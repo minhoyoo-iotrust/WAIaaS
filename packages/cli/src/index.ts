@@ -8,8 +8,10 @@
  *   status                            -- Check WAIaaS daemon status
  *   quickset                          -- Quick setup: create wallets, sessions, and MCP tokens
  *   quickstart                        -- (alias for quickset)
+ *   wallet create                     -- Create a new wallet
  *   wallet info                       -- Show wallet details
  *   wallet set-default-network <net>  -- Change default network
+ *   session prompt                    -- Generate agent connection prompt
  *   owner connect                     -- Connect external wallet via WalletConnect QR
  *   owner disconnect                  -- Disconnect WalletConnect session
  *   owner status                      -- Show WalletConnect session status
@@ -30,8 +32,9 @@ import { stopCommand } from './commands/stop.js';
 import { statusCommand } from './commands/status.js';
 import { mcpSetupCommand } from './commands/mcp-setup.js';
 import { quickstartCommand } from './commands/quickstart.js';
-import { walletInfoCommand, walletSetDefaultNetworkCommand } from './commands/wallet.js';
+import { walletInfoCommand, walletSetDefaultNetworkCommand, walletCreateCommand } from './commands/wallet.js';
 import { ownerConnectCommand, ownerDisconnectCommand, ownerStatusCommand } from './commands/owner.js';
+import { sessionPromptCommand } from './commands/session.js';
 import { updateCommand } from './commands/update.js';
 import { resolveDataDir } from './utils/data-dir.js';
 import { checkAndNotifyUpdate } from './utils/update-notify.js';
@@ -129,6 +132,26 @@ program
 const wallet = program.command('wallet').description('Wallet management commands');
 
 wallet
+  .command('create')
+  .description('Create a new wallet')
+  .option('--base-url <url>', 'Daemon base URL', 'http://127.0.0.1:3100')
+  .option('--chain <chain>', 'Chain type: solana or ethereum')
+  .option('--all', 'Create wallets for all supported chains')
+  .option('--mode <mode>', 'Environment mode: testnet or mainnet', 'mainnet')
+  .option('--name <name>', 'Wallet name (ignored with --all)')
+  .option('--password <password>', 'Master password')
+  .action(async (opts: { baseUrl?: string; chain?: string; all?: boolean; mode?: string; name?: string; password?: string }) => {
+    await walletCreateCommand({
+      baseUrl: opts.baseUrl ?? 'http://127.0.0.1:3100',
+      chain: opts.chain,
+      all: opts.all,
+      mode: opts.mode,
+      name: opts.name,
+      password: opts.password,
+    });
+  });
+
+wallet
   .command('info')
   .description('Show wallet details')
   .option('--base-url <url>', 'Daemon base URL', 'http://127.0.0.1:3100')
@@ -155,6 +178,25 @@ wallet
       password: opts.password,
       walletId: opts.wallet,
     }, network);
+  });
+
+// Session subcommand group
+const session = program.command('session').description('Session management commands');
+
+session
+  .command('prompt')
+  .description('Generate agent connection prompt (magic word)')
+  .option('--base-url <url>', 'Daemon base URL', 'http://127.0.0.1:3100')
+  .option('--wallet <id>', 'Wallet ID or name (all ACTIVE wallets if omitted)')
+  .option('--expires-in <seconds>', 'Session TTL in seconds', '86400')
+  .option('--password <password>', 'Master password')
+  .action(async (opts: { baseUrl?: string; wallet?: string; expiresIn?: string; password?: string }) => {
+    await sessionPromptCommand({
+      baseUrl: opts.baseUrl ?? 'http://127.0.0.1:3100',
+      walletId: opts.wallet,
+      expiresIn: parseInt(opts.expiresIn ?? '86400', 10),
+      password: opts.password,
+    });
   });
 
 // Owner subcommand group

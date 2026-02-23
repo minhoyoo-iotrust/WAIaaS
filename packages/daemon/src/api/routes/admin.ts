@@ -1,5 +1,5 @@
 /**
- * Admin route handlers: 22 daemon administration endpoints.
+ * Admin route handlers: 24 daemon administration endpoints.
  *
  * GET    /admin/status              - Daemon health/uptime/version (masterAuth)
  * POST   /admin/kill-switch         - Activate kill switch (masterAuth)
@@ -21,13 +21,15 @@
  * GET    /admin/telegram-users          - List Telegram bot users (masterAuth)
  * PUT    /admin/telegram-users/:chatId  - Update Telegram user role (masterAuth)
  * DELETE /admin/telegram-users/:chatId  - Delete Telegram user (masterAuth)
+ * GET    /admin/transactions        - Cross-wallet transaction list with filters (masterAuth)
+ * GET    /admin/incoming            - Cross-wallet incoming transaction list with filters (masterAuth)
  *
  * @see docs/37-rest-api-complete-spec.md
  * @see docs/36-killswitch-evm-freeze.md
  */
 
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
-import { sql, desc, eq, and, isNull, gt, count as drizzleCount } from 'drizzle-orm';
+import { sql, desc, eq, and, isNull, gt, gte, lte, count as drizzleCount } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { createHash } from 'node:crypto';
@@ -35,7 +37,7 @@ import { WAIaaSError, getDefaultNetwork, getNetworksForEnvironment } from '@waia
 import type { INotificationChannel, NotificationPayload, ChainType, EnvironmentType, IPriceOracle, IForexRateService, CurrencyCode } from '@waiaas/core';
 import { CurrencyCodeSchema, formatRatePreview } from '@waiaas/core';
 import type { JwtSecretManager, JwtPayload } from '../../infrastructure/jwt/jwt-secret-manager.js';
-import { wallets, sessions, sessionWallets, notificationLogs, policies, transactions } from '../../infrastructure/database/schema.js';
+import { wallets, sessions, sessionWallets, notificationLogs, policies, transactions, incomingTransactions } from '../../infrastructure/database/schema.js';
 import { generateId } from '../../infrastructure/database/id.js';
 import { buildConnectInfoPrompt } from './connect-info.js';
 import type * as schema from '../../infrastructure/database/schema.js';
@@ -253,6 +255,9 @@ const notificationLogQuerySchema = z.object({
   pageSize: z.string().optional().default('20'),
   channel: z.string().optional(),
   status: z.string().optional(),
+  eventType: z.string().optional(),
+  since: z.string().optional(),
+  until: z.string().optional(),
 });
 
 const notificationsLogRoute = createRoute({
@@ -476,6 +481,7 @@ const adminWalletTransactionsRoute = createRoute({
     params: z.object({ id: z.string().uuid() }),
     query: z.object({
       limit: z.coerce.number().int().min(1).max(100).default(20).optional(),
+      offset: z.coerce.number().int().min(0).default(0).optional(),
     }),
   },
   responses: {
@@ -527,6 +533,7 @@ const adminWalletBalanceRoute = createRoute({
                   .object({
                     balance: z.string(),
                     symbol: z.string(),
+                    usd: z.number().nullable().optional(),
                   })
                   .nullable(),
                 tokens: z.array(
@@ -636,6 +643,114 @@ const telegramUserDeleteRoute = createRoute({
 });
 
 // ---------------------------------------------------------------------------
+// Cross-wallet admin transaction route definitions
+// ---------------------------------------------------------------------------
+
+const adminTransactionsQuerySchema = z.object({
+  offset: z.coerce.number().int().min(0).default(0).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20).optional(),
+  wallet_id: z.string().uuid().optional(),
+  type: z.string().optional(),
+  status: z.string().optional(),
+  network: z.string().optional(),
+  since: z.coerce.number().optional(),
+  until: z.coerce.number().optional(),
+  search: z.string().optional(),
+});
+
+const adminTransactionsRoute = createRoute({
+  method: 'get',
+  path: '/admin/transactions',
+  tags: ['Admin'],
+  summary: 'List cross-wallet transactions with filters and pagination',
+  request: {
+    query: adminTransactionsQuerySchema,
+  },
+  responses: {
+    200: {
+      description: 'Paginated cross-wallet transaction list',
+      content: {
+        'application/json': {
+          schema: z.object({
+            items: z.array(
+              z.object({
+                id: z.string(),
+                walletId: z.string(),
+                walletName: z.string().nullable(),
+                type: z.string(),
+                status: z.string(),
+                tier: z.string().nullable(),
+                toAddress: z.string().nullable(),
+                amount: z.string().nullable(),
+                amountUsd: z.number().nullable(),
+                network: z.string().nullable(),
+                txHash: z.string().nullable(),
+                chain: z.string(),
+                createdAt: z.number().nullable(),
+              }),
+            ),
+            total: z.number().int(),
+            offset: z.number().int(),
+            limit: z.number().int(),
+          }),
+        },
+      },
+    },
+  },
+});
+
+const adminIncomingQuerySchema = z.object({
+  offset: z.coerce.number().int().min(0).default(0).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20).optional(),
+  wallet_id: z.string().uuid().optional(),
+  chain: z.string().optional(),
+  status: z.string().optional(),
+  suspicious: z.enum(['true', 'false']).optional(),
+});
+
+const adminIncomingRoute = createRoute({
+  method: 'get',
+  path: '/admin/incoming',
+  tags: ['Admin'],
+  summary: 'List cross-wallet incoming transactions with filters and pagination',
+  request: {
+    query: adminIncomingQuerySchema,
+  },
+  responses: {
+    200: {
+      description: 'Paginated cross-wallet incoming transaction list',
+      content: {
+        'application/json': {
+          schema: z.object({
+            items: z.array(
+              z.object({
+                id: z.string(),
+                txHash: z.string(),
+                walletId: z.string(),
+                walletName: z.string().nullable(),
+                fromAddress: z.string(),
+                amount: z.string(),
+                tokenAddress: z.string().nullable(),
+                chain: z.string(),
+                network: z.string(),
+                status: z.string(),
+                blockNumber: z.number().nullable(),
+                detectedAt: z.number().nullable(),
+                confirmedAt: z.number().nullable(),
+                suspicious: z.boolean(),
+              }),
+            ),
+            total: z.number().int(),
+            offset: z.number().int(),
+            limit: z.number().int(),
+          }),
+        },
+      },
+    },
+  },
+});
+
+// ---------------------------------------------------------------------------
 // Route factory
 // ---------------------------------------------------------------------------
 
@@ -664,6 +779,8 @@ const telegramUserDeleteRoute = createRoute({
  * GET    /admin/telegram-users          - List Telegram bot users (masterAuth)
  * PUT    /admin/telegram-users/:chatId  - Update Telegram user role (masterAuth)
  * DELETE /admin/telegram-users/:chatId  - Delete Telegram user (masterAuth)
+ * GET    /admin/transactions        - Cross-wallet transaction list (masterAuth)
+ * GET    /admin/incoming            - Cross-wallet incoming tx list (masterAuth)
  */
 export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
   const router = new OpenAPIHono({ defaultHook: openApiValidationHook });
@@ -732,6 +849,7 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
         amount: transactions.amount,
         amountUsd: transactions.amountUsd,
         network: transactions.network,
+        txHash: transactions.txHash,
         createdAt: transactions.createdAt,
       })
       .from(transactions)
@@ -750,6 +868,7 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
       amount: tx.amount ?? null,
       amountUsd: tx.amountUsd ?? null,
       network: tx.network ?? null,
+      txHash: tx.txHash ?? null,
       createdAt: tx.createdAt instanceof Date
         ? Math.floor(tx.createdAt.getTime() / 1000)
         : (typeof tx.createdAt === 'number' ? tx.createdAt : null),
@@ -1106,6 +1225,21 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
     if (query.status) {
       conditions.push(eq(notificationLogs.status, query.status));
     }
+    if (query.eventType) {
+      conditions.push(eq(notificationLogs.eventType, query.eventType));
+    }
+    if (query.since) {
+      const sinceTs = parseInt(query.since, 10);
+      if (!isNaN(sinceTs)) {
+        conditions.push(gte(notificationLogs.createdAt, new Date(sinceTs * 1000)));
+      }
+    }
+    if (query.until) {
+      const untilTs = parseInt(query.until, 10);
+      if (!isNaN(untilTs)) {
+        conditions.push(lte(notificationLogs.createdAt, new Date(untilTs * 1000)));
+      }
+    }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -1435,6 +1569,7 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
     const { id } = c.req.valid('param');
     const query = c.req.valid('query');
     const limit = query.limit ?? 20;
+    const offset = query.offset ?? 0;
 
     // Verify wallet exists
     const wallet = deps.db.select().from(wallets).where(eq(wallets.id, id)).get();
@@ -1449,6 +1584,7 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
       .where(eq(transactions.walletId, id))
       .orderBy(desc(transactions.createdAt))
       .limit(limit)
+      .offset(offset)
       .all();
 
     // Total count
@@ -1511,6 +1647,15 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
         const balanceInfo = await adapter.getBalance(wallet.publicKey);
         const nativeBalance = (Number(balanceInfo.balance) / 10 ** balanceInfo.decimals).toString();
 
+        // Resolve USD price for native token if price oracle is available
+        let nativeUsd: number | null = null;
+        if (deps.priceOracle) {
+          try {
+            const priceInfo = await deps.priceOracle.getNativePrice(chain);
+            nativeUsd = Number(nativeBalance) * priceInfo.usdPrice;
+          } catch { /* non-critical: USD price unavailable */ }
+        }
+
         const assets = await adapter.getAssets(wallet.publicKey);
         const tokens = assets
           .filter((a) => !a.isNative)
@@ -1523,7 +1668,7 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
         return {
           network,
           isDefault: network === defaultNetwork,
-          native: { balance: nativeBalance, symbol: balanceInfo.symbol },
+          native: { balance: nativeBalance, symbol: balanceInfo.symbol, usd: nativeUsd },
           tokens,
         };
       }),
@@ -1622,6 +1767,180 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
     }
 
     return c.json({ success: true }, 200);
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /admin/transactions (cross-wallet transaction list)
+  // ---------------------------------------------------------------------------
+
+  router.openapi(adminTransactionsRoute, async (c) => {
+    const query = c.req.valid('query');
+    const offset = query.offset ?? 0;
+    const limit = query.limit ?? 20;
+
+    // Build WHERE conditions
+    const conditions = [];
+    if (query.wallet_id) {
+      conditions.push(eq(transactions.walletId, query.wallet_id));
+    }
+    if (query.type) {
+      conditions.push(eq(transactions.type, query.type));
+    }
+    if (query.status) {
+      conditions.push(eq(transactions.status, query.status));
+    }
+    if (query.network) {
+      conditions.push(eq(transactions.network, query.network));
+    }
+    if (query.since !== undefined) {
+      conditions.push(sql`${transactions.createdAt} >= ${query.since}`);
+    }
+    if (query.until !== undefined) {
+      conditions.push(sql`${transactions.createdAt} <= ${query.until}`);
+    }
+    if (query.search) {
+      const pattern = `%${query.search}%`;
+      conditions.push(sql`(${transactions.txHash} LIKE ${pattern} OR ${transactions.toAddress} LIKE ${pattern})`);
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    // Count total
+    const totalResult = deps.db
+      .select({ count: drizzleCount() })
+      .from(transactions)
+      .where(whereClause)
+      .get();
+    const total = totalResult?.count ?? 0;
+
+    // Query with JOIN for walletName
+    const rows = deps.db
+      .select({
+        id: transactions.id,
+        walletId: transactions.walletId,
+        walletName: wallets.name,
+        type: transactions.type,
+        status: transactions.status,
+        tier: transactions.tier,
+        toAddress: transactions.toAddress,
+        amount: transactions.amount,
+        amountUsd: transactions.amountUsd,
+        network: transactions.network,
+        txHash: transactions.txHash,
+        chain: transactions.chain,
+        createdAt: transactions.createdAt,
+      })
+      .from(transactions)
+      .leftJoin(wallets, eq(transactions.walletId, wallets.id))
+      .where(whereClause)
+      .orderBy(desc(transactions.createdAt))
+      .offset(offset)
+      .limit(limit)
+      .all();
+
+    const items = rows.map((row) => ({
+      id: row.id,
+      walletId: row.walletId,
+      walletName: row.walletName ?? null,
+      type: row.type,
+      status: row.status,
+      tier: row.tier ?? null,
+      toAddress: row.toAddress ?? null,
+      amount: row.amount ?? null,
+      amountUsd: row.amountUsd ?? null,
+      network: row.network ?? null,
+      txHash: row.txHash ?? null,
+      chain: row.chain,
+      createdAt: row.createdAt instanceof Date
+        ? Math.floor(row.createdAt.getTime() / 1000)
+        : (typeof row.createdAt === 'number' ? row.createdAt : null),
+    }));
+
+    return c.json({ items, total, offset, limit }, 200);
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /admin/incoming (cross-wallet incoming transaction list)
+  // ---------------------------------------------------------------------------
+
+  router.openapi(adminIncomingRoute, async (c) => {
+    const query = c.req.valid('query');
+    const offset = query.offset ?? 0;
+    const limit = query.limit ?? 20;
+
+    // Build WHERE conditions (no default status filter -- admin sees all)
+    const conditions = [];
+    if (query.wallet_id) {
+      conditions.push(eq(incomingTransactions.walletId, query.wallet_id));
+    }
+    if (query.chain) {
+      conditions.push(eq(incomingTransactions.chain, query.chain));
+    }
+    if (query.status) {
+      conditions.push(eq(incomingTransactions.status, query.status));
+    }
+    if (query.suspicious !== undefined) {
+      conditions.push(eq(incomingTransactions.isSuspicious, query.suspicious === 'true'));
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    // Count total
+    const totalResult = deps.db
+      .select({ count: drizzleCount() })
+      .from(incomingTransactions)
+      .where(whereClause)
+      .get();
+    const total = totalResult?.count ?? 0;
+
+    // Query with JOIN for walletName
+    const rows = deps.db
+      .select({
+        id: incomingTransactions.id,
+        txHash: incomingTransactions.txHash,
+        walletId: incomingTransactions.walletId,
+        walletName: wallets.name,
+        fromAddress: incomingTransactions.fromAddress,
+        amount: incomingTransactions.amount,
+        tokenAddress: incomingTransactions.tokenAddress,
+        chain: incomingTransactions.chain,
+        network: incomingTransactions.network,
+        status: incomingTransactions.status,
+        blockNumber: incomingTransactions.blockNumber,
+        detectedAt: incomingTransactions.detectedAt,
+        confirmedAt: incomingTransactions.confirmedAt,
+        isSuspicious: incomingTransactions.isSuspicious,
+      })
+      .from(incomingTransactions)
+      .leftJoin(wallets, eq(incomingTransactions.walletId, wallets.id))
+      .where(whereClause)
+      .orderBy(desc(incomingTransactions.detectedAt))
+      .offset(offset)
+      .limit(limit)
+      .all();
+
+    const items = rows.map((row) => ({
+      id: row.id,
+      txHash: row.txHash,
+      walletId: row.walletId,
+      walletName: row.walletName ?? null,
+      fromAddress: row.fromAddress,
+      amount: row.amount,
+      tokenAddress: row.tokenAddress ?? null,
+      chain: row.chain,
+      network: row.network,
+      status: row.status,
+      blockNumber: row.blockNumber ?? null,
+      detectedAt: row.detectedAt instanceof Date
+        ? Math.floor(row.detectedAt.getTime() / 1000)
+        : (typeof row.detectedAt === 'number' ? row.detectedAt : null),
+      confirmedAt: row.confirmedAt instanceof Date
+        ? Math.floor(row.confirmedAt.getTime() / 1000)
+        : (typeof row.confirmedAt === 'number' ? row.confirmedAt : null),
+      suspicious: row.isSuspicious ?? false,
+    }));
+
+    return c.json({ items, total, offset, limit }, 200);
   });
 
   // ---------------------------------------------------------------------------

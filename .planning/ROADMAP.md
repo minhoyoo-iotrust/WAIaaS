@@ -17,6 +17,7 @@
 - ✅ **v27.1 수신 트랜잭션 모니터링 구현** -- Phases 224-230 (shipped 2026-02-22)
 - ✅ **v27.2 CAIP-19 자산 식별 표준** -- Phases 231-234 (shipped 2026-02-22)
 - ✅ **v27.3 토큰별 지출 한도 정책** -- Phases 235-238 (shipped 2026-02-22)
+- ✅ **v27.4 Admin UI UX 개선** -- Phases 239-243 (shipped 2026-02-23)
 
 ## Phases
 
@@ -200,6 +201,19 @@ See `.planning/milestones/v27.3-ROADMAP.md` for full details.
 
 </details>
 
+<details>
+<summary>✅ v27.4 Admin UI UX 개선 (Phases 239-243) -- SHIPPED 2026-02-23</summary>
+
+- [x] Phase 239: Foundation -- Shared Components + Admin API (2/2 plans) -- completed 2026-02-22
+- [x] Phase 240: Transactions Page + Dashboard (2/2 plans) -- completed 2026-02-22
+- [x] Phase 241: Token Registry + Notification Log (2/2 plans) -- completed 2026-02-22
+- [x] Phase 242: Incoming TX Monitoring UI (1/1 plan) -- completed 2026-02-22
+- [x] Phase 243: Wallet List + Wallet Detail (2/2 plans) -- completed 2026-02-23
+
+See `.planning/milestones/v27.4-ROADMAP.md` for full details.
+
+</details>
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -219,3 +233,4 @@ See `.planning/milestones/v27.3-ROADMAP.md` for full details.
 | 224-230 | v27.1 | 18/18 | Complete | 2026-02-22 |
 | 231-234 | v27.2 | 9/9 | Complete | 2026-02-22 |
 | 235-238 | v27.3 | 7/7 | Complete | 2026-02-22 |
+| 239-243 | v27.4 | 9/9 | Complete | 2026-02-23 |

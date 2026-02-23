@@ -1,4 +1,4 @@
-import { useSignal } from '@preact/signals';
+import { useSignal, useComputed } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
 import { currentPath } from '../components/layout';
@@ -17,6 +17,11 @@ import { getErrorMessage } from '../utils/error-messages';
 import { formatDate, formatAddress } from '../utils/format';
 import { TabNav } from '../components/tab-nav';
 import { Breadcrumb } from '../components/breadcrumb';
+import { SearchInput } from '../components/search-input';
+import { FilterBar } from '../components/filter-bar';
+import type { FilterField } from '../components/filter-bar';
+import { ExplorerLink } from '../components/explorer-link';
+import { fetchDisplayCurrency, formatWithDisplay } from '../utils/display-currency';
 import {
   type SettingsData,
   type RpcTestResult,
@@ -67,7 +72,7 @@ interface McpTokenResult {
 interface NetworkBalance {
   network: string;
   isDefault: boolean;
-  native: { balance: string; symbol: string } | null;
+  native: { balance: string; symbol: string; usd?: number | null } | null;
   tokens: Array<{ symbol: string; balance: string; address: string }>;
   error?: string;
 }
@@ -134,41 +139,7 @@ export function chainNetworkOptions(chain: string): { label: string; value: stri
   return [{ label: 'Devnet', value: 'devnet' }];
 }
 
-const walletColumns: Column<Wallet>[] = [
-  { key: 'name', header: 'Name' },
-  { key: 'chain', header: 'Chain' },
-  {
-    key: 'environment',
-    header: 'Environment',
-    render: (a) => (
-      <Badge variant={a.environment === 'mainnet' ? 'warning' : 'info'}>{a.environment}</Badge>
-    ),
-  },
-  {
-    key: 'publicKey',
-    header: 'Public Key',
-    render: (a) => (
-      <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-        {formatAddress(a.publicKey)} <CopyButton value={a.publicKey} />
-      </span>
-    ),
-  },
-  {
-    key: 'status',
-    header: 'Status',
-    render: (a) => (
-      <Badge variant={a.status === 'ACTIVE' ? 'success' : a.status === 'SUSPENDED' ? 'warning' : 'danger'}>{a.status}</Badge>
-    ),
-  },
-  {
-    key: 'ownerState',
-    header: 'Owner',
-    render: (a) => (
-      <Badge variant={ownerStateBadge(a.ownerState)}>{a.ownerState}</Badge>
-    ),
-  },
-  { key: 'createdAt', header: 'Created', render: (a) => formatDate(a.createdAt) },
-];
+// walletColumns moved inside WalletListContent to reference balances signal
 
 function ownerStateBadge(state: string): 'success' | 'warning' | 'danger' | 'info' | 'neutral' {
   switch (state) {
@@ -258,6 +229,44 @@ const APPROVAL_OPTIONS: Array<{
   },
 ];
 
+const DETAIL_TABS = [
+  { key: 'overview', label: 'Overview' },
+  { key: 'transactions', label: 'Transactions' },
+  { key: 'owner', label: 'Owner' },
+  { key: 'mcp', label: 'MCP' },
+];
+
+const TX_PAGE_SIZE = 20;
+
+const TX_STATUS_OPTIONS = [
+  { value: 'PENDING', label: 'PENDING' },
+  { value: 'APPROVED', label: 'APPROVED' },
+  { value: 'SUBMITTED', label: 'SUBMITTED' },
+  { value: 'CONFIRMED', label: 'CONFIRMED' },
+  { value: 'FAILED', label: 'FAILED' },
+];
+
+const TX_TYPE_OPTIONS = [
+  { value: 'TRANSFER', label: 'TRANSFER' },
+  { value: 'TOKEN_TRANSFER', label: 'TOKEN_TRANSFER' },
+  { value: 'CONTRACT_CALL', label: 'CONTRACT_CALL' },
+  { value: 'APPROVE', label: 'APPROVE' },
+  { value: 'BATCH', label: 'BATCH' },
+];
+
+const TX_FILTER_FIELDS: FilterField[] = [
+  { key: 'status', label: 'Status', type: 'select', options: TX_STATUS_OPTIONS },
+  { key: 'type', label: 'Type', type: 'select', options: TX_TYPE_OPTIONS },
+];
+
+const TX_COLUMNS = ['Time', 'Type', 'To', 'Amount', 'Network', 'Status', 'Tx Hash'];
+
+function txStatusVariant(status: string): 'success' | 'danger' | 'warning' {
+  if (status === 'CONFIRMED') return 'success';
+  if (status === 'FAILED') return 'danger';
+  return 'warning';
+}
+
 function WalletDetailView({ id }: { id: string }) {
   const wallet = useSignal<WalletDetail | null>(null);
   const loading = useSignal(true);
@@ -275,6 +284,9 @@ function WalletDetailView({ id }: { id: string }) {
   const balanceLoading = useSignal(true);
   const txs = useSignal<WalletTransaction[]>([]);
   const txsLoading = useSignal(true);
+  const txTotal = useSignal(0);
+  const txPage = useSignal(0);
+  const txFilters = useSignal<Record<string, string>>({ status: '', type: '' });
   const wcQrModal = useSignal(false);
   const wcQrData = useSignal<WcPairingResult | null>(null);
   const wcPairingLoading = useSignal(false);
@@ -290,6 +302,10 @@ function WalletDetailView({ id }: { id: string }) {
   const suspendLoading = useSignal(false);
   const suspendReason = useSignal('');
   const resumeLoading = useSignal(false);
+  const activeDetailTab = useSignal('overview');
+  const displayCurrency = useSignal<string>('USD');
+  const displayRate = useSignal<number | null>(1);
+
   const fetchWallet = async () => {
     try {
       const result = await apiGet<WalletDetail>(API.WALLET(id));
@@ -411,19 +427,32 @@ function WalletDetailView({ id }: { id: string }) {
     }
   };
 
-  const fetchTransactions = async () => {
+  const fetchTransactions = async (pageNum?: number) => {
     txsLoading.value = true;
     try {
+      const p = pageNum ?? txPage.value;
+      const offset = p * TX_PAGE_SIZE;
       const r = await apiGet<{ items: WalletTransaction[]; total: number }>(
-        API.ADMIN_WALLET_TRANSACTIONS(id),
+        `${API.ADMIN_WALLET_TRANSACTIONS(id)}?offset=${offset}&limit=${TX_PAGE_SIZE}`,
       );
       txs.value = r.items;
+      txTotal.value = r.total;
     } catch {
       txs.value = [];
+      txTotal.value = 0;
     } finally {
       txsLoading.value = false;
     }
   };
+
+  // Filtered transactions (client-side status/type filtering)
+  const filteredTxs = useComputed(() => {
+    let list = txs.value;
+    const f = txFilters.value;
+    if (f.status) list = list.filter((tx) => tx.status === f.status);
+    if (f.type) list = list.filter((tx) => tx.type === f.type);
+    return list;
+  });
 
   const fetchWcSession = async () => {
     wcSessionLoading.value = true;
@@ -574,6 +603,12 @@ function WalletDetailView({ id }: { id: string }) {
     fetchTransactions();
     fetchWcSession();
     fetchApprovalSettings();
+    fetchDisplayCurrency()
+      .then(({ currency, rate }) => {
+        displayCurrency.value = currency;
+        displayRate.value = rate;
+      })
+      .catch(() => { /* fallback to USD */ });
   }, [id]);
 
   useEffect(() => {
@@ -581,6 +616,459 @@ function WalletDetailView({ id }: { id: string }) {
       if (pollRef.value) clearInterval(pollRef.value);
     };
   }, []);
+
+  // Re-fetch transactions when page changes
+  useEffect(() => {
+    fetchTransactions();
+  }, [txPage.value]);
+
+  // Pagination handlers
+  const txOffset = txPage.value * TX_PAGE_SIZE;
+  const txShowFrom = txTotal.value > 0 ? txOffset + 1 : 0;
+  const txShowTo = Math.min(txOffset + TX_PAGE_SIZE, txTotal.value);
+  const txHasPrev = txPage.value > 0;
+  const txHasNext = (txPage.value + 1) * TX_PAGE_SIZE < txTotal.value;
+
+  // -------------------------------------------------------------------------
+  // Overview Tab
+  // -------------------------------------------------------------------------
+  function OverviewTab() {
+    if (!wallet.value) return null;
+    return (
+      <>
+        <div class="detail-grid">
+          <DetailRow label="ID" value={wallet.value.id} copy />
+          <DetailRow label="Public Key" value={wallet.value.publicKey} copy />
+          <DetailRow label="Chain" value={wallet.value.chain} />
+          <DetailRow label="Environment">
+            <Badge variant={wallet.value.environment === 'mainnet' ? 'warning' : 'info'}>
+              {wallet.value.environment}
+            </Badge>
+          </DetailRow>
+          <DetailRow label="Default Network" value={wallet.value.defaultNetwork ?? wallet.value.network} />
+          <DetailRow label="Status">
+            <Badge variant={wallet.value.status === 'ACTIVE' ? 'success' : wallet.value.status === 'SUSPENDED' ? 'warning' : 'danger'}>
+              {wallet.value.status}
+            </Badge>
+          </DetailRow>
+          {wallet.value.status === 'SUSPENDED' && (
+            <>
+              <DetailRow label="Suspended At" value={wallet.value.suspendedAt ? formatDate(wallet.value.suspendedAt) : '--'} />
+              <DetailRow label="Suspension Reason" value={wallet.value.suspensionReason ?? '--'} />
+            </>
+          )}
+          <DetailRow label="Created" value={formatDate(wallet.value.createdAt)} />
+          <DetailRow
+            label="Updated"
+            value={wallet.value.updatedAt ? formatDate(wallet.value.updatedAt) : 'Never'}
+          />
+        </div>
+
+        <div class="balance-section" style={{ marginTop: 'var(--space-6)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
+            <h3 style={{ margin: 0 }}>Balances</h3>
+            <Button variant="secondary" size="sm" onClick={fetchBalance} loading={balanceLoading.value}>
+              Refresh
+            </Button>
+          </div>
+          {balanceLoading.value ? (
+            <div class="stat-skeleton" style={{ height: '60px' }} />
+          ) : balance.value?.balances?.length ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+              {balance.value.balances.map((nb) => (
+                <div
+                  key={nb.network}
+                  style={{
+                    padding: 'var(--space-3)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: 'var(--radius-md)',
+                    background: nb.isDefault ? 'var(--color-bg-secondary)' : 'transparent',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
+                    <strong>{nb.network}</strong>
+                    {nb.isDefault && (
+                      <span class="badge badge-info" style={{ fontSize: '0.7rem' }}>Default</span>
+                    )}
+                  </div>
+                  {nb.error ? (
+                    <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>{nb.error}</p>
+                  ) : nb.native ? (
+                    <div>
+                      <DetailRow label="Native">
+                        <span>
+                          {nb.native.balance} {nb.native.symbol}
+                          {nb.native.usd != null && (
+                            <span style={{ color: 'var(--color-text-secondary)', marginLeft: 'var(--space-2)', fontSize: '0.85rem' }}>
+                              ({formatWithDisplay(nb.native.usd, displayCurrency.value, displayRate.value)})
+                            </span>
+                          )}
+                        </span>
+                      </DetailRow>
+                      {nb.tokens.length > 0 ? (
+                        nb.tokens.map((t) => (
+                          <DetailRow key={t.address} label={t.symbol} value={t.balance} />
+                        ))
+                      ) : null}
+                    </div>
+                  ) : (
+                    <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>Balance unavailable</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p style={{ color: 'var(--color-text-secondary)' }}>No balance data available</p>
+          )}
+        </div>
+
+        <div class="networks-section" style={{ marginTop: 'var(--space-6)' }}>
+          <h3 style={{ marginBottom: 'var(--space-3)' }}>Available Networks</h3>
+          {networksLoading.value ? (
+            <div class="stat-skeleton" style={{ height: '80px' }} />
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+              {(networks.value ?? []).map((n) => (
+                <div key={n.network} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: 'var(--space-2) var(--space-3)',
+                  background: 'var(--color-bg-secondary)', borderRadius: 'var(--radius-md)',
+                }}>
+                  <span>
+                    {n.name ?? n.network}
+                    {n.isDefault && <span style={{ marginLeft: 'var(--space-2)', display: 'inline-block' }}><Badge variant="success">Default</Badge></span>}
+                  </span>
+                  {!n.isDefault && wallet.value?.status === 'ACTIVE' && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => handleChangeDefaultNetwork(n.network)}
+                      loading={defaultNetworkLoading.value}
+                    >
+                      Set Default
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </>
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // Transactions Tab
+  // -------------------------------------------------------------------------
+  function TransactionsTab() {
+    return (
+      <>
+        <FilterBar
+          fields={TX_FILTER_FIELDS}
+          values={txFilters.value}
+          onChange={(v) => { txFilters.value = v; }}
+          syncUrl={false}
+        />
+
+        <div class="table-container" style={{ marginTop: 'var(--space-3)' }}>
+          <table>
+            <thead>
+              <tr>
+                {TX_COLUMNS.map((col) => (
+                  <th key={col}>{col}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {txsLoading.value && filteredTxs.value.length === 0 ? (
+                <tr>
+                  <td colSpan={TX_COLUMNS.length} class="table-loading">
+                    Loading...
+                  </td>
+                </tr>
+              ) : filteredTxs.value.length === 0 ? (
+                <tr>
+                  <td colSpan={TX_COLUMNS.length} class="table-empty">
+                    No transactions yet
+                  </td>
+                </tr>
+              ) : (
+                filteredTxs.value.map((tx) => (
+                  <tr key={tx.id}>
+                    <td>{tx.createdAt ? formatDate(tx.createdAt) : '\u2014'}</td>
+                    <td><Badge variant="info">{tx.type}</Badge></td>
+                    <td>{tx.toAddress ? formatAddress(tx.toAddress) : '\u2014'}</td>
+                    <td>{tx.amount ?? '\u2014'}</td>
+                    <td>{tx.network ?? '\u2014'}</td>
+                    <td><Badge variant={txStatusVariant(tx.status)}>{tx.status}</Badge></td>
+                    <td>
+                      <ExplorerLink network={tx.network ?? ''} txHash={tx.txHash} />
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination" style={{ marginTop: 'var(--space-3)' }}>
+          <span class="pagination-info">
+            Showing {txShowFrom}-{txShowTo} of {txTotal.value}
+          </span>
+          <div class="pagination-buttons">
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={!txHasPrev}
+              onClick={() => { txPage.value = txPage.value - 1; }}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={!txHasNext}
+              onClick={() => { txPage.value = txPage.value + 1; }}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // Owner Tab
+  // -------------------------------------------------------------------------
+  function OwnerTab() {
+    if (!wallet.value) return null;
+    return (
+      <div class="owner-section">
+        <h3 style={{ marginBottom: 'var(--space-3)' }}>Owner Wallet</h3>
+
+        {wallet.value.ownerState === 'NONE' && wallet.value.status !== 'TERMINATED' && (
+          <div style={{
+            background: 'var(--color-bg-secondary)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-md)',
+            padding: 'var(--space-3) var(--space-4)',
+            marginBottom: 'var(--space-4)',
+          }}>
+            <p style={{ marginBottom: 'var(--space-2)', fontWeight: 500 }}>
+              What is an Owner Wallet?
+            </p>
+            <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem', marginBottom: 'var(--space-3)' }}>
+              Register an Owner wallet to enable transaction approval (APPROVAL policy) for high-value transfers.
+              Connect D'CENT, MetaMask, or other WalletConnect-compatible wallets to approve transactions directly.
+            </p>
+            <Button size="sm" onClick={startEditOwner}>
+              Set Owner Address
+            </Button>
+          </div>
+        )}
+
+        <DetailRow label="Address">
+          {ownerEditing.value ? (
+            <div class="inline-edit">
+              <input
+                value={editOwnerAddress.value}
+                onInput={(e) => {
+                  editOwnerAddress.value = (e.target as HTMLInputElement).value;
+                }}
+                class="inline-edit-input"
+                placeholder="Enter owner wallet address"
+              />
+              <Button size="sm" onClick={handleSaveOwner} loading={ownerEditLoading.value}>
+                Save
+              </Button>
+              <Button size="sm" variant="secondary" onClick={cancelEditOwner}>
+                Cancel
+              </Button>
+            </div>
+          ) : (
+            <span>
+              {wallet.value.ownerAddress ? (
+                <>
+                  {formatAddress(wallet.value.ownerAddress)}
+                  <CopyButton value={wallet.value.ownerAddress} />
+                </>
+              ) : (
+                'Not set'
+              )}
+              {wallet.value.ownerState !== 'LOCKED' && wallet.value.status === 'ACTIVE' && (
+                <button class="btn btn-ghost btn-sm" onClick={startEditOwner} title="Set owner address">
+                  &#9998;
+                </button>
+              )}
+            </span>
+          )}
+        </DetailRow>
+        <DetailRow label="State">
+          <Badge variant={ownerStateBadge(wallet.value.ownerState)}>
+            {wallet.value.ownerState}
+          </Badge>
+        </DetailRow>
+        {wallet.value.ownerState === 'GRACE' && (
+          <div style={{
+            background: 'var(--color-bg-secondary)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-md)',
+            padding: 'var(--space-3) var(--space-4)',
+            marginTop: 'var(--space-3)',
+          }}>
+            <p style={{ marginBottom: 'var(--space-2)', fontWeight: 500, fontSize: '0.85rem' }}>
+              Verify Owner
+            </p>
+            <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>
+              Sign a verification message with the Owner wallet to transition from GRACE to LOCKED.
+              Connect via WalletConnect first, then trigger an APPROVAL-tier transaction or use the CLI/SDK to call the verify endpoint.
+            </p>
+          </div>
+        )}
+
+        {wallet.value.ownerState !== 'NONE' && (
+          <div style={{ marginTop: 'var(--space-4)', paddingTop: 'var(--space-3)', borderTop: '1px solid var(--color-border)' }}>
+            <h4 style={{ marginBottom: 'var(--space-2)', fontSize: '0.9rem' }}>Approval Method</h4>
+            <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem', marginBottom: 'var(--space-3)' }}>
+              Choose how transaction approvals are delivered to the owner.
+              Leave as "Auto (Global Fallback)" to use the system-wide priority.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+              {APPROVAL_OPTIONS.map(opt => (
+                <label key={opt.value ?? 'auto'} style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 'var(--space-2)',
+                  padding: 'var(--space-2) var(--space-3)',
+                  background: wallet.value?.approvalMethod === opt.value ? 'var(--color-bg-secondary)' : 'transparent',
+                  borderRadius: 'var(--radius-md)',
+                  cursor: 'pointer',
+                }}>
+                  <input
+                    type="radio"
+                    name="approval_method"
+                    value={opt.value ?? ''}
+                    checked={wallet.value?.approvalMethod === opt.value}
+                    onChange={() => handleApprovalMethodChange(opt.value)}
+                    style={{ marginTop: '2px' }}
+                  />
+                  <div>
+                    <div style={{ fontWeight: 500, fontSize: '0.9rem' }}>{opt.label}</div>
+                    <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem' }}>{opt.description}</div>
+                    {opt.warning && opt.warningCondition?.(approvalSettings.value) && (
+                      <div style={{
+                        marginTop: 'var(--space-1)',
+                        padding: 'var(--space-1) var(--space-2)',
+                        background: 'var(--color-warning-bg, #fff3cd)',
+                        border: '1px solid var(--color-warning-border, #ffc107)',
+                        borderRadius: 'var(--radius-sm)',
+                        fontSize: '0.75rem',
+                        color: 'var(--color-warning-text, #856404)',
+                      }}>
+                        {opt.warning}
+                      </div>
+                    )}
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div style={{ marginTop: 'var(--space-4)', paddingTop: 'var(--space-3)', borderTop: '1px solid var(--color-border)' }}>
+          <h4 style={{ marginBottom: 'var(--space-2)', fontSize: '0.9rem' }}>WalletConnect</h4>
+          {wcSessionLoading.value ? (
+            <div class="stat-skeleton" style={{ height: '60px' }} />
+          ) : wcSession.value ? (
+            <div>
+              <DetailRow label="Status">
+                <Badge variant="success">Connected</Badge>
+              </DetailRow>
+              <DetailRow label="Peer" value={wcSession.value.peerName ?? 'Unknown'} />
+              <DetailRow label="Chain ID" value={wcSession.value.chainId} />
+              <DetailRow label="Expires" value={formatDate(wcSession.value.expiry)} />
+              <div style={{ marginTop: 'var(--space-3)' }}>
+                <Button variant="danger" onClick={handleWcDisconnect} loading={wcDisconnectLoading.value}>
+                  Disconnect
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <p style={{ marginBottom: 'var(--space-3)', color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>
+                Connect an external wallet (D'CENT, MetaMask, Phantom) via WalletConnect for transaction approval.
+              </p>
+              {wallet.value?.ownerAddress ? (
+                <Button onClick={handleWcConnect} loading={wcPairingLoading.value}>
+                  Connect Wallet
+                </Button>
+              ) : (
+                <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>
+                  Set an Owner address first to enable WalletConnect.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // MCP Tab
+  // -------------------------------------------------------------------------
+  function McpTab() {
+    return (
+      <div class="mcp-setup-section">
+        <h3 style={{ marginBottom: 'var(--space-3)' }}>MCP Setup</h3>
+        {mcpResult.value ? (
+          <div>
+            <div class="detail-grid" style={{ marginBottom: 'var(--space-4)' }}>
+              <DetailRow label="Token Path" value={mcpResult.value.tokenPath} />
+              <DetailRow label="Expires At" value={formatDate(mcpResult.value.expiresAt)} />
+            </div>
+            <div style={{ marginBottom: 'var(--space-2)' }}>
+              <strong>Claude Desktop Config</strong>
+            </div>
+            <div style={{ position: 'relative' }}>
+              <pre><code style={{
+                display: 'block',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-all',
+                background: 'var(--color-bg-secondary)',
+                padding: 'var(--space-3)',
+                borderRadius: 'var(--radius-md)',
+                fontSize: '0.85rem',
+                maxHeight: '300px',
+                overflow: 'auto',
+              }}>
+                {JSON.stringify({ mcpServers: mcpResult.value.claudeDesktopConfig }, null, 2)}
+              </code></pre>
+              <div style={{ marginTop: 'var(--space-2)' }}>
+                <CopyButton
+                  value={JSON.stringify({ mcpServers: mcpResult.value.claudeDesktopConfig }, null, 2)}
+                  label="Copy Config"
+                />
+              </div>
+            </div>
+            <div style={{ marginTop: 'var(--space-3)' }}>
+              <Button variant="secondary" onClick={handleMcpSetup} loading={mcpLoading.value}>
+                Re-provision
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <p style={{ marginBottom: 'var(--space-3)', color: 'var(--color-text-secondary)' }}>
+              Provision an MCP token for Claude Desktop integration.
+            </p>
+            <Button onClick={handleMcpSetup} loading={mcpLoading.value}>
+              Setup MCP
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div class="page">
@@ -636,367 +1124,11 @@ function WalletDetailView({ id }: { id: string }) {
             </div>
           </div>
 
-          <div class="detail-grid">
-            <DetailRow label="ID" value={wallet.value.id} copy />
-            <DetailRow label="Public Key" value={wallet.value.publicKey} copy />
-            <DetailRow label="Chain" value={wallet.value.chain} />
-            <DetailRow label="Environment">
-              <Badge variant={wallet.value.environment === 'mainnet' ? 'warning' : 'info'}>
-                {wallet.value.environment}
-              </Badge>
-            </DetailRow>
-            <DetailRow label="Default Network" value={wallet.value.defaultNetwork ?? wallet.value.network} />
-            <DetailRow label="Status">
-              <Badge variant={wallet.value.status === 'ACTIVE' ? 'success' : wallet.value.status === 'SUSPENDED' ? 'warning' : 'danger'}>
-                {wallet.value.status}
-              </Badge>
-            </DetailRow>
-            {wallet.value.status === 'SUSPENDED' && (
-              <>
-                <DetailRow label="Suspended At" value={wallet.value.suspendedAt ? formatDate(wallet.value.suspendedAt) : '--'} />
-                <DetailRow label="Suspension Reason" value={wallet.value.suspensionReason ?? '--'} />
-              </>
-            )}
-            <DetailRow label="Created" value={formatDate(wallet.value.createdAt)} />
-            <DetailRow
-              label="Updated"
-              value={wallet.value.updatedAt ? formatDate(wallet.value.updatedAt) : 'Never'}
-            />
-          </div>
-
-          <div class="balance-section" style={{ marginTop: 'var(--space-6)' }}>
-            <h3 style={{ marginBottom: 'var(--space-3)' }}>Balances</h3>
-            {balanceLoading.value ? (
-              <div class="stat-skeleton" style={{ height: '60px' }} />
-            ) : balance.value?.balances?.length ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-                {balance.value.balances.map((nb) => (
-                  <div
-                    key={nb.network}
-                    style={{
-                      padding: 'var(--space-3)',
-                      border: '1px solid var(--color-border)',
-                      borderRadius: 'var(--radius-md)',
-                      background: nb.isDefault ? 'var(--color-bg-secondary)' : 'transparent',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
-                      <strong>{nb.network}</strong>
-                      {nb.isDefault && (
-                        <span class="badge badge-info" style={{ fontSize: '0.7rem' }}>Default</span>
-                      )}
-                    </div>
-                    {nb.error ? (
-                      <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>{nb.error}</p>
-                    ) : nb.native ? (
-                      <div>
-                        <DetailRow label="Native" value={`${nb.native.balance} ${nb.native.symbol}`} />
-                        {nb.tokens.length > 0 ? (
-                          nb.tokens.map((t) => (
-                            <DetailRow key={t.address} label={t.symbol} value={t.balance} />
-                          ))
-                        ) : null}
-                      </div>
-                    ) : (
-                      <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>Balance unavailable</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p style={{ color: 'var(--color-text-secondary)' }}>No balance data available</p>
-            )}
-          </div>
-
-          <div class="networks-section" style={{ marginTop: 'var(--space-6)' }}>
-            <h3 style={{ marginBottom: 'var(--space-3)' }}>Available Networks</h3>
-            {networksLoading.value ? (
-              <div class="stat-skeleton" style={{ height: '80px' }} />
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-                {(networks.value ?? []).map((n) => (
-                  <div key={n.network} style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: 'var(--space-2) var(--space-3)',
-                    background: 'var(--color-bg-secondary)', borderRadius: 'var(--radius-md)',
-                  }}>
-                    <span>
-                      {n.name ?? n.network}
-                      {n.isDefault && <Badge variant="success" style={{ marginLeft: 'var(--space-2)' }}>Default</Badge>}
-                    </span>
-                    {!n.isDefault && wallet.value?.status === 'ACTIVE' && (
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => handleChangeDefaultNetwork(n.network)}
-                        loading={defaultNetworkLoading.value}
-                      >
-                        Set Default
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div class="transactions-section" style={{ marginTop: 'var(--space-6)' }}>
-            <h3 style={{ marginBottom: 'var(--space-3)' }}>Recent Transactions</h3>
-            <Table<WalletTransaction>
-              columns={[
-                {
-                  key: 'createdAt',
-                  header: 'Time',
-                  render: (t) => (t.createdAt ? formatDate(t.createdAt) : '--'),
-                },
-                { key: 'type', header: 'Type', render: (t) => t.type },
-                {
-                  key: 'toAddress',
-                  header: 'To',
-                  render: (t) => (t.toAddress ? formatAddress(t.toAddress) : '--'),
-                },
-                { key: 'amount', header: 'Amount', render: (t) => t.amount ?? '--' },
-                {
-                  key: 'status',
-                  header: 'Status',
-                  render: (t) => (
-                    <Badge
-                      variant={
-                        t.status === 'CONFIRMED'
-                          ? 'success'
-                          : t.status === 'FAILED'
-                            ? 'danger'
-                            : 'warning'
-                      }
-                    >
-                      {t.status}
-                    </Badge>
-                  ),
-                },
-                { key: 'network', header: 'Network', render: (t) => t.network ?? '--' },
-              ]}
-              data={txs.value}
-              loading={txsLoading.value}
-              emptyMessage="No transactions yet"
-            />
-          </div>
-
-          <div class="owner-section" style={{ marginTop: 'var(--space-6)' }}>
-            <h3 style={{ marginBottom: 'var(--space-3)' }}>Owner Wallet</h3>
-
-            {wallet.value.ownerState === 'NONE' && wallet.value.status !== 'TERMINATED' && (
-              <div style={{
-                background: 'var(--color-bg-secondary)',
-                border: '1px solid var(--color-border)',
-                borderRadius: 'var(--radius-md)',
-                padding: 'var(--space-3) var(--space-4)',
-                marginBottom: 'var(--space-4)',
-              }}>
-                <p style={{ marginBottom: 'var(--space-2)', fontWeight: 500 }}>
-                  What is an Owner Wallet?
-                </p>
-                <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem', marginBottom: 'var(--space-3)' }}>
-                  Register an Owner wallet to enable transaction approval (APPROVAL policy) for high-value transfers.
-                  Connect D'CENT, MetaMask, or other WalletConnect-compatible wallets to approve transactions directly.
-                </p>
-                <Button size="sm" onClick={startEditOwner}>
-                  Set Owner Address
-                </Button>
-              </div>
-            )}
-
-            <DetailRow label="Address">
-              {ownerEditing.value ? (
-                <div class="inline-edit">
-                  <input
-                    value={editOwnerAddress.value}
-                    onInput={(e) => {
-                      editOwnerAddress.value = (e.target as HTMLInputElement).value;
-                    }}
-                    class="inline-edit-input"
-                    placeholder="Enter owner wallet address"
-                  />
-                  <Button size="sm" onClick={handleSaveOwner} loading={ownerEditLoading.value}>
-                    Save
-                  </Button>
-                  <Button size="sm" variant="secondary" onClick={cancelEditOwner}>
-                    Cancel
-                  </Button>
-                </div>
-              ) : (
-                <span>
-                  {wallet.value.ownerAddress ? (
-                    <>
-                      {formatAddress(wallet.value.ownerAddress)}
-                      <CopyButton value={wallet.value.ownerAddress} />
-                    </>
-                  ) : (
-                    'Not set'
-                  )}
-                  {wallet.value.ownerState !== 'LOCKED' && wallet.value.status === 'ACTIVE' && (
-                    <button class="btn btn-ghost btn-sm" onClick={startEditOwner} title="Set owner address">
-                      &#9998;
-                    </button>
-                  )}
-                </span>
-              )}
-            </DetailRow>
-            <DetailRow label="State">
-              <Badge variant={ownerStateBadge(wallet.value.ownerState)}>
-                {wallet.value.ownerState}
-              </Badge>
-            </DetailRow>
-            {wallet.value.ownerState === 'GRACE' && (
-              <div style={{
-                background: 'var(--color-bg-secondary)',
-                border: '1px solid var(--color-border)',
-                borderRadius: 'var(--radius-md)',
-                padding: 'var(--space-3) var(--space-4)',
-                marginTop: 'var(--space-3)',
-              }}>
-                <p style={{ marginBottom: 'var(--space-2)', fontWeight: 500, fontSize: '0.85rem' }}>
-                  Verify Owner
-                </p>
-                <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>
-                  Sign a verification message with the Owner wallet to transition from GRACE to LOCKED.
-                  Connect via WalletConnect first, then trigger an APPROVAL-tier transaction or use the CLI/SDK to call the verify endpoint.
-                </p>
-              </div>
-            )}
-
-            {wallet.value.ownerState !== 'NONE' && (
-              <div style={{ marginTop: 'var(--space-4)', paddingTop: 'var(--space-3)', borderTop: '1px solid var(--color-border)' }}>
-                <h4 style={{ marginBottom: 'var(--space-2)', fontSize: '0.9rem' }}>Approval Method</h4>
-                <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem', marginBottom: 'var(--space-3)' }}>
-                  Choose how transaction approvals are delivered to the owner.
-                  Leave as "Auto (Global Fallback)" to use the system-wide priority.
-                </p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-                  {APPROVAL_OPTIONS.map(opt => (
-                    <label key={opt.value ?? 'auto'} style={{
-                      display: 'flex', alignItems: 'flex-start', gap: 'var(--space-2)',
-                      padding: 'var(--space-2) var(--space-3)',
-                      background: wallet.value?.approvalMethod === opt.value ? 'var(--color-bg-secondary)' : 'transparent',
-                      borderRadius: 'var(--radius-md)',
-                      cursor: 'pointer',
-                    }}>
-                      <input
-                        type="radio"
-                        name="approval_method"
-                        value={opt.value ?? ''}
-                        checked={wallet.value?.approvalMethod === opt.value}
-                        onChange={() => handleApprovalMethodChange(opt.value)}
-                        style={{ marginTop: '2px' }}
-                      />
-                      <div>
-                        <div style={{ fontWeight: 500, fontSize: '0.9rem' }}>{opt.label}</div>
-                        <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem' }}>{opt.description}</div>
-                        {opt.warning && opt.warningCondition?.(approvalSettings.value) && (
-                          <div style={{
-                            marginTop: 'var(--space-1)',
-                            padding: 'var(--space-1) var(--space-2)',
-                            background: 'var(--color-warning-bg, #fff3cd)',
-                            border: '1px solid var(--color-warning-border, #ffc107)',
-                            borderRadius: 'var(--radius-sm)',
-                            fontSize: '0.75rem',
-                            color: 'var(--color-warning-text, #856404)',
-                          }}>
-                            {opt.warning}
-                          </div>
-                        )}
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div style={{ marginTop: 'var(--space-4)', paddingTop: 'var(--space-3)', borderTop: '1px solid var(--color-border)' }}>
-              <h4 style={{ marginBottom: 'var(--space-2)', fontSize: '0.9rem' }}>WalletConnect</h4>
-              {wcSessionLoading.value ? (
-                <div class="stat-skeleton" style={{ height: '60px' }} />
-              ) : wcSession.value ? (
-                <div>
-                  <DetailRow label="Status">
-                    <Badge variant="success">Connected</Badge>
-                  </DetailRow>
-                  <DetailRow label="Peer" value={wcSession.value.peerName ?? 'Unknown'} />
-                  <DetailRow label="Chain ID" value={wcSession.value.chainId} />
-                  <DetailRow label="Expires" value={formatDate(wcSession.value.expiry)} />
-                  <div style={{ marginTop: 'var(--space-3)' }}>
-                    <Button variant="danger" onClick={handleWcDisconnect} loading={wcDisconnectLoading.value}>
-                      Disconnect
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  <p style={{ marginBottom: 'var(--space-3)', color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>
-                    Connect an external wallet (D'CENT, MetaMask, Phantom) via WalletConnect for transaction approval.
-                  </p>
-                  {wallet.value?.ownerAddress ? (
-                    <Button onClick={handleWcConnect} loading={wcPairingLoading.value}>
-                      Connect Wallet
-                    </Button>
-                  ) : (
-                    <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>
-                      Set an Owner address first to enable WalletConnect.
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div class="mcp-setup-section" style={{ marginTop: 'var(--space-6)' }}>
-            <h3 style={{ marginBottom: 'var(--space-3)' }}>MCP Setup</h3>
-            {mcpResult.value ? (
-              <div>
-                <div class="detail-grid" style={{ marginBottom: 'var(--space-4)' }}>
-                  <DetailRow label="Token Path" value={mcpResult.value.tokenPath} />
-                  <DetailRow label="Expires At" value={formatDate(mcpResult.value.expiresAt)} />
-                </div>
-                <div style={{ marginBottom: 'var(--space-2)' }}>
-                  <strong>Claude Desktop Config</strong>
-                </div>
-                <div style={{ position: 'relative' }}>
-                  <pre><code style={{
-                    display: 'block',
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-all',
-                    background: 'var(--color-bg-secondary)',
-                    padding: 'var(--space-3)',
-                    borderRadius: 'var(--radius-md)',
-                    fontSize: '0.85rem',
-                    maxHeight: '300px',
-                    overflow: 'auto',
-                  }}>
-                    {JSON.stringify({ mcpServers: mcpResult.value.claudeDesktopConfig }, null, 2)}
-                  </code></pre>
-                  <div style={{ marginTop: 'var(--space-2)' }}>
-                    <CopyButton
-                      value={JSON.stringify({ mcpServers: mcpResult.value.claudeDesktopConfig }, null, 2)}
-                      label="Copy Config"
-                    />
-                  </div>
-                </div>
-                <div style={{ marginTop: 'var(--space-3)' }}>
-                  <Button variant="secondary" onClick={handleMcpSetup} loading={mcpLoading.value}>
-                    Re-provision
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div>
-                <p style={{ marginBottom: 'var(--space-3)', color: 'var(--color-text-secondary)' }}>
-                  Provision an MCP token for Claude Desktop integration.
-                </p>
-                <Button onClick={handleMcpSetup} loading={mcpLoading.value}>
-                  Setup MCP
-                </Button>
-              </div>
-            )}
-          </div>
+          <TabNav tabs={DETAIL_TABS} activeTab={activeDetailTab.value} onTabChange={(k) => { activeDetailTab.value = k; }} />
+          {activeDetailTab.value === 'overview' && <OverviewTab />}
+          {activeDetailTab.value === 'transactions' && <TransactionsTab />}
+          {activeDetailTab.value === 'owner' && <OwnerTab />}
+          {activeDetailTab.value === 'mcp' && <McpTab />}
 
           <Modal
             open={deleteModal.value}
@@ -1595,6 +1727,40 @@ function WalletConnectTab() {
 // Wallet List Content
 // ---------------------------------------------------------------------------
 
+const WALLET_FILTER_FIELDS: FilterField[] = [
+  {
+    key: 'chain',
+    label: 'Chain',
+    type: 'select',
+    options: [
+      { value: 'solana', label: 'Solana' },
+      { value: 'ethereum', label: 'Ethereum' },
+    ],
+  },
+  {
+    key: 'environment',
+    label: 'Environment',
+    type: 'select',
+    options: [
+      { value: 'testnet', label: 'Testnet' },
+      { value: 'mainnet', label: 'Mainnet' },
+    ],
+  },
+  {
+    key: 'status',
+    label: 'Status',
+    type: 'select',
+    options: [
+      { value: 'ACTIVE', label: 'ACTIVE' },
+      { value: 'SUSPENDED', label: 'SUSPENDED' },
+      { value: 'TERMINATED', label: 'TERMINATED' },
+    ],
+  },
+];
+
+/** Max wallets for which to fetch balances in parallel */
+const BALANCE_FETCH_LIMIT = 50;
+
 function WalletListContent() {
   const wallets = useSignal<Wallet[]>([]);
   const loading = useSignal(true);
@@ -1605,6 +1771,13 @@ function WalletListContent() {
   const formError = useSignal<string | null>(null);
   const formLoading = useSignal(false);
   const createdSessionToken = useSignal<string | null>(null);
+
+  // Search + filter state
+  const search = useSignal('');
+  const filters = useSignal<Record<string, string>>({ chain: '', environment: '', status: '' });
+  const balances = useSignal<Record<string, { balance: string; symbol: string; usd?: number | null } | null>>({});
+  const listDisplayCurrency = useSignal<string>('USD');
+  const listDisplayRate = useSignal<number | null>(1);
 
   const fetchWallets = async () => {
     try {
@@ -1617,6 +1790,105 @@ function WalletListContent() {
       loading.value = false;
     }
   };
+
+  // Fetch balances for wallets (up to BALANCE_FETCH_LIMIT)
+  const fetchBalances = async (walletList: Wallet[]) => {
+    const toFetch = walletList.slice(0, BALANCE_FETCH_LIMIT);
+    const results: Record<string, { balance: string; symbol: string; usd?: number | null } | null> = {};
+    await Promise.allSettled(
+      toFetch.map(async (w) => {
+        try {
+          const resp = await apiGet<WalletBalance>(API.ADMIN_WALLET_BALANCE(w.id));
+          const defaultNet = resp.balances?.find((b) => b.isDefault);
+          if (defaultNet?.native) {
+            results[w.id] = { balance: defaultNet.native.balance, symbol: defaultNet.native.symbol, usd: defaultNet.native.usd };
+          } else {
+            results[w.id] = null;
+          }
+        } catch {
+          results[w.id] = null;
+        }
+      }),
+    );
+    balances.value = { ...balances.value, ...results };
+  };
+
+  const filteredWallets = useComputed(() => {
+    let list = wallets.value;
+    const q = search.value.toLowerCase();
+    if (q) {
+      list = list.filter(
+        (w) => w.name.toLowerCase().includes(q) || w.publicKey.toLowerCase().includes(q),
+      );
+    }
+    const f = filters.value;
+    if (f.chain) list = list.filter((w) => w.chain === f.chain);
+    if (f.environment) list = list.filter((w) => w.environment === f.environment);
+    if (f.status) list = list.filter((w) => w.status === f.status);
+    return list;
+  });
+
+  // Build walletColumns inside the function so we can reference `balances`
+  const listColumns: Column<Wallet>[] = [
+    { key: 'name', header: 'Name' },
+    { key: 'chain', header: 'Chain' },
+    {
+      key: 'environment',
+      header: 'Environment',
+      render: (a) => (
+        <Badge variant={a.environment === 'mainnet' ? 'warning' : 'info'}>{a.environment}</Badge>
+      ),
+    },
+    {
+      key: 'publicKey',
+      header: 'Public Key',
+      render: (a) => (
+        <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+          {formatAddress(a.publicKey)} <CopyButton value={a.publicKey} />
+        </span>
+      ),
+    },
+    {
+      key: 'balance' as string,
+      header: 'Balance',
+      render: (wallet) => {
+        const bal = balances.value[wallet.id];
+        if (bal === undefined)
+          return <span style={{ color: 'var(--color-text-secondary)' }}>Loading...</span>;
+        if (bal === null)
+          return <span style={{ color: 'var(--color-text-secondary)' }}>--</span>;
+        return (
+          <span>
+            {bal.balance} {bal.symbol}
+            {bal.usd != null && (
+              <span style={{ color: 'var(--color-text-secondary)', marginLeft: 'var(--space-1)', fontSize: '0.85em' }}>
+                ({formatWithDisplay(bal.usd, listDisplayCurrency.value, listDisplayRate.value)})
+              </span>
+            )}
+          </span>
+        );
+      },
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (a) => (
+        <Badge
+          variant={
+            a.status === 'ACTIVE' ? 'success' : a.status === 'SUSPENDED' ? 'warning' : 'danger'
+          }
+        >
+          {a.status}
+        </Badge>
+      ),
+    },
+    {
+      key: 'ownerState',
+      header: 'Owner',
+      render: (a) => <Badge variant={ownerStateBadge(a.ownerState)}>{a.ownerState}</Badge>,
+    },
+    { key: 'createdAt', header: 'Created', render: (a) => formatDate(a.createdAt) },
+  ];
 
   const handleCreate = async () => {
     if (!formName.value.trim()) {
@@ -1660,7 +1932,19 @@ function WalletListContent() {
   };
 
   useEffect(() => {
-    fetchWallets();
+    fetchWallets().then(() => {
+      // Fetch balances after wallets load
+      if (wallets.value.length > 0) {
+        void fetchBalances(wallets.value);
+      }
+    });
+    // Fetch display currency for USD conversion
+    fetchDisplayCurrency()
+      .then(({ currency, rate }) => {
+        listDisplayCurrency.value = currency;
+        listDisplayRate.value = rate;
+      })
+      .catch(() => { /* fallback to USD/1 */ });
   }, []);
 
   return (
@@ -1746,9 +2030,21 @@ function WalletListContent() {
         </div>
       )}
 
+      <FilterBar
+        fields={WALLET_FILTER_FIELDS}
+        values={filters.value}
+        onChange={(v) => { filters.value = v; }}
+        syncUrl={false}
+      />
+      <SearchInput
+        value={search.value}
+        onSearch={(q) => { search.value = q; }}
+        placeholder="Search by name or public key..."
+      />
+
       <Table<Wallet>
-        columns={walletColumns}
-        data={wallets.value}
+        columns={listColumns}
+        data={filteredWallets.value}
         loading={loading.value}
         onRowClick={navigateToDetail}
         emptyMessage="No wallets yet"

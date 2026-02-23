@@ -200,7 +200,7 @@ function mockDetailApiCalls(wallet = mockWalletDetail) {
     if (path === `/v1/wallets/${wallet.id}`) return wallet;
     if (path === `/v1/wallets/${wallet.id}/networks`) return mockNetworks;
     if (path === `/v1/admin/wallets/${wallet.id}/balance`) return mockBalance;
-    if (path === `/v1/admin/wallets/${wallet.id}/transactions`) return mockTransactions;
+    if (path.startsWith(`/v1/admin/wallets/${wallet.id}/transactions`)) return mockTransactions;
     if (path === `/v1/wallets/${wallet.id}/wc/session`) throw new Error('No session');
     return {};
   });
@@ -211,6 +211,11 @@ async function renderAndWaitForDetail() {
   await waitFor(() => {
     expect(screen.getByText('trading-bot')).toBeTruthy();
   });
+}
+
+async function switchTab(tabLabel: string) {
+  fireEvent.click(screen.getByText(tabLabel));
+  await waitFor(() => {});
 }
 
 // ---------------------------------------------------------------------------
@@ -233,9 +238,11 @@ describe('WalletDetailView rendering', () => {
     expect(screen.getAllByText('devnet').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Balances')).toBeTruthy();
     expect(screen.getByText('Available Networks')).toBeTruthy();
-    expect(screen.getByText('Recent Transactions')).toBeTruthy();
-    expect(screen.getByText('Owner Wallet')).toBeTruthy();
-    expect(screen.getByText('MCP Setup')).toBeTruthy();
+    // Tab labels visible in TabNav
+    expect(screen.getByText('Overview')).toBeTruthy();
+    expect(screen.getByText('Transactions')).toBeTruthy();
+    expect(screen.getByText('Owner')).toBeTruthy();
+    expect(screen.getByText('MCP')).toBeTruthy();
   });
 
   it('renders balance with native and tokens', async () => {
@@ -264,11 +271,14 @@ describe('WalletDetailView rendering', () => {
     mockDetailApiCalls();
     await renderAndWaitForDetail();
 
+    await switchTab('Transactions');
+
+    // Status text appears in both filter options and badges, use getAllByText
     await waitFor(() => {
-      expect(screen.getByText('CONFIRMED')).toBeTruthy();
+      expect(screen.getAllByText('CONFIRMED').length).toBeGreaterThanOrEqual(1);
     });
-    expect(screen.getByText('FAILED')).toBeTruthy();
-    expect(screen.getByText('PENDING')).toBeTruthy();
+    expect(screen.getAllByText('FAILED').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('PENDING').length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders back link', async () => {
@@ -400,6 +410,8 @@ describe('WalletDetailView: handleMcpSetup', () => {
     mockDetailApiCalls();
     await renderAndWaitForDetail();
 
+    await switchTab('MCP');
+
     vi.mocked(apiPost).mockResolvedValueOnce(mockMcpResult);
 
     fireEvent.click(screen.getByText('Setup MCP'));
@@ -425,6 +437,8 @@ describe('WalletDetailView: handleMcpSetup', () => {
     mockDetailApiCalls();
     await renderAndWaitForDetail();
 
+    await switchTab('MCP');
+
     vi.mocked(apiPost).mockRejectedValueOnce(new ApiError(500, 'MCP_ERROR', 'Failed'));
 
     fireEvent.click(screen.getByText('Setup MCP'));
@@ -437,6 +451,8 @@ describe('WalletDetailView: handleMcpSetup', () => {
   it('shows Re-provision button after initial setup', async () => {
     mockDetailApiCalls();
     await renderAndWaitForDetail();
+
+    await switchTab('MCP');
 
     vi.mocked(apiPost).mockResolvedValueOnce(mockMcpResult);
     fireEvent.click(screen.getByText('Setup MCP'));
@@ -504,6 +520,8 @@ describe('WalletDetailView: owner address', () => {
     mockDetailApiCalls();
     await renderAndWaitForDetail();
 
+    await switchTab('Owner');
+
     expect(screen.getByText('Set Owner Address')).toBeTruthy();
     expect(screen.getByText('NONE')).toBeTruthy();
   });
@@ -511,6 +529,8 @@ describe('WalletDetailView: owner address', () => {
   it('handleSaveOwner: saves owner address', async () => {
     mockDetailApiCalls();
     await renderAndWaitForDetail();
+
+    await switchTab('Owner');
 
     vi.mocked(apiPut).mockResolvedValueOnce({
       ownerAddress: '0xNEW_OWNER_ADDRESS',
@@ -543,6 +563,8 @@ describe('WalletDetailView: owner address', () => {
     mockDetailApiCalls();
     await renderAndWaitForDetail();
 
+    await switchTab('Owner');
+
     fireEvent.click(screen.getByText('Set Owner Address'));
 
     const ownerInput = screen.getByPlaceholderText('Enter owner wallet address');
@@ -559,6 +581,8 @@ describe('WalletDetailView: owner address', () => {
   it('handleSaveOwner: handles API error', async () => {
     mockDetailApiCalls();
     await renderAndWaitForDetail();
+
+    await switchTab('Owner');
 
     vi.mocked(apiPut).mockRejectedValueOnce(new ApiError(400, 'INVALID_ADDRESS', 'Bad'));
 
@@ -579,6 +603,8 @@ describe('WalletDetailView: owner address', () => {
     mockDetailApiCalls();
     await renderAndWaitForDetail();
 
+    await switchTab('Owner');
+
     fireEvent.click(screen.getByText('Set Owner Address'));
 
     expect(screen.getByPlaceholderText('Enter owner wallet address')).toBeTruthy();
@@ -596,9 +622,12 @@ describe('WalletDetailView: owner address', () => {
     render(<WalletsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('GRACE')).toBeTruthy();
+      expect(screen.getByText('trading-bot')).toBeTruthy();
     });
 
+    await switchTab('Owner');
+
+    expect(screen.getByText('GRACE')).toBeTruthy();
     expect(screen.getByText('Verify Owner')).toBeTruthy();
   });
 });
@@ -612,6 +641,12 @@ describe('WalletDetailView: WalletConnect', () => {
     render(<WalletsPage />);
 
     await waitFor(() => {
+      expect(screen.getByText('trading-bot')).toBeTruthy();
+    });
+
+    await switchTab('Owner');
+
+    await waitFor(() => {
       expect(screen.getByText('Connect Wallet')).toBeTruthy();
     });
   });
@@ -619,6 +654,8 @@ describe('WalletDetailView: WalletConnect', () => {
   it('shows message when no owner is set', async () => {
     mockDetailApiCalls();
     await renderAndWaitForDetail();
+
+    await switchTab('Owner');
 
     expect(screen.getByText('Set an Owner address first to enable WalletConnect.')).toBeTruthy();
   });
@@ -633,6 +670,12 @@ describe('WalletDetailView: WalletConnect', () => {
     });
 
     render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('trading-bot')).toBeTruthy();
+    });
+
+    await switchTab('Owner');
 
     await waitFor(() => {
       expect(screen.getByText('Connect Wallet')).toBeTruthy();
@@ -658,6 +701,12 @@ describe('WalletDetailView: WalletConnect', () => {
     render(<WalletsPage />);
 
     await waitFor(() => {
+      expect(screen.getByText('trading-bot')).toBeTruthy();
+    });
+
+    await switchTab('Owner');
+
+    await waitFor(() => {
       expect(screen.getByText('Connect Wallet')).toBeTruthy();
     });
 
@@ -681,6 +730,12 @@ describe('WalletDetailView: WalletConnect', () => {
     vi.mocked(apiDelete).mockResolvedValueOnce(undefined);
 
     render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('trading-bot')).toBeTruthy();
+    });
+
+    await switchTab('Owner');
 
     await waitFor(() => {
       expect(screen.getByText('Connected')).toBeTruthy();
@@ -711,6 +766,12 @@ describe('WalletDetailView: WalletConnect', () => {
     vi.mocked(apiDelete).mockRejectedValueOnce(new ApiError(500, 'WC_DC_ERROR', 'Failed'));
 
     render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('trading-bot')).toBeTruthy();
+    });
+
+    await switchTab('Owner');
 
     await waitFor(() => {
       expect(screen.getByText('Disconnect')).toBeTruthy();
@@ -795,6 +856,12 @@ describe('WalletDetailView: fetch errors', () => {
     });
 
     render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('trading-bot')).toBeTruthy();
+    });
+
+    await switchTab('Transactions');
 
     await waitFor(() => {
       expect(screen.getByText('No transactions yet')).toBeTruthy();

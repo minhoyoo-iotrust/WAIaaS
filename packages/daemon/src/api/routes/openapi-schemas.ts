@@ -73,6 +73,7 @@ export const WalletCrudResponseSchema = z
     status: z.string(),
     ownerAddress: z.string().nullable(),
     ownerState: z.enum(['NONE', 'GRACE', 'LOCKED']),
+    monitorIncoming: z.boolean(),
     createdAt: z.number().int(),
   })
   .openapi('WalletCrudResponse');
@@ -596,7 +597,9 @@ export const AdminStatusResponseSchema = z
         status: z.string(),
         toAddress: z.string().nullable(),
         amount: z.string().nullable(),
+        amountUsd: z.number().nullable(),
         network: z.string().nullable(),
+        txHash: z.string().nullable(),
         createdAt: z.number().int().nullable(),
       }),
     ),

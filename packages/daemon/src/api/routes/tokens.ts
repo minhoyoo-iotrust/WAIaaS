@@ -1,9 +1,11 @@
 /**
- * Token registry route handlers: GET /v1/tokens, POST /v1/tokens, DELETE /v1/tokens.
+ * Token registry route handlers: GET /v1/tokens, POST /v1/tokens, DELETE /v1/tokens,
+ * GET /v1/tokens/resolve.
  *
  * GET /v1/tokens?network=: list all tokens (builtin + custom) for the given EVM network.
  * POST /v1/tokens: add a custom token to the registry (masterAuth required).
  * DELETE /v1/tokens: remove a custom token from the registry (masterAuth required).
+ * GET /v1/tokens/resolve?network=&address=: resolve ERC-20 token metadata on-chain.
  *
  * Token registry is UX-only: adding/removing tokens does NOT affect ALLOWED_TOKENS policy.
  *
@@ -11,8 +13,17 @@
  */
 
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
+import { createPublicClient, http, type Address } from 'viem';
 import { EVM_NETWORK_TYPES, WAIaaSError } from '@waiaas/core';
 import type { TokenRegistryService } from '../../infrastructure/token-registry/index.js';
+import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
+
+/** Minimal ERC-20 ABI for on-chain metadata resolution (symbol, name, decimals). */
+const ERC20_METADATA_ABI = [
+  { type: 'function', name: 'symbol', stateMutability: 'view', inputs: [], outputs: [{ name: '', type: 'string' }] },
+  { type: 'function', name: 'name', stateMutability: 'view', inputs: [], outputs: [{ name: '', type: 'string' }] },
+  { type: 'function', name: 'decimals', stateMutability: 'view', inputs: [], outputs: [{ name: '', type: 'uint8' }] },
+] as const;
 import {
   TokenRegistryListResponseSchema,
   AddTokenRequestSchema,
@@ -25,6 +36,7 @@ import {
 
 export interface TokenRegistryRouteDeps {
   tokenRegistryService: TokenRegistryService;
+  rpcConfig?: Record<string, string>;
 }
 
 // ---------------------------------------------------------------------------
@@ -108,10 +120,41 @@ function validateEvmNetwork(network: string): void {
 // Route factory
 // ---------------------------------------------------------------------------
 
+const resolveTokenRoute = createRoute({
+  method: 'get',
+  path: '/tokens/resolve',
+  tags: ['Tokens'],
+  summary: 'Resolve ERC-20 token metadata on-chain',
+  request: {
+    query: z.object({
+      network: z.string().openapi({ example: 'ethereum-mainnet' }),
+      address: z.string().openapi({ example: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48' }),
+    }),
+  },
+  responses: {
+    200: {
+      description: 'Resolved token metadata',
+      content: {
+        'application/json': {
+          schema: z.object({
+            symbol: z.string(),
+            name: z.string(),
+            decimals: z.number(),
+            address: z.string(),
+            network: z.string(),
+          }),
+        },
+      },
+    },
+    ...buildErrorResponses(['ACTION_VALIDATION_FAILED']),
+  },
+});
+
 /**
  * Create token registry route sub-router.
  *
  * GET  /tokens?network= -> list builtin + custom tokens for the network.
+ * GET  /tokens/resolve?network=&address= -> resolve ERC-20 metadata on-chain.
  * POST /tokens -> add custom token (409 on duplicate).
  * DELETE /tokens -> remove custom token.
  */
@@ -143,6 +186,41 @@ export function tokenRegistryRoutes(deps: TokenRegistryRouteDeps): OpenAPIHono {
       },
       200,
     );
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /tokens/resolve?network=&address=
+  // ---------------------------------------------------------------------------
+
+  router.openapi(resolveTokenRoute, async (c) => {
+    const { network, address } = c.req.valid('query');
+
+    validateEvmNetwork(network);
+
+    const rpcConfig = deps.rpcConfig ?? {};
+    const rpcUrl = resolveRpcUrl(rpcConfig, 'ethereum', network);
+    if (!rpcUrl) {
+      throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
+        message: `No RPC URL configured for network '${network}'. Set rpc.evm_${network.replace(/-/g, '_')} in config.`,
+      });
+    }
+
+    try {
+      const client = createPublicClient({ transport: http(rpcUrl) });
+      const contractAddress = address as Address;
+
+      const [symbol, name, decimals] = await Promise.all([
+        client.readContract({ address: contractAddress, abi: ERC20_METADATA_ABI, functionName: 'symbol' }),
+        client.readContract({ address: contractAddress, abi: ERC20_METADATA_ABI, functionName: 'name' }),
+        client.readContract({ address: contractAddress, abi: ERC20_METADATA_ABI, functionName: 'decimals' }),
+      ]);
+
+      return c.json({ symbol: symbol as string, name: name as string, decimals: Number(decimals), address, network }, 200);
+    } catch (err) {
+      throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
+        message: `Failed to resolve token at address '${address}' on '${network}': ${err instanceof Error ? err.message : 'unknown error'}`,
+      });
+    }
   });
 
   // ---------------------------------------------------------------------------

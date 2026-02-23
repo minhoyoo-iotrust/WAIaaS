@@ -193,10 +193,10 @@ describe('NotificationsPage', () => {
     expect(screen.getByText('sent')).toBeTruthy();
     expect(screen.getByText('failed')).toBeTruthy();
 
-    // Column headers
-    expect(screen.getByText('Event Type')).toBeTruthy();
-    expect(screen.getByText('Channel')).toBeTruthy();
-    expect(screen.getByText('Status')).toBeTruthy();
+    // Column headers (also present in FilterBar labels, so use getAllByText)
+    expect(screen.getAllByText('Event Type').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Channel').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Status').length).toBeGreaterThanOrEqual(1);
   });
 
   it('should handle pagination with Next button', async () => {

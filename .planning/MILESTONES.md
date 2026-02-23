@@ -1390,3 +1390,34 @@
 
 ---
 
+
+## v27.4 Admin UI UX 개선 (Shipped: 2026-02-23)
+
+**Delivered:** Admin UI에 부재한 핵심 기능(트랜잭션 페이지, 토큰 레지스트리, 수신 TX 모니터링)을 추가하고 기존 페이지 UX를 전반 개선. 운영자가 단일 UI에서 모든 지갑 운영 상태를 파악·관리 가능한 상태 달성.
+
+**Phases completed:** 239-243 (5 phases, 9 plans, 32 requirements)
+
+**Key accomplishments:**
+
+- ExplorerLink(13 networks)/FilterBar(URL sync)/SearchInput(debounce) 공용 컴포넌트 + 크로스 지갑 Admin API 2개 (GET /admin/transactions, GET /admin/incoming)
+- /transactions 페이지: 8-column 테이블, 서버사이드 페이지네이션, 행 확장, 5개 필터 + txHash/수신자 검색
+- Dashboard: Approval Pending 카드, 클릭 가능 StatCards, Recent Activity 네트워크/txHash 익스플로러 링크
+- /tokens 페이지: 네트워크별 토큰 CRUD, 온체인 메타데이터 자동 조회(GET /tokens/resolve), 빌트인/커스텀 배지
+- /incoming 페이지: 설정 패널 추출, 크로스 지갑 수신 TX 뷰어, 필터, 지갑별 모니터링 토글
+- 지갑 목록 검색/필터/잔액+USD + 지갑 상세 4탭(Overview/Transactions/Owner/MCP) 페이지네이션/USD/새로고침
+
+**Stats:**
+
+- 5 phases, 9 plans, 32 requirements
+- 51 files changed, +6,177 / -577 lines
+- ~186,724 LOC TypeScript
+- Timeline: 1 day (2026-02-22 → 2026-02-23)
+
+### Tech Debt
+
+- tokens.tsx uses raw HTML filter instead of shared FilterBar component (functional but inconsistent)
+- Wallet detail Transactions tab filter is client-side only on 20-item page (design limitation)
+- WDET-02 partial: status/type filters don't trigger server re-fetch across all pages
+
+---
+
