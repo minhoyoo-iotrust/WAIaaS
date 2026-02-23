@@ -236,24 +236,24 @@ See `.planning/milestones/v27.4-ROADMAP.md` for full details.
 **Plans**: 2 plans
 
 Plans:
-- [ ] 244-01-PLAN.md -- DEFI-01 패키지 구조 + DEFI-02 API 변환 패턴 확정
-- [ ] 244-02-PLAN.md -- DEFI-03 정책 연동 설계 확정
+- [x] 244-01-PLAN.md -- DEFI-01 패키지 구조 + DEFI-02 API 변환 패턴 확정
+- [x] 244-02-PLAN.md -- DEFI-03 정책 연동 설계 확정
 
 ### Phase 245: 런타임 동작 설계
 **Goal**: 브릿지/언스테이크 비동기 추적, 트랜잭션 상태 머신 확장, 통합 DB 마이그레이션, 안전성 방어(MEV/리베이스/stale calldata/API drift), 테스트 전략이 확정되어 구현 시 런타임 동작에 대한 설계 불확실성이 제거된다
-**Depends on**: Phase 244
+**Depends on**: Phase 244 (completed)
 **Requirements**: ASNC-01, ASNC-02, ASNC-03, ASNC-04, ASNC-05, SAFE-01, SAFE-02, SAFE-03, SAFE-04, TEST-01, TEST-02, TEST-03
 **Success Criteria** (what must be TRUE):
   1. AsyncStatusTracker 인터페이스와 폴링 스케줄러(setTimeout 체인, 간격/최대횟수) 설계가 완성되어, 브릿지/언스테이크/가스대기 3개 구현체가 동일 패턴을 따를 수 있다
   2. 트랜잭션 상태 머신(8-state -> 9-state, GAS_WAITING 추가) 전이 다이어그램과 통합 DB 마이그레이션(bridge_status + bridge_metadata 컬럼 + GAS_WAITING 상태)이 단일 설계로 확정되어, m28-03에서 마이그레이션을 바로 작성할 수 있다
   3. 4개 안전성 설계 -- Jito MEV fail-closed, stETH vs wstETH 아키텍처 결정, stale calldata 재조회 패턴, API drift Zod strict 전략 -- 가 각각 완성되어, 구현 시 안전 관련 판단이 불필요하다
   4. mock API 픽스처 공통 구조, 테스트 헬퍼(createMockApiResponse, assertContractCallRequest), 4-프로토콜 x 시나리오 매트릭스가 확정되어, 프로바이더 테스트 작성 시 일관된 패턴과 커버리지 기준이 존재한다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 245-01: TBD
-- [ ] 245-02: TBD
-- [ ] 245-03: TBD
+- [ ] 245-01-PLAN.md -- DEFI-04 비동기 상태 추적 설계 (AsyncStatusTracker + 폴링 + 상태 머신 + DB 마이그레이션)
+- [ ] 245-02-PLAN.md -- 안전성 설계 (MEV fail-closed + wstETH + stale calldata + API drift)
+- [ ] 245-03-PLAN.md -- DEFI-05 테스트 전략 (mock 픽스처 + 헬퍼 + 시나리오 매트릭스)
 
 ## Progress
 
@@ -278,5 +278,5 @@ Phases execute in numeric order: 244 -> 245
 | 231-234 | v27.2 | 9/9 | Complete | 2026-02-22 |
 | 235-238 | v27.3 | 7/7 | Complete | 2026-02-22 |
 | 239-243 | v27.4 | 9/9 | Complete | 2026-02-23 |
-| 244 | 2/2 | Complete   | 2026-02-23 | - |
-| 245 | v28.0 | 0/? | Not started | - |
+| 244 | v28.0 | 2/2 | Complete | 2026-02-23 |
+| 245 | v28.0 | 0/3 | Not started | - |
