@@ -253,7 +253,7 @@ See `.planning/milestones/v28.2-ROADMAP.md` for full details.
 
 **Milestone Goal:** LI.FI 메타 애그리게이터를 ActionProvider로 구현하여 AI 에이전트가 체인 간(Solana<->EVM, EVM<->EVM) 자산 브릿지/스왑을 수행할 수 있도록 한다. m28-04/m28-05가 재사용할 비동기 상태 추적 공통 인프라를 함께 구축한다.
 
-- [ ] **Phase 251: 비동기 상태 추적 공통 인프라** - IAsyncStatusTracker 인터페이스 + AsyncPollingService 폴링 스케줄러 + DB v23 마이그레이션(bridge_status/bridge_metadata/GAS_WAITING/partial index)
+- [x] **Phase 251: 비동기 상태 추적 공통 인프라** - IAsyncStatusTracker 인터페이스 + AsyncPollingService 폴링 스케줄러 + DB v23 마이그레이션(bridge_status/bridge_metadata/GAS_WAITING/partial index) -- completed 2026-02-24
 - [ ] **Phase 252: LiFi ActionProvider + 정책 연동 + 알림** - LiFiApiClient + LiFiActionProvider(bridge/cross_swap) + BridgeStatusTracker 2단계 폴링 + 출발 체인 정책 평가 + SPENDING_LIMIT 예약 해제 + 5개 브릿지 알림 이벤트
 - [ ] **Phase 253: 인터페이스 통합** - MCP 2개 도구 자동 노출 + TS/Python SDK executeAction + actions.skill.md 문서
 
@@ -272,8 +272,8 @@ See `.planning/milestones/v28.2-ROADMAP.md` for full details.
 **Plans**: 2 plans
 
 Plans:
-- [ ] 251-01-PLAN.md — IAsyncStatusTracker interface + GAS_WAITING enum + DB v23 migration + migration tests
-- [ ] 251-02-PLAN.md — AsyncPollingService + BackgroundWorkers registration + polling tests
+- [x] 251-01-PLAN.md — IAsyncStatusTracker interface + GAS_WAITING enum + DB v23 migration + migration tests
+- [x] 251-02-PLAN.md — AsyncPollingService + BackgroundWorkers registration + polling tests
 
 ### Phase 252: LiFi ActionProvider + 정책 연동 + 알림
 **Goal**: AI 에이전트가 LI.FI를 통해 크로스체인 브릿지/스왑을 실행하고, 출발 체인 정책 평가를 받으며, 브릿지 완료/실패/환불 시 알림을 수신하고 SPENDING_LIMIT 예약이 올바르게 해제되는 상태
@@ -312,6 +312,6 @@ Phases execute in numeric order: 251 → 252 → 253
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 251. 비동기 상태 추적 공통 인프라 | v28.3 | 0/2 | Not started | - |
+| 251. 비동기 상태 추적 공통 인프라 | v28.3 | 2/2 | Completed | 2026-02-24 |
 | 252. LiFi ActionProvider + 정책 연동 + 알림 | v28.3 | 0/3 | Not started | - |
 | 253. 인터페이스 통합 | v28.3 | 0/1 | Not started | - |
