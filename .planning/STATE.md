@@ -12,8 +12,8 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 Milestone: v28.0 기본 DeFi 프로토콜 설계
 Phase: 245 of 245 (런타임 동작 설계)
 Plan: 2 of 3 in current phase
-Status: Plan 245-02 complete (SAFE-01~04 안전성 설계 확정)
-Last activity: 2026-02-23 -- Completed 245-02-PLAN.md (안전성 설계 4개 확정)
+Status: Plan 245-01 + 245-02 complete
+Last activity: 2026-02-23 -- Completed 245-01-PLAN.md (DEFI-04 비동기 상태 추적 설계)
 
 Progress: [██████████] 67% (Phase 245, 2/3 plans)
 
@@ -47,6 +47,11 @@ Progress: [██████████] 67% (Phase 245, 2/3 plans)
 - SAFE-03: per-wallet 가스 대기 제한 max_per_wallet=5, per-wallet lock으로 nonce 순차 처리
 - SAFE-04: API drift 3중 방어 -- Zod + 버전 고정 URL + redirect:'error' + API_SCHEMA_DRIFT 알림 (3회 연속 실패)
 - SAFE-04: RPC 장애 시 effectiveWaitTime으로 타임아웃 시계 일시 정지
+- ASNC-01: IAsyncStatusTracker with timeoutTransition discriminator (TIMEOUT/BRIDGE_MONITORING/CANCELLED)
+- ASNC-02: Per-tracker timing via bridge_metadata.lastPolledAt, BackgroundWorkers 30s interval
+- ASNC-03: 통합 DB migration v23 -- bridge_status + bridge_metadata + GAS_WAITING + partial indexes 2개
+- ASNC-04: GAS_WAITING 11번째 트랜잭션 상태, Stage 3.5 진입, SIGNED/CANCELLED 탈출
+- ASNC-05: 브릿지 3단계 타임아웃 (2h active -> 22h monitoring -> TIMEOUT), 자동 취소 금지
 
 ### Blockers/Concerns
 
@@ -55,5 +60,5 @@ Progress: [██████████] 67% (Phase 245, 2/3 plans)
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Completed 245-02-PLAN.md (SAFE-01~04 안전성 설계 확정)
+Stopped at: Completed 245-01-PLAN.md (DEFI-04 비동기 상태 추적 설계 확정)
 Resume file: None
