@@ -233,12 +233,11 @@ See `.planning/milestones/v27.4-ROADMAP.md` for full details.
   2. ActionApiClient 베이스 패턴(fetch+AbortController+Zod)과 ContractCallRequest 변환 매핑(Solana programId/instructionData/accounts, EVM to/data/value)이 완성되어, 4개 프로바이더 API 클라이언트가 동일 기반 위에 구현 가능하다
   3. DeFi 에러 코드 체계(ACTION_API_ERROR, ACTION_RATE_LIMITED, PRICE_IMPACT_TOO_HIGH)와 슬리피지 제어 로직(기본값/상한/클램핑, bps-pct 단위 변환)이 완성되어, 프로바이더 간 일관된 에러 처리와 슬리피지 적용이 가능하다
   4. 4개 프로토콜의 정책 연동 플로우가 다이어그램과 함께 확정되어 -- resolve() -> Stage 2 경로, CONTRACT_WHITELIST 등록 대상, 크로스체인 출발 체인 정책 평가 규칙, 도착 주소 변조 방지 검증이 명문화된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 244-01: TBD
-- [ ] 244-02: TBD
-- [ ] 244-03: TBD
+- [ ] 244-01-PLAN.md -- DEFI-01 패키지 구조 + DEFI-02 API 변환 패턴 확정
+- [ ] 244-02-PLAN.md -- DEFI-03 정책 연동 설계 확정
 
 ### Phase 245: 런타임 동작 설계
 **Goal**: 브릿지/언스테이크 비동기 추적, 트랜잭션 상태 머신 확장, 통합 DB 마이그레이션, 안전성 방어(MEV/리베이스/stale calldata/API drift), 테스트 전략이 확정되어 구현 시 런타임 동작에 대한 설계 불확실성이 제거된다
@@ -279,5 +278,5 @@ Phases execute in numeric order: 244 -> 245
 | 231-234 | v27.2 | 9/9 | Complete | 2026-02-22 |
 | 235-238 | v27.3 | 7/7 | Complete | 2026-02-22 |
 | 239-243 | v27.4 | 9/9 | Complete | 2026-02-23 |
-| 244 | v28.0 | 0/? | Not started | - |
+| 244 | v28.0 | 0/2 | Not started | - |
 | 245 | v28.0 | 0/? | Not started | - |
