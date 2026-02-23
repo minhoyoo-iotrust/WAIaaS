@@ -416,6 +416,25 @@ describe('TransactionRequestSchema (discriminatedUnion 5-type)', () => {
       expect(result.to).toBe('0xContractAddr');
     });
 
+    it('ContractCallRequestSchema accepts optional actionProvider field', () => {
+      const result = ContractCallRequestSchema.parse({
+        type: 'CONTRACT_CALL',
+        to: '0xContractAddr',
+        calldata: '0xdeadbeef',
+        actionProvider: 'jupiter_swap',
+      });
+      expect(result.actionProvider).toBe('jupiter_swap');
+    });
+
+    it('ContractCallRequestSchema accepts object without actionProvider field', () => {
+      const result = ContractCallRequestSchema.parse({
+        type: 'CONTRACT_CALL',
+        to: '0xContractAddr',
+        calldata: '0xdeadbeef',
+      });
+      expect(result.actionProvider).toBeUndefined();
+    });
+
     it('BatchRequestSchema accepts mixed instruction types', () => {
       const result = BatchRequestSchema.parse({
         type: 'BATCH',

@@ -260,20 +260,23 @@ describe('ActionProviderRegistry', () => {
     expect(exposed[0].provider.metadata.name).toBe('exposed_one');
   });
 
-  // (l) executeResolve -- normal execution
+  // (l) executeResolve -- normal execution (returns array since v28.2)
   it('executeResolve calls resolve() and validates return with ContractCallRequestSchema', async () => {
     const registry = new ActionProviderRegistry();
     const provider = createMockProvider();
     registry.register(provider);
 
-    const result = await registry.executeResolve(
+    const results = await registry.executeResolve(
       'test_provider/swap_tokens',
       { tokenIn: 'USDC', tokenOut: 'WETH', amount: '1000000' },
       validContext,
     );
 
-    expect(result.type).toBe('CONTRACT_CALL');
-    expect(result.to).toBe('0x1234567890abcdef1234567890abcdef12345678');
+    expect(Array.isArray(results)).toBe(true);
+    expect(results).toHaveLength(1);
+    expect(results[0].type).toBe('CONTRACT_CALL');
+    expect(results[0].to).toBe('0x1234567890abcdef1234567890abcdef12345678');
+    expect(results[0].actionProvider).toBe('test_provider');
     expect(provider.resolve).toHaveBeenCalledWith(
       'swap_tokens',
       { tokenIn: 'USDC', tokenOut: 'WETH', amount: '1000000' },
@@ -381,5 +384,85 @@ describe('ActionProviderRegistry', () => {
 
     const meta = registry.listProviders();
     expect(meta[0].requiresApiKey).toBe(true);
+  });
+
+  // (p) executeResolve -- single result wrapped in array with actionProvider tag
+  it('executeResolve wraps single ContractCallRequest in array with actionProvider tag', async () => {
+    const registry = new ActionProviderRegistry();
+    const provider = createMockProvider();
+    registry.register(provider);
+
+    const results = await registry.executeResolve(
+      'test_provider/swap_tokens',
+      { tokenIn: 'USDC', tokenOut: 'WETH', amount: '1000000' },
+      validContext,
+    );
+
+    expect(Array.isArray(results)).toBe(true);
+    expect(results).toHaveLength(1);
+    expect(results[0].type).toBe('CONTRACT_CALL');
+    expect(results[0].actionProvider).toBe('test_provider');
+  });
+
+  // (q) executeResolve -- array result gets each element tagged with actionProvider
+  it('executeResolve tags each element in ContractCallRequest[] with actionProvider', async () => {
+    const registry = new ActionProviderRegistry();
+    const approveCall: ContractCallRequest = {
+      type: 'CONTRACT_CALL',
+      to: '0xTokenAddress0000000000000000000000000001',
+      calldata: '0x095ea7b3',
+      value: '0',
+    };
+    const swapCall: ContractCallRequest = {
+      type: 'CONTRACT_CALL',
+      to: '0xRouterAddress000000000000000000000000001',
+      calldata: '0x38ed1739',
+      value: '0',
+    };
+
+    const provider = createMockProvider({ name: 'multi_step' });
+    // Override resolve to return array
+    (provider.resolve as ReturnType<typeof vi.fn>).mockResolvedValue([approveCall, swapCall]);
+    registry.register(provider);
+
+    const results = await registry.executeResolve(
+      'multi_step/swap_tokens',
+      { tokenIn: 'USDC', tokenOut: 'WETH', amount: '1000000' },
+      validContext,
+    );
+
+    expect(results).toHaveLength(2);
+    expect(results[0].actionProvider).toBe('multi_step');
+    expect(results[0].to).toBe('0xTokenAddress0000000000000000000000000001');
+    expect(results[1].actionProvider).toBe('multi_step');
+    expect(results[1].to).toBe('0xRouterAddress000000000000000000000000001');
+  });
+
+  // (r) executeResolve -- invalid element in array throws ACTION_RETURN_INVALID
+  it('executeResolve throws ACTION_RETURN_INVALID for invalid array element', async () => {
+    const registry = new ActionProviderRegistry();
+    const validCall: ContractCallRequest = {
+      type: 'CONTRACT_CALL',
+      to: '0x1234567890abcdef1234567890abcdef12345678',
+      calldata: '0xdeadbeef',
+    };
+
+    const provider = createMockProvider({ name: 'bad_array' });
+    // Return array with one valid and one invalid element
+    (provider.resolve as ReturnType<typeof vi.fn>).mockResolvedValue([
+      validCall,
+      { invalid: 'data' }, // Missing required 'type' and 'to' fields
+    ]);
+    registry.register(provider);
+
+    await expect(
+      registry.executeResolve(
+        'bad_array/swap_tokens',
+        { tokenIn: 'USDC', tokenOut: 'WETH', amount: '1000000' },
+        validContext,
+      ),
+    ).rejects.toThrow(
+      expect.objectContaining({ code: 'ACTION_RETURN_INVALID' }),
+    );
   });
 });

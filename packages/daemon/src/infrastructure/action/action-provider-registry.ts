@@ -153,7 +153,10 @@ export class ActionProviderRegistry {
    * 1. Lookup action by key
    * 2. Validate input params via action.inputSchema.parse()
    * 3. Call provider.resolve()
-   * 4. Re-validate result via ContractCallRequestSchema.parse()
+   * 4. Normalize to array, re-validate each via ContractCallRequestSchema.parse()
+   * 5. Auto-tag each result with actionProvider = provider name
+   *
+   * Always returns an array (single results are wrapped).
    *
    * @throws WAIaaSError('ACTION_NOT_FOUND') if action key not found
    * @throws WAIaaSError('ACTION_VALIDATION_FAILED') if input validation fails
@@ -163,7 +166,7 @@ export class ActionProviderRegistry {
     actionKey: string,
     params: Record<string, unknown>,
     context: ActionContext,
-  ): Promise<ContractCallRequest> {
+  ): Promise<ContractCallRequest[]> {
     // 1. Lookup action
     const entry = this.actions.get(actionKey);
     if (!entry) {
@@ -185,22 +188,33 @@ export class ActionProviderRegistry {
     }
 
     // 3. Call provider.resolve()
-    const result = await entry.provider.resolve(
+    const rawResult = await entry.provider.resolve(
       entry.action.name,
       params,
       context,
     );
 
-    // 4. Re-validate return value (prevent policy bypass)
-    try {
-      return ContractCallRequestSchema.parse(result);
-    } catch (err) {
-      throw new WAIaaSError('ACTION_RETURN_INVALID', {
-        message: `Resolve return value schema validation failed for action '${actionKey}'`,
-        details: { actionKey },
-        cause: err as Error,
-      });
+    // 4. Normalize to array
+    const results = Array.isArray(rawResult) ? rawResult : [rawResult];
+
+    // 5. Re-validate each element + auto-tag with actionProvider
+    const validated: ContractCallRequest[] = [];
+    for (const item of results) {
+      try {
+        const parsed = ContractCallRequestSchema.parse(item);
+        // Auto-tag with provider name for provider-trust policy bypass
+        parsed.actionProvider = entry.provider.metadata.name;
+        validated.push(parsed);
+      } catch (err) {
+        throw new WAIaaSError('ACTION_RETURN_INVALID', {
+          message: `Resolve return value schema validation failed for action '${actionKey}'`,
+          details: { actionKey },
+          cause: err as Error,
+        });
+      }
     }
+
+    return validated;
   }
 
   /**
