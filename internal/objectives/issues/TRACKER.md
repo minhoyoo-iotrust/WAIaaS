@@ -167,8 +167,8 @@
 | 150 | ENHANCEMENT | LOW | 알림 카테고리 필터 전체 언체크 시 UX 혼동 — 전체 수신이 빈 체크로 표시 | v27.4 | FIXED | 2026-02-23 |
 | 151 | ENHANCEMENT | MEDIUM | CLI에서 에이전트 프롬프트(매직워드) 생성 명령어 추가 — `waiaas session prompt` | v27.4 | FIXED | 2026-02-23 |
 | 152 | ENHANCEMENT | MEDIUM | CLI에서 지갑 생성 명령어 추가 — `waiaas wallet create` | v27.4 | FIXED | 2026-02-23 |
-| 153 | ENHANCEMENT | MEDIUM | Admin UI Transactions + Incoming TX 페이지 통합 | — | OPEN | — |
-| 154 | ENHANCEMENT | LOW | Balance Monitoring 설정을 Notifications 페이지로 이동 | — | OPEN | — |
+| 153 | ENHANCEMENT | MEDIUM | Admin UI Transactions + Incoming TX 페이지 통합 | v28.1 | FIXED | 2026-02-23 |
+| 154 | ENHANCEMENT | LOW | Balance Monitoring 설정을 Notifications 페이지로 이동 | v28.1 | FIXED | 2026-02-23 |
 | 155 | ENHANCEMENT | MEDIUM | 알림 필터링을 이벤트 단위로 세분화 | — | OPEN | — |
 | 156 | BUG | MEDIUM | FilterBar / SearchInput CSS 스타일 누락으로 UI 엉성 | v28.1 | FIXED | 2026-02-23 |
 
@@ -182,8 +182,8 @@
 
 ## Summary
 
-- **OPEN:** 4
-- **FIXED:** 151
+- **OPEN:** 3
+- **FIXED:** 152
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1

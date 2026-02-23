@@ -957,6 +957,63 @@ describe('NotificationsPage - Additional Coverage', () => {
   // Initial loading state
   // -----------------------------------------------------------------------
 
+  describe('Balance Monitor tab', () => {
+    it('renders balance monitoring fields and saves settings', async () => {
+      vi.useRealTimers();
+
+      const mockSettingsData = {
+        monitoring: {
+          enabled: 'true',
+          check_interval_sec: '300',
+          low_balance_threshold_sol: '0.5',
+          low_balance_threshold_eth: '0.01',
+          cooldown_hours: '6',
+        },
+      };
+
+      vi.mocked(apiGet).mockImplementation((url: string) => {
+        if (url.includes('/notifications/status')) return Promise.resolve(mockStatus);
+        if (url.includes('/notifications/log')) return Promise.resolve(mockLogs);
+        if (url === '/v1/admin/settings') return Promise.resolve(mockSettingsData);
+        return Promise.resolve({});
+      });
+      vi.mocked(apiPut).mockResolvedValueOnce({ updated: 1, settings: mockSettingsData });
+
+      render(<NotificationsPage />);
+
+      // Switch to Balance Monitor tab
+      await waitFor(() => {
+        expect(screen.getByText('Balance Monitor')).toBeTruthy();
+      });
+      fireEvent.click(screen.getByText('Balance Monitor'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Balance Monitoring')).toBeTruthy();
+      });
+
+      // Should show monitoring description
+      expect(screen.getByText(/Periodic balance checks/)).toBeTruthy();
+
+      // Change cooldown hours
+      const cooldownInput = screen.getByLabelText('Alert Cooldown (hours)') as HTMLInputElement;
+      fireEvent.input(cooldownInput, { target: { value: '12' } });
+
+      await waitFor(() => {
+        expect(screen.getByText('Save')).toBeTruthy();
+      });
+
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/admin/settings', {
+          settings: expect.arrayContaining([
+            expect.objectContaining({ key: 'monitoring.cooldown_hours', value: '12' }),
+          ]),
+        });
+      });
+    });
+  });
+
   describe('loading skeleton', () => {
     it('shows skeleton cards during initial load', async () => {
       vi.useRealTimers();

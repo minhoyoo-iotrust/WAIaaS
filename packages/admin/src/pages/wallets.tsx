@@ -1229,13 +1229,6 @@ const RPC_DESCRIPTIONS: Record<string, string> = {
   evm_base_sepolia: 'RPC endpoint URL for Base Sepolia testnet',
 };
 
-const MONITORING_DESCRIPTIONS: Record<string, string> = {
-  enabled: 'Enable or disable balance monitoring',
-  check_interval_sec: 'How often to check wallet balances',
-  low_balance_threshold_sol: 'Alert when SOL balance drops below this amount',
-  low_balance_threshold_eth: 'Alert when ETH balance drops below this amount',
-  cooldown_hours: 'Suppress duplicate alerts for this many hours',
-};
 
 const evmNetworkOptions = [
   { label: 'Ethereum Mainnet', value: 'ethereum-mainnet' },
@@ -1442,151 +1435,6 @@ function RpcEndpointsTab() {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Balance Monitoring Tab
-// ---------------------------------------------------------------------------
-
-function BalanceMonitoringTab() {
-  const settings = useSignal<SettingsData>({});
-  const dirty = useSignal<Record<string, string>>({});
-  const saving = useSignal(false);
-  const loading = useSignal(true);
-
-  const fetchSettings = async () => {
-    try {
-      const result = await apiGet<SettingsData>(API.ADMIN_SETTINGS);
-      settings.value = result;
-    } catch (err) {
-      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
-      showToast('error', getErrorMessage(e.code));
-    } finally {
-      loading.value = false;
-    }
-  };
-
-  useEffect(() => {
-    fetchSettings();
-  }, []);
-
-  const handleFieldChange = (fullKey: string, value: string | number | boolean) => {
-    const strValue = typeof value === 'boolean' ? String(value) : String(value);
-    dirty.value = { ...dirty.value, [fullKey]: strValue };
-  };
-
-  const handleSave = async () => {
-    saving.value = true;
-    try {
-      const entries = Object.entries(dirty.value)
-        .filter(([key]) => key.startsWith('monitoring.'))
-        .map(([key, value]) => ({ key, value }));
-      const result = await apiPut<{ updated: number; settings: SettingsData }>(API.ADMIN_SETTINGS, { settings: entries });
-      settings.value = result.settings;
-      dirty.value = {};
-      showToast('success', 'Settings saved and applied');
-    } catch (err) {
-      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
-      showToast('error', getErrorMessage(e.code));
-    } finally {
-      saving.value = false;
-    }
-  };
-
-  const handleDiscard = () => {
-    dirty.value = {};
-  };
-
-  useEffect(() => {
-    registerDirty({
-      id: 'wallets-monitoring',
-      isDirty: () => Object.keys(dirty.value).filter(k => k.startsWith('monitoring.')).length > 0,
-      save: handleSave,
-      discard: handleDiscard,
-    });
-    return () => unregisterDirty('wallets-monitoring');
-  }, []);
-
-  const fields: { key: string; type: 'number' | 'checkbox'; min?: number; max?: number }[] = [
-    { key: 'enabled', type: 'checkbox' },
-    { key: 'check_interval_sec', type: 'number', min: 60, max: 86400 },
-    { key: 'low_balance_threshold_sol', type: 'number', min: 0 },
-    { key: 'low_balance_threshold_eth', type: 'number', min: 0 },
-    { key: 'cooldown_hours', type: 'number', min: 1, max: 168 },
-  ];
-
-  const dirtyCount = Object.keys(dirty.value).filter((k) => k.startsWith('monitoring.')).length;
-
-  if (loading.value) {
-    return (
-      <div class="empty-state">
-        <p>Loading settings...</p>
-      </div>
-    );
-  }
-
-  return (
-    <>
-      {/* Save bar -- sticky when dirty */}
-      {dirtyCount > 0 && (
-        <div class="settings-save-bar">
-          <span>{dirtyCount} unsaved change{dirtyCount > 1 ? 's' : ''}</span>
-          <div class="settings-save-bar-actions">
-            <Button variant="ghost" size="sm" onClick={handleDiscard}>
-              Discard
-            </Button>
-            <Button variant="primary" size="sm" onClick={handleSave} loading={saving.value}>
-              Save
-            </Button>
-          </div>
-        </div>
-      )}
-
-      <div class="settings-category">
-        <div class="settings-category-header">
-          <h3>Balance Monitoring</h3>
-          <p class="settings-description">
-            Periodic balance checks for all active wallets. Sends LOW_BALANCE alerts when
-            native token balance drops below thresholds. Changes apply immediately.
-          </p>
-        </div>
-        <div class="settings-category-body">
-          <div class="settings-fields-grid">
-            {fields.map((f) =>
-              f.type === 'checkbox' ? (
-                <div class="settings-field-full" key={f.key}>
-                  <FormField
-                    label={keyToLabel(f.key)}
-                    name={`monitoring.${f.key}`}
-                    type="checkbox"
-                    value={getEffectiveBoolValue(settings.value, dirty.value, 'monitoring', f.key)}
-                    onChange={(v) => handleFieldChange(`monitoring.${f.key}`, v)}
-                    description={MONITORING_DESCRIPTIONS[f.key]}
-                  />
-                </div>
-              ) : (
-                <FormField
-                  key={f.key}
-                  label={keyToLabel(f.key)}
-                  name={`monitoring.${f.key}`}
-                  type="number"
-                  value={Number(getEffectiveValue(settings.value, dirty.value, 'monitoring', f.key)) || 0}
-                  onChange={(v) => handleFieldChange(`monitoring.${f.key}`, v)}
-                  min={f.min}
-                  max={f.max}
-                  description={MONITORING_DESCRIPTIONS[f.key]}
-                />
-              ),
-            )}
-          </div>
-          <div class="settings-info-box">
-            Monitors all active wallet native token balances (SOL, ETH) at the configured interval.
-            When balance drops below threshold, a LOW_BALANCE notification is sent.
-            Duplicate alerts are suppressed for the cooldown period (per wallet).
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // WalletConnect Tab
@@ -2056,7 +1904,6 @@ function WalletListContent() {
 const WALLETS_TABS = [
   { key: 'wallets', label: 'Wallets' },
   { key: 'rpc', label: 'RPC Endpoints' },
-  { key: 'monitoring', label: 'Balance Monitoring' },
   { key: 'walletconnect', label: 'WalletConnect' },
 ];
 
@@ -2084,7 +1931,6 @@ function WalletListWithTabs() {
       <TabNav tabs={WALLETS_TABS} activeTab={activeTab.value} onTabChange={(k) => { activeTab.value = k; }} />
       {activeTab.value === 'wallets' && <WalletListContent />}
       {activeTab.value === 'rpc' && <RpcEndpointsTab />}
-      {activeTab.value === 'monitoring' && <BalanceMonitoringTab />}
       {activeTab.value === 'walletconnect' && <WalletConnectTab />}
     </div>
   );
