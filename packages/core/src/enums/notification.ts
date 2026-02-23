@@ -32,6 +32,7 @@ export const NOTIFICATION_EVENT_TYPES = [
   'UPDATE_AVAILABLE',
   'TX_INCOMING',
   'TX_INCOMING_SUSPICIOUS',
+  'ACTION_API_KEY_REQUIRED',
 ] as const;
 export type NotificationEventType = (typeof NOTIFICATION_EVENT_TYPES)[number];
 export const NotificationEventTypeEnum = z.enum(NOTIFICATION_EVENT_TYPES);

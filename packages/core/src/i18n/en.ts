@@ -4,7 +4,7 @@ import type { NotificationEventType } from '../enums/notification.js';
 /**
  * Messages type definition. Enforces key parity across all locales.
  * Keys in errors must match ERROR_CODES keys exactly (100 error codes).
- * Notification templates cover all 30 event types.
+ * Notification templates cover all 31 event types.
  */
 export interface Messages {
   errors: Record<ErrorCode, string>;
@@ -206,6 +206,7 @@ export const messages: Messages = {
     UPDATE_AVAILABLE: { title: 'WAIaaS Update Available', body: 'A new version {latestVersion} is available (current: {currentVersion}). Run `waiaas update` to update.' },
     TX_INCOMING: { title: 'Incoming Transaction Detected', body: '{walletName} received {amount} from {fromAddress} on {chain} {display_amount}' },
     TX_INCOMING_SUSPICIOUS: { title: 'Suspicious Incoming Transaction', body: '{walletName} received suspicious transaction: {amount} from {fromAddress}. Reasons: {reasons} {display_amount}' },
+    ACTION_API_KEY_REQUIRED: { title: 'API Key Required', body: '[WAIaaS] API key required for {provider}. Configure at {adminUrl} > System > API Keys' },
   },
   // System messages
   system: {

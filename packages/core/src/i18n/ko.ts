@@ -122,7 +122,7 @@ export const messages: Messages = {
     INVALID_SIGN_RESPONSE: '유효하지 않은 서명 응답 형식입니다',
     SIGN_REQUEST_ALREADY_PROCESSED: '이미 처리된 서명 요청입니다',
   },
-  // Notification templates (30 event types)
+  // Notification templates (31 event types)
   notifications: {
     TX_REQUESTED: { title: '거래 요청', body: '{walletName}이(가) {to}로 {amount} 전송을 요청했습니다 {display_amount}' },
     TX_QUEUED: { title: '거래 대기열 등록', body: '거래 {txId}가 처리 대기열에 등록되었습니다' },
@@ -154,6 +154,7 @@ export const messages: Messages = {
     UPDATE_AVAILABLE: { title: 'WAIaaS 업데이트 가능', body: '새 버전 {latestVersion}이(가) 출시되었습니다 (현재: {currentVersion}). `waiaas update`를 실행하여 업데이트하세요.' },
     TX_INCOMING: { title: '수신 트랜잭션 감지', body: '{walletName}이(가) {chain}에서 {fromAddress}로부터 {amount}을(를) 수신했습니다 {display_amount}' },
     TX_INCOMING_SUSPICIOUS: { title: '의심스러운 수신 트랜잭션', body: '{walletName}에 의심스러운 입금 감지: {fromAddress}로부터 {amount}. 사유: {reasons} {display_amount}' },
+    ACTION_API_KEY_REQUIRED: { title: 'API 키 필요', body: '[WAIaaS] {provider}에 API 키가 필요합니다. {adminUrl} > 시스템 > API 키에서 설정하세요' },
   },
   // System messages
   system: {
