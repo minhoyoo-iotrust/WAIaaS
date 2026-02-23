@@ -21,6 +21,7 @@
 - ✅ **v28.0 기본 DeFi 프로토콜 설계** -- Phases 244-245 (shipped 2026-02-23)
 - ✅ **v28.1 Jupiter Swap** -- Phases 246-247 (shipped 2026-02-23)
 - ✅ **v28.2 0x EVM DEX Swap** -- Phases 248-250 (shipped 2026-02-24)
+- 🚧 **v28.3 LI.FI 크로스체인 브릿지** -- Phases 251-253 (in progress)
 
 ## Phases
 
@@ -247,3 +248,70 @@ See `.planning/milestones/v28.1-ROADMAP.md` for full details.
 See `.planning/milestones/v28.2-ROADMAP.md` for full details.
 
 </details>
+
+### 🚧 v28.3 LI.FI 크로스체인 브릿지 (In Progress)
+
+**Milestone Goal:** LI.FI 메타 애그리게이터를 ActionProvider로 구현하여 AI 에이전트가 체인 간(Solana<->EVM, EVM<->EVM) 자산 브릿지/스왑을 수행할 수 있도록 한다. m28-04/m28-05가 재사용할 비동기 상태 추적 공통 인프라를 함께 구축한다.
+
+- [ ] **Phase 251: 비동기 상태 추적 공통 인프라** - IAsyncStatusTracker 인터페이스 + AsyncPollingService 폴링 스케줄러 + DB v23 마이그레이션(bridge_status/bridge_metadata/GAS_WAITING/partial index)
+- [ ] **Phase 252: LiFi ActionProvider + 정책 연동 + 알림** - LiFiApiClient + LiFiActionProvider(bridge/cross_swap) + BridgeStatusTracker 2단계 폴링 + 출발 체인 정책 평가 + SPENDING_LIMIT 예약 해제 + 5개 브릿지 알림 이벤트
+- [ ] **Phase 253: 인터페이스 통합** - MCP 2개 도구 자동 노출 + TS/Python SDK executeAction + actions.skill.md 문서
+
+## Phase Details
+
+### Phase 251: 비동기 상태 추적 공통 인프라
+**Goal**: m28-03/04/05가 공유하는 비동기 작업 상태 추적 기반이 완성되어, tracker를 등록하면 DB 기반 폴링이 자동으로 동작하는 상태
+**Depends on**: Nothing (first phase)
+**Requirements**: ASNC-01, ASNC-02, ASNC-03, ASNC-04, ASNC-05, ASNC-06
+**Success Criteria** (what must be TRUE):
+  1. IAsyncStatusTracker 인터페이스가 존재하고 checkStatus/name/maxAttempts/pollIntervalMs/timeoutTransition 메서드/속성을 표준화한다
+  2. AsyncPollingService에 tracker를 등록하면 DB에서 해당 tracker의 추적 대상을 조회하고 per-tracker 타이밍(pollIntervalMs/lastPolledAt)에 따라 선택적으로 폴링한다
+  3. DB v23 마이그레이션 적용 시 transactions 테이블에 bridge_status(6-value CHECK) + bridge_metadata(TEXT) 컬럼이 존재하고, TRANSACTION_STATUSES가 GAS_WAITING 포함 11개이다
+  4. DB v23 마이그레이션 적용 시 idx_transactions_bridge_status, idx_transactions_gas_waiting partial index 2개가 sqlite_master에 존재한다
+  5. AsyncPollingService가 BackgroundWorkers에 30초 간격으로 등록되어 pollAll()이 주기적으로 실행된다
+**Plans**: 2 plans
+
+Plans:
+- [ ] 251-01: IAsyncStatusTracker 인터페이스 + DB v23 마이그레이션 + 마이그레이션 테스트
+- [ ] 251-02: AsyncPollingService + BackgroundWorkers 등록 + 폴링 테스트
+
+### Phase 252: LiFi ActionProvider + 정책 연동 + 알림
+**Goal**: AI 에이전트가 LI.FI를 통해 크로스체인 브릿지/스왑을 실행하고, 출발 체인 정책 평가를 받으며, 브릿지 완료/실패/환불 시 알림을 수신하고 SPENDING_LIMIT 예약이 올바르게 해제되는 상태
+**Depends on**: Phase 251
+**Requirements**: LIFI-01, LIFI-02, LIFI-03, LIFI-04, LIFI-05, LIFI-06, LIFI-07, LIFI-08, LIFI-09, PLCY-01, PLCY-02, PLCY-03, NTFY-01, NTFY-02
+**Success Criteria** (what must be TRUE):
+  1. LiFiApiClient가 LI.FI /quote API로 크로스체인 경로+calldata를 조회하고 /status API로 브릿지 상태를 조회할 수 있으며 응답이 Zod 스키마로 검증된다
+  2. LiFiActionProvider의 cross_swap/bridge 액션이 ContractCallRequest를 반환하고, 슬리피지 기본 3%/최대 5% 클램프가 적용되며, API 에러 시 ACTION_API_ERROR + 미지원 체인 시 명확한 에러를 반환한다
+  3. BridgeStatusTracker가 활성 폴링(30초x240회=2시간) 후 BRIDGE_MONITORING 전환, 축소 폴링(5분x264회=22시간)에서 COMPLETED/FAILED/REFUNDED/TIMEOUT을 감지하고 대응 알림 이벤트를 발행한다
+  4. 크로스체인 브릿지 정책 평가가 출발 체인 월렛 기준으로 수행되고, provider-trust 바이패스가 적용되며, COMPLETED/FAILED/REFUNDED 시 SPENDING_LIMIT 예약 해제 + BRIDGE_MONITORING/TIMEOUT 시 예약 유지된다
+  5. BRIDGE_COMPLETED/BRIDGE_FAILED/BRIDGE_MONITORING_STARTED/BRIDGE_TIMEOUT/BRIDGE_REFUNDED 5개 NotificationEventType이 en/ko i18n 메시지 템플릿과 함께 동작한다
+**Plans**: 3 plans
+
+Plans:
+- [ ] 252-01: LiFiApiClient + Zod 스키마 + config.toml 설정
+- [ ] 252-02: LiFiActionProvider(cross_swap/bridge 액션) + 슬리피지 클램프 + 에러 처리
+- [ ] 252-03: BridgeStatusTracker(2단계 폴링) + 정책 예약 해제 + 알림 이벤트 5개 + i18n
+
+### Phase 253: 인터페이스 통합
+**Goal**: AI 에이전트가 MCP 도구, SDK, 스킬 파일을 통해 LI.FI 크로스체인 브릿지/스왑을 발견하고 실행할 수 있는 상태
+**Depends on**: Phase 252
+**Requirements**: INTG-01, INTG-02, INTG-03
+**Success Criteria** (what must be TRUE):
+  1. MCP tool 목록에 waiaas_lifi_bridge와 waiaas_lifi_cross_swap 2개 도구가 노출되고 정상 호출된다
+  2. TS SDK executeAction('lifi_bridge'/'lifi_cross_swap') 및 Python SDK execute_action()으로 크로스체인 브릿지/스왑을 실행할 수 있다
+  3. actions.skill.md에 LI.FI 크로스체인 브릿지 사용법, 파라미터, 예제가 문서화되어 있다
+**Plans**: 1 plan
+
+Plans:
+- [ ] 253-01: MCP 도구 노출 확인 + SDK 연동 테스트 + actions.skill.md 업데이트
+
+## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 251 → 252 → 253
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 251. 비동기 상태 추적 공통 인프라 | v28.3 | 0/2 | Not started | - |
+| 252. LiFi ActionProvider + 정책 연동 + 알림 | v28.3 | 0/3 | Not started | - |
+| 253. 인터페이스 통합 | v28.3 | 0/1 | Not started | - |
