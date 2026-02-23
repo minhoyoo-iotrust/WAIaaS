@@ -63,34 +63,34 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PINF-01 | — | Pending |
-| PINF-02 | — | Pending |
-| PINF-03 | — | Pending |
-| PINF-04 | — | Pending |
-| PINF-05 | — | Pending |
-| PINF-06 | — | Pending |
-| PINF-07 | — | Pending |
-| PINF-08 | — | Pending |
-| ZXSW-01 | — | Pending |
-| ZXSW-02 | — | Pending |
-| ZXSW-03 | — | Pending |
-| ZXSW-04 | — | Pending |
-| ZXSW-05 | — | Pending |
-| ZXSW-06 | — | Pending |
-| ZXSW-07 | — | Pending |
-| ZXSW-08 | — | Pending |
-| ZXSW-09 | — | Pending |
-| ZXSW-10 | — | Pending |
-| INTG-01 | — | Pending |
-| INTG-02 | — | Pending |
-| INTG-03 | — | Pending |
-| INTG-04 | — | Pending |
+| PINF-01 | Phase 248 | Pending |
+| PINF-02 | Phase 248 | Pending |
+| PINF-03 | Phase 248 | Pending |
+| PINF-04 | Phase 248 | Pending |
+| PINF-05 | Phase 248 | Pending |
+| PINF-06 | Phase 248 | Pending |
+| PINF-07 | Phase 248 | Pending |
+| PINF-08 | Phase 248 | Pending |
+| ZXSW-01 | Phase 249 | Pending |
+| ZXSW-02 | Phase 249 | Pending |
+| ZXSW-03 | Phase 249 | Pending |
+| ZXSW-04 | Phase 249 | Pending |
+| ZXSW-05 | Phase 249 | Pending |
+| ZXSW-06 | Phase 249 | Pending |
+| ZXSW-07 | Phase 249 | Pending |
+| ZXSW-08 | Phase 249 | Pending |
+| ZXSW-09 | Phase 249 | Pending |
+| ZXSW-10 | Phase 249 | Pending |
+| INTG-01 | Phase 250 | Pending |
+| INTG-02 | Phase 250 | Pending |
+| INTG-03 | Phase 250 | Pending |
+| INTG-04 | Phase 250 | Pending |
 
 **Coverage:**
 - v28.2 requirements: 22 total
-- Mapped to phases: 0
-- Unmapped: 22 ⚠️
+- Mapped to phases: 22
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-23*
-*Last updated: 2026-02-23 after initial definition*
+*Last updated: 2026-02-23 after roadmap creation*
