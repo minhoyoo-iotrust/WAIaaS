@@ -124,8 +124,8 @@ describe('SEC-11-01: Spoofed address in resolve() return', () => {
     // Schema validation passes (to is a valid string), but the to address is the attacker's
     // The security defense here is that the pipeline evaluates CONTRACT_WHITELIST
     // against this returned 'to' address -- the registry ensures schema compliance
-    expect(result.to).toBe('0xAttackerContract');
-    expect(result.type).toBe('CONTRACT_CALL');
+    expect(result[0].to).toBe('0xAttackerContract');
+    expect(result[0].type).toBe('CONTRACT_CALL');
   });
 });
 
@@ -197,8 +197,8 @@ describe('SEC-11-03: Chain format mismatch in resolve result', () => {
     );
 
     // Schema passes (all fields are valid strings), but chain adapter would catch mismatch
-    expect(result.type).toBe('CONTRACT_CALL');
-    expect(result.calldata).toBe('0xa9059cbb');
+    expect(result[0].type).toBe('CONTRACT_CALL');
+    expect(result[0].calldata).toBe('0xa9059cbb');
   });
 });
 
@@ -437,7 +437,7 @@ describe('SEC-11-11: Different providers can have same action name', () => {
     const resultA = await registry.executeResolve('provider_aaa/mock_action', { amount: '100' }, testContext);
     const resultB = await registry.executeResolve('provider_bbb/mock_action', { amount: '100' }, testContext);
 
-    expect(resultA.to).not.toBe(resultB.to);
+    expect(resultA[0].to).not.toBe(resultB[0].to);
   });
 });
 
@@ -576,7 +576,7 @@ describe('SEC-11-15: Large instructionData in resolve result', () => {
       testContext,
     );
 
-    expect(result.calldata).toBe(largeData);
+    expect(result[0].calldata).toBe(largeData);
   });
 });
 
@@ -600,7 +600,7 @@ describe('SEC-11-16: Provider chains field mismatch', () => {
       testContext,
     );
 
-    expect(result.type).toBe('CONTRACT_CALL');
+    expect(result[0].type).toBe('CONTRACT_CALL');
     // Note: This test documents that chain enforcement is NOT at registry level
     // Pipeline (stage 2-3) must validate chain compatibility
   });
