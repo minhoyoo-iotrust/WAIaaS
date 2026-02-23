@@ -142,7 +142,7 @@ export class DaemonLifecycle {
   private telegramBotRef: { current: import('../infrastructure/telegram/telegram-bot-service.js').TelegramBotService | null } = { current: null };
   private wcSessionService: import('../services/wc-session-service.js').WcSessionService | null = null;
   private wcServiceRef: import('../services/wc-session-service.js').WcServiceRef = { current: null };
-  private wcSigningBridge: import('../services/wc-signing-bridge.js').WcSigningBridge | null = null;
+  private wcSigningBridgeRef: import('../services/wc-signing-bridge.js').WcSigningBridgeRef = { current: null };
   private approvalChannelRouter: import('../services/signing-sdk/approval-channel-router.js').ApprovalChannelRouter | null = null;
   private _versionCheckService: import('../infrastructure/version/version-check-service.js').VersionCheckService | null = null;
   private incomingTxMonitorService: import('../services/incoming/incoming-tx-monitor-service.js').IncomingTxMonitorService | null = null;
@@ -663,7 +663,7 @@ export class DaemonLifecycle {
     try {
       if (this.wcSessionService && this.approvalWorkflow && this.sqlite) {
         const { WcSigningBridge } = await import('../services/wc-signing-bridge.js');
-        this.wcSigningBridge = new WcSigningBridge({
+        this.wcSigningBridgeRef.current = new WcSigningBridge({
           wcServiceRef: this.wcServiceRef,
           approvalWorkflow: this.approvalWorkflow,
           sqlite: this.sqlite,
@@ -674,7 +674,7 @@ export class DaemonLifecycle {
       }
     } catch (err) {
       console.warn('Step 4c-7 (fail-soft): WcSigningBridge init warning:', err);
-      this.wcSigningBridge = null;
+      this.wcSigningBridgeRef.current = null;
     }
 
     // ------------------------------------------------------------------
@@ -927,6 +927,8 @@ export class DaemonLifecycle {
           autoStopService: this.autoStopService,
           balanceMonitorService: this.balanceMonitorService,
           wcServiceRef: this.wcServiceRef,
+          wcSigningBridgeRef: this.wcSigningBridgeRef,
+          approvalWorkflow: this.approvalWorkflow,
           sqlite: this.sqlite,
           telegramBotRef: this.telegramBotRef,
           killSwitchService: this.killSwitchService,
@@ -962,7 +964,7 @@ export class DaemonLifecycle {
           eventBus: this.eventBus,
           killSwitchService: this.killSwitchService ?? undefined,
           wcServiceRef: this.wcServiceRef,
-          wcSigningBridge: this.wcSigningBridge ?? undefined,
+          wcSigningBridgeRef: this.wcSigningBridgeRef,
           approvalChannelRouter: this.approvalChannelRouter ?? undefined,
           versionCheckService: this._versionCheckService,
         });

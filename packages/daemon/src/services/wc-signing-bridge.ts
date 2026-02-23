@@ -92,6 +92,9 @@ function encodeBase58(buf: Buffer): string {
 // Types
 // ---------------------------------------------------------------------------
 
+/** Mutable ref for hot-reload: routes dereference .current at request time. */
+export type WcSigningBridgeRef = { current: WcSigningBridge | null };
+
 export interface WcSigningBridgeDeps {
   wcServiceRef: WcServiceRef;
   approvalWorkflow: ApprovalWorkflow;

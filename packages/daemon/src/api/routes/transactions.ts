@@ -48,7 +48,7 @@ import type { OwnerLifecycleService } from '../../workflow/owner-state.js';
 import type { NotificationService } from '../../notifications/notification-service.js';
 import type { IPriceOracle, IForexRateService, EventBus } from '@waiaas/core';
 import type { SettingsService } from '../../infrastructure/settings/settings-service.js';
-import type { WcSigningBridge } from '../../services/wc-signing-bridge.js';
+import type { WcSigningBridgeRef } from '../../services/wc-signing-bridge.js';
 import type { ApprovalChannelRouter } from '../../services/signing-sdk/approval-channel-router.js';
 import {
   TransactionRequestOpenAPI,
@@ -90,7 +90,7 @@ export interface TransactionRouteDeps {
   settingsService?: SettingsService;
   forexRateService?: IForexRateService;
   eventBus?: EventBus;
-  wcSigningBridge?: WcSigningBridge;
+  wcSigningBridgeRef?: WcSigningBridgeRef;
   approvalChannelRouter?: ApprovalChannelRouter;
 }
 
@@ -372,7 +372,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
       settingsService: deps.settingsService,
       forexRateService: deps.forexRateService,
       eventBus: deps.eventBus,
-      wcSigningBridge: deps.wcSigningBridge,
+      wcSigningBridge: deps.wcSigningBridgeRef?.current ?? undefined,
       approvalChannelRouter: deps.approvalChannelRouter,
     };
 
