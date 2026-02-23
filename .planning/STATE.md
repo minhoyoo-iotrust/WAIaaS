@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 
 Milestone: v28.2 0x EVM DEX Swap
 Phase: 248 of 250 (Provider Infrastructure)
-Plan: 0 of 3 in current phase
-Status: Ready to plan
-Last activity: 2026-02-23 -- Roadmap created (3 phases, 6 plans, 22 requirements)
+Plan: 1 of 3 in current phase
+Status: Executing
+Last activity: 2026-02-23 -- Completed 248-01-PLAN.md (provider infrastructure foundation)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
@@ -31,6 +31,9 @@ Progress: [░░░░░░░░░░] 0%
 - v28.2: resolve() -> ContractCallRequest[] 배열 (순차 파이프라인)
 - v28.2: config.toml [actions] 폐지 -> Admin Settings 단일 관리
 - v28.2: ACTION_API_KEY_REQUIRED 알림 이벤트 추가
+- 248-01: SettingsReader interface -- minimal contract between @waiaas/actions and daemon SettingsService
+- 248-01: Notify-before-throw pattern -- fire notification before error throw for actionable admin guidance
+- 248-01: ACTION_API_KEY_REQUIRED categorized as 'system' (operational guidance, not security alert)
 
 ### Blockers/Concerns
 
@@ -39,5 +42,5 @@ Progress: [░░░░░░░░░░] 0%
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Roadmap created for v28.2. Ready to plan Phase 248.
+Stopped at: Completed 248-01-PLAN.md
 Resume file: None
