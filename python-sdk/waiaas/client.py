@@ -556,7 +556,7 @@ class WAIaaSClient:
         executes them through the 6-stage transaction pipeline.
 
         Args:
-            provider: Action provider name (e.g., '0x-swap', 'jupiter_swap').
+            provider: Action provider name (e.g., 'zerox_swap', 'jupiter_swap').
             action: Action name (e.g., 'swap').
             params: Action-specific parameters as key-value dict.
             network: Target network. Defaults to wallet default network.
