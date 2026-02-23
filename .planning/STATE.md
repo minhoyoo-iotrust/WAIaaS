@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-23)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v28.2 0x EVM DEX Swap -- Phase 248 Provider Infrastructure
+**Current focus:** v28.2 0x EVM DEX Swap -- Phase 249 0x Swap Provider
 
 ## Current Position
 
 Milestone: v28.2 0x EVM DEX Swap
-Phase: 248 of 250 (Provider Infrastructure)
-Plan: 3 of 3 in current phase
+Phase: 249 of 250 (0x Swap Provider)
+Plan: 1 of 2 in current phase
 Status: Executing
-Last activity: 2026-02-23 -- Completed 248-03-PLAN.md (Admin UI Actions page)
+Last activity: 2026-02-23 -- Completed 249-01-PLAN.md (ZeroExApiClient + schemas + config)
 
-Progress: [██████████] 100%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
@@ -41,6 +41,9 @@ Progress: [██████████] 100%
 - 248-03: Static BUILTIN_PROVIDERS client-side array for provider cards independent of daemon registration
 - 248-03: Three-state status: Active (enabled+registered), Requires API Key (enabled+missing), Inactive (disabled)
 - 248-03: Toggle saves immediately via apiPut single-setting update
+- 249-01: AllowanceHolder address identical across all 20 chains -- single constant with Map lookup
+- 249-01: CHAIN_ID_MAP only maps 5 mainnet EVM networks in NETWORK_TYPES
+- 249-01: PriceResponseSchema .passthrough() for API drift tolerance
 
 ### Blockers/Concerns
 
@@ -49,5 +52,5 @@ Progress: [██████████] 100%
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Completed 248-03-PLAN.md
+Stopped at: Completed 249-01-PLAN.md
 Resume file: None

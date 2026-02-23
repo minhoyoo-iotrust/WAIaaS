@@ -277,7 +277,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 249-01-PLAN.md -- ZeroExApiClient + Zod schemas + config + AllowanceHolder mapping + tests
+- [x] 249-01-PLAN.md -- ZeroExApiClient + Zod schemas + config + AllowanceHolder mapping + tests
 - [ ] 249-02-PLAN.md -- ZeroExSwapActionProvider (approve+swap resolution) + registerBuiltInProviders wiring + tests
 
 ### Phase 250: Integration
@@ -301,5 +301,5 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 248. Provider Infrastructure | 3/3 | Complete    | 2026-02-23 | - |
-| 249. 0x Swap Provider | v28.2 | 0/2 | Not started | - |
+| 249. 0x Swap Provider | v28.2 | 1/2 | In progress | - |
 | 250. Integration | v28.2 | 0/1 | Not started | - |
