@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 
 Milestone: v28.2 0x EVM DEX Swap
 Phase: 248 of 250 (Provider Infrastructure)
-Plan: 1 of 3 in current phase
+Plan: 3 of 3 in current phase
 Status: Executing
-Last activity: 2026-02-23 -- Completed 248-01-PLAN.md (provider infrastructure foundation)
+Last activity: 2026-02-23 -- Completed 248-03-PLAN.md (Admin UI Actions page)
 
-Progress: [███░░░░░░░] 33%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -34,6 +34,9 @@ Progress: [███░░░░░░░] 33%
 - 248-01: SettingsReader interface -- minimal contract between @waiaas/actions and daemon SettingsService
 - 248-01: Notify-before-throw pattern -- fire notification before error throw for actionable admin guidance
 - 248-01: ACTION_API_KEY_REQUIRED categorized as 'system' (operational guidance, not security alert)
+- 248-03: Static BUILTIN_PROVIDERS client-side array for provider cards independent of daemon registration
+- 248-03: Three-state status: Active (enabled+registered), Requires API Key (enabled+missing), Inactive (disabled)
+- 248-03: Toggle saves immediately via apiPut single-setting update
 
 ### Blockers/Concerns
 
@@ -42,5 +45,5 @@ Progress: [███░░░░░░░] 33%
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Completed 248-01-PLAN.md
+Stopped at: Completed 248-03-PLAN.md
 Resume file: None

@@ -300,6 +300,6 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 248. Provider Infrastructure | 1/3 | In Progress|  | - |
+| 248. Provider Infrastructure | 2/3 | In Progress|  | - |
 | 249. 0x Swap Provider | v28.2 | 0/2 | Not started | - |
 | 250. Integration | v28.2 | 0/1 | Not started | - |
