@@ -257,12 +257,12 @@ See `.planning/milestones/v28.1-ROADMAP.md` for full details.
   3. API 키 미설정 상태에서 스왑 시도 시 ACTION_API_KEY_REQUIRED 알림이 adminUrl 필드와 함께 발송된다
   4. resolve()가 ContractCallRequest 배열을 반환하면 actions route가 각 요소를 순차적으로 6-stage 파이프라인에 통과시킨다
   5. actionProvider 태그가 있는 ContractCallRequest는 해당 프로바이더가 활성화 상태일 때 CONTRACT_WHITELIST 검사를 건너뛴다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 248-01: Admin Settings actions 카테고리 + config.toml 이관 + 알림 이벤트
-- [ ] 248-02: resolve() 배열 반환 + 순차 파이프라인 + provider-trust 정책
-- [ ] 248-03: Admin UI Actions 페이지
+- [ ] 248-01-PLAN.md -- Admin Settings actions category + config.toml migration + ACTION_API_KEY_REQUIRED notification
+- [ ] 248-02-PLAN.md -- resolve() array return + sequential pipeline + provider-trust policy
+- [ ] 248-03-PLAN.md -- Admin UI Actions page
 
 ### Phase 249: 0x Swap Provider
 **Goal**: AI 에이전트가 EVM 체인에서 0x Swap API v2를 통해 토큰 스왑을 실행할 수 있다
