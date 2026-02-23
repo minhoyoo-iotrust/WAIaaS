@@ -1,5 +1,29 @@
 # Changelog
 
+## [2.6.0-rc.9](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.6.0-rc.8...v2.6.0-rc.9) (2026-02-23)
+
+
+### Features
+
+* **251-01:** add IAsyncStatusTracker interface, GAS_WAITING enum, DB v23 migration ([7e59708](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7e59708b324e7ddb06781cc62a5d77309a69c8d0))
+* **251-02:** add AsyncPollingService with BackgroundWorkers integration ([5a51b25](https://github.com/minhoyoo-iotrust/WAIaaS/commit/5a51b25afea73f7bb26c5e15ef0748c06c9b0190))
+* **252-01:** add LiFiApiClient, Zod schemas, config, daemon settings ([4071bec](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4071becd9e84cb296ba03dda776c17f4d8319b99))
+* **252-02:** add LiFiActionProvider with cross_swap and bridge actions ([b40d079](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b40d079a3e9692c3e48f91502d74a627f2a02ada))
+* **252-03:** add BridgeStatusTracker, notifications, and reservation release ([5803855](https://github.com/minhoyoo-iotrust/WAIaaS/commit/58038552831a5df6cf7e65cfdc924c6100419ba5))
+* **253-01:** add LI.FI cross-chain bridge documentation to actions.skill.md ([48a1771](https://github.com/minhoyoo-iotrust/WAIaaS/commit/48a1771898e75775fbe1922c58e2775aa99342d7))
+* LI.FI cross-chain bridge integration (Phases 251-253) ([bb3e676](https://github.com/minhoyoo-iotrust/WAIaaS/commit/bb3e6764aa383db0a0df5a38adf23c53196feba0))
+
+
+### Bug Fixes
+
+* **253-01:** remove unused consoleSpy variable in LiFi MCP test ([0f7162d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0f7162dee1664955025dc3443d9e1b731160127c))
+* correct UNSUPPORTED_CHAIN error code to INVALID_INSTRUCTION in skill file ([d0526c3](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d0526c3f716fee245f32555a45109777f4b75d19))
+* extract rpcConfigKey helper to prevent RPC key duplication ([#167](https://github.com/minhoyoo-iotrust/WAIaaS/issues/167)) ([81879a0](https://github.com/minhoyoo-iotrust/WAIaaS/commit/81879a01d57c6fc84daf5384d4b01e352ef6783b))
+* remove redundant chain prefix from EVM RPC setting key in subscriberFactory ([#167](https://github.com/minhoyoo-iotrust/WAIaaS/issues/167)) ([406ee03](https://github.com/minhoyoo-iotrust/WAIaaS/commit/406ee03634c01f2a22cdcc2bdb9da43f572262f6))
+* update enum SSoT expected counts for LI.FI bridge additions ([4327048](https://github.com/minhoyoo-iotrust/WAIaaS/commit/432704861cd57c3a1a172dfe6c42c220c73162ac))
+* update stale test fixtures for DB v23, LiFi settings, and bridge events ([f7b59b0](https://github.com/minhoyoo-iotrust/WAIaaS/commit/f7b59b0ef1a89e52db975c5716fdba7eeab79e99))
+* update test fixtures for DB v23 migration and LiFi config keys ([af7cd7c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/af7cd7c06d507d3fcc770ecc1b164b4623e00e12))
+
 ## [2.6.0-rc.8](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.6.0-rc.7...v2.6.0-rc.8) (2026-02-23)
 
 
