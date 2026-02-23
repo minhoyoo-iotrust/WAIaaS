@@ -9,6 +9,7 @@
  *      4c-6. WalletConnect service (fail-soft)
  *      4c-8. Signing SDK lifecycle (fail-soft)
  *      4c-9. IncomingTxMonitorService (fail-soft)
+ *      4c-10. AsyncPollingService (fail-soft)
  *   5. HTTP server start (5s, fail-fast)
  *   6. Background workers + PID (no timeout, fail-soft)
  *
@@ -38,13 +39,13 @@ import type { AutoStopConfig } from '../services/autostop-service.js';
 import type { BalanceMonitorService, BalanceMonitorConfig } from '../services/monitoring/balance-monitor-service.js';
 import type { ChainType, NetworkType, EnvironmentType } from '@waiaas/core';
 import type { AdapterPool } from '../infrastructure/adapter-pool.js';
-import { resolveRpcUrl } from '../infrastructure/adapter-pool.js';
+import { resolveRpcUrl, rpcConfigKey } from '../infrastructure/adapter-pool.js';
 import { createDatabase, pushSchema, checkSchemaCompatibility } from '../infrastructure/database/index.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/index.js';
 import { loadConfig } from '../infrastructure/config/index.js';
 import type { DaemonConfig } from '../infrastructure/config/index.js';
 import { BackgroundWorkers } from './workers.js';
-import { keyValueStore } from '../infrastructure/database/schema.js';
+import { keyValueStore, transactions as txTable } from '../infrastructure/database/schema.js';
 import type * as schema from '../infrastructure/database/schema.js';
 import { eq } from 'drizzle-orm';
 import { decrypt } from '../infrastructure/keystore/crypto.js';
@@ -146,6 +147,7 @@ export class DaemonLifecycle {
   private approvalChannelRouter: import('../services/signing-sdk/approval-channel-router.js').ApprovalChannelRouter | null = null;
   private _versionCheckService: import('../infrastructure/version/version-check-service.js').VersionCheckService | null = null;
   private incomingTxMonitorService: import('../services/incoming/incoming-tx-monitor-service.js').IncomingTxMonitorService | null = null;
+  private _asyncPollingService: import('../services/async-polling-service.js').AsyncPollingService | null = null;
 
   /** Whether shutdown has been initiated. */
   get isShuttingDown(): boolean {
@@ -170,6 +172,11 @@ export class DaemonLifecycle {
   /** VersionCheckService instance (available after Step 6, used by Health endpoint). */
   get versionCheckService(): import('../infrastructure/version/version-check-service.js').VersionCheckService | null {
     return this._versionCheckService;
+  }
+
+  /** AsyncPollingService instance (available after Step 4c-10, used by action providers to register trackers). */
+  get pollingService(): import('../services/async-polling-service.js').AsyncPollingService | null {
+    return this._asyncPollingService;
   }
 
   /**
@@ -783,15 +790,14 @@ export class DaemonLifecycle {
           const subscriberFactory = async (chain: string, network: string) => {
             const sSvc = this._settingsService!;
             if (chain === 'solana') {
-              const rpcUrl = sSvc.get(`rpc.solana_${network}`);
+              const rpcUrl = sSvc.get(`rpc.${rpcConfigKey(chain, network)}`);
               // WSS URL: derive from RPC URL (replace https:// with wss://)
               const wssUrl = sSvc.get('incoming.wss_url') || rpcUrl.replace(/^https:\/\//, 'wss://');
               const { SolanaIncomingSubscriber } = await import('@waiaas/adapter-solana');
               return new SolanaIncomingSubscriber({ rpcUrl, wsUrl: wssUrl });
             }
             // EVM chains
-            const rpcKey = `rpc.evm_${chain}_${network.replace(/-/g, '_')}`;
-            const rpcUrl = sSvc.get(rpcKey);
+            const rpcUrl = sSvc.get(`rpc.${rpcConfigKey(chain, network)}`);
             const { EvmIncomingSubscriber } = await import('@waiaas/adapter-evm');
             return new EvmIncomingSubscriber({ rpcUrl });
           };
@@ -814,6 +820,39 @@ export class DaemonLifecycle {
     } catch (err) {
       console.warn('Step 4c-9 (fail-soft): Incoming TX monitor init warning:', err);
       this.incomingTxMonitorService = null;
+    }
+
+    // ------------------------------------------------------------------
+    // Step 4c-10: AsyncPollingService initialization (fail-soft)
+    // ------------------------------------------------------------------
+    try {
+      if (this._db) {
+        const { AsyncPollingService } = await import('../services/async-polling-service.js');
+        this._asyncPollingService = new AsyncPollingService(this._db, {
+          emitNotification: (eventType, walletId, data) => {
+            if (this.notificationService) {
+              void this.notificationService.notify(
+                eventType as import('@waiaas/core').NotificationEventType,
+                walletId,
+                undefined, // vars (template interpolation — not needed for bridge events)
+                data,      // details (metadata passed through to notification)
+              );
+            }
+          },
+          releaseReservation: (txId) => {
+            // Reset reserved_amount and reserved_amount_usd to 0 for the transaction
+            this._db!
+              .update(txTable)
+              .set({ reservedAmount: '0', reservedAmountUsd: null })
+              .where(eq(txTable.id, txId))
+              .run();
+          },
+        });
+        console.debug('Step 4c-10: AsyncPollingService initialized (with callbacks)');
+      }
+    } catch (err) {
+      console.warn('Step 4c-10 (fail-soft): AsyncPollingService init warning:', err);
+      this._asyncPollingService = null;
     }
 
     // ------------------------------------------------------------------
@@ -897,6 +936,28 @@ export class DaemonLifecycle {
       }
     } catch (err) {
       console.warn('Step 4f (fail-soft): ActionProviderRegistry init warning:', err);
+    }
+
+    // ------------------------------------------------------------------
+    // Step 4f-2: Register bridge status trackers when lifi is enabled
+    // ------------------------------------------------------------------
+    if (this._asyncPollingService && this._settingsService?.get('actions.lifi_enabled') === 'true') {
+      try {
+        const { BridgeStatusTracker, BridgeMonitoringTracker } = await import('@waiaas/actions');
+        const lifiConfig = {
+          enabled: true,
+          apiBaseUrl: this._settingsService!.get('actions.lifi_api_base_url'),
+          apiKey: this._settingsService!.get('actions.lifi_api_key'),
+          defaultSlippagePct: Number(this._settingsService!.get('actions.lifi_default_slippage_pct')),
+          maxSlippagePct: Number(this._settingsService!.get('actions.lifi_max_slippage_pct')),
+          requestTimeoutMs: 15_000,
+        };
+        this._asyncPollingService.registerTracker(new BridgeStatusTracker(lifiConfig));
+        this._asyncPollingService.registerTracker(new BridgeMonitoringTracker(lifiConfig));
+        console.debug('Step 4f-2: Bridge status trackers registered (bridge + bridge-monitoring)');
+      } catch (err) {
+        console.warn('Step 4f-2 (fail-soft): Bridge tracker registration failed:', err);
+      }
     }
 
     // ------------------------------------------------------------------
@@ -1079,6 +1140,18 @@ export class DaemonLifecycle {
         });
       }
 
+      // Register async-status polling worker (30s)
+      if (this._asyncPollingService) {
+        const pollingService = this._asyncPollingService;
+        this.workers.register('async-status', {
+          interval: 30_000,
+          handler: async () => {
+            if (this._isShuttingDown) return;
+            await pollingService.pollAll();
+          },
+        });
+      }
+
       // Register version-check worker (uses instance created in Step 4g)
       if (this._versionCheckService) {
         const versionCheckInterval = this._config!.daemon.update_check_interval * 1000;
@@ -1194,6 +1267,9 @@ export class DaemonLifecycle {
         }
         this.incomingTxMonitorService = null;
       }
+
+      // Clear AsyncPollingService reference (workers.stopAll() handles the timer)
+      this._asyncPollingService = null;
 
       // Step 6b: Remove all EventBus listeners
       this.eventBus.removeAllListeners();

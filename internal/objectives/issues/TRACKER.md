@@ -181,6 +181,7 @@
 | 164 | ENHANCEMENT | MEDIUM | 인커밍 모니터링이 환경 기본 네트워크만 구독 (전체 네트워크 미지원) | v28.2 | FIXED | 2026-02-24 |
 | 165 | ENHANCEMENT | HIGH | 알림 메시지 금액이 최소 단위(wei/lamports)로 표시 (사람 친화적 포맷 미지원) | v28.2 | FIXED | 2026-02-24 |
 | 166 | BUG | HIGH | WalletConnect 핫리로드 시 WcSigningBridge 미생성 — 서명 요청 전달 불가 | v28.2 | FIXED | 2026-02-24 |
+| 167 | BUG | HIGH | IncomingTxMonitor EVM RPC 설정 키 중복으로 모든 EVM 네트워크 구독 실패 | v28.3 | FIXED | 2026-02-24 |
 
 ## Type Legend
 
@@ -193,8 +194,8 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 165
+- **FIXED:** 166
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 166
+- **Total:** 167

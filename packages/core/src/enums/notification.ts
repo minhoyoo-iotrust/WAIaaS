@@ -33,6 +33,11 @@ export const NOTIFICATION_EVENT_TYPES = [
   'TX_INCOMING',
   'TX_INCOMING_SUSPICIOUS',
   'ACTION_API_KEY_REQUIRED',
+  'BRIDGE_COMPLETED',
+  'BRIDGE_FAILED',
+  'BRIDGE_MONITORING_STARTED',
+  'BRIDGE_TIMEOUT',
+  'BRIDGE_REFUNDED',
 ] as const;
 export type NotificationEventType = (typeof NOTIFICATION_EVENT_TYPES)[number];
 export const NotificationEventTypeEnum = z.enum(NOTIFICATION_EVENT_TYPES);

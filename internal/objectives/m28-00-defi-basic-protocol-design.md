@@ -1,7 +1,8 @@
 # 마일스톤 m28: 기본 DeFi 프로토콜 설계 (Swap/Bridge/Staking)
 
-- **Status:** PLANNED
+- **Status:** SHIPPED
 - **Milestone:** v28.0
+- **Completed:** 2026-02-23
 
 ## 목표
 

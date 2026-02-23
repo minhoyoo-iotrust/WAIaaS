@@ -166,6 +166,11 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'actions.zerox_swap_default_slippage_bps', category: 'actions', configPath: 'actions.zerox_swap_default_slippage_bps', defaultValue: '100', isCredential: false },
   { key: 'actions.zerox_swap_max_slippage_bps', category: 'actions', configPath: 'actions.zerox_swap_max_slippage_bps', defaultValue: '500', isCredential: false },
   { key: 'actions.zerox_swap_request_timeout_ms', category: 'actions', configPath: 'actions.zerox_swap_request_timeout_ms', defaultValue: '10000', isCredential: false },
+  { key: 'actions.lifi_enabled', category: 'actions', configPath: 'actions.lifi_enabled', defaultValue: 'false', isCredential: false },
+  { key: 'actions.lifi_api_key', category: 'actions', configPath: 'actions.lifi_api_key', defaultValue: '', isCredential: true },
+  { key: 'actions.lifi_api_base_url', category: 'actions', configPath: 'actions.lifi_api_base_url', defaultValue: 'https://li.quest/v1', isCredential: false },
+  { key: 'actions.lifi_default_slippage_pct', category: 'actions', configPath: 'actions.lifi_default_slippage_pct', defaultValue: '0.03', isCredential: false },
+  { key: 'actions.lifi_max_slippage_pct', category: 'actions', configPath: 'actions.lifi_max_slippage_pct', defaultValue: '0.05', isCredential: false },
 ] as const;
 
 // ---------------------------------------------------------------------------

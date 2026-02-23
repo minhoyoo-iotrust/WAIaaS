@@ -214,6 +214,11 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, NotificationCateg
   TX_INCOMING: 'transaction',
   TX_INCOMING_SUSPICIOUS: 'security_alert',
   ACTION_API_KEY_REQUIRED: 'system',
+  BRIDGE_COMPLETED: 'transaction',
+  BRIDGE_FAILED: 'transaction',
+  BRIDGE_MONITORING_STARTED: 'transaction',
+  BRIDGE_TIMEOUT: 'transaction',
+  BRIDGE_REFUNDED: 'transaction',
 };
 
 // ---------------------------------------------------------------------------
@@ -252,6 +257,11 @@ export const EVENT_DESCRIPTIONS: Record<NotificationEventType, string> = {
   APPROVAL_CHANNEL_SWITCHED: 'Approval channel changed',
   UPDATE_AVAILABLE: 'Daemon update available',
   ACTION_API_KEY_REQUIRED: 'API key required for action provider',
+  BRIDGE_COMPLETED: 'Cross-chain bridge transfer completed',
+  BRIDGE_FAILED: 'Cross-chain bridge transfer failed',
+  BRIDGE_MONITORING_STARTED: 'Bridge monitoring extended to reduced frequency',
+  BRIDGE_TIMEOUT: 'Bridge transfer timed out after 24 hours',
+  BRIDGE_REFUNDED: 'Bridge transfer refunded by protocol',
 };
 
 // ---------------------------------------------------------------------------

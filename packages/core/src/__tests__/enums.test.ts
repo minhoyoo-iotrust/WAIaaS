@@ -76,9 +76,10 @@ describe('Enum SSoT', () => {
     expect(WALLET_STATUSES).toContain('TERMINATED');
   });
 
-  it('TransactionStatus has 10 values', () => {
-    expect(TRANSACTION_STATUSES).toHaveLength(10);
+  it('TransactionStatus has 11 values', () => {
+    expect(TRANSACTION_STATUSES).toHaveLength(11);
     expect(TRANSACTION_STATUSES).toContain('SIGNED');
+    expect(TRANSACTION_STATUSES).toContain('GAS_WAITING');
   });
 
   it('TransactionType has 7 values', () => {
@@ -100,8 +101,8 @@ describe('Enum SSoT', () => {
     expect(SESSION_STATUSES).toHaveLength(3);
   });
 
-  it('NotificationEventType has 31 values', () => {
-    expect(NOTIFICATION_EVENT_TYPES).toHaveLength(31);
+  it('NotificationEventType has 36 values', () => {
+    expect(NOTIFICATION_EVENT_TYPES).toHaveLength(36);
   });
 
   it('NotificationLogStatus has 2 values', () => {

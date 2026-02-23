@@ -543,7 +543,7 @@ v28.2 0x EVM DEX Swap shipped (2026-02-24). 12-패키지 모노레포(packages/a
 
 ## 컨텍스트
 
-**누적:** 58 milestones (v0.1-v28.1), 247 phases, 532 plans, 1,463 requirements, 40 설계 문서(24-76), 8 objective 문서, ~187,250 LOC TS, 4,975 테스트
+**누적:** 60 milestones (v0.1-v28.2), 250 phases, 539 plans, 1,485 requirements, 40 설계 문서(24-76), 8 objective 문서, ~188,500 LOC TS, ~5,000 테스트
 
 v0.1~v0.10 설계 완료 (2026-02-05~09). 44 페이즈, 110 플랜, 286 요구사항, 30 설계 문서(24-64).
 v1.0 구현 계획 수립 완료 (2026-02-09). 8개 objective 문서, 설계 부채 추적, 문서 매핑 검증.
@@ -984,5 +984,22 @@ v28.0 shipped. DeFi 프로토콜 통합을 위한 설계 기반 완성. DEFI-01~
 
 v28.1 shipped. Jupiter Aggregator REST API를 IActionProvider 프레임워크에 통합 구현. packages/actions/ 신규 모노레포 패키지에 JupiterApiClient(native fetch + Zod 검증) + JupiterSwapActionProvider(5-safety) 구현. 데몬 자동 등록 + config.toml [actions] 8키 + MCP jupiter_swap 자동 노출 + 기존 6-stage pipeline 정책 평가(CONTRACT_WHITELIST + SPENDING_LIMIT) 코드 변경 없이 통합. 17/17 requirements PASS, tech debt 0건.
 
+## Shipped: v28.2 0x EVM DEX Swap
+
+v28.2 shipped. 0x Swap API v2를 IActionProvider 프레임워크에 통합하여 AI 에이전트가 19+ EVM 체인에서 DEX 토큰 스왑 수행. ZeroExApiClient(native fetch + Zod 검증) + ZeroExSwapActionProvider(AllowanceHolder 20체인 주소, 슬리피지 클램프) 구현. SettingsService SSoT 패턴, resolve() 배열 순차 파이프라인, provider-trust 정책 바이패스, Admin UI Actions 페이지 추가. 22/22 requirements PASS, 7 issue fixes.
+
+## Current Milestone: v28.3 LI.FI 크로스체인 브릿지
+
+**Goal:** LI.FI 메타 애그리게이터를 IActionProvider로 구현하여 AI 에이전트가 Solana↔EVM / EVM↔EVM 크로스체인 브릿지+스왑을 정책 평가 하에 수행하고, DEFI-04 확정 설계에 따른 비동기 상태 추적 공통 인프라(IAsyncStatusTracker + AsyncPollingService)를 구축
+
+**Target features:**
+- LiFiActionProvider (bridge/swap/crossSwap 3 액션, 40+ 체인)
+- LiFiApiClient (/quote + /status, Zod 검증, extends ActionApiClient)
+- IAsyncStatusTracker 공통 인터페이스 + BridgeStatusTracker (2단계 폴링: 2시간+22시간)
+- AsyncPollingService (tracker 등록 + DB 기반 폴링 스케줄러)
+- DB v23 마이그레이션 (bridge_status 6-value + bridge_metadata + GAS_WAITING 11-state + partial index 2개)
+- 알림 이벤트 5개 추가 (BRIDGE_COMPLETED/FAILED/MONITORING_STARTED/TIMEOUT/REFUNDED)
+- MCP 2 도구 + SDK 지원 + 스킬 파일
+
 ---
-*최종 업데이트: 2026-02-23 after v28.2 milestone start*
+*최종 업데이트: 2026-02-24 after v28.3 milestone start*

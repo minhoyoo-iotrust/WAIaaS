@@ -4,7 +4,7 @@ import type { NotificationEventType } from '../enums/notification.js';
 /**
  * Messages type definition. Enforces key parity across all locales.
  * Keys in errors must match ERROR_CODES keys exactly (100 error codes).
- * Notification templates cover all 31 event types.
+ * Notification templates cover all 36 event types.
  */
 export interface Messages {
   errors: Record<ErrorCode, string>;
@@ -209,6 +209,11 @@ export const messages: Messages = {
     TX_INCOMING: { title: 'Incoming Transaction Detected', body: '{walletName} received {amount} from {fromAddress} on {chain} {display_amount}' },
     TX_INCOMING_SUSPICIOUS: { title: 'Suspicious Incoming Transaction', body: '{walletName} received suspicious transaction: {amount} from {fromAddress}. Reasons: {reasons} {display_amount}' },
     ACTION_API_KEY_REQUIRED: { title: 'API Key Required', body: '[WAIaaS] API key required for {provider}. Configure at {adminUrl} > System > API Keys' },
+    BRIDGE_COMPLETED: { title: 'Bridge Transfer Completed', body: 'Cross-chain transfer completed. {tool} bridge from chain {fromChainId} to chain {toChainId}. Destination tx: {destTxHash}' },
+    BRIDGE_FAILED: { title: 'Bridge Transfer Failed', body: 'Cross-chain transfer failed: {substatusMessage}. Transaction {txId} on chain {fromChainId}' },
+    BRIDGE_MONITORING_STARTED: { title: 'Bridge Monitoring Extended', body: 'Bridge transfer {txId} not completed after 2 hours. Switching to extended monitoring (up to 22 hours)' },
+    BRIDGE_TIMEOUT: { title: 'Bridge Transfer Timeout', body: 'Bridge transfer {txId} timed out after 24 hours of monitoring. Manual verification required. {lifiExplorerLink}' },
+    BRIDGE_REFUNDED: { title: 'Bridge Transfer Refunded', body: 'Cross-chain transfer {txId} was refunded by the bridge protocol: {substatusMessage}' },
   },
   // System messages
   system: {

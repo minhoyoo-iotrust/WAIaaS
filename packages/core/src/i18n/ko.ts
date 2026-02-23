@@ -155,6 +155,11 @@ export const messages: Messages = {
     TX_INCOMING: { title: '수신 트랜잭션 감지', body: '{walletName}이(가) {chain}에서 {fromAddress}로부터 {amount}을(를) 수신했습니다 {display_amount}' },
     TX_INCOMING_SUSPICIOUS: { title: '의심스러운 수신 트랜잭션', body: '{walletName}에 의심스러운 입금 감지: {fromAddress}로부터 {amount}. 사유: {reasons} {display_amount}' },
     ACTION_API_KEY_REQUIRED: { title: 'API 키 필요', body: '[WAIaaS] {provider}에 API 키가 필요합니다. {adminUrl} > 시스템 > API 키에서 설정하세요' },
+    BRIDGE_COMPLETED: { title: '브릿지 전송 완료', body: '크로스체인 전송이 완료되었습니다. {tool} 브릿지 (체인 {fromChainId} -> 체인 {toChainId}). 도착 트랜잭션: {destTxHash}' },
+    BRIDGE_FAILED: { title: '브릿지 전송 실패', body: '크로스체인 전송 실패: {substatusMessage}. 트랜잭션 {txId} (체인 {fromChainId})' },
+    BRIDGE_MONITORING_STARTED: { title: '브릿지 모니터링 연장', body: '브릿지 전송 {txId}이(가) 2시간 내 완료되지 않았습니다. 확장 모니터링으로 전환합니다 (최대 22시간)' },
+    BRIDGE_TIMEOUT: { title: '브릿지 전송 시간 초과', body: '브릿지 전송 {txId}이(가) 24시간 모니터링 후 시간 초과되었습니다. 수동 확인이 필요합니다. {lifiExplorerLink}' },
+    BRIDGE_REFUNDED: { title: '브릿지 전송 환불', body: '크로스체인 전송 {txId}이(가) 브릿지 프로토콜에 의해 환불되었습니다: {substatusMessage}' },
   },
   // System messages
   system: {

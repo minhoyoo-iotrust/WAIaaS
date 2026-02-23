@@ -7,6 +7,7 @@
 import type { IActionProvider } from '@waiaas/core';
 import { JupiterSwapActionProvider } from './providers/jupiter-swap/index.js';
 import { ZeroExSwapActionProvider } from './providers/zerox-swap/index.js';
+import { LiFiActionProvider } from './providers/lifi/index.js';
 
 // Re-export provider classes
 export { JupiterSwapActionProvider } from './providers/jupiter-swap/index.js';
@@ -17,10 +18,27 @@ export { ZeroExSwapActionProvider } from './providers/zerox-swap/index.js';
 export { ALLOWANCE_HOLDER_ADDRESSES, ZEROX_SWAP_DEFAULTS, CHAIN_ID_MAP, getAllowanceHolderAddress } from './providers/zerox-swap/config.js';
 export type { ZeroExSwapConfig } from './providers/zerox-swap/config.js';
 
+export { LiFiActionProvider } from './providers/lifi/index.js';
+export { LIFI_DEFAULTS, LIFI_CHAIN_MAP, getLiFiChainId } from './providers/lifi/config.js';
+export type { LiFiConfig } from './providers/lifi/config.js';
+export { LiFiApiClient } from './providers/lifi/lifi-api-client.js';
+export { BridgeStatusTracker, BridgeMonitoringTracker } from './providers/lifi/bridge-status-tracker.js';
+
 // Re-export common utilities
 export { ActionApiClient } from './common/action-api-client.js';
 export { asBps, asPct, clampSlippageBps, bpsToPct, pctToBps } from './common/slippage.js';
 export type { SlippageBps, SlippagePct } from './common/slippage.js';
+
+// Re-export async status tracker interface and types (v28.3 DEFI-04)
+export {
+  BRIDGE_STATUS_VALUES,
+  BridgeStatusEnum,
+} from './common/async-status-tracker.js';
+export type {
+  IAsyncStatusTracker,
+  AsyncTrackingResult,
+  BridgeStatus,
+} from './common/async-status-tracker.js';
 
 // ---------------------------------------------------------------------------
 // Built-in provider registration
@@ -82,6 +100,21 @@ export function registerBuiltInProviders(
           requestTimeoutMs: Number(settingsReader.get('actions.zerox_swap_request_timeout_ms')),
         };
         return new ZeroExSwapActionProvider(config);
+      },
+    },
+    {
+      key: 'lifi',
+      enabledKey: 'actions.lifi_enabled',
+      factory: () => {
+        const config: import('./providers/lifi/config.js').LiFiConfig = {
+          enabled: true,
+          apiBaseUrl: settingsReader.get('actions.lifi_api_base_url'),
+          apiKey: settingsReader.get('actions.lifi_api_key'),
+          defaultSlippagePct: Number(settingsReader.get('actions.lifi_default_slippage_pct')),
+          maxSlippagePct: Number(settingsReader.get('actions.lifi_max_slippage_pct')),
+          requestTimeoutMs: 15_000,
+        };
+        return new LiFiActionProvider(config);
       },
     },
   ];

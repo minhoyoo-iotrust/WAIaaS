@@ -179,6 +179,9 @@ export const transactions = sqliteTable(
     error: text('error'),
     metadata: text('metadata'),
     network: text('network'),
+    // v28.3 DeFi async tracking columns
+    bridgeStatus: text('bridge_status'),
+    bridgeMetadata: text('bridge_metadata'),
   },
   (table) => [
     index('idx_transactions_wallet_status').on(table.walletId, table.status),
@@ -189,6 +192,9 @@ export const transactions = sqliteTable(
     index('idx_transactions_type').on(table.type),
     index('idx_transactions_contract_address').on(table.contractAddress),
     index('idx_transactions_parent_id').on(table.parentId),
+    // v28.3: partial index documentation (actual WHERE clause in DDL/migration only)
+    index('idx_transactions_bridge_status').on(table.bridgeStatus),
+    index('idx_transactions_gas_waiting').on(table.status),
     check('check_tx_type', buildCheckSql('type', TRANSACTION_TYPES)),
     check('check_tx_status', buildCheckSql('status', TRANSACTION_STATUSES)),
     check(
@@ -201,6 +207,14 @@ export const transactions = sqliteTable(
       'check_tx_network',
       sql.raw(
         `network IS NULL OR network IN (${NETWORK_TYPES.map((v) => `'${v}'`).join(', ')})`,
+      ),
+    ),
+    // v28.3: bridge_status CHECK constraint (SSoT: BRIDGE_STATUS_VALUES from @waiaas/actions)
+    // Not importing from @waiaas/actions to avoid circular dependency; values must match BRIDGE_STATUS_VALUES
+    check(
+      'check_bridge_status',
+      sql.raw(
+        `bridge_status IS NULL OR bridge_status IN ('PENDING', 'COMPLETED', 'FAILED', 'BRIDGE_MONITORING', 'TIMEOUT', 'REFUNDED')`,
       ),
     ),
   ],

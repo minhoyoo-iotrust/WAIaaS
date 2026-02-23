@@ -182,6 +182,11 @@ export const DaemonConfigSchema = z.object({
       zerox_swap_default_slippage_bps: z.number().int().min(1).max(10000).default(100),
       zerox_swap_max_slippage_bps: z.number().int().min(1).max(10000).default(500),
       zerox_swap_request_timeout_ms: z.number().int().min(1000).max(60000).default(10000),
+      lifi_enabled: z.boolean().default(false),
+      lifi_api_key: z.string().default(''),
+      lifi_api_base_url: z.string().default('https://li.quest/v1'),
+      lifi_default_slippage_pct: z.number().min(0.001).max(0.5).default(0.03),
+      lifi_max_slippage_pct: z.number().min(0.001).max(0.5).default(0.05),
     })
     .default({}),
 });

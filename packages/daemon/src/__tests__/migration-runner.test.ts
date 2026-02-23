@@ -58,57 +58,57 @@ function getVersions(): number[] {
 
 describe('Migration Runner', () => {
   // Note: pushSchema() creates latest schema (wallets table) and records
-  // all migration versions [1, 2, 3, ..., 22], so getMaxVersion() returns 22.
-  // All test migration versions use 23+ to avoid conflicts with real migrations.
+  // all migration versions [1, 2, 3, ..., 23], so getMaxVersion() returns 23.
+  // All test migration versions use 24+ to avoid conflicts with real migrations.
 
   it('should return { applied: 0, skipped: 0 } for empty migrations array', () => {
     const result = runMigrations(sqlite, []);
     expect(result).toEqual({ applied: 0, skipped: 0 });
-    expect(getMaxVersion()).toBe(22); // v1~v22 (token_registry asset_id)
+    expect(getMaxVersion()).toBe(23); // v1~v23 (DeFi async tracking)
   });
 
   it('should execute new migrations sequentially', () => {
     const migrations: Migration[] = [
       {
-        version: 23,
+        version: 24,
         description: 'Add test_column to wallets',
         up: (db) => {
-          db.exec('ALTER TABLE wallets ADD COLUMN test_col_v23 TEXT');
+          db.exec('ALTER TABLE wallets ADD COLUMN test_col_v24 TEXT');
         },
       },
       {
-        version: 24,
+        version: 25,
         description: 'Add another test_column to wallets',
         up: (db) => {
-          db.exec('ALTER TABLE wallets ADD COLUMN test_col_v24 TEXT');
+          db.exec('ALTER TABLE wallets ADD COLUMN test_col_v25 TEXT');
         },
       },
     ];
 
     const result = runMigrations(sqlite, migrations);
     expect(result).toEqual({ applied: 2, skipped: 0 });
-    expect(getMaxVersion()).toBe(24);
-    expect(getVersions()).toContain(23);
+    expect(getMaxVersion()).toBe(25);
     expect(getVersions()).toContain(24);
+    expect(getVersions()).toContain(25);
 
     // Verify columns were actually added
     const columns = sqlite.prepare("PRAGMA table_info('wallets')").all() as Array<{ name: string }>;
     const colNames = columns.map((c) => c.name);
-    expect(colNames).toContain('test_col_v23');
     expect(colNames).toContain('test_col_v24');
+    expect(colNames).toContain('test_col_v25');
   });
 
   it('should skip already-applied migrations', () => {
     const migrations: Migration[] = [
       {
-        version: 23,
+        version: 24,
         description: 'Add test_column to wallets',
         up: (db) => {
           db.exec('ALTER TABLE wallets ADD COLUMN test_col_skip TEXT');
         },
       },
       {
-        version: 24,
+        version: 25,
         description: 'Add another column',
         up: (db) => {
           db.exec('ALTER TABLE wallets ADD COLUMN test_col_skip2 TEXT');
@@ -123,20 +123,20 @@ describe('Migration Runner', () => {
     // Second run: skip both
     const second = runMigrations(sqlite, migrations);
     expect(second).toEqual({ applied: 0, skipped: 2 });
-    expect(getMaxVersion()).toBe(24);
+    expect(getMaxVersion()).toBe(25);
   });
 
   it('should rollback failed migration and not execute subsequent ones', () => {
     const migrations: Migration[] = [
       {
-        version: 23,
+        version: 24,
         description: 'Failing migration',
         up: () => {
           throw new Error('Intentional migration failure');
         },
       },
       {
-        version: 24,
+        version: 25,
         description: 'Should not be reached',
         up: (db) => {
           db.exec('ALTER TABLE wallets ADD COLUMN should_not_exist TEXT');
@@ -145,13 +145,13 @@ describe('Migration Runner', () => {
     ];
 
     expect(() => runMigrations(sqlite, migrations)).toThrow(
-      /Migration v23.*failed.*Intentional migration failure/,
+      /Migration v24.*failed.*Intentional migration failure/,
     );
 
-    // version 23 should NOT be recorded (max stays at 22 from pushSchema)
-    expect(getMaxVersion()).toBe(22);
+    // version 24 should NOT be recorded (max stays at 23 from pushSchema)
+    expect(getMaxVersion()).toBe(23);
 
-    // version 24 should NOT have been executed
+    // version 25 should NOT have been executed
     const columns = sqlite.prepare("PRAGMA table_info('wallets')").all() as Array<{ name: string }>;
     const colNames = columns.map((c) => c.name);
     expect(colNames).not.toContain('should_not_exist');
@@ -162,19 +162,11 @@ describe('Migration Runner', () => {
 
     const migrations: Migration[] = [
       {
-        version: 25,
-        description: 'Twenty-fifth',
+        version: 26,
+        description: 'Twenty-sixth',
         up: (db) => {
-          executionOrder.push(25);
-          db.exec('ALTER TABLE wallets ADD COLUMN order_v25 TEXT');
-        },
-      },
-      {
-        version: 23,
-        description: 'Twenty-third',
-        up: (db) => {
-          executionOrder.push(23);
-          db.exec('ALTER TABLE wallets ADD COLUMN order_v23 TEXT');
+          executionOrder.push(26);
+          db.exec('ALTER TABLE wallets ADD COLUMN order_v26 TEXT');
         },
       },
       {
@@ -185,190 +177,49 @@ describe('Migration Runner', () => {
           db.exec('ALTER TABLE wallets ADD COLUMN order_v24 TEXT');
         },
       },
+      {
+        version: 25,
+        description: 'Twenty-fifth',
+        up: (db) => {
+          executionOrder.push(25);
+          db.exec('ALTER TABLE wallets ADD COLUMN order_v25 TEXT');
+        },
+      },
     ];
 
     const result = runMigrations(sqlite, migrations);
     expect(result).toEqual({ applied: 3, skipped: 0 });
-    expect(executionOrder).toEqual([23, 24, 25]);
-    expect(getVersions()).toContain(23);
+    expect(executionOrder).toEqual([24, 25, 26]);
     expect(getVersions()).toContain(24);
     expect(getVersions()).toContain(25);
+    expect(getVersions()).toContain(26);
   });
 
-  it('should skip version 1-22 migrations (already applied from pushSchema)', () => {
+  it('should skip version 1-23 migrations (already applied from pushSchema)', () => {
     const migrations: Migration[] = [
+      ...Array.from({ length: 23 }, (_, i) => ({
+        version: i + 1,
+        description: `Should be skipped (pushSchema records v${i + 1})`,
+        up: () => { throw new Error('Should not execute'); },
+      })),
       {
-        version: 1,
-        description: 'Should be skipped (pushSchema creates v1)',
-        up: () => {
-          throw new Error('Should not execute');
-        },
-      },
-      {
-        version: 2,
-        description: 'Should be skipped (pushSchema records v2)',
-        up: () => {
-          throw new Error('Should not execute');
-        },
-      },
-      {
-        version: 3,
-        description: 'Should be skipped (pushSchema records v3)',
-        up: () => {
-          throw new Error('Should not execute');
-        },
-      },
-      {
-        version: 4,
-        description: 'Should be skipped (pushSchema records v4)',
-        up: () => {
-          throw new Error('Should not execute');
-        },
-      },
-      {
-        version: 5,
-        description: 'Should be skipped (pushSchema records v5)',
-        up: () => {
-          throw new Error('Should not execute');
-        },
-      },
-      {
-        version: 6,
-        description: 'Should be skipped (pushSchema records v6)',
-        up: () => {
-          throw new Error('Should not execute');
-        },
-      },
-      {
-        version: 7,
-        description: 'Should be skipped (pushSchema records v7)',
-        up: () => {
-          throw new Error('Should not execute');
-        },
-      },
-      {
-        version: 8,
-        description: 'Should be skipped (pushSchema records v8)',
-        up: () => {
-          throw new Error('Should not execute');
-        },
-      },
-      {
-        version: 9,
-        description: 'Should be skipped (pushSchema records v9)',
-        up: () => {
-          throw new Error('Should not execute');
-        },
-      },
-      {
-        version: 10,
-        description: 'Should be skipped (pushSchema records v10)',
-        up: () => {
-          throw new Error('Should not execute');
-        },
-      },
-      {
-        version: 11,
-        description: 'Should be skipped (pushSchema records v11)',
-        up: () => {
-          throw new Error('Should not execute');
-        },
-      },
-      {
-        version: 12,
-        description: 'Should be skipped (pushSchema records v12)',
-        up: () => {
-          throw new Error('Should not execute');
-        },
-      },
-      {
-        version: 13,
-        description: 'Should be skipped (pushSchema records v13)',
-        up: () => {
-          throw new Error('Should not execute');
-        },
-      },
-      {
-        version: 14,
-        description: 'Should be skipped (pushSchema records v14)',
-        up: () => {
-          throw new Error('Should not execute');
-        },
-      },
-      {
-        version: 15,
-        description: 'Should be skipped (pushSchema records v15)',
-        up: () => {
-          throw new Error('Should not execute');
-        },
-      },
-      {
-        version: 16,
-        description: 'Should be skipped (pushSchema records v16)',
-        up: () => {
-          throw new Error('Should not execute');
-        },
-      },
-      {
-        version: 17,
-        description: 'Should be skipped (pushSchema records v17)',
-        up: () => {
-          throw new Error('Should not execute');
-        },
-      },
-      {
-        version: 18,
-        description: 'Should be skipped (pushSchema records v18)',
-        up: () => {
-          throw new Error('Should not execute');
-        },
-      },
-      {
-        version: 19,
-        description: 'Should be skipped (pushSchema records v19)',
-        up: () => {
-          throw new Error('Should not execute');
-        },
-      },
-      {
-        version: 20,
-        description: 'Should be skipped (pushSchema records v20)',
-        up: () => {
-          throw new Error('Should not execute');
-        },
-      },
-      {
-        version: 21,
-        description: 'Should be skipped (pushSchema records v21)',
-        up: () => {
-          throw new Error('Should not execute');
-        },
-      },
-      {
-        version: 22,
-        description: 'Should be skipped (pushSchema records v22)',
-        up: () => {
-          throw new Error('Should not execute');
-        },
-      },
-      {
-        version: 23,
+        version: 24,
         description: 'Should execute',
-        up: (db) => {
+        up: (db: import('better-sqlite3').Database) => {
           db.exec('ALTER TABLE wallets ADD COLUMN v1_skip_test TEXT');
         },
       },
     ];
 
     const result = runMigrations(sqlite, migrations);
-    expect(result).toEqual({ applied: 1, skipped: 22 });
-    expect(getMaxVersion()).toBe(23);
+    expect(result).toEqual({ applied: 1, skipped: 23 });
+    expect(getMaxVersion()).toBe(24);
   });
 
   it('should record description in schema_version for applied migrations', () => {
     const migrations: Migration[] = [
       {
-        version: 23,
+        version: 24,
         description: 'Add token_balances table',
         up: (db) => {
           db.exec('ALTER TABLE wallets ADD COLUMN desc_test TEXT');
@@ -379,7 +230,7 @@ describe('Migration Runner', () => {
     runMigrations(sqlite, migrations);
 
     const row = sqlite
-      .prepare('SELECT description FROM schema_version WHERE version = 23')
+      .prepare('SELECT description FROM schema_version WHERE version = 24')
       .get() as { description: string } | undefined;
     expect(row).toBeDefined();
     expect(row!.description).toBe('Add token_balances table');
@@ -396,7 +247,7 @@ describe('managesOwnTransaction migrations', () => {
 
     const migrations: Migration[] = [
       {
-        version: 23,
+        version: 24,
         description: 'Self-managed PRAGMA migration',
         managesOwnTransaction: true,
         up: (db) => {
@@ -421,14 +272,14 @@ describe('managesOwnTransaction migrations', () => {
     const fkAfter = sqlite.pragma('foreign_keys') as Array<{ foreign_keys: number }>;
     expect(fkAfter[0]!.foreign_keys).toBe(1);
 
-    // schema_version should record version 23
-    expect(getMaxVersion()).toBe(23);
+    // schema_version should record version 24
+    expect(getMaxVersion()).toBe(24);
   });
 
   it('should still allow retry after failure and restore foreign_keys', () => {
     const migrations: Migration[] = [
       {
-        version: 23,
+        version: 24,
         description: 'Failing self-managed migration',
         managesOwnTransaction: true,
         up: () => {
@@ -439,11 +290,11 @@ describe('managesOwnTransaction migrations', () => {
 
     // Should throw the migration error
     expect(() => runMigrations(sqlite, migrations)).toThrow(
-      /Migration v23.*failed.*Intentional self-managed failure/,
+      /Migration v24.*failed.*Intentional self-managed failure/,
     );
 
-    // Version 23 should NOT be recorded (max stays at 22 from pushSchema)
-    expect(getMaxVersion()).toBe(22);
+    // Version 24 should NOT be recorded (max stays at 23 from pushSchema)
+    expect(getMaxVersion()).toBe(23);
 
     // foreign_keys should be restored to ON (1)
     const fkAfter = sqlite.pragma('foreign_keys') as Array<{ foreign_keys: number }>;
@@ -1147,13 +998,13 @@ describe('v22 migration: token_registry asset_id backfill', () => {
     const conn = createDatabase(':memory:');
     const db = conn.sqlite;
 
-    // pushSchema creates latest DDL (v22 with asset_id), so we need to remove the v22 version
-    // and drop the asset_id column. Simpler approach: use pushSchema then "downgrade" by
-    // removing v22 record so migration runner thinks v22 is pending.
+    // pushSchema creates latest DDL (v23 with bridge columns), so we need to remove v22+v23 versions
+    // and drop the asset_id column. Use pushSchema then "downgrade" by
+    // removing v22 and later versions so migration runner thinks v22 is pending.
     pushSchema(db);
 
-    // Remove v22 from schema_version so runMigrations will re-run it
-    db.prepare('DELETE FROM schema_version WHERE version = 22').run();
+    // Remove v22 and later from schema_version so runMigrations will re-run v22
+    db.prepare('DELETE FROM schema_version WHERE version >= 22').run();
 
     // asset_id column already exists from DDL, but for a proper test we need to verify
     // the backfill logic. The DDL creates the column, and pushSchema records it as applied.

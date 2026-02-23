@@ -12,6 +12,21 @@
 import type { IChainAdapter, ChainType, NetworkType, EvmNetworkType } from '@waiaas/core';
 
 /**
+ * Build the RPC config key for a given chain:network pair.
+ * Maps:
+ *   solana + 'devnet'             -> solana_devnet
+ *   ethereum + 'ethereum-sepolia' -> evm_ethereum_sepolia
+ *
+ * Used by both resolveRpcUrl (config object lookup) and subscriberFactory
+ * (SettingsService lookup with `rpc.` prefix) to ensure a single source of
+ * truth for key construction.
+ */
+export function rpcConfigKey(chain: string, network: string): string {
+  if (chain === 'solana') return `solana_${network}`;
+  return `evm_${network.replace(/-/g, '_')}`;
+}
+
+/**
  * Resolve RPC URL from config rpc section for a given chain:network.
  * Maps:
  *   solana + 'devnet'          -> rpc.solana_devnet
@@ -22,14 +37,8 @@ export function resolveRpcUrl(
   chain: string,
   network: string,
 ): string {
-  if (chain === 'solana') {
-    const key = `solana_${network}`;
-    return rpcConfig[key] || '';
-  } else if (chain === 'ethereum') {
-    const key = `evm_${network.replace(/-/g, '_')}`;
-    return rpcConfig[key] || '';
-  }
-  return '';
+  const key = rpcConfigKey(chain, network);
+  return rpcConfig[key] || '';
 }
 
 export class AdapterPool {
