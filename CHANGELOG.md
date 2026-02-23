@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.0-rc.6](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.6.0-rc.5...v2.6.0-rc.6) (2026-02-23)
+
+
+### Bug Fixes
+
+* **ci:** add @waiaas/actions package to Docker build and release pipeline ([35c59ab](https://github.com/minhoyoo-iotrust/WAIaaS/commit/35c59ab03f82f66ed6821a1ade3056eb8e33ae13))
+
 ## [2.6.0-rc.5](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.6.0-rc.4...v2.6.0-rc.5) (2026-02-23)
 
 
