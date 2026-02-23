@@ -1496,3 +1496,13 @@
 
 ---
 
+
+## v28.3 LI.FI 크로스체인 브릿지 (Shipped: 2026-02-23)
+
+**Phases completed:** 157 phases, 334 plans, 50 tasks
+
+**Key accomplishments:**
+- (none recorded)
+
+---
+
