@@ -790,7 +790,7 @@ export class DaemonLifecycle {
               return new SolanaIncomingSubscriber({ rpcUrl, wsUrl: wssUrl });
             }
             // EVM chains
-            const rpcKey = `rpc.evm_${chain}_${network.replace(/-/g, '_')}`;
+            const rpcKey = `rpc.evm_${network.replace(/-/g, '_')}`;
             const rpcUrl = sSvc.get(rpcKey);
             const { EvmIncomingSubscriber } = await import('@waiaas/adapter-evm');
             return new EvmIncomingSubscriber({ rpcUrl });
