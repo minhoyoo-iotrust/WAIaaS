@@ -303,7 +303,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 253-01: MCP 도구 노출 확인 + SDK 연동 테스트 + actions.skill.md 업데이트
+- [ ] 253-01-PLAN.md -- MCP LiFi tool registration verification + SDK compatibility + actions.skill.md LI.FI documentation
 
 ## Progress
 
