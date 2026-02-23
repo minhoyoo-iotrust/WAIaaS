@@ -2,8 +2,8 @@
 name: "WAIaaS Actions"
 description: "Action Provider framework: list providers, execute DeFi actions through the 6-stage transaction pipeline"
 category: "api"
-tags: [wallet, blockchain, defi, actions, waiass, jupiter, 0x, swap]
-version: "2.8.2"
+tags: [wallet, blockchain, defi, actions, waiass, jupiter, 0x, swap, lifi, bridge, cross-chain]
+version: "2.8.3"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]
@@ -11,7 +11,7 @@ dispatch:
 
 # WAIaaS Actions
 
-Action Provider framework for executing DeFi protocol actions (swaps, staking, liquidity) through the WAIaaS transaction pipeline. Actions are resolved by registered providers and executed as CONTRACT_CALL transactions through the existing 6-stage pipeline with full policy evaluation.
+Action Provider framework for executing DeFi protocol actions (swaps, staking, liquidity, cross-chain bridges) through the WAIaaS transaction pipeline. Actions are resolved by registered providers and executed as CONTRACT_CALL transactions through the existing 6-stage pipeline with full policy evaluation.
 
 > AI agents must NEVER request the master password. Use only your session token.
 
@@ -85,6 +85,31 @@ curl -s http://localhost:3100/v1/actions/providers \
           "description": "Swap tokens on EVM chains via 0x aggregator with slippage protection and AllowanceHolder approval",
           "chain": "ethereum",
           "riskLevel": "medium",
+          "defaultTier": "DELAY"
+        }
+      ]
+    },
+    {
+      "name": "lifi",
+      "description": "LI.FI cross-chain bridge and swap aggregator (100+ bridges, 40+ chains)",
+      "version": "1.0.0",
+      "chains": ["ethereum", "solana"],
+      "mcpExpose": true,
+      "requiresApiKey": false,
+      "hasApiKey": false,
+      "actions": [
+        {
+          "name": "cross_swap",
+          "description": "Cross-chain bridge and swap via LI.FI aggregator",
+          "chain": "ethereum",
+          "riskLevel": "high",
+          "defaultTier": "DELAY"
+        },
+        {
+          "name": "bridge",
+          "description": "Simple cross-chain bridge via LI.FI",
+          "chain": "ethereum",
+          "riskLevel": "high",
           "defaultTier": "DELAY"
         }
       ]
@@ -164,7 +189,7 @@ The transaction follows the standard lifecycle (PENDING -> QUEUED -> CONFIRMED/F
 
 1. The provider must be enabled via Admin UI > Settings > Actions.
 2. If the provider requires an API key (`requiresApiKey: true`), the key must be configured in Admin Settings.
-3. Either a **CONTRACT_WHITELIST** policy must include the resolved contract, or **provider-trust bypass** applies (see Section 5).
+3. Either a **CONTRACT_WHITELIST** policy must include the resolved contract, or **provider-trust bypass** applies (see Section 6).
 
 ## 3. Jupiter Swap -- Built-in Provider (Solana)
 
@@ -325,7 +350,7 @@ Additional chains supported by 0x API (BNB, Avalanche, Linea, Scroll, Blast, etc
 - **Same-token block**: Rejects `sellToken === buyToken` (case-insensitive) before API call.
 - **AllowanceHolder validation**: Verifies the returned `allowanceTarget` matches the known AllowanceHolder contract address (`0x0000000000001fF3684f28c67538d4D072C22734`) for the given chain ID. Mismatches are rejected.
 - **Zod runtime validation**: All 0x API responses (price and quote) are validated against Zod schemas with `.passthrough()` for forward compatibility.
-- **Provider-trust bypass**: When 0x Swap is enabled in Admin Settings, the CONTRACT_WHITELIST policy check is skipped for 0x-resolved transactions. The AllowanceHolder contract is automatically trusted. See Section 5.
+- **Provider-trust bypass**: When 0x Swap is enabled in Admin Settings, the CONTRACT_WHITELIST policy check is skipped for 0x-resolved transactions. The AllowanceHolder contract is automatically trusted. See Section 6.
 
 ### Multi-step Execution
 
@@ -418,7 +443,220 @@ curl -s -X POST http://localhost:3100/v1/actions/zerox_swap/swap \
 
 Response includes a `pipeline` array with two elements: `[approve, swap]`.
 
-## 5. Policy Integration
+## 5. LI.FI Cross-Chain Bridge -- Built-in Provider (Multi-Chain)
+
+The LI.FI provider uses the [LI.FI API](https://docs.li.fi/) to aggregate 100+ bridges and DEXs across 40+ chains. It enables cross-chain asset transfers (bridge) and cross-chain swaps (different tokens across chains). Unlike single-chain providers (Jupiter, 0x), LI.FI operates across multiple blockchains simultaneously.
+
+### Configuration
+
+Enable LI.FI via **Admin UI > Settings > Actions > LI.FI**, or environment variables. No API key is required -- LI.FI works without a key but with rate limits. An optional API key relaxes rate limits.
+
+| Setting | Env Variable | Default | Description |
+| ------- | ------------ | ------- | ----------- |
+| Enabled | `WAIAAS_ACTIONS_LIFI_ENABLED` | `false` | Enable LI.FI cross-chain provider |
+| API Key | `WAIAAS_ACTIONS_LIFI_API_KEY` | (empty) | Optional. Relaxes rate limits (not required for basic usage) |
+| API Base URL | `WAIAAS_ACTIONS_LIFI_API_BASE_URL` | `https://li.quest/v1` | LI.FI API endpoint |
+| Default Slippage | `WAIAAS_ACTIONS_LIFI_DEFAULT_SLIPPAGE_PCT` | `0.03` | Default slippage (3%, decimal) |
+| Max Slippage | `WAIAAS_ACTIONS_LIFI_MAX_SLIPPAGE_PCT` | `0.05` | Max slippage clamp (5%, decimal) |
+| Timeout | `WAIAAS_ACTIONS_LIFI_REQUEST_TIMEOUT_MS` | `15000` | API request timeout (higher due to cross-chain route computation) |
+
+**Note:** Slippage values are in **decimal** format (0.03 = 3%), NOT basis points. This differs from Jupiter and 0x which use basis points.
+
+### Actions
+
+| Action | Description | Use Case |
+| ------ | ----------- | -------- |
+| `cross_swap` | Cross-chain bridge and swap via LI.FI aggregator | Move tokens between different chains with token conversion (e.g., SOL on Solana to USDC on Base) |
+| `bridge` | Simple cross-chain bridge via LI.FI | Transfer same token between chains (e.g., USDC from Ethereum to Arbitrum) |
+
+Both actions accept the same parameters and use the same LI.FI `/quote` API -- the distinction is semantic for AI agent clarity.
+
+### Cross-Swap / Bridge Parameters
+
+| Parameter | Type | Required | Description |
+| --------- | ---- | -------- | ----------- |
+| `fromChain` | string | Yes | Source chain name (e.g., `solana`, `ethereum`, `base`, `arbitrum`). |
+| `toChain` | string | Yes | Destination chain name. |
+| `fromToken` | string | Yes | Source token address or symbol (e.g., `So11111111111111111111111111111111111111112` for SOL, `0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48` for USDC). |
+| `toToken` | string | Yes | Destination token address or symbol. |
+| `fromAmount` | string | Yes | Amount in smallest units (lamports for SOL, wei for ETH, etc.). |
+| `slippage` | number | No | Slippage tolerance as decimal (0-1). Default: `0.03` (3%). Clamped to max `0.05` (5%). |
+| `toAddress` | string | No | Destination address on the target chain. Defaults to the wallet address. |
+
+### Supported Chains
+
+| Chain | LI.FI Chain ID | WAIaaS Chain Names |
+| ----- | -------------- | ------------------ |
+| Solana | 1151111081099710 | `solana`, `solana-mainnet` |
+| Ethereum | 1 | `ethereum`, `ethereum-mainnet` |
+| Polygon | 137 | `polygon`, `polygon-mainnet` |
+| Arbitrum | 42161 | `arbitrum`, `arbitrum-mainnet` |
+| Optimism | 10 | `optimism`, `optimism-mainnet` |
+| Base | 8453 | `base`, `base-mainnet` |
+
+### Safety Features
+
+- **Slippage protection**: Default 3%, max 5% clamp. Slippage is in decimal (0.03 = 3%), NOT basis points. Values exceeding max are silently clamped.
+- **Unsupported chain error**: Descriptive error message listing supported chains when an unsupported chain name is provided.
+- **Zod runtime validation**: All LI.FI API responses (quote and status) are validated against Zod schemas to detect API drift.
+- **Provider-trust bypass**: When LI.FI is enabled in Admin Settings, the CONTRACT_WHITELIST policy check is skipped for LI.FI-resolved transactions. See Section 6.
+- **2-phase bridge monitoring**: Active polling (30s intervals, 240 attempts = 2 hours) followed by reduced polling (5min intervals, 264 attempts = 22 hours). Total monitoring window: 24 hours.
+- **SPENDING_LIMIT reservation**: Bridge amounts are reserved against the spending limit on submission. Released on COMPLETED/FAILED/REFUNDED. Held (not released) on TIMEOUT to prevent double-spend during manual resolution.
+
+### Bridge Status Tracking
+
+Cross-chain bridge transactions are asynchronous -- the source chain transaction confirms immediately, but the bridge transfer takes minutes to hours. LI.FI bridge status is tracked via a 2-phase polling lifecycle:
+
+1. **PENDING** -- Transaction submitted to source chain
+2. **Active polling** (Phase 1) -- Poll LI.FI `/status` API every 30 seconds for up to 2 hours (240 attempts). Detects COMPLETED, FAILED, or REFUNDED.
+3. **BRIDGE_MONITORING** -- If not resolved after 2 hours, transitions to reduced polling
+4. **Reduced polling** (Phase 2) -- Poll every 5 minutes for up to 22 hours (264 attempts). Covers slow bridges and congestion.
+5. **Terminal state** -- COMPLETED, FAILED, REFUNDED, or TIMEOUT (after 24 hours total)
+
+**Notification events** (5 bridge-specific events):
+- `BRIDGE_COMPLETED` -- Bridge transfer completed successfully on destination chain
+- `BRIDGE_FAILED` -- Bridge transfer failed
+- `BRIDGE_MONITORING_STARTED` -- Transitioned to reduced polling (bridge taking longer than expected)
+- `BRIDGE_TIMEOUT` -- Bridge not resolved after 24 hours of monitoring
+- `BRIDGE_REFUNDED` -- Bridge transfer was refunded on source chain
+
+### Example: Bridge USDC from Ethereum to Arbitrum
+
+**REST API:**
+```bash
+# Bridge 100 USDC (100000000 = 100 * 10^6) from Ethereum to Arbitrum
+curl -s -X POST http://localhost:3100/v1/actions/lifi/bridge \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -d '{
+    "params": {
+      "fromChain": "ethereum",
+      "toChain": "arbitrum",
+      "fromToken": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "toToken": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "fromAmount": "100000000"
+    }
+  }'
+```
+
+**MCP Tool:**
+```json
+{
+  "tool": "action_lifi_bridge",
+  "params": {
+    "fromChain": "ethereum",
+    "toChain": "arbitrum",
+    "fromToken": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    "toToken": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    "fromAmount": "100000000"
+  }
+}
+```
+
+**TypeScript SDK:**
+```typescript
+import { WAIaaSClient } from '@waiaas/sdk';
+
+const client = new WAIaaSClient({ baseUrl: 'http://localhost:3100', token: 'wai_sess_...' });
+
+const tx = await client.executeAction('lifi', 'bridge', {
+  params: {
+    fromChain: 'ethereum',
+    toChain: 'arbitrum',
+    fromToken: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+    toToken: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+    fromAmount: '100000000',
+  },
+});
+console.log('Transaction ID:', tx.id);
+// Poll GET /v1/transactions/{tx.id} for bridge_status updates
+```
+
+**Python SDK:**
+```python
+from waiaas import WAIaaSClient
+
+async with WAIaaSClient(base_url="http://localhost:3100", token="wai_sess_...") as client:
+    tx = await client.execute_action("lifi", "bridge", {
+        "fromChain": "ethereum",
+        "toChain": "arbitrum",
+        "fromToken": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "toToken": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "fromAmount": "100000000",
+    })
+    print("Transaction ID:", tx.id)
+    # Poll GET /v1/transactions/{tx.id} for bridge_status updates
+```
+
+### Example: Cross-Chain Swap SOL to Base USDC
+
+**REST API:**
+```bash
+# Swap 1 SOL (1000000000 lamports) from Solana to USDC on Base
+curl -s -X POST http://localhost:3100/v1/actions/lifi/cross_swap \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -d '{
+    "params": {
+      "fromChain": "solana",
+      "toChain": "base",
+      "fromToken": "So11111111111111111111111111111111111111112",
+      "toToken": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "fromAmount": "1000000000"
+    }
+  }'
+```
+
+**MCP Tool:**
+```json
+{
+  "tool": "action_lifi_cross_swap",
+  "params": {
+    "fromChain": "solana",
+    "toChain": "base",
+    "fromToken": "So11111111111111111111111111111111111111112",
+    "toToken": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    "fromAmount": "1000000000"
+  }
+}
+```
+
+**TypeScript SDK:**
+```typescript
+import { WAIaaSClient } from '@waiaas/sdk';
+
+const client = new WAIaaSClient({ baseUrl: 'http://localhost:3100', token: 'wai_sess_...' });
+
+const tx = await client.executeAction('lifi', 'cross_swap', {
+  params: {
+    fromChain: 'solana',
+    toChain: 'base',
+    fromToken: 'So11111111111111111111111111111111111111112',
+    toToken: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+    fromAmount: '1000000000',
+  },
+});
+console.log('Transaction ID:', tx.id);
+// Bridge status tracked automatically -- notifications sent on completion/failure
+```
+
+**Python SDK:**
+```python
+from waiaas import WAIaaSClient
+
+async with WAIaaSClient(base_url="http://localhost:3100", token="wai_sess_...") as client:
+    tx = await client.execute_action("lifi", "cross_swap", {
+        "fromChain": "solana",
+        "toChain": "base",
+        "fromToken": "So11111111111111111111111111111111111111112",
+        "toToken": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+        "fromAmount": "1000000000",
+    })
+    print("Transaction ID:", tx.id)
+    # Bridge status tracked automatically -- notifications sent on completion/failure
+```
+
+## 6. Policy Integration
 
 ### CONTRACT_WHITELIST
 
@@ -426,6 +664,7 @@ Action providers resolve to `CONTRACT_CALL` transactions targeting external prot
 
 **Jupiter Swap:** Jupiter program `JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4`.
 **0x Swap:** AllowanceHolder contract `0x0000000000001fF3684f28c67538d4D072C22734`.
+**LI.FI Bridge:** Routes are resolved dynamically by the LI.FI API (no fixed contract address). The target contract varies per bridge route and chain.
 
 ### Provider-Trust Bypass
 
@@ -434,20 +673,23 @@ When an action provider is **enabled** via Admin Settings, the CONTRACT_WHITELIS
 - Enabled providers are trusted at policy evaluation time (checked via SettingsService, not registration).
 - The `actionProvider` field is auto-tagged by the ActionProviderRegistry after Zod validation -- providers cannot spoof this field.
 - This means you do **not** need to manually whitelist the AllowanceHolder contract or Jupiter program when using built-in action providers. Enabling the provider in Admin Settings is sufficient.
+- For LI.FI, provider-trust bypass is especially important since bridge routes resolve to different contracts dynamically. Manual whitelisting is impractical.
 
 If you prefer explicit whitelisting (defense in depth), you can still add the contract addresses to CONTRACT_WHITELIST.
 
 ### SPENDING_LIMIT
 
-The swap input amount is converted to USD via IPriceOracle and evaluated against any `SPENDING_LIMIT` policy on the wallet. This ensures DeFi operations respect the same spending controls as regular transfers.
+The swap/bridge input amount is converted to USD via IPriceOracle and evaluated against any `SPENDING_LIMIT` policy on the wallet. This ensures DeFi operations respect the same spending controls as regular transfers.
 
-## 6. Configuration via Admin Settings
+**LI.FI bridge reservation lifecycle:** Bridge amounts are reserved against the spending limit when the transaction is submitted. The reservation is released on terminal states (COMPLETED, FAILED, REFUNDED) but **held** on TIMEOUT to prevent double-spend during manual resolution. This means the spending budget is not freed until the bridge completes or fails definitively.
+
+## 7. Configuration via Admin Settings
 
 Since v28.2, all action provider settings are managed via **Admin UI > Settings > Actions** (not config.toml). The Admin Settings UI provides:
 
 - **Enable/disable toggle** per provider (takes effect immediately, no daemon restart)
-- **API key management** (required for 0x Swap, optional for Jupiter Swap)
-- **Slippage defaults** (default and max, in basis points)
+- **API key management** (required for 0x Swap, optional for Jupiter Swap and LI.FI)
+- **Slippage defaults** (default and max, in basis points for Jupiter/0x, in decimal for LI.FI)
 - **Provider-specific settings** (base URL, timeout, Jito tip, max price impact)
 
 Settings are stored in the database and take precedence over config.toml defaults. Environment variables (`WAIAAS_ACTIONS_*`) can override database values for deployment automation.
@@ -463,7 +705,7 @@ The Admin UI shows a three-state status for each provider:
 - **Requires API Key** -- Provider is enabled but missing required API key (yellow, fires `ACTION_API_KEY_REQUIRED` notification)
 - **Inactive** -- Provider is disabled (gray)
 
-## 7. Error Reference
+## 8. Error Reference
 
 | Code | HTTP | Description | Recovery |
 |------|------|-------------|----------|
@@ -476,8 +718,10 @@ The Admin UI shows a three-state status for each provider:
 | `POLICY_VIOLATION` | 403 | Transaction blocked by policy. | Check policies with GET /v1/policies. |
 | `PRICE_IMPACT_TOO_HIGH` | 502 | Price impact exceeds configured maximum (Jupiter). | Reduce swap amount or increase max_price_impact_pct. |
 | `LIQUIDITY_UNAVAILABLE` | 502 | No liquidity available for the swap pair (0x). | Try a different token pair or smaller amount. |
+| `UNSUPPORTED_CHAIN` | 400 | Chain not supported by LI.FI integration. | Use one of the supported chains: solana, ethereum, polygon, arbitrum, optimism, base. |
+| `ACTION_API_ERROR` | 502 | LI.FI API returned an error. | Check LI.FI API status, verify parameters, retry. |
 
-## 8. MCP Auto-Registration
+## 9. MCP Auto-Registration
 
 When a provider has `mcpExpose: true` in its metadata, the MCP server automatically registers each action as an MCP tool using the naming convention:
 
@@ -488,6 +732,8 @@ action_{provider_name}_{action_name}
 **Current MCP tools:**
 - `action_jupiter_swap_swap` -- Jupiter Swap on Solana
 - `action_zerox_swap_swap` -- 0x Swap on EVM chains
+- `action_lifi_cross_swap` -- LI.FI Cross-Chain Swap (multi-chain)
+- `action_lifi_bridge` -- LI.FI Cross-Chain Bridge (multi-chain)
 
 Auto-registration happens after MCP server connection via `registerActionProviderTools()`. The tool list is refreshed on each session. If the REST API is unavailable, MCP enters degraded mode (14 built-in tools remain, action provider tools are skipped).
 
@@ -496,7 +742,7 @@ MCP tool parameters:
 - `network` (optional string): Target network
 - `wallet_id` (optional string): Target wallet ID
 
-## 9. Related Skill Files
+## 10. Related Skill Files
 
 - **admin.skill.md** -- API key management, Admin Settings, daemon admin
 - **transactions.skill.md** -- 5-type transaction reference (actions execute as CONTRACT_CALL)
