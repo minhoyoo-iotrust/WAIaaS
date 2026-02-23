@@ -254,7 +254,7 @@ See `.planning/milestones/v28.2-ROADMAP.md` for full details.
 **Milestone Goal:** LI.FI 메타 애그리게이터를 ActionProvider로 구현하여 AI 에이전트가 체인 간(Solana<->EVM, EVM<->EVM) 자산 브릿지/스왑을 수행할 수 있도록 한다. m28-04/m28-05가 재사용할 비동기 상태 추적 공통 인프라를 함께 구축한다.
 
 - [x] **Phase 251: 비동기 상태 추적 공통 인프라** - IAsyncStatusTracker 인터페이스 + AsyncPollingService 폴링 스케줄러 + DB v23 마이그레이션(bridge_status/bridge_metadata/GAS_WAITING/partial index) -- completed 2026-02-24
-- [ ] **Phase 252: LiFi ActionProvider + 정책 연동 + 알림** - LiFiApiClient + LiFiActionProvider(bridge/cross_swap) + BridgeStatusTracker 2단계 폴링 + 출발 체인 정책 평가 + SPENDING_LIMIT 예약 해제 + 5개 브릿지 알림 이벤트
+- [x] **Phase 252: LiFi ActionProvider + 정책 연동 + 알림** - LiFiApiClient + LiFiActionProvider(bridge/cross_swap) + BridgeStatusTracker 2단계 폴링 + 출발 체인 정책 평가 + SPENDING_LIMIT 예약 해제 + 5개 브릿지 알림 이벤트 -- completed 2026-02-24
 - [ ] **Phase 253: 인터페이스 통합** - MCP 2개 도구 자동 노출 + TS/Python SDK executeAction + actions.skill.md 문서
 
 ## Phase Details
@@ -288,9 +288,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 252-01-PLAN.md — LiFiApiClient + Zod schemas + LiFiConfig + daemon config/settings (wave 1)
-- [ ] 252-02-PLAN.md — LiFiActionProvider (cross_swap/bridge) + slippage clamp + registerBuiltInProviders (wave 2)
-- [ ] 252-03-PLAN.md — BridgeStatusTracker 2-phase polling + notification events 5 + i18n + reservation release (wave 3)
+- [x] 252-01-PLAN.md — LiFiApiClient + Zod schemas + LiFiConfig + daemon config/settings (wave 1)
+- [x] 252-02-PLAN.md — LiFiActionProvider (cross_swap/bridge) + slippage clamp + registerBuiltInProviders (wave 2)
+- [x] 252-03-PLAN.md — BridgeStatusTracker 2-phase polling + notification events 5 + i18n + reservation release (wave 3)
 
 ### Phase 253: 인터페이스 통합
 **Goal**: AI 에이전트가 MCP 도구, SDK, 스킬 파일을 통해 LI.FI 크로스체인 브릿지/스왑을 발견하고 실행할 수 있는 상태
@@ -313,5 +313,5 @@ Phases execute in numeric order: 251 → 252 → 253
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 251. 비동기 상태 추적 공통 인프라 | v28.3 | 2/2 | Completed | 2026-02-24 |
-| 252. LiFi ActionProvider + 정책 연동 + 알림 | v28.3 | 0/3 | Not started | - |
+| 252. LiFi ActionProvider + 정책 연동 + 알림 | v28.3 | 3/3 | Completed | 2026-02-24 |
 | 253. 인터페이스 통합 | v28.3 | 0/1 | Not started | - |
