@@ -881,15 +881,31 @@ export class DaemonLifecycle {
       this.apiKeyStore = new ApiKeyStore(this._db!, masterPassword);
       this.actionProviderRegistry = new ActionProviderRegistry();
 
+      // Register built-in action providers from @waiaas/actions
+      const { registerBuiltInProviders } = await import('@waiaas/actions');
+      const actionsConfig = {
+        jupiter_swap: {
+          enabled: this._config!.actions.jupiter_swap_enabled,
+          apiBaseUrl: this._config!.actions.jupiter_swap_api_base_url,
+          apiKey: this._config!.actions.jupiter_swap_api_key,
+          defaultSlippageBps: this._config!.actions.jupiter_swap_default_slippage_bps,
+          maxSlippageBps: this._config!.actions.jupiter_swap_max_slippage_bps,
+          maxPriceImpactPct: this._config!.actions.jupiter_swap_max_price_impact_pct,
+          jitoTipLamports: this._config!.actions.jupiter_swap_jito_tip_lamports,
+          requestTimeoutMs: this._config!.actions.jupiter_swap_request_timeout_ms,
+        },
+      };
+      const builtIn = registerBuiltInProviders(this.actionProviderRegistry, actionsConfig);
+
       // Load plugins from ~/.waiaas/actions/ (if exists)
       const actionsDir = join(dataDir, 'actions');
       if (existsSync(actionsDir)) {
         const result = await this.actionProviderRegistry.loadPlugins(actionsDir);
         console.debug(
-          `Step 4f: ActionProviderRegistry initialized (${result.loaded.length} plugins loaded, ${result.failed.length} failed)`,
+          `Step 4f: ActionProviderRegistry initialized (${builtIn.loaded.length} built-in, ${result.loaded.length} plugins loaded, ${result.failed.length} failed)`,
         );
       } else {
-        console.debug('Step 4f: ActionProviderRegistry initialized (no plugins directory)');
+        console.debug(`Step 4f: ActionProviderRegistry initialized (${builtIn.loaded.length} built-in, no plugins directory)`);
       }
     } catch (err) {
       console.warn('Step 4f (fail-soft): ActionProviderRegistry init warning:', err);

@@ -230,7 +230,7 @@ See `.planning/milestones/v28.0-ROADMAP.md` for full details.
 
 **Milestone Goal:** Jupiter Aggregator REST API를 IActionProvider 프레임워크에 통합하여, AI 에이전트가 Solana DEX 토큰 스왑을 안전하게 수행할 수 있게 한다. 새로운 npm 의존성 없이 native fetch + Zod 검증으로 구현하며, packages/actions/ 신규 모노레포 패키지를 생성한다.
 
-- [ ] **Phase 246: Core Provider Implementation** - JupiterApiClient + JupiterSwapActionProvider + Zod 스키마 + 안전 장치 + 단위 테스트
+- [x] **Phase 246: Core Provider Implementation** - JupiterApiClient + JupiterSwapActionProvider + Zod 스키마 + 안전 장치 + 단위 테스트 -- completed 2026-02-23
 - [ ] **Phase 247: Daemon Integration + DX** - 내장 프로바이더 등록 + config.toml 파싱 + 정책 통합 + MCP 검증 + 스킬 파일 업데이트
 
 ## Phase Details
@@ -245,11 +245,13 @@ See `.planning/milestones/v28.0-ROADMAP.md` for full details.
   3. JupiterSwapActionProvider.resolve()가 swapInstruction을 programId/instructionData/accounts를 포함한 ContractCallRequest로 변환하고 ContractCallRequestSchema.parse()를 통과한다
   4. 슬리피지 50bps 기본값 적용, 500bps 초과 시 클램프, priceImpact 1% 초과 시 PRICE_IMPACT_TOO_HIGH 거부, 동일 토큰 스왑 사전 차단이 모두 단위 테스트로 검증된다
   5. Jito MEV 보호 tip이 swap-instructions 요청에 포함되고, swapInstruction.programId가 Jupiter 프로그램 주소와 일치하는지 검증된다
-**Plans**: TBD
+**Plans**: 4/4
 
 Plans:
-- [ ] 246-01: TBD
-- [ ] 246-02: TBD
+- [x] 246-01: packages/actions 기반 + ActionApiClient + 슬리피지 유틸리티 + ChainError DeFi 코드
+- [x] 246-02: Jupiter API Client + Zod 스키마 + config
+- [x] 246-03: JupiterSwapActionProvider + 안전 장치 + registerBuiltInProviders
+- [x] 246-04: 단위 테스트 (11 slippage + 13 jupiter-swap = 24 tests)
 
 ### Phase 247: Daemon Integration + DX
 **Goal**: Jupiter Swap이 데몬 시작 시 자동 등록되어 MCP/SDK/REST를 통해 정책 평가를 거쳐 실행 가능하다
@@ -273,5 +275,5 @@ Phases execute in numeric order: 246 -> 247
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 246. Core Provider Implementation | v28.1 | 0/0 | Not started | - |
+| 246. Core Provider Implementation | v28.1 | 4/4 | Completed | 2026-02-23 |
 | 247. Daemon Integration + DX | v28.1 | 0/0 | Not started | - |

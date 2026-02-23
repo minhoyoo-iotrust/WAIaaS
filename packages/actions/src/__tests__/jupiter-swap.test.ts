@@ -106,9 +106,10 @@ describe('JupiterSwapActionProvider', () => {
     it('exposes swap action', () => {
       const provider = new JupiterSwapActionProvider({ enabled: true });
       expect(provider.actions).toHaveLength(1);
-      expect(provider.actions[0].name).toBe('swap');
-      expect(provider.actions[0].chain).toBe('solana');
-      expect(provider.actions[0].riskLevel).toBe('medium');
+      const swap = provider.actions[0]!;
+      expect(swap.name).toBe('swap');
+      expect(swap.chain).toBe('solana');
+      expect(swap.riskLevel).toBe('medium');
     });
   });
 
@@ -126,7 +127,7 @@ describe('JupiterSwapActionProvider', () => {
       expect(result.programId).toBe(JUPITER_PROGRAM_ID);
       expect(result.instructionData).toBe('c3dhcGRhdGE=');
       expect(result.accounts).toHaveLength(2);
-      expect(result.accounts![0].pubkey).toBe('So11111111111111111111111111111111111111112');
+      expect(result.accounts?.[0]?.pubkey).toBe('So11111111111111111111111111111111111111112');
     });
   });
 

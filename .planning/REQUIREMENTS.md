@@ -9,20 +9,20 @@ Requirements for milestone v28.1. Each maps to roadmap phases.
 
 ### Core Swap
 
-- [ ] **SWAP-01**: JupiterApiClient가 Quote API v1(GET /swap/v1/quote)을 호출하여 최적 경로, outAmount, priceImpactPct를 반환한다
-- [ ] **SWAP-02**: JupiterApiClient가 /swap-instructions API(POST /swap/v1/swap-instructions)를 호출하여 개별 instruction(swapInstruction, computeBudgetInstructions, setupInstructions)을 반환한다
-- [ ] **SWAP-03**: JupiterSwapActionProvider.resolve()가 swapInstruction을 ContractCallRequest(programId/instructionData/accounts)로 변환한다
-- [ ] **SWAP-04**: Jupiter API 응답(QuoteResponse, SwapInstructionsResponse)을 Zod 스키마로 런타임 검증하여 API drift를 조기 감지한다
-- [ ] **SWAP-05**: swapInstruction.programId가 Jupiter 프로그램 주소(JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4)와 일치하는지 검증한다
-- [ ] **SWAP-06**: Quote API 호출 시 restrictIntermediateTokens=true로 안전한 중간 토큰만 라우팅한다
+- [x] **SWAP-01**: JupiterApiClient가 Quote API v1(GET /swap/v1/quote)을 호출하여 최적 경로, outAmount, priceImpactPct를 반환한다
+- [x] **SWAP-02**: JupiterApiClient가 /swap-instructions API(POST /swap/v1/swap-instructions)를 호출하여 개별 instruction(swapInstruction, computeBudgetInstructions, setupInstructions)을 반환한다
+- [x] **SWAP-03**: JupiterSwapActionProvider.resolve()가 swapInstruction을 ContractCallRequest(programId/instructionData/accounts)로 변환한다
+- [x] **SWAP-04**: Jupiter API 응답(QuoteResponse, SwapInstructionsResponse)을 Zod 스키마로 런타임 검증하여 API drift를 조기 감지한다
+- [x] **SWAP-05**: swapInstruction.programId가 Jupiter 프로그램 주소(JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4)와 일치하는지 검증한다
+- [x] **SWAP-06**: Quote API 호출 시 restrictIntermediateTokens=true로 안전한 중간 토큰만 라우팅한다
 
 ### Safety & Protection
 
-- [ ] **SAFE-01**: 슬리피지 기본 50bps(0.5%) 적용, config.toml [actions.jupiter_swap] default_slippage_bps로 오버라이드 가능
-- [ ] **SAFE-02**: 슬리피지 상한 500bps(5%) 적용 — 사용자 요청이 상한 초과 시 상한으로 클램프
-- [ ] **SAFE-03**: priceImpactPct가 config 상한(기본 1.0%) 초과 시 PRICE_IMPACT_TOO_HIGH 에러로 거부한다
-- [ ] **SAFE-04**: Jito MEV 보호 tip(기본 1000 lamports)을 /swap-instructions 요청의 prioritizationFeeLamports.jitoTipLamports에 포함한다
-- [ ] **SAFE-05**: inputMint === outputMint 동일 토큰 스왑 요청을 사전 차단한다
+- [x] **SAFE-01**: 슬리피지 기본 50bps(0.5%) 적용, config.toml [actions.jupiter_swap] default_slippage_bps로 오버라이드 가능
+- [x] **SAFE-02**: 슬리피지 상한 500bps(5%) 적용 — 사용자 요청이 상한 초과 시 상한으로 클램프
+- [x] **SAFE-03**: priceImpactPct가 config 상한(기본 1.0%) 초과 시 PRICE_IMPACT_TOO_HIGH 에러로 거부한다
+- [x] **SAFE-04**: Jito MEV 보호 tip(기본 1000 lamports)을 /swap-instructions 요청의 prioritizationFeeLamports.jitoTipLamports에 포함한다
+- [x] **SAFE-05**: inputMint === outputMint 동일 토큰 스왑 요청을 사전 차단한다
 
 ### Policy Integration
 
@@ -68,17 +68,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SWAP-01 | Phase 246 | Pending |
-| SWAP-02 | Phase 246 | Pending |
-| SWAP-03 | Phase 246 | Pending |
-| SWAP-04 | Phase 246 | Pending |
-| SWAP-05 | Phase 246 | Pending |
-| SWAP-06 | Phase 246 | Pending |
-| SAFE-01 | Phase 246 | Pending |
-| SAFE-02 | Phase 246 | Pending |
-| SAFE-03 | Phase 246 | Pending |
-| SAFE-04 | Phase 246 | Pending |
-| SAFE-05 | Phase 246 | Pending |
+| SWAP-01 | Phase 246 | Done |
+| SWAP-02 | Phase 246 | Done |
+| SWAP-03 | Phase 246 | Done |
+| SWAP-04 | Phase 246 | Done |
+| SWAP-05 | Phase 246 | Done |
+| SWAP-06 | Phase 246 | Done |
+| SAFE-01 | Phase 246 | Done |
+| SAFE-02 | Phase 246 | Done |
+| SAFE-03 | Phase 246 | Done |
+| SAFE-04 | Phase 246 | Done |
+| SAFE-05 | Phase 246 | Done |
 | PLCY-01 | Phase 247 | Pending |
 | PLCY-02 | Phase 247 | Pending |
 | DX-01 | Phase 247 | Pending |
