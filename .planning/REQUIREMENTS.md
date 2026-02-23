@@ -14,9 +14,9 @@ Requirements for milestone v28.2 0x EVM DEX Swap. Each maps to roadmap phases.
 - [x] **PINF-03**: config.toml `[actions]` 섹션이 제거되고 기존 Jupiter 설정이 Admin Settings로 이관된다
 - [x] **PINF-04**: Admin UI Actions 페이지에서 빌트인 프로바이더 목록, 활성화 토글, API 키 관리가 가능하다
 - [x] **PINF-05**: API 키 미설정 시 ACTION_API_KEY_REQUIRED 알림 이벤트가 발송된다 (adminUrl 필드 포함)
-- [ ] **PINF-06**: IActionProvider.resolve() 반환 타입이 ContractCallRequest[]로 확장되고 actions route가 배열을 순차 파이프라인으로 실행한다
-- [ ] **PINF-07**: ContractCallRequest에 actionProvider 옵션 필드가 추가되고 활성화된 프로바이더의 resolve() 결과에 자동 태깅된다
-- [ ] **PINF-08**: Policy Stage 3에서 actionProvider 태그가 있고 해당 프로바이더가 활성화 상태이면 CONTRACT_WHITELIST 검사를 skip한다
+- [x] **PINF-06**: IActionProvider.resolve() 반환 타입이 ContractCallRequest[]로 확장되고 actions route가 배열을 순차 파이프라인으로 실행한다
+- [x] **PINF-07**: ContractCallRequest에 actionProvider 옵션 필드가 추가되고 활성화된 프로바이더의 resolve() 결과에 자동 태깅된다
+- [x] **PINF-08**: Policy Stage 3에서 actionProvider 태그가 있고 해당 프로바이더가 활성화 상태이면 CONTRACT_WHITELIST 검사를 skip한다
 
 ### 0x Swap Provider
 
@@ -68,9 +68,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PINF-03 | Phase 248 | Complete |
 | PINF-04 | Phase 248 | Complete |
 | PINF-05 | Phase 248 | Complete |
-| PINF-06 | Phase 248 | Pending |
-| PINF-07 | Phase 248 | Pending |
-| PINF-08 | Phase 248 | Pending |
+| PINF-06 | Phase 248 | Complete |
+| PINF-07 | Phase 248 | Complete |
+| PINF-08 | Phase 248 | Complete |
 | ZXSW-01 | Phase 249 | Pending |
 | ZXSW-02 | Phase 249 | Pending |
 | ZXSW-03 | Phase 249 | Pending |

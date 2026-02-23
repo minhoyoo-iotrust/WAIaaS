@@ -34,6 +34,10 @@ Progress: [██████████] 100%
 - 248-01: SettingsReader interface -- minimal contract between @waiaas/actions and daemon SettingsService
 - 248-01: Notify-before-throw pattern -- fire notification before error throw for actionable admin guidance
 - 248-01: ACTION_API_KEY_REQUIRED categorized as 'system' (operational guidance, not security alert)
+- 248-02: executeResolve() always returns ContractCallRequest[] -- callers always iterate
+- 248-02: actionProvider field auto-tagged by registry after Zod validation -- providers cannot spoof
+- 248-02: Provider-trust checks SettingsService at policy evaluation time (not registration)
+- 248-02: Multi-element response uses { id, status, pipeline: [{id, status}...] } for backward compat
 - 248-03: Static BUILTIN_PROVIDERS client-side array for provider cards independent of daemon registration
 - 248-03: Three-state status: Active (enabled+registered), Requires API Key (enabled+missing), Inactive (disabled)
 - 248-03: Toggle saves immediately via apiPut single-setting update
