@@ -590,6 +590,7 @@ Stage 6: Confirm (waitForConfirmation)
 | LI.FI | EVM | (quote.transactionRequest.to에서 동적 획득) | LI.FI diamond proxy | lifi |
 | LI.FI | Solana | (quote response에서 동적 획득) | Bridge program | lifi |
 | Lido | Ethereum | 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84 | stETH / Lido contract | lido |
+| Lido | Ethereum | 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0 | wstETH (Wrapped stETH) -- SAFE-02에서 추가 | lido |
 | Lido | Ethereum | 0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1 | WithdrawalQueueERC721 | lido |
 | Jito | Solana | SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy | SPL Stake Pool program | jito |
 
@@ -745,6 +746,121 @@ if (isOwnWallet) {
 - 폴링 스케줄러 설계 (setInterval vs setTimeout 체인)
 - transactions 테이블 bridge_status 컬럼 추가 + GAS_WAITING 상태 확장 통합 마이그레이션 설계
 - 상태 전이 다이어그램
+
+---
+
+### 6. 안전성 설계 (확정)
+
+> **상태:** 확정 설계 (2026-02-23)
+> **요구사항:** SAFE-01, SAFE-02, SAFE-03, SAFE-04
+
+#### SAFE-01: Jito MEV 보호 fail-closed 설계
+
+핵심 원칙: **Jito 블록 엔진이 사용 불가능할 때, 절대로 공개 멤풀로 폴백하지 않는다.**
+
+**설계 내용:**
+
+1. JupiterSwapActionProvider는 config.toml의 `jito_block_engine_url` 설정 존재 시 Jito 경로를 사용한다
+2. Jito 전송 실패 시 (연결 실패, 타임아웃, 거부):
+   - 트랜잭션을 즉시 FAILED 처리
+   - JITO_UNAVAILABLE 에러 코드 반환
+   - **공개 RPC를 통한 재전송 시도 절대 금지**
+3. Jito 가용성 추적:
+   - 3회 연속 실패 시 JITO_DEGRADED 알림 발송
+   - Jupiter 프로바이더를 자동 비활성화하지는 않음 (운영자 판단에 맡김)
+   - 운영자가 Admin Settings에서 수동으로 Jito URL을 제거하면 공개 RPC로 전환 (이것은 명시적 선택)
+4. Jupiter swap에 dynamicSlippage 사용:
+   - Jupiter API의 dynamicSlippage 파라미터를 기본 활성화
+   - 서버사이드에서 슬리피지를 자동 조정하여 샌드위치 공격 수익성을 최소화
+
+**데이터 플로우:**
+
+```
+JupiterSwapActionProvider.resolve()
+  |
+  v
+Jupiter API /swap-instructions (with dynamicSlippage)
+  |
+  v
+ContractCallRequest + Jito tip instruction (if jito_block_engine_url configured)
+  |
+  v
+SolanaAdapter.submitTransaction()
+  |
+  +-- jito_block_engine_url 존재 --> Jito Block Engine으로 전송
+  |     |
+  |     +-- 성공 --> SUBMITTED
+  |     +-- 실패 --> FAILED (JITO_UNAVAILABLE), 공개 RPC 폴백 금지
+  |
+  +-- jito_block_engine_url 미설정 --> 공개 RPC로 전송 (MEV 보호 없음)
+```
+
+**Pitfall 대응 매핑:**
+- Pitfall P2 (MEV/Frontrunning Exposure): fail-closed로 공개 멤풀 노출 제거
+- dynamicSlippage로 샌드위치 수익성 최소화
+- JITO_DEGRADED 알림으로 운영자가 상황을 인지하고 대응
+
+#### SAFE-02: stETH vs wstETH 아키텍처 결정 -- wstETH 채택
+
+Research에서 권장한 바와 같이, WAIaaS의 Lido 통합은 **wstETH(Wrapped stETH)를 기본으로 사용**한다.
+
+**채택 근거:**
+
+1. stETH는 리베이스 토큰 -- 잔고가 매일 자동 변경되어 캐시된 잔고가 즉시 stale해진다
+2. stETH transfer()는 정수 나눗셈으로 1-2 wei 먼지(dust)가 남는 문제 (Lido core#442)
+3. L2로 브릿지된 stETH는 리베이스가 중단되어 가치 하락
+4. wstETH는 non-rebasing -- 잔고 안정, 정책 평가 정확, dust 없음
+
+**wstETH 플로우 설계:**
+
+```
+=== Stake (ETH -> wstETH) ===
+1. Lido submit(ETH) -> stETH 수령
+2. stETH -> wstETH wrap (wstETH.wrap() 컨트랙트 호출)
+3. wstETH를 월렛에 저장
+
+=> BATCH 타입으로 2개 인스트럭션을 단일 트랜잭션으로 실행:
+   [submit() + wrap()]
+
+=== Unstake (wstETH -> ETH) ===
+1. wstETH -> stETH unwrap (wstETH.unwrap() 호출)
+2. stETH -> Withdrawal Queue requestWithdrawals()
+3. UnstakeStatusWorker가 폴링 -> Claim 가능 시 claimWithdrawals()
+
+=> Step 1+2: BATCH로 단일 트랜잭션
+=> Step 3: 비동기 (AsyncStatusTracker)
+```
+
+**wstETH 컨트랙트 주소:**
+- Ethereum mainnet: 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0
+
+**잔액 추적:**
+- wstETH 잔고를 직접 표시 (리베이스 없으므로 안정)
+- USD 환산: wstETH -> stETH 환율 * ETH/USD 오라클 가격
+- stETH:wstETH 환율은 wstETH.stEthPerToken() view 함수로 조회
+
+**정책 평가:**
+- SPENDING_LIMIT: wstETH 금액을 stETH 환산 -> ETH -> USD로 평가
+- CONTRACT_WHITELIST: Lido stETH + wstETH + WithdrawalQueue 3개 주소 등록 필요
+
+**PLCY-02 화이트리스트 번들 업데이트:**
+
+기존 DEFI-03에서 정의한 Lido 번들을 업데이트한다:
+
+| 주소 | 설명 |
+|------|------|
+| 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84 | stETH / Lido contract |
+| 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0 | wstETH (Wrapped stETH) |
+| 0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1 | WithdrawalQueueERC721 |
+
+**m28-04 objective 업데이트 지시:**
+
+m28-04-liquid-staking.md의 기술 결정 #7을 "wstETH 채택"으로 변경하라는 지시를 명시한다 (실제 수정은 구현 마일스톤에서 수행).
+
+**Pitfall 대응 매핑:**
+- Pitfall P5 (stETH Rebase): wstETH 채택으로 리베이스 문제 근본 해결
+- Lido core#442 (1-2 wei dust): wstETH는 non-rebasing이므로 dust 미발생
+- L2 브릿지 호환: wstETH는 L2에서도 가치 보존
 
 ---
 
