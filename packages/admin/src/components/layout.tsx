@@ -13,6 +13,7 @@ import PoliciesPage from '../pages/policies';
 import NotificationsPage from '../pages/notifications';
 import SecurityPage from '../pages/security';
 import SystemPage from '../pages/system';
+import ActionsPage from '../pages/actions';
 
 export const currentPath = signal(window.location.hash.slice(1) || '/dashboard');
 const searchOpen = signal(false);
@@ -27,6 +28,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/transactions': 'Transactions',
   '/sessions': 'Sessions',
   '/tokens': 'Token Registry',
+  '/actions': 'Actions',
   '/policies': 'Policies',
   '/notifications': 'Notifications',
   '/security': 'Security',
@@ -39,6 +41,7 @@ const PAGE_SUBTITLES: Record<string, string> = {
   '/transactions': 'View all transactions and configure incoming monitoring',
   '/sessions': 'View and manage active sessions',
   '/tokens': 'Manage EVM token registry per network',
+  '/actions': 'Manage DeFi action providers and API keys',
   '/policies': 'Configure transaction policies and rules',
   '/notifications': 'Channel status, delivery logs, and settings',
   '/security': 'Emergency controls and automatic protection rules',
@@ -60,6 +63,7 @@ const NAV_ITEMS = [
   { path: '/transactions', label: 'Transactions' },
   { path: '/sessions', label: 'Sessions' },
   { path: '/tokens', label: 'Tokens' },
+  { path: '/actions', label: 'Actions' },
   { path: '/policies', label: 'Policies' },
   { path: '/notifications', label: 'Notifications' },
   { path: '/security', label: 'Security' },
@@ -74,6 +78,7 @@ function PageRouter() {
     return <TransactionsPage />;
   }
   if (path === '/tokens') return <TokensPage />;
+  if (path === '/actions') return <ActionsPage />;
   if (path === '/sessions') return <SessionsPage />;
   if (path === '/policies') return <PoliciesPage />;
   if (path === '/notifications') return <NotificationsPage />;
