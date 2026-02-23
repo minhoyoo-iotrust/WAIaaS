@@ -88,10 +88,8 @@ function makeLiFiProvidersResponse() {
 }
 
 describe('registerActionProviderTools (LiFi)', () => {
-  let consoleSpy: ReturnType<typeof vi.spyOn>;
-
   beforeEach(() => {
-    consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   it('LiFi provider with mcpExpose=true registers 2 MCP tools', async () => {
