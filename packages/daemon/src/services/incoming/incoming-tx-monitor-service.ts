@@ -21,7 +21,8 @@
 
 import type { Database } from 'better-sqlite3';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import type { EventBus, IChainSubscriber, IncomingTransaction } from '@waiaas/core';
+import type { EventBus, IChainSubscriber, IncomingTransaction, ChainType, EnvironmentType } from '@waiaas/core';
+import { getNetworksForEnvironment } from '@waiaas/core';
 import type { BackgroundWorkers } from '../../lifecycle/workers.js';
 import type { KillSwitchService } from '../kill-switch-service.js';
 import type { NotificationService } from '../../notifications/notification-service.js';
@@ -149,20 +150,28 @@ export class IncomingTxMonitorService {
       public_key: string;
     }>;
 
-    // Subscribe each wallet
+    // Subscribe each wallet on all networks for its chain:environment
+    let subscriptionCount = 0;
     for (const wallet of wallets) {
-      try {
-        await this.multiplexer.addWallet(
-          wallet.chain,
-          wallet.environment,
-          wallet.id,
-          wallet.public_key,
-        );
-      } catch (err) {
-        console.warn(
-          `IncomingTxMonitor: failed to subscribe wallet ${wallet.id}:`,
-          err,
-        );
+      const networks = getNetworksForEnvironment(
+        wallet.chain as ChainType,
+        wallet.environment as EnvironmentType,
+      );
+      for (const network of networks) {
+        try {
+          await this.multiplexer.addWallet(
+            wallet.chain,
+            network,
+            wallet.id,
+            wallet.public_key,
+          );
+          subscriptionCount++;
+        } catch (err) {
+          console.warn(
+            `IncomingTxMonitor: failed to subscribe wallet ${wallet.id} on ${network}:`,
+            err,
+          );
+        }
       }
     }
 
@@ -170,7 +179,7 @@ export class IncomingTxMonitorService {
     this.registerWorkers();
 
     console.debug(
-      `IncomingTxMonitorService started: ${wallets.length} wallets subscribed`,
+      `IncomingTxMonitorService started: ${wallets.length} wallets, ${subscriptionCount} network subscriptions`,
     );
   }
 
@@ -219,20 +228,26 @@ export class IncomingTxMonitorService {
       public_key: string;
     }>;
 
-    // Add any new wallets to multiplexer (addWallet handles dedup internally)
+    // Add any new wallets to multiplexer on all networks (addWallet handles dedup internally)
     for (const wallet of dbWallets) {
-      try {
-        await this.multiplexer.addWallet(
-          wallet.chain,
-          wallet.environment,
-          wallet.id,
-          wallet.public_key,
-        );
-      } catch (err) {
-        console.warn(
-          `syncSubscriptions: failed to add wallet ${wallet.id}:`,
-          err,
-        );
+      const networks = getNetworksForEnvironment(
+        wallet.chain as ChainType,
+        wallet.environment as EnvironmentType,
+      );
+      for (const network of networks) {
+        try {
+          await this.multiplexer.addWallet(
+            wallet.chain,
+            network,
+            wallet.id,
+            wallet.public_key,
+          );
+        } catch (err) {
+          console.warn(
+            `syncSubscriptions: failed to add wallet ${wallet.id} on ${network}:`,
+            err,
+          );
+        }
       }
     }
   }

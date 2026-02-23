@@ -298,7 +298,7 @@ describe('stage5Execute: TX_FAILED notification on simulation failure', () => {
     );
     expect(failedCall).toBeTruthy();
     expect(failedCall![1]).toBe(walletId);
-    expect(failedCall![2]).toHaveProperty('reason', 'Insufficient funds');
+    expect(failedCall![2]).toHaveProperty('error', 'Insufficient funds');
     expect(failedCall![2]).toHaveProperty('amount', '1000000000');
     expect(failedCall![3]).toEqual({ txId: ctx.txId });
   });
@@ -363,7 +363,7 @@ describe('stage6Confirm: TX_FAILED notification on on-chain revert', () => {
     );
     expect(failedCall).toBeTruthy();
     expect(failedCall![1]).toBe(walletId);
-    expect(failedCall![2]).toHaveProperty('reason', 'Transaction reverted on-chain');
+    expect(failedCall![2]).toHaveProperty('error', 'Transaction reverted on-chain');
     expect(failedCall![2]).toHaveProperty('amount', '1000000000');
     expect(failedCall![3]).toEqual({ txId: ctx.txId });
   });

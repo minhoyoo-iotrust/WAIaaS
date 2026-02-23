@@ -180,8 +180,8 @@ describe('IncomingTxMonitorService', () => {
   describe('start()', () => {
     it('loads wallets from DB and adds to multiplexer', async () => {
       const walletRows = [
-        { id: 'w1', chain: 'solana', network: 'mainnet', public_key: 'pubkey1' },
-        { id: 'w2', chain: 'ethereum', network: 'sepolia', public_key: 'pubkey2' },
+        { id: 'w1', chain: 'solana', environment: 'mainnet', public_key: 'pubkey1' },
+        { id: 'w2', chain: 'ethereum', environment: 'sepolia', public_key: 'pubkey2' },
       ];
 
       // Make the wallet query return our test wallets
@@ -222,7 +222,7 @@ describe('IncomingTxMonitorService', () => {
 
     it('handles wallet subscription failure gracefully (per-wallet isolation)', async () => {
       const walletRows = [
-        { id: 'w1', chain: 'solana', network: 'mainnet', public_key: 'pubkey1' },
+        { id: 'w1', chain: 'solana', environment: 'mainnet', public_key: 'pubkey1' },
       ];
       sqlite._allFn.mockReturnValueOnce(walletRows);
 

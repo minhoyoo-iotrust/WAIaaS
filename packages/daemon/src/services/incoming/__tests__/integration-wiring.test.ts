@@ -206,7 +206,7 @@ describe('BUG-2: Polling Worker Handlers', () => {
 
     // Return one solana wallet from DB
     sqlite._allFn.mockReturnValueOnce([
-      { id: 'w1', chain: 'solana', network: 'mainnet', public_key: 'pk1' },
+      { id: 'w1', chain: 'solana', environment: 'mainnet', public_key: 'pk1' },
     ]);
 
     const service = new IncomingTxMonitorService({
@@ -254,7 +254,7 @@ describe('BUG-2: Polling Worker Handlers', () => {
 
     // Return one ethereum wallet from DB
     sqlite._allFn.mockReturnValueOnce([
-      { id: 'w2', chain: 'ethereum', network: 'mainnet', public_key: 'pk2' },
+      { id: 'w2', chain: 'ethereum', environment: 'mainnet', public_key: 'pk2' },
     ]);
 
     const service = new IncomingTxMonitorService({
@@ -302,7 +302,7 @@ describe('BUG-2: Polling Worker Handlers', () => {
 
     // Return one solana wallet from DB
     sqlite._allFn.mockReturnValueOnce([
-      { id: 'w1', chain: 'solana', network: 'mainnet', public_key: 'pk1' },
+      { id: 'w1', chain: 'solana', environment: 'mainnet', public_key: 'pk1' },
     ]);
 
     const service = new IncomingTxMonitorService({
@@ -368,7 +368,7 @@ describe('BUG-3: Gap Recovery Wiring', () => {
 
     // Return one solana wallet from DB
     sqlite._allFn.mockReturnValueOnce([
-      { id: 'w1', chain: 'solana', network: 'mainnet', public_key: 'pk1' },
+      { id: 'w1', chain: 'solana', environment: 'mainnet', public_key: 'pk1' },
     ]);
 
     const service = new IncomingTxMonitorService({
@@ -416,7 +416,7 @@ describe('BUG-3: Gap Recovery Wiring', () => {
 
     // Only return a solana wallet (no ethereum)
     sqlite._allFn.mockReturnValueOnce([
-      { id: 'w1', chain: 'solana', network: 'mainnet', public_key: 'pk1' },
+      { id: 'w1', chain: 'solana', environment: 'mainnet', public_key: 'pk1' },
     ]);
 
     const service = new IncomingTxMonitorService({
