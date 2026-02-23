@@ -272,8 +272,8 @@ See `.planning/milestones/v28.2-ROADMAP.md` for full details.
 **Plans**: 2 plans
 
 Plans:
-- [ ] 251-01: IAsyncStatusTracker 인터페이스 + DB v23 마이그레이션 + 마이그레이션 테스트
-- [ ] 251-02: AsyncPollingService + BackgroundWorkers 등록 + 폴링 테스트
+- [ ] 251-01-PLAN.md — IAsyncStatusTracker interface + GAS_WAITING enum + DB v23 migration + migration tests
+- [ ] 251-02-PLAN.md — AsyncPollingService + BackgroundWorkers registration + polling tests
 
 ### Phase 252: LiFi ActionProvider + 정책 연동 + 알림
 **Goal**: AI 에이전트가 LI.FI를 통해 크로스체인 브릿지/스왑을 실행하고, 출발 체인 정책 평가를 받으며, 브릿지 완료/실패/환불 시 알림을 수신하고 SPENDING_LIMIT 예약이 올바르게 해제되는 상태
