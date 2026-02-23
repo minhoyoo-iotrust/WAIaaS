@@ -1341,7 +1341,7 @@ table .table-loading {
   border-bottom: 1px solid var(--color-border);
 }
 
-.search-input {
+.search-input-wrapper input {
   width: 100%;
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--color-border);
@@ -1352,7 +1352,7 @@ table .table-loading {
   color: var(--color-text);
 }
 
-.search-input:focus {
+.search-input-wrapper input:focus {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 2px var(--color-primary-light);
 }
@@ -1466,9 +1466,29 @@ table .table-loading {
   gap: var(--space-2);
 }
 
+/* Filter Bar */
+.filter-bar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-3); margin-bottom: var(--space-4); }
+.filter-field { display: flex; flex-direction: column; gap: var(--space-1); }
+.filter-field label { font-size: var(--font-size-xs); font-weight: var(--font-weight-medium); color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.03em; }
+.filter-field select,
+.filter-field input[type="date"] { padding: var(--space-2) var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: var(--font-size-sm); background: var(--color-bg); color: var(--color-text); outline: none; transition: border-color 0.15s; min-width: 140px; }
+.filter-field select:focus,
+.filter-field input[type="date"]:focus { border-color: var(--color-primary); box-shadow: 0 0 0 2px var(--color-primary-light); }
+.filter-clear { align-self: flex-end; }
+
+/* Search Input (page-level) */
+.search-input { position: relative; display: inline-flex; align-items: center; max-width: 400px; width: 100%; margin-bottom: var(--space-4); }
+.search-input input[type="text"] { width: 100%; padding: var(--space-2) var(--space-3); padding-right: var(--space-8); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: var(--font-size-sm); background: var(--color-bg); color: var(--color-text); outline: none; transition: border-color 0.15s; }
+.search-input input[type="text"]:focus { border-color: var(--color-primary); box-shadow: 0 0 0 2px var(--color-primary-light); }
+.search-clear { position: absolute; right: var(--space-2); background: none; border: none; font-size: var(--font-size-sm); color: var(--color-text-muted); cursor: pointer; padding: var(--space-1) var(--space-2); border-radius: var(--radius-sm); }
+.search-clear:hover { color: var(--color-text); background: var(--color-bg-tertiary); }
+
 @media (max-width: 768px) {
   .channel-grid { grid-template-columns: 1fr; }
   .settings-fields-grid {
     grid-template-columns: 1fr;
   }
+  .filter-bar { flex-direction: column; align-items: stretch; }
+  .filter-field select, .filter-field input[type="date"] { min-width: 0; width: 100%; }
+  .search-input { max-width: 100%; }
 }
