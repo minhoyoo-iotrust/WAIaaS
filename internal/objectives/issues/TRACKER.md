@@ -179,6 +179,7 @@
 | 162 | MISSING | HIGH | 스킬 파일 마스터 패스워드 요청 금지 안내 누락 + 유지 보장 | v28.2 | FIXED | 2026-02-24 |
 | 163 | BUG | HIGH | 알림 메시지 {txId} 미치환 회귀 — TX_APPROVAL_REQUIRED, TX_FAILED 등 6곳 | v28.2 | FIXED | 2026-02-24 |
 | 164 | ENHANCEMENT | MEDIUM | 인커밍 모니터링이 환경 기본 네트워크만 구독 (전체 네트워크 미지원) | v28.2 | OPEN | — |
+| 165 | ENHANCEMENT | HIGH | 알림 메시지 금액이 최소 단위(wei/lamports)로 표시 (사람 친화적 포맷 미지원) | v28.2 | OPEN | — |
 
 ## Type Legend
 
@@ -190,9 +191,9 @@
 
 ## Summary
 
-- **OPEN:** 1
+- **OPEN:** 2
 - **FIXED:** 162
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 164
+- **Total:** 165

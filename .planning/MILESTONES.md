@@ -1486,3 +1486,13 @@
 
 ---
 
+
+## v28.2 0x EVM DEX Swap (Shipped: 2026-02-23)
+
+**Phases completed:** 154 phases, 328 plans, 50 tasks
+
+**Key accomplishments:**
+- (none recorded)
+
+---
+
