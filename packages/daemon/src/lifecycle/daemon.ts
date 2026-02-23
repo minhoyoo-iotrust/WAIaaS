@@ -9,6 +9,7 @@
  *      4c-6. WalletConnect service (fail-soft)
  *      4c-8. Signing SDK lifecycle (fail-soft)
  *      4c-9. IncomingTxMonitorService (fail-soft)
+ *      4c-10. AsyncPollingService (fail-soft)
  *   5. HTTP server start (5s, fail-fast)
  *   6. Background workers + PID (no timeout, fail-soft)
  *
@@ -146,6 +147,7 @@ export class DaemonLifecycle {
   private approvalChannelRouter: import('../services/signing-sdk/approval-channel-router.js').ApprovalChannelRouter | null = null;
   private _versionCheckService: import('../infrastructure/version/version-check-service.js').VersionCheckService | null = null;
   private incomingTxMonitorService: import('../services/incoming/incoming-tx-monitor-service.js').IncomingTxMonitorService | null = null;
+  private _asyncPollingService: import('../services/async-polling-service.js').AsyncPollingService | null = null;
 
   /** Whether shutdown has been initiated. */
   get isShuttingDown(): boolean {
@@ -170,6 +172,11 @@ export class DaemonLifecycle {
   /** VersionCheckService instance (available after Step 6, used by Health endpoint). */
   get versionCheckService(): import('../infrastructure/version/version-check-service.js').VersionCheckService | null {
     return this._versionCheckService;
+  }
+
+  /** AsyncPollingService instance (available after Step 4c-10, used by action providers to register trackers). */
+  get pollingService(): import('../services/async-polling-service.js').AsyncPollingService | null {
+    return this._asyncPollingService;
   }
 
   /**
@@ -817,6 +824,20 @@ export class DaemonLifecycle {
     }
 
     // ------------------------------------------------------------------
+    // Step 4c-10: AsyncPollingService initialization (fail-soft)
+    // ------------------------------------------------------------------
+    try {
+      if (this._db) {
+        const { AsyncPollingService } = await import('../services/async-polling-service.js');
+        this._asyncPollingService = new AsyncPollingService(this._db);
+        console.debug('Step 4c-10: AsyncPollingService initialized');
+      }
+    } catch (err) {
+      console.warn('Step 4c-10 (fail-soft): AsyncPollingService init warning:', err);
+      this._asyncPollingService = null;
+    }
+
+    // ------------------------------------------------------------------
     // Step 4e: Price Oracle (fail-soft)
     // ------------------------------------------------------------------
     try {
@@ -1079,6 +1100,18 @@ export class DaemonLifecycle {
         });
       }
 
+      // Register async-status polling worker (30s)
+      if (this._asyncPollingService) {
+        const pollingService = this._asyncPollingService;
+        this.workers.register('async-status', {
+          interval: 30_000,
+          handler: async () => {
+            if (this._isShuttingDown) return;
+            await pollingService.pollAll();
+          },
+        });
+      }
+
       // Register version-check worker (uses instance created in Step 4g)
       if (this._versionCheckService) {
         const versionCheckInterval = this._config!.daemon.update_check_interval * 1000;
@@ -1194,6 +1227,9 @@ export class DaemonLifecycle {
         }
         this.incomingTxMonitorService = null;
       }
+
+      // Clear AsyncPollingService reference (workers.stopAll() handles the timer)
+      this._asyncPollingService = null;
 
       // Step 6b: Remove all EventBus listeners
       this.eventBus.removeAllListeners();
