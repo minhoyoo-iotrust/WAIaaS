@@ -288,9 +288,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 252-01: LiFiApiClient + Zod 스키마 + config.toml 설정
-- [ ] 252-02: LiFiActionProvider(cross_swap/bridge 액션) + 슬리피지 클램프 + 에러 처리
-- [ ] 252-03: BridgeStatusTracker(2단계 폴링) + 정책 예약 해제 + 알림 이벤트 5개 + i18n
+- [ ] 252-01-PLAN.md — LiFiApiClient + Zod schemas + LiFiConfig + daemon config/settings (wave 1)
+- [ ] 252-02-PLAN.md — LiFiActionProvider (cross_swap/bridge) + slippage clamp + registerBuiltInProviders (wave 2)
+- [ ] 252-03-PLAN.md — BridgeStatusTracker 2-phase polling + notification events 5 + i18n + reservation release (wave 3)
 
 ### Phase 253: 인터페이스 통합
 **Goal**: AI 에이전트가 MCP 도구, SDK, 스킬 파일을 통해 LI.FI 크로스체인 브릿지/스왑을 발견하고 실행할 수 있는 상태
