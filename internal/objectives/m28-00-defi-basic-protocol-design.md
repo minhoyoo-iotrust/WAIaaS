@@ -1540,15 +1540,16 @@ export function createMockActionContext(overrides?: Partial<ActionContext>): Act
 
 ## 신규 산출물
 
-| ID | 산출물 | 설명 |
-|----|--------|------|
-| DEFI-01 | packages/actions/ 구조 설계 | 디렉토리, config 패턴, 프로바이더 로딩 |
-| DEFI-02 | REST → calldata 공통 패턴 | API Client, 슬리피지, 에러 코드 |
-| DEFI-03 | 정책 연동 설계 | CONTRACT_WHITELIST, SPENDING_LIMIT, 크로스체인 |
-| DEFI-04 | 비동기 상태 추적 설계 | AsyncStatusTracker, 폴링, 상태 전이, DB 마이그레이션 통합 계획 |
-| DEFI-05 | 테스트 전략 | mock 패턴, 테스트 매트릭스 |
+| ID | 산출물 | 설명 | 상태 |
+|----|--------|------|------|
+| DEFI-01 | packages/actions/ 구조 설계 | 디렉토리, config 패턴, 프로바이더 로딩 | 확정 (Phase 244) |
+| DEFI-02 | REST -> calldata 공통 패턴 | API Client, 슬리피지, 에러 코드 | 확정 (Phase 244) |
+| DEFI-03 | 정책 연동 설계 | CONTRACT_WHITELIST, SPENDING_LIMIT, 크로스체인 | 확정 (Phase 244) |
+| DEFI-04 | 비동기 상태 추적 설계 | AsyncStatusTracker, 폴링, 상태 전이, DB 마이그레이션 | 확정 (Phase 245) |
+| DEFI-05 | 테스트 전략 | mock 패턴, 테스트 매트릭스 | 확정 (Phase 245) |
+| 안전성 설계 | 안전성 설계 (SAFE-01~04) | MEV fail-closed, wstETH, stale calldata, API drift | 확정 (Phase 245) |
 
-### 산출물 → 구현 마일스톤 매핑
+### 산출물 -> 구현 마일스톤 매핑
 
 | 산출물 | 소비 마일스톤 | 설명 |
 |--------|-------------|------|
@@ -1557,6 +1558,10 @@ export function createMockActionContext(overrides?: Partial<ActionContext>): Act
 | DEFI-03 | m28-01, m28-02, m28-03, m28-04 | CONTRACT_WHITELIST/SPENDING_LIMIT 연동을 각 프로바이더에서 구현 |
 | DEFI-04 | m28-03, m28-04, m28-05 | AsyncStatusTracker 공통 인터페이스를 브릿지/unstake/가스대기에서 구현. DB 통합 마이그레이션은 m28-03에서 실행 |
 | DEFI-05 | m28-01, m28-02, m28-03, m28-04 | mock API 패턴, 테스트 헬퍼를 각 프로바이더 테스트에서 활용 |
+| 안전성 설계 SAFE-01 | m28-01 | Jito fail-closed를 Jupiter 프로바이더에서 구현 |
+| 안전성 설계 SAFE-02 | m28-04 | wstETH를 Lido 프로바이더에서 구현 (BATCH stake/unstake) |
+| 안전성 설계 SAFE-03 | m28-05 | re-resolve 패턴을 GasConditionWorker에서 구현 |
+| 안전성 설계 SAFE-04 | m28-01~m28-03 | API drift 3중 방어를 모든 REST API 프로바이더에서 구현 |
 
 ---
 
@@ -1579,6 +1584,8 @@ export function createMockActionContext(overrides?: Partial<ActionContext>): Act
 3. 정책 연동 규칙이 명확하여 구현 시 모호함 없음
 4. 비동기 상태 추적 패턴이 브릿지/unstake 양쪽에 재사용 가능
 5. 테스트 전략이 4개 프로토콜에 일관되게 적용 가능
+6. 4개 안전성 설계(MEV fail-closed, wstETH, stale calldata, API drift)가 완성되어 구현 시 안전 관련 판단 불필요
+7. mock 픽스처 구조, 테스트 헬퍼, 시나리오 매트릭스가 확정되어 일관된 테스트 작성 가능
 
 ---
 
