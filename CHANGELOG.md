@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.6.0-rc.4](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.6.0-rc.3...v2.6.0-rc.4) (2026-02-23)
+
+
+### Features
+
+* **244-01:** finalize DEFI-01 package structure design (PKGS-01~04) ([6799b89](https://github.com/minhoyoo-iotrust/WAIaaS/commit/6799b8983a70d0ba2738642e8c522d47ce3999c5))
+* **244-01:** update m28-02 objective from Permit2 to AllowanceHolder ([2837cdf](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2837cdfbbc6158b853c80309d73d0500115dd9f9))
+* **245-01:** ASNC-01/02/04/05 async status tracking confirmed design ([82eab8d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/82eab8dde16ca167ccd4b5afed930b5657e0534d))
+* **245-01:** ASNC-03 integrated DB migration v23 design confirmed ([6af6ac0](https://github.com/minhoyoo-iotrust/WAIaaS/commit/6af6ac0dd0e0cdd3bf885fd6085bc074b7b677df))
+* **245-02:** add SAFE-01 Jito MEV fail-closed and SAFE-02 wstETH adoption design ([8600a98](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8600a98ed666185e43151938da38897309845ec4))
+* **245-02:** add SAFE-03 stale calldata re-resolve and SAFE-04 API drift defense design ([90d42f3](https://github.com/minhoyoo-iotrust/WAIaaS/commit/90d42f3011e69cf005b5900bf3eb93d91bb99d1f))
+
 ## [2.6.0-rc.3](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.6.0-rc.2...v2.6.0-rc.3) (2026-02-23)
 
 
