@@ -19,7 +19,7 @@
 - ✅ **v27.3 토큰별 지출 한도 정책** -- Phases 235-238 (shipped 2026-02-22)
 - ✅ **v27.4 Admin UI UX 개선** -- Phases 239-243 (shipped 2026-02-23)
 - ✅ **v28.0 기본 DeFi 프로토콜 설계** -- Phases 244-245 (shipped 2026-02-23)
-- [ ] **v28.1 Jupiter Swap** -- Phases 246-247 (in progress)
+- ✅ **v28.1 Jupiter Swap** -- Phases 246-247 (shipped 2026-02-23)
 
 ## Phases
 
@@ -226,54 +226,12 @@ See `.planning/milestones/v28.0-ROADMAP.md` for full details.
 
 </details>
 
-### v28.1 Jupiter Swap (In Progress)
+<details>
+<summary>✅ v28.1 Jupiter Swap (Phases 246-247) -- SHIPPED 2026-02-23</summary>
 
-**Milestone Goal:** Jupiter Aggregator REST API를 IActionProvider 프레임워크에 통합하여, AI 에이전트가 Solana DEX 토큰 스왑을 안전하게 수행할 수 있게 한다. 새로운 npm 의존성 없이 native fetch + Zod 검증으로 구현하며, packages/actions/ 신규 모노레포 패키지를 생성한다.
+- [x] Phase 246: Core Provider Implementation (4/4 plans) -- completed 2026-02-23
+- [x] Phase 247: Daemon Integration + DX (2/2 plans) -- completed 2026-02-23
 
-- [x] **Phase 246: Core Provider Implementation** - JupiterApiClient + JupiterSwapActionProvider + Zod 스키마 + 안전 장치 + 단위 테스트 -- completed 2026-02-23
-- [x] **Phase 247: Daemon Integration + DX** - 내장 프로바이더 등록 + config.toml 파싱 + 정책 통합 + MCP 검증 + 스킬 파일 업데이트 -- completed 2026-02-23
+See `.planning/milestones/v28.1-ROADMAP.md` for full details.
 
-## Phase Details
-
-### Phase 246: Core Provider Implementation
-**Goal**: AI 에이전트가 Jupiter Swap을 요청하면 안전한 ContractCallRequest로 변환되어 기존 파이프라인에 진입할 수 있다
-**Depends on**: Nothing (first phase of v28.1)
-**Requirements**: SWAP-01, SWAP-02, SWAP-03, SWAP-04, SWAP-05, SWAP-06, SAFE-01, SAFE-02, SAFE-03, SAFE-04, SAFE-05
-**Success Criteria** (what must be TRUE):
-  1. JupiterApiClient가 Quote API(/swap/v1/quote)를 호출하여 outAmount, priceImpactPct를 포함한 Zod-검증된 응답을 반환한다
-  2. JupiterApiClient가 /swap-instructions API를 호출하여 swapInstruction + computeBudgetInstructions + setupInstructions를 Zod-검증된 응답으로 반환한다
-  3. JupiterSwapActionProvider.resolve()가 swapInstruction을 programId/instructionData/accounts를 포함한 ContractCallRequest로 변환하고 ContractCallRequestSchema.parse()를 통과한다
-  4. 슬리피지 50bps 기본값 적용, 500bps 초과 시 클램프, priceImpact 1% 초과 시 PRICE_IMPACT_TOO_HIGH 거부, 동일 토큰 스왑 사전 차단이 모두 단위 테스트로 검증된다
-  5. Jito MEV 보호 tip이 swap-instructions 요청에 포함되고, swapInstruction.programId가 Jupiter 프로그램 주소와 일치하는지 검증된다
-**Plans**: 4/4
-
-Plans:
-- [x] 246-01: packages/actions 기반 + ActionApiClient + 슬리피지 유틸리티 + ChainError DeFi 코드
-- [x] 246-02: Jupiter API Client + Zod 스키마 + config
-- [x] 246-03: JupiterSwapActionProvider + 안전 장치 + registerBuiltInProviders
-- [x] 246-04: 단위 테스트 (11 slippage + 13 jupiter-swap = 24 tests)
-
-### Phase 247: Daemon Integration + DX
-**Goal**: Jupiter Swap이 데몬 시작 시 자동 등록되어 MCP/SDK/REST를 통해 정책 평가를 거쳐 실행 가능하다
-**Depends on**: Phase 246
-**Requirements**: PLCY-01, PLCY-02, DX-01, DX-02, DX-03, DX-04
-**Success Criteria** (what must be TRUE):
-  1. 데몬 시작 시 JupiterSwapActionProvider가 ActionProviderRegistry에 자동 등록되고 config.toml [actions.jupiter_swap] 설정이 적용된다
-  2. MCP에 jupiter_swap 도구가 자동 노출되어 AI 에이전트가 도구 목록에서 발견하고 호출할 수 있다
-  3. CONTRACT_WHITELIST에 Jupiter 프로그램 주소 미등록 시 정책 엔진이 거부하고, 스왑 입력 금액이 IPriceOracle로 USD 환산되어 SPENDING_LIMIT 정책으로 평가된다
-  4. transactions.skill.md에 Jupiter Swap 사용법(REST API, MCP, SDK 예시)이 문서화된다
-**Plans**: 2/2
-
-Plans:
-- [x] 247-01: Config + Daemon Registration (DaemonConfigSchema [actions] 8 keys + registerBuiltInProviders + 7 tests)
-- [x] 247-02: Skill File Update + Verification (actions.skill.md Jupiter Swap 상세 + ChainError 보안 테스트 수정)
-
-## Progress
-
-**Execution Order:**
-Phases execute in numeric order: 246 -> 247
-
-| Phase | Milestone | Plans Complete | Status | Completed |
-|-------|-----------|----------------|--------|-----------|
-| 246. Core Provider Implementation | v28.1 | 4/4 | Completed | 2026-02-23 |
-| 247. Daemon Integration + DX | v28.1 | 2/2 | Completed | 2026-02-23 |
+</details>

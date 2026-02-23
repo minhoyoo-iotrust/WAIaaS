@@ -1,5 +1,29 @@
 # Project Milestones: WAIaaS
 
+## v28.1 Jupiter Swap (Shipped: 2026-02-23)
+
+**Delivered:** Jupiter Aggregator REST API를 IActionProvider 프레임워크에 통합하여 AI 에이전트가 Solana DEX 토큰 스왑을 안전하게 수행할 수 있게 달성. packages/actions/ 신규 모노레포 패키지에 JupiterApiClient(native fetch + Zod 검증) + JupiterSwapActionProvider(5-safety: 슬리피지 클램프, priceImpact 차단, Jito MEV tip, 동일 토큰 차단, Jupiter 프로그램 주소 검증) 구현. 데몬 자동 등록 + config.toml [actions] 8키 + MCP 자동 노출 + 기존 6-stage pipeline 정책 평가(CONTRACT_WHITELIST + SPENDING_LIMIT) 코드 변경 없이 통합.
+
+**Phases completed:** 246-247 (2 phases, 6 plans, 17 requirements)
+
+**Key accomplishments:**
+
+- packages/actions/ 신규 모노레포 패키지 — ActionApiClient + slippage 유틸리티 + ChainError DeFi 코드 체계
+- JupiterApiClient — Quote API v1(/swap/v1/quote) + /swap-instructions Zod 검증, native fetch 구현 (무의존성)
+- JupiterSwapActionProvider — 5-safety (슬리피지 50bps/500bps 클램프, priceImpact 1% 차단, Jito MEV tip 1000 lamports, 동일 토큰 차단)
+- 데몬 자동 등록 — config.toml [actions] 8 keys + registerBuiltInProviders + MCP jupiter_swap 자동 노출
+- 정책 통합 — 기존 6-stage pipeline이 CONTRACT_WHITELIST + SPENDING_LIMIT 자동 평가 (코드 변경 0)
+- actions.skill.md — Jupiter Swap 상세 문서 (REST API / MCP / SDK 예시, config, 안전 장치)
+
+**Stats:**
+
+- 2 phases, 6 plans, 17 requirements, 16 commits
+- 63 files changed (code), +2,972 / -1,721 lines
+- ~187,250 LOC TypeScript, 4,975 tests
+- Timeline: 1 day (2026-02-23)
+
+---
+
 ## v27.1 수신 트랜잭션 모니터링 구현 (Shipped: 2026-02-22)
 
 **Delivered:** v27.0에서 설계한 수신 트랜잭션 모니터링을 완전 구현. IChainSubscriber 기반 Solana/EVM 체인별 수신 감지, IncomingTxQueue 메모리 큐 + 배치 flush, SubscriptionMultiplexer 연결 공유 + 폴링 폴백, 3개 안전 규칙(dust/unknownToken/largeAmount), REST API 3 엔드포인트 + SDK/MCP 확장, 20개 통합 테스트 완성.
@@ -1449,6 +1473,16 @@
 - m28-05 objective GAS_WAITING 상태 위치/진입/탈출이 확정 설계와 불일치 (구현 마일스톤 시작 시 업데이트 필요)
 - m28-04 objective 결정 #7 stETH→wstETH 미반영 (구현 마일스톤 시작 시 업데이트 필요)
 - m28-03 objective 폴링 설정 30분→2시간+BRIDGE_MONITORING 미반영 (구현 마일스톤 시작 시 업데이트 필요)
+
+---
+
+
+## v28.1 Jupiter Swap (Shipped: 2026-02-23)
+
+**Phases completed:** 153 phases, 323 plans, 50 tasks
+
+**Key accomplishments:**
+- (none recorded)
 
 ---
 
