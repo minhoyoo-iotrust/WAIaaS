@@ -22,6 +22,17 @@ export { ActionApiClient } from './common/action-api-client.js';
 export { asBps, asPct, clampSlippageBps, bpsToPct, pctToBps } from './common/slippage.js';
 export type { SlippageBps, SlippagePct } from './common/slippage.js';
 
+// Re-export async status tracker interface and types (v28.3 DEFI-04)
+export {
+  BRIDGE_STATUS_VALUES,
+  BridgeStatusEnum,
+} from './common/async-status-tracker.js';
+export type {
+  IAsyncStatusTracker,
+  AsyncTrackingResult,
+  BridgeStatus,
+} from './common/async-status-tracker.js';
+
 // ---------------------------------------------------------------------------
 // Built-in provider registration
 // ---------------------------------------------------------------------------

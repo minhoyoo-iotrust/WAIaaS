@@ -11,6 +11,7 @@ export const TRANSACTION_STATUSES = [
   'EXPIRED',
   'PARTIAL_FAILURE',
   'SIGNED',
+  'GAS_WAITING',
 ] as const;
 export type TransactionStatus = (typeof TRANSACTION_STATUSES)[number];
 export const TransactionStatusEnum = z.enum(TRANSACTION_STATUSES);

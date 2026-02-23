@@ -55,7 +55,7 @@ const inList = (values: readonly string[]) => values.map((v) => `'${v}'`).join('
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 22;
+export const LATEST_SCHEMA_VERSION = 23;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -104,7 +104,7 @@ function getCreateTableStatements(): string[] {
   PRIMARY KEY (session_id, wallet_id)
 )`,
 
-    // Table 3: transactions
+    // Table 3: transactions (bridge_status + bridge_metadata added in v23)
     `CREATE TABLE IF NOT EXISTS transactions (
   id TEXT PRIMARY KEY,
   wallet_id TEXT NOT NULL REFERENCES wallets(id) ON DELETE RESTRICT,
@@ -131,7 +131,9 @@ function getCreateTableStatements(): string[] {
   reserved_amount_usd REAL,
   error TEXT,
   metadata TEXT,
-  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES)}))
+  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES)})),
+  bridge_status TEXT CHECK (bridge_status IS NULL OR bridge_status IN ('PENDING', 'COMPLETED', 'FAILED', 'BRIDGE_MONITORING', 'TIMEOUT', 'REFUNDED')),
+  bridge_metadata TEXT
 )`,
 
     // Table 4: policies (network column added in v8)
@@ -357,6 +359,10 @@ function getCreateIndexStatements(): string[] {
     'CREATE INDEX IF NOT EXISTS idx_incoming_tx_detected_at ON incoming_transactions(detected_at)',
     'CREATE INDEX IF NOT EXISTS idx_incoming_tx_chain_network ON incoming_transactions(chain, network)',
     "CREATE INDEX IF NOT EXISTS idx_incoming_tx_status ON incoming_transactions(status) WHERE status = 'DETECTED'",
+
+    // v28.3: DeFi async tracking partial indexes on transactions
+    'CREATE INDEX IF NOT EXISTS idx_transactions_bridge_status ON transactions(bridge_status) WHERE bridge_status IS NOT NULL',
+    "CREATE INDEX IF NOT EXISTS idx_transactions_gas_waiting ON transactions(status) WHERE status = 'GAS_WAITING'",
   ];
 }
 
@@ -1575,6 +1581,96 @@ MIGRATIONS.push({
       } catch {
         // Skip on error -- rows with unknown networks get asset_id = NULL
       }
+    }
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Migration v23: DeFi async tracking — bridge_status + bridge_metadata + GAS_WAITING
+// ---------------------------------------------------------------------------
+// 12-step table recreation required because:
+// 1. TRANSACTION_STATUSES now includes GAS_WAITING (11 entries), must update status CHECK
+// 2. New bridge_status column with 6-value CHECK constraint
+// 3. New bridge_metadata TEXT column
+// 4. 2 new partial indexes (idx_transactions_bridge_status, idx_transactions_gas_waiting)
+// @see internal/objectives/m28-00-defi-basic-protocol-design.md (DEFI-04 ASNC-01)
+
+MIGRATIONS.push({
+  version: 23,
+  description: 'DeFi async tracking: bridge_status + bridge_metadata + GAS_WAITING state',
+  managesOwnTransaction: true,
+  up: (sqlite) => {
+    sqlite.exec('BEGIN');
+
+    try {
+      // Step 1: Create transactions_new with updated CHECK + new columns
+      sqlite.exec(`CREATE TABLE transactions_new (
+  id TEXT PRIMARY KEY,
+  wallet_id TEXT NOT NULL REFERENCES wallets(id) ON DELETE RESTRICT,
+  session_id TEXT REFERENCES sessions(id) ON DELETE SET NULL,
+  chain TEXT NOT NULL,
+  tx_hash TEXT,
+  type TEXT NOT NULL CHECK (type IN (${inList(TRANSACTION_TYPES)})),
+  amount TEXT,
+  to_address TEXT,
+  token_mint TEXT,
+  contract_address TEXT,
+  method_signature TEXT,
+  spender_address TEXT,
+  approved_amount TEXT,
+  parent_id TEXT REFERENCES transactions_new(id) ON DELETE CASCADE,
+  batch_index INTEGER,
+  status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN (${inList(TRANSACTION_STATUSES)})),
+  tier TEXT CHECK (tier IS NULL OR tier IN (${inList(POLICY_TIERS)})),
+  queued_at INTEGER,
+  executed_at INTEGER,
+  created_at INTEGER NOT NULL,
+  reserved_amount TEXT,
+  amount_usd REAL,
+  reserved_amount_usd REAL,
+  error TEXT,
+  metadata TEXT,
+  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES)})),
+  bridge_status TEXT CHECK (bridge_status IS NULL OR bridge_status IN ('PENDING', 'COMPLETED', 'FAILED', 'BRIDGE_MONITORING', 'TIMEOUT', 'REFUNDED')),
+  bridge_metadata TEXT
+)`);
+
+      // Step 2: Copy existing data (bridge_status and bridge_metadata default to NULL)
+      sqlite.exec(`INSERT INTO transactions_new (id, wallet_id, session_id, chain, tx_hash, type, amount, to_address, token_mint, contract_address, method_signature, spender_address, approved_amount, parent_id, batch_index, status, tier, queued_at, executed_at, created_at, reserved_amount, amount_usd, reserved_amount_usd, error, metadata, network)
+  SELECT id, wallet_id, session_id, chain, tx_hash, type, amount, to_address, token_mint, contract_address, method_signature, spender_address, approved_amount, parent_id, batch_index, status, tier, queued_at, executed_at, created_at, reserved_amount, amount_usd, reserved_amount_usd, error, metadata, network FROM transactions`);
+
+      // Step 3: Drop old table
+      sqlite.exec('DROP TABLE transactions');
+
+      // Step 4: Rename new table
+      sqlite.exec('ALTER TABLE transactions_new RENAME TO transactions');
+
+      // Step 5: Recreate all 8 existing indexes
+      sqlite.exec('CREATE INDEX idx_transactions_wallet_status ON transactions(wallet_id, status)');
+      sqlite.exec('CREATE INDEX idx_transactions_session_id ON transactions(session_id)');
+      sqlite.exec('CREATE UNIQUE INDEX idx_transactions_tx_hash ON transactions(tx_hash)');
+      sqlite.exec('CREATE INDEX idx_transactions_queued_at ON transactions(queued_at)');
+      sqlite.exec('CREATE INDEX idx_transactions_created_at ON transactions(created_at)');
+      sqlite.exec('CREATE INDEX idx_transactions_type ON transactions(type)');
+      sqlite.exec('CREATE INDEX idx_transactions_contract_address ON transactions(contract_address)');
+      sqlite.exec('CREATE INDEX idx_transactions_parent_id ON transactions(parent_id)');
+
+      // Step 6: Create 2 new partial indexes
+      sqlite.exec('CREATE INDEX idx_transactions_bridge_status ON transactions(bridge_status) WHERE bridge_status IS NOT NULL');
+      sqlite.exec("CREATE INDEX idx_transactions_gas_waiting ON transactions(status) WHERE status = 'GAS_WAITING'");
+
+      // Step 7: Commit
+      sqlite.exec('COMMIT');
+    } catch (err) {
+      sqlite.exec('ROLLBACK');
+      throw err;
+    }
+
+    // Step 8: Re-enable foreign keys and verify integrity
+    sqlite.pragma('foreign_keys = ON');
+    const fkErrors = sqlite.pragma('foreign_key_check') as unknown[];
+    if (fkErrors.length > 0) {
+      throw new Error(`FK integrity violation after v23: ${JSON.stringify(fkErrors)}`);
     }
   },
 });
