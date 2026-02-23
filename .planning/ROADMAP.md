@@ -289,10 +289,11 @@ Plans:
   2. Python SDK에서 await client.execute_action('0x-swap', 'swap', params) 호출로 스왑이 실행된다
   3. MCP 클라이언트에서 action_0x_swap_swap 도구가 자동 노출되어 사용 가능하다
   4. actions.skill.md에 0x Swap REST API/MCP/SDK 예시, 설정 방법, 안전 장치가 문서화되어 있다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 250-01: SDK executeAction + MCP 자동 노출 + 스킬 문서 + 통합 테스트
+- [ ] 250-01-PLAN.md -- TS SDK executeAction + Python SDK execute_action + types + tests
+- [ ] 250-02-PLAN.md -- MCP auto-exposure verification + actions.skill.md 0x Swap documentation
 
 ## Progress
 
@@ -302,4 +303,4 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 248. Provider Infrastructure | 3/3 | Complete    | 2026-02-23 | - |
 | 249. 0x Swap Provider | 2/2 | Complete    | 2026-02-23 | - |
-| 250. Integration | v28.2 | 0/1 | Not started | - |
+| 250. Integration | v28.2 | 0/2 | Not started | - |
