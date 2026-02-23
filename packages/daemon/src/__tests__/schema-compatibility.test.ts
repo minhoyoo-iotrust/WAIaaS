@@ -450,8 +450,8 @@ describe('v19 migration: session_wallets', () => {
     }
   });
 
-  it('LATEST_SCHEMA_VERSION is 22', () => {
-    expect(LATEST_SCHEMA_VERSION).toBe(22);
+  it('LATEST_SCHEMA_VERSION is 23', () => {
+    expect(LATEST_SCHEMA_VERSION).toBe(23);
   });
 
   it('fresh DB via pushSchema creates session_wallets table', () => {

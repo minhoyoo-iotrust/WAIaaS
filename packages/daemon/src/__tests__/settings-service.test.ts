@@ -415,15 +415,15 @@ describe('SettingsService', () => {
           [
             'notifications.telegram_bot_token', 'notifications.discord_webhook_url', 'notifications.slack_webhook_url',
             'oracle.coingecko_api_key', 'telegram.bot_token',
-            'actions.jupiter_swap_api_key', 'actions.zerox_swap_api_key',
+            'actions.jupiter_swap_api_key', 'actions.zerox_swap_api_key', 'actions.lifi_api_key',
           ].includes(def.key),
         ).toBe(true);
       }
     });
 
     it('has expected number of definitions', () => {
-      // 11 notifications + 14 rpc + 14 security + 1 daemon + 2 walletconnect + 2 oracle + 1 display + 6 autostop + 5 monitoring + 2 telegram + 8 signing_sdk + 7 incoming + 13 actions = 86
-      expect(SETTING_DEFINITIONS.length).toBe(86);
+      // 11 notifications + 14 rpc + 14 security + 1 daemon + 2 walletconnect + 2 oracle + 1 display + 6 autostop + 5 monitoring + 2 telegram + 8 signing_sdk + 7 incoming + 18 actions = 91
+      expect(SETTING_DEFINITIONS.length).toBe(91);
     });
   });
 
@@ -453,9 +453,9 @@ describe('SettingsService', () => {
       expect(all.actions!.zerox_swap_default_slippage_bps).toBe('100');
     });
 
-    it('actions category has 13 settings', () => {
+    it('actions category has 18 settings', () => {
       const actionsDefs = SETTING_DEFINITIONS.filter((d) => d.category === 'actions');
-      expect(actionsDefs.length).toBe(13);
+      expect(actionsDefs.length).toBe(18);
     });
 
     it('actions.jupiter_swap_api_key is a credential', () => {
