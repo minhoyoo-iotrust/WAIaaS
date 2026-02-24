@@ -308,8 +308,20 @@ export default function SystemPage() {
               description="Maximum allowed deviation between price oracle sources"
             />
           </div>
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--space-3)', marginTop: 'var(--space-3)' }}>
+            <FormField
+              label="CoinGecko API Key"
+              name="oracle.coingecko_api_key"
+              type="password"
+              value={icc('oracle', 'coingecko_api_key') ? '••••••••' : ''}
+              onChange={(v) => handleFieldChange('oracle.coingecko_api_key', v)}
+              placeholder="Enter CoinGecko Pro API key (optional)"
+              description="Pro API key for higher rate limits. Free tier: ~30 req/min."
+            />
+          </div>
           <div class="settings-info-box">
             Maximum allowed deviation between price sources before flagging a discrepancy. Default is 5%.
+            CoinGecko Pro API key increases rate limits for reliable price data.
           </div>
         </div>
       </div>
@@ -566,10 +578,7 @@ export default function SystemPage() {
         </div>
       ) : (
         <>
-          {/* 1. API Keys */}
-          <ApiKeysSection />
-
-          {/* 2. Oracle */}
+          {/* 1. Oracle */}
           <OracleSection />
 
           {/* 3. Display Currency */}
