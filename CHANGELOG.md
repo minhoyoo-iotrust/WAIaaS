@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.0](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.6.0-rc.13...v2.6.0) (2026-02-24)
+
+
+### Bug Fixes
+
+* promote v2.6.0-rc.13 to stable 2.6.0 ([d5308d4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d5308d49c3375074e249c9568fc55fdf065eeda8))
+
 ## [2.6.0-rc.13](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.6.0-rc.12...v2.6.0-rc.13) (2026-02-24)
 
 
