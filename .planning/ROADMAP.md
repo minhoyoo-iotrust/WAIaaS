@@ -326,5 +326,5 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 254. Lido EVM Staking Provider | 2/2 | Complete    | 2026-02-24 | - |
-| 255. Jito Solana Staking Provider | 2/2 | Complete   | 2026-02-24 | - |
+| 255. Jito Solana Staking Provider | 2/2 | Complete    | 2026-02-24 | - |
 | 256. Staking API + Async Tracking + Interface Integration | v28.4 | 0/3 | Not started | - |
