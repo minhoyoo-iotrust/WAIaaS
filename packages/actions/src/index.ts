@@ -4,7 +4,8 @@
  * Exports registerBuiltInProviders() for daemon lifecycle integration
  * and individual provider classes for direct usage.
  */
-import type { IActionProvider } from '@waiaas/core';
+import type { IActionProvider, NetworkType } from '@waiaas/core';
+import { deriveEnvironment } from '@waiaas/core';
 import { JupiterSwapActionProvider } from './providers/jupiter-swap/index.js';
 import { ZeroExSwapActionProvider } from './providers/zerox-swap/index.js';
 import { LiFiActionProvider } from './providers/lifi/index.js';
@@ -127,9 +128,9 @@ export function registerBuiltInProviders(
       key: 'lido_staking',
       enabledKey: 'actions.lido_staking_enabled',
       factory: () => {
-        // Resolve environment: mainnet addresses by default, Holesky when 'testnet'
-        const envSetting = settingsReader.get('environment') ?? 'mainnet';
-        const isTestnet = envSetting === 'testnet';
+        // Resolve environment from registered rpc.evm_default_network setting
+        const evmNetwork = settingsReader.get('rpc.evm_default_network') || 'ethereum-mainnet';
+        const isTestnet = deriveEnvironment(evmNetwork as NetworkType) === 'testnet';
         const addresses = getLidoAddresses(isTestnet ? 'testnet' : 'mainnet');
 
         // Admin Settings overrides individual addresses; empty string falls back to environment default
