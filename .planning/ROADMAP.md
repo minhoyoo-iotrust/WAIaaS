@@ -268,6 +268,7 @@ See `.planning/milestones/v28.3-ROADMAP.md` for full details.
 - [x] **Phase 254: Lido EVM Staking Provider** - Lido 컨트랙트 직접 호출로 ETH->stETH 스테이킹/언스테이킹 + 정책 연동 (completed 2026-02-24)
 - [x] **Phase 255: Jito Solana Staking Provider** - SPL Stake Pool 프로그램으로 SOL->JitoSOL 스테이킹/언스테이킹 (completed 2026-02-24)
 - [x] **Phase 256: Staking API + Async Tracking + Interface Integration** - 비동기 unstake 추적 + 스테이킹 포지션 API + MCP/SDK/Admin/Skills 통합 (completed 2026-02-24)
+- [ ] **Phase 257: Staking Pipeline Integration Fix** - 감사 갭 수정: bridge_status 기록 + actionProvider metadata 영속화
 
 ## Phase Details
 
@@ -319,9 +320,19 @@ Plans:
 - [ ] 256-02-PLAN.md — GET /v1/wallets/:id/staking REST API + Zod 스키마 + 포지션 조회 + 통합 테스트
 - [ ] 256-03-PLAN.md — MCP 도구 노출 테스트 + Admin 스테이킹 섹션 + Skills 문서
 
+### Phase 257: Staking Pipeline Integration Fix
+**Goal**: 스테이킹 unstake 파이프라인이 bridge_status를 기록하여 async tracking이 작동하고, actionProvider가 metadata에 영속화되어 포지션 조회가 정상 동작한다
+**Depends on**: Phase 256
+**Requirements**: ASYNC-01, ASYNC-02, ASYNC-03, ASYNC-04, SAPI-01, SAPI-02
+**Gap Closure**: Closes gaps from v28.4 milestone audit
+**Success Criteria** (what must be TRUE):
+  1. Lido/Jito unstake 완료 후 bridge_status=PENDING + bridge_metadata가 DB에 기록되어 AsyncPollingService가 트랜잭션을 폴링한다
+  2. Action provider 트랜잭션의 metadata 컬럼에 {provider, action}이 기록되어 GET /v1/wallet/staking이 실제 포지션을 반환한다
+**Plans**: TBD
+
 ## Progress
 
-**Execution Order:** 254 -> 255 -> 256
+**Execution Order:** 254 -> 255 -> 256 -> 257
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
