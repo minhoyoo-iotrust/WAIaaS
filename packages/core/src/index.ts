@@ -75,6 +75,9 @@ export {
   type Transaction,
   SendTransactionRequestSchema,
   type SendTransactionRequest,
+  // v28.5 gas condition schema
+  GasConditionSchema,
+  type GasCondition,
   // v1.4 discriminatedUnion 5-type transaction request schemas
   TransactionRequestSchema,
   type TransactionRequest,

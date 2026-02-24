@@ -221,6 +221,10 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, NotificationCateg
   BRIDGE_REFUNDED: 'transaction',
   STAKING_UNSTAKE_COMPLETED: 'transaction',
   STAKING_UNSTAKE_TIMEOUT: 'transaction',
+  RPC_HEALTH_DEGRADED: 'system',
+  INCOMING_TX_RANGE_SKIPPED: 'system',
+  TX_GAS_WAITING: 'transaction',
+  TX_GAS_CONDITION_MET: 'transaction',
 };
 
 // ---------------------------------------------------------------------------
@@ -266,6 +270,10 @@ export const EVENT_DESCRIPTIONS: Record<NotificationEventType, string> = {
   BRIDGE_REFUNDED: 'Bridge transfer refunded by protocol',
   STAKING_UNSTAKE_COMPLETED: 'Staking unstake request completed',
   STAKING_UNSTAKE_TIMEOUT: 'Staking unstake monitoring timed out',
+  RPC_HEALTH_DEGRADED: 'RPC endpoint experiencing repeated failures',
+  INCOMING_TX_RANGE_SKIPPED: 'Block range skipped due to RPC errors',
+  TX_GAS_WAITING: 'Waiting for gas price condition to be met',
+  TX_GAS_CONDITION_MET: 'Gas price condition met, resuming execution',
 };
 
 // ---------------------------------------------------------------------------
