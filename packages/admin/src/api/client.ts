@@ -37,8 +37,13 @@ export async function apiCall<T>(path: string, options?: RequestInit): Promise<T
   }
 
   if (response.status === 401) {
-    logout();
-    throw new ApiError(401, 'INVALID_MASTER_PASSWORD', 'Authentication failed');
+    // Only trigger logout for admin endpoints where 401 means invalid master password.
+    // Non-admin endpoints (e.g. /v1/actions/*) may return 401 for auth-method mismatch,
+    // which should be handled by the caller, not by destroying the session.
+    if (path.startsWith('/v1/admin/')) {
+      logout();
+    }
+    throw new ApiError(401, 'UNAUTHORIZED', 'Authentication failed');
   }
 
   if (!response.ok) {

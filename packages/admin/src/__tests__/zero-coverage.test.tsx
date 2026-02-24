@@ -153,7 +153,7 @@ describe('Section 1: client.ts', () => {
     }
   });
 
-  it('apiCall 401: calls logout and throws INVALID_MASTER_PASSWORD', async () => {
+  it('apiCall 401 on admin path: calls logout and throws UNAUTHORIZED', async () => {
     vi.mocked(globalThis.fetch).mockResolvedValueOnce({
       ok: false,
       status: 401,
@@ -161,13 +161,31 @@ describe('Section 1: client.ts', () => {
     } as unknown as Response);
 
     try {
-      await apiCall('/test');
+      await apiCall('/v1/admin/settings');
       expect.unreachable('Should have thrown');
     } catch (e: unknown) {
       const err = e as InstanceType<typeof ApiError>;
       expect(err.status).toBe(401);
-      expect(err.code).toBe('INVALID_MASTER_PASSWORD');
+      expect(err.code).toBe('UNAUTHORIZED');
       expect(authStore.logout).toHaveBeenCalled();
+    }
+  });
+
+  it('apiCall 401 on non-admin path: does NOT call logout', async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      json: () => Promise.resolve({}),
+    } as unknown as Response);
+
+    try {
+      await apiCall('/v1/actions/providers');
+      expect.unreachable('Should have thrown');
+    } catch (e: unknown) {
+      const err = e as InstanceType<typeof ApiError>;
+      expect(err.status).toBe(401);
+      expect(err.code).toBe('UNAUTHORIZED');
+      expect(authStore.logout).not.toHaveBeenCalled();
     }
   });
 
