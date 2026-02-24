@@ -354,6 +354,16 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
 
       // Stage 1: Validate + DB INSERT (synchronous -- assigns ctx.txId)
       await stage1Validate(ctx);
+
+      // GAP-2 fix: Persist action provider metadata for staking position queries
+      // (GET /v1/wallet/staking uses metadata LIKE '%providerKey%' to find staking txs)
+      await deps.db
+        .update(transactions)
+        .set({
+          metadata: JSON.stringify({ provider, action }),
+        })
+        .where(eq(transactions.id, ctx.txId));
+
       pipelineResults.push({ id: ctx.txId, status: 'PENDING' });
 
       // Stages 2-6 run asynchronously (fire-and-forget)
@@ -364,6 +374,30 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
           await stage4Wait(ctx);
           await stage5Execute(ctx);
           await stage6Confirm(ctx);
+
+          // GAP-1 fix: Enroll staking unstake transactions in async tracking
+          // Lido unstake -> lido-withdrawal tracker, Jito unstake -> jito-epoch tracker
+          // AsyncPollingService.pollAll() picks up bridge_status='PENDING' transactions
+          if (action === 'unstake') {
+            const trackerMap: Record<string, string> = {
+              'lido_staking': 'lido-withdrawal',
+              'jito_staking': 'jito-epoch',
+            };
+            const trackerName = trackerMap[provider];
+            if (trackerName) {
+              await deps.db
+                .update(transactions)
+                .set({
+                  bridgeStatus: 'PENDING',
+                  bridgeMetadata: JSON.stringify({
+                    tracker: trackerName,
+                    notificationEvent: 'STAKING_UNSTAKE_TIMEOUT',
+                    enrolledAt: Date.now(),
+                  }),
+                })
+                .where(eq(transactions.id, ctx.txId));
+            }
+          }
         } catch (error) {
           // PIPELINE_HALTED is intentional -- transaction is QUEUED
           if (error instanceof WAIaaSError && error.code === 'PIPELINE_HALTED') {
