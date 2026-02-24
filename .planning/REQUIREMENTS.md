@@ -39,7 +39,7 @@ Requirements for milestone v28.4. Each maps to roadmap phases.
 
 ### 스테이킹 API
 
-- [x] **SAPI-01**: GET /v1/wallets/:id/staking으로 월렛별 스테이킹 포지션을 조회할 수 있다
+- [x] **SAPI-01**: GET /v1/wallet/staking (sessionAuth) + GET /v1/admin/wallets/:id/staking (masterAuth)으로 월렛별 스테이킹 포지션을 조회할 수 있다
 - [x] **SAPI-02**: 스테이킹 포지션에 stETH/JitoSOL 잔고, 현재 APY, USD 환산이 포함된다
 - [x] **SAPI-03**: 스테이킹 포지션이 없으면 빈 배열을 반환한다
 

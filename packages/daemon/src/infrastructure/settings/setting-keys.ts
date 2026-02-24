@@ -44,6 +44,7 @@ export const SETTING_CATEGORIES = [
   'signing_sdk',
   'incoming',
   'actions',
+  'policy',
 ] as const;
 
 export type SettingCategory = (typeof SETTING_CATEGORIES)[number];

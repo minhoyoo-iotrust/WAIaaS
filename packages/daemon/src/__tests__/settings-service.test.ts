@@ -383,7 +383,7 @@ describe('SettingsService', () => {
 
   describe('setting-keys', () => {
     it('all definitions have valid categories', () => {
-      const validCategories = new Set(['notifications', 'rpc', 'security', 'daemon', 'walletconnect', 'oracle', 'display', 'autostop', 'monitoring', 'telegram', 'signing_sdk', 'incoming', 'actions']);
+      const validCategories = new Set(['notifications', 'rpc', 'security', 'daemon', 'walletconnect', 'oracle', 'display', 'autostop', 'monitoring', 'telegram', 'signing_sdk', 'incoming', 'actions', 'policy']);
       for (const def of SETTING_DEFINITIONS) {
         expect(validCategories.has(def.category)).toBe(true);
       }
@@ -422,8 +422,8 @@ describe('SettingsService', () => {
     });
 
     it('has expected number of definitions', () => {
-      // 11 notifications + 14 rpc + 14 security + 1 daemon + 2 walletconnect + 2 oracle + 1 display + 6 autostop + 5 monitoring + 2 telegram + 8 signing_sdk + 7 incoming + 18 actions = 91
-      expect(SETTING_DEFINITIONS.length).toBe(91);
+      // 11 notifications + 14 rpc + 14 security + 1 daemon + 2 walletconnect + 2 oracle + 1 display + 6 autostop + 5 monitoring + 2 telegram + 8 signing_sdk + 7 incoming + 24 actions + 1 policy = 97
+      expect(SETTING_DEFINITIONS.length).toBe(97);
     });
   });
 
@@ -453,9 +453,9 @@ describe('SettingsService', () => {
       expect(all.actions!.zerox_swap_default_slippage_bps).toBe('100');
     });
 
-    it('actions category has 18 settings', () => {
+    it('actions category has 24 settings', () => {
       const actionsDefs = SETTING_DEFINITIONS.filter((d) => d.category === 'actions');
-      expect(actionsDefs.length).toBe(18);
+      expect(actionsDefs.length).toBe(24);
     });
 
     it('actions.jupiter_swap_api_key is a credential', () => {
