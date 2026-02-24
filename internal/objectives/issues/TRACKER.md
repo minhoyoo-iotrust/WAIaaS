@@ -187,6 +187,8 @@
 | 170 | BUG | HIGH | Admin UI Actions 페이지 접근 시 401 — sessionAuth 미스매치 | v28.4 | FIXED | 2026-02-24 |
 | 171 | BUG | HIGH | Admin UI apiCall 글로벌 401 핸들러가 비-admin 엔드포인트 401에도 로그아웃 트리거 | v28.3 | FIXED | 2026-02-24 |
 | 172 | BUG | HIGH | EVM IncomingTxMonitor getBlock(includeTransactions:true)가 L2 체인에서 타임아웃 | v28.3 | FIXED | 2026-02-24 |
+| 173 | BUG | HIGH | Admin UI 정책 기본값 체크박스가 항상 해제 상태로 표시 — policies.tsx 카테고리 불일치 | v28.5 | OPEN | |
+| 174 | ENHANCEMENT | HIGH | connect-info 프롬프트에 default-deny 상태 미포함 — 에이전트 잘못된 안내 | v28.5 | OPEN | |
 
 ## Type Legend
 
@@ -198,9 +200,9 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 2
 - **FIXED:** 171
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 172
+- **Total:** 174
