@@ -32,10 +32,12 @@ export { BridgeStatusTracker, BridgeMonitoringTracker } from './providers/lifi/b
 export { LidoStakingActionProvider } from './providers/lido-staking/index.js';
 export { LIDO_STAKING_DEFAULTS, LIDO_MAINNET_ADDRESSES, LIDO_TESTNET_ADDRESSES, getLidoAddresses } from './providers/lido-staking/config.js';
 export type { LidoStakingConfig } from './providers/lido-staking/config.js';
+export { LidoWithdrawalTracker } from './providers/lido-staking/withdrawal-tracker.js';
 
 export { JitoStakingActionProvider } from './providers/jito-staking/index.js';
 export { JITO_STAKING_DEFAULTS, JITO_MAINNET_ADDRESSES, getJitoAddresses } from './providers/jito-staking/config.js';
 export type { JitoStakingConfig } from './providers/jito-staking/config.js';
+export { JitoEpochTracker } from './providers/jito-staking/epoch-tracker.js';
 
 // Re-export common utilities
 export { ActionApiClient } from './common/action-api-client.js';
