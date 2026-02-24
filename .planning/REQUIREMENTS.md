@@ -13,8 +13,8 @@ Requirements for milestone v28.4. Each maps to roadmap phases.
 - [x] **LIDO-02**: LidoStakingActionProvider가 unstake 액션으로 stETH를 ETH로 출금 요청할 수 있다 (Withdrawal Queue)
 - [x] **LIDO-03**: Lido 컨트랙트 ABI 직접 호출로 외부 의존성 없이 submit()/requestWithdrawals() 인코딩한다
 - [x] **LIDO-04**: ETH 잔고 부족 시 INSUFFICIENT_BALANCE 에러를 반환한다
-- [ ] **LIDO-05**: Admin Settings에서 lido_enabled/steth_address/withdrawal_queue_address 런타임 설정 가능하다
-- [ ] **LIDO-06**: EnvironmentType에 따라 testnet/mainnet 컨트랙트 주소가 자동 전환된다
+- [x] **LIDO-05**: Admin Settings에서 lido_enabled/steth_address/withdrawal_queue_address 런타임 설정 가능하다
+- [x] **LIDO-06**: EnvironmentType에 따라 testnet/mainnet 컨트랙트 주소가 자동 전환된다
 
 ### Jito Staking
 
@@ -26,9 +26,9 @@ Requirements for milestone v28.4. Each maps to roadmap phases.
 
 ### 정책 연동
 
-- [ ] **PLCY-01**: 스테이킹 금액이 USD 환산되어 SPENDING_LIMIT 정책 평가를 받는다
-- [ ] **PLCY-02**: Lido/Jito 컨트랙트가 CONTRACT_WHITELIST 미등록 시 정책 거부된다
-- [ ] **PLCY-03**: provider-trust 모델로 빌트인 프로바이더 컨트랙트 화이트리스트 자동 등록된다
+- [x] **PLCY-01**: 스테이킹 금액이 USD 환산되어 SPENDING_LIMIT 정책 평가를 받는다
+- [x] **PLCY-02**: Lido/Jito 컨트랙트가 CONTRACT_WHITELIST 미등록 시 정책 거부된다
+- [x] **PLCY-03**: provider-trust 모델로 빌트인 프로바이더 컨트랙트 화이트리스트 자동 등록된다
 
 ### 비동기 추적
 
@@ -83,16 +83,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LIDO-02 | Phase 254 | Complete |
 | LIDO-03 | Phase 254 | Complete |
 | LIDO-04 | Phase 254 | Complete |
-| LIDO-05 | Phase 254 | Pending |
-| LIDO-06 | Phase 254 | Pending |
+| LIDO-05 | Phase 254 | Complete |
+| LIDO-06 | Phase 254 | Complete |
 | JITO-01 | Phase 255 | Pending |
 | JITO-02 | Phase 255 | Pending |
 | JITO-03 | Phase 255 | Pending |
 | JITO-04 | Phase 255 | Pending |
 | JITO-05 | Phase 255 | Pending |
-| PLCY-01 | Phase 254 | Pending |
-| PLCY-02 | Phase 254 | Pending |
-| PLCY-03 | Phase 254 | Pending |
+| PLCY-01 | Phase 254 | Complete |
+| PLCY-02 | Phase 254 | Complete |
+| PLCY-03 | Phase 254 | Complete |
 | ASYNC-01 | Phase 256 | Pending |
 | ASYNC-02 | Phase 256 | Pending |
 | ASYNC-03 | Phase 256 | Pending |

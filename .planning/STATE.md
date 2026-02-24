@@ -10,17 +10,17 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 ## Current Position
 
 Phase: 254 (1 of 3 in v28.4) (Lido EVM Staking Provider)
-Plan: 1 of 2 in current phase
+Plan: 2 of 2 in current phase (PHASE COMPLETE)
 Status: Executing
-Last activity: 2026-02-24 -- Completed 254-01 (Lido EVM Staking Provider core)
+Last activity: 2026-02-24 -- Completed 254-02 (Lido daemon integration + settings + tests)
 
-Progress: [█░░░░░░░░░] 14%
+Progress: [██░░░░░░░░] 29%
 
 ## Performance Metrics
 
 **Cumulative:** 61 milestones, 253 phases completed, 544 plans, 1,485 reqs, ~5,000+ tests, ~189,000 LOC TS
 
-**This milestone:** 3 phases, 7 plans (estimated), 25 requirements -- 1 plan complete
+**This milestone:** 3 phases, 7 plans (estimated), 25 requirements -- 2 plans complete
 
 ## Accumulated Context
 
@@ -33,6 +33,8 @@ Progress: [█░░░░░░░░░] 14%
 - AsyncPollingService uses sequential processing (no Promise.all) to respect external API rate limits (v28.3)
 - Lido manual ABI encoding (no viem at provider level) following zerox-swap pattern (v28.4)
 - parseEthAmount decimal-to-wei via string split + BigInt for precise arithmetic (v28.4)
+- Lido environment-based address switching: SettingsReader.get('environment') for mainnet/Holesky (v28.4)
+- Lido admin override pattern: empty string default falls back to environment-derived address (v28.4)
 
 ### Blockers/Concerns
 
@@ -41,5 +43,5 @@ Progress: [█░░░░░░░░░] 14%
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Completed 254-01-PLAN.md (Lido EVM Staking Provider core)
+Stopped at: Completed 254-02-PLAN.md (Lido daemon integration + settings + tests)
 Resume file: None
