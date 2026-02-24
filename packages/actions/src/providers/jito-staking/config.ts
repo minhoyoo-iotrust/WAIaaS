@@ -1,0 +1,70 @@
+/**
+ * Jito Staking configuration type, defaults, and address maps.
+ *
+ * Supports Solana mainnet only (Jito has no official devnet/testnet deployment).
+ * See: https://www.jito.network/
+ */
+
+export interface JitoStakingConfig {
+  enabled: boolean;
+  stakePoolAddress: string;    // Jito SPL Stake Pool
+  jitosolMint: string;         // JitoSOL token mint
+  stakePoolProgram: string;    // SPL Stake Pool program ID
+}
+
+// ---------------------------------------------------------------------------
+// Mainnet addresses (Solana)
+// ---------------------------------------------------------------------------
+
+export const JITO_MAINNET_ADDRESSES = {
+  stakePoolAddress: 'Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb',
+  jitosolMint: 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+  stakePoolProgram: 'SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy',
+} as const;
+
+// ---------------------------------------------------------------------------
+// Well-known PDA and program addresses
+// ---------------------------------------------------------------------------
+
+/** Stake Pool withdraw authority (PDA derived from stake pool address). */
+export const JITO_WITHDRAW_AUTHORITY = '6iQKfEyhr3bZMotVkW6beNZz5CPAkiwvgV2CTje9pVSS';
+
+/** Reserve stake account for the Jito Stake Pool. */
+export const JITO_RESERVE_STAKE = 'BgKUXdS2jFbByBaPQRf6eSCjMH3mRLDPH1MCVLhEAD3c';
+
+/** Manager fee account for the Jito Stake Pool. */
+export const JITO_MANAGER_FEE = 'B1aLzaNMeFVAyQ6f3XbbUyKcH2YPHu2fqiEagmiF23VR';
+
+/** SPL Token Program. */
+export const SPL_TOKEN_PROGRAM = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
+
+/** System Program. */
+export const SYSTEM_PROGRAM = '11111111111111111111111111111111';
+
+// ---------------------------------------------------------------------------
+// Defaults (disabled, mainnet addresses)
+// ---------------------------------------------------------------------------
+
+export const JITO_STAKING_DEFAULTS: JitoStakingConfig = {
+  enabled: false,
+  ...JITO_MAINNET_ADDRESSES,
+};
+
+// ---------------------------------------------------------------------------
+// Helper to select addresses by environment
+// ---------------------------------------------------------------------------
+
+/**
+ * Get Jito addresses for a given environment type.
+ *
+ * Jito Stake Pool is mainnet-only. Testnet falls back to mainnet addresses.
+ *
+ * @param environment - 'mainnet' or 'testnet'
+ */
+export function getJitoAddresses(
+  environment: 'mainnet' | 'testnet',
+): { stakePoolAddress: string; jitosolMint: string; stakePoolProgram: string } {
+  // Jito Stake Pool is mainnet-only. Testnet falls back to mainnet addresses.
+  void environment;
+  return { ...JITO_MAINNET_ADDRESSES };
+}
