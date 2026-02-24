@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.6.0-rc.12](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.6.0-rc.11...v2.6.0-rc.12) (2026-02-24)
+
+
+### Bug Fixes
+
+* skip native ETH polling on L2 chains to avoid getBlock timeout ([12e35f5](https://github.com/minhoyoo-iotrust/WAIaaS/commit/12e35f5203d562a169f0334ad99a464f61541ac3))
+* skip native ETH polling on L2 chains to avoid getBlock timeout ([2383c1a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2383c1aec78e477a95eacdaae5982deadb24e0e1)), closes [#172](https://github.com/minhoyoo-iotrust/WAIaaS/issues/172)
+
 ## [2.6.0-rc.11](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.6.0-rc.10...v2.6.0-rc.11) (2026-02-24)
 
 
