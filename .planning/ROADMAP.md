@@ -296,11 +296,11 @@ Plans:
   2. executeAction('jito_unstake', { amount: '1.0' })을 호출하면 Stake Pool에서 SOL 출금 요청이 생성된다
   3. SOL 잔고가 부족하면 INSUFFICIENT_BALANCE 에러가 반환된다
   4. Admin Settings에서 jito_enabled를 false로 변경하면 jito 액션이 비활성화된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 255-01: JitoStakingActionProvider + SPL Stake Pool instruction 빌드 + stake/unstake 액션
-- [ ] 255-02: SettingsService 설정 + 정책 연동 + 테스트
+- [ ] 255-01-PLAN.md — JitoStakingActionProvider + SPL Stake Pool instruction 빌드 (config, PDA 유틸, DepositSol/WithdrawSol) + 유닛 테스트
+- [ ] 255-02-PLAN.md — registerBuiltInProviders 등록 + SettingsService 설정 3개 + 통합 테스트
 
 ### Phase 256: Staking API + Async Tracking + Interface Integration
 **Goal**: unstake 비동기 완료 추적, 스테이킹 포지션 조회 API, 모든 인터페이스(MCP/SDK/Admin/Skills) 통합이 완성된다
