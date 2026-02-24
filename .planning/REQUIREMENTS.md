@@ -18,10 +18,10 @@ Requirements for milestone v28.4. Each maps to roadmap phases.
 
 ### Jito Staking
 
-- [ ] **JITO-01**: JitoStakingActionProvider가 stake 액션으로 SOL을 JitoSOL로 스테이킹할 수 있다
-- [ ] **JITO-02**: JitoStakingActionProvider가 unstake 액션으로 JitoSOL을 SOL로 출금 요청할 수 있다
-- [ ] **JITO-03**: SPL Stake Pool 프로그램 호출로 deposit/withdraw instruction을 빌드한다
-- [ ] **JITO-04**: SOL 잔고 부족 시 INSUFFICIENT_BALANCE 에러를 반환한다
+- [x] **JITO-01**: JitoStakingActionProvider가 stake 액션으로 SOL을 JitoSOL로 스테이킹할 수 있다
+- [x] **JITO-02**: JitoStakingActionProvider가 unstake 액션으로 JitoSOL을 SOL로 출금 요청할 수 있다
+- [x] **JITO-03**: SPL Stake Pool 프로그램 호출로 deposit/withdraw instruction을 빌드한다
+- [x] **JITO-04**: SOL 잔고 부족 시 INSUFFICIENT_BALANCE 에러를 반환한다
 - [ ] **JITO-05**: Admin Settings에서 jito_enabled/stake_pool/jitosol_mint 런타임 설정 가능하다
 
 ### 정책 연동
@@ -85,10 +85,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LIDO-04 | Phase 254 | Complete |
 | LIDO-05 | Phase 254 | Complete |
 | LIDO-06 | Phase 254 | Complete |
-| JITO-01 | Phase 255 | Pending |
-| JITO-02 | Phase 255 | Pending |
-| JITO-03 | Phase 255 | Pending |
-| JITO-04 | Phase 255 | Pending |
+| JITO-01 | Phase 255 | Complete |
+| JITO-02 | Phase 255 | Complete |
+| JITO-03 | Phase 255 | Complete |
+| JITO-04 | Phase 255 | Complete |
 | JITO-05 | Phase 255 | Pending |
 | PLCY-01 | Phase 254 | Complete |
 | PLCY-02 | Phase 254 | Complete |

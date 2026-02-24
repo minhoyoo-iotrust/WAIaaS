@@ -10,17 +10,17 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 ## Current Position
 
 Phase: 255 (2 of 3 in v28.4) (Jito Solana Staking Provider)
-Plan: 0 of 2 in current phase
-Status: Planned, ready to execute
-Last activity: 2026-02-24 -- Phase 254 complete (gap fixed: environment key), Phase 255 planned (2 plans, verified)
+Plan: 1 of 2 in current phase
+Status: Executing Phase 255
+Last activity: 2026-02-24 -- Plan 255-01 complete (Jito staking provider + 12 tests)
 
-Progress: [███░░░░░░░] 33%
+Progress: [████░░░░░░] 43%
 
 ## Performance Metrics
 
 **Cumulative:** 61 milestones, 253 phases completed, 544 plans, 1,485 reqs, ~5,000+ tests, ~189,000 LOC TS
 
-**This milestone:** 3 phases, 7 plans (estimated), 25 requirements -- 2 plans complete
+**This milestone:** 3 phases, 7 plans (estimated), 25 requirements -- 3 plans complete
 
 ## Accumulated Context
 
@@ -35,6 +35,10 @@ Progress: [███░░░░░░░] 33%
 - parseEthAmount decimal-to-wei via string split + BigInt for precise arithmetic (v28.4)
 - Lido environment-based address switching: rpc.evm_default_network + deriveEnvironment() for mainnet/Holesky (v28.4 — fixed from settingsReader.get('environment') which throws for unknown key)
 - Lido admin override pattern: empty string default falls back to environment-derived address (v28.4)
+- Pure mathematical Ed25519 on-curve check (crypto.subtle importKey unreliable for on-curve validation in Node.js 22) (v28.4)
+- parseSolAmount 9-decimal SOL->lamports conversion via string split + BigInt (v28.4)
+- Zero external Solana SDK deps for PDA derivation, base58, ATA -- pure TypeScript (v28.4)
+- Jito mainnet-only addresses, testnet falls back to mainnet (v28.4)
 
 ### Blockers/Concerns
 
@@ -43,6 +47,6 @@ Progress: [███░░░░░░░] 33%
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Phase 255 planned and verified (2 plans in 2 waves). Next: execute Phase 255, then plan+execute Phase 256, then milestone audit.
+Stopped at: Completed 255-01-PLAN.md (Jito staking provider core). Next: 255-02 (daemon registration + integration).
 Resume file: None
-Resume instructions: /gsd:execute-phase 255, then /gsd:plan-phase 256, then /gsd:execute-phase 256, then /gsd:audit-milestone
+Resume instructions: Continue with 255-02-PLAN.md execution, then plan+execute Phase 256, then milestone audit.
