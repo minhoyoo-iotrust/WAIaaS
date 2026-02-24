@@ -1,5 +1,39 @@
 # Changelog
 
+## [2.6.0-rc.13](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.6.0-rc.12...v2.6.0-rc.13) (2026-02-24)
+
+
+### Features
+
+* **254-01:** add Lido staking ABI encoding helpers and config ([1701463](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1701463dc1f76efe0e398211075d5db088635e37))
+* **254-01:** implement LidoStakingActionProvider with unit tests ([a4c000a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a4c000acfe11a272d1c77c31168646a53789634f))
+* **254-02:** register Lido staking in actions exports and SettingsService keys ([e58fcb7](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e58fcb72bc47086d8b663083af8649c72c943b7a))
+* **255-01:** add Jito staking config and SPL Stake Pool instruction encoding ([416dd4c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/416dd4c077135b4e0a1da343a2f09a51606f4e4b))
+* **255-01:** add JitoStakingActionProvider with stake/unstake and 12 unit tests ([a3d533d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a3d533d2a2c4b23829695fff39b3c75a26d4e25f))
+* **255-02:** register JitoStakingActionProvider in daemon + 3 SettingsService keys ([0c123bb](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0c123bb16f411d1e8bdff1c98959fefcaaeb3164))
+* **256-01:** add LidoWithdrawalTracker and JitoEpochTracker implementations ([57d2bb4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/57d2bb45a2ab95d06a293391a2ad5e9e1e691e01))
+* **256-01:** add staking notification events, daemon tracker registration, and dynamic event dispatch ([503133d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/503133d950ede97caa7d49ab53a15f2fd7fc9552))
+* **256-02:** add staking position Zod schema and REST API route ([bd7772a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/bd7772ae85e56f46050bc8e532e45604bd757940))
+* **256-03:** add Admin staking tab, admin staking API, and skill docs ([022ba7e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/022ba7e3bc3fb873d90e5e983cdec904e9b19813))
+
+
+### Bug Fixes
+
+* **176,177,178:** action provider default-enabled + hot-reload, wallet detail amount format, admin actions page ([bd401c6](https://github.com/minhoyoo-iotrust/WAIaaS/commit/bd401c68d8f30ebf969358f4155ce2f857da5afc))
+* **179,180:** add CoinGecko API key to Oracle section, remove duplicate API Keys from System page ([099ab63](https://github.com/minhoyoo-iotrust/WAIaaS/commit/099ab63ce32e0884c1cb0e6d3710fbe1ed0a442c))
+* **254:** use rpc.evm_default_network + deriveEnvironment() for Lido env switching ([99e1a95](https://github.com/minhoyoo-iotrust/WAIaaS/commit/99e1a95f1370f0195bee40bc2dcf40dfd3b46b1d))
+* **255:** revise plans based on checker feedback ([359bed0](https://github.com/minhoyoo-iotrust/WAIaaS/commit/359bed0c1b38570b6cc28b1aa90178829386f954))
+* **256:** add policy category to SETTING_CATEGORIES + update test counts ([de0dc93](https://github.com/minhoyoo-iotrust/WAIaaS/commit/de0dc93d6d24f872bb1c6339bbfb6bf20cbb4c43))
+* **256:** revise plan based on checker feedback — notification enum, dynamic event tests, settings cross-ref ([6e0313e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/6e0313e8efb935ba69e63cab82be638886aecc2e))
+* **256:** revise plans based on checker feedback ([0544c6d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0544c6d318508e5a09caffb4e7c6fcd1708aeebd))
+* **257-01:** add post-pipeline bridge_status enrollment and metadata persistence ([8cfaa0b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8cfaa0bb11f3b5acfc32475fb1ae264739bc5b31))
+* **admin:** resolve dirty-guard isDirty crash on navigation ([#181](https://github.com/minhoyoo-iotrust/WAIaaS/issues/181)) ([2a3152c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2a3152ce031e4aa50b88e1ede0c71981ce26901f))
+* **admin:** update system and actions page tests for v28.4 changes ([42bd6fb](https://github.com/minhoyoo-iotrust/WAIaaS/commit/42bd6fb6b6d5d2df510690c912907841f4ed3214))
+* **core:** update NotificationEventType count to 38 in enum test ([7949426](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7949426adbe0e34c0ba22c8f1f5bd7762af59d45))
+* **daemon:** update NotificationEventType count to 38 in notification-channels test ([8ef56bc](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8ef56bc3940668564dc57e5738657b34fa9d3a54))
+* resolve issues [#173](https://github.com/minhoyoo-iotrust/WAIaaS/issues/173) [#174](https://github.com/minhoyoo-iotrust/WAIaaS/issues/174) [#175](https://github.com/minhoyoo-iotrust/WAIaaS/issues/175) — policy defaults, connect-info, EVM backoff ([4d5f45b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4d5f45bb0e88849536d485b72b7b3f44eeca15cb))
+* update NotificationEventType expected count to 38 in enum SSoT verifier ([974683e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/974683e500714ee6989a8a864785f9877c2f29fc))
+
 ## [2.6.0-rc.12](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.6.0-rc.11...v2.6.0-rc.12) (2026-02-24)
 
 
