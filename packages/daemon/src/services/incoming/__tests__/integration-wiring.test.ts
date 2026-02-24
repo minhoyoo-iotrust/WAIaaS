@@ -277,7 +277,13 @@ describe('BUG-2: Polling Worker Handlers', () => {
     expect(pollEvmCall).toBeDefined();
 
     const handler = pollEvmCall![1].handler as () => Promise<void>;
-    await handler();
+
+    // Use fake timers to skip stagger delays between subscribers
+    vi.useFakeTimers();
+    const handlerPromise = handler();
+    await vi.advanceTimersByTimeAsync(20_000);
+    await handlerPromise;
+    vi.useRealTimers();
 
     // Assert subscriber.pollAll() was called for each ethereum network
     // ethereum:mainnet expands to 5 networks, all sharing the same mock subscriber
