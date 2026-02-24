@@ -10,17 +10,17 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 ## Current Position
 
 Phase: 254 (1 of 3 in v28.4) (Lido EVM Staking Provider)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-24 -- Roadmap created for v28.4 (3 phases, 7 plans, 25 requirements)
+Plan: 1 of 2 in current phase
+Status: Executing
+Last activity: 2026-02-24 -- Completed 254-01 (Lido EVM Staking Provider core)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█░░░░░░░░░] 14%
 
 ## Performance Metrics
 
 **Cumulative:** 61 milestones, 253 phases completed, 544 plans, 1,485 reqs, ~5,000+ tests, ~189,000 LOC TS
 
-**This milestone:** 3 phases, 7 plans (estimated), 25 requirements -- Ready to plan
+**This milestone:** 3 phases, 7 plans (estimated), 25 requirements -- 1 plan complete
 
 ## Accumulated Context
 
@@ -31,6 +31,8 @@ Progress: [░░░░░░░░░░] 0%
 - provider-trust 정책 바이패스 -- actionProvider 태그 시 CONTRACT_WHITELIST skip (v28.2)
 - SettingsService SSoT -- Admin Settings > Actions 페이지에서 빌트인 프로바이더 런타임 설정 (v28.2)
 - AsyncPollingService uses sequential processing (no Promise.all) to respect external API rate limits (v28.3)
+- Lido manual ABI encoding (no viem at provider level) following zerox-swap pattern (v28.4)
+- parseEthAmount decimal-to-wei via string split + BigInt for precise arithmetic (v28.4)
 
 ### Blockers/Concerns
 
@@ -39,5 +41,5 @@ Progress: [░░░░░░░░░░] 0%
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Roadmap created for v28.4 Liquid Staking (3 phases, 25 requirements)
+Stopped at: Completed 254-01-PLAN.md (Lido EVM Staking Provider core)
 Resume file: None

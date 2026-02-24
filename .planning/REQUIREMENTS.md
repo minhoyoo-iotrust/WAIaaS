@@ -9,10 +9,10 @@ Requirements for milestone v28.4. Each maps to roadmap phases.
 
 ### Lido Staking
 
-- [ ] **LIDO-01**: LidoStakingActionProvider가 stake 액션으로 ETH를 stETH로 스테이킹할 수 있다
-- [ ] **LIDO-02**: LidoStakingActionProvider가 unstake 액션으로 stETH를 ETH로 출금 요청할 수 있다 (Withdrawal Queue)
-- [ ] **LIDO-03**: Lido 컨트랙트 ABI 직접 호출로 외부 의존성 없이 submit()/requestWithdrawals() 인코딩한다
-- [ ] **LIDO-04**: ETH 잔고 부족 시 INSUFFICIENT_BALANCE 에러를 반환한다
+- [x] **LIDO-01**: LidoStakingActionProvider가 stake 액션으로 ETH를 stETH로 스테이킹할 수 있다
+- [x] **LIDO-02**: LidoStakingActionProvider가 unstake 액션으로 stETH를 ETH로 출금 요청할 수 있다 (Withdrawal Queue)
+- [x] **LIDO-03**: Lido 컨트랙트 ABI 직접 호출로 외부 의존성 없이 submit()/requestWithdrawals() 인코딩한다
+- [x] **LIDO-04**: ETH 잔고 부족 시 INSUFFICIENT_BALANCE 에러를 반환한다
 - [ ] **LIDO-05**: Admin Settings에서 lido_enabled/steth_address/withdrawal_queue_address 런타임 설정 가능하다
 - [ ] **LIDO-06**: EnvironmentType에 따라 testnet/mainnet 컨트랙트 주소가 자동 전환된다
 
@@ -79,10 +79,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LIDO-01 | Phase 254 | Pending |
-| LIDO-02 | Phase 254 | Pending |
-| LIDO-03 | Phase 254 | Pending |
-| LIDO-04 | Phase 254 | Pending |
+| LIDO-01 | Phase 254 | Complete |
+| LIDO-02 | Phase 254 | Complete |
+| LIDO-03 | Phase 254 | Complete |
+| LIDO-04 | Phase 254 | Complete |
 | LIDO-05 | Phase 254 | Pending |
 | LIDO-06 | Phase 254 | Pending |
 | JITO-01 | Phase 255 | Pending |
