@@ -182,6 +182,9 @@
 | 165 | ENHANCEMENT | HIGH | 알림 메시지 금액이 최소 단위(wei/lamports)로 표시 (사람 친화적 포맷 미지원) | v28.2 | FIXED | 2026-02-24 |
 | 166 | BUG | HIGH | WalletConnect 핫리로드 시 WcSigningBridge 미생성 — 서명 요청 전달 불가 | v28.2 | FIXED | 2026-02-24 |
 | 167 | BUG | HIGH | IncomingTxMonitor EVM RPC 설정 키 중복으로 모든 EVM 네트워크 구독 실패 | v28.3 | FIXED | 2026-02-24 |
+| 168 | ENHANCEMENT | MEDIUM | Admin UI 트랜잭션 금액이 raw 단위(lamports/wei)로 표시 | v28.3 | OPEN | |
+| 169 | BUG | HIGH | IncomingTxMonitor EVM 폴링이 무료 RPC 엔드포인트 rate limit 초과 | v28.3 | OPEN | |
+| 170 | BUG | HIGH | Admin UI Actions 페이지 접근 시 401 — sessionAuth 미스매치 | v28.3 | OPEN | |
 
 ## Type Legend
 
@@ -193,9 +196,9 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 3
 - **FIXED:** 166
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 167
+- **Total:** 170

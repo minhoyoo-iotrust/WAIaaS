@@ -44,7 +44,7 @@ Owner: "보유 ETH의 50%를 Lido에 스테이킹"
 | LidoContractHelper | Lido 컨트랙트 ABI 인코딩. viem `encodeFunctionData()` 사용. stETH 컨트랙트: `0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84` (Ethereum mainnet). Withdrawal Queue: `0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1` |
 | JitoStakeHelper | Jito SPL Stake Pool 프로그램 호출 헬퍼. Pool: `Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb`, JitoSOL Mint: `J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn` |
 | 스테이킹 상태 조회 | GET /v1/wallets/:id/staking — 월렛별 스테이킹 포지션 조회 (stETH/JitoSOL 잔고, 현재 APY, USD 환산). Admin 대시보드에도 표시 |
-| MCP 도구 | waiaas_lido_stake, waiaas_lido_unstake, waiaas_jito_stake, waiaas_jito_unstake |
+| MCP 도구 | action_lido_stake, action_lido_unstake, action_jito_stake, action_jito_unstake |
 | SDK 지원 | TS/Python SDK: executeAction('lido_stake', params), executeAction('jito_stake', params) |
 
 ### 입력 스키마
@@ -100,17 +100,17 @@ packages/daemon/src/routes/
 
 | 설정 키 | 기본값 | 설명 |
 |---------|--------|------|
-| `lido.enabled` | `true` | 프로바이더 활성화 |
-| `lido.steth_address` | `"0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84"` | stETH 컨트랙트 (Ethereum mainnet) |
-| `lido.withdrawal_queue_address` | `"0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1"` | Withdrawal Queue 컨트랙트 |
+| `actions.lido_enabled` | `true` | 프로바이더 활성화 |
+| `actions.lido_steth_address` | `"0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84"` | stETH 컨트랙트 (Ethereum mainnet) |
+| `actions.lido_withdrawal_queue_address` | `"0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1"` | Withdrawal Queue 컨트랙트 |
 
 **Jito (Solana)**
 
 | 설정 키 | 기본값 | 설명 |
 |---------|--------|------|
-| `jito.enabled` | `true` | 프로바이더 활성화 |
-| `jito.stake_pool` | `"Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb"` | Stake Pool 주소 |
-| `jito.jitosol_mint` | `"J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"` | JitoSOL Mint 주소 |
+| `actions.jito_enabled` | `true` | 프로바이더 활성화 |
+| `actions.jito_stake_pool` | `"Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb"` | Stake Pool 주소 |
+| `actions.jito_jitosol_mint` | `"J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"` | JitoSOL Mint 주소 |
 
 ---
 
@@ -168,7 +168,7 @@ packages/daemon/src/routes/
 
 | # | 시나리오 | 검증 방법 | 태그 |
 |---|---------|----------|------|
-| 13 | MCP: waiaas_lido_stake, waiaas_jito_stake 도구 노출 | lido + jito 프로바이더 등록 -> MCP tool 목록에 4개 도구 포함 assert | [L0] |
+| 13 | MCP: action_lido_stake, action_jito_stake 도구 노출 | lido + jito 프로바이더 등록 -> MCP tool 목록에 4개 도구 포함 assert | [L0] |
 
 ### Admin UI
 
