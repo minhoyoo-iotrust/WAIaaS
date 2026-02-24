@@ -197,6 +197,7 @@
 | 180 | ENHANCEMENT | LOW | System 페이지 API Keys 섹션이 Actions 페이지와 중복 — 단일화 필요 | v28.5 | FIXED | 2026-02-24 |
 | 181 | BUG | CRITICAL | Admin UI 네비게이션 불가 — dirty-guard isDirty 크래시 (t.isDirty is not a function) | v28.5 | FIXED | 2026-02-24 |
 | 182 | ENHANCEMENT | LOW | Admin Settings 외부 서비스 도움 URL 추가 — API 키 발급처 안내 누락 | — | OPEN | — |
+| 183 | ENHANCEMENT | LOW | Admin UI 정책 생성 시 타입별 한 줄 설명 추가 — 정책 유형 이해 어려움 | — | OPEN | — |
 
 ## Type Legend
 
@@ -208,9 +209,9 @@
 
 ## Summary
 
-- **OPEN:** 1
+- **OPEN:** 2
 - **FIXED:** 180
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 182
+- **Total:** 183
