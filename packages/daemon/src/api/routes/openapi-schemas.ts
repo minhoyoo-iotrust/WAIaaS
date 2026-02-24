@@ -1124,3 +1124,26 @@ export const PatchWalletResponseSchema = z
     monitorIncoming: z.boolean(),
   })
   .openapi('PatchWalletResponse');
+
+// ---------------------------------------------------------------------------
+// Staking Position Schemas (GET /v1/wallet/staking)
+// ---------------------------------------------------------------------------
+
+export const StakingPositionSchema = z.object({
+  protocol: z.enum(['lido', 'jito']),
+  chain: z.enum(['ethereum', 'solana']),
+  asset: z.string(),           // 'stETH' or 'JitoSOL'
+  balance: z.string(),         // Token balance as string (decimal)
+  balanceUsd: z.string().nullable(), // USD equivalent or null if price unavailable
+  apy: z.string().nullable(),  // Current APY % as string or null
+  pendingUnstake: z.object({
+    amount: z.string(),
+    status: z.enum(['PENDING', 'COMPLETED', 'TIMEOUT']),
+    requestedAt: z.number().nullable(),
+  }).nullable(),
+}).openapi('StakingPosition');
+
+export const StakingPositionsResponseSchema = z.object({
+  walletId: z.string(),
+  positions: z.array(StakingPositionSchema),
+}).openapi('StakingPositionsResponse');
