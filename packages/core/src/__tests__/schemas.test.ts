@@ -13,6 +13,7 @@ import {
   ContractCallRequestSchema,
   ApproveRequestSchema,
   BatchRequestSchema,
+  GasConditionSchema,
 } from '../index.js';
 
 describe('Zod SSoT Schemas', () => {
@@ -445,5 +446,168 @@ describe('TransactionRequestSchema (discriminatedUnion 5-type)', () => {
       });
       expect(result.instructions).toHaveLength(2);
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GasConditionSchema (v28.5)
+// ---------------------------------------------------------------------------
+
+describe('GasConditionSchema', () => {
+  it('parses with maxGasPrice only', () => {
+    const result = GasConditionSchema.parse({ maxGasPrice: '50000000000' });
+    expect(result.maxGasPrice).toBe('50000000000');
+    expect(result.maxPriorityFee).toBeUndefined();
+    expect(result.timeout).toBeUndefined();
+  });
+
+  it('parses with maxPriorityFee only', () => {
+    const result = GasConditionSchema.parse({ maxPriorityFee: '2000000000' });
+    expect(result.maxPriorityFee).toBe('2000000000');
+    expect(result.maxGasPrice).toBeUndefined();
+  });
+
+  it('parses with both maxGasPrice and maxPriorityFee', () => {
+    const result = GasConditionSchema.parse({
+      maxGasPrice: '50000000000',
+      maxPriorityFee: '2000000000',
+    });
+    expect(result.maxGasPrice).toBe('50000000000');
+    expect(result.maxPriorityFee).toBe('2000000000');
+  });
+
+  it('parses with timeout', () => {
+    const result = GasConditionSchema.parse({
+      maxGasPrice: '50000000000',
+      timeout: 3600,
+    });
+    expect(result.timeout).toBe(3600);
+  });
+
+  it('rejects when neither maxGasPrice nor maxPriorityFee is specified', () => {
+    expect(() => GasConditionSchema.parse({})).toThrow(/At least one/);
+  });
+
+  it('rejects when only timeout is specified (no gas price fields)', () => {
+    expect(() => GasConditionSchema.parse({ timeout: 3600 })).toThrow(/At least one/);
+  });
+
+  it('rejects non-numeric maxGasPrice', () => {
+    expect(() => GasConditionSchema.parse({ maxGasPrice: 'abc' })).toThrow(/numeric string/);
+  });
+
+  it('rejects non-numeric maxPriorityFee', () => {
+    expect(() => GasConditionSchema.parse({ maxPriorityFee: '1.5' })).toThrow(/numeric string/);
+  });
+
+  it('rejects timeout below 60', () => {
+    expect(() =>
+      GasConditionSchema.parse({ maxGasPrice: '100', timeout: 30 }),
+    ).toThrow();
+  });
+
+  it('rejects timeout above 86400', () => {
+    expect(() =>
+      GasConditionSchema.parse({ maxGasPrice: '100', timeout: 100000 }),
+    ).toThrow();
+  });
+
+  it('accepts timeout boundary: 60', () => {
+    const result = GasConditionSchema.parse({ maxGasPrice: '100', timeout: 60 });
+    expect(result.timeout).toBe(60);
+  });
+
+  it('accepts timeout boundary: 86400', () => {
+    const result = GasConditionSchema.parse({ maxGasPrice: '100', timeout: 86400 });
+    expect(result.timeout).toBe(86400);
+  });
+
+  it('rejects non-integer timeout', () => {
+    expect(() =>
+      GasConditionSchema.parse({ maxGasPrice: '100', timeout: 3600.5 }),
+    ).toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// gasCondition field on 5-type request schemas (v28.5)
+// ---------------------------------------------------------------------------
+
+describe('gasCondition on transaction request schemas', () => {
+  it('TRANSFER accepts optional gasCondition', () => {
+    const result = TransferRequestSchema.parse({
+      type: 'TRANSFER',
+      to: 'addr',
+      amount: '100',
+      gasCondition: { maxGasPrice: '50000000000' },
+    });
+    expect(result.gasCondition).toBeDefined();
+    expect(result.gasCondition!.maxGasPrice).toBe('50000000000');
+  });
+
+  it('TRANSFER works without gasCondition (backward compat)', () => {
+    const result = TransferRequestSchema.parse({
+      type: 'TRANSFER',
+      to: 'addr',
+      amount: '100',
+    });
+    expect(result.gasCondition).toBeUndefined();
+  });
+
+  it('TOKEN_TRANSFER accepts optional gasCondition', () => {
+    const result = TokenTransferRequestSchema.parse({
+      type: 'TOKEN_TRANSFER',
+      to: 'addr',
+      amount: '100',
+      token: { address: 'mint', decimals: 6, symbol: 'USDC' },
+      gasCondition: { maxPriorityFee: '2000000000', timeout: 1800 },
+    });
+    expect(result.gasCondition).toBeDefined();
+    expect(result.gasCondition!.maxPriorityFee).toBe('2000000000');
+    expect(result.gasCondition!.timeout).toBe(1800);
+  });
+
+  it('CONTRACT_CALL accepts optional gasCondition', () => {
+    const result = ContractCallRequestSchema.parse({
+      type: 'CONTRACT_CALL',
+      to: '0xContract',
+      calldata: '0xdeadbeef',
+      gasCondition: { maxGasPrice: '100000000000' },
+    });
+    expect(result.gasCondition).toBeDefined();
+  });
+
+  it('APPROVE accepts optional gasCondition', () => {
+    const result = ApproveRequestSchema.parse({
+      type: 'APPROVE',
+      spender: '0xSpender',
+      token: { address: '0xToken', decimals: 18, symbol: 'WETH' },
+      amount: '1000000000000000000',
+      gasCondition: { maxGasPrice: '50000000000', maxPriorityFee: '2000000000' },
+    });
+    expect(result.gasCondition).toBeDefined();
+  });
+
+  it('BATCH accepts optional gasCondition', () => {
+    const result = BatchRequestSchema.parse({
+      type: 'BATCH',
+      instructions: [
+        { to: 'addr1', amount: '100' },
+        { to: 'addr2', amount: '200' },
+      ],
+      gasCondition: { maxGasPrice: '50000000000' },
+    });
+    expect(result.gasCondition).toBeDefined();
+  });
+
+  it('rejects invalid gasCondition on TRANSFER', () => {
+    expect(() =>
+      TransferRequestSchema.parse({
+        type: 'TRANSFER',
+        to: 'addr',
+        amount: '100',
+        gasCondition: { timeout: 3600 }, // missing gas price fields
+      }),
+    ).toThrow(/At least one/);
   });
 });
