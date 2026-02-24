@@ -45,10 +45,10 @@ Requirements for milestone v28.4. Each maps to roadmap phases.
 
 ### 인터페이스
 
-- [ ] **INTF-01**: MCP에서 action_lido_stake/unstake, action_jito_stake/unstake 4개 도구가 노출된다
-- [ ] **INTF-02**: TS/Python SDK에서 executeAction('lido_stake'/'jito_stake', params)으로 실행 가능하다
-- [ ] **INTF-03**: Admin 대시보드에 스테이킹 포지션 섹션이 렌더링된다
-- [ ] **INTF-04**: actions.skill.md에 Lido/Jito 스테이킹 문서가 추가된다
+- [x] **INTF-01**: MCP에서 action_lido_stake/unstake, action_jito_stake/unstake 4개 도구가 노출된다
+- [x] **INTF-02**: TS/Python SDK에서 executeAction('lido_stake'/'jito_stake', params)으로 실행 가능하다
+- [x] **INTF-03**: Admin 대시보드에 스테이킹 포지션 섹션이 렌더링된다
+- [x] **INTF-04**: actions.skill.md에 Lido/Jito 스테이킹 문서가 추가된다
 
 ## v2 Requirements
 
@@ -100,10 +100,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SAPI-01 | Phase 256 | Complete |
 | SAPI-02 | Phase 256 | Complete |
 | SAPI-03 | Phase 256 | Complete |
-| INTF-01 | Phase 256 | Pending |
-| INTF-02 | Phase 256 | Pending |
-| INTF-03 | Phase 256 | Pending |
-| INTF-04 | Phase 256 | Pending |
+| INTF-01 | Phase 256 | Complete |
+| INTF-02 | Phase 256 | Complete |
+| INTF-03 | Phase 256 | Complete |
+| INTF-04 | Phase 256 | Complete |
 
 **Coverage:**
 - v1 requirements: 25 total

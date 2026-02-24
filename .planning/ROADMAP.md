@@ -267,7 +267,7 @@ See `.planning/milestones/v28.3-ROADMAP.md` for full details.
 
 - [x] **Phase 254: Lido EVM Staking Provider** - Lido 컨트랙트 직접 호출로 ETH->stETH 스테이킹/언스테이킹 + 정책 연동 (completed 2026-02-24)
 - [x] **Phase 255: Jito Solana Staking Provider** - SPL Stake Pool 프로그램으로 SOL->JitoSOL 스테이킹/언스테이킹 (completed 2026-02-24)
-- [ ] **Phase 256: Staking API + Async Tracking + Interface Integration** - 비동기 unstake 추적 + 스테이킹 포지션 API + MCP/SDK/Admin/Skills 통합
+- [x] **Phase 256: Staking API + Async Tracking + Interface Integration** - 비동기 unstake 추적 + 스테이킹 포지션 API + MCP/SDK/Admin/Skills 통합 (completed 2026-02-24)
 
 ## Phase Details
 
@@ -327,4 +327,4 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 254. Lido EVM Staking Provider | 2/2 | Complete    | 2026-02-24 | - |
 | 255. Jito Solana Staking Provider | 2/2 | Complete    | 2026-02-24 | - |
-| 256. Staking API + Async Tracking + Interface Integration | 2/3 | In Progress|  | - |
+| 256. Staking API + Async Tracking + Interface Integration | 3/3 | Complete   | 2026-02-24 | - |

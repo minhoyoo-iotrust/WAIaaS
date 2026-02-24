@@ -10,17 +10,17 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 ## Current Position
 
 Phase: 256 (3 of 3 in v28.4) (Staking API Async Tracking Interface Integration)
-Plan: 2 of 3 in current phase (COMPLETE)
-Status: Plan 256-02 complete
-Last activity: 2026-02-24 -- Plan 256-02 complete (GET /v1/wallet/staking API + 11 integration tests)
+Plan: 3 of 3 in current phase (COMPLETE)
+Status: Phase 256 complete -- all 3 plans done
+Last activity: 2026-02-24 -- Plan 256-03 complete (MCP tests + Admin staking tab + skill docs)
 
-Progress: [████████░░] 78%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Cumulative:** 61 milestones, 253 phases completed, 544 plans, 1,485 reqs, ~5,000+ tests, ~189,000 LOC TS
 
-**This milestone:** 3 phases, 7 plans (estimated), 25 requirements -- 7 plans complete
+**This milestone:** 3 phases, 8 plans total, 25 requirements -- 8 plans complete
 
 ## Accumulated Context
 
@@ -48,6 +48,7 @@ Progress: [████████░░] 78%
 - v1 balance estimation via transactions metadata aggregation, not RPC calls (v28.4)
 - Hardcoded APY for v1: Lido ~3.5%, Jito ~7.5% (v28.4)
 - Pending unstake detection via bridge_status='PENDING' column + provider metadata match (v28.4)
+- Admin staking endpoint at /v1/admin/wallets/:id/staking (masterAuth) mirrors sessionAuth staking data for admin UI (v28.4)
 
 ### Blockers/Concerns
 
@@ -56,6 +57,6 @@ Progress: [████████░░] 78%
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Completed 256-02-PLAN.md (Staking REST API + 11 tests). Next: 256-03 (MCP + Admin UI integration), then milestone audit.
+Stopped at: Completed 256-03-PLAN.md (MCP tests + Admin staking tab + skill docs). Phase 256 complete. All 3 phases in v28.4 done. Ready for milestone audit.
 Resume file: None
-Resume instructions: Execute plan 256-03, then milestone audit.
+Resume instructions: Milestone v28.4 audit and completion.
