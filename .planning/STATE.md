@@ -49,6 +49,8 @@ Progress: [██████████] 100%
 - Hardcoded APY for v1: Lido ~3.5%, Jito ~7.5% (v28.4)
 - Pending unstake detection via bridge_status='PENDING' column + provider metadata match (v28.4)
 - Admin staking endpoint at /v1/admin/wallets/:id/staking (masterAuth) mirrors sessionAuth staking data for admin UI (v28.4)
+- [Phase 257]: GAP-2 metadata UPDATE after Stage 1 (synchronous) ensures metadata available immediately for staking position queries
+- [Phase 257]: GAP-1 bridge_status enrollment after Stage 6 (inside fire-and-forget) ensures only confirmed unstakes enter async tracking
 
 ### Blockers/Concerns
 
