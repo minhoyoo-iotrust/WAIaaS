@@ -78,6 +78,7 @@ import {
   AgentPromptRequestSchema,
   AgentPromptResponseSchema,
   SessionReissueResponseSchema,
+  StakingPositionsResponseSchema,
   buildErrorResponses,
   openApiValidationHook,
 } from './openapi-schemas.js';
@@ -556,6 +557,25 @@ const adminWalletBalanceRoute = createRoute({
           }),
         },
       },
+    },
+    ...buildErrorResponses(['WALLET_NOT_FOUND']),
+  },
+});
+
+const adminWalletStakingRoute = createRoute({
+  method: 'get',
+  path: '/admin/wallets/{id}/staking',
+  tags: ['Admin'],
+  summary: 'Get wallet staking positions',
+  description:
+    'Returns staking positions (Lido stETH, Jito JitoSOL) for a specific wallet with balance, APY, pending unstake status.',
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+  },
+  responses: {
+    200: {
+      description: 'Staking positions for the wallet',
+      content: { 'application/json': { schema: StakingPositionsResponseSchema } },
     },
     ...buildErrorResponses(['WALLET_NOT_FOUND']),
   },
@@ -1738,6 +1758,120 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
     balances.sort((a, b) => (a.isDefault === b.isDefault ? 0 : a.isDefault ? -1 : 1));
 
     return c.json({ balances }, 200);
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /admin/wallets/:id/staking
+  // ---------------------------------------------------------------------------
+
+  router.openapi(adminWalletStakingRoute, async (c) => {
+    const { id } = c.req.valid('param');
+
+    // Verify wallet exists
+    const wallet = deps.db.select().from(wallets).where(eq(wallets.id, id)).get();
+    if (!wallet) {
+      throw new WAIaaSError('WALLET_NOT_FOUND');
+    }
+
+    const positions: Array<{
+      protocol: 'lido' | 'jito';
+      chain: 'ethereum' | 'solana';
+      asset: string;
+      balance: string;
+      balanceUsd: string | null;
+      apy: string | null;
+      pendingUnstake: { amount: string; status: 'PENDING' | 'COMPLETED' | 'TIMEOUT'; requestedAt: number | null } | null;
+    }> = [];
+
+    if (!deps.sqlite) {
+      return c.json({ walletId: id, positions }, 200);
+    }
+
+    const LIDO_APY = '~3.5%';
+    const JITO_APY = '~7.5%';
+
+    // Reuse aggregation logic inline (same as staking.ts)
+    function aggregateProvider(walletId: string, providerKey: string) {
+      const stakeRows = deps.sqlite!.prepare(
+        `SELECT amount, bridge_status, created_at, metadata
+         FROM transactions
+         WHERE wallet_id = ? AND status IN ('CONFIRMED', 'COMPLETED')
+           AND metadata LIKE ?
+         ORDER BY created_at ASC`,
+      ).all(walletId, `%${providerKey}%`) as Array<{ amount: string | null; bridge_status: string | null; created_at: number | null; metadata: string | null }>;
+
+      let totalStaked = 0n;
+      let totalUnstaked = 0n;
+
+      for (const row of stakeRows) {
+        if (!row.amount) continue;
+        let isUnstake = false;
+        if (row.metadata) {
+          try {
+            const meta = JSON.parse(row.metadata) as Record<string, unknown>;
+            if (meta.action === 'unstake' || meta.actionName === 'unstake') isUnstake = true;
+          } catch { /* ignore */ }
+        }
+        try {
+          const amountBig = BigInt(row.amount);
+          if (isUnstake) totalUnstaked += amountBig;
+          else totalStaked += amountBig;
+        } catch { /* skip */ }
+      }
+
+      const pendingRow = deps.sqlite!.prepare(
+        `SELECT amount, bridge_status, created_at
+         FROM transactions
+         WHERE wallet_id = ? AND bridge_status = 'PENDING'
+           AND metadata LIKE ?
+         ORDER BY created_at DESC
+         LIMIT 1`,
+      ).get(walletId, `%${providerKey}%`) as { amount: string | null; bridge_status: string | null; created_at: number | null } | undefined;
+
+      let pendingUnstake: { amount: string; status: 'PENDING' | 'COMPLETED' | 'TIMEOUT'; requestedAt: number | null } | null = null;
+      if (pendingRow?.amount) {
+        pendingUnstake = {
+          amount: pendingRow.amount,
+          status: (pendingRow.bridge_status ?? 'PENDING') as 'PENDING' | 'COMPLETED' | 'TIMEOUT',
+          requestedAt: pendingRow.created_at ?? null,
+        };
+      }
+
+      const balanceWei = totalStaked > totalUnstaked ? totalStaked - totalUnstaked : 0n;
+      return { balanceWei, pendingUnstake };
+    }
+
+    // Ethereum wallet -> Lido
+    if (wallet.chain === 'ethereum') {
+      const { balanceWei, pendingUnstake } = aggregateProvider(id, 'lido_staking');
+      if (balanceWei > 0n || pendingUnstake) {
+        let balanceUsd: string | null = null;
+        if (deps.priceOracle && balanceWei > 0n) {
+          try {
+            const priceInfo = await deps.priceOracle.getNativePrice('ethereum');
+            balanceUsd = (Number(balanceWei) / 1e18 * priceInfo.usdPrice).toFixed(2);
+          } catch { /* price unavailable */ }
+        }
+        positions.push({ protocol: 'lido', chain: 'ethereum', asset: 'stETH', balance: balanceWei.toString(), balanceUsd, apy: LIDO_APY, pendingUnstake });
+      }
+    }
+
+    // Solana wallet -> Jito
+    if (wallet.chain === 'solana') {
+      const { balanceWei: balanceLamports, pendingUnstake } = aggregateProvider(id, 'jito_staking');
+      if (balanceLamports > 0n || pendingUnstake) {
+        let balanceUsd: string | null = null;
+        if (deps.priceOracle && balanceLamports > 0n) {
+          try {
+            const priceInfo = await deps.priceOracle.getNativePrice('solana');
+            balanceUsd = (Number(balanceLamports) / 1e9 * priceInfo.usdPrice).toFixed(2);
+          } catch { /* price unavailable */ }
+        }
+        positions.push({ protocol: 'jito', chain: 'solana', asset: 'JitoSOL', balance: balanceLamports.toString(), balanceUsd, apy: JITO_APY, pendingUnstake });
+      }
+    }
+
+    return c.json({ walletId: id, positions }, 200);
   });
 
   // ---------------------------------------------------------------------------
