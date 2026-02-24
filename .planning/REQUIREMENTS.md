@@ -39,9 +39,9 @@ Requirements for milestone v28.4. Each maps to roadmap phases.
 
 ### 스테이킹 API
 
-- [ ] **SAPI-01**: GET /v1/wallets/:id/staking으로 월렛별 스테이킹 포지션을 조회할 수 있다
-- [ ] **SAPI-02**: 스테이킹 포지션에 stETH/JitoSOL 잔고, 현재 APY, USD 환산이 포함된다
-- [ ] **SAPI-03**: 스테이킹 포지션이 없으면 빈 배열을 반환한다
+- [x] **SAPI-01**: GET /v1/wallets/:id/staking으로 월렛별 스테이킹 포지션을 조회할 수 있다
+- [x] **SAPI-02**: 스테이킹 포지션에 stETH/JitoSOL 잔고, 현재 APY, USD 환산이 포함된다
+- [x] **SAPI-03**: 스테이킹 포지션이 없으면 빈 배열을 반환한다
 
 ### 인터페이스
 
@@ -97,9 +97,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ASYNC-02 | Phase 256 | Complete |
 | ASYNC-03 | Phase 256 | Complete |
 | ASYNC-04 | Phase 256 | Complete |
-| SAPI-01 | Phase 256 | Pending |
-| SAPI-02 | Phase 256 | Pending |
-| SAPI-03 | Phase 256 | Pending |
+| SAPI-01 | Phase 256 | Complete |
+| SAPI-02 | Phase 256 | Complete |
+| SAPI-03 | Phase 256 | Complete |
 | INTF-01 | Phase 256 | Pending |
 | INTF-02 | Phase 256 | Pending |
 | INTF-03 | Phase 256 | Pending |

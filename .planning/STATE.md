@@ -10,17 +10,17 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 ## Current Position
 
 Phase: 256 (3 of 3 in v28.4) (Staking API Async Tracking Interface Integration)
-Plan: 1 of 3 in current phase
-Status: Plan 256-01 complete
-Last activity: 2026-02-24 -- Plan 256-01 complete (LidoWithdrawalTracker + JitoEpochTracker + dynamic notification events)
+Plan: 2 of 3 in current phase (COMPLETE)
+Status: Plan 256-02 complete
+Last activity: 2026-02-24 -- Plan 256-02 complete (GET /v1/wallet/staking API + 11 integration tests)
 
-Progress: [███████░░░] 67%
+Progress: [████████░░] 78%
 
 ## Performance Metrics
 
 **Cumulative:** 61 milestones, 253 phases completed, 544 plans, 1,485 reqs, ~5,000+ tests, ~189,000 LOC TS
 
-**This milestone:** 3 phases, 7 plans (estimated), 25 requirements -- 6 plans complete
+**This milestone:** 3 phases, 7 plans (estimated), 25 requirements -- 7 plans complete
 
 ## Accumulated Context
 
@@ -44,6 +44,10 @@ Progress: [███████░░░] 67%
 - Dynamic notificationEvent in AsyncPollingService: tracker details.notificationEvent overrides hardcoded event names, with fallback to BRIDGE_* defaults (v28.4)
 - Metadata-based v1 tracking: Lido/Jito trackers use metadata.status field, not on-chain queries, for COMPLETED detection (v28.4)
 - Staking trackers use TIMEOUT terminal transition (no two-phase monitoring unlike bridge trackers) (v28.4)
+- Staking API route at /v1/wallet/staking (singular, sessionAuth) following existing wallet query patterns (v28.4)
+- v1 balance estimation via transactions metadata aggregation, not RPC calls (v28.4)
+- Hardcoded APY for v1: Lido ~3.5%, Jito ~7.5% (v28.4)
+- Pending unstake detection via bridge_status='PENDING' column + provider metadata match (v28.4)
 
 ### Blockers/Concerns
 
@@ -52,6 +56,6 @@ Progress: [███████░░░] 67%
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Completed 256-01-PLAN.md (LidoWithdrawalTracker + JitoEpochTracker + notification events + dynamic dispatch). Next: 256-02 (Staking REST API), then 256-03 (MCP + Admin UI).
+Stopped at: Completed 256-02-PLAN.md (Staking REST API + 11 tests). Next: 256-03 (MCP + Admin UI integration), then milestone audit.
 Resume file: None
-Resume instructions: Execute plans 256-02 and 256-03, then milestone audit.
+Resume instructions: Execute plan 256-03, then milestone audit.
