@@ -195,6 +195,7 @@
 | 178 | BUG | HIGH | Admin UI Actions 페이지에 LI.FI, Lido, Jito 프로바이더 미표시 — 하드코딩 누락 | v28.5 | FIXED | 2026-02-24 |
 | 179 | MISSING | MEDIUM | CoinGecko 가격 오라클 API 키 설정 Admin UI 누락 | v28.5 | FIXED | 2026-02-24 |
 | 180 | ENHANCEMENT | LOW | System 페이지 API Keys 섹션이 Actions 페이지와 중복 — 단일화 필요 | v28.5 | FIXED | 2026-02-24 |
+| 181 | BUG | CRITICAL | Admin UI 네비게이션 불가 — dirty-guard isDirty 크래시 (t.isDirty is not a function) | v28.5 | FIXED | 2026-02-24 |
 
 ## Type Legend
 
@@ -207,8 +208,8 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 179
+- **FIXED:** 180
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 180
+- **Total:** 181
