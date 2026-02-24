@@ -50,7 +50,7 @@ Requirements for v28.5 milestone. Each maps to roadmap phases.
 
 ## v2 Requirements
 
-해당 없음 — 이번 마일스톤에서 가스 조건부 실행 전체 기능을 구현.
+해당 없음 -- 이번 마일스톤에서 가스 조건부 실행 전체 기능을 구현.
 
 ## Out of Scope
 
@@ -67,13 +67,38 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (To be filled by roadmapper) | | |
+| PIPE-01 | Phase 258 | Pending |
+| PIPE-02 | Phase 258 | Pending |
+| PIPE-03 | Phase 258 | Pending |
+| PIPE-04 | Phase 258 | Pending |
+| PIPE-05 | Phase 258 | Pending |
+| PIPE-06 | Phase 258 | Pending |
+| EVAL-01 | Phase 258 | Pending |
+| EVAL-02 | Phase 258 | Pending |
+| EVAL-03 | Phase 258 | Pending |
+| EVAL-04 | Phase 258 | Pending |
+| WRKR-01 | Phase 258 | Pending |
+| WRKR-02 | Phase 258 | Pending |
+| WRKR-03 | Phase 258 | Pending |
+| WRKR-04 | Phase 258 | Pending |
+| WRKR-05 | Phase 258 | Pending |
+| WRKR-06 | Phase 258 | Pending |
+| NOTF-01 | Phase 258 | Pending |
+| NOTF-02 | Phase 258 | Pending |
+| NOTF-03 | Phase 258 | Pending |
+| INTF-01 | Phase 259 | Pending |
+| INTF-02 | Phase 259 | Pending |
+| INTF-03 | Phase 259 | Pending |
+| INTF-04 | Phase 259 | Pending |
+| INTF-05 | Phase 259 | Pending |
+| INTF-06 | Phase 259 | Pending |
+| INTF-07 | Phase 259 | Pending |
 
 **Coverage:**
 - v1 requirements: 25 total
-- Mapped to phases: 0
-- Unmapped: 25 ⚠️
+- Mapped to phases: 25
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-25*
-*Last updated: 2026-02-25 after initial definition*
+*Last updated: 2026-02-25 after roadmap creation*
