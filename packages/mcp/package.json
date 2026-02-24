@@ -1,6 +1,6 @@
 {
   "name": "@waiaas/mcp",
-  "version": "2.6.0-rc.10",
+  "version": "2.6.0-rc.11",
   "description": "WAIaaS MCP server - Model Context Protocol integration for AI agents",
   "license": "MIT",
   "type": "module",
