@@ -214,6 +214,19 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     app.use('/v1/transactions', sessionAuth);
     app.use('/v1/transactions/*', sessionAuth);
     app.use('/v1/utils/*', sessionAuth);
+    // dual-auth for GET /v1/actions/providers: masterAuth (Admin UI) or sessionAuth (agent)
+    app.use('/v1/actions/providers', async (c, next) => {
+      if (c.req.method === 'GET') {
+        const authHeader = c.req.header('Authorization');
+        if (authHeader?.startsWith('Bearer wai_sess_')) {
+          return sessionAuth(c, next);
+        }
+        // masterAuth handles admin GET (falls through to masterAuth block below)
+        await next();
+        return;
+      }
+      return sessionAuth(c, next);
+    });
     app.use('/v1/actions/*', sessionAuth);
     app.use('/v1/x402/*', sessionAuth);
     app.use('/v1/connect-info', sessionAuth);
@@ -289,6 +302,19 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     app.use('/v1/admin/transactions', masterAuthForAdmin);
     app.use('/v1/admin/transactions/*', masterAuthForAdmin);
     app.use('/v1/admin/incoming', masterAuthForAdmin);
+    // masterAuth for GET /v1/actions/providers (Admin UI reads provider list)
+    app.use('/v1/actions/providers', async (c, next) => {
+      if (c.req.method === 'GET') {
+        const authHeader = c.req.header('Authorization');
+        if (authHeader?.startsWith('Bearer wai_sess_')) {
+          // sessionAuth handles agent GET in the sessionAuth block above
+          await next();
+          return;
+        }
+        return masterAuthForAdmin(c, next);
+      }
+      await next();
+    });
   }
 
   // ownerAuth for POST /v1/owner/kill-switch

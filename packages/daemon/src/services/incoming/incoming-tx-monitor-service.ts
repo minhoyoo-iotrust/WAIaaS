@@ -534,16 +534,22 @@ export class IncomingTxMonitorService {
       },
     });
 
-    // 6. Polling worker for EVM (configurable interval)
+    // 6. Polling worker for EVM (configurable interval, inter-subscriber staggering)
     this.workers.register('incoming-tx-poll-evm', {
       interval: this.config.pollIntervalSec * 1000,
       handler: async () => {
         const entries = this.multiplexer.getSubscribersForChain('ethereum');
-        for (const { subscriber } of entries) {
+        for (let i = 0; i < entries.length; i++) {
+          const entry = entries[i];
+          if (!entry) continue;
           try {
-            await (subscriber as unknown as { pollAll(): Promise<void> }).pollAll();
+            await (entry.subscriber as unknown as { pollAll(): Promise<void> }).pollAll();
           } catch (err) {
             console.warn('EVM polling worker error:', err);
+          }
+          // Stagger between subscribers to avoid RPC rate-limit bursts
+          if (i < entries.length - 1) {
+            await new Promise((r) => setTimeout(r, 2000));
           }
         }
       },
