@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.6.0-rc.10](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.6.0-rc.9...v2.6.0-rc.10) (2026-02-24)
+
+
+### Bug Fixes
+
+* resolve issues [#168](https://github.com/minhoyoo-iotrust/WAIaaS/issues/168) formattedAmount, [#169](https://github.com/minhoyoo-iotrust/WAIaaS/issues/169) EVM backoff, [#170](https://github.com/minhoyoo-iotrust/WAIaaS/issues/170) dual-auth ([0f01bbf](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0f01bbf5a6ab86497192c7d346a03099b7ed12f1))
+* resolve issues [#168](https://github.com/minhoyoo-iotrust/WAIaaS/issues/168) formattedAmount, [#169](https://github.com/minhoyoo-iotrust/WAIaaS/issues/169) EVM backoff, [#170](https://github.com/minhoyoo-iotrust/WAIaaS/issues/170) dual-auth ([d9b723d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d9b723dd632d727c6b37ae721f833100a3d9a900))
+* use fake timers in EVM polling worker test to handle stagger delay ([b6be07f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b6be07ff63e7800fac38c17975f324e58edf5257))
+
 ## [2.6.0-rc.9](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.6.0-rc.8...v2.6.0-rc.9) (2026-02-23)
 
 
