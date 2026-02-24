@@ -505,6 +505,8 @@ const adminWalletTransactionsRoute = createRoute({
                 status: z.string(),
                 toAddress: z.string().nullable(),
                 amount: z.string().nullable(),
+                formattedAmount: z.string().nullable(),
+                amountUsd: z.number().nullable(),
                 network: z.string().nullable(),
                 txHash: z.string().nullable(),
                 createdAt: z.number().nullable(),
@@ -1669,19 +1671,23 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
       .get();
     const total = totalResult?.count ?? 0;
 
-    const items = rows.map((tx) => ({
-      id: tx.id,
-      type: tx.type,
-      status: tx.status,
-      toAddress: tx.toAddress ?? null,
-      amount: tx.amount ?? null,
-      amountUsd: tx.amountUsd ?? null,
-      network: tx.network ?? null,
-      txHash: tx.txHash ?? null,
-      createdAt: tx.createdAt instanceof Date
-        ? Math.floor(tx.createdAt.getTime() / 1000)
-        : (typeof tx.createdAt === 'number' ? tx.createdAt : null),
-    }));
+    const items = rows.map((tx) => {
+      const tokenAddr = tx.tokenMint ?? tx.contractAddress ?? null;
+      return {
+        id: tx.id,
+        type: tx.type,
+        status: tx.status,
+        toAddress: tx.toAddress ?? null,
+        amount: tx.amount ?? null,
+        formattedAmount: formatTxAmount(tx.amount ?? null, tx.chain, tx.network ?? null, tokenAddr, deps.db),
+        amountUsd: tx.amountUsd ?? null,
+        network: tx.network ?? null,
+        txHash: tx.txHash ?? null,
+        createdAt: tx.createdAt instanceof Date
+          ? Math.floor(tx.createdAt.getTime() / 1000)
+          : (typeof tx.createdAt === 'number' ? tx.createdAt : null),
+      };
+    });
 
     return c.json({ items, total }, 200);
   });

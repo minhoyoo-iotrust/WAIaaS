@@ -432,23 +432,23 @@ describe('SettingsService', () => {
   // -------------------------------------------------------------------------
 
   describe('actions category', () => {
-    it('actions.jupiter_swap_enabled returns false by default', () => {
-      expect(service.get('actions.jupiter_swap_enabled')).toBe('false');
+    it('actions.jupiter_swap_enabled returns true by default', () => {
+      expect(service.get('actions.jupiter_swap_enabled')).toBe('true');
     });
 
     it('actions.zerox_swap_api_key returns empty string by default', () => {
       expect(service.get('actions.zerox_swap_api_key')).toBe('');
     });
 
-    it('actions.zerox_swap_enabled returns false by default', () => {
-      expect(service.get('actions.zerox_swap_enabled')).toBe('false');
+    it('actions.zerox_swap_enabled returns true by default', () => {
+      expect(service.get('actions.zerox_swap_enabled')).toBe('true');
     });
 
     it('actions settings are accessible via getAll()', () => {
       const all = service.getAll();
       expect(all.actions).toBeDefined();
-      expect(all.actions!.jupiter_swap_enabled).toBe('false');
-      expect(all.actions!.zerox_swap_enabled).toBe('false');
+      expect(all.actions!.jupiter_swap_enabled).toBe('true');
+      expect(all.actions!.zerox_swap_enabled).toBe('true');
       expect(all.actions!.jupiter_swap_api_base_url).toBe('https://api.jup.ag/swap/v1');
       expect(all.actions!.zerox_swap_default_slippage_bps).toBe('100');
     });

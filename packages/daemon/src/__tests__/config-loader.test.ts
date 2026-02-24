@@ -647,7 +647,7 @@ describe('[actions] section', () => {
   it('loads [actions] section with all 8 defaults when no config.toml', () => {
     const dir = saveTempDir(createTempDir());
     const config = loadConfig(dir);
-    expect(config.actions.jupiter_swap_enabled).toBe(false);
+    expect(config.actions.jupiter_swap_enabled).toBe(true);
     expect(config.actions.jupiter_swap_api_base_url).toBe('https://api.jup.ag/swap/v1');
     expect(config.actions.jupiter_swap_api_key).toBe('');
     expect(config.actions.jupiter_swap_default_slippage_bps).toBe(50);

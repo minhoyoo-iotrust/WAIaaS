@@ -1014,6 +1014,7 @@ export class DaemonLifecycle {
           telegramBotRef: this.telegramBotRef,
           killSwitchService: this.killSwitchService,
           incomingTxMonitorService: this.incomingTxMonitorService,
+          actionProviderRegistryRef: { current: this.actionProviderRegistry },
         });
 
         const app = createApp({

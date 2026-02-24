@@ -87,6 +87,8 @@ interface WalletTransaction {
   status: string;
   toAddress: string | null;
   amount: string | null;
+  formattedAmount: string | null;
+  amountUsd: string | null;
   network: string | null;
   txHash: string | null;
   createdAt: number | null;
@@ -829,7 +831,7 @@ function WalletDetailView({ id }: { id: string }) {
                     <td>{tx.createdAt ? formatDate(tx.createdAt) : '\u2014'}</td>
                     <td><Badge variant="info">{tx.type}</Badge></td>
                     <td>{tx.toAddress ? formatAddress(tx.toAddress) : '\u2014'}</td>
-                    <td>{tx.amount ?? '\u2014'}</td>
+                    <td>{tx.amount ? (tx.formattedAmount ?? tx.amount) : '\u2014'}</td>
                     <td>{tx.network ?? '\u2014'}</td>
                     <td><Badge variant={txStatusVariant(tx.status)}>{tx.status}</Badge></td>
                     <td>

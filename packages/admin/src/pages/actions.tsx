@@ -15,13 +15,16 @@ interface BuiltinProvider {
   key: string;
   name: string;
   description: string;
-  chain: 'solana' | 'evm';
+  chain: 'solana' | 'evm' | 'multi';
   requiresApiKey: boolean;
 }
 
 const BUILTIN_PROVIDERS: BuiltinProvider[] = [
   { key: 'jupiter_swap', name: 'Jupiter Swap', description: 'Solana DEX aggregator', chain: 'solana', requiresApiKey: false },
   { key: 'zerox_swap', name: '0x Swap', description: 'EVM DEX aggregator (AllowanceHolder)', chain: 'evm', requiresApiKey: true },
+  { key: 'lifi', name: 'LI.FI', description: 'Multi-chain DEX/bridge aggregator', chain: 'multi', requiresApiKey: false },
+  { key: 'lido_staking', name: 'Lido Staking', description: 'ETH liquid staking (stETH/wstETH)', chain: 'evm', requiresApiKey: false },
+  { key: 'jito_staking', name: 'Jito Staking', description: 'SOL liquid staking (JitoSOL)', chain: 'solana', requiresApiKey: false },
 ];
 
 // ---------------------------------------------------------------------------

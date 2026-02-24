@@ -154,7 +154,7 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'incoming.wss_url', category: 'incoming', configPath: 'incoming.wss_url', defaultValue: '', isCredential: false },
 
   // --- actions category (DeFi action providers) ---
-  { key: 'actions.jupiter_swap_enabled', category: 'actions', configPath: 'actions.jupiter_swap_enabled', defaultValue: 'false', isCredential: false },
+  { key: 'actions.jupiter_swap_enabled', category: 'actions', configPath: 'actions.jupiter_swap_enabled', defaultValue: 'true', isCredential: false },
   { key: 'actions.jupiter_swap_api_base_url', category: 'actions', configPath: 'actions.jupiter_swap_api_base_url', defaultValue: 'https://api.jup.ag/swap/v1', isCredential: false },
   { key: 'actions.jupiter_swap_api_key', category: 'actions', configPath: 'actions.jupiter_swap_api_key', defaultValue: '', isCredential: true },
   { key: 'actions.jupiter_swap_default_slippage_bps', category: 'actions', configPath: 'actions.jupiter_swap_default_slippage_bps', defaultValue: '50', isCredential: false },
@@ -162,24 +162,24 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'actions.jupiter_swap_max_price_impact_pct', category: 'actions', configPath: 'actions.jupiter_swap_max_price_impact_pct', defaultValue: '1', isCredential: false },
   { key: 'actions.jupiter_swap_jito_tip_lamports', category: 'actions', configPath: 'actions.jupiter_swap_jito_tip_lamports', defaultValue: '1000', isCredential: false },
   { key: 'actions.jupiter_swap_request_timeout_ms', category: 'actions', configPath: 'actions.jupiter_swap_request_timeout_ms', defaultValue: '10000', isCredential: false },
-  { key: 'actions.zerox_swap_enabled', category: 'actions', configPath: 'actions.zerox_swap_enabled', defaultValue: 'false', isCredential: false },
+  { key: 'actions.zerox_swap_enabled', category: 'actions', configPath: 'actions.zerox_swap_enabled', defaultValue: 'true', isCredential: false },
   { key: 'actions.zerox_swap_api_key', category: 'actions', configPath: 'actions.zerox_swap_api_key', defaultValue: '', isCredential: true },
   { key: 'actions.zerox_swap_default_slippage_bps', category: 'actions', configPath: 'actions.zerox_swap_default_slippage_bps', defaultValue: '100', isCredential: false },
   { key: 'actions.zerox_swap_max_slippage_bps', category: 'actions', configPath: 'actions.zerox_swap_max_slippage_bps', defaultValue: '500', isCredential: false },
   { key: 'actions.zerox_swap_request_timeout_ms', category: 'actions', configPath: 'actions.zerox_swap_request_timeout_ms', defaultValue: '10000', isCredential: false },
-  { key: 'actions.lifi_enabled', category: 'actions', configPath: 'actions.lifi_enabled', defaultValue: 'false', isCredential: false },
+  { key: 'actions.lifi_enabled', category: 'actions', configPath: 'actions.lifi_enabled', defaultValue: 'true', isCredential: false },
   { key: 'actions.lifi_api_key', category: 'actions', configPath: 'actions.lifi_api_key', defaultValue: '', isCredential: true },
   { key: 'actions.lifi_api_base_url', category: 'actions', configPath: 'actions.lifi_api_base_url', defaultValue: 'https://li.quest/v1', isCredential: false },
   { key: 'actions.lifi_default_slippage_pct', category: 'actions', configPath: 'actions.lifi_default_slippage_pct', defaultValue: '0.03', isCredential: false },
   { key: 'actions.lifi_max_slippage_pct', category: 'actions', configPath: 'actions.lifi_max_slippage_pct', defaultValue: '0.05', isCredential: false },
 
   // --- Lido Staking ---
-  { key: 'actions.lido_staking_enabled', category: 'actions', configPath: 'actions.lido_staking_enabled', defaultValue: 'false', isCredential: false },
+  { key: 'actions.lido_staking_enabled', category: 'actions', configPath: 'actions.lido_staking_enabled', defaultValue: 'true', isCredential: false },
   { key: 'actions.lido_staking_steth_address', category: 'actions', configPath: 'actions.lido_staking_steth_address', defaultValue: '', isCredential: false },
   { key: 'actions.lido_staking_withdrawal_queue_address', category: 'actions', configPath: 'actions.lido_staking_withdrawal_queue_address', defaultValue: '', isCredential: false },
 
   // --- Jito Staking ---
-  { key: 'actions.jito_staking_enabled', category: 'actions', configPath: 'actions.jito_staking_enabled', defaultValue: 'false', isCredential: false },
+  { key: 'actions.jito_staking_enabled', category: 'actions', configPath: 'actions.jito_staking_enabled', defaultValue: 'true', isCredential: false },
   { key: 'actions.jito_staking_stake_pool_address', category: 'actions', configPath: 'actions.jito_staking_stake_pool_address', defaultValue: '', isCredential: false },
   { key: 'actions.jito_staking_jitosol_mint', category: 'actions', configPath: 'actions.jito_staking_jitosol_mint', defaultValue: '', isCredential: false },
 ] as const;
