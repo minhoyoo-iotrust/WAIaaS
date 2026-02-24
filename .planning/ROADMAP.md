@@ -22,6 +22,7 @@
 - ✅ **v28.1 Jupiter Swap** -- Phases 246-247 (shipped 2026-02-23)
 - ✅ **v28.2 0x EVM DEX Swap** -- Phases 248-250 (shipped 2026-02-24)
 - ✅ **v28.3 LI.FI 크로스체인 브릿지** -- Phases 251-253 (shipped 2026-02-24)
+- [ ] **v28.4 Liquid Staking (Lido + Jito)** -- Phases 254-256
 
 ## Phases
 
@@ -259,3 +260,71 @@ See `.planning/milestones/v28.2-ROADMAP.md` for full details.
 See `.planning/milestones/v28.3-ROADMAP.md` for full details.
 
 </details>
+
+### v28.4 Liquid Staking (Lido + Jito)
+
+**Milestone Goal:** AI 에이전트가 Lido(ETH stETH)와 Jito(SOL JitoSOL) 리퀴드 스테이킹을 안전하게 수행할 수 있다. 기존 정책 엔진(SPENDING_LIMIT, CONTRACT_WHITELIST) + provider-trust + IAsyncStatusTracker 비동기 추적 + 스테이킹 포지션 REST API로 완전한 스테이킹 워크플로우를 제공한다.
+
+- [ ] **Phase 254: Lido EVM Staking Provider** - Lido 컨트랙트 직접 호출로 ETH→stETH 스테이킹/언스테이킹 + 정책 연동
+- [ ] **Phase 255: Jito Solana Staking Provider** - SPL Stake Pool 프로그램으로 SOL→JitoSOL 스테이킹/언스테이킹
+- [ ] **Phase 256: Staking API + Async Tracking + Interface Integration** - 비동기 unstake 추적 + 스테이킹 포지션 API + MCP/SDK/Admin/Skills 통합
+
+## Phase Details
+
+### Phase 254: Lido EVM Staking Provider
+**Goal**: 에이전트가 ETH를 stETH로 스테이킹하고, stETH를 ETH로 출금 요청할 수 있다
+**Depends on**: Nothing (v28.3 IAsyncStatusTracker, v28.2 provider-trust 인프라 활용)
+**Requirements**: LIDO-01, LIDO-02, LIDO-03, LIDO-04, LIDO-05, LIDO-06, PLCY-01, PLCY-02, PLCY-03
+**Success Criteria** (what must be TRUE):
+  1. executeAction('lido_stake', { amount: '1.0' })을 호출하면 ETH가 Lido submit()으로 전송되어 stETH를 수령한다
+  2. executeAction('lido_unstake', { amount: '1.0' })을 호출하면 Withdrawal Queue에 출금 요청이 생성된다
+  3. ETH 잔고가 부족하면 INSUFFICIENT_BALANCE 에러가 반환된다
+  4. Admin Settings에서 lido_enabled를 false로 변경하면 lido 액션이 비활성화된다
+  5. 스테이킹 금액이 USD 환산되어 SPENDING_LIMIT 정책 평가를 받고, Lido 컨트랙트가 provider-trust로 자동 허용된다
+**Plans**: TBD
+
+Plans:
+- [ ] 254-01: LidoStakingActionProvider + Lido ABI 직접 인코딩 + stake/unstake 액션
+- [ ] 254-02: SettingsService 설정 + EnvironmentType 주소 전환 + 정책 연동 검증
+
+### Phase 255: Jito Solana Staking Provider
+**Goal**: 에이전트가 SOL을 JitoSOL로 스테이킹하고, JitoSOL을 SOL로 출금 요청할 수 있다
+**Depends on**: Phase 254 (공유 패턴: 정책 연동, provider-trust, SettingsService 구조)
+**Requirements**: JITO-01, JITO-02, JITO-03, JITO-04, JITO-05
+**Success Criteria** (what must be TRUE):
+  1. executeAction('jito_stake', { amount: '1.0' })을 호출하면 SOL이 SPL Stake Pool에 입금되어 JitoSOL을 수령한다
+  2. executeAction('jito_unstake', { amount: '1.0' })을 호출하면 Stake Pool에서 SOL 출금 요청이 생성된다
+  3. SOL 잔고가 부족하면 INSUFFICIENT_BALANCE 에러가 반환된다
+  4. Admin Settings에서 jito_enabled를 false로 변경하면 jito 액션이 비활성화된다
+**Plans**: TBD
+
+Plans:
+- [ ] 255-01: JitoStakingActionProvider + SPL Stake Pool instruction 빌드 + stake/unstake 액션
+- [ ] 255-02: SettingsService 설정 + 정책 연동 + 테스트
+
+### Phase 256: Staking API + Async Tracking + Interface Integration
+**Goal**: unstake 비동기 완료 추적, 스테이킹 포지션 조회 API, 모든 인터페이스(MCP/SDK/Admin/Skills) 통합이 완성된다
+**Depends on**: Phase 254, Phase 255
+**Requirements**: ASYNC-01, ASYNC-02, ASYNC-03, ASYNC-04, SAPI-01, SAPI-02, SAPI-03, INTF-01, INTF-02, INTF-03, INTF-04
+**Success Criteria** (what must be TRUE):
+  1. Lido unstake 후 Withdrawal Queue 상태가 AsyncPollingService로 폴링되고, Jito unstake 후 에포크 경계 완료가 폴링된다
+  2. unstake 완료 시 STAKING_UNSTAKE_COMPLETED 알림이 발행되고, 타임아웃 시 STAKING_UNSTAKE_TIMEOUT 알림이 발행된다
+  3. GET /v1/wallets/:id/staking 엔드포인트가 stETH/JitoSOL 잔고, 현재 APY, USD 환산을 포함한 포지션 배열을 반환한다
+  4. MCP에서 action_lido_stake/unstake, action_jito_stake/unstake 4개 도구가 노출되고, SDK에서 executeAction으로 실행 가능하다
+  5. Admin 대시보드에 스테이킹 포지션 섹션이 렌더링되고, actions.skill.md에 Lido/Jito 문서가 추가된다
+**Plans**: TBD
+
+Plans:
+- [ ] 256-01: IAsyncStatusTracker 구현체 (Lido Withdrawal Queue + Jito epoch tracker) + 알림 이벤트
+- [ ] 256-02: GET /v1/wallets/:id/staking REST API + Zod 스키마 + 포지션 조회 서비스
+- [ ] 256-03: MCP 도구 노출 + SDK executeAction + Admin 스테이킹 섹션 + Skills 문서
+
+## Progress
+
+**Execution Order:** 254 -> 255 -> 256
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 254. Lido EVM Staking Provider | v28.4 | 0/2 | Not started | - |
+| 255. Jito Solana Staking Provider | v28.4 | 0/2 | Not started | - |
+| 256. Staking API + Async Tracking + Interface Integration | v28.4 | 0/3 | Not started | - |

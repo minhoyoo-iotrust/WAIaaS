@@ -79,37 +79,37 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LIDO-01 | — | Pending |
-| LIDO-02 | — | Pending |
-| LIDO-03 | — | Pending |
-| LIDO-04 | — | Pending |
-| LIDO-05 | — | Pending |
-| LIDO-06 | — | Pending |
-| JITO-01 | — | Pending |
-| JITO-02 | — | Pending |
-| JITO-03 | — | Pending |
-| JITO-04 | — | Pending |
-| JITO-05 | — | Pending |
-| PLCY-01 | — | Pending |
-| PLCY-02 | — | Pending |
-| PLCY-03 | — | Pending |
-| ASYNC-01 | — | Pending |
-| ASYNC-02 | — | Pending |
-| ASYNC-03 | — | Pending |
-| ASYNC-04 | — | Pending |
-| SAPI-01 | — | Pending |
-| SAPI-02 | — | Pending |
-| SAPI-03 | — | Pending |
-| INTF-01 | — | Pending |
-| INTF-02 | — | Pending |
-| INTF-03 | — | Pending |
-| INTF-04 | — | Pending |
+| LIDO-01 | Phase 254 | Pending |
+| LIDO-02 | Phase 254 | Pending |
+| LIDO-03 | Phase 254 | Pending |
+| LIDO-04 | Phase 254 | Pending |
+| LIDO-05 | Phase 254 | Pending |
+| LIDO-06 | Phase 254 | Pending |
+| JITO-01 | Phase 255 | Pending |
+| JITO-02 | Phase 255 | Pending |
+| JITO-03 | Phase 255 | Pending |
+| JITO-04 | Phase 255 | Pending |
+| JITO-05 | Phase 255 | Pending |
+| PLCY-01 | Phase 254 | Pending |
+| PLCY-02 | Phase 254 | Pending |
+| PLCY-03 | Phase 254 | Pending |
+| ASYNC-01 | Phase 256 | Pending |
+| ASYNC-02 | Phase 256 | Pending |
+| ASYNC-03 | Phase 256 | Pending |
+| ASYNC-04 | Phase 256 | Pending |
+| SAPI-01 | Phase 256 | Pending |
+| SAPI-02 | Phase 256 | Pending |
+| SAPI-03 | Phase 256 | Pending |
+| INTF-01 | Phase 256 | Pending |
+| INTF-02 | Phase 256 | Pending |
+| INTF-03 | Phase 256 | Pending |
+| INTF-04 | Phase 256 | Pending |
 
 **Coverage:**
 - v1 requirements: 25 total
-- Mapped to phases: 0
-- Unmapped: 25 ⚠️
+- Mapped to phases: 25
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-24*
-*Last updated: 2026-02-24 after initial definition*
+*Last updated: 2026-02-24 after roadmap creation*
