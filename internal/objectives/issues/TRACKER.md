@@ -185,6 +185,7 @@
 | 168 | ENHANCEMENT | MEDIUM | Admin UI 트랜잭션 금액이 raw 단위(lamports/wei)로 표시 | v28.4 | FIXED | 2026-02-24 |
 | 169 | BUG | HIGH | IncomingTxMonitor EVM 폴링이 무료 RPC 엔드포인트 rate limit 초과 | v28.4 | FIXED | 2026-02-24 |
 | 170 | BUG | HIGH | Admin UI Actions 페이지 접근 시 401 — sessionAuth 미스매치 | v28.4 | FIXED | 2026-02-24 |
+| 171 | BUG | HIGH | Admin UI apiCall 글로벌 401 핸들러가 비-admin 엔드포인트 401에도 로그아웃 트리거 | v28.3 | FIXED | 2026-02-24 |
 
 ## Type Legend
 
@@ -197,8 +198,8 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 169
+- **FIXED:** 170
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 170
+- **Total:** 171
