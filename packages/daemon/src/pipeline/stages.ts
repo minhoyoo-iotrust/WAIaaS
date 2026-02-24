@@ -47,6 +47,7 @@ import type { WcSigningBridge } from '../services/wc-signing-bridge.js';
 import type { ApprovalChannelRouter } from '../services/signing-sdk/approval-channel-router.js';
 import { resolveEffectiveAmountUsd, type PriceResult } from './resolve-effective-amount-usd.js';
 import { sleep } from './sleep.js';
+import { rpcConfigKey } from '../infrastructure/adapter-pool.js';
 
 // v1.5: CoinGecko 키 안내 힌트 최초 1회 추적 (데몬 재시작 시 리셋 OK)
 const hintedTokens = new Set<string>();
@@ -679,6 +680,16 @@ export async function stage3_5GasCondition(ctx: PipelineContext): Promise<void> 
     timeout = maxTimeout;
   }
 
+  // Resolve RPC URL for GasConditionTracker (raw fetch, no adapter dependency)
+  let rpcUrl = '';
+  if (ctx.settingsService) {
+    try {
+      rpcUrl = ctx.settingsService.get(`rpc.${rpcConfigKey(ctx.wallet.chain, ctx.resolvedNetwork)}`);
+    } catch {
+      // Setting key not found -- tracker will skip this TX
+    }
+  }
+
   // Store gas condition metadata in bridgeMetadata for GasConditionTracker (258-02)
   const gasConditionMeta = {
     tracker: 'gas-condition',
@@ -689,6 +700,7 @@ export async function stage3_5GasCondition(ctx: PipelineContext): Promise<void> 
     },
     chain: ctx.wallet.chain,
     network: ctx.resolvedNetwork,
+    rpcUrl,
     gasConditionCreatedAt: Date.now(),
   };
 
