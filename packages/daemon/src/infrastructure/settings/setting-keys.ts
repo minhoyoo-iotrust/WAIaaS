@@ -45,6 +45,7 @@ export const SETTING_CATEGORIES = [
   'incoming',
   'actions',
   'policy',
+  'gas_condition',
 ] as const;
 
 export type SettingCategory = (typeof SETTING_CATEGORIES)[number];
@@ -182,6 +183,13 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'actions.jito_staking_enabled', category: 'actions', configPath: 'actions.jito_staking_enabled', defaultValue: 'true', isCredential: false },
   { key: 'actions.jito_staking_stake_pool_address', category: 'actions', configPath: 'actions.jito_staking_stake_pool_address', defaultValue: '', isCredential: false },
   { key: 'actions.jito_staking_jitosol_mint', category: 'actions', configPath: 'actions.jito_staking_jitosol_mint', defaultValue: '', isCredential: false },
+
+  // --- gas_condition category (Gas conditional execution) ---
+  { key: 'gas_condition.enabled', category: 'gas_condition', configPath: 'gas_condition.enabled', defaultValue: 'true', isCredential: false },
+  { key: 'gas_condition.poll_interval_sec', category: 'gas_condition', configPath: 'gas_condition.poll_interval_sec', defaultValue: '30', isCredential: false },
+  { key: 'gas_condition.default_timeout_sec', category: 'gas_condition', configPath: 'gas_condition.default_timeout_sec', defaultValue: '3600', isCredential: false },
+  { key: 'gas_condition.max_timeout_sec', category: 'gas_condition', configPath: 'gas_condition.max_timeout_sec', defaultValue: '86400', isCredential: false },
+  { key: 'gas_condition.max_pending_count', category: 'gas_condition', configPath: 'gas_condition.max_pending_count', defaultValue: '100', isCredential: false },
 ] as const;
 
 // ---------------------------------------------------------------------------
