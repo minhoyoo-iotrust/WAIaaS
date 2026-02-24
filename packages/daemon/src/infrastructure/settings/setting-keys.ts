@@ -176,6 +176,11 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'actions.lido_staking_enabled', category: 'actions', configPath: 'actions.lido_staking_enabled', defaultValue: 'false', isCredential: false },
   { key: 'actions.lido_staking_steth_address', category: 'actions', configPath: 'actions.lido_staking_steth_address', defaultValue: '', isCredential: false },
   { key: 'actions.lido_staking_withdrawal_queue_address', category: 'actions', configPath: 'actions.lido_staking_withdrawal_queue_address', defaultValue: '', isCredential: false },
+
+  // --- Jito Staking ---
+  { key: 'actions.jito_staking_enabled', category: 'actions', configPath: 'actions.jito_staking_enabled', defaultValue: 'false', isCredential: false },
+  { key: 'actions.jito_staking_stake_pool_address', category: 'actions', configPath: 'actions.jito_staking_stake_pool_address', defaultValue: '', isCredential: false },
+  { key: 'actions.jito_staking_jitosol_mint', category: 'actions', configPath: 'actions.jito_staking_jitosol_mint', defaultValue: '', isCredential: false },
 ] as const;
 
 // ---------------------------------------------------------------------------
