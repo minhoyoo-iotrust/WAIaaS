@@ -158,7 +158,7 @@ describe('ActionsPage', () => {
       expect(screen.getByText('Loading action providers...')).toBeTruthy();
     });
 
-    it('renders both provider cards with Inactive status when disabled', async () => {
+    it('renders all provider cards with Inactive status when disabled', async () => {
       mockApiCalls(mockSettingsDisabled, mockEmptyApiKeys, mockEmptyProviders);
       render(<ActionsPage />);
 
@@ -166,10 +166,13 @@ describe('ActionsPage', () => {
         expect(screen.getByText('Jupiter Swap')).toBeTruthy();
       });
       expect(screen.getByText('0x Swap')).toBeTruthy();
+      expect(screen.getByText('LI.FI')).toBeTruthy();
+      expect(screen.getByText('Lido Staking')).toBeTruthy();
+      expect(screen.getByText('Jito Staking')).toBeTruthy();
 
-      // Both should show Inactive
+      // All 5 should show Inactive
       const inactiveBadges = screen.getAllByText('Inactive');
-      expect(inactiveBadges.length).toBe(2);
+      expect(inactiveBadges.length).toBe(5);
     });
 
     it('renders provider descriptions', async () => {
@@ -187,9 +190,10 @@ describe('ActionsPage', () => {
       render(<ActionsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('solana')).toBeTruthy();
+        expect(screen.getAllByText('solana').length).toBeGreaterThanOrEqual(1);
       });
-      expect(screen.getByText('evm')).toBeTruthy();
+      expect(screen.getAllByText('evm').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('multi').length).toBeGreaterThanOrEqual(1);
     });
   });
 

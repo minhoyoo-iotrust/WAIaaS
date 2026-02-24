@@ -2,10 +2,9 @@
  * system.test.tsx
  *
  * Tests for the System page (system.tsx):
- * - Rendering all 6 sections (API Keys, Oracle, Display Currency, Rate Limit, Log Level, Danger Zone)
+ * - Rendering all 6 sections (Oracle, Display Currency, Rate Limit, Log Level, Signing SDK, Danger Zone)
  * - Daemon settings form fields (log level, oracle threshold, rate limit, display currency)
  * - Dirty tracking: save bar, save, discard
- * - API Keys CRUD (loading, list, set, change, save, cancel, delete, error)
  * - Danger Zone: shutdown modal with double-confirmation
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
@@ -74,7 +73,7 @@ vi.mock('../components/currency-select', () => ({
   ),
 }));
 
-import { apiGet, apiPost, apiPut, apiDelete } from '../api/client';
+import { apiGet, apiPost, apiPut } from '../api/client';
 import { showToast } from '../components/toast';
 import { registerDirty, unregisterDirty } from '../utils/dirty-guard';
 import SystemPage from '../pages/system';
@@ -147,14 +146,14 @@ describe('SystemPage', () => {
       render(<SystemPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('API Keys')).toBeTruthy();
+        expect(screen.getByText('Oracle')).toBeTruthy();
       });
-      expect(screen.getByText('Oracle')).toBeTruthy();
       // "Display Currency" appears in both <h3> heading and <label> (keyToLabel)
       expect(screen.getAllByText('Display Currency').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText('Global IP Rate Limit')).toBeTruthy();
       // "Log Level" also appears in both <h3> heading and <label>
       expect(screen.getAllByText('Log Level').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText('Signing SDK')).toBeTruthy();
       expect(screen.getByText('Danger Zone')).toBeTruthy();
     });
 
@@ -453,280 +452,6 @@ describe('SystemPage', () => {
         expect(vi.mocked(showToast)).toHaveBeenCalledWith(
           'error',
           'Error: SETTINGS_FETCH_FAIL',
-        );
-      });
-    });
-  });
-
-  // ---------------------------------------------------------------------------
-  // API Keys section
-  // ---------------------------------------------------------------------------
-
-  describe('API Keys section', () => {
-    afterEach(() => {
-      cleanup();
-      vi.clearAllMocks();
-    });
-
-    it('shows loading state for API keys', () => {
-      // Settings resolve immediately, api-keys never resolve
-      vi.mocked(apiGet).mockImplementation(async (path: string) => {
-        if (path === '/v1/admin/settings') return mockSettingsResponse;
-        if (path === '/v1/admin/api-keys') return new Promise(() => {});
-        return {};
-      });
-
-      render(<SystemPage />);
-
-      // The API keys loading state shows while main loading is still true,
-      // but once settings load, the API keys loading text appears
-      waitFor(() => {
-        expect(screen.getByText('Loading API keys...')).toBeTruthy();
-      });
-    });
-
-    it('renders null when no API keys exist', async () => {
-      mockApiCalls(mockSettingsResponse, { keys: [] });
-      render(<SystemPage />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Oracle')).toBeTruthy();
-      });
-
-      // API Keys heading should NOT be present when keys array is empty
-      expect(screen.queryByText('API Keys')).toBeNull();
-    });
-
-    it('renders API key list with provider names', async () => {
-      mockApiCalls();
-      render(<SystemPage />);
-
-      await waitFor(() => {
-        expect(screen.getByText('coingecko')).toBeTruthy();
-      });
-      expect(screen.getByText('openai')).toBeTruthy();
-    });
-
-    it('shows maskedKey for providers with key', async () => {
-      mockApiCalls();
-      render(<SystemPage />);
-
-      await waitFor(() => {
-        expect(screen.getByText('CG-****abc')).toBeTruthy();
-      });
-      expect(screen.getByText('Not set')).toBeTruthy();
-    });
-
-    it('shows Change button for provider with key, Set button for provider without key', async () => {
-      mockApiCalls();
-      render(<SystemPage />);
-
-      await waitFor(() => {
-        expect(screen.getByText('coingecko')).toBeTruthy();
-      });
-
-      // coingecko has key -> Change button
-      expect(screen.getByText('Change')).toBeTruthy();
-      // openai has no key -> Set button
-      expect(screen.getByText('Set')).toBeTruthy();
-    });
-
-    it('shows Delete button only for provider with key', async () => {
-      mockApiCalls();
-      render(<SystemPage />);
-
-      await waitFor(() => {
-        expect(screen.getByText('coingecko')).toBeTruthy();
-      });
-
-      // Only coingecko has a key, so only 1 Delete button
-      const deleteButtons = screen.getAllByText('Delete');
-      expect(deleteButtons.length).toBe(1);
-    });
-
-    it('shows Required badge for provider that requires key but has none', async () => {
-      mockApiCalls();
-      render(<SystemPage />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Required')).toBeTruthy();
-      });
-    });
-
-    it('clicking Set opens edit mode with password input', async () => {
-      mockApiCalls();
-      render(<SystemPage />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Set')).toBeTruthy();
-      });
-
-      fireEvent.click(screen.getByText('Set'));
-
-      await waitFor(() => {
-        const input = document.querySelector(
-          'input[name="apikey-openai"]',
-        ) as HTMLInputElement;
-        expect(input).toBeTruthy();
-        expect(input.type).toBe('password');
-      });
-
-      // Save and Cancel buttons should be visible in edit mode
-      expect(screen.getByText('Save')).toBeTruthy();
-      expect(screen.getByText('Cancel')).toBeTruthy();
-    });
-
-    it('save API key calls apiPut and refreshes list', async () => {
-      mockApiCalls();
-      render(<SystemPage />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Set')).toBeTruthy();
-      });
-
-      fireEvent.click(screen.getByText('Set'));
-
-      await waitFor(() => {
-        expect(
-          document.querySelector('input[name="apikey-openai"]'),
-        ).toBeTruthy();
-      });
-
-      const input = document.querySelector(
-        'input[name="apikey-openai"]',
-      ) as HTMLInputElement;
-      // FormField uses onInput for password type
-      fireEvent.input(input, { target: { value: 'new-key' } });
-
-      vi.mocked(apiPut).mockResolvedValueOnce({ updated: 1, settings: mockSettingsResponse });
-
-      fireEvent.click(screen.getByText('Save'));
-
-      await waitFor(() => {
-        expect(vi.mocked(apiPut)).toHaveBeenCalledWith(
-          '/v1/admin/api-keys/openai',
-          { apiKey: 'new-key' },
-        );
-      });
-
-      await waitFor(() => {
-        expect(vi.mocked(showToast)).toHaveBeenCalledWith(
-          'success',
-          'API key saved for openai',
-        );
-      });
-    });
-
-    it('cancel edit mode clears input and exits', async () => {
-      mockApiCalls();
-      render(<SystemPage />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Set')).toBeTruthy();
-      });
-
-      fireEvent.click(screen.getByText('Set'));
-
-      await waitFor(() => {
-        expect(
-          document.querySelector('input[name="apikey-openai"]'),
-        ).toBeTruthy();
-      });
-
-      fireEvent.click(screen.getByText('Cancel'));
-
-      await waitFor(() => {
-        // Edit mode should be gone, password input should not exist
-        expect(
-          document.querySelector('input[name="apikey-openai"]'),
-        ).toBeNull();
-      });
-
-      // Original display should be back
-      expect(screen.getByText('Not set')).toBeTruthy();
-    });
-
-    it('delete API key calls apiDelete and refreshes', async () => {
-      mockApiCalls();
-      render(<SystemPage />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Delete')).toBeTruthy();
-      });
-
-      vi.mocked(apiDelete).mockResolvedValueOnce(undefined);
-
-      fireEvent.click(screen.getByText('Delete'));
-
-      await waitFor(() => {
-        expect(vi.mocked(apiDelete)).toHaveBeenCalledWith(
-          '/v1/admin/api-keys/coingecko',
-        );
-      });
-
-      await waitFor(() => {
-        expect(vi.mocked(showToast)).toHaveBeenCalledWith(
-          'success',
-          'API key deleted for coingecko',
-        );
-      });
-    });
-
-    it('API key save error shows toast', async () => {
-      mockApiCalls();
-      render(<SystemPage />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Set')).toBeTruthy();
-      });
-
-      fireEvent.click(screen.getByText('Set'));
-
-      await waitFor(() => {
-        expect(
-          document.querySelector('input[name="apikey-openai"]'),
-        ).toBeTruthy();
-      });
-
-      const input = document.querySelector(
-        'input[name="apikey-openai"]',
-      ) as HTMLInputElement;
-      fireEvent.input(input, { target: { value: 'bad-key' } });
-
-      const MockApiError = (await import('../api/client')).ApiError;
-      vi.mocked(apiPut).mockRejectedValueOnce(
-        new MockApiError(400, 'API_KEY_SAVE_ERROR', 'Invalid'),
-      );
-
-      fireEvent.click(screen.getByText('Save'));
-
-      await waitFor(() => {
-        expect(vi.mocked(showToast)).toHaveBeenCalledWith(
-          'error',
-          'Error: API_KEY_SAVE_ERROR',
-        );
-      });
-    });
-
-    it('API key delete error shows toast', async () => {
-      mockApiCalls();
-      render(<SystemPage />);
-
-      await waitFor(() => {
-        expect(screen.getByText('Delete')).toBeTruthy();
-      });
-
-      const MockApiError = (await import('../api/client')).ApiError;
-      vi.mocked(apiDelete).mockRejectedValueOnce(
-        new MockApiError(500, 'DELETE_ERROR', 'Failed'),
-      );
-
-      fireEvent.click(screen.getByText('Delete'));
-
-      await waitFor(() => {
-        expect(vi.mocked(showToast)).toHaveBeenCalledWith(
-          'error',
-          'Error: DELETE_ERROR',
         );
       });
     });
