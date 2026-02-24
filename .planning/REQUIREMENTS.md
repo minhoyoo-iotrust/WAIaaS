@@ -18,25 +18,25 @@ Requirements for v28.5 milestone. Each maps to roadmap phases.
 
 ### Evaluator
 
-- [ ] **EVAL-01**: GasConditionEvaluator가 현재 가스 가격을 RPC에서 조회하여 조건과 비교한다
-- [ ] **EVAL-02**: EVM에서 eth_gasPrice로 baseFee+priorityFee를 조회하여 maxGasPrice 조건을 평가한다
-- [ ] **EVAL-03**: EVM에서 eth_maxPriorityFeePerGas로 priorityFee를 조회하여 maxPriorityFee 조건을 평가한다
-- [ ] **EVAL-04**: Solana에서 computeUnitPrice 기반으로 maxPriorityFee 조건을 평가한다
+- [x] **EVAL-01**: GasConditionEvaluator가 현재 가스 가격을 RPC에서 조회하여 조건과 비교한다
+- [x] **EVAL-02**: EVM에서 eth_gasPrice로 baseFee+priorityFee를 조회하여 maxGasPrice 조건을 평가한다
+- [x] **EVAL-03**: EVM에서 eth_maxPriorityFeePerGas로 priorityFee를 조회하여 maxPriorityFee 조건을 평가한다
+- [x] **EVAL-04**: Solana에서 computeUnitPrice 기반으로 maxPriorityFee 조건을 평가한다
 
 ### Worker
 
-- [ ] **WRKR-01**: GasConditionWorker가 대기 중인 트랜잭션의 가스 조건을 주기적으로 재평가한다
-- [ ] **WRKR-02**: 가스 조건 충족 시 GAS_WAITING에서 파이프라인을 재개한다 (Stage 4부터)
-- [ ] **WRKR-03**: 타임아웃 초과 시 트랜잭션을 CANCELLED로 전이하고 알림을 발송한다
-- [ ] **WRKR-04**: 데몬 재시작 후 DB의 GAS_WAITING 트랜잭션을 자동 복원하여 재평가를 재개한다
-- [ ] **WRKR-05**: 배치 조회로 한 번의 RPC 호출로 가스 가격을 확인 후 모든 대기 트랜잭션을 일괄 평가한다
+- [x] **WRKR-01**: GasConditionWorker가 대기 중인 트랜잭션의 가스 조건을 주기적으로 재평가한다
+- [x] **WRKR-02**: 가스 조건 충족 시 GAS_WAITING에서 파이프라인을 재개한다 (Stage 4부터)
+- [x] **WRKR-03**: 타임아웃 초과 시 트랜잭션을 CANCELLED로 전이하고 알림을 발송한다
+- [x] **WRKR-04**: 데몬 재시작 후 DB의 GAS_WAITING 트랜잭션을 자동 복원하여 재평가를 재개한다
+- [x] **WRKR-05**: 배치 조회로 한 번의 RPC 호출로 가스 가격을 확인 후 모든 대기 트랜잭션을 일괄 평가한다
 - [x] **WRKR-06**: max_pending_count 초과 시 새 gasCondition 트랜잭션을 에러로 거부한다
 
 ### Notification
 
 - [x] **NOTF-01**: 트랜잭션이 GAS_WAITING 상태 진입 시 TX_GAS_WAITING 알림을 발송한다
-- [ ] **NOTF-02**: 가스 조건 충족되어 실행 재개 시 TX_GAS_CONDITION_MET 알림을 발송한다
-- [ ] **NOTF-03**: 타임아웃 취소 시 기존 TX_CANCELLED 이벤트를 재사용한다
+- [x] **NOTF-02**: 가스 조건 충족되어 실행 재개 시 TX_GAS_CONDITION_MET 알림을 발송한다
+- [x] **NOTF-03**: 타임아웃 취소 시 기존 TX_CANCELLED 이벤트를 재사용한다
 
 ### Integration
 
@@ -67,25 +67,25 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PIPE-01 | Phase 258 | Pending |
-| PIPE-02 | Phase 258 | Pending |
-| PIPE-03 | Phase 258 | Pending |
+| PIPE-01 | Phase 258 | Complete |
+| PIPE-02 | Phase 258 | Complete |
+| PIPE-03 | Phase 258 | Complete |
 | PIPE-04 | Phase 258 | Pending |
 | PIPE-05 | Phase 258 | Pending |
-| PIPE-06 | Phase 258 | Pending |
-| EVAL-01 | Phase 258 | Pending |
-| EVAL-02 | Phase 258 | Pending |
-| EVAL-03 | Phase 258 | Pending |
-| EVAL-04 | Phase 258 | Pending |
-| WRKR-01 | Phase 258 | Pending |
-| WRKR-02 | Phase 258 | Pending |
-| WRKR-03 | Phase 258 | Pending |
-| WRKR-04 | Phase 258 | Pending |
-| WRKR-05 | Phase 258 | Pending |
-| WRKR-06 | Phase 258 | Pending |
-| NOTF-01 | Phase 258 | Pending |
-| NOTF-02 | Phase 258 | Pending |
-| NOTF-03 | Phase 258 | Pending |
+| PIPE-06 | Phase 258 | Complete |
+| EVAL-01 | Phase 258 | Complete |
+| EVAL-02 | Phase 258 | Complete |
+| EVAL-03 | Phase 258 | Complete |
+| EVAL-04 | Phase 258 | Complete |
+| WRKR-01 | Phase 258 | Complete |
+| WRKR-02 | Phase 258 | Complete |
+| WRKR-03 | Phase 258 | Complete |
+| WRKR-04 | Phase 258 | Complete |
+| WRKR-05 | Phase 258 | Complete |
+| WRKR-06 | Phase 258 | Complete |
+| NOTF-01 | Phase 258 | Complete |
+| NOTF-02 | Phase 258 | Complete |
+| NOTF-03 | Phase 258 | Complete |
 | INTF-01 | Phase 259 | Pending |
 | INTF-02 | Phase 259 | Pending |
 | INTF-03 | Phase 259 | Pending |

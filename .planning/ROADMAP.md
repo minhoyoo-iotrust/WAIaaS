@@ -296,7 +296,7 @@ See `.planning/milestones/v28.4-ROADMAP.md` for full details.
 
 Plans:
 - [x] 258-01: GasCondition Zod 스키마 + 파이프라인 분기 + 알림 이벤트 정의 -- completed 2026-02-25
-- [ ] 258-02: GasConditionEvaluator (EVM + Solana) + GasConditionWorker + 데몬 복원
+- [x] 258-02: GasConditionTracker (EVM + Solana) + AsyncPolling + Settings 5키 + 데몬 라이프사이클 -- completed 2026-02-25
 
 ### Phase 259: 외부 인터페이스 통합
 **Goal**: 에이전트가 REST API, MCP, SDK 등 모든 인터페이스에서 gasCondition을 지정할 수 있고, Admin이 Settings UI에서 운영 파라미터를 런타임 조정할 수 있는 상태
@@ -320,7 +320,7 @@ Phases execute in numeric order: 258 -> 259
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 258. GasCondition 코어 파이프라인 | v28.5 | 1/2 | In progress | - |
+| 258. GasCondition 코어 파이프라인 | v28.5 | 2/2 | Complete | 2026-02-25 |
 | 259. 외부 인터페이스 통합 | v28.5 | 0/2 | Not started | - |
 
 ---
