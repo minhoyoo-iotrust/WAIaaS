@@ -266,7 +266,7 @@ See `.planning/milestones/v28.3-ROADMAP.md` for full details.
 **Milestone Goal:** AI 에이전트가 Lido(ETH stETH)와 Jito(SOL JitoSOL) 리퀴드 스테이킹을 안전하게 수행할 수 있다. 기존 정책 엔진(SPENDING_LIMIT, CONTRACT_WHITELIST) + provider-trust + IAsyncStatusTracker 비동기 추적 + 스테이킹 포지션 REST API로 완전한 스테이킹 워크플로우를 제공한다.
 
 - [x] **Phase 254: Lido EVM Staking Provider** - Lido 컨트랙트 직접 호출로 ETH→stETH 스테이킹/언스테이킹 + 정책 연동 (completed 2026-02-24)
-- [ ] **Phase 255: Jito Solana Staking Provider** - SPL Stake Pool 프로그램으로 SOL→JitoSOL 스테이킹/언스테이킹
+- [x] **Phase 255: Jito Solana Staking Provider** - SPL Stake Pool 프로그램으로 SOL→JitoSOL 스테이킹/언스테이킹 (completed 2026-02-24)
 - [ ] **Phase 256: Staking API + Async Tracking + Interface Integration** - 비동기 unstake 추적 + 스테이킹 포지션 API + MCP/SDK/Admin/Skills 통합
 
 ## Phase Details
@@ -326,5 +326,5 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 254. Lido EVM Staking Provider | 2/2 | Complete    | 2026-02-24 | - |
-| 255. Jito Solana Staking Provider | 1/2 | In Progress|  | - |
+| 255. Jito Solana Staking Provider | 2/2 | Complete   | 2026-02-24 | - |
 | 256. Staking API + Async Tracking + Interface Integration | v28.4 | 0/3 | Not started | - |

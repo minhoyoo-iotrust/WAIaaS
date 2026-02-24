@@ -10,17 +10,17 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 ## Current Position
 
 Phase: 255 (2 of 3 in v28.4) (Jito Solana Staking Provider)
-Plan: 1 of 2 in current phase
-Status: Executing Phase 255
-Last activity: 2026-02-24 -- Plan 255-01 complete (Jito staking provider + 12 tests)
+Plan: 2 of 2 in current phase (COMPLETE)
+Status: Phase 255 complete
+Last activity: 2026-02-24 -- Plan 255-02 complete (Jito daemon registration + 9 integration tests)
 
-Progress: [████░░░░░░] 43%
+Progress: [██████░░░░] 57%
 
 ## Performance Metrics
 
 **Cumulative:** 61 milestones, 253 phases completed, 544 plans, 1,485 reqs, ~5,000+ tests, ~189,000 LOC TS
 
-**This milestone:** 3 phases, 7 plans (estimated), 25 requirements -- 3 plans complete
+**This milestone:** 3 phases, 7 plans (estimated), 25 requirements -- 5 plans complete
 
 ## Accumulated Context
 
@@ -39,6 +39,8 @@ Progress: [████░░░░░░] 43%
 - parseSolAmount 9-decimal SOL->lamports conversion via string split + BigInt (v28.4)
 - Zero external Solana SDK deps for PDA derivation, base58, ATA -- pure TypeScript (v28.4)
 - Jito mainnet-only addresses, testnet falls back to mainnet (v28.4)
+- Jito registration mainnet-only: getJitoAddresses('mainnet') always, no environment switching unlike Lido (v28.4)
+- Jito admin override: empty string default falls back to JITO_MAINNET_ADDRESSES (v28.4)
 
 ### Blockers/Concerns
 
@@ -47,6 +49,6 @@ Progress: [████░░░░░░] 43%
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Completed 255-01-PLAN.md (Jito staking provider core). Next: 255-02 (daemon registration + integration).
+Stopped at: Completed 255-02-PLAN.md (Jito daemon registration + integration). Phase 255 complete. Next: plan+execute Phase 256, then milestone audit.
 Resume file: None
-Resume instructions: Continue with 255-02-PLAN.md execution, then plan+execute Phase 256, then milestone audit.
+Resume instructions: Plan and execute Phase 256 (MCP + Admin UI integration), then milestone audit.
