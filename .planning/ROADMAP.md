@@ -265,8 +265,8 @@ See `.planning/milestones/v28.3-ROADMAP.md` for full details.
 
 **Milestone Goal:** AI 에이전트가 Lido(ETH stETH)와 Jito(SOL JitoSOL) 리퀴드 스테이킹을 안전하게 수행할 수 있다. 기존 정책 엔진(SPENDING_LIMIT, CONTRACT_WHITELIST) + provider-trust + IAsyncStatusTracker 비동기 추적 + 스테이킹 포지션 REST API로 완전한 스테이킹 워크플로우를 제공한다.
 
-- [x] **Phase 254: Lido EVM Staking Provider** - Lido 컨트랙트 직접 호출로 ETH→stETH 스테이킹/언스테이킹 + 정책 연동 (completed 2026-02-24)
-- [x] **Phase 255: Jito Solana Staking Provider** - SPL Stake Pool 프로그램으로 SOL→JitoSOL 스테이킹/언스테이킹 (completed 2026-02-24)
+- [x] **Phase 254: Lido EVM Staking Provider** - Lido 컨트랙트 직접 호출로 ETH->stETH 스테이킹/언스테이킹 + 정책 연동 (completed 2026-02-24)
+- [x] **Phase 255: Jito Solana Staking Provider** - SPL Stake Pool 프로그램으로 SOL->JitoSOL 스테이킹/언스테이킹 (completed 2026-02-24)
 - [ ] **Phase 256: Staking API + Async Tracking + Interface Integration** - 비동기 unstake 추적 + 스테이킹 포지션 API + MCP/SDK/Admin/Skills 통합
 
 ## Phase Details
@@ -284,8 +284,8 @@ See `.planning/milestones/v28.3-ROADMAP.md` for full details.
 **Plans**: 2 plans
 
 Plans:
-- [ ] 254-01-PLAN.md — LidoStakingActionProvider + Lido ABI 직접 인코딩 + stake/unstake 액션
-- [ ] 254-02-PLAN.md — SettingsService 설정 + EnvironmentType 주소 전환 + 정책 연동 검증
+- [x] 254-01-PLAN.md — LidoStakingActionProvider + Lido ABI 직접 인코딩 + stake/unstake 액션
+- [x] 254-02-PLAN.md — SettingsService 설정 + EnvironmentType 주소 전환 + 정책 연동 검증
 
 ### Phase 255: Jito Solana Staking Provider
 **Goal**: 에이전트가 SOL을 JitoSOL로 스테이킹하고, JitoSOL을 SOL로 출금 요청할 수 있다
@@ -299,8 +299,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 255-01-PLAN.md — JitoStakingActionProvider + SPL Stake Pool instruction 빌드 (config, PDA 유틸, DepositSol/WithdrawSol) + 유닛 테스트
-- [ ] 255-02-PLAN.md — registerBuiltInProviders 등록 + SettingsService 설정 3개 + 통합 테스트
+- [x] 255-01-PLAN.md — JitoStakingActionProvider + SPL Stake Pool instruction 빌드 (config, PDA 유틸, DepositSol/WithdrawSol) + 유닛 테스트
+- [x] 255-02-PLAN.md — registerBuiltInProviders 등록 + SettingsService 설정 3개 + 통합 테스트
 
 ### Phase 256: Staking API + Async Tracking + Interface Integration
 **Goal**: unstake 비동기 완료 추적, 스테이킹 포지션 조회 API, 모든 인터페이스(MCP/SDK/Admin/Skills) 통합이 완성된다
@@ -310,14 +310,14 @@ Plans:
   1. Lido unstake 후 Withdrawal Queue 상태가 AsyncPollingService로 폴링되고, Jito unstake 후 에포크 경계 완료가 폴링된다
   2. unstake 완료 시 STAKING_UNSTAKE_COMPLETED 알림이 발행되고, 타임아웃 시 STAKING_UNSTAKE_TIMEOUT 알림이 발행된다
   3. GET /v1/wallets/:id/staking 엔드포인트가 stETH/JitoSOL 잔고, 현재 APY, USD 환산을 포함한 포지션 배열을 반환한다
-  4. MCP에서 action_lido_stake/unstake, action_jito_stake/unstake 4개 도구가 노출되고, SDK에서 executeAction으로 실행 가능하다
+  4. MCP에서 action_lido_staking_stake/unstake, action_jito_staking_stake/unstake 4개 도구가 노출되고, SDK에서 executeAction으로 실행 가능하다
   5. Admin 대시보드에 스테이킹 포지션 섹션이 렌더링되고, actions.skill.md에 Lido/Jito 문서가 추가된다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 256-01: IAsyncStatusTracker 구현체 (Lido Withdrawal Queue + Jito epoch tracker) + 알림 이벤트
-- [ ] 256-02: GET /v1/wallets/:id/staking REST API + Zod 스키마 + 포지션 조회 서비스
-- [ ] 256-03: MCP 도구 노출 + SDK executeAction + Admin 스테이킹 섹션 + Skills 문서
+- [ ] 256-01-PLAN.md — IAsyncStatusTracker 구현체 (Lido Withdrawal Queue + Jito epoch tracker) + 데몬 등록 + 알림 이벤트
+- [ ] 256-02-PLAN.md — GET /v1/wallets/:id/staking REST API + Zod 스키마 + 포지션 조회 + 통합 테스트
+- [ ] 256-03-PLAN.md — MCP 도구 노출 테스트 + Admin 스테이킹 섹션 + Skills 문서
 
 ## Progress
 
