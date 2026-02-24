@@ -281,11 +281,11 @@ See `.planning/milestones/v28.3-ROADMAP.md` for full details.
   3. ETH 잔고가 부족하면 INSUFFICIENT_BALANCE 에러가 반환된다
   4. Admin Settings에서 lido_enabled를 false로 변경하면 lido 액션이 비활성화된다
   5. 스테이킹 금액이 USD 환산되어 SPENDING_LIMIT 정책 평가를 받고, Lido 컨트랙트가 provider-trust로 자동 허용된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 254-01: LidoStakingActionProvider + Lido ABI 직접 인코딩 + stake/unstake 액션
-- [ ] 254-02: SettingsService 설정 + EnvironmentType 주소 전환 + 정책 연동 검증
+- [ ] 254-01-PLAN.md — LidoStakingActionProvider + Lido ABI 직접 인코딩 + stake/unstake 액션
+- [ ] 254-02-PLAN.md — SettingsService 설정 + EnvironmentType 주소 전환 + 정책 연동 검증
 
 ### Phase 255: Jito Solana Staking Provider
 **Goal**: 에이전트가 SOL을 JitoSOL로 스테이킹하고, JitoSOL을 SOL로 출금 요청할 수 있다
