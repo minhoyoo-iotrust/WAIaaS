@@ -10,7 +10,7 @@ export interface DirtyRegistration {
 const registry = signal<DirtyRegistration[]>([]);
 
 /** True if ANY registered tab has dirty state */
-export const hasDirty = computed(() => registry.value.some(r => r.isDirty()));
+export const hasDirty = computed(() => registry.value.some(r => typeof r.isDirty === 'function' && r.isDirty()));
 
 /** Register a tab's dirty state handlers. Call on mount. */
 export function registerDirty(reg: DirtyRegistration): void {
@@ -25,7 +25,7 @@ export function unregisterDirty(id: string): void {
 
 /** Save all dirty tabs, returns true if all succeeded */
 export async function saveAllDirty(): Promise<boolean> {
-  const dirtyRegs = registry.value.filter(r => r.isDirty());
+  const dirtyRegs = registry.value.filter(r => typeof r.isDirty === 'function' && r.isDirty());
   try {
     for (const reg of dirtyRegs) {
       await reg.save();
@@ -38,7 +38,7 @@ export async function saveAllDirty(): Promise<boolean> {
 
 /** Discard all dirty tabs */
 export function discardAllDirty(): void {
-  const dirtyRegs = registry.value.filter(r => r.isDirty());
+  const dirtyRegs = registry.value.filter(r => typeof r.isDirty === 'function' && r.isDirty());
   for (const reg of dirtyRegs) {
     reg.discard();
   }
