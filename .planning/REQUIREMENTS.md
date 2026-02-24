@@ -1,0 +1,115 @@
+# Requirements: WAIaaS v28.4 Liquid Staking (Lido + Jito)
+
+**Defined:** 2026-02-24
+**Core Value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
+
+## v1 Requirements
+
+Requirements for milestone v28.4. Each maps to roadmap phases.
+
+### Lido Staking
+
+- [ ] **LIDO-01**: LidoStakingActionProvider가 stake 액션으로 ETH를 stETH로 스테이킹할 수 있다
+- [ ] **LIDO-02**: LidoStakingActionProvider가 unstake 액션으로 stETH를 ETH로 출금 요청할 수 있다 (Withdrawal Queue)
+- [ ] **LIDO-03**: Lido 컨트랙트 ABI 직접 호출로 외부 의존성 없이 submit()/requestWithdrawals() 인코딩한다
+- [ ] **LIDO-04**: ETH 잔고 부족 시 INSUFFICIENT_BALANCE 에러를 반환한다
+- [ ] **LIDO-05**: Admin Settings에서 lido_enabled/steth_address/withdrawal_queue_address 런타임 설정 가능하다
+- [ ] **LIDO-06**: EnvironmentType에 따라 testnet/mainnet 컨트랙트 주소가 자동 전환된다
+
+### Jito Staking
+
+- [ ] **JITO-01**: JitoStakingActionProvider가 stake 액션으로 SOL을 JitoSOL로 스테이킹할 수 있다
+- [ ] **JITO-02**: JitoStakingActionProvider가 unstake 액션으로 JitoSOL을 SOL로 출금 요청할 수 있다
+- [ ] **JITO-03**: SPL Stake Pool 프로그램 호출로 deposit/withdraw instruction을 빌드한다
+- [ ] **JITO-04**: SOL 잔고 부족 시 INSUFFICIENT_BALANCE 에러를 반환한다
+- [ ] **JITO-05**: Admin Settings에서 jito_enabled/stake_pool/jitosol_mint 런타임 설정 가능하다
+
+### 정책 연동
+
+- [ ] **PLCY-01**: 스테이킹 금액이 USD 환산되어 SPENDING_LIMIT 정책 평가를 받는다
+- [ ] **PLCY-02**: Lido/Jito 컨트랙트가 CONTRACT_WHITELIST 미등록 시 정책 거부된다
+- [ ] **PLCY-03**: provider-trust 모델로 빌트인 프로바이더 컨트랙트 화이트리스트 자동 등록된다
+
+### 비동기 추적
+
+- [ ] **ASYNC-01**: Lido unstake 요청 시 IAsyncStatusTracker로 Withdrawal Queue 상태를 폴링한다
+- [ ] **ASYNC-02**: Jito unstake 요청 시 IAsyncStatusTracker로 에포크 경계 완료를 폴링한다
+- [ ] **ASYNC-03**: unstake 완료 시 STAKING_UNSTAKE_COMPLETED 알림 이벤트를 발행한다
+- [ ] **ASYNC-04**: unstake 타임아웃 시 STAKING_UNSTAKE_TIMEOUT 알림 이벤트를 발행한다
+
+### 스테이킹 API
+
+- [ ] **SAPI-01**: GET /v1/wallets/:id/staking으로 월렛별 스테이킹 포지션을 조회할 수 있다
+- [ ] **SAPI-02**: 스테이킹 포지션에 stETH/JitoSOL 잔고, 현재 APY, USD 환산이 포함된다
+- [ ] **SAPI-03**: 스테이킹 포지션이 없으면 빈 배열을 반환한다
+
+### 인터페이스
+
+- [ ] **INTF-01**: MCP에서 action_lido_stake/unstake, action_jito_stake/unstake 4개 도구가 노출된다
+- [ ] **INTF-02**: TS/Python SDK에서 executeAction('lido_stake'/'jito_stake', params)으로 실행 가능하다
+- [ ] **INTF-03**: Admin 대시보드에 스테이킹 포지션 섹션이 렌더링된다
+- [ ] **INTF-04**: actions.skill.md에 Lido/Jito 스테이킹 문서가 추가된다
+
+## v2 Requirements
+
+Deferred to future release. Tracked but not in current roadmap.
+
+### Lido 확장
+
+- **LIDO-EXT-01**: L2(Arbitrum, Base 등)에서 wstETH 브릿지 스테이킹 지원
+- **LIDO-EXT-02**: stETH 리베이스 수익 추적 및 알림
+
+### 추가 프로토콜
+
+- **PROT-01**: Rocket Pool (rETH) Liquid Staking 지원
+- **PROT-02**: Marinade (mSOL) Solana Liquid Staking 지원
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| Native Staking (Validator 직접 위임) | Liquid Staking이 유동성 유지 + DeFi 활용에 적합. Native Staking은 별도 마일스톤 |
+| Yield Aggregator (auto-compound) | 스테이킹 기본 기능 우선. auto-compound는 추가 복잡성 |
+| wstETH 래핑/언래핑 | stETH 직접 사용이 직관적. L2 브릿지 시 별도 처리 |
+| Lido L2 스테이킹 | Ethereum mainnet 우선. L2는 v2 Requirements로 이연 |
+
+## Traceability
+
+Which phases cover which requirements. Updated during roadmap creation.
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| LIDO-01 | — | Pending |
+| LIDO-02 | — | Pending |
+| LIDO-03 | — | Pending |
+| LIDO-04 | — | Pending |
+| LIDO-05 | — | Pending |
+| LIDO-06 | — | Pending |
+| JITO-01 | — | Pending |
+| JITO-02 | — | Pending |
+| JITO-03 | — | Pending |
+| JITO-04 | — | Pending |
+| JITO-05 | — | Pending |
+| PLCY-01 | — | Pending |
+| PLCY-02 | — | Pending |
+| PLCY-03 | — | Pending |
+| ASYNC-01 | — | Pending |
+| ASYNC-02 | — | Pending |
+| ASYNC-03 | — | Pending |
+| ASYNC-04 | — | Pending |
+| SAPI-01 | — | Pending |
+| SAPI-02 | — | Pending |
+| SAPI-03 | — | Pending |
+| INTF-01 | — | Pending |
+| INTF-02 | — | Pending |
+| INTF-03 | — | Pending |
+| INTF-04 | — | Pending |
+
+**Coverage:**
+- v1 requirements: 25 total
+- Mapped to phases: 0
+- Unmapped: 25 ⚠️
+
+---
+*Requirements defined: 2026-02-24*
+*Last updated: 2026-02-24 after initial definition*
