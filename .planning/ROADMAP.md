@@ -295,7 +295,7 @@ See `.planning/milestones/v28.4-ROADMAP.md` for full details.
 **Plans**: TBD
 
 Plans:
-- [ ] 258-01: GasCondition Zod 스키마 + 파이프라인 분기 + 알림 이벤트 정의
+- [x] 258-01: GasCondition Zod 스키마 + 파이프라인 분기 + 알림 이벤트 정의 -- completed 2026-02-25
 - [ ] 258-02: GasConditionEvaluator (EVM + Solana) + GasConditionWorker + 데몬 복원
 
 ### Phase 259: 외부 인터페이스 통합
@@ -320,7 +320,7 @@ Phases execute in numeric order: 258 -> 259
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 258. GasCondition 코어 파이프라인 | v28.5 | 0/2 | Not started | - |
+| 258. GasCondition 코어 파이프라인 | v28.5 | 1/2 | In progress | - |
 | 259. 외부 인터페이스 통합 | v28.5 | 0/2 | Not started | - |
 
 ---

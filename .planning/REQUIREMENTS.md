@@ -9,12 +9,12 @@ Requirements for v28.5 milestone. Each maps to roadmap phases.
 
 ### Pipeline
 
-- [ ] **PIPE-01**: 트랜잭션 요청에 선택적 gasCondition 필드를 지정할 수 있다 (maxGasPrice/maxPriorityFee/timeout)
-- [ ] **PIPE-02**: gasCondition이 지정된 트랜잭션은 Stage 3(정책 평가) 통과 후 GAS_WAITING 상태로 진입한다
-- [ ] **PIPE-03**: gasCondition 미지정 트랜잭션은 기존 동작 그대로 즉시 실행된다 (하위 호환)
+- [x] **PIPE-01**: 트랜잭션 요청에 선택적 gasCondition 필드를 지정할 수 있다 (maxGasPrice/maxPriorityFee/timeout)
+- [x] **PIPE-02**: gasCondition이 지정된 트랜잭션은 Stage 3(정책 평가) 통과 후 GAS_WAITING 상태로 진입한다
+- [x] **PIPE-03**: gasCondition 미지정 트랜잭션은 기존 동작 그대로 즉시 실행된다 (하위 호환)
 - [ ] **PIPE-04**: 정책 위반 트랜잭션은 gasCondition 유무와 관계없이 즉시 거부된다 (가스 대기 없음)
 - [ ] **PIPE-05**: GAS_WAITING 트랜잭션은 nonce를 실행 시점에 할당한다 (대기 진입 시 미할당)
-- [ ] **PIPE-06**: GasCondition Zod 스키마가 기존 discriminatedUnion 7-type 모두에 적용된다
+- [x] **PIPE-06**: GasCondition Zod 스키마가 기존 discriminatedUnion 7-type 모두에 적용된다
 
 ### Evaluator
 
@@ -30,11 +30,11 @@ Requirements for v28.5 milestone. Each maps to roadmap phases.
 - [ ] **WRKR-03**: 타임아웃 초과 시 트랜잭션을 CANCELLED로 전이하고 알림을 발송한다
 - [ ] **WRKR-04**: 데몬 재시작 후 DB의 GAS_WAITING 트랜잭션을 자동 복원하여 재평가를 재개한다
 - [ ] **WRKR-05**: 배치 조회로 한 번의 RPC 호출로 가스 가격을 확인 후 모든 대기 트랜잭션을 일괄 평가한다
-- [ ] **WRKR-06**: max_pending_count 초과 시 새 gasCondition 트랜잭션을 에러로 거부한다
+- [x] **WRKR-06**: max_pending_count 초과 시 새 gasCondition 트랜잭션을 에러로 거부한다
 
 ### Notification
 
-- [ ] **NOTF-01**: 트랜잭션이 GAS_WAITING 상태 진입 시 TX_GAS_WAITING 알림을 발송한다
+- [x] **NOTF-01**: 트랜잭션이 GAS_WAITING 상태 진입 시 TX_GAS_WAITING 알림을 발송한다
 - [ ] **NOTF-02**: 가스 조건 충족되어 실행 재개 시 TX_GAS_CONDITION_MET 알림을 발송한다
 - [ ] **NOTF-03**: 타임아웃 취소 시 기존 TX_CANCELLED 이벤트를 재사용한다
 
