@@ -25,22 +25,69 @@ WAIaaS is a local daemon that sits between your AI agent and the blockchain:
 
 See [Security Model](docs/security-model.md) for full details.
 
+## Architecture
+
+```mermaid
+graph LR
+  subgraph Interfaces
+    SDK["TypeScript SDK"]
+    MCP["MCP Server"]
+    CLI["CLI"]
+    Admin["Admin UI"]
+    Skills["Skill Files"]
+    WalletSDK["Wallet SDK"]
+  end
+
+  subgraph Daemon
+    API["API Layer<br>(Hono + Middleware)"]
+    Services["Service Layer<br>(Policy, Notifications, Kill Switch)"]
+    Pipeline["Transaction Pipeline<br>(6-stage + 8-state)"]
+    Infra["Infrastructure<br>(SQLite, Keystore, Config)"]
+  end
+
+  subgraph Blockchain
+    Solana["Solana"]
+    EVM["EVM Chains"]
+  end
+
+  SDK & MCP & CLI & Admin & Skills & WalletSDK --> API
+  API --> Services --> Pipeline --> Infra
+  Infra --> Solana & EVM
+```
+
+**12 packages** in a monorepo:
+
+- **@waiaas/core** — Shared types, Zod schemas, enums, and interfaces
+- **@waiaas/daemon** — Self-hosted wallet daemon (Hono HTTP server)
+- **@waiaas/adapter-solana** — Solana chain adapter (SPL / Token-2022)
+- **@waiaas/adapter-evm** — EVM chain adapter (ERC-20 via viem)
+- **@waiaas/actions** — DeFi Action Providers (Jupiter, 0x, LI.FI, Lido, Jito)
+- **@waiaas/sdk** — TypeScript client library
+- **@waiaas/mcp** — Model Context Protocol server for AI agents
+- **@waiaas/cli** — Command-line interface
+- **@waiaas/admin** — Preact-based Admin Web UI
+- **@waiaas/wallet-sdk** — Wallet Signing SDK for wallet app integration
+- **@waiaas/push-relay** — Push Relay Server (ntfy → push services)
+- **@waiaas/skills** — Pre-built `.skill.md` instruction files for AI agents
+
+See [Architecture](docs/architecture.md) for the full technical deep-dive.
+
 ## Quick Start
 
 ```bash
 npm install -g @waiaas/cli
 waiaas init                        # Create data directory + config.toml
 waiaas start                       # Start daemon (sets master password on first run)
-waiaas quickset --mode testnet     # Create wallets + MCP sessions in one step
+waiaas quickset --mode mainnet     # Create wallets + MCP sessions in one step
 ```
 
 The `quickset` command does everything you need to get started:
 
-1. Creates **Solana Devnet + EVM Sepolia** wallets automatically
+1. Creates **Solana Mainnet + EVM Ethereum Mainnet** wallets automatically
 2. Issues **MCP session tokens** for each wallet
 3. Outputs a **Claude Desktop MCP config** snippet -- just copy and paste
 
-> Starting with mainnet? Use `waiaas quickset --mode mainnet` to create Solana Mainnet + EVM Ethereum Mainnet wallets instead. Mainnet mode recommends configuring spending limits and registering an owner wallet for high-value transaction approval.
+> We recommend configuring spending limits and registering an owner wallet for high-value transaction approval. For testing, use `waiaas quickset --mode testnet` to create Solana Devnet + EVM Sepolia wallets instead.
 
 ### Admin UI
 
@@ -143,6 +190,7 @@ Enabled by default (`admin_ui = true` in config.toml).
 
 | Document | Description |
 |----------|-------------|
+| [Architecture](docs/architecture.md) | System overview, package structure, pipeline, chain adapters |
 | [Security Model](docs/security-model.md) | Authentication, policy engine, Kill Switch, AutoStop |
 | [Deployment Guide](docs/deployment.md) | Docker, npm, configuration reference |
 | [API Reference](docs/api-reference.md) | REST API endpoints and authentication |
