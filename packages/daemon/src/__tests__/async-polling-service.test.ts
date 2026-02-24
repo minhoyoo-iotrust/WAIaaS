@@ -592,3 +592,121 @@ describe('AsyncPollingService: callbacks', () => {
     expect(updatedMeta.pollCount).toBe(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Dynamic notification event type tests (Phase 256: staking tracker support)
+// ---------------------------------------------------------------------------
+
+describe('AsyncPollingService: dynamic notification event type', () => {
+  beforeEach(() => resetDb());
+
+  it('staking tracker COMPLETED emits custom notificationEvent', async () => {
+    const metadata = JSON.stringify({
+      tracker: 'lido-withdrawal',
+      pollCount: 0,
+      lastPolledAt: 0,
+      notificationEvent: 'STAKING_UNSTAKE_TIMEOUT', // initial metadata for timeout path
+    });
+    insertBridgeTx('tx-staking-complete', 'PENDING', metadata);
+
+    const emitNotification = vi.fn();
+    const releaseReservation = vi.fn();
+
+    // Mock staking tracker that returns COMPLETED with notificationEvent
+    const tracker = createMockTracker({
+      name: 'lido-withdrawal',
+      maxAttempts: 480,
+      timeoutTransition: 'TIMEOUT',
+      checkStatus: vi.fn().mockResolvedValue({
+        state: 'COMPLETED',
+        details: {
+          completedAt: Date.now(),
+          protocol: 'lido',
+          notificationEvent: 'STAKING_UNSTAKE_COMPLETED',
+        },
+      } satisfies AsyncTrackingResult),
+    });
+
+    const service = new AsyncPollingService(db, { emitNotification, releaseReservation });
+    service.registerTracker(tracker);
+    await service.pollAll();
+
+    expect(emitNotification).toHaveBeenCalledWith(
+      'STAKING_UNSTAKE_COMPLETED',
+      'w-poll-test',
+      expect.objectContaining({
+        txId: 'tx-staking-complete',
+        protocol: 'lido',
+        notificationEvent: 'STAKING_UNSTAKE_COMPLETED',
+      }),
+    );
+    expect(releaseReservation).toHaveBeenCalledWith('tx-staking-complete');
+  });
+
+  it('staking tracker TIMEOUT emits custom notificationEvent from metadata', async () => {
+    // Metadata includes notificationEvent set at unstake creation time
+    const metadata = JSON.stringify({
+      tracker: 'lido-withdrawal',
+      pollCount: 480, // exceeds maxAttempts
+      lastPolledAt: 0,
+      notificationEvent: 'STAKING_UNSTAKE_TIMEOUT',
+    });
+    insertBridgeTx('tx-staking-timeout', 'PENDING', metadata);
+
+    const emitNotification = vi.fn();
+
+    const tracker = createMockTracker({
+      name: 'lido-withdrawal',
+      maxAttempts: 480,
+      timeoutTransition: 'TIMEOUT',
+    });
+
+    const service = new AsyncPollingService(db, { emitNotification, releaseReservation: vi.fn() });
+    service.registerTracker(tracker);
+    await service.pollAll();
+
+    // Should use STAKING_UNSTAKE_TIMEOUT instead of BRIDGE_TIMEOUT
+    expect(emitNotification).toHaveBeenCalledWith(
+      'STAKING_UNSTAKE_TIMEOUT',
+      'w-poll-test',
+      expect.objectContaining({ txId: 'tx-staking-timeout' }),
+    );
+
+    // bridge_status should be TIMEOUT
+    const tx = getTx('tx-staking-timeout');
+    expect(tx.bridge_status).toBe('TIMEOUT');
+  });
+
+  it('bridge tracker without notificationEvent falls back to BRIDGE_COMPLETED (regression)', async () => {
+    const metadata = JSON.stringify({
+      tracker: 'bridge',
+      pollCount: 0,
+      lastPolledAt: 0,
+      // No notificationEvent — bridge trackers do not set this field
+    });
+    insertBridgeTx('tx-bridge-fallback', 'PENDING', metadata);
+
+    const emitNotification = vi.fn();
+    const releaseReservation = vi.fn();
+
+    const tracker = createMockTracker({
+      checkStatus: vi.fn().mockResolvedValue({
+        state: 'COMPLETED',
+        details: { destTxHash: '0xdest' },
+        // No notificationEvent in details either
+      } satisfies AsyncTrackingResult),
+    });
+
+    const service = new AsyncPollingService(db, { emitNotification, releaseReservation });
+    service.registerTracker(tracker);
+    await service.pollAll();
+
+    // Should fall back to BRIDGE_COMPLETED (no notificationEvent in details)
+    expect(emitNotification).toHaveBeenCalledWith(
+      'BRIDGE_COMPLETED',
+      'w-poll-test',
+      expect.objectContaining({ txId: 'tx-bridge-fallback', destTxHash: '0xdest' }),
+    );
+    expect(releaseReservation).toHaveBeenCalledWith('tx-bridge-fallback');
+  });
+});

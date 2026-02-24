@@ -87,6 +87,8 @@ interface WalletTransaction {
   status: string;
   toAddress: string | null;
   amount: string | null;
+  formattedAmount: string | null;
+  amountUsd: string | null;
   network: string | null;
   txHash: string | null;
   createdAt: number | null;
@@ -112,6 +114,21 @@ interface WcPairingResult {
 interface WcPairingStatus {
   status: 'pending' | 'connected' | 'expired' | 'none';
   session?: WcSession | null;
+}
+
+interface StakingPosition {
+  protocol: 'lido' | 'jito';
+  chain: 'ethereum' | 'solana';
+  asset: string;
+  balance: string;
+  balanceUsd: string | null;
+  apy: string | null;
+  pendingUnstake: { amount: string; status: 'PENDING' | 'COMPLETED' | 'TIMEOUT'; requestedAt: number | null } | null;
+}
+
+interface StakingPositionsResponse {
+  walletId: string;
+  positions: StakingPosition[];
 }
 
 export function chainNetworkOptions(chain: string): { label: string; value: string }[] {
@@ -233,6 +250,7 @@ const DETAIL_TABS = [
   { key: 'overview', label: 'Overview' },
   { key: 'transactions', label: 'Transactions' },
   { key: 'owner', label: 'Owner' },
+  { key: 'staking', label: 'Staking' },
   { key: 'mcp', label: 'MCP' },
 ];
 
@@ -305,6 +323,8 @@ function WalletDetailView({ id }: { id: string }) {
   const activeDetailTab = useSignal('overview');
   const displayCurrency = useSignal<string>('USD');
   const displayRate = useSignal<number | null>(1);
+  const stakingPositions = useSignal<StakingPosition[]>([]);
+  const stakingLoading = useSignal(true);
 
   const fetchWallet = async () => {
     try {
@@ -454,6 +474,18 @@ function WalletDetailView({ id }: { id: string }) {
     return list;
   });
 
+  const fetchStaking = async () => {
+    stakingLoading.value = true;
+    try {
+      const result = await apiGet<StakingPositionsResponse>(API.ADMIN_WALLET_STAKING(id));
+      stakingPositions.value = result.positions ?? [];
+    } catch {
+      stakingPositions.value = [];
+    } finally {
+      stakingLoading.value = false;
+    }
+  };
+
   const fetchWcSession = async () => {
     wcSessionLoading.value = true;
     try {
@@ -602,6 +634,7 @@ function WalletDetailView({ id }: { id: string }) {
     fetchBalance();
     fetchTransactions();
     fetchWcSession();
+    fetchStaking();
     fetchApprovalSettings();
     fetchDisplayCurrency()
       .then(({ currency, rate }) => {
@@ -798,7 +831,7 @@ function WalletDetailView({ id }: { id: string }) {
                     <td>{tx.createdAt ? formatDate(tx.createdAt) : '\u2014'}</td>
                     <td><Badge variant="info">{tx.type}</Badge></td>
                     <td>{tx.toAddress ? formatAddress(tx.toAddress) : '\u2014'}</td>
-                    <td>{tx.amount ?? '\u2014'}</td>
+                    <td>{tx.amount ? (tx.formattedAmount ?? tx.amount) : '\u2014'}</td>
                     <td>{tx.network ?? '\u2014'}</td>
                     <td><Badge variant={txStatusVariant(tx.status)}>{tx.status}</Badge></td>
                     <td>
@@ -1014,6 +1047,93 @@ function WalletDetailView({ id }: { id: string }) {
   }
 
   // -------------------------------------------------------------------------
+  // Staking Tab
+  // -------------------------------------------------------------------------
+  function StakingTab() {
+    function protocolBadgeVariant(protocol: string): 'info' | 'neutral' {
+      if (protocol === 'lido') return 'info';
+      return 'neutral';
+    }
+
+    function unstakeStatusVariant(status: string): 'warning' | 'success' | 'danger' {
+      if (status === 'COMPLETED') return 'success';
+      if (status === 'TIMEOUT') return 'danger';
+      return 'warning';
+    }
+
+    return (
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
+          <h3 style={{ margin: 0 }}>Staking Positions</h3>
+          <Button variant="secondary" size="sm" onClick={fetchStaking} loading={stakingLoading.value}>
+            Refresh
+          </Button>
+        </div>
+
+        {stakingLoading.value ? (
+          <div class="stat-skeleton" style={{ height: '80px' }} />
+        ) : stakingPositions.value.length === 0 ? (
+          <EmptyState title="No staking positions" description="Stake ETH (Lido) or SOL (Jito) to see positions here." />
+        ) : (
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Protocol</th>
+                  <th>Asset</th>
+                  <th>Balance</th>
+                  <th>Balance (USD)</th>
+                  <th>APY</th>
+                  <th>Pending Unstake</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stakingPositions.value.map((pos) => (
+                  <tr key={`${pos.protocol}-${pos.chain}`}>
+                    <td>
+                      <Badge variant={protocolBadgeVariant(pos.protocol)}>
+                        {pos.protocol === 'lido' ? 'Lido' : 'Jito'}
+                      </Badge>
+                    </td>
+                    <td>{pos.asset}</td>
+                    <td>
+                      {pos.chain === 'ethereum'
+                        ? `${(Number(pos.balance) / 1e18).toFixed(6)} stETH`
+                        : `${(Number(pos.balance) / 1e9).toFixed(6)} JitoSOL`}
+                    </td>
+                    <td>
+                      {pos.balanceUsd
+                        ? formatWithDisplay(Number(pos.balanceUsd), displayCurrency.value, displayRate.value)
+                        : '\u2014'}
+                    </td>
+                    <td>{pos.apy ?? '\u2014'}</td>
+                    <td>
+                      {pos.pendingUnstake ? (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                          <Badge variant={unstakeStatusVariant(pos.pendingUnstake.status)}>
+                            {pos.pendingUnstake.status}
+                          </Badge>
+                          <span style={{ fontSize: '0.85em', color: 'var(--color-text-secondary)' }}>
+                            {pos.chain === 'ethereum'
+                              ? `${(Number(pos.pendingUnstake.amount) / 1e18).toFixed(4)} stETH`
+                              : `${(Number(pos.pendingUnstake.amount) / 1e9).toFixed(4)} JitoSOL`}
+                          </span>
+                        </span>
+                      ) : (
+                        '\u2014'
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // -------------------------------------------------------------------------
   // MCP Tab
   // -------------------------------------------------------------------------
   function McpTab() {
@@ -1128,6 +1248,7 @@ function WalletDetailView({ id }: { id: string }) {
           {activeDetailTab.value === 'overview' && <OverviewTab />}
           {activeDetailTab.value === 'transactions' && <TransactionsTab />}
           {activeDetailTab.value === 'owner' && <OwnerTab />}
+          {activeDetailTab.value === 'staking' && <StakingTab />}
           {activeDetailTab.value === 'mcp' && <McpTab />}
 
           <Modal

@@ -110,9 +110,12 @@ const mockSettingsResponse = {
     rate_limit_tx_rpm: '10',
     policy_defaults_delay_seconds: '300',
     policy_defaults_approval_timeout: '3600',
+  },
+  policy: {
     default_deny_tokens: 'true',
     default_deny_contracts: 'true',
     default_deny_spenders: 'false',
+    default_deny_x402_domains: 'true',
   },
   daemon: { log_level: 'info' },
   walletconnect: { project_id: '' },
@@ -759,7 +762,7 @@ describe('Settings coverage: field helpers', () => {
     mockApiCalls();
     await renderAndWait();
 
-    // default_deny_tokens is 'true' in security settings
+    // default_deny_tokens is 'true' in policy settings
     const tokensDenyCheckbox = document.querySelector('input[name="policy.default_deny_tokens"]') as HTMLInputElement;
     expect(tokensDenyCheckbox).toBeTruthy();
     expect(tokensDenyCheckbox.checked).toBe(true);
@@ -811,8 +814,8 @@ describe('Settings coverage: field helpers', () => {
         ...mockSettingsResponse.autostop,
         enabled: true as unknown as string, // actual boolean from API
       },
-      security: {
-        ...mockSettingsResponse.security,
+      policy: {
+        ...mockSettingsResponse.policy,
         default_deny_tokens: true as unknown as string, // boolean
       },
     };

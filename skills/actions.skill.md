@@ -2,8 +2,8 @@
 name: "WAIaaS Actions"
 description: "Action Provider framework: list providers, execute DeFi actions through the 6-stage transaction pipeline"
 category: "api"
-tags: [wallet, blockchain, defi, actions, waiass, jupiter, 0x, swap, lifi, bridge, cross-chain]
-version: "2.8.3"
+tags: [wallet, blockchain, defi, actions, waiass, jupiter, 0x, swap, lifi, bridge, cross-chain, lido, jito, staking, liquid-staking]
+version: "2.8.4"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]
@@ -656,7 +656,279 @@ async with WAIaaSClient(base_url="http://localhost:3100", token="wai_sess_...") 
     # Bridge status tracked automatically -- notifications sent on completion/failure
 ```
 
-## 6. Policy Integration
+## 6. Lido Liquid Staking (ETH -> stETH)
+
+The Lido Staking provider uses the [Lido Protocol](https://lido.fi/) to stake ETH and receive stETH (liquid staking token). Unstaking requests ETH withdrawal via the Lido Withdrawal Queue. Lido operates on Ethereum only.
+
+> AI agents must NEVER request the master password. Use only your session token.
+
+### Configuration
+
+Enable Lido Staking via **Admin UI > Settings > Actions > Lido Staking**, or environment variables. No API key is required.
+
+| Setting | Env Variable | Default | Description |
+| ------- | ------------ | ------- | ----------- |
+| Enabled | `WAIAAS_ACTIONS_LIDO_STAKING_ENABLED` | `false` | Enable Lido Staking provider |
+| stETH Address | `WAIAAS_ACTIONS_LIDO_STAKING_STETH_ADDRESS` | (auto) | Override stETH contract address (auto-detected from environment) |
+| Withdrawal Queue | `WAIAAS_ACTIONS_LIDO_STAKING_WITHDRAWAL_QUEUE_ADDRESS` | (auto) | Override Withdrawal Queue address (auto-detected from environment) |
+
+### Available Actions
+
+| Action | Description | Chain | Risk | Tier |
+| ------ | ----------- | ----- | ---- | ---- |
+| `stake` | Stake ETH to receive stETH via Lido protocol (submit). Immediate, no lock-up. | ethereum | medium | DELAY |
+| `unstake` | Request stETH to ETH withdrawal via Lido Withdrawal Queue. Takes 1-5 days to finalize. | ethereum | medium | DELAY |
+
+### Stake Parameters
+
+| Parameter | Type | Required | Description |
+| --------- | ---- | -------- | ----------- |
+| `amount` | string | Yes | Amount of ETH to stake (human-readable, e.g., `"1.0"` for 1 ETH). Converted to wei internally. |
+
+### Unstake Parameters
+
+| Parameter | Type | Required | Description |
+| --------- | ---- | -------- | ----------- |
+| `amount` | string | Yes | Amount of stETH to withdraw (human-readable, e.g., `"0.5"` for 0.5 stETH). Converted to wei internally. |
+
+### Chain Support
+
+- **Ethereum only** (mainnet and Holesky testnet)
+- Address auto-detection: `rpc.evm_default_network` + `deriveEnvironment()` determines mainnet vs Holesky addresses
+- Admin override: empty string default falls back to environment-derived addresses
+
+### Async Unstake Tracking
+
+Lido unstake is asynchronous -- the withdrawal request is submitted immediately, but ETH redemption takes 1-5 days:
+
+1. **PENDING** -- Withdrawal request submitted to Lido Withdrawal Queue
+2. **Polling** -- LidoWithdrawalTracker polls every 30s (480 attempts = 4 hours) using metadata.status field
+3. **COMPLETED** -- Withdrawal finalized, ETH available for claim
+4. **TIMEOUT** -- Not resolved after polling window
+
+**Notification events:**
+- `STAKING_UNSTAKE_COMPLETED` -- Unstake withdrawal finalized
+- `STAKING_UNSTAKE_TIMEOUT` -- Unstake not resolved after monitoring period
+
+### Example: Stake 1 ETH to stETH
+
+**REST API:**
+```bash
+curl -s -X POST http://localhost:3100/v1/actions/lido_staking/stake \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -d '{
+    "params": { "amount": "1.0" },
+    "network": "ethereum-mainnet"
+  }'
+```
+
+**MCP Tool:**
+```json
+{
+  "tool": "action_lido_staking_stake",
+  "params": { "amount": "1.0" },
+  "network": "ethereum-mainnet"
+}
+```
+
+**TypeScript SDK:**
+```typescript
+import { WAIaaSClient } from '@waiaas/sdk';
+
+const client = new WAIaaSClient({ baseUrl: 'http://localhost:3100', token: 'wai_sess_...' });
+
+const tx = await client.executeAction('lido_staking', 'stake', {
+  params: { amount: '1.0' },
+  network: 'ethereum-mainnet',
+});
+console.log('Transaction ID:', tx.id);
+```
+
+**Python SDK:**
+```python
+from waiaas import WAIaaSClient
+
+async with WAIaaSClient(base_url="http://localhost:3100", token="wai_sess_...") as client:
+    tx = await client.execute_action("lido_staking", "stake", {
+        "amount": "1.0",
+    }, network="ethereum-mainnet")
+    print("Transaction ID:", tx.id)
+```
+
+### Example: Unstake 0.5 stETH
+
+**REST API:**
+```bash
+curl -s -X POST http://localhost:3100/v1/actions/lido_staking/unstake \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -d '{
+    "params": { "amount": "0.5" },
+    "network": "ethereum-mainnet"
+  }'
+```
+
+**MCP Tool:**
+```json
+{
+  "tool": "action_lido_staking_unstake",
+  "params": { "amount": "0.5" },
+  "network": "ethereum-mainnet"
+}
+```
+
+**TypeScript SDK:**
+```typescript
+const tx = await client.executeAction('lido_staking', 'unstake', {
+  params: { amount: '0.5' },
+  network: 'ethereum-mainnet',
+});
+// Poll GET /v1/transactions/{tx.id} for async unstake status
+```
+
+**Python SDK:**
+```python
+tx = await client.execute_action("lido_staking", "unstake", {
+    "amount": "0.5",
+}, network="ethereum-mainnet")
+# Poll GET /v1/transactions/{tx.id} for async unstake status
+```
+
+## 7. Jito Liquid Staking (SOL -> JitoSOL)
+
+The Jito Staking provider uses the [Jito Stake Pool](https://www.jito.network/) to stake SOL and receive JitoSOL (liquid staking token). Unstaking burns JitoSOL to withdraw SOL with epoch boundary delay. Jito operates on Solana only.
+
+> AI agents must NEVER request the master password. Use only your session token.
+
+### Configuration
+
+Enable Jito Staking via **Admin UI > Settings > Actions > Jito Staking**, or environment variables. No API key is required.
+
+| Setting | Env Variable | Default | Description |
+| ------- | ------------ | ------- | ----------- |
+| Enabled | `WAIAAS_ACTIONS_JITO_STAKING_ENABLED` | `false` | Enable Jito Staking provider |
+| Stake Pool Address | `WAIAAS_ACTIONS_JITO_STAKING_STAKE_POOL_ADDRESS` | (auto) | Override Jito Stake Pool address (mainnet defaults) |
+| JitoSOL Mint | `WAIAAS_ACTIONS_JITO_STAKING_JITOSOL_MINT` | (auto) | Override JitoSOL mint address (mainnet defaults) |
+
+### Available Actions
+
+| Action | Description | Chain | Risk | Tier |
+| ------ | ----------- | ----- | ---- | ---- |
+| `stake` | Stake SOL to receive JitoSOL via Jito Stake Pool (DepositSol). Immediate, no lock-up. | solana | medium | DELAY |
+| `unstake` | Withdraw SOL from Jito Stake Pool by burning JitoSOL (WithdrawSol). Epoch boundary delay. | solana | medium | DELAY |
+
+### Stake Parameters
+
+| Parameter | Type | Required | Description |
+| --------- | ---- | -------- | ----------- |
+| `amount` | string | Yes | Amount of SOL to stake (human-readable, e.g., `"2.0"` for 2 SOL). Converted to lamports internally. |
+
+### Unstake Parameters
+
+| Parameter | Type | Required | Description |
+| --------- | ---- | -------- | ----------- |
+| `amount` | string | Yes | Amount of JitoSOL to withdraw (human-readable, e.g., `"1.5"` for 1.5 JitoSOL). Converted to lamports internally. |
+
+### Chain Support
+
+- **Solana only** (mainnet)
+- Mainnet-only addresses: `getJitoAddresses('mainnet')` always, testnet falls back to mainnet
+- Zero external Solana SDK dependencies -- pure TypeScript PDA derivation, base58, ATA
+
+### Async Unstake Tracking
+
+Jito unstake is asynchronous -- the withdrawal is submitted but SOL release happens at epoch boundaries:
+
+1. **PENDING** -- Withdrawal request submitted to Jito Stake Pool
+2. **Polling** -- JitoEpochTracker polls every 30s (240 attempts = 2 hours) using metadata.status field
+3. **COMPLETED** -- SOL released from stake pool
+4. **TIMEOUT** -- Not resolved after polling window
+
+**Notification events:**
+- `STAKING_UNSTAKE_COMPLETED` -- Unstake withdrawal completed
+- `STAKING_UNSTAKE_TIMEOUT` -- Unstake not resolved after monitoring period
+
+### Example: Stake 2 SOL to JitoSOL
+
+**REST API:**
+```bash
+curl -s -X POST http://localhost:3100/v1/actions/jito_staking/stake \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -d '{
+    "params": { "amount": "2.0" }
+  }'
+```
+
+**MCP Tool:**
+```json
+{
+  "tool": "action_jito_staking_stake",
+  "params": { "amount": "2.0" }
+}
+```
+
+**TypeScript SDK:**
+```typescript
+import { WAIaaSClient } from '@waiaas/sdk';
+
+const client = new WAIaaSClient({ baseUrl: 'http://localhost:3100', token: 'wai_sess_...' });
+
+const tx = await client.executeAction('jito_staking', 'stake', {
+  params: { amount: '2.0' },
+});
+console.log('Transaction ID:', tx.id);
+```
+
+**Python SDK:**
+```python
+from waiaas import WAIaaSClient
+
+async with WAIaaSClient(base_url="http://localhost:3100", token="wai_sess_...") as client:
+    tx = await client.execute_action("jito_staking", "stake", {
+        "amount": "2.0",
+    })
+    print("Transaction ID:", tx.id)
+```
+
+### Example: Unstake 1.5 JitoSOL
+
+**REST API:**
+```bash
+curl -s -X POST http://localhost:3100/v1/actions/jito_staking/unstake \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -d '{
+    "params": { "amount": "1.5" }
+  }'
+```
+
+**MCP Tool:**
+```json
+{
+  "tool": "action_jito_staking_unstake",
+  "params": { "amount": "1.5" }
+}
+```
+
+**TypeScript SDK:**
+```typescript
+const tx = await client.executeAction('jito_staking', 'unstake', {
+  params: { amount: '1.5' },
+});
+// Poll GET /v1/transactions/{tx.id} for async unstake status
+```
+
+**Python SDK:**
+```python
+tx = await client.execute_action("jito_staking", "unstake", {
+    "amount": "1.5",
+})
+# Poll GET /v1/transactions/{tx.id} for async unstake status
+```
+
+## 8. Policy Integration
 
 ### CONTRACT_WHITELIST
 
@@ -683,7 +955,7 @@ The swap/bridge input amount is converted to USD via IPriceOracle and evaluated 
 
 **LI.FI bridge reservation lifecycle:** Bridge amounts are reserved against the spending limit when the transaction is submitted. The reservation is released on terminal states (COMPLETED, FAILED, REFUNDED) but **held** on TIMEOUT to prevent double-spend during manual resolution. This means the spending budget is not freed until the bridge completes or fails definitively.
 
-## 7. Configuration via Admin Settings
+## 9. Configuration via Admin Settings
 
 Since v28.2, all action provider settings are managed via **Admin UI > Settings > Actions** (not config.toml). The Admin Settings UI provides:
 
@@ -705,7 +977,7 @@ The Admin UI shows a three-state status for each provider:
 - **Requires API Key** -- Provider is enabled but missing required API key (yellow, fires `ACTION_API_KEY_REQUIRED` notification)
 - **Inactive** -- Provider is disabled (gray)
 
-## 8. Error Reference
+## 10. Error Reference
 
 | Code | HTTP | Description | Recovery |
 |------|------|-------------|----------|
@@ -721,7 +993,7 @@ The Admin UI shows a three-state status for each provider:
 | `INVALID_INSTRUCTION` | 400 | Chain not supported by LI.FI integration. | Use one of the supported chains: solana, ethereum, polygon, arbitrum, optimism, base. |
 | `ACTION_API_ERROR` | 502 | LI.FI API returned an error. | Check LI.FI API status, verify parameters, retry. |
 
-## 9. MCP Auto-Registration
+## 11. MCP Auto-Registration
 
 When a provider has `mcpExpose: true` in its metadata, the MCP server automatically registers each action as an MCP tool using the naming convention:
 
@@ -729,11 +1001,15 @@ When a provider has `mcpExpose: true` in its metadata, the MCP server automatica
 action_{provider_name}_{action_name}
 ```
 
-**Current MCP tools:**
+**Current MCP tools (8 action tools):**
 - `action_jupiter_swap_swap` -- Jupiter Swap on Solana
 - `action_zerox_swap_swap` -- 0x Swap on EVM chains
 - `action_lifi_cross_swap` -- LI.FI Cross-Chain Swap (multi-chain)
 - `action_lifi_bridge` -- LI.FI Cross-Chain Bridge (multi-chain)
+- `action_lido_staking_stake` -- Lido ETH to stETH staking (Ethereum)
+- `action_lido_staking_unstake` -- Lido stETH to ETH withdrawal (Ethereum)
+- `action_jito_staking_stake` -- Jito SOL to JitoSOL staking (Solana)
+- `action_jito_staking_unstake` -- Jito JitoSOL to SOL withdrawal (Solana)
 
 Auto-registration happens after MCP server connection via `registerActionProviderTools()`. The tool list is refreshed on each session. If the REST API is unavailable, MCP enters degraded mode (14 built-in tools remain, action provider tools are skipped).
 
@@ -742,7 +1018,7 @@ MCP tool parameters:
 - `network` (optional string): Target network
 - `wallet_id` (optional string): Target wallet ID
 
-## 10. Related Skill Files
+## 12. Related Skill Files
 
 - **admin.skill.md** -- API key management, Admin Settings, daemon admin
 - **transactions.skill.md** -- 5-type transaction reference (actions execute as CONTRACT_CALL)

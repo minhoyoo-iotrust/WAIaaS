@@ -10,7 +10,7 @@
 
 ## Current State
 
-v28.2 0x EVM DEX Swap shipped (2026-02-24). 12-패키지 모노레포(packages/actions/ 신규) + Python SDK, ~188,500 LOC TypeScript, ~5,000 테스트 통과. MIT 라이선스, npm 10개 패키지(@waiaas/push-relay 추가) OIDC Trusted Publishing 발행, Sigstore provenance 배지 확보, Docker Hub/GHCR dual push(daemon + push-relay), 설계 문서 47개(신규 73/74/75 + 기존 44개 갱신) 교차 검증 PASS, 설계 부채 0건, 영문 README + CONTRIBUTING + 배포 가이드 + API 레퍼런스 + CHANGELOG 완비, @waiaas/skills npx 패키지 + examples/simple-agent 예제. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정(USD 기준, 12개 타입별 전용 폼, 누적 지출 한도 daily/monthly, 표시 통화 43개) → SOL/SPL/ETH/ERC-20 전송(네트워크 선택, USD 환산 정책 평가) → 컨트랙트 호출 → Approve → 배치 → 외부 dApp unsigned tx 서명(sign-only) → Action Provider 플러그인 실행 → x402 유료 API 자동 결제 → Owner 승인/거절(SIWS/SIWE + WalletConnect v2 QR 페어링 + 서명 요청 + Telegram Fallback 자동 전환) + Kill Switch 3-state 긴급 정지(6-step cascade + dual-auth 복구) + AutoStop 4-규칙 자동 정지 엔진 + 잔액 모니터링(LOW_BALANCE 사전 알림) + Telegram Bot 원격 관리(10개 명령어 + 2-Tier 인증 + i18n) + SDK/MCP로 프로그래밍 접근(18개 도구 + 스킬 리소스 + Action Provider 동적 도구) + Telegram/Discord/ntfy/Slack 알림(APPROVAL_CHANNEL_SWITCHED 추가) + Admin Web UI(`/admin`) 관리(Kill Switch 3-state UI + WalletConnect 세션 관리 페이지 + Telegram Users 관리 + AutoStop/Monitoring Settings + 12개 정책 폼 + PolicyRulesSummary 시각화) + Docker 원클릭 배포(Multi-stage + Secrets + non-root) + 토큰 레지스트리 관리 + API 스킬 파일(skills/ 7개) 제공까지 동작. **v1.8에서 추가:** VersionCheckService npm registry 24h 주기 자동 체크 + CLI stderr 업그레이드 알림(24h dedup, --quiet) + `waiaas upgrade` 7단계 시퀀스(--check/--to/--rollback) + BackupService DB+config 백업/복원(5개 보존) + 호환성 매트릭스(코드-DB 스키마 3-시나리오 판별) + Health API 확장(latestVersion/updateAvailable/schemaVersion) + Docker Watchtower+OCI 라벨 + GHCR 3-tier 태깅 + release-please 2-게이트 릴리스(Conventional Commits→Release PR→deploy 수동 승인) + SDK HealthResponse 타입 + 19건 E2E 통합 테스트.
+v28.4 Liquid Staking (Lido + Jito) shipped (2026-02-24). 12-패키지 모노레포(packages/actions/) + Python SDK, ~189,000 LOC TypeScript, ~5,000 테스트 통과. MIT 라이선스, npm 10개 패키지(@waiaas/push-relay 추가) OIDC Trusted Publishing 발행, Sigstore provenance 배지 확보, Docker Hub/GHCR dual push(daemon + push-relay), 설계 문서 47개(신규 73/74/75 + 기존 44개 갱신) 교차 검증 PASS, 설계 부채 0건, 영문 README + CONTRIBUTING + 배포 가이드 + API 레퍼런스 + CHANGELOG 완비, @waiaas/skills npx 패키지 + examples/simple-agent 예제. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정(USD 기준, 12개 타입별 전용 폼, 누적 지출 한도 daily/monthly, 표시 통화 43개) → SOL/SPL/ETH/ERC-20 전송(네트워크 선택, USD 환산 정책 평가) → 컨트랙트 호출 → Approve → 배치 → 외부 dApp unsigned tx 서명(sign-only) → Action Provider 플러그인 실행 → x402 유료 API 자동 결제 → Owner 승인/거절(SIWS/SIWE + WalletConnect v2 QR 페어링 + 서명 요청 + Telegram Fallback 자동 전환) + Kill Switch 3-state 긴급 정지(6-step cascade + dual-auth 복구) + AutoStop 4-규칙 자동 정지 엔진 + 잔액 모니터링(LOW_BALANCE 사전 알림) + Telegram Bot 원격 관리(10개 명령어 + 2-Tier 인증 + i18n) + SDK/MCP로 프로그래밍 접근(18개 도구 + 스킬 리소스 + Action Provider 동적 도구) + Telegram/Discord/ntfy/Slack 알림(APPROVAL_CHANNEL_SWITCHED 추가) + Admin Web UI(`/admin`) 관리(Kill Switch 3-state UI + WalletConnect 세션 관리 페이지 + Telegram Users 관리 + AutoStop/Monitoring Settings + 12개 정책 폼 + PolicyRulesSummary 시각화) + Docker 원클릭 배포(Multi-stage + Secrets + non-root) + 토큰 레지스트리 관리 + API 스킬 파일(skills/ 7개) 제공까지 동작. **v1.8에서 추가:** VersionCheckService npm registry 24h 주기 자동 체크 + CLI stderr 업그레이드 알림(24h dedup, --quiet) + `waiaas upgrade` 7단계 시퀀스(--check/--to/--rollback) + BackupService DB+config 백업/복원(5개 보존) + 호환성 매트릭스(코드-DB 스키마 3-시나리오 판별) + Health API 확장(latestVersion/updateAvailable/schemaVersion) + Docker Watchtower+OCI 라벨 + GHCR 3-tier 태깅 + release-please 2-게이트 릴리스(Conventional Commits→Release PR→deploy 수동 승인) + SDK HealthResponse 타입 + 19건 E2E 통합 테스트.
 
 **구현 로드맵:**
 - ✅ v1.1 코어 인프라 + 기본 전송 — shipped 2026-02-10
@@ -56,6 +56,8 @@ v28.2 0x EVM DEX Swap shipped (2026-02-24). 12-패키지 모노레포(packages/a
 - ✅ v28.0 기본 DeFi 프로토콜 설계 — shipped 2026-02-23 (5 plans, 25 requirements, 59 설계 결정)
 - ✅ v28.1 Jupiter Swap — shipped 2026-02-23 (6 plans, 17 requirements, ~187,250 LOC TS)
 - ✅ v28.2 0x EVM DEX Swap — shipped 2026-02-24 (7 plans, 22 requirements, ~188,500 LOC TS)
+- ✅ v28.3 LI.FI 크로스체인 브릿지 — shipped 2026-02-24 (6 plans, 22 requirements)
+- ✅ v28.4 Liquid Staking (Lido + Jito) — shipped 2026-02-24 (7 plans + 1 quick task, 25 requirements, ~189,000 LOC TS)
 
 **코드베이스 현황:**
 - 12-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/adapter-evm, @waiaas/cli, @waiaas/sdk, @waiaas/wallet-sdk, @waiaas/mcp, @waiaas/admin, @waiaas/push-relay, @waiaas/actions + waiaas (Python)
@@ -511,22 +513,16 @@ v28.2 0x EVM DEX Swap shipped (2026-02-24). 12-패키지 모노레포(packages/a
 - ✓ 데몬 자동 등록 — config.toml [actions] 8 keys + registerBuiltInProviders + MCP jupiter_swap 자동 노출 — v28.1 (JUP-12~14)
 - ✓ 정책 통합 — 6-stage pipeline CONTRACT_WHITELIST + SPENDING_LIMIT 자동 평가 (코드 변경 0) — v28.1 (JUP-15~17)
 
+- ✓ LidoStakingActionProvider — Lido 컨트랙트 직접 ABI 인코딩, ETH→stETH stake + Withdrawal Queue unstake — v28.4 (LIDO-01~06, PLCY-01~03)
+- ✓ JitoStakingActionProvider — SPL Stake Pool 프로그램, SOL→JitoSOL stake/unstake, 순수 TS PDA 유틸 — v28.4 (JITO-01~05)
+- ✓ IAsyncStatusTracker — LidoWithdrawalTracker + JitoEpochTracker + STAKING_UNSTAKE_COMPLETED/TIMEOUT 알림 — v28.4 (ASYNC-01~04)
+- ✓ Staking API — GET /v1/wallet/staking 포지션 조회 (APY + USD 환산 + pending unstake) — v28.4 (SAPI-01~03)
+- ✓ MCP 4 도구 자동 노출 + Admin UI 스테이킹 섹션 + actions.skill.md 문서화 — v28.4 (INTF-01~04)
+- ✓ Pipeline gap closure — bridge_status 기록 + actionProvider metadata 영속화 — v28.4 (Phase 257)
+
 ### 활성
 
-**Current Milestone: v28.2 0x EVM DEX Swap**
-
-**Goal:** 0x Swap API v2 (AllowanceHolder)를 ActionProvider로 구현하여, AI 에이전트가 EVM 체인(Ethereum, Base, Arbitrum 등 20개)에서 토큰 스왑을 정책 평가 하에 실행할 수 있는 상태. 동시에 빌트인 프로바이더 설정을 Admin Settings로 이관하고(#158), SDK executeAction() 메서드를 추가.
-
-**Target features:**
-- ZeroExSwapActionProvider (IActionProvider 구현체, 0x Swap API v2 AllowanceHolder 기반, 20개 EVM 체인)
-- ZeroExApiClient (단일 URL api.0x.org + chainId, 0x-api-key + 0x-version: v2 헤더)
-- AllowanceHolder 토큰 승인 (standard ERC-20 approve, EIP-712 불필요)
-- resolve() 배열 확장 (ContractCallRequest[] — [approve, swap] 순차 파이프라인)
-- Provider-trust 모델 (actionProvider 태그 → CONTRACT_WHITELIST 검사 skip)
-- Admin Settings Actions 페이지 (#158 — config.toml [actions] 폐지, SettingsService 단일 관리)
-- SDK executeAction() 메서드 (TS/Python SDK 신규)
-- ACTION_API_KEY_REQUIRED 알림 이벤트 (31번째 이벤트 타입)
-- 슬리피지 제어 (기본 1%, 상한 5%, Admin Settings 오버라이드)
+(No active milestone — use `/gsd:new-milestone` to start next)
 
 ### 범위 외
 
@@ -543,7 +539,7 @@ v28.2 0x EVM DEX Swap shipped (2026-02-24). 12-패키지 모노레포(packages/a
 
 ## 컨텍스트
 
-**누적:** 60 milestones (v0.1-v28.2), 250 phases, 539 plans, 1,485 requirements, 40 설계 문서(24-76), 8 objective 문서, ~188,500 LOC TS, ~5,000 테스트
+**누적:** 62 milestones (v0.1-v28.4), 257 phases, 552 plans, 1,532 requirements, 40 설계 문서(24-76), 8 objective 문서, ~189,000 LOC TS, ~5,000 테스트
 
 v0.1~v0.10 설계 완료 (2026-02-05~09). 44 페이즈, 110 플랜, 286 요구사항, 30 설계 문서(24-64).
 v1.0 구현 계획 수립 완료 (2026-02-09). 8개 objective 문서, 설계 부채 추적, 문서 매핑 검증.
@@ -950,6 +946,17 @@ v28.1 Jupiter Swap shipped (2026-02-23). 2 페이즈, 6 플랜, 17 요구사항,
 | evaluateTokenTier 4단계 CAIP-19 매칭 순서 | 정확→native:{chain}→native→raw 폴백, 토큰별 세밀 제어 | ✓ Good — v27.3 구현 |
 | parseDecimalToBigInt fixed-point multiplication | 부동소수점 없이 정밀 비교 | ✓ Good — v27.3 구현 |
 | NATIVE_DECIMALS 중복 정의 (DRY 위반) | cross-file 의존성 회피, 런타임 미영향 | ⚠️ Revisit — v27.3 tech debt |
+| Lido manual ABI encoding (no viem at provider level) | zerox-swap 패턴 일관성, 외부 의존성 제거 | ✓ Good — v28.4 구현 |
+| parseEthAmount decimal-to-wei via string split + BigInt | 부동소수점 없이 정밀 산술 | ✓ Good — v28.4 구현 |
+| Lido environment-based address switching (deriveEnvironment) | mainnet/Holesky 자동 전환, 설정 오버라이드 지원 | ✓ Good — v28.4 구현 |
+| Pure mathematical Ed25519 on-curve check | crypto.subtle importKey 불신뢰 대체 | ✓ Good — v28.4 구현 |
+| Zero external Solana SDK deps for PDA/base58/ATA | 순수 TypeScript 구현, 의존성 최소화 | ✓ Good — v28.4 구현 |
+| Dynamic notificationEvent in AsyncPollingService | tracker details.notificationEvent 오버라이드, BRIDGE_* 기본값 폴백 | ✓ Good — v28.4 구현 |
+| Metadata-based v1 tracking (no on-chain queries) | metadata.status 필드 기반 COMPLETED 감지 | ✓ Good — v28.4 구현 |
+| Staking API metadata aggregation (not RPC) | v1 balance estimation via transactions metadata | ✓ Good — v28.4 구현 |
+| Hardcoded APY for v1 (Lido ~3.5%, Jito ~7.5%) | 실시간 APY 조회 복잡도 회피, v2에서 개선 | ✓ Good — v28.4 구현 |
+| bridge_status enrollment after Stage 6 (fire-and-forget) | confirmed unstakes만 async tracking 진입 | ✓ Good — v28.4 구현 |
+| metadata UPDATE after Stage 1 (synchronous) | 포지션 조회 즉시 가능 | ✓ Good — v28.4 구현 |
 | sign-only tokenDecimals 미전달 | ParsedOperation에 decimals 없음, 설계 문서 기록 | — Pending — v27.3 known limitation |
 | APPROVE without OVERRIDE → SPENDING_LIMIT 평가 | token_limits 평가를 위해 기존 경로 수정 | ✓ Good — v27.3 구현 |
 | evaluateBatch tokenContext 미전달 | BATCH는 native 합산만, raw/USD만 적용 | ✓ Good — v27.3 구현 |
@@ -988,18 +995,9 @@ v28.1 shipped. Jupiter Aggregator REST API를 IActionProvider 프레임워크에
 
 v28.2 shipped. 0x Swap API v2를 IActionProvider 프레임워크에 통합하여 AI 에이전트가 19+ EVM 체인에서 DEX 토큰 스왑 수행. ZeroExApiClient(native fetch + Zod 검증) + ZeroExSwapActionProvider(AllowanceHolder 20체인 주소, 슬리피지 클램프) 구현. SettingsService SSoT 패턴, resolve() 배열 순차 파이프라인, provider-trust 정책 바이패스, Admin UI Actions 페이지 추가. 22/22 requirements PASS, 7 issue fixes.
 
-## Current Milestone: v28.3 LI.FI 크로스체인 브릿지
+## Shipped: v28.4 Liquid Staking (Lido + Jito)
 
-**Goal:** LI.FI 메타 애그리게이터를 IActionProvider로 구현하여 AI 에이전트가 Solana↔EVM / EVM↔EVM 크로스체인 브릿지+스왑을 정책 평가 하에 수행하고, DEFI-04 확정 설계에 따른 비동기 상태 추적 공통 인프라(IAsyncStatusTracker + AsyncPollingService)를 구축
-
-**Target features:**
-- LiFiActionProvider (bridge/swap/crossSwap 3 액션, 40+ 체인)
-- LiFiApiClient (/quote + /status, Zod 검증, extends ActionApiClient)
-- IAsyncStatusTracker 공통 인터페이스 + BridgeStatusTracker (2단계 폴링: 2시간+22시간)
-- AsyncPollingService (tracker 등록 + DB 기반 폴링 스케줄러)
-- DB v23 마이그레이션 (bridge_status 6-value + bridge_metadata + GAS_WAITING 11-state + partial index 2개)
-- 알림 이벤트 5개 추가 (BRIDGE_COMPLETED/FAILED/MONITORING_STARTED/TIMEOUT/REFUNDED)
-- MCP 2 도구 + SDK 지원 + 스킬 파일
+v28.4 shipped. Lido(ETH→stETH) + Jito(SOL→JitoSOL) Liquid Staking ActionProvider 구현. LidoStakingActionProvider(ABI 직접 인코딩, Withdrawal Queue unstake), JitoStakingActionProvider(SPL Stake Pool, 순수 TS PDA 유틸), IAsyncStatusTracker(LidoWithdrawalTracker + JitoEpochTracker + 동적 notificationEvent), GET /v1/wallet/staking 포지션 API(APY + USD 환산 + pending unstake), MCP 4 도구 자동 노출 + Admin UI 스테이킹 섹션 + actions.skill.md 문서화. Pipeline gap closure: bridge_status 기록 + actionProvider metadata 영속화. 25/25 requirements PASS.
 
 ---
-*최종 업데이트: 2026-02-24 after v28.3 milestone start*
+*최종 업데이트: 2026-02-24 after v28.4 milestone completion*

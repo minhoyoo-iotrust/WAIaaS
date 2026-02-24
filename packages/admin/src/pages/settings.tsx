@@ -591,28 +591,28 @@ export default function SettingsPage() {
                 label={keyToLabel('default_deny_tokens')}
                 name="policy.default_deny_tokens"
                 type="checkbox"
-                value={getEffectiveBoolValue('security', 'default_deny_tokens')}
+                value={getEffectiveBoolValue('policy', 'default_deny_tokens')}
                 onChange={(v) => handleFieldChange('policy.default_deny_tokens', v)}
               />
               <FormField
                 label={keyToLabel('default_deny_contracts')}
                 name="policy.default_deny_contracts"
                 type="checkbox"
-                value={getEffectiveBoolValue('security', 'default_deny_contracts')}
+                value={getEffectiveBoolValue('policy', 'default_deny_contracts')}
                 onChange={(v) => handleFieldChange('policy.default_deny_contracts', v)}
               />
               <FormField
                 label={keyToLabel('default_deny_spenders')}
                 name="policy.default_deny_spenders"
                 type="checkbox"
-                value={getEffectiveBoolValue('security', 'default_deny_spenders')}
+                value={getEffectiveBoolValue('policy', 'default_deny_spenders')}
                 onChange={(v) => handleFieldChange('policy.default_deny_spenders', v)}
               />
               <FormField
                 label={keyToLabel('default_deny_x402_domains')}
                 name="policy.default_deny_x402_domains"
                 type="checkbox"
-                value={getEffectiveBoolValue('security', 'default_deny_x402_domains')}
+                value={getEffectiveBoolValue('policy', 'default_deny_x402_domains')}
                 onChange={(v) => handleFieldChange('policy.default_deny_x402_domains', v)}
               />
             </div>

@@ -41,6 +41,8 @@ export interface HotReloadDeps {
   killSwitchService?: KillSwitchService | null;
   /** Duck-typed IncomingTxMonitorService to avoid circular imports */
   incomingTxMonitorService?: { updateConfig: (config: Partial<any>) => void } | null;
+  /** Duck-typed ActionProviderRegistry ref for hot-reload */
+  actionProviderRegistryRef?: { current: import('../action/action-provider-registry.js').ActionProviderRegistry | null } | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -90,6 +92,8 @@ const WALLETCONNECT_KEYS_PREFIX = 'walletconnect.';
 
 const INCOMING_KEYS_PREFIX = 'incoming.';
 
+const ACTIONS_KEYS_PREFIX = 'actions.';
+
 const TELEGRAM_BOT_KEYS = new Set([
   'telegram.bot_token',
   'telegram.locale',
@@ -123,6 +127,7 @@ export class HotReloadOrchestrator {
     const hasWalletConnectChanges = changedKeys.some((k) => k.startsWith(WALLETCONNECT_KEYS_PREFIX));
     const hasTelegramBotChanges = changedKeys.some((k) => TELEGRAM_BOT_KEYS.has(k));
     const hasIncomingChanges = changedKeys.some((k) => k.startsWith(INCOMING_KEYS_PREFIX));
+    const hasActionsChanges = changedKeys.some((k) => k.startsWith(ACTIONS_KEYS_PREFIX));
 
     const reloads: Promise<void>[] = [];
 
@@ -192,6 +197,14 @@ export class HotReloadOrchestrator {
       } catch (err) {
         console.warn('Hot-reload incoming monitor failed:', err);
       }
+    }
+
+    if (hasActionsChanges) {
+      reloads.push(
+        this.reloadActionProviders(changedKeys.filter((k) => k.startsWith(ACTIONS_KEYS_PREFIX))).catch((err) => {
+          console.warn('Hot-reload action providers failed:', err);
+        }),
+      );
     }
 
     await Promise.all(reloads);
@@ -430,6 +443,34 @@ export class HotReloadOrchestrator {
     ref.current.start();
 
     console.log('Hot-reload: Telegram Bot re-started with new settings');
+  }
+
+  /**
+   * Reload action providers when actions.* settings change.
+   * Unregisters all built-in providers, then re-registers enabled ones.
+   */
+  private async reloadActionProviders(_changedKeys: string[]): Promise<void> {
+    const ref = this.deps.actionProviderRegistryRef;
+    if (!ref?.current) return;
+
+    const registry = ref.current;
+    const ss = this.deps.settingsService;
+
+    // Built-in provider names (must match keys used in registerBuiltInProviders)
+    const BUILTIN_NAMES = ['jupiter_swap', 'zerox_swap', 'lifi', 'lido_staking', 'jito_staking'];
+
+    // Unregister all built-in providers first
+    for (const name of BUILTIN_NAMES) {
+      registry.unregister(name);
+    }
+
+    // Re-register enabled ones
+    const { registerBuiltInProviders } = await import('@waiaas/actions');
+    const result = registerBuiltInProviders(registry, ss);
+
+    console.log(
+      `Hot-reload: Action providers reloaded (${result.loaded.length} enabled: ${result.loaded.join(', ') || 'none'}, ${result.skipped.length} disabled: ${result.skipped.join(', ') || 'none'})`,
+    );
   }
 
   /**

@@ -56,6 +56,7 @@
 
 ## Milestone Completion
 
+- **Update objective status on milestone completion.** When a milestone is shipped, update the corresponding `internal/objectives/m{seq}-{sub}-{slug}.md` status header: `Status: PLANNED` → `SHIPPED`, add `Completed: YYYY-MM-DD`. Do this before creating the milestone PR.
 - **Create PR with `gh pr create`** when all phases are done. PR title: `Milestone v{X.Y}: {name}`. PR body: summary of phases, plans, key changes, and test results.
 - **Run `pnpm turbo run lint` and `pnpm turbo run typecheck` before creating the PR.** Lint/type errors in merged code block release-please PRs.
 - release-please manages version bumps + tags + CHANGELOG automatically (2-gate model).

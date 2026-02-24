@@ -187,6 +187,16 @@
 | 170 | BUG | HIGH | Admin UI Actions 페이지 접근 시 401 — sessionAuth 미스매치 | v28.4 | FIXED | 2026-02-24 |
 | 171 | BUG | HIGH | Admin UI apiCall 글로벌 401 핸들러가 비-admin 엔드포인트 401에도 로그아웃 트리거 | v28.3 | FIXED | 2026-02-24 |
 | 172 | BUG | HIGH | EVM IncomingTxMonitor getBlock(includeTransactions:true)가 L2 체인에서 타임아웃 | v28.3 | FIXED | 2026-02-24 |
+| 173 | BUG | HIGH | Admin UI 정책 기본값 체크박스가 항상 해제 상태로 표시 — policies.tsx 카테고리 불일치 | v28.4 | FIXED | 2026-02-24 |
+| 174 | ENHANCEMENT | HIGH | connect-info 프롬프트에 default-deny 상태 미포함 — 에이전트 잘못된 안내 | v28.4 | FIXED | 2026-02-24 |
+| 175 | BUG | HIGH | EVM IncomingSubscriber per-wallet 폴링 에러 시 무한 재시도 + 로그 스팸 | v28.4 | FIXED | 2026-02-24 |
+| 176 | BUG | HIGH | 액션 프로바이더 기본 비활성 + 런타임 활성화 시 레지스트리 미갱신 (핫 리로드 누락) | v28.5 | FIXED | 2026-02-24 |
+| 177 | ENHANCEMENT | MEDIUM | 지갑 상세 트랜잭션 목록 금액이 최소 단위(lamports/wei)로 표시 | v28.5 | FIXED | 2026-02-24 |
+| 178 | BUG | HIGH | Admin UI Actions 페이지에 LI.FI, Lido, Jito 프로바이더 미표시 — 하드코딩 누락 | v28.5 | FIXED | 2026-02-24 |
+| 179 | MISSING | MEDIUM | CoinGecko 가격 오라클 API 키 설정 Admin UI 누락 | v28.5 | FIXED | 2026-02-24 |
+| 180 | ENHANCEMENT | LOW | System 페이지 API Keys 섹션이 Actions 페이지와 중복 — 단일화 필요 | v28.5 | FIXED | 2026-02-24 |
+| 181 | BUG | CRITICAL | Admin UI 네비게이션 불가 — dirty-guard isDirty 크래시 (t.isDirty is not a function) | v28.5 | FIXED | 2026-02-24 |
+| 182 | ENHANCEMENT | LOW | Admin Settings 외부 서비스 도움 URL 추가 — API 키 발급처 안내 누락 | — | OPEN | — |
 
 ## Type Legend
 
@@ -198,9 +208,9 @@
 
 ## Summary
 
-- **OPEN:** 0
-- **FIXED:** 171
+- **OPEN:** 1
+- **FIXED:** 180
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 172
+- **Total:** 182

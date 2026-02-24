@@ -4,10 +4,15 @@
  * Exports registerBuiltInProviders() for daemon lifecycle integration
  * and individual provider classes for direct usage.
  */
-import type { IActionProvider } from '@waiaas/core';
+import type { IActionProvider, NetworkType } from '@waiaas/core';
+import { deriveEnvironment } from '@waiaas/core';
 import { JupiterSwapActionProvider } from './providers/jupiter-swap/index.js';
 import { ZeroExSwapActionProvider } from './providers/zerox-swap/index.js';
 import { LiFiActionProvider } from './providers/lifi/index.js';
+import { LidoStakingActionProvider } from './providers/lido-staking/index.js';
+import { getLidoAddresses, type LidoStakingConfig } from './providers/lido-staking/config.js';
+import { JitoStakingActionProvider } from './providers/jito-staking/index.js';
+import { getJitoAddresses, type JitoStakingConfig } from './providers/jito-staking/config.js';
 
 // Re-export provider classes
 export { JupiterSwapActionProvider } from './providers/jupiter-swap/index.js';
@@ -23,6 +28,16 @@ export { LIFI_DEFAULTS, LIFI_CHAIN_MAP, getLiFiChainId } from './providers/lifi/
 export type { LiFiConfig } from './providers/lifi/config.js';
 export { LiFiApiClient } from './providers/lifi/lifi-api-client.js';
 export { BridgeStatusTracker, BridgeMonitoringTracker } from './providers/lifi/bridge-status-tracker.js';
+
+export { LidoStakingActionProvider } from './providers/lido-staking/index.js';
+export { LIDO_STAKING_DEFAULTS, LIDO_MAINNET_ADDRESSES, LIDO_TESTNET_ADDRESSES, getLidoAddresses } from './providers/lido-staking/config.js';
+export type { LidoStakingConfig } from './providers/lido-staking/config.js';
+export { LidoWithdrawalTracker } from './providers/lido-staking/withdrawal-tracker.js';
+
+export { JitoStakingActionProvider } from './providers/jito-staking/index.js';
+export { JITO_STAKING_DEFAULTS, JITO_MAINNET_ADDRESSES, getJitoAddresses } from './providers/jito-staking/config.js';
+export type { JitoStakingConfig } from './providers/jito-staking/config.js';
+export { JitoEpochTracker } from './providers/jito-staking/epoch-tracker.js';
 
 // Re-export common utilities
 export { ActionApiClient } from './common/action-api-client.js';
@@ -115,6 +130,47 @@ export function registerBuiltInProviders(
           requestTimeoutMs: 15_000,
         };
         return new LiFiActionProvider(config);
+      },
+    },
+    {
+      key: 'lido_staking',
+      enabledKey: 'actions.lido_staking_enabled',
+      factory: () => {
+        // Resolve environment from registered rpc.evm_default_network setting
+        const evmNetwork = settingsReader.get('rpc.evm_default_network') || 'ethereum-mainnet';
+        const isTestnet = deriveEnvironment(evmNetwork as NetworkType) === 'testnet';
+        const addresses = getLidoAddresses(isTestnet ? 'testnet' : 'mainnet');
+
+        // Admin Settings overrides individual addresses; empty string falls back to environment default
+        const stethOverride = settingsReader.get('actions.lido_staking_steth_address');
+        const withdrawalOverride = settingsReader.get('actions.lido_staking_withdrawal_queue_address');
+
+        const config: LidoStakingConfig = {
+          enabled: true,
+          stethAddress: stethOverride || addresses.stethAddress,
+          withdrawalQueueAddress: withdrawalOverride || addresses.withdrawalQueueAddress,
+        };
+        return new LidoStakingActionProvider(config);
+      },
+    },
+    {
+      key: 'jito_staking',
+      enabledKey: 'actions.jito_staking_enabled',
+      factory: () => {
+        // Jito is mainnet-only -- no testnet pool exists.
+        // Read admin override addresses; empty string falls back to mainnet defaults.
+        const stakePoolOverride = settingsReader.get('actions.jito_staking_stake_pool_address');
+        const jitosolMintOverride = settingsReader.get('actions.jito_staking_jitosol_mint');
+
+        const addresses = getJitoAddresses('mainnet');
+
+        const config: JitoStakingConfig = {
+          enabled: true,
+          stakePoolAddress: stakePoolOverride || addresses.stakePoolAddress,
+          jitosolMint: jitosolMintOverride || addresses.jitosolMint,
+          stakePoolProgram: addresses.stakePoolProgram,
+        };
+        return new JitoStakingActionProvider(config);
       },
     },
   ];

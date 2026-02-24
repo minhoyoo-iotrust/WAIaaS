@@ -160,6 +160,8 @@ export const messages: Messages = {
     BRIDGE_MONITORING_STARTED: { title: '브릿지 모니터링 연장', body: '브릿지 전송 {txId}이(가) 2시간 내 완료되지 않았습니다. 확장 모니터링으로 전환합니다 (최대 22시간)' },
     BRIDGE_TIMEOUT: { title: '브릿지 전송 시간 초과', body: '브릿지 전송 {txId}이(가) 24시간 모니터링 후 시간 초과되었습니다. 수동 확인이 필요합니다. {lifiExplorerLink}' },
     BRIDGE_REFUNDED: { title: '브릿지 전송 환불', body: '크로스체인 전송 {txId}이(가) 브릿지 프로토콜에 의해 환불되었습니다: {substatusMessage}' },
+    STAKING_UNSTAKE_COMPLETED: { title: '스테이킹 언스테이크 완료', body: '언스테이크 요청 {txId}이(가) 완료되었습니다. 프로토콜: {protocol}. 출금이 가능합니다.' },
+    STAKING_UNSTAKE_TIMEOUT: { title: '스테이킹 언스테이크 시간 초과', body: '언스테이크 요청 {txId}이(가) 모니터링 후 시간 초과되었습니다. 프로토콜: {protocol}. 수동 확인이 필요할 수 있습니다.' },
   },
   // System messages
   system: {

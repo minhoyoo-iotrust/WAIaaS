@@ -302,7 +302,12 @@ export default function TransactionsPage() {
   useEffect(() => {
     const dirtyCount = Object.keys(dirty.value).filter((k) => k.startsWith('incoming.')).length;
     if (dirtyCount > 0) {
-      registerDirty('transactions-monitor');
+      registerDirty({
+        id: 'transactions-monitor',
+        isDirty: () => Object.keys(dirty.value).filter((k) => k.startsWith('incoming.')).length > 0,
+        save: handleSave,
+        discard: handleDiscard,
+      });
     } else {
       unregisterDirty('transactions-monitor');
     }

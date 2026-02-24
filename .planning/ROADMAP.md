@@ -22,6 +22,7 @@
 - ✅ **v28.1 Jupiter Swap** -- Phases 246-247 (shipped 2026-02-23)
 - ✅ **v28.2 0x EVM DEX Swap** -- Phases 248-250 (shipped 2026-02-24)
 - ✅ **v28.3 LI.FI 크로스체인 브릿지** -- Phases 251-253 (shipped 2026-02-24)
+- ✅ **v28.4 Liquid Staking (Lido + Jito)** -- Phases 254-257 (shipped 2026-02-24)
 
 ## Phases
 
@@ -257,5 +258,17 @@ See `.planning/milestones/v28.2-ROADMAP.md` for full details.
 - [x] Phase 253: 인터페이스 통합 (1/1 plan) -- completed 2026-02-24
 
 See `.planning/milestones/v28.3-ROADMAP.md` for full details.
+
+</details>
+
+<details>
+<summary>✅ v28.4 Liquid Staking (Lido + Jito) (Phases 254-257) -- SHIPPED 2026-02-24</summary>
+
+- [x] Phase 254: Lido EVM Staking Provider (2/2 plans) -- completed 2026-02-24
+- [x] Phase 255: Jito Solana Staking Provider (2/2 plans) -- completed 2026-02-24
+- [x] Phase 256: Staking API + Async Tracking + Interface Integration (3/3 plans) -- completed 2026-02-24
+- [x] Phase 257: Staking Pipeline Integration Fix (quick task) -- completed 2026-02-24
+
+See `.planning/milestones/v28.4-ROADMAP.md` for full details.
 
 </details>

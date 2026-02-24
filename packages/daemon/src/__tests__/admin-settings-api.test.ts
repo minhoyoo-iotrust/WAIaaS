@@ -3,12 +3,12 @@
  *
  * 18 tests covering:
  * GET /v1/admin/settings:
- *   1. Returns 200 with all 11 categories (including signing_sdk, telegram)
+ *   1. Returns 200 with all settings categories (including signing_sdk, telegram)
  *   2. Returns default values when no DB entries exist
  *   3. Returns masked boolean for credential keys
  *   4. Returns actual values for non-credential keys
  *   5. Returns 401 without masterAuth header
- *   6. Returns all 11 categories including signing_sdk and telegram with defaults
+ *   6. Returns all settings categories including signing_sdk and telegram with defaults
  *
  * PUT /v1/admin/settings:
  *   7. Returns 200 and updates a single setting
@@ -141,7 +141,7 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('GET /admin/settings', () => {
-  it('should return 200 with all 11 categories', async () => {
+  it('should return 200 with all settings categories', async () => {
     const config = fullConfig();
     const settingsService = new SettingsService({ db, config, masterPassword: TEST_PASSWORD });
     const app = createApp({
@@ -255,7 +255,7 @@ describe('GET /admin/settings', () => {
     expect(res.status).toBe(401);
   });
 
-  it('should return all 11 categories including signing_sdk and telegram with defaults', async () => {
+  it('should return all settings categories including signing_sdk and telegram with defaults', async () => {
     const config = fullConfig();
     const settingsService = new SettingsService({ db, config, masterPassword: TEST_PASSWORD });
     const app = createApp({

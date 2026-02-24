@@ -379,6 +379,50 @@ describe('GET /v1/connect-info', () => {
     expect(caps).not.toContain('x402');
   });
 
+  it('returns defaultDeny status reflecting default-deny toggles', async () => {
+    const res = await app.request('/v1/connect-info', {
+      headers: bearerHeader(sessionToken),
+    });
+    expect(res.status).toBe(200);
+
+    const body = await json(res);
+    const dd = body.defaultDeny as { tokenTransfers: boolean; contractCalls: boolean; tokenApprovals: boolean; x402Domains: boolean };
+
+    // No settingsService in test setup → defaults to true (deny)
+    expect(dd.tokenTransfers).toBe(true);
+    expect(dd.contractCalls).toBe(true);
+    expect(dd.tokenApprovals).toBe(true);
+    expect(dd.x402Domains).toBe(true);
+  });
+
+  it('prompt includes default-deny security section when active', async () => {
+    const res = await app.request('/v1/connect-info', {
+      headers: bearerHeader(sessionToken),
+    });
+    expect(res.status).toBe(200);
+
+    const body = await json(res);
+    const prompt = body.prompt as string;
+
+    expect(prompt).toContain('Security defaults (default-deny active)');
+    expect(prompt).toContain('Token transfers: DENY unless ALLOWED_TOKENS policy exists');
+    expect(prompt).toContain('Contract calls: DENY unless CONTRACT_WHITELIST policy exists');
+  });
+
+  it('policy summary reflects default-deny when no policies exist', async () => {
+    const res = await app.request('/v1/connect-info', {
+      headers: bearerHeader(sessionToken),
+    });
+    expect(res.status).toBe(200);
+
+    const body = await json(res);
+    const prompt = body.prompt as string;
+
+    // With default-deny active and no policies, should show default-deny message
+    expect(prompt).toContain('Default-deny active (whitelist policies required)');
+    expect(prompt).not.toContain('No restrictions');
+  });
+
   it('prompt contains wallet names, UUIDs, and addresses', async () => {
     const res = await app.request('/v1/connect-info', {
       headers: bearerHeader(sessionToken),

@@ -44,4 +44,5 @@ export const API = {
   WALLET_PATCH: (id: string) => `/v1/wallets/${id}`,
   TOKENS_RESOLVE: '/v1/tokens/resolve',
   ACTIONS_PROVIDERS: '/v1/actions/providers',
+  ADMIN_WALLET_STAKING: (id: string) => `/v1/admin/wallets/${id}/staking`,
 } as const;

@@ -1048,6 +1048,12 @@ export const ConnectInfoResponseSchema = z.object({
     network: z.string().nullable(),
   }))),
   capabilities: z.array(z.string()),
+  defaultDeny: z.object({
+    tokenTransfers: z.boolean().openapi({ description: 'Deny token transfers unless ALLOWED_TOKENS policy exists' }),
+    contractCalls: z.boolean().openapi({ description: 'Deny contract calls unless CONTRACT_WHITELIST policy exists' }),
+    tokenApprovals: z.boolean().openapi({ description: 'Deny token approvals unless APPROVED_SPENDERS policy exists' }),
+    x402Domains: z.boolean().openapi({ description: 'Deny x402 payments unless domain whitelist exists' }),
+  }).openapi({ description: 'Global default-deny policy toggles' }),
   daemon: z.object({
     version: z.string(),
     baseUrl: z.string(),
@@ -1118,3 +1124,26 @@ export const PatchWalletResponseSchema = z
     monitorIncoming: z.boolean(),
   })
   .openapi('PatchWalletResponse');
+
+// ---------------------------------------------------------------------------
+// Staking Position Schemas (GET /v1/wallet/staking)
+// ---------------------------------------------------------------------------
+
+export const StakingPositionSchema = z.object({
+  protocol: z.enum(['lido', 'jito']),
+  chain: z.enum(['ethereum', 'solana']),
+  asset: z.string(),           // 'stETH' or 'JitoSOL'
+  balance: z.string(),         // Token balance as string (decimal)
+  balanceUsd: z.string().nullable(), // USD equivalent or null if price unavailable
+  apy: z.string().nullable(),  // Current APY % as string or null
+  pendingUnstake: z.object({
+    amount: z.string(),
+    status: z.enum(['PENDING', 'COMPLETED', 'TIMEOUT']),
+    requestedAt: z.number().nullable(),
+  }).nullable(),
+}).openapi('StakingPosition');
+
+export const StakingPositionsResponseSchema = z.object({
+  walletId: z.string(),
+  positions: z.array(StakingPositionSchema),
+}).openapi('StakingPositionsResponse');

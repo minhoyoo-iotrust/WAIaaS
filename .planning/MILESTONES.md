@@ -1506,3 +1506,21 @@
 
 ---
 
+
+## v28.4 Liquid Staking (Lido + Jito) (Shipped: 2026-02-24)
+
+**Phases:** 254-257 (4 phases, 7 plans + 1 quick task)
+**Requirements:** 25/25 satisfied
+**Files:** 80 changed, +9,351 / -124 lines
+**Timeline:** 2026-02-24 (1 day, 47 commits)
+
+**Key accomplishments:**
+- LidoStakingActionProvider — Lido 컨트랙트 직접 ABI 인코딩, ETH→stETH 스테이킹 + Withdrawal Queue unstake
+- JitoStakingActionProvider — SPL Stake Pool 프로그램으로 SOL→JitoSOL 스테이킹/unstake, 순수 TS PDA 유틸
+- IAsyncStatusTracker — LidoWithdrawalTracker + JitoEpochTracker + STAKING_UNSTAKE_COMPLETED/TIMEOUT 알림
+- Staking API — GET /v1/wallet/staking 포지션 조회 (APY + USD 환산 + pending unstake)
+- MCP 4 도구 자동 노출 + Admin UI 스테이킹 섹션 + actions.skill.md Lido/Jito 문서화
+- Pipeline gap closure — bridge_status 기록 + actionProvider metadata 영속화
+
+---
+

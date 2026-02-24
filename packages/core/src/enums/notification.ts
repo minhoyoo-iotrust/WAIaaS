@@ -38,6 +38,8 @@ export const NOTIFICATION_EVENT_TYPES = [
   'BRIDGE_MONITORING_STARTED',
   'BRIDGE_TIMEOUT',
   'BRIDGE_REFUNDED',
+  'STAKING_UNSTAKE_COMPLETED',
+  'STAKING_UNSTAKE_TIMEOUT',
 ] as const;
 export type NotificationEventType = (typeof NOTIFICATION_EVENT_TYPES)[number];
 export const NotificationEventTypeEnum = z.enum(NOTIFICATION_EVENT_TYPES);

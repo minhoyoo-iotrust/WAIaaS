@@ -64,6 +64,7 @@ import type { KillSwitchState } from './routes/admin.js';
 import { tokenRegistryRoutes } from './routes/tokens.js';
 import { connectInfoRoutes } from './routes/connect-info.js';
 import { incomingRoutes } from './routes/incoming.js';
+import { createStakingRoutes } from './routes/staking.js';
 import { mcpTokenRoutes } from './routes/mcp.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
 import type { DaemonConfig } from '../infrastructure/config/loader.js';
@@ -403,6 +404,18 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         priceOracle: deps.priceOracle,
         forexRateService: deps.forexRateService,
         settingsService: deps.settingsService,
+      }),
+    );
+  }
+
+  // Register staking position routes (sessionAuth via /v1/wallet/* wildcard)
+  if (deps.db) {
+    app.route(
+      '/v1',
+      createStakingRoutes({
+        db: deps.db,
+        sqlite: deps.sqlite,
+        priceOracle: deps.priceOracle,
       }),
     );
   }
