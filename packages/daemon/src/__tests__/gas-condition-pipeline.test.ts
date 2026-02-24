@@ -290,7 +290,8 @@ describe('AsyncPollingService: gas-condition CANCELLED (maxAttempts timeout)', (
       state: 'PENDING', // won't be called because maxAttempts exceeded
     });
 
-    const service = new AsyncPollingService(db, { emitNotification: vi.fn() });
+    const emitNotification = vi.fn();
+    const service = new AsyncPollingService(db, { emitNotification });
     service.registerTracker(tracker);
     await service.pollAll();
 
@@ -299,6 +300,13 @@ describe('AsyncPollingService: gas-condition CANCELLED (maxAttempts timeout)', (
 
     // checkStatus should NOT have been called (maxAttempts exceeded)
     expect(tracker.checkStatus).not.toHaveBeenCalled();
+
+    // TX_CANCELLED notification emitted
+    expect(emitNotification).toHaveBeenCalledWith('TX_CANCELLED', 'w-gas-test', expect.objectContaining({
+      txId: 'tx-gas-cancel',
+      reason: 'gas-condition-timeout',
+      tracker: 'gas-condition',
+    }));
   });
 });
 
@@ -321,13 +329,21 @@ describe('AsyncPollingService: gas-condition TIMEOUT result', () => {
       details: { reason: 'timeout' },
     });
 
-    const service = new AsyncPollingService(db, { emitNotification: vi.fn() });
+    const emitNotification = vi.fn();
+    const service = new AsyncPollingService(db, { emitNotification });
     service.registerTracker(tracker);
     await service.pollAll();
 
     const tx = getTx('tx-gas-timeout-result');
     // timeoutTransition = 'CANCELLED' -> status should be CANCELLED
     expect(tx.status).toBe('CANCELLED');
+
+    // TX_CANCELLED notification emitted on TIMEOUT -> CANCELLED
+    expect(emitNotification).toHaveBeenCalledWith('TX_CANCELLED', 'w-gas-test', expect.objectContaining({
+      txId: 'tx-gas-timeout-result',
+      reason: 'gas-condition-timeout',
+      tracker: 'gas-condition',
+    }));
   });
 });
 

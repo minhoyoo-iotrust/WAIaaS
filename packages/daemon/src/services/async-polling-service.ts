@@ -181,6 +181,15 @@ export class AsyncPollingService {
         })
         .where(eq(transactions.id, tx.id))
         .run();
+
+      // Emit TX_CANCELLED notification for gas-condition timeout
+      if (tx.walletId) {
+        this.callbacks?.emitNotification?.('TX_CANCELLED', tx.walletId, {
+          txId: tx.id,
+          reason: 'gas-condition-timeout',
+          tracker: tracker.name,
+        });
+      }
     } else if (tracker.timeoutTransition === 'BRIDGE_MONITORING') {
       // Transition to reduced-frequency monitoring
       const newMeta = {
