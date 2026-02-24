@@ -219,6 +219,8 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, NotificationCateg
   BRIDGE_MONITORING_STARTED: 'transaction',
   BRIDGE_TIMEOUT: 'transaction',
   BRIDGE_REFUNDED: 'transaction',
+  STAKING_UNSTAKE_COMPLETED: 'transaction',
+  STAKING_UNSTAKE_TIMEOUT: 'transaction',
 };
 
 // ---------------------------------------------------------------------------
@@ -262,6 +264,8 @@ export const EVENT_DESCRIPTIONS: Record<NotificationEventType, string> = {
   BRIDGE_MONITORING_STARTED: 'Bridge monitoring extended to reduced frequency',
   BRIDGE_TIMEOUT: 'Bridge transfer timed out after 24 hours',
   BRIDGE_REFUNDED: 'Bridge transfer refunded by protocol',
+  STAKING_UNSTAKE_COMPLETED: 'Staking unstake request completed',
+  STAKING_UNSTAKE_TIMEOUT: 'Staking unstake monitoring timed out',
 };
 
 // ---------------------------------------------------------------------------

@@ -221,9 +221,10 @@ export class AsyncPollingService {
         .where(eq(transactions.id, tx.id))
         .run();
 
-      // Emit BRIDGE_TIMEOUT — reservation NOT released (funds may be in limbo)
+      // Emit timeout notification — staking trackers include notificationEvent in metadata
+      const timeoutEventType = (metadata.notificationEvent as string) ?? 'BRIDGE_TIMEOUT';
       if (tx.walletId) {
-        this.callbacks?.emitNotification?.('BRIDGE_TIMEOUT', tx.walletId, {
+        this.callbacks?.emitNotification?.(timeoutEventType, tx.walletId, {
           txId: tx.id,
           ...newMeta,
         });
@@ -267,8 +268,8 @@ export class AsyncPollingService {
         // Release SPENDING_LIMIT reservation (COMPLETED/REFUNDED both release)
         this.callbacks?.releaseReservation?.(tx.id);
 
-        // Emit notification
-        const eventType = isRefunded ? 'BRIDGE_REFUNDED' : 'BRIDGE_COMPLETED';
+        // Emit notification — staking trackers set notificationEvent in details
+        const eventType = (updatedMetadata.notificationEvent as string) ?? (isRefunded ? 'BRIDGE_REFUNDED' : 'BRIDGE_COMPLETED');
         if (tx.walletId) {
           this.callbacks?.emitNotification?.(eventType, tx.walletId, {
             txId: tx.id,
@@ -291,9 +292,10 @@ export class AsyncPollingService {
         // Release SPENDING_LIMIT reservation (FAILED = funds not deducted)
         this.callbacks?.releaseReservation?.(tx.id);
 
-        // Emit notification
+        // Emit notification — staking trackers may set notificationEvent in details
         if (tx.walletId) {
-          this.callbacks?.emitNotification?.('BRIDGE_FAILED', tx.walletId, {
+          const failEventType = (updatedMetadata.notificationEvent as string) ?? 'BRIDGE_FAILED';
+          this.callbacks?.emitNotification?.(failEventType, tx.walletId, {
             txId: tx.id,
             ...updatedMetadata,
           });

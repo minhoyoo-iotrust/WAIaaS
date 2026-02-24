@@ -214,6 +214,8 @@ export const messages: Messages = {
     BRIDGE_MONITORING_STARTED: { title: 'Bridge Monitoring Extended', body: 'Bridge transfer {txId} not completed after 2 hours. Switching to extended monitoring (up to 22 hours)' },
     BRIDGE_TIMEOUT: { title: 'Bridge Transfer Timeout', body: 'Bridge transfer {txId} timed out after 24 hours of monitoring. Manual verification required. {lifiExplorerLink}' },
     BRIDGE_REFUNDED: { title: 'Bridge Transfer Refunded', body: 'Cross-chain transfer {txId} was refunded by the bridge protocol: {substatusMessage}' },
+    STAKING_UNSTAKE_COMPLETED: { title: 'Staking Unstake Completed', body: 'Unstake request {txId} has been completed. Protocol: {protocol}. Funds are now available for withdrawal.' },
+    STAKING_UNSTAKE_TIMEOUT: { title: 'Staking Unstake Timeout', body: 'Unstake request {txId} timed out after monitoring. Protocol: {protocol}. Manual verification may be required.' },
   },
   // System messages
   system: {

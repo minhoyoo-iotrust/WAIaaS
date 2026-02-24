@@ -961,6 +961,26 @@ export class DaemonLifecycle {
     }
 
     // ------------------------------------------------------------------
+    // Step 4f-3: Register staking status trackers when lido/jito is enabled
+    // ------------------------------------------------------------------
+    if (this._asyncPollingService) {
+      try {
+        if (this._settingsService?.get('actions.lido_staking_enabled') === 'true') {
+          const { LidoWithdrawalTracker } = await import('@waiaas/actions');
+          this._asyncPollingService.registerTracker(new LidoWithdrawalTracker());
+          console.debug('Step 4f-3: Lido withdrawal tracker registered');
+        }
+        if (this._settingsService?.get('actions.jito_staking_enabled') === 'true') {
+          const { JitoEpochTracker } = await import('@waiaas/actions');
+          this._asyncPollingService.registerTracker(new JitoEpochTracker());
+          console.debug('Step 4f-3: Jito epoch tracker registered');
+        }
+      } catch (err) {
+        console.warn('Step 4f-3 (fail-soft): Staking tracker registration failed:', err);
+      }
+    }
+
+    // ------------------------------------------------------------------
     // Step 4g: VersionCheckService (create before Step 5 for Health endpoint)
     // ------------------------------------------------------------------
     if (this.sqlite && this._config!.daemon.update_check) {
