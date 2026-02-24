@@ -513,20 +513,18 @@ v28.2 0x EVM DEX Swap shipped (2026-02-24). 12-패키지 모노레포(packages/a
 
 ### 활성
 
-**Current Milestone: v28.2 0x EVM DEX Swap**
+**Current Milestone: v28.4 Liquid Staking (Lido + Jito)**
 
-**Goal:** 0x Swap API v2 (AllowanceHolder)를 ActionProvider로 구현하여, AI 에이전트가 EVM 체인(Ethereum, Base, Arbitrum 등 20개)에서 토큰 스왑을 정책 평가 하에 실행할 수 있는 상태. 동시에 빌트인 프로바이더 설정을 Admin Settings로 이관하고(#158), SDK executeAction() 메서드를 추가.
+**Goal:** Lido(ETH→stETH)와 Jito(SOL→JitoSOL) Liquid Staking ActionProvider를 구현하여, AI 에이전트가 유휴 ETH/SOL을 정책 평가 하에 스테이킹하고 유동성 토큰을 받을 수 있는 상태.
 
 **Target features:**
-- ZeroExSwapActionProvider (IActionProvider 구현체, 0x Swap API v2 AllowanceHolder 기반, 20개 EVM 체인)
-- ZeroExApiClient (단일 URL api.0x.org + chainId, 0x-api-key + 0x-version: v2 헤더)
-- AllowanceHolder 토큰 승인 (standard ERC-20 approve, EIP-712 불필요)
-- resolve() 배열 확장 (ContractCallRequest[] — [approve, swap] 순차 파이프라인)
-- Provider-trust 모델 (actionProvider 태그 → CONTRACT_WHITELIST 검사 skip)
-- Admin Settings Actions 페이지 (#158 — config.toml [actions] 폐지, SettingsService 단일 관리)
-- SDK executeAction() 메서드 (TS/Python SDK 신규)
-- ACTION_API_KEY_REQUIRED 알림 이벤트 (31번째 이벤트 타입)
-- 슬리피지 제어 (기본 1%, 상한 5%, Admin Settings 오버라이드)
+- LidoStakingActionProvider (EVM, stake ETH→stETH, unstake stETH→ETH via Withdrawal Queue)
+- JitoStakingActionProvider (Solana, stake SOL→JitoSOL, unstake JitoSOL→SOL via SPL Stake Pool)
+- 스테이킹 상태 조회 API (GET /v1/wallets/:id/staking)
+- MCP 4개 도구 자동 노출 + SDK executeAction 지원
+- Admin UI 대시보드 스테이킹 포지션 표시
+- 정책 연동 (SPENDING_LIMIT, CONTRACT_WHITELIST)
+- unstake 비동기 추적 (IAsyncStatusTracker 패턴)
 
 ### 범위 외
 
@@ -988,18 +986,18 @@ v28.1 shipped. Jupiter Aggregator REST API를 IActionProvider 프레임워크에
 
 v28.2 shipped. 0x Swap API v2를 IActionProvider 프레임워크에 통합하여 AI 에이전트가 19+ EVM 체인에서 DEX 토큰 스왑 수행. ZeroExApiClient(native fetch + Zod 검증) + ZeroExSwapActionProvider(AllowanceHolder 20체인 주소, 슬리피지 클램프) 구현. SettingsService SSoT 패턴, resolve() 배열 순차 파이프라인, provider-trust 정책 바이패스, Admin UI Actions 페이지 추가. 22/22 requirements PASS, 7 issue fixes.
 
-## Current Milestone: v28.3 LI.FI 크로스체인 브릿지
+## Current Milestone: v28.4 Liquid Staking (Lido + Jito)
 
-**Goal:** LI.FI 메타 애그리게이터를 IActionProvider로 구현하여 AI 에이전트가 Solana↔EVM / EVM↔EVM 크로스체인 브릿지+스왑을 정책 평가 하에 수행하고, DEFI-04 확정 설계에 따른 비동기 상태 추적 공통 인프라(IAsyncStatusTracker + AsyncPollingService)를 구축
+**Goal:** Action Provider 프레임워크 위에 Lido(ETH→stETH)와 Jito(SOL→JitoSOL) Liquid Staking을 구현하여, AI 에이전트가 유휴 ETH/SOL을 정책 평가 하에 스테이킹하고 유동성 토큰을 받을 수 있는 상태.
 
 **Target features:**
-- LiFiActionProvider (bridge/swap/crossSwap 3 액션, 40+ 체인)
-- LiFiApiClient (/quote + /status, Zod 검증, extends ActionApiClient)
-- IAsyncStatusTracker 공통 인터페이스 + BridgeStatusTracker (2단계 폴링: 2시간+22시간)
-- AsyncPollingService (tracker 등록 + DB 기반 폴링 스케줄러)
-- DB v23 마이그레이션 (bridge_status 6-value + bridge_metadata + GAS_WAITING 11-state + partial index 2개)
-- 알림 이벤트 5개 추가 (BRIDGE_COMPLETED/FAILED/MONITORING_STARTED/TIMEOUT/REFUNDED)
-- MCP 2 도구 + SDK 지원 + 스킬 파일
+- LidoStakingActionProvider — stake(ETH→stETH), unstake(stETH→ETH via Withdrawal Queue)
+- JitoStakingActionProvider — stake(SOL→JitoSOL), unstake(JitoSOL→SOL via SPL Stake Pool)
+- 스테이킹 상태 조회 API (GET /v1/wallets/:id/staking — 포지션, APY, USD 환산)
+- MCP 4개 도구 자동 노출 (action_lido_stake/unstake, action_jito_stake/unstake)
+- Admin UI 대시보드 스테이킹 포지션 표시
+- 정책 연동 (SPENDING_LIMIT USD 환산, CONTRACT_WHITELIST)
+- unstake 비동기 추적 (IAsyncStatusTracker 공통 인터페이스 활용)
 
 ---
-*최종 업데이트: 2026-02-24 after v28.3 milestone start*
+*최종 업데이트: 2026-02-24 after v28.4 milestone start*

@@ -5,44 +5,38 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v28.3 Phase 253 -- 인터페이스 통합 (COMPLETED)
+**Current focus:** v28.4 — Liquid Staking (Lido + Jito)
 
 ## Current Position
 
-Phase: 253 of 253 (인터페이스 통합)
-Plan: 1 of 1 in current phase
-Status: All plans executed
-Last activity: 2026-02-24 -- Phase 253 plan 01 executed (5 MCP LiFi tests, actions.skill.md LI.FI documentation)
-
-Progress: [██████████] 100%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-24 — Milestone v28.4 started
 
 ## Performance Metrics
 
-**Cumulative:** 60 milestones, 252 phases completed, 544 plans, 1,485 reqs, ~5,000+ tests, ~189,000 LOC TS
+**Cumulative:** 60 milestones, 253 phases completed, 544 plans, 1,485 reqs, ~5,000+ tests, ~189,000 LOC TS
 
-**This milestone:** 3 phases, 8 plans, 23 requirements -- Phases 251-253 DONE
+**This milestone:** 0 phases, 0 plans, 0 requirements — Starting
 
 ## Accumulated Context
 
 ### Decisions
 
-- DB v23: bridge_status CHECK values hardcoded in schema.ts (avoid circular dep with @waiaas/actions)
+(New milestone — carry forward relevant decisions from v28.3)
 - AsyncPollingService uses sequential processing (no Promise.all) to respect external API rate limits
-- GAS_WAITING resolves to 'gas-condition' tracker; bridge TX defaults to 'bridge' tracker
-- handleTimeout CANCELLED path updates transactions.status (not bridge_status)
-- daemon.ts handler uses async/await pattern to match BackgroundWorkers void | Promise<void> type
-- LiFiApiClient: chain IDs as number (not string|number) since LIFI_CHAIN_MAP values are all numbers
-- Shared mapLiFiStatus() function used by both BridgeStatusTracker and BridgeMonitoringTracker (code DRY)
-- Callback integration tests added to existing async-polling-service.test.ts (not separate file) for setup reuse
-- NotificationService.notify() uses positional args: (eventType, walletId, vars?, details?) -- not named object
-- BRIDGE_MONITORING transition sets metadata.tracker='bridge-monitoring' for BridgeMonitoringTracker pickup
+- IAsyncStatusTracker 공통 인터페이스 + AsyncPollingService DB 기반 폴링 스케줄러 available (v28.3)
+- resolve() 배열 순차 파이프라인 — ContractCallRequest[] 지원 (v28.2)
+- provider-trust 정책 바이패스 — actionProvider 태그 시 CONTRACT_WHITELIST skip (v28.2)
+- SettingsService SSoT — Admin Settings > Actions 페이지에서 빌트인 프로바이더 런타임 설정 (v28.2)
 
 ### Blockers/Concerns
 
-- #164: IncomingTxMonitorService가 environment를 네트워크로 사용 -- 전체 네트워크 미구독 (MEDIUM)
+- #164: IncomingTxMonitorService가 environment를 네트워크로 사용 — 전체 네트워크 미구독 (MEDIUM)
 
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Phase 253 completed -- all phases in milestone v28.3 complete, ready for verification
+Stopped at: Milestone v28.4 initialized, defining requirements
 Resume file: None
