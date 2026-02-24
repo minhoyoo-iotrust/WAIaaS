@@ -120,22 +120,75 @@ export function base58Encode(bytes: Uint8Array): string {
 // Ed25519 on-curve check + PDA derivation
 // ---------------------------------------------------------------------------
 
+// Ed25519 prime: p = 2^255 - 19
+const ED25519_P = (1n << 255n) - 19n;
+
+// Ed25519 curve constant d = -121665/121666 mod p
+// d = -121665 * modInverse(121666, p) mod p
+const ED25519_D = 37095705934669439343138083508754565189542113879843219016388785533085940283555n;
+
 /**
- * Check if a 32-byte point is on the Ed25519 curve using Node.js 22 crypto.subtle.
+ * Modular exponentiation: base^exp mod m using square-and-multiply.
  */
-async function isOnCurve(point: Uint8Array): Promise<boolean> {
-  try {
-    await crypto.subtle.importKey(
-      'raw',
-      point.buffer.slice(point.byteOffset, point.byteOffset + point.byteLength) as ArrayBuffer,
-      { name: 'Ed25519' },
-      false,
-      ['verify'],
-    );
-    return true;
-  } catch {
-    return false;
+function modPow(base: bigint, exp: bigint, m: bigint): bigint {
+  let result = 1n;
+  base = ((base % m) + m) % m;
+  while (exp > 0n) {
+    if (exp & 1n) result = (result * base) % m;
+    exp >>= 1n;
+    base = (base * base) % m;
   }
+  return result;
+}
+
+/**
+ * Check if a 32-byte compressed Ed25519 point represents a valid curve point.
+ *
+ * Ed25519 encoding: 32 bytes, little-endian y-coordinate, high bit of last byte = sign of x.
+ * A point is on curve if we can recover x from y using: x^2 = (y^2 - 1) / (d*y^2 + 1) mod p
+ * and the square root exists.
+ */
+function isOnCurve(point: Uint8Array): boolean {
+  if (point.length !== 32) return false;
+
+  // Decode y from little-endian bytes (clear the sign bit from the last byte)
+  const lastByte = point[31]!;
+  const yBytes = new Uint8Array(point);
+  yBytes[31] = lastByte & 0x7f; // clear sign bit
+
+  let y = 0n;
+  for (let i = 0; i < 32; i++) {
+    y |= BigInt(yBytes[i]!) << BigInt(i * 8);
+  }
+
+  // y must be < p
+  if (y >= ED25519_P) return false;
+
+  // Compute x^2 = (y^2 - 1) / (d*y^2 + 1) mod p
+  const y2 = (y * y) % ED25519_P;
+  const numerator = ((y2 - 1n) % ED25519_P + ED25519_P) % ED25519_P;
+  const denominator = ((ED25519_D * y2 + 1n) % ED25519_P + ED25519_P) % ED25519_P;
+
+  // denominator inverse: denom^(p-2) mod p (Fermat's little theorem)
+  const denomInv = modPow(denominator, ED25519_P - 2n, ED25519_P);
+  const x2 = (numerator * denomInv) % ED25519_P;
+
+  if (x2 === 0n) {
+    // x = 0, valid if sign bit is 0
+    return (lastByte & 0x80) === 0;
+  }
+
+  // Check if x^2 has a square root mod p
+  // x = x2^((p+3)/8) mod p (since p ≡ 5 mod 8)
+  const x = modPow(x2, (ED25519_P + 3n) / 8n, ED25519_P);
+
+  if ((x * x) % ED25519_P === x2) return true;
+
+  // Try x * sqrt(-1): sqrt(-1) = 2^((p-1)/4) mod p
+  const sqrtM1 = modPow(2n, (ED25519_P - 1n) / 4n, ED25519_P);
+  const x2Alt = (x * sqrtM1) % ED25519_P;
+
+  return (x2Alt * x2Alt) % ED25519_P === x2;
 }
 
 /**
@@ -172,7 +225,7 @@ export async function findProgramAddress(
     const hash = createHash('sha256').update(buffer).digest();
     const hashBytes = new Uint8Array(hash);
 
-    if (!(await isOnCurve(hashBytes))) {
+    if (!isOnCurve(hashBytes)) {
       return [hashBytes, bump];
     }
   }
