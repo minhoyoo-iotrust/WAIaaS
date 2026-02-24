@@ -171,6 +171,11 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'actions.lifi_api_base_url', category: 'actions', configPath: 'actions.lifi_api_base_url', defaultValue: 'https://li.quest/v1', isCredential: false },
   { key: 'actions.lifi_default_slippage_pct', category: 'actions', configPath: 'actions.lifi_default_slippage_pct', defaultValue: '0.03', isCredential: false },
   { key: 'actions.lifi_max_slippage_pct', category: 'actions', configPath: 'actions.lifi_max_slippage_pct', defaultValue: '0.05', isCredential: false },
+
+  // --- Lido Staking ---
+  { key: 'actions.lido_staking_enabled', category: 'actions', configPath: 'actions.lido_staking_enabled', defaultValue: 'false', isCredential: false },
+  { key: 'actions.lido_staking_steth_address', category: 'actions', configPath: 'actions.lido_staking_steth_address', defaultValue: '', isCredential: false },
+  { key: 'actions.lido_staking_withdrawal_queue_address', category: 'actions', configPath: 'actions.lido_staking_withdrawal_queue_address', defaultValue: '', isCredential: false },
 ] as const;
 
 // ---------------------------------------------------------------------------
