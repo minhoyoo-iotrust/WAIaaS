@@ -36,6 +36,7 @@ import {
   stage1Validate,
   stage2Auth,
   stage3Policy,
+  stage3_5GasCondition,
   stage4Wait,
   stage5Execute,
   stage6Confirm,
@@ -393,12 +394,13 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
       try {
         await stage2Auth(ctx);
         await stage3Policy(ctx);
+        await stage3_5GasCondition(ctx);
         await stage4Wait(ctx);
         await stage5Execute(ctx);
         await stage6Confirm(ctx);
       } catch (error) {
         // PIPELINE_HALTED is intentional -- do NOT mark as FAILED
-        // Transaction is QUEUED, waiting for delay expiry or owner approval
+        // Transaction is QUEUED, waiting for delay expiry or owner approval / gas condition
         if (error instanceof WAIaaSError && error.code === 'PIPELINE_HALTED') {
           return;
         }

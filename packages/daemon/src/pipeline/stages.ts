@@ -11,7 +11,7 @@
  * @see docs/32-pipeline-design.md
  */
 
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import {
@@ -566,6 +566,155 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
     .update(transactions)
     .set({ tier })
     .where(eq(transactions.id, ctx.txId));
+}
+
+// ---------------------------------------------------------------------------
+// Stage 3.5: Gas condition check (between policy and wait)
+// ---------------------------------------------------------------------------
+
+/**
+ * Stage 3.5: Gas condition check.
+ *
+ * If the request includes `gasCondition` and the `gas_condition.enabled` setting
+ * is true (defaults to true when settings key is not yet registered):
+ *   1. Check max_pending_count limit against current GAS_WAITING transactions
+ *   2. Set status='GAS_WAITING', store gasCondition metadata in bridgeMetadata
+ *   3. Emit TX_GAS_WAITING notification
+ *   4. Throw PIPELINE_HALTED (transaction will be picked up by GasConditionTracker)
+ *
+ * If gasCondition is absent: no-op (backward compat -- proceed to stage4Wait).
+ *
+ * @see 258-CONTEXT.md for architecture details
+ */
+export async function stage3_5GasCondition(ctx: PipelineContext): Promise<void> {
+  const req = ctx.request;
+
+  // Check if request has gasCondition (present on all 5 discriminatedUnion types)
+  const gasCondition = ('gasCondition' in req && req.gasCondition)
+    ? req.gasCondition as { maxGasPrice?: string; maxPriorityFee?: string; timeout?: number }
+    : undefined;
+
+  if (!gasCondition) {
+    // No gas condition specified: proceed normally (backward compat)
+    return;
+  }
+
+  // Check if gas_condition feature is enabled via settings
+  // Default to true if the setting key is not yet registered (258-02 adds it)
+  let gasConditionEnabled = true;
+  if (ctx.settingsService) {
+    try {
+      const enabledValue = ctx.settingsService.get('gas_condition.enabled');
+      gasConditionEnabled = enabledValue !== 'false';
+    } catch {
+      // Setting key not yet registered (will be added in 258-02) -- default to true
+      gasConditionEnabled = true;
+    }
+  }
+
+  if (!gasConditionEnabled) {
+    // Feature disabled: proceed normally, ignore gasCondition
+    return;
+  }
+
+  // Check max_pending_count limit
+  let maxPendingCount = 100;
+  if (ctx.settingsService) {
+    try {
+      const maxValue = ctx.settingsService.get('gas_condition.max_pending_count');
+      const parsed = parseInt(maxValue, 10);
+      if (!isNaN(parsed) && parsed > 0) {
+        maxPendingCount = parsed;
+      }
+    } catch {
+      // Setting key not yet registered -- use default
+    }
+  }
+
+  // Count current GAS_WAITING transactions
+  const countResult = ctx.db
+    .select({ count: sql<number>`count(*)` })
+    .from(transactions)
+    .where(eq(transactions.status, 'GAS_WAITING'))
+    .get();
+  const currentWaiting = countResult?.count ?? 0;
+
+  if (currentWaiting >= maxPendingCount) {
+    throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
+      message: `Gas condition pending limit reached (${currentWaiting}/${maxPendingCount}). Try again later.`,
+    });
+  }
+
+  // Resolve timeout: request.timeout > settings default > hardcoded 3600
+  let timeout = gasCondition.timeout;
+  if (!timeout) {
+    if (ctx.settingsService) {
+      try {
+        const defaultTimeout = ctx.settingsService.get('gas_condition.default_timeout_sec');
+        const parsed = parseInt(defaultTimeout, 10);
+        if (!isNaN(parsed) && parsed >= 60 && parsed <= 86400) {
+          timeout = parsed;
+        }
+      } catch {
+        // Setting key not yet registered
+      }
+    }
+    if (!timeout) timeout = 3600;
+  }
+
+  // Clamp timeout to max_timeout_sec
+  let maxTimeout = 86400;
+  if (ctx.settingsService) {
+    try {
+      const maxValue = ctx.settingsService.get('gas_condition.max_timeout_sec');
+      const parsed = parseInt(maxValue, 10);
+      if (!isNaN(parsed) && parsed >= 60) {
+        maxTimeout = parsed;
+      }
+    } catch {
+      // Setting key not yet registered
+    }
+  }
+  if (timeout > maxTimeout) {
+    timeout = maxTimeout;
+  }
+
+  // Store gas condition metadata in bridgeMetadata for GasConditionTracker (258-02)
+  const gasConditionMeta = {
+    tracker: 'gas-condition',
+    gasCondition: {
+      maxGasPrice: gasCondition.maxGasPrice,
+      maxPriorityFee: gasCondition.maxPriorityFee,
+      timeout,
+    },
+    chain: ctx.wallet.chain,
+    network: ctx.resolvedNetwork,
+    gasConditionCreatedAt: Date.now(),
+  };
+
+  // Set status='GAS_WAITING', store bridgeMetadata
+  await ctx.db
+    .update(transactions)
+    .set({
+      status: 'GAS_WAITING',
+      bridgeMetadata: JSON.stringify(gasConditionMeta),
+    })
+    .where(eq(transactions.id, ctx.txId));
+
+  // Fire-and-forget: notify TX_GAS_WAITING
+  void ctx.notificationService?.notify('TX_GAS_WAITING', ctx.walletId, {
+    txId: ctx.txId,
+    maxGasPrice: gasCondition.maxGasPrice ?? '',
+    maxPriorityFee: gasCondition.maxPriorityFee ?? '',
+    timeout: String(timeout),
+    chain: ctx.wallet.chain,
+    network: ctx.resolvedNetwork,
+  }, { txId: ctx.txId });
+
+  // Halt pipeline -- transaction will be picked up by GasConditionTracker
+  throw new WAIaaSError('PIPELINE_HALTED', {
+    message: `Transaction ${ctx.txId} waiting for gas condition (timeout: ${timeout}s)`,
+  });
 }
 
 // ---------------------------------------------------------------------------

@@ -22,6 +22,7 @@ import {
   stage1Validate,
   stage2Auth,
   stage3Policy,
+  stage3_5GasCondition,
   stage4Wait,
   stage5Execute,
   stage6Confirm,
@@ -87,10 +88,11 @@ export class TransactionPipeline {
       txId: '',
     };
 
-    // Execute 6 stages sequentially
+    // Execute 6 stages sequentially (Stage 3.5 inserted for gas condition check)
     await stage1Validate(ctx);
     await stage2Auth(ctx);
     await stage3Policy(ctx);
+    await stage3_5GasCondition(ctx);
     await stage4Wait(ctx);
     await stage5Execute(ctx);
     await stage6Confirm(ctx);
