@@ -31,6 +31,13 @@ const TRANSFER_EVENT = parseAbiItem(
 /** Maximum blocks per poll cycle (pitfall 4: RPC provider limits). */
 const MAX_BLOCK_RANGE = 10n;
 
+/**
+ * L2 network prefixes where getBlock(includeTransactions:true) causes timeouts
+ * due to high TX density (500-2000+ TXs/block → 200KB-1MB+ responses).
+ * On these chains, only ERC-20 detection (getLogs) is used (#172).
+ */
+const L2_NETWORK_PREFIXES = ['arbitrum', 'optimism', 'base'];
+
 interface EvmSubscription {
   address: string;
   network: string;
@@ -143,13 +150,17 @@ export class EvmIncomingSubscriber implements IChainSubscriber {
             sub.network,
           );
 
-          const nativeTxs = await this.pollNativeETH(
-            sub.address as Address,
-            sub.lastBlock + 1n,
-            toBlock,
-            walletId,
-            sub.network,
-          );
+          // Skip native ETH polling on L2 chains to avoid getBlock timeout (#172)
+          const isL2 = L2_NETWORK_PREFIXES.some((p) => sub.network.startsWith(p));
+          const nativeTxs = isL2
+            ? []
+            : await this.pollNativeETH(
+                sub.address as Address,
+                sub.lastBlock + 1n,
+                toBlock,
+                walletId,
+                sub.network,
+              );
 
           const allTxs = [...erc20Txs, ...nativeTxs];
           for (const tx of allTxs) {

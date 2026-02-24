@@ -186,6 +186,7 @@
 | 169 | BUG | HIGH | IncomingTxMonitor EVM 폴링이 무료 RPC 엔드포인트 rate limit 초과 | v28.4 | FIXED | 2026-02-24 |
 | 170 | BUG | HIGH | Admin UI Actions 페이지 접근 시 401 — sessionAuth 미스매치 | v28.4 | FIXED | 2026-02-24 |
 | 171 | BUG | HIGH | Admin UI apiCall 글로벌 401 핸들러가 비-admin 엔드포인트 401에도 로그아웃 트리거 | v28.3 | FIXED | 2026-02-24 |
+| 172 | BUG | HIGH | EVM IncomingTxMonitor getBlock(includeTransactions:true)가 L2 체인에서 타임아웃 | v28.3 | FIXED | 2026-02-24 |
 
 ## Type Legend
 
@@ -198,8 +199,8 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 170
+- **FIXED:** 171
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 171
+- **Total:** 172
