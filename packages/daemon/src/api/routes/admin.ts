@@ -42,6 +42,7 @@ import type { JwtSecretManager, JwtPayload } from '../../infrastructure/jwt/jwt-
 import { wallets, sessions, sessionWallets, notificationLogs, policies, transactions, incomingTransactions, tokenRegistry } from '../../infrastructure/database/schema.js';
 import { generateId } from '../../infrastructure/database/id.js';
 import { buildConnectInfoPrompt } from './connect-info.js';
+import type { DefaultDenyStatus } from './connect-info.js';
 import type * as schema from '../../infrastructure/database/schema.js';
 import type { NotificationService } from '../../notifications/notification-service.js';
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
@@ -2211,6 +2212,14 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
       capabilities.push('x402');
     }
 
+    // Read default-deny toggles
+    const defaultDeny: DefaultDenyStatus = {
+      tokenTransfers: deps.settingsService?.get('policy.default_deny_tokens') !== 'false',
+      contractCalls: deps.settingsService?.get('policy.default_deny_contracts') !== 'false',
+      tokenApprovals: deps.settingsService?.get('policy.default_deny_spenders') !== 'false',
+      x402Domains: deps.settingsService?.get('policy.default_deny_x402_domains') !== 'false',
+    };
+
     // Build prompt using shared prompt builder
     const host = c.req.header('Host') ?? 'localhost:3100';
     const protocol = c.req.header('X-Forwarded-Proto') ?? 'http';
@@ -2219,6 +2228,7 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
     const prompt = buildConnectInfoPrompt({
       wallets: promptWallets,
       capabilities,
+      defaultDeny,
       baseUrl,
       version: deps.version,
     });

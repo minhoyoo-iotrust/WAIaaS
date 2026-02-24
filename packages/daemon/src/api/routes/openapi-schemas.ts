@@ -1048,6 +1048,12 @@ export const ConnectInfoResponseSchema = z.object({
     network: z.string().nullable(),
   }))),
   capabilities: z.array(z.string()),
+  defaultDeny: z.object({
+    tokenTransfers: z.boolean().openapi({ description: 'Deny token transfers unless ALLOWED_TOKENS policy exists' }),
+    contractCalls: z.boolean().openapi({ description: 'Deny contract calls unless CONTRACT_WHITELIST policy exists' }),
+    tokenApprovals: z.boolean().openapi({ description: 'Deny token approvals unless APPROVED_SPENDERS policy exists' }),
+    x402Domains: z.boolean().openapi({ description: 'Deny x402 payments unless domain whitelist exists' }),
+  }).openapi({ description: 'Global default-deny policy toggles' }),
   daemon: z.object({
     version: z.string(),
     baseUrl: z.string(),

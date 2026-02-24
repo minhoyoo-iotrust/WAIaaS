@@ -46,6 +46,13 @@ export interface ConnectInfoRouteDeps {
 // Prompt builder (reusable by Plan 02 agent-prompt endpoint)
 // ---------------------------------------------------------------------------
 
+export interface DefaultDenyStatus {
+  tokenTransfers: boolean;
+  contractCalls: boolean;
+  tokenApprovals: boolean;
+  x402Domains: boolean;
+}
+
 export interface BuildConnectInfoPromptParams {
   wallets: Array<{
     id: string;
@@ -58,6 +65,7 @@ export interface BuildConnectInfoPromptParams {
     policies: Array<{ type: string }>;
   }>;
   capabilities: string[];
+  defaultDeny: DefaultDenyStatus;
   baseUrl: string;
   version: string;
 }
@@ -67,21 +75,38 @@ export interface BuildConnectInfoPromptParams {
  * wallets, policies, and capabilities for AI agent consumption.
  */
 export function buildConnectInfoPrompt(params: BuildConnectInfoPromptParams): string {
-  const { wallets: ws, capabilities, baseUrl, version } = params;
+  const { wallets: ws, capabilities, defaultDeny, baseUrl, version } = params;
 
   const lines: string[] = [];
   lines.push(`You are connected to WAIaaS daemon v${version}.`);
   lines.push(`Base URL: ${baseUrl}`);
   lines.push('');
+
+  // Default-deny security posture
+  const anyDenyActive = defaultDeny.tokenTransfers || defaultDeny.contractCalls || defaultDeny.tokenApprovals || defaultDeny.x402Domains;
+  if (anyDenyActive) {
+    lines.push('Security defaults (default-deny active):');
+    if (defaultDeny.tokenTransfers) lines.push('- Token transfers: DENY unless ALLOWED_TOKENS policy exists');
+    if (defaultDeny.contractCalls) lines.push('- Contract calls: DENY unless CONTRACT_WHITELIST policy exists');
+    if (defaultDeny.tokenApprovals) lines.push('- Token approvals: DENY unless APPROVED_SPENDERS policy exists');
+    if (defaultDeny.x402Domains) lines.push('- x402 payments: DENY unless X402_ALLOWED_DOMAINS policy exists');
+    lines.push('');
+  }
+
   lines.push(`You have access to ${ws.length} wallet(s):`);
   lines.push('');
 
   for (let i = 0; i < ws.length; i++) {
     const w = ws[i]!;
     const network = w.defaultNetwork ?? w.chain;
-    const policySummary = w.policies.length > 0
-      ? w.policies.map((p) => p.type).join(', ')
-      : 'No restrictions';
+    let policySummary: string;
+    if (w.policies.length > 0) {
+      policySummary = w.policies.map((p) => p.type).join(', ');
+    } else if (anyDenyActive) {
+      policySummary = 'Default-deny active (whitelist policies required)';
+    } else {
+      policySummary = 'No restrictions';
+    }
 
     lines.push(`${i + 1}. ${w.name} (${w.chain}/${w.environment})`);
     lines.push(`   ID: ${w.id}`);
@@ -242,7 +267,15 @@ export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
     const protocol = c.req.header('X-Forwarded-Proto') ?? 'http';
     const baseUrl = `${protocol}://${host}`;
 
-    // g. Build prompt
+    // g. Read default-deny toggles
+    const defaultDeny: DefaultDenyStatus = {
+      tokenTransfers: deps.settingsService?.get('policy.default_deny_tokens') !== 'false',
+      contractCalls: deps.settingsService?.get('policy.default_deny_contracts') !== 'false',
+      tokenApprovals: deps.settingsService?.get('policy.default_deny_spenders') !== 'false',
+      x402Domains: deps.settingsService?.get('policy.default_deny_x402_domains') !== 'false',
+    };
+
+    // h. Build prompt
     const promptWallets = linkedWallets.map((w) => {
       const networks = getNetworksForEnvironment(
         w.chain as ChainType,
@@ -263,11 +296,12 @@ export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
     const prompt = buildConnectInfoPrompt({
       wallets: promptWallets,
       capabilities,
+      defaultDeny,
       baseUrl,
       version: deps.version,
     });
 
-    // h. Return response
+    // i. Return response
     const expiresAtSec = session.expiresAt instanceof Date
       ? Math.floor(session.expiresAt.getTime() / 1000)
       : (session.expiresAt as number);
@@ -296,6 +330,7 @@ export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
       }),
       policies: policiesMap,
       capabilities,
+      defaultDeny,
       daemon: {
         version: deps.version,
         baseUrl,

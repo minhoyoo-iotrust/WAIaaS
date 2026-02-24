@@ -8,7 +8,7 @@
  * All tests use mock viem client (no real network calls).
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 // ---- Mock setup ----
 
@@ -628,6 +628,211 @@ describe('EvmIncomingSubscriber - L2 native ETH skip (#172)', () => {
     });
     // No getBlock calls
     expect(mockClient.getBlock).not.toHaveBeenCalled();
+  });
+});
+
+describe('EvmIncomingSubscriber - per-wallet backoff (#175)', () => {
+  let subscriber: EvmIncomingSubscriber;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    idCounter = 0;
+    subscriber = new EvmIncomingSubscriber({
+      rpcUrl: TEST_RPC_URL,
+      generateId: mockGenerateId,
+    });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('per-wallet pollERC20 failure applies backoff and skips on next cycle', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    // Subscribe at block 100
+    mockClient.getBlockNumber.mockResolvedValueOnce(100n);
+    const onTx = vi.fn();
+    await subscriber.subscribe('wallet-1', TEST_WALLET_ADDRESS, 'ethereum-sepolia', onTx);
+
+    // First poll: getLogs fails
+    mockClient.getBlockNumber.mockResolvedValueOnce(105n);
+    mockClient.getLogs.mockRejectedValueOnce(new Error('ResourceNotFoundRpcError'));
+    await subscriber.pollAll();
+
+    // Second immediate poll: wallet-1 should be skipped (backoff active)
+    mockClient.getBlockNumber.mockResolvedValueOnce(106n);
+    await subscriber.pollAll();
+
+    // getLogs should have been called only once (the failed one)
+    expect(mockClient.getLogs).toHaveBeenCalledTimes(1);
+
+    warnSpy.mockRestore();
+  });
+
+  it('per-wallet backoff increases exponentially', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    mockClient.getBlockNumber.mockResolvedValueOnce(100n);
+    await subscriber.subscribe('wallet-1', TEST_WALLET_ADDRESS, 'ethereum-sepolia', vi.fn());
+
+    // Fail 1: backoff 30s
+    mockClient.getBlockNumber.mockResolvedValueOnce(105n);
+    mockClient.getLogs.mockRejectedValueOnce(new Error('RPC error'));
+    await subscriber.pollAll();
+
+    // Advance 30s (just past first backoff)
+    vi.advanceTimersByTime(31_000);
+
+    // Fail 2: backoff 60s
+    mockClient.getBlockNumber.mockResolvedValueOnce(110n);
+    mockClient.getLogs.mockRejectedValueOnce(new Error('RPC error'));
+    await subscriber.pollAll();
+
+    // Advance only 31s (not enough for 60s backoff)
+    vi.advanceTimersByTime(31_000);
+
+    mockClient.getBlockNumber.mockResolvedValueOnce(115n);
+    await subscriber.pollAll();
+
+    // getLogs should only be called 2 times (the 2 failures), not 3
+    expect(mockClient.getLogs).toHaveBeenCalledTimes(2);
+
+    warnSpy.mockRestore();
+  });
+
+  it('forces cursor advancement after 3 consecutive failures', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    mockClient.getBlockNumber.mockResolvedValueOnce(100n);
+    await subscriber.subscribe('wallet-1', TEST_WALLET_ADDRESS, 'ethereum-sepolia', vi.fn());
+
+    // Fail 3 times on the same block range
+    for (let i = 0; i < 3; i++) {
+      mockClient.getBlockNumber.mockResolvedValueOnce(105n);
+      mockClient.getLogs.mockRejectedValueOnce(new Error('ResourceNotFoundRpcError'));
+      await subscriber.pollAll();
+      vi.advanceTimersByTime(301_000); // advance past max backoff
+    }
+
+    // After 3 failures, cursor should have advanced to 105 (skipped blocks 101-105)
+    // Next poll should use fromBlock > 105
+    mockClient.getBlockNumber.mockResolvedValueOnce(110n);
+    mockClient.getLogs.mockResolvedValueOnce([]);
+    mockClient.getBlock.mockResolvedValueOnce({ transactions: [] });
+    vi.advanceTimersByTime(301_000); // advance past backoff
+    await subscriber.pollAll();
+
+    // getLogs should be called with fromBlock 106n (after forced advancement to 105)
+    const lastCall = mockClient.getLogs.mock.calls[mockClient.getLogs.mock.calls.length - 1]!;
+    expect(lastCall[0]).toMatchObject({ fromBlock: 106n });
+
+    warnSpy.mockRestore();
+  });
+
+  it('resets per-wallet errorCount on successful poll', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    // Use L2 network to skip pollNativeETH (simplifies mocking)
+    mockClient.getBlockNumber.mockResolvedValueOnce(100n);
+    await subscriber.subscribe('wallet-1', TEST_WALLET_ADDRESS, 'arbitrum-mainnet', vi.fn());
+
+    // Fail once (range [101,101])
+    mockClient.getBlockNumber.mockResolvedValueOnce(101n);
+    mockClient.getLogs.mockRejectedValueOnce(new Error('RPC error'));
+    await subscriber.pollAll();
+
+    vi.advanceTimersByTime(31_000);
+
+    // Succeed (range [101,101] — lastBlock still 100 after error)
+    mockClient.getBlockNumber.mockResolvedValueOnce(101n);
+    mockClient.getLogs.mockResolvedValueOnce([]);
+    await subscriber.pollAll();
+
+    // Next poll without backoff (range [102,102])
+    mockClient.getBlockNumber.mockResolvedValueOnce(102n);
+    mockClient.getLogs.mockResolvedValueOnce([]);
+    await subscriber.pollAll();
+
+    // getLogs called 3 times: 1 fail + 2 success
+    expect(mockClient.getLogs).toHaveBeenCalledTimes(3);
+
+    warnSpy.mockRestore();
+  });
+
+  it('suppresses warn log below WARN_THRESHOLD (3)', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    mockClient.getBlockNumber.mockResolvedValueOnce(100n);
+    await subscriber.subscribe('wallet-1', TEST_WALLET_ADDRESS, 'ethereum-sepolia', vi.fn());
+
+    // Fail twice (below threshold)
+    for (let i = 0; i < 2; i++) {
+      mockClient.getBlockNumber.mockResolvedValueOnce(105n);
+      mockClient.getLogs.mockRejectedValueOnce(new Error('RPC error'));
+      await subscriber.pollAll();
+      vi.advanceTimersByTime(301_000);
+    }
+
+    // No warn should have been emitted (errorCount < 3)
+    expect(warnSpy).not.toHaveBeenCalled();
+
+    warnSpy.mockRestore();
+  });
+
+  it('logs message-only (no full stack trace) at WARN_THRESHOLD', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    mockClient.getBlockNumber.mockResolvedValueOnce(100n);
+    await subscriber.subscribe('wallet-1', TEST_WALLET_ADDRESS, 'ethereum-sepolia', vi.fn());
+
+    // Fail 3 times (reaching threshold)
+    for (let i = 0; i < 3; i++) {
+      mockClient.getBlockNumber.mockResolvedValueOnce(105n);
+      mockClient.getLogs.mockRejectedValueOnce(new Error('ResourceNotFoundRpcError'));
+      await subscriber.pollAll();
+      vi.advanceTimersByTime(301_000);
+    }
+
+    // warn called once at 3rd failure with message string (not Error object)
+    expect(warnSpy).toHaveBeenCalledOnce();
+    const warnArgs = warnSpy.mock.calls[0]!;
+    // Should be a single string argument (message only, no Error object)
+    expect(warnArgs).toHaveLength(1);
+    expect(typeof warnArgs[0]).toBe('string');
+    expect(warnArgs[0]).toContain('consecutive: 3');
+    expect(warnArgs[0]).toContain('ResourceNotFoundRpcError');
+
+    warnSpy.mockRestore();
+  });
+
+  it('per-wallet backoff does not affect other wallets', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    // Use L2 network to skip pollNativeETH
+    mockClient.getBlockNumber.mockResolvedValueOnce(100n);
+    await subscriber.subscribe('wallet-1', TEST_WALLET_ADDRESS, 'arbitrum-mainnet', vi.fn());
+
+    mockClient.getBlockNumber.mockResolvedValueOnce(100n);
+    await subscriber.subscribe('wallet-2', TEST_SENDER_ADDRESS, 'arbitrum-mainnet', vi.fn());
+
+    // First poll: wallet-1 fails, wallet-2 succeeds
+    mockClient.getBlockNumber.mockResolvedValueOnce(101n);
+    mockClient.getLogs
+      .mockRejectedValueOnce(new Error('RPC error'))
+      .mockResolvedValueOnce([]);
+    await subscriber.pollAll();
+
+    // Second poll: wallet-1 skipped (backoff), wallet-2 polls normally
+    mockClient.getBlockNumber.mockResolvedValueOnce(102n);
+    mockClient.getLogs.mockResolvedValueOnce([]);
+    await subscriber.pollAll();
+
+    // getLogs called 3 times: wallet-1 fail + wallet-2 success + wallet-2 success
+    expect(mockClient.getLogs).toHaveBeenCalledTimes(3);
+
+    warnSpy.mockRestore();
   });
 });
 

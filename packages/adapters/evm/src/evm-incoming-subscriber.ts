@@ -43,6 +43,10 @@ interface EvmSubscription {
   network: string;
   onTransaction: (tx: IncomingTransaction) => void;
   lastBlock: bigint;
+  /** Consecutive per-wallet poll error count. */
+  errorCount: number;
+  /** Timestamp (ms) until which this wallet's polling is skipped. */
+  backoffUntil: number;
 }
 
 /** Base backoff in ms after first RPC error. */
@@ -51,6 +55,8 @@ const BACKOFF_BASE_MS = 30_000;
 const BACKOFF_MAX_MS = 300_000;
 /** Consecutive errors before escalating log level to warn. */
 const WARN_THRESHOLD = 3;
+/** Maximum same-range retries before forcing cursor advancement. */
+const MAX_RETRY_SAME_RANGE = 3;
 
 export class EvmIncomingSubscriber implements IChainSubscriber {
   readonly chain: ChainType = 'ethereum';
@@ -82,6 +88,8 @@ export class EvmIncomingSubscriber implements IChainSubscriber {
       network,
       onTransaction,
       lastBlock: currentBlock,
+      errorCount: 0,
+      backoffUntil: 0,
     });
   }
 
@@ -134,6 +142,9 @@ export class EvmIncomingSubscriber implements IChainSubscriber {
       const currentBlock = await this.client.getBlockNumber();
 
       for (const [walletId, sub] of this.subscriptions) {
+        // Per-wallet backoff: skip if still within cooldown window
+        if (Date.now() < sub.backoffUntil) continue;
+
         try {
           if (sub.lastBlock >= currentBlock) continue; // no new blocks
 
@@ -168,10 +179,35 @@ export class EvmIncomingSubscriber implements IChainSubscriber {
           }
 
           sub.lastBlock = toBlock;
+          sub.errorCount = 0;
+          sub.backoffUntil = 0;
         } catch (err) {
           hadError = true;
-          // Per-wallet error: don't apply global backoff for individual wallet failures
-          console.warn(`EVM poll failed for wallet ${walletId}:`, err);
+          sub.errorCount++;
+
+          // Force cursor advancement after N consecutive failures to escape infinite retry
+          if (sub.errorCount >= MAX_RETRY_SAME_RANGE) {
+            const toBlock =
+              sub.lastBlock + MAX_BLOCK_RANGE < currentBlock
+                ? sub.lastBlock + MAX_BLOCK_RANGE
+                : currentBlock;
+            sub.lastBlock = toBlock;
+          }
+
+          // Per-wallet exponential backoff
+          const backoffMs = Math.min(
+            BACKOFF_BASE_MS * 2 ** (sub.errorCount - 1),
+            BACKOFF_MAX_MS,
+          );
+          sub.backoffUntil = Date.now() + backoffMs;
+
+          // Log only after WARN_THRESHOLD, message-only (no full stack trace)
+          if (sub.errorCount >= WARN_THRESHOLD) {
+            const msg = err instanceof Error ? err.message : String(err);
+            console.warn(
+              `EVM poll failed for wallet ${walletId} (backoff ${backoffMs / 1000}s, consecutive: ${sub.errorCount}): ${msg}`,
+            );
+          }
         }
       }
 

@@ -239,6 +239,7 @@ const POLICY_DEFAULTS_KEYS = [
   'policy.default_deny_tokens',
   'policy.default_deny_contracts',
   'policy.default_deny_spenders',
+  'policy.default_deny_x402_domains',
 ];
 
 function PolicyDefaultsTab() {
