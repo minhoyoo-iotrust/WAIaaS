@@ -1,7 +1,8 @@
 # 마일스톤 m28-03: LI.FI 크로스체인 브릿지
 
-- **Status:** PLANNED
+- **Status:** SHIPPED
 - **Milestone:** v28.3
+- **Completed:** 2026-02-24
 
 ## 목표
 
