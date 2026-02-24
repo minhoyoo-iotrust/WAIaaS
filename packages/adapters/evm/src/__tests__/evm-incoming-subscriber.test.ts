@@ -518,6 +518,119 @@ describe('EvmIncomingSubscriber - pollAll resilience', () => {
   });
 });
 
+describe('EvmIncomingSubscriber - L2 native ETH skip (#172)', () => {
+  let subscriber: EvmIncomingSubscriber;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    idCounter = 0;
+    subscriber = new EvmIncomingSubscriber({
+      rpcUrl: TEST_RPC_URL,
+      generateId: mockGenerateId,
+    });
+  });
+
+  it('skips pollNativeETH on arbitrum-mainnet (L2)', async () => {
+    mockClient.getBlockNumber.mockResolvedValueOnce(100n);
+    const onTransaction = vi.fn();
+    await subscriber.subscribe('wallet-1', TEST_WALLET_ADDRESS, 'arbitrum-mainnet', onTransaction);
+
+    mockClient.getBlockNumber.mockResolvedValueOnce(101n);
+    mockClient.getLogs.mockResolvedValueOnce([]);
+
+    await subscriber.pollAll();
+
+    // getBlock should NOT be called (native ETH polling skipped on L2)
+    expect(mockClient.getBlock).not.toHaveBeenCalled();
+  });
+
+  it('skips pollNativeETH on optimism-mainnet (L2)', async () => {
+    mockClient.getBlockNumber.mockResolvedValueOnce(100n);
+    const onTransaction = vi.fn();
+    await subscriber.subscribe('wallet-1', TEST_WALLET_ADDRESS, 'optimism-mainnet', onTransaction);
+
+    mockClient.getBlockNumber.mockResolvedValueOnce(101n);
+    mockClient.getLogs.mockResolvedValueOnce([]);
+
+    await subscriber.pollAll();
+
+    expect(mockClient.getBlock).not.toHaveBeenCalled();
+  });
+
+  it('skips pollNativeETH on base-mainnet (L2)', async () => {
+    mockClient.getBlockNumber.mockResolvedValueOnce(100n);
+    const onTransaction = vi.fn();
+    await subscriber.subscribe('wallet-1', TEST_WALLET_ADDRESS, 'base-mainnet', onTransaction);
+
+    mockClient.getBlockNumber.mockResolvedValueOnce(101n);
+    mockClient.getLogs.mockResolvedValueOnce([]);
+
+    await subscriber.pollAll();
+
+    expect(mockClient.getBlock).not.toHaveBeenCalled();
+  });
+
+  it('still runs pollNativeETH on ethereum-mainnet (L1)', async () => {
+    mockClient.getBlockNumber.mockResolvedValueOnce(100n);
+    const onTransaction = vi.fn();
+    await subscriber.subscribe('wallet-1', TEST_WALLET_ADDRESS, 'ethereum-mainnet', onTransaction);
+
+    mockClient.getBlockNumber.mockResolvedValueOnce(101n);
+    mockClient.getLogs.mockResolvedValueOnce([]);
+    mockClient.getBlock.mockResolvedValueOnce({ transactions: [] });
+
+    await subscriber.pollAll();
+
+    // getBlock SHOULD be called for L1
+    expect(mockClient.getBlock).toHaveBeenCalledOnce();
+  });
+
+  it('still runs pollNativeETH on ethereum-sepolia (L1 testnet)', async () => {
+    mockClient.getBlockNumber.mockResolvedValueOnce(100n);
+    const onTransaction = vi.fn();
+    await subscriber.subscribe('wallet-1', TEST_WALLET_ADDRESS, 'ethereum-sepolia', onTransaction);
+
+    mockClient.getBlockNumber.mockResolvedValueOnce(101n);
+    mockClient.getLogs.mockResolvedValueOnce([]);
+    mockClient.getBlock.mockResolvedValueOnce({ transactions: [] });
+
+    await subscriber.pollAll();
+
+    expect(mockClient.getBlock).toHaveBeenCalledOnce();
+  });
+
+  it('still detects ERC-20 on L2 chains (only native ETH is skipped)', async () => {
+    mockClient.getBlockNumber.mockResolvedValueOnce(100n);
+    const onTransaction = vi.fn();
+    await subscriber.subscribe('wallet-1', TEST_WALLET_ADDRESS, 'arbitrum-mainnet', onTransaction);
+
+    mockClient.getBlockNumber.mockResolvedValueOnce(101n);
+    mockClient.getLogs.mockResolvedValueOnce([
+      {
+        transactionHash: '0xarb_erc20',
+        args: {
+          from: TEST_SENDER_ADDRESS,
+          to: TEST_WALLET_ADDRESS,
+          value: 1000000n,
+        },
+        address: TEST_TOKEN_ADDRESS,
+        blockNumber: 101n,
+      },
+    ]);
+
+    await subscriber.pollAll();
+
+    expect(onTransaction).toHaveBeenCalledOnce();
+    expect(onTransaction.mock.calls[0]![0]).toMatchObject({
+      txHash: '0xarb_erc20',
+      tokenAddress: TEST_TOKEN_ADDRESS,
+      network: 'arbitrum-mainnet',
+    });
+    // No getBlock calls
+    expect(mockClient.getBlock).not.toHaveBeenCalled();
+  });
+});
+
 describe('EvmIncomingSubscriber - backoff on RPC errors (#169)', () => {
   let subscriber: EvmIncomingSubscriber;
 
