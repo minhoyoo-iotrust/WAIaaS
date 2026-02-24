@@ -35,11 +35,11 @@ import { sql, desc, eq, and, isNull, gt, gte, lte, count as drizzleCount } from 
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { createHash } from 'node:crypto';
-import { WAIaaSError, getDefaultNetwork, getNetworksForEnvironment } from '@waiaas/core';
+import { WAIaaSError, getDefaultNetwork, getNetworksForEnvironment, formatAmount } from '@waiaas/core';
 import type { INotificationChannel, NotificationPayload, ChainType, EnvironmentType, IPriceOracle, IForexRateService, CurrencyCode } from '@waiaas/core';
 import { CurrencyCodeSchema, formatRatePreview } from '@waiaas/core';
 import type { JwtSecretManager, JwtPayload } from '../../infrastructure/jwt/jwt-secret-manager.js';
-import { wallets, sessions, sessionWallets, notificationLogs, policies, transactions, incomingTransactions } from '../../infrastructure/database/schema.js';
+import { wallets, sessions, sessionWallets, notificationLogs, policies, transactions, incomingTransactions, tokenRegistry } from '../../infrastructure/database/schema.js';
 import { generateId } from '../../infrastructure/database/id.js';
 import { buildConnectInfoPrompt } from './connect-info.js';
 import type * as schema from '../../infrastructure/database/schema.js';
@@ -790,6 +790,51 @@ const adminIncomingRoute = createRoute({
  * POST   /admin/transactions/:id/cancel - Cancel delayed transaction (masterAuth)
  * POST   /admin/transactions/:id/reject - Reject pending approval transaction (masterAuth)
  */
+// ---------------------------------------------------------------------------
+// Amount formatting helpers (#168)
+// ---------------------------------------------------------------------------
+
+const NATIVE_DECIMALS: Record<string, number> = { solana: 9, ethereum: 18 };
+const NATIVE_SYMBOLS: Record<string, string> = { solana: 'SOL', ethereum: 'ETH' };
+
+/**
+ * Format raw blockchain amount to human-readable string with token symbol.
+ * Returns null if formatting is not possible (unknown token, null amount, etc).
+ */
+function formatTxAmount(
+  amount: string | null,
+  chain: string,
+  network: string | null,
+  tokenAddress: string | null,
+  db: BetterSQLite3Database<typeof schema>,
+): string | null {
+  if (!amount || amount === '0') return amount;
+
+  try {
+    if (tokenAddress) {
+      // Token transfer: look up decimals/symbol from token_registry
+      const token = db
+        .select({ symbol: tokenRegistry.symbol, decimals: tokenRegistry.decimals })
+        .from(tokenRegistry)
+        .where(and(
+          eq(tokenRegistry.address, tokenAddress),
+          network ? eq(tokenRegistry.network, network) : undefined,
+        ))
+        .limit(1)
+        .get();
+      if (!token) return null; // unknown token → caller falls back to raw
+      return `${formatAmount(BigInt(amount), token.decimals)} ${token.symbol}`;
+    }
+
+    // Native transfer
+    const decimals = NATIVE_DECIMALS[chain] ?? 18;
+    const symbol = NATIVE_SYMBOLS[chain] ?? chain.toUpperCase();
+    return `${formatAmount(BigInt(amount), decimals)} ${symbol}`;
+  } catch {
+    return null;
+  }
+}
+
 export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
   const router = new OpenAPIHono({ defaultHook: openApiValidationHook });
 
@@ -1837,6 +1882,8 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
         txHash: transactions.txHash,
         chain: transactions.chain,
         createdAt: transactions.createdAt,
+        tokenMint: transactions.tokenMint,
+        contractAddress: transactions.contractAddress,
       })
       .from(transactions)
       .leftJoin(wallets, eq(transactions.walletId, wallets.id))
@@ -1846,23 +1893,27 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
       .limit(limit)
       .all();
 
-    const items = rows.map((row) => ({
-      id: row.id,
-      walletId: row.walletId,
-      walletName: row.walletName ?? null,
-      type: row.type,
-      status: row.status,
-      tier: row.tier ?? null,
-      toAddress: row.toAddress ?? null,
-      amount: row.amount ?? null,
-      amountUsd: row.amountUsd ?? null,
-      network: row.network ?? null,
-      txHash: row.txHash ?? null,
-      chain: row.chain,
-      createdAt: row.createdAt instanceof Date
-        ? Math.floor(row.createdAt.getTime() / 1000)
-        : (typeof row.createdAt === 'number' ? row.createdAt : null),
-    }));
+    const items = rows.map((row) => {
+      const tokenAddr = row.tokenMint ?? row.contractAddress ?? null;
+      return {
+        id: row.id,
+        walletId: row.walletId,
+        walletName: row.walletName ?? null,
+        type: row.type,
+        status: row.status,
+        tier: row.tier ?? null,
+        toAddress: row.toAddress ?? null,
+        amount: row.amount ?? null,
+        formattedAmount: formatTxAmount(row.amount ?? null, row.chain, row.network ?? null, tokenAddr, deps.db),
+        amountUsd: row.amountUsd ?? null,
+        network: row.network ?? null,
+        txHash: row.txHash ?? null,
+        chain: row.chain,
+        createdAt: row.createdAt instanceof Date
+          ? Math.floor(row.createdAt.getTime() / 1000)
+          : (typeof row.createdAt === 'number' ? row.createdAt : null),
+      };
+    });
 
     return c.json({ items, total, offset, limit }, 200);
   });
@@ -1934,6 +1985,7 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
       walletName: row.walletName ?? null,
       fromAddress: row.fromAddress,
       amount: row.amount,
+      formattedAmount: formatTxAmount(row.amount, row.chain, row.network, row.tokenAddress ?? null, deps.db),
       tokenAddress: row.tokenAddress ?? null,
       chain: row.chain,
       network: row.network,

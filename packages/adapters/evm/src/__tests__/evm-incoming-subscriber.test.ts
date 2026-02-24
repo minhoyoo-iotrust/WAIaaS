@@ -517,3 +517,75 @@ describe('EvmIncomingSubscriber - pollAll resilience', () => {
     });
   });
 });
+
+describe('EvmIncomingSubscriber - backoff on RPC errors (#169)', () => {
+  let subscriber: EvmIncomingSubscriber;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    idCounter = 0;
+    subscriber = new EvmIncomingSubscriber({
+      rpcUrl: TEST_RPC_URL,
+      generateId: mockGenerateId,
+    });
+  });
+
+  it('applies backoff after getBlockNumber RPC failure (429/500)', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    // First call fails (simulating 429)
+    mockClient.getBlockNumber.mockRejectedValueOnce(new Error('HTTP 429'));
+
+    await subscriber.pollAll();
+
+    // Second immediate call should be skipped (backoff)
+    mockClient.getBlockNumber.mockResolvedValueOnce(100n);
+    await subscriber.pollAll();
+
+    // getBlockNumber should have been called only once (the failed one)
+    expect(mockClient.getBlockNumber).toHaveBeenCalledTimes(1);
+
+    warnSpy.mockRestore();
+  });
+
+  it('escalates backoff exponentially up to 300s cap', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.useFakeTimers();
+
+    // Fail 10 times
+    for (let i = 0; i < 10; i++) {
+      mockClient.getBlockNumber.mockRejectedValueOnce(new Error('HTTP 429'));
+      await subscriber.pollAll();
+      // Advance past max backoff
+      vi.advanceTimersByTime(301_000);
+    }
+
+    // After 10 failures, warn should have been called (threshold is 3)
+    expect(warnSpy).toHaveBeenCalled();
+    // The warn message should contain backoff duration capped at 300s
+    const lastWarnCall = warnSpy.mock.calls[warnSpy.mock.calls.length - 1]!;
+    expect(lastWarnCall[0]).toContain('300s');
+
+    vi.useRealTimers();
+    warnSpy.mockRestore();
+  });
+
+  it('suppresses warn for first errors below threshold', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.useFakeTimers();
+
+    // Fail twice (below WARN_THRESHOLD=3)
+    mockClient.getBlockNumber.mockRejectedValueOnce(new Error('HTTP 429'));
+    await subscriber.pollAll();
+    vi.advanceTimersByTime(31_000);
+
+    mockClient.getBlockNumber.mockRejectedValueOnce(new Error('HTTP 429'));
+    await subscriber.pollAll();
+
+    // warn should NOT have been called (errorCount < 3)
+    expect(warnSpy).not.toHaveBeenCalled();
+
+    vi.useRealTimers();
+    warnSpy.mockRestore();
+  });
+});

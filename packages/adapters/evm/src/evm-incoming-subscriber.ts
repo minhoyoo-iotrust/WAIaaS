@@ -38,12 +38,21 @@ interface EvmSubscription {
   lastBlock: bigint;
 }
 
+/** Base backoff in ms after first RPC error. */
+const BACKOFF_BASE_MS = 30_000;
+/** Maximum backoff in ms (cap). */
+const BACKOFF_MAX_MS = 300_000;
+/** Consecutive errors before escalating log level to warn. */
+const WARN_THRESHOLD = 3;
+
 export class EvmIncomingSubscriber implements IChainSubscriber {
   readonly chain: ChainType = 'ethereum';
 
   private client: PublicClient;
   private subscriptions = new Map<string, EvmSubscription>();
   private generateId: () => string;
+  private errorCount = 0;
+  private backoffUntil = 0;
 
   constructor(config: { rpcUrl: string; generateId?: () => string }) {
     this.client = createPublicClient({ transport: http(config.rpcUrl) });
@@ -110,41 +119,69 @@ export class EvmIncomingSubscriber implements IChainSubscriber {
   // -- Polling (called by BackgroundWorkers in Phase 226) --
 
   async pollAll(): Promise<void> {
-    const currentBlock = await this.client.getBlockNumber();
+    // Backoff: skip polling if still within backoff window
+    if (Date.now() < this.backoffUntil) return;
 
-    for (const [walletId, sub] of this.subscriptions) {
-      try {
-        if (sub.lastBlock >= currentBlock) continue; // no new blocks
+    let hadError = false;
+    try {
+      const currentBlock = await this.client.getBlockNumber();
 
-        const toBlock =
-          sub.lastBlock + MAX_BLOCK_RANGE < currentBlock
-            ? sub.lastBlock + MAX_BLOCK_RANGE
-            : currentBlock;
+      for (const [walletId, sub] of this.subscriptions) {
+        try {
+          if (sub.lastBlock >= currentBlock) continue; // no new blocks
 
-        const erc20Txs = await this.pollERC20(
-          sub.address as Address,
-          sub.lastBlock + 1n,
-          toBlock,
-          walletId,
-          sub.network,
-        );
+          const toBlock =
+            sub.lastBlock + MAX_BLOCK_RANGE < currentBlock
+              ? sub.lastBlock + MAX_BLOCK_RANGE
+              : currentBlock;
 
-        const nativeTxs = await this.pollNativeETH(
-          sub.address as Address,
-          sub.lastBlock + 1n,
-          toBlock,
-          walletId,
-          sub.network,
-        );
+          const erc20Txs = await this.pollERC20(
+            sub.address as Address,
+            sub.lastBlock + 1n,
+            toBlock,
+            walletId,
+            sub.network,
+          );
 
-        const allTxs = [...erc20Txs, ...nativeTxs];
-        for (const tx of allTxs) {
-          sub.onTransaction(tx);
+          const nativeTxs = await this.pollNativeETH(
+            sub.address as Address,
+            sub.lastBlock + 1n,
+            toBlock,
+            walletId,
+            sub.network,
+          );
+
+          const allTxs = [...erc20Txs, ...nativeTxs];
+          for (const tx of allTxs) {
+            sub.onTransaction(tx);
+          }
+
+          sub.lastBlock = toBlock;
+        } catch (err) {
+          hadError = true;
+          // Per-wallet error: don't apply global backoff for individual wallet failures
+          console.warn(`EVM poll failed for wallet ${walletId}:`, err);
         }
+      }
 
-        sub.lastBlock = toBlock;
-      } catch (err) {
-        console.warn(`EVM poll failed for wallet ${walletId}:`, err);
+      // Full cycle completed without RPC-level failure → reset backoff
+      if (!hadError) {
+        this.errorCount = 0;
+        this.backoffUntil = 0;
+      }
+    } catch (err) {
+      // RPC-level error (e.g. getBlockNumber failed — 429/500): apply backoff
+      this.errorCount++;
+      const backoffMs = Math.min(
+        BACKOFF_BASE_MS * 2 ** (this.errorCount - 1),
+        BACKOFF_MAX_MS,
+      );
+      this.backoffUntil = Date.now() + backoffMs;
+      if (this.errorCount >= WARN_THRESHOLD) {
+        console.warn(
+          `EVM poll RPC error (backoff ${backoffMs / 1000}s, consecutive: ${this.errorCount}):`,
+          err,
+        );
       }
     }
   }

@@ -31,6 +31,7 @@ interface TransactionItem {
   tier: string | null;
   toAddress: string | null;
   amount: string | null;
+  formattedAmount: string | null;
   amountUsd: number | null;
   network: string | null;
   txHash: string | null;
@@ -52,6 +53,7 @@ interface IncomingTxItem {
   walletName: string | null;
   fromAddress: string;
   amount: string;
+  formattedAmount: string | null;
   tokenAddress: string | null;
   chain: string;
   network: string;
@@ -86,6 +88,7 @@ interface UnifiedTxRow {
   walletName: string | null;
   counterparty: string | null;
   amount: string | null;
+  formattedAmount: string | null;
   amountUsd: number | null;
   network: string;
   status: string;
@@ -185,6 +188,7 @@ function normalizeOutgoing(tx: TransactionItem): UnifiedTxRow {
     walletName: tx.walletName,
     counterparty: tx.toAddress,
     amount: tx.amount,
+    formattedAmount: tx.formattedAmount,
     amountUsd: tx.amountUsd,
     network: tx.network ?? tx.chain,
     status: tx.status,
@@ -203,6 +207,7 @@ function normalizeIncoming(tx: IncomingTxItem): UnifiedTxRow {
     walletName: tx.walletName,
     counterparty: tx.fromAddress,
     amount: tx.amount,
+    formattedAmount: tx.formattedAmount,
     amountUsd: null,
     network: tx.network,
     status: tx.status,
@@ -663,15 +668,16 @@ export default function TransactionsPage() {
                       <td>
                         {row.amount
                           ? (() => {
+                              const displayAmount = row.formattedAmount ?? row.amount;
                               if (row.amountUsd != null) {
                                 const display = formatWithDisplay(
                                   row.amountUsd,
                                   displayCurrency.value,
                                   displayRate.value,
                                 );
-                                return display ? `${row.amount} (${display})` : row.amount;
+                                return display ? `${displayAmount} (${display})` : displayAmount;
                               }
-                              return row.amount;
+                              return displayAmount;
                             })()
                           : '\u2014'}
                       </td>
