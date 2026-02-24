@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.6.0-rc.11](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.6.0-rc.10...v2.6.0-rc.11) (2026-02-24)
+
+
+### Bug Fixes
+
+* only trigger logout on 401 from admin endpoints in apiCall ([3b7f438](https://github.com/minhoyoo-iotrust/WAIaaS/commit/3b7f43871abe677e995e5e497a602ff76055130b))
+* only trigger logout on 401 from admin endpoints in apiCall ([7df8a1e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7df8a1ec4c32c92ccb095bb487282f8533fbd6b4)), closes [#171](https://github.com/minhoyoo-iotrust/WAIaaS/issues/171)
+
 ## [2.6.0-rc.10](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.6.0-rc.9...v2.6.0-rc.10) (2026-02-24)
 
 
