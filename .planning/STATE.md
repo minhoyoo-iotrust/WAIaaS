@@ -5,22 +5,22 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v28.4 Phase 255 -- Jito Solana Staking Provider
+**Current focus:** v28.4 Phase 256 -- Staking API Async Tracking Interface Integration
 
 ## Current Position
 
-Phase: 255 (2 of 3 in v28.4) (Jito Solana Staking Provider)
-Plan: 2 of 2 in current phase (COMPLETE)
-Status: Phase 255 complete
-Last activity: 2026-02-24 -- Plan 255-02 complete (Jito daemon registration + 9 integration tests)
+Phase: 256 (3 of 3 in v28.4) (Staking API Async Tracking Interface Integration)
+Plan: 1 of 3 in current phase
+Status: Plan 256-01 complete
+Last activity: 2026-02-24 -- Plan 256-01 complete (LidoWithdrawalTracker + JitoEpochTracker + dynamic notification events)
 
-Progress: [██████░░░░] 57%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
 **Cumulative:** 61 milestones, 253 phases completed, 544 plans, 1,485 reqs, ~5,000+ tests, ~189,000 LOC TS
 
-**This milestone:** 3 phases, 7 plans (estimated), 25 requirements -- 5 plans complete
+**This milestone:** 3 phases, 7 plans (estimated), 25 requirements -- 6 plans complete
 
 ## Accumulated Context
 
@@ -41,6 +41,9 @@ Progress: [██████░░░░] 57%
 - Jito mainnet-only addresses, testnet falls back to mainnet (v28.4)
 - Jito registration mainnet-only: getJitoAddresses('mainnet') always, no environment switching unlike Lido (v28.4)
 - Jito admin override: empty string default falls back to JITO_MAINNET_ADDRESSES (v28.4)
+- Dynamic notificationEvent in AsyncPollingService: tracker details.notificationEvent overrides hardcoded event names, with fallback to BRIDGE_* defaults (v28.4)
+- Metadata-based v1 tracking: Lido/Jito trackers use metadata.status field, not on-chain queries, for COMPLETED detection (v28.4)
+- Staking trackers use TIMEOUT terminal transition (no two-phase monitoring unlike bridge trackers) (v28.4)
 
 ### Blockers/Concerns
 
@@ -49,6 +52,6 @@ Progress: [██████░░░░] 57%
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Completed 255-02-PLAN.md (Jito daemon registration + integration). Phase 255 complete. Next: plan+execute Phase 256, then milestone audit.
+Stopped at: Completed 256-01-PLAN.md (LidoWithdrawalTracker + JitoEpochTracker + notification events + dynamic dispatch). Next: 256-02 (Staking REST API), then 256-03 (MCP + Admin UI).
 Resume file: None
-Resume instructions: Plan and execute Phase 256 (MCP + Admin UI integration), then milestone audit.
+Resume instructions: Execute plans 256-02 and 256-03, then milestone audit.

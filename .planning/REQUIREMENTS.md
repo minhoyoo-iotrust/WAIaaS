@@ -32,10 +32,10 @@ Requirements for milestone v28.4. Each maps to roadmap phases.
 
 ### 비동기 추적
 
-- [ ] **ASYNC-01**: Lido unstake 요청 시 IAsyncStatusTracker로 Withdrawal Queue 상태를 폴링한다
-- [ ] **ASYNC-02**: Jito unstake 요청 시 IAsyncStatusTracker로 에포크 경계 완료를 폴링한다
-- [ ] **ASYNC-03**: unstake 완료 시 STAKING_UNSTAKE_COMPLETED 알림 이벤트를 발행한다
-- [ ] **ASYNC-04**: unstake 타임아웃 시 STAKING_UNSTAKE_TIMEOUT 알림 이벤트를 발행한다
+- [x] **ASYNC-01**: Lido unstake 요청 시 IAsyncStatusTracker로 Withdrawal Queue 상태를 폴링한다
+- [x] **ASYNC-02**: Jito unstake 요청 시 IAsyncStatusTracker로 에포크 경계 완료를 폴링한다
+- [x] **ASYNC-03**: unstake 완료 시 STAKING_UNSTAKE_COMPLETED 알림 이벤트를 발행한다
+- [x] **ASYNC-04**: unstake 타임아웃 시 STAKING_UNSTAKE_TIMEOUT 알림 이벤트를 발행한다
 
 ### 스테이킹 API
 
@@ -93,10 +93,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PLCY-01 | Phase 254 | Complete |
 | PLCY-02 | Phase 254 | Complete |
 | PLCY-03 | Phase 254 | Complete |
-| ASYNC-01 | Phase 256 | Pending |
-| ASYNC-02 | Phase 256 | Pending |
-| ASYNC-03 | Phase 256 | Pending |
-| ASYNC-04 | Phase 256 | Pending |
+| ASYNC-01 | Phase 256 | Complete |
+| ASYNC-02 | Phase 256 | Complete |
+| ASYNC-03 | Phase 256 | Complete |
+| ASYNC-04 | Phase 256 | Complete |
 | SAPI-01 | Phase 256 | Pending |
 | SAPI-02 | Phase 256 | Pending |
 | SAPI-03 | Phase 256 | Pending |
