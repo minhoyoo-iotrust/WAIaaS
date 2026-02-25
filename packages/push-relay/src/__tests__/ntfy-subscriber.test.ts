@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { NtfySubscriber } from '../subscriber/ntfy-subscriber.js';
+import { ConfigurablePayloadTransformer } from '../transformer/payload-transformer.js';
 
 // ── Fixtures ──────────────────────────────────────────────────────────
 
@@ -347,5 +348,138 @@ describe('NtfySubscriber', () => {
     await subscriber.stop();
 
     expect(onMessage).not.toHaveBeenCalled();
+  });
+
+  it('applies transformer to sign_request payload when transformer is provided', async () => {
+    const onMessage = vi.fn().mockResolvedValue(undefined);
+    const encoded = encodeBase64url(validSignRequest);
+    const ntfyMessage = JSON.stringify({
+      topic: 'sign-w1',
+      message: encoded,
+      title: 'Sign Request',
+      priority: 5,
+    });
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
+      const urlStr = url as string;
+      if (urlStr.includes('sign-w1')) {
+        return Promise.resolve(createSseResponse([`data: ${ntfyMessage}`]));
+      }
+      return new Promise(() => {});
+    });
+
+    const transformer = new ConfigurablePayloadTransformer({
+      static_fields: { app_id: 'test-app' },
+      category_map: {
+        sign_request: { sound: 'alert.caf', badge: '1' },
+      },
+    });
+
+    const subscriber = new NtfySubscriber({
+      ntfyServer: 'https://ntfy.sh',
+      signTopicPrefix: 'sign',
+      notifyTopicPrefix: 'notify',
+      walletNames: ['w1'],
+      onMessage,
+      transformer,
+    });
+
+    subscriber.start();
+    await new Promise((r) => setTimeout(r, 100));
+    await subscriber.stop();
+
+    expect(onMessage).toHaveBeenCalled();
+    const payload = onMessage.mock.calls[0]![1];
+    expect(payload.category).toBe('sign_request');
+    expect(payload.data.app_id).toBe('test-app');
+    expect(payload.data.sound).toBe('alert.caf');
+    expect(payload.data.badge).toBe('1');
+  });
+
+  it('applies transformer to notification payload with correct category_map', async () => {
+    const onMessage = vi.fn().mockResolvedValue(undefined);
+    const encoded = encodeBase64url(validNotification);
+    const ntfyMessage = JSON.stringify({
+      topic: 'notify-w1',
+      message: encoded,
+      title: 'Notification',
+      priority: 3,
+    });
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
+      const urlStr = url as string;
+      if (urlStr.includes('notify-w1')) {
+        return Promise.resolve(createSseResponse([`data: ${ntfyMessage}`]));
+      }
+      return new Promise(() => {});
+    });
+
+    const transformer = new ConfigurablePayloadTransformer({
+      static_fields: { app_id: 'test-app' },
+      category_map: {
+        sign_request: { sound: 'alert.caf' },
+        notification: { sound: 'default', channel: 'info' },
+      },
+    });
+
+    const subscriber = new NtfySubscriber({
+      ntfyServer: 'https://ntfy.sh',
+      signTopicPrefix: 'sign',
+      notifyTopicPrefix: 'notify',
+      walletNames: ['w1'],
+      onMessage,
+      transformer,
+    });
+
+    subscriber.start();
+    await new Promise((r) => setTimeout(r, 100));
+    await subscriber.stop();
+
+    expect(onMessage).toHaveBeenCalled();
+    const payload = onMessage.mock.calls[0]![1];
+    expect(payload.category).toBe('notification');
+    expect(payload.data.app_id).toBe('test-app');
+    expect(payload.data.sound).toBe('default');
+    expect(payload.data.channel).toBe('info');
+    // sign_request category_map should not be applied
+    expect(payload.data).not.toHaveProperty('badge');
+  });
+
+  it('does not transform payload when transformer is not provided (bypass)', async () => {
+    const onMessage = vi.fn().mockResolvedValue(undefined);
+    const encoded = encodeBase64url(validSignRequest);
+    const ntfyMessage = JSON.stringify({
+      topic: 'sign-w1',
+      message: encoded,
+      title: 'Sign Request',
+      priority: 5,
+    });
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
+      const urlStr = url as string;
+      if (urlStr.includes('sign-w1')) {
+        return Promise.resolve(createSseResponse([`data: ${ntfyMessage}`]));
+      }
+      return new Promise(() => {});
+    });
+
+    // No transformer provided — bypass
+    const subscriber = new NtfySubscriber({
+      ntfyServer: 'https://ntfy.sh',
+      signTopicPrefix: 'sign',
+      notifyTopicPrefix: 'notify',
+      walletNames: ['w1'],
+      onMessage,
+    });
+
+    subscriber.start();
+    await new Promise((r) => setTimeout(r, 100));
+    await subscriber.stop();
+
+    expect(onMessage).toHaveBeenCalled();
+    const payload = onMessage.mock.calls[0]![1];
+    // No transformer fields should be present
+    expect(payload.data).not.toHaveProperty('app_id');
+    expect(payload.data).not.toHaveProperty('sound');
   });
 });

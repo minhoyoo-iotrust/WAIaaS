@@ -8,6 +8,8 @@ import { DeviceRegistry } from './registry/device-registry.js';
 import { PushwooshProvider } from './providers/pushwoosh-provider.js';
 import { FcmProvider } from './providers/fcm-provider.js';
 import type { IPushProvider } from './providers/push-provider.js';
+import { ConfigurablePayloadTransformer } from './transformer/payload-transformer.js';
+import type { IPayloadTransformer } from './transformer/payload-transformer.js';
 import { createServer } from './server.js';
 
 const CONFIG_PATH = process.env['RELAY_CONFIG'] ?? resolve(process.cwd(), 'config.toml');
@@ -37,12 +39,20 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
+  // Initialize payload transformer (optional)
+  let transformer: IPayloadTransformer | undefined;
+  if (config.relay.push.payload) {
+    transformer = new ConfigurablePayloadTransformer(config.relay.push.payload);
+    console.log('[push-relay] Payload transformer: enabled (static_fields + category_map)');
+  }
+
   // Initialize ntfy subscriber
   const subscriber = new NtfySubscriber({
     ntfyServer: config.relay.ntfy_server,
     signTopicPrefix: config.relay.sign_topic_prefix,
     notifyTopicPrefix: config.relay.notify_topic_prefix,
     walletNames: config.relay.wallet_names,
+    transformer,
     onMessage: async (walletName, payload) => {
       const tokens = registry.getTokensByWalletName(walletName);
       if (tokens.length === 0) return;
