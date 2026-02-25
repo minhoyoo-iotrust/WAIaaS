@@ -207,6 +207,8 @@
 | 190 | BUG | HIGH | LI.FI + 0x resolve() value hex→decimal 변환 누락으로 스왑/브릿지 실패 | v28.8 | FIXED | 2026-02-25 |
 | 191 | BUG | CRITICAL | 세션 TTL이 1일로 적용 — quickset expiresIn/ttl 필드 불일치 + 스키마 max 7일 제한 | v28.8 | FIXED | 2026-02-25 |
 | 192 | MISSING | MEDIUM | 세션 토큰 영구 만료 시 에이전트 자력 복구 불가 — 복구 프로세스 스킬 필요 | v28.8 | FIXED | 2026-02-25 |
+| 193 | ENHANCEMENT | MEDIUM | 네트워크별 WSS URL 설정 + EVM WSS 구독 지원 — 인커밍 모니터 개선 | - | OPEN | - |
+| 194 | BUG | CRITICAL | 데몬 장시간 실행 시 응답 불능 — reconnectLoop 무지연 루프 + fetch 타임아웃 부재 | - | OPEN | - |
 
 ## Type Legend
 
@@ -218,9 +220,10 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 2
 - **FIXED:** 191
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 192
+- **Total:** 194
+- **Total:** 193
