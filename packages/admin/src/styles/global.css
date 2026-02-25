@@ -1321,6 +1321,46 @@ table .table-loading {
   opacity: 0.6;
 }
 
+/* RPC URL status indicators */
+.rpc-url-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+}
+
+.rpc-url-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.rpc-url-status-dot--available {
+  background-color: var(--color-success);
+}
+
+.rpc-url-status-dot--cooldown {
+  background-color: var(--color-warning);
+}
+
+.rpc-url-status-dot--unknown {
+  background-color: var(--color-text-muted);
+}
+
+.rpc-url-cooldown-info {
+  color: var(--color-warning);
+  font-size: var(--font-size-xs);
+}
+
+.rpc-url-test-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
 .settings-info-box {
   padding: var(--space-3) var(--space-4);
   background: var(--color-info-bg);

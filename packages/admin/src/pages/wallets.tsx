@@ -25,6 +25,8 @@ import { fetchDisplayCurrency, formatWithDisplay } from '../utils/display-curren
 import {
   type SettingsData,
   type RpcTestResult,
+  type RpcPoolStatus,
+  type RpcEndpointStatusEntry,
   keyToLabel,
   getEffectiveValue,
   getEffectiveBoolValue,
@@ -1387,6 +1389,21 @@ interface UrlEntry {
   enabled: boolean; // built-in URLs can be disabled
 }
 
+/** Format cooldown remaining time for display */
+function formatCooldown(ms: number): string {
+  if (ms <= 0) return '';
+  const sec = Math.ceil(ms / 1000);
+  if (sec < 60) return `${sec}s`;
+  const min = Math.floor(sec / 60);
+  const remSec = sec % 60;
+  return remSec > 0 ? `${min}m ${remSec}s` : `${min}m`;
+}
+
+/** Determine chain from network key for test-rpc API */
+function networkToChain(network: string): 'solana' | 'evm' {
+  return SOLANA_NETWORKS.includes(network) ? 'solana' : 'evm';
+}
+
 function RpcEndpointsTab() {
   const settings = useSignal<SettingsData>({});
   // Dirty state: network -> user URL list (JSON array string to save)
@@ -1398,6 +1415,11 @@ function RpcEndpointsTab() {
   const newUrlInputs = useSignal<Record<string, string>>({});
   // EVM default network dirty state
   const dirtyEvmDefault = useSignal<string | null>(null);
+  // Live pool status from GET /admin/rpc-status
+  const rpcPoolStatus = useSignal<RpcPoolStatus>({});
+  // Per-URL test state
+  const rpcTesting = useSignal<Record<string, boolean>>({});
+  const rpcTestResults = useSignal<Record<string, RpcTestResult>>({});
 
   // Build URL entries from settings data
   const buildUrlEntries = (settingsData: SettingsData): Record<string, UrlEntry[]> => {
@@ -1457,6 +1479,41 @@ function RpcEndpointsTab() {
   useEffect(() => {
     fetchSettings();
   }, []);
+
+  // Periodic pool status polling (every 15s)
+  useEffect(() => {
+    const fetchStatus = async () => {
+      try {
+        const result = await apiGet<{ networks: RpcPoolStatus }>(API.ADMIN_RPC_STATUS);
+        rpcPoolStatus.value = result.networks;
+      } catch {
+        // Silent failure on polling errors -- don't show toast
+      }
+    };
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 15_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Per-URL test handler
+  const handleTestUrl = async (network: string, url: string) => {
+    const key = `${network}:${url}`;
+    rpcTesting.value = { ...rpcTesting.value, [key]: true };
+    try {
+      const result = await apiPost<RpcTestResult>(API.ADMIN_SETTINGS_TEST_RPC, {
+        url,
+        chain: networkToChain(network),
+      });
+      rpcTestResults.value = { ...rpcTestResults.value, [key]: result };
+    } catch {
+      rpcTestResults.value = {
+        ...rpcTestResults.value,
+        [key]: { success: false, latencyMs: 0, error: 'Request failed' },
+      };
+    } finally {
+      rpcTesting.value = { ...rpcTesting.value, [key]: false };
+    }
+  };
 
   // Check if URL lists have changed from original
   const isDirty = (): boolean => {
@@ -1597,6 +1654,11 @@ function RpcEndpointsTab() {
     const urls = dirtyUrls.value[network] ?? [];
     const isExpanded = expanded.value[network] ?? false;
     const urlCount = urls.filter(e => e.enabled).length;
+    const networkStatuses = rpcPoolStatus.value[network] ?? [];
+
+    /** Look up pool status for a given URL */
+    const getUrlStatus = (url: string): RpcEndpointStatusEntry | undefined =>
+      networkStatuses.find(s => s.url === url);
 
     return (
       <details class="rpc-pool-network" open={isExpanded} data-testid={`rpc-network-${network}`}>
@@ -1609,56 +1671,113 @@ function RpcEndpointsTab() {
         </summary>
         {isExpanded && (
           <div class="rpc-url-list">
-            {urls.map((entry, idx) => (
-              <div
-                key={`${network}-${idx}`}
-                class={`rpc-url-item${entry.isBuiltin ? ' rpc-url-item--builtin' : ''}${!entry.enabled ? ' rpc-url-disabled' : ''}`}
-                data-testid={`rpc-url-${network}-${idx}`}
-              >
-                <span class="rpc-url-priority">#{idx + 1}</span>
-                <span class="rpc-url-item-url" title={entry.url}>{entry.url}</span>
-                {entry.isBuiltin && <span class="badge-builtin">(built-in)</span>}
-                <span class="rpc-url-actions">
-                  <button
-                    class="btn btn-ghost btn-sm rpc-action-btn"
-                    onClick={() => moveUrl(network, idx, 'up')}
-                    disabled={idx === 0}
-                    title="Move up"
-                    aria-label="Move up"
-                  >
-                    &uarr;
-                  </button>
-                  <button
-                    class="btn btn-ghost btn-sm rpc-action-btn"
-                    onClick={() => moveUrl(network, idx, 'down')}
-                    disabled={idx === urls.length - 1}
-                    title="Move down"
-                    aria-label="Move down"
-                  >
-                    &darr;
-                  </button>
-                  {entry.isBuiltin ? (
-                    <button
-                      class={`btn btn-ghost btn-sm rpc-action-btn${entry.enabled ? '' : ' rpc-toggle-off'}`}
-                      onClick={() => toggleBuiltin(network, idx)}
-                      title={entry.enabled ? 'Disable' : 'Enable'}
-                      aria-label={entry.enabled ? 'Disable' : 'Enable'}
+            {urls.map((entry, idx) => {
+              const status = getUrlStatus(entry.url);
+              const testKey = `${network}:${entry.url}`;
+              const isTesting = rpcTesting.value[testKey] ?? false;
+              const testResult = rpcTestResults.value[testKey];
+
+              return (
+                <div
+                  key={`${network}-${idx}`}
+                  class={`rpc-url-item${entry.isBuiltin ? ' rpc-url-item--builtin' : ''}${!entry.enabled ? ' rpc-url-disabled' : ''}`}
+                  data-testid={`rpc-url-${network}-${idx}`}
+                >
+                  <span class="rpc-url-priority">#{idx + 1}</span>
+                  <span class="rpc-url-item-url" title={entry.url}>{entry.url}</span>
+                  {entry.isBuiltin && <span class="badge-builtin">(built-in)</span>}
+                  {/* Live pool status indicator */}
+                  <span class="rpc-url-status" data-testid={`rpc-status-${network}-${idx}`}>
+                    {status ? (
+                      status.status === 'available' ? (
+                        <>
+                          <span class="rpc-url-status-dot rpc-url-status-dot--available" />
+                          <span>Available</span>
+                        </>
+                      ) : (
+                        <>
+                          <span class="rpc-url-status-dot rpc-url-status-dot--cooldown" />
+                          <span>Cooldown</span>
+                          <span class="rpc-url-cooldown-info">
+                            {formatCooldown(status.cooldownRemainingMs)} remaining
+                          </span>
+                          <Badge variant="warning">{status.failureCount} fail{status.failureCount !== 1 ? 's' : ''}</Badge>
+                        </>
+                      )
+                    ) : (
+                      <>
+                        <span class="rpc-url-status-dot rpc-url-status-dot--unknown" />
+                        <span>Unknown</span>
+                      </>
+                    )}
+                  </span>
+                  {/* Per-URL test button */}
+                  <span class="rpc-url-test-inline">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleTestUrl(network, entry.url)}
+                      loading={isTesting}
                     >
-                      {entry.enabled ? 'On' : 'Off'}
-                    </button>
-                  ) : (
+                      Test
+                    </Button>
+                    {testResult && (
+                      <span class={`rpc-test-result ${testResult.success ? 'rpc-test-result--success' : 'rpc-test-result--failure'}`}>
+                        <Badge variant={testResult.success ? 'success' : 'danger'}>
+                          {testResult.success ? 'OK' : 'FAIL'}
+                        </Badge>
+                        {testResult.success && (
+                          <>
+                            {' '}{testResult.latencyMs}ms
+                            {testResult.blockNumber !== undefined && ` (block #${testResult.blockNumber.toLocaleString()})`}
+                          </>
+                        )}
+                        {testResult.error && ` - ${testResult.error}`}
+                      </span>
+                    )}
+                  </span>
+                  <span class="rpc-url-actions">
                     <button
-                      class="btn btn-ghost btn-sm rpc-action-btn rpc-delete-btn"
-                      onClick={() => removeUrl(network, idx)}
-                      title="Remove"
-                      aria-label="Remove"
+                      class="btn btn-ghost btn-sm rpc-action-btn"
+                      onClick={() => moveUrl(network, idx, 'up')}
+                      disabled={idx === 0}
+                      title="Move up"
+                      aria-label="Move up"
                     >
-                      &times;
+                      &uarr;
                     </button>
-                  )}
-                </span>
-              </div>
-            ))}
+                    <button
+                      class="btn btn-ghost btn-sm rpc-action-btn"
+                      onClick={() => moveUrl(network, idx, 'down')}
+                      disabled={idx === urls.length - 1}
+                      title="Move down"
+                      aria-label="Move down"
+                    >
+                      &darr;
+                    </button>
+                    {entry.isBuiltin ? (
+                      <button
+                        class={`btn btn-ghost btn-sm rpc-action-btn${entry.enabled ? '' : ' rpc-toggle-off'}`}
+                        onClick={() => toggleBuiltin(network, idx)}
+                        title={entry.enabled ? 'Disable' : 'Enable'}
+                        aria-label={entry.enabled ? 'Disable' : 'Enable'}
+                      >
+                        {entry.enabled ? 'On' : 'Off'}
+                      </button>
+                    ) : (
+                      <button
+                        class="btn btn-ghost btn-sm rpc-action-btn rpc-delete-btn"
+                        onClick={() => removeUrl(network, idx)}
+                        title="Remove"
+                        aria-label="Remove"
+                      >
+                        &times;
+                      </button>
+                    )}
+                  </span>
+                </div>
+              );
+            })}
             <div class="rpc-add-url">
               <input
                 type="text"
