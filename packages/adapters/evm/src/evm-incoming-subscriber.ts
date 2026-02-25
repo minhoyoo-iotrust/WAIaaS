@@ -57,6 +57,19 @@ const BACKOFF_MAX_MS = 300_000;
 const WARN_THRESHOLD = 3;
 /** Maximum same-range retries before forcing cursor advancement. */
 const MAX_RETRY_SAME_RANGE = 3;
+/** Consecutive errors before emitting RPC health degraded alert (#185). */
+const RPC_ALERT_THRESHOLD = 5;
+
+/** RPC alert callback type for notifying admin of RPC issues (#185). */
+export type RpcAlertCallback = (alert: {
+  type: 'RPC_HEALTH_DEGRADED' | 'INCOMING_TX_RANGE_SKIPPED';
+  walletId: string;
+  network: string;
+  errorCount: number;
+  lastError: string;
+  fromBlock?: string;
+  toBlock?: string;
+}) => void;
 
 export class EvmIncomingSubscriber implements IChainSubscriber {
   readonly chain: ChainType = 'ethereum';
@@ -64,12 +77,16 @@ export class EvmIncomingSubscriber implements IChainSubscriber {
   private client: PublicClient;
   private subscriptions = new Map<string, EvmSubscription>();
   private generateId: () => string;
+  private onRpcAlert?: RpcAlertCallback;
   private errorCount = 0;
   private backoffUntil = 0;
+  /** Track wallets that already emitted RPC_HEALTH_DEGRADED to avoid spam. */
+  private alertedWallets = new Set<string>();
 
-  constructor(config: { rpcUrl: string; generateId?: () => string }) {
+  constructor(config: { rpcUrl: string; generateId?: () => string; onRpcAlert?: RpcAlertCallback }) {
     this.client = createPublicClient({ transport: http(config.rpcUrl) });
     this.generateId = config.generateId ?? (() => crypto.randomUUID());
+    this.onRpcAlert = config.onRpcAlert;
   }
 
   // -- Subscription management (2) --
@@ -181,17 +198,32 @@ export class EvmIncomingSubscriber implements IChainSubscriber {
           sub.lastBlock = toBlock;
           sub.errorCount = 0;
           sub.backoffUntil = 0;
+          this.alertedWallets.delete(walletId);
         } catch (err) {
           hadError = true;
           sub.errorCount++;
 
+          const errMsg = err instanceof Error ? err.message : String(err);
+
           // Force cursor advancement after N consecutive failures to escape infinite retry
           if (sub.errorCount >= MAX_RETRY_SAME_RANGE) {
+            const fromBlock = sub.lastBlock + 1n;
             const toBlock =
               sub.lastBlock + MAX_BLOCK_RANGE < currentBlock
                 ? sub.lastBlock + MAX_BLOCK_RANGE
                 : currentBlock;
             sub.lastBlock = toBlock;
+
+            // Emit INCOMING_TX_RANGE_SKIPPED alert (#185)
+            this.onRpcAlert?.({
+              type: 'INCOMING_TX_RANGE_SKIPPED',
+              walletId,
+              network: sub.network,
+              errorCount: sub.errorCount,
+              lastError: errMsg,
+              fromBlock: String(fromBlock),
+              toBlock: String(toBlock),
+            });
           }
 
           // Per-wallet exponential backoff
@@ -201,11 +233,22 @@ export class EvmIncomingSubscriber implements IChainSubscriber {
           );
           sub.backoffUntil = Date.now() + backoffMs;
 
+          // Emit RPC_HEALTH_DEGRADED alert once per wallet (#185)
+          if (sub.errorCount === RPC_ALERT_THRESHOLD && !this.alertedWallets.has(walletId)) {
+            this.alertedWallets.add(walletId);
+            this.onRpcAlert?.({
+              type: 'RPC_HEALTH_DEGRADED',
+              walletId,
+              network: sub.network,
+              errorCount: sub.errorCount,
+              lastError: errMsg,
+            });
+          }
+
           // Log only after WARN_THRESHOLD, message-only (no full stack trace)
           if (sub.errorCount >= WARN_THRESHOLD) {
-            const msg = err instanceof Error ? err.message : String(err);
             console.warn(
-              `EVM poll failed for wallet ${walletId} (backoff ${backoffMs / 1000}s, consecutive: ${sub.errorCount}): ${msg}`,
+              `EVM poll failed for wallet ${walletId} (backoff ${backoffMs / 1000}s, consecutive: ${sub.errorCount}): ${errMsg}`,
             );
           }
         }
