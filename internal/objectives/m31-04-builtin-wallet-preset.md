@@ -92,6 +92,94 @@ Wallet Type:    [D'CENT Wallet        ▼]
 - `wallet_type`과 `approval_method` 동시 제공 → `wallet_type` 프리셋 우선
 - 빌트인에 없는 `wallet_type` → 400 에러
 
+### 7. Push Relay 선언적 Payload 변환
+
+Push Relay가 지갑 앱별 푸시 메시지 포맷 차이를 **코드 변경 없이 config.toml에서 선언적으로 처리**한다.
+
+#### 문제
+
+현재 `buildPushPayload()`가 범용 `PushPayload`를 생성하면 `IPushProvider`가 그대로 전달한다. 그러나 지갑 앱마다 `data` 필드에 기대하는 구조가 다르다.
+
+예: D'CENT는 `tag_group_name`, `tag_value` 필드를 요구:
+
+```json
+{
+  "data": {
+    "tag_group_name": "common_push",
+    "tag_value": "waiaas_sign_request",
+    "requestId": "...",
+    "chain": "evm"
+  }
+}
+```
+
+#### config.toml 스키마
+
+```toml
+[relay.push.payload]
+# 모든 푸시에 주입되는 정적 필드
+[relay.push.payload.static_fields]
+tag_group_name = "common_push"
+
+# category(sign_request | notification) → 키-값 매핑
+[relay.push.payload.category_map]
+target_key = "tag_value"
+sign_request = "waiaas_sign_request"
+notification = "waiaas_notification"
+```
+
+#### 변환 파이프라인
+
+```
+ntfy 메시지
+  → buildPushPayload()         # 범용 PushPayload 생성
+  → ConfigurablePayloadTransformer.transform()  # config 기반 변환
+  → IPushProvider.send()       # Pushwoosh/FCM 전송
+```
+
+#### ConfigurablePayloadTransformer
+
+```typescript
+interface PayloadTransformConfig {
+  static_fields?: Record<string, string>;
+  category_map?: {
+    target_key: string;
+    sign_request?: string;
+    notification?: string;
+  };
+}
+
+class ConfigurablePayloadTransformer {
+  constructor(private readonly config: PayloadTransformConfig) {}
+
+  transform(payload: PushPayload): PushPayload {
+    const data = { ...payload.data };
+
+    // 1. 정적 필드 주입
+    if (this.config.static_fields) {
+      Object.assign(data, this.config.static_fields);
+    }
+
+    // 2. 카테고리 매핑
+    if (this.config.category_map) {
+      const { target_key, ...mapping } = this.config.category_map;
+      const mapped = mapping[payload.category];
+      if (mapped) data[target_key] = mapped;
+    }
+
+    return { ...payload, data };
+  }
+}
+```
+
+#### 설계 결정
+
+| ID | 결정 | 근거 |
+|----|------|------|
+| D1 | config 선언적 변환 우선 | 지갑 앱 추가 시 Push Relay 코드 변경 불필요. 대부분의 경우 정적 필드 주입 + 카테고리 매핑으로 충분 |
+| D2 | `[relay.push.payload]` 섹션 선택적 | 미설정 시 기존 동작 유지 (변환 없이 bypass) |
+| D3 | 변환은 Provider 앞단 | Provider는 전송 인프라(Pushwoosh/FCM) 책임, payload 구조는 수신측 앱의 관심사 |
+
 ## 요구사항
 
 | ID | 구분 | 내용 |
@@ -105,3 +193,7 @@ Wallet Type:    [D'CENT Wallet        ▼]
 | R7 | 검증 | 빌트인에 없는 `wallet_type` 제공 시 400 에러 |
 | R8 | SDK/MCP | Owner 등록 관련 인터페이스에 `wallet_type` 반영 |
 | R9 | Skill | `wallet.skill.md` Owner 등록 섹션에 `wallet_type` 사용법 추가 |
+| R10 | Push Relay | config.toml `[relay.push.payload]` 스키마 확장 (Zod 검증) |
+| R11 | Push Relay | `ConfigurablePayloadTransformer` 구현 — static_fields 주입 + category_map 매핑 |
+| R12 | Push Relay | 변환 파이프라인 통합 — `buildPushPayload()` → transformer → `IPushProvider.send()` |
+| R13 | Push Relay | `[relay.push.payload]` 미설정 시 기존 동작 유지 (bypass) |
