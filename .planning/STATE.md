@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 
 ## Current Position
 
-Phase: 2 of 5 (Phase 261: Adapter Integration)
-Plan: 2 of 3 in current phase
-Status: 261-02 complete, proceeding to 261-03
-Last activity: 2026-02-25 -- Completed 261-02 adapter RPC routing + hot-reload cooldown reset (12 tests, 2 files)
+Phase: 2 of 5 (Phase 261: Adapter Integration -- COMPLETE)
+Plan: 3 of 3 in current phase (all complete)
+Status: Phase 261 complete, proceeding to Phase 262
+Last activity: 2026-02-25 -- Completed 261-03 IncomingTxMonitor RpcPool integration (12 tests, 3 files)
 
-Progress: [█████░░░░░] 50%
+Progress: [██████░░░░] 60%
 
 ## Performance Metrics
 
@@ -25,7 +25,7 @@ Progress: [█████░░░░░] 50%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 260 | 2/2 | 5min | 2.5min |
-| 261 | 2/3 | 9min | 4.5min |
+| 261 | 3/3 | 13min | 4.3min |
 
 ## Accumulated Context
 
@@ -51,6 +51,11 @@ Progress: [█████░░░░░] 50%
 - 261-02: Hot-reload adds pool.reset() (cooldown clear) after eviction, not URL re-registration -- preserves startup URL priority order
 - 261-02: configKeyToNetwork imported from adapter-pool.ts in hot-reload to avoid duplicating network mapping logic
 
+- 261-03: resolveRpcUrlFromPool extracted as testable helper in adapter-pool.ts (not inline closure in daemon.ts)
+- 261-03: RpcPool URL used at subscriber creation time only -- mid-polling rotation deferred to Phase 264
+- 261-03: No changes to IncomingTxMonitorService or SubscriptionMultiplexer -- subscriberFactory is dependency-injected
+- 261-03: WSS URL derivation continues from resolved HTTP URL (same pattern as before RpcPool)
+
 ### Blockers/Concerns
 
 - 저장 방식 (SettingsService JSON 배열 vs rpc_endpoints DB 테이블) -- Phase 262 설계 시 결정 필요
@@ -59,5 +64,5 @@ Progress: [█████░░░░░] 50%
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 261-02-PLAN.md
+Stopped at: Completed 261-03-PLAN.md (Phase 261 complete)
 Resume file: None

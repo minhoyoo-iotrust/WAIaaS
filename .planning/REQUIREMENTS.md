@@ -26,7 +26,7 @@ Requirements for v28.6. Each maps to roadmap phases.
 - [x] **ADPT-01**: RpcPool 추상 레이어를 AdapterPool과 어댑터 사이에 도입한다
 - [x] **ADPT-02**: SolanaAdapter의 잔액/자산 조회가 RPC Pool을 경유한다
 - [x] **ADPT-03**: EvmAdapter의 PublicClient 생성이 RPC Pool에서 URL을 획득한다
-- [ ] **ADPT-04**: IncomingTxMonitor 각 Subscriber가 RPC Pool을 통해 폴링한다
+- [x] **ADPT-04**: IncomingTxMonitor 각 Subscriber가 RPC Pool을 통해 폴링한다
 
 ### Config + Settings
 
@@ -89,7 +89,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ADPT-01 | Phase 261 | Complete |
 | ADPT-02 | Phase 261 | Complete |
 | ADPT-03 | Phase 261 | Complete |
-| ADPT-04 | Phase 261 | Pending |
+| ADPT-04 | Phase 261 | Complete |
 | CONF-01 | Phase 261 | Complete |
 | CONF-02 | Phase 262 | Pending |
 | CONF-03 | Phase 262 | Pending |
