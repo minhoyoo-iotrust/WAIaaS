@@ -1,5 +1,36 @@
 # Changelog
 
+## [2.7.0-rc](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.6.0...v2.7.0-rc) (2026-02-25)
+
+
+### Features
+
+* **258-01:** add Pipeline Stage 3.5 gas condition check with GAS_WAITING transition ([5d15401](https://github.com/minhoyoo-iotrust/WAIaaS/commit/5d15401360fda526df5698df9ad42c7863e945fb))
+* **258-02:** add gas_condition settings (5 keys) to SETTING_DEFINITIONS ([6ccd56d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/6ccd56d353feb270628492030e61b59a4d31c7d4))
+* **258-02:** add GasConditionTracker with EVM/Solana RPC gas price queries ([801ec94](https://github.com/minhoyoo-iotrust/WAIaaS/commit/801ec9459bfbeb1d71b170f9f9c5b32b9a11445b))
+* **258-02:** add resumePipeline callback and gas-condition COMPLETED handling ([aa4e328](https://github.com/minhoyoo-iotrust/WAIaaS/commit/aa4e3282e95d6338b34746f70d2bae49c086696c))
+* **258-02:** register GasConditionTracker and add executeFromStage4 ([4594501](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4594501a3664bd691143593d11c90c0c92bc752b))
+* **259-01:** add Gas Condition section to Admin UI System page ([724caf2](https://github.com/minhoyoo-iotrust/WAIaaS/commit/724caf221ee61ec68f24d8abec948f5b66c90ec1))
+* **259-01:** add GasCondition OpenAPI schema and gas_condition settings category ([84ea5a5](https://github.com/minhoyoo-iotrust/WAIaaS/commit/84ea5a5ffccc7c5e44072796e5cbdef4f41ec30c))
+* **259-02:** add gas_condition parameter to MCP transaction tools ([6f6f12e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/6f6f12eb2dd1782a0813cfa1ef264b3c5e85dd83))
+* **259-02:** add gasCondition to MCP action_provider and Actions route ([2e1cce6](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2e1cce678165616662927fdf273fa321f744436f))
+* **259-02:** add gasCondition to TS SDK, Python SDK, and skill docs ([41f1cf1](https://github.com/minhoyoo-iotrust/WAIaaS/commit/41f1cf1275cf0bbe4484f346610f1dc032d4ec4c))
+* add GasCondition schema, notification events, and i18n (258-01 partial) ([23d2471](https://github.com/minhoyoo-iotrust/WAIaaS/commit/23d2471f8c951707a02cfd14fc712d3414bc6041))
+
+
+### Bug Fixes
+
+* **#185:** add retry and timeout handling to EVM incoming subscriber ([a91ab1a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a91ab1a60793f0ddd6f0f1fee67dfb866e15a7d2))
+* **#186:** correct LI.FI getQuote query parameter names ([bf10130](https://github.com/minhoyoo-iotrust/WAIaaS/commit/bf101306478fc7b09a549fb1632a17ca558d0f91))
+* **#187:** add retry logic for Solana mainnet RPC 429 rate limits ([08be559](https://github.com/minhoyoo-iotrust/WAIaaS/commit/08be55975404575f3f5bfa15547fa4be3c1079da))
+* **#188:** resolve actions providers wildcard auth and admin UI improvements ([a12ab8e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a12ab8ea00037d8fbd31840538bba0b60aca5ffa))
+* **258:** emit TX_CANCELLED notification on gas-condition timeout ([2784804](https://github.com/minhoyoo-iotrust/WAIaaS/commit/278480458874d389687831189abf4f7bb32b4443))
+* **259:** revise plans based on checker feedback ([c66d776](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c66d77693f07dea95f1413305cdefa86733d1e88))
+* **259:** update notification event type count from 38 to 42 ([0ae6381](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0ae63818c2b0ab2c82650fe4f7ba4594ef694671))
+* remove unused CurrencyCode import in display-currency-helper test ([d222511](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d222511e3dbb7f8c632b1e1a1385cbf8790c70c1))
+* update test expectations for dual-auth actions/providers endpoint ([62926ea](https://github.com/minhoyoo-iotrust/WAIaaS/commit/62926ea1648e18b5f6bbc371e180b8a077d100b4))
+* use regex matchers for action provider description tests ([aefff7f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/aefff7f9e2f5130e0222b6a69d0c6c7383122b1d))
+
 ## [2.6.0](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.6.0-rc.13...v2.6.0) (2026-02-24)
 
 
