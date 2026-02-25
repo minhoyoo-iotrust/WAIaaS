@@ -1373,6 +1373,7 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
           monitoring: emptyCategory,
           telegram: emptyCategory,
           signing_sdk: emptyCategory,
+          gas_condition: emptyCategory,
         },
         200,
       );
