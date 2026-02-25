@@ -23,17 +23,17 @@ Requirements for v28.6. Each maps to roadmap phases.
 
 ### Adapter Integration
 
-- [ ] **ADPT-01**: RpcPool 추상 레이어를 AdapterPool과 어댑터 사이에 도입한다
+- [x] **ADPT-01**: RpcPool 추상 레이어를 AdapterPool과 어댑터 사이에 도입한다
 - [ ] **ADPT-02**: SolanaAdapter의 잔액/자산 조회가 RPC Pool을 경유한다
 - [ ] **ADPT-03**: EvmAdapter의 PublicClient 생성이 RPC Pool에서 URL을 획득한다
 - [ ] **ADPT-04**: IncomingTxMonitor 각 Subscriber가 RPC Pool을 통해 폴링한다
 
 ### Config + Settings
 
-- [ ] **CONF-01**: config.toml 기존 단일 URL 설정이 1개짜리 Pool로 하위 호환 동작한다
+- [x] **CONF-01**: config.toml 기존 단일 URL 설정이 1개짜리 Pool로 하위 호환 동작한다
 - [ ] **CONF-02**: Admin Settings에서 네트워크별 RPC URL 목록을 추가/삭제/순서 변경할 수 있다
 - [ ] **CONF-03**: RPC 목록 변경 시 데몬 재시작 없이 hot-reload된다
-- [ ] **CONF-04**: 환경 변수 WAIAAS_RPC_* URL이 Pool 첫 번째 항목으로 추가된다
+- [x] **CONF-04**: 환경 변수 WAIAAS_RPC_* URL이 Pool 첫 번째 항목으로 추가된다
 
 ### Admin UI
 
@@ -86,14 +86,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DFLT-01 | Phase 260 | Complete |
 | DFLT-02 | Phase 260 | Complete |
 | DFLT-03 | Phase 260 | Complete |
-| ADPT-01 | Phase 261 | Pending |
+| ADPT-01 | Phase 261 | Complete |
 | ADPT-02 | Phase 261 | Pending |
 | ADPT-03 | Phase 261 | Pending |
 | ADPT-04 | Phase 261 | Pending |
-| CONF-01 | Phase 261 | Pending |
+| CONF-01 | Phase 261 | Complete |
 | CONF-02 | Phase 262 | Pending |
 | CONF-03 | Phase 262 | Pending |
-| CONF-04 | Phase 261 | Pending |
+| CONF-04 | Phase 261 | Complete |
 | ADUI-01 | Phase 263 | Pending |
 | ADUI-02 | Phase 263 | Pending |
 | ADUI-03 | Phase 263 | Pending |
