@@ -9,11 +9,11 @@ Requirements for v28.6. Each maps to roadmap phases.
 
 ### RPC Pool Core
 
-- [ ] **POOL-01**: 네트워크당 N개 RPC URL을 우선순위 순서로 등록할 수 있다
-- [ ] **POOL-02**: 요청 시 우선순위 순서대로 시도하고 실패 시 다음 엔드포인트로 자동 전환한다
-- [ ] **POOL-03**: 429/408/5xx 응답 시 해당 RPC에 cooldown 적용 (60초 기본, 지수 증가, 최대 5분)
-- [ ] **POOL-04**: cooldown 중인 RPC를 자동 스킵하고 cooldown 해제 시 자동 복귀한다
-- [ ] **POOL-05**: 네트워크의 전체 RPC가 실패하면 에러를 전파한다
+- [x] **POOL-01**: 네트워크당 N개 RPC URL을 우선순위 순서로 등록할 수 있다
+- [x] **POOL-02**: 요청 시 우선순위 순서대로 시도하고 실패 시 다음 엔드포인트로 자동 전환한다
+- [x] **POOL-03**: 429/408/5xx 응답 시 해당 RPC에 cooldown 적용 (60초 기본, 지수 증가, 최대 5분)
+- [x] **POOL-04**: cooldown 중인 RPC를 자동 스킵하고 cooldown 해제 시 자동 복귀한다
+- [x] **POOL-05**: 네트워크의 전체 RPC가 실패하면 에러를 전파한다
 
 ### Built-in Defaults
 
@@ -78,11 +78,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| POOL-01 | Phase 260 | Pending |
-| POOL-02 | Phase 260 | Pending |
-| POOL-03 | Phase 260 | Pending |
-| POOL-04 | Phase 260 | Pending |
-| POOL-05 | Phase 260 | Pending |
+| POOL-01 | Phase 260 | Complete |
+| POOL-02 | Phase 260 | Complete |
+| POOL-03 | Phase 260 | Complete |
+| POOL-04 | Phase 260 | Complete |
+| POOL-05 | Phase 260 | Complete |
 | DFLT-01 | Phase 260 | Pending |
 | DFLT-02 | Phase 260 | Pending |
 | DFLT-03 | Phase 260 | Pending |

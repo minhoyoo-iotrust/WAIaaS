@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 ## Current Position
 
 Phase: 1 of 5 (Phase 260: RPC Pool Core + Built-in Defaults)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-25 -- Roadmap created for v28.6 RPC Pool (5 phases, 25 reqs)
+Plan: 1 of 2 in current phase
+Status: Executing
+Last activity: 2026-02-25 -- Completed 260-01 RpcPool core (24 tests, 4 files)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█░░░░░░░░░] 10%
 
 ## Performance Metrics
 
@@ -24,7 +24,7 @@ Progress: [░░░░░░░░░░] 0%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 260 | 1/2 | 3min | 3min |
 
 ## Accumulated Context
 
@@ -33,6 +33,10 @@ Progress: [░░░░░░░░░░] 0%
 - Roadmap: 5 phases derived from 25 requirements in 6 categories (POOL/DFLT/ADPT/CONF/ADUI/MNTR)
 - Phase 260 combines POOL + DFLT -- built-in defaults are part of pool initialization, not a separate delivery
 - Phase 261 includes CONF-01/CONF-04 -- backward compat belongs with adapter wiring, not settings storage
+
+- 260-01: AllRpcFailedError extends Error (not ChainError) -- infrastructure-level, not chain-specific
+- 260-01: Injectable nowFn for deterministic cooldown testing instead of mocking Date.now
+- 260-01: Network key is string (not NetworkType) for flexibility -- adapters can use any identifier
 
 ### Blockers/Concerns
 
@@ -44,5 +48,5 @@ Progress: [░░░░░░░░░░] 0%
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Roadmap created, ready to plan Phase 260
+Stopped at: Completed 260-01-PLAN.md
 Resume file: None
