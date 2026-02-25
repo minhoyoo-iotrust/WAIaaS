@@ -5,26 +5,27 @@
 See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v28.5 가스비 조건부 실행 -- Phase 259 plan 01 complete, plan 02 next
+**Current focus:** v28.5 가스비 조건부 실행 -- Phase 259 complete (2/2 plans done)
 
 ## Current Position
 
 Phase: 259 of 259 (REST API + Admin + MCP + SDK 통합)
-Plan: 259-02 of 2 (next: MCP gasCondition tools + SDK sendTransfer gasCondition + TX_CANCELLED gap fix)
-Status: Phase 259 in progress -- plan 01 complete (4 tasks), plan 02 pending (6 tasks)
-Last activity: 2026-02-25 -- 259-01 executed (REST API gasCondition + Admin Settings + Admin UI)
+Plan: 2 of 2 (complete)
+Status: Phase 259 complete -- all plans executed (plan 01: 4 tasks, plan 02: 4 tasks)
+Last activity: 2026-02-25 -- 259-02 executed (MCP gasCondition + SDK + Python SDK + skill docs)
 
-Progress: [███████░░░] 75%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
-**Cumulative:** 62 milestones, 257 phases completed, 554 plans, 1,532 reqs, ~5,000+ tests, ~189,000 LOC TS
+**Cumulative:** 62 milestones, 259 phases completed, 556 plans, 1,532 reqs, ~5,000+ tests, ~189,000 LOC TS
 
 | Phase | Plan | Duration | Tasks | Files |
 | ----- | ---- | -------- | ----- | ----- |
 | 258   | 01   | 7min     | 5     | 11    |
 | 258   | 02   | 25min    | 5     | 8     |
 | 259   | 01   | 10min    | 4     | 6     |
+| 259   | 02   | 6min     | 4     | 14    |
 
 ## Accumulated Context
 
@@ -45,6 +46,9 @@ Progress: [███████░░░] 75%
 - executeFromStage4는 stage4Wait 건너뜀 -- 정책은 GAS_WAITING 진입 전 이미 평가됨
 - GasConditionOpenAPI는 documentation-only z.object -- core GasConditionSchema.refine()은 OpenAPI 호환 불가
 - gas_condition 카테고리를 SettingsResponseSchema에 추가 -- Admin Settings API 응답 타입 일치
+- Actions route gasCondition은 spread merge ({...contractCall, gasCondition})로 파이프라인 request에 주입 -- stage3_5GasCondition이 ctx.request에서 감지
+- Python SDK GasCondition은 by_alias=True로 camelCase 직렬화 -- REST API 호환
+- packages/skills/skills/는 gitignored -- skills/transactions.skill.md만 git 추적
 
 ### Blockers/Concerns
 
@@ -53,6 +57,6 @@ Progress: [███████░░░] 75%
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 259-01-PLAN.md (4 tasks, 10min)
-Resume file: .planning/phases/259-external-interface-integration/259-CONTEXT.md
-Resume instructions: Execute Phase 259-02 (wave 2, 6 tasks): MCP tools + SDK + TX_CANCELLED gap fix
+Stopped at: Completed 259-02-PLAN.md (4 tasks, 6min) -- Phase 259 complete
+Resume file: .planning/phases/259-external-interface-integration/259-02-SUMMARY.md
+Resume instructions: v28.5 milestone complete -- all phases (258, 259) executed. Ready for milestone PR.

@@ -279,7 +279,7 @@ See `.planning/milestones/v28.4-ROADMAP.md` for full details.
 **Milestone Goal:** AI 에이전트가 가스비 조건을 선언적으로 지정하여 비용을 최적화하고, 조건 충족 시 자동으로 트랜잭션을 실행하는 상태
 
 - [x] **Phase 258: GasCondition 코어 파이프라인** - GasCondition 스키마 + 가스 조건 평가기 + 백그라운드 워커 + 알림 이벤트 (completed 2026-02-24)
-- [ ] **Phase 259: 외부 인터페이스 통합** - REST API + Admin Settings/UI + MCP + SDK + Skill + ActionProvider 가스 조건 노출
+- [x] **Phase 259: 외부 인터페이스 통합** - REST API + Admin Settings/UI + MCP + SDK + Skill + ActionProvider 가스 조건 노출 (completed 2026-02-25)
 
 ## Phase Details
 
@@ -321,7 +321,7 @@ Phases execute in numeric order: 258 -> 259
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 258. GasCondition 코어 파이프라인 | v28.5 | Complete    | 2026-02-24 | 2026-02-25 |
-| 259. 외부 인터페이스 통합 | 1/2 | In Progress|  | - |
+| 259. 외부 인터페이스 통합 | 2/2 | Complete   | 2026-02-25 | - |
 
 ---
 *Roadmap created: 2026-02-25*

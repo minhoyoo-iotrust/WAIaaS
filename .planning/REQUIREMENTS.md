@@ -43,10 +43,10 @@ Requirements for v28.5 milestone. Each maps to roadmap phases.
 - [x] **INTF-01**: REST API 트랜잭션 제출 엔드포인트에 gasCondition 옵션 필드가 추가된다
 - [x] **INTF-02**: Admin Settings에 gas_condition 5개 키가 추가된다 (enabled/poll_interval_sec/default_timeout_sec/max_timeout_sec/max_pending_count)
 - [x] **INTF-03**: Admin UI System > Settings에 Gas Condition 설정 섹션이 추가된다
-- [ ] **INTF-04**: MCP send_token/call_contract 등 도구에 gasCondition 파라미터가 노출된다
-- [ ] **INTF-05**: TS/Python SDK에 gasCondition 파라미터가 노출된다
-- [ ] **INTF-06**: transactions.skill.md에 가스 조건부 실행 섹션이 추가된다
-- [ ] **INTF-07**: ActionProvider resolve 후 gasCondition이 적용된다
+- [x] **INTF-04**: MCP send_token/call_contract 등 도구에 gasCondition 파라미터가 노출된다
+- [x] **INTF-05**: TS/Python SDK에 gasCondition 파라미터가 노출된다
+- [x] **INTF-06**: transactions.skill.md에 가스 조건부 실행 섹션이 추가된다
+- [x] **INTF-07**: ActionProvider resolve 후 gasCondition이 적용된다
 
 ## v2 Requirements
 
@@ -89,10 +89,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INTF-01 | Phase 259 | Complete |
 | INTF-02 | Phase 259 | Complete |
 | INTF-03 | Phase 259 | Complete |
-| INTF-04 | Phase 259 | Pending |
-| INTF-05 | Phase 259 | Pending |
-| INTF-06 | Phase 259 | Pending |
-| INTF-07 | Phase 259 | Pending |
+| INTF-04 | Phase 259 | Complete |
+| INTF-05 | Phase 259 | Complete |
+| INTF-06 | Phase 259 | Complete |
+| INTF-07 | Phase 259 | Complete |
 
 **Coverage:**
 - v1 requirements: 25 total
