@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 ## Current Position
 
 Phase: 5 of 5 (Phase 264: Monitoring Alerts)
-Plan: 1 of 2 in current phase
-Status: 264-01 complete, proceeding to 264-02
-Last activity: 2026-02-25 -- Completed 264-01 RPC monitoring events + onEvent callback (44 event types, 5 new tests)
+Plan: 2 of 2 in current phase
+Status: All plans complete -- milestone ready for shipping
+Last activity: 2026-02-25 -- Completed 264-02 RpcPool notification wiring + integration tests (4 MNTR reqs verified)
 
-Progress: [█████████░] 92%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -28,7 +28,7 @@ Progress: [█████████░] 92%
 | 261 | 3/3 | 13min | 4.3min |
 | 262 | 1/1 | 6min | 6min |
 | 263 | 2/2 | 12min | 6min |
-| 264 | 1/2 | 4min | 4min |
+| 264 | 2/2 | 8min | 4min |
 
 ## Accumulated Context
 
@@ -77,6 +77,10 @@ Progress: [█████████░] 92%
 - 264-01: RPC_HEALTH_DEGRADED emitted on every cooldown entry; RPC_ALL_FAILED only when all endpoints in cooldown
 - 264-01: RPC_RECOVERED emitted only when endpoint was in cooldown before reportSuccess
 
+- 264-02: onEvent callback placed at RpcPool constructor in Step 4, checks this.notificationService at call time (lazy binding)
+- 264-02: walletId 'system' for infrastructure-level RPC alerts (not wallet-specific)
+- 264-02: Coexists with EvmIncomingSubscriber.onRpcAlert (different source, different semantics)
+
 ### Blockers/Concerns
 
 - [RESOLVED] 저장 방식 결정: SettingsService JSON 배열 방식 채택 (Phase 262-01에서 구현)
@@ -85,5 +89,5 @@ Progress: [█████████░] 92%
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 264-01-PLAN.md
+Stopped at: Completed 264-02-PLAN.md -- all phases complete, milestone ready for shipping
 Resume file: None
