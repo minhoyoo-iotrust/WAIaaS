@@ -304,7 +304,7 @@ See `.planning/milestones/v28.6-ROADMAP.md` for full details.
 
 - [x] **Phase 265: Wallet Preset Foundation** - DB 마이그레이션 + 프리셋 레지스트리 + API 스키마 확장 + 하위 호환 + 에러 처리
 - [x] **Phase 266: Auto-Setup Orchestration + Admin UI** - 4단계 자동 설정 파이프라인 + 실패 시 롤백 + Admin UI 지갑 종류 드롭다운
-- [ ] **Phase 267: Push Relay Payload Transform** - config 스키마 확장 + ConfigurablePayloadTransformer + 파이프라인 통합 + bypass
+- [x] **Phase 267: Push Relay Payload Transform** - config 스키마 확장 + ConfigurablePayloadTransformer + 파이프라인 통합 + bypass (completed 2026-02-25)
 
 ## Phase Details
 
@@ -363,7 +363,7 @@ Phases execute in numeric order: 265 -> 266 -> 267
 |-------|-----------|----------------|--------|-----------|
 | 265. Wallet Preset Foundation | v28.8 | 2/2 | Complete | 2026-02-26 |
 | 266. Auto-Setup Orchestration + Admin UI | v28.8 | 2/2 | Complete | 2026-02-26 |
-| 267. Push Relay Payload Transform | 1/2 | In Progress|  | - |
+| 267. Push Relay Payload Transform | 2/2 | Complete   | 2026-02-25 | - |
 
 ---
 *Roadmap created: 2026-02-25*
