@@ -102,7 +102,7 @@ describe('RpcPool.createWithDefaults()', () => {
   });
 
   it('falls back to second URL after first failure', () => {
-    let now = 0;
+    const now = 0;
     const pool = RpcPool.createWithDefaults({ nowFn: () => now });
 
     const firstUrl = pool.getUrl('mainnet');

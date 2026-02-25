@@ -46,6 +46,7 @@ export const SETTING_CATEGORIES = [
   'actions',
   'policy',
   'gas_condition',
+  'rpc_pool',
 ] as const;
 
 export type SettingCategory = (typeof SETTING_CATEGORIES)[number];
@@ -190,6 +191,21 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'gas_condition.default_timeout_sec', category: 'gas_condition', configPath: 'gas_condition.default_timeout_sec', defaultValue: '3600', isCredential: false },
   { key: 'gas_condition.max_timeout_sec', category: 'gas_condition', configPath: 'gas_condition.max_timeout_sec', defaultValue: '86400', isCredential: false },
   { key: 'gas_condition.max_pending_count', category: 'gas_condition', configPath: 'gas_condition.max_pending_count', defaultValue: '100', isCredential: false },
+
+  // --- rpc_pool category (per-network URL lists managed via Admin Settings API) ---
+  { key: 'rpc_pool.mainnet', category: 'rpc_pool', configPath: 'rpc_pool.mainnet', defaultValue: '[]', isCredential: false },
+  { key: 'rpc_pool.devnet', category: 'rpc_pool', configPath: 'rpc_pool.devnet', defaultValue: '[]', isCredential: false },
+  { key: 'rpc_pool.testnet', category: 'rpc_pool', configPath: 'rpc_pool.testnet', defaultValue: '[]', isCredential: false },
+  { key: 'rpc_pool.ethereum-mainnet', category: 'rpc_pool', configPath: 'rpc_pool.ethereum-mainnet', defaultValue: '[]', isCredential: false },
+  { key: 'rpc_pool.ethereum-sepolia', category: 'rpc_pool', configPath: 'rpc_pool.ethereum-sepolia', defaultValue: '[]', isCredential: false },
+  { key: 'rpc_pool.arbitrum-mainnet', category: 'rpc_pool', configPath: 'rpc_pool.arbitrum-mainnet', defaultValue: '[]', isCredential: false },
+  { key: 'rpc_pool.arbitrum-sepolia', category: 'rpc_pool', configPath: 'rpc_pool.arbitrum-sepolia', defaultValue: '[]', isCredential: false },
+  { key: 'rpc_pool.optimism-mainnet', category: 'rpc_pool', configPath: 'rpc_pool.optimism-mainnet', defaultValue: '[]', isCredential: false },
+  { key: 'rpc_pool.optimism-sepolia', category: 'rpc_pool', configPath: 'rpc_pool.optimism-sepolia', defaultValue: '[]', isCredential: false },
+  { key: 'rpc_pool.base-mainnet', category: 'rpc_pool', configPath: 'rpc_pool.base-mainnet', defaultValue: '[]', isCredential: false },
+  { key: 'rpc_pool.base-sepolia', category: 'rpc_pool', configPath: 'rpc_pool.base-sepolia', defaultValue: '[]', isCredential: false },
+  { key: 'rpc_pool.polygon-mainnet', category: 'rpc_pool', configPath: 'rpc_pool.polygon-mainnet', defaultValue: '[]', isCredential: false },
+  { key: 'rpc_pool.polygon-amoy', category: 'rpc_pool', configPath: 'rpc_pool.polygon-amoy', defaultValue: '[]', isCredential: false },
 ] as const;
 
 // ---------------------------------------------------------------------------

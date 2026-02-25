@@ -179,6 +179,26 @@ export class RpcPool {
 
   // ─── Reset ─────────────────────────────────────────────────
 
+  /**
+   * Atomically replace all endpoints for a network with a new URL list.
+   * Unlike register() which appends, this removes existing URLs entirely.
+   * New URLs are initialized with failureCount: 0, cooldownUntil: 0.
+   * An empty array removes the network from the pool.
+   */
+  replaceNetwork(network: string, urls: string[]): void {
+    if (urls.length === 0) {
+      this.endpoints.delete(network);
+      return;
+    }
+
+    const entries: RpcEndpointState[] = urls.map((url) => ({
+      url,
+      failureCount: 0,
+      cooldownUntil: 0,
+    }));
+    this.endpoints.set(network, entries);
+  }
+
   /** Clear all cooldown state for a network. */
   reset(network: string): void {
     const entries = this.endpoints.get(network);

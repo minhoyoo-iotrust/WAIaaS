@@ -14,7 +14,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { RpcPool } from '@waiaas/core';
-import { resolveRpcUrlFromPool, rpcConfigKey } from '../infrastructure/adapter-pool.js';
+import { resolveRpcUrlFromPool } from '../infrastructure/adapter-pool.js';
 
 // ---- Mock SolanaIncomingSubscriber ----
 const mockSolanaSubscriber = { type: 'solana-incoming' };

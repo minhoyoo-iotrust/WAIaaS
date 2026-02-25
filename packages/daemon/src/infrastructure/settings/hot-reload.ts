@@ -95,6 +95,8 @@ const INCOMING_KEYS_PREFIX = 'incoming.';
 
 const ACTIONS_KEYS_PREFIX = 'actions.';
 
+const RPC_POOL_KEYS_PREFIX = 'rpc_pool.';
+
 const TELEGRAM_BOT_KEYS = new Set([
   'telegram.bot_token',
   'telegram.locale',
@@ -129,6 +131,7 @@ export class HotReloadOrchestrator {
     const hasTelegramBotChanges = changedKeys.some((k) => TELEGRAM_BOT_KEYS.has(k));
     const hasIncomingChanges = changedKeys.some((k) => k.startsWith(INCOMING_KEYS_PREFIX));
     const hasActionsChanges = changedKeys.some((k) => k.startsWith(ACTIONS_KEYS_PREFIX));
+    const hasRpcPoolChanges = changedKeys.some((k) => k.startsWith(RPC_POOL_KEYS_PREFIX));
 
     const reloads: Promise<void>[] = [];
 
@@ -204,6 +207,14 @@ export class HotReloadOrchestrator {
       reloads.push(
         this.reloadActionProviders(changedKeys.filter((k) => k.startsWith(ACTIONS_KEYS_PREFIX))).catch((err) => {
           console.warn('Hot-reload action providers failed:', err);
+        }),
+      );
+    }
+
+    if (hasRpcPoolChanges) {
+      reloads.push(
+        this.reloadRpcPool(changedKeys.filter((k) => k.startsWith(RPC_POOL_KEYS_PREFIX))).catch((err) => {
+          console.warn('Hot-reload RPC pool failed:', err);
         }),
       );
     }
@@ -472,6 +483,96 @@ export class HotReloadOrchestrator {
     console.log(
       `Hot-reload: Action providers reloaded (${result.loaded.length} enabled: ${result.loaded.join(', ') || 'none'}, ${result.skipped.length} disabled: ${result.skipped.join(', ') || 'none'})`,
     );
+  }
+
+  /**
+   * Reload RPC Pool URLs when rpc_pool.* settings change.
+   * For each changed network:
+   * 1. Parse the JSON array of user-managed URLs from SettingsService
+   * 2. Build merged URL list: [user URLs] + [config.toml URL] + [built-in defaults]
+   * 3. Replace the network's URL list in RpcPool atomically
+   * 4. Evict cached adapters so next resolve() uses the new pool
+   */
+  private async reloadRpcPool(changedPoolKeys: string[]): Promise<void> {
+    const pool = this.deps.adapterPool;
+    if (!pool) return;
+
+    const rpcPool = pool.pool;
+    if (!rpcPool) return;
+
+    const ss = this.deps.settingsService;
+
+    // Dynamically import BUILT_IN_RPC_DEFAULTS
+    const { BUILT_IN_RPC_DEFAULTS } = await import('@waiaas/core');
+
+    for (const key of changedPoolKeys) {
+      // key format: 'rpc_pool.mainnet' or 'rpc_pool.ethereum-sepolia'
+      const network = key.replace('rpc_pool.', '');
+
+      // 1. Parse user-managed URL list from settings
+      const rawJson = ss.get(key);
+      let userUrls: string[] = [];
+      try {
+        const parsed = JSON.parse(rawJson);
+        if (Array.isArray(parsed)) {
+          userUrls = parsed.filter((u: unknown) => typeof u === 'string' && u.length > 0);
+        }
+      } catch {
+        // Invalid JSON -- treat as empty
+        userUrls = [];
+      }
+
+      // 2. Get config.toml URL for this network (if any)
+      const configUrls: string[] = [];
+      const configKey = this.networkToConfigKey(network);
+      if (configKey) {
+        const configUrl = ss.get(`rpc.${configKey}`);
+        if (configUrl) {
+          configUrls.push(configUrl);
+        }
+      }
+
+      // 3. Get built-in defaults for this network
+      const builtInUrls = (BUILT_IN_RPC_DEFAULTS as Record<string, readonly string[]>)[network] ?? [];
+
+      // 4. Merge: user URLs (highest priority) -> config.toml -> built-in defaults
+      // Deduplicate while preserving order
+      const seen = new Set<string>();
+      const mergedUrls: string[] = [];
+      for (const url of [...userUrls, ...configUrls, ...builtInUrls]) {
+        if (!seen.has(url)) {
+          seen.add(url);
+          mergedUrls.push(url);
+        }
+      }
+
+      // 5. Atomic replace in RpcPool
+      rpcPool.replaceNetwork(network, mergedUrls);
+      console.log(`Hot-reload: RpcPool ${network} updated (${mergedUrls.length} URLs: ${userUrls.length} user + ${configUrls.length} config + dedup built-in)`);
+
+      // 6. Evict cached adapters for affected network
+      // Determine chain type from network name
+      const solanaNetworks = new Set(['mainnet', 'devnet', 'testnet']);
+      if (solanaNetworks.has(network)) {
+        await pool.evict('solana' as any, network as any);
+      } else {
+        await pool.evict('ethereum' as any, network as any);
+      }
+    }
+  }
+
+  /**
+   * Reverse map: network name -> config.toml rpc field key.
+   * mainnet -> solana_mainnet, devnet -> solana_devnet, testnet -> solana_testnet
+   * ethereum-sepolia -> evm_ethereum_sepolia, base-mainnet -> evm_base_mainnet
+   */
+  private networkToConfigKey(network: string): string | null {
+    const solanaNetworks = new Set(['mainnet', 'devnet', 'testnet']);
+    if (solanaNetworks.has(network)) {
+      return `solana_${network}`;
+    }
+    // EVM: ethereum-sepolia -> evm_ethereum_sepolia
+    return `evm_${network.replace(/-/g, '_')}`;
   }
 
   /**
