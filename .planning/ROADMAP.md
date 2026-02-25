@@ -306,11 +306,11 @@ See `.planning/milestones/v28.5-ROADMAP.md` for full details.
   3. cooldown 시간(60초 기본, 지수 증가, 최대 5분)이 경과하면 해당 URL이 자동으로 복귀한다
   4. 네트워크의 모든 URL이 cooldown 상태이면 AllRpcFailedError가 발생한다
   5. 설정 없이 RpcPool을 생성하면 13개 네트워크(메인넷 6 + 테스트넷 7)에 빌트인 기본 URL이 자동 로딩된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 260-01: RpcPool 클래스 구현 (등록, 우선순위 fallback, cooldown, 전체 실패 에러)
-- [ ] 260-02: 빌트인 기본 RPC 목록 데이터 + RpcPool 자동 로딩
+- [ ] 260-01-PLAN.md — RpcPool 클래스 TDD (등록, 우선순위 fallback, cooldown, 전체 실패 에러)
+- [ ] 260-02-PLAN.md — 빌트인 기본 RPC 목록 데이터 + RpcPool.createWithDefaults() 팩토리
 
 ### Phase 261: Adapter Integration
 **Goal**: 기존 어댑터가 RpcPool을 경유하여 RPC를 호출하고, config.toml 단일 URL 설정이 하위 호환된다
