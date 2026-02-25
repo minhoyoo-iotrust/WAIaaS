@@ -303,7 +303,7 @@ See `.planning/milestones/v28.6-ROADMAP.md` for full details.
 **Milestone Goal:** Owner 등록 시 wallet_type을 지정하면 signing SDK/approval_method/preferred_wallet 설정이 자동으로 완성되어 지갑 앱 연동 세팅을 원클릭으로 끝낼 수 있고, Push Relay가 카테고리별 페이로드 변환을 선언적으로 처리할 수 있는 상태.
 
 - [x] **Phase 265: Wallet Preset Foundation** - DB 마이그레이션 + 프리셋 레지스트리 + API 스키마 확장 + 하위 호환 + 에러 처리
-- [ ] **Phase 266: Auto-Setup Orchestration + Admin UI** - 4단계 자동 설정 파이프라인 + 실패 시 롤백 + Admin UI 지갑 종류 드롭다운
+- [x] **Phase 266: Auto-Setup Orchestration + Admin UI** - 4단계 자동 설정 파이프라인 + 실패 시 롤백 + Admin UI 지갑 종류 드롭다운
 - [ ] **Phase 267: Push Relay Payload Transform** - config 스키마 확장 + ConfigurablePayloadTransformer + 파이프라인 통합 + bypass
 
 ## Phase Details
@@ -335,8 +335,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 266-01-PLAN.md -- 4단계 자동 설정 파이프라인 (signing SDK + registry + approval_method + preferred_wallet) + Settings 스냅샷 롤백
-- [ ] 266-02-PLAN.md -- Admin UI Owner 등록 폼 지갑 종류 드롭다운 + 프리셋 선택 연동
+- [x] 266-01-PLAN.md -- 4단계 자동 설정 파이프라인 (signing SDK + registry + approval_method + preferred_wallet) + Settings 스냅샷 롤백
+- [x] 266-02-PLAN.md -- Admin UI Owner 등록 폼 지갑 종류 드롭다운 + 프리셋 선택 연동
 
 ### Phase 267: Push Relay Payload Transform
 **Goal**: Push Relay가 config.toml의 선언적 설정으로 ntfy 페이로드를 앱 푸시 형식으로 변환하고, 설정이 없으면 기존 동작을 유지하는 상태
@@ -362,7 +362,7 @@ Phases execute in numeric order: 265 -> 266 -> 267
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 265. Wallet Preset Foundation | v28.8 | 2/2 | Complete | 2026-02-26 |
-| 266. Auto-Setup Orchestration + Admin UI | v28.8 | 0/2 | Not started | - |
+| 266. Auto-Setup Orchestration + Admin UI | v28.8 | 2/2 | Complete | 2026-02-26 |
 | 267. Push Relay Payload Transform | v28.8 | 0/2 | Not started | - |
 
 ---
