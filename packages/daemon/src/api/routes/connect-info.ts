@@ -122,7 +122,8 @@ export function buildConnectInfoPrompt(params: BuildConnectInfoPromptParams): st
   lines.push('Use POST /v1/transactions/send to transfer funds.');
   lines.push('Specify walletId parameter (UUID from the ID field above) to target a specific wallet.');
   lines.push('Append ?network=<network> to query a specific network (defaults to wallet default network).');
-  lines.push('When session expires (401), renew with PUT /v1/sessions/{sessionId}/renew.');
+  lines.push('When session expires (401 TOKEN_EXPIRED), renew with PUT /v1/sessions/{sessionId}/renew.');
+  lines.push('If renewal fails (RENEWAL_LIMIT_REACHED), ask the operator to run `waiaas session prompt` for a new token.');
   lines.push('');
   lines.push('IMPORTANT - Security boundaries:');
   lines.push('- NEVER ask the user for the master password (X-Master-Password). You do not need it.');
