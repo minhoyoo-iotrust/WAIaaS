@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { RpcPool, AllRpcFailedError } from '../rpc/rpc-pool.js';
-import type { RpcPoolOptions, RpcEndpointStatus } from '../rpc/rpc-pool.js';
+import type { RpcEndpointStatus } from '../rpc/rpc-pool.js';
 
 describe('RpcPool', () => {
   let pool: RpcPool;
@@ -42,9 +42,9 @@ describe('RpcPool', () => {
         'https://tertiary.com',
       ]);
       const status = pool.getStatus('mainnet');
-      expect(status[0].url).toBe('https://primary.com');
-      expect(status[1].url).toBe('https://secondary.com');
-      expect(status[2].url).toBe('https://tertiary.com');
+      expect(status[0]!.url).toBe('https://primary.com');
+      expect(status[1]!.url).toBe('https://secondary.com');
+      expect(status[2]!.url).toBe('https://tertiary.com');
     });
   });
 

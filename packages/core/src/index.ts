@@ -285,6 +285,15 @@ export { getExplorerTxUrl } from './utils/index.js';
 // i18n (multilingual messages)
 export { getMessages, type SupportedLocale, type Messages } from './i18n/index.js';
 
+// v28.6 RPC Pool (priority-based URL rotation with cooldown)
+export {
+  RpcPool,
+  AllRpcFailedError,
+  type RpcPoolOptions,
+  type RpcEndpointStatus,
+  type RpcRegistryEntry,
+} from './rpc/index.js';
+
 // v1.6 Events (EventBus + 7 typed event definitions)
 export { EventBus } from './events/index.js';
 export type {
