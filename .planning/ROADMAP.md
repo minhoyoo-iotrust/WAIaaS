@@ -321,7 +321,7 @@ Phases execute in numeric order: 258 -> 259
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 258. GasCondition 코어 파이프라인 | v28.5 | Complete    | 2026-02-24 | 2026-02-25 |
-| 259. 외부 인터페이스 통합 | 2/2 | Complete   | 2026-02-25 | - |
+| 259. 외부 인터페이스 통합 | 2/2 | Complete    | 2026-02-25 | - |
 
 ---
 *Roadmap created: 2026-02-25*
