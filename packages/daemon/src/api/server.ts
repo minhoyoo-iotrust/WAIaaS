@@ -84,6 +84,7 @@ import type { ActionProviderRegistry } from '../infrastructure/action/action-pro
 import type { ApiKeyStore } from '../infrastructure/action/api-key-store.js';
 import type * as schema from '../infrastructure/database/schema.js';
 import { TokenRegistryService } from '../infrastructure/token-registry/index.js';
+import { WalletLinkRegistry } from '../services/signing-sdk/wallet-link-registry.js';
 import { actionRoutes } from './routes/actions.js';
 import { x402Routes } from './routes/x402.js';
 import { wcRoutes, wcSessionRoutes } from './routes/wc.js';
@@ -359,6 +360,10 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         eventBus: deps.eventBus,
         jwtSecretManager: deps.jwtSecretManager ?? undefined,
         incomingTxMonitorService: deps.incomingTxMonitorService,
+        settingsService: deps.settingsService,
+        walletLinkRegistry: deps.settingsService
+          ? new WalletLinkRegistry(deps.settingsService)
+          : undefined,
       }),
     );
   }
