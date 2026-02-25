@@ -518,6 +518,52 @@ describe('WAIaaSClient', () => {
       expect(body['token']).toBeUndefined();
     });
 
+    it('should include gasCondition in HTTP request body when provided', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+      });
+
+      fetchSpy.mockResolvedValue(
+        mockResponse({ id: 'tx-gas-1', status: 'PENDING' }, 201),
+      );
+
+      await client.sendToken({
+        to: 'RecipientAddr',
+        amount: '1000000000000000000',
+        gasCondition: {
+          maxGasPrice: '20000000000',
+          maxPriorityFee: '1000000000',
+          timeout: 3600,
+        },
+      });
+
+      const opts = fetchSpy.mock.calls[0]![1] as RequestInit;
+      const body = JSON.parse(opts.body as string) as Record<string, unknown>;
+      expect(body['gasCondition']).toEqual({
+        maxGasPrice: '20000000000',
+        maxPriorityFee: '1000000000',
+        timeout: 3600,
+      });
+    });
+
+    it('should not include gasCondition in body when not provided (backward compat)', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+      });
+
+      fetchSpy.mockResolvedValue(
+        mockResponse({ id: 'tx-no-gas', status: 'PENDING' }, 201),
+      );
+
+      await client.sendToken({ to: 'addr', amount: '100' });
+
+      const opts = fetchSpy.mock.calls[0]![1] as RequestInit;
+      const body = JSON.parse(opts.body as string) as Record<string, unknown>;
+      expect(body).not.toHaveProperty('gasCondition');
+    });
+
     it('should throw WAIaaSError with hint on 400 server response', async () => {
       const client = new WAIaaSClient({
         baseUrl: 'http://localhost:3000',
@@ -1356,6 +1402,30 @@ describe('WAIaaSClient', () => {
 
       const opts = fetchSpy.mock.calls[0]![1] as RequestInit;
       expect(JSON.parse(opts.body as string)).toEqual({});
+    });
+
+    it('should include gasCondition in body when provided', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+      });
+
+      fetchSpy.mockResolvedValue(mockResponse({ id: 'tx-gas-action', status: 'PENDING' }));
+
+      await client.executeAction('0x-swap', 'swap', {
+        params: { sellToken: '0xA', buyToken: '0xB', sellAmount: '100' },
+        gasCondition: {
+          maxGasPrice: '15000000000',
+          timeout: 1800,
+        },
+      });
+
+      const opts = fetchSpy.mock.calls[0]![1] as RequestInit;
+      const body = JSON.parse(opts.body as string) as Record<string, unknown>;
+      expect(body['gasCondition']).toEqual({
+        maxGasPrice: '15000000000',
+        timeout: 1800,
+      });
     });
   });
 

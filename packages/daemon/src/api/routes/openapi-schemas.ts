@@ -351,6 +351,32 @@ export const CreatePolicyRequestOpenAPI = CreatePolicyRequestSchema.openapi('Cre
 export const UpdatePolicyRequestOpenAPI = UpdatePolicyRequestSchema.openapi('UpdatePolicyRequest');
 
 // ---------------------------------------------------------------------------
+// GasCondition OpenAPI Schema (Phase 259-01)
+// ---------------------------------------------------------------------------
+
+/**
+ * OpenAPI schema for gas condition. Documents the optional gasCondition field
+ * available on all 5 transaction request types. Actual validation is handled
+ * by @waiaas/core GasConditionSchema (Zod SSoT) in stage1Validate.
+ */
+export const GasConditionOpenAPI = z
+  .object({
+    maxGasPrice: z.string().optional().openapi({
+      description: 'Max gas price in wei (EVM: baseFee + priorityFee upper bound)',
+      example: '30000000000',
+    }),
+    maxPriorityFee: z.string().optional().openapi({
+      description: 'Max priority fee in wei (EVM) or micro-lamports (Solana)',
+      example: '2000000000',
+    }),
+    timeout: z.number().int().min(60).max(86400).optional().openapi({
+      description: 'Max wait time in seconds (60-86400). Uses Admin Settings default if omitted.',
+      example: 3600,
+    }),
+  })
+  .openapi('GasCondition');
+
+// ---------------------------------------------------------------------------
 // 5-type Transaction Request OpenAPI Components (Phase 86-01)
 // ---------------------------------------------------------------------------
 
@@ -821,6 +847,7 @@ export const SettingsResponseSchema = z
     monitoring: z.record(z.union([z.string(), z.boolean()])),
     telegram: z.record(z.union([z.string(), z.boolean()])),
     signing_sdk: z.record(z.union([z.string(), z.boolean()])),
+    gas_condition: z.record(z.union([z.string(), z.boolean()])),
   })
   .openapi('SettingsResponse');
 

@@ -196,8 +196,13 @@
 | 179 | MISSING | MEDIUM | CoinGecko 가격 오라클 API 키 설정 Admin UI 누락 | v28.5 | FIXED | 2026-02-24 |
 | 180 | ENHANCEMENT | LOW | System 페이지 API Keys 섹션이 Actions 페이지와 중복 — 단일화 필요 | v28.5 | FIXED | 2026-02-24 |
 | 181 | BUG | CRITICAL | Admin UI 네비게이션 불가 — dirty-guard isDirty 크래시 (t.isDirty is not a function) | v28.5 | FIXED | 2026-02-24 |
-| 182 | ENHANCEMENT | LOW | Admin Settings 외부 서비스 도움 URL 추가 — API 키 발급처 안내 누락 | — | OPEN | — |
-| 183 | ENHANCEMENT | LOW | Admin UI 정책 생성 시 타입별 한 줄 설명 추가 — 정책 유형 이해 어려움 | — | OPEN | — |
+| 182 | ENHANCEMENT | LOW | Admin Settings 외부 서비스 도움 URL 추가 — API 키 발급처 안내 누락 | v28.5 | FIXED | 2026-02-25 |
+| 183 | ENHANCEMENT | LOW | Admin UI 정책 생성 시 타입별 한 줄 설명 추가 — 정책 유형 이해 어려움 | v28.5 | FIXED | 2026-02-25 |
+| 184 | ENHANCEMENT | MEDIUM | 테스트 커버리지 임계값 상향 + 미설정 패키지 추가 — 실제 수치 대비 기준 과소 | v28.5 | FIXED | 2026-02-25 |
+| 185 | BUG | HIGH | EVM IncomingSubscriber free-tier RPC 408 타임아웃으로 수신 트랜잭션 무음 누락 | v28.5 | FIXED | 2026-02-25 |
+| 186 | BUG | CRITICAL | LI.FI getQuote 쿼리 파라미터명 오류로 스왑/브릿지 전체 실패 | v28.5 | FIXED | 2026-02-25 |
+| 187 | BUG | HIGH | 솔라나 메인넷 잔액 조회 429 실패 — 무료 RPC rate limit + 재시도 로직 부재 | v28.5 | FIXED | 2026-02-25 |
+| 188 | BUG | HIGH | Admin UI Actions 프로바이더가 항상 Inactive — `/v1/actions/*` 와일드카드 sessionAuth 충돌 | v28.5 | FIXED | 2026-02-25 |
 
 ## Type Legend
 
@@ -209,9 +214,9 @@
 
 ## Summary
 
-- **OPEN:** 2
-- **FIXED:** 180
+- **OPEN:** 0
+- **FIXED:** 187
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 183
+- **Total:** 188

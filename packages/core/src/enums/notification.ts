@@ -40,6 +40,10 @@ export const NOTIFICATION_EVENT_TYPES = [
   'BRIDGE_REFUNDED',
   'STAKING_UNSTAKE_COMPLETED',
   'STAKING_UNSTAKE_TIMEOUT',
+  'RPC_HEALTH_DEGRADED',
+  'INCOMING_TX_RANGE_SKIPPED',
+  'TX_GAS_WAITING',
+  'TX_GAS_CONDITION_MET',
 ] as const;
 export type NotificationEventType = (typeof NOTIFICATION_EVENT_TYPES)[number];
 export const NotificationEventTypeEnum = z.enum(NOTIFICATION_EVENT_TYPES);

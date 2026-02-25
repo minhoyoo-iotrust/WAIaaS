@@ -23,6 +23,7 @@
 - ✅ **v28.2 0x EVM DEX Swap** -- Phases 248-250 (shipped 2026-02-24)
 - ✅ **v28.3 LI.FI 크로스체인 브릿지** -- Phases 251-253 (shipped 2026-02-24)
 - ✅ **v28.4 Liquid Staking (Lido + Jito)** -- Phases 254-257 (shipped 2026-02-24)
+- ✅ **v28.5 가스비 조건부 실행** -- Phases 258-259 (shipped 2026-02-25)
 
 ## Phases
 
@@ -272,3 +273,24 @@ See `.planning/milestones/v28.3-ROADMAP.md` for full details.
 See `.planning/milestones/v28.4-ROADMAP.md` for full details.
 
 </details>
+
+<details>
+<summary>✅ v28.5 가스비 조건부 실행 (Phases 258-259) -- SHIPPED 2026-02-25</summary>
+
+- [x] Phase 258: GasCondition 코어 파이프라인 (2/2 plans) -- completed 2026-02-25
+- [x] Phase 259: 외부 인터페이스 통합 (2/2 plans) -- completed 2026-02-25
+
+See `.planning/milestones/v28.5-ROADMAP.md` for full details.
+
+</details>
+
+## Progress
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 258. GasCondition 코어 파이프라인 | v28.5 | 2/2 | Complete | 2026-02-25 |
+| 259. 외부 인터페이스 통합 | v28.5 | 2/2 | Complete | 2026-02-25 |
+
+---
+*Roadmap created: 2026-02-25*
+*Last updated: 2026-02-25 after v28.5 milestone completion*

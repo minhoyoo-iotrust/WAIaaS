@@ -1524,3 +1524,21 @@
 
 ---
 
+
+## v28.5 가스비 조건부 실행 (Shipped: 2026-02-25)
+
+**Phases:** 258-259 (2 phases, 4 plans, 18 tasks)
+**Requirements:** 25/25 satisfied
+**Files:** 84 changed, +5,646 / -110 lines
+**Timeline:** 2026-02-25 (1 day, 38 commits)
+
+**Key accomplishments:**
+- GasCondition Zod schema — maxGasPrice/maxPriorityFee/timeout on all 7 discriminatedUnion request types
+- Pipeline Stage 3.5 — gas condition check between policy evaluation and wait branching (GAS_WAITING state)
+- GasConditionTracker (IAsyncStatusTracker) — EVM eth_gasPrice/Solana getRecentPrioritizationFees RPC queries, 10s cache, daemon executeFromStage4 re-entry
+- 5 runtime-adjustable gas_condition Admin Settings + Admin UI Gas Condition 설정 섹션
+- Full interface integration — REST API + MCP 5 tools + TS/Python SDK + ActionProvider gasCondition injection + skill docs
+- 85 new tests across schema, pipeline, tracker, REST API, Admin UI, MCP, SDK layers
+
+---
+

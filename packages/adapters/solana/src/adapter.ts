@@ -75,6 +75,12 @@ const TOKEN_2022_PROGRAM_ID = 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb';
 /** Rent-exempt minimum for an Associated Token Account (~0.00204 SOL). */
 const ATA_RENT_LAMPORTS = 2_039_280n;
 
+/** RPC retry constants for rate-limited endpoints (#187). */
+const RPC_RETRY_MAX = 3;
+const RPC_RETRY_BASE_MS = 1_000;
+const RPC_RETRY_MAX_MS = 10_000;
+const RPC_RETRYABLE_STATUSES = new Set([408, 429, 500, 502, 503, 504]);
+
 /** Re-usable transaction encoder (stateless, safe to share). */
 const txEncoder = getTransactionEncoder();
 
@@ -146,7 +152,7 @@ export class SolanaAdapter implements IChainAdapter {
   async getBalance(addr: string): Promise<BalanceInfo> {
     const rpc = this.getRpc();
     try {
-      const result = await rpc.getBalance(address(addr)).send();
+      const result = await this.withRpcRetry(() => rpc.getBalance(address(addr)).send());
       return {
         address: addr,
         balance: result.value,
@@ -166,26 +172,30 @@ export class SolanaAdapter implements IChainAdapter {
   async getAssets(addr: string): Promise<AssetInfo[]> {
     const rpc = this.getRpc();
     try {
-      // 1. Get native SOL balance
-      const balanceResult = await rpc.getBalance(address(addr)).send();
+      // 1. Get native SOL balance (with retry for rate limits #187)
+      const balanceResult = await this.withRpcRetry(() => rpc.getBalance(address(addr)).send());
 
-      // 2. Get SPL Token Program accounts
-      const tokenResult = await rpc
-        .getTokenAccountsByOwner(
-          address(addr),
-          { programId: address(SPL_TOKEN_PROGRAM_ID) },
-          { encoding: 'jsonParsed' },
-        )
-        .send();
+      // 2. Get SPL Token Program accounts (with retry for rate limits #187)
+      const tokenResult = await this.withRpcRetry(() =>
+        rpc
+          .getTokenAccountsByOwner(
+            address(addr),
+            { programId: address(SPL_TOKEN_PROGRAM_ID) },
+            { encoding: 'jsonParsed' },
+          )
+          .send(),
+      );
 
-      // 3. Get Token-2022 program accounts
-      const token2022Result = await rpc
-        .getTokenAccountsByOwner(
-          address(addr),
-          { programId: address(TOKEN_2022_PROGRAM_ID) },
-          { encoding: 'jsonParsed' },
-        )
-        .send();
+      // 3. Get Token-2022 program accounts (with retry for rate limits #187)
+      const token2022Result = await this.withRpcRetry(() =>
+        rpc
+          .getTokenAccountsByOwner(
+            address(addr),
+            { programId: address(TOKEN_2022_PROGRAM_ID) },
+            { encoding: 'jsonParsed' },
+          )
+          .send(),
+      );
 
       // 4. Build result array -- native SOL first
       const assets: AssetInfo[] = [
@@ -1315,6 +1325,28 @@ export class SolanaAdapter implements IChainAdapter {
     }
   }
 
+  /**
+   * Wraps an RPC call with exponential backoff retry for 429/408/5xx errors (#187).
+   * Jitter: 50-100% of computed delay to prevent thundering herd.
+   */
+  private async withRpcRetry<T>(fn: () => Promise<T>): Promise<T> {
+    let lastError: unknown;
+    for (let attempt = 0; attempt <= RPC_RETRY_MAX; attempt++) {
+      try {
+        return await fn();
+      } catch (err) {
+        lastError = err;
+        if (attempt >= RPC_RETRY_MAX) break;
+        // Only retry on retryable HTTP status codes or network errors
+        if (!isRetryableRpcError(err)) break;
+        const delayMs = Math.min(RPC_RETRY_BASE_MS * 2 ** attempt, RPC_RETRY_MAX_MS);
+        const jitter = delayMs * (0.5 + Math.random() * 0.5);
+        await sleep(jitter);
+      }
+    }
+    throw lastError;
+  }
+
   private getRpc(): SolanaRpc {
     this.ensureConnected();
     return this._rpc!;
@@ -1323,4 +1355,19 @@ export class SolanaAdapter implements IChainAdapter {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Check if an RPC error is retryable (429/408/5xx or network errors). */
+function isRetryableRpcError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const msg = err.message;
+  // Solana RPC errors include HTTP status in the message
+  for (const status of RPC_RETRYABLE_STATUSES) {
+    if (msg.includes(String(status))) return true;
+  }
+  // Network errors
+  if (msg.includes('ECONNREFUSED') || msg.includes('ETIMEDOUT') || msg.includes('fetch failed')) {
+    return true;
+  }
+  return false;
 }

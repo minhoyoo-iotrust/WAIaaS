@@ -4,6 +4,24 @@ import { PolicyTierEnum } from '../enums/policy.js';
 import { ChainTypeEnum, NetworkTypeEnum } from '../enums/chain.js';
 import { Caip19Schema, parseCaip19 } from '../caip/index.js';
 
+// ---------------------------------------------------------------------------
+// GasCondition schema (v28.5): optional gas price condition for deferred execution
+// ---------------------------------------------------------------------------
+
+/** Gas condition for conditional execution. At least one of maxGasPrice or maxPriorityFee required. */
+export const GasConditionSchema = z.object({
+  /** EVM: baseFee + priorityFee upper bound in wei. */
+  maxGasPrice: z.string().regex(/^\d+$/, 'maxGasPrice must be a numeric string (wei)').optional(),
+  /** EVM: priorityFee upper bound in wei. Solana: computeUnitPrice upper bound in micro-lamports. */
+  maxPriorityFee: z.string().regex(/^\d+$/, 'maxPriorityFee must be a numeric string').optional(),
+  /** Maximum wait time in seconds (60-86400). Uses Admin Settings default if omitted. */
+  timeout: z.number().int().min(60).max(86400).optional(),
+}).refine(
+  (data) => data.maxGasPrice !== undefined || data.maxPriorityFee !== undefined,
+  { message: 'At least one of maxGasPrice or maxPriorityFee must be specified' },
+);
+export type GasCondition = z.infer<typeof GasConditionSchema>;
+
 export const TransactionSchema = z.object({
   id: z.string().uuid(),
   walletId: z.string().uuid(),
@@ -41,6 +59,9 @@ export type SendTransactionRequest = z.infer<typeof SendTransactionRequestSchema
 
 const numericStringPattern = /^\d+$/;
 
+/** Optional gas condition (shared across all 5 request types). */
+const gasConditionField = { gasCondition: GasConditionSchema.optional() } as const;
+
 /** Type 1: TRANSFER -- native token transfer (SOL/ETH). */
 export const TransferRequestSchema = z.object({
   type: z.literal('TRANSFER'),
@@ -48,6 +69,7 @@ export const TransferRequestSchema = z.object({
   amount: z.string().regex(numericStringPattern, 'amount must be a numeric string (lamports/wei)'),
   memo: z.string().max(256).optional(),
   network: NetworkTypeEnum.optional(),
+  ...gasConditionField,
 });
 export type TransferRequestInput = z.infer<typeof TransferRequestSchema>;
 
@@ -92,6 +114,7 @@ export const TokenTransferRequestSchema = z.object({
   token: TokenInfoSchema,
   memo: z.string().max(256).optional(),
   network: NetworkTypeEnum.optional(),
+  ...gasConditionField,
 });
 export type TokenTransferRequest = z.infer<typeof TokenTransferRequestSchema>;
 
@@ -118,6 +141,7 @@ export const ContractCallRequestSchema = z.object({
   network: NetworkTypeEnum.optional(),
   /** Provider name tag for provider-trust policy bypass. Set by ActionProviderRegistry. */
   actionProvider: z.string().optional(),
+  ...gasConditionField,
 });
 export type ContractCallRequest = z.infer<typeof ContractCallRequestSchema>;
 
@@ -128,6 +152,7 @@ export const ApproveRequestSchema = z.object({
   token: TokenInfoSchema,
   amount: z.string().regex(numericStringPattern, 'amount must be a numeric string'),
   network: NetworkTypeEnum.optional(),
+  ...gasConditionField,
 });
 export type ApproveRequest = z.infer<typeof ApproveRequestSchema>;
 
@@ -146,6 +171,7 @@ export const BatchRequestSchema = z.object({
     .min(2, 'Batch requires at least 2 instructions')
     .max(20, 'Batch maximum 20 instructions'),
   network: NetworkTypeEnum.optional(),
+  ...gasConditionField,
 });
 export type BatchRequest = z.infer<typeof BatchRequestSchema>;
 

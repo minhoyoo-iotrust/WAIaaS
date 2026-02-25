@@ -17,14 +17,15 @@ interface BuiltinProvider {
   description: string;
   chain: 'solana' | 'evm' | 'multi';
   requiresApiKey: boolean;
+  docsUrl?: string;
 }
 
 const BUILTIN_PROVIDERS: BuiltinProvider[] = [
-  { key: 'jupiter_swap', name: 'Jupiter Swap', description: 'Solana DEX aggregator', chain: 'solana', requiresApiKey: false },
-  { key: 'zerox_swap', name: '0x Swap', description: 'EVM DEX aggregator (AllowanceHolder)', chain: 'evm', requiresApiKey: true },
-  { key: 'lifi', name: 'LI.FI', description: 'Multi-chain DEX/bridge aggregator', chain: 'multi', requiresApiKey: false },
-  { key: 'lido_staking', name: 'Lido Staking', description: 'ETH liquid staking (stETH/wstETH)', chain: 'evm', requiresApiKey: false },
-  { key: 'jito_staking', name: 'Jito Staking', description: 'SOL liquid staking (JitoSOL)', chain: 'solana', requiresApiKey: false },
+  { key: 'jupiter_swap', name: 'Jupiter Swap', description: 'Solana DEX aggregator', chain: 'solana', requiresApiKey: false, docsUrl: 'https://station.jup.ag/docs' },
+  { key: 'zerox_swap', name: '0x Swap', description: 'EVM DEX aggregator (AllowanceHolder)', chain: 'evm', requiresApiKey: true, docsUrl: 'https://dashboard.0x.org' },
+  { key: 'lifi', name: 'LI.FI', description: 'Multi-chain DEX/bridge aggregator', chain: 'multi', requiresApiKey: false, docsUrl: 'https://docs.li.fi' },
+  { key: 'lido_staking', name: 'Lido Staking', description: 'ETH liquid staking (stETH/wstETH)', chain: 'evm', requiresApiKey: false, docsUrl: 'https://docs.lido.fi' },
+  { key: 'jito_staking', name: 'Jito Staking', description: 'SOL liquid staking (JitoSOL)', chain: 'solana', requiresApiKey: false, docsUrl: 'https://www.jito.network/docs' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -238,7 +239,15 @@ export default function ActionsPage() {
                     {bp.chain}
                   </Badge>
                 </h3>
-                <p class="settings-description" style={{ marginTop: 'var(--space-1)' }}>{bp.description}</p>
+                <p class="settings-description" style={{ marginTop: 'var(--space-1)' }}>
+                  {bp.description}
+                  {bp.docsUrl && (
+                    <>
+                      {' '}&mdash;{' '}
+                      <a href={bp.docsUrl} target="_blank" rel="noopener noreferrer">Docs</a>
+                    </>
+                  )}
+                </p>
               </div>
               <Badge variant={status.variant}>{status.label}</Badge>
             </div>

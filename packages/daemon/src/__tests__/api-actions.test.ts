@@ -701,6 +701,7 @@ describe('GET /v1/actions/providers (no auth)', () => {
 
     expect(res.status).toBe(401);
     const body = await json(res);
-    expect(body.code).toBe('INVALID_TOKEN');
+    // dual-auth endpoint: no auth header falls through to masterAuth
+    expect(body.code).toBe('INVALID_MASTER_PASSWORD');
   });
 });

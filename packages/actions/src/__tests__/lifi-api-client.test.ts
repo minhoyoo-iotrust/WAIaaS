@@ -161,8 +161,8 @@ describe('LiFiApiClient', () => {
       const result = await client.getQuote(DEFAULT_QUOTE_PARAMS);
 
       const url = new URL(capturedUrl);
-      expect(url.searchParams.get('fromChainId')).toBe('1');
-      expect(url.searchParams.get('toChainId')).toBe('8453');
+      expect(url.searchParams.get('fromChain')).toBe('1');
+      expect(url.searchParams.get('toChain')).toBe('8453');
       expect(url.searchParams.get('fromToken')).toBe('0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48');
       expect(url.searchParams.get('toToken')).toBe('0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913');
       expect(url.searchParams.get('fromAmount')).toBe('1000000');

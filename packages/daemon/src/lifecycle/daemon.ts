@@ -799,7 +799,19 @@ export class DaemonLifecycle {
             // EVM chains
             const rpcUrl = sSvc.get(`rpc.${rpcConfigKey(chain, network)}`);
             const { EvmIncomingSubscriber } = await import('@waiaas/adapter-evm');
-            return new EvmIncomingSubscriber({ rpcUrl });
+            const ns = this.notificationService;
+            return new EvmIncomingSubscriber({
+              rpcUrl,
+              onRpcAlert: ns ? (alert) => {
+                ns.notify(alert.type, alert.walletId, {
+                  network: alert.network,
+                  errorCount: String(alert.errorCount),
+                  lastError: alert.lastError,
+                  ...(alert.fromBlock ? { fromBlock: alert.fromBlock } : {}),
+                  ...(alert.toBlock ? { toBlock: alert.toBlock } : {}),
+                });
+              } : undefined,
+            });
           };
           this.incomingTxMonitorService = new IncomingTxMonitorCls({
             sqlite: this.sqlite,
@@ -846,6 +858,10 @@ export class DaemonLifecycle {
               .set({ reservedAmount: '0', reservedAmountUsd: null })
               .where(eq(txTable.id, txId))
               .run();
+          },
+          resumePipeline: (txId, walletId) => {
+            // Gas condition met: re-enter pipeline at stage 4 (execute from stage 4 onward)
+            void this.executeFromStage4(txId, walletId);
           },
         });
         console.debug('Step 4c-10: AsyncPollingService initialized (with callbacks)');
@@ -977,6 +993,24 @@ export class DaemonLifecycle {
         }
       } catch (err) {
         console.warn('Step 4f-3 (fail-soft): Staking tracker registration failed:', err);
+      }
+    }
+
+    // ------------------------------------------------------------------
+    // Step 4f-4: Register GasConditionTracker (gas price condition monitoring)
+    // ------------------------------------------------------------------
+    if (this._asyncPollingService) {
+      try {
+        const gasConditionEnabled = this._settingsService?.get('gas_condition.enabled') !== 'false';
+        if (gasConditionEnabled) {
+          const { GasConditionTracker } = await import('../pipeline/gas-condition-tracker.js');
+          this._asyncPollingService.registerTracker(new GasConditionTracker());
+          console.debug('Step 4f-4: GasConditionTracker registered');
+        } else {
+          console.debug('Step 4f-4: GasConditionTracker disabled');
+        }
+      } catch (err) {
+        console.warn('Step 4f-4 (fail-soft): GasConditionTracker registration failed:', err);
       }
     }
 
@@ -1363,6 +1397,110 @@ export class DaemonLifecycle {
     } catch (err) {
       console.error('Shutdown error:', err);
       process.exit(1);
+    }
+  }
+
+  /**
+   * Re-enter the pipeline at stage4 for a gas-condition-met transaction.
+   *
+   * Called by the resumePipeline callback in AsyncPollingService when
+   * GasConditionTracker returns COMPLETED. Skips stages 1-3 and 3.5
+   * (already evaluated). Runs stage5Execute + stage6Confirm.
+   *
+   * Gas-condition transactions bypass stage4Wait (policy was already evaluated
+   * at Stage 3, and the transaction was only waiting for gas price -- no further
+   * delay/approval needed).
+   *
+   * @param txId - Transaction ID to execute
+   * @param walletId - Wallet that owns the transaction
+   */
+  private async executeFromStage4(txId: string, walletId: string): Promise<void> {
+    try {
+      if (!this._db || !this.adapterPool || !this.keyStore || !this._config) {
+        console.warn(`executeFromStage4(${txId}): missing deps, skipping`);
+        return;
+      }
+
+      // Import stages and schema
+      const { stage5Execute, stage6Confirm } = await import('../pipeline/stages.js');
+      const { wallets, transactions } = await import('../infrastructure/database/schema.js');
+      const { eq } = await import('drizzle-orm');
+
+      // Look up wallet from DB
+      const wallet = this._db.select().from(wallets).where(eq(wallets.id, walletId)).get();
+      if (!wallet) {
+        console.warn(`executeFromStage4(${txId}): wallet ${walletId} not found`);
+        return;
+      }
+
+      // Look up transaction to get request data
+      const tx = this._db.select().from(transactions).where(eq(transactions.id, txId)).get();
+      if (!tx) {
+        console.warn(`executeFromStage4(${txId}): transaction not found`);
+        return;
+      }
+
+      // Use network recorded at Stage 1 (NOT re-resolve -- wallet.defaultNetwork may have changed)
+      const resolvedNetwork: string =
+        tx.network
+        ?? getDefaultNetwork(wallet.chain as ChainType, wallet.environment as EnvironmentType);
+
+      // Resolve adapter from pool using recorded network
+      const rpcUrl = resolveRpcUrl(
+        this._config.rpc as unknown as Record<string, string>,
+        wallet.chain,
+        resolvedNetwork,
+      );
+      const adapter = await this.adapterPool.resolve(
+        wallet.chain as ChainType,
+        resolvedNetwork as NetworkType,
+        rpcUrl,
+      );
+
+      // Construct minimal PipelineContext for stages 5-6
+      // Policy already evaluated at Stage 3 before GAS_WAITING entry
+      const ctx: import('../pipeline/stages.js').PipelineContext = {
+        db: this._db,
+        adapter,
+        keyStore: this.keyStore,
+        policyEngine: null as any, // Not needed for stages 5-6
+        masterPassword: this.masterPassword,
+        walletId,
+        wallet: {
+          publicKey: wallet.publicKey,
+          chain: wallet.chain,
+          environment: wallet.environment,
+          defaultNetwork: wallet.defaultNetwork ?? null,
+        },
+        resolvedNetwork,
+        request: {
+          to: tx.toAddress ?? '',
+          amount: tx.amount ?? '0',
+          memo: undefined,
+        },
+        txId,
+        eventBus: this.eventBus,
+      };
+
+      // Skip stage4Wait -- gas condition met, proceed directly to execution
+      await stage5Execute(ctx);
+      await stage6Confirm(ctx);
+    } catch (error) {
+      // Mark as FAILED if stages 5-6 throw
+      try {
+        if (this._db) {
+          const { transactions } = await import('../infrastructure/database/schema.js');
+          const { eq } = await import('drizzle-orm');
+          const errorMessage = error instanceof Error ? error.message : 'Gas condition pipeline re-entry failed';
+          this._db
+            .update(transactions)
+            .set({ status: 'FAILED', error: errorMessage })
+            .where(eq(transactions.id, txId))
+            .run();
+        }
+      } catch {
+        // Swallow DB update errors in background
+      }
     }
   }
 

@@ -180,9 +180,9 @@ describe('ActionsPage', () => {
       render(<ActionsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Solana DEX aggregator')).toBeTruthy();
+        expect(screen.getByText(/Solana DEX aggregator/)).toBeTruthy();
       });
-      expect(screen.getByText('EVM DEX aggregator (AllowanceHolder)')).toBeTruthy();
+      expect(screen.getByText(/EVM DEX aggregator \(AllowanceHolder\)/)).toBeTruthy();
     });
 
     it('renders chain badges', async () => {

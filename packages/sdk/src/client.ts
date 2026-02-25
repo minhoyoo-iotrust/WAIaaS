@@ -407,6 +407,7 @@ export class WAIaaSClient {
     if (params?.params) body.params = params.params;
     if (params?.network) body.network = params.network;
     if (params?.walletId) body.walletId = params.walletId;
+    if (params?.gasCondition) body.gasCondition = params.gasCondition;
     return withRetry(
       () => this.http.post<ExecuteActionResponse>(
         `/v1/actions/${provider}/${action}`,

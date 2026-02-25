@@ -2,8 +2,9 @@
  * system.test.tsx
  *
  * Tests for the System page (system.tsx):
- * - Rendering all 6 sections (Oracle, Display Currency, Rate Limit, Log Level, Signing SDK, Danger Zone)
+ * - Rendering all 7 sections (Oracle, Display Currency, Rate Limit, Log Level, Signing SDK, Gas Condition, Danger Zone)
  * - Daemon settings form fields (log level, oracle threshold, rate limit, display currency)
+ * - Gas Condition section (enabled, poll_interval_sec, default_timeout_sec, max_timeout_sec, max_pending_count)
  * - Dirty tracking: save bar, save, discard
  * - Danger Zone: shutdown modal with double-confirmation
  */
@@ -87,6 +88,13 @@ const mockSettingsResponse = {
   oracle: { cross_validation_threshold: '5' },
   display: { currency: 'USD' },
   security: { rate_limit_global_ip_rpm: '1000' },
+  gas_condition: {
+    enabled: 'true',
+    poll_interval_sec: '30',
+    default_timeout_sec: '3600',
+    max_timeout_sec: '86400',
+    max_pending_count: '100',
+  },
 };
 
 const mockApiKeys = {
@@ -141,7 +149,7 @@ describe('SystemPage', () => {
       expect(screen.getByText('Loading settings...')).toBeTruthy();
     });
 
-    it('renders all 6 sections after loading', async () => {
+    it('renders all 7 sections after loading', async () => {
       mockApiCalls();
       render(<SystemPage />);
 
@@ -154,6 +162,7 @@ describe('SystemPage', () => {
       // "Log Level" also appears in both <h3> heading and <label>
       expect(screen.getAllByText('Log Level').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText('Signing SDK')).toBeTruthy();
+      expect(screen.getByText('Gas Condition')).toBeTruthy();
       expect(screen.getByText('Danger Zone')).toBeTruthy();
     });
 
@@ -453,6 +462,157 @@ describe('SystemPage', () => {
           'error',
           'Error: SETTINGS_FETCH_FAIL',
         );
+      });
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Gas Condition section
+  // ---------------------------------------------------------------------------
+
+  describe('Gas Condition section', () => {
+    afterEach(() => {
+      cleanup();
+      vi.clearAllMocks();
+    });
+
+    it('renders Gas Condition section title', async () => {
+      mockApiCalls();
+      render(<SystemPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Gas Condition')).toBeTruthy();
+      });
+    });
+
+    it('displays all 5 gas condition setting fields', async () => {
+      mockApiCalls();
+      render(<SystemPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Gas Condition')).toBeTruthy();
+      });
+
+      // gas_condition.enabled (select)
+      const enabledSelect = document.querySelector(
+        'select[name="gas_condition.enabled"]',
+      ) as HTMLSelectElement;
+      expect(enabledSelect).toBeTruthy();
+      expect(enabledSelect.value).toBe('true');
+
+      // gas_condition.poll_interval_sec (number)
+      const pollInput = document.querySelector(
+        'input[name="gas_condition.poll_interval_sec"]',
+      ) as HTMLInputElement;
+      expect(pollInput).toBeTruthy();
+      expect(pollInput.value).toBe('30');
+
+      // gas_condition.default_timeout_sec (number)
+      const defaultTimeoutInput = document.querySelector(
+        'input[name="gas_condition.default_timeout_sec"]',
+      ) as HTMLInputElement;
+      expect(defaultTimeoutInput).toBeTruthy();
+      expect(defaultTimeoutInput.value).toBe('3600');
+
+      // gas_condition.max_timeout_sec (number)
+      const maxTimeoutInput = document.querySelector(
+        'input[name="gas_condition.max_timeout_sec"]',
+      ) as HTMLInputElement;
+      expect(maxTimeoutInput).toBeTruthy();
+      expect(maxTimeoutInput.value).toBe('86400');
+
+      // gas_condition.max_pending_count (number)
+      const maxPendingInput = document.querySelector(
+        'input[name="gas_condition.max_pending_count"]',
+      ) as HTMLInputElement;
+      expect(maxPendingInput).toBeTruthy();
+      expect(maxPendingInput.value).toBe('100');
+    });
+
+    it('changing gas_condition.enabled triggers dirty state', async () => {
+      mockApiCalls();
+      render(<SystemPage />);
+
+      await waitFor(() => {
+        expect(
+          document.querySelector('select[name="gas_condition.enabled"]'),
+        ).toBeTruthy();
+      });
+
+      const select = document.querySelector(
+        'select[name="gas_condition.enabled"]',
+      ) as HTMLSelectElement;
+      fireEvent.change(select, { target: { value: 'false' } });
+
+      await waitFor(() => {
+        expect(screen.getByText(/unsaved change/)).toBeTruthy();
+      });
+    });
+
+    it('save action includes gas_condition.* keys in API request body', async () => {
+      mockApiCalls();
+      render(<SystemPage />);
+
+      await waitFor(() => {
+        expect(
+          document.querySelector('select[name="gas_condition.enabled"]'),
+        ).toBeTruthy();
+      });
+
+      // Change the enabled field to trigger dirty state
+      const select = document.querySelector(
+        'select[name="gas_condition.enabled"]',
+      ) as HTMLSelectElement;
+      fireEvent.change(select, { target: { value: 'false' } });
+
+      await waitFor(() => {
+        expect(screen.getByText(/unsaved change/)).toBeTruthy();
+      });
+
+      vi.mocked(apiPut).mockResolvedValueOnce({ updated: 1, settings: mockSettingsResponse });
+
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/admin/settings', {
+          settings: expect.arrayContaining([
+            { key: 'gas_condition.enabled', value: 'false' },
+          ]),
+        });
+      });
+    });
+
+    it('isSystemSetting recognizes gas_condition.enabled (included in save filter)', async () => {
+      // This test verifies the isSystemSetting filter works for gas_condition prefix
+      // by confirming gas_condition keys pass through to the save API call.
+      mockApiCalls();
+      render(<SystemPage />);
+
+      await waitFor(() => {
+        expect(
+          document.querySelector('input[name="gas_condition.poll_interval_sec"]'),
+        ).toBeTruthy();
+      });
+
+      const input = document.querySelector(
+        'input[name="gas_condition.poll_interval_sec"]',
+      ) as HTMLInputElement;
+      fireEvent.input(input, { target: { value: '60' } });
+
+      await waitFor(() => {
+        expect(screen.getByText(/unsaved change/)).toBeTruthy();
+      });
+
+      vi.mocked(apiPut).mockResolvedValueOnce({ updated: 1, settings: mockSettingsResponse });
+
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/admin/settings', {
+          settings: expect.arrayContaining([
+            { key: 'gas_condition.poll_interval_sec', value: '60' },
+          ]),
+        });
       });
     });
   });

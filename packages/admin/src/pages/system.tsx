@@ -22,7 +22,7 @@ import { registerDirty, unregisterDirty } from '../utils/dirty-guard';
 // System-relevant setting categories (used for save filtering)
 // ---------------------------------------------------------------------------
 
-const SYSTEM_PREFIXES = ['display.', 'daemon.', 'oracle.', 'signing_sdk.'];
+const SYSTEM_PREFIXES = ['display.', 'daemon.', 'oracle.', 'signing_sdk.', 'gas_condition.'];
 const SYSTEM_EXACT_KEYS = new Set(['security.rate_limit_global_ip_rpm']);
 
 function isSystemSetting(key: string): boolean {
@@ -322,6 +322,8 @@ export default function SystemPage() {
           <div class="settings-info-box">
             Maximum allowed deviation between price sources before flagging a discrepancy. Default is 5%.
             CoinGecko Pro API key increases rate limits for reliable price data.
+            Get your API key from{' '}
+            <a href="https://www.coingecko.com/en/api" target="_blank" rel="noopener noreferrer">CoinGecko API Dashboard</a>.
           </div>
         </div>
       </div>
@@ -544,6 +546,84 @@ export default function SystemPage() {
   }
 
   // ---------------------------------------------------------------------------
+  // Section: Gas Condition
+  // ---------------------------------------------------------------------------
+
+  function GasConditionSection() {
+    return (
+      <div class="settings-category">
+        <div class="settings-category-header">
+          <h3>Gas Condition</h3>
+          <p class="settings-description">
+            Configure gas conditional execution for deferred transactions
+          </p>
+        </div>
+        <div class="settings-category-body">
+          <div class="settings-fields-grid">
+            <FormField
+              label="Gas Condition Enabled"
+              name="gas_condition.enabled"
+              type="select"
+              value={ev('gas_condition', 'enabled') || 'true'}
+              onChange={(v) => handleFieldChange('gas_condition.enabled', v)}
+              options={[
+                { label: 'Yes', value: 'true' },
+                { label: 'No', value: 'false' },
+              ]}
+              description="Enable gas conditional execution for agents"
+            />
+            <FormField
+              label={keyToLabel('poll_interval_sec')}
+              name="gas_condition.poll_interval_sec"
+              type="number"
+              value={Number(ev('gas_condition', 'poll_interval_sec')) || 30}
+              onChange={(v) => handleFieldChange('gas_condition.poll_interval_sec', v)}
+              min={10}
+              max={300}
+              description="How often to check gas prices (seconds)"
+            />
+            <FormField
+              label={keyToLabel('default_timeout_sec')}
+              name="gas_condition.default_timeout_sec"
+              type="number"
+              value={Number(ev('gas_condition', 'default_timeout_sec')) || 3600}
+              onChange={(v) => handleFieldChange('gas_condition.default_timeout_sec', v)}
+              min={60}
+              max={86400}
+              description="Default wait timeout when not specified in request (seconds)"
+            />
+            <FormField
+              label={keyToLabel('max_timeout_sec')}
+              name="gas_condition.max_timeout_sec"
+              type="number"
+              value={Number(ev('gas_condition', 'max_timeout_sec')) || 86400}
+              onChange={(v) => handleFieldChange('gas_condition.max_timeout_sec', v)}
+              min={60}
+              max={86400}
+              description="Maximum allowed timeout for gas conditions (seconds)"
+            />
+            <FormField
+              label={keyToLabel('max_pending_count')}
+              name="gas_condition.max_pending_count"
+              type="number"
+              value={Number(ev('gas_condition', 'max_pending_count')) || 100}
+              onChange={(v) => handleFieldChange('gas_condition.max_pending_count', v)}
+              min={1}
+              max={10000}
+              description="Maximum number of concurrent GAS_WAITING transactions"
+            />
+          </div>
+          <div class="settings-info-box">
+            Gas conditional execution allows agents to specify gas price conditions.
+            Transactions wait until gas prices fall below the specified threshold
+            before executing.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
   // Main render
   // ---------------------------------------------------------------------------
 
@@ -592,6 +672,9 @@ export default function SystemPage() {
 
           {/* 6. Signing SDK */}
           <SigningSDKSection />
+
+          {/* 7. Gas Condition */}
+          <GasConditionSection />
         </>
       )}
 

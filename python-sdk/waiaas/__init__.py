@@ -4,6 +4,7 @@ from waiaas.client import WAIaaSClient
 from waiaas.errors import WAIaaSError
 from waiaas.models import (
     ActionResponse,
+    GasCondition,
     WalletAddress,
     WalletBalance,
     WalletAssets,
@@ -33,6 +34,7 @@ __all__ = [
     "WAIaaSClient",
     "WAIaaSError",
     "ActionResponse",
+    "GasCondition",
     "WalletAddress",
     "WalletBalance",
     "WalletAssets",

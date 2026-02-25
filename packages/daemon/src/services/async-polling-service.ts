@@ -29,6 +29,8 @@ export interface AsyncPollingCallbacks {
   emitNotification?(eventType: string, walletId: string, data: Record<string, unknown>): void;
   /** Release SPENDING_LIMIT reservation for a transaction. */
   releaseReservation?(txId: string): void;
+  /** Resume pipeline execution for a gas-condition-met transaction (stage 4 re-entry). */
+  resumePipeline?(txId: string, walletId: string): void;
 }
 
 /**
@@ -179,6 +181,15 @@ export class AsyncPollingService {
         })
         .where(eq(transactions.id, tx.id))
         .run();
+
+      // Emit TX_CANCELLED notification for gas-condition timeout
+      if (tx.walletId) {
+        this.callbacks?.emitNotification?.('TX_CANCELLED', tx.walletId, {
+          txId: tx.id,
+          reason: 'gas-condition-timeout',
+          tracker: tracker.name,
+        });
+      }
     } else if (tracker.timeoutTransition === 'BRIDGE_MONITORING') {
       // Transition to reduced-frequency monitoring
       const newMeta = {
@@ -253,6 +264,34 @@ export class AsyncPollingService {
 
     switch (result.state) {
       case 'COMPLETED': {
+        // Special case: gas-condition COMPLETED -> resume pipeline (stage 4 re-entry)
+        if (tracker.name === 'gas-condition') {
+          // Transition GAS_WAITING -> PENDING for pipeline re-entry
+          this.db
+            .update(transactions)
+            .set({
+              status: 'PENDING',
+              bridgeMetadata: JSON.stringify(updatedMetadata),
+            })
+            .where(eq(transactions.id, tx.id))
+            .run();
+
+          // Emit TX_GAS_CONDITION_MET notification
+          const gasEventType = (updatedMetadata.notificationEvent as string) ?? 'TX_GAS_CONDITION_MET';
+          if (tx.walletId) {
+            this.callbacks?.emitNotification?.(gasEventType, tx.walletId, {
+              txId: tx.id,
+              ...updatedMetadata,
+            });
+          }
+
+          // Resume pipeline -- do NOT release reservation (funds still needed for execution)
+          if (tx.walletId) {
+            this.callbacks?.resumePipeline?.(tx.id, tx.walletId);
+          }
+          break;
+        }
+
         // Determine if refunded
         const isRefunded = updatedMetadata.refunded === true;
 
