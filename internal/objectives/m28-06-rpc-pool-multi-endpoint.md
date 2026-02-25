@@ -1,7 +1,8 @@
 # 마일스톤 m28-06: RPC Pool — 멀티 엔드포인트 로테이션
 
-- **Status:** PLANNED
-- **Milestone:** v28.7
+- **Status:** SHIPPED
+- **Milestone:** v28.6
+- **Completed:** 2026-02-25
 
 ## 목표
 
@@ -15,9 +16,9 @@
 
 WAIaaS는 네트워크당 단일 RPC URL에 의존한다. 모든 요청(잔액 조회, 트랜잭션 제출, 수신 모니터링)이 하나의 엔드포인트에 집중되어, 무료 공용 RPC의 rate limit에 즉시 도달한다.
 
-- **#185**: EVM IncomingSubscriber — dRPC 무료 Arbitrum에서 `eth_getLogs` 408 타임아웃 → 수신 트랜잭션 무음 누락
-- **#187**: Solana 메인넷 — `api.mainnet-beta.solana.com` 429 → Admin UI 잔액 조회 불가
-- 공통: 어댑터 레벨에 재시도 로직 없음, fallback RPC 없음, 관리자에게 RPC 장애 통보 없음
+- **#185** (v28.5 FIXED): EVM IncomingSubscriber — dRPC 무료 Arbitrum에서 `eth_getLogs` 408 타임아웃 → 수신 트랜잭션 무음 누락
+- **#187** (v28.5 FIXED): Solana 메인넷 — `api.mainnet-beta.solana.com` 429 → Admin UI 잔액 조회 불가
+- 공통: 개별 핫픽스로 증상은 해결했으나, 어댑터 레벨에 체계적인 fallback/로테이션 없음, 관리자에게 RPC 장애 통보 없음
 
 ### 현재 Admin UI 구조
 
@@ -51,7 +52,7 @@ Wallets 페이지에 3개 탭 존재:
 ### R-01: RPC Pool 코어
 
 - 네트워크당 N개 RPC URL 등록 (순서 = 우선순위)
-- 라운드 로빈 + 실패 시 다음 엔드포인트 fallback
+- 우선순위 기반 fallback (순서대로 시도, 실패 시 다음 엔드포인트로 전환)
 - 429/408/5xx 응답 시 해당 RPC에 cooldown (기본 60초, 지수 증가, 최대 5분)
 - cooldown 중인 RPC는 자동 스킵, cooldown 해제 시 복귀
 - 전체 RPC 실패 시에만 에러 전파 + `RPC_ALL_FAILED` 알림 이벤트
@@ -85,16 +86,17 @@ Wallets 페이지에 3개 탭 존재:
 
 ### R-03: 어댑터 통합
 
-- `AdapterPool`이 RPC Pool에서 엔드포인트를 받아 어댑터에 주입
+- 새로운 `RpcPool` 추상 레이어를 AdapterPool과 어댑터 사이에 도입. AdapterPool은 기존처럼 어댑터를 캐시하되, RPC URL 해석을 RpcPool에 위임
 - SolanaAdapter: `getBalance()`, `getAssets()` 호출 시 RPC Pool 경유
 - EvmAdapter: viem `createPublicClient` 생성 시 RPC Pool에서 URL 획득
 - IncomingTxMonitor: 각 Subscriber가 RPC Pool을 통해 폴링
 
-### R-04: Config + Admin Settings
+### R-04: Config + Admin Settings + 저장 구조
 
 - `config.toml`의 기존 단일 URL 설정은 하위 호환 유지 (1개짜리 Pool로 동작)
 - Admin Settings에서 네트워크별 RPC URL 목록 추가/삭제/순서 변경
 - hot-reload 지원 — RPC 목록 변경 시 데몬 재시작 불필요
+- **저장 방식**: 현재 SettingsService는 key-value(string) 저장. 복수 URL 저장은 JSON 배열 직렬화(`rpc.solana_mainnet` = `["url1","url2"]`)로 처리하거나, 별도 DB 테이블(`rpc_endpoints`)을 추가. 구체적 방식은 설계 단계에서 결정
 
 ### R-05: Admin UI — RPC Endpoints 탭 확장
 
@@ -110,9 +112,9 @@ Wallets 페이지에 3개 탭 존재:
 
 - 네트워크별 RPC 상태 API: `GET /admin/rpc-status`
 - 알림 이벤트:
-  - `RPC_HEALTH_DEGRADED`: 특정 RPC가 cooldown 진입 시
-  - `RPC_ALL_FAILED`: 네트워크의 전체 RPC가 실패 시
-  - `RPC_RECOVERED`: cooldown 해제 후 정상 복귀 시
+  - `RPC_HEALTH_DEGRADED` (기존): 특정 RPC가 cooldown 진입 시 — 이미 NotificationEventType에 존재, 의미를 Pool 맥락으로 확장
+  - `RPC_ALL_FAILED` (신규): 네트워크의 전체 RPC가 실패 시
+  - `RPC_RECOVERED` (신규): cooldown 해제 후 정상 복귀 시
 
 ---
 
@@ -124,20 +126,35 @@ Wallets 페이지에 3개 탭 존재:
 | 환경 변수 `WAIAAS_RPC_*` | 해당 URL이 Pool의 첫 번째 항목으로 추가 |
 | Admin Settings 미설정 | 빌트인 기본값 사용 |
 | Admin Settings에서 URL 추가 | 빌트인 + 사용자 URL 병합, 사용자 URL 우선 |
+| `config.toml` WS URL (`solana_ws_*`) | 변경 없음 — 기존 단일 WebSocket 유지 (HTTP RPC Pool 대상 아님) |
 
 ---
 
-## 해소되는 이슈
+## 구조적으로 해소되는 이슈
 
-| 이슈 | 제목 | 해소 방식 |
-|------|------|----------|
-| #185 | EVM IncomingSubscriber 408 타임아웃 | fallback RPC로 자동 전환 + cooldown |
-| #187 | Solana 메인넷 429 잔액 조회 실패 | 복수 RPC 로테이션으로 rate limit 분산 |
+#185, #187은 v28.5에서 개별 핫픽스로 증상을 해결했으나, 이 마일스톤은 근본적인 **멀티 엔드포인트 로테이션 인프라**를 제공하여 동일 유형의 문제가 재발하지 않도록 구조적으로 해소한다.
+
+| 이슈 | 제목 | 구조적 해소 방식 |
+|------|------|-----------------|
+| #185 (FIXED) | EVM IncomingSubscriber 408 타임아웃 | fallback RPC로 자동 전환 + cooldown |
+| #187 (FIXED) | Solana 메인넷 429 잔액 조회 실패 | 복수 RPC 로테이션으로 rate limit 분산 |
+
+---
+
+## 설계 단계 결정 사항
+
+1. **viem fallback 전략**: viem 빌트인 `fallback()` transport 활용 vs RpcPool 레벨에서 클라이언트 재생성. 빌트인 fallback은 viem이 자체 관리하므로 RpcPool과 cooldown 상태 동기화 방식이 달라짐
+2. **저장 방식**: SettingsService JSON 배열 직렬화(`rpc.solana_mainnet` = `["url1","url2"]`) vs 별도 `rpc_endpoints` DB 테이블. 후자 선택 시 v1.4+ DB 마이그레이션 규칙 적용 필요
+3. **Solana IncomingSubscriber WebSocket**: 비목표에서 WebSocket Pool 제외를 명시했으므로, Solana Incoming의 `onLogs` WebSocket 연결은 기존 단일 유지하고 HTTP 폴링 부분만 Pool 적용하는지 확인 필요
+4. **cooldown 파라미터 노출**: 초기 cooldown(60초), 지수 증가 배율, 최대 cooldown(5분) 값을 Admin Settings에서 런타임 조정 가능하게 할지 여부
+5. **`mainnet.optimism.io` 가용성**: Optimism 공식 RPC의 rate limit 강화/deprecation 상태 확인 후 빌트인 목록 최종 확정
+6. **SolanaAdapter 기존 retry 로직과의 관계**: SolanaAdapter에 이미 `withRpcRetry` 로직이 존재 — `RPC_RETRY_MAX=3`(초기 시도 1 + 재시도 3 = **총 4회**), `RPC_RETRYABLE_STATUSES={408,429,500,502,503,504}`, 지수 백오프(`RPC_RETRY_BASE_MS=1_000`, `RPC_RETRY_MAX_MS=10_000`). RpcPool의 cooldown/fallback과 이 retry가 공존하면 **이중 대기**(어댑터 레벨 10초 백오프 + Pool 레벨 60초 cooldown)가 발생할 수 있음. 중복 retry 제거 vs 계층 분리 결정 필요
+7. **EVM 어댑터 재생성 비용**: EvmAdapter는 `connect(rpcUrl)`에서 `createPublicClient`를 생성. RpcPool이 URL을 전환할 때 어댑터 인스턴스를 재생성해야 하는지, viem transport만 교체할 수 있는지 — 설계 결정 #1(viem fallback 전략)과 직접 연관
 
 ---
 
 ## 비목표 (Non-Goals)
 
 - 유료 RPC 프로바이더 자동 프로비저닝 (사용자가 직접 URL 입력)
-- RPC 응답 시간 기반 자동 최적화 (라운드 로빈 + cooldown으로 충분)
+- RPC 응답 시간 기반 자동 최적화 (우선순위 fallback + cooldown으로 충분)
 - WebSocket RPC Pool (HTTP RPC만 대상, WS는 단일 유지)
