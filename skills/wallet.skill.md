@@ -176,6 +176,15 @@ curl -s -X PUT http://localhost:3100/v1/wallets/01958f3a-1234-7000-8000-abcdef12
 Parameters:
 - `owner_address` (required): blockchain address (Solana base58 or Ethereum 0x-prefixed, EIP-55 normalized)
 - `approval_method` (optional): Owner approval method override for this wallet. Valid values: `"sdk_ntfy"`, `"sdk_telegram"`, `"walletconnect"`, `"telegram_bot"`, `"rest"`, or `null` (auto-detect). Set to `null` to clear and use automatic channel detection.
+- `wallet_type` (optional): Built-in wallet preset type. Valid values: `"dcent"`. When specified, the preset's approval_method and preferred_wallet override manual settings.
+
+```bash
+# With wallet preset:
+curl -s -X PUT http://localhost:3100/v1/wallets/01958f3a-1234-7000-8000-abcdef123456/owner \
+  -H 'Content-Type: application/json' \
+  -H 'X-Master-Password: your-master-password' \
+  -d '{"owner_address": "0x1234...abcd", "wallet_type": "dcent"}'
+```
 
 Response (200):
 ```json
@@ -190,9 +199,13 @@ Response (200):
   "ownerAddress": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
   "ownerVerified": false,
   "approvalMethod": null,
+  "walletType": null,
+  "warning": null,
   "updatedAt": 1707000100
 }
 ```
+
+When both `wallet_type` and `approval_method` are provided, the preset's approval_method takes precedence and a `warning` field is included in the response.
 
 Error: `OWNER_ALREADY_CONNECTED` (409) if wallet is in LOCKED state -- use ownerAuth to change owner.
 

@@ -24,6 +24,7 @@ import {
   ApproveRequestSchema,
   BatchRequestSchema,
   ApprovalMethodSchema,
+  WalletPresetTypeSchema,
 } from '@waiaas/core';
 import type { ErrorCode } from '@waiaas/core';
 
@@ -100,6 +101,8 @@ export const WalletOwnerResponseSchema = z
     ownerAddress: z.string().nullable(),
     ownerVerified: z.boolean().nullable(),
     approvalMethod: z.string().nullable().optional(),
+    walletType: z.string().nullable().optional(),
+    warning: z.string().nullable().optional(),
     updatedAt: z.number().int().nullable(),
   })
   .openapi('WalletOwnerResponse');
@@ -553,6 +556,7 @@ export const SetOwnerRequestSchema = z
   .object({
     owner_address: z.string().min(1),
     approval_method: ApprovalMethodSchema.nullable().optional(),
+    wallet_type: WalletPresetTypeSchema.optional(),
   })
   .openapi('SetOwnerRequest');
 
