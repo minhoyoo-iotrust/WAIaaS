@@ -31,10 +31,10 @@ Requirements for milestone v28.8. Each maps to roadmap phases.
 
 ### Relay (Push Relay Payload 변환)
 
-- [ ] **RLAY-01**: Push Relay config.toml [relay.push.payload] 스키마 확장 (static_fields + category_map, Zod 검증)
-- [ ] **RLAY-02**: ConfigurablePayloadTransformer 구현 — static_fields 주입 + category_map 카테고리별 매핑
-- [ ] **RLAY-03**: 변환 파이프라인 통합 — buildPushPayload() → transformer → IPushProvider.send()
-- [ ] **RLAY-04**: [relay.push.payload] 미설정 시 기존 동작 유지 (bypass)
+- [x] **RLAY-01**: Push Relay config.toml [relay.push.payload] 스키마 확장 (static_fields + category_map, Zod 검증)
+- [x] **RLAY-02**: ConfigurablePayloadTransformer 구현 — static_fields 주입 + category_map 카테고리별 매핑
+- [x] **RLAY-03**: 변환 파이프라인 통합 — buildPushPayload() → transformer → IPushProvider.send()
+- [x] **RLAY-04**: [relay.push.payload] 미설정 시 기존 동작 유지 (bypass)
 
 ## Future Requirements
 
@@ -64,10 +64,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | API-03 | Phase 265 | Pending |
 | DB-01 | Phase 265 | Pending |
 | ADUI-01 | Phase 266 | Pending |
-| RLAY-01 | Phase 267 | Pending |
-| RLAY-02 | Phase 267 | Pending |
-| RLAY-03 | Phase 267 | Pending |
-| RLAY-04 | Phase 267 | Pending |
+| RLAY-01 | Phase 267 | Complete |
+| RLAY-02 | Phase 267 | Complete |
+| RLAY-03 | Phase 267 | Complete |
+| RLAY-04 | Phase 267 | Complete |
 
 **Coverage:**
 - v1 requirements: 14 total
