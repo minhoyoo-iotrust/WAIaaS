@@ -318,11 +318,11 @@ See `.planning/milestones/v28.6-ROADMAP.md` for full details.
   3. 빌트인에 없는 wallet_type 값을 보내면 400 에러가 반환된다
   4. wallet_type과 approval_method를 동시에 전달하면 프리셋이 우선 적용되고 응답에 warning 필드가 포함된다
   5. WalletOwnerResponseSchema에 walletType/warning 필드가 포함되고 wallet.skill.md가 갱신된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 265-01: DB v24 마이그레이션 (wallet_type 컬럼) + WalletPreset 타입 정의 + 프리셋 레지스트리 (D'CENT 1종)
-- [ ] 265-02: Owner API wallet_type 필드 확장 + Zod 스키마 + 하위 호환 + 에러 처리 + 스킬 파일 갱신
+- [ ] 265-01-PLAN.md -- DB v24 마이그레이션 (wallet_type 컬럼) + WalletPreset 타입 정의 + 프리셋 레지스트리 (D'CENT 1종)
+- [ ] 265-02-PLAN.md -- Owner API wallet_type 필드 확장 + Zod 스키마 + 하위 호환 + 에러 처리 + 스킬 파일 갱신
 
 ### Phase 266: Auto-Setup Orchestration + Admin UI
 **Goal**: wallet_type 지정 시 signing SDK/approval_method/preferred_wallet/WalletLinkConfig가 자동으로 설정되고, 실패 시 안전하게 롤백되며, Admin UI에서 지갑 종류를 선택할 수 있는 상태
