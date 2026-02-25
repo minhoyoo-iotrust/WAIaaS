@@ -12,8 +12,8 @@ Requirements for v28.5 milestone. Each maps to roadmap phases.
 - [x] **PIPE-01**: 트랜잭션 요청에 선택적 gasCondition 필드를 지정할 수 있다 (maxGasPrice/maxPriorityFee/timeout)
 - [x] **PIPE-02**: gasCondition이 지정된 트랜잭션은 Stage 3(정책 평가) 통과 후 GAS_WAITING 상태로 진입한다
 - [x] **PIPE-03**: gasCondition 미지정 트랜잭션은 기존 동작 그대로 즉시 실행된다 (하위 호환)
-- [ ] **PIPE-04**: 정책 위반 트랜잭션은 gasCondition 유무와 관계없이 즉시 거부된다 (가스 대기 없음)
-- [ ] **PIPE-05**: GAS_WAITING 트랜잭션은 nonce를 실행 시점에 할당한다 (대기 진입 시 미할당)
+- [x] **PIPE-04**: 정책 위반 트랜잭션은 gasCondition 유무와 관계없이 즉시 거부된다 (가스 대기 없음)
+- [x] **PIPE-05**: GAS_WAITING 트랜잭션은 nonce를 실행 시점에 할당한다 (대기 진입 시 미할당)
 - [x] **PIPE-06**: GasCondition Zod 스키마가 기존 discriminatedUnion 7-type 모두에 적용된다
 
 ### Evaluator
@@ -70,8 +70,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PIPE-01 | Phase 258 | Complete |
 | PIPE-02 | Phase 258 | Complete |
 | PIPE-03 | Phase 258 | Complete |
-| PIPE-04 | Phase 258 | Pending |
-| PIPE-05 | Phase 258 | Pending |
+| PIPE-04 | Phase 258 | Complete |
+| PIPE-05 | Phase 258 | Complete |
 | PIPE-06 | Phase 258 | Complete |
 | EVAL-01 | Phase 258 | Complete |
 | EVAL-02 | Phase 258 | Complete |
