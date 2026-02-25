@@ -204,9 +204,9 @@
 | 187 | BUG | HIGH | 솔라나 메인넷 잔액 조회 429 실패 — 무료 RPC rate limit + 재시도 로직 부재 | v28.5 | FIXED | 2026-02-25 |
 | 188 | BUG | HIGH | Admin UI Actions 프로바이더가 항상 Inactive — `/v1/actions/*` 와일드카드 sessionAuth 충돌 | v28.5 | FIXED | 2026-02-25 |
 | 189 | ENHANCEMENT | HIGH | 에이전트 Zero-State 셋업 스킬 + 가이드 경량화 + README 진입점 | v28.7 | FIXED | 2026-02-25 |
-| 190 | BUG | HIGH | LI.FI + 0x resolve() value hex→decimal 변환 누락으로 스왑/브릿지 실패 | v28.7 | OPEN | — |
-| 191 | BUG | CRITICAL | 세션 TTL이 1일로 적용 — quickset expiresIn/ttl 필드 불일치 + 스키마 max 7일 제한 | v28.7 | OPEN | — |
-| 192 | MISSING | MEDIUM | 세션 토큰 영구 만료 시 에이전트 자력 복구 불가 — 복구 프로세스 스킬 필요 | — | OPEN | — |
+| 190 | BUG | HIGH | LI.FI + 0x resolve() value hex→decimal 변환 누락으로 스왑/브릿지 실패 | v28.8 | FIXED | 2026-02-25 |
+| 191 | BUG | CRITICAL | 세션 TTL이 1일로 적용 — quickset expiresIn/ttl 필드 불일치 + 스키마 max 7일 제한 | v28.8 | FIXED | 2026-02-25 |
+| 192 | MISSING | MEDIUM | 세션 토큰 영구 만료 시 에이전트 자력 복구 불가 — 복구 프로세스 스킬 필요 | v28.8 | FIXED | 2026-02-25 |
 
 ## Type Legend
 
@@ -218,8 +218,8 @@
 
 ## Summary
 
-- **OPEN:** 3
-- **FIXED:** 188
+- **OPEN:** 0
+- **FIXED:** 191
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1
