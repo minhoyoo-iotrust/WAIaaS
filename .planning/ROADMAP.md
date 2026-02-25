@@ -379,7 +379,7 @@ Phases execute in numeric order: 260 -> 261 -> 262 -> 263 -> 264
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 260. RPC Pool Core + Built-in Defaults | v28.6 | 2/2 | Complete | 2026-02-25 |
+| 260. RPC Pool Core + Built-in Defaults | v28.6 | Complete    | 2026-02-25 | 2026-02-25 |
 | 261. Adapter Integration | v28.6 | 0/3 | Not started | - |
 | 262. Settings Storage + Hot-Reload | v28.6 | 0/1 | Not started | - |
 | 263. Admin UI RPC Endpoints | v28.6 | 0/2 | Not started | - |
