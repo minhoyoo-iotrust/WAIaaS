@@ -291,7 +291,7 @@ See `.planning/milestones/v28.5-ROADMAP.md` for full details.
 - [x] **Phase 260: RPC Pool Core + Built-in Defaults** (2/2 plans) -- completed 2026-02-25
 - [x] **Phase 261: Adapter Integration** - RpcPool을 AdapterPool/Solana/EVM/IncomingTx에 통합하고 config.toml 하위 호환 유지 (completed 2026-02-25)
 - [x] **Phase 262: Settings Storage + Hot-Reload** - Admin Settings에서 네트워크별 RPC URL 목록 CRUD와 무중단 반영 (completed 2026-02-25)
-- [ ] **Phase 263: Admin UI RPC Endpoints** - RPC Endpoints 탭을 복수 URL 목록 관리로 확장
+- [x] **Phase 263: Admin UI RPC Endpoints** - RPC Endpoints 탭을 복수 URL 목록 관리로 확장 (completed 2026-02-25)
 - [ ] **Phase 264: Monitoring + Alerts** - RPC 상태 API와 health/failure/recovery 알림 이벤트
 
 ## Phase Details
@@ -382,7 +382,7 @@ Phases execute in numeric order: 260 -> 261 -> 262 -> 263 -> 264
 | 260. RPC Pool Core + Built-in Defaults | v28.6 | Complete    | 2026-02-25 | 2026-02-25 |
 | 261. Adapter Integration | 3/3 | Complete    | 2026-02-25 | - |
 | 262. Settings Storage + Hot-Reload | 1/1 | Complete    | 2026-02-25 | - |
-| 263. Admin UI RPC Endpoints | 1/2 | In Progress|  | - |
+| 263. Admin UI RPC Endpoints | 2/2 | Complete   | 2026-02-25 | - |
 | 264. Monitoring + Alerts | v28.6 | 0/2 | Not started | - |
 
 ---

@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 
 ## Current Position
 
-Phase: 4 of 5 (Phase 263: Admin UI RPC Endpoints -- IN PROGRESS)
-Plan: 1 of 2 in current phase
-Status: Completed 263-01, proceeding to 263-02
-Last activity: 2026-02-25 -- Completed 263-01 multi-URL RPC tab + GET /admin/rpc-status (11 tests, 9 files)
+Phase: 4 of 5 (Phase 263: Admin UI RPC Endpoints -- COMPLETE)
+Plan: 2 of 2 in current phase (ALL COMPLETE)
+Status: Phase 263 complete, proceeding to Phase 264
+Last activity: 2026-02-25 -- Completed 263-02 live status display + per-URL test (6 new tests, 3 files)
 
-Progress: [████████░░] 80%
+Progress: [█████████░] 90%
 
 ## Performance Metrics
 
@@ -27,7 +27,7 @@ Progress: [████████░░] 80%
 | 260 | 2/2 | 5min | 2.5min |
 | 261 | 3/3 | 13min | 4.3min |
 | 262 | 1/1 | 6min | 6min |
-| 263 | 1/2 | 9min | 9min |
+| 263 | 2/2 | 12min | 6min |
 
 ## Accumulated Context
 
@@ -68,6 +68,10 @@ Progress: [████████░░] 80%
 - 263-01: Built-in URLs toggle-able (enable/disable) not deletable -- prevents accidental loss of fallback URLs
 - 263-01: EVM default network selector preserved at top of EVM section, separate dirty state
 
+- 263-02: Pool status polling every 15s with silent failure -- no toast on polling errors
+- 263-02: Test/status composite key is network:url for per-URL state tracking
+- 263-02: networkToChain uses SOLANA_NETWORKS.includes for chain determination
+
 ### Blockers/Concerns
 
 - [RESOLVED] 저장 방식 결정: SettingsService JSON 배열 방식 채택 (Phase 262-01에서 구현)
@@ -76,5 +80,5 @@ Progress: [████████░░] 80%
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 263-01-PLAN.md
+Stopped at: Completed 263-02-PLAN.md
 Resume file: None

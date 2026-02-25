@@ -38,9 +38,9 @@ Requirements for v28.6. Each maps to roadmap phases.
 ### Admin UI
 
 - [x] **ADUI-01**: RPC Endpoints 탭에서 네트워크별 복수 URL 목록을 표시하고 순서를 변경할 수 있다
-- [ ] **ADUI-02**: URL별 상태를 표시한다 (정상: 레이턴시+블록번호 / cooldown: 남은시간+실패횟수)
+- [x] **ADUI-02**: URL별 상태를 표시한다 (정상: 레이턴시+블록번호 / cooldown: 남은시간+실패횟수)
 - [x] **ADUI-03**: URL 추가/삭제 폼을 제공한다
-- [ ] **ADUI-04**: 개별 URL 연결 테스트 버튼이 동작한다
+- [x] **ADUI-04**: 개별 URL 연결 테스트 버튼이 동작한다
 - [x] **ADUI-05**: 빌트인 기본 URL은 (built-in) 라벨로 구분하며 삭제 불가, 비활성화 가능하다
 
 ### Monitoring + Alerts
@@ -95,9 +95,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CONF-03 | Phase 262 | Complete |
 | CONF-04 | Phase 261 | Complete |
 | ADUI-01 | Phase 263 | Complete |
-| ADUI-02 | Phase 263 | Pending |
+| ADUI-02 | Phase 263 | Complete |
 | ADUI-03 | Phase 263 | Complete |
-| ADUI-04 | Phase 263 | Pending |
+| ADUI-04 | Phase 263 | Complete |
 | ADUI-05 | Phase 263 | Complete |
 | MNTR-01 | Phase 264 | Pending |
 | MNTR-02 | Phase 264 | Pending |
