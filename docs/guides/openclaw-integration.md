@@ -2,26 +2,11 @@
 
 This guide walks you through connecting WAIaaS to [OpenClaw](https://openclaw.io), an open-source AI agent bot that follows the Agent Skills open standard.
 
-## Prerequisites
-
-- WAIaaS daemon installed and running (`npx @waiaas/daemon` or `waiaas start`)
-- OpenClaw installed and configured
-
 ## Quick Setup
 
-### 1. Create Wallets and Sessions
+### 1. Initial Setup
 
-```bash
-waiaas quickset
-```
-
-This creates Solana + EVM wallets in mainnet mode and prints session tokens and MCP configuration.
-
-For testnet mode:
-
-```bash
-waiaas quickset --mode testnet
-```
+If WAIaaS is not yet installed, follow the `setup` skill (`waiaas-setup/SKILL.md`) for CLI installation, daemon startup, wallet creation, and session configuration.
 
 ### 2. Install WAIaaS Skills
 
@@ -29,10 +14,11 @@ waiaas quickset --mode testnet
 npx @waiaas/skills openclaw
 ```
 
-This installs 7 WAIaaS skill files to `~/.openclaw/skills/`:
+This installs 8 WAIaaS skill files to `~/.openclaw/skills/`:
 
 ```
 ~/.openclaw/skills/
+  waiaas-setup/SKILL.md
   waiaas-quickstart/SKILL.md
   waiaas-wallet/SKILL.md
   waiaas-transactions/SKILL.md
@@ -86,6 +72,7 @@ OpenClaw will use the `waiaas-quickstart` skill to query the daemon and return y
 
 | Skill | Description |
 |-------|-------------|
+| `waiaas-setup` | Zero-state daemon setup: install CLI, initialize, start daemon, create wallet, configure session |
 | `waiaas-quickstart` | End-to-end quickset: create wallet, session, check balance, send first transfer |
 | `waiaas-wallet` | Wallet CRUD, asset queries, session management, token registry, MCP provisioning |
 | `waiaas-transactions` | All 5 transaction types (TRANSFER, TOKEN_TRANSFER, CONTRACT_CALL, APPROVE, BATCH) |

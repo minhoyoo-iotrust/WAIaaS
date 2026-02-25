@@ -118,7 +118,16 @@ For agents that don't support MCP, or when you prefer REST API integration:
 npx @waiaas/skills add all
 ```
 
-This adds `.skill.md` instruction files to your project. Include them in your agent's context and it learns the WAIaaS API automatically. Available skills: `quickstart`, `wallet`, `transactions`, `policies`, `admin`, `actions`, `x402`.
+This adds `.skill.md` instruction files to your project. Include them in your agent's context and it learns the WAIaaS API automatically. Available skills: `setup`, `quickstart`, `wallet`, `transactions`, `policies`, `admin`, `actions`, `x402`.
+
+### Agent Self-Setup
+
+AI agents can set up WAIaaS from scratch by following the setup skill:
+
+1. Install skills: `npx @waiaas/skills add all`
+2. Read and follow `waiaas-setup/SKILL.md`
+
+The setup skill guides through CLI installation, daemon startup, wallet creation, and session configuration. Master password prompts require human input.
 
 ## Alternative: Docker
 

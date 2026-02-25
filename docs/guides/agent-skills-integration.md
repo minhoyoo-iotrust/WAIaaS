@@ -20,24 +20,15 @@ Agent Skills is an open standard for AI agent capability files. Platforms that s
 | Claude Code | `.claude/skills/` | Use `npx @waiaas/skills claude-code` instead |
 | OpenClaw | `~/.openclaw/skills/` | Use `npx @waiaas/skills openclaw` instead |
 
-## Prerequisites
-
-- WAIaaS daemon installed and running (`npx @waiaas/daemon` or `waiaas start`)
-- An AI agent platform that supports Agent Skills
-
 ## Quick Setup
 
-### 1. Create Wallets and Sessions
+### 1. Initial Setup
 
-```bash
-waiaas quickset
-```
-
-This creates Solana + EVM wallets in mainnet mode and prints session tokens.
+If WAIaaS is not yet installed, follow the `setup` skill (`waiaas-setup/SKILL.md`) for CLI installation, daemon startup, wallet creation, and session configuration.
 
 ### 2. Install WAIaaS Skills
 
-**Default (Codex, Gemini CLI, Goose, Amp):**
+**Default (Codex, Gemini CLI, Goose, Amp, Roo Code):**
 
 ```bash
 npx @waiaas/skills agent-skills
@@ -61,32 +52,11 @@ npx @waiaas/skills agent-skills --target github
 
 Installs to `.github/skills/waiaas-*/SKILL.md`.
 
-### 3. Configure Environment Variables
-
-Set these environment variables for your AI agent:
-
-```bash
-export WAIAAS_BASE_URL=http://localhost:3100
-export WAIAAS_SESSION_TOKEN=<your-session-token>
-```
-
-The agent no longer needs the master password. Provide only the session token from step 1.
-
-### 4. Environment Auto-Discovery
-
-With connect-info, the agent can discover capabilities without loading skill files. On startup, call:
-
-```bash
-curl -s http://localhost:3100/v1/connect-info \
-  -H 'Authorization: Bearer $WAIAAS_SESSION_TOKEN'
-```
-
-This returns all accessible wallets, policies, and capabilities with an AI-ready prompt, enabling automatic environment discovery.
-
 ## Available Skills
 
 | Skill | Description |
 |-------|-------------|
+| `waiaas-setup` | Zero-state daemon setup: install CLI, initialize, start daemon, create wallet, configure session |
 | `waiaas-quickstart` | End-to-end quickset: create wallet, session, check balance, send first transfer |
 | `waiaas-wallet` | Wallet CRUD, asset queries, session management, token registry, MCP provisioning |
 | `waiaas-transactions` | All 5 transaction types (TRANSFER, TOKEN_TRANSFER, CONTRACT_CALL, APPROVE, BATCH) |

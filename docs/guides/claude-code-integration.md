@@ -2,20 +2,11 @@
 
 This guide walks you through connecting WAIaaS to [Claude Code](https://claude.ai/claude-code), Anthropic's official CLI for Claude. WAIaaS provides two integration methods: skill files and MCP server.
 
-## Prerequisites
-
-- WAIaaS daemon installed and running (`npx @waiaas/daemon` or `waiaas start`)
-- Claude Code installed (`npm install -g @anthropic-ai/claude-code`)
-
 ## Quick Setup
 
-### 1. Create Wallets and Sessions
+### 1. Initial Setup
 
-```bash
-waiaas quickset
-```
-
-This creates Solana + EVM wallets in mainnet mode and prints session tokens and MCP configuration.
+If WAIaaS is not yet installed, follow the `setup` skill (`waiaas-setup/SKILL.md`) for CLI installation, daemon startup, wallet creation, and session configuration.
 
 ### 2. Install WAIaaS Skills
 
@@ -23,10 +14,11 @@ This creates Solana + EVM wallets in mainnet mode and prints session tokens and 
 npx @waiaas/skills claude-code
 ```
 
-This installs 7 WAIaaS skill files to `.claude/skills/` in your project directory:
+This installs 8 WAIaaS skill files to `.claude/skills/` in your project directory:
 
 ```
 .claude/skills/
+  waiaas-setup/SKILL.md
   waiaas-quickstart/SKILL.md
   waiaas-wallet/SKILL.md
   waiaas-transactions/SKILL.md
@@ -90,6 +82,7 @@ You can use both simultaneously. Skills provide comprehensive API documentation 
 
 | Skill | Description |
 |-------|-------------|
+| `waiaas-setup` | Zero-state daemon setup: install CLI, initialize, start daemon, create wallet, configure session |
 | `waiaas-quickstart` | End-to-end quickset: create wallet, session, check balance, send first transfer |
 | `waiaas-wallet` | Wallet CRUD, asset queries, session management, token registry, MCP provisioning |
 | `waiaas-transactions` | All 5 transaction types (TRANSFER, TOKEN_TRANSFER, CONTRACT_CALL, APPROVE, BATCH) |

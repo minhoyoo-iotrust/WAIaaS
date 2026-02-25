@@ -8,6 +8,12 @@ export interface SkillEntry {
 
 export const SKILL_REGISTRY: readonly SkillEntry[] = [
   {
+    name: "setup",
+    filename: "setup.skill.md",
+    description:
+      "Zero-state daemon setup: install CLI, initialize, start daemon, create wallet, configure session",
+  },
+  {
     name: "quickstart",
     filename: "quickstart.skill.md",
     description:

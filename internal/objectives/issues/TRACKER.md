@@ -203,6 +203,7 @@
 | 186 | BUG | CRITICAL | LI.FI getQuote 쿼리 파라미터명 오류로 스왑/브릿지 전체 실패 | v28.5 | FIXED | 2026-02-25 |
 | 187 | BUG | HIGH | 솔라나 메인넷 잔액 조회 429 실패 — 무료 RPC rate limit + 재시도 로직 부재 | v28.5 | FIXED | 2026-02-25 |
 | 188 | BUG | HIGH | Admin UI Actions 프로바이더가 항상 Inactive — `/v1/actions/*` 와일드카드 sessionAuth 충돌 | v28.5 | FIXED | 2026-02-25 |
+| 189 | ENHANCEMENT | HIGH | 에이전트 Zero-State 셋업 스킬 + 가이드 경량화 + README 진입점 | v28.7 | FIXED | 2026-02-25 |
 
 ## Type Legend
 
@@ -215,8 +216,8 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 187
+- **FIXED:** 188
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 188
+- **Total:** 189
