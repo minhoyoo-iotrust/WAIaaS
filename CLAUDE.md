@@ -26,7 +26,7 @@
 
 ## Configuration
 
-- No nesting in config.toml. Environment variables follow the `WAIAAS_{SECTION}_{KEY}` pattern.
+- No nesting in config.toml (daemon). Push Relay (`packages/push-relay`) config.toml allows nesting. Environment variables follow the `WAIAAS_{SECTION}_{KEY}` pattern.
 - **Expose runtime-adjustable settings in Admin Settings.** config.toml provides initial defaults; Admin Settings provides runtime overrides (hot-reload). Settings that should be changeable without daemon restart are made adjustable via SettingsService in the Admin UI. Security credentials (master_password_hash) and infrastructure settings (port, host, rpc_url) that require restart remain config.toml-only.
 
 ## Policy
