@@ -350,11 +350,11 @@ Plans:
   2. 각 URL의 실시간 상태(정상: 레이턴시+블록번호 / cooldown: 남은시간+실패횟수)가 표시된다
   3. URL 추가/삭제 폼이 동작하고 개별 URL 연결 테스트 버튼이 동작한다
   4. 빌트인 기본 URL은 (built-in) 라벨로 구분되며 삭제 불가, 비활성화만 가능하다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 263-01: RPC Endpoints 탭 복수 URL 목록 UI (순서 변경, 추가/삭제, built-in 라벨)
-- [ ] 263-02: URL별 실시간 상태 표시 + 개별 연결 테스트
+- [ ] 263-01-PLAN.md -- Multi-URL list UI + GET /admin/rpc-status endpoint + add/delete/reorder + built-in labels
+- [ ] 263-02-PLAN.md -- Live status display (polling) + per-URL connection test button
 
 ### Phase 264: Monitoring + Alerts
 **Goal**: 관리자가 RPC 상태를 API로 확인하고 장애/복구 시 자동 알림을 받는다
