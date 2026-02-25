@@ -6,10 +6,16 @@
  * agent chain/network, reuses instances for the same network, and cleanly disconnects
  * all on shutdown.
  *
+ * RpcPool integration (Phase 261): When an RpcPool is provided, AdapterPool uses it
+ * to resolve RPC URLs via priority-based fallback. Config.toml single-URL settings
+ * are seeded into RpcPool as highest-priority entries at daemon startup.
+ *
  * @see Phase 84-01
+ * @see Phase 261-01
  */
 
 import type { IChainAdapter, ChainType, NetworkType, EvmNetworkType } from '@waiaas/core';
+import type { RpcPool } from '@waiaas/core';
 
 /**
  * Build the RPC config key for a given chain:network pair.
@@ -41,8 +47,43 @@ export function resolveRpcUrl(
   return rpcConfig[key] || '';
 }
 
+/**
+ * Reverse mapping: config.toml rpc section key -> BUILT_IN_RPC_DEFAULTS network name.
+ *
+ * Examples:
+ *   solana_mainnet       -> mainnet
+ *   solana_devnet        -> devnet
+ *   evm_ethereum_sepolia -> ethereum-sepolia
+ *   evm_base_mainnet     -> base-mainnet
+ *   evm_default_network  -> null (skip, not a network key)
+ *   solana_ws_devnet     -> null (skip, WebSocket keys are not network endpoints)
+ */
+export function configKeyToNetwork(configKey: string): string | null {
+  // Skip non-network config keys
+  if (configKey === 'evm_default_network') return null;
+  // Skip WebSocket keys (solana_ws_*)
+  if (configKey.startsWith('solana_ws_')) return null;
+
+  // Solana: solana_mainnet -> mainnet, solana_devnet -> devnet
+  if (configKey.startsWith('solana_')) {
+    return configKey.slice('solana_'.length);
+  }
+
+  // EVM: evm_ethereum_sepolia -> ethereum-sepolia (strip evm_, replace _ with -)
+  if (configKey.startsWith('evm_')) {
+    return configKey.slice('evm_'.length).replace(/_/g, '-');
+  }
+
+  return null;
+}
+
 export class AdapterPool {
   private readonly _pool = new Map<string, IChainAdapter>();
+  private readonly rpcPool?: RpcPool;
+
+  constructor(rpcPool?: RpcPool) {
+    this.rpcPool = rpcPool;
+  }
 
   /**
    * Build cache key from chain:network.
@@ -56,11 +97,27 @@ export class AdapterPool {
    * - Solana: SolanaAdapter(network) -> connect(rpcUrl)
    * - Ethereum: EvmAdapter(network, viemChain, nativeSymbol, nativeName) -> connect(rpcUrl)
    * Same chain:network returns the cached instance.
+   *
+   * URL resolution priority:
+   * 1. If RpcPool is available, use rpcPool.getUrl(network) (priority-based fallback)
+   * 2. If RpcPool throws (no endpoints), fall back to provided rpcUrl
+   * 3. If no RpcPool (legacy path), use provided rpcUrl directly
    */
-  async resolve(chain: ChainType, network: NetworkType, rpcUrl: string): Promise<IChainAdapter> {
+  async resolve(chain: ChainType, network: NetworkType, rpcUrl?: string): Promise<IChainAdapter> {
     const key = this.cacheKey(chain, network);
     const existing = this._pool.get(key);
     if (existing) return existing;
+
+    // Derive actual RPC URL from pool or fallback
+    let actualRpcUrl = rpcUrl ?? '';
+    if (this.rpcPool) {
+      try {
+        actualRpcUrl = this.rpcPool.getUrl(network as string);
+      } catch {
+        // Pool has no endpoints for this network -- fall back to provided rpcUrl
+        actualRpcUrl = rpcUrl ?? '';
+      }
+    }
 
     let adapter: IChainAdapter;
 
@@ -78,7 +135,7 @@ export class AdapterPool {
       throw new Error(`Unsupported chain: ${chain}`);
     }
 
-    await adapter.connect(rpcUrl);
+    await adapter.connect(actualRpcUrl);
     this._pool.set(key, adapter);
     return adapter;
   }
@@ -128,5 +185,26 @@ export class AdapterPool {
   /** Number of cached adapters. */
   get size(): number {
     return this._pool.size;
+  }
+
+  /**
+   * Report an RPC URL failure to the pool for cooldown tracking.
+   * No-op if no RpcPool is configured.
+   */
+  reportRpcFailure(network: string, url: string): void {
+    this.rpcPool?.reportFailure(network, url);
+  }
+
+  /**
+   * Report an RPC URL success to the pool (resets failure count).
+   * No-op if no RpcPool is configured.
+   */
+  reportRpcSuccess(network: string, url: string): void {
+    this.rpcPool?.reportSuccess(network, url);
+  }
+
+  /** The underlying RpcPool instance, if configured. */
+  get pool(): RpcPool | undefined {
+    return this.rpcPool;
   }
 }

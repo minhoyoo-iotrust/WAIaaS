@@ -32,7 +32,7 @@ import { writeFileSync, unlinkSync, existsSync, mkdirSync, readdirSync, readFile
 import { join, dirname } from 'node:path';
 import type { Database as DatabaseType } from 'better-sqlite3';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import { WAIaaSError, getDefaultNetwork, EventBus } from '@waiaas/core';
+import { WAIaaSError, getDefaultNetwork, EventBus, RpcPool, BUILT_IN_RPC_DEFAULTS } from '@waiaas/core';
 import { KillSwitchService } from '../services/kill-switch-service.js';
 import { AutoStopService } from '../services/autostop-service.js';
 import type { AutoStopConfig } from '../services/autostop-service.js';
@@ -118,6 +118,7 @@ export class DaemonLifecycle {
   private _db: BetterSQLite3Database<typeof schema> | null = null;
   private keyStore: LocalKeyStore | null = null;
   private masterPassword = '';
+  private rpcPool: RpcPool | null = null;
   private adapterPool: AdapterPool | null = null;
   private httpServer: { close: () => void } | null = null;
   private workers: BackgroundWorkers | null = null;
@@ -177,6 +178,11 @@ export class DaemonLifecycle {
   /** AsyncPollingService instance (available after Step 4c-10, used by action providers to register trackers). */
   get pollingService(): import('../services/async-polling-service.js').AsyncPollingService | null {
     return this._asyncPollingService;
+  }
+
+  /** RpcPool instance (available after Step 4, used by IncomingTxMonitor for URL resolution). */
+  get rpcPoolInstance(): RpcPool | null {
+    return this.rpcPool;
   }
 
   /**
@@ -368,9 +374,30 @@ export class DaemonLifecycle {
     try {
       await withTimeout(
         (async () => {
-          const { AdapterPool } = await import('../infrastructure/adapter-pool.js');
-          this.adapterPool = new AdapterPool();
-          console.debug('Step 4: AdapterPool created (lazy init)');
+          const { AdapterPool, configKeyToNetwork: configKeyToNet } = await import('../infrastructure/adapter-pool.js');
+
+          // 1. Create empty RpcPool
+          this.rpcPool = new RpcPool();
+
+          // 2. Seed config.toml URLs first (highest priority)
+          //    WAIAAS_RPC_* env vars are already applied to config.rpc by applyEnvOverrides in loader.ts
+          const rpcConfig = this._config!.rpc as unknown as Record<string, string>;
+          for (const [configKey, url] of Object.entries(rpcConfig)) {
+            if (typeof url !== 'string' || !url) continue;
+            const network = configKeyToNet(configKey);
+            if (network) {
+              this.rpcPool.register(network, [url]);
+            }
+          }
+
+          // 3. Register built-in defaults (lower priority, appended after config URLs)
+          for (const [network, urls] of Object.entries(BUILT_IN_RPC_DEFAULTS)) {
+            this.rpcPool.register(network, [...urls]);
+          }
+
+          // 4. Create AdapterPool with RpcPool
+          this.adapterPool = new AdapterPool(this.rpcPool);
+          console.debug(`Step 4: AdapterPool created with RpcPool (${this.rpcPool.getNetworks().length} networks seeded)`);
         })(),
         10_000,
         'STEP4_ADAPTER',
@@ -379,6 +406,7 @@ export class DaemonLifecycle {
       // fail-soft: log warning but continue (daemon runs without chain adapter)
       console.warn('Step 4 (fail-soft): AdapterPool init warning:', err);
       this.adapterPool = null;
+      this.rpcPool = null;
     }
 
     // ------------------------------------------------------------------
