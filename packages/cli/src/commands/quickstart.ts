@@ -53,7 +53,7 @@ function printConfigPath(): void {
 export async function quickstartCommand(opts: QuickstartOptions): Promise<void> {
   const baseUrl = (opts.baseUrl ?? 'http://127.0.0.1:3100').replace(/\/+$/, '');
   const mode = opts.mode ?? 'mainnet';
-  const expiresIn = opts.expiresIn ?? 86400;
+  const ttl = opts.expiresIn ?? 2592000; // 30 days (matches config default)
 
   // Validate mode
   if (mode !== 'testnet' && mode !== 'mainnet') {
@@ -184,7 +184,7 @@ export async function quickstartCommand(opts: QuickstartOptions): Promise<void> 
     },
     body: JSON.stringify({
       walletIds,
-      expiresIn,
+      ttl,
     }),
   });
 

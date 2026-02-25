@@ -895,7 +895,7 @@ export const TestRpcResponseSchema = z
 export const McpTokenCreateRequestSchema = z
   .object({
     walletId: z.string().uuid(),
-    expiresIn: z.number().int().min(300).max(604800).optional(),
+    expiresIn: z.number().int().min(300).max(31536000).optional(),
   })
   .openapi('McpTokenCreateRequest');
 
