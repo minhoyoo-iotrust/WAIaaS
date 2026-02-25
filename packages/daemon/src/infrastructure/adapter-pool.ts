@@ -77,6 +77,37 @@ export function configKeyToNetwork(configKey: string): string | null {
   return null;
 }
 
+/**
+ * Resolve RPC URL preferring RpcPool, with fallback to SettingsService-style getter.
+ *
+ * Used by IncomingTxMonitor's subscriberFactory to resolve RPC URLs from the shared
+ * RpcPool (multi-endpoint rotation + cooldown) while preserving backward-compatible
+ * fallback to SettingsService single-URL settings.
+ *
+ * @param rpcPool - RpcPool instance (may be null/undefined when pool is not configured)
+ * @param settingsGet - SettingsService.get bound function for fallback (e.g. `sSvc.get.bind(sSvc)`)
+ * @param chain - Chain type ('solana' | 'ethereum')
+ * @param network - Network identifier (e.g. 'devnet', 'ethereum-sepolia')
+ * @returns Resolved RPC URL
+ *
+ * @see Phase 261-03
+ */
+export function resolveRpcUrlFromPool(
+  rpcPool: RpcPool | null | undefined,
+  settingsGet: (key: string) => string,
+  chain: string,
+  network: string,
+): string {
+  if (rpcPool) {
+    try {
+      return rpcPool.getUrl(network);
+    } catch {
+      // Pool has no entry or all in cooldown -- fall back to settings
+    }
+  }
+  return settingsGet(`rpc.${rpcConfigKey(chain, network)}`);
+}
+
 export class AdapterPool {
   private readonly _pool = new Map<string, IChainAdapter>();
   private readonly rpcPool?: RpcPool;

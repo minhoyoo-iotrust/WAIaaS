@@ -39,7 +39,7 @@ import type { AutoStopConfig } from '../services/autostop-service.js';
 import type { BalanceMonitorService, BalanceMonitorConfig } from '../services/monitoring/balance-monitor-service.js';
 import type { ChainType, NetworkType, EnvironmentType } from '@waiaas/core';
 import type { AdapterPool } from '../infrastructure/adapter-pool.js';
-import { resolveRpcUrl, rpcConfigKey } from '../infrastructure/adapter-pool.js';
+import { resolveRpcUrl, resolveRpcUrlFromPool } from '../infrastructure/adapter-pool.js';
 import { createDatabase, pushSchema, checkSchemaCompatibility } from '../infrastructure/database/index.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/index.js';
 import { loadConfig } from '../infrastructure/config/index.js';
@@ -815,17 +815,18 @@ export class DaemonLifecycle {
             cooldownMinutes: parseInt(ss.get('incoming.cooldown_minutes') || '5', 10),
           };
           // subscriberFactory creates chain-specific subscribers via dynamic import
+          // URL resolution: prefer RpcPool (multi-endpoint rotation), fallback to SettingsService
           const subscriberFactory = async (chain: string, network: string) => {
             const sSvc = this._settingsService!;
             if (chain === 'solana') {
-              const rpcUrl = sSvc.get(`rpc.${rpcConfigKey(chain, network)}`);
+              const rpcUrl = resolveRpcUrlFromPool(this.rpcPool, sSvc.get.bind(sSvc), chain, network);
               // WSS URL: derive from RPC URL (replace https:// with wss://)
               const wssUrl = sSvc.get('incoming.wss_url') || rpcUrl.replace(/^https:\/\//, 'wss://');
               const { SolanaIncomingSubscriber } = await import('@waiaas/adapter-solana');
               return new SolanaIncomingSubscriber({ rpcUrl, wsUrl: wssUrl });
             }
             // EVM chains
-            const rpcUrl = sSvc.get(`rpc.${rpcConfigKey(chain, network)}`);
+            const rpcUrl = resolveRpcUrlFromPool(this.rpcPool, sSvc.get.bind(sSvc), chain, network);
             const { EvmIncomingSubscriber } = await import('@waiaas/adapter-evm');
             const ns = this.notificationService;
             return new EvmIncomingSubscriber({
