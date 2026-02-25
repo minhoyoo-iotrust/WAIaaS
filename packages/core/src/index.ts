@@ -289,6 +289,7 @@ export { getMessages, type SupportedLocale, type Messages } from './i18n/index.j
 export {
   RpcPool,
   AllRpcFailedError,
+  BUILT_IN_RPC_DEFAULTS,
   type RpcPoolOptions,
   type RpcEndpointStatus,
   type RpcRegistryEntry,
