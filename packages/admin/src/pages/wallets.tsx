@@ -52,6 +52,7 @@ interface WalletDetail extends Wallet {
   ownerVerified: boolean | null;
   ownerState: 'NONE' | 'GRACE' | 'LOCKED';
   approvalMethod: string | null;
+  walletType?: string | null;
   suspendedAt: number | null;
   suspensionReason: string | null;
   updatedAt: number | null;
@@ -132,6 +133,12 @@ interface StakingPositionsResponse {
   walletId: string;
   positions: StakingPosition[];
 }
+
+/** Builtin wallet presets — mirrored from @waiaas/core BUILTIN_PRESETS.
+ *  When core adds a new preset, this list must be updated manually. */
+const WALLET_PRESETS = [
+  { value: 'dcent', label: "D'CENT Wallet", description: 'Hardware wallet with WalletConnect signing' },
+] as const;
 
 export function chainNetworkOptions(chain: string): { label: string; value: string }[] {
   if (chain === 'solana') {
@@ -317,6 +324,7 @@ function WalletDetailView({ id }: { id: string }) {
   const ownerEditing = useSignal(false);
   const editOwnerAddress = useSignal('');
   const ownerEditLoading = useSignal(false);
+  const walletTypeSelect = useSignal<string>('');
   const approvalSettings = useSignal<ApprovalSettingsInfo | null>(null);
   const suspendModal = useSignal(false);
   const suspendLoading = useSignal(false);
@@ -561,6 +569,7 @@ function WalletDetailView({ id }: { id: string }) {
 
   const startEditOwner = () => {
     editOwnerAddress.value = wallet.value?.ownerAddress ?? '';
+    walletTypeSelect.value = wallet.value?.walletType ?? '';
     ownerEditing.value = true;
   };
 
@@ -575,12 +584,21 @@ function WalletDetailView({ id }: { id: string }) {
     }
     ownerEditLoading.value = true;
     try {
-      await apiPut(API.WALLET_OWNER(id), {
+      const body: Record<string, unknown> = {
         owner_address: editOwnerAddress.value.trim(),
-      });
+      };
+      if (walletTypeSelect.value) {
+        body.wallet_type = walletTypeSelect.value;
+      }
+      await apiPut(API.WALLET_OWNER(id), body);
       await fetchWallet();
       ownerEditing.value = false;
-      showToast('success', 'Owner address updated');
+      const presetInfo = WALLET_PRESETS.find(p => p.value === walletTypeSelect.value);
+      if (presetInfo) {
+        showToast('success', `Owner set with ${presetInfo.label} auto-setup`);
+      } else {
+        showToast('success', 'Owner address updated');
+      }
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code, e.serverMessage));
@@ -903,6 +921,39 @@ function WalletDetailView({ id }: { id: string }) {
           </div>
         )}
 
+        {ownerEditing.value && wallet.value.ownerState === 'NONE' && (
+          <div style={{ marginBottom: 'var(--space-3)' }}>
+            <label style={{ display: 'block', marginBottom: 'var(--space-1)', fontSize: '0.85rem', fontWeight: 500 }}>
+              Wallet Type
+            </label>
+            <select
+              value={walletTypeSelect.value}
+              onChange={(e) => { walletTypeSelect.value = (e.target as HTMLSelectElement).value; }}
+              style={{
+                width: '100%',
+                padding: 'var(--space-2) var(--space-3)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--color-bg)',
+                color: 'var(--color-text)',
+                fontSize: '0.9rem',
+              }}
+            >
+              <option value="">Custom (manual setup)</option>
+              {WALLET_PRESETS.map((p) => (
+                <option key={p.value} value={p.value}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+            {walletTypeSelect.value && (
+              <p style={{ marginTop: 'var(--space-1)', fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>
+                {WALLET_PRESETS.find(p => p.value === walletTypeSelect.value)?.description}
+              </p>
+            )}
+          </div>
+        )}
+
         <DetailRow label="Address">
           {ownerEditing.value ? (
             <div class="inline-edit">
@@ -943,6 +994,11 @@ function WalletDetailView({ id }: { id: string }) {
           <Badge variant={ownerStateBadge(wallet.value.ownerState)}>
             {wallet.value.ownerState}
           </Badge>
+          {wallet.value.walletType && (
+            <Badge variant="info" style={{ marginLeft: 'var(--space-2)' }}>
+              {WALLET_PRESETS.find(p => p.value === wallet.value!.walletType)?.label ?? wallet.value.walletType}
+            </Badge>
+          )}
         </DetailRow>
         {wallet.value.ownerState === 'GRACE' && (
           <div style={{

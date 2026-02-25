@@ -392,6 +392,7 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
         ownerVerified: wallet.ownerVerified,
         ownerState,
         approvalMethod: wallet.ownerApprovalMethod ?? null,
+        walletType: wallet.walletType ?? null,
         suspendedAt: wallet.suspendedAt ? Math.floor(wallet.suspendedAt.getTime() / 1000) : null,
         suspensionReason: wallet.suspensionReason ?? null,
         createdAt: wallet.createdAt ? Math.floor(wallet.createdAt.getTime() / 1000) : 0,

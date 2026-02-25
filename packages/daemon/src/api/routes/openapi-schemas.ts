@@ -504,6 +504,7 @@ export const WalletDetailResponseSchema = z
     ownerVerified: z.boolean().nullable(),
     ownerState: z.enum(['NONE', 'GRACE', 'LOCKED']),
     approvalMethod: z.string().nullable().optional(),
+    walletType: z.string().nullable().optional(),
     suspendedAt: z.number().int().nullable().optional(),
     suspensionReason: z.string().nullable().optional(),
     createdAt: z.number().int(),
