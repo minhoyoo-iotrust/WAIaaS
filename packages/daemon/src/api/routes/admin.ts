@@ -1,5 +1,5 @@
 /**
- * Admin route handlers: 26 daemon administration endpoints.
+ * Admin route handlers: 27 daemon administration endpoints.
  *
  * GET    /admin/status              - Daemon health/uptime/version (masterAuth)
  * POST   /admin/kill-switch         - Activate kill switch (masterAuth)
@@ -23,6 +23,7 @@
  * DELETE /admin/telegram-users/:chatId  - Delete Telegram user (masterAuth)
  * GET    /admin/transactions        - Cross-wallet transaction list with filters (masterAuth)
  * GET    /admin/incoming            - Cross-wallet incoming transaction list with filters (masterAuth)
+ * GET    /admin/rpc-status          - Per-network RPC pool endpoint status (masterAuth)
  * POST   /admin/transactions/:id/cancel - Cancel a QUEUED (DELAY) transaction (masterAuth)
  * POST   /admin/transactions/:id/reject - Reject a pending approval transaction (masterAuth)
  *
@@ -37,6 +38,7 @@ import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { createHash } from 'node:crypto';
 import { WAIaaSError, getDefaultNetwork, getNetworksForEnvironment, formatAmount } from '@waiaas/core';
 import type { INotificationChannel, NotificationPayload, ChainType, EnvironmentType, IPriceOracle, IForexRateService, CurrencyCode } from '@waiaas/core';
+import type { RpcPool } from '@waiaas/core';
 import { CurrencyCodeSchema, formatRatePreview } from '@waiaas/core';
 import type { JwtSecretManager, JwtPayload } from '../../infrastructure/jwt/jwt-secret-manager.js';
 import { wallets, sessions, sessionWallets, notificationLogs, policies, transactions, incomingTransactions, tokenRegistry } from '../../infrastructure/database/schema.js';
@@ -79,6 +81,7 @@ import {
   AgentPromptResponseSchema,
   SessionReissueResponseSchema,
   StakingPositionsResponseSchema,
+  RpcStatusResponseSchema,
   buildErrorResponses,
   openApiValidationHook,
 } from './openapi-schemas.js';
@@ -119,6 +122,7 @@ export interface AdminRouteDeps {
   versionCheckService?: VersionCheckService | null;
   delayQueue?: DelayQueue;
   approvalWorkflow?: ApprovalWorkflow;
+  rpcPool?: RpcPool;
 }
 
 // ---------------------------------------------------------------------------
@@ -336,6 +340,23 @@ const testRpcRoute = createRoute({
     200: {
       description: 'RPC connectivity test result',
       content: { 'application/json': { schema: TestRpcResponseSchema } },
+    },
+  },
+});
+
+// ---------------------------------------------------------------------------
+// RPC Pool status route definition
+// ---------------------------------------------------------------------------
+
+const rpcStatusRoute = createRoute({
+  method: 'get',
+  path: '/admin/rpc-status',
+  tags: ['Admin'],
+  summary: 'Get per-network RPC pool endpoint status',
+  responses: {
+    200: {
+      description: 'RPC pool status per network',
+      content: { 'application/json': { schema: RpcStatusResponseSchema } },
     },
   },
 });
@@ -2556,6 +2577,22 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
       status: 'CANCELLED' as const,
       rejectedAt: result.rejectedAt,
     }, 200);
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /admin/rpc-status
+  // ---------------------------------------------------------------------------
+
+  router.openapi(rpcStatusRoute, async (c) => {
+    const networks: Record<string, { url: string; status: 'available' | 'cooldown'; failureCount: number; cooldownRemainingMs: number }[]> = {};
+
+    if (deps.rpcPool) {
+      for (const network of deps.rpcPool.getNetworks()) {
+        networks[network] = deps.rpcPool.getStatus(network);
+      }
+    }
+
+    return c.json({ networks }, 200);
   });
 
   return router;

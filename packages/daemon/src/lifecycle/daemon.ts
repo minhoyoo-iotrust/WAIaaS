@@ -32,14 +32,14 @@ import { writeFileSync, unlinkSync, existsSync, mkdirSync, readdirSync, readFile
 import { join, dirname } from 'node:path';
 import type { Database as DatabaseType } from 'better-sqlite3';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import { WAIaaSError, getDefaultNetwork, EventBus } from '@waiaas/core';
+import { WAIaaSError, getDefaultNetwork, EventBus, RpcPool, BUILT_IN_RPC_DEFAULTS } from '@waiaas/core';
 import { KillSwitchService } from '../services/kill-switch-service.js';
 import { AutoStopService } from '../services/autostop-service.js';
 import type { AutoStopConfig } from '../services/autostop-service.js';
 import type { BalanceMonitorService, BalanceMonitorConfig } from '../services/monitoring/balance-monitor-service.js';
 import type { ChainType, NetworkType, EnvironmentType } from '@waiaas/core';
 import type { AdapterPool } from '../infrastructure/adapter-pool.js';
-import { resolveRpcUrl, rpcConfigKey } from '../infrastructure/adapter-pool.js';
+import { resolveRpcUrl, resolveRpcUrlFromPool } from '../infrastructure/adapter-pool.js';
 import { createDatabase, pushSchema, checkSchemaCompatibility } from '../infrastructure/database/index.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/index.js';
 import { loadConfig } from '../infrastructure/config/index.js';
@@ -118,6 +118,7 @@ export class DaemonLifecycle {
   private _db: BetterSQLite3Database<typeof schema> | null = null;
   private keyStore: LocalKeyStore | null = null;
   private masterPassword = '';
+  private rpcPool: RpcPool | null = null;
   private adapterPool: AdapterPool | null = null;
   private httpServer: { close: () => void } | null = null;
   private workers: BackgroundWorkers | null = null;
@@ -177,6 +178,11 @@ export class DaemonLifecycle {
   /** AsyncPollingService instance (available after Step 4c-10, used by action providers to register trackers). */
   get pollingService(): import('../services/async-polling-service.js').AsyncPollingService | null {
     return this._asyncPollingService;
+  }
+
+  /** RpcPool instance (available after Step 4, used by IncomingTxMonitor for URL resolution). */
+  get rpcPoolInstance(): RpcPool | null {
+    return this.rpcPool;
   }
 
   /**
@@ -368,9 +374,48 @@ export class DaemonLifecycle {
     try {
       await withTimeout(
         (async () => {
-          const { AdapterPool } = await import('../infrastructure/adapter-pool.js');
-          this.adapterPool = new AdapterPool();
-          console.debug('Step 4: AdapterPool created (lazy init)');
+          const { AdapterPool, configKeyToNetwork: configKeyToNet } = await import('../infrastructure/adapter-pool.js');
+
+          // 1. Create empty RpcPool with onEvent callback for notifications
+          this.rpcPool = new RpcPool({
+            onEvent: (event) => {
+              // RPC pool health notifications -- use 'system' as walletId
+              // since these are infrastructure-level alerts, not wallet-specific.
+              if (this.notificationService) {
+                const vars: Record<string, string> = {
+                  network: event.network,
+                  url: event.url,
+                  errorCount: String(event.failureCount),
+                  totalEndpoints: String(event.totalEndpoints),
+                };
+                void this.notificationService.notify(
+                  event.type as import('@waiaas/core').NotificationEventType,
+                  'system',
+                  vars,
+                );
+              }
+            },
+          });
+
+          // 2. Seed config.toml URLs first (highest priority)
+          //    WAIAAS_RPC_* env vars are already applied to config.rpc by applyEnvOverrides in loader.ts
+          const rpcConfig = this._config!.rpc as unknown as Record<string, string>;
+          for (const [configKey, url] of Object.entries(rpcConfig)) {
+            if (typeof url !== 'string' || !url) continue;
+            const network = configKeyToNet(configKey);
+            if (network) {
+              this.rpcPool.register(network, [url]);
+            }
+          }
+
+          // 3. Register built-in defaults (lower priority, appended after config URLs)
+          for (const [network, urls] of Object.entries(BUILT_IN_RPC_DEFAULTS)) {
+            this.rpcPool.register(network, [...urls]);
+          }
+
+          // 4. Create AdapterPool with RpcPool
+          this.adapterPool = new AdapterPool(this.rpcPool);
+          console.debug(`Step 4: AdapterPool created with RpcPool (${this.rpcPool.getNetworks().length} networks seeded)`);
         })(),
         10_000,
         'STEP4_ADAPTER',
@@ -379,6 +424,7 @@ export class DaemonLifecycle {
       // fail-soft: log warning but continue (daemon runs without chain adapter)
       console.warn('Step 4 (fail-soft): AdapterPool init warning:', err);
       this.adapterPool = null;
+      this.rpcPool = null;
     }
 
     // ------------------------------------------------------------------
@@ -787,17 +833,18 @@ export class DaemonLifecycle {
             cooldownMinutes: parseInt(ss.get('incoming.cooldown_minutes') || '5', 10),
           };
           // subscriberFactory creates chain-specific subscribers via dynamic import
+          // URL resolution: prefer RpcPool (multi-endpoint rotation), fallback to SettingsService
           const subscriberFactory = async (chain: string, network: string) => {
             const sSvc = this._settingsService!;
             if (chain === 'solana') {
-              const rpcUrl = sSvc.get(`rpc.${rpcConfigKey(chain, network)}`);
+              const rpcUrl = resolveRpcUrlFromPool(this.rpcPool, sSvc.get.bind(sSvc), chain, network);
               // WSS URL: derive from RPC URL (replace https:// with wss://)
               const wssUrl = sSvc.get('incoming.wss_url') || rpcUrl.replace(/^https:\/\//, 'wss://');
               const { SolanaIncomingSubscriber } = await import('@waiaas/adapter-solana');
               return new SolanaIncomingSubscriber({ rpcUrl, wsUrl: wssUrl });
             }
             // EVM chains
-            const rpcUrl = sSvc.get(`rpc.${rpcConfigKey(chain, network)}`);
+            const rpcUrl = resolveRpcUrlFromPool(this.rpcPool, sSvc.get.bind(sSvc), chain, network);
             const { EvmIncomingSubscriber } = await import('@waiaas/adapter-evm');
             const ns = this.notificationService;
             return new EvmIncomingSubscriber({

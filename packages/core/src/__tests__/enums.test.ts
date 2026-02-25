@@ -101,11 +101,14 @@ describe('Enum SSoT', () => {
     expect(SESSION_STATUSES).toHaveLength(3);
   });
 
-  it('NotificationEventType has 42 values', () => {
-    expect(NOTIFICATION_EVENT_TYPES).toHaveLength(42);
+  it('NotificationEventType has 44 values', () => {
+    expect(NOTIFICATION_EVENT_TYPES).toHaveLength(44);
     // v28.5: gas condition events
     expect(NOTIFICATION_EVENT_TYPES).toContain('TX_GAS_WAITING');
     expect(NOTIFICATION_EVENT_TYPES).toContain('TX_GAS_CONDITION_MET');
+    // v28.6: RPC monitoring events
+    expect(NOTIFICATION_EVENT_TYPES).toContain('RPC_ALL_FAILED');
+    expect(NOTIFICATION_EVENT_TYPES).toContain('RPC_RECOVERED');
   });
 
   it('NotificationLogStatus has 2 values', () => {

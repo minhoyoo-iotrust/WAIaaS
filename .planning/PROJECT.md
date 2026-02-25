@@ -992,6 +992,20 @@ v28.5 가스비 조건부 실행 shipped (2026-02-25). 2 페이즈, 4 플랜, 25
 | USD value via price oracle getNativePrice | 지갑 잔액/상세에 실시간 USD 환산 표시 | ✓ Good — v27.4 구현 |
 | syncUrl=false for tab-routed pages | 탭 상태가 hash로 관리되는 페이지에서 FilterBar URL 충돌 방지 | ✓ Good — v27.4 구현 |
 
+## Current Milestone: v28.6 RPC Pool — 멀티 엔드포인트 로테이션
+
+**Goal:** 네트워크당 복수 RPC 엔드포인트를 등록·로테이션하여 rate limit 장애를 구조적으로 해소하고, Admin UI에서 RPC 목록을 관리할 수 있는 상태.
+
+**Target features:**
+- RPC Pool 코어 (우선순위 기반 fallback + cooldown + 자동 복귀)
+- 빌트인 기본 RPC 목록 (13개 네트워크, 메인넷+테스트넷)
+- SolanaAdapter/EvmAdapter/IncomingTxMonitor 어댑터 통합
+- Config + Admin Settings + hot-reload (하위 호환)
+- Admin UI RPC Endpoints 탭 확장 (복수 URL 목록 관리)
+- RPC 상태 모니터링 + 알림 (RPC_ALL_FAILED, RPC_RECOVERED)
+
+---
+
 ## Shipped: v27.2 CAIP-19 자산 식별 표준
 
 v27.2 shipped. WAIaaS 전체 코드베이스의 토큰/자산 식별 체계를 CAIP-19 표준으로 통일. Custom CAIP-2/19 파서 모듈(~240 LOC, 외부 의존성 0), 13-네트워크 양방향 맵, 가격 오라클 L2 지원(Polygon/Arbitrum/Optimism/Base), DB v22 마이그레이션(token_registry.asset_id + 자동 backfill), 4-시나리오 ALLOWED_TOKENS 정책 매칭 매트릭스, MCP 토큰 도구 assetId + TS/Python SDK 타입 확장 + 3개 스킬 파일 문서화. 모든 변경 additive(하위 호환). 31/31 requirements PASS.
@@ -1025,4 +1039,4 @@ v28.4 shipped. Lido(ETH→stETH) + Jito(SOL→JitoSOL) Liquid Staking ActionProv
 v28.5 shipped. 트랜잭션 파이프라인에 가스비 조건부 실행 기능 추가. GasCondition Zod schema(maxGasPrice/maxPriorityFee/timeout, at-least-one refine) + 7-type discriminatedUnion 전체 적용, Pipeline Stage 3.5(정책 평가→대기 사이 가스 조건 평가 삽입), GasConditionTracker(IAsyncStatusTracker, EVM eth_gasPrice + Solana getRecentPrioritizationFees raw JSON-RPC, 10s 캐시, 배치 평가), gas_condition.* Admin Settings 5키(런타임 조정), daemon executeFromStage4 재진입(GAS_WAITING→PENDING→Stage 4+5+6 실행), TX_GAS_WAITING/TX_GAS_CONDITION_MET/TX_CANCELLED 알림 이벤트 + i18n. REST API gasCondition OpenAPI 문서화, Admin UI Gas Condition 설정 섹션, MCP 5 tools gas_condition 파라미터, TS/Python SDK GasCondition 타입, ActionProvider gasCondition 파이프라인 주입, transactions.skill.md section 14 문서화. 25/25 requirements PASS, tech debt 2건(cosmetic).
 
 ---
-*최종 업데이트: 2026-02-25 after v28.5 milestone completion*
+*최종 업데이트: 2026-02-25 after v28.6 milestone start*

@@ -1542,3 +1542,13 @@
 
 ---
 
+
+## v28.6 RPC Pool -- 멀티 엔드포인트 로테이션 (Shipped: 2026-02-25)
+
+**Phases completed:** 163 phases, 344 plans, 50 tasks
+
+**Key accomplishments:**
+- (none recorded)
+
+---
+

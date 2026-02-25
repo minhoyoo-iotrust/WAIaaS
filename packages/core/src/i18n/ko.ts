@@ -163,6 +163,8 @@ export const messages: Messages = {
     STAKING_UNSTAKE_COMPLETED: { title: '스테이킹 언스테이크 완료', body: '언스테이크 요청 {txId}이(가) 완료되었습니다. 프로토콜: {protocol}. 출금이 가능합니다.' },
     STAKING_UNSTAKE_TIMEOUT: { title: '스테이킹 언스테이크 시간 초과', body: '언스테이크 요청 {txId}이(가) 모니터링 후 시간 초과되었습니다. 프로토콜: {protocol}. 수동 확인이 필요할 수 있습니다.' },
     RPC_HEALTH_DEGRADED: { title: 'RPC 상태 저하', body: '{network} RPC 엔드포인트에서 반복 실패가 발생하고 있습니다 (연속 {errorCount}회 오류). 마지막 오류: {lastError}. 전용 RPC 프로바이더로 전환을 고려하세요.' },
+    RPC_ALL_FAILED: { title: '전체 RPC 엔드포인트 실패', body: '{network}의 모든 RPC 엔드포인트가 쿨다운 상태입니다. RPC 연결이 불가합니다. 총 엔드포인트: {totalEndpoints}개. RPC 프로바이더 상태를 확인하거나 새 엔드포인트를 추가하세요.' },
+    RPC_RECOVERED: { title: 'RPC 엔드포인트 복구', body: '{network}의 RPC 엔드포인트 {url}이(가) 쿨다운에서 복구되어 사용 가능합니다.' },
     INCOMING_TX_RANGE_SKIPPED: { title: '수신 TX 스캔 누락', body: '{network}의 블록 범위 {fromBlock}-{toBlock}이(가) {errorCount}회 연속 실패 후 건너뛰어졌습니다. 이 범위의 수신 트랜잭션이 누락될 수 있습니다.' },
     TX_GAS_WAITING: { title: '가스 조건 대기 중', body: '거래 {txId}가 가스 조건 충족을 기다리고 있습니다. 최대 가스비: {maxGasPrice}, 타임아웃: {timeout}초' },
     TX_GAS_CONDITION_MET: { title: '가스 조건 충족', body: '거래 {txId}의 가스 조건이 충족되었습니다. 현재 가스비: {currentGasPrice}. 실행을 재개합니다.' },

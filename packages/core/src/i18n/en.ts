@@ -217,6 +217,8 @@ export const messages: Messages = {
     STAKING_UNSTAKE_COMPLETED: { title: 'Staking Unstake Completed', body: 'Unstake request {txId} has been completed. Protocol: {protocol}. Funds are now available for withdrawal.' },
     STAKING_UNSTAKE_TIMEOUT: { title: 'Staking Unstake Timeout', body: 'Unstake request {txId} timed out after monitoring. Protocol: {protocol}. Manual verification may be required.' },
     RPC_HEALTH_DEGRADED: { title: 'RPC Health Degraded', body: 'RPC endpoint for {network} is experiencing repeated failures ({errorCount} consecutive errors). Last error: {lastError}. Consider switching to a dedicated RPC provider.' },
+    RPC_ALL_FAILED: { title: 'All RPC Endpoints Failed', body: 'All RPC endpoints for {network} are in cooldown. No RPC connectivity available. Total endpoints: {totalEndpoints}. Check RPC provider status or add new endpoints.' },
+    RPC_RECOVERED: { title: 'RPC Endpoint Recovered', body: 'RPC endpoint {url} for {network} has recovered from cooldown and is available again.' },
     INCOMING_TX_RANGE_SKIPPED: { title: 'Incoming TX Scan Gap', body: 'Block range {fromBlock}-{toBlock} on {network} was skipped after {errorCount} consecutive failures. Incoming transactions in this range may be missed.' },
     TX_GAS_WAITING: { title: 'Gas Condition Pending', body: 'Transaction {txId} is waiting for gas condition to be met. Max gas price: {maxGasPrice}, timeout: {timeout}s' },
     TX_GAS_CONDITION_MET: { title: 'Gas Condition Met', body: 'Gas condition met for transaction {txId}. Current gas price: {currentGasPrice}. Resuming execution.' },
