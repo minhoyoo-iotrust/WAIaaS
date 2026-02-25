@@ -8,6 +8,8 @@
  * @module @waiaas/core/rpc
  */
 
+import { BUILT_IN_RPC_DEFAULTS } from './built-in-defaults.js';
+
 // ─── Types ─────────────────────────────────────────────────────
 
 /** Configuration options for RpcPool. */
@@ -74,6 +76,20 @@ export class RpcPool {
     this.baseCooldownMs = options?.baseCooldownMs ?? 60_000;
     this.maxCooldownMs = options?.maxCooldownMs ?? 300_000;
     this.nowFn = options?.nowFn ?? Date.now;
+  }
+
+  // ─── Factory ────────────────────────────────────────────────
+
+  /**
+   * Create an RpcPool pre-loaded with built-in default RPC URLs
+   * for all 13 supported networks (6 mainnet + 7 testnet).
+   */
+  static createWithDefaults(options?: RpcPoolOptions): RpcPool {
+    const pool = new RpcPool(options);
+    for (const [network, urls] of Object.entries(BUILT_IN_RPC_DEFAULTS)) {
+      pool.register(network, [...urls]);
+    }
+    return pool;
   }
 
   // ─── Registration ──────────────────────────────────────────
