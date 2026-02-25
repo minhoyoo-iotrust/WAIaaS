@@ -5,16 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v28.5 complete -- planning next milestone
+**Current focus:** v28.6 RPC Pool — 멀티 엔드포인트 로테이션
 
 ## Current Position
 
-Phase: 259 of 259 (all phases complete)
-Plan: N/A (milestone complete)
-Status: v28.5 가스비 조건부 실행 shipped 2026-02-25
-Last activity: 2026-02-25 -- milestone archived
-
-Progress: [██████████] 100%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-25 — Milestone v28.6 started
 
 ## Performance Metrics
 
@@ -33,6 +31,6 @@ Progress: [██████████] 100%
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: v28.5 milestone complete
+Stopped at: v28.6 milestone initialization
 Resume file: N/A
-Resume instructions: Start next milestone with /gsd:new-milestone
+Resume instructions: Define requirements and create roadmap
