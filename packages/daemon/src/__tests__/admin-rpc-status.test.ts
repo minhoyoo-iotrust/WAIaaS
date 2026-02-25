@@ -12,7 +12,7 @@
  * @see packages/daemon/src/api/routes/admin.ts
  */
 
-import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
 import type { Database as DatabaseType } from 'better-sqlite3';
 import argon2 from 'argon2';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
