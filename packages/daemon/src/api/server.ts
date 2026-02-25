@@ -310,6 +310,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     app.use('/v1/admin/transactions', masterAuthForAdmin);
     app.use('/v1/admin/transactions/*', masterAuthForAdmin);
     app.use('/v1/admin/incoming', masterAuthForAdmin);
+    app.use('/v1/admin/rpc-status', masterAuthForAdmin);
     // masterAuth for GET /v1/actions/providers (Admin UI reads provider list)
     app.use('/v1/actions/providers', async (c, next) => {
       if (c.req.method === 'GET') {
