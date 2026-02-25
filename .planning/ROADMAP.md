@@ -332,11 +332,11 @@ Plans:
   1. wallet_type 지정 시 signing SDK enabled + 레지스트리 등록 + approval_method + preferred_wallet이 한 번의 API 호출로 모두 설정된다
   2. 자동 설정 도중 실패가 발생하면 Settings 스냅샷이 복원되고 DB 트랜잭션이 롤백되어 부분 설정 상태가 남지 않는다
   3. Admin UI Owner 등록 폼에 지갑 종류 드롭다운이 표시되고, 빌트인 프리셋 목록과 Custom 옵션이 나열된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 266-01: 4단계 자동 설정 파이프라인 (signing SDK + registry + approval_method + preferred_wallet) + Settings 스냅샷 롤백
-- [ ] 266-02: Admin UI Owner 등록 폼 지갑 종류 드롭다운 + 프리셋 선택 연동
+- [ ] 266-01-PLAN.md -- 4단계 자동 설정 파이프라인 (signing SDK + registry + approval_method + preferred_wallet) + Settings 스냅샷 롤백
+- [ ] 266-02-PLAN.md -- Admin UI Owner 등록 폼 지갑 종류 드롭다운 + 프리셋 선택 연동
 
 ### Phase 267: Push Relay Payload Transform
 **Goal**: Push Relay가 config.toml의 선언적 설정으로 ntfy 페이로드를 앱 푸시 형식으로 변환하고, 설정이 없으면 기존 동작을 유지하는 상태
