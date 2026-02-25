@@ -24,6 +24,7 @@ import { registerSendBatch } from '../tools/send-batch.js';
 import { registerGetWalletInfo } from '../tools/get-wallet-info.js';
 import { registerSetDefaultNetwork } from '../tools/set-default-network.js';
 import { registerX402Fetch } from '../tools/x402-fetch.js';
+import { registerActionProviderTools } from '../tools/action-provider.js';
 
 // --- Mock ApiClient factory ---
 function createMockApiClient(responses: Map<string, ApiResult<unknown>>): ApiClient {
@@ -245,6 +246,41 @@ describe('send_token tool', () => {
     const token = calledBody['token'] as Record<string, unknown>;
     expect(token).toEqual({ address: 'mint1', decimals: 6, symbol: 'USDC' });
     expect(token).not.toHaveProperty('assetId');
+  });
+
+  it('maps gas_condition to camelCase gasCondition in body', async () => {
+    const apiClient = createMockApiClient(new Map());
+    const handler = getToolHandler(registerSendToken, apiClient);
+
+    await handler({
+      to: 'addr',
+      amount: '100',
+      gas_condition: {
+        max_gas_price: '20000000000',
+        max_priority_fee: '1000000000',
+        timeout: 3600,
+      },
+    });
+
+    expect(apiClient.post).toHaveBeenCalledWith('/v1/transactions/send', {
+      to: 'addr',
+      amount: '100',
+      gasCondition: {
+        maxGasPrice: '20000000000',
+        maxPriorityFee: '1000000000',
+        timeout: 3600,
+      },
+    });
+  });
+
+  it('does not include gasCondition in body when gas_condition is not provided (backward compat)', async () => {
+    const apiClient = createMockApiClient(new Map());
+    const handler = getToolHandler(registerSendToken, apiClient);
+
+    await handler({ to: 'addr', amount: '100' });
+
+    const calledBody = (apiClient.post as ReturnType<typeof vi.fn>).mock.calls[0]![1] as Record<string, unknown>;
+    expect(calledBody).not.toHaveProperty('gasCondition');
   });
 });
 
@@ -656,6 +692,31 @@ describe('call_contract tool', () => {
       network: 'arbitrum-mainnet',
     });
   });
+
+  it('maps gas_condition to camelCase gasCondition in body', async () => {
+    const apiClient = createMockApiClient(new Map());
+    const handler = getToolHandler(registerCallContract, apiClient);
+
+    await handler({
+      to: '0xContract',
+      calldata: '0xabcdef',
+      gas_condition: {
+        max_gas_price: '15000000000',
+        timeout: 1800,
+      },
+    });
+
+    expect(apiClient.post).toHaveBeenCalledWith('/v1/transactions/send', {
+      type: 'CONTRACT_CALL',
+      to: '0xContract',
+      calldata: '0xabcdef',
+      gasCondition: {
+        maxGasPrice: '15000000000',
+        maxPriorityFee: undefined,
+        timeout: 1800,
+      },
+    });
+  });
 });
 
 describe('approve_token tool', () => {
@@ -994,6 +1055,65 @@ describe('x402_fetch tool', () => {
     expect(result.isError).toBeUndefined();
     const parsed = JSON.parse(result.content[0]!.text) as Record<string, unknown>;
     expect(parsed['session_expired']).toBe(true);
+  });
+});
+
+describe('action_provider dynamic tools', () => {
+  it('maps gas_condition to camelCase gasCondition in body when calling action', async () => {
+    // Mock API client that returns a single provider with one action
+    const providersResponse = {
+      providers: [{
+        name: 'test_provider',
+        description: 'Test',
+        version: '1.0.0',
+        chains: ['ethereum'],
+        mcpExpose: true,
+        requiresApiKey: false,
+        hasApiKey: false,
+        actions: [{ name: 'test_action', description: 'Test action', chain: 'ethereum', riskLevel: 'medium', defaultTier: 'NOTIFY' }],
+      }],
+    };
+
+    let capturedHandler: ((args: Record<string, unknown>, extra: unknown) => Promise<unknown>) | undefined;
+
+    const apiClient = {
+      get: vi.fn(async () => ({ ok: true, data: providersResponse })),
+      post: vi.fn(async () => ({ ok: true, data: { id: 'tx-1', status: 'PENDING' } })),
+      put: vi.fn(),
+    } as unknown as ApiClient;
+
+    // Mock McpServer to capture the tool handler
+    const server = {
+      tool: (...fnArgs: unknown[]) => {
+        capturedHandler = fnArgs[fnArgs.length - 1] as typeof capturedHandler;
+        return {} as unknown; // mock RegisteredTool
+      },
+    } as unknown as McpServer;
+
+    await registerActionProviderTools(server, apiClient);
+
+    expect(capturedHandler).toBeDefined();
+
+    // Call the captured handler with gas_condition
+    await capturedHandler!({
+      params: { sellToken: '0xA', buyToken: '0xB' },
+      gas_condition: {
+        max_gas_price: '20000000000',
+        timeout: 1800,
+      },
+    }, {});
+
+    expect(apiClient.post).toHaveBeenCalledWith(
+      '/v1/actions/test_provider/test_action',
+      {
+        params: { sellToken: '0xA', buyToken: '0xB' },
+        gasCondition: {
+          maxGasPrice: '20000000000',
+          maxPriorityFee: undefined,
+          timeout: 1800,
+        },
+      },
+    );
   });
 });
 
