@@ -365,11 +365,11 @@ Plans:
   2. 특정 RPC가 cooldown에 진입하면 RPC_HEALTH_DEGRADED 알림이 발생한다
   3. 네트워크 전체 RPC가 실패하면 RPC_ALL_FAILED 알림이 발생한다
   4. cooldown 해제 후 정상 복귀하면 RPC_RECOVERED 알림이 발생한다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 264-01: GET /admin/rpc-status API 엔드포인트
-- [ ] 264-02: RPC_HEALTH_DEGRADED / RPC_ALL_FAILED / RPC_RECOVERED 알림 이벤트 통합
+- [ ] 264-01-PLAN.md -- RPC_ALL_FAILED + RPC_RECOVERED 이벤트 타입 추가 + RpcPool onEvent 콜백 인프라
+- [ ] 264-02-PLAN.md -- 데몬 라이프사이클 NotificationService 연동 + 통합 테스트 + MNTR-01 검증
 
 ## Progress
 
