@@ -151,11 +151,15 @@ export class ZeroExSwapActionProvider implements IActionProvider {
     // Build result array
     const isNativeEthSell = input.sellToken.toLowerCase() === NATIVE_ETH_ADDRESS;
 
+    // Convert value from hex to decimal string —
+    // 0x API may return hex format, but ContractCallRequestSchema requires /^\d+$/
     const swapRequest: ContractCallRequest = {
       type: 'CONTRACT_CALL',
       to: quote.transaction.to,
       calldata: quote.transaction.data,
-      value: quote.transaction.value,
+      value: quote.transaction.value
+        ? BigInt(quote.transaction.value).toString()
+        : undefined,
     };
 
     if (isNativeEthSell) {

@@ -123,11 +123,15 @@ export class LiFiActionProvider implements IActionProvider {
     });
 
     // Build ContractCallRequest from the transactionRequest
+    // Convert value from hex (e.g. "0x38d7ea4c68000") to decimal string —
+    // LI.FI API may return either format, but ContractCallRequestSchema requires /^\d+$/
     const request: ContractCallRequest = {
       type: 'CONTRACT_CALL',
       to: quote.transactionRequest.to,
       calldata: quote.transactionRequest.data,
-      value: quote.transactionRequest.value,
+      value: quote.transactionRequest.value
+        ? BigInt(quote.transactionRequest.value).toString()
+        : undefined,
     };
 
     return [request];
