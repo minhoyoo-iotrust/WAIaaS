@@ -2,7 +2,7 @@
  * Tests for display-currency-helper utilities.
  */
 import { describe, it, expect, vi } from 'vitest';
-import type { IForexRateService, CurrencyCode } from '@waiaas/core';
+import type { IForexRateService } from '@waiaas/core';
 import {
   resolveDisplayCurrencyCode,
   fetchDisplayRate,
