@@ -147,6 +147,22 @@ class TokenInfo(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class GasCondition(BaseModel):
+    """Gas price condition for deferred execution."""
+
+    max_gas_price: Optional[str] = Field(
+        default=None, alias="maxGasPrice", description="Max gas price in wei (EVM baseFee+priorityFee)"
+    )
+    max_priority_fee: Optional[str] = Field(
+        default=None, alias="maxPriorityFee", description="Max priority fee in wei (EVM) or micro-lamports (Solana)"
+    )
+    timeout: Optional[int] = Field(
+        default=None, description="Max wait time in seconds (60-86400)"
+    )
+
+    model_config = {"populate_by_name": True}
+
+
 class SendTokenRequest(BaseModel):
     """Request body for POST /v1/transactions/send (5-type support)."""
 
@@ -168,6 +184,8 @@ class SendTokenRequest(BaseModel):
     instructions: Optional[list[dict[str, Any]]] = None
     # Network selection (multichain)
     network: Optional[str] = None
+    # Gas conditional execution
+    gas_condition: Optional[GasCondition] = Field(default=None, alias="gasCondition")
 
     model_config = {"populate_by_name": True}
 

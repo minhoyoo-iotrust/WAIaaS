@@ -12,6 +12,7 @@ from waiaas.models import (
     ConnectInfo,
     EncodeCalldataRequest,
     EncodeCalldataResponse,
+    GasCondition,
     IncomingTransactionList,
     IncomingTransactionSummary,
     MultiNetworkAssetsResponse,
@@ -229,6 +230,7 @@ class WAIaaSClient:
         type: Optional[str] = None,
         token: Optional[dict[str, Any]] = None,
         network: Optional[str] = None,
+        gas_condition: Optional[dict[str, Any]] = None,
         **kwargs: Any,
     ) -> TransactionResponse:
         """POST /v1/transactions/send -- Send transaction (5-type support).
@@ -246,15 +248,17 @@ class WAIaaSClient:
             type: Transaction type (TRANSFER, TOKEN_TRANSFER, CONTRACT_CALL, APPROVE, BATCH).
             token: Token info dict with address, decimals, symbol (for TOKEN_TRANSFER/APPROVE).
             network: Target network (e.g., 'polygon-mainnet') for multichain transactions.
+            gas_condition: Gas price condition dict with maxGasPrice, maxPriorityFee, timeout.
             **kwargs: Additional fields (calldata, spender, instructions, etc.).
 
         Returns:
             TransactionResponse with id and status.
         """
         token_obj = TokenInfo(**token) if isinstance(token, dict) else token
+        gas_obj = GasCondition(**gas_condition) if isinstance(gas_condition, dict) else gas_condition
         request = SendTokenRequest(
             to=to, amount=amount, memo=memo, type=type,
-            token=token_obj, network=network, **kwargs,
+            token=token_obj, network=network, gas_condition=gas_obj, **kwargs,
         )
         body = request.model_dump(exclude_none=True, by_alias=True)
         resp = await self._request("POST", "/v1/transactions/send", json_body=body)
@@ -549,6 +553,7 @@ class WAIaaSClient:
         *,
         network: Optional[str] = None,
         wallet_id: Optional[str] = None,
+        gas_condition: Optional[dict[str, Any]] = None,
     ) -> ActionResponse:
         """POST /v1/actions/:provider/:action -- Execute an action via provider.
 
@@ -561,6 +566,7 @@ class WAIaaSClient:
             params: Action-specific parameters as key-value dict.
             network: Target network. Defaults to wallet default network.
             wallet_id: Target wallet ID for multi-wallet sessions.
+            gas_condition: Gas price condition dict with maxGasPrice, maxPriorityFee, timeout.
 
         Returns:
             ActionResponse with id, status, and optional pipeline for multi-step.
@@ -572,6 +578,9 @@ class WAIaaSClient:
             body["network"] = network
         if wallet_id is not None:
             body["walletId"] = wallet_id
+        if gas_condition is not None:
+            gas_obj = GasCondition(**gas_condition) if isinstance(gas_condition, dict) else gas_condition
+            body["gasCondition"] = gas_obj.model_dump(exclude_none=True, by_alias=True)
         resp = await self._request(
             "POST", f"/v1/actions/{provider}/{action}", json_body=body
         )

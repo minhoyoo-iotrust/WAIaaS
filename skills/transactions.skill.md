@@ -792,3 +792,112 @@ When both `address` and `assetId` are provided, the daemon extracts the address 
 ### Backward Compatibility
 
 `assetId` is fully optional. Existing requests without `assetId` continue to work unchanged. You can gradually adopt CAIP-19 identifiers without breaking existing integrations.
+
+## 14. Gas Conditional Execution
+
+Defer transaction execution until gas prices drop below specified thresholds. Supported on all transaction types except SIGN (sign-only is synchronous).
+
+### gasCondition Parameter
+
+Add an optional `gasCondition` object to any transaction request:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `maxGasPrice` | string | Max total gas price in wei (EVM: baseFee + priorityFee) |
+| `maxPriorityFee` | string | Max priority fee in wei (EVM) or micro-lamports (Solana computeUnitPrice) |
+| `timeout` | number | Max wait time in seconds (60-86400, default from Admin Settings) |
+
+At least one of `maxGasPrice` or `maxPriorityFee` is required.
+
+### Status Flow
+
+```
+PENDING -> GAS_WAITING -> PENDING -> CONFIRMED
+                       -> CANCELLED (timeout)
+```
+
+When gas conditions are met, the transaction resumes from Stage 4 (execution). If the timeout expires, the transaction is cancelled with `TX_CANCELLED` notification.
+
+### REST API Example
+
+```bash
+curl -s -X POST http://localhost:3100/v1/transactions/send \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -d '{
+    "type": "TRANSFER",
+    "to": "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD16",
+    "amount": "1000000000000000000",
+    "gasCondition": {
+      "maxGasPrice": "20000000000",
+      "maxPriorityFee": "1000000000",
+      "timeout": 3600
+    }
+  }'
+```
+
+### MCP Tool Example
+
+MCP tools use snake_case parameters:
+
+```json
+{
+  "tool": "send_token",
+  "arguments": {
+    "to": "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD16",
+    "amount": "1000000000000000000",
+    "gas_condition": {
+      "max_gas_price": "20000000000",
+      "max_priority_fee": "1000000000",
+      "timeout": 3600
+    }
+  }
+}
+```
+
+### TypeScript SDK Example
+
+```typescript
+await client.sendToken({
+  to: '0x742d35Cc6634C0532925a3b844Bc9e7595f2bD16',
+  amount: '1000000000000000000',
+  gasCondition: {
+    maxGasPrice: '20000000000',
+    maxPriorityFee: '1000000000',
+    timeout: 3600,
+  },
+});
+```
+
+### Python SDK Example
+
+```python
+await client.send_token(
+    to="0x742d35Cc6634C0532925a3b844Bc9e7595f2bD16",
+    amount="1000000000000000000",
+    gas_condition={
+        "maxGasPrice": "20000000000",
+        "maxPriorityFee": "1000000000",
+        "timeout": 3600,
+    },
+)
+```
+
+### Admin Settings
+
+Gas condition behavior is configured via Admin Settings (runtime-adjustable):
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `gas_condition.enabled` | `true` | Enable/disable gas conditional execution |
+| `gas_condition.poll_interval_sec` | `10` | Gas price polling interval (seconds) |
+| `gas_condition.default_timeout_sec` | `3600` | Default timeout when not specified |
+| `gas_condition.max_timeout_sec` | `86400` | Maximum allowed timeout |
+| `gas_condition.max_pending_count` | `50` | Max concurrent GAS_WAITING transactions |
+
+### Notes
+
+- SIGN type is not supported (sign-only pipeline is synchronous)
+- Policy evaluation occurs before gas waiting -- policy violations are rejected immediately
+- Nonce is assigned at execution time, not at gas-waiting entry
+- GAS_WAITING transactions are visible in `GET /v1/transactions/pending`

@@ -105,6 +105,16 @@ export interface TokenInfo {
   assetId?: string;
 }
 
+/** Gas price condition for deferred execution. */
+export interface GasCondition {
+  /** Max gas price in wei (EVM baseFee+priorityFee) */
+  maxGasPrice?: string;
+  /** Max priority fee in wei (EVM) or micro-lamports (Solana) */
+  maxPriorityFee?: string;
+  /** Max wait time in seconds (60-86400) */
+  timeout?: number;
+}
+
 export interface SendTokenParams {
   to?: string;
   amount?: string;
@@ -124,6 +134,8 @@ export interface SendTokenParams {
   instructions?: Array<Record<string, unknown>>;
   // Network selection (multichain)
   network?: string;
+  // Gas conditional execution
+  gasCondition?: GasCondition;
 }
 
 export interface BalanceOptions {
@@ -607,6 +619,8 @@ export interface ExecuteActionParams {
   network?: string;
   /** Target wallet ID (multi-wallet sessions). Omit for default wallet. */
   walletId?: string;
+  /** Gas price condition for deferred execution */
+  gasCondition?: GasCondition;
 }
 
 export interface ExecuteActionResponse {
