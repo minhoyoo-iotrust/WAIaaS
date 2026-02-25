@@ -20,6 +20,8 @@ export interface RpcPoolOptions {
   maxCooldownMs?: number;
   /** Clock function for testability. Default: Date.now. */
   nowFn?: () => number;
+  /** Optional callback invoked when endpoint state changes (cooldown/all-failed/recovered). */
+  onEvent?: (event: RpcPoolEvent) => void;
 }
 
 /** Public status of a single RPC endpoint. */
@@ -34,6 +36,16 @@ export interface RpcEndpointStatus {
 export interface RpcRegistryEntry {
   network: string;
   urls: string[];
+}
+
+/** Event emitted by RpcPool when endpoint state changes. */
+export interface RpcPoolEvent {
+  type: 'RPC_HEALTH_DEGRADED' | 'RPC_ALL_FAILED' | 'RPC_RECOVERED';
+  network: string;
+  url: string;
+  failureCount: number;
+  /** Total registered endpoints for this network. */
+  totalEndpoints: number;
 }
 
 // ─── Internal State ────────────────────────────────────────────
@@ -70,12 +82,14 @@ export class RpcPool {
   private readonly baseCooldownMs: number;
   private readonly maxCooldownMs: number;
   private readonly nowFn: () => number;
+  private readonly onEvent?: (event: RpcPoolEvent) => void;
   private readonly endpoints: Map<string, RpcEndpointState[]> = new Map();
 
   constructor(options?: RpcPoolOptions) {
     this.baseCooldownMs = options?.baseCooldownMs ?? 60_000;
     this.maxCooldownMs = options?.maxCooldownMs ?? 300_000;
     this.nowFn = options?.nowFn ?? Date.now;
+    this.onEvent = options?.onEvent;
   }
 
   // ─── Factory ────────────────────────────────────────────────
@@ -164,6 +178,33 @@ export class RpcPool {
       this.maxCooldownMs,
     );
     entry.cooldownUntil = this.nowFn() + cooldown;
+
+    const entries = this.endpoints.get(network);
+    const totalEndpoints = entries?.length ?? 0;
+
+    // Emit RPC_HEALTH_DEGRADED for this endpoint entering cooldown
+    this.onEvent?.({
+      type: 'RPC_HEALTH_DEGRADED',
+      network,
+      url,
+      failureCount: entry.failureCount,
+      totalEndpoints,
+    });
+
+    // Check if ALL endpoints for this network are now in cooldown
+    if (entries) {
+      const now = this.nowFn();
+      const allInCooldown = entries.every((e) => now < e.cooldownUntil);
+      if (allInCooldown) {
+        this.onEvent?.({
+          type: 'RPC_ALL_FAILED',
+          network,
+          url,
+          failureCount: entry.failureCount,
+          totalEndpoints,
+        });
+      }
+    }
   }
 
   /**
@@ -173,8 +214,21 @@ export class RpcPool {
     const entry = this.findEntry(network, url);
     if (!entry) return;
 
+    const wasInCooldown = entry.cooldownUntil > this.nowFn() && entry.failureCount > 0;
+
     entry.failureCount = 0;
     entry.cooldownUntil = 0;
+
+    if (wasInCooldown) {
+      const entries = this.endpoints.get(network);
+      this.onEvent?.({
+        type: 'RPC_RECOVERED',
+        network,
+        url,
+        failureCount: 0,
+        totalEndpoints: entries?.length ?? 0,
+      });
+    }
   }
 
   // ─── Reset ─────────────────────────────────────────────────

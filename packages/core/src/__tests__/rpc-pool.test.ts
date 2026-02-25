@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { RpcPool, AllRpcFailedError } from '../rpc/rpc-pool.js';
-import type { RpcEndpointStatus } from '../rpc/rpc-pool.js';
+import type { RpcEndpointStatus, RpcPoolEvent } from '../rpc/rpc-pool.js';
 
 describe('RpcPool', () => {
   let pool: RpcPool;
@@ -311,6 +311,86 @@ describe('RpcPool', () => {
       expect(err.network).toBe('mainnet');
       expect(err.urls).toEqual(['https://a.com']);
       expect(err.message).toContain('mainnet');
+    });
+  });
+
+  // ─── onEvent Callback ────────────────────────────────────────
+
+  describe('onEvent callback', () => {
+    it('emits RPC_HEALTH_DEGRADED when endpoint enters cooldown', () => {
+      const onEvent = vi.fn();
+      const eventPool = new RpcPool({ nowFn, onEvent });
+      eventPool.register('mainnet', ['https://a.com', 'https://b.com']);
+
+      eventPool.reportFailure('mainnet', 'https://a.com');
+
+      expect(onEvent).toHaveBeenCalledWith({
+        type: 'RPC_HEALTH_DEGRADED',
+        network: 'mainnet',
+        url: 'https://a.com',
+        failureCount: 1,
+        totalEndpoints: 2,
+      });
+    });
+
+    it('emits RPC_ALL_FAILED when all endpoints are in cooldown', () => {
+      const onEvent = vi.fn();
+      const eventPool = new RpcPool({ nowFn, onEvent });
+      eventPool.register('mainnet', ['https://a.com', 'https://b.com']);
+
+      eventPool.reportFailure('mainnet', 'https://a.com');
+      eventPool.reportFailure('mainnet', 'https://b.com');
+
+      // Should have: DEGRADED(a), DEGRADED(b), ALL_FAILED(b)
+      const calls = onEvent.mock.calls.map((c: [RpcPoolEvent]) => c[0].type);
+      expect(calls).toEqual(['RPC_HEALTH_DEGRADED', 'RPC_HEALTH_DEGRADED', 'RPC_ALL_FAILED']);
+
+      const allFailedCall = onEvent.mock.calls[2]![0] as RpcPoolEvent;
+      expect(allFailedCall.network).toBe('mainnet');
+      expect(allFailedCall.totalEndpoints).toBe(2);
+    });
+
+    it('emits RPC_RECOVERED when cooldown endpoint recovers via reportSuccess', () => {
+      const onEvent = vi.fn();
+      const eventPool = new RpcPool({ nowFn, onEvent });
+      eventPool.register('mainnet', ['https://a.com', 'https://b.com']);
+
+      eventPool.reportFailure('mainnet', 'https://a.com');
+      onEvent.mockClear();
+
+      eventPool.reportSuccess('mainnet', 'https://a.com');
+
+      expect(onEvent).toHaveBeenCalledWith({
+        type: 'RPC_RECOVERED',
+        network: 'mainnet',
+        url: 'https://a.com',
+        failureCount: 0,
+        totalEndpoints: 2,
+      });
+    });
+
+    it('does not emit RPC_RECOVERED if endpoint was not in cooldown', () => {
+      const onEvent = vi.fn();
+      const eventPool = new RpcPool({ nowFn, onEvent });
+      eventPool.register('mainnet', ['https://a.com', 'https://b.com']);
+
+      eventPool.reportSuccess('mainnet', 'https://a.com');
+
+      const recoveredCalls = onEvent.mock.calls.filter(
+        (c: [RpcPoolEvent]) => c[0].type === 'RPC_RECOVERED',
+      );
+      expect(recoveredCalls).toHaveLength(0);
+    });
+
+    it('does not emit events when onEvent not provided', () => {
+      const noEventPool = new RpcPool({ nowFn });
+      noEventPool.register('mainnet', ['https://a.com', 'https://b.com']);
+
+      // Should not throw
+      expect(() => {
+        noEventPool.reportFailure('mainnet', 'https://a.com');
+        noEventPool.reportSuccess('mainnet', 'https://a.com');
+      }).not.toThrow();
     });
   });
 
