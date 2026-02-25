@@ -59,6 +59,7 @@ v28.5 가스비 조건부 실행 shipped (2026-02-25). 12-패키지 모노레포
 - ✅ v28.3 LI.FI 크로스체인 브릿지 — shipped 2026-02-24 (6 plans, 22 requirements)
 - ✅ v28.4 Liquid Staking (Lido + Jito) — shipped 2026-02-24 (7 plans + 1 quick task, 25 requirements, ~189,000 LOC TS)
 - ✅ v28.5 가스비 조건부 실행 — shipped 2026-02-25 (4 plans, 25 requirements, ~190,000 LOC TS)
+- ✅ v28.6 RPC Pool 멀티엔드포인트 로테이션 — shipped 2026-02-25 (5 phases, 25 requirements, ~190,000 LOC TS)
 
 **코드베이스 현황:**
 - 12-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/adapter-evm, @waiaas/cli, @waiaas/sdk, @waiaas/wallet-sdk, @waiaas/mcp, @waiaas/admin, @waiaas/push-relay, @waiaas/actions + waiaas (Python)
@@ -992,17 +993,17 @@ v28.5 가스비 조건부 실행 shipped (2026-02-25). 2 페이즈, 4 플랜, 25
 | USD value via price oracle getNativePrice | 지갑 잔액/상세에 실시간 USD 환산 표시 | ✓ Good — v27.4 구현 |
 | syncUrl=false for tab-routed pages | 탭 상태가 hash로 관리되는 페이지에서 FilterBar URL 충돌 방지 | ✓ Good — v27.4 구현 |
 
-## Current Milestone: v28.6 RPC Pool — 멀티 엔드포인트 로테이션
+## Current Milestone: v28.8 빌트인 지갑 프리셋 자동 설정
 
-**Goal:** 네트워크당 복수 RPC 엔드포인트를 등록·로테이션하여 rate limit 장애를 구조적으로 해소하고, Admin UI에서 RPC 목록을 관리할 수 있는 상태.
+**Goal:** Owner 지갑 등록 시 지갑 종류(D'CENT 등)를 선택하면 signing SDK, 지갑 레지스트리, approval method 등 관련 설정이 자동으로 완료되고, Push Relay가 지갑 앱별 푸시 메시지 포맷을 선언적으로 변환하는 상태.
 
 **Target features:**
-- RPC Pool 코어 (우선순위 기반 fallback + cooldown + 자동 복귀)
-- 빌트인 기본 RPC 목록 (13개 네트워크, 메인넷+테스트넷)
-- SolanaAdapter/EvmAdapter/IncomingTxMonitor 어댑터 통합
-- Config + Admin Settings + hot-reload (하위 호환)
-- Admin UI RPC Endpoints 탭 확장 (복수 URL 목록 관리)
-- RPC 상태 모니터링 + 알림 (RPC_ALL_FAILED, RPC_RECOVERED)
+- 빌트인 지갑 프리셋 맵 (D'CENT 1종, WalletPreset → WalletLinkConfig 자동 매핑)
+- Owner 등록 API wallet_type 필드 + 4단계 자동 설정 (signing SDK + 레지스트리 + approval method + preferred_wallet)
+- DB 마이그레이션 v24 (wallets.wallet_type 컬럼)
+- Admin UI Owner 등록 폼 지갑 종류 드롭다운
+- Push Relay ConfigurablePayloadTransformer (static_fields + category_map)
+- Push Relay config.toml [relay.push.payload] 선언적 변환 파이프라인
 
 ---
 
@@ -1039,4 +1040,9 @@ v28.4 shipped. Lido(ETH→stETH) + Jito(SOL→JitoSOL) Liquid Staking ActionProv
 v28.5 shipped. 트랜잭션 파이프라인에 가스비 조건부 실행 기능 추가. GasCondition Zod schema(maxGasPrice/maxPriorityFee/timeout, at-least-one refine) + 7-type discriminatedUnion 전체 적용, Pipeline Stage 3.5(정책 평가→대기 사이 가스 조건 평가 삽입), GasConditionTracker(IAsyncStatusTracker, EVM eth_gasPrice + Solana getRecentPrioritizationFees raw JSON-RPC, 10s 캐시, 배치 평가), gas_condition.* Admin Settings 5키(런타임 조정), daemon executeFromStage4 재진입(GAS_WAITING→PENDING→Stage 4+5+6 실행), TX_GAS_WAITING/TX_GAS_CONDITION_MET/TX_CANCELLED 알림 이벤트 + i18n. REST API gasCondition OpenAPI 문서화, Admin UI Gas Condition 설정 섹션, MCP 5 tools gas_condition 파라미터, TS/Python SDK GasCondition 타입, ActionProvider gasCondition 파이프라인 주입, transactions.skill.md section 14 문서화. 25/25 requirements PASS, tech debt 2건(cosmetic).
 
 ---
-*최종 업데이트: 2026-02-25 after v28.6 milestone start*
+## Shipped: v28.6 RPC Pool 멀티엔드포인트 로테이션
+
+v28.6 shipped. 네트워크당 복수 RPC 엔드포인트 등록·로테이션 구현. RpcPool(round-robin, cooldown, event emission) + AdapterPool.withRpcPool() + BUILT_IN_RPC_DEFAULTS 13네트워크 + rpc_pool.* Settings 5키 + Admin RPC Endpoints 탭(status polling, URL 관리, built-in toggle) + hot-reload replaceNetwork() + RPC health 알림(DEGRADED/ALL_FAILED/RECOVERED). 25/25 requirements PASS.
+
+---
+*최종 업데이트: 2026-02-25 after v28.8 milestone start*
