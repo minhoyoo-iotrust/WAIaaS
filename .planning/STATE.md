@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 262 - Settings Storage Hot-Reload
+**Current focus:** Phase 263 - Admin UI RPC Endpoints
 
 ## Current Position
 
-Phase: 3 of 5 (Phase 262: Settings Storage Hot-Reload -- COMPLETE)
-Plan: 1 of 1 in current phase (all complete)
-Status: Phase 262 complete, proceeding to Phase 263
-Last activity: 2026-02-25 -- Completed 262-01 RpcPool settings storage + hot-reload (20 tests, 5 files)
+Phase: 4 of 5 (Phase 263: Admin UI RPC Endpoints -- IN PROGRESS)
+Plan: 1 of 2 in current phase
+Status: Completed 263-01, proceeding to 263-02
+Last activity: 2026-02-25 -- Completed 263-01 multi-URL RPC tab + GET /admin/rpc-status (11 tests, 9 files)
 
 Progress: [████████░░] 80%
 
@@ -27,6 +27,7 @@ Progress: [████████░░] 80%
 | 260 | 2/2 | 5min | 2.5min |
 | 261 | 3/3 | 13min | 4.3min |
 | 262 | 1/1 | 6min | 6min |
+| 263 | 1/2 | 9min | 9min |
 
 ## Accumulated Context
 
@@ -62,6 +63,11 @@ Progress: [████████░░] 80%
 - 262-01: URL merge priority: user URLs (Admin Settings) > config.toml single URL > built-in defaults
 - 262-01: networkToConfigKey() is private on HotReloadOrchestrator (inverse of configKeyToNetwork in adapter-pool.ts)
 
+- 263-01: User URLs saved as JSON arrays excluding built-in -- built-in defaults merged server-side by hot-reload
+- 263-01: BUILT_IN_RPC_URLS duplicated as frontend constant -- admin SPA cannot import @waiaas/core directly
+- 263-01: Built-in URLs toggle-able (enable/disable) not deletable -- prevents accidental loss of fallback URLs
+- 263-01: EVM default network selector preserved at top of EVM section, separate dirty state
+
 ### Blockers/Concerns
 
 - [RESOLVED] 저장 방식 결정: SettingsService JSON 배열 방식 채택 (Phase 262-01에서 구현)
@@ -70,5 +76,5 @@ Progress: [████████░░] 80%
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 262-01-PLAN.md (Phase 262 complete)
+Stopped at: Completed 263-01-PLAN.md
 Resume file: None
