@@ -376,8 +376,26 @@ export class DaemonLifecycle {
         (async () => {
           const { AdapterPool, configKeyToNetwork: configKeyToNet } = await import('../infrastructure/adapter-pool.js');
 
-          // 1. Create empty RpcPool
-          this.rpcPool = new RpcPool();
+          // 1. Create empty RpcPool with onEvent callback for notifications
+          this.rpcPool = new RpcPool({
+            onEvent: (event) => {
+              // RPC pool health notifications -- use 'system' as walletId
+              // since these are infrastructure-level alerts, not wallet-specific.
+              if (this.notificationService) {
+                const vars: Record<string, string> = {
+                  network: event.network,
+                  url: event.url,
+                  errorCount: String(event.failureCount),
+                  totalEndpoints: String(event.totalEndpoints),
+                };
+                void this.notificationService.notify(
+                  event.type as import('@waiaas/core').NotificationEventType,
+                  'system',
+                  vars,
+                );
+              }
+            },
+          });
 
           // 2. Seed config.toml URLs first (highest priority)
           //    WAIAAS_RPC_* env vars are already applied to config.rpc by applyEnvOverrides in loader.ts

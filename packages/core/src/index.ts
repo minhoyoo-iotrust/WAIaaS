@@ -293,6 +293,7 @@ export {
   type RpcPoolOptions,
   type RpcEndpointStatus,
   type RpcRegistryEntry,
+  type RpcPoolEvent,
 } from './rpc/index.js';
 
 // v1.6 Events (EventBus + 7 typed event definitions)
