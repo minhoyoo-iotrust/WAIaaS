@@ -383,7 +383,7 @@ Phases execute in numeric order: 260 -> 261 -> 262 -> 263 -> 264
 | 261. Adapter Integration | 3/3 | Complete    | 2026-02-25 | - |
 | 262. Settings Storage + Hot-Reload | 1/1 | Complete    | 2026-02-25 | - |
 | 263. Admin UI RPC Endpoints | 2/2 | Complete    | 2026-02-25 | - |
-| 264. Monitoring + Alerts | 2/2 | Complete   | 2026-02-25 | - |
+| 264. Monitoring + Alerts | 2/2 | Complete    | 2026-02-25 | - |
 
 ---
 *Roadmap created: 2026-02-25*
