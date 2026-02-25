@@ -573,6 +573,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         versionCheckService: deps.versionCheckService ?? null,
         delayQueue: deps.delayQueue,
         approvalWorkflow: deps.approvalWorkflow,
+        rpcPool: deps.adapterPool?.pool,
       }),
     );
 

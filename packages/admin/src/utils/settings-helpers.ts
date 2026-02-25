@@ -36,6 +36,15 @@ export interface NotifTestResult {
   error?: string;
 }
 
+export interface RpcEndpointStatusEntry {
+  url: string;
+  status: 'available' | 'cooldown';
+  failureCount: number;
+  cooldownRemainingMs: number;
+}
+
+export type RpcPoolStatus = Record<string, RpcEndpointStatusEntry[]>;
+
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------

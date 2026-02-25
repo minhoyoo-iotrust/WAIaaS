@@ -18,6 +18,7 @@ export const API = {
   MCP_TOKENS: '/v1/mcp/tokens',
   ADMIN_SETTINGS: '/v1/admin/settings',
   ADMIN_SETTINGS_TEST_RPC: '/v1/admin/settings/test-rpc',
+  ADMIN_RPC_STATUS: '/v1/admin/rpc-status',
   WALLET_NETWORKS: (id: string) => `/v1/wallets/${id}/networks`,
   WALLET_DEFAULT_NETWORK: (id: string) => `/v1/wallets/${id}/default-network`,
   ADMIN_WALLET_BALANCE: (id: string) => `/v1/admin/wallets/${id}/balance`,

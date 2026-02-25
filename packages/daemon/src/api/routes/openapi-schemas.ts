@@ -1174,3 +1174,18 @@ export const StakingPositionsResponseSchema = z.object({
   walletId: z.string(),
   positions: z.array(StakingPositionSchema),
 }).openapi('StakingPositionsResponse');
+
+// ---------------------------------------------------------------------------
+// RPC Pool Status Schema (GET /v1/admin/rpc-status)
+// ---------------------------------------------------------------------------
+
+export const RpcEndpointStatusSchema = z.object({
+  url: z.string(),
+  status: z.enum(['available', 'cooldown']),
+  failureCount: z.number().int(),
+  cooldownRemainingMs: z.number().int(),
+}).openapi('RpcEndpointStatus');
+
+export const RpcStatusResponseSchema = z.object({
+  networks: z.record(z.array(RpcEndpointStatusSchema)),
+}).openapi('RpcStatusResponse');

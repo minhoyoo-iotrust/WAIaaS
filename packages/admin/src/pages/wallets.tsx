@@ -1325,32 +1325,6 @@ function WalletDetailView({ id }: { id: string }) {
 // RPC Endpoints Tab
 // ---------------------------------------------------------------------------
 
-const solanaRpcKeys = ['solana_mainnet', 'solana_devnet', 'solana_testnet'];
-const evmRpcKeys = [
-  'evm_ethereum_mainnet', 'evm_ethereum_sepolia',
-  'evm_polygon_mainnet', 'evm_polygon_amoy',
-  'evm_arbitrum_mainnet', 'evm_arbitrum_sepolia',
-  'evm_optimism_mainnet', 'evm_optimism_sepolia',
-  'evm_base_mainnet', 'evm_base_sepolia',
-];
-
-const RPC_DESCRIPTIONS: Record<string, string> = {
-  solana_mainnet: 'RPC endpoint URL for Solana mainnet',
-  solana_devnet: 'RPC endpoint URL for Solana devnet',
-  solana_testnet: 'RPC endpoint URL for Solana testnet',
-  evm_ethereum_mainnet: 'RPC endpoint URL for Ethereum mainnet',
-  evm_ethereum_sepolia: 'RPC endpoint URL for Ethereum Sepolia testnet',
-  evm_polygon_mainnet: 'RPC endpoint URL for Polygon mainnet',
-  evm_polygon_amoy: 'RPC endpoint URL for Polygon Amoy testnet',
-  evm_arbitrum_mainnet: 'RPC endpoint URL for Arbitrum mainnet',
-  evm_arbitrum_sepolia: 'RPC endpoint URL for Arbitrum Sepolia testnet',
-  evm_optimism_mainnet: 'RPC endpoint URL for Optimism mainnet',
-  evm_optimism_sepolia: 'RPC endpoint URL for Optimism Sepolia testnet',
-  evm_base_mainnet: 'RPC endpoint URL for Base mainnet',
-  evm_base_sepolia: 'RPC endpoint URL for Base Sepolia testnet',
-};
-
-
 const evmNetworkOptions = [
   { label: 'Ethereum Mainnet', value: 'ethereum-mainnet' },
   { label: 'Ethereum Sepolia', value: 'ethereum-sepolia' },
@@ -1364,18 +1338,114 @@ const evmNetworkOptions = [
   { label: 'Base Sepolia', value: 'base-sepolia' },
 ];
 
+// Built-in RPC URLs mirror of @waiaas/core/rpc/built-in-defaults.ts
+// (admin SPA cannot import @waiaas/core directly)
+const BUILT_IN_RPC_URLS: Record<string, string[]> = {
+  'mainnet': ['https://api.mainnet-beta.solana.com', 'https://rpc.ankr.com/solana', 'https://solana.drpc.org'],
+  'devnet': ['https://api.devnet.solana.com', 'https://rpc.ankr.com/solana_devnet'],
+  'testnet': ['https://api.testnet.solana.com'],
+  'ethereum-mainnet': ['https://eth.drpc.org', 'https://rpc.ankr.com/eth', 'https://ethereum.publicnode.com'],
+  'ethereum-sepolia': ['https://sepolia.drpc.org', 'https://ethereum-sepolia-rpc.publicnode.com'],
+  'polygon-mainnet': ['https://polygon.drpc.org', 'https://polygon-rpc.com', 'https://polygon.publicnode.com'],
+  'polygon-amoy': ['https://polygon-amoy.drpc.org'],
+  'arbitrum-mainnet': ['https://arbitrum.drpc.org', 'https://arbitrum.publicnode.com'],
+  'arbitrum-sepolia': ['https://arbitrum-sepolia.drpc.org', 'https://arbitrum-sepolia-rpc.publicnode.com'],
+  'optimism-mainnet': ['https://optimism.drpc.org', 'https://mainnet.optimism.io', 'https://optimism.publicnode.com'],
+  'optimism-sepolia': ['https://optimism-sepolia.drpc.org', 'https://optimism-sepolia-rpc.publicnode.com'],
+  'base-mainnet': ['https://base.drpc.org', 'https://base.publicnode.com'],
+  'base-sepolia': ['https://base-sepolia.drpc.org', 'https://base-sepolia-rpc.publicnode.com'],
+};
+
+const NETWORK_DISPLAY_NAMES: Record<string, string> = {
+  'mainnet': 'Solana Mainnet',
+  'devnet': 'Solana Devnet',
+  'testnet': 'Solana Testnet',
+  'ethereum-mainnet': 'Ethereum Mainnet',
+  'ethereum-sepolia': 'Ethereum Sepolia',
+  'polygon-mainnet': 'Polygon Mainnet',
+  'polygon-amoy': 'Polygon Amoy',
+  'arbitrum-mainnet': 'Arbitrum Mainnet',
+  'arbitrum-sepolia': 'Arbitrum Sepolia',
+  'optimism-mainnet': 'Optimism Mainnet',
+  'optimism-sepolia': 'Optimism Sepolia',
+  'base-mainnet': 'Base Mainnet',
+  'base-sepolia': 'Base Sepolia',
+};
+
+const SOLANA_NETWORKS = ['mainnet', 'devnet', 'testnet'];
+const EVM_NETWORKS = [
+  'ethereum-mainnet', 'ethereum-sepolia',
+  'polygon-mainnet', 'polygon-amoy',
+  'arbitrum-mainnet', 'arbitrum-sepolia',
+  'optimism-mainnet', 'optimism-sepolia',
+  'base-mainnet', 'base-sepolia',
+];
+
+interface UrlEntry {
+  url: string;
+  isBuiltin: boolean;
+  enabled: boolean; // built-in URLs can be disabled
+}
+
 function RpcEndpointsTab() {
   const settings = useSignal<SettingsData>({});
-  const dirty = useSignal<Record<string, string>>({});
+  // Dirty state: network -> user URL list (JSON array string to save)
+  const dirtyUrls = useSignal<Record<string, UrlEntry[]>>({});
+  const originalUrls = useSignal<Record<string, UrlEntry[]>>({});
   const saving = useSignal(false);
   const loading = useSignal(true);
-  const rpcTestResults = useSignal<Record<string, RpcTestResult>>({});
-  const rpcTesting = useSignal<Record<string, boolean>>({});
+  const expanded = useSignal<Record<string, boolean>>({});
+  const newUrlInputs = useSignal<Record<string, string>>({});
+  // EVM default network dirty state
+  const dirtyEvmDefault = useSignal<string | null>(null);
+
+  // Build URL entries from settings data
+  const buildUrlEntries = (settingsData: SettingsData): Record<string, UrlEntry[]> => {
+    const result: Record<string, UrlEntry[]> = {};
+    const allNetworks = [...SOLANA_NETWORKS, ...EVM_NETWORKS];
+
+    for (const network of allNetworks) {
+      const userUrls: string[] = [];
+      const poolData = settingsData['rpc_pool'];
+      if (poolData) {
+        const raw = poolData[network];
+        if (typeof raw === 'string' && raw !== '[]') {
+          try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              userUrls.push(...parsed.filter((u: unknown) => typeof u === 'string' && u.length > 0));
+            }
+          } catch { /* ignore parse errors */ }
+        }
+      }
+
+      const builtinUrls = BUILT_IN_RPC_URLS[network] ?? [];
+      const userSet = new Set(userUrls);
+
+      const entries: UrlEntry[] = [];
+      // User URLs first (highest priority)
+      for (const url of userUrls) {
+        entries.push({ url, isBuiltin: builtinUrls.includes(url), enabled: true });
+      }
+      // Built-in URLs that are NOT in user list (appended at bottom)
+      for (const url of builtinUrls) {
+        if (!userSet.has(url)) {
+          entries.push({ url, isBuiltin: true, enabled: true });
+        }
+      }
+
+      result[network] = entries;
+    }
+    return result;
+  };
 
   const fetchSettings = async () => {
     try {
       const result = await apiGet<SettingsData>(API.ADMIN_SETTINGS);
       settings.value = result;
+      const entries = buildUrlEntries(result);
+      originalUrls.value = entries;
+      dirtyUrls.value = JSON.parse(JSON.stringify(entries));
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
@@ -1388,21 +1458,61 @@ function RpcEndpointsTab() {
     fetchSettings();
   }, []);
 
-  const handleFieldChange = (fullKey: string, value: string | number | boolean) => {
-    const strValue = typeof value === 'boolean' ? String(value) : String(value);
-    dirty.value = { ...dirty.value, [fullKey]: strValue };
+  // Check if URL lists have changed from original
+  const isDirty = (): boolean => {
+    if (dirtyEvmDefault.value !== null) return true;
+    for (const network of [...SOLANA_NETWORKS, ...EVM_NETWORKS]) {
+      const orig = originalUrls.value[network] ?? [];
+      const curr = dirtyUrls.value[network] ?? [];
+      if (orig.length !== curr.length) return true;
+      for (let i = 0; i < orig.length; i++) {
+        if (orig[i].url !== curr[i].url || orig[i].enabled !== curr[i].enabled) return true;
+      }
+    }
+    return false;
   };
+
+  const dirtyCount = useComputed(() => {
+    let count = 0;
+    if (dirtyEvmDefault.value !== null) count++;
+    for (const network of [...SOLANA_NETWORKS, ...EVM_NETWORKS]) {
+      const orig = originalUrls.value[network] ?? [];
+      const curr = dirtyUrls.value[network] ?? [];
+      if (orig.length !== curr.length) { count++; continue; }
+      for (let i = 0; i < orig.length; i++) {
+        if (orig[i].url !== curr[i].url || orig[i].enabled !== curr[i].enabled) { count++; break; }
+      }
+    }
+    return count;
+  });
 
   const handleSave = async () => {
     saving.value = true;
     try {
-      const entries = Object.entries(dirty.value)
-        .filter(([key]) => key.startsWith('rpc.'))
-        .map(([key, value]) => ({ key, value }));
+      const entries: { key: string; value: string }[] = [];
+
+      // Collect rpc_pool.* entries (user-managed URLs only, excluding built-in-only entries)
+      for (const network of [...SOLANA_NETWORKS, ...EVM_NETWORKS]) {
+        const urls = dirtyUrls.value[network] ?? [];
+        // Save only user URLs (non-builtin) as JSON array
+        const userOnlyUrls = urls
+          .filter(e => !e.isBuiltin && e.enabled)
+          .map(e => e.url);
+        entries.push({ key: `rpc_pool.${network}`, value: JSON.stringify(userOnlyUrls) });
+      }
+
+      // Include EVM default network if changed
+      if (dirtyEvmDefault.value !== null) {
+        entries.push({ key: 'rpc.evm_default_network', value: dirtyEvmDefault.value });
+      }
+
       const result = await apiPut<{ updated: number; settings: SettingsData }>(API.ADMIN_SETTINGS, { settings: entries });
       settings.value = result.settings;
-      dirty.value = {};
-      showToast('success', 'Settings saved and applied');
+      const newEntries = buildUrlEntries(result.settings);
+      originalUrls.value = newEntries;
+      dirtyUrls.value = JSON.parse(JSON.stringify(newEntries));
+      dirtyEvmDefault.value = null;
+      showToast('success', 'RPC settings saved and applied');
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
@@ -1412,84 +1522,163 @@ function RpcEndpointsTab() {
   };
 
   const handleDiscard = () => {
-    dirty.value = {};
+    dirtyUrls.value = JSON.parse(JSON.stringify(originalUrls.value));
+    dirtyEvmDefault.value = null;
   };
 
   useEffect(() => {
     registerDirty({
       id: 'wallets-rpc',
-      isDirty: () => Object.keys(dirty.value).filter(k => k.startsWith('rpc.')).length > 0,
+      isDirty,
       save: handleSave,
       discard: handleDiscard,
     });
     return () => unregisterDirty('wallets-rpc');
   }, []);
 
-  const handleRpcTest = async (settingKey: string) => {
-    const shortKey = settingKey.split('.')[1] ?? '';
-    const effectiveUrl = getEffectiveValue(settings.value, dirty.value, 'rpc', shortKey);
-    if (!effectiveUrl) {
-      showToast('warning', 'Enter a URL before testing');
-      return;
-    }
-
-    const chain = shortKey.startsWith('solana') ? 'solana' : 'evm';
-
-    rpcTesting.value = { ...rpcTesting.value, [settingKey]: true };
-    try {
-      const result = await apiPost<RpcTestResult>(API.ADMIN_SETTINGS_TEST_RPC, { url: effectiveUrl, chain });
-      rpcTestResults.value = { ...rpcTestResults.value, [settingKey]: result };
-    } catch {
-      rpcTestResults.value = {
-        ...rpcTestResults.value,
-        [settingKey]: { success: false, latencyMs: 0, error: 'Request failed' },
-      };
-    } finally {
-      rpcTesting.value = { ...rpcTesting.value, [settingKey]: false };
-    }
+  const toggleExpand = (network: string) => {
+    expanded.value = { ...expanded.value, [network]: !expanded.value[network] };
   };
 
-  function RpcField({ shortKey }: { shortKey: string }) {
-    const fullKey = `rpc.${shortKey}`;
-    const testResult = rpcTestResults.value[fullKey];
-    const isTesting = rpcTesting.value[fullKey];
+  const addUrl = (network: string) => {
+    const url = (newUrlInputs.value[network] ?? '').trim();
+    if (!url) return;
+    // Validate https://
+    if (!url.startsWith('https://')) {
+      showToast('warning', 'URL must start with https://');
+      return;
+    }
+    // Check duplicate
+    const current = dirtyUrls.value[network] ?? [];
+    if (current.some(e => e.url === url)) {
+      showToast('warning', 'URL already exists in this network');
+      return;
+    }
+    // Insert user URLs before built-in-only entries (at the end of user section)
+    const newEntries = [...current];
+    // Find first built-in-only entry that isn't in user list
+    const insertIdx = newEntries.findIndex(e => e.isBuiltin && !current.slice(0, current.indexOf(e)).some(u => !u.isBuiltin));
+    // Simpler: append as last user URL (before any built-in-only URLs)
+    const lastUserIdx = newEntries.reduce((acc, e, i) => (!e.isBuiltin ? i + 1 : acc), 0);
+    newEntries.splice(lastUserIdx, 0, { url, isBuiltin: false, enabled: true });
+    dirtyUrls.value = { ...dirtyUrls.value, [network]: newEntries };
+    newUrlInputs.value = { ...newUrlInputs.value, [network]: '' };
+  };
+
+  const removeUrl = (network: string, index: number) => {
+    const current = [...(dirtyUrls.value[network] ?? [])];
+    if (current[index]?.isBuiltin) return; // cannot delete built-in
+    current.splice(index, 1);
+    dirtyUrls.value = { ...dirtyUrls.value, [network]: current };
+  };
+
+  const moveUrl = (network: string, index: number, direction: 'up' | 'down') => {
+    const current = [...(dirtyUrls.value[network] ?? [])];
+    const targetIdx = direction === 'up' ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= current.length) return;
+    // Only allow reorder within user URLs section
+    const entry = current[index];
+    const target = current[targetIdx];
+    if (!entry || !target) return;
+    // Swap
+    [current[index], current[targetIdx]] = [current[targetIdx], current[index]];
+    dirtyUrls.value = { ...dirtyUrls.value, [network]: current };
+  };
+
+  const toggleBuiltin = (network: string, index: number) => {
+    const current = [...(dirtyUrls.value[network] ?? [])];
+    const entry = current[index];
+    if (!entry?.isBuiltin) return;
+    current[index] = { ...entry, enabled: !entry.enabled };
+    dirtyUrls.value = { ...dirtyUrls.value, [network]: current };
+  };
+
+  function NetworkSection({ network }: { network: string }) {
+    const urls = dirtyUrls.value[network] ?? [];
+    const isExpanded = expanded.value[network] ?? false;
+    const urlCount = urls.filter(e => e.enabled).length;
 
     return (
-      <div class="settings-field-full">
-        <div class="rpc-field-row">
-          <FormField
-            label={keyToLabel(shortKey)}
-            name={fullKey}
-            type="text"
-            value={getEffectiveValue(settings.value, dirty.value, 'rpc', shortKey)}
-            onChange={(v) => handleFieldChange(fullKey, v)}
-            placeholder="https://..."
-            description={RPC_DESCRIPTIONS[shortKey]}
-          />
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleRpcTest(fullKey)}
-            loading={!!isTesting}
-          >
-            Test
-          </Button>
-        </div>
-        {testResult && (
-          <div class={`rpc-test-result ${testResult.success ? 'rpc-test-result--success' : 'rpc-test-result--failure'}`}>
-            <Badge variant={testResult.success ? 'success' : 'danger'}>
-              {testResult.success ? 'OK' : 'FAIL'}
-            </Badge>
-            <span>{testResult.latencyMs}ms</span>
-            {testResult.blockNumber !== undefined && <span> (block #{testResult.blockNumber.toLocaleString()})</span>}
-            {testResult.error && <span> - {testResult.error}</span>}
+      <details class="rpc-pool-network" open={isExpanded} data-testid={`rpc-network-${network}`}>
+        <summary
+          class="rpc-pool-network-header"
+          onClick={(e) => { e.preventDefault(); toggleExpand(network); }}
+        >
+          <span>{NETWORK_DISPLAY_NAMES[network] ?? network}</span>
+          <span class="rpc-pool-url-count">{urlCount} URL{urlCount !== 1 ? 's' : ''}</span>
+        </summary>
+        {isExpanded && (
+          <div class="rpc-url-list">
+            {urls.map((entry, idx) => (
+              <div
+                key={`${network}-${idx}`}
+                class={`rpc-url-item${entry.isBuiltin ? ' rpc-url-item--builtin' : ''}${!entry.enabled ? ' rpc-url-disabled' : ''}`}
+                data-testid={`rpc-url-${network}-${idx}`}
+              >
+                <span class="rpc-url-priority">#{idx + 1}</span>
+                <span class="rpc-url-item-url" title={entry.url}>{entry.url}</span>
+                {entry.isBuiltin && <span class="badge-builtin">(built-in)</span>}
+                <span class="rpc-url-actions">
+                  <button
+                    class="btn btn-ghost btn-sm rpc-action-btn"
+                    onClick={() => moveUrl(network, idx, 'up')}
+                    disabled={idx === 0}
+                    title="Move up"
+                    aria-label="Move up"
+                  >
+                    &uarr;
+                  </button>
+                  <button
+                    class="btn btn-ghost btn-sm rpc-action-btn"
+                    onClick={() => moveUrl(network, idx, 'down')}
+                    disabled={idx === urls.length - 1}
+                    title="Move down"
+                    aria-label="Move down"
+                  >
+                    &darr;
+                  </button>
+                  {entry.isBuiltin ? (
+                    <button
+                      class={`btn btn-ghost btn-sm rpc-action-btn${entry.enabled ? '' : ' rpc-toggle-off'}`}
+                      onClick={() => toggleBuiltin(network, idx)}
+                      title={entry.enabled ? 'Disable' : 'Enable'}
+                      aria-label={entry.enabled ? 'Disable' : 'Enable'}
+                    >
+                      {entry.enabled ? 'On' : 'Off'}
+                    </button>
+                  ) : (
+                    <button
+                      class="btn btn-ghost btn-sm rpc-action-btn rpc-delete-btn"
+                      onClick={() => removeUrl(network, idx)}
+                      title="Remove"
+                      aria-label="Remove"
+                    >
+                      &times;
+                    </button>
+                  )}
+                </span>
+              </div>
+            ))}
+            <div class="rpc-add-url">
+              <input
+                type="text"
+                class="rpc-add-url-input"
+                placeholder="https://your-rpc-url.com"
+                value={newUrlInputs.value[network] ?? ''}
+                onInput={(e) => {
+                  newUrlInputs.value = { ...newUrlInputs.value, [network]: (e.target as HTMLInputElement).value };
+                }}
+                onKeyDown={(e) => { if (e.key === 'Enter') addUrl(network); }}
+              />
+              <Button variant="secondary" size="sm" onClick={() => addUrl(network)}>
+                Add
+              </Button>
+            </div>
           </div>
         )}
-      </div>
+      </details>
     );
   }
-
-  const dirtyCount = Object.keys(dirty.value).filter((k) => k.startsWith('rpc.')).length;
 
   if (loading.value) {
     return (
@@ -1499,12 +1688,15 @@ function RpcEndpointsTab() {
     );
   }
 
+  const currentEvmDefault = dirtyEvmDefault.value
+    ?? (getEffectiveValue(settings.value, {}, 'rpc', 'evm_default_network') || 'ethereum-sepolia');
+
   return (
     <>
       {/* Save bar -- sticky when dirty */}
-      {dirtyCount > 0 && (
+      {dirtyCount.value > 0 && (
         <div class="settings-save-bar">
-          <span>{dirtyCount} unsaved change{dirtyCount > 1 ? 's' : ''}</span>
+          <span>{dirtyCount.value} unsaved change{dirtyCount.value > 1 ? 's' : ''}</span>
           <div class="settings-save-bar-actions">
             <Button variant="ghost" size="sm" onClick={handleDiscard}>
               Discard
@@ -1519,36 +1711,28 @@ function RpcEndpointsTab() {
       <div class="settings-category">
         <div class="settings-category-header">
           <h3>RPC Endpoints</h3>
-          <p class="settings-description">Configure blockchain RPC URLs for Solana and EVM networks</p>
+          <p class="settings-description">Manage prioritized RPC URL lists per network. User URLs have highest priority; built-in defaults are appended automatically.</p>
         </div>
         <div class="settings-category-body">
           <div class="settings-subgroup">
             <div class="settings-subgroup-title">Solana</div>
-            <div class="settings-fields-grid">
-              {solanaRpcKeys.map((k) => (
-                <RpcField key={k} shortKey={k} />
-              ))}
-            </div>
+            {SOLANA_NETWORKS.map(n => <NetworkSection key={n} network={n} />)}
           </div>
 
           <div class="settings-subgroup">
             <div class="settings-subgroup-title">EVM</div>
-            <div class="settings-fields-grid">
-              {evmRpcKeys.map((k) => (
-                <RpcField key={k} shortKey={k} />
-              ))}
-              <div class="settings-field-full">
-                <FormField
-                  label={keyToLabel('evm_default_network')}
-                  name="rpc.evm_default_network"
-                  type="select"
-                  value={getEffectiveValue(settings.value, dirty.value, 'rpc', 'evm_default_network') || 'ethereum-sepolia'}
-                  onChange={(v) => handleFieldChange('rpc.evm_default_network', v)}
-                  options={evmNetworkOptions}
-                  description="Default EVM network for new wallets"
-                />
-              </div>
+            <div class="settings-field-full" style={{ marginBottom: 'var(--space-3)' }}>
+              <FormField
+                label={keyToLabel('evm_default_network')}
+                name="rpc.evm_default_network"
+                type="select"
+                value={currentEvmDefault}
+                onChange={(v) => { dirtyEvmDefault.value = String(v); }}
+                options={evmNetworkOptions}
+                description="Default EVM network for new wallets"
+              />
             </div>
+            {EVM_NETWORKS.map(n => <NetworkSection key={n} network={n} />)}
           </div>
         </div>
       </div>
