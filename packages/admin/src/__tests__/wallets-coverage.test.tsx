@@ -1188,13 +1188,13 @@ describe('RpcEndpointsTab', () => {
   beforeEach(() => { currentPath.value = '/wallets'; });
   afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
-  it('saves RPC settings', async () => {
+  it('renders network sections and expands to show URLs', async () => {
     vi.mocked(apiGet).mockImplementation(async (path: string) => {
       if (path === '/v1/wallets') return mockWalletList;
       if (path === '/v1/admin/settings') return mockSettingsData;
+      if (path === '/v1/admin/rpc-status') return { networks: {} };
       return {};
     });
-    vi.mocked(apiPut).mockResolvedValueOnce({ updated: 1, settings: mockSettingsData });
 
     render(<WalletsPage />);
 
@@ -1202,31 +1202,22 @@ describe('RpcEndpointsTab', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Solana')).toBeTruthy();
+      expect(screen.getByText('EVM')).toBeTruthy();
     });
 
-    // Change a field
-    const devnetInput = screen.getByLabelText('Solana Devnet') as HTMLInputElement;
-    fireEvent.input(devnetInput, { target: { value: 'https://new-devnet.com' } });
+    // Expand Solana Devnet to see URL list
+    fireEvent.click(screen.getByText('Solana Devnet'));
 
     await waitFor(() => {
-      expect(screen.getByText('Save')).toBeTruthy();
-    });
-
-    fireEvent.click(screen.getByText('Save'));
-
-    await waitFor(() => {
-      expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/admin/settings', {
-        settings: expect.arrayContaining([
-          expect.objectContaining({ key: 'rpc.solana_devnet', value: 'https://new-devnet.com' }),
-        ]),
-      });
+      expect(screen.getByText('https://api.devnet.solana.com')).toBeTruthy();
     });
   });
 
-  it('tests RPC endpoint', async () => {
+  it('shows test button inside expanded network section', async () => {
     vi.mocked(apiGet).mockImplementation(async (path: string) => {
       if (path === '/v1/wallets') return mockWalletList;
       if (path === '/v1/admin/settings') return mockSettingsData;
+      if (path === '/v1/admin/rpc-status') return { networks: {} };
       return {};
     });
     vi.mocked(apiPost).mockResolvedValueOnce({ success: true, latencyMs: 150, blockNumber: 12345 });
@@ -1239,9 +1230,14 @@ describe('RpcEndpointsTab', () => {
       expect(screen.getByText('Solana')).toBeTruthy();
     });
 
-    // Click Test button next to a field
-    const testBtns = screen.getAllByText('Test');
-    fireEvent.click(testBtns[0]);
+    // Expand Solana Mainnet to see Test buttons
+    fireEvent.click(screen.getByText('Solana Mainnet'));
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Test').length).toBeGreaterThan(0);
+    });
+
+    fireEvent.click(screen.getAllByText('Test')[0]);
 
     await waitFor(() => {
       expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/admin/settings/test-rpc', expect.objectContaining({

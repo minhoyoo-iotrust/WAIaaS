@@ -1485,7 +1485,7 @@ function RpcEndpointsTab() {
     const fetchStatus = async () => {
       try {
         const result = await apiGet<{ networks: RpcPoolStatus }>(API.ADMIN_RPC_STATUS);
-        rpcPoolStatus.value = result.networks;
+        rpcPoolStatus.value = result.networks ?? {};
       } catch {
         // Silent failure on polling errors -- don't show toast
       }
