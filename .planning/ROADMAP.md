@@ -347,11 +347,11 @@ Plans:
   2. ConfigurablePayloadTransformer가 static_fields를 모든 페이로드에 주입하고, category_map으로 카테고리별 필드를 매핑한다
   3. buildPushPayload() 출력이 transformer를 거쳐 IPushProvider.send()에 전달되는 파이프라인이 동작한다
   4. [relay.push.payload] 섹션이 없으면 transformer가 bypass되어 기존 ntfy 원본 페이로드가 그대로 전달된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 267-01: config.toml [relay.push.payload] Zod 스키마 확장 + ConfigurablePayloadTransformer 구현
-- [ ] 267-02: buildPushPayload() 파이프라인 통합 + bypass 로직 + 통합 테스트
+- [ ] 267-01-PLAN.md -- config.toml [relay.push.payload] Zod 스키마 확장 + ConfigurablePayloadTransformer TDD 구현
+- [ ] 267-02-PLAN.md -- buildPushPayload() 파이프라인 통합 + bypass 로직 + 통합 테스트
 
 ## Progress
 
