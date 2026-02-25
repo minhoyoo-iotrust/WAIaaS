@@ -18,7 +18,7 @@ import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vite
 import type { Database as DatabaseType } from 'better-sqlite3';
 import argon2 from 'argon2';
 import { RpcPool } from '@waiaas/core';
-import type { RpcPoolEvent, NotificationEventType } from '@waiaas/core';
+import type { RpcPoolEvent } from '@waiaas/core';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
 import { createApp } from '../api/server.js';
 import { SettingsService } from '../infrastructure/settings/index.js';

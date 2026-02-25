@@ -342,7 +342,7 @@ describe('RpcPool', () => {
       eventPool.reportFailure('mainnet', 'https://b.com');
 
       // Should have: DEGRADED(a), DEGRADED(b), ALL_FAILED(b)
-      const calls = onEvent.mock.calls.map((c: [RpcPoolEvent]) => c[0].type);
+      const calls = onEvent.mock.calls.map((c: unknown[]) => (c[0] as RpcPoolEvent).type);
       expect(calls).toEqual(['RPC_HEALTH_DEGRADED', 'RPC_HEALTH_DEGRADED', 'RPC_ALL_FAILED']);
 
       const allFailedCall = onEvent.mock.calls[2]![0] as RpcPoolEvent;
@@ -377,7 +377,7 @@ describe('RpcPool', () => {
       eventPool.reportSuccess('mainnet', 'https://a.com');
 
       const recoveredCalls = onEvent.mock.calls.filter(
-        (c: [RpcPoolEvent]) => c[0].type === 'RPC_RECOVERED',
+        (c: unknown[]) => (c[0] as RpcPoolEvent).type === 'RPC_RECOVERED',
       );
       expect(recoveredCalls).toHaveLength(0);
     });
