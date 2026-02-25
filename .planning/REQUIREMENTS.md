@@ -17,9 +17,9 @@ Requirements for v28.6. Each maps to roadmap phases.
 
 ### Built-in Defaults
 
-- [ ] **DFLT-01**: 메인넷 6개 네트워크에 빌트인 기본 RPC 목록을 제공한다
-- [ ] **DFLT-02**: 테스트넷 7개 네트워크에 빌트인 기본 RPC 목록을 제공한다
-- [ ] **DFLT-03**: 설정 미지정 시 빌트인 기본값으로 자동 동작한다
+- [x] **DFLT-01**: 메인넷 6개 네트워크에 빌트인 기본 RPC 목록을 제공한다
+- [x] **DFLT-02**: 테스트넷 7개 네트워크에 빌트인 기본 RPC 목록을 제공한다
+- [x] **DFLT-03**: 설정 미지정 시 빌트인 기본값으로 자동 동작한다
 
 ### Adapter Integration
 
@@ -83,9 +83,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | POOL-03 | Phase 260 | Complete |
 | POOL-04 | Phase 260 | Complete |
 | POOL-05 | Phase 260 | Complete |
-| DFLT-01 | Phase 260 | Pending |
-| DFLT-02 | Phase 260 | Pending |
-| DFLT-03 | Phase 260 | Pending |
+| DFLT-01 | Phase 260 | Complete |
+| DFLT-02 | Phase 260 | Complete |
+| DFLT-03 | Phase 260 | Complete |
 | ADPT-01 | Phase 261 | Pending |
 | ADPT-02 | Phase 261 | Pending |
 | ADPT-03 | Phase 261 | Pending |

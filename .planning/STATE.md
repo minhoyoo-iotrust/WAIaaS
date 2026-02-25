@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 
 ## Current Position
 
-Phase: 1 of 5 (Phase 260: RPC Pool Core + Built-in Defaults)
-Plan: 1 of 2 in current phase
-Status: Executing
-Last activity: 2026-02-25 -- Completed 260-01 RpcPool core (24 tests, 4 files)
+Phase: 1 of 5 (Phase 260: RPC Pool Core + Built-in Defaults) -- COMPLETE
+Plan: 2 of 2 in current phase (all plans done)
+Status: Phase 260 complete, ready for Phase 261
+Last activity: 2026-02-25 -- Completed 260-02 built-in defaults (18 tests, 4 files)
 
-Progress: [█░░░░░░░░░] 10%
+Progress: [██░░░░░░░░] 20%
 
 ## Performance Metrics
 
@@ -24,7 +24,7 @@ Progress: [█░░░░░░░░░] 10%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 260 | 1/2 | 3min | 3min |
+| 260 | 2/2 | 5min | 2.5min |
 
 ## Accumulated Context
 
@@ -37,6 +37,8 @@ Progress: [█░░░░░░░░░] 10%
 - 260-01: AllRpcFailedError extends Error (not ChainError) -- infrastructure-level, not chain-specific
 - 260-01: Injectable nowFn for deterministic cooldown testing instead of mocking Date.now
 - 260-01: Network key is string (not NetworkType) for flexibility -- adapters can use any identifier
+- 260-02: BUILT_IN_RPC_DEFAULTS typed as Readonly<Record<string, readonly string[]>> -- double immutability
+- 260-02: createWithDefaults() is static factory, not constructor param -- keeps new RpcPool() clean for manual configs
 
 ### Blockers/Concerns
 
@@ -48,5 +50,5 @@ Progress: [█░░░░░░░░░] 10%
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 260-01-PLAN.md
+Stopped at: Completed 260-02-PLAN.md (Phase 260 fully complete)
 Resume file: None

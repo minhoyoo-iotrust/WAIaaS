@@ -288,7 +288,7 @@ See `.planning/milestones/v28.5-ROADMAP.md` for full details.
 
 **Milestone Goal:** 네트워크당 복수 RPC 엔드포인트를 등록/로테이션하여 무료 RPC rate limit 문제를 구조적으로 해소하고, Admin UI에서 네트워크별 RPC 목록을 관리할 수 있는 상태.
 
-- [ ] **Phase 260: RPC Pool Core + Built-in Defaults** - RpcPool 클래스와 13개 네트워크 빌트인 기본 RPC 목록
+- [x] **Phase 260: RPC Pool Core + Built-in Defaults** (2/2 plans) -- completed 2026-02-25
 - [ ] **Phase 261: Adapter Integration** - RpcPool을 AdapterPool/Solana/EVM/IncomingTx에 통합하고 config.toml 하위 호환 유지
 - [ ] **Phase 262: Settings Storage + Hot-Reload** - Admin Settings에서 네트워크별 RPC URL 목록 CRUD와 무중단 반영
 - [ ] **Phase 263: Admin UI RPC Endpoints** - RPC Endpoints 탭을 복수 URL 목록 관리로 확장
@@ -309,8 +309,8 @@ See `.planning/milestones/v28.5-ROADMAP.md` for full details.
 **Plans**: 2 plans
 
 Plans:
-- [ ] 260-01-PLAN.md — RpcPool 클래스 TDD (등록, 우선순위 fallback, cooldown, 전체 실패 에러)
-- [ ] 260-02-PLAN.md — 빌트인 기본 RPC 목록 데이터 + RpcPool.createWithDefaults() 팩토리
+- [x] 260-01-PLAN.md — RpcPool 클래스 TDD (등록, 우선순위 fallback, cooldown, 전체 실패 에러)
+- [x] 260-02-PLAN.md — 빌트인 기본 RPC 목록 데이터 + RpcPool.createWithDefaults() 팩토리
 
 ### Phase 261: Adapter Integration
 **Goal**: 기존 어댑터가 RpcPool을 경유하여 RPC를 호출하고, config.toml 단일 URL 설정이 하위 호환된다
@@ -379,7 +379,7 @@ Phases execute in numeric order: 260 -> 261 -> 262 -> 263 -> 264
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 260. RPC Pool Core + Built-in Defaults | 1/2 | In Progress|  | - |
+| 260. RPC Pool Core + Built-in Defaults | v28.6 | 2/2 | Complete | 2026-02-25 |
 | 261. Adapter Integration | v28.6 | 0/3 | Not started | - |
 | 262. Settings Storage + Hot-Reload | v28.6 | 0/1 | Not started | - |
 | 263. Admin UI RPC Endpoints | v28.6 | 0/2 | Not started | - |
