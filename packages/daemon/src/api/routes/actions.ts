@@ -108,6 +108,11 @@ const ActionExecuteRequestSchema = z
     params: z.record(z.unknown()).optional().default({}),
     network: z.string().optional(),
     walletId: z.string().uuid().optional().describe('Target wallet ID (optional -- defaults to session default wallet)'),
+    gasCondition: z.object({
+      maxGasPrice: z.string().optional(),
+      maxPriorityFee: z.string().optional(),
+      timeout: z.number().int().min(60).max(86400).optional(),
+    }).optional(),
   })
   .openapi('ActionExecuteRequest');
 
@@ -331,6 +336,11 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
     const pipelineResults: Array<{ id: string; status: string }> = [];
 
     for (const contractCall of contractCalls) {
+      // Inject gasCondition into the pipeline request if provided
+      const requestWithGas = body.gasCondition
+        ? { ...contractCall, gasCondition: body.gasCondition }
+        : contractCall;
+
       // Build PipelineContext for this specific ContractCallRequest
       const ctx: PipelineContext = {
         db: deps.db,
@@ -341,7 +351,7 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
         walletId,
         wallet: walletData,
         resolvedNetwork,
-        request: contractCall, // Single ContractCallRequest with type: 'CONTRACT_CALL'
+        request: requestWithGas, // ContractCallRequest with optional gasCondition
         txId: '', // stage1Validate will assign
         sessionId,
         sqlite: deps.sqlite,
