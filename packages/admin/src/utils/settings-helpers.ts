@@ -121,6 +121,11 @@ export function keyToLabel(key: string): string {
     ntfy_request_topic_prefix: 'Ntfy Request Topic Prefix',
     ntfy_response_topic_prefix: 'Ntfy Response Topic Prefix',
     wallets: 'Registered Wallets (JSON)',
+    // gas_condition keys
+    poll_interval_sec: 'Poll Interval (seconds)',
+    default_timeout_sec: 'Default Timeout (seconds)',
+    max_timeout_sec: 'Max Timeout (seconds)',
+    max_pending_count: 'Max Pending Count',
   };
   return map[key] ?? key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
