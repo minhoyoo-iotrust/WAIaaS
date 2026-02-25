@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 261 - Adapter Integration
+**Current focus:** Phase 262 - Settings Storage Hot-Reload
 
 ## Current Position
 
-Phase: 2 of 5 (Phase 261: Adapter Integration -- COMPLETE)
-Plan: 3 of 3 in current phase (all complete)
-Status: Phase 261 complete, proceeding to Phase 262
-Last activity: 2026-02-25 -- Completed 261-03 IncomingTxMonitor RpcPool integration (12 tests, 3 files)
+Phase: 3 of 5 (Phase 262: Settings Storage Hot-Reload -- COMPLETE)
+Plan: 1 of 1 in current phase (all complete)
+Status: Phase 262 complete, proceeding to Phase 263
+Last activity: 2026-02-25 -- Completed 262-01 RpcPool settings storage + hot-reload (20 tests, 5 files)
 
-Progress: [██████░░░░] 60%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
@@ -26,6 +26,7 @@ Progress: [██████░░░░] 60%
 |-------|-------|-------|----------|
 | 260 | 2/2 | 5min | 2.5min |
 | 261 | 3/3 | 13min | 4.3min |
+| 262 | 1/1 | 6min | 6min |
 
 ## Accumulated Context
 
@@ -56,13 +57,18 @@ Progress: [██████░░░░] 60%
 - 261-03: No changes to IncomingTxMonitorService or SubscriptionMultiplexer -- subscriberFactory is dependency-injected
 - 261-03: WSS URL derivation continues from resolved HTTP URL (same pattern as before RpcPool)
 
+- 262-01: rpc_pool.* defaultValue is '[]' -- URL lists managed exclusively via Admin Settings API, not config.toml
+- 262-01: replaceNetwork() does full atomic replace (not merge like register()) -- ensures URL list matches admin setting
+- 262-01: URL merge priority: user URLs (Admin Settings) > config.toml single URL > built-in defaults
+- 262-01: networkToConfigKey() is private on HotReloadOrchestrator (inverse of configKeyToNetwork in adapter-pool.ts)
+
 ### Blockers/Concerns
 
-- 저장 방식 (SettingsService JSON 배열 vs rpc_endpoints DB 테이블) -- Phase 262 설계 시 결정 필요
+- [RESOLVED] 저장 방식 결정: SettingsService JSON 배열 방식 채택 (Phase 262-01에서 구현)
 - #164: IncomingTxMonitorService 환경 기본 네트워크만 구독 (MEDIUM, 기존 이슈)
 
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 261-03-PLAN.md (Phase 261 complete)
+Stopped at: Completed 262-01-PLAN.md (Phase 262 complete)
 Resume file: None

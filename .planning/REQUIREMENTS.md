@@ -31,8 +31,8 @@ Requirements for v28.6. Each maps to roadmap phases.
 ### Config + Settings
 
 - [x] **CONF-01**: config.toml 기존 단일 URL 설정이 1개짜리 Pool로 하위 호환 동작한다
-- [ ] **CONF-02**: Admin Settings에서 네트워크별 RPC URL 목록을 추가/삭제/순서 변경할 수 있다
-- [ ] **CONF-03**: RPC 목록 변경 시 데몬 재시작 없이 hot-reload된다
+- [x] **CONF-02**: Admin Settings에서 네트워크별 RPC URL 목록을 추가/삭제/순서 변경할 수 있다
+- [x] **CONF-03**: RPC 목록 변경 시 데몬 재시작 없이 hot-reload된다
 - [x] **CONF-04**: 환경 변수 WAIAAS_RPC_* URL이 Pool 첫 번째 항목으로 추가된다
 
 ### Admin UI
@@ -91,8 +91,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ADPT-03 | Phase 261 | Complete |
 | ADPT-04 | Phase 261 | Complete |
 | CONF-01 | Phase 261 | Complete |
-| CONF-02 | Phase 262 | Pending |
-| CONF-03 | Phase 262 | Pending |
+| CONF-02 | Phase 262 | Complete |
+| CONF-03 | Phase 262 | Complete |
 | CONF-04 | Phase 261 | Complete |
 | ADUI-01 | Phase 263 | Pending |
 | ADUI-02 | Phase 263 | Pending |
