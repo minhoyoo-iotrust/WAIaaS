@@ -284,13 +284,107 @@ See `.planning/milestones/v28.5-ROADMAP.md` for full details.
 
 </details>
 
+### v28.6 RPC Pool -- 멀티 엔드포인트 로테이션 (In Progress)
+
+**Milestone Goal:** 네트워크당 복수 RPC 엔드포인트를 등록/로테이션하여 무료 RPC rate limit 문제를 구조적으로 해소하고, Admin UI에서 네트워크별 RPC 목록을 관리할 수 있는 상태.
+
+- [ ] **Phase 260: RPC Pool Core + Built-in Defaults** - RpcPool 클래스와 13개 네트워크 빌트인 기본 RPC 목록
+- [ ] **Phase 261: Adapter Integration** - RpcPool을 AdapterPool/Solana/EVM/IncomingTx에 통합하고 config.toml 하위 호환 유지
+- [ ] **Phase 262: Settings Storage + Hot-Reload** - Admin Settings에서 네트워크별 RPC URL 목록 CRUD와 무중단 반영
+- [ ] **Phase 263: Admin UI RPC Endpoints** - RPC Endpoints 탭을 복수 URL 목록 관리로 확장
+- [ ] **Phase 264: Monitoring + Alerts** - RPC 상태 API와 health/failure/recovery 알림 이벤트
+
+## Phase Details
+
+### Phase 260: RPC Pool Core + Built-in Defaults
+**Goal**: 네트워크당 복수 RPC를 우선순위 기반으로 로테이션하는 기본 인프라가 동작한다
+**Depends on**: Nothing (first phase of v28.6)
+**Requirements**: POOL-01, POOL-02, POOL-03, POOL-04, POOL-05, DFLT-01, DFLT-02, DFLT-03
+**Success Criteria** (what must be TRUE):
+  1. RpcPool에 네트워크와 복수 URL을 등록하면 우선순위 순서대로 URL을 반환한다
+  2. 특정 URL에 429/408/5xx 실패를 보고하면 해당 URL에 cooldown이 적용되고 다음 URL이 반환된다
+  3. cooldown 시간(60초 기본, 지수 증가, 최대 5분)이 경과하면 해당 URL이 자동으로 복귀한다
+  4. 네트워크의 모든 URL이 cooldown 상태이면 AllRpcFailedError가 발생한다
+  5. 설정 없이 RpcPool을 생성하면 13개 네트워크(메인넷 6 + 테스트넷 7)에 빌트인 기본 URL이 자동 로딩된다
+**Plans**: TBD
+
+Plans:
+- [ ] 260-01: RpcPool 클래스 구현 (등록, 우선순위 fallback, cooldown, 전체 실패 에러)
+- [ ] 260-02: 빌트인 기본 RPC 목록 데이터 + RpcPool 자동 로딩
+
+### Phase 261: Adapter Integration
+**Goal**: 기존 어댑터가 RpcPool을 경유하여 RPC를 호출하고, config.toml 단일 URL 설정이 하위 호환된다
+**Depends on**: Phase 260
+**Requirements**: ADPT-01, ADPT-02, ADPT-03, ADPT-04, CONF-01, CONF-04
+**Success Criteria** (what must be TRUE):
+  1. AdapterPool이 RpcPool을 통해 어댑터에 RPC URL을 제공한다
+  2. SolanaAdapter의 getBalance/getAssets 호출이 RPC Pool을 경유하여 fallback이 동작한다
+  3. EvmAdapter의 PublicClient 생성이 RPC Pool에서 URL을 획득한다
+  4. IncomingTxMonitor의 각 Subscriber가 RPC Pool을 통해 폴링한다
+  5. config.toml에 단일 URL만 설정된 경우 1개짜리 Pool로 기존과 동일하게 동작한다
+**Plans**: TBD
+
+Plans:
+- [ ] 261-01: RpcPool 추상 레이어를 AdapterPool에 도입하고 config.toml/환경변수 하위 호환 처리
+- [ ] 261-02: SolanaAdapter + EvmAdapter RPC Pool 경유 통합
+- [ ] 261-03: IncomingTxMonitor Subscriber RPC Pool 폴링 통합
+
+### Phase 262: Settings Storage + Hot-Reload
+**Goal**: 관리자가 Admin Settings에서 네트워크별 RPC URL 목록을 관리하고 데몬 재시작 없이 즉시 반영된다
+**Depends on**: Phase 261
+**Requirements**: CONF-02, CONF-03
+**Success Criteria** (what must be TRUE):
+  1. Admin Settings API를 통해 네트워크별 RPC URL을 추가/삭제/순서 변경할 수 있다
+  2. RPC 목록 변경이 데몬 재시작 없이 RpcPool에 즉시 반영된다
+**Plans**: TBD
+
+Plans:
+- [ ] 262-01: SettingsService RPC URL 목록 저장 구조 + hot-reload 연동
+
+### Phase 263: Admin UI RPC Endpoints
+**Goal**: Admin UI의 RPC Endpoints 탭에서 네트워크별 복수 RPC URL을 시각적으로 관리할 수 있다
+**Depends on**: Phase 262
+**Requirements**: ADUI-01, ADUI-02, ADUI-03, ADUI-04, ADUI-05
+**Success Criteria** (what must be TRUE):
+  1. RPC Endpoints 탭에서 네트워크별 복수 URL 목록이 표시되고 순서를 변경할 수 있다
+  2. 각 URL의 실시간 상태(정상: 레이턴시+블록번호 / cooldown: 남은시간+실패횟수)가 표시된다
+  3. URL 추가/삭제 폼이 동작하고 개별 URL 연결 테스트 버튼이 동작한다
+  4. 빌트인 기본 URL은 (built-in) 라벨로 구분되며 삭제 불가, 비활성화만 가능하다
+**Plans**: TBD
+
+Plans:
+- [ ] 263-01: RPC Endpoints 탭 복수 URL 목록 UI (순서 변경, 추가/삭제, built-in 라벨)
+- [ ] 263-02: URL별 실시간 상태 표시 + 개별 연결 테스트
+
+### Phase 264: Monitoring + Alerts
+**Goal**: 관리자가 RPC 상태를 API로 확인하고 장애/복구 시 자동 알림을 받는다
+**Depends on**: Phase 261
+**Requirements**: MNTR-01, MNTR-02, MNTR-03, MNTR-04
+**Success Criteria** (what must be TRUE):
+  1. GET /admin/rpc-status API가 네트워크별 RPC 상태(URL, 상태, cooldown 정보)를 반환한다
+  2. 특정 RPC가 cooldown에 진입하면 RPC_HEALTH_DEGRADED 알림이 발생한다
+  3. 네트워크 전체 RPC가 실패하면 RPC_ALL_FAILED 알림이 발생한다
+  4. cooldown 해제 후 정상 복귀하면 RPC_RECOVERED 알림이 발생한다
+**Plans**: TBD
+
+Plans:
+- [ ] 264-01: GET /admin/rpc-status API 엔드포인트
+- [ ] 264-02: RPC_HEALTH_DEGRADED / RPC_ALL_FAILED / RPC_RECOVERED 알림 이벤트 통합
+
 ## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 260 -> 261 -> 262 -> 263 -> 264
+(Phase 264 depends on 261 not 262/263, so could run in parallel with 262-263 if needed)
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 258. GasCondition 코어 파이프라인 | v28.5 | 2/2 | Complete | 2026-02-25 |
-| 259. 외부 인터페이스 통합 | v28.5 | 2/2 | Complete | 2026-02-25 |
+| 260. RPC Pool Core + Built-in Defaults | v28.6 | 0/2 | Not started | - |
+| 261. Adapter Integration | v28.6 | 0/3 | Not started | - |
+| 262. Settings Storage + Hot-Reload | v28.6 | 0/1 | Not started | - |
+| 263. Admin UI RPC Endpoints | v28.6 | 0/2 | Not started | - |
+| 264. Monitoring + Alerts | v28.6 | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-25*
-*Last updated: 2026-02-25 after v28.5 milestone completion*
+*Last updated: 2026-02-25 after v28.6 roadmap creation*

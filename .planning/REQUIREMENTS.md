@@ -78,37 +78,37 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| POOL-01 | — | Pending |
-| POOL-02 | — | Pending |
-| POOL-03 | — | Pending |
-| POOL-04 | — | Pending |
-| POOL-05 | — | Pending |
-| DFLT-01 | — | Pending |
-| DFLT-02 | — | Pending |
-| DFLT-03 | — | Pending |
-| ADPT-01 | — | Pending |
-| ADPT-02 | — | Pending |
-| ADPT-03 | — | Pending |
-| ADPT-04 | — | Pending |
-| CONF-01 | — | Pending |
-| CONF-02 | — | Pending |
-| CONF-03 | — | Pending |
-| CONF-04 | — | Pending |
-| ADUI-01 | — | Pending |
-| ADUI-02 | — | Pending |
-| ADUI-03 | — | Pending |
-| ADUI-04 | — | Pending |
-| ADUI-05 | — | Pending |
-| MNTR-01 | — | Pending |
-| MNTR-02 | — | Pending |
-| MNTR-03 | — | Pending |
-| MNTR-04 | — | Pending |
+| POOL-01 | Phase 260 | Pending |
+| POOL-02 | Phase 260 | Pending |
+| POOL-03 | Phase 260 | Pending |
+| POOL-04 | Phase 260 | Pending |
+| POOL-05 | Phase 260 | Pending |
+| DFLT-01 | Phase 260 | Pending |
+| DFLT-02 | Phase 260 | Pending |
+| DFLT-03 | Phase 260 | Pending |
+| ADPT-01 | Phase 261 | Pending |
+| ADPT-02 | Phase 261 | Pending |
+| ADPT-03 | Phase 261 | Pending |
+| ADPT-04 | Phase 261 | Pending |
+| CONF-01 | Phase 261 | Pending |
+| CONF-02 | Phase 262 | Pending |
+| CONF-03 | Phase 262 | Pending |
+| CONF-04 | Phase 261 | Pending |
+| ADUI-01 | Phase 263 | Pending |
+| ADUI-02 | Phase 263 | Pending |
+| ADUI-03 | Phase 263 | Pending |
+| ADUI-04 | Phase 263 | Pending |
+| ADUI-05 | Phase 263 | Pending |
+| MNTR-01 | Phase 264 | Pending |
+| MNTR-02 | Phase 264 | Pending |
+| MNTR-03 | Phase 264 | Pending |
+| MNTR-04 | Phase 264 | Pending |
 
 **Coverage:**
 - v1 requirements: 25 total
-- Mapped to phases: 0
-- Unmapped: 25 ⚠️
+- Mapped to phases: 25
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-25*
-*Last updated: 2026-02-25 after initial definition*
+*Last updated: 2026-02-25 after roadmap creation (traceability updated)*
