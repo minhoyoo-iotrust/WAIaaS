@@ -1,5 +1,5 @@
 export { loadConfig } from './config.js';
-export type { RelayConfig } from './config.js';
+export type { RelayConfig, PayloadConfig } from './config.js';
 export { NtfySubscriber } from './subscriber/ntfy-subscriber.js';
 export type { NtfySubscriberOpts } from './subscriber/ntfy-subscriber.js';
 export { DeviceRegistry } from './registry/device-registry.js';
@@ -8,3 +8,5 @@ export type { PushPayload } from './subscriber/message-parser.js';
 export { PushwooshProvider } from './providers/pushwoosh-provider.js';
 export { FcmProvider } from './providers/fcm-provider.js';
 export { createServer } from './server.js';
+export { ConfigurablePayloadTransformer } from './transformer/payload-transformer.js';
+export type { IPayloadTransformer } from './transformer/payload-transformer.js';
