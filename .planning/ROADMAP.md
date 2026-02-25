@@ -336,10 +336,10 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Admin Settings API를 통해 네트워크별 RPC URL을 추가/삭제/순서 변경할 수 있다
   2. RPC 목록 변경이 데몬 재시작 없이 RpcPool에 즉시 반영된다
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 262-01: SettingsService RPC URL 목록 저장 구조 + hot-reload 연동
+- [ ] 262-01-PLAN.md -- RpcPool.replaceNetwork() + rpc_pool.* SettingDefinitions + hot-reload 연동 + 통합 테스트
 
 ### Phase 263: Admin UI RPC Endpoints
 **Goal**: Admin UI의 RPC Endpoints 탭에서 네트워크별 복수 RPC URL을 시각적으로 관리할 수 있다
