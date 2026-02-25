@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 263 - Admin UI RPC Endpoints
+**Current focus:** Phase 264 - Monitoring Alerts
 
 ## Current Position
 
-Phase: 4 of 5 (Phase 263: Admin UI RPC Endpoints -- COMPLETE)
-Plan: 2 of 2 in current phase (ALL COMPLETE)
-Status: Phase 263 complete, proceeding to Phase 264
-Last activity: 2026-02-25 -- Completed 263-02 live status display + per-URL test (6 new tests, 3 files)
+Phase: 5 of 5 (Phase 264: Monitoring Alerts)
+Plan: 1 of 2 in current phase
+Status: 264-01 complete, proceeding to 264-02
+Last activity: 2026-02-25 -- Completed 264-01 RPC monitoring events + onEvent callback (44 event types, 5 new tests)
 
-Progress: [█████████░] 90%
+Progress: [█████████░] 92%
 
 ## Performance Metrics
 
@@ -28,6 +28,7 @@ Progress: [█████████░] 90%
 | 261 | 3/3 | 13min | 4.3min |
 | 262 | 1/1 | 6min | 6min |
 | 263 | 2/2 | 12min | 6min |
+| 264 | 1/2 | 4min | 4min |
 
 ## Accumulated Context
 
@@ -72,6 +73,10 @@ Progress: [█████████░] 90%
 - 263-02: Test/status composite key is network:url for per-URL state tracking
 - 263-02: networkToChain uses SOLANA_NETWORKS.includes for chain determination
 
+- 264-01: onEvent is optional callback (not EventEmitter) -- keeps RpcPool lightweight with zero dependencies
+- 264-01: RPC_HEALTH_DEGRADED emitted on every cooldown entry; RPC_ALL_FAILED only when all endpoints in cooldown
+- 264-01: RPC_RECOVERED emitted only when endpoint was in cooldown before reportSuccess
+
 ### Blockers/Concerns
 
 - [RESOLVED] 저장 방식 결정: SettingsService JSON 배열 방식 채택 (Phase 262-01에서 구현)
@@ -80,5 +85,5 @@ Progress: [█████████░] 90%
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 263-02-PLAN.md
+Stopped at: Completed 264-01-PLAN.md
 Resume file: None

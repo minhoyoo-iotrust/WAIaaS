@@ -45,10 +45,10 @@ Requirements for v28.6. Each maps to roadmap phases.
 
 ### Monitoring + Alerts
 
-- [ ] **MNTR-01**: GET /admin/rpc-status API가 네트워크별 RPC 상태를 반환한다
-- [ ] **MNTR-02**: 특정 RPC가 cooldown 진입 시 RPC_HEALTH_DEGRADED 알림이 발생한다
-- [ ] **MNTR-03**: 네트워크 전체 RPC 실패 시 RPC_ALL_FAILED 알림이 발생한다
-- [ ] **MNTR-04**: cooldown 해제 후 정상 복귀 시 RPC_RECOVERED 알림이 발생한다
+- [x] **MNTR-01**: GET /admin/rpc-status API가 네트워크별 RPC 상태를 반환한다
+- [x] **MNTR-02**: 특정 RPC가 cooldown 진입 시 RPC_HEALTH_DEGRADED 알림이 발생한다
+- [x] **MNTR-03**: 네트워크 전체 RPC 실패 시 RPC_ALL_FAILED 알림이 발생한다
+- [x] **MNTR-04**: cooldown 해제 후 정상 복귀 시 RPC_RECOVERED 알림이 발생한다
 
 ## v2 Requirements
 
@@ -99,10 +99,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ADUI-03 | Phase 263 | Complete |
 | ADUI-04 | Phase 263 | Complete |
 | ADUI-05 | Phase 263 | Complete |
-| MNTR-01 | Phase 264 | Pending |
-| MNTR-02 | Phase 264 | Pending |
-| MNTR-03 | Phase 264 | Pending |
-| MNTR-04 | Phase 264 | Pending |
+| MNTR-01 | Phase 264 | Complete |
+| MNTR-02 | Phase 264 | Complete |
+| MNTR-03 | Phase 264 | Complete |
+| MNTR-04 | Phase 264 | Complete |
 
 **Coverage:**
 - v1 requirements: 25 total
