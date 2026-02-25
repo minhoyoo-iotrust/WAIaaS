@@ -322,12 +322,12 @@ Plans:
   3. EvmAdapter의 PublicClient 생성이 RPC Pool에서 URL을 획득한다
   4. IncomingTxMonitor의 각 Subscriber가 RPC Pool을 통해 폴링한다
   5. config.toml에 단일 URL만 설정된 경우 1개짜리 Pool로 기존과 동일하게 동작한다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 261-01: RpcPool 추상 레이어를 AdapterPool에 도입하고 config.toml/환경변수 하위 호환 처리
-- [ ] 261-02: SolanaAdapter + EvmAdapter RPC Pool 경유 통합
-- [ ] 261-03: IncomingTxMonitor Subscriber RPC Pool 폴링 통합
+- [ ] 261-01-PLAN.md -- RpcPool 추상 레이어를 AdapterPool에 도입하고 config.toml/환경변수 하위 호환 처리
+- [ ] 261-02-PLAN.md -- SolanaAdapter + EvmAdapter RPC Pool 경유 통합 + hot-reload cooldown reset
+- [ ] 261-03-PLAN.md -- IncomingTxMonitor subscriberFactory RPC Pool 폴링 통합
 
 ### Phase 262: Settings Storage + Hot-Reload
 **Goal**: 관리자가 Admin Settings에서 네트워크별 RPC URL 목록을 관리하고 데몬 재시작 없이 즉시 반영된다
