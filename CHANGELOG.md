@@ -1,5 +1,32 @@
 # Changelog
 
+## [2.7.0-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.7.0-rc...v2.7.0-rc.1) (2026-02-25)
+
+
+### Features
+
+* **260-01:** implement RpcPool with priority-based URL rotation and cooldown ([bdfcde2](https://github.com/minhoyoo-iotrust/WAIaaS/commit/bdfcde26ec644212a6694bbae761ee498388d561))
+* **260-02:** add built-in RPC defaults and createWithDefaults factory ([97926b6](https://github.com/minhoyoo-iotrust/WAIaaS/commit/97926b657c961a72c0e65bbdc54e6af8a615c16f))
+* **261-01:** wire RpcPool into AdapterPool with config.toml seeding ([c0942cc](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c0942cc6ed259d014202168123dbde193366fc9b))
+* **261-02:** add RpcPool cooldown reset to hot-reload RPC handler ([5dbe336](https://github.com/minhoyoo-iotrust/WAIaaS/commit/5dbe3364810604ff74de2d90ee41e7737dd98fca))
+* **261-03:** wire IncomingTxMonitor subscriberFactory to RpcPool ([e06f933](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e06f93395ced71074474c7ecd8c3e4a3dcd43cee))
+* **262-01:** add RpcPool.replaceNetwork(), rpc_pool.* settings, and hot-reload handler ([2f167bb](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2f167bbc683c71be8477c6c2e772791e05cd54f6))
+* **263-01:** add GET /admin/rpc-status endpoint and multi-URL RPC Endpoints tab ([4bb7b09](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4bb7b0919564cff3188a2837af209dd6583ec5fc))
+* **263-02:** add live RPC pool status display and per-URL test buttons ([942d300](https://github.com/minhoyoo-iotrust/WAIaaS/commit/942d300d1e64c633e8a52b41a4a86a6d743346ca))
+* **264-01:** add onEvent callback to RpcPool for cooldown/all-failed/recovered emission ([206253a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/206253a9d24a4e15d4c8e25a05e32353a375a999))
+* **264-01:** add RPC_ALL_FAILED and RPC_RECOVERED notification events ([8f3d7e6](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8f3d7e63fb75ea1aa77c864c7131b8014f217307))
+* **264-02:** wire RpcPool onEvent to NotificationService and export RpcPoolEvent ([76eec32](https://github.com/minhoyoo-iotrust/WAIaaS/commit/76eec3245a68831883d55ebbb0c672df63d488d2))
+
+
+### Bug Fixes
+
+* **260:** export BUILT_IN_RPC_DEFAULTS from @waiaas/core barrel ([5b70017](https://github.com/minhoyoo-iotrust/WAIaaS/commit/5b7001714658d55bf740727a0c6f009937c26a8c))
+* **263-01:** remove unused vi import in admin-rpc-status test ([68a9a49](https://github.com/minhoyoo-iotrust/WAIaaS/commit/68a9a49f63cf68f46dd7ee880d906fc7f091b542))
+* guard against undefined rpcPoolStatus and update stale RPC tab tests ([c3e6ea8](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c3e6ea8c0018ac0942915f50d54b04e9bd9daf37))
+* resolve lint error and type errors in RPC pool tests ([b4f516d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b4f516d0d8aeddcfee173e74b4bfc65cbe56d1d1))
+* update NotificationEventType expected count in enum SSoT verifier ([c572fb8](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c572fb8925558fa13888b937ced1b935962d4669))
+* update snapshot counts for new RPC pool events and settings ([9d6e433](https://github.com/minhoyoo-iotrust/WAIaaS/commit/9d6e433c9338469090984d675f0aacb938dcc87b))
+
 ## [2.7.0-rc](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.6.0...v2.7.0-rc) (2026-02-25)
 
 
