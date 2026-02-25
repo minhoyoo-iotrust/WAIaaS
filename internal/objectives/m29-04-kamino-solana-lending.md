@@ -1,4 +1,4 @@
-# 마일스톤 m29-02: Solana Lending (Kamino)
+# 마일스톤 m29-04: Solana Lending (Kamino)
 
 - **Status:** PLANNED
 - **Milestone:** TBD
@@ -11,7 +11,7 @@ m28에서 구축된 Lending 프레임워크 위에 Kamino K-Lend를 Solana Lendi
 
 ## 배경
 
-m29-01에서 ILendingProvider 인터페이스, PositionTracker, HealthFactorMonitor가 EVM(Aave) 기반으로 구축된다. m29-02는 동일 프레임워크를 **Solana에 적용**하여 멀티체인 Lending을 완성한다.
+m29-02에서 ILendingProvider 인터페이스, PositionTracker, HealthFactorMonitor가 EVM(Aave) 기반으로 구축된다. m29-04는 동일 프레임워크를 **Solana에 적용**하여 멀티체인 Lending을 완성한다.
 
 Kamino는 TVL ~$3.5B으로 Solana 최대 대출 프로토콜이다. K-Lend V2는 대출/차입, 자동 유동성 관리, 레버리지 수익 전략을 제공하며, 풀스택 TypeScript SDK(`@kamino-finance/klend-sdk`)로 프로그래밍 통합이 용이하다.
 
@@ -75,7 +75,7 @@ packages/actions/src/
 | # | 결정 항목 | 선택지 | 결정 근거 |
 |---|----------|--------|----------|
 | 1 | 통합 방식 | @kamino-finance/klend-sdk | Kamino는 Solana 프로그램 호출이 복잡(obligation 계정, reserve 조회 등). SDK가 instruction 빌딩을 추상화. ABI 직접 호출보다 SDK가 효율적 |
-| 2 | Lending 프레임워크 호환 | ILendingProvider 구현 | m29-01에서 정의한 supply/borrow/repay/withdraw 4개 표준 액션 + getPosition/getHealthFactor. Aave와 동일 인터페이스로 Admin UI/정책이 프로토콜 무관하게 동작 |
+| 2 | Lending 프레임워크 호환 | ILendingProvider 구현 | m29-02에서 정의한 supply/borrow/repay/withdraw 4개 표준 액션 + getPosition/getHealthFactor. Aave와 동일 인터페이스로 Admin UI/정책이 프로토콜 무관하게 동작 |
 | 3 | Market 선택 | Admin Settings에서 기본 market 지정 | Kamino는 Main/JLP/Altcoin 등 복수 market 운영. 기본값은 main market, 액션 파라미터로 오버라이드 가능 |
 
 ---
@@ -101,7 +101,7 @@ packages/actions/src/
 
 | 의존 대상 | 이유 |
 |----------|------|
-| m29-01 (Aave + Lending 프레임워크) | ILendingProvider, PositionTracker, HealthFactorMonitor, LendingPolicyEvaluator, positions 테이블 |
+| m29-02 (Aave + Lending 프레임워크) | ILendingProvider, PositionTracker, HealthFactorMonitor, LendingPolicyEvaluator, positions 테이블 |
 | v1.5 (가격 오라클) | Kamino 포지션 USD 환산 |
 | v1.4.6 (Solana 인프라) | SolanaAdapter, ContractCallRequest(Solana) |
 
@@ -124,10 +124,10 @@ packages/actions/src/
 | 페이즈 | 2개 (KaminoLendingProvider + SDK 래퍼 1 / MCP+SDK+Admin UI 확장 1) |
 | 신규/수정 파일 | 10-14개 |
 | 테스트 | 8-12개 |
-| DB 마이그레이션 | 없음 (m29-01 positions 테이블 재사용) |
+| DB 마이그레이션 | 없음 (m29-02 positions 테이블 재사용) |
 
 ---
 
 *생성일: 2026-02-15*
-*선행: m29-01 (Aave V3 + Lending 프레임워크)*
+*선행: m29-02 (Aave V3 + Lending 프레임워크)*
 *관련: Kamino (https://docs.kamino.finance/), @kamino-finance/klend-sdk*

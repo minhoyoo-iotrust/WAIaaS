@@ -1,4 +1,4 @@
-# 마일스톤 m30-03: ERC-4337 Account Abstraction 지원
+# 마일스톤 m30-06: ERC-4337 Account Abstraction 지원
 
 - **Status:** PLANNED
 - **Milestone:** TBD
@@ -30,7 +30,7 @@ AI 에이전트: "USDC를 DAI로 스왑해줘" (ETH 잔고 0)
 EOA (현재):
   → INSUFFICIENT_BALANCE 에러 (가스비 ETH 없음)
 
-스마트 어카운트 (m30-03):
+스마트 어카운트 (m30-06):
   1. UserOperation 생성 (APPROVE + SWAP 배치)
   2. Paymaster가 가스비 스폰서 (에이전트는 USDC에서 수수료 차감)
   3. Bundler가 UserOperation 제출 → 단일 원자적 실행
@@ -160,7 +160,7 @@ skills/
 | 2 | Bundler/Paymaster 연동 | 외부 서비스(Pimlico, Stackup, Alchemy 등) URL 설정 | Self-hosted Bundler는 운영 부담 과다. 호스팅 서비스를 Admin Settings URL로 설정. 인터페이스는 ERC-4337 표준 RPC이므로 서비스 교체 용이 |
 | 3 | 기존 EOA 호환 | accountType 옵션으로 공존 | EOA 지갑은 변경 없이 유지. 신규 지갑 생성 시 `accountType: "smart"` 선택. 기존 에이전트 코드 영향 없음 |
 | 4 | 배포 시점 | 첫 트랜잭션 시 (lazy deployment) | CREATE2 예측 주소로 미배포 상태에서도 주소 확정. 가스비 절약 (사용 시점까지 배포 지연). 입금 수신은 미배포 상태에서도 가능 |
-| 5 | ERC-7579 모듈 지원 | m30-03에서는 기본 구조만, 모듈 시스템은 향후 확장 | ERC-7579 모듈(Validator/Executor/Hook)은 복잡도 높음. 기본 스마트 어카운트(Paymaster+배치)만 먼저 구현하고, 모듈 시스템은 사용자 수요 확인 후 |
+| 5 | ERC-7579 모듈 지원 | m30-06에서는 기본 구조만, 모듈 시스템은 향후 확장 | ERC-7579 모듈(Validator/Executor/Hook)은 복잡도 높음. 기본 스마트 어카운트(Paymaster+배치)만 먼저 구현하고, 모듈 시스템은 사용자 수요 확인 후 |
 | 6 | Solana 지원 범위 | EVM 전용 | ERC-4337은 EVM 표준. Solana는 프로그램 기반 계정 모델이 이미 유사한 기능 제공 (PDA, CPI). Solana AA는 별도 검토 |
 | 7 | EntryPoint 버전 | v0.7 (최신) | v0.6은 레거시. v0.7이 가스 효율성 개선 + 최신 Bundler/Paymaster 서비스 지원 |
 | 8 | 설정 위치 | Admin Settings (런타임 조정) | Bundler/Paymaster URL과 API 키를 데몬 재시작 없이 변경 가능. 보안 자격증명은 마스킹 표시 |
@@ -223,7 +223,7 @@ skills/
 | 의존 대상 | 이유 |
 |----------|------|
 | m28-m29 (DeFi 프로토콜) | DeFi가 EOA 기반으로 안정화된 후 스마트 어카운트 도입. 배치 트랜잭션(APPROVE+SWAP) 원자성이 DeFi에서 가장 큰 가치 |
-| m30-00~m30-01 (운영 기능) | Audit Log, Dry-Run 등 운영 인프라가 스마트 어카운트 디버깅에 필요 |
+| m30-00~m30-02 (운영 기능) | Audit Log, Dry-Run 등 운영 인프라가 스마트 어카운트 디버깅에 필요 |
 | v1.4 (EVM 인프라) | EvmAdapter, viem 2.x 기반 위에 스마트 어카운트 레이어 추가 |
 
 ---
@@ -253,5 +253,5 @@ skills/
 ---
 
 *생성일: 2026-02-20*
-*선행: m30-00~m30-01 (운영 기능 확장)*
+*선행: m30-00~m30-02 (운영 기능 확장)*
 *관련: PROJECT.md 범위 외 → 별도 마일스톤으로 승격*

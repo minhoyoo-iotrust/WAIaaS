@@ -1,7 +1,8 @@
 # 마일스톤 m28-04: Liquid Staking (Lido + Jito)
 
-- **Status:** PLANNED
+- **Status:** SHIPPED
 - **Milestone:** v28.4
+- **Completed:** 2026-02-24
 
 ## 목표
 

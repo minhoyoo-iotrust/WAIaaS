@@ -1,7 +1,8 @@
 # 마일스톤 m28-05: 가스비 조건부 실행
 
-- **Status:** PLANNED
+- **Status:** SHIPPED
 - **Milestone:** v28.5
+- **Completed:** 2026-02-25
 
 ## 목표
 

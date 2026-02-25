@@ -1,4 +1,4 @@
-# 마일스톤 m28-07: RPC Pool — 멀티 엔드포인트 로테이션
+# 마일스톤 m28-06: RPC Pool — 멀티 엔드포인트 로테이션
 
 - **Status:** PLANNED
 - **Milestone:** v28.7

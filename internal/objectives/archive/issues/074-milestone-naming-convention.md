@@ -103,18 +103,18 @@ m15-02-0x-evm-swap.md                 ← 하위 프로토콜
 | `v2.3.3-lifi-crosschain-bridge.md` | `m28-03-lifi-crosschain-bridge.md` | 서브 |
 | `v2.3.4-liquid-staking.md` | `m28-04-liquid-staking.md` | 서브 |
 | `v2.4-defi-advanced-protocol-design.md` | `m29-defi-advanced-protocol-design.md` | |
-| `v2.4.1-aave-evm-lending.md` | `m29-01-aave-evm-lending.md` | 서브 |
-| `v2.4.2-kamino-solana-lending.md` | `m29-02-kamino-solana-lending.md` | 서브 |
-| `v2.4.3-pendle-yield-trading.md` | `m29-03-pendle-yield-trading.md` | 서브 |
-| `v2.4.4-drift-solana-perp.md` | `m29-04-drift-solana-perp.md` | 서브 |
-| `v2.4.5-morpho-evm-lending.md` | `m29-05-morpho-evm-lending.md` | 서브 |
-| `v2.4.6-marinade-sol-staking.md` | `m29-06-marinade-sol-staking.md` | 서브 |
-| `v2.4.7-cow-protocol-mev-free-swap.md` | `m29-07-cow-protocol-mev-free-swap.md` | 서브 |
+| `v2.4.1-aave-evm-lending.md` | `m29-02-aave-evm-lending.md` | 서브 |
+| `v2.4.2-kamino-solana-lending.md` | `m29-04-kamino-solana-lending.md` | 서브 |
+| `v2.4.3-pendle-yield-trading.md` | `m29-06-pendle-yield-trading.md` | 서브 |
+| `v2.4.4-drift-solana-perp.md` | `m29-08-drift-solana-perp.md` | 서브 |
+| `v2.4.5-morpho-evm-lending.md` | `m29-10-morpho-evm-lending.md` | 서브 |
+| `v2.4.6-marinade-sol-staking.md` | `m29-12-marinade-sol-staking.md` | 서브 |
+| `v2.4.7-cow-protocol-mev-free-swap.md` | `m29-14-cow-protocol-mev-free-swap.md` | 서브 |
 | `v2.5-operational-features-design.md` | `m30-operational-features-design.md` | |
-| `v2.5.1-operational-features-impl.md` | `m30-01-operational-features-impl.md` | 서브 |
-| `v2.5.2-master-password-change.md` | `m30-02-master-password-change.md` | 서브 |
+| `v2.5.1-operational-features-impl.md` | `m30-02-operational-features-impl.md` | 서브 |
+| `v2.5.2-master-password-change.md` | `m30-04-master-password-change.md` | 서브 |
 | `v2.6-desktop-architecture-redesign.md` | `m31-desktop-architecture-redesign.md` | |
-| `v2.6.1-desktop-app.md` | `m31-01-desktop-app.md` | 서브 |
+| `v2.6.1-desktop-app.md` | `m31-02-desktop-app.md` | 서브 |
 
 ### 이슈 파일 명명
 

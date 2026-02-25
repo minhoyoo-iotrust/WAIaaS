@@ -1,17 +1,17 @@
-# 마일스톤 m29-05: EVM Lending 확장 (Morpho)
+# 마일스톤 m29-10: EVM Lending 확장 (Morpho)
 
 - **Status:** PLANNED
 - **Milestone:** TBD
 
 ## 목표
 
-m29-01 Lending 프레임워크 위에 Morpho Blue를 추가 Lending Provider로 구현하여, AI 에이전트가 Aave 외에 Morpho의 모듈형 대출 시장에서도 자산 예치/차입을 실행할 수 있는 상태.
+m29-02 Lending 프레임워크 위에 Morpho Blue를 추가 Lending Provider로 구현하여, AI 에이전트가 Aave 외에 Morpho의 모듈형 대출 시장에서도 자산 예치/차입을 실행할 수 있는 상태.
 
 ---
 
 ## 배경
 
-Morpho는 TVL ~$8B으로 Base 최대 대출 프로토콜이며, 12 EVM 체인을 지원한다. Aave(m29-01)와 달리 **모듈형 아키텍처**(Morpho Blue + MetaMorpho Vault)로, 커스텀 대출 시장을 생성할 수 있다.
+Morpho는 TVL ~$8B으로 Base 최대 대출 프로토콜이며, 12 EVM 체인을 지원한다. Aave(m29-02)와 달리 **모듈형 아키텍처**(Morpho Blue + MetaMorpho Vault)로, 커스텀 대출 시장을 생성할 수 있다.
 
 ### Aave vs Morpho
 
@@ -23,7 +23,7 @@ Morpho는 TVL ~$8B으로 Base 최대 대출 프로토콜이며, 12 EVM 체인을
 | Vault | 없음 | MetaMorpho (큐레이터 관리) |
 | 강점 | 안정성, 유동성 | 자본 효율, 유연성 |
 
-m29-01의 ILendingProvider 인터페이스를 그대로 구현하므로, Admin UI/정책/포지션 추적이 프로토콜 무관하게 동작한다.
+m29-02의 ILendingProvider 인터페이스를 그대로 구현하므로, Admin UI/정책/포지션 추적이 프로토콜 무관하게 동작한다.
 
 ---
 
@@ -70,7 +70,7 @@ const MorphoVaultDepositInputSchema = z.object({
 
 | # | 결정 항목 | 선택지 | 결정 근거 |
 |---|----------|--------|----------|
-| 1 | 통합 방식 | REST API + 컨트랙트 ABI | Morpho REST API로 시장 데이터 조회, 컨트랙트 ABI로 트랜잭션 실행. Aave(m29-01)와 동일 패턴 |
+| 1 | 통합 방식 | REST API + 컨트랙트 ABI | Morpho REST API로 시장 데이터 조회, 컨트랙트 ABI로 트랜잭션 실행. Aave(m29-02)와 동일 패턴 |
 | 2 | Vault 지원 | MetaMorpho Vault 포함 | Vault는 단일 자산 예치 → 큐레이터가 최적 시장 배분. ERC-4626 표준이라 deposit/withdraw 단순 |
 | 3 | 시장 선택 | marketId 파라미터 | Morpho는 수천 개의 개별 시장이 존재. 사용자가 시장을 명시적으로 선택. 추천 시장은 MCP 도구 설명에 안내 |
 
@@ -95,7 +95,7 @@ const MorphoVaultDepositInputSchema = z.object({
 
 | 의존 대상 | 이유 |
 |----------|------|
-| m29-01 (Lending 프레임워크) | ILendingProvider, PositionTracker, HealthFactorMonitor, positions 테이블 |
+| m29-02 (Lending 프레임워크) | ILendingProvider, PositionTracker, HealthFactorMonitor, positions 테이블 |
 | v1.5 (가격 오라클) | 포지션 USD 환산 |
 
 ---
@@ -116,10 +116,10 @@ const MorphoVaultDepositInputSchema = z.object({
 | 페이즈 | 1-2개 |
 | 신규/수정 파일 | 8-12개 |
 | 테스트 | 6-10개 |
-| DB 마이그레이션 | 없음 (m29-01 positions 테이블 재사용) |
+| DB 마이그레이션 | 없음 (m29-02 positions 테이블 재사용) |
 
 ---
 
 *생성일: 2026-02-15*
-*선행: m29-01 (Aave V3 + Lending 프레임워크)*
+*선행: m29-02 (Aave V3 + Lending 프레임워크)*
 *관련: Morpho (https://docs.morpho.org/)*

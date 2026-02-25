@@ -1,7 +1,8 @@
 # 마일스톤 m28-01: Jupiter Swap (첫 번째 Action Provider 구현체)
 
-- **Status:** PLANNED
+- **Status:** SHIPPED
 - **Milestone:** v28.1
+- **Completed:** 2026-02-23
 
 ## 목표
 

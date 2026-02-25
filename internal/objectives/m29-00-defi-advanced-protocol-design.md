@@ -5,7 +5,7 @@
 
 ## 목표
 
-상태를 가진 DeFi 포지션(담보/차입, 수익률 거래, 레버리지 트레이딩)을 관리하기 위한 3개 프레임워크(ILendingProvider, IYieldProvider, IPerpProvider)와 공통 인프라(PositionTracker, HealthFactorMonitor, MarginMonitor)를 설계 수준에서 정의한다. 7개 프로토콜(Aave, Kamino, Pendle, Drift, Morpho, Marinade, CoW)의 공통 설계를 확정하여 m29-01~m29-07 구현 마일스톤의 입력을 생산한다.
+상태를 가진 DeFi 포지션(담보/차입, 수익률 거래, 레버리지 트레이딩)을 관리하기 위한 3개 프레임워크(ILendingProvider, IYieldProvider, IPerpProvider)와 공통 인프라(PositionTracker, HealthFactorMonitor, MarginMonitor)를 설계 수준에서 정의한다. 7개 프로토콜(Aave, Kamino, Pendle, Drift, Morpho, Marinade, CoW)의 공통 설계를 확정하여 m29-02~m29-14 구현 마일스톤의 입력을 생산한다.
 
 ---
 
@@ -32,8 +32,8 @@ m29-xx (포지션):  resolve() → ContractCallRequest → 실행 → 포지션 
 
 | 마일스톤 | 프로토콜 | 패턴 |
 |---------|----------|------|
-| m29-06 | Marinade | m28-04 Staking 패턴 재사용 |
-| m29-07 | CoW Protocol | Intent/EIP-712 서명 신규 패턴 |
+| m29-12 | Marinade | m28-04 Staking 패턴 재사용 |
+| m29-14 | CoW Protocol | Intent/EIP-712 서명 신규 패턴 |
 
 ---
 
@@ -57,7 +57,7 @@ ILendingProvider extends IActionProvider
 | 포지션 모델 | type: SUPPLY / BORROW, provider, asset, amount, apy, updated_at |
 | 헬스 팩터 | 담보 가치 / 차입 가치 비율. 1.0 미만 시 청산. 기본 경고 임계값 1.2 |
 | 정책 확장 | LendingPolicyEvaluator — 최대 LTV 제한, 허용 담보/차입 자산 화이트리스트 |
-| 대상 구현체 | Aave V3 (m29-01), Kamino (m29-02), Morpho (m29-05) |
+| 대상 구현체 | Aave V3 (m29-02), Kamino (m29-04), Morpho (m29-10) |
 
 #### 1.3 설계 산출물
 
@@ -85,7 +85,7 @@ IYieldProvider extends IActionProvider
 | 인터페이스 | IYieldProvider — IActionProvider 확장, 5개 표준 액션 + 3개 조회 메서드 |
 | 포지션 모델 | token_type: PT / YT / LP, market_id, amount, entry_price, maturity, apy |
 | 만기 관리 | MaturityMonitor — 만기 7일 전/1일 전 알림, 만기 후 미상환 경고 |
-| 대상 구현체 | Pendle (m29-03) |
+| 대상 구현체 | Pendle (m29-06) |
 
 #### 2.3 설계 산출물
 
@@ -114,7 +114,7 @@ IPerpProvider extends IActionProvider
 | 포지션 모델 | direction: LONG / SHORT, market, size, entry_price, leverage, unrealized_pnl, margin, liquidation_price |
 | 마진 모니터링 | MarginMonitor — 유지 마진 임계값 접근 시 MARGIN_WARNING, 청산 가격 접근 시 LIQUIDATION_IMMINENT |
 | 정책 확장 | PerpPolicyEvaluator — 최대 레버리지 제한, 최대 포지션 크기(USD), 허용 시장 화이트리스트 |
-| 대상 구현체 | Drift (m29-04) |
+| 대상 구현체 | Drift (m29-08) |
 
 #### 3.3 설계 산출물
 
@@ -222,7 +222,7 @@ IPerpProvider extends IActionProvider
 
 ## 성공 기준
 
-1. 3개 프레임워크의 인터페이스가 확정되어 m29-01에서 바로 구현 가능
+1. 3개 프레임워크의 인터페이스가 확정되어 m29-02에서 바로 구현 가능
 2. positions 테이블 스키마가 Lending/Yield/Perp/Staking을 통합 수용
 3. 모니터링 패턴이 3개 모니터에 일관되게 적용 가능
 4. Intent 패턴이 기존 ContractCallRequest 패턴과 공존하는 구조 확정
@@ -231,6 +231,6 @@ IPerpProvider extends IActionProvider
 ---
 
 *생성일: 2026-02-15*
-*범위: 설계 마일스톤 — 코드 구현은 m29-01~m29-07에서 수행*
+*범위: 설계 마일스톤 — 코드 구현은 m29-02~m29-14에서 수행*
 *선행: m28 (기본 DeFi 프로토콜 설계), v1.5 (Action Provider 프레임워크)*
 *관련: 설계 문서 62 (action-provider-architecture)*

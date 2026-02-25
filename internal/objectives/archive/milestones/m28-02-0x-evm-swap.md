@@ -1,7 +1,8 @@
 # 마일스톤 m28-02: 0x EVM DEX Swap
 
-- **Status:** PLANNED
+- **Status:** SHIPPED
 - **Milestone:** v28.2
+- **Completed:** 2026-02-24
 
 ## 목표
 
