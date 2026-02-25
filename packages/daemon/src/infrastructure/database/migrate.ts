@@ -55,7 +55,7 @@ const inList = (values: readonly string[]) => values.map((v) => `'${v}'`).join('
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 23;
+export const LATEST_SCHEMA_VERSION = 24;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -75,7 +75,8 @@ function getCreateTableStatements(): string[] {
   suspended_at INTEGER,
   suspension_reason TEXT,
   monitor_incoming INTEGER NOT NULL DEFAULT 0,
-  owner_approval_method TEXT CHECK (owner_approval_method IS NULL OR owner_approval_method IN ('sdk_ntfy', 'sdk_telegram', 'walletconnect', 'telegram_bot', 'rest'))
+  owner_approval_method TEXT CHECK (owner_approval_method IS NULL OR owner_approval_method IN ('sdk_ntfy', 'sdk_telegram', 'walletconnect', 'telegram_bot', 'rest')),
+  wallet_type TEXT
 )`,
 
     // Table 2: sessions (v26.4: wallet_id removed, v26.5: token_issued_count added)
@@ -1672,6 +1673,20 @@ MIGRATIONS.push({
     if (fkErrors.length > 0) {
       throw new Error(`FK integrity violation after v23: ${JSON.stringify(fkErrors)}`);
     }
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Migration v24: Add wallet_type column to wallets table for preset auto-setup
+// ---------------------------------------------------------------------------
+// Simple ALTER TABLE ADD COLUMN -- nullable TEXT, no CHECK constraint (validated at app level via Zod).
+// Supports wallet preset auto-setup (v28.8): stores the preset type identifier.
+
+MIGRATIONS.push({
+  version: 24,
+  description: 'Add wallet_type column to wallets table for preset auto-setup',
+  up: (sqlite) => {
+    sqlite.exec('ALTER TABLE wallets ADD COLUMN wallet_type TEXT');
   },
 });
 
