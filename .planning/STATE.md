@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v28.5 가스비 조건부 실행 -- Phase 258 complete, Phase 259 next
+**Current focus:** v28.5 가스비 조건부 실행 -- Phase 259 plan 01 complete, plan 02 next
 
 ## Current Position
 
 Phase: 259 of 259 (REST API + Admin + MCP + SDK 통합)
-Plan: 259-01 of 2 (next: REST API gasCondition + Admin Settings + Admin UI)
-Status: Phase 258 complete, ready for Phase 259
-Last activity: 2026-02-25 -- 258-02 complete (GasConditionTracker + Worker + Settings + daemon lifecycle)
+Plan: 259-02 of 2 (next: MCP gasCondition tools + SDK sendTransfer gasCondition + TX_CANCELLED gap fix)
+Status: Phase 259 in progress -- plan 01 complete (4 tasks), plan 02 pending (6 tasks)
+Last activity: 2026-02-25 -- 259-01 executed (REST API gasCondition + Admin Settings + Admin UI)
 
-Progress: [█████░░░░░] 50%
+Progress: [███████░░░] 75%
 
 ## Performance Metrics
 
@@ -24,6 +24,7 @@ Progress: [█████░░░░░] 50%
 | ----- | ---- | -------- | ----- | ----- |
 | 258   | 01   | 7min     | 5     | 11    |
 | 258   | 02   | 25min    | 5     | 8     |
+| 259   | 01   | 10min    | 4     | 6     |
 
 ## Accumulated Context
 
@@ -42,6 +43,8 @@ Progress: [█████░░░░░] 50%
 - gas-condition COMPLETED → GAS_WAITING→PENDING 전환 후 executeFromStage4로 파이프라인 재진입
 - resumePipeline은 reservation 해제 안 함 -- 온체인 실행에 자금 필요
 - executeFromStage4는 stage4Wait 건너뜀 -- 정책은 GAS_WAITING 진입 전 이미 평가됨
+- GasConditionOpenAPI는 documentation-only z.object -- core GasConditionSchema.refine()은 OpenAPI 호환 불가
+- gas_condition 카테고리를 SettingsResponseSchema에 추가 -- Admin Settings API 응답 타입 일치
 
 ### Blockers/Concerns
 
@@ -50,6 +53,6 @@ Progress: [█████░░░░░] 50%
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 258-02-PLAN.md (5 tasks, 5 commits)
-Resume file: .planning/phases/258-gas-condition-core-pipeline/258-CONTEXT.md
-Resume instructions: Phase 258 complete. Execute Phase 259 (REST API gasCondition + Admin Settings + MCP + SDK)
+Stopped at: Completed 259-01-PLAN.md (4 tasks, 10min)
+Resume file: .planning/phases/259-external-interface-integration/259-CONTEXT.md
+Resume instructions: Execute Phase 259-02 (wave 2, 6 tasks): MCP tools + SDK + TX_CANCELLED gap fix

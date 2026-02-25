@@ -307,11 +307,11 @@ Plans:
   2. Admin Settings에서 gas_condition 5개 키(enabled/poll_interval_sec/default_timeout_sec/max_timeout_sec/max_pending_count)를 런타임 변경할 수 있고, Admin UI System > Settings에 Gas Condition 설정 섹션이 표시된다
   3. MCP send_token/call_contract 등 도구와 TS/Python SDK에서 gasCondition 파라미터가 노출되어 에이전트가 사용할 수 있다
   4. ActionProvider resolve 후 gasCondition이 적용되어 DeFi 트랜잭션에서도 가스 조건부 실행이 동작하고, transactions.skill.md에 가스 조건부 실행 가이드가 포함된다
-**Plans**: TBD
+**Plans**:
 
 Plans:
-- [ ] 259-01: REST API gasCondition 필드 + Admin Settings 5키 + Admin UI 설정 섹션
-- [ ] 259-02: MCP + SDK + ActionProvider gasCondition 통합 + Skill 파일 업데이트
+- [ ] 259-01: REST API gasCondition 필드 + Admin Settings 5키 + Admin UI 설정 섹션 + TX_CANCELLED 알림 갭 수정 (wave 1, 5 tasks)
+- [ ] 259-02: MCP + SDK + ActionProvider gasCondition 통합 + Skill 파일 업데이트 (wave 2, 6 tasks)
 
 ## Progress
 
@@ -321,7 +321,7 @@ Phases execute in numeric order: 258 -> 259
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 258. GasCondition 코어 파이프라인 | v28.5 | Complete    | 2026-02-24 | 2026-02-25 |
-| 259. 외부 인터페이스 통합 | v28.5 | 0/2 | Not started | - |
+| 259. 외부 인터페이스 통합 | 1/2 | In Progress|  | - |
 
 ---
 *Roadmap created: 2026-02-25*
