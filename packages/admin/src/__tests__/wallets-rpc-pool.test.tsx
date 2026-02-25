@@ -1,7 +1,7 @@
 /**
  * Tests for RPC Pool multi-URL tab in Wallets page.
  *
- * 7 tests covering:
+ * 13 tests covering:
  * 1. Renders network sections with URLs from settings
  * 2. Add URL form appends to list
  * 3. Delete button removes user URL
@@ -9,6 +9,12 @@
  * 5. Reorder buttons move URLs up/down
  * 6. Save sends rpc_pool.* JSON arrays via PUT /admin/settings
  * 7. Discard resets dirty state
+ * 8. Displays available status for URLs from rpc-status polling
+ * 9. Displays cooldown status with remaining time and failure count
+ * 10. Test button calls POST /admin/settings/test-rpc with correct chain
+ * 11. Test result displays latency and block number on success
+ * 12. Test result displays error on failure
+ * 13. formatCooldown via rendering (tested through cooldown display)
  *
  * @see packages/admin/src/pages/wallets.tsx
  */
@@ -124,15 +130,20 @@ const mockWallets = {
   total: 0,
 };
 
+/** Default rpc-status response (all URLs unknown / empty) */
+const defaultRpcStatusResponse = { networks: {} };
+
 /** Navigate to wallets page and switch to RPC Endpoints tab */
-async function renderAndNavigateToRpcTab() {
+async function renderAndNavigateToRpcTab(rpcStatusOverride?: Record<string, unknown>) {
   currentPath.value = '/wallets';
 
   const settingsData = mockSettingsWithRpcPool();
+  const rpcStatusData = rpcStatusOverride ?? defaultRpcStatusResponse;
 
   vi.mocked(apiGet).mockImplementation((path: string) => {
     if (path === '/v1/wallets') return Promise.resolve(mockWallets);
     if (path === '/v1/admin/settings') return Promise.resolve(settingsData);
+    if (path === '/v1/admin/rpc-status') return Promise.resolve(rpcStatusData);
     if (path.includes('/balance')) return Promise.resolve({ balances: [] });
     return Promise.resolve({});
   });
@@ -266,6 +277,7 @@ describe('RPC Pool multi-URL tab', () => {
     vi.mocked(apiGet).mockImplementation((path: string) => {
       if (path === '/v1/wallets') return Promise.resolve(mockWallets);
       if (path === '/v1/admin/settings') return Promise.resolve(settingsData);
+      if (path === '/v1/admin/rpc-status') return Promise.resolve(defaultRpcStatusResponse);
       return Promise.resolve({});
     });
 
@@ -313,6 +325,7 @@ describe('RPC Pool multi-URL tab', () => {
     vi.mocked(apiGet).mockImplementation((path: string) => {
       if (path === '/v1/wallets') return Promise.resolve(mockWallets);
       if (path === '/v1/admin/settings') return Promise.resolve(settingsData);
+      if (path === '/v1/admin/rpc-status') return Promise.resolve(defaultRpcStatusResponse);
       return Promise.resolve({});
     });
 
@@ -401,5 +414,172 @@ describe('RPC Pool multi-URL tab', () => {
     await waitFor(() => {
       expect(screen.queryByText('https://temp-url.com')).toBeNull();
     });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Plan 02: Live status display + per-URL test button
+  // ---------------------------------------------------------------------------
+
+  it('should display available status for URLs from rpc-status polling', async () => {
+    const rpcStatus = {
+      networks: {
+        mainnet: [
+          { url: 'https://custom-solana.rpc.com', status: 'available', failureCount: 0, cooldownRemainingMs: 0 },
+          { url: 'https://api.mainnet-beta.solana.com', status: 'available', failureCount: 0, cooldownRemainingMs: 0 },
+        ],
+      },
+    };
+
+    await renderAndNavigateToRpcTab(rpcStatus);
+
+    // Expand Solana Mainnet
+    fireEvent.click(screen.getByText('Solana Mainnet'));
+
+    await waitFor(() => {
+      expect(screen.getByText('https://custom-solana.rpc.com')).toBeTruthy();
+    });
+
+    // Should show "Available" status text
+    const availableTexts = screen.getAllByText('Available');
+    expect(availableTexts.length).toBeGreaterThan(0);
+  });
+
+  it('should display cooldown status with remaining time and failure count', async () => {
+    const rpcStatus = {
+      networks: {
+        mainnet: [
+          { url: 'https://custom-solana.rpc.com', status: 'cooldown', failureCount: 2, cooldownRemainingMs: 45000 },
+        ],
+      },
+    };
+
+    await renderAndNavigateToRpcTab(rpcStatus);
+
+    // Expand Solana Mainnet
+    fireEvent.click(screen.getByText('Solana Mainnet'));
+
+    await waitFor(() => {
+      expect(screen.getByText('https://custom-solana.rpc.com')).toBeTruthy();
+    });
+
+    // Should show "Cooldown" status
+    expect(screen.getByText('Cooldown')).toBeTruthy();
+
+    // Should show remaining time "45s remaining"
+    expect(screen.getByText('45s remaining')).toBeTruthy();
+
+    // Should show failure count badge "2 fails"
+    expect(screen.getByText('2 fails')).toBeTruthy();
+  });
+
+  it('should call POST /admin/settings/test-rpc with correct chain for Solana', async () => {
+    vi.mocked(apiPost).mockResolvedValue({
+      success: true,
+      latencyMs: 42,
+      blockNumber: 123456,
+    });
+
+    await renderAndNavigateToRpcTab();
+
+    // Expand Solana Mainnet
+    fireEvent.click(screen.getByText('Solana Mainnet'));
+
+    await waitFor(() => {
+      expect(screen.getByText('https://custom-solana.rpc.com')).toBeTruthy();
+    });
+
+    // Find and click the first Test button
+    const testButtons = screen.getAllByText('Test');
+    fireEvent.click(testButtons[0]);
+
+    await waitFor(() => {
+      expect(vi.mocked(apiPost)).toHaveBeenCalledWith(
+        '/v1/admin/settings/test-rpc',
+        { url: 'https://custom-solana.rpc.com', chain: 'solana' },
+      );
+    });
+  });
+
+  it('should display latency and block number on test success', async () => {
+    vi.mocked(apiPost).mockResolvedValue({
+      success: true,
+      latencyMs: 42,
+      blockNumber: 123456,
+    });
+
+    await renderAndNavigateToRpcTab();
+
+    // Expand Solana Mainnet
+    fireEvent.click(screen.getByText('Solana Mainnet'));
+
+    await waitFor(() => {
+      expect(screen.getByText('https://custom-solana.rpc.com')).toBeTruthy();
+    });
+
+    // Click Test button
+    const testButtons = screen.getAllByText('Test');
+    fireEvent.click(testButtons[0]);
+
+    // Wait for test result to appear
+    await waitFor(() => {
+      expect(screen.getByText('OK')).toBeTruthy();
+    });
+
+    // Check latency and block number in rendered output
+    expect(screen.getByText(/42ms/)).toBeTruthy();
+    expect(screen.getByText(/block #123,456/)).toBeTruthy();
+  });
+
+  it('should display error message on test failure', async () => {
+    vi.mocked(apiPost).mockResolvedValue({
+      success: false,
+      latencyMs: 0,
+      error: 'Connection refused',
+    });
+
+    await renderAndNavigateToRpcTab();
+
+    // Expand Solana Mainnet
+    fireEvent.click(screen.getByText('Solana Mainnet'));
+
+    await waitFor(() => {
+      expect(screen.getByText('https://custom-solana.rpc.com')).toBeTruthy();
+    });
+
+    // Click Test button
+    const testButtons = screen.getAllByText('Test');
+    fireEvent.click(testButtons[0]);
+
+    // Wait for FAIL result
+    await waitFor(() => {
+      expect(screen.getByText('FAIL')).toBeTruthy();
+    });
+
+    // Check error message
+    expect(screen.getByText(/Connection refused/)).toBeTruthy();
+  });
+
+  it('should format cooldown times correctly via rendering', async () => {
+    // Test various cooldown durations through the UI
+    const rpcStatus = {
+      networks: {
+        mainnet: [
+          { url: 'https://custom-solana.rpc.com', status: 'cooldown', failureCount: 3, cooldownRemainingMs: 125000 },
+        ],
+      },
+    };
+
+    await renderAndNavigateToRpcTab(rpcStatus);
+
+    // Expand Solana Mainnet
+    fireEvent.click(screen.getByText('Solana Mainnet'));
+
+    await waitFor(() => {
+      expect(screen.getByText('https://custom-solana.rpc.com')).toBeTruthy();
+    });
+
+    // 125000ms -> "2m 5s remaining"
+    expect(screen.getByText('2m 5s remaining')).toBeTruthy();
+    expect(screen.getByText('3 fails')).toBeTruthy();
   });
 });
