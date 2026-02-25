@@ -53,6 +53,22 @@ const POLICY_TYPES = [
   { label: 'x402 Allowed Domains', value: 'X402_ALLOWED_DOMAINS' },
 ];
 
+/** One-line description for each policy type (#183). */
+const POLICY_DESCRIPTIONS: Record<string, string> = {
+  SPENDING_LIMIT: 'Set per-transaction and cumulative spending limits by security tier (instant, notify, delay, approval).',
+  WHITELIST: 'Allow transfers only to pre-approved recipient addresses.',
+  TIME_RESTRICTION: 'Restrict transactions to specific time windows or days of the week.',
+  RATE_LIMIT: 'Limit the maximum number of transactions within a time window.',
+  ALLOWED_TOKENS: 'Allow only specified tokens for transfers; all others are denied.',
+  CONTRACT_WHITELIST: 'Allow contract calls only to pre-approved contract addresses.',
+  METHOD_WHITELIST: 'Allow only specific contract methods (function selectors) to be called.',
+  APPROVED_SPENDERS: 'Allow token approvals only for pre-approved spender addresses.',
+  APPROVE_AMOUNT_LIMIT: 'Set maximum token approval amounts and optionally block unlimited approvals.',
+  APPROVE_TIER_OVERRIDE: 'Force a specific security tier for all token approval transactions.',
+  ALLOWED_NETWORKS: 'Restrict transactions to specific blockchain networks only.',
+  X402_ALLOWED_DOMAINS: 'Allow x402 payments only to pre-approved domains.',
+};
+
 const DEFAULT_RULES: Record<string, Record<string, unknown>> = {
   SPENDING_LIMIT: {
     instant_max_usd: '10',
@@ -772,6 +788,7 @@ export default function PoliciesPage() {
                 value={formType.value}
                 onChange={handleTypeChange}
                 options={POLICY_TYPES}
+                description={POLICY_DESCRIPTIONS[formType.value] ?? ''}
               />
               <FormField
                 label="Wallet"
@@ -874,6 +891,9 @@ export default function PoliciesPage() {
               <div>
                 <div class="policy-type-readonly">
                   Type: {getPolicyTypeLabel(editPolicy.value.type)}
+                  {POLICY_DESCRIPTIONS[editPolicy.value.type] && (
+                    <span class="form-description">{POLICY_DESCRIPTIONS[editPolicy.value.type]}</span>
+                  )}
                 </div>
                 <div class="policy-form-section">
                   <div class="policy-form-header">

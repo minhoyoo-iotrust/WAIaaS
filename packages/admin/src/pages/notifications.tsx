@@ -266,6 +266,12 @@ function NotificationSettingsTab() {
           </div>
 
           <FieldGroup legend="Telegram" description="Telegram notification channel and bot configuration">
+            <div class="settings-info-box" style={{ marginBottom: '0.75rem' }}>
+              Get your bot token from{' '}
+              <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer">@BotFather</a>
+              {' '}&mdash; send /newbot and follow the instructions. To get your Chat ID, send a message to your bot then visit{' '}
+              <a href="https://api.telegram.org" target="_blank" rel="noopener noreferrer">Telegram Bot API</a>.
+            </div>
             <div class="settings-fields-grid">
               <FormField
                 label={keyToLabel('telegram_bot_token')}
@@ -317,6 +323,14 @@ function NotificationSettingsTab() {
           </FieldGroup>
 
           <FieldGroup legend="Other Channels" description="Discord, ntfy, Slack, and rate limiting">
+            <div class="settings-info-box" style={{ marginBottom: '0.75rem' }}>
+              <strong>Discord:</strong> Create a webhook in Server Settings &gt; Integrations &gt;{' '}
+              <a href="https://support.discord.com/hc/en-us/articles/228383668" target="_blank" rel="noopener noreferrer">Webhooks</a>.
+              {' '}<strong>ntfy:</strong> Use any{' '}
+              <a href="https://ntfy.sh" target="_blank" rel="noopener noreferrer">ntfy server</a> (self-hosted or ntfy.sh).
+              {' '}<strong>Slack:</strong> Create an{' '}
+              <a href="https://api.slack.com/messaging/webhooks" target="_blank" rel="noopener noreferrer">Incoming Webhook</a> in your Slack workspace.
+            </div>
             <div class="settings-fields-grid">
               <FormField
                 label={keyToLabel('discord_webhook_url')}

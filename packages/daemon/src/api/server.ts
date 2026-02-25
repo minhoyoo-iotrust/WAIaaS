@@ -228,7 +228,14 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
       }
       return sessionAuth(c, next);
     });
-    app.use('/v1/actions/*', sessionAuth);
+    app.use('/v1/actions/*', async (c, next) => {
+      // GET /v1/actions/providers is handled by dual-auth middleware above
+      if (c.req.method === 'GET' && c.req.path.endsWith('/actions/providers')) {
+        await next();
+        return;
+      }
+      return sessionAuth(c, next);
+    });
     app.use('/v1/x402/*', sessionAuth);
     app.use('/v1/connect-info', sessionAuth);
     // sessionAuth for GET /v1/policies and GET /v1/tokens (dual-auth: agent read-only access)
