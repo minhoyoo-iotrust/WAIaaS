@@ -29,8 +29,8 @@ export class LiFiApiClient extends ActionApiClient {
     toAddress?: string;
   }): Promise<LiFiQuoteResponse> {
     return this.get('quote', LiFiQuoteResponseSchema, {
-      fromChainId: String(params.fromChain),
-      toChainId: String(params.toChain),
+      fromChain: String(params.fromChain),
+      toChain: String(params.toChain),
       fromToken: params.fromToken,
       toToken: params.toToken,
       fromAmount: params.fromAmount,
