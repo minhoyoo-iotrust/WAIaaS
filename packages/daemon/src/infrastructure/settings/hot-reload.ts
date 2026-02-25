@@ -12,6 +12,7 @@ import type { Database } from 'better-sqlite3';
 import type { INotificationChannel } from '@waiaas/core';
 import type { NotificationService } from '../../notifications/notification-service.js';
 import type { AdapterPool } from '../adapter-pool.js';
+import { configKeyToNetwork } from '../adapter-pool.js';
 import type { SettingsService } from './settings-service.js';
 import type { AutoStopService, AutoStopConfig } from '../../services/autostop-service.js';
 import type { BalanceMonitorService, BalanceMonitorConfig } from '../../services/monitoring/balance-monitor-service.js';
@@ -496,6 +497,19 @@ export class HotReloadOrchestrator {
         const network = field.replace('evm_', '').replace(/_/g, '-');
         await pool.evict('ethereum' as any, network as any);
         console.log(`Hot-reload: Evicted ethereum:${network} adapter`);
+      }
+    }
+
+    // Reset RpcPool cooldown for affected networks so next resolve starts fresh
+    const rpcPool = pool.pool;
+    if (rpcPool) {
+      for (const key of changedRpcKeys) {
+        const field = key.replace('rpc.', '');
+        const network = configKeyToNetwork(field);
+        if (network && rpcPool.hasNetwork(network)) {
+          rpcPool.reset(network);
+          console.log(`Hot-reload: Reset RpcPool cooldown for ${network}`);
+        }
       }
     }
   }
