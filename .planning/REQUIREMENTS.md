@@ -54,26 +54,26 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PRST-01 | — | Pending |
-| PRST-02 | — | Pending |
-| PRST-03 | — | Pending |
-| PRST-04 | — | Pending |
-| PRST-05 | — | Pending |
-| API-01 | — | Pending |
-| API-02 | — | Pending |
-| API-03 | — | Pending |
-| DB-01 | — | Pending |
-| ADUI-01 | — | Pending |
-| RLAY-01 | — | Pending |
-| RLAY-02 | — | Pending |
-| RLAY-03 | — | Pending |
-| RLAY-04 | — | Pending |
+| PRST-01 | Phase 265 | Pending |
+| PRST-02 | Phase 266 | Pending |
+| PRST-03 | Phase 265 | Pending |
+| PRST-04 | Phase 265 | Pending |
+| PRST-05 | Phase 266 | Pending |
+| API-01 | Phase 265 | Pending |
+| API-02 | Phase 265 | Pending |
+| API-03 | Phase 265 | Pending |
+| DB-01 | Phase 265 | Pending |
+| ADUI-01 | Phase 266 | Pending |
+| RLAY-01 | Phase 267 | Pending |
+| RLAY-02 | Phase 267 | Pending |
+| RLAY-03 | Phase 267 | Pending |
+| RLAY-04 | Phase 267 | Pending |
 
 **Coverage:**
 - v1 requirements: 14 total
-- Mapped to phases: 0
-- Unmapped: 14 ⚠️
+- Mapped to phases: 14
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-25*
-*Last updated: 2026-02-25 after initial definition*
+*Last updated: 2026-02-25 after roadmap creation (traceability updated)*
