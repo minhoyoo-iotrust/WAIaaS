@@ -141,6 +141,8 @@ export const ContractCallRequestSchema = z.object({
   network: NetworkTypeEnum.optional(),
   /** Provider name tag for provider-trust policy bypass. Set by ActionProviderRegistry. */
   actionProvider: z.string().optional(),
+  /** Action name for lending policy evaluation. Set by ActionProviderRegistry. */
+  actionName: z.string().optional(),
   ...gasConditionField,
 });
 export type ContractCallRequest = z.infer<typeof ContractCallRequestSchema>;

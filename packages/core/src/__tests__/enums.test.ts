@@ -92,9 +92,11 @@ describe('Enum SSoT', () => {
     expect(TRANSACTION_TYPES).toContain('X402_PAYMENT');
   });
 
-  it('PolicyType has 12 values', () => {
-    expect(POLICY_TYPES).toHaveLength(12);
+  it('PolicyType has 14 values', () => {
+    expect(POLICY_TYPES).toHaveLength(14);
     expect(POLICY_TYPES).toContain('X402_ALLOWED_DOMAINS');
+    expect(POLICY_TYPES).toContain('LENDING_LTV_LIMIT');
+    expect(POLICY_TYPES).toContain('LENDING_ASSET_WHITELIST');
   });
 
   it('PolicyTier has 4 values', () => {

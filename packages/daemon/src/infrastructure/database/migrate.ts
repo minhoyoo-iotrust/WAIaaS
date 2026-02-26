@@ -57,7 +57,7 @@ const inList = (values: readonly string[]) => values.map((v) => `'${v}'`).join('
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 25;
+export const LATEST_SCHEMA_VERSION = 26;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -1751,6 +1751,64 @@ MIGRATIONS.push({
     sqlite.exec('CREATE INDEX IF NOT EXISTS idx_defi_positions_wallet_provider ON defi_positions(wallet_id, provider)');
     sqlite.exec('CREATE INDEX IF NOT EXISTS idx_defi_positions_status ON defi_positions(status)');
     sqlite.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_defi_positions_unique ON defi_positions(wallet_id, provider, asset_id, category)');
+  },
+});
+
+// ---------------------------------------------------------------------------
+// v26: Add LENDING_LTV_LIMIT and LENDING_ASSET_WHITELIST to policies table CHECK constraint
+// ---------------------------------------------------------------------------
+// POLICY_TYPES SSoT array now includes LENDING_LTV_LIMIT and LENDING_ASSET_WHITELIST (14 total).
+// SQLite cannot ALTER CHECK constraints, so we recreate the policies table (12-step pattern).
+
+MIGRATIONS.push({
+  version: 26,
+  description: 'Add lending policy types to policies table CHECK constraint',
+  managesOwnTransaction: true,
+  up: (sqlite) => {
+    // Step 1: Begin transaction (foreign_keys already OFF via runner)
+    sqlite.exec('BEGIN');
+
+    try {
+      // Step 2: Create policies_new with updated CHECK (uses SSoT POLICY_TYPES array)
+      sqlite.exec(`CREATE TABLE policies_new (
+  id TEXT PRIMARY KEY,
+  wallet_id TEXT REFERENCES wallets(id) ON DELETE CASCADE,
+  type TEXT NOT NULL CHECK (type IN (${inList(POLICY_TYPES)})),
+  rules TEXT NOT NULL,
+  priority INTEGER NOT NULL DEFAULT 0,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES)})),
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+)`);
+
+      // Step 3: Copy existing policies
+      sqlite.exec('INSERT INTO policies_new SELECT * FROM policies');
+
+      // Step 4: Drop old table
+      sqlite.exec('DROP TABLE policies');
+
+      // Step 5: Rename new table
+      sqlite.exec('ALTER TABLE policies_new RENAME TO policies');
+
+      // Step 6: Recreate indexes
+      sqlite.exec('CREATE INDEX idx_policies_wallet_enabled ON policies(wallet_id, enabled)');
+      sqlite.exec('CREATE INDEX idx_policies_type ON policies(type)');
+      sqlite.exec('CREATE INDEX idx_policies_network ON policies(network)');
+
+      // Step 7: Commit
+      sqlite.exec('COMMIT');
+    } catch (err) {
+      sqlite.exec('ROLLBACK');
+      throw err;
+    }
+
+    // Step 8: Re-enable foreign keys and verify integrity
+    sqlite.pragma('foreign_keys = ON');
+    const fkErrors = sqlite.pragma('foreign_key_check') as unknown[];
+    if (fkErrors.length > 0) {
+      throw new Error(`FK integrity violation after v26: ${JSON.stringify(fkErrors)}`);
+    }
   },
 });
 
