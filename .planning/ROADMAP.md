@@ -172,7 +172,7 @@ See `.planning/milestones/v29.0-ROADMAP.md` for full details.
 
 **Milestone Goal:** DeFi Lending 프레임워크(포지션 추적, 헬스 팩터 모니터링, 담보/차입 관리)를 구축하고, Aave V3를 첫 번째 Lending Provider로 구현하여 AI 에이전트가 EVM 체인에서 자산 예치/차입을 정책 평가 하에 실행할 수 있는 상태.
 
-- [ ] **Phase 274: SSoT Enums + DB Migration + Core Interfaces** - DeFi 열거형, defi_positions 테이블, ILendingProvider/IPositionProvider 인터페이스 정의
+- [x] **Phase 274: SSoT Enums + DB Migration + Core Interfaces** - DeFi 열거형, defi_positions 테이블, ILendingProvider/IPositionProvider 인터페이스 정의
 - [ ] **Phase 275: Lending Framework Services** - PositionTracker, HealthFactorMonitor, LendingPolicyEvaluator 프로토콜 무관 서비스
 - [ ] **Phase 276: Aave V3 Provider Implementation** - supply/borrow/repay/withdraw 4개 액션 resolve + 5체인 주소 매핑
 - [ ] **Phase 277: REST API + MCP + SDK Integration** - 포지션/헬스팩터 API, MCP 5도구, SDK 확장, 정책 엔진 연동
@@ -191,9 +191,9 @@ See `.planning/milestones/v29.0-ROADMAP.md` for full details.
   4. ILendingProvider와 IPositionProvider 인터페이스가 정의되어 있으며, ILendingProvider가 IActionProvider를 확장하여 ActionProviderRegistry에 등록 가능하다
 **Plans**: 3 plans (2 waves)
 Plans:
-- [ ] 274-01-PLAN.md -- SSoT DeFi 열거형 + 알림 이벤트 + i18n 템플릿
-- [ ] 274-02-PLAN.md -- defi_positions DB 마이그레이션 + Drizzle 스키마
-- [ ] 274-03-PLAN.md -- ILendingProvider + IPositionProvider 인터페이스
+- [x] 274-01-PLAN.md -- SSoT DeFi 열거형 + 알림 이벤트 + i18n 템플릿
+- [x] 274-02-PLAN.md -- defi_positions DB 마이그레이션 + Drizzle 스키마
+- [x] 274-03-PLAN.md -- ILendingProvider + IPositionProvider 인터페이스
 
 ### Phase 275: Lending Framework Services
 **Goal**: 프로토콜 무관한 포지션 추적, 헬스 팩터 모니터링, Lending 정책 평가 서비스가 동작하여 어떤 Lending Provider든 연결하면 바로 포지션 동기화/경고/정책 제한이 적용되는 상태
@@ -247,11 +247,11 @@ Phases execute in numeric order: 274 -> 275 -> 276 -> 277 -> 278
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 274. SSoT Enums + DB + Interfaces | v29.2 | 0/3 | Planned | - |
+| 274. SSoT Enums + DB + Interfaces | v29.2 | 3/3 | **DONE** | 2026-02-27 |
 | 275. Lending Framework Services | v29.2 | 0/TBD | Not started | - |
 | 276. Aave V3 Provider | v29.2 | 0/TBD | Not started | - |
 | 277. REST API + MCP + SDK | v29.2 | 0/TBD | Not started | - |
 | 278. Admin UI + Settings + E2E | v29.2 | 0/TBD | Not started | - |
 
 ---
-*Last updated: 2026-02-26 after v29.2 roadmap creation*
+*Last updated: 2026-02-27 after Phase 274 completion*
