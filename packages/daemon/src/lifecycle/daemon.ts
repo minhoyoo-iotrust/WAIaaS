@@ -1055,9 +1055,41 @@ export class DaemonLifecycle {
       this.apiKeyStore = new ApiKeyStore(this._db!, masterPassword);
       this.actionProviderRegistry = new ActionProviderRegistry();
 
+      // Create IRpcCaller for Aave V3 using RpcPool eth_call.
+      // RpcPool.getUrl(network) provides priority-based URL rotation with cooldown.
+      const rpcCaller = this.rpcPool ? (() => {
+        const pool = this.rpcPool!;
+        const networkMap: Record<number, string> = {
+          1: 'ethereum-mainnet',
+          42161: 'arbitrum-mainnet',
+          10: 'optimism-mainnet',
+          137: 'polygon-mainnet',
+          8453: 'base-mainnet',
+        };
+        return {
+          call: async (params: { to: string; data: string; chainId?: number }): Promise<string> => {
+            const network = params.chainId ? (networkMap[params.chainId] ?? 'ethereum-mainnet') : 'ethereum-mainnet';
+            const rpcUrl = pool.getUrl(network);
+            const resp = await fetch(rpcUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                jsonrpc: '2.0',
+                id: 1,
+                method: 'eth_call',
+                params: [{ to: params.to, data: params.data }, 'latest'],
+              }),
+            });
+            const json = await resp.json() as { result?: string; error?: { message: string } };
+            if (json.error) throw new Error(json.error.message);
+            return json.result ?? '0x';
+          },
+        };
+      })() : undefined;
+
       // Register built-in action providers from @waiaas/actions (reads from SettingsService)
       const { registerBuiltInProviders } = await import('@waiaas/actions');
-      const builtIn = registerBuiltInProviders(this.actionProviderRegistry, this._settingsService!);
+      const builtIn = registerBuiltInProviders(this.actionProviderRegistry, this._settingsService!, { rpcCaller });
 
       // Load plugins from ~/.waiaas/actions/ (if exists)
       const actionsDir = join(dataDir, 'actions');

@@ -15,6 +15,7 @@ import { JitoStakingActionProvider } from './providers/jito-staking/index.js';
 import { getJitoAddresses, type JitoStakingConfig } from './providers/jito-staking/config.js';
 import { AaveV3LendingProvider } from './providers/aave-v3/index.js';
 import { type AaveV3Config } from './providers/aave-v3/config.js';
+import type { IRpcCaller } from './providers/aave-v3/aave-rpc.js';
 
 // Re-export provider classes
 export { JupiterSwapActionProvider } from './providers/jupiter-swap/index.js';
@@ -85,6 +86,7 @@ interface ProviderRegistry {
 export function registerBuiltInProviders(
   registry: ProviderRegistry,
   settingsReader: SettingsReader,
+  options?: { rpcCaller?: IRpcCaller },
 ): { loaded: string[]; skipped: string[] } {
   const loaded: string[] = [];
   const skipped: string[] = [];
@@ -186,9 +188,7 @@ export function registerBuiltInProviders(
       enabledKey: 'actions.aave_v3_enabled',
       factory: () => {
         const config: AaveV3Config = { enabled: true };
-        // NOTE: rpcCaller injection deferred to Phase 277 (daemon lifecycle).
-        // Provider works without rpcCaller for resolve() -- query methods gracefully degrade.
-        return new AaveV3LendingProvider(config);
+        return new AaveV3LendingProvider(config, options?.rpcCaller);
       },
     },
   ];

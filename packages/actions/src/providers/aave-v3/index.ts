@@ -22,10 +22,11 @@ import type {
   LendingPositionSummary,
   HealthFactor,
   MarketInfo,
+  NetworkType,
 } from '@waiaas/core';
 import type { IPositionProvider, PositionUpdate, PositionCategory } from '@waiaas/core';
 import type { AaveV3Config } from './config.js';
-import { AAVE_V3_DEFAULTS, getAaveAddresses } from './config.js';
+import { getAaveAddresses } from './config.js';
 import {
   encodeSupplyCalldata,
   encodeBorrowCalldata,
@@ -84,11 +85,9 @@ export class AaveV3LendingProvider implements ILendingProvider, IPositionProvide
   readonly metadata: ActionProviderMetadata;
   readonly actions: readonly ActionDefinition[];
 
-  private readonly config: AaveV3Config;
   private readonly rpcCaller?: IRpcCaller;
 
-  constructor(config?: Partial<AaveV3Config>, rpcCaller?: IRpcCaller) {
-    this.config = { ...AAVE_V3_DEFAULTS, ...config };
+  constructor(_config?: Partial<AaveV3Config>, rpcCaller?: IRpcCaller) {
     this.rpcCaller = rpcCaller;
 
     this.metadata = {
@@ -171,7 +170,7 @@ export class AaveV3LendingProvider implements ILendingProvider, IPositionProvide
     context: ActionContext,
   ): ContractCallRequest[] {
     const input = AaveSupplyInputSchema.parse(params);
-    const network = input.network || 'ethereum-mainnet';
+    const network = (input.network || 'ethereum-mainnet') as NetworkType;
     const addresses = getAaveAddresses(network);
     const amount = parseTokenAmount(input.amount);
 
@@ -203,7 +202,7 @@ export class AaveV3LendingProvider implements ILendingProvider, IPositionProvide
     context: ActionContext,
   ): Promise<ContractCallRequest> {
     const input = AaveBorrowInputSchema.parse(params);
-    const network = input.network || 'ethereum-mainnet';
+    const network = (input.network || 'ethereum-mainnet') as NetworkType;
     const addresses = getAaveAddresses(network);
     const amount = parseTokenAmount(input.amount);
 
@@ -230,7 +229,7 @@ export class AaveV3LendingProvider implements ILendingProvider, IPositionProvide
     context: ActionContext,
   ): ContractCallRequest[] {
     const input = AaveRepayInputSchema.parse(params);
-    const network = input.network || 'ethereum-mainnet';
+    const network = (input.network || 'ethereum-mainnet') as NetworkType;
     const addresses = getAaveAddresses(network);
     const amount = input.amount === 'max' ? MAX_UINT256 : parseTokenAmount(input.amount);
 
@@ -262,7 +261,7 @@ export class AaveV3LendingProvider implements ILendingProvider, IPositionProvide
     context: ActionContext,
   ): Promise<ContractCallRequest> {
     const input = AaveWithdrawInputSchema.parse(params);
-    const network = input.network || 'ethereum-mainnet';
+    const network = (input.network || 'ethereum-mainnet') as NetworkType;
     const addresses = getAaveAddresses(network);
     const amount = input.amount === 'max' ? MAX_UINT256 : parseTokenAmount(input.amount);
 
@@ -297,7 +296,7 @@ export class AaveV3LendingProvider implements ILendingProvider, IPositionProvide
     // This is a simplification -- proper conversion requires oracle price lookup
     const simulated = simulateHealthFactor(accountData, 'borrow', borrowAmount);
     if (simulated < LIQUIDATION_THRESHOLD_HF) {
-      throw new ChainError('POLICY_VIOLATION', 'ethereum', {
+      throw new ChainError('CONTRACT_EXECUTION_FAILED', 'ethereum', {
         message: `Borrow would cause health factor to drop below liquidation threshold (simulated HF: ${hfToNumber(simulated).toFixed(4)})`,
       });
     }
@@ -314,7 +313,7 @@ export class AaveV3LendingProvider implements ILendingProvider, IPositionProvide
 
     const simulated = simulateHealthFactor(accountData, 'withdraw', withdrawAmount);
     if (simulated < LIQUIDATION_THRESHOLD_HF) {
-      throw new ChainError('POLICY_VIOLATION', 'ethereum', {
+      throw new ChainError('CONTRACT_EXECUTION_FAILED', 'ethereum', {
         message: `Withdrawal would cause health factor to drop below liquidation threshold (simulated HF: ${hfToNumber(simulated).toFixed(4)})`,
       });
     }
@@ -346,7 +345,7 @@ export class AaveV3LendingProvider implements ILendingProvider, IPositionProvide
   // ILendingProvider query methods
   // -------------------------------------------------------------------------
 
-  async getPosition(walletId: string, context: ActionContext): Promise<LendingPositionSummary[]> {
+  async getPosition(_walletId: string, context: ActionContext): Promise<LendingPositionSummary[]> {
     if (!this.rpcCaller) return [];
 
     try {
@@ -388,7 +387,7 @@ export class AaveV3LendingProvider implements ILendingProvider, IPositionProvide
     }
   }
 
-  async getHealthFactor(walletId: string, context: ActionContext): Promise<HealthFactor> {
+  async getHealthFactor(_walletId: string, context: ActionContext): Promise<HealthFactor> {
     if (!this.rpcCaller) {
       return {
         factor: Infinity,

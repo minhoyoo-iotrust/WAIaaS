@@ -1181,6 +1181,40 @@ export const StakingPositionsResponseSchema = z.object({
 }).openapi('StakingPositionsResponse');
 
 // ---------------------------------------------------------------------------
+// DeFi Position Schemas (GET /v1/wallet/positions, GET /v1/wallet/health-factor)
+// ---------------------------------------------------------------------------
+
+export const DeFiPositionSchema = z.object({
+  id: z.string(),
+  category: z.string(),         // LENDING / YIELD / PERP / STAKING
+  provider: z.string(),         // Provider name (e.g., "aave_v3")
+  chain: z.string(),
+  network: z.string().nullable(),
+  assetId: z.string().nullable(),
+  amount: z.string(),           // Raw amount string
+  amountUsd: z.number().nullable(), // USD conversion
+  metadata: z.unknown().nullable(), // Parsed JSON metadata
+  status: z.string(),           // ACTIVE / CLOSED / LIQUIDATED
+  openedAt: z.number(),         // Unix seconds
+  lastSyncedAt: z.number(),     // Unix seconds
+}).openapi('DeFiPosition');
+
+export const DeFiPositionsResponseSchema = z.object({
+  walletId: z.string(),
+  positions: z.array(DeFiPositionSchema),
+  totalValueUsd: z.number().nullable(), // Sum of all position USD values
+}).openapi('DeFiPositionsResponse');
+
+export const HealthFactorResponseSchema = z.object({
+  walletId: z.string(),
+  factor: z.number(),           // Decimal (e.g., 2.5)
+  totalCollateralUsd: z.number(),
+  totalDebtUsd: z.number(),
+  currentLtv: z.number(),
+  status: z.enum(['safe', 'warning', 'danger', 'critical']),
+}).openapi('HealthFactorResponse');
+
+// ---------------------------------------------------------------------------
 // RPC Pool Status Schema (GET /v1/admin/rpc-status)
 // ---------------------------------------------------------------------------
 

@@ -65,6 +65,7 @@ import { tokenRegistryRoutes } from './routes/tokens.js';
 import { connectInfoRoutes } from './routes/connect-info.js';
 import { incomingRoutes } from './routes/incoming.js';
 import { createStakingRoutes } from './routes/staking.js';
+import { createDefiPositionRoutes } from './routes/defi-positions.js';
 import { mcpTokenRoutes } from './routes/mcp.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
 import type { DaemonConfig } from '../infrastructure/config/loader.js';
@@ -429,6 +430,18 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         db: deps.db,
         sqlite: deps.sqlite,
         priceOracle: deps.priceOracle,
+      }),
+    );
+  }
+
+  // Register DeFi position routes (sessionAuth via /v1/wallet/* wildcard)
+  if (deps.db) {
+    app.route(
+      '/v1',
+      createDefiPositionRoutes({
+        db: deps.db,
+        sqlite: deps.sqlite,
+        actionProviderRegistry: deps.actionProviderRegistry,
       }),
     );
   }
