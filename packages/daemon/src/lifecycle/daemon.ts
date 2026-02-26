@@ -10,6 +10,8 @@
  *      4c-8. Signing SDK lifecycle (fail-soft)
  *      4c-9. IncomingTxMonitorService (fail-soft)
  *      4c-10. AsyncPollingService (fail-soft)
+ *      4c-10.5. PositionTracker (fail-soft)
+ *      4c-11. DeFiMonitorService (fail-soft)
  *   5. HTTP server start (5s, fail-fast)
  *   6. Background workers + PID (no timeout, fail-soft)
  *
@@ -18,7 +20,7 @@
  *   2-4. HTTP server close
  *   5. In-flight signing -- STUB (Phase 50-04)
  *   6. Pending queue persistence -- STUB (Phase 50-04)
- *   6a. Stop TelegramBot, WcSessionService, AutoStop, BalanceMonitor, IncomingTxMonitor
+ *   6a. Stop PositionTracker, DeFiMonitorService, TelegramBot, WcSessionService, AutoStop, BalanceMonitor, IncomingTxMonitor
  *   6b. Remove all EventBus listeners
  *   7. workers.stopAll()
  *   8. WAL checkpoint(TRUNCATE)
@@ -149,6 +151,8 @@ export class DaemonLifecycle {
   private _versionCheckService: import('../infrastructure/version/version-check-service.js').VersionCheckService | null = null;
   private incomingTxMonitorService: import('../services/incoming/incoming-tx-monitor-service.js').IncomingTxMonitorService | null = null;
   private _asyncPollingService: import('../services/async-polling-service.js').AsyncPollingService | null = null;
+  private positionTracker: import('../services/defi/position-tracker.js').PositionTracker | null = null;
+  private defiMonitorService: import('../services/monitoring/defi-monitor-service.js').DeFiMonitorService | null = null;
 
   /** Whether shutdown has been initiated. */
   get isShuttingDown(): boolean {
@@ -178,6 +182,11 @@ export class DaemonLifecycle {
   /** AsyncPollingService instance (available after Step 4c-10, used by action providers to register trackers). */
   get pollingService(): import('../services/async-polling-service.js').AsyncPollingService | null {
     return this._asyncPollingService;
+  }
+
+  /** PositionTracker instance (available after Step 4c-10.5). */
+  get positionTrackerInstance(): import('../services/defi/position-tracker.js').PositionTracker | null {
+    return this.positionTracker;
   }
 
   /** RpcPool instance (available after Step 4, used by IncomingTxMonitor for URL resolution). */
@@ -934,6 +943,43 @@ export class DaemonLifecycle {
     }
 
     // ------------------------------------------------------------------
+    // Step 4c-10.5: PositionTracker initialization (fail-soft)
+    // ------------------------------------------------------------------
+    try {
+      if (this.sqlite && this._settingsService) {
+        const trackerEnabled = this._settingsService.get('position_tracker.enabled');
+        if (trackerEnabled !== 'false') {
+          const { PositionTracker } = await import('../services/defi/position-tracker.js');
+          this.positionTracker = new PositionTracker({
+            sqlite: this.sqlite,
+            settingsService: this._settingsService,
+          });
+          this.positionTracker.start();
+          console.debug('Step 4c-10.5: Position tracker started');
+        } else {
+          console.debug('Step 4c-10.5: Position tracker disabled');
+        }
+      }
+    } catch (err) {
+      console.warn('Step 4c-10.5 (fail-soft): Position tracker init warning:', err);
+      this.positionTracker = null;
+    }
+
+    // ------------------------------------------------------------------
+    // Step 4c-11: DeFiMonitorService initialization (fail-soft)
+    // ------------------------------------------------------------------
+    try {
+      const { DeFiMonitorService } = await import('../services/monitoring/defi-monitor-service.js');
+      this.defiMonitorService = new DeFiMonitorService();
+      // Monitors will be registered by providers in Plan 275-02 (HealthFactorMonitor)
+      // Start is deferred until monitors are registered.
+      console.debug('Step 4c-11: DeFi monitor service initialized');
+    } catch (err) {
+      console.warn('Step 4c-11 (fail-soft): DeFi monitor service init warning:', err);
+      this.defiMonitorService = null;
+    }
+
+    // ------------------------------------------------------------------
     // Step 4e: Price Oracle (fail-soft)
     // ------------------------------------------------------------------
     try {
@@ -1343,6 +1389,18 @@ export class DaemonLifecycle {
       if (this.autoStopService) {
         this.autoStopService.stop();
         this.autoStopService = null;
+      }
+
+      // Stop PositionTracker (before BalanceMonitor for cleaner ordering)
+      if (this.positionTracker) {
+        this.positionTracker.stop();
+        this.positionTracker = null;
+      }
+
+      // Stop DeFiMonitorService
+      if (this.defiMonitorService) {
+        this.defiMonitorService.stop();
+        this.defiMonitorService = null;
       }
 
       // Stop BalanceMonitorService (before EventBus cleanup)
