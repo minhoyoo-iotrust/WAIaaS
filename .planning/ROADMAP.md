@@ -252,7 +252,7 @@ Phases execute in numeric order: 274 -> 275 -> 276 -> 277 -> 278
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 274. SSoT Enums + DB + Interfaces | v29.2 | 3/3 | **DONE** | 2026-02-27 |
-| 275. Lending Framework Services | 1/3 | In Progress|  | - |
+| 275. Lending Framework Services | 2/3 | In Progress|  | - |
 | 276. Aave V3 Provider | v29.2 | 0/TBD | Not started | - |
 | 277. REST API + MCP + SDK | v29.2 | 0/TBD | Not started | - |
 | 278. Admin UI + Settings + E2E | v29.2 | 0/TBD | Not started | - |
