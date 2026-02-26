@@ -2780,6 +2780,291 @@ healthFactor = liquidationThreshold / currentLtv
 
 ---
 
+## 16. REST API 명세
+
+### 16.1 GET /v1/wallets/:id/health-factor 엔드포인트
+
+지갑의 전체 lending 포트폴리오 health factor를 조회하는 엔드포인트. 모든 lending 프로바이더의 포지션을 집계하여 종합적인 위험도를 반환한다.
+
+| 항목 | 값 |
+|------|-----|
+| **Method** | GET |
+| **Path** | `/v1/wallets/{id}/health-factor` |
+| **Auth** | sessionAuth (JWT, 지갑이 세션의 wallet list에 포함) |
+| **Tag** | 'DeFi Positions' |
+
+**Path Parameters:**
+
+| 파라미터 | 타입 | 설명 |
+|----------|------|------|
+| `id` | string (UUID) | 지갑 ID |
+
+**Query Parameters:**
+
+| 파라미터 | 타입 | 필수 | 설명 |
+|----------|------|------|------|
+| `provider` | string | N | 특정 프로바이더 필터 (e.g., 'aave_v3', 'kamino', 'morpho_blue') |
+
+**Response (200 OK):** HealthFactorResponseSchema
+
+**Error Responses:**
+
+| 상태 코드 | 조건 | 응답 |
+|-----------|------|------|
+| 404 | 지갑 미존재 | `{ error: 'WALLET_NOT_FOUND', message: '...' }` |
+| 403 | 지갑이 세션에 포함되지 않음 | `{ error: 'FORBIDDEN', message: '...' }` |
+| 200 | 지갑에 lending 포지션 없음 | status='NO_POSITIONS', healthFactor=null |
+
+### 16.2 HealthFactorResponseSchema (Zod)
+
+```typescript
+export const HealthFactorResponseSchema = z.object({
+  walletId: z.string(),
+  aggregated: z.object({
+    healthFactor: z.number().nullable()
+      .describe('Worst health factor across all providers. null when no debt.'),
+    totalCollateralUsd: z.number(),
+    totalDebtUsd: z.number(),
+    status: z.enum(['SAFE', 'WARNING', 'DANGER', 'CRITICAL', 'NO_POSITIONS']),
+  }),
+  providers: z.array(z.object({
+    provider: z.string().describe('Provider name (e.g., "aave_v3")'),
+    healthFactor: z.number().describe('Provider-specific health factor'),
+    totalCollateralUsd: z.number(),
+    totalDebtUsd: z.number(),
+    currentLtv: z.number().describe('Current LTV as decimal'),
+    maxLtv: z.number().describe('Max LTV before liquidation'),
+    positions: z.array(z.object({
+      asset: z.string().describe('CAIP-19'),
+      positionType: z.enum(['SUPPLY', 'BORROW']),
+      amount: z.string(),
+      amountUsd: z.number(),
+      apy: z.number().nullable(),
+    })),
+  })),
+  lastSyncedAt: z.number().int()
+    .describe('Unix timestamp (seconds) of last defi_positions sync'),
+}).openapi('HealthFactorResponse');
+
+export type HealthFactorResponse = z.infer<typeof HealthFactorResponseSchema>;
+```
+
+**집계 로직:**
+- `aggregated.healthFactor` = `Math.min(...providers.map(p => p.healthFactor))` — 모든 프로바이더 중 최악의 health factor
+- `aggregated.totalCollateralUsd` = 프로바이더별 collateral 합산
+- `aggregated.totalDebtUsd` = 프로바이더별 debt 합산
+- `aggregated.status` = aggregated healthFactor 기준 상태 분류 (section 14.2 임계값)
+- totalDebtUsd = 0인 경우: healthFactor = null, status = 'SAFE' (debt 없으므로 청산 위험 없음)
+
+### 16.3 Phase 268 positions API와의 관계
+
+Phase 268에서 설계한 GET /v1/wallets/:id/positions (section 7)와 새 /health-factor 엔드포인트의 관계를 명확히 한다.
+
+| 엔드포인트 | 반환 데이터 | 용도 |
+|-----------|-----------|------|
+| `GET /v1/wallets/:id/positions` | 모든 카테고리의 포지션 (LENDING, STAKING, YIELD, PERP) | 범용 포지션 조회 |
+| `GET /v1/wallets/:id/positions?category=LENDING` | lending 포지션만 필터링 | lending 상세 포지션 |
+| `GET /v1/wallets/:id/health-factor` | 계산된 위험 지표 + 프로바이더별 분석 | 포트폴리오 위험 평가 |
+
+**데이터 소스 동일:** 두 엔드포인트 모두 `defi_positions` 테이블에서 데이터를 읽음. /health-factor는 추가로 health factor를 계산/집계.
+
+**AI 에이전트 권장 사용 순서:**
+1. `GET /health-factor` — 먼저 위험도 확인 (한 번의 호출로 전체 상태 파악)
+2. `GET /positions?category=LENDING` — 필요 시 상세 포지션 조회
+3. 액션 결정 (supply 추가, repay 등)
+
+### 16.4 OpenAPIHono createRoute 정의
+
+**파일:** `packages/daemon/src/api/routes/defi-positions.ts` (Phase 268 positions 라우트와 동일 파일)
+
+```typescript
+const healthFactorRoute = createRoute({
+  method: 'get',
+  path: '/v1/wallets/{id}/health-factor',
+  tags: ['DeFi Positions'],
+  summary: 'Get wallet health factor across all lending providers',
+  request: {
+    params: WalletIdParamSchema,
+    query: HealthFactorQuerySchema,
+  },
+  responses: {
+    200: {
+      content: { 'application/json': { schema: HealthFactorResponseSchema } },
+      description: 'Health factor with per-provider breakdown',
+    },
+    404: {
+      content: { 'application/json': { schema: ErrorSchema } },
+      description: 'Wallet not found',
+    },
+    403: {
+      content: { 'application/json': { schema: ErrorSchema } },
+      description: 'Wallet not in session',
+    },
+  },
+  security: [{ sessionAuth: [] }],
+});
+```
+
+**HealthFactorQuerySchema:**
+
+```typescript
+const HealthFactorQuerySchema = z.object({
+  provider: z.string().optional()
+    .describe('Filter by provider name (e.g., "aave_v3")'),
+}).openapi('HealthFactorQuery');
+```
+
+### 16.5 설계 결정
+
+| ID | 결정 | 선택 | 근거 |
+|----|------|------|------|
+| DEC-LEND-12 | 엔드포인트 구조 | 단일 집계 /health-factor (프로바이더별 아님) | AI 에이전트에게 단순 (한 번 호출). 프로바이더별 데이터는 응답 body의 `providers` 배열에 포함. 프로바이더별 별도 엔드포인트면 N번 호출 필요 |
+| DEC-LEND-13 | healthFactor null 정책 | totalDebtUsd = 0일 때 null | health factor는 collateral/debt 비율. debt 없으면 정의 불가 (무한대 아님). null로 표현하고 status='SAFE'로 분류 |
+| DEC-LEND-14 | lastSyncedAt 소스 | defi_positions.updated_at | 데이터 신선도를 AI 에이전트에게 전달. 오래된 데이터면 에이전트가 PositionTracker 동기화 요청 가능 |
+
+---
+
+## 17. 프로토콜 인터페이스 매핑
+
+### 17.1 Aave V3 매핑 (EVM, IPool ABI → ILendingProvider)
+
+**체인:** EVM (Ethereum, Polygon, Arbitrum, Optimism 등 멀티체인)
+**SDK 의존:** viem ABI encoding (프로젝트에 이미 존재)
+**어댑터:** EvmAdapter
+**구현 마일스톤:** m29-02
+
+**컨트랙트 주소:** Aave V3 Pool
+- Ethereum mainnet: `0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2`
+- 다른 네트워크: config 기반 조회 테이블 (네트워크별 Pool 주소 상이)
+
+**메서드 매핑 테이블:**
+
+| ILendingProvider 메서드 | Aave V3 ABI 함수 | 비고 |
+|---|---|---|
+| `resolve('supply', ...)` | `IPool.supply(asset, amount, onBehalfOf, referralCode=0)` | ERC-20 approve 필요. allowance 부족 시 resolve()가 [approveReq, supplyReq] 반환 |
+| `resolve('borrow', ...)` | `IPool.borrow(asset, amount, interestRateMode=2, referralCode=0, onBehalfOf)` | interestRateMode: 2=variable (기본), 1=stable (deprecated) |
+| `resolve('repay', ...)` | `IPool.repay(asset, amount, interestRateMode, onBehalfOf)` | amount=type(uint256).max → 전액 상환. ERC-20 approve 필요 |
+| `resolve('withdraw', ...)` | `IPool.withdraw(asset, amount, to)` | amount=type(uint256).max → 전액 인출 |
+| `getPosition(walletId)` | Pool + aToken/debtToken balanceOf 쿼리 | aToken 잔액 = supply 포지션, variableDebtToken 잔액 = borrow 포지션 |
+| `getHealthFactor(walletId)` | `IPool.getUserAccountData(user)` | 6-tuple 반환: totalCollateralBase, totalDebtBase, availableBorrowsBase, currentLiquidationThreshold, ltv, healthFactor. 값은 base currency (ETH, 8 decimals) |
+| `getMarkets(chain)` | `Pool.getReservesList()` + `getReserveData(asset)` | Reserve 데이터에 ltv, liquidationThreshold, APY (ray 기반 이율에서 계산) 포함 |
+
+**포지션 모델:** Global account — 단일 `getUserAccountData()` 호출로 전체 health factor 획득. 개별 자산 포지션은 aToken/debtToken 잔액으로 도출.
+
+**APY 계산:**
+- Aave V3 이율은 ray (10^27) 단위
+- APY 변환: `apy = ((1 + currentLiquidityRate / 10^27 / SECONDS_PER_YEAR) ^ SECONDS_PER_YEAR) - 1`
+- SECONDS_PER_YEAR = 31536000
+
+### 17.2 Kamino 매핑 (Solana, klend-sdk → ILendingProvider)
+
+**체인:** Solana
+**SDK 의존:** `@kamino-finance/klend-sdk` (TypeScript SDK)
+**어댑터:** SolanaAdapter
+**구현 마일스톤:** m29-04
+
+**마켓 주소:** Main market = `7u3HeHxYDLhnCoErrtycNokbQYbWGzLs6JSDqGAv5PfF` (JLEND program). 배포별 설정 가능.
+
+**메서드 매핑 테이블:**
+
+| ILendingProvider 메서드 | Kamino SDK 메서드 | 비고 |
+|---|---|---|
+| `resolve('supply', ...)` | `KaminoAction.buildDepositTxns(market, amount, mint, wallet, obligation?)` | `{ setupIxs, lendingIxs, cleanupIxs }` 반환. SolanaTransactionRequest로 변환 |
+| `resolve('borrow', ...)` | `KaminoAction.buildBorrowTxns(market, amount, mint, wallet, obligation)` | 기존 obligation (이전 supply에서 생성) 필요 |
+| `resolve('repay', ...)` | `KaminoAction.buildRepayTxns(market, amount, mint, wallet, obligation)` | amount = MAX_U64 → 전액 상환 |
+| `resolve('withdraw', ...)` | `KaminoAction.buildWithdrawTxns(market, amount, mint, wallet, obligation)` | amount = MAX_U64 → 전액 인출 |
+| `getPosition(walletId)` | `market.getObligationByWallet(publicKey)` | obligation.deposits[] + obligation.borrows[] → 각 항목을 LendingPositionSummary로 확장 |
+| `getHealthFactor(walletId)` | `obligation.stats` (borrowLimit, userTotalDeposit, userTotalBorrow) | healthFactor = borrowLimit / userTotalBorrow (borrow 없으면 Infinity → null) |
+| `getMarkets(chain)` | `market.loadReserves()` + reserves 순회 | 각 reserve에 ltv, liquidationThreshold, supply/borrow APY 포함 |
+
+**포지션 모델:** Obligation 기반 — 사용자당 마켓당 하나의 obligation PDA. 하나의 obligation이 여러 deposit/borrow 항목 보유. obligation 하나를 N개 포지션 행(자산별 SUPPLY/BORROW 타입별 1행)으로 확장.
+
+**SDK 호환성 플래그:**
+- klend-sdk가 `@solana/web3.js` 1.x (legacy)에 의존할 수 있음
+- 프로젝트는 `@solana/kit` 6.x 사용
+- 호환성 미확인 시 Kamino 프로바이더에 PublicKey ↔ Address 타입 변환 어댑터 레이어 필요
+- 구현 마일스톤 m29-04에서 확인 필요 (연구 플래그)
+
+### 17.3 Morpho Blue 매핑 (EVM, IMorpho ABI → ILendingProvider)
+
+**체인:** EVM (Ethereum mainnet)
+**SDK 의존:** viem ABI encoding (raw ABI 호출, 별도 SDK 불필요)
+**어댑터:** EvmAdapter
+**구현 마일스톤:** m29-10
+
+**컨트랙트 주소:** Morpho Blue = `0xBBBBBbbBBb9cc5e90e3b3Af64bdAF62C37EEFFCb` (immutable singleton)
+
+**MarketParams 구조체:**
+
+```typescript
+interface MorphoMarketParams {
+  loanToken: `0x${string}`;
+  collateralToken: `0x${string}`;
+  oracle: `0x${string}`;
+  irm: `0x${string}`;     // Interest Rate Model
+  lltv: bigint;            // Liquidation LTV (WAD scaled, e.g., 0.86e18)
+}
+// Market ID = keccak256(abi.encode(marketParams))
+```
+
+**메서드 매핑 테이블:**
+
+| ILendingProvider 메서드 | Morpho ABI 함수 | 비고 |
+|---|---|---|
+| `resolve('supply', ...)` | `IMorpho.supplyCollateral(marketParams, assets, onBehalf, data='0x')` | ERC-20 approve 필요. MarketParams 구조체가 시장 식별 |
+| `resolve('borrow', ...)` | `IMorpho.borrow(marketParams, assets, shares=0, onBehalf, receiver)` | assets (금액) 또는 shares (지분 기반). 사람이 읽는 금액에는 assets 사용 |
+| `resolve('repay', ...)` | `IMorpho.repay(marketParams, assets, shares=0, onBehalf, data='0x')` | assets로 정밀 상환, shares=type(uint256).max로 전액 상환 |
+| `resolve('withdraw', ...)` | `IMorpho.withdrawCollateral(marketParams, assets, onBehalf, receiver)` | shares 기반 부분 인출 없음; 정확한 자산 금액 지정 |
+| `getPosition(walletId)` | `IMorpho.position(marketId, user)` | (supplyShares, borrowShares, collateral) 반환. 마켓별 — 알려진 각 마켓 조회 필요 |
+| `getHealthFactor(walletId)` | 계산: `(collateral * oraclePrice / 1e36 * LLTV / 1e18) / borrowedAmount` | 마켓별 계산. 집계: 포지션 있는 모든 마켓 중 최악의 health factor |
+| `getMarkets(chain)` | Config 기반 curated list (온체인 레지스트리 없음) | 각 마켓은 keccak256(abi.encode(MarketParams))로 식별. config에 알려진 marketId → MarketParams 매핑 저장 |
+
+**포지션 모델:** Per-market isolated — 글로벌 getUserAccountData() 없음. 각 마켓이 독립적인 담보/차입/LTV 보유. 집계 health factor = min(마켓별 health factors).
+
+**Health Factor 계산 공식:**
+
+```
+// 마켓별:
+healthFactor_market = (collateral * oraclePrice / ORACLE_PRICE_SCALE * LLTV / WAD) / borrowedAmount
+// ORACLE_PRICE_SCALE = 10^36
+// WAD = 10^18 (LLTV 스케일)
+
+// 집계:
+healthFactor_aggregated = Math.min(...marketsWithPositions.map(m => m.healthFactor))
+```
+
+### 17.4 프로토콜 간 차이점 정리
+
+| 관점 | Aave V3 | Kamino | Morpho Blue |
+|------|---------|--------|-------------|
+| **체인** | EVM (멀티체인) | Solana | EVM (Ethereum) |
+| **포지션 모델** | Global account | Obligation 기반 | Per-market isolated |
+| **Health factor** | 단일 getUserAccountData() | borrowLimit / totalBorrow | 마켓별 계산, min()으로 집계 |
+| **시장 탐색** | 온체인 (getReservesList) | 온체인 (reserves) | Config 기반 curated list |
+| **다단계 TX** | approve + action | 단일 TX (instructions) | approve + action |
+| **이자율** | Variable (기본), Stable (deprecated) | Variable only | Variable only (IRM 기반) |
+| **인출 대상** | 지정 주소 | 지갑 (암시적) | 지정 주소 |
+| **SDK 의존** | viem ABI encoding | @kamino-finance/klend-sdk | viem ABI encoding |
+| **체인 어댑터** | EvmAdapter | SolanaAdapter | EvmAdapter |
+| **구현 마일스톤** | m29-02 | m29-04 | m29-10 |
+
+**핵심 차이점 요약:**
+1. **포지션 모델 차이가 가장 큼:** Aave는 글로벌, Kamino는 obligation, Morpho는 마켓별 격리. ILendingProvider.getHealthFactor()가 이를 추상화.
+2. **시장 탐색:** Aave/Kamino는 온체인 조회, Morpho는 config 기반 (온체인 레지스트리 없음).
+3. **Solana vs EVM:** Kamino만 SolanaAdapter 사용. klend-sdk → SolanaTransactionRequest 변환 필요.
+4. **다단계 TX:** EVM 프로토콜(Aave, Morpho)은 approve + action 패턴, Kamino는 setup+lending+cleanup 인스트럭션이 단일 TX로 결합.
+
+### 17.5 설계 결정
+
+| ID | 결정 | 선택 | 근거 |
+|----|------|------|------|
+| DEC-LEND-15 | Morpho getMarkets() 구현 | Config 기반 curated list (온체인 탐색 아님) | Morpho Blue에 마켓 레지스트리 없음. self-hosted 모델에서 운영자가 지원 마켓 결정. config에 marketId → MarketParams 매핑 |
+| DEC-LEND-16 | Kamino resolve() 반환 | klend-sdk instructions → SolanaTransactionRequest 변환 | Solana 트랜잭션은 ContractCallRequest가 아닌 별도 요청 타입 사용. SolanaAdapter가 파이프라인에서 처리 |
+| DEC-LEND-17 | Aave V3 이자율 모드 기본값 | 입력 스키마에서 default 2 (variable), stable deprecated 명시 | STABLE_BORROWING_NOT_ENABLED 에러 방지. 대부분 마켓에서 stable 비활성화 |
+| DEC-LEND-18 | Morpho health factor 집계 | min() of per-market health factors | 보수적 접근. 최악의 마켓 위험을 AI 에이전트와 모니터링에 노출 |
+
+---
+
 ## 신규 산출물
 
 | ID | 산출물 | 설명 |
