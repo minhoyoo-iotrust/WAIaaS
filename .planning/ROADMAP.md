@@ -176,7 +176,7 @@ See `.planning/milestones/v29.0-ROADMAP.md` for full details.
 - [x] **Phase 275: Lending Framework Services** - PositionTracker, HealthFactorMonitor, LendingPolicyEvaluator 프로토콜 무관 서비스
 - [x] **Phase 276: Aave V3 Provider Implementation** - supply/borrow/repay/withdraw 4개 액션 resolve + 5체인 주소 매핑 (completed 2026-02-26)
 - [x] **Phase 277: REST API + MCP + SDK Integration** - 포지션/헬스팩터 API, MCP 5도구, SDK 확장, 정책 엔진 연동 (completed 2026-02-27)
-- [ ] **Phase 278: Admin UI + Settings + E2E** - DeFi 포트폴리오 패널, Aave 설정 4키, 통합 검증
+- [x] **Phase 278: Admin UI + Settings + E2E** - DeFi 포트폴리오 패널, Aave 설정 4키, 통합 검증 (completed 2026-02-27)
 
 ## Phase Details
 
@@ -222,9 +222,9 @@ Plans:
   5. 모든 ABI 인코딩이 manual hex 패턴(Lido 패턴 준수)으로 구현되어 viem ABI 의존 없이 동작한다
 **Plans**: 3 plans (2 waves)
 Plans:
-- [ ] 276-01-PLAN.md -- Aave V3 manual hex ABI encoding + 5-chain 주소 레지스트리 + Zod 입력 스키마
-- [ ] 276-02-PLAN.md -- RPC 응답 디코더 + 헬스 팩터 시뮬레이션 + APY 변환 유틸리티
-- [ ] 276-03-PLAN.md -- AaveV3LendingProvider 클래스 + registerBuiltInProviders 등록 + 통합 테스트
+- [x] 276-01-PLAN.md -- Aave V3 manual hex ABI encoding + 5-chain 주소 레지스트리 + Zod 입력 스키마
+- [x] 276-02-PLAN.md -- RPC 응답 디코더 + 헬스 팩터 시뮬레이션 + APY 변환 유틸리티
+- [x] 276-03-PLAN.md -- AaveV3LendingProvider 클래스 + registerBuiltInProviders 등록 + 통합 테스트
 
 ### Phase 277: REST API + MCP + SDK Integration
 **Goal**: AI 에이전트가 REST API, MCP 도구, SDK를 통해 Lending 포지션을 조회하고, Aave V3 액션을 실행하며, 정책 엔진이 Lending 관련 요청을 평가하는 상태
@@ -250,7 +250,11 @@ Plans:
   2. Admin Settings에서 aave_v3.health_factor_warning_threshold, position_sync_interval_sec, max_ltv_pct를 조정할 수 있고, 변경이 즉시 반영된다
   3. Admin Settings에서 aave_v3.enabled 토글로 프로바이더를 활성화/비활성화할 수 있다
   4. supply -> position-sync -> health-check -> borrow -> HF-warning 전체 플로우가 E2E 테스트로 검증된다
-**Plans**: TBD
+**Plans**: 3 plans (2 waves)
+Plans:
+- [x] 278-01-PLAN.md -- Settings 키 4개 + Actions 페이지 Aave V3 카드 + 서비스 settingsService 연동
+- [x] 278-02-PLAN.md -- Admin DeFi positions 엔드포인트 + Dashboard DeFi 섹션
+- [x] 278-03-PLAN.md -- Admin UI 테스트 + E2E 통합 테스트
 
 ## Progress
 
@@ -263,7 +267,7 @@ Phases execute in numeric order: 274 -> 275 -> 276 -> 277 -> 278
 | 275. Lending Framework Services | v29.2 | 3/3 | **DONE** | 2026-02-27 |
 | 276. Aave V3 Provider | v29.2 | 3/3 | **DONE** | 2026-02-26 |
 | 277. REST API + MCP + SDK | v29.2 | 3/3 | **DONE** | 2026-02-27 |
-| 278. Admin UI + Settings + E2E | v29.2 | 0/TBD | Not started | - |
+| 278. Admin UI + Settings + E2E | v29.2 | 3/3 | **DONE** | 2026-02-27 |
 
 ---
-*Last updated: 2026-02-27 after Phase 277 completion*
+*Last updated: 2026-02-27 after Phase 278 completion (ALL PHASES COMPLETE)*
