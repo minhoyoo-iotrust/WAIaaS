@@ -220,7 +220,11 @@ Plans:
   3. getUserAccountData()를 통해 18-decimal bigint 정밀도의 헬스 팩터를 조회할 수 있고, borrow/withdraw 전 HF 시뮬레이션이 자기 청산을 방지한다
   4. 자산별 APY, LTV, 유동성 등 시장 데이터를 조회할 수 있다
   5. 모든 ABI 인코딩이 manual hex 패턴(Lido 패턴 준수)으로 구현되어 viem ABI 의존 없이 동작한다
-**Plans**: TBD
+**Plans**: 3 plans (2 waves)
+Plans:
+- [ ] 276-01-PLAN.md -- Aave V3 manual hex ABI encoding + 5-chain 주소 레지스트리 + Zod 입력 스키마
+- [ ] 276-02-PLAN.md -- RPC 응답 디코더 + 헬스 팩터 시뮬레이션 + APY 변환 유틸리티
+- [ ] 276-03-PLAN.md -- AaveV3LendingProvider 클래스 + registerBuiltInProviders 등록 + 통합 테스트
 
 ### Phase 277: REST API + MCP + SDK Integration
 **Goal**: AI 에이전트가 REST API, MCP 도구, SDK를 통해 Lending 포지션을 조회하고, Aave V3 액션을 실행하며, 정책 엔진이 Lending 관련 요청을 평가하는 상태
@@ -253,7 +257,7 @@ Phases execute in numeric order: 274 -> 275 -> 276 -> 277 -> 278
 |-------|-----------|----------------|--------|-----------|
 | 274. SSoT Enums + DB + Interfaces | v29.2 | 3/3 | **DONE** | 2026-02-27 |
 | 275. Lending Framework Services | v29.2 | 3/3 | **DONE** | 2026-02-27 |
-| 276. Aave V3 Provider | v29.2 | 0/TBD | Not started | - |
+| 276. Aave V3 Provider | v29.2 | 0/3 | **PLANNED** | - |
 | 277. REST API + MCP + SDK | v29.2 | 0/TBD | Not started | - |
 | 278. Admin UI + Settings + E2E | v29.2 | 0/TBD | Not started | - |
 
