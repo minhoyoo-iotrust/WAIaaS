@@ -33,12 +33,12 @@ Requirements for EVM Lending framework + Aave V3 provider. Each maps to roadmap 
 - [ ] **AAVE-02**: AaveV3LendingProvider가 borrow 액션을 Pool.borrow() calldata로 resolve (variable rate only)
 - [ ] **AAVE-03**: AaveV3LendingProvider가 repay 액션을 Pool.repay() calldata로 resolve
 - [ ] **AAVE-04**: AaveV3LendingProvider가 withdraw 액션을 Pool.withdraw() calldata로 resolve
-- [ ] **AAVE-05**: supply/repay 시 ERC-20 approve를 포함한 multi-step ContractCallRequest[] 반환
-- [ ] **AAVE-06**: 5개 EVM 체인(Ethereum/Arbitrum/Optimism/Polygon/Base) Pool/DataProvider/Oracle 주소 매핑
-- [ ] **AAVE-07**: getUserAccountData()로 헬스 팩터 조회 (18-decimal bigint 정밀도)
-- [ ] **AAVE-08**: 자산별 APY/LTV/유동성 시장 데이터 조회
-- [ ] **AAVE-09**: borrow/withdraw 전 HF 시뮬레이션으로 자기 청산 방지
-- [ ] **AAVE-10**: manual hex ABI encoding (viem 미사용, Lido 패턴 준수)
+- [x] **AAVE-05**: supply/repay 시 ERC-20 approve를 포함한 multi-step ContractCallRequest[] 반환
+- [x] **AAVE-06**: 5개 EVM 체인(Ethereum/Arbitrum/Optimism/Polygon/Base) Pool/DataProvider/Oracle 주소 매핑
+- [x] **AAVE-07**: getUserAccountData()로 헬스 팩터 조회 (18-decimal bigint 정밀도)
+- [x] **AAVE-08**: 자산별 APY/LTV/유동성 시장 데이터 조회
+- [x] **AAVE-09**: borrow/withdraw 전 HF 시뮬레이션으로 자기 청산 방지
+- [x] **AAVE-10**: manual hex ABI encoding (viem 미사용, Lido 패턴 준수)
 
 ### API + MCP + SDK
 
@@ -111,12 +111,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AAVE-02 | Phase 276 | Pending |
 | AAVE-03 | Phase 276 | Pending |
 | AAVE-04 | Phase 276 | Pending |
-| AAVE-05 | Phase 276 | Pending |
-| AAVE-06 | Phase 276 | Pending |
-| AAVE-07 | Phase 276 | Pending |
-| AAVE-08 | Phase 276 | Pending |
-| AAVE-09 | Phase 276 | Pending |
-| AAVE-10 | Phase 276 | Pending |
+| AAVE-05 | Phase 276 | Complete |
+| AAVE-06 | Phase 276 | Complete |
+| AAVE-07 | Phase 276 | Complete |
+| AAVE-08 | Phase 276 | Complete |
+| AAVE-09 | Phase 276 | Complete |
+| AAVE-10 | Phase 276 | Complete |
 | API-01 | Phase 277 | Pending |
 | API-02 | Phase 277 | Pending |
 | API-03 | Phase 277 | Pending |
