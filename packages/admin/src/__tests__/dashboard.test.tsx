@@ -88,18 +88,18 @@ describe('DashboardPage', () => {
 
     render(<DashboardPage />);
 
-    // Flush initial async work (3 apiGet calls: fetchStatus, fetchDisplayCurrency, approval count)
+    // Flush initial async work (apiGet calls: fetchStatus, fetchDefi, fetchDisplayCurrency, approval count)
     await vi.advanceTimersByTimeAsync(0);
     const initialCalls = vi.mocked(apiGet).mock.calls.length;
     expect(initialCalls).toBeGreaterThanOrEqual(1);
 
-    // After 30s poll, fetchStatus fires again
+    // After 30s poll, fetchStatus + fetchDefi fire again (2 calls per interval)
     await vi.advanceTimersByTimeAsync(30_000);
-    expect(vi.mocked(apiGet)).toHaveBeenCalledTimes(initialCalls + 1);
+    expect(vi.mocked(apiGet)).toHaveBeenCalledTimes(initialCalls + 2);
 
     // After another 30s poll
     await vi.advanceTimersByTimeAsync(30_000);
-    expect(vi.mocked(apiGet)).toHaveBeenCalledTimes(initialCalls + 2);
+    expect(vi.mocked(apiGet)).toHaveBeenCalledTimes(initialCalls + 4);
 
     vi.useRealTimers();
   });

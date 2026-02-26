@@ -422,8 +422,8 @@ describe('SettingsService', () => {
     });
 
     it('has expected number of definitions', () => {
-      // 11 notifications + 14 rpc + 14 security + 1 daemon + 2 walletconnect + 2 oracle + 1 display + 6 autostop + 5 monitoring + 2 telegram + 8 signing_sdk + 7 incoming + 24 actions + 1 policy + 5 gas_condition + 13 rpc_pool = 115
-      expect(SETTING_DEFINITIONS.length).toBe(128);
+      // 11 notifications + 14 rpc + 14 security + 1 daemon + 2 walletconnect + 2 oracle + 1 display + 6 autostop + 5 monitoring + 2 telegram + 8 signing_sdk + 7 incoming + 28 actions + 1 policy + 5 gas_condition + 13 rpc_pool = 132
+      expect(SETTING_DEFINITIONS.length).toBe(132);
     });
   });
 
@@ -453,9 +453,9 @@ describe('SettingsService', () => {
       expect(all.actions!.zerox_swap_default_slippage_bps).toBe('100');
     });
 
-    it('actions category has 24 settings', () => {
+    it('actions category has 28 settings', () => {
       const actionsDefs = SETTING_DEFINITIONS.filter((d) => d.category === 'actions');
-      expect(actionsDefs.length).toBe(24);
+      expect(actionsDefs.length).toBe(28);
     });
 
     it('actions.jupiter_swap_api_key is a credential', () => {
