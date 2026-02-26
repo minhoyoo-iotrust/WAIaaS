@@ -1,96 +1,77 @@
-# Requirements: WAIaaS v29.0 고급 DeFi 프로토콜 설계
+# Requirements: WAIaaS v29.2 EVM Lending (Aave V3)
 
 **Defined:** 2026-02-26
 **Core Value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
 
-## v1 Requirements
+## v29.2 Requirements
 
-Requirements for v29.0 milestone. Each maps to roadmap phases.
+Requirements for EVM Lending framework + Aave V3 provider. Each maps to roadmap phases.
 
-### Lending (LEND)
+### SSoT Enum + DB Foundation
 
-- [ ] **LEND-01**: ILendingProvider 인터페이스가 supply/borrow/repay/withdraw 4개 표준 액션을 정의한다
-- [ ] **LEND-02**: getPosition/getHealthFactor/getMarkets 3개 조회 메서드가 정의된다
-- [ ] **LEND-03**: LendingPosition Zod 스키마가 type(SUPPLY/BORROW), provider, asset, amount, apy를 포함한다
-- [ ] **LEND-04**: HealthFactor 타입이 담보 가치/차입 가치 비율과 임계값(기본 1.2)을 정의한다
-- [ ] **LEND-05**: LendingPolicyEvaluator가 최대 LTV 제한 규칙을 정의한다
-- [ ] **LEND-06**: 허용 담보/차입 자산 화이트리스트 정책이 정의된다
-- [ ] **LEND-07**: REST API GET /v1/wallets/:id/positions 엔드포인트가 명세된다
-- [ ] **LEND-08**: REST API GET /v1/wallets/:id/health-factor 엔드포인트가 명세된다
-- [ ] **LEND-09**: Aave V3/Kamino/Morpho 대상 구현체의 인터페이스 매핑이 정의된다
+- [ ] **ENUM-01**: LIQUIDATION_WARNING 등 4개 DeFi 알림 이벤트가 notification enum에 추가됨
+- [ ] **ENUM-02**: POSITION_CATEGORIES (LENDING/YIELD/PERP/STAKING) enum이 core/enums/defi.ts에 정의됨
+- [ ] **ENUM-03**: POSITION_STATUSES (ACTIVE/CLOSED/LIQUIDATED) enum이 core/enums/defi.ts에 정의됨
+- [ ] **ENUM-04**: defi_positions 테이블이 DB 마이그레이션으로 생성됨 (category discriminant, UNIQUE key)
+- [ ] **ENUM-05**: DeFi 이벤트 메시지 템플릿이 알림 서비스에 등록됨
 
-### Yield (YIELD)
+### Lending Framework
 
-- [ ] **YIELD-01**: IYieldProvider 인터페이스가 buyPT/buyYT/redeemPT/addLiquidity/removeLiquidity 5개 표준 액션을 정의한다
-- [ ] **YIELD-02**: getMarkets/getPosition/getYieldForecast 3개 조회 메서드가 정의된다
-- [ ] **YIELD-03**: YieldPosition Zod 스키마가 token_type(PT/YT/LP), market_id, maturity, apy를 포함한다
-- [ ] **YIELD-04**: MaturityInfo 타입이 만기일, 경과 시간, 상환 가능 여부를 정의한다
-- [ ] **YIELD-05**: MaturityMonitor가 1일 1회 폴링으로 만기 7일/1일 전 알림과 미상환 경고를 설계한다
-- [ ] **YIELD-06**: positions 테이블의 Yield 카테고리 확장 스키마가 정의된다
+- [ ] **LEND-01**: ILendingProvider 인터페이스가 IActionProvider를 확장하여 getPosition/getHealthFactor/getMarkets 메서드 제공
+- [ ] **LEND-02**: IPositionProvider 인터페이스가 PositionTracker용 읽기 전용 동기화 메서드 제공
+- [ ] **LEND-03**: PositionTracker가 등록된 provider별로 5분 간격 포지션 동기화 수행
+- [ ] **LEND-04**: PositionTracker가 defi_positions 테이블에 batch upsert로 포지션 캐시
+- [ ] **LEND-05**: HealthFactorMonitor가 DB 캐시에서 HF < threshold(기본 1.2) 감지 시 LIQUIDATION_WARNING 발송
+- [ ] **LEND-06**: HealthFactorMonitor가 HF < 1.5일 때 폴링 주기를 5분→1분으로 단축 (적응형)
+- [ ] **LEND-07**: LendingPolicyEvaluator가 max_ltv_pct 기반 차입 제한 평가
+- [ ] **LEND-08**: LendingPolicyEvaluator가 supply/repay를 비지출(non-spending)로 분류하여 SPENDING_LIMIT 미차감
+- [ ] **LEND-09**: LendingPolicyEvaluator가 USD 기준 차입 한도 평가
 
-### Perp (PERP)
+### Aave V3 Provider
 
-- [ ] **PERP-01**: IPerpProvider 인터페이스가 openPosition/closePosition/modifyPosition/addMargin/withdrawMargin 5개 표준 액션을 정의한다
-- [ ] **PERP-02**: getPosition/getMarginInfo/getMarkets 3개 조회 메서드가 정의된다
-- [ ] **PERP-03**: PerpPosition Zod 스키마가 direction(LONG/SHORT), leverage, unrealized_pnl, liquidation_price를 포함한다
-- [ ] **PERP-04**: MarginInfo 타입이 유지 마진, 사용 마진, 가용 마진을 정의한다
-- [ ] **PERP-05**: PerpPolicyEvaluator가 최대 레버리지 제한 규칙을 정의한다
-- [ ] **PERP-06**: 최대 포지션 크기(USD) 정책과 허용 시장 화이트리스트가 정의된다
-- [ ] **PERP-07**: MarginMonitor가 1분 간격 폴링으로 유지 마진 임계값 접근 시 경고를 설계한다
+- [ ] **AAVE-01**: AaveV3LendingProvider가 supply 액션을 Pool.supply() calldata로 resolve
+- [ ] **AAVE-02**: AaveV3LendingProvider가 borrow 액션을 Pool.borrow() calldata로 resolve (variable rate only)
+- [ ] **AAVE-03**: AaveV3LendingProvider가 repay 액션을 Pool.repay() calldata로 resolve
+- [ ] **AAVE-04**: AaveV3LendingProvider가 withdraw 액션을 Pool.withdraw() calldata로 resolve
+- [ ] **AAVE-05**: supply/repay 시 ERC-20 approve를 포함한 multi-step ContractCallRequest[] 반환
+- [ ] **AAVE-06**: 5개 EVM 체인(Ethereum/Arbitrum/Optimism/Polygon/Base) Pool/DataProvider/Oracle 주소 매핑
+- [ ] **AAVE-07**: getUserAccountData()로 헬스 팩터 조회 (18-decimal bigint 정밀도)
+- [ ] **AAVE-08**: 자산별 APY/LTV/유동성 시장 데이터 조회
+- [ ] **AAVE-09**: borrow/withdraw 전 HF 시뮬레이션으로 자기 청산 방지
+- [ ] **AAVE-10**: manual hex ABI encoding (viem 미사용, Lido 패턴 준수)
 
-### Position Infrastructure (POS)
+### API + MCP + SDK
 
-- [ ] **POS-01**: positions 통합 테이블 스키마가 category(LENDING/YIELD/PERP/STAKING) discriminatedUnion으로 정의된다
-- [ ] **POS-02**: PositionTracker 동기화 스케줄러가 카테고리별 차등 주기(Lending 5분, Perp 1분, Yield 1시간)를 설계한다
-- [ ] **POS-03**: GET /v1/wallets/:id/positions 통합 응답 Zod 스키마가 4개 카테고리를 포함한다
-- [ ] **POS-04**: Admin 포트폴리오 뷰 와이어프레임이 프로토콜별 포지션, USD 환산, APY, 헬스 팩터를 표시한다
-- [ ] **POS-05**: DB 마이그레이션 v25 스키마가 positions 테이블을 정의한다
-- [ ] **POS-06**: positions 테이블 배치 쓰기 전략이 SQLite 쓰기 경합을 방지하도록 설계된다
+- [ ] **API-01**: GET /v1/wallets/:id/positions로 DeFi 포지션 목록 조회
+- [ ] **API-02**: GET /v1/wallets/:id/health-factor로 헬스 팩터 조회
+- [ ] **API-03**: MCP 도구 5개 (aave_supply/borrow/repay/withdraw/positions) 자동 등록
+- [ ] **API-04**: TS/Python SDK에서 executeAction('aave_supply', params) 등으로 Lending 액션 실행
+- [ ] **API-05**: 포지션 조회 API가 USD 환산 금액 포함
 
-### Monitoring (MON)
+### Admin UI + Settings
 
-- [ ] **MON-01**: IDeFiMonitor 공통 인터페이스가 3개 모니터의 공통 패턴을 정의한다
-- [ ] **MON-02**: HealthFactorMonitor가 적응형 폴링(5s-5min, 위험도 기반)으로 설계된다
-- [ ] **MON-03**: MaturityMonitor가 1일 1회 폴링으로 설계된다
-- [ ] **MON-04**: MarginMonitor가 1분 간격 폴링으로 설계된다
-- [ ] **MON-05**: 알림 이벤트 4개(LIQUIDATION_WARNING, MATURITY_WARNING, MARGIN_WARNING, LIQUIDATION_IMMINENT)가 정의된다
-- [ ] **MON-06**: 모니터 라이프사이클이 데몬 시작/정지 시 등록/해제로 설계된다
-- [ ] **MON-07**: config.toml [monitoring] 섹션이 임계값과 폴링 주기를 정의한다
+- [ ] **ADMN-01**: Admin 대시보드에 DeFi 포지션 섹션 표시 (예치/차입 현황, HF, APY)
+- [ ] **ADMN-02**: Admin Settings에서 aave_v3.health_factor_warning_threshold 설정 가능
+- [ ] **ADMN-03**: Admin Settings에서 aave_v3.position_sync_interval_sec 설정 가능
+- [ ] **ADMN-04**: Admin Settings에서 aave_v3.max_ltv_pct 설정 가능
+- [ ] **ADMN-05**: Admin Settings에서 aave_v3.enabled 토글로 프로바이더 활성화/비활성화
 
-### Intent (INTENT)
+## Future Requirements
 
-- [ ] **INTENT-01**: SignableOrder Zod 타입이 정의된다
-- [ ] **INTENT-02**: ActionProviderRegistry가 intent 타입을 지원하도록 확장 설계된다
-- [ ] **INTENT-03**: EIP-712 서명 파이프라인(signTypedData)이 설계된다
-- [ ] **INTENT-04**: 주문 상태 추적(OPEN → FULFILLED/EXPIRED) 폴링이 설계된다
-- [ ] **INTENT-05**: 기존 ContractCallRequest 파이프라인과의 분기점이 정의된다
-- [ ] **INTENT-06**: Intent 보안 설계(chainId + verifyingContract + nonce + deadline 바인딩)가 정의된다
+Deferred to future release. Tracked but not in current roadmap.
 
-## v2 Requirements
+### Advanced Lending
 
-Deferred to future milestones. Tracked but not in current roadmap.
+- **LEND-10**: E-Mode 지원 (자산 카테고리별 높은 LTV)
+- **LEND-11**: Flash loan 지원
+- **LEND-12**: Credit delegation (제3자 차입 위임)
+- **LEND-13**: Auto-leverage (반복 공급+차입)
 
-### Lending Implementation
+### Multi-Protocol
 
-- **LEND-10**: Aave V3 ActionProvider 구현 (m29-02)
-- **LEND-11**: Kamino ActionProvider 구현 (m29-04)
-- **LEND-12**: Morpho ActionProvider 구현 (m29-10)
-
-### Yield Implementation
-
-- **YIELD-07**: Pendle ActionProvider 구현 (m29-06)
-
-### Perp Implementation
-
-- **PERP-08**: Drift ActionProvider 구현 (m29-08)
-
-### Intent Implementation
-
-- **INTENT-07**: CoW Protocol ActionProvider 구현 (m29-14)
-
-### Staking Extension
-
-- **STAKE-01**: Marinade ActionProvider 구현 (m29-12)
+- **LEND-14**: Kamino Lending (Solana) 통합
+- **LEND-15**: Morpho Lending (EVM) 통합
+- **LEND-16**: Compound V3 통합
 
 ## Out of Scope
 
@@ -98,12 +79,13 @@ Explicitly excluded. Documented to prevent scope creep.
 
 | Feature | Reason |
 |---------|--------|
-| 프로토콜 구현 코드 | 설계 마일스톤 — 코드 구현은 m29-02~m29-14에서 수행 |
-| Admin UI 포지션 뷰 구현 | 와이어프레임만, 구현은 m29-xx 구현 마일스톤에서 |
-| 자동 청산 방어 (auto-repay) | 높은 복잡도, 별도 마일스톤에서 정책 통합 후 검토 |
-| DeFi 대시보드/차트 | AI 에이전트 우선, 인간 UI는 이후 |
-| 여러 프로토콜의 실시간 TVL/APY 비교 | 에이전트 의사결정에 불필요, 각 프로바이더가 개별 제공 |
-| Solver Network 직접 운영 | CoW Protocol은 기존 솔버 네트워크 활용 |
+| Flash loan 실행 | AI 에이전트 지갑에서 flash loan은 악용 위험 높음 |
+| Credit delegation | 복잡한 위험 관리, 별도 설계 필요 |
+| Auto-leverage | 반복 공급+차입 자동화는 청산 위험 증가 |
+| Liquidation 실행 | 청산 봇 기능은 지갑 시스템 범위 외 |
+| Stable rate 차입 | Aave V3 거버넌스에서 비활성화됨 |
+| Avalanche 체인 지원 | WAIaaS NETWORK_TYPES 미포함, 향후 추가 가능 |
+| 실시간 WebSocket HF 모니터링 | RPC 비용 과다, 폴링 기반으로 충분 |
 
 ## Traceability
 
@@ -111,53 +93,46 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| POS-01 | Phase 268 | Pending |
-| POS-02 | Phase 268 | Pending |
-| POS-03 | Phase 268 | Pending |
-| POS-04 | Phase 268 | Pending |
-| POS-05 | Phase 268 | Pending |
-| POS-06 | Phase 268 | Pending |
-| MON-01 | Phase 269 | Pending |
-| MON-02 | Phase 269 | Pending |
-| MON-03 | Phase 269 | Pending |
-| MON-04 | Phase 269 | Pending |
-| MON-05 | Phase 269 | Pending |
-| MON-06 | Phase 269 | Pending |
-| MON-07 | Phase 269 | Pending |
-| LEND-01 | Phase 270 | Pending |
-| LEND-02 | Phase 270 | Pending |
-| LEND-03 | Phase 270 | Pending |
-| LEND-04 | Phase 270 | Pending |
-| LEND-05 | Phase 270 | Pending |
-| LEND-06 | Phase 270 | Pending |
-| LEND-07 | Phase 270 | Pending |
-| LEND-08 | Phase 270 | Pending |
-| LEND-09 | Phase 270 | Pending |
-| YIELD-01 | Phase 271 | Pending |
-| YIELD-02 | Phase 271 | Pending |
-| YIELD-03 | Phase 271 | Pending |
-| YIELD-04 | Phase 271 | Pending |
-| YIELD-05 | Phase 271 | Pending |
-| YIELD-06 | Phase 271 | Pending |
-| PERP-01 | Phase 272 | Pending |
-| PERP-02 | Phase 272 | Pending |
-| PERP-03 | Phase 272 | Pending |
-| PERP-04 | Phase 272 | Pending |
-| PERP-05 | Phase 272 | Pending |
-| PERP-06 | Phase 272 | Pending |
-| PERP-07 | Phase 272 | Pending |
-| INTENT-01 | Phase 273 | Pending |
-| INTENT-02 | Phase 273 | Pending |
-| INTENT-03 | Phase 273 | Pending |
-| INTENT-04 | Phase 273 | Pending |
-| INTENT-05 | Phase 273 | Pending |
-| INTENT-06 | Phase 273 | Pending |
+| ENUM-01 | TBD | Pending |
+| ENUM-02 | TBD | Pending |
+| ENUM-03 | TBD | Pending |
+| ENUM-04 | TBD | Pending |
+| ENUM-05 | TBD | Pending |
+| LEND-01 | TBD | Pending |
+| LEND-02 | TBD | Pending |
+| LEND-03 | TBD | Pending |
+| LEND-04 | TBD | Pending |
+| LEND-05 | TBD | Pending |
+| LEND-06 | TBD | Pending |
+| LEND-07 | TBD | Pending |
+| LEND-08 | TBD | Pending |
+| LEND-09 | TBD | Pending |
+| AAVE-01 | TBD | Pending |
+| AAVE-02 | TBD | Pending |
+| AAVE-03 | TBD | Pending |
+| AAVE-04 | TBD | Pending |
+| AAVE-05 | TBD | Pending |
+| AAVE-06 | TBD | Pending |
+| AAVE-07 | TBD | Pending |
+| AAVE-08 | TBD | Pending |
+| AAVE-09 | TBD | Pending |
+| AAVE-10 | TBD | Pending |
+| API-01 | TBD | Pending |
+| API-02 | TBD | Pending |
+| API-03 | TBD | Pending |
+| API-04 | TBD | Pending |
+| API-05 | TBD | Pending |
+| ADMN-01 | TBD | Pending |
+| ADMN-02 | TBD | Pending |
+| ADMN-03 | TBD | Pending |
+| ADMN-04 | TBD | Pending |
+| ADMN-05 | TBD | Pending |
 
 **Coverage:**
-- v1 requirements: 38 total
-- Mapped to phases: 38
-- Unmapped: 0
+- v29.2 requirements: 34 total
+- Mapped to phases: 0
+- Unmapped: 34 (pending roadmap creation)
 
 ---
 *Requirements defined: 2026-02-26*
-*Last updated: 2026-02-26 after roadmap creation -- traceability populated*
+*Last updated: 2026-02-26 after initial definition*
