@@ -2392,6 +2392,394 @@ if (this.defiMonitorService) {
 
 ---
 
+## 13. ILendingProvider 인터페이스
+
+### 13.1 인터페이스 정의
+
+ILendingProvider는 IActionProvider를 확장하여 lending-specific 쿼리 메서드 3개를 추가한다. 기존 IActionProvider의 `metadata`, `actions`, `resolve()` 를 상속하며, lending 포지션 조회/헬스 팩터/시장 정보를 위한 메서드를 정의한다.
+
+**파일:** `packages/core/src/interfaces/lending-provider.types.ts`
+**Re-export:** `packages/core/src/interfaces/index.ts`
+
+```typescript
+import type { IActionProvider, ActionContext } from './action-provider.types.js';
+
+export interface ILendingProvider extends IActionProvider {
+  /** 지갑의 현재 lending 포지션 조회 (API/AI 에이전트용 상세 타입) */
+  getPosition(walletId: string, context: ActionContext): Promise<LendingPositionSummary[]>;
+
+  /** 지갑의 health factor (담보/차입 비율) 조회 */
+  getHealthFactor(walletId: string, context: ActionContext): Promise<HealthFactor>;
+
+  /** 사용 가능한 lending 시장 목록 조회 */
+  getMarkets(chain: string, network?: string): Promise<MarketInfo[]>;
+}
+```
+
+**쿼리 메서드 3개:**
+
+| 메서드 | 반환 타입 | 용도 |
+|--------|-----------|------|
+| `getPosition(walletId, context)` | `LendingPositionSummary[]` | 지갑의 현재 lending 포지션 (supply/borrow) 상세 정보 |
+| `getHealthFactor(walletId, context)` | `HealthFactor` | 담보/차입 비율, LTV, 위험 상태 판단 |
+| `getMarkets(chain, network?)` | `MarketInfo[]` | AI 에이전트가 사용 가능한 시장 탐색 |
+
+### 13.2 ActionDefinition 4개
+
+ILendingProvider는 4개의 표준 lending 액션을 정의한다. 각 액션의 입력 스키마와 위험 수준, 기본 승인 티어를 명세한다.
+
+| 액션 | 입력 스키마 | risk | defaultTier | 설명 |
+|------|-------------|------|-------------|------|
+| `supply` | `{ asset: CAIP-19, amount: string, onBehalfOf?: address }` | medium | DELAY | 담보/공급 자산 예치 |
+| `borrow` | `{ asset: CAIP-19, amount: string, interestRateMode?: 1\|2 (default 2=variable) }` | high | APPROVAL | 담보 대비 자산 차입 |
+| `repay` | `{ asset: CAIP-19, amount: string, interestRateMode?: number }` | low | INSTANT | 차입 금액 상환 |
+| `withdraw` | `{ asset: CAIP-19, amount: string, to?: address }` | medium | DELAY | 예치 자산 인출 |
+
+**입력 스키마 상세:**
+
+```typescript
+// Zod SSoT: LendingActionInputSchemas
+const SupplyInputSchema = z.object({
+  asset: z.string().describe('CAIP-19 asset identifier'),
+  amount: z.string().describe('Human-readable amount (e.g., "100.5")'),
+  onBehalfOf: z.string().optional().describe('Supply on behalf of another address'),
+});
+
+const BorrowInputSchema = z.object({
+  asset: z.string().describe('CAIP-19 asset identifier'),
+  amount: z.string().describe('Human-readable amount'),
+  interestRateMode: z.union([z.literal(1), z.literal(2)]).default(2)
+    .describe('1=stable (deprecated), 2=variable (default)'),
+});
+
+const RepayInputSchema = z.object({
+  asset: z.string().describe('CAIP-19 asset identifier'),
+  amount: z.string().describe('Human-readable amount or "MAX" for full repay'),
+  interestRateMode: z.number().optional(),
+});
+
+const WithdrawInputSchema = z.object({
+  asset: z.string().describe('CAIP-19 asset identifier'),
+  amount: z.string().describe('Human-readable amount or "MAX" for full withdraw'),
+  to: z.string().optional().describe('Withdraw to different address'),
+});
+```
+
+**resolve() 반환 타입:**
+- `resolve()` → `ContractCallRequest | ContractCallRequest[]`
+- 단일 트랜잭션: repay, withdraw, borrow
+- 멀티 트랜잭션: supply (approve + supply), borrow (일부 프로토콜에서 approve 필요)
+- LidoStaking의 approve + requestWithdrawals 패턴과 동일
+
+**각 액션의 chain은 프로바이더별로 설정:**
+- Aave V3 / Morpho Blue: `chain: 'evm'`
+- Kamino: `chain: 'solana'`
+
+### 13.3 IPositionProvider 동시 구현 패턴
+
+각 lending 프로바이더 클래스는 `ILendingProvider`와 `IPositionProvider` (Phase 268)를 동시에 구현한다. 두 인터페이스는 동일한 RPC 호출을 공유하지만 반환 타입이 목적에 따라 다르다.
+
+| 인터페이스 | 메서드 | 반환 타입 | 용도 |
+|-----------|--------|-----------|------|
+| `IPositionProvider` | `getPositions(walletId)` | `PositionUpdate[]` | PositionTracker 쓰기 큐 (defi_positions 테이블 갱신) |
+| `ILendingProvider` | `getPosition(walletId, context)` | `LendingPositionSummary[]` | REST API / AI 에이전트 응답 (상세 정보) |
+
+**구현 패턴 예시:**
+
+```typescript
+class AaveV3Provider implements ILendingProvider, IPositionProvider {
+  // IActionProvider (ILendingProvider 경유 상속)
+  readonly metadata: ActionProviderMetadata = { name: 'aave_v3', ... };
+  readonly actions: readonly ActionDefinition[] = [
+    { name: 'supply', inputSchema: SupplyInputSchema, risk: 'medium', defaultTier: 'DELAY' },
+    { name: 'borrow', inputSchema: BorrowInputSchema, risk: 'high', defaultTier: 'APPROVAL' },
+    { name: 'repay', inputSchema: RepayInputSchema, risk: 'low', defaultTier: 'INSTANT' },
+    { name: 'withdraw', inputSchema: WithdrawInputSchema, risk: 'medium', defaultTier: 'DELAY' },
+  ];
+  async resolve(actionName, params, context): Promise<ContractCallRequest | ContractCallRequest[]> { ... }
+
+  // ILendingProvider 쿼리 메서드
+  async getPosition(walletId, context): Promise<LendingPositionSummary[]> { ... }
+  async getHealthFactor(walletId, context): Promise<HealthFactor> { ... }
+  async getMarkets(chain, network?): Promise<MarketInfo[]> { ... }
+
+  // IPositionProvider (PositionTracker 연동)
+  async getPositions(walletId): Promise<PositionUpdate[]> { ... }
+  getProviderName(): string { return 'aave_v3'; }
+  getSupportedCategories(): PositionCategory[] { return ['LENDING']; }
+}
+```
+
+**동일 RPC 호출, 다른 반환 타입:**
+- `getUserAccountData()` (Aave) → `PositionUpdate[]` (PositionTracker용) + `LendingPositionSummary[]` (API용)
+- 내부적으로 공유 메서드(`_fetchRawPositions()`)가 RPC 결과를 캐시하고, 각 인터페이스 메서드가 필요한 형태로 변환
+
+### 13.4 설계 결정
+
+| ID | 결정 | 선택 | 근거 |
+|----|------|------|------|
+| DEC-LEND-01 | ILendingProvider 상속 구조 | IActionProvider를 extends (별도 인터페이스 아님) | resolve()를 같은 클래스에 유지하여 6-stage pipeline에 자연스럽게 통합. 별도 인터페이스면 resolve() 연결에 추가 배선 필요 |
+| DEC-LEND-02 | 쿼리 메서드 배치 | ILendingProvider에 직접 3개 쿼리 메서드 추가 | 별도 서비스를 통한 간접 참조 회피. 프로바이더가 자체 데이터를 가장 잘 알고 있으므로 메서드를 직접 제공 |
+| DEC-LEND-03 | borrow 기본 이자율 모드 | interestRateMode=2 (variable) 기본값 | Aave V3 stable rate가 대부분 시장에서 deprecated. variable이 안전한 기본값. stable(1) 옵션은 유지하되 명시적 선택 필요 |
+| DEC-LEND-04 | resolve() 반환 타입 | `ContractCallRequest \| ContractCallRequest[]` | multi-step approve+supply 패턴 지원 (LidoStaking의 approve + requestWithdrawals와 동일). 단일 트랜잭션은 ContractCallRequest, 다단계는 배열 |
+
+---
+
+## 14. LendingPosition + HealthFactor 타입
+
+### 14.1 LendingPosition Zod 스키마
+
+Phase 268의 `LendingMetadataSchema` 개념을 확장하여 API 응답용 상세 포지션 타입을 정의한다. 이 스키마는 REST API 응답에 사용되며, `defi_positions` 테이블의 metadata JSON 컬럼은 Phase 268의 LendingMetadataSchema를 계속 사용한다.
+
+**파일:** `packages/core/src/schemas/lending.schema.ts`
+
+```typescript
+// Zod SSoT: API 응답용 LendingPosition
+export const LendingPositionSummarySchema = z.object({
+  asset: z.string().describe('CAIP-19 asset identifier'),
+  symbol: z.string().describe('Human-readable symbol (e.g., "USDC")'),
+  positionType: z.enum(['SUPPLY', 'BORROW']),
+  amount: z.string().describe('Raw units as string (bigint serialization)'),
+  amountUsd: z.number().describe('USD value at current price'),
+  apy: z.number().describe('APY as decimal (e.g., 0.032 = 3.2%)'),
+  interestRateMode: z.enum(['STABLE', 'VARIABLE']).optional()
+    .describe('Only applicable to borrow positions on protocols supporting multiple modes'),
+  chain: ChainTypeEnum,
+  network: z.string(),
+  provider: z.string().describe('Provider name (e.g., "aave_v3", "kamino", "morpho_blue")'),
+});
+
+export type LendingPositionSummary = z.infer<typeof LendingPositionSummarySchema>;
+```
+
+**필드 명세:**
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `asset` | string (CAIP-19) | Phase 232 CAIP-19 표준 자산 식별자 |
+| `symbol` | string | Human-readable 심볼 |
+| `positionType` | 'SUPPLY' \| 'BORROW' | 공급 또는 차입 |
+| `amount` | string | raw units (bigint JSON 직렬화 → string) |
+| `amountUsd` | number | 현재 가격 기준 USD 환산값 |
+| `apy` | number | APY (decimal, 예: 0.032 = 3.2%) |
+| `interestRateMode` | 'STABLE' \| 'VARIABLE' (optional) | 이자율 모드 (borrow 포지션, 지원 프로토콜만) |
+| `chain` | ChainTypeEnum | 'evm' \| 'solana' |
+| `network` | string | 네트워크 이름 |
+| `provider` | string | 프로바이더 이름 |
+
+### 14.2 HealthFactor 타입
+
+담보/차입 비율을 기반으로 한 포트폴리오 위험도 타입. Phase 269의 HealthFactorMonitor severity 수준과 일관된 상태 분류를 사용한다.
+
+```typescript
+export const HealthFactorSchema = z.object({
+  healthFactor: z.number().nullable()
+    .describe('Collateral/debt ratio. > 1 = safe, < 1 = liquidatable. null if no debt.'),
+  totalCollateralUsd: z.number(),
+  totalDebtUsd: z.number(),
+  availableBorrowUsd: z.number(),
+  currentLtv: z.number().describe('Current LTV as decimal (e.g., 0.65 = 65%)'),
+  maxLtv: z.number().describe('Max allowed LTV before liquidation'),
+  status: z.enum(['SAFE', 'WARNING', 'DANGER', 'CRITICAL', 'NO_POSITIONS'])
+    .describe('Maps to Phase 269 MonitorSeverity'),
+  positions: z.array(LendingPositionSummarySchema)
+    .describe('Per-asset breakdown'),
+});
+
+export type HealthFactor = z.infer<typeof HealthFactorSchema>;
+```
+
+**상태 임계값 매핑 (Phase 269 HealthFactorMonitor와 일치):**
+
+| status | healthFactor 범위 | Phase 269 MonitorSeverity | 의미 |
+|--------|-------------------|--------------------------|------|
+| `SAFE` | hf >= 2.0 | LOW | 안전, 청산 위험 없음 |
+| `WARNING` | 1.5 <= hf < 2.0 | MEDIUM | 주의 필요, 시장 변동 시 위험 |
+| `DANGER` | 1.2 <= hf < 1.5 | HIGH | 위험, 담보 추가 또는 상환 권장 |
+| `CRITICAL` | hf < 1.2 | CRITICAL | 긴급, 청산 임박 |
+| `NO_POSITIONS` | - | - | lending 포지션 없음 |
+
+### 14.3 MarketInfo 타입
+
+AI 에이전트가 사용 가능한 lending 시장을 탐색할 때 사용하는 타입. 시장별 APY, LTV, 유동성 정보를 제공한다.
+
+```typescript
+export const MarketInfoSchema = z.object({
+  marketId: z.string().describe('Protocol-specific market identifier'),
+  asset: z.string().describe('CAIP-19 asset identifier'),
+  symbol: z.string().describe('Human-readable symbol'),
+  supplyApy: z.number().describe('Current supply APY (decimal)'),
+  borrowApy: z.number().describe('Current borrow APY (decimal)'),
+  totalSupply: z.string().describe('Total supply in asset units'),
+  totalBorrow: z.string().describe('Total borrow in asset units'),
+  ltv: z.number().describe('Max LTV for this market (decimal, e.g., 0.80 = 80%)'),
+  liquidationThreshold: z.number().describe('Liquidation threshold (decimal, e.g., 0.825)'),
+  isActive: z.boolean().describe('Whether the market accepts new positions'),
+  chain: ChainTypeEnum,
+  network: z.string(),
+  provider: z.string().describe('Provider name'),
+});
+
+export type MarketInfo = z.infer<typeof MarketInfoSchema>;
+```
+
+### 14.4 설계 결정
+
+| ID | 결정 | 선택 | 근거 |
+|----|------|------|------|
+| DEC-LEND-05 | HealthFactor status enum | Phase 269 MonitorSeverity와 1:1 매핑 | 일관된 경고 분류. 모니터링(Phase 269)과 API 응답이 동일한 분류 체계를 사용하여 AI 에이전트 혼란 방지 |
+| DEC-LEND-06 | amount 필드 타입 | string (bigint 아님) | JSON 직렬화에서 bigint는 커스텀 핸들러 필요. string으로 통일하여 REST API 호환성 보장 |
+| DEC-LEND-07 | 자산 식별자 | CAIP-19 사용 (raw address 아님) | Phase 232 CAIP-19 통합과 일관성 유지. 체인/네트워크 정보가 식별자에 포함되어 멀티체인 환경에서 모호성 제거 |
+
+---
+
+## 15. LendingPolicyEvaluator
+
+### 15.1 LENDING_LTV_LIMIT 정책 타입
+
+DatabasePolicyEngine의 정책 타입 레지스트리에 추가되는 새로운 정책 타입. borrow 액션에 대해 예상 LTV를 계산하여 최대 허용 LTV를 초과하는 차입을 방지한다.
+
+**Rules JSON 스키마 (LendingLtvLimitRules):**
+
+```typescript
+const LendingLtvLimitRulesSchema = z.object({
+  maxLtv: z.number().min(0).max(1)
+    .describe('Maximum allowed LTV ratio (e.g., 0.75 = 75%)'),
+  warningLtv: z.number().min(0).max(1)
+    .describe('Warning threshold (e.g., 0.65 = 65%) — forces DELAY tier for human review'),
+});
+
+type LendingLtvLimitRules = z.infer<typeof LendingLtvLimitRulesSchema>;
+```
+
+**평가 로직:**
+
+1. **적용 대상:** `borrow` 액션에만 적용 (supply/repay/withdraw는 LTV를 악화시키지 않음)
+2. **예상 LTV 계산:**
+   ```
+   projectedLtv = (currentDebtUsd + newBorrowAmountUsd) / totalCollateralUsd
+   ```
+3. **판정:**
+   - `projectedLtv > maxLtv` → **deny** (reason: "Borrow would exceed max LTV ({maxLtv})")
+   - `warningLtv < projectedLtv <= maxLtv` → **allow** but upgrade tier to DELAY (인간 검토 강제)
+   - `projectedLtv <= warningLtv` → **allow** (원래 티어 유지)
+4. **현재 포지션 데이터:** `defi_positions` 테이블에서 읽기 (PositionTracker가 캐시한 데이터)
+5. **통합 지점:** DatabasePolicyEngine.evaluate() step 4h (기존 APPROVE_TIER_OVERRIDE step 4g 이후)
+6. **스코핑:** 기존 정책과 동일한 우선순위 해결 (wallet+network > wallet+null > global+network > global+null)
+
+### 15.2 LENDING_ASSET_WHITELIST 정책 타입
+
+CLAUDE.md의 default-deny 원칙을 lending에 적용하는 화이트리스트 정책. CONTRACT_WHITELIST 패턴을 따라 "Contracts default-deny (CONTRACT_WHITELIST opt-in)" 규칙을 lending 자산에도 확장한다.
+
+**Rules JSON 스키마 (LendingAssetWhitelistRules):**
+
+```typescript
+const LendingAssetWhitelistRulesSchema = z.object({
+  collateralAssets: z.array(z.object({
+    assetId: z.string().describe('CAIP-19 asset identifier'),
+    symbol: z.string().optional().describe('Human-readable symbol for Admin UI display'),
+  })).describe('Allowed assets for supply/withdraw actions'),
+  borrowAssets: z.array(z.object({
+    assetId: z.string().describe('CAIP-19 asset identifier'),
+    symbol: z.string().optional().describe('Human-readable symbol for Admin UI display'),
+  })).describe('Allowed assets for borrow/repay actions'),
+});
+
+type LendingAssetWhitelistRules = z.infer<typeof LendingAssetWhitelistRulesSchema>;
+```
+
+**평가 로직:**
+
+1. **Default-deny:** LENDING_ASSET_WHITELIST 정책이 존재하지 않으면 → 모든 lending 액션 deny ("No lending asset whitelist configured")
+2. **supply/withdraw 액션:** `collateralAssets` 목록에서 asset 확인
+3. **borrow/repay 액션:** `borrowAssets` 목록에서 asset 확인
+4. **매칭:** CAIP-19 식별자 exact match
+5. **통합 지점:** DatabasePolicyEngine.evaluate() step 4h (LENDING_LTV_LIMIT 이전, step 4h-a)
+6. **순서:** asset whitelist 먼저 (4h-a), LTV limit 이후 (4h-b) → 유효하지 않은 자산을 먼저 거부하고, 유효한 자산에 대해서만 LTV 계산
+
+### 15.3 PolicyEngine 통합 지점
+
+**Zod SSoT 정책 타입 유니온 확장:**
+
+```typescript
+// 기존 9개 타입 + 새로운 2개 타입
+const PolicyTypeEnum = z.enum([
+  // 기존
+  'WHITELIST', 'ALLOWED_NETWORKS', 'ALLOWED_TOKENS',
+  'CONTRACT_WHITELIST', 'METHOD_WHITELIST', 'APPROVED_SPENDERS',
+  'APPROVE_AMOUNT_LIMIT', 'APPROVE_TIER_OVERRIDE', 'SPENDING_LIMIT',
+  // 신규 (lending)
+  'LENDING_LTV_LIMIT', 'LENDING_ASSET_WHITELIST',
+]);
+```
+
+**기존 policies 테이블 스키마 재사용:**
+- `type` 컬럼: 새 정책 타입 추가 (CHECK 제약 갱신 필요)
+- `rules` JSON 컬럼: LendingLtvLimitRules 또는 LendingAssetWhitelistRules 저장
+- `wallet_id`, `priority`, `enabled`, `network` 컬럼: 기존과 동일하게 사용
+
+**Lending 액션 식별 방법:**
+- ContractCallRequest.metadata 필드에 `{ actionProvider: string, actionName: string }` 전달
+- 예: `{ actionProvider: 'aave_v3', actionName: 'borrow' }`
+- PolicyEvaluator가 `metadata.actionName`이 `['supply', 'borrow', 'repay', 'withdraw']` 중 하나인지 확인
+- 이 방식으로 discriminatedUnion 5-type에 새 타입을 추가하지 않고 lending 액션을 식별
+
+**정책 평가 순서 (전체):**
+
+| 단계 | 정책 타입 | 비고 |
+|------|-----------|------|
+| 4a | WHITELIST | 기존 |
+| 4b | ALLOWED_NETWORKS | 기존 |
+| 4c | ALLOWED_TOKENS | 기존 |
+| 4d | CONTRACT_WHITELIST | 기존 |
+| 4e | METHOD_WHITELIST | 기존 |
+| 4f | APPROVED_SPENDERS | 기존 |
+| 4g | APPROVE_AMOUNT_LIMIT / APPROVE_TIER_OVERRIDE | 기존 |
+| **4h-a** | **LENDING_ASSET_WHITELIST** | **신규 — lending 자산 화이트리스트** |
+| **4h-b** | **LENDING_LTV_LIMIT** | **신규 — borrow LTV 제한** |
+| 5 | SPENDING_LIMIT | 기존 |
+
+**Admin UI 정책 페이지 확장:**
+- 정책 타입 드롭다운에 `LENDING_LTV_LIMIT`, `LENDING_ASSET_WHITELIST` 추가
+- Rules 에디터:
+  - LENDING_LTV_LIMIT: maxLtv 슬라이더 (0~1 범위, 기본 0.75), warningLtv 슬라이더 (0~1 범위, 기본 0.65)
+  - LENDING_ASSET_WHITELIST: 자산 피커 (CAIP-19 기반, collateralAssets/borrowAssets 분리)
+
+### 15.4 HealthFactor 정책-모니터 임계값 관계
+
+LendingPolicyEvaluator의 maxLtv와 Phase 269 HealthFactorMonitor의 임계값은 서로 다른 목적을 가지지만 수학적으로 연관된다.
+
+**구분:**
+- **LendingPolicyEvaluator.maxLtv:** 새로운 borrow가 이 LTV를 초과하는 것을 방지 (사전 예방)
+- **HealthFactorMonitor 임계값:** 기존 포지션의 health factor 하락을 감지하여 경고 (사후 감시)
+
+**변환 공식:**
+
+```
+healthFactor = liquidationThreshold / currentLtv
+```
+
+**예시:**
+- maxLtv = 0.75, liquidationThreshold = 0.825인 시장에서
+- 최대 차입 시 healthFactor = 0.825 / 0.75 = 1.10 (DANGER 범위)
+- 이는 정책이 허용한 최대 borrow가 즉시 모니터링 DANGER 경고를 발생시킴을 의미
+
+**권장 설정:**
+- warningLtv를 설정하여 결과 health factor가 SAFE 범위(>= 2.0)에 머물도록 보장
+- 예: liquidationThreshold = 0.825이면, warningLtv = 0.825 / 2.0 = 0.4125 이하로 설정
+- 이렇게 하면 정책이 승인한 borrow가 즉시 모니터링 경고를 트리거하지 않음
+
+### 15.5 설계 결정
+
+| ID | 결정 | 선택 | 근거 |
+|----|------|------|------|
+| DEC-LEND-08 | LENDING_ASSET_WHITELIST default-deny | 정책 미설정 시 모든 lending 액션 deny | CLAUDE.md "Contracts default-deny (CONTRACT_WHITELIST opt-in)" 패턴 준수. 보안 기본값 |
+| DEC-LEND-09 | Lending 액션 식별 방법 | ContractCallRequest.metadata (discriminatedUnion 타입 추가 아님) | 5-type pipeline 무결성 보존. metadata는 이미 존재하는 확장 포인트이며, 새 union member 추가 시 전체 파이프라인 변경 필요 |
+| DEC-LEND-10 | LTV 계산 데이터 소스 | defi_positions 캐시 (라이브 RPC 아님) | RPC 지연이 파이프라인을 블로킹하는 것 방지. PositionTracker가 데이터 신선도 보장. 최악의 경우 약간 오래된 데이터로 판정하나, 모니터링이 사후 커버 |
+| DEC-LEND-11 | warningLtv 초과 시 동작 | DELAY 티어로 업그레이드 (deny 아님) | 경계선 차입을 허용하되 인간 검토를 강제. deny하면 지나치게 제한적. LTV limit policy가 hard cap, warning은 soft cap |
+
+---
+
 ## 신규 산출물
 
 | ID | 산출물 | 설명 |
