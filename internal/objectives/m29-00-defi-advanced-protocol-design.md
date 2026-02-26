@@ -3686,6 +3686,466 @@ resolve()는 Pendle Hosted SDK convert endpoint를 기본 경로로 사용한다
 
 ---
 
+## 21. IPerpProvider 인터페이스
+
+### 21.1 인터페이스 정의
+
+IPerpProvider는 IActionProvider를 확장하여 perp-specific 쿼리 메서드 3개를 추가한다. 기존 IActionProvider의 `metadata`, `actions`, `resolve()` 를 상속하며, perp 포지션 조회/마진 정보/시장 탐색을 위한 메서드를 정의한다. Phase 270 섹션 13.1의 ILendingProvider, Phase 271 섹션 18.1의 IYieldProvider 패턴을 정확히 미러링한다.
+
+**파일:** `packages/core/src/interfaces/perp-provider.types.ts`
+**Re-export:** `packages/core/src/interfaces/index.ts`
+
+```typescript
+import type { IActionProvider, ActionContext } from './action-provider.types.js';
+
+export interface IPerpProvider extends IActionProvider {
+  /** 지갑의 현재 perp 포지션 조회 (시장별 포지션 상세) */
+  getPosition(walletId: string, context: ActionContext): Promise<PerpPositionSummary[]>;
+
+  /** 지갑의 마진 정보 조회 (계정 수준 집계: 총 담보, 사용 마진, 가용 마진, 유지 마진) */
+  getMarginInfo(walletId: string, context: ActionContext): Promise<MarginInfo>;
+
+  /** 사용 가능한 perp 시장 목록 조회 */
+  getMarkets(chain: string, network?: string): Promise<PerpMarketInfo[]>;
+}
+```
+
+**쿼리 메서드 3개:**
+
+| 메서드 | 반환 타입 | 용도 |
+|--------|-----------|------|
+| `getPosition(walletId, context)` | `PerpPositionSummary[]` | 지갑의 현재 perp 포지션 상세 (시장별 방향, 레버리지, 미실현 PnL, 청산 가격) |
+| `getMarginInfo(walletId, context)` | `MarginInfo` | 계정 수준 마진 집계 (총 담보, 사용 마진, 가용 마진, 유지 마진). cross-margin 모델 반영 |
+| `getMarkets(chain, network?)` | `PerpMarketInfo[]` | AI 에이전트가 사용 가능한 perp 시장 탐색 (오라클 가격, 펀딩 레이트, 최대 레버리지) |
+
+### 21.2 ActionDefinition 5개
+
+IPerpProvider는 5개의 표준 perp 액션을 정의한다. 각 액션의 입력 스키마와 위험 수준, 기본 승인 티어를 명세한다.
+
+| 액션 | 입력 스키마 | risk | defaultTier | 설명 |
+|------|-------------|------|-------------|------|
+| `open_position` | `{ market, direction, size, leverage?, orderType, limitPrice? }` | high | APPROVAL | 레버리지 포지션 개설 (LONG/SHORT) |
+| `close_position` | `{ market, size? }` | medium | DELAY | 포지션 청산 (전체 또는 부분) |
+| `modify_position` | `{ market, newSize?, newLimitPrice? }` | high | APPROVAL | 포지션 크기/주문 변경 |
+| `add_margin` | `{ amount, asset }` | low | AUTO | 담보(마진) 추가 (안전 마진 확보) |
+| `withdraw_margin` | `{ amount, asset }` | medium | DELAY | 여유 담보(마진) 인출 |
+
+**입력 스키마 상세:**
+
+```typescript
+// Zod SSoT: PerpActionInputSchemas
+
+const OpenPositionInputSchema = z.object({
+  market: z.string().describe('Perp market symbol (e.g., "SOL-PERP", "BTC-PERP")'),
+  direction: z.enum(['LONG', 'SHORT']).describe('Position direction'),
+  size: z.string().describe('Base asset amount as string (e.g., "100" = 100 SOL)'),
+  leverage: z.number().min(1).max(100).optional()
+    .describe('Optional leverage hint. Account-level leverage is determined by position size vs collateral'),
+  orderType: z.enum(['MARKET', 'LIMIT']).describe('Order type'),
+  limitPrice: z.string().optional()
+    .describe('Limit price as string (required when orderType=LIMIT)'),
+});
+
+const ClosePositionInputSchema = z.object({
+  market: z.string().describe('Perp market symbol'),
+  size: z.string().optional()
+    .describe('Partial close amount (base asset). Omit for full close'),
+});
+
+const ModifyPositionInputSchema = z.object({
+  market: z.string().describe('Perp market symbol'),
+  newSize: z.string().optional()
+    .describe('New position size (base asset). Placing additional or reducing order'),
+  newLimitPrice: z.string().optional()
+    .describe('New limit price for pending order modification'),
+});
+
+const AddMarginInputSchema = z.object({
+  amount: z.string().describe('Human-readable collateral amount (e.g., "100" USDC)'),
+  asset: z.string().describe('CAIP-19 identifier of collateral asset (e.g., USDC)'),
+});
+
+const WithdrawMarginInputSchema = z.object({
+  amount: z.string().describe('Human-readable withdrawal amount'),
+  asset: z.string().describe('CAIP-19 identifier of collateral asset'),
+});
+```
+
+**resolve() 반환 타입:**
+- `resolve()` -> `ContractCallRequest | ContractCallRequest[]`
+- 단일 트랜잭션: close_position, add_margin, withdraw_margin
+- 멀티 트랜잭션: open_position (approve + order in some protocols), modify_position (cancel + place)
+- Drift의 경우 모든 액션이 단일 Solana instruction으로 실행 가능
+
+**모든 액션의 chain은 프로바이더별로 설정:**
+- Drift: `chain: 'solana'` (Drift는 Solana-native 프로토콜)
+
+### 21.3 IPositionProvider 동시 구현 패턴
+
+각 perp 프로바이더 클래스는 `IPerpProvider`와 `IPositionProvider` (Phase 268)를 동시에 구현한다. 두 인터페이스는 동일한 SDK 호출을 공유하지만 반환 타입이 목적에 따라 다르다. Phase 270 섹션 13.3의 AaveV3Provider, Phase 271 섹션 18.3의 PendleProvider 패턴을 정확히 미러링한다.
+
+| 인터페이스 | 메서드 | 반환 타입 | 용도 |
+|-----------|--------|-----------|------|
+| `IPositionProvider` | `getPositions(walletId)` | `PositionUpdate[]` | PositionTracker 쓰기 큐 (defi_positions 테이블 갱신) |
+| `IPerpProvider` | `getPosition(walletId, context)` | `PerpPositionSummary[]` | REST API / AI 에이전트 응답 (상세 정보 + human-readable 필드) |
+
+**구현 패턴 예시:**
+
+```typescript
+class DriftProvider implements IPerpProvider, IPositionProvider {
+  // IActionProvider (IPerpProvider 경유 상속)
+  readonly metadata: ActionProviderMetadata = {
+    name: 'drift',
+    displayName: 'Drift V2',
+    description: 'Perpetual futures trading — open/close leveraged positions with cross-margin',
+    chains: ['solana'],
+    networks: ['mainnet-beta'],
+    category: 'perp',
+  };
+  readonly actions: readonly ActionDefinition[] = [
+    { name: 'open_position', inputSchema: OpenPositionInputSchema, riskLevel: 'high', defaultTier: 'APPROVAL', chain: 'solana',
+      description: 'Open a leveraged perpetual position (LONG or SHORT). Position direction and size determine effective leverage.' },
+    { name: 'close_position', inputSchema: ClosePositionInputSchema, riskLevel: 'medium', defaultTier: 'DELAY', chain: 'solana',
+      description: 'Close a perpetual position (full or partial). Full close settles all PnL.' },
+    { name: 'modify_position', inputSchema: ModifyPositionInputSchema, riskLevel: 'high', defaultTier: 'APPROVAL', chain: 'solana',
+      description: 'Modify position size or pending order limit price.' },
+    { name: 'add_margin', inputSchema: AddMarginInputSchema, riskLevel: 'low', defaultTier: 'AUTO', chain: 'solana',
+      description: 'Deposit collateral to increase available margin. Reduces liquidation risk.' },
+    { name: 'withdraw_margin', inputSchema: WithdrawMarginInputSchema, riskLevel: 'medium', defaultTier: 'DELAY', chain: 'solana',
+      description: 'Withdraw excess collateral from margin account.' },
+  ];
+  async resolve(actionName: string, params: unknown, context: ActionContext): Promise<ContractCallRequest | ContractCallRequest[]> { ... }
+
+  // IPerpProvider 쿼리 메서드
+  async getPosition(walletId: string, context: ActionContext): Promise<PerpPositionSummary[]> { ... }
+  async getMarginInfo(walletId: string, context: ActionContext): Promise<MarginInfo> { ... }
+  async getMarkets(chain: string, network?: string): Promise<PerpMarketInfo[]> { ... }
+
+  // IPositionProvider (PositionTracker 연동)
+  async getPositions(walletId: string): Promise<PositionUpdate[]> { ... }
+  getProviderName(): string { return 'drift'; }
+  getSupportedCategories(): PositionCategory[] { return ['PERP']; }
+}
+```
+
+**동일 SDK 호출, 다른 반환 타입:**
+- Drift SDK `user.getPerpPosition()` + `user.getTotalCollateral()` -> `PositionUpdate[]` (PositionTracker용) + `PerpPositionSummary[]` (API용)
+- 내부적으로 공유 메서드(`_fetchRawPositions()`)가 SDK 결과를 캐시하고, 각 인터페이스 메서드가 필요한 형태로 변환
+
+### 21.4 설계 결정
+
+| ID | 결정 | 선택 | 근거 |
+|----|------|------|------|
+| DEC-PERP-01 | IPerpProvider 상속 구조 | IActionProvider를 extends (별도 인터페이스 아님) | ILendingProvider (DEC-LEND-01), IYieldProvider (DEC-YIELD-01) 동일 패턴. resolve()를 같은 클래스에 유지하여 6-stage pipeline에 자연스럽게 통합 |
+| DEC-PERP-02 | 쿼리 메서드 배치 | IPerpProvider에 직접 3개 쿼리 메서드 추가 | ILendingProvider (DEC-LEND-02), IYieldProvider (DEC-YIELD-02) 동일 패턴. 별도 서비스 간접 참조 회피, 프로바이더가 자체 데이터를 가장 잘 알고 있음 |
+| DEC-PERP-03 | 액션별 riskLevel 분류 | open_position: high, close_position: medium, modify_position: high, add_margin: low, withdraw_margin: medium | 레버리지 포지션 개설/변경은 자산 손실 위험이 높아 high. 마진 추가는 안전 마진 확보이므로 low. 인출과 포지션 청산은 medium |
+| DEC-PERP-04 | MarginInfo 계정 수준 집계 | MarginInfo는 계정 수준(account-level) 집계 전용. 포지션별 마진은 PerpPositionSummary.marginUsed | Drift는 cross-margin 모델 (모든 포지션이 같은 담보 풀 공유). 포지션별 격리 마진은 misleading. 계정 수준 집계가 실제 위험 상태를 정확히 반영 |
+| DEC-PERP-05 | leverage 파라미터 선택성 | open_position의 leverage는 optional | 계정 수준 레버리지는 포지션 크기 vs 담보로 결정됨. 명시적 레버리지 설정은 일부 프로토콜에서만 지원. Drift는 포지션 크기로 실효 레버리지 결정 |
+| DEC-PERP-06 | Perp 액션 식별 방법 | ContractCallRequest.metadata (discriminatedUnion 타입 추가 아님) | DEC-LEND-09 동일 패턴. `{ actionProvider: 'drift', actionName: 'open_position' }`. 5-type pipeline 무결성 보존 |
+
+---
+
+## 22. PerpPosition + MarginInfo 타입 + PerpPolicyEvaluator
+
+### 22.1 PerpPositionSummary Zod 스키마 (API 응답용)
+
+Phase 268의 `PerpMetadataSchema` (defi_positions.metadata JSON 컬럼용)를 확장하여 API 응답용 상세 포지션 타입을 정의한다. Phase 270 섹션 14.1의 LendingPositionSummarySchema, Phase 271 섹션 19.1의 YieldPositionSummarySchema 패턴을 미러링한다. PerpPositionSummary는 DB의 PerpMetadata에 human-readable 필드(markPrice, fundingRate, realizedPnl 등 실시간 계산 필드)를 추가한 superset이다.
+
+**파일:** `packages/core/src/schemas/perp.schema.ts`
+
+```typescript
+// Zod SSoT: API 응답용 PerpPositionSummary
+export const PerpPositionSummarySchema = z.object({
+  positionId: z.string().describe('Unique position identifier (UUID v7)'),
+  provider: z.string().describe('Provider name (e.g., "drift")'),
+  market: z.string().describe('Perp market symbol (e.g., "SOL-PERP")'),
+  direction: z.enum(['LONG', 'SHORT']).describe('Position direction'),
+  size: z.string().describe('Base asset amount as string (absolute value)'),
+  entryPrice: z.string().describe('Average entry price as string'),
+  markPrice: z.string().describe('Current mark price as string'),
+  leverage: z.string().describe('Current effective leverage as string'),
+  unrealizedPnl: z.string().describe('Unrealized PnL in USD as string'),
+  realizedPnl: z.string().describe('Realized PnL in USD as string'),
+  liquidationPrice: z.string().nullable()
+    .describe('Liquidation price as string. null if no liquidation risk'),
+  marginUsed: z.string().describe('Margin allocated to this position as string'),
+  fundingRate: z.string().describe('Current funding rate as string'),
+  status: z.enum(['OPEN', 'CLOSING', 'CLOSED']).describe('Position lifecycle status'),
+  openedAt: z.string().describe('Position open timestamp (ISO 8601)'),
+  updatedAt: z.string().describe('Last update timestamp (ISO 8601)'),
+});
+
+export type PerpPositionSummary = z.infer<typeof PerpPositionSummarySchema>;
+```
+
+**필드 명세:**
+
+| 필드 | 타입 | 출처 | 설명 |
+|------|------|------|------|
+| `positionId` | string | defi_positions.id | 고유 포지션 ID |
+| `provider` | string | defi_positions.provider | 프로바이더 이름 |
+| `market` | string | metadata.market (via protocol mapping) | 시장 심볼 |
+| `direction` | 'LONG' \| 'SHORT' | metadata.direction | DB PerpMetadata에서 직접 |
+| `size` | string | defi_positions.amount | raw units (bigint -> string) |
+| `entryPrice` | string | metadata.entryPrice | 평균 진입 가격 |
+| `markPrice` | string | **쿼리 시 SDK 조회** | 현재 마크 가격 (실시간) |
+| `leverage` | string | metadata.leverage | 현재 실효 레버리지 |
+| `unrealizedPnl` | string | metadata.unrealizedPnl | 미실현 PnL |
+| `realizedPnl` | string | **쿼리 시 SDK 조회** | 실현 PnL (펀딩 정산 포함) |
+| `liquidationPrice` | string \| null | metadata.liquidationPrice | 청산 가격 (null = 안전) |
+| `marginUsed` | string | metadata.margin | 이 포지션에 할당된 마진 |
+| `fundingRate` | string | **쿼리 시 SDK 조회** | 현재 펀딩 레이트 (실시간) |
+| `status` | enum | defi_positions.status | 포지션 상태 |
+| `openedAt` | string | defi_positions.created_at | 포지션 개설 시점 |
+| `updatedAt` | string | defi_positions.updated_at | 마지막 갱신 시점 |
+
+**DB PerpMetadataSchema (Phase 268 섹션 5.3)와의 매핑 관계:**
+
+| DB (PerpMetadataSchema) | API (PerpPositionSummary) | 매핑 |
+|---|---|---|
+| direction | direction | 직접 복사 |
+| leverage | leverage | 직접 복사 |
+| margin | marginUsed | 직접 복사 (필드명 변경) |
+| liquidationPrice | liquidationPrice | 직접 복사 |
+| unrealizedPnl | unrealizedPnl | 직접 복사 |
+| (없음) | market | DriftProvider가 market index -> symbol 매핑 |
+| (없음) | entryPrice | SDK에서 position.entryPrice 조회 |
+| (없음) | markPrice | SDK에서 현재 oracle mark price 조회 (실시간) |
+| (없음) | realizedPnl | SDK에서 settled PnL + funding payments 조회 |
+| (없음) | fundingRate | SDK에서 현재 1h funding rate 조회 (실시간) |
+
+### 22.2 MarginInfo 타입
+
+계정 수준(account-level)의 마진 집계 정보 타입. cross-margin 모델에서 모든 포지션이 공유하는 담보 풀의 상태를 표현한다. 포지션별 마진은 PerpPositionSummary.marginUsed에서 제공하며, MarginInfo는 계정 전체의 위험도를 판단하는 데 사용한다.
+
+```typescript
+export const MarginInfoSchema = z.object({
+  totalCollateral: z.string()
+    .describe('Total deposited collateral value in USD as string'),
+  usedMargin: z.string()
+    .describe('Margin currently used by all positions as string'),
+  availableMargin: z.string()
+    .describe('Free collateral available for new positions as string'),
+  maintenanceMargin: z.string()
+    .describe('Minimum required margin before liquidation as string'),
+  marginRatio: z.string()
+    .describe('totalCollateral / usedMargin ratio as string'),
+  accountLeverage: z.string()
+    .describe('Total notional exposure / totalCollateral as string'),
+  unrealizedPnlTotal: z.string()
+    .describe('Sum of all position unrealized PnL as string'),
+  liquidatable: z.boolean()
+    .describe('true if marginRatio below maintenance threshold (account at risk of liquidation)'),
+});
+
+export type MarginInfo = z.infer<typeof MarginInfoSchema>;
+```
+
+**필드 설명:**
+
+| 필드 | 설명 | AI 에이전트 활용 |
+|------|------|-----------------|
+| `totalCollateral` | 전체 예치 담보 가치 (USD) | 계정의 총 담보 규모 파악 |
+| `usedMargin` | 현재 포지션들이 사용 중인 마진 | 여유 마진 계산의 기반 |
+| `availableMargin` | 새 포지션에 사용 가능한 여유 담보 | "추가 포지션 개설 가능 여부" 판단 |
+| `maintenanceMargin` | 청산 방지에 필요한 최소 마진 | 청산 위험 판단 |
+| `marginRatio` | 담보/사용마진 비율 | MarginMonitor 핵심 지표 |
+| `accountLeverage` | 총 명목 노출 / 총 담보 | PERP_LEVERAGE_LIMIT 정책 평가에 사용 |
+| `unrealizedPnlTotal` | 전체 미실현 PnL 합계 | 포트폴리오 수익/손실 파악 |
+| `liquidatable` | 청산 위험 여부 | 긴급 알림 트리거 |
+
+**참고:** 모든 수치는 계정 수준 집계이다 (DEC-PERP-04). 이는 Drift의 cross-margin 모델을 반영한다. 개별 포지션의 마진은 PerpPositionSummary.marginUsed에서 확인할 수 있으나, 실제 청산은 계정 수준에서 판단된다.
+
+### 22.3 PerpMarketInfo 타입
+
+AI 에이전트가 사용 가능한 perp 시장을 탐색할 때 사용하는 타입. IPerpProvider.getMarkets() 반환 타입. 시장별 오라클 가격, 펀딩 레이트, 최대 레버리지 정보를 제공한다.
+
+```typescript
+export const PerpMarketInfoSchema = z.object({
+  marketIndex: z.number().describe('Protocol-specific market index'),
+  symbol: z.string().describe('Market symbol (e.g., "SOL-PERP")'),
+  baseAsset: z.string().describe('CAIP-19 identifier of the base asset'),
+  oraclePrice: z.string().describe('Current oracle price as string'),
+  fundingRate: z.string().describe('Current 1h funding rate as string'),
+  openInterest: z.string().describe('Total open interest as string'),
+  maxLeverage: z.number().describe('Protocol max leverage for this market'),
+  minOrderSize: z.string().describe('Minimum order size in base asset units as string'),
+  tickSize: z.string().describe('Price tick size as string'),
+  status: z.enum(['ACTIVE', 'SETTLEMENT', 'DELISTED'])
+    .describe('Market lifecycle status'),
+});
+
+export type PerpMarketInfo = z.infer<typeof PerpMarketInfoSchema>;
+```
+
+**필드 설명:**
+
+| 필드 | 설명 | AI 에이전트 활용 |
+|------|------|-----------------|
+| `marketIndex` | 프로토콜별 시장 인덱스 | 내부 참조용 (Drift market index) |
+| `symbol` | 시장 심볼 (SOL-PERP 등) | 사용자에게 제시, open_position market 파라미터로 전달 |
+| `baseAsset` | 기초 자산 CAIP-19 | 어떤 자산의 perp인지 이해 |
+| `oraclePrice` | 현재 오라클 가격 | 진입 가격 판단 |
+| `fundingRate` | 현재 1h 펀딩 레이트 | LONG/SHORT 방향 결정 (음수 = short 유리) |
+| `openInterest` | 총 미결제 약정 | 시장 유동성 판단 |
+| `maxLeverage` | 프로토콜 최대 레버리지 | PERP_LEVERAGE_LIMIT와의 관계 이해 |
+| `minOrderSize` | 최소 주문 크기 | 주문 유효성 사전 검증 |
+| `tickSize` | 가격 틱 크기 | limit 주문 가격 유효성 검증 |
+| `status` | 시장 상태 | 거래 가능 여부 확인 (ACTIVE만 신규 포지션 허용) |
+
+### 22.4 PerpPolicyEvaluator 설계
+
+3개의 새로운 정책 타입을 DatabasePolicyEngine에 추가한다. Phase 270 섹션 15 LendingPolicyEvaluator 패턴을 따라 PERP_LEVERAGE_LIMIT, PERP_POSITION_SIZE_LIMIT, PERP_MARKET_WHITELIST를 정의한다.
+
+#### 22.4.1 PERP_LEVERAGE_LIMIT 정책 타입
+
+**계정 수준** 최대 레버리지 제한. borrow의 LTV 제한(DEC-LEND-11)과 동일한 패턴으로 warning/deny 이중 임계값을 사용한다.
+
+**Rules JSON 스키마:**
+
+```typescript
+const PerpLeverageLimitRulesSchema = z.object({
+  maxLeverage: z.number().min(1).max(100)
+    .describe('Maximum allowed account-level leverage (e.g., 10 = 10x)'),
+  warningLeverage: z.number().min(1).max(100)
+    .describe('Warning threshold — forces DELAY tier for human review'),
+});
+
+type PerpLeverageLimitRules = z.infer<typeof PerpLeverageLimitRulesSchema>;
+```
+
+**평가 로직:**
+
+1. **적용 대상:** `open_position`, `modify_position` 액션에 적용 (close/add_margin/withdraw_margin은 레버리지를 악화시키지 않음)
+2. **예상 레버리지 계산:**
+   ```
+   projectedLeverage = (currentTotalNotional + newPositionNotional) / totalCollateral
+   ```
+3. **판정:**
+   - `projectedLeverage > maxLeverage` -> **deny** (reason: "Position would exceed max leverage ({maxLeverage}x)")
+   - `warningLeverage < projectedLeverage <= maxLeverage` -> **allow** but upgrade tier to DELAY (인간 검토 강제)
+   - `projectedLeverage <= warningLeverage` -> **allow** (원래 티어 유지)
+4. **현재 포지션 데이터:** `defi_positions` 테이블에서 읽기 (PositionTracker가 캐시한 데이터, DEC-LEND-10 패턴)
+5. **중요:** 계정 수준 레버리지를 검사 (포지션별 아님). cross-margin 모델에서 한 포지션의 레버리지가 전체 계정에 영향
+
+#### 22.4.2 PERP_POSITION_SIZE_LIMIT 정책 타입
+
+포지션 크기(명목 가치)를 USD 기준으로 제한한다. 시장별 제한과 전체 노출 제한을 모두 지원한다.
+
+**Rules JSON 스키마:**
+
+```typescript
+const PerpPositionSizeLimitRulesSchema = z.object({
+  maxPositionSizeUsd: z.string()
+    .describe('Maximum position notional value in USD per market (string for precision)'),
+  maxTotalExposureUsd: z.string()
+    .describe('Maximum total notional exposure across all markets (string for precision)'),
+});
+
+type PerpPositionSizeLimitRules = z.infer<typeof PerpPositionSizeLimitRulesSchema>;
+```
+
+**평가 로직:**
+
+1. **적용 대상:** `open_position`, `modify_position` 액션
+2. **시장별 크기 계산:**
+   ```
+   projectedMarketNotional = currentMarketNotional + newOrderNotional
+   ```
+3. **전체 노출 계산:**
+   ```
+   projectedTotalExposure = sum(allMarketNotionals) + newOrderNotional
+   ```
+4. **판정:**
+   - `projectedMarketNotional > maxPositionSizeUsd` -> **deny** (reason: "Position in {market} would exceed per-market size limit")
+   - `projectedTotalExposure > maxTotalExposureUsd` -> **deny** (reason: "Total exposure would exceed max total exposure limit")
+
+#### 22.4.3 PERP_MARKET_WHITELIST 정책 타입
+
+허용된 시장만 거래 가능. CLAUDE.md의 default-deny 원칙을 perp에 적용한다. LENDING_ASSET_WHITELIST (DEC-LEND-08) 및 CONTRACT_WHITELIST 패턴을 따른다.
+
+**Rules JSON 스키마:**
+
+```typescript
+const PerpMarketWhitelistRulesSchema = z.object({
+  allowedMarkets: z.array(z.string())
+    .describe('Allowed market symbols (e.g., ["SOL-PERP", "BTC-PERP"])'),
+});
+
+type PerpMarketWhitelistRules = z.infer<typeof PerpMarketWhitelistRulesSchema>;
+```
+
+**평가 로직:**
+
+1. **Default-deny:** PERP_MARKET_WHITELIST 정책이 존재하지 않으면 -> 모든 perp 액션 deny ("No perp market whitelist configured")
+2. **매칭:** market symbol exact match
+3. **적용 대상:** 모든 perp 액션 (open_position, close_position, modify_position). add_margin/withdraw_margin은 시장과 무관하므로 제외
+
+#### 22.4.4 PolicyEngine 통합 지점
+
+**Zod SSoT 정책 타입 유니온 확장:**
+
+```typescript
+// 기존 11개 타입 + 새로운 3개 타입
+const PolicyTypeEnum = z.enum([
+  // 기존
+  'WHITELIST', 'ALLOWED_NETWORKS', 'ALLOWED_TOKENS',
+  'CONTRACT_WHITELIST', 'METHOD_WHITELIST', 'APPROVED_SPENDERS',
+  'APPROVE_AMOUNT_LIMIT', 'APPROVE_TIER_OVERRIDE', 'SPENDING_LIMIT',
+  // lending (Phase 270)
+  'LENDING_LTV_LIMIT', 'LENDING_ASSET_WHITELIST',
+  // perp (신규)
+  'PERP_LEVERAGE_LIMIT', 'PERP_POSITION_SIZE_LIMIT', 'PERP_MARKET_WHITELIST',
+]);
+```
+
+**Perp 액션 식별 방법:**
+- ContractCallRequest.metadata 필드에 `{ actionProvider: string, actionName: string }` 전달
+- 예: `{ actionProvider: 'drift', actionName: 'open_position' }`
+- PolicyEvaluator가 `metadata.actionName`이 `['open_position', 'close_position', 'modify_position', 'add_margin', 'withdraw_margin']` 중 하나인지 확인
+- DEC-LEND-09 동일 패턴으로 discriminatedUnion 5-type에 새 타입을 추가하지 않고 perp 액션을 식별
+
+**정책 평가 순서 (전체):**
+
+| 단계 | 정책 타입 | 비고 |
+|------|-----------|------|
+| 4a | WHITELIST | 기존 |
+| 4b | ALLOWED_NETWORKS | 기존 |
+| 4c | ALLOWED_TOKENS | 기존 |
+| 4d | CONTRACT_WHITELIST | 기존 |
+| 4e | METHOD_WHITELIST | 기존 |
+| 4f | APPROVED_SPENDERS | 기존 |
+| 4g | APPROVE_AMOUNT_LIMIT / APPROVE_TIER_OVERRIDE | 기존 |
+| 4h-a | LENDING_ASSET_WHITELIST | Phase 270 |
+| 4h-b | LENDING_LTV_LIMIT | Phase 270 |
+| **4h-c** | **PERP_MARKET_WHITELIST** | **신규 — perp 시장 화이트리스트 (default-deny)** |
+| **4h-d** | **PERP_LEVERAGE_LIMIT** | **신규 — 계정 레버리지 제한** |
+| **4h-e** | **PERP_POSITION_SIZE_LIMIT** | **신규 — 포지션 크기 USD 제한** |
+| 5 | SPENDING_LIMIT | 기존 |
+
+**순서 근거:** market whitelist 먼저 (4h-c) -> leverage limit 이후 (4h-d) -> position size 마지막 (4h-e). 유효하지 않은 시장을 먼저 거부하고, 유효한 시장에 대해서만 레버리지/크기 계산 수행.
+
+**Admin UI 정책 페이지 확장:**
+- 정책 타입 드롭다운에 `PERP_LEVERAGE_LIMIT`, `PERP_POSITION_SIZE_LIMIT`, `PERP_MARKET_WHITELIST` 추가
+- Rules 에디터:
+  - PERP_LEVERAGE_LIMIT: maxLeverage 슬라이더 (1~100 범위), warningLeverage 슬라이더 (1~100 범위)
+  - PERP_POSITION_SIZE_LIMIT: maxPositionSizeUsd, maxTotalExposureUsd 입력 필드
+  - PERP_MARKET_WHITELIST: 시장 심볼 태그 입력 (e.g., SOL-PERP, BTC-PERP)
+
+### 22.5 설계 결정
+
+| ID | 결정 | 선택 | 근거 |
+|----|------|------|------|
+| DEC-PERP-07 | PerpPositionSummary와 DB 관계 | PerpMetadataSchema (Phase 268)의 superset — API 응답에 실시간 계산 필드(markPrice, fundingRate, realizedPnl) 추가 | DB 스키마 변경 없이 API 응답을 풍부하게. LendingPositionSummary (DEC-LEND-06), YieldPositionSummary (DEC-YIELD-05) 동일 패턴. amount는 string 타입 |
+| DEC-PERP-08 | MarginInfo 계정 수준 전용 | MarginInfo는 계정 수준 집계만 제공. 포지션별 마진은 PerpPositionSummary.marginUsed | cross-margin 모델에서 계정 수준 집계만이 실제 청산 위험을 반영. 포지션별 마진 비율은 misleading |
+| DEC-PERP-09 | PERP_MARKET_WHITELIST default-deny | 정책 미설정 시 모든 perp 액션 deny | CLAUDE.md "Contracts default-deny (CONTRACT_WHITELIST opt-in)" 패턴 준수. LENDING_ASSET_WHITELIST (DEC-LEND-08) 동일 패턴 |
+| DEC-PERP-10 | PERP_LEVERAGE_LIMIT 검사 대상 | 계정 수준(account-level) 레버리지 검사 | cross-margin 모델에서 포지션별 레버리지 검사는 의미 없음. Drift `user.getLeverage()`가 계정 수준 집계를 반환 |
+| DEC-PERP-11 | warningLeverage 초과 시 동작 | DELAY 티어로 업그레이드 (deny 아님) | LendingPolicyEvaluator의 warningLtv (DEC-LEND-11) 동일 패턴. 경계선 레버리지를 허용하되 인간 검토를 강제 |
+| DEC-PERP-12 | 수치 필드 타입 | 모든 amount/price/margin 필드는 string | DEC-LEND-06 동일 패턴. JSON 직렬화에서 bigint 호환성 보장. REST API 응답에서 정밀도 손실 방지 |
+| DEC-PERP-13 | 자산 식별자 형식 | 모든 asset 식별자는 CAIP-19 형식 | DEC-LEND-07, DEC-YIELD-08 동일 패턴. Phase 232 CAIP-19 통합과 일관성 유지 |
+
+---
+
 ## 신규 산출물
 
 | ID | 산출물 | 설명 |
