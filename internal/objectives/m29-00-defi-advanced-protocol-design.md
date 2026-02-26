@@ -1,7 +1,8 @@
 # 마일스톤 m29: 고급 DeFi 프로토콜 설계 (Lending/Yield/Perp 프레임워크)
 
-- **Status:** PLANNED
-- **Milestone:** TBD
+- **Status:** SHIPPED
+- **Milestone:** v29.0
+- **Completed:** 2026-02-26
 
 ## 목표
 
