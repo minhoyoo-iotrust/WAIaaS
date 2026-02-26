@@ -1971,6 +1971,427 @@ export function severityRank(severity: MonitorSeverity): number {
 
 ---
 
+## 11. 알림 이벤트 통합
+
+### 11.1 4개 신규 NotificationEventType
+
+| 이벤트 | 발생 모니터 | 설명 |
+|--------|-----------|------|
+| `LIQUIDATION_WARNING` | HealthFactorMonitor | Lending health factor가 warning/danger 임계값 이하. severity WARNING/DANGER에서 발생 |
+| `MATURITY_WARNING` | MaturityMonitor | Yield 포지션 만기 접근 (7일/1일 전) 또는 만기 후 미상환 |
+| `MARGIN_WARNING` | MarginMonitor | Perp 마진 비율이 warning 임계값(30%) 이하 |
+| `LIQUIDATION_IMMINENT` | HealthFactorMonitor / MarginMonitor | Lending health factor CRITICAL 또는 Perp 마진 비율 CRITICAL. 즉시 자금 손실 위험 |
+
+**추가 위치:** `packages/core/src/enums/notification.ts` NOTIFICATION_EVENT_TYPES 배열 끝부분 (기존 44개 → 48개)
+
+```typescript
+export const NOTIFICATION_EVENT_TYPES = [
+  // ... existing 44 events ...
+  'LIQUIDATION_WARNING',      // DeFi: lending health factor below threshold
+  'MATURITY_WARNING',         // DeFi: yield position approaching maturity
+  'MARGIN_WARNING',           // DeFi: perp margin below maintenance level
+  'LIQUIDATION_IMMINENT',     // DeFi: perp/lending at immediate liquidation risk
+] as const;
+```
+
+이 배열이 Zod enum(`NotificationEventTypeEnum`), DB CHECK constraint, i18n 키의 SSoT이다. 배열에 추가하면 하위 의존 체인이 자동으로 48개 이벤트를 인식한다.
+
+### 11.2 EVENT_CATEGORY_MAP 확장
+
+**파일:** `packages/core/src/schemas/signing-protocol.ts`
+
+**새로운 카테고리 `'defi_monitoring'` 추가:**
+
+```typescript
+export const NOTIFICATION_CATEGORIES = [
+  'transaction',
+  'policy',
+  'security_alert',
+  'session',
+  'owner',
+  'system',
+  'defi_monitoring',   // NEW: DeFi position monitoring alerts
+] as const;
+```
+
+기존 6개 → 7개 카테고리. `NotificationCategory` 타입이 자동으로 7개 값을 포함한다.
+
+**EVENT_CATEGORY_MAP 확장 (4개 매핑 추가):**
+
+```typescript
+export const EVENT_CATEGORY_MAP: Record<NotificationEventType, NotificationCategory> = {
+  // ... existing 44 mappings ...
+  LIQUIDATION_WARNING: 'defi_monitoring',
+  MATURITY_WARNING: 'defi_monitoring',
+  MARGIN_WARNING: 'defi_monitoring',
+  LIQUIDATION_IMMINENT: 'security_alert',     // 의도적: 아래 근거 참조
+};
+```
+
+**`LIQUIDATION_IMMINENT`를 `security_alert`에 매핑하는 근거:**
+- 임박한 자금 손실은 보안 사건과 동급의 긴급도
+- `security_alert` 카테고리는 `BROADCAST_EVENTS`와 결합하여 모든 알림 채널(ntfy, Telegram, push relay, wallet app)에 동시 배송
+- KILL_SWITCH_ACTIVATED, TX_INCOMING_SUSPICIOUS와 동일 수준의 전파 범위
+- 다른 3개 DeFi 이벤트(WARNING 수준)는 `defi_monitoring` 카테고리로 일반 배송
+
+### 11.3 EVENT_DESCRIPTIONS 확장
+
+**파일:** `packages/core/src/schemas/signing-protocol.ts`
+
+```typescript
+export const EVENT_DESCRIPTIONS: Record<NotificationEventType, string> = {
+  // ... existing 44 descriptions ...
+  LIQUIDATION_WARNING: 'DeFi lending position health factor below warning threshold',
+  MATURITY_WARNING: 'DeFi yield position approaching or past maturity',
+  MARGIN_WARNING: 'DeFi perpetual position margin below warning threshold',
+  LIQUIDATION_IMMINENT: 'DeFi position at immediate liquidation risk',
+};
+```
+
+### 11.4 i18n 메시지 템플릿
+
+**영문 (`packages/core/src/i18n/en.ts`):**
+
+```typescript
+LIQUIDATION_WARNING: {
+  title: 'Liquidation Risk Warning',
+  body: '{walletName} lending position on {provider} has health factor {healthFactor} (threshold: {threshold}). Consider adding collateral or repaying debt.',
+},
+MATURITY_WARNING: {
+  title: 'Maturity Warning',
+  body: '{walletName} yield position on {provider} matures in {daysRemaining} days (maturity: {maturityDate}). Redeem before maturity to avoid penalties.',
+},
+MARGIN_WARNING: {
+  title: 'Margin Warning',
+  body: '{walletName} perp position on {provider} margin ratio at {marginRatio}% (maintenance: {maintenanceMargin}%). Add margin to avoid liquidation.',
+},
+LIQUIDATION_IMMINENT: {
+  title: 'LIQUIDATION IMMINENT',
+  body: '{walletName} position on {provider} at immediate liquidation risk. Health factor: {healthFactor}, Liquidation price: {liquidationPrice}. Take action NOW.',
+},
+```
+
+**한글 (`packages/core/src/i18n/ko.ts`):**
+
+```typescript
+LIQUIDATION_WARNING: {
+  title: '청산 위험 경고',
+  body: '{walletName} {provider} 대출 포지션 헬스 팩터 {healthFactor} (임계값: {threshold}). 담보 추가 또는 부채 상환을 고려하세요.',
+},
+MATURITY_WARNING: {
+  title: '만기 경고',
+  body: '{walletName} {provider} 수익률 포지션이 {daysRemaining}일 후 만기입니다 (만기일: {maturityDate}). 만기 전 상환하세요.',
+},
+MARGIN_WARNING: {
+  title: '마진 경고',
+  body: '{walletName} {provider} 무기한 선물 포지션 마진 비율 {marginRatio}% (유지 마진: {maintenanceMargin}%). 마진 추가로 청산을 방지하세요.',
+},
+LIQUIDATION_IMMINENT: {
+  title: '청산 임박',
+  body: '{walletName} {provider} 포지션 즉시 청산 위험. 헬스 팩터: {healthFactor}, 청산 가격: {liquidationPrice}. 즉시 조치하세요.',
+},
+```
+
+### 11.5 BROADCAST_EVENTS 확장
+
+**파일:** `packages/daemon/src/notifications/notification-service.ts`
+
+```typescript
+const BROADCAST_EVENTS: Set<string> = new Set([
+  'KILL_SWITCH_ACTIVATED',
+  'KILL_SWITCH_RECOVERED',
+  'AUTO_STOP_TRIGGERED',
+  'TX_INCOMING_SUSPICIOUS',
+  'LIQUIDATION_IMMINENT',     // NEW: critical DeFi risk, broadcast to all channels
+]);
+```
+
+기존 4개 → 5개 BROADCAST 이벤트. `LIQUIDATION_IMMINENT`는 KILL_SWITCH_ACTIVATED, TX_INCOMING_SUSPICIOUS와 동급의 긴급도로 모든 알림 채널(ntfy, Telegram, push relay, wallet app)에 동시 배송된다.
+
+### 11.6 알림 쿨다운 전략
+
+**쿨다운 키:** `${walletId}:${positionId}` 복합 키 (per-wallet:position)
+
+BalanceMonitorService는 per-wallet 쿨다운이지만, DeFi 모니터는 같은 지갑에 여러 포지션이 있으므로 per-position 쿨다운 필요. 한 포지션의 쿨다운이 같은 지갑의 다른 위험 포지션 알림을 차단하면 안 된다.
+
+| Severity | 쿨다운 | 근거 |
+|----------|--------|------|
+| WARNING | `cooldown_hours` (기본 4시간) 적용 | 알림 피로 방지. 상태가 안정적이므로 반복 불필요 |
+| DANGER | `cooldown_hours` (기본 4시간) 적용 | WARNING과 동일. 위험하지만 즉시 청산은 아님 |
+| CRITICAL | 쿨다운 미적용 (매 평가마다 발생) | 임박한 위험은 반복 알림이 사용자 행동 유도에 필수 |
+
+**Recovery 감지:** severity가 SAFE로 복귀하면 쿨다운 맵에서 해당 키 삭제. 재악화 시 쿨다운 없이 즉시 알림 발생.
+
+### 11.7 SSoT 체인 업데이트 체크리스트
+
+구현 마일스톤에서 아래 5개 파일을 모두 업데이트해야 한다. 하나라도 누락되면 타입 에러 또는 테스트 실패 발생:
+
+- [ ] `packages/core/src/enums/notification.ts` — NOTIFICATION_EVENT_TYPES 배열에 4개 추가 (44 → 48개)
+- [ ] `packages/core/src/schemas/signing-protocol.ts` — NOTIFICATION_CATEGORIES에 `'defi_monitoring'` 추가 (6 → 7개), EVENT_CATEGORY_MAP에 4개 매핑 추가, EVENT_DESCRIPTIONS에 4개 추가
+- [ ] `packages/core/src/i18n/en.ts` — 4개 영문 메시지 템플릿 (title + body)
+- [ ] `packages/core/src/i18n/ko.ts` — 4개 한글 메시지 템플릿 (title + body)
+- [ ] `packages/daemon/src/notifications/notification-service.ts` — BROADCAST_EVENTS에 `LIQUIDATION_IMMINENT` 추가 (4 → 5개)
+
+**자동 검증:** 기존 테스트 `signing-protocol.test.ts`가 모든 이벤트에 카테고리 매핑이 있는지 검증. 48개 이벤트에 매핑이 완전하면 자동 통과.
+
+### 11.8 설계 결정
+
+| ID | 결정 | 선택 | 근거 |
+|----|------|------|------|
+| DEC-MON-09 | LIQUIDATION_IMMINENT 카테고리 | `security_alert` + BROADCAST_EVENTS | 즉시 자금 손실 가능성은 보안 사건(KILL_SWITCH, TX_INCOMING_SUSPICIOUS)과 동급. security_alert 카테고리 + BROADCAST 조합으로 모든 채널에 동시 배송. defi_monitoring에 넣으면 일반 배송으로 긴급도가 낮아짐 |
+| DEC-MON-10 | 신규 카테고리 추가 | `defi_monitoring` 카테고리 신설 | DeFi 알림을 기존 6개 카테고리에 혼합하면 Admin UI에서 DeFi 알림만 필터링 불가. transaction에 넣으면 실제 트랜잭션 알림과 혼동. system에 넣으면 인프라 알림과 혼동. 독립 카테고리가 필터링/관리에 최적 |
+| DEC-MON-11 | 쿨다운 키 구성 | `walletId:positionId` 복합 키 | BalanceMonitorService의 per-wallet 쿨다운은 지갑당 잔액이 하나이므로 적절. DeFi는 한 지갑에 복수 포지션 → per-wallet 쿨다운은 다른 포지션의 위험 알림을 차단함. per-position 쿨다운으로 각 포지션이 독립적으로 알림 |
+| DEC-MON-12 | CRITICAL 쿨다운 정책 | 쿨다운 미적용 | 반복 알림이 사용자의 즉시 행동(담보 추가, 마진 추가, 포지션 종료)을 유도하는 것이 알림 피로보다 중요. 자산 손실 가능성 앞에서 알림 피로는 수용 가능한 트레이드오프. BROADCAST 배송으로 모든 채널에 도달 보장 |
+
+---
+
+## 12. 설정 구조 + 라이프사이클
+
+### 12.1 config.toml [monitoring] 섹션
+
+플랫 키 규칙 준수 (CLAUDE.md: "No nesting in config.toml (daemon)"). 17개 키를 `[monitoring]` 섹션에 플랫하게 배치한다.
+
+```toml
+[monitoring]
+# Global toggle
+enabled = true
+
+# HealthFactorMonitor — adaptive polling thresholds
+health_factor_safe_threshold = 2.0         # above this = SAFE (5min poll)
+health_factor_warning_threshold = 1.5      # above this = WARNING (1min poll)
+health_factor_danger_threshold = 1.2       # above this = DANGER (15s poll)
+# below danger = CRITICAL (5s poll)
+
+# HealthFactorMonitor — polling intervals (seconds)
+health_factor_safe_interval = 300          # 5 minutes
+health_factor_warning_interval = 60        # 1 minute
+health_factor_danger_interval = 15         # 15 seconds
+health_factor_critical_interval = 5        # 5 seconds
+
+# MaturityMonitor — fixed polling
+maturity_check_interval = 86400            # 24 hours (seconds)
+maturity_warning_days_first = 7            # first alert at 7 days before maturity
+maturity_warning_days_final = 1            # final alert at 1 day before maturity
+maturity_unredeemed_alert = true           # alert if position not redeemed after maturity
+
+# MarginMonitor — fixed polling
+margin_check_interval = 60                 # 1 minute (seconds)
+margin_warning_ratio = 0.3                 # warn when margin ratio < 30%
+margin_critical_ratio = 0.15              # LIQUIDATION_IMMINENT when margin ratio < 15%
+
+# Shared cooldown
+cooldown_hours = 4                         # duplicate alert suppression window (hours)
+```
+
+**17개 키 전체 명세:**
+
+| # | 키 | 타입 | 기본값 | 범위 | 용도 |
+|---|-----|------|--------|------|------|
+| 1 | `enabled` | boolean | true | - | 전체 모니터링 활성화/비활성화 |
+| 2 | `health_factor_safe_threshold` | number | 2.0 | 1.0~10.0 | SAFE 임계값 (이상이면 안전) |
+| 3 | `health_factor_warning_threshold` | number | 1.5 | 1.0~10.0 | WARNING 임계값 |
+| 4 | `health_factor_danger_threshold` | number | 1.2 | 1.0~10.0 | DANGER 임계값 |
+| 5 | `health_factor_safe_interval` | int (sec) | 300 | 10~3600 | SAFE 폴링 간격 |
+| 6 | `health_factor_warning_interval` | int (sec) | 60 | 5~300 | WARNING 폴링 간격 |
+| 7 | `health_factor_danger_interval` | int (sec) | 15 | 3~60 | DANGER 폴링 간격 |
+| 8 | `health_factor_critical_interval` | int (sec) | 5 | 1~30 | CRITICAL 폴링 간격 |
+| 9 | `maturity_check_interval` | int (sec) | 86400 | 3600~604800 | 만기 체크 주기 |
+| 10 | `maturity_warning_days_first` | int | 7 | 1~30 | 첫 경고 기준일 |
+| 11 | `maturity_warning_days_final` | int | 1 | 1~7 | 최종 경고 기준일 |
+| 12 | `maturity_unredeemed_alert` | boolean | true | - | 만기 후 미상환 경고 |
+| 13 | `margin_check_interval` | int (sec) | 60 | 10~3600 | 마진 체크 주기 |
+| 14 | `margin_warning_ratio` | number | 0.3 | 0.05~0.5 | WARNING 마진 비율 임계값 |
+| 15 | `margin_critical_ratio` | number | 0.15 | 0.01~0.3 | CRITICAL 마진 비율 임계값 |
+| 16 | `cooldown_hours` | int | 4 | 1~48 | 쿨다운 시간 (시간 단위) |
+
+**제약 조건 (런타임 검증):**
+- `health_factor_safe_threshold > health_factor_warning_threshold > health_factor_danger_threshold` (threshold 순서 보장)
+- `margin_warning_ratio > margin_critical_ratio` (WARNING이 CRITICAL보다 높아야 함)
+- `maturity_warning_days_first >= maturity_warning_days_final` (첫 경고가 최종 경고 이전)
+
+### 12.2 DaemonConfigSchema Zod 확장
+
+**파일:** `packages/daemon/src/infrastructure/config/loader.ts`
+
+```typescript
+// DaemonConfigSchema 내 monitoring 섹션 추가
+monitoring: z
+  .object({
+    enabled: z.boolean().default(true),
+    health_factor_safe_threshold: z.number().min(1).max(10).default(2.0),
+    health_factor_warning_threshold: z.number().min(1).max(10).default(1.5),
+    health_factor_danger_threshold: z.number().min(1).max(10).default(1.2),
+    health_factor_safe_interval: z.number().int().min(10).max(3600).default(300),
+    health_factor_warning_interval: z.number().int().min(5).max(300).default(60),
+    health_factor_danger_interval: z.number().int().min(3).max(60).default(15),
+    health_factor_critical_interval: z.number().int().min(1).max(30).default(5),
+    maturity_check_interval: z.number().int().min(3600).max(604800).default(86400),
+    maturity_warning_days_first: z.number().int().min(1).max(30).default(7),
+    maturity_warning_days_final: z.number().int().min(1).max(7).default(1),
+    maturity_unredeemed_alert: z.boolean().default(true),
+    margin_check_interval: z.number().int().min(10).max(3600).default(60),
+    margin_warning_ratio: z.number().min(0.05).max(0.5).default(0.3),
+    margin_critical_ratio: z.number().min(0.01).max(0.3).default(0.15),
+    cooldown_hours: z.number().int().min(1).max(48).default(4),
+  })
+  .default({}),
+```
+
+모든 키에 `.default()` 적용. `[monitoring]` 섹션이 없어도 기본값으로 동작한다.
+
+**KNOWN_SECTIONS 확장:**
+
+```typescript
+const KNOWN_SECTIONS = [
+  // ... existing 12 sections ...
+  'monitoring',
+] as const;
+```
+
+기존 12개 → 13개. `detectNestedSections()` 검증이 `[monitoring]`을 허용하도록 한다.
+
+**환경 변수 패턴:** `WAIAAS_MONITORING_{KEY}` 형식
+
+| 환경 변수 | 설명 |
+|-----------|------|
+| `WAIAAS_MONITORING_ENABLED` | 모니터링 전체 토글 |
+| `WAIAAS_MONITORING_HEALTH_FACTOR_SAFE_THRESHOLD` | SAFE 임계값 |
+| `WAIAAS_MONITORING_COOLDOWN_HOURS` | 쿨다운 시간 |
+| ... | (17개 키 각각에 대응) |
+
+### 12.3 Admin Settings 키 등록
+
+SettingsService에 등록하여 Admin UI에서 데몬 재시작 없이 실시간 변경 가능한 키 목록:
+
+**핫 리로드 가능 키 (17개 전부):**
+
+| 키 | 타입 | Admin UI 표시 |
+|----|------|--------------|
+| `monitoring.enabled` | boolean | DeFi Monitoring toggle |
+| `monitoring.health_factor_safe_threshold` | number | Health Factor Safe Threshold |
+| `monitoring.health_factor_warning_threshold` | number | Health Factor Warning Threshold |
+| `monitoring.health_factor_danger_threshold` | number | Health Factor Danger Threshold |
+| `monitoring.health_factor_safe_interval` | number | Safe Polling Interval (seconds) |
+| `monitoring.health_factor_warning_interval` | number | Warning Polling Interval (seconds) |
+| `monitoring.health_factor_danger_interval` | number | Danger Polling Interval (seconds) |
+| `monitoring.health_factor_critical_interval` | number | Critical Polling Interval (seconds) |
+| `monitoring.maturity_check_interval` | number | Maturity Check Interval (seconds) |
+| `monitoring.maturity_warning_days_first` | number | First Maturity Warning (days) |
+| `monitoring.maturity_warning_days_final` | number | Final Maturity Warning (days) |
+| `monitoring.maturity_unredeemed_alert` | boolean | Unredeemed Position Alert |
+| `monitoring.margin_check_interval` | number | Margin Check Interval (seconds) |
+| `monitoring.margin_warning_ratio` | number | Margin Warning Ratio |
+| `monitoring.margin_critical_ratio` | number | Margin Critical Ratio |
+| `monitoring.cooldown_hours` | number | Alert Cooldown (hours) |
+
+모든 17개 키를 핫 리로드 지원한다. `updateConfig()`가 호출되면 각 모니터가 자체 interval/threshold를 갱신하며, interval 변경은 다음 폴링 사이클부터 적용된다 (BalanceMonitorService `updateConfig` 패턴).
+
+**폴링 간격 핫 리로드 메커니즘:**
+- HealthFactorMonitor: 재귀 setTimeout이므로 다음 `scheduleNext()` 호출 시 새 간격 적용 (자연스러운 전환)
+- MaturityMonitor/MarginMonitor: `updateConfig()` 내에서 clearInterval → setInterval(새 간격)으로 타이머 재생성
+
+### 12.4 HotReloadOrchestrator 확장
+
+**파일:** `packages/daemon/src/infrastructure/settings/hot-reload.ts`
+
+```typescript
+/**
+ * Reload DeFi monitoring configuration from Admin Settings.
+ * Follows reloadBalanceMonitor() pattern (duck-typed service deps).
+ */
+async reloadDeFiMonitors(): Promise<void> {
+  if (!this.defiMonitorService) return;
+
+  const settings = this.settingsService.getAll();
+  const monitoringConfig: Record<string, unknown> = {};
+
+  // Extract monitoring.* keys from settings
+  for (const [key, value] of Object.entries(settings)) {
+    if (key.startsWith('monitoring.')) {
+      const configKey = key.replace('monitoring.', '');
+      monitoringConfig[configKey] = value;
+    }
+  }
+
+  if (Object.keys(monitoringConfig).length > 0) {
+    this.defiMonitorService.updateConfig(monitoringConfig);
+    console.debug('HotReloadOrchestrator: DeFi monitoring config reloaded');
+  }
+}
+```
+
+**변경 감지:** settings 변경 이벤트 시 `monitoring.*` 프리픽스 키가 포함되면 `reloadDeFiMonitors()` 트리거. 기존 `reloadBalanceMonitor()` 호출 지점에 병렬 추가.
+
+### 12.5 DaemonLifecycle 연동
+
+**시작: Step 4c-11** (PositionTracker 이후, fail-soft)
+
+```typescript
+// packages/daemon/src/lifecycle/daemon.ts
+
+// Step 4c-11: DeFi Monitor Service (fail-soft)
+// Placed after PositionTracker — monitors read defi_positions data
+try {
+  if (this.sqlite && this._settingsService) {
+    const monitoringEnabled = this._settingsService.get('monitoring.enabled');
+    if (monitoringEnabled !== 'false') {
+      const { DeFiMonitorService } = await import(
+        '../services/monitoring/defi-monitor-service.js'
+      );
+      this.defiMonitorService = new DeFiMonitorService({
+        sqlite: this.sqlite,
+        notificationService: this.notificationService!,
+        settingsService: this._settingsService,
+        config: this._config!.monitoring,
+        positionTracker: this.positionTracker ?? undefined,
+      });
+      this.defiMonitorService.start();
+      console.debug('Step 4c-11: DeFi monitor service started');
+    }
+  }
+} catch (err) {
+  console.warn('Step 4c-11 (fail-soft): DeFi monitor init warning:', err);
+  this.defiMonitorService = null;
+}
+```
+
+**정지: EventBus cleanup 이전**
+
+```typescript
+// Shutdown sequence (before EventBus cleanup)
+if (this.defiMonitorService) {
+  this.defiMonitorService.stop();
+  this.defiMonitorService = null;
+  console.debug('DeFiMonitorService stopped');
+}
+```
+
+**조건:** `sqlite && settingsService && config.monitoring.enabled !== false`
+- sqlite: DB에서 defi_positions 읽기 필요
+- settingsService: Admin Settings 핫 리로드 연동
+- monitoring.enabled: 전체 토글 (config.toml 또는 Admin Settings에서 false로 설정 시 스킵)
+
+**PositionTracker 의존 관계:**
+- 모니터가 defi_positions 테이블에서 데이터를 읽으므로 PositionTracker가 먼저 시작되어야 함
+- Step 4c-10 (PositionTracker/AsyncPollingService) → Step 4c-11 (DeFiMonitorService) 순서
+- PositionTracker가 실패해도 DeFiMonitorService는 시작 가능 (테이블에 데이터가 없을 뿐, 에러는 아님)
+
+**fail-soft 패턴:**
+- DeFiMonitorService 생성/시작 실패 시 console.warn + defiMonitorService = null
+- 다른 서비스(API, 인증, 트랜잭션)에 영향 없음
+- 기존 BalanceMonitorService (Step 4c-4), IncomingTxMonitorService (Step 4c-9)와 동일 패턴
+
+### 12.6 설계 결정
+
+| ID | 결정 | 선택 | 근거 |
+|----|------|------|------|
+| DEC-MON-13 | config.toml 구조 | `[monitoring]` 섹션 17개 플랫 키 | CLAUDE.md 규칙 "No nesting in config.toml (daemon)" 준수. `[monitoring.health_factor]` 등의 네스팅은 `detectNestedSections()` 검증에서 거부됨 |
+| DEC-MON-14 | KNOWN_SECTIONS 등록 | `'monitoring'` 추가 필수 | 미등록 시 `Unknown config section '[monitoring]'` 에러로 데몬 시작 실패. 기존 12개 → 13개 |
+| DEC-MON-15 | Admin Settings 핫 리로드 범위 | 임계값 + 폴링 간격 모두 지원 (17개 전부) | BalanceMonitorService의 `updateConfig()` 패턴으로 다음 폴링 사이클부터 적용. 폴링 간격 변경도 타이머 재생성(clearInterval → setInterval)으로 처리 가능. 데몬 재시작 불필요 |
+| DEC-MON-16 | DaemonLifecycle 배치 | Step 4c-11 (PositionTracker 이후) | 모니터가 defi_positions 테이블에서 데이터를 읽으므로 PositionTracker가 데이터를 준비한 후 시작. fail-soft로 실패해도 다른 서비스 영향 없음 |
+
+---
+
 ## 신규 산출물
 
 | ID | 산출물 | 설명 |
