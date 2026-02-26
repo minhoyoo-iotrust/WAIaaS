@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Planning next milestone
+**Current focus:** v29.0 고급 DeFi 프로토콜 설계
 
 ## Current Position
 
-Phase: Milestone v28.8 complete
-Plan: N/A
-Status: Milestone shipped
-Last activity: 2026-02-26 -- Milestone v28.8 shipped (빌트인 지갑 프리셋 자동 설정)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-26 — Milestone v29.0 started
 
-Progress: [██████████] 100%
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -24,7 +24,7 @@ Progress: [██████████] 100%
 
 ### Decisions
 
-(Cleared at milestone boundary — see PROJECT.md Key Decisions for full history)
+(New milestone — no decisions yet)
 
 ### Blockers/Concerns
 
@@ -33,5 +33,5 @@ Progress: [██████████] 100%
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Milestone v28.8 shipped. Ready for /gsd:new-milestone.
+Stopped at: Milestone v29.0 started. Defining requirements.
 Resume file: None
