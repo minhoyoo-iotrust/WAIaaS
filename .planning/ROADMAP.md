@@ -347,7 +347,10 @@ Plans:
   2. HealthFactorMonitor가 적응형 폴링(5분 safe, 1분 warning, 15초 danger, 5초 critical) 설계를 명세하고, MaturityMonitor/MarginMonitor 각각의 폴링 전략이 정의된다
   3. 4개 알림 이벤트(LIQUIDATION_WARNING, MATURITY_WARNING, MARGIN_WARNING, LIQUIDATION_IMMINENT)가 기존 NotificationService EVENT_CATEGORY_MAP에 통합되는 설계가 완성된다
   4. 모니터 라이프사이클(데몬 시작/정지 시 등록/해제)과 config.toml [monitoring] 섹션(임계값, 폴링 주기)이 정의된다
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 269-01-PLAN.md -- IDeFiMonitor 공통 인터페이스 + DeFiMonitorService 오케스트레이터 + 3개 모니터 상세 설계 (섹션 9-10)
+- [ ] 269-02-PLAN.md -- 4개 알림 이벤트 SSoT 통합 + 설정 구조 + 데몬 라이프사이클 (섹션 11-12)
 
 ### Phase 270: Lending 프레임워크 설계
 **Goal**: ILendingProvider 인터페이스와 관련 타입/정책이 확정되어, Aave V3/Kamino/Morpho 구현이 프레임워크 수정 없이 Provider만 추가하면 동작한다
@@ -402,7 +405,7 @@ Phases execute in numeric order: 268 -> 269 -> 270 -> 271 -> 272 -> 273
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 268. 포지션 인프라 설계 | 2/2 | Complete    | 2026-02-26 | - |
-| 269. DeFi 모니터링 프레임워크 설계 | v29.0 | 0/TBD | Not started | - |
+| 269. DeFi 모니터링 프레임워크 설계 | v29.0 | 0/2 | Planned | - |
 | 270. Lending 프레임워크 설계 | v29.0 | 0/TBD | Not started | - |
 | 271. Yield 프레임워크 설계 | v29.0 | 0/TBD | Not started | - |
 | 272. Perp 프레임워크 설계 | v29.0 | 0/TBD | Not started | - |
