@@ -236,6 +236,14 @@ export type {
   Caip19AssetType,
   Caip19,
   Caip19Params,
+  // v29.2 lending provider types
+  LendingPositionSummary,
+  HealthFactor,
+  MarketInfo,
+  ILendingProvider,
+  // v29.2 position provider types
+  PositionUpdate,
+  IPositionProvider,
 } from './interfaces/index.js';
 
 // v27.1 connection state machine (value exports)
@@ -285,6 +293,13 @@ export {
   nativeAssetId,
   tokenAssetId,
   isNativeAsset,
+} from './interfaces/index.js';
+
+// v29.2 Lending Provider Zod schemas (value exports)
+export {
+  LendingPositionSummarySchema,
+  HealthFactorSchema,
+  MarketInfoSchema,
 } from './interfaces/index.js';
 
 // v1.5.3 Currency formatting utilities
