@@ -1,3 +1,16 @@
+---
+gsd_state_version: 1.0
+milestone: v0.1
+milestone_name: EVM Lending -- Aave V3
+status: unknown
+last_updated: "2026-02-26T18:05:53.457Z"
+progress:
+  total_phases: 172
+  completed_phases: 167
+  total_plans: 365
+  completed_plans: 361
+---
+
 # Project State
 
 ## Project Reference

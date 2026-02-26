@@ -26,6 +26,19 @@ m29-02+ (포지션):  resolve() → ContractCallRequest → 실행 → 포지션
 
 ## 구현 대상
 
+### SSoT Enum 확장 (선행 작업)
+
+HealthFactorMonitor 알림 발송과 defi_positions 테이블 CHECK 제약 조건에 필요한 enum을 먼저 추가해야 한다.
+
+| 대상 파일 | 추가 항목 | 용도 |
+|----------|----------|------|
+| `packages/core/src/enums/notification.ts` | `LIQUIDATION_WARNING` | 헬스 팩터 경고 알림 (E2E #10) |
+| `packages/core/src/enums/notification.ts` | `MATURITY_WARNING`, `MARGIN_WARNING`, `LIQUIDATION_IMMINENT` | m29-04/06/08용 (같이 추가하여 후속 마일스톤 enum 변경 최소화) |
+| `packages/core/src/enums/` (신규 `defi.ts`) | `POSITION_CATEGORIES`: `LENDING`, `YIELD`, `PERP`, `STAKING` | defi_positions 테이블 category CHECK 제약 |
+| `packages/core/src/enums/` (신규 `defi.ts`) | `POSITION_STATUSES`: `ACTIVE`, `CLOSED`, `LIQUIDATED` | defi_positions 테이블 status CHECK 제약 |
+| `packages/daemon/src/services/notification/message-templates.ts` | LIQUIDATION_WARNING 외 4개 이벤트 메시지 템플릿 | 알림 메시지 렌더링 |
+| `packages/daemon/src/services/notification/` | EVENT_CATEGORY_MAP에 DeFi 이벤트 카테고리 추가 | 알림 필터링 |
+
 ### Lending 프레임워크 (공통 인프라)
 
 | 컴포넌트 | 내용 |
@@ -75,26 +88,35 @@ const AaveWithdrawInputSchema = z.object({
 ### 파일/모듈 구조
 
 ```
+packages/core/src/enums/
+  defi.ts                          # POSITION_CATEGORIES, POSITION_STATUSES (신규)
+
 packages/core/src/interfaces/
-  lending-provider.types.ts      # ILendingProvider, Position, HealthFactor
+  lending-provider.types.ts        # ILendingProvider, Position, HealthFactor
 
 packages/daemon/src/services/
   defi/
-    position-tracker.ts          # PositionTracker (포지션 동기화)
-    health-factor-monitor.ts     # HealthFactorMonitor (청산 경고)
-    lending-policy-evaluator.ts  # Lending 정책 평가
+    position-tracker.ts            # PositionTracker (포지션 동기화)
+    health-factor-monitor.ts       # HealthFactorMonitor (청산 경고)
+    lending-policy-evaluator.ts    # Lending 정책 평가
 
 packages/actions/src/
   providers/
     aave-v3/
-      index.ts                   # AaveV3LendingProvider
-      aave-contracts.ts          # ABI + 체인별 주소 매핑
-      market-data.ts             # 시장 데이터 조회
-      schemas.ts                 # 입력 Zod 스키마
-      config.ts                  # AaveConfig 타입
+      index.ts                     # AaveV3LendingProvider
+      aave-contracts.ts            # ABI + 체인별 주소 매핑
+      market-data.ts               # 시장 데이터 조회
+      schemas.ts                   # 입력 Zod 스키마
+      config.ts                    # AaveConfig 타입
 
 packages/daemon/src/routes/
-  wallets.ts                     # GET /v1/wallets/:id/positions, /health-factor 추가
+  wallets.ts                       # GET /v1/wallets/:id/positions, /health-factor 추가
+
+수정 대상 (기존 파일):
+  packages/core/src/enums/notification.ts          # +4 이벤트 타입
+  packages/daemon/src/.../message-templates.ts     # +4 메시지 템플릿
+  packages/daemon/src/.../notification 필터링       # EVENT_CATEGORY_MAP 확장
+  packages/daemon/src/infrastructure/database/schema.ts  # defi_positions 테이블 추가
 ```
 
 ### Admin Settings (Actions 페이지)
@@ -195,7 +217,7 @@ packages/daemon/src/routes/
 
 | 항목 | 예상 |
 |------|------|
-| 페이즈 | 3-4개 (Lending 프레임워크 + DB 1 / Aave Provider + 컨트랙트 1 / 헬스팩터 모니터링 + 알림 1 / Admin UI + API + MCP 1) |
+| 페이즈 | 4-5개 (SSoT Enum + DB 마이그레이션 1 / Lending 프레임워크 1 / Aave Provider + 컨트랙트 1 / 헬스팩터 모니터링 + 알림 1 / Admin UI + API + MCP 1) |
 | 신규/수정 파일 | 20-28개 |
 | 테스트 | 15-25개 |
 | DB 마이그레이션 | positions 테이블 추가 |
