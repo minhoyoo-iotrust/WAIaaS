@@ -35,6 +35,8 @@ import {
   POLICY_TIERS,
   NOTIFICATION_LOG_STATUSES,
   INCOMING_TX_STATUSES,
+  POSITION_CATEGORIES,
+  POSITION_STATUSES,
   NETWORK_TO_CAIP2,
   tokenAssetId,
 } from '@waiaas/core';
@@ -55,7 +57,7 @@ const inList = (values: readonly string[]) => values.map((v) => `'${v}'`).join('
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 24;
+export const LATEST_SCHEMA_VERSION = 25;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -287,6 +289,26 @@ function getCreateTableStatements(): string[] {
   last_block_number INTEGER,
   updated_at INTEGER NOT NULL
 )`,
+
+    // Table 18: defi_positions (DeFi position tracking, v29.2)
+    `CREATE TABLE IF NOT EXISTS defi_positions (
+  id TEXT PRIMARY KEY,
+  wallet_id TEXT NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
+  category TEXT NOT NULL CHECK(category IN (${inList(POSITION_CATEGORIES)})),
+  provider TEXT NOT NULL,
+  chain TEXT NOT NULL CHECK(chain IN (${inList(CHAIN_TYPES)})),
+  network TEXT CHECK(network IS NULL OR network IN (${inList(NETWORK_TYPES)})),
+  asset_id TEXT,
+  amount TEXT NOT NULL,
+  amount_usd REAL,
+  metadata TEXT,
+  status TEXT NOT NULL DEFAULT 'ACTIVE' CHECK(status IN (${inList(POSITION_STATUSES)})),
+  opened_at INTEGER NOT NULL,
+  closed_at INTEGER,
+  last_synced_at INTEGER NOT NULL,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+)`,
   ];
 }
 
@@ -364,6 +386,12 @@ function getCreateIndexStatements(): string[] {
     // v28.3: DeFi async tracking partial indexes on transactions
     'CREATE INDEX IF NOT EXISTS idx_transactions_bridge_status ON transactions(bridge_status) WHERE bridge_status IS NOT NULL',
     "CREATE INDEX IF NOT EXISTS idx_transactions_gas_waiting ON transactions(status) WHERE status = 'GAS_WAITING'",
+
+    // v29.2: defi_positions indexes
+    'CREATE INDEX IF NOT EXISTS idx_defi_positions_wallet_category ON defi_positions(wallet_id, category)',
+    'CREATE INDEX IF NOT EXISTS idx_defi_positions_wallet_provider ON defi_positions(wallet_id, provider)',
+    'CREATE INDEX IF NOT EXISTS idx_defi_positions_status ON defi_positions(status)',
+    'CREATE UNIQUE INDEX IF NOT EXISTS idx_defi_positions_unique ON defi_positions(wallet_id, provider, asset_id, category)',
   ];
 }
 
@@ -1687,6 +1715,42 @@ MIGRATIONS.push({
   description: 'Add wallet_type column to wallets table for preset auto-setup',
   up: (sqlite) => {
     sqlite.exec('ALTER TABLE wallets ADD COLUMN wallet_type TEXT');
+  },
+});
+
+// ---------------------------------------------------------------------------
+// v29.2 Migration 25: Add defi_positions table for DeFi position tracking
+// ---------------------------------------------------------------------------
+
+MIGRATIONS.push({
+  version: 25,
+  description: 'Add defi_positions table for DeFi position tracking',
+  up: (sqlite) => {
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS defi_positions (
+        id TEXT PRIMARY KEY,
+        wallet_id TEXT NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
+        category TEXT NOT NULL CHECK(category IN (${inList(POSITION_CATEGORIES)})),
+        provider TEXT NOT NULL,
+        chain TEXT NOT NULL CHECK(chain IN (${inList(CHAIN_TYPES)})),
+        network TEXT CHECK(network IS NULL OR network IN (${inList(NETWORK_TYPES)})),
+        asset_id TEXT,
+        amount TEXT NOT NULL,
+        amount_usd REAL,
+        metadata TEXT,
+        status TEXT NOT NULL DEFAULT 'ACTIVE' CHECK(status IN (${inList(POSITION_STATUSES)})),
+        opened_at INTEGER NOT NULL,
+        closed_at INTEGER,
+        last_synced_at INTEGER NOT NULL,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      )
+    `);
+    // Indexes for the new table
+    sqlite.exec('CREATE INDEX IF NOT EXISTS idx_defi_positions_wallet_category ON defi_positions(wallet_id, category)');
+    sqlite.exec('CREATE INDEX IF NOT EXISTS idx_defi_positions_wallet_provider ON defi_positions(wallet_id, provider)');
+    sqlite.exec('CREATE INDEX IF NOT EXISTS idx_defi_positions_status ON defi_positions(status)');
+    sqlite.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_defi_positions_unique ON defi_positions(wallet_id, provider, asset_id, category)');
   },
 });
 
