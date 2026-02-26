@@ -4619,6 +4619,495 @@ const TRANSACTION_TYPES = [
 
 ---
 
+## 25. EIP-712 서명 파이프라인 + 상태 추적 설계
+
+이 섹션은 섹션 24에서 정의한 SignableOrder가 실제로 서명되고, off-chain API에 제출되며, 상태가 추적되는 전체 파이프라인을 설계한다. IChainAdapter signTypedData 확장, 10-step intent 파이프라인, IntentOrderTracker, 그리고 기존 ContractCallRequest 파이프라인과의 분기점을 정의한다.
+
+### 25.1 IChainAdapter signTypedData 확장
+
+IChainAdapter에 EIP-712 typed data 서명 메서드를 추가한다 (method 23, 기존 22 메서드 + 1).
+
+**TypedDataParams (입력):**
+
+```typescript
+interface TypedDataParams {
+  domain: {
+    name: string;
+    version: string;
+    chainId: number;
+    verifyingContract: `0x${string}`;
+  };
+  types: Record<string, Array<{ name: string; type: string }>>;
+  primaryType: string;
+  message: Record<string, unknown>;
+}
+```
+
+**TypedDataSignature (출력):**
+
+```typescript
+interface TypedDataSignature {
+  signature: `0x${string}`;  // 65-byte signature (r[32] + s[32] + v[1])
+  signer: `0x${string}`;     // recovered signer address for verification
+}
+```
+
+**IChainAdapter 확장:**
+
+```typescript
+// IChainAdapter에 추가 (+1 method, total 23 methods)
+signTypedData(params: TypedDataParams, privateKey: Uint8Array): Promise<TypedDataSignature>;
+```
+
+**EvmAdapter 구현 설계:**
+
+```typescript
+class EvmAdapter implements IChainAdapter {
+  async signTypedData(params: TypedDataParams, privateKey: Uint8Array): Promise<TypedDataSignature> {
+    // 1. Uint8Array → hex 변환 (기존 signExternalTransaction 패턴)
+    const privateKeyHex = `0x${Buffer.from(privateKey).toString('hex')}` as Hex;
+
+    try {
+      // 2. viem 로컬 계정 생성
+      const account = privateKeyToAccount(privateKeyHex);
+
+      // 3. EIP-712 서명
+      const signature = await account.signTypedData({
+        domain: params.domain,
+        types: params.types,
+        primaryType: params.primaryType,
+        message: params.message,
+      });
+
+      // 4. 서명자 주소 복원 (검증용)
+      const signer = await recoverTypedDataAddress({
+        domain: params.domain,
+        types: params.types,
+        primaryType: params.primaryType,
+        message: params.message,
+        signature,
+      });
+
+      return { signature, signer };
+    } finally {
+      // 5. 키 메모리 정리 (기존 패턴)
+      // privateKeyHex는 string이므로 GC에 의존 (기존 signExternalTransaction과 동일 한계)
+    }
+  }
+}
+```
+
+**SolanaAdapter:**
+
+```typescript
+class SolanaAdapter implements IChainAdapter {
+  async signTypedData(_params: TypedDataParams, _privateKey: Uint8Array): Promise<TypedDataSignature> {
+    throw new ChainError('NOT_SUPPORTED', 'EIP-712 typed data signing is EVM-only');
+  }
+}
+```
+
+**기존 sign-only 파이프라인과의 관계:**
+
+| 항목 | signExternalTransaction | signTypedData |
+|------|------------------------|---------------|
+| 서명 대상 | Raw transaction bytes (keccak256 hash) | EIP-712 structured typed data |
+| 입력 | txHash: string, privateKey: Uint8Array | TypedDataParams, privateKey: Uint8Array |
+| 출력 | signature: string | TypedDataSignature (signature + signer) |
+| 키 관리 | Uint8Array → hex, try/finally release | 동일 패턴 |
+| 체인 지원 | EVM + Solana | EVM only |
+| 파이프라인 | sign-only pipeline (8-state machine) | Intent pipeline (10-step) |
+
+### 25.2 Intent 파이프라인 10-step 설계
+
+기존 6-stage 파이프라인과 완전히 분리된 intent 전용 파이프라인:
+
+```
+Intent Pipeline (10 steps):
+┌─────────────────────────────────────────────────────────────────────┐
+│ Step 1: ActionProviderRegistry.executeResolve()                     │
+│         → returns SignableOrder (type='INTENT')                     │
+│                                                                     │
+│ Step 2: SignableOrder Zod validation                                │
+│         → SignableOrderSchema.parse(result)                         │
+│                                                                     │
+│ Step 3: Security validation (섹션 26 규칙)                          │
+│         → deadline check, chainId match, whitelist check            │
+│                                                                     │
+│ Step 4: Policy evaluation                                           │
+│         → SPENDING_LIMIT (sellAmount), ALLOWED_TOKENS               │
+│         → (sellToken, buyToken)                                     │
+│                                                                     │
+│ Step 5: Transaction record creation                                 │
+│         → UUID v7, DB INSERT type='INTENT', status='PENDING'        │
+│                                                                     │
+│ Step 6: Key decryption                                              │
+│         → LocalKeyStore.decryptPrivateKey(walletId)                 │
+│                                                                     │
+│ Step 7: EIP-712 signing                                             │
+│         → adapter.signTypedData(params, privateKey)                 │
+│                                                                     │
+│ Step 8: Key release                                                 │
+│         → LocalKeyStore.releaseKey() in finally block               │
+│                                                                     │
+│ Step 9: Off-chain API submission                                    │
+│         → POST intentMetadata.orderApiUrl with order + signature    │
+│         → Response: orderUid (protocol-specific order ID)           │
+│                                                                     │
+│ Step 10: Async polling registration                                 │
+│          → bridge_status='PENDING', tracker='intent-order'          │
+│          → bridge_metadata: { orderUid, statusApiUrl, protocol }    │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**기존 6-stage 파이프라인과의 비교:**
+
+| 항목 | 6-stage Pipeline | Intent Pipeline |
+|------|-----------------|-----------------|
+| 진입점 | POST /v1/wallets/:id/transactions | POST /v1/actions/:action |
+| 스키마 검증 | TransactionRequestSchema (5-type) | SignableOrderSchema |
+| 가스 추정 | Stage 4: estimateGas + safety margin | 불필요 (gasless) |
+| 서명 대상 | Raw transaction | EIP-712 typed data |
+| 제출 대상 | Blockchain (eth_sendRawTransaction) | Off-chain API |
+| 실행 주체 | Wallet (gas 소비) | Solver (gas 부담) |
+| 상태 추적 | On-chain confirmation | AsyncPollingService polling |
+| 파이프라인 길이 | 6 stages | 10 steps |
+
+**각 Step의 컴포넌트 매핑:**
+
+| Step | Component | 기존/신규 |
+|------|-----------|----------|
+| 1 | ActionProviderRegistry | 확장 (섹션 24.3) |
+| 2 | Zod validation | 기존 패턴 |
+| 3 | IntentSecurityValidator | 신규 (섹션 26) |
+| 4 | PolicyEngine | 기존 (Step 4h 경로) |
+| 5 | DB insert | 기존 패턴 |
+| 6-8 | LocalKeyStore | 기존 |
+| 7 | IChainAdapter.signTypedData | 신규 (섹션 25.1) |
+| 9 | fetch() | 신규 intent-specific |
+| 10 | AsyncPollingService | 기존 인프라 |
+
+### 25.3 IntentOrderTracker (IAsyncStatusTracker 구현)
+
+기존 IAsyncStatusTracker 패턴(LiFiBridgeTracker, LidoWithdrawalTracker, JitoEpochTracker)을 따르는 IntentOrderTracker를 설계한다.
+
+```typescript
+class IntentOrderTracker implements IAsyncStatusTracker {
+  name = 'intent-order';
+  pollIntervalMs = 10_000;    // 10초 (CoW 주문은 1-2분 내 체결 일반적)
+  maxAttempts = 180;           // 180 × 10s = 30분 타임아웃
+  timeoutTransition = 'TIMEOUT' as const;
+
+  async checkStatus(metadata: BridgeMetadata): Promise<AsyncStatusResult> {
+    const { statusApiUrl, orderUid, protocol } = metadata;
+
+    // CoW Protocol orderbook API 호출
+    const response = await fetch(`${statusApiUrl}/${orderUid}`);
+    if (!response.ok) {
+      return { state: 'PENDING' }; // API 일시 오류 시 재시도
+    }
+    const order = await response.json();
+
+    // CoW Protocol 상태 → WAIaaS 상태 매핑 (5-state)
+    switch (order.status) {
+      case 'presignaturePending':
+      case 'open':
+        return { state: 'PENDING' };
+
+      case 'fulfilled':
+        return {
+          state: 'COMPLETED',
+          details: {
+            executedSellAmount: order.executedSellAmount,
+            executedBuyAmount: order.executedBuyAmount,
+            solver: order.solver,
+          },
+        };
+
+      case 'cancelled':
+      case 'expired':
+        return {
+          state: 'FAILED',
+          details: { reason: order.status },
+        };
+
+      default:
+        return { state: 'PENDING' }; // 미지 상태는 계속 폴링
+    }
+  }
+}
+```
+
+**등록:** IntentOrderTracker는 데몬 시작 시 AsyncPollingService에 등록 (기존 LiFiBridgeTracker, LidoWithdrawalTracker와 동일 패턴).
+
+**bridge_metadata JSON 구조:**
+
+```typescript
+{
+  tracker: 'intent-order',               // IntentOrderTracker 이름
+  orderUid: string,                       // 프로토콜별 주문 ID
+  statusApiUrl: string,                   // intentMetadata.statusApiUrl
+  protocol: string,                       // 'cow_protocol'
+  notificationEvent: 'INTENT_ORDER_FILLED', // 완료 시 알림 이벤트
+  enrolledAt: number,                     // Date.now()
+}
+```
+
+**알림 이벤트:**
+
+주문 상태가 'fulfilled'로 전환되면 EventBus를 통해 `INTENT_ORDER_FILLED` 이벤트를 발행한다. 이벤트 페이로드에 `executedSellAmount`, `executedBuyAmount`를 포함하여 AI 에이전트가 실행 결과를 소비할 수 있게 한다.
+
+| 상태 전환 | WAIaaS 매핑 | 알림 이벤트 | Priority |
+|----------|------------|------------|----------|
+| open → fulfilled | PENDING → COMPLETED | INTENT_ORDER_FILLED | normal |
+| open → cancelled | PENDING → FAILED | (transaction_failed 기존 이벤트) | high |
+| open → expired | PENDING → FAILED | (transaction_failed 기존 이벤트) | normal |
+| polling → timeout | PENDING → TIMEOUT | (transaction_failed 기존 이벤트) | high |
+
+### 25.4 ContractCallRequest 파이프라인과의 분기점
+
+**분기 위치:** `packages/daemon/src/api/routes/actions.ts` — actions 라우트 핸들러
+
+**현재 플로우:**
+
+```
+POST /v1/actions/:action → registry.executeResolve()
+                         → ContractCallRequest[]
+                         → 6-stage pipeline
+```
+
+**확장 플로우:**
+
+```
+POST /v1/actions/:action → registry.executeResolve()
+                         → (ContractCallRequest | SignableOrder)[]
+                                        ↓
+                              result.type === 'INTENT'?
+                              ├── YES → Intent pipeline (10-step)
+                              └── NO  → 6-stage pipeline (변경 없음)
+```
+
+**동질성 제약 (homogeneous result constraint):**
+
+단일 `executeResolve()` 호출은 모든 결과가 ContractCallRequest이거나 모든 결과가 SignableOrder여야 한다. 혼합 결과는 허용하지 않는다.
+
+근거:
+- Intent 프로토콜(CoW)은 단일 주문을 반환
+- DeFi 프로토콜은 하나 이상의 contract call을 반환
+- 혼합 결과는 트랜잭션 원자성 보장이 복잡해짐
+
+혼합 결과가 반환된 경우 (에러 케이스):
+```typescript
+const results = await registry.executeResolve(action, params, context);
+const types = new Set(results.map(r => r.type === 'INTENT' ? 'INTENT' : 'CONTRACT'));
+if (types.size > 1) {
+  throw new WAIaaSError('INVALID_ACTION_RESULT',
+    'executeResolve returned mixed result types (ContractCallRequest + SignableOrder)');
+}
+```
+
+**핵심 보장:** 기존 6-stage 파이프라인 코드 경로는 완전히 변경되지 않는다. Intent 지원은 additive(추가적)이며, 기존 코드를 수정하지 않는다.
+
+### 25.5 설계 결정
+
+| ID | 결정 | 근거 |
+|----|------|------|
+| DEC-INTENT-08 | signTypedData는 IChainAdapter의 신규 메서드 (method 23), signExternalTransaction과 별도 | 서명 대상이 완전히 다름 (raw tx hash vs EIP-712 typed data). 메서드 분리가 관심사 분리 원칙에 부합 |
+| DEC-INTENT-09 | Intent 파이프라인은 10-step으로 6-stage와 완전 분리된 코드 경로 | 6-stage의 gas estimation/on-chain submission이 intent와 호환 불가. 파이프라인 분리로 기존 코드 무영향 보장 |
+| DEC-INTENT-10 | IntentOrderTracker 폴링 간격 10초 (LiFi 30초보다 빠름) | CoW 주문은 1-2분 내 체결이 일반적. 빠른 상태 반영을 위해 10초 간격 |
+| DEC-INTENT-11 | maxAttempts=180 (30분 타임아웃) | 주문이 30분 이상 미체결이면 validTo(deadline) 초과로 expired 처리됨. 타임아웃과 deadline이 일관된 시간 범위 |
+| DEC-INTENT-12 | executeResolve()는 동질적 결과만 반환 (ContractCallRequest 또는 SignableOrder, 혼합 불가) | 혼합 결과의 원자성 보장이 복잡하고, 실제 프로토콜에서 혼합 결과가 발생하지 않음 |
+| DEC-INTENT-13 | INTENT_ORDER_FILLED 알림 이벤트로 AI 에이전트에 주문 완료 통지 | executedSellAmount, executedBuyAmount 포함으로 실행 결과 소비 가능 |
+| DEC-INTENT-14 | SolanaAdapter.signTypedData()는 NOT_SUPPORTED throw (EVM 전용) | EIP-712는 EVM 표준. Solana intent 프로토콜 지원은 별도 마일스톤 범위 |
+
+---
+
+## 26. Intent 보안 설계
+
+Intent 기반 트레이딩은 EIP-712 서명으로 자금 이동 권한을 위임하므로, 서명 악용을 방지하는 다층 보안이 필수적이다. 이 섹션은 4중 바인딩 보안 모델, 서버 사이드 검증 규칙, 공격 벡터 분석 및 완화를 정의한다.
+
+### 26.1 4중 바인딩 (chainId + verifyingContract + nonce + deadline)
+
+EIP-712 서명의 오용을 방지하는 4개 보안 레이어:
+
+```
+┌─ Layer 1: chainId ────────── Prevents cross-chain replay ──────────────┐
+│  ┌─ Layer 2: verifyingContract ── Prevents phishing contract ─────────┐│
+│  │  ┌─ Layer 3: nonce/orderUid ──── Prevents order replay ──────────┐ ││
+│  │  │  ┌─ Layer 4: validTo ──────── Limits signature lifetime ─────┐│ ││
+│  │  │  │                                                           ││ ││
+│  │  │  │                EIP-712 Signed Order                       ││ ││
+│  │  │  │                                                           ││ ││
+│  │  │  └───────────────────────────────────────────────────────────┘│ ││
+│  │  └───────────────────────────────────────────────────────────────┘ ││
+│  └───────────────────────────────────────────────────────────────────┘│
+└───────────────────────────────────────────────────────────────────────┘
+```
+
+**Layer 1: chainId 바인딩**
+
+EIP-712 domain separator에 chainId가 포함된다. chainId=1(mainnet) 서명은 chainId=11155111(sepolia)에서 무효하다.
+
+- **보호 대상:** Cross-chain replay 공격
+- **서버 사이드 검증:** `domain.chainId === wallet.chainId`
+- **메커니즘:** domainSeparator = keccak256(abi.encode(typeHash, nameHash, versionHash, **chainId**, verifyingContract))
+
+**Layer 2: verifyingContract 바인딩**
+
+EIP-712 domain.verifyingContract는 서명이 유효한 컨트랙트를 지정한다. CoW Protocol 0x9008D19f... 서명은 다른 컨트랙트에서 무효하다.
+
+- **보호 대상:** Phishing contract 공격 (악의적 Provider가 공격자 컨트랙트 주소 설정)
+- **서버 사이드 검증:** verifyingContract ∈ INTENT_VERIFYING_CONTRACT_WHITELIST (default-deny)
+- **메커니즘:** domainSeparator에 verifyingContract 포함
+
+**Layer 3: nonce/orderUid 바인딩**
+
+프로토콜별 nonce로 동일 서명의 재사용을 방지한다. CoW Protocol은 `orderUid = keccak256(orderDigest, owner, validTo)`로 주문별 고유 ID를 생성한다.
+
+- **보호 대상:** Signature replay 공격
+- **서버 사이드 검증:** bridge_metadata에 orderUid 저장, DB 중복 체크
+- **메커니즘:** 프로토콜 관리 nonce (WAIaaS가 nonce를 생성하지 않음)
+
+**Layer 4: validTo (deadline) 바인딩**
+
+Unix timestamp로 서명의 유효 기간을 제한한다. 만료된 서명은 settlement contract에서 거부된다.
+
+- **보호 대상:** Long-lived signature 공격 (서명 도난 시 무기한 악용)
+- **서버 사이드 검증:** `validTo - Math.floor(Date.now() / 1000) <= MAX_DEADLINE_SECONDS` (기본 300초 = 5분)
+- **메커니즘:** settlement contract의 validTo 체크 + WAIaaS 서버 사이드 사전 검증
+
+### 26.2 서버 사이드 검증 규칙
+
+IntentSecurityValidator는 intent 전용 보안 검증을 수행하는 독립 클래스다. PolicyEngine과 분리하여 보안 검증이 정책 평가보다 먼저 실행되도록 한다 (파이프라인 Step 3).
+
+```typescript
+class IntentSecurityValidator {
+  constructor(
+    private readonly settingsService: SettingsService,
+  ) {}
+
+  // Rule 1: Deadline 검증 (가장 저렴한 체크 — 먼저 실행)
+  validateDeadline(validTo: number): void {
+    const now = Math.floor(Date.now() / 1000);
+    const remaining = validTo - now;
+    if (remaining <= 0) {
+      throw new ChainError('INTENT_EXPIRED',
+        'Order deadline has already passed');
+    }
+    const maxDeadline = this.settingsService.get('intent_max_deadline_seconds') ?? 300;
+    if (remaining > maxDeadline) {
+      throw new ChainError('INTENT_DEADLINE_TOO_LONG',
+        `Deadline ${remaining}s exceeds maximum ${maxDeadline}s`);
+    }
+  }
+
+  // Rule 2: Chain ID 검증
+  validateChainId(domainChainId: number, walletChainId: number): void {
+    if (domainChainId !== walletChainId) {
+      throw new ChainError('INTENT_CHAIN_MISMATCH',
+        `Domain chainId ${domainChainId} does not match wallet chainId ${walletChainId}`);
+    }
+  }
+
+  // Rule 3: verifyingContract 화이트리스트 (default-deny)
+  validateVerifyingContract(verifyingContract: string, whitelist: string[]): void {
+    if (!whitelist.length) {
+      throw new ChainError('INTENT_NO_WHITELIST',
+        'INTENT_VERIFYING_CONTRACT_WHITELIST not configured — all intent signing denied');
+    }
+    const normalized = verifyingContract.toLowerCase();
+    if (!whitelist.some(addr => addr.toLowerCase() === normalized)) {
+      throw new ChainError('INTENT_CONTRACT_NOT_WHITELISTED',
+        `verifyingContract ${verifyingContract} not in whitelist`);
+    }
+  }
+
+  // Rule 4: 중복 주문 감지 (DB 쿼리 — 가장 비싼 체크 → 마지막 실행)
+  async validateNoDuplicate(orderHash: string): Promise<void> {
+    const existing = await db.select().from(transactions)
+      .where(and(
+        eq(transactions.type, 'INTENT'),
+        sql`json_extract(bridge_metadata, '$.orderUid') = ${orderHash}`
+      )).get();
+    if (existing) {
+      throw new ChainError('INTENT_DUPLICATE_ORDER',
+        `Order ${orderHash} already submitted`);
+    }
+  }
+}
+```
+
+**검증 실행 순서 (fail-fast, 저비용 → 고비용):**
+
+1. `validateDeadline` — 만료/과다 deadline 체크 (순수 연산, 가장 저렴)
+2. `validateChainId` — 크로스체인 체크 (메모리 비교)
+3. `validateVerifyingContract` — 화이트리스트 체크 (배열 탐색)
+4. `validateNoDuplicate` — 중복 제출 체크 (DB 쿼리, 가장 비용)
+
+**INTENT_VERIFYING_CONTRACT_WHITELIST 정책:**
+
+| 항목 | 설명 |
+|------|------|
+| 패턴 | default-deny (CONTRACT_WHITELIST와 동일) |
+| 저장 | Admin Settings `intent_verifying_contract_whitelist` |
+| 형식 | JSON array of 0x-prefixed addresses |
+| 비교 | case-insensitive (toLowerCase) |
+| 미설정 시 | 모든 intent 서명 거부 |
+| 설정 경로 | Admin UI + CLI (`waiaas settings set`) |
+| 체인 스코프 | 암시적 — wallet의 chainId와 domain.chainId 일치로 체인 특정됨 |
+
+**MAX_DEADLINE_SECONDS 설정:**
+
+| 항목 | 설명 |
+|------|------|
+| 기본값 | 300 (5분) |
+| 저장 | Admin Settings `intent_max_deadline_seconds` |
+| Hot-reload | SettingsService 경유 |
+| 범위 | 60-3600 (1분~1시간, 검증됨) |
+
+### 26.3 공격 벡터 분석 + 완화
+
+| 공격 벡터 | 설명 | 완화 | 검증 규칙 |
+|-----------|------|------|----------|
+| Cross-chain replay | Mainnet 서명을 testnet에서 재사용 | EIP-712 domain separator에 chainId 포함 | Rule 2: chainId must match wallet |
+| Phishing contract | 악의적 Provider가 verifyingContract를 공격자 컨트랙트로 설정 | INTENT_VERIFYING_CONTRACT_WHITELIST (default-deny) | Rule 3: whitelist check |
+| Signature replay | 동일 서명 주문을 복수 제출 | 프로토콜 nonce (orderUid 고유성) + DB 중복 체크 | Rule 4: duplicate detection |
+| Long-lived signature | 도난 서명이 장기간 악용 가능 | MAX_DEADLINE_SECONDS (5분) | Rule 1: deadline validation |
+| Amount manipulation | Provider가 서명 후 sellAmount 변조 | SignableOrder는 서명 전 Zod 검증. 서명된 message는 불변 | Step 2: Zod validation |
+| API endpoint hijack | Provider가 orderApiUrl을 공격자 서버로 설정 | INTENT_VERIFYING_CONTRACT_WHITELIST로 알려진 프로토콜만 허용. 선택적 URL 화이트리스트 가능 | Rule 3 + optional URL whitelist |
+| Key exposure via signTypedData | 서명 후 privateKey가 메모리에 잔류 | signExternalTransaction과 동일 패턴: try/finally releaseKey() | Step 8: key release in finally |
+
+**잔여 위험 (WAIaaS 범위 외):**
+
+| 잔여 위험 | 설명 | 완화 주체 |
+|----------|------|----------|
+| Solver front-running | 솔버가 주문 정보를 이용해 선행 매매 | CoW Protocol의 batch auction 설계가 부분적으로 완화. WAIaaS 범위 외 |
+| Price slippage | 시장 가격 변동으로 불리한 체결 | buyAmount 최솟값이 서명된 주문에 포함. AI 에이전트가 적절한 슬리피지 설정 필요 |
+| Protocol-level vulnerability | Settlement contract 보안 취약점 | 프로토콜 개발팀 책임. WAIaaS는 verifyingContract 화이트리스트로 검증된 프로토콜만 허용 |
+
+### 26.4 설계 결정
+
+| ID | 결정 | 근거 |
+|----|------|------|
+| DEC-INTENT-15 | IntentSecurityValidator는 PolicyEngine과 별도 독립 클래스 | 보안 검증은 정책 평가보다 선행해야 함 (파이프라인 Step 3 vs Step 4). 관심사 분리 |
+| DEC-INTENT-16 | INTENT_VERIFYING_CONTRACT_WHITELIST는 default-deny | CONTRACT_WHITELIST 패턴 일관성. 미설정 시 모든 intent 서명 거부 (안전한 기본값) |
+| DEC-INTENT-17 | MAX_DEADLINE_SECONDS=300 (5분) | 보안(짧은 서명 수명)과 사용성(솔버 실행 시간 확보)의 균형. CoW 주문 평균 체결 1-2분 |
+| DEC-INTENT-18 | 검증 순서는 fail-fast: deadline → chainId → whitelist → duplicate (저비용 → 고비용) | 빈번한 실패를 저비용 체크에서 조기 거부하여 DB 쿼리 부하 최소화 |
+| DEC-INTENT-19 | Nonce 관리는 프로토콜 측 (CoW orderUid). WAIaaS는 중복 제출만 체크 | 프로토콜이 nonce 생성/관리를 담당. WAIaaS가 자체 nonce를 생성하면 프로토콜과 불일치 위험 |
+| DEC-INTENT-20 | Key release는 기존 signExternalTransaction 패턴 (try/finally releaseKey()) | 동일 보안 수준 유지. 추가 완화는 sodium-native guarded memory 아키텍처에 의존 |
+| DEC-INTENT-21 | 잔여 위험 (solver front-running, price slippage)은 문서화하되 WAIaaS 범위 외 | WAIaaS는 서명 보안을 담당, 시장 실행 최적화는 프로토콜/에이전트 책임 |
+
+**Phase 273 전체 설계 결정 총정리:**
+
+| 범위 | 결정 ID | 수 |
+|------|---------|-----|
+| 섹션 24 (SignableOrder + Registry) | DEC-INTENT-01~07 | 7개 |
+| 섹션 25 (Pipeline + Tracking) | DEC-INTENT-08~14 | 7개 |
+| 섹션 26 (Security) | DEC-INTENT-15~21 | 7개 |
+| **합계** | | **21개** |
+
+---
+
 ## 신규 산출물
 
 | ID | 산출물 | 설명 |
