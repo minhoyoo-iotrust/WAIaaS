@@ -244,6 +244,10 @@ export type {
   // v29.2 position provider types
   PositionUpdate,
   IPositionProvider,
+  // v29.2 DeFi monitor types
+  IDeFiMonitor,
+  MonitorSeverity,
+  MonitorEvaluation,
 } from './interfaces/index.js';
 
 // v27.1 connection state machine (value exports)
