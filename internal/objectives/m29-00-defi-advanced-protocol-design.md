@@ -4146,6 +4146,233 @@ const PolicyTypeEnum = z.enum([
 
 ---
 
+## 23. PerpPolicyEvaluator + MarginMonitor 통합 + Drift 프로토콜 매핑
+
+### 23.1 PerpPolicyEvaluator 정책 평가 플로우 요약
+
+섹션 22.4에서 정의한 3개 정책 타입의 PolicyEngine step 4h-c~e 평가 플로우를 명세한다.
+
+**정책 평가 파이프라인:**
+
+```
+ContractCallRequest 도착 (stage 4: PolicyEngine)
+  │
+  ├── metadata.actionProvider = 'drift'? ── NO → 기존 4a~4g 경로
+  │
+  └── YES → perp 정책 경로 진입
+       │
+       ├── Step 4h-c: PERP_MARKET_WHITELIST
+       │   ├── 정책 미설정 → DENY ("No perp market whitelist configured")
+       │   ├── market ∉ allowedMarkets → DENY ("Market {market} not in whitelist")
+       │   └── market ∈ allowedMarkets → PASS
+       │
+       ├── Step 4h-d: PERP_LEVERAGE_LIMIT
+       │   ├── 적용 대상: open_position, modify_position만
+       │   ├── projectedLeverage 계산:
+       │   │   read defi_positions (category='PERP') → 현재 account leverage 조회
+       │   │   projectedLeverage = (currentTotalNotional + newNotional) / totalCollateral
+       │   ├── projectedLeverage > maxLeverage → DENY
+       │   ├── projectedLeverage > warningLeverage → ALLOW + tier upgrade to DELAY
+       │   └── projectedLeverage ≤ warningLeverage → ALLOW
+       │
+       └── Step 4h-e: PERP_POSITION_SIZE_LIMIT
+           ├── 적용 대상: open_position, modify_position만
+           ├── projectedMarketNotional > maxPositionSizeUsd → DENY
+           ├── projectedTotalExposure > maxTotalExposureUsd → DENY
+           └── 모두 통과 → ALLOW
+```
+
+**Perp 액션 식별:**
+- `ContractCallRequest.metadata = { actionProvider: 'drift', actionName: 'open_position' }` 형태
+- PolicyEvaluator가 `metadata.actionProvider`가 perp 프로바이더(drift 등)인지 확인
+- `metadata.actionName`에 따라 적용 대상 정책 필터링:
+  - `open_position`, `modify_position` → 3개 정책 모두 평가
+  - `close_position` → PERP_MARKET_WHITELIST만 평가
+  - `add_margin`, `withdraw_margin` → 시장과 무관하므로 정책 평가 생략 (기존 4a~4g만 적용)
+
+### 23.2-23.4 (섹션 22.4 참조)
+
+PERP_LEVERAGE_LIMIT, PERP_POSITION_SIZE_LIMIT, PERP_MARKET_WHITELIST의 상세 규칙 스키마와 평가 로직은 섹션 22.4에서 정의 완료. 본 섹션에서는 통합 플로우와 데이터 플로우만 추가한다.
+
+### 23.5 MarginMonitor ↔ IPerpProvider 데이터 플로우
+
+Phase 269 섹션 10.3의 MarginMonitor가 IPerpProvider를 통해 perp 포지션을 모니터링하는 전체 데이터 흐름을 명세한다. Phase 271 섹션 20.1의 MaturityMonitor ↔ IYieldProvider 연동 패턴을 정확히 미러링한다.
+
+**데이터 흐름 (5단계):**
+
+```
+1. PositionTracker.syncCategory('PERP')
+   → DriftProvider.getPositions(walletId)  [IPositionProvider 인터페이스]
+   → Drift SDK: user.getPerpPosition(marketIndex) per market
+
+2. PositionTracker → defi_positions 테이블에 저장
+   → category='PERP', status='ACTIVE'
+   → metadata JSON에 PerpMetadataSchema (direction, leverage, unrealizedPnl, liquidationPrice, margin, entryPrice, market)
+
+3. MarginMonitor.checkAll()
+   → defi_positions에서 category='PERP', status='ACTIVE' 행 읽기
+   → DB 캐시 기반 (RPC 호출 없음, DEC-MON-03 준수)
+
+4. MarginMonitor.evaluate(position)
+   → 이중 판정 로직:
+     a) margin ratio: metadata.margin 기반 계산 → WARNING/CRITICAL
+     b) liquidation price proximity: |currentPrice - liquidationPrice| / currentPrice → CRITICAL if < 5%
+   → final severity = max(margin severity, liquidation severity)
+
+5. 알림 발생
+   → WARNING → MARGIN_WARNING 이벤트 (defi_monitoring 카테고리, 4h 쿨다운)
+   → CRITICAL → LIQUIDATION_IMMINENT 이벤트 (security_alert 카테고리, BROADCAST, 쿨다운 없음)
+   → Phase 269 섹션 11 SSoT 알림 체인 사용
+```
+
+**MarginMonitor가 IPerpProvider에 직접 의존하지 않는 이유:**
+
+- DEC-MON-03: monitors read from defi_positions cache, never make direct RPC calls
+- MarginMonitor는 `defi_positions.metadata`의 margin/leverage/liquidationPrice 값만 필요 (DB에서 읽기)
+- IPerpProvider.getPosition()은 **API 응답용** (markPrice, fundingRate 등 실시간 필드 포함)
+- MarginMonitor는 **DB 캐시 사용** (raw metadata만 필요)
+- 이 분리로 모니터링 주기(1분)가 Drift SDK 호출 비용에 영향받지 않음
+
+```
+                        ┌─────────────────┐
+                        │   Drift SDK     │
+                        │ (user.getPerpPosition)
+                        └────────┬────────┘
+                                 │ getPositions()
+                        ┌────────▼────────┐
+                        │ DriftProvider   │ (IPerpProvider + IPositionProvider)
+                        └────────┬────────┘
+                                 │ PositionUpdate[]
+                        ┌────────▼────────┐
+                        │PositionTracker  │ (1분 간격 PERP 카테고리 동기화)
+                        └────────┬────────┘
+                                 │ INSERT/UPDATE
+                        ┌────────▼────────┐
+                        │ defi_positions  │ (category='PERP')
+                        └────────┬────────┘
+                                 │ SELECT (DB read only)
+                   ┌─────────────▼─────────────┐
+                   │     MarginMonitor          │
+                   │  1. margin ratio check     │
+                   │  2. liquidation proximity  │
+                   │  → MARGIN_WARNING          │
+                   │  → LIQUIDATION_IMMINENT    │
+                   └───────────────────────────┘
+```
+
+**PerpMetadataSchema 완전성 검증:**
+
+Phase 268 섹션 5.3에서 정의한 PerpMetadataSchema가 MarginMonitor.evaluate() 소비에 충분한지 확인한다.
+
+| PerpMetadataSchema 필드 | 타입 | MarginMonitor 사용 | 용도 |
+|---|---|---|---|
+| `direction` | `'LONG' \| 'SHORT'` | YES | 청산 가격 방향 로직 (LONG: 하락 시 청산, SHORT: 상승 시 청산) |
+| `leverage` | `number` | YES | margin ratio 계산에 사용 (positionValue / leverage = 사용 마진) |
+| `unrealizedPnl` | `number \| null` | YES (informational) | 포지션 요약에 포함, severity 판정에는 직접 미사용 |
+| `liquidationPrice` | `number \| null` | YES | 청산 가격 근접도 판정 (`\|currentPrice - liquidationPrice\| / currentPrice < 0.05`) |
+| `margin` | `number \| null` | YES | margin ratio 계산의 핵심 입력 (`marginRatio = availableMargin / usedMargin`) |
+| `entryPrice` | `number \| null` | YES | 현재 가격 추정 (PositionTracker가 최신 가격으로 갱신), position value 계산 |
+| `market` | `string` | NO (informational) | 시장 식별용, MarginMonitor 판정에 불필요 |
+
+**검증 결론:** PerpMetadataSchema는 MarginMonitor.evaluate() 소비에 **완전하다**. 7개 필드 중 6개가 MarginMonitor에서 직접 또는 간접적으로 사용된다. 스키마 변경 불필요.
+
+**DANGER/CRITICAL 시 on-demand 동기화:**
+- MarginMonitor가 DANGER 또는 CRITICAL severity를 감지하면, PositionTracker에 PERP 카테고리 즉시 동기화를 요청 (HealthFactorMonitor의 DEC-MON-04 동일 패턴)
+- `PositionTracker.syncCategory('PERP')` 호출로 최신 Drift SDK 데이터 확보
+- PositionTracker의 running 플래그가 동시 동기화를 방지하므로 과부하 없음
+
+### 23.6 Drift V2 프로토콜 매핑
+
+Phase 270 섹션 17 (Aave V3/Kamino/Morpho 매핑), Phase 271 섹션 20.3 (Pendle V2 매핑) 패턴을 미러링한다.
+
+**체인:** Solana (mainnet-beta)
+**SDK 의존:** `@drift-labs/sdk` (~2.158.x) — DriftClient + User 클래스
+**어댑터:** SolanaAdapter
+**구현 마일스톤:** m29-08
+
+**액션 매핑 테이블:**
+
+| IPerpProvider 액션 | Drift SDK 메서드 | 파라미터 | 비고 |
+|---|---|---|---|
+| `open_position` | `driftClient.placePerpOrder(orderParams)` | orderType, marketIndex, direction, baseAssetAmount, price, auctionParams | Drift에는 명시적 "open" 명령이 없음 — 모든 포지션 변경은 주문을 통해 수행 |
+| `close_position` | `driftClient.closePosition(marketIndex)` | marketIndex (부분 청산: reducing direction으로 placePerpOrder) | 편의 메서드. 또는 반대 방향 주문으로 수동 청산 |
+| `modify_position` | `driftClient.modifyPerpOrder(orderParams, orderId)` | 변경된 params + orderId. 포지션 리사이즈: 추가/감소 주문 | 원자적 cancel+place |
+| `add_margin` | `driftClient.deposit(amount, marketIndex, ata)` | amount (USDC precision), marketIndex=0 (USDC spot), associatedTokenAccount | USDC를 담보로 예치 |
+| `withdraw_margin` | `driftClient.withdraw(amount, marketIndex, ata)` | deposit과 동일 파라미터. 계정에서 인출 | free collateral 확인 후 허용 |
+
+**쿼리 매핑 테이블:**
+
+| IPerpProvider 쿼리 | Drift SDK 메서드 | 비고 |
+|---|---|---|
+| `getPosition(walletId)` | `user.getPerpPosition(marketIndex)` per market, 전체 시장 순회 | 시장별 포지션 반환: baseAssetAmount, quoteAssetAmount, lastCumulativeFundingRate |
+| `getMarginInfo(walletId)` | `user.getTotalCollateral()` + `user.getMarginRequirement('Maintenance')` + `user.getFreeCollateral()` + `user.getLeverage()` | 모든 값이 계정 수준 집계 |
+| `getMarkets(chain)` | `driftClient.getPerpMarketAccounts()` + `driftClient.getOracleDataForPerpMarket(idx)` | 전체 perp 시장 목록 + 오라클 가격 |
+
+**Drift 전용 구현 노트:**
+
+| 항목 | 값 | 비고 |
+|------|-----|------|
+| 정밀도 상수 | BASE_PRECISION (1e9), PRICE_PRECISION (1e6), MARGIN_PRECISION (1e4) | SDK 변환 헬퍼 항상 사용 |
+| 변환 함수 | `convertToPerpPrecision()`, `convertToPricePrecision()` | raw 값 직접 사용 금지 |
+| 기본 시장 | marketIndex 0 = SOL-PERP (mainnet), 인덱스는 환경별 상이 | `PerpMarkets[env]` 레지스트리 사용 |
+| 마진 모델 | cross-margin 기본 (모든 포지션이 하나의 담보 풀 공유) | isolated margin 미지원 (v29-08 범위) |
+| 서브 계정 | sub-account 0만 사용 (최대 128 지원, 미래 확장) | DEC-PERP-15 참조 |
+| DriftClient 초기화 | Connection + Wallet + env 파라미터 필요 | SolanaAdapter의 기존 Connection 재사용 |
+
+**Drift order-based 모델 추상화:**
+
+IPerpProvider가 Drift의 order-based 모델을 position-based semantics로 추상화하는 방법:
+
+| IPerpProvider (position-based) | Drift SDK (order-based) | 추상화 |
+|---|---|---|
+| `open_position(direction=LONG, size=100)` | `placePerpOrder({ direction: LONG, baseAssetAmount: 100 })` | AI 에이전트는 "포지션 개설"로 인식, 내부적으로 주문 배치 |
+| `close_position(market=SOL-PERP)` | `closePosition(marketIndex=0)` 또는 반대 방향 주문 | AI 에이전트는 "포지션 청산"으로 인식, 내부적으로 편의 메서드 또는 반대 주문 |
+| `modify_position(newSize=50)` | 포지션 감소 주문 배치 (현재 100 → 목표 50 = 50 감소 주문) | AI 에이전트는 "크기 변경"으로 인식, 내부적으로 추가/감소 주문 계산 |
+
+**핵심:** AI 에이전트는 포지션 단위로 생각한다 (open/close/modify). Drift는 주문 단위로 동작한다 (place/cancel/modify order). IPerpProvider가 이 간극을 메운다.
+
+### 23.7 설계 결정
+
+| ID | 결정 | 선택 | 근거 |
+|----|------|------|------|
+| DEC-PERP-14 | Drift 통합 경로 | `@drift-labs/sdk` 직접 사용 (Gateway 아님) | WAIaaS 데몬이 이미 Solana 연결 관리. Gateway는 별도 Rust 바이너리로 불필요한 인프라 복잡도 추가. SDK가 직접 Solana 프로그램 호출 제공 |
+| DEC-PERP-15 | Drift 서브 계정 전략 | v29-08에서 sub-account 0만 사용, 확장 가능성 보존 | 다중 서브 계정 지원은 복잡도 증가 (포지션 조회 시 전체 서브 계정 순회 필요). v29-08 범위에서 불필요. 인터페이스는 미래 서브 계정 지원을 차단하지 않음 |
+| DEC-PERP-16 | order-based → position-based 추상화 | IPerpProvider가 Drift의 주문 기반 모델을 포지션 기반 시맨틱스로 추상화 | AI 에이전트가 주문 개념을 이해할 필요 없음. "포지션 개설/청산/변경"으로 단순화. 내부적으로 DriftProvider가 주문 파라미터 구성 |
+| DEC-PERP-17 | PerpMetadataSchema 확장 여부 | Phase 268 정의 그대로 유지. Drift 특화 필드는 metadata JSON에 provider가 자유롭게 추가 | DEC-YIELD-09 동일 패턴. 프레임워크 스키마 변경 불필요. subAccountId 등 Drift 특화 필드는 metadata JSON passthrough로 저장 |
+| DEC-PERP-18 | DriftProvider 지원 체인 | `chains: ['solana']` only (Drift는 Solana-native) | Drift는 EVM에 배포되지 않음. 명시적으로 solana only 제한 |
+
+**크로스 프로토콜 비교 테이블:**
+
+| 차원 | Drift V2 (Perp) | Aave V3 (Lending, 참조) | Pendle V2 (Yield, 참조) |
+|------|-----------------|------------------------|------------------------|
+| **도메인** | 레버리지 선물 거래 | 담보/차입 | 수익률 토큰화 |
+| **통합 경로** | SDK 직접 (`@drift-labs/sdk`) | ABI 인코딩 (viem) | Hosted SDK (REST API) |
+| **체인** | Solana only | EVM (Ethereum, Polygon 등) | EVM (Ethereum, Arbitrum, Optimism) |
+| **포지션 모델** | Cross-margin (모든 포지션 공유 담보) | Global account (프로토콜별) | 토큰 기반 (PT/YT/LP) |
+| **리스크 차원** | 레버리지/청산/마진 | Health Factor/LTV | 만기/시간 가치 감소 |
+| **모니터 타입** | MarginMonitor (1분 고정) | HealthFactorMonitor (적응형 5초~5분) | MaturityMonitor (24시간 고정) |
+| **정밀도** | BN + 프로토콜 상수 (BASE=1e9, PRICE=1e6) | uint256 (EVM 표준) | SDK 추상화 |
+| **서브 계정** | Yes (128개) | No | No |
+| **주문 모델** | Order-based (모든 포지션 변경이 주문) | Instruction-based (supply/borrow 직접) | Transaction-based (swap/redeem) |
+| **구현 마일스톤** | m29-08 | m29-02 (프레임워크 + Aave) | m29-06 |
+
+**핵심 차이점 요약:**
+1. **Order-based 추상화:** Drift는 유일하게 order-based 모델. IPerpProvider가 position-based 시맨틱스로 추상화 (Aave/Pendle은 instruction/transaction-based로 직접 매핑).
+2. **Cross-margin 복잡도:** Drift의 cross-margin은 하나의 포지션 변경이 전체 계정 위험도에 영향. Aave의 health factor도 계정 수준이지만, Pendle은 포지션 간 독립.
+3. **1분 폴링 필요성:** 레버리지 포지션의 가격 민감도가 높아 1분 간격 모니터링 필요. Aave는 적응형 (상태에 따라 5초~5분), Pendle은 24시간 (만기는 느리게 변화).
+4. **정밀도 핸들링:** Drift의 BN 기반 정밀도 상수는 SDK 변환 함수 필수. Aave는 EVM uint256 표준, Pendle은 SDK가 추상화.
+
+**Phase 272 전체 설계 결정 총정리:**
+
+| 범위 | 결정 ID | 수 |
+|------|---------|-----|
+| 섹션 21 (IPerpProvider) | DEC-PERP-01~06 | 6개 |
+| 섹션 22 (Perp 타입 + 정책) | DEC-PERP-07~13 | 7개 |
+| 섹션 23 (통합 + 매핑) | DEC-PERP-14~18 | 5개 |
+| **합계** | | **18개** |
+
+---
+
 ## 신규 산출물
 
 | ID | 산출물 | 설명 |
