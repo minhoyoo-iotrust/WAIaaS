@@ -153,10 +153,10 @@ describe('PositionTracker', () => {
   });
 
   it('isolates per-wallet errors', async () => {
-    let callCount = 0;
+    let _callCount = 0;
     const errorProvider = makeMockProvider({
       getPositions: vi.fn().mockImplementation((walletId: string) => {
-        callCount++;
+        _callCount++;
         if (walletId === 'wallet-1') {
           throw new Error('RPC error');
         }

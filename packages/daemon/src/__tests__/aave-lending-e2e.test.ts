@@ -15,7 +15,7 @@ import { registerBuiltInProviders, AaveV3LendingProvider } from '@waiaas/actions
 import { HealthFactorMonitor } from '../services/monitoring/health-factor-monitor.js';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
 import type { Database as DatabaseType } from 'better-sqlite3';
-import type { ActionContext, ContractCallRequest } from '@waiaas/core';
+import type { ActionContext } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------
 // Test helpers

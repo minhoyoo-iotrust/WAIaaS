@@ -7,7 +7,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { AaveV3LendingProvider } from '../providers/aave-v3/index.js';
 import { AAVE_V3_ADDRESSES } from '../providers/aave-v3/config.js';
-import { MAX_UINT256 } from '../providers/aave-v3/aave-contracts.js';
 import type { IRpcCaller } from '../providers/aave-v3/aave-rpc.js';
 import type { ActionContext, ContractCallRequest } from '@waiaas/core';
 
@@ -22,8 +21,8 @@ const CONTEXT: ActionContext = {
 };
 
 const TEST_ASSET = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'; // USDC-like
-const ETH_POOL = AAVE_V3_ADDRESSES['ethereum-mainnet'].pool;
-const BASE_POOL = AAVE_V3_ADDRESSES['base-mainnet'].pool;
+const ETH_POOL = AAVE_V3_ADDRESSES['ethereum-mainnet']!.pool;
+const BASE_POOL = AAVE_V3_ADDRESSES['base-mainnet']!.pool;
 
 // ---------------------------------------------------------------------------
 // Metadata
@@ -108,7 +107,7 @@ describe('resolve aave_supply', () => {
       { asset: TEST_ASSET, amount: '1.0' },
       CONTEXT,
     )) as ContractCallRequest[];
-    expect(result[0].calldata!.startsWith('0x095ea7b3')).toBe(true);
+    expect(result[0]!.calldata!.startsWith('0x095ea7b3')).toBe(true);
   });
 
   it('should have supply calldata starting with 0x617ba037', async () => {
@@ -117,7 +116,7 @@ describe('resolve aave_supply', () => {
       { asset: TEST_ASSET, amount: '1.0' },
       CONTEXT,
     )) as ContractCallRequest[];
-    expect(result[1].calldata!.startsWith('0x617ba037')).toBe(true);
+    expect(result[1]!.calldata!.startsWith('0x617ba037')).toBe(true);
   });
 
   it('should target asset address for approve', async () => {
@@ -126,7 +125,7 @@ describe('resolve aave_supply', () => {
       { asset: TEST_ASSET, amount: '1.0' },
       CONTEXT,
     )) as ContractCallRequest[];
-    expect(result[0].to).toBe(TEST_ASSET);
+    expect(result[0]!.to).toBe(TEST_ASSET);
   });
 
   it('should target Pool address for supply (ethereum-mainnet default)', async () => {
@@ -135,7 +134,7 @@ describe('resolve aave_supply', () => {
       { asset: TEST_ASSET, amount: '1.0' },
       CONTEXT,
     )) as ContractCallRequest[];
-    expect(result[1].to).toBe(ETH_POOL);
+    expect(result[1]!.to).toBe(ETH_POOL);
   });
 
   it('should have type CONTRACT_CALL and value 0', async () => {
@@ -144,10 +143,10 @@ describe('resolve aave_supply', () => {
       { asset: TEST_ASSET, amount: '1.0' },
       CONTEXT,
     )) as ContractCallRequest[];
-    expect(result[0].type).toBe('CONTRACT_CALL');
-    expect(result[0].value).toBe('0');
-    expect(result[1].type).toBe('CONTRACT_CALL');
-    expect(result[1].value).toBe('0');
+    expect(result[0]!.type).toBe('CONTRACT_CALL');
+    expect(result[0]!.value).toBe('0');
+    expect(result[1]!.type).toBe('CONTRACT_CALL');
+    expect(result[1]!.value).toBe('0');
   });
 
   it('should encode 1.0 as 1e18 in calldata', async () => {
@@ -157,7 +156,7 @@ describe('resolve aave_supply', () => {
       CONTEXT,
     )) as ContractCallRequest[];
     // Amount is the 2nd 32-byte word of supply calldata
-    const calldata = result[1].calldata!;
+    const calldata = result[1]!.calldata!;
     const amountHex = calldata.slice(10 + 64, 10 + 128);
     expect(BigInt('0x' + amountHex)).toBe(10n ** 18n);
   });
@@ -168,7 +167,7 @@ describe('resolve aave_supply', () => {
       { asset: TEST_ASSET, amount: '1.0' },
       CONTEXT,
     )) as ContractCallRequest[];
-    const calldata = result[1].calldata!;
+    const calldata = result[1]!.calldata!;
     expect(calldata.toLowerCase()).toContain(CONTEXT.walletAddress.slice(2).toLowerCase());
   });
 });
@@ -242,7 +241,7 @@ describe('resolve aave_repay', () => {
       { asset: TEST_ASSET, amount: '50.0' },
       CONTEXT,
     )) as ContractCallRequest[];
-    expect(result[1].calldata!.startsWith('0x573ade81')).toBe(true);
+    expect(result[1]!.calldata!.startsWith('0x573ade81')).toBe(true);
   });
 
   it('should encode max as MAX_UINT256 in repay calldata', async () => {
@@ -252,7 +251,7 @@ describe('resolve aave_repay', () => {
       CONTEXT,
     )) as ContractCallRequest[];
     // Repay calldata: selector + asset + amount + interestRateMode + onBehalfOf
-    const repayCalldata = result[1].calldata!;
+    const repayCalldata = result[1]!.calldata!;
     const amountHex = repayCalldata.slice(10 + 64, 10 + 128);
     expect(amountHex).toBe('f'.repeat(64));
   });
@@ -264,7 +263,7 @@ describe('resolve aave_repay', () => {
       CONTEXT,
     )) as ContractCallRequest[];
     // Approve calldata: selector + spender + amount
-    const approveCalldata = result[0].calldata!;
+    const approveCalldata = result[0]!.calldata!;
     const amountHex = approveCalldata.slice(10 + 64, 10 + 128);
     expect(amountHex).toBe('f'.repeat(64));
   });
@@ -342,7 +341,7 @@ describe('amount parsing', () => {
       CONTEXT,
     )) as ContractCallRequest[];
     // 0.001 * 1e18 = 1e15
-    const calldata = result[1].calldata!;
+    const calldata = result[1]!.calldata!;
     const amountHex = calldata.slice(10 + 64, 10 + 128);
     expect(BigInt('0x' + amountHex)).toBe(10n ** 15n);
   });
@@ -353,7 +352,7 @@ describe('amount parsing', () => {
       { asset: TEST_ASSET, amount: '100.5' },
       CONTEXT,
     )) as ContractCallRequest[];
-    const calldata = result[1].calldata!;
+    const calldata = result[1]!.calldata!;
     const amountHex = calldata.slice(10 + 64, 10 + 128);
     // 100.5 * 1e18 = 100500000000000000000
     expect(BigInt('0x' + amountHex)).toBe(100_500_000_000_000_000_000n);
@@ -373,8 +372,8 @@ describe('network selection', () => {
       { asset: TEST_ASSET, amount: '1.0', network: 'base-mainnet' },
       CONTEXT,
     )) as ContractCallRequest[];
-    expect(result[1].to).toBe(BASE_POOL);
-    expect(result[1].to).not.toBe(ETH_POOL);
+    expect(result[1]!.to).toBe(BASE_POOL);
+    expect(result[1]!.to).not.toBe(ETH_POOL);
   });
 
   it('should default to ethereum-mainnet when network is not specified', async () => {
@@ -383,7 +382,7 @@ describe('network selection', () => {
       { asset: TEST_ASSET, amount: '1.0' },
       CONTEXT,
     )) as ContractCallRequest[];
-    expect(result[1].to).toBe(ETH_POOL);
+    expect(result[1]!.to).toBe(ETH_POOL);
   });
 
   it('should throw for unsupported network', async () => {

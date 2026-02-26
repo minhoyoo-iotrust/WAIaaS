@@ -42,7 +42,7 @@ const TEST_SPENDER = '0xABCDEF0123456789ABCDEF0123456789ABCDEF01';
 
 describe('AAVE_SELECTORS', () => {
   it('should have correct length (0x + 8 hex chars = 10)', () => {
-    for (const [name, selector] of Object.entries(AAVE_SELECTORS)) {
+    for (const [_name, selector] of Object.entries(AAVE_SELECTORS)) {
       expect(selector).toMatch(/^0x[0-9a-f]{8}$/);
     }
   });
@@ -292,13 +292,13 @@ describe('AAVE_V3_ADDRESSES', () => {
   });
 
   it('should have Ethereum pool address different from others', () => {
-    const ethPool = AAVE_V3_ADDRESSES['ethereum-mainnet'].pool;
-    const arbPool = AAVE_V3_ADDRESSES['arbitrum-mainnet'].pool;
+    const ethPool = AAVE_V3_ADDRESSES['ethereum-mainnet']!.pool;
+    const arbPool = AAVE_V3_ADDRESSES['arbitrum-mainnet']!.pool;
     expect(ethPool).not.toBe(arbPool);
   });
 
   it('should have all addresses starting with 0x', () => {
-    for (const [network, addresses] of Object.entries(AAVE_V3_ADDRESSES)) {
+    for (const [_network, addresses] of Object.entries(AAVE_V3_ADDRESSES)) {
       expect(addresses.pool.startsWith('0x')).toBe(true);
       expect(addresses.dataProvider.startsWith('0x')).toBe(true);
       expect(addresses.oracle.startsWith('0x')).toBe(true);
@@ -306,11 +306,11 @@ describe('AAVE_V3_ADDRESSES', () => {
   });
 
   it('should have correct chain IDs', () => {
-    expect(AAVE_V3_ADDRESSES['ethereum-mainnet'].chainId).toBe(1);
-    expect(AAVE_V3_ADDRESSES['arbitrum-mainnet'].chainId).toBe(42161);
-    expect(AAVE_V3_ADDRESSES['optimism-mainnet'].chainId).toBe(10);
-    expect(AAVE_V3_ADDRESSES['polygon-mainnet'].chainId).toBe(137);
-    expect(AAVE_V3_ADDRESSES['base-mainnet'].chainId).toBe(8453);
+    expect(AAVE_V3_ADDRESSES['ethereum-mainnet']!.chainId).toBe(1);
+    expect(AAVE_V3_ADDRESSES['arbitrum-mainnet']!.chainId).toBe(42161);
+    expect(AAVE_V3_ADDRESSES['optimism-mainnet']!.chainId).toBe(10);
+    expect(AAVE_V3_ADDRESSES['polygon-mainnet']!.chainId).toBe(137);
+    expect(AAVE_V3_ADDRESSES['base-mainnet']!.chainId).toBe(8453);
   });
 });
 
