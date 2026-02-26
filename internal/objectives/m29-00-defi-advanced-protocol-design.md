@@ -1322,6 +1322,655 @@ async function fetchPositions(walletId: string): Promise<void> {
 
 ---
 
+## 9. 모니터링 프레임워크 — IDeFiMonitor 인터페이스
+
+### 9.1 IDeFiMonitor 인터페이스 정의
+
+3개 전문 모니터(HealthFactorMonitor, MaturityMonitor, MarginMonitor)가 공통으로 구현하는 인터페이스를 정의한다. IChainSubscriber 6메서드 패턴을 참조하여 DeFiMonitorService가 모니터를 제네릭하게 관리할 수 있는 계약을 제공한다.
+
+```typescript
+// packages/core/src/interfaces/defi-monitor.types.ts (신규 파일)
+
+/**
+ * 4-level risk severity for DeFi position monitoring.
+ * Used by all three monitors (HealthFactor, Maturity, Margin)
+ * to classify position risk level.
+ */
+export type MonitorSeverity = 'SAFE' | 'WARNING' | 'DANGER' | 'CRITICAL';
+
+/**
+ * Result of evaluating a single DeFi position.
+ * Returned by IDeFiMonitor.evaluate() when a position
+ * requires attention (non-null) or is healthy (null).
+ */
+export interface MonitorEvaluation {
+  walletId: string;         // Position owner wallet
+  positionId: string;       // defi_positions.id
+  severity: MonitorSeverity;
+  value: number;            // Measured value (health factor, days to maturity, margin ratio)
+  threshold: number;        // Threshold that was crossed
+  message: string;          // Human-readable description for notifications
+}
+
+/**
+ * IDeFiMonitor: common interface for DeFi position risk monitors.
+ *
+ * Design rationale:
+ * - 6 members (1 property + 5 methods) providing lifecycle + evaluation contracts
+ * - evaluate() returns null for positions not relevant to this monitor
+ *   (e.g., HealthFactorMonitor returns null for YIELD category)
+ * - getInterval() may return dynamic values (HealthFactorMonitor adaptive polling)
+ *   or fixed values (MaturityMonitor 86,400,000ms, MarginMonitor 60,000ms)
+ * - start()/stop() manage internal polling timers
+ * - updateConfig() enables hot-reload from Admin Settings
+ *
+ * File location: packages/core/src/interfaces/defi-monitor.types.ts
+ */
+export interface IDeFiMonitor {
+  /** Monitor type identifier (e.g., 'health-factor', 'maturity', 'margin') */
+  readonly name: string;
+
+  /**
+   * Evaluate a single position and determine its risk severity.
+   * Returns MonitorEvaluation if position is relevant and at risk,
+   * or null if position is not relevant to this monitor
+   * (e.g., wrong category or not ACTIVE).
+   */
+  evaluate(position: DefiPositionRow): MonitorEvaluation | null;
+
+  /**
+   * Get current polling interval in milliseconds.
+   * HealthFactorMonitor: dynamic based on currentSeverity
+   * MaturityMonitor: fixed 86,400,000ms (24h)
+   * MarginMonitor: fixed 60,000ms (1min)
+   */
+  getInterval(): number;
+
+  /** Start the monitoring polling loop */
+  start(): void;
+
+  /** Stop the monitoring polling loop and clean up timers */
+  stop(): void;
+
+  /**
+   * Update configuration at runtime (hot-reload from Admin Settings).
+   * Called by DeFiMonitorService.updateConfig() which propagates to all monitors.
+   * Each monitor extracts its relevant keys from the config object.
+   */
+  updateConfig(config: Record<string, unknown>): void;
+}
+```
+
+**인터페이스 위치:** `@waiaas/core` (인터페이스 + 타입 정의). 구현체는 `packages/daemon/src/services/monitoring/` 하위.
+
+### 9.2 MonitorSeverity 타입 상세
+
+4단계 severity는 폴링 간격, 알림 수준, Admin UI 표시 색상을 결정한다:
+
+| Severity | 의미 | 폴링 간격 | 알림 | Admin UI 색상 |
+|----------|------|----------|------|--------------|
+| SAFE | 정상. 리스크 없음 | 최대 간격 (모니터별) | 없음 | Green (#22c55e) |
+| WARNING | 경고. 리스크 감지 | 중간 간격 | WARNING 수준 알림 (쿨다운 적용) | Yellow (#eab308) |
+| DANGER | 위험. 리스크 상승 | 짧은 간격 | WARNING 수준 알림 (쿨다운 적용) | Orange (#f97316) |
+| CRITICAL | 임박한 위험. 즉시 조치 필요 | 최소 간격 | LIQUIDATION_IMMINENT 알림 (쿨다운 미적용) | Red (#ef4444) |
+
+**Severity 전이 규칙:**
+- **하강(악화):** severity가 SAFE → WARNING, WARNING → DANGER 등으로 나빠지면 즉시 폴링 간격 변경 (다음 tick에 적용)
+- **상승(개선):** severity가 개선되면 즉시 간격 변경. 별도의 히스테리시스(hysteresis) 없음 — 단순성 우선
+- **무포지션:** 해당 카테고리에 ACTIVE 포지션이 없으면 SAFE로 유지 (불필요한 폴링 방지)
+
+### 9.3 DeFiMonitorService 오케스트레이터
+
+```typescript
+// packages/daemon/src/services/monitoring/defi-monitor-service.ts
+
+/**
+ * DeFiMonitorService: orchestrates 3 specialized DeFi monitors.
+ *
+ * Responsibilities:
+ * - Register/start/stop all monitors as a unit
+ * - Propagate config updates to all monitors (hot-reload)
+ * - Provide single entry point for DaemonLifecycle
+ *
+ * Pattern: IncomingTxMonitorService (queue + multiplexer + workers → monitors array)
+ * Dependencies: same as BalanceMonitorService { sqlite, notificationService, settingsService, config }
+ */
+class DeFiMonitorService {
+  private monitors: IDeFiMonitor[] = [];
+
+  constructor(deps: {
+    sqlite: Database;
+    notificationService: NotificationService;
+    settingsService: SettingsService;
+    config: MonitoringConfig;
+  }) {
+    // Instantiate and register 3 monitors
+    this.register(new HealthFactorMonitor(deps));
+    this.register(new MaturityMonitor(deps));
+    this.register(new MarginMonitor(deps));
+  }
+
+  /**
+   * Register a monitor. Must be called before start().
+   */
+  register(monitor: IDeFiMonitor): void {
+    this.monitors.push(monitor);
+  }
+
+  /**
+   * Start all registered monitors.
+   * Fail-soft: if one monitor fails to start, others still start.
+   * Matches BalanceMonitorService error isolation pattern.
+   */
+  start(): void {
+    for (const monitor of this.monitors) {
+      try {
+        monitor.start();
+        console.debug(`DeFiMonitorService: ${monitor.name} started`);
+      } catch (err) {
+        console.warn(`DeFiMonitorService: ${monitor.name} failed to start:`, err);
+        // Continue starting other monitors
+      }
+    }
+  }
+
+  /**
+   * Stop all registered monitors (reverse order).
+   * Ensures cleanup even if individual stop() throws.
+   */
+  stop(): void {
+    for (const monitor of [...this.monitors].reverse()) {
+      try {
+        monitor.stop();
+      } catch (err) {
+        console.warn(`DeFiMonitorService: ${monitor.name} failed to stop:`, err);
+      }
+    }
+  }
+
+  /**
+   * Propagate config update to all monitors.
+   * Called by HotReloadOrchestrator.reloadDeFiMonitors().
+   */
+  updateConfig(config: Record<string, unknown>): void {
+    for (const monitor of this.monitors) {
+      try {
+        monitor.updateConfig(config);
+      } catch (err) {
+        console.warn(`DeFiMonitorService: ${monitor.name} config update failed:`, err);
+      }
+    }
+  }
+}
+```
+
+### 9.4 모니터 등록 패턴
+
+- DeFiMonitorService 생성자에서 3개 모니터를 인스턴스화하여 register()
+- 각 모니터는 자체 폴링 타이머를 관리:
+  * HealthFactorMonitor: 재귀 `setTimeout` (적응형 간격)
+  * MaturityMonitor: `setInterval` (고정 간격) + 시작 시 즉시 1회 실행
+  * MarginMonitor: `setInterval` (고정 간격) + 시작 시 즉시 1회 실행
+- 모니터 간 독립성: 한 모니터의 에러가 다른 모니터에 영향 없음 (per-monitor try/catch in start/stop/updateConfig)
+- 타이머 unref(): `timer.unref()` 호출로 프로세스 종료 차단 방지 (BalanceMonitorService 패턴)
+
+### 9.5 설계 결정
+
+| ID | 결정 | 선택 | 근거 |
+|----|------|------|------|
+| DEC-MON-01 | IDeFiMonitor와 IActionProvider 관계 | IDeFiMonitor는 IActionProvider를 확장하지 않는다 | 모니터링과 액션은 독립적 관심사. IActionProvider는 resolve()/getMetadata()/getActions() 실행 메서드를 포함하며 모니터에 불필요. 관심사 분리 원칙 준수 |
+| DEC-MON-02 | DeFiMonitorService와 BalanceMonitorService 관계 | 병렬 운영 (대체 아님) | BalanceMonitorService는 네이티브 토큰 잔액(LOW_BALANCE) 모니터링. DeFiMonitorService는 DeFi 포지션 리스크 모니터링. 모니터링 대상이 완전히 다름. 공유하는 것은 NotificationService뿐 |
+| DEC-MON-03 | 모니터 데이터 소스 | defi_positions 테이블 읽기 (직접 RPC 호출 금지) | PositionTracker가 데이터 갱신 담당. 모니터가 독립적으로 RPC를 호출하면 (1) RPC rate limit 초과 위험, (2) PositionTracker와 데이터 불일치, (3) 모니터 타이밍과 데이터 신선도가 결합되어 복잡도 증가. 모니터는 캐시된 데이터를 평가만 수행 |
+| DEC-MON-04 | HealthFactorMonitor DANGER/CRITICAL 시 데이터 신선도 | PositionTracker에 LENDING 카테고리 즉시 동기화 요청 (on-demand sync) | HealthFactorMonitor가 DANGER/CRITICAL 진입 시 defi_positions 데이터가 최대 5분 전 (LENDING 폴링 주기)일 수 있음. 5초 간격으로 체크하는데 5분 전 데이터는 의미 없음. `PositionTracker.syncCategory('LENDING')` 호출로 최신 데이터 확보. on-demand sync는 PositionTracker의 오버랩 방지 로직(running 플래그)이 이미 보호 |
+
+---
+
+## 10. 3개 모니터 상세 설계
+
+### 10.1 HealthFactorMonitor (적응형 폴링)
+
+**파일 위치:** `packages/daemon/src/services/monitoring/health-factor-monitor.ts`
+
+**대상:** `defi_positions` 테이블의 `category='LENDING'`, `status='ACTIVE'` 포지션
+
+**적응형 폴링 설계:**
+
+재귀 `setTimeout` 사용 (`setInterval` 금지 — 폴링 간격이 동적으로 변경되므로):
+
+```typescript
+class HealthFactorMonitor implements IDeFiMonitor {
+  readonly name = 'health-factor';
+  private timer: ReturnType<typeof setTimeout> | null = null;
+  private currentSeverity: MonitorSeverity = 'SAFE';
+  private cooldownMap = new Map<string, number>(); // key: walletId:positionId, value: last alert epoch ms
+  private positionTracker: PositionTracker | null;
+
+  // Severity → polling interval mapping (configurable)
+  private intervals: Record<MonitorSeverity, number> = {
+    SAFE: 300_000,       // 5 minutes
+    WARNING: 60_000,     // 1 minute
+    DANGER: 15_000,      // 15 seconds
+    CRITICAL: 5_000,     // 5 seconds
+  };
+
+  // Health factor → severity threshold mapping (configurable)
+  private thresholds = {
+    safe: 2.0,           // > 2.0 = SAFE
+    warning: 1.5,        // > 1.5 = WARNING
+    danger: 1.2,         // > 1.2 = DANGER
+                         // <= 1.2 = CRITICAL
+  };
+
+  getInterval(): number {
+    return this.intervals[this.currentSeverity];
+  }
+
+  start(): void {
+    this.scheduleNext();
+  }
+
+  stop(): void {
+    if (this.timer) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+  }
+
+  private scheduleNext(): void {
+    const interval = this.intervals[this.currentSeverity];
+    this.timer = setTimeout(async () => {
+      await this.checkAllPositions();
+      this.scheduleNext(); // Re-schedule with potentially different interval
+    }, interval);
+    this.timer.unref(); // Don't block process exit
+  }
+
+  /**
+   * Check all LENDING positions and determine worst severity.
+   */
+  private async checkAllPositions(): Promise<void> {
+    const positions = this.sqlite
+      .prepare("SELECT * FROM defi_positions WHERE category = 'LENDING' AND status = 'ACTIVE'")
+      .all() as DefiPositionRow[];
+
+    if (positions.length === 0) {
+      this.currentSeverity = 'SAFE';
+      return;
+    }
+
+    let worstSeverity: MonitorSeverity = 'SAFE';
+
+    for (const position of positions) {
+      try {
+        const evaluation = this.evaluate(position);
+        if (evaluation) {
+          // Track worst severity across all positions
+          if (severityRank(evaluation.severity) > severityRank(worstSeverity)) {
+            worstSeverity = evaluation.severity;
+          }
+          // Emit alert (with cooldown check)
+          this.emitAlert(evaluation);
+        }
+      } catch (err) {
+        // Per-wallet error isolation (BalanceMonitorService pattern)
+        console.error(`HealthFactorMonitor: error evaluating position ${position.id}:`, err);
+      }
+    }
+
+    const previousSeverity = this.currentSeverity;
+    this.currentSeverity = worstSeverity;
+
+    // On-demand sync: DANGER/CRITICAL 진입 시 PositionTracker에 즉시 동기화 요청
+    if (
+      (worstSeverity === 'DANGER' || worstSeverity === 'CRITICAL') &&
+      severityRank(worstSeverity) > severityRank(previousSeverity) &&
+      this.positionTracker
+    ) {
+      void this.positionTracker.syncCategory('LENDING');
+    }
+  }
+}
+```
+
+**severity 판정 기준:**
+
+| Health Factor 범위 | Severity | 폴링 간격 |
+|-------------------|----------|----------|
+| > safe_threshold (2.0) | SAFE | 300,000ms (5분) |
+| > warning_threshold (1.5) | WARNING | 60,000ms (1분) |
+| > danger_threshold (1.2) | DANGER | 15,000ms (15초) |
+| <= danger_threshold (1.2) | CRITICAL | 5,000ms (5초) |
+
+**평가 로직 (`evaluate(position)`):**
+
+```typescript
+evaluate(position: DefiPositionRow): MonitorEvaluation | null {
+  // Skip non-LENDING or non-ACTIVE positions
+  if (position.category !== 'LENDING' || position.status !== 'ACTIVE') {
+    return null;
+  }
+
+  // Extract health factor from metadata (Phase 268 LendingMetadata)
+  const metadata = JSON.parse(position.metadata ?? '{}');
+  const healthFactor = metadata.healthFactor;
+  if (healthFactor == null) return null;
+
+  // Determine severity
+  let severity: MonitorSeverity;
+  let threshold: number;
+  if (healthFactor > this.thresholds.safe) {
+    return null; // SAFE — no evaluation needed
+  } else if (healthFactor > this.thresholds.warning) {
+    severity = 'WARNING';
+    threshold = this.thresholds.safe;
+  } else if (healthFactor > this.thresholds.danger) {
+    severity = 'DANGER';
+    threshold = this.thresholds.warning;
+  } else {
+    severity = 'CRITICAL';
+    threshold = this.thresholds.danger;
+  }
+
+  return {
+    walletId: position.wallet_id,
+    positionId: position.id,
+    severity,
+    value: healthFactor,
+    threshold,
+    message: `Health factor ${healthFactor.toFixed(2)} below ${threshold} threshold`,
+  };
+}
+```
+
+**알림 발생:**
+
+| Severity | 알림 이벤트 | 배송 모드 | 쿨다운 |
+|----------|-----------|----------|--------|
+| WARNING | LIQUIDATION_WARNING | 일반 (defi_monitoring 카테고리) | cooldown_hours (4h) per walletId:positionId |
+| DANGER | LIQUIDATION_WARNING | 일반 (defi_monitoring 카테고리) | cooldown_hours (4h) per walletId:positionId |
+| CRITICAL | LIQUIDATION_IMMINENT | BROADCAST (security_alert 카테고리) | 쿨다운 없음 — 매 평가마다 발생 |
+
+**쿨다운 맵:** `Map<string, number>` — key: `${walletId}:${positionId}`, value: last alert timestamp (ms)
+
+```typescript
+private emitAlert(evaluation: MonitorEvaluation): void {
+  const cooldownKey = `${evaluation.walletId}:${evaluation.positionId}`;
+
+  if (evaluation.severity === 'CRITICAL') {
+    // CRITICAL: no cooldown — emit every evaluation
+    this.notificationService.notify('LIQUIDATION_IMMINENT', evaluation.walletId, {
+      healthFactor: evaluation.value.toFixed(2),
+      threshold: evaluation.threshold.toFixed(2),
+      provider: /* from position metadata */,
+    });
+  } else {
+    // WARNING/DANGER: apply cooldown
+    const lastAlert = this.cooldownMap.get(cooldownKey) ?? 0;
+    const cooldownMs = this.cooldownHours * 3600 * 1000;
+    if (Date.now() - lastAlert >= cooldownMs) {
+      this.notificationService.notify('LIQUIDATION_WARNING', evaluation.walletId, {
+        healthFactor: evaluation.value.toFixed(2),
+        threshold: evaluation.threshold.toFixed(2),
+        provider: /* from position metadata */,
+      });
+      this.cooldownMap.set(cooldownKey, Date.now());
+    }
+  }
+}
+```
+
+**Recovery 감지:** severity가 SAFE로 복귀하면 해당 포지션의 쿨다운 키를 삭제 → 재악화 시 즉시 알림 가능.
+
+### 10.2 MaturityMonitor (1일 고정 폴링)
+
+**파일 위치:** `packages/daemon/src/services/monitoring/maturity-monitor.ts`
+
+**대상:** `defi_positions` 테이블의 `category='YIELD'`, `status='ACTIVE'` 포지션
+
+**고정 폴링:** `setInterval(86,400,000ms = 24시간)` + 시작 시 즉시 1회 실행
+
+```typescript
+class MaturityMonitor implements IDeFiMonitor {
+  readonly name = 'maturity';
+  private timer: ReturnType<typeof setInterval> | null = null;
+  private cooldownMap = new Map<string, number>();
+
+  // Configurable thresholds
+  private config = {
+    intervalMs: 86_400_000,        // 24 hours
+    warningDaysFirst: 7,           // First alert at 7 days before maturity
+    warningDaysFinal: 1,           // Final alert at 1 day before maturity
+    unredeemedAlert: true,         // Alert for positions past maturity
+  };
+
+  getInterval(): number {
+    return this.config.intervalMs; // Fixed value
+  }
+
+  start(): void {
+    this.timer = setInterval(() => void this.checkAll(), this.config.intervalMs);
+    this.timer.unref();
+    void this.checkAll(); // Immediate first run
+  }
+
+  stop(): void {
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
+  }
+}
+```
+
+**평가 로직 (`evaluate(position)`):**
+
+```typescript
+evaluate(position: DefiPositionRow): MonitorEvaluation | null {
+  // Skip non-YIELD or non-ACTIVE positions
+  if (position.category !== 'YIELD' || position.status !== 'ACTIVE') {
+    return null;
+  }
+
+  // Extract maturity from metadata (Phase 268 YieldMetadata)
+  const metadata = JSON.parse(position.metadata ?? '{}');
+  const maturityEpoch = metadata.maturity; // epoch seconds
+  if (maturityEpoch == null) return null;
+
+  const now = Date.now() / 1000; // current epoch seconds
+  const MS_PER_DAY = 86_400;
+  const daysRemaining = (maturityEpoch - now) / MS_PER_DAY;
+
+  // Severity determination
+  if (daysRemaining <= 0 && this.config.unredeemedAlert) {
+    // Past maturity, not redeemed
+    return {
+      walletId: position.wallet_id,
+      positionId: position.id,
+      severity: 'CRITICAL',
+      value: daysRemaining,
+      threshold: 0,
+      message: `Yield position past maturity by ${Math.abs(daysRemaining).toFixed(0)} days — unredeemed`,
+    };
+  } else if (daysRemaining <= this.config.warningDaysFinal) {
+    // Final warning (1 day)
+    return {
+      walletId: position.wallet_id,
+      positionId: position.id,
+      severity: 'DANGER',
+      value: daysRemaining,
+      threshold: this.config.warningDaysFinal,
+      message: `Yield position matures in ${daysRemaining.toFixed(1)} days`,
+    };
+  } else if (daysRemaining <= this.config.warningDaysFirst) {
+    // First warning (7 days)
+    return {
+      walletId: position.wallet_id,
+      positionId: position.id,
+      severity: 'WARNING',
+      value: daysRemaining,
+      threshold: this.config.warningDaysFirst,
+      message: `Yield position matures in ${daysRemaining.toFixed(0)} days`,
+    };
+  }
+
+  return null; // SAFE — no alert needed
+}
+```
+
+**알림 발생:**
+
+| Severity | 알림 이벤트 | 설명 |
+|----------|-----------|------|
+| WARNING (7일 이내) | MATURITY_WARNING | 만기 접근 알림 |
+| DANGER (1일 이내) | MATURITY_WARNING | 만기 최종 경고 |
+| CRITICAL (만기 후 미상환) | MATURITY_WARNING | 미상환 경고 (LIQUIDATION_IMMINENT 아님 — 아래 DEC-MON-06 참조) |
+
+**쿨다운:** 24h per-wallet:position. 1일 폴링이므로 자연적 쿨다운이 적용되지만, hot-reload로 폴링 간격이 줄어든 경우를 대비하여 명시적 쿨다운도 유지.
+
+### 10.3 MarginMonitor (1분 고정 폴링)
+
+**파일 위치:** `packages/daemon/src/services/monitoring/margin-monitor.ts`
+
+**대상:** `defi_positions` 테이블의 `category='PERP'`, `status='ACTIVE'` 포지션
+
+**고정 폴링:** `setInterval(60,000ms = 1분)` + 시작 시 즉시 1회 실행
+
+```typescript
+class MarginMonitor implements IDeFiMonitor {
+  readonly name = 'margin';
+  private timer: ReturnType<typeof setInterval> | null = null;
+  private cooldownMap = new Map<string, number>();
+
+  // Configurable thresholds
+  private config = {
+    intervalMs: 60_000,           // 1 minute
+    warningRatio: 0.30,           // Warn when margin ratio < 30%
+    criticalRatio: 0.15,          // CRITICAL when margin ratio < 15%
+  };
+
+  getInterval(): number {
+    return this.config.intervalMs; // Fixed value
+  }
+
+  start(): void {
+    this.timer = setInterval(() => void this.checkAll(), this.config.intervalMs);
+    this.timer.unref();
+    void this.checkAll(); // Immediate first run
+  }
+
+  stop(): void {
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
+  }
+}
+```
+
+**평가 로직 (`evaluate(position)`):**
+
+```typescript
+evaluate(position: DefiPositionRow): MonitorEvaluation | null {
+  // Skip non-PERP or non-ACTIVE positions
+  if (position.category !== 'PERP' || position.status !== 'ACTIVE') {
+    return null;
+  }
+
+  // Extract margin data from metadata (Phase 268 PerpMetadata)
+  const metadata = JSON.parse(position.metadata ?? '{}');
+  const { margin, liquidationPrice, entryPrice } = metadata;
+  if (margin == null) return null;
+
+  // Calculate margin ratio (available margin / used margin)
+  const usedMargin = metadata.margin ?? 0;
+  const leverage = metadata.leverage ?? 1;
+  const positionValue = parseFloat(position.amount) * (entryPrice ?? 0);
+  const availableMargin = usedMargin - (positionValue / leverage);
+  const marginRatio = usedMargin > 0 ? availableMargin / usedMargin : 1;
+
+  // 1. Margin ratio severity
+  let marginSeverity: MonitorSeverity = 'SAFE';
+  if (marginRatio < this.config.criticalRatio) {
+    marginSeverity = 'CRITICAL';
+  } else if (marginRatio < this.config.warningRatio) {
+    marginSeverity = 'WARNING';
+  }
+
+  // 2. Liquidation price proximity severity
+  let liquidationSeverity: MonitorSeverity = 'SAFE';
+  if (liquidationPrice != null && entryPrice != null) {
+    // Estimate current price from latest position data
+    const currentPrice = entryPrice; // PositionTracker updates with latest price
+    const priceDistance = Math.abs(currentPrice - liquidationPrice) / currentPrice;
+    if (priceDistance < 0.05) { // Within 5% of liquidation price
+      liquidationSeverity = 'CRITICAL';
+    }
+  }
+
+  // Final severity = max(margin ratio severity, liquidation price severity)
+  const finalSeverity = severityRank(marginSeverity) >= severityRank(liquidationSeverity)
+    ? marginSeverity : liquidationSeverity;
+
+  if (finalSeverity === 'SAFE') return null;
+
+  return {
+    walletId: position.wallet_id,
+    positionId: position.id,
+    severity: finalSeverity,
+    value: marginRatio,
+    threshold: finalSeverity === 'CRITICAL' ? this.config.criticalRatio : this.config.warningRatio,
+    message: `Margin ratio ${(marginRatio * 100).toFixed(1)}% ${
+      finalSeverity === 'CRITICAL' ? 'at critical level' : 'below warning threshold'
+    }`,
+  };
+}
+```
+
+**이중 판정 로직:**
+
+| 판정 기준 | WARNING 조건 | CRITICAL 조건 |
+|-----------|-------------|--------------|
+| Margin Ratio | marginRatio < 0.30 (30%) | marginRatio < 0.15 (15%) |
+| Liquidation Price | - | 현재 가격이 청산 가격의 5% 이내 |
+| 최종 severity | max(margin severity, liquidation severity) | 둘 중 하나만 CRITICAL이면 CRITICAL |
+
+**알림 발생:**
+
+| Severity | 알림 이벤트 | 배송 모드 | 쿨다운 |
+|----------|-----------|----------|--------|
+| WARNING | MARGIN_WARNING | 일반 (defi_monitoring) | cooldown_hours (4h) per walletId:positionId |
+| CRITICAL | LIQUIDATION_IMMINENT | BROADCAST (security_alert) | 쿨다운 없음 |
+
+### 10.4 설계 결정
+
+| ID | 결정 | 선택 | 근거 |
+|----|------|------|------|
+| DEC-MON-05 | 적응형 vs 고정 폴링 | HealthFactorMonitor만 적응형 폴링, MaturityMonitor/MarginMonitor는 고정 폴링 | 폴링 빈도가 상태에 따라 극적으로 변하는 것은 health factor뿐 (5분 → 5초, 60배 차이). MaturityMonitor는 1일 고정 (만기는 느리게 변화). MarginMonitor는 1분 고정 (시장 가격은 지속적으로 변동하므로 일정 간격 유지가 적절) |
+| DEC-MON-06 | MaturityMonitor CRITICAL 알림 이벤트 | MATURITY_WARNING 사용 (LIQUIDATION_IMMINENT 아님) | 만기 미상환은 즉시 자금 손실이 아니라 기회 비용 손실. PT/YT 만기 후에도 상환 가능(다만 불리한 조건). LIQUIDATION_IMMINENT는 청산에 의한 즉시 자금 손실 위험에만 사용하여 의미적 일관성 유지 |
+| DEC-MON-07 | MarginMonitor 판정 기준 | margin ratio + liquidation price 이중 판정 | margin ratio만으로는 마진이 충분해 보여도 가격이 청산 가격에 급접근한 경우를 놓침. liquidation price 근접도만으로는 마진 추가로 안전해진 경우를 과탐지. 둘 중 하나만 위험해도 경고하는 것이 보수적(안전) 전략 |
+| DEC-MON-08 | CRITICAL 알림 쿨다운 | 쿨다운 미적용 — 매 평가마다 발생 | 임박한 위험(LIQUIDATION_IMMINENT)은 반복 알림이 사용자의 즉시 행동을 유도하는 것이 알림 피로보다 중요. BalanceMonitorService CRITICAL 패턴과 동일. BROADCAST_EVENTS 배송으로 모든 채널에 동시 전달 |
+
+### 10.5 공통 유틸리티
+
+**severityRank 함수:**
+
+```typescript
+// packages/core/src/interfaces/defi-monitor.types.ts (함께 정의)
+
+/** Numeric rank for severity comparison (higher = worse) */
+export function severityRank(severity: MonitorSeverity): number {
+  const ranks: Record<MonitorSeverity, number> = {
+    SAFE: 0,
+    WARNING: 1,
+    DANGER: 2,
+    CRITICAL: 3,
+  };
+  return ranks[severity];
+}
+```
+
+---
+
 ## 신규 산출물
 
 | ID | 산출물 | 설명 |
