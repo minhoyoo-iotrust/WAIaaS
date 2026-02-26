@@ -93,46 +93,46 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ENUM-01 | TBD | Pending |
-| ENUM-02 | TBD | Pending |
-| ENUM-03 | TBD | Pending |
-| ENUM-04 | TBD | Pending |
-| ENUM-05 | TBD | Pending |
-| LEND-01 | TBD | Pending |
-| LEND-02 | TBD | Pending |
-| LEND-03 | TBD | Pending |
-| LEND-04 | TBD | Pending |
-| LEND-05 | TBD | Pending |
-| LEND-06 | TBD | Pending |
-| LEND-07 | TBD | Pending |
-| LEND-08 | TBD | Pending |
-| LEND-09 | TBD | Pending |
-| AAVE-01 | TBD | Pending |
-| AAVE-02 | TBD | Pending |
-| AAVE-03 | TBD | Pending |
-| AAVE-04 | TBD | Pending |
-| AAVE-05 | TBD | Pending |
-| AAVE-06 | TBD | Pending |
-| AAVE-07 | TBD | Pending |
-| AAVE-08 | TBD | Pending |
-| AAVE-09 | TBD | Pending |
-| AAVE-10 | TBD | Pending |
-| API-01 | TBD | Pending |
-| API-02 | TBD | Pending |
-| API-03 | TBD | Pending |
-| API-04 | TBD | Pending |
-| API-05 | TBD | Pending |
-| ADMN-01 | TBD | Pending |
-| ADMN-02 | TBD | Pending |
-| ADMN-03 | TBD | Pending |
-| ADMN-04 | TBD | Pending |
-| ADMN-05 | TBD | Pending |
+| ENUM-01 | Phase 274 | Pending |
+| ENUM-02 | Phase 274 | Pending |
+| ENUM-03 | Phase 274 | Pending |
+| ENUM-04 | Phase 274 | Pending |
+| ENUM-05 | Phase 274 | Pending |
+| LEND-01 | Phase 274 | Pending |
+| LEND-02 | Phase 274 | Pending |
+| LEND-03 | Phase 275 | Pending |
+| LEND-04 | Phase 275 | Pending |
+| LEND-05 | Phase 275 | Pending |
+| LEND-06 | Phase 275 | Pending |
+| LEND-07 | Phase 275 | Pending |
+| LEND-08 | Phase 275 | Pending |
+| LEND-09 | Phase 275 | Pending |
+| AAVE-01 | Phase 276 | Pending |
+| AAVE-02 | Phase 276 | Pending |
+| AAVE-03 | Phase 276 | Pending |
+| AAVE-04 | Phase 276 | Pending |
+| AAVE-05 | Phase 276 | Pending |
+| AAVE-06 | Phase 276 | Pending |
+| AAVE-07 | Phase 276 | Pending |
+| AAVE-08 | Phase 276 | Pending |
+| AAVE-09 | Phase 276 | Pending |
+| AAVE-10 | Phase 276 | Pending |
+| API-01 | Phase 277 | Pending |
+| API-02 | Phase 277 | Pending |
+| API-03 | Phase 277 | Pending |
+| API-04 | Phase 277 | Pending |
+| API-05 | Phase 277 | Pending |
+| ADMN-01 | Phase 278 | Pending |
+| ADMN-02 | Phase 278 | Pending |
+| ADMN-03 | Phase 278 | Pending |
+| ADMN-04 | Phase 278 | Pending |
+| ADMN-05 | Phase 278 | Pending |
 
 **Coverage:**
 - v29.2 requirements: 34 total
-- Mapped to phases: 0
-- Unmapped: 34 (pending roadmap creation)
+- Mapped to phases: 34
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-26*
-*Last updated: 2026-02-26 after initial definition*
+*Last updated: 2026-02-26 after roadmap creation -- traceability updated*
