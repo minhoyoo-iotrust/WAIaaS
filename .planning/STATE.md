@@ -5,16 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Planning next milestone
+**Current focus:** v29.2 EVM Lending (Aave V3)
 
 ## Current Position
 
-Phase: 273 of 273 (Intent 서명 패턴 설계) -- 6 of 6 in milestone
-Plan: 02/02 complete
-Status: v29.0 milestone complete, archived
-Last activity: 2026-02-26 -- v29.0 milestone archived
-
-Progress: [██████████] 100% (6/6 phases)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-26 — Milestone v29.2 started
 
 ## Performance Metrics
 
@@ -24,7 +22,7 @@ Progress: [██████████] 100% (6/6 phases)
 
 ### Decisions
 
-(Cleared at milestone completion — see .planning/milestones/v29.0-ROADMAP.md for v29.0 decisions)
+(New milestone — no decisions yet)
 
 ### Blockers/Concerns
 
@@ -35,5 +33,5 @@ Progress: [██████████] 100% (6/6 phases)
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: v29.0 milestone complete. Ready for next milestone (/gsd:new-milestone).
+Stopped at: v29.2 milestone started. Defining requirements.
 Resume file: None
