@@ -390,7 +390,10 @@ Plans:
   2. PerpPosition Zod 스키마(direction LONG/SHORT, leverage, unrealized_pnl, liquidation_price)와 MarginInfo 타입(유지 마진, 사용 마진, 가용 마진)이 명세된다
   3. PerpPolicyEvaluator가 최대 레버리지 제한과 최대 포지션 크기(USD) 정책, 허용 시장 화이트리스트를 정의하며, 기존 PolicyEngine과의 통합 지점이 명확하다
   4. MarginMonitor가 1분 간격 폴링으로 유지 마진 임계값 접근 시 MARGIN_WARNING, 청산 가격 접근 시 LIQUIDATION_IMMINENT를 발생시키는 설계가 정의된다
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 272-01-PLAN.md -- IPerpProvider 인터페이스(5 actions + 3 queries) + PerpPosition/MarginInfo/PerpMarketInfo Zod 타입 + PerpPolicyEvaluator 3개 정책 (섹션 21-22)
+- [ ] 272-02-PLAN.md -- MarginMonitor 통합 데이터 플로우 + PerpMetadata 완전성 검증 + Drift V2 프로토콜 매핑 (섹션 23)
 
 ### Phase 273: Intent 서명 패턴 설계
 **Goal**: Intent 기반 트레이딩(EIP-712 서명 + 솔버 실행)의 파이프라인이 설계되어, CoW Protocol 구현이 기존 ContractCallRequest 파이프라인과 충돌 없이 공존한다
@@ -414,7 +417,7 @@ Phases execute in numeric order: 268 -> 269 -> 270 -> 271 -> 272 -> 273
 | 269. DeFi 모니터링 프레임워크 설계 | 2/2 | Complete    | 2026-02-26 | - |
 | 270. Lending 프레임워크 설계 | 2/2 | Complete    | 2026-02-26 | - |
 | 271. Yield 프레임워크 설계 | 2/2 | Complete    | 2026-02-26 | - |
-| 272. Perp 프레임워크 설계 | v29.0 | 0/TBD | Not started | - |
+| 272. Perp 프레임워크 설계 | v29.0 | 0/2 | Not started | - |
 | 273. Intent 서명 패턴 설계 | v29.0 | 0/TBD | Not started | - |
 
 ---
