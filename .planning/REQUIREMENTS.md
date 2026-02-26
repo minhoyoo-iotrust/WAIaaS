@@ -42,11 +42,11 @@ Requirements for EVM Lending framework + Aave V3 provider. Each maps to roadmap 
 
 ### API + MCP + SDK
 
-- [ ] **API-01**: GET /v1/wallets/:id/positions로 DeFi 포지션 목록 조회
-- [ ] **API-02**: GET /v1/wallets/:id/health-factor로 헬스 팩터 조회
-- [ ] **API-03**: MCP 도구 5개 (aave_supply/borrow/repay/withdraw/positions) 자동 등록
-- [ ] **API-04**: TS/Python SDK에서 executeAction('aave_supply', params) 등으로 Lending 액션 실행
-- [ ] **API-05**: 포지션 조회 API가 USD 환산 금액 포함
+- [x] **API-01**: GET /v1/wallet/positions로 DeFi 포지션 목록 조회 (sessionAuth, staking 패턴)
+- [x] **API-02**: GET /v1/wallet/health-factor로 헬스 팩터 조회 (sessionAuth)
+- [x] **API-03**: MCP 도구 6개 (4 action auto-registered: aave_supply/borrow/repay/withdraw + 2 query manual: get_defi_positions/get_health_factor)
+- [x] **API-04**: TS/Python SDK에서 executeAction('aave_supply', params) 등으로 Lending 액션 실행
+- [x] **API-05**: 포지션 조회 API가 USD 환산 금액 포함
 
 ### Admin UI + Settings
 
@@ -117,11 +117,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AAVE-08 | Phase 276 | Complete |
 | AAVE-09 | Phase 276 | Complete |
 | AAVE-10 | Phase 276 | Complete |
-| API-01 | Phase 277 | Pending |
-| API-02 | Phase 277 | Pending |
-| API-03 | Phase 277 | Pending |
-| API-04 | Phase 277 | Pending |
-| API-05 | Phase 277 | Pending |
+| API-01 | Phase 277 | Complete |
+| API-02 | Phase 277 | Complete |
+| API-03 | Phase 277 | Complete |
+| API-04 | Phase 277 | Complete |
+| API-05 | Phase 277 | Complete |
 | ADMN-01 | Phase 278 | Pending |
 | ADMN-02 | Phase 278 | Pending |
 | ADMN-03 | Phase 278 | Pending |
