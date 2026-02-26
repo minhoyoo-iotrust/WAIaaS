@@ -1552,3 +1552,28 @@
 
 ---
 
+
+## v28.8 빌트인 지갑 프리셋 자동 설정 (Shipped: 2026-02-26)
+
+**Delivered:** Owner 등록 시 wallet_type 지정으로 signing SDK/approval_method/preferred_wallet 4단계 자동 설정이 원클릭으로 완료되고, Push Relay가 config.toml 선언적 설정으로 카테고리별 페이로드 변환을 처리하며 미설정 시 기존 동작을 유지하는 상태 달성.
+
+**Phases completed:** 265-267 (3 phases, 6 plans, 14 requirements)
+
+**Key accomplishments:**
+
+- WalletPreset 타입 시스템 + BUILTIN_PRESETS 레지스트리(D'CENT 1종) + DB v24 마이그레이션(wallet_type 컬럼)
+- Owner API wallet_type 필드 확장 — Zod 검증, 프리셋 우선 적용, 충돌 시 warning 응답
+- PresetAutoSetupService 4단계 파이프라인 — signing SDK enable → WalletLinkRegistry → approval_method → preferred_channel + Settings 스냅샷 롤백
+- Admin UI Owner 등록 폼 지갑 종류 드롭다운 (빌트인 프리셋 + Custom 옵션)
+- ConfigurablePayloadTransformer — static_fields 주입 + category_map 카테고리별 매핑, 선언적 config 기반
+- NtfySubscriber 파이프라인 통합 + bypass 패턴 (미설정 시 zero-overhead)
+
+**Stats:**
+
+- 3 phases, 6 plans, 14 requirements, 29 commits
+- 56 files changed, +4,952 / -262 lines
+- ~180,194 LOC TypeScript, 42 new tests
+- Timeline: 1 day (2026-02-25 → 2026-02-26)
+
+---
+

@@ -1,7 +1,8 @@
 # 빌트인 지갑 프리셋 자동 설정
 
-- **Status:** IN_PROGRESS
+- **Status:** SHIPPED
 - **Milestone:** v28.8
+- **Completed:** 2026-02-26
 
 ## 목표
 
