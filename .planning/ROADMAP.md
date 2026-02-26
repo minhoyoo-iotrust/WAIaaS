@@ -26,6 +26,7 @@
 - ✅ **v28.5 가스비 조건부 실행** -- Phases 258-259 (shipped 2026-02-25)
 - ✅ **v28.6 RPC Pool 멀티엔드포인트 로테이션** -- Phases 260-264 (shipped 2026-02-25)
 - ✅ **v28.8 빌트인 지갑 프리셋 자동 설정** -- Phases 265-267 (shipped 2026-02-26)
+- ✅ **v29.0 고급 DeFi 프로토콜 설계** -- Phases 268-273 (shipped 2026-02-26)
 
 ## Phases
 
@@ -310,13 +311,30 @@ See `.planning/milestones/v28.8-ROADMAP.md` for full details.
 
 </details>
 
+<details>
+<summary>✅ v29.0 고급 DeFi 프로토콜 설계 (Phases 268-273) -- SHIPPED 2026-02-26</summary>
+
+- [x] Phase 268: 포지션 인프라 설계 (2/2 plans) -- completed 2026-02-26
+- [x] Phase 269: DeFi 모니터링 프레임워크 설계 (2/2 plans) -- completed 2026-02-26
+- [x] Phase 270: Lending 프레임워크 설계 (2/2 plans) -- completed 2026-02-26
+- [x] Phase 271: Yield 프레임워크 설계 (2/2 plans) -- completed 2026-02-26
+- [x] Phase 272: Perp 프레임워크 설계 (2/2 plans) -- completed 2026-02-26
+- [x] Phase 273: Intent 서명 패턴 설계 (2/2 plans) -- completed 2026-02-26
+
+See `.planning/milestones/v29.0-ROADMAP.md` for full details.
+
+</details>
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 265. Wallet Preset Foundation | v28.8 | 2/2 | Complete | 2026-02-26 |
-| 266. Auto-Setup Orchestration + Admin UI | v28.8 | 2/2 | Complete | 2026-02-26 |
-| 267. Push Relay Payload Transform | v28.8 | 2/2 | Complete | 2026-02-25 |
+| 268. 포지션 인프라 설계 | v29.0 | 2/2 | Complete | 2026-02-26 |
+| 269. DeFi 모니터링 프레임워크 설계 | v29.0 | 2/2 | Complete | 2026-02-26 |
+| 270. Lending 프레임워크 설계 | v29.0 | 2/2 | Complete | 2026-02-26 |
+| 271. Yield 프레임워크 설계 | v29.0 | 2/2 | Complete | 2026-02-26 |
+| 272. Perp 프레임워크 설계 | v29.0 | 2/2 | Complete | 2026-02-26 |
+| 273. Intent 서명 패턴 설계 | v29.0 | 2/2 | Complete | 2026-02-26 |
 
 ---
-*Last updated: 2026-02-26 after v28.8 milestone completion*
+*Last updated: 2026-02-26 after v29.0 milestone completion*

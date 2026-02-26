@@ -1193,4 +1193,5 @@ export const RpcEndpointStatusSchema = z.object({
 
 export const RpcStatusResponseSchema = z.object({
   networks: z.record(z.array(RpcEndpointStatusSchema)),
+  builtinUrls: z.record(z.array(z.string())),
 }).openapi('RpcStatusResponse');

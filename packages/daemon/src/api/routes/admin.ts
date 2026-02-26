@@ -36,7 +36,7 @@ import { sql, desc, eq, and, isNull, gt, gte, lte, count as drizzleCount } from 
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { createHash } from 'node:crypto';
-import { WAIaaSError, getDefaultNetwork, getNetworksForEnvironment, formatAmount } from '@waiaas/core';
+import { WAIaaSError, getDefaultNetwork, getNetworksForEnvironment, formatAmount, BUILT_IN_RPC_DEFAULTS } from '@waiaas/core';
 import type { INotificationChannel, NotificationPayload, ChainType, EnvironmentType, IPriceOracle, IForexRateService, CurrencyCode } from '@waiaas/core';
 import type { RpcPool } from '@waiaas/core';
 import { CurrencyCodeSchema, formatRatePreview } from '@waiaas/core';
@@ -2592,7 +2592,13 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
       }
     }
 
-    return c.json({ networks }, 200);
+    // Provide built-in URL defaults so Admin UI doesn't need hardcoded mirror (#197)
+    const builtinUrls: Record<string, string[]> = {};
+    for (const [network, urls] of Object.entries(BUILT_IN_RPC_DEFAULTS)) {
+      builtinUrls[network] = [...urls];
+    }
+
+    return c.json({ networks, builtinUrls }, 200);
   });
 
   return router;

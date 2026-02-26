@@ -32,7 +32,7 @@ export async function resolvePassword(): Promise<string> {
 /**
  * Prompt for a password with hidden input.
  */
-function promptPassword(prompt: string): Promise<string> {
+export function promptPassword(prompt: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const rl = createInterface({
       input: process.stdin,

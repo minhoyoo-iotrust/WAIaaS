@@ -907,3 +907,201 @@ describe('EvmIncomingSubscriber - backoff on RPC errors (#169)', () => {
     warnSpy.mockRestore();
   });
 });
+
+describe('EvmIncomingSubscriber - RPC Pool integration (#199)', () => {
+  beforeEach(() => {
+    // mockReset clears once-queues (mockResolvedValueOnce) leaked from prior tests
+    mockClient.getBlockNumber.mockReset();
+    mockClient.getLogs.mockReset();
+    mockClient.getBlock.mockReset();
+    idCounter = 0;
+  });
+
+  it('calls reportRpcFailure on global RPC error (getBlockNumber failure)', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const reportFailure = vi.fn();
+    const subscriber = new EvmIncomingSubscriber({
+      rpcUrl: TEST_RPC_URL,
+      reportRpcFailure: reportFailure,
+      generateId: mockGenerateId,
+    });
+
+    mockClient.getBlockNumber.mockRejectedValueOnce(new Error('HTTP 429'));
+    await subscriber.pollAll();
+
+    expect(reportFailure).toHaveBeenCalledWith(TEST_RPC_URL);
+    warnSpy.mockRestore();
+  });
+
+  it('calls reportRpcFailure on per-wallet error', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const reportFailure = vi.fn();
+    const subscriber = new EvmIncomingSubscriber({
+      rpcUrl: TEST_RPC_URL,
+      reportRpcFailure: reportFailure,
+      generateId: mockGenerateId,
+    });
+
+    mockClient.getBlockNumber.mockResolvedValueOnce(100n);
+    await subscriber.subscribe('wallet-1', TEST_WALLET_ADDRESS, 'ethereum-sepolia', vi.fn());
+
+    mockClient.getBlockNumber.mockResolvedValueOnce(101n);
+    mockClient.getLogs.mockRejectedValueOnce(new Error('HTTP 408'));
+    await subscriber.pollAll();
+
+    expect(reportFailure).toHaveBeenCalledWith(TEST_RPC_URL);
+    warnSpy.mockRestore();
+  });
+
+  it('calls reportRpcSuccess after a fully clean poll cycle', async () => {
+    const reportSuccess = vi.fn();
+    const subscriber = new EvmIncomingSubscriber({
+      rpcUrl: TEST_RPC_URL,
+      reportRpcSuccess: reportSuccess,
+      generateId: mockGenerateId,
+    });
+
+    mockClient.getBlockNumber.mockResolvedValueOnce(100n);
+    await subscriber.subscribe('wallet-1', TEST_WALLET_ADDRESS, 'arbitrum-mainnet', vi.fn());
+
+    mockClient.getBlockNumber.mockResolvedValueOnce(101n);
+    mockClient.getLogs.mockResolvedValueOnce([]);
+    await subscriber.pollAll();
+
+    expect(reportSuccess).toHaveBeenCalledWith(TEST_RPC_URL);
+  });
+
+  it('does not call reportRpcSuccess when per-wallet error occurs', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const reportSuccess = vi.fn();
+    const subscriber = new EvmIncomingSubscriber({
+      rpcUrl: TEST_RPC_URL,
+      reportRpcSuccess: reportSuccess,
+      generateId: mockGenerateId,
+    });
+
+    mockClient.getBlockNumber.mockResolvedValueOnce(100n);
+    await subscriber.subscribe('wallet-1', TEST_WALLET_ADDRESS, 'ethereum-sepolia', vi.fn());
+
+    mockClient.getBlockNumber.mockResolvedValueOnce(101n);
+    mockClient.getLogs.mockRejectedValueOnce(new Error('RPC error'));
+    await subscriber.pollAll();
+
+    expect(reportSuccess).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
+  it('re-resolves RPC URL each poll cycle via resolveRpcUrl callback', async () => {
+    let callCount = 0;
+    const urls = [TEST_RPC_URL, 'https://rpc2.test.com', 'https://rpc3.test.com'];
+    const resolveRpcUrl = vi.fn(() => urls[Math.min(callCount++, urls.length - 1)]!);
+
+    const subscriber = new EvmIncomingSubscriber({
+      resolveRpcUrl,
+      generateId: mockGenerateId,
+    });
+
+    // resolveRpcUrl called once in constructor
+    expect(resolveRpcUrl).toHaveBeenCalledTimes(1);
+
+    // Poll cycle 1: calls resolveRpcUrl again
+    mockClient.getBlockNumber.mockResolvedValueOnce(100n);
+    await subscriber.pollAll();
+    expect(resolveRpcUrl).toHaveBeenCalledTimes(2);
+
+    // Poll cycle 2: calls resolveRpcUrl again
+    mockClient.getBlockNumber.mockResolvedValueOnce(100n);
+    await subscriber.pollAll();
+    expect(resolveRpcUrl).toHaveBeenCalledTimes(3);
+  });
+
+  it('switches to new RPC URL when resolveRpcUrl returns different URL', async () => {
+    const { createPublicClient: mockCreate } = await import('viem');
+    vi.mocked(mockCreate).mockClear();
+
+    let currentUrl = TEST_RPC_URL;
+    const resolveRpcUrl = () => currentUrl;
+
+    const subscriber = new EvmIncomingSubscriber({
+      resolveRpcUrl,
+      generateId: mockGenerateId,
+    });
+
+    // Constructor creates first client
+    expect(vi.mocked(mockCreate)).toHaveBeenCalledTimes(1);
+
+    // Same URL → no new client
+    mockClient.getBlockNumber.mockResolvedValueOnce(100n);
+    await subscriber.pollAll();
+    expect(vi.mocked(mockCreate)).toHaveBeenCalledTimes(1);
+
+    // Different URL → new client created
+    currentUrl = 'https://rpc2.test.com';
+    mockClient.getBlockNumber.mockResolvedValueOnce(100n);
+    await subscriber.pollAll();
+    expect(vi.mocked(mockCreate)).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps current client when resolveRpcUrl throws (AllRpcFailedError)', async () => {
+    const { createPublicClient: mockCreate } = await import('viem');
+    vi.mocked(mockCreate).mockClear();
+
+    let shouldThrow = false;
+    const resolveRpcUrl = () => {
+      if (shouldThrow) throw new Error('AllRpcFailedError');
+      return TEST_RPC_URL;
+    };
+
+    const subscriber = new EvmIncomingSubscriber({
+      resolveRpcUrl,
+      generateId: mockGenerateId,
+    });
+
+    expect(vi.mocked(mockCreate)).toHaveBeenCalledTimes(1);
+
+    // resolveRpcUrl throws → no new client, polls with existing client
+    shouldThrow = true;
+    mockClient.getBlockNumber.mockResolvedValueOnce(100n);
+    await subscriber.pollAll();
+    expect(vi.mocked(mockCreate)).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports failure with correct URL after endpoint switch', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const reportFailure = vi.fn();
+    let currentUrl = TEST_RPC_URL;
+
+    const subscriber = new EvmIncomingSubscriber({
+      resolveRpcUrl: () => currentUrl,
+      reportRpcFailure: reportFailure,
+      generateId: mockGenerateId,
+    });
+
+    mockClient.getBlockNumber.mockResolvedValueOnce(100n);
+    await subscriber.subscribe('wallet-1', TEST_WALLET_ADDRESS, 'ethereum-sepolia', vi.fn());
+
+    // Switch URL before poll
+    currentUrl = 'https://rpc2.test.com';
+
+    mockClient.getBlockNumber.mockRejectedValueOnce(new Error('HTTP 500'));
+    await subscriber.pollAll();
+
+    // Should report failure with the NEW URL (rpc2)
+    expect(reportFailure).toHaveBeenCalledWith('https://rpc2.test.com');
+    warnSpy.mockRestore();
+  });
+
+  it('single endpoint (no resolveRpcUrl) still works with static rpcUrl', async () => {
+    const reportSuccess = vi.fn();
+    const subscriber = new EvmIncomingSubscriber({
+      rpcUrl: TEST_RPC_URL,
+      reportRpcSuccess: reportSuccess,
+      generateId: mockGenerateId,
+    });
+
+    mockClient.getBlockNumber.mockResolvedValueOnce(100n);
+    await subscriber.pollAll();
+
+    expect(reportSuccess).toHaveBeenCalledWith(TEST_RPC_URL);
+  });
+});

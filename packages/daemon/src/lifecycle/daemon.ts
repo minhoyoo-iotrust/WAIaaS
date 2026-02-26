@@ -852,14 +852,18 @@ export class DaemonLifecycle {
               const { SolanaIncomingSubscriber } = await import('@waiaas/adapter-solana');
               return new SolanaIncomingSubscriber({ rpcUrl, wsUrl: wssUrl });
             }
-            // EVM chains
-            const rpcUrl = resolveRpcUrlFromPool(this.rpcPool, sSvc.get.bind(sSvc), chain, network);
-            const wssUrl = resolveWssUrl(network, rpcUrl);
+            // EVM chains — dynamic URL resolution via RPC Pool (#199)
+            const rpcPool = this.rpcPool;
+            const resolveRpcUrl = () => resolveRpcUrlFromPool(rpcPool, sSvc.get.bind(sSvc), chain, network);
+            const initialRpcUrl = resolveRpcUrl();
+            const wssUrl = resolveWssUrl(network, initialRpcUrl);
             const { EvmIncomingSubscriber } = await import('@waiaas/adapter-evm');
             const ns = this.notificationService;
             return new EvmIncomingSubscriber({
-              rpcUrl,
-              wsUrl: wssUrl !== rpcUrl.replace(/^https:\/\//, 'wss://') ? wssUrl : undefined,
+              resolveRpcUrl,
+              reportRpcFailure: (url) => rpcPool?.reportFailure(network, url),
+              reportRpcSuccess: (url) => rpcPool?.reportSuccess(network, url),
+              wsUrl: wssUrl !== initialRpcUrl.replace(/^https:\/\//, 'wss://') ? wssUrl : undefined,
               onRpcAlert: ns ? (alert) => {
                 ns.notify(alert.type, alert.walletId, {
                   network: alert.network,

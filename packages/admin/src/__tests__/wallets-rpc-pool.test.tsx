@@ -130,15 +130,35 @@ const mockWallets = {
   total: 0,
 };
 
+/** Built-in RPC URLs returned by the rpc-status endpoint (#197) */
+const defaultBuiltinUrls: Record<string, string[]> = {
+  mainnet: ['https://api.mainnet-beta.solana.com'],
+  devnet: ['https://api.devnet.solana.com'],
+  testnet: ['https://api.testnet.solana.com'],
+  'ethereum-mainnet': ['https://eth.llamarpc.com'],
+  'ethereum-sepolia': ['https://rpc.sepolia.org'],
+  'polygon-mainnet': [],
+  'polygon-amoy': [],
+  'arbitrum-mainnet': [],
+  'arbitrum-sepolia': [],
+  'optimism-mainnet': [],
+  'optimism-sepolia': [],
+  'base-mainnet': [],
+  'base-sepolia': [],
+};
+
 /** Default rpc-status response (all URLs unknown / empty) */
-const defaultRpcStatusResponse = { networks: {} };
+const defaultRpcStatusResponse = { networks: {}, builtinUrls: defaultBuiltinUrls };
 
 /** Navigate to wallets page and switch to RPC Endpoints tab */
 async function renderAndNavigateToRpcTab(rpcStatusOverride?: Record<string, unknown>) {
   currentPath.value = '/wallets';
 
   const settingsData = mockSettingsWithRpcPool();
-  const rpcStatusData = rpcStatusOverride ?? defaultRpcStatusResponse;
+  // Ensure builtinUrls is always included in rpc-status responses
+  const rpcStatusData = rpcStatusOverride
+    ? { builtinUrls: defaultBuiltinUrls, ...rpcStatusOverride }
+    : defaultRpcStatusResponse;
 
   vi.mocked(apiGet).mockImplementation((path: string) => {
     if (path === '/v1/wallets') return Promise.resolve(mockWallets);

@@ -1396,24 +1396,6 @@ const evmNetworkOptions = [
   { label: 'Base Sepolia', value: 'base-sepolia' },
 ];
 
-// Built-in RPC URLs mirror of @waiaas/core/rpc/built-in-defaults.ts
-// (admin SPA cannot import @waiaas/core directly)
-const BUILT_IN_RPC_URLS: Record<string, string[]> = {
-  'mainnet': ['https://api.mainnet-beta.solana.com', 'https://rpc.ankr.com/solana', 'https://solana.drpc.org'],
-  'devnet': ['https://api.devnet.solana.com', 'https://rpc.ankr.com/solana_devnet'],
-  'testnet': ['https://api.testnet.solana.com'],
-  'ethereum-mainnet': ['https://eth.drpc.org', 'https://rpc.ankr.com/eth', 'https://ethereum.publicnode.com'],
-  'ethereum-sepolia': ['https://sepolia.drpc.org', 'https://ethereum-sepolia-rpc.publicnode.com'],
-  'polygon-mainnet': ['https://polygon.drpc.org', 'https://polygon-rpc.com', 'https://polygon.publicnode.com'],
-  'polygon-amoy': ['https://polygon-amoy.drpc.org'],
-  'arbitrum-mainnet': ['https://arbitrum.drpc.org', 'https://arbitrum.publicnode.com'],
-  'arbitrum-sepolia': ['https://arbitrum-sepolia.drpc.org', 'https://arbitrum-sepolia-rpc.publicnode.com'],
-  'optimism-mainnet': ['https://optimism.drpc.org', 'https://mainnet.optimism.io', 'https://optimism.publicnode.com'],
-  'optimism-sepolia': ['https://optimism-sepolia.drpc.org', 'https://optimism-sepolia-rpc.publicnode.com'],
-  'base-mainnet': ['https://base.drpc.org', 'https://base.publicnode.com'],
-  'base-sepolia': ['https://base-sepolia.drpc.org', 'https://base-sepolia-rpc.publicnode.com'],
-};
-
 const NETWORK_DISPLAY_NAMES: Record<string, string> = {
   'mainnet': 'Solana Mainnet',
   'devnet': 'Solana Devnet',
@@ -1473,12 +1455,14 @@ function RpcEndpointsTab() {
   const dirtyEvmDefault = useSignal<string | null>(null);
   // Live pool status from GET /admin/rpc-status
   const rpcPoolStatus = useSignal<RpcPoolStatus>({});
+  // Built-in RPC URLs fetched from API (#197 — replaces hardcoded BUILT_IN_RPC_URLS)
+  const builtinRpcUrls = useSignal<Record<string, string[]>>({});
   // Per-URL test state
   const rpcTesting = useSignal<Record<string, boolean>>({});
   const rpcTestResults = useSignal<Record<string, RpcTestResult>>({});
 
-  // Build URL entries from settings data
-  const buildUrlEntries = (settingsData: SettingsData): Record<string, UrlEntry[]> => {
+  // Build URL entries from settings data + API-provided built-in defaults (#197)
+  const buildUrlEntries = (settingsData: SettingsData, builtinDefaults: Record<string, string[]>): Record<string, UrlEntry[]> => {
     const result: Record<string, UrlEntry[]> = {};
     const allNetworks = [...SOLANA_NETWORKS, ...EVM_NETWORKS];
 
@@ -1497,7 +1481,7 @@ function RpcEndpointsTab() {
         }
       }
 
-      const builtinUrls = BUILT_IN_RPC_URLS[network] ?? [];
+      const builtinUrls = builtinDefaults[network] ?? [];
       const userSet = new Set(userUrls);
 
       const entries: UrlEntry[] = [];
@@ -1519,9 +1503,18 @@ function RpcEndpointsTab() {
 
   const fetchSettings = async () => {
     try {
+      // Fetch built-in URL defaults from API before building entries (#197)
+      try {
+        const rpcResult = await apiGet<{ networks: RpcPoolStatus; builtinUrls: Record<string, string[]> }>(API.ADMIN_RPC_STATUS);
+        if (rpcResult.builtinUrls) {
+          builtinRpcUrls.value = rpcResult.builtinUrls;
+        }
+        rpcPoolStatus.value = rpcResult.networks ?? {};
+      } catch { /* non-fatal: buildUrlEntries will use empty defaults */ }
+
       const result = await apiGet<SettingsData>(API.ADMIN_SETTINGS);
       settings.value = result;
-      const entries = buildUrlEntries(result);
+      const entries = buildUrlEntries(result, builtinRpcUrls.value);
       originalUrls.value = entries;
       dirtyUrls.value = JSON.parse(JSON.stringify(entries));
     } catch (err) {
@@ -1540,8 +1533,11 @@ function RpcEndpointsTab() {
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        const result = await apiGet<{ networks: RpcPoolStatus }>(API.ADMIN_RPC_STATUS);
+        const result = await apiGet<{ networks: RpcPoolStatus; builtinUrls?: Record<string, string[]> }>(API.ADMIN_RPC_STATUS);
         rpcPoolStatus.value = result.networks ?? {};
+        if (result.builtinUrls) {
+          builtinRpcUrls.value = result.builtinUrls;
+        }
       } catch {
         // Silent failure on polling errors -- don't show toast
       }

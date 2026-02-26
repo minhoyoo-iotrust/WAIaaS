@@ -1577,3 +1577,37 @@
 
 ---
 
+
+## v29.0 고급 DeFi 프로토콜 설계 (Shipped: 2026-02-26)
+
+**Delivered:** 상태를 가진 DeFi 포지션(담보/차입, 수익률 거래, 레버리지 트레이딩)을 관리하기 위한 3개 프레임워크(ILendingProvider, IYieldProvider, IPerpProvider)와 공통 인프라(PositionTracker, DeFiMonitorService), Intent 서명 패턴(EIP-712)을 설계 수준에서 정의. m29-00 설계 문서에 26개 섹션(5-26) 추가, 총 59 설계 결정. m29-02~m29-14 구현 마일스톤의 입력 산출물 완성.
+
+**Phases completed:** 268-273 (6 phases, 12 plans, 38 requirements)
+
+**Key accomplishments:**
+
+- defi_positions 통합 테이블 스키마(DDL + Drizzle + DB v25) + PositionTracker 카테고리별 차등 폴링 + 배치 쓰기 전략 + GET /positions API + Admin 포트폴리오 와이어프레임
+- IDeFiMonitor 공통 인터페이스 + 3개 모니터(HealthFactor 적응형 폴링, Maturity 1일 1회, Margin 1분) + 4 알림 이벤트 SSoT + config.toml [monitoring] 17키 + 데몬 라이프사이클 통합
+- ILendingProvider(supply/borrow/repay/withdraw + 3 queries) + LendingPolicyEvaluator(LTV 제한 + 자산 화이트리스트) + Aave V3/Kamino/Morpho 프로토콜 매핑
+- IYieldProvider(buyPT/buyYT/redeemPT/addLiquidity/removeLiquidity + 3 queries) + MaturityMonitor 만기 관리 + Pendle V2 프로토콜 매핑
+- IPerpProvider(5 actions + 3 queries) + PerpPolicyEvaluator(최대 레버리지/포지션 크기/시장 화이트리스트) + MarginMonitor 5-stage 데이터 플로우 + Drift V2 매핑
+- SignableOrder EIP-712 Zod 타입 + ActionProviderRegistry intent 확장 + 10-step 파이프라인 + IntentOrderTracker + 4-layer 보안 모델(21 설계 결정)
+
+**Stats:**
+
+- 6 phases, 12 plans, 38 requirements, 30 commits
+- 38 files changed, +11,805 / -27 lines
+- Output: m29-00 설계 문서 26개 섹션, 59 설계 결정
+- Timeline: 1 day (2026-02-26)
+- Git range: 588346e → 341d796
+
+### Known Gaps
+
+- INT-01 (low): 273-01-SUMMARY.md slug 오타 ('272-perp-framework-design' → '272-perp-framework')
+- INT-02 (low): INTENT_ORDER_FILLED 알림 SSoT 체인 미연결 (m29-14에서 처리)
+- FLOW-01 (low): SolanaAdapter.signTypedData() 미명세 (EVM-only 스코프, 구현 시 NOT_SUPPORTED stub)
+- FLOW-02 (low): STAKING 카테고리 기존 Lido/Jito 미연결 (staking 마이그레이션 마일스톤에서 처리)
+- Tech debt: Yield 자산 화이트리스트 정책 미정의, Solana intent 서명 경로 미명세
+
+---
+

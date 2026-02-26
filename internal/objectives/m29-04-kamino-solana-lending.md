@@ -5,7 +5,7 @@
 
 ## 목표
 
-m28에서 구축된 Lending 프레임워크 위에 Kamino K-Lend를 Solana Lending Provider로 구현하여, AI 에이전트가 Solana 체인에서 자산 예치/차입을 정책 평가 하에 실행할 수 있는 상태.
+m29-02에서 구축된 Lending 프레임워크 위에 Kamino K-Lend를 Solana Lending Provider로 구현하여, AI 에이전트가 Solana 체인에서 자산 예치/차입을 정책 평가 하에 실행할 수 있는 상태.
 
 ---
 
@@ -25,7 +25,7 @@ Kamino는 TVL ~$3.5B으로 Solana 최대 대출 프로토콜이다. K-Lend V2는
 |----------|------|
 | KaminoLendingProvider | ILendingProvider 구현체 (Solana). 4개 표준 액션: supply(예치), borrow(차입), repay(상환), withdraw(출금). @kamino-finance/klend-sdk 사용. Program ID: `KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD` |
 | KaminoMarketData | Kamino REST API + SDK로 시장 데이터 조회. 자산별 APY, LTV, 유동성, 리저브 정보 |
-| Solana PositionTracker 확장 | m28 PositionTracker를 Solana 포지션 동기화로 확장. Kamino obligation 계정에서 담보/차입 포지션 조회 |
+| Solana PositionTracker 확장 | m29-02 PositionTracker를 Solana 포지션 동기화로 확장. Kamino obligation 계정에서 담보/차입 포지션 조회 |
 | MCP 도구 | waiaas_kamino_supply, waiaas_kamino_borrow, waiaas_kamino_repay, waiaas_kamino_withdraw, waiaas_kamino_positions |
 | SDK 지원 | TS/Python SDK: executeAction('kamino_supply', params) 등 |
 
@@ -101,6 +101,7 @@ packages/actions/src/
 
 | 의존 대상 | 이유 |
 |----------|------|
+| m29-00 (고급 DeFi 프로토콜 설계) | ILendingProvider 인터페이스, PositionTracker 설계 (DEFI-10, DEFI-13) |
 | m29-02 (Aave + Lending 프레임워크) | ILendingProvider, PositionTracker, HealthFactorMonitor, LendingPolicyEvaluator, positions 테이블 |
 | v1.5 (가격 오라클) | Kamino 포지션 USD 환산 |
 | v1.4.6 (Solana 인프라) | SolanaAdapter, ContractCallRequest(Solana) |

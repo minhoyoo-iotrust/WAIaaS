@@ -1192,7 +1192,14 @@ describe('RpcEndpointsTab', () => {
     vi.mocked(apiGet).mockImplementation(async (path: string) => {
       if (path === '/v1/wallets') return mockWalletList;
       if (path === '/v1/admin/settings') return mockSettingsData;
-      if (path === '/v1/admin/rpc-status') return { networks: {} };
+      if (path === '/v1/admin/rpc-status') return {
+        networks: {},
+        builtinUrls: {
+          mainnet: ['https://api.mainnet-beta.solana.com'],
+          devnet: ['https://api.devnet.solana.com'],
+          testnet: ['https://api.testnet.solana.com'],
+        },
+      };
       return {};
     });
 
@@ -1217,7 +1224,14 @@ describe('RpcEndpointsTab', () => {
     vi.mocked(apiGet).mockImplementation(async (path: string) => {
       if (path === '/v1/wallets') return mockWalletList;
       if (path === '/v1/admin/settings') return mockSettingsData;
-      if (path === '/v1/admin/rpc-status') return { networks: {} };
+      if (path === '/v1/admin/rpc-status') return {
+        networks: {},
+        builtinUrls: {
+          mainnet: ['https://api.mainnet-beta.solana.com'],
+          devnet: ['https://api.devnet.solana.com'],
+          testnet: ['https://api.testnet.solana.com'],
+        },
+      };
       return {};
     });
     vi.mocked(apiPost).mockResolvedValueOnce({ success: true, latencyMs: 150, blockNumber: 12345 });

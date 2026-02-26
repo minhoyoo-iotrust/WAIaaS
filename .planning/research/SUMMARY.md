@@ -1,180 +1,238 @@
 # Project Research Summary
 
-**Project:** WAIaaS Jupiter Swap Action Provider (m28-01)
-**Domain:** Solana DEX Token Swap via Jupiter Aggregator — IActionProvider Implementation
-**Researched:** 2026-02-23
-**Confidence:** HIGH
+**Project:** WAIaaS Advanced DeFi Protocol Integration (m29)
+**Domain:** Lending (Aave V3 / Kamino / Morpho), Yield Tokenization (Pendle PT/YT), Perpetual Trading (Drift), Intent-Based Trading (CoW Protocol), Position Tracking, DeFi Monitoring
+**Researched:** 2026-02-26
+**Confidence:** HIGH (stack and architecture grounded in existing codebase + official docs; protocol specifics verified via npm registry, Etherscan, official docs)
 
 ## Executive Summary
 
-Jupiter Swap Action Provider (m28-01) is the first built-in Action Provider in the WAIaaS DeFi expansion. The implementation integrates Jupiter Aggregator's REST API into the existing IActionProvider framework, converting Jupiter swap instructions into ContractCallRequest objects that flow through the established 6-stage pipeline. The approach requires no new npm dependencies — two Jupiter REST endpoints (`/swap/v1/quote` and `/swap/v1/swap-instructions`) are consumed via native Node.js `fetch()` with Zod response validation for runtime API drift detection. A new `@waiaas/actions` monorepo package isolates built-in providers from daemon internals and establishes the container for all future built-in Action Providers.
+WAIaaS m29 adds advanced DeFi protocol support — lending, yield tokenization, perpetual trading, and intent-based trading — to an AI agent wallet that already has swaps, staking, and cross-chain bridging. The correct architecture extends the existing IActionProvider framework: every new protocol (Aave, Kamino, Pendle, Drift, CoW) becomes a new IActionProvider implementation that resolves to ContractCallRequest[], flows through the existing 6-stage pipeline, and is automatically exposed as MCP tools. No new pipeline variants, no new transaction types, and critically, zero new npm dependencies for EVM protocols. All EVM integrations (Aave, Morpho, Pendle, CoW) use direct ABI encoding or REST API calldata — the same pattern proven by Lido, Jupiter, 0x, and LI.FI.
 
-The recommended approach is a 2-phase build: Phase 246 implements the core provider (JupiterApiClient + JupiterSwapActionProvider + unit tests with msw mocks), and Phase 247 wires the daemon integration (built-in registration, config parsing, policy integration, MCP verification, skill file update). This sequencing minimizes risk because the provider logic is fully testable in isolation before touching daemon startup code. The critical architectural constraint is using `/swap-instructions` rather than `/swap` — the latter returns a serialized transaction that is incompatible with the resolve-then-execute pattern and cannot be mapped to ContractCallRequest.
+The recommended delivery order is infrastructure-first: build the positions table and PositionTracker service before any protocol, then add the DeFiMonitorService (health factor / maturity / margin rules), then implement protocols in order of simplicity and TVL priority: Aave V3 (largest TVL, simplest ABI), Kamino (Solana lending parity), Pendle (fixed yield via Hosted SDK REST API), and Drift perps (most complex, requires Gateway REST API). CoW Protocol intent-based trading rounds out the feature set and requires extending IChainAdapter with EIP-712 signTypedData support. Morpho Blue is a valid addition but lower priority than Kamino for the Solana-first user base.
 
-The top risks are: (1) using the wrong Jupiter endpoint (`/swap` vs `/swap-instructions`), which is a critical design violation already guarded by design doc 63; (2) compute budget instructions from Jupiter's response must be included alongside the swap instruction or transactions fail on complex multi-hop routes; (3) the ContractCallRequest `accounts[]` field name must be verified against the actual schema before implementation to avoid a silent Zod validation mismatch. All three risks are fully addressed by the existing design decisions and the Zod-first validation strategy.
+The primary risks are operational, not architectural. Stale health factor data during volatile markets is the most dangerous failure mode — the solution is adaptive polling (5 min safe, 1 min warning, 15 sec danger, 5 sec critical) rather than a fixed interval. SQLite write contention from high-frequency position updates requires batch writes in a dedicated BackgroundWorker, never inline with the pipeline. Intent signatures require strict EIP-712 domain binding with short deadlines (2-5 minutes for AI agents) and server-side nonce tracking to prevent replay attacks. Finally, scope discipline is critical: this milestone provides DeFi execution primitives for AI agents, not a DeFi dashboard for humans. Resist impermanent loss calculators, portfolio aggregation, and yield comparison matrices — the AI agent needs structured risk assessments, not charts.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The implementation leverages entirely existing infrastructure with zero new npm dependencies. Jupiter integration is handled via native `fetch()` (Node.js 22 built-in), `AbortSignal.timeout(10_000)`, and Zod response schemas. The only new artifact is the `packages/actions/` package that houses built-in providers, with `@waiaas/core` and `zod` as peer dependencies only.
+The zero-external-SDK principle established in v28.x continues to hold for all EVM protocols. Aave V3 (supply/borrow/repay/withdraw) is encoded directly against the Pool contract ABI using the same `encodeXxxCalldata()` pattern as `lido-contract.ts`. Morpho Blue follows the same approach with a 5-field MarketParams struct. Pendle uses its official Hosted SDK REST API — identical to the Jupiter/0x/LI.FI pattern that returns transaction calldata directly. CoW Protocol order signing uses `viem`'s `signTypedData()` which is already present in the daemon, plus the CoW OrderBook REST API for submission. No new npm packages are needed for any of these.
+
+The two Solana protocols are the exceptions. The `@kamino-finance/klend-sdk` v7.3.20 is incompatible with WAIaaS's `@solana/kit ^6.0.1` (the SDK requires `@solana/kit ^2.3.0` and `@coral-xyz/anchor ^0.28`). The recommended path is the Kamino REST API (if available) or manual Anchor IDL-based instruction encoding. Drift is the one unavoidable external dependency situation: `@drift-labs/sdk` (26+ transitive packages) is the only practical approach for building valid Drift instructions. The Drift Gateway REST API (`drift-labs/gateway`, a self-hosted Rust binary) is the recommended integration path — the Gateway shields `@waiaas/actions` from direct SDK coupling.
 
 **Core technologies:**
-- `@waiaas/core` (IActionProvider, ContractCallRequest types) — unchanged interface; JupiterSwapActionProvider implements resolve()
-- `@waiaas/daemon` (ActionProviderRegistry, 6-stage pipeline) — unchanged; built-in registration added to Step 4f of daemon startup
-- Jupiter API v1 (native fetch, no SDK) — `/swap/v1/quote` + `/swap/v1/swap-instructions` only; SDK adds unnecessary bundle bloat for 2 endpoints
-- Jito MEV protection (via Jupiter parameter) — `jitoTipLamports` in swap-instructions request; Jupiter handles Jito block engine internally; no direct Jito SDK needed
-- Zod 3.x (runtime response validation) — API drift detection; critical for long-term maintainability as Jupiter API evolves
-- `@solana/kit` 6.x (unchanged) — handles signing and transaction submission downstream in the pipeline
+- viem `^2.21.0` — EVM ABI encoding + EIP-712 signing; already in daemon, zero new cost
+- @solana/kit `^6.0.1` — Solana instruction building if manual encoding needed for Kamino; already present
+- Drift Gateway REST API — self-hosted Rust binary exposing `/v2/orders`, `/v2/positions`, `/v2/user/marginInfo`; avoids `@drift-labs/sdk` in monorepo
+- Pendle Hosted SDK `https://api-v2.pendle.finance/core/v2/sdk/` — REST API returning calldata, same pattern as Jupiter
+- CoW OrderBook API `https://api.cow.fi` — REST API for intent submission after EIP-712 signing
+- Drizzle ORM + SQLite — new `positions` table, DB migration v25
 
 **What not to add:**
-- `@jup-ag/api` (Jupiter SDK) — unnecessary; 2 endpoints via native fetch is sufficient
-- `jito-ts` — Jupiter API abstracts Jito; direct Jito SDK would add coupling without benefit
-- Any Raydium/Orca/individual DEX SDK — Jupiter aggregates 20+ DEXes; per-DEX SDKs defeat the purpose
+- `@aave/client` — peerDeps: viem + ethers + thirdweb; 4 ABI calls don't justify 3 peer deps
+- `@morpho-org/blue-sdk-viem` — peerDeps: viem + blue-sdk + morpho-ts + lodash; 5 ABI calls don't justify it
+- `@kamino-finance/klend-sdk` — `@solana/kit ^2.3.0` conflicts with our `^6.0.1`; 20+ transitive deps
+- `@drift-labs/sdk` — `@solana/web3.js 1.x` legacy (incompatible with `@solana/kit 6.x`); 26+ deps; use Gateway instead
+- `@pendle/sdk-v2` — ethers-based (not viem), beta-only releases; Pendle team recommends Hosted SDK for backends
+- `@cowprotocol/cow-sdk` — 7 sub-packages + IPFS deps for 1 signing function + 1 REST call
 
 ### Expected Features
 
 **Must have (table stakes):**
-- Quote API call with Zod-validated response — foundation of all swap flows; catches API drift early
-- `/swap-instructions` call and ContractCallRequest conversion — core resolve() output; must use this endpoint not `/swap`
-- Slippage protection (default 50bps, max 500bps, schema-enforced) — user expects safe defaults; upper bound prevents runaway slippage
-- Price impact validation (reject > 1%) — prevents catastrophic loss on illiquid routes; PRICE_IMPACT_TOO_HIGH error
-- MCP tool auto-exposure (`mcpExpose=true`) — AI agents need tool access without manual wiring
-- SDK `executeAction('jupiter_swap', params)` support — SDK users expect consistent interface across all actions
-- `[actions.jupiter_swap]` config.toml section — all parameters overridable at deploy time without code changes
+- Aave V3 supply, borrow, repay, withdraw (EVM) — largest lending protocol by TVL; foundation for health factor monitoring
+- Health factor query per lending position — without this, agent operates blind; prerequisite for safe autonomous borrowing
+- PositionTracker service + `positions` DB table — unified position state across all protocols, survives daemon restarts
+- DeFiMonitorService with HealthFactorRule, MaturityRule, MarginRule — the critical safety layer for autonomous agents
+- Notification events for liquidation risk, maturity approaching, margin warning — routes to existing 4-channel pipeline
+- GET /v1/positions REST endpoint + `list_positions` MCP tool — agent API surface for position awareness
+- Kamino lending supply/borrow (Solana) — Solana lending parity with EVM
+- CONTRACT_WHITELIST and SPENDING_LIMIT policy integration for all new protocols
 
-**Should have (differentiators):**
-- Jito MEV protection (tip lamports via Jupiter parameter) — prevents frontrunning and sandwich attacks; low cost (~$0.0002/swap)
-- `programId` verification against known Jupiter program address — MITM defense; prevents spoofed swap instructions
-- `restrictIntermediateTokens=true` — prevents routing through manipulated or low-liquidity tokens
-- `inputMint === outputMint` pre-validation — eliminates nonsense swap requests before hitting the API
-- CONTRACT_WHITELIST integration — consistent with WAIaaS default-deny policy; Jupiter program must be whitelisted
-- SPENDING_LIMIT USD conversion — existing price oracle enables policy enforcement on swap input amount
+**Should have (competitive):**
+- Pendle PT buy/sell/redeem (fixed yield, EVM) — uniquely valuable for AI treasury management; no competitor offers this
+- Drift perp open/close/query (Solana) — hedging and leveraged speculation via Gateway REST API
+- CoW Protocol EIP-712 intent signing (MEV protection) — differentiator over direct 0x swaps
+- EIP-712 `signTypedData()` extension to IChainAdapter + EvmAdapter
+- Proactive auto-repay on HF critical threshold — "AI agent safety net" feature
+- Admin UI DeFi positions panel (Phase 2 / later milestone)
 
-**Defer to later milestones:**
-- DCA (Dollar Cost Averaging) — separate milestone scope with different API flow
-- Limit Orders — separate milestone scope; requires background execution model
-- Route visualization in Admin UI — Admin UI extension, out of m28-01 scope
-- Multi-hop customization — Jupiter auto-optimizes; manual route control adds complexity without value
+**Defer (v2+ or later phases):**
+- Morpho Blue isolated market lending — valid but Kamino is higher priority for Solana user base
+- Cross-protocol position dashboard with historical charts — AI agents need structured assessments, not charts
+- Automated yield farming / LP management — 10x scope, impermanent loss complexity
+- Custom liquidation bot — MEV extraction role, ethical concerns, out of scope
+- Advanced perp strategies (grid trading, basis trading, funding rate arbitrage) — agent application logic, not wallet infrastructure
+- Flash loan strategies — separate milestone with dedicated risk analysis
 
 ### Architecture Approach
 
-The architecture follows strict layering: JupiterSwapActionProvider implements IActionProvider and emits ContractCallRequest, which passes unchanged into the existing 6-stage pipeline (policy → sign → submit → confirm). No pipeline modifications are needed. The new `packages/actions/` package has peer dependencies only — the daemon imports and registers it at startup. The JupiterApiClient is a thin fetch wrapper with Zod validation; the provider orchestrates a 6-step resolve flow (input validation → quote → quote validation → swap-instructions → ContractCallRequest mapping → defensive re-validation).
+All new protocols plug into the existing IActionProvider framework without modifications to the 6-stage pipeline, policy engine, or signing infrastructure. The key architecture addition is the `positions` table (DB v25 migration) with a dedicated `PositionTracker` BackgroundWorker — separate from AsyncPollingService, which handles finite transaction lifecycles, not perpetual position monitoring. The `DeFiMonitorService` is a single BackgroundWorker with pluggable `IDeFiMonitorRule` implementations (HealthFactorRule, MaturityRule, MarginRule), feeding into the existing NotificationService. Intent-based protocols (CoW) require adding an optional `resolveIntent()` method to IActionProvider and `signTypedData()` to IChainAdapter, extending the existing sign-only pipeline variant.
 
 **Major components:**
-1. `JupiterApiClient` — HTTP client for Jupiter REST API (native fetch + AbortSignal timeout + Zod response validation); handles optional `x-api-key` header for rate limit relaxation
-2. `JupiterSwapActionProvider` — IActionProvider implementation; orchestrates 6-step resolve flow; produces ContractCallRequest containing programId, instructionData (Base64), and accounts
-3. `packages/actions/` (new monorepo package) — container for all built-in Action Providers; peer deps on `@waiaas/core` and `zod`; no daemon knowledge
-4. Daemon startup extension (Step 4f) — built-in provider registration before ESM plugin loading; config-driven enable/disable; ApiKeyStore for encrypted API key
-5. Zod schemas (input + quote response + swap-instructions response) — SSoT for all Jupiter API types; enables API drift detection; validates both real and mocked responses
+1. **AaveLendingActionProvider** (packages/actions) — IActionProvider impl; direct ABI encoding for supply/borrow/repay/withdraw; produces ContractCallRequest[]
+2. **KaminoLendingActionProvider** (packages/actions) — Solana lending via REST API or manual instruction encoding; same IActionProvider contract
+3. **PendleYieldActionProvider** (packages/actions) — Hosted SDK REST API (calldata pattern identical to Jupiter); IActionProvider impl
+4. **DriftPerpActionProvider** (packages/actions) — Drift Gateway REST API; IActionProvider impl; avoids direct SDK
+5. **CoWIntentActionProvider** (packages/actions) — EIP-712 signing + OrderBook API; extends IActionProvider with optional `resolveIntent()`
+6. **IPositionReader** (packages/core) — new interface for reading on-chain position state, implemented per-protocol alongside each ActionProvider
+7. **PositionTracker** (packages/daemon) — BackgroundWorker; polls OPEN positions, calls IPositionReader, updates positions table; adaptive polling frequency based on risk_score
+8. **DeFiMonitorService** (packages/daemon) — BackgroundWorker; evaluates IDeFiMonitorRule instances per position snapshot; emits DeFi alerts via existing NotificationService
+9. **positions table** (DB v25 migration) — UUIDv7 PK, wallet_id FK, protocol, position_type, status, metrics (JSON), risk_score, lifecycle timestamps
 
 **Key patterns to follow:**
-- Provider-first testability: provider is fully testable without daemon integration via msw HTTP mocks
-- Defensive re-validation: ContractCallRequestSchema.parse() at end of resolve() guards against malformed output
-- Config-driven behavior: all numeric parameters (slippage, price impact, Jito tip, timeout) are config.toml overridable and SettingsService runtime-adjustable
+- One ActionProvider per protocol (consistent with Jupiter/0x/LiFi/Lido/Jito separation)
+- ABI encoding in dedicated module (like `lido-contract.ts` — keep encoding functions separate from provider class)
+- PositionReader separate from ActionProvider (reads = different lifecycle from writes)
+- Metrics as JSON in DB (flexible blob like `bridgeMetadata`, not per-metric columns)
+- Max 6 new notification event types (hierarchical POSITION_WARNING / POSITION_CRITICAL pattern, not per-state-per-protocol)
 
 ### Critical Pitfalls
 
-1. **/swap vs /swap-instructions endpoint choice (CRITICAL)** — `/swap` returns a serialized Base64 transaction with embedded feePayer and recentBlockhash, making ContractCallRequest mapping impossible. Must use `/swap-instructions`. Design doc 63 specifies this; enforce in code review.
-2. **computeBudgetInstructions omission (MEDIUM, HIGH impact)** — Jupiter's response includes `computeBudgetInstructions` that set the CU limit and priority fee. Omitting them causes transaction failure on multi-hop routes that exceed Solana's default 200K CU limit. These must be included alongside swapInstruction in the transaction build. Resolution approach (batch vs additional fields vs adapter auto-detect) must be determined by reading `IChainAdapter.buildContractCall()` before implementation.
-3. **ContractCallRequest accounts field name mismatch (HIGH)** — Design doc 63 references `accounts[].address` but the actual schema may use `accounts[].pubkey`. A mismatch causes Zod validation failure with no clear error message. Verify the exact field name in the live ContractCallRequestSchema before writing the mapping code.
-4. **Jupiter API URL migration (HIGH)** — Legacy tutorials reference `quote-api.jup.ag/v6/quote`; correct URL is `api.jup.ag/swap/v1/quote`. Zod response validation catches wrong endpoint at runtime; `api_base_url` config allows correction without code changes.
-5. **ATA setup instructions required (MEDIUM)** — If the wallet lacks an ATA for the output token, the swap fails. Jupiter's `setupInstructions` in the response handle ATA creation and must be prepended to the transaction before swapInstruction.
+1. **Stale health factor data during volatile markets (C1)** — Never cache HF as a single value; implement adaptive polling (5 min safe, 1 min warning, 15 sec danger, 5 sec critical); always use on-chain `getUserAccountData()` as authoritative source; include `positionLastSyncedAt` in every API response.
+
+2. **SQLite write contention from position tracking (C2)** — Position updates must be batched in a single transaction per polling cycle from a dedicated BackgroundWorker; never update positions inline with the pipeline; monitor p99 write duration; consider a separate SQLite file for positions if contention is measurable.
+
+3. **Intent signature replay / cross-chain replay (C3)** — Every EIP-712 intent must include `chainId`, `verifyingContract`, `nonce` (server-side monotonic counter per wallet+chain), and `deadline` (max 5 minutes for AI agents); enforce chain match before accessing private key.
+
+4. **Liquidation alert arrives after liquidation occurs (C4)** — Set aggressive thresholds (WARNING at HF < 1.5, CRITICAL at HF < 1.3); implement auto-repay for autonomous agents at configurable threshold; never document this as "liquidation protection" — it is best-effort monitoring.
+
+5. **Over-engineering for human users instead of AI agents (C5)** — Design API responses for AI consumption first: `{ healthFactor, risk, suggestedAction, liquidationPrice }` — not raw position data. Admin UI position panel is Phase 2. No historical data in Phase 1. Maximum 15 fields per endpoint.
 
 ## Implications for Roadmap
 
-The 2-phase structure from ARCHITECTURE.md is confirmed as optimal. Dependencies flow cleanly: Phase 246 produces a fully tested, standalone provider; Phase 247 wires it into the running system and validates end-to-end. All critical pitfalls land in Phase 246 where unit tests can catch them before any daemon interaction.
+Based on research, the build order must be infrastructure-first. No protocol implementation starts until position tracking infrastructure is ready, and no protocol is production-ready without the monitoring service active.
 
-### Phase 246: Core Provider Implementation
+### Phase 1: Position Infrastructure (Foundation)
 
-**Rationale:** The provider is independently testable without daemon integration. Building and testing it in isolation catches the critical pitfalls (wrong endpoint, missing computeBudget, field name mismatches, ATA handling) before touching the daemon startup path. This is the higher-risk phase — all critical and medium pitfalls concentrate here and must be resolved before Phase 247.
+**Rationale:** All 5 new providers depend on the positions table and PositionTracker. Building this first means every subsequent protocol gets monitoring for free immediately upon integration. Building protocols before this foundation would require retrofitting — the riskiest implementation pattern.
+**Delivers:** `positions` table (DB v25 migration), IPositionReader interface in packages/core, PositionTracker BackgroundWorker in packages/daemon, DeFiPositionEvent in EventBus, GET /v1/positions REST endpoints, `list_positions` MCP tool.
+**Avoids:** C2 (SQLite contention — batch write design established from day 1), M2 (AsyncPollingService overload — dedicated worker pattern, not reusing AsyncPollingService), N1 (migration complexity — single-purpose v25 migration, no combined schema changes).
 
-**Delivers:** `packages/actions/` package structure, JupiterSwapConfig with defaults, JupiterSwapInputSchema (Zod), Jupiter API response Zod schemas (quote + swap-instructions), JupiterApiClient (fetch + AbortSignal + response validation), JupiterSwapActionProvider (6-step resolve flow), unit tests with msw mocks, schema validation tests, computeBudgetInstructions handling decision
+### Phase 2: DeFi Monitor Service
 
-**Addresses features:**
-- Table stakes: Quote API, swap-instructions, ContractCallRequest conversion, slippage validation, price impact check, Zod response schemas
-- Differentiators: Jito tip, programId verification, restrictIntermediateTokens, inputMint=outputMint guard
+**Rationale:** Build the monitoring rules engine before any protocol so that when protocols are added in subsequent phases, monitoring is immediately operational. Testing health factor rules, maturity rules, and margin rules without real positions is straightforward using MockPositionProvider. Adding monitoring after protocols means retrofitting — historically the riskiest approach.
+**Delivers:** DeFiMonitorService (BackgroundWorker), IDeFiMonitorRule interface, HealthFactorRule + MaturityRule + MarginRule, 6 DEFI_* notification event types, Admin Settings for thresholds.
+**Avoids:** C4 (liquidation timing — aggressive thresholds established in monitor design), M6 (event type explosion — hierarchical event pattern, max 6 types), M1 (resource exhaustion — adaptive polling interval logic built once, shared by all monitors).
+**Uses:** existing NotificationService, existing EVENT_CATEGORY_MAP extension pattern, existing BackgroundWorkers framework.
 
-**Avoids pitfalls:**
-- P2 (wrong endpoint) — code structure enforces `/swap-instructions`; no code path touches `/swap`
-- P4 (compute budget) — `computeBudgetInstructions` included in transaction build after reading IChainAdapter
-- P5 (ATA setup) — `setupInstructions` prepended before swapInstruction in build
-- P7 (field name mismatch) — ContractCallRequestSchema read before writing mapping code; unit test verifies Zod parse succeeds
-- P11 (mock quality) — Zod schemas validate mock fixtures match real API shape; msw intercepts HTTP
+### Phase 3: Aave V3 Lending (EVM)
 
-### Phase 247: Daemon Integration and DX
+**Rationale:** Largest DeFi TVL category ($35B+). Simplest integration (4 ABI-encoded calls, zero new deps). Establishes the lending provider pattern reused by Kamino and Morpho. Health factor monitoring becomes immediately operational via Phase 2's DeFiMonitorService.
+**Delivers:** AaveLendingActionProvider (supply/borrow/repay/withdraw), AavePositionReader, aave-contracts.ts ABI encodings, per-chain Pool address config, CONTRACT_WHITELIST + SPENDING_LIMIT integration, MCP tools auto-generated via mcpExpose=true.
+**Avoids:** C1 (stale data — AavePositionReader uses `getUserAccountData()` directly, tiered polling from Phase 2), C5 (over-engineering — 4 actions only, 3 query methods max).
+**Implements:** Pattern to be reused for all subsequent lending providers.
 
-**Rationale:** Once the provider is tested in isolation, daemon wiring is low-risk configuration work. MCP auto-discovery and SDK support require no code changes to existing infrastructure — only verification and documentation are needed. Policy integration tests can only run in this phase because they require the full daemon context.
+### Phase 4: Kamino Lending (Solana)
 
-**Delivers:** Built-in provider registration in `daemon.ts` Step 4f, config.toml `[actions.jupiter_swap]` section parsing, SettingsService runtime-adjustable settings (slippage, price impact), ApiKeyStore integration for optional Jupiter API key, MCP tool verification (`action_jupiter_swap_jupiter_swap`), SDK end-to-end test (`executeAction('jupiter_swap', params)`), policy integration tests (CONTRACT_WHITELIST enforcement + SPENDING_LIMIT USD conversion on swap amount), `skills/transactions.skill.md` update with Jupiter Swap usage
+**Rationale:** Solana lending parity with EVM. Reuses the ILendingProvider action pattern established in Phase 3. Kamino is Solana's dominant lending protocol. The DeFiMonitorService extends to Kamino health monitoring via obligation account calculation.
+**Delivers:** KaminoLendingActionProvider (supply/borrow/repay/withdraw), KaminoPositionReader, DeFiMonitorService extension for Kamino HF via obligation account.
+**Avoids:** N4 (Solana program incompatibility — reuses existing instructionData + accounts pattern from Jupiter/Jito), dependency conflict with @kamino-finance/klend-sdk.
+**Research flag:** Verify Kamino REST API availability and response format before implementation begins. If unavailable, assess Anchor IDL-based instruction encoding complexity and timeline impact.
 
-**Uses:**
-- `@waiaas/actions` package (from Phase 246)
-- `ActionProviderRegistry.register()` (unchanged API)
-- `SettingsService` (existing runtime settings infrastructure)
-- `ApiKeyStore` (existing AES-256-GCM encrypted key storage)
+### Phase 5: Pendle Yield Tokenization (EVM)
 
-**Implements:**
-- Daemon Step 4f extension (built-in providers before ESM plugins)
-- config.toml section loader extension (`[actions.jupiter_swap]`)
-- Environment variable override (`WAIAAS_ACTIONS_JUPITER_SWAP_*`)
+**Rationale:** Fixed yield is uniquely valuable for AI agents managing treasury (predictable returns, principal protected at maturity). Lower risk than perps. Integration is straightforward — Hosted SDK REST API follows the exact Jupiter/LI.FI calldata pattern. Maturity tracking extends DeFiMonitorService's MaturityRule built in Phase 2.
+**Delivers:** PendleYieldActionProvider (buy PT / sell PT / buy YT / redeem at maturity), PendlePositionReader, market discovery API integration, PT_MATURITY_APPROACHING notifications via existing DeFiMonitorService.
+**Avoids:** M4 (lock-up mismanagement — `earliestWithdrawAt` mandatory in position metadata from deposit result), M7 (IActionProvider strain — Pendle Hosted SDK returns calldata directly, no interface extension needed).
+**Standard patterns:** REST API + calldata pattern well-established; research phase not needed.
 
-**Avoids pitfalls:**
-- P8 (registration order) — built-in providers registered before ESM plugins; name conflict detected at registration time
-- P9 (MCP tool name) — follow design doc as-is (`action_jupiter_swap_jupiter_swap`); functional even if slightly redundant
-- P10 (config flat structure) — `[actions.jupiter_swap]` is standard TOML table; environment variables follow `WAIAAS_{SECTION}_{KEY}` pattern
+### Phase 6: Drift Perpetual Trading (Solana)
+
+**Rationale:** Highest complexity and highest risk — deferred until phases 1-5 are stable. Requires Drift Gateway REST API (self-hosted Rust binary). New MAX_LEVERAGE policy type needed. MarginRule from Phase 2 becomes active for Drift positions automatically.
+**Delivers:** DriftPerpActionProvider (open/close position, place orders, query PnL/margin), DriftPositionReader, MarginRule integration, DEFI_MARGIN_WARNING / DEFI_MARGIN_CRITICAL notifications, MAX_LEVERAGE PolicyType.
+**Avoids:** M5 (funding rate blindness — cumulative funding cost tracked in position metadata per polling cycle), M3 (policy explosion — only 1 new PolicyType: MAX_LEVERAGE), N3 (scope creep — no solver network, no grid trading, no market making).
+**Research flag:** Evaluate Drift Gateway self-hosting requirements (Docker image, binary release, config format) and confirm API endpoint surface matches expected contract (`POST /v2/orders`, `GET /v2/positions`, `GET /v2/user/marginInfo`).
+
+### Phase 7: CoW Protocol Intent Trading (EVM)
+
+**Rationale:** Intent-based MEV protection is a differentiator over 0x swaps. Deferred last because it requires extending IActionProvider with optional `resolveIntent()` and IChainAdapter with `signTypedData()` — interface-level changes that affect all providers and must not create churn during other protocol implementations. Phase 7 allows these interfaces to stabilize after concrete usage in phases 3-6.
+**Delivers:** CoWIntentActionProvider, EIP-712 order signing, CoW OrderBook API submission, intent nonce tracking table, `resolveIntent()` extension to IActionProvider, `signTypedData()` on IChainAdapter + EvmAdapter.
+**Avoids:** C3 (replay attacks — short deadlines, server-side nonces, chainId enforcement before key access), N3 (scope creep — sign and submit only, no solver implementation, no keeper network).
+**Research flag:** Verify CoW API order status polling semantics and settlement timeline; confirm EIP-712 domain parameters for each supported chain (Ethereum, Arbitrum, Base).
+
+### Phase 8: Admin UI DeFi Panel + DX Polish
+
+**Rationale:** Admin UI for DeFi positions is explicitly Phase 2 in scope (enforcing C5 prevention — AI agents use API, humans use Admin UI later). All AI agent needs are served by the API and MCP tools delivered in phases 1-7. This phase adds operator visibility and DX completeness.
+**Delivers:** DeFi positions viewer in Admin UI, position detail modal with risk score, monitor threshold settings UI, `defi.skill.md` skill file (new domain), updates to wallet.skill.md and transactions.skill.md, MCP tool updates.
+**Avoids:** C5 (over-engineering — human UI follows AI API, not the other way around).
 
 ### Phase Ordering Rationale
 
-- Provider-first ordering reflects the dependency direction: `packages/actions/` has zero knowledge of `packages/daemon/`; daemon imports actions unidirectionally. Building the dependency first is the correct order.
-- All critical pitfalls manifest in Phase 246 where they can be caught by unit tests before any daemon interaction. Phase 247 has only low-risk configuration wiring.
-- The 2-phase split aligns with the natural testing boundary: Phase 246 tests with msw mocks at the HTTP layer; Phase 247 tests with the full daemon context and real policy engine.
-- Config and policy integration land in Phase 247 because they require the running daemon context and follow well-established patterns from previous milestones.
+- Infrastructure before protocols (phases 1-2) ensures every protocol gets monitoring automatically — no retrofitting
+- Aave before Kamino (phase 3 before 4) because Aave establishes the lending provider pattern with zero dependencies, making it the safest first protocol implementation
+- Pendle before Drift (phase 5 before 6) because Pendle is simpler (REST calldata pattern, no external deps) and lower risk (no leverage), building confidence before the most complex integration
+- CoW Protocol last among protocol phases (phase 7) because its interface changes (`resolveIntent`, `signTypedData`) must not create churn during other protocol implementations
+- Admin UI last (phase 8) enforcing the AI-agent-first design principle from PITFALLS.md C5
 
 ### Research Flags
 
-Phases needing deeper investigation during planning:
+Phases needing deeper research before planning begins:
 
-- **Phase 246 — computeBudgetInstructions transport (P4, open design question):** How `computeBudgetInstructions` from Jupiter's response travel through ContractCallRequest to the Solana adapter is not fully resolved. Three options exist: (1) include in a BATCH type alongside swapInstruction, (2) add explicit computeBudget fields to ContractCallRequest, (3) let the adapter auto-detect from instruction complexity. Read `IChainAdapter.buildContractCall()` and `SolanaAdapter` implementation at Phase 246 start to select the correct approach before writing any code.
+- **Phase 4 (Kamino):** Verify REST API availability and endpoint contract. If the Kamino REST API does not return transaction instructions (analogous to Jupiter's `/swap-instructions`), the fallback is manual Anchor IDL-based instruction encoding — a significantly more complex approach that needs dedicated planning.
+- **Phase 6 (Drift):** Evaluate Drift Gateway self-hosting requirements — Docker image availability, binary release cadence, configuration format, operator burden. Determine whether WAIaaS (a) requires operators to run the gateway externally, (b) bundles the gateway as a Docker Compose sidecar, or (c) defers Drift until a simpler integration path exists.
+- **Phase 7 (CoW):** Verify EIP-712 domain parameters and nonce schema per supported chain; confirm order status polling semantics (solver settlement latency, timeout behavior, partial fill handling).
 
-Phases with standard patterns (skip research-phase):
+Phases with standard patterns (research phase not needed):
 
-- **Phase 247 (daemon integration):** Built-in provider registration follows a well-established pattern from the existing codebase (daemon Step 4 lifecycle, config loader, SettingsService). No novel patterns required; direct implementation appropriate.
+- **Phase 1 (Infrastructure):** SQLite + Drizzle migration patterns are well-established in WAIaaS (v24 migrations, MIG-01~06 strategy)
+- **Phase 2 (Monitor Service):** Follows existing BalanceMonitorService and IncomingTxMonitorService BackgroundWorker patterns exactly
+- **Phase 3 (Aave V3):** Direct ABI encoding pattern fully proven by LidoStakingActionProvider; function signatures verified against Etherscan; 4 functions only
+- **Phase 5 (Pendle):** Hosted SDK REST API follows Jupiter/0x/LI.FI calldata pattern exactly; no novel integration patterns
+- **Phase 8 (Admin UI):** Admin UI component patterns well-established across v1.3.2, v2.3, v27.4 milestones
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Zero new dependencies confirmed; native fetch + Zod is established WAIaaS pattern; Jupiter API v1 URL verified against official docs |
-| Features | HIGH | Design doc 63 + Jupiter API docs + existing framework constraints define clear and bounded scope |
-| Architecture | HIGH | Full 6-step resolve flow specified; only computeBudgetInstructions passing is an open decision requiring codebase read |
-| Pitfalls | HIGH | All 12 pitfalls sourced from codebase analysis + design docs + Jupiter API docs; P4 and P7 are the live risks requiring pre-implementation verification |
+| Stack | HIGH | Zero new deps for EVM protocols verified against npm registry. Drift Gateway approach is MEDIUM — depends on self-hosting viability and endpoint contract match. |
+| Features | HIGH | Protocol docs verified (Aave, Morpho, Pendle, CoW via official sources + Etherscan). Drift feature set MEDIUM — Gateway API surface needs pre-implementation verification. Kamino MEDIUM — REST API availability unconfirmed. |
+| Architecture | HIGH | Grounded in deep codebase analysis of all 5 existing providers, 17-table DB schema, 6-stage pipeline, 3 existing BackgroundWorkers, and existing AsyncPollingService pattern. |
+| Pitfalls | HIGH (system) / MEDIUM (DeFi-specific) | System-level pitfalls (SQLite contention, EventBus limits, RPC budget, BackgroundWorker accumulation) verified from codebase. DeFi-specific pitfalls (liquidation timing, funding rate compounding) from research + community sources. |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **computeBudgetInstructions transport (P4) — open design decision:** How `computeBudgetInstructions` from Jupiter's response are included in the final Solana transaction is not specified in design doc 63. Read `IChainAdapter.buildContractCall()` and `SolanaAdapter` at the start of Phase 246 and make an explicit design decision before writing the ContractCallRequest mapping code. Document the decision in Phase 246 implementation.
+- **Kamino REST API availability:** STACK.md recommends REST API as primary integration path, but the endpoint contract has not been fully verified. Before Phase 4 planning, confirm that Kamino exposes a REST endpoint returning transaction instructions analogous to Jupiter's `/swap-instructions`. If unavailable, the fallback (manual Anchor IDL instruction encoding) is significantly more complex and needs its own research sprint.
 
-- **ContractCallRequest accounts field name (P7) — 5-minute verification required:** `accounts[].pubkey` vs `accounts[].address` — read the actual `ContractCallRequestSchema` from `packages/core/src/schemas/transaction.schema.ts` before writing any mapping code. A mismatch produces a hard-to-debug Zod parse failure at runtime.
+- **Drift Gateway hosting model:** The integration depends on operators providing a self-hosted Drift Gateway instance (Rust binary). This adds operational complexity. The milestone planning must commit to one of: (a) external operator-provided gateway, (b) Docker Compose sidecar bundled with WAIaaS, (c) defer Drift. This is a product decision, not a technical one.
 
-- **ApiKeyStore API for named keys — confirm before Phase 247:** Confirm the existing ApiKeyStore supports named key storage for `jupiter_swap` specifically. If it only supports a single key, a minor extension is needed before implementing the API key header injection in JupiterApiClient.
+- **Table naming inconsistency:** STACK.md calls the new table `defi_positions` while ARCHITECTURE.md calls it `positions`. The planning phase must canonicalize the name before the migration is written. Recommendation: `defi_positions` (more specific, avoids collision risk with future non-DeFi position tracking).
+
+- **New PolicyType count:** PITFALLS.md M3 recommends max 2 new PolicyTypes for the entire DeFi expansion. FEATURES.md suggests MAX_LEVERAGE and MAX_BORROW_UTILIZATION. The planning phase must commit to exactly which PolicyTypes are added (suggestion: MAX_LEVERAGE only in Phase 6, MAX_BORROW_UTILIZATION deferred) and which controls move to Admin Settings as provider-level configuration.
+
+- **Intent nonce table:** PITFALLS.md C3 recommends server-side nonce tracking via an `intent_nonces` table. This is a new DB table not reflected in the positions table design. Include in either the Phase 1 positions migration (as a separate table) or Phase 7 CoW migration.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- WAIaaS design document 63 (internal) — Full Jupiter Swap architecture, resolve flow, ContractCallRequest mapping, DEFI-01~05 safety rules, Jito MEV protection specification
-- Jupiter API v1 official documentation — `/swap/v1/quote` and `/swap/v1/swap-instructions` endpoint specs, response schemas, `jitoTipLamports` parameter, URL migration from v6
-- WAIaaS codebase — `packages/core` (IActionProvider interface, ContractCallRequest schema), `packages/daemon` (ActionProviderRegistry, 6-stage pipeline, daemon Step 4 lifecycle), `packages/mcp` (action-provider.ts auto-discovery)
+- [Aave V3 Pool Contract Docs](https://aave.com/docs/aave-v3/smart-contracts/pool) — supply/borrow/repay/withdraw ABI signatures
+- [Aave V3 Pool on Etherscan](https://etherscan.io/address/0x87870bca3f3fd6335c3f4ce8392d69350b4fa4e2) — ABI and address verification
+- [Morpho Blue Solidity Source](https://github.com/morpho-org/morpho-blue/blob/main/src/Morpho.sol) — MarketParams struct, function signatures
+- [Pendle Hosted SDK Docs](https://docs.pendle.finance/pendle-v2/Developers/Backend/HostedSdk) — REST API endpoint, calldata response pattern
+- [CoW Protocol Signing Schemes](https://docs.cow.fi/cow-protocol/reference/core/signing-schemes) — EIP-712 domain parameters per chain
+- [CoW GPv2Order.sol](https://github.com/cowprotocol/contracts/blob/main/src/contracts/libraries/GPv2Order.sol) — 12-field order struct
+- [viem signTypedData](https://viem.sh/docs/accounts/local/signTypedData) — EIP-712 signing via existing viem dependency
+- WAIaaS codebase: `packages/actions/src/providers/lido-staking/` — ABI encoding pattern (directly applicable to Aave)
+- WAIaaS codebase: `packages/actions/src/providers/lifi/` — REST calldata pattern (directly applicable to Pendle)
+- WAIaaS codebase: `packages/daemon/src/services/monitoring/balance-monitor-service.ts` — BackgroundWorker pattern for DeFiMonitorService
+- WAIaaS codebase: `packages/daemon/src/lifecycle/workers.ts` — BackgroundWorkers framework
+- WAIaaS codebase: `packages/daemon/src/infrastructure/database/schema.ts` — 17-table schema baseline for v25 migration
 
 ### Secondary (MEDIUM confidence)
-- Jito MEV protection via Jupiter abstraction — confirmed Jupiter handles Jito block engine submission internally when `jitoTipLamports` is provided; direct Jito SDK not required
-- Solana compute budget behavior — multi-hop routes exceeding 200K CU limit is documented Solana behavior; Jupiter's `computeBudgetInstructions` is the standard mitigation provided by Jupiter API
+- [Drift Gateway GitHub](https://github.com/drift-labs/gateway) — REST endpoint list; self-hosting model requires operator evaluation
+- [Kamino Developer Docs](https://docs.kamino.finance/) — klend-sdk entry point; REST API availability unconfirmed
+- [Kamino klend-sdk on npm](https://www.npmjs.com/package/@kamino-finance/klend-sdk) — dependency analysis (version conflicts confirmed HIGH)
+- [Drift SDK on npm](https://www.npmjs.com/package/@drift-labs/sdk) — 26+ transitive deps, @solana/web3.js 1.x conflict confirmed HIGH
+- [EIP-712 implementation issues](https://www.coinspect.com/blog/chainid-eip-712-implementation-issue/) — replay attack research (40+ wallets affected)
+- [AI agent DeFi trading incident ($450K)](https://www.cryptotimes.io/2026/02/23/ai-agent-accidentally-sends-450k-sparks-autonomous-trading-debate/) — autonomous agent risk validation
 
 ### Tertiary (LOW confidence)
-- Jupiter API URL migration (v6 → v1) — based on documented URL change and `api_base_url` config provides runtime correction capability; exact migration date not confirmed
-- ATA creation via `setupInstructions` — standard Solana pattern; Jupiter handling confirmed in API docs but not verified against live response shape in test environment before implementation
+- [Kamino V2 Modular Lending architecture](https://docs.kamino.finance/) — V2 changes may affect integration surface; verify during Phase 4 planning
+- [Pendle Solana expansion](https://blockworks.co/news/pendle-2025-outlook) — PT-only via CCIP bridge, not full Pendle protocol on Solana
+- [CoW Protocol Solana/Cosmos expansion plans](https://coinmarketcap.com/cmc-ai/cow-protocol/latest-updates/) — future roadmap, not relevant to current implementation scope
 
 ---
-*Research completed: 2026-02-23*
+*Research completed: 2026-02-26*
 *Ready for roadmap: yes*

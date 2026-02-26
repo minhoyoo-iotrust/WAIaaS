@@ -95,6 +95,7 @@ const MorphoVaultDepositInputSchema = z.object({
 
 | 의존 대상 | 이유 |
 |----------|------|
+| m29-00 (고급 DeFi 프로토콜 설계) | ILendingProvider 인터페이스 설계 (DEFI-10) |
 | m29-02 (Lending 프레임워크) | ILendingProvider, PositionTracker, HealthFactorMonitor, positions 테이블 |
 | v1.5 (가격 오라클) | 포지션 USD 환산 |
 

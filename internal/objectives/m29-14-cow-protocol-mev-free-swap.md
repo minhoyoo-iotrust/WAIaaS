@@ -102,6 +102,7 @@ const CowSwapInputSchema = z.object({
 
 | 의존 대상 | 이유 |
 |----------|------|
+| m29-00 (고급 DeFi 프로토콜 설계) | Intent/서명 패턴 설계, SignableOrder 타입, ActionProviderRegistry intent 타입 확장 (DEFI-15) |
 | v1.5 (Action Provider 프레임워크) | IActionProvider, ActionProviderRegistry (intent 타입 확장) |
 | v1.4 (EVM 인프라) | EvmAdapter, viem signTypedData() |
 

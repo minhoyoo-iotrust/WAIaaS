@@ -16,6 +16,21 @@ application_code = "ABCDE-12345"
 # project_id = "my-wallet-app"
 # service_account_key_path = "/etc/push-relay/service-account.json"
 
+# Optional: customize push notification payload per category
+# Static fields are added to every push notification
+# [relay.push.payload.static_fields]
+# app_id = "com.example.wallet"
+# env = "production"
+#
+# Category-specific fields (merged on top of static_fields)
+# [relay.push.payload.category_map.sign_request]
+# sound = "alert.caf"
+# badge = "1"
+#
+# [relay.push.payload.category_map.notification]
+# sound = "default"
+# channel = "info"
+
 [relay.server]
 port = 3200
 host = "0.0.0.0"
