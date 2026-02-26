@@ -404,7 +404,10 @@ Plans:
   2. EIP-712 서명 파이프라인(signTypedData)이 IChainAdapter/EvmAdapter 확장으로 설계되고, 기존 sign-only 파이프라인 변형과의 관계가 명확하다
   3. 주문 상태 추적(OPEN -> FULFILLED/EXPIRED) 폴링이 설계되고, 기존 ContractCallRequest 파이프라인과의 분기점이 명확히 정의된다
   4. Intent 보안 설계(chainId + verifyingContract + nonce + deadline 바인딩, 서버 사이드 nonce 추적, 최대 5분 deadline)가 리플레이/크로스체인 공격을 방지한다
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 273-01-PLAN.md -- SignableOrder Zod 타입 + EIP-712 도메인/타입 정의 + ActionProviderRegistry 확장 설계 (섹션 24)
+- [ ] 273-02-PLAN.md -- EIP-712 서명 파이프라인 + IntentOrderTracker + 분기점 정의 + 보안 설계 (섹션 25-26)
 
 ## Progress
 
@@ -418,7 +421,7 @@ Phases execute in numeric order: 268 -> 269 -> 270 -> 271 -> 272 -> 273
 | 270. Lending 프레임워크 설계 | 2/2 | Complete    | 2026-02-26 | - |
 | 271. Yield 프레임워크 설계 | 2/2 | Complete    | 2026-02-26 | - |
 | 272. Perp 프레임워크 설계 | v29.0 | Complete    | 2026-02-26 | - |
-| 273. Intent 서명 패턴 설계 | v29.0 | 0/TBD | Not started | - |
+| 273. Intent 서명 패턴 설계 | v29.0 | 0/2 | Not started | - |
 
 ---
 *Last updated: 2026-02-26 after v29.0 roadmap creation*
