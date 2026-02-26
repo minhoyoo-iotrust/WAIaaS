@@ -4493,6 +4493,130 @@ const { domain, types, primaryType, message } = signableOrder;
 const signature = await account.signTypedData({ domain, types, primaryType, message });
 ```
 
+### 24.3 ActionProviderRegistry 확장 설계
+
+**현재 상태:**
+
+현재 `ActionProviderRegistry.executeResolve()`는 `Promise<ContractCallRequest[]>`를 반환하며, `actions.ts` 라우트의 모든 호출부는 ContractCallRequest[]를 전제로 6-stage 파이프라인에 투입한다. Intent 주문은 6-stage 파이프라인에 진입할 수 없다 (calldata 없음, gas estimation 불가, on-chain submission 불가).
+
+**Option A (권장): Union 반환 타입 확장**
+
+```typescript
+// 현재
+executeResolve(
+  action: string,
+  params: Record<string, unknown>,
+  context: ActionContext
+): Promise<ContractCallRequest[]>;
+
+// 확장
+type ResolveResult = ContractCallRequest | SignableOrder;
+
+executeResolve(
+  action: string,
+  params: Record<string, unknown>,
+  context: ActionContext
+): Promise<ResolveResult[]>;
+```
+
+호출부(actions.ts) 분기:
+
+```typescript
+const results = await registry.executeResolve(action, params, context);
+for (const result of results) {
+  if (result.type === 'INTENT') {
+    // Intent 파이프라인: validate → sign typed data → API submit → poll
+    await handleIntentOrder(result as SignableOrder, walletId, context);
+  } else {
+    // 기존 6-stage 파이프라인 (변경 없음)
+    await handleContractCall(result as ContractCallRequest, walletId, context);
+  }
+}
+```
+
+**장점:**
+- 단일 진입점으로 일관된 인터페이스
+- `type` 필드 기반 discriminatedUnion 분기 — 프로젝트의 확립된 패턴
+- 기존 Provider는 ContractCallRequest를 반환하므로 ResolveResult union을 자동 만족
+- 향후 새 결과 타입(예: Permit2 서명) 추가 시 union에만 추가
+
+**단점:**
+- 반환 타입 확장으로 인해 모든 호출부가 두 타입을 처리해야 함
+
+**Option B: 별도 executeIntentResolve 메서드**
+
+```typescript
+// 기존 (변경 없음)
+executeResolve(
+  action: string,
+  params: Record<string, unknown>,
+  context: ActionContext
+): Promise<ContractCallRequest[]>;
+
+// 신규
+executeIntentResolve(
+  action: string,
+  params: Record<string, unknown>,
+  context: ActionContext
+): Promise<SignableOrder[]>;
+```
+
+**장점:**
+- 기존 코드에 영향 제로
+
+**단점:**
+- Provider가 intent와 contract call을 별도로 등록해야 함
+- 라우팅 로직 중복 (어떤 resolve를 호출할지 결정하는 로직 필요)
+- 확장성 낮음 (새 결과 타입마다 새 메서드 추가)
+
+**권장: Option A — Union 반환 타입 확장**
+
+근거:
+1. **타입 안전성:** `type` 필드 기반 discriminatedUnion은 프로젝트의 확립된 패턴 (TransactionRequestSchema 5-type, TRANSACTION_TYPES 7-type)
+2. **단일 레지스트리:** Provider가 반환 타입에 따라 자동 분류, 별도 intent 등록 불필요
+3. **전방 호환:** Permit2 서명 등 새 결과 타입은 union에 추가만 하면 됨
+4. **최소 영향:** 기존 Provider는 ContractCallRequest를 반환하므로 ResolveResult union을 자동 만족. 타입 변경만으로 기존 코드가 깨지지 않음
+
+**TRANSACTION_TYPES 확장:**
+
+```typescript
+// 현재 (7-value)
+const TRANSACTION_TYPES = [
+  'TRANSFER', 'TOKEN_TRANSFER', 'CONTRACT_CALL',
+  'APPROVE', 'BATCH', 'SIGN', 'X402_PAYMENT'
+] as const;
+
+// 확장 (8-value)
+const TRANSACTION_TYPES = [
+  'TRANSFER', 'TOKEN_TRANSFER', 'CONTRACT_CALL',
+  'APPROVE', 'BATCH', 'SIGN', 'X402_PAYMENT', 'INTENT'
+] as const;
+```
+
+**분리 원칙:**
+- `TRANSACTION_TYPES` (8-value): DB `transactions.type` 컬럼용 — 'INTENT' 추가
+- `TransactionRequestSchema` (5-type discriminatedUnion): 외부 API 요청 검증용 — **변경 없음**
+- Intent 주문은 `POST /v1/wallets/:id/transactions` (외부 API)가 아닌 `POST /v1/actions/:action` (ActionProviderRegistry)를 통해서만 진입
+- DB `transactions.type` 컬럼의 CHECK 제약 업데이트는 구현 마일스톤(m29-14)에서 ALTER TABLE 마이그레이션으로 처리
+
+### 24.4 설계 결정
+
+| ID | 결정 | 근거 |
+|----|------|------|
+| DEC-INTENT-01 | SignableOrder는 `type: 'INTENT'` 리터럴을 분기 키로 사용 | 프로젝트 7-type discriminatedUnion 패턴 일관성. ContractCallRequest의 type과 구분되는 별도 리터럴 |
+| DEC-INTENT-02 | SignableOrder 필드는 viem signTypedData 파라미터와 1:1 매핑 | 변환 레이어 불필요, 버그 유입 지점 최소화 |
+| DEC-INTENT-03 | intentMetadata가 off-chain API URL과 거래 세부정보를 운반 | EIP-712 서명 데이터(domain/types/message)와 프로토콜 메타데이터(API URL, 토큰 정보)를 분리 |
+| DEC-INTENT-04 | ActionProviderRegistry.executeResolve()가 union `(ContractCallRequest \| SignableOrder)[]` 반환 (Option A) | 단일 진입점, 타입 안전 분기, 기존 Provider 호환, 전방 확장성. Option B(별도 메서드)보다 유리 |
+| DEC-INTENT-05 | TRANSACTION_TYPES를 8-value로 확장 ('INTENT' 추가), TransactionRequestSchema(5-type)는 변경 없음 | Intent는 ActionProviderRegistry를 통해서만 진입, 외부 API 스키마 변경 불필요. DB type 컬럼만 확장 |
+| DEC-INTENT-06 | Amount 필드(sellAmount, buyAmount)는 string 타입으로 bigint 직렬화 | DEC-LEND-06 패턴 일관성. JSON 직렬화에서 bigint precision 손실 방지 |
+| DEC-INTENT-07 | CoW Protocol 도메인만 완전 정의, 1inch Fusion/UniswapX는 플레이스홀더 | m29-14 구현 범위. 향후 확장 시 도메인 테이블에 추가만 하면 됨 |
+
+**Phase 273 섹션 24 설계 결정 총정리:**
+
+| 범위 | 결정 ID | 수 |
+|------|---------|-----|
+| 섹션 24 (SignableOrder + Registry) | DEC-INTENT-01~07 | 7개 |
+
 ---
 
 ## 신규 산출물
