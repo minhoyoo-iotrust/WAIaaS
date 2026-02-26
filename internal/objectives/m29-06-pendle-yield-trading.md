@@ -37,14 +37,14 @@ AI 에이전트: "stETH를 Pendle에서 고정 5% 수익률로 예치해줘"
 | 컴포넌트 | 내용 |
 |----------|------|
 | IYieldProvider | Yield 전용 인터페이스. IActionProvider 확장. 추가 메서드: `getMarkets(chain)`, `getPosition(walletId)`, `getYieldForecast(marketId)`. 표준 액션: buyPT, buyYT, redeemPT, addLiquidity, removeLiquidity |
-| YieldPositionTracker | 월렛별 Yield 포지션 추적. yield_positions 테이블(wallet_id, provider, market_id, token_type[PT/YT/LP], amount, entry_price, maturity, apy). PositionTracker(m28)와 통합 |
+| YieldPositionTracker | 월렛별 Yield 포지션 추적. m29-02 통합 positions 테이블(category=YIELD) 확장 사용. 추가 필드: market_id, token_type[PT/YT/LP], entry_price, maturity, apy. PositionTracker(m29-02)와 통합 |
 | MaturityMonitor | 만기 접근 알림. 만기 7일 전, 1일 전 알림 발송. 만기 후 미상환 경고 |
 
 ### Pendle 구현체
 
 | 컴포넌트 | 내용 |
 |----------|------|
-| PendleLendingProvider | IYieldProvider 구현체. Pendle REST API v2 호출. 5개 액션: buyPT(고정 수익률 확보), buyYT(변동 수익률 레버리지), redeemPT(만기 상환), addLiquidity(LP 추가), removeLiquidity(LP 제거) |
+| PendleYieldProvider | IYieldProvider 구현체. Pendle REST API v2 호출. 5개 액션: buyPT(고정 수익률 확보), buyYT(변동 수익률 레버리지), redeemPT(만기 상환), addLiquidity(LP 추가), removeLiquidity(LP 제거) |
 | PendleApiClient | Pendle REST API v2 래퍼 (https://api-v2.pendle.finance). /markets, /swap, /add-liquidity, /remove-liquidity 엔드포인트. API 키 불필요(무료). 응답 Zod 스키마 검증 |
 | MCP 도구 | waiaas_pendle_buy_pt, waiaas_pendle_buy_yt, waiaas_pendle_redeem, waiaas_pendle_positions |
 | SDK 지원 | TS/Python SDK: executeAction('pendle_buy_pt', params) 등 |
@@ -106,6 +106,7 @@ const PendleBuyPTInputSchema = z.object({
 
 | 의존 대상 | 이유 |
 |----------|------|
+| m29-00 (고급 DeFi 프로토콜 설계) | IYieldProvider 인터페이스, MaturityMonitor 설계 (DEFI-11, DEFI-14) |
 | m29-02 (Lending 프레임워크) | PositionTracker 통합, Admin 포트폴리오 뷰 확장, 정책 평가 인프라 |
 | v1.5 (가격 오라클) | PT/YT 토큰 USD 환산 |
 | v1.4 (EVM 인프라) | EvmAdapter, ContractCallRequest |
@@ -129,7 +130,7 @@ const PendleBuyPTInputSchema = z.object({
 | 페이즈 | 2-3개 (Yield 프레임워크 + DB 1 / Pendle Provider + API Client 1 / MCP+만기 모니터링+Admin 1) |
 | 신규/수정 파일 | 15-20개 |
 | 테스트 | 9-15개 |
-| DB 마이그레이션 | yield_positions 테이블 추가 (또는 positions 확장) |
+| DB 마이그레이션 | positions 통합 테이블 확장 (m29-00 설계 DEFI-13에 따라 category=YIELD 추가) |
 
 ---
 

@@ -220,6 +220,25 @@ IPerpProvider extends IActionProvider
 
 ---
 
+## 구현 순서 가이드
+
+```
+m29-00 (설계) ─┬→ m29-02 (Lending 프레임워크 + Aave) ─┬→ m29-04 (Kamino)   [병렬 가능]
+               │                                       ├→ m29-06 (Pendle)   [병렬 가능]
+               │                                       ├→ m29-08 (Drift)    [병렬 가능]
+               │                                       └→ m29-10 (Morpho)   [병렬 가능]
+               └→ m29-14 (CoW Protocol)                                     [m29-02와 독립]
+
+m28-04 (Staking) → m29-12 (Marinade)                                        [완전 독립]
+```
+
+- m29-02는 Lending 프레임워크(PositionTracker, positions 테이블)를 구축하므로 m29-04/06/08/10보다 반드시 선행
+- m29-04/06/08/10은 m29-02 완료 후 병렬 실행 가능 (각자 category 확장만 수행, DB 마이그레이션 충돌 없음)
+- m29-12(Marinade)는 m28-04 패턴 재사용으로 m29-xx와 완전 독립
+- m29-14(CoW)는 m29-00 Intent 설계(DEFI-15)에만 의존, m29-02와 병렬 가능
+
+---
+
 ## 성공 기준
 
 1. 3개 프레임워크의 인터페이스가 확정되어 m29-02에서 바로 구현 가능

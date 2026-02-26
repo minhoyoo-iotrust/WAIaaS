@@ -31,7 +31,7 @@ m29-02+ (포지션):  resolve() → ContractCallRequest → 실행 → 포지션
 | 컴포넌트 | 내용 |
 |----------|------|
 | ILendingProvider | Lending 전용 인터페이스. IActionProvider 확장. 추가 메서드: `getPosition(walletId)`, `getHealthFactor(walletId)`, `getMarkets()`. 4개 표준 액션: supply, borrow, repay, withdraw |
-| PositionTracker | 월렛별 DeFi 포지션 추적 서비스. positions 테이블(wallet_id, provider, asset, type[SUPPLY/BORROW], amount, apy, updated_at). 주기적 동기화(5분 간격) |
+| PositionTracker | 월렛별 DeFi 포지션 추적 서비스. m29-00 DEFI-13 설계에 따라 처음부터 category discriminated 통합 positions 테이블로 생성(LENDING/YIELD/PERP/STAKING), 초기에는 LENDING category만 사용. 주기적 동기화(5분 간격) |
 | HealthFactorMonitor | 헬스 팩터 모니터링. 임계값(기본 1.2) 미만 시 LIQUIDATION_WARNING 알림 발송. Owner에게 상환/담보 추가 권고 |
 | LendingPolicyEvaluator | 차입 정책 평가. 최대 차입 비율(LTV) 제한, 허용 담보/차입 자산 화이트리스트, USD 기준 차입 한도 |
 | Admin 포트폴리오 뷰 | Admin 대시보드에 DeFi 포지션 섹션 추가. 예치/차입 현황, 헬스 팩터, APY 표시 |
@@ -58,7 +58,7 @@ const AaveSupplyInputSchema = z.object({
 const AaveBorrowInputSchema = z.object({
   asset: z.string(),            // 차입 자산 주소
   amount: z.string(),           // 차입 수량
-  interestRateMode: z.enum(['variable', 'stable']).default('variable'),
+  // Aave V3: stable rate mode는 2023년 거버넌스에서 비활성화됨. variable만 지원
 });
 
 const AaveRepayInputSchema = z.object({
@@ -139,7 +139,7 @@ packages/daemon/src/routes/
 
 | # | 시나리오 | 검증 방법 | 태그 |
 |---|---------|----------|------|
-| 5 | Borrow resolve -> ContractCallRequest 반환 | resolve('borrow', {asset, amount, interestRateMode: 'variable'}) -> Pool.borrow calldata assert | [L0] |
+| 5 | Borrow resolve -> ContractCallRequest 반환 | resolve('borrow', {asset, amount}) -> Pool.borrow calldata (variable rate) assert | [L0] |
 | 6 | Borrow 실행 -> BORROW 포지션 생성 | mock 차입 실행 -> positions 테이블에 BORROW 포지션 기록 assert | [L0] |
 | 7 | Repay resolve -> ContractCallRequest 반환 | resolve('repay', {asset, amount}) -> Pool.repay calldata assert | [L0] |
 | 8 | 담보 없이 차입 -> 에러 | 담보 미예치 상태에서 borrow -> INSUFFICIENT_COLLATERAL 에러 assert | [L0] |
@@ -172,10 +172,11 @@ packages/daemon/src/routes/
 
 | 의존 대상 | 이유 |
 |----------|------|
+| m29-00 (고급 DeFi 프로토콜 설계) | ILendingProvider 인터페이스, PositionTracker, HealthFactorMonitor, LendingPolicyEvaluator 설계 (DEFI-10, DEFI-13, DEFI-14) |
 | v1.5 (Action Provider 프레임워크) | IActionProvider, ActionProviderRegistry, MCP Tool 자동 변환 |
 | v1.5 (가격 오라클) | 포지션 USD 환산, 헬스 팩터 계산에 IPriceOracle 필요 |
 | v1.4 (EVM 인프라) | EvmAdapter, ContractCallRequest, CONTRACT_WHITELIST |
-| m26 (운영 기능 설계) | Audit Log API로 포지션 변동 이력 기록 |
+| v1.6 (운영 인프라) | Audit Log API로 포지션 변동 이력 기록 |
 
 ---
 
