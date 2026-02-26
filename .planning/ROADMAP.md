@@ -318,7 +318,7 @@ See `.planning/milestones/v28.8-ROADMAP.md` for full details.
 - [x] **Phase 268: 포지션 인프라 설계** - positions 통합 테이블, PositionTracker 동기화, 통합 API 스키마, Admin 포트폴리오 와이어프레임 (completed 2026-02-26)
 - [x] **Phase 269: DeFi 모니터링 프레임워크 설계** - IDeFiMonitor 인터페이스, 3개 모니터 룰, 알림 이벤트, 설정 구조 (completed 2026-02-26)
 - [x] **Phase 270: Lending 프레임워크 설계** - ILendingProvider 인터페이스, 포지션/헬스 팩터 타입, 정책, REST API, 프로토콜 매핑 (completed 2026-02-26)
-- [ ] **Phase 271: Yield 프레임워크 설계** - IYieldProvider 인터페이스, PT/YT 포지션 타입, 만기 관리, DB 확장 스키마
+- [x] **Phase 271: Yield 프레임워크 설계** - IYieldProvider 인터페이스, PT/YT 포지션 타입, 만기 관리, DB 확장 스키마 (completed 2026-02-26)
 - [ ] **Phase 272: Perp 프레임워크 설계** - IPerpProvider 인터페이스, 마진/PnL 타입, 정책, 마진 모니터링
 - [ ] **Phase 273: Intent 서명 패턴 설계** - SignableOrder 타입, ActionProviderRegistry 확장, EIP-712 파이프라인, 보안
 
@@ -413,7 +413,7 @@ Phases execute in numeric order: 268 -> 269 -> 270 -> 271 -> 272 -> 273
 | 268. 포지션 인프라 설계 | 2/2 | Complete    | 2026-02-26 | - |
 | 269. DeFi 모니터링 프레임워크 설계 | 2/2 | Complete    | 2026-02-26 | - |
 | 270. Lending 프레임워크 설계 | 2/2 | Complete    | 2026-02-26 | - |
-| 271. Yield 프레임워크 설계 | v29.0 | 0/2 | Planned | - |
+| 271. Yield 프레임워크 설계 | 2/2 | Complete    | 2026-02-26 | - |
 | 272. Perp 프레임워크 설계 | v29.0 | 0/TBD | Not started | - |
 | 273. Intent 서명 패턴 설계 | v29.0 | 0/TBD | Not started | - |
 
