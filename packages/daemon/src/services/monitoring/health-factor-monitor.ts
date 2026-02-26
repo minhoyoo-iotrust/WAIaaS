@@ -22,6 +22,7 @@ import type { Database } from 'better-sqlite3';
 import type { IDeFiMonitor, MonitorSeverity, MonitorEvaluation } from '@waiaas/core';
 import type { NotificationService } from '../../notifications/notification-service.js';
 import type { PositionTracker } from '../defi/position-tracker.js';
+import type { SettingsService } from '../../infrastructure/settings/settings-service.js';
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -32,6 +33,7 @@ export interface HealthFactorMonitorConfig {
   warningThreshold: number; // default 1.5
   dangerThreshold: number; // default 1.2
   cooldownHours: number; // default 4
+  maxLtvPct?: number; // default undefined (LendingPolicyEvaluator reference)
 }
 
 const DEFAULT_CONFIG: HealthFactorMonitorConfig = {
@@ -116,6 +118,27 @@ export class HealthFactorMonitor implements IDeFiMonitor {
     if (typeof config['cooldown_hours'] === 'number') {
       this.config.cooldownHours = config['cooldown_hours'];
     }
+    if (typeof config['max_ltv_pct'] === 'number') {
+      this.config.maxLtvPct = config['max_ltv_pct'];
+    }
+  }
+
+  /** Load config overrides from Admin Settings (Phase 278). */
+  loadFromSettings(settingsService: SettingsService): void {
+    try {
+      const threshold = settingsService.get('actions.aave_v3_health_factor_warning_threshold');
+      const parsed = Number(threshold);
+      if (!Number.isNaN(parsed) && parsed > 0) {
+        this.updateConfig({ health_factor_warning_threshold: parsed });
+      }
+    } catch { /* fallback to default */ }
+    try {
+      const maxLtv = settingsService.get('actions.aave_v3_max_ltv_pct');
+      const parsed = Number(maxLtv);
+      if (!Number.isNaN(parsed) && parsed > 0 && parsed <= 1) {
+        this.updateConfig({ max_ltv_pct: parsed });
+      }
+    } catch { /* fallback to default */ }
   }
 
   // -----------------------------------------------------------------------

@@ -45,6 +45,7 @@ const DEFAULT_INTERVALS: Record<PositionCategory, number> = {
 
 export class PositionTracker {
   private readonly sqlite: Database;
+  private readonly settingsService?: SettingsService;
   private readonly writeQueue: PositionWriteQueue;
   private readonly providers = new Map<string, IPositionProvider>();
   private readonly timers = new Map<PositionCategory, NodeJS.Timeout>();
@@ -52,7 +53,7 @@ export class PositionTracker {
 
   constructor(opts: { sqlite: Database; settingsService?: SettingsService }) {
     this.sqlite = opts.sqlite;
-    // settingsService reserved for future runtime config overrides (Phase 278)
+    this.settingsService = opts.settingsService;
     this.writeQueue = new PositionWriteQueue();
   }
 
@@ -88,7 +89,17 @@ export class PositionTracker {
   start(): void {
     for (const category of POSITION_CATEGORIES) {
       this.running.set(category, false);
-      const intervalMs = DEFAULT_INTERVALS[category];
+      let intervalMs = DEFAULT_INTERVALS[category];
+      // Runtime override from Admin Settings (Phase 278)
+      if (category === 'LENDING' && this.settingsService) {
+        try {
+          const val = this.settingsService.get('actions.aave_v3_position_sync_interval_sec');
+          const parsed = Number(val);
+          if (!Number.isNaN(parsed) && parsed > 0) {
+            intervalMs = parsed * 1000; // seconds -> milliseconds
+          }
+        } catch { /* fallback to default */ }
+      }
       const timer = setInterval(() => void this.syncCategory(category), intervalMs);
       timer.unref();
       this.timers.set(category, timer);

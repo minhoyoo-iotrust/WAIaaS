@@ -5,6 +5,7 @@ import { API } from '../api/endpoints';
 import { FormField, Button, Badge } from '../components/form';
 import { showToast } from '../components/toast';
 import { getErrorMessage } from '../utils/error-messages';
+import { keyToLabel } from '../utils/settings-helpers';
 import type { SettingsData, ApiKeyEntry } from '../utils/settings-helpers';
 
 // ---------------------------------------------------------------------------
@@ -26,6 +27,7 @@ const BUILTIN_PROVIDERS: BuiltinProvider[] = [
   { key: 'lifi', name: 'LI.FI', description: 'Multi-chain DEX/bridge aggregator', chain: 'multi', requiresApiKey: false, docsUrl: 'https://docs.li.fi' },
   { key: 'lido_staking', name: 'Lido Staking', description: 'ETH liquid staking (stETH/wstETH)', chain: 'evm', requiresApiKey: false, docsUrl: 'https://docs.lido.fi' },
   { key: 'jito_staking', name: 'Jito Staking', description: 'SOL liquid staking (JitoSOL)', chain: 'solana', requiresApiKey: false, docsUrl: 'https://www.jito.network/docs' },
+  { key: 'aave_v3', name: 'Aave V3 Lending', description: 'EVM lending protocol (supply, borrow, repay, withdraw)', chain: 'evm', requiresApiKey: false, docsUrl: 'https://docs.aave.com/developers' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -66,6 +68,9 @@ export default function ActionsPage() {
 
   // Toggle saving state
   const toggleSaving = useSignal<string | null>(null);
+
+  // Aave V3 advanced settings dirty state
+  const advancedDirty = useSignal<Record<string, string>>({});
 
   // ---------------------------------------------------------------------------
   // Data fetching
@@ -155,6 +160,28 @@ export default function ActionsPage() {
       await apiDelete(API.ADMIN_API_KEY(providerKey));
       showToast('success', `API key deleted for ${providerKey}`);
       await fetchApiKeys();
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // Advanced settings save handler (Aave V3)
+  // ---------------------------------------------------------------------------
+
+  const handleAdvancedSave = async (settingKey: string, value: string) => {
+    const fullKey = `actions.${settingKey}`;
+    try {
+      const result = await apiPut<{ updated: number; settings: SettingsData }>(API.ADMIN_SETTINGS, {
+        settings: [{ key: fullKey, value }],
+      });
+      settings.value = result.settings;
+      // Clear dirty for this key
+      const newDirty = { ...advancedDirty.value };
+      delete newDirty[settingKey];
+      advancedDirty.value = newDirty;
+      showToast('success', 'Setting updated');
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
@@ -312,6 +339,38 @@ export default function ActionsPage() {
                       )}
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Aave V3 Advanced Settings -- only when Aave V3 is enabled */}
+              {bp.key === 'aave_v3' && enabled && (
+                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
+                  <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-2)', color: 'var(--text-secondary)' }}>
+                    Advanced Settings
+                  </div>
+                  {(['aave_v3_health_factor_warning_threshold', 'aave_v3_position_sync_interval_sec', 'aave_v3_max_ltv_pct'] as const).map((shortKey) => {
+                    const cat = settings.value['actions'] as Record<string, string> | undefined;
+                    const currentValue = advancedDirty.value[shortKey] ?? cat?.[shortKey] ?? '';
+                    return (
+                      <div key={shortKey} style={{ marginBottom: 'var(--space-2)' }}>
+                        <FormField
+                          label={keyToLabel(shortKey)}
+                          name={`actions.${shortKey}`}
+                          type="text"
+                          value={currentValue}
+                          onChange={(v) => {
+                            advancedDirty.value = { ...advancedDirty.value, [shortKey]: String(v) };
+                          }}
+                          onBlur={() => {
+                            const val = advancedDirty.value[shortKey];
+                            if (val !== undefined) {
+                              void handleAdvancedSave(shortKey, val);
+                            }
+                          }}
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
