@@ -16,6 +16,7 @@
  *   owner disconnect                  -- Disconnect WalletConnect session
  *   owner status                      -- Show WalletConnect session status
  *   mcp setup                         -- Set up MCP integration for Claude Desktop
+ *   notification setup                -- Set up Telegram notifications
  *   update                            -- Update WAIaaS to the latest version
  *   update --check                    -- Check for available updates
  *   update --to <version>             -- Update to a specific version
@@ -35,6 +36,7 @@ import { quickstartCommand } from './commands/quickstart.js';
 import { walletInfoCommand, walletSetDefaultNetworkCommand, walletCreateCommand } from './commands/wallet.js';
 import { ownerConnectCommand, ownerDisconnectCommand, ownerStatusCommand } from './commands/owner.js';
 import { sessionPromptCommand } from './commands/session.js';
+import { notificationSetupCommand } from './commands/notification-setup.js';
 import { updateCommand } from './commands/update.js';
 import { resolveDataDir } from './utils/data-dir.js';
 import { checkAndNotifyUpdate } from './utils/update-notify.js';
@@ -274,6 +276,36 @@ mcp
       all: opts.all ?? false,
       expiresIn: parseInt(opts.expiresIn ?? '86400', 10),
       masterPassword: opts.password,
+    });
+  });
+
+// Notification subcommand group
+const notification = program.command('notification').description('Notification management commands');
+
+notification
+  .command('setup')
+  .description('Set up Telegram notifications')
+  .option('--base-url <url>', 'Daemon base URL', 'http://127.0.0.1:3100')
+  .option('--bot-token <token>', 'Telegram bot token')
+  .option('--chat-id <id>', 'Telegram chat ID')
+  .option('--locale <locale>', 'Notification language (en/ko)', 'en')
+  .option('--password <password>', 'Master password')
+  .option('--test', 'Send test notification after setup', false)
+  .action(async (opts: {
+    baseUrl?: string;
+    botToken?: string;
+    chatId?: string;
+    locale?: string;
+    password?: string;
+    test?: boolean;
+  }) => {
+    await notificationSetupCommand({
+      baseUrl: opts.baseUrl,
+      botToken: opts.botToken,
+      chatId: opts.chatId,
+      locale: opts.locale,
+      password: opts.password,
+      test: opts.test,
     });
   });
 

@@ -599,6 +599,29 @@ Note: RPC failure returns HTTP 200 with `success: false` -- it is not an HTTP er
 
 ### Set up Telegram notifications
 
+**CLI (recommended):**
+```bash
+# Interactive mode (prompts for bot token and chat ID)
+waiaas notification setup
+
+# Non-interactive with test notification
+waiaas notification setup --bot-token <TOKEN> --chat-id <ID> --test
+
+# Full options
+waiaas notification setup --bot-token <TOKEN> --chat-id <ID> --locale ko --test
+```
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--base-url <url>` | Daemon base URL | `http://127.0.0.1:3100` |
+| `--bot-token <token>` | Telegram bot token (hidden prompt if omitted) | - |
+| `--chat-id <id>` | Telegram chat ID (visible prompt if omitted) | - |
+| `--locale <locale>` | Notification language (`en` / `ko`) | `en` |
+| `--password <pw>` | Master password | env/file/prompt |
+| `--test` | Send test notification after setup | false |
+
+**REST API:**
+
 1. Update settings with bot token and chat ID:
 ```bash
 curl -s -X PUT http://localhost:3100/v1/admin/settings \

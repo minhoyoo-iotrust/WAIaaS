@@ -209,7 +209,7 @@
 | 192 | MISSING | MEDIUM | 세션 토큰 영구 만료 시 에이전트 자력 복구 불가 — 복구 프로세스 스킬 필요 | v28.8 | FIXED | 2026-02-25 |
 | 193 | ENHANCEMENT | MEDIUM | 네트워크별 WSS URL 설정 + EVM WSS 구독 지원 — 인커밍 모니터 개선 | v28.8 | FIXED | 2026-02-26 |
 | 194 | BUG | CRITICAL | 데몬 장시간 실행 시 응답 불능 — reconnectLoop 무지연 루프 + fetch 타임아웃 부재 | v28.8 | FIXED | 2026-02-26 |
-| 195 | MISSING | MEDIUM | CLI 텔레그램 알림 설정 명령어 추가 (`waiaas notification setup`) | - | OPEN | - |
+| 195 | MISSING | MEDIUM | CLI 텔레그램 알림 설정 명령어 추가 (`waiaas notification setup`) | v29.0 | FIXED | 2026-02-26 |
 | 196 | ENHANCEMENT | LOW | CLAUDE.md에 Admin Settings 우선 사용 컨벤션 추가 | v29.0 | FIXED | 2026-02-26 |
 | 197 | BUG | MEDIUM | Admin UI RPC 빌트인 URL 하드코딩 중복으로 동기화 깨짐 — API 기반 전환 필요 | v29.0 | FIXED | 2026-02-26 |
 | 198 | MISSING | LOW | Wallet SDK 연동 가이드에 Push Relay 페이로드 커스텀 섹션 누락 | v29.0 | FIXED | 2026-02-26 |
@@ -225,8 +225,8 @@
 
 ## Summary
 
-- **OPEN:** 1
-- **FIXED:** 197
+- **OPEN:** 0
+- **FIXED:** 198
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1
