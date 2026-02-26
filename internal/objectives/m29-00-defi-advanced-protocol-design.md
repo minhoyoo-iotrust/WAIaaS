@@ -3438,6 +3438,254 @@ export type YieldForecast = z.infer<typeof YieldForecastSchema>;
 
 ---
 
+## 20. MaturityMonitor 통합 + Pendle 프로토콜 매핑
+
+### 20.1 MaturityMonitor ↔ IYieldProvider 연동 설계
+
+Phase 269 섹션 10.2의 MaturityMonitor가 IYieldProvider를 통해 yield 포지션을 모니터링하는 전체 데이터 흐름을 명세한다.
+
+**데이터 흐름 (5단계):**
+
+```
+1. PositionTracker.syncCategory('YIELD')
+   → PendleProvider.getPositions(walletId)  [IPositionProvider 인터페이스]
+   → Pendle Backend API 호출
+
+2. PositionTracker → defi_positions 테이블에 저장
+   → category='YIELD', status='ACTIVE'
+   → metadata JSON에 YieldMetadataSchema (tokenType, marketId, maturity, apy, entryPrice)
+
+3. MaturityMonitor.checkAll()
+   → defi_positions에서 category='YIELD', status='ACTIVE' 행 읽기
+   → DB 캐시 기반 (RPC 호출 없음, DEC-MON-03 준수)
+
+4. MaturityMonitor.evaluate(position)
+   → metadata.maturity 에포크와 현재 시간 비교
+   → severity 산정 (WARNING/DANGER/CRITICAL)
+
+5. 알림 발생
+   → MATURITY_WARNING 이벤트 (Phase 269 섹션 11 SSoT 체인)
+   → NotificationService.notify() 호출
+```
+
+**MaturityMonitor가 IYieldProvider에 직접 의존하지 않는 이유:**
+
+- DEC-MON-03: monitors read from defi_positions cache, never make direct RPC calls
+- MaturityMonitor는 `defi_positions.metadata.maturity` 값만 필요 (DB에서 읽기)
+- IYieldProvider.getPosition()은 **API 응답용** (human-readable 필드 포함)
+- MaturityMonitor는 **DB 캐시 사용** (raw metadata만 필요)
+- 이 분리로 모니터링 주기가 RPC 호출 비용에 영향받지 않음
+
+```
+                        ┌─────────────┐
+                        │ Pendle API  │
+                        └──────┬──────┘
+                               │ getPositions()
+                        ┌──────▼──────┐
+                        │ PendleProvider│ (IPositionProvider + IYieldProvider)
+                        └──────┬──────┘
+                               │ PositionUpdate[]
+                        ┌──────▼──────┐
+                        │PositionTracker│
+                        └──────┬──────┘
+                               │ INSERT/UPDATE
+                        ┌──────▼──────┐
+                        │defi_positions│ (category='YIELD')
+                        └──────┬──────┘
+                               │ SELECT (DB read only)
+                   ┌───────────▼───────────┐
+                   │   MaturityMonitor      │ (evaluate → MATURITY_WARNING)
+                   └───────────────────────┘
+```
+
+**MaturityMonitor 트리거 조건 매핑 (Phase 269 섹션 10.2 확인):**
+
+| 조건 | MaturityMonitor severity | MaturityInfo.warningLevel | 폴링 | 알림 |
+|------|--------------------------|---------------------------|------|------|
+| daysRemaining > 7 | (평가 생략) | NONE | 24h 고정 | 없음 |
+| 1 < daysRemaining <= 7 | WARNING | WARNING_7D | 24h 고정 | MATURITY_WARNING (일반, 쿨다운 적용) |
+| 0 < daysRemaining <= 1 | DANGER | WARNING_1D | 24h 고정 | MATURITY_WARNING (일반, 쿨다운 적용) |
+| daysRemaining <= 0 && status='ACTIVE' | CRITICAL | EXPIRED_UNREDEEMED | 24h 고정 | MATURITY_WARNING (BROADCAST, 쿨다운 없음) |
+
+**MaturityMonitor vs HealthFactorMonitor 차이:**
+- HealthFactorMonitor: **적응형 폴링** (SAFE=5분, CRITICAL=5초) — 시장 가격 변동에 따라 health factor가 빠르게 변할 수 있음
+- MaturityMonitor: **고정 폴링** (24시간) — 만기는 시간에 따라 결정적으로 변화, 긴급 갱신 불필요
+
+**만기 후 자동 액션 (미래 확장 가능성):**
+- **현재 설계:** MATURITY_WARNING 알림만 발생. 자동 상환(auto-redeem) 없음
+- **이유:** 자동 상환은 높은 복잡도 (gas estimation, slippage, 실패 처리). REQUIREMENTS.md의 scope 범위 밖
+- **미래 가능성:** 정책 기반 자동 상환 파이프라인 (MaturityMonitor → PolicyEngine → auto-action). MaturityMonitor.evaluate()의 반환에 suggestedAction 필드 추가 가능. 현재 인터페이스는 이 확장을 차단하지 않음
+
+### 20.2 positions 테이블 YIELD 카테고리 확장 검증
+
+Phase 268 섹션 5.3에서 이미 정의된 YIELD 스키마의 완전성을 검증하고, Pendle 구현에 필요한 추가 필드가 있는지 확인한다.
+
+**기존 YieldMetadataSchema (섹션 5.3) 검토:**
+
+| 필드 | 타입 | Pendle 수용 가능? | 비고 |
+|------|------|-------------------|------|
+| `tokenType` | `'PT' \| 'YT' \| 'LP'` | YES | Pendle의 3가지 토큰 유형 완전 수용 |
+| `marketId` | `string` | YES | Pendle market address 저장 충분 |
+| `maturity` | `number (epoch seconds)` | YES | MaturityMonitor 필수 필드 충족 |
+| `apy` | `number \| null` | YES | 현재 implied APY 캐시 가능 |
+| `entryPrice` | `number \| null` | YES | 진입 시점 가격 기록 가능 |
+
+**Pendle 특화 추가 필드 권장 사항:**
+
+Pendle 구현(m29-06) 시 metadata JSON에 추가로 저장할 수 있는 필드들:
+
+| 필드 | 타입 | 용도 | 추가 방법 |
+|------|------|------|-----------|
+| `syAddress` | `string` (optional) | SY 토큰 주소 (라우팅 참조용) | metadata JSON에 자유 추가 |
+| `underlyingAsset` | `string` (optional) | 기초 자산 CAIP-19 (human-readable context) | metadata JSON에 자유 추가 |
+| `ptAddress` | `string` (optional) | PT 토큰 주소 (잔액 조회 참조) | metadata JSON에 자유 추가 |
+| `ytAddress` | `string` (optional) | YT 토큰 주소 (잔액 조회 참조) | metadata JSON에 자유 추가 |
+
+**추가 방식:** YieldMetadataSchema 자체를 변경하지 않고, PendleProvider가 metadata JSON에 추가 필드를 자유롭게 저장 가능. Zod의 `passthrough()` 또는 JSON 컬럼의 유연성 활용.
+
+**결론:** Phase 268 YieldMetadataSchema는 핵심 요구사항을 충족한다. 프레임워크 스키마 변경은 불필요하며, Pendle 특화 필드는 구현 시(m29-06) metadata JSON에 provider가 자유롭게 추가한다.
+
+**Phase 268 discriminatedUnion 검증:**
+
+```typescript
+// Phase 268 섹션 5.3에서 정의한 구조:
+export const YieldPositionSchema = BasePositionSchema.extend({
+  category: z.literal('YIELD'),
+  metadata: YieldMetadataSchema,
+});
+
+// PositionSchema discriminatedUnion에 이미 포함:
+export const PositionSchema = z.discriminatedUnion('category', [
+  LendingPositionSchema,
+  YieldPositionSchema,  // ← YIELD 카테고리 이미 등록
+  PerpPositionSchema,
+  StakingPositionSchema,
+]);
+```
+
+→ YIELD 카테고리는 discriminatedUnion에 완전히 통합되어 있음. 추가 작업 불필요.
+
+### 20.3 Pendle V2 프로토콜 매핑 (Router + Hosted SDK → IYieldProvider)
+
+Phase 270 섹션 17 (Aave V3/Kamino/Morpho 매핑) 패턴을 미러링한다.
+
+**체인:** EVM (Ethereum, Arbitrum, Optimism 등 멀티체인)
+**SDK 의존:** Pendle Hosted SDK (REST API) + Pendle Router V3 (IPAllActionV3 ABI)
+**어댑터:** EvmAdapter
+**구현 마일스톤:** m29-06
+
+**Pendle V2 주소:**
+- Router: `0x888888888889758F76e7103c6CbF23ABbF58F946` (여러 체인에 동일)
+- 다른 컨트랙트 (SY, PT, YT, Market): 시장별 상이, API로 조회
+
+**메서드 매핑 테이블:**
+
+| IYieldProvider 메서드 | Pendle Router (IPAllActionV3) | Pendle Hosted SDK | 비고 |
+|---|---|---|---|
+| `resolve('buy_pt')` | `swapExactTokenForPt(receiver, market, minPtOut, guessPtOut, input, limit)` | `GET /core/v2/sdk/{chainId}/convert` tokensIn=[underlying] tokensOut=[PT] | Hosted SDK가 routing/optimization 처리 |
+| `resolve('buy_yt')` | `swapExactTokenForYt(receiver, market, minYtOut, guessYtOut, input, limit)` | `GET /core/v2/sdk/{chainId}/convert` tokensIn=[underlying] tokensOut=[YT] | YT 가격은 만기 접근 시 0에 수렴 |
+| `resolve('redeem_pt')` | `redeemPyToToken(receiver, YT, netPyIn, output)` | `GET /core/v2/sdk/{chainId}/convert` tokensIn=[PT] tokensOut=[underlying] | post-maturity: PT only, pre-maturity: PT+YT |
+| `resolve('add_liquidity')` | `addLiquiditySingleToken(receiver, market, minLpOut, guessPtReceivedFromSy, input, limit)` | `GET /core/v2/sdk/{chainId}/convert` tokensIn=[underlying] tokensOut=[LP] | SY 라우팅은 SDK가 자동 처리 |
+| `resolve('remove_liquidity')` | `removeLiquiditySingleToken(receiver, market, netLpToRemove, output, limit)` | `GET /core/v2/sdk/{chainId}/convert` tokensIn=[LP] tokensOut=[underlying] | |
+| `getMarkets()` | -- | `GET /core/v1/{chainId}/markets/all` | 시장 목록 + APY + TVL |
+| `getPosition()` | -- | `GET /core/v1/{chainId}/dashboard/positions/database/{userAddress}` | 또는 defi_positions DB 캐시 |
+| `getYieldForecast()` | -- | `GET /core/v2/{chainId}/markets/{marketAddress}/data` | implied/underlying/fixed APY + PT/YT 가격 |
+
+**Hosted SDK 우선 전략:**
+
+resolve()는 Pendle Hosted SDK convert endpoint를 기본 경로로 사용한다. Router 직접 호출은 fallback 또는 고급 설정용이다.
+
+- **이유:** Hosted SDK가 라우팅 최적화 + 슬리피지 보호 + aggregator 통합 처리
+- **convert endpoint 통합 인터페이스:**
+  ```
+  GET https://api-v2.pendle.finance/core/v2/sdk/{chainId}/convert
+  Parameters:
+    receiver: string      // 수신 지갑 주소
+    tokensIn: string[]    // 입력 토큰 주소 (underlying 또는 PT/LP)
+    amountsIn: string[]   // 입력 수량
+    tokensOut: string[]   // 출력 토큰 주소 (PT/YT/LP 또는 underlying)
+    slippage: number      // 슬리피지 허용 범위 (decimal)
+    enableAggregator: boolean  // DEX aggregator 사용 여부
+
+  Response:
+    tx.to: string         // Router 주소
+    tx.data: string       // calldata (pre-encoded)
+    tx.value: string      // native token value (ETH swap 시)
+  ```
+- **resolve() 구현 패턴:** Hosted SDK 응답의 `tx` 객체를 직접 `ContractCallRequest`로 변환
+- **Router 직접 호출은 SDK 장애 시 fallback으로만 사용**
+
+**인증 및 Rate Limit:**
+
+| 항목 | 값 | 비고 |
+|------|-----|------|
+| API Key | 불필요 (공개 API) | 별도 인증 없음 |
+| Rate Limit | 100 CU/minute (free tier) | Computation Units 기반 |
+| Base URL | `https://api-v2.pendle.finance` | 모든 체인 공통 |
+| Chain ID | path parameter ({chainId}) | 1=Ethereum, 42161=Arbitrum, 10=Optimism |
+
+- 구현 시 RpcPool 패턴으로 rate limit 관리 가능 (요청 큐잉 + 재시도)
+- Free tier 100 CU/minute는 일반적인 사용에 충분 (getMarkets = 1CU, convert = 5CU 추정)
+
+**지원 체인:**
+
+| Pendle V2 지원 | WAIaaS EVM 지원 | PendleProvider 교집합 |
+|---|---|---|
+| Ethereum | Ethereum | YES |
+| Arbitrum | Arbitrum | YES |
+| Optimism | Optimism | YES |
+| BNB Chain | (미지원) | NO |
+| Mantle | (미지원) | NO |
+| -- | Base | NO (Pendle 미배포) |
+
+- PendleProvider.metadata.chains: `['evm']`
+- PendleProvider.metadata.networks: `['ethereum', 'arbitrum', 'optimism']` (교집합)
+- 새 체인 추가 시 양쪽 지원 여부 확인 후 metadata.networks에 추가
+
+**크로스 프로토콜 비교 테이블 (Phase 270 섹션 17.4 패턴):**
+
+| 차원 | Pendle V2 | Aave V3 (참조) | Kamino (참조) |
+|------|-----------|----------------|---------------|
+| **도메인** | Yield tokenization | Lending/Borrowing | Lending/Borrowing |
+| **포지션 모델** | PT/YT/LP 3종, 만기 기반 | Global account | Obligation 기반 |
+| **수익률 유형** | 고정(PT) + 변동(YT) + 수수료(LP) | Supply APY (변동) | Supply APY (변동) |
+| **만기 관리** | 고정 만기일, 자동 상환 필요 | 없음 (open-ended) | 없음 (open-ended) |
+| **시장 발견** | REST API (markets/all) | 온체인 (getReservesList) | 온체인 (reserves) |
+| **가격 결정** | AMM (Pendle V2 SYS market) | Oracle 기반 | Oracle 기반 |
+| **SY 라우팅** | underlying → SY → PT/YT (SDK 자동) | N/A | N/A |
+| **Health Factor** | 해당 없음 (비담보 포지션) | 담보/차입 비율 | 담보/차입 비율 |
+| **모니터 타입** | MaturityMonitor (고정 폴링) | HealthFactorMonitor (적응형) | HealthFactorMonitor (적응형) |
+| **알림 이벤트** | MATURITY_WARNING | LIQUIDATION_WARNING/IMMINENT | LIQUIDATION_WARNING/IMMINENT |
+| **SDK 의존** | Hosted SDK (REST) | viem ABI encoding | @kamino-finance/klend-sdk |
+| **구현 마일스톤** | m29-06 | m29-02 | m29-04 |
+
+**핵심 차이점 요약:**
+1. **Yield vs Lending 근본 차이:** Pendle 포지션은 만기가 있고 담보/차입이 아님. health factor 개념 없음. 대신 maturity 기반 모니터링.
+2. **SY 추상화:** Pendle의 고유 레이어. IYieldProvider가 이를 숨기고 underlying 토큰으로 입출력을 추상화.
+3. **Hosted SDK 의존:** Aave/Morpho는 직접 ABI 인코딩, Pendle은 Hosted SDK 중심. Router fallback은 복잡한 파라미터 구조(ApproxParams, LimitOrderData) 때문.
+4. **3종 토큰:** PT(원금), YT(수익), LP(유동성) — lending의 supply/borrow 2종과 다른 모델.
+
+### 20.4 설계 결정
+
+| ID | 결정 | 선택 | 근거 |
+|----|------|------|------|
+| DEC-YIELD-09 | YieldMetadataSchema 확장 방식 | Phase 268 정의 그대로 유지. Pendle 특화 필드(syAddress, underlyingAsset, ptAddress, ytAddress)는 metadata JSON에 provider가 자유롭게 추가 | 프레임워크 스키마 변경 불필요. Zod passthrough / JSON 유연성 활용. 다른 yield 프로토콜이 다른 추가 필드를 사용할 수 있으므로 provider 자유도 보장 |
+| DEC-YIELD-10 | MaturityMonitor ↔ IYieldProvider 관계 | MaturityMonitor는 IYieldProvider에 직접 의존하지 않음 (DB 캐시 기반) | DEC-MON-03 준수. 모니터가 DB 캐시만 읽어 RPC 호출 비용과 무관. PositionTracker가 데이터 갱신 책임, MaturityMonitor는 읽기만 |
+| DEC-YIELD-11 | Pendle 통합 기본 경로 | Hosted SDK convert endpoint를 기본 경로로 사용, Router 직접 호출은 fallback | Hosted SDK가 routing optimization, aggregator integration, slippage protection 제공. Router 직접 호출은 ApproxParams/LimitOrderData 등 복잡한 파라미터 구조 필요 |
+| DEC-YIELD-12 | Pendle API 인증/제한 | 공개 API (API key 불필요), rate limit 100 CU/minute free tier, RpcPool 패턴으로 관리 | 별도 인증 설정 불필요. Rate limit은 일반적 사용에 충분하지만 RpcPool 패턴으로 큐잉/재시도 보장 |
+| DEC-YIELD-13 | PendleProvider 지원 체인 | Pendle 지원 체인 중 WAIaaS 지원 체인의 교집합만 노출 (ethereum, arbitrum, optimism) | WAIaaS가 지원하지 않는 체인(BNB, Mantle)은 EvmAdapter로 처리 불가. 교집합만 metadata.networks에 등록 |
+
+**Phase 271 전체 설계 결정 총정리:**
+
+| 범위 | 결정 ID | 수 |
+|------|---------|-----|
+| 섹션 18 (IYieldProvider) | DEC-YIELD-01~04 | 4개 |
+| 섹션 19 (Yield 타입) | DEC-YIELD-05~08 | 4개 |
+| 섹션 20 (통합 + 매핑) | DEC-YIELD-09~13 | 5개 |
+| **합계** | | **13개** |
+
+---
+
 ## 신규 산출물
 
 | ID | 산출물 | 설명 |
