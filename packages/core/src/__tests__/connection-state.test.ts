@@ -293,12 +293,9 @@ describe('reconnectLoop', () => {
 
   it('does not apply backoff when connection was stable before disconnect', async () => {
     const controller = new AbortController();
-    let connectCount = 0;
 
     const subscriber = {
-      connect: vi.fn(async () => {
-        connectCount++;
-      }),
+      connect: vi.fn(async () => {}),
       waitForDisconnect: vi.fn(async () => {
         // Simulate stable connection by advancing Date.now mock
         // Since we can't easily mock Date.now in this context,
