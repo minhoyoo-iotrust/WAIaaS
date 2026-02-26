@@ -315,7 +315,7 @@ See `.planning/milestones/v28.8-ROADMAP.md` for full details.
 
 **Milestone Goal:** 상태를 가진 DeFi 포지션(담보/차입, 수익률 거래, 레버리지 트레이딩)을 관리하기 위한 3개 프레임워크(ILendingProvider, IYieldProvider, IPerpProvider)와 공통 인프라(PositionTracker, DeFiMonitorService)를 설계 수준에서 정의하여, m29-02~m29-14 구현 마일스톤의 입력을 생산한다.
 
-- [ ] **Phase 268: 포지션 인프라 설계** - positions 통합 테이블, PositionTracker 동기화, 통합 API 스키마, Admin 포트폴리오 와이어프레임
+- [x] **Phase 268: 포지션 인프라 설계** - positions 통합 테이블, PositionTracker 동기화, 통합 API 스키마, Admin 포트폴리오 와이어프레임 (completed 2026-02-26)
 - [ ] **Phase 269: DeFi 모니터링 프레임워크 설계** - IDeFiMonitor 인터페이스, 3개 모니터 룰, 알림 이벤트, 설정 구조
 - [ ] **Phase 270: Lending 프레임워크 설계** - ILendingProvider 인터페이스, 포지션/헬스 팩터 타입, 정책, REST API, 프로토콜 매핑
 - [ ] **Phase 271: Yield 프레임워크 설계** - IYieldProvider 인터페이스, PT/YT 포지션 타입, 만기 관리, DB 확장 스키마
@@ -401,7 +401,7 @@ Phases execute in numeric order: 268 -> 269 -> 270 -> 271 -> 272 -> 273
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 268. 포지션 인프라 설계 | v29.0 | 0/2 | Planned | - |
+| 268. 포지션 인프라 설계 | 2/2 | Complete    | 2026-02-26 | - |
 | 269. DeFi 모니터링 프레임워크 설계 | v29.0 | 0/TBD | Not started | - |
 | 270. Lending 프레임워크 설계 | v29.0 | 0/TBD | Not started | - |
 | 271. Yield 프레임워크 설계 | v29.0 | 0/TBD | Not started | - |
