@@ -59,6 +59,8 @@ import type {
   GetIncomingTransactionSummaryParams,
   ExecuteActionParams,
   ExecuteActionResponse,
+  DeFiPositionsResponse,
+  HealthFactorResponse,
 } from './types.js';
 
 export class WAIaaSClient {
@@ -150,6 +152,34 @@ export class WAIaaSClient {
     return withRetry(
       () => this.http.get<MultiNetworkAssetsResponse>(
         '/v1/wallet/assets?network=all',
+        this.authHeaders(),
+      ),
+      this.retryOptions,
+    );
+  }
+
+  // --- DeFi queries ---
+  async getPositions(options?: { walletId?: string }): Promise<DeFiPositionsResponse> {
+    const query = new URLSearchParams();
+    if (options?.walletId) query.set('wallet_id', options.walletId);
+    const qs = query.toString();
+    return withRetry(
+      () => this.http.get<DeFiPositionsResponse>(
+        `/v1/wallet/positions${qs ? `?${qs}` : ''}`,
+        this.authHeaders(),
+      ),
+      this.retryOptions,
+    );
+  }
+
+  async getHealthFactor(options?: { walletId?: string; network?: string }): Promise<HealthFactorResponse> {
+    const query = new URLSearchParams();
+    if (options?.walletId) query.set('wallet_id', options.walletId);
+    if (options?.network) query.set('network', options.network);
+    const qs = query.toString();
+    return withRetry(
+      () => this.http.get<HealthFactorResponse>(
+        `/v1/wallet/health-factor${qs ? `?${qs}` : ''}`,
         this.authHeaders(),
       ),
       this.retryOptions,

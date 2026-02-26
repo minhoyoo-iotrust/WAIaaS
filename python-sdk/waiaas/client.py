@@ -37,6 +37,8 @@ from waiaas.models import (
     WcSessionInfo,
     X402FetchRequest,
     X402FetchResponse,
+    DeFiPositionsResponse,
+    HealthFactorResponse,
 )
 from waiaas.retry import RetryPolicy, with_retry
 
@@ -177,6 +179,37 @@ class WAIaaSClient:
         """
         resp = await self._request("GET", "/v1/wallet/assets", params={"network": "all"})
         return MultiNetworkAssetsResponse.model_validate(resp.json())
+
+    # -----------------------------------------------------------------
+    # DeFi Queries API
+    # -----------------------------------------------------------------
+
+    async def get_positions(
+        self,
+        *,
+        wallet_id: Optional[str] = None,
+    ) -> DeFiPositionsResponse:
+        """GET /v1/wallet/positions -- Get DeFi lending positions."""
+        params: dict[str, Any] = {}
+        if wallet_id is not None:
+            params["wallet_id"] = wallet_id
+        resp = await self._request("GET", "/v1/wallet/positions", params=params or None)
+        return DeFiPositionsResponse.model_validate(resp.json())
+
+    async def get_health_factor(
+        self,
+        *,
+        wallet_id: Optional[str] = None,
+        network: Optional[str] = None,
+    ) -> HealthFactorResponse:
+        """GET /v1/wallet/health-factor -- Get lending health factor."""
+        params: dict[str, Any] = {}
+        if wallet_id is not None:
+            params["wallet_id"] = wallet_id
+        if network is not None:
+            params["network"] = network
+        resp = await self._request("GET", "/v1/wallet/health-factor", params=params or None)
+        return HealthFactorResponse.model_validate(resp.json())
 
     # -----------------------------------------------------------------
     # Wallet Management API

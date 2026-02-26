@@ -537,3 +537,50 @@ class SpendingLimitRules(BaseModel):
     monthly_limit_usd: Optional[float] = Field(
         default=None, description="30d rolling window cumulative USD limit"
     )
+
+
+# ---------------------------------------------------------------------------
+# DeFi Position Models (API-01, API-02, API-05)
+# ---------------------------------------------------------------------------
+
+
+class DeFiPosition(BaseModel):
+    """Single DeFi position."""
+
+    id: str
+    category: str
+    provider: str
+    chain: str
+    network: Optional[str] = None
+    asset_id: Optional[str] = Field(None, alias="assetId")
+    amount: str
+    amount_usd: Optional[float] = Field(None, alias="amountUsd")
+    metadata: Optional[Any] = None
+    status: str
+    opened_at: int = Field(alias="openedAt")
+    last_synced_at: int = Field(alias="lastSyncedAt")
+
+    model_config = {"populate_by_name": True}
+
+
+class DeFiPositionsResponse(BaseModel):
+    """GET /v1/wallet/positions response."""
+
+    wallet_id: str = Field(alias="walletId")
+    positions: list[DeFiPosition]
+    total_value_usd: Optional[float] = Field(None, alias="totalValueUsd")
+
+    model_config = {"populate_by_name": True}
+
+
+class HealthFactorResponse(BaseModel):
+    """GET /v1/wallet/health-factor response."""
+
+    wallet_id: str = Field(alias="walletId")
+    factor: float
+    total_collateral_usd: float = Field(alias="totalCollateralUsd")
+    total_debt_usd: float = Field(alias="totalDebtUsd")
+    current_ltv: float = Field(alias="currentLtv")
+    status: str  # 'safe' | 'warning' | 'danger' | 'critical'
+
+    model_config = {"populate_by_name": True}
