@@ -189,7 +189,11 @@ See `.planning/milestones/v29.0-ROADMAP.md` for full details.
   2. POSITION_CATEGORIES(LENDING/YIELD/PERP/STAKING)와 POSITION_STATUSES(ACTIVE/CLOSED/LIQUIDATED) enum이 core/enums/에 정의되어 import 가능하다
   3. defi_positions 테이블이 DB 마이그레이션으로 생성되고, category/status CHECK 제약 조건이 SSoT enum에서 파생된다
   4. ILendingProvider와 IPositionProvider 인터페이스가 정의되어 있으며, ILendingProvider가 IActionProvider를 확장하여 ActionProviderRegistry에 등록 가능하다
-**Plans**: TBD
+**Plans**: 3 plans (2 waves)
+Plans:
+- [ ] 274-01-PLAN.md -- SSoT DeFi 열거형 + 알림 이벤트 + i18n 템플릿
+- [ ] 274-02-PLAN.md -- defi_positions DB 마이그레이션 + Drizzle 스키마
+- [ ] 274-03-PLAN.md -- ILendingProvider + IPositionProvider 인터페이스
 
 ### Phase 275: Lending Framework Services
 **Goal**: 프로토콜 무관한 포지션 추적, 헬스 팩터 모니터링, Lending 정책 평가 서비스가 동작하여 어떤 Lending Provider든 연결하면 바로 포지션 동기화/경고/정책 제한이 적용되는 상태
@@ -243,7 +247,7 @@ Phases execute in numeric order: 274 -> 275 -> 276 -> 277 -> 278
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 274. SSoT Enums + DB + Interfaces | v29.2 | 0/TBD | Not started | - |
+| 274. SSoT Enums + DB + Interfaces | v29.2 | 0/3 | Planned | - |
 | 275. Lending Framework Services | v29.2 | 0/TBD | Not started | - |
 | 276. Aave V3 Provider | v29.2 | 0/TBD | Not started | - |
 | 277. REST API + MCP + SDK | v29.2 | 0/TBD | Not started | - |
