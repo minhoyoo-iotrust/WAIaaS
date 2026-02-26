@@ -23,7 +23,10 @@
  * 4e. Evaluate APPROVED_SPENDERS: deny APPROVE if no policy or spender not approved
  * 4f. Evaluate APPROVE_AMOUNT_LIMIT: deny APPROVE if unlimited or exceeds max amount
  * 4g. Evaluate APPROVE_TIER_OVERRIDE: force tier for APPROVE (defaults to APPROVAL, skips SPENDING_LIMIT)
+ * 4h. Evaluate LENDING_ASSET_WHITELIST: deny lending action if asset not whitelisted (default-deny)
+ * 4h-b. Evaluate LENDING_LTV_LIMIT: deny borrow if projected LTV exceeds maxLtv
  * 5. Evaluate SPENDING_LIMIT: classify amount into INSTANT/NOTIFY/DELAY/APPROVAL
+ *    (skip for non-spending lending actions: supply/repay/withdraw)
  *
  * TOCTOU Prevention (evaluateAndReserve):
  * Uses BEGIN IMMEDIATE to serialize concurrent policy evaluations.
@@ -90,6 +93,17 @@ interface ApproveAmountLimitRules {
 
 interface ApproveTierOverrideRules {
   tier: string; // PolicyTier value
+}
+
+/** LTV-based borrow restriction rules (Phase 275). */
+interface LendingLtvLimitRules {
+  maxLtv: number;       // e.g., 0.80 (80%)
+  warningLtv: number;   // e.g., 0.70 (70%) — DELAY tier
+}
+
+/** Lending asset whitelist rules (Phase 275). */
+interface LendingAssetWhitelistRules {
+  assets: Array<{ address: string; symbol?: string }>;
 }
 
 /** Threshold for detecting "unlimited" approve amounts. */
@@ -163,6 +177,8 @@ interface TransactionParam {
   tokenDecimals?: number;
   /** Action provider name for provider-trust policy bypass (set by ActionProviderRegistry). */
   actionProvider?: string;
+  /** Action name for lending policy evaluation (supply/borrow/repay/withdraw). Set by ActionProviderRegistry. */
+  actionName?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -287,7 +303,26 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       return approveTierResult; // FINAL result, skips SPENDING_LIMIT (including token_limits)
     }
 
-    // Step 5: Evaluate SPENDING_LIMIT (tier classification)
+    // Step 4h: Evaluate LENDING_ASSET_WHITELIST (default-deny for lending assets)
+    const lendingAssetResult = this.evaluateLendingAssetWhitelist(resolved, transaction);
+    if (lendingAssetResult !== null) {
+      return lendingAssetResult;
+    }
+
+    // Step 4h-b: Evaluate LENDING_LTV_LIMIT (LTV-based borrow restriction)
+    const ltvResult = this.evaluateLendingLtvLimit(resolved, transaction, walletId);
+    if (ltvResult !== null) {
+      return ltvResult;
+    }
+
+    // Step 5: Non-spending classification for lending actions (LEND-08, research flag M6)
+    // supply/repay/withdraw are non-spending — skip SPENDING_LIMIT entirely
+    const NON_SPENDING_ACTIONS = new Set(['supply', 'repay', 'withdraw']);
+    if (transaction.actionName && NON_SPENDING_ACTIONS.has(transaction.actionName)) {
+      return { allowed: true, tier: 'INSTANT' };
+    }
+
+    // Step 5 (continued): Evaluate SPENDING_LIMIT (tier classification)
     // Phase 236: Build tokenContext from transaction for token_limits evaluation
     const spendingPolicy = resolved.find((p) => p.type === 'SPENDING_LIMIT');
     const tokenContext = this.buildTokenContext(transaction, spendingPolicy);
@@ -476,6 +511,12 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       if (amountResult !== null) return amountResult;
     }
 
+    // LENDING_ASSET_WHITELIST applies to lending actions (CONTRACT_CALL with actionName)
+    if (instr.type === 'CONTRACT_CALL') {
+      const lendingAssetResult = this.evaluateLendingAssetWhitelist(resolved, instr);
+      if (lendingAssetResult !== null) return lendingAssetResult;
+    }
+
     return null; // All applicable policies passed
   }
 
@@ -585,7 +626,26 @@ export class DatabasePolicyEngine implements IPolicyEngine {
         return approveTierResult; // FINAL result, skips SPENDING_LIMIT (including token_limits)
       }
 
-      // Step 5: Compute reserved total for SPENDING_LIMIT evaluation
+      // Step 4h: Evaluate LENDING_ASSET_WHITELIST (default-deny for lending assets)
+      const lendingAssetResult = this.evaluateLendingAssetWhitelist(resolved, transaction);
+      if (lendingAssetResult !== null) {
+        return lendingAssetResult;
+      }
+
+      // Step 4h-b: Evaluate LENDING_LTV_LIMIT (LTV-based borrow restriction)
+      const ltvResult = this.evaluateLendingLtvLimit(resolved, transaction, walletId, usdAmount);
+      if (ltvResult !== null) {
+        return ltvResult;
+      }
+
+      // Step 5: Non-spending classification for lending actions (LEND-08, research flag M6)
+      // supply/repay/withdraw are non-spending — skip SPENDING_LIMIT entirely
+      const NON_SPENDING_ACTIONS_R = new Set(['supply', 'repay', 'withdraw']);
+      if (transaction.actionName && NON_SPENDING_ACTIONS_R.has(transaction.actionName)) {
+        return { allowed: true, tier: 'INSTANT' as PolicyTier };
+      }
+
+      // Step 5 (continued): Compute reserved total for SPENDING_LIMIT evaluation
       const spendingPolicy = resolved.find((p) => p.type === 'SPENDING_LIMIT');
       if (spendingPolicy) {
         // Sum of reserved_amount for wallet's PENDING/QUEUED/SIGNED transactions
@@ -1523,5 +1583,131 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       assetId: transaction.assetId,
       policyNetwork: spendingPolicy?.network ?? undefined,
     };
+  }
+
+  // -------------------------------------------------------------------------
+  // Private: LENDING_ASSET_WHITELIST evaluation (Step 4h)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Evaluate LENDING_ASSET_WHITELIST policy.
+   *
+   * Logic:
+   * - Only applies to lending actions (supply/borrow/repay/withdraw)
+   * - If no LENDING_ASSET_WHITELIST policy exists: deny (default-deny per CLAUDE.md)
+   * - If policy exists: check if target contract address is in rules.assets[].address
+   *
+   * Returns PolicyEvaluation if denied, null if allowed (or not applicable).
+   */
+  private evaluateLendingAssetWhitelist(
+    resolved: PolicyRow[],
+    transaction: TransactionParam,
+  ): PolicyEvaluation | null {
+    // Only applies to lending actions
+    const LENDING_ACTIONS = new Set(['supply', 'borrow', 'repay', 'withdraw']);
+    if (!transaction.actionName || !LENDING_ACTIONS.has(transaction.actionName)) {
+      return null;
+    }
+
+    const assetPolicy = resolved.find((p) => p.type === 'LENDING_ASSET_WHITELIST');
+    if (!assetPolicy) {
+      // Default-deny (CLAUDE.md compliance): no whitelist -> deny lending
+      return {
+        allowed: false,
+        tier: 'INSTANT',
+        reason: 'No LENDING_ASSET_WHITELIST policy configured. Lending assets require explicit whitelist.',
+      };
+    }
+
+    const rules = JSON.parse(assetPolicy.rules) as LendingAssetWhitelistRules;
+    const targetAddress = transaction.contractAddress ?? transaction.toAddress;
+    const isWhitelisted = rules.assets.some(
+      (a) => a.address.toLowerCase() === targetAddress.toLowerCase(),
+    );
+
+    if (!isWhitelisted) {
+      return {
+        allowed: false,
+        tier: 'INSTANT',
+        reason: `Asset ${targetAddress} not in lending asset whitelist`,
+      };
+    }
+    return null; // pass through
+  }
+
+  // -------------------------------------------------------------------------
+  // Private: LENDING_LTV_LIMIT evaluation (Step 4h-b)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Evaluate LENDING_LTV_LIMIT policy for borrow actions.
+   *
+   * Logic:
+   * - Only applies to borrow actions
+   * - Reads cached LENDING positions from defi_positions table
+   * - Calculates projected LTV = (currentDebtUsd + newBorrowUsd) / totalCollateralUsd
+   * - Denies if projected LTV > maxLtv
+   * - Returns DELAY tier if projected LTV > warningLtv
+   *
+   * @param usdAmount - USD value of the new borrow (from pipeline IPriceOracle, LEND-09)
+   * Returns PolicyEvaluation if denied/escalated, null if allowed (or not applicable).
+   */
+  private evaluateLendingLtvLimit(
+    resolved: PolicyRow[],
+    transaction: TransactionParam,
+    walletId: string,
+    usdAmount?: number,
+  ): PolicyEvaluation | null {
+    // Only applies to borrow actions
+    if (transaction.actionName !== 'borrow') return null;
+
+    const ltvPolicy = resolved.find((p) => p.type === 'LENDING_LTV_LIMIT');
+    if (!ltvPolicy) return null; // No LTV policy -> pass through
+
+    const rules = JSON.parse(ltvPolicy.rules) as LendingLtvLimitRules;
+
+    // Read cached position data from defi_positions
+    if (!this.sqlite) return null;
+
+    const positions = this.sqlite.prepare(
+      "SELECT amount_usd, metadata, status FROM defi_positions WHERE wallet_id = ? AND category = 'LENDING' AND status = 'ACTIVE'",
+    ).all(walletId) as Array<{ amount_usd: number | null; metadata: string | null; status: string }>;
+
+    // Aggregate collateral and debt from positions
+    let totalCollateralUsd = 0;
+    let totalDebtUsd = 0;
+    for (const pos of positions) {
+      if (!pos.metadata) continue;
+      try {
+        const meta = JSON.parse(pos.metadata) as Record<string, unknown>;
+        const posType = meta.positionType as string | undefined;
+        const usd = pos.amount_usd ?? 0;
+        if (posType === 'SUPPLY') totalCollateralUsd += usd;
+        else if (posType === 'BORROW') totalDebtUsd += usd;
+      } catch { /* ignore parse errors */ }
+    }
+
+    // Calculate projected LTV including new borrow amount (LEND-09)
+    const newBorrowUsd = usdAmount ?? 0;
+
+    const projectedLtv = totalCollateralUsd > 0
+      ? (totalDebtUsd + newBorrowUsd) / totalCollateralUsd
+      : (totalDebtUsd > 0 || newBorrowUsd > 0 ? Infinity : 0);
+
+    if (projectedLtv > rules.maxLtv) {
+      return {
+        allowed: false,
+        tier: 'INSTANT',
+        reason: `Borrow would exceed max LTV (projected: ${(projectedLtv * 100).toFixed(1)}%, limit: ${(rules.maxLtv * 100).toFixed(1)}%)`,
+      };
+    }
+    if (projectedLtv > rules.warningLtv) {
+      return {
+        allowed: true,
+        tier: 'DELAY' as PolicyTier,
+        reason: `LTV approaching limit (projected: ${(projectedLtv * 100).toFixed(1)}%)`,
+      };
+    }
+    return null; // pass through
   }
 }
