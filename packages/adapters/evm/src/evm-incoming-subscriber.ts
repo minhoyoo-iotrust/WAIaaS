@@ -75,6 +75,10 @@ export class EvmIncomingSubscriber implements IChainSubscriber {
   readonly chain: ChainType = 'ethereum';
 
   private client: PublicClient;
+  private currentRpcUrl: string;
+  private resolveRpcUrl: () => string;
+  private reportRpcFailure?: (url: string) => void;
+  private reportRpcSuccess?: (url: string) => void;
   private subscriptions = new Map<string, EvmSubscription>();
   private generateId: () => string;
   private onRpcAlert?: RpcAlertCallback;
@@ -83,8 +87,20 @@ export class EvmIncomingSubscriber implements IChainSubscriber {
   /** Track wallets that already emitted RPC_HEALTH_DEGRADED to avoid spam. */
   private alertedWallets = new Set<string>();
 
-  constructor(config: { rpcUrl: string; wsUrl?: string; generateId?: () => string; onRpcAlert?: RpcAlertCallback }) {
-    this.client = createPublicClient({ transport: http(config.rpcUrl) });
+  constructor(config: {
+    rpcUrl?: string;
+    resolveRpcUrl?: () => string;
+    reportRpcFailure?: (url: string) => void;
+    reportRpcSuccess?: (url: string) => void;
+    wsUrl?: string;
+    generateId?: () => string;
+    onRpcAlert?: RpcAlertCallback;
+  }) {
+    this.resolveRpcUrl = config.resolveRpcUrl ?? (() => config.rpcUrl!);
+    this.reportRpcFailure = config.reportRpcFailure;
+    this.reportRpcSuccess = config.reportRpcSuccess;
+    this.currentRpcUrl = this.resolveRpcUrl();
+    this.client = createPublicClient({ transport: http(this.currentRpcUrl) });
     this.generateId = config.generateId ?? (() => crypto.randomUUID());
     this.onRpcAlert = config.onRpcAlert;
     // wsUrl accepted for future WSS subscription support (#193).
@@ -155,6 +171,10 @@ export class EvmIncomingSubscriber implements IChainSubscriber {
   async pollAll(): Promise<void> {
     // Backoff: skip polling if still within backoff window
     if (Date.now() < this.backoffUntil) return;
+
+    // Dynamic RPC URL re-resolution: switch to next available endpoint (#199)
+    this.refreshClient();
+    const rpcUrl = this.currentRpcUrl;
 
     let hadError = false;
     try {
@@ -260,10 +280,15 @@ export class EvmIncomingSubscriber implements IChainSubscriber {
       if (!hadError) {
         this.errorCount = 0;
         this.backoffUntil = 0;
+        this.reportRpcSuccess?.(rpcUrl);
+      } else {
+        // At least one per-wallet error: report to RPC Pool for cooldown (#199)
+        this.reportRpcFailure?.(rpcUrl);
       }
     } catch (err) {
       // RPC-level error (e.g. getBlockNumber failed — 429/500): apply backoff
       this.errorCount++;
+      this.reportRpcFailure?.(rpcUrl);
       const backoffMs = Math.min(
         BACKOFF_BASE_MS * 2 ** (this.errorCount - 1),
         BACKOFF_MAX_MS,
@@ -279,6 +304,22 @@ export class EvmIncomingSubscriber implements IChainSubscriber {
   }
 
   // -- Private helpers --
+
+  /**
+   * Re-resolve RPC URL from pool and recreate viem client if URL changed (#199).
+   * Called at the start of each pollAll() cycle to pick up cooldown rotations.
+   */
+  private refreshClient(): void {
+    try {
+      const newUrl = this.resolveRpcUrl();
+      if (newUrl !== this.currentRpcUrl) {
+        this.currentRpcUrl = newUrl;
+        this.client = createPublicClient({ transport: http(newUrl) });
+      }
+    } catch {
+      // resolveRpcUrl may throw (e.g., AllRpcFailedError) — keep current client
+    }
+  }
 
   private async pollERC20(
     walletAddress: Address,
