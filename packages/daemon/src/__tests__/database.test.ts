@@ -101,7 +101,8 @@ describe('Schema creation', () => {
     expect(colNames).toContain('suspension_reason');
     expect(colNames).toContain('owner_approval_method');
     expect(colNames).toContain('monitor_incoming');
-    expect(colNames).toHaveLength(15);
+    expect(colNames).toContain('wallet_type');
+    expect(colNames).toHaveLength(16);
   });
 
   it('transactions table should have correct columns including v0.6 and v0.10 additions', () => {
