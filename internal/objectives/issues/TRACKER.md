@@ -215,6 +215,7 @@
 | 198 | MISSING | LOW | Wallet SDK 연동 가이드에 Push Relay 페이로드 커스텀 섹션 누락 | v29.0 | FIXED | 2026-02-26 |
 | 199 | BUG | HIGH | EVM 수신 폴링이 RPC Pool 우회하여 단일 엔드포인트만 사용 | v29.0 | FIXED | 2026-02-26 |
 | 200 | ENHANCEMENT | HIGH | Auto-Provision 모드: 마스터 패스워드 없는 초기 셋업 + set-master 인계 | 미정 | OPEN | |
+| 201 | ENHANCEMENT | MEDIUM | Auto-Provision 문서 동기화: 스킬 파일 + 가이드 + README | 미정 | OPEN | |
 
 ## Type Legend
 
@@ -226,9 +227,9 @@
 
 ## Summary
 
-- **OPEN:** 1
+- **OPEN:** 2
 - **FIXED:** 198
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 200
+- **Total:** 201
