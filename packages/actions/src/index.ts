@@ -13,6 +13,8 @@ import { LidoStakingActionProvider } from './providers/lido-staking/index.js';
 import { getLidoAddresses, type LidoStakingConfig } from './providers/lido-staking/config.js';
 import { JitoStakingActionProvider } from './providers/jito-staking/index.js';
 import { getJitoAddresses, type JitoStakingConfig } from './providers/jito-staking/config.js';
+import { AaveV3LendingProvider } from './providers/aave-v3/index.js';
+import { type AaveV3Config } from './providers/aave-v3/config.js';
 
 // Re-export provider classes
 export { JupiterSwapActionProvider } from './providers/jupiter-swap/index.js';
@@ -38,6 +40,12 @@ export { JitoStakingActionProvider } from './providers/jito-staking/index.js';
 export { JITO_STAKING_DEFAULTS, JITO_MAINNET_ADDRESSES, getJitoAddresses } from './providers/jito-staking/config.js';
 export type { JitoStakingConfig } from './providers/jito-staking/config.js';
 export { JitoEpochTracker } from './providers/jito-staking/epoch-tracker.js';
+
+export { AaveV3LendingProvider } from './providers/aave-v3/index.js';
+export { AAVE_V3_DEFAULTS, AAVE_V3_ADDRESSES, getAaveAddresses, AAVE_CHAIN_ID_MAP } from './providers/aave-v3/config.js';
+export type { AaveV3Config, AaveChainAddresses } from './providers/aave-v3/config.js';
+export type { IRpcCaller, UserAccountData, ReserveData } from './providers/aave-v3/aave-rpc.js';
+export { decodeGetUserAccountData, decodeGetReserveData, simulateHealthFactor, rayToApy, hfToNumber, LIQUIDATION_THRESHOLD_HF, WARNING_THRESHOLD_HF } from './providers/aave-v3/aave-rpc.js';
 
 // Re-export common utilities
 export { ActionApiClient } from './common/action-api-client.js';
@@ -171,6 +179,16 @@ export function registerBuiltInProviders(
           stakePoolProgram: addresses.stakePoolProgram,
         };
         return new JitoStakingActionProvider(config);
+      },
+    },
+    {
+      key: 'aave_v3',
+      enabledKey: 'actions.aave_v3_enabled',
+      factory: () => {
+        const config: AaveV3Config = { enabled: true };
+        // NOTE: rpcCaller injection deferred to Phase 277 (daemon lifecycle).
+        // Provider works without rpcCaller for resolve() -- query methods gracefully degrade.
+        return new AaveV3LendingProvider(config);
       },
     },
   ];
