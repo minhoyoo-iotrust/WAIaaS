@@ -173,7 +173,7 @@ See `.planning/milestones/v29.0-ROADMAP.md` for full details.
 **Milestone Goal:** DeFi Lending 프레임워크(포지션 추적, 헬스 팩터 모니터링, 담보/차입 관리)를 구축하고, Aave V3를 첫 번째 Lending Provider로 구현하여 AI 에이전트가 EVM 체인에서 자산 예치/차입을 정책 평가 하에 실행할 수 있는 상태.
 
 - [x] **Phase 274: SSoT Enums + DB Migration + Core Interfaces** - DeFi 열거형, defi_positions 테이블, ILendingProvider/IPositionProvider 인터페이스 정의
-- [ ] **Phase 275: Lending Framework Services** - PositionTracker, HealthFactorMonitor, LendingPolicyEvaluator 프로토콜 무관 서비스
+- [x] **Phase 275: Lending Framework Services** - PositionTracker, HealthFactorMonitor, LendingPolicyEvaluator 프로토콜 무관 서비스
 - [ ] **Phase 276: Aave V3 Provider Implementation** - supply/borrow/repay/withdraw 4개 액션 resolve + 5체인 주소 매핑
 - [ ] **Phase 277: REST API + MCP + SDK Integration** - 포지션/헬스팩터 API, MCP 5도구, SDK 확장, 정책 엔진 연동
 - [ ] **Phase 278: Admin UI + Settings + E2E** - DeFi 포트폴리오 패널, Aave 설정 4키, 통합 검증
@@ -206,9 +206,9 @@ Plans:
   4. supply/repay 트랜잭션이 SPENDING_LIMIT 누적 카운터에 차감되지 않는다 (비지출 분류)
 **Plans**: 3 plans (2 waves)
 Plans:
-- [ ] 275-01-PLAN.md -- PositionTracker + PositionWriteQueue + IDeFiMonitor + DeFiMonitorService + 데몬 라이프사이클 통합
-- [ ] 275-02-PLAN.md -- HealthFactorMonitor 적응형 폴링 + 청산 경고 알림
-- [ ] 275-03-PLAN.md -- LendingPolicyEvaluator + actionName 확장 + POLICY_TYPES + 비지출 분류
+- [x] 275-01-PLAN.md -- PositionTracker + PositionWriteQueue + IDeFiMonitor + DeFiMonitorService + 데몬 라이프사이클 통합
+- [x] 275-02-PLAN.md -- HealthFactorMonitor 적응형 폴링 + 청산 경고 알림
+- [x] 275-03-PLAN.md -- LendingPolicyEvaluator + actionName 확장 + POLICY_TYPES + 비지출 분류
 
 ### Phase 276: Aave V3 Provider Implementation
 **Goal**: AaveV3LendingProvider가 supply/borrow/repay/withdraw 4개 액션을 ContractCallRequest 배열로 resolve하고, 5개 EVM 체인에서 헬스 팩터/시장 데이터 조회가 가능한 상태
@@ -252,10 +252,10 @@ Phases execute in numeric order: 274 -> 275 -> 276 -> 277 -> 278
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 274. SSoT Enums + DB + Interfaces | v29.2 | 3/3 | **DONE** | 2026-02-27 |
-| 275. Lending Framework Services | 2/3 | In Progress|  | - |
+| 275. Lending Framework Services | v29.2 | 3/3 | **DONE** | 2026-02-27 |
 | 276. Aave V3 Provider | v29.2 | 0/TBD | Not started | - |
 | 277. REST API + MCP + SDK | v29.2 | 0/TBD | Not started | - |
 | 278. Admin UI + Settings + E2E | v29.2 | 0/TBD | Not started | - |
 
 ---
-*Last updated: 2026-02-27 after Phase 274 completion*
+*Last updated: 2026-02-27 after Phase 275 completion*
