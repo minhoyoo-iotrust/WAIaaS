@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.8.0-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.8.0-rc...v2.8.0-rc.1) (2026-02-26)
+
+
+### Features
+
+* add `waiaas notification setup` CLI command ([#195](https://github.com/minhoyoo-iotrust/WAIaaS/issues/195)) ([45c5fc6](https://github.com/minhoyoo-iotrust/WAIaaS/commit/45c5fc68235345cca63e73a7558d7587d8bace24))
+
+
+### Bug Fixes
+
+* **admin:** update RPC endpoint test mocks with builtinUrls field ([8a88136](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8a881360d6acc2dd2fdd5b521c7c8471397c4498))
+* EVM incoming subscriber RPC pool integration + Admin UI API-based builtin URLs ([a2f274d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a2f274d05762413246bbe607ad960871752cac34))
+* resolve issues [#196](https://github.com/minhoyoo-iotrust/WAIaaS/issues/196) [#197](https://github.com/minhoyoo-iotrust/WAIaaS/issues/197) [#198](https://github.com/minhoyoo-iotrust/WAIaaS/issues/198) [#199](https://github.com/minhoyoo-iotrust/WAIaaS/issues/199) — RPC pool bypass, Admin UI sync, docs ([e43ab71](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e43ab714939f33e2c061436084fda20473bcfa15))
+
 ## [2.8.0-rc](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.7.0...v2.8.0-rc) (2026-02-26)
 
 
