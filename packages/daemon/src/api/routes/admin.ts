@@ -605,6 +605,53 @@ const adminWalletStakingRoute = createRoute({
 });
 
 // ---------------------------------------------------------------------------
+// DeFi Positions route definition
+// ---------------------------------------------------------------------------
+
+const adminDefiPositionsRoute = createRoute({
+  method: 'get',
+  path: '/admin/defi/positions',
+  tags: ['Admin'],
+  summary: 'Get all DeFi positions across wallets',
+  description:
+    'Returns all active DeFi positions across all wallets with aggregated totals. ' +
+    'Optionally filter by wallet_id. masterAuth required.',
+  request: {
+    query: z.object({
+      wallet_id: z.string().uuid().optional(),
+    }),
+  },
+  responses: {
+    200: {
+      description: 'Active DeFi positions with aggregates',
+      content: {
+        'application/json': {
+          schema: z.object({
+            positions: z.array(z.object({
+              id: z.string(),
+              walletId: z.string(),
+              category: z.string(),
+              provider: z.string(),
+              chain: z.string(),
+              network: z.string().nullable(),
+              assetId: z.string().nullable(),
+              amount: z.string(),
+              amountUsd: z.number().nullable(),
+              status: z.string(),
+              openedAt: z.number(),
+              lastSyncedAt: z.number(),
+            })),
+            totalValueUsd: z.number().nullable(),
+            worstHealthFactor: z.number().nullable(),
+            activeCount: z.number(),
+          }),
+        },
+      },
+    },
+  },
+});
+
+// ---------------------------------------------------------------------------
 // Telegram Users route definitions
 // ---------------------------------------------------------------------------
 
@@ -2599,6 +2646,85 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
     }
 
     return c.json({ networks, builtinUrls }, 200);
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /admin/defi/positions
+  // ---------------------------------------------------------------------------
+
+  router.openapi(adminDefiPositionsRoute, async (c) => {
+    const { wallet_id } = c.req.valid('query');
+
+    if (!deps.sqlite) {
+      return c.json({ positions: [], totalValueUsd: null, worstHealthFactor: null, activeCount: 0 }, 200);
+    }
+
+    // Cross-wallet DeFi positions query
+    let rows: Array<{
+      id: string; wallet_id: string; category: string; provider: string;
+      chain: string; network: string | null; asset_id: string | null;
+      amount: string; amount_usd: number | null; metadata: string | null;
+      status: string; opened_at: number; last_synced_at: number;
+    }>;
+
+    if (wallet_id) {
+      rows = deps.sqlite.prepare(
+        `SELECT id, wallet_id, category, provider, chain, network, asset_id,
+                amount, amount_usd, metadata, status, opened_at, last_synced_at
+         FROM defi_positions
+         WHERE wallet_id = ? AND status = 'ACTIVE'
+         ORDER BY category, provider`,
+      ).all(wallet_id) as typeof rows;
+    } else {
+      rows = deps.sqlite.prepare(
+        `SELECT id, wallet_id, category, provider, chain, network, asset_id,
+                amount, amount_usd, metadata, status, opened_at, last_synced_at
+         FROM defi_positions
+         WHERE status = 'ACTIVE'
+         ORDER BY category, provider`,
+      ).all() as typeof rows;
+    }
+
+    const positions = rows.map((row) => ({
+      id: row.id,
+      walletId: row.wallet_id,
+      category: row.category,
+      provider: row.provider,
+      chain: row.chain,
+      network: row.network,
+      assetId: row.asset_id,
+      amount: row.amount,
+      amountUsd: row.amount_usd,
+      status: row.status,
+      openedAt: row.opened_at,
+      lastSyncedAt: row.last_synced_at,
+    }));
+
+    // Aggregate totalValueUsd
+    const usdValues = positions.map((p) => p.amountUsd).filter((v): v is number => v !== null);
+    const totalValueUsd = usdValues.length > 0 ? usdValues.reduce((a, b) => a + b, 0) : null;
+
+    // Worst health factor from metadata JSON
+    let worstHealthFactor: number | null = null;
+    for (const row of rows) {
+      if (row.category === 'LENDING' && row.metadata) {
+        try {
+          const meta = JSON.parse(row.metadata) as Record<string, unknown>;
+          if (typeof meta.healthFactor === 'number' && meta.healthFactor > 0) {
+            if (worstHealthFactor === null || meta.healthFactor < worstHealthFactor) {
+              worstHealthFactor = meta.healthFactor;
+            }
+          }
+        } catch { /* skip */ }
+      }
+    }
+
+    return c.json({
+      positions,
+      totalValueUsd,
+      worstHealthFactor,
+      activeCount: positions.length,
+    }, 200);
   });
 
   return router;
