@@ -362,7 +362,10 @@ Plans:
   3. LendingPolicyEvaluator가 최대 LTV 제한과 허용 담보/차입 자산 화이트리스트 정책을 정의하며, 기존 PolicyEngine과의 통합 지점이 명확하다
   4. REST API GET /v1/wallets/:id/positions, GET /v1/wallets/:id/health-factor 엔드포인트가 요청/응답 스키마와 함께 명세된다
   5. Aave V3, Kamino, Morpho 3개 프로토콜의 인터페이스 매핑(ABI/REST 호출과 ILendingProvider 메서드 대응)이 정의된다
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 270-01-PLAN.md -- ILendingProvider 인터페이스 + LendingPosition/HealthFactor/MarketInfo 타입 + LendingPolicyEvaluator 설계 (섹션 13-15)
+- [ ] 270-02-PLAN.md -- REST API health-factor 엔드포인트 + Aave V3/Kamino/Morpho 프로토콜 매핑 (섹션 16-17)
 
 ### Phase 271: Yield 프레임워크 설계
 **Goal**: IYieldProvider 인터페이스와 만기 관리 체계가 확정되어, Pendle 구현이 프레임워크 수정 없이 Provider만 추가하면 동작한다
@@ -406,7 +409,7 @@ Phases execute in numeric order: 268 -> 269 -> 270 -> 271 -> 272 -> 273
 |-------|-----------|----------------|--------|-----------|
 | 268. 포지션 인프라 설계 | 2/2 | Complete    | 2026-02-26 | - |
 | 269. DeFi 모니터링 프레임워크 설계 | 2/2 | Complete    | 2026-02-26 | - |
-| 270. Lending 프레임워크 설계 | v29.0 | 0/TBD | Not started | - |
+| 270. Lending 프레임워크 설계 | v29.0 | 0/2 | Planned | - |
 | 271. Yield 프레임워크 설계 | v29.0 | 0/TBD | Not started | - |
 | 272. Perp 프레임워크 설계 | v29.0 | 0/TBD | Not started | - |
 | 273. Intent 서명 패턴 설계 | v29.0 | 0/TBD | Not started | - |
