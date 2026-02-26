@@ -235,7 +235,11 @@ Plans:
   2. GET /v1/wallets/:id/health-factor 엔드포인트가 raw bigint + decimal 형식의 헬스 팩터와 SAFE/WARNING/DANGER/CRITICAL 분류를 반환한다
   3. MCP 도구 5개(aave_supply/borrow/repay/withdraw/positions)가 자동 등록되어 MCP 클라이언트에서 호출 가능하다
   4. TS/Python SDK에서 executeAction('aave_supply', params) 호출로 Lending 액션을 실행하고, getPositions()/getHealthFactor() 편의 메서드가 동작한다
-**Plans**: TBD
+**Plans**: 3 plans (2 waves)
+Plans:
+- [ ] 277-01-PLAN.md -- REST API 엔드포인트 (positions, health-factor) + IRpcCaller 주입 + 테스트
+- [ ] 277-02-PLAN.md -- MCP 도구 2개 + TS/Python SDK 편의 메서드 + 테스트
+- [ ] 277-03-PLAN.md -- Skill 파일 업데이트 (wallet.skill.md, actions.skill.md)
 
 ### Phase 278: Admin UI + Settings + E2E
 **Goal**: 운영자가 Admin UI에서 DeFi 포지션 현황을 한눈에 파악하고, Aave V3 관련 설정을 조정할 수 있으며, 전체 Lending 플로우가 E2E로 검증된 상태
@@ -258,8 +262,8 @@ Phases execute in numeric order: 274 -> 275 -> 276 -> 277 -> 278
 | 274. SSoT Enums + DB + Interfaces | v29.2 | 3/3 | **DONE** | 2026-02-27 |
 | 275. Lending Framework Services | v29.2 | 3/3 | **DONE** | 2026-02-27 |
 | 276. Aave V3 Provider | 3/3 | Complete    | 2026-02-26 | - |
-| 277. REST API + MCP + SDK | v29.2 | 0/TBD | Not started | - |
+| 277. REST API + MCP + SDK | v29.2 | 0/3 | **PLANNED** | - |
 | 278. Admin UI + Settings + E2E | v29.2 | 0/TBD | Not started | - |
 
 ---
-*Last updated: 2026-02-27 after Phase 275 completion*
+*Last updated: 2026-02-27 after Phase 277 planning*
