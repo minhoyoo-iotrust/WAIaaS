@@ -3065,6 +3065,379 @@ healthFactor_aggregated = Math.min(...marketsWithPositions.map(m => m.healthFact
 
 ---
 
+## 18. IYieldProvider 인터페이스
+
+### 18.1 인터페이스 정의
+
+IYieldProvider는 IActionProvider를 확장하여 yield-specific 쿼리 메서드 3개를 추가한다. 기존 IActionProvider의 `metadata`, `actions`, `resolve()` 를 상속하며, yield 시장 탐색/포지션 조회/수익률 예측을 위한 메서드를 정의한다. Phase 270 섹션 13.1의 ILendingProvider 패턴을 정확히 미러링한다.
+
+**파일:** `packages/core/src/interfaces/yield-provider.types.ts`
+**Re-export:** `packages/core/src/interfaces/index.ts`
+
+```typescript
+import type { IActionProvider, ActionContext } from './action-provider.types.js';
+
+export interface IYieldProvider extends IActionProvider {
+  /** 사용 가능한 yield 시장 목록 (시장별 APY, TVL, 만기 등) */
+  getMarkets(chain: string, network?: string): Promise<YieldMarketInfo[]>;
+
+  /** 지갑의 현재 yield 포지션 조회 (PT/YT/LP 포지션 상세) */
+  getPosition(walletId: string, context: ActionContext): Promise<YieldPositionSummary[]>;
+
+  /** 시장의 수익률 데이터 조회 (현재 implied/underlying/fixed APY, PT/YT 가격) */
+  getYieldForecast(marketId: string, context: ActionContext): Promise<YieldForecast>;
+}
+```
+
+**쿼리 메서드 3개:**
+
+| 메서드 | 반환 타입 | 용도 |
+|--------|-----------|------|
+| `getMarkets(chain, network?)` | `YieldMarketInfo[]` | AI 에이전트가 사용 가능한 yield 시장 탐색 (APY, 만기, TVL) |
+| `getPosition(walletId, context)` | `YieldPositionSummary[]` | 지갑의 현재 PT/YT/LP 포지션 상세 (만기 정보 포함) |
+| `getYieldForecast(marketId, context)` | `YieldForecast` | 시장의 현재 수익률 데이터 (현재 시장 데이터 기반 단순 조회, 예측 모델 아님) |
+
+### 18.2 ActionDefinition 5개
+
+IYieldProvider는 5개의 표준 yield 액션을 정의한다. 각 액션의 입력 스키마와 위험 수준, 기본 승인 티어를 명세한다.
+
+| 액션 | 입력 스키마 | risk | defaultTier | 설명 |
+|------|-------------|------|-------------|------|
+| `buy_pt` | `{ marketId: string, amount: string, slippage?: number }` | medium | DELAY | Principal Token 매수 (고정 수익률 확보) |
+| `buy_yt` | `{ marketId: string, amount: string, slippage?: number }` | high | DELAY | Yield Token 매수 (변동 수익률 레버리지, 만기 시 가치 0) |
+| `redeem_pt` | `{ marketId: string, amount: string }` | low | AUTO | PT 상환 (만기 후 원금 회수). pre/post-maturity 자동 감지 |
+| `add_liquidity` | `{ marketId: string, amount: string, slippage?: number }` | medium | DELAY | AMM 유동성 공급 (LP 토큰 수령) |
+| `remove_liquidity` | `{ marketId: string, amount: string, slippage?: number }` | low | AUTO | LP 제거 (유동성 회수) |
+
+**입력 스키마 상세:**
+
+```typescript
+// Zod SSoT: YieldActionInputSchemas
+
+const BuyPTInputSchema = z.object({
+  marketId: z.string().describe('Yield market identifier (e.g., Pendle market address)'),
+  amount: z.string().describe('Human-readable amount of underlying asset to spend (e.g., "100.5")'),
+  slippage: z.number().min(0).max(1).default(0.01)
+    .describe('Max slippage tolerance (decimal, e.g., 0.01 = 1%)'),
+});
+
+const BuyYTInputSchema = z.object({
+  marketId: z.string().describe('Yield market identifier'),
+  amount: z.string().describe('Human-readable amount of underlying asset to spend'),
+  slippage: z.number().min(0).max(1).default(0.01)
+    .describe('Max slippage tolerance'),
+});
+
+const RedeemPTInputSchema = z.object({
+  marketId: z.string().describe('Yield market identifier'),
+  amount: z.string().describe('Human-readable amount of PT to redeem (or "MAX" for full redeem)'),
+});
+
+const AddLiquidityInputSchema = z.object({
+  marketId: z.string().describe('Yield market identifier'),
+  amount: z.string().describe('Human-readable amount of underlying asset to provide'),
+  slippage: z.number().min(0).max(1).default(0.01)
+    .describe('Max slippage tolerance'),
+});
+
+const RemoveLiquidityInputSchema = z.object({
+  marketId: z.string().describe('Yield market identifier'),
+  amount: z.string().describe('Human-readable amount of LP tokens to remove (or "MAX" for full removal)'),
+  slippage: z.number().min(0).max(1).default(0.01)
+    .describe('Max slippage tolerance'),
+});
+```
+
+**resolve() 반환 타입:**
+- `resolve()` → `ContractCallRequest | ContractCallRequest[]`
+- 단일 트랜잭션: redeem_pt (post-maturity), remove_liquidity
+- 멀티 트랜잭션: buy_pt (approve + swap), buy_yt (approve + swap), add_liquidity (approve + addLiquidity)
+- ERC-20 approve가 필요한 경우 LidoStaking/AaveV3의 approve + action 패턴과 동일
+
+**모든 액션의 chain은 프로바이더별로 설정:**
+- Pendle V2: `chain: 'evm'` (Ethereum, Arbitrum, Optimism 등 EVM 체인)
+
+**redeemPT pre/post-maturity 자동 감지:**
+- resolve('redeem_pt')는 내부적으로 현재 시점과 maturity epoch을 비교
+- **post-maturity (만기 후):** PT만으로 underlying 상환 가능 → 단일 트랜잭션
+- **pre-maturity (만기 전):** PT + YT를 함께 상환해야 함 → YT 잔액 확인 후 라우팅
+- AI 에이전트는 단일 `redeem_pt` 액션만 호출하면 됨 (내부 복잡성 추상화)
+
+### 18.3 IPositionProvider 동시 구현 패턴
+
+각 yield 프로바이더 클래스는 `IYieldProvider`와 `IPositionProvider` (Phase 268)를 동시에 구현한다. 두 인터페이스는 동일한 API 호출을 공유하지만 반환 타입이 목적에 따라 다르다. Phase 270 섹션 13.3의 AaveV3Provider 패턴을 정확히 미러링한다.
+
+| 인터페이스 | 메서드 | 반환 타입 | 용도 |
+|-----------|--------|-----------|------|
+| `IPositionProvider` | `getPositions(walletId)` | `PositionUpdate[]` | PositionTracker 쓰기 큐 (defi_positions 테이블 갱신) |
+| `IYieldProvider` | `getPosition(walletId, context)` | `YieldPositionSummary[]` | REST API / AI 에이전트 응답 (상세 정보 + human-readable 필드) |
+
+**구현 패턴 예시:**
+
+```typescript
+class PendleProvider implements IYieldProvider, IPositionProvider {
+  // IActionProvider (IYieldProvider 경유 상속)
+  readonly metadata: ActionProviderMetadata = {
+    name: 'pendle',
+    displayName: 'Pendle V2',
+    description: 'Yield tokenization protocol — buy/sell fixed and variable yield',
+    chains: ['evm'],
+    networks: ['ethereum', 'arbitrum', 'optimism'],
+    category: 'yield',
+  };
+  readonly actions: readonly ActionDefinition[] = [
+    { name: 'buy_pt', inputSchema: BuyPTInputSchema, riskLevel: 'medium', defaultTier: 'DELAY', chain: 'evm',
+      description: 'Buy Principal Token (PT) for a yield market. Fixed yield until maturity.' },
+    { name: 'buy_yt', inputSchema: BuyYTInputSchema, riskLevel: 'high', defaultTier: 'DELAY', chain: 'evm',
+      description: 'Buy Yield Token (YT) for leveraged variable yield exposure. Value approaches 0 at maturity.' },
+    { name: 'redeem_pt', inputSchema: RedeemPTInputSchema, riskLevel: 'low', defaultTier: 'AUTO', chain: 'evm',
+      description: 'Redeem PT for underlying asset. Auto-detects pre/post-maturity routing.' },
+    { name: 'add_liquidity', inputSchema: AddLiquidityInputSchema, riskLevel: 'medium', defaultTier: 'DELAY', chain: 'evm',
+      description: 'Add liquidity to yield market AMM pool.' },
+    { name: 'remove_liquidity', inputSchema: RemoveLiquidityInputSchema, riskLevel: 'low', defaultTier: 'AUTO', chain: 'evm',
+      description: 'Remove liquidity from yield market AMM pool.' },
+  ];
+  async resolve(actionName: string, params: unknown, context: ActionContext): Promise<ContractCallRequest | ContractCallRequest[]> { ... }
+
+  // IYieldProvider 쿼리 메서드
+  async getMarkets(chain: string, network?: string): Promise<YieldMarketInfo[]> { ... }
+  async getPosition(walletId: string, context: ActionContext): Promise<YieldPositionSummary[]> { ... }
+  async getYieldForecast(marketId: string, context: ActionContext): Promise<YieldForecast> { ... }
+
+  // IPositionProvider (PositionTracker 연동)
+  async getPositions(walletId: string): Promise<PositionUpdate[]> { ... }
+  getProviderName(): string { return 'pendle'; }
+  getSupportedCategories(): PositionCategory[] { return ['YIELD']; }
+}
+```
+
+**동일 API 호출, 다른 반환 타입:**
+- Pendle Backend API `GET /v1/{chainId}/dashboard/positions/database/{userAddress}` → `PositionUpdate[]` (PositionTracker용) + `YieldPositionSummary[]` (API용)
+- 내부적으로 공유 메서드(`_fetchRawPositions()`)가 API 결과를 캐시하고, 각 인터페이스 메서드가 필요한 형태로 변환
+
+### 18.4 설계 결정
+
+| ID | 결정 | 선택 | 근거 |
+|----|------|------|------|
+| DEC-YIELD-01 | IYieldProvider 상속 구조 | IActionProvider를 extends (별도 인터페이스 아님) | ILendingProvider (DEC-LEND-01) 동일 패턴. resolve()를 같은 클래스에 유지하여 6-stage pipeline에 자연스럽게 통합 |
+| DEC-YIELD-02 | 쿼리 메서드 배치 | IYieldProvider에 직접 3개 쿼리 메서드 추가 | ILendingProvider (DEC-LEND-02) 동일 패턴. 별도 서비스 간접 참조 회피, 프로바이더가 자체 데이터를 가장 잘 알고 있음 |
+| DEC-YIELD-03 | redeemPT 액션 통합 | 단일 redeem_pt 액션이 pre/post-maturity 모두 처리 | AI 에이전트 인터페이스 단순화. 6개가 아닌 5개 액션 유지. 내부적으로 maturity 시점 감지 후 자동 라우팅 (post: PT only, pre: PT+YT) |
+| DEC-YIELD-04 | buy_yt riskLevel | high (다른 액션은 medium 또는 low) | YT는 만기 시 가치 0으로 수렴하는 레버리지 포지션. 원금 손실 위험이 PT/LP보다 본질적으로 높음. DELAY 티어이지만 risk 분류는 high |
+
+---
+
+## 19. YieldPosition + MaturityInfo 타입
+
+### 19.1 YieldPositionSummary Zod 스키마
+
+Phase 268의 `YieldMetadataSchema` (defi_positions.metadata JSON 컬럼용)를 확장하여 API 응답용 상세 포지션 타입을 정의한다. Phase 270 섹션 14.1의 LendingPositionSummarySchema 패턴을 미러링한다. YieldPositionSummary는 DB의 YieldMetadata에 human-readable 필드(marketName, underlyingAsset 식별자, maturityInfo 구조체)를 추가한 superset이다.
+
+**파일:** `packages/core/src/schemas/yield.schema.ts`
+
+```typescript
+// Zod SSoT: API 응답용 YieldPositionSummary
+export const YieldPositionSummarySchema = z.object({
+  positionId: z.string().describe('Unique position identifier (UUID v7)'),
+  provider: z.string().describe('Provider name (e.g., "pendle")'),
+  chain: z.string().describe('Chain type (e.g., "evm")'),
+  network: z.string().describe('Network name (e.g., "ethereum", "arbitrum")'),
+  tokenType: z.enum(['PT', 'YT', 'LP']).describe('Yield token type'),
+  marketId: z.string().describe('Market identifier (e.g., Pendle market address)'),
+  marketName: z.string().describe('Human-readable market name (e.g., "PT stETH 27MAR2025")'),
+  underlyingAsset: z.string().describe('CAIP-19 identifier of the underlying asset'),
+  amount: z.string().describe('Token amount as string (bigint serialization)'),
+  amountUsd: z.number().nullable().describe('USD value at current price'),
+  maturity: z.number().int().describe('Maturity epoch timestamp (seconds)'),
+  maturityInfo: z.lazy(() => MaturityInfoSchema).describe('Computed maturity status'),
+  apy: z.number().nullable().describe('Current implied APY (decimal, e.g., 0.05 = 5%)'),
+  entryPrice: z.number().nullable().describe('Price at position entry (in underlying terms)'),
+  status: z.enum(['ACTIVE', 'CLOSED', 'MATURED']).describe('Position lifecycle status'),
+  updatedAt: z.number().describe('Last update epoch timestamp (seconds)'),
+});
+
+export type YieldPositionSummary = z.infer<typeof YieldPositionSummarySchema>;
+```
+
+**필드 명세:**
+
+| 필드 | 타입 | 출처 | 설명 |
+|------|------|------|------|
+| `positionId` | string | defi_positions.id | 고유 포지션 ID |
+| `provider` | string | defi_positions.provider | 프로바이더 이름 |
+| `chain` | string | defi_positions.chain | 체인 타입 |
+| `network` | string | defi_positions.network | 네트워크 이름 |
+| `tokenType` | 'PT' \| 'YT' \| 'LP' | metadata.tokenType | DB YieldMetadata에서 직접 |
+| `marketId` | string | metadata.marketId | DB YieldMetadata에서 직접 |
+| `marketName` | string | **API 조회 시 추가** | human-readable (Pendle API 시장 정보) |
+| `underlyingAsset` | string (CAIP-19) | **API 조회 시 추가** | 기초 자산 식별자 |
+| `amount` | string | defi_positions.amount | raw units (bigint → string) |
+| `amountUsd` | number \| null | **가격 서비스 조회** | 현재 가격 기준 USD 환산 |
+| `maturity` | number (epoch sec) | metadata.maturity | DB YieldMetadata에서 직접 |
+| `maturityInfo` | MaturityInfo | **런타임 계산** | 현재 시점 기준 만기 상태 |
+| `apy` | number \| null | metadata.apy | 현재 implied APY |
+| `entryPrice` | number \| null | metadata.entryPrice | 진입 시점 가격 |
+| `status` | enum | defi_positions.status | 포지션 상태 |
+| `updatedAt` | number (epoch sec) | defi_positions.updated_at | 마지막 갱신 시점 |
+
+**DB YieldMetadataSchema (Phase 268 섹션 5.3)와의 매핑 관계:**
+
+| DB (YieldMetadataSchema) | API (YieldPositionSummary) | 매핑 |
+|---|---|---|
+| tokenType | tokenType | 직접 복사 |
+| marketId | marketId | 직접 복사 |
+| maturity | maturity | 직접 복사 |
+| apy | apy | 직접 복사 |
+| entryPrice | entryPrice | 직접 복사 |
+| (없음) | marketName | Pendle API 시장 정보에서 조회 |
+| (없음) | underlyingAsset | Pendle API 시장 정보에서 조회 (CAIP-19 형식 변환) |
+| (없음) | maturityInfo | 현재 시점 기준 런타임 계산 (MaturityInfoSchema 사용) |
+| (없음) | amountUsd | PriceOracleService 사용 |
+
+### 19.2 MaturityInfo 타입
+
+yield 포지션의 만기 상태를 표현하는 타입. 만기일, 잔여 일수, 상환 가능 여부, 만기 경과 여부, 경고 수준을 캡슐화한다. Phase 269 섹션 10.2의 MaturityMonitor 3-tier severity와 1:1 매핑을 유지한다.
+
+```typescript
+export const MaturityInfoSchema = z.object({
+  maturityEpoch: z.number().int()
+    .describe('Maturity timestamp (epoch seconds)'),
+  daysRemaining: z.number().int()
+    .describe('Days until maturity (negative = past maturity)'),
+  isRedeemable: z.boolean()
+    .describe('true = post-maturity, PT-only redemption available'),
+  isExpired: z.boolean()
+    .describe('true = maturity date has passed'),
+  warningLevel: z.enum(['NONE', 'WARNING_7D', 'WARNING_1D', 'EXPIRED_UNREDEEMED']).nullable()
+    .describe('Maturity warning level, maps to MaturityMonitor severity'),
+});
+
+export type MaturityInfo = z.infer<typeof MaturityInfoSchema>;
+```
+
+**MaturityInfo 계산 로직 (런타임):**
+
+```typescript
+function computeMaturityInfo(maturityEpoch: number): MaturityInfo {
+  const nowSec = Math.floor(Date.now() / 1000);
+  const diffSec = maturityEpoch - nowSec;
+  const daysRemaining = Math.floor(diffSec / 86_400);
+  const isExpired = diffSec <= 0;
+  const isRedeemable = isExpired; // post-maturity: PT-only redemption
+
+  let warningLevel: MaturityInfo['warningLevel'] = 'NONE';
+  if (isExpired) {
+    warningLevel = 'EXPIRED_UNREDEEMED'; // CRITICAL in MaturityMonitor
+  } else if (daysRemaining <= 1) {
+    warningLevel = 'WARNING_1D';          // DANGER in MaturityMonitor
+  } else if (daysRemaining <= 7) {
+    warningLevel = 'WARNING_7D';          // WARNING in MaturityMonitor
+  }
+
+  return { maturityEpoch, daysRemaining, isRedeemable, isExpired, warningLevel };
+}
+```
+
+**Phase 269 MaturityMonitor severity와의 매핑:**
+
+| MaturityInfo.warningLevel | MaturityMonitor severity | 조건 | 알림 이벤트 |
+|---|---|---|---|
+| `NONE` | (평가 생략) | daysRemaining > 7 | 없음 |
+| `WARNING_7D` | WARNING | 1 < daysRemaining <= 7 | MATURITY_WARNING (일반, 쿨다운 적용) |
+| `WARNING_1D` | DANGER | 0 < daysRemaining <= 1 | MATURITY_WARNING (일반, 쿨다운 적용) |
+| `EXPIRED_UNREDEEMED` | CRITICAL | daysRemaining <= 0 && status='ACTIVE' | MATURITY_WARNING (BROADCAST, 쿨다운 없음) |
+
+**pre-maturity vs post-maturity 상환 차이:**
+
+| 상태 | isRedeemable | 상환 방법 | resolve('redeem_pt') 동작 |
+|------|-------------|-----------|---------------------------|
+| pre-maturity (만기 전) | false | PT + YT를 함께 burn → underlying | YT 잔액 확인 → 부족 시 에러, 충분 시 redeemPyToToken 호출 |
+| post-maturity (만기 후) | true | PT만 burn → underlying | PT만으로 redeemPyToToken 호출 (YT 불필요) |
+
+### 19.3 YieldMarketInfo 타입
+
+AI 에이전트가 사용 가능한 yield 시장을 탐색할 때 사용하는 타입. IYieldProvider.getMarkets() 반환 타입. 시장별 APY, 만기, TVL 정보를 제공한다.
+
+```typescript
+export const YieldMarketInfoSchema = z.object({
+  marketId: z.string().describe('Protocol-specific market identifier'),
+  name: z.string().describe('Human-readable market name (e.g., "PT stETH 27MAR2025")'),
+  chain: z.string().describe('Chain type (e.g., "evm")'),
+  network: z.string().describe('Network name (e.g., "ethereum")'),
+  underlyingAsset: z.string().describe('CAIP-19 identifier of the underlying asset'),
+  ptAddress: z.string().describe('Principal Token contract address'),
+  ytAddress: z.string().describe('Yield Token contract address'),
+  syAddress: z.string().describe('Standardized Yield (SY) token contract address'),
+  maturity: z.number().int().describe('Maturity epoch timestamp (seconds)'),
+  impliedApy: z.number().describe('Implied APY from PT price (fixed yield, decimal)'),
+  underlyingApy: z.number().describe('Underlying asset base APY (variable yield, decimal)'),
+  liquidity: z.string().describe('Total Value Locked in underlying asset units'),
+  liquidityUsd: z.number().nullable().describe('TVL in USD'),
+});
+
+export type YieldMarketInfo = z.infer<typeof YieldMarketInfoSchema>;
+```
+
+**필드 설명:**
+
+| 필드 | 설명 | AI 에이전트 활용 |
+|------|------|-----------------|
+| `marketId` | 시장 식별자 (Pendle market address) | buy_pt/buy_yt 등 액션의 marketId 파라미터로 전달 |
+| `name` | 사람이 읽을 수 있는 시장명 | 대화에서 사용자에게 제시 |
+| `underlyingAsset` | 기초 자산 CAIP-19 | 사용자가 어떤 자산의 yield인지 이해 |
+| `ptAddress` / `ytAddress` / `syAddress` | 토큰 주소들 | 고급 사용 시 직접 참조 가능 |
+| `maturity` | 만기 에포크 | 만기까지 남은 기간 표시 |
+| `impliedApy` | PT 매수 시 고정 수익률 | 에이전트가 수익률 비교 판단 |
+| `underlyingApy` | 기초 자산의 기본 수익률 | implied vs underlying 비교로 yield premium 계산 |
+| `liquidity` / `liquidityUsd` | 유동성 | 슬리피지 위험 판단 |
+
+### 19.4 YieldForecast 타입
+
+IYieldProvider.getYieldForecast() 반환 타입. 특정 yield 시장의 현재 수익률 데이터를 제공한다. **중요: 이름은 "forecast"이지만 예측 모델이 아닌 현재 시장 데이터 기반 단순 조회이다** (Pendle API market data 직접 반환).
+
+```typescript
+export const YieldForecastSchema = z.object({
+  marketId: z.string().describe('Market identifier'),
+  impliedApy: z.number().describe('PT implied APY — fixed yield if buying PT now (decimal)'),
+  underlyingApy: z.number().describe('Underlying asset current variable APY (decimal)'),
+  fixedApy: z.number().describe('Fixed APY for PT holders until maturity (= impliedApy)'),
+  longYieldApy: z.number().nullable()
+    .describe('Expected YT yield (leveraged, may be null if unavailable)'),
+  daysToMaturity: z.number().int().describe('Days until market maturity'),
+  ptPriceInUnderlying: z.number().describe('1 PT = X underlying (discount to par)'),
+  ytPriceInUnderlying: z.number().describe('1 YT = X underlying'),
+});
+
+export type YieldForecast = z.infer<typeof YieldForecastSchema>;
+```
+
+**필드 설명:**
+
+| 필드 | 설명 | AI 에이전트 활용 |
+|------|------|-----------------|
+| `impliedApy` | PT 매수 시 고정 수익률 | "이 시장에서 고정 5% 수익을 받을 수 있어" |
+| `underlyingApy` | 기초 자산의 현재 변동 수익률 | "stETH의 기본 수익률은 3.2%" |
+| `fixedApy` | PT 보유 시 만기까지 확정 수익률 (= impliedApy) | impliedApy와 동일, 명시적 명명 |
+| `longYieldApy` | YT 보유 시 기대 수익률 (레버리지) | "YT로 변동 수익률에 레버리지 노출" |
+| `daysToMaturity` | 만기까지 남은 일수 | 투자 기간 판단 |
+| `ptPriceInUnderlying` | PT 가격 (underlying 기준) | PT 디스카운트 = 1 - ptPrice (수익률 원천) |
+| `ytPriceInUnderlying` | YT 가격 (underlying 기준) | YT 비용 대비 수익 기대값 판단 |
+
+**getYieldForecast()는 예측이 아닌 현재 데이터 조회:**
+- Pendle API `GET /core/v2/{chainId}/markets/{marketAddress}/data` 응답을 직접 매핑
+- 복잡한 수익 곡선 예측이나 Monte Carlo 시뮬레이션 없음
+- AI 에이전트가 현재 시장 상황을 이해하고 판단하는 데 필요한 최소 데이터
+
+### 19.5 설계 결정
+
+| ID | 결정 | 선택 | 근거 |
+|----|------|------|------|
+| DEC-YIELD-05 | YieldPositionSummary와 DB 관계 | YieldMetadataSchema (Phase 268)의 superset — API 응답에 human-readable 필드 추가 | DB 스키마 변경 없이 API 응답을 풍부하게. LendingPositionSummary (DEC-LEND-06) 동일 패턴. amount는 string 타입 |
+| DEC-YIELD-06 | MaturityInfo.warningLevel 매핑 | MaturityMonitor severity와 1:1 매핑 (NONE=SAFE, WARNING_7D=WARNING, WARNING_1D=DANGER, EXPIRED_UNREDEEMED=CRITICAL) | 일관된 경고 분류. 모니터링(Phase 269)과 API 응답이 동일한 분류 체계를 사용하여 AI 에이전트 혼란 방지 |
+| DEC-YIELD-07 | YieldForecast 데이터 모델 | 현재 시장 데이터 기반 단순 조회 (예측 모델 아님) | Pendle API market data 직접 반환. 복잡한 통계 모델 불필요. AI 에이전트가 판단하는 데 필요한 최소 데이터만 제공 |
+| DEC-YIELD-08 | 자산 식별자 형식 | 모든 asset 식별자는 CAIP-19 형식 | Phase 232 CAIP-19 통합 + DEC-LEND-07과 일관성 유지. 멀티체인 환경에서 자산 모호성 제거 |
+
+---
+
 ## 신규 산출물
 
 | ID | 산출물 | 설명 |
