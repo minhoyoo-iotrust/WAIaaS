@@ -971,9 +971,20 @@ export class DaemonLifecycle {
     try {
       const { DeFiMonitorService } = await import('../services/monitoring/defi-monitor-service.js');
       this.defiMonitorService = new DeFiMonitorService();
-      // Monitors will be registered by providers in Plan 275-02 (HealthFactorMonitor)
-      // Start is deferred until monitors are registered.
-      console.debug('Step 4c-11: DeFi monitor service initialized');
+
+      // Register HealthFactorMonitor
+      if (this.sqlite) {
+        const { HealthFactorMonitor } = await import('../services/monitoring/health-factor-monitor.js');
+        const healthMonitor = new HealthFactorMonitor({
+          sqlite: this.sqlite,
+          notificationService: this.notificationService ?? undefined,
+          positionTracker: this.positionTracker ?? undefined,
+        });
+        this.defiMonitorService.register(healthMonitor);
+      }
+
+      this.defiMonitorService.start();
+      console.debug('Step 4c-11: DeFi monitor service started with', this.defiMonitorService.monitorCount, 'monitors');
     } catch (err) {
       console.warn('Step 4c-11 (fail-soft): DeFi monitor service init warning:', err);
       this.defiMonitorService = null;
