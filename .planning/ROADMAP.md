@@ -204,7 +204,11 @@ Plans:
   2. HealthFactorMonitor가 DB 캐시에서 HF < 1.2인 포지션을 감지하면 LIQUIDATION_WARNING 알림을 발송하고, HF < 1.5일 때 폴링 주기가 5분에서 1분으로 단축된다
   3. LendingPolicyEvaluator가 max_ltv_pct 정책을 평가하여 LTV 초과 차입 요청을 거부하고, USD 기준 차입 한도를 적용한다
   4. supply/repay 트랜잭션이 SPENDING_LIMIT 누적 카운터에 차감되지 않는다 (비지출 분류)
-**Plans**: TBD
+**Plans**: 3 plans (2 waves)
+Plans:
+- [ ] 275-01-PLAN.md -- PositionTracker + PositionWriteQueue + IDeFiMonitor + DeFiMonitorService + 데몬 라이프사이클 통합
+- [ ] 275-02-PLAN.md -- HealthFactorMonitor 적응형 폴링 + 청산 경고 알림
+- [ ] 275-03-PLAN.md -- LendingPolicyEvaluator + actionName 확장 + POLICY_TYPES + 비지출 분류
 
 ### Phase 276: Aave V3 Provider Implementation
 **Goal**: AaveV3LendingProvider가 supply/borrow/repay/withdraw 4개 액션을 ContractCallRequest 배열로 resolve하고, 5개 EVM 체인에서 헬스 팩터/시장 데이터 조회가 가능한 상태
@@ -248,7 +252,7 @@ Phases execute in numeric order: 274 -> 275 -> 276 -> 277 -> 278
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 274. SSoT Enums + DB + Interfaces | v29.2 | 3/3 | **DONE** | 2026-02-27 |
-| 275. Lending Framework Services | v29.2 | 0/TBD | Not started | - |
+| 275. Lending Framework Services | 1/3 | In Progress|  | - |
 | 276. Aave V3 Provider | v29.2 | 0/TBD | Not started | - |
 | 277. REST API + MCP + SDK | v29.2 | 0/TBD | Not started | - |
 | 278. Admin UI + Settings + E2E | v29.2 | 0/TBD | Not started | - |

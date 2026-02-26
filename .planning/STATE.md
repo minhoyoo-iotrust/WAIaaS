@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v29.2 Phase 275 -- Lending Framework Services (next)
+**Current focus:** v29.2 Phase 275 -- Lending Framework Services (planned, ready to execute)
 
 ## Current Position
 
-Phase: 274 (1 of 5) -- SSoT Enums + DB Migration + Core Interfaces -- **COMPLETE**
-Plan: 3 of 3 in current phase
-Status: Phase 274 complete. Ready to plan Phase 275.
-Last activity: 2026-02-27 -- Phase 274 executed (3 plans, 2 waves, 7 reqs met)
+Phase: 275 (2 of 5) -- Lending Framework Services -- **PLANNED**
+Plan: 0 of 3 in current phase
+Status: Phase 275 planned (3 plans, 2 waves). Ready to execute.
+Last activity: 2026-02-27 -- Phase 275 planned (3 plans, 7 reqs mapped)
 
 Progress: [██░░░░░░░░] 20%
 
@@ -41,5 +41,5 @@ Progress: [██░░░░░░░░] 20%
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Phase 274 completed (3/3 plans, 7/7 reqs). Ready to plan Phase 275.
+Stopped at: Phase 275 planned (3 plans, 2 waves, 7 reqs). Ready to execute Phase 275.
 Resume file: None
