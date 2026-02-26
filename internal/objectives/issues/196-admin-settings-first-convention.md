@@ -2,7 +2,7 @@
 
 - **유형:** ENHANCEMENT
 - **심각도:** LOW
-- **상태:** OPEN
+- **상태:** FIXED
 
 ## 현상
 

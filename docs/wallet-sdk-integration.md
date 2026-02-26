@@ -178,6 +178,36 @@ host = "0.0.0.0"
 api_key = "your-secret-api-key"
 ```
 
+#### Payload Customization
+
+Push Relay supports declarative payload customization via `[relay.push.payload]`. This lets you add custom fields to push notifications sent to wallet apps (e.g., sound, badge, app-specific metadata).
+
+```toml
+# Static fields added to every push notification
+[relay.push.payload.static_fields]
+app_id = "com.example.wallet"
+env = "production"
+
+# Category-specific fields (merged on top of static_fields)
+[relay.push.payload.category_map.sign_request]
+sound = "alert.caf"
+badge = "1"
+
+[relay.push.payload.category_map.notification]
+sound = "default"
+channel = "info"
+```
+
+**Merge priority** (highest wins): original event data > `category_map` fields > `static_fields`.
+
+Categories: `sign_request` (owner approval requests) and `notification` (general wallet notifications).
+
+The transformation pipeline:
+
+```
+ntfy SSE → buildPushPayload() → ConfigurablePayloadTransformer → Push Provider (FCM/Pushwoosh)
+```
+
 #### Device Registration
 
 Wallet apps register their push token with the Push Relay server:
