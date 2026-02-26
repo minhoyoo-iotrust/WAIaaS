@@ -111,13 +111,53 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (Populated by roadmapper) | | |
+| POS-01 | Phase 268 | Pending |
+| POS-02 | Phase 268 | Pending |
+| POS-03 | Phase 268 | Pending |
+| POS-04 | Phase 268 | Pending |
+| POS-05 | Phase 268 | Pending |
+| POS-06 | Phase 268 | Pending |
+| MON-01 | Phase 269 | Pending |
+| MON-02 | Phase 269 | Pending |
+| MON-03 | Phase 269 | Pending |
+| MON-04 | Phase 269 | Pending |
+| MON-05 | Phase 269 | Pending |
+| MON-06 | Phase 269 | Pending |
+| MON-07 | Phase 269 | Pending |
+| LEND-01 | Phase 270 | Pending |
+| LEND-02 | Phase 270 | Pending |
+| LEND-03 | Phase 270 | Pending |
+| LEND-04 | Phase 270 | Pending |
+| LEND-05 | Phase 270 | Pending |
+| LEND-06 | Phase 270 | Pending |
+| LEND-07 | Phase 270 | Pending |
+| LEND-08 | Phase 270 | Pending |
+| LEND-09 | Phase 270 | Pending |
+| YIELD-01 | Phase 271 | Pending |
+| YIELD-02 | Phase 271 | Pending |
+| YIELD-03 | Phase 271 | Pending |
+| YIELD-04 | Phase 271 | Pending |
+| YIELD-05 | Phase 271 | Pending |
+| YIELD-06 | Phase 271 | Pending |
+| PERP-01 | Phase 272 | Pending |
+| PERP-02 | Phase 272 | Pending |
+| PERP-03 | Phase 272 | Pending |
+| PERP-04 | Phase 272 | Pending |
+| PERP-05 | Phase 272 | Pending |
+| PERP-06 | Phase 272 | Pending |
+| PERP-07 | Phase 272 | Pending |
+| INTENT-01 | Phase 273 | Pending |
+| INTENT-02 | Phase 273 | Pending |
+| INTENT-03 | Phase 273 | Pending |
+| INTENT-04 | Phase 273 | Pending |
+| INTENT-05 | Phase 273 | Pending |
+| INTENT-06 | Phase 273 | Pending |
 
 **Coverage:**
 - v1 requirements: 38 total
-- Mapped to phases: 0
-- Unmapped: 38 ⚠️
+- Mapped to phases: 38
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-26*
-*Last updated: 2026-02-26 after initial definition*
+*Last updated: 2026-02-26 after roadmap creation -- traceability populated*
