@@ -1,0 +1,457 @@
+/**
+ * Aave V3 Lending Action Provider.
+ *
+ * Implements ILendingProvider + IPositionProvider to resolve Aave V3
+ * lending requests into ContractCallRequest arrays for the sequential pipeline.
+ *
+ * Actions:
+ * - aave_supply: approve + supply (2-element array)
+ * - aave_borrow: single element (no approve needed)
+ * - aave_repay: approve + repay (2-element array, supports 'max')
+ * - aave_withdraw: single element (supports 'max')
+ *
+ * Risk levels: borrow/withdraw = high (APPROVAL), supply/repay = medium (DELAY).
+ */
+import { ChainError } from '@waiaas/core';
+import type {
+  ILendingProvider,
+  ActionProviderMetadata,
+  ActionDefinition,
+  ActionContext,
+  ContractCallRequest,
+  LendingPositionSummary,
+  HealthFactor,
+  MarketInfo,
+} from '@waiaas/core';
+import type { IPositionProvider, PositionUpdate, PositionCategory } from '@waiaas/core';
+import type { AaveV3Config } from './config.js';
+import { AAVE_V3_DEFAULTS, getAaveAddresses } from './config.js';
+import {
+  encodeSupplyCalldata,
+  encodeBorrowCalldata,
+  encodeRepayCalldata,
+  encodeWithdrawCalldata,
+  encodeApproveCalldata,
+  encodeGetUserAccountDataCalldata,
+  MAX_UINT256,
+} from './aave-contracts.js';
+import {
+  type IRpcCaller,
+  decodeGetUserAccountData,
+  simulateHealthFactor,
+  hfToNumber,
+  LIQUIDATION_THRESHOLD_HF,
+} from './aave-rpc.js';
+import {
+  AaveSupplyInputSchema,
+  AaveBorrowInputSchema,
+  AaveRepayInputSchema,
+  AaveWithdrawInputSchema,
+} from './schemas.js';
+
+// ---------------------------------------------------------------------------
+// Amount parsing helper
+// ---------------------------------------------------------------------------
+
+/**
+ * Parse a human-readable token amount string to smallest unit (bigint).
+ * Handles decimal amounts like "100.5" with configurable decimals.
+ *
+ * @param amount - Human-readable amount string (e.g., "100.5")
+ * @param decimals - Token decimals (default 18 for most ERC-20 tokens)
+ * @throws ChainError if amount is zero or negative
+ */
+function parseTokenAmount(amount: string, decimals: number = 18): bigint {
+  const parts = amount.split('.');
+  const whole = BigInt(parts[0] || '0');
+  const fractional = (parts[1] || '').padEnd(decimals, '0').slice(0, decimals);
+  const result = whole * 10n ** BigInt(decimals) + BigInt(fractional);
+
+  if (result <= 0n) {
+    throw new ChainError('INVALID_INSTRUCTION', 'ethereum', {
+      message: 'Amount must be greater than 0',
+    });
+  }
+
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Provider implementation
+// ---------------------------------------------------------------------------
+
+export class AaveV3LendingProvider implements ILendingProvider, IPositionProvider {
+  readonly metadata: ActionProviderMetadata;
+  readonly actions: readonly ActionDefinition[];
+
+  private readonly config: AaveV3Config;
+  private readonly rpcCaller?: IRpcCaller;
+
+  constructor(config?: Partial<AaveV3Config>, rpcCaller?: IRpcCaller) {
+    this.config = { ...AAVE_V3_DEFAULTS, ...config };
+    this.rpcCaller = rpcCaller;
+
+    this.metadata = {
+      name: 'aave_v3',
+      description: 'Aave V3 DeFi lending protocol for EVM chains: supply, borrow, repay, withdraw',
+      version: '1.0.0',
+      chains: ['ethereum'],
+      mcpExpose: true,
+      requiresApiKey: false,
+      requiredApis: [],
+    };
+
+    this.actions = [
+      {
+        name: 'aave_supply',
+        description: 'Supply (deposit) an ERC-20 token as collateral to Aave V3 lending pool',
+        chain: 'ethereum',
+        inputSchema: AaveSupplyInputSchema,
+        riskLevel: 'medium',
+        defaultTier: 'DELAY',
+      },
+      {
+        name: 'aave_borrow',
+        description: 'Borrow an asset from Aave V3 lending pool against deposited collateral (variable rate)',
+        chain: 'ethereum',
+        inputSchema: AaveBorrowInputSchema,
+        riskLevel: 'high',
+        defaultTier: 'APPROVAL',
+      },
+      {
+        name: 'aave_repay',
+        description: 'Repay borrowed debt on Aave V3 lending pool. Use amount="max" for full repayment.',
+        chain: 'ethereum',
+        inputSchema: AaveRepayInputSchema,
+        riskLevel: 'medium',
+        defaultTier: 'DELAY',
+      },
+      {
+        name: 'aave_withdraw',
+        description: 'Withdraw supplied collateral from Aave V3 lending pool. Use amount="max" for full withdrawal.',
+        chain: 'ethereum',
+        inputSchema: AaveWithdrawInputSchema,
+        riskLevel: 'high',
+        defaultTier: 'APPROVAL',
+      },
+    ] as const;
+  }
+
+  // -------------------------------------------------------------------------
+  // IActionProvider.resolve()
+  // -------------------------------------------------------------------------
+
+  async resolve(
+    actionName: string,
+    params: Record<string, unknown>,
+    context: ActionContext,
+  ): Promise<ContractCallRequest | ContractCallRequest[]> {
+    switch (actionName) {
+      case 'aave_supply':
+        return this.resolveSupply(params, context);
+      case 'aave_borrow':
+        return this.resolveBorrow(params, context);
+      case 'aave_repay':
+        return this.resolveRepay(params, context);
+      case 'aave_withdraw':
+        return this.resolveWithdraw(params, context);
+      default:
+        throw new ChainError('INVALID_INSTRUCTION', 'ethereum', {
+          message: `Unknown action: ${actionName}`,
+        });
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Supply: approve + Pool.supply()
+  // -------------------------------------------------------------------------
+
+  private resolveSupply(
+    params: Record<string, unknown>,
+    context: ActionContext,
+  ): ContractCallRequest[] {
+    const input = AaveSupplyInputSchema.parse(params);
+    const network = input.network || 'ethereum-mainnet';
+    const addresses = getAaveAddresses(network);
+    const amount = parseTokenAmount(input.amount);
+
+    const approveReq: ContractCallRequest = {
+      type: 'CONTRACT_CALL',
+      to: input.asset,
+      calldata: encodeApproveCalldata(addresses.pool, amount),
+      value: '0',
+      network,
+    };
+
+    const supplyReq: ContractCallRequest = {
+      type: 'CONTRACT_CALL',
+      to: addresses.pool,
+      calldata: encodeSupplyCalldata(input.asset, amount, context.walletAddress),
+      value: '0',
+      network,
+    };
+
+    return [approveReq, supplyReq];
+  }
+
+  // -------------------------------------------------------------------------
+  // Borrow: Pool.borrow() (no approve needed -- Pool releases tokens TO user)
+  // -------------------------------------------------------------------------
+
+  private async resolveBorrow(
+    params: Record<string, unknown>,
+    context: ActionContext,
+  ): Promise<ContractCallRequest> {
+    const input = AaveBorrowInputSchema.parse(params);
+    const network = input.network || 'ethereum-mainnet';
+    const addresses = getAaveAddresses(network);
+    const amount = parseTokenAmount(input.amount);
+
+    // AAVE-09: HF simulation check if rpcCaller available
+    if (this.rpcCaller) {
+      await this.checkBorrowSafety(context.walletAddress, amount, addresses.pool, addresses.chainId);
+    }
+
+    return {
+      type: 'CONTRACT_CALL',
+      to: addresses.pool,
+      calldata: encodeBorrowCalldata(input.asset, amount, context.walletAddress),
+      value: '0',
+      network,
+    };
+  }
+
+  // -------------------------------------------------------------------------
+  // Repay: approve + Pool.repay() (supports 'max' for full repayment)
+  // -------------------------------------------------------------------------
+
+  private resolveRepay(
+    params: Record<string, unknown>,
+    context: ActionContext,
+  ): ContractCallRequest[] {
+    const input = AaveRepayInputSchema.parse(params);
+    const network = input.network || 'ethereum-mainnet';
+    const addresses = getAaveAddresses(network);
+    const amount = input.amount === 'max' ? MAX_UINT256 : parseTokenAmount(input.amount);
+
+    const approveReq: ContractCallRequest = {
+      type: 'CONTRACT_CALL',
+      to: input.asset,
+      calldata: encodeApproveCalldata(addresses.pool, amount),
+      value: '0',
+      network,
+    };
+
+    const repayReq: ContractCallRequest = {
+      type: 'CONTRACT_CALL',
+      to: addresses.pool,
+      calldata: encodeRepayCalldata(input.asset, amount, context.walletAddress),
+      value: '0',
+      network,
+    };
+
+    return [approveReq, repayReq];
+  }
+
+  // -------------------------------------------------------------------------
+  // Withdraw: Pool.withdraw() (supports 'max', no approve needed)
+  // -------------------------------------------------------------------------
+
+  private async resolveWithdraw(
+    params: Record<string, unknown>,
+    context: ActionContext,
+  ): Promise<ContractCallRequest> {
+    const input = AaveWithdrawInputSchema.parse(params);
+    const network = input.network || 'ethereum-mainnet';
+    const addresses = getAaveAddresses(network);
+    const amount = input.amount === 'max' ? MAX_UINT256 : parseTokenAmount(input.amount);
+
+    // AAVE-09: HF simulation for non-max withdrawals
+    if (this.rpcCaller && amount !== MAX_UINT256) {
+      await this.checkWithdrawSafety(context.walletAddress, amount, addresses.pool, addresses.chainId);
+    }
+
+    return {
+      type: 'CONTRACT_CALL',
+      to: addresses.pool,
+      calldata: encodeWithdrawCalldata(input.asset, amount, context.walletAddress),
+      value: '0',
+      network,
+    };
+  }
+
+  // -------------------------------------------------------------------------
+  // HF Safety checks (AAVE-09)
+  // -------------------------------------------------------------------------
+
+  private async checkBorrowSafety(
+    walletAddress: string,
+    borrowAmount: bigint,
+    poolAddress: string,
+    chainId: number,
+  ): Promise<void> {
+    const accountData = await this.fetchUserAccountData(walletAddress, poolAddress, chainId);
+    if (!accountData) return;
+
+    // Approximate: treat borrow amount as base currency units for simulation
+    // This is a simplification -- proper conversion requires oracle price lookup
+    const simulated = simulateHealthFactor(accountData, 'borrow', borrowAmount);
+    if (simulated < LIQUIDATION_THRESHOLD_HF) {
+      throw new ChainError('POLICY_VIOLATION', 'ethereum', {
+        message: `Borrow would cause health factor to drop below liquidation threshold (simulated HF: ${hfToNumber(simulated).toFixed(4)})`,
+      });
+    }
+  }
+
+  private async checkWithdrawSafety(
+    walletAddress: string,
+    withdrawAmount: bigint,
+    poolAddress: string,
+    chainId: number,
+  ): Promise<void> {
+    const accountData = await this.fetchUserAccountData(walletAddress, poolAddress, chainId);
+    if (!accountData) return;
+
+    const simulated = simulateHealthFactor(accountData, 'withdraw', withdrawAmount);
+    if (simulated < LIQUIDATION_THRESHOLD_HF) {
+      throw new ChainError('POLICY_VIOLATION', 'ethereum', {
+        message: `Withdrawal would cause health factor to drop below liquidation threshold (simulated HF: ${hfToNumber(simulated).toFixed(4)})`,
+      });
+    }
+  }
+
+  private async fetchUserAccountData(
+    walletAddress: string,
+    poolAddress: string,
+    chainId: number,
+  ): Promise<{ totalCollateralBase: bigint; totalDebtBase: bigint; currentLiquidationThreshold: bigint } | null> {
+    if (!this.rpcCaller) return null;
+
+    try {
+      const calldata = encodeGetUserAccountDataCalldata(walletAddress);
+      const response = await this.rpcCaller.call({ to: poolAddress, data: calldata, chainId });
+      const data = decodeGetUserAccountData(response);
+      return {
+        totalCollateralBase: data.totalCollateralBase,
+        totalDebtBase: data.totalDebtBase,
+        currentLiquidationThreshold: data.currentLiquidationThreshold,
+      };
+    } catch {
+      // If RPC fails, skip simulation and let daemon-level policy handle it
+      return null;
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // ILendingProvider query methods
+  // -------------------------------------------------------------------------
+
+  async getPosition(walletId: string, context: ActionContext): Promise<LendingPositionSummary[]> {
+    if (!this.rpcCaller) return [];
+
+    try {
+      const network = 'ethereum-mainnet'; // default
+      const addresses = getAaveAddresses(network);
+      const calldata = encodeGetUserAccountDataCalldata(context.walletAddress);
+      const response = await this.rpcCaller.call({
+        to: addresses.pool,
+        data: calldata,
+        chainId: addresses.chainId,
+      });
+      const data = decodeGetUserAccountData(response);
+
+      const positions: LendingPositionSummary[] = [];
+
+      if (data.totalCollateralBase > 0n) {
+        positions.push({
+          asset: 'COLLATERAL',
+          positionType: 'SUPPLY',
+          amount: data.totalCollateralBase.toString(),
+          amountUsd: Number(data.totalCollateralBase) / 1e8,
+          apy: null,
+        });
+      }
+
+      if (data.totalDebtBase > 0n) {
+        positions.push({
+          asset: 'DEBT',
+          positionType: 'BORROW',
+          amount: data.totalDebtBase.toString(),
+          amountUsd: Number(data.totalDebtBase) / 1e8,
+          apy: null,
+        });
+      }
+
+      return positions;
+    } catch {
+      return [];
+    }
+  }
+
+  async getHealthFactor(walletId: string, context: ActionContext): Promise<HealthFactor> {
+    if (!this.rpcCaller) {
+      return {
+        factor: Infinity,
+        totalCollateralUsd: 0,
+        totalDebtUsd: 0,
+        currentLtv: 0,
+        status: 'safe',
+      };
+    }
+
+    try {
+      const network = 'ethereum-mainnet';
+      const addresses = getAaveAddresses(network);
+      const calldata = encodeGetUserAccountDataCalldata(context.walletAddress);
+      const response = await this.rpcCaller.call({
+        to: addresses.pool,
+        data: calldata,
+        chainId: addresses.chainId,
+      });
+      const data = decodeGetUserAccountData(response);
+
+      const hf = hfToNumber(data.healthFactor);
+      const totalCollateralUsd = Number(data.totalCollateralBase) / 1e8;
+      const totalDebtUsd = Number(data.totalDebtBase) / 1e8;
+      const currentLtv = totalCollateralUsd > 0 ? totalDebtUsd / totalCollateralUsd : 0;
+
+      let status: 'safe' | 'warning' | 'danger' | 'critical';
+      if (hf >= 2.0) status = 'safe';
+      else if (hf >= 1.5) status = 'warning';
+      else if (hf >= 1.2) status = 'danger';
+      else status = 'critical';
+
+      return { factor: hf, totalCollateralUsd, totalDebtUsd, currentLtv, status };
+    } catch {
+      return {
+        factor: Infinity,
+        totalCollateralUsd: 0,
+        totalDebtUsd: 0,
+        currentLtv: 0,
+        status: 'safe',
+      };
+    }
+  }
+
+  async getMarkets(_chain: string, _network?: string): Promise<MarketInfo[]> {
+    // Deferred to Phase 277: requires getReservesList + per-reserve queries
+    return [];
+  }
+
+  // -------------------------------------------------------------------------
+  // IPositionProvider methods
+  // -------------------------------------------------------------------------
+
+  async getPositions(_walletId: string): Promise<PositionUpdate[]> {
+    // Deferred: PositionTracker will use ILendingProvider.getPosition via adapter in Phase 277
+    return [];
+  }
+
+  getProviderName(): string {
+    return 'aave_v3';
+  }
+
+  getSupportedCategories(): PositionCategory[] {
+    return ['LENDING'];
+  }
+}
