@@ -333,7 +333,10 @@ See `.planning/milestones/v28.8-ROADMAP.md` for full details.
   2. PositionTracker 스케줄러가 카테고리별 차등 폴링 주기(Lending 5분, Perp 1분, Yield 1시간)를 정의하고, SQLite 쓰기 경합 방지를 위한 배치 쓰기 전략이 명시된다
   3. GET /v1/wallets/:id/positions 통합 응답 Zod 스키마가 4개 카테고리 포지션을 포함하며, AI 에이전트가 소비 가능한 구조화된 응답 형식이다
   4. Admin 포트폴리오 뷰 와이어프레임이 프로토콜별 포지션, USD 환산, APY, 헬스 팩터를 표시하는 레이아웃을 정의한다
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 268-01-PLAN.md -- defi_positions 테이블 스키마 + DB v25 마이그레이션 + PositionTracker 서비스 + 배치 쓰기 전략 설계
+- [ ] 268-02-PLAN.md -- GET /v1/wallets/:id/positions REST API 명세 + Admin 포트폴리오 와이어프레임 설계
 
 ### Phase 269: DeFi 모니터링 프레임워크 설계
 **Goal**: 3개 모니터(HealthFactor, Maturity, Margin)를 일관되게 관리하는 IDeFiMonitor 공통 프레임워크가 설계되어, 프로토콜 구현 시 모니터링이 자동으로 활성화된다
@@ -398,7 +401,7 @@ Phases execute in numeric order: 268 -> 269 -> 270 -> 271 -> 272 -> 273
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 268. 포지션 인프라 설계 | v29.0 | 0/TBD | Not started | - |
+| 268. 포지션 인프라 설계 | v29.0 | 0/2 | Planned | - |
 | 269. DeFi 모니터링 프레임워크 설계 | v29.0 | 0/TBD | Not started | - |
 | 270. Lending 프레임워크 설계 | v29.0 | 0/TBD | Not started | - |
 | 271. Yield 프레임워크 설계 | v29.0 | 0/TBD | Not started | - |
