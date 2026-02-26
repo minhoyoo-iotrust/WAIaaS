@@ -561,6 +561,31 @@ describe('quicksetCommand (formerly quickstart)', () => {
     expect(mockStdout).toHaveBeenCalledWith('WAIaaS Quickset Complete!');
   });
 
+  it('QS-TTL: sends ttl field (not expiresIn) with 30-day default to session API', async () => {
+    const fetchMock = createQuickstartFetchMock('testnet');
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { quickstartCommand } = await import('../commands/quickstart.js');
+    await quickstartCommand({
+      dataDir: testDir,
+      baseUrl: 'http://127.0.0.1:3100',
+      mode: 'testnet',
+      masterPassword: 'test-pw',
+    });
+
+    // Find the POST /v1/sessions call
+    const sessionCalls = fetchMock.mock.calls.filter(
+      (c: unknown[]) => String(c[0]).includes('/v1/sessions') && (c[1] as RequestInit | undefined)?.method === 'POST',
+    );
+    expect(sessionCalls.length).toBe(1);
+
+    const body = JSON.parse((sessionCalls[0] as [string, RequestInit])[1].body as string) as Record<string, unknown>;
+
+    // Must send "ttl" (not "expiresIn")
+    expect(body['ttl']).toBe(2592000); // 30 days
+    expect(body['expiresIn']).toBeUndefined();
+  });
+
   it('QS-04: parses availableNetworks field correctly (not networks)', async () => {
     // This mock returns ONLY availableNetworks (no legacy "networks" key)
     const fetchMock = vi.fn((url: string | URL, init?: RequestInit) => {

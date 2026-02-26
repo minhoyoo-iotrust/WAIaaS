@@ -17,6 +17,7 @@ import type { SettingsService } from '../../../infrastructure/settings/settings-
 import type Database from 'better-sqlite3';
 
 const DEFAULT_NTFY_SERVER = 'https://ntfy.sh';
+const FETCH_TIMEOUT_MS = 10_000;
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export interface WalletNotificationChannelDeps {
@@ -137,15 +138,22 @@ export class WalletNotificationChannel {
     const encoded = Buffer.from(json, 'utf-8').toString('base64url');
 
     const url = `${ntfyServer}/${topic}`;
-    await fetch(url, {
-      method: 'POST',
-      body: encoded,
-      headers: {
-        'Priority': String(priority),
-        'Title': message.title,
-        'Tags': `waiaas,${message.category}`,
-      },
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    try {
+      await fetch(url, {
+        method: 'POST',
+        body: encoded,
+        signal: controller.signal,
+        headers: {
+          'Priority': String(priority),
+          'Title': message.title,
+          'Tags': `waiaas,${message.category}`,
+        },
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 
   private getNtfyServer(): string {

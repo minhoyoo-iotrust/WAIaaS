@@ -27,6 +27,7 @@ import type { SettingsService } from '../../../infrastructure/settings/settings-
 const MAX_RECONNECT_ATTEMPTS = 3;
 const RECONNECT_DELAY_MS = 5_000;
 const DEFAULT_NTFY_SERVER = 'https://ntfy.sh';
+const FETCH_TIMEOUT_MS = 10_000;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -184,14 +185,21 @@ export class NtfySigningChannel {
       click: universalLinkUrl,
     });
 
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body,
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+        signal: controller.signal,
+      });
 
-    if (!res.ok) {
-      throw new Error(`Failed to publish sign request to ntfy: HTTP ${res.status}`);
+      if (!res.ok) {
+        throw new Error(`Failed to publish sign request to ntfy: HTTP ${res.status}`);
+      }
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 
@@ -274,6 +282,10 @@ export class NtfySigningChannel {
           // Ignore malformed messages or handler errors
         }
       }
+
+      // SSE stream ended normally -- clean up subscription (#194 Fix 3)
+      this.activeSubscriptions.delete(requestId);
+      clearTimeout(expirationTimer);
     } catch (_err) {
       // Don't reconnect if explicitly aborted
       if (abortController.signal.aborted) {

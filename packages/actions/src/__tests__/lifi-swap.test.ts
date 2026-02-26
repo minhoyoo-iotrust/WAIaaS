@@ -126,6 +126,75 @@ describe('LiFiActionProvider', () => {
     });
   });
 
+  describe('LIFI-HEX: hex value conversion (#190)', () => {
+    it('converts hex value "0x38d7ea4c68000" to decimal string', async () => {
+      server.use(
+        http.get('https://li.quest/v1/quote', () => {
+          return HttpResponse.json(makeQuoteResponse({
+            transactionRequest: {
+              data: '0xbridgecalldata123',
+              to: '0xLiFiBridgeContract',
+              value: '0x38d7ea4c68000', // 1000000000000000 in hex
+              from: '0x1234567890123456789012345678901234567890',
+              chainId: 1,
+              gasLimit: '300000',
+            },
+          }));
+        }),
+      );
+
+      const provider = new LiFiActionProvider({ enabled: true });
+      const result = await provider.resolve('cross_swap', DEFAULT_PARAMS, CONTEXT);
+      const req = result[0] as { value?: string };
+      expect(req.value).toBe('1000000000000000');
+    });
+
+    it('converts hex value "0x0" to decimal "0"', async () => {
+      server.use(
+        http.get('https://li.quest/v1/quote', () => {
+          return HttpResponse.json(makeQuoteResponse({
+            transactionRequest: {
+              data: '0xbridgecalldata123',
+              to: '0xLiFiBridgeContract',
+              value: '0x0',
+              from: '0x1234567890123456789012345678901234567890',
+              chainId: 1,
+              gasLimit: '300000',
+            },
+          }));
+        }),
+      );
+
+      const provider = new LiFiActionProvider({ enabled: true });
+      const result = await provider.resolve('cross_swap', DEFAULT_PARAMS, CONTEXT);
+      const req = result[0] as { value?: string };
+      expect(req.value).toBe('0');
+    });
+
+    it('passes decimal value through unchanged', async () => {
+      server.use(
+        http.get('https://li.quest/v1/quote', () => {
+          return HttpResponse.json(makeQuoteResponse({
+            transactionRequest: {
+              data: '0xbridgecalldata123',
+              to: '0xLiFiBridgeContract',
+              value: '1000000000000000',
+              from: '0x1234567890123456789012345678901234567890',
+              chainId: 1,
+              gasLimit: '300000',
+            },
+          }));
+        }),
+      );
+
+      const provider = new LiFiActionProvider({ enabled: true });
+      const result = await provider.resolve('cross_swap', DEFAULT_PARAMS, CONTEXT);
+      const req = result[0] as { value?: string };
+      expect(req.value).toBe('1000000000000000');
+    });
+
+  });
+
   describe('LIFI-04: slippage clamping', () => {
     it('uses default 0.03 (3%) when no slippage specified', async () => {
       let capturedUrl = '';

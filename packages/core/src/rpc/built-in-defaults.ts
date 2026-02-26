@@ -76,5 +76,7 @@ export const BUILT_IN_RPC_DEFAULTS: Readonly<Record<string, readonly string[]>> 
   ],
   'polygon-amoy': [
     'https://polygon-amoy.drpc.org',
+    'https://rpc-amoy.polygon.technology',
+    'https://polygon-amoy-bor-rpc.publicnode.com',
   ],
 } as const;

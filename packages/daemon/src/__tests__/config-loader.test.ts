@@ -609,9 +609,9 @@ poll_interval = 60
   });
 
   // CFG-02 verification: incoming keys registered in setting-keys.ts
-  it('CFG-02 verify: SETTING_DEFINITIONS has exactly 7 incoming.* keys', () => {
+  it('CFG-02 verify: SETTING_DEFINITIONS has exactly 20 incoming.* keys', () => {
     const incomingDefs = SETTING_DEFINITIONS.filter((d) => d.key.startsWith('incoming.'));
-    expect(incomingDefs).toHaveLength(7);
+    expect(incomingDefs).toHaveLength(20);
     const keys = incomingDefs.map((d) => d.key).sort();
     expect(keys).toEqual([
       'incoming.cooldown_minutes',
@@ -621,6 +621,19 @@ poll_interval = 60
       'incoming.suspicious_amount_multiplier',
       'incoming.suspicious_dust_usd',
       'incoming.wss_url',
+      'incoming.wss_url.arbitrum-mainnet',
+      'incoming.wss_url.arbitrum-sepolia',
+      'incoming.wss_url.base-mainnet',
+      'incoming.wss_url.base-sepolia',
+      'incoming.wss_url.devnet',
+      'incoming.wss_url.ethereum-mainnet',
+      'incoming.wss_url.ethereum-sepolia',
+      'incoming.wss_url.mainnet',
+      'incoming.wss_url.optimism-mainnet',
+      'incoming.wss_url.optimism-sepolia',
+      'incoming.wss_url.polygon-amoy',
+      'incoming.wss_url.polygon-mainnet',
+      'incoming.wss_url.testnet',
     ]);
   });
 

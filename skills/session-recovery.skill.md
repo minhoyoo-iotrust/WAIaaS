@@ -1,0 +1,112 @@
+---
+name: "WAIaaS Session Recovery"
+description: "Recover from expired or permanently expired session tokens"
+category: "api"
+tags: [wallet, blockchain, session, recovery, token, expired, waiass]
+version: "2.5.0-rc"
+dispatch:
+  kind: "tool"
+  allowedCommands: ["curl"]
+---
+
+# WAIaaS Session Recovery
+
+This skill guides you through recovering from an expired session token. Follow the appropriate path based on your error type.
+
+> AI agents must NEVER request the master password. Use only your session token.
+
+## Diagnosing the Problem
+
+When you receive a `401` response with one of these error codes, your session needs attention:
+
+| Error Code | Meaning | Recovery Path |
+|-----------|---------|---------------|
+| `TOKEN_EXPIRED` | Session TTL elapsed | Try renewal first |
+| `RENEWAL_LIMIT_REACHED` | Max renewals exceeded (default 12) | Request new session |
+| `SESSION_REVOKED` | Session manually revoked by operator | Request new session |
+| `SESSION_NOT_FOUND` | Session deleted or invalid | Request new session |
+
+## Path A: Session Renewal (Self-Service)
+
+If your session is expired but not permanently, try renewing it first:
+
+```bash
+curl -s -X PUT http://localhost:3100/v1/sessions/{sessionId}/renew \
+  -H "Authorization: Bearer wai_sess_..." | jq .
+```
+
+**Success response:**
+```json
+{
+  "token": "wai_sess_<new-token>",
+  "expiresAt": 1740000000,
+  "renewalCount": 1
+}
+```
+
+Update your session token with the new value and continue operating.
+
+**Safety checks that may block renewal:**
+- Less than 50% of TTL has elapsed (too early)
+- Renewal count exceeds max (default 12)
+- Absolute session lifetime exceeded (default 1 year)
+- Token hash mismatch (concurrent renewal detected)
+
+## Path B: Request New Session from Operator
+
+When renewal is not possible (RENEWAL_LIMIT_REACHED, SESSION_REVOKED, SESSION_NOT_FOUND), you cannot self-recover. Follow these steps:
+
+### Step 1: Inform the User
+
+Tell the user clearly:
+
+> My WAIaaS session token has permanently expired and cannot be renewed. I need a new session token to continue operating.
+
+### Step 2: Guide the Operator
+
+The operator (human user) should create a new session via one of these methods:
+
+**Option A: CLI (recommended)**
+```bash
+waiaas session prompt
+```
+This generates a new session with an AI-ready connection prompt.
+
+**Option B: Admin UI**
+1. Open Admin UI (http://localhost:3100/admin)
+2. Navigate to Sessions page
+3. Click "Create Session" and select the wallets
+4. Copy the generated token
+
+**Option C: REST API**
+```bash
+curl -s -X POST http://localhost:3100/v1/sessions \
+  -H "Content-Type: application/json" \
+  -H "X-Master-Password: <operator-enters-password>" \
+  -d '{"walletIds": ["<wallet-id>"], "ttl": 2592000}' | jq .
+```
+
+### Step 3: Apply the New Token
+
+Once the operator provides the new token:
+
+**For MCP agents:** The operator updates the token file at `DATA_DIR/mcp-token`. The MCP recovery loop polls this file every 60 seconds and will automatically pick up the new token.
+
+**For REST API agents:** Update the `Authorization: Bearer wai_sess_...` header with the new token value.
+
+### Step 4: Verify Recovery
+
+After applying the new token, call connect-info to verify:
+
+```bash
+curl -s http://localhost:3100/v1/connect-info \
+  -H "Authorization: Bearer wai_sess_<new-token>" | jq .session
+```
+
+Expected: 200 OK with session info including new `expiresAt`.
+
+## Prevention Tips
+
+- **Check session expiry proactively**: The `connect-info` response includes `session.expiresAt` (Unix timestamp). Monitor this to renew before expiration.
+- **Renew early**: Call `PUT /v1/sessions/{id}/renew` when 60% of TTL has elapsed (MCP agents do this automatically).
+- **Use long TTL**: Default session TTL is 30 days. The operator can configure up to 1 year via Admin Settings.

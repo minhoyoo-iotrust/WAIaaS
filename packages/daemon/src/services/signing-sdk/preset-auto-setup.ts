@@ -1,0 +1,137 @@
+/**
+ * PresetAutoSetupService — 4-step atomic auto-setup pipeline.
+ *
+ * When a wallet preset (e.g. D'CENT) is selected during owner registration,
+ * this service configures all signing SDK settings in a single atomic operation:
+ *
+ * 1. Enable signing SDK (signing_sdk.enabled = 'true')
+ * 2. Register WalletLinkConfig in WalletLinkRegistry
+ * 3. Set preferred_wallet in Settings
+ * 4. Set preferred_channel in Settings (based on approval method)
+ *
+ * On failure, all Settings changes are rolled back via snapshot restore.
+ * The caller is responsible for wrapping DB changes in a SQLite transaction.
+ *
+ * @see Phase 266 — Auto-Setup Orchestration
+ */
+
+import type { WalletPreset } from '@waiaas/core';
+import { WAIaaSError } from '@waiaas/core';
+import type { SettingsService } from '../../infrastructure/settings/settings-service.js';
+import type { WalletLinkRegistry } from './wallet-link-registry.js';
+
+// ---------------------------------------------------------------------------
+// Step names for the applied list
+// ---------------------------------------------------------------------------
+
+const STEP_SDK_ENABLED = 'signing_sdk_enabled';
+const STEP_WALLET_REGISTERED = 'wallet_registered';
+const STEP_PREFERRED_WALLET = 'preferred_wallet_set';
+const STEP_PREFERRED_CHANNEL = 'preferred_channel_set';
+
+// ---------------------------------------------------------------------------
+// Settings keys used in snapshot
+// ---------------------------------------------------------------------------
+
+const SNAPSHOT_KEYS = [
+  'signing_sdk.enabled',
+  'signing_sdk.preferred_wallet',
+  'signing_sdk.preferred_channel',
+] as const;
+
+// ---------------------------------------------------------------------------
+// PresetAutoSetupService
+// ---------------------------------------------------------------------------
+
+export class PresetAutoSetupService {
+  constructor(
+    private readonly settingsService: SettingsService,
+    private readonly walletLinkRegistry: WalletLinkRegistry,
+  ) {}
+
+  /**
+   * Apply preset auto-setup: 4 steps with Settings snapshot rollback.
+   *
+   * Steps:
+   *   (1) enable signing SDK
+   *   (2) register WalletLinkConfig
+   *   (3) set preferred_wallet
+   *   (4) set preferred_channel
+   *
+   * approval_method is handled by the caller (wallets.ts handler saves to DB).
+   *
+   * @returns { applied: string[] } — list of steps that were applied
+   * @throws — re-throws after rolling back Settings snapshot
+   */
+  apply(preset: WalletPreset): { applied: string[] } {
+    // Capture Settings snapshot for rollback
+    const snapshot: Record<string, string> = {};
+    for (const key of SNAPSHOT_KEYS) {
+      snapshot[key] = this.settingsService.get(key);
+    }
+
+    const applied: string[] = [];
+
+    try {
+      // Step 1: Enable signing SDK
+      const currentEnabled = this.settingsService.get('signing_sdk.enabled');
+      if (currentEnabled !== 'true') {
+        this.settingsService.set('signing_sdk.enabled', 'true');
+        applied.push(STEP_SDK_ENABLED);
+      }
+
+      // Step 2: Register WalletLinkConfig (idempotent — skip if already registered)
+      try {
+        this.walletLinkRegistry.registerWallet(preset.walletLinkConfig);
+        applied.push(STEP_WALLET_REGISTERED);
+      } catch (err) {
+        // SIGN_REQUEST_ALREADY_PROCESSED means wallet is already registered — skip (idempotent)
+        if (
+          err instanceof WAIaaSError &&
+          err.code === 'SIGN_REQUEST_ALREADY_PROCESSED'
+        ) {
+          // Already registered, skip
+        } else {
+          throw err;
+        }
+      }
+
+      // Step 3: Set preferred_wallet
+      const currentPreferred = this.settingsService.get('signing_sdk.preferred_wallet');
+      if (currentPreferred !== preset.preferredWallet) {
+        this.settingsService.set('signing_sdk.preferred_wallet', preset.preferredWallet);
+        applied.push(STEP_PREFERRED_WALLET);
+      }
+
+      // Step 4: Set preferred_channel based on approval method
+      switch (preset.approvalMethod) {
+        case 'sdk_ntfy':
+          this.settingsService.set('signing_sdk.preferred_channel', 'ntfy');
+          applied.push(STEP_PREFERRED_CHANNEL);
+          break;
+        case 'sdk_telegram':
+          this.settingsService.set('signing_sdk.preferred_channel', 'telegram');
+          applied.push(STEP_PREFERRED_CHANNEL);
+          break;
+        case 'walletconnect':
+          // WalletConnect is not a signing SDK channel — don't touch preferred_channel
+          break;
+        default:
+          // Other approval methods: skip channel setting
+          break;
+      }
+
+      return { applied };
+    } catch (err) {
+      // Rollback: restore all snapshot keys, each in its own try/catch
+      for (const key of SNAPSHOT_KEYS) {
+        try {
+          this.settingsService.set(key, snapshot[key]!);
+        } catch {
+          // Swallow restore errors to avoid masking the original error
+        }
+      }
+      throw err;
+    }
+  }
+}

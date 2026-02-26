@@ -300,11 +300,11 @@ describe('Fresh DB: settings table via pushSchema', () => {
     const row = freshSqlite
       .prepare('SELECT MAX(version) AS max_version FROM schema_version')
       .get() as { max_version: number };
-    expect(row.max_version).toBe(23);
+    expect(row.max_version).toBe(24);
   });
 
   it('LATEST_SCHEMA_VERSION should be 23', () => {
-    expect(LATEST_SCHEMA_VERSION).toBe(23);
+    expect(LATEST_SCHEMA_VERSION).toBe(24);
   });
 });
 

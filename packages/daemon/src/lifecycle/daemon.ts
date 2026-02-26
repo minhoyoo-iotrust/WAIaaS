@@ -836,19 +836,30 @@ export class DaemonLifecycle {
           // URL resolution: prefer RpcPool (multi-endpoint rotation), fallback to SettingsService
           const subscriberFactory = async (chain: string, network: string) => {
             const sSvc = this._settingsService!;
+            // Per-network WSS URL resolution (#193):
+            // Priority: per-network key → global incoming.wss_url → auto-derive from RPC URL
+            const resolveWssUrl = (net: string, rpcUrl: string): string => {
+              const perNetwork = sSvc.get(`incoming.wss_url.${net}`);
+              if (perNetwork) return perNetwork;
+              const global = sSvc.get('incoming.wss_url');
+              if (global) return global;
+              return rpcUrl.replace(/^https:\/\//, 'wss://');
+            };
+
             if (chain === 'solana') {
               const rpcUrl = resolveRpcUrlFromPool(this.rpcPool, sSvc.get.bind(sSvc), chain, network);
-              // WSS URL: derive from RPC URL (replace https:// with wss://)
-              const wssUrl = sSvc.get('incoming.wss_url') || rpcUrl.replace(/^https:\/\//, 'wss://');
+              const wssUrl = resolveWssUrl(network, rpcUrl);
               const { SolanaIncomingSubscriber } = await import('@waiaas/adapter-solana');
               return new SolanaIncomingSubscriber({ rpcUrl, wsUrl: wssUrl });
             }
             // EVM chains
             const rpcUrl = resolveRpcUrlFromPool(this.rpcPool, sSvc.get.bind(sSvc), chain, network);
+            const wssUrl = resolveWssUrl(network, rpcUrl);
             const { EvmIncomingSubscriber } = await import('@waiaas/adapter-evm');
             const ns = this.notificationService;
             return new EvmIncomingSubscriber({
               rpcUrl,
+              wsUrl: wssUrl !== rpcUrl.replace(/^https:\/\//, 'wss://') ? wssUrl : undefined,
               onRpcAlert: ns ? (alert) => {
                 ns.notify(alert.type, alert.walletId, {
                   network: alert.network,

@@ -18,7 +18,7 @@ import { eq, and, inArray, sql } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { createHash } from 'node:crypto';
-import { WAIaaSError, getDefaultNetwork, getNetworksForEnvironment, validateNetworkEnvironment } from '@waiaas/core';
+import { WAIaaSError, getDefaultNetwork, getNetworksForEnvironment, validateNetworkEnvironment, BUILTIN_PRESETS, type WalletPreset } from '@waiaas/core';
 import type { ChainType, EnvironmentType, NetworkType, EventBus } from '@waiaas/core';
 import { wallets, sessions, sessionWallets, transactions } from '../../infrastructure/database/schema.js';
 import { generateId } from '../../infrastructure/database/id.js';
@@ -28,6 +28,9 @@ import type { NotificationService } from '../../notifications/notification-servi
 import type { JwtSecretManager, JwtPayload } from '../../infrastructure/jwt/index.js';
 import type * as schema from '../../infrastructure/database/schema.js';
 import { resolveOwnerState, OwnerLifecycleService } from '../../workflow/owner-state.js';
+import type { SettingsService } from '../../infrastructure/settings/settings-service.js';
+import type { WalletLinkRegistry } from '../../services/signing-sdk/wallet-link-registry.js';
+import { PresetAutoSetupService } from '../../services/signing-sdk/preset-auto-setup.js';
 import { validateOwnerAddress } from '../middleware/address-validation.js';
 import type { AdapterPool } from '../../infrastructure/adapter-pool.js';
 import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
@@ -67,6 +70,10 @@ export interface WalletCrudRouteDeps {
   jwtSecretManager?: JwtSecretManager;
   /** Duck-typed to avoid circular dependency with IncomingTxMonitorService */
   incomingTxMonitorService?: { syncSubscriptions(): void | Promise<void> };
+  /** SettingsService for preset auto-setup (Phase 266). Optional for backward compat. */
+  settingsService?: SettingsService;
+  /** WalletLinkRegistry for preset auto-setup (Phase 266). Optional for backward compat. */
+  walletLinkRegistry?: WalletLinkRegistry;
 }
 
 // ---------------------------------------------------------------------------
@@ -385,6 +392,7 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
         ownerVerified: wallet.ownerVerified,
         ownerState,
         approvalMethod: wallet.ownerApprovalMethod ?? null,
+        walletType: wallet.walletType ?? null,
         suspendedAt: wallet.suspendedAt ? Math.floor(wallet.suspendedAt.getTime() / 1000) : null,
         suspensionReason: wallet.suspensionReason ?? null,
         createdAt: wallet.createdAt ? Math.floor(wallet.createdAt.getTime() / 1000) : 0,
@@ -864,14 +872,46 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
     // Set owner with normalized address
     ownerLifecycle.setOwner(walletId, normalizedAddress);
 
-    // Update approval_method if explicitly provided (three-state protocol):
-    //   undefined (omitted) = preserve existing value, no DB update
-    //   null (explicit) = clear column to NULL (revert to Auto/global fallback)
-    //   valid string = save value to DB
-    if (body.approval_method !== undefined) {
-      deps.sqlite.prepare(
-        'UPDATE wallets SET owner_approval_method = ? WHERE id = ?',
-      ).run(body.approval_method, walletId);
+    // wallet_type processing
+    let warning: string | null = null;
+    const walletType = body.wallet_type ?? null;
+
+    if (walletType) {
+      const preset: WalletPreset = BUILTIN_PRESETS[walletType];
+      // preset is guaranteed to exist since WalletPresetTypeSchema only allows builtin values
+
+      // wallet_type + approval_method both provided: preset takes priority + warning
+      if (body.approval_method !== undefined && body.approval_method !== null) {
+        warning = `wallet_type '${walletType}' preset overrides approval_method. Preset value '${preset.approvalMethod}' applied instead of '${body.approval_method}'.`;
+      }
+
+      // Wrap DB changes + auto-setup in SQLite transaction for atomicity
+      const txnFn = deps.sqlite.transaction(() => {
+        // Save preset's approval_method and wallet_type to DB
+        deps.sqlite.prepare(
+          'UPDATE wallets SET owner_approval_method = ?, wallet_type = ? WHERE id = ?',
+        ).run(preset.approvalMethod, walletType, walletId);
+
+        // Auto-setup: configure signing SDK settings atomically (Phase 266)
+        if (deps.settingsService && deps.walletLinkRegistry) {
+          const autoSetup = new PresetAutoSetupService(
+            deps.settingsService,
+            deps.walletLinkRegistry,
+          );
+          autoSetup.apply(preset);
+        }
+      });
+      txnFn();
+    } else {
+      // No wallet_type: use existing approval_method logic (three-state protocol):
+      //   undefined (omitted) = preserve existing value, no DB update
+      //   null (explicit) = clear column to NULL (revert to Auto/global fallback)
+      //   valid string = save value to DB
+      if (body.approval_method !== undefined) {
+        deps.sqlite.prepare(
+          'UPDATE wallets SET owner_approval_method = ? WHERE id = ?',
+        ).run(body.approval_method, walletId);
+      }
     }
 
     // Fire-and-forget: notify owner set
@@ -906,6 +946,8 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
         ownerAddress: updated!.ownerAddress,
         ownerVerified: updated!.ownerVerified,
         approvalMethod: updated!.ownerApprovalMethod ?? null,
+        walletType: updated!.walletType ?? null,
+        warning,
         updatedAt: updated!.updatedAt ? Math.floor(updated!.updatedAt.getTime() / 1000) : null,
       },
       200,

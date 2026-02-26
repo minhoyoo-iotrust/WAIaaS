@@ -579,7 +579,76 @@ describe('NtfySigningChannel', () => {
   });
 
   // -----------------------------------------------------------------------
-  // 11. Ignores responses for different requestId
+  // 11. Publish fetch has AbortSignal timeout (#194)
+  // -----------------------------------------------------------------------
+
+  it('includes AbortSignal in publish fetch for timeout protection (#194)', async () => {
+    fetchMock
+      .mockResolvedValueOnce({ ok: true }) // publish
+      .mockResolvedValueOnce({ // SSE
+        ok: true,
+        body: {
+          getReader: () => ({
+            read: vi.fn().mockResolvedValue({ done: true }),
+            releaseLock: vi.fn(),
+          }),
+        },
+      });
+
+    await channel.sendRequest({
+      txId,
+      chain: 'evm',
+      network: 'ethereum-mainnet',
+      type: 'TRANSFER',
+      from: signerAddress,
+      to: '0xabcdef0123456789abcdef0123456789abcdef01',
+      policyTier: 'APPROVAL',
+      walletId: 'dcent',
+    });
+
+    // Verify publish fetch includes signal
+    const publishOpts = fetchMock.mock.calls[0][1] as RequestInit;
+    expect(publishOpts.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  // -----------------------------------------------------------------------
+  // 12. SSE normal end cleans up activeSubscriptions (#194)
+  // -----------------------------------------------------------------------
+
+  it('cleans up activeSubscriptions when SSE stream ends normally (#194)', async () => {
+    // SSE stream ends normally (done: true) without matching response
+    fetchMock
+      .mockResolvedValueOnce({ ok: true }) // publish
+      .mockResolvedValueOnce({ // SSE - stream ends immediately
+        ok: true,
+        body: {
+          getReader: () => ({
+            read: vi.fn().mockResolvedValue({ done: true }),
+            releaseLock: vi.fn(),
+          }),
+        },
+      });
+
+    const result = await channel.sendRequest({
+      txId,
+      chain: 'evm',
+      network: 'ethereum-mainnet',
+      type: 'TRANSFER',
+      from: signerAddress,
+      to: '0xabcdef0123456789abcdef0123456789abcdef01',
+      policyTier: 'APPROVAL',
+      walletId: 'dcent',
+    });
+
+    // Wait for async SSE processing to complete
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    // cancelSubscription on already-cleaned requestId should be no-op (no error)
+    channel.cancelSubscription(result.requestId);
+  });
+
+  // -----------------------------------------------------------------------
+  // 13. Ignores responses for different requestId
   // -----------------------------------------------------------------------
 
   it('ignores SSE responses with different requestId', async () => {

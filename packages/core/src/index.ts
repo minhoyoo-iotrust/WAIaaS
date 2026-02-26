@@ -117,6 +117,14 @@ export {
   type IncomingTransactionDto,
 } from './schemas/index.js';
 
+// Wallet Preset (v28.8 builtin wallet preset registry)
+export {
+  WALLET_PRESET_TYPES,
+  WalletPresetTypeSchema,
+  BUILTIN_PRESETS,
+} from './schemas/wallet-preset.js';
+export type { WalletPresetType, WalletPreset } from './schemas/wallet-preset.js';
+
 // Signing Protocol (v2.6.1 Zod schemas + types + utilities)
 export {
   APPROVAL_METHODS,

@@ -83,10 +83,12 @@ export class EvmIncomingSubscriber implements IChainSubscriber {
   /** Track wallets that already emitted RPC_HEALTH_DEGRADED to avoid spam. */
   private alertedWallets = new Set<string>();
 
-  constructor(config: { rpcUrl: string; generateId?: () => string; onRpcAlert?: RpcAlertCallback }) {
+  constructor(config: { rpcUrl: string; wsUrl?: string; generateId?: () => string; onRpcAlert?: RpcAlertCallback }) {
     this.client = createPublicClient({ transport: http(config.rpcUrl) });
     this.generateId = config.generateId ?? (() => crypto.randomUUID());
     this.onRpcAlert = config.onRpcAlert;
+    // wsUrl accepted for future WSS subscription support (#193).
+    // Currently stored but unused -- EVM uses polling-first strategy (D-06).
   }
 
   // -- Subscription management (2) --

@@ -234,6 +234,73 @@ describe('ZeroExSwapActionProvider', () => {
     });
   });
 
+  describe('ZXSW-HEX: hex value conversion (#190)', () => {
+    it('converts hex value to decimal string for native ETH swap', async () => {
+      server.use(
+        http.get('https://api.0x.org/swap/allowance-holder/quote', () => {
+          return HttpResponse.json(makeQuoteResponse({
+            sellToken: NATIVE_ETH,
+            transaction: {
+              to: ALLOWANCE_HOLDER,
+              data: '0xswapdata_eth',
+              gas: '200000',
+              gasPrice: '30000000000',
+              value: '0xde0b6b3a7640000', // 1000000000000000000 in hex (1 ETH)
+            },
+          }));
+        }),
+      );
+
+      const provider = new ZeroExSwapActionProvider({ enabled: true, apiKey: 'test-key' });
+      const result = await provider.resolve('swap', {
+        sellToken: NATIVE_ETH,
+        buyToken: USDC_ADDRESS,
+        sellAmount: '1000000000000000000',
+      }, CONTEXT);
+
+      const swap = (result as Array<{ value?: string }>)[0]!;
+      expect(swap.value).toBe('1000000000000000000');
+    });
+
+    it('converts hex "0x0" to decimal "0"', async () => {
+      server.use(
+        http.get('https://api.0x.org/swap/allowance-holder/quote', () => {
+          return HttpResponse.json(makeQuoteResponse({
+            transaction: {
+              to: ALLOWANCE_HOLDER,
+              data: '0xswapdata_erc20',
+              gas: '200000',
+              gasPrice: '30000000000',
+              value: '0x0',
+            },
+          }));
+        }),
+      );
+
+      const provider = new ZeroExSwapActionProvider({ enabled: true, apiKey: 'test-key' });
+      const result = await provider.resolve('swap', {
+        sellToken: WETH_ADDRESS,
+        buyToken: USDC_ADDRESS,
+        sellAmount: '1000000000000000000',
+      }, CONTEXT);
+
+      const swap = (result as Array<{ value?: string }>)[1]!;
+      expect(swap.value).toBe('0');
+    });
+
+    it('passes decimal value through unchanged', async () => {
+      const provider = new ZeroExSwapActionProvider({ enabled: true, apiKey: 'test-key' });
+      const result = await provider.resolve('swap', {
+        sellToken: NATIVE_ETH,
+        buyToken: USDC_ADDRESS,
+        sellAmount: '1000000000000000000',
+      }, CONTEXT);
+
+      const swap = (result as Array<{ value?: string }>)[0]!;
+      expect(swap.value).toBe('1000000000000000000');
+    });
+  });
+
   describe('ZXSW-06: Slippage clamping', () => {
     it('uses default 100bps (1%) when no slippage specified', async () => {
       let capturedUrl = '';

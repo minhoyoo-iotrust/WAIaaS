@@ -15,6 +15,7 @@
  * transactions.network and policies.network columns added.
  * v26.4: session_wallets junction table added for 1:N session-wallet model.
  * sessions.walletId removed (migrated to session_wallets).
+ * v28.8: wallet_type column added for wallet preset auto-setup.
  *
  * @see docs/25-sqlite-schema.md
  */
@@ -73,6 +74,7 @@ export const wallets = sqliteTable(
     suspensionReason: text('suspension_reason'),
     ownerApprovalMethod: text('owner_approval_method'),
     monitorIncoming: integer('monitor_incoming', { mode: 'boolean' }).notNull().default(false),
+    walletType: text('wallet_type'),
   },
   (table) => [
     uniqueIndex('idx_wallets_public_key').on(table.publicKey),

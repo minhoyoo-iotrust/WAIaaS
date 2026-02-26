@@ -94,15 +94,36 @@ export async function reconnectLoop(
   signal?: AbortSignal,
 ): Promise<void> {
   let attempt = 0;
+  /** Minimum connection duration (ms) to consider a connect "stable".
+   *  If disconnect happens faster than this, apply backoff to prevent tight loops (#194). */
+  const MIN_STABLE_DURATION_MS = 5_000;
 
   while (!signal?.aborted) {
     try {
       onStateChange('RECONNECTING');
+      const connectTime = Date.now();
       await subscriber.connect();
-      attempt = 0; // Success resets counter
       onStateChange('WS_ACTIVE');
       await subscriber.waitForDisconnect();
-      // Disconnected normally -- loop back to reconnect
+
+      // Check if connection was stable (lasted >= MIN_STABLE_DURATION_MS)
+      const elapsed = Date.now() - connectTime;
+      if (elapsed >= MIN_STABLE_DURATION_MS) {
+        // Stable connection: reset counter, reconnect immediately
+        attempt = 0;
+      } else {
+        // Rapid disconnect: WebSocket likely failed immediately (fire-and-forget).
+        // Treat as failure to prevent tight reconnect loops (#194).
+        attempt++;
+        if (attempt >= config.pollingFallbackThreshold) {
+          onStateChange('POLLING_FALLBACK');
+        }
+        if (attempt >= config.maxAttempts) {
+          return;
+        }
+        const delay = calculateDelay(attempt - 1, config);
+        await sleep(delay);
+      }
     } catch {
       attempt++;
       if (attempt >= config.pollingFallbackThreshold) {

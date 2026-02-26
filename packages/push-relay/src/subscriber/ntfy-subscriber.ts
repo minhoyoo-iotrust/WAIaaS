@@ -1,5 +1,6 @@
 import type { PushPayload, ParsedNtfyMessage } from './message-parser.js';
 import { buildPushPayload, determineMessageType } from './message-parser.js';
+import type { IPayloadTransformer } from '../transformer/payload-transformer.js';
 
 const MAX_RECONNECT_DELAY_MS = 60_000;
 const INITIAL_RECONNECT_DELAY_MS = 1_000;
@@ -11,16 +12,19 @@ export interface NtfySubscriberOpts {
   walletNames: string[];
   onMessage: (walletName: string, payload: PushPayload) => Promise<void>;
   onError?: (error: Error) => void;
+  transformer?: IPayloadTransformer;
 }
 
 export class NtfySubscriber {
   private readonly opts: NtfySubscriberOpts;
   private readonly abortControllers = new Map<string, AbortController>();
+  private readonly transformer?: IPayloadTransformer;
   private _connected = false;
   private _topicCount = 0;
 
   constructor(opts: NtfySubscriberOpts) {
     this.opts = opts;
+    this.transformer = opts.transformer;
   }
 
   get connected(): boolean {
@@ -106,7 +110,10 @@ export class NtfySubscriber {
             );
             if (!type) continue;
 
-            const payload = buildPushPayload(ntfyMsg, type);
+            let payload = buildPushPayload(ntfyMsg, type);
+            if (this.transformer) {
+              payload = this.transformer.transform(payload);
+            }
             await this.opts.onMessage(walletName, payload);
           } catch (err) {
             this.opts.onError?.(err instanceof Error ? err : new Error(String(err)));

@@ -24,6 +24,7 @@ import {
   ApproveRequestSchema,
   BatchRequestSchema,
   ApprovalMethodSchema,
+  WalletPresetTypeSchema,
 } from '@waiaas/core';
 import type { ErrorCode } from '@waiaas/core';
 
@@ -100,6 +101,8 @@ export const WalletOwnerResponseSchema = z
     ownerAddress: z.string().nullable(),
     ownerVerified: z.boolean().nullable(),
     approvalMethod: z.string().nullable().optional(),
+    walletType: z.string().nullable().optional(),
+    warning: z.string().nullable().optional(),
     updatedAt: z.number().int().nullable(),
   })
   .openapi('WalletOwnerResponse');
@@ -501,6 +504,7 @@ export const WalletDetailResponseSchema = z
     ownerVerified: z.boolean().nullable(),
     ownerState: z.enum(['NONE', 'GRACE', 'LOCKED']),
     approvalMethod: z.string().nullable().optional(),
+    walletType: z.string().nullable().optional(),
     suspendedAt: z.number().int().nullable().optional(),
     suspensionReason: z.string().nullable().optional(),
     createdAt: z.number().int(),
@@ -553,6 +557,7 @@ export const SetOwnerRequestSchema = z
   .object({
     owner_address: z.string().min(1),
     approval_method: ApprovalMethodSchema.nullable().optional(),
+    wallet_type: WalletPresetTypeSchema.optional(),
   })
   .openapi('SetOwnerRequest');
 
@@ -895,7 +900,7 @@ export const TestRpcResponseSchema = z
 export const McpTokenCreateRequestSchema = z
   .object({
     walletId: z.string().uuid(),
-    expiresIn: z.number().int().min(300).max(604800).optional(),
+    expiresIn: z.number().int().min(300).max(31536000).optional(),
   })
   .openapi('McpTokenCreateRequest');
 

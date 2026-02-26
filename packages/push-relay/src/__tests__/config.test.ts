@@ -178,4 +178,174 @@ api_key = "k"
 
     rmSync(dir, { recursive: true });
   });
+
+  it('loads config with [relay.push.payload] section', () => {
+    const dir = tmpDir();
+    const path = join(dir, 'config.toml');
+    writeFileSync(
+      path,
+      `
+[relay]
+wallet_names = ["dcent"]
+
+[relay.push]
+provider = "pushwoosh"
+
+[relay.push.pushwoosh]
+api_token = "token"
+application_code = "code"
+
+[relay.push.payload.static_fields]
+app_id = "com.dcent.wallet"
+env = "production"
+
+[relay.push.payload.category_map.sign_request]
+sound = "alert.caf"
+badge = "1"
+
+[relay.push.payload.category_map.notification]
+sound = "default"
+
+[relay.server]
+api_key = "secret"
+`,
+    );
+
+    const config = loadConfig(path);
+    expect(config.relay.push.payload).toBeDefined();
+    expect(config.relay.push.payload!.static_fields).toEqual({
+      app_id: 'com.dcent.wallet',
+      env: 'production',
+    });
+    expect(config.relay.push.payload!.category_map).toEqual({
+      sign_request: { sound: 'alert.caf', badge: '1' },
+      notification: { sound: 'default' },
+    });
+
+    rmSync(dir, { recursive: true });
+  });
+
+  it('loads config without [relay.push.payload] section (backward compat)', () => {
+    const dir = tmpDir();
+    const path = join(dir, 'config.toml');
+    writeFileSync(
+      path,
+      `
+[relay]
+wallet_names = ["dcent"]
+
+[relay.push]
+provider = "pushwoosh"
+
+[relay.push.pushwoosh]
+api_token = "token"
+application_code = "code"
+
+[relay.server]
+api_key = "secret"
+`,
+    );
+
+    const config = loadConfig(path);
+    expect(config.relay.push.payload).toBeUndefined();
+
+    rmSync(dir, { recursive: true });
+  });
+
+  it('loads config with empty [relay.push.payload] section', () => {
+    const dir = tmpDir();
+    const path = join(dir, 'config.toml');
+    writeFileSync(
+      path,
+      `
+[relay]
+wallet_names = ["dcent"]
+
+[relay.push]
+provider = "pushwoosh"
+
+[relay.push.pushwoosh]
+api_token = "token"
+application_code = "code"
+
+[relay.push.payload]
+
+[relay.server]
+api_key = "secret"
+`,
+    );
+
+    const config = loadConfig(path);
+    expect(config.relay.push.payload).toBeDefined();
+    expect(config.relay.push.payload!.static_fields).toEqual({});
+    expect(config.relay.push.payload!.category_map).toEqual({});
+
+    rmSync(dir, { recursive: true });
+  });
+
+  it('loads config with only static_fields in payload', () => {
+    const dir = tmpDir();
+    const path = join(dir, 'config.toml');
+    writeFileSync(
+      path,
+      `
+[relay]
+wallet_names = ["dcent"]
+
+[relay.push]
+provider = "pushwoosh"
+
+[relay.push.pushwoosh]
+api_token = "token"
+application_code = "code"
+
+[relay.push.payload.static_fields]
+app_id = "com.dcent.wallet"
+
+[relay.server]
+api_key = "secret"
+`,
+    );
+
+    const config = loadConfig(path);
+    expect(config.relay.push.payload).toBeDefined();
+    expect(config.relay.push.payload!.static_fields).toEqual({ app_id: 'com.dcent.wallet' });
+    expect(config.relay.push.payload!.category_map).toEqual({});
+
+    rmSync(dir, { recursive: true });
+  });
+
+  it('loads config with only category_map in payload', () => {
+    const dir = tmpDir();
+    const path = join(dir, 'config.toml');
+    writeFileSync(
+      path,
+      `
+[relay]
+wallet_names = ["dcent"]
+
+[relay.push]
+provider = "pushwoosh"
+
+[relay.push.pushwoosh]
+api_token = "token"
+application_code = "code"
+
+[relay.push.payload.category_map.sign_request]
+sound = "alert.caf"
+
+[relay.server]
+api_key = "secret"
+`,
+    );
+
+    const config = loadConfig(path);
+    expect(config.relay.push.payload).toBeDefined();
+    expect(config.relay.push.payload!.static_fields).toEqual({});
+    expect(config.relay.push.payload!.category_map).toEqual({
+      sign_request: { sound: 'alert.caf' },
+    });
+
+    rmSync(dir, { recursive: true });
+  });
 });

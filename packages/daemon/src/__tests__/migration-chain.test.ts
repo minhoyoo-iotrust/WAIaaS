@@ -1001,8 +1001,8 @@ describe('edge cases', () => {
     const row = db.prepare('SELECT message FROM notification_logs WHERE id = ?').get('notif-pre-v10') as { message: string | null };
     expect(row.message).toBeNull();
 
-    // Verify LATEST_SCHEMA_VERSION is 23
-    expect(LATEST_SCHEMA_VERSION).toBe(23);
+    // Verify LATEST_SCHEMA_VERSION is 24
+    expect(LATEST_SCHEMA_VERSION).toBe(24);
   });
 
   it('T-13: existing notification_logs data preserved after v10 migration', () => {
@@ -1331,7 +1331,7 @@ describe('v12 migration: x402 CHECK constraints', () => {
     // Verify final version is 19
     const versions = getVersions(db);
     expect(versions).toContain(19);
-    expect(Math.max(...versions)).toBe(23);
+    expect(Math.max(...versions)).toBe(24);
 
     // Verify data survived the entire chain
     const wallet = db.prepare('SELECT * FROM wallets WHERE id = ?').get('a-chain-12') as { environment: string; default_network: string };
@@ -1512,7 +1512,7 @@ describe('v13 migration: amount_usd and reserved_amount_usd columns', () => {
     // Verify final version is 19
     const versions = getVersions(db);
     expect(versions).toContain(19);
-    expect(Math.max(...versions)).toBe(23);
+    expect(Math.max(...versions)).toBe(24);
 
     // Verify amount_usd columns exist and are NULL for migrated data
     const tx = db.prepare('SELECT amount_usd, reserved_amount_usd FROM transactions WHERE id = ?').get('tx-chain-13') as {
@@ -1727,7 +1727,7 @@ describe('v16 migration: WC infra tables + approval_channel', () => {
     // Verify final version is 19
     const versions = getVersions(db);
     expect(versions).toContain(19);
-    expect(Math.max(...versions)).toBe(23);
+    expect(Math.max(...versions)).toBe(24);
 
     // Verify wc_sessions and wc_store tables exist
     const wcSessions = db.prepare(
@@ -1757,5 +1757,161 @@ describe('v16 migration: WC infra tables + approval_channel', () => {
     db.prepare('INSERT INTO wc_store (key, value) VALUES (?, ?)').run('test-key', '"test-value"');
     const storeRow = db.prepare('SELECT value FROM wc_store WHERE key = ?').get('test-key') as { value: string };
     expect(storeRow.value).toBe('"test-value"');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// T-17: v24 migration: wallet_type column for preset auto-setup
+// ---------------------------------------------------------------------------
+
+describe('v24 migration: wallet_type column for preset auto-setup', () => {
+  let db: DatabaseType;
+
+  afterEach(() => {
+    try { db.close(); } catch { /* already closed */ }
+  });
+
+  /**
+   * Create a v23 state DB: v5 + apply v6-v23 migrations manually.
+   */
+  function createV23Database(): DatabaseType {
+    const v5Db = createV5SchemaDatabase();
+    const v6to23 = MIGRATIONS.filter((m) => m.version >= 6 && m.version <= 23);
+    runMigrations(v5Db, v6to23);
+    return v5Db;
+  }
+
+  it('T-17a (T-v24-1): v23 -> v24 migration adds wallet_type column with NULL default', () => {
+    db = createV23Database();
+    const ts = Math.floor(Date.now() / 1000);
+
+    // Insert wallet before migration
+    db.prepare(
+      `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run('w-v24-pre', 'Pre V24', 'solana', 'testnet', 'devnet', 'pk-v24-pre', 'ACTIVE', 0, ts, ts);
+
+    // Run v24 migration
+    const v24 = MIGRATIONS.filter((m) => m.version === 24);
+    runMigrations(db, v24);
+
+    // Verify wallet_type column exists
+    const columns = getTableColumns(db, 'wallets');
+    expect(columns).toContain('wallet_type');
+
+    // Verify existing wallet has wallet_type = NULL
+    const wallet = db.prepare('SELECT wallet_type FROM wallets WHERE id = ?').get('w-v24-pre') as { wallet_type: string | null };
+    expect(wallet.wallet_type).toBeNull();
+  });
+
+  it('T-17b (T-v24-2): fresh DB LATEST_SCHEMA_VERSION is 24', () => {
+    const conn = createDatabase(':memory:');
+    db = conn.sqlite;
+    pushSchema(db);
+
+    expect(LATEST_SCHEMA_VERSION).toBe(24);
+
+    const versions = getVersions(db);
+    expect(versions).toContain(24);
+  });
+
+  it('T-17c (T-v24-3): v24 migration preserves existing wallet data with wallet_type NULL (backward compat)', () => {
+    db = createV23Database();
+    const ts = Math.floor(Date.now() / 1000);
+
+    // Insert multiple wallets before migration
+    db.prepare(
+      `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at, owner_approval_method)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run('w-v24-compat1', 'Compat 1', 'solana', 'testnet', 'devnet', 'pk-v24-c1', 'ACTIVE', 0, ts, ts, 'walletconnect');
+
+    db.prepare(
+      `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run('w-v24-compat2', 'Compat 2', 'ethereum', 'mainnet', 'ethereum-mainnet', 'pk-v24-c2', 'ACTIVE', 0, ts, ts);
+
+    // Run v24 migration
+    const v24 = MIGRATIONS.filter((m) => m.version === 24);
+    runMigrations(db, v24);
+
+    // Verify all existing wallets have wallet_type = NULL
+    const w1 = db.prepare('SELECT wallet_type, owner_approval_method FROM wallets WHERE id = ?').get('w-v24-compat1') as {
+      wallet_type: string | null; owner_approval_method: string | null;
+    };
+    expect(w1.wallet_type).toBeNull();
+    expect(w1.owner_approval_method).toBe('walletconnect');
+
+    const w2 = db.prepare('SELECT wallet_type FROM wallets WHERE id = ?').get('w-v24-compat2') as { wallet_type: string | null };
+    expect(w2.wallet_type).toBeNull();
+  });
+
+  it('T-17d (T-v24-4): fresh DB wallets table includes wallet_type column', () => {
+    const conn = createDatabase(':memory:');
+    db = conn.sqlite;
+    pushSchema(db);
+
+    const columns = getTableColumns(db, 'wallets');
+    expect(columns).toContain('wallet_type');
+
+    // Verify wallet_type can be inserted and read back
+    const ts = Math.floor(Date.now() / 1000);
+    db.prepare(
+      `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at, wallet_type)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run('w-fresh-v24', 'Fresh V24', 'solana', 'testnet', 'devnet', 'pk-fresh-v24', 'ACTIVE', 0, ts, ts, 'dcent');
+
+    const wallet = db.prepare('SELECT wallet_type FROM wallets WHERE id = ?').get('w-fresh-v24') as { wallet_type: string };
+    expect(wallet.wallet_type).toBe('dcent');
+  });
+
+  it('T-17e: v24 migrated DB schema matches fresh DB wallets columns', () => {
+    // Fresh DB
+    const connA = createDatabase(':memory:');
+    const freshDb = connA.sqlite;
+    pushSchema(freshDb);
+
+    // v23 migrated DB
+    db = createV23Database();
+    const v24 = MIGRATIONS.filter((m) => m.version === 24);
+    runMigrations(db, v24);
+
+    // Compare wallets columns
+    const freshCols = getTableColumns(freshDb, 'wallets');
+    const migratedCols = getTableColumns(db, 'wallets');
+    expect(migratedCols).toEqual(freshCols);
+
+    freshDb.close();
+  });
+
+  it('T-17f: v1 -> v24 full chain migration includes wallet_type', () => {
+    db = createV1SchemaDatabase();
+    const ts = Math.floor(Date.now() / 1000);
+
+    // Insert agent data for full chain test
+    db.prepare(
+      `INSERT INTO agents (id, name, chain, network, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run('a-chain-24', 'Chain V24', 'solana', 'devnet', 'pk-chain-24', 'ACTIVE', 0, ts, ts);
+
+    // Run full pushSchema (v2 -> v24 chain)
+    pushSchema(db);
+
+    // Verify final version is 24
+    const versions = getVersions(db);
+    expect(versions).toContain(24);
+    expect(Math.max(...versions)).toBe(24);
+
+    // Verify wallets table has wallet_type column
+    const columns = getTableColumns(db, 'wallets');
+    expect(columns).toContain('wallet_type');
+
+    // Verify existing data has wallet_type = NULL
+    const wallet = db.prepare('SELECT wallet_type FROM wallets WHERE id = ?').get('a-chain-24') as { wallet_type: string | null };
+    expect(wallet.wallet_type).toBeNull();
+
+    // Verify wallet_type can be set
+    db.prepare('UPDATE wallets SET wallet_type = ? WHERE id = ?').run('dcent', 'a-chain-24');
+    const updated = db.prepare('SELECT wallet_type FROM wallets WHERE id = ?').get('a-chain-24') as { wallet_type: string };
+    expect(updated.wallet_type).toBe('dcent');
   });
 });
