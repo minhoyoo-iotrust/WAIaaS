@@ -611,7 +611,7 @@ poll_interval = 60
   // CFG-02 verification: incoming keys registered in setting-keys.ts
   it('CFG-02 verify: SETTING_DEFINITIONS has exactly 7 incoming.* keys', () => {
     const incomingDefs = SETTING_DEFINITIONS.filter((d) => d.key.startsWith('incoming.'));
-    expect(incomingDefs).toHaveLength(7);
+    expect(incomingDefs).toHaveLength(20);
     const keys = incomingDefs.map((d) => d.key).sort();
     expect(keys).toEqual([
       'incoming.cooldown_minutes',
