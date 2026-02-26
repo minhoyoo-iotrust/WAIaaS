@@ -421,7 +421,7 @@ Phases execute in numeric order: 268 -> 269 -> 270 -> 271 -> 272 -> 273
 | 270. Lending 프레임워크 설계 | 2/2 | Complete    | 2026-02-26 | - |
 | 271. Yield 프레임워크 설계 | 2/2 | Complete    | 2026-02-26 | - |
 | 272. Perp 프레임워크 설계 | v29.0 | Complete    | 2026-02-26 | - |
-| 273. Intent 서명 패턴 설계 | v29.0 | 0/2 | Not started | - |
+| 273. Intent 서명 패턴 설계 | 1/2 | In Progress|  | - |
 
 ---
 *Last updated: 2026-02-26 after v29.0 roadmap creation*
