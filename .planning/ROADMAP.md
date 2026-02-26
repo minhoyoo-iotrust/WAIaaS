@@ -376,7 +376,10 @@ Plans:
   2. YieldPosition Zod 스키마(token_type PT/YT/LP, market_id, maturity, apy)와 MaturityInfo 타입(만기일, 경과 시간, 상환 가능 여부)이 명세된다
   3. MaturityMonitor가 1일 1회 폴링으로 만기 7일/1일 전 알림 및 만기 후 미상환 경고를 발생시키는 설계가 Phase 269의 IDeFiMonitor를 활용하여 정의된다
   4. positions 테이블의 Yield 카테고리 확장 스키마가 Phase 268의 discriminatedUnion에 통합된다
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 271-01-PLAN.md -- IYieldProvider 인터페이스(5 actions + 3 queries) + YieldPosition/MaturityInfo/YieldMarketInfo/YieldForecast Zod 타입 (섹션 18-19)
+- [ ] 271-02-PLAN.md -- MaturityMonitor 통합 + positions YIELD 확장 검증 + Pendle V2 프로토콜 매핑 (섹션 20)
 
 ### Phase 272: Perp 프레임워크 설계
 **Goal**: IPerpProvider 인터페이스와 마진/레버리지 정책이 확정되어, Drift 구현이 프레임워크 수정 없이 Provider만 추가하면 동작한다
@@ -410,7 +413,7 @@ Phases execute in numeric order: 268 -> 269 -> 270 -> 271 -> 272 -> 273
 | 268. 포지션 인프라 설계 | 2/2 | Complete    | 2026-02-26 | - |
 | 269. DeFi 모니터링 프레임워크 설계 | 2/2 | Complete    | 2026-02-26 | - |
 | 270. Lending 프레임워크 설계 | 2/2 | Complete    | 2026-02-26 | - |
-| 271. Yield 프레임워크 설계 | v29.0 | 0/TBD | Not started | - |
+| 271. Yield 프레임워크 설계 | v29.0 | 0/2 | Planned | - |
 | 272. Perp 프레임워크 설계 | v29.0 | 0/TBD | Not started | - |
 | 273. Intent 서명 패턴 설계 | v29.0 | 0/TBD | Not started | - |
 
