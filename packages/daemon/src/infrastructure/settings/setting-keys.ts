@@ -154,6 +154,20 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'incoming.suspicious_amount_multiplier', category: 'incoming', configPath: 'incoming.suspicious_amount_multiplier', defaultValue: '10', isCredential: false },
   { key: 'incoming.cooldown_minutes', category: 'incoming', configPath: 'incoming.cooldown_minutes', defaultValue: '5', isCredential: false },
   { key: 'incoming.wss_url', category: 'incoming', configPath: 'incoming.wss_url', defaultValue: '', isCredential: false },
+  // Per-network WSS URL overrides (#193): takes priority over global incoming.wss_url
+  { key: 'incoming.wss_url.mainnet', category: 'incoming', configPath: 'incoming.wss_url.mainnet', defaultValue: '', isCredential: false },
+  { key: 'incoming.wss_url.devnet', category: 'incoming', configPath: 'incoming.wss_url.devnet', defaultValue: '', isCredential: false },
+  { key: 'incoming.wss_url.testnet', category: 'incoming', configPath: 'incoming.wss_url.testnet', defaultValue: '', isCredential: false },
+  { key: 'incoming.wss_url.ethereum-mainnet', category: 'incoming', configPath: 'incoming.wss_url.ethereum-mainnet', defaultValue: '', isCredential: false },
+  { key: 'incoming.wss_url.ethereum-sepolia', category: 'incoming', configPath: 'incoming.wss_url.ethereum-sepolia', defaultValue: '', isCredential: false },
+  { key: 'incoming.wss_url.arbitrum-mainnet', category: 'incoming', configPath: 'incoming.wss_url.arbitrum-mainnet', defaultValue: '', isCredential: false },
+  { key: 'incoming.wss_url.arbitrum-sepolia', category: 'incoming', configPath: 'incoming.wss_url.arbitrum-sepolia', defaultValue: '', isCredential: false },
+  { key: 'incoming.wss_url.optimism-mainnet', category: 'incoming', configPath: 'incoming.wss_url.optimism-mainnet', defaultValue: '', isCredential: false },
+  { key: 'incoming.wss_url.optimism-sepolia', category: 'incoming', configPath: 'incoming.wss_url.optimism-sepolia', defaultValue: '', isCredential: false },
+  { key: 'incoming.wss_url.base-mainnet', category: 'incoming', configPath: 'incoming.wss_url.base-mainnet', defaultValue: '', isCredential: false },
+  { key: 'incoming.wss_url.base-sepolia', category: 'incoming', configPath: 'incoming.wss_url.base-sepolia', defaultValue: '', isCredential: false },
+  { key: 'incoming.wss_url.polygon-mainnet', category: 'incoming', configPath: 'incoming.wss_url.polygon-mainnet', defaultValue: '', isCredential: false },
+  { key: 'incoming.wss_url.polygon-amoy', category: 'incoming', configPath: 'incoming.wss_url.polygon-amoy', defaultValue: '', isCredential: false },
 
   // --- actions category (DeFi action providers) ---
   { key: 'actions.jupiter_swap_enabled', category: 'actions', configPath: 'actions.jupiter_swap_enabled', defaultValue: 'true', isCredential: false },

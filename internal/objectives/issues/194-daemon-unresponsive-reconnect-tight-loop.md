@@ -2,7 +2,7 @@
 
 - **유형:** BUG
 - **심각도:** CRITICAL
-- **상태:** OPEN
+- **상태:** FIXED
 - **관련:** #185 (EVM IncomingSubscriber RPC 타임아웃), #169 (인커밍 모니터 RPC rate limit)
 
 ## 현상
