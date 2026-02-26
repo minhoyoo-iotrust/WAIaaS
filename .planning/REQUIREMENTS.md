@@ -29,10 +29,10 @@ Requirements for EVM Lending framework + Aave V3 provider. Each maps to roadmap 
 
 ### Aave V3 Provider
 
-- [ ] **AAVE-01**: AaveV3LendingProvider가 supply 액션을 Pool.supply() calldata로 resolve
-- [ ] **AAVE-02**: AaveV3LendingProvider가 borrow 액션을 Pool.borrow() calldata로 resolve (variable rate only)
-- [ ] **AAVE-03**: AaveV3LendingProvider가 repay 액션을 Pool.repay() calldata로 resolve
-- [ ] **AAVE-04**: AaveV3LendingProvider가 withdraw 액션을 Pool.withdraw() calldata로 resolve
+- [x] **AAVE-01**: AaveV3LendingProvider가 supply 액션을 Pool.supply() calldata로 resolve
+- [x] **AAVE-02**: AaveV3LendingProvider가 borrow 액션을 Pool.borrow() calldata로 resolve (variable rate only)
+- [x] **AAVE-03**: AaveV3LendingProvider가 repay 액션을 Pool.repay() calldata로 resolve
+- [x] **AAVE-04**: AaveV3LendingProvider가 withdraw 액션을 Pool.withdraw() calldata로 resolve
 - [x] **AAVE-05**: supply/repay 시 ERC-20 approve를 포함한 multi-step ContractCallRequest[] 반환
 - [x] **AAVE-06**: 5개 EVM 체인(Ethereum/Arbitrum/Optimism/Polygon/Base) Pool/DataProvider/Oracle 주소 매핑
 - [x] **AAVE-07**: getUserAccountData()로 헬스 팩터 조회 (18-decimal bigint 정밀도)
@@ -107,10 +107,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LEND-07 | Phase 275 | Pending |
 | LEND-08 | Phase 275 | Pending |
 | LEND-09 | Phase 275 | Pending |
-| AAVE-01 | Phase 276 | Pending |
-| AAVE-02 | Phase 276 | Pending |
-| AAVE-03 | Phase 276 | Pending |
-| AAVE-04 | Phase 276 | Pending |
+| AAVE-01 | Phase 276 | Complete |
+| AAVE-02 | Phase 276 | Complete |
+| AAVE-03 | Phase 276 | Complete |
+| AAVE-04 | Phase 276 | Complete |
 | AAVE-05 | Phase 276 | Complete |
 | AAVE-06 | Phase 276 | Complete |
 | AAVE-07 | Phase 276 | Complete |

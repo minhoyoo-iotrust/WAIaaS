@@ -174,7 +174,7 @@ See `.planning/milestones/v29.0-ROADMAP.md` for full details.
 
 - [x] **Phase 274: SSoT Enums + DB Migration + Core Interfaces** - DeFi 열거형, defi_positions 테이블, ILendingProvider/IPositionProvider 인터페이스 정의
 - [x] **Phase 275: Lending Framework Services** - PositionTracker, HealthFactorMonitor, LendingPolicyEvaluator 프로토콜 무관 서비스
-- [ ] **Phase 276: Aave V3 Provider Implementation** - supply/borrow/repay/withdraw 4개 액션 resolve + 5체인 주소 매핑
+- [x] **Phase 276: Aave V3 Provider Implementation** - supply/borrow/repay/withdraw 4개 액션 resolve + 5체인 주소 매핑 (completed 2026-02-26)
 - [ ] **Phase 277: REST API + MCP + SDK Integration** - 포지션/헬스팩터 API, MCP 5도구, SDK 확장, 정책 엔진 연동
 - [ ] **Phase 278: Admin UI + Settings + E2E** - DeFi 포트폴리오 패널, Aave 설정 4키, 통합 검증
 
@@ -257,7 +257,7 @@ Phases execute in numeric order: 274 -> 275 -> 276 -> 277 -> 278
 |-------|-----------|----------------|--------|-----------|
 | 274. SSoT Enums + DB + Interfaces | v29.2 | 3/3 | **DONE** | 2026-02-27 |
 | 275. Lending Framework Services | v29.2 | 3/3 | **DONE** | 2026-02-27 |
-| 276. Aave V3 Provider | 2/3 | In Progress|  | - |
+| 276. Aave V3 Provider | 3/3 | Complete   | 2026-02-26 | - |
 | 277. REST API + MCP + SDK | v29.2 | 0/TBD | Not started | - |
 | 278. Admin UI + Settings + E2E | v29.2 | 0/TBD | Not started | - |
 
