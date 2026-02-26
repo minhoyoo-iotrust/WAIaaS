@@ -222,6 +222,22 @@ export const messages: Messages = {
     INCOMING_TX_RANGE_SKIPPED: { title: 'Incoming TX Scan Gap', body: 'Block range {fromBlock}-{toBlock} on {network} was skipped after {errorCount} consecutive failures. Incoming transactions in this range may be missed.' },
     TX_GAS_WAITING: { title: 'Gas Condition Pending', body: 'Transaction {txId} is waiting for gas condition to be met. Max gas price: {maxGasPrice}, timeout: {timeout}s' },
     TX_GAS_CONDITION_MET: { title: 'Gas Condition Met', body: 'Gas condition met for transaction {txId}. Current gas price: {currentGasPrice}. Resuming execution.' },
+    LIQUIDATION_WARNING: {
+      title: 'Liquidation Warning',
+      body: '{walletName} health factor at {healthFactor} (threshold: {threshold}). Consider adding collateral or repaying debt.',
+    },
+    MATURITY_WARNING: {
+      title: 'Maturity Warning',
+      body: '{walletName} position in {provider} matures in {daysUntilMaturity} days. Redeem before maturity to avoid losses.',
+    },
+    MARGIN_WARNING: {
+      title: 'Margin Warning',
+      body: '{walletName} margin ratio at {marginRatio}% in {provider}. Add margin to avoid liquidation.',
+    },
+    LIQUIDATION_IMMINENT: {
+      title: 'Liquidation Imminent',
+      body: '{walletName} is at imminent risk of liquidation. Health factor: {healthFactor}. Immediate action required.',
+    },
   },
   // System messages
   system: {

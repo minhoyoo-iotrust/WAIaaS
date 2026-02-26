@@ -439,6 +439,18 @@ describe('EVENT_CATEGORY_MAP', () => {
       expect(enumKeys.has(key)).toBe(true);
     }
   });
+
+  it('maps DeFi events to correct categories', () => {
+    expect(EVENT_CATEGORY_MAP.LIQUIDATION_WARNING).toBe('defi_monitoring');
+    expect(EVENT_CATEGORY_MAP.MATURITY_WARNING).toBe('defi_monitoring');
+    expect(EVENT_CATEGORY_MAP.MARGIN_WARNING).toBe('defi_monitoring');
+    expect(EVENT_CATEGORY_MAP.LIQUIDATION_IMMINENT).toBe('security_alert');
+  });
+
+  it('NOTIFICATION_CATEGORIES has 7 values including defi_monitoring', () => {
+    expect(NOTIFICATION_CATEGORIES).toHaveLength(7);
+    expect(NOTIFICATION_CATEGORIES).toContain('defi_monitoring');
+  });
 });
 
 describe('NotificationMessageSchema', () => {

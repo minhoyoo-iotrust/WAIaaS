@@ -23,6 +23,7 @@ const BROADCAST_EVENTS: Set<string> = new Set([
   'KILL_SWITCH_RECOVERED',
   'AUTO_STOP_TRIGGERED',
   'TX_INCOMING_SUSPICIOUS',
+  'LIQUIDATION_IMMINENT',
 ]);
 
 export interface NotificationServiceConfig {

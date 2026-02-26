@@ -59,6 +59,12 @@ export {
   INCOMING_TX_STATUSES,
   type IncomingTxStatus,
   IncomingTxStatusEnum,
+  POSITION_CATEGORIES,
+  type PositionCategory,
+  PositionCategoryEnum,
+  POSITION_STATUSES,
+  type PositionStatus,
+  PositionStatusEnum,
 } from './enums/index.js';
 
 // Schemas (5 domain Zod SSoT schemas + v1.4 discriminatedUnion 5-type)
