@@ -82,6 +82,7 @@ export class EvmIncomingSubscriber implements IChainSubscriber {
   private subscriptions = new Map<string, EvmSubscription>();
   private generateId: () => string;
   private onRpcAlert?: RpcAlertCallback;
+  private resolveTokenAddresses?: () => Address[];
   private errorCount = 0;
   private backoffUntil = 0;
   /** Track wallets that already emitted RPC_HEALTH_DEGRADED to avoid spam. */
@@ -95,6 +96,8 @@ export class EvmIncomingSubscriber implements IChainSubscriber {
     wsUrl?: string;
     generateId?: () => string;
     onRpcAlert?: RpcAlertCallback;
+    /** Resolve registered token contract addresses for getLogs address filter (#203). */
+    resolveTokenAddresses?: () => Address[];
   }) {
     this.resolveRpcUrl = config.resolveRpcUrl ?? (() => config.rpcUrl!);
     this.reportRpcFailure = config.reportRpcFailure;
@@ -103,6 +106,7 @@ export class EvmIncomingSubscriber implements IChainSubscriber {
     this.client = createPublicClient({ transport: http(this.currentRpcUrl) });
     this.generateId = config.generateId ?? (() => crypto.randomUUID());
     this.onRpcAlert = config.onRpcAlert;
+    this.resolveTokenAddresses = config.resolveTokenAddresses;
     // wsUrl accepted for future WSS subscription support (#193).
     // Currently stored but unused -- EVM uses polling-first strategy (D-06).
   }
@@ -328,14 +332,23 @@ export class EvmIncomingSubscriber implements IChainSubscriber {
     walletId: string,
     network: string,
   ): Promise<IncomingTransaction[]> {
+    // Resolve token addresses for getLogs address filter (#203)
+    const tokenAddresses = this.resolveTokenAddresses?.() ?? [];
+
+    // No registered tokens → skip ERC-20 polling gracefully (#203)
+    if (tokenAddresses.length === 0) return [];
+
     const logs = await this.client.getLogs({
+      address: tokenAddresses,
       event: TRANSFER_EVENT,
       args: { to: walletAddress },
       fromBlock,
       toBlock,
     });
 
-    return logs.map((log) => ({
+    // Null guard: some RPCs return null instead of empty array (#203)
+    const results = logs ?? [];
+    return results.map((log) => ({
       id: this.generateId(),
       txHash: log.transactionHash!,
       walletId,

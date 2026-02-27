@@ -232,6 +232,7 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, NotificationCateg
   MATURITY_WARNING: 'defi_monitoring',
   MARGIN_WARNING: 'defi_monitoring',
   LIQUIDATION_IMMINENT: 'security_alert',
+  SESSION_IDLE: 'session',
 };
 
 // ---------------------------------------------------------------------------
@@ -287,6 +288,7 @@ export const EVENT_DESCRIPTIONS: Record<NotificationEventType, string> = {
   MATURITY_WARNING: 'Position approaching maturity date',
   MARGIN_WARNING: 'Margin ratio below safe level',
   LIQUIDATION_IMMINENT: 'Position at imminent liquidation risk',
+  SESSION_IDLE: 'Session idle for extended period',
 };
 
 // ---------------------------------------------------------------------------

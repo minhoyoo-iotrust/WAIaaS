@@ -178,7 +178,7 @@ export const messages: Messages = {
   },
   // Notification templates (30 event types)
   notifications: {
-    TX_REQUESTED: { title: 'Transaction Requested', body: '{walletName} requested {amount} transfer to {to} {display_amount}' },
+    TX_REQUESTED: { title: 'Transaction Requested', body: '{walletName} requested {type}: {amount} to {to} {display_amount}' },
     TX_QUEUED: { title: 'Transaction Queued', body: 'Transaction {txId} queued for processing' },
     TX_SUBMITTED: { title: 'Transaction Submitted', body: 'Transaction {txId} submitted to blockchain {display_amount}' },
     TX_CONFIRMED: { title: 'Transaction Confirmed', body: 'Transaction {txId} confirmed. Amount: {amount} {display_amount}' },
@@ -238,6 +238,7 @@ export const messages: Messages = {
       title: 'Liquidation Imminent',
       body: '{walletName} is at imminent risk of liquidation. Health factor: {healthFactor}. Immediate action required.',
     },
+    SESSION_IDLE: { title: 'Idle Session Detected', body: 'Session {sessionId} for {walletName} has been idle for an extended period. You can manually revoke it from the Admin UI if needed.' },
   },
   // System messages
   system: {

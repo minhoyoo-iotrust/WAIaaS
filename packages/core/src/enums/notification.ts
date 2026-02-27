@@ -50,6 +50,7 @@ export const NOTIFICATION_EVENT_TYPES = [
   'MATURITY_WARNING',
   'MARGIN_WARNING',
   'LIQUIDATION_IMMINENT',
+  'SESSION_IDLE',
 ] as const;
 export type NotificationEventType = (typeof NOTIFICATION_EVENT_TYPES)[number];
 export const NotificationEventTypeEnum = z.enum(NOTIFICATION_EVENT_TYPES);

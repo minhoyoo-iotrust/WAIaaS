@@ -107,8 +107,8 @@ describe('Enum SSoT', () => {
     expect(SESSION_STATUSES).toHaveLength(3);
   });
 
-  it('NotificationEventType has 48 values', () => {
-    expect(NOTIFICATION_EVENT_TYPES).toHaveLength(48);
+  it('NotificationEventType has 49 values', () => {
+    expect(NOTIFICATION_EVENT_TYPES).toHaveLength(49);
     // v28.5: gas condition events
     expect(NOTIFICATION_EVENT_TYPES).toContain('TX_GAS_WAITING');
     expect(NOTIFICATION_EVENT_TYPES).toContain('TX_GAS_CONDITION_MET');
@@ -120,6 +120,8 @@ describe('Enum SSoT', () => {
     expect(NOTIFICATION_EVENT_TYPES).toContain('MATURITY_WARNING');
     expect(NOTIFICATION_EVENT_TYPES).toContain('MARGIN_WARNING');
     expect(NOTIFICATION_EVENT_TYPES).toContain('LIQUIDATION_IMMINENT');
+    // #204: idle session notification
+    expect(NOTIFICATION_EVENT_TYPES).toContain('SESSION_IDLE');
   });
 
   it('NotificationLogStatus has 2 values', () => {

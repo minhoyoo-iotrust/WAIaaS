@@ -224,40 +224,29 @@ export class AutoStopService {
   }
 
   // -----------------------------------------------------------------------
-  // Session revocation (AUTO-03)
+  // Session idle detection (AUTO-03) — notify only, no revoke (#204)
   // -----------------------------------------------------------------------
 
-  /** Check and revoke idle sessions. */
+  /** Check idle sessions and send SESSION_IDLE notification instead of revoking. */
   private checkIdleSessions(): void {
     const now = Math.floor(Date.now() / 1000);
     const idleSessions = this.idleTimeoutRule.checkIdle(now);
 
     for (const { walletId, sessionId } of idleSessions) {
-      this.revokeSession(walletId, sessionId);
+      this.notifyIdleSession(walletId, sessionId);
     }
   }
 
-  /** Revoke a single session due to idle timeout. */
-  private revokeSession(walletId: string, sessionId: string): void {
-    const now = Math.floor(Date.now() / 1000);
-
-    const result = this.sqlite
-      .prepare(
-        `UPDATE sessions SET revoked_at = ? WHERE id = ? AND revoked_at IS NULL
-         AND EXISTS (SELECT 1 FROM session_wallets WHERE session_id = sessions.id AND wallet_id = ?)`,
-      )
-      .run(now, sessionId, walletId);
-
-    // Remove from tracking regardless of DB result
+  /** Send SESSION_IDLE notification and remove from tracking to prevent duplicates (#204). */
+  private notifyIdleSession(walletId: string, sessionId: string): void {
+    // Remove from tracking to prevent duplicate notifications
     this.idleTimeoutRule.removeSession(walletId, sessionId);
 
-    if (result.changes === 0) return; // Already revoked or not found
-
-    // Fire-and-forget notification (AUTO-06)
+    // Fire-and-forget notification
     void this.notificationService?.notify(
-      'AUTO_STOP_TRIGGERED' as Parameters<NotificationService['notify']>[0],
+      'SESSION_IDLE' as Parameters<NotificationService['notify']>[0],
       walletId,
-      { walletId, reason: 'Idle session revoked: ' + sessionId, rule: 'IDLE_TIMEOUT' },
+      { walletId, sessionId, reason: 'Idle session detected' },
     );
   }
 

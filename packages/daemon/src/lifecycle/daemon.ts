@@ -868,11 +868,42 @@ export class DaemonLifecycle {
             const wssUrl = resolveWssUrl(network, initialRpcUrl);
             const { EvmIncomingSubscriber } = await import('@waiaas/adapter-evm');
             const ns = this.notificationService;
+            // Token address resolver for getLogs address filter (#203)
+            const { TokenRegistryService } = await import('../infrastructure/token-registry/index.js');
+            const tokenRegistry = this._db ? new TokenRegistryService(this._db) : null;
+            let cachedTokenAddresses: import('viem').Address[] = [];
+            let cacheExpiry = 0;
+            const resolveTokenAddresses = (): import('viem').Address[] => {
+              const now = Date.now();
+              if (now < cacheExpiry) return cachedTokenAddresses;
+              // Refresh every 60s to pick up runtime token additions
+              try {
+                if (tokenRegistry) {
+                  // Synchronous access: getTokensForNetwork is async but uses sync DB
+                  // Use a cached snapshot refreshed periodically
+                  void tokenRegistry.getTokensForNetwork(network).then((tokens) => {
+                    cachedTokenAddresses = tokens
+                      .map((t) => t.address as import('viem').Address);
+                    cacheExpiry = Date.now() + 60_000;
+                  });
+                }
+              } catch { /* keep previous cache */ }
+              return cachedTokenAddresses;
+            };
+            // Prime the cache immediately
+            if (tokenRegistry) {
+              try {
+                const tokens = await tokenRegistry.getTokensForNetwork(network);
+                cachedTokenAddresses = tokens.map((t) => t.address as import('viem').Address);
+                cacheExpiry = Date.now() + 60_000;
+              } catch { /* empty cache is fine — ERC-20 polling will be skipped */ }
+            }
             return new EvmIncomingSubscriber({
               resolveRpcUrl,
               reportRpcFailure: (url) => rpcPool?.reportFailure(network, url),
               reportRpcSuccess: (url) => rpcPool?.reportSuccess(network, url),
               wsUrl: wssUrl !== initialRpcUrl.replace(/^https:\/\//, 'wss://') ? wssUrl : undefined,
+              resolveTokenAddresses,
               onRpcAlert: ns ? (alert) => {
                 ns.notify(alert.type, alert.walletId, {
                   network: alert.network,

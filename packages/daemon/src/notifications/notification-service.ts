@@ -134,10 +134,13 @@ export class NotificationService {
 
     const { title, body } = getNotificationMessage(eventType, this.config.locale, mergedVars);
 
+    // Use vars.network (actual tx network) if provided, otherwise fall back to wallet default (#206)
+    const effectiveNetwork = vars?.network || walletInfo.network;
+
     // Build explorer URL when txHash + network are available
     const txHash = vars?.txHash;
-    const explorerUrl = (txHash && walletInfo.network)
-      ? getExplorerTxUrl(walletInfo.network, txHash) ?? undefined
+    const explorerUrl = (txHash && effectiveNetwork)
+      ? getExplorerTxUrl(effectiveNetwork, txHash) ?? undefined
       : undefined;
 
     const payload: NotificationPayload = {
@@ -145,7 +148,7 @@ export class NotificationService {
       walletId,
       walletName: walletInfo.walletName,
       walletAddress: walletInfo.walletAddress,
-      network: walletInfo.network,
+      network: effectiveNetwork,
       title,
       body,
       message: `${title}\n${body}`,
