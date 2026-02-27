@@ -1,9 +1,9 @@
 /**
  * WAIaaSClient - Core wallet client for WAIaaS daemon REST API.
  *
- * Wraps 22 REST API methods with typed responses:
+ * Wraps 21 REST API methods with typed responses:
  * - getBalance(), getAddress(), getAssets() (wallet queries)
- * - getWalletInfo(), setDefaultNetwork() (wallet management)
+ * - getWalletInfo() (wallet management)
  * - sendToken(), getTransaction(), listTransactions(), listPendingTransactions() (transactions)
  * - listIncomingTransactions(), getIncomingTransactionSummary() (incoming transactions)
  * - createSession(), renewSession() (session management)
@@ -45,7 +45,6 @@ import type {
   SignTransactionParams,
   SignTransactionResponse,
   WalletInfoResponse,
-  SetDefaultNetworkResponse,
   MultiNetworkBalanceResponse,
   MultiNetworkAssetsResponse,
   X402FetchParams,
@@ -287,7 +286,6 @@ export class WAIaaSClient {
     const body: Record<string, unknown> = {};
     if (params.walletIds) body['walletIds'] = params.walletIds;
     if (params.walletId) body['walletId'] = params.walletId;
-    if (params.defaultWalletId) body['defaultWalletId'] = params.defaultWalletId;
     if (params.expiresIn !== undefined) body['expiresIn'] = params.expiresIn;
     if (params.constraints) body['constraints'] = params.constraints;
     if (params.source) body['source'] = params.source;
@@ -366,7 +364,7 @@ export class WAIaaSClient {
       this.retryOptions,
     );
     const networks = await withRetry(
-      () => this.http.get<{ networks: Array<{ network: string; isDefault: boolean }> }>(
+      () => this.http.get<{ networks: Array<{ network: string }> }>(
         `/v1/wallets/${address.walletId}/networks`,
         this.authHeaders(),
       ),
@@ -380,17 +378,6 @@ export class WAIaaSClient {
       address: address.address,
       networks: networks.networks ?? [],
     };
-  }
-
-  async setDefaultNetwork(network: string): Promise<SetDefaultNetworkResponse> {
-    return withRetry(
-      () => this.http.put<SetDefaultNetworkResponse>(
-        '/v1/wallet/default-network',
-        { network },
-        this.authHeaders(),
-      ),
-      this.retryOptions,
-    );
   }
 
   // --- x402 ---
