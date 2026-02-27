@@ -8,7 +8,16 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: None (planning next)
+## Current Milestone: v29.4 Solana Lending (Kamino)
+
+**Goal:** m29-02에서 구축된 Lending 프레임워크 위에 Kamino K-Lend를 Solana Lending Provider로 구현하여, AI 에이전트가 Solana 체인에서 자산 예치/차입을 정책 평가 하에 실행할 수 있는 상태.
+
+**Target features:**
+- KaminoLendingProvider — ILendingProvider 구현체 (supply/borrow/repay/withdraw), @kamino-finance/klend-sdk 사용
+- Solana PositionTracker 확장 — Kamino obligation 계정에서 담보/차입 포지션 조회
+- MCP 5도구 + TS/Python SDK 확장
+- Admin UI DeFi 포트폴리오 Kamino 포지션 통합
+- Admin Settings (kamino.enabled/market/hf_threshold) 런타임 조정
 
 **Previous milestone:** v29.3 shipped 2026-02-27 — 기본 지갑/기본 네트워크 개념 제거 (4 phases, 10 plans, 72 requirements, 231 files, +6,200/-2,354 lines)
 
