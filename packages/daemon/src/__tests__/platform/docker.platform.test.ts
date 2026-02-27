@@ -6,7 +6,7 @@
  * No actual Docker daemon required -- CI-safe file parsing tests.
  *
  * Categories:
- *   Build (2)      - Multi-stage build structure
+ *   Build (2)      - 3-stage build structure (builder + prod-deps + runner)
  *   Compose (2)    - Service config, healthcheck
  *   Volume (2)     - Named volume, data dir
  *   Env (2)        - Environment variables, env_file
@@ -43,15 +43,17 @@ const entrypoint = readFileSync(resolve(projectRoot, 'docker/entrypoint.sh'), 'u
 
 describe('PLAT-02 Docker Platform Tests', () => {
   describe('Build', () => {
-    it('PLAT-02-BUILD-01: Dockerfile has 2-stage build (builder + runner)', () => {
+    it('PLAT-02-BUILD-01: Dockerfile has 3-stage build (builder + prod-deps + runner)', () => {
       // Stage 1: builder
       expect(dockerfile).toMatch(/FROM\s+node:22-slim\s+AS\s+builder/);
-      // Stage 2: runner
+      // Stage 2: prod-deps (inherits from builder)
+      expect(dockerfile).toMatch(/FROM\s+builder\s+AS\s+prod-deps/);
+      // Stage 3: runner
       expect(dockerfile).toMatch(/FROM\s+node:22-slim\s+AS\s+runner/);
 
       // builder uses full install
       expect(dockerfile).toMatch(/pnpm install --frozen-lockfile/);
-      // runner uses prod install
+      // prod-deps uses prod install
       expect(dockerfile).toMatch(/pnpm install --frozen-lockfile --prod/);
     });
 
@@ -61,8 +63,8 @@ describe('PLAT-02 Docker Platform Tests', () => {
       expect(runnerStageStart).toBeGreaterThan(0);
       const runnerStage = dockerfile.slice(runnerStageStart);
 
-      // --prod flag in runner stage
-      expect(runnerStage).toContain('--prod');
+      // runner copies pre-built prod deps from prod-deps stage (no direct pnpm install)
+      expect(runnerStage).toMatch(/COPY\s+--from=prod-deps/);
 
       // COPY --from=builder copies dist directories, not src
       const copyFromBuilder = runnerStage.match(/COPY\s+--from=builder\s+[^\n]+/g) ?? [];
