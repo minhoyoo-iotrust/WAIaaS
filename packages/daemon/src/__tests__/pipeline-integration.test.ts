@@ -13,7 +13,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
 import type { DatabaseConnection } from '../infrastructure/database/index.js';
-import { wallets, policies, sessions, transactions } from '../infrastructure/database/schema.js';
+import { wallets, policies, sessions, sessionWallets, transactions } from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
 import { DatabasePolicyEngine } from '../pipeline/database-policy-engine.js';
 import {
@@ -100,7 +100,6 @@ async function insertTestAgent(
     name: 'test-wallet',
     chain: 'solana',
     environment: 'testnet',
-    defaultNetwork: 'devnet',
     publicKey: MOCK_PUBLIC_KEY + '-' + id.slice(0, 8), // unique per agent
     status: 'ACTIVE',
     ownerAddress: overrides.ownerAddress ?? null,
@@ -117,10 +116,14 @@ async function insertTestSession(walletId: string): Promise<string> {
   const expires = new Date(now.getTime() + 86400000); // +1 day
   await conn.db.insert(sessions).values({
     id,
-    walletId,
     tokenHash: 'hash_' + id,
     expiresAt: expires,
     absoluteExpiresAt: expires,
+    createdAt: now,
+  });
+  await conn.db.insert(sessionWallets).values({
+    sessionId: id,
+    walletId,
     createdAt: now,
   });
   return id;
@@ -158,7 +161,7 @@ function createPipelineContext(
     policyEngine: new DefaultPolicyEngine(),
     masterPassword: 'test-master',
     walletId,
-    wallet: { publicKey: MOCK_PUBLIC_KEY, chain: 'solana', environment: 'testnet', defaultNetwork: 'devnet' },
+    wallet: { publicKey: MOCK_PUBLIC_KEY, chain: 'solana', environment: 'testnet' },
     resolvedNetwork: 'devnet',
     request: { to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', amount: '1000000000' },
     txId: '',

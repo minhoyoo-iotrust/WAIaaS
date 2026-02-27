@@ -105,7 +105,6 @@ const mockWalletDetail = {
   ownerVerified: null,
   createdAt: 1707609600,
   updatedAt: null,
-  defaultNetwork: 'devnet',
 };
 
 const mockWalletWithOwner = {
@@ -231,8 +230,7 @@ describe('WalletDetailView rendering', () => {
     expect(screen.getByText('trading-bot')).toBeTruthy();
     expect(screen.getByText('Chain')).toBeTruthy();
     expect(screen.getByText('solana')).toBeTruthy();
-    expect(screen.getByText('Default Network')).toBeTruthy();
-    // 'devnet' appears multiple times (detail row + networks list), use getAllByText
+    // 'devnet' appears in networks list, use getAllByText
     expect(screen.getAllByText('devnet').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Balances')).toBeTruthy();
     expect(screen.getByText('Available Networks')).toBeTruthy();
@@ -254,14 +252,13 @@ describe('WalletDetailView rendering', () => {
     expect(screen.getByText('USDC')).toBeTruthy();
   });
 
-  it('renders available networks with default badge', async () => {
+  it('renders available networks', async () => {
     mockDetailApiCalls();
     await renderAndWaitForDetail();
 
     await waitFor(() => {
       expect(screen.getByText('Devnet')).toBeTruthy();
     });
-    expect(screen.getAllByText('Default').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Testnet')).toBeTruthy();
   });
 

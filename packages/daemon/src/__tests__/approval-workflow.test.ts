@@ -35,7 +35,6 @@ async function insertTestAgent(): Promise<string> {
     name: 'test-wallet',
     chain: 'solana',
     environment: 'testnet',
-    defaultNetwork: 'devnet',
     publicKey: generateId(), // unique per test
     status: 'ACTIVE',
     createdAt: now,

@@ -877,7 +877,7 @@ describe('get_wallet_info tool', () => {
   it('returns combined wallet info with networks', async () => {
     const responses = new Map<string, ApiResult<unknown>>([
       ['GET:/v1/wallet/address', { ok: true, data: { walletId: 'w1', chain: 'ethereum', network: 'ethereum-sepolia', address: '0xabc' } }],
-      ['GET:/v1/wallets/w1/networks', { ok: true, data: { networks: [{ network: 'ethereum-sepolia', name: 'Sepolia', isDefault: true }] } }],
+      ['GET:/v1/wallets/w1/networks', { ok: true, data: { networks: [{ network: 'ethereum-sepolia', name: 'Sepolia' }] } }],
     ]);
     const apiClient = createMockApiClient(responses);
     const handler = getToolHandler(registerGetWalletInfo, apiClient);
@@ -886,7 +886,7 @@ describe('get_wallet_info tool', () => {
     const parsed = JSON.parse(result.content[0]!.text);
     expect(parsed.walletId).toBe('w1');
     expect(parsed.networks).toHaveLength(1);
-    expect(parsed.networks[0].isDefault).toBe(true);
+    expect(parsed.networks[0].network).toBe('ethereum-sepolia');
   });
 
   it('returns address info with empty networks on networks API failure', async () => {

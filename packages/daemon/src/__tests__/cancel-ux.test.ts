@@ -383,7 +383,6 @@ describe('Admin cancel/reject endpoints', () => {
       name: 'Test Wallet',
       chain: 'solana',
       environment: 'testnet',
-      defaultNetwork: 'devnet',
       publicKey: `pk-test-${walletId.slice(0, 8)}`,
       status: 'ACTIVE',
       createdAt: new Date(),

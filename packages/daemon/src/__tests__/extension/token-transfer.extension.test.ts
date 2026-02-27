@@ -40,7 +40,7 @@ let walletId: string;
 
 async function insertTestWallet(
   connection: DatabaseConnection,
-  overrides?: { chain?: string; environment?: string; defaultNetwork?: string },
+  overrides?: { chain?: string; environment?: string },
 ): Promise<string> {
   const id = generateId();
   const now = new Date(Math.floor(Date.now() / 1000) * 1000);
@@ -49,7 +49,6 @@ async function insertTestWallet(
     name: 'ext-token-test-wallet',
     chain: overrides?.chain ?? 'solana',
     environment: overrides?.environment ?? 'testnet',
-    defaultNetwork: overrides?.defaultNetwork ?? 'devnet',
     publicKey: `pk-ext-${id}`,
     status: 'ACTIVE',
     createdAt: now,
@@ -722,7 +721,7 @@ describe('TOK-X01~X08: Cross-validation', () => {
     });
 
     // EVM wallet with ERC-20 policy
-    const evmWalletId = await insertTestWallet(conn, { chain: 'ethereum', defaultNetwork: 'ethereum-sepolia' });
+    const evmWalletId = await insertTestWallet(conn, { chain: 'ethereum' });
     insertPolicy(conn.sqlite, {
       walletId: evmWalletId,
       type: 'ALLOWED_TOKENS',
@@ -810,7 +809,6 @@ describe('TOK-X01~X08: Cross-validation', () => {
     // Create EVM wallet
     const evmWalletId = await insertTestWallet(conn, {
       chain: 'ethereum',
-      defaultNetwork: 'ethereum-sepolia',
     });
 
     // ethereum-sepolia scoped ALLOWED_TOKENS

@@ -38,7 +38,7 @@ let walletId: string;
 
 async function insertTestWallet(
   connection: DatabaseConnection,
-  overrides?: { chain?: string; environment?: string; defaultNetwork?: string },
+  overrides?: { chain?: string; environment?: string },
 ): Promise<string> {
   const id = generateId();
   const now = new Date(Math.floor(Date.now() / 1000) * 1000);
@@ -47,7 +47,6 @@ async function insertTestWallet(
     name: 'ext-contract-test-wallet',
     chain: overrides?.chain ?? 'ethereum',
     environment: overrides?.environment ?? 'testnet',
-    defaultNetwork: overrides?.defaultNetwork ?? 'ethereum-sepolia',
     publicKey: `pk-ext-${id}`,
     status: 'ACTIVE',
     createdAt: now,
@@ -146,7 +145,6 @@ describe('CTR-U01~U02: Normal contract calls', () => {
   it('CTR-U02: Solana whitelisted program call passes pipeline', async () => {
     const solWalletId = await insertTestWallet(conn, {
       chain: 'solana',
-      defaultNetwork: 'devnet',
     });
 
     insertPolicy(conn.sqlite, {
@@ -666,7 +664,7 @@ describe('CTR-X01~X08: Cross-validation + EVM/Solana branching', () => {
   // CTR-X02: Solana programId matching
   // -------------------------------------------------------------------------
   it('CTR-X02: Solana programId matches CONTRACT_WHITELIST correctly', async () => {
-    const solWalletId = await insertTestWallet(conn, { chain: 'solana', defaultNetwork: 'devnet' });
+    const solWalletId = await insertTestWallet(conn, { chain: 'solana' });
 
     insertPolicy(conn.sqlite, {
       walletId: solWalletId,

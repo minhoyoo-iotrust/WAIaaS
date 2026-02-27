@@ -51,7 +51,6 @@ export interface SeedOptions {
   walletName?: string;
   chain?: string;
   environment?: string;
-  defaultNetwork?: string;
   revokedAt?: number | null;
   expiresAt?: number;
   constraints?: string | null;

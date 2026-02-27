@@ -37,7 +37,6 @@ async function insertTestWallet(connection: DatabaseConnection): Promise<string>
     name: 'sec-batch-wallet',
     chain: 'solana',
     environment: 'testnet',
-    defaultNetwork: 'devnet',
     publicKey: `pk-bat-${id}`,
     status: 'ACTIVE',
     createdAt: now,

@@ -36,7 +36,6 @@ function createTestDb(): DatabaseType {
     name TEXT NOT NULL,
     chain TEXT NOT NULL,
     environment TEXT NOT NULL DEFAULT 'testnet',
-    default_network TEXT,
     public_key TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'ACTIVE',
     owner_address TEXT,
@@ -66,7 +65,6 @@ function createTestDb(): DatabaseType {
   db.exec(`CREATE TABLE IF NOT EXISTS session_wallets (
     session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
     wallet_id TEXT NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
-    is_default INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER NOT NULL,
     PRIMARY KEY (session_id, wallet_id)
   )`);

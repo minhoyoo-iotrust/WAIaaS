@@ -36,7 +36,6 @@ async function insertTestWallet(): Promise<string> {
     name: 'test-wallet',
     chain: 'solana',
     environment: 'testnet',
-    defaultNetwork: 'devnet',
     publicKey: generateId(),
     status: 'ACTIVE',
     createdAt: now,

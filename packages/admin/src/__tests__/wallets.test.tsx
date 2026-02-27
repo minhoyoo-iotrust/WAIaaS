@@ -103,7 +103,6 @@ const mockWallets = {
 
 const mockWalletDetail = {
   ...mockWallets.items[0],
-  defaultNetwork: 'devnet',
   ownerAddress: null,
   ownerVerified: null,
   ownerState: 'NONE' as const,
@@ -207,8 +206,6 @@ describe('WalletsPage', () => {
     // Overview tab is active by default and shows wallet info
     expect(screen.getByText('Chain')).toBeTruthy();
     expect(screen.getByText('Environment')).toBeTruthy();
-    expect(screen.getByText('Default Network')).toBeTruthy();
-
     // Tab buttons should be visible
     expect(screen.getByText('Overview')).toBeTruthy();
     expect(screen.getByText('Transactions')).toBeTruthy();
@@ -547,7 +544,6 @@ const mockDetailForTabs = {
   environment: 'testnet',
   publicKey: 'abc123def456',
   status: 'ACTIVE',
-  defaultNetwork: 'devnet',
   ownerAddress: null,
   ownerVerified: null,
   ownerState: 'NONE' as const,

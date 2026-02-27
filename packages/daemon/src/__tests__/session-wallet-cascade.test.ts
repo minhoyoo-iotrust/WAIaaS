@@ -354,7 +354,7 @@ describe('Session-Wallet Cascade Defense', () => {
   // -----------------------------------------------------------------------
   // Test 4: Sequential deletions maintain consistency
   // -----------------------------------------------------------------------
-  it('maintains is_default invariant across sequential deletions', async () => {
+  it('maintains session-wallet links across sequential deletions', async () => {
     const w1 = generateId();
     const w2 = generateId();
     const w3 = generateId();

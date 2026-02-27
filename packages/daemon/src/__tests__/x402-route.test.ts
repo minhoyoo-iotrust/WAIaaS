@@ -289,7 +289,7 @@ afterEach(() => {
 // Auth helpers
 // ---------------------------------------------------------------------------
 
-async function createTestWallet(chain = 'ethereum', env = 'testnet', defaultNetwork = 'base-sepolia'): Promise<string> {
+async function createTestWallet(chain = 'ethereum', env = 'testnet'): Promise<string> {
   const id = generateId();
   const now = Math.floor(Date.now() / 1000);
   conn.sqlite

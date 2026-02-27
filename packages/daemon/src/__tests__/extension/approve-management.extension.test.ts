@@ -41,7 +41,7 @@ let walletId: string;
 
 async function insertTestWallet(
   connection: DatabaseConnection,
-  opts?: { chain?: string; defaultNetwork?: string },
+  opts?: { chain?: string },
 ): Promise<string> {
   const id = generateId();
   const now = new Date(Math.floor(Date.now() / 1000) * 1000);
@@ -50,7 +50,6 @@ async function insertTestWallet(
     name: 'ext-approve-test-wallet',
     chain: opts?.chain ?? 'ethereum',
     environment: 'testnet',
-    defaultNetwork: opts?.defaultNetwork ?? 'ethereum-sepolia',
     publicKey: `pk-ext-apr-${id}`,
     status: 'ACTIVE',
     createdAt: now,
@@ -351,7 +350,6 @@ describe('APR-I01~I03: integration pipeline', () => {
   it('APR-I02: Solana approve full pipeline -> allowed with INSTANT (no APPROVE_TIER_OVERRIDE)', async () => {
     const solanaWalletId = await insertTestWallet(conn, {
       chain: 'solana',
-      defaultNetwork: 'devnet',
     });
     const spender = 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr';
 

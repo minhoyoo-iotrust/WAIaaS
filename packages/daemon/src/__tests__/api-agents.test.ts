@@ -439,7 +439,7 @@ describe('chain-network validation', () => {
     expect(body.chain).toBe('solana');
   });
 
-  it('POST /wallets with chain=ethereum, no network -> defaults to evm_default_network', async () => {
+  it('POST /wallets with chain=ethereum, no network -> uses first network for environment', async () => {
     const res = await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
@@ -582,7 +582,7 @@ describe('EVM wallet creation', () => {
     expect(body.publicKey).toBe(MOCK_EVM_PUBLIC_KEY);
   });
 
-  it('generateKeyPair receives defaultNetwork derived from environment for EVM wallet', async () => {
+  it('generateKeyPair receives network derived from environment for EVM wallet', async () => {
     await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
@@ -596,13 +596,13 @@ describe('EVM wallet creation', () => {
     const mockFn = testKeyStore.generateKeyPair as ReturnType<typeof vi.fn>;
     const calls = mockFn.mock.calls;
     const lastCall = calls[calls.length - 1]!;
-    // generateKeyPair(walletId, chain, defaultNetwork, masterPassword)
+    // generateKeyPair(walletId, chain, network, masterPassword)
     expect(lastCall[1]).toBe('ethereum');
     expect(lastCall[2]).toBe('ethereum-mainnet');
     expect(lastCall[3]).toBe(TEST_MASTER_PASSWORD);
   });
 
-  it('generateKeyPair receives defaultNetwork derived from environment for Solana wallet', async () => {
+  it('generateKeyPair receives network derived from environment for Solana wallet', async () => {
     await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
@@ -616,7 +616,7 @@ describe('EVM wallet creation', () => {
     const mockFn = testKeyStore.generateKeyPair as ReturnType<typeof vi.fn>;
     const calls = mockFn.mock.calls;
     const lastCall = calls[calls.length - 1]!;
-    // generateKeyPair(walletId, chain, defaultNetwork, masterPassword)
+    // generateKeyPair(walletId, chain, network, masterPassword)
     expect(lastCall[1]).toBe('solana');
     expect(lastCall[2]).toBe('mainnet');
     expect(lastCall[3]).toBe(TEST_MASTER_PASSWORD);

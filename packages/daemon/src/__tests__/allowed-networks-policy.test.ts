@@ -34,7 +34,6 @@ async function insertTestWallet(): Promise<string> {
     name: 'test-wallet',
     chain: 'ethereum',
     environment: 'testnet',
-    defaultNetwork: 'ethereum-sepolia',
     publicKey: `0x${id.replace(/-/g, '').slice(0, 40)}`,
     status: 'ACTIVE',
     createdAt: now,

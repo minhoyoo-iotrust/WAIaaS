@@ -147,7 +147,6 @@ describe('Pipeline network resolution integration', () => {
         publicKey: MOCK_PUBLIC_KEY,
         chain: 'solana',
         environment: 'testnet',
-        defaultNetwork: null, // v29.3: default_network removed from DB
       },
       resolvedNetwork: 'testnet', // explicit non-default network
       request: { to: '22222222222222222222222222222222', amount: '100000000' },
@@ -156,7 +155,7 @@ describe('Pipeline network resolution integration', () => {
 
     await stage1Validate(ctx);
 
-    // Verify DB has the resolvedNetwork, not wallet.defaultNetwork
+    // Verify DB has the resolvedNetwork
     const tx = dbConn.db.select().from(transactions).where(eq(transactions.id, ctx.txId)).get();
     expect(tx).toBeDefined();
     expect(tx!.network).toBe('testnet'); // resolvedNetwork, not 'devnet'
@@ -179,7 +178,6 @@ describe('Pipeline network resolution integration', () => {
         publicKey: MOCK_PUBLIC_KEY,
         chain: 'solana',
         environment: 'testnet',
-        defaultNetwork: null, // v29.3: default_network removed from DB
       },
       resolvedNetwork: 'testnet',
       request: { to: '22222222222222222222222222222222', amount: '50000000' },

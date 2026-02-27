@@ -48,7 +48,6 @@ async function insertTestWallet(
     name: opts.name ?? 'e2e-chain-wallet',
     chain: 'solana',
     environment: 'testnet',
-    defaultNetwork: 'devnet',
     publicKey: `pk-e2e-${id}`,
     status: 'ACTIVE',
     createdAt: now,

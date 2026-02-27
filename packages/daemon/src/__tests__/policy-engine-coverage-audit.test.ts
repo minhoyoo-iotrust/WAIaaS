@@ -32,7 +32,6 @@ async function insertTestAgent(): Promise<string> {
     name: 'audit-agent',
     chain: 'solana',
     environment: 'testnet',
-    defaultNetwork: 'devnet',
     publicKey: '11111111111111111111111111111112',
     status: 'ACTIVE',
     createdAt: now,
