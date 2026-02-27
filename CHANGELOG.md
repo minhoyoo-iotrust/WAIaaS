@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.8.0-rc.3](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.8.0-rc.2...v2.8.0-rc.3) (2026-02-27)
+
+
+### Bug Fixes
+
+* register missing position_tracker.enabled setting key and restore test coverage ([4b9cdee](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4b9cdeea7bdc332e8abe3a74692cf3173fb8772a))
+
 ## [2.8.0-rc.2](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.8.0-rc.1...v2.8.0-rc.2) (2026-02-27)
 
 
