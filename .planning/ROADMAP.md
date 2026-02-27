@@ -231,14 +231,12 @@ See `.planning/milestones/v29.3-ROADMAP.md` for full details.
   3. TS SDK executeAction과 Python SDK execute_action으로 Kamino action을 실행할 수 있고, PositionTracker가 5분 주기로 Kamino obligation을 defi_positions 테이블에 동기화한다
   4. LendingPolicyEvaluator가 Kamino borrow action에 max_ltv_pct 정책을 적용하고, HealthFactorMonitor가 Kamino HF를 adaptive polling으로 평가하여 위험 시 알림을 발송한다
   5. Admin UI DeFi dashboard에서 Aave V3 + Kamino 포지션이 provider 구분과 함께 통합 표시되고, actions.skill.md에 Kamino Lending 4 action 문서가 추가된다
-**Plans**: TBD
-
-Plans:
-- [ ] 284-01: Provider registration + Admin Settings 3 keys + LendingPolicyEvaluator wiring
-- [ ] 284-02: PositionTracker sync + HealthFactorMonitor adaptive polling integration
-- [ ] 284-03: MCP tool auto-exposure + TS/Python SDK executeAction support
-- [ ] 284-04: Admin UI DeFi dashboard Kamino positions + Skill file update
-- [ ] 284-05: Integration tests for all KINT requirements
+**Plans** (Wave 1 || Wave 2 || Wave 3):
+- [ ] 284-01 (W1): Provider registration + Admin Settings 3 keys + LendingPolicyEvaluator wiring [KINT-01, KINT-07, KINT-08]
+- [ ] 284-02 (W1): PositionTracker provider wiring + daemon lifecycle Step 4f-5 [KINT-05, KINT-06]
+- [ ] 284-03 (W2): MCP tool auto-exposure + HF aggregation + SDK verification [KINT-02, KINT-03, KINT-04] -- depends on 284-01
+- [ ] 284-04 (W2): Admin UI Actions card + Skill file update [KINT-09, KINT-10] -- depends on 284-01
+- [ ] 284-05 (W3): Integration tests for all KINT requirements [KINT-01..10] -- depends on 284-01,02,03,04
 
 ## Progress
 
