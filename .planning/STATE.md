@@ -8,7 +8,7 @@ progress:
   total_phases: 176
   completed_phases: 169
   total_plans: 376
-  completed_plans: 369
+  completed_plans: 370
 ---
 
 # Project State
@@ -23,9 +23,9 @@ See: .planning/PROJECT.md (updated 2026-02-27)
 ## Current Position
 
 Phase: 280 of 282 (JWT/인증 + API 엔드포인트 + 파이프라인/인프라 + Admin Settings)
-Plan: 2 of 3 in current phase
-Status: Executing
-Last activity: 2026-02-27 -- Plan 280-02 complete (API route endpoints deleted, defaultNetwork/isDefault removed)
+Plan: 3 of 3 in current phase (COMPLETE)
+Status: Phase 280 complete
+Last activity: 2026-02-27 -- Plan 280-03 complete (pipeline/services/settings defaultNetwork removal, 78 files, 199/199 tests pass)
 
 Progress: [==============================░░] 95%
 
@@ -51,6 +51,9 @@ Progress: [==============================░░] 95%
 - [Phase 280-02]: NETWORK_REQUIRED error for EVM balance/assets queries without network param
 - [Phase 280-02]: Cascade defense simplified (no isDefault promotion on wallet termination)
 - [Phase 280]: JWT payload minimal: sub/iat/exp only, old wlt claims silently ignored
+- [Phase 280-03]: BalanceMonitor dedup key: walletId:network (per-network tracking)
+- [Phase 280-03]: ownerAuth two-pass lookup: wallets table first, then transactions table for tx approve/reject
+- [Phase 280-03]: rpc.evm_default_network completely removed from settings/config/hot-reload
 
 ### Research Flags
 
@@ -63,5 +66,5 @@ None -- 이 마일스톤은 기존 기능 제거이므로 연구 불필요.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 280-01-PLAN.md + 280-02-PLAN.md (parallel)
+Stopped at: Completed 280-03-PLAN.md (Phase 280 all plans complete)
 Resume file: None

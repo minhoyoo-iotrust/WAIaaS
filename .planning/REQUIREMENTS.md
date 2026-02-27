@@ -57,18 +57,18 @@ Requirements for removing default wallet/default network concepts. Each maps to 
 
 ### Pipeline / Infrastructure
 
-- [ ] **PIPE-01**: daemon.ts에서 getDefaultNetwork() 폴백이 제거되고 network null 시 에러 처리된다
-- [ ] **PIPE-02**: PipelineContext에서 wallet.defaultNetwork 필드가 제거된다
-- [ ] **PIPE-03**: notification-service.ts에서 defaultNetwork 셀렉트/폴백이 제거되고 chain 값으로 대체된다
-- [ ] **PIPE-04**: adapter-pool.ts에서 evm_default_network skip 로직이 제거된다
-- [ ] **PIPE-05**: balance-monitor-service.ts에서 default_network 폴백이 getNetworksForEnvironment() 순회로 대체된다
-- [ ] **PIPE-06**: WC 페어링 API에서 default_network 의존이 제거되고 network 파라미터가 필수화된다
+- [x] **PIPE-01**: daemon.ts에서 getDefaultNetwork() 폴백이 제거되고 network null 시 에러 처리된다
+- [x] **PIPE-02**: PipelineContext에서 wallet.defaultNetwork 필드가 제거된다
+- [x] **PIPE-03**: notification-service.ts에서 defaultNetwork 셀렉트/폴백이 제거되고 chain 값으로 대체된다
+- [x] **PIPE-04**: adapter-pool.ts에서 evm_default_network skip 로직이 제거된다
+- [x] **PIPE-05**: balance-monitor-service.ts에서 default_network 폴백이 getNetworksForEnvironment() 순회로 대체된다
+- [x] **PIPE-06**: WC 페어링 API에서 default_network 의존이 제거되고 network 파라미터가 필수화된다
 
 ### Admin Settings
 
-- [ ] **ASET-01**: rpc.evm_default_network 설정 키가 setting-keys.ts에서 삭제된다
-- [ ] **ASET-02**: config loader에서 evm_default_network 스키마 필드가 삭제된다
-- [ ] **ASET-03**: hot-reload.ts에서 evm_default_network 특수 skip 로직이 삭제된다
+- [x] **ASET-01**: rpc.evm_default_network 설정 키가 setting-keys.ts에서 삭제된다
+- [x] **ASET-02**: config loader에서 evm_default_network 스키마 필드가 삭제된다
+- [x] **ASET-03**: hot-reload.ts에서 evm_default_network 특수 skip 로직이 삭제된다
 
 ### SDK / CLI / Python SDK
 
@@ -164,15 +164,15 @@ None — 이 마일스톤은 기존 기능 정리이므로 추가 기능 없음.
 | API-08 | Phase 280 | Complete |
 | API-09 | Phase 280 | Complete |
 | API-10 | Phase 280 | Complete |
-| PIPE-01 | Phase 280 | Pending |
-| PIPE-02 | Phase 280 | Pending |
-| PIPE-03 | Phase 280 | Pending |
-| PIPE-04 | Phase 280 | Pending |
-| PIPE-05 | Phase 280 | Pending |
-| PIPE-06 | Phase 280 | Pending |
-| ASET-01 | Phase 280 | Pending |
-| ASET-02 | Phase 280 | Pending |
-| ASET-03 | Phase 280 | Pending |
+| PIPE-01 | Phase 280 | Complete |
+| PIPE-02 | Phase 280 | Complete |
+| PIPE-03 | Phase 280 | Complete |
+| PIPE-04 | Phase 280 | Complete |
+| PIPE-05 | Phase 280 | Complete |
+| PIPE-06 | Phase 280 | Complete |
+| ASET-01 | Phase 280 | Complete |
+| ASET-02 | Phase 280 | Complete |
+| ASET-03 | Phase 280 | Complete |
 | SDK-01 | Phase 281 | Pending |
 | SDK-02 | Phase 281 | Pending |
 | SDK-03 | Phase 281 | Pending |
