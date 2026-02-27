@@ -45,15 +45,15 @@ Requirements for removing default wallet/default network concepts. Each maps to 
 ### API Endpoints
 
 - [ ] **API-01**: PATCH /v1/sessions/:id/wallets/:walletId/default 엔드포인트가 삭제된다
-- [ ] **API-02**: PUT /v1/wallets/:id/default-network 엔드포인트가 삭제된다
-- [ ] **API-03**: PUT /v1/wallet/default-network 엔드포인트가 삭제된다
-- [ ] **API-04**: POST /v1/sessions 요청에서 defaultWalletId 파라미터가 제거된다
-- [ ] **API-05**: GET /v1/wallets/:id/networks 응답에서 isDefault 필드가 제거된다
-- [ ] **API-06**: GET /v1/wallets/:id 응답에서 defaultNetwork 필드가 제거된다
-- [ ] **API-07**: GET /v1/connect-info 응답에서 defaultNetwork, isDefault 필드가 제거된다
-- [ ] **API-08**: 트랜잭션/액션 라우트에서 wallet.defaultNetwork 네트워크 해석이 제거된다
-- [ ] **API-09**: Admin 라우트에서 defaultNetwork 잔고 정렬/표시 및 isDefault 세팅이 제거된다
-- [ ] **API-10**: OpenAPI 스키마에서 defaultNetwork/isDefault 관련 스키마가 제거된다
+- [x] **API-02**: PUT /v1/wallets/:id/default-network 엔드포인트가 삭제된다
+- [x] **API-03**: PUT /v1/wallet/default-network 엔드포인트가 삭제된다
+- [x] **API-04**: POST /v1/sessions 요청에서 defaultWalletId 파라미터가 제거된다
+- [x] **API-05**: GET /v1/wallets/:id/networks 응답에서 isDefault 필드가 제거된다
+- [x] **API-06**: GET /v1/wallets/:id 응답에서 defaultNetwork 필드가 제거된다
+- [x] **API-07**: GET /v1/connect-info 응답에서 defaultNetwork, isDefault 필드가 제거된다
+- [x] **API-08**: 트랜잭션/액션 라우트에서 wallet.defaultNetwork 네트워크 해석이 제거된다
+- [x] **API-09**: Admin 라우트에서 defaultNetwork 잔고 정렬/표시 및 isDefault 세팅이 제거된다
+- [x] **API-10**: OpenAPI 스키마에서 defaultNetwork/isDefault 관련 스키마가 제거된다
 
 ### Pipeline / Infrastructure
 
@@ -155,15 +155,15 @@ None — 이 마일스톤은 기존 기능 정리이므로 추가 기능 없음.
 | AUTH-04 | Phase 280 | Pending |
 | AUTH-05 | Phase 280 | Pending |
 | API-01 | Phase 280 | Pending |
-| API-02 | Phase 280 | Pending |
-| API-03 | Phase 280 | Pending |
-| API-04 | Phase 280 | Pending |
-| API-05 | Phase 280 | Pending |
-| API-06 | Phase 280 | Pending |
-| API-07 | Phase 280 | Pending |
-| API-08 | Phase 280 | Pending |
-| API-09 | Phase 280 | Pending |
-| API-10 | Phase 280 | Pending |
+| API-02 | Phase 280 | Complete |
+| API-03 | Phase 280 | Complete |
+| API-04 | Phase 280 | Complete |
+| API-05 | Phase 280 | Complete |
+| API-06 | Phase 280 | Complete |
+| API-07 | Phase 280 | Complete |
+| API-08 | Phase 280 | Complete |
+| API-09 | Phase 280 | Complete |
+| API-10 | Phase 280 | Complete |
 | PIPE-01 | Phase 280 | Pending |
 | PIPE-02 | Phase 280 | Pending |
 | PIPE-03 | Phase 280 | Pending |

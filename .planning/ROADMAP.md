@@ -220,12 +220,12 @@ Plans:
   3. POST /v1/sessions 요청에서 defaultWalletId 파라미터가 무시되고, GET 응답에서 defaultNetwork/isDefault 필드가 없다
   4. 파이프라인이 wallet.defaultNetwork 없이 동작하고, BalanceMonitor가 전체 네트워크를 순회하여 잔액을 체크한다
   5. rpc.evm_default_network 설정 키가 setting-keys/config loader/hot-reload에서 완전히 제거된다
-**Plans**: TBD
+**Plans**: 3 plans (2 waves)
 
 Plans:
-- [ ] 280-01: JWT/Auth 미들웨어 + Telegram Bot 기본 지갑 로직 제거
-- [ ] 280-02: API 라우트 엔드포인트 삭제 + 응답 필드 제거 + OpenAPI 스키마 정리
-- [ ] 280-03: 파이프라인/인프라 서비스 + Admin Settings 기본 네트워크 의존 제거
+- [ ] 280-01-PLAN.md -- JWT/Auth 미들웨어 + Telegram Bot 기본 지갑 로직 제거 (wave 1)
+- [ ] 280-02-PLAN.md -- API 라우트 엔드포인트 삭제 + 응답 필드 제거 + OpenAPI 스키마 정리 (wave 1)
+- [ ] 280-03-PLAN.md -- 파이프라인/인프라 서비스 + Admin Settings 기본 네트워크 의존 제거 (wave 2)
 
 ### Phase 281: SDK/CLI/Python SDK + MCP + Admin UI + Skill 파일
 **Goal**: 모든 외부 인터페이스(SDK, CLI, Python SDK, MCP 도구, Admin UI, Skill 파일)에서 기본 지갑/기본 네트워크 참조가 제거되고 명시적 지정 가이드로 교체된다
@@ -267,7 +267,7 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 279. DB + Core + Resolution | v29.3 | 2/2 | Complete | 2026-02-27 |
-| 280. JWT/Auth + API + Pipeline | v29.3 | 0/3 | Not started | - |
+| 280. JWT/Auth + API + Pipeline | 1/3 | In Progress|  | - |
 | 281. SDK/MCP/Admin UI/Skills | v29.3 | 0/3 | Not started | - |
 | 282. E2E + Test Fixes | v29.3 | 0/2 | Not started | - |
 

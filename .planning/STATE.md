@@ -23,9 +23,9 @@ See: .planning/PROJECT.md (updated 2026-02-27)
 ## Current Position
 
 Phase: 280 of 282 (JWT/인증 + API 엔드포인트 + 파이프라인/인프라 + Admin Settings)
-Plan: 0 of 3 in current phase
-Status: Ready to plan
-Last activity: 2026-02-27 -- Phase 279 complete (2 plans, 18 requirements, 14/14 must-haves verified)
+Plan: 2 of 3 in current phase
+Status: Executing
+Last activity: 2026-02-27 -- Plan 280-02 complete (API route endpoints deleted, defaultNetwork/isDefault removed)
 
 Progress: [==============================░░] 95%
 
@@ -47,6 +47,9 @@ Progress: [==============================░░] 95%
 - [Phase 279]: Migration v27 uses 12-step table recreation for both session_wallets and wallets
 - [Phase 279]: resolveWalletId queries session_wallets at resolution time (not JWT-cached)
 - [Phase 279]: resolveNetwork 4->3 param signature change (breaking, callers fixed Phase 280)
+- [Phase 280-02]: Wallet creation uses getSingleNetwork ?? first network for key generation
+- [Phase 280-02]: NETWORK_REQUIRED error for EVM balance/assets queries without network param
+- [Phase 280-02]: Cascade defense simplified (no isDefault promotion on wallet termination)
 
 ### Research Flags
 
@@ -59,5 +62,5 @@ None -- 이 마일스톤은 기존 기능 제거이므로 연구 불필요.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Phase 279 complete, auto-advancing to Phase 280
+Stopped at: Completed 280-02-PLAN.md
 Resume file: None
