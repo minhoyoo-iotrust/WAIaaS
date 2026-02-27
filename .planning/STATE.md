@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v29.3
 milestone_name: 기본 지갑/기본 네트워크 개념 제거
 status: executing
-last_updated: "2026-02-27T14:00:00.000Z"
+last_updated: "2026-02-27T13:09:52.545Z"
 progress:
   total_phases: 282
-  completed_phases: 280
+  completed_phases: 281
   total_plans: 381
-  completed_plans: 378
+  completed_plans: 381
 ---
 
 # Project State
@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-02-27)
 ## Current Position
 
 Phase: 281 of 282 (SDK/CLI/Python SDK + MCP + Admin UI + Skill 파일)
-Plan: 2 of 3 in current phase
-Status: Executing Phase 281 (Plans 01+02 complete, Plan 03 remaining)
-Last activity: 2026-02-27 -- Plan 281-01 complete (SDK/CLI/Python SDK default removal)
+Plan: 3 of 3 in current phase
+Status: Phase 281 complete (all 3 plans done)
+Last activity: 2026-02-27 -- Plan 281-03 complete (Admin UI + Skill files)
 
-Progress: [██████████████████████████████░░] 96%
+Progress: [███████████████████████████████░] 97%
 
 ## Performance Metrics
 
@@ -58,6 +58,8 @@ Progress: [███████████████████████
 - [Phase 281-02]: sign-transaction.ts network pattern normalized from 'Omit to use wallet default' to standard pattern
 - [Phase 281-01]: Clean removal without backward compat shims (pre-release stage)
 - [Phase 281-01]: WalletNetworkInfo kept with only network field (still used by getWalletInfo)
+- [Phase 281]: WalletDetail interface: removed defaultNetwork field (API no longer returns it)
+- [Phase 281]: Skill files: standardized on 'Required for EVM wallets; auto-resolved for Solana' network pattern
 
 ### Research Flags
 
@@ -70,5 +72,5 @@ None -- 이 마일스톤은 기존 기능 제거이므로 연구 불필요.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 281-01-PLAN.md (parallel with 281-02)
+Stopped at: Completed 281-03-PLAN.md (Phase 281 complete)
 Resume file: None

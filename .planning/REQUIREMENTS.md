@@ -89,19 +89,19 @@ Requirements for removing default wallet/default network concepts. Each maps to 
 
 ### Admin UI
 
-- [ ] **ADMN-01**: wallets.tsx에서 Default Network 표시, Set as Default 버튼, evm_default_network 설정 폼이 제거된다
-- [ ] **ADMN-02**: sessions.tsx에서 세션 생성 시 defaultWalletId 선택 UI가 제거된다
-- [ ] **ADMN-03**: settings.tsx에서 rpc.evm_default_network 설정 필드가 제거된다
-- [ ] **ADMN-04**: settings-helpers.ts에서 evm_default_network 라벨이 삭제된다
-- [ ] **ADMN-05**: settings-search-index.ts에서 rpc.evm_default_network 항목이 삭제된다
-- [ ] **ADMN-06**: endpoints.ts에서 WALLET_DEFAULT_NETWORK 상수가 삭제된다
+- [x] **ADMN-01**: wallets.tsx에서 Default Network 표시, Set as Default 버튼, evm_default_network 설정 폼이 제거된다
+- [x] **ADMN-02**: sessions.tsx에서 세션 생성 시 defaultWalletId 선택 UI가 제거된다
+- [x] **ADMN-03**: settings.tsx에서 rpc.evm_default_network 설정 필드가 제거된다
+- [x] **ADMN-04**: settings-helpers.ts에서 evm_default_network 라벨이 삭제된다
+- [x] **ADMN-05**: settings-search-index.ts에서 rpc.evm_default_network 항목이 삭제된다
+- [x] **ADMN-06**: endpoints.ts에서 WALLET_DEFAULT_NETWORK 상수가 삭제된다
 
 ### Skill Files
 
-- [ ] **SKIL-01**: wallet.skill.md에서 default network 관련 문구가 제거/수정된다
-- [ ] **SKIL-02**: transactions.skill.md에서 network 명시 필수 안내가 추가된다
-- [ ] **SKIL-03**: quickstart.skill.md에서 "wallet's default network" 참조가 제거/수정된다
-- [ ] **SKIL-04**: admin.skill.md에서 rpc.evm_default_network 설정 문서가 제거된다
+- [x] **SKIL-01**: wallet.skill.md에서 default network 관련 문구가 제거/수정된다
+- [x] **SKIL-02**: transactions.skill.md에서 network 명시 필수 안내가 추가된다
+- [x] **SKIL-03**: quickstart.skill.md에서 "wallet's default network" 참조가 제거/수정된다
+- [x] **SKIL-04**: admin.skill.md에서 rpc.evm_default_network 설정 문서가 제거된다
 
 ### E2E Verification
 
@@ -184,16 +184,16 @@ None — 이 마일스톤은 기존 기능 정리이므로 추가 기능 없음.
 | MCP-02 | Phase 281 | Complete |
 | MCP-03 | Phase 281 | Complete |
 | MCP-04 | Phase 281 | Complete |
-| ADMN-01 | Phase 281 | Pending |
-| ADMN-02 | Phase 281 | Pending |
-| ADMN-03 | Phase 281 | Pending |
-| ADMN-04 | Phase 281 | Pending |
-| ADMN-05 | Phase 281 | Pending |
-| ADMN-06 | Phase 281 | Pending |
-| SKIL-01 | Phase 281 | Pending |
-| SKIL-02 | Phase 281 | Pending |
-| SKIL-03 | Phase 281 | Pending |
-| SKIL-04 | Phase 281 | Pending |
+| ADMN-01 | Phase 281 | Complete |
+| ADMN-02 | Phase 281 | Complete |
+| ADMN-03 | Phase 281 | Complete |
+| ADMN-04 | Phase 281 | Complete |
+| ADMN-05 | Phase 281 | Complete |
+| ADMN-06 | Phase 281 | Complete |
+| SKIL-01 | Phase 281 | Complete |
+| SKIL-02 | Phase 281 | Complete |
+| SKIL-03 | Phase 281 | Complete |
+| SKIL-04 | Phase 281 | Complete |
 | E2E-01 | Phase 282 | Pending |
 | E2E-02 | Phase 282 | Pending |
 | E2E-03 | Phase 282 | Pending |
