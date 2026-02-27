@@ -6,7 +6,6 @@
  * - handleMcpSetup, fetchNetworks, fetchBalance, fetchTransactions
  * - fetchWcSession, handleWcConnect, handleWcDisconnect
  * - startEditOwner, cancelEditOwner, handleSaveOwner
- * - handleChangeDefaultNetwork
  * - Error handling branches
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -117,9 +116,9 @@ const mockWalletWithOwner = {
 
 const mockNetworks = {
   availableNetworks: [
-    { network: 'devnet', name: 'Devnet', isDefault: true },
-    { network: 'testnet', name: 'Testnet', isDefault: false },
-    { network: 'mainnet', name: 'Mainnet', isDefault: false },
+    { network: 'devnet', name: 'Devnet' },
+    { network: 'testnet', name: 'Testnet' },
+    { network: 'mainnet', name: 'Mainnet' },
   ],
 };
 
@@ -127,7 +126,6 @@ const mockBalance = {
   balances: [
     {
       network: 'devnet',
-      isDefault: true,
       native: { balance: '2.5', symbol: 'SOL' },
       tokens: [
         { symbol: 'USDC', balance: '100.00', address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v' },
@@ -459,55 +457,6 @@ describe('WalletDetailView: handleMcpSetup', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Re-provision')).toBeTruthy();
-    });
-  });
-});
-
-describe('WalletDetailView: handleChangeDefaultNetwork', () => {
-  beforeEach(() => { currentPath.value = '/wallets/test-wallet-1'; });
-  afterEach(() => { cleanup(); vi.clearAllMocks(); });
-
-  it('changes default network on Set Default click', async () => {
-    mockDetailApiCalls();
-    await renderAndWaitForDetail();
-
-    vi.mocked(apiPut).mockResolvedValueOnce(undefined);
-
-    await waitFor(() => {
-      const setDefaultButtons = screen.getAllByText('Set Default');
-      expect(setDefaultButtons.length).toBeGreaterThan(0);
-    });
-
-    // Click "Set Default" on testnet (first non-default network)
-    const setDefaultButtons = screen.getAllByText('Set Default');
-    fireEvent.click(setDefaultButtons[0]!);
-
-    await waitFor(() => {
-      expect(vi.mocked(apiPut)).toHaveBeenCalledWith(
-        '/v1/wallets/test-wallet-1/default-network',
-        { network: 'testnet' },
-      );
-    });
-
-    await waitFor(() => {
-      expect(vi.mocked(showToast)).toHaveBeenCalledWith('success', 'Default network changed to testnet');
-    });
-  });
-
-  it('handles change default network error', async () => {
-    mockDetailApiCalls();
-    await renderAndWaitForDetail();
-
-    vi.mocked(apiPut).mockRejectedValueOnce(new ApiError(500, 'NET_ERROR', 'Failed'));
-
-    await waitFor(() => {
-      expect(screen.getAllByText('Set Default').length).toBeGreaterThan(0);
-    });
-
-    fireEvent.click(screen.getAllByText('Set Default')[0]!);
-
-    await waitFor(() => {
-      expect(vi.mocked(showToast)).toHaveBeenCalledWith('error', 'Error: NET_ERROR');
     });
   });
 });
@@ -877,7 +826,7 @@ describe('WalletDetailView: balance with no tokens', () => {
     vi.mocked(apiGet).mockImplementation(async (path: string) => {
       if (path === '/v1/wallets/test-wallet-1') return mockWalletDetail;
       if (path.includes('/networks')) return mockNetworks;
-      if (path.includes('/balance')) return { balances: [{ network: 'devnet', isDefault: true, native: { balance: '1.0', symbol: 'SOL' }, tokens: [] }] };
+      if (path.includes('/balance')) return { balances: [{ network: 'devnet', native: { balance: '1.0', symbol: 'SOL' }, tokens: [] }] };
       if (path.includes('/transactions')) return mockTransactions;
       if (path.includes('/wc/session')) throw new Error('No session');
       return {};
@@ -899,7 +848,7 @@ describe('WalletDetailView: wallet with balance error', () => {
     vi.mocked(apiGet).mockImplementation(async (path: string) => {
       if (path === '/v1/wallets/test-wallet-1') return mockWalletDetail;
       if (path.includes('/networks')) return mockNetworks;
-      if (path.includes('/balance')) return { balances: [{ network: 'devnet', isDefault: true, native: null, tokens: [], error: 'RPC unavailable' }] };
+      if (path.includes('/balance')) return { balances: [{ network: 'devnet', native: null, tokens: [], error: 'RPC unavailable' }] };
       if (path.includes('/transactions')) return mockTransactions;
       if (path.includes('/wc/session')) throw new Error('No session');
       return {};
@@ -953,7 +902,6 @@ const mockSettingsData = {
     solana_testnet: '',
     evm_ethereum_mainnet: '',
     evm_ethereum_sepolia: 'https://rpc.sepolia.org',
-    evm_default_network: 'ethereum-sepolia',
   },
   monitoring: {
     enabled: 'true',

@@ -127,8 +127,8 @@ const graceWallet = {
 
 const mockNetworks = {
   availableNetworks: [
-    { network: 'devnet', name: 'Devnet', isDefault: true },
-    { network: 'testnet', name: 'Testnet', isDefault: false },
+    { network: 'devnet', name: 'Devnet' },
+    { network: 'testnet', name: 'Testnet' },
   ],
 };
 

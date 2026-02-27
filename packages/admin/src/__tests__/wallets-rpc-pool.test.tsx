@@ -92,7 +92,7 @@ import { showToast } from '../components/toast';
 function mockSettingsWithRpcPool(overrides: Record<string, string> = {}) {
   return {
     notifications: {},
-    rpc: { evm_default_network: 'ethereum-sepolia' },
+    rpc: {},
     security: {},
     daemon: {},
     walletconnect: {},

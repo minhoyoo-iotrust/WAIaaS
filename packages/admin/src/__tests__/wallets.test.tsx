@@ -112,8 +112,8 @@ const mockWalletDetail = {
 
 const mockNetworks = {
   networks: [
-    { network: 'devnet', name: 'Devnet', isDefault: true },
-    { network: 'testnet', name: 'Testnet', isDefault: false },
+    { network: 'devnet', name: 'Devnet' },
+    { network: 'testnet', name: 'Testnet' },
   ],
 };
 
@@ -329,7 +329,6 @@ const mockBalanceWallet1 = {
   balances: [
     {
       network: 'devnet',
-      isDefault: true,
       native: { balance: '1.5', symbol: 'SOL' },
       tokens: [],
     },
@@ -340,7 +339,6 @@ const mockBalanceWallet2 = {
   balances: [
     {
       network: 'ethereum-sepolia',
-      isDefault: true,
       native: { balance: '0.25', symbol: 'ETH' },
       tokens: [],
     },
@@ -585,11 +583,11 @@ const mockTxItems = [
 
 function mockDetailApiGet(overrides?: {
   transactions?: { items: typeof mockTxItems; total: number };
-  balance?: { balances: Array<{ network: string; isDefault: boolean; native: { balance: string; symbol: string; usd?: number | null } | null; tokens: never[]; error?: string }> };
+  balance?: { balances: Array<{ network: string; native: { balance: string; symbol: string; usd?: number | null } | null; tokens: never[]; error?: string }> };
 }) {
   return (path: string) => {
     if (path === '/v1/wallets/test-wallet-id') return Promise.resolve(mockDetailForTabs);
-    if (path.includes('/networks')) return Promise.resolve({ availableNetworks: [{ network: 'devnet', name: 'Devnet', isDefault: true }] });
+    if (path.includes('/networks')) return Promise.resolve({ availableNetworks: [{ network: 'devnet', name: 'Devnet' }] });
     if (path.includes('/balance')) return Promise.resolve(overrides?.balance ?? { balances: [] });
     if (path.includes('/transactions')) return Promise.resolve(overrides?.transactions ?? { items: [], total: 0 });
     if (path.includes('/wc/session')) return Promise.reject(new Error('no session'));
@@ -752,7 +750,6 @@ describe('WalletDetailView - 4-tab structure', () => {
       balance: {
         balances: [{
           network: 'devnet',
-          isDefault: true,
           native: { balance: '1.5', symbol: 'SOL', usd: 750.0 },
           tokens: [],
         }],
@@ -778,7 +775,6 @@ describe('WalletDetailView - 4-tab structure', () => {
       balance: {
         balances: [{
           network: 'devnet',
-          isDefault: true,
           native: { balance: '1.5', symbol: 'SOL' },
           tokens: [],
         }],

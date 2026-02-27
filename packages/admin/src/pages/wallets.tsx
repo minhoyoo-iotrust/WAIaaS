@@ -47,7 +47,6 @@ interface Wallet {
 }
 
 interface WalletDetail extends Wallet {
-  defaultNetwork: string;
   ownerAddress: string | null;
   ownerVerified: boolean | null;
   ownerState: 'NONE' | 'GRACE' | 'LOCKED';
@@ -61,7 +60,6 @@ interface WalletDetail extends Wallet {
 interface NetworkInfo {
   network: string;
   name?: string;
-  isDefault: boolean;
 }
 
 interface McpTokenResult {
@@ -74,7 +72,6 @@ interface McpTokenResult {
 
 interface NetworkBalance {
   network: string;
-  isDefault: boolean;
   native: { balance: string; symbol: string; usd?: number | null } | null;
   tokens: Array<{ symbol: string; balance: string; address: string }>;
   error?: string;
@@ -306,7 +303,6 @@ function WalletDetailView({ id }: { id: string }) {
   const mcpResult = useSignal<McpTokenResult | null>(null);
   const networks = useSignal<NetworkInfo[]>([]);
   const networksLoading = useSignal(true);
-  const defaultNetworkLoading = useSignal(false);
   const balance = useSignal<WalletBalance | null>(null);
   const balanceLoading = useSignal(true);
   const txs = useSignal<WalletTransaction[]>([]);
@@ -607,21 +603,6 @@ function WalletDetailView({ id }: { id: string }) {
     }
   };
 
-  const handleChangeDefaultNetwork = async (network: string) => {
-    defaultNetworkLoading.value = true;
-    try {
-      await apiPut(API.WALLET_DEFAULT_NETWORK(id), { network });
-      showToast('success', `Default network changed to ${network}`);
-      await fetchWallet();
-      await fetchNetworks();
-    } catch (err) {
-      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
-      showToast('error', getErrorMessage(e.code));
-    } finally {
-      defaultNetworkLoading.value = false;
-    }
-  };
-
   const fetchApprovalSettings = async () => {
     try {
       const result = await apiGet<SettingsData>(API.ADMIN_SETTINGS);
@@ -698,7 +679,6 @@ function WalletDetailView({ id }: { id: string }) {
               {wallet.value.environment}
             </Badge>
           </DetailRow>
-          <DetailRow label="Default Network" value={wallet.value.defaultNetwork ?? wallet.value.network} />
           <DetailRow label="Status">
             <Badge variant={wallet.value.status === 'ACTIVE' ? 'success' : wallet.value.status === 'SUSPENDED' ? 'warning' : 'danger'}>
               {wallet.value.status}
@@ -735,14 +715,11 @@ function WalletDetailView({ id }: { id: string }) {
                     padding: 'var(--space-3)',
                     border: '1px solid var(--color-border)',
                     borderRadius: 'var(--radius-md)',
-                    background: nb.isDefault ? 'var(--color-bg-secondary)' : 'transparent',
+                    background: 'transparent',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
                     <strong>{nb.network}</strong>
-                    {nb.isDefault && (
-                      <span class="badge badge-info" style={{ fontSize: '0.7rem' }}>Default</span>
-                    )}
                   </div>
                   {nb.error ? (
                     <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>{nb.error}</p>
@@ -789,18 +766,7 @@ function WalletDetailView({ id }: { id: string }) {
                 }}>
                   <span>
                     {n.name ?? n.network}
-                    {n.isDefault && <span style={{ marginLeft: 'var(--space-2)', display: 'inline-block' }}><Badge variant="success">Default</Badge></span>}
                   </span>
-                  {!n.isDefault && wallet.value?.status === 'ACTIVE' && (
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => handleChangeDefaultNetwork(n.network)}
-                      loading={defaultNetworkLoading.value}
-                    >
-                      Set Default
-                    </Button>
-                  )}
                 </div>
               ))}
             </div>
@@ -1451,8 +1417,6 @@ function RpcEndpointsTab() {
   const loading = useSignal(true);
   const expanded = useSignal<Record<string, boolean>>({});
   const newUrlInputs = useSignal<Record<string, string>>({});
-  // EVM default network dirty state
-  const dirtyEvmDefault = useSignal<string | null>(null);
   // Live pool status from GET /admin/rpc-status
   const rpcPoolStatus = useSignal<RpcPoolStatus>({});
   // Built-in RPC URLs fetched from API (#197 — replaces hardcoded BUILT_IN_RPC_URLS)
@@ -1569,7 +1533,6 @@ function RpcEndpointsTab() {
 
   // Check if URL lists have changed from original
   const isDirty = (): boolean => {
-    if (dirtyEvmDefault.value !== null) return true;
     for (const network of [...SOLANA_NETWORKS, ...EVM_NETWORKS]) {
       const orig = originalUrls.value[network] ?? [];
       const curr = dirtyUrls.value[network] ?? [];
@@ -1583,7 +1546,6 @@ function RpcEndpointsTab() {
 
   const dirtyCount = useComputed(() => {
     let count = 0;
-    if (dirtyEvmDefault.value !== null) count++;
     for (const network of [...SOLANA_NETWORKS, ...EVM_NETWORKS]) {
       const orig = originalUrls.value[network] ?? [];
       const curr = dirtyUrls.value[network] ?? [];
@@ -1610,17 +1572,11 @@ function RpcEndpointsTab() {
         entries.push({ key: `rpc_pool.${network}`, value: JSON.stringify(userOnlyUrls) });
       }
 
-      // Include EVM default network if changed
-      if (dirtyEvmDefault.value !== null) {
-        entries.push({ key: 'rpc.evm_default_network', value: dirtyEvmDefault.value });
-      }
-
       const result = await apiPut<{ updated: number; settings: SettingsData }>(API.ADMIN_SETTINGS, { settings: entries });
       settings.value = result.settings;
       const newEntries = buildUrlEntries(result.settings);
       originalUrls.value = newEntries;
       dirtyUrls.value = JSON.parse(JSON.stringify(newEntries));
-      dirtyEvmDefault.value = null;
       showToast('success', 'RPC settings saved and applied');
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
@@ -1632,7 +1588,6 @@ function RpcEndpointsTab() {
 
   const handleDiscard = () => {
     dirtyUrls.value = JSON.parse(JSON.stringify(originalUrls.value));
-    dirtyEvmDefault.value = null;
   };
 
   useEffect(() => {
@@ -1859,9 +1814,6 @@ function RpcEndpointsTab() {
     );
   }
 
-  const currentEvmDefault = dirtyEvmDefault.value
-    ?? (getEffectiveValue(settings.value, {}, 'rpc', 'evm_default_network') || 'ethereum-sepolia');
-
   return (
     <>
       {/* Save bar -- sticky when dirty */}
@@ -1892,17 +1844,6 @@ function RpcEndpointsTab() {
 
           <div class="settings-subgroup">
             <div class="settings-subgroup-title">EVM</div>
-            <div class="settings-field-full" style={{ marginBottom: 'var(--space-3)' }}>
-              <FormField
-                label={keyToLabel('evm_default_network')}
-                name="rpc.evm_default_network"
-                type="select"
-                value={currentEvmDefault}
-                onChange={(v) => { dirtyEvmDefault.value = String(v); }}
-                options={evmNetworkOptions}
-                description="Default EVM network for new wallets"
-              />
-            </div>
             {EVM_NETWORKS.map(n => <NetworkSection key={n} network={n} />)}
           </div>
         </div>
@@ -2123,9 +2064,9 @@ function WalletListContent() {
       toFetch.map(async (w) => {
         try {
           const resp = await apiGet<WalletBalance>(API.ADMIN_WALLET_BALANCE(w.id));
-          const defaultNet = resp.balances?.find((b) => b.isDefault);
-          if (defaultNet?.native) {
-            results[w.id] = { balance: defaultNet.native.balance, symbol: defaultNet.native.symbol, usd: defaultNet.native.usd };
+          const firstNet = resp.balances?.[0];
+          if (firstNet?.native) {
+            results[w.id] = { balance: firstNet.native.balance, symbol: firstNet.native.symbol, usd: firstNet.native.usd };
           } else {
             results[w.id] = null;
           }
