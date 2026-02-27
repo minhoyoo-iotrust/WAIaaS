@@ -4,12 +4,13 @@
  * - GET /v1/wallet/positions: Returns cached DeFi positions from defi_positions DB table
  *   with USD amounts and status filtering (only ACTIVE positions).
  * - GET /v1/wallet/health-factor: Returns live health factor from ILendingProvider
- *   (Aave V3) with severity classification (safe/warning/danger/critical).
+ *   implementations (Aave V3, Kamino) with severity classification.
  *
  * - sessionAuth required (via wildcard /v1/wallet/*)
  * - Wallet resolved via resolveWalletId (session default or explicit wallet_id)
  *
  * @see packages/actions/src/providers/aave-v3
+ * @see packages/actions/src/providers/kamino
  */
 
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
@@ -70,8 +71,8 @@ const getHealthFactorRoute = createRoute({
   tags: ['DeFi'],
   summary: 'Get lending health factor',
   description:
-    'Returns live health factor from the lending provider (Aave V3) with ' +
-    'collateral/debt USD values and severity classification.',
+    'Returns aggregated health factor from all registered lending providers ' +
+    '(Aave V3, Kamino) with collateral/debt USD values and severity classification.',
   request: {
     query: z.object({
       wallet_id: z.string().uuid().optional(),
@@ -212,10 +213,18 @@ export function createDefiPositionRoutes(deps: DefiPositionRouteDeps): OpenAPIHo
       });
     }
 
-    // Look up ILendingProvider from actionProviderRegistry
-    const provider = deps.actionProviderRegistry?.getProvider?.('aave_v3') as ILendingProvider | undefined;
+    // Iterate all registered lending providers (Aave V3, Kamino, etc.)
+    const lendingProviders: Array<{ name: string; provider: ILendingProvider }> = [];
+    if (deps.actionProviderRegistry) {
+      for (const meta of deps.actionProviderRegistry.listProviders()) {
+        const p = deps.actionProviderRegistry.getProvider(meta.name);
+        if (p && 'getHealthFactor' in p && typeof (p as unknown as ILendingProvider).getHealthFactor === 'function') {
+          lendingProviders.push({ name: meta.name, provider: p as unknown as ILendingProvider });
+        }
+      }
+    }
 
-    if (!provider || typeof provider.getHealthFactor !== 'function') {
+    if (lendingProviders.length === 0) {
       // No lending provider registered -- return default safe response
       return c.json({
         walletId,
@@ -227,20 +236,41 @@ export function createDefiPositionRoutes(deps: DefiPositionRouteDeps): OpenAPIHo
       }, 200);
     }
 
-    // Live health factor query via ILendingProvider
-    const hf = await provider.getHealthFactor(walletId, {
+    // Aggregate health factors: use worst (lowest) factor across all providers
+    let worstFactor = Infinity;
+    let totalCollateralUsd = 0;
+    let totalDebtUsd = 0;
+    let worstLtv = 0;
+    let worstStatus: string = 'safe';
+
+    const context = {
       walletAddress: wallet.publicKey,
       chain: wallet.chain as 'ethereum' | 'solana',
       walletId,
-    });
+    };
+
+    for (const { provider } of lendingProviders) {
+      try {
+        const hf = await provider.getHealthFactor(walletId, context);
+        totalCollateralUsd += hf.totalCollateralUsd;
+        totalDebtUsd += hf.totalDebtUsd;
+        if (hf.factor < worstFactor) {
+          worstFactor = hf.factor;
+          worstLtv = hf.currentLtv;
+          worstStatus = hf.status;
+        }
+      } catch {
+        // Skip provider on error (graceful degradation)
+      }
+    }
 
     return c.json({
       walletId,
-      factor: hf.factor,
-      totalCollateralUsd: hf.totalCollateralUsd,
-      totalDebtUsd: hf.totalDebtUsd,
-      currentLtv: hf.currentLtv,
-      status: hf.status,
+      factor: worstFactor,
+      totalCollateralUsd,
+      totalDebtUsd,
+      currentLtv: worstLtv,
+      status: worstStatus,
     }, 200);
   });
 
