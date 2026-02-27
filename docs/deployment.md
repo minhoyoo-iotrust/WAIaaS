@@ -239,7 +239,7 @@ docker compose up -d
 docker compose logs -f waiaas
 ```
 
-### 7. Upgrade
+### 7. Update
 
 ```bash
 docker compose pull
@@ -583,7 +583,7 @@ docker compose logs waiaas
 ```
 
 Common causes:
-- Missing master password: set `WAIAAS_DAEMON_MASTER_PASSWORD_HASH` or use Docker secrets.
+- Missing master password: use `WAIAAS_AUTO_PROVISION=true` for auto-provision, or set `WAIAAS_MASTER_PASSWORD` / use Docker secrets.
 - Volume permission issues: the container runs as UID 1001. Ensure the data volume is accessible.
 
 ### Admin UI Not Loading

@@ -214,9 +214,9 @@
 | 197 | BUG | MEDIUM | Admin UI RPC 빌트인 URL 하드코딩 중복으로 동기화 깨짐 — API 기반 전환 필요 | v29.0 | FIXED | 2026-02-26 |
 | 198 | MISSING | LOW | Wallet SDK 연동 가이드에 Push Relay 페이로드 커스텀 섹션 누락 | v29.0 | FIXED | 2026-02-26 |
 | 199 | BUG | HIGH | EVM 수신 폴링이 RPC Pool 우회하여 단일 엔드포인트만 사용 | v29.0 | FIXED | 2026-02-26 |
-| 200 | ENHANCEMENT | HIGH | Auto-Provision 모드: 마스터 패스워드 없는 초기 셋업 + set-master 인계 | 미정 | OPEN | |
-| 201 | ENHANCEMENT | MEDIUM | Auto-Provision 문서 동기화: 스킬 파일 + 가이드 + README | 미정 | OPEN | |
-| 202 | ENHANCEMENT | MEDIUM | deployment.md 현행화: Admin Settings 우선 + #200 Auto-Provision 반영 | 미정 | OPEN | |
+| 200 | ENHANCEMENT | HIGH | Auto-Provision 모드: 마스터 패스워드 없는 초기 셋업 + set-master 인계 | v29.2 | FIXED | 2026-02-27 |
+| 201 | ENHANCEMENT | MEDIUM | Auto-Provision 문서 동기화: 스킬 파일 + 가이드 + README | v29.2 | FIXED | 2026-02-27 |
+| 202 | ENHANCEMENT | MEDIUM | deployment.md 현행화: Admin Settings 우선 + #200 Auto-Provision 반영 | v29.2 | FIXED | 2026-02-27 |
 | 203 | BUG | HIGH | EVM 수신 모니터 eth_getLogs address 필터 누락으로 반복 실패 | v29.2 | FIXED | 2026-02-27 |
 | 204 | BUG | HIGH | AUTO-03 idle timeout이 세션을 revoke하여 에이전트 운영 방해 | v29.2 | FIXED | 2026-02-27 |
 | 205 | ENHANCEMENT | MEDIUM | 알림 메시지에서 트랜잭션 타입 구분 불가 — CONTRACT_CALL 등이 "전송"으로 표시 | v29.2 | FIXED | 2026-02-27 |
@@ -232,8 +232,8 @@
 
 ## Summary
 
-- **OPEN:** 3
-- **FIXED:** 202
+- **OPEN:** 0
+- **FIXED:** 205
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1

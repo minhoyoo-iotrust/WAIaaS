@@ -137,11 +137,14 @@ describe('EvmIncomingSubscriber - pollAll ERC-20', () => {
   let subscriber: EvmIncomingSubscriber;
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    mockClient.getBlockNumber.mockReset();
+    mockClient.getLogs.mockReset();
+    mockClient.getBlock.mockReset();
     idCounter = 0;
     subscriber = new EvmIncomingSubscriber({
       rpcUrl: TEST_RPC_URL,
       generateId: mockGenerateId,
+      resolveTokenAddresses: () => [TEST_TOKEN_ADDRESS as `0x${string}`],
     });
   });
 
@@ -372,11 +375,14 @@ describe('EvmIncomingSubscriber - pollAll resilience', () => {
   let subscriber: EvmIncomingSubscriber;
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    mockClient.getBlockNumber.mockReset();
+    mockClient.getLogs.mockReset();
+    mockClient.getBlock.mockReset();
     idCounter = 0;
     subscriber = new EvmIncomingSubscriber({
       rpcUrl: TEST_RPC_URL,
       generateId: mockGenerateId,
+      resolveTokenAddresses: () => [TEST_TOKEN_ADDRESS as `0x${string}`],
     });
   });
 
@@ -522,11 +528,14 @@ describe('EvmIncomingSubscriber - L2 native ETH skip (#172)', () => {
   let subscriber: EvmIncomingSubscriber;
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    mockClient.getBlockNumber.mockReset();
+    mockClient.getLogs.mockReset();
+    mockClient.getBlock.mockReset();
     idCounter = 0;
     subscriber = new EvmIncomingSubscriber({
       rpcUrl: TEST_RPC_URL,
       generateId: mockGenerateId,
+      resolveTokenAddresses: () => [TEST_TOKEN_ADDRESS as `0x${string}`],
     });
   });
 
@@ -635,12 +644,15 @@ describe('EvmIncomingSubscriber - per-wallet backoff (#175)', () => {
   let subscriber: EvmIncomingSubscriber;
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    mockClient.getBlockNumber.mockReset();
+    mockClient.getLogs.mockReset();
+    mockClient.getBlock.mockReset();
     vi.useFakeTimers();
     idCounter = 0;
     subscriber = new EvmIncomingSubscriber({
       rpcUrl: TEST_RPC_URL,
       generateId: mockGenerateId,
+      resolveTokenAddresses: () => [TEST_TOKEN_ADDRESS as `0x${string}`],
     });
   });
 
