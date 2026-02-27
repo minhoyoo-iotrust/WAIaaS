@@ -29,13 +29,11 @@ interface CreatedWallet {
   chain: string;
   environment: string;
   publicKey: string;
-  defaultNetwork: string | null;
   availableNetworks: string[];
 }
 
 interface NetworkInfo {
   network: string;
-  isDefault?: boolean;
 }
 
 /** Print platform-specific Claude Desktop config.json path. */
@@ -103,7 +101,6 @@ export async function quickstartCommand(opts: QuickstartOptions): Promise<void> 
       chain: string;
       environment: string;
       publicKey: string;
-      defaultNetwork: string | null;
     };
 
     if (walletRes.status === 409) {
@@ -120,7 +117,7 @@ export async function quickstartCommand(opts: QuickstartOptions): Promise<void> 
       }
       const listData = await listRes.json() as { wallets: Array<{
         id: string; name: string; chain: string; environment: string;
-        publicKey: string; defaultNetwork: string | null;
+        publicKey: string;
       }> };
       const existing = listData.wallets.find((w) => w.name === name);
       if (!existing) {
@@ -141,7 +138,6 @@ export async function quickstartCommand(opts: QuickstartOptions): Promise<void> 
         chain: string;
         environment: string;
         publicKey: string;
-        defaultNetwork: string | null;
       };
     }
 
@@ -168,7 +164,6 @@ export async function quickstartCommand(opts: QuickstartOptions): Promise<void> 
       chain: walletData.chain,
       environment: walletData.environment,
       publicKey: walletData.publicKey,
-      defaultNetwork: walletData.defaultNetwork,
       availableNetworks,
     });
   }
@@ -216,24 +211,17 @@ export async function quickstartCommand(opts: QuickstartOptions): Promise<void> 
     console.log(`  Name: ${wallet.name}`);
     console.log(`  Address: ${wallet.publicKey}`);
     console.log(`  Environment: ${wallet.environment}`);
-    if (wallet.defaultNetwork) {
-      console.log(`  Default Network: ${wallet.defaultNetwork}`);
-    }
     if (wallet.availableNetworks.length > 0) {
       console.log(`  Available Networks: ${wallet.availableNetworks.join(', ')}`);
     }
   }
 
   // Multi-wallet session info
-  const defaultWallet = createdWallets[0];
   const walletNames = createdWallets.map((w) => w.name).join(', ');
   console.log('');
   console.log('Multi-Wallet Session:');
   console.log(`  Session ID: ${sessionData.id}`);
   console.log(`  Connected Wallets: ${createdWallets.length} (${walletNames})`);
-  if (defaultWallet) {
-    console.log(`  Default Wallet: ${defaultWallet.name}`);
-  }
   const expDate = new Date(sessionData.expiresAt * 1000);
   const yyyy = expDate.getFullYear();
   const mm = String(expDate.getMonth() + 1).padStart(2, '0');
@@ -272,7 +260,7 @@ export async function quickstartCommand(opts: QuickstartOptions): Promise<void> 
   console.log('');
   console.log('Connected Wallets:');
   createdWallets.forEach((wallet, index) => {
-    const network = wallet.defaultNetwork ?? wallet.environment;
+    const network = wallet.environment;
     console.log(`${index + 1}. ${wallet.name} (${wallet.id.slice(0, 8)}) \u2014 ${network}`);
   });
   console.log('');

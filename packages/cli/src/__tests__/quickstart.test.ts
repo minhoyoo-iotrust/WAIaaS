@@ -54,7 +54,6 @@ const SOLANA_WALLET = {
   chain: 'solana',
   environment: 'testnet',
   publicKey: '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
-  defaultNetwork: 'devnet',
 };
 
 const EVM_WALLET = {
@@ -63,25 +62,24 @@ const EVM_WALLET = {
   chain: 'ethereum',
   environment: 'testnet',
   publicKey: '0x1234567890abcdef1234567890abcdef12345678',
-  defaultNetwork: 'ethereum-sepolia',
 };
 
 const SESSION_EXPIRES_AT = Math.floor(Date.now() / 1000) + 86400;
 
 const SOLANA_NETWORKS = {
   availableNetworks: [
-    { network: 'devnet', isDefault: true },
-    { network: 'testnet', isDefault: false },
+    { network: 'devnet' },
+    { network: 'testnet' },
   ],
 };
 
 const EVM_NETWORKS = {
   availableNetworks: [
-    { network: 'ethereum-sepolia', isDefault: true },
-    { network: 'polygon-amoy', isDefault: false },
-    { network: 'arbitrum-sepolia', isDefault: false },
-    { network: 'optimism-sepolia', isDefault: false },
-    { network: 'base-sepolia', isDefault: false },
+    { network: 'ethereum-sepolia' },
+    { network: 'polygon-amoy' },
+    { network: 'arbitrum-sepolia' },
+    { network: 'optimism-sepolia' },
+    { network: 'base-sepolia' },
   ],
 };
 
@@ -622,11 +620,11 @@ describe('quicksetCommand (formerly quickstart)', () => {
       if (urlStr.includes('/networks')) {
         if (urlStr.includes('sol-wallet')) {
           return Promise.resolve(mockResponse(200, {
-            availableNetworks: [{ network: 'devnet', isDefault: true }],
+            availableNetworks: [{ network: 'devnet' }],
           }));
         }
         return Promise.resolve(mockResponse(200, {
-          availableNetworks: [{ network: 'ethereum-sepolia', isDefault: true }],
+          availableNetworks: [{ network: 'ethereum-sepolia' }],
         }));
       }
 

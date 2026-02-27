@@ -10,7 +10,6 @@
  *   quickstart                        -- (alias for quickset)
  *   wallet create                     -- Create a new wallet
  *   wallet info                       -- Show wallet details
- *   wallet set-default-network <net>  -- Change default network
  *   session prompt                    -- Generate agent connection prompt
  *   owner connect                     -- Connect external wallet via WalletConnect QR
  *   owner disconnect                  -- Disconnect WalletConnect session
@@ -33,7 +32,7 @@ import { stopCommand } from './commands/stop.js';
 import { statusCommand } from './commands/status.js';
 import { mcpSetupCommand } from './commands/mcp-setup.js';
 import { quickstartCommand } from './commands/quickstart.js';
-import { walletInfoCommand, walletSetDefaultNetworkCommand, walletCreateCommand } from './commands/wallet.js';
+import { walletInfoCommand, walletCreateCommand } from './commands/wallet.js';
 import { ownerConnectCommand, ownerDisconnectCommand, ownerStatusCommand } from './commands/owner.js';
 import { sessionPromptCommand } from './commands/session.js';
 import { notificationSetupCommand } from './commands/notification-setup.js';
@@ -167,21 +166,6 @@ wallet
       password: opts.password,
       walletId: opts.wallet,
     });
-  });
-
-wallet
-  .command('set-default-network')
-  .description('Change wallet default network')
-  .argument('<network>', 'Network to set as default (e.g., polygon-amoy)')
-  .option('--base-url <url>', 'Daemon base URL', 'http://127.0.0.1:3100')
-  .option('--wallet <id>', 'Wallet ID or name (auto-detected if only one)')
-  .option('--password <password>', 'Master password')
-  .action(async (network: string, opts: { baseUrl?: string; wallet?: string; password?: string }) => {
-    await walletSetDefaultNetworkCommand({
-      baseUrl: opts.baseUrl ?? 'http://127.0.0.1:3100',
-      password: opts.password,
-      walletId: opts.wallet,
-    }, network);
   });
 
 // Session subcommand group
