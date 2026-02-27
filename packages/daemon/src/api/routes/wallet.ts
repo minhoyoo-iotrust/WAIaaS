@@ -220,7 +220,7 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
       });
     }
 
-    // network query parameter -> specific network, fallback to wallet.defaultNetwork
+    // network query parameter -> specific network, fallback to environment resolution
     const { network: queryNetwork, display_currency: queryCurrency } = c.req.valid('query');
 
     // Resolve display currency from query param or server setting
@@ -341,7 +341,7 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
       });
     }
 
-    // network query parameter -> specific network, fallback to wallet.defaultNetwork
+    // network query parameter -> specific network, fallback to environment resolution
     const { network: queryNetwork, display_currency: queryCurrency } = c.req.valid('query');
 
     // Resolve display currency from query param or server setting
