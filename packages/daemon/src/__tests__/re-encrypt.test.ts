@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { reEncryptKeystores, reEncryptSettings } from '../infrastructure/keystore/re-encrypt.js';
 import * as fsPromises from 'node:fs/promises';
 import { encrypt, type EncryptedData, KDF_PARAMS } from '../infrastructure/keystore/crypto.js';
@@ -128,10 +128,8 @@ describe('reEncryptSettings', () => {
     const apiKeyUpdates: { providerName: string; encryptedKey: string }[] = [];
 
     // Build a minimal mock DB using chained builder pattern
-    let selectCount = 0;
     const mockDb = {
       select: () => {
-        const idx = selectCount++;
         return {
           from: () => ({
             where: () => ({
