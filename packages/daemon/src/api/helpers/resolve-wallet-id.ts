@@ -1,15 +1,19 @@
 /**
- * Wallet ID resolution helper: resolves walletId from request parameters with 3-priority fallback.
+ * Wallet ID resolution helper: resolves walletId from request parameters.
  *
  * Priority order:
  *   1. bodyWalletId (explicit POST/PUT body parameter)
  *   2. c.req.query('walletId') (GET/DELETE query parameter)
- *   3. c.get('defaultWalletId') (session-auth middleware default wallet)
+ *
+ * If neither is provided, auto-resolve:
+ *   - Query session_wallets for the session
+ *   - If exactly 1 wallet -> use it (single-wallet DX convenience)
+ *   - If 0 or 2+ wallets -> throw WALLET_ID_REQUIRED
  *
  * After resolution, validates that the session has access to the wallet
  * by checking session_wallets junction table.
  *
- * @see Phase 211 -- API wallet selection
+ * @see Phase 279 -- remove default wallet concept
  */
 
 import type { Context } from 'hono';
@@ -19,12 +23,13 @@ import { WAIaaSError } from '@waiaas/core';
 import { sessionWallets } from '../../infrastructure/database/schema.js';
 
 /**
- * Resolve wallet ID from request context with 3-priority fallback + session access check.
+ * Resolve wallet ID from request context with 2-priority + auto-resolve + session access check.
  *
- * @param c - Hono request context (must have sessionId and defaultWalletId set by sessionAuth)
+ * @param c - Hono request context (must have sessionId set by sessionAuth)
  * @param db - Drizzle database instance
  * @param bodyWalletId - Optional walletId from request body (highest priority)
  * @returns Resolved wallet ID string
+ * @throws WAIaaSError('WALLET_ID_REQUIRED') if no walletId and session has 0 or 2+ wallets
  * @throws WAIaaSError('WALLET_ACCESS_DENIED') if session does not have access to the wallet
  */
 export function resolveWalletId(
@@ -34,20 +39,32 @@ export function resolveWalletId(
 ): string {
   // Priority 1: explicit body parameter
   // Priority 2: query parameter
-  // Priority 3: default wallet from session-auth middleware
-  const walletId =
-    bodyWalletId ||
-    c.req.query('walletId') ||
-    (c.get('defaultWalletId' as never) as string | undefined);
+  const walletId = bodyWalletId || c.req.query('walletId');
+
+  const sessionId = c.get('sessionId' as never) as string;
 
   if (!walletId) {
-    throw new WAIaaSError('WALLET_ACCESS_DENIED', {
-      message: 'No wallet ID provided and no default wallet available',
+    // Auto-resolve: query all wallets linked to this session
+    const links = db
+      .select({ walletId: sessionWallets.walletId })
+      .from(sessionWallets)
+      .where(eq(sessionWallets.sessionId, sessionId))
+      .all();
+
+    if (links.length === 1) {
+      // Single wallet in session -> auto-resolve
+      return links[0].walletId;
+    }
+
+    // 0 or 2+ wallets -> walletId is required
+    throw new WAIaaSError('WALLET_ID_REQUIRED', {
+      message: links.length === 0
+        ? 'No wallets linked to this session'
+        : `Session has ${links.length} wallets — specify walletId`,
     });
   }
 
   // Verify session has access to this wallet via session_wallets junction table
-  const sessionId = c.get('sessionId' as never) as string;
   const link = db
     .select()
     .from(sessionWallets)
