@@ -248,6 +248,24 @@ describe('BackgroundWorkers', () => {
 
     await workers.stopAll();
   });
+  it('isRunning returns false for unregistered worker', () => {
+    const workers = new BackgroundWorkers();
+    expect(workers.isRunning('nonexistent')).toBe(false);
+  });
+
+  it('isRunning returns true while handler is executing', async () => {
+    const workers = new BackgroundWorkers();
+    let resolve!: () => void;
+    const blocking = new Promise<void>((r) => { resolve = r; });
+    workers.register('slow', { interval: 60_000, handler: () => blocking, runImmediately: true });
+    workers.startAll();
+    await new Promise((r) => setTimeout(r, 10));
+    expect(workers.isRunning('slow')).toBe(true);
+    resolve();
+    await new Promise((r) => setTimeout(r, 10));
+    expect(workers.isRunning('slow')).toBe(false);
+    await workers.stopAll();
+  });
 });
 
 // ---------------------------------------------------------------------------
