@@ -20,7 +20,6 @@ from waiaas.models import (
     PendingTransactionList,
     SendTokenRequest,
     SessionRenewResponse,
-    SetDefaultNetworkResponse,
     SignTransactionRequest,
     SignTransactionResponse,
     TokenInfo,
@@ -235,20 +234,6 @@ class WAIaaSClient:
             address=addr.address,
             networks=net_data.get("availableNetworks", []),
         )
-
-    async def set_default_network(self, network: str) -> SetDefaultNetworkResponse:
-        """PUT /v1/wallet/default-network -- Change default network.
-
-        Args:
-            network: New default network (e.g., 'polygon-amoy', 'ethereum-sepolia').
-
-        Returns:
-            SetDefaultNetworkResponse with id, defaultNetwork, previousNetwork.
-        """
-        resp = await self._request(
-            "PUT", "/v1/wallet/default-network", json_body={"network": network}
-        )
-        return SetDefaultNetworkResponse.model_validate(resp.json())
 
     # -----------------------------------------------------------------
     # Transaction API
