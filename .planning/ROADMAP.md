@@ -240,9 +240,9 @@ Plans:
 **Plans**: 3 plans (2 waves)
 
 Plans:
-- [ ] 281-01-PLAN.md -- SDK + CLI + Python SDK 기본값 참조 제거 (wave 1)
-- [ ] 281-02-PLAN.md -- MCP 도구 삭제 + description 업데이트 (wave 1)
-- [ ] 281-03-PLAN.md -- Admin UI 기본 지갑/네트워크 UI 제거 + Skill 파일 업데이트 (wave 2)
+- [x] 281-01-PLAN.md -- SDK + CLI + Python SDK 기본값 참조 제거 (wave 1)
+- [x] 281-02-PLAN.md -- MCP 도구 삭제 + description 업데이트 (wave 1)
+- [x] 281-03-PLAN.md -- Admin UI 기본 지갑/네트워크 UI 제거 + Skill 파일 업데이트 (wave 2)
 
 ### Phase 282: E2E 검증 + 기존 테스트 수정
 **Goal**: 기본 지갑/기본 네트워크 제거 후 모든 변경 사항이 E2E 시나리오로 검증되고, 기존 테스트가 전체 통과한다
@@ -268,8 +268,8 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 279. DB + Core + Resolution | v29.3 | 2/2 | Complete | 2026-02-27 |
 | 280. JWT/Auth + API + Pipeline | v29.3 | 3/3 | Complete | 2026-02-27 |
-| 281. SDK/MCP/Admin UI/Skills | 3/3 | Complete   | 2026-02-27 | - |
+| 281. SDK/MCP/Admin UI/Skills | v29.3 | 3/3 | Complete | 2026-02-27 |
 | 282. E2E + Test Fixes | v29.3 | 0/2 | Not started | - |
 
 ---
-*Last updated: 2026-02-27 after Phase 280 completion*
+*Last updated: 2026-02-27 after Phase 281 completion*
