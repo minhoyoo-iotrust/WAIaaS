@@ -1201,6 +1201,29 @@ export class DaemonLifecycle {
     }
 
     // ------------------------------------------------------------------
+    // Step 4f-5: Register IPositionProvider implementations with PositionTracker
+    // ------------------------------------------------------------------
+    if (this.positionTracker && this.actionProviderRegistry) {
+      try {
+        // Check each registered provider for IPositionProvider interface (duck-typing)
+        for (const meta of this.actionProviderRegistry.listProviders()) {
+          const provider = this.actionProviderRegistry.getProvider(meta.name);
+          if (provider && 'getPositions' in provider && 'getSupportedCategories' in provider && 'getProviderName' in provider) {
+            this.positionTracker.registerProvider(provider as unknown as import('@waiaas/core').IPositionProvider);
+            console.debug(`Step 4f-5: Registered ${meta.name} with PositionTracker`);
+          }
+        }
+        console.debug(`Step 4f-5: PositionTracker has ${this.positionTracker.providerCount} providers`);
+        // Trigger immediate LENDING sync now that providers are registered
+        if (this.positionTracker.providerCount > 0) {
+          void this.positionTracker.syncCategory('LENDING');
+        }
+      } catch (err) {
+        console.warn('Step 4f-5 (fail-soft): PositionTracker provider registration warning:', err);
+      }
+    }
+
+    // ------------------------------------------------------------------
     // Step 4g: VersionCheckService (create before Step 5 for Health endpoint)
     // ------------------------------------------------------------------
     if (this.sqlite && this._config!.daemon.update_check) {
