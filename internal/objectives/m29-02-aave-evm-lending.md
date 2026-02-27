@@ -1,7 +1,8 @@
 # 마일스톤 m29-02: EVM Lending (Aave V3) + Lending 프레임워크
 
-- **Status:** PLANNED
-- **Milestone:** TBD
+- **Status:** SHIPPED
+- **Milestone:** v29.2
+- **Completed:** 2026-02-27
 
 ## 목표
 

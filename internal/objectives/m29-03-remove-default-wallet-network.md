@@ -1,7 +1,8 @@
 # 마일스톤 m29-03: 기본 지갑/기본 네트워크 개념 제거
 
-- **Status:** IN_PROGRESS
+- **Status:** SHIPPED
 - **Milestone:** v29.3
+- **Completed:** 2026-02-27
 
 ## 목표
 
