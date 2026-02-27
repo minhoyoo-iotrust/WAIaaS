@@ -44,7 +44,7 @@ Requirements for removing default wallet/default network concepts. Each maps to 
 
 ### API Endpoints
 
-- [ ] **API-01**: PATCH /v1/sessions/:id/wallets/:walletId/default 엔드포인트가 삭제된다
+- [x] **API-01**: PATCH /v1/sessions/:id/wallets/:walletId/default 엔드포인트가 삭제된다
 - [x] **API-02**: PUT /v1/wallets/:id/default-network 엔드포인트가 삭제된다
 - [x] **API-03**: PUT /v1/wallet/default-network 엔드포인트가 삭제된다
 - [x] **API-04**: POST /v1/sessions 요청에서 defaultWalletId 파라미터가 제거된다
@@ -105,15 +105,15 @@ Requirements for removing default wallet/default network concepts. Each maps to 
 
 ### E2E Verification
 
-- [ ] **E2E-01**: 세션에 지갑 1개 + walletId 생략 → 자동 해석 테스트 통과
-- [ ] **E2E-02**: 세션에 지갑 2개 + walletId 생략 → WALLET_ID_REQUIRED 테스트 통과
-- [ ] **E2E-03**: Solana 지갑 + network 생략 → 자동 해석 테스트 통과
-- [ ] **E2E-04**: EVM 지갑 + network 생략 → NETWORK_REQUIRED 테스트 통과
-- [ ] **E2E-05**: 삭제된 엔드포인트 3개 → 404 테스트 통과
-- [ ] **E2E-06**: 신규 JWT에 wlt claim 없음 테스트 통과
-- [ ] **E2E-07**: connect-info 응답에 defaultNetwork/isDefault 없음 테스트 통과
-- [ ] **E2E-08**: MCP 멀티 지갑 + wallet_id 생략 → WALLET_ID_REQUIRED 테스트 통과
-- [ ] **E2E-09**: 기존 테스트 전체 통과 (기존 테스트 수정 포함)
+- [x] **E2E-01**: 세션에 지갑 1개 + walletId 생략 → 자동 해석 테스트 통과
+- [x] **E2E-02**: 세션에 지갑 2개 + walletId 생략 → WALLET_ID_REQUIRED 테스트 통과
+- [x] **E2E-03**: Solana 지갑 + network 생략 → 자동 해석 테스트 통과
+- [x] **E2E-04**: EVM 지갑 + network 생략 → NETWORK_REQUIRED 테스트 통과
+- [x] **E2E-05**: 삭제된 엔드포인트 3개 → 404 테스트 통과
+- [x] **E2E-06**: 신규 JWT에 wlt claim 없음 테스트 통과
+- [x] **E2E-07**: connect-info 응답에 defaultNetwork/isDefault 없음 테스트 통과
+- [x] **E2E-08**: MCP 멀티 지갑 + wallet_id 생략 → WALLET_ID_REQUIRED 테스트 통과
+- [x] **E2E-09**: 기존 테스트 전체 통과 (기존 테스트 수정 포함)
 
 ## Future Requirements
 
@@ -154,7 +154,7 @@ None — 이 마일스톤은 기존 기능 정리이므로 추가 기능 없음.
 | AUTH-03 | Phase 280 | Complete |
 | AUTH-04 | Phase 280 | Complete |
 | AUTH-05 | Phase 280 | Complete |
-| API-01 | Phase 280 | Pending |
+| API-01 | Phase 280 | Complete |
 | API-02 | Phase 280 | Complete |
 | API-03 | Phase 280 | Complete |
 | API-04 | Phase 280 | Complete |
@@ -194,15 +194,15 @@ None — 이 마일스톤은 기존 기능 정리이므로 추가 기능 없음.
 | SKIL-02 | Phase 281 | Complete |
 | SKIL-03 | Phase 281 | Complete |
 | SKIL-04 | Phase 281 | Complete |
-| E2E-01 | Phase 282 | Pending |
-| E2E-02 | Phase 282 | Pending |
-| E2E-03 | Phase 282 | Pending |
-| E2E-04 | Phase 282 | Pending |
-| E2E-05 | Phase 282 | Pending |
-| E2E-06 | Phase 282 | Pending |
-| E2E-07 | Phase 282 | Pending |
-| E2E-08 | Phase 282 | Pending |
-| E2E-09 | Phase 282 | Pending |
+| E2E-01 | Phase 282 | Complete |
+| E2E-02 | Phase 282 | Complete |
+| E2E-03 | Phase 282 | Complete |
+| E2E-04 | Phase 282 | Complete |
+| E2E-05 | Phase 282 | Complete |
+| E2E-06 | Phase 282 | Complete |
+| E2E-07 | Phase 282 | Complete |
+| E2E-08 | Phase 282 | Complete |
+| E2E-09 | Phase 282 | Complete |
 
 **Coverage:**
 - v29.3 requirements: 72 total
