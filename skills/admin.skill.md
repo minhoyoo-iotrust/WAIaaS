@@ -89,6 +89,51 @@ curl -s -X POST http://localhost:3100/v1/admin/agent-prompt \
 
 ---
 
+## Master Password Management
+
+### CLI: set-master
+
+Change the master password. Requires the current password and a new password.
+
+```bash
+waiaas set-master
+```
+
+This prompts for:
+1. Current master password (or reads from `recovery.key` if auto-provisioned)
+2. New master password
+3. New master password confirmation
+
+**SECURITY:** After changing the password, delete the `recovery.key` file if it exists. The new password protects all wallet private keys via Argon2id key derivation.
+
+### PUT /v1/admin/master-password -- Change Master Password
+
+Change the master password via REST API. Requires current masterAuth.
+
+```bash
+curl -s -X PUT http://localhost:3100/v1/admin/master-password \
+  -H 'Content-Type: application/json' \
+  -H 'X-Master-Password: <current-password>' \
+  -d '{"newPassword": "<new-strong-password>"}'
+```
+
+**Request body:**
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `newPassword` | string | Yes | New master password (min 8 characters). |
+
+**Response (200):**
+```json
+{
+  "message": "Master password updated successfully"
+}
+```
+
+**SECURITY NOTICE:** AI agents must NEVER call this endpoint. Master password changes are operator-only operations. After changing, all existing `X-Master-Password` headers must use the new password. Session tokens (Bearer) are unaffected.
+
+---
+
 ## 1. Daemon Status & Control
 
 > **See also:** `GET /health` (no auth required, includes version check info: `latestVersion`, `updateAvailable`, `schemaVersion`). Documented in **quickstart.skill.md** Step 1.
