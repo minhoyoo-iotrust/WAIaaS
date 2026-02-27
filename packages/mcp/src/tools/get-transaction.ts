@@ -14,7 +14,7 @@ export function registerGetTransaction(server: McpServer, apiClient: ApiClient, 
     {
       transaction_id: z.string().describe('Transaction ID to retrieve'),
       display_currency: z.string().optional().describe('Display currency for amount conversion (e.g. KRW, EUR). Defaults to server setting.'),
-      wallet_id: z.string().optional().describe('Target wallet ID. Omit to use the default wallet.'),
+      wallet_id: z.string().optional().describe('Target wallet ID. Required for multi-wallet sessions; auto-resolved when session has a single wallet.'),
     },
     async (args) => {
       const params = new URLSearchParams();

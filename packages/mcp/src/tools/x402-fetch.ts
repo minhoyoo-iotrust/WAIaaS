@@ -30,7 +30,7 @@ export function registerX402Fetch(
         .describe('Additional HTTP headers'),
       body: z.string().optional()
         .describe('Request body string'),
-      wallet_id: z.string().optional().describe('Target wallet ID. Omit to use the default wallet.'),
+      wallet_id: z.string().optional().describe('Target wallet ID. Required for multi-wallet sessions; auto-resolved when session has a single wallet.'),
     },
     async (args) => {
       const requestBody: Record<string, unknown> = { url: args.url };

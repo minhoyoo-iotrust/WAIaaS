@@ -12,7 +12,7 @@ export function registerGetAddress(server: McpServer, apiClient: ApiClient, wall
     'get_address',
     withWalletPrefix('Get the public address of the wallet.', walletContext?.walletName),
     {
-      wallet_id: z.string().optional().describe('Target wallet ID. Omit to use the default wallet.'),
+      wallet_id: z.string().optional().describe('Target wallet ID. Required for multi-wallet sessions; auto-resolved when session has a single wallet.'),
     },
     async (args) => {
       const params = new URLSearchParams();

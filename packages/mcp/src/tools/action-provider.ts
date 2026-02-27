@@ -84,9 +84,9 @@ export async function registerActionProviderTools(
           params: z.record(z.unknown()).optional()
             .describe('Action-specific parameters as key-value pairs'),
           network: z.string().optional()
-            .describe('Target network. Defaults to wallet default network.'),
+            .describe('Target network. Required for EVM wallets; auto-resolved for Solana.'),
           wallet_id: z.string().optional()
-            .describe('Target wallet ID. Omit to use the default wallet.'),
+            .describe('Target wallet ID. Required for multi-wallet sessions; auto-resolved when session has a single wallet.'),
           gas_condition: z.object({
             max_gas_price: z.string().optional().describe('Max gas price in wei (EVM baseFee+priorityFee)'),
             max_priority_fee: z.string().optional().describe('Max priority fee in wei (EVM) or micro-lamports (Solana)'),

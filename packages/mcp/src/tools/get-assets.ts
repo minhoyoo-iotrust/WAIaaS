@@ -12,9 +12,9 @@ export function registerGetAssets(server: McpServer, apiClient: ApiClient, walle
     'get_assets',
     withWalletPrefix('Get all assets (native + tokens) held by the wallet.', walletContext?.walletName),
     {
-      network: z.string().optional().describe("Query assets for specific network. Use 'all' to get assets for all networks in the wallet's environment. Defaults to wallet default network."),
+      network: z.string().optional().describe("Query assets for specific network. Use 'all' for all networks. Required for EVM wallets; auto-resolved for Solana."),
       display_currency: z.string().optional().describe('Display currency for asset value conversion (e.g. KRW, EUR). Defaults to server setting.'),
-      wallet_id: z.string().optional().describe('Target wallet ID. Omit to use the default wallet.'),
+      wallet_id: z.string().optional().describe('Target wallet ID. Required for multi-wallet sessions; auto-resolved when session has a single wallet.'),
     },
     async (args) => {
       const params = new URLSearchParams();
