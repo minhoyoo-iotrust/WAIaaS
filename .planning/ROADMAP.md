@@ -204,11 +204,11 @@ See `.planning/milestones/v29.2-ROADMAP.md` for full details.
   3. resolveWalletId가 세션 지갑 1개이면 자동 해석하고, 2개 이상이면 WALLET_ID_REQUIRED 에러를 반환한다
   4. network-resolver가 Solana는 자동 해석하고, EVM은 network 누락 시 NETWORK_REQUIRED 에러를 반환한다
   5. getDefaultNetwork가 getSingleNetwork로 리네임되고, ENVIRONMENT_DEFAULT_NETWORK가 ENVIRONMENT_SINGLE_NETWORK로 변경되며, EVM 항목이 제거된다
-**Plans**: TBD
+**Plans**: 2 plans (2 waves)
 
 Plans:
-- [ ] 279-01: DB 마이그레이션 + Drizzle 스키마 + 코어 스키마/에러/i18n 변경
-- [ ] 279-02: resolveWalletId + network-resolver 해석 로직 변경
+- [ ] 279-01-PLAN.md -- DB migration v27 + Drizzle schema + core enums/schemas/errors/i18n
+- [ ] 279-02-PLAN.md -- resolveWalletId 2-priority + network-resolver getSingleNetwork
 
 ### Phase 280: JWT/인증 + API 엔드포인트 + 파이프라인/인프라 + Admin Settings
 **Goal**: 서버 런타임(인증, API 라우트, 파이프라인, 인프라 서비스) 전체에서 기본 지갑/기본 네트워크 의존이 제거되고, 삭제된 엔드포인트가 404를 반환한다
