@@ -59,7 +59,7 @@ describe('SEC-01 Session Authentication Attacks', () => {
   // SEC-01-01: JWT Signature Forgery
   describe('SEC-01-01: JWT signature forgery', () => {
     it('rejects JWT signed with attacker secret', async () => {
-      const { walletId, sessionId } = seedSecurityTestData(conn.sqlite);
+      const { sessionId } = seedSecurityTestData(conn.sqlite);
 
       // Attacker forges a JWT with a different secret
       const attackerSecret = new TextEncoder().encode('attacker-secret-32bytes-padding!');

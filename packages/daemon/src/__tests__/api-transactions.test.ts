@@ -350,7 +350,6 @@ describe('POST /v1/transactions/send', () => {
   it('should return 404 SESSION_NOT_FOUND when session does not exist in DB', async () => {
     // Sign a JWT with valid format but session not in DB
     const fakeSessionId = generateId();
-    const fakeWalletId = '00000000-0000-7000-8000-000000000000';
     const now = Math.floor(Date.now() / 1000);
 
     const payload: JwtPayload = { sub: fakeSessionId, iat: now, exp: now + 3600 };
