@@ -8,9 +8,20 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: v29.2 SHIPPED (Next: TBD)
+## Current Milestone: v29.3 기본 지갑/기본 네트워크 개념 제거
 
-**v29.2 shipped 2026-02-27.** DeFi Lending 프레임워크(ILendingProvider/IPositionProvider, PositionTracker, HealthFactorMonitor, LendingPolicyEvaluator)를 구축하고, Aave V3를 첫 번째 Lending Provider로 구현. supply/borrow/repay/withdraw 4액션, 5체인 지원, 적응형 HF 모니터링, REST API + MCP 6도구 + TS/Python SDK + Admin UI 대시보드 완전 통합.
+**Goal:** "기본 지갑(default wallet)"과 "기본 네트워크(default network)" 개념을 제거하여, 에이전트가 항상 명시적으로 대상 지갑과 네트워크를 지정하도록 강제. 암묵적 기본값으로 인해 트랜잭션이 의도하지 않은 네트워크에서 실행되는 문제를 근본적으로 해결.
+
+**Target features:**
+- DB 마이그레이션: session_wallets.is_default + wallets.default_network 컬럼 삭제
+- 해석 로직 변경: resolveWalletId Priority 3 제거, network-resolver Priority 2 제거
+- JWT 축소: wlt claim 제거, 세션 생성/갱신 시 defaultWalletId 로직 제거
+- API 정리: 기본 지갑/네트워크 변경 엔드포인트 3개 삭제, 관련 응답 필드 제거
+- getDefaultNetwork → getSingleNetwork 리네임 + EVM null 반환
+- SDK/CLI/Python SDK/MCP/Admin UI/Skill 파일 전체 동기화
+- WALLET_ID_REQUIRED / NETWORK_REQUIRED 신규 에러 코드
+
+**Previous milestone:** v29.2 shipped 2026-02-27 — DeFi Lending 프레임워크 + Aave V3
 
 ## Current State
 
