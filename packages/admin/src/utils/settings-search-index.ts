@@ -32,7 +32,6 @@ export const SETTINGS_SEARCH_INDEX: SearchIndexEntry[] = [
   { id: 'wallets.rpc.evm_optimism_sepolia', label: 'Optimism Sepolia', description: 'RPC endpoint URL for Optimism Sepolia testnet', page: '/wallets', tab: 'rpc', fieldName: 'rpc.evm_optimism_sepolia', keywords: ['blockchain', 'rpc', 'evm', 'optimism', 'l2', 'url', 'endpoint', 'test'] },
   { id: 'wallets.rpc.evm_base_mainnet', label: 'Base Mainnet', description: 'RPC endpoint URL for Base mainnet', page: '/wallets', tab: 'rpc', fieldName: 'rpc.evm_base_mainnet', keywords: ['blockchain', 'rpc', 'evm', 'base', 'coinbase', 'l2', 'url', 'endpoint'] },
   { id: 'wallets.rpc.evm_base_sepolia', label: 'Base Sepolia', description: 'RPC endpoint URL for Base Sepolia testnet', page: '/wallets', tab: 'rpc', fieldName: 'rpc.evm_base_sepolia', keywords: ['blockchain', 'rpc', 'evm', 'base', 'coinbase', 'l2', 'url', 'endpoint', 'test'] },
-  { id: 'wallets.rpc.evm_default_network', label: 'Default EVM Network', description: 'Default EVM network for new wallets', page: '/wallets', tab: 'rpc', fieldName: 'rpc.evm_default_network', keywords: ['blockchain', 'evm', 'default', 'network'] },
 
   // --- Balance Monitoring (now in Notifications page) ---
   { id: 'notifications.balance.enabled', label: 'Enabled', description: 'Enable or disable balance monitoring', page: '/notifications', tab: 'balance', fieldName: 'monitoring.enabled', keywords: ['balance', 'monitoring', 'toggle', 'enable'] },

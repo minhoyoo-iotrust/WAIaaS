@@ -91,7 +91,6 @@ const mockSettingsResponse = {
     evm_optimism_sepolia: 'https://optimism-sepolia.drpc.org',
     evm_base_mainnet: 'https://base.drpc.org',
     evm_base_sepolia: 'https://base-sepolia.drpc.org',
-    evm_default_network: 'ethereum-sepolia',
   },
   security: {
     session_ttl: '86400',

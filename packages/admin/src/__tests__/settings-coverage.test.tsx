@@ -99,7 +99,6 @@ const mockSettingsResponse = {
     evm_optimism_sepolia: '',
     evm_base_mainnet: '',
     evm_base_sepolia: '',
-    evm_default_network: 'ethereum-sepolia',
   },
   security: {
     session_ttl: '86400',
