@@ -237,12 +237,12 @@ Plans:
   3. Python SDK에 is_default/default_network/isDefault 필드와 set_default_network 메서드가 없다
   4. MCP에 set-default-network 도구가 없고, 25개 도구의 wallet_id description이 명시적 지정을 안내한다
   5. Admin UI에서 Default Network 표시, Set as Default 버튼, evm_default_network 설정이 없고, 세션 생성에 defaultWalletId 선택이 없다
-**Plans**: TBD
+**Plans**: 3 plans (2 waves)
 
 Plans:
-- [ ] 281-01: SDK + CLI + Python SDK 기본값 참조 제거
-- [ ] 281-02: MCP 도구 삭제 + description 업데이트
-- [ ] 281-03: Admin UI 기본 지갑/네트워크 UI 제거 + Skill 파일 업데이트
+- [ ] 281-01-PLAN.md -- SDK + CLI + Python SDK 기본값 참조 제거 (wave 1)
+- [ ] 281-02-PLAN.md -- MCP 도구 삭제 + description 업데이트 (wave 1)
+- [ ] 281-03-PLAN.md -- Admin UI 기본 지갑/네트워크 UI 제거 + Skill 파일 업데이트 (wave 2)
 
 ### Phase 282: E2E 검증 + 기존 테스트 수정
 **Goal**: 기본 지갑/기본 네트워크 제거 후 모든 변경 사항이 E2E 시나리오로 검증되고, 기존 테스트가 전체 통과한다
@@ -268,7 +268,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 279. DB + Core + Resolution | v29.3 | 2/2 | Complete | 2026-02-27 |
 | 280. JWT/Auth + API + Pipeline | v29.3 | 3/3 | Complete | 2026-02-27 |
-| 281. SDK/MCP/Admin UI/Skills | v29.3 | 0/3 | Not started | - |
+| 281. SDK/MCP/Admin UI/Skills | 1/3 | In Progress|  | - |
 | 282. E2E + Test Fixes | v29.3 | 0/2 | Not started | - |
 
 ---

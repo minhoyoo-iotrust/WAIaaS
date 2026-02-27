@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v29.3
 milestone_name: 기본 지갑/기본 네트워크 개념 제거
-status: ready_to_plan
+status: executing
 last_updated: "2026-02-27T14:00:00.000Z"
 progress:
   total_phases: 282
   completed_phases: 280
   total_plans: 381
-  completed_plans: 376
+  completed_plans: 377
 ---
 
 # Project State
@@ -23,9 +23,9 @@ See: .planning/PROJECT.md (updated 2026-02-27)
 ## Current Position
 
 Phase: 281 of 282 (SDK/CLI/Python SDK + MCP + Admin UI + Skill 파일)
-Plan: 0 of 3 in current phase
-Status: Ready to plan
-Last activity: 2026-02-27 -- Phase 280 complete (3 plans, 24 requirements, 5/5 must-haves verified)
+Plan: 2 of 3 in current phase
+Status: Executing Phase 281 (Plan 02 complete)
+Last activity: 2026-02-27 -- Plan 281-02 complete (MCP tool deletion + description update)
 
 Progress: [██████████████████████████████░░] 96%
 
@@ -54,6 +54,8 @@ Progress: [███████████████████████
 - [Phase 280-03]: BalanceMonitor dedup key: walletId:network (per-network tracking)
 - [Phase 280-03]: ownerAuth two-pass lookup: wallets table first, then transactions table for tx approve/reject
 - [Phase 280-03]: rpc.evm_default_network completely removed from settings/config/hot-reload
+- [Phase 281-02]: get-tokens.ts has no wallet_id (network-scoped query, not wallet-scoped)
+- [Phase 281-02]: sign-transaction.ts network pattern normalized from 'Omit to use wallet default' to standard pattern
 
 ### Research Flags
 
@@ -66,5 +68,5 @@ None -- 이 마일스톤은 기존 기능 제거이므로 연구 불필요.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Phase 280 complete, auto-advancing to Phase 281
+Stopped at: Completed 281-02-PLAN.md
 Resume file: None

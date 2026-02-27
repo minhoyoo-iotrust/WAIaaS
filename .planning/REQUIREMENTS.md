@@ -82,10 +82,10 @@ Requirements for removing default wallet/default network concepts. Each maps to 
 
 ### MCP Tools
 
-- [ ] **MCP-01**: set-default-network.ts MCP 도구 파일이 삭제된다
-- [ ] **MCP-02**: server.ts에서 registerSetDefaultNetwork 등록이 제거된다
-- [ ] **MCP-03**: 25개 MCP 도구의 wallet_id description에서 "Omit to use the default wallet" 문구가 제거/수정된다
-- [ ] **MCP-04**: action-provider.ts의 network description에서 "Defaults to wallet default network" 문구가 제거된다
+- [x] **MCP-01**: set-default-network.ts MCP 도구 파일이 삭제된다
+- [x] **MCP-02**: server.ts에서 registerSetDefaultNetwork 등록이 제거된다
+- [x] **MCP-03**: 25개 MCP 도구의 wallet_id description에서 "Omit to use the default wallet" 문구가 제거/수정된다
+- [x] **MCP-04**: action-provider.ts의 network description에서 "Defaults to wallet default network" 문구가 제거된다
 
 ### Admin UI
 
@@ -180,10 +180,10 @@ None — 이 마일스톤은 기존 기능 정리이므로 추가 기능 없음.
 | SDK-05 | Phase 281 | Pending |
 | SDK-06 | Phase 281 | Pending |
 | SDK-07 | Phase 281 | Pending |
-| MCP-01 | Phase 281 | Pending |
-| MCP-02 | Phase 281 | Pending |
-| MCP-03 | Phase 281 | Pending |
-| MCP-04 | Phase 281 | Pending |
+| MCP-01 | Phase 281 | Complete |
+| MCP-02 | Phase 281 | Complete |
+| MCP-03 | Phase 281 | Complete |
+| MCP-04 | Phase 281 | Complete |
 | ADMN-01 | Phase 281 | Pending |
 | ADMN-02 | Phase 281 | Pending |
 | ADMN-03 | Phase 281 | Pending |
