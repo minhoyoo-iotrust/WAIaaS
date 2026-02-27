@@ -9,21 +9,21 @@ Requirements for removing default wallet/default network concepts. Each maps to 
 
 ### DB Migration
 
-- [ ] **DB-01**: session_wallets 테이블에서 is_default 컬럼이 삭제된다
-- [ ] **DB-02**: wallets 테이블에서 default_network 컬럼이 삭제된다
-- [ ] **DB-03**: default_network 관련 CHECK 제약이 삭제된다
-- [ ] **DB-04**: 마이그레이션이 기존 데이터를 손실 없이 처리한다
+- [x] **DB-01**: session_wallets 테이블에서 is_default 컬럼이 삭제된다
+- [x] **DB-02**: wallets 테이블에서 default_network 컬럼이 삭제된다
+- [x] **DB-03**: default_network 관련 CHECK 제약이 삭제된다
+- [x] **DB-04**: 마이그레이션이 기존 데이터를 손실 없이 처리한다
 
 ### Core Schema / Error Codes
 
-- [ ] **CORE-01**: WalletSchema에서 defaultNetwork 필드가 제거된다
-- [ ] **CORE-02**: CreateSessionRequestSchema에서 defaultWalletId 필드가 제거된다
-- [ ] **CORE-03**: WALLET_ID_REQUIRED 에러 코드가 추가되어 세션에 지갑 2개 이상일 때 walletId 누락 시 반환된다
-- [ ] **CORE-04**: NETWORK_REQUIRED 에러 코드가 추가되어 EVM 지갑에서 network 누락 시 반환된다
-- [ ] **CORE-05**: CANNOT_REMOVE_DEFAULT_WALLET 에러 코드가 삭제된다
-- [ ] **CORE-06**: getDefaultNetwork 함수가 getSingleNetwork로 리네임되고 EVM은 null을 반환한다
-- [ ] **CORE-07**: ENVIRONMENT_DEFAULT_NETWORK 상수가 ENVIRONMENT_SINGLE_NETWORK로 변경되고 EVM 항목이 제거된다
-- [ ] **CORE-08**: en.ts/ko.ts i18n 메시지가 신규 에러 코드에 맞게 업데이트된다
+- [x] **CORE-01**: WalletSchema에서 defaultNetwork 필드가 제거된다
+- [x] **CORE-02**: CreateSessionRequestSchema에서 defaultWalletId 필드가 제거된다
+- [x] **CORE-03**: WALLET_ID_REQUIRED 에러 코드가 추가되어 세션에 지갑 2개 이상일 때 walletId 누락 시 반환된다
+- [x] **CORE-04**: NETWORK_REQUIRED 에러 코드가 추가되어 EVM 지갑에서 network 누락 시 반환된다
+- [x] **CORE-05**: CANNOT_REMOVE_DEFAULT_WALLET 에러 코드가 삭제된다
+- [x] **CORE-06**: getDefaultNetwork 함수가 getSingleNetwork로 리네임되고 EVM은 null을 반환한다
+- [x] **CORE-07**: ENVIRONMENT_DEFAULT_NETWORK 상수가 ENVIRONMENT_SINGLE_NETWORK로 변경되고 EVM 항목이 제거된다
+- [x] **CORE-08**: en.ts/ko.ts i18n 메시지가 신규 에러 코드에 맞게 업데이트된다
 
 ### Resolution Logic
 
@@ -131,18 +131,18 @@ None — 이 마일스톤은 기존 기능 정리이므로 추가 기능 없음.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DB-01 | Phase 279 | Pending |
-| DB-02 | Phase 279 | Pending |
-| DB-03 | Phase 279 | Pending |
-| DB-04 | Phase 279 | Pending |
-| CORE-01 | Phase 279 | Pending |
-| CORE-02 | Phase 279 | Pending |
-| CORE-03 | Phase 279 | Pending |
-| CORE-04 | Phase 279 | Pending |
-| CORE-05 | Phase 279 | Pending |
-| CORE-06 | Phase 279 | Pending |
-| CORE-07 | Phase 279 | Pending |
-| CORE-08 | Phase 279 | Pending |
+| DB-01 | Phase 279 | Complete |
+| DB-02 | Phase 279 | Complete |
+| DB-03 | Phase 279 | Complete |
+| DB-04 | Phase 279 | Complete |
+| CORE-01 | Phase 279 | Complete |
+| CORE-02 | Phase 279 | Complete |
+| CORE-03 | Phase 279 | Complete |
+| CORE-04 | Phase 279 | Complete |
+| CORE-05 | Phase 279 | Complete |
+| CORE-06 | Phase 279 | Complete |
+| CORE-07 | Phase 279 | Complete |
+| CORE-08 | Phase 279 | Complete |
 | RSLV-01 | Phase 279 | Pending |
 | RSLV-02 | Phase 279 | Pending |
 | RSLV-03 | Phase 279 | Pending |

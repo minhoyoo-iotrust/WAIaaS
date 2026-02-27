@@ -207,7 +207,7 @@ See `.planning/milestones/v29.2-ROADMAP.md` for full details.
 **Plans**: 2 plans (2 waves)
 
 Plans:
-- [ ] 279-01-PLAN.md -- DB migration v27 + Drizzle schema + core enums/schemas/errors/i18n
+- [x] 279-01-PLAN.md -- DB migration v27 + Drizzle schema + core enums/schemas/errors/i18n
 - [ ] 279-02-PLAN.md -- resolveWalletId 2-priority + network-resolver getSingleNetwork
 
 ### Phase 280: JWT/인증 + API 엔드포인트 + 파이프라인/인프라 + Admin Settings
@@ -266,7 +266,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 279. DB + Core + Resolution | v29.3 | 0/2 | Not started | - |
+| 279. DB + Core + Resolution | 1/2 | In Progress|  | - |
 | 280. JWT/Auth + API + Pipeline | v29.3 | 0/3 | Not started | - |
 | 281. SDK/MCP/Admin UI/Skills | v29.3 | 0/3 | Not started | - |
 | 282. E2E + Test Fixes | v29.3 | 0/2 | Not started | - |

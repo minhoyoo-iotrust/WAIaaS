@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v29.3
 milestone_name: 기본 지갑/기본 네트워크 개념 제거
-status: ready_to_plan
-last_updated: "2026-02-27T07:00:00.000Z"
+status: executing
+last_updated: "2026-02-27T10:02:00.000Z"
 progress:
   total_phases: 282
   completed_phases: 278
   total_plans: 381
-  completed_plans: 371
+  completed_plans: 372
 ---
 
 # Project State
@@ -23,9 +23,9 @@ See: .planning/PROJECT.md (updated 2026-02-27)
 ## Current Position
 
 Phase: 279 of 282 (DB 마이그레이션 + 코어 스키마/타입/에러 + 해석 로직)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-27 -- Roadmap created for v29.3 (4 phases, 10 plans, 72 requirements)
+Plan: 1 of 2 in current phase
+Status: Executing
+Last activity: 2026-02-27 -- Completed 279-01-PLAN.md (DB migration v27 + core enums/schemas/errors/i18n)
 
 Progress: [==============================░░] 94%
 
@@ -44,6 +44,7 @@ Progress: [==============================░░] 94%
 - D5: 하위 호환 레이어 없이 깔끔한 제거 (pre-release 단계)
 - D6: getDefaultNetwork -> getSingleNetwork 리네임 + EVM null 반환
 - D7: BalanceMonitor 전체 네트워크 순회 (IncomingTxMonitor 패턴)
+- [Phase 279]: Migration v27 uses 12-step table recreation for both session_wallets and wallets
 
 ### Research Flags
 
@@ -56,5 +57,5 @@ None -- 이 마일스톤은 기존 기능 제거이므로 연구 불필요.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Roadmap created for v29.3 -- 4 phases (279-282), 10 plans, 72 requirements
+Stopped at: Completed 279-01-PLAN.md
 Resume file: None
