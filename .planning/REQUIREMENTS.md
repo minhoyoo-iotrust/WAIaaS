@@ -36,11 +36,11 @@ Requirements for removing default wallet/default network concepts. Each maps to 
 
 ### JWT / Auth
 
-- [ ] **AUTH-01**: JWT 페이로드에서 wlt claim이 제거된다
-- [ ] **AUTH-02**: session-auth 미들웨어에서 defaultWalletId 컨텍스트 설정이 제거된다
-- [ ] **AUTH-03**: 기존 JWT의 wlt claim이 있어도 에러 없이 무시된다 (하위 호환)
-- [ ] **AUTH-04**: owner-auth 미들웨어에서 defaultWalletId 의존이 제거된다
-- [ ] **AUTH-05**: Telegram Bot 세션 생성에서 wlt claim 구성과 is_default INSERT가 제거된다
+- [x] **AUTH-01**: JWT 페이로드에서 wlt claim이 제거된다
+- [x] **AUTH-02**: session-auth 미들웨어에서 defaultWalletId 컨텍스트 설정이 제거된다
+- [x] **AUTH-03**: 기존 JWT의 wlt claim이 있어도 에러 없이 무시된다 (하위 호환)
+- [x] **AUTH-04**: owner-auth 미들웨어에서 defaultWalletId 의존이 제거된다
+- [x] **AUTH-05**: Telegram Bot 세션 생성에서 wlt claim 구성과 is_default INSERT가 제거된다
 
 ### API Endpoints
 
@@ -149,11 +149,11 @@ None — 이 마일스톤은 기존 기능 정리이므로 추가 기능 없음.
 | RSLV-04 | Phase 279 | Complete |
 | RSLV-05 | Phase 279 | Complete |
 | RSLV-06 | Phase 279 | Complete |
-| AUTH-01 | Phase 280 | Pending |
-| AUTH-02 | Phase 280 | Pending |
-| AUTH-03 | Phase 280 | Pending |
-| AUTH-04 | Phase 280 | Pending |
-| AUTH-05 | Phase 280 | Pending |
+| AUTH-01 | Phase 280 | Complete |
+| AUTH-02 | Phase 280 | Complete |
+| AUTH-03 | Phase 280 | Complete |
+| AUTH-04 | Phase 280 | Complete |
+| AUTH-05 | Phase 280 | Complete |
 | API-01 | Phase 280 | Pending |
 | API-02 | Phase 280 | Complete |
 | API-03 | Phase 280 | Complete |

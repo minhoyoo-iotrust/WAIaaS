@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
-milestone: v29.3
+milestone: v0.1
 milestone_name: 기본 지갑/기본 네트워크 개념 제거
-status: ready_to_plan
-last_updated: "2026-02-27T12:00:00.000Z"
+status: unknown
+last_updated: "2026-02-27T10:40:55.545Z"
 progress:
-  total_phases: 282
-  completed_phases: 279
-  total_plans: 381
-  completed_plans: 373
+  total_phases: 176
+  completed_phases: 169
+  total_plans: 376
+  completed_plans: 369
 ---
 
 # Project State
@@ -50,6 +50,7 @@ Progress: [==============================░░] 95%
 - [Phase 280-02]: Wallet creation uses getSingleNetwork ?? first network for key generation
 - [Phase 280-02]: NETWORK_REQUIRED error for EVM balance/assets queries without network param
 - [Phase 280-02]: Cascade defense simplified (no isDefault promotion on wallet termination)
+- [Phase 280]: JWT payload minimal: sub/iat/exp only, old wlt claims silently ignored
 
 ### Research Flags
 
@@ -62,5 +63,5 @@ None -- 이 마일스톤은 기존 기능 제거이므로 연구 불필요.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 280-02-PLAN.md
+Stopped at: Completed 280-01-PLAN.md + 280-02-PLAN.md (parallel)
 Resume file: None
