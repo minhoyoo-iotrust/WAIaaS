@@ -89,7 +89,6 @@ async function insertTestWallet(): Promise<string> {
     name: 'test-wallet',
     chain: 'ethereum',
     environment: 'testnet',
-    defaultNetwork: 'ethereum-sepolia',
     publicKey: MOCK_PUBLIC_KEY + '-' + id.slice(0, 8),
     status: 'ACTIVE',
     createdAt: now,
@@ -129,7 +128,7 @@ function createPipelineContext(
     policyEngine: new DefaultPolicyEngine(),
     masterPassword: 'test-master',
     walletId,
-    wallet: { publicKey: MOCK_PUBLIC_KEY, chain: 'ethereum', environment: 'testnet', defaultNetwork: 'ethereum-sepolia' },
+    wallet: { publicKey: MOCK_PUBLIC_KEY, chain: 'ethereum', environment: 'testnet' },
     resolvedNetwork: 'ethereum-sepolia',
     request: {
       type: 'TRANSFER' as const,

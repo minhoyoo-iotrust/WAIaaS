@@ -73,10 +73,10 @@ function seedWallet(sqlite: DatabaseType, walletId: string): void {
   const ts = Math.floor(Date.now() / 1000);
   sqlite
     .prepare(
-      `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
-    .run(walletId, 'Test Wallet', 'solana', 'mainnet', 'mainnet', `pk-${walletId}`, 'ACTIVE', 0, ts, ts);
+    .run(walletId, 'Test Wallet', 'solana', 'mainnet', `pk-${walletId}`, 'ACTIVE', 0, ts, ts);
 }
 
 function masterAuthJsonHeaders(): Record<string, string> {
@@ -283,8 +283,8 @@ describe('SESSION_EXPIRED notification', () => {
       .run(sessionId, 'hash-expired', pastTimestamp, pastTimestamp + 86400, pastTimestamp);
     sqlite
       .prepare(
-        `INSERT INTO session_wallets (session_id, wallet_id, is_default, created_at)
-         VALUES (?, ?, 1, ?)`,
+        `INSERT INTO session_wallets (session_id, wallet_id, created_at)
+       VALUES (?, ?, ?)`,
       )
       .run(sessionId, testWalletId, pastTimestamp);
 
@@ -343,8 +343,8 @@ describe('SESSION_EXPIRED notification', () => {
       .run(sessionId, 'hash-active', futureTimestamp, futureTimestamp + 86400, nowTs);
     sqlite
       .prepare(
-        `INSERT INTO session_wallets (session_id, wallet_id, is_default, created_at)
-         VALUES (?, ?, 1, ?)`,
+        `INSERT INTO session_wallets (session_id, wallet_id, created_at)
+       VALUES (?, ?, ?)`,
       )
       .run(sessionId, testWalletId, nowTs);
 

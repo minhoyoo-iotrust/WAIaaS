@@ -38,7 +38,6 @@ async function insertTestWallet(connection: DatabaseConnection): Promise<string>
     name: 'sec05-boundary-wallet',
     chain: 'solana',
     environment: 'testnet',
-    defaultNetwork: 'devnet',
     publicKey: `pk-sec05-${id}`,
     status: 'ACTIVE',
     createdAt: now,

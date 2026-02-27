@@ -36,7 +36,6 @@ async function insertTestWallet(connection: DatabaseConnection): Promise<string>
     name: 'sec-contract-test-wallet',
     chain: 'ethereum',
     environment: 'testnet',
-    defaultNetwork: 'ethereum-sepolia',
     publicKey: `pk-sec-${id}`,
     status: 'ACTIVE',
     createdAt: now,

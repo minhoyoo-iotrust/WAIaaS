@@ -37,7 +37,6 @@ async function insertTestAgent(overrides?: {
     name: 'test-wallet',
     chain: 'solana',
     environment: 'testnet',
-    defaultNetwork: 'devnet',
     publicKey: `pk-${id}`,
     status: 'ACTIVE',
     ownerAddress: overrides?.ownerAddress ?? null,

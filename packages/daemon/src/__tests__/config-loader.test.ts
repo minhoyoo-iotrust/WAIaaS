@@ -378,30 +378,6 @@ describe('EVM RPC config', () => {
     }
   });
 
-  it('default config has evm_default_network = ethereum-sepolia', () => {
-    const dir = saveTempDir(createTempDir());
-    const config = loadConfig(dir);
-    expect(config.rpc.evm_default_network).toBe('ethereum-sepolia');
-  });
-
-  it('evm_default_network rejects Solana network values', () => {
-    expect(() =>
-      DaemonConfigSchema.parse({ rpc: { evm_default_network: 'devnet' } }),
-    ).toThrow();
-  });
-
-  it('evm_default_network accepts valid EVM network', () => {
-    const result = DaemonConfigSchema.parse({ rpc: { evm_default_network: 'polygon-mainnet' } });
-    expect(result.rpc.evm_default_network).toBe('polygon-mainnet');
-  });
-
-  it('env override WAIAAS_RPC_EVM_DEFAULT_NETWORK works', () => {
-    const dir = saveTempDir(createTempDir());
-    setEnv('WAIAAS_RPC_EVM_DEFAULT_NETWORK', 'polygon-mainnet');
-    const config = loadConfig(dir);
-    expect(config.rpc.evm_default_network).toBe('polygon-mainnet');
-  });
-
   it('env override WAIAAS_RPC_EVM_ETHEREUM_MAINNET works', () => {
     const dir = saveTempDir(createTempDir());
     setEnv('WAIAAS_RPC_EVM_ETHEREUM_MAINNET', 'https://custom.rpc.io');
@@ -416,12 +392,12 @@ describe('EVM RPC config', () => {
     expect('ethereum_sepolia' in config.rpc).toBe(false);
   });
 
-  it('DaemonConfigSchema rpc section has 16 keys', () => {
+  it('DaemonConfigSchema rpc section has 15 keys', () => {
     const dir = saveTempDir(createTempDir());
     const config = loadConfig(dir);
     const rpcKeys = Object.keys(config.rpc);
-    // 5 Solana + 10 EVM + 1 evm_default_network = 16
-    expect(rpcKeys).toHaveLength(16);
+    // 5 Solana + 10 EVM = 15
+    expect(rpcKeys).toHaveLength(15);
   });
 });
 

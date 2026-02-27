@@ -35,7 +35,6 @@ function createTestDb(): DatabaseType {
     name TEXT NOT NULL,
     chain TEXT NOT NULL,
     environment TEXT NOT NULL DEFAULT 'testnet',
-    default_network TEXT,
     public_key TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'ACTIVE',
     owner_address TEXT,
@@ -59,7 +58,6 @@ function insertWallet(
   opts: {
     chain?: string;
     environment?: string;
-    defaultNetwork?: string | null;
     publicKey?: string;
     status?: string;
   } = {},
@@ -67,13 +65,12 @@ function insertWallet(
   const now = Math.floor(Date.now() / 1000);
   const chain = opts.chain ?? 'solana';
   const env = opts.environment ?? 'testnet';
-  const network = opts.defaultNetwork === undefined ? null : opts.defaultNetwork;
   const pk = opts.publicKey ?? `pk-${id}`;
   const status = opts.status ?? 'ACTIVE';
 
   db.prepare(
-    'INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-  ).run(id, `wallet-${id}`, chain, env, network, pk, status, now, now);
+    'INSERT INTO wallets (id, name, chain, environment, public_key, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+  ).run(id, `wallet-${id}`, chain, env, pk, status, now, now);
 }
 
 // ---------------------------------------------------------------------------
@@ -479,7 +476,8 @@ describe('BalanceMonitorService', () => {
       await service.checkAllWallets();
 
       const status = service.getStatus();
-      expect(status.trackedWallets).toBe(1);
+      // Solana testnet has 2 networks (devnet, testnet), each tracked separately
+      expect(status.trackedWallets).toBe(2);
     });
   });
 

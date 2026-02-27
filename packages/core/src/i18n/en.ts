@@ -55,7 +55,7 @@ export interface Messages {
 }
 
 export const messages: Messages = {
-  // Error messages (104 error codes from SS10.12 unified matrix + signing protocol + session multi-wallet)
+  // Error messages (105 error codes from SS10.12 unified matrix + signing protocol + session multi-wallet + v29.3 resolution)
   errors: {
     // PIPELINE domain (1)
     PIPELINE_HALTED: 'Pipeline halted (transaction queued for delay or approval)',
@@ -79,8 +79,8 @@ export const messages: Messages = {
     SESSION_RENEWAL_MISMATCH: 'Session renewal token mismatch',
     WALLET_ACCESS_DENIED: 'Wallet not accessible from this session',
     WALLET_ALREADY_LINKED: 'Wallet already linked to this session',
-    CANNOT_REMOVE_DEFAULT_WALLET: 'Cannot remove default wallet (change default first)',
     SESSION_REQUIRES_WALLET: 'Session must have at least one wallet',
+    WALLET_ID_REQUIRED: 'Wallet ID is required when session has multiple wallets',
     // TX domain (25)
     INSUFFICIENT_BALANCE: 'Insufficient balance',
     INVALID_ADDRESS: 'Invalid address format',
@@ -103,6 +103,7 @@ export const messages: Messages = {
     BATCH_SIZE_EXCEEDED: 'Batch size exceeded',
     BATCH_POLICY_VIOLATION: 'Batch policy violation',
     ENVIRONMENT_NETWORK_MISMATCH: "Network is not allowed in this wallet's environment",
+    NETWORK_REQUIRED: 'Network is required for EVM wallets',
     INVALID_TRANSACTION: 'Invalid raw transaction format',
     WALLET_NOT_SIGNER: 'Wallet is not a signer in this transaction',
     UNSUPPORTED_TX_TYPE: 'Unsupported transaction type',

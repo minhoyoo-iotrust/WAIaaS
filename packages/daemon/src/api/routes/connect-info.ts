@@ -60,7 +60,6 @@ export interface BuildConnectInfoPromptParams {
     chain: string;
     environment: string;
     address: string;
-    defaultNetwork: string | null;
     networks: string[];
     policies: Array<{ type: string }>;
   }>;
@@ -98,7 +97,6 @@ export function buildConnectInfoPrompt(params: BuildConnectInfoPromptParams): st
 
   for (let i = 0; i < ws.length; i++) {
     const w = ws[i]!;
-    const network = w.defaultNetwork ?? w.chain;
     let policySummary: string;
     if (w.policies.length > 0) {
       policySummary = w.policies.map((p) => p.type).join(', ');
@@ -111,7 +109,7 @@ export function buildConnectInfoPrompt(params: BuildConnectInfoPromptParams): st
     lines.push(`${i + 1}. ${w.name} (${w.chain}/${w.environment})`);
     lines.push(`   ID: ${w.id}`);
     lines.push(`   Address: ${w.address}`);
-    lines.push(`   Networks: ${w.networks.join(', ')} (default: ${network})`);
+    lines.push(`   Networks: ${w.networks.join(', ')}`);
     lines.push(`   Policies: ${policySummary}`);
     lines.push('');
   }
@@ -121,7 +119,7 @@ export function buildConnectInfoPrompt(params: BuildConnectInfoPromptParams): st
   lines.push('Use GET /v1/wallet/balance to check balances.');
   lines.push('Use POST /v1/transactions/send to transfer funds.');
   lines.push('Specify walletId parameter (UUID from the ID field above) to target a specific wallet.');
-  lines.push('Append ?network=<network> to query a specific network (defaults to wallet default network).');
+  lines.push('Append ?network=<network> to query a specific network (required for EVM wallets, auto-resolved for Solana).');
   lines.push('When session expires (401 TOKEN_EXPIRED), renew with PUT /v1/sessions/{sessionId}/renew.');
   lines.push('If renewal fails (RENEWAL_LIMIT_REACHED), ask the operator to run `waiaas session prompt` for a new token.');
   lines.push('');
@@ -176,7 +174,6 @@ export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
   router.openapi(connectInfoRoute, (c) => {
     // a. Read session context set by sessionAuth middleware
     const sessionId = c.get('sessionId' as never) as string;
-    const defaultWalletId = c.get('defaultWalletId' as never) as string | undefined;
 
     // b. Query session row for expiresAt and source
     const session = deps.db
@@ -200,9 +197,7 @@ export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
         name: wallets.name,
         chain: wallets.chain,
         environment: wallets.environment,
-        defaultNetwork: wallets.defaultNetwork,
         publicKey: wallets.publicKey,
-        isDefault: sessionWallets.isDefault,
       })
       .from(sessionWallets)
       .innerJoin(wallets, eq(sessionWallets.walletId, wallets.id))
@@ -286,9 +281,8 @@ export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
         id: w.id,
         name: w.name,
         chain: w.chain,
-        environment: w.environment,
+        environment: w.environment!,
         address: w.publicKey,
-        defaultNetwork: w.defaultNetwork,
         networks: networks.map((n) => n),
         policies: policiesMap[w.id] ?? [],
       };
@@ -322,10 +316,8 @@ export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
           id: w.id,
           name: w.name,
           chain: w.chain,
-          environment: w.environment,
-          defaultNetwork: w.defaultNetwork,
+          environment: w.environment!,
           address: w.publicKey,
-          isDefault: w.isDefault ?? (w.id === defaultWalletId),
           availableNetworks: networks.map((n) => n),
         };
       }),

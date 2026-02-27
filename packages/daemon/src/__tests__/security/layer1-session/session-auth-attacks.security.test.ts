@@ -59,11 +59,11 @@ describe('SEC-01 Session Authentication Attacks', () => {
   // SEC-01-01: JWT Signature Forgery
   describe('SEC-01-01: JWT signature forgery', () => {
     it('rejects JWT signed with attacker secret', async () => {
-      const { walletId, sessionId } = seedSecurityTestData(conn.sqlite);
+      const { sessionId } = seedSecurityTestData(conn.sqlite);
 
       // Attacker forges a JWT with a different secret
       const attackerSecret = new TextEncoder().encode('attacker-secret-32bytes-padding!');
-      const forgedJwt = await new SignJWT({ sub: sessionId, wlt: walletId })
+      const forgedJwt = await new SignJWT({ sub: sessionId })
         .setProtectedHeader({ alg: 'HS256' })
         .setIssuedAt(nowSeconds())
         .setExpirationTime(nowSeconds() + 3600)
@@ -196,14 +196,9 @@ describe('SEC-01 Session Authentication Attacks', () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      // It either succeeds with the JWT's wlt (walletB) or is blocked
-      // The key point: sessionAuth reads wlt from JWT payload and sets it on context
-      // But the actual security relies on the session existing in DB and belonging to a wallet
+      // sessionAuth validates session exists in DB; walletId is resolved via resolveWalletId
+      // which queries session_wallets at request time (not from JWT)
       expect(res.status).toBe(200);
-      const body = await json(res);
-      // The walletId comes from the JWT's wlt claim, but session belongs to walletA
-      // This demonstrates that application-layer authorization must filter by walletId
-      expect(body.walletId).toBe(walletB);
     });
   });
 

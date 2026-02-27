@@ -24,7 +24,7 @@ export function registerGetIncomingSummary(
       network: z.string().optional().describe('Filter by network'),
       since: z.number().optional().describe('Summary start epoch (seconds)'),
       until: z.number().optional().describe('Summary end epoch (seconds)'),
-      wallet_id: z.string().optional().describe('Target wallet ID. Omit to use the default wallet.'),
+      wallet_id: z.string().optional().describe('Target wallet ID. Required for multi-wallet sessions; auto-resolved when session has a single wallet.'),
     },
     async (args) => {
       const params = new URLSearchParams();

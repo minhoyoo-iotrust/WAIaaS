@@ -61,7 +61,6 @@ export type {
   SignTransactionResponse,
   WalletNetworkInfo,
   WalletInfoResponse,
-  SetDefaultNetworkResponse,
   X402FetchParams,
   X402PaymentInfo,
   X402FetchResponse,

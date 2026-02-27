@@ -151,11 +151,10 @@ export const SessionCreateResponseSchema = z
     id: z.string().uuid(),
     token: z.string(),
     expiresAt: z.number().int(),
-    walletId: z.string().uuid(), // backward compat: default wallet
+    walletId: z.string().uuid(), // first wallet in session
     wallets: z.array(z.object({
       id: z.string().uuid(),
       name: z.string(),
-      isDefault: z.boolean(),
     })),
   })
   .openapi('SessionCreateResponse');
@@ -163,12 +162,11 @@ export const SessionCreateResponseSchema = z
 export const SessionListItemSchema = z
   .object({
     id: z.string().uuid(),
-    walletId: z.string().uuid(), // backward compat: default wallet
-    walletName: z.string().nullable(), // backward compat: default wallet name
+    walletId: z.string().uuid(), // first wallet in session
+    walletName: z.string().nullable(), // first wallet name
     wallets: z.array(z.object({
       id: z.string().uuid(),
       name: z.string(),
-      isDefault: z.boolean(),
     })),
     status: z.string(),
     renewalCount: z.number().int(),
@@ -188,7 +186,6 @@ export const SessionListItemSchema = z
 export const SessionWalletSchema = z.object({
   sessionId: z.string().uuid(),
   walletId: z.string().uuid(),
-  isDefault: z.boolean(),
   createdAt: z.number().int(),
 }).openapi('SessionWallet');
 
@@ -197,15 +194,9 @@ export const SessionWalletListSchema = z.object({
     id: z.string().uuid(),
     name: z.string(),
     chain: z.string(),
-    isDefault: z.boolean(),
     createdAt: z.number().int(),
   })),
 }).openapi('SessionWalletList');
-
-export const SessionDefaultWalletSchema = z.object({
-  sessionId: z.string().uuid(),
-  defaultWalletId: z.string().uuid(),
-}).openapi('SessionDefaultWallet');
 
 export const SessionRevokeResponseSchema = z
   .object({
@@ -497,7 +488,6 @@ export const WalletDetailResponseSchema = z
     chain: z.string(),
     network: z.string(),
     environment: z.string(),
-    defaultNetwork: z.string().nullable().optional(),
     publicKey: z.string(),
     status: z.string(),
     ownerAddress: z.string().nullable(),
@@ -513,24 +503,8 @@ export const WalletDetailResponseSchema = z
   .openapi('WalletDetailResponse');
 
 // ---------------------------------------------------------------------------
-// Wallet Network Management Schemas (PUT /wallets/:id/default-network, GET /wallets/:id/networks)
+// Wallet Network Schemas (GET /wallets/:id/networks)
 // ---------------------------------------------------------------------------
-
-// PUT /wallets/:id/default-network request
-export const UpdateDefaultNetworkRequestSchema = z
-  .object({
-    network: z.string().min(1),
-  })
-  .openapi('UpdateDefaultNetworkRequest');
-
-// PUT /wallets/:id/default-network response
-export const UpdateDefaultNetworkResponseSchema = z
-  .object({
-    id: z.string().uuid(),
-    defaultNetwork: z.string(),
-    previousNetwork: z.string().nullable(),
-  })
-  .openapi('UpdateDefaultNetworkResponse');
 
 // GET /wallets/:id/networks response
 export const WalletNetworksResponseSchema = z
@@ -538,11 +512,9 @@ export const WalletNetworksResponseSchema = z
     id: z.string().uuid(),
     chain: z.string(),
     environment: z.string(),
-    defaultNetwork: z.string().nullable(),
     availableNetworks: z.array(
       z.object({
         network: z.string(),
-        isDefault: z.boolean(),
       }),
     ),
   })
@@ -1083,9 +1055,7 @@ export const ConnectInfoResponseSchema = z.object({
     name: z.string(),
     chain: z.string(),
     environment: z.string(),
-    defaultNetwork: z.string().nullable(),
     address: z.string(),
-    isDefault: z.boolean(),
     availableNetworks: z.array(z.string()),
   })),
   policies: z.record(z.string(), z.array(z.object({

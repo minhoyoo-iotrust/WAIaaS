@@ -1,5 +1,5 @@
 /**
- * createMcpServer: factory that creates an MCP server with 25 tools + 4 resource groups (3 static + 1 template).
+ * createMcpServer: factory that creates an MCP server with 24 tools + 4 resource groups (3 static + 1 template).
  *
  * Each tool/resource is registered via a dedicated register function
  * from its own module, following Dependency Injection pattern.
@@ -25,7 +25,6 @@ import { registerSendBatch } from './tools/send-batch.js';
 import { registerGetWalletInfo } from './tools/get-wallet-info.js';
 import { registerEncodeCalldata } from './tools/encode-calldata.js';
 import { registerSignTransaction } from './tools/sign-transaction.js';
-import { registerSetDefaultNetwork } from './tools/set-default-network.js';
 import { registerX402Fetch } from './tools/x402-fetch.js';
 import { registerWcConnect } from './tools/wc-connect.js';
 import { registerWcStatus } from './tools/wc-status.js';
@@ -65,7 +64,7 @@ export function createMcpServer(apiClient: ApiClient, walletContext?: WalletCont
     version: '0.0.0',
   });
 
-  // Register 25 tools
+  // Register 24 tools
   registerConnectInfo(server, apiClient);
   registerGetPolicies(server, apiClient, walletContext);
   registerGetTokens(server, apiClient, walletContext);
@@ -82,7 +81,6 @@ export function createMcpServer(apiClient: ApiClient, walletContext?: WalletCont
   registerGetWalletInfo(server, apiClient, walletContext);
   registerEncodeCalldata(server, apiClient, walletContext);
   registerSignTransaction(server, apiClient, walletContext);
-  registerSetDefaultNetwork(server, apiClient, walletContext);
   registerX402Fetch(server, apiClient, walletContext);
   registerWcConnect(server, apiClient, walletContext);
   registerWcStatus(server, apiClient, walletContext);

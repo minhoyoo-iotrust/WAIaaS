@@ -30,7 +30,6 @@ interface Wallet {
 interface SessionWallet {
   id: string;
   name: string;
-  isDefault: boolean;
 }
 
 interface Session {
@@ -291,7 +290,6 @@ export default function SessionsPage() {
   // Multi-wallet session creation modal state
   const createModal = useSignal(false);
   const createSelectedIds = useSignal<Set<string>>(new Set());
-  const createDefaultWalletId = useSignal('');
 
   const fetchWallets = async () => {
     try {
@@ -325,16 +323,8 @@ export default function SessionsPage() {
     const next = new Set(createSelectedIds.value);
     if (next.has(id)) {
       next.delete(id);
-      // If removed wallet was the default, reset default
-      if (createDefaultWalletId.value === id) {
-        createDefaultWalletId.value = next.size > 0 ? (Array.from(next)[0] ?? '') : '';
-      }
     } else {
       next.add(id);
-      // Auto-set first selected wallet as default
-      if (next.size === 1) {
-        createDefaultWalletId.value = id;
-      }
     }
     createSelectedIds.value = next;
   };
@@ -345,7 +335,7 @@ export default function SessionsPage() {
       const ids = Array.from(createSelectedIds.value);
       const body: Record<string, unknown> = ids.length === 1
         ? { walletId: ids[0] }
-        : { walletIds: ids, defaultWalletId: createDefaultWalletId.value || ids[0] };
+        : { walletIds: ids };
       const result = await apiPost<CreatedSession>(API.SESSIONS, body);
       createdToken.value = result.token;
       tokenModal.value = true;
@@ -413,7 +403,6 @@ export default function SessionsPage() {
               {s.wallets.map((w) => (
                 <span key={w.id}>
                   {w.name ?? w.id.slice(0, 8)}
-                  {w.isDefault && <Badge variant="info">default</Badge>}
                 </span>
               ))}
             </div>
@@ -529,7 +518,6 @@ export default function SessionsPage() {
             <Button
               onClick={() => {
                 createSelectedIds.value = new Set();
-                createDefaultWalletId.value = '';
                 createModal.value = true;
               }}
               disabled={wallets.value.length === 0}
@@ -600,21 +588,6 @@ export default function SessionsPage() {
                 ))}
               </div>
             </div>
-            {createSelectedIds.value.size > 1 && (
-              <div style={{ marginTop: 'var(--space-3)' }}>
-                <label style={{ fontWeight: 600, display: 'block', marginBottom: 'var(--space-2)' }}>Default Wallet</label>
-                <div style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: 'var(--space-2)' }}>
-                  {wallets.value.filter((w) => createSelectedIds.value.has(w.id)).map((w) => (
-                    <label key={w.id} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', padding: 'var(--space-1) 0', cursor: 'pointer' }}>
-                      <input type="radio" name="defaultWallet" checked={createDefaultWalletId.value === w.id}
-                        onChange={() => { createDefaultWalletId.value = w.id; }} />
-                      <span>{w.name}</span>
-                      <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem' }}>({w.chain}/{w.network})</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
           </Modal>
 
         </>

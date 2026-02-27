@@ -401,7 +401,7 @@ describe('EVM Wallet Full Lifecycle E2E', () => {
     const token = session.token as string;
 
     // Get balance
-    const balanceRes = await app.request('/v1/wallet/balance', {
+    const balanceRes = await app.request('/v1/wallet/balance?network=ethereum-sepolia', {
       headers: bearerHeader(token),
     });
     expect(balanceRes.status).toBe(200);
@@ -445,13 +445,14 @@ describe('EVM Wallet Full Lifecycle E2E', () => {
     const session = await json(sessionRes);
     const token = session.token as string;
 
-    // Send ETH transfer
+    // Send ETH transfer (network required for EVM wallets after v27)
     const sendRes = await app.request('/v1/transactions/send', {
       method: 'POST',
       headers: bearerJsonHeader(token),
       body: JSON.stringify({
         to: '0x742d35Cc6634C0532925a3b844Bc9e7595916Da2',
         amount: '1000000000000000000',
+        network: 'ethereum-sepolia',
       }),
     });
     expect(sendRes.status).toBe(201);
@@ -540,6 +541,7 @@ describe('EVM Wallet Full Lifecycle E2E', () => {
       body: JSON.stringify({
         to: '0x742d35Cc6634C0532925a3b844Bc9e7595916Da2',
         amount: '1000000000000000000',
+        network: 'ethereum-sepolia',
       }),
     });
     expect(sendRes.status).toBe(201);
@@ -714,8 +716,8 @@ describe('Dual Chain Simultaneous Operation', () => {
     expect(solBalance.decimals).toBe(9);
     expect(solBalance.balance).toBe('1000000000');
 
-    // Get balance for EVM wallet
-    const evmBalanceRes = await app.request('/v1/wallet/balance', {
+    // Get balance for EVM wallet (network required for EVM)
+    const evmBalanceRes = await app.request('/v1/wallet/balance?network=ethereum-sepolia', {
       headers: bearerHeader(evmToken),
     });
     expect(evmBalanceRes.status).toBe(200);
@@ -743,6 +745,7 @@ describe('Dual Chain Simultaneous Operation', () => {
       body: JSON.stringify({
         to: '0x742d35Cc6634C0532925a3b844Bc9e7595916Da2',
         amount: '1000000000000000000',
+        network: 'ethereum-sepolia',
       }),
     });
     expect(evmSendRes.status).toBe(201);
@@ -820,7 +823,8 @@ describe('Dual Chain Simultaneous Operation', () => {
 
     expect(evmWallet).toBeDefined();
     expect(evmWallet!.name).toBe('evm-list-test');
-    expect(evmWallet!.network).toBe('ethereum-sepolia');
+    // EVM wallets no longer have a single default_network; getSingleNetwork returns null, falling back to chain
+    expect(evmWallet!.network).toBe('ethereum');
     expect((evmWallet!.publicKey as string).startsWith('0x')).toBe(true);
   });
 });

@@ -44,12 +44,12 @@ function createTestSettingsService(
 
 const now = () => Math.floor(Date.now() / 1000);
 
-function insertTestWallet(sqlite: DatabaseType, walletId: string, chain = 'ethereum', network = 'ethereum-sepolia'): void {
+function insertTestWallet(sqlite: DatabaseType, walletId: string, chain = 'ethereum', _network = 'ethereum-sepolia'): void {
   const ts = now();
   sqlite.prepare(
-    `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  ).run(walletId, `Wallet ${walletId.slice(-2)}`, chain, 'testnet', network, `pk-${walletId.slice(-4)}`, 'ACTIVE', 0, ts, ts);
+    `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).run(walletId, `Wallet ${walletId.slice(-2)}`, chain, 'testnet', `pk-${walletId.slice(-4)}`, 'ACTIVE', 0, ts, ts);
 }
 
 function insertTestSession(

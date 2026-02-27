@@ -57,17 +57,16 @@ const inList = (values: readonly string[]) => values.map((v) => `'${v}'`).join('
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 26;
+export const LATEST_SCHEMA_VERSION = 27;
 
 function getCreateTableStatements(): string[] {
   return [
-    // Table 1: wallets (renamed from agents in v3, environment model in v6b, owner_approval_method in v18)
+    // Table 1: wallets (renamed from agents in v3, environment model in v6b, v29.3: default_network removed)
     `CREATE TABLE IF NOT EXISTS wallets (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   chain TEXT NOT NULL CHECK (chain IN (${inList(CHAIN_TYPES)})),
   environment TEXT NOT NULL CHECK (environment IN (${inList(ENVIRONMENT_TYPES)})),
-  default_network TEXT CHECK (default_network IS NULL OR default_network IN (${inList(NETWORK_TYPES)})),
   public_key TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'CREATING' CHECK (status IN (${inList(WALLET_STATUSES)})),
   owner_address TEXT,
@@ -98,11 +97,10 @@ function getCreateTableStatements(): string[] {
   token_issued_count INTEGER NOT NULL DEFAULT 1
 )`,
 
-    // Table 2b: session_wallets (v26.4: session-wallet junction for 1:N model)
+    // Table 2b: session_wallets (v26.4: session-wallet junction for 1:N model, v29.3: is_default removed)
     `CREATE TABLE IF NOT EXISTS session_wallets (
   session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
   wallet_id TEXT NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
-  is_default INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL,
   PRIMARY KEY (session_id, wallet_id)
 )`,
@@ -1808,6 +1806,94 @@ MIGRATIONS.push({
     const fkErrors = sqlite.pragma('foreign_key_check') as unknown[];
     if (fkErrors.length > 0) {
       throw new Error(`FK integrity violation after v26: ${JSON.stringify(fkErrors)}`);
+    }
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Migration v27: Remove is_default from session_wallets, default_network from wallets
+// v29.3: Default wallet/default network concept removed
+// ---------------------------------------------------------------------------
+
+MIGRATIONS.push({
+  version: 27,
+  description: 'Remove is_default from session_wallets and default_network from wallets (v29.3)',
+  managesOwnTransaction: true,
+  up: (sqlite) => {
+    sqlite.exec('BEGIN');
+
+    try {
+      // ── Part 1: Remove is_default from session_wallets ──
+
+      // Step 2: Create session_wallets_new without is_default
+      sqlite.exec(`CREATE TABLE session_wallets_new (
+  session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  wallet_id TEXT NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (session_id, wallet_id)
+)`);
+
+      // Step 3: Copy data (is_default column discarded, no data loss)
+      sqlite.exec('INSERT INTO session_wallets_new (session_id, wallet_id, created_at) SELECT session_id, wallet_id, created_at FROM session_wallets');
+
+      // Step 4: Drop old table
+      sqlite.exec('DROP TABLE session_wallets');
+
+      // Step 5: Rename
+      sqlite.exec('ALTER TABLE session_wallets_new RENAME TO session_wallets');
+
+      // Step 6: Recreate indexes
+      sqlite.exec('CREATE INDEX idx_session_wallets_session ON session_wallets(session_id)');
+      sqlite.exec('CREATE INDEX idx_session_wallets_wallet ON session_wallets(wallet_id)');
+
+      // ── Part 2: Remove default_network from wallets ──
+
+      // Step 7: Create wallets_new without default_network
+      sqlite.exec(`CREATE TABLE wallets_new (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  chain TEXT NOT NULL CHECK (chain IN (${inList(CHAIN_TYPES)})),
+  environment TEXT NOT NULL CHECK (environment IN (${inList(ENVIRONMENT_TYPES)})),
+  public_key TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'CREATING' CHECK (status IN (${inList(WALLET_STATUSES)})),
+  owner_address TEXT,
+  owner_verified INTEGER NOT NULL DEFAULT 0 CHECK (owner_verified IN (0, 1)),
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  suspended_at INTEGER,
+  suspension_reason TEXT,
+  monitor_incoming INTEGER NOT NULL DEFAULT 0,
+  owner_approval_method TEXT CHECK (owner_approval_method IS NULL OR owner_approval_method IN ('sdk_ntfy', 'sdk_telegram', 'walletconnect', 'telegram_bot', 'rest')),
+  wallet_type TEXT
+)`);
+
+      // Step 8: Copy data (default_network intentionally excluded)
+      sqlite.exec('INSERT INTO wallets_new (id, name, chain, environment, public_key, status, owner_address, owner_verified, created_at, updated_at, suspended_at, suspension_reason, monitor_incoming, owner_approval_method, wallet_type) SELECT id, name, chain, environment, public_key, status, owner_address, owner_verified, created_at, updated_at, suspended_at, suspension_reason, monitor_incoming, owner_approval_method, wallet_type FROM wallets');
+
+      // Step 9: Drop old table
+      sqlite.exec('DROP TABLE wallets');
+
+      // Step 10: Rename
+      sqlite.exec('ALTER TABLE wallets_new RENAME TO wallets');
+
+      // Step 11: Recreate indexes
+      sqlite.exec('CREATE UNIQUE INDEX idx_wallets_public_key ON wallets(public_key)');
+      sqlite.exec('CREATE INDEX idx_wallets_status ON wallets(status)');
+      sqlite.exec('CREATE INDEX idx_wallets_chain_environment ON wallets(chain, environment)');
+      sqlite.exec('CREATE INDEX idx_wallets_owner_address ON wallets(owner_address)');
+
+      // Step 12: Commit
+      sqlite.exec('COMMIT');
+    } catch (err) {
+      sqlite.exec('ROLLBACK');
+      throw err;
+    }
+
+    // Re-enable foreign keys and verify integrity
+    sqlite.pragma('foreign_keys = ON');
+    const fkErrors = sqlite.pragma('foreign_key_check') as unknown[];
+    if (fkErrors.length > 0) {
+      throw new Error(`FK integrity violation after v27: ${JSON.stringify(fkErrors)}`);
     }
   },
 });

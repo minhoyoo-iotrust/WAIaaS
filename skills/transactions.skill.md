@@ -44,7 +44,7 @@ WAIaaS uses a **discriminatedUnion 5-type** system for transactions. The `type` 
 
 All transaction types use `POST /v1/transactions/send` with the appropriate `type` field.
 
-All transaction types accept an optional `network` parameter to specify the target network for the transaction. If omitted, the wallet's default network is used. The specified network must be valid for the wallet's environment.
+All transaction types accept a `network` parameter to specify the target network for the transaction. Required for EVM wallets; auto-resolved for Solana wallets. Must be valid for the wallet's environment.
 
 ## 2. Type 1: TRANSFER (Native SOL/ETH)
 
@@ -69,7 +69,7 @@ Parameters:
 - `to` (required): recipient address (base58 for Solana, 0x-hex for EVM)
 - `amount` (required): string of digits in smallest unit (lamports for SOL, wei for ETH)
 - `memo` (optional): string, max 256 characters
-- `network` (optional): target network for this transaction. Defaults to wallet's default network. Must be valid for the wallet's environment.
+- `network`: target network for this transaction. Required for EVM wallets; auto-resolved for Solana. Must be valid for the wallet's environment.
 
 ### Response (201)
 
@@ -142,7 +142,7 @@ Parameters:
   - `symbol` (required): string, 1-10 characters
   - `assetId` (optional): CAIP-19 asset identifier (e.g., `"eip155:1/erc20:0xa0b8..."`). Cross-validated against `address` when provided.
 - `memo` (optional): string, max 256 characters
-- `network` (optional): target network for this transaction. Defaults to wallet's default network. Must be valid for the wallet's environment.
+- `network`: target network for this transaction. Required for EVM wallets; auto-resolved for Solana. Must be valid for the wallet's environment.
 
 ## 4. Type 3: CONTRACT_CALL (Arbitrary Contract)
 
@@ -189,7 +189,7 @@ EVM-specific parameters:
 - `calldata` (optional): hex-encoded calldata (e.g., `"0x095ea7b3..."`)
 - `abi` (optional): JSON ABI fragment array for the function being called
 - `value` (optional): native token value to send with call, string of digits in wei
-- `network` (optional): target network for this transaction. Defaults to wallet's default network. Must be valid for the wallet's environment.
+- `network`: target network for this transaction. Required for EVM wallets; auto-resolved for Solana. Must be valid for the wallet's environment.
 
 ### Solana Program Call
 
@@ -216,7 +216,7 @@ Solana-specific parameters:
   - `pubkey`: account public key
   - `isSigner`: boolean
   - `isWritable`: boolean
-- `network` (optional): target network for this transaction. Defaults to wallet's default network. Must be valid for the wallet's environment.
+- `network`: target network for this transaction. Required for EVM wallets; auto-resolved for Solana. Must be valid for the wallet's environment.
 
 ## 5. Type 4: APPROVE (Token Spending Approval)
 
@@ -269,7 +269,7 @@ Parameters:
   - `symbol` (required): string, 1-10 characters
   - `assetId` (optional): CAIP-19 asset identifier. Cross-validated against `address` when provided.
 - `amount` (required): string of digits, max approval amount in token's smallest unit
-- `network` (optional): target network for this transaction. Defaults to wallet's default network. Must be valid for the wallet's environment.
+- `network`: target network for this transaction. Required for EVM wallets; auto-resolved for Solana. Must be valid for the wallet's environment.
 
 ## 6. Type 5: BATCH (Multiple Instructions)
 
@@ -299,7 +299,7 @@ curl -s -X POST http://localhost:3100/v1/transactions/send \
 Parameters:
 - `type` (required): `"BATCH"`
 - `instructions` (required): array of 2-20 instruction objects. Each instruction follows the schema of TRANSFER, TOKEN_TRANSFER, CONTRACT_CALL, or APPROVE (without the `type` field)
-- `network` (optional): target network for this transaction. Defaults to wallet's default network. Must be valid for the wallet's environment.
+- `network`: target network for this transaction. Required for EVM wallets; auto-resolved for Solana. Must be valid for the wallet's environment.
 
 Batch instruction examples:
 
@@ -605,7 +605,7 @@ Sign an externally built unsigned transaction after policy evaluation. The signe
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | transaction | string | Yes | Unsigned transaction (base64 for Solana, 0x-hex for EVM) |
-| network | string | No | Target network (defaults to wallet default) |
+| network | string | No | Target network. Required for EVM wallets; auto-resolved for Solana. |
 
 **Response (200):**
 

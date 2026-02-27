@@ -2,7 +2,6 @@
  * `waiaas wallet` subcommand group:
  *   wallet create                        -- Create a new wallet
  *   wallet info                          -- Show wallet details
- *   wallet set-default-network <network> -- Change default network
  *
  * All commands use masterAuth (X-Master-Password header) for daemon communication.
  */
@@ -27,21 +26,13 @@ interface WalletListItem {
 
 interface NetworkInfo {
   network: string;
-  isDefault: boolean;
 }
 
 interface WalletNetworksResponse {
   id: string;
   chain: string;
   environment: string;
-  defaultNetwork: string | null;
   availableNetworks: NetworkInfo[];
-}
-
-interface SetDefaultNetworkResponse {
-  id: string;
-  defaultNetwork: string;
-  previousNetwork: string | null;
 }
 
 /**
@@ -133,7 +124,6 @@ export async function walletInfoCommand(opts: WalletCommandOptions): Promise<voi
     opts.baseUrl, 'GET', `/v1/wallets/${wallet.id}/networks`, password,
   );
 
-  const defaultNet = networks.availableNetworks.find((n) => n.isDefault)?.network ?? wallet.network;
   const available = networks.availableNetworks.map((n) => n.network).join(', ') || 'none';
 
   console.log('');
@@ -142,7 +132,6 @@ export async function walletInfoCommand(opts: WalletCommandOptions): Promise<voi
   console.log(`  Chain:            ${wallet.chain}`);
   console.log(`  Environment:      ${wallet.environment}`);
   console.log(`  Address:          ${wallet.publicKey}`);
-  console.log(`  Default Network:  ${defaultNet}`);
   console.log(`  Available:        ${available}`);
   console.log(`  Status:           ${wallet.status}`);
   console.log('');
@@ -163,7 +152,6 @@ interface CreatedWallet {
   chain: string;
   environment: string;
   publicKey: string;
-  defaultNetwork: string | null;
 }
 
 const SUPPORTED_CHAINS = ['solana', 'ethereum'] as const;
@@ -253,33 +241,8 @@ export async function walletCreateCommand(opts: WalletCreateOptions): Promise<vo
     console.log(`  Chain:            ${w.chain}`);
     console.log(`  Environment:      ${w.environment}`);
     console.log(`  Address:          ${w.publicKey}`);
-    console.log(`  Default Network:  ${w.defaultNetwork ?? networks.defaultNetwork ?? 'auto'}`);
     console.log(`  Available:        ${available}`);
     console.log('');
   }
 }
 
-/**
- * `waiaas wallet set-default-network <network>` -- Change default network.
- */
-export async function walletSetDefaultNetworkCommand(
-  opts: WalletCommandOptions,
-  network: string,
-): Promise<void> {
-  const password = await getMasterPassword(opts);
-  const wallet = await selectWallet(opts.baseUrl, password, opts.walletId);
-
-  const result = await daemonRequest<SetDefaultNetworkResponse>(
-    opts.baseUrl,
-    'PUT',
-    `/v1/wallets/${wallet.id}/default-network`,
-    password,
-    { network },
-  );
-
-  console.log('');
-  console.log(`Default network changed for wallet '${wallet.name}':`);
-  console.log(`  Previous: ${result.previousNetwork ?? '(none)'}`);
-  console.log(`  Current:  ${result.defaultNetwork}`);
-  console.log('');
-}

@@ -1,66 +1,83 @@
+/**
+ * Network resolver tests: 2-priority network resolution with getSingleNetwork auto-resolve.
+ *
+ * Tests cover:
+ *   1-2. Solana auto-resolve (devnet for testnet, mainnet for mainnet)
+ *   3. Explicit requestNetwork for Solana overrides auto-resolve
+ *   4-5. EVM NETWORK_REQUIRED when network omitted
+ *   6-7. Explicit requestNetwork works for EVM
+ *   8-9. Cross-validation errors (environment mismatch)
+ *   10-11. Cross-validation errors (chain mismatch)
+ *
+ * @see Phase 279 -- remove default wallet/network concept
+ */
+
 import { describe, it, expect } from 'vitest';
 import { resolveNetwork } from '../pipeline/network-resolver.js';
 
 describe('resolveNetwork()', () => {
-  // Test 1: All params null -> 3rd priority fallback (solana+testnet -> devnet)
-  it('falls back to getDefaultNetwork when all params are null (solana+testnet -> devnet)', () => {
-    const result = resolveNetwork(null, null, 'testnet', 'solana');
+  // --- Solana auto-resolve (getSingleNetwork returns network) ---
+
+  it('auto-resolves Solana testnet to devnet when network omitted', () => {
+    const result = resolveNetwork(null, 'testnet', 'solana');
     expect(result).toBe('devnet');
   });
 
-  // Test 2: requestNetwork specified -> 1st priority (solana+testnet+testnet -> testnet)
-  it('uses requestNetwork as 1st priority (solana+testnet, request=testnet)', () => {
-    const result = resolveNetwork('testnet', null, 'testnet', 'solana');
+  it('auto-resolves Solana mainnet to mainnet when network omitted', () => {
+    const result = resolveNetwork(null, 'mainnet', 'solana');
+    expect(result).toBe('mainnet');
+  });
+
+  it('uses explicit requestNetwork for Solana (testnet env, request=testnet)', () => {
+    const result = resolveNetwork('testnet', 'testnet', 'solana');
     expect(result).toBe('testnet');
   });
 
-  // Test 3: requestNetwork overrides walletDefaultNetwork (ethereum+testnet, request=polygon-amoy, wallet=ethereum-sepolia)
-  it('requestNetwork overrides walletDefaultNetwork (1st > 2nd priority)', () => {
-    const result = resolveNetwork('polygon-amoy', 'ethereum-sepolia', 'testnet', 'ethereum');
+  // --- EVM NETWORK_REQUIRED (getSingleNetwork returns null) ---
+
+  it('throws NETWORK_REQUIRED for EVM testnet when network omitted', () => {
+    expect(() => resolveNetwork(null, 'testnet', 'ethereum')).toThrow();
+    try {
+      resolveNetwork(null, 'testnet', 'ethereum');
+    } catch (err: any) {
+      expect(err.code).toBe('NETWORK_REQUIRED');
+    }
+  });
+
+  it('throws NETWORK_REQUIRED for EVM mainnet when network omitted', () => {
+    expect(() => resolveNetwork(null, 'mainnet', 'ethereum')).toThrow();
+    try {
+      resolveNetwork(null, 'mainnet', 'ethereum');
+    } catch (err: any) {
+      expect(err.code).toBe('NETWORK_REQUIRED');
+    }
+  });
+
+  it('uses explicit requestNetwork for EVM (testnet, request=polygon-amoy)', () => {
+    const result = resolveNetwork('polygon-amoy', 'testnet', 'ethereum');
     expect(result).toBe('polygon-amoy');
   });
 
-  // Test 4: walletDefaultNetwork used (ethereum+mainnet, wallet=polygon-mainnet)
-  it('uses walletDefaultNetwork as 2nd priority when requestNetwork is null', () => {
-    const result = resolveNetwork(null, 'polygon-mainnet', 'mainnet', 'ethereum');
-    expect(result).toBe('polygon-mainnet');
+  it('uses explicit requestNetwork for EVM (mainnet, request=arbitrum-mainnet)', () => {
+    const result = resolveNetwork('arbitrum-mainnet', 'mainnet', 'ethereum');
+    expect(result).toBe('arbitrum-mainnet');
   });
 
-  // Test 5: 3rd priority fallback (ethereum+mainnet, null, null -> ethereum-mainnet)
-  it('falls back to getDefaultNetwork (ethereum+mainnet -> ethereum-mainnet)', () => {
-    const result = resolveNetwork(null, null, 'mainnet', 'ethereum');
-    expect(result).toBe('ethereum-mainnet');
+  // --- Cross-validation errors ---
+
+  it('throws on environment mismatch (solana mainnet + devnet request)', () => {
+    expect(() => resolveNetwork('devnet', 'mainnet', 'solana')).toThrow();
   });
 
-  // Test 6: environment mismatch FAIL (solana+mainnet+devnet -> throw)
-  it('throws on environment mismatch (solana mainnet wallet + devnet request)', () => {
-    expect(() => resolveNetwork('devnet', null, 'mainnet', 'solana')).toThrow();
+  it('throws on environment mismatch (ethereum testnet + ethereum-mainnet request)', () => {
+    expect(() => resolveNetwork('ethereum-mainnet', 'testnet', 'ethereum')).toThrow();
   });
 
-  // Test 7: environment mismatch FAIL (ethereum+testnet+ethereum-mainnet -> throw)
-  it('throws on environment mismatch (ethereum testnet wallet + ethereum-mainnet request)', () => {
-    expect(() => resolveNetwork('ethereum-mainnet', null, 'testnet', 'ethereum')).toThrow();
+  it('throws on chain mismatch (solana + ethereum-sepolia request)', () => {
+    expect(() => resolveNetwork('ethereum-sepolia', 'testnet', 'solana')).toThrow();
   });
 
-  // Test 8: chain mismatch FAIL (solana+testnet+ethereum-sepolia -> throw)
-  it('throws on chain mismatch (solana wallet + ethereum-sepolia request)', () => {
-    expect(() => resolveNetwork('ethereum-sepolia', null, 'testnet', 'solana')).toThrow();
-  });
-
-  // Test 9: chain mismatch FAIL (ethereum+mainnet+devnet -> throw)
-  it('throws on chain mismatch (ethereum wallet + devnet request)', () => {
-    expect(() => resolveNetwork('devnet', null, 'mainnet', 'ethereum')).toThrow();
-  });
-
-  // Test 10: L2 testnet usage (ethereum+testnet, wallet=polygon-amoy -> polygon-amoy)
-  it('supports L2 testnet via walletDefaultNetwork (ethereum+testnet, wallet=polygon-amoy)', () => {
-    const result = resolveNetwork(null, 'polygon-amoy', 'testnet', 'ethereum');
-    expect(result).toBe('polygon-amoy');
-  });
-
-  // Test 11: requestNetwork overrides walletDefaultNetwork (solana+testnet, request=devnet, wallet=testnet -> devnet)
-  it('requestNetwork overrides walletDefaultNetwork (solana, request=devnet, wallet=testnet)', () => {
-    const result = resolveNetwork('devnet', 'testnet', 'testnet', 'solana');
-    expect(result).toBe('devnet');
+  it('throws on chain mismatch (ethereum + devnet request)', () => {
+    expect(() => resolveNetwork('devnet', 'mainnet', 'ethereum')).toThrow();
   });
 });

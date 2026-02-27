@@ -55,7 +55,6 @@ function buildCtx(overrides: Partial<PipelineContext> = {}): PipelineContext {
       publicKey: 'pk-test',
       chain: 'ethereum',
       environment: 'testnet',
-      defaultNetwork: 'ethereum-sepolia',
     },
     resolvedNetwork: 'ethereum-sepolia',
     request: { to: '0xRecipient', amount: '1000' } as any,
@@ -231,7 +230,6 @@ describe('stage4Wait WC integration', () => {
         publicKey: 'pk-sol',
         chain: 'solana',
         environment: 'testnet',
-        defaultNetwork: 'devnet',
       },
     });
 

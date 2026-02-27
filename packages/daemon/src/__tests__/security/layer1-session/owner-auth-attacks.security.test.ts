@@ -66,7 +66,7 @@ describe('SEC-01-OA Owner Authentication Attacks', () => {
       });
       const token = await signTestToken(jwtManager, sessionId, walletId);
 
-      const res = await app.request('/v1/owner/approve', {
+      const res = await app.request(`/v1/owner/${walletId}/approve`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -89,7 +89,7 @@ describe('SEC-01-OA Owner Authentication Attacks', () => {
       });
       const token = await signTestToken(jwtManager, sessionId, walletId);
 
-      const res = await app.request('/v1/owner/approve', {
+      const res = await app.request(`/v1/owner/${walletId}/approve`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -112,7 +112,7 @@ describe('SEC-01-OA Owner Authentication Attacks', () => {
       });
       const token = await signTestToken(jwtManager, sessionId, walletId);
 
-      const res = await app.request('/v1/owner/approve', {
+      const res = await app.request(`/v1/owner/${walletId}/approve`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -181,7 +181,7 @@ describe('SEC-01-OA Owner Authentication Attacks', () => {
       const message = 'approve_tx:some-tx-id';
       const attackerHeaders = createOwnerHeaders(attackerKp, message);
 
-      const res = await app.request('/v1/owner/approve', {
+      const res = await app.request(`/v1/owner/${walletId}/approve`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -213,7 +213,7 @@ describe('SEC-01-OA Owner Authentication Attacks', () => {
       const message = 'approve_tx:some-tx-id';
       const headers = createOwnerHeaders(unregisteredKp, message);
 
-      const res = await app.request('/v1/owner/approve', {
+      const res = await app.request(`/v1/owner/${walletId}/approve`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -236,7 +236,7 @@ describe('SEC-01-OA Owner Authentication Attacks', () => {
       const message = 'approve_tx:some-tx-id';
       const headers = createOwnerHeaders(unregisteredKp, message);
 
-      const res = await app.request('/v1/owner/approve', {
+      const res = await app.request(`/v1/owner/${walletId}/approve`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -288,7 +288,7 @@ describe('SEC-01-OA Owner Authentication Attacks', () => {
       const headers = createOwnerHeaders(ownerKp, message);
 
       // First request -- should succeed
-      const res1 = await app.request('/v1/owner/approve', {
+      const res1 = await app.request(`/v1/owner/${walletId}/approve`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -298,7 +298,7 @@ describe('SEC-01-OA Owner Authentication Attacks', () => {
       expect(res1.status).toBe(200);
 
       // Replay: same exact signature and message
-      const res2 = await app.request('/v1/owner/approve', {
+      const res2 = await app.request(`/v1/owner/${walletId}/approve`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,

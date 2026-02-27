@@ -2,13 +2,13 @@
  * Session-wallet cascade defense tests for TERMINATE handler.
  *
  * Verifies:
- * - Default wallet deletion -> auto-promote earliest-linked wallet
- * - Non-default wallet deletion -> no change to default
+ * - Wallet deletion -> session_wallets link removed
  * - Last wallet deletion -> session auto-revoke
  * - Multi-session wallet deletion -> per-session cascade
- * - is_default invariant holds in all scenarios
- * - Promotion order is by created_at ASC
  * - Sequential TERMINATE + session renew data consistency
+ *
+ * Note: v27 removed is_default column from session_wallets.
+ * Default wallet resolution now uses created_at ASC ordering.
  *
  * Uses in-memory SQLite + full Hono app (same pattern as session-lifecycle-e2e.test.ts).
  */
@@ -16,7 +16,7 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
 import type { Database as DatabaseType } from 'better-sqlite3';
 import argon2 from 'argon2';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { createDatabase, pushSchema, generateId } from '../infrastructure/database/index.js';
 import { JwtSecretManager } from '../infrastructure/jwt/index.js';
 import { DaemonConfigSchema } from '../infrastructure/config/loader.js';
@@ -134,10 +134,10 @@ function seedWallet(sqlite: DatabaseType, walletId: string): void {
   const ts = Math.floor(Date.now() / 1000);
   sqlite
     .prepare(
-      `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
-    .run(walletId, `Wallet-${walletId.slice(0, 8)}`, 'solana', 'testnet', 'devnet', `pk-${walletId}`, 'ACTIVE', 0, ts, ts);
+    .run(walletId, `Wallet-${walletId.slice(0, 8)}`, 'solana', 'testnet', `pk-${walletId}`, 'ACTIVE', 0, ts, ts);
 }
 
 function seedSession(sqlite: DatabaseType, sessionId: string): void {
@@ -152,52 +152,14 @@ function seedSession(sqlite: DatabaseType, sessionId: string): void {
     .run(sessionId, `hash-${sessionId}`, expiresAt, absoluteExpiresAt, ts, 0, 12);
 }
 
-function seedSessionWallet(sqlite: DatabaseType, sessionId: string, walletId: string, isDefault: boolean, createdAtOffset = 0): void {
+function seedSessionWallet(sqlite: DatabaseType, sessionId: string, walletId: string, _isDefault: boolean, createdAtOffset = 0): void {
   const ts = Math.floor(Date.now() / 1000) + createdAtOffset;
   sqlite
     .prepare(
-      `INSERT INTO session_wallets (session_id, wallet_id, is_default, created_at)
-       VALUES (?, ?, ?, ?)`,
+      `INSERT INTO session_wallets (session_id, wallet_id, created_at)
+       VALUES (?, ?, ?)`,
     )
-    .run(sessionId, walletId, isDefault ? 1 : 0, ts);
-}
-
-/**
- * Assert the is_default invariant: for an active (non-revoked) session,
- * there must be exactly 1 default wallet among its session_wallets.
- * For a revoked session, 0 session_wallets rows (or 0 defaults) is acceptable.
- */
-function assertDefaultInvariant(
-  db: ReturnType<typeof createDatabase>['db'],
-  sessionId: string,
-): void {
-  const session = db
-    .select()
-    .from(sessions)
-    .where(eq(sessions.id, sessionId))
-    .get();
-  expect(session).toBeDefined();
-
-  const defaults = db
-    .select()
-    .from(sessionWallets)
-    .where(and(
-      eq(sessionWallets.sessionId, sessionId),
-      eq(sessionWallets.isDefault, true),
-    ))
-    .all();
-
-  const allLinks = db
-    .select()
-    .from(sessionWallets)
-    .where(eq(sessionWallets.sessionId, sessionId))
-    .all();
-
-  if (session!.revokedAt === null && allLinks.length > 0) {
-    // Active session with wallets: exactly 1 default
-    expect(defaults.length).toBe(1);
-  }
-  // Revoked session or empty session: 0 defaults is fine
+    .run(sessionId, walletId, ts);
 }
 
 // ---------------------------------------------------------------------------
@@ -274,7 +236,7 @@ afterEach(() => {
 
 describe('Session-Wallet Cascade Defense', () => {
   // -----------------------------------------------------------------------
-  // Test 1: Default wallet deletion -> auto-promote
+  // Test 1: Wallet deletion -> link removed, remaining wallets stay
   // -----------------------------------------------------------------------
   it('auto-promotes next wallet when default wallet is terminated', async () => {
     const w1 = generateId();
@@ -286,11 +248,11 @@ describe('Session-Wallet Cascade Defense', () => {
     seedWallet(sqlite, w2);
     seedWallet(sqlite, w3);
     seedSession(sqlite, s1);
-    seedSessionWallet(sqlite, s1, w1, true, 0);   // default, earliest
+    seedSessionWallet(sqlite, s1, w1, true, 0);   // earliest
     seedSessionWallet(sqlite, s1, w2, false, 1);   // second
     seedSessionWallet(sqlite, s1, w3, false, 2);   // third
 
-    // TERMINATE w1 (default wallet)
+    // TERMINATE w1 (earliest wallet)
     const res = await app.request(`/v1/wallets/${w1}`, {
       method: 'DELETE',
       headers: masterAuthHeaders(),
@@ -299,30 +261,20 @@ describe('Session-Wallet Cascade Defense', () => {
 
     // w1 should be removed from session_wallets
     const w1Links = db.select().from(sessionWallets)
-      .where(and(eq(sessionWallets.sessionId, s1), eq(sessionWallets.walletId, w1)))
+      .where(eq(sessionWallets.walletId, w1))
       .all();
     expect(w1Links.length).toBe(0);
 
-    // w2 should be promoted to default (created_at ASC order)
-    const w2Link = db.select().from(sessionWallets)
-      .where(and(eq(sessionWallets.sessionId, s1), eq(sessionWallets.walletId, w2)))
-      .get();
-    expect(w2Link).toBeDefined();
-    expect(w2Link!.isDefault).toBe(true);
-
-    // w3 remains non-default
-    const w3Link = db.select().from(sessionWallets)
-      .where(and(eq(sessionWallets.sessionId, s1), eq(sessionWallets.walletId, w3)))
-      .get();
-    expect(w3Link).toBeDefined();
-    expect(w3Link!.isDefault).toBe(false);
-
-    // Invariant check
-    assertDefaultInvariant(db, s1);
+    // w2 and w3 remain linked
+    const remainingLinks = db.select().from(sessionWallets)
+      .where(eq(sessionWallets.sessionId, s1))
+      .all();
+    expect(remainingLinks.length).toBe(2);
+    expect(remainingLinks.map((l) => l.walletId).sort()).toEqual([w2, w3].sort());
   });
 
   // -----------------------------------------------------------------------
-  // Test 2: Non-default wallet deletion -> no change
+  // Test 2: Non-earliest wallet deletion -> no change to other links
   // -----------------------------------------------------------------------
   it('preserves default when non-default wallet is terminated', async () => {
     const w1 = generateId();
@@ -335,69 +287,34 @@ describe('Session-Wallet Cascade Defense', () => {
     seedSessionWallet(sqlite, s1, w1, true, 0);
     seedSessionWallet(sqlite, s1, w2, false, 1);
 
-    // TERMINATE w2 (non-default)
+    // TERMINATE w2
     const res = await app.request(`/v1/wallets/${w2}`, {
       method: 'DELETE',
       headers: masterAuthHeaders(),
     });
     expect(res.status).toBe(200);
 
-    // w1 is still default
-    const w1Link = db.select().from(sessionWallets)
-      .where(and(eq(sessionWallets.sessionId, s1), eq(sessionWallets.walletId, w1)))
-      .get();
-    expect(w1Link).toBeDefined();
-    expect(w1Link!.isDefault).toBe(true);
+    // w1 is still linked
+    const w1Links = db.select().from(sessionWallets)
+      .where(eq(sessionWallets.walletId, w1))
+      .all();
+    expect(w1Links.length).toBe(1);
 
     // w2 is removed
     const w2Links = db.select().from(sessionWallets)
-      .where(and(eq(sessionWallets.sessionId, s1), eq(sessionWallets.walletId, w2)))
+      .where(eq(sessionWallets.walletId, w2))
       .all();
     expect(w2Links.length).toBe(0);
-
-    assertDefaultInvariant(db, s1);
   });
 
   // -----------------------------------------------------------------------
-  // Test 3: Last wallet deletion -> session auto-revoke
-  // -----------------------------------------------------------------------
-  it('auto-revokes session when last wallet is terminated', async () => {
-    const w1 = generateId();
-    const s1 = generateId();
-
-    seedWallet(sqlite, w1);
-    seedSession(sqlite, s1);
-    seedSessionWallet(sqlite, s1, w1, true, 0);
-
-    // TERMINATE w1 (only wallet)
-    const res = await app.request(`/v1/wallets/${w1}`, {
-      method: 'DELETE',
-      headers: masterAuthHeaders(),
-    });
-    expect(res.status).toBe(200);
-
-    // Session should be revoked
-    const session = db.select().from(sessions)
-      .where(eq(sessions.id, s1))
-      .get();
-    expect(session).toBeDefined();
-    expect(session!.revokedAt).not.toBeNull();
-
-    // No session_wallets left for this session
-    const links = db.select().from(sessionWallets)
-      .where(eq(sessionWallets.sessionId, s1))
-      .all();
-    expect(links.length).toBe(0);
-  });
-
-  // -----------------------------------------------------------------------
-  // Test 4: Multi-session wallet deletion
+  // Test 3: Multi-session wallet deletion
   // -----------------------------------------------------------------------
   it('handles wallet linked to multiple sessions (promote in one, revoke in other)', async () => {
     const w1 = generateId();
     const w2 = generateId();
-    const sA = generateId(); // session A: w1(default) + w2
-    const sB = generateId(); // session B: w1(default) only
+    const sA = generateId(); // session A: w1 + w2
+    const sB = generateId(); // session B: w1 only
 
     seedWallet(sqlite, w1);
     seedWallet(sqlite, w2);
@@ -414,14 +331,12 @@ describe('Session-Wallet Cascade Defense', () => {
     });
     expect(res.status).toBe(200);
 
-    // Session A: w2 should be promoted to default
+    // Session A: w2 should remain
     const sALinks = db.select().from(sessionWallets)
       .where(eq(sessionWallets.sessionId, sA))
       .all();
     expect(sALinks.length).toBe(1);
     expect(sALinks[0]!.walletId).toBe(w2);
-    expect(sALinks[0]!.isDefault).toBe(true);
-    assertDefaultInvariant(db, sA);
 
     // Session B: auto-revoked (last wallet)
     const sessionB = db.select().from(sessions)
@@ -437,9 +352,9 @@ describe('Session-Wallet Cascade Defense', () => {
   });
 
   // -----------------------------------------------------------------------
-  // Test 5: is_default invariant after complex scenario
+  // Test 4: Sequential deletions maintain consistency
   // -----------------------------------------------------------------------
-  it('maintains is_default invariant across sequential deletions', async () => {
+  it('maintains session-wallet links across sequential deletions', async () => {
     const w1 = generateId();
     const w2 = generateId();
     const w3 = generateId();
@@ -453,25 +368,26 @@ describe('Session-Wallet Cascade Defense', () => {
     seedSessionWallet(sqlite, s1, w2, false, 1);
     seedSessionWallet(sqlite, s1, w3, false, 2);
 
-    // Delete w1 (default) -> w2 promoted
+    // Delete w1 -> w2, w3 remain
     await app.request(`/v1/wallets/${w1}`, {
       method: 'DELETE',
       headers: masterAuthHeaders(),
     });
-    assertDefaultInvariant(db, s1);
+    let links = db.select().from(sessionWallets)
+      .where(eq(sessionWallets.sessionId, s1))
+      .all();
+    expect(links.length).toBe(2);
 
-    // Delete w2 (now default) -> w3 promoted
+    // Delete w2 -> w3 remains
     await app.request(`/v1/wallets/${w2}`, {
       method: 'DELETE',
       headers: masterAuthHeaders(),
     });
-    assertDefaultInvariant(db, s1);
-
-    const w3Link = db.select().from(sessionWallets)
-      .where(and(eq(sessionWallets.sessionId, s1), eq(sessionWallets.walletId, w3)))
-      .get();
-    expect(w3Link).toBeDefined();
-    expect(w3Link!.isDefault).toBe(true);
+    links = db.select().from(sessionWallets)
+      .where(eq(sessionWallets.sessionId, s1))
+      .all();
+    expect(links.length).toBe(1);
+    expect(links[0]!.walletId).toBe(w3);
 
     // Delete w3 (last) -> session revoked
     await app.request(`/v1/wallets/${w3}`, {
@@ -486,7 +402,7 @@ describe('Session-Wallet Cascade Defense', () => {
   });
 
   // -----------------------------------------------------------------------
-  // Test 6: Promotion order by created_at ASC
+  // Test 5: Earliest-linked wallet resolution
   // -----------------------------------------------------------------------
   it('promotes earliest-linked wallet (created_at ASC) when default is deleted', async () => {
     const w1 = generateId();
@@ -498,35 +414,29 @@ describe('Session-Wallet Cascade Defense', () => {
     seedWallet(sqlite, w2);
     seedWallet(sqlite, w3);
     seedSession(sqlite, s1);
-    // w1 is default, but w3 was linked BEFORE w2 (offset trick)
     seedSessionWallet(sqlite, s1, w1, true, 0);
     seedSessionWallet(sqlite, s1, w3, false, 1);  // w3 linked at +1s
     seedSessionWallet(sqlite, s1, w2, false, 5);  // w2 linked at +5s
 
-    // TERMINATE w1 -> w3 should be promoted (earlier created_at than w2)
+    // TERMINATE w1 -> w3 should be the new "default" (earliest created_at)
     const res = await app.request(`/v1/wallets/${w1}`, {
       method: 'DELETE',
       headers: masterAuthHeaders(),
     });
     expect(res.status).toBe(200);
 
-    const w3Link = db.select().from(sessionWallets)
-      .where(and(eq(sessionWallets.sessionId, s1), eq(sessionWallets.walletId, w3)))
-      .get();
-    expect(w3Link).toBeDefined();
-    expect(w3Link!.isDefault).toBe(true);
-
-    const w2Link = db.select().from(sessionWallets)
-      .where(and(eq(sessionWallets.sessionId, s1), eq(sessionWallets.walletId, w2)))
-      .get();
-    expect(w2Link).toBeDefined();
-    expect(w2Link!.isDefault).toBe(false);
-
-    assertDefaultInvariant(db, s1);
+    const remaining = db.select().from(sessionWallets)
+      .where(eq(sessionWallets.sessionId, s1))
+      .all();
+    expect(remaining.length).toBe(2);
+    // w3 has earlier created_at than w2, so it's the effective default
+    const sorted = remaining.sort((a, b) => a.createdAt - b.createdAt);
+    expect(sorted[0]!.walletId).toBe(w3);
+    expect(sorted[1]!.walletId).toBe(w2);
   });
 
   // -----------------------------------------------------------------------
-  // Test 7: TERMINATE + sequential operations data consistency
+  // Test 6: TERMINATE + sequential operations data consistency
   // -----------------------------------------------------------------------
   it('maintains data consistency when TERMINATE and subsequent operations run sequentially', async () => {
     const w1 = generateId();
@@ -554,19 +464,19 @@ describe('Session-Wallet Cascade Defense', () => {
     });
     expect(addRes.status).toBe(201);
 
-    // TERMINATE w1 (default) -> w2 should be promoted
+    // TERMINATE w1 -> w2 should remain
     const deleteRes = await app.request(`/v1/wallets/${w1}`, {
       method: 'DELETE',
       headers: masterAuthHeaders(),
     });
     expect(deleteRes.status).toBe(200);
 
-    // Verify w2 is now default
-    const w2Link = db.select().from(sessionWallets)
-      .where(and(eq(sessionWallets.sessionId, sessionId), eq(sessionWallets.walletId, w2)))
-      .get();
-    expect(w2Link).toBeDefined();
-    expect(w2Link!.isDefault).toBe(true);
+    // Verify w2 is still linked
+    const allLinks = db.select().from(sessionWallets)
+      .where(eq(sessionWallets.sessionId, sessionId))
+      .all();
+    expect(allLinks.length).toBe(1);
+    expect(allLinks[0]!.walletId).toBe(w2);
 
     // Session should remain active (not revoked) since w2 is still linked
     const session = db.select().from(sessions)
@@ -574,13 +484,6 @@ describe('Session-Wallet Cascade Defense', () => {
       .get();
     expect(session).toBeDefined();
     expect(session!.revokedAt).toBeNull();
-
-    // Only w2 remains in session_wallets
-    const allLinks = db.select().from(sessionWallets)
-      .where(eq(sessionWallets.sessionId, sessionId))
-      .all();
-    expect(allLinks.length).toBe(1);
-    expect(allLinks[0]!.walletId).toBe(w2);
 
     // Now TERMINATE w2 (last wallet) -> session should be revoked
     const deleteRes2 = await app.request(`/v1/wallets/${w2}`, {

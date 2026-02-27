@@ -109,7 +109,6 @@ async function insertTestWallet(connection: DatabaseConnection): Promise<string>
     name: 'ext-oracle-test-wallet',
     chain: 'solana',
     environment: 'testnet',
-    defaultNetwork: 'devnet',
     publicKey: `pk-ext-orc-${id}`,
     status: 'ACTIVE',
     createdAt: now,

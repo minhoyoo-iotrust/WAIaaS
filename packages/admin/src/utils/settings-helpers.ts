@@ -89,7 +89,6 @@ export function keyToLabel(key: string): string {
     evm_optimism_sepolia: 'Optimism Sepolia',
     evm_base_mainnet: 'Base Mainnet',
     evm_base_sepolia: 'Base Sepolia',
-    evm_default_network: 'Default EVM Network',
     session_ttl: 'Session TTL (seconds)',
     max_sessions_per_wallet: 'Max Sessions per Wallet',
     max_pending_tx: 'Max Pending Transactions',

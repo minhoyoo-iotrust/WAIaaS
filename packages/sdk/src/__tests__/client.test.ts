@@ -1098,8 +1098,8 @@ describe('WAIaaSClient', () => {
       fetchSpy.mockResolvedValueOnce(
         mockResponse({
           networks: [
-            { network: 'ethereum-sepolia', isDefault: true },
-            { network: 'polygon-amoy', isDefault: false },
+            { network: 'ethereum-sepolia' },
+            { network: 'polygon-amoy' },
           ],
         }),
       );
@@ -1111,7 +1111,7 @@ describe('WAIaaSClient', () => {
       expect(result.environment).toBe('testnet');
       expect(result.address).toBe('0xabc123');
       expect(result.networks).toHaveLength(2);
-      expect(result.networks[0]!.isDefault).toBe(true);
+      expect(result.networks[0]!.network).toBe('ethereum-sepolia');
 
       const url1 = fetchSpy.mock.calls[0]![0] as string;
       expect(url1).toBe('http://localhost:3000/v1/wallet/address');
@@ -1143,54 +1143,6 @@ describe('WAIaaSClient', () => {
 
       // getWalletInfo should throw because networks call fails
       await expect(client.getWalletInfo()).rejects.toThrow(WAIaaSError);
-    });
-  });
-
-  // =========================================================================
-  // setDefaultNetwork
-  // =========================================================================
-
-  describe('setDefaultNetwork', () => {
-    it('should call PUT /v1/wallet/default-network with correct body', async () => {
-      const client = new WAIaaSClient({
-        baseUrl: 'http://localhost:3000',
-        sessionToken: mockToken,
-      });
-
-      const expected = {
-        id: 'wallet-1',
-        defaultNetwork: 'polygon-amoy',
-        previousNetwork: 'ethereum-sepolia',
-      };
-
-      fetchSpy.mockResolvedValue(mockResponse(expected));
-
-      const result = await client.setDefaultNetwork('polygon-amoy');
-
-      expect(result).toEqual(expected);
-
-      const calledUrl = fetchSpy.mock.calls[0]![0] as string;
-      expect(calledUrl).toBe('http://localhost:3000/v1/wallet/default-network');
-
-      const opts = fetchSpy.mock.calls[0]![1] as RequestInit;
-      expect(opts.method).toBe('PUT');
-      expect(JSON.parse(opts.body as string)).toEqual({ network: 'polygon-amoy' });
-    });
-
-    it('should throw on environment mismatch error', async () => {
-      const client = new WAIaaSClient({
-        baseUrl: 'http://localhost:3000',
-        sessionToken: mockToken,
-        retryOptions: { maxRetries: 0 },
-      });
-
-      fetchSpy.mockResolvedValue(
-        mockErrorResponse('ENVIRONMENT_NETWORK_MISMATCH', 'Network not allowed', 400),
-      );
-
-      const err = await client.setDefaultNetwork('mainnet').catch((e: unknown) => e) as WAIaaSError;
-      expect(err).toBeInstanceOf(WAIaaSError);
-      expect(err.code).toBe('ENVIRONMENT_NETWORK_MISMATCH');
     });
   });
 

@@ -69,7 +69,6 @@ function mockConfig(): DaemonConfig {
       evm_optimism_sepolia: 'https://optimism-sepolia.drpc.org',
       evm_base_mainnet: 'https://base.drpc.org',
       evm_base_sepolia: 'https://base-sepolia.drpc.org',
-      evm_default_network: 'ethereum-sepolia' as const,
     },
     notifications: {
       enabled: false,
@@ -165,10 +164,10 @@ async function createTestWallet(): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   conn.sqlite
     .prepare(
-      `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO wallets (id, name, chain, environment, public_key, status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     )
-    .run(id, 'test-agent', 'solana', 'testnet', 'devnet', '11111111111111111111111111111112', 'ACTIVE', now, now);
+    .run(id, 'test-agent', 'solana', 'testnet', '11111111111111111111111111111112', 'ACTIVE', now, now);
   return id;
 }
 

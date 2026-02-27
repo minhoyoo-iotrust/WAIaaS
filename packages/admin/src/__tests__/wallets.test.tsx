@@ -103,7 +103,6 @@ const mockWallets = {
 
 const mockWalletDetail = {
   ...mockWallets.items[0],
-  defaultNetwork: 'devnet',
   ownerAddress: null,
   ownerVerified: null,
   ownerState: 'NONE' as const,
@@ -112,8 +111,8 @@ const mockWalletDetail = {
 
 const mockNetworks = {
   networks: [
-    { network: 'devnet', name: 'Devnet', isDefault: true },
-    { network: 'testnet', name: 'Testnet', isDefault: false },
+    { network: 'devnet', name: 'Devnet' },
+    { network: 'testnet', name: 'Testnet' },
   ],
 };
 
@@ -207,8 +206,6 @@ describe('WalletsPage', () => {
     // Overview tab is active by default and shows wallet info
     expect(screen.getByText('Chain')).toBeTruthy();
     expect(screen.getByText('Environment')).toBeTruthy();
-    expect(screen.getByText('Default Network')).toBeTruthy();
-
     // Tab buttons should be visible
     expect(screen.getByText('Overview')).toBeTruthy();
     expect(screen.getByText('Transactions')).toBeTruthy();
@@ -329,7 +326,6 @@ const mockBalanceWallet1 = {
   balances: [
     {
       network: 'devnet',
-      isDefault: true,
       native: { balance: '1.5', symbol: 'SOL' },
       tokens: [],
     },
@@ -340,7 +336,6 @@ const mockBalanceWallet2 = {
   balances: [
     {
       network: 'ethereum-sepolia',
-      isDefault: true,
       native: { balance: '0.25', symbol: 'ETH' },
       tokens: [],
     },
@@ -549,7 +544,6 @@ const mockDetailForTabs = {
   environment: 'testnet',
   publicKey: 'abc123def456',
   status: 'ACTIVE',
-  defaultNetwork: 'devnet',
   ownerAddress: null,
   ownerVerified: null,
   ownerState: 'NONE' as const,
@@ -585,11 +579,11 @@ const mockTxItems = [
 
 function mockDetailApiGet(overrides?: {
   transactions?: { items: typeof mockTxItems; total: number };
-  balance?: { balances: Array<{ network: string; isDefault: boolean; native: { balance: string; symbol: string; usd?: number | null } | null; tokens: never[]; error?: string }> };
+  balance?: { balances: Array<{ network: string; native: { balance: string; symbol: string; usd?: number | null } | null; tokens: never[]; error?: string }> };
 }) {
   return (path: string) => {
     if (path === '/v1/wallets/test-wallet-id') return Promise.resolve(mockDetailForTabs);
-    if (path.includes('/networks')) return Promise.resolve({ availableNetworks: [{ network: 'devnet', name: 'Devnet', isDefault: true }] });
+    if (path.includes('/networks')) return Promise.resolve({ availableNetworks: [{ network: 'devnet', name: 'Devnet' }] });
     if (path.includes('/balance')) return Promise.resolve(overrides?.balance ?? { balances: [] });
     if (path.includes('/transactions')) return Promise.resolve(overrides?.transactions ?? { items: [], total: 0 });
     if (path.includes('/wc/session')) return Promise.reject(new Error('no session'));
@@ -752,7 +746,6 @@ describe('WalletDetailView - 4-tab structure', () => {
       balance: {
         balances: [{
           network: 'devnet',
-          isDefault: true,
           native: { balance: '1.5', symbol: 'SOL', usd: 750.0 },
           tokens: [],
         }],
@@ -778,7 +771,6 @@ describe('WalletDetailView - 4-tab structure', () => {
       balance: {
         balances: [{
           network: 'devnet',
-          isDefault: true,
           native: { balance: '1.5', symbol: 'SOL' },
           tokens: [],
         }],

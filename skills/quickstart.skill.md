@@ -52,7 +52,7 @@ curl -s http://localhost:3100/v1/connect-info \
 
 If using MCP, call the `connect_info` tool instead.
 
-For multi-wallet sessions, specify `wallet_id` parameter to target a specific wallet. Omit to use the default wallet.
+For multi-wallet sessions, specify `wallet_id` parameter to target a specific wallet. Required for multi-wallet sessions; auto-resolved when session has a single wallet.
 
 ## Step-by-Step Workflow
 
@@ -124,7 +124,7 @@ Response (201):
 }
 ```
 
-The `network` field shows the wallet's default network, automatically assigned based on the chain and environment. For Solana mainnet, the default is `mainnet`. For Ethereum mainnet, the default is `ethereum-mainnet`.
+The `network` field shows the wallet's primary network. Solana has a single auto-resolved network per environment (e.g., `mainnet`). EVM wallets require explicit network specification (e.g., `ethereum-mainnet`, `polygon-mainnet`).
 
 The `session` field contains the auto-created session token. Save the `token` value -- use it as `Authorization: Bearer <token>` for all wallet operations below. To skip auto-session creation, set `createSession: false`.
 
@@ -162,7 +162,7 @@ curl -s http://localhost:3100/v1/wallet/balance \
   -H 'Authorization: Bearer wai_sess_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
 ```
 
-Optional: Append `?network=<network>` to query a specific network (defaults to the wallet's default network).
+Optional: Append `?network=<network>` to query a specific network. Required for EVM wallets; auto-resolved for Solana.
 
 Response:
 ```json
@@ -188,7 +188,7 @@ curl -s http://localhost:3100/v1/wallet/assets \
   -H 'Authorization: Bearer wai_sess_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
 ```
 
-Optional: Append `?network=<network>` to query a specific network (defaults to the wallet's default network).
+Optional: Append `?network=<network>` to query a specific network. Required for EVM wallets; auto-resolved for Solana.
 
 Response:
 ```json
@@ -238,7 +238,7 @@ Parameters:
 - `to` (required): recipient wallet address
 - `amount` (required): string of digits in smallest unit (lamports for SOL, wei for ETH)
 - `memo` (optional): max 256 characters
-- `network` (optional): target network for this transaction (defaults to wallet's default network)
+- `network`: target network for this transaction. Required for EVM wallets; auto-resolved for Solana.
 
 Response (201):
 ```json

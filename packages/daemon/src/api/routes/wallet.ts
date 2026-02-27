@@ -1,10 +1,10 @@
 /**
  * Wallet query routes: GET /v1/wallet/address, GET /v1/wallet/balance,
- * GET /v1/wallet/assets, PUT /v1/wallet/default-network.
+ * GET /v1/wallet/assets.
  *
  * v1.2: Protected by sessionAuth middleware (Authorization: Bearer wai_sess_<token>),
  *       applied at server level in createApp().
- * Wallet identification via JWT payload walletId (set by sessionAuth on context).
+ * Wallet identification via resolveWalletId (body > query > single-wallet auto-resolve).
  *
  * @see docs/37-rest-api-complete-spec.md
  */
@@ -12,7 +12,7 @@
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { eq, and } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import { WAIaaSError, validateNetworkEnvironment, getNetworksForEnvironment } from '@waiaas/core';
+import { WAIaaSError, validateNetworkEnvironment, getNetworksForEnvironment, getSingleNetwork } from '@waiaas/core';
 import type { ChainType, NetworkType, EnvironmentType, IForexRateService } from '@waiaas/core';
 import type { AdapterPool } from '../../infrastructure/adapter-pool.js';
 import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
@@ -23,8 +23,6 @@ import {
   WalletAddressResponseSchema,
   WalletBalanceResponseSchema,
   WalletAssetsResponseSchema,
-  UpdateDefaultNetworkRequestSchema,
-  UpdateDefaultNetworkResponseSchema,
   buildErrorResponses,
   openApiValidationHook,
 } from './openapi-schemas.js';
@@ -122,29 +120,6 @@ const walletAssetsRoute = createRoute({
   },
 });
 
-const walletDefaultNetworkRoute = createRoute({
-  method: 'put',
-  path: '/wallet/default-network',
-  tags: ['Wallet'],
-  summary: 'Change wallet default network (session-scoped)',
-  request: {
-    body: {
-      content: {
-        'application/json': { schema: UpdateDefaultNetworkRequestSchema },
-      },
-    },
-  },
-  responses: {
-    200: {
-      description: 'Default network updated',
-      content: {
-        'application/json': { schema: UpdateDefaultNetworkResponseSchema },
-      },
-    },
-    ...buildErrorResponses(['WALLET_NOT_FOUND', 'WALLET_TERMINATED', 'ENVIRONMENT_NETWORK_MISMATCH']),
-  },
-});
-
 // ---------------------------------------------------------------------------
 // Helper: Wire ERC-20 token list on EVM adapters
 // ---------------------------------------------------------------------------
@@ -214,7 +189,6 @@ async function wireEvmTokens(
  * GET /wallet/address          -> returns wallet's public key
  * GET /wallet/balance          -> calls adapter.getBalance() and returns lamports
  * GET /wallet/assets           -> calls adapter.getAssets() and returns all token balances
- * PUT /wallet/default-network  -> changes wallet default network (session-scoped)
  */
 export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
   const router = new OpenAPIHono({ defaultHook: openApiValidationHook });
@@ -228,7 +202,7 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
       {
         walletId: wallet.id,
         chain: wallet.chain,
-        network: wallet.defaultNetwork!,
+        network: getSingleNetwork(wallet.chain as ChainType, wallet.environment as EnvironmentType) ?? wallet.chain,
         environment: wallet.environment!,
         address: wallet.publicKey,
       },
@@ -246,7 +220,7 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
       });
     }
 
-    // network query parameter -> specific network, fallback to wallet.defaultNetwork
+    // network query parameter -> specific network, fallback to environment resolution
     const { network: queryNetwork, display_currency: queryCurrency } = c.req.valid('query');
 
     // Resolve display currency from query param or server setting
@@ -295,8 +269,15 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
       return c.json({ walletId: wallet.id, chain: wallet.chain, environment: wallet.environment, balances } as never, 200);
     }
 
-    // --- existing: specific network or wallet default ---
-    const targetNetwork = queryNetwork ?? wallet.defaultNetwork!;
+    // --- existing: specific network or auto-resolve ---
+    const singleNetwork = getSingleNetwork(wallet.chain as ChainType, wallet.environment as EnvironmentType);
+    const targetNetwork = queryNetwork ?? singleNetwork;
+
+    if (!targetNetwork) {
+      throw new WAIaaSError('NETWORK_REQUIRED', {
+        message: `Network query parameter is required for ${wallet.chain} wallets`,
+      });
+    }
 
     // Validate network-environment compatibility when query param specified
     if (queryNetwork) {
@@ -360,7 +341,7 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
       });
     }
 
-    // network query parameter -> specific network, fallback to wallet.defaultNetwork
+    // network query parameter -> specific network, fallback to environment resolution
     const { network: queryNetwork, display_currency: queryCurrency } = c.req.valid('query');
 
     // Resolve display currency from query param or server setting
@@ -420,8 +401,15 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
       return c.json({ walletId: wallet.id, chain: wallet.chain, environment: wallet.environment, networkAssets } as never, 200);
     }
 
-    // --- existing: specific network or wallet default ---
-    const targetNetwork = queryNetwork ?? wallet.defaultNetwork!;
+    // --- existing: specific network or auto-resolve ---
+    const singleNetworkForAssets = getSingleNetwork(wallet.chain as ChainType, wallet.environment as EnvironmentType);
+    const targetNetwork = queryNetwork ?? singleNetworkForAssets;
+
+    if (!targetNetwork) {
+      throw new WAIaaSError('NETWORK_REQUIRED', {
+        message: `Network query parameter is required for ${wallet.chain} wallets`,
+      });
+    }
 
     // Validate network-environment compatibility when query param specified
     if (queryNetwork) {
@@ -470,54 +458,6 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
           displayValue: toDisplayAmount(a.usdValue ?? null, currencyCode, displayRate),
         })),
         displayCurrency: currencyCode ?? null,
-      },
-      200,
-    );
-  });
-
-  // ---------------------------------------------------------------------------
-  // PUT /wallet/default-network (session-scoped)
-  // ---------------------------------------------------------------------------
-
-  router.openapi(walletDefaultNetworkRoute, async (c) => {
-    const walletId = resolveWalletId(c, deps.db);
-    const wallet = await resolveWalletById(deps.db, walletId);
-
-    if (wallet.status === 'TERMINATED') {
-      throw new WAIaaSError('WALLET_TERMINATED', {
-        message: `Wallet '${walletId}' is already terminated`,
-      });
-    }
-
-    const body = c.req.valid('json');
-
-    // Validate that the requested network is allowed for wallet's chain+environment
-    try {
-      validateNetworkEnvironment(
-        wallet.chain as ChainType,
-        wallet.environment as EnvironmentType,
-        body.network as NetworkType,
-      );
-    } catch {
-      throw new WAIaaSError('ENVIRONMENT_NETWORK_MISMATCH', {
-        message: `Network '${body.network}' is not allowed for chain '${wallet.chain}' in environment '${wallet.environment}'`,
-      });
-    }
-
-    const previousNetwork = wallet.defaultNetwork;
-    const now = new Date(Math.floor(Date.now() / 1000) * 1000);
-
-    await deps.db
-      .update(wallets)
-      .set({ defaultNetwork: body.network, updatedAt: now })
-      .where(eq(wallets.id, walletId))
-      .run();
-
-    return c.json(
-      {
-        id: walletId,
-        defaultNetwork: body.network,
-        previousNetwork: previousNetwork ?? null,
       },
       200,
     );

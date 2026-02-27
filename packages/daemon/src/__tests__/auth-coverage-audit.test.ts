@@ -120,9 +120,9 @@ describe('sessionAuth edge cases (coverage audit)', () => {
   function seedWallet() {
     const ts = nowSeconds();
     sqlite.prepare(
-      `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ).run(TEST_WALLET_ID, 'Audit Wallet', 'solana', 'mainnet', 'mainnet', `pk-audit-${Math.random()}`, 'ACTIVE', 0, ts, ts);
+      `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(TEST_WALLET_ID, 'Audit Wallet', 'solana', 'mainnet', `pk-audit-${Math.random()}`, 'ACTIVE', 0, ts, ts);
   }
 
   function seedSession(opts: { expiresAt?: number; revokedAt?: number | null } = {}) {
@@ -139,8 +139,8 @@ describe('sessionAuth edge cases (coverage audit)', () => {
       opts.revokedAt ?? null,
     );
     sqlite.prepare(
-      `INSERT INTO session_wallets (session_id, wallet_id, is_default, created_at)
-       VALUES (?, ?, 1, ?)`,
+      `INSERT INTO session_wallets (session_id, wallet_id, created_at)
+       VALUES (?, ?, ?)`,
     ).run(TEST_SESSION_ID, TEST_WALLET_ID, ts);
   }
 
@@ -148,7 +148,7 @@ describe('sessionAuth edge cases (coverage audit)', () => {
     const ts = nowSeconds();
     const payload: JwtPayload = {
       sub: TEST_SESSION_ID,
-      wlt: TEST_WALLET_ID,
+
       iat: ts,
       exp: ts + 3600,
       ...overrides,
@@ -221,7 +221,7 @@ describe('sessionAuth edge cases (coverage audit)', () => {
     const unknownSessionId = generateId();
     const token = await manager.signToken({
       sub: unknownSessionId,
-      wlt: TEST_WALLET_ID,
+
       iat: nowSeconds(),
       exp: nowSeconds() + 3600,
     });
@@ -312,10 +312,10 @@ describe('ownerAuth edge cases (coverage audit)', () => {
   function seedWallet(ownerAddress: string) {
     const ts = nowSeconds();
     sqlite.prepare(
-      `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, owner_address, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, owner_address, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(
-      TEST_WALLET_ID, 'Owner Audit Wallet', 'solana', 'mainnet', 'mainnet',
+      TEST_WALLET_ID, 'Owner Audit Wallet', 'solana', 'mainnet',
       'pk-owner-audit-test', 'ACTIVE', 0, ownerAddress, ts, ts,
     );
   }

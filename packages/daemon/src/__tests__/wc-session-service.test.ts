@@ -86,14 +86,14 @@ describe('WcSessionService', () => {
 
       // Insert wallet first (FK constraint)
       sqlite.prepare(
-        `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      ).run('w-wc-1', 'WC Wallet 1', 'ethereum', 'testnet', 'ethereum-sepolia', 'pk-wc-1', 'ACTIVE', 0, ts, ts);
+        `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run('w-wc-1', 'WC Wallet 1', 'ethereum', 'testnet', 'pk-wc-1', 'ACTIVE', 0, ts, ts);
 
       sqlite.prepare(
-        `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      ).run('w-wc-2', 'WC Wallet 2', 'solana', 'testnet', 'devnet', 'pk-wc-2', 'ACTIVE', 0, ts, ts);
+        `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run('w-wc-2', 'WC Wallet 2', 'solana', 'testnet', 'pk-wc-2', 'ACTIVE', 0, ts, ts);
 
       // Insert wc_sessions directly
       sqlite.prepare(
@@ -131,9 +131,9 @@ describe('WcSessionService', () => {
 
       // Create wallet
       sqlite.prepare(
-        `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      ).run('w-del-1', 'WC Del', 'ethereum', 'testnet', 'ethereum-sepolia', 'pk-del-1', 'ACTIVE', 0, ts, ts);
+        `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run('w-del-1', 'WC Del', 'ethereum', 'testnet', 'pk-del-1', 'ACTIVE', 0, ts, ts);
 
       // Insert session
       sqlite.prepare(
@@ -165,14 +165,14 @@ describe('WcSessionService', () => {
 
       // Create two wallets
       sqlite.prepare(
-        `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      ).run('w-keep', 'WC Keep', 'ethereum', 'testnet', 'ethereum-sepolia', 'pk-keep', 'ACTIVE', 0, ts, ts);
+        `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run('w-keep', 'WC Keep', 'ethereum', 'testnet', 'pk-keep', 'ACTIVE', 0, ts, ts);
 
       sqlite.prepare(
-        `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      ).run('w-remove', 'WC Remove', 'ethereum', 'mainnet', 'ethereum-mainnet', 'pk-remove', 'ACTIVE', 0, ts, ts);
+        `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run('w-remove', 'WC Remove', 'ethereum', 'mainnet', 'pk-remove', 'ACTIVE', 0, ts, ts);
 
       // Insert two sessions
       sqlite.prepare(

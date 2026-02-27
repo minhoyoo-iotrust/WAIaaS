@@ -295,7 +295,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
     // NOTE: Must read body BEFORE resolveWalletId since raw JSON can only be read once.
     const request = await c.req.json();
 
-    // Resolve walletId from body.walletId > query > defaultWalletId
+    // Resolve walletId from body.walletId > query > single-wallet auto-resolve
     const walletId = resolveWalletId(c, deps.db, request.walletId);
 
     // Look up wallet
@@ -309,12 +309,11 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
       throw new WAIaaSError('WALLET_TERMINATED');
     }
 
-    // Resolve network: request > wallet.defaultNetwork > environment default
+    // Resolve network: request > getSingleNetwork auto-resolve
     let resolvedNetwork: string;
     try {
       resolvedNetwork = resolveNetwork(
         request.network as NetworkType | undefined,
-        wallet.defaultNetwork as NetworkType | null,
         wallet.environment as EnvironmentType,
         wallet.chain as ChainType,
       );
@@ -358,7 +357,6 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
         publicKey: wallet.publicKey,
         chain: wallet.chain,
         environment: wallet.environment,
-        defaultNetwork: wallet.defaultNetwork ?? null,
       },
       resolvedNetwork,
       request,
@@ -453,7 +451,6 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
     // Resolve network (same pattern as POST /transactions/send)
     const resolvedNetwork = resolveNetwork(
       body.network as NetworkType | undefined,
-      wallet.defaultNetwork as NetworkType | null,
       wallet.environment as EnvironmentType,
       wallet.chain as ChainType,
     );

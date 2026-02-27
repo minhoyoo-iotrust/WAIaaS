@@ -65,10 +65,9 @@ export class TransactionPipeline {
       });
     }
 
-    // Resolve network from request > wallet.defaultNetwork > environment default
+    // Resolve network from request > environment single network
     const resolvedNetwork = resolveNetwork(
       (request as { network?: string }).network as NetworkType | undefined,
-      wallet.defaultNetwork as NetworkType | null,
       wallet.environment as EnvironmentType,
       wallet.chain as ChainType,
     );
@@ -81,7 +80,6 @@ export class TransactionPipeline {
         publicKey: wallet.publicKey,
         chain: wallet.chain,
         environment: wallet.environment,
-        defaultNetwork: wallet.defaultNetwork ?? null,
       },
       resolvedNetwork,
       request,

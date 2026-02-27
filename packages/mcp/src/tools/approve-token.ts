@@ -25,8 +25,8 @@ export function registerApproveToken(server: McpServer, apiClient: ApiClient, wa
         ),
       }).describe('Token info. Includes optional CAIP-19 assetId for standard asset identification.'),
       amount: z.string().describe('Approval amount in smallest unit'),
-      network: z.string().optional().describe('Target network (e.g., polygon-mainnet). Defaults to wallet default network.'),
-      wallet_id: z.string().optional().describe('Target wallet ID. Omit to use the default wallet.'),
+      network: z.string().optional().describe('Target network (e.g., polygon-mainnet). Required for EVM wallets; auto-resolved for Solana.'),
+      wallet_id: z.string().optional().describe('Target wallet ID. Required for multi-wallet sessions; auto-resolved when session has a single wallet.'),
       gas_condition: z.object({
         max_gas_price: z.string().optional().describe('Max gas price in wei (EVM baseFee+priorityFee)'),
         max_priority_fee: z.string().optional().describe('Max priority fee in wei (EVM) or micro-lamports (Solana)'),

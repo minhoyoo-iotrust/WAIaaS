@@ -584,10 +584,8 @@ export class HotReloadOrchestrator {
     if (!pool) return;
 
     for (const key of changedRpcKeys) {
-      // key format: 'rpc.solana_mainnet' or 'rpc.evm_ethereum_sepolia' or 'rpc.evm_default_network'
+      // key format: 'rpc.solana_mainnet' or 'rpc.evm_ethereum_sepolia'
       const field = key.replace('rpc.', '');
-
-      if (field === 'evm_default_network') continue; // No adapter to evict for this key
 
       if (field.startsWith('solana_')) {
         const network = field.replace('solana_', '');

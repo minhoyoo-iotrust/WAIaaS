@@ -12,7 +12,7 @@ export function registerGetHealthFactor(server: McpServer, apiClient: ApiClient,
     'waiaas_get_health_factor',
     withWalletPrefix('Get lending health factor (safe/warning/danger/critical).', walletContext?.walletName),
     {
-      wallet_id: z.string().optional().describe('Target wallet ID. Omit to use the default wallet.'),
+      wallet_id: z.string().optional().describe('Target wallet ID. Required for multi-wallet sessions; auto-resolved when session has a single wallet.'),
       network: z.string().optional().describe('Target network for health factor query.'),
     },
     async (args) => {

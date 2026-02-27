@@ -524,16 +524,6 @@ export default function SettingsPage() {
               {evmRpcKeys.map((k) => (
                 <RpcField key={k} shortKey={k} />
               ))}
-              <div class="settings-field-full">
-                <FormField
-                  label={keyToLabel('evm_default_network')}
-                  name="rpc.evm_default_network"
-                  type="select"
-                  value={getEffectiveValue('rpc', 'evm_default_network') || 'ethereum-sepolia'}
-                  onChange={(v) => handleFieldChange('rpc.evm_default_network', v)}
-                  options={evmNetworkOptions}
-                />
-              </div>
             </div>
           </div>
         </div>

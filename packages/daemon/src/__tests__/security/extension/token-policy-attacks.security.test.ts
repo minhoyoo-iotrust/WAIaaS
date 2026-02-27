@@ -29,7 +29,7 @@ let walletId: string;
 
 async function insertTestWallet(
   connection: DatabaseConnection,
-  overrides?: { chain?: string; environment?: string; defaultNetwork?: string },
+  overrides?: { chain?: string; environment?: string },
 ): Promise<string> {
   const id = generateId();
   const now = new Date(Math.floor(Date.now() / 1000) * 1000);
@@ -38,7 +38,6 @@ async function insertTestWallet(
     name: 'sec-token-test-wallet',
     chain: overrides?.chain ?? 'solana',
     environment: overrides?.environment ?? 'testnet',
-    defaultNetwork: overrides?.defaultNetwork ?? 'devnet',
     publicKey: `pk-sec-${id}`,
     status: 'ACTIVE',
     createdAt: now,

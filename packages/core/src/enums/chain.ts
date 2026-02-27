@@ -83,16 +83,18 @@ export const ENVIRONMENT_NETWORK_MAP: Record<
 } as const;
 
 /**
- * Default network for each chain+environment combination.
+ * Single network for each chain+environment combination.
+ * Solana environments have exactly one network (auto-resolvable).
+ * EVM environments have multiple networks (null = must be specified explicitly).
  */
-export const ENVIRONMENT_DEFAULT_NETWORK: Record<
+export const ENVIRONMENT_SINGLE_NETWORK: Record<
   `${ChainType}:${EnvironmentType}`,
-  NetworkType
+  NetworkType | null
 > = {
   'solana:mainnet': 'mainnet',
   'solana:testnet': 'devnet',
-  'ethereum:mainnet': 'ethereum-mainnet',
-  'ethereum:testnet': 'ethereum-sepolia',
+  'ethereum:mainnet': null,
+  'ethereum:testnet': null,
 } as const;
 
 // ─── Environment Mapping Functions ──────────────────────────────
@@ -109,14 +111,16 @@ export function getNetworksForEnvironment(
 }
 
 /**
- * Get the default network for a chain+environment combination.
+ * Get the single network for a chain+environment combination.
+ * Returns the network for Solana (single network per environment).
+ * Returns null for EVM (multiple networks, must be specified explicitly).
  */
-export function getDefaultNetwork(
+export function getSingleNetwork(
   chain: ChainType,
   env: EnvironmentType,
-): NetworkType {
+): NetworkType | null {
   const key = `${chain}:${env}` as const;
-  return ENVIRONMENT_DEFAULT_NETWORK[key];
+  return ENVIRONMENT_SINGLE_NETWORK[key];
 }
 
 /**

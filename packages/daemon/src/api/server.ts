@@ -189,7 +189,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     const masterAuthForWalletDetail = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash, passwordRef: deps.passwordRef });
     app.use('/v1/wallets/:id', async (c, next) => {
       // Skip sub-paths that have their own masterAuth registered below
-      if (c.req.path.includes('/owner') || c.req.path.includes('/default-network') || c.req.path.includes('/networks') || c.req.path.includes('/wc/')) {
+      if (c.req.path.includes('/owner') || c.req.path.includes('/networks') || c.req.path.includes('/wc/')) {
         await next();
         return;
       }
@@ -201,7 +201,6 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
   if (deps.masterPasswordHash !== undefined || deps.passwordRef) {
     const masterAuthForOwner = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash, passwordRef: deps.passwordRef });
     app.use('/v1/wallets/:id/owner', masterAuthForOwner);
-    app.use('/v1/wallets/:id/default-network', masterAuthForOwner);
     app.use('/v1/wallets/:id/networks', masterAuthForOwner);
   }
 

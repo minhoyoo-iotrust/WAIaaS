@@ -91,7 +91,6 @@ describe('Schema creation', () => {
     expect(colNames).toContain('name');
     expect(colNames).toContain('chain');
     expect(colNames).toContain('environment');
-    expect(colNames).toContain('default_network');
     expect(colNames).toContain('public_key');
     expect(colNames).toContain('status');
     expect(colNames).toContain('owner_address');
@@ -103,7 +102,7 @@ describe('Schema creation', () => {
     expect(colNames).toContain('owner_approval_method');
     expect(colNames).toContain('monitor_incoming');
     expect(colNames).toContain('wallet_type');
-    expect(colNames).toHaveLength(16);
+    expect(colNames).toHaveLength(15);
   });
 
   it('transactions table should have correct columns including v0.6 and v0.10 additions', () => {
@@ -247,72 +246,63 @@ describe('CHECK constraints', () => {
     it('should accept valid status ACTIVE', () => {
       expect(() => {
         sqlite.prepare(
-          `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        ).run(generateId(), 'Test Wallet', 'solana', 'mainnet', 'mainnet', 'pubkey1', 'ACTIVE', 0, ts, ts);
+          `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ).run(generateId(), 'Test Wallet', 'solana', 'mainnet', 'pubkey1', 'ACTIVE', 0, ts, ts);
       }).not.toThrow();
     });
 
     it('should reject invalid status INVALID_STATUS', () => {
       expect(() => {
         sqlite.prepare(
-          `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        ).run(generateId(), 'Test Wallet', 'solana', 'mainnet', 'mainnet', 'pubkey2', 'INVALID_STATUS', 0, ts, ts);
+          `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ).run(generateId(), 'Test Wallet', 'solana', 'mainnet', 'pubkey2', 'INVALID_STATUS', 0, ts, ts);
       }).toThrow(/CHECK/i);
     });
 
     it('should accept valid chain solana', () => {
       expect(() => {
         sqlite.prepare(
-          `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        ).run(generateId(), 'Test Wallet', 'solana', 'mainnet', 'mainnet', 'pubkey3', 'CREATING', 0, ts, ts);
+          `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ).run(generateId(), 'Test Wallet', 'solana', 'mainnet', 'pubkey3', 'CREATING', 0, ts, ts);
       }).not.toThrow();
     });
 
     it('should reject invalid chain bitcoin', () => {
       expect(() => {
         sqlite.prepare(
-          `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        ).run(generateId(), 'Test Wallet', 'bitcoin', 'mainnet', 'mainnet', 'pubkey4', 'CREATING', 0, ts, ts);
+          `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ).run(generateId(), 'Test Wallet', 'bitcoin', 'mainnet', 'pubkey4', 'CREATING', 0, ts, ts);
       }).toThrow(/CHECK/i);
     });
 
-    it('should accept valid environment testnet with EVM default_network', () => {
+    it('should accept valid EVM wallet with mainnet environment', () => {
       expect(() => {
         sqlite.prepare(
-          `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        ).run(generateId(), 'EVM Agent', 'ethereum', 'mainnet', 'ethereum-mainnet', 'pubkey-evm1', 'CREATING', 0, ts, ts);
+          `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ).run(generateId(), 'EVM Agent', 'ethereum', 'mainnet', 'pubkey-evm1', 'CREATING', 0, ts, ts);
       }).not.toThrow();
     });
 
-    it('should accept valid environment testnet with polygon-amoy default_network', () => {
+    it('should accept valid EVM wallet with testnet environment', () => {
       expect(() => {
         sqlite.prepare(
-          `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        ).run(generateId(), 'EVM Agent', 'ethereum', 'testnet', 'polygon-amoy', 'pubkey-evm2', 'CREATING', 0, ts, ts);
+          `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ).run(generateId(), 'EVM Agent', 'ethereum', 'testnet', 'pubkey-evm2', 'CREATING', 0, ts, ts);
       }).not.toThrow();
     });
 
     it('should reject invalid environment value', () => {
       expect(() => {
         sqlite.prepare(
-          `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        ).run(generateId(), 'Test Wallet', 'solana', 'invalid-env', 'mainnet', 'pubkey-env', 'CREATING', 0, ts, ts);
-      }).toThrow(/CHECK/i);
-    });
-
-    it('should reject invalid default_network value', () => {
-      expect(() => {
-        sqlite.prepare(
-          `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        ).run(generateId(), 'Test Wallet', 'solana', 'mainnet', 'invalid-network', 'pubkey-net', 'CREATING', 0, ts, ts);
+          `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ).run(generateId(), 'Test Wallet', 'solana', 'invalid-env', 'pubkey-env', 'CREATING', 0, ts, ts);
       }).toThrow(/CHECK/i);
     });
   });
@@ -323,9 +313,9 @@ describe('CHECK constraints', () => {
     beforeEach(() => {
       walletId = generateId();
       sqlite.prepare(
-        `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      ).run(walletId, 'Test Wallet', 'solana', 'mainnet', 'mainnet', `pubkey-tx-${Math.random()}`, 'ACTIVE', 0, ts, ts);
+        `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run(walletId, 'Test Wallet', 'solana', 'mainnet', `pubkey-tx-${Math.random()}`, 'ACTIVE', 0, ts, ts);
     });
 
     it('should accept valid type TRANSFER', () => {
@@ -440,9 +430,9 @@ describe('UUID v7 ordering', () => {
       const id = generateId();
       createdIds.push(id);
       sqlite.prepare(
-        `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      ).run(id, `Agent ${i}`, 'solana', 'mainnet', 'mainnet', `uuid-test-pk-${i}`, 'ACTIVE', 0, ts0, ts0);
+        `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run(id, `Agent ${i}`, 'solana', 'mainnet', `uuid-test-pk-${i}`, 'ACTIVE', 0, ts0, ts0);
       await new Promise((r) => setTimeout(r, 2));
     }
 
@@ -471,8 +461,8 @@ describe('Foreign key constraints', () => {
 
     expect(() => {
       sqlite.prepare(
-        `INSERT INTO session_wallets (session_id, wallet_id, is_default, created_at)
-         VALUES (?, ?, 1, ?)`,
+        `INSERT INTO session_wallets (session_id, wallet_id, created_at)
+       VALUES (?, ?, ?)`,
       ).run(sessId, 'non-existent-wallet-id', ts0);
     }).toThrow(/FOREIGN KEY/i);
   });
@@ -482,17 +472,17 @@ describe('Foreign key constraints', () => {
     const sessionId = generateId();
 
     sqlite.prepare(
-      `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ).run(walletId, 'Agent', 'solana', 'mainnet', 'mainnet', 'pk-fk-cascade', 'ACTIVE', 0, ts0, ts0);
+      `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(walletId, 'Agent', 'solana', 'mainnet', 'pk-fk-cascade', 'ACTIVE', 0, ts0, ts0);
 
     sqlite.prepare(
       `INSERT INTO sessions (id, token_hash, expires_at, absolute_expires_at, created_at)
        VALUES (?, ?, ?, ?, ?)`,
     ).run(sessionId, 'hash456', ts0 + 3600, ts0 + 86400, ts0);
     sqlite.prepare(
-      `INSERT INTO session_wallets (session_id, wallet_id, is_default, created_at)
-       VALUES (?, ?, 1, ?)`,
+      `INSERT INTO session_wallets (session_id, wallet_id, created_at)
+       VALUES (?, ?, ?)`,
     ).run(sessionId, walletId, ts0);
 
     // Verify session_wallets exists
@@ -511,9 +501,9 @@ describe('Foreign key constraints', () => {
     const txId = generateId();
 
     sqlite.prepare(
-      `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ).run(walletId, 'Agent', 'solana', 'mainnet', 'mainnet', 'pk-fk-restrict', 'ACTIVE', 0, ts0, ts0);
+      `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(walletId, 'Agent', 'solana', 'mainnet', 'pk-fk-restrict', 'ACTIVE', 0, ts0, ts0);
 
     sqlite.prepare(
       `INSERT INTO transactions (id, wallet_id, chain, type, status, created_at)
@@ -532,17 +522,17 @@ describe('Foreign key constraints', () => {
     const txId = generateId();
 
     sqlite.prepare(
-      `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ).run(walletId, 'Agent', 'solana', 'mainnet', 'mainnet', 'pk-fk-setnull', 'ACTIVE', 0, ts0, ts0);
+      `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(walletId, 'Agent', 'solana', 'mainnet', 'pk-fk-setnull', 'ACTIVE', 0, ts0, ts0);
 
     sqlite.prepare(
       `INSERT INTO sessions (id, token_hash, expires_at, absolute_expires_at, created_at)
        VALUES (?, ?, ?, ?, ?)`,
     ).run(sessionId, 'hash789', ts0 + 3600, ts0 + 86400, ts0);
     sqlite.prepare(
-      `INSERT INTO session_wallets (session_id, wallet_id, is_default, created_at)
-       VALUES (?, ?, 1, ?)`,
+      `INSERT INTO session_wallets (session_id, wallet_id, created_at)
+       VALUES (?, ?, ?)`,
     ).run(sessionId, walletId, ts0);
 
     sqlite.prepare(
@@ -563,9 +553,9 @@ describe('Foreign key constraints', () => {
     const approvalId = generateId();
 
     sqlite.prepare(
-      `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ).run(walletId, 'Agent', 'solana', 'mainnet', 'mainnet', 'pk-fk-pa-cascade', 'ACTIVE', 0, ts0, ts0);
+      `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(walletId, 'Agent', 'solana', 'mainnet', 'pk-fk-pa-cascade', 'ACTIVE', 0, ts0, ts0);
 
     sqlite.prepare(
       `INSERT INTO transactions (id, wallet_id, chain, type, status, created_at)

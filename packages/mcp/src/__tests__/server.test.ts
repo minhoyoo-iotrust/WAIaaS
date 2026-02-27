@@ -84,8 +84,8 @@ describe('createMcpServer', () => {
     const apiClient = createMockApiClient();
     createMcpServer(apiClient, { walletName: 'trading-bot' });
 
-    // 25 tools should be registered (24 wallet tools + connect_info)
-    expect(mockTool).toHaveBeenCalledTimes(25);
+    // 24 tools should be registered (23 wallet tools + connect_info)
+    expect(mockTool).toHaveBeenCalledTimes(24);
 
     // connect_info (first tool) has no wallet prefix (not wallet-scoped)
     // All other tool calls' second argument (description) should have the prefix

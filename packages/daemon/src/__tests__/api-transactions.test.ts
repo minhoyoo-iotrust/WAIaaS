@@ -83,7 +83,6 @@ function mockConfig(): DaemonConfig {
       evm_optimism_sepolia: 'https://optimism-sepolia.drpc.org',
       evm_base_mainnet: 'https://base.drpc.org',
       evm_base_sepolia: 'https://base-sepolia.drpc.org',
-      evm_default_network: 'ethereum-sepolia' as const,
     },
     notifications: {
       enabled: false,
@@ -266,13 +265,13 @@ async function createSessionToken(walletId: string): Promise<string> {
      VALUES (?, ?, ?, ?, ?)`,
   ).run(sessionId, `hash-${sessionId}`, now + 86400, now + 86400 * 30, now);
   conn.sqlite.prepare(
-    `INSERT INTO session_wallets (session_id, wallet_id, is_default, created_at)
-     VALUES (?, ?, 1, ?)`,
+    `INSERT INTO session_wallets (session_id, wallet_id, created_at)
+       VALUES (?, ?, ?)`,
   ).run(sessionId, walletId, now);
 
   const payload: JwtPayload = {
     sub: sessionId,
-    wlt: walletId,
+
     iat: now,
     exp: now + 3600,
   };
@@ -351,10 +350,9 @@ describe('POST /v1/transactions/send', () => {
   it('should return 404 SESSION_NOT_FOUND when session does not exist in DB', async () => {
     // Sign a JWT with valid format but session not in DB
     const fakeSessionId = generateId();
-    const fakeWalletId = '00000000-0000-7000-8000-000000000000';
     const now = Math.floor(Date.now() / 1000);
 
-    const payload: JwtPayload = { sub: fakeSessionId, wlt: fakeWalletId, iat: now, exp: now + 3600 };
+    const payload: JwtPayload = { sub: fakeSessionId, iat: now, exp: now + 3600 };
     const token = await jwtSecretManager.signToken(payload);
 
     const res = await app.request('/v1/transactions/send', {

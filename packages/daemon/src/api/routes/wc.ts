@@ -20,7 +20,8 @@
 
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import { WAIaaSError } from '@waiaas/core';
+import { WAIaaSError, getSingleNetwork, getNetworksForEnvironment } from '@waiaas/core';
+import type { ChainType, EnvironmentType } from '@waiaas/core';
 import type { WcSessionService, WcServiceRef } from '../../services/wc-session-service.js';
 import type * as schema from '../../infrastructure/database/schema.js';
 import {
@@ -206,8 +207,8 @@ export function wcRoutes(deps: WcRouteDeps): OpenAPIHono {
     // Look up wallet via raw SQL (simpler, avoids Drizzle query builder complexity)
     const sqlite = (db as any).session?.client as import('better-sqlite3').Database;
     const wallet = sqlite
-      .prepare('SELECT id, chain, default_network, environment, status, owner_address FROM wallets WHERE id = ?')
-      .get(id) as { id: string; chain: string; default_network: string | null; environment: string; status: string; owner_address: string | null } | undefined;
+      .prepare('SELECT id, chain, environment, status, owner_address FROM wallets WHERE id = ?')
+      .get(id) as { id: string; chain: string; environment: string; status: string; owner_address: string | null } | undefined;
 
     if (!wallet) {
       throw new WAIaaSError('WALLET_NOT_FOUND');
@@ -222,7 +223,8 @@ export function wcRoutes(deps: WcRouteDeps): OpenAPIHono {
     }
 
     const svc = requireWcService(wcServiceRef);
-    const network = wallet.default_network ?? wallet.environment;
+    const network = getSingleNetwork(wallet.chain as ChainType, wallet.environment as EnvironmentType)
+      ?? getNetworksForEnvironment(wallet.chain as ChainType, wallet.environment as EnvironmentType)[0]!;
     const result = await svc.createPairing(id, network, wallet.chain);
 
     return c.json(
@@ -336,8 +338,8 @@ export function wcSessionRoutes(deps: WcRouteDeps): OpenAPIHono {
   const lookupWallet = (walletId: string) => {
     const sqlite = (db as any).session?.client as import('better-sqlite3').Database;
     return sqlite
-      .prepare('SELECT id, chain, default_network, environment, status, owner_address FROM wallets WHERE id = ?')
-      .get(walletId) as { id: string; chain: string; default_network: string | null; environment: string; status: string; owner_address: string | null } | undefined;
+      .prepare('SELECT id, chain, environment, status, owner_address FROM wallets WHERE id = ?')
+      .get(walletId) as { id: string; chain: string; environment: string; status: string; owner_address: string | null } | undefined;
   };
 
   // -------------------------------------------------------------------------
@@ -356,7 +358,8 @@ export function wcSessionRoutes(deps: WcRouteDeps): OpenAPIHono {
     }
 
     const svc = requireWcService(wcServiceRef);
-    const network = wallet.default_network ?? wallet.environment;
+    const network = getSingleNetwork(wallet.chain as ChainType, wallet.environment as EnvironmentType)
+      ?? getNetworksForEnvironment(wallet.chain as ChainType, wallet.environment as EnvironmentType)[0]!;
     const result = await svc.createPairing(walletId, network, wallet.chain);
 
     return c.json(

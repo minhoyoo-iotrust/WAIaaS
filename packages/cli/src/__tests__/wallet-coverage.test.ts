@@ -1,7 +1,7 @@
 /**
  * Unit tests for `commands/wallet.ts`.
  *
- * Covers walletInfoCommand, walletSetDefaultNetworkCommand,
+ * Covers walletInfoCommand, walletCreateCommand,
  * and internal helpers (selectWallet, daemonRequest, getMasterPassword).
  */
 
@@ -110,8 +110,7 @@ describe('wallet commands', () => {
             id: 'w-aaa',
             chain: 'solana',
             environment: 'testnet',
-            defaultNetwork: 'devnet',
-            availableNetworks: [{ network: 'devnet', isDefault: true }],
+            availableNetworks: [{ network: 'devnet' }],
           }));
         }
         return Promise.reject(new Error(`Unexpected: ${u}`));
@@ -135,8 +134,7 @@ describe('wallet commands', () => {
             id: 'w-bbb',
             chain: 'ethereum',
             environment: 'testnet',
-            defaultNetwork: 'sepolia',
-            availableNetworks: [{ network: 'sepolia', isDefault: true }],
+            availableNetworks: [{ network: 'sepolia' }],
           }));
         }
         return Promise.reject(new Error(`Unexpected: ${u}`));
@@ -160,8 +158,7 @@ describe('wallet commands', () => {
             id: 'w-aaa',
             chain: 'solana',
             environment: 'testnet',
-            defaultNetwork: 'devnet',
-            availableNetworks: [{ network: 'devnet', isDefault: true }],
+            availableNetworks: [{ network: 'devnet' }],
           }));
         }
         return Promise.reject(new Error(`Unexpected: ${u}`));
@@ -301,8 +298,7 @@ describe('wallet commands', () => {
             id: 'w-aaa',
             chain: 'solana',
             environment: 'testnet',
-            defaultNetwork: 'devnet',
-            availableNetworks: [{ network: 'devnet', isDefault: true }],
+            availableNetworks: [{ network: 'devnet' }],
           }));
         }
         return Promise.reject(new Error(`Unexpected: ${u}`));
@@ -340,10 +336,9 @@ describe('wallet commands', () => {
             id: 'w-aaa',
             chain: 'solana',
             environment: 'testnet',
-            defaultNetwork: 'devnet',
             availableNetworks: [
-              { network: 'devnet', isDefault: true },
-              { network: 'testnet', isDefault: false },
+              { network: 'devnet' },
+              { network: 'testnet' },
             ],
           }));
         }
@@ -359,12 +354,11 @@ describe('wallet commands', () => {
       expect(mockStdout).toHaveBeenCalledWith(expect.stringContaining('Chain:            solana'));
       expect(mockStdout).toHaveBeenCalledWith(expect.stringContaining('Environment:      testnet'));
       expect(mockStdout).toHaveBeenCalledWith(expect.stringContaining('Address:          7xKXtg'));
-      expect(mockStdout).toHaveBeenCalledWith(expect.stringContaining('Default Network:  devnet'));
       expect(mockStdout).toHaveBeenCalledWith(expect.stringContaining('Available:        devnet, testnet'));
       expect(mockStdout).toHaveBeenCalledWith(expect.stringContaining('Status:           active'));
     });
 
-    it('no default in availableNetworks: falls back to wallet.network', async () => {
+    it('displays available networks without default network line', async () => {
       const fetchMock = vi.fn((url: string | URL) => {
         const u = String(url);
         if (u.endsWith('/v1/wallets')) {
@@ -375,10 +369,9 @@ describe('wallet commands', () => {
             id: 'w-aaa',
             chain: 'solana',
             environment: 'testnet',
-            defaultNetwork: null,
             availableNetworks: [
-              { network: 'devnet', isDefault: false },
-              { network: 'testnet', isDefault: false },
+              { network: 'devnet' },
+              { network: 'testnet' },
             ],
           }));
         }
@@ -389,8 +382,10 @@ describe('wallet commands', () => {
       const { walletInfoCommand } = await import('../commands/wallet.js');
       await walletInfoCommand({ baseUrl: BASE, password: TEST_PW });
 
-      // Falls back to wallet.network which is 'devnet'
-      expect(mockStdout).toHaveBeenCalledWith(expect.stringContaining('Default Network:  devnet'));
+      // No Default Network line shown
+      const allCalls = mockStdout.mock.calls.map((c: unknown[]) => String(c[0]));
+      expect(allCalls.every((msg: string) => !msg.includes('Default Network:'))).toBe(true);
+      expect(mockStdout).toHaveBeenCalledWith(expect.stringContaining('Available:        devnet, testnet'));
     });
 
     it('empty availableNetworks: shows "none"', async () => {
@@ -404,7 +399,6 @@ describe('wallet commands', () => {
             id: 'w-aaa',
             chain: 'solana',
             environment: 'testnet',
-            defaultNetwork: null,
             availableNetworks: [],
           }));
         }
@@ -419,87 +413,4 @@ describe('wallet commands', () => {
     });
   });
 
-  // -----------------------------------------------------------------------
-  // walletSetDefaultNetworkCommand
-  // -----------------------------------------------------------------------
-
-  describe('walletSetDefaultNetworkCommand', () => {
-    it('happy path: changes default network', async () => {
-      const fetchMock = vi.fn((url: string | URL, init?: RequestInit) => {
-        const u = String(url);
-        if (u.endsWith('/v1/wallets')) {
-          return Promise.resolve(mockResponse(200, { items: [WALLET_A] }));
-        }
-        if (u.includes('/default-network') && init?.method === 'PUT') {
-          return Promise.resolve(mockResponse(200, {
-            id: 'w-aaa',
-            defaultNetwork: 'testnet',
-            previousNetwork: 'devnet',
-          }));
-        }
-        return Promise.reject(new Error(`Unexpected: ${u}`));
-      });
-      vi.stubGlobal('fetch', fetchMock);
-
-      const { walletSetDefaultNetworkCommand } = await import('../commands/wallet.js');
-      await walletSetDefaultNetworkCommand({ baseUrl: BASE, password: TEST_PW }, 'testnet');
-
-      expect(mockStdout).toHaveBeenCalledWith(expect.stringContaining("Default network changed for wallet 'sol-test'"));
-      expect(mockStdout).toHaveBeenCalledWith(expect.stringContaining('Previous: devnet'));
-      expect(mockStdout).toHaveBeenCalledWith(expect.stringContaining('Current:  testnet'));
-    });
-
-    it('previous network is null: displays "(none)"', async () => {
-      const fetchMock = vi.fn((url: string | URL, init?: RequestInit) => {
-        const u = String(url);
-        if (u.endsWith('/v1/wallets')) {
-          return Promise.resolve(mockResponse(200, { items: [WALLET_A] }));
-        }
-        if (u.includes('/default-network') && init?.method === 'PUT') {
-          return Promise.resolve(mockResponse(200, {
-            id: 'w-aaa',
-            defaultNetwork: 'mainnet-beta',
-            previousNetwork: null,
-          }));
-        }
-        return Promise.reject(new Error(`Unexpected: ${u}`));
-      });
-      vi.stubGlobal('fetch', fetchMock);
-
-      const { walletSetDefaultNetworkCommand } = await import('../commands/wallet.js');
-      await walletSetDefaultNetworkCommand({ baseUrl: BASE, password: TEST_PW }, 'mainnet-beta');
-
-      expect(mockStdout).toHaveBeenCalledWith(expect.stringContaining('Previous: (none)'));
-      expect(mockStdout).toHaveBeenCalledWith(expect.stringContaining('Current:  mainnet-beta'));
-    });
-
-    it('sends correct body with network name', async () => {
-      const fetchMock = vi.fn((url: string | URL, init?: RequestInit) => {
-        const u = String(url);
-        if (u.endsWith('/v1/wallets')) {
-          return Promise.resolve(mockResponse(200, { items: [WALLET_A] }));
-        }
-        if (u.includes('/default-network') && init?.method === 'PUT') {
-          const body = JSON.parse(init.body as string) as { network: string };
-          expect(body.network).toBe('testnet');
-          return Promise.resolve(mockResponse(200, {
-            id: 'w-aaa',
-            defaultNetwork: 'testnet',
-            previousNetwork: 'devnet',
-          }));
-        }
-        return Promise.reject(new Error(`Unexpected: ${u}`));
-      });
-      vi.stubGlobal('fetch', fetchMock);
-
-      const { walletSetDefaultNetworkCommand } = await import('../commands/wallet.js');
-      await walletSetDefaultNetworkCommand({ baseUrl: BASE, password: TEST_PW }, 'testnet');
-
-      // Verify the PUT was called
-      const putCalls = fetchMock.mock.calls.filter(
-        (c: unknown[]) => (c[1] as RequestInit | undefined)?.method === 'PUT',
-      );
-      expect(putCalls.length).toBe(1);
-    });
-  });
 });

@@ -33,7 +33,7 @@ let walletId: string;
 
 async function insertTestWallet(
   connection: DatabaseConnection,
-  opts?: { chain?: string; defaultNetwork?: string },
+  opts?: { chain?: string },
 ): Promise<string> {
   const id = generateId();
   const now = new Date(Math.floor(Date.now() / 1000) * 1000);
@@ -42,7 +42,6 @@ async function insertTestWallet(
     name: 'ext-batch-test-wallet',
     chain: opts?.chain ?? 'solana',
     environment: 'testnet',
-    defaultNetwork: opts?.defaultNetwork ?? 'devnet',
     publicKey: `pk-ext-bat-${id}`,
     status: 'ACTIVE',
     createdAt: now,
@@ -301,7 +300,6 @@ describe('BAT-U08~U11: error scenarios', () => {
     // evaluateBatch works for any chain at policy level.
     const evmWalletId = await insertTestWallet(conn, {
       chain: 'ethereum',
-      defaultNetwork: 'ethereum-sepolia',
     });
 
     insertPolicy(conn.sqlite, {

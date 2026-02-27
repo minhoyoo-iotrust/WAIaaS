@@ -754,7 +754,6 @@ export class TelegramBotService {
     // Create JWT payload and sign token
     const jwtPayload: JwtPayload = {
       sub: sessionId,
-      wlt: walletId,
       iat: nowSec,
       exp: expiresAt,
     };
@@ -778,8 +777,8 @@ export class TelegramBotService {
       );
     this.sqlite
       .prepare(
-        `INSERT INTO session_wallets (session_id, wallet_id, is_default, created_at)
-         VALUES (?, ?, 1, ?)`,
+        `INSERT INTO session_wallets (session_id, wallet_id, created_at)
+         VALUES (?, ?, ?)`,
       )
       .run(sessionId, walletId, nowSec);
 

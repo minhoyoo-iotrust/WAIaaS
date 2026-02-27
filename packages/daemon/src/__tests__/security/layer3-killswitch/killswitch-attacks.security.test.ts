@@ -134,7 +134,7 @@ describe('SEC-03-01: ACTIVATED(SUSPENDED) state blocks protected APIs', () => {
     const ownerHeaders = createOwnerHeaders(ownerKeyPair, message);
 
     // Owner path bypasses kill switch guard -- should reach ownerAuth middleware
-    const res = await app.request('/v1/owner/approve', {
+    const res = await app.request(`/v1/owner/${walletId}/approve`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -228,7 +228,7 @@ describe('SEC-03-03: Owner signature forgery is rejected', () => {
     // Override address to real owner's (forgery attempt)
     fakeHeaders['X-Owner-Address'] = realOwner.address;
 
-    const res = await app.request('/v1/owner/approve', {
+    const res = await app.request(`/v1/owner/${walletId}/approve`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -521,7 +521,7 @@ describe('SEC-03-08: LOCKED state blocks APIs same as SUSPENDED', () => {
     const message = `recover:${walletId}:${Date.now()}`;
     const ownerHeaders = createOwnerHeaders(ownerKeyPair, message);
 
-    const res = await app.request('/v1/owner/approve', {
+    const res = await app.request(`/v1/owner/${walletId}/approve`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,

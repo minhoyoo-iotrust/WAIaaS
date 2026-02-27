@@ -4,10 +4,11 @@ import {
   EnvironmentTypeEnum,
   ENVIRONMENT_NETWORK_MAP,
   getNetworksForEnvironment,
-  getDefaultNetwork,
+  getSingleNetwork,
   deriveEnvironment,
   validateNetworkEnvironment,
   NETWORK_TYPES,
+  ENVIRONMENT_SINGLE_NETWORK,
 } from '../enums/chain.js';
 
 // ─── 1. ENVIRONMENT_TYPES SSoT ─────────────────────────────────
@@ -82,23 +83,44 @@ describe('getNetworksForEnvironment', () => {
   });
 });
 
-// ─── 4. getDefaultNetwork() ─────────────────────────────────────
+// ─── 4. getSingleNetwork() ────────────────────────────────────
 
-describe('getDefaultNetwork', () => {
+describe('getSingleNetwork', () => {
   it('solana mainnet -> mainnet', () => {
-    expect(getDefaultNetwork('solana', 'mainnet')).toBe('mainnet');
+    expect(getSingleNetwork('solana', 'mainnet')).toBe('mainnet');
   });
 
-  it('solana testnet -> devnet (ENV-04)', () => {
-    expect(getDefaultNetwork('solana', 'testnet')).toBe('devnet');
+  it('solana testnet -> devnet', () => {
+    expect(getSingleNetwork('solana', 'testnet')).toBe('devnet');
   });
 
-  it('ethereum mainnet -> ethereum-mainnet', () => {
-    expect(getDefaultNetwork('ethereum', 'mainnet')).toBe('ethereum-mainnet');
+  it('ethereum mainnet -> null (EVM has multiple networks)', () => {
+    expect(getSingleNetwork('ethereum', 'mainnet')).toBeNull();
   });
 
-  it('ethereum testnet -> ethereum-sepolia', () => {
-    expect(getDefaultNetwork('ethereum', 'testnet')).toBe('ethereum-sepolia');
+  it('ethereum testnet -> null (EVM has multiple networks)', () => {
+    expect(getSingleNetwork('ethereum', 'testnet')).toBeNull();
+  });
+});
+
+// ─── 4b. ENVIRONMENT_SINGLE_NETWORK constant ────────────────────
+
+describe('ENVIRONMENT_SINGLE_NETWORK', () => {
+  it('should have all 4 chain:environment keys', () => {
+    expect(ENVIRONMENT_SINGLE_NETWORK).toHaveProperty('solana:mainnet');
+    expect(ENVIRONMENT_SINGLE_NETWORK).toHaveProperty('solana:testnet');
+    expect(ENVIRONMENT_SINGLE_NETWORK).toHaveProperty('ethereum:mainnet');
+    expect(ENVIRONMENT_SINGLE_NETWORK).toHaveProperty('ethereum:testnet');
+  });
+
+  it('Solana entries return network values', () => {
+    expect(ENVIRONMENT_SINGLE_NETWORK['solana:mainnet']).toBe('mainnet');
+    expect(ENVIRONMENT_SINGLE_NETWORK['solana:testnet']).toBe('devnet');
+  });
+
+  it('EVM entries return null', () => {
+    expect(ENVIRONMENT_SINGLE_NETWORK['ethereum:mainnet']).toBeNull();
+    expect(ENVIRONMENT_SINGLE_NETWORK['ethereum:testnet']).toBeNull();
   });
 });
 

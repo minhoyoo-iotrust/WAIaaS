@@ -283,7 +283,6 @@ export class NotificationService {
         .select({
           name: schema.wallets.name,
           publicKey: schema.wallets.publicKey,
-          defaultNetwork: schema.wallets.defaultNetwork,
           chain: schema.wallets.chain,
         })
         .from(schema.wallets)
@@ -293,7 +292,7 @@ export class NotificationService {
       return {
         walletName: row.name,
         walletAddress: row.publicKey,
-        network: row.defaultNetwork ?? row.chain,
+        network: row.chain,
       };
     } catch {
       return empty;

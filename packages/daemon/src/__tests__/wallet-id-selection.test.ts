@@ -151,10 +151,10 @@ function seedWallet(
   const ts = Math.floor(Date.now() / 1000);
   sqlite
     .prepare(
-      `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
-    .run(walletId, name, 'solana', 'testnet', 'devnet', publicKey, 'ACTIVE', 0, ts, ts);
+    .run(walletId, name, 'solana', 'testnet', publicKey, 'ACTIVE', 0, ts, ts);
 }
 
 // ---------------------------------------------------------------------------
@@ -254,15 +254,15 @@ describe('Wallet ID Selection Integration', () => {
   // GET /v1/wallet/address
   // -------------------------------------------------------------------------
 
-  it('GET /v1/wallet/address -- default wallet (walletA) when no walletId specified', async () => {
+  it('GET /v1/wallet/address -- WALLET_ID_REQUIRED when no walletId and session has 2 wallets', async () => {
     const res = await app.request('/v1/wallet/address', {
       headers: bearerHeader(sessionToken),
     });
-    expect(res.status).toBe(200);
+    // Phase 279: no default wallet concept -- must specify walletId when session has 2+ wallets
+    expect(res.status).toBe(400);
 
     const body = await json(res);
-    expect(body.walletId).toBe(walletA);
-    expect(body.address).toBe(PK_A);
+    expect(body.code).toBe('WALLET_ID_REQUIRED');
   });
 
   it('GET /v1/wallet/address?walletId={walletB} -- selects walletB via query param', async () => {
@@ -316,7 +316,7 @@ describe('Wallet ID Selection Integration', () => {
     expect(txRow!.wallet_id).toBe(walletB);
   });
 
-  it('POST /v1/transactions/send (no walletId) -- uses default walletA', async () => {
+  it('POST /v1/transactions/send (no walletId) -- WALLET_ID_REQUIRED when session has 2 wallets', async () => {
     const res = await app.request('/v1/transactions/send', {
       method: 'POST',
       headers: bearerJsonHeader(sessionToken),
@@ -326,17 +326,11 @@ describe('Wallet ID Selection Integration', () => {
         amount: '200000',
       }),
     });
-    expect(res.status).toBe(201);
+    // Phase 279: no default wallet concept -- must specify walletId when session has 2+ wallets
+    expect(res.status).toBe(400);
 
     const body = await json(res);
-    expect(body.id).toBeTruthy();
-
-    // Verify in DB that the transaction is associated with walletA (default)
-    const txRow = sqlite
-      .prepare('SELECT wallet_id FROM transactions WHERE id = ?')
-      .get(body.id as string) as { wallet_id: string } | undefined;
-    expect(txRow).toBeDefined();
-    expect(txRow!.wallet_id).toBe(walletA);
+    expect(body.code).toBe('WALLET_ID_REQUIRED');
   });
 
   it('POST /v1/transactions/send { walletId: unlinked } -- WALLET_ACCESS_DENIED', async () => {

@@ -28,6 +28,7 @@
 - ✅ **v28.8 빌트인 지갑 프리셋 자동 설정** -- Phases 265-267 (shipped 2026-02-26)
 - ✅ **v29.0 고급 DeFi 프로토콜 설계** -- Phases 268-273 (shipped 2026-02-26)
 - ✅ **v29.2 EVM Lending -- Aave V3** -- Phases 274-278 (shipped 2026-02-27)
+- ✅ **v29.3 기본 지갑/기본 네트워크 개념 제거** -- Phases 279-282 (shipped 2026-02-27)
 
 ## Phases
 
@@ -182,5 +183,17 @@ See `.planning/milestones/v29.2-ROADMAP.md` for full details.
 
 </details>
 
+<details>
+<summary>✅ v29.3 기본 지갑/기본 네트워크 개념 제거 (Phases 279-282) -- SHIPPED 2026-02-27</summary>
+
+- [x] Phase 279: DB + Core + Resolution (2/2 plans) -- completed 2026-02-27
+- [x] Phase 280: JWT/Auth + API + Pipeline + Settings (3/3 plans) -- completed 2026-02-27
+- [x] Phase 281: SDK/MCP/Admin UI/Skills (3/3 plans) -- completed 2026-02-27
+- [x] Phase 282: E2E + Test Fixes (2/2 plans) -- completed 2026-02-27
+
+See `.planning/milestones/v29.3-ROADMAP.md` for full details.
+
+</details>
+
 ---
-*Last updated: 2026-02-27 after v29.2 milestone completion*
+*Last updated: 2026-02-27 after v29.3 milestone completion*

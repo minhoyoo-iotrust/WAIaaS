@@ -88,7 +88,6 @@ function mockConfig(): DaemonConfig {
       evm_optimism_sepolia: 'https://optimism-sepolia.drpc.org',
       evm_base_mainnet: 'https://base.drpc.org',
       evm_base_sepolia: 'https://base-sepolia.drpc.org',
-      evm_default_network: 'ethereum-sepolia' as const,
     },
     notifications: {
       enabled: false,
@@ -384,13 +383,13 @@ async function createSessionToken(walletId: string): Promise<string> {
      VALUES (?, ?, ?, ?, ?)`,
   ).run(sessionId, `hash-${sessionId}`, now + 86400, now + 86400 * 30, now);
   conn.sqlite.prepare(
-    `INSERT INTO session_wallets (session_id, wallet_id, is_default, created_at)
-     VALUES (?, ?, 1, ?)`,
+    `INSERT INTO session_wallets (session_id, wallet_id, created_at)
+       VALUES (?, ?, ?)`,
   ).run(sessionId, walletId, now);
 
   const payload: JwtPayload = {
     sub: sessionId,
-    wlt: walletId,
+
     iat: now,
     exp: now + 3600,
   };

@@ -15,7 +15,7 @@ export function registerListTransactions(server: McpServer, apiClient: ApiClient
       limit: z.number().optional().describe('Maximum number of transactions to return'),
       cursor: z.string().optional().describe('Pagination cursor from previous response'),
       display_currency: z.string().optional().describe('Display currency for amount conversion (e.g. KRW, EUR). Defaults to server setting.'),
-      wallet_id: z.string().optional().describe('Target wallet ID. Omit to use the default wallet.'),
+      wallet_id: z.string().optional().describe('Target wallet ID. Required for multi-wallet sessions; auto-resolved when session has a single wallet.'),
     },
     async (args) => {
       const params = new URLSearchParams();

@@ -28,7 +28,7 @@ export function registerListIncomingTransactions(
       from_address: z.string().optional().describe('Filter by sender address'),
       since: z.number().optional().describe('Filter: only transactions detected after this epoch (seconds)'),
       until: z.number().optional().describe('Filter: only transactions detected before this epoch (seconds)'),
-      wallet_id: z.string().optional().describe('Target wallet ID. Omit to use the default wallet.'),
+      wallet_id: z.string().optional().describe('Target wallet ID. Required for multi-wallet sessions; auto-resolved when session has a single wallet.'),
     },
     async (args) => {
       const params = new URLSearchParams();

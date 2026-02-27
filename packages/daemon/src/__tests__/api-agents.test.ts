@@ -78,7 +78,6 @@ function mockConfig(): DaemonConfig {
       evm_optimism_sepolia: 'https://optimism-sepolia.drpc.org',
       evm_base_mainnet: 'https://base.drpc.org',
       evm_base_sepolia: 'https://base-sepolia.drpc.org',
-      evm_default_network: 'ethereum-sepolia' as const,
     },
     notifications: {
       enabled: false,
@@ -271,14 +270,14 @@ async function createSessionToken(walletId: string): Promise<string> {
      VALUES (?, ?, ?, ?, ?)`,
   ).run(sessionId, `hash-${sessionId}`, now + 86400, now + 86400 * 30, now);
   conn.sqlite.prepare(
-    `INSERT INTO session_wallets (session_id, wallet_id, is_default, created_at)
-     VALUES (?, ?, 1, ?)`,
+    `INSERT INTO session_wallets (session_id, wallet_id, created_at)
+       VALUES (?, ?, ?)`,
   ).run(sessionId, walletId, now);
 
   // Sign JWT
   const payload: JwtPayload = {
     sub: sessionId,
-    wlt: walletId,
+
     iat: now,
     exp: now + 3600,
   };
@@ -381,7 +380,6 @@ describe('POST /v1/wallets (wallet CRUD)', () => {
     expect(row).toBeTruthy();
     expect(row.name).toBe('persisted-wallet');
     expect(row.chain).toBe('solana');
-    expect(row.default_network).toBe('devnet');
     expect(row.environment).toBe('testnet');
     expect(row.status).toBe('ACTIVE');
     expect(row.public_key).toBe(MOCK_SOLANA_PUBLIC_KEY);
@@ -441,7 +439,7 @@ describe('chain-network validation', () => {
     expect(body.chain).toBe('solana');
   });
 
-  it('POST /wallets with chain=ethereum, no network -> defaults to evm_default_network', async () => {
+  it('POST /wallets with chain=ethereum, no network -> uses first network for environment', async () => {
     const res = await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
@@ -567,7 +565,7 @@ describe('EVM wallet creation', () => {
     expect(body.network).toBe('ethereum-sepolia');
   });
 
-  it('POST /wallets with chain=ethereum and no network defaults to evm_default_network', async () => {
+  it('POST /wallets with chain=ethereum and no network defaults to first testnet network', async () => {
     const res = await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
@@ -580,11 +578,11 @@ describe('EVM wallet creation', () => {
 
     expect(res.status).toBe(201);
     const body = await json(res);
-    expect(body.network).toBe('ethereum-sepolia'); // config evm_default_network
+    expect(body.network).toBe('ethereum-sepolia'); // first testnet EVM network
     expect(body.publicKey).toBe(MOCK_EVM_PUBLIC_KEY);
   });
 
-  it('generateKeyPair receives defaultNetwork derived from environment for EVM wallet', async () => {
+  it('generateKeyPair receives network derived from environment for EVM wallet', async () => {
     await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
@@ -598,13 +596,13 @@ describe('EVM wallet creation', () => {
     const mockFn = testKeyStore.generateKeyPair as ReturnType<typeof vi.fn>;
     const calls = mockFn.mock.calls;
     const lastCall = calls[calls.length - 1]!;
-    // generateKeyPair(walletId, chain, defaultNetwork, masterPassword)
+    // generateKeyPair(walletId, chain, network, masterPassword)
     expect(lastCall[1]).toBe('ethereum');
     expect(lastCall[2]).toBe('ethereum-mainnet');
     expect(lastCall[3]).toBe(TEST_MASTER_PASSWORD);
   });
 
-  it('generateKeyPair receives defaultNetwork derived from environment for Solana wallet', async () => {
+  it('generateKeyPair receives network derived from environment for Solana wallet', async () => {
     await app.request('/v1/wallets', {
       method: 'POST',
       headers: {
@@ -618,7 +616,7 @@ describe('EVM wallet creation', () => {
     const mockFn = testKeyStore.generateKeyPair as ReturnType<typeof vi.fn>;
     const calls = mockFn.mock.calls;
     const lastCall = calls[calls.length - 1]!;
-    // generateKeyPair(walletId, chain, defaultNetwork, masterPassword)
+    // generateKeyPair(walletId, chain, network, masterPassword)
     expect(lastCall[1]).toBe('solana');
     expect(lastCall[2]).toBe('mainnet');
     expect(lastCall[3]).toBe(TEST_MASTER_PASSWORD);
@@ -645,7 +643,6 @@ describe('EVM wallet creation', () => {
     >;
     expect(row).toBeTruthy();
     expect(row.chain).toBe('ethereum');
-    expect(row.default_network).toBe('ethereum-sepolia');
     expect(row.environment).toBe('testnet');
     expect(row.public_key).toBe(MOCK_EVM_PUBLIC_KEY);
     expect((row.public_key as string).startsWith('0x')).toBe(true);
@@ -681,10 +678,9 @@ describe('GET /v1/wallet/address', () => {
   it('should return 404 SESSION_NOT_FOUND when session does not exist in DB', async () => {
     // Sign a JWT with valid format but session not in DB
     const fakeSessionId = generateId();
-    const fakeWalletId = '00000000-0000-7000-8000-000000000000';
     const now = Math.floor(Date.now() / 1000);
 
-    const payload: JwtPayload = { sub: fakeSessionId, wlt: fakeWalletId, iat: now, exp: now + 3600 };
+    const payload: JwtPayload = { sub: fakeSessionId, iat: now, exp: now + 3600 };
     const token = await jwtSecretManager.signToken(payload);
 
     const res = await app.request('/v1/wallet/address', {
@@ -773,13 +769,13 @@ describe('GET /v1/wallet/balance', () => {
        VALUES (?, ?, ?, ?, ?)`,
     ).run(sessionId, `hash-${sessionId}`, now + 86400, now + 86400 * 30, now);
     conn.sqlite.prepare(
-      `INSERT INTO session_wallets (session_id, wallet_id, is_default, created_at)
-       VALUES (?, ?, 1, ?)`,
+      `INSERT INTO session_wallets (session_id, wallet_id, created_at)
+       VALUES (?, ?, ?)`,
     ).run(sessionId, walletId, now);
 
     const payload: JwtPayload = {
       sub: sessionId,
-      wlt: walletId,
+  
       iat: now - 7200,
       exp: now - 3600, // expired
     };

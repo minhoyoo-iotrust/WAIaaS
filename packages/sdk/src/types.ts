@@ -191,8 +191,6 @@ export interface CreateSessionParams {
   walletIds?: string[];
   /** Single wallet ID (backward-compatible, singular) */
   walletId?: string;
-  /** Default wallet ID override (optional) */
-  defaultWalletId?: string;
   /** Session expiration time in seconds */
   expiresIn?: number;
   /** Session constraints */
@@ -204,7 +202,6 @@ export interface CreateSessionParams {
 export interface CreateSessionWallet {
   id: string;
   name: string;
-  isDefault: boolean;
 }
 
 export interface CreateSessionResponse {
@@ -240,9 +237,7 @@ export interface ConnectInfoWallet {
   name: string;
   chain: string;
   environment: string;
-  defaultNetwork: string;
   address: string;
-  isDefault: boolean;
 }
 
 export interface ConnectInfoSession {
@@ -388,7 +383,6 @@ export interface SignTransactionResponse {
 
 export interface WalletNetworkInfo {
   network: string;
-  isDefault: boolean;
 }
 
 export interface WalletInfoResponse {
@@ -398,12 +392,6 @@ export interface WalletInfoResponse {
   environment: string;
   address: string;
   networks: WalletNetworkInfo[];
-}
-
-export interface SetDefaultNetworkResponse {
-  id: string;
-  defaultNetwork: string;
-  previousNetwork: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -615,9 +603,9 @@ export interface GetIncomingTransactionSummaryParams {
 export interface ExecuteActionParams {
   /** Action-specific parameters as key-value pairs */
   params?: Record<string, unknown>;
-  /** Target network (e.g., 'ethereum-mainnet'). Defaults to wallet default. */
+  /** Target network (e.g., 'ethereum-mainnet'). Required for EVM wallets. */
   network?: string;
-  /** Target wallet ID (multi-wallet sessions). Omit for default wallet. */
+  /** Target wallet ID (required for multi-wallet sessions). */
   walletId?: string;
   /** Gas price condition for deferred execution */
   gasCondition?: GasCondition;

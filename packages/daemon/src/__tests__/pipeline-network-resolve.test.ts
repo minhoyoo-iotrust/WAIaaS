@@ -6,9 +6,10 @@
  *   2. Stage 3 passes resolvedNetwork to policy engine TransactionParam.network
  *   3. Route layer error conversion: environment mismatch -> ENVIRONMENT_NETWORK_MISMATCH WAIaaSError
  *   4. Route layer error conversion: chain mismatch -> ACTION_VALIDATION_FAILED WAIaaSError
- *   5. daemon.ts re-entry: tx.network used directly, null falls back to getDefaultNetwork
+ *   5. daemon.ts re-entry: tx.network used directly, null falls back to getSingleNetwork
  *
  * @see docs/70-pipeline-network-resolve-design.md
+ * @see Phase 279 -- remove default wallet/network concept
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -20,7 +21,7 @@ import { generateId } from '../infrastructure/database/id.js';
 import { stage1Validate, stage3Policy } from '../pipeline/stages.js';
 import type { PipelineContext } from '../pipeline/stages.js';
 import { resolveNetwork } from '../pipeline/network-resolver.js';
-import { WAIaaSError, getDefaultNetwork } from '@waiaas/core';
+import { WAIaaSError, getSingleNetwork } from '@waiaas/core';
 import type {
   IChainAdapter,
   UnsignedTransaction,
@@ -111,7 +112,7 @@ describe('Pipeline network resolution integration', () => {
     dbConn = createDatabase(':memory:');
     pushSchema(dbConn.sqlite);
 
-    // Insert a testnet solana wallet with defaultNetwork=devnet
+    // Insert a testnet solana wallet (no defaultNetwork after v29.3)
     walletId = generateId();
     const now = new Date(Math.floor(Date.now() / 1000) * 1000);
     await dbConn.db.insert(wallets).values({
@@ -119,7 +120,6 @@ describe('Pipeline network resolution integration', () => {
       name: 'test-wallet',
       chain: 'solana',
       environment: 'testnet',
-      defaultNetwork: 'devnet',
       publicKey: MOCK_PUBLIC_KEY,
       status: 'ACTIVE',
       createdAt: now,
@@ -147,7 +147,6 @@ describe('Pipeline network resolution integration', () => {
         publicKey: MOCK_PUBLIC_KEY,
         chain: 'solana',
         environment: 'testnet',
-        defaultNetwork: 'devnet',
       },
       resolvedNetwork: 'testnet', // explicit non-default network
       request: { to: '22222222222222222222222222222222', amount: '100000000' },
@@ -156,7 +155,7 @@ describe('Pipeline network resolution integration', () => {
 
     await stage1Validate(ctx);
 
-    // Verify DB has the resolvedNetwork, not wallet.defaultNetwork
+    // Verify DB has the resolvedNetwork
     const tx = dbConn.db.select().from(transactions).where(eq(transactions.id, ctx.txId)).get();
     expect(tx).toBeDefined();
     expect(tx!.network).toBe('testnet'); // resolvedNetwork, not 'devnet'
@@ -179,7 +178,6 @@ describe('Pipeline network resolution integration', () => {
         publicKey: MOCK_PUBLIC_KEY,
         chain: 'solana',
         environment: 'testnet',
-        defaultNetwork: 'devnet',
       },
       resolvedNetwork: 'testnet',
       request: { to: '22222222222222222222222222222222', amount: '50000000' },
@@ -206,7 +204,7 @@ describe('Pipeline network resolution integration', () => {
   it('environment mismatch produces ENVIRONMENT_NETWORK_MISMATCH WAIaaSError', () => {
     // Simulate the route handler catch block
     try {
-      resolveNetwork('devnet', null, 'mainnet', 'solana');
+      resolveNetwork('devnet', 'mainnet', 'solana');
       throw new Error('should not reach');
     } catch (err) {
       // Simulate the route handler error conversion logic
@@ -229,7 +227,7 @@ describe('Pipeline network resolution integration', () => {
   it('chain mismatch produces ACTION_VALIDATION_FAILED WAIaaSError', () => {
     // Simulate the route handler catch block
     try {
-      resolveNetwork('ethereum-sepolia', null, 'testnet', 'solana');
+      resolveNetwork('ethereum-sepolia', 'testnet', 'solana');
       throw new Error('should not reach');
     } catch (err) {
       // Simulate the route handler error conversion logic (chain error goes to ACTION_VALIDATION_FAILED)
@@ -244,22 +242,24 @@ describe('Pipeline network resolution integration', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Test 5: daemon.ts re-entry: tx.network direct use + getDefaultNetwork fallback
+  // Test 5: daemon.ts re-entry: tx.network used directly, getSingleNetwork for auto-resolve
   // -------------------------------------------------------------------------
 
-  it('re-entry uses tx.network directly, falls back to getDefaultNetwork when null', () => {
+  it('re-entry uses tx.network directly, falls back to getSingleNetwork when null', () => {
     // Case A: tx.network is set -> use directly
     const txNetworkSet = 'testnet';
-    const resolvedA: string = txNetworkSet ?? getDefaultNetwork('solana', 'testnet');
+    const resolvedA: string = txNetworkSet ?? getSingleNetwork('solana', 'testnet') ?? 'unreachable';
     expect(resolvedA).toBe('testnet');
 
-    // Case B: tx.network is null -> fallback to getDefaultNetwork
+    // Case B: tx.network is null, Solana -> getSingleNetwork returns devnet
     const txNetworkNull = null;
-    const resolvedB: string = txNetworkNull ?? getDefaultNetwork('solana', 'testnet');
-    expect(resolvedB).toBe('devnet'); // solana+testnet default = devnet
+    const solanaResult = getSingleNetwork('solana', 'testnet');
+    expect(solanaResult).toBe('devnet');
+    const resolvedB: string = txNetworkNull ?? solanaResult ?? 'unreachable';
+    expect(resolvedB).toBe('devnet');
 
-    // Case C: ethereum mainnet fallback
-    const resolvedC: string = getDefaultNetwork('ethereum', 'mainnet');
-    expect(resolvedC).toBe('ethereum-mainnet');
+    // Case C: tx.network is null, EVM -> getSingleNetwork returns null (must specify explicitly)
+    const evmResult = getSingleNetwork('ethereum', 'mainnet');
+    expect(evmResult).toBeNull();
   });
 });

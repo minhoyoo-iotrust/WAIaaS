@@ -8,9 +8,9 @@
  * 4. returns 401 TOKEN_EXPIRED when token is expired
  * 5. returns 401 SESSION_REVOKED when session is revoked in DB
  * 6. returns 404 SESSION_NOT_FOUND when session ID not in DB
- * 7. passes through and sets sessionId/defaultWalletId when token is valid and session active
+ * 7. passes through and sets sessionId when token is valid and session active
  * 8. succeeds with old secret during dual-key rotation window
- * 9. sets defaultWalletId only (walletId no longer set; resolved via resolveWalletId)
+ * 9. sets sessionId only (walletId resolved via resolveWalletId, not from JWT)
  *
  * Uses Hono app.request() testing pattern + in-memory SQLite.
  */
@@ -47,8 +47,7 @@ function createTestApp(jwtManager: JwtSecretManager, database: ReturnType<typeof
   );
   testApp.get('/protected/data', (c) => {
     const sessionId = c.get('sessionId' as never) as string | undefined;
-    const defaultWalletId = c.get('defaultWalletId' as never) as string | undefined;
-    return c.json({ sessionId, defaultWalletId, ok: true });
+    return c.json({ sessionId, ok: true });
   });
   return testApp;
 }
@@ -57,9 +56,9 @@ function createTestApp(jwtManager: JwtSecretManager, database: ReturnType<typeof
 function seedTestData(opts?: { revokedAt?: number }) {
   const ts = nowSeconds();
   sqlite.prepare(
-    `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  ).run(TEST_WALLET_ID, 'Test Wallet', 'solana', 'mainnet', 'mainnet', `pk-session-auth-${Math.random()}`, 'ACTIVE', 0, ts, ts);
+    `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).run(TEST_WALLET_ID, 'Test Wallet', 'solana', 'mainnet', `pk-session-auth-${Math.random()}`, 'ACTIVE', 0, ts, ts);
 
   sqlite.prepare(
     `INSERT INTO sessions (id, token_hash, expires_at, absolute_expires_at, created_at, revoked_at)
@@ -73,11 +72,11 @@ function seedTestData(opts?: { revokedAt?: number }) {
     opts?.revokedAt ?? null,
   );
 
-  // v26.4: Insert session_wallets junction row
+  // Insert session_wallets junction row
   sqlite.prepare(
-    `INSERT INTO session_wallets (session_id, wallet_id, is_default, created_at)
-     VALUES (?, ?, ?, ?)`,
-  ).run(TEST_SESSION_ID, TEST_WALLET_ID, 1, ts);
+    `INSERT INTO session_wallets (session_id, wallet_id, created_at)
+     VALUES (?, ?, ?)`,
+  ).run(TEST_SESSION_ID, TEST_WALLET_ID, ts);
 }
 
 /** Helper: sign a valid test token */
@@ -85,7 +84,7 @@ async function signTestToken(jwtManager: JwtSecretManager, overrides?: Partial<J
   const ts = nowSeconds();
   const payload: JwtPayload = {
     sub: TEST_SESSION_ID,
-    wlt: TEST_WALLET_ID,
+
     iat: ts,
     exp: ts + 3600,
     ...overrides,
@@ -195,9 +194,9 @@ describe('sessionAuth middleware', () => {
     // Seed agent but NOT the session
     const ts = nowSeconds();
     sqlite.prepare(
-      `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ).run(TEST_WALLET_ID, 'Test Wallet', 'solana', 'mainnet', 'mainnet', `pk-no-session-${Math.random()}`, 'ACTIVE', 0, ts, ts);
+      `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(TEST_WALLET_ID, 'Test Wallet', 'solana', 'mainnet', `pk-no-session-${Math.random()}`, 'ACTIVE', 0, ts, ts);
 
     const token = await signTestToken(manager);
 
@@ -210,7 +209,7 @@ describe('sessionAuth middleware', () => {
     expect(body.code).toBe('SESSION_NOT_FOUND');
   });
 
-  it('passes through and sets sessionId/defaultWalletId when token is valid and session active', async () => {
+  it('passes through and sets sessionId when token is valid and session active', async () => {
     seedTestData();
 
     const token = await signTestToken(manager);
@@ -223,10 +222,11 @@ describe('sessionAuth middleware', () => {
     const body = await json(res);
     expect(body.ok).toBe(true);
     expect(body.sessionId).toBe(TEST_SESSION_ID);
-    expect(body.defaultWalletId).toBe(TEST_WALLET_ID);
+    // v29.3: defaultWalletId is no longer set on context
+    expect(body).not.toHaveProperty('defaultWalletId');
   });
 
-  it('sets defaultWalletId only (walletId no longer set)', async () => {
+  it('sets sessionId only (walletId resolved via resolveWalletId, not from JWT)', async () => {
     seedTestData();
 
     const token = await signTestToken(manager);
@@ -238,8 +238,9 @@ describe('sessionAuth middleware', () => {
 
     const body = await json(res);
     expect(body.ok).toBe(true);
-    expect(body.defaultWalletId).toBe(TEST_WALLET_ID);
-    // walletId is no longer set by session-auth middleware (resolved via resolveWalletId)
+    expect(body.sessionId).toBe(TEST_SESSION_ID);
+    // Neither defaultWalletId nor walletId are set by session-auth middleware
+    expect(body).not.toHaveProperty('defaultWalletId');
     expect(body).not.toHaveProperty('walletId');
   });
 

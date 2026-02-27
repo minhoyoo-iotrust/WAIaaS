@@ -23,7 +23,6 @@ import type { ActionContext } from '@waiaas/core';
 
 const makeSettingsReader = (overrides: Record<string, string> = {}) => {
   const defaults: Record<string, string> = {
-    'rpc.evm_default_network': 'ethereum-mainnet',
     'actions.aave_v3_enabled': 'true',
     'actions.aave_v3_health_factor_warning_threshold': '1.2',
     'actions.aave_v3_position_sync_interval_sec': '300',

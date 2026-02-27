@@ -8,9 +8,9 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: v29.2 SHIPPED (Next: TBD)
+## Current Milestone: None (planning next)
 
-**v29.2 shipped 2026-02-27.** DeFi Lending 프레임워크(ILendingProvider/IPositionProvider, PositionTracker, HealthFactorMonitor, LendingPolicyEvaluator)를 구축하고, Aave V3를 첫 번째 Lending Provider로 구현. supply/borrow/repay/withdraw 4액션, 5체인 지원, 적응형 HF 모니터링, REST API + MCP 6도구 + TS/Python SDK + Admin UI 대시보드 완전 통합.
+**Previous milestone:** v29.3 shipped 2026-02-27 — 기본 지갑/기본 네트워크 개념 제거 (4 phases, 10 plans, 72 requirements, 231 files, +6,200/-2,354 lines)
 
 ## Current State
 
@@ -67,6 +67,7 @@ v29.2 EVM Lending -- Aave V3 shipped (2026-02-27). 12-패키지 모노레포(pac
 - ✅ v28.8 빌트인 지갑 프리셋 자동 설정 — shipped 2026-02-26 (3 phases, 6 plans, 14 requirements, ~180,194 LOC TS)
 - ✅ v29.0 고급 DeFi 프로토콜 설계 — shipped 2026-02-26 (6 phases, 12 plans, 38 requirements, 59 설계 결정)
 - ✅ v29.2 EVM Lending -- Aave V3 — shipped 2026-02-27 (5 phases, 15 plans, 34 requirements)
+- ✅ v29.3 기본 지갑/기본 네트워크 개념 제거 — shipped 2026-02-27 (4 phases, 10 plans, 72 requirements)
 
 **코드베이스 현황:**
 - 12-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/adapter-evm, @waiaas/cli, @waiaas/sdk, @waiaas/wallet-sdk, @waiaas/mcp, @waiaas/admin, @waiaas/push-relay, @waiaas/actions + waiaas (Python)

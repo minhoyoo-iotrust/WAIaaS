@@ -1643,3 +1643,13 @@
 
 ---
 
+
+## v29.3 기본 지갑/기본 네트워크 개념 제거 (Shipped: 2026-02-27)
+
+**Phases completed:** 178 phases, 381 plans, 50 tasks
+
+**Key accomplishments:**
+- (none recorded)
+
+---
+
