@@ -93,12 +93,11 @@ const ENUMS: EnumDef[] = [
   { name: 'OwnerState', array: OWNER_STATES, zodOptions: OwnerStateEnum.options, expectedCount: 3 },
 ];
 
-// ─── DB CHECK Targets (7 SSoT-derived + 4 nullable) ────────────────────
+// ─── DB CHECK Targets (6 SSoT-derived + 4 nullable) ────────────────────
 
 const CHECK_TARGETS: CheckTarget[] = [
   { table: 'wallets', column: 'chain', array: CHAIN_TYPES, nullable: false },
   { table: 'wallets', column: 'environment', array: ENVIRONMENT_TYPES, nullable: false },
-  { table: 'wallets', column: 'default_network', array: NETWORK_TYPES, nullable: true },
   { table: 'wallets', column: 'status', array: WALLET_STATUSES, nullable: false },
   { table: 'transactions', column: 'type', array: TRANSACTION_TYPES, nullable: false },
   { table: 'transactions', column: 'status', array: TRANSACTION_STATUSES, nullable: false },
