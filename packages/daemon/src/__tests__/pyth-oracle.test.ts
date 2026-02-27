@@ -246,3 +246,20 @@ describe('PythOracle', () => {
     expect(result.source).toBe('pyth');
   });
 });
+
+// ---------------------------------------------------------------------------
+// getNativeFeedId coverage
+// ---------------------------------------------------------------------------
+
+describe('getNativeFeedId', () => {
+  it('should return feed ID for supported networks', async () => {
+    const { getNativeFeedId } = await import('../infrastructure/oracle/pyth-feed-ids.js');
+    expect(getNativeFeedId('mainnet')).toBeDefined();
+    expect(getNativeFeedId('ethereum-mainnet')).toBeDefined();
+  });
+
+  it('should return undefined for unsupported networks', async () => {
+    const { getNativeFeedId } = await import('../infrastructure/oracle/pyth-feed-ids.js');
+    expect(getNativeFeedId('unknown-network' as any)).toBeUndefined();
+  });
+});

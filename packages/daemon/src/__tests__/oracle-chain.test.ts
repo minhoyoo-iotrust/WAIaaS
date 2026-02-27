@@ -377,3 +377,19 @@ describe('OracleChain', () => {
     expect(primary.getPrice).not.toHaveBeenCalled();
   });
 });
+
+// ---------------------------------------------------------------------------
+// ForexNotAvailableError coverage
+// ---------------------------------------------------------------------------
+
+import { ForexNotAvailableError } from '../infrastructure/oracle/oracle-errors.js';
+
+describe('ForexNotAvailableError', () => {
+  it('should set message and currency property', () => {
+    const err = new ForexNotAvailableError('KRW');
+    expect(err.message).toBe('Forex rate not available for USD/KRW');
+    expect(err.name).toBe('ForexNotAvailableError');
+    expect(err.currency).toBe('KRW');
+    expect(err).toBeInstanceOf(Error);
+  });
+});
