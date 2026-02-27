@@ -201,7 +201,7 @@ See `.planning/milestones/v29.3-ROADMAP.md` for full details.
 **Milestone Goal:** Kamino K-Lend를 ILendingProvider 구현체로 구축하여 AI 에이전트가 Solana 체인에서 supply/borrow/repay/withdraw를 정책 평가 하에 수행할 수 있도록 한다. v29.2에서 구축된 Lending 프레임워크(ILendingProvider, IPositionProvider, PositionTracker, HealthFactorMonitor, LendingPolicyEvaluator, defi_positions 테이블)를 재사용하며, @kamino-finance/klend-sdk로 Solana instruction을 빌드한다.
 
 - [x] **Phase 283: Kamino Core Provider** - KaminoLendingProvider 구현 (4 actions + position/HF/market query + SDK wrapper) -- completed 2026-02-28
-- [ ] **Phase 284: Kamino Integration** - MCP/SDK/Admin UI/정책/스킬 전 레이어 통합 + Admin Settings
+- [x] **Phase 284: Kamino Integration** - MCP/SDK/Admin UI/정책/스킬 전 레이어 통합 + Admin Settings (completed 2026-02-27)
 
 ## Phase Details
 
@@ -246,7 +246,7 @@ Phases execute in numeric order: 283 -> 284
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 283. Kamino Core Provider | 4/4 | Complete | 2026-02-28 |
-| 284. Kamino Integration | 0/5 | Not started | - |
+| 284. Kamino Integration | 0/5 | Complete    | 2026-02-27 |
 
 ---
 *Last updated: 2026-02-28 after Phase 283 completion*

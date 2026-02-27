@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
-milestone: v29.4
-milestone_name: Solana Lending (Kamino)
-status: active
-last_updated: "2026-02-28T02:05:00Z"
+milestone: v0.1
+milestone_name: Solana Lending -- Kamino
+status: unknown
+last_updated: "2026-02-27T17:42:36.343Z"
 progress:
-  total_phases: 284
-  completed_phases: 283
-  total_plans: 392
-  completed_plans: 387
+  total_phases: 180
+  completed_phases: 174
+  total_plans: 390
+  completed_plans: 384
 ---
 
 # Project State
