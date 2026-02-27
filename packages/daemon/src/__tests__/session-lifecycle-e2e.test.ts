@@ -230,15 +230,14 @@ function seedWallet(
   const ts = Math.floor(Date.now() / 1000);
   sqlite
     .prepare(
-      `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, owner_address, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, owner_address, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       walletId,
       'Test Wallet',
       'solana',
       'testnet',
-      'devnet',
       `pk-${walletId}`,
       'ACTIVE',
       opts?.ownerVerified ? 1 : 0,
@@ -365,10 +364,9 @@ describe('Session Lifecycle E2E (TEST-03)', () => {
     // v26.4: Response includes wallets array + backward compat walletId
     expect(created.walletId).toBe(testWalletId);
     expect(created.wallets).toBeDefined();
-    const createdWallets = created.wallets as Array<{ id: string; name: string; isDefault: boolean }>;
+    const createdWallets = created.wallets as Array<{ id: string; name: string }>;
     expect(createdWallets).toHaveLength(1);
     expect(createdWallets[0]!.id).toBe(testWalletId);
-    expect(createdWallets[0]!.isDefault).toBe(true);
 
     // 2. GET /v1/wallet/address with Bearer token -> 200
     const walletRes = await app.request('/v1/wallet/address', {
@@ -777,10 +775,10 @@ describe('Multi-Wallet Session E2E (v26.4)', () => {
     expect(body.walletId).toBe(testWalletId);
 
     // wallets array has 2 entries
-    const walletsList = body.wallets as Array<{ id: string; name: string; isDefault: boolean }>;
+    const walletsList = body.wallets as Array<{ id: string; name: string }>;
     expect(walletsList).toHaveLength(2);
-    expect(walletsList.find((w) => w.id === testWalletId)!.isDefault).toBe(true);
-    expect(walletsList.find((w) => w.id === wallet2Id)!.isDefault).toBe(false);
+    expect(walletsList.find((w) => w.id === testWalletId)).toBeDefined();
+    expect(walletsList.find((w) => w.id === wallet2Id)).toBeDefined();
   });
 
   it('creates session with walletId (singular, backward compat)', async () => {
@@ -793,10 +791,9 @@ describe('Multi-Wallet Session E2E (v26.4)', () => {
     const body = await json(res);
 
     expect(body.walletId).toBe(testWalletId);
-    const walletsList = body.wallets as Array<{ id: string; isDefault: boolean }>;
+    const walletsList = body.wallets as Array<{ id: string }>;
     expect(walletsList).toHaveLength(1);
     expect(walletsList[0]!.id).toBe(testWalletId);
-    expect(walletsList[0]!.isDefault).toBe(true);
   });
 
   it('GET /v1/sessions includes wallets array in listing', async () => {
@@ -817,9 +814,9 @@ describe('Multi-Wallet Session E2E (v26.4)', () => {
     expect(sessions.length).toBeGreaterThanOrEqual(1);
 
     const session = sessions[0]!;
-    const walletsList = session.wallets as Array<{ id: string; isDefault: boolean }>;
+    const walletsList = session.wallets as Array<{ id: string }>;
     expect(walletsList).toHaveLength(2);
-    // walletId backward compat = default wallet
+    // walletId = first wallet
     expect(session.walletId).toBe(testWalletId);
   });
 
@@ -844,7 +841,6 @@ describe('Multi-Wallet Session E2E (v26.4)', () => {
     const addBody = await json(addRes);
     expect(addBody.sessionId).toBe(sessionId);
     expect(addBody.walletId).toBe(wallet2Id);
-    expect(addBody.isDefault).toBe(false);
 
     // Verify via list
     const listRes = await app.request(`/v1/sessions/${sessionId}/wallets`, {
@@ -852,7 +848,7 @@ describe('Multi-Wallet Session E2E (v26.4)', () => {
     });
     expect(listRes.status).toBe(200);
     const listBody = await json(listRes);
-    const walletsList = listBody.wallets as Array<{ id: string; isDefault: boolean }>;
+    const walletsList = listBody.wallets as Array<{ id: string }>;
     expect(walletsList).toHaveLength(2);
   });
 
@@ -906,8 +902,8 @@ describe('Multi-Wallet Session E2E (v26.4)', () => {
     expect(walletsList[0]!.id).toBe(testWalletId);
   });
 
-  it('DELETE /sessions/:id/wallets/:walletId returns 400 CANNOT_REMOVE_DEFAULT_WALLET', async () => {
-    // Create session with 2 wallets (testWalletId is default)
+  it('DELETE /sessions/:id/wallets/:walletId allows removing any wallet (if >1 remain)', async () => {
+    // Create session with 2 wallets
     const createRes = await app.request('/v1/sessions', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
@@ -917,14 +913,12 @@ describe('Multi-Wallet Session E2E (v26.4)', () => {
     const created = await json(createRes);
     const sessionId = created.id as string;
 
-    // Try to remove default wallet
+    // Remove first wallet -- should succeed (no default restriction)
     const removeRes = await app.request(`/v1/sessions/${sessionId}/wallets/${testWalletId}`, {
       method: 'DELETE',
       headers: masterAuthHeader(),
     });
-    expect(removeRes.status).toBe(400);
-    const body = await json(removeRes);
-    expect(body.code).toBe('CANNOT_REMOVE_DEFAULT_WALLET');
+    expect(removeRes.status).toBe(204);
   });
 
   it('DELETE /sessions/:id/wallets/:walletId returns 400 SESSION_REQUIRES_WALLET for last wallet', async () => {
@@ -938,18 +932,17 @@ describe('Multi-Wallet Session E2E (v26.4)', () => {
     const created = await json(createRes);
     const sessionId = created.id as string;
 
-    // Try to remove the only wallet (also the default)
+    // Try to remove the only wallet -- should get SESSION_REQUIRES_WALLET
     const removeRes = await app.request(`/v1/sessions/${sessionId}/wallets/${testWalletId}`, {
       method: 'DELETE',
       headers: masterAuthHeader(),
     });
-    // Should get CANNOT_REMOVE_DEFAULT_WALLET since it's the default
     expect(removeRes.status).toBe(400);
     const body = await json(removeRes);
-    expect(body.code).toBe('CANNOT_REMOVE_DEFAULT_WALLET');
+    expect(body.code).toBe('SESSION_REQUIRES_WALLET');
   });
 
-  it('PATCH /sessions/:id/wallets/:walletId/default changes default wallet', async () => {
+  it('PATCH /sessions/:id/wallets/:walletId/default returns 404 (route removed in v29.3)', async () => {
     // Create session with 2 wallets
     const createRes = await app.request('/v1/sessions', {
       method: 'POST',
@@ -960,27 +953,12 @@ describe('Multi-Wallet Session E2E (v26.4)', () => {
     const created = await json(createRes);
     const sessionId = created.id as string;
 
-    // Change default to wallet2
+    // Attempt to set default wallet -- should return 404 (route removed)
     const patchRes = await app.request(`/v1/sessions/${sessionId}/wallets/${wallet2Id}/default`, {
       method: 'PATCH',
       headers: masterAuthHeader(),
     });
-    expect(patchRes.status).toBe(200);
-    const patchBody = await json(patchRes);
-    expect(patchBody.sessionId).toBe(sessionId);
-    expect(patchBody.defaultWalletId).toBe(wallet2Id);
-
-    // Verify via list -- wallet2 should be default
-    const listRes = await app.request(`/v1/sessions/${sessionId}/wallets`, {
-      headers: masterAuthHeader(),
-    });
-    expect(listRes.status).toBe(200);
-    const listBody = await json(listRes);
-    const walletsList = listBody.wallets as Array<{ id: string; isDefault: boolean }>;
-    const w1 = walletsList.find((w) => w.id === testWalletId)!;
-    const w2 = walletsList.find((w) => w.id === wallet2Id)!;
-    expect(w1.isDefault).toBe(false);
-    expect(w2.isDefault).toBe(true);
+    expect(patchRes.status).toBe(404);
   });
 
   it('GET /sessions/:id/wallets returns wallet list with details', async () => {
@@ -1003,7 +981,6 @@ describe('Multi-Wallet Session E2E (v26.4)', () => {
       id: string;
       name: string;
       chain: string;
-      isDefault: boolean;
       createdAt: number;
     }>;
     expect(walletsList).toHaveLength(2);

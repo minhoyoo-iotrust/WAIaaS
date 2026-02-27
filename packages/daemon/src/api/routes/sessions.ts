@@ -4,13 +4,13 @@
  * PUT /sessions/:id/renew (token renewal with 5 safety checks),
  * POST /sessions/:id/wallets (add wallet),
  * DELETE /sessions/:id/wallets/:walletId (remove wallet),
- * PATCH /sessions/:id/wallets/:walletId/default (set default),
  * GET /sessions/:id/wallets (list wallets).
  *
  * CRUD routes are protected by masterAuth middleware at the server level.
  * Renewal route is protected by sessionAuth (session's own token).
  *
  * v26.4: Multi-wallet session model via session_wallets junction table.
+ * v29.3: Removed default wallet concept (no isDefault, no setDefaultWallet route).
  *
  * @see docs/52-auth-redesign.md
  * @see docs/37-rest-api-complete-spec.md
@@ -35,7 +35,6 @@ import {
   SessionRenewResponseSchema,
   SessionWalletSchema,
   SessionWalletListSchema,
-  SessionDefaultWalletSchema,
   buildErrorResponses,
   openApiValidationHook,
 } from './openapi-schemas.js';
@@ -169,24 +168,7 @@ const removeWalletRoute = createRoute({
   },
   responses: {
     204: { description: 'Wallet removed' },
-    ...buildErrorResponses(['SESSION_NOT_FOUND', 'CANNOT_REMOVE_DEFAULT_WALLET', 'SESSION_REQUIRES_WALLET']),
-  },
-});
-
-const setDefaultWalletRoute = createRoute({
-  method: 'patch',
-  path: '/sessions/{id}/wallets/{walletId}/default',
-  tags: ['Sessions'],
-  summary: 'Set default wallet for session',
-  request: {
-    params: z.object({ id: z.string().uuid(), walletId: z.string().uuid() }),
-  },
-  responses: {
-    200: {
-      description: 'Default wallet changed',
-      content: { 'application/json': { schema: SessionDefaultWalletSchema } },
-    },
-    ...buildErrorResponses(['SESSION_NOT_FOUND']),
+    ...buildErrorResponses(['SESSION_NOT_FOUND', 'SESSION_REQUIRES_WALLET']),
   },
 });
 
@@ -220,7 +202,6 @@ const listSessionWalletsRoute = createRoute({
  * PUT /sessions/:id/renew                   -> renew session token (200)
  * POST /sessions/:id/wallets                -> add wallet to session (201)
  * DELETE /sessions/:id/wallets/:walletId    -> remove wallet from session (204)
- * PATCH /sessions/:id/wallets/:wId/default  -> set default wallet (200)
  * GET /sessions/:id/wallets                 -> list session wallets (200)
  */
 export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
@@ -234,7 +215,6 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
 
     // Normalize walletId/walletIds
     const walletIds: string[] = parsed.walletIds ?? (parsed.walletId ? [parsed.walletId] : []);
-    const defaultWalletId = parsed.defaultWalletId ?? walletIds[0]!;
 
     // Verify all wallets exist and are active
     for (const wId of walletIds) {
@@ -287,10 +267,9 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
     const expiresAt = nowSec + ttl;
     const absoluteExpiresAt = nowSec + deps.config.security.session_absolute_lifetime;
 
-    // Create JWT payload with defaultWalletId
+    // Create JWT payload
     const jwtPayload: JwtPayload = {
       sub: sessionId,
-      wlt: defaultWalletId,
       iat: nowSec,
       exp: expiresAt,
     };
@@ -316,7 +295,6 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
       deps.db.insert(sessionWallets).values({
         sessionId,
         walletId: wId,
-        isDefault: wId === defaultWalletId,
         createdAt: new Date(nowSec * 1000),
       }).run();
     }
@@ -324,17 +302,17 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
     // Build wallets array for response
     const walletRows = walletIds.map((wId) => {
       const w = deps.db.select().from(wallets).where(eq(wallets.id, wId)).get()!;
-      return { id: w.id, name: w.name, isDefault: wId === defaultWalletId };
+      return { id: w.id, name: w.name };
     });
 
-    // Fire-and-forget: notify session creation
-    void deps.notificationService?.notify('SESSION_CREATED', defaultWalletId, {
+    // Fire-and-forget: notify session creation (use first wallet as notification target)
+    void deps.notificationService?.notify('SESSION_CREATED', walletIds[0]!, {
       sessionId,
     });
 
     // v1.6: emit wallet:activity SESSION_CREATED event
     deps.eventBus?.emit('wallet:activity', {
-      walletId: defaultWalletId,
+      walletId: walletIds[0]!,
       activity: 'SESSION_CREATED',
       details: { sessionId },
       timestamp: Math.floor(Date.now() / 1000),
@@ -345,7 +323,7 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
         id: sessionId,
         token,
         expiresAt,
-        walletId: defaultWalletId,
+        walletId: walletIds[0]!,
         wallets: walletRows,
       },
       201,
@@ -413,7 +391,6 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
       const swRows = deps.db
         .select({
           walletId: sessionWallets.walletId,
-          isDefault: sessionWallets.isDefault,
           walletName: wallets.name,
         })
         .from(sessionWallets)
@@ -421,17 +398,15 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
         .where(eq(sessionWallets.sessionId, row.id))
         .all();
 
-      const defaultSw = swRows.find((sw) => sw.isDefault);
       const walletsList = swRows.map((sw) => ({
         id: sw.walletId,
         name: sw.walletName ?? 'Unknown',
-        isDefault: sw.isDefault,
       }));
 
       return {
         id: row.id,
-        walletId: defaultSw?.walletId ?? walletsList[0]?.id ?? '',
-        walletName: defaultSw?.walletName ?? walletsList[0]?.name ?? null,
+        walletId: walletsList[0]?.id ?? '',
+        walletName: walletsList[0]?.name ?? null,
         wallets: walletsList,
         status,
         renewalCount: row.renewalCount,
@@ -542,25 +517,12 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
       throw new WAIaaSError('RENEWAL_TOO_EARLY');
     }
 
-    // ----- Get default wallet from session_wallets -----
-    const defaultWallet = deps.db
-      .select()
-      .from(sessionWallets)
-      .where(
-        and(
-          eq(sessionWallets.sessionId, sessionId),
-          eq(sessionWallets.isDefault, true),
-        ),
-      )
-      .get();
-
     // ----- Issue new token -----
     const newTtl = currentTtl;
     const newExpiresAt = Math.min(nowSec + newTtl, absoluteExpiresAtSec);
 
     const newPayload: JwtPayload = {
       sub: sessionId,
-      wlt: defaultWallet!.walletId,
       iat: nowSec,
       exp: newExpiresAt,
     };
@@ -676,11 +638,10 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
       });
     }
 
-    // 5. Insert (is_default = false)
+    // 5. Insert
     deps.db.insert(sessionWallets).values({
       sessionId,
       walletId,
-      isDefault: false,
       createdAt: nowDate,
     }).run();
 
@@ -694,7 +655,6 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
       {
         sessionId,
         walletId,
-        isDefault: false,
         createdAt: nowSec,
       },
       201,
@@ -725,12 +685,7 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
       });
     }
 
-    // 2. Cannot remove default wallet
-    if (sw.isDefault) {
-      throw new WAIaaSError('CANNOT_REMOVE_DEFAULT_WALLET');
-    }
-
-    // 3. Must have at least 1 wallet remaining
+    // 2. Must have at least 1 wallet remaining
     const countResult = deps.db
       .select({ count: sql<number>`count(*)` })
       .from(sessionWallets)
@@ -741,7 +696,7 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
       throw new WAIaaSError('SESSION_REQUIRES_WALLET');
     }
 
-    // 4. Delete
+    // 3. Delete
     deps.db
       .delete(sessionWallets)
       .where(
@@ -759,62 +714,6 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
     });
 
     return new Response(null, { status: 204 }) as any;
-  });
-
-  // -------------------------------------------------------------------------
-  // PATCH /sessions/:id/wallets/:walletId/default -- set default wallet
-  // -------------------------------------------------------------------------
-  router.openapi(setDefaultWalletRoute, (c) => {
-    const { id: sessionId, walletId } = c.req.valid('param');
-
-    // 1. Check that wallet is linked to session
-    const sw = deps.db
-      .select()
-      .from(sessionWallets)
-      .where(
-        and(
-          eq(sessionWallets.sessionId, sessionId),
-          eq(sessionWallets.walletId, walletId),
-        ),
-      )
-      .get();
-
-    if (!sw) {
-      throw new WAIaaSError('SESSION_NOT_FOUND', {
-        message: 'Wallet is not linked to this session',
-      });
-    }
-
-    // 2. Atomic swap: unset old default, set new default
-    deps.db
-      .update(sessionWallets)
-      .set({ isDefault: false })
-      .where(
-        and(
-          eq(sessionWallets.sessionId, sessionId),
-          eq(sessionWallets.isDefault, true),
-        ),
-      )
-      .run();
-
-    deps.db
-      .update(sessionWallets)
-      .set({ isDefault: true })
-      .where(
-        and(
-          eq(sessionWallets.sessionId, sessionId),
-          eq(sessionWallets.walletId, walletId),
-        ),
-      )
-      .run();
-
-    return c.json(
-      {
-        sessionId,
-        defaultWalletId: walletId,
-      },
-      200,
-    );
   });
 
   // -------------------------------------------------------------------------
@@ -838,7 +737,6 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
     const rows = deps.db
       .select({
         walletId: sessionWallets.walletId,
-        isDefault: sessionWallets.isDefault,
         swCreatedAt: sessionWallets.createdAt,
         walletName: wallets.name,
         chain: wallets.chain,
@@ -852,7 +750,6 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
       id: row.walletId,
       name: row.walletName ?? 'Unknown',
       chain: row.chain ?? 'unknown',
-      isDefault: row.isDefault,
       createdAt: Math.floor(row.swCreatedAt.getTime() / 1000),
     }));
 

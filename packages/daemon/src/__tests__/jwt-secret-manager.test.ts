@@ -197,7 +197,7 @@ describe('JwtSecretManager', () => {
 
       const payload: JwtPayload = {
         sub: 'session-id-123',
-        wlt: 'wallet-id-456',
+
         iat: nowSeconds(),
         exp: nowSeconds() + 3600,
       };
@@ -219,7 +219,7 @@ describe('JwtSecretManager', () => {
       const now = nowSeconds();
       const payload: JwtPayload = {
         sub: 'session-id-abc',
-        wlt: 'wallet-id-xyz',
+
         iat: now,
         exp: now + 3600,
       };
@@ -228,7 +228,6 @@ describe('JwtSecretManager', () => {
       const decoded = await manager.verifyToken(token);
 
       expect(decoded.sub).toBe('session-id-abc');
-      expect(decoded.wlt).toBe('wallet-id-xyz');
       expect(decoded.exp).toBe(now + 3600);
     });
 
@@ -246,7 +245,7 @@ describe('JwtSecretManager', () => {
       const past = nowSeconds() - 3600;
       const payload: JwtPayload = {
         sub: 'session-id-expired',
-        wlt: 'wallet-id-expired',
+
         iat: past - 7200,
         exp: past,
       };
@@ -267,7 +266,7 @@ describe('JwtSecretManager', () => {
       const now = Math.floor(baseTime / 1000);
       const payload: JwtPayload = {
         sub: 'session-id-rotation',
-        wlt: 'wallet-id-rotation',
+
         iat: now,
         exp: now + 3600,
       };
@@ -282,7 +281,6 @@ describe('JwtSecretManager', () => {
       // Token signed with old key should still verify during rotation window
       const decoded = await manager.verifyToken(token);
       expect(decoded.sub).toBe('session-id-rotation');
-      expect(decoded.wlt).toBe('wallet-id-rotation');
     });
   });
 });

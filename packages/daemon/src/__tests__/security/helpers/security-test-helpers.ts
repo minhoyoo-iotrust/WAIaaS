@@ -210,13 +210,12 @@ export function seedSecurityTestData(
 export async function signTestToken(
   jwtManager: JwtSecretManager,
   sessionId: string,
-  walletId: string,
+  _walletId: string,
   overrides?: Partial<JwtPayload>,
 ): Promise<string> {
   const ts = Math.floor(Date.now() / 1000);
   const payload: JwtPayload = {
     sub: sessionId,
-    wlt: walletId,
     iat: ts,
     exp: ts + 3600,
     ...overrides,

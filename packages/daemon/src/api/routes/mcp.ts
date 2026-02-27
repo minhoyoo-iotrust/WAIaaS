@@ -140,7 +140,6 @@ export function mcpTokenRoutes(deps: McpTokenRouteDeps): OpenAPIHono {
     // 4. Sign JWT
     const jwtPayload: JwtPayload = {
       sub: sessionId,
-      wlt: parsed.walletId,
       iat: nowSec,
       exp: expiresAt,
     };
@@ -165,7 +164,6 @@ export function mcpTokenRoutes(deps: McpTokenRouteDeps): OpenAPIHono {
     deps.db.insert(sessionWallets).values({
       sessionId,
       walletId: parsed.walletId,
-      isDefault: true,
       createdAt: new Date(nowSec * 1000),
     }).run();
 

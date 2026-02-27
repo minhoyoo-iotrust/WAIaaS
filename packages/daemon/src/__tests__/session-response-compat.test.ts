@@ -1,12 +1,15 @@
 /**
- * Session response backward compatibility tests (v26.4).
+ * Session response tests (v29.3).
  *
  * Verifies:
- * - Session creation response includes wallets array + walletId backward compat
- * - Session listing includes wallets array + walletId/walletName backward compat
- * - Session renewal issues JWT with wlt claim matching session_wallets default
+ * - Session creation response includes wallets array + walletId (first wallet)
+ * - Session listing includes wallets array + walletId/walletName (first wallet)
+ * - Session renewal issues JWT without wlt claim (sessionId only)
  * - walletId/walletName fields have expected types for legacy clients
  * - Create and list return consistent wallet data
+ *
+ * v29.3: Removed default wallet concept (no isDefault, no setDefaultWallet route).
+ *        JWT payload contains only sub/iat/exp (no wlt claim).
  *
  * @see .planning/phases/211-api-wallet-selection/211-03-PLAN.md
  */
@@ -144,10 +147,10 @@ function seedWallet(
   const ts = Math.floor(Date.now() / 1000);
   sqlite
     .prepare(
-      `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, owner_address, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, owner_address, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
-    .run(walletId, name, 'solana', 'testnet', 'devnet', `pk-${walletId}`, 'ACTIVE', 0, null, ts, ts);
+    .run(walletId, name, 'solana', 'testnet', `pk-${walletId}`, 'ACTIVE', 0, null, ts, ts);
 }
 
 // ---------------------------------------------------------------------------
@@ -226,11 +229,11 @@ afterEach(() => {
 });
 
 // ===========================================================================
-// Session Response Backward Compatibility
+// Session Response Tests (v29.3)
 // ===========================================================================
 
-describe('Session Response Backward Compatibility (v26.4)', () => {
-  it('POST /sessions response includes wallets array and walletId backward compat', async () => {
+describe('Session Response (v29.3 -- no default wallet)', () => {
+  it('POST /sessions response includes wallets array and walletId (first wallet)', async () => {
     const res = await app.request('/v1/sessions', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
@@ -239,27 +242,24 @@ describe('Session Response Backward Compatibility (v26.4)', () => {
     expect(res.status).toBe(201);
     const body = await json(res);
 
-    // walletId backward compat field = default wallet (first in array)
+    // walletId = first wallet in session
     expect(body.walletId).toBe(walletA);
 
-    // wallets array present with 2 entries
-    const walletsList = body.wallets as Array<{ id: string; name: string; isDefault: boolean }>;
+    // wallets array present with 2 entries (no isDefault field)
+    const walletsList = body.wallets as Array<{ id: string; name: string }>;
     expect(walletsList).toHaveLength(2);
 
-    // Default wallet (walletA) has isDefault=true
-    const defaultWallet = walletsList.find((w) => w.id === walletA)!;
-    expect(defaultWallet).toBeDefined();
-    expect(defaultWallet.isDefault).toBe(true);
-    expect(defaultWallet.name).toBe('Wallet Alpha');
+    const firstWallet = walletsList.find((w) => w.id === walletA)!;
+    expect(firstWallet).toBeDefined();
+    expect(firstWallet.name).toBe('Wallet Alpha');
+    expect('isDefault' in firstWallet).toBe(false);
 
-    // Non-default wallet (walletB) has isDefault=false
-    const otherWallet = walletsList.find((w) => w.id === walletB)!;
-    expect(otherWallet).toBeDefined();
-    expect(otherWallet.isDefault).toBe(false);
-    expect(otherWallet.name).toBe('Wallet Beta');
+    const secondWallet = walletsList.find((w) => w.id === walletB)!;
+    expect(secondWallet).toBeDefined();
+    expect(secondWallet.name).toBe('Wallet Beta');
   });
 
-  it('GET /sessions listing includes wallets array + walletId/walletName backward compat', async () => {
+  it('GET /sessions listing includes wallets array + walletId/walletName (first wallet)', async () => {
     // Create a multi-wallet session
     const createRes = await app.request('/v1/sessions', {
       method: 'POST',
@@ -278,21 +278,21 @@ describe('Session Response Backward Compatibility (v26.4)', () => {
 
     const session = sessions[0]!;
 
-    // walletId backward compat = default wallet
+    // walletId = first wallet
     expect(session.walletId).toBe(walletA);
 
-    // walletName backward compat = default wallet name
+    // walletName = first wallet name
     expect(session.walletName).toBe('Wallet Alpha');
 
-    // wallets array present with 2 entries
-    const walletsList = session.wallets as Array<{ id: string; name: string; isDefault: boolean }>;
+    // wallets array present with 2 entries (no isDefault field)
+    const walletsList = session.wallets as Array<{ id: string; name: string }>;
     expect(walletsList).toHaveLength(2);
-    expect(walletsList.find((w) => w.id === walletA)!.isDefault).toBe(true);
-    expect(walletsList.find((w) => w.id === walletB)!.isDefault).toBe(false);
+    expect(walletsList.find((w) => w.id === walletA)).toBeDefined();
+    expect(walletsList.find((w) => w.id === walletB)).toBeDefined();
   });
 
-  it('PUT /sessions/:id/renew issues JWT with wlt claim for new default wallet', async () => {
-    // Create session with 2 wallets (walletA is default)
+  it('PUT /sessions/:id/renew issues JWT without wlt claim', async () => {
+    // Create session with 2 wallets
     const createRes = await app.request('/v1/sessions', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
@@ -302,13 +302,6 @@ describe('Session Response Backward Compatibility (v26.4)', () => {
     const created = await json(createRes);
     const sessionId = created.id as string;
     const token = created.token as string;
-
-    // Change default wallet to walletB
-    const patchRes = await app.request(`/v1/sessions/${sessionId}/wallets/${walletB}/default`, {
-      method: 'PATCH',
-      headers: masterAuthHeader(),
-    });
-    expect(patchRes.status).toBe(200);
 
     // Advance time past 50% TTL (> 1800 seconds)
     vi.advanceTimersByTime(1801 * 1000);
@@ -322,12 +315,16 @@ describe('Session Response Backward Compatibility (v26.4)', () => {
     const renewed = await json(renewRes);
     const newToken = renewed.token as string;
 
-    // Decode JWT to verify wlt claim points to walletB (new default)
+    // Decode JWT to verify no wlt claim (only sub/iat/exp)
     const payload = await jwtManager.verifyToken(newToken);
-    expect(payload.wlt).toBe(walletB);
+    expect(payload.sub).toBe(sessionId);
+    expect(payload.iat).toBeDefined();
+    expect(payload.exp).toBeDefined();
+    // wlt should not be in the payload
+    expect('wlt' in payload).toBe(false);
   });
 
-  it('backward compat: walletId is UUID string, walletName is string or null', async () => {
+  it('walletId is UUID string, walletName is string or null', async () => {
     // Create session with single wallet
     const createRes = await app.request('/v1/sessions', {
       method: 'POST',
@@ -373,7 +370,7 @@ describe('Session Response Backward Compatibility (v26.4)', () => {
     });
     expect(createRes.status).toBe(201);
     const created = await json(createRes);
-    const createdWallets = created.wallets as Array<{ id: string; name: string; isDefault: boolean }>;
+    const createdWallets = created.wallets as Array<{ id: string; name: string }>;
 
     // List sessions
     const listRes = await app.request('/v1/sessions', {
@@ -382,7 +379,7 @@ describe('Session Response Backward Compatibility (v26.4)', () => {
     expect(listRes.status).toBe(200);
     const sessions = (await listRes.json()) as Array<Record<string, unknown>>;
     const session = sessions[0]!;
-    const listedWallets = session.wallets as Array<{ id: string; name: string; isDefault: boolean }>;
+    const listedWallets = session.wallets as Array<{ id: string; name: string }>;
 
     // Both should have the same number of wallets
     expect(listedWallets).toHaveLength(createdWallets.length);
@@ -392,17 +389,11 @@ describe('Session Response Backward Compatibility (v26.4)', () => {
     const listedIds = listedWallets.map((w) => w.id).sort();
     expect(listedIds).toEqual(createdIds);
 
-    // Both should have the same default wallet
-    const createdDefault = createdWallets.find((w) => w.isDefault)!;
-    const listedDefault = listedWallets.find((w) => w.isDefault)!;
-    expect(listedDefault.id).toBe(createdDefault.id);
-    expect(listedDefault.name).toBe(createdDefault.name);
-
-    // walletId backward compat should match in both responses
+    // walletId should match in both responses
     expect(session.walletId).toBe(created.walletId);
   });
 
-  it('single-wallet session: walletId backward compat works without wallets array parsing', async () => {
+  it('single-wallet session: walletId works without wallets array parsing', async () => {
     // Simulate a legacy client that only reads walletId from create response
     const createRes = await app.request('/v1/sessions', {
       method: 'POST',
@@ -416,10 +407,29 @@ describe('Session Response Backward Compatibility (v26.4)', () => {
     const legacyWalletId = created.walletId as string;
     expect(legacyWalletId).toBe(walletA);
 
-    // wallets array still present for new clients
-    const walletsList = created.wallets as Array<{ id: string; isDefault: boolean }>;
+    // wallets array still present for new clients (no isDefault)
+    const walletsList = created.wallets as Array<{ id: string }>;
     expect(walletsList).toHaveLength(1);
     expect(walletsList[0]!.id).toBe(legacyWalletId);
-    expect(walletsList[0]!.isDefault).toBe(true);
+    expect('isDefault' in walletsList[0]!).toBe(false);
+  });
+
+  it('PATCH /sessions/:id/wallets/:walletId/default returns 404 (removed)', async () => {
+    // Create session
+    const createRes = await app.request('/v1/sessions', {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ walletIds: [walletA, walletB] }),
+    });
+    expect(createRes.status).toBe(201);
+    const created = await json(createRes);
+    const sessionId = created.id as string;
+
+    // Attempt to set default wallet -- should return 404 (route removed)
+    const patchRes = await app.request(`/v1/sessions/${sessionId}/wallets/${walletB}/default`, {
+      method: 'PATCH',
+      headers: masterAuthHeader(),
+    });
+    expect(patchRes.status).toBe(404);
   });
 });

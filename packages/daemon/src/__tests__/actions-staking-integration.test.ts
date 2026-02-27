@@ -390,7 +390,7 @@ async function createSessionToken(walletId: string): Promise<string> {
 
   const payload: JwtPayload = {
     sub: sessionId,
-    wlt: walletId,
+
     iat: now,
     exp: now + 3600,
   };

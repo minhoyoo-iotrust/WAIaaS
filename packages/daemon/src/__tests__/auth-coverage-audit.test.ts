@@ -148,7 +148,7 @@ describe('sessionAuth edge cases (coverage audit)', () => {
     const ts = nowSeconds();
     const payload: JwtPayload = {
       sub: TEST_SESSION_ID,
-      wlt: TEST_WALLET_ID,
+
       iat: ts,
       exp: ts + 3600,
       ...overrides,
@@ -221,7 +221,7 @@ describe('sessionAuth edge cases (coverage audit)', () => {
     const unknownSessionId = generateId();
     const token = await manager.signToken({
       sub: unknownSessionId,
-      wlt: TEST_WALLET_ID,
+
       iat: nowSeconds(),
       exp: nowSeconds() + 3600,
     });

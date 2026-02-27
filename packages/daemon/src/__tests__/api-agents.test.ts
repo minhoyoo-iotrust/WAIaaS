@@ -278,7 +278,7 @@ async function createSessionToken(walletId: string): Promise<string> {
   // Sign JWT
   const payload: JwtPayload = {
     sub: sessionId,
-    wlt: walletId,
+
     iat: now,
     exp: now + 3600,
   };
@@ -684,7 +684,7 @@ describe('GET /v1/wallet/address', () => {
     const fakeWalletId = '00000000-0000-7000-8000-000000000000';
     const now = Math.floor(Date.now() / 1000);
 
-    const payload: JwtPayload = { sub: fakeSessionId, wlt: fakeWalletId, iat: now, exp: now + 3600 };
+    const payload: JwtPayload = { sub: fakeSessionId, iat: now, exp: now + 3600 };
     const token = await jwtSecretManager.signToken(payload);
 
     const res = await app.request('/v1/wallet/address', {
@@ -779,7 +779,7 @@ describe('GET /v1/wallet/balance', () => {
 
     const payload: JwtPayload = {
       sub: sessionId,
-      wlt: walletId,
+  
       iat: now - 7200,
       exp: now - 3600, // expired
     };
