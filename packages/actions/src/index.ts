@@ -16,6 +16,8 @@ import { getJitoAddresses, type JitoStakingConfig } from './providers/jito-staki
 import { AaveV3LendingProvider } from './providers/aave-v3/index.js';
 import { type AaveV3Config } from './providers/aave-v3/config.js';
 import type { IRpcCaller } from './providers/aave-v3/aave-rpc.js';
+import { KaminoLendingProvider } from './providers/kamino/index.js';
+import type { KaminoConfig } from './providers/kamino/config.js';
 
 // Re-export provider classes
 export { JupiterSwapActionProvider } from './providers/jupiter-swap/index.js';
@@ -196,6 +198,18 @@ export function registerBuiltInProviders(
       factory: () => {
         const config: AaveV3Config = { enabled: true };
         return new AaveV3LendingProvider(config, options?.rpcCaller);
+      },
+    },
+    {
+      key: 'kamino',
+      enabledKey: 'actions.kamino_enabled',
+      factory: () => {
+        const config: KaminoConfig = {
+          enabled: true,
+          market: settingsReader.get('actions.kamino_market') || 'main',
+          hfThreshold: Number(settingsReader.get('actions.kamino_hf_threshold')) || 1.2,
+        };
+        return new KaminoLendingProvider(config);
       },
     },
   ];

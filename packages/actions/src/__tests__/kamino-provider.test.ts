@@ -641,11 +641,11 @@ describe('ILendingProvider query methods', () => {
 });
 
 // ---------------------------------------------------------------------------
-// registerBuiltInProviders does NOT include kamino yet
+// registerBuiltInProviders includes kamino when enabled
 // ---------------------------------------------------------------------------
 
-describe('registerBuiltInProviders does NOT include kamino yet', () => {
-  it('should not register kamino (deferred to Phase 284)', async () => {
+describe('registerBuiltInProviders includes kamino when enabled', () => {
+  it('should register kamino when actions.kamino_enabled is true', async () => {
     const { registerBuiltInProviders } = await import('../index.js');
     const registered: Array<{ metadata: { name: string } }> = [];
     const registry = {
@@ -654,13 +654,32 @@ describe('registerBuiltInProviders does NOT include kamino yet', () => {
     const settingsReader = {
       get: (key: string) => {
         if (key === 'actions.kamino_enabled') return 'true';
+        if (key === 'actions.kamino_market') return 'main';
+        if (key === 'actions.kamino_hf_threshold') return '1.2';
         return '';
       },
     };
 
     const result = registerBuiltInProviders(registry, settingsReader);
-    // Kamino should NOT be in the loaded list (not registered yet)
+    expect(result.loaded).toContain('kamino');
+    expect(registered.some((p) => p.metadata.name === 'kamino')).toBe(true);
+  });
+
+  it('should skip kamino when actions.kamino_enabled is not true', async () => {
+    const { registerBuiltInProviders } = await import('../index.js');
+    const registered: Array<{ metadata: { name: string } }> = [];
+    const registry = {
+      register: (provider: unknown) => registered.push(provider as { metadata: { name: string } }),
+    };
+    const settingsReader = {
+      get: (key: string) => {
+        if (key === 'actions.kamino_enabled') return 'false';
+        return '';
+      },
+    };
+
+    const result = registerBuiltInProviders(registry, settingsReader);
     expect(result.loaded).not.toContain('kamino');
-    expect(registered.every((p) => p.metadata.name !== 'kamino')).toBe(true);
+    expect(result.skipped).toContain('kamino');
   });
 });
