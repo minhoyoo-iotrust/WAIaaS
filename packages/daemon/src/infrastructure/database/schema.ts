@@ -10,12 +10,13 @@
  * v1.4.2: agents table renamed to wallets, agent_id columns renamed to wallet_id.
  * WALLET_STATUSES used for status CHECK constraint.
  *
- * v1.4.6: Environment model -- wallets.network replaced by wallets.environment + wallets.defaultNetwork.
+ * v1.4.6: Environment model -- wallets.network replaced by wallets.environment.
  * v2.6.1: owner_approval_method column added for signing SDK approval channel preference.
  * transactions.network and policies.network columns added.
  * v26.4: session_wallets junction table added for 1:N session-wallet model.
  * sessions.walletId removed (migrated to session_wallets).
  * v28.8: wallet_type column added for wallet preset auto-setup.
+ * v29.3: Removed default_network from wallets, is_default from session_wallets (default wallet/network concept removed).
  *
  * @see docs/25-sqlite-schema.md
  */
@@ -55,7 +56,7 @@ const buildCheckSql = (column: string, values: readonly string[]) =>
 
 // ---------------------------------------------------------------------------
 // Table 1: wallets -- wallet identity and lifecycle state (renamed from agents in v3)
-// v1.4.6: network replaced by environment + defaultNetwork (environment model)
+// v1.4.6: network replaced by environment (environment model). v29.3: default_network removed.
 // ---------------------------------------------------------------------------
 
 export const wallets = sqliteTable(
@@ -65,7 +66,6 @@ export const wallets = sqliteTable(
     name: text('name').notNull(),
     chain: text('chain').notNull(),
     environment: text('environment').notNull(),
-    defaultNetwork: text('default_network'),
     publicKey: text('public_key').notNull(),
     status: text('status').notNull().default('CREATING'),
     ownerAddress: text('owner_address'),
@@ -85,12 +85,6 @@ export const wallets = sqliteTable(
     index('idx_wallets_owner_address').on(table.ownerAddress),
     check('check_chain', buildCheckSql('chain', CHAIN_TYPES)),
     check('check_environment', buildCheckSql('environment', ENVIRONMENT_TYPES)),
-    check(
-      'check_default_network',
-      sql.raw(
-        `default_network IS NULL OR default_network IN (${NETWORK_TYPES.map((v) => `'${v}'`).join(', ')})`,
-      ),
-    ),
     check('check_status', buildCheckSql('status', WALLET_STATUSES)),
     check('check_owner_verified', sql`owner_verified IN (0, 1)`),
   ],
@@ -137,7 +131,6 @@ export const sessionWallets = sqliteTable(
     walletId: text('wallet_id')
       .notNull()
       .references(() => wallets.id, { onDelete: 'cascade' }),
-    isDefault: integer('is_default', { mode: 'boolean' }).notNull().default(false),
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   },
   (table) => [
