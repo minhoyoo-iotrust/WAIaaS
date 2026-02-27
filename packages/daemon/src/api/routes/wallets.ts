@@ -18,7 +18,7 @@ import { eq, and, inArray, sql } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { createHash } from 'node:crypto';
-import { WAIaaSError, getDefaultNetwork, getNetworksForEnvironment, validateNetworkEnvironment, BUILTIN_PRESETS, type WalletPreset } from '@waiaas/core';
+import { WAIaaSError, getSingleNetwork, getNetworksForEnvironment, BUILTIN_PRESETS, type WalletPreset } from '@waiaas/core';
 import type { ChainType, EnvironmentType, NetworkType, EventBus } from '@waiaas/core';
 import { wallets, sessions, sessionWallets, transactions } from '../../infrastructure/database/schema.js';
 import { generateId } from '../../infrastructure/database/id.js';
@@ -40,8 +40,6 @@ import {
   WalletCreateResponseSchema,
   SetOwnerRequestSchema,
   UpdateWalletRequestSchema,
-  UpdateDefaultNetworkRequestSchema,
-  UpdateDefaultNetworkResponseSchema,
   WalletNetworksResponseSchema,
   WalletCrudResponseSchema,
   WalletOwnerResponseSchema,
@@ -273,28 +271,6 @@ const resumeWalletRoute = createRoute({
   },
 });
 
-const updateDefaultNetworkRoute = createRoute({
-  method: 'put',
-  path: '/wallets/{id}/default-network',
-  tags: ['Wallets'],
-  summary: 'Update wallet default network',
-  request: {
-    params: z.object({ id: z.string().uuid() }),
-    body: {
-      content: {
-        'application/json': { schema: UpdateDefaultNetworkRequestSchema },
-      },
-    },
-  },
-  responses: {
-    200: {
-      description: 'Default network updated',
-      content: { 'application/json': { schema: UpdateDefaultNetworkResponseSchema } },
-    },
-    ...buildErrorResponses(['WALLET_NOT_FOUND', 'WALLET_TERMINATED', 'ENVIRONMENT_NETWORK_MISMATCH']),
-  },
-});
-
 const walletNetworksRoute = createRoute({
   method: 'get',
   path: '/wallets/{id}/networks',
@@ -341,7 +317,7 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
           id: a.id,
           name: a.name,
           chain: a.chain,
-          network: a.defaultNetwork!,
+          network: getSingleNetwork(a.chain as ChainType, a.environment as EnvironmentType) ?? a.chain,
           environment: a.environment!,
           publicKey: a.publicKey,
           status: a.status,
@@ -387,7 +363,7 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
         id: wallet.id,
         name: wallet.name,
         chain: wallet.chain,
-        network: wallet.defaultNetwork!,
+        network: getSingleNetwork(wallet.chain as ChainType, wallet.environment as EnvironmentType) ?? wallet.chain,
         environment: wallet.environment!,
         publicKey: wallet.publicKey,
         status: wallet.status,
@@ -415,8 +391,9 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
     const chain = parsed.chain as ChainType;
     const environment = parsed.environment as EnvironmentType;
 
-    // Derive default network from chain + environment
-    const defaultNetwork = getDefaultNetwork(chain, environment);
+    // Derive network for key generation (Solana: single network; EVM: first available)
+    const network = getSingleNetwork(chain, environment)
+      ?? getNetworksForEnvironment(chain, environment)[0]!;
 
     // Generate wallet ID
     const id = generateId();
@@ -426,7 +403,7 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
     const { publicKey } = await deps.keyStore.generateKeyPair(
       id,
       chain,
-      defaultNetwork,
+      network,
       currentPassword,
     );
 
@@ -438,7 +415,6 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
       name: parsed.name,
       chain: parsed.chain,
       environment,
-      defaultNetwork,
       publicKey,
       status: 'ACTIVE',
       createdAt: now,
@@ -457,7 +433,6 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
       const sessionId = generateId();
       const jwtPayload: JwtPayload = {
         sub: sessionId,
-        wlt: id,
         iat: nowSec,
         exp: expiresAt,
       };
@@ -479,7 +454,6 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
       deps.db.insert(sessionWallets).values({
         sessionId,
         walletId: id,
-        isDefault: true,
         createdAt: now,
       }).run();
 
@@ -494,13 +468,13 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
       });
     }
 
-    // Return 201 with wallet JSON (network field for backward compatibility)
+    // Return 201 with wallet JSON
     return c.json(
       {
         id,
         name: parsed.name,
         chain: parsed.chain,
-        network: defaultNetwork,
+        network: network as string,
         environment,
         publicKey,
         status: 'ACTIVE',
@@ -546,7 +520,7 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
         id: wallet.id,
         name: body.name,
         chain: wallet.chain,
-        network: wallet.defaultNetwork!,
+        network: getSingleNetwork(wallet.chain as ChainType, wallet.environment as EnvironmentType) ?? wallet.chain,
         environment: wallet.environment!,
         publicKey: wallet.publicKey,
         status: wallet.status,
@@ -642,26 +616,23 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
     const linkedSessions = deps.db
       .select({
         sessionId: sessionWallets.sessionId,
-        isDefault: sessionWallets.isDefault,
       })
       .from(sessionWallets)
       .where(eq(sessionWallets.walletId, walletId))
       .all();
 
-    // Step 2: Per-session cascade defense (auto-promote or auto-revoke)
+    // Step 2: Per-session cascade defense (auto-revoke if last wallet)
     for (const link of linkedSessions) {
       // Find other wallets still linked to this session
       const otherWallets = deps.db
         .select({
           walletId: sessionWallets.walletId,
-          createdAt: sessionWallets.createdAt,
         })
         .from(sessionWallets)
         .where(and(
           eq(sessionWallets.sessionId, link.sessionId),
           sql`${sessionWallets.walletId} != ${walletId}`,
         ))
-        .orderBy(sessionWallets.createdAt) // ASC: earliest-linked wallet first
         .all();
 
       if (otherWallets.length === 0) {
@@ -671,19 +642,7 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
           .set({ revokedAt: now })
           .where(eq(sessions.id, link.sessionId))
           .run();
-      } else if (link.isDefault) {
-        // Default wallet being removed -> auto-promote earliest-linked wallet
-        const promotee = otherWallets[0]!;
-        deps.db
-          .update(sessionWallets)
-          .set({ isDefault: true })
-          .where(and(
-            eq(sessionWallets.sessionId, link.sessionId),
-            eq(sessionWallets.walletId, promotee.walletId),
-          ))
-          .run();
       }
-      // Non-default wallet with other wallets remaining: junction row removal suffices
     }
 
     // Step 3: Remove all session_wallets links for this wallet
@@ -943,7 +902,7 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
         id: updated!.id,
         name: updated!.name,
         chain: updated!.chain,
-        network: updated!.defaultNetwork!,
+        network: getSingleNetwork(updated!.chain as ChainType, updated!.environment as EnvironmentType) ?? updated!.chain,
         environment: updated!.environment!,
         publicKey: updated!.publicKey,
         status: updated!.status,
@@ -1014,64 +973,6 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
   });
 
   // ---------------------------------------------------------------------------
-  // PUT /wallets/:id/default-network
-  // ---------------------------------------------------------------------------
-
-  router.openapi(updateDefaultNetworkRoute, async (c) => {
-    const { id: walletId } = c.req.valid('param');
-    const body = c.req.valid('json');
-
-    const wallet = await deps.db
-      .select()
-      .from(wallets)
-      .where(eq(wallets.id, walletId))
-      .get();
-
-    if (!wallet) {
-      throw new WAIaaSError('WALLET_NOT_FOUND', {
-        message: `Wallet '${walletId}' not found`,
-      });
-    }
-
-    if (wallet.status === 'TERMINATED') {
-      throw new WAIaaSError('WALLET_TERMINATED', {
-        message: `Wallet '${walletId}' is already terminated`,
-      });
-    }
-
-    // Validate that the requested network is allowed for wallet's chain+environment
-    try {
-      validateNetworkEnvironment(
-        wallet.chain as ChainType,
-        wallet.environment as EnvironmentType,
-        body.network as NetworkType,
-      );
-    } catch {
-      throw new WAIaaSError('ENVIRONMENT_NETWORK_MISMATCH', {
-        message: `Network '${body.network}' is not allowed for chain '${wallet.chain}' in environment '${wallet.environment}'`,
-      });
-    }
-
-    const previousNetwork = wallet.defaultNetwork;
-    const now = new Date(Math.floor(Date.now() / 1000) * 1000);
-
-    await deps.db
-      .update(wallets)
-      .set({ defaultNetwork: body.network, updatedAt: now })
-      .where(eq(wallets.id, walletId))
-      .run();
-
-    return c.json(
-      {
-        id: walletId,
-        defaultNetwork: body.network,
-        previousNetwork: previousNetwork ?? null,
-      },
-      200,
-    );
-  });
-
-  // ---------------------------------------------------------------------------
   // GET /wallets/:id/networks
   // ---------------------------------------------------------------------------
 
@@ -1100,10 +1001,8 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
         id: wallet.id,
         chain: wallet.chain,
         environment: wallet.environment!,
-        defaultNetwork: wallet.defaultNetwork ?? null,
         availableNetworks: networks.map((n) => ({
           network: n,
-          isDefault: n === wallet.defaultNetwork,
         })),
       },
       200,
@@ -1157,16 +1056,17 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
       throw new WAIaaSError('ADAPTER_NOT_AVAILABLE');
     }
 
-    // Resolve adapter
-    const network = (wallet.defaultNetwork ?? wallet.environment) as string;
+    // Resolve adapter -- use getSingleNetwork for Solana, first network for EVM
+    const singleNetwork = getSingleNetwork(wallet.chain as ChainType, wallet.environment as EnvironmentType);
+    const withdrawNetwork = singleNetwork ?? getNetworksForEnvironment(wallet.chain as ChainType, wallet.environment as EnvironmentType)[0]!;
     const rpcUrl = resolveRpcUrl(
       deps.config.rpc as unknown as Record<string, string>,
       wallet.chain,
-      network,
+      withdrawNetwork,
     );
     const adapter = await deps.adapterPool.resolve(
       wallet.chain as ChainType,
-      network as NetworkType,
+      withdrawNetwork as NetworkType,
       rpcUrl,
     );
 

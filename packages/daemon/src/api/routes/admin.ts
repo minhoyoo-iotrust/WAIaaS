@@ -36,7 +36,7 @@ import { sql, desc, eq, and, isNull, gt, gte, lte, count as drizzleCount } from 
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { createHash } from 'node:crypto';
-import { WAIaaSError, getDefaultNetwork, getNetworksForEnvironment, formatAmount, BUILT_IN_RPC_DEFAULTS } from '@waiaas/core';
+import { WAIaaSError, getSingleNetwork, getNetworksForEnvironment, formatAmount, BUILT_IN_RPC_DEFAULTS } from '@waiaas/core';
 import type { INotificationChannel, NotificationPayload, ChainType, EnvironmentType, IPriceOracle, IForexRateService, CurrencyCode } from '@waiaas/core';
 import type { RpcPool } from '@waiaas/core';
 import { CurrencyCodeSchema, formatRatePreview } from '@waiaas/core';
@@ -583,7 +583,6 @@ const adminWalletBalanceRoute = createRoute({
             balances: z.array(
               z.object({
                 network: z.string(),
-                isDefault: z.boolean(),
                 native: z
                   .object({
                     balance: z.string(),
@@ -1903,14 +1902,12 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
     const chain = wallet.chain as ChainType;
     const env = wallet.environment as EnvironmentType;
     const networks = getNetworksForEnvironment(chain, env);
-    const defaultNetwork = wallet.defaultNetwork
-      ?? getDefaultNetwork(chain, env);
 
     const results = await Promise.allSettled(
       networks.map(async (network) => {
         const rpcUrl = resolveRpcUrl(deps.daemonConfig!.rpc, wallet.chain, network);
         if (!rpcUrl) {
-          return { network, isDefault: network === defaultNetwork, native: null, tokens: [], error: 'RPC endpoint not configured' };
+          return { network, native: null, tokens: [], error: 'RPC endpoint not configured' };
         }
         const adapter = await deps.adapterPool!.resolve(chain, network, rpcUrl);
 
@@ -1937,7 +1934,6 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
 
         return {
           network,
-          isDefault: network === defaultNetwork,
           native: { balance: nativeBalance, symbol: balanceInfo.symbol, usd: nativeUsd },
           tokens,
         };
@@ -1947,11 +1943,8 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
     const balances = results.map((r, i) => {
       if (r.status === 'fulfilled') return r.value;
       const errorMessage = r.reason instanceof Error ? r.reason.message : String(r.reason);
-      return { network: networks[i]!, isDefault: networks[i] === defaultNetwork, native: null, tokens: [], error: errorMessage };
+      return { network: networks[i]!, native: null, tokens: [], error: errorMessage };
     });
-
-    // Sort: default network first
-    balances.sort((a, b) => (a.isDefault === b.isDefault ? 0 : a.isDefault ? -1 : 1));
 
     return c.json({ balances }, 200);
   });
@@ -2370,20 +2363,20 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
     const absoluteExpiresAt = nowSec + config.security.session_absolute_lifetime;
 
     // Get target wallets (with environment for prompt builder)
-    let targetWallets: Array<{ id: string; name: string; chain: string; environment: string; publicKey: string; defaultNetwork: string | null }>;
+    let targetWallets: Array<{ id: string; name: string; chain: string; environment: string; publicKey: string }>;
 
     if (body.walletIds && body.walletIds.length > 0) {
       targetWallets = body.walletIds
         .map((wid) => deps.db.select().from(wallets).where(eq(wallets.id, wid)).get())
         .filter((w): w is NonNullable<typeof w> => w != null && w.status === 'ACTIVE')
-        .map((w) => ({ id: w.id, name: w.name, chain: w.chain, environment: w.environment, publicKey: w.publicKey, defaultNetwork: w.defaultNetwork }));
+        .map((w) => ({ id: w.id, name: w.name, chain: w.chain, environment: w.environment, publicKey: w.publicKey }));
     } else {
       targetWallets = deps.db
         .select()
         .from(wallets)
         .where(eq(wallets.status, 'ACTIVE'))
         .all()
-        .map((w) => ({ id: w.id, name: w.name, chain: w.chain, environment: w.environment, publicKey: w.publicKey, defaultNetwork: w.defaultNetwork }));
+        .map((w) => ({ id: w.id, name: w.name, chain: w.chain, environment: w.environment, publicKey: w.publicKey }));
     }
 
     if (targetWallets.length === 0) {
@@ -2466,13 +2459,12 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
         source: 'api',
       }).run();
 
-      // Insert N rows into session_wallets (first wallet is default)
+      // Insert N rows into session_wallets
       for (let i = 0; i < targetWallets.length; i++) {
         const w = targetWallets[i]!;
         deps.db.insert(sessionWallets).values({
           sessionId,
           walletId: w.id,
-          isDefault: i === 0,
           createdAt: new Date(nowSec * 1000),
         }).run();
       }
@@ -2481,7 +2473,7 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
     }
 
     // Sign JWT (new or re-signed for reused session)
-    const jwtPayload: JwtPayload = { sub: sessionId, wlt: defaultWallet.id, iat: nowSec, exp: actualExpiresAt };
+    const jwtPayload: JwtPayload = { sub: sessionId, iat: nowSec, exp: actualExpiresAt };
     const token = await deps.jwtSecretManager.signToken(jwtPayload);
 
     if (!sessionReused) {
@@ -2508,7 +2500,6 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
         chain: w.chain,
         environment: w.environment,
         address: w.publicKey,
-        defaultNetwork: w.defaultNetwork,
         networks: networks.map((n) => n),
         policies: walletPolicies,
       };
@@ -2630,17 +2621,8 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
       throw new WAIaaSError('SESSION_NOT_FOUND', { message: 'Session expired' });
     }
 
-    // Get default wallet for JWT
-    const defaultSw = deps.db
-      .select({ walletId: sessionWallets.walletId })
-      .from(sessionWallets)
-      .where(and(eq(sessionWallets.sessionId, sessionId), eq(sessionWallets.isDefault, true)))
-      .get();
-
-    const defaultWalletId = defaultSw?.walletId ?? '';
-
-    // Re-sign JWT
-    const jwtPayload: JwtPayload = { sub: sessionId, wlt: defaultWalletId, iat: nowSec, exp: expiresAtSec };
+    // Re-sign JWT (no wallet claim needed -- walletId resolved at request time)
+    const jwtPayload: JwtPayload = { sub: sessionId, iat: nowSec, exp: expiresAtSec };
     const token = await deps.jwtSecretManager.signToken(jwtPayload);
 
     // Increment token_issued_count
