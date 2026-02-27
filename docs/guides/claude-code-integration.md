@@ -99,6 +99,10 @@ To update to the latest skill files:
 npx @waiaas/skills claude-code --force
 ```
 
+## See Also
+
+- [Agent Self-Setup Guide](agent-self-setup.md) -- Fully autonomous daemon setup with `waiaas init --auto-provision`
+
 ## Troubleshooting
 
 ### Skills not detected by Claude Code

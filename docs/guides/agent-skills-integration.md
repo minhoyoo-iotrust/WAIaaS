@@ -69,6 +69,7 @@ Installs to `.github/skills/waiaas-*/SKILL.md`.
 
 For platform-specific setup with additional features:
 
+- **Agent Self-Setup**: See [Agent Self-Setup Guide](agent-self-setup.md) -- fully autonomous setup with auto-provision
 - **Claude Code**: See [Claude Code Integration Guide](claude-code-integration.md) -- includes MCP server integration
 - **OpenClaw**: See [OpenClaw Integration Guide](openclaw-integration.md) -- includes `openclaw.json` configuration
 

@@ -21,15 +21,24 @@ npm install -g @waiaas/cli
 
 ### 2. Initialize
 
+**Auto-provision (recommended for AI agents -- no human interaction):**
+
 ```bash
-waiaas init
+waiaas init --auto-provision
 ```
 
 This creates the data directory at `~/.waiaas/` with:
 
-- `config.toml` -- default configuration
+- `config.toml` -- default configuration with auto-generated master password hash
+- `recovery.key` -- plaintext master password for autonomous access
 - `keystore/` -- encrypted key storage (sodium-native guarded memory)
 - `data/waiaas.db` -- SQLite database
+
+**Manual (human-guided password setup):**
+
+```bash
+waiaas init
+```
 
 You will be prompted to set a **master password**. This password protects all wallet private keys via Argon2id key derivation. Store it securely -- it cannot be recovered.
 
@@ -39,7 +48,7 @@ You will be prompted to set a **master password**. This password protects all wa
 waiaas start
 ```
 
-The daemon starts at `http://127.0.0.1:3100` by default. You will be prompted for the master password.
+The daemon starts at `http://127.0.0.1:3100` by default. If initialized manually, you will be prompted for the master password. If auto-provisioned, no prompt is needed.
 
 ### 4. Verify
 
@@ -141,21 +150,39 @@ volumes:
 
 Create a `.env` file with your settings:
 
+**With auto-provision (no password hash needed):**
+
+```bash
+# Auto-provision: generates master password on first start
+WAIAAS_AUTO_PROVISION=true
+
+# Optional: RPC endpoints (or configure later via Admin Settings)
+WAIAAS_RPC_SOLANA_MAINNET=https://api.mainnet-beta.solana.com
+WAIAAS_RPC_SOLANA_DEVNET=https://api.devnet.solana.com
+# WAIAAS_RPC_EVM_ETHEREUM_MAINNET=https://eth-mainnet.g.alchemy.com/v2/YOUR_KEY
+
+# Optional: Daemon settings
+WAIAAS_DAEMON_PORT=3100
+WAIAAS_DAEMON_LOG_LEVEL=info
+```
+
+**With pre-set password hash:**
+
 ```bash
 # Required: Master password hash (Argon2id)
 # Generate with: npx @waiaas/cli hash-password
-WAIAAS_DAEMON_MASTER_PASSWORD_HASH=$argon2id$v=19$m=65536,t=3,p=4$...
+WAIAAS_SECURITY_MASTER_PASSWORD_HASH=$argon2id$v=19$m=65536,t=3,p=4$...
 
-# Optional: RPC endpoints
+# Optional: RPC endpoints (or configure later via Admin Settings)
 WAIAAS_RPC_SOLANA_MAINNET=https://api.mainnet-beta.solana.com
 WAIAAS_RPC_SOLANA_DEVNET=https://api.devnet.solana.com
-# WAIAAS_RPC_ETHEREUM_MAINNET=https://eth-mainnet.g.alchemy.com/v2/YOUR_KEY
+# WAIAAS_RPC_EVM_ETHEREUM_MAINNET=https://eth-mainnet.g.alchemy.com/v2/YOUR_KEY
 
 # Optional: Daemon settings
 WAIAAS_DAEMON_PORT=3100
 WAIAAS_DAEMON_LOG_LEVEL=info
 
-# Optional: Notifications
+# Optional: Notifications (or configure later via Admin Settings)
 WAIAAS_NOTIFICATIONS_ENABLED=true
 WAIAAS_NOTIFICATIONS_TELEGRAM_BOT_TOKEN=123456:ABC-DEF...
 WAIAAS_NOTIFICATIONS_TELEGRAM_CHAT_ID=987654321
@@ -220,6 +247,34 @@ docker compose up -d
 ```
 
 Database migrations run automatically on startup. The Docker image supports Watchtower auto-update via the `com.centurylinklabs.watchtower.enable=true` label.
+
+### Docker Auto-Provision
+
+For fully autonomous Docker deployments (no pre-set password), add `WAIAAS_AUTO_PROVISION=true` to your environment:
+
+```yaml
+services:
+  daemon:
+    image: ghcr.io/minho-yoo/waiaas:latest
+    environment:
+      - WAIAAS_AUTO_PROVISION=true
+      - WAIAAS_DATA_DIR=/data
+      - WAIAAS_DAEMON_HOSTNAME=0.0.0.0
+    volumes:
+      - waiaas-data:/data
+    ports:
+      - "127.0.0.1:3100:3100"
+```
+
+On first start (when `/data/config.toml` does not exist), the entrypoint automatically runs `waiaas init --auto-provision`. The generated master password is saved to `/data/recovery.key`.
+
+Retrieve the recovery key after first start:
+
+```bash
+docker compose exec daemon cat /data/recovery.key
+```
+
+After retrieving, harden the password with `waiaas set-master` and delete the recovery key.
 
 ### Docker Image Details
 
@@ -288,29 +343,54 @@ WAIAAS_RPC_SOLANA_MAINNET="https://my-rpc.example.com"
 WAIAAS_SECURITY_SESSION_TTL=43200
 ```
 
-### Admin Settings (Runtime Override)
+### Admin Settings (Preferred for Runtime Configuration)
 
-Settings that benefit from runtime changes are available through the Admin Settings API. These override `config.toml` values without restarting the daemon:
+**Prefer Admin Settings over config.toml.** Most settings can be changed at runtime through the Admin Settings API, Admin UI, or CLI commands without restarting the daemon:
 
 ```bash
-# View current settings
+# View all current settings
 curl http://127.0.0.1:3100/v1/admin/settings \
   -H "X-Master-Password: <password>"
 
-# Update a setting
+# Update settings (hot-reload, no restart needed)
 curl -X PUT http://127.0.0.1:3100/v1/admin/settings \
   -H "X-Master-Password: <password>" \
   -H "Content-Type: application/json" \
-  -d '{"key": "display_currency", "value": "KRW"}'
+  -d '{"settings":[{"key": "display.currency", "value": "KRW"}]}'
 ```
 
-Infrastructure settings (port, hostname, rpc_url, master_password_hash) require a daemon restart and remain config.toml-only.
+Admin Settings covers: notifications, RPC endpoints, security parameters, display currency, monitoring, autostop, signing SDK, WalletConnect, oracle, and daemon log level.
+
+Only infrastructure settings (port, hostname, database path, master_password_hash) require a daemon restart and remain config.toml-only. For everything else, use Admin Settings, CLI commands, or the Admin UI.
 
 ---
 
 ## Post-Installation
 
-### 1. Access Admin UI
+### 1. Harden Master Password (Auto-Provision Only)
+
+If you used `--auto-provision` or `WAIAAS_AUTO_PROVISION=true`, change the auto-generated password to a strong human-chosen password:
+
+```bash
+waiaas set-master
+```
+
+Or via REST API:
+
+```bash
+curl -s -X PUT http://127.0.0.1:3100/v1/admin/master-password \
+  -H "Content-Type: application/json" \
+  -H "X-Master-Password: $(cat ~/.waiaas/recovery.key)" \
+  -d '{"newPassword": "<your-strong-password>"}'
+```
+
+After changing, delete the recovery key:
+
+```bash
+rm ~/.waiaas/recovery.key
+```
+
+### 2. Access Admin UI
 
 Open your browser and navigate to:
 
@@ -320,7 +400,7 @@ http://127.0.0.1:3100/admin
 
 Log in with your master password to access the dashboard, wallet management, session management, policy configuration, and notification settings.
 
-### 2. Create Your First Wallet
+### 3. Create Your First Wallet
 
 ```bash
 curl -X POST http://127.0.0.1:3100/v1/wallets \
@@ -348,7 +428,7 @@ Response:
 }
 ```
 
-### 3. Create a Session Token
+### 4. Create a Session Token
 
 ```bash
 curl -X POST http://127.0.0.1:3100/v1/sessions \
@@ -359,7 +439,7 @@ curl -X POST http://127.0.0.1:3100/v1/sessions \
 
 The response includes a `token` field (`wai_sess_...`) that AI agents use to authenticate.
 
-### 4. Set Up MCP (for AI Agents)
+### 5. Set Up MCP (for AI Agents)
 
 ```bash
 # Automatic: registers MCP server with Claude Desktop
@@ -374,7 +454,7 @@ waiaas mcp setup --all
 
 This automatically creates session tokens and configures Claude Desktop's MCP server settings.
 
-### 5. Install Skill Files (Optional)
+### 6. Install Skill Files (Optional)
 
 Skill files teach AI agents how to interact with the WAIaaS API. They are plain Markdown files that can be included in the AI agent's context.
 
@@ -404,9 +484,33 @@ WAIaaS supports four notification channels: **Telegram**, **Discord**, **ntfy**,
 | ntfy | `ntfy_topic` + `ntfy_server` | Choose topic, subscribe via app |
 | Slack | `slack_webhook_url` | Create incoming webhook |
 
-For detailed setup instructions, see the Admin UI **Notifications** panel at `http://127.0.0.1:3100/admin`.
+### Via Admin Settings (Recommended)
 
-Test your notification channels:
+Use the Admin Settings API for runtime configuration without editing config.toml:
+
+```bash
+# Configure Telegram notifications via Admin Settings
+curl -s -X PUT http://127.0.0.1:3100/v1/admin/settings \
+  -H "Content-Type: application/json" \
+  -H "X-Master-Password: <password>" \
+  -d '{"settings":[
+    {"key":"notifications.telegram_bot_token","value":"<bot-token>"},
+    {"key":"notifications.telegram_chat_id","value":"<chat-id>"},
+    {"key":"notifications.enabled","value":"true"}
+  ]}'
+```
+
+Or use the CLI:
+
+```bash
+waiaas notification setup --bot-token <TOKEN> --chat-id <ID> --test
+```
+
+### Via Admin UI
+
+Open `http://127.0.0.1:3100/admin`, navigate to **Notifications**, and configure channels through the visual interface.
+
+### Test Notifications
 
 ```bash
 curl -X POST http://127.0.0.1:3100/v1/admin/notifications/test \
