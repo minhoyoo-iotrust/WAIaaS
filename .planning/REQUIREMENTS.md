@@ -9,30 +9,30 @@ Requirements for milestone v29.4. Each maps to roadmap phases.
 
 ### Kamino Provider (KPROV)
 
-- [ ] **KPROV-01**: KaminoLendingProvider implements ILendingProvider + IPositionProvider interfaces
-- [ ] **KPROV-02**: User can supply assets to Kamino market via kamino_supply action
-- [ ] **KPROV-03**: User can borrow assets from Kamino market via kamino_borrow action
-- [ ] **KPROV-04**: User can repay borrowed assets via kamino_repay action (supports "max")
-- [ ] **KPROV-05**: User can withdraw supplied assets via kamino_withdraw action (supports "max")
-- [ ] **KPROV-06**: SDK wrapper abstracts @kamino-finance/klend-sdk instruction building
-- [ ] **KPROV-07**: Actions resolve to Solana ContractCallRequest with correct Kamino instructions
-- [ ] **KPROV-08**: Borrow/withdraw actions simulate HF impact and block self-liquidation risk
-- [ ] **KPROV-09**: Kamino lending positions (SUPPLY/BORROW) queryable from obligation account
-- [ ] **KPROV-10**: Health factor calculated from Kamino obligation collateral/debt data
-- [ ] **KPROV-11**: Market data (APY, LTV, available liquidity) queryable per reserve
+- [x] **KPROV-01**: KaminoLendingProvider implements ILendingProvider + IPositionProvider interfaces
+- [x] **KPROV-02**: User can supply assets to Kamino market via kamino_supply action
+- [x] **KPROV-03**: User can borrow assets from Kamino market via kamino_borrow action
+- [x] **KPROV-04**: User can repay borrowed assets via kamino_repay action (supports "max")
+- [x] **KPROV-05**: User can withdraw supplied assets via kamino_withdraw action (supports "max")
+- [x] **KPROV-06**: SDK wrapper abstracts @kamino-finance/klend-sdk instruction building
+- [x] **KPROV-07**: Actions resolve to Solana ContractCallRequest with correct Kamino instructions
+- [x] **KPROV-08**: Borrow/withdraw actions simulate HF impact and block self-liquidation risk
+- [x] **KPROV-09**: Kamino lending positions (SUPPLY/BORROW) queryable from obligation account
+- [x] **KPROV-10**: Health factor calculated from Kamino obligation collateral/debt data
+- [x] **KPROV-11**: Market data (APY, LTV, available liquidity) queryable per reserve
 
 ### Integration (KINT)
 
-- [ ] **KINT-01**: Provider registered in registerBuiltInProviders with actions.kamino_enabled Admin Setting
-- [ ] **KINT-02**: MCP auto-exposes 4 Kamino action tools via mcpExpose: true metadata
-- [ ] **KINT-03**: Existing get-defi-positions/get-health-factor MCP tools return Kamino data
-- [ ] **KINT-04**: TS/Python SDK executeAction supports Kamino actions
-- [ ] **KINT-05**: PositionTracker syncs Kamino positions into defi_positions table (LENDING, 5min)
-- [ ] **KINT-06**: HealthFactorMonitor evaluates Kamino health with adaptive polling
-- [ ] **KINT-07**: LendingPolicyEvaluator applies max_ltv_pct to Kamino borrow actions
-- [ ] **KINT-08**: Admin Settings 3 keys (kamino.enabled, kamino.market, kamino.hf_threshold) runtime configurable
-- [ ] **KINT-09**: Admin UI DeFi dashboard shows combined Aave + Kamino positions
-- [ ] **KINT-10**: actions.skill.md updated with Kamino Lending documentation
+- [x] **KINT-01**: Provider registered in registerBuiltInProviders with actions.kamino_enabled Admin Setting
+- [x] **KINT-02**: MCP auto-exposes 4 Kamino action tools via mcpExpose: true metadata
+- [x] **KINT-03**: Existing get-defi-positions/get-health-factor MCP tools return Kamino data
+- [x] **KINT-04**: TS/Python SDK executeAction supports Kamino actions
+- [x] **KINT-05**: PositionTracker syncs Kamino positions into defi_positions table (LENDING, 5min)
+- [x] **KINT-06**: HealthFactorMonitor evaluates Kamino health with adaptive polling
+- [x] **KINT-07**: LendingPolicyEvaluator applies max_ltv_pct to Kamino borrow actions
+- [x] **KINT-08**: Admin Settings 3 keys (kamino.enabled, kamino.market, kamino.hf_threshold) runtime configurable
+- [x] **KINT-09**: Admin UI DeFi dashboard shows combined Aave + Kamino positions
+- [x] **KINT-10**: actions.skill.md updated with Kamino Lending documentation
 
 ## v2 Requirements
 
@@ -57,27 +57,27 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| KPROV-01 | Phase 283 | Pending |
-| KPROV-02 | Phase 283 | Pending |
-| KPROV-03 | Phase 283 | Pending |
-| KPROV-04 | Phase 283 | Pending |
-| KPROV-05 | Phase 283 | Pending |
-| KPROV-06 | Phase 283 | Pending |
-| KPROV-07 | Phase 283 | Pending |
-| KPROV-08 | Phase 283 | Pending |
-| KPROV-09 | Phase 283 | Pending |
-| KPROV-10 | Phase 283 | Pending |
-| KPROV-11 | Phase 283 | Pending |
-| KINT-01 | Phase 284 | Pending |
-| KINT-02 | Phase 284 | Pending |
-| KINT-03 | Phase 284 | Pending |
-| KINT-04 | Phase 284 | Pending |
-| KINT-05 | Phase 284 | Pending |
-| KINT-06 | Phase 284 | Pending |
-| KINT-07 | Phase 284 | Pending |
-| KINT-08 | Phase 284 | Pending |
-| KINT-09 | Phase 284 | Pending |
-| KINT-10 | Phase 284 | Pending |
+| KPROV-01 | Phase 283 | Complete |
+| KPROV-02 | Phase 283 | Complete |
+| KPROV-03 | Phase 283 | Complete |
+| KPROV-04 | Phase 283 | Complete |
+| KPROV-05 | Phase 283 | Complete |
+| KPROV-06 | Phase 283 | Complete |
+| KPROV-07 | Phase 283 | Complete |
+| KPROV-08 | Phase 283 | Complete |
+| KPROV-09 | Phase 283 | Complete |
+| KPROV-10 | Phase 283 | Complete |
+| KPROV-11 | Phase 283 | Complete |
+| KINT-01 | Phase 284 | Complete |
+| KINT-02 | Phase 284 | Complete |
+| KINT-03 | Phase 284 | Complete |
+| KINT-04 | Phase 284 | Complete |
+| KINT-05 | Phase 284 | Complete |
+| KINT-06 | Phase 284 | Complete |
+| KINT-07 | Phase 284 | Complete |
+| KINT-08 | Phase 284 | Complete |
+| KINT-09 | Phase 284 | Complete |
+| KINT-10 | Phase 284 | Complete |
 
 **Coverage:**
 - v1 requirements: 21 total
@@ -86,4 +86,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-02-28*
-*Last updated: 2026-02-28 after roadmap creation -- traceability updated*
+*Last updated: 2026-02-28 after milestone audit -- all 21 requirements complete*
