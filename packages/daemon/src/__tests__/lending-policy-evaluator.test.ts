@@ -360,6 +360,28 @@ describe('LENDING_LTV_LIMIT - Step 4h-b', () => {
     expect(result.allowed).toBe(true);
   });
 
+  it('applies LTV check to prefixed borrow actions (kamino_borrow, aave_borrow)', async () => {
+    // Same scenario as first test: $10,000 collateral, $8,000 debt -> 80% LTV > 75% maxLtv
+    await insertPosition(walletId, 'SUPPLY', 10000);
+    await insertPosition(walletId, 'BORROW', 8000);
+
+    await insertPolicy({
+      walletId,
+      type: 'LENDING_LTV_LIMIT',
+      rules: JSON.stringify({ maxLtv: 0.75, warningLtv: 0.70 }),
+    });
+
+    // kamino_borrow should trigger LTV check via suffix matching
+    const kaminoResult = await engine.evaluate(walletId, lendingTx('kamino_borrow'));
+    expect(kaminoResult.allowed).toBe(false);
+    expect(kaminoResult.reason).toContain('exceed max LTV');
+
+    // aave_borrow should also trigger LTV check
+    const aaveResult = await engine.evaluate(walletId, lendingTx('aave_borrow'));
+    expect(aaveResult.allowed).toBe(false);
+    expect(aaveResult.reason).toContain('exceed max LTV');
+  });
+
   it('passes through when no LTV policy configured', async () => {
     await insertPosition(walletId, 'SUPPLY', 10000);
     await insertPosition(walletId, 'BORROW', 9000);
