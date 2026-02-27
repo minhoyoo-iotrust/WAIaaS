@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   WalletSchema,
   CreateWalletRequestSchema,
+  CreateSessionRequestSchema,
   TransactionSchema,
   SendTransactionRequestSchema,
   PolicySchema,
@@ -127,7 +128,6 @@ describe('Zod SSoT Schemas', () => {
         name: 'test',
         chain: 'solana',
         environment: 'testnet',
-        defaultNetwork: 'devnet',
         publicKey: 'abc123',
         status: 'ACTIVE',
         ownerAddress: null,
@@ -138,8 +138,12 @@ describe('Zod SSoT Schemas', () => {
       expect(wallet.status).toBe('ACTIVE');
       expect(wallet.chain).toBe('solana');
       expect(wallet.environment).toBe('testnet');
-      expect(wallet.defaultNetwork).toBe('devnet');
       expect(wallet.ownerAddress).toBeNull();
+    });
+
+    it('does not have defaultNetwork field', () => {
+      const shape = WalletSchema.shape;
+      expect('defaultNetwork' in shape).toBe(false);
     });
 
     it('rejects invalid chain', () => {
@@ -149,7 +153,6 @@ describe('Zod SSoT Schemas', () => {
           name: 'test',
           chain: 'bitcoin',
           environment: 'testnet',
-          defaultNetwork: 'devnet',
           publicKey: 'abc123',
           status: 'ACTIVE',
           ownerAddress: null,
@@ -176,6 +179,32 @@ describe('Zod SSoT Schemas', () => {
         updatedAt: 1700000000,
       });
       expect(session.renewalCount).toBe(0);
+    });
+  });
+
+  describe('CreateSessionRequestSchema', () => {
+    it('does not have defaultWalletId field', () => {
+      // v29.3: defaultWalletId removed (default wallet concept removed)
+      const shape = CreateSessionRequestSchema._def.schema.shape;
+      expect('defaultWalletId' in shape).toBe(false);
+    });
+
+    it('parses with walletId', () => {
+      const result = CreateSessionRequestSchema.parse({
+        walletId: '01912345-6789-7abc-8def-0123456789ab',
+      });
+      expect(result.walletId).toBe('01912345-6789-7abc-8def-0123456789ab');
+    });
+
+    it('parses with walletIds', () => {
+      const result = CreateSessionRequestSchema.parse({
+        walletIds: ['01912345-6789-7abc-8def-0123456789ab'],
+      });
+      expect(result.walletIds).toHaveLength(1);
+    });
+
+    it('rejects when neither walletId nor walletIds is provided', () => {
+      expect(() => CreateSessionRequestSchema.parse({})).toThrow(/Either walletId or walletIds/);
     });
   });
 

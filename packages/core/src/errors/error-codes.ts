@@ -21,8 +21,9 @@ export interface ErrorCodeEntry {
 }
 
 /**
- * 104 error codes from SS10.12 unified error code matrix + signing protocol + session multi-wallet.
+ * 105 error codes from SS10.12 unified error code matrix + signing protocol + session multi-wallet.
  * SSoT: 37-rest-api-complete-spec.md section 10.12 + 73-signing-protocol-v1.md
+ * v29.3: +WALLET_ID_REQUIRED, +NETWORK_REQUIRED, -CANNOT_REMOVE_DEFAULT_WALLET (net +1)
  */
 export const ERROR_CODES = {
   // --- AUTH domain (8) ---
@@ -83,7 +84,7 @@ export const ERROR_CODES = {
     message: 'System is locked',
   },
 
-  // --- SESSION domain (12) ---
+  // --- SESSION domain (12: -CANNOT_REMOVE_DEFAULT_WALLET, +WALLET_ID_REQUIRED) ---
   SESSION_NOT_FOUND: {
     code: 'SESSION_NOT_FOUND',
     domain: 'SESSION',
@@ -154,19 +155,19 @@ export const ERROR_CODES = {
     retryable: false,
     message: 'Wallet already linked to this session',
   },
-  CANNOT_REMOVE_DEFAULT_WALLET: {
-    code: 'CANNOT_REMOVE_DEFAULT_WALLET',
-    domain: 'SESSION',
-    httpStatus: 400,
-    retryable: false,
-    message: 'Cannot remove default wallet (change default first)',
-  },
   SESSION_REQUIRES_WALLET: {
     code: 'SESSION_REQUIRES_WALLET',
     domain: 'SESSION',
     httpStatus: 400,
     retryable: false,
     message: 'Session must have at least one wallet',
+  },
+  WALLET_ID_REQUIRED: {
+    code: 'WALLET_ID_REQUIRED',
+    domain: 'SESSION',
+    httpStatus: 400,
+    retryable: false,
+    message: 'Wallet ID is required when session has multiple wallets',
   },
 
   // --- PIPELINE domain (1) ---
@@ -178,7 +179,7 @@ export const ERROR_CODES = {
     message: 'Pipeline halted (transaction queued for delay or approval)',
   },
 
-  // --- TX domain (25) ---
+  // --- TX domain (26: +NETWORK_REQUIRED) ---
   INSUFFICIENT_BALANCE: {
     code: 'INSUFFICIENT_BALANCE',
     domain: 'TX',
@@ -325,6 +326,13 @@ export const ERROR_CODES = {
     httpStatus: 400,
     retryable: false,
     message: "Network is not allowed in this wallet's environment",
+  },
+  NETWORK_REQUIRED: {
+    code: 'NETWORK_REQUIRED',
+    domain: 'TX',
+    httpStatus: 400,
+    retryable: false,
+    message: 'Network is required for EVM wallets',
   },
   INVALID_TRANSACTION: {
     code: 'INVALID_TRANSACTION',

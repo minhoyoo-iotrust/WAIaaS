@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import {
   ChainTypeEnum,
-  NetworkTypeEnum,
   EnvironmentTypeEnum,
   WalletStatusEnum,
 } from '../enums/index.js';
@@ -11,7 +10,6 @@ export const WalletSchema = z.object({
   name: z.string().min(1).max(100),
   chain: ChainTypeEnum,
   environment: EnvironmentTypeEnum,
-  defaultNetwork: NetworkTypeEnum.nullable(),
   publicKey: z.string(),
   status: WalletStatusEnum,
   ownerAddress: z.string().nullable(),

@@ -1,7 +1,7 @@
 import type { Messages } from './en.js';
 
 export const messages: Messages = {
-  // Error messages (104 error codes)
+  // Error messages (105 error codes)
   errors: {
     // PIPELINE domain (1)
     PIPELINE_HALTED: '파이프라인 중단 (트랜잭션이 지연 또는 승인 대기열에 들어감)',
@@ -25,8 +25,8 @@ export const messages: Messages = {
     SESSION_RENEWAL_MISMATCH: '세션 갱신 토큰이 일치하지 않습니다',
     WALLET_ACCESS_DENIED: '이 세션에서 접근할 수 없는 지갑입니다',
     WALLET_ALREADY_LINKED: '이미 이 세션에 연결된 지갑입니다',
-    CANNOT_REMOVE_DEFAULT_WALLET: '기본 지갑을 제거할 수 없습니다 (먼저 기본값을 변경하세요)',
     SESSION_REQUIRES_WALLET: '세션에는 최소 하나의 지갑이 필요합니다',
+    WALLET_ID_REQUIRED: '세션에 지갑이 2개 이상일 때 walletId를 지정해야 합니다',
     // TX domain (25)
     INSUFFICIENT_BALANCE: '잔액이 부족합니다',
     INVALID_ADDRESS: '유효하지 않은 주소 형식입니다',
@@ -49,6 +49,7 @@ export const messages: Messages = {
     BATCH_SIZE_EXCEEDED: '배치 크기를 초과했습니다',
     BATCH_POLICY_VIOLATION: '배치 정책 위반입니다',
     ENVIRONMENT_NETWORK_MISMATCH: '네트워크가 이 지갑의 환경에서 허용되지 않습니다',
+    NETWORK_REQUIRED: 'EVM 지갑에서는 네트워크를 지정해야 합니다',
     INVALID_TRANSACTION: '유효하지 않은 원시 트랜잭션 형식입니다',
     WALLET_NOT_SIGNER: '지갑이 이 트랜잭션의 서명자가 아닙니다',
     UNSUPPORTED_TX_TYPE: '지원하지 않는 트랜잭션 유형입니다',

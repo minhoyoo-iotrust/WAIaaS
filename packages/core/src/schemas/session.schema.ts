@@ -17,7 +17,6 @@ export type Session = z.infer<typeof SessionSchema>;
 export const CreateSessionRequestSchema = z.object({
   walletId: z.string().uuid().optional(),
   walletIds: z.array(z.string().uuid()).min(1).optional(),
-  defaultWalletId: z.string().uuid().optional(),
   ttl: z.number().int().min(300).max(31536000).optional(), // defaults to config security.session_ttl (2592000 = 30 days)
   constraints: z.record(z.unknown()).nullable().optional(),
 }).refine(
