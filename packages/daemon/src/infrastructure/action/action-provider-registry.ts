@@ -204,6 +204,8 @@ export class ActionProviderRegistry {
         const parsed = ContractCallRequestSchema.parse(item);
         // Auto-tag with provider name for provider-trust policy bypass
         parsed.actionProvider = entry.provider.metadata.name;
+        // Auto-tag with action name for lending policy evaluation (Phase 275)
+        parsed.actionName = entry.action.name;
         validated.push(parsed);
       } catch (err) {
         throw new WAIaaSError('ACTION_RETURN_INVALID', {

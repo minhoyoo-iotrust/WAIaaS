@@ -623,6 +623,34 @@ table .table-loading {
   font-size: 0.9em;
 }
 
+/* Auto-provision Banner */
+.auto-provision-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-4);
+  font-size: var(--font-size-sm);
+}
+
+.auto-provision-banner-icon {
+  font-size: 1.1em;
+}
+
+.auto-provision-link {
+  color: var(--color-warning);
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+.auto-provision-link:hover {
+  opacity: 0.8;
+}
+
 /* Prompt Card */
 .prompt-card {
   background: var(--color-bg-secondary);

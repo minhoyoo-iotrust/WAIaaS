@@ -27,6 +27,7 @@
 - ✅ **v28.6 RPC Pool 멀티엔드포인트 로테이션** -- Phases 260-264 (shipped 2026-02-25)
 - ✅ **v28.8 빌트인 지갑 프리셋 자동 설정** -- Phases 265-267 (shipped 2026-02-26)
 - ✅ **v29.0 고급 DeFi 프로토콜 설계** -- Phases 268-273 (shipped 2026-02-26)
+- ✅ **v29.2 EVM Lending -- Aave V3** -- Phases 274-278 (shipped 2026-02-27)
 
 ## Phases
 
@@ -52,201 +53,44 @@ See `.planning/milestones/v2.2-ROADMAP.md` for full details.
 <details>
 <summary>✅ v2.3 Admin UI 기능별 메뉴 재구성 (Phases 182-187) -- SHIPPED 2026-02-18</summary>
 
-- [x] Phase 182: UI 공용 컴포넌트 (2/2 plans) -- completed 2026-02-18
-- [x] Phase 183: 메뉴 재구성 + 신규 페이지 (3/3 plans) -- completed 2026-02-18
-- [x] Phase 184: Settings 분산 배치 (2/2 plans) -- completed 2026-02-18
-- [x] Phase 185: UX 강화 (2/2 plans) -- completed 2026-02-18
-- [x] Phase 186: 마무리 (1/1 plan) -- completed 2026-02-18
-- [x] Phase 187: 감사 갭 수정 (1/1 plan) -- completed 2026-02-18
+- [x] Phase 182-187: 6 phases, 11 plans -- completed 2026-02-18
 
 See `.planning/milestones/v2.3-ROADMAP.md` for full details.
 
 </details>
 
 <details>
-<summary>✅ v2.4 npm Trusted Publishing 전환 (Phases 188-190) -- SHIPPED 2026-02-19</summary>
+<summary>✅ v2.4-v2.5 (Phases 188-197) -- SHIPPED 2026-02-19</summary>
 
-- [x] Phase 188: 사전 준비 (1/1 plan) -- completed 2026-02-19
-- [x] Phase 189: OIDC 전환 (2/2 plans) -- completed 2026-02-19
-- [x] Phase 190: 검증 및 정리 (1/1 plan) -- completed 2026-02-19
-
-See `.planning/milestones/v2.4-ROADMAP.md` for full details.
+See `.planning/milestones/` for archived phase details.
 
 </details>
 
 <details>
-<summary>✅ v2.4.1 Admin UI 테스트 커버리지 복원 (Phases 191-193) -- SHIPPED 2026-02-19</summary>
+<summary>✅ v2.6-v26.4 (Phases 198-214) -- SHIPPED 2026-02-21</summary>
 
-- [x] Phase 191: Security + WalletConnect 페이지 테스트 (2/2 plans) -- completed 2026-02-19
-- [x] Phase 192: System 페이지 테스트 (1/1 plan) -- completed 2026-02-19
-- [x] Phase 193: 공용 컴포넌트 + 기존 페이지 개선 + 임계값 복원 (2/2 plans) -- completed 2026-02-19
-
-See `.planning/milestones/v2.4.1-ROADMAP.md` for full details.
+See `.planning/milestones/` for archived phase details.
 
 </details>
 
 <details>
-<summary>✅ v2.5 DX 품질 개선 (Phases 194-197) -- SHIPPED 2026-02-19</summary>
+<summary>✅ v27.0-v27.4 (Phases 215-243) -- SHIPPED 2026-02-23</summary>
 
-- [x] Phase 194: CLI + 데몬 시작 DX (2/2 plans) -- completed 2026-02-19
-- [x] Phase 195: Quickstart + MCP DX (2/2 plans) -- completed 2026-02-19
-- [x] Phase 196: README + SDK 문서 정합성 (2/2 plans) -- completed 2026-02-19
-- [x] Phase 197: Docker + Python SDK DX (2/2 plans) -- completed 2026-02-19
-
-See `.planning/milestones/v2.5-ROADMAP.md` for full details.
+See `.planning/milestones/` for archived phase details.
 
 </details>
 
 <details>
-<summary>✅ v2.6 Wallet SDK 설계 (Phases 198-201) -- SHIPPED 2026-02-20</summary>
+<summary>✅ v28.0-v28.1 (Phases 244-247) -- SHIPPED 2026-02-23</summary>
 
-- [x] Phase 198: Signing Protocol v1 설계 (2/2 plans) -- completed 2026-02-19
-- [x] Phase 199: Wallet SDK + 데몬 컴포넌트 설계 (2/2 plans) -- completed 2026-02-19
-- [x] Phase 200: 알림 채널 + Push Relay Server 설계 (2/2 plans) -- completed 2026-02-19
-- [x] Phase 201: 기존 설계 문서 갱신 + 교차 검증 (1/1 plan) -- completed 2026-02-20
-
-See `.planning/milestones/v2.6-ROADMAP.md` for full details.
-
-</details>
-
-<details>
-<summary>✅ v2.6.1 WAIaaS Wallet Signing SDK (Phases 202-205) -- SHIPPED 2026-02-20</summary>
-
-- [x] Phase 202: 서명 프로토콜 + 데몬 인프라 + SDK 패키지 + ntfy 채널 (4/4 plans) -- completed 2026-02-20
-- [x] Phase 203: Telegram 채널 + 채널 라우팅 + REST API + Admin UI (4/4 plans) -- completed 2026-02-20
-- [x] Phase 204: Signing SDK 데몬 라이프사이클 연결 (2/2 plans) -- completed 2026-02-20
-- [x] Phase 205: Admin Settings API + Skills 동기화 (3/3 plans) -- completed 2026-02-20
-
-See `.planning/milestones/v2.6.1-ROADMAP.md` for full details.
-
-</details>
-
-<details>
-<summary>✅ v2.7 지갑 앱 알림 채널 (Phase 206) -- SHIPPED 2026-02-20</summary>
-
-- [x] Phase 206: 지갑 앱 알림 사이드 채널 (4/4 plans) -- completed 2026-02-20
-
-See `.planning/milestones/v2.7-ROADMAP.md` for full details.
-
-</details>
-
-<details>
-<summary>✅ v26.3 Push Relay Server (Phases 207-209) -- SHIPPED 2026-02-20</summary>
-
-- [x] Phase 207: 데몬 SignRequest 인코딩 통일 (1/1 plan) -- completed 2026-02-20
-- [x] Phase 208: Push Relay Server 구현 (5/5 plans) -- completed 2026-02-20
-- [x] Phase 209: 배포 인프라 (2/2 plans) -- completed 2026-02-20
-
-See `.planning/milestones/v26.3-ROADMAP.md` for full details.
-
-</details>
-
-<details>
-<summary>✅ v26.4 멀티 지갑 세션 + 에이전트 자기 발견 (Phases 210-214) -- SHIPPED 2026-02-21</summary>
-
-- [x] Phase 210: 세션 모델 재구조화 (3/3 plans) -- completed 2026-02-20
-- [x] Phase 211: API 레이어 지갑 선택 (3/3 plans) -- completed 2026-02-20
-- [x] Phase 212: 자기 발견 엔드포인트 (2/2 plans) -- completed 2026-02-20
-- [x] Phase 213: 통합 레이어 (4/4 plans) -- completed 2026-02-20
-- [x] Phase 214: 검증 보고서 + SDK 타입 수정 (3/3 plans) -- completed 2026-02-21
-
-See `.planning/milestones/v26.4-ROADMAP.md` for full details.
-
-</details>
-
-<details>
-<summary>✅ v27.0 수신 트랜잭션 모니터링 설계 (Phases 215-223) -- SHIPPED 2026-02-21</summary>
-
-- [x] Phase 215: IChainSubscriber 인터페이스 + DB 스키마 설계 (2/2 plans) -- completed 2026-02-21
-- [x] Phase 216: Solana 수신 감지 전략 설계 (1/1 plan) -- completed 2026-02-21
-- [x] Phase 217: EVM 수신 감지 전략 설계 (1/1 plan) -- completed 2026-02-21
-- [x] Phase 218: WebSocket 연결 관리 + 폴링 폴백 설계 (2/2 plans) -- completed 2026-02-21
-- [x] Phase 219: 알림 이벤트 + 의심 입금 감지 설계 (2/2 plans) -- completed 2026-02-21
-- [x] Phase 220: REST API + SDK/MCP 명세 설계 (2/2 plans) -- completed 2026-02-21
-- [x] Phase 221: 설정 구조 + 설계 통합 검증 (2/2 plans) -- completed 2026-02-21
-- [x] Phase 222: 설계 문서 Critical/High 불일치 수정 (2/2 plans) -- completed 2026-02-21
-- [x] Phase 223: 알림 명세 보완 + 문서 정합성 (2/2 plans) -- completed 2026-02-21
-
-See `.planning/milestones/v27.0-ROADMAP.md` for full details.
-
-</details>
-
-<details>
-<summary>✅ v27.1 수신 트랜잭션 모니터링 구현 (Phases 224-230) -- SHIPPED 2026-02-22</summary>
-
-- [x] Phase 224: Core Types + DB Foundation (2/2 plans) -- completed 2026-02-21
-- [x] Phase 225: Chain Subscriber Implementations (3/3 plans) -- completed 2026-02-21
-- [x] Phase 226: Monitor Service + Resilience (4/4 plans) -- completed 2026-02-21
-- [x] Phase 227: Config + Settings + Notifications (2/2 plans) -- completed 2026-02-21
-- [x] Phase 228: REST API + SDK + MCP (3/3 plans) -- completed 2026-02-21
-- [x] Phase 229: Integration Testing (2/2 plans) -- completed 2026-02-21
-- [x] Phase 230: Integration Wiring Fixes (2/2 plans) -- completed 2026-02-21
-
-See `.planning/milestones/v27.1-ROADMAP.md` for full details.
-
-</details>
-
-<details>
-<summary>✅ v27.2 CAIP-19 자산 식별 표준 (Phases 231-234) -- SHIPPED 2026-02-22</summary>
-
-- [x] Phase 231: Core CAIP Module + Network Map (2/2 plans) -- completed 2026-02-22
-- [x] Phase 232: Oracle L2 Support + Cache Key Migration (2/2 plans) -- completed 2026-02-22
-- [x] Phase 233: DB Migration + Schema + Policy (3/3 plans) -- completed 2026-02-22
-- [x] Phase 234: MCP + SDK + Skills Integration (2/2 plans) -- completed 2026-02-22
-
-See `.planning/milestones/v27.2-ROADMAP.md` for full details.
-
-</details>
-
-<details>
-<summary>✅ v27.3 토큰별 지출 한도 정책 (Phases 235-238) -- SHIPPED 2026-02-22</summary>
-
-- [x] Phase 235: Schema -- Zod SSoT 확장 (1/1 plan) -- completed 2026-02-22
-- [x] Phase 236: Policy Engine -- 토큰별 티어 평가 (3/3 plans) -- completed 2026-02-22
-- [x] Phase 237: Admin UI -- 토큰별 한도 편집 폼 (2/2 plans) -- completed 2026-02-22
-- [x] Phase 238: Compat + Docs -- 하위 호환 검증 및 문서화 (1/1 plan) -- completed 2026-02-22
-
-See `.planning/milestones/v27.3-ROADMAP.md` for full details.
-
-</details>
-
-<details>
-<summary>✅ v27.4 Admin UI UX 개선 (Phases 239-243) -- SHIPPED 2026-02-23</summary>
-
-- [x] Phase 239: Foundation -- Shared Components + Admin API (2/2 plans) -- completed 2026-02-22
-- [x] Phase 240: Transactions Page + Dashboard (2/2 plans) -- completed 2026-02-22
-- [x] Phase 241: Token Registry + Notification Log (2/2 plans) -- completed 2026-02-22
-- [x] Phase 242: Incoming TX Monitoring UI (1/1 plan) -- completed 2026-02-22
-- [x] Phase 243: Wallet List + Wallet Detail (2/2 plans) -- completed 2026-02-23
-
-See `.planning/milestones/v27.4-ROADMAP.md` for full details.
-
-</details>
-
-<details>
-<summary>✅ v28.0 기본 DeFi 프로토콜 설계 (Phases 244-245) -- SHIPPED 2026-02-23</summary>
-
-- [x] Phase 244: 코어 설계 기반 (2/2 plans) -- completed 2026-02-23
-- [x] Phase 245: 런타임 동작 설계 (3/3 plans) -- completed 2026-02-23
-
-See `.planning/milestones/v28.0-ROADMAP.md` for full details.
-
-</details>
-
-<details>
-<summary>✅ v28.1 Jupiter Swap (Phases 246-247) -- SHIPPED 2026-02-23</summary>
-
-- [x] Phase 246: Core Provider Implementation (4/4 plans) -- completed 2026-02-23
-- [x] Phase 247: Daemon Integration + DX (2/2 plans) -- completed 2026-02-23
-
-See `.planning/milestones/v28.1-ROADMAP.md` for full details.
+See `.planning/milestones/` for archived phase details.
 
 </details>
 
 <details>
 <summary>✅ v28.2 0x EVM DEX Swap (Phases 248-250) -- SHIPPED 2026-02-24</summary>
 
-- [x] Phase 248: Provider Infrastructure (3/3 plans) -- completed 2026-02-23
+- [x] Phase 248: 0x API 클라이언트 + 공통 인프라 (2/2 plans) -- completed 2026-02-23
 - [x] Phase 249: 0x Swap Provider (2/2 plans) -- completed 2026-02-23
 - [x] Phase 250: Integration (2/2 plans) -- completed 2026-02-23
 
@@ -325,16 +169,18 @@ See `.planning/milestones/v29.0-ROADMAP.md` for full details.
 
 </details>
 
-## Progress
+<details>
+<summary>✅ v29.2 EVM Lending -- Aave V3 (Phases 274-278) -- SHIPPED 2026-02-27</summary>
 
-| Phase | Milestone | Plans Complete | Status | Completed |
-|-------|-----------|----------------|--------|-----------|
-| 268. 포지션 인프라 설계 | v29.0 | 2/2 | Complete | 2026-02-26 |
-| 269. DeFi 모니터링 프레임워크 설계 | v29.0 | 2/2 | Complete | 2026-02-26 |
-| 270. Lending 프레임워크 설계 | v29.0 | 2/2 | Complete | 2026-02-26 |
-| 271. Yield 프레임워크 설계 | v29.0 | 2/2 | Complete | 2026-02-26 |
-| 272. Perp 프레임워크 설계 | v29.0 | 2/2 | Complete | 2026-02-26 |
-| 273. Intent 서명 패턴 설계 | v29.0 | 2/2 | Complete | 2026-02-26 |
+- [x] Phase 274: SSoT Enums + DB Migration + Core Interfaces (3/3 plans) -- completed 2026-02-27
+- [x] Phase 275: Lending Framework Services (3/3 plans) -- completed 2026-02-27
+- [x] Phase 276: Aave V3 Provider Implementation (3/3 plans) -- completed 2026-02-26
+- [x] Phase 277: REST API + MCP + SDK Integration (3/3 plans) -- completed 2026-02-27
+- [x] Phase 278: Admin UI + Settings + E2E (3/3 plans) -- completed 2026-02-27
+
+See `.planning/milestones/v29.2-ROADMAP.md` for full details.
+
+</details>
 
 ---
-*Last updated: 2026-02-26 after v29.0 milestone completion*
+*Last updated: 2026-02-27 after v29.2 milestone completion*

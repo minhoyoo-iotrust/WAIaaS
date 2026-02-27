@@ -338,6 +338,7 @@ export async function executeSignOnly(
     amount: firstOp?.amount?.toString() ?? '0',
     to: firstOp?.to ?? '',
     display_amount: '', // sign-only: no USD conversion
+    network: request.network ?? '',
   }, { txId, signOnly: true });
 
   // v1.6: emit wallet:activity TX_SUBMITTED event (sign-only complete)

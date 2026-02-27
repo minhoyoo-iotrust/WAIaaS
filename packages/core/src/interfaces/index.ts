@@ -98,3 +98,22 @@ export {
   tokenAssetId,
   isNativeAsset,
 } from '../caip/index.js';
+
+// v29.2 Lending Provider types (Zod SSoT)
+export type {
+  LendingPositionSummary,
+  HealthFactor,
+  MarketInfo,
+  ILendingProvider,
+} from './lending-provider.types.js';
+export {
+  LendingPositionSummarySchema,
+  HealthFactorSchema,
+  MarketInfoSchema,
+} from './lending-provider.types.js';
+
+// v29.2 Position Provider types
+export type { PositionUpdate, IPositionProvider } from './position-provider.types.js';
+
+// v29.2 DeFi Monitor types
+export type { IDeFiMonitor, MonitorSeverity, MonitorEvaluation } from './defi-monitor.types.js';

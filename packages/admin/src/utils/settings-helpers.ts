@@ -130,6 +130,11 @@ export function keyToLabel(key: string): string {
     ntfy_request_topic_prefix: 'Ntfy Request Topic Prefix',
     ntfy_response_topic_prefix: 'Ntfy Response Topic Prefix',
     wallets: 'Registered Wallets (JSON)',
+    // aave_v3 keys
+    aave_v3_enabled: 'Aave V3 Enabled',
+    aave_v3_health_factor_warning_threshold: 'HF Warning Threshold',
+    aave_v3_position_sync_interval_sec: 'Position Sync Interval (seconds)',
+    aave_v3_max_ltv_pct: 'Max LTV Percentage',
     // gas_condition keys
     poll_interval_sec: 'Poll Interval (seconds)',
     default_timeout_sec: 'Default Timeout (seconds)',

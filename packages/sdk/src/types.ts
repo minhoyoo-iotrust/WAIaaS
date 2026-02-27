@@ -646,3 +646,37 @@ export type PolicyType =
   | 'APPROVE_TIER_OVERRIDE'
   | 'ALLOWED_NETWORKS'
   | 'X402_ALLOWED_DOMAINS';
+
+// ---------------------------------------------------------------------------
+// DeFi Position Types (API-01, API-02, API-05)
+// ---------------------------------------------------------------------------
+
+export interface DeFiPosition {
+  id: string;
+  category: string;
+  provider: string;
+  chain: string;
+  network: string | null;
+  assetId: string | null;
+  amount: string;
+  amountUsd: number | null;
+  metadata: unknown | null;
+  status: string;
+  openedAt: number;
+  lastSyncedAt: number;
+}
+
+export interface DeFiPositionsResponse {
+  walletId: string;
+  positions: DeFiPosition[];
+  totalValueUsd: number | null;
+}
+
+export interface HealthFactorResponse {
+  walletId: string;
+  factor: number;
+  totalCollateralUsd: number;
+  totalDebtUsd: number;
+  currentLtv: number;
+  status: 'safe' | 'warning' | 'danger' | 'critical';
+}

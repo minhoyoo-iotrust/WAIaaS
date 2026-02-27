@@ -42,6 +42,8 @@ import {
   POLICY_TIERS,
   NOTIFICATION_LOG_STATUSES,
   INCOMING_TX_STATUSES,
+  POSITION_CATEGORIES,
+  POSITION_STATUSES,
 } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------
@@ -491,3 +493,41 @@ export const incomingTxCursors = sqliteTable('incoming_tx_cursors', {
   lastBlockNumber: integer('last_block_number'),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
+
+// ---------------------------------------------------------------------------
+// Table 18: defi_positions -- DeFi position tracking
+// v29.2: Added for DeFi Lending framework position persistence
+// ---------------------------------------------------------------------------
+
+export const defiPositions = sqliteTable(
+  'defi_positions',
+  {
+    id: text('id').primaryKey(),
+    walletId: text('wallet_id').notNull().references(() => wallets.id, { onDelete: 'cascade' }),
+    category: text('category').notNull(),
+    provider: text('provider').notNull(),
+    chain: text('chain').notNull(),
+    network: text('network'),
+    assetId: text('asset_id'),
+    amount: text('amount').notNull(),
+    amountUsd: real('amount_usd'),
+    metadata: text('metadata'),
+    status: text('status').notNull().default('ACTIVE'),
+    openedAt: integer('opened_at', { mode: 'timestamp' }).notNull(),
+    closedAt: integer('closed_at', { mode: 'timestamp' }),
+    lastSyncedAt: integer('last_synced_at', { mode: 'timestamp' }).notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  },
+  (table) => [
+    index('idx_defi_positions_wallet_category').on(table.walletId, table.category),
+    index('idx_defi_positions_wallet_provider').on(table.walletId, table.provider),
+    index('idx_defi_positions_status').on(table.status),
+    uniqueIndex('idx_defi_positions_unique').on(
+      table.walletId, table.provider, table.assetId, table.category,
+    ),
+    check('check_position_category', buildCheckSql('category', POSITION_CATEGORIES)),
+    check('check_position_status', buildCheckSql('status', POSITION_STATUSES)),
+    check('check_position_chain', buildCheckSql('chain', CHAIN_TYPES)),
+  ],
+);

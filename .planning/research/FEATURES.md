@@ -1,448 +1,329 @@
-# Feature Landscape: Advanced DeFi Protocol Integration
+# Feature Landscape: Aave V3 EVM Lending + Lending Framework
 
-**Domain:** Lending (Aave V3 / Kamino / Morpho), Yield Tokenization (Pendle PT/YT), Perpetual Trading (Drift), Position Tracking, DeFi Monitoring (HealthFactor / Maturity / Margin), Intent-Based Trading (CoW Protocol EIP-712)
+**Domain:** DeFi Lending framework (ILendingProvider, PositionTracker, HealthFactorMonitor, LendingPolicyEvaluator) + Aave V3 first provider implementation
 **Researched:** 2026-02-26
-**Overall confidence:** HIGH (official protocol docs + SDK analysis + codebase review + competitive analysis)
+**Overall confidence:** HIGH (Aave V3 official docs verified, codebase IActionProvider pattern verified, m29-00 design doc reviewed, Phase 268-270 design outputs reviewed)
 
 ---
 
 ## Table Stakes
 
-Features users expect from an AI agent wallet with advanced DeFi protocol support. Missing = product cannot compete with Coinbase AgentKit (which integrates Morpho lending and yield monitoring), LiquidityGuard AI, or dedicated DeFi agent frameworks.
+Features users expect from an AI agent wallet with DeFi lending support. Missing any of these = incomplete lending integration, agent cannot safely manage lending positions. These are the minimum viable set for shipping Aave V3 support.
 
-### 1. Lending Protocol Integration (ILendingProvider)
+### 1. Core Lending Actions (4 operations via ILendingProvider)
 
-**Why this matters:** Lending is the largest DeFi category by TVL ($35B+ Aave alone). AI agents managing idle capital must be able to supply collateral, borrow against it, and maintain healthy positions. Without lending, the wallet is limited to swaps and staking -- insufficient for autonomous DeFi management.
-
-| Feature | Why Expected | Complexity | Dependencies | Notes |
-|---------|--------------|------------|--------------|-------|
-| Aave V3 supply (deposit collateral) | Aave is the dominant EVM lending protocol. Supply is the entry point for earning interest + enabling borrowing | Medium | viem ABI encoding, ERC-20 approve before supply | Pool.supply(asset, amount, onBehalfOf, 0). Returns aToken receipt. Deployed on Ethereum, Base, Arbitrum, Polygon, Optimism. Pool address: 0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2 (Ethereum) |
-| Aave V3 borrow (draw loan against collateral) | Core lending operation. Agent borrows stablecoins against volatile collateral for DeFi operations | High | Health factor check BEFORE borrow to prevent immediate liquidation risk | Pool.borrow(asset, amount, 2, 0, onBehalfOf). interestRateMode=2 (variable only in V3). Must verify HF > 1.0 after simulated borrow |
-| Aave V3 repay (return borrowed asset) | Complete lending lifecycle. Without repay, positions accumulate interest indefinitely | Medium | ERC-20 approve of debt token before repay | Pool.repay(asset, amount, 2, onBehalfOf). Use type(uint256).max for full debt repay |
-| Aave V3 withdraw (redeem aTokens for underlying) | Exit strategy. Agent must be able to recover supplied capital | Medium | Health factor check -- withdraw reduces collateral, may trigger liquidation | Pool.withdraw(asset, amount, to). Use type(uint).max for full balance. Must check HF after simulated withdrawal |
-| Kamino Lend supply + borrow (Solana equivalent) | Kamino is Solana's largest lending protocol. Solana agents need lending parity with EVM | High | @kamino-finance/klend-sdk for instruction building, KaminoMarket.load() for market data | KaminoAction.buildDepositTxns() / buildBorrowTxns(). Instruction-level integration, not REST API |
-| Health Factor query | Agent MUST know position health before any action. Without HF visibility, agent operates blind | Medium | Aave: getUserAccountData() returns HF directly. Kamino: SDK obligation calculation | Aave HF = (totalCollateral * liquidationThreshold) / totalDebt. HF < 1 = liquidation eligible |
-| Position summary query | "What are my lending positions?" -- basic visibility for agent decision-making | Medium | Aave: Pool view functions for user reserves. Kamino: obligation account deserialization | Returns: supplied assets + aToken balances, borrowed assets + debt, current HF, current LTV |
-
-### 2. Yield Tokenization (Pendle PT/YT)
-
-**Why this matters:** Pendle is the dominant yield tokenization protocol ($5B+ TVL), enabling fixed-yield strategies that are uniquely valuable for AI agents: buy PT at discount, hold to maturity, receive guaranteed fixed return. This is the DeFi equivalent of a bond -- a crucial tool for agents managing treasury.
+**Why this matters:** Lending is the largest DeFi category by TVL. Aave V3 alone holds ~$37B TVL across 10+ EVM chains. AI agents managing idle capital must supply, borrow, repay, and withdraw. These 4 operations form a complete lending lifecycle. Without all 4, the agent enters positions it cannot exit.
 
 | Feature | Why Expected | Complexity | Dependencies | Notes |
 |---------|--------------|------------|--------------|-------|
-| Buy PT (Principal Token) with underlying | Core fixed-yield entry: buy discounted PT, hold to maturity, redeem at par. Agent locks in fixed APY | High | Pendle Router swapExactTokenForPt(). Requires market address, ApproxParams for slippage. Flash swap mechanics | EVM-only (Ethereum, Arbitrum). Pendle Solana deployment is PT-only via CCIP/Kamino bridge -- not full protocol |
-| Sell PT for underlying | Exit before maturity or take profit. PT trades at discount that narrows as maturity approaches | Medium | Pendle Router swapExactPtForToken(). Requires PT approval | Liquidity varies by market; near-expiry markets may have thin liquidity |
-| Buy YT (Yield Token) | Speculative yield position: long future yield at leveraged exposure. Higher risk, higher potential return | High | Pendle Router swapExactTokenForYt(). Flash swap + approximation logic | YT value decays to 0 at maturity. Agent must understand time decay |
-| Redeem PT at maturity | Post-maturity, PT redeems 1:1 for underlying SY token. Core value proposition of fixed yield | Low | Pendle Router redeemPyToToken(). Only PT needed post-maturity (no YT required) | Must track maturity dates per position |
-| Market/pool discovery | Agent needs to know which PT/YT markets exist, their APYs, and maturity dates | Medium | Pendle API or on-chain market enumeration. Each market = specific underlying + maturity date | Required for agent to make informed PT purchase decisions |
+| Supply (deposit asset to earn interest) | Entry point for lending. Agent deposits idle assets to earn supply APY + enable borrowing. aTokens are minted as receipt | Medium | ERC-20 approve before supply (existing multi-step pattern from LidoStaking), viem ABI encoding, Pool contract address per chain | `Pool.supply(asset, amount, onBehalfOf, 0)`. Referral code always 0 (inactive). Returns aToken balance increase. Must resolve to `[approveRequest, supplyRequest]` ContractCallRequest[] when allowance insufficient |
+| Borrow (draw loan against collateral) | Core value proposition of lending. Agent borrows stablecoins against volatile collateral for further DeFi operations (leverage, yield farming) | High | Pre-borrow health factor simulation REQUIRED -- must verify HF stays > 1.0 after borrow. LendingPolicyEvaluator LTV check. Sufficient collateral deposited | `Pool.borrow(asset, amount, 2, 0, onBehalfOf)`. interestRateMode ALWAYS 2 (variable) -- stable rate deprecated in V3 governance. Must check projected HF before resolving |
+| Repay (return borrowed asset to reduce debt) | Closes borrowing positions. Without repay, debt accrues interest indefinitely. Critical for health factor management when approaching liquidation | Medium | ERC-20 approve of debt token before repay. Must handle max repay (type(uint256).max = full debt) | `Pool.repay(asset, amount, 2, onBehalfOf)`. Returns actual amount repaid. Agent should support "repay all" shorthand |
+| Withdraw (redeem supplied asset) | Exit strategy. Agent recovers deposited capital + accrued interest. aTokens are burned | Medium | Post-withdrawal health factor check -- reducing collateral may trigger liquidation if outstanding borrows exist. Must prevent HF < 1.0 | `Pool.withdraw(asset, amount, to)`. Use type(uint).max for full balance. Amount limited by available liquidity in pool |
 
-### 3. Perpetual Trading (Drift Protocol)
+**Confidence:** HIGH -- Aave V3 Pool ABI verified from official docs (https://aave.com/docs/aave-v3/smart-contracts/pool). All 4 functions are single contract calls via viem encodeFunctionData, matching the existing resolve() -> ContractCallRequest pattern.
 
-**Why this matters:** Perpetual futures enable hedging and leveraged speculation -- core operations for sophisticated AI agents. Drift is Solana's dominant perps platform with up to 101x leverage, cross-margin, and deep liquidity.
+### 2. Health Factor Visibility
 
-| Feature | Why Expected | Complexity | Dependencies | Notes |
-|---------|--------------|------------|--------------|-------|
-| Open perp position (long/short) | Core perp operation: agent expresses directional view with leverage | Very High | @drift-labs/sdk required (complex instruction building, BN precision, oracle integration). Cannot use REST API alone | SDK uses BigNum (BN) for all values. DriftClient initialization requires market subscription |
-| Close perp position | Exit strategy. Agent must be able to close winning or losing positions | High | DriftClient.cancelAndPlaceOrders() or market close. Position tracking via getUser() | Must handle partial close vs full close |
-| Place limit/trigger orders | Non-market order types for agent's conditional strategies (take-profit, stop-loss) | High | DriftClient.placePerpOrder() with orderType variants. On-chain order book | Order types: MARKET, LIMIT, TRIGGER_MARKET, TRIGGER_LIMIT, ORACLE |
-| Margin query + free collateral | Agent must know available margin before opening positions. Margin call prevention | Medium | DriftClient getUser() -> calculateFreeCollateral(), getMarginRequirement() | Cross-margin across all perp positions and spot balances |
-| Position PnL query | "What is my current P&L?" for agent decision-making | Medium | getUser().getPerpPosition(marketIndex) -> baseAssetAmount, quoteAssetAmount, unrealizedPnl | Mark price vs entry price, including funding payments |
-| Funding rate query | Funding rate affects position profitability over time. Agent needs to factor this in | Low | DriftClient.getPerpMarketAccount(marketIndex).amm.lastFundingRate | Updated hourly. Critical for carry trade strategies |
-
-### 4. Position Tracking (PositionTracker)
-
-**Why this matters:** Across lending + yield + perps, an agent manages multiple concurrent positions. Without unified tracking, the agent cannot make informed cross-protocol decisions about capital allocation.
+**Why this matters:** Health factor (HF) is THE risk metric for lending. HF = (totalCollateral * liquidationThreshold) / totalDebt. HF < 1.0 = position eligible for liquidation (up to 50% of debt can be liquidated, or 100% if HF < 0.95 or positions < $2,000). An AI agent operating lending without HF visibility is operating blind.
 
 | Feature | Why Expected | Complexity | Dependencies | Notes |
 |---------|--------------|------------|--------------|-------|
-| Unified position inventory | Single query: "what are all my DeFi positions?" across protocols | Medium | Aggregate from ILendingProvider.getPositions(), Pendle market queries, Drift getUser() | Returns normalized PositionSummary[] with protocol, type, amounts, health metrics |
-| Position value in USD | All positions valued in common denominator for portfolio-level decisions | Low | Existing IPriceOracle + CAIP-19 asset identification | LST positions use exchange-rate-to-base-asset method (existing pattern from v28.4) |
-| Position state persistence | Positions must survive daemon restarts. Track open/close lifecycle | Medium | New DB table: defi_positions (walletId, protocol, type, metadata JSON, status, opened_at, closed_at) | IAsyncStatusTracker already provides the polling pattern |
-| REST API: GET /v1/wallets/:id/positions | Agent/Admin needs HTTP access to position data | Medium | New endpoint aggregating from position DB + live chain queries | Merge DB persisted state with on-chain current values |
-| MCP tool: get_defi_positions | AI agents access positions via MCP | Low | Auto-generated from ActionProvider with mcpExpose=true | Standard MCP tool pattern |
+| Health factor query (per-wallet) | Agent MUST know HF before any borrow/withdraw that affects collateral/debt ratio. Decision-making prerequisite | Medium | Aave Pool.getUserAccountData() returns 6-tuple including healthFactor (uint256, WAD-scaled 1e18) | Returns: totalCollateralBase, totalDebtBase, availableBorrowsBase, currentLiquidationThreshold, ltv, healthFactor. All values in base currency (USD) with 8 decimals |
+| Health factor status classification | Agent needs semantic meaning, not just a number. "Am I safe, at risk, or about to be liquidated?" | Low | Thresholds from Phase 269 HealthFactorMonitor design: SAFE (>2.0), WARNING (1.5-2.0), DANGER (1.2-1.5), CRITICAL (<1.2) | Admin-configurable warning threshold (default 1.2). Maps to LIQUIDATION_WARNING notification |
+| Pre-action HF simulation | Before borrow/withdraw, predict resulting HF. Reject if simulated HF would be unsafe | High | Current collateral+debt from getUserAccountData() + projected change from action params + asset price from IPriceOracle | Critical safety feature: prevents agent from submitting a borrow that would immediately trigger liquidation warning |
+| REST API endpoint (GET /v1/wallets/:id/health-factor) | Standard API access for health factor data. AI agents query this before lending decisions | Medium | HealthFactor response schema (Zod), aggregated across providers with per-provider breakdown | Returns worst HF across all lending providers + per-provider detail array |
 
-### 5. DeFi Monitoring Service
+**Confidence:** HIGH -- getUserAccountData() function verified from Aave V3 Pool contract. Returns health factor directly; no manual computation needed for Aave.
 
-**Why this matters:** DeFi positions are not "set and forget." Health factors change with price movements, PT maturities arrive, and margin requirements shift. Without proactive monitoring, an agent's positions can be liquidated without warning. This is THE critical safety layer.
+### 3. Position Tracking and Persistence
 
-| Feature | Why Expected | Complexity | Dependencies | Notes |
-|---------|--------------|------------|--------------|-------|
-| Health Factor monitoring (Aave/Kamino) | Poll HF at interval, alert when approaching liquidation threshold | High | On-chain HF query per lending position. Configurable thresholds (WARNING at 1.5, CRITICAL at 1.2, DANGER at 1.05) | Aave: getUserAccountData() single call. Kamino: obligation recalculation. Both need per-position polling |
-| Maturity monitoring (Pendle PT/YT) | Alert agent when PT position approaches maturity for redemption | Medium | Track maturity timestamps per PT position. Alert at configurable lead time (7d, 1d, 1h before) | YT positions that reach maturity without being sold/redeemed lose all remaining yield value |
-| Margin monitoring (Drift) | Alert when free margin drops below threshold, prevent forced liquidation | High | Drift getUser() margin calculation. Configurable free-margin threshold | Drift liquidation = oracle price based. Must use same oracle source as Drift |
-| Multi-channel alert routing | Monitoring alerts use existing 4-channel notification system (Telegram/Discord/ntfy/Slack) | Low | Existing NotificationService + WalletNotificationChannel | New event types: HF_WARNING, HF_CRITICAL, PT_MATURITY_APPROACHING, MARGIN_LOW, POSITION_LIQUIDATED |
-| Auto-action on critical threshold (optional) | Configurable: auto-repay on HF critical, auto-redeem on PT maturity | Very High | Requires PositionTracker + ILendingProvider + policy engine integration for auto-actions | This is the "AI agent safety net" -- the wallet itself takes protective action |
-
-### 6. Policy Integration for DeFi Positions
+**Why this matters:** Lending creates stateful positions that persist across sessions. Unlike swap (fire-and-forget), a supply position accrues interest continuously and a borrow position accrues debt. The agent must track these across daemon restarts and provide a unified view.
 
 | Feature | Why Expected | Complexity | Dependencies | Notes |
 |---------|--------------|------------|--------------|-------|
-| CONTRACT_WHITELIST for lending/perp contracts | Aave Pool, Kamino program, Drift program, Pendle Router must be whitelisted | Low | Existing policy engine. Provider-managed whitelist bundles (pattern from v28.0) | Critical: each protocol has multiple contract addresses per chain |
-| SPENDING_LIMIT on supply/borrow/position-open | All capital deployment counts against spending limits | Low | resolve() returns amount -> USD conversion -> existing 4-tier evaluation | Borrow actions: evaluate the borrowed amount, not the collateral |
-| MAX_LEVERAGE policy (new) | Prevent agents from opening excessively leveraged perp positions | Medium | New PolicyType: MAX_LEVERAGE with configurable multiplier per wallet | Drift supports up to 101x. Default policy should cap at 5x or 10x |
-| MAX_BORROW_UTILIZATION policy (new) | Prevent agents from borrowing up to liquidation threshold | Medium | New PolicyType: ensure post-borrow HF >= minHealthFactor (e.g., 1.5) | Evaluated at borrow time. Prevents "borrow to 99% LTV" scenarios |
+| defi_positions table (DB persistence) | Positions survive daemon restarts. Track open/close lifecycle with USD valuation | Medium | DB migration (defi_positions 14-column table from m29-00 design), Drizzle ORM schema, POSITION_CATEGORIES/STATUSES SSoT enums | Already designed in Phase 268: category-discriminated table with LendingMetadata JSON in metadata column |
+| Periodic position sync (PositionTracker, 5min interval) | aToken balances change continuously (interest accrual). DB cache must be refreshed periodically for Admin UI and API queries | Medium | PositionTracker service (from Phase 268 design), IPositionProvider interface on each lending provider, PositionWriteQueue for batch DB writes | Sync reads on-chain aToken/debtToken balances, updates defi_positions with current amounts + USD values |
+| Position query API (GET /v1/wallets/:id/positions) | Agent asks "what are my lending positions?" -- needs structured response with amounts, APYs, USD values | Medium | Positions endpoint designed in Phase 268 (section 7), filter by category=LENDING | Returns array of positions with asset, positionType (SUPPLY/BORROW), amount, amountUsd, apy, provider |
+| Position lifecycle tracking (ACTIVE -> CLOSED/LIQUIDATED) | Detect when positions are closed (withdraw all) or liquidated (HF < 1.0). Update status accordingly | Medium | PositionTracker sync detects zero balances -> CLOSED. HealthFactorMonitor detects liquidation events -> LIQUIDATED | Status transitions recorded with timestamps for audit trail |
+
+**Confidence:** HIGH -- defi_positions table and PositionTracker design already completed in Phase 268 of m29-00. Implementation follows established patterns.
+
+### 4. Health Factor Monitoring and Alerts
+
+**Why this matters:** Lending positions can become dangerous between agent interactions. Price drops reduce collateral value, increasing liquidation risk. Continuous monitoring with proactive alerts is essential for owner visibility. Without alerts, the first notification of trouble may be actual liquidation.
+
+| Feature | Why Expected | Complexity | Dependencies | Notes |
+|---------|--------------|------------|--------------|-------|
+| HealthFactorMonitor service (polling) | Background service that checks HF for all wallets with active lending positions at regular intervals (5min default, adaptive) | Medium | Phase 269 design: adaptive polling (5min normal, 2min WARNING, 1min DANGER, 30s CRITICAL). Reads from defi_positions cache for efficiency, on-chain for critical checks | Integrates with existing daemon lifecycle (start/stop registration) |
+| LIQUIDATION_WARNING notification event | When HF drops below threshold (default 1.2), fire LIQUIDATION_WARNING through existing 4-channel notification system (Telegram/Discord/ntfy/Slack) | Medium | New notification event type in @waiaas/core SSoT enums. Message template with current HF, collateral/debt values, recommended actions | Must include actionable info: "Your health factor is 1.15. Consider repaying debt or adding collateral." |
+| Duplicate alert suppression | Avoid spamming owner with repeated warnings. One alert per severity level transition per wallet per provider | Low | Existing notification dedup pattern (24h for LOW_BALANCE). For HF: alert on severity transition (SAFE->WARNING, WARNING->DANGER, etc.), not on every poll | Severity transitions: SAFE(>2.0) -> WARNING(1.5-2.0) -> DANGER(1.2-1.5) -> CRITICAL(<1.2) |
+
+**Confidence:** HIGH -- HealthFactorMonitor design completed in Phase 269 with adaptive polling, severity levels, and notification integration.
+
+### 5. Lending Policy Evaluation
+
+**Why this matters:** AI agents must not borrow unlimited amounts or interact with arbitrary lending markets. The project's default-deny security model (CLAUDE.md: "deny when ... not configured") must extend to lending. LTV limits prevent over-leveraging that could cause liquidation.
+
+| Feature | Why Expected | Complexity | Dependencies | Notes |
+|---------|--------------|------------|--------------|-------|
+| LENDING_ASSET_WHITELIST policy type | Default-deny: only pre-approved assets can be used as collateral or for borrowing. Follows CONTRACT_WHITELIST pattern | Medium | New policy type in DatabasePolicyEngine. Rules JSON: `{ collateralAssets: [{assetId, symbol}], borrowAssets: [{assetId, symbol}] }`. CAIP-19 asset identifiers | When no whitelist configured, ALL lending actions denied. Same pattern as CONTRACT_WHITELIST opt-in |
+| LENDING_LTV_LIMIT policy type | Maximum LTV cap for new borrows. Prevents agent from leveraging beyond owner-defined risk tolerance | Medium | New policy type. Rules JSON: `{ maxLtv: 0.75, warningLtv: 0.65 }`. Projected LTV computed before borrow execution | Evaluated BEFORE pipeline submission. If projected LTV > maxLtv, action denied. Policy configurable per-wallet or global |
+| Policy integration with existing pipeline | Lending actions (supply/borrow/repay/withdraw) flow through the same 6-stage pipeline. ContractCallRequest carries action metadata for policy evaluator identification | Low | Existing metadata/hint field on ContractCallRequest to carry `{ actionProvider: 'aave_v3', actionName: 'borrow' }` | No new transaction type in discriminatedUnion 5-type. Lending actions ARE CONTRACT_CALL type with metadata annotation |
+
+**Confidence:** HIGH -- DatabasePolicyEngine pattern verified from codebase. 9 existing policy types provide the exact pattern to follow. Phase 270 design specifies integration points.
+
+### 6. Aave V3 Chain Support (Contract Address Mapping)
+
+**Why this matters:** Aave V3 is deployed across 10+ EVM chains. The wallet already supports multi-chain EVM (EvmAdapter + environment/network model). Agent must be able to use Aave on the chain where their wallet operates.
+
+| Feature | Why Expected | Complexity | Dependencies | Notes |
+|---------|--------------|------------|--------------|-------|
+| AaveContractHelper (chain-to-contract address mapping) | Maps chain/network to correct Pool, PoolDataProvider, Oracle addresses. Required for every Aave interaction | Low | Static mapping from Aave deployed addresses. Pool addresses: Ethereum=0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2, Arbitrum/Optimism/Polygon=0x794a61358D6845594F94dc1DB02A252b5b4814aD, Base=0xA238Dd80C259a72e81d7e4664a9801593F98d1c5 | Alternative: use PoolAddressesProvider.getPool() for dynamic resolution. Hardcoded preferred for self-hosted (no extra RPC call). Fallback to dynamic if needed |
+| Market data query (AaveMarketData) | Agent needs to know available assets, their APYs, LTVs, supply/borrow caps before making decisions | Medium | On-chain: PoolDataProvider.getReserveData(asset) returns rates, caps, totals. PoolDataProvider.getAllReservesTokens() for asset list | Returns per-asset: supplyApy, borrowApy, ltv, liquidationThreshold, supplyCap, borrowCap, isActive |
+| L2Pool optimization (Arbitrum/Optimism/Base/Polygon) | L2 chains use calldata-optimized L2Pool contract for lower gas costs | Low | Use L2Pool ABI which accepts compressed calldata format. Same functional interface as Pool but encoded differently | Aave deploys L2Pool on all L2s. encodeFunctionData uses the same method names but may have different ABI |
+
+**Confidence:** HIGH -- Contract addresses verified via Etherscan/BaseScan. PoolDataProvider ABI verified from official docs.
+
+### 7. MCP Tool Integration
+
+**Why this matters:** MCP tools are how AI agents interact with the wallet. Without MCP tools for lending, agents cannot use lending features through the standard MCP interface. Existing pattern: each ActionProvider's actions are auto-converted to MCP tools.
+
+| Feature | Why Expected | Complexity | Dependencies | Notes |
+|---------|--------------|------------|--------------|-------|
+| waiaas_aave_supply MCP tool | Supply assets to Aave V3 | Low | Auto-generated from AaveV3LendingProvider.actions[0] by ActionProviderRegistry -> MCP tool conversion | Input: { asset: string, amount: string }. Same pattern as waiaas_lido_stake |
+| waiaas_aave_borrow MCP tool | Borrow assets from Aave V3 | Low | Auto-generated | Input: { asset: string, amount: string }. interestRateMode hardcoded to 2 (variable) |
+| waiaas_aave_repay MCP tool | Repay borrowed assets | Low | Auto-generated | Input: { asset: string, amount: string }. "max" for full repay |
+| waiaas_aave_withdraw MCP tool | Withdraw supplied assets | Low | Auto-generated | Input: { asset: string, amount: string }. "max" for full withdrawal |
+| waiaas_aave_positions MCP tool | Query current lending positions | Medium | NOT auto-generated (query method, not action). Must be manually registered as MCP tool | Input: { walletId?: string }. Returns positions array + health factor |
+
+**Confidence:** HIGH -- MCP auto-conversion pattern verified from existing providers. Manual tool registration pattern exists for query-only operations.
+
+### 8. SDK Extension
+
+**Why this matters:** TS/Python SDK users need programmatic access to lending functions. Existing pattern: `executeAction('provider_action', params)`.
+
+| Feature | Why Expected | Complexity | Dependencies | Notes |
+|---------|--------------|------------|--------------|-------|
+| SDK executeAction('aave_supply', params) | TypeScript/Python SDK supply call | Low | Existing executeAction pattern in SDK. No new SDK methods needed -- just new action names | Same pattern as executeAction('lido_stake', params) |
+| SDK executeAction('aave_borrow', params) | SDK borrow call | Low | Same pattern | Agent code: `await sdk.executeAction('aave_borrow', { asset: '0x...', amount: '100' })` |
+| SDK executeAction('aave_repay', params) | SDK repay call | Low | Same pattern | Support 'max' amount for full repay |
+| SDK executeAction('aave_withdraw', params) | SDK withdraw call | Low | Same pattern | Support 'max' amount for full withdrawal |
+| SDK getPositions(walletId) convenience method | Typed method for position queries (not just raw API call) | Medium | New SDK method wrapping GET /v1/wallets/:id/positions | Returns typed LendingPosition[] with TS IntelliSense |
+| SDK getHealthFactor(walletId) convenience method | Typed method for health factor queries | Medium | New SDK method wrapping GET /v1/wallets/:id/health-factor | Returns typed HealthFactor with status classification |
+
+**Confidence:** HIGH -- executeAction pattern verified in codebase. New convenience methods follow existing SDK patterns.
+
+### 9. Admin UI Integration
+
+**Why this matters:** Admin Web UI is the operator's primary management interface. DeFi positions need visibility alongside existing wallet management. Without Admin UI, operator must use raw API calls to monitor positions.
+
+| Feature | Why Expected | Complexity | Dependencies | Notes |
+|---------|--------------|------------|--------------|-------|
+| Portfolio section in wallet detail view | Show active DeFi positions (supplied/borrowed assets, amounts, APYs) in wallet's Overview tab | Medium | Existing Wallet 4-tab detail view (Overview/Transactions/Owner/MCP). Add DeFi section to Overview or new Positions tab | Reads from defi_positions DB cache via positions API |
+| Health factor indicator | Visual HF display with color-coded status (green=safe, yellow=warning, red=danger) | Low | HF data from health-factor API. Color mapping: >2.0 green, 1.5-2.0 yellow, 1.2-1.5 orange, <1.2 red | Most important single metric for lending positions |
+| APY display per position | Show current supply/borrow APY for each position | Low | APY stored in defi_positions.metadata.apy, refreshed by PositionTracker | Supply APY = earnings rate. Borrow APY = cost rate. Agent should see both |
+| Aave V3 admin settings | Enable/disable provider, configure HF warning threshold, position sync interval, max LTV | Low | Existing Admin Settings pattern (Actions page). 4 config keys: enabled, health_factor_warning_threshold, position_sync_interval_sec, max_ltv_pct | Matches existing provider settings pattern from v28.x actions |
+
+**Confidence:** HIGH -- Admin UI patterns well-established. Preact component patterns verified from existing wallet detail views.
 
 ---
 
 ## Differentiators
 
-Features that set WAIaaS apart from Coinbase AgentKit and other AI agent wallets. Not expected, but highly valued for advanced DeFi use cases.
+Features that set this implementation apart from basic Aave integrations. Not expected by every user, but valued by sophisticated AI agent operators.
 
-### High Value
-
-| Feature | Value Proposition | Complexity | Dependencies | Notes |
-|---------|-------------------|------------|--------------|-------|
-| Intent-based trading via CoW Protocol | MEV-protected swaps via EIP-712 signed intents. Solvers compete for best execution. No direct on-chain transaction from wallet | Very High | @cowprotocol/cow-sdk for order signing. EIP-712 domain separator. Off-chain order submission to CoW API. Solver settlement | Fundamentally different from ActionProvider resolve() pattern: no calldata returned, order is signed and submitted off-chain. Batch auction settlement. EVM-only |
-| Proactive HF defender (auto-repay/deleverage) | When HF drops to CRITICAL, wallet auto-executes repay or collateral top-up without human intervention. The "kill switch for liquidation" | Very High | ILendingProvider.repay() + PositionTracker + DeFiMonitorService + policy engine approval bypass for emergency actions | Unique value: most agent wallets alert but do not auto-act. WAIaaS can be the safety net that prevents liquidation losses |
-| Cross-protocol position dashboard (Admin UI) | Single Admin UI page showing all DeFi positions: lending HF, PT maturity timelines, perp PnL, margin utilization | High | PositionTracker REST API + Admin UI components | Coinbase AgentKit has no admin dashboard. This is a self-hosted operator advantage |
-| Fixed yield strategy via MCP | "Lock 10 ETH at 5% fixed yield for 6 months" -> MCP tool -> Pendle PT purchase -> maturity tracking -> auto-redeem | High | Pendle integration + maturity monitoring + auto-redeem action | Bridges traditional finance "fixed income" concept to DeFi via natural language |
-| Unified DeFi health dashboard notification | Daily/weekly digest of all position health across protocols. "Your portfolio: 3 lending positions (HF avg 2.1), 2 PT positions (nearest maturity: 45 days), 1 perp position (+$340 unrealized)" | Medium | PositionTracker + NotificationService + templated message formatting | Quality-of-life feature that reduces monitoring burden on operators |
-
-### Medium Value
+### 1. Pre-Action Safety Simulation
 
 | Feature | Value Proposition | Complexity | Dependencies | Notes |
 |---------|-------------------|------------|--------------|-------|
-| Lending APY comparison across protocols | "Which protocol offers best supply rate for USDC?" across Aave/Kamino/Morpho | Medium | On-chain rate queries per protocol. Normalize to common APY format | Useful for agent capital allocation decisions |
-| Provider-level enable/disable for advanced protocols | Operator chooses which advanced DeFi protocols are active. Security-conscious operators can disable perps entirely | Low | Existing config.toml [actions.{name}] enabled pattern | Aligns with self-hosted philosophy: operator controls risk exposure |
-| Position history and analytics | Track historical positions: entry/exit prices, duration, realized PnL | Medium | DB table extension with position lifecycle events | Useful for operator review of agent performance |
-| Morpho Blue isolated market lending | Alternative to Aave with isolated risk: each market has its own collateral/loan pair. No cross-contamination | High | morpho-org/blue-sdk-viem for TypeScript integration. Singleton contract pattern. MarketParams identification | Morpho is simpler contract-wise but market discovery is more complex |
+| Simulate borrow impact on HF | Before executing borrow, compute projected HF. Reject if result would be unsafe. Prevents self-inflicted liquidation risk | High | Current getUserAccountData() + projected borrow amount + asset price from IPriceOracle. Formula: newHF = (collateral * liqThreshold) / (currentDebt + newBorrow) | Unique safety feature for AI agents. Most wallets don't simulate -- they just submit and hope |
+| Simulate withdrawal impact on HF | Before executing withdrawal, check if remaining collateral supports existing debt | High | Same simulation approach. Formula: newHF = ((collateral - withdrawAmount) * liqThreshold) / currentDebt | Prevents accidental self-liquidation when withdrawing collateral with active borrows |
+| "max safe borrow" calculation | Agent asks "how much can I safely borrow?" -- returns amount respecting max LTV policy | Medium | Available borrows from getUserAccountData().availableBorrowsBase, capped by LendingPolicyEvaluator maxLtv | Useful for agents doing automated leverage strategies |
+
+### 2. Adaptive Monitoring Intelligence
+
+| Feature | Value Proposition | Complexity | Dependencies | Notes |
+|---------|-------------------|------------|--------------|-------|
+| Adaptive polling frequency | HF closer to danger = more frequent checks. SAFE: 5min, WARNING: 2min, DANGER: 1min, CRITICAL: 30s | Medium | Phase 269 HealthFactorMonitor already designed this. Implementation follows the design | Balances RPC cost vs risk detection speed. Most competing products use fixed intervals |
+| Escalating notification severity | First warning is informational. Repeated/worsening warnings escalate priority. Critical triggers immediate owner notification via all channels | Medium | Existing notification priority system (LOW/NORMAL/HIGH/URGENT). Map HF severity to notification priority | Owner gets gentler nudges for minor HF drops, urgent alerts for approaching liquidation |
+
+### 3. Collateral Management
+
+| Feature | Value Proposition | Complexity | Dependencies | Notes |
+|---------|-------------------|------------|--------------|-------|
+| Enable/disable asset as collateral (setUserUseReserveAsCollateral) | Agent can toggle which supplied assets count as collateral. Useful for risk isolation -- supply an asset for interest without using it as borrow collateral | Medium | Pool.setUserUseReserveAsCollateral(asset, useAsCollateral). Additional action in AaveV3LendingProvider | Not all agents need this, but it's a powerful risk management primitive |
+| Isolation mode awareness | Detect when an asset is in Isolation Mode (can only borrow stablecoins up to debt ceiling). Prevent confusing errors | Low | getReserveConfigurationData() includes isolation mode flags. Surface this in market data query | Aave V3 feature: some assets (newer, riskier) have restricted borrowing capabilities |
+
+### 4. Market Intelligence for Agent Decision-Making
+
+| Feature | Value Proposition | Complexity | Dependencies | Notes |
+|---------|-------------------|------------|--------------|-------|
+| Real-time APY comparison across assets | Agent asks "which asset gives the best supply APY right now?" for optimal capital allocation | Medium | PoolDataProvider.getReserveData() for all active reserves. Return sorted by supply/borrow APY | Enables yield optimization strategies: move capital to highest-APY assets |
+| Utilization rate visibility | Show how utilized each lending pool is. High utilization = higher APY but lower withdrawal liquidity | Low | Utilization = totalBorrow / totalSupply. Derived from getReserveData() | Agent should avoid supplying to 95%+ utilized pools (withdrawal risk) |
+| Supply/borrow cap awareness | Prevent failed transactions by checking caps before action submission | Low | PoolDataProvider.getReserveCaps() returns supply/borrow caps per asset | If supply cap is hit, supply transaction will revert. Better to check beforehand |
 
 ---
 
 ## Anti-Features
 
-Features to explicitly NOT build. These represent scope creep, excessive risk for autonomous agents, or fundamentally different products.
+Features to explicitly NOT build in this milestone. Either premature, out of scope, or harmful.
 
 | Anti-Feature | Why Avoid | What to Do Instead |
 |--------------|-----------|-------------------|
-| Automated yield farming / LP management | Impermanent loss, rebalancing complexity, multi-protocol coordination. 10x scope. Coinbase mentions it but does not ship it well | Provide lending supply (earn interest) and Pendle PT (fixed yield) as yield strategies. These are simpler, lower-risk alternatives |
-| Custom liquidation bot (run liquidations on others) | MEV extraction role, not wallet infrastructure role. Ethical concerns. High capital requirements | Focus on liquidation PREVENTION (HF monitoring + auto-repay). The wallet protects its own positions, does not attack others |
-| Advanced perp strategies (grid trading, basis trading, funding rate arbitrage) | Agent application logic, not wallet infrastructure. Requires persistent order management, complex state machines | Provide the primitives (open/close/query) and let agent frameworks build strategies. WAIaaS is the execution layer |
-| Cross-margin across protocols | Combining Aave collateral with Drift margin in a unified margin calculation is protocol-impossible and extremely dangerous | Track positions per protocol independently. Show unified view in dashboard but never combine margin calculations |
-| Pendle LP provision | Providing liquidity to Pendle PT/SY pools requires impermanent loss management, fee optimization, and active rebalancing | Buying/selling PT and YT via Router is sufficient. LP is a separate, more complex operation |
-| Morpho Vault curation | Creating and managing Morpho Vaults (curated lending pools) is a DeFi protocol operator task, not an agent wallet task | Support supply/borrow via existing Morpho markets. Do not build vault creation/management |
-| CoW Protocol solver implementation | Building a solver is a MEV/market-making operation requiring significant capital and infrastructure | Integrate as order submitter only. Use CoW SDK to sign and submit intents, let existing solvers compete |
-| Drift market making / JIT liquidity | Providing liquidity on Drift is a professional market-making operation | Support trading (open/close positions, orders) only |
-| Automatic portfolio rebalancing across protocols | Deciding when to move capital between lending/staking/perps is agent application logic | Provide position queries and execution primitives. Agent decides allocation |
-| Flash loan strategies | Flash loans are for MEV extraction, arbitrage, and liquidation -- not wallet operations | Not in scope. If needed in future, separate milestone with dedicated risk analysis |
+| Flash loan support | Flash loans require atomic same-transaction execution with custom receiver contracts. Incompatible with the wallet's key-custody signing model (sign externally, submit). Extremely high complexity with limited AI agent use cases | Defer indefinitely. Flash loans are primarily for MEV/arbitrage bots that run their own contracts, not for wallet-managed agents |
+| Credit delegation (let others borrow against your collateral) | Extreme risk: a delegatee can borrow and not repay, leaving the delegator with debt. No safe way for an AI agent to manage this | Explicitly block. Do not expose approveDelegation(). This is an anti-feature for an AI agent wallet |
+| Stable rate borrowing | Aave V3 governance disabled stable rate on most markets (2023). The interestRateMode=1 parameter exists in ABI but fails for most assets | Always use interestRateMode=2 (variable). Do not expose rate mode selection to agent |
+| Auto-leverage (recursive supply-borrow-supply) | Multi-step leverage amplification that multiplies liquidation risk. Extremely dangerous for autonomous agents without real-time human oversight | Provide individual supply/borrow actions. Agent can compose leverage manually if owner configures appropriate policies, but wallet does not automate multi-step leverage |
+| Liquidation execution (becoming a liquidator) | Requires monitoring other users' positions, maintaining capital reserves, competing with MEV bots. Completely different product | Not relevant to wallet use case. This is for specialized liquidation bots |
+| Cross-protocol aggregation (borrow on Aave, supply on Morpho) | Cross-protocol optimization requires understanding collateral positions across multiple protocols simultaneously. Phase 1 should focus on per-protocol correctness | Defer to future milestone when multiple ILendingProvider implementations exist (Aave + Kamino + Morpho). PositionTracker already supports multi-provider aggregation |
+| Aave V3 E-Mode automatic selection | E-Mode optimizes LTV for same-category assets (e.g., stablecoin-to-stablecoin at 97% LTV). Adding E-Mode support adds complexity to the policy evaluator (different LTV limits per mode) | Document E-Mode as future enhancement. For now, use standard mode parameters. E-Mode can be added as a differentiator in a later iteration |
+| Governance token staking (stkAAVE) | Aave safety module staking is a governance participation mechanism, not a lending feature. Different smart contracts, different risk model | Out of scope. Could be a separate staking provider if needed |
 
 ---
 
 ## Feature Dependencies
 
 ```
-[Existing] IActionProvider framework (v1.5) + @waiaas/actions package (v28.1)
-  |
-  +-> ILendingProvider interface (NEW - extends IActionProvider pattern)
-  |     |
-  |     +-> AaveLendingProvider (EVM: supply/borrow/repay/withdraw)
-  |     |     +-> Aave Pool ABI encoding (viem, like Lido pattern)
-  |     |     +-> getUserAccountData() for health factor
-  |     |     +-> aToken balance tracking
-  |     |     +-> Multi-chain: Ethereum/Base/Arbitrum/Polygon/Optimism
-  |     |
-  |     +-> KaminoLendingProvider (Solana: supply/borrow/repay/withdraw)
-  |     |     +-> @kamino-finance/klend-sdk for instruction building
-  |     |     +-> KaminoMarket.load() for reserve data
-  |     |     +-> Obligation account for health status
-  |     |
-  |     +-> MorphoLendingProvider (EVM: supplyCollateral/borrow/repay/withdrawCollateral)
-  |           +-> morpho-org/blue-sdk-viem for market queries
-  |           +-> Singleton contract pattern (single address all markets)
-  |           +-> MarketParams identification per market
-  |
-  +-> IYieldProvider interface (NEW)
-  |     |
-  |     +-> PendleYieldProvider (EVM: buy PT/sell PT/buy YT/redeem)
-  |           +-> Pendle Router ABI encoding
-  |           +-> Market discovery (list markets + APY + maturity)
-  |           +-> ApproxParams for swap slippage (Pendle-specific)
-  |           +-> Flash swap mechanics for YT trading
-  |
-  +-> IPerpProvider interface (NEW)
-  |     |
-  |     +-> DriftPerpProvider (Solana: open/close/order/query)
-  |           +-> @drift-labs/sdk (REQUIRED - complex instruction building)
-  |           +-> DriftClient initialization + market subscription
-  |           +-> BN precision handling (Solana token precision)
-  |           +-> Oracle integration for mark/index price
-  |
-  +-> PositionTracker service (NEW)
-  |     +-> DB: defi_positions table (walletId, protocol, type, metadata, status)
-  |     +-> Aggregates from all providers: lending + yield + perp
-  |     +-> REST API: GET /v1/wallets/:id/positions
-  |     +-> MCP tool: get_defi_positions
-  |
-  +-> DeFiMonitorService (NEW)
-  |     +-> Health Factor polling (Aave/Kamino)
-  |     +-> Maturity tracking (Pendle PT)
-  |     +-> Margin monitoring (Drift)
-  |     +-> Alert routing via existing NotificationService
-  |     +-> Optional: auto-action on critical thresholds
-  |
-  +-> IntentProvider interface (NEW - different from IActionProvider)
-  |     |
-  |     +-> CoWIntentProvider (EVM: EIP-712 signed order -> off-chain submission)
-  |           +-> @cowprotocol/cow-sdk for order signing
-  |           +-> EIP-712 domain separator construction
-  |           +-> Order Book API submission (not on-chain tx)
-  |           +-> Solver settlement monitoring
-  |
-  +-> New PolicyTypes (extensions)
-        +-> MAX_LEVERAGE (cap perp leverage per wallet)
-        +-> MAX_BORROW_UTILIZATION (minimum HF after borrow)
-        +-> DEFI_PROTOCOL_ALLOWLIST (which protocols enabled per wallet)
-
-[Existing] Policy Engine (12 PolicyTypes)
-  +-> CONTRACT_WHITELIST for Aave/Kamino/Pendle/Drift/Morpho/CoW contracts
-  +-> SPENDING_LIMIT USD evaluation for supply/borrow/position amounts
-
-[Existing] IPriceOracle (Pyth + CoinGecko)
-  +-> USD valuation for all positions
-  +-> aToken/debtToken/PT/YT valuation
-
-[Existing] IAsyncStatusTracker
-  +-> Reuse polling pattern for position monitoring
-  +-> Health factor check as async tracker variant
-
-[Existing] Notification System (4 channels + wallet notification)
-  +-> HF_WARNING, HF_CRITICAL, HF_DANGER
-  +-> PT_MATURITY_APPROACHING, PT_MATURITY_REACHED
-  +-> MARGIN_LOW, MARGIN_CRITICAL
-  +-> POSITION_LIQUIDATED
-  +-> DEFI_DIGEST (daily/weekly summary)
+SSoT Enum Extension (LIQUIDATION_WARNING, POSITION_CATEGORIES, POSITION_STATUSES)
+    |
+    v
+DB Migration (defi_positions table) ──────────────────────────┐
+    |                                                          |
+    v                                                          v
+ILendingProvider Interface Definition           PositionTracker Service
+    |                                                |
+    v                                                v
+AaveV3LendingProvider Implementation    HealthFactorMonitor Service
+    |           |                              |
+    v           v                              v
+AaveContractHelper    AaveMarketData    LIQUIDATION_WARNING Notifications
+(chain address map)   (reserve data)           |
+    |                                          v
+    v                                   Adaptive Polling (severity-based)
+LendingPolicyEvaluator
+(LENDING_ASSET_WHITELIST + LENDING_LTV_LIMIT)
+    |
+    v
+REST API Endpoints (positions + health-factor)
+    |
+    v
+MCP Tools (5: supply, borrow, repay, withdraw, positions)
+    |
+    v
+SDK Extension (executeAction + getPositions/getHealthFactor)
+    |
+    v
+Admin UI (portfolio view + HF indicator + settings)
 ```
+
+**Critical path:** SSoT Enums -> DB Migration -> ILendingProvider -> AaveV3Provider -> HealthFactorMonitor -> REST API -> MCP/SDK/Admin
+
+**Parallel tracks after ILendingProvider:**
+- Track A: AaveV3Provider + AaveContractHelper + AaveMarketData
+- Track B: PositionTracker + HealthFactorMonitor + Notifications
+- Track C: LendingPolicyEvaluator (can start after interface definition)
 
 ---
 
 ## MVP Recommendation
 
-### Phase 1: Lending Framework + Aave V3 (highest priority)
+### Phase 1: SSoT Enums + DB Migration
+Build the foundation that all subsequent phases depend on.
 
-Prioritize because:
-1. Lending is the largest DeFi category by TVL and the most requested by AI agent operators
-2. Establishes ILendingProvider interface reused by Kamino and Morpho
-3. Aave V3 has the simplest integration (4 ABI calls on Pool contract, no SDK dependency)
-4. Health factor query is the foundation for DeFiMonitorService
-5. Direct ABI encoding pattern already proven by LidoStakingActionProvider
+Prioritize:
+1. POSITION_CATEGORIES, POSITION_STATUSES enums in @waiaas/core
+2. LIQUIDATION_WARNING + 3 future DeFi notification events (MATURITY_WARNING, MARGIN_WARNING, LIQUIDATION_IMMINENT) -- add all at once to minimize future enum changes
+3. defi_positions table migration (DB version increment)
+4. Drizzle ORM schema + 4 CHECK constraints + 4 indexes
+5. Notification message templates for new events
+6. EVENT_CATEGORY_MAP extension for DeFi event category
 
-Addresses:
-- AaveLendingProvider: supply, borrow, repay, withdraw (4 actions)
-- Health factor query via getUserAccountData()
-- aToken balance tracking for position visibility
-- CONTRACT_WHITELIST integration with Aave Pool addresses per chain
-- SPENDING_LIMIT evaluation on supply and borrow amounts
+### Phase 2: Lending Framework (ILendingProvider + PositionTracker + HealthFactorMonitor)
+Build the protocol-agnostic framework that Aave V3, Kamino, and Morpho will all use.
 
-### Phase 2: Position Tracking + DeFi Monitoring
+Prioritize:
+1. ILendingProvider interface (extends IActionProvider, adds getPosition/getHealthFactor/getMarkets)
+2. LendingPosition, HealthFactor, MarketInfo Zod types
+3. PositionTracker service (5-min sync, PositionWriteQueue, UPSERT logic)
+4. HealthFactorMonitor service (adaptive polling, severity classification, notification dispatch)
+5. LendingPolicyEvaluator (LENDING_ASSET_WHITELIST + LENDING_LTV_LIMIT policy types)
 
-Prioritize because:
-1. Monitoring is the critical safety layer -- without it, lending positions are dangerous for autonomous agents
-2. PositionTracker is required by all subsequent providers (yield, perps)
-3. DeFiMonitorService establishes the health-factor polling pattern
-4. Admin UI position dashboard provides operator visibility
+### Phase 3: Aave V3 Provider Implementation
+First concrete lending provider -- validates the framework against a real protocol.
 
-Addresses:
-- PositionTracker service + DB table (defi_positions)
-- DeFiMonitorService: HF polling for Aave
-- New notification events (HF_WARNING, HF_CRITICAL)
-- REST API: GET /v1/wallets/:id/positions
-- Admin UI: Positions panel
+Prioritize:
+1. AaveContractHelper (chain-to-address mapping for 5 EVM chains)
+2. AaveV3LendingProvider (resolve() for supply/borrow/repay/withdraw)
+3. ERC-20 approve + action multi-step resolution (follow LidoStaking pattern)
+4. Pre-borrow/pre-withdraw HF simulation safety checks
+5. IPositionProvider implementation (getPositions for PositionTracker)
 
-### Phase 3: Kamino Lending (Solana parity)
+### Phase 4: Monitoring + Notifications + API
+Wire everything together with observable interfaces.
 
-Prioritize because:
-1. Solana is WAIaaS's primary chain -- lending parity with EVM is essential
-2. Reuses ILendingProvider interface from Phase 1
-3. Kamino is Solana's dominant lending protocol
-4. DeFiMonitorService extends to Kamino health monitoring
+Prioritize:
+1. REST API: GET /v1/wallets/:id/positions, GET /v1/wallets/:id/health-factor
+2. MCP tools: 5 tools (4 actions + 1 positions query)
+3. SDK: executeAction support + getPositions/getHealthFactor convenience methods
+4. LIQUIDATION_WARNING notification flow (HF monitor -> EventBus -> notification channels)
 
-Addresses:
-- KaminoLendingProvider: supply, borrow, repay, withdraw
-- Health factor calculation via obligation account
-- DeFiMonitorService extension for Kamino
+### Phase 5: Admin UI + Settings
+Operator visibility and configuration.
 
-### Phase 4: Pendle Yield Tokenization (EVM)
+Prioritize:
+1. Admin Settings (aave_v3.enabled, HF threshold, sync interval, max LTV)
+2. Wallet detail portfolio section (positions list + HF indicator)
+3. APY display per position
 
-Prioritize because:
-1. Fixed yield is uniquely valuable for AI agents (predictable returns)
-2. PT maturity tracking extends DeFiMonitorService
-3. Lower risk than perps (principal protected at maturity)
-
-Addresses:
-- PendleYieldProvider: buy PT, sell PT, buy YT, redeem at maturity
-- Market discovery (list markets, APY, maturity)
-- Maturity monitoring via DeFiMonitorService
-- PT_MATURITY_APPROACHING notifications
-
-### Phase 5: Drift Perpetual Trading (Solana)
-
-Prioritize later because:
-1. Highest complexity (requires @drift-labs/sdk, BN precision, oracle integration)
-2. Highest risk for autonomous agents (leverage + liquidation)
-3. Requires new policy types (MAX_LEVERAGE, margin monitoring)
-4. SDK dependency is unavoidable -- cannot use REST API alone for instruction building
-
-Addresses:
-- DriftPerpProvider: open/close position, place orders, query PnL
-- Margin monitoring via DeFiMonitorService
-- MAX_LEVERAGE policy type
-- MARGIN_LOW / MARGIN_CRITICAL notifications
-
-### Phase 6: CoW Protocol Intent Trading (EVM)
-
-Prioritize last because:
-1. Fundamentally different from ActionProvider resolve() pattern (off-chain order, not on-chain tx)
-2. Requires new IntentProvider interface alongside IActionProvider
-3. EIP-712 signing requires special handling in keyStore
-4. Value is incremental over 0x swap (better MEV protection, but higher complexity)
-
-Addresses:
-- CoWIntentProvider: create order, sign EIP-712, submit to Order Book API
-- Solver settlement monitoring
-- Batch auction result tracking
-
-**Defer:** Morpho Blue lending (can be Phase 3.5 if demand warrants -- similar to Aave but with isolated market complexity), auto-action on critical thresholds (Phase 2.5 after monitoring proves stable), lending APY comparison (nice-to-have after all protocols integrated).
+Defer:
+- E-Mode support: adds complexity to policy evaluator without clear AI agent benefit in V1
+- Cross-protocol aggregation: meaningful only after 2+ lending providers exist
+- setUserUseReserveAsCollateral: useful but not MVP -- agents can supply collateral-eligible assets by default
+- Market intelligence features (APY comparison, utilization): nice-to-have after core lending works
 
 ---
 
-## Complexity Budget
+## Key Integration Points with Existing Infrastructure
 
-| Component | Est. Files | Est. Tests | Est. LOC | DB Migration | External SDK |
-|-----------|-----------|------------|----------|-------------|-------------|
-| Aave V3 Lending | 10-14 | 15-22 | ~2,000 | 1 (defi_positions table) | None (viem ABI only) |
-| PositionTracker + Monitor | 12-16 | 18-25 | ~2,500 | Shared with above | None |
-| Kamino Lending | 10-14 | 12-18 | ~1,800 | None | @kamino-finance/klend-sdk |
-| Pendle Yield | 12-16 | 14-20 | ~2,200 | None | None (viem ABI) |
-| Drift Perps | 14-18 | 16-24 | ~2,800 | None | @drift-labs/sdk (required) |
-| CoW Protocol Intent | 10-14 | 12-18 | ~1,800 | 1 (intent_orders table) | @cowprotocol/cow-sdk |
-| New Policy Types (2-3) | 4-6 | 8-12 | ~600 | 1 (policy_types extension) | None |
-| Admin UI Positions | 6-10 | 8-12 | ~1,500 | None | None |
-| **Total** | **~80-110** | **~105-155** | **~15,200** | **3** | **3 npm packages** |
-
----
-
-## Critical Technical Findings
-
-### 1. Drift SDK is Mandatory (Cannot Use REST API Alone)
-
-**Confidence: HIGH** (Drift official docs + SDK analysis)
-
-Unlike Jupiter/0x/LI.FI which expose REST APIs that return transaction data, Drift's on-chain program requires complex instruction building with specific account layouts, oracle integrations, and BN precision handling. The @drift-labs/sdk is the ONLY practical way to construct valid Drift instructions. This is a significant architectural decision because it introduces a heavy npm dependency (~50+ transitive packages) and ties WAIaaS to Drift's SDK versioning.
-
-**Impact:** DriftPerpProvider cannot follow the "native fetch + Zod validation" pattern used by Jupiter/0x/LI.FI. It must import and use @drift-labs/sdk.
-
-### 2. CoW Protocol Breaks the ActionProvider Pattern
-
-**Confidence: HIGH** (CoW Protocol docs + SDK analysis)
-
-CoW Protocol's intent-based model is fundamentally different from the resolve()-returns-ContractCallRequest pattern:
-- Orders are signed off-chain via EIP-712 (not as on-chain transactions)
-- Orders are submitted to CoW's Order Book API (not broadcast to blockchain)
-- Settlement happens via solver batch auctions (no direct tx from wallet)
-- Result monitoring requires polling CoW's order status API
-
-This means CoW integration needs a new IntentProvider interface alongside IActionProvider, or a special adapter that bridges the intent model to the existing pipeline. The wallet signs an EIP-712 typed message (not a transaction), which requires the keyStore to support message signing in addition to transaction signing.
-
-### 3. Pendle Router Uses Flash Swaps for YT Trading
-
-**Confidence: HIGH** (Pendle official docs)
-
-All Pendle swaps are technically flash swaps: the Market sends output tokens first, then enforces input tokens have been received by end of transaction. For YT trading specifically, this means the Router performs a multi-step atomic operation:
-1. Flash-borrow PT from market
-2. Combine PT + YT received from user
-3. Redeem SY
-4. Swap SY for desired output token
-5. Repay flash borrow from swap proceeds
-
-This complexity is hidden behind the Router's swapExactTokenForYt/swapExactYtForToken functions, but the resulting on-chain transaction may interact with multiple contracts. CONTRACT_WHITELIST must include the Pendle Router, Market, YT contract, and SY contract for the specific market.
-
-### 4. Aave V3 Uses Uniform Pool Address on Most Chains
-
-**Confidence: HIGH** (Aave docs + Etherscan verification)
-
-Aave V3 Pool addresses vary by chain but are well-documented:
-- Ethereum: 0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2
-- Arbitrum: 0x794a61358D6845594F94dc1DB02A252b5b4814aD
-- Polygon: 0x794a61358D6845594F94dc1DB02A252b5b4814aD (same as Arbitrum)
-- Base/Optimism: separate addresses from Aave address registry
-
-Unlike 0x which uses a unified API with chain ID, Aave requires per-chain contract address configuration. The provider must maintain a chain -> Pool address mapping, similar to the existing 0x AllowanceHolder address map.
-
-### 5. Kamino V2 is Modular (Breaking Change from V1)
-
-**Confidence: MEDIUM** (Kamino docs + community analysis)
-
-Kamino Lend V2 transitions from monolithic pools to a modular lending primitive. The klend-sdk may need version-specific handling. V2 allows custom products (peer-to-peer lending, orderbook lending) which changes the market discovery pattern. Integration should target the stable klend-sdk API surface rather than direct program calls.
-
-### 6. Health Factor Polling Frequency is Critical
-
-**Confidence: HIGH** (DeFi agent community best practices)
-
-Research shows DeFi monitoring agents poll health factors every 30-60 seconds on Ethereum and every 5-10 seconds during high-volatility events. For WAIaaS (self-hosted daemon), recommended defaults:
-- Normal: 60 second polling interval
-- Warning (HF < 1.5): 15 second polling
-- Critical (HF < 1.2): 5 second polling
-- This adaptive polling pattern prevents both unnecessary RPC load and delayed liquidation warnings
-
----
-
-## Competitive Landscape
-
-| Feature | WAIaaS (planned) | Coinbase AgentKit | LiquidityGuard AI |
-|---------|-----------------|-------------------|-------------------|
-| Lending (Aave/Kamino) | Multi-protocol, multi-chain | Morpho only (Base focus) | Aave cross-chain |
-| Yield tokenization (Pendle) | PT/YT buy/sell/redeem | Not supported | Not supported |
-| Perpetual trading (Drift) | Solana native | Not supported | Not supported |
-| Position tracking | Unified across protocols | Per-protocol only | Cross-chain monitoring |
-| Health factor monitoring | Adaptive polling + auto-action | Basic monitoring | Real-time + AI reasoning |
-| Intent trading (CoW) | EIP-712 MEV protection | Not supported | Not supported |
-| Policy enforcement | 15+ PolicyTypes, default-deny | "Programmable guardrails" | Not mentioned |
-| Self-hosted | Yes (daemon) | No (Coinbase cloud) | Open source, self-hosted |
-| MCP integration | Native (auto-conversion) | Not native | Not native |
-
-WAIaaS differentiators: self-hosted lending with HF monitoring, multi-protocol position tracking, fixed yield via Pendle, perp trading via Drift, intent-based MEV protection, all with policy enforcement.
+| Existing Component | How Lending Uses It | Integration Complexity |
+|--------------------|--------------------|-----------------------|
+| IActionProvider + ActionProviderRegistry | ILendingProvider extends IActionProvider. AaveV3Provider registers like any other provider. MCP tools auto-generated from actions[] | Low -- follows established pattern |
+| 6-stage transaction pipeline | Supply/borrow/repay/withdraw resolve to ContractCallRequest, flow through normal pipeline for policy evaluation + signing | Low -- no pipeline changes needed |
+| EvmAdapter (viem 2.x) | ABI encoding via viem encodeFunctionData. Transaction submission via existing adapter | Low -- standard viem pattern |
+| IPriceOracle (Pyth + CoinGecko) | Position USD valuation, HF simulation, LTV calculation | Low -- existing oracle API |
+| DatabasePolicyEngine (9 policy types) | +2 new types: LENDING_ASSET_WHITELIST, LENDING_LTV_LIMIT | Medium -- new evaluator logic but existing DB/policy infrastructure |
+| EventBus + Notification system (4 channels) | LIQUIDATION_WARNING event -> existing notification dispatch | Low -- add event type + message template |
+| Admin Web UI (Preact + Vite) | New portfolio section in wallet detail, new settings keys | Medium -- new UI components but existing patterns |
+| CAIP-19 asset identification | Lending positions use assetId for asset identification in policies and tracking | Low -- existing caip/ module |
+| DB migration system (pushSchema 3-step) | New defi_positions table migration | Low -- standard migration pattern |
 
 ---
 
 ## Sources
 
 ### Protocol Documentation (HIGH confidence)
-- [Aave V3 Pool Contract](https://aave.com/docs/aave-v3/smart-contracts/pool) -- supply/borrow/repay/withdraw ABI
-- [Aave V3 Smart Contracts Overview](https://aave.com/docs/aave-v3/smart-contracts) -- contract architecture
-- [Aave V3 Addresses Dashboard](https://aave.com/docs/resources/addresses) -- deployed addresses per chain
-- [Aave Health Factor & Liquidations](https://aave.com/help/borrowing/liquidations) -- HF calculation formula
-- [Kamino Developer Docs](https://docs.kamino.finance/) -- klend-sdk entry point
-- [Kamino klend-sdk GitHub](https://github.com/Kamino-Finance/klend-sdk) -- TypeScript SDK
-- [Morpho Blue Smart Contracts](https://github.com/morpho-org/morpho-blue) -- singleton pattern, core functions
-- [Morpho Borrow Tutorials](https://docs.morpho.org/build/borrow/tutorials/assets-flow/) -- supply/borrow/repay/withdraw flow
-- [Pendle Router Integration Guide](https://docs.pendle.finance/pendle-v2/Developers/Contracts/PendleRouter/ContractIntegrationGuide) -- swap/mint/redeem functions
-- [Pendle Yield Tokenization Contracts](https://docs.pendle.finance/pendle-v2/Developers/Contracts/YieldTokenization) -- PT/YT mechanics
-- [Pendle High Level Architecture](https://docs.pendle.finance/pendle-v2/Developers/HighLevelArchitecture) -- SY/PT/YT relationship
-- [Pendle Deployments](https://docs.pendle.finance/pendle-v2/Developers/Deployments) -- contract addresses per chain
-- [Drift SDK Documentation](https://docs.drift.trade/sdk-documentation) -- TypeScript SDK usage
-- [Drift Liquidations](https://docs.drift.trade/liquidations/liquidations) -- margin calculation, liquidation engine
-- [Drift Funding Rates](https://docs.drift.trade/trading/funding-rates) -- funding rate mechanics
-- [Drift Oracles](https://docs.drift.trade/trading/oracles) -- oracle validity checking
-- [CoW Protocol Signing Schemes](https://docs.cow.fi/cow-protocol/reference/core/signing-schemes) -- EIP-712 order digest
-- [CoW Protocol Intents](https://docs.cow.fi/cow-protocol/concepts/introduction/intents) -- intent flow and solver competition
-- [CoW SDK GitHub](https://github.com/cowprotocol/cow-sdk) -- @cowprotocol/cow-sdk package
-- [CoW SDK npm](https://www.npmjs.com/package/@cowprotocol/cow-sdk) -- v7.2.9, sub-packages
+- [Aave V3 Pool Smart Contract](https://aave.com/docs/aave-v3/smart-contracts/pool) -- supply/borrow/repay/withdraw/getUserAccountData function signatures
+- [Aave V3 View Contracts](https://aave.com/docs/aave-v3/smart-contracts/view-contracts) -- getReserveData/getUserReserveData/getAllReservesTokens
+- [Aave V3 Overview](https://aave.com/docs/aave-v3/overview) -- E-Mode, isolation mode, supply/borrow caps
+- [Aave Health Factor & Liquidations](https://aave.com/help/borrowing/liquidations) -- HF formula, liquidation close factors
+- [Aave Addresses Dashboard](https://aave.com/docs/resources/addresses) -- deployed contract addresses per chain
+- [Aave E-Mode](https://aave.com/help/borrowing/e-mode) -- high efficiency mode for correlated assets
+- [Aave PoolAddressesProvider](https://aave.com/docs/aave-v3/smart-contracts/pool-addresses-provider) -- dynamic contract address resolution
 
-### Ecosystem Analysis (MEDIUM confidence)
-- [Pendle 2026 Expansion to Solana](https://blockworks.co/news/pendle-2025-outlook) -- PT-only via CCIP, not full protocol
-- [Kamino V2 Modular Lending](https://docs.kamino.finance/) -- V2 architecture changes
-- [Morpho 2026 Review](https://stablecoininsider.org/morpho-complete-review-for-2026/) -- V2 roadmap
-- [CoW Protocol Cross-Chain 2026](https://coinmarketcap.com/cmc-ai/cow-protocol/latest-updates/) -- Solana/Cosmos expansion plans
-- [Coinbase AgentKit Q1 Update](https://www.coinbase.com/developer-platform/discover/launches/agentkit-q1-update) -- competitive comparison
-- [Coinbase Agentic Wallets](https://www.coinbase.com/developer-platform/discover/launches/agentic-wallets) -- Feb 2026 launch
-- [DeFAI: AI Agents in DeFi](https://cow.fi/learn/how-ai-agents-can-be-used-in-defi) -- AI agent DeFi patterns
-- [LiquidityGuard AI](https://github.com/kunalsinghdadhwal/LiqX) -- cross-chain monitoring reference
+### Contract Addresses (HIGH confidence)
+- [Aave Pool V3 Ethereum](https://etherscan.io/address/0x87870bca3f3fd6335c3f4ce8392d69350b4fa4e2) -- 0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2
+- [Aave Pool V3 Arbitrum](https://arbiscan.io/address/0x794a61358d6845594f94dc1db02a252b5b4814ad) -- 0x794a61358D6845594F94dc1DB02A252b5b4814aD
+- [Aave Pool V3 Polygon](https://polygonscan.com/address/0x794a61358D6845594F94dc1DB02A252b5b4814aD) -- same as Arbitrum
+- [Aave Pool V3 Base](https://basescan.org/address/0xa238dd80c259a72e81d7e4664a9801593f98d1c5) -- 0xA238Dd80C259a72e81d7e4664a9801593F98d1c5
 
-### Codebase Analysis (HIGH confidence)
-- `packages/core/src/interfaces/action-provider.types.ts` -- IActionProvider interface (resolve() contract)
-- `packages/actions/src/common/async-status-tracker.ts` -- IAsyncStatusTracker, BridgeStatus
-- `packages/actions/src/index.ts` -- registerBuiltInProviders(), existing 5 providers
-- `packages/actions/src/providers/lido-staking/` -- ABI encoding pattern (viem, reusable for Aave)
-- `packages/actions/src/providers/lifi/bridge-status-tracker.ts` -- async polling pattern
-- `packages/daemon/src/services/async-polling-service.ts` -- AsyncPollingService infrastructure
-- `packages/daemon/src/pipeline/gas-condition-tracker.ts` -- GasCondition tracker (extend for HF)
+### Codebase (HIGH confidence)
+- `/packages/core/src/interfaces/action-provider.types.ts` -- IActionProvider, ActionDefinition, ActionContext, resolve() -> ContractCallRequest
+- `/packages/actions/src/providers/lido-staking/index.ts` -- Multi-step resolve pattern (approve + action), LidoStakingActionProvider
+- `/internal/objectives/m29-02-aave-evm-lending.md` -- Milestone objective with 15 E2E test scenarios
+- `/internal/objectives/m29-00-defi-advanced-protocol-design.md` -- ILendingProvider design, defi_positions table DDL, PositionTracker, HealthFactorMonitor
+
+### Design Phases (HIGH confidence)
+- Phase 268: Position infrastructure design (defi_positions table, IPositionProvider, PositionWriteQueue)
+- Phase 269: DeFi monitoring framework (HealthFactorMonitor, adaptive polling, severity classification)
+- Phase 270: Lending framework design (ILendingProvider interface, LendingPolicyEvaluator, protocol mapping)

@@ -24,6 +24,7 @@ import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { WAIaaSError, resolveX402Network, CAIP2_TO_NETWORK } from '@waiaas/core';
 import type { IPriceOracle, PolicyEvaluation, EventBus } from '@waiaas/core';
+import type { MasterPasswordRef } from '../middleware/master-auth.js';
 import type { AdapterPool } from '../../infrastructure/adapter-pool.js';
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
 import { wallets, transactions, policies } from '../../infrastructure/database/schema.js';
@@ -67,6 +68,8 @@ export interface X402RouteDeps {
   keyStore: LocalKeyStore;
   policyEngine: X402PolicyEngine;
   masterPassword: string;
+  /** Mutable ref for live password updates. Takes precedence over masterPassword. */
+  passwordRef?: MasterPasswordRef;
   config: DaemonConfig;
   notificationService?: NotificationService;
   priceOracle?: IPriceOracle;
@@ -442,7 +445,7 @@ export function x402Routes(deps: X402RouteDeps): OpenAPIHono {
         deps.keyStore,
         walletId,
         wallet.publicKey,
-        deps.masterPassword,
+        deps.passwordRef?.password ?? deps.masterPassword,
       );
 
       // Fill resource.url in the payment payload

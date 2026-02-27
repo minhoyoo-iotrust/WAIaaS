@@ -1,5 +1,5 @@
 /**
- * createMcpServer: factory that creates an MCP server with 23 tools + 4 resource groups (3 static + 1 template).
+ * createMcpServer: factory that creates an MCP server with 25 tools + 4 resource groups (3 static + 1 template).
  *
  * Each tool/resource is registered via a dedicated register function
  * from its own module, following Dependency Injection pattern.
@@ -35,6 +35,8 @@ import { registerGetPolicies } from './tools/get-policies.js';
 import { registerGetTokens } from './tools/get-tokens.js';
 import { registerListIncomingTransactions } from './tools/list-incoming-transactions.js';
 import { registerGetIncomingSummary } from './tools/get-incoming-summary.js';
+import { registerGetDefiPositions } from './tools/get-defi-positions.js';
+import { registerGetHealthFactor } from './tools/get-health-factor.js';
 
 // Resource registrations (Task 2)
 import { registerWalletBalance } from './resources/wallet-balance.js';
@@ -63,7 +65,7 @@ export function createMcpServer(apiClient: ApiClient, walletContext?: WalletCont
     version: '0.0.0',
   });
 
-  // Register 23 tools
+  // Register 25 tools
   registerConnectInfo(server, apiClient);
   registerGetPolicies(server, apiClient, walletContext);
   registerGetTokens(server, apiClient, walletContext);
@@ -87,6 +89,8 @@ export function createMcpServer(apiClient: ApiClient, walletContext?: WalletCont
   registerWcDisconnect(server, apiClient, walletContext);
   registerListIncomingTransactions(server, apiClient, walletContext);
   registerGetIncomingSummary(server, apiClient, walletContext);
+  registerGetDefiPositions(server, apiClient, walletContext);
+  registerGetHealthFactor(server, apiClient, walletContext);
 
   // Register 4 resource groups (3 static + 1 template)
   registerWalletBalance(server, apiClient, walletContext);

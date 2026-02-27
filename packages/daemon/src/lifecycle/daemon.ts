@@ -10,6 +10,8 @@
  *      4c-8. Signing SDK lifecycle (fail-soft)
  *      4c-9. IncomingTxMonitorService (fail-soft)
  *      4c-10. AsyncPollingService (fail-soft)
+ *      4c-10.5. PositionTracker (fail-soft)
+ *      4c-11. DeFiMonitorService (fail-soft)
  *   5. HTTP server start (5s, fail-fast)
  *   6. Background workers + PID (no timeout, fail-soft)
  *
@@ -18,7 +20,7 @@
  *   2-4. HTTP server close
  *   5. In-flight signing -- STUB (Phase 50-04)
  *   6. Pending queue persistence -- STUB (Phase 50-04)
- *   6a. Stop TelegramBot, WcSessionService, AutoStop, BalanceMonitor, IncomingTxMonitor
+ *   6a. Stop PositionTracker, DeFiMonitorService, TelegramBot, WcSessionService, AutoStop, BalanceMonitor, IncomingTxMonitor
  *   6b. Remove all EventBus listeners
  *   7. workers.stopAll()
  *   8. WAL checkpoint(TRUNCATE)
@@ -118,6 +120,7 @@ export class DaemonLifecycle {
   private _db: BetterSQLite3Database<typeof schema> | null = null;
   private keyStore: LocalKeyStore | null = null;
   private masterPassword = '';
+  private passwordRef: import('../api/middleware/master-auth.js').MasterPasswordRef | null = null;
   private rpcPool: RpcPool | null = null;
   private adapterPool: AdapterPool | null = null;
   private httpServer: { close: () => void } | null = null;
@@ -149,6 +152,8 @@ export class DaemonLifecycle {
   private _versionCheckService: import('../infrastructure/version/version-check-service.js').VersionCheckService | null = null;
   private incomingTxMonitorService: import('../services/incoming/incoming-tx-monitor-service.js').IncomingTxMonitorService | null = null;
   private _asyncPollingService: import('../services/async-polling-service.js').AsyncPollingService | null = null;
+  private positionTracker: import('../services/defi/position-tracker.js').PositionTracker | null = null;
+  private defiMonitorService: import('../services/monitoring/defi-monitor-service.js').DeFiMonitorService | null = null;
 
   /** Whether shutdown has been initiated. */
   get isShuttingDown(): boolean {
@@ -178,6 +183,11 @@ export class DaemonLifecycle {
   /** AsyncPollingService instance (available after Step 4c-10, used by action providers to register trackers). */
   get pollingService(): import('../services/async-polling-service.js').AsyncPollingService | null {
     return this._asyncPollingService;
+  }
+
+  /** PositionTracker instance (available after Step 4c-10.5). */
+  get positionTrackerInstance(): import('../services/defi/position-tracker.js').PositionTracker | null {
+    return this.positionTracker;
   }
 
   /** RpcPool instance (available after Step 4, used by IncomingTxMonitor for URL resolution). */
@@ -257,6 +267,7 @@ export class DaemonLifecycle {
           db: this._db!,
           config: this._config!,
           masterPassword,
+          passwordRef: this.passwordRef ?? undefined,
         });
         const importResult = this._settingsService.importFromConfig();
         if (importResult.imported > 0) {
@@ -454,6 +465,8 @@ export class DaemonLifecycle {
         timeCost: 2,
         parallelism: 1,
       });
+      // Create mutable ref for live password/hash updates (password change API)
+      this.passwordRef = { password: masterPassword, hash: this.masterPasswordHash };
       console.debug('Step 4c: JWT secret manager initialized, master password hashed');
     }
 
@@ -859,11 +872,42 @@ export class DaemonLifecycle {
             const wssUrl = resolveWssUrl(network, initialRpcUrl);
             const { EvmIncomingSubscriber } = await import('@waiaas/adapter-evm');
             const ns = this.notificationService;
+            // Token address resolver for getLogs address filter (#203)
+            const { TokenRegistryService } = await import('../infrastructure/token-registry/index.js');
+            const tokenRegistry = this._db ? new TokenRegistryService(this._db) : null;
+            let cachedTokenAddresses: import('viem').Address[] = [];
+            let cacheExpiry = 0;
+            const resolveTokenAddresses = (): import('viem').Address[] => {
+              const now = Date.now();
+              if (now < cacheExpiry) return cachedTokenAddresses;
+              // Refresh every 60s to pick up runtime token additions
+              try {
+                if (tokenRegistry) {
+                  // Synchronous access: getTokensForNetwork is async but uses sync DB
+                  // Use a cached snapshot refreshed periodically
+                  void tokenRegistry.getTokensForNetwork(network).then((tokens) => {
+                    cachedTokenAddresses = tokens
+                      .map((t) => t.address as import('viem').Address);
+                    cacheExpiry = Date.now() + 60_000;
+                  });
+                }
+              } catch { /* keep previous cache */ }
+              return cachedTokenAddresses;
+            };
+            // Prime the cache immediately
+            if (tokenRegistry) {
+              try {
+                const tokens = await tokenRegistry.getTokensForNetwork(network);
+                cachedTokenAddresses = tokens.map((t) => t.address as import('viem').Address);
+                cacheExpiry = Date.now() + 60_000;
+              } catch { /* empty cache is fine — ERC-20 polling will be skipped */ }
+            }
             return new EvmIncomingSubscriber({
               resolveRpcUrl,
               reportRpcFailure: (url) => rpcPool?.reportFailure(network, url),
               reportRpcSuccess: (url) => rpcPool?.reportSuccess(network, url),
               wsUrl: wssUrl !== initialRpcUrl.replace(/^https:\/\//, 'wss://') ? wssUrl : undefined,
+              resolveTokenAddresses,
               onRpcAlert: ns ? (alert) => {
                 ns.notify(alert.type, alert.walletId, {
                   network: alert.network,
@@ -934,6 +978,54 @@ export class DaemonLifecycle {
     }
 
     // ------------------------------------------------------------------
+    // Step 4c-10.5: PositionTracker initialization (fail-soft)
+    // ------------------------------------------------------------------
+    try {
+      if (this.sqlite && this._settingsService) {
+        const trackerEnabled = this._settingsService.get('position_tracker.enabled');
+        if (trackerEnabled !== 'false') {
+          const { PositionTracker } = await import('../services/defi/position-tracker.js');
+          this.positionTracker = new PositionTracker({
+            sqlite: this.sqlite,
+            settingsService: this._settingsService,
+          });
+          this.positionTracker.start();
+          console.debug('Step 4c-10.5: Position tracker started');
+        } else {
+          console.debug('Step 4c-10.5: Position tracker disabled');
+        }
+      }
+    } catch (err) {
+      console.warn('Step 4c-10.5 (fail-soft): Position tracker init warning:', err);
+      this.positionTracker = null;
+    }
+
+    // ------------------------------------------------------------------
+    // Step 4c-11: DeFiMonitorService initialization (fail-soft)
+    // ------------------------------------------------------------------
+    try {
+      const { DeFiMonitorService } = await import('../services/monitoring/defi-monitor-service.js');
+      this.defiMonitorService = new DeFiMonitorService();
+
+      // Register HealthFactorMonitor
+      if (this.sqlite) {
+        const { HealthFactorMonitor } = await import('../services/monitoring/health-factor-monitor.js');
+        const healthMonitor = new HealthFactorMonitor({
+          sqlite: this.sqlite,
+          notificationService: this.notificationService ?? undefined,
+          positionTracker: this.positionTracker ?? undefined,
+        });
+        this.defiMonitorService.register(healthMonitor);
+      }
+
+      this.defiMonitorService.start();
+      console.debug('Step 4c-11: DeFi monitor service started with', this.defiMonitorService.monitorCount, 'monitors');
+    } catch (err) {
+      console.warn('Step 4c-11 (fail-soft): DeFi monitor service init warning:', err);
+      this.defiMonitorService = null;
+    }
+
+    // ------------------------------------------------------------------
     // Step 4e: Price Oracle (fail-soft)
     // ------------------------------------------------------------------
     try {
@@ -995,12 +1087,44 @@ export class DaemonLifecycle {
       const { ActionProviderRegistry, ApiKeyStore } =
         await import('../infrastructure/action/index.js');
 
-      this.apiKeyStore = new ApiKeyStore(this._db!, masterPassword);
+      this.apiKeyStore = new ApiKeyStore(this._db!, masterPassword, this.passwordRef ?? undefined);
       this.actionProviderRegistry = new ActionProviderRegistry();
+
+      // Create IRpcCaller for Aave V3 using RpcPool eth_call.
+      // RpcPool.getUrl(network) provides priority-based URL rotation with cooldown.
+      const rpcCaller = this.rpcPool ? (() => {
+        const pool = this.rpcPool!;
+        const networkMap: Record<number, string> = {
+          1: 'ethereum-mainnet',
+          42161: 'arbitrum-mainnet',
+          10: 'optimism-mainnet',
+          137: 'polygon-mainnet',
+          8453: 'base-mainnet',
+        };
+        return {
+          call: async (params: { to: string; data: string; chainId?: number }): Promise<string> => {
+            const network = params.chainId ? (networkMap[params.chainId] ?? 'ethereum-mainnet') : 'ethereum-mainnet';
+            const rpcUrl = pool.getUrl(network);
+            const resp = await fetch(rpcUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                jsonrpc: '2.0',
+                id: 1,
+                method: 'eth_call',
+                params: [{ to: params.to, data: params.data }, 'latest'],
+              }),
+            });
+            const json = await resp.json() as { result?: string; error?: { message: string } };
+            if (json.error) throw new Error(json.error.message);
+            return json.result ?? '0x';
+          },
+        };
+      })() : undefined;
 
       // Register built-in action providers from @waiaas/actions (reads from SettingsService)
       const { registerBuiltInProviders } = await import('@waiaas/actions');
-      const builtIn = registerBuiltInProviders(this.actionProviderRegistry, this._settingsService!);
+      const builtIn = registerBuiltInProviders(this.actionProviderRegistry, this._settingsService!, { rpcCaller });
 
       // Load plugins from ~/.waiaas/actions/ (if exists)
       const actionsDir = join(dataDir, 'actions');
@@ -1119,6 +1243,7 @@ export class DaemonLifecycle {
           keyStore: this.keyStore!,
           masterPassword: this.masterPassword,
           masterPasswordHash: this.masterPasswordHash || undefined,
+          passwordRef: this.passwordRef ?? undefined,
           config: this._config!,
           adapterPool: this.adapterPool,
           policyEngine: new DatabasePolicyEngine(
@@ -1345,6 +1470,18 @@ export class DaemonLifecycle {
         this.autoStopService = null;
       }
 
+      // Stop PositionTracker (before BalanceMonitor for cleaner ordering)
+      if (this.positionTracker) {
+        this.positionTracker.stop();
+        this.positionTracker = null;
+      }
+
+      // Stop DeFiMonitorService
+      if (this.defiMonitorService) {
+        this.defiMonitorService.stop();
+        this.defiMonitorService = null;
+      }
+
       // Stop BalanceMonitorService (before EventBus cleanup)
       if (this.balanceMonitorService) {
         this.balanceMonitorService.stop();
@@ -1416,6 +1553,11 @@ export class DaemonLifecycle {
       // Clear master password and hash from memory
       this.masterPassword = '';
       this.masterPasswordHash = '';
+      if (this.passwordRef) {
+        this.passwordRef.password = '';
+        this.passwordRef.hash = '';
+        this.passwordRef = null;
+      }
 
       // Step 10: Close DB, unlink PID, release lock
       if (this.sqlite) {

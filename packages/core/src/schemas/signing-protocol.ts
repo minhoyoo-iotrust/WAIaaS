@@ -179,6 +179,7 @@ export const NOTIFICATION_CATEGORIES = [
   'session',
   'owner',
   'system',
+  'defi_monitoring',
 ] as const;
 export type NotificationCategory = (typeof NOTIFICATION_CATEGORIES)[number];
 
@@ -227,6 +228,11 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, NotificationCateg
   INCOMING_TX_RANGE_SKIPPED: 'system',
   TX_GAS_WAITING: 'transaction',
   TX_GAS_CONDITION_MET: 'transaction',
+  LIQUIDATION_WARNING: 'defi_monitoring',
+  MATURITY_WARNING: 'defi_monitoring',
+  MARGIN_WARNING: 'defi_monitoring',
+  LIQUIDATION_IMMINENT: 'security_alert',
+  SESSION_IDLE: 'session',
 };
 
 // ---------------------------------------------------------------------------
@@ -278,6 +284,11 @@ export const EVENT_DESCRIPTIONS: Record<NotificationEventType, string> = {
   INCOMING_TX_RANGE_SKIPPED: 'Block range skipped due to RPC errors',
   TX_GAS_WAITING: 'Waiting for gas price condition to be met',
   TX_GAS_CONDITION_MET: 'Gas price condition met, resuming execution',
+  LIQUIDATION_WARNING: 'Health factor below warning threshold',
+  MATURITY_WARNING: 'Position approaching maturity date',
+  MARGIN_WARNING: 'Margin ratio below safe level',
+  LIQUIDATION_IMMINENT: 'Position at imminent liquidation risk',
+  SESSION_IDLE: 'Session idle for extended period',
 };
 
 // ---------------------------------------------------------------------------

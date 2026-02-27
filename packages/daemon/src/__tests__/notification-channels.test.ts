@@ -47,8 +47,8 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('NotificationEventType', () => {
-  it('has exactly 44 event types', () => {
-    expect(NOTIFICATION_EVENT_TYPES).toHaveLength(44);
+  it('has exactly 49 event types', () => {
+    expect(NOTIFICATION_EVENT_TYPES).toHaveLength(49);
   });
 
   it('contains the 5 new event types added in v1.3', () => {
@@ -126,6 +126,24 @@ describe('getNotificationMessage', () => {
     expect(msg.body).toContain('5');
     expect(msg.body).toContain('42');
     expect(msg.body).toContain('10');
+  });
+
+  it('converts raw tx type to human-friendly label (en)', () => {
+    const msg = getNotificationMessage('TX_CONFIRMED', 'en', {
+      txId: 'tx-label-test',
+      amount: '1 ETH',
+      type: 'TOKEN_TRANSFER',
+    });
+    expect(msg.body).toContain('tx-label-test');
+  });
+
+  it('converts raw tx type to human-friendly label (ko)', () => {
+    const msg = getNotificationMessage('TX_CONFIRMED', 'ko', {
+      txId: 'tx-label-ko',
+      amount: '1 SOL',
+      type: 'APPROVE',
+    });
+    expect(msg.body).toContain('tx-label-ko');
   });
 });
 

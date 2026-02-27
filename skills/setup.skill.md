@@ -22,31 +22,96 @@ This skill guides you through setting up WAIaaS from scratch -- from an empty ma
 
 ## Setup Flow
 
-Follow these steps in order. Steps 3 and 4 require human input for the master password.
+WAIaaS supports two setup modes: **auto-provision** (fully autonomous, recommended for AI agents) and **manual** (human-guided password setup).
 
-### Step 1: Install CLI
+---
 
-Check if WAIaaS CLI is already installed:
+### Option A: Auto-Provision (Recommended for AI Agents)
 
-```bash
-which waiaas
-```
+No human interaction required. The daemon generates a random master password and saves it to `recovery.key`.
 
-If not found, install globally:
+#### Step 1: Install CLI
 
 ```bash
-npm install -g @waiaas/cli
+which waiaas || npm install -g @waiaas/cli
 ```
 
-Verify installation:
+#### Step 2: Initialize with Auto-Provision
 
 ```bash
-waiaas --version
+waiaas init --auto-provision
 ```
 
-### Step 2: Initialize Data Directory
+This creates `~/.waiaas/` with:
+- `config.toml` -- default configuration
+- `recovery.key` -- generated master password (read once, then secure this file)
 
-Create the WAIaaS data directory and default configuration:
+#### Step 3: Start Daemon
+
+```bash
+waiaas start
+```
+
+The daemon starts immediately using the auto-provisioned password. No password prompt.
+
+Verify the daemon is running:
+
+```bash
+curl -s http://localhost:3100/health
+```
+
+Expected: `{"status":"ok", ...}`
+
+#### Step 4: Create Wallet and Session
+
+```bash
+waiaas quickset
+```
+
+The command reads the master password from `recovery.key` automatically. No password prompt needed.
+
+The command outputs:
+1. Wallet IDs and public keys (Solana + EVM)
+2. **Session tokens** (`wai_sess_...`) -- capture these
+3. MCP configuration JSON
+
+#### Step 5: Configure Environment
+
+```bash
+export WAIAAS_BASE_URL=http://localhost:3100
+export WAIAAS_SESSION_TOKEN=<session-token-from-step-4>
+```
+
+#### Step 6: Verify Connection
+
+```bash
+curl -s http://localhost:3100/v1/connect-info \
+  -H "Authorization: Bearer $WAIAAS_SESSION_TOKEN"
+```
+
+#### Step 7: Harden Master Password (Post-Setup)
+
+After initial setup, the operator should replace the auto-generated password with a strong human-chosen password:
+
+```bash
+waiaas set-master
+```
+
+This prompts for the current password (from `recovery.key`) and a new password. After changing, delete `recovery.key`.
+
+---
+
+### Option B: Manual Setup (Human-Guided)
+
+Follow these steps when a human operator is present for password entry.
+
+#### Step 1: Install CLI
+
+```bash
+which waiaas || npm install -g @waiaas/cli
+```
+
+#### Step 2: Initialize Data Directory
 
 ```bash
 waiaas init
@@ -54,7 +119,7 @@ waiaas init
 
 This creates `~/.waiaas/` with `config.toml` and required subdirectories. Safe to run multiple times -- skips if already initialized.
 
-### Step 3: Start Daemon
+#### Step 3: Start Daemon
 
 ```bash
 waiaas start
@@ -75,7 +140,7 @@ curl -s http://localhost:3100/health
 
 Expected: `{"status":"ok", ...}`
 
-### Step 4: Create Wallet and Session
+#### Step 4: Create Wallet and Session
 
 ```bash
 waiaas quickset
@@ -91,33 +156,23 @@ The command outputs:
 2. **Session tokens** (`wai_sess_...`) -- capture these
 3. MCP configuration JSON
 
-### Step 5: Configure Environment
-
-Set environment variables with the session token from Step 4:
+#### Step 5: Configure Environment
 
 ```bash
 export WAIAAS_BASE_URL=http://localhost:3100
 export WAIAAS_SESSION_TOKEN=<session-token-from-step-4>
 ```
 
-Replace `<session-token-from-step-4>` with the actual `wai_sess_...` token printed by `quickset`.
-
-### Step 6: Verify Connection
-
-Call the self-discovery endpoint to confirm everything works:
+#### Step 6: Verify Connection
 
 ```bash
 curl -s http://localhost:3100/v1/connect-info \
   -H "Authorization: Bearer $WAIAAS_SESSION_TOKEN"
 ```
 
-This returns:
-- Accessible wallets and their networks
-- Active policies
-- Available capabilities
-- AI-ready usage prompt
+---
 
-### Step 7: Install Skill Files
+### Install Skill Files (Both Options)
 
 Install WAIaaS skill files for your AI agent platform:
 

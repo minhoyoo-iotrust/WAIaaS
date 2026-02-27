@@ -15,6 +15,7 @@ import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type * as schema from '../database/schema.js';
 import { apiKeys } from '../database/schema.js';
 import { encryptSettingValue, decryptSettingValue } from '../settings/settings-crypto.js';
+import type { MasterPasswordRef } from '../../api/middleware/master-auth.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -32,10 +33,20 @@ export interface ApiKeyListEntry {
 // ---------------------------------------------------------------------------
 
 export class ApiKeyStore {
+  private readonly passwordRef?: MasterPasswordRef;
+
   constructor(
     private readonly db: BetterSQLite3Database<typeof schema>,
     private readonly masterPassword: string,
-  ) {}
+    passwordRef?: MasterPasswordRef,
+  ) {
+    this.passwordRef = passwordRef;
+  }
+
+  /** Resolve the current master password (passwordRef takes precedence). */
+  private get currentPassword(): string {
+    return this.passwordRef?.password ?? this.masterPassword;
+  }
 
   /**
    * Store or update an API key for a provider. The key is encrypted with
@@ -43,7 +54,7 @@ export class ApiKeyStore {
    * updatedAt is always refreshed.
    */
   set(providerName: string, apiKey: string): void {
-    const encrypted = encryptSettingValue(apiKey, this.masterPassword);
+    const encrypted = encryptSettingValue(apiKey, this.currentPassword);
     const now = new Date(Math.floor(Date.now() / 1000) * 1000);
 
     this.db
@@ -76,7 +87,7 @@ export class ApiKeyStore {
       .get();
 
     if (!row) return null;
-    return decryptSettingValue(row.encryptedKey, this.masterPassword);
+    return decryptSettingValue(row.encryptedKey, this.currentPassword);
   }
 
   /**
@@ -128,7 +139,7 @@ export class ApiKeyStore {
     const rows = this.db.select().from(apiKeys).all();
 
     return rows.map((row) => {
-      const decrypted = decryptSettingValue(row.encryptedKey, this.masterPassword);
+      const decrypted = decryptSettingValue(row.encryptedKey, this.currentPassword);
       return {
         providerName: row.providerName,
         hasKey: true,

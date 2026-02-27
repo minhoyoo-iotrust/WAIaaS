@@ -84,3 +84,12 @@ export {
   type IncomingTxStatus,
   IncomingTxStatusEnum,
 } from './incoming-tx.js';
+
+export {
+  POSITION_CATEGORIES,
+  type PositionCategory,
+  PositionCategoryEnum,
+  POSITION_STATUSES,
+  type PositionStatus,
+  PositionStatusEnum,
+} from './defi.js';

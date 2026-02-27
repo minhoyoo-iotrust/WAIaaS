@@ -59,6 +59,12 @@ export {
   INCOMING_TX_STATUSES,
   type IncomingTxStatus,
   IncomingTxStatusEnum,
+  POSITION_CATEGORIES,
+  type PositionCategory,
+  PositionCategoryEnum,
+  POSITION_STATUSES,
+  type PositionStatus,
+  PositionStatusEnum,
 } from './enums/index.js';
 
 // Schemas (5 domain Zod SSoT schemas + v1.4 discriminatedUnion 5-type)
@@ -230,6 +236,18 @@ export type {
   Caip19AssetType,
   Caip19,
   Caip19Params,
+  // v29.2 lending provider types
+  LendingPositionSummary,
+  HealthFactor,
+  MarketInfo,
+  ILendingProvider,
+  // v29.2 position provider types
+  PositionUpdate,
+  IPositionProvider,
+  // v29.2 DeFi monitor types
+  IDeFiMonitor,
+  MonitorSeverity,
+  MonitorEvaluation,
 } from './interfaces/index.js';
 
 // v27.1 connection state machine (value exports)
@@ -279,6 +297,13 @@ export {
   nativeAssetId,
   tokenAssetId,
   isNativeAsset,
+} from './interfaces/index.js';
+
+// v29.2 Lending Provider Zod schemas (value exports)
+export {
+  LendingPositionSummarySchema,
+  HealthFactorSchema,
+  MarketInfoSchema,
 } from './interfaces/index.js';
 
 // v1.5.3 Currency formatting utilities

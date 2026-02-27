@@ -32,6 +32,10 @@ import {
   KillSwitchStateEnum,
   OWNER_STATES,
   OwnerStateEnum,
+  POSITION_CATEGORIES,
+  PositionCategoryEnum,
+  POSITION_STATUSES,
+  PositionStatusEnum,
 } from '../index.js';
 
 describe('Enum SSoT', () => {
@@ -88,9 +92,11 @@ describe('Enum SSoT', () => {
     expect(TRANSACTION_TYPES).toContain('X402_PAYMENT');
   });
 
-  it('PolicyType has 12 values', () => {
-    expect(POLICY_TYPES).toHaveLength(12);
+  it('PolicyType has 14 values', () => {
+    expect(POLICY_TYPES).toHaveLength(14);
     expect(POLICY_TYPES).toContain('X402_ALLOWED_DOMAINS');
+    expect(POLICY_TYPES).toContain('LENDING_LTV_LIMIT');
+    expect(POLICY_TYPES).toContain('LENDING_ASSET_WHITELIST');
   });
 
   it('PolicyTier has 4 values', () => {
@@ -101,14 +107,21 @@ describe('Enum SSoT', () => {
     expect(SESSION_STATUSES).toHaveLength(3);
   });
 
-  it('NotificationEventType has 44 values', () => {
-    expect(NOTIFICATION_EVENT_TYPES).toHaveLength(44);
+  it('NotificationEventType has 49 values', () => {
+    expect(NOTIFICATION_EVENT_TYPES).toHaveLength(49);
     // v28.5: gas condition events
     expect(NOTIFICATION_EVENT_TYPES).toContain('TX_GAS_WAITING');
     expect(NOTIFICATION_EVENT_TYPES).toContain('TX_GAS_CONDITION_MET');
     // v28.6: RPC monitoring events
     expect(NOTIFICATION_EVENT_TYPES).toContain('RPC_ALL_FAILED');
     expect(NOTIFICATION_EVENT_TYPES).toContain('RPC_RECOVERED');
+    // v29.2: DeFi monitoring events
+    expect(NOTIFICATION_EVENT_TYPES).toContain('LIQUIDATION_WARNING');
+    expect(NOTIFICATION_EVENT_TYPES).toContain('MATURITY_WARNING');
+    expect(NOTIFICATION_EVENT_TYPES).toContain('MARGIN_WARNING');
+    expect(NOTIFICATION_EVENT_TYPES).toContain('LIQUIDATION_IMMINENT');
+    // #204: idle session notification
+    expect(NOTIFICATION_EVENT_TYPES).toContain('SESSION_IDLE');
   });
 
   it('NotificationLogStatus has 2 values', () => {
@@ -127,6 +140,38 @@ describe('Enum SSoT', () => {
 
   it('OwnerState has 3 values', () => {
     expect(OWNER_STATES).toHaveLength(3);
+  });
+
+  // DeFi SSoT enums (v29.2)
+  describe('DeFi SSoT enums', () => {
+    it('POSITION_CATEGORIES has 4 values', () => {
+      expect(POSITION_CATEGORIES).toHaveLength(4);
+      expect(POSITION_CATEGORIES).toContain('LENDING');
+      expect(POSITION_CATEGORIES).toContain('YIELD');
+      expect(POSITION_CATEGORIES).toContain('PERP');
+      expect(POSITION_CATEGORIES).toContain('STAKING');
+    });
+
+    it('PositionCategoryEnum validates correct values', () => {
+      for (const cat of POSITION_CATEGORIES) {
+        expect(PositionCategoryEnum.parse(cat)).toBe(cat);
+      }
+      expect(PositionCategoryEnum.safeParse('INVALID').success).toBe(false);
+    });
+
+    it('POSITION_STATUSES has 3 values', () => {
+      expect(POSITION_STATUSES).toHaveLength(3);
+      expect(POSITION_STATUSES).toContain('ACTIVE');
+      expect(POSITION_STATUSES).toContain('CLOSED');
+      expect(POSITION_STATUSES).toContain('LIQUIDATED');
+    });
+
+    it('PositionStatusEnum validates correct values', () => {
+      for (const status of POSITION_STATUSES) {
+        expect(PositionStatusEnum.parse(status)).toBe(status);
+      }
+      expect(PositionStatusEnum.safeParse('INVALID').success).toBe(false);
+    });
   });
 
   // EVM NetworkType subset
@@ -237,7 +282,7 @@ describe('Enum SSoT', () => {
     expect(() => NotificationLogStatusEnum.parse('pending')).toThrow();
   });
 
-  // All enum arrays contain only string values (no duplicates) -- all 16
+  // All enum arrays contain only string values (no duplicates) -- all 18
   it('enum arrays have no duplicate values', () => {
     const allArrays = [
       CHAIN_TYPES, NETWORK_TYPES, SOLANA_NETWORK_TYPES, EVM_NETWORK_TYPES,
@@ -246,6 +291,7 @@ describe('Enum SSoT', () => {
       POLICY_TYPES, POLICY_TIERS, SESSION_STATUSES,
       NOTIFICATION_EVENT_TYPES, NOTIFICATION_LOG_STATUSES,
       AUDIT_ACTIONS, KILL_SWITCH_STATES, OWNER_STATES,
+      POSITION_CATEGORIES, POSITION_STATUSES,
     ];
     for (const arr of allArrays) {
       const unique = new Set(arr);

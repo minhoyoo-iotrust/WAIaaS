@@ -178,7 +178,7 @@ export const messages: Messages = {
   },
   // Notification templates (30 event types)
   notifications: {
-    TX_REQUESTED: { title: 'Transaction Requested', body: '{walletName} requested {amount} transfer to {to} {display_amount}' },
+    TX_REQUESTED: { title: 'Transaction Requested', body: '{walletName} requested {type}: {amount} to {to} {display_amount}' },
     TX_QUEUED: { title: 'Transaction Queued', body: 'Transaction {txId} queued for processing' },
     TX_SUBMITTED: { title: 'Transaction Submitted', body: 'Transaction {txId} submitted to blockchain {display_amount}' },
     TX_CONFIRMED: { title: 'Transaction Confirmed', body: 'Transaction {txId} confirmed. Amount: {amount} {display_amount}' },
@@ -222,6 +222,23 @@ export const messages: Messages = {
     INCOMING_TX_RANGE_SKIPPED: { title: 'Incoming TX Scan Gap', body: 'Block range {fromBlock}-{toBlock} on {network} was skipped after {errorCount} consecutive failures. Incoming transactions in this range may be missed.' },
     TX_GAS_WAITING: { title: 'Gas Condition Pending', body: 'Transaction {txId} is waiting for gas condition to be met. Max gas price: {maxGasPrice}, timeout: {timeout}s' },
     TX_GAS_CONDITION_MET: { title: 'Gas Condition Met', body: 'Gas condition met for transaction {txId}. Current gas price: {currentGasPrice}. Resuming execution.' },
+    LIQUIDATION_WARNING: {
+      title: 'Liquidation Warning',
+      body: '{walletName} health factor at {healthFactor} (threshold: {threshold}). Consider adding collateral or repaying debt.',
+    },
+    MATURITY_WARNING: {
+      title: 'Maturity Warning',
+      body: '{walletName} position in {provider} matures in {daysUntilMaturity} days. Redeem before maturity to avoid losses.',
+    },
+    MARGIN_WARNING: {
+      title: 'Margin Warning',
+      body: '{walletName} margin ratio at {marginRatio}% in {provider}. Add margin to avoid liquidation.',
+    },
+    LIQUIDATION_IMMINENT: {
+      title: 'Liquidation Imminent',
+      body: '{walletName} is at imminent risk of liquidation. Health factor: {healthFactor}. Immediate action required.',
+    },
+    SESSION_IDLE: { title: 'Idle Session Detected', body: 'Session {sessionId} for {walletName} has been idle for an extended period. You can manually revoke it from the Admin UI if needed.' },
   },
   // System messages
   system: {

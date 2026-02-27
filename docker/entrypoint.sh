@@ -46,8 +46,21 @@ file_env WAIAAS_MASTER_PASSWORD
 file_env WAIAAS_TELEGRAM_BOT_TOKEN
 file_env WAIAAS_NOTIFICATIONS_TELEGRAM_BOT_TOKEN
 
+DATA_DIR="${WAIAAS_DATA_DIR:-/data}"
+
 echo "WAIaaS daemon starting..."
-echo "Data directory: ${WAIAAS_DATA_DIR:-/data}"
+echo "Data directory: ${DATA_DIR}"
+
+# ---------------------------------------------------------------------------
+# Auto-provision: if WAIAAS_AUTO_PROVISION=true and no config.toml exists,
+# run `waiaas init --auto-provision` to generate config + random master password.
+# The generated password is saved to $DATA_DIR/recovery.key for later hardening.
+# ---------------------------------------------------------------------------
+if [ "${WAIAAS_AUTO_PROVISION:-false}" = "true" ] && [ ! -f "${DATA_DIR}/config.toml" ]; then
+  echo "Auto-provision mode: initializing data directory..."
+  node /app/packages/cli/dist/index.js init --auto-provision --data-dir "${DATA_DIR}"
+  echo "Auto-provision complete. Recovery key saved to ${DATA_DIR}/recovery.key"
+fi
 
 # exec replaces shell with node process (PID 1 = node, receives SIGTERM directly)
-exec node /app/packages/cli/dist/index.js start --data-dir "${WAIAAS_DATA_DIR:-/data}"
+exec node /app/packages/cli/dist/index.js start --data-dir "${DATA_DIR}"

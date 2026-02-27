@@ -36,7 +36,7 @@ path = "data/waiaas.db"
 # Full reference: https://github.com/minhoyoo-iotrust/WAIaaS#configuration
 `;
 
-export async function initCommand(dataDir: string): Promise<void> {
+export async function initCommand(dataDir: string, opts?: { autoProvision?: boolean }): Promise<void> {
   const configPath = join(dataDir, 'config.toml');
 
   // Check if already initialized
@@ -68,12 +68,26 @@ export async function initCommand(dataDir: string): Promise<void> {
     for (const sub of subdirs) {
       console.log(`  ${sub}/`);
     }
-    console.log('');
-    console.log('Set your master password before starting:');
-    console.log('  export WAIAAS_MASTER_PASSWORD="your-secure-password"');
-    console.log('Or use a password file:');
-    console.log('  echo "your-secure-password" > ~/.waiaas/master-password.txt');
-    console.log('  export WAIAAS_MASTER_PASSWORD_FILE=~/.waiaas/master-password.txt');
+
+    // Auto-provision: generate recovery key for headless / CI environments
+    if (opts?.autoProvision) {
+      const { randomBytes } = await import('node:crypto');
+      const password = randomBytes(32).toString('hex');
+      const recoveryPath = join(dataDir, 'recovery.key');
+      writeFileSync(recoveryPath, password, { mode: 0o600 });
+      console.log('');
+      console.log('Auto-provision mode enabled.');
+      console.log(`Recovery key saved to: ${recoveryPath}`);
+      console.log('IMPORTANT: Change the master password after initial setup.');
+    } else {
+      console.log('');
+      console.log('Set your master password before starting:');
+      console.log('  export WAIAAS_MASTER_PASSWORD="your-secure-password"');
+      console.log('Or use a password file:');
+      console.log('  echo "your-secure-password" > ~/.waiaas/master-password.txt');
+      console.log('  export WAIAAS_MASTER_PASSWORD_FILE=~/.waiaas/master-password.txt');
+    }
+
     console.log('');
     console.log('Next: waiaas start');
   } catch (err: unknown) {

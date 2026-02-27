@@ -619,6 +619,7 @@ export const AdminStatusResponseSchema = z
     policyCount: z.number().int(),
     recentTxCount: z.number().int(),
     failedTxCount: z.number().int(),
+    autoProvisioned: z.boolean().openapi({ description: 'Whether daemon was auto-provisioned (recovery.key exists)' }),
     recentTransactions: z.array(
       z.object({
         id: z.string(),
@@ -670,6 +671,20 @@ export const KillSwitchResponseSchema = z
     activatedBy: z.string().nullable(),
   })
   .openapi('KillSwitchResponse');
+
+export const MasterPasswordChangeRequestSchema = z
+  .object({
+    newPassword: z.string().min(8).openapi({ description: 'New master password (minimum 8 characters)' }),
+  })
+  .openapi('MasterPasswordChangeRequest');
+
+export const MasterPasswordChangeResponseSchema = z
+  .object({
+    message: z.string(),
+    walletsReEncrypted: z.number().int(),
+    settingsReEncrypted: z.number().int(),
+  })
+  .openapi('MasterPasswordChangeResponse');
 
 export const KillSwitchActivateResponseSchema = z
   .object({
@@ -1179,6 +1194,40 @@ export const StakingPositionsResponseSchema = z.object({
   walletId: z.string(),
   positions: z.array(StakingPositionSchema),
 }).openapi('StakingPositionsResponse');
+
+// ---------------------------------------------------------------------------
+// DeFi Position Schemas (GET /v1/wallet/positions, GET /v1/wallet/health-factor)
+// ---------------------------------------------------------------------------
+
+export const DeFiPositionSchema = z.object({
+  id: z.string(),
+  category: z.string(),         // LENDING / YIELD / PERP / STAKING
+  provider: z.string(),         // Provider name (e.g., "aave_v3")
+  chain: z.string(),
+  network: z.string().nullable(),
+  assetId: z.string().nullable(),
+  amount: z.string(),           // Raw amount string
+  amountUsd: z.number().nullable(), // USD conversion
+  metadata: z.unknown().nullable(), // Parsed JSON metadata
+  status: z.string(),           // ACTIVE / CLOSED / LIQUIDATED
+  openedAt: z.number(),         // Unix seconds
+  lastSyncedAt: z.number(),     // Unix seconds
+}).openapi('DeFiPosition');
+
+export const DeFiPositionsResponseSchema = z.object({
+  walletId: z.string(),
+  positions: z.array(DeFiPositionSchema),
+  totalValueUsd: z.number().nullable(), // Sum of all position USD values
+}).openapi('DeFiPositionsResponse');
+
+export const HealthFactorResponseSchema = z.object({
+  walletId: z.string(),
+  factor: z.number(),           // Decimal (e.g., 2.5)
+  totalCollateralUsd: z.number(),
+  totalDebtUsd: z.number(),
+  currentLtv: z.number(),
+  status: z.enum(['safe', 'warning', 'danger', 'critical']),
+}).openapi('HealthFactorResponse');
 
 // ---------------------------------------------------------------------------
 // RPC Pool Status Schema (GET /v1/admin/rpc-status)

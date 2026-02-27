@@ -58,11 +58,14 @@ import type { KillSwitchService } from '../../services/kill-switch-service.js';
 import type { VersionCheckService } from '../../infrastructure/version/version-check-service.js';
 import type { DelayQueue } from '../../workflow/delay-queue.js';
 import type { ApprovalWorkflow } from '../../workflow/approval-workflow.js';
+import type { MasterPasswordRef } from '../middleware/master-auth.js';
 import {
   AdminStatusResponseSchema,
   KillSwitchResponseSchema,
   KillSwitchActivateResponseSchema,
   KillSwitchEscalateResponseSchema,
+  MasterPasswordChangeRequestSchema,
+  MasterPasswordChangeResponseSchema,
   RecoverResponseSchema,
   KillSwitchRecoverRequestSchema,
   ShutdownResponseSchema,
@@ -99,6 +102,8 @@ export interface KillSwitchState {
 export interface AdminRouteDeps {
   db: BetterSQLite3Database<typeof schema>;
   jwtSecretManager?: JwtSecretManager;
+  /** Mutable ref for live password/hash updates (password change API). */
+  passwordRef?: MasterPasswordRef;
   getKillSwitchState: () => KillSwitchState;
   setKillSwitchState: (state: string, activatedBy?: string) => void;
   killSwitchService?: KillSwitchService;
@@ -213,6 +218,25 @@ const shutdownRoute = createRoute({
       description: 'Shutdown initiated',
       content: { 'application/json': { schema: ShutdownResponseSchema } },
     },
+  },
+});
+
+const masterPasswordChangeRoute = createRoute({
+  method: 'put',
+  path: '/admin/master-password',
+  tags: ['Admin'],
+  summary: 'Change master password',
+  request: {
+    body: {
+      content: { 'application/json': { schema: MasterPasswordChangeRequestSchema } },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Master password changed successfully',
+      content: { 'application/json': { schema: MasterPasswordChangeResponseSchema } },
+    },
+    ...buildErrorResponses(['INVALID_MASTER_PASSWORD', 'ACTION_VALIDATION_FAILED']),
   },
 });
 
@@ -605,6 +629,53 @@ const adminWalletStakingRoute = createRoute({
 });
 
 // ---------------------------------------------------------------------------
+// DeFi Positions route definition
+// ---------------------------------------------------------------------------
+
+const adminDefiPositionsRoute = createRoute({
+  method: 'get',
+  path: '/admin/defi/positions',
+  tags: ['Admin'],
+  summary: 'Get all DeFi positions across wallets',
+  description:
+    'Returns all active DeFi positions across all wallets with aggregated totals. ' +
+    'Optionally filter by wallet_id. masterAuth required.',
+  request: {
+    query: z.object({
+      wallet_id: z.string().uuid().optional(),
+    }),
+  },
+  responses: {
+    200: {
+      description: 'Active DeFi positions with aggregates',
+      content: {
+        'application/json': {
+          schema: z.object({
+            positions: z.array(z.object({
+              id: z.string(),
+              walletId: z.string(),
+              category: z.string(),
+              provider: z.string(),
+              chain: z.string(),
+              network: z.string().nullable(),
+              assetId: z.string().nullable(),
+              amount: z.string(),
+              amountUsd: z.number().nullable(),
+              status: z.string(),
+              openedAt: z.number(),
+              lastSyncedAt: z.number(),
+            })),
+            totalValueUsd: z.number().nullable(),
+            worstHealthFactor: z.number().nullable(),
+            activeCount: z.number(),
+          }),
+        },
+      },
+    },
+  },
+});
+
+// ---------------------------------------------------------------------------
 // Telegram Users route definitions
 // ---------------------------------------------------------------------------
 
@@ -981,6 +1052,13 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
       && semverMod.default.valid(latestVersion) !== null
       && semverMod.default.gt(latestVersion, deps.version);
 
+    // Check for auto-provisioned status (recovery.key exists in data dir)
+    const { existsSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const autoProvisioned = deps.dataDir
+      ? existsSync(join(deps.dataDir, 'recovery.key'))
+      : false;
+
     return c.json(
       {
         status: 'running',
@@ -996,6 +1074,7 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
         policyCount,
         recentTxCount,
         failedTxCount,
+        autoProvisioned,
         recentTransactions,
       },
       200,
@@ -1180,6 +1259,95 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
     return c.json(
       {
         message: 'Shutdown initiated',
+      },
+      200,
+    );
+  });
+
+  // ---------------------------------------------------------------------------
+  // PUT /admin/master-password
+  // ---------------------------------------------------------------------------
+
+  router.openapi(masterPasswordChangeRoute, async (c) => {
+    const body = c.req.valid('json');
+    const newPassword = body.newPassword;
+
+    if (!deps.passwordRef) {
+      throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
+        message: 'Password change not supported (passwordRef not available)',
+      });
+    }
+
+    const oldPassword = deps.passwordRef.password;
+
+    if (newPassword === oldPassword) {
+      throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
+        message: 'New password must be different from the current password',
+      });
+    }
+
+    // 1. Re-encrypt keystore files
+    const { join } = await import('node:path');
+    const { reEncryptKeystores, reEncryptSettings } = await import(
+      '../../infrastructure/keystore/re-encrypt.js'
+    );
+
+    const keystoreDir = deps.dataDir ? join(deps.dataDir, 'keystore') : null;
+    let walletsReEncrypted = 0;
+    if (keystoreDir) {
+      const { existsSync } = await import('node:fs');
+      if (existsSync(keystoreDir)) {
+        walletsReEncrypted = await reEncryptKeystores(keystoreDir, oldPassword, newPassword);
+      }
+    }
+
+    // 2. Re-encrypt settings + API keys in DB
+    const settingsReEncrypted = reEncryptSettings(
+      deps.db,
+      deps.sqlite,
+      oldPassword,
+      newPassword,
+    );
+
+    // 3. Compute new Argon2id hash
+    const argon2 = await import('argon2');
+    const newHash = await argon2.default.hash(newPassword, {
+      type: argon2.default.argon2id,
+      memoryCost: 19456,
+      timeCost: 2,
+      parallelism: 1,
+    });
+
+    // 4. Update DB master_password_hash
+    const { keyValueStore } = await import('../../infrastructure/database/schema.js');
+    deps.db
+      .update(keyValueStore)
+      .set({ value: newHash, updatedAt: new Date() })
+      .where(eq(keyValueStore.key, 'master_password_hash'))
+      .run();
+
+    // 5. Update in-memory ref (live swap)
+    deps.passwordRef.password = newPassword;
+    deps.passwordRef.hash = newHash;
+
+    // 6. Delete recovery.key if it exists (auto-provision → manual)
+    if (deps.dataDir) {
+      const recoveryPath = join(deps.dataDir, 'recovery.key');
+      const { existsSync, unlinkSync } = await import('node:fs');
+      if (existsSync(recoveryPath)) {
+        try {
+          unlinkSync(recoveryPath);
+        } catch {
+          // Non-fatal: recovery.key cleanup failure
+        }
+      }
+    }
+
+    return c.json(
+      {
+        message: 'Master password changed successfully',
+        walletsReEncrypted,
+        settingsReEncrypted,
       },
       200,
     );
@@ -2599,6 +2767,85 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
     }
 
     return c.json({ networks, builtinUrls }, 200);
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /admin/defi/positions
+  // ---------------------------------------------------------------------------
+
+  router.openapi(adminDefiPositionsRoute, async (c) => {
+    const { wallet_id } = c.req.valid('query');
+
+    if (!deps.sqlite) {
+      return c.json({ positions: [], totalValueUsd: null, worstHealthFactor: null, activeCount: 0 }, 200);
+    }
+
+    // Cross-wallet DeFi positions query
+    let rows: Array<{
+      id: string; wallet_id: string; category: string; provider: string;
+      chain: string; network: string | null; asset_id: string | null;
+      amount: string; amount_usd: number | null; metadata: string | null;
+      status: string; opened_at: number; last_synced_at: number;
+    }>;
+
+    if (wallet_id) {
+      rows = deps.sqlite.prepare(
+        `SELECT id, wallet_id, category, provider, chain, network, asset_id,
+                amount, amount_usd, metadata, status, opened_at, last_synced_at
+         FROM defi_positions
+         WHERE wallet_id = ? AND status = 'ACTIVE'
+         ORDER BY category, provider`,
+      ).all(wallet_id) as typeof rows;
+    } else {
+      rows = deps.sqlite.prepare(
+        `SELECT id, wallet_id, category, provider, chain, network, asset_id,
+                amount, amount_usd, metadata, status, opened_at, last_synced_at
+         FROM defi_positions
+         WHERE status = 'ACTIVE'
+         ORDER BY category, provider`,
+      ).all() as typeof rows;
+    }
+
+    const positions = rows.map((row) => ({
+      id: row.id,
+      walletId: row.wallet_id,
+      category: row.category,
+      provider: row.provider,
+      chain: row.chain,
+      network: row.network,
+      assetId: row.asset_id,
+      amount: row.amount,
+      amountUsd: row.amount_usd,
+      status: row.status,
+      openedAt: row.opened_at,
+      lastSyncedAt: row.last_synced_at,
+    }));
+
+    // Aggregate totalValueUsd
+    const usdValues = positions.map((p) => p.amountUsd).filter((v): v is number => v !== null);
+    const totalValueUsd = usdValues.length > 0 ? usdValues.reduce((a, b) => a + b, 0) : null;
+
+    // Worst health factor from metadata JSON
+    let worstHealthFactor: number | null = null;
+    for (const row of rows) {
+      if (row.category === 'LENDING' && row.metadata) {
+        try {
+          const meta = JSON.parse(row.metadata) as Record<string, unknown>;
+          if (typeof meta.healthFactor === 'number' && meta.healthFactor > 0) {
+            if (worstHealthFactor === null || meta.healthFactor < worstHealthFactor) {
+              worstHealthFactor = meta.healthFactor;
+            }
+          }
+        } catch { /* skip */ }
+      }
+    }
+
+    return c.json({
+      positions,
+      totalValueUsd,
+      worstHealthFactor,
+      activeCount: positions.length,
+    }, 200);
   });
 
   return router;

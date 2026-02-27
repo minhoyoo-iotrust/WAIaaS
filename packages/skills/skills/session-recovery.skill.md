@@ -3,7 +3,7 @@ name: "WAIaaS Session Recovery"
 description: "Recover from expired or permanently expired session tokens"
 category: "api"
 tags: [wallet, blockchain, session, recovery, token, expired, waiass]
-version: "2.5.0-rc"
+version: "2.8.0-rc.1"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]
@@ -104,6 +104,40 @@ curl -s http://localhost:3100/v1/connect-info \
 ```
 
 Expected: 200 OK with session info including new `expiresAt`.
+
+## Path C: Auto-Provision Recovery
+
+If the daemon was set up with `waiaas init --auto-provision`, the master password is stored in `recovery.key` in the data directory (default: `~/.waiaas/recovery.key`). This enables autonomous recovery without human intervention.
+
+### Step 1: Read the Recovery Key
+
+The agent or automation script can read the password from `recovery.key`:
+
+```bash
+MASTER_PW=$(cat ~/.waiaas/recovery.key)
+```
+
+### Step 2: Create a New Session
+
+Use the recovery key to create a new session via the admin API:
+
+```bash
+curl -s -X POST http://localhost:3100/v1/sessions \
+  -H "Content-Type: application/json" \
+  -H "X-Master-Password: ${MASTER_PW}" \
+  -d '{"walletIds": ["<wallet-id>"]}'
+```
+
+### Step 3: Apply and Verify
+
+Update your session token and verify with connect-info:
+
+```bash
+curl -s http://localhost:3100/v1/connect-info \
+  -H "Authorization: Bearer wai_sess_<new-token>"
+```
+
+**SECURITY NOTE:** The `recovery.key` file contains the master password in plaintext. The operator should harden the password with `waiaas set-master` and delete `recovery.key` as soon as practical. This path is intended for initial autonomous bootstrapping only.
 
 ## Prevention Tips
 

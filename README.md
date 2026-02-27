@@ -120,14 +120,25 @@ npx @waiaas/skills add all
 
 This adds `.skill.md` instruction files to your project. Include them in your agent's context and it learns the WAIaaS API automatically. Available skills: `setup`, `quickstart`, `wallet`, `transactions`, `policies`, `admin`, `actions`, `x402`.
 
-### Agent Self-Setup
+### Agent Self-Setup (Auto-Provision)
 
-AI agents can set up WAIaaS from scratch by following the setup skill:
+AI agents can set up WAIaaS fully autonomously with no human interaction:
 
-1. Install skills: `npx @waiaas/skills add all`
-2. Read and follow `waiaas-setup/SKILL.md`
+```bash
+npm install -g @waiaas/cli
+waiaas init --auto-provision     # Generates random master password → recovery.key
+waiaas start                     # No password prompt
+waiaas quickset                  # Creates wallets + sessions automatically
+waiaas set-master                # (Later) Harden password, then delete recovery.key
+```
 
-The setup skill guides through CLI installation, daemon startup, wallet creation, and session configuration. Master password prompts require human input.
+The `--auto-provision` flag generates a cryptographically random master password and saves it to `~/.waiaas/recovery.key`. All subsequent CLI commands read it automatically. See the [Agent Self-Setup Guide](docs/guides/agent-self-setup.md) for the complete flow.
+
+For manual setup with human-guided password entry, install skills and follow `waiaas-setup/SKILL.md`:
+
+```bash
+npx @waiaas/skills add all
+```
 
 ## Alternative: Docker
 
@@ -203,6 +214,7 @@ Enabled by default (`admin_ui = true` in config.toml).
 | [Security Model](docs/security-model.md) | Authentication, policy engine, Kill Switch, AutoStop |
 | [Deployment Guide](docs/deployment.md) | Docker, npm, configuration reference |
 | [API Reference](docs/api-reference.md) | REST API endpoints and authentication |
+| [Agent Self-Setup Guide](docs/guides/agent-self-setup.md) | Fully autonomous setup with auto-provision |
 | [Agent Skills Integration](docs/guides/agent-skills-integration.md) | Universal guide for 27+ AI agent platforms |
 | [Claude Code Integration](docs/guides/claude-code-integration.md) | Skill files + MCP server setup for Claude Code |
 | [OpenClaw Integration](docs/guides/openclaw-integration.md) | Quick setup for OpenClaw bot |

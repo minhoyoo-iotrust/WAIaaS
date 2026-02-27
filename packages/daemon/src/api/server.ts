@@ -65,7 +65,9 @@ import { tokenRegistryRoutes } from './routes/tokens.js';
 import { connectInfoRoutes } from './routes/connect-info.js';
 import { incomingRoutes } from './routes/incoming.js';
 import { createStakingRoutes } from './routes/staking.js';
+import { createDefiPositionRoutes } from './routes/defi-positions.js';
 import { mcpTokenRoutes } from './routes/mcp.js';
+import type { MasterPasswordRef } from './middleware/master-auth.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
 import type { DaemonConfig } from '../infrastructure/config/loader.js';
 import { WAIaaSError } from '@waiaas/core';
@@ -100,6 +102,8 @@ export interface CreateAppDeps {
   keyStore?: LocalKeyStore;
   masterPassword?: string;
   masterPasswordHash?: string; // Argon2id hash for masterAuth middleware
+  /** Mutable ref for live password/hash updates (password change API). */
+  passwordRef?: MasterPasswordRef;
   config?: DaemonConfig;
   adapterPool?: AdapterPool | null;
   policyEngine?: IPolicyEngine;
@@ -148,8 +152,8 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
   app.onError(errorHandler);
 
   // Register route-level auth middleware on the app (before sub-routers)
-  if (deps.masterPasswordHash !== undefined) {
-    const masterAuth = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash });
+  if (deps.masterPasswordHash !== undefined || deps.passwordRef) {
+    const masterAuth = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash, passwordRef: deps.passwordRef });
     app.use('/v1/wallets', masterAuth);
     // /v1/policies: GET allows sessionAuth or masterAuth, others require masterAuth only
     app.use('/v1/policies', async (c, next) => {
@@ -181,8 +185,8 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
   }
 
   // masterAuth for GET /v1/wallets/:id (wallet detail) -- skip sub-paths with own auth
-  if (deps.masterPasswordHash !== undefined) {
-    const masterAuthForWalletDetail = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash });
+  if (deps.masterPasswordHash !== undefined || deps.passwordRef) {
+    const masterAuthForWalletDetail = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash, passwordRef: deps.passwordRef });
     app.use('/v1/wallets/:id', async (c, next) => {
       // Skip sub-paths that have their own masterAuth registered below
       if (c.req.path.includes('/owner') || c.req.path.includes('/default-network') || c.req.path.includes('/networks') || c.req.path.includes('/wc/')) {
@@ -194,16 +198,16 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
   }
 
   // masterAuth for PUT /v1/wallets/:id/owner
-  if (deps.masterPasswordHash !== undefined) {
-    const masterAuthForOwner = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash });
+  if (deps.masterPasswordHash !== undefined || deps.passwordRef) {
+    const masterAuthForOwner = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash, passwordRef: deps.passwordRef });
     app.use('/v1/wallets/:id/owner', masterAuthForOwner);
     app.use('/v1/wallets/:id/default-network', masterAuthForOwner);
     app.use('/v1/wallets/:id/networks', masterAuthForOwner);
   }
 
   // masterAuth for WalletConnect routes
-  if (deps.masterPasswordHash !== undefined) {
-    const masterAuthForWc = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash });
+  if (deps.masterPasswordHash !== undefined || deps.passwordRef) {
+    const masterAuthForWc = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash, passwordRef: deps.passwordRef });
     app.use('/v1/wallets/:id/wc/*', masterAuthForWc);
   }
 
@@ -270,8 +274,8 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
   }
 
   // masterAuth for admin routes (except GET /admin/kill-switch which is public)
-  if (deps.masterPasswordHash !== undefined) {
-    const masterAuthForAdmin = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash });
+  if (deps.masterPasswordHash !== undefined || deps.passwordRef) {
+    const masterAuthForAdmin = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash, passwordRef: deps.passwordRef });
     app.use('/v1/admin/status', masterAuthForAdmin);
     app.use('/v1/admin/kill-switch', async (c, next) => {
       // POST requires masterAuth, GET is public
@@ -312,6 +316,8 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     app.use('/v1/admin/transactions/*', masterAuthForAdmin);
     app.use('/v1/admin/incoming', masterAuthForAdmin);
     app.use('/v1/admin/rpc-status', masterAuthForAdmin);
+    app.use('/v1/admin/defi/*', masterAuthForAdmin);
+    app.use('/v1/admin/master-password', masterAuthForAdmin);
     // masterAuth for GET /v1/actions/providers (Admin UI reads provider list)
     app.use('/v1/actions/providers', async (c, next) => {
       if (c.req.method === 'GET') {
@@ -346,14 +352,16 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
   app.route('/v1', utilsRoutes());
 
   // Register wallet CRUD routes when deps are available
-  if (deps.db && deps.sqlite && deps.keyStore && deps.masterPassword !== undefined && deps.config) {
+  const effectiveMasterPassword = deps.passwordRef?.password ?? deps.masterPassword;
+  if (deps.db && deps.sqlite && deps.keyStore && effectiveMasterPassword !== undefined && deps.config) {
     app.route(
       '/v1',
       walletCrudRoutes({
         db: deps.db,
         sqlite: deps.sqlite,
         keyStore: deps.keyStore,
-        masterPassword: deps.masterPassword,
+        masterPassword: effectiveMasterPassword,
+        passwordRef: deps.passwordRef,
         config: deps.config,
         adapterPool: deps.adapterPool ?? undefined,
         notificationService: deps.notificationService,
@@ -433,11 +441,23 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     );
   }
 
+  // Register DeFi position routes (sessionAuth via /v1/wallet/* wildcard)
+  if (deps.db) {
+    app.route(
+      '/v1',
+      createDefiPositionRoutes({
+        db: deps.db,
+        sqlite: deps.sqlite,
+        actionProviderRegistry: deps.actionProviderRegistry,
+      }),
+    );
+  }
+
   // Register transaction routes when all pipeline deps are available
   if (
     deps.db &&
     deps.keyStore &&
-    deps.masterPassword !== undefined &&
+    effectiveMasterPassword !== undefined &&
     deps.adapterPool &&
     deps.policyEngine &&
     deps.config
@@ -450,7 +470,8 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         config: deps.config,
         keyStore: deps.keyStore,
         policyEngine: deps.policyEngine,
-        masterPassword: deps.masterPassword,
+        masterPassword: effectiveMasterPassword,
+        passwordRef: deps.passwordRef,
         approvalWorkflow: deps.approvalWorkflow,
         delayQueue: deps.delayQueue,
         ownerLifecycle: deps.ownerLifecycle,
@@ -472,7 +493,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     deps.apiKeyStore &&
     deps.db &&
     deps.keyStore &&
-    deps.masterPassword !== undefined &&
+    effectiveMasterPassword !== undefined &&
     deps.adapterPool &&
     deps.policyEngine &&
     deps.config
@@ -487,7 +508,8 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         config: deps.config,
         keyStore: deps.keyStore,
         policyEngine: deps.policyEngine,
-        masterPassword: deps.masterPassword,
+        masterPassword: effectiveMasterPassword,
+        passwordRef: deps.passwordRef,
         approvalWorkflow: deps.approvalWorkflow,
         delayQueue: deps.delayQueue,
         ownerLifecycle: deps.ownerLifecycle,
@@ -504,7 +526,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     deps.db &&
     deps.sqlite &&
     deps.keyStore &&
-    deps.masterPassword !== undefined &&
+    effectiveMasterPassword !== undefined &&
     deps.policyEngine &&
     deps.policyEngine instanceof DatabasePolicyEngine &&
     deps.config
@@ -514,7 +536,8 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
       sqlite: deps.sqlite,
       keyStore: deps.keyStore,
       policyEngine: deps.policyEngine,
-      masterPassword: deps.masterPassword,
+      masterPassword: effectiveMasterPassword,
+      passwordRef: deps.passwordRef,
       config: deps.config,
       notificationService: deps.notificationService,
       priceOracle: deps.priceOracle,
@@ -548,6 +571,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
       adminRoutes({
         db: deps.db,
         jwtSecretManager: deps.jwtSecretManager,
+        passwordRef: deps.passwordRef,
         getKillSwitchState: () => killSwitchHolder,
         setKillSwitchState: (state: string, activatedBy?: string) => {
           killSwitchHolder.state = state;

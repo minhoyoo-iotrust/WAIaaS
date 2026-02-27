@@ -13,6 +13,10 @@ dispatch:
 
 WAIaaS (Wallet-as-a-Service for AI Agents) is a self-hosted local daemon that lets AI agents execute on-chain transactions on Solana and Ethereum with policy-based security controls. This guide walks through the complete workflow from creating your first wallet to sending a transaction.
 
+> AI agents must NEVER request the master password. Use only your session token.
+
+> **Preferred setup:** Use `waiaas init --auto-provision` for fully autonomous daemon setup without human interaction. See `setup.skill.md` Option A for the complete auto-provision flow.
+
 ## Base URL
 
 ```

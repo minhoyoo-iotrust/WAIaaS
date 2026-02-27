@@ -124,7 +124,7 @@ export const messages: Messages = {
   },
   // Notification templates (31 event types)
   notifications: {
-    TX_REQUESTED: { title: '거래 요청', body: '{walletName}이(가) {to}로 {amount} 전송을 요청했습니다 {display_amount}' },
+    TX_REQUESTED: { title: '거래 요청', body: '{walletName}이(가) {to}로 {amount} {type}을(를) 요청했습니다 {display_amount}' },
     TX_QUEUED: { title: '거래 대기열 등록', body: '거래 {txId}가 처리 대기열에 등록되었습니다' },
     TX_SUBMITTED: { title: '거래 제출', body: '거래 {txId}가 블록체인에 제출되었습니다 {display_amount}' },
     TX_CONFIRMED: { title: '거래 확인', body: '거래 {txId}가 확인되었습니다. 금액: {amount} {display_amount}' },
@@ -168,6 +168,23 @@ export const messages: Messages = {
     INCOMING_TX_RANGE_SKIPPED: { title: '수신 TX 스캔 누락', body: '{network}의 블록 범위 {fromBlock}-{toBlock}이(가) {errorCount}회 연속 실패 후 건너뛰어졌습니다. 이 범위의 수신 트랜잭션이 누락될 수 있습니다.' },
     TX_GAS_WAITING: { title: '가스 조건 대기 중', body: '거래 {txId}가 가스 조건 충족을 기다리고 있습니다. 최대 가스비: {maxGasPrice}, 타임아웃: {timeout}초' },
     TX_GAS_CONDITION_MET: { title: '가스 조건 충족', body: '거래 {txId}의 가스 조건이 충족되었습니다. 현재 가스비: {currentGasPrice}. 실행을 재개합니다.' },
+    LIQUIDATION_WARNING: {
+      title: '청산 경고',
+      body: '{walletName} 헬스 팩터가 {healthFactor}입니다 (임계값: {threshold}). 담보 추가 또는 부채 상환을 고려하세요.',
+    },
+    MATURITY_WARNING: {
+      title: '만기 경고',
+      body: '{walletName}의 {provider} 포지션이 {daysUntilMaturity}일 후 만기됩니다. 만기 전에 상환하세요.',
+    },
+    MARGIN_WARNING: {
+      title: '마진 경고',
+      body: '{walletName}의 {provider} 마진 비율이 {marginRatio}%입니다. 청산을 피하려면 마진을 추가하세요.',
+    },
+    LIQUIDATION_IMMINENT: {
+      title: '즉시 청산 위험',
+      body: '{walletName}이(가) 즉시 청산 위험에 처해 있습니다. 헬스 팩터: {healthFactor}. 즉각적인 조치가 필요합니다.',
+    },
+    SESSION_IDLE: { title: '세션 유휴 감지', body: '{walletName}의 세션 {sessionId}이(가) 장시간 사용되지 않고 있습니다. 필요 시 Admin UI에서 수동 취소하세요.' },
   },
   // System messages
   system: {

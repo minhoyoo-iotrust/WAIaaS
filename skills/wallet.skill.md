@@ -789,7 +789,7 @@ The nonce is a random 32-byte hex string valid for 5 minutes. Used by owner wall
 
 ## 9. MCP Tools Reference
 
-The MCP server exposes 23 tools for AI agents. Key wallet management tools:
+The MCP server exposes 25 tools for AI agents. Key wallet management tools:
 
 ### set_default_network
 
@@ -1226,4 +1226,135 @@ const summary = await client.getIncomingTransactionSummary({ period: 'weekly' })
 ```python
 incoming = await client.list_incoming_transactions(limit=10, status="CONFIRMED")
 summary = await client.get_incoming_transaction_summary(period="weekly")
+```
+
+## 16. DeFi Positions
+
+Query DeFi lending positions and health factor for the wallet. Requires **sessionAuth**.
+
+### GET /v1/wallet/positions -- Get DeFi Positions
+
+Returns all active DeFi positions tracked for the wallet, with USD valuations.
+
+```bash
+curl -s http://localhost:3100/v1/wallet/positions \
+  -H 'Authorization: Bearer wai_sess_eyJ...'
+```
+
+Query Parameters:
+- `wallet_id` (optional): Target wallet ID. Omit to use the default wallet.
+
+Response (200):
+```json
+{
+  "walletId": "01958f3a-1234-7000-8000-abcdef123456",
+  "positions": [
+    {
+      "id": "pos-001",
+      "category": "LENDING",
+      "provider": "aave_v3",
+      "chain": "ethereum",
+      "network": "ethereum-mainnet",
+      "assetId": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "amount": "1000000000000000000",
+      "amountUsd": 2500.0,
+      "metadata": {"aToken": "0xabc..."},
+      "status": "ACTIVE",
+      "openedAt": 1700000000,
+      "lastSyncedAt": 1700003600
+    }
+  ],
+  "totalValueUsd": 2500.0
+}
+```
+
+Position categories: `LENDING`, `YIELD`, `PERP`, `STAKING`.
+Position statuses: `ACTIVE`, `CLOSED`, `LIQUIDATED`. Only ACTIVE positions are returned by default.
+
+Fields:
+- `assetId`: Token contract address (nullable)
+- `amount`: Raw amount as digit string (smallest units)
+- `amountUsd`: USD equivalent (null if price unavailable)
+- `metadata`: Provider-specific metadata (nullable)
+- `totalValueUsd`: Sum of all position USD values (null if no positions)
+
+### GET /v1/wallet/health-factor -- Get Lending Health Factor
+
+Returns the lending health factor for the wallet, queried live from the lending protocol (e.g., Aave V3). The health factor indicates how close the wallet is to liquidation.
+
+```bash
+curl -s http://localhost:3100/v1/wallet/health-factor \
+  -H 'Authorization: Bearer wai_sess_eyJ...'
+```
+
+Query Parameters:
+- `wallet_id` (optional): Target wallet ID
+- `network` (optional): Target network for health factor query (e.g., `ethereum-mainnet`)
+
+Response (200):
+```json
+{
+  "walletId": "01958f3a-1234-7000-8000-abcdef123456",
+  "factor": 2.5,
+  "totalCollateralUsd": 10000.0,
+  "totalDebtUsd": 4000.0,
+  "currentLtv": 0.4,
+  "status": "safe"
+}
+```
+
+Health factor status classification:
+- `safe`: factor > 2.0 -- healthy position
+- `warning`: 1.5 < factor <= 2.0 -- monitor closely
+- `danger`: 1.1 < factor <= 1.5 -- at risk of liquidation
+- `critical`: factor <= 1.1 -- immediate liquidation risk
+
+If no lending positions exist, returns a default safe response (factor: Infinity, totalCollateralUsd: 0, totalDebtUsd: 0).
+
+### MCP Tools
+
+| Tool | Description |
+|------|-------------|
+| `waiaas_get_defi_positions` | Get all DeFi positions for the wallet. Supports optional `wallet_id` parameter. |
+| `waiaas_get_health_factor` | Get lending health factor. Supports optional `wallet_id` and `network` parameters. |
+
+### SDK Methods
+
+**TypeScript:**
+```typescript
+import { WAIaaSClient } from '@waiaas/sdk';
+
+const client = new WAIaaSClient({ baseUrl: 'http://localhost:3100', sessionToken: 'wai_sess_...' });
+
+// Get all DeFi positions
+const positions = await client.getPositions();
+// Returns: { walletId, positions: [...], totalValueUsd }
+
+// Get positions for a specific wallet
+const walletPositions = await client.getPositions({ walletId: 'wlt-123' });
+
+// Get lending health factor
+const health = await client.getHealthFactor();
+// Returns: { walletId, factor, totalCollateralUsd, totalDebtUsd, currentLtv, status }
+
+// Get health factor for a specific wallet and network
+const walletHealth = await client.getHealthFactor({ walletId: 'wlt-123', network: 'ethereum-mainnet' });
+```
+
+**Python:**
+```python
+from waiaas import WAIaaSClient
+
+async with WAIaaSClient("http://localhost:3100", "wai_sess_...") as client:
+    # Get all DeFi positions
+    positions = await client.get_positions()
+
+    # Get positions for a specific wallet
+    wallet_positions = await client.get_positions(wallet_id="wlt-123")
+
+    # Get lending health factor
+    health = await client.get_health_factor()
+
+    # Get health factor for a specific wallet and network
+    wallet_health = await client.get_health_factor(wallet_id="wlt-123", network="ethereum-mainnet")
 ```

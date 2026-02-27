@@ -979,6 +979,7 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
           error: simResult.error ?? 'Simulation failed',
           amount: reqAmount,
           display_amount: displayAmount,
+          network: ctx.resolvedNetwork,
         }, { txId: ctx.txId });
 
         // v1.6: emit transaction:failed event (simulation failure)
@@ -1024,6 +1025,7 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
         amount: reqAmount,
         to: reqTo,
         display_amount: displayAmount,
+        network: ctx.resolvedNetwork,
       }, { txId: ctx.txId });
 
       // v1.6: emit wallet:activity TX_SUBMITTED event
@@ -1057,6 +1059,7 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
             error: err.message,
             amount: reqAmount,
             display_amount: displayAmount,
+            network: ctx.resolvedNetwork,
           }, { txId: ctx.txId });
 
           // v1.6: emit transaction:failed event (permanent chain error)
@@ -1089,6 +1092,7 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
               error: `${err.code} (max retries exceeded)`,
               amount: reqAmount,
               display_amount: displayAmount,
+              network: ctx.resolvedNetwork,
             }, { txId: ctx.txId });
 
             // v1.6: emit transaction:failed event (transient max retries)
@@ -1127,6 +1131,7 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
               error: `${err.code} (stale retry exhausted)`,
               amount: reqAmount,
               display_amount: displayAmount,
+              network: ctx.resolvedNetwork,
             }, { txId: ctx.txId });
 
             // v1.6: emit transaction:failed event (stale retry exhausted)
@@ -1197,6 +1202,7 @@ export async function stage6Confirm(ctx: PipelineContext): Promise<void> {
       amount: reqAmount,
       to: reqTo,
       display_amount: displayAmount,
+      network: ctx.resolvedNetwork,
     }, { txId: ctx.txId });
 
     // v1.6: emit transaction:completed event
@@ -1223,6 +1229,7 @@ export async function stage6Confirm(ctx: PipelineContext): Promise<void> {
       error: 'Transaction reverted on-chain',
       amount: reqAmount,
       display_amount: displayAmount,
+      network: ctx.resolvedNetwork,
     }, { txId: ctx.txId });
 
     // v1.6: emit transaction:failed event (on-chain revert)

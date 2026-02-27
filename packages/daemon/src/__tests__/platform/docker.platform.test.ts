@@ -251,7 +251,7 @@ describe('PLAT-02 Docker Platform Tests', () => {
   describe('Auto-init', () => {
     it('PLAT-02-AUTOINIT-01: entrypoint.sh runs "start --data-dir" command for auto-init', () => {
       // The entrypoint runs 'start' with --data-dir which handles init if needed
-      expect(entrypoint).toMatch(/start\s+--data-dir\s+"\$\{WAIAAS_DATA_DIR/);
+      expect(entrypoint).toMatch(/start\s+--data-dir\s+"\$\{(WAIAAS_)?DATA_DIR/);
     });
   });
 });

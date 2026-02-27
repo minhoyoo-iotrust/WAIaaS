@@ -28,6 +28,7 @@ import { WAIaaSError } from '@waiaas/core';
 import type { ChainType, NetworkType, EnvironmentType, IPolicyEngine } from '@waiaas/core';
 import type { AdapterPool } from '../../infrastructure/adapter-pool.js';
 import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
+import type { MasterPasswordRef } from '../middleware/master-auth.js';
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
 import { wallets, transactions } from '../../infrastructure/database/schema.js';
 import type { LocalKeyStore } from '../../infrastructure/keystore/keystore.js';
@@ -82,6 +83,8 @@ export interface TransactionRouteDeps {
   keyStore: LocalKeyStore;
   policyEngine: IPolicyEngine;
   masterPassword: string;
+  /** Mutable ref for live password updates. Takes precedence over masterPassword. */
+  passwordRef?: MasterPasswordRef;
   approvalWorkflow?: ApprovalWorkflow;
   delayQueue?: DelayQueue;
   ownerLifecycle?: OwnerLifecycleService;
@@ -349,7 +352,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
       adapter,
       keyStore: deps.keyStore,
       policyEngine: deps.policyEngine,
-      masterPassword: deps.masterPassword,
+      masterPassword: deps.passwordRef?.password ?? deps.masterPassword,
       walletId,
       wallet: {
         publicKey: wallet.publicKey,
@@ -475,7 +478,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
         adapter,
         keyStore: deps.keyStore,
         policyEngine: deps.policyEngine,
-        masterPassword: deps.masterPassword,
+        masterPassword: deps.passwordRef?.password ?? deps.masterPassword,
         notificationService: deps.notificationService,
         eventBus: deps.eventBus,
       },

@@ -40,6 +40,7 @@ interface AdminStatus {
   recentTxCount: number;
   failedTxCount: number;
   recentTransactions: RecentTransaction[];
+  autoProvisioned?: boolean;
 }
 
 interface AgentPromptResult {
@@ -47,6 +48,26 @@ interface AgentPromptResult {
   walletCount: number;
   sessionsCreated: number;
   expiresAt: number;
+}
+
+interface DefiPositionSummary {
+  positions: Array<{
+    id: string;
+    walletId: string;
+    category: string;
+    provider: string;
+    chain: string;
+    network: string | null;
+    assetId: string | null;
+    amount: string;
+    amountUsd: number | null;
+    status: string;
+    openedAt: number;
+    lastSyncedAt: number;
+  }>;
+  totalValueUsd: number | null;
+  worstHealthFactor: number | null;
+  activeCount: number;
 }
 
 function StatCard({ label, value, loading, badge, href }: {
@@ -139,6 +160,27 @@ function buildTxColumns(
   ];
 }
 
+function buildDefiColumns(
+  displayCurrency: string,
+  displayRate: number | null,
+): Column<DefiPositionSummary['positions'][number]>[] {
+  return [
+    { key: 'provider', header: 'Provider' },
+    { key: 'category', header: 'Category', render: (p) => <Badge variant="info">{p.category}</Badge> },
+    { key: 'chain', header: 'Chain', render: (p) => <Badge variant="info">{p.chain}</Badge> },
+    { key: 'amount', header: 'Amount' },
+    {
+      key: 'amountUsd',
+      header: 'USD Value',
+      render: (p) => {
+        if (p.amountUsd === null) return '\u2014';
+        const display = formatWithDisplay(p.amountUsd, displayCurrency, displayRate);
+        return display ?? `$${p.amountUsd.toFixed(2)}`;
+      },
+    },
+  ];
+}
+
 async function copyToClipboard(text: string): Promise<void> {
   try {
     await navigator.clipboard.writeText(text);
@@ -163,6 +205,20 @@ export default function DashboardPage() {
   const promptLoading = useSignal(false);
   const promptText = useSignal<string | null>(null);
   const approvalCount = useSignal<number | null>(null);
+  const defiData = useSignal<DefiPositionSummary | null>(null);
+  const defiLoading = useSignal(true);
+
+  const fetchDefi = async () => {
+    defiLoading.value = true;
+    try {
+      const result = await apiGet<DefiPositionSummary>(API.ADMIN_DEFI_POSITIONS);
+      defiData.value = result;
+    } catch {
+      // DeFi positions not available or empty -- keep null
+    } finally {
+      defiLoading.value = false;
+    }
+  };
 
   const fetchStatus = async () => {
     loading.value = true;
@@ -210,6 +266,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchStatus();
+    fetchDefi();
     fetchDisplayCurrency()
       .then(({ currency, rate }) => {
         displayCurrency.value = currency;
@@ -219,7 +276,7 @@ export default function DashboardPage() {
     apiGet<{ total: number }>(API.ADMIN_TRANSACTIONS + '?status=APPROVED&limit=1')
       .then((res) => { approvalCount.value = res.total; })
       .catch(() => { /* fallback */ });
-    const interval = setInterval(fetchStatus, 30_000);
+    const interval = setInterval(() => { fetchStatus(); fetchDefi(); }, 30_000);
     return () => clearInterval(interval);
   }, []);
 
@@ -240,6 +297,18 @@ export default function DashboardPage() {
             <strong>Update available:</strong>{' '}
             {data.value.version} {'\u2192'} {data.value.latestVersion}{' \u2014 '}
             Run <code>waiaas update</code> to update.
+          </span>
+        </div>
+      )}
+      {data.value?.autoProvisioned && (
+        <div class="auto-provision-banner" role="alert">
+          <span class="auto-provision-banner-icon">{'\u26A0'}</span>
+          <span>
+            <strong>Auto-provision mode active.</strong>{' '}
+            Change the master password for security.{' '}
+            <a href="#/security?tab=password" class="auto-provision-link">
+              Go to Security
+            </a>
           </span>
         </div>
       )}
@@ -321,6 +390,45 @@ export default function DashboardPage() {
           </Button>
         )}
       </div>
+
+      {/* DeFi Positions Section */}
+      {defiData.value && defiData.value.activeCount > 0 && (
+        <div style={{ marginTop: 'var(--space-4)' }}>
+          <h3 style={{ marginBottom: 'var(--space-3)' }}>DeFi Positions</h3>
+          <div class="stat-grid">
+            <StatCard
+              label="Total DeFi Value"
+              value={defiData.value.totalValueUsd !== null
+                ? (formatWithDisplay(defiData.value.totalValueUsd, displayCurrency.value, displayRate.value) ?? `$${defiData.value.totalValueUsd.toFixed(2)}`)
+                : '\u2014'}
+              loading={defiLoading.value}
+            />
+            <StatCard
+              label="Health Factor"
+              value={defiData.value.worstHealthFactor !== null
+                ? defiData.value.worstHealthFactor.toFixed(2)
+                : 'N/A'}
+              loading={defiLoading.value}
+              badge={defiData.value.worstHealthFactor !== null
+                ? (defiData.value.worstHealthFactor < 1.2 ? 'danger' : defiData.value.worstHealthFactor < 1.5 ? 'warning' : 'success')
+                : undefined}
+            />
+            <StatCard
+              label="Active Positions"
+              value={defiData.value.activeCount.toString()}
+              loading={defiLoading.value}
+            />
+          </div>
+          <div style={{ marginTop: 'var(--space-3)' }}>
+            <Table
+              columns={buildDefiColumns(displayCurrency.value, displayRate.value)}
+              data={defiData.value.positions}
+              loading={defiLoading.value}
+              emptyMessage="No active DeFi positions"
+            />
+          </div>
+        </div>
+      )}
 
       <div style={{ marginTop: 'var(--space-4)' }}>
         <h3 style={{ marginBottom: 'var(--space-3)' }}>Recent Activity</h3>

@@ -444,7 +444,7 @@ describe('AutoStopService', () => {
   // -----------------------------------------------------------------------
 
   describe('IdleTimeoutRule', () => {
-    it('유휴 타임아웃 초과 세션 자동 해지', () => {
+    it('유휴 타임아웃 초과 시 SESSION_IDLE 알림 발송 (#204)', () => {
       vi.useFakeTimers();
 
       const walletId = 'wallet-idle';
@@ -481,7 +481,13 @@ describe('AutoStopService', () => {
       // Advance time past idle timeout + check interval
       vi.advanceTimersByTime(15_000); // 15 seconds > 10 second timeout
 
-      expect(isSessionRevoked(db, 'session-1')).toBe(true);
+      // #204: idle timeout now sends SESSION_IDLE notification instead of revoking
+      expect(isSessionRevoked(db, 'session-1')).toBe(false);
+      expect(mockNotify).toHaveBeenCalledWith(
+        'SESSION_IDLE',
+        walletId,
+        expect.objectContaining({ walletId, sessionId: 'session-1' }),
+      );
 
       idleService.stop();
       vi.useRealTimers();
@@ -723,6 +729,14 @@ describe('AutoStopService', () => {
       }
 
       expect(getWalletStatus(db, walletId)).toBe('SUSPENDED');
+    });
+
+    it('idleCheckIntervalSec 런타임 변경 시 타이머 재시작', () => {
+      service.start();
+
+      // Update idle check interval -- should restart the internal timer
+      // No throw means the config change was applied successfully
+      expect(() => service.updateConfig({ idleCheckIntervalSec: 120 })).not.toThrow();
     });
   });
 

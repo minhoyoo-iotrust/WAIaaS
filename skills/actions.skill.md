@@ -928,7 +928,175 @@ tx = await client.execute_action("jito_staking", "unstake", {
 # Poll GET /v1/transactions/{tx.id} for async unstake status
 ```
 
-## 8. Policy Integration
+## 8. Aave V3 Lending -- Built-in Provider (EVM)
+
+The Aave V3 Lending provider uses the [Aave Protocol V3](https://aave.com/) to supply collateral, borrow assets, repay debt, and withdraw collateral on EVM chains. It supports multi-chain deployment across Ethereum, Arbitrum, Optimism, Polygon, and Base.
+
+> AI agents must NEVER request the master password. Use only your session token.
+
+### Configuration
+
+Enable Aave V3 Lending via **Admin UI > Settings > Actions > Aave V3 Lending**, or environment variables. No API key is required -- Aave V3 operates via on-chain contracts with RPC calls.
+
+| Setting | Env Variable | Default | Description |
+| ------- | ------------ | ------- | ----------- |
+| Enabled | `WAIAAS_ACTIONS_AAVE_V3_ENABLED` | `false` | Enable Aave V3 Lending provider |
+
+### Available Actions
+
+| Action | Description | Chain | Risk | Tier |
+| ------ | ----------- | ----- | ---- | ---- |
+| `aave_supply` | Supply assets as collateral to Aave V3 lending pool | ethereum | medium | DELAY |
+| `aave_borrow` | Borrow assets against collateral from Aave V3 | ethereum | high | DELAY |
+| `aave_repay` | Repay borrowed assets to Aave V3 lending pool | ethereum | low | DELAY |
+| `aave_withdraw` | Withdraw supplied collateral from Aave V3 | ethereum | medium | DELAY |
+
+### Supported Chains
+
+| Network | Chain ID | WAIaaS Network Name |
+| ------- | -------- | ------------------- |
+| Ethereum | 1 | `ethereum-mainnet` |
+| Arbitrum | 42161 | `arbitrum-mainnet` |
+| Optimism | 10 | `optimism-mainnet` |
+| Polygon | 137 | `polygon-mainnet` |
+| Base | 8453 | `base-mainnet` |
+
+### Supply Parameters (aave_supply)
+
+| Parameter | Type | Required | Description |
+| --------- | ---- | -------- | ----------- |
+| `asset` | string | Yes | Token address to supply (EVM hex address, e.g., `0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48`). |
+| `amount` | string | Yes | Amount in human-readable format (e.g., `"100.5"` for 100.5 USDC). Converted to token decimals internally. |
+
+### Borrow Parameters (aave_borrow)
+
+| Parameter | Type | Required | Description |
+| --------- | ---- | -------- | ----------- |
+| `asset` | string | Yes | Token address to borrow. |
+| `amount` | string | Yes | Amount in human-readable format. |
+
+### Repay Parameters (aave_repay)
+
+| Parameter | Type | Required | Description |
+| --------- | ---- | -------- | ----------- |
+| `asset` | string | Yes | Token address to repay. |
+| `amount` | string | Yes | Amount in human-readable format, or `"max"` for full repayment. |
+
+### Withdraw Parameters (aave_withdraw)
+
+| Parameter | Type | Required | Description |
+| --------- | ---- | -------- | ----------- |
+| `asset` | string | Yes | Token address to withdraw. |
+| `amount` | string | Yes | Amount in human-readable format, or `"max"` for full withdrawal. |
+
+### Safety Features
+
+- **Health factor simulation**: Borrow and withdraw actions simulate the resulting health factor before execution. If the simulated health factor would drop below a safe threshold, the action is rejected to prevent self-liquidation.
+- **Non-spending classification**: Supply and repay actions are classified as non-spending operations and are not counted toward SPENDING_LIMIT policy limits. The assets remain under the wallet's control as collateral or debt reduction.
+- **ERC-20 auto-approval**: Supply and repay actions automatically include an ERC-20 approve step (multi-step pipeline) to approve the Aave V3 Pool contract to spend the required token amount.
+- **Provider-trust bypass**: When Aave V3 is enabled in Admin Settings, the CONTRACT_WHITELIST policy check is automatically skipped for Aave V3-resolved transactions. See Policy Integration section.
+
+### Multi-step Execution
+
+Supply and repay actions generate **two sequential transactions** (pipeline):
+1. **ERC-20 approve** -- Approve the Aave V3 Pool contract to spend the token amount.
+2. **Aave V3 call** -- Execute the supply/repay call on the Aave V3 Pool contract.
+
+Borrow and withdraw actions generate **one transaction** (no approval needed since the protocol already holds the assets).
+
+### Example: Supply 100 USDC to Aave V3 on Ethereum
+
+**REST API:**
+```bash
+curl -s -X POST http://localhost:3100/v1/actions/aave_v3/aave_supply \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -d '{
+    "params": {
+      "asset": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "amount": "100"
+    },
+    "network": "ethereum-mainnet"
+  }'
+```
+
+**MCP Tool:**
+```json
+{
+  "tool": "action_aave_v3_aave_supply",
+  "params": {
+    "asset": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    "amount": "100"
+  },
+  "network": "ethereum-mainnet"
+}
+```
+
+**TypeScript SDK:**
+```typescript
+import { WAIaaSClient } from '@waiaas/sdk';
+
+const client = new WAIaaSClient({ baseUrl: 'http://localhost:3100', sessionToken: 'wai_sess_...' });
+
+const tx = await client.executeAction('aave_v3', 'aave_supply', {
+  params: {
+    asset: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+    amount: '100',
+  },
+  network: 'ethereum-mainnet',
+});
+console.log('Transaction ID:', tx.id);
+```
+
+**Python SDK:**
+```python
+from waiaas import WAIaaSClient
+
+async with WAIaaSClient(base_url="http://localhost:3100", token="wai_sess_...") as client:
+    tx = await client.execute_action("aave_v3", "aave_supply", {
+        "asset": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "amount": "100",
+    }, network="ethereum-mainnet")
+    print("Transaction ID:", tx.id)
+```
+
+### Example: Borrow 0.5 ETH from Aave V3
+
+**REST API:**
+```bash
+curl -s -X POST http://localhost:3100/v1/actions/aave_v3/aave_borrow \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -d '{
+    "params": {
+      "asset": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+      "amount": "0.5"
+    },
+    "network": "ethereum-mainnet"
+  }'
+```
+
+**MCP Tool:**
+```json
+{
+  "tool": "action_aave_v3_aave_borrow",
+  "params": {
+    "asset": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+    "amount": "0.5"
+  },
+  "network": "ethereum-mainnet"
+}
+```
+
+### DeFi Position Queries
+
+After executing Aave V3 actions, use the DeFi position endpoints to monitor your lending state:
+
+- **GET /v1/wallet/positions** -- View all active lending positions (see `wallet.skill.md` Section 16)
+- **GET /v1/wallet/health-factor** -- Monitor lending health factor to avoid liquidation
+- **MCP tools:** `waiaas_get_defi_positions`, `waiaas_get_health_factor`
+
+## 9. Policy Integration
 
 ### CONTRACT_WHITELIST
 
@@ -955,7 +1123,7 @@ The swap/bridge input amount is converted to USD via IPriceOracle and evaluated 
 
 **LI.FI bridge reservation lifecycle:** Bridge amounts are reserved against the spending limit when the transaction is submitted. The reservation is released on terminal states (COMPLETED, FAILED, REFUNDED) but **held** on TIMEOUT to prevent double-spend during manual resolution. This means the spending budget is not freed until the bridge completes or fails definitively.
 
-## 9. Configuration via Admin Settings
+## 10. Configuration via Admin Settings
 
 Since v28.2, all action provider settings are managed via **Admin UI > Settings > Actions** (not config.toml). The Admin Settings UI provides:
 
@@ -977,7 +1145,7 @@ The Admin UI shows a three-state status for each provider:
 - **Requires API Key** -- Provider is enabled but missing required API key (yellow, fires `ACTION_API_KEY_REQUIRED` notification)
 - **Inactive** -- Provider is disabled (gray)
 
-## 10. Error Reference
+## 11. Error Reference
 
 | Code | HTTP | Description | Recovery |
 |------|------|-------------|----------|
@@ -993,7 +1161,7 @@ The Admin UI shows a three-state status for each provider:
 | `INVALID_INSTRUCTION` | 400 | Chain not supported by LI.FI integration. | Use one of the supported chains: solana, ethereum, polygon, arbitrum, optimism, base. |
 | `ACTION_API_ERROR` | 502 | LI.FI API returned an error. | Check LI.FI API status, verify parameters, retry. |
 
-## 11. MCP Auto-Registration
+## 12. MCP Auto-Registration
 
 When a provider has `mcpExpose: true` in its metadata, the MCP server automatically registers each action as an MCP tool using the naming convention:
 
@@ -1001,7 +1169,7 @@ When a provider has `mcpExpose: true` in its metadata, the MCP server automatica
 action_{provider_name}_{action_name}
 ```
 
-**Current MCP tools (8 action tools):**
+**Current MCP tools (12 action tools):**
 - `action_jupiter_swap_swap` -- Jupiter Swap on Solana
 - `action_zerox_swap_swap` -- 0x Swap on EVM chains
 - `action_lifi_cross_swap` -- LI.FI Cross-Chain Swap (multi-chain)
@@ -1010,6 +1178,10 @@ action_{provider_name}_{action_name}
 - `action_lido_staking_unstake` -- Lido stETH to ETH withdrawal (Ethereum)
 - `action_jito_staking_stake` -- Jito SOL to JitoSOL staking (Solana)
 - `action_jito_staking_unstake` -- Jito JitoSOL to SOL withdrawal (Solana)
+- `action_aave_v3_aave_supply` -- Aave V3 supply collateral (EVM)
+- `action_aave_v3_aave_borrow` -- Aave V3 borrow assets (EVM)
+- `action_aave_v3_aave_repay` -- Aave V3 repay debt (EVM)
+- `action_aave_v3_aave_withdraw` -- Aave V3 withdraw collateral (EVM)
 
 Auto-registration happens after MCP server connection via `registerActionProviderTools()`. The tool list is refreshed on each session. If the REST API is unavailable, MCP enters degraded mode (14 built-in tools remain, action provider tools are skipped).
 
@@ -1018,7 +1190,7 @@ MCP tool parameters:
 - `network` (optional string): Target network
 - `wallet_id` (optional string): Target wallet ID
 
-## 12. Related Skill Files
+## 13. Related Skill Files
 
 - **admin.skill.md** -- API key management, Admin Settings, daemon admin
 - **transactions.skill.md** -- 5-type transaction reference (actions execute as CONTRACT_CALL)

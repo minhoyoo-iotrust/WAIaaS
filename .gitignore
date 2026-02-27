@@ -47,5 +47,8 @@ how-to-test/
 # Spread/marketing drafts (private)
 how-to-spread/
 
+# Claude Code project settings (local overrides)
+.claude/settings.json
+
 # Docker secrets (never commit)
 secrets/

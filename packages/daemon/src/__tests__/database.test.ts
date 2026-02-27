@@ -59,6 +59,7 @@ describe('Schema creation', () => {
     expect(tableNames).toEqual([
       'api_keys',
       'audit_log',
+      'defi_positions',
       'incoming_transactions',
       'incoming_tx_cursors',
       'key_value_store',

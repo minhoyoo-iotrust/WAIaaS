@@ -46,6 +46,11 @@ export const NOTIFICATION_EVENT_TYPES = [
   'INCOMING_TX_RANGE_SKIPPED',
   'TX_GAS_WAITING',
   'TX_GAS_CONDITION_MET',
+  'LIQUIDATION_WARNING',
+  'MATURITY_WARNING',
+  'MARGIN_WARNING',
+  'LIQUIDATION_IMMINENT',
+  'SESSION_IDLE',
 ] as const;
 export type NotificationEventType = (typeof NOTIFICATION_EVENT_TYPES)[number];
 export const NotificationEventTypeEnum = z.enum(NOTIFICATION_EVENT_TYPES);

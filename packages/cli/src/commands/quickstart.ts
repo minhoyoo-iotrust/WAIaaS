@@ -77,7 +77,7 @@ export async function quickstartCommand(opts: QuickstartOptions): Promise<void> 
   }
 
   // Step 2: Resolve master password
-  const password = opts.masterPassword ?? await resolvePassword();
+  const password = opts.masterPassword ?? await resolvePassword(opts.dataDir);
 
   // Step 3: Create Solana + EVM wallets
   const chains = [
