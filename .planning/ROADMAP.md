@@ -28,7 +28,7 @@
 - ✅ **v28.8 빌트인 지갑 프리셋 자동 설정** -- Phases 265-267 (shipped 2026-02-26)
 - ✅ **v29.0 고급 DeFi 프로토콜 설계** -- Phases 268-273 (shipped 2026-02-26)
 - ✅ **v29.2 EVM Lending -- Aave V3** -- Phases 274-278 (shipped 2026-02-27)
-- [ ] **v29.3 기본 지갑/기본 네트워크 개념 제거** -- Phases 279-282 (in progress)
+- ✅ **v29.3 기본 지갑/기본 네트워크 개념 제거** -- Phases 279-282 (shipped 2026-02-27)
 
 ## Phases
 
@@ -190,7 +190,7 @@ See `.planning/milestones/v29.2-ROADMAP.md` for full details.
 - [x] **Phase 279: DB 마이그레이션 + 코어 스키마/타입/에러 + 해석 로직** - 데이터 계층과 핵심 해석 규칙 변경 (completed 2026-02-27)
 - [x] **Phase 280: JWT/인증 + API 엔드포인트 + 파이프라인/인프라 + Admin Settings** - 서버 런타임 전체에서 기본값 의존 제거 (completed 2026-02-27)
 - [x] **Phase 281: SDK/CLI/Python SDK + MCP + Admin UI + Skill 파일** - 외부 인터페이스 전체 동기화 (completed 2026-02-27)
-- [ ] **Phase 282: E2E 검증 + 기존 테스트 수정** - 변경 사항 전체 검증 및 기존 테스트 통과 보장
+- [x] **Phase 282: E2E 검증 + 기존 테스트 수정** - 변경 사항 전체 검증 및 기존 테스트 통과 보장 (completed 2026-02-27)
 
 ## Phase Details
 
@@ -254,11 +254,11 @@ Plans:
   3. 삭제된 3개 엔드포인트가 404를 반환하고, 신규 JWT에 wlt claim이 없고, connect-info에 defaultNetwork/isDefault가 없다
   4. MCP 멀티 지갑 세션에서 wallet_id 생략 시 WALLET_ID_REQUIRED가 반환된다
   5. 기존 테스트 전체가 통과한다 (기존 테스트의 defaultWalletId/defaultNetwork/isDefault 참조 수정 포함)
-**Plans**: TBD
+**Plans**: 2 plans (1 wave)
 
 Plans:
-- [ ] 282-01: E2E 테스트 작성 (지갑 해석 + 네트워크 해석 + 삭제 엔드포인트 + JWT + connect-info + MCP)
-- [ ] 282-02: 기존 테스트 수정 + 전체 테스트 통과 검증
+- [x] 282-01-PLAN.md -- E2E 검증 테스트: 지갑 해석 + 네트워크 해석 + 삭제 엔드포인트 + JWT + connect-info + MCP (wave 1)
+- [x] 282-02-PLAN.md -- 기존 테스트 수정 (~40 파일) + 전체 테스트 통과 검증 (wave 1)
 
 ## Progress
 
@@ -269,7 +269,7 @@ Plans:
 | 279. DB + Core + Resolution | v29.3 | 2/2 | Complete | 2026-02-27 |
 | 280. JWT/Auth + API + Pipeline | v29.3 | 3/3 | Complete | 2026-02-27 |
 | 281. SDK/MCP/Admin UI/Skills | v29.3 | 3/3 | Complete | 2026-02-27 |
-| 282. E2E + Test Fixes | v29.3 | 0/2 | Not started | - |
+| 282. E2E + Test Fixes | v29.3 | 2/2 | Complete | 2026-02-27 |
 
 ---
-*Last updated: 2026-02-27 after Phase 281 completion*
+*Last updated: 2026-02-27 after Phase 282 completion — v29.3 milestone complete*
