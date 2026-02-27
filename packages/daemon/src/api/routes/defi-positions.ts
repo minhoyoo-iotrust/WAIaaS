@@ -241,7 +241,7 @@ export function createDefiPositionRoutes(deps: DefiPositionRouteDeps): OpenAPIHo
     let totalCollateralUsd = 0;
     let totalDebtUsd = 0;
     let worstLtv = 0;
-    let worstStatus: string = 'safe';
+    let worstStatus: 'safe' | 'warning' | 'danger' | 'critical' = 'safe';
 
     const context = {
       walletAddress: wallet.publicKey,
