@@ -208,7 +208,7 @@ See `.planning/milestones/v29.2-ROADMAP.md` for full details.
 
 Plans:
 - [x] 279-01-PLAN.md -- DB migration v27 + Drizzle schema + core enums/schemas/errors/i18n
-- [ ] 279-02-PLAN.md -- resolveWalletId 2-priority + network-resolver getSingleNetwork
+- [x] 279-02-PLAN.md -- resolveWalletId 2-priority + network-resolver getSingleNetwork
 
 ### Phase 280: JWT/인증 + API 엔드포인트 + 파이프라인/인프라 + Admin Settings
 **Goal**: 서버 런타임(인증, API 라우트, 파이프라인, 인프라 서비스) 전체에서 기본 지갑/기본 네트워크 의존이 제거되고, 삭제된 엔드포인트가 404를 반환한다
@@ -266,10 +266,10 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 279. DB + Core + Resolution | 2/2 | Complete   | 2026-02-27 | - |
+| 279. DB + Core + Resolution | v29.3 | 2/2 | Complete | 2026-02-27 |
 | 280. JWT/Auth + API + Pipeline | v29.3 | 0/3 | Not started | - |
 | 281. SDK/MCP/Admin UI/Skills | v29.3 | 0/3 | Not started | - |
 | 282. E2E + Test Fixes | v29.3 | 0/2 | Not started | - |
 
 ---
-*Last updated: 2026-02-27 after v29.3 roadmap creation*
+*Last updated: 2026-02-27 after Phase 279 completion*

@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v29.3
 milestone_name: 기본 지갑/기본 네트워크 개념 제거
-status: executing
-last_updated: "2026-02-27T10:02:00.000Z"
+status: ready_to_plan
+last_updated: "2026-02-27T12:00:00.000Z"
 progress:
   total_phases: 282
-  completed_phases: 278
+  completed_phases: 279
   total_plans: 381
   completed_plans: 373
 ---
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-27)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v29.3 기본 지갑/기본 네트워크 개념 제거 -- Phase 279
+**Current focus:** v29.3 기본 지갑/기본 네트워크 개념 제거 -- Phase 280
 
 ## Current Position
 
-Phase: 279 of 282 (DB 마이그레이션 + 코어 스키마/타입/에러 + 해석 로직)
-Plan: 2 of 2 in current phase (COMPLETE)
-Status: Executing
-Last activity: 2026-02-27 -- Completed 279-02-PLAN.md (resolveWalletId + network-resolver resolution logic)
+Phase: 280 of 282 (JWT/인증 + API 엔드포인트 + 파이프라인/인프라 + Admin Settings)
+Plan: 0 of 3 in current phase
+Status: Ready to plan
+Last activity: 2026-02-27 -- Phase 279 complete (2 plans, 18 requirements, 14/14 must-haves verified)
 
-Progress: [==============================░░] 94%
+Progress: [==============================░░] 95%
 
 ## Performance Metrics
 
@@ -59,5 +59,5 @@ None -- 이 마일스톤은 기존 기능 제거이므로 연구 불필요.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 279-02-PLAN.md
+Stopped at: Phase 279 complete, auto-advancing to Phase 280
 Resume file: None
