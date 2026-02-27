@@ -29,6 +29,7 @@
 - ✅ **v29.0 고급 DeFi 프로토콜 설계** -- Phases 268-273 (shipped 2026-02-26)
 - ✅ **v29.2 EVM Lending -- Aave V3** -- Phases 274-278 (shipped 2026-02-27)
 - ✅ **v29.3 기본 지갑/기본 네트워크 개념 제거** -- Phases 279-282 (shipped 2026-02-27)
+- [ ] **v29.4 Solana Lending (Kamino)** -- Phases 283-284 (in progress)
 
 ## Phases
 
@@ -195,5 +196,61 @@ See `.planning/milestones/v29.3-ROADMAP.md` for full details.
 
 </details>
 
+### v29.4 Solana Lending -- Kamino (In Progress)
+
+**Milestone Goal:** Kamino K-Lend를 ILendingProvider 구현체로 구축하여 AI 에이전트가 Solana 체인에서 supply/borrow/repay/withdraw를 정책 평가 하에 수행할 수 있도록 한다. v29.2에서 구축된 Lending 프레임워크(ILendingProvider, IPositionProvider, PositionTracker, HealthFactorMonitor, LendingPolicyEvaluator, defi_positions 테이블)를 재사용하며, @kamino-finance/klend-sdk로 Solana instruction을 빌드한다.
+
+- [ ] **Phase 283: Kamino Core Provider** - KaminoLendingProvider 구현 (4 actions + position/HF/market query + SDK wrapper)
+- [ ] **Phase 284: Kamino Integration** - MCP/SDK/Admin UI/정책/스킬 전 레이어 통합 + Admin Settings
+
+## Phase Details
+
+### Phase 283: Kamino Core Provider
+**Goal**: AI 에이전트가 Kamino K-Lend의 4가지 lending action(supply/borrow/repay/withdraw)을 실행하고, 포지션/HF/시장 데이터를 조회할 수 있는 상태
+**Depends on**: Nothing (first phase; reuses existing ILendingProvider framework from v29.2)
+**Requirements**: KPROV-01, KPROV-02, KPROV-03, KPROV-04, KPROV-05, KPROV-06, KPROV-07, KPROV-08, KPROV-09, KPROV-10, KPROV-11
+**Success Criteria** (what must be TRUE):
+  1. KaminoLendingProvider가 ILendingProvider + IPositionProvider 인터페이스를 구현하며, 4개 action(kamino_supply, kamino_borrow, kamino_repay, kamino_withdraw)이 정의되고, 각 action의 execute가 Solana ContractCallRequest를 반환한다
+  2. @kamino-finance/klend-sdk를 래핑한 SDK wrapper가 supply/borrow/repay/withdraw instruction을 빌드하며, "max" 금액 지정 시 repay는 전액 상환, withdraw는 전액 출금으로 처리된다
+  3. kamino_borrow/kamino_withdraw 실행 시 결과 HF를 시뮬레이션하여, HF가 임계값 이하로 떨어지면 자기 청산 위험으로 action을 차단한다
+  4. Kamino obligation 계정에서 SUPPLY/BORROW 포지션 목록을 조회할 수 있고, 담보/부채 데이터로 health factor 숫자를 계산하여 반환한다
+  5. reserve별 시장 데이터(supply APY, borrow APY, LTV ratio, available liquidity)를 조회할 수 있다
+**Plans**: TBD
+
+Plans:
+- [ ] 283-01: KaminoLendingProvider scaffold + klend-sdk wrapper + action definitions
+- [ ] 283-02: Supply/Borrow/Repay/Withdraw instruction building + HF simulation guard
+- [ ] 283-03: Position query + Health factor calculation + Market data query
+- [ ] 283-04: Unit tests for all KPROV requirements
+
+### Phase 284: Kamino Integration
+**Goal**: Kamino provider가 MCP/SDK/Admin UI/정책 평가기/스킬 문서 전 레이어에 통합되어, 기존 Aave V3와 동일한 수준의 운영 가시성과 정책 제어가 적용되는 상태
+**Depends on**: Phase 283
+**Requirements**: KINT-01, KINT-02, KINT-03, KINT-04, KINT-05, KINT-06, KINT-07, KINT-08, KINT-09, KINT-10
+**Success Criteria** (what must be TRUE):
+  1. registerBuiltInProviders에 등록되어 actions.kamino_enabled Admin Setting으로 런타임 활성화/비활성화되며, kamino.market과 kamino.hf_threshold 설정이 Admin Settings UI에서 조정 가능하다
+  2. MCP 클라이언트에서 4개 Kamino action 도구가 자동 노출(mcpExpose: true)되고, 기존 get-defi-positions/get-health-factor 도구가 Kamino 포지션 데이터를 포함하여 반환한다
+  3. TS SDK executeAction과 Python SDK execute_action으로 Kamino action을 실행할 수 있고, PositionTracker가 5분 주기로 Kamino obligation을 defi_positions 테이블에 동기화한다
+  4. LendingPolicyEvaluator가 Kamino borrow action에 max_ltv_pct 정책을 적용하고, HealthFactorMonitor가 Kamino HF를 adaptive polling으로 평가하여 위험 시 알림을 발송한다
+  5. Admin UI DeFi dashboard에서 Aave V3 + Kamino 포지션이 provider 구분과 함께 통합 표시되고, actions.skill.md에 Kamino Lending 4 action 문서가 추가된다
+**Plans**: TBD
+
+Plans:
+- [ ] 284-01: Provider registration + Admin Settings 3 keys + LendingPolicyEvaluator wiring
+- [ ] 284-02: PositionTracker sync + HealthFactorMonitor adaptive polling integration
+- [ ] 284-03: MCP tool auto-exposure + TS/Python SDK executeAction support
+- [ ] 284-04: Admin UI DeFi dashboard Kamino positions + Skill file update
+- [ ] 284-05: Integration tests for all KINT requirements
+
+## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 283 -> 284
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 283. Kamino Core Provider | 0/4 | Not started | - |
+| 284. Kamino Integration | 0/5 | Not started | - |
+
 ---
-*Last updated: 2026-02-27 after v29.3 milestone completion*
+*Last updated: 2026-02-28 after v29.4 roadmap creation*

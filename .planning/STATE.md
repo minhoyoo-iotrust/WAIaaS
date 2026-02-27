@@ -5,9 +5,9 @@ milestone_name: Solana Lending (Kamino)
 status: active
 last_updated: "2026-02-28T00:00:00Z"
 progress:
-  total_phases: 282
+  total_phases: 284
   completed_phases: 282
-  total_plans: 383
+  total_plans: 392
   completed_plans: 383
 ---
 
@@ -18,14 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-28)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Milestone v29.4 — Solana Lending (Kamino)
+**Current focus:** Phase 283 -- Kamino Core Provider
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-02-28 — Milestone v29.4 started
+Phase: 283 of 284 (Kamino Core Provider)
+Plan: 0 of 4 in current phase
+Status: Ready to plan
+Last activity: 2026-02-28 -- Roadmap created for v29.4
+
+Progress: [░░░░░░░░░░] 0% (0/9 plans)
 
 ## Performance Metrics
 
@@ -35,11 +37,13 @@ Last activity: 2026-02-28 — Milestone v29.4 started
 
 ### Decisions
 
-Cleared -- see .planning/milestones/v29.3-ROADMAP.md for v29.3 decisions.
+- v29.2 ILendingProvider framework reused (no DB migration needed -- defi_positions table exists)
+- 2-phase structure: core provider (283) then integration (284), matching Aave V3 pattern
+- @kamino-finance/klend-sdk for instruction building (no direct CPI)
 
-### Research Flags
+### Pending Todos
 
-None
+None yet.
 
 ### Blockers/Concerns
 
@@ -47,7 +51,7 @@ None
 
 ## Session Continuity
 
-Last session: 2026-02-27
-Stopped at: v29.3 milestone complete and archived.
+Last session: 2026-02-28
+Stopped at: Roadmap created for v29.4. Ready to plan Phase 283.
 Resume file: None
-Resume command: /gsd:new-milestone
+Resume command: /gsd:plan-phase 283

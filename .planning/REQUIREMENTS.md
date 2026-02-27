@@ -57,33 +57,33 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| KPROV-01 | TBD | Pending |
-| KPROV-02 | TBD | Pending |
-| KPROV-03 | TBD | Pending |
-| KPROV-04 | TBD | Pending |
-| KPROV-05 | TBD | Pending |
-| KPROV-06 | TBD | Pending |
-| KPROV-07 | TBD | Pending |
-| KPROV-08 | TBD | Pending |
-| KPROV-09 | TBD | Pending |
-| KPROV-10 | TBD | Pending |
-| KPROV-11 | TBD | Pending |
-| KINT-01 | TBD | Pending |
-| KINT-02 | TBD | Pending |
-| KINT-03 | TBD | Pending |
-| KINT-04 | TBD | Pending |
-| KINT-05 | TBD | Pending |
-| KINT-06 | TBD | Pending |
-| KINT-07 | TBD | Pending |
-| KINT-08 | TBD | Pending |
-| KINT-09 | TBD | Pending |
-| KINT-10 | TBD | Pending |
+| KPROV-01 | Phase 283 | Pending |
+| KPROV-02 | Phase 283 | Pending |
+| KPROV-03 | Phase 283 | Pending |
+| KPROV-04 | Phase 283 | Pending |
+| KPROV-05 | Phase 283 | Pending |
+| KPROV-06 | Phase 283 | Pending |
+| KPROV-07 | Phase 283 | Pending |
+| KPROV-08 | Phase 283 | Pending |
+| KPROV-09 | Phase 283 | Pending |
+| KPROV-10 | Phase 283 | Pending |
+| KPROV-11 | Phase 283 | Pending |
+| KINT-01 | Phase 284 | Pending |
+| KINT-02 | Phase 284 | Pending |
+| KINT-03 | Phase 284 | Pending |
+| KINT-04 | Phase 284 | Pending |
+| KINT-05 | Phase 284 | Pending |
+| KINT-06 | Phase 284 | Pending |
+| KINT-07 | Phase 284 | Pending |
+| KINT-08 | Phase 284 | Pending |
+| KINT-09 | Phase 284 | Pending |
+| KINT-10 | Phase 284 | Pending |
 
 **Coverage:**
 - v1 requirements: 21 total
-- Mapped to phases: 0
-- Unmapped: 21
+- Mapped to phases: 21
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-28*
-*Last updated: 2026-02-28 after initial definition*
+*Last updated: 2026-02-28 after roadmap creation -- traceability updated*
