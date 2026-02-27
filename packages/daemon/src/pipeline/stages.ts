@@ -68,7 +68,7 @@ export interface PipelineContext {
   masterPassword: string;
   // Request data
   walletId: string;
-  wallet: { publicKey: string; chain: string; environment: string; defaultNetwork: string | null };
+  wallet: { publicKey: string; chain: string; environment: string };
   resolvedNetwork: string;
   request: SendTransactionRequest | TransactionRequest;
   // State accumulated through stages
