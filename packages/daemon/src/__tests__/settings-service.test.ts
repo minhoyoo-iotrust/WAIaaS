@@ -383,7 +383,7 @@ describe('SettingsService', () => {
 
   describe('setting-keys', () => {
     it('all definitions have valid categories', () => {
-      const validCategories = new Set(['notifications', 'rpc', 'security', 'daemon', 'walletconnect', 'oracle', 'display', 'autostop', 'monitoring', 'telegram', 'signing_sdk', 'incoming', 'actions', 'policy', 'gas_condition', 'rpc_pool']);
+      const validCategories = new Set(['notifications', 'rpc', 'security', 'daemon', 'walletconnect', 'oracle', 'display', 'autostop', 'monitoring', 'telegram', 'signing_sdk', 'incoming', 'actions', 'policy', 'gas_condition', 'rpc_pool', 'position_tracker']);
       for (const def of SETTING_DEFINITIONS) {
         expect(validCategories.has(def.category)).toBe(true);
       }
@@ -422,8 +422,8 @@ describe('SettingsService', () => {
     });
 
     it('has expected number of definitions', () => {
-      // 11 notifications + 14 rpc + 14 security + 1 daemon + 2 walletconnect + 2 oracle + 1 display + 6 autostop + 5 monitoring + 2 telegram + 8 signing_sdk + 7 incoming + 28 actions + 1 policy + 5 gas_condition + 13 rpc_pool = 132
-      expect(SETTING_DEFINITIONS.length).toBe(132);
+      // 11 notifications + 14 rpc + 14 security + 1 daemon + 2 walletconnect + 2 oracle + 1 display + 6 autostop + 5 monitoring + 2 telegram + 8 signing_sdk + 7 incoming + 28 actions + 1 policy + 5 gas_condition + 13 rpc_pool + 1 position_tracker = 133
+      expect(SETTING_DEFINITIONS.length).toBe(133);
     });
   });
 

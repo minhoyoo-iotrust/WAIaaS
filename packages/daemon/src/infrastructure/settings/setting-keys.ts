@@ -47,6 +47,7 @@ export const SETTING_CATEGORIES = [
   'policy',
   'gas_condition',
   'rpc_pool',
+  'position_tracker',
 ] as const;
 
 export type SettingCategory = (typeof SETTING_CATEGORIES)[number];
@@ -226,6 +227,9 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'rpc_pool.base-sepolia', category: 'rpc_pool', configPath: 'rpc_pool.base-sepolia', defaultValue: '[]', isCredential: false },
   { key: 'rpc_pool.polygon-mainnet', category: 'rpc_pool', configPath: 'rpc_pool.polygon-mainnet', defaultValue: '[]', isCredential: false },
   { key: 'rpc_pool.polygon-amoy', category: 'rpc_pool', configPath: 'rpc_pool.polygon-amoy', defaultValue: '[]', isCredential: false },
+
+  // --- position_tracker category (DeFi position sync) ---
+  { key: 'position_tracker.enabled', category: 'position_tracker', configPath: 'position_tracker.enabled', defaultValue: 'true', isCredential: false },
 ] as const;
 
 // ---------------------------------------------------------------------------
