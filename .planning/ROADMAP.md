@@ -187,7 +187,7 @@ See `.planning/milestones/v29.2-ROADMAP.md` for full details.
 
 **Milestone Goal:** "기본 지갑(default wallet)"과 "기본 네트워크(default network)" 개념을 코드베이스 전체에서 제거하여, 에이전트가 항상 명시적으로 대상 지갑과 네트워크를 지정하도록 강제한다.
 
-- [ ] **Phase 279: DB 마이그레이션 + 코어 스키마/타입/에러 + 해석 로직** - 데이터 계층과 핵심 해석 규칙 변경
+- [x] **Phase 279: DB 마이그레이션 + 코어 스키마/타입/에러 + 해석 로직** - 데이터 계층과 핵심 해석 규칙 변경 (completed 2026-02-27)
 - [ ] **Phase 280: JWT/인증 + API 엔드포인트 + 파이프라인/인프라 + Admin Settings** - 서버 런타임 전체에서 기본값 의존 제거
 - [ ] **Phase 281: SDK/CLI/Python SDK + MCP + Admin UI + Skill 파일** - 외부 인터페이스 전체 동기화
 - [ ] **Phase 282: E2E 검증 + 기존 테스트 수정** - 변경 사항 전체 검증 및 기존 테스트 통과 보장
@@ -266,7 +266,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 279. DB + Core + Resolution | 1/2 | In Progress|  | - |
+| 279. DB + Core + Resolution | 2/2 | Complete   | 2026-02-27 | - |
 | 280. JWT/Auth + API + Pipeline | v29.3 | 0/3 | Not started | - |
 | 281. SDK/MCP/Admin UI/Skills | v29.3 | 0/3 | Not started | - |
 | 282. E2E + Test Fixes | v29.3 | 0/2 | Not started | - |

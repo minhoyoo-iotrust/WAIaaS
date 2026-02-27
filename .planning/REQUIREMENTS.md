@@ -27,12 +27,12 @@ Requirements for removing default wallet/default network concepts. Each maps to 
 
 ### Resolution Logic
 
-- [ ] **RSLV-01**: resolveWalletId에서 Priority 3 (JWT 기본 지갑)이 제거된다
-- [ ] **RSLV-02**: 세션에 지갑 1개일 때 walletId 생략 시 자동 해석된다
-- [ ] **RSLV-03**: 세션에 지갑 2개 이상일 때 walletId 생략 시 WALLET_ID_REQUIRED 에러가 반환된다
-- [ ] **RSLV-04**: network-resolver에서 Priority 2 (wallet.defaultNetwork)가 제거된다
-- [ ] **RSLV-05**: Solana 지갑에서 network 생략 시 단일 네트워크로 자동 해석된다
-- [ ] **RSLV-06**: EVM 지갑에서 network 생략 시 NETWORK_REQUIRED 에러가 반환된다
+- [x] **RSLV-01**: resolveWalletId에서 Priority 3 (JWT 기본 지갑)이 제거된다
+- [x] **RSLV-02**: 세션에 지갑 1개일 때 walletId 생략 시 자동 해석된다
+- [x] **RSLV-03**: 세션에 지갑 2개 이상일 때 walletId 생략 시 WALLET_ID_REQUIRED 에러가 반환된다
+- [x] **RSLV-04**: network-resolver에서 Priority 2 (wallet.defaultNetwork)가 제거된다
+- [x] **RSLV-05**: Solana 지갑에서 network 생략 시 단일 네트워크로 자동 해석된다
+- [x] **RSLV-06**: EVM 지갑에서 network 생략 시 NETWORK_REQUIRED 에러가 반환된다
 
 ### JWT / Auth
 
@@ -143,12 +143,12 @@ None — 이 마일스톤은 기존 기능 정리이므로 추가 기능 없음.
 | CORE-06 | Phase 279 | Complete |
 | CORE-07 | Phase 279 | Complete |
 | CORE-08 | Phase 279 | Complete |
-| RSLV-01 | Phase 279 | Pending |
-| RSLV-02 | Phase 279 | Pending |
-| RSLV-03 | Phase 279 | Pending |
-| RSLV-04 | Phase 279 | Pending |
-| RSLV-05 | Phase 279 | Pending |
-| RSLV-06 | Phase 279 | Pending |
+| RSLV-01 | Phase 279 | Complete |
+| RSLV-02 | Phase 279 | Complete |
+| RSLV-03 | Phase 279 | Complete |
+| RSLV-04 | Phase 279 | Complete |
+| RSLV-05 | Phase 279 | Complete |
+| RSLV-06 | Phase 279 | Complete |
 | AUTH-01 | Phase 280 | Pending |
 | AUTH-02 | Phase 280 | Pending |
 | AUTH-03 | Phase 280 | Pending |

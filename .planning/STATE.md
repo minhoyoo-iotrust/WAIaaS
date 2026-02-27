@@ -8,7 +8,7 @@ progress:
   total_phases: 282
   completed_phases: 278
   total_plans: 381
-  completed_plans: 372
+  completed_plans: 373
 ---
 
 # Project State
@@ -23,9 +23,9 @@ See: .planning/PROJECT.md (updated 2026-02-27)
 ## Current Position
 
 Phase: 279 of 282 (DB 마이그레이션 + 코어 스키마/타입/에러 + 해석 로직)
-Plan: 1 of 2 in current phase
+Plan: 2 of 2 in current phase (COMPLETE)
 Status: Executing
-Last activity: 2026-02-27 -- Completed 279-01-PLAN.md (DB migration v27 + core enums/schemas/errors/i18n)
+Last activity: 2026-02-27 -- Completed 279-02-PLAN.md (resolveWalletId + network-resolver resolution logic)
 
 Progress: [==============================░░] 94%
 
@@ -45,6 +45,8 @@ Progress: [==============================░░] 94%
 - D6: getDefaultNetwork -> getSingleNetwork 리네임 + EVM null 반환
 - D7: BalanceMonitor 전체 네트워크 순회 (IncomingTxMonitor 패턴)
 - [Phase 279]: Migration v27 uses 12-step table recreation for both session_wallets and wallets
+- [Phase 279]: resolveWalletId queries session_wallets at resolution time (not JWT-cached)
+- [Phase 279]: resolveNetwork 4->3 param signature change (breaking, callers fixed Phase 280)
 
 ### Research Flags
 
@@ -57,5 +59,5 @@ None -- 이 마일스톤은 기존 기능 제거이므로 연구 불필요.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 279-01-PLAN.md
+Stopped at: Completed 279-02-PLAN.md
 Resume file: None
