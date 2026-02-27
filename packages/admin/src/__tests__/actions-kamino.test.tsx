@@ -1,14 +1,14 @@
 /**
- * actions-aave-v3.test.tsx
+ * actions-kamino.test.tsx
  *
- * Tests for Aave V3 card in Actions page:
- * - Aave V3 card renders with correct info
+ * Tests for Kamino Lending card in Actions page:
+ * - Kamino card renders with correct info
  * - Toggle enable/disable works
  * - Advanced settings section shows when enabled
  * - Advanced settings save calls apiPut with correct key
  * - Card shows Inactive when disabled
  *
- * @see ADMN-02, ADMN-03, ADMN-04, ADMN-05
+ * @see KINT-08, KINT-09
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/preact';
@@ -64,24 +64,23 @@ vi.mock('../utils/dirty-guard', () => ({
 }));
 
 import { apiGet, apiPut } from '../api/client';
-import { showToast } from '../components/toast';
 import ActionsPage from '../pages/actions';
 
 // ---------------------------------------------------------------------------
 // Mock data
 // ---------------------------------------------------------------------------
 
-const mockSettingsAaveEnabled = {
+const mockSettingsKaminoEnabled = {
   actions: {
     jupiter_swap_enabled: 'false',
     zerox_swap_enabled: 'false',
     lifi_enabled: 'false',
     lido_staking_enabled: 'false',
     jito_staking_enabled: 'false',
-    aave_v3_enabled: 'true',
-    aave_v3_health_factor_warning_threshold: '1.2',
-    aave_v3_position_sync_interval_sec: '300',
-    aave_v3_max_ltv_pct: '0.8',
+    aave_v3_enabled: 'false',
+    kamino_enabled: 'true',
+    kamino_market: 'main',
+    kamino_hf_threshold: '1.2',
   },
 };
 
@@ -93,6 +92,7 @@ const mockSettingsAllDisabled = {
     lido_staking_enabled: 'false',
     jito_staking_enabled: 'false',
     aave_v3_enabled: 'false',
+    kamino_enabled: 'false',
   },
 };
 
@@ -116,103 +116,106 @@ function mockApiCalls(
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('ActionsPage - Aave V3 Card', () => {
+describe('ActionsPage - Kamino Lending Card', () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
   });
 
-  it('renders Aave V3 Lending card', async () => {
+  it('renders Kamino Lending card', async () => {
     mockApiCalls(mockSettingsAllDisabled);
     render(<ActionsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Aave V3 Lending')).toBeTruthy();
+      expect(screen.getByText('Kamino Lending')).toBeTruthy();
     });
-    expect(screen.getByText(/EVM lending protocol/)).toBeTruthy();
+    expect(screen.getByText(/Solana lending protocol/)).toBeTruthy();
   });
 
-  it('toggle Aave V3 calls apiPut with actions.aave_v3_enabled', async () => {
+  it('toggle Kamino calls apiPut with actions.kamino_enabled', async () => {
     mockApiCalls(mockSettingsAllDisabled);
     render(<ActionsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Aave V3 Lending')).toBeTruthy();
+      expect(screen.getByText('Kamino Lending')).toBeTruthy();
     });
 
     const checkbox = document.querySelector(
-      'input[name="actions.aave_v3_enabled"]',
+      'input[name="actions.kamino_enabled"]',
     ) as HTMLInputElement;
     expect(checkbox).toBeTruthy();
     expect(checkbox.checked).toBe(false);
 
     vi.mocked(apiPut).mockResolvedValueOnce({
       updated: 1,
-      settings: mockSettingsAaveEnabled,
+      settings: mockSettingsKaminoEnabled,
     });
 
     fireEvent.change(checkbox, { target: { checked: true } });
 
     await waitFor(() => {
       expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/admin/settings', {
-        settings: [{ key: 'actions.aave_v3_enabled', value: 'true' }],
+        settings: [{ key: 'actions.kamino_enabled', value: 'true' }],
       });
     });
   });
 
-  it('shows Advanced Settings section when Aave V3 is enabled', async () => {
-    mockApiCalls(mockSettingsAaveEnabled);
+  it('shows Advanced Settings section when Kamino is enabled', async () => {
+    mockApiCalls(mockSettingsKaminoEnabled);
     render(<ActionsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Advanced Settings')).toBeTruthy();
+      expect(screen.getByText('Kamino Lending')).toBeTruthy();
     });
 
-    // Check all 3 advanced setting fields are present
+    // Check Advanced Settings header and Kamino-specific fields
+    const advancedHeaders = screen.getAllByText('Advanced Settings');
+    expect(advancedHeaders.length).toBeGreaterThanOrEqual(1);
+
+    // Check Kamino-specific setting fields
+    expect(screen.getByText('Market')).toBeTruthy();
     expect(screen.getByText('HF Warning Threshold')).toBeTruthy();
-    expect(screen.getByText('Position Sync Interval (seconds)')).toBeTruthy();
-    expect(screen.getByText('Max LTV Percentage')).toBeTruthy();
   });
 
-  it('saving advanced setting calls apiPut with correct key', async () => {
-    mockApiCalls(mockSettingsAaveEnabled);
+  it('saving Kamino advanced setting calls apiPut with correct key', async () => {
+    mockApiCalls(mockSettingsKaminoEnabled);
     render(<ActionsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Advanced Settings')).toBeTruthy();
+      expect(screen.getByText('Kamino Lending')).toBeTruthy();
     });
 
-    // Find the HF threshold input
-    const hfInput = document.querySelector(
-      'input[name="actions.aave_v3_health_factor_warning_threshold"]',
+    // Find the Kamino market input
+    const marketInput = document.querySelector(
+      'input[name="actions.kamino_market"]',
     ) as HTMLInputElement;
-    expect(hfInput).toBeTruthy();
+    expect(marketInput).toBeTruthy();
 
     vi.mocked(apiPut).mockResolvedValueOnce({
       updated: 1,
-      settings: mockSettingsAaveEnabled,
+      settings: mockSettingsKaminoEnabled,
     });
 
     // Change value
-    fireEvent.input(hfInput, { target: { value: '1.5' } });
+    fireEvent.input(marketInput, { target: { value: '7u3HeHxYDLhn' } });
 
     // Trigger blur on the wrapper div to save
-    const wrapper = hfInput.closest('[style*="margin-bottom"]') as HTMLElement;
+    const wrapper = marketInput.closest('[style*="margin-bottom"]') as HTMLElement;
     fireEvent.blur(wrapper);
 
     await waitFor(() => {
       expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/admin/settings', {
-        settings: [{ key: 'actions.aave_v3_health_factor_warning_threshold', value: '1.5' }],
+        settings: [{ key: 'actions.kamino_market', value: '7u3HeHxYDLhn' }],
       });
     });
   });
 
-  it('shows Inactive when Aave V3 is disabled along with all other providers', async () => {
+  it('shows Inactive when Kamino is disabled along with all other providers', async () => {
     mockApiCalls(mockSettingsAllDisabled);
     render(<ActionsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Aave V3 Lending')).toBeTruthy();
+      expect(screen.getByText('Kamino Lending')).toBeTruthy();
     });
 
     // All 7 providers disabled -> 7 Inactive badges

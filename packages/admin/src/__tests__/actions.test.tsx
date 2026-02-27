@@ -170,9 +170,9 @@ describe('ActionsPage', () => {
       expect(screen.getByText('Lido Staking')).toBeTruthy();
       expect(screen.getByText('Jito Staking')).toBeTruthy();
 
-      // All 6 should show Inactive (5 original + Aave V3)
+      // All 7 should show Inactive (5 original + Aave V3 + Kamino)
       const inactiveBadges = screen.getAllByText('Inactive');
-      expect(inactiveBadges.length).toBe(6);
+      expect(inactiveBadges.length).toBe(7);
     });
 
     it('renders provider descriptions', async () => {
