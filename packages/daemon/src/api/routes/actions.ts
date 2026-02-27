@@ -231,7 +231,7 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
       });
     }
 
-    // 2. Resolve walletId from body.walletId > query > defaultWalletId
+    // 2. Resolve walletId from body.walletId > query > single-wallet auto-resolve
     const walletId = resolveWalletId(c, deps.db, body.walletId);
     const sessionId = c.get('sessionId' as never) as string | undefined;
 
@@ -292,12 +292,11 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
       });
     }
 
-    // 7. Resolve network: body.network > wallet.defaultNetwork > environment default
+    // 7. Resolve network: body.network > getSingleNetwork auto-resolve
     let resolvedNetwork: string;
     try {
       resolvedNetwork = resolveNetwork(
         body.network as NetworkType | undefined,
-        wallet.defaultNetwork as NetworkType | null,
         wallet.environment as EnvironmentType,
         wallet.chain as ChainType,
       );
@@ -329,7 +328,6 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
       publicKey: wallet.publicKey,
       chain: wallet.chain,
       environment: wallet.environment,
-      defaultNetwork: wallet.defaultNetwork ?? null,
     };
     const pipelineConfig = {
       policy_defaults_delay_seconds: deps.config.security.policy_defaults_delay_seconds,
