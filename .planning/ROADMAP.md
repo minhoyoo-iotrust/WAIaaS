@@ -215,13 +215,11 @@ See `.planning/milestones/v29.3-ROADMAP.md` for full details.
   3. kamino_borrow/kamino_withdraw 실행 시 결과 HF를 시뮬레이션하여, HF가 임계값 이하로 떨어지면 자기 청산 위험으로 action을 차단한다
   4. Kamino obligation 계정에서 SUPPLY/BORROW 포지션 목록을 조회할 수 있고, 담보/부채 데이터로 health factor 숫자를 계산하여 반환한다
   5. reserve별 시장 데이터(supply APY, borrow APY, LTV ratio, available liquidity)를 조회할 수 있다
-**Plans**: TBD
-
-Plans:
-- [ ] 283-01: KaminoLendingProvider scaffold + klend-sdk wrapper + action definitions
-- [ ] 283-02: Supply/Borrow/Repay/Withdraw instruction building + HF simulation guard
-- [ ] 283-03: Position query + Health factor calculation + Market data query
-- [ ] 283-04: Unit tests for all KPROV requirements
+**Plans** (Wave 1 || Wave 2 || Wave 3):
+- [ ] 283-01 (W1): KaminoLendingProvider scaffold + klend-sdk wrapper + action definitions [KPROV-01..07]
+- [ ] 283-02 (W2): HF simulation guard for borrow/withdraw [KPROV-08] -- depends on 283-01
+- [ ] 283-03 (W2): Position query + HF calculation + Market data + index exports [KPROV-09..11] -- depends on 283-01
+- [ ] 283-04 (W3): Unit tests for all KPROV requirements [KPROV-01..11] -- depends on 283-01,02,03
 
 ### Phase 284: Kamino Integration
 **Goal**: Kamino provider가 MCP/SDK/Admin UI/정책 평가기/스킬 문서 전 레이어에 통합되어, 기존 Aave V3와 동일한 수준의 운영 가시성과 정책 제어가 적용되는 상태
@@ -249,7 +247,7 @@ Phases execute in numeric order: 283 -> 284
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 283. Kamino Core Provider | 0/4 | Not started | - |
+| 283. Kamino Core Provider | 0/4 | Plans created | - |
 | 284. Kamino Integration | 0/5 | Not started | - |
 
 ---
