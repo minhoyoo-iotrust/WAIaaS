@@ -26,7 +26,7 @@ Complete reference for wallet CRUD operations, asset queries, session management
 - Create/list/delete sessions, manage session-wallet links
 - Create/delete MCP tokens
 - Register/remove custom tokens
-- Set owner addresses, default network, additional networks
+- Set owner addresses, manage networks
 - WalletConnect pairing management
 
 > AI agents must NEVER request the master password. Use only your session token.
@@ -37,7 +37,7 @@ All wallet CRUD endpoints require **masterAuth** (`X-Master-Password` header), e
 
 ### POST /v1/wallets -- Create Wallet (masterAuth)
 
-Create a new wallet with an auto-generated key pair. Each wallet belongs to an **environment** (testnet or mainnet) which determines the available networks and default network.
+Create a new wallet with an auto-generated key pair. Each wallet belongs to an **environment** (testnet or mainnet) which determines the available networks.
 
 ```bash
 curl -s -X POST http://localhost:3100/v1/wallets \
@@ -49,7 +49,7 @@ curl -s -X POST http://localhost:3100/v1/wallets \
 Parameters:
 - `name` (required): string, 1-100 characters
 - `chain` (optional): `"solana"` (default) or `"ethereum"`
-- `environment` (optional): `"mainnet"` (default) or `"testnet"` -- determines available networks and default network
+- `environment` (optional): `"mainnet"` (default) or `"testnet"` -- determines available networks
 - `createSession` (optional): boolean, default `true` -- auto-creates a session token in the response
 
 Response (201):
@@ -71,7 +71,7 @@ Response (201):
 }
 ```
 
-The `network` field shows the wallet's default network, automatically derived from `chain` + `environment`. The `session` field is included when `createSession` is `true` (default); set to `false` to create the wallet without a session.
+The `network` field shows the wallet's primary network (chain-dependent: Solana has a single auto-resolved network; EVM requires explicit network specification). The `session` field is included when `createSession` is `true` (default); set to `false` to create the wallet without a session.
 
 ### GET /v1/wallets -- List Wallets (masterAuth)
 
@@ -100,7 +100,7 @@ Response (200):
 
 ### GET /v1/wallets/{id} -- Wallet Detail (masterAuth)
 
-Returns full wallet info including owner state and default network.
+Returns full wallet info including owner state and available networks.
 
 ```bash
 curl -s http://localhost:3100/v1/wallets/01958f3a-1234-7000-8000-abcdef123456 \
@@ -115,7 +115,6 @@ Response (200):
   "chain": "solana",
   "network": "mainnet",
   "environment": "mainnet",
-  "defaultNetwork": "mainnet",
   "publicKey": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
   "status": "ACTIVE",
   "ownerAddress": null,
@@ -236,31 +235,6 @@ Errors:
 - `INVALID_SIGNATURE` (401): Signature verification failed
 - LOCKED state returns 200 (no-op, already verified)
 
-### PUT /v1/wallets/{id}/default-network -- Change Default Network (masterAuth)
-
-Change the wallet's default network. The new network must be valid for the wallet's environment.
-
-```bash
-curl -s -X PUT http://localhost:3100/v1/wallets/01958f3a-1234-7000-8000-abcdef123456/default-network \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: your-master-password' \
-  -d '{"network": "testnet"}'
-```
-
-Parameters:
-- `network` (required): new default network identifier. Must be valid for the wallet's chain + environment.
-
-Response (200):
-```json
-{
-  "id": "01958f3a-1234-7000-8000-abcdef123456",
-  "defaultNetwork": "testnet",
-  "previousNetwork": "devnet"
-}
-```
-
-Error: `ENVIRONMENT_NETWORK_MISMATCH` (400) if the specified network is not valid for the wallet's environment.
-
 ### GET /v1/wallets/{id}/networks -- List Available Networks (masterAuth)
 
 Get all networks available for a wallet based on its chain and environment.
@@ -276,9 +250,8 @@ Response (200):
   "id": "01958f3a-1234-7000-8000-abcdef123456",
   "chain": "solana",
   "environment": "mainnet",
-  "defaultNetwork": "mainnet",
   "availableNetworks": [
-    {"network": "mainnet", "isDefault": true}
+    {"network": "mainnet"}
   ]
 }
 ```
@@ -288,7 +261,7 @@ Response (200):
 When your session has multiple wallets, you can target a specific wallet:
 - GET requests: add `?walletId=<id>` query parameter
 - POST requests: add `walletId` field in request body
-- Omitting walletId uses the session's default wallet
+- Omitting walletId auto-resolves when session has a single wallet
 
 Example:
 ```bash
@@ -337,7 +310,7 @@ curl -s http://localhost:3100/v1/wallet/balance \
   -H 'Authorization: Bearer wai_sess_eyJ...'
 ```
 
-Query a specific network by appending `?network=devnet`. Defaults to the wallet's default network.
+Query a specific network by appending `?network=devnet`. Required for EVM wallets; auto-resolved for Solana.
 
 Response (200):
 ```json
@@ -390,7 +363,7 @@ curl -s http://localhost:3100/v1/wallet/assets \
   -H 'Authorization: Bearer wai_sess_eyJ...'
 ```
 
-Query a specific network by appending `?network=devnet`. Defaults to the wallet's default network.
+Query a specific network by appending `?network=devnet`. Required for EVM wallets; auto-resolved for Solana.
 
 Response (200):
 ```json
@@ -489,31 +462,6 @@ The following MCP tools support an optional `display_currency` parameter:
 - `get_balance` -- includes `displayBalance`/`displayCurrency` in response
 - `get_assets` -- includes `assets[].displayValue`/`displayCurrency` in response
 
-### PUT /v1/wallet/default-network -- Change Default Network (sessionAuth)
-
-Session-scoped endpoint to change the wallet's default network. The network must be valid for the wallet's chain + environment.
-
-```bash
-curl -s -X PUT http://localhost:3100/v1/wallet/default-network \
-  -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer wai_sess_eyJ...' \
-  -d '{"network": "polygon-amoy"}'
-```
-
-Parameters:
-- `network` (required): new default network identifier
-
-Response (200):
-```json
-{
-  "id": "01958f3a-1234-7000-8000-abcdef123456",
-  "defaultNetwork": "polygon-amoy",
-  "previousNetwork": "ethereum-sepolia"
-}
-```
-
-Error: `ENVIRONMENT_NETWORK_MISMATCH` (400) if the specified network is not valid for the wallet's environment.
-
 ## 4. Session Management
 
 Session creation and listing require **masterAuth**. Revocation requires **masterAuth**. Renewal requires **sessionAuth** (the session's own token).
@@ -533,13 +481,12 @@ curl -s -X POST http://localhost:3100/v1/sessions \
 curl -s -X POST http://localhost:3100/v1/sessions \
   -H 'Content-Type: application/json' \
   -H 'X-Master-Password: your-master-password' \
-  -d '{"walletIds": ["wallet-1-uuid", "wallet-2-uuid"], "defaultWalletId": "wallet-1-uuid"}'
+  -d '{"walletIds": ["wallet-1-uuid", "wallet-2-uuid"]}'
 ```
 
 Parameters:
 - `walletId` (string): UUID of a single wallet (backward compatible)
 - `walletIds` (string[]): UUIDs of multiple wallets (mutually exclusive with walletId)
-- `defaultWalletId` (optional): specify default wallet (defaults to first in walletIds)
 - `ttl` (optional): session lifetime in seconds, 300-604800 (default: 86400 = 24 hours)
 - `constraints` (optional): custom constraints object
 
@@ -768,12 +715,12 @@ The nonce is a random 32-byte hex string valid for 5 minutes. Used by owner wall
 
 ### Environment-Network Reference
 
-| Chain | Environment | Default Network | Available Networks |
-|-------|-------------|-----------------|-------------------|
-| `solana` | `testnet` | `devnet` | `devnet`, `testnet` |
-| `solana` | `mainnet` | `mainnet` | `mainnet` |
-| `ethereum` | `testnet` | `ethereum-sepolia` | `ethereum-sepolia`, `polygon-amoy`, `arbitrum-sepolia`, `optimism-sepolia`, `base-sepolia` |
-| `ethereum` | `mainnet` | `ethereum-mainnet` | `ethereum-mainnet`, `polygon-mainnet`, `arbitrum-mainnet`, `optimism-mainnet`, `base-mainnet` |
+| Chain | Environment | Available Networks |
+|-------|-------------|-------------------|
+| `solana` | `testnet` | `devnet`, `testnet` |
+| `solana` | `mainnet` | `mainnet` |
+| `ethereum` | `testnet` | `ethereum-sepolia`, `polygon-amoy`, `arbitrum-sepolia`, `optimism-sepolia`, `base-sepolia` |
+| `ethereum` | `mainnet` | `ethereum-mainnet`, `polygon-mainnet`, `arbitrum-mainnet`, `optimism-mainnet`, `base-mainnet` |
 
 ### Key Differences
 
@@ -789,51 +736,34 @@ The nonce is a random 32-byte hex string valid for 5 minutes. Used by owner wall
 
 ## 9. MCP Tools Reference
 
-The MCP server exposes 25 tools for AI agents. Key wallet management tools:
-
-### set_default_network
-
-Changes the wallet's default network for subsequent operations (session-scoped).
-
-Parameters:
-- `network` (required): New default network identifier (e.g., `polygon-amoy`, `ethereum-sepolia`)
-
-Calls `PUT /v1/wallet/default-network` internally. Returns the updated default network and previous network.
+The MCP server exposes 24 tools for AI agents. Key wallet management tools:
 
 ### get_balance
 
 Get native token balance. Supports `network` parameter:
-- Omitted: uses wallet default network
+- Required for EVM wallets; auto-resolved for Solana
 - Specific network name: queries that network
 - `"all"`: returns balances for all networks in the wallet's environment
 
 ### get_assets
 
 Get all assets (native + tokens). Same `network` parameter support as `get_balance`:
-- Omitted: uses wallet default network
+- Required for EVM wallets; auto-resolved for Solana
 - Specific network name: queries that network
 - `"all"`: returns assets for all networks in the wallet's environment
 
 ### get_wallet_info
 
-Combined wallet information including address, chain, environment, and available networks with their default status.
+Combined wallet information including address, chain, environment, and all available networks.
 
 ## 10. CLI Commands
 
 ### waiaas wallet info
 
-Displays wallet information including chain, environment, address, default network, and all available networks.
+Displays wallet information including chain, environment, address, and all available networks.
 
 ```bash
 waiaas wallet info
-```
-
-### waiaas wallet set-default-network
-
-Changes the wallet's default network.
-
-```bash
-waiaas wallet set-default-network polygon-amoy
 ```
 
 ## 11. SDK Methods
@@ -847,9 +777,6 @@ const client = new WAIaaSClient({ baseUrl: 'http://localhost:3100', sessionToken
 
 // Wallet info
 const info = await client.getWalletInfo();
-
-// Change default network
-await client.setDefaultNetwork('polygon-amoy');
 
 // Get all balances across networks
 const allBalances = await client.getAllBalances();
@@ -868,9 +795,6 @@ from waiaas import WAIaaSClient
 async with WAIaaSClient("http://localhost:3100", "wai_sess_...") as client:
     # Wallet info
     info = await client.get_wallet_info()
-
-    # Change default network
-    await client.set_default_network("polygon-amoy")
 
     # Get all balances across networks
     all_balances = await client.get_all_balances()
@@ -1242,7 +1166,7 @@ curl -s http://localhost:3100/v1/wallet/positions \
 ```
 
 Query Parameters:
-- `wallet_id` (optional): Target wallet ID. Omit to use the default wallet.
+- `wallet_id` (optional): Target wallet ID. Required for multi-wallet sessions; auto-resolved for single wallet.
 
 Response (200):
 ```json

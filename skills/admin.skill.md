@@ -43,13 +43,12 @@ The master password is set in `config.toml` under `[security]` or via environmen
 curl -s -X POST http://localhost:3100/v1/sessions \
   -H 'Content-Type: application/json' \
   -H 'X-Master-Password: <password>' \
-  -d '{"walletIds": ["wallet-1-uuid", "wallet-2-uuid"], "defaultWalletId": "wallet-1-uuid"}'
+  -d '{"walletIds": ["wallet-1-uuid", "wallet-2-uuid"]}'
 ```
 
 Body:
-- `walletIds`: string[] -- Connect multiple wallets (new)
+- `walletIds`: string[] -- Connect multiple wallets
 - `walletId`: string -- Connect single wallet (backward compatible)
-- `defaultWalletId`?: string -- Specify default wallet (optional, defaults to first)
 - `expiresIn`?: number -- TTL in seconds
 
 ## Session-Wallet Management (masterAuth required)
@@ -405,8 +404,7 @@ curl -s http://localhost:3100/v1/admin/settings \
     "rpc.evm_optimism_mainnet": "https://optimism.drpc.org",
     "rpc.evm_optimism_sepolia": "https://optimism-sepolia.drpc.org",
     "rpc.evm_base_mainnet": "https://base.drpc.org",
-    "rpc.evm_base_sepolia": "https://base-sepolia.drpc.org",
-    "rpc.evm_default_network": "ethereum-sepolia"
+    "rpc.evm_base_sepolia": "https://base-sepolia.drpc.org"
   },
   "security": {
     "security.session_ttl": "86400",
@@ -467,7 +465,7 @@ curl -s http://localhost:3100/v1/admin/settings \
 | Category        | Keys                                                    | Description                            |
 | --------------- | ------------------------------------------------------- | -------------------------------------- |
 | `notifications` | enabled, telegram_*, discord_*, ntfy_*, slack_*, locale, rate_limit_rpm | Notification channel configuration.  |
-| `rpc`           | solana_*, evm_*, evm_default_network                    | Blockchain RPC endpoint URLs.          |
+| `rpc`           | solana_*, evm_*                                         | Blockchain RPC endpoint URLs.          |
 | `security`      | session_ttl, max_sessions_*, rate_limit_*, policy_defaults_* | Security and rate limiting.         |
 | `daemon`        | log_level                                               | Daemon runtime settings.               |
 | `walletconnect` | project_id                                              | WalletConnect project configuration.   |
@@ -547,7 +545,6 @@ RPC:
 - `rpc.evm_optimism_sepolia` -- Optimism Sepolia testnet RPC URL
 - `rpc.evm_base_mainnet` -- Base mainnet RPC URL
 - `rpc.evm_base_sepolia` -- Base Sepolia testnet RPC URL
-- `rpc.evm_default_network` -- Default EVM network for new wallets
 
 Security:
 - `security.session_ttl` -- Default session TTL in seconds (default: "86400")

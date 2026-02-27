@@ -160,8 +160,8 @@ curl -s -X POST http://localhost:3100/v1/actions/jupiter_swap/swap \
 | Parameter | Type | Required | Description |
 | --------- | ---- | -------- | ----------- |
 | `params` | object | No | Action-specific parameters as key-value pairs. Varies per provider/action. |
-| `network` | string | No | Target network. Defaults to wallet's default network. |
-| `walletId` | string | No | Target wallet ID. Omit to use the default wallet. |
+| `network` | string | No | Target network. Required for EVM wallets; auto-resolved for Solana. |
+| `walletId` | string | No | Target wallet ID. Required for multi-wallet sessions; auto-resolved for single wallet. |
 
 **Single-step response (201):**
 ```json
@@ -694,7 +694,7 @@ Enable Lido Staking via **Admin UI > Settings > Actions > Lido Staking**, or env
 ### Chain Support
 
 - **Ethereum only** (mainnet and Holesky testnet)
-- Address auto-detection: `rpc.evm_default_network` + `deriveEnvironment()` determines mainnet vs Holesky addresses
+- Address auto-detection: `deriveEnvironment()` determines mainnet vs Holesky addresses based on wallet environment
 - Admin override: empty string default falls back to environment-derived addresses
 
 ### Async Unstake Tracking
