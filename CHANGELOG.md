@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.8.0-rc.4](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.8.0-rc.3...v2.8.0-rc.4) (2026-02-27)
+
+
+### Bug Fixes
+
+* add BackgroundWorkers isRunning tests for coverage margin ([97a6ce5](https://github.com/minhoyoo-iotrust/WAIaaS/commit/97a6ce5cd7a6fe338d4fe036580d3f10cbda1bf5))
+
 ## [2.8.0-rc.3](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.8.0-rc.2...v2.8.0-rc.3) (2026-02-27)
 
 
