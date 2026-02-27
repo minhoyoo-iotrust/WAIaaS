@@ -1,5 +1,40 @@
 # Changelog
 
+## [2.8.0-rc.2](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.8.0-rc.1...v2.8.0-rc.2) (2026-02-27)
+
+
+### Features
+
+* **274-01:** add DeFi SSoT enums, notification events, and i18n templates ([431c31c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/431c31cd035988e1f36f401e1f77a65a754c69d3))
+* **274-02:** add defi_positions table migration v25 and Drizzle schema ([7950883](https://github.com/minhoyoo-iotrust/WAIaaS/commit/795088385ec968a16c49ec5a01cfc60adc4f22a4))
+* **274-03:** add ILendingProvider and IPositionProvider interfaces ([a34371f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a34371f75ef422d2947271c2b4039e046dcea2a8))
+* **275-01:** add IDeFiMonitor interface, PositionWriteQueue, PositionTracker, DeFiMonitorService ([96d3864](https://github.com/minhoyoo-iotrust/WAIaaS/commit/96d38644fbff989c3ed07c5e64c1d0fe13668fc8))
+* **275-01:** daemon lifecycle integration + PositionTracker/WriteQueue unit tests ([a455dc0](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a455dc040141513ba03690caf9805251d5a26e0e))
+* **275-02:** add HealthFactorMonitor with adaptive polling and severity alerts ([493d372](https://github.com/minhoyoo-iotrust/WAIaaS/commit/493d37224db189b258fb874eccd7778f1f865ce7))
+* **275-03:** add lending policy evaluation to DatabasePolicyEngine with 18 unit tests ([2bd8f15](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2bd8f15d33c995d294a1ac78c160ebf5f04a0bc6))
+* **275-03:** extend ContractCallRequestSchema with actionName, add lending policy types, v26 migration ([e7166b3](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e7166b30deb2283c84c8016513aa2f3295f90a7e))
+* **276-01:** add Aave V3 manual hex ABI encoding, 5-chain address registry, and Zod input schemas ([ba39474](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ba394747c6cf5518b8a016a009b4bd61ba164f97))
+* **276-02:** add Aave V3 RPC response decoders, health factor simulation, and APY conversion ([1ad946e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1ad946e24a1157edf8e2d99b3c2438c8e5eeae92))
+* **276-03:** implement AaveV3LendingProvider with 4 actions + dual interface compliance ([3a8a9df](https://github.com/minhoyoo-iotrust/WAIaaS/commit/3a8a9dfe7197bb550cf3b38a4617b5067a45720e))
+* **276-03:** register AaveV3LendingProvider in registerBuiltInProviders + re-exports ([af1589d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/af1589d138d94f7f06a31187928ddf8650ec39b9))
+* **277-01:** REST API endpoints for DeFi positions + health factor + IRpcCaller injection ([5bab769](https://github.com/minhoyoo-iotrust/WAIaaS/commit/5bab769bd583f238bb134c8e4d967344810c070e))
+* **277-02:** MCP tools + TS SDK + Python SDK for DeFi positions and health factor ([fbc8f76](https://github.com/minhoyoo-iotrust/WAIaaS/commit/fbc8f76f29f7a268395b956728e945cbf3d191c2))
+* **277-03:** update skill files with DeFi Lending documentation ([d6ca034](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d6ca0346a64593bd125265e9edcd3400663137eb))
+* **278-01:** add Aave V3 runtime settings + Actions card + service integration ([abc7e99](https://github.com/minhoyoo-iotrust/WAIaaS/commit/abc7e99a4e735480562891312b733aa4c74de1ee))
+* **278-02:** add Admin DeFi positions endpoint + Dashboard section ([0473be9](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0473be9d37adf45090214a9d92cd3beefb5e8faf))
+* implement auto-provision mode ([#200](https://github.com/minhoyoo-iotrust/WAIaaS/issues/200)) ([74f2288](https://github.com/minhoyoo-iotrust/WAIaaS/commit/74f22885888dabe8cdad837b95004d8dbcea6f20))
+
+
+### Bug Fixes
+
+* **275:** revise plans based on checker feedback ([5fa7fc6](https://github.com/minhoyoo-iotrust/WAIaaS/commit/5fa7fc6a7ab03f59100c460b9f0623bb657379a3))
+* resolve 4 open issues ([#203](https://github.com/minhoyoo-iotrust/WAIaaS/issues/203), [#204](https://github.com/minhoyoo-iotrust/WAIaaS/issues/204), [#205](https://github.com/minhoyoo-iotrust/WAIaaS/issues/205), [#206](https://github.com/minhoyoo-iotrust/WAIaaS/issues/206)) ([4d8d2e9](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4d8d2e9d1350c34a5cdf72f0141f1a0448a8f0a1))
+* resolve lint errors and typecheck issues in Aave V3 test files ([1cafc75](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1cafc7516e1f33ab544a53af2223f97703667fd6))
+* resolve lint errors in re-encrypt test file ([76898ee](https://github.com/minhoyoo-iotrust/WAIaaS/commit/76898ee4988ece4925403dc9bc76bce5a83f735e))
+* update enum SSoT expected counts for PolicyType (14) and NotificationEventType (49) ([fde9041](https://github.com/minhoyoo-iotrust/WAIaaS/commit/fde9041a426141c5f06ad87c5ba6da407da74b0d))
+* update pre-existing test assertions for notification event count and idle timeout behavior ([ac9c117](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ac9c117bf84af945469179cd1c0be52d86fa1b13))
+* update test assertions for MCP tool count and EVM incoming subscriber mocks ([bed3881](https://github.com/minhoyoo-iotrust/WAIaaS/commit/bed38813f04e4e52eb72c21501f62637d40e69c5))
+
 ## [2.8.0-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.8.0-rc...v2.8.0-rc.1) (2026-02-26)
 
 
