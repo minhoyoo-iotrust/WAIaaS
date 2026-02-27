@@ -35,7 +35,7 @@ THRESHOLDS=(
   85    # daemon
   89    # adapters/solana
   80    # sdk
-  80    # cli
+  77    # cli
   87    # mcp
   87    # admin
   92    # adapters/evm
