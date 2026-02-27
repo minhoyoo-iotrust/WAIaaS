@@ -360,18 +360,20 @@ describe('Chain 5: Time-based expiry + tier escalation + AutoStop', { timeout: 3
       sessionId: 'sess-chain5-1-' + generateId().slice(0, 8),
     });
 
-    // Token with 1 second until expiry
-    const nowSec = Math.floor(Date.now() / 1000);
-    const shortToken = await signTestToken(jwtManager, sess1, wId, {
-      iat: nowSec,
-      exp: nowSec + 1, // Expires in 1 second
-    });
-
+    // Create app first, then generate short-lived token right before use
+    // to avoid CI timing issues where setup takes >1s
     const killState = 'ACTIVE';
     const app = createSecurityTestApp({
       jwtManager,
       db: conn.db,
       getKillSwitchState: () => killState,
+    });
+
+    // Token with 2 seconds until expiry (generated right before request to avoid CI timing drift)
+    const nowSec = Math.floor(Date.now() / 1000);
+    const shortToken = await signTestToken(jwtManager, sess1, wId, {
+      iat: nowSec,
+      exp: nowSec + 2,
     });
 
     // Token should be valid now
@@ -381,7 +383,7 @@ describe('Chain 5: Time-based expiry + tier escalation + AutoStop', { timeout: 3
     expect(res1.status).toBe(200);
 
     // Step 2: Wait for expiry
-    await new Promise((r) => setTimeout(r, 1500));
+    await new Promise((r) => setTimeout(r, 2500));
 
     const expiredRes = await app.request('/v1/wallet/balance', {
       headers: { Authorization: `Bearer ${shortToken}` },
