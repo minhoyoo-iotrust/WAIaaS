@@ -4,9 +4,9 @@
  * Validates Authorization header format (Bearer wai_sess_...),
  * verifies JWT via JwtSecretManager (supports dual-key rotation),
  * checks session existence and revocation in SQLite,
- * and sets sessionId/defaultWalletId on Hono context.
+ * and sets sessionId on Hono context.
  *
- * v26.4: defaultWalletId만 설정. walletId는 resolveWalletId()로 결정.
+ * walletId is resolved via resolveWalletId() at request time.
  *
  * Factory pattern: createSessionAuth(deps) returns middleware.
  *
@@ -64,9 +64,8 @@ export function createSessionAuth(deps: SessionAuthDeps) {
       throw new WAIaaSError('SESSION_REVOKED');
     }
 
-    // 5. Set context variables (defaultWalletId only; walletId resolved via resolveWalletId)
+    // 5. Set context variables (sessionId only; walletId resolved via resolveWalletId)
     c.set('sessionId', payload.sub);
-    c.set('defaultWalletId', payload.wlt);
 
     await next();
   });
