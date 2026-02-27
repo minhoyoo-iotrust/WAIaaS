@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.1
+milestone: v29.3
 milestone_name: 기본 지갑/기본 네트워크 개념 제거
-status: unknown
-last_updated: "2026-02-27T10:40:55.545Z"
+status: ready_to_plan
+last_updated: "2026-02-27T14:00:00.000Z"
 progress:
-  total_phases: 176
-  completed_phases: 169
-  total_plans: 376
-  completed_plans: 370
+  total_phases: 282
+  completed_phases: 280
+  total_plans: 381
+  completed_plans: 376
 ---
 
 # Project State
@@ -18,20 +18,20 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-27)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v29.3 기본 지갑/기본 네트워크 개념 제거 -- Phase 280
+**Current focus:** v29.3 기본 지갑/기본 네트워크 개념 제거 -- Phase 281
 
 ## Current Position
 
-Phase: 280 of 282 (JWT/인증 + API 엔드포인트 + 파이프라인/인프라 + Admin Settings)
-Plan: 3 of 3 in current phase (COMPLETE)
-Status: Phase 280 complete
-Last activity: 2026-02-27 -- Plan 280-03 complete (pipeline/services/settings defaultNetwork removal, 78 files, 199/199 tests pass)
+Phase: 281 of 282 (SDK/CLI/Python SDK + MCP + Admin UI + Skill 파일)
+Plan: 0 of 3 in current phase
+Status: Ready to plan
+Last activity: 2026-02-27 -- Phase 280 complete (3 plans, 24 requirements, 5/5 must-haves verified)
 
-Progress: [==============================░░] 95%
+Progress: [██████████████████████████████░░] 96%
 
 ## Performance Metrics
 
-**Cumulative:** 68 milestones (67 shipped + 1 in progress), 278 phases completed, ~600 plans, ~1,696 reqs, ~5,000+ tests, ~180,194 LOC TS
+**Cumulative:** 68 milestones (67 shipped + 1 in progress), 280 phases completed, ~605 plans, ~1,738 reqs, ~5,000+ tests, ~180,194 LOC TS
 
 ## Accumulated Context
 
@@ -66,5 +66,5 @@ None -- 이 마일스톤은 기존 기능 제거이므로 연구 불필요.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 280-03-PLAN.md (Phase 280 all plans complete)
+Stopped at: Phase 280 complete, auto-advancing to Phase 281
 Resume file: None
