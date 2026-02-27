@@ -8,20 +8,9 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: v29.3 기본 지갑/기본 네트워크 개념 제거
+## Current Milestone: None (planning next)
 
-**Goal:** "기본 지갑(default wallet)"과 "기본 네트워크(default network)" 개념을 제거하여, 에이전트가 항상 명시적으로 대상 지갑과 네트워크를 지정하도록 강제. 암묵적 기본값으로 인해 트랜잭션이 의도하지 않은 네트워크에서 실행되는 문제를 근본적으로 해결.
-
-**Target features:**
-- DB 마이그레이션: session_wallets.is_default + wallets.default_network 컬럼 삭제
-- 해석 로직 변경: resolveWalletId Priority 3 제거, network-resolver Priority 2 제거
-- JWT 축소: wlt claim 제거, 세션 생성/갱신 시 defaultWalletId 로직 제거
-- API 정리: 기본 지갑/네트워크 변경 엔드포인트 3개 삭제, 관련 응답 필드 제거
-- getDefaultNetwork → getSingleNetwork 리네임 + EVM null 반환
-- SDK/CLI/Python SDK/MCP/Admin UI/Skill 파일 전체 동기화
-- WALLET_ID_REQUIRED / NETWORK_REQUIRED 신규 에러 코드
-
-**Previous milestone:** v29.2 shipped 2026-02-27 — DeFi Lending 프레임워크 + Aave V3
+**Previous milestone:** v29.3 shipped 2026-02-27 — 기본 지갑/기본 네트워크 개념 제거 (4 phases, 10 plans, 72 requirements, 231 files, +6,200/-2,354 lines)
 
 ## Current State
 
@@ -78,6 +67,7 @@ v29.2 EVM Lending -- Aave V3 shipped (2026-02-27). 12-패키지 모노레포(pac
 - ✅ v28.8 빌트인 지갑 프리셋 자동 설정 — shipped 2026-02-26 (3 phases, 6 plans, 14 requirements, ~180,194 LOC TS)
 - ✅ v29.0 고급 DeFi 프로토콜 설계 — shipped 2026-02-26 (6 phases, 12 plans, 38 requirements, 59 설계 결정)
 - ✅ v29.2 EVM Lending -- Aave V3 — shipped 2026-02-27 (5 phases, 15 plans, 34 requirements)
+- ✅ v29.3 기본 지갑/기본 네트워크 개념 제거 — shipped 2026-02-27 (4 phases, 10 plans, 72 requirements)
 
 **코드베이스 현황:**
 - 12-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/adapter-evm, @waiaas/cli, @waiaas/sdk, @waiaas/wallet-sdk, @waiaas/mcp, @waiaas/admin, @waiaas/push-relay, @waiaas/actions + waiaas (Python)
