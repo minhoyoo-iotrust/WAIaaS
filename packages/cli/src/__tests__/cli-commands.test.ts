@@ -339,9 +339,12 @@ describe('stopCommand', () => {
   });
 
   it('reads PID file, sends SIGTERM to running process', async () => {
-    // Fork a long-running child process so we can send it signals
-    const { fork } = await import('node:child_process');
-    const child = fork('/dev/null', [], { detached: true, stdio: 'ignore' });
+    // Spawn a long-running child process so we can send it signals
+    const { spawn } = await import('node:child_process');
+    const child = spawn(process.execPath, ['-e', 'setTimeout(()=>{},60000)'], {
+      detached: true,
+      stdio: 'ignore',
+    });
     const childPid = child.pid!;
 
     // Write PID file
@@ -367,7 +370,7 @@ describe('stopCommand', () => {
 
     await stopPromise;
 
-    // Should have called kill with SIGTERM
+    // Should have called kill with SIGTERM (also called with 0 for isProcessAlive check)
     expect(killSpy).toHaveBeenCalledWith(childPid, 'SIGTERM');
 
     killSpy.mockRestore();
