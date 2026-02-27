@@ -200,7 +200,7 @@ See `.planning/milestones/v29.3-ROADMAP.md` for full details.
 
 **Milestone Goal:** Kamino K-Lend를 ILendingProvider 구현체로 구축하여 AI 에이전트가 Solana 체인에서 supply/borrow/repay/withdraw를 정책 평가 하에 수행할 수 있도록 한다. v29.2에서 구축된 Lending 프레임워크(ILendingProvider, IPositionProvider, PositionTracker, HealthFactorMonitor, LendingPolicyEvaluator, defi_positions 테이블)를 재사용하며, @kamino-finance/klend-sdk로 Solana instruction을 빌드한다.
 
-- [ ] **Phase 283: Kamino Core Provider** - KaminoLendingProvider 구현 (4 actions + position/HF/market query + SDK wrapper)
+- [x] **Phase 283: Kamino Core Provider** - KaminoLendingProvider 구현 (4 actions + position/HF/market query + SDK wrapper) -- completed 2026-02-28
 - [ ] **Phase 284: Kamino Integration** - MCP/SDK/Admin UI/정책/스킬 전 레이어 통합 + Admin Settings
 
 ## Phase Details
@@ -216,10 +216,10 @@ See `.planning/milestones/v29.3-ROADMAP.md` for full details.
   4. Kamino obligation 계정에서 SUPPLY/BORROW 포지션 목록을 조회할 수 있고, 담보/부채 데이터로 health factor 숫자를 계산하여 반환한다
   5. reserve별 시장 데이터(supply APY, borrow APY, LTV ratio, available liquidity)를 조회할 수 있다
 **Plans** (Wave 1 || Wave 2 || Wave 3):
-- [ ] 283-01 (W1): KaminoLendingProvider scaffold + klend-sdk wrapper + action definitions [KPROV-01..07]
-- [ ] 283-02 (W2): HF simulation guard for borrow/withdraw [KPROV-08] -- depends on 283-01
-- [ ] 283-03 (W2): Position query + HF calculation + Market data + index exports [KPROV-09..11] -- depends on 283-01
-- [ ] 283-04 (W3): Unit tests for all KPROV requirements [KPROV-01..11] -- depends on 283-01,02,03
+- [x] 283-01 (W1): KaminoLendingProvider scaffold + klend-sdk wrapper + action definitions [KPROV-01..07]
+- [x] 283-02 (W2): HF simulation guard for borrow/withdraw [KPROV-08] -- depends on 283-01
+- [x] 283-03 (W2): Position query + HF calculation + Market data + index exports [KPROV-09..11] -- depends on 283-01
+- [x] 283-04 (W3): Unit tests for all KPROV requirements [KPROV-01..11] -- depends on 283-01,02,03
 
 ### Phase 284: Kamino Integration
 **Goal**: Kamino provider가 MCP/SDK/Admin UI/정책 평가기/스킬 문서 전 레이어에 통합되어, 기존 Aave V3와 동일한 수준의 운영 가시성과 정책 제어가 적용되는 상태
@@ -247,8 +247,8 @@ Phases execute in numeric order: 283 -> 284
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 283. Kamino Core Provider | 0/4 | Plans created | - |
+| 283. Kamino Core Provider | 4/4 | Complete | 2026-02-28 |
 | 284. Kamino Integration | 0/5 | Not started | - |
 
 ---
-*Last updated: 2026-02-28 after v29.4 roadmap creation*
+*Last updated: 2026-02-28 after Phase 283 completion*
