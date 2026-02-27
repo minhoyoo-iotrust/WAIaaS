@@ -28,6 +28,7 @@ const BUILTIN_PROVIDERS: BuiltinProvider[] = [
   { key: 'lido_staking', name: 'Lido Staking', description: 'ETH liquid staking (stETH/wstETH)', chain: 'evm', requiresApiKey: false, docsUrl: 'https://docs.lido.fi' },
   { key: 'jito_staking', name: 'Jito Staking', description: 'SOL liquid staking (JitoSOL)', chain: 'solana', requiresApiKey: false, docsUrl: 'https://www.jito.network/docs' },
   { key: 'aave_v3', name: 'Aave V3 Lending', description: 'EVM lending protocol (supply, borrow, repay, withdraw)', chain: 'evm', requiresApiKey: false, docsUrl: 'https://docs.aave.com/developers' },
+  { key: 'kamino', name: 'Kamino Lending', description: 'Solana lending protocol (supply, borrow, repay, withdraw)', chain: 'solana', requiresApiKey: false, docsUrl: 'https://docs.kamino.finance' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -349,6 +350,41 @@ export default function ActionsPage() {
                     Advanced Settings
                   </div>
                   {(['aave_v3_health_factor_warning_threshold', 'aave_v3_position_sync_interval_sec', 'aave_v3_max_ltv_pct'] as const).map((shortKey) => {
+                    const cat = settings.value['actions'] as Record<string, string> | undefined;
+                    const currentValue = advancedDirty.value[shortKey] ?? cat?.[shortKey] ?? '';
+                    return (
+                      <div
+                        key={shortKey}
+                        style={{ marginBottom: 'var(--space-2)' }}
+                        onBlur={() => {
+                          const val = advancedDirty.value[shortKey];
+                          if (val !== undefined) {
+                            void handleAdvancedSave(shortKey, val);
+                          }
+                        }}
+                      >
+                        <FormField
+                          label={keyToLabel(shortKey)}
+                          name={`actions.${shortKey}`}
+                          type="text"
+                          value={currentValue}
+                          onChange={(v) => {
+                            advancedDirty.value = { ...advancedDirty.value, [shortKey]: String(v) };
+                          }}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Kamino Advanced Settings -- only when Kamino is enabled */}
+              {bp.key === 'kamino' && enabled && (
+                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
+                  <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-2)', color: 'var(--text-secondary)' }}>
+                    Advanced Settings
+                  </div>
+                  {(['kamino_market', 'kamino_hf_threshold'] as const).map((shortKey) => {
                     const cat = settings.value['actions'] as Record<string, string> | undefined;
                     const currentValue = advancedDirty.value[shortKey] ?? cat?.[shortKey] ?? '';
                     return (

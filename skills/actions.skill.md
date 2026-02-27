@@ -1096,7 +1096,118 @@ After executing Aave V3 actions, use the DeFi position endpoints to monitor your
 - **GET /v1/wallet/health-factor** -- Monitor lending health factor to avoid liquidation
 - **MCP tools:** `waiaas_get_defi_positions`, `waiaas_get_health_factor`
 
-## 9. Policy Integration
+## 9. Kamino Lending -- Built-in Provider (Solana)
+
+The Kamino Lending provider uses the [Kamino K-Lend](https://kamino.finance/) protocol to supply collateral, borrow assets, repay debt, and withdraw collateral on Solana. It uses the @kamino-finance/klend-sdk for instruction building.
+
+> AI agents must NEVER request the master password. Use only your session token.
+
+### Configuration
+
+Enable Kamino Lending via **Admin UI > Settings > Actions > Kamino Lending**, or environment variables. No API key is required -- Kamino operates via on-chain Solana programs.
+
+| Setting | Environment Variable | Default | Description |
+|---------|---------------------|---------|-------------|
+| Enabled | `WAIAAS_ACTIONS_KAMINO_ENABLED` | `false` | Enable Kamino Lending provider |
+| Market | `WAIAAS_ACTIONS_KAMINO_MARKET` | `main` | Market identifier ('main' or custom pubkey) |
+| HF Threshold | `WAIAAS_ACTIONS_KAMINO_HF_THRESHOLD` | `1.2` | Health factor warning threshold |
+
+### Actions
+
+| Action | Description | Chain | Risk | Default Tier |
+|--------|------------|-------|------|-------------|
+| `kamino_supply` | Supply assets as collateral to Kamino lending market | solana | medium | DELAY |
+| `kamino_borrow` | Borrow assets against collateral from Kamino | solana | high | APPROVAL |
+| `kamino_repay` | Repay borrowed debt (supports 'max' for full repayment) | solana | medium | DELAY |
+| `kamino_withdraw` | Withdraw supplied collateral (supports 'max' for full withdrawal) | solana | high | APPROVAL |
+
+### Supply Parameters (kamino_supply)
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `asset` | string | yes | Token mint address to supply |
+| `amount` | string | yes | Amount to supply (human-readable) |
+| `market` | string | no | Market identifier (default: 'main') |
+
+### Borrow Parameters (kamino_borrow)
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `asset` | string | yes | Token mint address to borrow |
+| `amount` | string | yes | Amount to borrow (human-readable) |
+| `market` | string | no | Market identifier (default: 'main') |
+
+### Repay Parameters (kamino_repay)
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `asset` | string | yes | Token mint address to repay |
+| `amount` | string | yes | Amount to repay, or 'max' for full repayment |
+| `market` | string | no | Market identifier (default: 'main') |
+
+### Withdraw Parameters (kamino_withdraw)
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `asset` | string | yes | Token mint address to withdraw |
+| `amount` | string | yes | Amount to withdraw, or 'max' for full withdrawal |
+| `market` | string | no | Market identifier (default: 'main') |
+
+### Safety Features
+
+- **Health factor simulation**: Borrow and withdraw actions simulate the resulting health factor before execution. If the simulated HF falls below the configured threshold, the action is blocked to prevent self-liquidation.
+- **Non-spending classification**: Kamino lending actions are classified as non-spending (no SPENDING_LIMIT deduction) since they involve lending/borrowing, not asset purchases.
+- **Max amount support**: Repay and withdraw support 'max' to handle full debt repayment and full collateral withdrawal respectively.
+
+### Examples
+
+**REST API:**
+```bash
+curl -s -X POST http://localhost:3100/v1/actions/kamino/kamino_supply \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"params":{"asset":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","amount":"100","market":"main"},"wallet_id":"...","network":"mainnet"}'
+```
+
+**MCP:**
+```json
+{
+  "tool": "action_kamino_kamino_supply",
+  "arguments": {
+    "asset": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "amount": "100",
+    "wallet_id": "...",
+    "network": "mainnet"
+  }
+}
+```
+
+**TypeScript SDK:**
+```typescript
+const tx = await client.executeAction('kamino', 'kamino_supply', {
+  asset: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+  amount: '100',
+  market: 'main',
+}, { walletId: '...', network: 'mainnet' });
+```
+
+**Python SDK:**
+```python
+tx = await client.execute_action("kamino", "kamino_supply", {
+    "asset": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "amount": "100",
+    "market": "main",
+}, wallet_id="...", network="mainnet")
+```
+
+### Position Monitoring
+
+Kamino positions are automatically tracked via PositionTracker (5-minute sync interval) and stored in the defi_positions table. Use the position query endpoints to check current positions and health factor:
+
+- **Positions**: `GET /v1/wallet/positions` or MCP tool `waiaas_get_defi_positions`
+- **Health Factor**: `GET /v1/wallet/health-factor` or MCP tool `waiaas_get_health_factor`
+
+## 10. Policy Integration
 
 ### CONTRACT_WHITELIST
 
@@ -1123,7 +1234,7 @@ The swap/bridge input amount is converted to USD via IPriceOracle and evaluated 
 
 **LI.FI bridge reservation lifecycle:** Bridge amounts are reserved against the spending limit when the transaction is submitted. The reservation is released on terminal states (COMPLETED, FAILED, REFUNDED) but **held** on TIMEOUT to prevent double-spend during manual resolution. This means the spending budget is not freed until the bridge completes or fails definitively.
 
-## 10. Configuration via Admin Settings
+## 11. Configuration via Admin Settings
 
 Since v28.2, all action provider settings are managed via **Admin UI > Settings > Actions** (not config.toml). The Admin Settings UI provides:
 
@@ -1145,7 +1256,7 @@ The Admin UI shows a three-state status for each provider:
 - **Requires API Key** -- Provider is enabled but missing required API key (yellow, fires `ACTION_API_KEY_REQUIRED` notification)
 - **Inactive** -- Provider is disabled (gray)
 
-## 11. Error Reference
+## 12. Error Reference
 
 | Code | HTTP | Description | Recovery |
 |------|------|-------------|----------|
@@ -1161,7 +1272,7 @@ The Admin UI shows a three-state status for each provider:
 | `INVALID_INSTRUCTION` | 400 | Chain not supported by LI.FI integration. | Use one of the supported chains: solana, ethereum, polygon, arbitrum, optimism, base. |
 | `ACTION_API_ERROR` | 502 | LI.FI API returned an error. | Check LI.FI API status, verify parameters, retry. |
 
-## 12. MCP Auto-Registration
+## 13. MCP Auto-Registration
 
 When a provider has `mcpExpose: true` in its metadata, the MCP server automatically registers each action as an MCP tool using the naming convention:
 
@@ -1169,7 +1280,7 @@ When a provider has `mcpExpose: true` in its metadata, the MCP server automatica
 action_{provider_name}_{action_name}
 ```
 
-**Current MCP tools (12 action tools):**
+**Current MCP tools (16 action tools):**
 - `action_jupiter_swap_swap` -- Jupiter Swap on Solana
 - `action_zerox_swap_swap` -- 0x Swap on EVM chains
 - `action_lifi_cross_swap` -- LI.FI Cross-Chain Swap (multi-chain)
@@ -1182,6 +1293,10 @@ action_{provider_name}_{action_name}
 - `action_aave_v3_aave_borrow` -- Aave V3 borrow assets (EVM)
 - `action_aave_v3_aave_repay` -- Aave V3 repay debt (EVM)
 - `action_aave_v3_aave_withdraw` -- Aave V3 withdraw collateral (EVM)
+- `action_kamino_kamino_supply` -- Kamino supply collateral (Solana)
+- `action_kamino_kamino_borrow` -- Kamino borrow assets (Solana)
+- `action_kamino_kamino_repay` -- Kamino repay debt (Solana)
+- `action_kamino_kamino_withdraw` -- Kamino withdraw collateral (Solana)
 
 Auto-registration happens after MCP server connection via `registerActionProviderTools()`. The tool list is refreshed on each session. If the REST API is unavailable, MCP enters degraded mode (14 built-in tools remain, action provider tools are skipped).
 
@@ -1190,7 +1305,7 @@ MCP tool parameters:
 - `network` (optional string): Target network
 - `wallet_id` (optional string): Target wallet ID
 
-## 13. Related Skill Files
+## 14. Related Skill Files
 
 - **admin.skill.md** -- API key management, Admin Settings, daemon admin
 - **transactions.skill.md** -- 5-type transaction reference (actions execute as CONTRACT_CALL)
