@@ -1,5 +1,42 @@
 # Changelog
 
+## [2.9.0-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc...v2.9.0-rc.1) (2026-02-27)
+
+
+### Bug Fixes
+
+* **test:** increase JWT expiry window in Chain 5 security test for CI stability ([a6f4b30](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a6f4b305f8cae1b1b642324ac8a03a4ef8431e51))
+
+## [2.9.0-rc](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.8.0...v2.9.0-rc) (2026-02-27)
+
+
+### Features
+
+* **280-03:** remove defaultNetwork from services, settings, and fix all tests ([64e2acc](https://github.com/minhoyoo-iotrust/WAIaaS/commit/64e2accd51d4d5d0a980f11cbb0522f3f3a30c78))
+
+
+### Bug Fixes
+
+* **281-02:** delete set_default_network MCP tool and remove registration ([0bc9290](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0bc9290da01e72a0fde263a44108a2db7860d296))
+* **281-02:** update wallet_id and network descriptions in all 24 MCP tools ([8f77c9f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8f77c9f8b495c50101174e8618306f1badb78b1a))
+* **281-03:** update skill files to remove default network/wallet references ([908dd90](https://github.com/minhoyoo-iotrust/WAIaaS/commit/908dd9079915fc3f1f8656962f02e71e59ac1499))
+* **282-02:** remove defaultNetwork/isDefault/evm_default_network from test files ([24eda31](https://github.com/minhoyoo-iotrust/WAIaaS/commit/24eda319e3ada93e30d2352c56fab1856abb5f6a))
+* **282-02:** resolve lint errors from unused variables after default removal ([73cb52b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/73cb52b7be9cc115a20bb524a1928aa77f5aeb3a))
+* **ci:** remove wallets.default_network from enum SSoT verification ([d26ea9b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d26ea9b95f2421ffd5495d6c7756aee67fccbac7))
+* **ci:** revert CLI coverage threshold to 77% -- CI environment yields lower coverage than local ([a815815](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a81581551e9e85ced13b6b7b8f403ddb8d5f856b))
+* pass this.notificationService to re-entry PipelineContext. ([c3fa0d6](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c3fa0d6c3cdb858f06755df9d81c4c81678a50ef))
+* **pipeline:** restore original request on DELAY/GAS_WAITING re-entry and add notificationService ([#207](https://github.com/minhoyoo-iotrust/WAIaaS/issues/207), [#208](https://github.com/minhoyoo-iotrust/WAIaaS/issues/208)) ([c3fa0d6](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c3fa0d6c3cdb858f06755df9d81c4c81678a50ef))
+* **test:** update Docker platform test for 3-stage build structure ([902a38c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/902a38c5b6589358f0d55aaf7987da97b7fc19dc))
+
+
+### Code Refactoring
+
+* **281-01:** remove default network/wallet types and methods from Python SDK ([46d34b7](https://github.com/minhoyoo-iotrust/WAIaaS/commit/46d34b70593452565bb4ead6acce27f15d0e4662))
+* **281-01:** remove default wallet/network types and methods from SDK ([3ff7853](https://github.com/minhoyoo-iotrust/WAIaaS/commit/3ff785378b10645bacca84edb6fcf7f611465689))
+* **281-01:** remove set-default-network command and defaultNetwork from CLI ([9868f1a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/9868f1af1fe788f08ffea7be7de226be7149594d))
+* **281-03:** remove default network UI and evm_default_network from wallets page ([8884ff0](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8884ff0c9b782e1ac90af6168dcd5bcf72a54fb3))
+* **281-03:** remove defaultWalletId and evm_default_network from sessions, settings, helpers ([3981599](https://github.com/minhoyoo-iotrust/WAIaaS/commit/3981599b2551c3d63f9ed66baf22df5cecf226a9))
+
 ## [2.8.0](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.8.0...v2.8.0) (2026-02-27)
 
 
