@@ -321,6 +321,10 @@ export async function stage1Validate(ctx: PipelineContext): Promise<void> {
   const amount = 'amount' in req ? (req as { amount?: string }).amount : undefined;
   const toAddress = 'to' in req ? (req as { to?: string }).to : undefined;
 
+  // Serialize original request for pipeline re-entry (#208)
+  // DELAY/GAS_WAITING re-entry needs the full request to rebuild the correct tx type
+  const metadata = JSON.stringify({ originalRequest: req });
+
   await ctx.db.insert(transactions).values({
     id: ctx.txId,
     walletId: ctx.walletId,
@@ -332,6 +336,7 @@ export async function stage1Validate(ctx: PipelineContext): Promise<void> {
     toAddress: toAddress ?? null,
     sessionId: ctx.sessionId ?? null,
     createdAt: now,
+    metadata,
   });
 
   // Fire-and-forget: notify TX_REQUESTED (never blocks pipeline)

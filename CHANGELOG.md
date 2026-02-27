@@ -1,5 +1,35 @@
 # Changelog
 
+## [2.8.0](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.8.0...v2.8.0) (2026-02-27)
+
+
+### Bug Fixes
+
+* deterministic Docker build for native addons ([4e9e545](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4e9e54515dd8a8814b53aa2fbd82190c3e9fa43c))
+* use prod-deps stage for deterministic Docker native addon builds ([911ee16](https://github.com/minhoyoo-iotrust/WAIaaS/commit/911ee1663a2be036ae15c9c5943ac1be878929c1))
+
+## [2.8.0](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.8.0...v2.8.0) (2026-02-27)
+
+
+### Bug Fixes
+
+* deterministic Docker build for native addons ([4e9e545](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4e9e54515dd8a8814b53aa2fbd82190c3e9fa43c))
+* use prod-deps stage for deterministic Docker native addon builds ([911ee16](https://github.com/minhoyoo-iotrust/WAIaaS/commit/911ee1663a2be036ae15c9c5943ac1be878929c1))
+
+## [2.8.0](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.8.0-rc.4...v2.8.0) (2026-02-27)
+
+
+### Bug Fixes
+
+* promote v2.8.0-rc.4 to stable 2.8.0 ([f864587](https://github.com/minhoyoo-iotrust/WAIaaS/commit/f8645870232bff167cc7a062281226383fa70a38))
+
+## [2.8.0-rc.4](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.8.0-rc.3...v2.8.0-rc.4) (2026-02-27)
+
+
+### Bug Fixes
+
+* add BackgroundWorkers isRunning tests for coverage margin ([97a6ce5](https://github.com/minhoyoo-iotrust/WAIaaS/commit/97a6ce5cd7a6fe338d4fe036580d3f10cbda1bf5))
+
 ## [2.8.0-rc.3](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.8.0-rc.2...v2.8.0-rc.3) (2026-02-27)
 
 

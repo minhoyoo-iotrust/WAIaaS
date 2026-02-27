@@ -1,7 +1,8 @@
 # =============================================================================
 # WAIaaS Docker Image -- Multi-stage build
-# Stage 1 (builder): Install deps + build all packages via turbo
-# Stage 2 (runner):  Production-only deps + dist artifacts + non-root user
+# Stage 1 (builder):   Install deps + build all packages via turbo
+# Stage 2 (prod-deps): Production-only deps with build tools for native addons
+# Stage 3 (runner):    Slim image with pre-built deps + dist artifacts
 # =============================================================================
 
 # ---------------------------------------------------------------------------
@@ -44,7 +45,25 @@ RUN pnpm turbo build --filter=@waiaas/daemon... --filter=@waiaas/cli... --filter
 
 
 # ---------------------------------------------------------------------------
-# Stage 2: runner
+# Stage 2: prod-deps
+# Build tools (python3/make/g++) are inherited from builder, so native addon
+# compilation always succeeds even when prebuilt binary download fails.
+# ---------------------------------------------------------------------------
+FROM builder AS prod-deps
+
+WORKDIR /prod
+
+RUN cp /app/package.json /app/pnpm-workspace.yaml /app/pnpm-lock.yaml /app/turbo.json ./ && \
+    for dir in core daemon admin adapters/solana adapters/evm cli sdk mcp push-relay actions; do \
+      mkdir -p "packages/$dir" && \
+      cp "/app/packages/$dir/package.json" "packages/$dir/"; \
+    done
+
+RUN pnpm install --frozen-lockfile --prod
+
+
+# ---------------------------------------------------------------------------
+# Stage 3: runner
 # ---------------------------------------------------------------------------
 FROM node:22-slim AS runner
 
@@ -69,29 +88,12 @@ RUN apt-get update \
 # Non-root user (UID 1001)
 RUN groupadd -g 1001 waiaas && useradd -u 1001 -g waiaas -m -s /bin/sh waiaas
 
-RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
-
 WORKDIR /app
 
-# 1) Copy workspace config for pnpm install --prod
-COPY --from=builder /app/package.json /app/pnpm-workspace.yaml /app/pnpm-lock.yaml /app/turbo.json ./
+# 1) Copy production dependencies (pre-compiled native addons from prod-deps stage)
+COPY --from=prod-deps /prod/ ./
 
-# 2) Copy each package's package.json
-COPY --from=builder /app/packages/core/package.json packages/core/package.json
-COPY --from=builder /app/packages/daemon/package.json packages/daemon/package.json
-COPY --from=builder /app/packages/admin/package.json packages/admin/package.json
-COPY --from=builder /app/packages/adapters/solana/package.json packages/adapters/solana/package.json
-COPY --from=builder /app/packages/adapters/evm/package.json packages/adapters/evm/package.json
-COPY --from=builder /app/packages/cli/package.json packages/cli/package.json
-COPY --from=builder /app/packages/sdk/package.json packages/sdk/package.json
-COPY --from=builder /app/packages/mcp/package.json packages/mcp/package.json
-COPY --from=builder /app/packages/push-relay/package.json packages/push-relay/package.json
-COPY --from=builder /app/packages/actions/package.json packages/actions/package.json
-
-# 3) Install production dependencies only
-RUN pnpm install --frozen-lockfile --prod
-
-# 4) Copy build artifacts (dist directories)
+# 2) Copy build artifacts (dist directories)
 COPY --from=builder /app/packages/core/dist packages/core/dist
 COPY --from=builder /app/packages/daemon/dist packages/daemon/dist
 COPY --from=builder /app/packages/daemon/public packages/daemon/public
@@ -103,14 +105,14 @@ COPY --from=builder /app/packages/sdk/dist packages/sdk/dist
 COPY --from=builder /app/packages/mcp/dist packages/mcp/dist
 COPY --from=builder /app/packages/actions/dist packages/actions/dist
 
-# 5) Copy and prepare entrypoint
+# 3) Copy and prepare entrypoint
 COPY docker/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
-# 6) Create data directory with correct ownership
+# 4) Create data directory with correct ownership
 RUN mkdir -p /data && chown -R waiaas:waiaas /data /app
 
-# 7) Environment configuration
+# 5) Environment configuration
 ENV NODE_ENV=production
 ENV WAIAAS_DATA_DIR=/data
 ENV WAIAAS_DAEMON_HOSTNAME=0.0.0.0

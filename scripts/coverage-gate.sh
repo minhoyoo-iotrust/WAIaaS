@@ -13,9 +13,10 @@
 
 set -euo pipefail
 
-MODE="${COVERAGE_GATE_MODE:-soft}"
+MODE="${COVERAGE_GATE_MODE:-hard}"
 
-# All 9 packages and their thresholds (parallel arrays for bash 3.x compat)
+# All 11 packages and their thresholds (parallel arrays for bash 3.x compat)
+# Thresholds are synced with vitest.config.ts lines thresholds
 PACKAGES=(
   "packages/core"
   "packages/daemon"
@@ -26,17 +27,21 @@ PACKAGES=(
   "packages/admin"
   "packages/adapters/evm"
   "packages/wallet-sdk"
+  "packages/push-relay"
+  "packages/actions"
 )
 THRESHOLDS=(
-  90
-  85
-  80
-  80
-  70    # cli
-  70    # mcp
-  70    # admin
-  50    # adapters/evm
-  80    # wallet-sdk
+  95    # core
+  85    # daemon
+  89    # adapters/solana
+  80    # sdk
+  80    # cli
+  87    # mcp
+  87    # admin
+  92    # adapters/evm
+  87    # wallet-sdk
+  82    # push-relay
+  95    # actions
 )
 
 get_threshold() {
