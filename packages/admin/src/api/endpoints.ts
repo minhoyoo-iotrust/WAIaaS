@@ -47,4 +47,5 @@ export const API = {
   ACTIONS_PROVIDERS: '/v1/actions/providers',
   ADMIN_WALLET_STAKING: (id: string) => `/v1/admin/wallets/${id}/staking`,
   ADMIN_DEFI_POSITIONS: '/v1/admin/defi/positions',
+  ADMIN_MASTER_PASSWORD: '/v1/admin/master-password',
 } as const;

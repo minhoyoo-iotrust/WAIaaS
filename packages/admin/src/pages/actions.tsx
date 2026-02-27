@@ -352,7 +352,16 @@ export default function ActionsPage() {
                     const cat = settings.value['actions'] as Record<string, string> | undefined;
                     const currentValue = advancedDirty.value[shortKey] ?? cat?.[shortKey] ?? '';
                     return (
-                      <div key={shortKey} style={{ marginBottom: 'var(--space-2)' }}>
+                      <div
+                        key={shortKey}
+                        style={{ marginBottom: 'var(--space-2)' }}
+                        onBlur={() => {
+                          const val = advancedDirty.value[shortKey];
+                          if (val !== undefined) {
+                            void handleAdvancedSave(shortKey, val);
+                          }
+                        }}
+                      >
                         <FormField
                           label={keyToLabel(shortKey)}
                           name={`actions.${shortKey}`}
@@ -360,12 +369,6 @@ export default function ActionsPage() {
                           value={currentValue}
                           onChange={(v) => {
                             advancedDirty.value = { ...advancedDirty.value, [shortKey]: String(v) };
-                          }}
-                          onBlur={() => {
-                            const val = advancedDirty.value[shortKey];
-                            if (val !== undefined) {
-                              void handleAdvancedSave(shortKey, val);
-                            }
                           }}
                         />
                       </div>

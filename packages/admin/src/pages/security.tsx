@@ -2,6 +2,7 @@ import { useSignal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
 import { apiGet, apiPost, apiPut, ApiError } from '../api/client';
 import { API } from '../api/endpoints';
+import { logout } from '../auth/store';
 import { FormField, Button, Badge } from '../components/form';
 import { Modal } from '../components/modal';
 import { TabNav } from '../components/tab-nav';
@@ -28,6 +29,7 @@ const SECURITY_TABS = [
   { key: 'killswitch', label: 'Kill Switch' },
   { key: 'autostop', label: 'AutoStop Rules' },
   { key: 'jwt', label: 'Invalidate Sessions' },
+  { key: 'password', label: 'Master Password' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -431,11 +433,120 @@ function JwtRotationTab() {
 }
 
 // ---------------------------------------------------------------------------
+// Master Password Tab
+// ---------------------------------------------------------------------------
+
+function MasterPasswordTab() {
+  const currentPw = useSignal('');
+  const newPw = useSignal('');
+  const confirmPw = useSignal('');
+  const saving = useSignal(false);
+  const validationError = useSignal<string | null>(null);
+
+  const validate = (): boolean => {
+    if (newPw.value.length < 8) {
+      validationError.value = 'New password must be at least 8 characters.';
+      return false;
+    }
+    if (newPw.value !== confirmPw.value) {
+      validationError.value = 'New password and confirmation do not match.';
+      return false;
+    }
+    validationError.value = null;
+    return true;
+  };
+
+  const handleSubmit = async () => {
+    if (!validate()) return;
+    saving.value = true;
+    try {
+      await apiPut(API.ADMIN_MASTER_PASSWORD, { newPassword: newPw.value });
+      showToast('success', 'Master password changed. Please log in again.');
+      // Clear form before logout
+      currentPw.value = '';
+      newPw.value = '';
+      confirmPw.value = '';
+      setTimeout(() => logout(), 500);
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      saving.value = false;
+    }
+  };
+
+  return (
+    <div class="settings-category">
+      <div class="settings-category-header">
+        <h3>Change Master Password</h3>
+        <p class="settings-description">
+          Update the master password used to authenticate with the Admin UI.
+          You will be logged out after a successful change.
+        </p>
+      </div>
+      <div class="settings-category-body">
+        {validationError.value && (
+          <div class="settings-info-box" style={{ borderColor: 'var(--color-danger)', color: 'var(--color-danger)', marginBottom: 'var(--space-3)' }}>
+            {validationError.value}
+          </div>
+        )}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', maxWidth: '400px' }}>
+          <FormField
+            label="Current Password"
+            name="current-password"
+            type="password"
+            value={currentPw.value}
+            onChange={(v) => { currentPw.value = String(v); }}
+          />
+          <FormField
+            label="New Password"
+            name="new-password"
+            type="password"
+            value={newPw.value}
+            onChange={(v) => { newPw.value = String(v); }}
+            description="Minimum 8 characters"
+          />
+          <FormField
+            label="Confirm New Password"
+            name="confirm-password"
+            type="password"
+            value={confirmPw.value}
+            onChange={(v) => { confirmPw.value = String(v); }}
+          />
+          <div>
+            <Button
+              variant="primary"
+              onClick={handleSubmit}
+              loading={saving.value}
+              disabled={!currentPw.value || !newPw.value || !confirmPw.value}
+            >
+              Change Password
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Security Page Component
 // ---------------------------------------------------------------------------
 
 export default function SecurityPage() {
-  const activeTab = useSignal('killswitch');
+  // Check URL query params for initial tab (e.g. #/security?tab=password)
+  const initialTab = (() => {
+    const hash = location.hash;
+    const qIdx = hash.indexOf('?');
+    if (qIdx >= 0) {
+      const params = new URLSearchParams(hash.slice(qIdx + 1));
+      const t = params.get('tab');
+      if (t && SECURITY_TABS.some((st) => st.key === t)) return t;
+    }
+    return 'killswitch';
+  })();
+
+  const activeTab = useSignal(initialTab);
 
   useEffect(() => {
     const nav = pendingNavigation.value;
@@ -466,6 +577,7 @@ export default function SecurityPage() {
       {activeTab.value === 'killswitch' && <KillSwitchTab />}
       {activeTab.value === 'autostop' && <AutoStopTab />}
       {activeTab.value === 'jwt' && <JwtRotationTab />}
+      {activeTab.value === 'password' && <MasterPasswordTab />}
     </div>
   );
 }

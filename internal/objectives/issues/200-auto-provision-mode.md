@@ -107,7 +107,38 @@ Body: { "newPassword": "<새 패스워드>" }
 | 3e 파일 교체 실패 | 임시 파일 유지 + 원본 유지. 에러 반환 + 수동 복구 안내 |
 | 4~6 해시/메모리 갱신 실패 | 파일은 이미 교체됨. 데몬 재시작으로 복구 가능 (새 패스워드 사용) |
 
-### 5. Admin UI 패스워드 관리
+### 5. Docker 엔트리포인트 auto-provision 지원
+
+`docker/entrypoint.sh`에 `WAIAAS_AUTO_PROVISION` 환경변수 분기를 추가한다.
+
+**변경 후 entrypoint.sh:**
+```sh
+#!/bin/sh
+set -e
+
+# ... 기존 _FILE 시크릿 처리 (WAIAAS_MASTER_PASSWORD, WAIAAS_TELEGRAM_BOT_TOKEN 등) ...
+
+# Auto-provision: 초기화 안 된 상태 + 플래그 설정 시 자동 init
+if [ "${WAIAAS_AUTO_PROVISION:-}" = "true" ] && [ ! -f "${WAIAAS_DATA_DIR:-/data}/config.toml" ]; then
+  echo "Auto-provisioning WAIaaS..."
+  node /app/packages/cli/dist/index.js init --auto-provision --data-dir "${WAIAAS_DATA_DIR:-/data}"
+fi
+
+echo "WAIaaS daemon starting..."
+echo "Data directory: ${WAIAAS_DATA_DIR:-/data}"
+
+exec node /app/packages/cli/dist/index.js start --data-dir "${WAIAAS_DATA_DIR:-/data}"
+```
+
+**동작:**
+- `WAIAAS_AUTO_PROVISION=true` + `config.toml` 미존재 → `init --auto-provision` 실행 후 `start`
+- `WAIAAS_AUTO_PROVISION=true` + `config.toml` 존재 → `start`만 실행 (컨테이너 재시작 시 멱등)
+- `WAIAAS_AUTO_PROVISION` 미설정 → 기존 동작 유지 (`start`만 실행)
+
+**quickset 분리 근거:**
+quickset은 데몬이 떠 있어야 하고(`GET /health` 선행) 엔트리포인트의 `exec`이 프로세스를 교체하므로, 같은 엔트리포인트에서 순차 실행할 수 없다. `docker exec` 또는 docker-compose `depends_on: condition: service_healthy`로 별도 실행한다.
+
+### 6. Admin UI 패스워드 관리
 
 두 가지 UI 요소를 추가한다.
 
@@ -165,6 +196,39 @@ waiaas set-master                 # 현재 패스워드 프롬프트 → 새 패
 # 또는 Admin UI Settings > Security > Change Master Password
 ```
 
+### Docker 자동 프로비저닝
+```bash
+docker run -e WAIAAS_AUTO_PROVISION=true -v waiaas-data:/data waiaas/daemon
+# → 엔트리포인트가 init --auto-provision 자동 실행 → start
+# → quickset은 헬스체크 통과 후 docker exec으로 실행
+docker exec waiaas node /app/packages/cli/dist/index.js quickset --data-dir /data
+```
+
+### Docker Compose 자동 프로비저닝 + quickset
+```yaml
+services:
+  waiaas:
+    image: waiaas/daemon
+    environment:
+      WAIAAS_AUTO_PROVISION: "true"
+    volumes:
+      - waiaas-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3100/health"]
+
+  waiaas-setup:
+    image: waiaas/daemon
+    depends_on:
+      waiaas:
+        condition: service_healthy
+    entrypoint: >
+      node /app/packages/cli/dist/index.js quickset
+      --data-dir /data --base-url http://waiaas:3100
+    volumes:
+      - waiaas-data:/data
+    restart: "no"
+```
+
 ### 기존 방식 (변경 없음)
 ```bash
 waiaas init
@@ -195,6 +259,8 @@ waiaas quickset --password xxx    # 패스워드 입력
 | D6 | 패스워드 변경 시 JWT secret 로테이션 안 함 | 에이전트 세션은 패스워드 변경과 무관. 운영 중인 에이전트를 불필요하게 중단시키지 않음. 세션 무효화가 필요한 상황(유출)은 킬 스위치/세션 취소로 대응 |
 | D7 | 키스토어 재암호화는 atomic rename 전략 | 직접 덮어쓰기는 중간 실패 시 키 손실 위험. 임시 파일에 먼저 쓰고 전부 성공 시 교체하면 원본 보존 |
 | D8 | 패스워드 최소 길이 8자만 검증 | 과도한 규칙(대소문자/특수문자 필수)은 UX 저하. Self-hosted 환경에서 사용자가 보안 수준 결정 |
+| D9 | 엔트리포인트에서 `config.toml` 존재 여부로 init 실행 판단 | PID 파일이나 DB 파일 대비 config.toml이 init 완료의 가장 명확한 지표. 컨테이너 재시작 시 중복 init 방지 |
+| D10 | quickset은 엔트리포인트에 포함하지 않음 | `exec`이 프로세스를 교체하므로 start 이후 추가 명령 실행 불가. 데몬 헬스체크 통과 후 별도 실행이 올바른 순서 |
 
 ## 테스트 항목
 
@@ -206,6 +272,13 @@ waiaas quickset --password xxx    # 패스워드 입력
 - [ ] `waiaas start`가 recovery.key로 정상 시작 확인
 - [ ] `waiaas quickset`이 recovery.key로 월렛+세션 생성 확인
 - [ ] Auto-provision 상태에서 Admin UI 인계 배너 표시 확인
+
+### Docker 엔트리포인트
+- [ ] `WAIAAS_AUTO_PROVISION=true` + 빈 볼륨 → `init --auto-provision` 실행 후 `start` 정상 기동 확인
+- [ ] `WAIAAS_AUTO_PROVISION=true` + 기존 볼륨(config.toml 존재) → init 건너뛰고 `start`만 실행 확인
+- [ ] `WAIAAS_AUTO_PROVISION` 미설정 → 기존 동작 유지 (init 미실행) 확인
+- [ ] 컨테이너 기동 후 `docker exec quickset`이 recovery.key로 패스워드 자동 해석 확인
+- [ ] docker-compose `depends_on: service_healthy` + setup 컨테이너 quickset 정상 완료 확인
 
 ### set-master + 패스워드 변경
 - [ ] `waiaas set-master` 실행 후 recovery.key 삭제 확인

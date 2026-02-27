@@ -36,7 +36,7 @@ export async function startCommand(dataDir: string): Promise<void> {
   // Resolve master password
   let password: string;
   try {
-    password = await resolvePassword();
+    password = await resolvePassword(dataDir);
   } catch (err) {
     console.error(`Failed to resolve master password: ${(err as Error).message}`);
     process.exit(1);

@@ -619,6 +619,7 @@ export const AdminStatusResponseSchema = z
     policyCount: z.number().int(),
     recentTxCount: z.number().int(),
     failedTxCount: z.number().int(),
+    autoProvisioned: z.boolean().openapi({ description: 'Whether daemon was auto-provisioned (recovery.key exists)' }),
     recentTransactions: z.array(
       z.object({
         id: z.string(),
@@ -670,6 +671,20 @@ export const KillSwitchResponseSchema = z
     activatedBy: z.string().nullable(),
   })
   .openapi('KillSwitchResponse');
+
+export const MasterPasswordChangeRequestSchema = z
+  .object({
+    newPassword: z.string().min(8).openapi({ description: 'New master password (minimum 8 characters)' }),
+  })
+  .openapi('MasterPasswordChangeRequest');
+
+export const MasterPasswordChangeResponseSchema = z
+  .object({
+    message: z.string(),
+    walletsReEncrypted: z.number().int(),
+    settingsReEncrypted: z.number().int(),
+  })
+  .openapi('MasterPasswordChangeResponse');
 
 export const KillSwitchActivateResponseSchema = z
   .object({

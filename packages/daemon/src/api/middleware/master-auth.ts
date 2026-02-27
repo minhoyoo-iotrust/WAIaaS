@@ -17,8 +17,16 @@ import { WAIaaSError } from '@waiaas/core';
 // Types
 // ---------------------------------------------------------------------------
 
+/** Mutable ref for in-memory master password + hash, enabling hot-swap on password change. */
+export interface MasterPasswordRef {
+  password: string;
+  hash: string;
+}
+
 export interface MasterAuthDeps {
-  masterPasswordHash: string; // Argon2id hash stored during daemon init
+  masterPasswordHash?: string; // Argon2id hash stored during daemon init
+  /** Mutable ref for live password/hash updates. Takes precedence over masterPasswordHash. */
+  passwordRef?: MasterPasswordRef;
 }
 
 // ---------------------------------------------------------------------------
@@ -35,8 +43,16 @@ export function createMasterAuth(deps: MasterAuthDeps) {
       });
     }
 
+    // Use ref hash (live) if available, else fall back to static hash
+    const hash = deps.passwordRef?.hash ?? deps.masterPasswordHash;
+    if (!hash) {
+      throw new WAIaaSError('INVALID_MASTER_PASSWORD', {
+        message: 'Master password not configured',
+      });
+    }
+
     // Verify password against stored Argon2id hash
-    const isValid = await argon2.verify(deps.masterPasswordHash, password);
+    const isValid = await argon2.verify(hash, password);
 
     if (!isValid) {
       throw new WAIaaSError('INVALID_MASTER_PASSWORD', {

@@ -22,6 +22,7 @@ import { WAIaaSError, getDefaultNetwork, getNetworksForEnvironment, validateNetw
 import type { ChainType, EnvironmentType, NetworkType, EventBus } from '@waiaas/core';
 import { wallets, sessions, sessionWallets, transactions } from '../../infrastructure/database/schema.js';
 import { generateId } from '../../infrastructure/database/id.js';
+import type { MasterPasswordRef } from '../middleware/master-auth.js';
 import type { LocalKeyStore } from '../../infrastructure/keystore/keystore.js';
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
 import type { NotificationService } from '../../notifications/notification-service.js';
@@ -63,6 +64,8 @@ export interface WalletCrudRouteDeps {
   sqlite: SQLiteDatabase;
   keyStore: LocalKeyStore;
   masterPassword: string;
+  /** Mutable ref for live password updates. Takes precedence over masterPassword. */
+  passwordRef?: MasterPasswordRef;
   config: DaemonConfig;
   adapterPool?: AdapterPool;
   notificationService?: NotificationService;
@@ -419,11 +422,12 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
     const id = generateId();
 
     // Generate key pair via keystore
+    const currentPassword = deps.passwordRef?.password ?? deps.masterPassword;
     const { publicKey } = await deps.keyStore.generateKeyPair(
       id,
       chain,
       defaultNetwork,
-      deps.masterPassword,
+      currentPassword,
     );
 
     // Insert into wallets table
@@ -1169,7 +1173,7 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
     // Decrypt private key
     const privateKey = await deps.keyStore.decryptPrivateKey(
       walletId,
-      deps.masterPassword,
+      deps.passwordRef?.password ?? deps.masterPassword,
     );
 
     // Sweep all assets to owner address

@@ -24,6 +24,7 @@ import type { ActionProviderRegistry } from '../../infrastructure/action/action-
 import type { ApiKeyStore } from '../../infrastructure/action/api-key-store.js';
 import type { AdapterPool } from '../../infrastructure/adapter-pool.js';
 import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
+import type { MasterPasswordRef } from '../middleware/master-auth.js';
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
 import type { LocalKeyStore } from '../../infrastructure/keystore/keystore.js';
 import type * as schema from '../../infrastructure/database/schema.js';
@@ -65,6 +66,8 @@ export interface ActionRouteDeps {
   keyStore: LocalKeyStore;
   policyEngine: IPolicyEngine;
   masterPassword: string;
+  /** Mutable ref for live password updates. Takes precedence over masterPassword. */
+  passwordRef?: MasterPasswordRef;
   approvalWorkflow?: ApprovalWorkflow;
   delayQueue?: DelayQueue;
   ownerLifecycle?: OwnerLifecycleService;
@@ -347,7 +350,7 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
         adapter,
         keyStore: deps.keyStore,
         policyEngine: deps.policyEngine,
-        masterPassword: deps.masterPassword,
+        masterPassword: deps.passwordRef?.password ?? deps.masterPassword,
         walletId,
         wallet: walletData,
         resolvedNetwork,

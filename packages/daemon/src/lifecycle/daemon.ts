@@ -120,6 +120,7 @@ export class DaemonLifecycle {
   private _db: BetterSQLite3Database<typeof schema> | null = null;
   private keyStore: LocalKeyStore | null = null;
   private masterPassword = '';
+  private passwordRef: import('../api/middleware/master-auth.js').MasterPasswordRef | null = null;
   private rpcPool: RpcPool | null = null;
   private adapterPool: AdapterPool | null = null;
   private httpServer: { close: () => void } | null = null;
@@ -266,6 +267,7 @@ export class DaemonLifecycle {
           db: this._db!,
           config: this._config!,
           masterPassword,
+          passwordRef: this.passwordRef ?? undefined,
         });
         const importResult = this._settingsService.importFromConfig();
         if (importResult.imported > 0) {
@@ -463,6 +465,8 @@ export class DaemonLifecycle {
         timeCost: 2,
         parallelism: 1,
       });
+      // Create mutable ref for live password/hash updates (password change API)
+      this.passwordRef = { password: masterPassword, hash: this.masterPasswordHash };
       console.debug('Step 4c: JWT secret manager initialized, master password hashed');
     }
 
@@ -1083,7 +1087,7 @@ export class DaemonLifecycle {
       const { ActionProviderRegistry, ApiKeyStore } =
         await import('../infrastructure/action/index.js');
 
-      this.apiKeyStore = new ApiKeyStore(this._db!, masterPassword);
+      this.apiKeyStore = new ApiKeyStore(this._db!, masterPassword, this.passwordRef ?? undefined);
       this.actionProviderRegistry = new ActionProviderRegistry();
 
       // Create IRpcCaller for Aave V3 using RpcPool eth_call.
@@ -1239,6 +1243,7 @@ export class DaemonLifecycle {
           keyStore: this.keyStore!,
           masterPassword: this.masterPassword,
           masterPasswordHash: this.masterPasswordHash || undefined,
+          passwordRef: this.passwordRef ?? undefined,
           config: this._config!,
           adapterPool: this.adapterPool,
           policyEngine: new DatabasePolicyEngine(
@@ -1548,6 +1553,11 @@ export class DaemonLifecycle {
       // Clear master password and hash from memory
       this.masterPassword = '';
       this.masterPasswordHash = '';
+      if (this.passwordRef) {
+        this.passwordRef.password = '';
+        this.passwordRef.hash = '';
+        this.passwordRef = null;
+      }
 
       // Step 10: Close DB, unlink PID, release lock
       if (this.sqlite) {

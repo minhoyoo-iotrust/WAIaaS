@@ -24,6 +24,7 @@ import type { DaemonConfig } from '../config/loader.js';
 import { SETTING_DEFINITIONS, SETTING_CATEGORIES, getSettingDefinition } from './setting-keys.js';
 import type { SettingDefinition } from './setting-keys.js';
 import { encryptSettingValue, decryptSettingValue } from './settings-crypto.js';
+import type { MasterPasswordRef } from '../../api/middleware/master-auth.js';
 
 // ---------------------------------------------------------------------------
 // SettingsService
@@ -33,17 +34,26 @@ export interface SettingsServiceOptions {
   db: BetterSQLite3Database<typeof schema>;
   config: DaemonConfig;
   masterPassword: string;
+  /** Mutable ref for live password updates. Takes precedence over masterPassword. */
+  passwordRef?: MasterPasswordRef;
 }
 
 export class SettingsService {
   private readonly db: BetterSQLite3Database<typeof schema>;
   private readonly config: DaemonConfig;
   private readonly masterPassword: string;
+  private readonly passwordRef?: MasterPasswordRef;
 
   constructor(opts: SettingsServiceOptions) {
     this.db = opts.db;
     this.config = opts.config;
     this.masterPassword = opts.masterPassword;
+    this.passwordRef = opts.passwordRef;
+  }
+
+  /** Resolve the current master password (passwordRef takes precedence). */
+  private get currentPassword(): string {
+    return this.passwordRef?.password ?? this.masterPassword;
   }
 
   // -------------------------------------------------------------------------
@@ -68,7 +78,7 @@ export class SettingsService {
     const row = this.db.select().from(settings).where(eq(settings.key, key)).get();
     if (row) {
       if (row.encrypted) {
-        return decryptSettingValue(row.value, this.masterPassword);
+        return decryptSettingValue(row.value, this.currentPassword);
       }
       return row.value;
     }
@@ -102,7 +112,7 @@ export class SettingsService {
 
     const isCredential = def.isCredential;
     const storedValue = isCredential
-      ? encryptSettingValue(value, this.masterPassword)
+      ? encryptSettingValue(value, this.currentPassword)
       : value;
 
     this.db
@@ -165,7 +175,7 @@ export class SettingsService {
 
       if (row) {
         catObj[fieldName] = row.encrypted
-          ? decryptSettingValue(row.value, this.masterPassword)
+          ? decryptSettingValue(row.value, this.currentPassword)
           : row.value;
       } else {
         // Fallback: config.toml -> default
@@ -208,7 +218,7 @@ export class SettingsService {
         if (row) {
           // Credential in DB: mask as boolean (has value = true)
           try {
-            const decrypted = decryptSettingValue(row.value, this.masterPassword);
+            const decrypted = decryptSettingValue(row.value, this.currentPassword);
             catObj[fieldName] = decrypted !== '';
           } catch {
             catObj[fieldName] = false;

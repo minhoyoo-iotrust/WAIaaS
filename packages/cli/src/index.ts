@@ -38,6 +38,7 @@ import { ownerConnectCommand, ownerDisconnectCommand, ownerStatusCommand } from 
 import { sessionPromptCommand } from './commands/session.js';
 import { notificationSetupCommand } from './commands/notification-setup.js';
 import { updateCommand } from './commands/update.js';
+import { setMasterCommand } from './commands/set-master.js';
 import { resolveDataDir } from './utils/data-dir.js';
 import { checkAndNotifyUpdate } from './utils/update-notify.js';
 
@@ -55,9 +56,10 @@ program
   .command('init')
   .description('Initialize WAIaaS data directory')
   .option('--data-dir <path>', 'Data directory path')
-  .action(async (opts: { dataDir?: string }) => {
+  .option('--auto-provision', 'Enable auto-provision mode (generate recovery key)')
+  .action(async (opts: { dataDir?: string; autoProvision?: boolean }) => {
     const dataDir = resolveDataDir(opts);
-    await initCommand(dataDir);
+    await initCommand(dataDir, { autoProvision: opts.autoProvision });
   });
 
 program
@@ -333,6 +335,17 @@ program
       rollback: opts.rollback,
       noStart: opts.start === false, // commander: --no-start → start=false
     });
+  });
+
+program
+  .command('set-master')
+  .description('Change the master password')
+  .option('--data-dir <path>', 'Data directory path')
+  .option('--base-url <url>', 'Daemon base URL', 'http://127.0.0.1:3100')
+  .option('--password <password>', 'Current master password')
+  .action(async (opts: { dataDir?: string; baseUrl?: string; password?: string }) => {
+    const dataDir = resolveDataDir(opts);
+    await setMasterCommand({ dataDir, baseUrl: opts.baseUrl, password: opts.password });
   });
 
 // Pre-parse --quiet and --data-dir from argv (program.opts() is empty before parseAsync)

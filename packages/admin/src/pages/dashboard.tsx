@@ -40,6 +40,7 @@ interface AdminStatus {
   recentTxCount: number;
   failedTxCount: number;
   recentTransactions: RecentTransaction[];
+  autoProvisioned?: boolean;
 }
 
 interface AgentPromptResult {
@@ -296,6 +297,18 @@ export default function DashboardPage() {
             <strong>Update available:</strong>{' '}
             {data.value.version} {'\u2192'} {data.value.latestVersion}{' \u2014 '}
             Run <code>waiaas update</code> to update.
+          </span>
+        </div>
+      )}
+      {data.value?.autoProvisioned && (
+        <div class="auto-provision-banner" role="alert">
+          <span class="auto-provision-banner-icon">{'\u26A0'}</span>
+          <span>
+            <strong>Auto-provision mode active.</strong>{' '}
+            Change the master password for security.{' '}
+            <a href="#/security?tab=password" class="auto-provision-link">
+              Go to Security
+            </a>
           </span>
         </div>
       )}

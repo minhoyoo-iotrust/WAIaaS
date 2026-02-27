@@ -4,13 +4,15 @@
  * Priority:
  *   1. WAIAAS_MASTER_PASSWORD environment variable
  *   2. WAIAAS_MASTER_PASSWORD_FILE (read file content, trim)
- *   3. Interactive prompt (stdin)
+ *   3. Recovery key file (auto-provision mode)
+ *   4. Interactive prompt (stdin)
  */
 
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 
-export async function resolvePassword(): Promise<string> {
+export async function resolvePassword(dataDir?: string): Promise<string> {
   // 1. Env var
   const envPassword = process.env['WAIAAS_MASTER_PASSWORD'];
   if (envPassword) return envPassword;
@@ -25,7 +27,16 @@ export async function resolvePassword(): Promise<string> {
     return content;
   }
 
-  // 3. Interactive prompt
+  // 3. Recovery key (auto-provision)
+  if (dataDir) {
+    const recoveryPath = join(dataDir, 'recovery.key');
+    if (existsSync(recoveryPath)) {
+      const content = readFileSync(recoveryPath, 'utf-8').trim();
+      if (content.length > 0) return content;
+    }
+  }
+
+  // 4. Interactive prompt
   return promptPassword('Master password: ');
 }
 
