@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.9.0-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc...v2.9.0-rc.1) (2026-02-27)
+
+
+### Bug Fixes
+
+* **test:** increase JWT expiry window in Chain 5 security test for CI stability ([a6f4b30](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a6f4b305f8cae1b1b642324ac8a03a4ef8431e51))
+
 ## [2.9.0-rc](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.8.0...v2.9.0-rc) (2026-02-27)
 
 
