@@ -1,5 +1,27 @@
 # Project Milestones: WAIaaS
 
+## v29.2 EVM Lending -- Aave V3 (Shipped: 2026-02-27)
+
+**Delivered:** DeFi Lending 프레임워크(ILendingProvider/IPositionProvider 인터페이스, PositionTracker, HealthFactorMonitor, LendingPolicyEvaluator)를 구축하고, Aave V3를 첫 번째 Lending Provider로 구현. supply/borrow/repay/withdraw 4개 액션을 manual hex ABI encoding으로 5개 EVM 체인(Ethereum/Arbitrum/Optimism/Polygon/Base)에서 지원. 적응형 HF 모니터링(< 1.5 시 5분→1분 폴링), Lending 정책(max_ltv_pct + 비지출 분류), REST API + MCP 6도구 + TS/Python SDK 확장, Admin UI DeFi 포지션 대시보드 + Aave V3 Settings 4키 런타임 조정까지 완전 통합.
+
+**Phases completed:** 274-278 (5 phases, 15 plans, 34 requirements)
+
+**Key accomplishments:**
+
+- DeFi Lending 프레임워크 — ILendingProvider/IPositionProvider, PositionTracker(5분 batch sync), HealthFactorMonitor(4단계 severity), LendingPolicyEvaluator(LTV/차입한도/비지출)
+- Aave V3 LendingProvider — supply/borrow/repay/withdraw 4액션, manual hex ABI encoding(Lido 패턴), 5-chain Pool/DataProvider/Oracle 주소 레지스트리
+- 적응형 헬스 팩터 모니터링 — HF < 1.5 시 폴링 5분→1분, LIQUIDATION_WARNING/IMMINENT 경고, borrow/withdraw 전 HF 시뮬레이션으로 자기 청산 방지
+- REST API + MCP + SDK 통합 — GET /v1/wallet/positions + /health-factor, MCP 6도구(4 action auto-registered + 2 query), TS/Python SDK getPositions()/getHealthFactor()
+- Admin UI DeFi 포트폴리오 — 대시보드 HF 게이지(색상 badge), 포지션 테이블, Aave V3 Settings 4키(enabled/hf_threshold/sync_interval/max_ltv_pct) 런타임 조정
+
+**Stats:**
+
+- 5 phases, 15 plans, 34 requirements, 109 commits
+- 281 files changed, +45,864 / -1,159 lines
+- Timeline: 2 days (2026-02-26 → 2026-02-27)
+
+---
+
 ## v28.1 Jupiter Swap (Shipped: 2026-02-23)
 
 **Delivered:** Jupiter Aggregator REST API를 IActionProvider 프레임워크에 통합하여 AI 에이전트가 Solana DEX 토큰 스왑을 안전하게 수행할 수 있게 달성. packages/actions/ 신규 모노레포 패키지에 JupiterApiClient(native fetch + Zod 검증) + JupiterSwapActionProvider(5-safety: 슬리피지 클램프, priceImpact 차단, Jito MEV tip, 동일 토큰 차단, Jupiter 프로그램 주소 검증) 구현. 데몬 자동 등록 + config.toml [actions] 8키 + MCP 자동 노출 + 기존 6-stage pipeline 정책 평가(CONTRACT_WHITELIST + SPENDING_LIMIT) 코드 변경 없이 통합.
@@ -1608,6 +1630,16 @@
 - FLOW-01 (low): SolanaAdapter.signTypedData() 미명세 (EVM-only 스코프, 구현 시 NOT_SUPPORTED stub)
 - FLOW-02 (low): STAKING 카테고리 기존 Lido/Jito 미연결 (staking 마이그레이션 마일스톤에서 처리)
 - Tech debt: Yield 자산 화이트리스트 정책 미정의, Solana intent 서명 경로 미명세
+
+---
+
+
+## v29.2 EVM Lending -- Aave V3 (Shipped: 2026-02-27)
+
+**Phases completed:** 174 phases, 371 plans, 50 tasks
+
+**Key accomplishments:**
+- (none recorded)
 
 ---
 

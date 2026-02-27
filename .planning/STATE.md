@@ -1,43 +1,47 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.1
+milestone: v29.2
 milestone_name: EVM Lending -- Aave V3
 status: milestone_complete
-last_updated: "2026-02-27T00:00:00.000Z"
+last_updated: "2026-02-27T02:44:24.514Z"
 progress:
-  total_phases: 172
-  completed_phases: 172
-  total_plans: 368
-  completed_plans: 368
+  total_phases: 278
+  completed_phases: 278
+  total_plans: 371
+  completed_plans: 371
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-26)
+See: .planning/PROJECT.md (updated 2026-02-27)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v29.2 COMPLETE -- All 5 phases shipped (274-278)
+**Current focus:** v29.2 SHIPPED -- Planning next milestone
 
 ## Current Position
 
-Phase: 278 (5 of 5) -- Admin UI + Settings + E2E -- **DONE**
+Phase: 278 (5 of 5) -- Admin UI + Settings + E2E -- **SHIPPED**
 Plan: 3 of 3 in current phase
-Status: All phases complete. Milestone v29.2 ready for archival and PR.
-Last activity: 2026-02-27 -- Phase 278 completed (Admin UI + Settings + E2E, 3 plans all done)
+Status: v29.2 milestone archived. Ready for next milestone.
+Last activity: 2026-02-27 -- v29.2 milestone archived
 
 Progress: [██████████] 100%
 
 ## Performance Metrics
 
-**Cumulative:** 67 milestones (66 shipped + 1 active), 275 phases completed, ~595 plans, ~1,662 reqs, ~5,000+ tests, ~180,194 LOC TS
+**Cumulative:** 68 milestones (67 shipped + 1 archived), 278 phases completed, ~600 plans, ~1,696 reqs, ~5,000+ tests, ~180,194 LOC TS
 
 ## Accumulated Context
 
 ### Decisions
 
-(New milestone -- no decisions yet)
+- D1: manual hex ABI encoding (Lido 패턴 준수, viem ABI 의존 없음)
+- D2: IRpcCaller DI for testability (Provider 클래스에 주입)
+- D3: 적응형 폴링 (HF < 1.5 → 1분, otherwise 5분)
+- D4: 비지출 분류 (supply/repay/withdraw → SPENDING_LIMIT 미차감)
+- D5: SESSION_IDLE 알림 전환 (#204, 세션 해지 대신 알림)
 
 ### Research Flags
 
@@ -54,5 +58,5 @@ Progress: [██████████] 100%
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Phase 278 completed (3/3 plans, 5/5 reqs). All v29.2 phases complete. Milestone ready for archival.
+Stopped at: v29.2 milestone archived. PR creation pending (user request: hold).
 Resume file: None

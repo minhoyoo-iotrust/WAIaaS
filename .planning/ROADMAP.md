@@ -27,6 +27,7 @@
 - ✅ **v28.6 RPC Pool 멀티엔드포인트 로테이션** -- Phases 260-264 (shipped 2026-02-25)
 - ✅ **v28.8 빌트인 지갑 프리셋 자동 설정** -- Phases 265-267 (shipped 2026-02-26)
 - ✅ **v29.0 고급 DeFi 프로토콜 설계** -- Phases 268-273 (shipped 2026-02-26)
+- ✅ **v29.2 EVM Lending -- Aave V3** -- Phases 274-278 (shipped 2026-02-27)
 
 ## Phases
 
@@ -168,106 +169,18 @@ See `.planning/milestones/v29.0-ROADMAP.md` for full details.
 
 </details>
 
-### v29.2 EVM Lending -- Aave V3 (In Progress)
+<details>
+<summary>✅ v29.2 EVM Lending -- Aave V3 (Phases 274-278) -- SHIPPED 2026-02-27</summary>
 
-**Milestone Goal:** DeFi Lending 프레임워크(포지션 추적, 헬스 팩터 모니터링, 담보/차입 관리)를 구축하고, Aave V3를 첫 번째 Lending Provider로 구현하여 AI 에이전트가 EVM 체인에서 자산 예치/차입을 정책 평가 하에 실행할 수 있는 상태.
+- [x] Phase 274: SSoT Enums + DB Migration + Core Interfaces (3/3 plans) -- completed 2026-02-27
+- [x] Phase 275: Lending Framework Services (3/3 plans) -- completed 2026-02-27
+- [x] Phase 276: Aave V3 Provider Implementation (3/3 plans) -- completed 2026-02-26
+- [x] Phase 277: REST API + MCP + SDK Integration (3/3 plans) -- completed 2026-02-27
+- [x] Phase 278: Admin UI + Settings + E2E (3/3 plans) -- completed 2026-02-27
 
-- [x] **Phase 274: SSoT Enums + DB Migration + Core Interfaces** - DeFi 열거형, defi_positions 테이블, ILendingProvider/IPositionProvider 인터페이스 정의
-- [x] **Phase 275: Lending Framework Services** - PositionTracker, HealthFactorMonitor, LendingPolicyEvaluator 프로토콜 무관 서비스
-- [x] **Phase 276: Aave V3 Provider Implementation** - supply/borrow/repay/withdraw 4개 액션 resolve + 5체인 주소 매핑 (completed 2026-02-26)
-- [x] **Phase 277: REST API + MCP + SDK Integration** - 포지션/헬스팩터 API, MCP 5도구, SDK 확장, 정책 엔진 연동 (completed 2026-02-27)
-- [x] **Phase 278: Admin UI + Settings + E2E** - DeFi 포트폴리오 패널, Aave 설정 4키, 통합 검증 (completed 2026-02-27)
+See `.planning/milestones/v29.2-ROADMAP.md` for full details.
 
-## Phase Details
-
-### Phase 274: SSoT Enums + DB Migration + Core Interfaces
-**Goal**: DeFi Lending에 필요한 모든 타입, 열거형, DB 테이블, 핵심 인터페이스가 확립되어 후속 페이즈가 타입 안전하게 구현을 시작할 수 있는 상태
-**Depends on**: Nothing (first phase of v29.2)
-**Requirements**: ENUM-01, ENUM-02, ENUM-03, ENUM-04, ENUM-05, LEND-01, LEND-02
-**Success Criteria** (what must be TRUE):
-  1. LIQUIDATION_WARNING 포함 4개 DeFi 알림 이벤트가 NotificationEventType SSoT enum에 존재하고, 알림 서비스가 해당 이벤트를 수신하여 메시지를 포맷할 수 있다
-  2. POSITION_CATEGORIES(LENDING/YIELD/PERP/STAKING)와 POSITION_STATUSES(ACTIVE/CLOSED/LIQUIDATED) enum이 core/enums/에 정의되어 import 가능하다
-  3. defi_positions 테이블이 DB 마이그레이션으로 생성되고, category/status CHECK 제약 조건이 SSoT enum에서 파생된다
-  4. ILendingProvider와 IPositionProvider 인터페이스가 정의되어 있으며, ILendingProvider가 IActionProvider를 확장하여 ActionProviderRegistry에 등록 가능하다
-**Plans**: 3 plans (2 waves)
-Plans:
-- [x] 274-01-PLAN.md -- SSoT DeFi 열거형 + 알림 이벤트 + i18n 템플릿
-- [x] 274-02-PLAN.md -- defi_positions DB 마이그레이션 + Drizzle 스키마
-- [x] 274-03-PLAN.md -- ILendingProvider + IPositionProvider 인터페이스
-
-### Phase 275: Lending Framework Services
-**Goal**: 프로토콜 무관한 포지션 추적, 헬스 팩터 모니터링, Lending 정책 평가 서비스가 동작하여 어떤 Lending Provider든 연결하면 바로 포지션 동기화/경고/정책 제한이 적용되는 상태
-**Depends on**: Phase 274
-**Requirements**: LEND-03, LEND-04, LEND-05, LEND-06, LEND-07, LEND-08, LEND-09
-**Success Criteria** (what must be TRUE):
-  1. PositionTracker가 등록된 IPositionProvider에서 5분 간격으로 포지션을 가져와 defi_positions 테이블에 batch upsert하고, 데몬 재시작 후에도 캐시된 포지션이 유지된다
-  2. HealthFactorMonitor가 DB 캐시에서 HF < 1.2인 포지션을 감지하면 LIQUIDATION_WARNING 알림을 발송하고, HF < 1.5일 때 폴링 주기가 5분에서 1분으로 단축된다
-  3. LendingPolicyEvaluator가 max_ltv_pct 정책을 평가하여 LTV 초과 차입 요청을 거부하고, USD 기준 차입 한도를 적용한다
-  4. supply/repay 트랜잭션이 SPENDING_LIMIT 누적 카운터에 차감되지 않는다 (비지출 분류)
-**Plans**: 3 plans (2 waves)
-Plans:
-- [x] 275-01-PLAN.md -- PositionTracker + PositionWriteQueue + IDeFiMonitor + DeFiMonitorService + 데몬 라이프사이클 통합
-- [x] 275-02-PLAN.md -- HealthFactorMonitor 적응형 폴링 + 청산 경고 알림
-- [x] 275-03-PLAN.md -- LendingPolicyEvaluator + actionName 확장 + POLICY_TYPES + 비지출 분류
-
-### Phase 276: Aave V3 Provider Implementation
-**Goal**: AaveV3LendingProvider가 supply/borrow/repay/withdraw 4개 액션을 ContractCallRequest 배열로 resolve하고, 5개 EVM 체인에서 헬스 팩터/시장 데이터 조회가 가능한 상태
-**Depends on**: Phase 274, Phase 275
-**Requirements**: AAVE-01, AAVE-02, AAVE-03, AAVE-04, AAVE-05, AAVE-06, AAVE-07, AAVE-08, AAVE-09, AAVE-10
-**Success Criteria** (what must be TRUE):
-  1. supply/borrow/repay/withdraw 각 액션이 올바른 Pool 함수 calldata를 포함한 ContractCallRequest[]를 반환하고, supply/repay 시 ERC-20 approve 단계가 포함된다
-  2. Ethereum/Arbitrum/Optimism/Polygon/Base 5개 체인의 Pool/PoolDataProvider/Oracle 주소가 매핑되어 체인별 올바른 컨트랙트를 호출한다
-  3. getUserAccountData()를 통해 18-decimal bigint 정밀도의 헬스 팩터를 조회할 수 있고, borrow/withdraw 전 HF 시뮬레이션이 자기 청산을 방지한다
-  4. 자산별 APY, LTV, 유동성 등 시장 데이터를 조회할 수 있다
-  5. 모든 ABI 인코딩이 manual hex 패턴(Lido 패턴 준수)으로 구현되어 viem ABI 의존 없이 동작한다
-**Plans**: 3 plans (2 waves)
-Plans:
-- [x] 276-01-PLAN.md -- Aave V3 manual hex ABI encoding + 5-chain 주소 레지스트리 + Zod 입력 스키마
-- [x] 276-02-PLAN.md -- RPC 응답 디코더 + 헬스 팩터 시뮬레이션 + APY 변환 유틸리티
-- [x] 276-03-PLAN.md -- AaveV3LendingProvider 클래스 + registerBuiltInProviders 등록 + 통합 테스트
-
-### Phase 277: REST API + MCP + SDK Integration
-**Goal**: AI 에이전트가 REST API, MCP 도구, SDK를 통해 Lending 포지션을 조회하고, Aave V3 액션을 실행하며, 정책 엔진이 Lending 관련 요청을 평가하는 상태
-**Depends on**: Phase 276
-**Requirements**: API-01, API-02, API-03, API-04, API-05
-**Success Criteria** (what must be TRUE):
-  1. GET /v1/wallet/positions 엔드포인트가 DeFi 포지션 목록을 USD 환산 금액과 함께 반환한다 (sessionAuth, staking 패턴)
-  2. GET /v1/wallet/health-factor 엔드포인트가 decimal 형식의 헬스 팩터와 SAFE/WARNING/DANGER/CRITICAL 분류를 반환한다 (sessionAuth)
-  3. MCP 도구 6개(4 action auto-registered: aave_supply/borrow/repay/withdraw + 2 query manual: get_defi_positions/get_health_factor)가 등록되어 MCP 클라이언트에서 호출 가능하다
-  4. TS/Python SDK에서 executeAction('aave_supply', params) 호출로 Lending 액션을 실행하고, getPositions()/getHealthFactor() 편의 메서드가 동작한다
-**Plans**: 3 plans (2 waves)
-Plans:
-- [x] 277-01-PLAN.md -- REST API 엔드포인트 (positions, health-factor) + IRpcCaller 주입 + 테스트
-- [x] 277-02-PLAN.md -- MCP 도구 2개 + TS/Python SDK 편의 메서드 + 테스트
-- [x] 277-03-PLAN.md -- Skill 파일 업데이트 (wallet.skill.md, actions.skill.md)
-
-### Phase 278: Admin UI + Settings + E2E
-**Goal**: 운영자가 Admin UI에서 DeFi 포지션 현황을 한눈에 파악하고, Aave V3 관련 설정을 조정할 수 있으며, 전체 Lending 플로우가 E2E로 검증된 상태
-**Depends on**: Phase 277
-**Requirements**: ADMN-01, ADMN-02, ADMN-03, ADMN-04, ADMN-05
-**Success Criteria** (what must be TRUE):
-  1. Admin 대시보드에 DeFi 포지션 섹션이 표시되어 예치/차입 현황, 헬스 팩터 게이지, APY가 시각적으로 확인된다
-  2. Admin Settings에서 aave_v3.health_factor_warning_threshold, position_sync_interval_sec, max_ltv_pct를 조정할 수 있고, 변경이 즉시 반영된다
-  3. Admin Settings에서 aave_v3.enabled 토글로 프로바이더를 활성화/비활성화할 수 있다
-  4. supply -> position-sync -> health-check -> borrow -> HF-warning 전체 플로우가 E2E 테스트로 검증된다
-**Plans**: 3 plans (2 waves)
-Plans:
-- [x] 278-01-PLAN.md -- Settings 키 4개 + Actions 페이지 Aave V3 카드 + 서비스 settingsService 연동
-- [x] 278-02-PLAN.md -- Admin DeFi positions 엔드포인트 + Dashboard DeFi 섹션
-- [x] 278-03-PLAN.md -- Admin UI 테스트 + E2E 통합 테스트
-
-## Progress
-
-**Execution Order:**
-Phases execute in numeric order: 274 -> 275 -> 276 -> 277 -> 278
-
-| Phase | Milestone | Plans Complete | Status | Completed |
-|-------|-----------|----------------|--------|-----------|
-| 274. SSoT Enums + DB + Interfaces | v29.2 | 3/3 | **DONE** | 2026-02-27 |
-| 275. Lending Framework Services | v29.2 | 3/3 | **DONE** | 2026-02-27 |
-| 276. Aave V3 Provider | v29.2 | 3/3 | **DONE** | 2026-02-26 |
-| 277. REST API + MCP + SDK | v29.2 | 3/3 | **DONE** | 2026-02-27 |
-| 278. Admin UI + Settings + E2E | v29.2 | 3/3 | **DONE** | 2026-02-27 |
+</details>
 
 ---
-*Last updated: 2026-02-27 after Phase 278 completion (ALL PHASES COMPLETE)*
+*Last updated: 2026-02-27 after v29.2 milestone completion*
