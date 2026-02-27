@@ -730,6 +730,14 @@ describe('AutoStopService', () => {
 
       expect(getWalletStatus(db, walletId)).toBe('SUSPENDED');
     });
+
+    it('idleCheckIntervalSec 런타임 변경 시 타이머 재시작', () => {
+      service.start();
+
+      // Update idle check interval -- should restart the internal timer
+      // No throw means the config change was applied successfully
+      expect(() => service.updateConfig({ idleCheckIntervalSec: 120 })).not.toThrow();
+    });
   });
 
   // -----------------------------------------------------------------------

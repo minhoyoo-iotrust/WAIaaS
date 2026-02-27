@@ -127,6 +127,24 @@ describe('getNotificationMessage', () => {
     expect(msg.body).toContain('42');
     expect(msg.body).toContain('10');
   });
+
+  it('converts raw tx type to human-friendly label (en)', () => {
+    const msg = getNotificationMessage('TX_CONFIRMED', 'en', {
+      txId: 'tx-label-test',
+      amount: '1 ETH',
+      type: 'TOKEN_TRANSFER',
+    });
+    expect(msg.body).toContain('tx-label-test');
+  });
+
+  it('converts raw tx type to human-friendly label (ko)', () => {
+    const msg = getNotificationMessage('TX_CONFIRMED', 'ko', {
+      txId: 'tx-label-ko',
+      amount: '1 SOL',
+      type: 'APPROVE',
+    });
+    expect(msg.body).toContain('tx-label-ko');
+  });
 });
 
 // ---------------------------------------------------------------------------

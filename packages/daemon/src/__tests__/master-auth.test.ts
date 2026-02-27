@@ -73,6 +73,21 @@ describe('masterAuth middleware', () => {
     expect(body.code).toBe('INVALID_MASTER_PASSWORD');
   });
 
+  it('rejects with 401 when master password hash is not configured', async () => {
+    const app = new Hono();
+    app.onError(errorHandler);
+    app.use('/protected/*', createMasterAuth({ masterPasswordHash: '' }));
+    app.get('/protected/data', (c) => c.json({ ok: true }));
+
+    const res = await app.request('/protected/data', {
+      headers: { 'X-Master-Password': 'any-password' },
+    });
+    expect(res.status).toBe(401);
+
+    const body = await json(res);
+    expect(body.code).toBe('INVALID_MASTER_PASSWORD');
+  });
+
   it('passes through when correct master password provided', async () => {
     const app = createTestApp(passwordHash);
 
