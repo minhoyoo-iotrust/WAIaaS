@@ -8,6 +8,14 @@
 * deterministic Docker build for native addons ([4e9e545](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4e9e54515dd8a8814b53aa2fbd82190c3e9fa43c))
 * use prod-deps stage for deterministic Docker native addon builds ([911ee16](https://github.com/minhoyoo-iotrust/WAIaaS/commit/911ee1663a2be036ae15c9c5943ac1be878929c1))
 
+## [2.8.0](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.8.0...v2.8.0) (2026-02-27)
+
+
+### Bug Fixes
+
+* deterministic Docker build for native addons ([4e9e545](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4e9e54515dd8a8814b53aa2fbd82190c3e9fa43c))
+* use prod-deps stage for deterministic Docker native addon builds ([911ee16](https://github.com/minhoyoo-iotrust/WAIaaS/commit/911ee1663a2be036ae15c9c5943ac1be878929c1))
+
 ## [2.8.0](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.8.0-rc.4...v2.8.0) (2026-02-27)
 
 
