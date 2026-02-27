@@ -1661,7 +1661,16 @@ export class DaemonLifecycle {
         rpcUrl,
       );
 
-      // Construct minimal PipelineContext for stages 5-6
+      // Restore original request from metadata (#208)
+      // DELAY/GAS_WAITING re-entry needs full request to rebuild correct tx type
+      const meta = tx.metadata ? JSON.parse(tx.metadata) : {};
+      const request = meta.originalRequest ?? {
+        to: tx.toAddress ?? '',
+        amount: tx.amount ?? '0',
+        memo: undefined,
+      };
+
+      // Construct PipelineContext for stages 5-6
       // Policy already evaluated at Stage 3 before GAS_WAITING entry
       const ctx: import('../pipeline/stages.js').PipelineContext = {
         db: this._db,
@@ -1677,13 +1686,10 @@ export class DaemonLifecycle {
           defaultNetwork: wallet.defaultNetwork ?? null,
         },
         resolvedNetwork,
-        request: {
-          to: tx.toAddress ?? '',
-          amount: tx.amount ?? '0',
-          memo: undefined,
-        },
+        request,
         txId,
         eventBus: this.eventBus,
+        notificationService: this.notificationService ?? undefined,
       };
 
       // Skip stage4Wait -- gas condition met, proceed directly to execution
@@ -1760,7 +1766,15 @@ export class DaemonLifecycle {
         rpcUrl,
       );
 
-      // Construct minimal PipelineContext for stages 5-6
+      // Restore original request from metadata (#208)
+      const meta = tx.metadata ? JSON.parse(tx.metadata) : {};
+      const request = meta.originalRequest ?? {
+        to: tx.toAddress ?? '',
+        amount: tx.amount ?? '0',
+        memo: undefined,
+      };
+
+      // Construct PipelineContext for stages 5-6
       const ctx: import('../pipeline/stages.js').PipelineContext = {
         db: this._db,
         adapter,
@@ -1775,13 +1789,10 @@ export class DaemonLifecycle {
           defaultNetwork: wallet.defaultNetwork ?? null,
         },
         resolvedNetwork,
-        request: {
-          to: tx.toAddress ?? '',
-          amount: tx.amount ?? '0',
-          memo: undefined,
-        },
+        request,
         txId,
         eventBus: this.eventBus,
+        notificationService: this.notificationService ?? undefined,
       };
 
       await stage5Execute(ctx);

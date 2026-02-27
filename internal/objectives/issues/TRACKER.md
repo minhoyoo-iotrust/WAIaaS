@@ -221,6 +221,9 @@
 | 204 | BUG | HIGH | AUTO-03 idle timeout이 세션을 revoke하여 에이전트 운영 방해 | v29.2 | FIXED | 2026-02-27 |
 | 205 | ENHANCEMENT | MEDIUM | 알림 메시지에서 트랜잭션 타입 구분 불가 — CONTRACT_CALL 등이 "전송"으로 표시 | v29.2 | FIXED | 2026-02-27 |
 | 206 | BUG | HIGH | 알림 메시지에 트랜잭션 실제 네트워크 대신 지갑 기본 네트워크 표시 | v29.2 | FIXED | 2026-02-27 |
+| 207 | BUG | HIGH | 파이프라인 재진입 시 notificationService 누락으로 대기 트랜잭션 알림 미발송 | v29.3 | FIXED | 2026-02-27 |
+| 208 | BUG | CRITICAL | DELAY/GAS_WAITING 재진입 시 원본 요청 데이터 손실로 트랜잭션 변질 | v29.3 | FIXED | 2026-02-27 |
+| 209 | ENHANCEMENT | MEDIUM | 테스트 커버리지 임계값 상향 — 실제 수치 대비 과소 설정 + CI Gate soft mode | v29.3 | OPEN | |
 
 ## Type Legend
 
@@ -232,9 +235,9 @@
 
 ## Summary
 
-- **OPEN:** 0
-- **FIXED:** 205
+- **OPEN:** 1
+- **FIXED:** 207
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 206
+- **Total:** 209
