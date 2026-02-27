@@ -28,6 +28,7 @@
 - ✅ **v28.8 빌트인 지갑 프리셋 자동 설정** -- Phases 265-267 (shipped 2026-02-26)
 - ✅ **v29.0 고급 DeFi 프로토콜 설계** -- Phases 268-273 (shipped 2026-02-26)
 - ✅ **v29.2 EVM Lending -- Aave V3** -- Phases 274-278 (shipped 2026-02-27)
+- [ ] **v29.3 기본 지갑/기본 네트워크 개념 제거** -- Phases 279-282 (in progress)
 
 ## Phases
 
@@ -182,5 +183,93 @@ See `.planning/milestones/v29.2-ROADMAP.md` for full details.
 
 </details>
 
+### v29.3 기본 지갑/기본 네트워크 개념 제거 (In Progress)
+
+**Milestone Goal:** "기본 지갑(default wallet)"과 "기본 네트워크(default network)" 개념을 코드베이스 전체에서 제거하여, 에이전트가 항상 명시적으로 대상 지갑과 네트워크를 지정하도록 강제한다.
+
+- [ ] **Phase 279: DB 마이그레이션 + 코어 스키마/타입/에러 + 해석 로직** - 데이터 계층과 핵심 해석 규칙 변경
+- [ ] **Phase 280: JWT/인증 + API 엔드포인트 + 파이프라인/인프라 + Admin Settings** - 서버 런타임 전체에서 기본값 의존 제거
+- [ ] **Phase 281: SDK/CLI/Python SDK + MCP + Admin UI + Skill 파일** - 외부 인터페이스 전체 동기화
+- [ ] **Phase 282: E2E 검증 + 기존 테스트 수정** - 변경 사항 전체 검증 및 기존 테스트 통과 보장
+
+## Phase Details
+
+### Phase 279: DB 마이그레이션 + 코어 스키마/타입/에러 + 해석 로직
+**Goal**: 기본 지갑/기본 네트워크가 데이터 모델과 핵심 해석 규칙에서 완전히 제거되고, 새로운 명시적 해석 규칙이 동작한다
+**Depends on**: Nothing (first phase of v29.3)
+**Requirements**: DB-01, DB-02, DB-03, DB-04, CORE-01, CORE-02, CORE-03, CORE-04, CORE-05, CORE-06, CORE-07, CORE-08, RSLV-01, RSLV-02, RSLV-03, RSLV-04, RSLV-05, RSLV-06
+**Success Criteria** (what must be TRUE):
+  1. DB에 session_wallets.is_default 컬럼과 wallets.default_network 컬럼이 존재하지 않으며, 기존 데이터가 손실 없이 마이그레이션된다
+  2. WalletSchema와 CreateSessionRequestSchema에서 defaultNetwork/defaultWalletId 필드가 없고, 타입 검사가 통과한다
+  3. resolveWalletId가 세션 지갑 1개이면 자동 해석하고, 2개 이상이면 WALLET_ID_REQUIRED 에러를 반환한다
+  4. network-resolver가 Solana는 자동 해석하고, EVM은 network 누락 시 NETWORK_REQUIRED 에러를 반환한다
+  5. getDefaultNetwork가 getSingleNetwork로 리네임되고, ENVIRONMENT_DEFAULT_NETWORK가 ENVIRONMENT_SINGLE_NETWORK로 변경되며, EVM 항목이 제거된다
+**Plans**: TBD
+
+Plans:
+- [ ] 279-01: DB 마이그레이션 + Drizzle 스키마 + 코어 스키마/에러/i18n 변경
+- [ ] 279-02: resolveWalletId + network-resolver 해석 로직 변경
+
+### Phase 280: JWT/인증 + API 엔드포인트 + 파이프라인/인프라 + Admin Settings
+**Goal**: 서버 런타임(인증, API 라우트, 파이프라인, 인프라 서비스) 전체에서 기본 지갑/기본 네트워크 의존이 제거되고, 삭제된 엔드포인트가 404를 반환한다
+**Depends on**: Phase 279
+**Requirements**: AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, API-01, API-02, API-03, API-04, API-05, API-06, API-07, API-08, API-09, API-10, PIPE-01, PIPE-02, PIPE-03, PIPE-04, PIPE-05, PIPE-06, ASET-01, ASET-02, ASET-03
+**Success Criteria** (what must be TRUE):
+  1. JWT에 wlt claim이 포함되지 않으며, 기존 JWT의 wlt claim은 에러 없이 무시된다
+  2. PATCH /sessions/:id/wallets/:walletId/default, PUT /wallets/:id/default-network, PUT /wallet/default-network 3개 엔드포인트가 404를 반환한다
+  3. POST /v1/sessions 요청에서 defaultWalletId 파라미터가 무시되고, GET 응답에서 defaultNetwork/isDefault 필드가 없다
+  4. 파이프라인이 wallet.defaultNetwork 없이 동작하고, BalanceMonitor가 전체 네트워크를 순회하여 잔액을 체크한다
+  5. rpc.evm_default_network 설정 키가 setting-keys/config loader/hot-reload에서 완전히 제거된다
+**Plans**: TBD
+
+Plans:
+- [ ] 280-01: JWT/Auth 미들웨어 + Telegram Bot 기본 지갑 로직 제거
+- [ ] 280-02: API 라우트 엔드포인트 삭제 + 응답 필드 제거 + OpenAPI 스키마 정리
+- [ ] 280-03: 파이프라인/인프라 서비스 + Admin Settings 기본 네트워크 의존 제거
+
+### Phase 281: SDK/CLI/Python SDK + MCP + Admin UI + Skill 파일
+**Goal**: 모든 외부 인터페이스(SDK, CLI, Python SDK, MCP 도구, Admin UI, Skill 파일)에서 기본 지갑/기본 네트워크 참조가 제거되고 명시적 지정 가이드로 교체된다
+**Depends on**: Phase 280
+**Requirements**: SDK-01, SDK-02, SDK-03, SDK-04, SDK-05, SDK-06, SDK-07, MCP-01, MCP-02, MCP-03, MCP-04, ADMN-01, ADMN-02, ADMN-03, ADMN-04, ADMN-05, ADMN-06, SKIL-01, SKIL-02, SKIL-03, SKIL-04
+**Success Criteria** (what must be TRUE):
+  1. SDK에 setDefaultNetwork 메서드와 defaultWalletId 파라미터가 없고, ConnectInfoWallet에 defaultNetwork 필드가 없다
+  2. CLI에 wallet set-default-network 서브커맨드가 없고, quickstart에서 defaultNetwork 참조가 없다
+  3. Python SDK에 is_default/default_network/isDefault 필드와 set_default_network 메서드가 없다
+  4. MCP에 set-default-network 도구가 없고, 25개 도구의 wallet_id description이 명시적 지정을 안내한다
+  5. Admin UI에서 Default Network 표시, Set as Default 버튼, evm_default_network 설정이 없고, 세션 생성에 defaultWalletId 선택이 없다
+**Plans**: TBD
+
+Plans:
+- [ ] 281-01: SDK + CLI + Python SDK 기본값 참조 제거
+- [ ] 281-02: MCP 도구 삭제 + description 업데이트
+- [ ] 281-03: Admin UI 기본 지갑/네트워크 UI 제거 + Skill 파일 업데이트
+
+### Phase 282: E2E 검증 + 기존 테스트 수정
+**Goal**: 기본 지갑/기본 네트워크 제거 후 모든 변경 사항이 E2E 시나리오로 검증되고, 기존 테스트가 전체 통과한다
+**Depends on**: Phase 281
+**Requirements**: E2E-01, E2E-02, E2E-03, E2E-04, E2E-05, E2E-06, E2E-07, E2E-08, E2E-09
+**Success Criteria** (what must be TRUE):
+  1. 세션 지갑 1개 + walletId 생략 시 자동 해석되고, 2개 + walletId 생략 시 WALLET_ID_REQUIRED 에러가 반환된다
+  2. Solana + network 생략 시 자동 해석되고, EVM + network 생략 시 NETWORK_REQUIRED 에러가 반환된다
+  3. 삭제된 3개 엔드포인트가 404를 반환하고, 신규 JWT에 wlt claim이 없고, connect-info에 defaultNetwork/isDefault가 없다
+  4. MCP 멀티 지갑 세션에서 wallet_id 생략 시 WALLET_ID_REQUIRED가 반환된다
+  5. 기존 테스트 전체가 통과한다 (기존 테스트의 defaultWalletId/defaultNetwork/isDefault 참조 수정 포함)
+**Plans**: TBD
+
+Plans:
+- [ ] 282-01: E2E 테스트 작성 (지갑 해석 + 네트워크 해석 + 삭제 엔드포인트 + JWT + connect-info + MCP)
+- [ ] 282-02: 기존 테스트 수정 + 전체 테스트 통과 검증
+
+## Progress
+
+**Execution Order:** 279 -> 280 -> 281 -> 282
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 279. DB + Core + Resolution | v29.3 | 0/2 | Not started | - |
+| 280. JWT/Auth + API + Pipeline | v29.3 | 0/3 | Not started | - |
+| 281. SDK/MCP/Admin UI/Skills | v29.3 | 0/3 | Not started | - |
+| 282. E2E + Test Fixes | v29.3 | 0/2 | Not started | - |
+
 ---
-*Last updated: 2026-02-27 after v29.2 milestone completion*
+*Last updated: 2026-02-27 after v29.3 roadmap creation*

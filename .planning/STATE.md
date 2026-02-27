@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v29.3
 milestone_name: 기본 지갑/기본 네트워크 개념 제거
-status: defining_requirements
-last_updated: "2026-02-27T06:00:00.000Z"
+status: ready_to_plan
+last_updated: "2026-02-27T07:00:00.000Z"
 progress:
-  total_phases: 278
+  total_phases: 282
   completed_phases: 278
-  total_plans: 371
+  total_plans: 381
   completed_plans: 371
 ---
 
@@ -18,36 +18,36 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-27)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v29.3 기본 지갑/기본 네트워크 개념 제거
+**Current focus:** v29.3 기본 지갑/기본 네트워크 개념 제거 -- Phase 279
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-02-27 — Milestone v29.3 started
+Phase: 279 of 282 (DB 마이그레이션 + 코어 스키마/타입/에러 + 해석 로직)
+Plan: 0 of 2 in current phase
+Status: Ready to plan
+Last activity: 2026-02-27 -- Roadmap created for v29.3 (4 phases, 10 plans, 72 requirements)
+
+Progress: [==============================░░] 94%
 
 ## Performance Metrics
 
-**Cumulative:** 68 milestones (67 shipped + 1 archived), 278 phases completed, ~600 plans, ~1,696 reqs, ~5,000+ tests, ~180,194 LOC TS
+**Cumulative:** 68 milestones (67 shipped + 1 in progress), 278 phases completed, ~600 plans, ~1,696 reqs, ~5,000+ tests, ~180,194 LOC TS
 
 ## Accumulated Context
 
 ### Decisions
 
-- D1: manual hex ABI encoding (Lido 패턴 준수, viem ABI 의존 없음)
-- D2: IRpcCaller DI for testability (Provider 클래스에 주입)
-- D3: 적응형 폴링 (HF < 1.5 → 1분, otherwise 5분)
-- D4: 비지출 분류 (supply/repay/withdraw → SPENDING_LIMIT 미차감)
-- D5: SESSION_IDLE 알림 전환 (#204, 세션 해지 대신 알림)
+- D1: 단일 지갑 세션 walletId 생략 허용 (자동 해석, DX 우선)
+- D2: Solana 단일 네트워크 자동 해석, EVM 필수 (환경당 네트워크 수 기반)
+- D3: WALLET_ID_REQUIRED / NETWORK_REQUIRED 전용 에러 코드 (VALIDATION_ERROR와 구분)
+- D4: JWT wlt claim 제거 (기본 지갑 불필요, 토큰 크기 절감)
+- D5: 하위 호환 레이어 없이 깔끔한 제거 (pre-release 단계)
+- D6: getDefaultNetwork -> getSingleNetwork 리네임 + EVM null 반환
+- D7: BalanceMonitor 전체 네트워크 순회 (IncomingTxMonitor 패턴)
 
 ### Research Flags
 
-- C1: ERC-20 approve race condition -- USDT-like tokens require zero-first approve; multi-step resolve must annotate both elements with actionProvider
-- C2: HF 18-decimal precision -- bigint comparisons only (1_200_000_000_000_000_000n), never Number conversion for safety-critical checks
-- C3: Position sync drift -- DB is cache of on-chain truth, force sync after Stage 6 confirms lending tx
-- C4: CONTRACT_WHITELIST bypass -- both elements of [approveReq, actionReq] must carry actionProvider metadata
-- M6: SPENDING_LIMIT classification -- supply/repay/withdraw are non-spending; only borrow counts
+None -- 이 마일스톤은 기존 기능 제거이므로 연구 불필요.
 
 ### Blockers/Concerns
 
@@ -56,5 +56,5 @@ Last activity: 2026-02-27 — Milestone v29.3 started
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Starting milestone v29.3
+Stopped at: Roadmap created for v29.3 -- 4 phases (279-282), 10 plans, 72 requirements
 Resume file: None

@@ -131,13 +131,84 @@ None — 이 마일스톤은 기존 기능 정리이므로 추가 기능 없음.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (To be filled by roadmapper) | | |
+| DB-01 | Phase 279 | Pending |
+| DB-02 | Phase 279 | Pending |
+| DB-03 | Phase 279 | Pending |
+| DB-04 | Phase 279 | Pending |
+| CORE-01 | Phase 279 | Pending |
+| CORE-02 | Phase 279 | Pending |
+| CORE-03 | Phase 279 | Pending |
+| CORE-04 | Phase 279 | Pending |
+| CORE-05 | Phase 279 | Pending |
+| CORE-06 | Phase 279 | Pending |
+| CORE-07 | Phase 279 | Pending |
+| CORE-08 | Phase 279 | Pending |
+| RSLV-01 | Phase 279 | Pending |
+| RSLV-02 | Phase 279 | Pending |
+| RSLV-03 | Phase 279 | Pending |
+| RSLV-04 | Phase 279 | Pending |
+| RSLV-05 | Phase 279 | Pending |
+| RSLV-06 | Phase 279 | Pending |
+| AUTH-01 | Phase 280 | Pending |
+| AUTH-02 | Phase 280 | Pending |
+| AUTH-03 | Phase 280 | Pending |
+| AUTH-04 | Phase 280 | Pending |
+| AUTH-05 | Phase 280 | Pending |
+| API-01 | Phase 280 | Pending |
+| API-02 | Phase 280 | Pending |
+| API-03 | Phase 280 | Pending |
+| API-04 | Phase 280 | Pending |
+| API-05 | Phase 280 | Pending |
+| API-06 | Phase 280 | Pending |
+| API-07 | Phase 280 | Pending |
+| API-08 | Phase 280 | Pending |
+| API-09 | Phase 280 | Pending |
+| API-10 | Phase 280 | Pending |
+| PIPE-01 | Phase 280 | Pending |
+| PIPE-02 | Phase 280 | Pending |
+| PIPE-03 | Phase 280 | Pending |
+| PIPE-04 | Phase 280 | Pending |
+| PIPE-05 | Phase 280 | Pending |
+| PIPE-06 | Phase 280 | Pending |
+| ASET-01 | Phase 280 | Pending |
+| ASET-02 | Phase 280 | Pending |
+| ASET-03 | Phase 280 | Pending |
+| SDK-01 | Phase 281 | Pending |
+| SDK-02 | Phase 281 | Pending |
+| SDK-03 | Phase 281 | Pending |
+| SDK-04 | Phase 281 | Pending |
+| SDK-05 | Phase 281 | Pending |
+| SDK-06 | Phase 281 | Pending |
+| SDK-07 | Phase 281 | Pending |
+| MCP-01 | Phase 281 | Pending |
+| MCP-02 | Phase 281 | Pending |
+| MCP-03 | Phase 281 | Pending |
+| MCP-04 | Phase 281 | Pending |
+| ADMN-01 | Phase 281 | Pending |
+| ADMN-02 | Phase 281 | Pending |
+| ADMN-03 | Phase 281 | Pending |
+| ADMN-04 | Phase 281 | Pending |
+| ADMN-05 | Phase 281 | Pending |
+| ADMN-06 | Phase 281 | Pending |
+| SKIL-01 | Phase 281 | Pending |
+| SKIL-02 | Phase 281 | Pending |
+| SKIL-03 | Phase 281 | Pending |
+| SKIL-04 | Phase 281 | Pending |
+| E2E-01 | Phase 282 | Pending |
+| E2E-02 | Phase 282 | Pending |
+| E2E-03 | Phase 282 | Pending |
+| E2E-04 | Phase 282 | Pending |
+| E2E-05 | Phase 282 | Pending |
+| E2E-06 | Phase 282 | Pending |
+| E2E-07 | Phase 282 | Pending |
+| E2E-08 | Phase 282 | Pending |
+| E2E-09 | Phase 282 | Pending |
 
 **Coverage:**
-- v29.3 requirements: 55 total
-- Mapped to phases: 0
-- Unmapped: 55 ⚠️
+- v29.3 requirements: 72 total
+- Mapped to phases: 72
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-27*
-*Last updated: 2026-02-27 after initial definition*
+*Last updated: 2026-02-27 after roadmap creation -- traceability table populated, coverage count corrected (55 -> 72)*
