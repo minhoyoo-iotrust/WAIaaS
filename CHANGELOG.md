@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.8.0](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.8.0-rc.4...v2.8.0) (2026-02-27)
+
+
+### Bug Fixes
+
+* promote v2.8.0-rc.4 to stable 2.8.0 ([f864587](https://github.com/minhoyoo-iotrust/WAIaaS/commit/f8645870232bff167cc7a062281226383fa70a38))
+
 ## [2.8.0-rc.4](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.8.0-rc.3...v2.8.0-rc.4) (2026-02-27)
 
 
