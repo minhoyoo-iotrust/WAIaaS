@@ -8,7 +8,7 @@ progress:
   total_phases: 282
   completed_phases: 280
   total_plans: 381
-  completed_plans: 377
+  completed_plans: 378
 ---
 
 # Project State
@@ -24,8 +24,8 @@ See: .planning/PROJECT.md (updated 2026-02-27)
 
 Phase: 281 of 282 (SDK/CLI/Python SDK + MCP + Admin UI + Skill 파일)
 Plan: 2 of 3 in current phase
-Status: Executing Phase 281 (Plan 02 complete)
-Last activity: 2026-02-27 -- Plan 281-02 complete (MCP tool deletion + description update)
+Status: Executing Phase 281 (Plans 01+02 complete, Plan 03 remaining)
+Last activity: 2026-02-27 -- Plan 281-01 complete (SDK/CLI/Python SDK default removal)
 
 Progress: [██████████████████████████████░░] 96%
 
@@ -56,6 +56,8 @@ Progress: [███████████████████████
 - [Phase 280-03]: rpc.evm_default_network completely removed from settings/config/hot-reload
 - [Phase 281-02]: get-tokens.ts has no wallet_id (network-scoped query, not wallet-scoped)
 - [Phase 281-02]: sign-transaction.ts network pattern normalized from 'Omit to use wallet default' to standard pattern
+- [Phase 281-01]: Clean removal without backward compat shims (pre-release stage)
+- [Phase 281-01]: WalletNetworkInfo kept with only network field (still used by getWalletInfo)
 
 ### Research Flags
 
@@ -68,5 +70,5 @@ None -- 이 마일스톤은 기존 기능 제거이므로 연구 불필요.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 281-02-PLAN.md
+Stopped at: Completed 281-01-PLAN.md (parallel with 281-02)
 Resume file: None

@@ -72,13 +72,13 @@ Requirements for removing default wallet/default network concepts. Each maps to 
 
 ### SDK / CLI / Python SDK
 
-- [ ] **SDK-01**: SDK CreateSessionParams에서 defaultWalletId 필드가 제거된다
-- [ ] **SDK-02**: SDK ConnectInfoWallet에서 defaultNetwork 필드가 제거된다
-- [ ] **SDK-03**: SDK setDefaultNetwork() 메서드가 삭제된다
-- [ ] **SDK-04**: CLI wallet set-default-network 서브커맨드가 삭제된다
-- [ ] **SDK-05**: CLI quickstart에서 defaultNetwork 타입/표시 로직이 제거된다
-- [ ] **SDK-06**: Python SDK models.py에서 is_default, default_network, isDefault 필드가 제거된다
-- [ ] **SDK-07**: Python SDK client.py에서 set_default_network() 메서드가 삭제된다
+- [x] **SDK-01**: SDK CreateSessionParams에서 defaultWalletId 필드가 제거된다
+- [x] **SDK-02**: SDK ConnectInfoWallet에서 defaultNetwork 필드가 제거된다
+- [x] **SDK-03**: SDK setDefaultNetwork() 메서드가 삭제된다
+- [x] **SDK-04**: CLI wallet set-default-network 서브커맨드가 삭제된다
+- [x] **SDK-05**: CLI quickstart에서 defaultNetwork 타입/표시 로직이 제거된다
+- [x] **SDK-06**: Python SDK models.py에서 is_default, default_network, isDefault 필드가 제거된다
+- [x] **SDK-07**: Python SDK client.py에서 set_default_network() 메서드가 삭제된다
 
 ### MCP Tools
 
@@ -173,13 +173,13 @@ None — 이 마일스톤은 기존 기능 정리이므로 추가 기능 없음.
 | ASET-01 | Phase 280 | Complete |
 | ASET-02 | Phase 280 | Complete |
 | ASET-03 | Phase 280 | Complete |
-| SDK-01 | Phase 281 | Pending |
-| SDK-02 | Phase 281 | Pending |
-| SDK-03 | Phase 281 | Pending |
-| SDK-04 | Phase 281 | Pending |
-| SDK-05 | Phase 281 | Pending |
-| SDK-06 | Phase 281 | Pending |
-| SDK-07 | Phase 281 | Pending |
+| SDK-01 | Phase 281 | Complete |
+| SDK-02 | Phase 281 | Complete |
+| SDK-03 | Phase 281 | Complete |
+| SDK-04 | Phase 281 | Complete |
+| SDK-05 | Phase 281 | Complete |
+| SDK-06 | Phase 281 | Complete |
+| SDK-07 | Phase 281 | Complete |
 | MCP-01 | Phase 281 | Complete |
 | MCP-02 | Phase 281 | Complete |
 | MCP-03 | Phase 281 | Complete |

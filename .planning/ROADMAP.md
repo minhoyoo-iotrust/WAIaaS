@@ -268,7 +268,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 279. DB + Core + Resolution | v29.3 | 2/2 | Complete | 2026-02-27 |
 | 280. JWT/Auth + API + Pipeline | v29.3 | 3/3 | Complete | 2026-02-27 |
-| 281. SDK/MCP/Admin UI/Skills | 1/3 | In Progress|  | - |
+| 281. SDK/MCP/Admin UI/Skills | 2/3 | In Progress|  | - |
 | 282. E2E + Test Fixes | v29.3 | 0/2 | Not started | - |
 
 ---
