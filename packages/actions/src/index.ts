@@ -48,6 +48,13 @@ export type { AaveV3Config, AaveChainAddresses } from './providers/aave-v3/confi
 export type { IRpcCaller, UserAccountData, ReserveData } from './providers/aave-v3/aave-rpc.js';
 export { decodeGetUserAccountData, decodeGetReserveData, simulateHealthFactor, rayToApy, hfToNumber, LIQUIDATION_THRESHOLD_HF, WARNING_THRESHOLD_HF } from './providers/aave-v3/aave-rpc.js';
 
+export { KaminoLendingProvider } from './providers/kamino/index.js';
+export { KAMINO_DEFAULTS, KAMINO_PROGRAM_ID, KAMINO_MAIN_MARKET, resolveMarketAddress } from './providers/kamino/config.js';
+export type { KaminoConfig } from './providers/kamino/config.js';
+export type { IKaminoSdkWrapper, KaminoInstruction, KaminoObligation, KaminoReserve } from './providers/kamino/kamino-sdk-wrapper.js';
+export { MockKaminoSdkWrapper } from './providers/kamino/kamino-sdk-wrapper.js';
+export { calculateHealthFactor, simulateKaminoHealthFactor, hfToStatus, KAMINO_LIQUIDATION_THRESHOLD, KAMINO_DEFAULT_HF_THRESHOLD } from './providers/kamino/hf-simulation.js';
+
 // Re-export common utilities
 export { ActionApiClient } from './common/action-api-client.js';
 export { asBps, asPct, clampSlippageBps, bpsToPct, pctToBps } from './common/slippage.js';

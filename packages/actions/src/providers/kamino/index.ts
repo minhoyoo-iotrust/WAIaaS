@@ -35,6 +35,12 @@ import {
   KaminoRepayInputSchema,
   KaminoWithdrawInputSchema,
 } from './schemas.js';
+import {
+  simulateKaminoHealthFactor,
+  calculateHealthFactor,
+  hfToStatus,
+  KAMINO_LIQUIDATION_THRESHOLD,
+} from './hf-simulation.js';
 
 // ---------------------------------------------------------------------------
 // Amount parsing helper
@@ -286,16 +292,16 @@ export class KaminoLendingProvider implements ILendingProvider, IPositionProvide
       const totalCollateralUsd = obligation.deposits.reduce((sum, d) => sum + d.marketValueUsd, 0);
       const totalDebtUsd = obligation.borrows.reduce((sum, b) => sum + b.marketValueUsd, 0);
 
-      // Simulate post-action HF
-      const newDebt = totalDebtUsd + amountUsd;
-      if (newDebt <= 0) return;
+      const result = simulateKaminoHealthFactor(
+        { totalCollateralUsd, totalDebtUsd },
+        'borrow',
+        amountUsd,
+        KAMINO_LIQUIDATION_THRESHOLD,
+      );
 
-      const weightedLiqThreshold = 0.85; // Kamino typical
-      const simulatedHf = (totalCollateralUsd * weightedLiqThreshold) / newDebt;
-
-      if (simulatedHf < 1.0) {
+      if (!result.safe) {
         throw new ChainError('CONTRACT_EXECUTION_FAILED', 'solana', {
-          message: `Borrow would cause health factor to drop below liquidation threshold (simulated HF: ${simulatedHf.toFixed(4)})`,
+          message: `Borrow would cause health factor to drop below liquidation threshold (simulated HF: ${result.simulatedHf.toFixed(4)})`,
         });
       }
     } catch (err) {
@@ -317,16 +323,16 @@ export class KaminoLendingProvider implements ILendingProvider, IPositionProvide
       const totalCollateralUsd = obligation.deposits.reduce((sum, d) => sum + d.marketValueUsd, 0);
       const totalDebtUsd = obligation.borrows.reduce((sum, b) => sum + b.marketValueUsd, 0);
 
-      // Simulate post-action HF (withdrawal reduces collateral)
-      const newCollateral = totalCollateralUsd - amountUsd;
-      if (totalDebtUsd <= 0) return;
+      const result = simulateKaminoHealthFactor(
+        { totalCollateralUsd, totalDebtUsd },
+        'withdraw',
+        amountUsd,
+        KAMINO_LIQUIDATION_THRESHOLD,
+      );
 
-      const weightedLiqThreshold = 0.85;
-      const simulatedHf = (newCollateral * weightedLiqThreshold) / totalDebtUsd;
-
-      if (simulatedHf < 1.0) {
+      if (!result.safe) {
         throw new ChainError('CONTRACT_EXECUTION_FAILED', 'solana', {
-          message: `Withdrawal would cause health factor to drop below liquidation threshold (simulated HF: ${simulatedHf.toFixed(4)})`,
+          message: `Withdrawal would cause health factor to drop below liquidation threshold (simulated HF: ${result.simulatedHf.toFixed(4)})`,
         });
       }
     } catch (err) {
@@ -388,22 +394,9 @@ export class KaminoLendingProvider implements ILendingProvider, IPositionProvide
 
       const totalCollateralUsd = obligation.deposits.reduce((sum, d) => sum + d.marketValueUsd, 0);
       const totalDebtUsd = obligation.borrows.reduce((sum, b) => sum + b.marketValueUsd, 0);
-
-      let factor: number;
-      if (totalDebtUsd <= 0) {
-        factor = Infinity;
-      } else {
-        const weightedLiqThreshold = 0.85;
-        factor = (totalCollateralUsd * weightedLiqThreshold) / totalDebtUsd;
-      }
-
+      const factor = calculateHealthFactor(totalCollateralUsd, totalDebtUsd);
       const currentLtv = obligation.loanToValue;
-
-      let status: 'safe' | 'warning' | 'danger' | 'critical';
-      if (factor >= 2.0) status = 'safe';
-      else if (factor >= 1.5) status = 'warning';
-      else if (factor >= 1.2) status = 'danger';
-      else status = 'critical';
+      const status = hfToStatus(factor);
 
       return { factor, totalCollateralUsd, totalDebtUsd, currentLtv, status };
     } catch {
