@@ -65,6 +65,7 @@
 |----------|----------|
 | `packages/daemon/src/api/helpers/resolve-wallet-id.ts` | Priority 3 (JWT 기본 지갑) 제거. 세션에 지갑 1개면 자동 해석, 2개 이상이면 `WALLET_ID_REQUIRED` 에러 |
 | `packages/daemon/src/pipeline/network-resolver.ts` | Priority 2 (wallet.defaultNetwork) 제거. 체인+환경에 네트워크 1개면 자동 해석(Solana), 다수면 `NETWORK_REQUIRED` 에러 |
+| `packages/core/src/enums/chain.ts` (`getDefaultNetwork`) | 역할 변경: 다수 네트워크 체인의 폴백용이 아닌, 단일 네트워크 체인의 자동 해석 전용으로 한정. 함수명을 `getSingleNetwork`로 변경하거나, 다수 네트워크 체인에서 호출 시 `null` 반환하도록 수정 |
 
 ### 네트워크 자동 해석 규칙 (environment 유지)
 
@@ -90,15 +91,44 @@
 
 | 대상 파일 | 변경 내용 |
 |----------|----------|
-| `packages/mcp/src/tools/*.ts` (15+ 파일) | `wallet_id` description에서 "Omit to use the default wallet" 문구 제거. 세션 지갑 1개일 때만 optional, 다수면 필수로 설명 업데이트 |
+| `packages/mcp/src/tools/set-default-network.ts` | **도구 파일 삭제** — PUT 엔드포인트 삭제에 따라 MCP 도구도 삭제 |
+| `packages/mcp/src/tools/*.ts` (23개 파일) | `wallet_id` description에서 "Omit to use the default wallet" 문구 제거. 세션 지갑 1개일 때만 optional, 다수면 필수로 설명 업데이트 |
 | `packages/mcp/src/tools/action-provider.ts` | `network` description에서 "Defaults to wallet default network" 문구 제거 |
 
 ### Admin UI
 
 | 대상 파일 | 변경 내용 |
 |----------|----------|
-| `packages/admin/src/pages/wallets.tsx` | "Default Network" 표시, "Set as Default" 버튼, 기본 네트워크 하이라이팅 제거 |
-| Admin Settings | `rpc.evm_default_network` 설정 항목 제거 |
+| `packages/admin/src/pages/wallets.tsx` | "Default Network" 표시(line 701), "Set as Default" 버튼(line 798), 기본 네트워크 하이라이팅, `handleChangeDefaultNetwork` 함수, `defaultNetworkLoading` signal, `evm_default_network` 설정 폼(line 1897) 제거 |
+| `packages/admin/src/pages/sessions.tsx` | 세션 생성 시 `defaultWalletId` 선택 라디오 UI(line 608-609) + `createDefaultWalletId` 로직(line 347-348) 제거 |
+| `packages/admin/src/pages/settings.tsx` | `rpc.evm_default_network` 설정 폼 필드(line 528-534) 제거 |
+| `packages/admin/src/utils/settings-helpers.ts` | `evm_default_network: 'Default EVM Network'` 라벨(line 92) 삭제 |
+| `packages/admin/src/utils/settings-search-index.ts` | `rpc.evm_default_network` 검색 인덱스 항목(line 35) 삭제 |
+
+### Admin Settings 세부 삭제 대상
+
+| 대상 파일 | 변경 내용 |
+|----------|----------|
+| `packages/daemon/src/infrastructure/settings/setting-keys.ts` | `rpc.evm_default_network` 키 등록 삭제 |
+| `packages/daemon/src/infrastructure/config/loader.ts` | `evm_default_network` 스키마 필드 삭제 |
+| `packages/daemon/src/lifecycle/hot-reload.ts` | `evm_default_network` 특수 skip 로직 (line 590) 삭제 |
+
+### SDK 패키지 (`packages/sdk`)
+
+| 대상 파일 | 변경 내용 |
+|----------|----------|
+| `packages/sdk/src/types.ts:195` | `CreateSessionOptions.defaultWalletId` 필드 제거 |
+| `packages/sdk/src/types.ts:243` | `WalletNetworkInfo.defaultNetwork` 필드 제거 |
+| `packages/sdk/src/types.ts:405` | `UpdateDefaultNetworkResult.defaultNetwork` / `previousNetwork` 타입 삭제 |
+| `packages/sdk/src/client.ts:290` | 세션 생성 시 `defaultWalletId` 전송 로직 제거 |
+| `packages/sdk/src/client.ts` | `setDefaultNetwork()` 메서드 삭제 (PUT 엔드포인트 삭제에 따라) |
+
+### CLI 패키지 (`packages/cli`)
+
+| 대상 파일 | 변경 내용 |
+|----------|----------|
+| `packages/cli/src/commands/wallet.ts` | `set-default-network` 서브커맨드 삭제, `defaultNetwork` 표시(line 256) 제거 |
+| `packages/cli/src/commands/quickstart.ts` | `defaultNetwork` 타입 정의(line 32, 106, 123, 144) + 표시 로직(line 171, 219-220) + `defaultWallet` 참조(line 228, 234-235) 제거/수정 |
 
 ### Skill 파일
 
@@ -111,15 +141,28 @@
 
 | 대상 파일 | 변경 내용 |
 |----------|----------|
-| `packages/core/src/schemas/session.schema.ts` | `defaultWalletId` 필드 제거 |
+| `packages/core/src/schemas/session.schema.ts` | `CreateSessionRequestSchema`의 `defaultWalletId` 필드 제거 (SessionSchema가 아닌 요청 스키마에 위치) |
+| `packages/core/src/schemas/wallet.schema.ts:14` | `WalletSchema.defaultNetwork` 필드 제거 (`defaultNetwork: NetworkTypeEnum.nullable()`) |
 | `packages/daemon/src/api/routes/openapi-schemas.ts` | `defaultNetwork`, `isDefault` 관련 스키마 필드 제거, `UpdateDefaultNetworkRequestSchema` / `UpdateDefaultNetworkResponseSchema` 삭제 |
 | `packages/daemon/src/infrastructure/database/schema.ts` | `is_default`, `default_network` 컬럼 및 CHECK 제약 제거 |
 
-### 파이프라인 재진입
+### 에러 코드 / i18n
+
+| 대상 파일 | 변경 내용 |
+|----------|----------|
+| `packages/core/src/errors/error-codes.ts` | `WALLET_ID_REQUIRED`, `NETWORK_REQUIRED` 에러 코드 신규 추가 |
+| `packages/core/src/i18n/en.ts` | 신규 에러 코드 메시지 추가, 기존 default wallet/network 관련 메시지 제거/수정 |
+
+### 파이프라인 / 인프라
 
 | 대상 파일 | 변경 내용 |
 |----------|----------|
 | `packages/daemon/src/lifecycle/daemon.ts` | 재진입 시 `getDefaultNetwork()` 폴백 제거. `tx.network`이 null이면 에러 (레거시 트랜잭션 마이그레이션 시 network 채워야 함) |
+| `packages/daemon/src/pipeline/stages.ts` | `defaultNetwork` 참조 제거 |
+| `packages/daemon/src/pipeline/pipeline.ts` | `defaultNetwork` 참조 제거 |
+| `packages/daemon/src/notifications/notification-service.ts` | `defaultNetwork` 참조 제거 |
+| `packages/daemon/src/infrastructure/adapter-pool.ts` | `defaultNetwork` 참조 제거 |
+| `packages/daemon/src/api/routes/wallet.ts` | `defaultNetwork` 참조 제거 |
 
 ---
 
@@ -131,7 +174,7 @@
 | 2 | 단일 네트워크 체인에서 network 생략 | 허용 (Solana 등) | Solana는 환경당 네트워크가 1개뿐(mainnet→solana-mainnet, testnet→solana-devnet)이므로 자동 해석. EVM은 다수이므로 필수 |
 | 3 | 에러 코드 | `WALLET_ID_REQUIRED` / `NETWORK_REQUIRED` 신규 추가 | 기존 `VALIDATION_ERROR`와 구분하여 에이전트가 누락된 필드를 명확히 인지하도록 전용 에러 코드 사용 |
 | 4 | JWT 축소 | `wlt` claim 제거 | 기본 지갑 개념 제거에 따라 JWT에 지갑 ID를 포함할 이유가 없음. 토큰 크기 절감 + JWT 갱신 시 기본 지갑 재조회 로직 제거 |
-| 5 | 하위 호환성 | 마이그레이션으로 컬럼 삭제, Breaking Change | 기본 지갑/네트워크는 내부 편의 기능이므로, 호환 레이어 없이 깔끔하게 제거. Semver minor bump (기능 변경) |
+| 5 | 하위 호환성 | 마이그레이션으로 컬럼 삭제, Breaking Change | 기본 지갑/네트워크는 내부 편의 기능이므로, 호환 레이어 없이 깔끔하게 제거. API 삭제 + 필수 파라미터 추가는 Breaking Change이나, 현재 pre-release (v2.x RC) 단계이므로 Semver minor bump로 처리 |
 | 6 | environment 유지 | mainnet/testnet 구분 유지 | environment는 보안 경계(테스트넷 자산 vs 메인넷 자산)이므로 제거 대상이 아님. 네트워크 검증(chain-network, environment-network)은 그대로 유지 |
 | 7 | getDefaultNetwork 함수 | 유지하되 역할 변경 | 단일 네트워크 체인의 자동 해석에만 사용. 다수 네트워크 체인에서는 폴백으로 사용하지 않음 |
 
@@ -186,6 +229,14 @@
 |---|---------|----------|------|
 | 15 | connect-info 응답에 defaultNetwork/isDefault 없음 | GET /v1/connect-info → 응답에 defaultNetwork, isDefault 필드 없음 assert | [L0] |
 
+### SDK / CLI
+
+| # | 시나리오 | 검증 방법 | 태그 |
+|---|---------|----------|------|
+| 16 | SDK createSession에 defaultWalletId 미지원 | `WAIaaSClient.createSession({ walletId })` → 요청 body에 defaultWalletId 필드 없음 assert | [L0] |
+| 17 | SDK setDefaultNetwork 메서드 삭제 | `WAIaaSClient` 인스턴스에 `setDefaultNetwork` 메서드 없음 assert (타입 레벨) | [L0] |
+| 18 | CLI wallet set-default-network 삭제 | `waiaas wallet set-default-network` 실행 → 알 수 없는 커맨드 에러 assert | [L1] |
+
 ---
 
 ## 의존
@@ -212,13 +263,14 @@
 
 | 항목 | 예상 |
 |------|------|
-| 페이즈 | 2-3개 (DB 마이그레이션 + 해석 로직 + JWT/API 1 / MCP + Admin UI + Skills 1 / 테스트 정리 1) |
-| 신규/수정 파일 | 30-40개 |
-| 테스트 | 15-20개 (신규) + 20+개 (기존 수정) |
+| 페이즈 | 3-4개 (DB 마이그레이션 + Core 스키마/에러 1 / 해석 로직 + JWT/API + 파이프라인 1 / SDK + CLI + MCP + Admin UI + Skills 1 / 테스트 정리 1) |
+| 신규/수정 파일 | 60-80개 (소스 25-35 + 테스트 35-45) |
+| 테스트 | 15-20개 (신규) + 50+개 (기존 수정) |
 | DB 마이그레이션 | is_default 컬럼 삭제, default_network 컬럼 삭제 |
 
 ---
 
 *생성일: 2026-02-27*
+*검증일: 2026-02-27 — 코드베이스 대조 검증 완료 (18/18 항목 일치, 6개 카테고리 누락 보완)*
 *선행: v26.4 (멀티 지갑 세션), v1.4.6 (멀티체인 월렛)*
-*관련: resolve-wallet-id.ts, network-resolver.ts, session-auth.ts*
+*관련: resolve-wallet-id.ts, network-resolver.ts, session-auth.ts, sdk/client.ts, cli/wallet.ts, admin/sessions.tsx*
