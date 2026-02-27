@@ -15,11 +15,17 @@ import SecurityPage from '../pages/security';
 import SystemPage from '../pages/system';
 import ActionsPage from '../pages/actions';
 
-export const currentPath = signal(window.location.hash.slice(1) || '/dashboard');
+function extractPath(hash: string): string {
+  const raw = hash.slice(1) || '/dashboard';
+  const qIdx = raw.indexOf('?');
+  return qIdx >= 0 ? raw.slice(0, qIdx) : raw;
+}
+
+export const currentPath = signal(extractPath(window.location.hash));
 const searchOpen = signal(false);
 
 window.addEventListener('hashchange', () => {
-  currentPath.value = window.location.hash.slice(1) || '/dashboard';
+  currentPath.value = extractPath(window.location.hash);
 });
 
 const PAGE_TITLES: Record<string, string> = {
