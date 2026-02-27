@@ -648,9 +648,9 @@ describe('data transformation: v7 network to environment', () => {
 
     pushSchema(db);
 
-    const wallet = db.prepare('SELECT environment, default_network FROM wallets WHERE id = ?').get('w-sol-dn') as { environment: string; default_network: string };
+    // After full migration chain (v7 sets environment, v27 drops default_network)
+    const wallet = db.prepare('SELECT environment FROM wallets WHERE id = ?').get('w-sol-dn') as { environment: string };
     expect(wallet.environment).toBe('testnet');
-    expect(wallet.default_network).toBe('devnet');
   });
 
   it('T-7b: ethereum-sepolia -> testnet', () => {
@@ -664,9 +664,8 @@ describe('data transformation: v7 network to environment', () => {
 
     pushSchema(db);
 
-    const wallet = db.prepare('SELECT environment, default_network FROM wallets WHERE id = ?').get('w-eth-sep') as { environment: string; default_network: string };
+    const wallet = db.prepare('SELECT environment FROM wallets WHERE id = ?').get('w-eth-sep') as { environment: string };
     expect(wallet.environment).toBe('testnet');
-    expect(wallet.default_network).toBe('ethereum-sepolia');
   });
 
   it('T-7c: ethereum-mainnet -> mainnet', () => {
@@ -680,9 +679,8 @@ describe('data transformation: v7 network to environment', () => {
 
     pushSchema(db);
 
-    const wallet = db.prepare('SELECT environment, default_network FROM wallets WHERE id = ?').get('w-eth-mn') as { environment: string; default_network: string };
+    const wallet = db.prepare('SELECT environment FROM wallets WHERE id = ?').get('w-eth-mn') as { environment: string };
     expect(wallet.environment).toBe('mainnet');
-    expect(wallet.default_network).toBe('ethereum-mainnet');
   });
 
   it('T-7d: polygon-amoy -> testnet', () => {
@@ -696,9 +694,8 @@ describe('data transformation: v7 network to environment', () => {
 
     pushSchema(db);
 
-    const wallet = db.prepare('SELECT environment, default_network FROM wallets WHERE id = ?').get('w-poly-am') as { environment: string; default_network: string };
+    const wallet = db.prepare('SELECT environment FROM wallets WHERE id = ?').get('w-poly-am') as { environment: string };
     expect(wallet.environment).toBe('testnet');
-    expect(wallet.default_network).toBe('polygon-amoy');
   });
 
   it('T-7e: base-mainnet -> mainnet', () => {
@@ -712,12 +709,11 @@ describe('data transformation: v7 network to environment', () => {
 
     pushSchema(db);
 
-    const wallet = db.prepare('SELECT environment, default_network FROM wallets WHERE id = ?').get('w-base-mn') as { environment: string; default_network: string };
+    const wallet = db.prepare('SELECT environment FROM wallets WHERE id = ?').get('w-base-mn') as { environment: string };
     expect(wallet.environment).toBe('mainnet');
-    expect(wallet.default_network).toBe('base-mainnet');
   });
 
-  it('T-7f: default_network preserved after migration', () => {
+  it('T-7f: environment preserved after full migration chain', () => {
     db = createV5SchemaDatabase();
     const ts = Math.floor(Date.now() / 1000);
 
@@ -728,8 +724,9 @@ describe('data transformation: v7 network to environment', () => {
 
     pushSchema(db);
 
-    const wallet = db.prepare('SELECT default_network FROM wallets WHERE id = ?').get('w-arb-sep') as { default_network: string };
-    expect(wallet.default_network).toBe('arbitrum-sepolia');
+    // After v27, default_network column is dropped; verify environment is correct
+    const wallet = db.prepare('SELECT environment FROM wallets WHERE id = ?').get('w-arb-sep') as { environment: string };
+    expect(wallet.environment).toBe('testnet');
   });
 });
 
@@ -1006,8 +1003,8 @@ describe('edge cases', () => {
     const row = db.prepare('SELECT message FROM notification_logs WHERE id = ?').get('notif-pre-v10') as { message: string | null };
     expect(row.message).toBeNull();
 
-    // Verify LATEST_SCHEMA_VERSION is 26
-    expect(LATEST_SCHEMA_VERSION).toBe(26);
+    // Verify LATEST_SCHEMA_VERSION is 27
+    expect(LATEST_SCHEMA_VERSION).toBe(27);
   });
 
   it('T-13: existing notification_logs data preserved after v10 migration', () => {
@@ -1336,12 +1333,11 @@ describe('v12 migration: x402 CHECK constraints', () => {
     // Verify final version is 19
     const versions = getVersions(db);
     expect(versions).toContain(19);
-    expect(Math.max(...versions)).toBe(26);
+    expect(Math.max(...versions)).toBe(27);
 
-    // Verify data survived the entire chain
-    const wallet = db.prepare('SELECT * FROM wallets WHERE id = ?').get('a-chain-12') as { environment: string; default_network: string };
+    // Verify data survived the entire chain (v27 drops default_network)
+    const wallet = db.prepare('SELECT * FROM wallets WHERE id = ?').get('a-chain-12') as { environment: string };
     expect(wallet.environment).toBe('testnet');
-    expect(wallet.default_network).toBe('devnet');
 
     const tx = db.prepare('SELECT * FROM transactions WHERE id = ?').get('tx-chain-12') as { wallet_id: string; network: string };
     expect(tx.wallet_id).toBe('a-chain-12');
@@ -1517,7 +1513,7 @@ describe('v13 migration: amount_usd and reserved_amount_usd columns', () => {
     // Verify final version is 19
     const versions = getVersions(db);
     expect(versions).toContain(19);
-    expect(Math.max(...versions)).toBe(26);
+    expect(Math.max(...versions)).toBe(27);
 
     // Verify amount_usd columns exist and are NULL for migrated data
     const tx = db.prepare('SELECT amount_usd, reserved_amount_usd FROM transactions WHERE id = ?').get('tx-chain-13') as {
@@ -1732,7 +1728,7 @@ describe('v16 migration: WC infra tables + approval_channel', () => {
     // Verify final version is 19
     const versions = getVersions(db);
     expect(versions).toContain(19);
-    expect(Math.max(...versions)).toBe(26);
+    expect(Math.max(...versions)).toBe(27);
 
     // Verify wc_sessions and wc_store tables exist
     const wcSessions = db.prepare(
@@ -1809,12 +1805,12 @@ describe('v24 migration: wallet_type column for preset auto-setup', () => {
     expect(wallet.wallet_type).toBeNull();
   });
 
-  it('T-17b (T-v24-2): fresh DB LATEST_SCHEMA_VERSION is 26', () => {
+  it('T-17b (T-v24-2): fresh DB LATEST_SCHEMA_VERSION is 27', () => {
     const conn = createDatabase(':memory:');
     db = conn.sqlite;
     pushSchema(db);
 
-    expect(LATEST_SCHEMA_VERSION).toBe(26);
+    expect(LATEST_SCHEMA_VERSION).toBe(27);
 
     const versions = getVersions(db);
     expect(versions).toContain(24);
@@ -1857,13 +1853,15 @@ describe('v24 migration: wallet_type column for preset auto-setup', () => {
 
     const columns = getTableColumns(db, 'wallets');
     expect(columns).toContain('wallet_type');
+    // v27 drops default_network
+    expect(columns).not.toContain('default_network');
 
     // Verify wallet_type can be inserted and read back
     const ts = Math.floor(Date.now() / 1000);
     db.prepare(
-      `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at, wallet_type)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ).run('w-fresh-v24', 'Fresh V24', 'solana', 'testnet', 'devnet', 'pk-fresh-v24', 'ACTIVE', 0, ts, ts, 'dcent');
+      `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, created_at, updated_at, wallet_type)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run('w-fresh-v24', 'Fresh V24', 'solana', 'testnet', 'pk-fresh-v24', 'ACTIVE', 0, ts, ts, 'dcent');
 
     const wallet = db.prepare('SELECT wallet_type FROM wallets WHERE id = ?').get('w-fresh-v24') as { wallet_type: string };
     expect(wallet.wallet_type).toBe('dcent');
@@ -1875,10 +1873,10 @@ describe('v24 migration: wallet_type column for preset auto-setup', () => {
     const freshDb = connA.sqlite;
     pushSchema(freshDb);
 
-    // v23 migrated DB
+    // v23 migrated DB -> apply v24 through v27 for full equivalence
     db = createV23Database();
-    const v24 = MIGRATIONS.filter((m) => m.version === 24);
-    runMigrations(db, v24);
+    const v24to27 = MIGRATIONS.filter((m) => m.version >= 24 && m.version <= 27);
+    runMigrations(db, v24to27);
 
     // Compare wallets columns
     const freshCols = getTableColumns(freshDb, 'wallets');
@@ -1904,7 +1902,7 @@ describe('v24 migration: wallet_type column for preset auto-setup', () => {
     // Verify final version is 24
     const versions = getVersions(db);
     expect(versions).toContain(24);
-    expect(Math.max(...versions)).toBe(26);
+    expect(Math.max(...versions)).toBe(27);
 
     // Verify wallets table has wallet_type column
     const columns = getTableColumns(db, 'wallets');

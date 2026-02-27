@@ -1018,13 +1018,13 @@ describe('Multi-Wallet Session E2E (v26.4)', () => {
     expect(renewed.token).toBeDefined();
     expect(renewed.renewalCount).toBe(1);
 
-    // Use renewed token to access wallet -- should still work
+    // Use renewed token to access wallet -- must specify walletId since session has 2 wallets
     const newToken = renewed.token as string;
-    const walletRes = await app.request('/v1/wallet/address', {
+    const walletRes = await app.request(`/v1/wallet/address?walletId=${testWalletId}`, {
       headers: bearerHeader(newToken),
     });
     expect(walletRes.status).toBe(200);
     const walletBody = await json(walletRes);
-    expect(walletBody.walletId).toBe(testWalletId); // default wallet
+    expect(walletBody.walletId).toBe(testWalletId);
   });
 });

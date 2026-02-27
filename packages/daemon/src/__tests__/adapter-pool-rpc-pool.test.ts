@@ -207,10 +207,6 @@ describe('configKeyToNetwork', () => {
     expect(configKeyToNetwork('evm_optimism_mainnet')).toBe('optimism-mainnet');
   });
 
-  it('returns null for evm_default_network (skip)', () => {
-    expect(configKeyToNetwork('evm_default_network')).toBeNull();
-  });
-
   it('returns null for solana_ws_devnet (WebSocket key, skip)', () => {
     expect(configKeyToNetwork('solana_ws_devnet')).toBeNull();
   });

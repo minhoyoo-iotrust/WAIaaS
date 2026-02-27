@@ -28,7 +28,7 @@ import { eq } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { WAIaaSError } from '@waiaas/core';
 import type * as schema from '../../infrastructure/database/schema.js';
-import { wallets } from '../../infrastructure/database/schema.js';
+import { wallets, transactions } from '../../infrastructure/database/schema.js';
 import { verifySIWE } from './siwe-verify.js';
 import { decodeBase58 } from './address-validation.js';
 
@@ -66,19 +66,38 @@ export function createOwnerAuth(deps: OwnerAuthDeps) {
 
     // Look up wallet to verify owner_address match.
     // Use wallet ID from route param (/v1/wallets/:id/* routes).
-    // For transaction approval routes, the wallet ID comes from the transaction record.
-    const walletId = c.req.param('id');
-    if (!walletId) {
+    // For transaction routes (/v1/transactions/:id/approve|reject),
+    // :id is the transaction ID -- look up the transaction to get walletId.
+    const paramId = c.req.param('id');
+    if (!paramId) {
       throw new WAIaaSError('WALLET_NOT_FOUND', {
         message: 'Wallet ID required for owner authentication',
       });
     }
 
-    const wallet = deps.db
+    // Try direct wallet lookup first
+    let wallet = deps.db
       .select()
       .from(wallets)
-      .where(eq(wallets.id, walletId))
+      .where(eq(wallets.id, paramId))
       .get();
+
+    // If not found as wallet, try as transaction ID (approve/reject routes)
+    if (!wallet) {
+      const tx = deps.db
+        .select({ walletId: transactions.walletId })
+        .from(transactions)
+        .where(eq(transactions.id, paramId))
+        .get();
+
+      if (tx) {
+        wallet = deps.db
+          .select()
+          .from(wallets)
+          .where(eq(wallets.id, tx.walletId))
+          .get();
+      }
+    }
 
     if (!wallet) {
       throw new WAIaaSError('WALLET_NOT_FOUND');

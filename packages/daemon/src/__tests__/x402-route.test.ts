@@ -127,7 +127,6 @@ function mockConfig(overrides?: Partial<DaemonConfig>): DaemonConfig {
       evm_optimism_sepolia: 'https://optimism-sepolia.drpc.org',
       evm_base_mainnet: 'https://base.drpc.org',
       evm_base_sepolia: 'https://base-sepolia.drpc.org',
-      evm_default_network: 'ethereum-sepolia' as const,
     },
     notifications: {
       enabled: false,
@@ -295,10 +294,10 @@ async function createTestWallet(chain = 'ethereum', env = 'testnet', defaultNetw
   const now = Math.floor(Date.now() / 1000);
   conn.sqlite
     .prepare(
-      `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO wallets (id, name, chain, environment, public_key, status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     )
-    .run(id, 'x402-test-wallet', chain, env, defaultNetwork, MOCK_PUBLIC_KEY, 'ACTIVE', now, now);
+    .run(id, 'x402-test-wallet', chain, env, MOCK_PUBLIC_KEY, 'ACTIVE', now, now);
   return id;
 }
 
@@ -314,8 +313,8 @@ async function createSessionToken(walletId: string): Promise<string> {
     .run(sessionId, `hash-${sessionId}`, now + 86400, now + 86400 * 30, now);
   conn.sqlite
     .prepare(
-      `INSERT INTO session_wallets (session_id, wallet_id, is_default, created_at)
-       VALUES (?, ?, 1, ?)`,
+      `INSERT INTO session_wallets (session_id, wallet_id, created_at)
+       VALUES (?, ?, ?)`,
     )
     .run(sessionId, walletId, now);
 

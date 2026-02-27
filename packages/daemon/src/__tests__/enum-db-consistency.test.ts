@@ -226,7 +226,6 @@ describe('IT-03: sqlite_master CHECK SQL matches SSoT', () => {
   }> = [
     { table: 'wallets', column: 'chain', ssot: CHAIN_TYPES, label: 'wallets.chain' },
     { table: 'wallets', column: 'environment', ssot: ENVIRONMENT_TYPES, label: 'wallets.environment' },
-    { table: 'wallets', column: 'default_network', ssot: NETWORK_TYPES, label: 'wallets.default_network' },
     { table: 'wallets', column: 'status', ssot: WALLET_STATUSES, label: 'wallets.status' },
     { table: 'transactions', column: 'type', ssot: TRANSACTION_TYPES, label: 'transactions.type' },
     { table: 'transactions', column: 'status', ssot: TRANSACTION_STATUSES, label: 'transactions.status' },
@@ -253,11 +252,11 @@ describe('IT-03: sqlite_master CHECK SQL matches SSoT', () => {
 
 describe('IT-04: expected CHECK constraints exist', () => {
   it('SSoT-derived CHECK constraints across 4 tables (wallets, transactions, policies, notification_logs)', () => {
-    // wallets: chain, environment, default_network, status, owner_approval_method = 5 SSoT + owner_verified(IN) = 6 IN-based
+    // wallets: chain, environment, status, owner_approval_method = 4 SSoT + owner_verified(IN) = 5 IN-based
     // transactions: type, status, tier, network, bridge_status = 5 IN-based
     // policies: type, network = 2 IN-based
     // notification_logs: status = 1 IN-based
-    // Total IN-based: 6+5+2+1 = 14
+    // Total IN-based: 5+5+2+1 = 13
 
     const tables = ['wallets', 'transactions', 'policies', 'notification_logs'];
     let inBasedCheckCount = 0;
@@ -269,8 +268,8 @@ describe('IT-04: expected CHECK constraints exist', () => {
       if (matches) inBasedCheckCount += matches.length;
     }
 
-    // 14 IN-based CHECK constraints (13 SSoT-derived + 1 owner_verified boolean)
-    expect(inBasedCheckCount).toBe(14);
+    // 13 IN-based CHECK constraints (12 SSoT-derived + 1 owner_verified boolean)
+    expect(inBasedCheckCount).toBe(13);
   });
 });
 
@@ -306,7 +305,7 @@ describe('IT-05: audit_log extensibility', () => {
 
 describe('IT-06: CHECK constraint existence matrix', () => {
   const matrix: Array<{ table: string; hasCheck: boolean; columns: string[] }> = [
-    { table: 'wallets', hasCheck: true, columns: ['chain', 'environment', 'default_network', 'status', 'owner_verified'] },
+    { table: 'wallets', hasCheck: true, columns: ['chain', 'environment', 'status', 'owner_verified'] },
     { table: 'transactions', hasCheck: true, columns: ['type', 'status', 'tier', 'network'] },
     { table: 'policies', hasCheck: true, columns: ['type', 'network'] },
     { table: 'notification_logs', hasCheck: true, columns: ['status'] },

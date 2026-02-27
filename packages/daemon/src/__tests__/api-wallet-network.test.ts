@@ -75,7 +75,6 @@ function mockConfig(): DaemonConfig {
       evm_optimism_sepolia: 'https://optimism-sepolia.drpc.org',
       evm_base_mainnet: 'https://base.drpc.org',
       evm_base_sepolia: 'https://base-sepolia.drpc.org',
-      evm_default_network: 'ethereum-sepolia' as const,
     },
     notifications: {
       enabled: false,
@@ -201,55 +200,7 @@ async function createEthTestnetWallet(): Promise<string> {
   return body.id as string;
 }
 
-// ---------------------------------------------------------------------------
-// PUT /v1/wallets/:id/default-network (3 tests)
-// ---------------------------------------------------------------------------
-
-describe('PUT /v1/wallets/:id/default-network', () => {
-  it('should change default network for ethereum testnet wallet', async () => {
-    const walletId = await createEthTestnetWallet();
-
-    const res = await app.request(`/v1/wallets/${walletId}/default-network`, {
-      method: 'PUT',
-      headers: masterHeaders(),
-      body: JSON.stringify({ network: 'polygon-amoy' }),
-    });
-
-    expect(res.status).toBe(200);
-    const body = await json(res);
-    expect(body.id).toBe(walletId);
-    expect(body.defaultNetwork).toBe('polygon-amoy');
-    expect(body.previousNetwork).toBe('ethereum-sepolia');
-  });
-
-  it('should return ENVIRONMENT_NETWORK_MISMATCH for testnet wallet with mainnet network', async () => {
-    const walletId = await createEthTestnetWallet();
-
-    const res = await app.request(`/v1/wallets/${walletId}/default-network`, {
-      method: 'PUT',
-      headers: masterHeaders(),
-      body: JSON.stringify({ network: 'ethereum-mainnet' }),
-    });
-
-    expect(res.status).toBe(400);
-    const body = await json(res);
-    expect(body.code).toBe('ENVIRONMENT_NETWORK_MISMATCH');
-  });
-
-  it('should return 404 for non-existent wallet', async () => {
-    const fakeId = '00000000-0000-7000-8000-000000000000';
-
-    const res = await app.request(`/v1/wallets/${fakeId}/default-network`, {
-      method: 'PUT',
-      headers: masterHeaders(),
-      body: JSON.stringify({ network: 'ethereum-sepolia' }),
-    });
-
-    expect(res.status).toBe(404);
-    const body = await json(res);
-    expect(body.code).toBe('WALLET_NOT_FOUND');
-  });
-});
+// PUT /v1/wallets/:id/default-network endpoint was deleted in v29.3 (default network concept removed)
 
 // ---------------------------------------------------------------------------
 // GET /v1/wallets/:id/networks (2 tests)
@@ -268,9 +219,7 @@ describe('GET /v1/wallets/:id/networks', () => {
     expect(body.id).toBe(walletId);
     expect(body.chain).toBe('ethereum');
     expect(body.environment).toBe('testnet');
-    expect(body.defaultNetwork).toBe('ethereum-sepolia');
-
-    const networks = body.availableNetworks as Array<{ network: string; isDefault: boolean }>;
+    const networks = body.availableNetworks as Array<{ network: string }>;
     expect(networks).toHaveLength(5);
 
     // Check all 5 EVM testnets are present
@@ -282,13 +231,6 @@ describe('GET /v1/wallets/:id/networks', () => {
       'optimism-sepolia',
       'polygon-amoy',
     ]);
-
-    // Check isDefault flag
-    const defaultEntry = networks.find((n) => n.network === 'ethereum-sepolia');
-    expect(defaultEntry?.isDefault).toBe(true);
-
-    const nonDefaultEntry = networks.find((n) => n.network === 'polygon-amoy');
-    expect(nonDefaultEntry?.isDefault).toBe(false);
   });
 
   it('should return 404 for non-existent wallet', async () => {

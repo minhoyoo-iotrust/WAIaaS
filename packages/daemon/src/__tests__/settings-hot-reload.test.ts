@@ -252,16 +252,7 @@ describe('HotReloadOrchestrator.handleChangedKeys', () => {
     expect(mockPool.evict).toHaveBeenCalledWith('ethereum', 'ethereum-sepolia');
   });
 
-  it('RPC evm_default_network key does not trigger eviction', async () => {
-    const orchestrator = new HotReloadOrchestrator({
-      settingsService,
-      notificationService: notifService,
-      adapterPool: mockPool,
-    });
 
-    await orchestrator.handleChangedKeys(['rpc.evm_default_network']);
-    expect(mockPool.evict).not.toHaveBeenCalled();
-  });
 
   it('security key changes log message (no subsystem call needed)', async () => {
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});

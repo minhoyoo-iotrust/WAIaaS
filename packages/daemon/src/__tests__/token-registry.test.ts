@@ -78,7 +78,6 @@ function mockConfig(): DaemonConfig {
       evm_optimism_sepolia: 'https://optimism-sepolia.drpc.org',
       evm_base_mainnet: 'https://base.drpc.org',
       evm_base_sepolia: 'https://base-sepolia.drpc.org',
-      evm_default_network: 'ethereum-sepolia' as const,
     },
     notifications: {
       enabled: false,
@@ -762,7 +761,7 @@ describe('getAssets ERC-20 wiring', () => {
     const { token } = await createWalletAndSession();
 
     // Call getAssets
-    const res = await app.request('/v1/wallet/assets', {
+    const res = await app.request('/v1/wallet/assets?network=ethereum-sepolia', {
       headers: bearerHeader(token),
     });
     expect(res.status).toBe(200);
@@ -808,7 +807,7 @@ describe('getAssets ERC-20 wiring', () => {
     });
 
     // Call getAssets
-    const res = await app.request('/v1/wallet/assets', {
+    const res = await app.request('/v1/wallet/assets?network=ethereum-sepolia', {
       headers: bearerHeader(token),
     });
     expect(res.status).toBe(200);
@@ -862,7 +861,7 @@ describe('getAssets ERC-20 wiring', () => {
     });
 
     // Call getAssets
-    const res = await app.request('/v1/wallet/assets', {
+    const res = await app.request('/v1/wallet/assets?network=ethereum-sepolia', {
       headers: bearerHeader(token),
     });
     expect(res.status).toBe(200);
@@ -890,7 +889,7 @@ describe('getAssets ERC-20 wiring', () => {
     const { token } = await createWalletAndSession();
 
     // Call getAssets with no custom tokens and no policies (builtin tokens still apply)
-    const res = await app.request('/v1/wallet/assets', {
+    const res = await app.request('/v1/wallet/assets?network=ethereum-sepolia', {
       headers: bearerHeader(token),
     });
     expect(res.status).toBe(200);

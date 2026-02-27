@@ -83,7 +83,6 @@ function mockConfig(): DaemonConfig {
       evm_optimism_sepolia: 'https://optimism-sepolia.drpc.org',
       evm_base_mainnet: 'https://base.drpc.org',
       evm_base_sepolia: 'https://base-sepolia.drpc.org',
-      evm_default_network: 'ethereum-sepolia' as const,
     },
     notifications: {
       enabled: false,
@@ -329,7 +328,6 @@ describe('POST /v1/mcp/tokens', () => {
 
     expect(walletLinks.length).toBe(1);
     expect(walletLinks[0]!.walletId).toBe(walletId);
-    expect(walletLinks[0]!.isDefault).toBe(true);
 
     // Verify session exists
     const sessionRow = conn.db

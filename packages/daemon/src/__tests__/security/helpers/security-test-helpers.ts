@@ -23,6 +23,8 @@ import { createOwnerAuth } from '../../../api/middleware/owner-auth.js';
 import { createKillSwitchGuard } from '../../../api/middleware/kill-switch-guard.js';
 import { errorHandler } from '../../../api/middleware/error-handler.js';
 import type * as schema from '../../../infrastructure/database/schema.js';
+import { sessionWallets } from '../../../infrastructure/database/schema.js';
+import { eq } from 'drizzle-orm';
 import { createRequire } from 'node:module';
 
 type SodiumNative = typeof import('sodium-native');
@@ -91,7 +93,7 @@ export function createInMemoryDb(): DatabaseConnection {
  * - GET /v1/nonce (public, no auth)
  * - GET /v1/wallet/balance (sessionAuth required)
  * - POST /v1/transactions (sessionAuth required)
- * - POST /v1/owner/approve (sessionAuth + ownerAuth required)
+ * - POST /v1/owner/:id/approve (sessionAuth + ownerAuth required)
  */
 export function createSecurityTestApp(opts: {
   jwtManager: JwtSecretManager;
@@ -114,25 +116,38 @@ export function createSecurityTestApp(opts: {
 
   app.use('/v1/wallet/*', sessionMiddleware);
   app.use('/v1/transactions/*', sessionMiddleware);
-  app.use('/v1/owner/*', sessionMiddleware);
+  app.use('/v1/owner/:id/*', sessionMiddleware);
 
   // Owner auth protected routes (after sessionAuth)
+  // Use :id param pattern so ownerAuth can extract walletId from route
   const ownerMiddleware = createOwnerAuth({ db: opts.db });
-  app.use('/v1/owner/*', ownerMiddleware);
+  app.use('/v1/owner/:id/*', ownerMiddleware);
+
+  // Helper: resolve default wallet from session_wallets (earliest created_at)
+  function resolveDefaultWallet(sessionId: string): string | undefined {
+    const links = opts.db
+      .select()
+      .from(sessionWallets)
+      .where(eq(sessionWallets.sessionId, sessionId))
+      .all()
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    return links[0]?.walletId;
+  }
 
   // Protected route handlers
   app.get('/v1/wallet/balance', (c) => {
     const sessionId = c.get('sessionId' as never) as string;
-    const walletId = c.get('defaultWalletId' as never) as string;
+    const walletId = resolveDefaultWallet(sessionId);
     return c.json({ balance: '1000000000', sessionId, walletId });
   });
 
   app.post('/v1/transactions', (c) => {
-    const walletId = c.get('defaultWalletId' as never) as string;
+    const sessionId = c.get('sessionId' as never) as string;
+    const walletId = resolveDefaultWallet(sessionId);
     return c.json({ id: 'tx-test', walletId, status: 'PENDING' });
   });
 
-  app.post('/v1/owner/approve', (c) => {
+  app.post('/v1/owner/:id/approve', (c) => {
     const ownerAddress = c.get('ownerAddress' as never) as string;
     return c.json({ approved: true, ownerAddress });
   });
@@ -158,15 +173,14 @@ export function seedSecurityTestData(
 
   sqlite
     .prepare(
-      `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, owner_address, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, owner_address, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       walletId,
       opts.walletName ?? 'Security Test Wallet',
       opts.chain ?? 'solana',
       opts.environment ?? 'mainnet',
-      opts.defaultNetwork ?? 'mainnet',
       `pk-sec-${walletId}`,
       'ACTIVE',
       opts.ownerVerified ? 1 : 0,
@@ -192,8 +206,8 @@ export function seedSecurityTestData(
     );
   sqlite
     .prepare(
-      `INSERT INTO session_wallets (session_id, wallet_id, is_default, created_at)
-       VALUES (?, ?, 1, ?)`,
+      `INSERT INTO session_wallets (session_id, wallet_id, created_at)
+       VALUES (?, ?, ?)`,
     )
     .run(sessionId, walletId, ts);
 

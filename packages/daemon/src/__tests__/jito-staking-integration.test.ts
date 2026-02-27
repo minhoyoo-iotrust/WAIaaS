@@ -33,7 +33,6 @@ const makeSettingsReader = (overrides: Record<string, string> = {}) => {
     'actions.zerox_swap_enabled': 'false',
     'actions.lifi_enabled': 'false',
     'actions.lido_staking_enabled': 'false',
-    'rpc.evm_default_network': 'ethereum-mainnet',
   };
   const data = { ...defaults, ...overrides };
   return { get: (key: string) => data[key] ?? '' };

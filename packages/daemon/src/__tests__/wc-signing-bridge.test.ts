@@ -106,9 +106,9 @@ function nowEpoch(): number {
 function insertTestWallet(sqlite: DatabaseType, walletId: string, chain = 'ethereum'): void {
   const ts = nowEpoch();
   sqlite.prepare(
-    `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  ).run(walletId, `Wallet`, chain, 'testnet', chain === 'ethereum' ? 'ethereum-sepolia' : 'devnet', `pk-${walletId}`, 'ACTIVE', 0, ts, ts);
+    `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).run(walletId, `Wallet`, chain, 'testnet', `pk-${walletId}`, 'ACTIVE', 0, ts, ts);
 }
 
 function insertTestTransaction(sqlite: DatabaseType, walletId: string, txId: string): void {

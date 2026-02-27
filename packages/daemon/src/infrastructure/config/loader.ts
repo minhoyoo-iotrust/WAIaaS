@@ -11,7 +11,6 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse } from 'smol-toml';
 import { z } from 'zod';
-import { EvmNetworkTypeEnum } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------
 // Zod Schema: 12 sections, flat keys, with defaults
@@ -74,9 +73,6 @@ export const DaemonConfigSchema = z.object({
       evm_optimism_sepolia: z.string().default('https://optimism-sepolia.drpc.org'),
       evm_base_mainnet: z.string().default('https://base.drpc.org'),
       evm_base_sepolia: z.string().default('https://base-sepolia.drpc.org'),
-
-      // EVM default network for agent creation when network not specified
-      evm_default_network: EvmNetworkTypeEnum.default('ethereum-sepolia'),
     })
     .default({}),
   notifications: z

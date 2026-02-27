@@ -130,7 +130,7 @@ function insertSession(db: DatabaseType, id: string, walletId: string): void {
     'INSERT INTO sessions (id, token_hash, expires_at, absolute_expires_at, created_at) VALUES (?, ?, ?, ?, ?)',
   ).run(id, `hash-${id}`, now + 3600, now + 86400, now);
   db.prepare(
-    'INSERT INTO session_wallets (session_id, wallet_id, is_default, created_at) VALUES (?, ?, 1, ?)',
+    'INSERT INTO session_wallets (session_id, wallet_id, created_at) VALUES (?, ?, ?)',
   ).run(id, walletId, now);
 }
 

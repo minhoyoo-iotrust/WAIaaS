@@ -24,7 +24,6 @@ import type { ActionContext } from '@waiaas/core';
 
 const makeSettingsReader = (overrides: Record<string, string> = {}) => {
   const defaults: Record<string, string> = {
-    'rpc.evm_default_network': 'ethereum-mainnet',
     'actions.lido_staking_enabled': 'false',
     'actions.lido_staking_steth_address': '',
     'actions.lido_staking_withdrawal_queue_address': '',
@@ -87,8 +86,9 @@ describe('Lido Staking integration', () => {
     it('uses Holesky testnet addresses when environment is testnet', async () => {
       const registry = new ActionProviderRegistry();
       const reader = makeSettingsReader({
-        'rpc.evm_default_network': 'ethereum-sepolia',
         'actions.lido_staking_enabled': 'true',
+        // Provide testnet network explicitly to trigger testnet address resolution
+        'rpc.evm_default_network': 'ethereum-sepolia',
       });
 
       registerBuiltInProviders(registry, reader);
@@ -107,7 +107,6 @@ describe('Lido Staking integration', () => {
     it('uses mainnet addresses when environment is mainnet', async () => {
       const registry = new ActionProviderRegistry();
       const reader = makeSettingsReader({
-        'rpc.evm_default_network': 'ethereum-mainnet',
         'actions.lido_staking_enabled': 'true',
       });
 
@@ -130,7 +129,6 @@ describe('Lido Staking integration', () => {
       const customSteth = '0xCustomStethAddress000000000000000000000001';
       const registry = new ActionProviderRegistry();
       const reader = makeSettingsReader({
-        'rpc.evm_default_network': 'ethereum-mainnet',
         'actions.lido_staking_enabled': 'true',
         'actions.lido_staking_steth_address': customSteth,
       });

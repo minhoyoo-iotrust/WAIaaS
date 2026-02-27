@@ -36,7 +36,7 @@ import { sql, desc, eq, and, isNull, gt, gte, lte, count as drizzleCount } from 
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { createHash } from 'node:crypto';
-import { WAIaaSError, getSingleNetwork, getNetworksForEnvironment, formatAmount, BUILT_IN_RPC_DEFAULTS } from '@waiaas/core';
+import { WAIaaSError, getNetworksForEnvironment, formatAmount, BUILT_IN_RPC_DEFAULTS } from '@waiaas/core';
 import type { INotificationChannel, NotificationPayload, ChainType, EnvironmentType, IPriceOracle, IForexRateService, CurrencyCode } from '@waiaas/core';
 import type { RpcPool } from '@waiaas/core';
 import { CurrencyCodeSchema, formatRatePreview } from '@waiaas/core';

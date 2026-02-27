@@ -53,7 +53,7 @@ export function resolveWalletId(
 
     if (links.length === 1) {
       // Single wallet in session -> auto-resolve
-      return links[0].walletId;
+      return links[0]!.walletId;
     }
 
     // 0 or 2+ wallets -> walletId is required

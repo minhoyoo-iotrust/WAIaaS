@@ -402,8 +402,8 @@ describe('Chain 5: Time-based expiry + tier escalation + AutoStop', { timeout: 3
       .run(sess2, `hash-${sess2.slice(0, 8)}`, sessionNow + 86400, sessionNow + 86400 * 30, sessionNow);
     conn.sqlite
       .prepare(
-        `INSERT INTO session_wallets (session_id, wallet_id, is_default, created_at)
-         VALUES (?, ?, 1, ?)`,
+        `INSERT INTO session_wallets (session_id, wallet_id, created_at)
+       VALUES (?, ?, ?)`,
       )
       .run(sess2, wId, sessionNow);
     const newToken = await signTestToken(jwtManager, sess2, wId);

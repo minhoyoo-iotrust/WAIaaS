@@ -146,10 +146,10 @@ function seedWallet(
   const ts = Math.floor(Date.now() / 1000);
   sqlite
     .prepare(
-      `INSERT INTO wallets (id, name, chain, environment, default_network, public_key, status, owner_verified, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
-    .run(walletId, name, chain, environment, 'devnet', publicKey, 'ACTIVE', 0, ts, ts);
+    .run(walletId, name, chain, environment, publicKey, 'ACTIVE', 0, ts, ts);
 }
 
 function seedPolicy(
@@ -284,7 +284,7 @@ describe('GET /v1/connect-info', () => {
     expect(res.status).toBe(200);
 
     const body = await json(res);
-    const ws = body.wallets as Array<{ id: string; name: string; chain: string; environment: string; address: string; isDefault: boolean }>;
+    const ws = body.wallets as Array<{ id: string; name: string; chain: string; environment: string; address: string }>;
 
     expect(ws.length).toBe(2);
 
@@ -299,10 +299,6 @@ describe('GET /v1/connect-info', () => {
     expect(wA.chain).toBe('solana');
     expect(wA.environment).toBe('testnet');
     expect(wA.address).toBe(PK_A);
-    expect(wA.isDefault).toBe(true);
-
-    const wB = ws.find((w) => w.id === walletB)!;
-    expect(wB.isDefault).toBe(false);
   });
 
   it('returns per-wallet policies', async () => {
@@ -654,15 +650,11 @@ describe('POST /v1/admin/agent-prompt', () => {
     const infoBody = await json(infoRes);
 
     // Verify wallets match
-    const ws = infoBody.wallets as Array<{ id: string; name: string; isDefault: boolean }>;
+    const ws = infoBody.wallets as Array<{ id: string; name: string }>;
     expect(ws.length).toBe(2);
     const ids = ws.map((w) => w.id);
     expect(ids).toContain(walletA);
     expect(ids).toContain(walletB);
-
-    // Default wallet is walletA
-    const defaultW = ws.find((w) => w.isDefault);
-    expect(defaultW?.id).toBe(walletA);
 
     // Prompt is non-empty
     expect((infoBody.prompt as string).length).toBeGreaterThan(0);

@@ -17,7 +17,7 @@
 
 import type { Database } from 'better-sqlite3';
 import type { ChainType, EnvironmentType, NetworkType } from '@waiaas/core';
-import { getDefaultNetwork } from '@waiaas/core';
+import { getNetworksForEnvironment } from '@waiaas/core';
 import type { AdapterPool } from '../../infrastructure/adapter-pool.js';
 import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
 import type { NotificationService } from '../../notifications/notification-service.js';
@@ -50,7 +50,6 @@ interface WalletRow {
   id: string;
   chain: string;
   environment: string;
-  default_network: string | null;
   public_key: string;
 }
 
@@ -119,7 +118,7 @@ export class BalanceMonitorService {
   async checkAllWallets(): Promise<void> {
     const wallets = this.sqlite
       .prepare(
-        "SELECT id, chain, environment, default_network, public_key FROM wallets WHERE status = 'ACTIVE'",
+        "SELECT id, chain, environment, public_key FROM wallets WHERE status = 'ACTIVE'",
       )
       .all() as WalletRow[];
 
@@ -139,34 +138,42 @@ export class BalanceMonitorService {
   private async checkWallet(wallet: WalletRow): Promise<void> {
     const chain = wallet.chain as ChainType;
     const env = wallet.environment as EnvironmentType;
-    const network = (wallet.default_network ??
-      getDefaultNetwork(chain, env)) as NetworkType;
+    const networks = getNetworksForEnvironment(chain, env);
 
-    const rpcUrl = resolveRpcUrl(this.rpcConfig, chain, network);
-    if (!rpcUrl) return; // No RPC URL configured -- skip
+    for (const network of networks) {
+      try {
+        const rpcUrl = resolveRpcUrl(this.rpcConfig, chain, network);
+        if (!rpcUrl) continue; // No RPC URL configured -- skip this network
 
-    const adapter = await this.adapterPool.resolve(chain, network, rpcUrl);
-    const balanceInfo = await adapter.getBalance(wallet.public_key);
+        const adapter = await this.adapterPool.resolve(chain, network as NetworkType, rpcUrl);
+        const balanceInfo = await adapter.getBalance(wallet.public_key);
 
-    // Convert from smallest unit to decimal
-    const decimalBalance =
-      Number(balanceInfo.balance) / 10 ** balanceInfo.decimals;
-    const threshold = this.getThreshold(chain);
-    const currency = balanceInfo.symbol;
+        // Convert from smallest unit to decimal
+        const decimalBalance =
+          Number(balanceInfo.balance) / 10 ** balanceInfo.decimals;
+        const threshold = this.getThreshold(chain);
+        const currency = balanceInfo.symbol;
 
-    if (decimalBalance <= threshold) {
-      // Balance is low
-      if (this.shouldNotify(wallet.id)) {
-        this.notifyLowBalance(wallet.id, decimalBalance, currency, threshold);
+        // Use walletId:network as the dedup key for per-network tracking
+        const dedupKey = `${wallet.id}:${network}`;
+
+        if (decimalBalance <= threshold) {
+          // Balance is low
+          if (this.shouldNotify(dedupKey)) {
+            this.notifyLowBalance(wallet.id, decimalBalance, currency, threshold);
+          }
+          // Mark as low (regardless of notification)
+          this.lastNotified.set(dedupKey, {
+            timestamp: Date.now(),
+            wasLow: true,
+          });
+        } else {
+          // Balance is above threshold -- mark recovered if it was low
+          this.markRecovered(dedupKey);
+        }
+      } catch {
+        // Per-network error isolation: skip this network
       }
-      // Mark as low (regardless of notification)
-      this.lastNotified.set(wallet.id, {
-        timestamp: Date.now(),
-        wasLow: true,
-      });
-    } else {
-      // Balance is above threshold -- mark recovered if it was low
-      this.markRecovered(wallet.id);
     }
   }
 

@@ -70,7 +70,7 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'notifications.notify_categories', category: 'notifications', configPath: 'notifications.notify_categories', defaultValue: '[]', isCredential: false },
   { key: 'notifications.notify_events', category: 'notifications', configPath: 'notifications.notify_events', defaultValue: '[]', isCredential: false },
 
-  // --- rpc category (Solana 3 + EVM 10 + evm_default_network) ---
+  // --- rpc category (Solana 3 + EVM 10) ---
   { key: 'rpc.solana_mainnet', category: 'rpc', configPath: 'rpc.solana_mainnet', defaultValue: 'https://api.mainnet-beta.solana.com', isCredential: false },
   { key: 'rpc.solana_devnet', category: 'rpc', configPath: 'rpc.solana_devnet', defaultValue: 'https://api.devnet.solana.com', isCredential: false },
   { key: 'rpc.solana_testnet', category: 'rpc', configPath: 'rpc.solana_testnet', defaultValue: 'https://api.testnet.solana.com', isCredential: false },
@@ -84,7 +84,6 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'rpc.evm_optimism_sepolia', category: 'rpc', configPath: 'rpc.evm_optimism_sepolia', defaultValue: 'https://optimism-sepolia.drpc.org', isCredential: false },
   { key: 'rpc.evm_base_mainnet', category: 'rpc', configPath: 'rpc.evm_base_mainnet', defaultValue: 'https://base.drpc.org', isCredential: false },
   { key: 'rpc.evm_base_sepolia', category: 'rpc', configPath: 'rpc.evm_base_sepolia', defaultValue: 'https://base-sepolia.drpc.org', isCredential: false },
-  { key: 'rpc.evm_default_network', category: 'rpc', configPath: 'rpc.evm_default_network', defaultValue: 'ethereum-sepolia', isCredential: false },
 
   // --- security category ---
   { key: 'security.session_ttl', category: 'security', configPath: 'security.session_ttl', defaultValue: '2592000', isCredential: false },

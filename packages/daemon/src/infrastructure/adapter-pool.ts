@@ -55,12 +55,9 @@ export function resolveRpcUrl(
  *   solana_devnet        -> devnet
  *   evm_ethereum_sepolia -> ethereum-sepolia
  *   evm_base_mainnet     -> base-mainnet
- *   evm_default_network  -> null (skip, not a network key)
  *   solana_ws_devnet     -> null (skip, WebSocket keys are not network endpoints)
  */
 export function configKeyToNetwork(configKey: string): string | null {
-  // Skip non-network config keys
-  if (configKey === 'evm_default_network') return null;
   // Skip WebSocket keys (solana_ws_*)
   if (configKey.startsWith('solana_ws_')) return null;
 

@@ -117,20 +117,20 @@ describe('KillSwitchService cascade', () => {
       'INSERT INTO sessions (id, token_hash, expires_at, absolute_expires_at, created_at) VALUES (?, ?, ?, ?, ?)',
     ).run('sess-1', 'hash1', futureTime, futureTime, now);
     db.prepare(
-      'INSERT INTO session_wallets (session_id, wallet_id, is_default, created_at) VALUES (?, ?, 1, ?)',
+      'INSERT INTO session_wallets (session_id, wallet_id, created_at) VALUES (?, ?, ?)',
     ).run('sess-1', 'wallet-1', now);
     db.prepare(
       'INSERT INTO sessions (id, token_hash, expires_at, absolute_expires_at, created_at) VALUES (?, ?, ?, ?, ?)',
     ).run('sess-2', 'hash2', futureTime, futureTime, now);
     db.prepare(
-      'INSERT INTO session_wallets (session_id, wallet_id, is_default, created_at) VALUES (?, ?, 1, ?)',
+      'INSERT INTO session_wallets (session_id, wallet_id, created_at) VALUES (?, ?, ?)',
     ).run('sess-2', 'wallet-2', now);
     // 1 already revoked session (should remain unchanged)
     db.prepare(
       'INSERT INTO sessions (id, token_hash, expires_at, revoked_at, absolute_expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?)',
     ).run('sess-3', 'hash3', futureTime, now - 100, futureTime, now);
     db.prepare(
-      'INSERT INTO session_wallets (session_id, wallet_id, is_default, created_at) VALUES (?, ?, 1, ?)',
+      'INSERT INTO session_wallets (session_id, wallet_id, created_at) VALUES (?, ?, ?)',
     ).run('sess-3', 'wallet-1', now);
 
     // Transactions: PENDING, QUEUED, EXECUTING, CONFIRMED (should not be cancelled)

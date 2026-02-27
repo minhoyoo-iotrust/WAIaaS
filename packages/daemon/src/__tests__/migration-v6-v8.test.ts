@@ -472,11 +472,11 @@ describe('pushSchema vs migration schema equivalence', () => {
     expect(walletsColsA.map((c) => c.name)).not.toContain('network');
     expect(walletsColsB.map((c) => c.name)).not.toContain('network');
 
-    // wallets should have 'environment' and 'default_network' columns
+    // wallets should have 'environment' column (v27 drops default_network)
     expect(walletsColsA.map((c) => c.name)).toContain('environment');
-    expect(walletsColsA.map((c) => c.name)).toContain('default_network');
+    expect(walletsColsA.map((c) => c.name)).not.toContain('default_network');
     expect(walletsColsB.map((c) => c.name)).toContain('environment');
-    expect(walletsColsB.map((c) => c.name)).toContain('default_network');
+    expect(walletsColsB.map((c) => c.name)).not.toContain('default_network');
 
     // Compare transactions table columns
     const txColsA = (dbA.prepare("PRAGMA table_info('transactions')").all() as Array<{ name: string }>)
@@ -519,7 +519,7 @@ describe('pushSchema vs migration schema equivalence', () => {
     }
   });
 
-  it('should have LATEST_SCHEMA_VERSION = 26', () => {
-    expect(LATEST_SCHEMA_VERSION).toBe(26);
+  it('should have LATEST_SCHEMA_VERSION = 27', () => {
+    expect(LATEST_SCHEMA_VERSION).toBe(27);
   });
 });
