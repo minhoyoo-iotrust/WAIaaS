@@ -52,30 +52,30 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| APIKEY-01 | — | Pending |
-| APIKEY-02 | — | Pending |
-| APIKEY-03 | — | Pending |
-| APIKEY-04 | — | Pending |
-| APIKEY-05 | — | Pending |
-| APIKEY-06 | — | Pending |
-| APIKEY-07 | — | Pending |
-| NETID-01 | — | Pending |
-| NETID-02 | — | Pending |
-| NETID-03 | — | Pending |
-| NETID-04 | — | Pending |
-| NETID-05 | — | Pending |
-| NETID-06 | — | Pending |
-| NETID-07 | — | Pending |
-| NETID-08 | — | Pending |
-| NETID-09 | — | Pending |
-| NETID-10 | — | Pending |
-| NETID-11 | — | Pending |
+| APIKEY-01 | Phase 285 | Pending |
+| APIKEY-02 | Phase 285 | Pending |
+| APIKEY-03 | Phase 285 | Pending |
+| APIKEY-04 | Phase 285 | Pending |
+| APIKEY-05 | Phase 285 | Pending |
+| APIKEY-06 | Phase 285 | Pending |
+| APIKEY-07 | Phase 285 | Pending |
+| NETID-01 | Phase 286 | Pending |
+| NETID-02 | Phase 286 | Pending |
+| NETID-03 | Phase 286 | Pending |
+| NETID-04 | Phase 286 | Pending |
+| NETID-05 | Phase 286 | Pending |
+| NETID-06 | Phase 286 | Pending |
+| NETID-07 | Phase 286 | Pending |
+| NETID-08 | Phase 286 | Pending |
+| NETID-09 | Phase 286 | Pending |
+| NETID-10 | Phase 286 | Pending |
+| NETID-11 | Phase 286 | Pending |
 
 **Coverage:**
 - v29.5 requirements: 18 total
-- Mapped to phases: 0
-- Unmapped: 18 ⚠️
+- Mapped to phases: 18
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-28*
-*Last updated: 2026-02-28 after initial definition*
+*Last updated: 2026-02-28 after roadmap creation -- traceability populated*
