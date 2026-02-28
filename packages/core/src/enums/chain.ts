@@ -162,3 +162,54 @@ export function validateNetworkEnvironment(
     );
   }
 }
+
+// ─── Legacy Network Name Normalization ─────────────────────────
+
+/**
+ * Legacy Solana network name mapping.
+ * Auto-converts bare 'mainnet'/'devnet'/'testnet' to 'solana-mainnet'/'solana-devnet'/'solana-testnet'.
+ * Emits deprecation warning on first use.
+ */
+const LEGACY_SOLANA_NETWORK_MAP: Record<string, NetworkType> = {
+  'mainnet': 'solana-mainnet',
+  'devnet': 'solana-devnet',
+  'testnet': 'solana-testnet',
+};
+
+let _legacyWarned = false;
+
+/**
+ * Normalize a network input string, converting legacy Solana names to new format.
+ * Returns the canonical NetworkType if valid, or the input unchanged if not a legacy name.
+ * Emits a deprecation warning to stderr on first legacy conversion.
+ */
+export function normalizeNetworkInput(network: string): string {
+  const mapped = LEGACY_SOLANA_NETWORK_MAP[network];
+  if (mapped) {
+    if (!_legacyWarned) {
+      console.warn(
+        `[WAIaaS DEPRECATION] Network name '${network}' is deprecated. Use '${mapped}' instead. ` +
+        `Legacy names will be removed in a future release.`,
+      );
+      _legacyWarned = true;
+    }
+    return mapped;
+  }
+  return network;
+}
+
+/** Reset the legacy warning flag (for testing only). */
+export function _resetLegacyWarning(): void {
+  _legacyWarned = false;
+}
+
+/**
+ * Zod schema that accepts both legacy and new Solana network names.
+ * Preprocesses the input through normalizeNetworkInput() before validating
+ * against NetworkTypeEnum. Use for external API inputs (REST, MCP).
+ * Internal code should use NetworkTypeEnum directly (strict validation).
+ */
+export const NetworkTypeEnumWithLegacy = z.preprocess(
+  (val) => (typeof val === 'string' ? normalizeNetworkInput(val) : val),
+  NetworkTypeEnum,
+);
