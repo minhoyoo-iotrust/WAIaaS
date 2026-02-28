@@ -20,7 +20,6 @@ export {
   notificationLogs,
   tokenRegistry,
   settings,
-  apiKeys,
   telegramUsers,
   incomingTransactions,
   incomingTxCursors,

@@ -49,7 +49,7 @@ import type { NetworkType } from '@waiaas/core';
 const inList = (values: readonly string[]) => values.map((v) => `'${v}'`).join(', ');
 
 // ---------------------------------------------------------------------------
-// DDL statements for all 18 tables (latest schema: wallets + wallet_id + session_wallets + token_registry + settings + api_keys + telegram_users + wc_sessions + wc_store + incoming_transactions + incoming_tx_cursors)
+// DDL statements for all 17 tables (latest schema: wallets + wallet_id + session_wallets + token_registry + settings + telegram_users + wc_sessions + wc_store + incoming_transactions + incoming_tx_cursors)
 // ---------------------------------------------------------------------------
 
 /**
@@ -57,7 +57,7 @@ const inList = (values: readonly string[]) => values.map((v) => `'${v}'`).join('
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 27;
+export const LATEST_SCHEMA_VERSION = 28;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -218,15 +218,7 @@ function getCreateTableStatements(): string[] {
   updated_at INTEGER NOT NULL
 )`,
 
-    // Table 11: api_keys (Action Provider API key encrypted storage, v1.5)
-    `CREATE TABLE IF NOT EXISTS api_keys (
-  provider_name TEXT PRIMARY KEY,
-  encrypted_key TEXT NOT NULL,
-  created_at INTEGER NOT NULL,
-  updated_at INTEGER NOT NULL
-)`,
-
-    // Table 12: schema_version
+    // Table 11: schema_version
     `CREATE TABLE IF NOT EXISTS schema_version (
   version INTEGER PRIMARY KEY,
   applied_at INTEGER NOT NULL,
@@ -1894,6 +1886,58 @@ MIGRATIONS.push({
     const fkErrors = sqlite.pragma('foreign_key_check') as unknown[];
     if (fkErrors.length > 0) {
       throw new Error(`FK integrity violation after v27: ${JSON.stringify(fkErrors)}`);
+    }
+  },
+});
+
+// ---------------------------------------------------------------------------
+// v28: Migrate api_keys to settings table and drop api_keys (v29.5 #214)
+// ---------------------------------------------------------------------------
+
+MIGRATIONS.push({
+  version: 28,
+  description: 'Migrate api_keys to settings table and drop api_keys (v29.5 #214)',
+  managesOwnTransaction: true,
+  up: (sqlite) => {
+    sqlite.exec('BEGIN');
+    try {
+      // 1. Check if api_keys table exists (may not exist on very old DBs that skipped v11)
+      const tableExists = sqlite
+        .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='api_keys'")
+        .get();
+
+      if (tableExists) {
+        // 2. Read all api_keys rows
+        const rows = sqlite
+          .prepare('SELECT provider_name, encrypted_key, updated_at FROM api_keys')
+          .all() as Array<{
+          provider_name: string;
+          encrypted_key: string;
+          updated_at: number;
+        }>;
+
+        // 3. For each row, insert into settings with key = 'actions.{provider_name}_api_key'
+        // Only insert if the setting doesn't already exist (avoid overwriting manual settings)
+        // encrypted_key values use the SAME encryption format as settings.value
+        // (both use encryptSettingValue from settings-crypto.ts), so copy directly.
+        const insertStmt = sqlite.prepare(
+          `INSERT OR IGNORE INTO settings (key, value, encrypted, category, updated_at)
+           VALUES (?, ?, 1, 'actions', ?)`,
+        );
+
+        for (const row of rows) {
+          const settingKey = `actions.${row.provider_name}_api_key`;
+          insertStmt.run(settingKey, row.encrypted_key, row.updated_at);
+        }
+
+        // 4. Drop api_keys table
+        sqlite.exec('DROP TABLE IF EXISTS api_keys');
+      }
+
+      sqlite.exec('COMMIT');
+    } catch (err) {
+      sqlite.exec('ROLLBACK');
+      throw err;
     }
   },
 });
