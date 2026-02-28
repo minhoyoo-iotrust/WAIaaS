@@ -1,7 +1,7 @@
 # 마일스톤 m29-05: 내부 일관성 정리
 
 - **Status:** PLANNED
-- **Milestone:** TBD
+- **Milestone:** v29.5
 
 ## 목표
 
@@ -43,6 +43,9 @@ Solana 네트워크 ID가 `mainnet`, `devnet`, `testnet`으로 정의되어 EVM(
 | Admin UI | `actions.tsx`가 `PUT /admin/api-keys/:provider` 대신 `PUT /admin/settings` 사용, 또는 기존 엔드포인트 유지 (내부 위임) |
 | hot-reload 수정 | `BUILTIN_NAMES`에 `aave_v3`, `kamino` 추가 |
 | hot-reload rpcCaller | `reloadActionProviders()`에서 `registerBuiltInProviders` 호출 시 `options.rpcCaller` 전달 |
+| 기존 테스트 | `api-admin-api-keys.test.ts` — ApiKeyStore 제거에 따른 테스트 업데이트 (SettingsService 기반으로 전환) |
+| DB 마이그레이션 | schema_version **v28**: `api_keys` → `settings` 데이터 이전 + `api_keys` 테이블 DROP |
+| OpenAPI/SDK 영향 | OpenAPI 라우트 유지 (내부 위임), SDK에 API key 메서드 없으므로 SDK 변경 불필요 |
 | 이슈 트래커 | `TRACKER.md` #214 상태를 FIXED로 갱신, 마일스톤 필드에 `v29.5` 기입 |
 
 ### Phase 2: Solana 네트워크 ID 통일 (#211)
@@ -52,11 +55,11 @@ Solana 네트워크 ID에 `solana-` 프리픽스를 추가하여 `{chain}-{netwo
 | 대상 | 내용 |
 |------|------|
 | core 상수 변경 | `SOLANA_NETWORK_TYPES`: `mainnet` → `solana-mainnet`, `devnet` → `solana-devnet`, `testnet` → `solana-testnet` |
-| RPC 기본값 키 | `built-in-defaults.ts` 키 변경 |
-| config 파싱 | `config.toml` 파서 — `solana_mainnet` → `solana-mainnet` 매핑, 레거시 키 호환 |
-| adapter-pool | `rpcConfigKey()`, `configKeyToNetwork()` 매핑 로직 |
-| hot-reload | `networkToConfigKey()`, `reloadRpc()`, `reloadRpcPool()` 매핑 |
-| DB 마이그레이션 | `wallets.network`, `transactions.network`, `incoming_transactions.network` 등 `mainnet` → `solana-mainnet` UPDATE |
+| RPC 기본값 키 | `built-in-defaults.ts` 키는 `solana-mainnet` 등으로 변경 |
+| config 파싱 | `config.toml` 키는 기존 `solana_mainnet` 유지 (하위 호환). 파서에서 `solana_mainnet` → `solana-mainnet` 변환 |
+| adapter-pool | `rpcConfigKey()`: `solana-` prefix strip하여 기존 config 키 유지 (`solana_mainnet`). `configKeyToNetwork()`: `solana_mainnet` → `solana-mainnet` 역변환 |
+| hot-reload | `networkToConfigKey()`, `reloadRpc()`, `reloadRpcPool()` — `solana-mainnet` ↔ `solana_mainnet` 매핑 |
+| DB 마이그레이션 | schema_version **v29**: `wallets.network`, `transactions.network`, `incoming_transactions.network` 등 `mainnet` → `solana-mainnet` UPDATE |
 | Admin UI | 네트워크 드롭다운, 필터, 표시 레이블 |
 | CLI | 네트워크 파라미터 파싱, 레거시 입력 호환 |
 | MCP | 네트워크 파라미터 스키마 |
@@ -75,7 +78,8 @@ Solana 네트워크 ID에 `solana-` 프리픽스를 추가하여 `{chain}-{netwo
 | 2 | `/admin/api-keys/*` API 유지 여부 | 삭제 vs 유지(내부 위임) | **유지(내부 위임)** — 하위 호환성. 내부적으로 `settingsService`에 위임하고 hot-reload 트리거 |
 | 3 | `api_keys` 테이블 마이그레이션 | DROP 즉시 vs 비활성화 후 추후 DROP | **마이그레이션 후 DROP** — 기존 키를 `settings`로 이전 후 테이블 제거. 롤백 안전성 위해 마이그레이션 스크립트에서 이전 → DROP 순서 |
 | 4 | #211 레거시 호환 | 구버전 입력 즉시 거부 vs 자동 변환 | **자동 변환 + 경고** — CLI/API에서 `mainnet` 입력 시 `solana-mainnet`으로 자동 변환하되 deprecation 경고. DB는 마이그레이션으로 일괄 변환 |
-| 5 | config.toml 키 호환 | `solana_mainnet` 즉시 제거 vs 레거시 키 허용 | **레거시 키 허용** — `solana_mainnet`과 `solana_solana_mainnet` 모두 인식. 향후 major 버전에서 레거시 제거 |
+| 5 | config.toml 키 호환 | config 키도 변경 vs config 키 유지 | **config 키 유지** — `rpcConfigKey()`에서 `solana-` prefix를 strip하여 config 키는 기존 `solana_mainnet` 그대로 유지. `configKeyToNetwork()`에서 `solana_mainnet` → `solana-mainnet` 역변환. `solana_solana_mainnet` 같은 어색한 키 회피 |
+| 6 | DB 마이그레이션 순서 | Phase 1 → Phase 2 vs 동시 | **Phase 1(v28) → Phase 2(v29) 순차** — #214 API 키 이전이 먼저, #211 네트워크 ID 변환이 후순위. 현재 최신 schema_version=27 |
 
 ---
 
@@ -141,7 +145,7 @@ Solana 네트워크 ID에 `solana-` 프리픽스를 추가하여 `{chain}-{netwo
 |------|------|
 | 페이즈 | 2개 |
 | 수정 패키지 | 10개 (core, daemon, admin, cli, mcp, sdk, actions, solana, evm, skills) |
-| DB 마이그레이션 | 2건 (#214 api_keys→settings 이전, #211 network 값 변환) |
+| DB 마이그레이션 | 2건: v28(#214 api_keys→settings 이전+DROP), v29(#211 network 값 변환) |
 | 삭제 파일 | 1개 (`api-key-store.ts`) |
 | 예상 수정 파일 | 40-60개 |
 | 예상 LOC 변경 | +500/-800 (net 삭제 — 중복 코드 제거) |

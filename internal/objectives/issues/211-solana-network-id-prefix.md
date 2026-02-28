@@ -33,9 +33,10 @@ Solana 네트워크 ID를 `solana-mainnet`, `solana-devnet`, `solana-testnet`으
 
 - [ ] `SOLANA_NETWORK_TYPES`가 `['solana-mainnet', 'solana-devnet', 'solana-testnet']`으로 변경 확인
 - [ ] `validateChainNetwork('solana', 'solana-mainnet')` 정상 통과
-- [ ] `validateChainNetwork('solana', 'mainnet')` 에러 발생
-- [ ] DB 마이그레이션으로 기존 `mainnet` → `solana-mainnet` 변환 확인
+- [ ] `validateChainNetwork('solana', 'mainnet')` 입력 시 `solana-mainnet`으로 자동 변환 + deprecation 경고
+- [ ] DB 마이그레이션(schema_version v29)으로 기존 `mainnet` → `solana-mainnet` 변환 확인
 - [ ] Admin UI 네트워크 필터에 `solana-mainnet` 표시 확인
-- [ ] config.toml `rpc` 섹션 키 호환성 확인
+- [ ] config.toml `rpc` 섹션 키 `solana_mainnet` 그대로 유지 — `rpcConfigKey()`에서 `solana-` prefix strip
+- [ ] `configKeyToNetwork('solana_mainnet')` → `solana-mainnet` 역변환 정상 동작
 - [ ] RPC Pool 빌트인 기본값 키 매핑 정상 동작
 - [ ] 기존 테스트 전체 통과
