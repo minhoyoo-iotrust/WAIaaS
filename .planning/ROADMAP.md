@@ -242,11 +242,13 @@ Plans:
   3. config.toml의 기존 `solana_mainnet` 키가 정상 인식되어 기존 사용자 설정이 유효하다
   4. DeFi 프로바이더(Jupiter/Jito/Kamino), RPC Pool, MCP, SDK가 `solana-mainnet` 형식으로 정상 동작한다
   5. 전 패키지 기존 테스트가 모두 통과한다 (`pnpm turbo run test:unit`)
-**Plans**: TBD
+**Plans**: 4 plans (3 waves)
 
 Plans:
-- [ ] 286-01: TBD
-- [ ] 286-02: TBD
+- [x] 286-01-PLAN.md -- Core SSoT 상수 변경 + DB migration v29 (wave 1)
+- [ ] 286-02-PLAN.md -- 인프라 레이어: adapter-pool, config, hot-reload, oracle, DeFi 프로바이더 (wave 2)
+- [ ] 286-03-PLAN.md -- 인터페이스 레이어: CLI, Admin UI, skills, 레거시 입력 자동 변환 (wave 2)
+- [ ] 286-04-PLAN.md -- 테스트 업데이트 + 전 패키지 테스트 통과 확인 (wave 3)
 
 ## Progress
 
@@ -256,7 +258,7 @@ Phases execute in numeric order: 285 → 286
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 285. API 키 저장소 통합 | 2/2 | Complete | 2026-02-28 |
-| 286. Solana 네트워크 ID 통일 | 0/? | Not started | - |
+| 286. Solana 네트워크 ID 통일 | 1/4 | In Progress | - |
 
 ---
-*Last updated: 2026-02-28 after Phase 285 completion*
+*Last updated: 2026-02-28 after Phase 286 planning*

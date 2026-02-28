@@ -23,9 +23,9 @@ See: .planning/PROJECT.md (updated 2026-02-28)
 ## Current Position
 
 Phase: 286 of 286 (Solana 네트워크 ID 통일)
-Plan: 0 of ? in current phase
-Status: Phase 285 complete, ready to plan Phase 286
-Last activity: 2026-02-28 -- Phase 285 executed (2 plans, all pass)
+Plan: 0 of 4 in current phase (3 waves)
+Status: Phase 286 planned (4 plans, 3 waves), ready to execute
+Last activity: 2026-02-28 -- Phase 286 planned (4 plans)
 
 Progress: [████████████████████░] 99% (285/286 phases)
 
@@ -54,6 +54,6 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Phase 285 executed (2/2 plans complete). Phase 286 ready to plan.
+Stopped at: Phase 286 planned (4 plans, 3 waves). Ready to execute.
 Resume file: .planning/ROADMAP.md
-Resume command: /gsd:plan-phase 286
+Resume command: /gsd:execute-phase 286
