@@ -226,11 +226,11 @@ See `.planning/milestones/v29.4-ROADMAP.md` for full details.
   3. `/admin/api-keys/*` REST API 엔드포인트가 기존과 동일하게 동작하며, 내부적으로 SettingsService에 위임한다
   4. hot-reload 시 aave_v3, kamino 포함 전체 빌트인 프로바이더가 중복 없이 재등록되고 rpcCaller가 정상 전달된다
   5. 기존 api-admin-api-keys 테스트가 SettingsService 기반으로 전환되어 통과한다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 285-01: TBD
-- [ ] 285-02: TBD
+- [ ] 285-01-PLAN.md -- DB migration v28 + admin route delegation to SettingsService
+- [ ] 285-02-PLAN.md -- ApiKeyStore removal + hot-reload fix + test conversion
 
 ### Phase 286: Solana 네트워크 ID 통일
 **Goal**: 모든 Solana 네트워크 참조가 `solana-mainnet`, `solana-devnet`, `solana-testnet` 형식으로 통일되어 EVM과 동일한 `{chain}-{network}` 패턴을 따른다
