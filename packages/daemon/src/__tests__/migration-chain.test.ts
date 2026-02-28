@@ -758,7 +758,7 @@ describe('data transformation: v6 transactions.network backfill', () => {
     pushSchema(db);
 
     const tx = db.prepare('SELECT network FROM transactions WHERE id = ?').get('tx-sol-bf') as { network: string };
-    expect(tx.network).toBe('devnet');
+    expect(tx.network).toBe('solana-devnet');
   });
 
   it('T-8b: EVM transaction backfill', () => {
@@ -801,7 +801,7 @@ describe('data transformation: v6 transactions.network backfill', () => {
 
     for (let i = 1; i <= 5; i++) {
       const tx = db.prepare('SELECT network FROM transactions WHERE id = ?').get(`tx-multi-${i}`) as { network: string };
-      expect(tx.network).toBe('mainnet');
+      expect(tx.network).toBe('solana-mainnet');
     }
   });
 });
@@ -1004,7 +1004,7 @@ describe('edge cases', () => {
     expect(row.message).toBeNull();
 
     // Verify LATEST_SCHEMA_VERSION is 28
-    expect(LATEST_SCHEMA_VERSION).toBe(28);
+    expect(LATEST_SCHEMA_VERSION).toBe(29);
   });
 
   it('T-13: existing notification_logs data preserved after v10 migration', () => {
@@ -1143,14 +1143,14 @@ describe('v12 migration: x402 CHECK constraints', () => {
     expect(transfer.amount).toBe('1000000');
     expect(transfer.to_address).toBe('addr1');
     expect(transfer.status).toBe('CONFIRMED');
-    expect(transfer.network).toBe('devnet');
+    expect(transfer.network).toBe('devnet'); // still old format, v29 not yet applied
 
     const token = db.prepare('SELECT * FROM transactions WHERE id = ?').get('tx-token') as {
       type: string; status: string; network: string;
     };
     expect(token.type).toBe('TOKEN_TRANSFER');
     expect(token.status).toBe('PENDING');
-    expect(token.network).toBe('devnet');
+    expect(token.network).toBe('devnet'); // still old format, v29 not yet applied
   });
 
   it('T-14b: v11 -> v12 migration preserves existing policies data', () => {
@@ -1333,7 +1333,7 @@ describe('v12 migration: x402 CHECK constraints', () => {
     // Verify final version is 19
     const versions = getVersions(db);
     expect(versions).toContain(19);
-    expect(Math.max(...versions)).toBe(28);
+    expect(Math.max(...versions)).toBe(29);
 
     // Verify data survived the entire chain (v27 drops default_network)
     const wallet = db.prepare('SELECT * FROM wallets WHERE id = ?').get('a-chain-12') as { environment: string };
@@ -1341,7 +1341,7 @@ describe('v12 migration: x402 CHECK constraints', () => {
 
     const tx = db.prepare('SELECT * FROM transactions WHERE id = ?').get('tx-chain-12') as { wallet_id: string; network: string };
     expect(tx.wallet_id).toBe('a-chain-12');
-    expect(tx.network).toBe('devnet');
+    expect(tx.network).toBe('solana-devnet');
 
     const pol = db.prepare('SELECT * FROM policies WHERE id = ?').get('pol-chain-12') as { wallet_id: string; type: string };
     expect(pol.wallet_id).toBe('a-chain-12');
@@ -1352,7 +1352,7 @@ describe('v12 migration: x402 CHECK constraints', () => {
       db.prepare(
         `INSERT INTO transactions (id, wallet_id, chain, type, status, created_at, network)
          VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      ).run('tx-x402-chain', 'a-chain-12', 'solana', 'X402_PAYMENT', 'PENDING', ts, 'devnet');
+      ).run('tx-x402-chain', 'a-chain-12', 'solana', 'X402_PAYMENT', 'PENDING', ts, 'solana-devnet');
     }).not.toThrow();
 
     // Verify X402_ALLOWED_DOMAINS can be inserted
@@ -1428,7 +1428,7 @@ describe('v13 migration: amount_usd and reserved_amount_usd columns', () => {
     expect(tx.type).toBe('TRANSFER');
     expect(tx.amount).toBe('1000000');
     expect(tx.status).toBe('PENDING');
-    expect(tx.network).toBe('devnet');
+    expect(tx.network).toBe('devnet'); // still old format, v29 not yet applied
     expect(tx.reserved_amount).toBe('1000000');
     expect(tx.amount_usd).toBeNull();
     expect(tx.reserved_amount_usd).toBeNull();
@@ -1513,7 +1513,7 @@ describe('v13 migration: amount_usd and reserved_amount_usd columns', () => {
     // Verify final version is 19
     const versions = getVersions(db);
     expect(versions).toContain(19);
-    expect(Math.max(...versions)).toBe(28);
+    expect(Math.max(...versions)).toBe(29);
 
     // Verify amount_usd columns exist and are NULL for migrated data
     const tx = db.prepare('SELECT amount_usd, reserved_amount_usd FROM transactions WHERE id = ?').get('tx-chain-13') as {
@@ -1728,7 +1728,7 @@ describe('v16 migration: WC infra tables + approval_channel', () => {
     // Verify final version is 19
     const versions = getVersions(db);
     expect(versions).toContain(19);
-    expect(Math.max(...versions)).toBe(28);
+    expect(Math.max(...versions)).toBe(29);
 
     // Verify wc_sessions and wc_store tables exist
     const wcSessions = db.prepare(
@@ -1805,12 +1805,12 @@ describe('v24 migration: wallet_type column for preset auto-setup', () => {
     expect(wallet.wallet_type).toBeNull();
   });
 
-  it('T-17b (T-v24-2): fresh DB LATEST_SCHEMA_VERSION is 28', () => {
+  it('T-17b (T-v24-2): fresh DB LATEST_SCHEMA_VERSION is 29', () => {
     const conn = createDatabase(':memory:');
     db = conn.sqlite;
     pushSchema(db);
 
-    expect(LATEST_SCHEMA_VERSION).toBe(28);
+    expect(LATEST_SCHEMA_VERSION).toBe(29);
 
     const versions = getVersions(db);
     expect(versions).toContain(24);
@@ -1902,7 +1902,7 @@ describe('v24 migration: wallet_type column for preset auto-setup', () => {
     // Verify final version is 24
     const versions = getVersions(db);
     expect(versions).toContain(24);
-    expect(Math.max(...versions)).toBe(28);
+    expect(Math.max(...versions)).toBe(29);
 
     // Verify wallets table has wallet_type column
     const columns = getTableColumns(db, 'wallets');

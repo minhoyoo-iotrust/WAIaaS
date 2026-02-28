@@ -1166,7 +1166,7 @@ Enable Kamino Lending via **Admin UI > Settings > Actions > Kamino Lending**, or
 curl -s -X POST http://localhost:3100/v1/actions/kamino/kamino_supply \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"params":{"asset":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","amount":"100","market":"main"},"wallet_id":"...","network":"mainnet"}'
+  -d '{"params":{"asset":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","amount":"100","market":"main"},"wallet_id":"...","network":"solana-mainnet"}'
 ```
 
 **MCP:**
@@ -1188,7 +1188,7 @@ const tx = await client.executeAction('kamino', 'kamino_supply', {
   asset: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
   amount: '100',
   market: 'main',
-}, { walletId: '...', network: 'mainnet' });
+}, { walletId: '...', network: 'solana-mainnet' });
 ```
 
 **Python SDK:**
@@ -1197,7 +1197,7 @@ tx = await client.execute_action("kamino", "kamino_supply", {
     "asset": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
     "amount": "100",
     "market": "main",
-}, wallet_id="...", network="mainnet")
+}, wallet_id="...", network="solana-mainnet")
 ```
 
 ### Position Monitoring
