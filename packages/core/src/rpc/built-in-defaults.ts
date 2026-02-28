@@ -11,9 +11,9 @@
 /**
  * Built-in default RPC URLs for all supported networks.
  *
- * - **Mainnet (6):** mainnet (Solana), ethereum-mainnet, arbitrum-mainnet,
+ * - **Mainnet (6):** solana-mainnet, ethereum-mainnet, arbitrum-mainnet,
  *   optimism-mainnet, base-mainnet, polygon-mainnet
- * - **Testnet (7):** devnet (Solana), testnet (Solana), ethereum-sepolia,
+ * - **Testnet (7):** solana-devnet, solana-testnet, ethereum-sepolia,
  *   arbitrum-sepolia, optimism-sepolia, base-sepolia, polygon-amoy
  *
  * URLs are ordered by priority (index 0 = highest priority).
@@ -21,7 +21,7 @@
  */
 export const BUILT_IN_RPC_DEFAULTS: Readonly<Record<string, readonly string[]>> = {
   // ─── Mainnet (6 networks) ──────────────────────────────────────
-  'mainnet': [
+  'solana-mainnet': [
     'https://api.mainnet-beta.solana.com',
     'https://rpc.ankr.com/solana',
     'https://solana.drpc.org',
@@ -51,11 +51,11 @@ export const BUILT_IN_RPC_DEFAULTS: Readonly<Record<string, readonly string[]>> 
   ],
 
   // ─── Testnet (7 networks) ─────────────────────────────────────
-  'devnet': [
+  'solana-devnet': [
     'https://api.devnet.solana.com',
     'https://rpc.ankr.com/solana_devnet',
   ],
-  'testnet': [
+  'solana-testnet': [
     'https://api.testnet.solana.com',
   ],
   'ethereum-sepolia': [

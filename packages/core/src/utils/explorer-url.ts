@@ -7,9 +7,9 @@
 
 const EXPLORER_MAP: Record<string, string> = {
   // Solana
-  mainnet: 'https://solscan.io/tx/{txHash}',
-  devnet: 'https://solscan.io/tx/{txHash}?cluster=devnet',
-  testnet: 'https://solscan.io/tx/{txHash}?cluster=testnet',
+  'solana-mainnet': 'https://solscan.io/tx/{txHash}',
+  'solana-devnet': 'https://solscan.io/tx/{txHash}?cluster=devnet',
+  'solana-testnet': 'https://solscan.io/tx/{txHash}?cluster=testnet',
   // Ethereum
   'ethereum-mainnet': 'https://etherscan.io/tx/{txHash}',
   'ethereum-sepolia': 'https://sepolia.etherscan.io/tx/{txHash}',
