@@ -58,7 +58,7 @@ Response (201):
   "id": "01958f3a-1234-7000-8000-abcdef123456",
   "name": "trading-bot",
   "chain": "solana",
-  "network": "mainnet",
+  "network": "solana-mainnet",
   "environment": "mainnet",
   "publicKey": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
   "status": "ACTIVE",
@@ -88,7 +88,7 @@ Response (200):
       "id": "01958f3a-1234-7000-8000-abcdef123456",
       "name": "trading-bot",
       "chain": "solana",
-      "network": "mainnet",
+      "network": "solana-mainnet",
       "environment": "mainnet",
       "publicKey": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
       "status": "ACTIVE",
@@ -113,7 +113,7 @@ Response (200):
   "id": "01958f3a-1234-7000-8000-abcdef123456",
   "name": "trading-bot",
   "chain": "solana",
-  "network": "mainnet",
+  "network": "solana-mainnet",
   "environment": "mainnet",
   "publicKey": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
   "status": "ACTIVE",
@@ -191,7 +191,7 @@ Response (200):
   "id": "01958f3a-1234-7000-8000-abcdef123456",
   "name": "trading-bot",
   "chain": "solana",
-  "network": "mainnet",
+  "network": "solana-mainnet",
   "environment": "mainnet",
   "publicKey": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
   "status": "ACTIVE",
@@ -251,7 +251,7 @@ Response (200):
   "chain": "solana",
   "environment": "mainnet",
   "availableNetworks": [
-    {"network": "mainnet"}
+    {"network": "solana-mainnet"}
   ]
 }
 ```
@@ -296,7 +296,7 @@ Response (200):
 {
   "walletId": "01958f3a-1234-7000-8000-abcdef123456",
   "chain": "solana",
-  "network": "devnet",
+  "network": "solana-devnet",
   "address": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"
 }
 ```
@@ -317,7 +317,7 @@ Response (200):
 {
   "walletId": "01958f3a-1234-7000-8000-abcdef123456",
   "chain": "solana",
-  "network": "devnet",
+  "network": "solana-devnet",
   "address": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
   "balance": "2500000000",
   "decimals": 9,
@@ -370,7 +370,7 @@ Response (200):
 {
   "walletId": "01958f3a-1234-7000-8000-abcdef123456",
   "chain": "solana",
-  "network": "devnet",
+  "network": "solana-devnet",
   "assets": [
     {
       "mint": "So11111111111111111111111111111111111111112",
@@ -444,7 +444,7 @@ Response:
 {
   "walletId": "01958f3a-1234-7000-8000-abcdef123456",
   "chain": "solana",
-  "network": "devnet",
+  "network": "solana-devnet",
   "address": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
   "balance": "2500000000",
   "decimals": 9,
@@ -717,8 +717,8 @@ The nonce is a random 32-byte hex string valid for 5 minutes. Used by owner wall
 
 | Chain | Environment | Available Networks |
 |-------|-------------|-------------------|
-| `solana` | `testnet` | `devnet`, `testnet` |
-| `solana` | `mainnet` | `mainnet` |
+| `solana` | `testnet` | `solana-devnet`, `solana-testnet` |
+| `solana` | `mainnet` | `solana-mainnet` |
 | `ethereum` | `testnet` | `ethereum-sepolia`, `polygon-amoy`, `arbitrum-sepolia`, `optimism-sepolia`, `base-sepolia` |
 | `ethereum` | `mainnet` | `ethereum-mainnet`, `polygon-mainnet`, `arbitrum-mainnet`, `optimism-mainnet`, `base-mainnet` |
 
@@ -1048,7 +1048,7 @@ Query Parameters:
 - `limit` (optional): Max results, 1-100 (default: 20)
 - `cursor` (optional): Pagination cursor from previous response
 - `chain` (optional): Filter by chain (`solana` or `ethereum`)
-- `network` (optional): Filter by network (e.g., `devnet`, `ethereum-mainnet`)
+- `network` (optional): Filter by network (e.g., `solana-devnet`, `ethereum-mainnet`)
 - `status` (optional): `DETECTED` or `CONFIRMED` (default: `CONFIRMED`)
 - `token` (optional): Filter by token address (omit for native transfers)
 - `from_address` (optional): Filter by sender address
@@ -1068,7 +1068,7 @@ Response (200):
       "amount": "1000000000",
       "tokenAddress": null,
       "chain": "solana",
-      "network": "devnet",
+      "network": "solana-devnet",
       "status": "CONFIRMED",
       "blockNumber": 280000000,
       "detectedAt": 1707000000,

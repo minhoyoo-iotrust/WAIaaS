@@ -152,9 +152,9 @@ const SUSPICIOUS_OPTIONS = [
 ];
 
 const NETWORK_OPTIONS = [
-  { value: 'mainnet', label: 'mainnet' },
-  { value: 'devnet', label: 'devnet' },
-  { value: 'testnet', label: 'testnet' },
+  { value: 'solana-mainnet', label: 'solana-mainnet' },
+  { value: 'solana-devnet', label: 'solana-devnet' },
+  { value: 'solana-testnet', label: 'solana-testnet' },
   { value: 'ethereum-mainnet', label: 'ethereum-mainnet' },
   { value: 'ethereum-sepolia', label: 'ethereum-sepolia' },
   { value: 'polygon-mainnet', label: 'polygon-mainnet' },

@@ -6,7 +6,7 @@ import { apiGet } from '../../api/client';
 import { API } from '../../api/endpoints';
 
 const NETWORK_NATIVE_SYMBOL: Record<string, string> = {
-  'mainnet': 'SOL', 'devnet': 'SOL', 'testnet': 'SOL',
+  'solana-mainnet': 'SOL', 'solana-devnet': 'SOL', 'solana-testnet': 'SOL',
   'ethereum-mainnet': 'ETH', 'ethereum-sepolia': 'ETH',
   'polygon-mainnet': 'POL', 'polygon-amoy': 'POL',
   'arbitrum-mainnet': 'ETH', 'arbitrum-sepolia': 'ETH',

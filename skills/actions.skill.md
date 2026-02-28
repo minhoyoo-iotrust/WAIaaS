@@ -151,7 +151,7 @@ curl -s -X POST http://localhost:3100/v1/actions/jupiter_swap/swap \
       "amount": "1000000000",
       "slippageBps": 50
     },
-    "network": "devnet"
+    "network": "solana-devnet"
   }'
 ```
 
@@ -1177,7 +1177,7 @@ curl -s -X POST http://localhost:3100/v1/actions/kamino/kamino_supply \
     "asset": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
     "amount": "100",
     "wallet_id": "...",
-    "network": "mainnet"
+    "network": "solana-mainnet"
   }
 }
 ```
