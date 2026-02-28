@@ -246,6 +246,41 @@ export class SettingsService {
   }
 
   // -------------------------------------------------------------------------
+  // setApiKey(providerName, value) -- set API key for any provider
+  // -------------------------------------------------------------------------
+
+  /**
+   * Set an API key for a provider. Bypasses SETTING_DEFINITIONS validation
+   * to support arbitrary provider names (e.g., custom/plugin providers).
+   * Value is always encrypted as credential.
+   */
+  setApiKey(providerName: string, value: string): void {
+    const key = `actions.${providerName}_api_key`;
+    const storedValue = value
+      ? encryptSettingValue(value, this.currentPassword)
+      : '';
+
+    this.db
+      .insert(settings)
+      .values({
+        key,
+        value: storedValue,
+        encrypted: value.length > 0,
+        category: 'actions',
+        updatedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: settings.key,
+        set: {
+          value: storedValue,
+          encrypted: value.length > 0,
+          updatedAt: new Date(),
+        },
+      })
+      .run();
+  }
+
+  // -------------------------------------------------------------------------
   // hasApiKey(providerName) -- check if API key exists for a provider
   // -------------------------------------------------------------------------
 

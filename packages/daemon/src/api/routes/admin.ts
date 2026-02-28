@@ -1762,7 +1762,7 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
     }
 
     const settingKey = `actions.${provider}_api_key`;
-    deps.settingsService.set(settingKey, body.apiKey);
+    deps.settingsService.setApiKey(provider, body.apiKey);
 
     // Trigger hot-reload so providers pick up the new key immediately
     if (deps.onSettingsChanged) {
@@ -1794,7 +1794,7 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
     }
 
     const settingKey = `actions.${provider}_api_key`;
-    deps.settingsService.set(settingKey, '');
+    deps.settingsService.setApiKey(provider, '');
 
     // Trigger hot-reload
     if (deps.onSettingsChanged) {

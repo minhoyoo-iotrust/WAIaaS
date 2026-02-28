@@ -3,8 +3,9 @@
  *   - GET /v1/actions/providers
  *   - POST /v1/actions/:provider/:action
  *
- * Uses in-memory SQLite + mock ActionProviderRegistry + ApiKeyStore + Hono app.request().
+ * Uses in-memory SQLite + mock ActionProviderRegistry + SettingsService + Hono app.request().
  * Follows same pattern as api-transactions.test.ts.
+ * v29.5: Migrated from ApiKeyStore to SettingsService (#214).
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -18,7 +19,7 @@ import type { DaemonConfig } from '../infrastructure/config/loader.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
 import { DefaultPolicyEngine } from '../pipeline/default-policy-engine.js';
 import { ActionProviderRegistry } from '../infrastructure/action/action-provider-registry.js';
-import { ApiKeyStore } from '../infrastructure/action/api-key-store.js';
+import { SettingsService } from '../infrastructure/settings/settings-service.js';
 import type {
   IActionProvider,
   IChainAdapter,
@@ -312,7 +313,7 @@ let conn: DatabaseConnection;
 let app: OpenAPIHono;
 let jwtSecretManager: JwtSecretManager;
 let registry: ActionProviderRegistry;
-let apiKeyStore: ApiKeyStore;
+let settingsService: SettingsService;
 
 beforeEach(async () => {
   conn = createDatabase(':memory:');
@@ -334,8 +335,12 @@ beforeEach(async () => {
   registry.register(createPaidProvider());
   registry.register(createMultiStepProvider());
 
-  // Create ApiKeyStore
-  apiKeyStore = new ApiKeyStore(conn.db, TEST_MASTER_PASSWORD);
+  // Create SettingsService (replaces ApiKeyStore since v29.5 #214)
+  settingsService = new SettingsService({
+    db: conn.db,
+    config: mockConfig(),
+    masterPassword: TEST_MASTER_PASSWORD,
+  });
 
   app = createApp({
     db: conn.db,
@@ -348,7 +353,7 @@ beforeEach(async () => {
     policyEngine: new DefaultPolicyEngine(),
     jwtSecretManager,
     actionProviderRegistry: registry,
-    apiKeyStore,
+    settingsService,
   });
 });
 
@@ -441,7 +446,7 @@ describe('GET /v1/actions/providers', () => {
     const authHeader = await createSessionToken(walletId);
 
     // Set API key for paid_provider
-    apiKeyStore.set('paid_provider', 'test-api-key-12345');
+    settingsService.setApiKey('paid_provider', 'test-api-key-12345');
 
     const res = await app.request('/v1/actions/providers', {
       method: 'GET',
@@ -551,7 +556,7 @@ describe('POST /v1/actions/:provider/:action', () => {
     const authHeader = await createSessionToken(walletId);
 
     // Set API key
-    apiKeyStore.set('paid_provider', 'my-secret-api-key-99');
+    settingsService.setApiKey('paid_provider', 'my-secret-api-key-99');
 
     const res = await app.request('/v1/actions/paid_provider/paid_action', {
       method: 'POST',

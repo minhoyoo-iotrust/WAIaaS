@@ -5,14 +5,15 @@
  * PUT    /v1/admin/api-keys/:provider    (masterAuth) - Set or update API key
  * DELETE /v1/admin/api-keys/:provider    (masterAuth) - Delete API key
  *
- * Uses in-memory SQLite + mock IActionProvider + Hono app.request().
+ * Uses in-memory SQLite + mock IActionProvider + SettingsService + Hono app.request().
+ * v29.5: Migrated from ApiKeyStore to SettingsService (#214).
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import argon2 from 'argon2';
 import { createApp } from '../api/server.js';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
-import { ApiKeyStore } from '../infrastructure/action/api-key-store.js';
+import { SettingsService } from '../infrastructure/settings/settings-service.js';
 import { ActionProviderRegistry } from '../infrastructure/action/action-provider-registry.js';
 import type { DatabaseConnection } from '../infrastructure/database/index.js';
 import type { DaemonConfig } from '../infrastructure/config/loader.js';
@@ -114,6 +115,7 @@ function createMockProvider(opts: {
 let conn: DatabaseConnection;
 let app: OpenAPIHono;
 let masterPasswordHash: string;
+let lastChangedKeys: string[] = [];
 
 beforeEach(async () => {
   conn = createDatabase(':memory:');
@@ -123,19 +125,25 @@ beforeEach(async () => {
     type: argon2.argon2id, memoryCost: 4096, timeCost: 2, parallelism: 1,
   });
 
-  const apiKeyStore = new ApiKeyStore(conn.db, TEST_MASTER_PASSWORD);
+  const settingsService = new SettingsService({
+    db: conn.db,
+    config: mockConfig(),
+    masterPassword: TEST_MASTER_PASSWORD,
+  });
   const registry = new ActionProviderRegistry();
 
   // Register two mock providers: one requiring API key, one not
   registry.register(createMockProvider({ name: 'test_provider', requiresApiKey: true }));
   registry.register(createMockProvider({ name: 'free_provider', requiresApiKey: false }));
 
+  lastChangedKeys = [];
   app = createApp({
     db: conn.db, sqlite: conn.sqlite,
     masterPassword: TEST_MASTER_PASSWORD, masterPasswordHash,
     config: mockConfig(),
-    apiKeyStore,
+    settingsService,
     actionProviderRegistry: registry,
+    onSettingsChanged: (keys: string[]) => { lastChangedKeys = keys; },
   });
 });
 
@@ -194,6 +202,20 @@ describe('Admin API Keys endpoints', () => {
     const body = await json(res);
     expect(body.success).toBe(true);
     expect(body.providerName).toBe('test_provider');
+  });
+
+  it('PUT /v1/admin/api-keys triggers onSettingsChanged', async () => {
+    await app.request('/v1/admin/api-keys/test_provider', {
+      method: 'PUT',
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        'X-Master-Password': TEST_MASTER_PASSWORD,
+      },
+      body: JSON.stringify({ apiKey: 'sk-test-key-12345678' }),
+    });
+
+    expect(lastChangedKeys).toEqual(['actions.test_provider_api_key']);
   });
 
   it('GET /v1/admin/api-keys -- after set, hasKey=true and maskedKey present', async () => {
@@ -279,6 +301,27 @@ describe('Admin API Keys endpoints', () => {
     expect(res.status).toBe(200);
     const body = await json(res);
     expect(body.success).toBe(true);
+  });
+
+  it('DELETE /v1/admin/api-keys triggers onSettingsChanged', async () => {
+    // Set key first
+    await app.request('/v1/admin/api-keys/test_provider', {
+      method: 'PUT',
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        'X-Master-Password': TEST_MASTER_PASSWORD,
+      },
+      body: JSON.stringify({ apiKey: 'sk-to-delete' }),
+    });
+
+    lastChangedKeys = [];
+    await app.request('/v1/admin/api-keys/test_provider', {
+      method: 'DELETE',
+      headers: { Host: HOST, 'X-Master-Password': TEST_MASTER_PASSWORD },
+    });
+
+    expect(lastChangedKeys).toEqual(['actions.test_provider_api_key']);
   });
 
   it('DELETE /v1/admin/api-keys/nonexistent -- returns 404', async () => {
