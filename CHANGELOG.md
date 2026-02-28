@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.9.0-rc.2](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc.1...v2.9.0-rc.2) (2026-02-28)
+
+
+### Features
+
+* **283-01:** add Kamino K-Lend provider scaffold with SDK wrapper ([dcab529](https://github.com/minhoyoo-iotrust/WAIaaS/commit/dcab529a24f9542b3abd63746ca046fd82705fe6))
+* **283-02,283-03:** add HF simulation module and register Kamino exports ([93ac61c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/93ac61cf1464b7f397f523208f0c0358314e0889))
+* **284-01:** register Kamino in registerBuiltInProviders + 3 Admin Settings keys ([9832732](https://github.com/minhoyoo-iotrust/WAIaaS/commit/9832732ba9d901453fb9fa5a6de165a7800d578b))
+* **284-02:** wire PositionTracker provider registration after Step 4f ([89e5ad6](https://github.com/minhoyoo-iotrust/WAIaaS/commit/89e5ad6648ec353dcd789c0ecbc140b3a6bbde95))
+* **284-03:** multi-provider health factor aggregation + MCP/SDK verification ([958e61d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/958e61d03461aad5936b42d3f93ae392f3bdfdcf))
+* **284-04:** add Kamino to Admin UI Actions page + update actions.skill.md ([eb75d2c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/eb75d2c72123c0bb82003f13633927bb12768f10))
+
+
+### Bug Fixes
+
+* **284-03:** fix worstStatus type in health factor aggregation ([1df49ac](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1df49ac50c56a9d10e0c901283060e0659b8a70c))
+* add missing listProviders mock in health-factor test ([6939e35](https://github.com/minhoyoo-iotrust/WAIaaS/commit/6939e35e5dfabf62e60623bd5a06b5e77ac66a46))
+* **lending:** use suffix matching for borrow action names in LTV policy ([cdd81f7](https://github.com/minhoyoo-iotrust/WAIaaS/commit/cdd81f7fdc0bc4fc07e25788a50376afe5def680))
+* resolve 3 open issues ([#210](https://github.com/minhoyoo-iotrust/WAIaaS/issues/210), [#212](https://github.com/minhoyoo-iotrust/WAIaaS/issues/212), [#213](https://github.com/minhoyoo-iotrust/WAIaaS/issues/213)) ([5e66eaa](https://github.com/minhoyoo-iotrust/WAIaaS/commit/5e66eaa9b656e652e9d610af228b2c75a047ce8e))
+
 ## [2.9.0-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc...v2.9.0-rc.1) (2026-02-27)
 
 
