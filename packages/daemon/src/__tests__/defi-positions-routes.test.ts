@@ -444,6 +444,7 @@ describe('GET /v1/wallet/health-factor', () => {
 
     const mockRegistry = {
       getProvider: vi.fn().mockReturnValue(mockProvider),
+      listProviders: vi.fn().mockReturnValue([{ name: 'aave_v3' }]),
     } as unknown as ActionProviderRegistry;
 
     const appWithRegistry = createApp({
