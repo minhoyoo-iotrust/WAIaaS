@@ -294,6 +294,14 @@ describe('SettingsService', () => {
       const all = service.getAll();
       expect(all.notifications!.telegram_bot_token).toBe('decrypted-secret');
     });
+
+    it('returns non-encrypted DB row value directly', () => {
+      // Set a non-credential value (stored as plaintext, encrypted=false)
+      service.set('daemon.log_level', 'trace');
+
+      const all = service.getAll();
+      expect(all.daemon!.log_level).toBe('trace');
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -424,6 +432,154 @@ describe('SettingsService', () => {
     it('has expected number of definitions', () => {
       // 11 notifications + 13 rpc + 14 security + 1 daemon + 2 walletconnect + 2 oracle + 1 display + 6 autostop + 5 monitoring + 2 telegram + 8 signing_sdk + 7 incoming + 31 actions + 1 policy + 5 gas_condition + 13 rpc_pool + 1 position_tracker = 135
       expect(SETTING_DEFINITIONS.length).toBe(135);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // hasApiKey()
+  // -------------------------------------------------------------------------
+
+  describe('hasApiKey()', () => {
+    it('returns true when API key exists with non-empty value', () => {
+      service.set('actions.jupiter_swap_api_key', 'my-api-key-12345678');
+      expect(service.hasApiKey('jupiter_swap')).toBe(true);
+    });
+
+    it('returns false when no API key row exists', () => {
+      expect(service.hasApiKey('jupiter_swap')).toBe(false);
+    });
+
+    it('returns false when encrypted data is corrupted', () => {
+      // Insert corrupted encrypted row directly
+      db.insert(settings).values({
+        key: 'actions.jupiter_swap_api_key',
+        value: 'corrupted-not-valid-encrypted-data',
+        encrypted: true,
+        category: 'actions',
+        updatedAt: new Date(),
+      }).run();
+
+      expect(service.hasApiKey('jupiter_swap')).toBe(false);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // getApiKeyMasked()
+  // -------------------------------------------------------------------------
+
+  describe('getApiKeyMasked()', () => {
+    it('returns masked key for long API key (> 6 chars)', () => {
+      service.set('actions.jupiter_swap_api_key', 'sk-abcdefgh');
+      const masked = service.getApiKeyMasked('jupiter_swap');
+      expect(masked).toBe('sk-a...gh');
+    });
+
+    it('returns masked key for medium API key (4-6 chars)', () => {
+      service.set('actions.jupiter_swap_api_key', 'abcd');
+      const masked = service.getApiKeyMasked('jupiter_swap');
+      expect(masked).toBe('ab...');
+    });
+
+    it('returns masked key for short API key (< 4 chars)', () => {
+      service.set('actions.jupiter_swap_api_key', 'ab');
+      const masked = service.getApiKeyMasked('jupiter_swap');
+      expect(masked).toBe('****');
+    });
+
+    it('returns null when no key exists', () => {
+      expect(service.getApiKeyMasked('jupiter_swap')).toBeNull();
+    });
+
+    it('returns null when encrypted data is corrupted', () => {
+      db.insert(settings).values({
+        key: 'actions.jupiter_swap_api_key',
+        value: 'corrupted-data',
+        encrypted: true,
+        category: 'actions',
+        updatedAt: new Date(),
+      }).run();
+
+      expect(service.getApiKeyMasked('jupiter_swap')).toBeNull();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // getApiKeyUpdatedAt()
+  // -------------------------------------------------------------------------
+
+  describe('getApiKeyUpdatedAt()', () => {
+    it('returns Date when API key exists', () => {
+      service.set('actions.jupiter_swap_api_key', 'my-key-12345678');
+      const updatedAt = service.getApiKeyUpdatedAt('jupiter_swap');
+      expect(updatedAt).toBeInstanceOf(Date);
+    });
+
+    it('returns null when no key exists', () => {
+      expect(service.getApiKeyUpdatedAt('jupiter_swap')).toBeNull();
+    });
+
+    it('returns null when encrypted data is corrupted', () => {
+      db.insert(settings).values({
+        key: 'actions.jupiter_swap_api_key',
+        value: 'corrupted-data',
+        encrypted: true,
+        category: 'actions',
+        updatedAt: new Date(),
+      }).run();
+
+      expect(service.getApiKeyUpdatedAt('jupiter_swap')).toBeNull();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // getAllMasked() - encrypted credential paths
+  // -------------------------------------------------------------------------
+
+  describe('getAllMasked() - encrypted credentials', () => {
+    it('masks encrypted non-empty credential as true', () => {
+      service.set('notifications.telegram_bot_token', 'encrypted-secret');
+      const masked = service.getAllMasked();
+      expect(masked.notifications!.telegram_bot_token).toBe(true);
+    });
+
+    it('masks corrupted encrypted credential as false', () => {
+      db.insert(settings).values({
+        key: 'notifications.telegram_bot_token',
+        value: 'corrupted-encrypted-data',
+        encrypted: true,
+        category: 'notifications',
+        updatedAt: new Date(),
+      }).run();
+
+      const masked = service.getAllMasked();
+      expect(masked.notifications!.telegram_bot_token).toBe(false);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // importFromConfig() - empty string handling
+  // -------------------------------------------------------------------------
+
+  describe('importFromConfig() - empty string skip', () => {
+    it('skips empty string config values that differ from default', () => {
+      // ntfy_server defaults to 'https://ntfy.sh', config value '' differs from default
+      // so it passes the default check but gets caught by empty string check
+      const customConfig = createTestConfig({
+        notifications: { ntfy_server: '' },
+      });
+      const svc = new SettingsService({
+        db,
+        config: customConfig,
+        masterPassword: TEST_MASTER_PASSWORD,
+      });
+
+      const result = svc.importFromConfig();
+
+      // ntfy_server should NOT be imported (empty string skipped)
+      const row = db.select().from(settings)
+        .where(eq(settings.key, 'notifications.ntfy_server')).get();
+      expect(row).toBeUndefined();
+      expect(result.skipped).toBeGreaterThan(0);
     });
   });
 
