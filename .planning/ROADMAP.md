@@ -255,7 +255,7 @@ Phases execute in numeric order: 285 → 286
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 285. API 키 저장소 통합 | 0/? | Not started | - |
+| 285. API 키 저장소 통합 | 1/2 | In Progress|  |
 | 286. Solana 네트워크 ID 통일 | 0/? | Not started | - |
 
 ---
