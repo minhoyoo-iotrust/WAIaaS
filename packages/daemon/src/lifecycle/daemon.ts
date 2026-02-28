@@ -122,6 +122,8 @@ export class DaemonLifecycle {
   private masterPassword = '';
   private passwordRef: import('../api/middleware/master-auth.js').MasterPasswordRef | null = null;
   private rpcPool: RpcPool | null = null;
+  /** IRpcCaller for Aave V3 on-chain reads, passed to HotReloadOrchestrator */
+  private rpcCaller: { call: (params: { to: string; data: string; chainId?: number }) => Promise<string> } | undefined;
   private adapterPool: AdapterPool | null = null;
   private httpServer: { close: () => void } | null = null;
   private workers: BackgroundWorkers | null = null;
@@ -1122,6 +1124,9 @@ export class DaemonLifecycle {
         };
       })() : undefined;
 
+      // Store rpcCaller for HotReloadOrchestrator use
+      this.rpcCaller = rpcCaller;
+
       // Register built-in action providers from @waiaas/actions (reads from SettingsService)
       const { registerBuiltInProviders } = await import('@waiaas/actions');
       const builtIn = registerBuiltInProviders(this.actionProviderRegistry, this._settingsService!, { rpcCaller });
@@ -1258,6 +1263,7 @@ export class DaemonLifecycle {
           killSwitchService: this.killSwitchService,
           incomingTxMonitorService: this.incomingTxMonitorService,
           actionProviderRegistryRef: { current: this.actionProviderRegistry },
+          rpcCaller: this.rpcCaller ?? undefined,
         });
 
         const app = createApp({

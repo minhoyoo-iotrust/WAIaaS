@@ -513,7 +513,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         sqlite: deps.sqlite,
         notificationService: deps.notificationService,
         priceOracle: deps.priceOracle,
-        settingsService: deps.settingsService,
+        settingsService: deps.settingsService!,
       }),
     );
   }

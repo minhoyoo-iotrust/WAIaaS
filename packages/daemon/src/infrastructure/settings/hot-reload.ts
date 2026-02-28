@@ -44,6 +44,8 @@ export interface HotReloadDeps {
   incomingTxMonitorService?: { updateConfig: (config: Partial<any>) => void } | null;
   /** Duck-typed ActionProviderRegistry ref for hot-reload */
   actionProviderRegistryRef?: { current: import('../action/action-provider-registry.js').ActionProviderRegistry | null } | null;
+  /** IRpcCaller for Aave V3 on-chain reads via RpcPool */
+  rpcCaller?: { call: (params: { to: string; data: string; chainId?: number }) => Promise<string> } | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -469,16 +471,22 @@ export class HotReloadOrchestrator {
     const ss = this.deps.settingsService;
 
     // Built-in provider names (must match keys used in registerBuiltInProviders)
-    const BUILTIN_NAMES = ['jupiter_swap', 'zerox_swap', 'lifi', 'lido_staking', 'jito_staking'];
+    const BUILTIN_NAMES = [
+      'jupiter_swap', 'zerox_swap', 'lifi',
+      'lido_staking', 'jito_staking',
+      'aave_v3', 'kamino',
+    ];
 
     // Unregister all built-in providers first
     for (const name of BUILTIN_NAMES) {
       registry.unregister(name);
     }
 
-    // Re-register enabled ones
+    // Re-register enabled ones (forward rpcCaller for Aave V3 on-chain reads)
     const { registerBuiltInProviders } = await import('@waiaas/actions');
-    const result = registerBuiltInProviders(registry, ss);
+    const result = registerBuiltInProviders(registry, ss, {
+      rpcCaller: this.deps.rpcCaller ?? undefined,
+    });
 
     console.log(
       `Hot-reload: Action providers reloaded (${result.loaded.length} enabled: ${result.loaded.join(', ') || 'none'}, ${result.skipped.length} disabled: ${result.skipped.join(', ') || 'none'})`,
