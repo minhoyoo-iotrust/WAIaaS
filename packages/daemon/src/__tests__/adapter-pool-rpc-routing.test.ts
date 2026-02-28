@@ -73,13 +73,13 @@ describe('Solana adapter resolves via RpcPool', () => {
 
   it('connects with highest-priority URL from pool', async () => {
     const rpcPool = new RpcPool();
-    rpcPool.register('devnet', [
+    rpcPool.register('solana-devnet', [
       'https://devnet-primary.example.com',
       'https://devnet-secondary.example.com',
     ]);
 
     const pool = new AdapterPool(rpcPool);
-    const adapter = await pool.resolve('solana', 'devnet');
+    const adapter = await pool.resolve('solana', 'solana-devnet');
 
     expect(adapter).toBeInstanceOf(MockSolanaAdapter);
     expect(mockSolanaConnect).toHaveBeenCalledWith('https://devnet-primary.example.com');
@@ -87,10 +87,10 @@ describe('Solana adapter resolves via RpcPool', () => {
 
   it('ignores provided rpcUrl fallback when pool has the network', async () => {
     const rpcPool = new RpcPool();
-    rpcPool.register('devnet', ['https://pool-url.example.com']);
+    rpcPool.register('solana-devnet', ['https://pool-url.example.com']);
 
     const pool = new AdapterPool(rpcPool);
-    await pool.resolve('solana', 'devnet', 'https://fallback-should-be-ignored.rpc');
+    await pool.resolve('solana', 'solana-devnet', 'https://fallback-should-be-ignored.rpc');
 
     // Pool URL takes priority over provided fallback
     expect(mockSolanaConnect).toHaveBeenCalledWith('https://pool-url.example.com');
@@ -141,11 +141,11 @@ describe('Fallback to rpcUrl when pool has no network', () => {
 
   it('Solana: falls back to provided rpcUrl for unregistered network', async () => {
     const rpcPool = new RpcPool();
-    rpcPool.register('devnet', ['https://devnet.example.com']); // only devnet registered
+    rpcPool.register('solana-devnet', ['https://devnet.example.com']); // only devnet registered
 
     const pool = new AdapterPool(rpcPool);
     // Request mainnet which is NOT registered in pool
-    const adapter = await pool.resolve('solana', 'mainnet', 'https://my-mainnet-fallback.rpc');
+    const adapter = await pool.resolve('solana', 'solana-mainnet', 'https://my-mainnet-fallback.rpc');
 
     expect(adapter).toBeInstanceOf(MockSolanaAdapter);
     expect(mockSolanaConnect).toHaveBeenCalledWith('https://my-mainnet-fallback.rpc');
@@ -168,7 +168,7 @@ describe('Fallback to rpcUrl when pool has no network', () => {
     const rpcPool = new RpcPool(); // empty pool
     const pool = new AdapterPool(rpcPool);
 
-    await pool.resolve('solana', 'devnet');
+    await pool.resolve('solana', 'solana-devnet');
 
     expect(mockSolanaConnect).toHaveBeenCalledWith('');
   });
@@ -189,7 +189,7 @@ describe('Pool URL rotation after failure report', () => {
       nowFn: () => now,
     });
 
-    rpcPool.register('devnet', [
+    rpcPool.register('solana-devnet', [
       'https://url-1.rpc',
       'https://url-2.rpc',
     ]);
@@ -197,24 +197,24 @@ describe('Pool URL rotation after failure report', () => {
     const adapterPool = new AdapterPool(rpcPool);
 
     // First resolve -> URL-1 (highest priority)
-    const adapter1 = await adapterPool.resolve('solana', 'devnet');
+    const adapter1 = await adapterPool.resolve('solana', 'solana-devnet');
     expect(mockSolanaConnect).toHaveBeenCalledWith('https://url-1.rpc');
     expect(adapter1).toBeInstanceOf(MockSolanaAdapter);
 
     // Report failure on URL-1
-    adapterPool.reportRpcFailure('devnet', 'https://url-1.rpc');
+    adapterPool.reportRpcFailure('solana-devnet', 'https://url-1.rpc');
 
     // Verify URL-1 is in cooldown
-    const status = rpcPool.getStatus('devnet');
+    const status = rpcPool.getStatus('solana-devnet');
     expect(status[0]!.status).toBe('cooldown');
     expect(status[1]!.status).toBe('available');
 
     // Evict cached adapter so next resolve creates a fresh one
-    await adapterPool.evict('solana', 'devnet');
+    await adapterPool.evict('solana', 'solana-devnet');
     mockSolanaConnect.mockClear();
 
     // Second resolve -> should get URL-2 (URL-1 is in cooldown)
-    const adapter2 = await adapterPool.resolve('solana', 'devnet');
+    const adapter2 = await adapterPool.resolve('solana', 'solana-devnet');
     expect(mockSolanaConnect).toHaveBeenCalledWith('https://url-2.rpc');
     expect(adapter2).toBeInstanceOf(MockSolanaAdapter);
   });
@@ -226,7 +226,7 @@ describe('Pool URL rotation after failure report', () => {
       nowFn: () => now,
     });
 
-    rpcPool.register('devnet', [
+    rpcPool.register('solana-devnet', [
       'https://url-1.rpc',
       'https://url-2.rpc',
     ]);
@@ -234,21 +234,21 @@ describe('Pool URL rotation after failure report', () => {
     const adapterPool = new AdapterPool(rpcPool);
 
     // Resolve -> URL-1
-    await adapterPool.resolve('solana', 'devnet');
+    await adapterPool.resolve('solana', 'solana-devnet');
     expect(mockSolanaConnect).toHaveBeenCalledWith('https://url-1.rpc');
 
     // Fail URL-1
-    adapterPool.reportRpcFailure('devnet', 'https://url-1.rpc');
+    adapterPool.reportRpcFailure('solana-devnet', 'https://url-1.rpc');
 
     // Advance time past cooldown
     now += 70_000;
 
     // Evict and re-resolve
-    await adapterPool.evict('solana', 'devnet');
+    await adapterPool.evict('solana', 'solana-devnet');
     mockSolanaConnect.mockClear();
 
     // URL-1 cooldown expired -> URL-1 should be first again
-    await adapterPool.resolve('solana', 'devnet');
+    await adapterPool.resolve('solana', 'solana-devnet');
     expect(mockSolanaConnect).toHaveBeenCalledWith('https://url-1.rpc');
   });
 });
@@ -263,31 +263,31 @@ describe('RpcPool reset clears cooldown for hot-reload', () => {
       nowFn: () => now,
     });
 
-    rpcPool.register('devnet', [
+    rpcPool.register('solana-devnet', [
       'https://url-1.rpc',
       'https://url-2.rpc',
     ]);
 
     // Put URL-1 in cooldown
-    rpcPool.reportFailure('devnet', 'https://url-1.rpc');
-    expect(rpcPool.getStatus('devnet')[0]!.status).toBe('cooldown');
-    expect(rpcPool.getUrl('devnet')).toBe('https://url-2.rpc'); // URL-1 skipped
+    rpcPool.reportFailure('solana-devnet', 'https://url-1.rpc');
+    expect(rpcPool.getStatus('solana-devnet')[0]!.status).toBe('cooldown');
+    expect(rpcPool.getUrl('solana-devnet')).toBe('https://url-2.rpc'); // URL-1 skipped
 
     // Reset cooldown (simulates hot-reload behavior)
-    rpcPool.reset('devnet');
+    rpcPool.reset('solana-devnet');
 
     // URL-1 should be available again (first in priority)
-    expect(rpcPool.getStatus('devnet')[0]!.status).toBe('available');
-    expect(rpcPool.getStatus('devnet')[0]!.failureCount).toBe(0);
-    expect(rpcPool.getUrl('devnet')).toBe('https://url-1.rpc');
+    expect(rpcPool.getStatus('solana-devnet')[0]!.status).toBe('available');
+    expect(rpcPool.getStatus('solana-devnet')[0]!.failureCount).toBe(0);
+    expect(rpcPool.getUrl('solana-devnet')).toBe('https://url-1.rpc');
   });
 
   it('hasNetwork returns true for registered networks', () => {
     const rpcPool = new RpcPool();
-    rpcPool.register('devnet', ['https://url.rpc']);
+    rpcPool.register('solana-devnet', ['https://url.rpc']);
 
-    expect(rpcPool.hasNetwork('devnet')).toBe(true);
-    expect(rpcPool.hasNetwork('mainnet')).toBe(false);
+    expect(rpcPool.hasNetwork('solana-devnet')).toBe(true);
+    expect(rpcPool.hasNetwork('solana-mainnet')).toBe(false);
   });
 
   it('reset on non-existent network is a no-op', () => {

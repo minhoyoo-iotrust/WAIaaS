@@ -397,8 +397,8 @@ describe('BUG-3: Gap Recovery Wiring', () => {
     expect(onGapRecovery).toBeDefined();
     expect(typeof onGapRecovery).toBe('function');
 
-    // Call onGapRecovery for solana:mainnet
-    await onGapRecovery('solana', 'mainnet', ['w1']);
+    // Call onGapRecovery for solana:solana-mainnet
+    await onGapRecovery('solana', 'solana-mainnet', ['w1']);
 
     // Assert subscriber.pollAll() was called (via createGapRecoveryHandler -> entry.subscriber.pollAll())
     expect(mockPollAll).toHaveBeenCalledTimes(1);
@@ -443,10 +443,10 @@ describe('BUG-3: Gap Recovery Wiring', () => {
     const multiplexer = (service as any).multiplexer;
     const onGapRecovery = (multiplexer as any).deps.onGapRecovery;
 
-    // Call onGapRecovery for 'ethereum:mainnet' which has no subscriber
+    // Call onGapRecovery for 'ethereum:ethereum-mainnet' which has no subscriber
     // Should NOT throw -- createGapRecoveryHandler gracefully skips missing entries
     await expect(
-      onGapRecovery('ethereum', 'mainnet', ['w1']),
+      onGapRecovery('ethereum', 'ethereum-mainnet', ['w1']),
     ).resolves.not.toThrow();
 
     // solana pollAll should NOT have been called (we requested ethereum)

@@ -194,7 +194,7 @@ describe.skipIf(!DEVNET_ENABLED)('Level 3: Solana Devnet', () => {
   beforeAll(async () => {
     if (!DEVNET_ENABLED) return;
 
-    adapter = new SolanaAdapter('devnet');
+    adapter = new SolanaAdapter('solana-devnet');
     await adapter.connect(DEVNET_RPC_URL);
 
     // Generate fresh key pairs for this test run

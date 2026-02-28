@@ -46,7 +46,7 @@ let passwordHash: string;
 function createMockAdapter(): IChainAdapter {
   return {
     chain: 'solana' as const,
-    network: 'devnet' as const,
+    network: 'solana-devnet' as const,
     connect: async () => {},
     disconnect: async () => {},
     isConnected: () => true,
@@ -440,8 +440,8 @@ describe('GET /v1/connect-info', () => {
 
     // Network list must appear
     expect(prompt).toContain('Networks:');
-    expect(prompt).toContain('devnet');
-    expect(prompt).toContain('testnet');
+    expect(prompt).toContain('solana-devnet');
+    expect(prompt).toContain('solana-testnet');
 
     // walletId usage instructions reference UUID
     expect(prompt).toContain('UUID from the ID field above');
@@ -461,8 +461,8 @@ describe('GET /v1/connect-info', () => {
     expect(wA.availableNetworks).toBeDefined();
     expect(Array.isArray(wA.availableNetworks)).toBe(true);
     expect(wA.availableNetworks.length).toBeGreaterThan(0);
-    expect(wA.availableNetworks).toContain('devnet');
-    expect(wA.availableNetworks).toContain('testnet');
+    expect(wA.availableNetworks).toContain('solana-devnet');
+    expect(wA.availableNetworks).toContain('solana-testnet');
   });
 
   it('rejects without session token (401)', async () => {

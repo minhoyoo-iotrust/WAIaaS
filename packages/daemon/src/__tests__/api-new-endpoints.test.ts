@@ -164,7 +164,7 @@ function mockKeyStore(): LocalKeyStore {
 function mockAdapter(assets: AssetInfo[] = MOCK_ASSETS): IChainAdapter {
   return {
     chain: 'solana' as const,
-    network: 'devnet' as const,
+    network: 'solana-devnet' as const,
     connect: async () => {},
     disconnect: async () => {},
     isConnected: () => true,
@@ -343,7 +343,7 @@ describe('GET /v1/wallet/assets', () => {
     const body = await json(res);
     expect(body.walletId).toBe(walletId);
     expect(body.chain).toBe('solana');
-    expect(body.network).toBe('devnet');
+    expect(body.network).toBe('solana-devnet');
 
     const assets = body.assets as Array<Record<string, unknown>>;
     expect(assets).toHaveLength(2);
@@ -592,7 +592,7 @@ describe('GET /v1/wallets (list)', () => {
     // Check shape
     expect(items[0]!.id).toBeTruthy();
     expect(items[0]!.chain).toBe('solana');
-    expect(items[0]!.network).toBe('devnet');
+    expect(items[0]!.network).toBe('solana-devnet');
     expect(items[0]!.publicKey).toBeTruthy();
     expect(items[0]!.status).toBe('ACTIVE');
     expect(typeof items[0]!.createdAt).toBe('number');
@@ -629,7 +629,7 @@ describe('GET /v1/wallets/:id (detail)', () => {
     expect(body.id).toBe(walletId);
     expect(body.name).toBe('test-wallet');
     expect(body.chain).toBe('solana');
-    expect(body.network).toBe('devnet');
+    expect(body.network).toBe('solana-devnet');
     expect(body.publicKey).toBeTruthy();
     expect(body.status).toBe('ACTIVE');
     expect(body.ownerState).toBe('NONE');

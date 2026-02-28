@@ -312,8 +312,8 @@ describe('networkToCaip2()', () => {
     expect(networkToCaip2('ethereum-mainnet')).toBe('eip155:1');
   });
 
-  it('returns solana mainnet chain ID for mainnet', () => {
-    expect(networkToCaip2('mainnet')).toBe('solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp');
+  it('returns solana mainnet chain ID for solana-mainnet', () => {
+    expect(networkToCaip2('solana-mainnet')).toBe('solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp');
   });
 
   it('all 13 NetworkType values resolve without error', () => {
@@ -335,10 +335,10 @@ describe('caip2ToNetwork()', () => {
     });
   });
 
-  it('returns { chain: solana, network: mainnet } for solana mainnet chain ID', () => {
+  it('returns { chain: solana, network: solana-mainnet } for solana mainnet chain ID', () => {
     expect(caip2ToNetwork('solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp')).toEqual({
       chain: 'solana',
-      network: 'mainnet',
+      network: 'solana-mainnet',
     });
   });
 
@@ -362,8 +362,8 @@ describe('nativeAssetId()', () => {
     expect(nativeAssetId('polygon-amoy')).toBe('eip155:80002/slip44:966');
   });
 
-  it('returns solana mainnet native asset for mainnet', () => {
-    expect(nativeAssetId('mainnet')).toBe(
+  it('returns solana mainnet native asset for solana-mainnet', () => {
+    expect(nativeAssetId('solana-mainnet')).toBe(
       'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/slip44:501',
     );
   });
@@ -393,7 +393,7 @@ describe('tokenAssetId()', () => {
 
   it('preserves Solana base58 case and uses token namespace', () => {
     const result = tokenAssetId(
-      'mainnet',
+      'solana-mainnet',
       'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
     );
     expect(result).toBe(
@@ -415,7 +415,7 @@ describe('tokenAssetId()', () => {
     const evmAddr = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48';
     const solAddr = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
     for (const network of NETWORK_TYPES) {
-      const addr = ['mainnet', 'devnet', 'testnet'].includes(network) ? solAddr : evmAddr;
+      const addr = ['solana-mainnet', 'solana-devnet', 'solana-testnet'].includes(network) ? solAddr : evmAddr;
       const assetId = tokenAssetId(network, addr);
       expect(() => Caip19Schema.parse(assetId)).not.toThrow();
     }

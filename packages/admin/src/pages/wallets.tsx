@@ -140,9 +140,9 @@ const WALLET_PRESETS = [
 export function chainNetworkOptions(chain: string): { label: string; value: string }[] {
   if (chain === 'solana') {
     return [
-      { label: 'Devnet', value: 'devnet' },
-      { label: 'Testnet', value: 'testnet' },
-      { label: 'Mainnet', value: 'mainnet' },
+      { label: 'Solana Devnet', value: 'solana-devnet' },
+      { label: 'Solana Testnet', value: 'solana-testnet' },
+      { label: 'Solana Mainnet', value: 'solana-mainnet' },
     ];
   }
   if (chain === 'ethereum') {
@@ -159,7 +159,7 @@ export function chainNetworkOptions(chain: string): { label: string; value: stri
       { label: 'Base Mainnet', value: 'base-mainnet' },
     ];
   }
-  return [{ label: 'Devnet', value: 'devnet' }];
+  return [{ label: 'Solana Devnet', value: 'solana-devnet' }];
 }
 
 // walletColumns moved inside WalletListContent to reference balances signal
@@ -1363,9 +1363,9 @@ const evmNetworkOptions = [
 ];
 
 const NETWORK_DISPLAY_NAMES: Record<string, string> = {
-  'mainnet': 'Solana Mainnet',
-  'devnet': 'Solana Devnet',
-  'testnet': 'Solana Testnet',
+  'solana-mainnet': 'Solana Mainnet',
+  'solana-devnet': 'Solana Devnet',
+  'solana-testnet': 'Solana Testnet',
   'ethereum-mainnet': 'Ethereum Mainnet',
   'ethereum-sepolia': 'Ethereum Sepolia',
   'polygon-mainnet': 'Polygon Mainnet',
@@ -1378,7 +1378,7 @@ const NETWORK_DISPLAY_NAMES: Record<string, string> = {
   'base-sepolia': 'Base Sepolia',
 };
 
-const SOLANA_NETWORKS = ['mainnet', 'devnet', 'testnet'];
+const SOLANA_NETWORKS = ['solana-mainnet', 'solana-devnet', 'solana-testnet'];
 const EVM_NETWORKS = [
   'ethereum-mainnet', 'ethereum-sepolia',
   'polygon-mainnet', 'polygon-amoy',

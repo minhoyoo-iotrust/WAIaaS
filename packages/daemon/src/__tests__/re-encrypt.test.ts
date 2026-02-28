@@ -116,16 +116,14 @@ describe('reEncryptSettings', () => {
     const encValue = encryptSettingValue('secret-api-key', OLD_PW);
     const encApiKey = encryptSettingValue('provider-secret', OLD_PW);
 
+    // After v28 migration, API keys are stored in settings table with encrypted=true
     const settingsRows = [
       { key: 'some_key', value: encValue, encrypted: true, updatedAt: new Date() },
-    ];
-    const apiKeyRows = [
-      { providerName: 'test-provider', encryptedKey: encApiKey, createdAt: new Date(), updatedAt: new Date() },
+      { key: 'api_key.test-provider', value: encApiKey, encrypted: true, updatedAt: new Date() },
     ];
 
     // Track updates
     const settingsUpdates: { key: string; value: string }[] = [];
-    const apiKeyUpdates: { providerName: string; encryptedKey: string }[] = [];
 
     // Build a minimal mock DB using chained builder pattern
     const mockDb = {
@@ -135,7 +133,6 @@ describe('reEncryptSettings', () => {
             where: () => ({
               all: () => settingsRows,
             }),
-            all: () => apiKeyRows,
           }),
         };
       },
@@ -143,9 +140,7 @@ describe('reEncryptSettings', () => {
         set: (data: Record<string, unknown>) => ({
           where: () => ({
             run: () => {
-              if ('encryptedKey' in data) {
-                apiKeyUpdates.push(data as unknown as { providerName: string; encryptedKey: string });
-              } else if ('value' in data) {
+              if ('value' in data) {
                 settingsUpdates.push(data as unknown as { key: string; value: string });
               }
             },
@@ -161,16 +156,14 @@ describe('reEncryptSettings', () => {
       NEW_PW,
     );
 
-    expect(count).toBe(2); // 1 setting + 1 api key
+    expect(count).toBe(2); // 2 encrypted settings (including migrated api key)
 
-    // Verify the re-encrypted settings value can be decrypted with new password
-    expect(settingsUpdates).toHaveLength(1);
+    // Verify the re-encrypted settings values can be decrypted with new password
+    expect(settingsUpdates).toHaveLength(2);
     const decrypted = decryptSettingValue(settingsUpdates[0]!.value, NEW_PW);
     expect(decrypted).toBe('secret-api-key');
 
-    // Verify the re-encrypted API key can be decrypted with new password
-    expect(apiKeyUpdates).toHaveLength(1);
-    const decryptedApi = decryptSettingValue(apiKeyUpdates[0]!.encryptedKey, NEW_PW);
+    const decryptedApi = decryptSettingValue(settingsUpdates[1]!.value, NEW_PW);
     expect(decryptedApi).toBe('provider-secret');
   });
 

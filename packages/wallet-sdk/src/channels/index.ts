@@ -9,3 +9,4 @@ export {
   parseNotification,
 } from './ntfy.js';
 export { sendViaTelegram } from './telegram.js';
+export { sendViaRelay } from './relay.js';

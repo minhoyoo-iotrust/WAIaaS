@@ -50,14 +50,13 @@ const now = () => Math.floor(Date.now() / 1000);
 // ---------------------------------------------------------------------------
 
 describe('Schema creation', () => {
-  it('should create all 18 tables', () => {
+  it('should create all 17 tables', () => {
     const tables = sqlite
       .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
       .all() as Array<{ name: string }>;
 
     const tableNames = tables.map((t) => t.name).sort();
     expect(tableNames).toEqual([
-      'api_keys',
       'audit_log',
       'defi_positions',
       'incoming_transactions',

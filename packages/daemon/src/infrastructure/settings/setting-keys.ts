@@ -218,9 +218,9 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'gas_condition.max_pending_count', category: 'gas_condition', configPath: 'gas_condition.max_pending_count', defaultValue: '100', isCredential: false },
 
   // --- rpc_pool category (per-network URL lists managed via Admin Settings API) ---
-  { key: 'rpc_pool.mainnet', category: 'rpc_pool', configPath: 'rpc_pool.mainnet', defaultValue: '[]', isCredential: false },
-  { key: 'rpc_pool.devnet', category: 'rpc_pool', configPath: 'rpc_pool.devnet', defaultValue: '[]', isCredential: false },
-  { key: 'rpc_pool.testnet', category: 'rpc_pool', configPath: 'rpc_pool.testnet', defaultValue: '[]', isCredential: false },
+  { key: 'rpc_pool.solana-mainnet', category: 'rpc_pool', configPath: 'rpc_pool.solana-mainnet', defaultValue: '[]', isCredential: false },
+  { key: 'rpc_pool.solana-devnet', category: 'rpc_pool', configPath: 'rpc_pool.solana-devnet', defaultValue: '[]', isCredential: false },
+  { key: 'rpc_pool.solana-testnet', category: 'rpc_pool', configPath: 'rpc_pool.solana-testnet', defaultValue: '[]', isCredential: false },
   { key: 'rpc_pool.ethereum-mainnet', category: 'rpc_pool', configPath: 'rpc_pool.ethereum-mainnet', defaultValue: '[]', isCredential: false },
   { key: 'rpc_pool.ethereum-sepolia', category: 'rpc_pool', configPath: 'rpc_pool.ethereum-sepolia', defaultValue: '[]', isCredential: false },
   { key: 'rpc_pool.arbitrum-mainnet', category: 'rpc_pool', configPath: 'rpc_pool.arbitrum-mainnet', defaultValue: '[]', isCredential: false },

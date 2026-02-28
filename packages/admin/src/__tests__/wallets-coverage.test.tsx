@@ -96,7 +96,7 @@ const mockWalletDetail = {
   id: 'test-wallet-1',
   name: 'trading-bot',
   chain: 'solana',
-  network: 'devnet',
+  network: 'solana-devnet',
   environment: 'testnet',
   publicKey: 'ABC123DEF456GHI789JKL012MNO345PQR678STU901',
   status: 'ACTIVE',
@@ -115,16 +115,16 @@ const mockWalletWithOwner = {
 
 const mockNetworks = {
   availableNetworks: [
-    { network: 'devnet', name: 'Devnet' },
-    { network: 'testnet', name: 'Testnet' },
-    { network: 'mainnet', name: 'Mainnet' },
+    { network: 'solana-devnet', name: 'Devnet' },
+    { network: 'solana-testnet', name: 'Testnet' },
+    { network: 'solana-mainnet', name: 'Mainnet' },
   ],
 };
 
 const mockBalance = {
   balances: [
     {
-      network: 'devnet',
+      network: 'solana-devnet',
       native: { balance: '2.5', symbol: 'SOL' },
       tokens: [
         { symbol: 'USDC', balance: '100.00', address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v' },
@@ -141,7 +141,7 @@ const mockTransactions = {
       status: 'CONFIRMED',
       toAddress: '9xBdDfVcFk5JMZfKXXj3JxfJKe7r5pNAAQKi7pVKsFTH',
       amount: '1.5 SOL',
-      network: 'devnet',
+      network: 'solana-devnet',
       txHash: 'abcdef1234567890',
       createdAt: 1707609600,
     },
@@ -151,7 +151,7 @@ const mockTransactions = {
       status: 'FAILED',
       toAddress: null,
       amount: null,
-      network: 'devnet',
+      network: 'solana-devnet',
       txHash: null,
       createdAt: 1707696000,
     },
@@ -231,7 +231,7 @@ describe('WalletDetailView rendering', () => {
     expect(screen.getByText('Chain')).toBeTruthy();
     expect(screen.getByText('solana')).toBeTruthy();
     // 'devnet' appears in networks list, use getAllByText
-    expect(screen.getAllByText('devnet').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('solana-devnet').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Balances')).toBeTruthy();
     expect(screen.getByText('Available Networks')).toBeTruthy();
     // Tab labels visible in TabNav
@@ -823,7 +823,7 @@ describe('WalletDetailView: balance with no tokens', () => {
     vi.mocked(apiGet).mockImplementation(async (path: string) => {
       if (path === '/v1/wallets/test-wallet-1') return mockWalletDetail;
       if (path.includes('/networks')) return mockNetworks;
-      if (path.includes('/balance')) return { balances: [{ network: 'devnet', native: { balance: '1.0', symbol: 'SOL' }, tokens: [] }] };
+      if (path.includes('/balance')) return { balances: [{ network: 'solana-devnet', native: { balance: '1.0', symbol: 'SOL' }, tokens: [] }] };
       if (path.includes('/transactions')) return mockTransactions;
       if (path.includes('/wc/session')) throw new Error('No session');
       return {};
@@ -845,7 +845,7 @@ describe('WalletDetailView: wallet with balance error', () => {
     vi.mocked(apiGet).mockImplementation(async (path: string) => {
       if (path === '/v1/wallets/test-wallet-1') return mockWalletDetail;
       if (path.includes('/networks')) return mockNetworks;
-      if (path.includes('/balance')) return { balances: [{ network: 'devnet', native: null, tokens: [], error: 'RPC unavailable' }] };
+      if (path.includes('/balance')) return { balances: [{ network: 'solana-devnet', native: null, tokens: [], error: 'RPC unavailable' }] };
       if (path.includes('/transactions')) return mockTransactions;
       if (path.includes('/wc/session')) throw new Error('No session');
       return {};
@@ -869,7 +869,7 @@ const mockWalletList = {
       id: 'w-1',
       name: 'trading-bot',
       chain: 'solana',
-      network: 'devnet',
+      network: 'solana-devnet',
       environment: 'testnet',
       publicKey: 'ABC123DEF456GHI789',
       status: 'ACTIVE',
@@ -944,7 +944,7 @@ describe('WalletListContent', () => {
       id: 'w-3',
       name: 'new-bot',
       chain: 'solana',
-      network: 'devnet',
+      network: 'solana-devnet',
       environment: 'testnet',
       publicKey: 'XYZ',
       status: 'ACTIVE',
@@ -1140,9 +1140,9 @@ describe('RpcEndpointsTab', () => {
       if (path === '/v1/admin/rpc-status') return {
         networks: {},
         builtinUrls: {
-          mainnet: ['https://api.mainnet-beta.solana.com'],
-          devnet: ['https://api.devnet.solana.com'],
-          testnet: ['https://api.testnet.solana.com'],
+'solana-mainnet': ['https://api.mainnet-beta.solana.com'],
+'solana-devnet': ['https://api.devnet.solana.com'],
+'solana-testnet': ['https://api.testnet.solana.com'],
         },
       };
       return {};
@@ -1172,9 +1172,9 @@ describe('RpcEndpointsTab', () => {
       if (path === '/v1/admin/rpc-status') return {
         networks: {},
         builtinUrls: {
-          mainnet: ['https://api.mainnet-beta.solana.com'],
-          devnet: ['https://api.devnet.solana.com'],
-          testnet: ['https://api.testnet.solana.com'],
+'solana-mainnet': ['https://api.mainnet-beta.solana.com'],
+'solana-devnet': ['https://api.devnet.solana.com'],
+'solana-testnet': ['https://api.testnet.solana.com'],
         },
       };
       return {};

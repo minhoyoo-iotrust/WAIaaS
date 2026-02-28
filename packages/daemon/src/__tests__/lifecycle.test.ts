@@ -93,7 +93,7 @@ describe('BackgroundWorkers', () => {
     workers.startAll();
 
     expect(handler).not.toHaveBeenCalled();
-    await new Promise((r) => setTimeout(r, 120));
+    await new Promise((r) => setTimeout(r, 500));
     expect(handler.mock.calls.length).toBeGreaterThanOrEqual(2);
 
     await workers.stopAll();

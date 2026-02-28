@@ -31,7 +31,7 @@ const TEST_MASTER_PASSWORD = 'test-master-password';
 
 /** All 13 network keys matching BUILT_IN_RPC_DEFAULTS */
 const ALL_NETWORK_KEYS = [
-  'mainnet', 'devnet', 'testnet',
+  'solana-mainnet', 'solana-devnet', 'solana-testnet',
   'ethereum-mainnet', 'ethereum-sepolia',
   'arbitrum-mainnet', 'arbitrum-sepolia',
   'optimism-mainnet', 'optimism-sepolia',
@@ -80,7 +80,7 @@ describe('rpc_pool.* SettingDefinitions', () => {
     const { sqlite, db } = createTestDb();
     const ss = new SettingsService({ db, config: createTestConfig(), masterPassword: TEST_MASTER_PASSWORD });
 
-    expect(ss.get('rpc_pool.mainnet')).toBe('[]');
+    expect(ss.get('rpc_pool.solana-mainnet')).toBe('[]');
     expect(ss.get('rpc_pool.ethereum-sepolia')).toBe('[]');
 
     sqlite.close();
@@ -91,8 +91,8 @@ describe('rpc_pool.* SettingDefinitions', () => {
     const ss = new SettingsService({ db, config: createTestConfig(), masterPassword: TEST_MASTER_PASSWORD });
 
     const urls = '["https://custom.rpc.com","https://another.rpc.com"]';
-    ss.set('rpc_pool.mainnet', urls);
-    expect(ss.get('rpc_pool.mainnet')).toBe(urls);
+    ss.set('rpc_pool.solana-mainnet', urls);
+    expect(ss.get('rpc_pool.solana-mainnet')).toBe(urls);
 
     sqlite.close();
   });
@@ -105,38 +105,38 @@ describe('rpc_pool.* SettingDefinitions', () => {
 describe('RpcPool.replaceNetwork()', () => {
   it('replaces existing URLs completely', () => {
     const pool = new RpcPool();
-    pool.register('mainnet', ['https://a.com', 'https://b.com']);
+    pool.register('solana-mainnet', ['https://a.com', 'https://b.com']);
 
-    pool.replaceNetwork('mainnet', ['https://x.com', 'https://y.com']);
+    pool.replaceNetwork('solana-mainnet', ['https://x.com', 'https://y.com']);
 
-    expect(pool.getUrl('mainnet')).toBe('https://x.com');
-    const status = pool.getStatus('mainnet');
+    expect(pool.getUrl('solana-mainnet')).toBe('https://x.com');
+    const status = pool.getStatus('solana-mainnet');
     expect(status).toHaveLength(2);
     expect(status.map((s) => s.url)).toEqual(['https://x.com', 'https://y.com']);
   });
 
   it('empty array removes the network', () => {
     const pool = new RpcPool();
-    pool.register('mainnet', ['https://a.com']);
-    expect(pool.hasNetwork('mainnet')).toBe(true);
+    pool.register('solana-mainnet', ['https://a.com']);
+    expect(pool.hasNetwork('solana-mainnet')).toBe(true);
 
-    pool.replaceNetwork('mainnet', []);
-    expect(pool.hasNetwork('mainnet')).toBe(false);
+    pool.replaceNetwork('solana-mainnet', []);
+    expect(pool.hasNetwork('solana-mainnet')).toBe(false);
   });
 
   it('cooldown state is cleared after replacement', () => {
     const now = 0;
     const pool = new RpcPool({ nowFn: () => now });
-    pool.register('mainnet', ['https://a.com', 'https://b.com']);
+    pool.register('solana-mainnet', ['https://a.com', 'https://b.com']);
 
     // Put first URL into cooldown
-    pool.reportFailure('mainnet', 'https://a.com');
-    const statusBefore = pool.getStatus('mainnet');
+    pool.reportFailure('solana-mainnet', 'https://a.com');
+    const statusBefore = pool.getStatus('solana-mainnet');
     expect(statusBefore[0]!.status).toBe('cooldown');
 
     // Replace -- all entries should be fresh
-    pool.replaceNetwork('mainnet', ['https://a.com', 'https://c.com']);
-    const statusAfter = pool.getStatus('mainnet');
+    pool.replaceNetwork('solana-mainnet', ['https://a.com', 'https://c.com']);
+    const statusAfter = pool.getStatus('solana-mainnet');
     expect(statusAfter[0]!.status).toBe('available');
     expect(statusAfter[0]!.failureCount).toBe(0);
     expect(statusAfter[1]!.status).toBe('available');
@@ -197,10 +197,10 @@ describe('HotReloadOrchestrator rpc_pool.* dispatch', () => {
       adapterPool: mockAdapterPool,
     });
 
-    await orchestrator.handleChangedKeys(['rpc_pool.mainnet']);
+    await orchestrator.handleChangedKeys(['rpc_pool.solana-mainnet']);
 
     expect(logSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Hot-reload: RpcPool mainnet updated'),
+      expect.stringContaining('Hot-reload: RpcPool solana-mainnet updated'),
     );
 
     logSpy.mockRestore();
@@ -209,17 +209,17 @@ describe('HotReloadOrchestrator rpc_pool.* dispatch', () => {
   it('user URL takes highest priority', async () => {
     vi.spyOn(console, 'log').mockImplementation(() => {});
 
-    settingsService.set('rpc_pool.devnet', '["https://custom.dev.com"]');
+    settingsService.set('rpc_pool.solana-devnet', '["https://custom.dev.com"]');
 
     const orchestrator = new HotReloadOrchestrator({
       settingsService,
       adapterPool: mockAdapterPool,
     });
 
-    await orchestrator.handleChangedKeys(['rpc_pool.devnet']);
+    await orchestrator.handleChangedKeys(['rpc_pool.solana-devnet']);
 
     // User URL should be first
-    expect(rpcPool.getUrl('devnet')).toBe('https://custom.dev.com');
+    expect(rpcPool.getUrl('solana-devnet')).toBe('https://custom.dev.com');
 
     vi.restoreAllMocks();
   });
@@ -234,17 +234,17 @@ describe('HotReloadOrchestrator rpc_pool.* dispatch', () => {
     const ssWithConfig = new SettingsService({ db, config: configWithRpc, masterPassword: TEST_MASTER_PASSWORD });
 
     // User sets custom URL via Admin Settings
-    ssWithConfig.set('rpc_pool.mainnet', '["https://user-rpc.com"]');
+    ssWithConfig.set('rpc_pool.solana-mainnet', '["https://user-rpc.com"]');
 
     const orchestrator = new HotReloadOrchestrator({
       settingsService: ssWithConfig,
       adapterPool: mockAdapterPool,
     });
 
-    await orchestrator.handleChangedKeys(['rpc_pool.mainnet']);
+    await orchestrator.handleChangedKeys(['rpc_pool.solana-mainnet']);
 
     // Verify URL order: user -> config -> built-in
-    const status = rpcPool.getStatus('mainnet');
+    const status = rpcPool.getStatus('solana-mainnet');
     const urls = status.map((s) => s.url);
     expect(urls[0]).toBe('https://user-rpc.com');
     expect(urls[1]).toBe('https://config-rpc.com');
@@ -258,17 +258,17 @@ describe('HotReloadOrchestrator rpc_pool.* dispatch', () => {
     vi.spyOn(console, 'log').mockImplementation(() => {});
 
     // User URL is same as built-in default
-    settingsService.set('rpc_pool.mainnet', '["https://api.mainnet-beta.solana.com"]');
+    settingsService.set('rpc_pool.solana-mainnet', '["https://api.mainnet-beta.solana.com"]');
 
     const orchestrator = new HotReloadOrchestrator({
       settingsService,
       adapterPool: mockAdapterPool,
     });
 
-    await orchestrator.handleChangedKeys(['rpc_pool.mainnet']);
+    await orchestrator.handleChangedKeys(['rpc_pool.solana-mainnet']);
 
     // Should not have duplicate
-    const status = rpcPool.getStatus('mainnet');
+    const status = rpcPool.getStatus('solana-mainnet');
     const urlSet = new Set(status.map((s) => s.url));
     expect(urlSet.size).toBe(status.length);
 
@@ -278,17 +278,17 @@ describe('HotReloadOrchestrator rpc_pool.* dispatch', () => {
   it('invalid JSON is treated as empty user URL list', async () => {
     vi.spyOn(console, 'log').mockImplementation(() => {});
 
-    settingsService.set('rpc_pool.mainnet', 'not-valid-json');
+    settingsService.set('rpc_pool.solana-mainnet', 'not-valid-json');
 
     const orchestrator = new HotReloadOrchestrator({
       settingsService,
       adapterPool: mockAdapterPool,
     });
 
-    await orchestrator.handleChangedKeys(['rpc_pool.mainnet']);
+    await orchestrator.handleChangedKeys(['rpc_pool.solana-mainnet']);
 
     // Should still have built-in defaults (no user URLs due to invalid JSON)
-    const status = rpcPool.getStatus('mainnet');
+    const status = rpcPool.getStatus('solana-mainnet');
     expect(status.length).toBeGreaterThanOrEqual(1);
     // First URL should be a built-in default or config URL (not the invalid JSON)
     expect(status[0]!.url).toMatch(/^https:\/\//);
@@ -304,9 +304,9 @@ describe('HotReloadOrchestrator rpc_pool.* dispatch', () => {
       adapterPool: mockAdapterPool,
     });
 
-    await orchestrator.handleChangedKeys(['rpc_pool.mainnet']);
+    await orchestrator.handleChangedKeys(['rpc_pool.solana-mainnet']);
 
-    expect(mockAdapterPool.evict).toHaveBeenCalledWith('solana', 'mainnet');
+    expect(mockAdapterPool.evict).toHaveBeenCalledWith('solana', 'solana-mainnet');
 
     vi.restoreAllMocks();
   });
@@ -329,7 +329,7 @@ describe('HotReloadOrchestrator rpc_pool.* dispatch', () => {
   it('multiple network keys changed simultaneously are all processed', async () => {
     vi.spyOn(console, 'log').mockImplementation(() => {});
 
-    settingsService.set('rpc_pool.mainnet', '["https://sol-custom.com"]');
+    settingsService.set('rpc_pool.solana-mainnet', '["https://sol-custom.com"]');
     settingsService.set('rpc_pool.ethereum-sepolia', '["https://eth-custom.com"]');
 
     const orchestrator = new HotReloadOrchestrator({
@@ -337,14 +337,14 @@ describe('HotReloadOrchestrator rpc_pool.* dispatch', () => {
       adapterPool: mockAdapterPool,
     });
 
-    await orchestrator.handleChangedKeys(['rpc_pool.mainnet', 'rpc_pool.ethereum-sepolia']);
+    await orchestrator.handleChangedKeys(['rpc_pool.solana-mainnet', 'rpc_pool.ethereum-sepolia']);
 
     // Both networks should have user URLs as first
-    expect(rpcPool.getUrl('mainnet')).toBe('https://sol-custom.com');
+    expect(rpcPool.getUrl('solana-mainnet')).toBe('https://sol-custom.com');
     expect(rpcPool.getUrl('ethereum-sepolia')).toBe('https://eth-custom.com');
 
     // Both adapters should be evicted
-    expect(mockAdapterPool.evict).toHaveBeenCalledWith('solana', 'mainnet');
+    expect(mockAdapterPool.evict).toHaveBeenCalledWith('solana', 'solana-mainnet');
     expect(mockAdapterPool.evict).toHaveBeenCalledWith('ethereum', 'ethereum-sepolia');
 
     vi.restoreAllMocks();
@@ -358,7 +358,7 @@ describe('HotReloadOrchestrator rpc_pool.* dispatch', () => {
 
     // Should not throw
     await expect(
-      orchestrator.handleChangedKeys(['rpc_pool.mainnet']),
+      orchestrator.handleChangedKeys(['rpc_pool.solana-mainnet']),
     ).resolves.toBeUndefined();
   });
 
@@ -376,7 +376,7 @@ describe('HotReloadOrchestrator rpc_pool.* dispatch', () => {
 
     // Should not throw (early return when pool.pool is undefined)
     await expect(
-      orchestrator.handleChangedKeys(['rpc_pool.mainnet']),
+      orchestrator.handleChangedKeys(['rpc_pool.solana-mainnet']),
     ).resolves.toBeUndefined();
   });
 
@@ -390,11 +390,11 @@ describe('HotReloadOrchestrator rpc_pool.* dispatch', () => {
 
     // Only rpc_pool keys -- should NOT trigger rpc.* eviction logic
     mockAdapterPool.evict.mockClear();
-    await orchestrator.handleChangedKeys(['rpc_pool.devnet']);
+    await orchestrator.handleChangedKeys(['rpc_pool.solana-devnet']);
 
     // Evict should be called exactly once (from rpc_pool handler, for solana:devnet)
     expect(mockAdapterPool.evict).toHaveBeenCalledTimes(1);
-    expect(mockAdapterPool.evict).toHaveBeenCalledWith('solana', 'devnet');
+    expect(mockAdapterPool.evict).toHaveBeenCalledWith('solana', 'solana-devnet');
 
     vi.restoreAllMocks();
   });

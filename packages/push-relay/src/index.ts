@@ -8,5 +8,6 @@ export type { PushPayload } from './subscriber/message-parser.js';
 export { PushwooshProvider } from './providers/pushwoosh-provider.js';
 export { FcmProvider } from './providers/fcm-provider.js';
 export { createServer } from './server.js';
+export { createSignResponseRoutes } from './relay/sign-response-routes.js';
 export { ConfigurablePayloadTransformer } from './transformer/payload-transformer.js';
 export type { IPayloadTransformer } from './transformer/payload-transformer.js';

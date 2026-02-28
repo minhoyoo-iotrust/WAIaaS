@@ -315,7 +315,6 @@ describe('IT-06: CHECK constraint existence matrix', () => {
     { table: 'sessions', hasCheck: false, columns: [] },
     { table: 'key_value_store', hasCheck: false, columns: [] },
     { table: 'pending_approvals', hasCheck: false, columns: [] },
-    { table: 'api_keys', hasCheck: false, columns: [] },
     { table: 'settings', hasCheck: true, columns: ['encrypted'] }, // encrypted has IN(0,1)
   ];
 

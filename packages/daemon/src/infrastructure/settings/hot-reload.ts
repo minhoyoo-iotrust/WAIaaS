@@ -44,6 +44,8 @@ export interface HotReloadDeps {
   incomingTxMonitorService?: { updateConfig: (config: Partial<any>) => void } | null;
   /** Duck-typed ActionProviderRegistry ref for hot-reload */
   actionProviderRegistryRef?: { current: import('../action/action-provider-registry.js').ActionProviderRegistry | null } | null;
+  /** IRpcCaller for Aave V3 on-chain reads via RpcPool */
+  rpcCaller?: { call: (params: { to: string; data: string; chainId?: number }) => Promise<string> } | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -469,16 +471,22 @@ export class HotReloadOrchestrator {
     const ss = this.deps.settingsService;
 
     // Built-in provider names (must match keys used in registerBuiltInProviders)
-    const BUILTIN_NAMES = ['jupiter_swap', 'zerox_swap', 'lifi', 'lido_staking', 'jito_staking'];
+    const BUILTIN_NAMES = [
+      'jupiter_swap', 'zerox_swap', 'lifi',
+      'lido_staking', 'jito_staking',
+      'aave_v3', 'kamino',
+    ];
 
     // Unregister all built-in providers first
     for (const name of BUILTIN_NAMES) {
       registry.unregister(name);
     }
 
-    // Re-register enabled ones
+    // Re-register enabled ones (forward rpcCaller for Aave V3 on-chain reads)
     const { registerBuiltInProviders } = await import('@waiaas/actions');
-    const result = registerBuiltInProviders(registry, ss);
+    const result = registerBuiltInProviders(registry, ss, {
+      rpcCaller: this.deps.rpcCaller ?? undefined,
+    });
 
     console.log(
       `Hot-reload: Action providers reloaded (${result.loaded.length} enabled: ${result.loaded.join(', ') || 'none'}, ${result.skipped.length} disabled: ${result.skipped.join(', ') || 'none'})`,
@@ -506,7 +514,7 @@ export class HotReloadOrchestrator {
     const { BUILT_IN_RPC_DEFAULTS } = await import('@waiaas/core');
 
     for (const key of changedPoolKeys) {
-      // key format: 'rpc_pool.mainnet' or 'rpc_pool.ethereum-sepolia'
+      // key format: 'rpc_pool.solana-mainnet' or 'rpc_pool.ethereum-sepolia'
       const network = key.replace('rpc_pool.', '');
 
       // 1. Parse user-managed URL list from settings
@@ -552,7 +560,7 @@ export class HotReloadOrchestrator {
 
       // 6. Evict cached adapters for affected network
       // Determine chain type from network name
-      const solanaNetworks = new Set(['mainnet', 'devnet', 'testnet']);
+      const solanaNetworks = new Set(['solana-mainnet', 'solana-devnet', 'solana-testnet']);
       if (solanaNetworks.has(network)) {
         await pool.evict('solana' as any, network as any);
       } else {
@@ -563,13 +571,14 @@ export class HotReloadOrchestrator {
 
   /**
    * Reverse map: network name -> config.toml rpc field key.
-   * mainnet -> solana_mainnet, devnet -> solana_devnet, testnet -> solana_testnet
+   * solana-mainnet -> solana_mainnet, solana-devnet -> solana_devnet
    * ethereum-sepolia -> evm_ethereum_sepolia, base-mainnet -> evm_base_mainnet
    */
   private networkToConfigKey(network: string): string | null {
-    const solanaNetworks = new Set(['mainnet', 'devnet', 'testnet']);
+    const solanaNetworks = new Set(['solana-mainnet', 'solana-devnet', 'solana-testnet']);
     if (solanaNetworks.has(network)) {
-      return `solana_${network}`;
+      // solana-mainnet -> solana_mainnet (strip 'solana-', prefix 'solana_')
+      return `solana_${network.slice('solana-'.length)}`;
     }
     // EVM: ethereum-sepolia -> evm_ethereum_sepolia
     return `evm_${network.replace(/-/g, '_')}`;
@@ -588,7 +597,7 @@ export class HotReloadOrchestrator {
       const field = key.replace('rpc.', '');
 
       if (field.startsWith('solana_')) {
-        const network = field.replace('solana_', '');
+        const network = `solana-${field.replace('solana_', '')}`;
         await pool.evict('solana' as any, network as any);
         console.log(`Hot-reload: Evicted solana:${network} adapter`);
       } else if (field.startsWith('evm_')) {

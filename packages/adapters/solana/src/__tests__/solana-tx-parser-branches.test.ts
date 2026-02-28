@@ -92,7 +92,7 @@ function buildTxBase64(instruction: {
 }
 
 beforeAll(async () => {
-  adapter = new SolanaAdapter('devnet');
+  adapter = new SolanaAdapter('solana-devnet');
 
   const kp1 = await buildTestKeypair();
   const kp2 = await buildTestKeypair();

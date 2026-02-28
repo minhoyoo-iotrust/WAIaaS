@@ -87,7 +87,7 @@ function instructionsToRequests(
     programId: ix.programId,
     instructionData: ix.instructionData,
     accounts: ix.accounts,
-    network: 'mainnet' as const,
+    network: 'solana-mainnet' as const,
   }));
 }
 
@@ -446,7 +446,7 @@ export class KaminoLendingProvider implements ILendingProvider, IPositionProvide
           category: 'LENDING' as const,
           provider: 'kamino',
           chain: 'solana',
-          network: 'mainnet',
+          network: 'solana-mainnet',
           assetId: deposit.mintAddress,
           amount: deposit.amount.toString(),
           amountUsd: deposit.marketValueUsd,
@@ -462,7 +462,7 @@ export class KaminoLendingProvider implements ILendingProvider, IPositionProvide
           category: 'LENDING' as const,
           provider: 'kamino',
           chain: 'solana',
-          network: 'mainnet',
+          network: 'solana-mainnet',
           assetId: borrow.mintAddress,
           amount: borrow.amount.toString(),
           amountUsd: borrow.marketValueUsd,

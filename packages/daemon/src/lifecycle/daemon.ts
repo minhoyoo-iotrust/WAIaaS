@@ -122,6 +122,8 @@ export class DaemonLifecycle {
   private masterPassword = '';
   private passwordRef: import('../api/middleware/master-auth.js').MasterPasswordRef | null = null;
   private rpcPool: RpcPool | null = null;
+  /** IRpcCaller for Aave V3 on-chain reads, passed to HotReloadOrchestrator */
+  private rpcCaller: { call: (params: { to: string; data: string; chainId?: number }) => Promise<string> } | undefined;
   private adapterPool: AdapterPool | null = null;
   private httpServer: { close: () => void } | null = null;
   private workers: BackgroundWorkers | null = null;
@@ -137,7 +139,7 @@ export class DaemonLifecycle {
   private _settingsService: import('../infrastructure/settings/settings-service.js').SettingsService | null = null;
   private priceOracle: IPriceOracle | undefined;
   private actionProviderRegistry: import('../infrastructure/action/action-provider-registry.js').ActionProviderRegistry | null = null;
-  private apiKeyStore: import('../infrastructure/action/api-key-store.js').ApiKeyStore | null = null;
+  // apiKeyStore removed in v29.5 (#214) -- API keys now managed by SettingsService
   private forexRateService: IForexRateService | null = null;
   private eventBus: EventBus = new EventBus();
   private killSwitchService: KillSwitchService | null = null;
@@ -1081,13 +1083,13 @@ export class DaemonLifecycle {
     }
 
     // ------------------------------------------------------------------
-    // Step 4f: ActionProviderRegistry + ApiKeyStore (fail-soft)
+    // Step 4f: ActionProviderRegistry (fail-soft)
+    // API keys are managed by SettingsService since v29.5 (#214)
     // ------------------------------------------------------------------
     try {
-      const { ActionProviderRegistry, ApiKeyStore } =
+      const { ActionProviderRegistry } =
         await import('../infrastructure/action/index.js');
 
-      this.apiKeyStore = new ApiKeyStore(this._db!, masterPassword, this.passwordRef ?? undefined);
       this.actionProviderRegistry = new ActionProviderRegistry();
 
       // Create IRpcCaller for Aave V3 using RpcPool eth_call.
@@ -1121,6 +1123,9 @@ export class DaemonLifecycle {
           },
         };
       })() : undefined;
+
+      // Store rpcCaller for HotReloadOrchestrator use
+      this.rpcCaller = rpcCaller;
 
       // Register built-in action providers from @waiaas/actions (reads from SettingsService)
       const { registerBuiltInProviders } = await import('@waiaas/actions');
@@ -1258,6 +1263,7 @@ export class DaemonLifecycle {
           killSwitchService: this.killSwitchService,
           incomingTxMonitorService: this.incomingTxMonitorService,
           actionProviderRegistryRef: { current: this.actionProviderRegistry },
+          rpcCaller: this.rpcCaller ?? undefined,
         });
 
         const app = createApp({
@@ -1281,7 +1287,7 @@ export class DaemonLifecycle {
           settingsService: this._settingsService ?? undefined,
           priceOracle: this.priceOracle,
           actionProviderRegistry: this.actionProviderRegistry ?? undefined,
-          apiKeyStore: this.apiKeyStore ?? undefined,
+          // apiKeyStore removed in v29.5 -- API keys via SettingsService
           onSettingsChanged: (changedKeys: string[]) => {
             void hotReloader.handleChangedKeys(changedKeys);
           },

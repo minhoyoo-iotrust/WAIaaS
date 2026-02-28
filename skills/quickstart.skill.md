@@ -111,7 +111,7 @@ Response (201):
   "id": "01958f3a-1234-7000-8000-abcdef123456",
   "name": "my-first-wallet",
   "chain": "solana",
-  "network": "mainnet",
+  "network": "solana-mainnet",
   "environment": "mainnet",
   "publicKey": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
   "status": "ACTIVE",
@@ -124,7 +124,7 @@ Response (201):
 }
 ```
 
-The `network` field shows the wallet's primary network. Solana has a single auto-resolved network per environment (e.g., `mainnet`). EVM wallets require explicit network specification (e.g., `ethereum-mainnet`, `polygon-mainnet`).
+The `network` field shows the wallet's primary network. Solana has a single auto-resolved network per environment (e.g., `solana-mainnet`). EVM wallets require explicit network specification (e.g., `ethereum-mainnet`, `polygon-mainnet`).
 
 The `session` field contains the auto-created session token. Save the `token` value -- use it as `Authorization: Bearer <token>` for all wallet operations below. To skip auto-session creation, set `createSession: false`.
 
@@ -169,7 +169,7 @@ Response:
 {
   "walletId": "01958f3a-1234-7000-8000-abcdef123456",
   "chain": "solana",
-  "network": "mainnet",
+  "network": "solana-mainnet",
   "address": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
   "balance": "1000000000",
   "decimals": 9,
@@ -195,7 +195,7 @@ Response:
 {
   "walletId": "01958f3a-1234-7000-8000-abcdef123456",
   "chain": "solana",
-  "network": "mainnet",
+  "network": "solana-mainnet",
   "assets": [
     {
       "mint": "So11111111111111111111111111111111111111112",
@@ -268,7 +268,7 @@ Response:
   "status": "CONFIRMED",
   "tier": "INSTANT",
   "chain": "solana",
-  "network": "mainnet",
+  "network": "solana-mainnet",
   "toAddress": "9aE476sH92Vz7DMPyq5WLPkrKWivxeuTKEFKd2sZZcde",
   "amount": "100000000",
   "txHash": "5UfD...abc",

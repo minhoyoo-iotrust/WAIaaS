@@ -6,5 +6,3 @@
  */
 
 export { ActionProviderRegistry } from './action-provider-registry.js';
-export { ApiKeyStore } from './api-key-store.js';
-export type { ApiKeyListEntry } from './api-key-store.js';

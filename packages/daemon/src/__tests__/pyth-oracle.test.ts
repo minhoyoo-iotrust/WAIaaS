@@ -47,7 +47,7 @@ describe('PythOracle', () => {
       json: () => Promise.resolve(response),
     });
 
-    const result = await oracle.getPrice({ address: 'native', decimals: 9, chain: 'solana', network: 'mainnet' });
+    const result = await oracle.getPrice({ address: 'native', decimals: 9, chain: 'solana', network: 'solana-mainnet' });
 
     expect(result.usdPrice).toBeCloseTo(184.13602312, 6);
     expect(result.source).toBe('pyth');
@@ -90,7 +90,7 @@ describe('PythOracle', () => {
         address: 'UnKnOwNtOkEn1111111111111111111111111111',
         decimals: 6,
         chain: 'solana',
-        network: 'mainnet',
+        network: 'solana-mainnet',
       }),
     ).rejects.toThrow(PriceNotAvailableError);
 
@@ -109,7 +109,7 @@ describe('PythOracle', () => {
     });
 
     await expect(
-      oracle.getPrice({ address: 'native', decimals: 9, chain: 'solana', network: 'mainnet' }),
+      oracle.getPrice({ address: 'native', decimals: 9, chain: 'solana', network: 'solana-mainnet' }),
     ).rejects.toThrow(/Pyth API/);
   });
 
@@ -127,7 +127,7 @@ describe('PythOracle', () => {
       json: () => Promise.resolve(response),
     });
 
-    await oracle.getPrice({ address: 'native', decimals: 9, chain: 'solana', network: 'mainnet' });
+    await oracle.getPrice({ address: 'native', decimals: 9, chain: 'solana', network: 'solana-mainnet' });
 
     // Verify fetch was called with AbortSignal.timeout
     expect(fetchMock).toHaveBeenCalledOnce();
@@ -154,7 +154,7 @@ describe('PythOracle', () => {
     });
 
     const tokens = [
-      { address: 'native', decimals: 9, chain: 'solana' as const, network: 'mainnet' as const },
+      { address: 'native', decimals: 9, chain: 'solana' as const, network: 'solana-mainnet' as const },
       { address: 'native', decimals: 18, chain: 'ethereum' as const, network: 'ethereum-mainnet' as const },
     ];
 
@@ -254,7 +254,7 @@ describe('PythOracle', () => {
 describe('getNativeFeedId', () => {
   it('should return feed ID for supported networks', async () => {
     const { getNativeFeedId } = await import('../infrastructure/oracle/pyth-feed-ids.js');
-    expect(getNativeFeedId('mainnet')).toBeDefined();
+    expect(getNativeFeedId('solana-mainnet')).toBeDefined();
     expect(getNativeFeedId('ethereum-mainnet')).toBeDefined();
   });
 

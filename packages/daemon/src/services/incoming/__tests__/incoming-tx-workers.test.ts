@@ -44,7 +44,7 @@ function makeDetectedTx(
     id: `tx-id-${Math.random().toString(36).slice(2, 8)}`,
     tx_hash: `hash-${Math.random().toString(36).slice(2, 10)}`,
     chain,
-    network: chain === 'solana' ? 'mainnet' : 'mainnet',
+    network: chain === 'solana' ? 'solana-mainnet' : 'ethereum-mainnet',
     block_number: chain === 'ethereum' ? 100 : null,
     ...overrides,
   };
@@ -220,7 +220,7 @@ describe('incoming-tx-workers', () => {
     it('should upgrade DETECTED EVM tx when block confirmations >= mainnet threshold (12)', async () => {
       const row = makeDetectedTx('ethereum', {
         id: 'evm-1',
-        network: 'mainnet',
+        network: 'ethereum-mainnet',
         block_number: 100,
       });
       const mock = createConfirmationMockDb([row]);
@@ -232,7 +232,7 @@ describe('incoming-tx-workers', () => {
       });
       await handler();
 
-      expect(getBlockNumber).toHaveBeenCalledWith('ethereum', 'mainnet');
+      expect(getBlockNumber).toHaveBeenCalledWith('ethereum', 'ethereum-mainnet');
       expect(mock.getUpdateCalls()).toHaveLength(1);
       expect(mock.getUpdateCalls()[0]![1]).toBe('evm-1');
     });
@@ -240,7 +240,7 @@ describe('incoming-tx-workers', () => {
     it('should NOT upgrade EVM tx when confirmations < mainnet threshold', async () => {
       const row = makeDetectedTx('ethereum', {
         id: 'evm-2',
-        network: 'mainnet',
+        network: 'ethereum-mainnet',
         block_number: 100,
       });
       const mock = createConfirmationMockDb([row]);
@@ -278,7 +278,7 @@ describe('incoming-tx-workers', () => {
     it('should use sepolia threshold (1) for sepolia network', async () => {
       const row = makeDetectedTx('ethereum', {
         id: 'evm-sep',
-        network: 'sepolia',
+        network: 'ethereum-sepolia',
         block_number: 100,
       });
       const mock = createConfirmationMockDb([row]);
@@ -290,7 +290,7 @@ describe('incoming-tx-workers', () => {
       });
       await handler();
 
-      expect(EVM_CONFIRMATION_THRESHOLDS['sepolia']).toBe(1);
+      expect(EVM_CONFIRMATION_THRESHOLDS['ethereum-sepolia']).toBe(1);
       expect(mock.getUpdateCalls()).toHaveLength(1);
     });
 
@@ -311,12 +311,12 @@ describe('incoming-tx-workers', () => {
     it('should cache block numbers per network to avoid redundant RPC calls', async () => {
       const row1 = makeDetectedTx('ethereum', {
         id: 'evm-c1',
-        network: 'mainnet',
+        network: 'ethereum-mainnet',
         block_number: 100,
       });
       const row2 = makeDetectedTx('ethereum', {
         id: 'evm-c2',
-        network: 'mainnet',
+        network: 'ethereum-mainnet',
         block_number: 90,
       });
       const mock = createConfirmationMockDb([row1, row2]);
@@ -414,14 +414,14 @@ describe('incoming-tx-workers', () => {
     it('should INSERT OR REPLACE cursor for Solana wallet (last_signature)', () => {
       const mock = createCursorMockDb();
 
-      updateCursor(mock.db, 'wallet-1', 'solana', 'mainnet', 'sig-abc123');
+      updateCursor(mock.db, 'wallet-1', 'solana', 'solana-mainnet', 'sig-abc123');
 
       const calls = mock.getRunCalls();
       expect(calls).toHaveLength(1);
       // walletId, chain, network, last_signature, last_block_number, updated_at
       expect(calls[0]![0]).toBe('wallet-1');
       expect(calls[0]![1]).toBe('solana');
-      expect(calls[0]![2]).toBe('mainnet');
+      expect(calls[0]![2]).toBe('solana-mainnet');
       expect(calls[0]![3]).toBe('sig-abc123'); // last_signature
       expect(calls[0]![4]).toBeNull(); // last_block_number null for Solana
       expect(typeof calls[0]![5]).toBe('number'); // updated_at
@@ -430,13 +430,13 @@ describe('incoming-tx-workers', () => {
     it('should INSERT OR REPLACE cursor for EVM wallet (last_block_number)', () => {
       const mock = createCursorMockDb();
 
-      updateCursor(mock.db, 'wallet-2', 'ethereum', 'mainnet', '12345');
+      updateCursor(mock.db, 'wallet-2', 'ethereum', 'ethereum-mainnet', '12345');
 
       const calls = mock.getRunCalls();
       expect(calls).toHaveLength(1);
       expect(calls[0]![0]).toBe('wallet-2');
       expect(calls[0]![1]).toBe('ethereum');
-      expect(calls[0]![2]).toBe('mainnet');
+      expect(calls[0]![2]).toBe('ethereum-mainnet');
       expect(calls[0]![3]).toBeNull(); // last_signature null for EVM
       expect(calls[0]![4]).toBe(12345); // last_block_number parsed
     });
@@ -444,8 +444,8 @@ describe('incoming-tx-workers', () => {
     it('should replace existing cursor for same wallet+chain+network', () => {
       const mock = createCursorMockDb();
 
-      updateCursor(mock.db, 'wallet-1', 'solana', 'mainnet', 'sig-1');
-      updateCursor(mock.db, 'wallet-1', 'solana', 'mainnet', 'sig-2');
+      updateCursor(mock.db, 'wallet-1', 'solana', 'solana-mainnet', 'sig-1');
+      updateCursor(mock.db, 'wallet-1', 'solana', 'solana-mainnet', 'sig-2');
 
       // Both should execute (INSERT OR REPLACE handles the update at DB level)
       const calls = mock.getRunCalls();
@@ -460,7 +460,7 @@ describe('incoming-tx-workers', () => {
       const mock = createCursorMockDb();
       mock.setGetResult({ last_signature: 'sig-xyz', last_block_number: null });
 
-      const result = loadCursor(mock.db, 'wallet-1', 'solana', 'mainnet');
+      const result = loadCursor(mock.db, 'wallet-1', 'solana', 'solana-mainnet');
       expect(result).toBe('sig-xyz');
     });
 
@@ -468,7 +468,7 @@ describe('incoming-tx-workers', () => {
       const mock = createCursorMockDb();
       mock.setGetResult({ last_signature: null, last_block_number: 9999 });
 
-      const result = loadCursor(mock.db, 'wallet-2', 'ethereum', 'mainnet');
+      const result = loadCursor(mock.db, 'wallet-2', 'ethereum', 'ethereum-mainnet');
       expect(result).toBe('9999');
     });
 
@@ -476,7 +476,7 @@ describe('incoming-tx-workers', () => {
       const mock = createCursorMockDb();
       mock.setGetResult(undefined);
 
-      const result = loadCursor(mock.db, 'wallet-3', 'solana', 'devnet');
+      const result = loadCursor(mock.db, 'wallet-3', 'solana', 'solana-devnet');
       expect(result).toBeNull();
     });
 
@@ -484,7 +484,7 @@ describe('incoming-tx-workers', () => {
       const mock = createCursorMockDb();
       mock.setGetResult({ last_signature: null, last_block_number: null });
 
-      const result = loadCursor(mock.db, 'wallet-4', 'ethereum', 'sepolia');
+      const result = loadCursor(mock.db, 'wallet-4', 'ethereum', 'ethereum-sepolia');
       expect(result).toBeNull();
     });
 
@@ -492,11 +492,11 @@ describe('incoming-tx-workers', () => {
       const mock = createCursorMockDb();
       mock.setGetResult(undefined);
 
-      loadCursor(mock.db, 'w-abc', 'solana', 'devnet');
+      loadCursor(mock.db, 'w-abc', 'solana', 'solana-devnet');
 
       const getCalls = mock.getGetCalls();
       expect(getCalls).toHaveLength(1);
-      expect(getCalls[0]).toEqual(['w-abc', 'solana', 'devnet']);
+      expect(getCalls[0]).toEqual(['w-abc', 'solana', 'solana-devnet']);
     });
   });
 
@@ -508,11 +508,11 @@ describe('incoming-tx-workers', () => {
     it('should call pollAll() on the correct subscriber for chain:network', async () => {
       const mockPollAll = vi.fn().mockResolvedValue(undefined);
       const subscribers = new Map([
-        ['solana:mainnet', { subscriber: { pollAll: mockPollAll } }],
+        ['solana:solana-mainnet', { subscriber: { pollAll: mockPollAll } }],
       ]);
 
       const handler = createGapRecoveryHandler({ subscribers });
-      await handler('solana', 'mainnet', ['wallet-1', 'wallet-2']);
+      await handler('solana', 'solana-mainnet', ['wallet-1', 'wallet-2']);
 
       expect(mockPollAll).toHaveBeenCalledTimes(1);
     });
@@ -522,18 +522,18 @@ describe('incoming-tx-workers', () => {
 
       const handler = createGapRecoveryHandler({ subscribers });
       // Should not throw
-      await expect(handler('solana', 'devnet', ['wallet-x'])).resolves.toBeUndefined();
+      await expect(handler('solana', 'solana-devnet', ['wallet-x'])).resolves.toBeUndefined();
     });
 
     it('should warn but not throw when pollAll() fails', async () => {
       const mockPollAll = vi.fn().mockRejectedValue(new Error('RPC down'));
       const subscribers = new Map([
-        ['ethereum:mainnet', { subscriber: { pollAll: mockPollAll } }],
+        ['ethereum:ethereum-mainnet', { subscriber: { pollAll: mockPollAll } }],
       ]);
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       const handler = createGapRecoveryHandler({ subscribers });
-      await expect(handler('ethereum', 'mainnet', ['w1'])).resolves.toBeUndefined();
+      await expect(handler('ethereum', 'ethereum-mainnet', ['w1'])).resolves.toBeUndefined();
 
       expect(warnSpy).toHaveBeenCalledWith(
         expect.stringContaining('Gap recovery failed'),
@@ -549,7 +549,7 @@ describe('incoming-tx-workers', () => {
 
   describe('EVM_CONFIRMATION_THRESHOLDS', () => {
     it('should have mainnet = 12', () => {
-      expect(EVM_CONFIRMATION_THRESHOLDS['mainnet']).toBe(12);
+      expect(EVM_CONFIRMATION_THRESHOLDS['ethereum-mainnet']).toBe(12);
     });
 
     it('should have polygon-mainnet = 128', () => {
@@ -557,7 +557,7 @@ describe('incoming-tx-workers', () => {
     });
 
     it('should have all testnet thresholds = 1', () => {
-      expect(EVM_CONFIRMATION_THRESHOLDS['sepolia']).toBe(1);
+      expect(EVM_CONFIRMATION_THRESHOLDS['ethereum-sepolia']).toBe(1);
       expect(EVM_CONFIRMATION_THRESHOLDS['polygon-amoy']).toBe(1);
       expect(EVM_CONFIRMATION_THRESHOLDS['arbitrum-mainnet']).toBe(1);
       expect(EVM_CONFIRMATION_THRESHOLDS['arbitrum-sepolia']).toBe(1);

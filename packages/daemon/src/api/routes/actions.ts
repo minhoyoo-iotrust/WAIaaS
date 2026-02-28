@@ -21,7 +21,7 @@ import type { ChainType, NetworkType, EnvironmentType, IPolicyEngine } from '@wa
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import type { ActionProviderRegistry } from '../../infrastructure/action/action-provider-registry.js';
-import type { ApiKeyStore } from '../../infrastructure/action/api-key-store.js';
+// ApiKeyStore removed in v29.5 (#214) -- API keys managed by SettingsService
 import type { AdapterPool } from '../../infrastructure/adapter-pool.js';
 import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
 import type { MasterPasswordRef } from '../middleware/master-auth.js';
@@ -59,7 +59,6 @@ import { resolveWalletId } from '../helpers/resolve-wallet-id.js';
 
 export interface ActionRouteDeps {
   registry: ActionProviderRegistry;
-  apiKeyStore: ApiKeyStore;
   db: BetterSQLite3Database<typeof schema>;
   adapterPool: AdapterPool;
   config: DaemonConfig;
@@ -74,7 +73,7 @@ export interface ActionRouteDeps {
   sqlite?: SQLiteDatabase;
   notificationService?: NotificationService;
   priceOracle?: IPriceOracle;
-  settingsService?: SettingsService;
+  settingsService: SettingsService;
 }
 
 // ---------------------------------------------------------------------------
@@ -199,7 +198,7 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
         chains: meta.chains,
         mcpExpose: meta.mcpExpose,
         requiresApiKey: meta.requiresApiKey,
-        hasApiKey: deps.apiKeyStore.has(meta.name),
+        hasApiKey: deps.settingsService.hasApiKey(meta.name),
         actions: providerActions.map((a) => ({
           name: a.action.name,
           description: a.action.description,
@@ -237,7 +236,7 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
 
     // 3. Check API key requirement (after walletId resolution for notification context)
     if (entry.provider.metadata.requiresApiKey) {
-      if (!deps.apiKeyStore.has(entry.provider.metadata.name)) {
+      if (!deps.settingsService.hasApiKey(entry.provider.metadata.name)) {
         // Fire notification before throwing error
         const adminPort = deps.config.daemon?.port ?? 3000;
         const adminUrl = `http://localhost:${adminPort}/admin`;

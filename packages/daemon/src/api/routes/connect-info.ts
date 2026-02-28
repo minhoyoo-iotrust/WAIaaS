@@ -21,7 +21,7 @@ import { getNetworksForEnvironment } from '@waiaas/core';
 import type { ChainType, EnvironmentType } from '@waiaas/core';
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
 import type { SettingsService } from '../../infrastructure/settings/index.js';
-import type { ApiKeyStore } from '../../infrastructure/action/api-key-store.js';
+import type { ActionProviderRegistry } from '../../infrastructure/action/action-provider-registry.js';
 import type * as schema from '../../infrastructure/database/schema.js';
 import { sessions, sessionWallets, wallets, policies } from '../../infrastructure/database/schema.js';
 import {
@@ -38,7 +38,7 @@ export interface ConnectInfoRouteDeps {
   db: BetterSQLite3Database<typeof schema>;
   config: DaemonConfig;
   settingsService?: SettingsService;
-  apiKeyStore?: ApiKeyStore;
+  actionProviderRegistry?: ActionProviderRegistry;
   version: string;
 }
 
@@ -241,15 +241,18 @@ export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
       }
     }
 
-    // actions: check if apiKeyStore has any keys
-    if (deps.apiKeyStore) {
+    // actions: check if any providers have API keys configured
+    if (deps.settingsService && deps.actionProviderRegistry) {
       try {
-        const keys = deps.apiKeyStore.listAll();
-        if (keys.some((k) => k.hasKey)) {
+        const providers = deps.actionProviderRegistry.listProviders();
+        const hasAnyKey = providers.some(
+          (p) => p.requiresApiKey && deps.settingsService!.hasApiKey(p.name),
+        );
+        if (hasAnyKey) {
           capabilities.push('actions');
         }
       } catch {
-        // API key store not available
+        // Settings service not available
       }
     }
 

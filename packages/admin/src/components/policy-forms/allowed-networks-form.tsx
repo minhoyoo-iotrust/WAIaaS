@@ -8,9 +8,9 @@ interface NetworkRow {
 }
 
 const NETWORK_OPTIONS = [
-  { label: 'mainnet', value: 'mainnet' },
-  { label: 'devnet', value: 'devnet' },
-  { label: 'testnet', value: 'testnet' },
+  { label: 'solana-mainnet', value: 'solana-mainnet' },
+  { label: 'solana-devnet', value: 'solana-devnet' },
+  { label: 'solana-testnet', value: 'solana-testnet' },
   { label: 'ethereum-mainnet', value: 'ethereum-mainnet' },
   { label: 'ethereum-sepolia', value: 'ethereum-sepolia' },
   { label: 'polygon-mainnet', value: 'polygon-mainnet' },
@@ -31,7 +31,7 @@ export function AllowedNetworksForm({ rules, onChange, errors }: PolicyFormProps
       <DynamicRowList<NetworkRow>
         items={networks}
         onAdd={() =>
-          onChange({ ...rules, networks: [...networks, { network: 'mainnet', name: '' }] })
+          onChange({ ...rules, networks: [...networks, { network: 'solana-mainnet', name: '' }] })
         }
         onRemove={(i) =>
           onChange({ ...rules, networks: networks.filter((_, idx) => idx !== i) })

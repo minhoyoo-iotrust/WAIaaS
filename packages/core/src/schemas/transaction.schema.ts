@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { TransactionTypeEnum, TransactionStatusEnum } from '../enums/transaction.js';
 import { PolicyTierEnum } from '../enums/policy.js';
-import { ChainTypeEnum, NetworkTypeEnum } from '../enums/chain.js';
+import { ChainTypeEnum, NetworkTypeEnum, NetworkTypeEnumWithLegacy } from '../enums/chain.js';
 import { Caip19Schema, parseCaip19 } from '../caip/index.js';
 
 // ---------------------------------------------------------------------------
@@ -68,7 +68,7 @@ export const TransferRequestSchema = z.object({
   to: z.string().min(1),
   amount: z.string().regex(numericStringPattern, 'amount must be a numeric string (lamports/wei)'),
   memo: z.string().max(256).optional(),
-  network: NetworkTypeEnum.optional(),
+  network: NetworkTypeEnumWithLegacy.optional(),
   ...gasConditionField,
 });
 export type TransferRequestInput = z.infer<typeof TransferRequestSchema>;
@@ -113,7 +113,7 @@ export const TokenTransferRequestSchema = z.object({
   amount: z.string().regex(numericStringPattern, 'amount must be a numeric string'),
   token: TokenInfoSchema,
   memo: z.string().max(256).optional(),
-  network: NetworkTypeEnum.optional(),
+  network: NetworkTypeEnumWithLegacy.optional(),
   ...gasConditionField,
 });
 export type TokenTransferRequest = z.infer<typeof TokenTransferRequestSchema>;
@@ -138,7 +138,7 @@ export const ContractCallRequestSchema = z.object({
       }),
     )
     .optional(),
-  network: NetworkTypeEnum.optional(),
+  network: NetworkTypeEnumWithLegacy.optional(),
   /** Provider name tag for provider-trust policy bypass. Set by ActionProviderRegistry. */
   actionProvider: z.string().optional(),
   /** Action name for lending policy evaluation. Set by ActionProviderRegistry. */
@@ -153,7 +153,7 @@ export const ApproveRequestSchema = z.object({
   spender: z.string().min(1),
   token: TokenInfoSchema,
   amount: z.string().regex(numericStringPattern, 'amount must be a numeric string'),
-  network: NetworkTypeEnum.optional(),
+  network: NetworkTypeEnumWithLegacy.optional(),
   ...gasConditionField,
 });
 export type ApproveRequest = z.infer<typeof ApproveRequestSchema>;
@@ -172,7 +172,7 @@ export const BatchRequestSchema = z.object({
     )
     .min(2, 'Batch requires at least 2 instructions')
     .max(20, 'Batch maximum 20 instructions'),
-  network: NetworkTypeEnum.optional(),
+  network: NetworkTypeEnumWithLegacy.optional(),
   ...gasConditionField,
 });
 export type BatchRequest = z.infer<typeof BatchRequestSchema>;

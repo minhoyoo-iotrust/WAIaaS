@@ -78,7 +78,7 @@ describe('EvmAdapter buildTokenTransfer', () => {
   let adapter: EvmAdapter;
 
   beforeEach(async () => {
-    adapter = new EvmAdapter('mainnet');
+    adapter = new EvmAdapter('ethereum-mainnet');
     vi.clearAllMocks();
     mockClient.chain = { id: 1 };
     await adapter.connect('https://eth-mainnet.example.com');
@@ -291,7 +291,7 @@ describe('EvmAdapter getAssets ERC-20 multicall', () => {
   let adapter: EvmAdapter;
 
   beforeEach(async () => {
-    adapter = new EvmAdapter('mainnet');
+    adapter = new EvmAdapter('ethereum-mainnet');
     vi.clearAllMocks();
     mockClient.chain = { id: 1 };
     await adapter.connect('https://eth-mainnet.example.com');

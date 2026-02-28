@@ -87,10 +87,10 @@ describe('AdapterPool with RpcPool', () => {
 
   it('resolves URL from RpcPool when available', async () => {
     const rpcPool = new RpcPool();
-    rpcPool.register('devnet', ['https://pool-devnet.example.com']);
+    rpcPool.register('solana-devnet', ['https://pool-devnet.example.com']);
 
     const pool = new AdapterPool(rpcPool);
-    const adapter = await pool.resolve('solana', 'devnet');
+    const adapter = await pool.resolve('solana', 'solana-devnet');
 
     expect(adapter).toBeInstanceOf(MockSolanaAdapter);
     expect(mockSolanaConnect).toHaveBeenCalledWith('https://pool-devnet.example.com');
@@ -129,7 +129,7 @@ describe('AdapterPool without RpcPool (backward compat)', () => {
 
   it('uses provided rpcUrl when no RpcPool is set', async () => {
     const pool = new AdapterPool();
-    const adapter = await pool.resolve('solana', 'devnet', 'https://custom.rpc');
+    const adapter = await pool.resolve('solana', 'solana-devnet', 'https://custom.rpc');
 
     expect(adapter).toBeInstanceOf(MockSolanaAdapter);
     expect(mockSolanaConnect).toHaveBeenCalledWith('https://custom.rpc');
@@ -155,7 +155,7 @@ describe('AdapterPool RpcPool fallback', () => {
     const rpcPool = new RpcPool(); // empty pool
     const pool = new AdapterPool(rpcPool);
 
-    const adapter = await pool.resolve('solana', 'devnet', 'https://fallback.rpc');
+    const adapter = await pool.resolve('solana', 'solana-devnet', 'https://fallback.rpc');
 
     expect(adapter).toBeInstanceOf(MockSolanaAdapter);
     expect(mockSolanaConnect).toHaveBeenCalledWith('https://fallback.rpc');
@@ -165,7 +165,7 @@ describe('AdapterPool RpcPool fallback', () => {
     const rpcPool = new RpcPool(); // empty pool
     const pool = new AdapterPool(rpcPool);
 
-    const adapter = await pool.resolve('solana', 'devnet');
+    const adapter = await pool.resolve('solana', 'solana-devnet');
 
     expect(adapter).toBeInstanceOf(MockSolanaAdapter);
     expect(mockSolanaConnect).toHaveBeenCalledWith('');
@@ -175,16 +175,16 @@ describe('AdapterPool RpcPool fallback', () => {
 // ─── Test 4: configKeyToNetwork mapping ─────────────────────────────────
 
 describe('configKeyToNetwork', () => {
-  it('maps solana_mainnet -> mainnet', () => {
-    expect(configKeyToNetwork('solana_mainnet')).toBe('mainnet');
+  it('maps solana_mainnet -> solana-mainnet', () => {
+    expect(configKeyToNetwork('solana_mainnet')).toBe('solana-mainnet');
   });
 
-  it('maps solana_devnet -> devnet', () => {
-    expect(configKeyToNetwork('solana_devnet')).toBe('devnet');
+  it('maps solana_devnet -> solana-devnet', () => {
+    expect(configKeyToNetwork('solana_devnet')).toBe('solana-devnet');
   });
 
-  it('maps solana_testnet -> testnet', () => {
-    expect(configKeyToNetwork('solana_testnet')).toBe('testnet');
+  it('maps solana_testnet -> solana-testnet', () => {
+    expect(configKeyToNetwork('solana_testnet')).toBe('solana-testnet');
   });
 
   it('maps evm_ethereum_sepolia -> ethereum-sepolia', () => {
@@ -227,7 +227,7 @@ describe('Config.toml URL priority seeding', () => {
     const rpcPool = new RpcPool();
 
     // Seed config URL first (highest priority)
-    rpcPool.register('devnet', ['https://my-custom.rpc']);
+    rpcPool.register('solana-devnet', ['https://my-custom.rpc']);
 
     // Then register built-in defaults (lower priority)
     for (const [network, urls] of Object.entries(BUILT_IN_RPC_DEFAULTS)) {
@@ -235,14 +235,14 @@ describe('Config.toml URL priority seeding', () => {
     }
 
     // getUrl returns highest-priority URL
-    expect(rpcPool.getUrl('devnet')).toBe('https://my-custom.rpc');
+    expect(rpcPool.getUrl('solana-devnet')).toBe('https://my-custom.rpc');
   });
 
   it('built-in defaults are available for networks without config URL', () => {
     const rpcPool = new RpcPool();
 
     // Only seed config for devnet
-    rpcPool.register('devnet', ['https://my-custom.rpc']);
+    rpcPool.register('solana-devnet', ['https://my-custom.rpc']);
 
     // Register all built-in defaults
     for (const [network, urls] of Object.entries(BUILT_IN_RPC_DEFAULTS)) {
@@ -250,7 +250,7 @@ describe('Config.toml URL priority seeding', () => {
     }
 
     // Seeded network uses config URL
-    expect(rpcPool.getUrl('devnet')).toBe('https://my-custom.rpc');
+    expect(rpcPool.getUrl('solana-devnet')).toBe('https://my-custom.rpc');
 
     // Non-seeded networks use built-in defaults
     expect(rpcPool.getUrl('ethereum-sepolia')).toBe('https://1rpc.io/sepolia');
@@ -260,7 +260,7 @@ describe('Config.toml URL priority seeding', () => {
     const rpcPool = new RpcPool();
 
     // Config has same URL as built-in default
-    rpcPool.register('devnet', ['https://api.devnet.solana.com']);
+    rpcPool.register('solana-devnet', ['https://api.devnet.solana.com']);
 
     // Register built-in defaults (which includes the same URL)
     for (const [network, urls] of Object.entries(BUILT_IN_RPC_DEFAULTS)) {
@@ -268,7 +268,7 @@ describe('Config.toml URL priority seeding', () => {
     }
 
     // Verify devnet has correct count (no duplication of matching URLs)
-    const status = rpcPool.getStatus('devnet');
+    const status = rpcPool.getStatus('solana-devnet');
     const uniqueUrls = new Set(status.map((s) => s.url));
     expect(uniqueUrls.size).toBe(status.length); // no duplicates
   });
@@ -279,12 +279,12 @@ describe('Config.toml URL priority seeding', () => {
 describe('AdapterPool RPC failure/success reporting', () => {
   it('reportRpcFailure delegates to pool.reportFailure', () => {
     const rpcPool = new RpcPool();
-    rpcPool.register('devnet', ['https://url1.rpc', 'https://url2.rpc']);
+    rpcPool.register('solana-devnet', ['https://url1.rpc', 'https://url2.rpc']);
 
     const pool = new AdapterPool(rpcPool);
-    pool.reportRpcFailure('devnet', 'https://url1.rpc');
+    pool.reportRpcFailure('solana-devnet', 'https://url1.rpc');
 
-    const status = rpcPool.getStatus('devnet');
+    const status = rpcPool.getStatus('solana-devnet');
     expect(status[0]!.failureCount).toBe(1);
     expect(status[0]!.status).toBe('cooldown');
     expect(status[1]!.failureCount).toBe(0);
@@ -293,28 +293,28 @@ describe('AdapterPool RPC failure/success reporting', () => {
 
   it('reportRpcSuccess delegates to pool.reportSuccess', () => {
     const rpcPool = new RpcPool();
-    rpcPool.register('devnet', ['https://url1.rpc']);
+    rpcPool.register('solana-devnet', ['https://url1.rpc']);
 
     // First fail, then succeed
-    rpcPool.reportFailure('devnet', 'https://url1.rpc');
-    expect(rpcPool.getStatus('devnet')[0]!.failureCount).toBe(1);
+    rpcPool.reportFailure('solana-devnet', 'https://url1.rpc');
+    expect(rpcPool.getStatus('solana-devnet')[0]!.failureCount).toBe(1);
 
     const pool = new AdapterPool(rpcPool);
-    pool.reportRpcSuccess('devnet', 'https://url1.rpc');
+    pool.reportRpcSuccess('solana-devnet', 'https://url1.rpc');
 
-    expect(rpcPool.getStatus('devnet')[0]!.failureCount).toBe(0);
-    expect(rpcPool.getStatus('devnet')[0]!.status).toBe('available');
+    expect(rpcPool.getStatus('solana-devnet')[0]!.failureCount).toBe(0);
+    expect(rpcPool.getStatus('solana-devnet')[0]!.status).toBe('available');
   });
 
   it('reportRpcFailure is no-op without RpcPool', () => {
     const pool = new AdapterPool();
     // Should not throw
-    expect(() => pool.reportRpcFailure('devnet', 'https://url.rpc')).not.toThrow();
+    expect(() => pool.reportRpcFailure('solana-devnet', 'https://url.rpc')).not.toThrow();
   });
 
   it('reportRpcSuccess is no-op without RpcPool', () => {
     const pool = new AdapterPool();
     // Should not throw
-    expect(() => pool.reportRpcSuccess('devnet', 'https://url.rpc')).not.toThrow();
+    expect(() => pool.reportRpcSuccess('solana-devnet', 'https://url.rpc')).not.toThrow();
   });
 });

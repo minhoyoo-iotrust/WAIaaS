@@ -145,7 +145,7 @@ describe('Kamino Lending E2E flow', () => {
 
     const req = requests[0]!;
     expect(req.type).toBe('CONTRACT_CALL');
-    expect(req.network).toBe('mainnet');
+    expect(req.network).toBe('solana-mainnet');
     expect(req.programId).toBeDefined();
     expect(req.instructionData).toBeDefined();
   });

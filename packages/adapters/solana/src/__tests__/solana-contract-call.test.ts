@@ -77,7 +77,7 @@ describe('SolanaAdapter - Contract Call', () => {
   let adapter: SolanaAdapter;
 
   beforeEach(async () => {
-    adapter = new SolanaAdapter('devnet');
+    adapter = new SolanaAdapter('solana-devnet');
     vi.clearAllMocks();
     await adapter.connect(TEST_RPC_URL);
   });

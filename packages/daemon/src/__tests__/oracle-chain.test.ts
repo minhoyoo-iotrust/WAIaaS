@@ -46,7 +46,7 @@ const SOL_TOKEN: TokenRef = {
   address: 'native',
   decimals: 9,
   chain: 'solana',
-  network: 'mainnet',
+  network: 'solana-mainnet',
 };
 
 const ETH_TOKEN: TokenRef = {
@@ -61,11 +61,11 @@ const _USDC_TOKEN: TokenRef = {
   symbol: 'USDC',
   decimals: 6,
   chain: 'solana',
-  network: 'mainnet',
+  network: 'solana-mainnet',
 };
 
 // CAIP-19 cache keys for test assertions
-const SOL_CACHE_KEY = buildCacheKey('mainnet', 'native');         // solana:5eykt.../slip44:501
+const SOL_CACHE_KEY = buildCacheKey('solana-mainnet', 'native');         // solana:5eykt.../slip44:501
 const ETH_CACHE_KEY = buildCacheKey('ethereum-mainnet', 'native'); // eip155:1/slip44:60
 
 // ---------------------------------------------------------------------------
@@ -334,7 +334,7 @@ describe('OracleChain', () => {
     expect(result.source).toBe('pyth');
     // Verify getPrice was called with native token including network
     expect(primary.getPrice).toHaveBeenCalledWith(
-      expect.objectContaining({ address: 'native', chain: 'solana', decimals: 9, network: 'mainnet' }),
+      expect.objectContaining({ address: 'native', chain: 'solana', decimals: 9, network: 'solana-mainnet' }),
     );
   });
 

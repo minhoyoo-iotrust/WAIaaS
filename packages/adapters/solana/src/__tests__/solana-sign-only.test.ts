@@ -83,7 +83,7 @@ function toBase64(compiled: ReturnType<typeof compileTransaction>): string {
 }
 
 beforeAll(async () => {
-  adapter = new SolanaAdapter('devnet');
+  adapter = new SolanaAdapter('solana-devnet');
   // No connect needed -- parseTransaction and signExternalTransaction are offline
 
   // Generate test keypairs

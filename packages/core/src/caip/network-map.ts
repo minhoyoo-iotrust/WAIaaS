@@ -22,9 +22,9 @@ export const CAIP2_TO_NETWORK: Record<string, { chain: ChainType; network: Netwo
   'eip155:8453':     { chain: 'ethereum', network: 'base-mainnet' },
   'eip155:84532':    { chain: 'ethereum', network: 'base-sepolia' },
   // Solana
-  'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp': { chain: 'solana', network: 'mainnet' },
-  'solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1':  { chain: 'solana', network: 'devnet' },
-  'solana:4uhcVJyU9pJkvQyS88uRDiswHXSCkY3z':  { chain: 'solana', network: 'testnet' },
+  'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp': { chain: 'solana', network: 'solana-mainnet' },
+  'solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1':  { chain: 'solana', network: 'solana-devnet' },
+  'solana:4uhcVJyU9pJkvQyS88uRDiswHXSCkY3z':  { chain: 'solana', network: 'solana-testnet' },
 };
 
 // ── NetworkType -> CAIP-2 (reverse mapping) ─────────────────────

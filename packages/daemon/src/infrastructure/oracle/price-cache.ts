@@ -37,7 +37,7 @@ interface CacheEntry {
  */
 export function resolveNetwork(chain: ChainType, network?: NetworkType): NetworkType {
   if (network) return network;
-  return chain === 'solana' ? 'mainnet' : 'ethereum-mainnet';
+  return chain === 'solana' ? 'solana-mainnet' : 'ethereum-mainnet';
 }
 
 /**
@@ -47,13 +47,13 @@ export function resolveNetwork(chain: ChainType, network?: NetworkType): Network
  * EVM addresses are lowercased internally by tokenAssetId().
  * Solana base58 addresses are preserved by tokenAssetId().
  *
- * @param network - NetworkType (e.g., 'ethereum-mainnet', 'polygon-mainnet', 'mainnet').
+ * @param network - NetworkType (e.g., 'ethereum-mainnet', 'polygon-mainnet', 'solana-mainnet').
  * @param address - Token address or 'native' for native token.
  * @returns CAIP-19 asset type URI as cache key.
  *
  * @example buildCacheKey('ethereum-mainnet', 'native') => 'eip155:1/slip44:60'
  * @example buildCacheKey('polygon-mainnet', '0xAddr') => 'eip155:137/erc20:0xaddr'
- * @example buildCacheKey('mainnet', 'EPjFWdd5...') => 'solana:5eykt.../token:EPjFWdd5...'
+ * @example buildCacheKey('solana-mainnet', 'EPjFWdd5...') => 'solana:5eykt.../token:EPjFWdd5...'
  */
 export function buildCacheKey(network: NetworkType, address: string): string {
   if (address === 'native') {

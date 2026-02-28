@@ -4,7 +4,7 @@
  * Used by the master password change API (PUT /v1/admin/master-password).
  *
  * Keystore files: decrypt with old password → re-encrypt with new password → atomic rename.
- * Settings/API keys: decrypt with old password → re-encrypt with new password → DB transaction.
+ * Settings (incl. API keys after v28): decrypt with old password → re-encrypt with new password → DB transaction.
  *
  * Rollback: on failure, temp files are cleaned up and originals are preserved.
  */
@@ -16,7 +16,7 @@ import { encryptSettingValue, decryptSettingValue } from '../settings/settings-c
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { eq } from 'drizzle-orm';
-import { settings, apiKeys } from '../database/schema.js';
+import { settings } from '../database/schema.js';
 import type * as schema from '../database/schema.js';
 
 // ---------------------------------------------------------------------------
@@ -104,14 +104,17 @@ export async function reEncryptKeystores(
 }
 
 // ---------------------------------------------------------------------------
-// Settings + API keys re-encryption
+// Settings re-encryption (includes API keys after v28 migration)
 // ---------------------------------------------------------------------------
 
 /**
- * Re-encrypt all credential settings and API keys in the database.
+ * Re-encrypt all credential settings in the database.
  * Uses a SQLite transaction for atomicity.
  *
- * @returns Number of re-encrypted entries (settings + api keys)
+ * After v28 migration, API keys are stored in the settings table with encrypted=true,
+ * so they are automatically re-encrypted along with other credential settings.
+ *
+ * @returns Number of re-encrypted entries
  */
 export function reEncryptSettings(
   db: BetterSQLite3Database<typeof schema>,
@@ -140,17 +143,8 @@ export function reEncryptSettings(
       count++;
     }
 
-    // Re-encrypt API keys
-    const allApiKeys = db.select().from(apiKeys).all();
-    for (const row of allApiKeys) {
-      const plaintext = decryptSettingValue(row.encryptedKey, oldPassword);
-      const reEncrypted = encryptSettingValue(plaintext, newPassword);
-      db.update(apiKeys)
-        .set({ encryptedKey: reEncrypted, updatedAt: new Date() })
-        .where(eq(apiKeys.providerName, row.providerName))
-        .run();
-      count++;
-    }
+    // Note: After v28 migration, API keys are in the settings table with encrypted=true
+    // and are already covered by the settings re-encryption loop above.
   };
 
   if (sqlite) {

@@ -24,12 +24,12 @@ import { nativeAssetId, tokenAssetId } from '@waiaas/core';
 /** Hardcoded Pyth price feed IDs for major tokens (keyed by CAIP-19 asset type). */
 export const PYTH_FEED_IDS: ReadonlyMap<string, string> = new Map([
   // Native tokens
-  [nativeAssetId('mainnet'),          'ef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d'],  // SOL/USD
+  [nativeAssetId('solana-mainnet'),          'ef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d'],  // SOL/USD
   [nativeAssetId('ethereum-mainnet'), 'ff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace'],  // ETH/USD
 
   // Solana SPL tokens
-  [tokenAssetId('mainnet', 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'), 'eaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a'], // USDC/USD
-  [tokenAssetId('mainnet', 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB'), '2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b'],  // USDT/USD
+  [tokenAssetId('solana-mainnet', 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'), 'eaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a'], // USDC/USD
+  [tokenAssetId('solana-mainnet', 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB'), '2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b'],  // USDT/USD
 ]);
 
 // ---------------------------------------------------------------------------
@@ -38,7 +38,7 @@ export const PYTH_FEED_IDS: ReadonlyMap<string, string> = new Map([
 
 /** Map from NetworkType to the native token's Pyth feed ID. */
 const NATIVE_FEED_MAP: ReadonlyMap<NetworkType, string> = new Map([
-  ['mainnet',          'ef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d'],  // SOL/USD
+  ['solana-mainnet',   'ef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d'],  // SOL/USD
   ['ethereum-mainnet', 'ff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace'],  // ETH/USD
 ]);
 
@@ -59,7 +59,7 @@ export function getFeedId(cacheKey: string): string | undefined {
 /**
  * Get the Pyth feed ID for a network's native token.
  *
- * @param network - Network type (e.g., 'mainnet' for Solana, 'ethereum-mainnet' for Ethereum).
+ * @param network - Network type (e.g., 'solana-mainnet' for Solana, 'ethereum-mainnet' for Ethereum).
  * @returns Feed ID hex string or undefined if network not supported.
  */
 export function getNativeFeedId(network: NetworkType): string | undefined {

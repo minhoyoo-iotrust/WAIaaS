@@ -105,7 +105,7 @@ describe('EvmAdapter', () => {
   let adapter: EvmAdapter;
 
   beforeEach(() => {
-    adapter = new EvmAdapter('mainnet');
+    adapter = new EvmAdapter('ethereum-mainnet');
     vi.clearAllMocks();
     // Restore default mock implementations
     mockClient.chain = { id: 1 };
@@ -122,10 +122,10 @@ describe('EvmAdapter', () => {
   describe('IChainAdapter interface compliance', () => {
     it('EvmAdapter has chain=ethereum and network matches constructor arg', () => {
       expect(adapter.chain).toBe('ethereum');
-      expect(adapter.network).toBe('mainnet');
+      expect(adapter.network).toBe('ethereum-mainnet');
 
-      const devnetAdapter = new EvmAdapter('devnet');
-      expect(devnetAdapter.network).toBe('devnet');
+      const sepoliaAdapter = new EvmAdapter('ethereum-sepolia');
+      expect(sepoliaAdapter.network).toBe('ethereum-sepolia');
     });
 
     it('EvmAdapter has all 20 IChainAdapter methods', () => {

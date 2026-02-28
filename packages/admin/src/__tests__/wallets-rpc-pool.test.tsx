@@ -104,9 +104,9 @@ function mockSettingsWithRpcPool(overrides: Record<string, string> = {}) {
     signing_sdk: {},
     gas_condition: {},
     rpc_pool: {
-      mainnet: '["https://custom-solana.rpc.com"]',
-      devnet: '[]',
-      testnet: '[]',
+      'solana-mainnet': '["https://custom-solana.rpc.com"]',
+      'solana-devnet': '[]',
+      'solana-testnet': '[]',
       'ethereum-mainnet': '[]',
       'ethereum-sepolia': '[]',
       'polygon-mainnet': '[]',
@@ -132,9 +132,9 @@ const mockWallets = {
 
 /** Built-in RPC URLs returned by the rpc-status endpoint (#197) */
 const defaultBuiltinUrls: Record<string, string[]> = {
-  mainnet: ['https://api.mainnet-beta.solana.com'],
-  devnet: ['https://api.devnet.solana.com'],
-  testnet: ['https://api.testnet.solana.com'],
+  'solana-mainnet': ['https://api.mainnet-beta.solana.com'],
+  'solana-devnet': ['https://api.devnet.solana.com'],
+  'solana-testnet': ['https://api.testnet.solana.com'],
   'ethereum-mainnet': ['https://eth.llamarpc.com'],
   'ethereum-sepolia': ['https://rpc.sepolia.org'],
   'polygon-mainnet': [],
@@ -291,7 +291,7 @@ describe('RPC Pool multi-URL tab', () => {
   it('should reorder URLs with up/down buttons', async () => {
     // Settings with 2 custom URLs so we can test reordering
     const settingsData = mockSettingsWithRpcPool({
-      mainnet: '["https://custom1.rpc.com","https://custom2.rpc.com"]',
+      'solana-mainnet': '["https://custom1.rpc.com","https://custom2.rpc.com"]',
     });
 
     vi.mocked(apiGet).mockImplementation((path: string) => {
@@ -399,7 +399,7 @@ describe('RPC Pool multi-URL tab', () => {
     expect(rpcPoolEntries.length).toBeGreaterThan(0);
 
     // Verify mainnet has the custom URL
-    const mainnetEntry = rpcPoolEntries.find((e: { key: string }) => e.key === 'rpc_pool.mainnet');
+    const mainnetEntry = rpcPoolEntries.find((e: { key: string }) => e.key === 'rpc_pool.solana-mainnet');
     expect(mainnetEntry).toBeDefined();
     if (mainnetEntry) {
       const urls = JSON.parse(mainnetEntry.value);
@@ -443,7 +443,7 @@ describe('RPC Pool multi-URL tab', () => {
   it('should display available status for URLs from rpc-status polling', async () => {
     const rpcStatus = {
       networks: {
-        mainnet: [
+        'solana-mainnet': [
           { url: 'https://custom-solana.rpc.com', status: 'available', failureCount: 0, cooldownRemainingMs: 0 },
           { url: 'https://api.mainnet-beta.solana.com', status: 'available', failureCount: 0, cooldownRemainingMs: 0 },
         ],
@@ -467,7 +467,7 @@ describe('RPC Pool multi-URL tab', () => {
   it('should display cooldown status with remaining time and failure count', async () => {
     const rpcStatus = {
       networks: {
-        mainnet: [
+        'solana-mainnet': [
           { url: 'https://custom-solana.rpc.com', status: 'cooldown', failureCount: 2, cooldownRemainingMs: 45000 },
         ],
       },
@@ -583,7 +583,7 @@ describe('RPC Pool multi-URL tab', () => {
     // Test various cooldown durations through the UI
     const rpcStatus = {
       networks: {
-        mainnet: [
+        'solana-mainnet': [
           { url: 'https://custom-solana.rpc.com', status: 'cooldown', failureCount: 3, cooldownRemainingMs: 125000 },
         ],
       },

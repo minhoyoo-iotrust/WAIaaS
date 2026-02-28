@@ -35,7 +35,7 @@ function makeTx(overrides: Partial<IncomingTransaction> = {}): IncomingTransacti
     amount: '1000000000',
     tokenAddress: null,
     chain: 'solana',
-    network: 'mainnet',
+    network: 'solana-mainnet',
     status: 'DETECTED',
     blockNumber: 100,
     detectedAt: 1700000000,
@@ -196,10 +196,10 @@ describe('IncomingTxMonitorService', () => {
       );
 
       // Verify subscriber factory was called for all networks:
-      // solana:mainnet → ['mainnet'] (1 network)
+      // solana:mainnet → ['solana-mainnet'] (1 network)
       // ethereum:testnet → ['ethereum-sepolia', 'polygon-amoy', 'arbitrum-sepolia', 'optimism-sepolia', 'base-sepolia'] (5 networks)
       expect(subscriberFactory).toHaveBeenCalledTimes(6);
-      expect(subscriberFactory).toHaveBeenCalledWith('solana', 'mainnet');
+      expect(subscriberFactory).toHaveBeenCalledWith('solana', 'solana-mainnet');
       expect(subscriberFactory).toHaveBeenCalledWith('ethereum', 'ethereum-sepolia');
       expect(subscriberFactory).toHaveBeenCalledWith('ethereum', 'polygon-amoy');
       expect(subscriberFactory).toHaveBeenCalledWith('ethereum', 'arbitrum-sepolia');

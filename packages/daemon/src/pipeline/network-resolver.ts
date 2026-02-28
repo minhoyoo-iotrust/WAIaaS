@@ -3,6 +3,7 @@ import {
   type EnvironmentType,
   type NetworkType,
   getSingleNetwork,
+  normalizeNetworkInput,
   validateChainNetwork,
   validateNetworkEnvironment,
   WAIaaSError,
@@ -37,8 +38,11 @@ export function resolveNetwork(
   environment: EnvironmentType,
   chain: ChainType,
 ): NetworkType {
-  // Step 1: Use explicit request network, or try auto-resolve
-  const resolved: NetworkType | null = requestNetwork ?? getSingleNetwork(chain, environment);
+  // Step 1: Normalize legacy network names (mainnet -> solana-mainnet, etc.)
+  const normalizedRequest = requestNetwork ? normalizeNetworkInput(requestNetwork) as NetworkType : undefined;
+
+  // Step 2: Use explicit request network, or try auto-resolve
+  const resolved: NetworkType | null = normalizedRequest ?? getSingleNetwork(chain, environment);
 
   if (resolved === null) {
     // EVM chains have multiple networks per environment -- cannot auto-resolve
@@ -47,10 +51,10 @@ export function resolveNetwork(
     });
   }
 
-  // Step 2: Cross-validate chain + network (solana cannot use EVM networks)
+  // Step 3: Cross-validate chain + network (solana cannot use EVM networks)
   validateChainNetwork(chain, resolved);
 
-  // Step 3: Cross-validate environment + network (testnet cannot use mainnet networks)
+  // Step 4: Cross-validate environment + network (testnet cannot use mainnet networks)
   validateNetworkEnvironment(chain, environment, resolved);
 
   return resolved;

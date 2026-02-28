@@ -46,7 +46,7 @@ let passwordHash: string;
 function createMockSolanaAdapter(overrides: Partial<IChainAdapter> = {}): IChainAdapter {
   return {
     chain: 'solana' as const,
-    network: 'devnet' as const,
+    network: 'solana-devnet' as const,
     connect: async () => {},
     disconnect: async () => {},
     isConnected: () => true,
@@ -304,7 +304,7 @@ beforeEach(async () => {
   const evmAdapter = createMockEvmAdapter();
 
   const adapters = new Map<string, IChainAdapter>([
-    ['solana:devnet', solanaAdapter],
+    ['solana:solana-devnet', solanaAdapter],
     ['ethereum:ethereum-sepolia', evmAdapter],
   ]);
   const mockAdapterPool = createMockAdapterPoolDual(adapters);
@@ -340,7 +340,7 @@ afterEach(() => {
 
 describe('Wallet ID resolution (E2E-01, E2E-02)', () => {
   it('E2E-01: single-wallet session + walletId omitted -> auto-resolves', async () => {
-    const wallet = await createWallet(app, 'solana', 'devnet', 'sol-auto');
+    const wallet = await createWallet(app, 'solana', 'solana-devnet', 'sol-auto');
     const { token } = await createSession(app, wallet.id as string);
 
     // GET /v1/wallet/balance without walletId -> should auto-resolve (single wallet in session)
@@ -353,8 +353,8 @@ describe('Wallet ID resolution (E2E-01, E2E-02)', () => {
   });
 
   it('E2E-02: multi-wallet session + walletId omitted -> WALLET_ID_REQUIRED', async () => {
-    const wallet1 = await createWallet(app, 'solana', 'devnet', 'sol-1');
-    const wallet2 = await createWallet(app, 'solana', 'devnet', 'sol-2');
+    const wallet1 = await createWallet(app, 'solana', 'solana-devnet', 'sol-1');
+    const wallet2 = await createWallet(app, 'solana', 'solana-devnet', 'sol-2');
     const { token } = await createMultiWalletSession(app, [wallet1.id as string, wallet2.id as string]);
 
     // GET /v1/wallet/balance without walletId -> WALLET_ID_REQUIRED (2 wallets in session)
@@ -373,7 +373,7 @@ describe('Wallet ID resolution (E2E-01, E2E-02)', () => {
 
 describe('Network resolution (E2E-03, E2E-04)', () => {
   it('E2E-03: Solana + network omitted -> auto-resolves (single network per env)', async () => {
-    const wallet = await createWallet(app, 'solana', 'devnet', 'sol-net');
+    const wallet = await createWallet(app, 'solana', 'solana-devnet', 'sol-net');
     const { token } = await createSession(app, wallet.id as string);
 
     // GET /v1/wallet/balance with walletId but no network -> Solana auto-resolves
@@ -422,7 +422,7 @@ describe('Deleted endpoints return 404 (E2E-05)', () => {
   });
 
   it('PUT /v1/wallet/default-network -> 404', async () => {
-    const wallet = await createWallet(app, 'solana', 'devnet', 'sol-del');
+    const wallet = await createWallet(app, 'solana', 'solana-devnet', 'sol-del');
     const { token } = await createSession(app, wallet.id as string);
 
     const res = await app.request('/v1/wallet/default-network', {
@@ -430,7 +430,7 @@ describe('Deleted endpoints return 404 (E2E-05)', () => {
       headers: {
         ...bearerJsonHeader(token),
       },
-      body: JSON.stringify({ network: 'devnet' }),
+      body: JSON.stringify({ network: 'solana-devnet' }),
     });
     expect(res.status).toBe(404);
   });
@@ -442,7 +442,7 @@ describe('Deleted endpoints return 404 (E2E-05)', () => {
 
 describe('JWT payload (E2E-06)', () => {
   it('newly issued JWT has no wlt claim', async () => {
-    const wallet = await createWallet(app, 'solana', 'devnet', 'sol-jwt');
+    const wallet = await createWallet(app, 'solana', 'solana-devnet', 'sol-jwt');
     const { token } = await createSession(app, wallet.id as string);
 
     // Decode the JWT payload (wai_sess_ prefix + base64url JWT)
@@ -467,7 +467,7 @@ describe('JWT payload (E2E-06)', () => {
 
 describe('connect-info response (E2E-07)', () => {
   it('connect-info wallets have no defaultNetwork or isDefault', async () => {
-    const wallet = await createWallet(app, 'solana', 'devnet', 'sol-ci');
+    const wallet = await createWallet(app, 'solana', 'solana-devnet', 'sol-ci');
     const { token } = await createSession(app, wallet.id as string);
 
     const res = await app.request('/v1/connect-info', {
@@ -505,8 +505,8 @@ describe('connect-info response (E2E-07)', () => {
 
 describe('MCP multi-wallet wallet_id requirement (E2E-08)', () => {
   it('multi-wallet session transaction without walletId -> WALLET_ID_REQUIRED', async () => {
-    const wallet1 = await createWallet(app, 'solana', 'devnet', 'mcp-sol-1');
-    const wallet2 = await createWallet(app, 'solana', 'devnet', 'mcp-sol-2');
+    const wallet1 = await createWallet(app, 'solana', 'solana-devnet', 'mcp-sol-1');
+    const wallet2 = await createWallet(app, 'solana', 'solana-devnet', 'mcp-sol-2');
     const { token } = await createMultiWalletSession(app, [wallet1.id as string, wallet2.id as string]);
 
     // POST /v1/wallet/send (the API endpoint MCP uses for transfers) without walletId
@@ -525,8 +525,8 @@ describe('MCP multi-wallet wallet_id requirement (E2E-08)', () => {
   });
 
   it('multi-wallet session with explicit walletId does not return WALLET_ID_REQUIRED', async () => {
-    const wallet1 = await createWallet(app, 'solana', 'devnet', 'mcp-sol-3');
-    const wallet2 = await createWallet(app, 'solana', 'devnet', 'mcp-sol-4');
+    const wallet1 = await createWallet(app, 'solana', 'solana-devnet', 'mcp-sol-3');
+    const wallet2 = await createWallet(app, 'solana', 'solana-devnet', 'mcp-sol-4');
     const { token } = await createMultiWalletSession(app, [wallet1.id as string, wallet2.id as string]);
 
     // POST /v1/wallet/send with explicit walletId

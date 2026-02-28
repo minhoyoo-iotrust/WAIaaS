@@ -246,6 +246,103 @@ export class SettingsService {
   }
 
   // -------------------------------------------------------------------------
+  // setApiKey(providerName, value) -- set API key for any provider
+  // -------------------------------------------------------------------------
+
+  /**
+   * Set an API key for a provider. Bypasses SETTING_DEFINITIONS validation
+   * to support arbitrary provider names (e.g., custom/plugin providers).
+   * Value is always encrypted as credential.
+   */
+  setApiKey(providerName: string, value: string): void {
+    const key = `actions.${providerName}_api_key`;
+    const storedValue = value
+      ? encryptSettingValue(value, this.currentPassword)
+      : '';
+
+    this.db
+      .insert(settings)
+      .values({
+        key,
+        value: storedValue,
+        encrypted: value.length > 0,
+        category: 'actions',
+        updatedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: settings.key,
+        set: {
+          value: storedValue,
+          encrypted: value.length > 0,
+          updatedAt: new Date(),
+        },
+      })
+      .run();
+  }
+
+  // -------------------------------------------------------------------------
+  // hasApiKey(providerName) -- check if API key exists for a provider
+  // -------------------------------------------------------------------------
+
+  /**
+   * Check if an API key exists for a provider in settings.
+   * Looks up 'actions.{providerName}_api_key' and returns true if non-empty value exists in DB.
+   */
+  hasApiKey(providerName: string): boolean {
+    const key = `actions.${providerName}_api_key`;
+    const row = this.db.select().from(settings).where(eq(settings.key, key)).get();
+    if (!row) return false;
+    try {
+      const val = row.encrypted ? decryptSettingValue(row.value, this.currentPassword) : row.value;
+      return val.length > 0;
+    } catch {
+      return false;
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // getApiKeyMasked(providerName) -- masked API key for display
+  // -------------------------------------------------------------------------
+
+  /**
+   * Get masked API key for a provider (for display in admin UI).
+   * Returns null if no key exists.
+   */
+  getApiKeyMasked(providerName: string): string | null {
+    const key = `actions.${providerName}_api_key`;
+    const row = this.db.select().from(settings).where(eq(settings.key, key)).get();
+    if (!row) return null;
+    try {
+      const val = row.encrypted ? decryptSettingValue(row.value, this.currentPassword) : row.value;
+      if (val.length === 0) return null;
+      return maskApiKey(val);
+    } catch {
+      return null;
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // getApiKeyUpdatedAt(providerName) -- updatedAt for admin list display
+  // -------------------------------------------------------------------------
+
+  /**
+   * Get the updatedAt timestamp for a provider's API key.
+   * Returns null if no key exists or value is empty.
+   */
+  getApiKeyUpdatedAt(providerName: string): Date | null {
+    const key = `actions.${providerName}_api_key`;
+    const row = this.db.select().from(settings).where(eq(settings.key, key)).get();
+    if (!row) return null;
+    try {
+      const val = row.encrypted ? decryptSettingValue(row.value, this.currentPassword) : row.value;
+      if (val.length === 0) return null;
+      return row.updatedAt;
+    } catch {
+      return null;
+    }
+  }
+
+  // -------------------------------------------------------------------------
   // importFromConfig() -- first-boot config.toml -> DB import
   // -------------------------------------------------------------------------
 
@@ -323,4 +420,22 @@ export class SettingsService {
     const value = (sectionObj as Record<string, unknown>)[field];
     return value;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Internal helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Mask an API key for display purposes.
+ * Same logic as the old ApiKeyStore maskKey.
+ */
+function maskApiKey(key: string): string {
+  if (key.length > 6) {
+    return key.slice(0, 4) + '...' + key.slice(-2);
+  }
+  if (key.length >= 4) {
+    return key.slice(0, 2) + '...';
+  }
+  return '****';
 }

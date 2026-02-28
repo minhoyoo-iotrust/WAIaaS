@@ -58,8 +58,8 @@ describe('resolveX402Network', () => {
   });
 
   it('returns correct chain+network for known Solana CAIP-2 IDs', () => {
-    expect(resolveX402Network('solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp')).toEqual({ chain: 'solana', network: 'mainnet' });
-    expect(resolveX402Network('solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1')).toEqual({ chain: 'solana', network: 'devnet' });
+    expect(resolveX402Network('solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp')).toEqual({ chain: 'solana', network: 'solana-mainnet' });
+    expect(resolveX402Network('solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1')).toEqual({ chain: 'solana', network: 'solana-devnet' });
   });
 
   it('throws for unknown CAIP-2 ID', () => {

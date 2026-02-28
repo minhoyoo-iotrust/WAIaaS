@@ -37,7 +37,7 @@ const NATIVE_SLIP44: Record<string, number> = {
  *
  * @example nativeAssetId('ethereum-mainnet') => 'eip155:1/slip44:60'
  * @example nativeAssetId('polygon-mainnet') => 'eip155:137/slip44:966'
- * @example nativeAssetId('mainnet') => 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/slip44:501'
+ * @example nativeAssetId('solana-mainnet') => 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/slip44:501'
  */
 export function nativeAssetId(network: NetworkType): string {
   const caip2 = networkToCaip2(network);
@@ -54,7 +54,7 @@ export function nativeAssetId(network: NetworkType): string {
  *
  * @example tokenAssetId('ethereum-mainnet', '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48')
  *          => 'eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48'
- * @example tokenAssetId('mainnet', 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v')
+ * @example tokenAssetId('solana-mainnet', 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v')
  *          => 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
  */
 export function tokenAssetId(network: NetworkType, address: string): string {

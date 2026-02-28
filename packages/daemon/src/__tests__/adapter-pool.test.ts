@@ -132,7 +132,7 @@ describe('AdapterPool', () => {
   // Test 4: different networks return different instances
   it('returns different instances for different networks', async () => {
     const devnet = await pool.resolve('solana', 'devnet', 'https://api.devnet.solana.com');
-    const mainnet = await pool.resolve('solana', 'mainnet', 'https://api.mainnet.solana.com');
+    const mainnet = await pool.resolve('solana', 'solana-mainnet', 'https://api.mainnet.solana.com');
 
     expect(devnet).not.toBe(mainnet);
     expect(pool.size).toBe(2);
@@ -188,7 +188,7 @@ describe('AdapterPool', () => {
   // Test 7: unknown chain throws
   it('throws for unknown chain type', async () => {
     await expect(
-      pool.resolve('bitcoin' as any, 'mainnet' as any, 'https://btc.rpc.example'),
+      pool.resolve('bitcoin' as any, 'solana-mainnet' as any, 'https://btc.rpc.example'),
     ).rejects.toThrow('Unsupported chain: bitcoin');
   });
 

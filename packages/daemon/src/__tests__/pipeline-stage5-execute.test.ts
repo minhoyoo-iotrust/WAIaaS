@@ -55,7 +55,7 @@ import type { NotificationService } from '../notifications/notification-service.
 function createMockAdapter(overrides: Partial<IChainAdapter> = {}): IChainAdapter {
   return {
     chain: 'solana' as const,
-    network: 'devnet' as const,
+    network: 'solana-devnet' as const,
     connect: async () => {},
     disconnect: async () => {},
     isConnected: () => true,
@@ -176,7 +176,7 @@ function createPipelineContext(
     masterPassword: 'test-master',
     walletId,
     wallet: { publicKey: MOCK_PUBLIC_KEY, chain: 'solana', environment: 'testnet' },
-    resolvedNetwork: 'devnet',
+    resolvedNetwork: 'solana-devnet',
     request: { to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr', amount: '1000000000' },
     txId: '',
     ...overrides,

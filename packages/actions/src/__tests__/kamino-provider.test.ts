@@ -187,7 +187,7 @@ describe('resolve kamino_supply', () => {
       CONTEXT,
     );
     const req = firstRequest(result);
-    expect(req.network).toBe('mainnet');
+    expect(req.network).toBe('solana-mainnet');
   });
 
   it('should target market address', async () => {

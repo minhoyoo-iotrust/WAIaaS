@@ -234,7 +234,7 @@ describe('CT-1: SolanaAdapter Contract Tests', () => {
 
   chainAdapterContractTests(
     async () => {
-      const adapter = new SolanaAdapter('devnet');
+      const adapter = new SolanaAdapter('solana-devnet');
       await adapter.connect(TEST_RPC_URL);
       return adapter;
     },

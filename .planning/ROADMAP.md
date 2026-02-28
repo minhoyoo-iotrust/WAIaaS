@@ -30,6 +30,7 @@
 - ✅ **v29.2 EVM Lending -- Aave V3** -- Phases 274-278 (shipped 2026-02-27)
 - ✅ **v29.3 기본 지갑/기본 네트워크 개념 제거** -- Phases 279-282 (shipped 2026-02-27)
 - ✅ **v29.4 Solana Lending (Kamino)** -- Phases 283-284 (shipped 2026-02-28)
+- ✅ **v29.5 내부 일관성 정리** -- Phases 285-287 (shipped 2026-02-28)
 
 ## Phases
 
@@ -206,5 +207,24 @@ See `.planning/milestones/v29.4-ROADMAP.md` for full details.
 
 </details>
 
+<details>
+<summary>✅ v29.5 내부 일관성 정리 (Phases 285-287) -- SHIPPED 2026-02-28</summary>
+
+- [x] Phase 285: API 키 저장소 통합 (2/2 plans) -- completed 2026-02-28
+- [x] Phase 286: Solana 네트워크 ID 통일 (4/4 plans) -- completed 2026-02-28
+- [x] Phase 287: Push Relay 서명 응답 릴레이 (1/1 plan) -- completed 2026-02-28
+
+See `.planning/milestones/v29.5-ROADMAP.md` for full details.
+
+</details>
+
+## Progress
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 285. API 키 저장소 통합 | v29.5 | 2/2 | Complete | 2026-02-28 |
+| 286. Solana 네트워크 ID 통일 | v29.5 | 4/4 | Complete | 2026-02-28 |
+| 287. Push Relay 서명 응답 릴레이 | v29.5 | 1/1 | Complete | 2026-02-28 |
+
 ---
-*Last updated: 2026-02-28 after v29.4 milestone completion*
+*Last updated: 2026-02-28 after v29.5 milestone completion*

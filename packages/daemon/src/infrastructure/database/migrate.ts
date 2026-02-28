@@ -48,8 +48,29 @@ import type { NetworkType } from '@waiaas/core';
 
 const inList = (values: readonly string[]) => values.map((v) => `'${v}'`).join(', ');
 
+/**
+ * NETWORK_TYPES_WITH_LEGACY includes both old ('mainnet', 'devnet', 'testnet') and new
+ * ('solana-mainnet', 'solana-devnet', 'solana-testnet') Solana network names.
+ * Used in pre-v29 migrations so CHECK constraints accept data in either format
+ * during the migration chain. Migration v29 converts old -> new, and post-v29
+ * tables use NETWORK_TYPES (new names only).
+ */
+const LEGACY_SOLANA_NETWORKS = ['mainnet', 'devnet', 'testnet'] as const;
+const NETWORK_TYPES_WITH_LEGACY = [...new Set([...NETWORK_TYPES, ...LEGACY_SOLANA_NETWORKS])] as const;
+
+/**
+ * Map legacy bare Solana network names to their prefixed form.
+ * Used by pre-v29 migrations (e.g., v22 asset_id backfill) that need to look up
+ * NETWORK_TO_CAIP2 with potentially old-format data.
+ */
+const LEGACY_NETWORK_NORMALIZE: Record<string, string> = {
+  mainnet: 'solana-mainnet',
+  devnet: 'solana-devnet',
+  testnet: 'solana-testnet',
+};
+
 // ---------------------------------------------------------------------------
-// DDL statements for all 18 tables (latest schema: wallets + wallet_id + session_wallets + token_registry + settings + api_keys + telegram_users + wc_sessions + wc_store + incoming_transactions + incoming_tx_cursors)
+// DDL statements for all 17 tables (latest schema: wallets + wallet_id + session_wallets + token_registry + settings + telegram_users + wc_sessions + wc_store + incoming_transactions + incoming_tx_cursors)
 // ---------------------------------------------------------------------------
 
 /**
@@ -57,7 +78,7 @@ const inList = (values: readonly string[]) => values.map((v) => `'${v}'`).join('
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 27;
+export const LATEST_SCHEMA_VERSION = 29;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -218,15 +239,7 @@ function getCreateTableStatements(): string[] {
   updated_at INTEGER NOT NULL
 )`,
 
-    // Table 11: api_keys (Action Provider API key encrypted storage, v1.5)
-    `CREATE TABLE IF NOT EXISTS api_keys (
-  provider_name TEXT PRIMARY KEY,
-  encrypted_key TEXT NOT NULL,
-  created_at INTEGER NOT NULL,
-  updated_at INTEGER NOT NULL
-)`,
-
-    // Table 12: schema_version
+    // Table 11: schema_version
     `CREATE TABLE IF NOT EXISTS schema_version (
   version INTEGER PRIMARY KEY,
   applied_at INTEGER NOT NULL,
@@ -439,7 +452,7 @@ MIGRATIONS.push({
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   chain TEXT NOT NULL CHECK (chain IN (${inList(CHAIN_TYPES)})),
-  network TEXT NOT NULL CHECK (network IN (${inList(NETWORK_TYPES)})),
+  network TEXT NOT NULL CHECK (network IN (${inList(NETWORK_TYPES_WITH_LEGACY)})),
   public_key TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'CREATING' CHECK (status IN (${inList(WALLET_STATUSES)})),
   owner_address TEXT,
@@ -772,7 +785,7 @@ MIGRATIONS.push({
   name TEXT NOT NULL,
   chain TEXT NOT NULL CHECK (chain IN (${inList(CHAIN_TYPES)})),
   environment TEXT NOT NULL CHECK (environment IN (${inList(ENVIRONMENT_TYPES)})),
-  default_network TEXT CHECK (default_network IS NULL OR default_network IN (${inList(NETWORK_TYPES)})),
+  default_network TEXT CHECK (default_network IS NULL OR default_network IN (${inList(NETWORK_TYPES_WITH_LEGACY)})),
   public_key TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'CREATING' CHECK (status IN (${inList(WALLET_STATUSES)})),
   owner_address TEXT,
@@ -875,7 +888,7 @@ FROM wallets`);
   reserved_amount TEXT,
   error TEXT,
   metadata TEXT,
-  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES)}))
+  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES_WITH_LEGACY)}))
 )`);
       sqlite.exec(`INSERT INTO transactions_new (id, wallet_id, session_id, chain, tx_hash, type, amount, to_address, token_mint, contract_address, method_signature, spender_address, approved_amount, parent_id, batch_index, status, tier, queued_at, executed_at, created_at, reserved_amount, error, metadata, network)
   SELECT id, wallet_id, session_id, chain, tx_hash, type, amount, to_address, token_mint, contract_address, method_signature, spender_address, approved_amount, parent_id, batch_index, status, tier, queued_at, executed_at, created_at, reserved_amount, error, metadata, network FROM transactions`);
@@ -971,7 +984,7 @@ MIGRATIONS.push({
   rules TEXT NOT NULL,
   priority INTEGER NOT NULL DEFAULT 0,
   enabled INTEGER NOT NULL DEFAULT 1,
-  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES)})),
+  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES_WITH_LEGACY)})),
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 )`);
@@ -1054,7 +1067,7 @@ MIGRATIONS.push({
   reserved_amount TEXT,
   error TEXT,
   metadata TEXT,
-  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES)}))
+  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES_WITH_LEGACY)}))
 )`);
 
       // Step 3: Copy existing data
@@ -1165,7 +1178,7 @@ MIGRATIONS.push({
   reserved_amount TEXT,
   error TEXT,
   metadata TEXT,
-  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES)}))
+  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES_WITH_LEGACY)}))
 )`);
 
       sqlite.exec(`INSERT INTO transactions_new (id, wallet_id, session_id, chain, tx_hash, type, amount, to_address, token_mint, contract_address, method_signature, spender_address, approved_amount, parent_id, batch_index, status, tier, queued_at, executed_at, created_at, reserved_amount, error, metadata, network)
@@ -1209,7 +1222,7 @@ MIGRATIONS.push({
   rules TEXT NOT NULL,
   priority INTEGER NOT NULL DEFAULT 0,
   enabled INTEGER NOT NULL DEFAULT 1,
-  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES)})),
+  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES_WITH_LEGACY)})),
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 )`);
@@ -1473,7 +1486,7 @@ MIGRATIONS.push({
   reserved_amount_usd REAL,
   error TEXT,
   metadata TEXT,
-  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES)}))
+  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES_WITH_LEGACY)}))
 )`);
 
       sqlite.exec(`INSERT INTO transactions_new (id, wallet_id, session_id, chain, tx_hash, type, amount, to_address, token_mint, contract_address, method_signature, spender_address, approved_amount, parent_id, batch_index, status, tier, queued_at, executed_at, created_at, reserved_amount, amount_usd, reserved_amount_usd, error, metadata, network)
@@ -1600,10 +1613,12 @@ MIGRATIONS.push({
     );
 
     for (const row of rows) {
+      // Normalize legacy Solana network names (mainnet -> solana-mainnet, etc.)
+      const normalizedNetwork = LEGACY_NETWORK_NORMALIZE[row.network] ?? row.network;
       // Guard: only backfill for known networks (Pitfall 4)
-      if (!(row.network in NETWORK_TO_CAIP2)) continue;
+      if (!(normalizedNetwork in NETWORK_TO_CAIP2)) continue;
       try {
-        const assetId = tokenAssetId(row.network as NetworkType, row.address);
+        const assetId = tokenAssetId(normalizedNetwork as NetworkType, row.address);
         updateStmt.run(assetId, row.id);
       } catch {
         // Skip on error -- rows with unknown networks get asset_id = NULL
@@ -1657,7 +1672,7 @@ MIGRATIONS.push({
   reserved_amount_usd REAL,
   error TEXT,
   metadata TEXT,
-  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES)})),
+  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES_WITH_LEGACY)})),
   bridge_status TEXT CHECK (bridge_status IS NULL OR bridge_status IN ('PENDING', 'COMPLETED', 'FAILED', 'BRIDGE_MONITORING', 'TIMEOUT', 'REFUNDED')),
   bridge_metadata TEXT
 )`);
@@ -1731,7 +1746,7 @@ MIGRATIONS.push({
         category TEXT NOT NULL CHECK(category IN (${inList(POSITION_CATEGORIES)})),
         provider TEXT NOT NULL,
         chain TEXT NOT NULL CHECK(chain IN (${inList(CHAIN_TYPES)})),
-        network TEXT CHECK(network IS NULL OR network IN (${inList(NETWORK_TYPES)})),
+        network TEXT CHECK(network IS NULL OR network IN (${inList(NETWORK_TYPES_WITH_LEGACY)})),
         asset_id TEXT,
         amount TEXT NOT NULL,
         amount_usd REAL,
@@ -1775,7 +1790,7 @@ MIGRATIONS.push({
   rules TEXT NOT NULL,
   priority INTEGER NOT NULL DEFAULT 0,
   enabled INTEGER NOT NULL DEFAULT 1,
-  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES)})),
+  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES_WITH_LEGACY)})),
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 )`);
@@ -1894,6 +1909,240 @@ MIGRATIONS.push({
     const fkErrors = sqlite.pragma('foreign_key_check') as unknown[];
     if (fkErrors.length > 0) {
       throw new Error(`FK integrity violation after v27: ${JSON.stringify(fkErrors)}`);
+    }
+  },
+});
+
+// ---------------------------------------------------------------------------
+// v28: Migrate api_keys to settings table and drop api_keys (v29.5 #214)
+// ---------------------------------------------------------------------------
+
+MIGRATIONS.push({
+  version: 28,
+  description: 'Migrate api_keys to settings table and drop api_keys (v29.5 #214)',
+  managesOwnTransaction: true,
+  up: (sqlite) => {
+    sqlite.exec('BEGIN');
+    try {
+      // 1. Check if api_keys table exists (may not exist on very old DBs that skipped v11)
+      const tableExists = sqlite
+        .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='api_keys'")
+        .get();
+
+      if (tableExists) {
+        // 2. Read all api_keys rows
+        const rows = sqlite
+          .prepare('SELECT provider_name, encrypted_key, updated_at FROM api_keys')
+          .all() as Array<{
+          provider_name: string;
+          encrypted_key: string;
+          updated_at: number;
+        }>;
+
+        // 3. For each row, insert into settings with key = 'actions.{provider_name}_api_key'
+        // Only insert if the setting doesn't already exist (avoid overwriting manual settings)
+        // encrypted_key values use the SAME encryption format as settings.value
+        // (both use encryptSettingValue from settings-crypto.ts), so copy directly.
+        const insertStmt = sqlite.prepare(
+          `INSERT OR IGNORE INTO settings (key, value, encrypted, category, updated_at)
+           VALUES (?, ?, 1, 'actions', ?)`,
+        );
+
+        for (const row of rows) {
+          const settingKey = `actions.${row.provider_name}_api_key`;
+          insertStmt.run(settingKey, row.encrypted_key, row.updated_at);
+        }
+
+        // 4. Drop api_keys table
+        sqlite.exec('DROP TABLE IF EXISTS api_keys');
+      }
+
+      sqlite.exec('COMMIT');
+    } catch (err) {
+      sqlite.exec('ROLLBACK');
+      throw err;
+    }
+  },
+});
+
+// ---------------------------------------------------------------------------
+// v29: Rename Solana network IDs to solana-{network} format (v29.5 #211)
+// ---------------------------------------------------------------------------
+// Converts mainnet->solana-mainnet, devnet->solana-devnet, testnet->solana-testnet
+// in all tables with Solana network references.
+// Tables with CHECK constraints (transactions, policies, defi_positions) require
+// 12-step table recreation. Tables without CHECK (incoming_transactions,
+// incoming_tx_cursors, token_registry) use simple UPDATE.
+
+MIGRATIONS.push({
+  version: 29,
+  description: 'Rename Solana network IDs to solana-{network} format (v29.5 #211)',
+  managesOwnTransaction: true,
+  up: (sqlite) => {
+    sqlite.exec('BEGIN');
+    try {
+      // Helper: Solana network CASE WHEN clause for SELECT
+      const solanaCase = (col: string) =>
+        `CASE WHEN chain = 'solana' AND ${col} = 'mainnet' THEN 'solana-mainnet'` +
+        ` WHEN chain = 'solana' AND ${col} = 'devnet' THEN 'solana-devnet'` +
+        ` WHEN chain = 'solana' AND ${col} = 'testnet' THEN 'solana-testnet'` +
+        ` ELSE ${col} END`;
+
+      // ── 1. transactions: 12-step recreation (has CHECK on network) ──
+
+      sqlite.exec(`CREATE TABLE transactions_new (
+  id TEXT PRIMARY KEY,
+  wallet_id TEXT NOT NULL REFERENCES wallets(id) ON DELETE RESTRICT,
+  session_id TEXT REFERENCES sessions(id) ON DELETE SET NULL,
+  chain TEXT NOT NULL,
+  tx_hash TEXT,
+  type TEXT NOT NULL CHECK (type IN (${inList(TRANSACTION_TYPES)})),
+  amount TEXT,
+  to_address TEXT,
+  token_mint TEXT,
+  contract_address TEXT,
+  method_signature TEXT,
+  spender_address TEXT,
+  approved_amount TEXT,
+  parent_id TEXT REFERENCES transactions(id) ON DELETE CASCADE,
+  batch_index INTEGER,
+  status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN (${inList(TRANSACTION_STATUSES)})),
+  tier TEXT CHECK (tier IS NULL OR tier IN (${inList(POLICY_TIERS)})),
+  queued_at INTEGER,
+  executed_at INTEGER,
+  created_at INTEGER NOT NULL,
+  reserved_amount TEXT,
+  amount_usd REAL,
+  reserved_amount_usd REAL,
+  error TEXT,
+  metadata TEXT,
+  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES)})),
+  bridge_status TEXT CHECK (bridge_status IS NULL OR bridge_status IN ('PENDING', 'COMPLETED', 'FAILED', 'BRIDGE_MONITORING', 'TIMEOUT', 'REFUNDED')),
+  bridge_metadata TEXT
+)`);
+
+      sqlite.exec(`INSERT INTO transactions_new
+  SELECT id, wallet_id, session_id, chain, tx_hash, type, amount, to_address,
+         token_mint, contract_address, method_signature, spender_address,
+         approved_amount, parent_id, batch_index, status, tier, queued_at,
+         executed_at, created_at, reserved_amount, amount_usd, reserved_amount_usd,
+         error, metadata, ${solanaCase('network')}, bridge_status, bridge_metadata
+  FROM transactions`);
+
+      sqlite.exec('DROP TABLE transactions');
+      sqlite.exec('ALTER TABLE transactions_new RENAME TO transactions');
+
+      // Recreate transactions indexes
+      sqlite.exec('CREATE INDEX IF NOT EXISTS idx_transactions_wallet_status ON transactions(wallet_id, status)');
+      sqlite.exec('CREATE INDEX IF NOT EXISTS idx_transactions_session_id ON transactions(session_id)');
+      sqlite.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_tx_hash ON transactions(tx_hash)');
+      sqlite.exec('CREATE INDEX IF NOT EXISTS idx_transactions_queued_at ON transactions(queued_at)');
+      sqlite.exec('CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON transactions(created_at)');
+      sqlite.exec('CREATE INDEX IF NOT EXISTS idx_transactions_type ON transactions(type)');
+      sqlite.exec('CREATE INDEX IF NOT EXISTS idx_transactions_contract_address ON transactions(contract_address)');
+      sqlite.exec('CREATE INDEX IF NOT EXISTS idx_transactions_parent_id ON transactions(parent_id)');
+      sqlite.exec('CREATE INDEX IF NOT EXISTS idx_transactions_bridge_status ON transactions(bridge_status) WHERE bridge_status IS NOT NULL');
+      sqlite.exec("CREATE INDEX IF NOT EXISTS idx_transactions_gas_waiting ON transactions(status) WHERE status = 'GAS_WAITING'");
+
+      // ── 2. policies: 12-step recreation (has CHECK on network) ──
+
+      sqlite.exec(`CREATE TABLE policies_new (
+  id TEXT PRIMARY KEY,
+  wallet_id TEXT REFERENCES wallets(id) ON DELETE CASCADE,
+  type TEXT NOT NULL CHECK (type IN (${inList(POLICY_TYPES)})),
+  rules TEXT NOT NULL,
+  priority INTEGER NOT NULL DEFAULT 0,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES)})),
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+)`);
+
+      // policies doesn't have a chain column, so we check if network is one of the bare Solana names
+      sqlite.exec(`INSERT INTO policies_new
+  SELECT id, wallet_id, type, rules, priority, enabled,
+         CASE WHEN network = 'mainnet' THEN 'solana-mainnet'
+              WHEN network = 'devnet' THEN 'solana-devnet'
+              WHEN network = 'testnet' THEN 'solana-testnet'
+              ELSE network END,
+         created_at, updated_at
+  FROM policies`);
+
+      sqlite.exec('DROP TABLE policies');
+      sqlite.exec('ALTER TABLE policies_new RENAME TO policies');
+
+      // Recreate policies indexes
+      sqlite.exec('CREATE INDEX IF NOT EXISTS idx_policies_wallet_enabled ON policies(wallet_id, enabled)');
+      sqlite.exec('CREATE INDEX IF NOT EXISTS idx_policies_type ON policies(type)');
+      sqlite.exec('CREATE INDEX IF NOT EXISTS idx_policies_network ON policies(network)');
+
+      // ── 3. defi_positions: 12-step recreation (has CHECK on network) ──
+
+      sqlite.exec(`CREATE TABLE defi_positions_new (
+  id TEXT PRIMARY KEY,
+  wallet_id TEXT NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
+  category TEXT NOT NULL CHECK(category IN (${inList(POSITION_CATEGORIES)})),
+  provider TEXT NOT NULL,
+  chain TEXT NOT NULL CHECK(chain IN (${inList(CHAIN_TYPES)})),
+  network TEXT CHECK(network IS NULL OR network IN (${inList(NETWORK_TYPES)})),
+  asset_id TEXT,
+  amount TEXT NOT NULL,
+  amount_usd REAL,
+  metadata TEXT,
+  status TEXT NOT NULL DEFAULT 'ACTIVE' CHECK(status IN (${inList(POSITION_STATUSES)})),
+  opened_at INTEGER NOT NULL,
+  closed_at INTEGER,
+  last_synced_at INTEGER NOT NULL,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+)`);
+
+      sqlite.exec(`INSERT INTO defi_positions_new
+  SELECT id, wallet_id, category, provider, chain, ${solanaCase('network')},
+         asset_id, amount, amount_usd, metadata, status, opened_at, closed_at,
+         last_synced_at, created_at, updated_at
+  FROM defi_positions`);
+
+      sqlite.exec('DROP TABLE defi_positions');
+      sqlite.exec('ALTER TABLE defi_positions_new RENAME TO defi_positions');
+
+      // Recreate defi_positions indexes
+      sqlite.exec('CREATE INDEX IF NOT EXISTS idx_defi_positions_wallet_category ON defi_positions(wallet_id, category)');
+      sqlite.exec('CREATE INDEX IF NOT EXISTS idx_defi_positions_wallet_provider ON defi_positions(wallet_id, provider)');
+      sqlite.exec('CREATE INDEX IF NOT EXISTS idx_defi_positions_status ON defi_positions(status)');
+      sqlite.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_defi_positions_unique ON defi_positions(wallet_id, provider, asset_id, category)');
+
+      // ── 4. incoming_transactions: UPDATE only (no CHECK on network) ──
+
+      sqlite.exec(`UPDATE incoming_transactions SET network = 'solana-mainnet' WHERE chain = 'solana' AND network = 'mainnet'`);
+      sqlite.exec(`UPDATE incoming_transactions SET network = 'solana-devnet' WHERE chain = 'solana' AND network = 'devnet'`);
+      sqlite.exec(`UPDATE incoming_transactions SET network = 'solana-testnet' WHERE chain = 'solana' AND network = 'testnet'`);
+
+      // ── 5. incoming_tx_cursors: UPDATE only (no CHECK on network) ──
+
+      sqlite.exec(`UPDATE incoming_tx_cursors SET network = 'solana-mainnet' WHERE chain = 'solana' AND network = 'mainnet'`);
+      sqlite.exec(`UPDATE incoming_tx_cursors SET network = 'solana-devnet' WHERE chain = 'solana' AND network = 'devnet'`);
+      sqlite.exec(`UPDATE incoming_tx_cursors SET network = 'solana-testnet' WHERE chain = 'solana' AND network = 'testnet'`);
+
+      // ── 6. token_registry: UPDATE only (no CHECK on network, no chain column) ──
+
+      sqlite.exec(`UPDATE token_registry SET network = 'solana-mainnet' WHERE network = 'mainnet'`);
+      sqlite.exec(`UPDATE token_registry SET network = 'solana-devnet' WHERE network = 'devnet'`);
+      sqlite.exec(`UPDATE token_registry SET network = 'solana-testnet' WHERE network = 'testnet'`);
+
+      sqlite.exec('COMMIT');
+    } catch (err) {
+      sqlite.exec('ROLLBACK');
+      throw err;
+    }
+
+    // Re-enable foreign keys and verify integrity
+    sqlite.pragma('foreign_keys = ON');
+    const fkErrors = sqlite.pragma('foreign_key_check') as unknown[];
+    if (fkErrors.length > 0) {
+      throw new Error(
+        `FK integrity check failed after v29 migration: ${JSON.stringify(fkErrors)}`,
+      );
     }
   },
 });

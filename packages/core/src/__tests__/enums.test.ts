@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import {
   CHAIN_TYPES,
   ChainTypeEnum,
@@ -36,6 +36,9 @@ import {
   PositionCategoryEnum,
   POSITION_STATUSES,
   PositionStatusEnum,
+  normalizeNetworkInput,
+  _resetLegacyWarning,
+  NetworkTypeEnumWithLegacy,
 } from '../index.js';
 
 describe('Enum SSoT', () => {
@@ -49,9 +52,9 @@ describe('Enum SSoT', () => {
   it('NetworkType has 13 values', () => {
     expect(NETWORK_TYPES).toHaveLength(13);
     // Solana networks
-    expect(NETWORK_TYPES).toContain('mainnet');
-    expect(NETWORK_TYPES).toContain('devnet');
-    expect(NETWORK_TYPES).toContain('testnet');
+    expect(NETWORK_TYPES).toContain('solana-mainnet');
+    expect(NETWORK_TYPES).toContain('solana-devnet');
+    expect(NETWORK_TYPES).toContain('solana-testnet');
     // EVM networks
     expect(NETWORK_TYPES).toContain('ethereum-mainnet');
     expect(NETWORK_TYPES).toContain('ethereum-sepolia');
@@ -192,14 +195,14 @@ describe('Enum SSoT', () => {
 
     it('EvmNetworkTypeEnum validates EVM networks', () => {
       expect(EvmNetworkTypeEnum.parse('ethereum-sepolia')).toBe('ethereum-sepolia');
-      expect(() => EvmNetworkTypeEnum.parse('devnet')).toThrow();
+      expect(() => EvmNetworkTypeEnum.parse('solana-devnet')).toThrow();
     });
 
     it('SOLANA_NETWORK_TYPES has 3 values', () => {
       expect(SOLANA_NETWORK_TYPES).toHaveLength(3);
-      expect(SOLANA_NETWORK_TYPES).toContain('mainnet');
-      expect(SOLANA_NETWORK_TYPES).toContain('devnet');
-      expect(SOLANA_NETWORK_TYPES).toContain('testnet');
+      expect(SOLANA_NETWORK_TYPES).toContain('solana-mainnet');
+      expect(SOLANA_NETWORK_TYPES).toContain('solana-devnet');
+      expect(SOLANA_NETWORK_TYPES).toContain('solana-testnet');
     });
 
     it('every EVM network is in NETWORK_TYPES', () => {
@@ -212,9 +215,9 @@ describe('Enum SSoT', () => {
   // validateChainNetwork
   describe('validateChainNetwork', () => {
     it('accepts valid Solana chain+network pairs', () => {
-      expect(() => validateChainNetwork('solana', 'devnet')).not.toThrow();
-      expect(() => validateChainNetwork('solana', 'mainnet')).not.toThrow();
-      expect(() => validateChainNetwork('solana', 'testnet')).not.toThrow();
+      expect(() => validateChainNetwork('solana', 'solana-devnet')).not.toThrow();
+      expect(() => validateChainNetwork('solana', 'solana-mainnet')).not.toThrow();
+      expect(() => validateChainNetwork('solana', 'solana-testnet')).not.toThrow();
     });
 
     it('accepts valid EVM chain+network pairs', () => {
@@ -226,9 +229,9 @@ describe('Enum SSoT', () => {
     });
 
     it('rejects Solana network for ethereum chain', () => {
-      expect(() => validateChainNetwork('ethereum', 'devnet')).toThrow();
-      expect(() => validateChainNetwork('ethereum', 'mainnet')).toThrow();
-      expect(() => validateChainNetwork('ethereum', 'testnet')).toThrow();
+      expect(() => validateChainNetwork('ethereum', 'solana-devnet')).toThrow();
+      expect(() => validateChainNetwork('ethereum', 'solana-mainnet')).toThrow();
+      expect(() => validateChainNetwork('ethereum', 'solana-testnet')).toThrow();
     });
 
     it('rejects EVM network for solana chain', () => {
@@ -241,7 +244,7 @@ describe('Enum SSoT', () => {
     });
 
     it('error message is descriptive', () => {
-      expect(() => validateChainNetwork('ethereum', 'devnet')).toThrow(/Invalid network.*devnet.*ethereum/);
+      expect(() => validateChainNetwork('ethereum', 'solana-devnet')).toThrow(/Invalid network.*solana-devnet.*ethereum/);
       expect(() => validateChainNetwork('solana', 'ethereum-sepolia')).toThrow(/Invalid network.*ethereum-sepolia.*solana/);
     });
   });
@@ -280,6 +283,56 @@ describe('Enum SSoT', () => {
     expect(NotificationLogStatusEnum.parse('sent')).toBe('sent');
     expect(NotificationLogStatusEnum.parse('failed')).toBe('failed');
     expect(() => NotificationLogStatusEnum.parse('pending')).toThrow();
+  });
+
+  // normalizeNetworkInput: legacy -> canonical + passthrough
+  describe('normalizeNetworkInput', () => {
+    beforeEach(() => _resetLegacyWarning());
+
+    it('converts legacy mainnet to solana-mainnet', () => {
+      expect(normalizeNetworkInput('mainnet')).toBe('solana-mainnet');
+    });
+
+    it('converts legacy devnet to solana-devnet', () => {
+      expect(normalizeNetworkInput('devnet')).toBe('solana-devnet');
+    });
+
+    it('converts legacy testnet to solana-testnet', () => {
+      expect(normalizeNetworkInput('testnet')).toBe('solana-testnet');
+    });
+
+    it('passes through canonical solana-mainnet unchanged', () => {
+      expect(normalizeNetworkInput('solana-mainnet')).toBe('solana-mainnet');
+    });
+
+    it('passes through EVM network unchanged', () => {
+      expect(normalizeNetworkInput('ethereum-mainnet')).toBe('ethereum-mainnet');
+      expect(normalizeNetworkInput('polygon-amoy')).toBe('polygon-amoy');
+    });
+
+    it('passes through unknown network unchanged', () => {
+      expect(normalizeNetworkInput('unknown-chain')).toBe('unknown-chain');
+    });
+  });
+
+  // NetworkTypeEnumWithLegacy accepts both legacy and canonical
+  describe('NetworkTypeEnumWithLegacy', () => {
+    beforeEach(() => _resetLegacyWarning());
+
+    it('accepts canonical network names', () => {
+      expect(NetworkTypeEnumWithLegacy.parse('solana-mainnet')).toBe('solana-mainnet');
+      expect(NetworkTypeEnumWithLegacy.parse('ethereum-sepolia')).toBe('ethereum-sepolia');
+    });
+
+    it('accepts and normalizes legacy Solana network names', () => {
+      expect(NetworkTypeEnumWithLegacy.parse('mainnet')).toBe('solana-mainnet');
+      expect(NetworkTypeEnumWithLegacy.parse('devnet')).toBe('solana-devnet');
+      expect(NetworkTypeEnumWithLegacy.parse('testnet')).toBe('solana-testnet');
+    });
+
+    it('rejects invalid network names', () => {
+      expect(() => NetworkTypeEnumWithLegacy.parse('invalid')).toThrow();
+    });
   });
 
   // All enum arrays contain only string values (no duplicates) -- all 18

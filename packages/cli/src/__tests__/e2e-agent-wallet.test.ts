@@ -103,7 +103,7 @@ describe('E2E Wallet Management', () => {
     // base58: alphanumeric string, 32-44 chars (no 0, O, I, l)
     expect(body.address).toMatch(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/);
     expect(body.chain).toBe('solana');
-    expect(body.network).toBe('devnet');
+    expect(body.network).toBe('solana-devnet');
   });
 
   test('E-07: GET /v1/wallet/balance returns SOL balance', async () => {

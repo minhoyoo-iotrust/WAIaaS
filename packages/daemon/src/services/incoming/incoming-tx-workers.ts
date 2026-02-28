@@ -23,8 +23,8 @@ import type { Database } from 'better-sqlite3';
  * `currentBlock - txBlockNumber >= threshold`.
  */
 export const EVM_CONFIRMATION_THRESHOLDS: Record<string, number> = {
-  mainnet: 12,
-  sepolia: 1,
+  'ethereum-mainnet': 12,
+  'ethereum-sepolia': 1,
   'polygon-mainnet': 128,
   'polygon-amoy': 1,
   'arbitrum-mainnet': 1,

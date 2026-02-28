@@ -16,7 +16,7 @@ import { createApp } from '../api/server.js';
 import { createDatabase, pushSchema, generateId } from '../infrastructure/database/index.js';
 import { JwtSecretManager, type JwtPayload } from '../infrastructure/jwt/index.js';
 import { ActionProviderRegistry } from '../infrastructure/action/action-provider-registry.js';
-import { ApiKeyStore } from '../infrastructure/action/api-key-store.js';
+import { SettingsService } from '../infrastructure/settings/settings-service.js';
 import type { DatabaseConnection } from '../infrastructure/database/index.js';
 import type { DaemonConfig } from '../infrastructure/config/loader.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
@@ -150,7 +150,7 @@ function mockKeyStore(): LocalKeyStore {
 function mockAdapter(chain: 'solana' | 'ethereum' = 'ethereum'): IChainAdapter {
   return {
     chain,
-    network: chain === 'ethereum' ? 'ethereum-sepolia' : 'devnet',
+    network: chain === 'ethereum' ? 'ethereum-sepolia' : 'solana-devnet',
     connect: async () => {},
     disconnect: async () => {},
     isConnected: () => true,
@@ -343,7 +343,11 @@ beforeEach(async () => {
     jwtSecretManager,
     policyEngine: mockPolicyEngine(),
     actionProviderRegistry: registry,
-    apiKeyStore: new ApiKeyStore(conn.db, TEST_MASTER_PASSWORD),
+    settingsService: new SettingsService({
+      db: conn.db,
+      config: mockConfig(),
+      masterPassword: TEST_MASTER_PASSWORD,
+    }),
   });
 });
 
@@ -523,7 +527,11 @@ describe('Action staking pipeline integration (GAP-1 + GAP-2)', () => {
       jwtSecretManager,
       policyEngine: mockPolicyEngine(),
       actionProviderRegistry: buildMockRegistry(),
-      apiKeyStore: new ApiKeyStore(conn.db, TEST_MASTER_PASSWORD),
+      settingsService: new SettingsService({
+        db: conn.db,
+        config: mockConfig(),
+        masterPassword: TEST_MASTER_PASSWORD,
+      }),
     });
 
     const res = await app.request('/v1/actions/jito_staking/unstake', {

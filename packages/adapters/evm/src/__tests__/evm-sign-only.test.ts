@@ -92,7 +92,7 @@ describe('EvmAdapter sign-only operations', () => {
   // NOTE: parseTransaction and signExternalTransaction do NOT require RPC connection
   // They work purely with local crypto operations
   beforeEach(() => {
-    adapter = new EvmAdapter('mainnet');
+    adapter = new EvmAdapter('ethereum-mainnet');
   });
 
   describe('parseTransaction', () => {

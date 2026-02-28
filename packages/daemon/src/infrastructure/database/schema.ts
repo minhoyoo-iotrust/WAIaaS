@@ -1,7 +1,7 @@
 /**
  * Drizzle ORM schema definitions for WAIaaS daemon SQLite database.
  *
- * 17 tables: wallets, sessions, session_wallets, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs, token_registry, settings, api_keys, telegram_users, wc_sessions, wc_store, incoming_transactions, incoming_tx_cursors
+ * 16 tables: wallets, sessions, session_wallets, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs, token_registry, settings, telegram_users, wc_sessions, wc_store, incoming_transactions, incoming_tx_cursors
  *
  * CHECK constraints are derived from @waiaas/core enum SSoT arrays (not hardcoded strings).
  * All timestamps are Unix epoch seconds via { mode: 'timestamp' }.
@@ -379,18 +379,7 @@ export const settings = sqliteTable(
 );
 
 // ---------------------------------------------------------------------------
-// Table 11: api_keys -- Action Provider API key encrypted storage (v1.5)
-// ---------------------------------------------------------------------------
-
-export const apiKeys = sqliteTable('api_keys', {
-  providerName: text('provider_name').primaryKey(),
-  encryptedKey: text('encrypted_key').notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
-});
-
-// ---------------------------------------------------------------------------
-// Table 12: telegram_users -- Telegram Bot user management (v1.6)
+// Table 11: telegram_users -- Telegram Bot user management (v1.6)
 // ---------------------------------------------------------------------------
 
 export const telegramUsers = sqliteTable(

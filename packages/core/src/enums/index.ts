@@ -20,6 +20,9 @@ export {
   getSingleNetwork,
   deriveEnvironment,
   validateNetworkEnvironment,
+  normalizeNetworkInput,
+  _resetLegacyWarning,
+  NetworkTypeEnumWithLegacy,
 } from './chain.js';
 
 export {

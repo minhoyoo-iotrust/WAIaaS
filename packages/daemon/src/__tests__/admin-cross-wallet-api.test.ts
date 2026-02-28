@@ -85,7 +85,7 @@ function mockKeyStore(): LocalKeyStore {
 
 function mockAdapter(): IChainAdapter {
   return {
-    chain: 'solana' as const, network: 'devnet' as const,
+    chain: 'solana' as const, network: 'solana-devnet' as const,
     connect: async () => {}, disconnect: async () => {}, isConnected: () => true,
     getHealth: async (): Promise<HealthInfo> => ({ healthy: true, latencyMs: 1 }),
     getBalance: async (addr: string): Promise<BalanceInfo> => ({ address: addr, balance: 1_000_000_000n, decimals: 9, symbol: 'SOL' }),
@@ -182,11 +182,11 @@ beforeEach(async () => {
 
   // Seed 5 transactions with varied types/statuses/networks
   const txData = [
-    { walletId: wallet1Id, chain: 'solana', type: 'TRANSFER', status: 'CONFIRMED', network: 'devnet', toAddress: 'addr1', amount: '1000000000', txHash: 'hash1', createdAt: new Date((nowSec - 3600) * 1000) },
-    { walletId: wallet1Id, chain: 'solana', type: 'TOKEN_TRANSFER', status: 'PENDING', network: 'devnet', toAddress: 'addr2', amount: '500000', txHash: 'hash2', createdAt: new Date((nowSec - 1800) * 1000) },
+    { walletId: wallet1Id, chain: 'solana', type: 'TRANSFER', status: 'CONFIRMED', network: 'solana-devnet', toAddress: 'addr1', amount: '1000000000', txHash: 'hash1', createdAt: new Date((nowSec - 3600) * 1000) },
+    { walletId: wallet1Id, chain: 'solana', type: 'TOKEN_TRANSFER', status: 'PENDING', network: 'solana-devnet', toAddress: 'addr2', amount: '500000', txHash: 'hash2', createdAt: new Date((nowSec - 1800) * 1000) },
     { walletId: wallet2Id, chain: 'ethereum', type: 'TRANSFER', status: 'CONFIRMED', network: 'ethereum-sepolia', toAddress: 'addr3', amount: '2000000000000000000', txHash: 'hash3', createdAt: new Date((nowSec - 900) * 1000) },
     { walletId: wallet2Id, chain: 'ethereum', type: 'CONTRACT_CALL', status: 'FAILED', network: 'ethereum-sepolia', toAddress: 'addr4', amount: '0', txHash: 'hash4', createdAt: new Date((nowSec - 600) * 1000) },
-    { walletId: wallet1Id, chain: 'solana', type: 'TRANSFER', status: 'CONFIRMED', network: 'devnet', toAddress: 'addr5', amount: '3000000000', txHash: 'hash5', createdAt: new Date((nowSec - 300) * 1000) },
+    { walletId: wallet1Id, chain: 'solana', type: 'TRANSFER', status: 'CONFIRMED', network: 'solana-devnet', toAddress: 'addr5', amount: '3000000000', txHash: 'hash5', createdAt: new Date((nowSec - 300) * 1000) },
   ];
 
   for (const tx of txData) {
@@ -197,9 +197,9 @@ beforeEach(async () => {
 
   // Seed 3 incoming transactions with varied chains/statuses/suspicious
   const incomingData = [
-    { walletId: wallet1Id, txHash: 'in-hash1', fromAddress: 'sender1', amount: '100000000', chain: 'solana', network: 'devnet', status: 'CONFIRMED', blockNumber: 12345, detectedAt: new Date((nowSec - 2000) * 1000), confirmedAt: new Date((nowSec - 1900) * 1000), isSuspicious: false },
+    { walletId: wallet1Id, txHash: 'in-hash1', fromAddress: 'sender1', amount: '100000000', chain: 'solana', network: 'solana-devnet', status: 'CONFIRMED', blockNumber: 12345, detectedAt: new Date((nowSec - 2000) * 1000), confirmedAt: new Date((nowSec - 1900) * 1000), isSuspicious: false },
     { walletId: wallet2Id, txHash: 'in-hash2', fromAddress: 'sender2', amount: '5000000000000000000', chain: 'ethereum', network: 'ethereum-sepolia', status: 'DETECTED', blockNumber: 67890, detectedAt: new Date((nowSec - 1000) * 1000), isSuspicious: true },
-    { walletId: wallet1Id, txHash: 'in-hash3', fromAddress: 'sender3', amount: '200000000', chain: 'solana', network: 'devnet', status: 'CONFIRMED', blockNumber: 12400, detectedAt: new Date((nowSec - 500) * 1000), confirmedAt: new Date((nowSec - 400) * 1000), isSuspicious: false },
+    { walletId: wallet1Id, txHash: 'in-hash3', fromAddress: 'sender3', amount: '200000000', chain: 'solana', network: 'solana-devnet', status: 'CONFIRMED', blockNumber: 12400, detectedAt: new Date((nowSec - 500) * 1000), confirmedAt: new Date((nowSec - 400) * 1000), isSuspicious: false },
   ];
 
   for (const inc of incomingData) {

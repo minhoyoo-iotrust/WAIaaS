@@ -234,9 +234,11 @@ await fetch('https://your-push-relay:3200/devices', {
 import {
   parseSignRequest,
   buildSignResponse,
-  sendViaNtfy,
+  sendViaRelay,
   formatDisplayMessage,
 } from '@waiaas/wallet-sdk';
+
+const PUSH_RELAY_URL = 'https://your-push-relay.example.com';
 
 // 1. Handle incoming native push notification
 onPushReceived((push) => {
@@ -260,12 +262,12 @@ async function onApprove(request: SignRequest) {
     ownerWallet.address,
   );
 
-  // 5. Send response directly to ntfy (bypasses Push Relay)
-  await sendViaNtfy(response, request.responseChannel.responseTopic);
+  // 5. Send response via Push Relay (wallet only needs the relay URL)
+  await sendViaRelay(response, request.responseChannel.responseTopic, PUSH_RELAY_URL);
 }
 ```
 
-> **Note:** Push Relay is one-directional (daemon → wallet). Responses always go back directly via ntfy from the wallet app to the daemon.
+> **Tip:** `sendViaRelay()` posts the response to Push Relay's `/v1/sign-response` endpoint, which forwards it to the ntfy response topic. This means the wallet app only needs to know the Push Relay URL — no direct ntfy access required. For server-side or testing use cases, `sendViaNtfy()` is still available as a direct ntfy alternative.
 
 For more details, see the [`@waiaas/push-relay` package on npm](https://www.npmjs.com/package/@waiaas/push-relay).
 
@@ -304,7 +306,7 @@ Each SignRequest contains:
 6. [User]        Reviews and approves/rejects
 7. [Wallet App]  Signs raw message with owner private key
 8. [Wallet SDK]  buildSignResponse() with signature
-9. [Wallet SDK]  sendViaNtfy() or sendViaTelegram() -> response always via ntfy
+9. [Wallet SDK]  sendViaRelay() (Scenario 3) / sendViaNtfy() (Scenario 1) / sendViaTelegram() (Scenario 2)
 10. [Daemon]     Receives response, broadcasts if approved
 ```
 
@@ -390,7 +392,7 @@ console.log('Response:', response);
 A: The SDK requires a communication channel. ntfy is the simplest option (free, open-source). You can also use Push Relay to deliver sign requests via your existing push infrastructure (Pushwoosh/FCM).
 
 **Q: What is Push Relay and when should I use it?**
-A: `@waiaas/push-relay` is a bridge server that subscribes to WAIaaS ntfy topics and forwards sign requests as native push notifications (Pushwoosh/FCM). Use it when your wallet app already has native push infrastructure and you want to avoid integrating ntfy directly.
+A: `@waiaas/push-relay` is a bridge server that subscribes to WAIaaS ntfy topics and forwards sign requests as native push notifications (Pushwoosh/FCM). It also relays signing responses back to ntfy via `POST /v1/sign-response`, so wallet apps only need to know the Push Relay URL. Use it when your wallet app already has native push infrastructure and you want to avoid integrating ntfy directly.
 
 **Q: What happens if my wallet app is offline?**
 A: Sign requests have an expiration time (configured in WAIaaS daemon). If no response is received before expiry, the transaction is rejected automatically.
