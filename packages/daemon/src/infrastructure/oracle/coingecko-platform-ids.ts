@@ -26,7 +26,7 @@ export interface CoinGeckoPlatform {
  */
 export const COINGECKO_PLATFORM_MAP: Record<string, CoinGeckoPlatform> = {
   // Solana (mainnet only -- devnet/testnet have no CoinGecko prices)
-  'mainnet':          { platformId: 'solana',              nativeCoinId: 'solana' },
+  'solana-mainnet':   { platformId: 'solana',              nativeCoinId: 'solana' },
   // EVM Mainnet L1
   'ethereum-mainnet': { platformId: 'ethereum',            nativeCoinId: 'ethereum' },
   // EVM L2 Mainnets

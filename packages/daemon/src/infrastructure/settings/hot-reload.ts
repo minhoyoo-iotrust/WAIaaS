@@ -560,7 +560,7 @@ export class HotReloadOrchestrator {
 
       // 6. Evict cached adapters for affected network
       // Determine chain type from network name
-      const solanaNetworks = new Set(['mainnet', 'devnet', 'testnet']);
+      const solanaNetworks = new Set(['solana-mainnet', 'solana-devnet', 'solana-testnet']);
       if (solanaNetworks.has(network)) {
         await pool.evict('solana' as any, network as any);
       } else {
@@ -571,13 +571,14 @@ export class HotReloadOrchestrator {
 
   /**
    * Reverse map: network name -> config.toml rpc field key.
-   * mainnet -> solana_mainnet, devnet -> solana_devnet, testnet -> solana_testnet
+   * solana-mainnet -> solana_mainnet, solana-devnet -> solana_devnet
    * ethereum-sepolia -> evm_ethereum_sepolia, base-mainnet -> evm_base_mainnet
    */
   private networkToConfigKey(network: string): string | null {
-    const solanaNetworks = new Set(['mainnet', 'devnet', 'testnet']);
+    const solanaNetworks = new Set(['solana-mainnet', 'solana-devnet', 'solana-testnet']);
     if (solanaNetworks.has(network)) {
-      return `solana_${network}`;
+      // solana-mainnet -> solana_mainnet (strip 'solana-', prefix 'solana_')
+      return `solana_${network.slice('solana-'.length)}`;
     }
     // EVM: ethereum-sepolia -> evm_ethereum_sepolia
     return `evm_${network.replace(/-/g, '_')}`;

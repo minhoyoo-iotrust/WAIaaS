@@ -20,7 +20,8 @@ import type { RpcPool } from '@waiaas/core';
 /**
  * Build the RPC config key for a given chain:network pair.
  * Maps:
- *   solana + 'devnet'             -> solana_devnet
+ *   solana + 'solana-mainnet'     -> solana_mainnet
+ *   solana + 'solana-devnet'      -> solana_devnet
  *   ethereum + 'ethereum-sepolia' -> evm_ethereum_sepolia
  *
  * Used by both resolveRpcUrl (config object lookup) and subscriberFactory
@@ -28,14 +29,19 @@ import type { RpcPool } from '@waiaas/core';
  * truth for key construction.
  */
 export function rpcConfigKey(chain: string, network: string): string {
-  if (chain === 'solana') return `solana_${network}`;
+  if (chain === 'solana') {
+    // solana-mainnet -> solana_mainnet, solana-devnet -> solana_devnet
+    // Strip 'solana-' prefix to get config.toml key (e.g., solana_mainnet)
+    const suffix = network.startsWith('solana-') ? network.slice('solana-'.length) : network;
+    return `solana_${suffix}`;
+  }
   return `evm_${network.replace(/-/g, '_')}`;
 }
 
 /**
  * Resolve RPC URL from config rpc section for a given chain:network.
  * Maps:
- *   solana + 'devnet'          -> rpc.solana_devnet
+ *   solana + 'solana-devnet'      -> rpc.solana_devnet
  *   ethereum + 'ethereum-sepolia' -> rpc.evm_ethereum_sepolia
  */
 export function resolveRpcUrl(
@@ -51,8 +57,8 @@ export function resolveRpcUrl(
  * Reverse mapping: config.toml rpc section key -> BUILT_IN_RPC_DEFAULTS network name.
  *
  * Examples:
- *   solana_mainnet       -> mainnet
- *   solana_devnet        -> devnet
+ *   solana_mainnet       -> solana-mainnet
+ *   solana_devnet        -> solana-devnet
  *   evm_ethereum_sepolia -> ethereum-sepolia
  *   evm_base_mainnet     -> base-mainnet
  *   solana_ws_devnet     -> null (skip, WebSocket keys are not network endpoints)
@@ -61,9 +67,9 @@ export function configKeyToNetwork(configKey: string): string | null {
   // Skip WebSocket keys (solana_ws_*)
   if (configKey.startsWith('solana_ws_')) return null;
 
-  // Solana: solana_mainnet -> mainnet, solana_devnet -> devnet
+  // Solana: solana_mainnet -> solana-mainnet, solana_devnet -> solana-devnet
   if (configKey.startsWith('solana_')) {
-    return configKey.slice('solana_'.length);
+    return `solana-${configKey.slice('solana_'.length)}`;
   }
 
   // EVM: evm_ethereum_sepolia -> ethereum-sepolia (strip evm_, replace _ with -)
