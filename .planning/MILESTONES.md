@@ -1,5 +1,28 @@
 # Project Milestones: WAIaaS
 
+## v29.5 내부 일관성 정리 (Shipped: 2026-02-28)
+
+**Delivered:** API 키 이중 저장소 버그(#214)를 SettingsService SSoT 통합으로 해결하고, Solana 네트워크 ID를 `solana-mainnet` 형식으로 전 스택 통일(#211)하며, Push Relay 서명 응답 릴레이 엔드포인트(#215)를 추가한 내부 일관성 정리 마일스톤. DB migration v28(api_keys→settings), v29(network ID 리네이밍), 레거시 입력 자동 변환, config.toml 하위 호환성을 모두 확보.
+
+**Phases completed:** 285-287 (3 phases, 7 plans, 18 requirements)
+
+**Key accomplishments:**
+
+- API 키 저장소 SSoT 통합 — ApiKeyStore 완전 제거, DB migration v28로 api_keys→settings 마이그레이션, hot-reload rpcCaller 전달 수정
+- Solana 네트워크 ID 통일 — `solana-mainnet`/`solana-devnet`/`solana-testnet` 전 스택 적용, DB migration v29 (6 테이블 12-step recreation)
+- 레거시 입력 자동 변환 — `normalizeNetworkInput()` + `NetworkTypeEnumWithLegacy` Zod preprocess, config.toml `rpcConfigKey()` 양방향 매핑
+- Push Relay 서명 응답 릴레이 — POST /v1/sign-response 엔드포인트 + sendViaRelay() SDK 함수
+- 전 패키지 5,595+ 테스트 통과 확인 (typecheck/lint 포함)
+
+**Stats:**
+
+- 3 phases, 7 plans, 18 requirements, 23 commits
+- 156 files changed, +3,990 / -1,220 lines
+- ~223,044 LOC TypeScript
+- Timeline: 1 day (2026-02-28)
+
+---
+
 ## v29.4 Solana Lending -- Kamino (Shipped: 2026-02-28)
 
 **Delivered:** Kamino K-Lend를 ILendingProvider 구현체로 구축하여 AI 에이전트가 Solana 체인에서 supply/borrow/repay/withdraw를 정책 평가 하에 수행할 수 있도록 한 마일스톤. v29.2에서 구축된 Lending 프레임워크를 재사용하며, @kamino-finance/klend-sdk 래핑 SDK로 Solana instruction을 빌드. HF 시뮬레이션 가드로 자기 청산 방지, PositionTracker duck-type 자동 등록, Admin Settings 3키 런타임 조정, MCP 4도구 자동 노출, Admin UI 7th provider card, KINT-07 LTV suffix matching 버그 수정까지 완료.
@@ -1678,4 +1701,14 @@
 ---
 
 
+
+
+## v29.5 내부 일관성 정리 (Shipped: 2026-02-28)
+
+**Phases completed:** 180 phases, 387 plans, 52 tasks
+
+**Key accomplishments:**
+- (none recorded)
+
+---
 

@@ -1,7 +1,8 @@
 # 마일스톤 m29-05: 내부 일관성 정리
 
-- **Status:** PLANNED
+- **Status:** SHIPPED
 - **Milestone:** v29.5
+- **Completed:** 2026-02-28
 
 ## 목표
 
