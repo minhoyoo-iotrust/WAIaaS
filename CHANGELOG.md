@@ -1,5 +1,28 @@
 # Changelog
 
+## [2.9.0-rc.3](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc.2...v2.9.0-rc.3) (2026-02-28)
+
+
+### Features
+
+* **#215:** add Push Relay sign response relay endpoint + sendViaRelay SDK function ([71ab2fd](https://github.com/minhoyoo-iotrust/WAIaaS/commit/71ab2fdbc7d418ce5f954d8cd96626e02e413dac))
+* **285-01:** add v28 migration to move api_keys to settings table ([d4ff31b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d4ff31b530a648326a585f3f317c7ea8bfb7599d))
+* **285-01:** delegate admin API key routes to SettingsService ([9362c3a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/9362c3af36cb318cf9e61b412ef08600cb7d2b0a))
+* **285-02:** add setApiKey bypass, migrate tests, update admin routes ([6911e02](https://github.com/minhoyoo-iotrust/WAIaaS/commit/6911e02313966ea220546439ebbc469f6fed03e1))
+* **285-02:** remove ApiKeyStore, fix hot-reload, update action route guard ([1eef92a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1eef92ab7d70843d468f99a9bb1c3d00d20a35dd))
+* **286-01:** add DB migration v29 for Solana network ID renaming ([c63fb1b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c63fb1b1103ecb9d97fd82ce23c2bf61d5609aff))
+* **286-01:** rename Solana network SSoT constants to solana-{network} format ([c654802](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c654802698839996deed1893ca604cbd32690b11))
+* **286-01:** update CAIP mappings, explorer URLs, and RPC defaults for solana-{network} ([a5894ab](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a5894ab9f851eb821bf4404599ca552fa13f54f2))
+* **286-02:** update infrastructure layer for solana-{network} format ([26d8187](https://github.com/minhoyoo-iotrust/WAIaaS/commit/26d8187bb996d9a589e6827d9b63d45c848e85f7))
+* **286-03:** add legacy network name normalizer and NetworkTypeEnumWithLegacy ([a413522](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a413522bb1523173c8dbb812bb1cc2212af99685))
+* **286-03:** update Admin UI network displays and skills file examples ([6bdbcc8](https://github.com/minhoyoo-iotrust/WAIaaS/commit/6bdbcc87306c33e6645ccfcbb33c11a820bbb6cc))
+
+
+### Bug Fixes
+
+* **286-03:** export normalizeNetworkInput and NetworkTypeEnumWithLegacy from enums index ([6c6a9e6](https://github.com/minhoyoo-iotrust/WAIaaS/commit/6c6a9e6aa680c460b4f6103a57932a587b198320))
+* update Kamino skill examples to solana-mainnet and fix test name ([2c451e1](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2c451e1282b665d93e707868d27eda2afa453e3d))
+
 ## [2.9.0-rc.2](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc.1...v2.9.0-rc.2) (2026-02-28)
 
 
