@@ -83,6 +83,7 @@ async function main(): Promise<void> {
     subscriber,
     provider,
     apiKey: config.relay.server.api_key,
+    ntfyServer: config.relay.ntfy_server,
   });
 
   const server = serve({

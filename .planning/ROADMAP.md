@@ -30,7 +30,7 @@
 - ✅ **v29.2 EVM Lending -- Aave V3** -- Phases 274-278 (shipped 2026-02-27)
 - ✅ **v29.3 기본 지갑/기본 네트워크 개념 제거** -- Phases 279-282 (shipped 2026-02-27)
 - ✅ **v29.4 Solana Lending (Kamino)** -- Phases 283-284 (shipped 2026-02-28)
-- [ ] **v29.5 내부 일관성 정리** -- Phases 285-286 (in progress)
+- [ ] **v29.5 내부 일관성 정리** -- Phases 285-287 (in progress)
 
 ## Phases
 
@@ -209,10 +209,11 @@ See `.planning/milestones/v29.4-ROADMAP.md` for full details.
 
 ### v29.5 내부 일관성 정리 (In Progress)
 
-**Milestone Goal:** API 키 이중 저장소 버그(#214) 수정 + Solana 네트워크 ID 통일(#211)로 코드베이스 내부 일관성 확보
+**Milestone Goal:** API 키 이중 저장소 버그(#214) 수정 + Solana 네트워크 ID 통일(#211) + Push Relay 서명 응답 릴레이(#215)
 
 - [x] **Phase 285: API 키 저장소 통합** - ApiKeyStore 제거, SettingsService SSoT 통합, DB migration v28 -- completed 2026-02-28
 - [x] **Phase 286: Solana 네트워크 ID 통일** - `{chain}-{network}` 패턴 전 스택 적용, DB migration v29 -- completed 2026-02-28
+- [x] **Phase 287: Push Relay 서명 응답 릴레이** - POST /v1/sign-response 엔드포인트 + sendViaRelay() SDK 함수 -- completed 2026-02-28
 
 ## Phase Details
 
@@ -253,12 +254,13 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 285 → 286
+Phases execute in numeric order: 285 → 286 → 287
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 285. API 키 저장소 통합 | 2/2 | Complete | 2026-02-28 |
 | 286. Solana 네트워크 ID 통일 | 4/4 | Complete | 2026-02-28 |
+| 287. Push Relay 서명 응답 릴레이 | 1/1 | Complete | 2026-02-28 |
 
 ---
-*Last updated: 2026-02-28 after Phase 286 execution complete*
+*Last updated: 2026-02-28 after Phase 287 execution complete*

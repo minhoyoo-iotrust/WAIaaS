@@ -8,6 +8,7 @@
  *   - buildSignResponse(requestId, action, signature?, signerAddress) - Create SignResponse
  *   - formatDisplayMessage(request) - Human-readable transaction summary
  *   - sendViaNtfy(response, topic, serverUrl?) - Publish to ntfy response topic
+ *   - sendViaRelay(response, topic, pushRelayUrl) - Send via Push Relay server
  *   - sendViaTelegram(response, botUsername) - Generate Telegram deeplink URL
  *   - subscribeToRequests(topic, callback, serverUrl?) - SSE subscription for sign requests
  *   - subscribeToNotifications(topic, callback, serverUrl?) - SSE subscription for notifications
@@ -27,6 +28,7 @@ export {
   sendViaNtfy,
   subscribeToRequests,
   sendViaTelegram,
+  sendViaRelay,
   subscribeToNotifications,
   parseNotification,
 } from './channels/index.js';

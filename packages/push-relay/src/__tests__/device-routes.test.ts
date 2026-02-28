@@ -34,6 +34,7 @@ beforeEach(() => {
     subscriber: makeMockSubscriber(),
     provider: makeMockProvider(),
     apiKey: API_KEY,
+    ntfyServer: 'https://ntfy.sh',
   });
 });
 

@@ -3,6 +3,7 @@ import type { SignRequest, SignResponse } from '@waiaas/core';
 import { encodeSignRequest } from '@waiaas/core';
 import { sendViaNtfy } from '../channels/ntfy.js';
 import { sendViaTelegram } from '../channels/telegram.js';
+import { sendViaRelay } from '../channels/relay.js';
 import { subscribeToRequests } from '../channels/ntfy.js';
 import {
   parseNotification,
@@ -465,5 +466,77 @@ describe('subscribeToNotifications', () => {
     );
 
     unsubscribe();
+  });
+});
+
+describe('sendViaRelay', () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('should POST SignResponse to Push Relay /v1/sign-response endpoint', async () => {
+    fetchMock.mockResolvedValue({ ok: true });
+
+    const response = makeValidResponse();
+    await sendViaRelay(response, 'waiaas-response-abc123', 'https://relay.example.com');
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+    const [url, opts] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('https://relay.example.com/v1/sign-response');
+    expect(opts.method).toBe('POST');
+    expect(opts.headers).toEqual({ 'Content-Type': 'application/json' });
+
+    const body = JSON.parse(opts.body as string) as {
+      requestId: string;
+      action: string;
+      signature: string;
+      signerAddress: string;
+      responseTopic: string;
+    };
+    expect(body.requestId).toBe(response.requestId);
+    expect(body.action).toBe('approve');
+    expect(body.signature).toBe(response.signature);
+    expect(body.signerAddress).toBe(response.signerAddress);
+    expect(body.responseTopic).toBe('waiaas-response-abc123');
+  });
+
+  it('should strip trailing slash from relay URL', async () => {
+    fetchMock.mockResolvedValue({ ok: true });
+
+    await sendViaRelay(makeValidResponse(), 'topic', 'https://relay.example.com/');
+
+    const [url] = fetchMock.mock.calls[0] as [string];
+    expect(url).toBe('https://relay.example.com/v1/sign-response');
+  });
+
+  it('should omit signature for reject action', async () => {
+    fetchMock.mockResolvedValue({ ok: true });
+
+    const response: SignResponse = {
+      ...makeValidResponse(),
+      action: 'reject',
+      signature: undefined,
+    };
+    await sendViaRelay(response, 'topic', 'https://relay.example.com');
+
+    const body = JSON.parse(
+      (fetchMock.mock.calls[0] as [string, RequestInit])[1].body as string,
+    ) as { signature?: string };
+    expect(body.signature).toBeUndefined();
+  });
+
+  it('should throw Error on HTTP error', async () => {
+    fetchMock.mockResolvedValue({ ok: false, status: 502 });
+
+    await expect(
+      sendViaRelay(makeValidResponse(), 'topic', 'https://relay.example.com'),
+    ).rejects.toThrow('Failed to send response via Push Relay: HTTP 502');
   });
 });

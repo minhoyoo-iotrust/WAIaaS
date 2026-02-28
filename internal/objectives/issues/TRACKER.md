@@ -225,11 +225,11 @@
 | 208 | BUG | CRITICAL | DELAY/GAS_WAITING 재진입 시 원본 요청 데이터 손실로 트랜잭션 변질 | v29.3 | FIXED | 2026-02-27 |
 | 209 | ENHANCEMENT | MEDIUM | 테스트 커버리지 임계값 상향 — 실제 수치 대비 과소 설정 + CI Gate soft mode | v29.3 | FIXED | 2026-02-27 |
 | 210 | ENHANCEMENT | HIGH | Sepolia 빌트인 RPC 엔드포인트 확장 — 무료 티어 제한으로 수신 모니터 중단 | v29.4 | FIXED | 2026-02-28 |
-| 211 | ENHANCEMENT | LOW | Solana 네트워크 ID에 `solana-` 프리픽스 추가 — EVM과 네이밍 규칙 통일 | m29-05 | OPEN | |
+| 211 | ENHANCEMENT | LOW | Solana 네트워크 ID에 `solana-` 프리픽스 추가 — EVM과 네이밍 규칙 통일 | m29-05 | FIXED | 2026-02-28 |
 | 212 | BUG | CRITICAL | 액션 라우트 GAP-2 fix가 stage1Validate의 originalRequest 메타데이터 덮어씀 — #208 수정 불완전 | v29.4 | FIXED | 2026-02-28 |
 | 213 | ENHANCEMENT | LOW | Admin UI 지갑 리스트에서 BALANCE 컬럼 제거 — 기본 네트워크 제거로 단일 잔액 무의미 | v29.4 | FIXED | 2026-02-28 |
-| 214 | BUG | CRITICAL | API 키 이중 저장소 비동기화로 프로바이더에 키 미전달 — ApiKeyStore ↔ SettingsService 불일치 | m29-05 | OPEN | |
-| 215 | ENHANCEMENT | MEDIUM | Push Relay 서명 응답 릴레이 엔드포인트 추가 — 지갑 앱이 ntfy 직접 접근 불필요하도록 | - | OPEN | |
+| 214 | BUG | CRITICAL | API 키 이중 저장소 비동기화로 프로바이더에 키 미전달 — ApiKeyStore ↔ SettingsService 불일치 | m29-05 | FIXED | 2026-02-28 |
+| 215 | ENHANCEMENT | MEDIUM | Push Relay 서명 응답 릴레이 엔드포인트 추가 — 지갑 앱이 ntfy 직접 접근 불필요하도록 | v29.5 | FIXED | 2026-02-28 |
 
 ## Type Legend
 
@@ -241,8 +241,8 @@
 
 ## Summary
 
-- **OPEN:** 3
-- **FIXED:** 211
+- **OPEN:** 0
+- **FIXED:** 215
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1
