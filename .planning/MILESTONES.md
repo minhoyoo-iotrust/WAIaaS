@@ -1,5 +1,29 @@
 # Project Milestones: WAIaaS
 
+## v29.4 Solana Lending -- Kamino (Shipped: 2026-02-28)
+
+**Delivered:** Kamino K-Lend를 ILendingProvider 구현체로 구축하여 AI 에이전트가 Solana 체인에서 supply/borrow/repay/withdraw를 정책 평가 하에 수행할 수 있도록 한 마일스톤. v29.2에서 구축된 Lending 프레임워크를 재사용하며, @kamino-finance/klend-sdk 래핑 SDK로 Solana instruction을 빌드. HF 시뮬레이션 가드로 자기 청산 방지, PositionTracker duck-type 자동 등록, Admin Settings 3키 런타임 조정, MCP 4도구 자동 노출, Admin UI 7th provider card, KINT-07 LTV suffix matching 버그 수정까지 완료.
+
+**Phases completed:** 283-284 (2 phases, 9 plans, 21 requirements)
+
+**Key accomplishments:**
+
+- KaminoLendingProvider — ILendingProvider + IPositionProvider 구현, 4 actions(supply/borrow/repay/withdraw), @kamino-finance/klend-sdk 래핑 SDK 추상화
+- HF 시뮬레이션 모듈 — borrow/withdraw 전 Health Factor 영향 시뮬레이션, 자기 청산 위험 차단, Number 연산(USD floats)
+- 83 신규 테스트 — 70 KPROV 단위 테스트(calculateHealthFactor/simulateKaminoHealthFactor/hfToStatus 포함) + 13 KINT 통합 테스트
+- Full stack 통합 — registerBuiltInProviders + 3 Admin Settings(kamino.enabled/market/hf_threshold) + HealthFactorMonitor multi-provider 최소값 적용
+- Admin UI + 문서 — Actions 페이지 Kamino Lending 7번째 카드 + actions.skill.md Section 9 (REST/MCP/SDK 예시 포함)
+- KINT-07 버그 수정 — LendingPolicyEvaluator endsWith('borrow') suffix matching으로 provider-prefixed action name(kamino_borrow, aave_borrow) 정책 평가 정상화
+
+**Stats:**
+
+- 2 phases, 9 plans, 21 requirements, 21 commits
+- 61 files changed, +6,771 / -206 lines
+- ~192,843 LOC TypeScript, 83 new tests
+- Timeline: 1 day (2026-02-28)
+
+---
+
 ## v29.2 EVM Lending -- Aave V3 (Shipped: 2026-02-27)
 
 **Delivered:** DeFi Lending 프레임워크(ILendingProvider/IPositionProvider 인터페이스, PositionTracker, HealthFactorMonitor, LendingPolicyEvaluator)를 구축하고, Aave V3를 첫 번째 Lending Provider로 구현. supply/borrow/repay/withdraw 4개 액션을 manual hex ABI encoding으로 5개 EVM 체인(Ethereum/Arbitrum/Optimism/Polygon/Base)에서 지원. 적응형 HF 모니터링(< 1.5 시 5분→1분 폴링), Lending 정책(max_ltv_pct + 비지출 분류), REST API + MCP 6도구 + TS/Python SDK 확장, Admin UI DeFi 포지션 대시보드 + Aave V3 Settings 4키 런타임 조정까지 완전 통합.
@@ -1652,4 +1676,6 @@
 - (none recorded)
 
 ---
+
+
 
