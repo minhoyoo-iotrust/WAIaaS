@@ -229,6 +229,7 @@
 | 212 | BUG | CRITICAL | 액션 라우트 GAP-2 fix가 stage1Validate의 originalRequest 메타데이터 덮어씀 — #208 수정 불완전 | v29.4 | FIXED | 2026-02-28 |
 | 213 | ENHANCEMENT | LOW | Admin UI 지갑 리스트에서 BALANCE 컬럼 제거 — 기본 네트워크 제거로 단일 잔액 무의미 | v29.4 | FIXED | 2026-02-28 |
 | 214 | BUG | CRITICAL | API 키 이중 저장소 비동기화로 프로바이더에 키 미전달 — ApiKeyStore ↔ SettingsService 불일치 | m29-05 | OPEN | |
+| 215 | ENHANCEMENT | MEDIUM | Push Relay 서명 응답 릴레이 엔드포인트 추가 — 지갑 앱이 ntfy 직접 접근 불필요하도록 | - | OPEN | |
 
 ## Type Legend
 
@@ -240,9 +241,9 @@
 
 ## Summary
 
-- **OPEN:** 2
+- **OPEN:** 3
 - **FIXED:** 211
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 214
+- **Total:** 215

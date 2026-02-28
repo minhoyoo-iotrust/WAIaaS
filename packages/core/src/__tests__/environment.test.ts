@@ -51,14 +51,14 @@ describe('ENVIRONMENT_NETWORK_MAP', () => {
 // ─── 3. getNetworksForEnvironment() ─────────────────────────────
 
 describe('getNetworksForEnvironment', () => {
-  it('solana mainnet -> [mainnet]', () => {
-    expect(getNetworksForEnvironment('solana', 'mainnet')).toEqual(['mainnet']);
+  it('solana mainnet -> [solana-mainnet]', () => {
+    expect(getNetworksForEnvironment('solana', 'mainnet')).toEqual(['solana-mainnet']);
   });
 
-  it('solana testnet -> [devnet, testnet]', () => {
+  it('solana testnet -> [solana-devnet, solana-testnet]', () => {
     expect(getNetworksForEnvironment('solana', 'testnet')).toEqual([
-      'devnet',
-      'testnet',
+      'solana-devnet',
+      'solana-testnet',
     ]);
   });
 
@@ -86,12 +86,12 @@ describe('getNetworksForEnvironment', () => {
 // ─── 4. getSingleNetwork() ────────────────────────────────────
 
 describe('getSingleNetwork', () => {
-  it('solana mainnet -> mainnet', () => {
-    expect(getSingleNetwork('solana', 'mainnet')).toBe('mainnet');
+  it('solana mainnet -> solana-mainnet', () => {
+    expect(getSingleNetwork('solana', 'mainnet')).toBe('solana-mainnet');
   });
 
-  it('solana testnet -> devnet', () => {
-    expect(getSingleNetwork('solana', 'testnet')).toBe('devnet');
+  it('solana testnet -> solana-devnet', () => {
+    expect(getSingleNetwork('solana', 'testnet')).toBe('solana-devnet');
   });
 
   it('ethereum mainnet -> null (EVM has multiple networks)', () => {
@@ -114,8 +114,8 @@ describe('ENVIRONMENT_SINGLE_NETWORK', () => {
   });
 
   it('Solana entries return network values', () => {
-    expect(ENVIRONMENT_SINGLE_NETWORK['solana:mainnet']).toBe('mainnet');
-    expect(ENVIRONMENT_SINGLE_NETWORK['solana:testnet']).toBe('devnet');
+    expect(ENVIRONMENT_SINGLE_NETWORK['solana:mainnet']).toBe('solana-mainnet');
+    expect(ENVIRONMENT_SINGLE_NETWORK['solana:testnet']).toBe('solana-devnet');
   });
 
   it('EVM entries return null', () => {
@@ -129,7 +129,7 @@ describe('ENVIRONMENT_SINGLE_NETWORK', () => {
 describe('deriveEnvironment', () => {
   // 6 mainnet networks
   it.each([
-    'mainnet',
+    'solana-mainnet',
     'ethereum-mainnet',
     'polygon-mainnet',
     'arbitrum-mainnet',
@@ -141,8 +141,8 @@ describe('deriveEnvironment', () => {
 
   // 7 testnet networks
   it.each([
-    'devnet',
-    'testnet',
+    'solana-devnet',
+    'solana-testnet',
     'ethereum-sepolia',
     'polygon-amoy',
     'arbitrum-sepolia',
@@ -156,9 +156,9 @@ describe('deriveEnvironment', () => {
 // ─── 6. validateNetworkEnvironment() ────────────────────────────
 
 describe('validateNetworkEnvironment', () => {
-  it('valid: solana mainnet mainnet -> no throw', () => {
+  it('valid: solana mainnet solana-mainnet -> no throw', () => {
     expect(() =>
-      validateNetworkEnvironment('solana', 'mainnet', 'mainnet'),
+      validateNetworkEnvironment('solana', 'mainnet', 'solana-mainnet'),
     ).not.toThrow();
   });
 
@@ -168,10 +168,10 @@ describe('validateNetworkEnvironment', () => {
     ).not.toThrow();
   });
 
-  it('mismatch: solana mainnet devnet -> throw', () => {
+  it('mismatch: solana mainnet solana-devnet -> throw', () => {
     expect(() =>
-      validateNetworkEnvironment('solana', 'mainnet', 'devnet'),
-    ).toThrow(/Invalid network 'devnet' for chain 'solana' in environment 'mainnet'/);
+      validateNetworkEnvironment('solana', 'mainnet', 'solana-devnet'),
+    ).toThrow(/Invalid network 'solana-devnet' for chain 'solana' in environment 'mainnet'/);
   });
 
   it('mismatch: ethereum testnet ethereum-mainnet -> throw', () => {

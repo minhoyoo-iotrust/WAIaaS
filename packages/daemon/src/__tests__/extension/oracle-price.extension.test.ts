@@ -379,7 +379,7 @@ describe('ORC-I01~I06: integration -- OracleChain', () => {
 
   it('ORC-I05: CoinGecko 429 simulation -> stale cache fallback', async () => {
     // Pre-populate cache with CAIP-19 key (matches OracleChain's buildCacheKey)
-    const solCacheKey = buildCacheKey('mainnet', 'native');
+    const solCacheKey = buildCacheKey('solana-mainnet', 'native');
     cache.set(solCacheKey, buildPrice(180, { source: 'pyth' }));
 
     // Expire TTL but within staleMax
@@ -412,8 +412,8 @@ describe('ORC-I01~I06: integration -- OracleChain', () => {
     const result = await oracle.getPrices([SOL_TOKEN, USDC_TOKEN]);
 
     expect(result.size).toBe(1);
-    expect(result.has(buildCacheKey('mainnet', 'native'))).toBe(true);
-    expect(result.has(buildCacheKey('mainnet', USDC_TOKEN.address))).toBe(false);
+    expect(result.has(buildCacheKey('solana-mainnet', 'native'))).toBe(true);
+    expect(result.has(buildCacheKey('solana-mainnet', USDC_TOKEN.address))).toBe(false);
   });
 });
 
@@ -566,7 +566,7 @@ describe('ORC-X01~X08: cross-validation + price age + cache', () => {
 
   it('ORC-X07: total oracle failure + stale cache -> isStale=true, source=cache', async () => {
     // Pre-populate and expire with CAIP-19 key
-    const solCacheKey = buildCacheKey('mainnet', 'native');
+    const solCacheKey = buildCacheKey('solana-mainnet', 'native');
     cache.set(solCacheKey, buildPrice(180));
     const entry = (cache as unknown as { cache: Map<string, { expiresAt: number }> }).cache.get(solCacheKey);
     if (entry) {

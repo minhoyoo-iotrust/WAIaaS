@@ -421,7 +421,7 @@ describe('SEC-07-11: network scoping for CONTRACT_WHITELIST', () => {
         JSON.stringify({ contracts: [{ address: contractAddr }] }),
         20,
         1,
-        'mainnet',
+        'solana-mainnet',
         now,
         now,
       );

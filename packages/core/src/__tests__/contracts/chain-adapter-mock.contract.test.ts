@@ -229,7 +229,7 @@ class ContractTestMockChainAdapter implements IChainAdapter {
 describe('CT-1/CT-2: MockChainAdapter Contract Tests', () => {
   chainAdapterContractTests(
     () => {
-      const adapter = new ContractTestMockChainAdapter('solana', 'devnet');
+      const adapter = new ContractTestMockChainAdapter('solana', 'solana-devnet');
       // Pre-connect so pipeline tests work
       adapter.connect('http://mock-rpc');
       return adapter;

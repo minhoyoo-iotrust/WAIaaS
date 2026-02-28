@@ -1002,7 +1002,7 @@ describe('Section 7: Policy Form Components', () => {
       );
 
       const onChange = vi.fn();
-      const rules = { networks: [{ network: 'mainnet', name: 'Main' }] };
+      const rules = { networks: [{ network: 'solana-mainnet', name: 'Main' }] };
 
       render(<AllowedNetworksForm rules={rules} onChange={onChange} errors={{}} />);
 
@@ -1011,8 +1011,8 @@ describe('Section 7: Policy Form Components', () => {
       expect(onChange).toHaveBeenCalledWith(
         expect.objectContaining({
           networks: expect.arrayContaining([
-            expect.objectContaining({ network: 'mainnet' }),
-            expect.objectContaining({ network: 'mainnet', name: '' }),
+            expect.objectContaining({ network: 'solana-mainnet' }),
+            expect.objectContaining({ network: 'solana-mainnet', name: '' }),
           ]),
         }),
       );
@@ -1026,8 +1026,8 @@ describe('Section 7: Policy Form Components', () => {
       const onChange = vi.fn();
       const rules = {
         networks: [
-          { network: 'mainnet', name: '' },
-          { network: 'devnet', name: '' },
+          { network: 'solana-mainnet', name: '' },
+          { network: 'solana-devnet', name: '' },
         ],
       };
 
@@ -1040,7 +1040,7 @@ describe('Section 7: Policy Form Components', () => {
 
       expect(onChange).toHaveBeenCalledWith(
         expect.objectContaining({
-          networks: [expect.objectContaining({ network: 'devnet' })],
+          networks: [expect.objectContaining({ network: 'solana-devnet' })],
         }),
       );
     });
@@ -1051,7 +1051,7 @@ describe('Section 7: Policy Form Components', () => {
       );
 
       const onChange = vi.fn();
-      const rules = { networks: [{ network: 'mainnet', name: '' }] };
+      const rules = { networks: [{ network: 'solana-mainnet', name: '' }] };
 
       const { container } = render(
         <AllowedNetworksForm rules={rules} onChange={onChange} errors={{}} />,
@@ -1060,11 +1060,11 @@ describe('Section 7: Policy Form Components', () => {
       // Use getElementById since getByLabelText has issues with jsdom for=id association
       const select = container.querySelector('#field-network-sel-0') as HTMLSelectElement;
       expect(select).toBeTruthy();
-      fireEvent.change(select, { target: { value: 'devnet' } });
+      fireEvent.change(select, { target: { value: 'solana-devnet' } });
 
       expect(onChange).toHaveBeenCalledWith(
         expect.objectContaining({
-          networks: [expect.objectContaining({ network: 'devnet' })],
+          networks: [expect.objectContaining({ network: 'solana-devnet' })],
         }),
       );
     });

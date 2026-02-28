@@ -160,7 +160,7 @@ describe('SEC-10-04: Stale cache returned when oracles fail', () => {
   it('returns stale data with isStale=true from cache', async () => {
     // Pre-populate cache with data that is past TTL but within staleMax
     const stalePrice = priceInfo(180, { source: 'pyth' });
-    const solCacheKey = buildCacheKey('mainnet', 'native');
+    const solCacheKey = buildCacheKey('solana-mainnet', 'native');
     cache.set(solCacheKey, stalePrice);
 
     // Fast-forward past TTL (5 min) but within staleMax (30 min)
@@ -289,8 +289,8 @@ describe('SEC-10-10: getPrices with partial failures', () => {
     const result = await oracle.getPrices([SOL_TOKEN, USDC_TOKEN]);
 
     expect(result.size).toBe(1);
-    expect(result.has(buildCacheKey('mainnet', 'native'))).toBe(true);
-    expect(result.has(buildCacheKey('mainnet', 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'))).toBe(false);
+    expect(result.has(buildCacheKey('solana-mainnet', 'native'))).toBe(true);
+    expect(result.has(buildCacheKey('solana-mainnet', 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'))).toBe(false);
   });
 });
 
@@ -499,8 +499,8 @@ describe('SEC-10-18: getPrices batch with mixed results', () => {
     const result = await oracle.getPrices([token1, token2, token3]);
 
     expect(result.size).toBe(2);
-    expect(result.get(buildCacheKey('mainnet', 'Token1'))?.usdPrice).toBe(10);
-    expect(result.get(buildCacheKey('mainnet', 'Token3'))?.usdPrice).toBe(30);
+    expect(result.get(buildCacheKey('solana-mainnet', 'Token1'))?.usdPrice).toBe(10);
+    expect(result.get(buildCacheKey('solana-mainnet', 'Token3'))?.usdPrice).toBe(30);
   });
 });
 

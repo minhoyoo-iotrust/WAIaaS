@@ -170,7 +170,7 @@ describe('Level 1: Mock RPC Scenarios', () => {
   });
 
   beforeEach(async () => {
-    adapter = new SolanaAdapter('devnet');
+    adapter = new SolanaAdapter('solana-devnet');
     vi.clearAllMocks();
   });
 

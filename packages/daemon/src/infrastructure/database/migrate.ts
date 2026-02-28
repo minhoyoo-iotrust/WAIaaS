@@ -48,6 +48,27 @@ import type { NetworkType } from '@waiaas/core';
 
 const inList = (values: readonly string[]) => values.map((v) => `'${v}'`).join(', ');
 
+/**
+ * NETWORK_TYPES_WITH_LEGACY includes both old ('mainnet', 'devnet', 'testnet') and new
+ * ('solana-mainnet', 'solana-devnet', 'solana-testnet') Solana network names.
+ * Used in pre-v29 migrations so CHECK constraints accept data in either format
+ * during the migration chain. Migration v29 converts old -> new, and post-v29
+ * tables use NETWORK_TYPES (new names only).
+ */
+const LEGACY_SOLANA_NETWORKS = ['mainnet', 'devnet', 'testnet'] as const;
+const NETWORK_TYPES_WITH_LEGACY = [...new Set([...NETWORK_TYPES, ...LEGACY_SOLANA_NETWORKS])] as const;
+
+/**
+ * Map legacy bare Solana network names to their prefixed form.
+ * Used by pre-v29 migrations (e.g., v22 asset_id backfill) that need to look up
+ * NETWORK_TO_CAIP2 with potentially old-format data.
+ */
+const LEGACY_NETWORK_NORMALIZE: Record<string, string> = {
+  mainnet: 'solana-mainnet',
+  devnet: 'solana-devnet',
+  testnet: 'solana-testnet',
+};
+
 // ---------------------------------------------------------------------------
 // DDL statements for all 17 tables (latest schema: wallets + wallet_id + session_wallets + token_registry + settings + telegram_users + wc_sessions + wc_store + incoming_transactions + incoming_tx_cursors)
 // ---------------------------------------------------------------------------
@@ -431,7 +452,7 @@ MIGRATIONS.push({
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   chain TEXT NOT NULL CHECK (chain IN (${inList(CHAIN_TYPES)})),
-  network TEXT NOT NULL CHECK (network IN (${inList(NETWORK_TYPES)})),
+  network TEXT NOT NULL CHECK (network IN (${inList(NETWORK_TYPES_WITH_LEGACY)})),
   public_key TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'CREATING' CHECK (status IN (${inList(WALLET_STATUSES)})),
   owner_address TEXT,
@@ -764,7 +785,7 @@ MIGRATIONS.push({
   name TEXT NOT NULL,
   chain TEXT NOT NULL CHECK (chain IN (${inList(CHAIN_TYPES)})),
   environment TEXT NOT NULL CHECK (environment IN (${inList(ENVIRONMENT_TYPES)})),
-  default_network TEXT CHECK (default_network IS NULL OR default_network IN (${inList(NETWORK_TYPES)})),
+  default_network TEXT CHECK (default_network IS NULL OR default_network IN (${inList(NETWORK_TYPES_WITH_LEGACY)})),
   public_key TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'CREATING' CHECK (status IN (${inList(WALLET_STATUSES)})),
   owner_address TEXT,
@@ -867,7 +888,7 @@ FROM wallets`);
   reserved_amount TEXT,
   error TEXT,
   metadata TEXT,
-  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES)}))
+  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES_WITH_LEGACY)}))
 )`);
       sqlite.exec(`INSERT INTO transactions_new (id, wallet_id, session_id, chain, tx_hash, type, amount, to_address, token_mint, contract_address, method_signature, spender_address, approved_amount, parent_id, batch_index, status, tier, queued_at, executed_at, created_at, reserved_amount, error, metadata, network)
   SELECT id, wallet_id, session_id, chain, tx_hash, type, amount, to_address, token_mint, contract_address, method_signature, spender_address, approved_amount, parent_id, batch_index, status, tier, queued_at, executed_at, created_at, reserved_amount, error, metadata, network FROM transactions`);
@@ -963,7 +984,7 @@ MIGRATIONS.push({
   rules TEXT NOT NULL,
   priority INTEGER NOT NULL DEFAULT 0,
   enabled INTEGER NOT NULL DEFAULT 1,
-  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES)})),
+  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES_WITH_LEGACY)})),
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 )`);
@@ -1046,7 +1067,7 @@ MIGRATIONS.push({
   reserved_amount TEXT,
   error TEXT,
   metadata TEXT,
-  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES)}))
+  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES_WITH_LEGACY)}))
 )`);
 
       // Step 3: Copy existing data
@@ -1157,7 +1178,7 @@ MIGRATIONS.push({
   reserved_amount TEXT,
   error TEXT,
   metadata TEXT,
-  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES)}))
+  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES_WITH_LEGACY)}))
 )`);
 
       sqlite.exec(`INSERT INTO transactions_new (id, wallet_id, session_id, chain, tx_hash, type, amount, to_address, token_mint, contract_address, method_signature, spender_address, approved_amount, parent_id, batch_index, status, tier, queued_at, executed_at, created_at, reserved_amount, error, metadata, network)
@@ -1201,7 +1222,7 @@ MIGRATIONS.push({
   rules TEXT NOT NULL,
   priority INTEGER NOT NULL DEFAULT 0,
   enabled INTEGER NOT NULL DEFAULT 1,
-  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES)})),
+  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES_WITH_LEGACY)})),
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 )`);
@@ -1465,7 +1486,7 @@ MIGRATIONS.push({
   reserved_amount_usd REAL,
   error TEXT,
   metadata TEXT,
-  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES)}))
+  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES_WITH_LEGACY)}))
 )`);
 
       sqlite.exec(`INSERT INTO transactions_new (id, wallet_id, session_id, chain, tx_hash, type, amount, to_address, token_mint, contract_address, method_signature, spender_address, approved_amount, parent_id, batch_index, status, tier, queued_at, executed_at, created_at, reserved_amount, amount_usd, reserved_amount_usd, error, metadata, network)
@@ -1592,10 +1613,12 @@ MIGRATIONS.push({
     );
 
     for (const row of rows) {
+      // Normalize legacy Solana network names (mainnet -> solana-mainnet, etc.)
+      const normalizedNetwork = LEGACY_NETWORK_NORMALIZE[row.network] ?? row.network;
       // Guard: only backfill for known networks (Pitfall 4)
-      if (!(row.network in NETWORK_TO_CAIP2)) continue;
+      if (!(normalizedNetwork in NETWORK_TO_CAIP2)) continue;
       try {
-        const assetId = tokenAssetId(row.network as NetworkType, row.address);
+        const assetId = tokenAssetId(normalizedNetwork as NetworkType, row.address);
         updateStmt.run(assetId, row.id);
       } catch {
         // Skip on error -- rows with unknown networks get asset_id = NULL
@@ -1649,7 +1672,7 @@ MIGRATIONS.push({
   reserved_amount_usd REAL,
   error TEXT,
   metadata TEXT,
-  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES)})),
+  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES_WITH_LEGACY)})),
   bridge_status TEXT CHECK (bridge_status IS NULL OR bridge_status IN ('PENDING', 'COMPLETED', 'FAILED', 'BRIDGE_MONITORING', 'TIMEOUT', 'REFUNDED')),
   bridge_metadata TEXT
 )`);
@@ -1723,7 +1746,7 @@ MIGRATIONS.push({
         category TEXT NOT NULL CHECK(category IN (${inList(POSITION_CATEGORIES)})),
         provider TEXT NOT NULL,
         chain TEXT NOT NULL CHECK(chain IN (${inList(CHAIN_TYPES)})),
-        network TEXT CHECK(network IS NULL OR network IN (${inList(NETWORK_TYPES)})),
+        network TEXT CHECK(network IS NULL OR network IN (${inList(NETWORK_TYPES_WITH_LEGACY)})),
         asset_id TEXT,
         amount TEXT NOT NULL,
         amount_usd REAL,
@@ -1767,7 +1790,7 @@ MIGRATIONS.push({
   rules TEXT NOT NULL,
   priority INTEGER NOT NULL DEFAULT 0,
   enabled INTEGER NOT NULL DEFAULT 1,
-  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES)})),
+  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES_WITH_LEGACY)})),
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 )`);

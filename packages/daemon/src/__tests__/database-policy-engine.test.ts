@@ -2202,7 +2202,7 @@ describe('DatabasePolicyEngine - evaluateSpendingLimit with token_limits', () =>
     // Update to network-scoped policy (use valid network from DB CHECK constraint)
     conn.sqlite
       .prepare('UPDATE policies SET network = ? WHERE id = (SELECT id FROM policies ORDER BY rowid DESC LIMIT 1)')
-      .run('mainnet');
+      .run('solana-mainnet');
 
     // 0.5 SOL = 500000000 (9 decimals), should be INSTANT (0.5 <= 1)
     const result = await engine.evaluate(walletId, {
@@ -2210,7 +2210,7 @@ describe('DatabasePolicyEngine - evaluateSpendingLimit with token_limits', () =>
       amount: '500000000',
       toAddress: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
       chain: 'solana',
-      network: 'mainnet',
+      network: 'solana-mainnet',
     });
 
     expect(result.allowed).toBe(true);

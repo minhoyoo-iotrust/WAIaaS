@@ -64,7 +64,7 @@ const DEFAULT_SIGNED_TX: SignedTransaction = {
 function createMockAdapter(overrides: Partial<IChainAdapter> = {}): IChainAdapter {
   return {
     chain: 'solana' as const,
-    network: 'devnet' as const,
+    network: 'solana-devnet' as const,
     connect: async () => {},
     disconnect: async () => {},
     isConnected: () => true,
@@ -205,7 +205,7 @@ function createRequest(overrides: Partial<SignOnlyRequest> = {}): SignOnlyReques
   return {
     transaction: 'base64encodedtx',
     chain: 'solana',
-    network: 'devnet',
+    network: 'solana-devnet',
     ...overrides,
   };
 }
@@ -234,20 +234,20 @@ describe('mapOperationToParam', () => {
     const result = mapOperationToParam(
       { type: 'NATIVE_TRANSFER', to: 'addr1', amount: 1000n },
       'solana',
-      'devnet',
+      'solana-devnet',
     );
     expect(result.type).toBe('TRANSFER');
     expect(result.amount).toBe('1000');
     expect(result.toAddress).toBe('addr1');
     expect(result.chain).toBe('solana');
-    expect(result.network).toBe('devnet');
+    expect(result.network).toBe('solana-devnet');
   });
 
   it('should map TOKEN_TRANSFER with tokenAddress', () => {
     const result = mapOperationToParam(
       { type: 'TOKEN_TRANSFER', to: 'addr1', amount: 500n, token: 'TokenMint123' },
       'solana',
-      'devnet',
+      'solana-devnet',
     );
     expect(result.type).toBe('TOKEN_TRANSFER');
     expect(result.tokenAddress).toBe('TokenMint123');

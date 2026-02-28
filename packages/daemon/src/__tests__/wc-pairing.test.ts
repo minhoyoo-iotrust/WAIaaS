@@ -272,7 +272,7 @@ describe('WcSessionService Pairing', () => {
 
   describe('NETWORK_TO_CAIP2', () => {
     it('maps Solana devnet correctly', () => {
-      expect(NETWORK_TO_CAIP2['devnet']).toBe('solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1');
+      expect(NETWORK_TO_CAIP2['solana-devnet']).toBe('solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1');
     });
 
     it('maps ethereum-sepolia correctly', () => {
@@ -280,7 +280,7 @@ describe('WcSessionService Pairing', () => {
     });
 
     it('maps Solana mainnet correctly', () => {
-      expect(NETWORK_TO_CAIP2['mainnet']).toBe('solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp');
+      expect(NETWORK_TO_CAIP2['solana-mainnet']).toBe('solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp');
     });
 
     it('maps base-sepolia correctly', () => {

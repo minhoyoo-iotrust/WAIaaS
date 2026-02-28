@@ -3,13 +3,13 @@ import { getExplorerTxUrl } from '../utils/explorer-url.js';
 
 describe('getExplorerTxUrl', () => {
   it('returns Solana mainnet URL', () => {
-    expect(getExplorerTxUrl('mainnet', '5abc123')).toBe(
+    expect(getExplorerTxUrl('solana-mainnet', '5abc123')).toBe(
       'https://solscan.io/tx/5abc123',
     );
   });
 
   it('returns Solana devnet URL with cluster param', () => {
-    expect(getExplorerTxUrl('devnet', '5abc123')).toBe(
+    expect(getExplorerTxUrl('solana-devnet', '5abc123')).toBe(
       'https://solscan.io/tx/5abc123?cluster=devnet',
     );
   });
@@ -56,7 +56,7 @@ describe('getExplorerTxUrl', () => {
 
   it('returns all 13 networks', () => {
     const networks = [
-      'mainnet', 'devnet', 'testnet',
+      'solana-mainnet', 'solana-devnet', 'solana-testnet',
       'ethereum-mainnet', 'ethereum-sepolia',
       'polygon-mainnet', 'polygon-amoy',
       'arbitrum-mainnet', 'arbitrum-sepolia',

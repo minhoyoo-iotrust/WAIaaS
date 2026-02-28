@@ -141,7 +141,7 @@ describe('AdapterPool.evict', () => {
     const pool = new AdapterPool();
 
     // Evict a key that was never added -- should not throw
-    await expect(pool.evict('solana' as any, 'devnet' as any)).resolves.toBeUndefined();
+    await expect(pool.evict('solana' as any, 'solana-devnet' as any)).resolves.toBeUndefined();
     expect(pool.size).toBe(0);
   });
 
@@ -154,13 +154,13 @@ describe('AdapterPool.evict', () => {
       connect: vi.fn().mockResolvedValue(undefined),
       disconnect: vi.fn().mockRejectedValue(new Error('disconnect failed')),
     };
-    (pool as any)._pool.set('solana:devnet', mockAdapter);
+    (pool as any)._pool.set('solana:solana-devnet', mockAdapter);
     expect(pool.size).toBe(1);
 
     // Spy on console.warn for the error
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    await expect(pool.evict('solana' as any, 'devnet' as any)).resolves.toBeUndefined();
+    await expect(pool.evict('solana' as any, 'solana-devnet' as any)).resolves.toBeUndefined();
     expect(pool.size).toBe(0);
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining('evict disconnect warning'),
@@ -179,10 +179,10 @@ describe('AdapterPool.evict', () => {
       connect: vi.fn().mockResolvedValue(undefined),
       disconnect: vi.fn().mockResolvedValue(undefined),
     };
-    (pool as any)._pool.set('solana:devnet', mockAdapter);
+    (pool as any)._pool.set('solana:solana-devnet', mockAdapter);
     expect(pool.size).toBe(1);
 
-    await pool.evict('solana' as any, 'devnet' as any);
+    await pool.evict('solana' as any, 'solana-devnet' as any);
     expect(pool.size).toBe(0);
     expect(mockAdapter.disconnect).toHaveBeenCalledTimes(1);
   });
@@ -238,7 +238,7 @@ describe('HotReloadOrchestrator.handleChangedKeys', () => {
     });
 
     await orchestrator.handleChangedKeys(['rpc.solana_devnet']);
-    expect(mockPool.evict).toHaveBeenCalledWith('solana', 'devnet');
+    expect(mockPool.evict).toHaveBeenCalledWith('solana', 'solana-devnet');
   });
 
   it('RPC EVM key changes trigger correct eviction', async () => {
@@ -286,7 +286,7 @@ describe('HotReloadOrchestrator.handleChangedKeys', () => {
     ]);
 
     expect(replaceSpy).toHaveBeenCalled(); // notification reload
-    expect(mockPool.evict).toHaveBeenCalledWith('solana', 'mainnet'); // RPC eviction
+    expect(mockPool.evict).toHaveBeenCalledWith('solana', 'solana-mainnet'); // RPC eviction
     expect(logSpy).toHaveBeenCalledWith(
       expect.stringContaining('Security parameters updated'),
     ); // security log
@@ -338,7 +338,7 @@ describe('HotReloadOrchestrator.handleChangedKeys', () => {
     ]);
 
     // RPC reload should still have been called despite notification failure
-    expect(mockPool.evict).toHaveBeenCalledWith('solana', 'devnet');
+    expect(mockPool.evict).toHaveBeenCalledWith('solana', 'solana-devnet');
     // Notification error should have been caught and warned
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining('Hot-reload notifications failed'),

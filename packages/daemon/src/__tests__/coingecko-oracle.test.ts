@@ -8,7 +8,7 @@ const SOLANA_USDC: TokenRef = {
   symbol: 'USDC',
   decimals: 6,
   chain: 'solana',
-  network: 'mainnet',
+  network: 'solana-mainnet',
 };
 
 /** USDC ERC-20 token on Ethereum (checksum address). */
@@ -35,7 +35,7 @@ const SOLANA_WBTC: TokenRef = {
   symbol: 'WBTC',
   decimals: 8,
   chain: 'solana',
-  network: 'mainnet',
+  network: 'solana-mainnet',
 };
 
 /** USDC on Polygon (L2 test token). */

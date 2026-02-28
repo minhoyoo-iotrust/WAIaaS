@@ -20,17 +20,17 @@ describe('resolveNetwork()', () => {
 
   it('auto-resolves Solana testnet to devnet when network omitted', () => {
     const result = resolveNetwork(null, 'testnet', 'solana');
-    expect(result).toBe('devnet');
+    expect(result).toBe('solana-devnet');
   });
 
   it('auto-resolves Solana mainnet to mainnet when network omitted', () => {
     const result = resolveNetwork(null, 'mainnet', 'solana');
-    expect(result).toBe('mainnet');
+    expect(result).toBe('solana-mainnet');
   });
 
   it('uses explicit requestNetwork for Solana (testnet env, request=testnet)', () => {
     const result = resolveNetwork('testnet', 'testnet', 'solana');
-    expect(result).toBe('testnet');
+    expect(result).toBe('solana-testnet');
   });
 
   // --- EVM NETWORK_REQUIRED (getSingleNetwork returns null) ---

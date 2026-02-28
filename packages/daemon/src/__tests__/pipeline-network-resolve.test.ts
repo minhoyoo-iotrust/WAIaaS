@@ -40,7 +40,7 @@ import { DefaultPolicyEngine } from '../pipeline/default-policy-engine.js';
 function createMockAdapter(overrides: Partial<IChainAdapter> = {}): IChainAdapter {
   return {
     chain: 'solana' as const,
-    network: 'devnet' as const,
+    network: 'solana-devnet' as const,
     connect: async () => {},
     disconnect: async () => {},
     isConnected: () => true,
@@ -148,7 +148,7 @@ describe('Pipeline network resolution integration', () => {
         chain: 'solana',
         environment: 'testnet',
       },
-      resolvedNetwork: 'testnet', // explicit non-default network
+      resolvedNetwork: 'solana-testnet', // explicit non-default network
       request: { to: '22222222222222222222222222222222', amount: '100000000' },
       txId: '',
     };
@@ -158,7 +158,7 @@ describe('Pipeline network resolution integration', () => {
     // Verify DB has the resolvedNetwork
     const tx = dbConn.db.select().from(transactions).where(eq(transactions.id, ctx.txId)).get();
     expect(tx).toBeDefined();
-    expect(tx!.network).toBe('testnet'); // resolvedNetwork, not 'devnet'
+    expect(tx!.network).toBe('solana-testnet'); // resolvedNetwork, not 'devnet'
   });
 
   // -------------------------------------------------------------------------
@@ -179,7 +179,7 @@ describe('Pipeline network resolution integration', () => {
         chain: 'solana',
         environment: 'testnet',
       },
-      resolvedNetwork: 'testnet',
+      resolvedNetwork: 'solana-testnet',
       request: { to: '22222222222222222222222222222222', amount: '50000000' },
       txId: '',
     };
@@ -194,7 +194,7 @@ describe('Pipeline network resolution integration', () => {
     // Verify evaluate was called with network = resolvedNetwork
     expect(evaluateSpy).toHaveBeenCalledTimes(1);
     const [, txParam] = evaluateSpy.mock.calls[0]!;
-    expect(txParam.network).toBe('testnet');
+    expect(txParam.network).toBe('solana-testnet');
   });
 
   // -------------------------------------------------------------------------
@@ -204,7 +204,7 @@ describe('Pipeline network resolution integration', () => {
   it('environment mismatch produces ENVIRONMENT_NETWORK_MISMATCH WAIaaSError', () => {
     // Simulate the route handler catch block
     try {
-      resolveNetwork('devnet', 'mainnet', 'solana');
+      resolveNetwork('solana-devnet', 'mainnet', 'solana');
       throw new Error('should not reach');
     } catch (err) {
       // Simulate the route handler error conversion logic
@@ -247,16 +247,16 @@ describe('Pipeline network resolution integration', () => {
 
   it('re-entry uses tx.network directly, falls back to getSingleNetwork when null', () => {
     // Case A: tx.network is set -> use directly
-    const txNetworkSet = 'testnet';
+    const txNetworkSet = 'solana-testnet';
     const resolvedA: string = txNetworkSet ?? getSingleNetwork('solana', 'testnet') ?? 'unreachable';
-    expect(resolvedA).toBe('testnet');
+    expect(resolvedA).toBe('solana-testnet');
 
     // Case B: tx.network is null, Solana -> getSingleNetwork returns devnet
     const txNetworkNull = null;
     const solanaResult = getSingleNetwork('solana', 'testnet');
-    expect(solanaResult).toBe('devnet');
+    expect(solanaResult).toBe('solana-devnet');
     const resolvedB: string = txNetworkNull ?? solanaResult ?? 'unreachable';
-    expect(resolvedB).toBe('devnet');
+    expect(resolvedB).toBe('solana-devnet');
 
     // Case C: tx.network is null, EVM -> getSingleNetwork returns null (must specify explicitly)
     const evmResult = getSingleNetwork('ethereum', 'mainnet');

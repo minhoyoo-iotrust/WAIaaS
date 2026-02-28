@@ -12,7 +12,7 @@ afterEach(cleanup);
 describe('ExplorerLink', () => {
   it('renders external link for Solana mainnet txHash', () => {
     const txHash = '5abc123def456789abcdef0123456789abcdef0123456789abcdef012345678901';
-    render(<ExplorerLink network="mainnet" txHash={txHash} />);
+    render(<ExplorerLink network="solana-mainnet" txHash={txHash} />);
 
     const link = screen.getByRole('link');
     expect(link.getAttribute('href')).toContain('solscan.io');
@@ -37,12 +37,12 @@ describe('ExplorerLink', () => {
   });
 
   it('returns null when txHash is null', () => {
-    const { container } = render(<ExplorerLink network="mainnet" txHash={null} />);
+    const { container } = render(<ExplorerLink network="solana-mainnet" txHash={null} />);
     expect(container.innerHTML).toBe('');
   });
 
   it('returns null when txHash is empty string', () => {
-    const { container } = render(<ExplorerLink network="mainnet" txHash="" />);
+    const { container } = render(<ExplorerLink network="solana-mainnet" txHash="" />);
     expect(container.innerHTML).toBe('');
   });
 

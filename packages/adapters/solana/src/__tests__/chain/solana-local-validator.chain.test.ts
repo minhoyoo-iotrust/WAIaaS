@@ -79,7 +79,7 @@ describe.skipIf(!validatorRunning)('Level 2: Solana Local Validator E2E', () => 
     await airdropSol(accountA.address, 10_000_000_000n, LOCAL_RPC_URL);
 
     // Create adapter instance
-    adapter = new SolanaAdapter('devnet');
+    adapter = new SolanaAdapter('solana-devnet');
   }, 30_000);
 
   afterAll(async () => {
@@ -193,7 +193,7 @@ describe.skipIf(!validatorRunning)('Level 2: Solana Local Validator E2E', () => 
   describe('E2E-4: connection management', () => {
     it('manages connect/disconnect/health lifecycle', { timeout: 30_000 }, async () => {
       // Create a fresh adapter for this test
-      const freshAdapter = new SolanaAdapter('devnet');
+      const freshAdapter = new SolanaAdapter('solana-devnet');
 
       // Initially not connected
       expect(freshAdapter.isConnected()).toBe(false);

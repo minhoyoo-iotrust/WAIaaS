@@ -132,15 +132,15 @@ describe('RPC Pool Notification Integration', () => {
     const notifySpy = vi.fn();
     const pool = createNotifyingPool(notifySpy);
 
-    pool.register('mainnet', ['https://rpc1.example.com', 'https://rpc2.example.com']);
-    pool.reportFailure('mainnet', 'https://rpc1.example.com');
+    pool.register('solana-mainnet', ['https://rpc1.example.com', 'https://rpc2.example.com']);
+    pool.reportFailure('solana-mainnet', 'https://rpc1.example.com');
 
     expect(notifySpy).toHaveBeenCalledTimes(1);
     expect(notifySpy).toHaveBeenCalledWith(
       'RPC_HEALTH_DEGRADED',
       'system',
       expect.objectContaining({
-        network: 'mainnet',
+        network: 'solana-mainnet',
         url: 'https://rpc1.example.com',
         errorCount: '1',
         totalEndpoints: '2',
@@ -152,9 +152,9 @@ describe('RPC Pool Notification Integration', () => {
     const notifySpy = vi.fn();
     const pool = createNotifyingPool(notifySpy);
 
-    pool.register('mainnet', ['https://rpc1.example.com', 'https://rpc2.example.com']);
-    pool.reportFailure('mainnet', 'https://rpc1.example.com');
-    pool.reportFailure('mainnet', 'https://rpc2.example.com');
+    pool.register('solana-mainnet', ['https://rpc1.example.com', 'https://rpc2.example.com']);
+    pool.reportFailure('solana-mainnet', 'https://rpc1.example.com');
+    pool.reportFailure('solana-mainnet', 'https://rpc2.example.com');
 
     // Should have: 2x RPC_HEALTH_DEGRADED + 1x RPC_ALL_FAILED = 3 calls
     expect(notifySpy).toHaveBeenCalledTimes(3);
@@ -166,7 +166,7 @@ describe('RPC Pool Notification Integration', () => {
     expect(allFailedCall).toBeDefined();
     expect(allFailedCall![1]).toBe('system');
     expect(allFailedCall![2]).toMatchObject({
-      network: 'mainnet',
+      network: 'solana-mainnet',
       url: 'https://rpc2.example.com',
       totalEndpoints: '2',
     });
@@ -176,20 +176,20 @@ describe('RPC Pool Notification Integration', () => {
     const notifySpy = vi.fn();
     const pool = createNotifyingPool(notifySpy);
 
-    pool.register('mainnet', ['https://rpc1.example.com']);
-    pool.reportFailure('mainnet', 'https://rpc1.example.com');
+    pool.register('solana-mainnet', ['https://rpc1.example.com']);
+    pool.reportFailure('solana-mainnet', 'https://rpc1.example.com');
 
     // Clear spy to isolate recovery event
     notifySpy.mockClear();
 
-    pool.reportSuccess('mainnet', 'https://rpc1.example.com');
+    pool.reportSuccess('solana-mainnet', 'https://rpc1.example.com');
 
     expect(notifySpy).toHaveBeenCalledTimes(1);
     expect(notifySpy).toHaveBeenCalledWith(
       'RPC_RECOVERED',
       'system',
       expect.objectContaining({
-        network: 'mainnet',
+        network: 'solana-mainnet',
         url: 'https://rpc1.example.com',
         errorCount: '0',
         totalEndpoints: '1',
@@ -202,7 +202,7 @@ describe('RPC Pool Notification Integration', () => {
     const settingsService = new SettingsService({ db, config, masterPassword: TEST_PASSWORD });
 
     const rpcPool = new RpcPool();
-    rpcPool.register('mainnet', ['https://api.mainnet-beta.solana.com']);
+    rpcPool.register('solana-mainnet', ['https://api.mainnet-beta.solana.com']);
     rpcPool.register('ethereum-sepolia', ['https://sepolia.drpc.org']);
 
     const adapterPool = new AdapterPool(rpcPool);
@@ -225,10 +225,10 @@ describe('RPC Pool Notification Integration', () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { networks: Record<string, { url: string; status: string; failureCount: number; cooldownRemainingMs: number }[]> };
     expect(body).toHaveProperty('networks');
-    expect(body.networks).toHaveProperty('mainnet');
+    expect(body.networks).toHaveProperty('solana-mainnet');
     expect(body.networks).toHaveProperty('ethereum-sepolia');
-    expect(body.networks['mainnet']).toHaveLength(1);
-    expect(body.networks['mainnet']![0]).toMatchObject({
+    expect(body.networks['solana-mainnet']).toHaveLength(1);
+    expect(body.networks['solana-mainnet']![0]).toMatchObject({
       url: 'https://api.mainnet-beta.solana.com',
       status: 'available',
       failureCount: 0,

@@ -212,7 +212,7 @@ See `.planning/milestones/v29.4-ROADMAP.md` for full details.
 **Milestone Goal:** API 키 이중 저장소 버그(#214) 수정 + Solana 네트워크 ID 통일(#211)로 코드베이스 내부 일관성 확보
 
 - [x] **Phase 285: API 키 저장소 통합** - ApiKeyStore 제거, SettingsService SSoT 통합, DB migration v28 -- completed 2026-02-28
-- [ ] **Phase 286: Solana 네트워크 ID 통일** - `{chain}-{network}` 패턴 전 스택 적용, DB migration v29
+- [x] **Phase 286: Solana 네트워크 ID 통일** - `{chain}-{network}` 패턴 전 스택 적용, DB migration v29 -- completed 2026-02-28
 
 ## Phase Details
 
@@ -248,7 +248,7 @@ Plans:
 - [x] 286-01-PLAN.md -- Core SSoT 상수 변경 + DB migration v29 (wave 1)
 - [x] 286-02-PLAN.md -- 인프라 레이어: adapter-pool, config, hot-reload, oracle, DeFi 프로바이더 (wave 2)
 - [x] 286-03-PLAN.md -- 인터페이스 레이어: CLI, Admin UI, skills, 레거시 입력 자동 변환 (wave 2)
-- [ ] 286-04-PLAN.md -- 테스트 업데이트 + 전 패키지 테스트 통과 확인 (wave 3)
+- [x] 286-04-PLAN.md -- 테스트 업데이트 + 전 패키지 테스트 통과 확인 (wave 3)
 
 ## Progress
 
@@ -258,7 +258,7 @@ Phases execute in numeric order: 285 → 286
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 285. API 키 저장소 통합 | 2/2 | Complete | 2026-02-28 |
-| 286. Solana 네트워크 ID 통일 | 3/4 | In Progress | - |
+| 286. Solana 네트워크 ID 통일 | 4/4 | Complete | 2026-02-28 |
 
 ---
-*Last updated: 2026-02-28 after Phase 286 planning*
+*Last updated: 2026-02-28 after Phase 286 execution complete*

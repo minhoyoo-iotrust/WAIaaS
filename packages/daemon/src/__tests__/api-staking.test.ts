@@ -147,7 +147,7 @@ function mockKeyStore() {
 function mockAdapter(): IChainAdapter {
   return {
     chain: 'solana' as const,
-    network: 'devnet' as const,
+    network: 'solana-devnet' as const,
     connect: async () => {},
     disconnect: async () => {},
     isConnected: () => true,

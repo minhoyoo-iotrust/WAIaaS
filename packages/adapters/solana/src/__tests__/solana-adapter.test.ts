@@ -169,7 +169,7 @@ describe('SolanaAdapter', () => {
   let adapter: SolanaAdapter;
 
   beforeEach(async () => {
-    adapter = new SolanaAdapter('devnet');
+    adapter = new SolanaAdapter('solana-devnet');
     vi.clearAllMocks();
 
     // Generate test fixtures (key pairs + unsigned tx)
@@ -190,7 +190,7 @@ describe('SolanaAdapter', () => {
       await adapter.connect(TEST_RPC_URL);
       expect(adapter.isConnected()).toBe(true);
       expect(adapter.chain).toBe('solana');
-      expect(adapter.network).toBe('devnet');
+      expect(adapter.network).toBe('solana-devnet');
     });
 
     it('disconnect() clears state and isConnected returns false', async () => {

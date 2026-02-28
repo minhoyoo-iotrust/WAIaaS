@@ -514,7 +514,7 @@ export class HotReloadOrchestrator {
     const { BUILT_IN_RPC_DEFAULTS } = await import('@waiaas/core');
 
     for (const key of changedPoolKeys) {
-      // key format: 'rpc_pool.mainnet' or 'rpc_pool.ethereum-sepolia'
+      // key format: 'rpc_pool.solana-mainnet' or 'rpc_pool.ethereum-sepolia'
       const network = key.replace('rpc_pool.', '');
 
       // 1. Parse user-managed URL list from settings
@@ -597,7 +597,7 @@ export class HotReloadOrchestrator {
       const field = key.replace('rpc.', '');
 
       if (field.startsWith('solana_')) {
-        const network = field.replace('solana_', '');
+        const network = `solana-${field.replace('solana_', '')}`;
         await pool.evict('solana' as any, network as any);
         console.log(`Hot-reload: Evicted solana:${network} adapter`);
       } else if (field.startsWith('evm_')) {

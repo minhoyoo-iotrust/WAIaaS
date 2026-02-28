@@ -66,7 +66,7 @@ import { chainNetworkOptions } from '../pages/wallets';
 // Mirrored from @waiaas/core/src/enums/chain.ts — admin SPA can't import core directly.
 // If core adds new networks, this test will NOT catch them automatically;
 // but it WILL catch value typos (e.g. 'sepolia' instead of 'ethereum-sepolia').
-const SOLANA_NETWORK_TYPES = ['mainnet', 'devnet', 'testnet'] as const;
+const SOLANA_NETWORK_TYPES = ['solana-mainnet', 'solana-devnet', 'solana-testnet'] as const;
 const EVM_NETWORK_TYPES = [
   'ethereum-mainnet', 'ethereum-sepolia',
   'polygon-mainnet', 'polygon-amoy',
@@ -82,7 +82,7 @@ const mockWallets = {
       id: 'wallet-1',
       name: 'bot-alpha',
       chain: 'solana',
-      network: 'devnet',
+      network: 'solana-devnet',
       environment: 'testnet',
       publicKey: 'abc123def456',
       status: 'ACTIVE',
@@ -92,7 +92,7 @@ const mockWallets = {
       id: 'wallet-2',
       name: 'bot-beta',
       chain: 'solana',
-      network: 'devnet',
+      network: 'solana-devnet',
       environment: 'testnet',
       publicKey: 'xyz789uvw012',
       status: 'ACTIVE',
@@ -111,8 +111,8 @@ const mockWalletDetail = {
 
 const mockNetworks = {
   networks: [
-    { network: 'devnet', name: 'Devnet' },
-    { network: 'testnet', name: 'Testnet' },
+    { network: 'solana-devnet', name: 'Devnet' },
+    { network: 'solana-testnet', name: 'Testnet' },
   ],
 };
 
@@ -154,7 +154,7 @@ describe('WalletsPage', () => {
       id: 'wallet-3',
       name: 'new-bot',
       chain: 'solana',
-      network: 'devnet',
+      network: 'solana-devnet',
       environment: 'testnet',
       publicKey: 'newkey123',
       status: 'ACTIVE',
@@ -288,7 +288,7 @@ const mockWalletsExtended = {
       id: 'wallet-1',
       name: 'bot-alpha',
       chain: 'solana',
-      network: 'devnet',
+      network: 'solana-devnet',
       environment: 'testnet',
       publicKey: 'abc123def456',
       status: 'ACTIVE',
@@ -310,7 +310,7 @@ const mockWalletsExtended = {
       id: 'wallet-3',
       name: 'trade-gamma',
       chain: 'solana',
-      network: 'devnet',
+      network: 'solana-devnet',
       environment: 'testnet',
       publicKey: 'pqr456mno789',
       status: 'ACTIVE',
@@ -457,7 +457,7 @@ const mockDetailForTabs = {
   id: 'test-wallet-id',
   name: 'test-wallet',
   chain: 'solana',
-  network: 'devnet',
+  network: 'solana-devnet',
   environment: 'testnet',
   publicKey: 'abc123def456',
   status: 'ACTIVE',
@@ -478,7 +478,7 @@ const mockTxItems = [
     status: 'CONFIRMED',
     toAddress: '0xabc123456789def012345678',
     amount: '1.5',
-    network: 'devnet',
+    network: 'solana-devnet',
     txHash: '5xYz7890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234',
     createdAt: 1707609600,
   },
@@ -488,7 +488,7 @@ const mockTxItems = [
     status: 'PENDING',
     toAddress: '0xdef456789012abc345678901',
     amount: '100',
-    network: 'devnet',
+    network: 'solana-devnet',
     txHash: null,
     createdAt: 1707609500,
   },
@@ -500,7 +500,7 @@ function mockDetailApiGet(overrides?: {
 }) {
   return (path: string) => {
     if (path === '/v1/wallets/test-wallet-id') return Promise.resolve(mockDetailForTabs);
-    if (path.includes('/networks')) return Promise.resolve({ availableNetworks: [{ network: 'devnet', name: 'Devnet' }] });
+    if (path.includes('/networks')) return Promise.resolve({ availableNetworks: [{ network: 'solana-devnet', name: 'Devnet' }] });
     if (path.includes('/balance')) return Promise.resolve(overrides?.balance ?? { balances: [] });
     if (path.includes('/transactions')) return Promise.resolve(overrides?.transactions ?? { items: [], total: 0 });
     if (path.includes('/wc/session')) return Promise.reject(new Error('no session'));
@@ -662,7 +662,7 @@ describe('WalletDetailView - 4-tab structure', () => {
     vi.mocked(apiGet).mockImplementation(mockDetailApiGet({
       balance: {
         balances: [{
-          network: 'devnet',
+          network: 'solana-devnet',
           native: { balance: '1.5', symbol: 'SOL', usd: 750.0 },
           tokens: [],
         }],
@@ -687,7 +687,7 @@ describe('WalletDetailView - 4-tab structure', () => {
     vi.mocked(apiGet).mockImplementation(mockDetailApiGet({
       balance: {
         balances: [{
-          network: 'devnet',
+          network: 'solana-devnet',
           native: { balance: '1.5', symbol: 'SOL' },
           tokens: [],
         }],

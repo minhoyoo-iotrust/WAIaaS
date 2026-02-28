@@ -123,7 +123,7 @@ const defaultParams: SendRequestParams = {
   walletId: 'wallet-1',
   txId: '01234567-abcd-7000-8000-000000000001',
   chain: 'solana' as const,
-  network: 'devnet',
+  network: 'solana-devnet',
   type: 'TRANSFER',
   from: 'abcd1234',
   to: 'efgh5678',

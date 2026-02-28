@@ -186,7 +186,7 @@ async function generateTestFixtures() {
 
 describe('SolanaAdapter misc branch coverage', () => {
   beforeEach(async () => {
-    adapter = new SolanaAdapter('devnet');
+    adapter = new SolanaAdapter('solana-devnet');
     vi.clearAllMocks();
     await generateTestFixtures();
   });

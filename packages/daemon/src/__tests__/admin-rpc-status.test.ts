@@ -123,7 +123,7 @@ describe('GET /admin/rpc-status', () => {
 
     // Create RpcPool with test data
     const rpcPool = new RpcPool();
-    rpcPool.register('mainnet', ['https://api.mainnet-beta.solana.com', 'https://rpc.ankr.com/solana']);
+    rpcPool.register('solana-mainnet', ['https://api.mainnet-beta.solana.com', 'https://rpc.ankr.com/solana']);
     rpcPool.register('ethereum-sepolia', ['https://sepolia.drpc.org']);
 
     // Create AdapterPool with the RpcPool
@@ -144,10 +144,10 @@ describe('GET /admin/rpc-status', () => {
     expect(res.status).toBe(200);
     const body = await json(res) as { networks: Record<string, unknown[]> };
     expect(body).toHaveProperty('networks');
-    expect(body.networks).toHaveProperty('mainnet');
+    expect(body.networks).toHaveProperty('solana-mainnet');
     expect(body.networks).toHaveProperty('ethereum-sepolia');
-    expect(Array.isArray(body.networks['mainnet'])).toBe(true);
-    expect(body.networks['mainnet']).toHaveLength(2);
+    expect(Array.isArray(body.networks['solana-mainnet'])).toBe(true);
+    expect(body.networks['solana-mainnet']).toHaveLength(2);
     expect(body.networks['ethereum-sepolia']).toHaveLength(1);
   });
 
@@ -177,9 +177,9 @@ describe('GET /admin/rpc-status', () => {
     const settingsService = new SettingsService({ db, config, masterPassword: TEST_PASSWORD });
 
     const rpcPool = new RpcPool();
-    rpcPool.register('mainnet', ['https://api.mainnet-beta.solana.com']);
+    rpcPool.register('solana-mainnet', ['https://api.mainnet-beta.solana.com']);
     // Report a failure to verify cooldown fields
-    rpcPool.reportFailure('mainnet', 'https://api.mainnet-beta.solana.com');
+    rpcPool.reportFailure('solana-mainnet', 'https://api.mainnet-beta.solana.com');
 
     const adapterPool = new AdapterPool(rpcPool);
 
@@ -197,7 +197,7 @@ describe('GET /admin/rpc-status', () => {
 
     expect(res.status).toBe(200);
     const body = await json(res) as { networks: Record<string, { url: string; status: string; failureCount: number; cooldownRemainingMs: number }[]> };
-    const mainnetEntries = body.networks['mainnet'];
+    const mainnetEntries = body.networks['solana-mainnet'];
     expect(mainnetEntries).toHaveLength(1);
     const entry = mainnetEntries[0];
     expect(entry).toHaveProperty('url', 'https://api.mainnet-beta.solana.com');

@@ -87,7 +87,7 @@ function mockKeyStore(): LocalKeyStore {
 
 function mockAdapter(): IChainAdapter {
   return {
-    chain: 'solana' as const, network: 'devnet' as const,
+    chain: 'solana' as const, network: 'solana-devnet' as const,
     connect: async () => {}, disconnect: async () => {}, isConnected: () => true,
     getHealth: async (): Promise<HealthInfo> => ({ healthy: true, latencyMs: 1 }),
     getBalance: async (addr: string): Promise<BalanceInfo> => ({ address: addr, balance: 1_000_000_000n, decimals: 9, symbol: 'SOL' }),

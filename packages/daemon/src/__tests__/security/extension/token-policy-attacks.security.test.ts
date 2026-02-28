@@ -416,7 +416,7 @@ describe('SEC-06-10: network scoping for ALLOWED_TOKENS', () => {
         JSON.stringify({ tokens: [{ address: tokenAddr }] }),
         20,
         1,
-        'mainnet', // network-scoped
+        'solana-mainnet', // network-scoped
         now,
         now,
       );

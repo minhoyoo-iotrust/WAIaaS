@@ -146,7 +146,7 @@ function mockKeyStore() {
 function mockAdapter(): IChainAdapter {
   return {
     chain: 'solana' as const,
-    network: 'devnet' as const,
+    network: 'solana-devnet' as const,
     connect: async () => {},
     disconnect: async () => {},
     isConnected: () => true,
@@ -305,7 +305,7 @@ describe('POST /v1/wallets (wallet CRUD)', () => {
     const body = await json(res);
     expect(body.name).toBe('test-wallet');
     expect(body.chain).toBe('solana');
-    expect(body.network).toBe('devnet');
+    expect(body.network).toBe('solana-devnet');
     expect(body.publicKey).toBe(MOCK_SOLANA_PUBLIC_KEY);
     expect(body.id).toBeTruthy();
   });
@@ -435,7 +435,7 @@ describe('chain-network validation', () => {
 
     expect(res.status).toBe(201);
     const body = await json(res);
-    expect(body.network).toBe('devnet');
+    expect(body.network).toBe('solana-devnet');
     expect(body.chain).toBe('solana');
   });
 
@@ -519,7 +519,7 @@ describe('chain-network validation', () => {
     expect(res.status).toBe(201);
     const body = await json(res);
     expect(body.environment).toBe('testnet');
-    expect(body.network).toBe('devnet');
+    expect(body.network).toBe('solana-devnet');
   });
 
   it('POST /wallets with chain=solana + environment=mainnet -> success', async () => {
@@ -535,7 +535,7 @@ describe('chain-network validation', () => {
 
     expect(res.status).toBe(201);
     const body = await json(res);
-    expect(body.network).toBe('mainnet');
+    expect(body.network).toBe('solana-mainnet');
     expect(body.environment).toBe('mainnet');
     expect(body.chain).toBe('solana');
   });
@@ -618,7 +618,7 @@ describe('EVM wallet creation', () => {
     const lastCall = calls[calls.length - 1]!;
     // generateKeyPair(walletId, chain, network, masterPassword)
     expect(lastCall[1]).toBe('solana');
-    expect(lastCall[2]).toBe('mainnet');
+    expect(lastCall[2]).toBe('solana-mainnet');
     expect(lastCall[3]).toBe(TEST_MASTER_PASSWORD);
   });
 
@@ -671,7 +671,7 @@ describe('GET /v1/wallet/address', () => {
     const body = await json(res);
     expect(body.walletId).toBe(walletId);
     expect(body.chain).toBe('solana');
-    expect(body.network).toBe('devnet');
+    expect(body.network).toBe('solana-devnet');
     expect(body.address).toBe(MOCK_SOLANA_PUBLIC_KEY);
   });
 
@@ -746,7 +746,7 @@ describe('GET /v1/wallet/balance', () => {
     expect(body.symbol).toBe('SOL');
     expect(body.walletId).toBe(walletId);
     expect(body.chain).toBe('solana');
-    expect(body.network).toBe('devnet');
+    expect(body.network).toBe('solana-devnet');
     expect(body.address).toBe(MOCK_SOLANA_PUBLIC_KEY);
   });
 

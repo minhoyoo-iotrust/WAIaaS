@@ -98,7 +98,7 @@ function createMockEvmAdapter(overrides: Partial<IChainAdapter> = {}): IChainAda
 function createMockSolanaAdapter(overrides: Partial<IChainAdapter> = {}): IChainAdapter {
   return {
     chain: 'solana' as const,
-    network: 'devnet' as const,
+    network: 'solana-devnet' as const,
     connect: async () => {},
     disconnect: async () => {},
     isConnected: () => true,
@@ -631,7 +631,7 @@ describe('Dual Chain Simultaneous Operation', () => {
     // Dual-chain adapter pool
     const adapterMap = new Map<string, IChainAdapter>();
     adapterMap.set('ethereum:ethereum-sepolia', mockEvmAdapter);
-    adapterMap.set('solana:devnet', mockSolanaAdapter);
+    adapterMap.set('solana:solana-devnet', mockSolanaAdapter);
     mockAdapterPool = createMockAdapterPoolDual(adapterMap);
 
     app = createApp({
@@ -666,7 +666,7 @@ describe('Dual Chain Simultaneous Operation', () => {
       body: JSON.stringify({
         name: 'solana-dual-test',
         chain: 'solana',
-        network: 'devnet',
+        network: 'solana-devnet',
       }),
     });
     expect(solCreateRes.status).toBe(201);
@@ -760,7 +760,7 @@ describe('Dual Chain Simultaneous Operation', () => {
     const resolveArgs = resolveCalls.map(
       (c: [string, string, string]) => `${c[0]}:${c[1]}`,
     );
-    expect(resolveArgs).toContain('solana:devnet');
+    expect(resolveArgs).toContain('solana:solana-devnet');
     expect(resolveArgs).toContain('ethereum:ethereum-sepolia');
 
     // Wait for async pipelines
@@ -786,7 +786,7 @@ describe('Dual Chain Simultaneous Operation', () => {
       body: JSON.stringify({
         name: 'solana-list-test',
         chain: 'solana',
-        network: 'devnet',
+        network: 'solana-devnet',
       }),
     });
     expect(solCreateRes.status).toBe(201);
@@ -819,7 +819,7 @@ describe('Dual Chain Simultaneous Operation', () => {
 
     expect(solanaWallet).toBeDefined();
     expect(solanaWallet!.name).toBe('solana-list-test');
-    expect(solanaWallet!.network).toBe('devnet');
+    expect(solanaWallet!.network).toBe('solana-devnet');
 
     expect(evmWallet).toBeDefined();
     expect(evmWallet!.name).toBe('evm-list-test');

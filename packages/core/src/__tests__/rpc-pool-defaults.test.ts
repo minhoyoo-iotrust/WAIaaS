@@ -5,7 +5,7 @@ import { RpcPool } from '../rpc/rpc-pool.js';
 // ─── Constants ────────────────────────────────────────────────
 
 const MAINNET_KEYS = [
-  'mainnet',
+  'solana-mainnet',
   'ethereum-mainnet',
   'arbitrum-mainnet',
   'optimism-mainnet',
@@ -14,8 +14,8 @@ const MAINNET_KEYS = [
 ] as const;
 
 const TESTNET_KEYS = [
-  'devnet',
-  'testnet',
+  'solana-devnet',
+  'solana-testnet',
   'ethereum-sepolia',
   'arbitrum-sepolia',
   'optimism-sepolia',
@@ -91,9 +91,9 @@ describe('RpcPool.createWithDefaults()', () => {
     }
   });
 
-  it('getUrl returns first URL (highest priority) for mainnet', () => {
+  it('getUrl returns first URL (highest priority) for solana-mainnet', () => {
     const pool = RpcPool.createWithDefaults();
-    expect(pool.getUrl('mainnet')).toBe('https://api.mainnet-beta.solana.com');
+    expect(pool.getUrl('solana-mainnet')).toBe('https://api.mainnet-beta.solana.com');
   });
 
   it('getUrl returns first URL for ethereum-mainnet', () => {
@@ -105,12 +105,12 @@ describe('RpcPool.createWithDefaults()', () => {
     const now = 0;
     const pool = RpcPool.createWithDefaults({ nowFn: () => now });
 
-    const firstUrl = pool.getUrl('mainnet');
+    const firstUrl = pool.getUrl('solana-mainnet');
     expect(firstUrl).toBe('https://api.mainnet-beta.solana.com');
 
-    pool.reportFailure('mainnet', firstUrl);
+    pool.reportFailure('solana-mainnet', firstUrl);
 
-    const secondUrl = pool.getUrl('mainnet');
+    const secondUrl = pool.getUrl('solana-mainnet');
     expect(secondUrl).toBe('https://rpc.ankr.com/solana');
   });
 });
@@ -125,16 +125,16 @@ describe('createWithDefaults with custom options', () => {
       nowFn: () => now,
     });
 
-    const firstUrl = pool.getUrl('mainnet');
-    pool.reportFailure('mainnet', firstUrl);
+    const firstUrl = pool.getUrl('solana-mainnet');
+    pool.reportFailure('solana-mainnet', firstUrl);
 
     // At 29s, first URL should still be in cooldown
     now = 29_999;
-    expect(pool.getUrl('mainnet')).toBe('https://rpc.ankr.com/solana');
+    expect(pool.getUrl('solana-mainnet')).toBe('https://rpc.ankr.com/solana');
 
     // At 30s, first URL should be available again (30_000ms cooldown)
     now = 30_000;
-    expect(pool.getUrl('mainnet')).toBe('https://api.mainnet-beta.solana.com');
+    expect(pool.getUrl('solana-mainnet')).toBe('https://api.mainnet-beta.solana.com');
   });
 
   it('respects custom maxCooldownMs', () => {
@@ -145,21 +145,21 @@ describe('createWithDefaults with custom options', () => {
       nowFn: () => now,
     });
 
-    const firstUrl = pool.getUrl('mainnet');
+    const firstUrl = pool.getUrl('solana-mainnet');
     // Failure 1: 10_000ms cooldown
-    pool.reportFailure('mainnet', firstUrl);
+    pool.reportFailure('solana-mainnet', firstUrl);
     now = 10_000;
-    expect(pool.getUrl('mainnet')).toBe(firstUrl);
+    expect(pool.getUrl('solana-mainnet')).toBe(firstUrl);
 
     // Failure 2: 20_000ms cooldown (10_000 * 2^1 = 20_000, capped at max)
-    pool.reportFailure('mainnet', firstUrl);
+    pool.reportFailure('solana-mainnet', firstUrl);
     now += 20_000;
-    expect(pool.getUrl('mainnet')).toBe(firstUrl);
+    expect(pool.getUrl('solana-mainnet')).toBe(firstUrl);
 
     // Failure 3: still 20_000ms cooldown (capped)
-    pool.reportFailure('mainnet', firstUrl);
+    pool.reportFailure('solana-mainnet', firstUrl);
     now += 20_000;
-    expect(pool.getUrl('mainnet')).toBe(firstUrl);
+    expect(pool.getUrl('solana-mainnet')).toBe(firstUrl);
   });
 });
 
@@ -168,13 +168,13 @@ describe('createWithDefaults with custom options', () => {
 describe('additional registrations merge with defaults', () => {
   it('custom URL is appended after defaults', () => {
     const pool = RpcPool.createWithDefaults();
-    pool.register('mainnet', ['https://custom.rpc.com']);
+    pool.register('solana-mainnet', ['https://custom.rpc.com']);
 
     // Default URLs still have higher priority
-    expect(pool.getUrl('mainnet')).toBe('https://api.mainnet-beta.solana.com');
+    expect(pool.getUrl('solana-mainnet')).toBe('https://api.mainnet-beta.solana.com');
 
     // Custom URL is accessible via status
-    const status = pool.getStatus('mainnet');
+    const status = pool.getStatus('solana-mainnet');
     const urls = status.map((s) => s.url);
     expect(urls).toContain('https://custom.rpc.com');
     expect(urls.length).toBe(4); // 3 defaults + 1 custom
@@ -182,9 +182,9 @@ describe('additional registrations merge with defaults', () => {
 
   it('duplicate default URLs are not re-added', () => {
     const pool = RpcPool.createWithDefaults();
-    pool.register('mainnet', ['https://api.mainnet-beta.solana.com']);
+    pool.register('solana-mainnet', ['https://api.mainnet-beta.solana.com']);
 
-    const status = pool.getStatus('mainnet');
+    const status = pool.getStatus('solana-mainnet');
     expect(status).toHaveLength(3); // Still 3, duplicate ignored
   });
 

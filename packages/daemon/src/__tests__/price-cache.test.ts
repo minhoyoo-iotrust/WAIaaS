@@ -228,7 +228,7 @@ describe('buildCacheKey', () => {
   });
 
   it('should produce CAIP-19 format for Solana SPL token (base58 preserved)', () => {
-    expect(buildCacheKey('mainnet', 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'))
+    expect(buildCacheKey('solana-mainnet', 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'))
       .toBe('solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
   });
 
@@ -250,14 +250,14 @@ describe('buildCacheKey', () => {
   });
 
   it('should produce CAIP-19 for Solana native (SOL slip44:501)', () => {
-    expect(buildCacheKey('mainnet', 'native'))
+    expect(buildCacheKey('solana-mainnet', 'native'))
       .toBe('solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/slip44:501');
   });
 });
 
 describe('resolveNetwork', () => {
   it('should resolve solana chain to mainnet by default', () => {
-    expect(resolveNetwork('solana')).toBe('mainnet');
+    expect(resolveNetwork('solana')).toBe('solana-mainnet');
   });
 
   it('should resolve ethereum chain to ethereum-mainnet by default', () => {
@@ -268,14 +268,14 @@ describe('resolveNetwork', () => {
     expect(resolveNetwork('ethereum', 'polygon-mainnet')).toBe('polygon-mainnet');
   });
 
-  it('should return explicit network over chain default (solana -> devnet)', () => {
-    expect(resolveNetwork('solana', 'devnet')).toBe('devnet');
+  it('should return explicit network over chain default (solana -> solana-devnet)', () => {
+    expect(resolveNetwork('solana', 'solana-devnet')).toBe('solana-devnet');
   });
 });
 
 describe('PYTH_FEED_IDS cross-validation', () => {
   it('should match buildCacheKey output for mainnet/native (SOL)', () => {
-    expect(PYTH_FEED_IDS.has(buildCacheKey('mainnet', 'native'))).toBe(true);
+    expect(PYTH_FEED_IDS.has(buildCacheKey('solana-mainnet', 'native'))).toBe(true);
   });
 
   it('should match buildCacheKey output for ethereum-mainnet/native (ETH)', () => {
@@ -283,20 +283,20 @@ describe('PYTH_FEED_IDS cross-validation', () => {
   });
 
   it('should match buildCacheKey output for mainnet/USDC (Solana SPL)', () => {
-    expect(PYTH_FEED_IDS.has(buildCacheKey('mainnet', 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'))).toBe(true);
+    expect(PYTH_FEED_IDS.has(buildCacheKey('solana-mainnet', 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'))).toBe(true);
   });
 
   it('should match buildCacheKey output for mainnet/USDT (Solana SPL)', () => {
-    expect(PYTH_FEED_IDS.has(buildCacheKey('mainnet', 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB'))).toBe(true);
+    expect(PYTH_FEED_IDS.has(buildCacheKey('solana-mainnet', 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB'))).toBe(true);
   });
 
   it('should verify all 4 PYTH_FEED_IDS entries are reachable via buildCacheKey', () => {
     // All known entries: SOL native, ETH native, Solana USDC, Solana USDT
     const knownPairs = [
-      { network: 'mainnet' as const, address: 'native' },
+      { network: 'solana-mainnet' as const, address: 'native' },
       { network: 'ethereum-mainnet' as const, address: 'native' },
-      { network: 'mainnet' as const, address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v' },
-      { network: 'mainnet' as const, address: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB' },
+      { network: 'solana-mainnet' as const, address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v' },
+      { network: 'solana-mainnet' as const, address: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB' },
     ];
 
     for (const { network, address } of knownPairs) {

@@ -43,9 +43,13 @@ const EXPECTED_EVM_KEYS: Record<string, string> = {
 };
 
 describe('rpcConfigKey', () => {
-  // Test 1: Solana networks
-  it.each(['mainnet', 'devnet', 'testnet'])('solana + %s -> solana_%s', (network) => {
-    expect(rpcConfigKey('solana', network)).toBe(`solana_${network}`);
+  // Test 1: Solana networks (strip solana- prefix for config key)
+  it.each([
+    ['solana-mainnet', 'solana_mainnet'],
+    ['solana-devnet', 'solana_devnet'],
+    ['solana-testnet', 'solana_testnet'],
+  ])('solana + %s -> %s', (network, expectedKey) => {
+    expect(rpcConfigKey('solana', network)).toBe(expectedKey);
   });
 
   // Test 2: EVM networks — no chain prefix duplication (#167)
@@ -62,7 +66,7 @@ describe('rpcConfigKey', () => {
 
   // Test 3: SettingsService key format (with rpc. prefix)
   it('prefixed with rpc. matches SettingsService keys', () => {
-    expect(`rpc.${rpcConfigKey('solana', 'devnet')}`).toBe('rpc.solana_devnet');
+    expect(`rpc.${rpcConfigKey('solana', 'solana-devnet')}`).toBe('rpc.solana_devnet');
     expect(`rpc.${rpcConfigKey('ethereum', 'ethereum-sepolia')}`).toBe('rpc.evm_ethereum_sepolia');
     expect(`rpc.${rpcConfigKey('ethereum', 'polygon-amoy')}`).toBe('rpc.evm_polygon_amoy');
     expect(`rpc.${rpcConfigKey('ethereum', 'base-sepolia')}`).toBe('rpc.evm_base_sepolia');
@@ -77,7 +81,7 @@ describe('resolveRpcUrl', () => {
   };
 
   it('resolves Solana RPC URL', () => {
-    expect(resolveRpcUrl(rpcConfig, 'solana', 'devnet')).toBe('https://api.devnet.solana.com');
+    expect(resolveRpcUrl(rpcConfig, 'solana', 'solana-devnet')).toBe('https://api.devnet.solana.com');
   });
 
   it('resolves EVM RPC URL without chain prefix duplication', () => {
@@ -91,6 +95,6 @@ describe('resolveRpcUrl', () => {
   });
 
   it('returns empty string for unknown chain', () => {
-    expect(resolveRpcUrl(rpcConfig, 'bitcoin', 'mainnet')).toBe('');
+    expect(resolveRpcUrl(rpcConfig, 'bitcoin', 'solana-mainnet')).toBe('');
   });
 });

@@ -150,7 +150,7 @@ function mockKeyStore(): LocalKeyStore {
 function mockAdapter(chain: 'solana' | 'ethereum' = 'ethereum'): IChainAdapter {
   return {
     chain,
-    network: chain === 'ethereum' ? 'ethereum-sepolia' : 'devnet',
+    network: chain === 'ethereum' ? 'ethereum-sepolia' : 'solana-devnet',
     connect: async () => {},
     disconnect: async () => {},
     isConnected: () => true,
