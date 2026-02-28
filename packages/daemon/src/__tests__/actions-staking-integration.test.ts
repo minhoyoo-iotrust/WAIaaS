@@ -442,6 +442,11 @@ describe('Action staking pipeline integration (GAP-1 + GAP-2)', () => {
     expect(metadata.provider).toBe('lido_staking');
     expect(metadata.action).toBe('stake');
 
+    // #212: Verify originalRequest is preserved after GAP-2 metadata merge
+    expect(metadata.originalRequest).toBeDefined();
+    const origReq = metadata.originalRequest as Record<string, unknown>;
+    expect(origReq.type).toBe('CONTRACT_CALL');
+
     // Verify GAP-1: stake action should NOT set bridge_status (only unstake does)
     expect(tx.bridge_status).toBeNull();
   });
@@ -491,6 +496,11 @@ describe('Action staking pipeline integration (GAP-1 + GAP-2)', () => {
     const metadata = JSON.parse(tx.metadata as string) as Record<string, unknown>;
     expect(metadata.provider).toBe('lido_staking');
     expect(metadata.action).toBe('unstake');
+
+    // #212: Verify originalRequest is preserved after GAP-2 metadata merge
+    expect(metadata.originalRequest).toBeDefined();
+    const origReq = metadata.originalRequest as Record<string, unknown>;
+    expect(origReq.type).toBe('CONTRACT_CALL');
   });
 
   it('POST /v1/actions/jito_staking/unstake sets bridge_status=PENDING with jito-epoch tracker', async () => {

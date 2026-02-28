@@ -369,10 +369,18 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
 
       // GAP-2 fix: Persist action provider metadata for staking position queries
       // (GET /v1/wallet/staking uses metadata LIKE '%providerKey%' to find staking txs)
+      // Merge with existing metadata to preserve originalRequest (#212)
+      const existingTx = await deps.db
+        .select({ metadata: transactions.metadata })
+        .from(transactions)
+        .where(eq(transactions.id, ctx.txId))
+        .get();
+      const existingMeta = existingTx?.metadata ? JSON.parse(existingTx.metadata as string) : {};
+
       await deps.db
         .update(transactions)
         .set({
-          metadata: JSON.stringify({ provider, action }),
+          metadata: JSON.stringify({ ...existingMeta, provider, action }),
         })
         .where(eq(transactions.id, ctx.txId));
 

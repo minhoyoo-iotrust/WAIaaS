@@ -253,7 +253,7 @@ describe('Config.toml URL priority seeding', () => {
     expect(rpcPool.getUrl('devnet')).toBe('https://my-custom.rpc');
 
     // Non-seeded networks use built-in defaults
-    expect(rpcPool.getUrl('ethereum-sepolia')).toBe('https://sepolia.drpc.org');
+    expect(rpcPool.getUrl('ethereum-sepolia')).toBe('https://1rpc.io/sepolia');
   });
 
   it('config URL is not duplicated if same as built-in default', () => {

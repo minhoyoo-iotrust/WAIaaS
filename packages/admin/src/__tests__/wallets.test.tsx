@@ -129,7 +129,6 @@ describe('WalletsPage', () => {
   it('should render wallet list table', async () => {
     vi.mocked(apiGet).mockImplementation((path: string) => {
       if (path === '/v1/wallets') return Promise.resolve(mockWallets);
-      if (path.includes('/balance')) return Promise.resolve({ balances: [] });
       return Promise.resolve({});
     });
 
@@ -149,7 +148,6 @@ describe('WalletsPage', () => {
   it('should show create form and call POST on submit', async () => {
     vi.mocked(apiGet).mockImplementation((path: string) => {
       if (path === '/v1/wallets') return Promise.resolve(mockWallets);
-      if (path.includes('/balance')) return Promise.resolve({ balances: [] });
       return Promise.resolve({});
     });
     vi.mocked(apiPost).mockResolvedValue({
@@ -322,27 +320,7 @@ const mockWalletsExtended = {
   ],
 };
 
-const mockBalanceWallet1 = {
-  balances: [
-    {
-      network: 'devnet',
-      native: { balance: '1.5', symbol: 'SOL' },
-      tokens: [],
-    },
-  ],
-};
-
-const mockBalanceWallet2 = {
-  balances: [
-    {
-      network: 'ethereum-sepolia',
-      native: { balance: '0.25', symbol: 'ETH' },
-      tokens: [],
-    },
-  ],
-};
-
-describe('WalletListContent - search, filter, balance', () => {
+describe('WalletListContent - search and filter', () => {
   beforeEach(() => {
     currentPath.value = '/wallets';
   });
@@ -355,7 +333,6 @@ describe('WalletListContent - search, filter, balance', () => {
   it('should filter wallets by search text (name)', async () => {
     vi.mocked(apiGet).mockImplementation((path: string) => {
       if (path === '/v1/wallets') return Promise.resolve(mockWalletsExtended);
-      if (path.includes('/balance')) return Promise.resolve({ balances: [] });
       return Promise.resolve({});
     });
 
@@ -386,7 +363,6 @@ describe('WalletListContent - search, filter, balance', () => {
   it('should render FilterBar with chain, environment, and status dropdowns', async () => {
     vi.mocked(apiGet).mockImplementation((path: string) => {
       if (path === '/v1/wallets') return Promise.resolve(mockWalletsExtended);
-      if (path.includes('/balance')) return Promise.resolve({ balances: [] });
       return Promise.resolve({});
     });
 
@@ -406,68 +382,9 @@ describe('WalletListContent - search, filter, balance', () => {
     expect(screen.getByPlaceholderText('Search by name or public key...')).toBeTruthy();
   });
 
-  it('should display balance column with native balance', async () => {
-    vi.mocked(apiGet).mockImplementation((path: string) => {
-      if (path === '/v1/wallets') return Promise.resolve(mockWalletsExtended);
-      if (path === '/v1/admin/wallets/wallet-1/balance') return Promise.resolve(mockBalanceWallet1);
-      if (path === '/v1/admin/wallets/wallet-2/balance') return Promise.resolve(mockBalanceWallet2);
-      if (path.includes('/balance')) return Promise.resolve({ balances: [] });
-      return Promise.resolve({});
-    });
-
-    render(<WalletsPage />);
-
-    // Wait for wallets and balances to load
-    await waitFor(() => {
-      expect(screen.getByText('bot-alpha')).toBeTruthy();
-    });
-
-    // Balance column header
-    expect(screen.getByText('Balance')).toBeTruthy();
-
-    // Wait for balance values to appear
-    await waitFor(() => {
-      expect(screen.getByText(/1\.5/)).toBeTruthy();
-      expect(screen.getByText(/SOL/)).toBeTruthy();
-    });
-
-    await waitFor(() => {
-      expect(screen.getByText(/0\.25/)).toBeTruthy();
-      expect(screen.getByText(/ETH/)).toBeTruthy();
-    });
-  });
-
-  it('should show loading state for balance column', async () => {
-    // apiGet for wallets resolves immediately, but balance never resolves
-    let resolveBalances: () => void;
-    const balancePromise = new Promise<{ balances: never[] }>((resolve) => {
-      resolveBalances = () => resolve({ balances: [] });
-    });
-
-    vi.mocked(apiGet).mockImplementation((path: string) => {
-      if (path === '/v1/wallets') return Promise.resolve(mockWalletsExtended);
-      if (path.includes('/balance')) return balancePromise;
-      return Promise.resolve({});
-    });
-
-    render(<WalletsPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText('bot-alpha')).toBeTruthy();
-    });
-
-    // Balance cells should show "Loading..." while fetching
-    const loadingCells = screen.getAllByText('Loading...');
-    expect(loadingCells.length).toBeGreaterThan(0);
-
-    // Resolve balances to prevent hanging
-    resolveBalances!();
-  });
-
   it('should filter wallets by chain dropdown', async () => {
     vi.mocked(apiGet).mockImplementation((path: string) => {
       if (path === '/v1/wallets') return Promise.resolve(mockWalletsExtended);
-      if (path.includes('/balance')) return Promise.resolve({ balances: [] });
       return Promise.resolve({});
     });
 
