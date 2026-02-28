@@ -52,7 +52,7 @@ import type { SettingsService } from '../../infrastructure/settings/index.js';
 import { getSettingDefinition } from '../../infrastructure/settings/index.js';
 import type { AdapterPool } from '../../infrastructure/adapter-pool.js';
 import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
-import type { ApiKeyStore } from '../../infrastructure/action/api-key-store.js';
+// ApiKeyStore removed in v29.5 (#214) -- API keys now managed by SettingsService
 import type { ActionProviderRegistry } from '../../infrastructure/action/action-provider-registry.js';
 import type { KillSwitchService } from '../../services/kill-switch-service.js';
 import type { VersionCheckService } from '../../infrastructure/version/version-check-service.js';
@@ -119,7 +119,6 @@ export interface AdminRouteDeps {
   daemonConfig?: DaemonConfig;
   priceOracle?: IPriceOracle;
   oracleConfig?: { coingeckoApiKeyConfigured: boolean; crossValidationThreshold: number };
-  apiKeyStore?: ApiKeyStore;
   actionProviderRegistry?: ActionProviderRegistry;
   forexRateService?: IForexRateService;
   sqlite?: SQLiteDatabase;
@@ -1725,26 +1724,23 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
 
   router.openapi(apiKeysListRoute, async (c) => {
     const registry = deps.actionProviderRegistry;
-    const store = deps.apiKeyStore;
+    const ss = deps.settingsService;
 
     if (!registry) {
       return c.json({ keys: [] }, 200);
     }
 
     const providers = registry.listProviders();
-    const storedKeys = store ? store.listAll() : [];
-    const storedMap = new Map(storedKeys.map((k) => [k.providerName, k]));
-
     const keys = providers.map((p) => {
-      const stored = storedMap.get(p.name);
+      const hasKey = ss ? ss.hasApiKey(p.name) : false;
+      const maskedKey = ss ? ss.getApiKeyMasked(p.name) : null;
+      const updatedAt = ss ? ss.getApiKeyUpdatedAt(p.name) : null;
       return {
         providerName: p.name,
-        hasKey: stored?.hasKey ?? false,
-        maskedKey: stored?.maskedKey ?? null,
+        hasKey,
+        maskedKey,
         requiresApiKey: p.requiresApiKey ?? false,
-        updatedAt: stored?.updatedAt
-          ? stored.updatedAt.toISOString()
-          : null,
+        updatedAt: updatedAt instanceof Date ? updatedAt.toISOString() : null,
       };
     });
 
@@ -1759,13 +1755,20 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
     const { provider } = c.req.valid('param');
     const body = c.req.valid('json');
 
-    if (!deps.apiKeyStore) {
+    if (!deps.settingsService) {
       throw new WAIaaSError('ADAPTER_NOT_AVAILABLE', {
-        message: 'API key store not available',
+        message: 'Settings service not available',
       });
     }
 
-    deps.apiKeyStore.set(provider, body.apiKey);
+    const settingKey = `actions.${provider}_api_key`;
+    deps.settingsService.set(settingKey, body.apiKey);
+
+    // Trigger hot-reload so providers pick up the new key immediately
+    if (deps.onSettingsChanged) {
+      deps.onSettingsChanged([settingKey]);
+    }
+
     return c.json({ success: true, providerName: provider }, 200);
   });
 
@@ -1776,18 +1779,26 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
   router.openapi(apiKeyDeleteRoute, async (c) => {
     const { provider } = c.req.valid('param');
 
-    if (!deps.apiKeyStore) {
+    if (!deps.settingsService) {
       throw new WAIaaSError('ADAPTER_NOT_AVAILABLE', {
-        message: 'API key store not available',
+        message: 'Settings service not available',
       });
     }
 
-    const deleted = deps.apiKeyStore.delete(provider);
-    if (!deleted) {
+    // Check if key exists before "deleting"
+    if (!deps.settingsService.hasApiKey(provider)) {
       throw new WAIaaSError('ACTION_NOT_FOUND', {
         message: `No API key found for provider '${provider}'`,
         details: { providerName: provider },
       });
+    }
+
+    const settingKey = `actions.${provider}_api_key`;
+    deps.settingsService.set(settingKey, '');
+
+    // Trigger hot-reload
+    if (deps.onSettingsChanged) {
+      deps.onSettingsChanged([settingKey]);
     }
 
     return c.json({ success: true }, 200);
@@ -2518,14 +2529,17 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
       }
     }
 
-    if (deps.apiKeyStore) {
+    if (deps.settingsService && deps.actionProviderRegistry) {
       try {
-        const keys = deps.apiKeyStore.listAll();
-        if (keys.some((k) => k.hasKey)) {
+        const providers = deps.actionProviderRegistry.listProviders();
+        const hasAnyKey = providers.some(
+          (p) => p.requiresApiKey && deps.settingsService!.hasApiKey(p.name),
+        );
+        if (hasAnyKey) {
           capabilities.push('actions');
         }
       } catch {
-        // API key store not available
+        // Settings service not available
       }
     }
 

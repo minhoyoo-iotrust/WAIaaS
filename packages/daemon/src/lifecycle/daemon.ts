@@ -137,7 +137,7 @@ export class DaemonLifecycle {
   private _settingsService: import('../infrastructure/settings/settings-service.js').SettingsService | null = null;
   private priceOracle: IPriceOracle | undefined;
   private actionProviderRegistry: import('../infrastructure/action/action-provider-registry.js').ActionProviderRegistry | null = null;
-  private apiKeyStore: import('../infrastructure/action/api-key-store.js').ApiKeyStore | null = null;
+  // apiKeyStore removed in v29.5 (#214) -- API keys now managed by SettingsService
   private forexRateService: IForexRateService | null = null;
   private eventBus: EventBus = new EventBus();
   private killSwitchService: KillSwitchService | null = null;
@@ -1081,13 +1081,13 @@ export class DaemonLifecycle {
     }
 
     // ------------------------------------------------------------------
-    // Step 4f: ActionProviderRegistry + ApiKeyStore (fail-soft)
+    // Step 4f: ActionProviderRegistry (fail-soft)
+    // API keys are managed by SettingsService since v29.5 (#214)
     // ------------------------------------------------------------------
     try {
-      const { ActionProviderRegistry, ApiKeyStore } =
+      const { ActionProviderRegistry } =
         await import('../infrastructure/action/index.js');
 
-      this.apiKeyStore = new ApiKeyStore(this._db!, masterPassword, this.passwordRef ?? undefined);
       this.actionProviderRegistry = new ActionProviderRegistry();
 
       // Create IRpcCaller for Aave V3 using RpcPool eth_call.
@@ -1281,7 +1281,7 @@ export class DaemonLifecycle {
           settingsService: this._settingsService ?? undefined,
           priceOracle: this.priceOracle,
           actionProviderRegistry: this.actionProviderRegistry ?? undefined,
-          apiKeyStore: this.apiKeyStore ?? undefined,
+          // apiKeyStore removed in v29.5 -- API keys via SettingsService
           onSettingsChanged: (changedKeys: string[]) => {
             void hotReloader.handleChangedKeys(changedKeys);
           },

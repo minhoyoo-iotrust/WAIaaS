@@ -83,7 +83,7 @@ import type { OwnerLifecycleService } from '../workflow/owner-state.js';
 import type { NotificationService } from '../notifications/notification-service.js';
 import type { SettingsService } from '../infrastructure/settings/index.js';
 import type { ActionProviderRegistry } from '../infrastructure/action/action-provider-registry.js';
-import type { ApiKeyStore } from '../infrastructure/action/api-key-store.js';
+// ApiKeyStore removed in v29.5 (#214) -- API keys now managed by SettingsService
 import type * as schema from '../infrastructure/database/schema.js';
 import { TokenRegistryService } from '../infrastructure/token-registry/index.js';
 import { WalletLinkRegistry } from '../services/signing-sdk/wallet-link-registry.js';
@@ -115,7 +115,6 @@ export interface CreateAppDeps {
   settingsService?: SettingsService;
   priceOracle?: IPriceOracle;
   actionProviderRegistry?: ActionProviderRegistry;
-  apiKeyStore?: ApiKeyStore;
   onSettingsChanged?: (changedKeys: string[]) => void;
   dataDir?: string;
   forexRateService?: IForexRateService;
@@ -489,7 +488,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
   // Register action routes when registry + pipeline deps are available
   if (
     deps.actionProviderRegistry &&
-    deps.apiKeyStore &&
+    deps.settingsService &&
     deps.db &&
     deps.keyStore &&
     effectiveMasterPassword !== undefined &&
@@ -501,7 +500,6 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
       '/v1',
       actionRoutes({
         registry: deps.actionProviderRegistry,
-        apiKeyStore: deps.apiKeyStore,
         db: deps.db,
         adapterPool: deps.adapterPool,
         config: deps.config,
@@ -594,7 +592,6 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         adapterPool: deps.adapterPool ?? null,
         daemonConfig: deps.config,
         priceOracle: deps.priceOracle,
-        apiKeyStore: deps.apiKeyStore,
         actionProviderRegistry: deps.actionProviderRegistry,
         forexRateService: deps.forexRateService,
         sqlite: deps.sqlite,
@@ -671,7 +668,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
       db: deps.db,
       config: deps.config ?? {} as DaemonConfig,
       settingsService: deps.settingsService,
-      apiKeyStore: deps.apiKeyStore,
+      actionProviderRegistry: deps.actionProviderRegistry,
       version: DAEMON_VERSION,
     }));
   }
