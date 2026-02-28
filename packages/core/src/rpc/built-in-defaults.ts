@@ -59,8 +59,11 @@ export const BUILT_IN_RPC_DEFAULTS: Readonly<Record<string, readonly string[]>> 
     'https://api.testnet.solana.com',
   ],
   'ethereum-sepolia': [
-    'https://sepolia.drpc.org',
+    'https://1rpc.io/sepolia',
+    'https://0xrpc.io/sep',
     'https://ethereum-sepolia-rpc.publicnode.com',
+    'https://sepolia.drpc.org',
+    'https://rpc.sepolia.org',
   ],
   'arbitrum-sepolia': [
     'https://arbitrum-sepolia.drpc.org',

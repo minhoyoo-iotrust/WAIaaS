@@ -134,6 +134,10 @@ export function keyToLabel(key: string): string {
     aave_v3_health_factor_warning_threshold: 'HF Warning Threshold',
     aave_v3_position_sync_interval_sec: 'Position Sync Interval (seconds)',
     aave_v3_max_ltv_pct: 'Max LTV Percentage',
+    // kamino keys
+    kamino_enabled: 'Kamino Enabled',
+    kamino_market: 'Market',
+    kamino_hf_threshold: 'HF Warning Threshold',
     // gas_condition keys
     poll_interval_sec: 'Poll Interval (seconds)',
     default_timeout_sec: 'Default Timeout (seconds)',

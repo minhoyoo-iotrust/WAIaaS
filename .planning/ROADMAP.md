@@ -29,6 +29,7 @@
 - ✅ **v29.0 고급 DeFi 프로토콜 설계** -- Phases 268-273 (shipped 2026-02-26)
 - ✅ **v29.2 EVM Lending -- Aave V3** -- Phases 274-278 (shipped 2026-02-27)
 - ✅ **v29.3 기본 지갑/기본 네트워크 개념 제거** -- Phases 279-282 (shipped 2026-02-27)
+- ✅ **v29.4 Solana Lending (Kamino)** -- Phases 283-284 (shipped 2026-02-28)
 
 ## Phases
 
@@ -195,5 +196,15 @@ See `.planning/milestones/v29.3-ROADMAP.md` for full details.
 
 </details>
 
+<details>
+<summary>✅ v29.4 Solana Lending -- Kamino (Phases 283-284) -- SHIPPED 2026-02-28</summary>
+
+- [x] Phase 283: Kamino Core Provider (4/4 plans) -- completed 2026-02-28
+- [x] Phase 284: Kamino Integration (5/5 plans) -- completed 2026-02-28
+
+See `.planning/milestones/v29.4-ROADMAP.md` for full details.
+
+</details>
+
 ---
-*Last updated: 2026-02-27 after v29.3 milestone completion*
+*Last updated: 2026-02-28 after v29.4 milestone completion*

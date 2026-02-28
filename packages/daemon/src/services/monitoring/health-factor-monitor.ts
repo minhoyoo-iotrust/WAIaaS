@@ -139,6 +139,18 @@ export class HealthFactorMonitor implements IDeFiMonitor {
         this.updateConfig({ max_ltv_pct: parsed });
       }
     } catch { /* fallback to default */ }
+    // Also read Kamino HF threshold (KINT-07: use minimum across providers)
+    try {
+      const kaminoThreshold = settingsService.get('actions.kamino_hf_threshold');
+      const kaminoParsed = Number(kaminoThreshold);
+      if (!Number.isNaN(kaminoParsed) && kaminoParsed > 0) {
+        // Use the lower threshold (more conservative) between current and kamino
+        const currentWarning = this.config.warningThreshold;
+        if (kaminoParsed < currentWarning) {
+          this.updateConfig({ health_factor_warning_threshold: kaminoParsed });
+        }
+      }
+    } catch { /* fallback to default */ }
   }
 
   // -----------------------------------------------------------------------

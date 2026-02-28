@@ -1658,8 +1658,8 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     walletId: string,
     usdAmount?: number,
   ): PolicyEvaluation | null {
-    // Only applies to borrow actions
-    if (transaction.actionName !== 'borrow') return null;
+    // Only applies to borrow actions (matches 'borrow', 'aave_borrow', 'kamino_borrow', etc.)
+    if (!transaction.actionName?.endsWith('borrow')) return null;
 
     const ltvPolicy = resolved.find((p) => p.type === 'LENDING_LTV_LIMIT');
     if (!ltvPolicy) return null; // No LTV policy -> pass through

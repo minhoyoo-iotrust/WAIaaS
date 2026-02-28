@@ -16,6 +16,8 @@ import { getJitoAddresses, type JitoStakingConfig } from './providers/jito-staki
 import { AaveV3LendingProvider } from './providers/aave-v3/index.js';
 import { type AaveV3Config } from './providers/aave-v3/config.js';
 import type { IRpcCaller } from './providers/aave-v3/aave-rpc.js';
+import { KaminoLendingProvider } from './providers/kamino/index.js';
+import type { KaminoConfig } from './providers/kamino/config.js';
 
 // Re-export provider classes
 export { JupiterSwapActionProvider } from './providers/jupiter-swap/index.js';
@@ -47,6 +49,13 @@ export { AAVE_V3_DEFAULTS, AAVE_V3_ADDRESSES, getAaveAddresses, AAVE_CHAIN_ID_MA
 export type { AaveV3Config, AaveChainAddresses } from './providers/aave-v3/config.js';
 export type { IRpcCaller, UserAccountData, ReserveData } from './providers/aave-v3/aave-rpc.js';
 export { decodeGetUserAccountData, decodeGetReserveData, simulateHealthFactor, rayToApy, hfToNumber, LIQUIDATION_THRESHOLD_HF, WARNING_THRESHOLD_HF } from './providers/aave-v3/aave-rpc.js';
+
+export { KaminoLendingProvider } from './providers/kamino/index.js';
+export { KAMINO_DEFAULTS, KAMINO_PROGRAM_ID, KAMINO_MAIN_MARKET, resolveMarketAddress } from './providers/kamino/config.js';
+export type { KaminoConfig } from './providers/kamino/config.js';
+export type { IKaminoSdkWrapper, KaminoInstruction, KaminoObligation, KaminoReserve } from './providers/kamino/kamino-sdk-wrapper.js';
+export { MockKaminoSdkWrapper } from './providers/kamino/kamino-sdk-wrapper.js';
+export { calculateHealthFactor, simulateKaminoHealthFactor, hfToStatus, KAMINO_LIQUIDATION_THRESHOLD, KAMINO_DEFAULT_HF_THRESHOLD } from './providers/kamino/hf-simulation.js';
 
 // Re-export common utilities
 export { ActionApiClient } from './common/action-api-client.js';
@@ -189,6 +198,18 @@ export function registerBuiltInProviders(
       factory: () => {
         const config: AaveV3Config = { enabled: true };
         return new AaveV3LendingProvider(config, options?.rpcCaller);
+      },
+    },
+    {
+      key: 'kamino',
+      enabledKey: 'actions.kamino_enabled',
+      factory: () => {
+        const config: KaminoConfig = {
+          enabled: true,
+          market: settingsReader.get('actions.kamino_market') || 'main',
+          hfThreshold: Number(settingsReader.get('actions.kamino_hf_threshold')) || 1.2,
+        };
+        return new KaminoLendingProvider(config);
       },
     },
   ];

@@ -1,7 +1,8 @@
 # 마일스톤 m29-04: Solana Lending (Kamino)
 
-- **Status:** PLANNED
-- **Milestone:** TBD
+- **Status:** SHIPPED
+- **Milestone:** v29.4
+- **Completed:** 2026-02-28
 
 ## 목표
 

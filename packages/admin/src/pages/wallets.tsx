@@ -2023,8 +2023,6 @@ const WALLET_FILTER_FIELDS: FilterField[] = [
   },
 ];
 
-/** Max wallets for which to fetch balances in parallel */
-const BALANCE_FETCH_LIMIT = 50;
 
 function WalletListContent() {
   const wallets = useSignal<Wallet[]>([]);
@@ -2040,9 +2038,6 @@ function WalletListContent() {
   // Search + filter state
   const search = useSignal('');
   const filters = useSignal<Record<string, string>>({ chain: '', environment: '', status: '' });
-  const balances = useSignal<Record<string, { balance: string; symbol: string; usd?: number | null } | null>>({});
-  const listDisplayCurrency = useSignal<string>('USD');
-  const listDisplayRate = useSignal<number | null>(1);
 
   const fetchWallets = async () => {
     try {
@@ -2056,27 +2051,6 @@ function WalletListContent() {
     }
   };
 
-  // Fetch balances for wallets (up to BALANCE_FETCH_LIMIT)
-  const fetchBalances = async (walletList: Wallet[]) => {
-    const toFetch = walletList.slice(0, BALANCE_FETCH_LIMIT);
-    const results: Record<string, { balance: string; symbol: string; usd?: number | null } | null> = {};
-    await Promise.allSettled(
-      toFetch.map(async (w) => {
-        try {
-          const resp = await apiGet<WalletBalance>(API.ADMIN_WALLET_BALANCE(w.id));
-          const firstNet = resp.balances?.[0];
-          if (firstNet?.native) {
-            results[w.id] = { balance: firstNet.native.balance, symbol: firstNet.native.symbol, usd: firstNet.native.usd };
-          } else {
-            results[w.id] = null;
-          }
-        } catch {
-          results[w.id] = null;
-        }
-      }),
-    );
-    balances.value = { ...balances.value, ...results };
-  };
 
   const filteredWallets = useComputed(() => {
     let list = wallets.value;
@@ -2112,27 +2086,6 @@ function WalletListContent() {
           {formatAddress(a.publicKey)} <CopyButton value={a.publicKey} />
         </span>
       ),
-    },
-    {
-      key: 'balance' as string,
-      header: 'Balance',
-      render: (wallet) => {
-        const bal = balances.value[wallet.id];
-        if (bal === undefined)
-          return <span style={{ color: 'var(--color-text-secondary)' }}>Loading...</span>;
-        if (bal === null)
-          return <span style={{ color: 'var(--color-text-secondary)' }}>--</span>;
-        return (
-          <span>
-            {bal.balance} {bal.symbol}
-            {bal.usd != null && (
-              <span style={{ color: 'var(--color-text-secondary)', marginLeft: 'var(--space-1)', fontSize: '0.85em' }}>
-                ({formatWithDisplay(bal.usd, listDisplayCurrency.value, listDisplayRate.value)})
-              </span>
-            )}
-          </span>
-        );
-      },
     },
     {
       key: 'status',
@@ -2197,19 +2150,7 @@ function WalletListContent() {
   };
 
   useEffect(() => {
-    fetchWallets().then(() => {
-      // Fetch balances after wallets load
-      if (wallets.value.length > 0) {
-        void fetchBalances(wallets.value);
-      }
-    });
-    // Fetch display currency for USD conversion
-    fetchDisplayCurrency()
-      .then(({ currency, rate }) => {
-        listDisplayCurrency.value = currency;
-        listDisplayRate.value = rate;
-      })
-      .catch(() => { /* fallback to USD/1 */ });
+    void fetchWallets();
   }, []);
 
   return (

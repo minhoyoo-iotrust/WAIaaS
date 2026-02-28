@@ -205,6 +205,11 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'actions.aave_v3_position_sync_interval_sec', category: 'actions', configPath: 'actions.aave_v3_position_sync_interval_sec', defaultValue: '300', isCredential: false },
   { key: 'actions.aave_v3_max_ltv_pct', category: 'actions', configPath: 'actions.aave_v3_max_ltv_pct', defaultValue: '0.8', isCredential: false },
 
+  // --- Kamino Lending ---
+  { key: 'actions.kamino_enabled', category: 'actions', configPath: 'actions.kamino_enabled', defaultValue: 'false', isCredential: false },
+  { key: 'actions.kamino_market', category: 'actions', configPath: 'actions.kamino_market', defaultValue: 'main', isCredential: false },
+  { key: 'actions.kamino_hf_threshold', category: 'actions', configPath: 'actions.kamino_hf_threshold', defaultValue: '1.2', isCredential: false },
+
   // --- gas_condition category (Gas conditional execution) ---
   { key: 'gas_condition.enabled', category: 'gas_condition', configPath: 'gas_condition.enabled', defaultValue: 'true', isCredential: false },
   { key: 'gas_condition.poll_interval_sec', category: 'gas_condition', configPath: 'gas_condition.poll_interval_sec', defaultValue: '30', isCredential: false },

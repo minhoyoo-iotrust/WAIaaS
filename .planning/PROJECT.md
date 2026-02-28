@@ -8,7 +8,9 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: None (planning next)
+## Current Milestone: v29.4 Solana Lending (Kamino) — SHIPPED 2026-02-28
+
+**Delivered:** Kamino K-Lend를 ILendingProvider 구현체로 구축하여 AI 에이전트가 Solana 체인에서 supply/borrow/repay/withdraw를 정책 평가 하에 수행 가능. HF 시뮬레이션 자기 청산 방지, PositionTracker duck-type 자동 등록, Admin Settings 3키 런타임 조정, MCP 4도구 자동 노출, KINT-07 LTV suffix matching 버그 수정.
 
 **Previous milestone:** v29.3 shipped 2026-02-27 — 기본 지갑/기본 네트워크 개념 제거 (4 phases, 10 plans, 72 requirements, 231 files, +6,200/-2,354 lines)
 
@@ -68,11 +70,12 @@ v29.2 EVM Lending -- Aave V3 shipped (2026-02-27). 12-패키지 모노레포(pac
 - ✅ v29.0 고급 DeFi 프로토콜 설계 — shipped 2026-02-26 (6 phases, 12 plans, 38 requirements, 59 설계 결정)
 - ✅ v29.2 EVM Lending -- Aave V3 — shipped 2026-02-27 (5 phases, 15 plans, 34 requirements)
 - ✅ v29.3 기본 지갑/기본 네트워크 개념 제거 — shipped 2026-02-27 (4 phases, 10 plans, 72 requirements)
+- ✅ v29.4 Solana Lending (Kamino) — shipped 2026-02-28 (2 phases, 9 plans, 21 requirements, ~192,843 LOC TS)
 
 **코드베이스 현황:**
 - 12-패키지 모노레포: @waiaas/core, @waiaas/daemon, @waiaas/adapter-solana, @waiaas/adapter-evm, @waiaas/cli, @waiaas/sdk, @waiaas/wallet-sdk, @waiaas/mcp, @waiaas/admin, @waiaas/push-relay, @waiaas/actions + waiaas (Python)
-- ~180,194 LOC TypeScript (ESM-only, Node.js 22, Admin UI ~26,000 LOC, Push Relay ~1,782 LOC)
-- ~5,000 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + wallet-sdk + MCP + admin + push-relay + actions)
+- ~192,843 LOC TypeScript (ESM-only, Node.js 22, Admin UI ~26,000 LOC, Push Relay ~1,782 LOC)
+- ~5,083 테스트 (core + adapter-solana + adapter-evm + daemon + CLI + SDK + wallet-sdk + MCP + admin + push-relay + actions)
 - pnpm workspace + Turborepo, Vitest, ESLint flat config, Prettier
 - OpenAPIHono 50 엔드포인트, GET /doc OpenAPI 3.0 자동 생성
 - 8개 API 스킬 파일 (skills/ 디렉토리) — quickstart/wallet/transactions/policies/admin/actions/x402 + MCP 스킬 리소스(waiaas://skills/{name})
@@ -109,6 +112,7 @@ v29.2 EVM Lending -- Aave V3 shipped (2026-02-27). 12-패키지 모노레포(pac
 - token_limits: CAIP-19 키 기반 토큰별 사람 읽기 단위 지출 한도, evaluateTokenTier 4단계 매칭(정확→native:{chain}→native→raw 폴백), Admin UI 토큰 레지스트리 연동 편집기
 - DeFi Lending 프레임워크: ILendingProvider/IPositionProvider, PositionTracker(5분 sync), HealthFactorMonitor(4단계 severity, 적응형 폴링), LendingPolicyEvaluator(LTV/차입한도/비지출분류)
 - AaveV3LendingProvider: supply/borrow/repay/withdraw 4액션, manual hex ABI(Lido 패턴), 5-chain 주소 레지스트리, HF 시뮬레이션 자기 청산 방지
+- KaminoLendingProvider: Solana supply/borrow/repay/withdraw 4액션, @kamino-finance/klend-sdk 래퍼, HF 시뮬레이션 가드, PositionTracker duck-type 자동 등록
 - defi_positions DB v25: category/status/provider/assetId 인덱싱, PositionWriteQueue batch upsert
 - GET /v1/wallet/positions + /health-factor REST API, MCP 6도구(4 action + 2 query), TS/Python SDK 확장
 - Admin DeFi Dashboard: HF 게이지(색상 badge), 포지션 테이블, Aave V3 Settings 4키 런타임 조정
@@ -554,16 +558,22 @@ v29.2 EVM Lending -- Aave V3 shipped (2026-02-27). 12-패키지 모노레포(pac
 - ✓ IPerpProvider(5 actions + 3 queries) + PerpPolicyEvaluator 3정책 + MarginMonitor + Drift V2 매핑 — v29.0 (PERP-01~07)
 - ✓ SignableOrder EIP-712 + ActionProviderRegistry intent 확장 + 10-step 파이프라인 + 4-layer 보안 모델 — v29.0 (INTENT-01~06)
 
+- ✓ SSoT Enum 확장 (DeFi 알림 이벤트 + 포지션 카테고리/상태) — v29.2
+- ✓ ILendingProvider 인터페이스 + Lending 프레임워크 공통 인프라 — v29.2
+- ✓ PositionTracker 포지션 추적 서비스 (defi_positions 테이블) — v29.2
+- ✓ HealthFactorMonitor 헬스 팩터 모니터링 + LIQUIDATION_WARNING 알림 — v29.2
+- ✓ LendingPolicyEvaluator 차입 정책 평가 (LTV, USD 한도) — v29.2 (KINT-07 suffix matching fix in v29.4)
+- ✓ AaveV3LendingProvider 구현 (supply/borrow/repay/withdraw) — v29.2
+- ✓ KaminoLendingProvider 구현 (Solana supply/borrow/repay/withdraw, HF 시뮬레이션) — v29.4
+- ✓ REST API + MCP 도구 + SDK 확장 (포지션/헬스팩터 조회) — v29.2
+- ✓ Admin 포트폴리오 뷰 (DeFi 포지션 섹션) — v29.2 (Kamino 통합 v29.4)
+
 ### 활성
 
-- [ ] SSoT Enum 확장 (DeFi 알림 이벤트 + 포지션 카테고리/상태)
-- [ ] ILendingProvider 인터페이스 + Lending 프레임워크 공통 인프라
-- [ ] PositionTracker 포지션 추적 서비스 (defi_positions 테이블)
-- [ ] HealthFactorMonitor 헬스 팩터 모니터링 + LIQUIDATION_WARNING 알림
-- [ ] LendingPolicyEvaluator 차입 정책 평가 (LTV, USD 한도)
-- [ ] AaveV3LendingProvider 구현 (supply/borrow/repay/withdraw)
-- [ ] REST API + MCP 도구 + SDK 확장 (포지션/헬스팩터 조회)
-- [ ] Admin 포트폴리오 뷰 (DeFi 포지션 섹션)
+- [ ] Yield 프레임워크 — IYieldProvider + MaturityMonitor + Pendle V2
+- [ ] Perp 프레임워크 — IPerpProvider + MarginMonitor + Drift V2
+- [ ] Intent 서명 — EIP-712 SignableOrder + CoW Protocol
+- [ ] Morpho Lending — ILendingProvider 3rd 구현체
 
 ### 범위 외
 
@@ -580,7 +590,7 @@ v29.2 EVM Lending -- Aave V3 shipped (2026-02-27). 12-패키지 모노레포(pac
 
 ## 컨텍스트
 
-**누적:** 65 milestones (v0.1-v28.8), 267 phases, 570 plans, 1,596 requirements, 40 설계 문서(24-76), 8 objective 문서, ~180,194 LOC TS, ~5,000 테스트
+**누적:** 71 milestones (v0.1-v29.4), 284 phases, ~631 plans, ~1,801 requirements, 48 설계 문서(24-76 + m29-00), 8 objective 문서, ~192,843 LOC TS, ~5,083 테스트
 
 v0.1~v0.10 설계 완료 (2026-02-05~09). 44 페이즈, 110 플랜, 286 요구사항, 30 설계 문서(24-64).
 v1.0 구현 계획 수립 완료 (2026-02-09). 8개 objective 문서, 설계 부채 추적, 문서 매핑 검증.
@@ -629,6 +639,10 @@ v28.1 Jupiter Swap shipped (2026-02-23). 2 페이즈, 6 플랜, 17 요구사항,
 v28.5 가스비 조건부 실행 shipped (2026-02-25). 2 페이즈, 4 플랜, 25 요구사항, 84 파일 변경, +5,646/-110 lines, 38 커밋, ~190,000 LOC TS, 17 설계 결정.
 v28.6 RPC Pool 멀티엔드포인트 로테이션 shipped (2026-02-25). 5 페이즈, 25 요구사항, 49 커밋, +9,493 lines.
 v28.8 빌트인 지갑 프리셋 자동 설정 shipped (2026-02-26). 3 페이즈, 6 플랜, 14 요구사항, 56 파일 변경, +4,952/-262 lines, 29 커밋, ~180,194 LOC TS, 42 신규 테스트, 12 설계 결정.
+v29.0 고급 DeFi 프로토콜 설계 shipped (2026-02-26). 6 페이즈, 12 플랜, 38 요구사항, 59 설계 결정, 설계 문서 m29-00(26섹션).
+v29.2 EVM Lending -- Aave V3 shipped (2026-02-27). 5 페이즈, 15 플랜, 34 요구사항, 109 커밋, 281 파일, +45,864/-1,159 lines. DeFi Lending 프레임워크 + Aave V3 Provider.
+v29.3 기본 지갑/기본 네트워크 개념 제거 shipped (2026-02-27). 4 페이즈, 10 플랜, 72 요구사항, 231 파일, +6,200/-2,354 lines.
+v29.4 Solana Lending (Kamino) shipped (2026-02-28). 2 페이즈, 9 플랜, 21 요구사항, 61 파일 변경, +6,771/-206 lines, 21 커밋, ~192,843 LOC TS, 83 신규 테스트, 7 설계 결정.
 
 **기술 스택 (v0.2 확정, v1.4.1 구현 검증):**
 - Runtime: Node.js 22 LTS (ESM-only)
@@ -645,7 +659,7 @@ v28.8 빌트인 지갑 프리셋 자동 설정 shipped (2026-02-26). 3 페이즈
 - Admin: Preact 10.x + @preact/signals + Vite 6.x, @testing-library/preact
 - 미구현: Tauri
 
-**설계 문서:** 40개 (24-76) + 대응표/테스트 전략/objective
+**설계 문서:** 48개 (24-76 + m29-00) + 대응표/테스트 전략/objective
 
 ### 알려진 이슈
 
@@ -1100,5 +1114,17 @@ v28.8 shipped. Owner 등록 시 wallet_type 지정으로 signing SDK/approval_me
 
 v29.0 shipped. 상태를 가진 DeFi 포지션 관리를 위한 3개 프레임워크(ILendingProvider, IYieldProvider, IPerpProvider)와 공통 인프라(defi_positions 테이블 + PositionTracker + DeFiMonitorService 3개 모니터), Intent 서명 패턴(SignableOrder EIP-712)을 설계 수준에서 완전 정의. m29-00 설계 문서에 26개 섹션(5-26) 추가, 총 59 설계 결정 수립. 포지션 인프라(DB v25, 차등 폴링, 배치 쓰기), 모니터링 프레임워크(HealthFactor 적응형/Maturity 일간/Margin 분간), Lending(Aave V3/Kamino/Morpho 매핑), Yield(Pendle V2 매핑 + 만기 관리), Perp(Drift V2 매핑 + 마진 모니터링), Intent(10-step 파이프라인 + 4-layer 보안 모델) 완성. m29-02~m29-14 구현 마일스톤 입력 산출물 전량 확보. 38/38 requirements PASS, audit passed.
 
+## Shipped: v29.2 EVM Lending -- Aave V3
+
+v29.2 shipped. DeFi Lending 프레임워크(ILendingProvider/IPositionProvider, PositionTracker 5분 sync, HealthFactorMonitor 4단계 severity, LendingPolicyEvaluator) 구축 + Aave V3를 첫 번째 Provider로 구현. supply/borrow/repay/withdraw 4액션, manual hex ABI encoding, 5-chain(Ethereum/Arbitrum/Optimism/Polygon/Base) 지원. 적응형 HF 모니터링(< 1.5 시 폴링 5분→1분), Lending 정책(max_ltv_pct + 비지출 분류), REST API + MCP 6도구 + TS/Python SDK, Admin UI DeFi 포지션 대시보드 + Aave V3 Settings 4키 런타임 조정. 34/34 requirements PASS.
+
+## Shipped: v29.3 기본 지갑/기본 네트워크 개념 제거
+
+v29.3 shipped. default_wallet/default_network 개념을 제거하고 명시적 walletId/network 선택 모델로 전환. DB 마이그레이션(sessions.default_wallet_id 제거, wallets.default_network 제거), resolveWalletId 단순화, JWT wlt claim 필수화, API network 파라미터 필수화. 231 파일 수정, 72/72 requirements PASS.
+
+## Shipped: v29.4 Solana Lending (Kamino)
+
+v29.4 shipped. Kamino K-Lend를 ILendingProvider 구현체로 구축. KaminoLendingProvider(4 actions: supply/borrow/repay/withdraw), @kamino-finance/klend-sdk 래핑 SDK 추상화(IKaminoSdkWrapper + MockKaminoSdkWrapper), HF 시뮬레이션 모듈(calculateHealthFactor/simulateKaminoHealthFactor/hfToStatus, Number 연산), borrow/withdraw 자기 청산 방지 가드, PositionTracker duck-type IPositionProvider 자동 등록, Admin Settings 3키(kamino.enabled/market/hf_threshold), MCP 4도구 자동 노출(mcpExpose: true), Admin UI 7th provider card, actions.skill.md Section 9 문서화. KINT-07 버그 수정: LendingPolicyEvaluator endsWith('borrow') suffix matching으로 provider-prefixed action name 정책 평가 정상화. 21/21 requirements PASS.
+
 ---
-*최종 업데이트: 2026-02-26 after v29.0 milestone*
+*최종 업데이트: 2026-02-28 after v29.4 milestone*
