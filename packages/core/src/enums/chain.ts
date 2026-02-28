@@ -6,7 +6,7 @@ export const ChainTypeEnum = z.enum(CHAIN_TYPES);
 
 export const NETWORK_TYPES = [
   // Solana
-  'mainnet', 'devnet', 'testnet',
+  'solana-mainnet', 'solana-devnet', 'solana-testnet',
   // EVM Tier 1
   'ethereum-mainnet', 'ethereum-sepolia',
   'polygon-mainnet', 'polygon-amoy',
@@ -17,7 +17,7 @@ export const NETWORK_TYPES = [
 export type NetworkType = (typeof NETWORK_TYPES)[number];
 export const NetworkTypeEnum = z.enum(NETWORK_TYPES);
 
-export const SOLANA_NETWORK_TYPES = ['mainnet', 'devnet', 'testnet'] as const;
+export const SOLANA_NETWORK_TYPES = ['solana-mainnet', 'solana-devnet', 'solana-testnet'] as const;
 export type SolanaNetworkType = (typeof SOLANA_NETWORK_TYPES)[number];
 
 export const EVM_NETWORK_TYPES = [
@@ -32,7 +32,7 @@ export const EvmNetworkTypeEnum = z.enum(EVM_NETWORK_TYPES);
 
 /**
  * Cross-validate chain + network combination.
- * Solana agents must use Solana networks (mainnet/devnet/testnet).
+ * Solana agents must use Solana networks (solana-mainnet/solana-devnet/solana-testnet).
  * Ethereum agents must use EVM networks (ethereum-mainnet etc).
  * Throws Error on mismatch. Caller (daemon route) converts to WAIaaSError('VALIDATION_ERROR').
  */
@@ -64,8 +64,8 @@ export const ENVIRONMENT_NETWORK_MAP: Record<
   `${ChainType}:${EnvironmentType}`,
   readonly NetworkType[]
 > = {
-  'solana:mainnet': ['mainnet'],
-  'solana:testnet': ['devnet', 'testnet'],
+  'solana:mainnet': ['solana-mainnet'],
+  'solana:testnet': ['solana-devnet', 'solana-testnet'],
   'ethereum:mainnet': [
     'ethereum-mainnet',
     'polygon-mainnet',
@@ -91,8 +91,8 @@ export const ENVIRONMENT_SINGLE_NETWORK: Record<
   `${ChainType}:${EnvironmentType}`,
   NetworkType | null
 > = {
-  'solana:mainnet': 'mainnet',
-  'solana:testnet': 'devnet',
+  'solana:mainnet': 'solana-mainnet',
+  'solana:testnet': 'solana-devnet',
   'ethereum:mainnet': null,
   'ethereum:testnet': null,
 } as const;
@@ -127,7 +127,7 @@ export function getSingleNetwork(
  * Mainnet networks (exhaustive list for deriveEnvironment).
  */
 const MAINNET_NETWORKS: readonly NetworkType[] = [
-  'mainnet',
+  'solana-mainnet',
   'ethereum-mainnet',
   'polygon-mainnet',
   'arbitrum-mainnet',
