@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 295 - Notifications 페이지 ntfy 섹션 분리
+**Current focus:** Phase 296 - Skill 파일 + 문서 갱신
 
 ## Current Position
 
-Phase: 295 of 296 (Notifications 페이지 ntfy 섹션 분리)
+Phase: 296 of 296 (Skill 파일 + 문서 갱신)
 Plan: 1 of 1 in current phase
-Status: Phase 295 complete
-Last activity: 2026-03-01 -- Phase 295 executed (1 plan, 2 tasks, 3 new tests)
+Status: Phase 296 complete
+Last activity: 2026-03-01 -- Phase 296 executed (1 plan, 2 tasks, admin.skill.md + wallet.skill.md updated)
 
-Progress: [==============================..] 99% (295/296 phases)
+Progress: [================================] 100% (296/296 phases)
 
 ## Performance Metrics
 
@@ -43,6 +43,7 @@ Progress: [==============================..] 99% (295/296 phases)
 - v29.7: wallet_apps DB 테이블로 앱 엔티티 관리 (Settings key-value가 아닌 정규화 테이블)
 - v29.7: 앱별 알림 토픽 (waiaas-notify-{wallet_apps.name}), Alerts 토글로 수신 제어
 - v29.7: signing_sdk.* 설정 키 유지 (UI 레이블만 변경, 내부 호환)
+- v29.7: admin.skill.md Section 8 삽입 (기존 8->9, 9->10 재번호), sdk_ntfy "Human Wallet App via ntfy" 명명
 
 ### Pending Todos
 
@@ -56,5 +57,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Phase 295 complete (1 plan executed, ntfy FieldGroup separation + Human Wallet Apps link). Ready for Phase 296.
-Resume command: /gsd:execute-phase 296
+Stopped at: Phase 296 complete (1 plan, 2 tasks, skill files updated). All 296 phases complete. Ready for verification and milestone completion.
+Resume command: /gsd:verify-work 296
