@@ -91,7 +91,7 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v29.6-ROADMAP.md` for full 
 
 - [x] **Phase 291: D'CENT 프리셋 + 토픽 라우팅** - D'CENT approval method를 sdk_ntfy로 전환하고 지갑별 wallet_type 기반 서명 토픽 라우팅을 구현한다 (completed 2026-03-01)
 - [x] **Phase 292: Admin UI 오너 설정 화면 개선** - 프리셋 변경 UX, approval method 미리보기, WalletConnect 조건부 표시를 구현한다 (completed 2026-03-01)
-- [ ] **Phase 293: Human Wallet Apps 레지스트리 + UI** - wallet_apps DB 테이블, WalletAppService, REST API, Human Wallet Apps Admin 페이지를 구축한다
+- [x] **Phase 293: Human Wallet Apps 레지스트리 + UI** - wallet_apps DB 테이블, WalletAppService, REST API, Human Wallet Apps Admin 페이지를 구축한다 (completed 2026-03-01)
 - [ ] **Phase 294: 지갑 앱 알림 라우팅** - WalletNotificationChannel을 앱별 토픽 발행으로 전환하고 Alerts 토글을 반영한다
 - [ ] **Phase 295: Notifications 페이지 ntfy 섹션 분리** - ntfy 설정을 독립 FieldGroup으로 분리하고 Human Wallet Apps 페이지와 연동한다
 - [ ] **Phase 296: Skill 파일 + 문서 갱신** - admin.skill.md와 wallet.skill.md에 변경 사항을 반영한다
@@ -141,10 +141,10 @@ Plans:
 **Plans**: 4 plans (Wave 1 → Wave 2 parallel → Wave 3)
 
 Plans:
-- [ ] 293-01: DB migration v31 + WalletAppService CRUD + signing_enabled 차단 로직 (Wave 1)
-- [ ] 293-02: REST API 엔드포인트 GET/POST/PUT/DELETE /v1/admin/wallet-apps (Wave 2)
-- [ ] 293-03: Human Wallet Apps Admin UI 페이지 + 사이드바 메뉴 + System 페이지 정리 (Wave 2)
-- [ ] 293-04: 프리셋 자동 등록 + 통합 테스트 (Wave 3)
+- [x] 293-01: DB migration v31 + WalletAppService CRUD + signing_enabled 차단 로직 (Wave 1) (completed 2026-03-01)
+- [x] 293-02: REST API 엔드포인트 GET/POST/PUT/DELETE /v1/admin/wallet-apps (Wave 2) (completed 2026-03-01)
+- [x] 293-03: Human Wallet Apps Admin UI 페이지 + 사이드바 메뉴 + System 페이지 정리 (Wave 2) (completed 2026-03-01)
+- [x] 293-04: 프리셋 자동 등록 + 통합 테스트 (Wave 3) (completed 2026-03-01)
 
 ### Phase 294: 지갑 앱 알림 라우팅
 **Goal**: WalletNotificationChannel이 Alerts 활성화된 앱별 토픽으로 알림을 발행하고, 비활성 앱에는 알림이 발행되지 않는다
@@ -191,10 +191,10 @@ Plans:
 |-------|----------------|--------|-----------|
 | 291. D'CENT 프리셋 + 토픽 라우팅 | 2/2 | Complete    | 2026-03-01 |
 | 292. Admin UI 오너 설정 화면 개선 | 2/2 | Complete    | 2026-03-01 |
-| 293. Human Wallet Apps 레지스트리 + UI | 0/4 | Not started | - |
+| 293. Human Wallet Apps 레지스트리 + UI | 4/4 | Complete    | 2026-03-01 |
 | 294. 지갑 앱 알림 라우팅 | 0/1 | Not started | - |
 | 295. Notifications 페이지 ntfy 섹션 분리 | 0/1 | Not started | - |
 | 296. Skill 파일 + 문서 갱신 | 0/1 | Not started | - |
 
 ---
-*Last updated: 2026-03-01 after v29.7 roadmap creation*
+*Last updated: 2026-03-01 after Phase 293 completion*
