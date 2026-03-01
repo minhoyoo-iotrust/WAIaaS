@@ -9,8 +9,8 @@ Requirements for Solana Perp DEX (Drift) + Perp 프레임워크. Each maps to ro
 
 ### Perp Framework
 
-- [ ] **PERP-01**: IPerpProvider 인터페이스가 IActionProvider를 확장하여 getPosition/getMarginInfo/getMarkets 메서드와 5 표준 액션(open_position/close_position/modify_position/add_margin/withdraw_margin)을 정의한다
-- [ ] **PERP-02**: PerpPositionTracker가 defi_positions 테이블(category='PERP')에 포지션을 기록하며, metadata JSON에 market/direction/size/entry_price/leverage/unrealized_pnl/margin/liquidation_price를 저장한다
+- [x] **PERP-01**: IPerpProvider 인터페이스가 IActionProvider를 확장하여 getPosition/getMarginInfo/getMarkets 메서드와 5 표준 액션(open_position/close_position/modify_position/add_margin/withdraw_margin)을 정의한다
+- [x] **PERP-02**: PerpPositionTracker가 defi_positions 테이블(category='PERP')에 포지션을 기록하며, metadata JSON에 market/direction/size/entry_price/leverage/unrealized_pnl/margin/liquidation_price를 저장한다
 - [ ] **PERP-03**: MarginMonitor가 마진 비율을 주기적으로 모니터링하고, 유지 마진 임계값 접근 시 MARGIN_WARNING 알림을 발행한다
 - [ ] **PERP-04**: MarginMonitor가 청산 가격 접근 시 LIQUIDATION_IMMINENT 경고를 발행하고, 임계값 근접 시 폴링 간격을 단축한다
 - [ ] **PERP-05**: PerpPolicyEvaluator가 max_leverage 초과 시 정책 거부 또는 APPROVAL 격상을 수행한다
@@ -60,8 +60,8 @@ Requirements for Solana Perp DEX (Drift) + Perp 프레임워크. Each maps to ro
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PERP-01 | Phase 297 | Pending |
-| PERP-02 | Phase 297 | Pending |
+| PERP-01 | Phase 297 | Complete |
+| PERP-02 | Phase 297 | Complete |
 | PERP-03 | Phase 297 | Pending |
 | PERP-04 | Phase 297 | Pending |
 | PERP-05 | Phase 297 | Pending |

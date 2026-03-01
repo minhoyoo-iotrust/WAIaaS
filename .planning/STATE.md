@@ -8,7 +8,7 @@ progress:
   total_phases: 299
   completed_phases: 296
   total_plans: 666
-  completed_plans: 659
+  completed_plans: 660
 ---
 
 # Project State
@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 ## Current Position
 
 Phase: 297 of 299 (Perp 프레임워크)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-03-01 -- Roadmap created for v29.8 (3 phases, 7 plans, 22 requirements)
+Plan: 1 of 2 in current phase
+Status: Executing
+Last activity: 2026-03-02 -- Completed 297-01-PLAN.md (IPerpProvider interface + Zod schemas)
 
-Progress: [░░░░░░░░░░] 0% (0/7 plans)
+Progress: [█░░░░░░░░░] 14% (1/7 plans)
 
 ## Performance Metrics
 
@@ -41,6 +41,8 @@ Progress: [░░░░░░░░░░] 0% (0/7 plans)
 - v29.8: @drift-labs/sdk @solana/web3.js 1.x 호환성은 DriftSdkWrapper에서 격리 (DRIFT-08)
 - v29.8: DB migration 불필요 (defi_positions category='PERP' 이미 지원)
 - v29.8: MarginMonitor는 기존 HealthFactorMonitor/IDeFiMonitor 패턴 재사용
+- v29.8: Perp rules interfaces exported to satisfy noUnusedLocals (Plan 02 will consume)
+- v29.8: close_position/add_margin classified as NON_SPENDING (returns user's own funds)
 
 ### Pending Todos
 
@@ -54,6 +56,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-01
-Stopped at: Roadmap created for v29.8 -- ready to plan Phase 297
-Resume command: /gsd:plan-phase 297
+Last session: 2026-03-02
+Stopped at: Completed 297-01-PLAN.md -- ready to execute 297-02
+Resume command: /gsd:execute-phase 297
