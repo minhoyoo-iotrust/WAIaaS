@@ -90,7 +90,7 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v29.6-ROADMAP.md` for full 
 **Milestone Goal:** D'CENT 프리셋을 WalletConnect에서 sdk_ntfy 직접 서명으로 전환하고, 지갑별 wallet_type 토픽 라우팅을 구현한다. "Signing SDK"를 "Human Wallet Apps"로 재구성하여 운영자 지갑 앱을 1급 개념으로 관리하고, Admin UI 설정 구조를 정리한다.
 
 - [x] **Phase 291: D'CENT 프리셋 + 토픽 라우팅** - D'CENT approval method를 sdk_ntfy로 전환하고 지갑별 wallet_type 기반 서명 토픽 라우팅을 구현한다 (completed 2026-03-01)
-- [ ] **Phase 292: Admin UI 오너 설정 화면 개선** - 프리셋 변경 UX, approval method 미리보기, WalletConnect 조건부 표시를 구현한다
+- [x] **Phase 292: Admin UI 오너 설정 화면 개선** - 프리셋 변경 UX, approval method 미리보기, WalletConnect 조건부 표시를 구현한다 (completed 2026-03-01)
 - [ ] **Phase 293: Human Wallet Apps 레지스트리 + UI** - wallet_apps DB 테이블, WalletAppService, REST API, Human Wallet Apps Admin 페이지를 구축한다
 - [ ] **Phase 294: 지갑 앱 알림 라우팅** - WalletNotificationChannel을 앱별 토픽 발행으로 전환하고 Alerts 토글을 반영한다
 - [ ] **Phase 295: Notifications 페이지 ntfy 섹션 분리** - ntfy 설정을 독립 FieldGroup으로 분리하고 Human Wallet Apps 페이지와 연동한다
@@ -126,7 +126,7 @@ Plans:
 
 Plans:
 - [ ] 292-01: Owner 탭 Wallet Type 선택/변경 UI + approval method 미리보기 + WalletConnect 조건부 표시 + 상태별 읽기 전용 처리
-- [ ] 292-02: Phase 292 테스트 (T-OWN-01 ~ T-OWN-07)
+- [x] 292-02: Phase 292 테스트 (T-OWN-01 ~ T-OWN-07) (completed 2026-03-01)
 
 ### Phase 293: Human Wallet Apps 레지스트리 + UI
 **Goal**: 운영자가 사용하는 지갑 앱을 1급 엔티티로 등록/관리하고, Admin UI의 Human Wallet Apps 최상위 메뉴에서 앱별 Signing/Alerts 토글과 연결 지갑을 확인할 수 있다
@@ -190,7 +190,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 291. D'CENT 프리셋 + 토픽 라우팅 | 2/2 | Complete    | 2026-03-01 |
-| 292. Admin UI 오너 설정 화면 개선 | 0/2 | Plans created | - |
+| 292. Admin UI 오너 설정 화면 개선 | 2/2 | Complete    | 2026-03-01 |
 | 293. Human Wallet Apps 레지스트리 + UI | 0/4 | Not started | - |
 | 294. 지갑 앱 알림 라우팅 | 0/1 | Not started | - |
 | 295. Notifications 페이지 ntfy 섹션 분리 | 0/1 | Not started | - |
