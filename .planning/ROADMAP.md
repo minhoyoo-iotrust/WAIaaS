@@ -92,7 +92,7 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v29.7-ROADMAP.md` for full 
 **Milestone Goal:** DeFi Perp(무기한 선물) 프레임워크를 구축하고 Drift Protocol을 첫 번째 Perp Provider로 구현하여 AI 에이전트가 Solana에서 레버리지 트레이딩을 정책 평가 하에 실행
 
 - [x] **Phase 297: Perp 프레임워크** - IPerpProvider 인터페이스, PerpPositionTracker, MarginMonitor, PerpPolicyEvaluator (completed 2026-03-01)
-- [ ] **Phase 298: Drift Provider** - DriftSdkWrapper, DriftMarketData, DriftPerpProvider 5 액션 구현
+- [x] **Phase 298: Drift Provider** - DriftSdkWrapper, DriftMarketData, DriftPerpProvider 5 액션 구현 (completed 2026-03-01)
 - [ ] **Phase 299: 통합** - MCP 5도구, Admin Settings/UI, actions.skill.md, TS/Python SDK, REST API, 자동 등록
 
 ## Phase Details
@@ -157,7 +157,7 @@ Phases execute in numeric order: 297 -> 298 -> 299
 | 244-267 | v28.0-v28.8 | All | Complete | 2026-02-26 |
 | 268-296 | v29.0-v29.7 | All | Complete | 2026-03-01 |
 | 297. Perp 프레임워크 | 2/2 | Complete   | 2026-03-01 | - |
-| 298. Drift Provider | 2/3 | In Progress|  | - |
+| 298. Drift Provider | 3/3 | Complete   | 2026-03-01 | - |
 | 299. 통합 | v29.8 | 0/2 | Not started | - |
 
 ---
