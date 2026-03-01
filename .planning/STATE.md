@@ -1,8 +1,8 @@
 ---
 gsd_state_version: 1.0
-milestone: v29.7
-milestone_name: D'CENT 직접 서명 + Human Wallet Apps 통합
-status: complete
+milestone: v29.8
+milestone_name: Solana Perp DEX (Drift) + Perp 프레임워크
+status: active
 last_updated: "2026-03-01"
 progress:
   total_phases: 296
@@ -18,15 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Planning next milestone
+**Current focus:** Milestone v29.8 — Solana Perp DEX (Drift) + Perp 프레임워크
 
 ## Current Position
 
-Phase: 296 of 296 (all complete)
-Status: Milestone v29.7 shipped
-Last activity: 2026-03-01 -- Milestone v29.7 archived (6 phases, 11 plans, 40 requirements)
-
-Progress: [================================] 100% (296/296 phases)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-01 — Milestone v29.8 started
 
 ## Performance Metrics
 
@@ -56,5 +55,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Milestone v29.7 archived. All 296 phases complete. Ready for next milestone.
+Stopped at: Starting milestone v29.8 — Solana Perp DEX (Drift) + Perp 프레임워크
 Resume command: /gsd:new-milestone

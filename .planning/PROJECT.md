@@ -8,9 +8,17 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: Planning next milestone
+## Current Milestone: v29.8 Solana Perp DEX (Drift) + Perp 프레임워크
 
-**Previous milestone:** v29.7 shipped 2026-03-01 — D'CENT 직접 서명 + Human Wallet Apps 통합 (6 phases, 11 plans, 40 requirements)
+**Goal:** DeFi Perp(무기한 선물) 프레임워크를 구축하고 Drift Protocol을 첫 번째 Perp Provider로 구현하여 AI 에이전트가 Solana에서 레버리지 트레이딩을 정책 평가 하에 실행
+
+**Target features:**
+- IPerpProvider 인터페이스 (IActionProvider 확장, 5 표준 액션: open/close/modify_position, add/withdraw_margin)
+- PerpPositionTracker (defi_positions category='PERP', metadata JSON 포지션 추적)
+- MarginMonitor (마진 비율 모니터링, MARGIN_WARNING + LIQUIDATION_IMMINENT 경고)
+- PerpPolicyEvaluator (최대 레버리지/최대 포지션 크기 USD/허용 시장 화이트리스트)
+- DriftPerpProvider (@drift-labs/sdk, Solana Perp 5 액션, DriftSdkWrapper)
+- MCP 5 도구 + Admin Settings 5키 + REST API + TS/Python SDK + actions.skill.md
 
 ## Current State
 
