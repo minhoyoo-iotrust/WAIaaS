@@ -8,7 +8,7 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: v29.6 Pendle Yield Trading + Yield 프레임워크
+## Current Milestone: v29.6 SHIPPED (2026-03-01) — Pendle Yield Trading + Yield 프레임워크
 
 **Goal:** DeFi Yield 프레임워크(수익률 추적, 만기 관리, PT/YT 포지션 모니터링)를 구축하고, Pendle Finance를 첫 번째 Yield Provider로 구현하여 AI 에이전트가 고정 수익률 전략을 정책 평가 하에 실행할 수 있는 상태.
 
@@ -23,6 +23,8 @@
 - DB migration — PositionStatusEnum에 MATURED 추가
 
 **Previous milestone:** v29.5 shipped 2026-02-28 — 내부 일관성 정리 (3 phases, 7 plans, 18 requirements, ~223,044 LOC TS)
+
+**This milestone shipped:** v29.6 shipped 2026-03-01 — Pendle Yield Trading + Yield 프레임워크 (3 phases, 8 plans, MaturityMonitor, 63 new tests)
 
 ## Current State
 

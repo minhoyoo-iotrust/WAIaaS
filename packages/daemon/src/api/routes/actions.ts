@@ -109,7 +109,7 @@ const ActionExecuteRequestSchema = z
   .object({
     params: z.record(z.unknown()).optional().default({}),
     network: z.string().optional(),
-    walletId: z.string().uuid().optional().describe('Target wallet ID (optional -- defaults to session default wallet)'),
+    walletId: z.string().uuid().optional().describe('Target wallet ID (optional -- auto-resolved if session has single wallet)'),
     gasCondition: z.object({
       maxGasPrice: z.string().optional(),
       maxPriorityFee: z.string().optional(),

@@ -934,10 +934,10 @@ export const TxSignRequestSchema = z
       description: 'Chain type (optional -- inferred from wallet)',
     }),
     network: z.string().optional().openapi({
-      description: 'Network (optional -- resolved from wallet defaults)',
+      description: 'Network (optional -- auto-resolved for single-network chains)',
     }),
     walletId: z.string().uuid().optional().openapi({
-      description: 'Target wallet ID (optional -- defaults to session default wallet)',
+      description: 'Target wallet ID (optional -- auto-resolved if session has single wallet)',
     }),
   })
   .openapi('TxSignRequest');

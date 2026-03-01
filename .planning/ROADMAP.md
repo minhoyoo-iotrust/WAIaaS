@@ -218,75 +218,24 @@ See `.planning/milestones/v29.5-ROADMAP.md` for full details.
 
 </details>
 
-### v29.6 Pendle Yield Trading + Yield 프레임워크 (In Progress)
+<details>
+<summary>✅ v29.6 Pendle Yield Trading + Yield 프레임워크 (Phases 288-290) -- SHIPPED 2026-03-01</summary>
 
-**Milestone Goal:** DeFi Yield 프레임워크(수익률 추적, 만기 관리, PT/YT 포지션 모니터링)를 구축하고, Pendle Finance를 첫 번째 Yield Provider로 구현하여 AI 에이전트가 고정 수익률 전략을 정책 평가 하에 실행할 수 있는 상태.
+- [x] Phase 288: Yield Framework + DB Migration (2/2 plans) -- completed 2026-03-01
+- [x] Phase 289: Pendle Provider + API Client (3/3 plans) -- completed 2026-03-01
+- [x] Phase 290: Integration + Maturity Monitor (3/3 plans) -- completed 2026-03-01
 
-- [ ] **Phase 288: Yield Framework + DB Migration** - IYieldProvider 인터페이스, YieldPositionTracker, MATURED 상태 추가, 포지션 API 확장
-- [ ] **Phase 289: Pendle Provider + API Client** - PendleApiClient REST API v2 래퍼, PendleYieldProvider 5개 액션 구현
-- [ ] **Phase 290: Integration + Maturity Monitor** - MCP 도구 등록, Admin Settings/UI, 만기 모니터링, 스킬 파일, 프로바이더 등록
+See `.planning/milestones/v29.6-ROADMAP.md` for full details.
 
-## Phase Details
-
-### Phase 288: Yield Framework + DB Migration
-**Goal**: AI 에이전트가 Yield 포지션을 추적하고, 만기(MATURED) 상태를 구분할 수 있으며, 기존 포지션 API에서 Yield 포지션이 함께 조회되는 상태
-**Depends on**: Nothing (first phase of v29.6)
-**Requirements**: YIELD-01, YIELD-02, YIELD-03, YIELD-05
-**Success Criteria** (what must be TRUE):
-  1. IYieldProvider 인터페이스가 존재하며 IActionProvider를 확장하고, getMarkets/getPosition/getYieldForecast 메서드와 buyPT/buyYT/redeemPT/addLiquidity/removeLiquidity 표준 액션을 정의한다
-  2. Yield 포지션(category=YIELD)이 positions 테이블에 생성되며, metadata JSON에 market_id/token_type/entry_price/maturity/apy가 저장된다
-  3. PositionStatusEnum에 MATURED 상태가 존재하며, DB CHECK 제약 조건과 Zod enum이 동시에 업데이트되어 DB migration이 적용된다
-  4. GET /v1/wallets/:id/positions 응답에 Yield 포지션(category=YIELD)이 Aave SUPPLY 등 기존 포지션과 함께 반환된다
-**Plans**: TBD
-
-Plans:
-- [ ] 288-01: IYieldProvider 인터페이스 + YieldPositionTracker
-- [ ] 288-02: DB migration (MATURED 상태) + 포지션 API 확장
-
-### Phase 289: Pendle Provider + API Client
-**Goal**: AI 에이전트가 Pendle Finance에서 PT/YT 구매, PT 상환, LP 추가/제거를 수행할 수 있으며, Convert API로 calldata가 빌드되어 ContractCallRequest로 반환되는 상태
-**Depends on**: Phase 288
-**Requirements**: PNDL-01, PNDL-02, PNDL-03, PNDL-04, PNDL-05, PNDL-06, PNDL-07
-**Success Criteria** (what must be TRUE):
-  1. PendleApiClient가 Pendle REST API v2를 호출하여 시장 목록을 조회(/v1/markets/all)하고, Convert 엔드포인트(/v2/sdk/{chainId}/convert)로 트랜잭션 calldata를 빌드하며, 응답이 Zod 스키마로 검증된다
-  2. buyPT 액션이 market+tokenIn+amountIn 입력을 받아 Convert API를 호출하고, ContractCallRequest를 반환하며, PT 포지션(만기 포함)이 생성된다
-  3. buyYT 액션이 동일한 Convert API 패턴으로 YT 포지션을 생성한다
-  4. redeemPT 액션이 만기 도래 PT를 상환하고, 만기 전 시도 시 Convert API를 통해 시장 매도 경로를 자동 감지한다
-  5. addLiquidity/removeLiquidity 액션이 Convert API를 활용하여 LP 포지션을 생성/종료한다
-**Plans**: TBD
-
-Plans:
-- [ ] 289-01: PendleApiClient (REST API v2 래퍼 + Zod 스키마)
-- [ ] 289-02: PendleYieldProvider buyPT + buyYT 액션
-- [ ] 289-03: PendleYieldProvider redeemPT + addLiquidity + removeLiquidity 액션
-
-### Phase 290: Integration + Maturity Monitor
-**Goal**: Pendle Yield Trading이 MCP/Admin/스킬 파일에서 접근 가능하고, 만기 접근 시 자동 알림이 발송되며, 프로바이더가 데몬에 등록되어 완전 통합된 상태
-**Depends on**: Phase 289
-**Requirements**: YIELD-04, INTG-01, INTG-02, INTG-03, INTG-04, INTG-05, INTG-06
-**Success Criteria** (what must be TRUE):
-  1. MCP 클라이언트에서 action_pendle_buy_pt/buy_yt/redeem_pt/add_liquidity/remove_liquidity 5개 도구가 자동 등록되어 호출 가능하다
-  2. Admin Settings에서 pendle_enabled/api_base_url/default_slippage_pct/maturity_warning_days/api_key 5개 설정을 런타임에 변경할 수 있다
-  3. MaturityMonitor가 1일 1회 폴링하여 만기 7일 전/1일 전 경고 알림을 발송하고, 만기 후 미상환 PT에 대해 경고를 발송하며, MATURITY_WARNING 이벤트가 EventBus를 통해 전달된다
-  4. Admin UI Actions 페이지에 Pendle Yield Trading 카드가 표시되고, actions.skill.md에 Pendle 섹션(REST/MCP/SDK 예시 + 보안 안내)이 추가된다
-  5. registerBuiltInProviders에 PendleYieldProvider가 등록되어 기본 활성화되며, Pendle 포지션이 PositionTracker에 duck-type 자동 등록된다
-**Plans**: TBD
-
-Plans:
-- [ ] 290-01: MaturityMonitor + EventBus 이벤트
-- [ ] 290-02: registerBuiltInProviders + Admin Settings + PositionTracker 통합
-- [ ] 290-03: MCP 도구 등록 + Admin UI 카드 + actions.skill.md
+</details>
 
 ## Progress
 
-**Execution Order:**
-Phases execute in numeric order: 288 -> 289 -> 290
-
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 288. Yield Framework + DB Migration | v29.6 | 0/2 | Not started | - |
-| 289. Pendle Provider + API Client | v29.6 | 0/3 | Not started | - |
-| 290. Integration + Maturity Monitor | v29.6 | 0/3 | Not started | - |
+| 288. Yield Framework + DB Migration | v29.6 | 2/2 | ✅ Done | 2026-03-01 |
+| 289. Pendle Provider + API Client | v29.6 | 3/3 | ✅ Done | 2026-03-01 |
+| 290. Integration + Maturity Monitor | v29.6 | 3/3 | ✅ Done | 2026-03-01 |
 
 ---
-*Last updated: 2026-03-01 after v29.6 roadmap creation*
+*Last updated: 2026-03-01 after v29.6 milestone completion*

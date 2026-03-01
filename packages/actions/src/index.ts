@@ -162,9 +162,9 @@ export function registerBuiltInProviders(
       key: 'lido_staking',
       enabledKey: 'actions.lido_staking_enabled',
       factory: () => {
-        // Resolve environment from registered rpc.evm_default_network setting
-        const evmNetwork = settingsReader.get('rpc.evm_default_network') || 'ethereum-mainnet';
-        const isTestnet = deriveEnvironment(evmNetwork as NetworkType) === 'testnet';
+        // Lido is Ethereum-only; default to mainnet
+        const evmNetwork: NetworkType = 'ethereum-mainnet';
+        const isTestnet = deriveEnvironment(evmNetwork) === 'testnet';
         const addresses = getLidoAddresses(isTestnet ? 'testnet' : 'mainnet');
 
         // Admin Settings overrides individual addresses; empty string falls back to environment default

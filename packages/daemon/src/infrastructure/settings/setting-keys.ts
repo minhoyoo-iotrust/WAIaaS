@@ -155,9 +155,9 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'incoming.cooldown_minutes', category: 'incoming', configPath: 'incoming.cooldown_minutes', defaultValue: '5', isCredential: false },
   { key: 'incoming.wss_url', category: 'incoming', configPath: 'incoming.wss_url', defaultValue: '', isCredential: false },
   // Per-network WSS URL overrides (#193): takes priority over global incoming.wss_url
-  { key: 'incoming.wss_url.mainnet', category: 'incoming', configPath: 'incoming.wss_url.mainnet', defaultValue: '', isCredential: false },
-  { key: 'incoming.wss_url.devnet', category: 'incoming', configPath: 'incoming.wss_url.devnet', defaultValue: '', isCredential: false },
-  { key: 'incoming.wss_url.testnet', category: 'incoming', configPath: 'incoming.wss_url.testnet', defaultValue: '', isCredential: false },
+  { key: 'incoming.wss_url.solana-mainnet', category: 'incoming', configPath: 'incoming.wss_url.solana-mainnet', defaultValue: '', isCredential: false },
+  { key: 'incoming.wss_url.solana-devnet', category: 'incoming', configPath: 'incoming.wss_url.solana-devnet', defaultValue: '', isCredential: false },
+  { key: 'incoming.wss_url.solana-testnet', category: 'incoming', configPath: 'incoming.wss_url.solana-testnet', defaultValue: '', isCredential: false },
   { key: 'incoming.wss_url.ethereum-mainnet', category: 'incoming', configPath: 'incoming.wss_url.ethereum-mainnet', defaultValue: '', isCredential: false },
   { key: 'incoming.wss_url.ethereum-sepolia', category: 'incoming', configPath: 'incoming.wss_url.ethereum-sepolia', defaultValue: '', isCredential: false },
   { key: 'incoming.wss_url.arbitrum-mainnet', category: 'incoming', configPath: 'incoming.wss_url.arbitrum-mainnet', defaultValue: '', isCredential: false },

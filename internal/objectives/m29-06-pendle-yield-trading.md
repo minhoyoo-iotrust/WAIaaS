@@ -1,7 +1,9 @@
 # 마일스톤 m29-06: Yield Trading (Pendle) + Yield 프레임워크
 
-- **Status:** PLANNED
-- **Milestone:** TBD
+- **Status:** SHIPPED
+- **Milestone:** v29.6
+- **Package:** 2.9.0-rc.4
+- **Completed:** 2026-03-01
 
 ## 목표
 
