@@ -316,6 +316,115 @@ describe('MaturityMonitor', () => {
   });
 
   // -----------------------------------------------------------------------
+  // loadFromSettings
+  // -----------------------------------------------------------------------
+
+  describe('loadFromSettings', () => {
+    it('loads warningDays from settings service', () => {
+      const mockSettings = { get: vi.fn().mockReturnValue('14') };
+      monitor.loadFromSettings(mockSettings as unknown as import('../infrastructure/settings/settings-service.js').SettingsService);
+      expect(monitor.getConfig().warningDays).toBe(14);
+    });
+
+    it('ignores invalid settings value', () => {
+      const mockSettings = { get: vi.fn().mockReturnValue('not-a-number') };
+      monitor.loadFromSettings(mockSettings as unknown as import('../infrastructure/settings/settings-service.js').SettingsService);
+      expect(monitor.getConfig().warningDays).toBe(7); // default
+    });
+
+    it('ignores when settings service throws', () => {
+      const mockSettings = { get: vi.fn().mockImplementation(() => { throw new Error('no setting'); }) };
+      monitor.loadFromSettings(mockSettings as unknown as import('../infrastructure/settings/settings-service.js').SettingsService);
+      expect(monitor.getConfig().warningDays).toBe(7); // default
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Testing accessors
+  // -----------------------------------------------------------------------
+
+  describe('testing accessors', () => {
+    it('getCooldownMapSize returns 0 initially', () => {
+      expect(monitor.getCooldownMapSize()).toBe(0);
+    });
+
+    it('getCooldownMapSize increases after warning emission', async () => {
+      const nowSec = Math.floor(Date.now() / 1000);
+      insertYieldPosition(sqlite, 'wallet-1', nowSec + 3 * 86_400);
+      await monitor.checkAllPositions();
+      expect(monitor.getCooldownMapSize()).toBe(1);
+    });
+
+    it('getConfig returns copy of current config', () => {
+      const config = monitor.getConfig();
+      expect(config.warningDays).toBe(7);
+      expect(config.pollingIntervalMs).toBe(1000);
+      // Modifying returned object should not affect internal state
+      config.warningDays = 99;
+      expect(monitor.getConfig().warningDays).toBe(7);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Edge cases
+  // -----------------------------------------------------------------------
+
+  describe('edge cases', () => {
+    it('handles invalid JSON metadata gracefully', async () => {
+      positionCounter++;
+      const id = `pos-${positionCounter}`;
+      const now = Math.floor(Date.now() / 1000);
+      sqlite
+        .prepare(
+          `INSERT INTO defi_positions (id, wallet_id, category, provider, chain, amount, metadata, status, opened_at, last_synced_at, created_at, updated_at)
+           VALUES (?, ?, 'YIELD', 'pendle', 'ethereum', '100', ?, 'ACTIVE', ?, ?, ?, ?)`,
+        )
+        .run(id, 'wallet-1', 'not-valid-json{', now, now, now, now);
+
+      await monitor.checkAllPositions();
+      expect(mockEventBus.emit).not.toHaveBeenCalled();
+    });
+
+    it('handles null metadata gracefully', async () => {
+      positionCounter++;
+      const id = `pos-${positionCounter}`;
+      const now = Math.floor(Date.now() / 1000);
+      sqlite
+        .prepare(
+          `INSERT INTO defi_positions (id, wallet_id, category, provider, chain, amount, metadata, status, opened_at, last_synced_at, created_at, updated_at)
+           VALUES (?, ?, 'YIELD', 'pendle', 'ethereum', '100', NULL, 'ACTIVE', ?, ?, ?, ?)`,
+        )
+        .run(id, 'wallet-1', now, now, now, now);
+
+      await monitor.checkAllPositions();
+      expect(mockEventBus.emit).not.toHaveBeenCalled();
+    });
+
+    it('handles position without market_id in metadata', async () => {
+      const nowSec = Math.floor(Date.now() / 1000);
+      positionCounter++;
+      const id = `pos-${positionCounter}`;
+      sqlite
+        .prepare(
+          `INSERT INTO defi_positions (id, wallet_id, category, provider, chain, amount, metadata, status, opened_at, last_synced_at, created_at, updated_at)
+           VALUES (?, ?, 'YIELD', 'pendle', 'ethereum', '100', ?, 'ACTIVE', ?, ?, ?, ?)`,
+        )
+        .run(id, 'wallet-1', JSON.stringify({ maturity: nowSec + 3 * 86_400 }), nowSec, nowSec, nowSec, nowSec);
+
+      await monitor.checkAllPositions();
+      expect(mockEventBus.emit).toHaveBeenCalledWith(
+        'yield:maturity-warning',
+        expect.objectContaining({ marketId: '' }),
+      );
+    });
+
+    it('updateConfig handles maturity_polling_interval_ms', () => {
+      monitor.updateConfig({ maturity_polling_interval_ms: 60_000 });
+      expect(monitor.getConfig().pollingIntervalMs).toBe(60_000);
+    });
+  });
+
+  // -----------------------------------------------------------------------
   // Event payload
   // -----------------------------------------------------------------------
 
