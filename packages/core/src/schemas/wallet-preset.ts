@@ -32,10 +32,10 @@ export interface WalletPreset {
 export const BUILTIN_PRESETS: Record<WalletPresetType, WalletPreset> = {
   dcent: {
     displayName: "D'CENT Wallet",
-    approvalMethod: 'walletconnect',
+    approvalMethod: 'sdk_ntfy',
     preferredWallet: 'dcent',
     signingEnabled: true,
-    description: "D'CENT hardware wallet with WalletConnect signing",
+    description: "D'CENT hardware wallet with push notification signing",
     walletLinkConfig: {
       name: 'dcent',
       displayName: "D'CENT Wallet",

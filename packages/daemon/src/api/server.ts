@@ -61,6 +61,7 @@ import { utilsRoutes } from './routes/utils.js';
 import { skillsRoutes } from './routes/skills.js';
 import { adminRoutes } from './routes/admin.js';
 import type { KillSwitchState } from './routes/admin.js';
+import { createWalletAppsRoutes } from './routes/wallet-apps.js';
 import { tokenRegistryRoutes } from './routes/tokens.js';
 import { connectInfoRoutes } from './routes/connect-info.js';
 import { incomingRoutes } from './routes/incoming.js';
@@ -87,6 +88,7 @@ import type { ActionProviderRegistry } from '../infrastructure/action/action-pro
 import type * as schema from '../infrastructure/database/schema.js';
 import { TokenRegistryService } from '../infrastructure/token-registry/index.js';
 import { WalletLinkRegistry } from '../services/signing-sdk/wallet-link-registry.js';
+import { WalletAppService } from '../services/signing-sdk/wallet-app-service.js';
 import { actionRoutes } from './routes/actions.js';
 import { x402Routes } from './routes/x402.js';
 import { wcRoutes, wcSessionRoutes } from './routes/wc.js';
@@ -370,6 +372,9 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         walletLinkRegistry: deps.settingsService
           ? new WalletLinkRegistry(deps.settingsService)
           : undefined,
+        walletAppService: deps.sqlite
+          ? new WalletAppService(deps.sqlite)
+          : undefined,
       }),
     );
   }
@@ -602,6 +607,16 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         rpcPool: deps.adapterPool?.pool,
       }),
     );
+
+    // Register wallet apps routes (masterAuth via admin middleware)
+    if (deps.sqlite) {
+      app.route(
+        '/v1',
+        createWalletAppsRoutes({
+          walletAppService: new WalletAppService(deps.sqlite),
+        }),
+      );
+    }
 
     // Register owner kill-switch route (ownerAuth protected)
     if (deps.killSwitchService) {

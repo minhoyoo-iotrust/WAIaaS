@@ -322,12 +322,37 @@ function NotificationSettingsTab() {
             </div>
           </FieldGroup>
 
-          <FieldGroup legend="Other Channels" description="Discord, ntfy, Slack, and rate limiting">
+          <FieldGroup legend="ntfy" description="Push notification channel for Human Wallet Apps (signing requests and activity alerts)">
+            <div class="settings-info-box" style={{ marginBottom: '0.75rem' }}>
+              ntfy is the push notification infrastructure used by Human Wallet Apps for signing requests and activity alerts.
+              Per-app notification settings (Signing/Alerts toggles) are managed in{' '}
+              <a href="#/wallet-apps">Human Wallet Apps</a>.
+            </div>
+            <div class="settings-fields-grid">
+              <FormField
+                label={keyToLabel('ntfy_server')}
+                name="notifications.ntfy_server"
+                type="text"
+                value={getEffectiveValue(settings.value, dirty.value, 'notifications', 'ntfy_server')}
+                onChange={(v) => handleFieldChange('notifications.ntfy_server', v)}
+                description="Server URL for ntfy push notifications"
+              />
+
+              <FormField
+                label={keyToLabel('ntfy_topic')}
+                name="notifications.ntfy_topic"
+                type="text"
+                value={getEffectiveValue(settings.value, dirty.value, 'notifications', 'ntfy_topic')}
+                onChange={(v) => handleFieldChange('notifications.ntfy_topic', v)}
+                description="Topic name for ntfy notifications"
+              />
+            </div>
+          </FieldGroup>
+
+          <FieldGroup legend="Other Channels" description="Discord, Slack, and rate limiting">
             <div class="settings-info-box" style={{ marginBottom: '0.75rem' }}>
               <strong>Discord:</strong> Create a webhook in Server Settings &gt; Integrations &gt;{' '}
               <a href="https://support.discord.com/hc/en-us/articles/228383668" target="_blank" rel="noopener noreferrer">Webhooks</a>.
-              {' '}<strong>ntfy:</strong> Use any{' '}
-              <a href="https://ntfy.sh" target="_blank" rel="noopener noreferrer">ntfy server</a> (self-hosted or ntfy.sh).
               {' '}<strong>Slack:</strong> Create an{' '}
               <a href="https://api.slack.com/messaging/webhooks" target="_blank" rel="noopener noreferrer">Incoming Webhook</a> in your Slack workspace.
             </div>
@@ -340,24 +365,6 @@ function NotificationSettingsTab() {
                 onChange={(v) => handleFieldChange('notifications.discord_webhook_url', v)}
                 placeholder={isCredentialConfigured(settings.value, dirty.value, 'notifications', 'discord_webhook_url') ? '(configured)' : ''}
                 description="Webhook URL for Discord notifications"
-              />
-
-              <FormField
-                label={keyToLabel('ntfy_server')}
-                name="notifications.ntfy_server"
-                type="text"
-                value={getEffectiveValue(settings.value, dirty.value, 'notifications', 'ntfy_server')}
-                onChange={(v) => handleFieldChange('notifications.ntfy_server', v)}
-                description="Server URL for ntfy notifications"
-              />
-
-              <FormField
-                label={keyToLabel('ntfy_topic')}
-                name="notifications.ntfy_topic"
-                type="text"
-                value={getEffectiveValue(settings.value, dirty.value, 'notifications', 'ntfy_topic')}
-                onChange={(v) => handleFieldChange('notifications.ntfy_topic', v)}
-                description="Topic name for ntfy notifications"
               />
 
               <FormField

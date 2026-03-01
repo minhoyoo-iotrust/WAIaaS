@@ -128,7 +128,7 @@ Response (200):
 
 Owner states: `NONE` (no owner set), `GRACE` (owner set, not verified), `LOCKED` (owner verified via SIWS/SIWE signature).
 
-Approval methods: `sdk_ntfy` (Wallet SDK via ntfy), `sdk_telegram` (Wallet SDK via Telegram), `walletconnect` (WalletConnect), `telegram_bot` (Telegram Bot), `rest` (REST API polling), or `null` (auto-detect based on infrastructure).
+Approval methods: `sdk_ntfy` (Human Wallet App via ntfy push notifications), `sdk_telegram` (Wallet SDK via Telegram), `walletconnect` (WalletConnect), `telegram_bot` (Telegram Bot), `rest` (REST API polling), or `null` (auto-detect based on infrastructure).
 
 ### PUT /v1/wallets/{id} -- Update Wallet Name (sessionAuth)
 
@@ -184,6 +184,13 @@ curl -s -X PUT http://localhost:3100/v1/wallets/01958f3a-1234-7000-8000-abcdef12
   -H 'X-Master-Password: your-master-password' \
   -d '{"owner_address": "0x1234...abcd", "wallet_type": "dcent"}'
 ```
+
+When `wallet_type: "dcent"` is specified:
+- `approval_method` is automatically set to `sdk_ntfy` (push notification signing via ntfy)
+- The D'CENT app is auto-registered in the Human Wallet Apps registry (`wallet_apps` table)
+- Signing requests are routed to the `waiaas-sign-dcent` ntfy topic
+- Activity alerts are sent to the `waiaas-notify-dcent` ntfy topic (if Alerts toggle is enabled)
+- WalletConnect is NOT required -- D'CENT uses direct push notification signing
 
 Response (200):
 ```json
@@ -824,6 +831,8 @@ async with WAIaaSClient("http://localhost:3100", "wai_sess_...") as client:
 | `UNAUTHORIZED` | 401 | Missing or invalid auth header |
 
 ## 13. WalletConnect Session Management
+
+> **Note:** Wallets using `sdk_ntfy` approval method (e.g., D'CENT preset) do not require WalletConnect. WalletConnect is only needed when `approval_method` is set to `walletconnect`. In Admin UI, the WalletConnect section is hidden when `sdk_ntfy` is active.
 
 WalletConnect allows the wallet owner to connect an external wallet (D'CENT, MetaMask, Phantom, etc.) to approve high-tier transactions. The daemon manages WC pairing, sessions, and signing bridges.
 

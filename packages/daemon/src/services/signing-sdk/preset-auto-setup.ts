@@ -19,6 +19,7 @@ import type { WalletPreset } from '@waiaas/core';
 import { WAIaaSError } from '@waiaas/core';
 import type { SettingsService } from '../../infrastructure/settings/settings-service.js';
 import type { WalletLinkRegistry } from './wallet-link-registry.js';
+import type { WalletAppService } from './wallet-app-service.js';
 
 // ---------------------------------------------------------------------------
 // Step names for the applied list
@@ -28,6 +29,7 @@ const STEP_SDK_ENABLED = 'signing_sdk_enabled';
 const STEP_WALLET_REGISTERED = 'wallet_registered';
 const STEP_PREFERRED_WALLET = 'preferred_wallet_set';
 const STEP_PREFERRED_CHANNEL = 'preferred_channel_set';
+const STEP_WALLET_APP_REGISTERED = 'wallet_app_registered';
 
 // ---------------------------------------------------------------------------
 // Settings keys used in snapshot
@@ -47,6 +49,7 @@ export class PresetAutoSetupService {
   constructor(
     private readonly settingsService: SettingsService,
     private readonly walletLinkRegistry: WalletLinkRegistry,
+    private readonly walletAppService?: WalletAppService,
   ) {}
 
   /**
@@ -119,6 +122,13 @@ export class PresetAutoSetupService {
         default:
           // Other approval methods: skip channel setting
           break;
+      }
+
+      // Step 5: Register wallet app in wallet_apps registry (v29.7)
+      // Use preferredWallet as app name (matches wallet_type / BUILTIN_PRESETS key)
+      if (this.walletAppService) {
+        this.walletAppService.ensureRegistered(preset.preferredWallet, preset.displayName);
+        applied.push(STEP_WALLET_APP_REGISTERED);
       }
 
       return { applied };

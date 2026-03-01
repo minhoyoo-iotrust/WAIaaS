@@ -41,10 +41,11 @@ describe('i18n message system', () => {
     expect(Object.keys(en.cli).sort()).toEqual(Object.keys(ko.cli).sort());
   });
 
-  it('all 105 error codes have corresponding messages', () => {
+  it('all 108 error codes have corresponding messages', () => {
     // v29.3: +WALLET_ID_REQUIRED, +NETWORK_REQUIRED, -CANNOT_REMOVE_DEFAULT_WALLET (net +1)
+    // v29.7: +SIGNING_DISABLED, +WALLET_APP_DUPLICATE, +WALLET_APP_NOT_FOUND (+3)
     const en = getMessages('en');
-    expect(Object.keys(en.errors).length).toBe(105);
+    expect(Object.keys(en.errors).length).toBe(108);
   });
 
   it('error code keys match ERROR_CODES keys', () => {

@@ -294,6 +294,52 @@ export const PolicyDeleteResponseSchema = z
   .openapi('PolicyDeleteResponse');
 
 // ---------------------------------------------------------------------------
+// Wallet Apps schemas (v29.7 Human Wallet Apps)
+// ---------------------------------------------------------------------------
+
+export const WalletAppSchema = z
+  .object({
+    id: z.string().openapi({ description: 'Wallet app UUID', example: '01234567-89ab-cdef-0123-456789abcdef' }),
+    name: z.string().openapi({ description: 'App identifier (same namespace as wallet_type)', example: 'dcent' }),
+    display_name: z.string().openapi({ description: 'Human-readable app name', example: "D'CENT Wallet" }),
+    signing_enabled: z.boolean().openapi({ description: 'Whether signing requests are sent to this app' }),
+    alerts_enabled: z.boolean().openapi({ description: 'Whether activity alerts are sent to this app' }),
+    used_by: z.array(z.object({
+      id: z.string(),
+      label: z.string(),
+    })).openapi({ description: 'Wallets using this app (wallet_type = app name)' }),
+    created_at: z.number().openapi({ description: 'Unix timestamp (seconds)' }),
+    updated_at: z.number().openapi({ description: 'Unix timestamp (seconds)' }),
+  })
+  .openapi('WalletApp');
+
+export const WalletAppListResponseSchema = z
+  .object({
+    apps: z.array(WalletAppSchema),
+  })
+  .openapi('WalletAppListResponse');
+
+export const WalletAppCreateRequestSchema = z
+  .object({
+    name: z.string().min(1).max(64).regex(/^[a-z0-9][a-z0-9-]*$/, 'Lowercase alphanumeric with hyphens').openapi({ description: 'App identifier', example: 'my-custom-wallet' }),
+    display_name: z.string().min(1).max(128).openapi({ description: 'Display name', example: 'My Custom Wallet' }),
+  })
+  .openapi('WalletAppCreateRequest');
+
+export const WalletAppUpdateRequestSchema = z
+  .object({
+    signing_enabled: z.boolean().optional().openapi({ description: 'Toggle signing requests' }),
+    alerts_enabled: z.boolean().optional().openapi({ description: 'Toggle activity alerts' }),
+  })
+  .openapi('WalletAppUpdateRequest');
+
+export const WalletAppResponseSchema = z
+  .object({
+    app: WalletAppSchema,
+  })
+  .openapi('WalletAppResponse');
+
+// ---------------------------------------------------------------------------
 // Error Code -> OpenAPI Response Mapping
 // ---------------------------------------------------------------------------
 

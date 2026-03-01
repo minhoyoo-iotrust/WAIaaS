@@ -74,13 +74,29 @@ export class ApprovalChannelRouter {
    * @throws Error if SDK channel sendRequest() fails (propagated, no silent fallback)
    */
   async route(walletId: string, params: SendRequestParams): Promise<RouteResult> {
-    // 1. Read wallet's owner_approval_method from DB
+    // 1. Read wallet's owner_approval_method and wallet_type from DB
     const row = this.sqlite.prepare(
-      'SELECT owner_approval_method FROM wallets WHERE id = ?',
-    ).get(walletId) as { owner_approval_method: string | null } | undefined;
+      'SELECT owner_approval_method, wallet_type FROM wallets WHERE id = ?',
+    ).get(walletId) as { owner_approval_method: string | null; wallet_type: string | null } | undefined;
 
     if (!row) {
       throw new Error(`Wallet not found: ${walletId}`);
+    }
+
+    // Enrich params with wallet_type for per-wallet topic routing (SIGN-03, SIGN-04)
+    const enrichedParams: SendRequestParams = {
+      ...params,
+      walletName: row.wallet_type || params.walletName,
+    };
+
+    // Check wallet_apps.signing_enabled — block if signing is disabled for this app (v29.7)
+    if (row.wallet_type) {
+      const app = this.sqlite.prepare(
+        'SELECT signing_enabled FROM wallet_apps WHERE name = ?',
+      ).get(row.wallet_type) as { signing_enabled: number } | undefined;
+      if (app && app.signing_enabled === 0) {
+        throw new Error(`SIGNING_DISABLED: Signing disabled for wallet app: ${row.wallet_type}`);
+      }
     }
 
     const explicitMethod = row.owner_approval_method as ApprovalMethod | null;
@@ -102,11 +118,11 @@ export class ApprovalChannelRouter {
 
       // SDK methods: only use if SDK is enabled, otherwise fall through to global fallback
       if (explicitMethod === 'sdk_ntfy' && sdkEnabled && this.ntfyChannel) {
-        const result = await this.ntfyChannel.sendRequest(params);
+        const result = await this.ntfyChannel.sendRequest(enrichedParams);
         return { method: 'sdk_ntfy', channelResult: { requestId: result.requestId } };
       }
       if (explicitMethod === 'sdk_telegram' && sdkEnabled && this.telegramChannel) {
-        const result = await this.telegramChannel.sendRequest(params);
+        const result = await this.telegramChannel.sendRequest(enrichedParams);
         return { method: 'sdk_telegram', channelResult: { requestId: result.requestId } };
       }
 
@@ -114,7 +130,7 @@ export class ApprovalChannelRouter {
     }
 
     // 3. Global fallback priority (CHAN-06)
-    return this.globalFallback(params);
+    return this.globalFallback(enrichedParams);
   }
 
   // -------------------------------------------------------------------------

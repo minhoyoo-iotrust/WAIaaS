@@ -323,6 +323,8 @@ curl -s -X POST http://localhost:3100/v1/admin/notifications/test \
 }
 ```
 
+> **ntfy channel:** In Admin UI, ntfy has its own section in Notifications Settings (separate from Other Channels). Per-app notification settings (Signing/Alerts toggles) are managed in Human Wallet Apps.
+
 ### GET /v1/admin/notifications/log -- Query Delivery Logs
 
 Query notification delivery history with pagination and filtering.
@@ -474,7 +476,7 @@ curl -s http://localhost:3100/v1/admin/settings \
 | `autostop`      | enabled, consecutive_failures_*, unusual_activity_*, idle_* | Automatic protection rules.          |
 | `monitoring`    | enabled, check_interval_sec, low_balance_threshold_*, cooldown_hours | Balance monitoring configuration. |
 | `telegram`      | enabled, bot_token, locale                               | Telegram Bot interactive commands.     |
-| `signing_sdk`   | enabled, request_expiry_min, preferred_channel, preferred_wallet, ntfy_*_topic_prefix | Wallet Signing SDK for owner approval. |
+| `signing_sdk`   | enabled, request_expiry_min, preferred_channel, preferred_wallet, ntfy_*_topic_prefix | Human Wallet Apps (signing + alerts) configuration. Internal key prefix is signing_sdk for backward compatibility. |
 
 ### PUT /v1/admin/settings -- Update Settings
 
@@ -874,7 +876,131 @@ If no key exists for the provider, returns 404 `ACTION_NOT_FOUND`.
 
 ---
 
-## 8. Error Reference
+## 8. Human Wallet Apps Management (v29.7)
+
+Manage Human Wallet Apps -- the wallet applications used by the human operator for signing requests and activity alerts. Apps are tied to ntfy notification topics (`waiaas-sign-{name}` for signing, `waiaas-notify-{name}` for alerts).
+
+When a wallet preset (e.g., D'CENT) is applied to a wallet via `PUT /v1/wallets/{id}/owner`, the corresponding app is automatically registered in the wallet_apps registry.
+
+**Admin UI:** Human Wallet Apps has a top-level menu item in the sidebar (between Security and System).
+
+### GET /v1/admin/wallet-apps -- List Wallet Apps
+
+Returns all registered wallet apps with the wallets using each app.
+
+```bash
+curl -s http://localhost:3100/v1/admin/wallet-apps \
+  -H 'X-Master-Password: <password>'
+```
+
+**Response (200):**
+```json
+{
+  "apps": [
+    {
+      "id": "<uuid>",
+      "name": "dcent",
+      "display_name": "D'CENT Wallet",
+      "signing_enabled": true,
+      "alerts_enabled": true,
+      "used_by": [
+        {"id": "<wallet-uuid>", "label": "my-wallet"}
+      ],
+      "created_at": 1707000000,
+      "updated_at": 1707000000
+    }
+  ]
+}
+```
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `id` | string | Wallet app UUID. |
+| `name` | string | Unique app identifier (matches `wallets.wallet_type`). |
+| `display_name` | string | Human-readable display name. |
+| `signing_enabled` | boolean | Whether signing requests are routed to this app. |
+| `alerts_enabled` | boolean | Whether activity alerts are sent to this app. |
+| `used_by` | array | Wallets using this app (`wallet_type` = app name). |
+| `created_at` | integer | Unix timestamp (seconds). |
+| `updated_at` | integer | Unix timestamp (seconds). |
+
+### POST /v1/admin/wallet-apps -- Register Wallet App
+
+Register a new wallet app manually.
+
+```bash
+curl -s -X POST http://localhost:3100/v1/admin/wallet-apps \
+  -H 'Content-Type: application/json' \
+  -H 'X-Master-Password: <password>' \
+  -d '{"name": "my-custom-wallet", "display_name": "My Custom Wallet"}'
+```
+
+**Request body:**
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `name` | string | Yes | Unique app identifier (lowercase, kebab-case). |
+| `display_name` | string | Yes | Human-readable display name. |
+
+**Response (201):**
+```json
+{
+  "app": {
+    "id": "<uuid>",
+    "name": "my-custom-wallet",
+    "display_name": "My Custom Wallet",
+    "signing_enabled": true,
+    "alerts_enabled": true,
+    "used_by": [],
+    "created_at": 1707000000,
+    "updated_at": 1707000000
+  }
+}
+```
+
+Error: `WALLET_APP_DUPLICATE` (409) if an app with the same name already exists.
+
+### PUT /v1/admin/wallet-apps/{id} -- Update App Toggles
+
+Toggle signing and/or alerts for a wallet app.
+
+```bash
+curl -s -X PUT http://localhost:3100/v1/admin/wallet-apps/<app-uuid> \
+  -H 'Content-Type: application/json' \
+  -H 'X-Master-Password: <password>' \
+  -d '{"signing_enabled": true, "alerts_enabled": false}'
+```
+
+**Request body:**
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `signing_enabled` | boolean | No | Enable/disable signing request routing. |
+| `alerts_enabled` | boolean | No | Enable/disable activity alert notifications. |
+
+**Response (200):** Same schema as POST response (includes `used_by`).
+
+Error: `WALLET_APP_NOT_FOUND` (404) if the app ID does not exist.
+
+### DELETE /v1/admin/wallet-apps/{id} -- Remove Wallet App
+
+Remove a registered wallet app.
+
+```bash
+curl -s -X DELETE http://localhost:3100/v1/admin/wallet-apps/<app-uuid> \
+  -H 'X-Master-Password: <password>'
+```
+
+**Response (200):**
+```json
+{"ok": true}
+```
+
+Error: `WALLET_APP_NOT_FOUND` (404) if the app ID does not exist.
+
+---
+
+## 9. Error Reference
 
 | Error Code               | HTTP | Description                                    |
 | ------------------------ | ---- | ---------------------------------------------- |
@@ -886,6 +1012,8 @@ If no key exists for the provider, returns 404 `ACTION_NOT_FOUND`.
 | `ACTION_VALIDATION_FAILED`| 400 | Invalid setting key or request body.            |
 | `API_KEY_REQUIRED`       | 403  | Action provider requires API key not yet configured. |
 | `ACTION_NOT_FOUND`       | 404  | Action provider or API key not found.           |
+| `WALLET_APP_DUPLICATE`   | 409  | Wallet app with the same name already exists.   |
+| `WALLET_APP_NOT_FOUND`   | 404  | Wallet app not found by ID.                     |
 
 **Error response format:**
 ```json
@@ -901,7 +1029,7 @@ If no key exists for the provider, returns 404 `ACTION_NOT_FOUND`.
 
 ---
 
-## 9. Related Skill Files
+## 10. Related Skill Files
 
 - **actions.skill.md** -- Action Provider REST API (DeFi actions)
 - **policies.skill.md** -- Policy management (10 policy types for transaction controls)

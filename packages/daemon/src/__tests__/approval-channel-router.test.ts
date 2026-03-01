@@ -24,10 +24,16 @@ import type { Database } from 'better-sqlite3';
 // Mock helpers
 // ---------------------------------------------------------------------------
 
-function createMockSqlite(ownerApprovalMethod: string | null = null, walletExists = true): Database {
+function createMockSqlite(
+  ownerApprovalMethod: string | null = null,
+  walletExists = true,
+  walletType: string | null = null,
+): Database {
   const stmt = {
     get: vi.fn().mockReturnValue(
-      walletExists ? { owner_approval_method: ownerApprovalMethod } : undefined,
+      walletExists
+        ? { owner_approval_method: ownerApprovalMethod, wallet_type: walletType }
+        : undefined,
     ),
   };
   return {
@@ -329,6 +335,67 @@ describe('ApprovalChannelRouter - SDK disabled fallback (CHAN-07)', () => {
 });
 
 // ---------------------------------------------------------------------------
+// wallet_type topic routing (SIGN-03, SIGN-04, SIGN-05)
+// ---------------------------------------------------------------------------
+
+describe('ApprovalChannelRouter - wallet_type topic routing (SIGN-03, SIGN-04, SIGN-05)', () => {
+  it('SIGN-03: enriches walletName from wallet_type when routing to sdk_ntfy channel', async () => {
+    const sqlite = createMockSqlite('sdk_ntfy', true, 'dcent');
+    const settings = createMockSettings({ 'signing_sdk.enabled': 'true' });
+    const ntfyChannel = createMockNtfyChannel();
+
+    const router = new ApprovalChannelRouter({ sqlite, settingsService: settings, ntfyChannel });
+    const result = await router.route('wallet-1', defaultParams);
+
+    expect(result.method).toBe('sdk_ntfy');
+    // Verify ntfyChannel received enriched params with walletName from wallet_type
+    expect(ntfyChannel.sendRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ walletName: 'dcent' }),
+    );
+  });
+
+  it('SIGN-03: enriches walletName from wallet_type for non-dcent wallet types', async () => {
+    const sqlite = createMockSqlite('sdk_ntfy', true, 'other-wallet');
+    const settings = createMockSettings({ 'signing_sdk.enabled': 'true' });
+    const ntfyChannel = createMockNtfyChannel();
+
+    const router = new ApprovalChannelRouter({ sqlite, settingsService: settings, ntfyChannel });
+    await router.route('wallet-1', defaultParams);
+
+    expect(ntfyChannel.sendRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ walletName: 'other-wallet' }),
+    );
+  });
+
+  it('SIGN-04: does not set walletName when wallet_type is NULL (global fallback)', async () => {
+    const sqlite = createMockSqlite('sdk_ntfy', true, null);
+    const settings = createMockSettings({ 'signing_sdk.enabled': 'true' });
+    const ntfyChannel = createMockNtfyChannel();
+
+    const router = new ApprovalChannelRouter({ sqlite, settingsService: settings, ntfyChannel });
+    await router.route('wallet-1', defaultParams);
+
+    // walletName should be undefined (not enriched), letting SignRequestBuilder use preferred_wallet
+    const calledParams = (ntfyChannel.sendRequest as ReturnType<typeof vi.fn>).mock.calls[0]![0] as SendRequestParams;
+    expect(calledParams.walletName).toBeUndefined();
+  });
+
+  it('SIGN-03: enriches walletName from wallet_type even when falling through to global fallback', async () => {
+    // No explicit approval_method set, but wallet_type is set
+    const sqlite = createMockSqlite(null, true, 'dcent');
+    const settings = createMockSettings({ 'signing_sdk.enabled': 'true' });
+    const ntfyChannel = createMockNtfyChannel();
+
+    const router = new ApprovalChannelRouter({ sqlite, settingsService: settings, ntfyChannel });
+    await router.route('wallet-1', defaultParams);
+
+    expect(ntfyChannel.sendRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ walletName: 'dcent' }),
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Edge cases
 // ---------------------------------------------------------------------------
 
@@ -422,5 +489,61 @@ describe('ApprovalChannelRouter - Edge cases', () => {
 
     // Whitespace-only project_id should be treated as not configured
     expect(result.method).toBe('rest');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// signing_enabled blocking (APP-08, v29.7)
+// ---------------------------------------------------------------------------
+
+describe('ApprovalChannelRouter - signing_enabled blocking (APP-08)', () => {
+  it('T-APP-08: signing_enabled=0 blocks signing with SIGNING_DISABLED error', async () => {
+    // Mock: wallet has wallet_type='dcent', wallet_apps has signing_enabled=0
+    const stmtGet = vi.fn()
+      .mockReturnValueOnce({ owner_approval_method: 'sdk_ntfy', wallet_type: 'dcent' }) // wallet lookup
+      .mockReturnValueOnce({ signing_enabled: 0 }); // wallet_apps lookup
+    const sqlite = {
+      prepare: vi.fn().mockReturnValue({ get: stmtGet }),
+    } as unknown as Database;
+    const settings = createMockSettings({ 'signing_sdk.enabled': 'true' });
+    const ntfyChannel = createMockNtfyChannel();
+
+    const router = new ApprovalChannelRouter({ sqlite, settingsService: settings, ntfyChannel });
+    await expect(router.route('wallet-1', defaultParams))
+      .rejects.toThrow('SIGNING_DISABLED');
+  });
+
+  it('T-APP-08b: signing_enabled=1 allows signing', async () => {
+    const stmtGet = vi.fn()
+      .mockReturnValueOnce({ owner_approval_method: 'sdk_ntfy', wallet_type: 'dcent' })
+      .mockReturnValueOnce({ signing_enabled: 1 });
+    const sqlite = {
+      prepare: vi.fn().mockReturnValue({ get: stmtGet }),
+    } as unknown as Database;
+    const settings = createMockSettings({ 'signing_sdk.enabled': 'true' });
+    const ntfyChannel = createMockNtfyChannel();
+
+    const router = new ApprovalChannelRouter({ sqlite, settingsService: settings, ntfyChannel });
+    const result = await router.route('wallet-1', defaultParams);
+
+    expect(result.method).toBe('sdk_ntfy');
+    expect(ntfyChannel.sendRequest).toHaveBeenCalled();
+  });
+
+  it('T-APP-08c: no wallet_apps row allows signing (passthrough)', async () => {
+    const stmtGet = vi.fn()
+      .mockReturnValueOnce({ owner_approval_method: 'sdk_ntfy', wallet_type: 'dcent' })
+      .mockReturnValueOnce(undefined); // no wallet_apps row
+    const sqlite = {
+      prepare: vi.fn().mockReturnValue({ get: stmtGet }),
+    } as unknown as Database;
+    const settings = createMockSettings({ 'signing_sdk.enabled': 'true' });
+    const ntfyChannel = createMockNtfyChannel();
+
+    const router = new ApprovalChannelRouter({ sqlite, settingsService: settings, ntfyChannel });
+    const result = await router.route('wallet-1', defaultParams);
+
+    expect(result.method).toBe('sdk_ntfy');
+    expect(ntfyChannel.sendRequest).toHaveBeenCalled();
   });
 });

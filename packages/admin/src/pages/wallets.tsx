@@ -134,8 +134,13 @@ interface StakingPositionsResponse {
 /** Builtin wallet presets — mirrored from @waiaas/core BUILTIN_PRESETS.
  *  When core adds a new preset, this list must be updated manually. */
 const WALLET_PRESETS = [
-  { value: 'dcent', label: "D'CENT Wallet", description: 'Hardware wallet with WalletConnect signing' },
+  { value: 'dcent', label: "D'CENT Wallet", description: "D'CENT hardware wallet with push notification signing" },
 ] as const;
+
+/** Maps preset value to the human-readable approval method it auto-configures. */
+const PRESET_APPROVAL_PREVIEW: Record<string, string> = {
+  dcent: 'Wallet App (ntfy)',
+};
 
 export function chainNetworkOptions(chain: string): { label: string; value: string }[] {
   if (chain === 'solana') {
@@ -321,6 +326,7 @@ function WalletDetailView({ id }: { id: string }) {
   const editOwnerAddress = useSignal('');
   const ownerEditLoading = useSignal(false);
   const walletTypeSelect = useSignal<string>('');
+  const walletTypeChanging = useSignal(false);
   const approvalSettings = useSignal<ApprovalSettingsInfo | null>(null);
   const suspendModal = useSignal(false);
   const suspendLoading = useSignal(false);
@@ -594,6 +600,33 @@ function WalletDetailView({ id }: { id: string }) {
         showToast('success', `Owner set with ${presetInfo.label} auto-setup`);
       } else {
         showToast('success', 'Owner address updated');
+      }
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code, e.serverMessage));
+    } finally {
+      ownerEditLoading.value = false;
+    }
+  };
+
+  const handleWalletTypeChange = async (newType: string) => {
+    if (!wallet.value?.ownerAddress) return;
+    ownerEditLoading.value = true;
+    try {
+      const body: Record<string, unknown> = {
+        owner_address: wallet.value.ownerAddress,
+      };
+      if (newType) {
+        body.wallet_type = newType;
+      }
+      await apiPut(API.WALLET_OWNER(id), body);
+      await fetchWallet();
+      walletTypeChanging.value = false;
+      const presetInfo = WALLET_PRESETS.find(p => p.value === newType);
+      if (presetInfo) {
+        showToast('success', `Wallet Type changed to ${presetInfo.label}`);
+      } else {
+        showToast('success', 'Wallet Type cleared');
       }
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
@@ -917,6 +950,11 @@ function WalletDetailView({ id }: { id: string }) {
                 {WALLET_PRESETS.find(p => p.value === walletTypeSelect.value)?.description}
               </p>
             )}
+            {walletTypeSelect.value && PRESET_APPROVAL_PREVIEW[walletTypeSelect.value] && (
+              <p style={{ marginTop: 'var(--space-1)', fontSize: '0.8rem', color: 'var(--color-primary)' }}>
+                Approval: {PRESET_APPROVAL_PREVIEW[walletTypeSelect.value]}
+              </p>
+            )}
           </div>
         )}
 
@@ -967,6 +1005,59 @@ function WalletDetailView({ id }: { id: string }) {
           )}
         </DetailRow>
         {wallet.value.ownerState === 'GRACE' && (
+          <div style={{ marginTop: 'var(--space-3)' }}>
+            <DetailRow label="Wallet Type">
+              {walletTypeChanging.value ? (
+                <div class="inline-edit">
+                  <select
+                    value={walletTypeSelect.value}
+                    onChange={(e) => { walletTypeSelect.value = (e.target as HTMLSelectElement).value; }}
+                    style={{
+                      padding: 'var(--space-1) var(--space-2)',
+                      border: '1px solid var(--color-border)',
+                      borderRadius: 'var(--radius-md)',
+                      background: 'var(--color-bg)',
+                      color: 'var(--color-text)',
+                      fontSize: '0.85rem',
+                    }}
+                  >
+                    <option value="">Custom (manual setup)</option>
+                    {WALLET_PRESETS.map((p) => (
+                      <option key={p.value} value={p.value}>{p.label}</option>
+                    ))}
+                  </select>
+                  <Button size="sm" onClick={() => handleWalletTypeChange(walletTypeSelect.value)} loading={ownerEditLoading.value}>
+                    Save
+                  </Button>
+                  <Button size="sm" variant="secondary" onClick={() => { walletTypeChanging.value = false; }}>
+                    Cancel
+                  </Button>
+                </div>
+              ) : (
+                <span>
+                  {WALLET_PRESETS.find(p => p.value === wallet.value!.walletType)?.label ?? wallet.value!.walletType ?? 'Custom'}
+                  <button class="btn btn-ghost btn-sm" onClick={() => {
+                    walletTypeSelect.value = wallet.value?.walletType ?? '';
+                    walletTypeChanging.value = true;
+                  }} title="Change wallet type">
+                    &#9998;
+                  </button>
+                </span>
+              )}
+            </DetailRow>
+            {walletTypeChanging.value && walletTypeSelect.value && PRESET_APPROVAL_PREVIEW[walletTypeSelect.value] && (
+              <p style={{ fontSize: '0.8rem', color: 'var(--color-primary)', marginTop: 'var(--space-1)' }}>
+                Approval: {PRESET_APPROVAL_PREVIEW[walletTypeSelect.value]}
+              </p>
+            )}
+          </div>
+        )}
+        {wallet.value.ownerState === 'LOCKED' && wallet.value.walletType && (
+          <DetailRow label="Wallet Type">
+            <span>{WALLET_PRESETS.find(p => p.value === wallet.value!.walletType)?.label ?? wallet.value!.walletType}</span>
+          </DetailRow>
+        )}
+        {wallet.value.ownerState === 'GRACE' && (
           <div style={{
             background: 'var(--color-bg-secondary)',
             border: '1px solid var(--color-border)',
@@ -1007,6 +1098,7 @@ function WalletDetailView({ id }: { id: string }) {
                     checked={wallet.value?.approvalMethod === opt.value}
                     onChange={() => handleApprovalMethodChange(opt.value)}
                     style={{ marginTop: '2px' }}
+                    disabled={wallet.value?.ownerState === 'LOCKED'}
                   />
                   <div>
                     <div style={{ fontWeight: 500, fontSize: '0.9rem' }}>{opt.label}</div>
@@ -1031,41 +1123,43 @@ function WalletDetailView({ id }: { id: string }) {
           </div>
         )}
 
-        <div style={{ marginTop: 'var(--space-4)', paddingTop: 'var(--space-3)', borderTop: '1px solid var(--color-border)' }}>
-          <h4 style={{ marginBottom: 'var(--space-2)', fontSize: '0.9rem' }}>WalletConnect</h4>
-          {wcSessionLoading.value ? (
-            <div class="stat-skeleton" style={{ height: '60px' }} />
-          ) : wcSession.value ? (
-            <div>
-              <DetailRow label="Status">
-                <Badge variant="success">Connected</Badge>
-              </DetailRow>
-              <DetailRow label="Peer" value={wcSession.value.peerName ?? 'Unknown'} />
-              <DetailRow label="Chain ID" value={wcSession.value.chainId} />
-              <DetailRow label="Expires" value={formatDate(wcSession.value.expiry)} />
-              <div style={{ marginTop: 'var(--space-3)' }}>
-                <Button variant="danger" onClick={handleWcDisconnect} loading={wcDisconnectLoading.value}>
-                  Disconnect
-                </Button>
+        {wallet.value?.approvalMethod === 'walletconnect' && (
+          <div style={{ marginTop: 'var(--space-4)', paddingTop: 'var(--space-3)', borderTop: '1px solid var(--color-border)' }}>
+            <h4 style={{ marginBottom: 'var(--space-2)', fontSize: '0.9rem' }}>WalletConnect</h4>
+            {wcSessionLoading.value ? (
+              <div class="stat-skeleton" style={{ height: '60px' }} />
+            ) : wcSession.value ? (
+              <div>
+                <DetailRow label="Status">
+                  <Badge variant="success">Connected</Badge>
+                </DetailRow>
+                <DetailRow label="Peer" value={wcSession.value.peerName ?? 'Unknown'} />
+                <DetailRow label="Chain ID" value={wcSession.value.chainId} />
+                <DetailRow label="Expires" value={formatDate(wcSession.value.expiry)} />
+                <div style={{ marginTop: 'var(--space-3)' }}>
+                  <Button variant="danger" onClick={handleWcDisconnect} loading={wcDisconnectLoading.value}>
+                    Disconnect
+                  </Button>
+                </div>
               </div>
-            </div>
-          ) : (
-            <div>
-              <p style={{ marginBottom: 'var(--space-3)', color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>
-                Connect an external wallet (D'CENT, MetaMask, Phantom) via WalletConnect for transaction approval.
-              </p>
-              {wallet.value?.ownerAddress ? (
-                <Button onClick={handleWcConnect} loading={wcPairingLoading.value}>
-                  Connect Wallet
-                </Button>
-              ) : (
-                <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>
-                  Set an Owner address first to enable WalletConnect.
+            ) : (
+              <div>
+                <p style={{ marginBottom: 'var(--space-3)', color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>
+                  Connect an external wallet (D'CENT, MetaMask, Phantom) via WalletConnect for transaction approval.
                 </p>
-              )}
-            </div>
-          )}
-        </div>
+                {wallet.value?.ownerAddress ? (
+                  <Button onClick={handleWcConnect} loading={wcPairingLoading.value}>
+                    Connect Wallet
+                  </Button>
+                ) : (
+                  <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>
+                    Set an Owner address first to enable WalletConnect.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   }

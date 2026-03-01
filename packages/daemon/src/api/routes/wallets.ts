@@ -31,6 +31,7 @@ import type * as schema from '../../infrastructure/database/schema.js';
 import { resolveOwnerState, OwnerLifecycleService } from '../../workflow/owner-state.js';
 import type { SettingsService } from '../../infrastructure/settings/settings-service.js';
 import type { WalletLinkRegistry } from '../../services/signing-sdk/wallet-link-registry.js';
+import type { WalletAppService } from '../../services/signing-sdk/wallet-app-service.js';
 import { PresetAutoSetupService } from '../../services/signing-sdk/preset-auto-setup.js';
 import { validateOwnerAddress } from '../middleware/address-validation.js';
 import type { AdapterPool } from '../../infrastructure/adapter-pool.js';
@@ -75,6 +76,8 @@ export interface WalletCrudRouteDeps {
   settingsService?: SettingsService;
   /** WalletLinkRegistry for preset auto-setup (Phase 266). Optional for backward compat. */
   walletLinkRegistry?: WalletLinkRegistry;
+  /** WalletAppService for preset auto-registration (v29.7). Optional for backward compat. */
+  walletAppService?: WalletAppService;
 }
 
 // ---------------------------------------------------------------------------
@@ -860,6 +863,7 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
           const autoSetup = new PresetAutoSetupService(
             deps.settingsService,
             deps.walletLinkRegistry,
+            deps.walletAppService,
           );
           autoSetup.apply(preset);
         }

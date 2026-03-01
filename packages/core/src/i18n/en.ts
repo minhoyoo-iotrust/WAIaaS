@@ -168,7 +168,7 @@ export const messages: Messages = {
     X402_DELAY_TIMEOUT: 'x402 payment exceeds request timeout (DELAY tier)',
     X402_APPROVAL_REQUIRED: 'x402 payment requires owner approval (amount too high)',
     X402_SERVER_ERROR: 'Resource server error after x402 payment',
-    // SIGNING domain (7)
+    // SIGNING domain (8)
     WALLET_NOT_REGISTERED: 'Wallet not registered in signing SDK',
     SIGNING_SDK_DISABLED: 'Signing SDK is disabled',
     SIGN_REQUEST_NOT_FOUND: 'Sign request not found',
@@ -176,6 +176,10 @@ export const messages: Messages = {
     SIGNER_ADDRESS_MISMATCH: 'Signer address does not match wallet owner',
     INVALID_SIGN_RESPONSE: 'Invalid sign response format',
     SIGN_REQUEST_ALREADY_PROCESSED: 'Sign request has already been processed',
+    SIGNING_DISABLED: 'Signing disabled for this wallet app',
+    // ADMIN domain (wallet apps)
+    WALLET_APP_DUPLICATE: 'Wallet app already registered',
+    WALLET_APP_NOT_FOUND: 'Wallet app not found',
   },
   // Notification templates (30 event types)
   notifications: {

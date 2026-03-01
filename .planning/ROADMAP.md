@@ -32,6 +32,7 @@
 - ✅ **v29.4 Solana Lending (Kamino)** -- Phases 283-284 (shipped 2026-02-28)
 - ✅ **v29.5 내부 일관성 정리** -- Phases 285-287 (shipped 2026-02-28)
 - ✅ **v29.6 Pendle Yield Trading + Yield 프레임워크** -- Phases 288-290 (shipped 2026-03-01)
+- ✅ **v29.7 D'CENT 직접 서명 + Human Wallet Apps 통합** -- Phases 291-296 (shipped 2026-03-01)
 
 ## Phases
 
@@ -71,7 +72,7 @@ See `.planning/milestones/` for archived phase details.
 </details>
 
 <details>
-<summary>✅ v29.0-v29.6 (Phases 268-290) -- SHIPPED 2026-03-01</summary>
+<summary>✅ v29.0-v29.7 (Phases 268-296) -- SHIPPED 2026-03-01</summary>
 
 - [x] Phase 268-273: 고급 DeFi 프로토콜 설계 (v29.0) -- completed 2026-02-26
 - [x] Phase 274-278: EVM Lending -- Aave V3 (v29.2) -- completed 2026-02-27
@@ -79,10 +80,23 @@ See `.planning/milestones/` for archived phase details.
 - [x] Phase 283-284: Solana Lending -- Kamino (v29.4) -- completed 2026-02-28
 - [x] Phase 285-287: 내부 일관성 정리 (v29.5) -- completed 2026-02-28
 - [x] Phase 288-290: Pendle Yield Trading + Yield 프레임워크 (v29.6) -- completed 2026-03-01
+- [x] Phase 291-296: D'CENT 직접 서명 + Human Wallet Apps 통합 (v29.7) -- completed 2026-03-01
 
-See `.planning/milestones/v29.0-ROADMAP.md` through `v29.6-ROADMAP.md` for full details.
+See `.planning/milestones/v29.0-ROADMAP.md` through `v29.7-ROADMAP.md` for full details.
 
 </details>
 
+## Progress
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1-173 | v0.1-v2.0 | All | Complete | 2026-02-18 |
+| 178-197 | v2.2-v2.5 | All | Complete | 2026-02-19 |
+| 198-214 | v2.6-v26.4 | All | Complete | 2026-02-21 |
+| 215-243 | v27.0-v27.4 | All | Complete | 2026-02-23 |
+| 244-267 | v28.0-v28.8 | All | Complete | 2026-02-26 |
+| 268-290 | v29.0-v29.6 | All | Complete | 2026-03-01 |
+| 291-296 | v29.7 | 11/11 | Complete | 2026-03-01 |
+
 ---
-*Last updated: 2026-03-01 after v29.6 milestone completion*
+*Last updated: 2026-03-01 after v29.7 milestone completion*
