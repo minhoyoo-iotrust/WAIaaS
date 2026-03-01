@@ -6,9 +6,9 @@ status: active
 last_updated: "2026-03-02"
 progress:
   total_phases: 299
-  completed_phases: 296
+  completed_phases: 299
   total_plans: 666
-  completed_plans: 665
+  completed_plans: 666
 ---
 
 # Project State
@@ -18,20 +18,20 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 299 -- Integration (registerBuiltInProviders, Admin UI, skill.md)
+**Current focus:** Phase 299 complete -- Milestone v29.8 ready for completion
 
 ## Current Position
 
 Phase: 299 of 299 (Integration)
-Plan: 1 of 2 in current phase
-Status: Plan 299-01 complete
-Last activity: 2026-03-02 -- Completed 299-01-PLAN.md (DriftPerpProvider registration + hot-reload)
+Plan: 2 of 2 in current phase
+Status: Plan 299-02 complete (Phase 299 done -- all phases complete)
+Last activity: 2026-03-02 -- Completed 299-02-PLAN.md (Admin UI Drift card + actions.skill.md)
 
-Progress: [████████░░] 86% (6/7 plans)
+Progress: [##########] 100% (7/7 plans)
 
 ## Performance Metrics
 
-**Cumulative:** 74 milestones shipped, 296 phases completed, ~659 plans, ~1,877 reqs, ~5,595+ tests, ~225,248 LOC TS
+**Cumulative:** 74 milestones shipped, 299 phases completed, ~666 plans, ~1,877 reqs, ~5,595+ tests, ~225,248 LOC TS
 
 ## Accumulated Context
 
@@ -56,6 +56,9 @@ Progress: [████████░░] 86% (6/7 plans)
 - v29.8: 81 unit tests for Drift provider -- follows kamino-provider.test.ts patterns exactly
 - v29.8: DriftConfig factory uses only enabled+subAccount (policy keys consumed by MarginMonitor/PerpPolicyEvaluator, not provider)
 - v29.8: pendle_yield missing from BUILTIN_NAMES was pre-existing bug, fixed alongside drift_perp addition
+- v29.8: Drift Perp card follows exact same pattern as Aave V3/Kamino advanced settings blocks
+- v29.8: MCP tools list updated from 21 to 26 to include 5 drift actions
+- v29.8: Skill file sections renumbered 11-15 to 12-16 to accommodate Drift at section 11
 
 ### Pending Todos
 
@@ -70,5 +73,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 299-01-PLAN.md -- DriftPerpProvider registration + hot-reload BUILTIN_NAMES
-Resume command: /gsd:execute-phase 299
+Stopped at: Completed 299-02-PLAN.md -- All 3 phases (297-299) complete, milestone v29.8 ready
+Resume command: Milestone completion (objective update, PR creation)
