@@ -219,6 +219,13 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'actions.pendle_yield_request_timeout_ms', category: 'actions', configPath: 'actions.pendle_yield_request_timeout_ms', defaultValue: '10000', isCredential: false },
   { key: 'actions.pendle_yield_maturity_warning_days', category: 'actions', configPath: 'actions.pendle_yield_maturity_warning_days', defaultValue: '7', isCredential: false },
 
+  // --- Drift Perp ---
+  { key: 'actions.drift_enabled', category: 'actions', configPath: 'actions.drift_enabled', defaultValue: 'false', isCredential: false },
+  { key: 'actions.drift_max_leverage', category: 'actions', configPath: 'actions.drift_max_leverage', defaultValue: '5', isCredential: false },
+  { key: 'actions.drift_max_position_usd', category: 'actions', configPath: 'actions.drift_max_position_usd', defaultValue: '10000', isCredential: false },
+  { key: 'actions.drift_margin_warning_threshold_pct', category: 'actions', configPath: 'actions.drift_margin_warning_threshold_pct', defaultValue: '0.15', isCredential: false },
+  { key: 'actions.drift_position_sync_interval_sec', category: 'actions', configPath: 'actions.drift_position_sync_interval_sec', defaultValue: '60', isCredential: false },
+
   // --- gas_condition category (Gas conditional execution) ---
   { key: 'gas_condition.enabled', category: 'gas_condition', configPath: 'gas_condition.enabled', defaultValue: 'true', isCredential: false },
   { key: 'gas_condition.poll_interval_sec', category: 'gas_condition', configPath: 'gas_condition.poll_interval_sec', defaultValue: '30', isCredential: false },

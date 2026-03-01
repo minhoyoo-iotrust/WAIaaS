@@ -1034,6 +1034,21 @@ export class DaemonLifecycle {
         this.defiMonitorService.register(maturityMonitor);
       }
 
+      // Register MarginMonitor
+      if (this.sqlite) {
+        const { MarginMonitor } = await import('../services/monitoring/margin-monitor.js');
+        const marginMonitor = new MarginMonitor({
+          sqlite: this.sqlite,
+          eventBus: this.eventBus,
+          notificationService: this.notificationService ?? undefined,
+          positionTracker: this.positionTracker ?? undefined,
+        });
+        if (this._settingsService) {
+          marginMonitor.loadFromSettings(this._settingsService);
+        }
+        this.defiMonitorService.register(marginMonitor);
+      }
+
       this.defiMonitorService.start();
       console.debug('Step 4c-11: DeFi monitor service started with', this.defiMonitorService.monitorCount, 'monitors');
     } catch (err) {
