@@ -256,6 +256,11 @@ export type {
   YieldPositionSummary,
   YieldForecast,
   IYieldProvider,
+  // v29.8 perp provider types
+  PerpPositionSummary,
+  MarginInfo,
+  PerpMarketInfo,
+  IPerpProvider,
 } from './interfaces/index.js';
 
 // v27.1 connection state machine (value exports)
@@ -321,6 +326,13 @@ export {
   YieldForecastSchema,
 } from './interfaces/index.js';
 
+// v29.8 Perp Provider Zod schemas (value exports)
+export {
+  PerpPositionSummarySchema,
+  MarginInfoSchema,
+  PerpMarketInfoSchema,
+} from './interfaces/index.js';
+
 // v1.5.3 Currency formatting utilities
 export { formatDisplayCurrency, formatRatePreview } from './utils/index.js';
 
@@ -354,4 +366,5 @@ export type {
   IncomingTxEvent,
   IncomingTxSuspiciousEvent,
   YieldMaturityWarningEvent,
+  MarginWarningEvent,
 } from './events/index.js';
