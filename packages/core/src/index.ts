@@ -251,6 +251,11 @@ export type {
   IDeFiMonitor,
   MonitorSeverity,
   MonitorEvaluation,
+  // v29.6 yield provider types
+  YieldMarketInfo,
+  YieldPositionSummary,
+  YieldForecast,
+  IYieldProvider,
 } from './interfaces/index.js';
 
 // v27.1 connection state machine (value exports)
@@ -307,6 +312,13 @@ export {
   LendingPositionSummarySchema,
   HealthFactorSchema,
   MarketInfoSchema,
+} from './interfaces/index.js';
+
+// v29.6 Yield Provider Zod schemas (value exports)
+export {
+  YieldMarketInfoSchema,
+  YieldPositionSummarySchema,
+  YieldForecastSchema,
 } from './interfaces/index.js';
 
 // v1.5.3 Currency formatting utilities
