@@ -87,52 +87,52 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SIGN-01 | — | Pending |
-| SIGN-02 | — | Pending |
-| SIGN-03 | — | Pending |
-| SIGN-04 | — | Pending |
-| SIGN-05 | — | Pending |
-| SIGN-06 | — | Pending |
-| OWN-01 | — | Pending |
-| OWN-02 | — | Pending |
-| OWN-03 | — | Pending |
-| OWN-04 | — | Pending |
-| OWN-05 | — | Pending |
-| OWN-06 | — | Pending |
-| OWN-07 | — | Pending |
-| APP-01 | — | Pending |
-| APP-02 | — | Pending |
-| APP-03 | — | Pending |
-| APP-04 | — | Pending |
-| APP-05 | — | Pending |
-| APP-06 | — | Pending |
-| APP-07 | — | Pending |
-| APP-08 | — | Pending |
-| APP-09 | — | Pending |
-| APP-10 | — | Pending |
-| HWUI-01 | — | Pending |
-| HWUI-02 | — | Pending |
-| HWUI-03 | — | Pending |
-| HWUI-04 | — | Pending |
-| HWUI-05 | — | Pending |
-| HWUI-06 | — | Pending |
-| HWUI-07 | — | Pending |
-| HWUI-08 | — | Pending |
-| HWUI-09 | — | Pending |
-| NOTI-01 | — | Pending |
-| NOTI-02 | — | Pending |
-| NOTI-03 | — | Pending |
-| DOC-01 | — | Pending |
-| DOC-02 | — | Pending |
-| DOC-03 | — | Pending |
-| DOC-04 | — | Pending |
-| DOC-05 | — | Pending |
+| SIGN-01 | Phase 291 | Pending |
+| SIGN-02 | Phase 291 | Pending |
+| SIGN-03 | Phase 291 | Pending |
+| SIGN-04 | Phase 291 | Pending |
+| SIGN-05 | Phase 291 | Pending |
+| SIGN-06 | Phase 291 | Pending |
+| OWN-01 | Phase 292 | Pending |
+| OWN-02 | Phase 292 | Pending |
+| OWN-03 | Phase 292 | Pending |
+| OWN-04 | Phase 292 | Pending |
+| OWN-05 | Phase 292 | Pending |
+| OWN-06 | Phase 292 | Pending |
+| OWN-07 | Phase 292 | Pending |
+| APP-01 | Phase 293 | Pending |
+| APP-02 | Phase 293 | Pending |
+| APP-03 | Phase 293 | Pending |
+| APP-04 | Phase 293 | Pending |
+| APP-05 | Phase 293 | Pending |
+| APP-06 | Phase 293 | Pending |
+| APP-07 | Phase 293 | Pending |
+| APP-08 | Phase 293 | Pending |
+| APP-09 | Phase 293 | Pending |
+| APP-10 | Phase 293 | Pending |
+| HWUI-01 | Phase 293 | Pending |
+| HWUI-02 | Phase 293 | Pending |
+| HWUI-03 | Phase 293 | Pending |
+| HWUI-04 | Phase 293 | Pending |
+| HWUI-05 | Phase 293 | Pending |
+| HWUI-06 | Phase 293 | Pending |
+| HWUI-07 | Phase 293 | Pending |
+| HWUI-08 | Phase 293 | Pending |
+| HWUI-09 | Phase 293 | Pending |
+| NOTI-01 | Phase 294 | Pending |
+| NOTI-02 | Phase 294 | Pending |
+| NOTI-03 | Phase 294 | Pending |
+| DOC-01 | Phase 295 | Pending |
+| DOC-02 | Phase 295 | Pending |
+| DOC-03 | Phase 295 | Pending |
+| DOC-04 | Phase 296 | Pending |
+| DOC-05 | Phase 296 | Pending |
 
 **Coverage:**
 - v29.7 requirements: 40 total
-- Mapped to phases: 0
-- Unmapped: 40 ⚠️
+- Mapped to phases: 40/40
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-01*
-*Last updated: 2026-03-01 after initial definition*
+*Last updated: 2026-03-01 after roadmap creation (traceability updated)*
