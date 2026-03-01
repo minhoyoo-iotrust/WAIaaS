@@ -313,6 +313,15 @@ describe('DB CHECK constraint - perp policy INSERT', () => {
 
 describe('Non-spending classification - perp actions', () => {
   beforeEach(async () => {
+    // Need PERP_ALLOWED_MARKETS so Step 4i default-deny passes before Step 5
+    await insertPolicy({
+      walletId,
+      type: 'PERP_ALLOWED_MARKETS',
+      rules: JSON.stringify({
+        markets: [{ market: '0xDriftProgram' }],
+      }),
+    });
+
     // Insert a tight SPENDING_LIMIT policy
     await insertPolicy({
       walletId,
