@@ -168,7 +168,7 @@ export const messages: Messages = {
     X402_DELAY_TIMEOUT: 'x402 payment exceeds request timeout (DELAY tier)',
     X402_APPROVAL_REQUIRED: 'x402 payment requires owner approval (amount too high)',
     X402_SERVER_ERROR: 'Resource server error after x402 payment',
-    // SIGNING domain (7)
+    // SIGNING domain (8)
     WALLET_NOT_REGISTERED: 'Wallet not registered in signing SDK',
     SIGNING_SDK_DISABLED: 'Signing SDK is disabled',
     SIGN_REQUEST_NOT_FOUND: 'Sign request not found',

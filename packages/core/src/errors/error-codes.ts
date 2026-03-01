@@ -738,7 +738,7 @@ export const ERROR_CODES = {
     message: 'Resource server error after x402 payment',
   },
 
-  // --- SIGNING domain (7) ---
+  // --- SIGNING domain (8) ---
   WALLET_NOT_REGISTERED: {
     code: 'WALLET_NOT_REGISTERED',
     domain: 'SIGNING',

@@ -389,8 +389,9 @@ describe('SIGNING domain error codes', () => {
     (e) => e.domain === 'SIGNING',
   );
 
-  it('has exactly 7 SIGNING domain codes', () => {
-    expect(signingCodes).toHaveLength(7);
+  it('has exactly 8 SIGNING domain codes', () => {
+    // v29.7: +SIGNING_DISABLED
+    expect(signingCodes).toHaveLength(8);
   });
 
   it('includes all expected error codes', () => {
@@ -402,6 +403,7 @@ describe('SIGNING domain error codes', () => {
     expect(codeNames).toContain('SIGNER_ADDRESS_MISMATCH');
     expect(codeNames).toContain('INVALID_SIGN_RESPONSE');
     expect(codeNames).toContain('SIGN_REQUEST_ALREADY_PROCESSED');
+    expect(codeNames).toContain('SIGNING_DISABLED');
   });
 
   it('creates WAIaaSError from SIGNING domain codes (type-safe)', () => {
