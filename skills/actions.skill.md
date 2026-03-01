@@ -2,8 +2,8 @@
 name: "WAIaaS Actions"
 description: "Action Provider framework: list providers, execute DeFi actions through the 6-stage transaction pipeline"
 category: "api"
-tags: [wallet, blockchain, defi, actions, waiass, jupiter, 0x, swap, lifi, bridge, cross-chain, lido, jito, staking, liquid-staking]
-version: "2.8.4"
+tags: [wallet, blockchain, defi, actions, waiass, jupiter, 0x, swap, lifi, bridge, cross-chain, lido, jito, staking, liquid-staking, pendle, yield, pt, yt]
+version: "2.8.5"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]
@@ -1207,7 +1207,200 @@ Kamino positions are automatically tracked via PositionTracker (5-minute sync in
 - **Positions**: `GET /v1/wallet/positions` or MCP tool `waiaas_get_defi_positions`
 - **Health Factor**: `GET /v1/wallet/health-factor` or MCP tool `waiaas_get_health_factor`
 
-## 10. Policy Integration
+## 10. Pendle Yield Trading -- Built-in Provider (EVM)
+
+The Pendle Yield Trading provider uses the [Pendle Finance](https://pendle.finance/) protocol to buy/sell Principal Tokens (PT) and Yield Tokens (YT), redeem matured PT, and manage LP positions on EVM chains. It uses the Pendle REST API v2 for market discovery and transaction calldata building via the Convert endpoint.
+
+> AI agents must NEVER request the master password. Use only your session token.
+
+### Configuration
+
+Enable Pendle Yield Trading via **Admin UI > Settings > Actions > Pendle Yield**, or environment variables. API key is optional but recommended for higher rate limits.
+
+| Setting | Env Variable | Default | Description |
+| ------- | ------------ | ------- | ----------- |
+| Enabled | `WAIAAS_ACTIONS_PENDLE_YIELD_ENABLED` | `false` | Enable Pendle Yield Trading provider |
+| API Base URL | `WAIAAS_ACTIONS_PENDLE_YIELD_API_BASE_URL` | `https://api-v2.pendle.finance` | Pendle API v2 base URL |
+| API Key | `WAIAAS_ACTIONS_PENDLE_YIELD_API_KEY` | (empty) | Optional API key for higher rate limits |
+| Default Slippage (bps) | `WAIAAS_ACTIONS_PENDLE_YIELD_DEFAULT_SLIPPAGE_BPS` | `100` | Default slippage tolerance in basis points (100 = 1%) |
+| Max Slippage (bps) | `WAIAAS_ACTIONS_PENDLE_YIELD_MAX_SLIPPAGE_BPS` | `500` | Maximum allowed slippage in basis points (500 = 5%) |
+| Request Timeout (ms) | `WAIAAS_ACTIONS_PENDLE_YIELD_REQUEST_TIMEOUT_MS` | `10000` | API request timeout |
+| Maturity Warning Days | `WAIAAS_ACTIONS_PENDLE_YIELD_MATURITY_WARNING_DAYS` | `7` | Days before maturity to send warning notifications |
+
+### Available Actions
+
+| Action | Description | Chain | Risk | Tier |
+| ------ | ----------- | ----- | ---- | ---- |
+| `buy_pt` | Buy Principal Token (PT) for fixed yield exposure | ethereum | medium | DELAY |
+| `buy_yt` | Buy Yield Token (YT) for leveraged yield exposure | ethereum | high | DELAY |
+| `redeem_pt` | Redeem matured PT for underlying asset (auto-detects pre/post-maturity) | ethereum | low | NOTIFY |
+| `add_liquidity` | Add liquidity to Pendle market LP pool | ethereum | medium | DELAY |
+| `remove_liquidity` | Remove liquidity from Pendle market LP pool | ethereum | low | NOTIFY |
+
+### Supported Chains
+
+| Network | Chain ID | WAIaaS Network Name |
+| ------- | -------- | ------------------- |
+| Ethereum | 1 | `ethereum-mainnet` |
+| Arbitrum | 42161 | `arbitrum-mainnet` |
+| Base | 8453 | `base-mainnet` |
+
+### Buy PT Parameters (buy_pt)
+
+| Parameter | Type | Required | Description |
+| --------- | ---- | -------- | ----------- |
+| `market` | string | Yes | Pendle market address (EVM hex address) |
+| `tokenIn` | string | Yes | Input token address to swap from |
+| `amountIn` | string | Yes | Amount in human-readable format (e.g., `"100"` for 100 USDC) |
+| `slippage` | number | No | Slippage tolerance in basis points (defaults to `default_slippage_bps` setting) |
+
+### Buy YT Parameters (buy_yt)
+
+| Parameter | Type | Required | Description |
+| --------- | ---- | -------- | ----------- |
+| `market` | string | Yes | Pendle market address |
+| `tokenIn` | string | Yes | Input token address to swap from |
+| `amountIn` | string | Yes | Amount in human-readable format |
+| `slippage` | number | No | Slippage tolerance in basis points |
+
+### Redeem PT Parameters (redeem_pt)
+
+| Parameter | Type | Required | Description |
+| --------- | ---- | -------- | ----------- |
+| `market` | string | Yes | Pendle market address |
+| `amount` | string | Yes | Amount of PT to redeem |
+
+### Add Liquidity Parameters (add_liquidity)
+
+| Parameter | Type | Required | Description |
+| --------- | ---- | -------- | ----------- |
+| `market` | string | Yes | Pendle market address |
+| `tokenIn` | string | Yes | Input token address |
+| `amountIn` | string | Yes | Amount in human-readable format |
+| `slippage` | number | No | Slippage tolerance in basis points |
+
+### Remove Liquidity Parameters (remove_liquidity)
+
+| Parameter | Type | Required | Description |
+| --------- | ---- | -------- | ----------- |
+| `market` | string | Yes | Pendle market address |
+| `amount` | string | Yes | Amount of LP tokens to remove |
+| `slippage` | number | No | Slippage tolerance in basis points |
+
+### Safety Features
+
+- **Maturity monitoring**: MaturityMonitor polls daily and sends MATURITY_WARNING notifications at 7 days, 1 day before maturity, and post-maturity for unredeemed PT positions.
+- **Slippage clamping**: Slippage is clamped to `max_slippage_bps` to prevent excessive price impact.
+- **Zod runtime validation**: All Pendle API responses (market list, convert) are validated against Zod schemas.
+- **Provider-trust bypass**: When Pendle is enabled in Admin Settings, the CONTRACT_WHITELIST policy check is skipped for Pendle-resolved transactions.
+- **Position tracking**: Yield positions (category=YIELD) are tracked in the defi_positions table with maturity metadata for monitoring.
+
+### Maturity Monitoring
+
+Pendle PT and YT positions have fixed maturity dates. The MaturityMonitor service checks positions daily and sends warnings:
+
+1. **N-day warning** -- Position maturity is within configured `maturity_warning_days` (default 7)
+2. **1-day warning** -- Position maturity is within 24 hours
+3. **Post-maturity warning** -- Position has matured but PT has not been redeemed
+
+**Notification event:** `MATURITY_WARNING`
+
+### Example: Buy PT on Ethereum
+
+**REST API:**
+```bash
+curl -s -X POST http://localhost:3100/v1/actions/pendle_yield/buy_pt \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -d '{
+    "params": {
+      "market": "0x...",
+      "tokenIn": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "amountIn": "1000"
+    },
+    "network": "ethereum-mainnet"
+  }'
+```
+
+**MCP Tool:**
+```json
+{
+  "tool": "action_pendle_yield_buy_pt",
+  "params": {
+    "market": "0x...",
+    "tokenIn": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    "amountIn": "1000"
+  },
+  "network": "ethereum-mainnet"
+}
+```
+
+**TypeScript SDK:**
+```typescript
+import { WAIaaSClient } from '@waiaas/sdk';
+
+const client = new WAIaaSClient({ baseUrl: 'http://localhost:3100', token: 'wai_sess_...' });
+
+const tx = await client.executeAction('pendle_yield', 'buy_pt', {
+  params: {
+    market: '0x...',
+    tokenIn: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+    amountIn: '1000',
+  },
+  network: 'ethereum-mainnet',
+});
+console.log('Transaction ID:', tx.id);
+```
+
+**Python SDK:**
+```python
+from waiaas import WAIaaSClient
+
+async with WAIaaSClient(base_url="http://localhost:3100", token="wai_sess_...") as client:
+    tx = await client.execute_action("pendle_yield", "buy_pt", {
+        "market": "0x...",
+        "tokenIn": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "amountIn": "1000",
+    }, network="ethereum-mainnet")
+    print("Transaction ID:", tx.id)
+```
+
+### Example: Redeem Matured PT
+
+**REST API:**
+```bash
+curl -s -X POST http://localhost:3100/v1/actions/pendle_yield/redeem_pt \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -d '{
+    "params": {
+      "market": "0x...",
+      "amount": "1000"
+    },
+    "network": "ethereum-mainnet"
+  }'
+```
+
+**MCP Tool:**
+```json
+{
+  "tool": "action_pendle_yield_redeem_pt",
+  "params": {
+    "market": "0x...",
+    "amount": "1000"
+  },
+  "network": "ethereum-mainnet"
+}
+```
+
+### Position Monitoring
+
+Pendle yield positions are automatically tracked via PositionTracker and stored in the defi_positions table (category=YIELD). Use the position query endpoints:
+
+- **Positions**: `GET /v1/wallet/positions` or MCP tool `waiaas_get_defi_positions`
+- **Maturity alerts**: Configured via Admin UI > Settings > Actions > Pendle Yield > Maturity Warning Days
+
+## 11. Policy Integration
 
 ### CONTRACT_WHITELIST
 
@@ -1234,7 +1427,7 @@ The swap/bridge input amount is converted to USD via IPriceOracle and evaluated 
 
 **LI.FI bridge reservation lifecycle:** Bridge amounts are reserved against the spending limit when the transaction is submitted. The reservation is released on terminal states (COMPLETED, FAILED, REFUNDED) but **held** on TIMEOUT to prevent double-spend during manual resolution. This means the spending budget is not freed until the bridge completes or fails definitively.
 
-## 11. Configuration via Admin Settings
+## 12. Configuration via Admin Settings
 
 Since v28.2, all action provider settings are managed via **Admin UI > Settings > Actions** (not config.toml). The Admin Settings UI provides:
 
@@ -1256,7 +1449,7 @@ The Admin UI shows a three-state status for each provider:
 - **Requires API Key** -- Provider is enabled but missing required API key (yellow, fires `ACTION_API_KEY_REQUIRED` notification)
 - **Inactive** -- Provider is disabled (gray)
 
-## 12. Error Reference
+## 13. Error Reference
 
 | Code | HTTP | Description | Recovery |
 |------|------|-------------|----------|
@@ -1272,7 +1465,7 @@ The Admin UI shows a three-state status for each provider:
 | `INVALID_INSTRUCTION` | 400 | Chain not supported by LI.FI integration. | Use one of the supported chains: solana, ethereum, polygon, arbitrum, optimism, base. |
 | `ACTION_API_ERROR` | 502 | LI.FI API returned an error. | Check LI.FI API status, verify parameters, retry. |
 
-## 13. MCP Auto-Registration
+## 14. MCP Auto-Registration
 
 When a provider has `mcpExpose: true` in its metadata, the MCP server automatically registers each action as an MCP tool using the naming convention:
 
@@ -1280,7 +1473,7 @@ When a provider has `mcpExpose: true` in its metadata, the MCP server automatica
 action_{provider_name}_{action_name}
 ```
 
-**Current MCP tools (16 action tools):**
+**Current MCP tools (21 action tools):**
 - `action_jupiter_swap_swap` -- Jupiter Swap on Solana
 - `action_zerox_swap_swap` -- 0x Swap on EVM chains
 - `action_lifi_cross_swap` -- LI.FI Cross-Chain Swap (multi-chain)
@@ -1297,6 +1490,11 @@ action_{provider_name}_{action_name}
 - `action_kamino_kamino_borrow` -- Kamino borrow assets (Solana)
 - `action_kamino_kamino_repay` -- Kamino repay debt (Solana)
 - `action_kamino_kamino_withdraw` -- Kamino withdraw collateral (Solana)
+- `action_pendle_yield_buy_pt` -- Pendle buy Principal Token (EVM)
+- `action_pendle_yield_buy_yt` -- Pendle buy Yield Token (EVM)
+- `action_pendle_yield_redeem_pt` -- Pendle redeem matured PT (EVM)
+- `action_pendle_yield_add_liquidity` -- Pendle add LP (EVM)
+- `action_pendle_yield_remove_liquidity` -- Pendle remove LP (EVM)
 
 Auto-registration happens after MCP server connection via `registerActionProviderTools()`. The tool list is refreshed on each session. If the REST API is unavailable, MCP enters degraded mode (14 built-in tools remain, action provider tools are skipped).
 
@@ -1305,7 +1503,7 @@ MCP tool parameters:
 - `network` (optional string): Target network
 - `wallet_id` (optional string): Target wallet ID
 
-## 14. Related Skill Files
+## 15. Related Skill Files
 
 - **admin.skill.md** -- API key management, Admin Settings, daemon admin
 - **transactions.skill.md** -- 5-type transaction reference (actions execute as CONTRACT_CALL)
