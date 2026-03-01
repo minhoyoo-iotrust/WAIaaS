@@ -138,6 +138,12 @@ export function keyToLabel(key: string): string {
     kamino_enabled: 'Kamino Enabled',
     kamino_market: 'Market',
     kamino_hf_threshold: 'HF Warning Threshold',
+    // drift perp keys
+    drift_enabled: 'Drift Perp Enabled',
+    drift_max_leverage: 'Max Leverage',
+    drift_max_position_usd: 'Max Position Size (USD)',
+    drift_margin_warning_threshold_pct: 'Margin Warning Threshold (%)',
+    drift_position_sync_interval_sec: 'Position Sync Interval (seconds)',
     // gas_condition keys
     poll_interval_sec: 'Poll Interval (seconds)',
     default_timeout_sec: 'Default Timeout (seconds)',
