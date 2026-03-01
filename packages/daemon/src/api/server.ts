@@ -61,6 +61,7 @@ import { utilsRoutes } from './routes/utils.js';
 import { skillsRoutes } from './routes/skills.js';
 import { adminRoutes } from './routes/admin.js';
 import type { KillSwitchState } from './routes/admin.js';
+import { createWalletAppsRoutes } from './routes/wallet-apps.js';
 import { tokenRegistryRoutes } from './routes/tokens.js';
 import { connectInfoRoutes } from './routes/connect-info.js';
 import { incomingRoutes } from './routes/incoming.js';
@@ -606,6 +607,16 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         rpcPool: deps.adapterPool?.pool,
       }),
     );
+
+    // Register wallet apps routes (masterAuth via admin middleware)
+    if (deps.sqlite) {
+      app.route(
+        '/v1',
+        createWalletAppsRoutes({
+          walletAppService: new WalletAppService(deps.sqlite),
+        }),
+      );
+    }
 
     // Register owner kill-switch route (ownerAuth protected)
     if (deps.killSwitchService) {
