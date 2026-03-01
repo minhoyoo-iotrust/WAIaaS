@@ -1,8 +1,8 @@
 ---
 gsd_state_version: 1.0
-milestone: v29.6
-milestone_name: Pendle Yield Trading + Yield 프레임워크
-status: shipped
+milestone: v29.7
+milestone_name: D'CENT 직접 서명 + Human Wallet Apps 통합
+status: active
 last_updated: "2026-03-01T00:00:00Z"
 progress:
   total_phases: 290
@@ -18,16 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Planning next milestone
+**Current focus:** Milestone v29.7 — D'CENT 직접 서명 + Human Wallet Apps 통합
 
 ## Current Position
 
-Phase: 290 of 290 (all complete)
-Plan: 8 of 8 (all complete)
-Status: Milestone v29.6 SHIPPED
-Last activity: 2026-03-01 -- Milestone v29.6 archived
-
-Progress: [██████████████████████████████████] 100%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-01 — Milestone v29.7 started
 
 ## Performance Metrics
 
@@ -54,5 +52,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Milestone v29.6 archived. Ready for next milestone.
+Stopped at: Milestone v29.7 started. Defining requirements.
 Resume command: /gsd:new-milestone

@@ -8,12 +8,19 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: v29.6 SHIPPED (2026-03-01) — Pendle Yield Trading + Yield 프레임워크
+## Current Milestone: v29.7 D'CENT 직접 서명 + Human Wallet Apps 통합
 
-**Status:** SHIPPED 2026-03-01
-**Shipped:** DeFi Yield 프레임워크(IYieldProvider, MaturityMonitor, MATURED 포지션 상태) + Pendle Finance Yield Provider (5 액션: buyPT/buyYT/redeemPT/addLiquidity/removeLiquidity) + Admin Settings 7키 + MCP 5도구 + actions.skill.md + #216/#217 버그 수정
+**Goal:** D'CENT 프리셋의 승인 방식을 WalletConnect에서 Push Relay 기반 직접 서명(sdk_ntfy)으로 전환하고, 지갑별 wallet_type이 서명 토픽 라우팅에 반영되도록 파이프라인을 수정한다. "Signing SDK"를 사용자 친화적인 "Human Wallet Apps" 개념으로 재구성하여 사람(운영자)이 사용하는 지갑 앱을 1급 개념으로 관리하고, Admin UI의 설정 구조를 정리한다.
 
-**Previous milestone:** v29.5 shipped 2026-02-28 — 내부 일관성 정리 (3 phases, 7 plans, 18 requirements, ~223,044 LOC TS)
+**Target features:**
+- D'CENT 프리셋 sdk_ntfy 전환 + 지갑별 wallet_type 토픽 라우팅
+- Admin UI 오너 설정 화면 개선 (프리셋 변경 UX, WC 조건부 표시)
+- Human Wallet Apps 최상위 메뉴 (wallet_apps DB, CRUD, signing/alerts 토글)
+- 앱별 알림 토픽 전환 (WalletNotificationChannel)
+- Notifications 페이지 ntfy 독립 섹션
+- Skill 파일 + 문서 갱신
+
+**Previous milestone:** v29.6 shipped 2026-03-01 — Pendle Yield Trading + Yield 프레임워크 (3 phases, 8 plans, 18 requirements, ~225,248 LOC TS)
 
 ## Current State
 
