@@ -122,11 +122,11 @@ Plans:
   2. GRACE 상태에서 Wallet Type을 변경할 수 있고, 변경 시 approval method가 자동으로 갱신된다
   3. LOCKED 상태에서 Wallet Type과 approval method가 읽기 전용으로 표시된다
   4. approval_method가 sdk_ntfy일 때 WalletConnect 섹션이 숨겨지고, walletconnect일 때만 WalletConnect 섹션이 표시된다
-**Plans**: TBD
+**Plans**: 2 plans defined
 
 Plans:
-- [ ] 292-01: Owner 탭 Wallet Type 선택/변경 UI + approval method 미리보기
-- [ ] 292-02: WalletConnect 섹션 조건부 표시 + 상태별 읽기 전용 처리
+- [ ] 292-01: Owner 탭 Wallet Type 선택/변경 UI + approval method 미리보기 + WalletConnect 조건부 표시 + 상태별 읽기 전용 처리
+- [ ] 292-02: Phase 292 테스트 (T-OWN-01 ~ T-OWN-07)
 
 ### Phase 293: Human Wallet Apps 레지스트리 + UI
 **Goal**: 운영자가 사용하는 지갑 앱을 1급 엔티티로 등록/관리하고, Admin UI의 Human Wallet Apps 최상위 메뉴에서 앱별 Signing/Alerts 토글과 연결 지갑을 확인할 수 있다
@@ -190,7 +190,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 291. D'CENT 프리셋 + 토픽 라우팅 | 2/2 | Complete    | 2026-03-01 |
-| 292. Admin UI 오너 설정 화면 개선 | 0/2 | Not started | - |
+| 292. Admin UI 오너 설정 화면 개선 | 0/2 | Plans created | - |
 | 293. Human Wallet Apps 레지스트리 + UI | 0/4 | Not started | - |
 | 294. 지갑 앱 알림 라우팅 | 0/1 | Not started | - |
 | 295. Notifications 페이지 ntfy 섹션 분리 | 0/1 | Not started | - |
