@@ -134,7 +134,7 @@ interface StakingPositionsResponse {
 /** Builtin wallet presets — mirrored from @waiaas/core BUILTIN_PRESETS.
  *  When core adds a new preset, this list must be updated manually. */
 const WALLET_PRESETS = [
-  { value: 'dcent', label: "D'CENT Wallet", description: 'Hardware wallet with WalletConnect signing' },
+  { value: 'dcent', label: "D'CENT Wallet", description: "D'CENT hardware wallet with push notification signing" },
 ] as const;
 
 export function chainNetworkOptions(chain: string): { label: string; value: string }[] {
