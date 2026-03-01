@@ -23,10 +23,10 @@ Requirements for Solana Perp DEX (Drift) + Perp 프레임워크. Each maps to ro
 - [ ] **DRIFT-02**: DriftPerpProvider가 close_position 액션으로 포지션을 청산하며, percentage 파라미터로 부분 청산을 지원한다
 - [ ] **DRIFT-03**: DriftPerpProvider가 modify_position 액션으로 포지션 크기 및 레버리지를 변경한다
 - [ ] **DRIFT-04**: DriftPerpProvider가 add_margin/withdraw_margin 액션으로 마진을 추가/출금한다
-- [ ] **DRIFT-05**: DriftSdkWrapper가 @drift-labs/sdk를 래핑하여 DriftClient 초기화, 오더 빌딩, 포지션/마진 조회를 추상화한다
+- [x] **DRIFT-05**: DriftSdkWrapper가 @drift-labs/sdk를 래핑하여 DriftClient 초기화, 오더 빌딩, 포지션/마진 조회를 추상화한다
 - [ ] **DRIFT-06**: DriftMarketData가 Drift 시장 목록, 펀딩 레이트, 오라클 가격, 오픈 인터레스트를 조회한다
-- [ ] **DRIFT-07**: DriftPerpProvider가 market/limit 주문 타입을 지원하며, limit 주문 시 limitPrice를 전달한다
-- [ ] **DRIFT-08**: DriftSdkWrapper가 @solana/web3.js 1.x와 @solana/kit 6.x 호환성을 격리하여 타입 변환을 처리한다
+- [x] **DRIFT-07**: DriftPerpProvider가 market/limit 주문 타입을 지원하며, limit 주문 시 limitPrice를 전달한다
+- [x] **DRIFT-08**: DriftSdkWrapper가 @solana/web3.js 1.x와 @solana/kit 6.x 호환성을 격리하여 타입 변환을 처리한다
 
 ### Integration
 
@@ -71,10 +71,10 @@ Requirements for Solana Perp DEX (Drift) + Perp 프레임워크. Each maps to ro
 | DRIFT-02 | Phase 298 | Pending |
 | DRIFT-03 | Phase 298 | Pending |
 | DRIFT-04 | Phase 298 | Pending |
-| DRIFT-05 | Phase 298 | Pending |
+| DRIFT-05 | Phase 298 | Complete |
 | DRIFT-06 | Phase 298 | Pending |
-| DRIFT-07 | Phase 298 | Pending |
-| DRIFT-08 | Phase 298 | Pending |
+| DRIFT-07 | Phase 298 | Complete |
+| DRIFT-08 | Phase 298 | Complete |
 | INTG-01 | Phase 299 | Pending |
 | INTG-02 | Phase 299 | Pending |
 | INTG-03 | Phase 299 | Pending |

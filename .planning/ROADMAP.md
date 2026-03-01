@@ -157,7 +157,7 @@ Phases execute in numeric order: 297 -> 298 -> 299
 | 244-267 | v28.0-v28.8 | All | Complete | 2026-02-26 |
 | 268-296 | v29.0-v29.7 | All | Complete | 2026-03-01 |
 | 297. Perp 프레임워크 | 2/2 | Complete   | 2026-03-01 | - |
-| 298. Drift Provider | v29.8 | 0/3 | Not started | - |
+| 298. Drift Provider | 1/3 | In Progress|  | - |
 | 299. 통합 | v29.8 | 0/2 | Not started | - |
 
 ---

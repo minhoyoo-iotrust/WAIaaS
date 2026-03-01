@@ -8,7 +8,7 @@ progress:
   total_phases: 299
   completed_phases: 296
   total_plans: 666
-  completed_plans: 661
+  completed_plans: 662
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 297 -- Perp 프레임워크 (IPerpProvider, PerpPositionTracker, MarginMonitor, PerpPolicyEvaluator)
+**Current focus:** Phase 298 -- Drift Provider (DriftSdkWrapper, DriftMarketData, DriftPerpProvider)
 
 ## Current Position
 
-Phase: 297 of 299 (Perp 프레임워크)
-Plan: 2 of 2 in current phase (COMPLETE)
-Status: Phase 297 complete
-Last activity: 2026-03-02 -- Completed 297-02-PLAN.md (MarginMonitor + PerpPolicyEvaluator)
+Phase: 298 of 299 (Drift Provider)
+Plan: 1 of 3 in current phase
+Status: Plan 298-01 complete
+Last activity: 2026-03-02 -- Completed 298-01-PLAN.md (DriftSdkWrapper + IDriftSdkWrapper + Zod schemas)
 
-Progress: [██░░░░░░░░] 28% (2/7 plans)
+Progress: [████░░░░░░] 42% (3/7 plans)
 
 ## Performance Metrics
 
@@ -46,6 +46,9 @@ Progress: [██░░░░░░░░] 28% (2/7 plans)
 - v29.8: MarginMonitor uses marginRatio thresholds 0.30/0.15/0.10 (lower = more dangerous)
 - v29.8: PERP_ALLOWED_MARKETS enforces default-deny for all 5 perp actions via suffix matching
 - v29.8: PERP_MAX_LEVERAGE/PERP_MAX_POSITION_USD support DELAY tier for warning zones
+- v29.8: DriftInstruction uses same structure as KaminoInstruction for SDK wrapper consistency
+- v29.8: Mock instruction data uses UTF-8 encoding for string amounts (Drift uses strings, not bigint)
+- v29.8: DriftSdkWrapper stores rpcUrl + subAccount for future real SDK integration
 
 ### Pending Todos
 
@@ -60,5 +63,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 297-02-PLAN.md -- Phase 297 complete, ready for Phase 298
+Stopped at: Completed 298-01-PLAN.md -- DriftSdkWrapper + Zod schemas done, ready for 298-02
 Resume command: /gsd:execute-phase 298
