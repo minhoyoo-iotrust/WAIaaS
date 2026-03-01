@@ -176,6 +176,10 @@ export const messages: Messages = {
     SIGNER_ADDRESS_MISMATCH: 'Signer address does not match wallet owner',
     INVALID_SIGN_RESPONSE: 'Invalid sign response format',
     SIGN_REQUEST_ALREADY_PROCESSED: 'Sign request has already been processed',
+    SIGNING_DISABLED: 'Signing disabled for this wallet app',
+    // ADMIN domain (wallet apps)
+    WALLET_APP_DUPLICATE: 'Wallet app already registered',
+    WALLET_APP_NOT_FOUND: 'Wallet app not found',
   },
   // Notification templates (30 event types)
   notifications: {

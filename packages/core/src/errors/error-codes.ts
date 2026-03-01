@@ -788,6 +788,29 @@ export const ERROR_CODES = {
     retryable: false,
     message: 'Sign request has already been processed',
   },
+  SIGNING_DISABLED: {
+    code: 'SIGNING_DISABLED',
+    domain: 'SIGNING',
+    httpStatus: 403,
+    retryable: false,
+    message: 'Signing disabled for this wallet app',
+  },
+
+  // --- ADMIN domain (wallet apps) ---
+  WALLET_APP_DUPLICATE: {
+    code: 'WALLET_APP_DUPLICATE',
+    domain: 'ADMIN',
+    httpStatus: 409,
+    retryable: false,
+    message: 'Wallet app already registered',
+  },
+  WALLET_APP_NOT_FOUND: {
+    code: 'WALLET_APP_NOT_FOUND',
+    domain: 'ADMIN',
+    httpStatus: 404,
+    retryable: false,
+    message: 'Wallet app not found',
+  },
 } as const satisfies Record<string, ErrorCodeEntry>;
 
 export type ErrorCode = keyof typeof ERROR_CODES;

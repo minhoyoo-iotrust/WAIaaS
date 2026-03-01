@@ -480,7 +480,7 @@ const ALL_TABLES = [
   'audit_log', 'key_value_store', 'notification_logs', 'token_registry',
   'settings', 'schema_version', 'telegram_users',
   'wc_sessions', 'wc_store', 'incoming_transactions', 'incoming_tx_cursors',
-  'defi_positions',
+  'defi_positions', 'wallet_apps',
 ];
 
 // ---------------------------------------------------------------------------
@@ -540,7 +540,7 @@ describe('pushSchema on existing databases', () => {
 
     expect(() => pushSchema(db)).not.toThrow();
 
-    // All 18 tables should exist (17 + schema_version)
+    // All 19 tables should exist (18 + schema_version)
     for (const table of ALL_TABLES) {
       const result = db.prepare(
         "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
@@ -592,7 +592,7 @@ describe('migration chain schema equivalence', () => {
     migratedDb = createV5SchemaDatabase();
     pushSchema(migratedDb);
 
-    // Compare all 18 tables column names
+    // Compare all 19 tables column names
     for (const table of ALL_TABLES) {
       const freshCols = getTableColumns(freshDb, table);
       const migratedCols = getTableColumns(migratedDb, table);
@@ -617,7 +617,7 @@ describe('migration chain schema equivalence', () => {
     migratedDb = createV1SchemaDatabase();
     pushSchema(migratedDb);
 
-    // Compare all 18 tables column names
+    // Compare all 19 tables column names
     for (const table of ALL_TABLES) {
       const freshCols = getTableColumns(freshDb, table);
       const migratedCols = getTableColumns(migratedDb, table);
@@ -1004,7 +1004,7 @@ describe('edge cases', () => {
     expect(row.message).toBeNull();
 
     // Verify LATEST_SCHEMA_VERSION is 28
-    expect(LATEST_SCHEMA_VERSION).toBe(30);
+    expect(LATEST_SCHEMA_VERSION).toBe(31);
   });
 
   it('T-13: existing notification_logs data preserved after v10 migration', () => {
@@ -1333,7 +1333,7 @@ describe('v12 migration: x402 CHECK constraints', () => {
     // Verify final version is 19
     const versions = getVersions(db);
     expect(versions).toContain(19);
-    expect(Math.max(...versions)).toBe(30);
+    expect(Math.max(...versions)).toBe(31);
 
     // Verify data survived the entire chain (v27 drops default_network)
     const wallet = db.prepare('SELECT * FROM wallets WHERE id = ?').get('a-chain-12') as { environment: string };
@@ -1513,7 +1513,7 @@ describe('v13 migration: amount_usd and reserved_amount_usd columns', () => {
     // Verify final version is 19
     const versions = getVersions(db);
     expect(versions).toContain(19);
-    expect(Math.max(...versions)).toBe(30);
+    expect(Math.max(...versions)).toBe(31);
 
     // Verify amount_usd columns exist and are NULL for migrated data
     const tx = db.prepare('SELECT amount_usd, reserved_amount_usd FROM transactions WHERE id = ?').get('tx-chain-13') as {
@@ -1728,7 +1728,7 @@ describe('v16 migration: WC infra tables + approval_channel', () => {
     // Verify final version is 19
     const versions = getVersions(db);
     expect(versions).toContain(19);
-    expect(Math.max(...versions)).toBe(30);
+    expect(Math.max(...versions)).toBe(31);
 
     // Verify wc_sessions and wc_store tables exist
     const wcSessions = db.prepare(
@@ -1810,7 +1810,7 @@ describe('v24 migration: wallet_type column for preset auto-setup', () => {
     db = conn.sqlite;
     pushSchema(db);
 
-    expect(LATEST_SCHEMA_VERSION).toBe(30);
+    expect(LATEST_SCHEMA_VERSION).toBe(31);
 
     const versions = getVersions(db);
     expect(versions).toContain(24);
@@ -1902,7 +1902,7 @@ describe('v24 migration: wallet_type column for preset auto-setup', () => {
     // Verify final version is 24
     const versions = getVersions(db);
     expect(versions).toContain(24);
-    expect(Math.max(...versions)).toBe(30);
+    expect(Math.max(...versions)).toBe(31);
 
     // Verify wallets table has wallet_type column
     const columns = getTableColumns(db, 'wallets');

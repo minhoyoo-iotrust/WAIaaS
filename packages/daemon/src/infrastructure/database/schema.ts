@@ -1,7 +1,7 @@
 /**
  * Drizzle ORM schema definitions for WAIaaS daemon SQLite database.
  *
- * 16 tables: wallets, sessions, session_wallets, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs, token_registry, settings, telegram_users, wc_sessions, wc_store, incoming_transactions, incoming_tx_cursors
+ * 19 tables: wallets, sessions, session_wallets, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs, token_registry, settings, telegram_users, wc_sessions, wc_store, incoming_transactions, incoming_tx_cursors, defi_positions, wallet_apps
  *
  * CHECK constraints are derived from @waiaas/core enum SSoT arrays (not hardcoded strings).
  * All timestamps are Unix epoch seconds via { mode: 'timestamp' }.
@@ -513,3 +513,17 @@ export const defiPositions = sqliteTable(
     check('check_position_chain', buildCheckSql('chain', CHAIN_TYPES)),
   ],
 );
+
+// ---------------------------------------------------------------------------
+// Table 19: wallet_apps -- Human Wallet Apps registry (v29.7)
+// ---------------------------------------------------------------------------
+
+export const walletApps = sqliteTable('wallet_apps', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull().unique(),
+  displayName: text('display_name').notNull(),
+  signingEnabled: integer('signing_enabled', { mode: 'boolean' }).notNull().default(true),
+  alertsEnabled: integer('alerts_enabled', { mode: 'boolean' }).notNull().default(true),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});

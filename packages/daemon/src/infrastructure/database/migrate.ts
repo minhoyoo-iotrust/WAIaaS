@@ -1,7 +1,7 @@
 /**
  * Schema push + incremental migration runner for daemon SQLite database.
  *
- * Creates all 18 tables with indexes, foreign keys, and CHECK constraints
+ * Creates all 19 tables with indexes, foreign keys, and CHECK constraints
  * using CREATE TABLE IF NOT EXISTS statements. After initial schema creation,
  * runs incremental migrations via runMigrations() for ALTER TABLE changes.
  *
@@ -70,7 +70,7 @@ const LEGACY_NETWORK_NORMALIZE: Record<string, string> = {
 };
 
 // ---------------------------------------------------------------------------
-// DDL statements for all 17 tables (latest schema: wallets + wallet_id + session_wallets + token_registry + settings + telegram_users + wc_sessions + wc_store + incoming_transactions + incoming_tx_cursors)
+// DDL statements for all 19 tables (latest schema: wallets + wallet_id + session_wallets + token_registry + settings + telegram_users + wc_sessions + wc_store + incoming_transactions + incoming_tx_cursors + defi_positions + wallet_apps)
 // ---------------------------------------------------------------------------
 
 /**
@@ -78,7 +78,7 @@ const LEGACY_NETWORK_NORMALIZE: Record<string, string> = {
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 30;
+export const LATEST_SCHEMA_VERSION = 31;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -317,6 +317,17 @@ function getCreateTableStatements(): string[] {
   opened_at INTEGER NOT NULL,
   closed_at INTEGER,
   last_synced_at INTEGER NOT NULL,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+)`,
+
+    // Table 19: wallet_apps (Human Wallet Apps registry, v29.7)
+    `CREATE TABLE IF NOT EXISTS wallet_apps (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  display_name TEXT NOT NULL,
+  signing_enabled INTEGER NOT NULL DEFAULT 1,
+  alerts_enabled INTEGER NOT NULL DEFAULT 1,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 )`,
@@ -2207,6 +2218,26 @@ MIGRATIONS.push({
         `FK integrity check failed after v30 migration: ${JSON.stringify(fkErrors)}`,
       );
     }
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Migration v31: Create wallet_apps table for Human Wallet Apps registry (v29.7)
+// ---------------------------------------------------------------------------
+
+MIGRATIONS.push({
+  version: 31,
+  description: 'Create wallet_apps table for Human Wallet Apps registry',
+  up: (sqlite) => {
+    sqlite.exec(`CREATE TABLE IF NOT EXISTS wallet_apps (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  display_name TEXT NOT NULL,
+  signing_enabled INTEGER NOT NULL DEFAULT 1,
+  alerts_enabled INTEGER NOT NULL DEFAULT 1,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+)`);
   },
 });
 

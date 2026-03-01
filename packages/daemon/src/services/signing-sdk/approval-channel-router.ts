@@ -89,6 +89,16 @@ export class ApprovalChannelRouter {
       walletName: row.wallet_type || params.walletName,
     };
 
+    // Check wallet_apps.signing_enabled — block if signing is disabled for this app (v29.7)
+    if (row.wallet_type) {
+      const app = this.sqlite.prepare(
+        'SELECT signing_enabled FROM wallet_apps WHERE name = ?',
+      ).get(row.wallet_type) as { signing_enabled: number } | undefined;
+      if (app && app.signing_enabled === 0) {
+        throw new Error(`SIGNING_DISABLED: Signing disabled for wallet app: ${row.wallet_type}`);
+      }
+    }
+
     const explicitMethod = row.owner_approval_method as ApprovalMethod | null;
 
     // 2. If explicit method is set, try to use it

@@ -122,6 +122,10 @@ export const messages: Messages = {
     SIGNER_ADDRESS_MISMATCH: '서명자 주소가 지갑 Owner와 일치하지 않습니다',
     INVALID_SIGN_RESPONSE: '유효하지 않은 서명 응답 형식입니다',
     SIGN_REQUEST_ALREADY_PROCESSED: '이미 처리된 서명 요청입니다',
+    SIGNING_DISABLED: '이 월렛 앱의 서명이 비활성화되어 있습니다',
+    // ADMIN domain (wallet apps)
+    WALLET_APP_DUPLICATE: '이미 등록된 월렛 앱입니다',
+    WALLET_APP_NOT_FOUND: '월렛 앱을 찾을 수 없습니다',
   },
   // Notification templates (31 event types)
   notifications: {
