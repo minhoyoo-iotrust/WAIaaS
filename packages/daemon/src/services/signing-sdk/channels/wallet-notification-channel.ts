@@ -1,6 +1,10 @@
 /**
- * WalletNotificationChannel -- pushes all notification events to sdk_ntfy wallets
- * via dedicated ntfy side channel (waiaas-notify-{walletName}).
+ * WalletNotificationChannel -- pushes all notification events to alert-enabled
+ * wallet apps via dedicated ntfy side channel (waiaas-notify-{appName}).
+ *
+ * Notifications are published to each app with alerts_enabled=1 in the
+ * wallet_apps table. Apps with alerts_enabled=0 are skipped. When no
+ * alert-enabled apps exist, publishing is skipped entirely.
  *
  * Independent from existing NotificationService channels[]. Runs in parallel,
  * isolated by try/catch to never affect existing channel delivery.
@@ -18,7 +22,6 @@ import type Database from 'better-sqlite3';
 
 const DEFAULT_NTFY_SERVER = 'https://ntfy.sh';
 const FETCH_TIMEOUT_MS = 10_000;
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export interface WalletNotificationChannelDeps {
   sqlite: Database.Database;
@@ -35,11 +38,11 @@ export class WalletNotificationChannel {
   }
 
   /**
-   * Send notification to wallet side channel.
+   * Send notification to alert-enabled wallet app side channels.
    * - Checks signing_sdk.enabled + signing_sdk.notifications_enabled
-   * - Checks notify_categories filter
-   * - Resolves target wallets (single or broadcast for non-UUID walletId)
-   * - Publishes NotificationMessage as base64url to ntfy
+   * - Checks notify_categories / notify_events filter
+   * - Resolves alert-enabled apps from wallet_apps table
+   * - Publishes NotificationMessage as base64url to ntfy for each app
    *
    * NEVER throws -- all errors are caught and logged.
    */
@@ -79,9 +82,9 @@ export class WalletNotificationChannel {
         }
       }
 
-      // Resolve target wallets
-      const targets = this.resolveTargetWallets(walletId);
-      if (targets.length === 0) return;
+      // Resolve alert-enabled apps (NOTI-01/02/03)
+      const appNames = this.resolveAlertApps();
+      if (appNames.length === 0) return; // NOTI-03: skip when no alert-enabled apps
 
       // Resolve ntfy server
       const ntfyServer = this.getNtfyServer();
@@ -89,14 +92,14 @@ export class WalletNotificationChannel {
       // Determine priority
       const priority = category === 'security_alert' ? 5 : 3;
 
-      // Send to all targets in parallel
+      // Send to all alert-enabled apps in parallel
       await Promise.allSettled(
-        targets.map((t) =>
-          this.publishNotification(ntfyServer, t.walletName, {
+        appNames.map((appName) =>
+          this.publishNotification(ntfyServer, appName, {
             version: '1',
             eventType,
-            walletId: t.walletId,
-            walletName: t.walletName,
+            walletId,
+            walletName: appName,
             category,
             title,
             body,
@@ -110,21 +113,15 @@ export class WalletNotificationChannel {
     }
   }
 
-  private resolveTargetWallets(walletId: string): Array<{ walletId: string; walletName: string }> {
-    if (UUID_REGEX.test(walletId)) {
-      // Single wallet -- check if sdk_ntfy
-      const row = this.sqlite.prepare(
-        'SELECT id, name, owner_approval_method FROM wallets WHERE id = ?',
-      ).get(walletId) as { id: string; name: string; owner_approval_method: string | null } | undefined;
-      if (!row || row.owner_approval_method !== 'sdk_ntfy') return [];
-      return [{ walletId: row.id, walletName: row.name }];
-    }
-
-    // Non-UUID (system, empty, etc.) -- broadcast to all sdk_ntfy wallets
+  /**
+   * Query wallet_apps table for apps with alerts_enabled=1.
+   * Returns app names for topic routing.
+   */
+  private resolveAlertApps(): string[] {
     const rows = this.sqlite.prepare(
-      "SELECT id, name FROM wallets WHERE owner_approval_method = 'sdk_ntfy' AND status = 'ACTIVE'",
-    ).all() as Array<{ id: string; name: string }>;
-    return rows.map((r) => ({ walletId: r.id, walletName: r.name }));
+      'SELECT name FROM wallet_apps WHERE alerts_enabled = 1',
+    ).all() as Array<{ name: string }>;
+    return rows.map((r) => r.name);
   }
 
   private async publishNotification(
