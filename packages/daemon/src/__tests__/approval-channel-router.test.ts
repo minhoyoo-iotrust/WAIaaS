@@ -24,10 +24,16 @@ import type { Database } from 'better-sqlite3';
 // Mock helpers
 // ---------------------------------------------------------------------------
 
-function createMockSqlite(ownerApprovalMethod: string | null = null, walletExists = true): Database {
+function createMockSqlite(
+  ownerApprovalMethod: string | null = null,
+  walletExists = true,
+  walletType: string | null = null,
+): Database {
   const stmt = {
     get: vi.fn().mockReturnValue(
-      walletExists ? { owner_approval_method: ownerApprovalMethod } : undefined,
+      walletExists
+        ? { owner_approval_method: ownerApprovalMethod, wallet_type: walletType }
+        : undefined,
     ),
   };
   return {
@@ -325,6 +331,67 @@ describe('ApprovalChannelRouter - SDK disabled fallback (CHAN-07)', () => {
 
     expect(result.method).toBe('rest');
     expect(result.channelResult).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// wallet_type topic routing (SIGN-03, SIGN-04, SIGN-05)
+// ---------------------------------------------------------------------------
+
+describe('ApprovalChannelRouter - wallet_type topic routing (SIGN-03, SIGN-04, SIGN-05)', () => {
+  it('SIGN-03: enriches walletName from wallet_type when routing to sdk_ntfy channel', async () => {
+    const sqlite = createMockSqlite('sdk_ntfy', true, 'dcent');
+    const settings = createMockSettings({ 'signing_sdk.enabled': 'true' });
+    const ntfyChannel = createMockNtfyChannel();
+
+    const router = new ApprovalChannelRouter({ sqlite, settingsService: settings, ntfyChannel });
+    const result = await router.route('wallet-1', defaultParams);
+
+    expect(result.method).toBe('sdk_ntfy');
+    // Verify ntfyChannel received enriched params with walletName from wallet_type
+    expect(ntfyChannel.sendRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ walletName: 'dcent' }),
+    );
+  });
+
+  it('SIGN-03: enriches walletName from wallet_type for non-dcent wallet types', async () => {
+    const sqlite = createMockSqlite('sdk_ntfy', true, 'other-wallet');
+    const settings = createMockSettings({ 'signing_sdk.enabled': 'true' });
+    const ntfyChannel = createMockNtfyChannel();
+
+    const router = new ApprovalChannelRouter({ sqlite, settingsService: settings, ntfyChannel });
+    await router.route('wallet-1', defaultParams);
+
+    expect(ntfyChannel.sendRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ walletName: 'other-wallet' }),
+    );
+  });
+
+  it('SIGN-04: does not set walletName when wallet_type is NULL (global fallback)', async () => {
+    const sqlite = createMockSqlite('sdk_ntfy', true, null);
+    const settings = createMockSettings({ 'signing_sdk.enabled': 'true' });
+    const ntfyChannel = createMockNtfyChannel();
+
+    const router = new ApprovalChannelRouter({ sqlite, settingsService: settings, ntfyChannel });
+    await router.route('wallet-1', defaultParams);
+
+    // walletName should be undefined (not enriched), letting SignRequestBuilder use preferred_wallet
+    const calledParams = (ntfyChannel.sendRequest as ReturnType<typeof vi.fn>).mock.calls[0]![0] as SendRequestParams;
+    expect(calledParams.walletName).toBeUndefined();
+  });
+
+  it('SIGN-03: enriches walletName from wallet_type even when falling through to global fallback', async () => {
+    // No explicit approval_method set, but wallet_type is set
+    const sqlite = createMockSqlite(null, true, 'dcent');
+    const settings = createMockSettings({ 'signing_sdk.enabled': 'true' });
+    const ntfyChannel = createMockNtfyChannel();
+
+    const router = new ApprovalChannelRouter({ sqlite, settingsService: settings, ntfyChannel });
+    await router.route('wallet-1', defaultParams);
+
+    expect(ntfyChannel.sendRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ walletName: 'dcent' }),
+    );
   });
 });
 

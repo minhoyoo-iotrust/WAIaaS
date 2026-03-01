@@ -206,7 +206,7 @@ describe('Admin UI wallet preset dropdown', () => {
 
   it('T-ADUI-02: preset selection sends wallet_type in API body', async () => {
     setupApiMocks(noneWallet);
-    vi.mocked(apiPut).mockResolvedValue({ ...noneWallet, walletType: 'dcent', approvalMethod: 'walletconnect' });
+    vi.mocked(apiPut).mockResolvedValue({ ...noneWallet, walletType: 'dcent', approvalMethod: 'sdk_ntfy' });
     await renderAndWaitForDetail();
 
     await switchToOwnerTab();
