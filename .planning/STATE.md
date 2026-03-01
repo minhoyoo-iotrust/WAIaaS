@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: D'CENT 직접 서명 + Human Wallet Apps 통합
 status: unknown
-last_updated: "2026-03-01T10:10:17.723Z"
+last_updated: "2026-03-01T11:36:51.889Z"
 progress:
-  total_phases: 180
-  completed_phases: 174
-  total_plans: 385
-  completed_plans: 379
+  total_phases: 183
+  completed_phases: 177
+  total_plans: 391
+  completed_plans: 385
 ---
 
 # Project State
