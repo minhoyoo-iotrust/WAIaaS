@@ -60,34 +60,34 @@ Requirements for Solana Perp DEX (Drift) + Perp 프레임워크. Each maps to ro
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PERP-01 | — | Pending |
-| PERP-02 | — | Pending |
-| PERP-03 | — | Pending |
-| PERP-04 | — | Pending |
-| PERP-05 | — | Pending |
-| PERP-06 | — | Pending |
-| PERP-07 | — | Pending |
-| DRIFT-01 | — | Pending |
-| DRIFT-02 | — | Pending |
-| DRIFT-03 | — | Pending |
-| DRIFT-04 | — | Pending |
-| DRIFT-05 | — | Pending |
-| DRIFT-06 | — | Pending |
-| DRIFT-07 | — | Pending |
-| DRIFT-08 | — | Pending |
-| INTG-01 | — | Pending |
-| INTG-02 | — | Pending |
-| INTG-03 | — | Pending |
-| INTG-04 | — | Pending |
-| INTG-05 | — | Pending |
-| INTG-06 | — | Pending |
-| INTG-07 | — | Pending |
+| PERP-01 | Phase 297 | Pending |
+| PERP-02 | Phase 297 | Pending |
+| PERP-03 | Phase 297 | Pending |
+| PERP-04 | Phase 297 | Pending |
+| PERP-05 | Phase 297 | Pending |
+| PERP-06 | Phase 297 | Pending |
+| PERP-07 | Phase 297 | Pending |
+| DRIFT-01 | Phase 298 | Pending |
+| DRIFT-02 | Phase 298 | Pending |
+| DRIFT-03 | Phase 298 | Pending |
+| DRIFT-04 | Phase 298 | Pending |
+| DRIFT-05 | Phase 298 | Pending |
+| DRIFT-06 | Phase 298 | Pending |
+| DRIFT-07 | Phase 298 | Pending |
+| DRIFT-08 | Phase 298 | Pending |
+| INTG-01 | Phase 299 | Pending |
+| INTG-02 | Phase 299 | Pending |
+| INTG-03 | Phase 299 | Pending |
+| INTG-04 | Phase 299 | Pending |
+| INTG-05 | Phase 299 | Pending |
+| INTG-06 | Phase 299 | Pending |
+| INTG-07 | Phase 299 | Pending |
 
 **Coverage:**
 - v29.8 requirements: 22 total
-- Mapped to phases: 0
-- Unmapped: 22 ⚠️
+- Mapped to phases: 22
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-01*
-*Last updated: 2026-03-01 after initial definition*
+*Last updated: 2026-03-01 after roadmap creation (traceability updated)*

@@ -5,9 +5,9 @@ milestone_name: Solana Perp DEX (Drift) + Perp 프레임워크
 status: active
 last_updated: "2026-03-01"
 progress:
-  total_phases: 296
+  total_phases: 299
   completed_phases: 296
-  total_plans: 659
+  total_plans: 666
   completed_plans: 659
 ---
 
@@ -18,14 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Milestone v29.8 — Solana Perp DEX (Drift) + Perp 프레임워크
+**Current focus:** Phase 297 -- Perp 프레임워크 (IPerpProvider, PerpPositionTracker, MarginMonitor, PerpPolicyEvaluator)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-03-01 — Milestone v29.8 started
+Phase: 297 of 299 (Perp 프레임워크)
+Plan: 0 of 2 in current phase
+Status: Ready to plan
+Last activity: 2026-03-01 -- Roadmap created for v29.8 (3 phases, 7 plans, 22 requirements)
+
+Progress: [░░░░░░░░░░] 0% (0/7 plans)
 
 ## Performance Metrics
 
@@ -35,13 +37,10 @@ Last activity: 2026-03-01 — Milestone v29.8 started
 
 ### Decisions
 
-- v29.7: D'CENT approval_method를 walletconnect에서 sdk_ntfy로 전환 (Push Relay 기반 직접 서명)
-- v29.7: wallet_type 기반 서명 토픽 라우팅 (ApprovalChannelRouter에서 DB 조회)
-- v29.7: "Signing SDK" -> "Human Wallet Apps" 최상위 메뉴 승격 (System 하위에서 분리)
-- v29.7: wallet_apps DB 테이블로 앱 엔티티 관리 (Settings key-value가 아닌 정규화 테이블)
-- v29.7: 앱별 알림 토픽 (waiaas-notify-{wallet_apps.name}), Alerts 토글로 수신 제어
-- v29.7: signing_sdk.* 설정 키 유지 (UI 레이블만 변경, 내부 호환)
-- v29.7: admin.skill.md Section 8 삽입 (기존 8->9, 9->10 재번호), sdk_ntfy "Human Wallet App via ntfy" 명명
+- v29.8 roadmap: 3 phases (Framework -> Provider -> Integration), follows Lending/Yield 프레임워크 패턴
+- v29.8: @drift-labs/sdk @solana/web3.js 1.x 호환성은 DriftSdkWrapper에서 격리 (DRIFT-08)
+- v29.8: DB migration 불필요 (defi_positions category='PERP' 이미 지원)
+- v29.8: MarginMonitor는 기존 HealthFactorMonitor/IDeFiMonitor 패턴 재사용
 
 ### Pending Todos
 
@@ -51,9 +50,10 @@ None.
 
 - #164: IncomingTxMonitorService 환경 기본 네트워크만 구독 (MEDIUM, 별도 마일스톤)
 - STO-03: Confirmation Worker RPC 콜백 미주입 (별도 마일스톤)
+- @drift-labs/sdk가 @solana/web3.js 1.x 의존 -- @solana/kit 6.x 코드베이스와 타입 호환성 격리 필요
 
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Starting milestone v29.8 — Solana Perp DEX (Drift) + Perp 프레임워크
-Resume command: /gsd:new-milestone
+Stopped at: Roadmap created for v29.8 -- ready to plan Phase 297
+Resume command: /gsd:plan-phase 297
