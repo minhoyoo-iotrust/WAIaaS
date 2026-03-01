@@ -9,12 +9,6 @@ import {
   MockDriftSdkWrapper,
   DriftSdkWrapper,
 } from '../providers/drift/drift-sdk-wrapper.js';
-import type {
-  DriftInstruction,
-  DriftPosition,
-  DriftMarginInfo,
-  DriftMarketInfo,
-} from '../providers/drift/drift-sdk-wrapper.js';
 import { DRIFT_PROGRAM_ID } from '../providers/drift/config.js';
 
 // ---------------------------------------------------------------------------
