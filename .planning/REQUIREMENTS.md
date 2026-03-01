@@ -53,9 +53,9 @@ Requirements for milestone v29.7: D'CENT 직접 서명 + Human Wallet Apps 통�
 
 ### Notification Routing
 
-- [ ] **NOTI-01**: WalletNotificationChannel이 alerts_enabled=1인 앱의 waiaas-notify-{name} 토픽으로 알림을 발행한다
-- [ ] **NOTI-02**: alerts_enabled=0인 앱에는 알림이 발행되지 않는다
-- [ ] **NOTI-03**: Alerts 활성 앱이 0개이면 WalletNotificationChannel이 skip된다
+- [x] **NOTI-01**: WalletNotificationChannel이 alerts_enabled=1인 앱의 waiaas-notify-{name} 토픽으로 알림을 발행한다
+- [x] **NOTI-02**: alerts_enabled=0인 앱에는 알림이 발행되지 않는다
+- [x] **NOTI-03**: Alerts 활성 앱이 0개이면 WalletNotificationChannel이 skip된다
 
 ### Documentation
 
@@ -119,9 +119,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | HWUI-07 | Phase 293 | Pending |
 | HWUI-08 | Phase 293 | Pending |
 | HWUI-09 | Phase 293 | Pending |
-| NOTI-01 | Phase 294 | Pending |
-| NOTI-02 | Phase 294 | Pending |
-| NOTI-03 | Phase 294 | Pending |
+| NOTI-01 | Phase 294 | Complete |
+| NOTI-02 | Phase 294 | Complete |
+| NOTI-03 | Phase 294 | Complete |
 | DOC-01 | Phase 295 | Pending |
 | DOC-02 | Phase 295 | Pending |
 | DOC-03 | Phase 295 | Pending |
