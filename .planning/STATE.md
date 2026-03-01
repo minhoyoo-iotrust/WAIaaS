@@ -1,9 +1,9 @@
 ---
 gsd_state_version: 1.0
-milestone: v29.5
-milestone_name: 내부 일관성 정리
-status: completed
-last_updated: "2026-02-28T11:10:00Z"
+milestone: v29.6
+milestone_name: Pendle Yield Trading + Yield 프레임워크
+status: defining_requirements
+last_updated: "2026-03-01T00:00:00Z"
 progress:
   total_phases: 287
   completed_phases: 287
@@ -15,19 +15,17 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-28)
+See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Planning next milestone
+**Current focus:** Milestone v29.6 — Pendle Yield Trading + Yield 프레임워크
 
 ## Current Position
 
-Phase: 287 of 287 (all complete)
-Plan: All plans complete
-Status: v29.5 milestone shipped
-Last activity: 2026-02-28 -- v29.5 milestone completed
-
-Progress: [█████████████████████] 100% (287/287 phases)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-01 — Milestone v29.6 started
 
 ## Performance Metrics
 
@@ -50,6 +48,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-28
-Stopped at: v29.5 milestone completed, ready for next milestone.
+Last session: 2026-03-01
+Stopped at: Milestone v29.6 started, defining requirements.
 Resume command: /gsd:new-milestone

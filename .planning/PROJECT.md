@@ -8,7 +8,19 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: (none — planning next)
+## Current Milestone: v29.6 Pendle Yield Trading + Yield 프레임워크
+
+**Goal:** DeFi Yield 프레임워크(수익률 추적, 만기 관리, PT/YT 포지션 모니터링)를 구축하고, Pendle Finance를 첫 번째 Yield Provider로 구현하여 AI 에이전트가 고정 수익률 전략을 정책 평가 하에 실행할 수 있는 상태.
+
+**Target features:**
+- IYieldProvider 인터페이스 — Yield 전용 인터페이스(getMarkets, getPosition, getYieldForecast) + 표준 액션(buyPT, buyYT, redeemPT, addLiquidity, removeLiquidity)
+- YieldPositionTracker — 월렛별 Yield 포지션 추적, positions 테이블(category=YIELD) + metadata JSON 활용
+- MaturityMonitor — 만기 접근 알림(7일/1일 전 경고, 만기 후 미상환 경고), 1일 1회 폴링
+- PendleYieldProvider — IYieldProvider 구현체, Pendle REST API v2 Convert 엔드포인트 호출
+- PendleApiClient — Pendle REST API v2 래퍼(시장 조회 + Convert 트랜잭션 빌드)
+- MCP 도구 5개 — buyPT/buyYT/redeemPT/addLiquidity/removeLiquidity (ActionProvider mcpExpose=true)
+- Admin Settings 5개 — pendle_enabled, api_base_url, default_slippage_pct, maturity_warning_days, api_key
+- DB migration — PositionStatusEnum에 MATURED 추가
 
 **Previous milestone:** v29.5 shipped 2026-02-28 — 내부 일관성 정리 (3 phases, 7 plans, 18 requirements, ~223,044 LOC TS)
 
