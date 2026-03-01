@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.9.0-rc.4](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc.3...v2.9.0-rc.4) (2026-03-01)
+
+
+### Features
+
+* add IYieldProvider interface and MATURED position status (Phase 288) ([acffa04](https://github.com/minhoyoo-iotrust/WAIaaS/commit/acffa040028c56f02caf5cf1a1faf324db99d2a4))
+* add MaturityMonitor service and complete Phase 290 ([7f9ab6c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7f9ab6c7aa0c6695643869f5deea8d2bb0e02948))
+* add Pendle integration infrastructure (Phase 290 partial) ([82de326](https://github.com/minhoyoo-iotrust/WAIaaS/commit/82de326abe2bb4c0453f6a1227046ec6abf63b27))
+* add PendleYieldProvider with API client and 5 yield actions (Phase 289) ([44d13ed](https://github.com/minhoyoo-iotrust/WAIaaS/commit/44d13edf67778422fdbce40d916f6df87d96a306))
+* **mcp:** add npm keywords and MCP Registry server.json for agent discovery ([399ded6](https://github.com/minhoyoo-iotrust/WAIaaS/commit/399ded66713d26637589c54041eb9c48be6d9890))
+
+
+### Bug Fixes
+
+* resolve Solana WSS URL prefix and Lido factory errors ([#216](https://github.com/minhoyoo-iotrust/WAIaaS/issues/216), [#217](https://github.com/minhoyoo-iotrust/WAIaaS/issues/217)) ([57f1502](https://github.com/minhoyoo-iotrust/WAIaaS/commit/57f1502e02cf8fa60134d28d17de19735c4d2e4c))
+* update Admin UI action provider count from 7 to 8 (Pendle added) ([897171f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/897171fda162e4df7b75ef3529f5d2adb9901373))
+* update test assertions for v29.6 setting definitions and sort order ([30b2873](https://github.com/minhoyoo-iotrust/WAIaaS/commit/30b287319c9c45b9d0b33ba1cb96d39757f8cd56))
+
 ## [2.9.0-rc.3](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc.2...v2.9.0-rc.3) (2026-02-28)
 
 
