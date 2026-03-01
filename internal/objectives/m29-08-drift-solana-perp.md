@@ -1,7 +1,8 @@
 # 마일스톤 m29-08: Solana Perp DEX (Drift) + Perp 프레임워크
 
-- **Status:** PLANNED
-- **Milestone:** TBD
+- **Status:** SHIPPED
+- **Milestone:** v29.8
+- **Completed:** 2026-03-02
 
 ## 목표
 

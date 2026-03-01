@@ -33,7 +33,7 @@
 - ✅ **v29.5 내부 일관성 정리** -- Phases 285-287 (shipped 2026-02-28)
 - ✅ **v29.6 Pendle Yield Trading + Yield 프레임워크** -- Phases 288-290 (shipped 2026-03-01)
 - ✅ **v29.7 D'CENT 직접 서명 + Human Wallet Apps 통합** -- Phases 291-296 (shipped 2026-03-01)
-- [ ] **v29.8 Solana Perp DEX (Drift) + Perp 프레임워크** -- Phases 297-299 (in progress)
+- ✅ **v29.8 Solana Perp DEX (Drift) + Perp 프레임워크** -- Phases 297-299 (shipped 2026-03-02)
 
 ## Phases
 
@@ -87,7 +87,7 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v29.7-ROADMAP.md` for full 
 
 </details>
 
-### v29.8 Solana Perp DEX (Drift) + Perp 프레임워크 (In Progress)
+### v29.8 Solana Perp DEX (Drift) + Perp 프레임워크 (Shipped 2026-03-02)
 
 **Milestone Goal:** DeFi Perp(무기한 선물) 프레임워크를 구축하고 Drift Protocol을 첫 번째 Perp Provider로 구현하여 AI 에이전트가 Solana에서 레버리지 트레이딩을 정책 평가 하에 실행
 
@@ -124,9 +124,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 298-01-PLAN.md -- DriftSdkWrapper + IDriftSdkWrapper 인터페이스 + MockDriftSdkWrapper + Zod 입력 스키마
-- [ ] 298-02-PLAN.md -- DriftMarketData + DriftPerpProvider 5 액션 (IPerpProvider + IPositionProvider)
-- [ ] 298-03-PLAN.md -- Drift Provider 유닛 테스트 (SDK wrapper + market data + provider)
+- [x] 298-01-PLAN.md -- DriftSdkWrapper + IDriftSdkWrapper 인터페이스 + MockDriftSdkWrapper + Zod 입력 스키마
+- [x] 298-02-PLAN.md -- DriftMarketData + DriftPerpProvider 5 액션 (IPerpProvider + IPositionProvider)
+- [x] 298-03-PLAN.md -- Drift Provider 유닛 테스트 (SDK wrapper + market data + provider)
 
 ### Phase 299: 통합
 **Goal**: Drift Perp 트레이딩이 MCP/Admin/SDK/REST API 전 인터페이스에서 일관되게 사용 가능하다
@@ -140,8 +140,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 299-01-PLAN.md -- registerBuiltInProviders 등록 + hot-reload BUILTIN_NAMES 추가
-- [ ] 299-02-PLAN.md -- Admin UI Drift 카드 + actions.skill.md 섹션 추가
+- [x] 299-01-PLAN.md -- registerBuiltInProviders 등록 + hot-reload BUILTIN_NAMES 추가
+- [x] 299-02-PLAN.md -- Admin UI Drift 카드 + actions.skill.md 섹션 추가
 
 ## Progress
 
@@ -156,9 +156,9 @@ Phases execute in numeric order: 297 -> 298 -> 299
 | 215-243 | v27.0-v27.4 | All | Complete | 2026-02-23 |
 | 244-267 | v28.0-v28.8 | All | Complete | 2026-02-26 |
 | 268-296 | v29.0-v29.7 | All | Complete | 2026-03-01 |
-| 297. Perp 프레임워크 | 2/2 | Complete   | 2026-03-01 | - |
-| 298. Drift Provider | 3/3 | Complete   | 2026-03-01 | - |
-| 299. 통합 | 2/2 | Complete   | 2026-03-01 | - |
+| 297. Perp 프레임워크 | v29.8 | 2/2 | Complete | 2026-03-02 |
+| 298. Drift Provider | v29.8 | 3/3 | Complete | 2026-03-02 |
+| 299. 통합 | v29.8 | 2/2 | Complete | 2026-03-02 |
 
 ---
-*Last updated: 2026-03-02 after Phase 298 plan creation*
+*Last updated: 2026-03-02 after v29.8 milestone completion*
