@@ -20,6 +20,23 @@ export interface WAIaaSClientOptions {
   retryOptions?: RetryOptions;
 }
 
+export interface ConnectOptions {
+  /** Base URL of the WAIaaS daemon (default: "http://localhost:3100") */
+  baseUrl?: string;
+  /** Session token — if provided, auto-discovery is skipped */
+  token?: string;
+  /** Data directory path (default: ~/.waiaas) */
+  dataDir?: string;
+  /** Auto-start the daemon if not running (default: false) */
+  autoStart?: boolean;
+  /** Readiness polling timeout in ms when autoStart is true (default: 30000) */
+  startTimeoutMs?: number;
+  /** Request timeout in milliseconds (default: 30000) */
+  timeout?: number;
+  /** Retry options for API calls */
+  retryOptions?: RetryOptions;
+}
+
 export interface RetryOptions {
   /** Maximum number of retries (default: 3) */
   maxRetries?: number;
