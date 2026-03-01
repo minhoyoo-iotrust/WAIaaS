@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v29.8
 milestone_name: Solana Perp DEX (Drift) + Perp 프레임워크
 status: active
-last_updated: "2026-03-01"
+last_updated: "2026-03-02"
 progress:
   total_phases: 299
   completed_phases: 296
   total_plans: 666
-  completed_plans: 660
+  completed_plans: 661
 ---
 
 # Project State
@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 ## Current Position
 
 Phase: 297 of 299 (Perp 프레임워크)
-Plan: 1 of 2 in current phase
-Status: Executing
-Last activity: 2026-03-02 -- Completed 297-01-PLAN.md (IPerpProvider interface + Zod schemas)
+Plan: 2 of 2 in current phase (COMPLETE)
+Status: Phase 297 complete
+Last activity: 2026-03-02 -- Completed 297-02-PLAN.md (MarginMonitor + PerpPolicyEvaluator)
 
-Progress: [█░░░░░░░░░] 14% (1/7 plans)
+Progress: [██░░░░░░░░] 28% (2/7 plans)
 
 ## Performance Metrics
 
@@ -43,6 +43,9 @@ Progress: [█░░░░░░░░░] 14% (1/7 plans)
 - v29.8: MarginMonitor는 기존 HealthFactorMonitor/IDeFiMonitor 패턴 재사용
 - v29.8: Perp rules interfaces exported to satisfy noUnusedLocals (Plan 02 will consume)
 - v29.8: close_position/add_margin classified as NON_SPENDING (returns user's own funds)
+- v29.8: MarginMonitor uses marginRatio thresholds 0.30/0.15/0.10 (lower = more dangerous)
+- v29.8: PERP_ALLOWED_MARKETS enforces default-deny for all 5 perp actions via suffix matching
+- v29.8: PERP_MAX_LEVERAGE/PERP_MAX_POSITION_USD support DELAY tier for warning zones
 
 ### Pending Todos
 
@@ -57,5 +60,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 297-01-PLAN.md -- ready to execute 297-02
-Resume command: /gsd:execute-phase 297
+Stopped at: Completed 297-02-PLAN.md -- Phase 297 complete, ready for Phase 298
+Resume command: /gsd:execute-phase 298

@@ -11,11 +11,11 @@ Requirements for Solana Perp DEX (Drift) + Perp 프레임워크. Each maps to ro
 
 - [x] **PERP-01**: IPerpProvider 인터페이스가 IActionProvider를 확장하여 getPosition/getMarginInfo/getMarkets 메서드와 5 표준 액션(open_position/close_position/modify_position/add_margin/withdraw_margin)을 정의한다
 - [x] **PERP-02**: PerpPositionTracker가 defi_positions 테이블(category='PERP')에 포지션을 기록하며, metadata JSON에 market/direction/size/entry_price/leverage/unrealized_pnl/margin/liquidation_price를 저장한다
-- [ ] **PERP-03**: MarginMonitor가 마진 비율을 주기적으로 모니터링하고, 유지 마진 임계값 접근 시 MARGIN_WARNING 알림을 발행한다
-- [ ] **PERP-04**: MarginMonitor가 청산 가격 접근 시 LIQUIDATION_IMMINENT 경고를 발행하고, 임계값 근접 시 폴링 간격을 단축한다
-- [ ] **PERP-05**: PerpPolicyEvaluator가 max_leverage 초과 시 정책 거부 또는 APPROVAL 격상을 수행한다
-- [ ] **PERP-06**: PerpPolicyEvaluator가 max_position_usd 초과 시 APPROVAL 격상을 수행한다
-- [ ] **PERP-07**: PerpPolicyEvaluator가 allowed_markets 화이트리스트에 없는 시장 요청을 거부한다
+- [x] **PERP-03**: MarginMonitor가 마진 비율을 주기적으로 모니터링하고, 유지 마진 임계값 접근 시 MARGIN_WARNING 알림을 발행한다
+- [x] **PERP-04**: MarginMonitor가 청산 가격 접근 시 LIQUIDATION_IMMINENT 경고를 발행하고, 임계값 근접 시 폴링 간격을 단축한다
+- [x] **PERP-05**: PerpPolicyEvaluator가 max_leverage 초과 시 정책 거부 또는 APPROVAL 격상을 수행한다
+- [x] **PERP-06**: PerpPolicyEvaluator가 max_position_usd 초과 시 APPROVAL 격상을 수행한다
+- [x] **PERP-07**: PerpPolicyEvaluator가 allowed_markets 화이트리스트에 없는 시장 요청을 거부한다
 
 ### Drift Provider
 
@@ -62,11 +62,11 @@ Requirements for Solana Perp DEX (Drift) + Perp 프레임워크. Each maps to ro
 |-------------|-------|--------|
 | PERP-01 | Phase 297 | Complete |
 | PERP-02 | Phase 297 | Complete |
-| PERP-03 | Phase 297 | Pending |
-| PERP-04 | Phase 297 | Pending |
-| PERP-05 | Phase 297 | Pending |
-| PERP-06 | Phase 297 | Pending |
-| PERP-07 | Phase 297 | Pending |
+| PERP-03 | Phase 297 | Complete |
+| PERP-04 | Phase 297 | Complete |
+| PERP-05 | Phase 297 | Complete |
+| PERP-06 | Phase 297 | Complete |
+| PERP-07 | Phase 297 | Complete |
 | DRIFT-01 | Phase 298 | Pending |
 | DRIFT-02 | Phase 298 | Pending |
 | DRIFT-03 | Phase 298 | Pending |
