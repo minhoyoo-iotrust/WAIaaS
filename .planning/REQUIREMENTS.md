@@ -59,30 +59,30 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| YIELD-01 | — | Pending |
-| YIELD-02 | — | Pending |
-| YIELD-03 | — | Pending |
-| YIELD-04 | — | Pending |
-| YIELD-05 | — | Pending |
-| PNDL-01 | — | Pending |
-| PNDL-02 | — | Pending |
-| PNDL-03 | — | Pending |
-| PNDL-04 | — | Pending |
-| PNDL-05 | — | Pending |
-| PNDL-06 | — | Pending |
-| PNDL-07 | — | Pending |
-| INTG-01 | — | Pending |
-| INTG-02 | — | Pending |
-| INTG-03 | — | Pending |
-| INTG-04 | — | Pending |
-| INTG-05 | — | Pending |
-| INTG-06 | — | Pending |
+| YIELD-01 | Phase 288 | Pending |
+| YIELD-02 | Phase 288 | Pending |
+| YIELD-03 | Phase 288 | Pending |
+| YIELD-04 | Phase 290 | Pending |
+| YIELD-05 | Phase 288 | Pending |
+| PNDL-01 | Phase 289 | Pending |
+| PNDL-02 | Phase 289 | Pending |
+| PNDL-03 | Phase 289 | Pending |
+| PNDL-04 | Phase 289 | Pending |
+| PNDL-05 | Phase 289 | Pending |
+| PNDL-06 | Phase 289 | Pending |
+| PNDL-07 | Phase 289 | Pending |
+| INTG-01 | Phase 290 | Pending |
+| INTG-02 | Phase 290 | Pending |
+| INTG-03 | Phase 290 | Pending |
+| INTG-04 | Phase 290 | Pending |
+| INTG-05 | Phase 290 | Pending |
+| INTG-06 | Phase 290 | Pending |
 
 **Coverage:**
 - v1 requirements: 18 total
-- Mapped to phases: 0
-- Unmapped: 18 ⚠️
+- Mapped to phases: 18
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-01*
-*Last updated: 2026-03-01 after initial definition*
+*Last updated: 2026-03-01 after roadmap creation — all 18 requirements mapped to phases 288-290*
