@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 294 - 지갑 앱 알림 라우팅
+**Current focus:** Phase 295 - Notifications 페이지 ntfy 섹션 분리
 
 ## Current Position
 
-Phase: 294 of 296 (지갑 앱 알림 라우팅)
+Phase: 295 of 296 (Notifications 페이지 ntfy 섹션 분리)
 Plan: 1 of 1 in current phase
-Status: Phase 294 complete
-Last activity: 2026-03-01 -- Phase 294 executed (1 plan, 2 tasks, 18 tests)
+Status: Phase 295 complete
+Last activity: 2026-03-01 -- Phase 295 executed (1 plan, 2 tasks, 3 new tests)
 
-Progress: [==============================..] 98% (294/296 phases)
+Progress: [==============================..] 99% (295/296 phases)
 
 ## Performance Metrics
 
@@ -56,5 +56,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Phase 294 complete (1 plan executed, app-based notification routing). Ready for Phase 295.
-Resume command: /gsd:execute-phase 295
+Stopped at: Phase 295 complete (1 plan executed, ntfy FieldGroup separation + Human Wallet Apps link). Ready for Phase 296.
+Resume command: /gsd:execute-phase 296

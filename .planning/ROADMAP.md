@@ -93,7 +93,7 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v29.6-ROADMAP.md` for full 
 - [x] **Phase 292: Admin UI 오너 설정 화면 개선** - 프리셋 변경 UX, approval method 미리보기, WalletConnect 조건부 표시를 구현한다 (completed 2026-03-01)
 - [x] **Phase 293: Human Wallet Apps 레지스트리 + UI** - wallet_apps DB 테이블, WalletAppService, REST API, Human Wallet Apps Admin 페이지를 구축한다 (completed 2026-03-01)
 - [x] **Phase 294: 지갑 앱 알림 라우팅** - WalletNotificationChannel을 앱별 토픽 발행으로 전환하고 Alerts 토글을 반영한다 (completed 2026-03-01)
-- [ ] **Phase 295: Notifications 페이지 ntfy 섹션 분리** - ntfy 설정을 독립 FieldGroup으로 분리하고 Human Wallet Apps 페이지와 연동한다
+- [x] **Phase 295: Notifications 페이지 ntfy 섹션 분리** - ntfy 설정을 독립 FieldGroup으로 분리하고 Human Wallet Apps 페이지와 연동한다 (completed 2026-03-01)
 - [ ] **Phase 296: Skill 파일 + 문서 갱신** - admin.skill.md와 wallet.skill.md에 변경 사항을 반영한다
 
 ## Phase Details
@@ -169,7 +169,7 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 295-01: ntfy 독립 FieldGroup 분리 + Other Channels 정리 + Human Wallet Apps 링크
+- [x] 295-01: ntfy 독립 FieldGroup 분리 + Other Channels 정리 + Human Wallet Apps 링크 (completed 2026-03-01)
 
 ### Phase 296: Skill 파일 + 문서 갱신
 **Goal**: Skill 파일이 Human Wallet Apps 메뉴, D'CENT sdk_ntfy 오너 설정, ntfy 섹션 변경 사항을 정확하게 반영한다
@@ -193,8 +193,8 @@ Plans:
 | 292. Admin UI 오너 설정 화면 개선 | 2/2 | Complete    | 2026-03-01 |
 | 293. Human Wallet Apps 레지스트리 + UI | 4/4 | Complete    | 2026-03-01 |
 | 294. 지갑 앱 알림 라우팅 | 1/1 | Complete    | 2026-03-01 |
-| 295. Notifications 페이지 ntfy 섹션 분리 | 0/1 | Not started | - |
+| 295. Notifications 페이지 ntfy 섹션 분리 | 1/1 | Complete    | 2026-03-01 |
 | 296. Skill 파일 + 문서 갱신 | 0/1 | Not started | - |
 
 ---
-*Last updated: 2026-03-01 after Phase 293 completion*
+*Last updated: 2026-03-01 after Phase 295 completion*
