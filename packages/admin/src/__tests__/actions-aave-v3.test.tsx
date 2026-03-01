@@ -215,8 +215,8 @@ describe('ActionsPage - Aave V3 Card', () => {
       expect(screen.getByText('Aave V3 Lending')).toBeTruthy();
     });
 
-    // All 7 providers disabled -> 7 Inactive badges
+    // All 8 providers disabled -> 8 Inactive badges
     const inactiveBadges = screen.getAllByText('Inactive');
-    expect(inactiveBadges.length).toBe(7);
+    expect(inactiveBadges.length).toBe(8);
   });
 });
