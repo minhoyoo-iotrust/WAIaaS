@@ -2,7 +2,8 @@
  * system.test.tsx
  *
  * Tests for the System page (system.tsx):
- * - Rendering all 7 sections (Oracle, Display Currency, Rate Limit, Log Level, Signing SDK, Gas Condition, Danger Zone)
+ * - Rendering all 6 sections (Oracle, Display Currency, Rate Limit, Log Level, Gas Condition, Danger Zone)
+ * - Note: Signing SDK section moved to Human Wallet Apps page in v29.7
  * - Daemon settings form fields (log level, oracle threshold, rate limit, display currency)
  * - Gas Condition section (enabled, poll_interval_sec, default_timeout_sec, max_timeout_sec, max_pending_count)
  * - Dirty tracking: save bar, save, discard
@@ -149,7 +150,7 @@ describe('SystemPage', () => {
       expect(screen.getByText('Loading settings...')).toBeTruthy();
     });
 
-    it('renders all 7 sections after loading', async () => {
+    it('renders all 6 sections after loading (Signing SDK moved to Human Wallet Apps)', async () => {
       mockApiCalls();
       render(<SystemPage />);
 
@@ -161,7 +162,8 @@ describe('SystemPage', () => {
       expect(screen.getByText('Global IP Rate Limit')).toBeTruthy();
       // "Log Level" also appears in both <h3> heading and <label>
       expect(screen.getAllByText('Log Level').length).toBeGreaterThanOrEqual(1);
-      expect(screen.getByText('Signing SDK')).toBeTruthy();
+      // Signing SDK section moved to Human Wallet Apps page (v29.7)
+      expect(screen.queryByText('Signing SDK')).toBeNull();
       expect(screen.getByText('Gas Condition')).toBeTruthy();
       expect(screen.getByText('Danger Zone')).toBeTruthy();
     });

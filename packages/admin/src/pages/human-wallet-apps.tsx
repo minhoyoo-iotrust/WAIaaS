@@ -282,44 +282,43 @@ export default function HumanWalletAppsPage() {
       </div>
 
       {/* Register Modal */}
-      {registerModal.value && (
-        <Modal
-          title="Register Wallet App"
-          onClose={() => { registerModal.value = false; }}
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <FormField
-              label="App Name"
-              name="register-app-name"
-              type="text"
-              value={registerName.value}
-              onChange={(v) => { registerName.value = String(v); }}
-              placeholder="my-custom-wallet"
-              description="Lowercase alphanumeric with hyphens (e.g., dcent, my-wallet)"
-            />
-            <FormField
-              label="Display Name"
-              name="register-app-display-name"
-              type="text"
-              value={registerDisplayName.value}
-              onChange={(v) => { registerDisplayName.value = String(v); }}
-              placeholder="My Custom Wallet"
-              description="Human-readable name shown in the UI"
-            />
-            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-              <Button variant="secondary" onClick={() => { registerModal.value = false; }}>
-                Cancel
-              </Button>
-              <Button
-                onClick={handleRegister}
-                disabled={registerSaving.value || !registerName.value.trim() || !registerDisplayName.value.trim()}
-              >
-                {registerSaving.value ? 'Registering...' : 'Register'}
-              </Button>
-            </div>
+      <Modal
+        open={registerModal.value}
+        title="Register Wallet App"
+        onCancel={() => { registerModal.value = false; }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <FormField
+            label="App Name"
+            name="register-app-name"
+            type="text"
+            value={registerName.value}
+            onChange={(v) => { registerName.value = String(v); }}
+            placeholder="my-custom-wallet"
+            description="Lowercase alphanumeric with hyphens (e.g., dcent, my-wallet)"
+          />
+          <FormField
+            label="Display Name"
+            name="register-app-display-name"
+            type="text"
+            value={registerDisplayName.value}
+            onChange={(v) => { registerDisplayName.value = String(v); }}
+            placeholder="My Custom Wallet"
+            description="Human-readable name shown in the UI"
+          />
+          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+            <Button variant="secondary" onClick={() => { registerModal.value = false; }}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleRegister}
+              disabled={registerSaving.value || !registerName.value.trim() || !registerDisplayName.value.trim()}
+            >
+              {registerSaving.value ? 'Registering...' : 'Register'}
+            </Button>
           </div>
-        </Modal>
-      )}
+        </div>
+      </Modal>
     </div>
   );
 }
