@@ -2,6 +2,46 @@
 
 *A living document updated after each milestone. Lessons feed forward into future planning.*
 
+## Milestone: v29.6 — Pendle Yield Trading + Yield 프레임워크
+
+**Shipped:** 2026-03-01
+**Phases:** 3 | **Plans:** 8 | **Sessions:** 1
+
+### What Was Built
+- IYieldProvider 인터페이스 — IActionProvider 확장, getMarkets/getPosition/getYieldForecast 3 메서드, MATURED 포지션 상태 추가
+- PendleYieldProvider — 5 Yield 액션(buyPT/buyYT/redeemPT/addLiquidity/removeLiquidity), Pendle REST API v2 Convert 엔드포인트 기반
+- PendleApiClient — Pendle REST API v2 래퍼, Zod 스키마 검증, 무료 티어 100 CU/분 지원
+- MaturityMonitor — IDeFiMonitor 구현, 1일 1회 폴링, 만기 7일/1일 전 경고 + 만기 후 미상환 경고, 24시간 쿨다운
+- Admin Settings 7키 + MCP 5도구 자동 등록 + actions.skill.md Pendle Yield Trading 섹션
+- 버그 수정: #216 Solana WSS URL prefix, #217 Lido factory default network residue
+
+### What Worked
+- v29.0 설계 문서(Phase 271 Yield 프레임워크 설계)가 구현 방향을 명확히 하여 빠른 구현 가능
+- REST API Convert 엔드포인트 선택으로 SDK 의존성 없이 깔끔한 구현 — 외부 의존성 최소화 전략 유효
+- 기존 ActionProvider/PositionTracker/DeFi 모니터링 프레임워크 재사용 — v29.0/v29.2에서 구축한 인프라의 가치 확인
+- 50 파일 변경만으로 완전한 Yield Trading 스택 구현 — 프레임워크 추상화가 잘 작동
+
+### What Was Inefficient
+- Phase directory에 SUMMARY.md 없이 작업 완료 — GSD 추적과 실제 코드 커밋 사이 동기화 누락
+- REQUIREMENTS.md traceability 상태가 Pending으로 유지된 채 아카이브 — 자동 상태 업데이트 미구현
+
+### Patterns Established
+- Yield Provider 패턴: IYieldProvider extends IActionProvider + Convert API calldata → ContractCallRequest 반환
+- DeFi Provider 3-tier 구성: ApiClient(HTTP 래퍼) → Provider(IYieldProvider 구현) → Integration(Settings+MCP+Admin)
+- MaturityMonitor 패턴: IDeFiMonitor + 만기 기반 경고 3단계(7일/1일/만기후) + 쿨다운
+
+### Key Lessons
+1. REST API 기반 DeFi Provider 패턴이 확립됨 — SDK 없이 HTTP calldata 빌드 → ContractCallRequest 반환이 표준 패턴
+2. v29.0 설계 단계에서의 인터페이스 정의가 구현 속도를 극대화 — 설계 투자 ROI 확인
+3. Pendle 무료 티어(100 CU/분)로도 기본 기능 충분 — 유료 API 키는 선택적 최적화
+
+### Cost Observations
+- Model mix: ~100% opus (quality profile)
+- Sessions: 1
+- Notable: 1일 완료, 50 파일 +3,940 lines — DeFi Provider 추가가 프레임워크 덕분에 빠름
+
+---
+
 ## Milestone: v29.5 — 내부 일관성 정리
 
 **Shipped:** 2026-02-28

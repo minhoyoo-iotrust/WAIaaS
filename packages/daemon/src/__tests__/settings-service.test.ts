@@ -423,15 +423,15 @@ describe('SettingsService', () => {
           [
             'notifications.telegram_bot_token', 'notifications.discord_webhook_url', 'notifications.slack_webhook_url',
             'oracle.coingecko_api_key', 'telegram.bot_token',
-            'actions.jupiter_swap_api_key', 'actions.zerox_swap_api_key', 'actions.lifi_api_key',
+            'actions.jupiter_swap_api_key', 'actions.zerox_swap_api_key', 'actions.lifi_api_key', 'actions.pendle_yield_api_key',
           ].includes(def.key),
         ).toBe(true);
       }
     });
 
     it('has expected number of definitions', () => {
-      // 11 notifications + 13 rpc + 14 security + 1 daemon + 2 walletconnect + 2 oracle + 1 display + 6 autostop + 5 monitoring + 2 telegram + 8 signing_sdk + 7 incoming + 31 actions + 1 policy + 5 gas_condition + 13 rpc_pool + 1 position_tracker = 135
-      expect(SETTING_DEFINITIONS.length).toBe(135);
+      // 11 notifications + 13 rpc + 14 security + 1 daemon + 2 walletconnect + 2 oracle + 1 display + 6 autostop + 5 monitoring + 2 telegram + 8 signing_sdk + 7 incoming + 38 actions + 1 policy + 5 gas_condition + 13 rpc_pool + 1 position_tracker = 142
+      expect(SETTING_DEFINITIONS.length).toBe(142);
     });
   });
 
@@ -609,9 +609,9 @@ describe('SettingsService', () => {
       expect(all.actions!.zerox_swap_default_slippage_bps).toBe('100');
     });
 
-    it('actions category has 31 settings', () => {
+    it('actions category has 38 settings', () => {
       const actionsDefs = SETTING_DEFINITIONS.filter((d) => d.category === 'actions');
-      expect(actionsDefs.length).toBe(31);
+      expect(actionsDefs.length).toBe(38);
     });
 
     it('actions.jupiter_swap_api_key is a credential', () => {

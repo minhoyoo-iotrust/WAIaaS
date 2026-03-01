@@ -1020,6 +1020,20 @@ export class DaemonLifecycle {
         this.defiMonitorService.register(healthMonitor);
       }
 
+      // Register MaturityMonitor
+      if (this.sqlite) {
+        const { MaturityMonitor } = await import('../services/monitoring/maturity-monitor.js');
+        const maturityMonitor = new MaturityMonitor({
+          sqlite: this.sqlite,
+          eventBus: this.eventBus,
+          notificationService: this.notificationService ?? undefined,
+        });
+        if (this._settingsService) {
+          maturityMonitor.loadFromSettings(this._settingsService);
+        }
+        this.defiMonitorService.register(maturityMonitor);
+      }
+
       this.defiMonitorService.start();
       console.debug('Step 4c-11: DeFi monitor service started with', this.defiMonitorService.monitorCount, 'monitors');
     } catch (err) {

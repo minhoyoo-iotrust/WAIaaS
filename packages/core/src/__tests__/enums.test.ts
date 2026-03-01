@@ -162,11 +162,12 @@ describe('Enum SSoT', () => {
       expect(PositionCategoryEnum.safeParse('INVALID').success).toBe(false);
     });
 
-    it('POSITION_STATUSES has 3 values', () => {
-      expect(POSITION_STATUSES).toHaveLength(3);
+    it('POSITION_STATUSES has 4 values', () => {
+      expect(POSITION_STATUSES).toHaveLength(4);
       expect(POSITION_STATUSES).toContain('ACTIVE');
       expect(POSITION_STATUSES).toContain('CLOSED');
       expect(POSITION_STATUSES).toContain('LIQUIDATED');
+      expect(POSITION_STATUSES).toContain('MATURED');
     });
 
     it('PositionStatusEnum validates correct values', () => {

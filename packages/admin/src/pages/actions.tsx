@@ -29,6 +29,7 @@ const BUILTIN_PROVIDERS: BuiltinProvider[] = [
   { key: 'jito_staking', name: 'Jito Staking', description: 'SOL liquid staking (JitoSOL)', chain: 'solana', requiresApiKey: false, docsUrl: 'https://www.jito.network/docs' },
   { key: 'aave_v3', name: 'Aave V3 Lending', description: 'EVM lending protocol (supply, borrow, repay, withdraw)', chain: 'evm', requiresApiKey: false, docsUrl: 'https://docs.aave.com/developers' },
   { key: 'kamino', name: 'Kamino Lending', description: 'Solana lending protocol (supply, borrow, repay, withdraw)', chain: 'solana', requiresApiKey: false, docsUrl: 'https://docs.kamino.finance' },
+  { key: 'pendle_yield', name: 'Pendle Yield', description: 'EVM yield trading: buy/sell PT/YT, redeem at maturity, add/remove LP', chain: 'evm', requiresApiKey: false, docsUrl: 'https://docs.pendle.finance' },
 ];
 
 // ---------------------------------------------------------------------------

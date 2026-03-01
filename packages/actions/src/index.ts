@@ -18,6 +18,8 @@ import { type AaveV3Config } from './providers/aave-v3/config.js';
 import type { IRpcCaller } from './providers/aave-v3/aave-rpc.js';
 import { KaminoLendingProvider } from './providers/kamino/index.js';
 import type { KaminoConfig } from './providers/kamino/config.js';
+import { PendleYieldProvider } from './providers/pendle/index.js';
+import type { PendleConfig } from './providers/pendle/config.js';
 
 // Re-export provider classes
 export { JupiterSwapActionProvider } from './providers/jupiter-swap/index.js';
@@ -56,6 +58,11 @@ export type { KaminoConfig } from './providers/kamino/config.js';
 export type { IKaminoSdkWrapper, KaminoInstruction, KaminoObligation, KaminoReserve } from './providers/kamino/kamino-sdk-wrapper.js';
 export { MockKaminoSdkWrapper } from './providers/kamino/kamino-sdk-wrapper.js';
 export { calculateHealthFactor, simulateKaminoHealthFactor, hfToStatus, KAMINO_LIQUIDATION_THRESHOLD, KAMINO_DEFAULT_HF_THRESHOLD } from './providers/kamino/hf-simulation.js';
+
+export { PendleYieldProvider } from './providers/pendle/index.js';
+export { PENDLE_DEFAULTS, PENDLE_CHAIN_ID_MAP, getPendleChainId } from './providers/pendle/config.js';
+export type { PendleConfig } from './providers/pendle/config.js';
+export { PendleApiClient } from './providers/pendle/pendle-api-client.js';
 
 // Re-export common utilities
 export { ActionApiClient } from './common/action-api-client.js';
@@ -155,9 +162,9 @@ export function registerBuiltInProviders(
       key: 'lido_staking',
       enabledKey: 'actions.lido_staking_enabled',
       factory: () => {
-        // Resolve environment from registered rpc.evm_default_network setting
-        const evmNetwork = settingsReader.get('rpc.evm_default_network') || 'ethereum-mainnet';
-        const isTestnet = deriveEnvironment(evmNetwork as NetworkType) === 'testnet';
+        // Lido is Ethereum-only; default to mainnet
+        const evmNetwork: NetworkType = 'ethereum-mainnet';
+        const isTestnet = deriveEnvironment(evmNetwork) === 'testnet';
         const addresses = getLidoAddresses(isTestnet ? 'testnet' : 'mainnet');
 
         // Admin Settings overrides individual addresses; empty string falls back to environment default
@@ -210,6 +217,21 @@ export function registerBuiltInProviders(
           hfThreshold: Number(settingsReader.get('actions.kamino_hf_threshold')) || 1.2,
         };
         return new KaminoLendingProvider(config);
+      },
+    },
+    {
+      key: 'pendle_yield',
+      enabledKey: 'actions.pendle_yield_enabled',
+      factory: () => {
+        const config: PendleConfig = {
+          enabled: true,
+          apiBaseUrl: settingsReader.get('actions.pendle_yield_api_base_url') || 'https://api-v2.pendle.finance',
+          apiKey: settingsReader.get('actions.pendle_yield_api_key') || '',
+          defaultSlippageBps: Number(settingsReader.get('actions.pendle_yield_default_slippage_bps')) || 100,
+          maxSlippageBps: Number(settingsReader.get('actions.pendle_yield_max_slippage_bps')) || 500,
+          requestTimeoutMs: Number(settingsReader.get('actions.pendle_yield_request_timeout_ms')) || 10_000,
+        };
+        return new PendleYieldProvider(config);
       },
     },
   ];

@@ -129,7 +129,7 @@ const x402FetchRoute = createRoute({
             method: z.enum(['GET', 'POST', 'PUT', 'DELETE', 'PATCH']).default('GET'),
             headers: z.record(z.string()).optional(),
             body: z.string().optional(),
-            walletId: z.string().uuid().optional().describe('Target wallet ID (optional -- defaults to session default wallet)'),
+            walletId: z.string().uuid().optional().describe('Target wallet ID (optional -- auto-resolved if session has single wallet)'),
           }),
         },
       },

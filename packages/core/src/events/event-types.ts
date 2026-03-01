@@ -81,6 +81,18 @@ export interface IncomingTxSuspiciousEvent extends IncomingTxEvent {
   suspiciousReasons: string[];
 }
 
+// v29.6 yield maturity warning event
+
+export interface YieldMaturityWarningEvent {
+  walletId: string;
+  positionId: string;
+  provider: string;
+  marketId: string;
+  daysUntilMaturity: number;
+  maturityDate: number;
+  timestamp: number;
+}
+
 // ---------------------------------------------------------------------------
 // Event map (typed EventEmitter key -> payload mapping)
 // ---------------------------------------------------------------------------
@@ -93,4 +105,5 @@ export interface WaiaasEventMap {
   'wallet:activity': WalletActivityEvent;
   'kill-switch:state-changed': KillSwitchStateChangedEvent;
   'approval:channel-switched': ApprovalChannelSwitchedEvent;
+  'yield:maturity-warning': YieldMaturityWarningEvent;
 }

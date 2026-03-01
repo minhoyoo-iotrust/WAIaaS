@@ -30,11 +30,13 @@ The wallet app uses `@waiaas/wallet-sdk` to parse requests, display them to the 
 
 ### Choosing an Integration Option
 
-| Option | Server Required | Pros | Best For |
-|--------|----------------|------|----------|
-| **Scenario 1:** ntfy Direct | No | Simplest setup, no infrastructure | Server-side bots, hardware wallet bridges |
-| **Scenario 2:** Telegram Relay | No | Familiar UX, universal links | Mobile apps using Telegram as notification channel |
-| **Scenario 3:** Push Relay | Push Relay server | Reuse existing push infra (Pushwoosh/FCM) | D'CENT and other wallet apps with native push |
+**We recommend Scenario 3 (Push Relay)** for production wallet apps. It provides the best end-user experience — users only need to select their wallet app in the Admin UI, with no additional setup for ntfy topics or Telegram bots. The Push Relay bridges WAIaaS signing requests to your existing push notification infrastructure.
+
+| Option | Server Required | User Setup | Best For |
+|--------|----------------|------------|----------|
+| **Scenario 3:** Push Relay (Recommended) | Push Relay server | Wallet app selection only | Production wallet apps with native push (D'CENT, etc.) |
+| **Scenario 1:** ntfy Direct | No | ntfy topic configuration | Server-side bots, hardware wallet bridges, development |
+| **Scenario 2:** Telegram Relay | No | Telegram bot + chat ID setup | Apps without push infra, using Telegram as notification channel |
 
 ## Prerequisites
 

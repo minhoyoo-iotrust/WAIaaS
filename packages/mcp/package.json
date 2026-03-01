@@ -2,6 +2,20 @@
   "name": "@waiaas/mcp",
   "version": "2.9.0-rc.3",
   "description": "WAIaaS MCP server - Model Context Protocol integration for AI agents",
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "modelcontextprotocol",
+    "wallet",
+    "crypto",
+    "blockchain",
+    "ai-agent",
+    "wallet-as-a-service",
+    "defi",
+    "solana",
+    "ethereum",
+    "self-custody"
+  ],
   "license": "MIT",
   "type": "module",
   "repository": {
