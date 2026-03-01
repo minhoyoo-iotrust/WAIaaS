@@ -1,5 +1,26 @@
 # Changelog
 
+## [2.9.0-rc.5](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc.4...v2.9.0-rc.5) (2026-03-01)
+
+
+### Features
+
+* **291-01:** change D'CENT preset to sdk_ntfy and add wallet_type topic routing ([d38a619](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d38a6196c61b6ae283fc06e84e362bf58bca6dc9))
+* **292-01:** add Wallet Type UI controls and conditional WalletConnect display ([0444cd2](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0444cd2735078c9a01e98ab3e6c70d009997e963))
+* **293-01:** add wallet_apps DB table, WalletAppService CRUD, signing blocking, preset auto-registration ([3e751de](https://github.com/minhoyoo-iotrust/WAIaaS/commit/3e751decd4e1cc0b93fbad1cc9c661f744b05f78))
+* **293-02:** add REST API endpoints for wallet apps CRUD ([17156cb](https://github.com/minhoyoo-iotrust/WAIaaS/commit/17156cb6cb4a747d74a76949d0e5e2f2a8a754bd))
+* **294-01:** convert WalletNotificationChannel to app-based topic routing ([1cca54a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1cca54ae1eb9d7b0cb93653d5b43698ae982b167))
+* **295-01:** separate ntfy into independent FieldGroup in Notifications Settings ([b1e6ff0](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b1e6ff0e0099ad49d0a6e4b51b5723cf57f44105))
+* **admin:** add Human Wallet Apps page with registry and ntfy settings ([00d5aa3](https://github.com/minhoyoo-iotrust/WAIaaS/commit/00d5aa3cc5c8c87ecd76548ad626da6fbbff1b76))
+
+
+### Bug Fixes
+
+* **292:** revise plans based on checker feedback ([40ccf20](https://github.com/minhoyoo-iotrust/WAIaaS/commit/40ccf20cdc542445370857f6f264c2f73dfd6a7a))
+* remove unused variable in wallet-app-service test ([84c2883](https://github.com/minhoyoo-iotrust/WAIaaS/commit/84c28833bd8f174948724ae4f794f45b973f0d44))
+* update D'CENT preset approval_method in tests (walletconnect → sdk_ntfy) ([5fb699a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/5fb699ab2261c94110c9d32f09ac5eaaef6d8bc3))
+* update error code counts for v29.7 new codes ([908900c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/908900c4983e368d423f94781c4914630638ae9f))
+
 ## [2.9.0-rc.4](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc.3...v2.9.0-rc.4) (2026-03-01)
 
 
