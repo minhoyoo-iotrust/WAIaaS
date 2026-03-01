@@ -137,11 +137,11 @@ Plans:
   2. Admin Settings 5키(drift_enabled/max_leverage/max_position_usd/margin_warning_threshold_pct/position_sync_interval_sec)가 런타임 조정 가능하고, Admin UI Actions 페이지에 Drift Perp Trading 카드가 표시된다
   3. registerBuiltInProviders에서 DriftPerpProvider가 자동 등록되며, actions.drift_enabled 설정으로 활성화/비활성화가 제어된다
   4. GET /v1/wallets/:id/positions에서 Perp 포지션(category='PERP')이 Lending/Yield 포지션과 함께 통합 반환되고, actions.skill.md에 Drift Perp Trading 섹션이 추가된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 299-01: MCP 5도구 + Admin Settings 5키 + 자동 등록
-- [ ] 299-02: Admin UI Drift 카드 + actions.skill.md + TS/Python SDK
+- [ ] 299-01-PLAN.md -- registerBuiltInProviders 등록 + hot-reload BUILTIN_NAMES 추가
+- [ ] 299-02-PLAN.md -- Admin UI Drift 카드 + actions.skill.md 섹션 추가
 
 ## Progress
 
