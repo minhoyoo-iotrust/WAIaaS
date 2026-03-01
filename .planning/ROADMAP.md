@@ -194,7 +194,7 @@ Plans:
 | 293. Human Wallet Apps 레지스트리 + UI | 4/4 | Complete    | 2026-03-01 |
 | 294. 지갑 앱 알림 라우팅 | 1/1 | Complete    | 2026-03-01 |
 | 295. Notifications 페이지 ntfy 섹션 분리 | 1/1 | Complete    | 2026-03-01 |
-| 296. Skill 파일 + 문서 갱신 | 1/1 | Complete   | 2026-03-01 |
+| 296. Skill 파일 + 문서 갱신 | 1/1 | Complete    | 2026-03-01 |
 
 ---
 *Last updated: 2026-03-01 after Phase 295 completion*
