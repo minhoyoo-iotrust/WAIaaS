@@ -1014,6 +1014,122 @@ describe('NotificationsPage - Additional Coverage', () => {
     });
   });
 
+  // -----------------------------------------------------------------------
+  // ntfy FieldGroup separation
+  // -----------------------------------------------------------------------
+
+  describe('ntfy FieldGroup separation', () => {
+    const mockSettingsForNtfy = {
+      'notifications.enabled': { value: 'true', source: 'default' },
+      'notifications.ntfy_server': { value: 'https://ntfy.sh', source: 'default' },
+      'notifications.ntfy_topic': { value: 'waiaas', source: 'default' },
+      'notifications.discord_webhook_url': { value: '', source: 'default' },
+      'notifications.slack_webhook_url': { value: '', source: 'default' },
+      'notifications.rate_limit_rpm': { value: '20', source: 'default' },
+      'notifications.locale': { value: 'en', source: 'default' },
+      'notifications.telegram_bot_token': { value: '', source: 'default' },
+      'notifications.telegram_chat_id': { value: '', source: 'default' },
+      'telegram.bot_token': { value: '', source: 'default' },
+      'telegram.locale': { value: 'en', source: 'default' },
+    };
+
+    function setupSettingsMocks() {
+      vi.mocked(apiGet).mockImplementation((url: string) => {
+        if (url.includes('/notifications/status')) return Promise.resolve(mockStatus);
+        if (url.includes('/notifications/log')) return Promise.resolve(mockLogs);
+        if (url === '/v1/admin/settings') return Promise.resolve(mockSettingsForNtfy);
+        return Promise.resolve({});
+      });
+    }
+
+    it('renders ntfy as independent FieldGroup section in Settings tab', async () => {
+      vi.useRealTimers();
+      setupSettingsMocks();
+
+      const { container } = render(<NotificationsPage />);
+
+      // Switch to Settings tab
+      const settingsBtns = screen.getAllByText('Settings');
+      fireEvent.click(settingsBtns[0]);
+
+      await waitFor(() => {
+        expect(screen.getByText('Notification Configuration')).toBeTruthy();
+      });
+
+      // Find the ntfy FieldGroup legend
+      const legends = container.querySelectorAll('legend');
+      const ntfyLegend = Array.from(legends).find(l => l.textContent === 'ntfy');
+      expect(ntfyLegend).toBeTruthy();
+
+      // Verify the ntfy FieldGroup has the push notification description
+      const ntfyFieldset = ntfyLegend!.closest('fieldset');
+      expect(ntfyFieldset).toBeTruthy();
+      const desc = ntfyFieldset!.querySelector('.field-group-description');
+      expect(desc?.textContent).toContain('Push notification');
+    });
+
+    it('Other Channels shows only Discord and Slack (no ntfy fields)', async () => {
+      vi.useRealTimers();
+      setupSettingsMocks();
+
+      const { container } = render(<NotificationsPage />);
+
+      // Switch to Settings tab
+      const settingsBtns = screen.getAllByText('Settings');
+      fireEvent.click(settingsBtns[0]);
+
+      await waitFor(() => {
+        expect(screen.getByText('Other Channels')).toBeTruthy();
+      });
+
+      // Find the Other Channels FieldGroup
+      const legends = container.querySelectorAll('legend');
+      const otherLegend = Array.from(legends).find(l => l.textContent === 'Other Channels');
+      expect(otherLegend).toBeTruthy();
+
+      const otherFieldset = otherLegend!.closest('fieldset');
+      expect(otherFieldset).toBeTruthy();
+
+      // Description should mention Discord and Slack but NOT ntfy
+      const desc = otherFieldset!.querySelector('.field-group-description');
+      expect(desc?.textContent).toContain('Discord');
+      expect(desc?.textContent).toContain('Slack');
+      expect(desc?.textContent).not.toContain('ntfy');
+
+      // Info box inside Other Channels should NOT mention ntfy
+      const infoBox = otherFieldset!.querySelector('.settings-info-box');
+      expect(infoBox?.textContent).toContain('Discord');
+      expect(infoBox?.textContent).toContain('Slack');
+      expect(infoBox?.textContent).not.toContain('ntfy');
+    });
+
+    it('ntfy section contains Human Wallet Apps link', async () => {
+      vi.useRealTimers();
+      setupSettingsMocks();
+
+      const { container } = render(<NotificationsPage />);
+
+      // Switch to Settings tab
+      const settingsBtns = screen.getAllByText('Settings');
+      fireEvent.click(settingsBtns[0]);
+
+      await waitFor(() => {
+        expect(screen.getByText('Notification Configuration')).toBeTruthy();
+      });
+
+      // Find the Human Wallet Apps link
+      const link = screen.getByText('Human Wallet Apps') as HTMLAnchorElement;
+      expect(link).toBeTruthy();
+      expect(link.getAttribute('href')).toBe('#/wallet-apps');
+
+      // Verify the link is inside the ntfy FieldGroup
+      const legends = container.querySelectorAll('legend');
+      const ntfyLegend = Array.from(legends).find(l => l.textContent === 'ntfy');
+      const ntfyFieldset = ntfyLegend!.closest('fieldset');
+      expect(ntfyFieldset!.contains(link)).toBe(true);
+    });
+  });
+
   describe('loading skeleton', () => {
     it('shows skeleton cards during initial load', async () => {
       vi.useRealTimers();
