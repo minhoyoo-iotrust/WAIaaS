@@ -14,6 +14,7 @@ import NotificationsPage from '../pages/notifications';
 import SecurityPage from '../pages/security';
 import SystemPage from '../pages/system';
 import ActionsPage from '../pages/actions';
+import HumanWalletAppsPage from '../pages/human-wallet-apps';
 
 function extractPath(hash: string): string {
   const raw = hash.slice(1) || '/dashboard';
@@ -38,6 +39,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/policies': 'Policies',
   '/notifications': 'Notifications',
   '/security': 'Security',
+  '/wallet-apps': 'Human Wallet Apps',
   '/system': 'System',
 };
 
@@ -51,6 +53,7 @@ const PAGE_SUBTITLES: Record<string, string> = {
   '/policies': 'Configure transaction policies and rules',
   '/notifications': 'Channel status, delivery logs, and settings',
   '/security': 'Emergency controls and automatic protection rules',
+  '/wallet-apps': 'Manage wallet apps for signing and notifications',
   '/system': 'API keys, display preferences, and daemon configuration',
 };
 
@@ -73,6 +76,7 @@ const NAV_ITEMS = [
   { path: '/policies', label: 'Policies' },
   { path: '/notifications', label: 'Notifications' },
   { path: '/security', label: 'Security' },
+  { path: '/wallet-apps', label: 'Human Wallet Apps' },
   { path: '/system', label: 'System' },
 ];
 
@@ -102,6 +106,7 @@ function PageRouter() {
     return <WalletsPage />;
   }
   if (path === '/security') return <SecurityPage />;
+  if (path === '/wallet-apps') return <HumanWalletAppsPage />;
   if (path === '/system') return <SystemPage />;
   if (path.startsWith('/wallets')) return <WalletsPage />;
   return <DashboardPage />;

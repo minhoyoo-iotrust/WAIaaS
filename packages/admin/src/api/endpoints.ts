@@ -47,4 +47,6 @@ export const API = {
   ADMIN_WALLET_STAKING: (id: string) => `/v1/admin/wallets/${id}/staking`,
   ADMIN_DEFI_POSITIONS: '/v1/admin/defi/positions',
   ADMIN_MASTER_PASSWORD: '/v1/admin/master-password',
+  ADMIN_WALLET_APPS: '/v1/admin/wallet-apps',
+  ADMIN_WALLET_APP: (id: string) => `/v1/admin/wallet-apps/${id}`,
 } as const;
