@@ -1,5 +1,28 @@
 # Project Milestones: WAIaaS
 
+## v29.7 D'CENT 직접 서명 + Human Wallet Apps 통합 (Shipped: 2026-03-01)
+
+**Delivered:** D'CENT 프리셋의 승인 방식을 WalletConnect에서 Push Relay 기반 직접 서명(sdk_ntfy)으로 전환하고, 지갑별 wallet_type 기반 서명 토픽 라우팅을 구현한 마일스톤. "Signing SDK"를 "Human Wallet Apps"로 재구성하여 지갑 앱을 wallet_apps DB 테이블 기반 1급 엔티티로 관리하고, 앱별 Signing/Alerts 토글, 앱별 알림 토픽 라우팅, Admin UI Human Wallet Apps 최상위 메뉴, Notifications 페이지 ntfy 독립 섹션 분리까지 완료.
+
+**Phases completed:** 291-296 (6 phases, 11 plans, 40 requirements)
+
+**Key accomplishments:**
+
+- D'CENT preset sdk_ntfy 전환 — approval_method를 walletconnect에서 sdk_ntfy로 변경, wallet_type 기반 서명 토픽 라우팅(waiaas-sign-{wallet_type})
+- Admin UI Owner 탭 개선 — Wallet Type 선택/변경 UI, approval method 미리보기, WalletConnect 조건부 표시, 상태별(NONE/GRACE/LOCKED) 읽기 전용 처리
+- Human Wallet Apps 레지스트리 — wallet_apps DB 테이블(migration v31), WalletAppService CRUD, REST API 4 엔드포인트, signing_enabled 차단, 프리셋 자동 등록
+- Human Wallet Apps Admin UI — 최상위 메뉴 승격, 앱 카드(Signing/Alerts 토글, Used by 목록), ntfy 서버 설정, 앱 등록/삭제
+- 앱별 알림 라우팅 — WalletNotificationChannel을 앱별 토픽(waiaas-notify-{name}) 발행으로 전환, Alerts 토글 반영
+- Notifications ntfy 독립 섹션 — ntfy FieldGroup 분리, Other Channels 정리(Discord+Slack only), Human Wallet Apps 링크
+
+**Stats:**
+
+- 6 phases, 11 plans, 40 requirements, 40 commits
+- 73 files changed, +7,424 / -428 lines (+2,492 / -399 TS/TSX)
+- Timeline: 1 day (2026-03-01)
+
+---
+
 ## v29.6 Pendle Yield Trading + Yield 프레임워크 (Shipped: 2026-03-01)
 
 **Delivered:** DeFi Yield 프레임워크(IYieldProvider, MaturityMonitor, MATURED 포지션 상태)를 구축하고 Pendle Finance를 첫 번째 Yield Provider로 구현하여, AI 에이전트가 고정 수익률 전략(PT/YT/LP 매수·상환·유동성 공급)을 정책 평가 하에 실행할 수 있도록 한 마일스톤. Pendle REST API v2 Convert 엔드포인트 기반 calldata 빌드, 만기 경고 알림(7일/1일/만기후), Admin Settings 7키 런타임 조정, MCP 5도구 자동 노출, actions.skill.md 문서화까지 완료. 추가로 #216(Solana WSS URL prefix) 및 #217(Lido factory errors) 버그 수정.
@@ -1737,12 +1760,4 @@
 ---
 
 
-## v29.6 Pendle Yield Trading + Yield 프레임워크 (Shipped: 2026-03-01)
-
-**Phases completed:** 181 phases, 383 plans, 50 tasks
-
-**Key accomplishments:**
-- (none recorded)
-
----
 

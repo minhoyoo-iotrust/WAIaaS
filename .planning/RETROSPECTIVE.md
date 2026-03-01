@@ -2,6 +2,46 @@
 
 *A living document updated after each milestone. Lessons feed forward into future planning.*
 
+## Milestone: v29.7 — D'CENT 직접 서명 + Human Wallet Apps 통합
+
+**Shipped:** 2026-03-01
+**Phases:** 6 | **Plans:** 11 | **Sessions:** 1
+
+### What Was Built
+- D'CENT preset sdk_ntfy 전환 — approval_method를 walletconnect에서 sdk_ntfy로 변경, wallet_type 기반 서명 토픽 라우팅
+- Admin UI Owner 탭 개선 — Wallet Type 선택/변경 UI, approval method 미리보기, WalletConnect 조건부 표시, 상태별 읽기 전용
+- wallet_apps DB 테이블(migration v31) + WalletAppService CRUD + REST API 4 엔드포인트 + signing_enabled 차단
+- Human Wallet Apps Admin UI 최상위 메뉴 — 앱 카드(Signing/Alerts 토글, Used by 목록), ntfy 서버 설정, 앱 등록/삭제
+- WalletNotificationChannel 앱별 토픽(waiaas-notify-{name}) 발행 전환 + Alerts 토글 반영
+- Notifications ntfy 독립 FieldGroup 분리 + Human Wallet Apps 링크
+
+### What Worked
+- 6 phases 전체 1일 완료 — 설계 문서(m29-07)가 DB 스키마/API/UI까지 상세히 정의되어 빠른 구현
+- wallet_apps DB 테이블 정규화 결정이 Used by 역추적, signing_enabled 차단, alerts_enabled 라우팅 전부 깔끔하게 해결
+- 기존 PresetAutoSetupService의 sdk_ntfy case 분기를 재활용하여 코드 변경 최소화
+- Admin UI 컴포넌트 패턴(FieldGroup, Toggle, Card) 재사용으로 293/295 구현이 빠름
+
+### What Was Inefficient
+- REQUIREMENTS.md traceability 상태가 대부분 Pending으로 유지된 채 아카이브 — 자동 상태 업데이트 미구현 (반복 이슈)
+- Phase 291 plan 목록에 `[ ]` 체크 미갱신 (ROADMAP.md의 Plan checklist가 수동)
+
+### Patterns Established
+- wallet_apps 정규화 테이블 패턴: 앱 엔티티를 Settings key-value가 아닌 DB 테이블로 관리, FK 역추적 자연스러움
+- 앱별 토픽 네이밍: signing용 `waiaas-sign-{wallet_apps.name}`, alerts용 `waiaas-notify-{wallet_apps.name}` — 동일 네임스페이스
+- Admin UI 메뉴 승격 패턴: 기존 서브섹션 제거 → 최상위 메뉴 추가 + 설정 키 유지(내부 호환)
+
+### Key Lessons
+1. DB 테이블 정규화가 Settings JSON보다 확장성 높음 — CRUD + 토글 + 역추적 + 차단 로직 전부 SQL로 해결
+2. 프리셋 변경은 정의 변경만으로 기존 로직 분기가 자동 활성화 — 코드 수정 최소화 설계의 가치
+3. "Human Wallet Apps" 네이밍이 기술 용어("Signing SDK")보다 사용자 친화적 — 메뉴 구조가 사용자 멘탈 모델과 일치
+
+### Cost Observations
+- Model mix: ~100% opus (quality profile)
+- Sessions: 1
+- Notable: 73 파일, +7,424/-428 lines, 1일 완료 — DB+API+UI 풀스택 구현이 설계 문서 덕분에 빠름
+
+---
+
 ## Milestone: v29.6 — Pendle Yield Trading + Yield 프레임워크
 
 **Shipped:** 2026-03-01
@@ -124,6 +164,8 @@
 |-----------|----------|--------|------------|
 | v29.0 | 1 | 6 | 설계 전용 마일스톤, 1일 완료 |
 | v29.5 | 1 | 3 | 이슈 기반 정리 마일스톤, 156 파일 변경 1일 완료 |
+| v29.6 | 1 | 3 | Yield Provider 패턴 확립, 50 파일 1일 완료 |
+| v29.7 | 1 | 6 | 풀스택(DB+API+UI) 구현, 73 파일 1일 완료 |
 
 ### Cumulative Quality
 
@@ -131,6 +173,8 @@
 |-----------|-------|----------|-----------------|
 | v29.0 | ~5,000 (unchanged) | unchanged | +59 decisions |
 | v29.5 | ~5,595 (+512) | maintained | +5 decisions |
+| v29.6 | ~5,595 (unchanged) | maintained | +4 decisions |
+| v29.7 | ~5,595 (unchanged) | maintained | +7 decisions |
 
 ### Top Lessons (Verified Across Milestones)
 
