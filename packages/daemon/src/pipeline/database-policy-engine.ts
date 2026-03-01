@@ -106,6 +106,23 @@ interface LendingAssetWhitelistRules {
   assets: Array<{ address: string; symbol?: string }>;
 }
 
+/** Perp max leverage restriction rules (Phase 297). */
+export interface PerpMaxLeverageRules {
+  maxLeverage: number;       // e.g., 10 (10x)
+  warningLeverage?: number;  // e.g., 5 (5x) -- DELAY tier
+}
+
+/** Perp max position USD restriction rules (Phase 297). */
+export interface PerpMaxPositionUsdRules {
+  maxPositionUsd: number;    // e.g., 10000 ($10,000)
+  warningPositionUsd?: number; // e.g., 8000 -- DELAY tier
+}
+
+/** Perp allowed markets whitelist rules (Phase 297). */
+export interface PerpAllowedMarketsRules {
+  markets: Array<{ market: string; name?: string }>;
+}
+
 /** Threshold for detecting "unlimited" approve amounts. */
 const UNLIMITED_THRESHOLD = (2n ** 256n - 1n) / 2n;
 
@@ -179,6 +196,10 @@ interface TransactionParam {
   actionProvider?: string;
   /** Action name for lending policy evaluation (supply/borrow/repay/withdraw). Set by ActionProviderRegistry. */
   actionName?: string;
+  /** Leverage for perp policy evaluation (open_position/modify_position). Set by ActionProviderRegistry. */
+  perpLeverage?: number;
+  /** Position size in USD for perp policy evaluation. Set by ActionProviderRegistry. */
+  perpSizeUsd?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -317,7 +338,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
 
     // Step 5: Non-spending classification for lending actions (LEND-08, research flag M6)
     // supply/repay/withdraw are non-spending — skip SPENDING_LIMIT entirely
-    const NON_SPENDING_ACTIONS = new Set(['supply', 'repay', 'withdraw']);
+    const NON_SPENDING_ACTIONS = new Set(['supply', 'repay', 'withdraw', 'close_position', 'add_margin']);
     if (transaction.actionName && NON_SPENDING_ACTIONS.has(transaction.actionName)) {
       return { allowed: true, tier: 'INSTANT' };
     }
@@ -640,7 +661,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
 
       // Step 5: Non-spending classification for lending actions (LEND-08, research flag M6)
       // supply/repay/withdraw are non-spending — skip SPENDING_LIMIT entirely
-      const NON_SPENDING_ACTIONS_R = new Set(['supply', 'repay', 'withdraw']);
+      const NON_SPENDING_ACTIONS_R = new Set(['supply', 'repay', 'withdraw', 'close_position', 'add_margin']);
       if (transaction.actionName && NON_SPENDING_ACTIONS_R.has(transaction.actionName)) {
         return { allowed: true, tier: 'INSTANT' as PolicyTier };
       }

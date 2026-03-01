@@ -15,6 +15,9 @@ export const POLICY_TYPES = [
   'X402_ALLOWED_DOMAINS',
   'LENDING_LTV_LIMIT',
   'LENDING_ASSET_WHITELIST',
+  'PERP_MAX_LEVERAGE',
+  'PERP_MAX_POSITION_USD',
+  'PERP_ALLOWED_MARKETS',
 ] as const;
 export type PolicyType = (typeof POLICY_TYPES)[number];
 export const PolicyTypeEnum = z.enum(POLICY_TYPES);
