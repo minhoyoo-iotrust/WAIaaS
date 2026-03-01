@@ -109,8 +109,8 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v29.7-ROADMAP.md` for full 
 **Plans**: 2 plans
 
 Plans:
-- [ ] 297-01-PLAN.md -- IPerpProvider 인터페이스 + Zod 스키마 + 이벤트/정책 타입 확장
-- [ ] 297-02-PLAN.md -- MarginMonitor + PerpPolicyEvaluator 구현
+- [x] 297-01-PLAN.md -- IPerpProvider 인터페이스 + Zod 스키마 + 이벤트/정책 타입 확장
+- [x] 297-02-PLAN.md -- MarginMonitor + PerpPolicyEvaluator 구현
 
 ### Phase 298: Drift Provider
 **Goal**: AI 에이전트가 Drift Protocol에서 포지션 개설/청산/변경/마진 관리를 실행할 수 있다
@@ -121,12 +121,12 @@ Plans:
   2. DriftPerpProvider가 open_position 액션으로 market/limit 주문을 통해 Drift 포지션을 개설하고, close_position으로 전체/부분 청산(percentage 파라미터)을 수행한다
   3. DriftPerpProvider가 modify_position으로 포지션 크기/레버리지를 변경하고, add_margin/withdraw_margin으로 마진을 추가/출금한다
   4. DriftMarketData가 Drift 시장 목록, 펀딩 레이트, 오라클 가격, 오픈 인터레스트를 조회하며, DriftPerpProvider.getMarkets()가 이 데이터를 반환한다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 298-01: DriftSdkWrapper + @solana/web3.js 1.x 호환성 격리
-- [ ] 298-02: DriftMarketData + DriftPerpProvider 5 액션 구현
-- [ ] 298-03: Drift Provider 테스트 + market/limit 주문 검증
+- [ ] 298-01-PLAN.md -- DriftSdkWrapper + IDriftSdkWrapper 인터페이스 + MockDriftSdkWrapper + Zod 입력 스키마
+- [ ] 298-02-PLAN.md -- DriftMarketData + DriftPerpProvider 5 액션 (IPerpProvider + IPositionProvider)
+- [ ] 298-03-PLAN.md -- Drift Provider 유닛 테스트 (SDK wrapper + market data + provider)
 
 ### Phase 299: 통합
 **Goal**: Drift Perp 트레이딩이 MCP/Admin/SDK/REST API 전 인터페이스에서 일관되게 사용 가능하다
@@ -161,4 +161,4 @@ Phases execute in numeric order: 297 -> 298 -> 299
 | 299. 통합 | v29.8 | 0/2 | Not started | - |
 
 ---
-*Last updated: 2026-03-02 after Phase 297 plan creation*
+*Last updated: 2026-03-02 after Phase 298 plan creation*
