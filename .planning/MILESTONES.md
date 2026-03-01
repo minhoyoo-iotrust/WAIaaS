@@ -1,5 +1,29 @@
 # Project Milestones: WAIaaS
 
+## v29.6 Pendle Yield Trading + Yield 프레임워크 (Shipped: 2026-03-01)
+
+**Delivered:** DeFi Yield 프레임워크(IYieldProvider, MaturityMonitor, MATURED 포지션 상태)를 구축하고 Pendle Finance를 첫 번째 Yield Provider로 구현하여, AI 에이전트가 고정 수익률 전략(PT/YT/LP 매수·상환·유동성 공급)을 정책 평가 하에 실행할 수 있도록 한 마일스톤. Pendle REST API v2 Convert 엔드포인트 기반 calldata 빌드, 만기 경고 알림(7일/1일/만기후), Admin Settings 7키 런타임 조정, MCP 5도구 자동 노출, actions.skill.md 문서화까지 완료. 추가로 #216(Solana WSS URL prefix) 및 #217(Lido factory errors) 버그 수정.
+
+**Phases completed:** 288-290 (3 phases, 8 plans, 18 requirements)
+
+**Key accomplishments:**
+
+- IYieldProvider 인터페이스 — IActionProvider 확장, getMarkets/getPosition/getYieldForecast 메서드, MATURED 포지션 상태 추가
+- PendleYieldProvider — 5개 Yield 액션(buyPT/buyYT/redeemPT/addLiquidity/removeLiquidity), Convert API 기반 calldata 빌드
+- PendleApiClient — Pendle REST API v2 래퍼, Zod 스키마 검증, 무료 티어 100 CU/분 지원
+- MaturityMonitor — 만기 7일/1일 전 경고 + 만기 후 미상환 경고, 1일 1회 폴링, 24시간 쿨다운, EventBus 연동
+- Admin Settings 7키 + MCP 5도구 자동 등록 + actions.skill.md Pendle Yield Trading 섹션
+- 버그 수정: #216 Solana WSS URL prefix, #217 Lido factory default network residue
+
+**Stats:**
+
+- 3 phases, 8 plans, 18 requirements, 14 commits
+- 50 files changed, +3,940 / -107 lines
+- ~225,248 LOC TypeScript
+- Timeline: 1 day (2026-03-01)
+
+---
+
 ## v29.5 내부 일관성 정리 (Shipped: 2026-02-28)
 
 **Delivered:** API 키 이중 저장소 버그(#214)를 SettingsService SSoT 통합으로 해결하고, Solana 네트워크 ID를 `solana-mainnet` 형식으로 전 스택 통일(#211)하며, Push Relay 서명 응답 릴레이 엔드포인트(#215)를 추가한 내부 일관성 정리 마일스톤. DB migration v28(api_keys→settings), v29(network ID 리네이밍), 레거시 입력 자동 변환, config.toml 하위 호환성을 모두 확보.
@@ -1706,6 +1730,16 @@
 ## v29.5 내부 일관성 정리 (Shipped: 2026-02-28)
 
 **Phases completed:** 180 phases, 387 plans, 52 tasks
+
+**Key accomplishments:**
+- (none recorded)
+
+---
+
+
+## v29.6 Pendle Yield Trading + Yield 프레임워크 (Shipped: 2026-03-01)
+
+**Phases completed:** 181 phases, 383 plans, 50 tasks
 
 **Key accomplishments:**
 - (none recorded)
