@@ -138,13 +138,13 @@ Plans:
   3. Admin 사이드바에 Human Wallet Apps 최상위 메뉴가 표시되고, System 페이지에서 Signing SDK 서브섹션이 제거된다
   4. Human Wallet Apps 페이지에서 앱 카드가 표시되며, 카드에서 Signing/Alerts 토글, "Used by" 지갑 목록, ntfy 서버 URL 설정, 앱 등록/삭제가 가능하다
   5. signing_enabled=0인 앱의 지갑에서 서명 요청 시 SIGNING_DISABLED 에러가 발생하고, 프리셋 적용 시 해당 앱이 wallet_apps에 자동 등록된다
-**Plans**: TBD
+**Plans**: 4 plans (Wave 1 → Wave 2 parallel → Wave 3)
 
 Plans:
-- [ ] 293-01: DB migration v31 + WalletAppService CRUD + signing_enabled 차단 로직
-- [ ] 293-02: REST API 엔드포인트 (GET/POST/PUT/DELETE /v1/admin/wallet-apps)
-- [ ] 293-03: Human Wallet Apps Admin UI 페이지 + 사이드바 메뉴 + System 페이지 정리
-- [ ] 293-04: 프리셋 자동 등록 + 통합 테스트
+- [ ] 293-01: DB migration v31 + WalletAppService CRUD + signing_enabled 차단 로직 (Wave 1)
+- [ ] 293-02: REST API 엔드포인트 GET/POST/PUT/DELETE /v1/admin/wallet-apps (Wave 2)
+- [ ] 293-03: Human Wallet Apps Admin UI 페이지 + 사이드바 메뉴 + System 페이지 정리 (Wave 2)
+- [ ] 293-04: 프리셋 자동 등록 + 통합 테스트 (Wave 3)
 
 ### Phase 294: 지갑 앱 알림 라우팅
 **Goal**: WalletNotificationChannel이 Alerts 활성화된 앱별 토픽으로 알림을 발행하고, 비활성 앱에는 알림이 발행되지 않는다
