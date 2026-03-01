@@ -8,7 +8,7 @@ progress:
   total_phases: 299
   completed_phases: 296
   total_plans: 666
-  completed_plans: 662
+  completed_plans: 663
 ---
 
 # Project State
@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 ## Current Position
 
 Phase: 298 of 299 (Drift Provider)
-Plan: 1 of 3 in current phase
-Status: Plan 298-01 complete
-Last activity: 2026-03-02 -- Completed 298-01-PLAN.md (DriftSdkWrapper + IDriftSdkWrapper + Zod schemas)
+Plan: 2 of 3 in current phase
+Status: Plan 298-02 complete
+Last activity: 2026-03-02 -- Completed 298-02-PLAN.md (DriftPerpProvider + DriftMarketData)
 
-Progress: [████░░░░░░] 42% (3/7 plans)
+Progress: [█████░░░░░] 57% (4/7 plans)
 
 ## Performance Metrics
 
@@ -49,6 +49,10 @@ Progress: [████░░░░░░] 42% (3/7 plans)
 - v29.8: DriftInstruction uses same structure as KaminoInstruction for SDK wrapper consistency
 - v29.8: Mock instruction data uses UTF-8 encoding for string amounts (Drift uses strings, not bigint)
 - v29.8: DriftSdkWrapper stores rpcUrl + subAccount for future real SDK integration
+- v29.8: DriftPerpProvider config is readonly public (not private) to satisfy noUnusedLocals
+- v29.8: marginRatioToStatus thresholds 0.30/0.15/0.10 match MarginMonitor from 297-02
+- v29.8: DriftMarketData is separate class for testability (thin IDriftSdkWrapper wrapper)
+- v29.8: IPositionProvider.getPositions uses assetId=null for perp positions (m29-00 section 5.3)
 
 ### Pending Todos
 
@@ -63,5 +67,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 298-01-PLAN.md -- DriftSdkWrapper + Zod schemas done, ready for 298-02
+Stopped at: Completed 298-02-PLAN.md -- DriftPerpProvider + DriftMarketData done, ready for 298-03
 Resume command: /gsd:execute-phase 298
