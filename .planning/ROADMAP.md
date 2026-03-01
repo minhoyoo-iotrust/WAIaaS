@@ -106,11 +106,11 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v29.7-ROADMAP.md` for full 
   2. PerpPositionTracker가 defi_positions 테이블에 category='PERP' 포지션을 기록하고, metadata에 market/direction/size/entry_price/leverage/unrealized_pnl/margin/liquidation_price 필드가 저장된다
   3. MarginMonitor가 마진 비율 임계값 접근 시 MARGIN_WARNING 알림을, 청산 가격 접근 시 LIQUIDATION_IMMINENT 경고를 EventBus로 발행하며, 위험 시 폴링 간격이 단축된다
   4. PerpPolicyEvaluator가 max_leverage 초과, max_position_usd 초과, allowed_markets 미포함 요청에 대해 각각 거부/APPROVAL 격상을 수행한다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 297-01: IPerpProvider 인터페이스 + PerpPositionTracker 구현
-- [ ] 297-02: MarginMonitor + PerpPolicyEvaluator 구현
+- [ ] 297-01-PLAN.md -- IPerpProvider 인터페이스 + Zod 스키마 + 이벤트/정책 타입 확장
+- [ ] 297-02-PLAN.md -- MarginMonitor + PerpPolicyEvaluator 구현
 
 ### Phase 298: Drift Provider
 **Goal**: AI 에이전트가 Drift Protocol에서 포지션 개설/청산/변경/마진 관리를 실행할 수 있다
@@ -161,4 +161,4 @@ Phases execute in numeric order: 297 -> 298 -> 299
 | 299. 통합 | v29.8 | 0/2 | Not started | - |
 
 ---
-*Last updated: 2026-03-01 after v29.8 roadmap creation*
+*Last updated: 2026-03-02 after Phase 297 plan creation*
