@@ -1,4 +1,4 @@
-# 마일스톤 m31-02: Tauri Desktop App
+# 마일스톤 m34-02: Tauri Desktop App
 
 - **Status:** PLANNED
 - **Milestone:** TBD

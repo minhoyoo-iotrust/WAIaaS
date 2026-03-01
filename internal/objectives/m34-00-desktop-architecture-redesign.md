@@ -1,4 +1,4 @@
-# 마일스톤 m31: Desktop App 아키텍처 재설계
+# 마일스톤 m34-00: Desktop App 아키텍처 재설계
 
 - **Status:** PLANNED
 - **Milestone:** TBD
@@ -122,4 +122,4 @@
 *생성일: 2026-02-14*
 *m20 이후로 이연: 2026-02-16 — Desktop은 배포 채널이므로 m20 릴리스 후 진행*
 *선행: v1.3.2 (Admin Web UI)*
-*후행: m31-02 (Tauri Desktop App 구현)*
+*후행: m34-02 (Tauri Desktop App 구현)*
