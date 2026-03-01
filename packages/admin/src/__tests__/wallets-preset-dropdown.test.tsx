@@ -272,14 +272,14 @@ describe('Admin UI wallet preset dropdown', () => {
     expect(body).not.toHaveProperty('wallet_type');
   });
 
-  it('T-ADUI-04: dropdown not shown when ownerState is GRACE', async () => {
+  it('T-ADUI-04: NONE-state Wallet Type dropdown not shown when editing in GRACE state', async () => {
     setupApiMocks(graceWallet);
     await renderAndWaitForDetail();
 
     // Switch to Owner tab
     await switchToOwnerTab();
 
-    // GRACE state shows the edit pencil button
+    // GRACE state shows the edit pencil button for owner address
     const pencilBtn = screen.getByTitle('Set owner address');
     expect(pencilBtn).toBeTruthy();
 
@@ -291,8 +291,9 @@ describe('Admin UI wallet preset dropdown', () => {
       expect(screen.getByPlaceholderText('Enter owner wallet address')).toBeTruthy();
     });
 
-    // Wallet Type dropdown should NOT be present (only for NONE state)
-    expect(screen.queryByText('Wallet Type')).toBeNull();
+    // The NONE-state full-width dropdown (with "Custom (manual setup)") should NOT appear
+    // during GRACE address editing — GRACE has its own Wallet Type section instead
+    expect(screen.queryByDisplayValue('Custom (manual setup)')).toBeNull();
   });
 
   it('T-ADUI-05: walletType badge displayed for preset wallet', async () => {
@@ -305,7 +306,8 @@ describe('Admin UI wallet preset dropdown', () => {
     // GRACE badge should be present
     expect(screen.getByText('GRACE')).toBeTruthy();
 
-    // D'CENT Wallet badge should be displayed next to owner state
-    expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+    // D'CENT Wallet should be displayed (badge + Wallet Type section)
+    const dcentElements = screen.getAllByText("D'CENT Wallet");
+    expect(dcentElements.length).toBeGreaterThanOrEqual(1);
   });
 });

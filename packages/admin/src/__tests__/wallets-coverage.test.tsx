@@ -113,6 +113,12 @@ const mockWalletWithOwner = {
   ownerState: 'GRACE' as const,
 };
 
+/** GRACE wallet with WalletConnect approval method — WC section only renders when approvalMethod === 'walletconnect'. */
+const mockWalletWithOwnerWc = {
+  ...mockWalletWithOwner,
+  approvalMethod: 'walletconnect',
+};
+
 const mockNetworks = {
   availableNetworks: [
     { network: 'solana-devnet', name: 'Devnet' },
@@ -583,7 +589,7 @@ describe('WalletDetailView: WalletConnect', () => {
   afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
   it('shows Connect Wallet button when owner is set and no session', async () => {
-    mockDetailApiCalls(mockWalletWithOwner);
+    mockDetailApiCalls(mockWalletWithOwnerWc);
     render(<WalletsPage />);
 
     await waitFor(() => {
@@ -598,7 +604,7 @@ describe('WalletDetailView: WalletConnect', () => {
   });
 
   it('shows message when no owner is set', async () => {
-    mockDetailApiCalls();
+    mockDetailApiCalls({ ...mockWalletDetail, approvalMethod: 'walletconnect' });
     await renderAndWaitForDetail();
 
     await switchTab('Owner');
@@ -607,7 +613,7 @@ describe('WalletDetailView: WalletConnect', () => {
   });
 
   it('handleWcConnect: initiates pairing', async () => {
-    mockDetailApiCalls(mockWalletWithOwner);
+    mockDetailApiCalls(mockWalletWithOwnerWc);
 
     vi.mocked(apiPost).mockResolvedValueOnce({
       uri: 'wc:abc123',
@@ -640,7 +646,7 @@ describe('WalletDetailView: WalletConnect', () => {
   });
 
   it('handleWcConnect error', async () => {
-    mockDetailApiCalls(mockWalletWithOwner);
+    mockDetailApiCalls(mockWalletWithOwnerWc);
 
     vi.mocked(apiPost).mockRejectedValueOnce(new ApiError(500, 'WC_ERROR', 'Failed'));
 
@@ -666,7 +672,7 @@ describe('WalletDetailView: WalletConnect', () => {
   it('handleWcDisconnect: disconnects session', async () => {
     // Mock with WC session present
     vi.mocked(apiGet).mockImplementation(async (path: string) => {
-      if (path === '/v1/wallets/test-wallet-1') return mockWalletWithOwner;
+      if (path === '/v1/wallets/test-wallet-1') return mockWalletWithOwnerWc;
       if (path === '/v1/wallets/test-wallet-1/networks') return mockNetworks;
       if (path === '/v1/admin/wallets/test-wallet-1/balance') return mockBalance;
       if (path === '/v1/admin/wallets/test-wallet-1/transactions') return mockTransactions;
@@ -702,7 +708,7 @@ describe('WalletDetailView: WalletConnect', () => {
 
   it('handleWcDisconnect error', async () => {
     vi.mocked(apiGet).mockImplementation(async (path: string) => {
-      if (path === '/v1/wallets/test-wallet-1') return mockWalletWithOwner;
+      if (path === '/v1/wallets/test-wallet-1') return mockWalletWithOwnerWc;
       if (path === '/v1/wallets/test-wallet-1/networks') return mockNetworks;
       if (path === '/v1/admin/wallets/test-wallet-1/balance') return mockBalance;
       if (path === '/v1/admin/wallets/test-wallet-1/transactions') return mockTransactions;
