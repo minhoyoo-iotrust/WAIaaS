@@ -30,13 +30,13 @@ Requirements for Solana Perp DEX (Drift) + Perp 프레임워크. Each maps to ro
 
 ### Integration
 
-- [ ] **INTG-01**: MCP 5개 도구(action_drift_open_position/close_position/modify_position/add_margin/withdraw_margin)가 mcpExpose=true로 자동 노출된다
-- [ ] **INTG-02**: Admin Settings 5키(drift_enabled/drift_max_leverage/drift_max_position_usd/drift_margin_warning_threshold_pct/drift_position_sync_interval_sec)가 런타임 조정 가능하다
+- [x] **INTG-01**: MCP 5개 도구(action_drift_open_position/close_position/modify_position/add_margin/withdraw_margin)가 mcpExpose=true로 자동 노출된다
+- [x] **INTG-02**: Admin Settings 5키(drift_enabled/drift_max_leverage/drift_max_position_usd/drift_margin_warning_threshold_pct/drift_position_sync_interval_sec)가 런타임 조정 가능하다
 - [ ] **INTG-03**: Admin UI Actions 페이지에 Drift Perp Trading 카드가 표시되어 활성화 상태와 설정을 관리한다
 - [ ] **INTG-04**: actions.skill.md에 Drift Perp Trading 섹션이 추가되어 REST/MCP/SDK 사용 예시를 제공한다
-- [ ] **INTG-05**: TS/Python SDK에서 executeAction('open_position', { provider: 'drift', ... })으로 Drift Perp 액션을 실행할 수 있다
-- [ ] **INTG-06**: GET /v1/wallets/:id/positions에서 Perp 포지션(category='PERP')이 Lending/Yield 포지션과 함께 통합 반환된다
-- [ ] **INTG-07**: registerBuiltInProviders에서 DriftPerpProvider가 자동 등록되며, actions.drift_enabled 설정으로 활성화/비활성화된다
+- [x] **INTG-05**: TS/Python SDK에서 executeAction('open_position', { provider: 'drift', ... })으로 Drift Perp 액션을 실행할 수 있다
+- [x] **INTG-06**: GET /v1/wallets/:id/positions에서 Perp 포지션(category='PERP')이 Lending/Yield 포지션과 함께 통합 반환된다
+- [x] **INTG-07**: registerBuiltInProviders에서 DriftPerpProvider가 자동 등록되며, actions.drift_enabled 설정으로 활성화/비활성화된다
 
 ## Future Requirements
 
@@ -75,13 +75,13 @@ Requirements for Solana Perp DEX (Drift) + Perp 프레임워크. Each maps to ro
 | DRIFT-06 | Phase 298 | Complete |
 | DRIFT-07 | Phase 298 | Complete |
 | DRIFT-08 | Phase 298 | Complete |
-| INTG-01 | Phase 299 | Pending |
-| INTG-02 | Phase 299 | Pending |
+| INTG-01 | Phase 299 | Complete |
+| INTG-02 | Phase 299 | Complete |
 | INTG-03 | Phase 299 | Pending |
 | INTG-04 | Phase 299 | Pending |
-| INTG-05 | Phase 299 | Pending |
-| INTG-06 | Phase 299 | Pending |
-| INTG-07 | Phase 299 | Pending |
+| INTG-05 | Phase 299 | Complete |
+| INTG-06 | Phase 299 | Complete |
+| INTG-07 | Phase 299 | Complete |
 
 **Coverage:**
 - v29.8 requirements: 22 total

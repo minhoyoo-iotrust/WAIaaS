@@ -8,7 +8,7 @@ progress:
   total_phases: 299
   completed_phases: 296
   total_plans: 666
-  completed_plans: 664
+  completed_plans: 665
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-01)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 298 -- Drift Provider (DriftSdkWrapper, DriftMarketData, DriftPerpProvider)
+**Current focus:** Phase 299 -- Integration (registerBuiltInProviders, Admin UI, skill.md)
 
 ## Current Position
 
-Phase: 298 of 299 (Drift Provider)
-Plan: 3 of 3 in current phase
-Status: Plan 298-03 complete (Phase 298 done)
-Last activity: 2026-03-02 -- Completed 298-03-PLAN.md (Drift Provider unit tests, 81 tests)
+Phase: 299 of 299 (Integration)
+Plan: 1 of 2 in current phase
+Status: Plan 299-01 complete
+Last activity: 2026-03-02 -- Completed 299-01-PLAN.md (DriftPerpProvider registration + hot-reload)
 
-Progress: [███████░░░] 71% (5/7 plans)
+Progress: [████████░░] 86% (6/7 plans)
 
 ## Performance Metrics
 
@@ -54,6 +54,8 @@ Progress: [███████░░░] 71% (5/7 plans)
 - v29.8: DriftMarketData is separate class for testability (thin IDriftSdkWrapper wrapper)
 - v29.8: IPositionProvider.getPositions uses assetId=null for perp positions (m29-00 section 5.3)
 - v29.8: 81 unit tests for Drift provider -- follows kamino-provider.test.ts patterns exactly
+- v29.8: DriftConfig factory uses only enabled+subAccount (policy keys consumed by MarginMonitor/PerpPolicyEvaluator, not provider)
+- v29.8: pendle_yield missing from BUILTIN_NAMES was pre-existing bug, fixed alongside drift_perp addition
 
 ### Pending Todos
 
@@ -68,5 +70,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 298-03-PLAN.md -- Phase 298 complete, ready for Phase 299 (Perp Integration)
+Stopped at: Completed 299-01-PLAN.md -- DriftPerpProvider registration + hot-reload BUILTIN_NAMES
 Resume command: /gsd:execute-phase 299
