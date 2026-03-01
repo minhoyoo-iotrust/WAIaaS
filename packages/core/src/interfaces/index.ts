@@ -130,3 +130,16 @@ export {
   YieldPositionSummarySchema,
   YieldForecastSchema,
 } from './yield-provider.types.js';
+
+// v29.8 Perp Provider types (Zod SSoT)
+export type {
+  PerpPositionSummary,
+  MarginInfo,
+  PerpMarketInfo,
+  IPerpProvider,
+} from './perp-provider.types.js';
+export {
+  PerpPositionSummarySchema,
+  MarginInfoSchema,
+  PerpMarketInfoSchema,
+} from './perp-provider.types.js';
