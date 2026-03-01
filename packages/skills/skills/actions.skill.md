@@ -3,7 +3,7 @@ name: "WAIaaS Actions"
 description: "Action Provider framework: list providers, execute DeFi actions through the 6-stage transaction pipeline"
 category: "api"
 tags: [wallet, blockchain, defi, actions, waiass, jupiter, 0x, swap, lifi, bridge, cross-chain, lido, jito, staking, liquid-staking, pendle, yield, pt, yt, drift, perp, perpetual, leverage, futures]
-version: "2.8.5"
+version: "2.9.0-rc.4"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]
