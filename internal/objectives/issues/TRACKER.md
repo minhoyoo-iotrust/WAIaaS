@@ -230,6 +230,8 @@
 | 213 | ENHANCEMENT | LOW | Admin UI 지갑 리스트에서 BALANCE 컬럼 제거 — 기본 네트워크 제거로 단일 잔액 무의미 | v29.4 | FIXED | 2026-02-28 |
 | 214 | BUG | CRITICAL | API 키 이중 저장소 비동기화로 프로바이더에 키 미전달 — ApiKeyStore ↔ SettingsService 불일치 | m29-05 | FIXED | 2026-02-28 |
 | 215 | ENHANCEMENT | MEDIUM | Push Relay 서명 응답 릴레이 엔드포인트 추가 — 지갑 앱이 ntfy 직접 접근 불필요하도록 | v29.5 | FIXED | 2026-02-28 |
+| 216 | BUG | HIGH | Solana WSS URL 설정 키에 `solana-` 프리픽스 누락 — IncomingTxMonitor 구독 실패 | v29.6 | OPEN | |
+| 217 | BUG | HIGH | 기본 네트워크 제거 잔재 — Lido 팩토리 에러 + OpenAPI/코멘트 불일치 | v29.6 | OPEN | |
 
 ## Type Legend
 
@@ -241,9 +243,9 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 2
 - **FIXED:** 215
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 215
+- **Total:** 217
