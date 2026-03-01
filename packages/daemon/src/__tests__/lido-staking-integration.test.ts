@@ -83,12 +83,13 @@ describe('Lido Staking integration', () => {
 
   // 3. Environment address switching
   describe('environment address switching', () => {
-    it('uses Holesky testnet addresses when environment is testnet', async () => {
+    it('uses Holesky testnet addresses via Admin Settings override', async () => {
       const registry = new ActionProviderRegistry();
       const reader = makeSettingsReader({
         'actions.lido_staking_enabled': 'true',
-        // Provide testnet network explicitly to trigger testnet address resolution
-        'rpc.evm_default_network': 'ethereum-sepolia',
+        // Admin Settings address override takes priority over environment defaults
+        'actions.lido_staking_steth_address': LIDO_TESTNET_ADDRESSES.stethAddress,
+        'actions.lido_staking_withdrawal_queue_address': LIDO_TESTNET_ADDRESSES.withdrawalQueueAddress,
       });
 
       registerBuiltInProviders(registry, reader);

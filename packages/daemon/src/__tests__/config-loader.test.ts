@@ -601,14 +601,14 @@ poll_interval = 60
       'incoming.wss_url.arbitrum-sepolia',
       'incoming.wss_url.base-mainnet',
       'incoming.wss_url.base-sepolia',
-      'incoming.wss_url.solana-devnet',
       'incoming.wss_url.ethereum-mainnet',
       'incoming.wss_url.ethereum-sepolia',
-      'incoming.wss_url.solana-mainnet',
       'incoming.wss_url.optimism-mainnet',
       'incoming.wss_url.optimism-sepolia',
       'incoming.wss_url.polygon-amoy',
       'incoming.wss_url.polygon-mainnet',
+      'incoming.wss_url.solana-devnet',
+      'incoming.wss_url.solana-mainnet',
       'incoming.wss_url.solana-testnet',
     ]);
   });
