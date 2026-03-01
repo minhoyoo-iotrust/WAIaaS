@@ -210,6 +210,15 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'actions.kamino_market', category: 'actions', configPath: 'actions.kamino_market', defaultValue: 'main', isCredential: false },
   { key: 'actions.kamino_hf_threshold', category: 'actions', configPath: 'actions.kamino_hf_threshold', defaultValue: '1.2', isCredential: false },
 
+  // --- Pendle Yield ---
+  { key: 'actions.pendle_yield_enabled', category: 'actions', configPath: 'actions.pendle_yield_enabled', defaultValue: 'false', isCredential: false },
+  { key: 'actions.pendle_yield_api_base_url', category: 'actions', configPath: 'actions.pendle_yield_api_base_url', defaultValue: 'https://api-v2.pendle.finance', isCredential: false },
+  { key: 'actions.pendle_yield_api_key', category: 'actions', configPath: 'actions.pendle_yield_api_key', defaultValue: '', isCredential: true },
+  { key: 'actions.pendle_yield_default_slippage_bps', category: 'actions', configPath: 'actions.pendle_yield_default_slippage_bps', defaultValue: '100', isCredential: false },
+  { key: 'actions.pendle_yield_max_slippage_bps', category: 'actions', configPath: 'actions.pendle_yield_max_slippage_bps', defaultValue: '500', isCredential: false },
+  { key: 'actions.pendle_yield_request_timeout_ms', category: 'actions', configPath: 'actions.pendle_yield_request_timeout_ms', defaultValue: '10000', isCredential: false },
+  { key: 'actions.pendle_yield_maturity_warning_days', category: 'actions', configPath: 'actions.pendle_yield_maturity_warning_days', defaultValue: '7', isCredential: false },
+
   // --- gas_condition category (Gas conditional execution) ---
   { key: 'gas_condition.enabled', category: 'gas_condition', configPath: 'gas_condition.enabled', defaultValue: 'true', isCredential: false },
   { key: 'gas_condition.poll_interval_sec', category: 'gas_condition', configPath: 'gas_condition.poll_interval_sec', defaultValue: '30', isCredential: false },

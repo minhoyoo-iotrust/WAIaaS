@@ -353,4 +353,5 @@ export type {
   WalletActivityEvent,
   IncomingTxEvent,
   IncomingTxSuspiciousEvent,
+  YieldMaturityWarningEvent,
 } from './events/index.js';

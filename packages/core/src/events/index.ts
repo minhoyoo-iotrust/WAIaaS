@@ -9,4 +9,5 @@ export type {
   ApprovalChannelSwitchedEvent,
   IncomingTxEvent,
   IncomingTxSuspiciousEvent,
+  YieldMaturityWarningEvent,
 } from './event-types.js';
