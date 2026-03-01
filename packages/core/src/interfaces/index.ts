@@ -117,3 +117,16 @@ export type { PositionUpdate, IPositionProvider } from './position-provider.type
 
 // v29.2 DeFi Monitor types
 export type { IDeFiMonitor, MonitorSeverity, MonitorEvaluation } from './defi-monitor.types.js';
+
+// v29.6 Yield Provider types (Zod SSoT)
+export type {
+  YieldMarketInfo,
+  YieldPositionSummary,
+  YieldForecast,
+  IYieldProvider,
+} from './yield-provider.types.js';
+export {
+  YieldMarketInfoSchema,
+  YieldPositionSummarySchema,
+  YieldForecastSchema,
+} from './yield-provider.types.js';

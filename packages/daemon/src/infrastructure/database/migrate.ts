@@ -78,7 +78,7 @@ const LEGACY_NETWORK_NORMALIZE: Record<string, string> = {
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 29;
+export const LATEST_SCHEMA_VERSION = 30;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -2142,6 +2142,69 @@ MIGRATIONS.push({
     if (fkErrors.length > 0) {
       throw new Error(
         `FK integrity check failed after v29 migration: ${JSON.stringify(fkErrors)}`,
+      );
+    }
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Migration v30: Add MATURED status to defi_positions CHECK constraint (v29.6)
+// ---------------------------------------------------------------------------
+
+MIGRATIONS.push({
+  version: 30,
+  description: 'Add MATURED position status to defi_positions CHECK constraint (v29.6 Yield)',
+  managesOwnTransaction: true,
+  up: (sqlite) => {
+    sqlite.exec('BEGIN');
+    try {
+      // 12-step table recreation for defi_positions (status CHECK constraint update)
+      sqlite.exec(`CREATE TABLE defi_positions_new (
+  id TEXT PRIMARY KEY,
+  wallet_id TEXT NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
+  category TEXT NOT NULL CHECK(category IN (${inList(POSITION_CATEGORIES)})),
+  provider TEXT NOT NULL,
+  chain TEXT NOT NULL CHECK(chain IN (${inList(CHAIN_TYPES)})),
+  network TEXT CHECK(network IS NULL OR network IN (${inList(NETWORK_TYPES)})),
+  asset_id TEXT,
+  amount TEXT NOT NULL,
+  amount_usd REAL,
+  metadata TEXT,
+  status TEXT NOT NULL DEFAULT 'ACTIVE' CHECK(status IN (${inList(POSITION_STATUSES)})),
+  opened_at INTEGER NOT NULL,
+  closed_at INTEGER,
+  last_synced_at INTEGER NOT NULL,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+)`);
+
+      sqlite.exec(`INSERT INTO defi_positions_new
+  SELECT id, wallet_id, category, provider, chain, network,
+         asset_id, amount, amount_usd, metadata, status, opened_at, closed_at,
+         last_synced_at, created_at, updated_at
+  FROM defi_positions`);
+
+      sqlite.exec('DROP TABLE defi_positions');
+      sqlite.exec('ALTER TABLE defi_positions_new RENAME TO defi_positions');
+
+      // Recreate indexes
+      sqlite.exec('CREATE INDEX IF NOT EXISTS idx_defi_positions_wallet_category ON defi_positions(wallet_id, category)');
+      sqlite.exec('CREATE INDEX IF NOT EXISTS idx_defi_positions_wallet_provider ON defi_positions(wallet_id, provider)');
+      sqlite.exec('CREATE INDEX IF NOT EXISTS idx_defi_positions_status ON defi_positions(status)');
+      sqlite.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_defi_positions_unique ON defi_positions(wallet_id, provider, asset_id, category)');
+
+      sqlite.exec('COMMIT');
+    } catch (err) {
+      sqlite.exec('ROLLBACK');
+      throw err;
+    }
+
+    // Re-enable foreign keys and verify integrity
+    sqlite.pragma('foreign_keys = ON');
+    const fkErrors = sqlite.pragma('foreign_key_check') as unknown[];
+    if (fkErrors.length > 0) {
+      throw new Error(
+        `FK integrity check failed after v30 migration: ${JSON.stringify(fkErrors)}`,
       );
     }
   },
