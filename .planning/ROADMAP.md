@@ -89,7 +89,7 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v29.6-ROADMAP.md` for full 
 
 **Milestone Goal:** D'CENT 프리셋을 WalletConnect에서 sdk_ntfy 직접 서명으로 전환하고, 지갑별 wallet_type 토픽 라우팅을 구현한다. "Signing SDK"를 "Human Wallet Apps"로 재구성하여 운영자 지갑 앱을 1급 개념으로 관리하고, Admin UI 설정 구조를 정리한다.
 
-- [ ] **Phase 291: D'CENT 프리셋 + 토픽 라우팅** - D'CENT approval method를 sdk_ntfy로 전환하고 지갑별 wallet_type 기반 서명 토픽 라우팅을 구현한다
+- [x] **Phase 291: D'CENT 프리셋 + 토픽 라우팅** - D'CENT approval method를 sdk_ntfy로 전환하고 지갑별 wallet_type 기반 서명 토픽 라우팅을 구현한다 (completed 2026-03-01)
 - [ ] **Phase 292: Admin UI 오너 설정 화면 개선** - 프리셋 변경 UX, approval method 미리보기, WalletConnect 조건부 표시를 구현한다
 - [ ] **Phase 293: Human Wallet Apps 레지스트리 + UI** - wallet_apps DB 테이블, WalletAppService, REST API, Human Wallet Apps Admin 페이지를 구축한다
 - [ ] **Phase 294: 지갑 앱 알림 라우팅** - WalletNotificationChannel을 앱별 토픽 발행으로 전환하고 Alerts 토글을 반영한다
@@ -107,7 +107,7 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v29.6-ROADMAP.md` for full 
   2. wallet_type이 설정된 지갑의 서명 요청이 waiaas-sign-{wallet_type} 토픽으로 발행된다
   3. wallet_type이 NULL인 지갑은 글로벌 preferred_wallet 설정값으로 토픽이 결정되고, preferred_wallet도 미설정이면 WALLET_NOT_REGISTERED 에러가 발생한다
   4. D'CENT 프리셋 description이 "D'CENT hardware wallet with push notification signing"으로 표시된다
-**Plans**: TBD
+**Plans**: 2 plans defined
 
 Plans:
 - [ ] 291-01: D'CENT 프리셋 정의 변경 + ApprovalChannelRouter wallet_type 기반 토픽 라우팅
@@ -189,7 +189,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 291. D'CENT 프리셋 + 토픽 라우팅 | 0/2 | Not started | - |
+| 291. D'CENT 프리셋 + 토픽 라우팅 | 2/2 | Complete    | 2026-03-01 |
 | 292. Admin UI 오너 설정 화면 개선 | 0/2 | Not started | - |
 | 293. Human Wallet Apps 레지스트리 + UI | 0/4 | Not started | - |
 | 294. 지갑 앱 알림 라우팅 | 0/1 | Not started | - |
