@@ -254,7 +254,7 @@ describe('WalletAppService', () => {
 
   describe('getAlertEnabledApps()', () => {
     it('T-APP-03b: filters by alerts_enabled', () => {
-      const app1 = service.register('dcent', "D'CENT");
+      service.register('dcent', "D'CENT");
       const app2 = service.register('custom', 'Custom');
       service.update(app2.id, { alertsEnabled: false });
 
