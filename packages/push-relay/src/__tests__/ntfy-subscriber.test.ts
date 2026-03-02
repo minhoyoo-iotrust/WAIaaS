@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { gzipSync, deflateSync, brotliCompressSync } from 'node:zlib';
-import { NtfySubscriber } from '../subscriber/ntfy-subscriber.js';
+import { NtfySubscriber, isLikelyCompressed, selectDecompressor } from '../subscriber/ntfy-subscriber.js';
 import { ConfigurablePayloadTransformer } from '../transformer/payload-transformer.js';
 
 // ── Fixtures ──────────────────────────────────────────────────────────
@@ -86,7 +86,145 @@ function createCompressedSseResponse(
   });
 }
 
-// ── Tests ─────────────────────────────────────────────────────────────
+/**
+ * Create a compressed SSE response WITHOUT Content-Encoding header.
+ * Simulates scenario B: CDN compresses but undici strips the header.
+ */
+function createHeaderlessCompressedResponse(
+  lines: string[],
+  encoding: 'gzip' | 'deflate',
+): Response {
+  const text = lines.join('\n') + '\n';
+  const raw = Buffer.from(text, 'utf-8');
+  const compressed = encoding === 'gzip' ? gzipSync(raw) : deflateSync(raw);
+
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new Uint8Array(compressed));
+      controller.close();
+    },
+  });
+  // NO Content-Encoding header — simulates undici stripping it
+  return new Response(stream, {
+    status: 200,
+    headers: { 'Content-Type': 'text/event-stream' },
+  });
+}
+
+/**
+ * Create an UNCOMPRESSED SSE response WITH Content-Encoding header.
+ * Simulates scenarios A/D: undici already decompressed but kept the header.
+ */
+function createAlreadyDecompressedResponse(lines: string[]): Response {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(lines.join('\n') + '\n');
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(data);
+      controller.close();
+    },
+  });
+  // Plaintext body but header says 'deflate' — undici already decompressed
+  return new Response(stream, {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Content-Encoding': 'deflate',
+    },
+  });
+}
+
+// ── Unit Tests: isLikelyCompressed ───────────────────────────────────
+
+describe('isLikelyCompressed', () => {
+  it('returns false for empty chunk', () => {
+    expect(isLikelyCompressed(new Uint8Array(0))).toBe(false);
+  });
+
+  it('returns false for SSE event: line', () => {
+    const chunk = new TextEncoder().encode('event: open\n');
+    expect(isLikelyCompressed(chunk)).toBe(false);
+  });
+
+  it('returns false for SSE data: line', () => {
+    const chunk = new TextEncoder().encode('data: {"topic":"test"}\n');
+    expect(isLikelyCompressed(chunk)).toBe(false);
+  });
+
+  it('returns false for SSE id: line', () => {
+    const chunk = new TextEncoder().encode('id: 123\n');
+    expect(isLikelyCompressed(chunk)).toBe(false);
+  });
+
+  it('returns false for SSE retry: line', () => {
+    const chunk = new TextEncoder().encode('retry: 5000\n');
+    expect(isLikelyCompressed(chunk)).toBe(false);
+  });
+
+  it('returns false for SSE comment (colon)', () => {
+    const chunk = new TextEncoder().encode(': keepalive\n');
+    expect(isLikelyCompressed(chunk)).toBe(false);
+  });
+
+  it('returns false for empty SSE line (newline)', () => {
+    const chunk = new TextEncoder().encode('\n');
+    expect(isLikelyCompressed(chunk)).toBe(false);
+  });
+
+  it('returns true for gzip magic bytes', () => {
+    const chunk = new Uint8Array([0x1f, 0x8b, 0x08, 0x00]);
+    expect(isLikelyCompressed(chunk)).toBe(true);
+  });
+
+  it('returns true for deflate (zlib) header', () => {
+    const chunk = new Uint8Array([0x78, 0x9c, 0x01, 0x02]);
+    expect(isLikelyCompressed(chunk)).toBe(true);
+  });
+
+  it('returns true for deflate CMF=0x58', () => {
+    // This is the exact byte pattern from issue #236
+    const chunk = new Uint8Array([0x58, 0x69, 0x01, 0x02]);
+    expect(isLikelyCompressed(chunk)).toBe(true);
+  });
+
+  it('returns true for actual gzip compressed data', () => {
+    const compressed = gzipSync(Buffer.from('data: {}\n'));
+    expect(isLikelyCompressed(new Uint8Array(compressed))).toBe(true);
+  });
+
+  it('returns true for actual deflate compressed data', () => {
+    const compressed = deflateSync(Buffer.from('data: {}\n'));
+    expect(isLikelyCompressed(new Uint8Array(compressed))).toBe(true);
+  });
+});
+
+describe('selectDecompressor', () => {
+  it('returns null for uncompressed SSE data', () => {
+    const chunk = new TextEncoder().encode('event: open\n');
+    expect(selectDecompressor(chunk, null)).toBeNull();
+  });
+
+  it('returns null for uncompressed data even with Content-Encoding header', () => {
+    // Scenario A/D: undici already decompressed but kept header
+    const chunk = new TextEncoder().encode('event: open\n');
+    expect(selectDecompressor(chunk, 'deflate')).toBeNull();
+  });
+
+  it('returns decompressor for compressed data without header', () => {
+    // Scenario B: undici stripped header but left data compressed
+    const compressed = gzipSync(Buffer.from('data: {}\n'));
+    const result = selectDecompressor(new Uint8Array(compressed), null);
+    expect(result).not.toBeNull();
+  });
+
+  it('returns brotli decompressor when header says br and data is compressed', () => {
+    const compressed = brotliCompressSync(Buffer.from('data: {}\n'));
+    const result = selectDecompressor(new Uint8Array(compressed), 'br');
+    expect(result).not.toBeNull();
+  });
+});
+
+// ── Integration Tests: NtfySubscriber ────────────────────────────────
 
 describe('NtfySubscriber', () => {
   afterEach(() => {
@@ -510,8 +648,10 @@ describe('NtfySubscriber', () => {
     expect(payload.data).not.toHaveProperty('sound');
   });
 
+  // ── Compression Tests ────────────────────────────────────────────────
+
   it.each(['gzip', 'deflate', 'br'] as const)(
-    'decompresses %s-encoded SSE responses',
+    'decompresses %s-encoded SSE responses (with Content-Encoding header)',
     async (encoding) => {
       const onMessage = vi.fn().mockResolvedValue(undefined);
       const encoded = encodeBase64url(validSignRequest);
@@ -590,6 +730,89 @@ describe('NtfySubscriber', () => {
     await new Promise((r) => setTimeout(r, 100));
     await subscriber.stop();
 
+    expect(onMessage).toHaveBeenCalled();
+    expect(onMessage.mock.calls[0]![1].category).toBe('sign_request');
+  });
+
+  // ── #236 Scenario B: Compressed body WITHOUT Content-Encoding header ──
+
+  it.each(['gzip', 'deflate'] as const)(
+    'decompresses %s body when Content-Encoding header is stripped (scenario B, #236)',
+    async (encoding) => {
+      const onMessage = vi.fn().mockResolvedValue(undefined);
+      const encoded = encodeBase64url(validSignRequest);
+      const ntfyMessage = JSON.stringify({
+        topic: 'sign-w1',
+        message: encoded,
+        title: 'Sign Request',
+        priority: 5,
+      });
+
+      vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
+        const urlStr = url as string;
+        if (urlStr.includes('sign-w1')) {
+          return Promise.resolve(
+            createHeaderlessCompressedResponse([`data: ${ntfyMessage}`], encoding),
+          );
+        }
+        return new Promise(() => {});
+      });
+
+      const subscriber = new NtfySubscriber({
+        ntfyServer: 'https://ntfy.sh',
+        signTopicPrefix: 'sign',
+        notifyTopicPrefix: 'notify',
+        walletNames: ['w1'],
+        onMessage,
+      });
+
+      subscriber.start();
+      await new Promise((r) => setTimeout(r, 200));
+      await subscriber.stop();
+
+      expect(onMessage).toHaveBeenCalled();
+      const call = onMessage.mock.calls[0]!;
+      expect(call[0]).toBe('w1');
+      expect(call[1].category).toBe('sign_request');
+    },
+  );
+
+  // ── #236 Scenario A/D: Already decompressed body WITH Content-Encoding header ──
+
+  it('does not double-decompress when undici already decompressed but kept header (scenario A/D, #236)', async () => {
+    const onMessage = vi.fn().mockResolvedValue(undefined);
+    const encoded = encodeBase64url(validSignRequest);
+    const ntfyMessage = JSON.stringify({
+      topic: 'sign-w1',
+      message: encoded,
+      title: 'Sign Request',
+      priority: 5,
+    });
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
+      const urlStr = url as string;
+      if (urlStr.includes('sign-w1')) {
+        // Plaintext body but Content-Encoding: deflate header present
+        return Promise.resolve(
+          createAlreadyDecompressedResponse([`data: ${ntfyMessage}`]),
+        );
+      }
+      return new Promise(() => {});
+    });
+
+    const subscriber = new NtfySubscriber({
+      ntfyServer: 'https://ntfy.sh',
+      signTopicPrefix: 'sign',
+      notifyTopicPrefix: 'notify',
+      walletNames: ['w1'],
+      onMessage,
+    });
+
+    subscriber.start();
+    await new Promise((r) => setTimeout(r, 100));
+    await subscriber.stop();
+
+    // Should process normally — magic bytes detect plaintext, skip decompression
     expect(onMessage).toHaveBeenCalled();
     expect(onMessage.mock.calls[0]![1].category).toBe('sign_request');
   });
