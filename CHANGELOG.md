@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.9.0-rc.12](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc.11...v2.9.0-rc.12) (2026-03-02)
+
+
+### Features
+
+* add wallet_type/name separation and subscription token routing ([#230](https://github.com/minhoyoo-iotrust/WAIaaS/issues/230), [#231](https://github.com/minhoyoo-iotrust/WAIaaS/issues/231)) ([f9e94aa](https://github.com/minhoyoo-iotrust/WAIaaS/commit/f9e94aa393cd86dbfeb1e6cc8d9b970066eed87f))
+
+
+### Bug Fixes
+
+* remove duplicate ntfy server URL from Human Wallet Apps page ([#232](https://github.com/minhoyoo-iotrust/WAIaaS/issues/232)) ([2ba21a2](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2ba21a24186fe47269241d5f3a24d50e39332e1e))
+* remove empty body from wallet app test notification request ([d849713](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d84971321ae1b19475baacfd589b1391024b51a4))
+* resolve open issues [#230](https://github.com/minhoyoo-iotrust/WAIaaS/issues/230), [#231](https://github.com/minhoyoo-iotrust/WAIaaS/issues/231), [#232](https://github.com/minhoyoo-iotrust/WAIaaS/issues/232) ([192d41c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/192d41c38763d7f4efc28f8e97dcfdec3ba19d74))
+
 ## [2.9.0-rc.11](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc.10...v2.9.0-rc.11) (2026-03-02)
 
 
