@@ -524,6 +524,8 @@ export const walletApps = sqliteTable('wallet_apps', {
   displayName: text('display_name').notNull(),
   signingEnabled: integer('signing_enabled', { mode: 'boolean' }).notNull().default(true),
   alertsEnabled: integer('alerts_enabled', { mode: 'boolean' }).notNull().default(true),
+  signTopic: text('sign_topic'),
+  notifyTopic: text('notify_topic'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });

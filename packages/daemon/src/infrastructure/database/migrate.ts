@@ -78,7 +78,7 @@ const LEGACY_NETWORK_NORMALIZE: Record<string, string> = {
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 32;
+export const LATEST_SCHEMA_VERSION = 33;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -321,13 +321,15 @@ function getCreateTableStatements(): string[] {
   updated_at INTEGER NOT NULL
 )`,
 
-    // Table 19: wallet_apps (Human Wallet Apps registry, v29.7)
+    // Table 19: wallet_apps (Human Wallet Apps registry, v29.7, v29.10: sign_topic/notify_topic)
     `CREATE TABLE IF NOT EXISTS wallet_apps (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL UNIQUE,
   display_name TEXT NOT NULL,
   signing_enabled INTEGER NOT NULL DEFAULT 1,
   alerts_enabled INTEGER NOT NULL DEFAULT 1,
+  sign_topic TEXT,
+  notify_topic TEXT,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 )`,
@@ -2252,6 +2254,27 @@ MIGRATIONS.push({
     // No DDL needed -- SQLite cannot ALTER TABLE ... ALTER COLUMN DEFAULT.
     // Fresh databases use getCreateTableStatements() which already has DEFAULT 0.
     // Existing sessions retain their max_renewals values unchanged.
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Migration v33: Add sign_topic and notify_topic to wallet_apps for per-wallet ntfy topic routing (v29.10)
+// ---------------------------------------------------------------------------
+
+MIGRATIONS.push({
+  version: 33,
+  description: 'Add sign_topic and notify_topic columns to wallet_apps for per-wallet ntfy topic routing',
+  up: (sqlite) => {
+    sqlite.exec(`ALTER TABLE wallet_apps ADD COLUMN sign_topic TEXT`);
+    sqlite.exec(`ALTER TABLE wallet_apps ADD COLUMN notify_topic TEXT`);
+    // Backfill existing rows with prefix+appName defaults
+    const prefix = 'waiaas-sign';
+    const notifyPrefix = 'waiaas-notify';
+    const rows = sqlite.prepare('SELECT id, name FROM wallet_apps').all() as Array<{ id: string; name: string }>;
+    const stmt = sqlite.prepare('UPDATE wallet_apps SET sign_topic = ?, notify_topic = ? WHERE id = ?');
+    for (const row of rows) {
+      stmt.run(`${prefix}-${row.name}`, `${notifyPrefix}-${row.name}`, row.id);
+    }
   },
 });
 
