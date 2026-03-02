@@ -274,7 +274,7 @@ describe('DriftSdkWrapper (real stub)', () => {
     expect(wrapper.subAccount).toBe(0);
   });
 
-  it('should throw for build methods (buildOpenPositionInstruction)', async () => {
+  it('should throw for buildOpenPositionInstruction', async () => {
     const wrapper = new DriftSdkWrapper('https://api.mainnet-beta.solana.com', 0);
     await expect(
       wrapper.buildOpenPositionInstruction({
@@ -287,12 +287,45 @@ describe('DriftSdkWrapper (real stub)', () => {
     ).rejects.toThrow();
   });
 
-  it('should throw for query methods (getMarkets)', async () => {
+  it('should throw for buildClosePositionInstruction', async () => {
     const wrapper = new DriftSdkWrapper('https://api.mainnet-beta.solana.com', 0);
-    await expect(wrapper.getMarkets()).rejects.toThrow();
+    await expect(
+      wrapper.buildClosePositionInstruction({ market: 'SOL-PERP', walletAddress: WALLET }),
+    ).rejects.toThrow();
   });
 
-  it('should mention @drift-labs/sdk in error message', async () => {
+  it('should throw for buildModifyPositionInstruction', async () => {
+    const wrapper = new DriftSdkWrapper('https://api.mainnet-beta.solana.com', 0);
+    await expect(
+      wrapper.buildModifyPositionInstruction({ market: 'SOL-PERP', newSize: '200', walletAddress: WALLET }),
+    ).rejects.toThrow();
+  });
+
+  it('should throw for buildDepositInstruction', async () => {
+    const wrapper = new DriftSdkWrapper('https://api.mainnet-beta.solana.com', 0);
+    await expect(
+      wrapper.buildDepositInstruction({ amount: '500', asset: 'USDC', walletAddress: WALLET }),
+    ).rejects.toThrow();
+  });
+
+  it('should throw for buildWithdrawInstruction', async () => {
+    const wrapper = new DriftSdkWrapper('https://api.mainnet-beta.solana.com', 0);
+    await expect(
+      wrapper.buildWithdrawInstruction({ amount: '200', asset: 'USDC', walletAddress: WALLET }),
+    ).rejects.toThrow();
+  });
+
+  it('should throw for getPositions', async () => {
+    const wrapper = new DriftSdkWrapper('https://api.mainnet-beta.solana.com', 0);
+    await expect(wrapper.getPositions(WALLET)).rejects.toThrow('@drift-labs/sdk');
+  });
+
+  it('should throw for getMarginInfo', async () => {
+    const wrapper = new DriftSdkWrapper('https://api.mainnet-beta.solana.com', 0);
+    await expect(wrapper.getMarginInfo(WALLET)).rejects.toThrow('@drift-labs/sdk');
+  });
+
+  it('should throw for getMarkets', async () => {
     const wrapper = new DriftSdkWrapper('https://api.mainnet-beta.solana.com', 0);
     await expect(wrapper.getMarkets()).rejects.toThrow('@drift-labs/sdk');
   });

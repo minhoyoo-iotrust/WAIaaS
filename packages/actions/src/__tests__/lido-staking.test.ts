@@ -5,7 +5,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { LidoStakingActionProvider } from '../providers/lido-staking/index.js';
-import { LIDO_MAINNET_ADDRESSES } from '../providers/lido-staking/config.js';
+import { LIDO_MAINNET_ADDRESSES, LIDO_TESTNET_ADDRESSES, getLidoAddresses } from '../providers/lido-staking/config.js';
 import type { ActionContext } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------
@@ -148,5 +148,23 @@ describe('LidoStakingActionProvider', () => {
       const arr = result as Array<{ to: string }>;
       expect(arr[1]!.to).toBe(LIDO_MAINNET_ADDRESSES.withdrawalQueueAddress);
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getLidoAddresses helper
+// ---------------------------------------------------------------------------
+
+describe('getLidoAddresses', () => {
+  it('returns mainnet addresses for mainnet', () => {
+    const addrs = getLidoAddresses('mainnet');
+    expect(addrs.stethAddress).toBe(LIDO_MAINNET_ADDRESSES.stethAddress);
+    expect(addrs.withdrawalQueueAddress).toBe(LIDO_MAINNET_ADDRESSES.withdrawalQueueAddress);
+  });
+
+  it('returns testnet addresses for testnet', () => {
+    const addrs = getLidoAddresses('testnet');
+    expect(addrs.stethAddress).toBe(LIDO_TESTNET_ADDRESSES.stethAddress);
+    expect(addrs.withdrawalQueueAddress).toBe(LIDO_TESTNET_ADDRESSES.withdrawalQueueAddress);
   });
 });
