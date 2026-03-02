@@ -325,8 +325,9 @@ function NotificationSettingsTab() {
           <FieldGroup legend="ntfy" description="Push notification channel for Human Wallet Apps (signing requests and activity alerts)">
             <div class="settings-info-box" style={{ marginBottom: '0.75rem' }}>
               ntfy is the push notification infrastructure used by Human Wallet Apps for signing requests and activity alerts.
-              Per-app notification settings (Signing/Alerts toggles) are managed in{' '}
+              Per-wallet ntfy topics (sign topic, notify topic) are managed in{' '}
               <a href="#/wallet-apps">Human Wallet Apps</a>.
+              The server URL below is shared across all wallet apps.
             </div>
             <div class="settings-fields-grid">
               <FormField
@@ -336,15 +337,6 @@ function NotificationSettingsTab() {
                 value={getEffectiveValue(settings.value, dirty.value, 'notifications', 'ntfy_server')}
                 onChange={(v) => handleFieldChange('notifications.ntfy_server', v)}
                 description="Server URL for ntfy push notifications"
-              />
-
-              <FormField
-                label={keyToLabel('ntfy_topic')}
-                name="notifications.ntfy_topic"
-                type="text"
-                value={getEffectiveValue(settings.value, dirty.value, 'notifications', 'ntfy_topic')}
-                onChange={(v) => handleFieldChange('notifications.ntfy_topic', v)}
-                description="Topic name for ntfy notifications"
               />
             </div>
           </FieldGroup>
