@@ -49,4 +49,5 @@ export const API = {
   ADMIN_MASTER_PASSWORD: '/v1/admin/master-password',
   ADMIN_WALLET_APPS: '/v1/admin/wallet-apps',
   ADMIN_WALLET_APP: (id: string) => `/v1/admin/wallet-apps/${id}`,
+  ADMIN_WALLET_APP_TEST_NOTIFICATION: (id: string) => `/v1/admin/wallet-apps/${id}/test-notification`,
 } as const;

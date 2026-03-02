@@ -345,6 +345,14 @@ export const WalletAppResponseSchema = z
   })
   .openapi('WalletAppResponse');
 
+export const WalletAppTestNotificationResponseSchema = z
+  .object({
+    success: z.boolean().openapi({ description: 'Whether the test notification was sent successfully' }),
+    topic: z.string().optional().openapi({ description: 'ntfy topic the notification was sent to' }),
+    error: z.string().optional().openapi({ description: 'Error message if notification failed' }),
+  })
+  .openapi('WalletAppTestNotificationResponse');
+
 // ---------------------------------------------------------------------------
 // Error Code -> OpenAPI Response Mapping
 // ---------------------------------------------------------------------------
