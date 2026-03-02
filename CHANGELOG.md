@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.9.0-rc.15](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc.14...v2.9.0-rc.15) (2026-03-02)
+
+
+### Bug Fixes
+
+* **push-relay:** replace undici fetch with node:http SSE + dynamic topic subscription ([#236](https://github.com/minhoyoo-iotrust/WAIaaS/issues/236), [#237](https://github.com/minhoyoo-iotrust/WAIaaS/issues/237)) ([a05fc33](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a05fc3352159d75c16cadaad89b205ec67d724b9))
+* **push-relay:** replace undici fetch with node:http SSE + dynamic topic subscription ([#236](https://github.com/minhoyoo-iotrust/WAIaaS/issues/236), [#237](https://github.com/minhoyoo-iotrust/WAIaaS/issues/237)) ([70bc535](https://github.com/minhoyoo-iotrust/WAIaaS/commit/70bc53588679a99f62e4abe2c1c4d75cbcfa51b2))
+
 ## [2.9.0-rc.14](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc.13...v2.9.0-rc.14) (2026-03-02)
 
 
