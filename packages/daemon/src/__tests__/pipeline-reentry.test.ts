@@ -254,12 +254,12 @@ describe('#208 - Stage 1 originalRequest serialization', () => {
     };
 
     const mockEvmAdapter = createMockAdapter({
-      chain: 'evm' as any,
+      chain: 'ethereum' as any,
       network: 'ethereum-sepolia' as any,
     });
     const ctx = createPipelineContext(dbConn, walletId, request, {
       adapter: mockEvmAdapter,
-      wallet: { publicKey: '0xabcdef', chain: 'evm', environment: 'testnet', defaultNetwork: 'ethereum-sepolia' },
+      wallet: { publicKey: '0xabcdef', chain: 'ethereum', environment: 'testnet', defaultNetwork: 'ethereum-sepolia' },
     });
     await stage1Validate(ctx);
 

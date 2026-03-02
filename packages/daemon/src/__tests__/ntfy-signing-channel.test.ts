@@ -38,7 +38,7 @@ const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
 const mockSignRequest: SignRequest = {
   version: '1',
   requestId,
-  chain: 'evm',
+  chain: 'ethereum',
   network: 'ethereum-mainnet',
   message: 'WAIaaS Transaction Approval\n\nTransaction: ...',
   displayMessage: 'TRANSFER 1.5 ETH from 0x123456... to 0xabcdef...',
@@ -198,7 +198,7 @@ describe('NtfySigningChannel', () => {
 
     const result = await channel.sendRequest({
       txId,
-      chain: 'evm',
+      chain: 'ethereum',
       network: 'ethereum-mainnet',
       type: 'TRANSFER',
       from: signerAddress,
@@ -231,7 +231,7 @@ describe('NtfySigningChannel', () => {
     const decodedRequest = JSON.parse(decodedJson);
     expect(decodedRequest.requestId).toBe(requestId);
     expect(decodedRequest.displayMessage).toBe(mockSignRequest.displayMessage);
-    expect(decodedRequest.chain).toBe('evm');
+    expect(decodedRequest.chain).toBe('ethereum');
 
     // Verify result
     expect(result.requestId).toBe(requestId);
@@ -256,7 +256,7 @@ describe('NtfySigningChannel', () => {
 
     await channel.sendRequest({
       txId,
-      chain: 'evm',
+      chain: 'ethereum',
       network: 'ethereum-mainnet',
       type: 'TRANSFER',
       from: signerAddress,
@@ -296,7 +296,7 @@ describe('NtfySigningChannel', () => {
 
     await channel.sendRequest({
       txId,
-      chain: 'evm',
+      chain: 'ethereum',
       network: 'ethereum-mainnet',
       type: 'TRANSFER',
       from: signerAddress,
@@ -345,7 +345,7 @@ describe('NtfySigningChannel', () => {
 
       await channel.sendRequest({
         txId,
-        chain: 'evm',
+        chain: 'ethereum',
         network: 'ethereum-mainnet',
         type: 'TRANSFER',
         from: signerAddress,
@@ -386,7 +386,7 @@ describe('NtfySigningChannel', () => {
 
     await channel.sendRequest({
       txId,
-      chain: 'evm',
+      chain: 'ethereum',
       network: 'ethereum-mainnet',
       type: 'TRANSFER',
       from: signerAddress,
@@ -423,7 +423,7 @@ describe('NtfySigningChannel', () => {
 
     await channel.sendRequest({
       txId,
-      chain: 'evm',
+      chain: 'ethereum',
       network: 'ethereum-mainnet',
       type: 'TRANSFER',
       from: signerAddress,
@@ -470,7 +470,7 @@ describe('NtfySigningChannel', () => {
 
     await channel.sendRequest({
       txId,
-      chain: 'evm',
+      chain: 'ethereum',
       network: 'ethereum-mainnet',
       type: 'TRANSFER',
       from: signerAddress,
@@ -507,7 +507,7 @@ describe('NtfySigningChannel', () => {
 
     const result = await channel.sendRequest({
       txId,
-      chain: 'evm',
+      chain: 'ethereum',
       network: 'ethereum-mainnet',
       type: 'TRANSFER',
       from: signerAddress,
@@ -544,7 +544,7 @@ describe('NtfySigningChannel', () => {
 
     await channel.sendRequest({
       txId,
-      chain: 'evm',
+      chain: 'ethereum',
       network: 'ethereum-mainnet',
       type: 'TRANSFER',
       from: signerAddress,
@@ -567,7 +567,7 @@ describe('NtfySigningChannel', () => {
     await expect(
       channel.sendRequest({
         txId,
-        chain: 'evm',
+        chain: 'ethereum',
         network: 'ethereum-mainnet',
         type: 'TRANSFER',
         from: signerAddress,
@@ -597,7 +597,7 @@ describe('NtfySigningChannel', () => {
 
     await channel.sendRequest({
       txId,
-      chain: 'evm',
+      chain: 'ethereum',
       network: 'ethereum-mainnet',
       type: 'TRANSFER',
       from: signerAddress,
@@ -631,7 +631,7 @@ describe('NtfySigningChannel', () => {
 
     const result = await channel.sendRequest({
       txId,
-      chain: 'evm',
+      chain: 'ethereum',
       network: 'ethereum-mainnet',
       type: 'TRANSFER',
       from: signerAddress,
@@ -664,7 +664,7 @@ describe('NtfySigningChannel', () => {
 
     await channel.sendRequest({
       txId,
-      chain: 'evm',
+      chain: 'ethereum',
       network: 'ethereum-mainnet',
       type: 'TRANSFER',
       from: signerAddress,

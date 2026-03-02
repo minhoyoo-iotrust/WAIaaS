@@ -278,7 +278,7 @@ export class SignResponseHandler {
     // Verify cryptographic signature
     let isValid = false;
     try {
-      if (request.chain === 'evm') {
+      if (request.chain === 'ethereum') {
         isValid = await this.evmVerify({
           address: signerAddress,
           message: request.message,
@@ -340,7 +340,7 @@ export class SignResponseHandler {
     if (signature) {
       try {
         let isValid = false;
-        if (request.chain === 'evm') {
+        if (request.chain === 'ethereum') {
           isValid = await this.evmVerify({
             address: signerAddress,
             message: request.message,

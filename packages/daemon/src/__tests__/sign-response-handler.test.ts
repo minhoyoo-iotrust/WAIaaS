@@ -93,7 +93,7 @@ function createTestRequest(overrides: Partial<SignRequest> = {}): SignRequest {
   return {
     version: '1',
     requestId,
-    chain: 'evm',
+    chain: 'ethereum',
     network: 'ethereum-mainnet',
     message: 'WAIaaS Transaction Approval\n\nTransaction: ...',
     displayMessage: 'TRANSFER 1.5 ETH',

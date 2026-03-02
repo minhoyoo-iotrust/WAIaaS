@@ -14,11 +14,12 @@ export interface DeviceRoutesOpts {
   registry: DeviceRegistry;
   subscriber: NtfySubscriber;
   provider: IPushProvider;
+  version?: string;
 }
 
 export function createDeviceRoutes(opts: DeviceRoutesOpts): Hono {
   const app = new Hono();
-  const { registry, subscriber, provider } = opts;
+  const { registry, subscriber, provider, version } = opts;
 
   // POST /devices — register device token
   app.post('/devices', async (c) => {
@@ -48,6 +49,7 @@ export function createDeviceRoutes(opts: DeviceRoutesOpts): Hono {
     const providerValid = await provider.validateConfig();
     return c.json({
       status: 'ok',
+      version: version ?? 'unknown',
       ntfy: {
         connected: subscriber.connected,
         topics: subscriber.topicCount,

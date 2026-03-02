@@ -2,6 +2,7 @@
 
 import { serve } from '@hono/node-server';
 import { resolve } from 'node:path';
+import { createRequire } from 'node:module';
 import { loadConfig } from './config.js';
 import { NtfySubscriber } from './subscriber/ntfy-subscriber.js';
 import { DeviceRegistry } from './registry/device-registry.js';
@@ -11,6 +12,16 @@ import type { IPushProvider } from './providers/push-provider.js';
 import { ConfigurablePayloadTransformer } from './transformer/payload-transformer.js';
 import type { IPayloadTransformer } from './transformer/payload-transformer.js';
 import { createServer } from './server.js';
+
+const require = createRequire(import.meta.url);
+const pkg = require('../package.json') as { version: string };
+export const VERSION: string = pkg.version;
+
+// --version flag
+if (process.argv.includes('--version')) {
+  console.log(VERSION);
+  process.exit(0);
+}
 
 const CONFIG_PATH = process.env['RELAY_CONFIG'] ?? resolve(process.cwd(), 'config.toml');
 const DB_PATH = process.env['RELAY_DB'] ?? resolve(process.cwd(), 'relay.db');
@@ -84,6 +95,7 @@ async function main(): Promise<void> {
     provider,
     apiKey: config.relay.server.api_key,
     ntfyServer: config.relay.ntfy_server,
+    version: VERSION,
   });
 
   const server = serve({
@@ -93,7 +105,7 @@ async function main(): Promise<void> {
   });
 
   console.log(
-    `[push-relay] Server listening on ${config.relay.server.host}:${config.relay.server.port}`,
+    `[push-relay] v${VERSION} listening on ${config.relay.server.host}:${config.relay.server.port}`,
   );
 
   // Graceful shutdown
