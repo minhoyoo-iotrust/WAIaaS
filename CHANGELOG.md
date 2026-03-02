@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.9.0-rc.11](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc.10...v2.9.0-rc.11) (2026-03-02)
+
+
+### Bug Fixes
+
+* move wallet app notification toggle to Human Wallet Apps page ([#229](https://github.com/minhoyoo-iotrust/WAIaaS/issues/229)) ([327f887](https://github.com/minhoyoo-iotrust/WAIaaS/commit/327f887e471796f5c3712f0c1a757726dec266db))
+* move wallet app notification toggle to Human Wallet Apps page ([#229](https://github.com/minhoyoo-iotrust/WAIaaS/issues/229)) ([d4b9e39](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d4b9e39e9a1bb81843856d78b163d1baabbdbd30))
+* update settings tests for notification subgroup removal ([0d8e70f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0d8e70f1b83a687d302f07811f0311eea0ecd659))
+
 ## [2.9.0-rc.10](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc.9...v2.9.0-rc.10) (2026-03-02)
 
 
