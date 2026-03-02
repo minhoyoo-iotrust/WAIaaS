@@ -475,7 +475,9 @@ export class WAIaaSClient {
     const body: Record<string, unknown> = {};
     if (params.walletIds) body['walletIds'] = params.walletIds;
     if (params.walletId) body['walletId'] = params.walletId;
-    if (params.expiresIn !== undefined) body['expiresIn'] = params.expiresIn;
+    if (params.ttl !== undefined) body['ttl'] = params.ttl;
+    if (params.maxRenewals !== undefined) body['maxRenewals'] = params.maxRenewals;
+    if (params.absoluteLifetime !== undefined) body['absoluteLifetime'] = params.absoluteLifetime;
     if (params.constraints) body['constraints'] = params.constraints;
     if (params.source) body['source'] = params.source;
 

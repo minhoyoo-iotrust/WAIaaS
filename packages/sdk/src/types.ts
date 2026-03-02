@@ -208,8 +208,12 @@ export interface CreateSessionParams {
   walletIds?: string[];
   /** Single wallet ID (backward-compatible, singular) */
   walletId?: string;
-  /** Session expiration time in seconds */
-  expiresIn?: number;
+  /** Session TTL in seconds (omit for unlimited session) */
+  ttl?: number;
+  /** Maximum number of renewals (0 = unlimited) */
+  maxRenewals?: number;
+  /** Absolute session lifetime in seconds (0 = unlimited) */
+  absoluteLifetime?: number;
   /** Session constraints */
   constraints?: Record<string, unknown>;
   /** Source indicator */

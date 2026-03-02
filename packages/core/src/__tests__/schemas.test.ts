@@ -103,7 +103,6 @@ describe('Zod SSoT Schemas', () => {
       expect(result.server_host).toBe('127.0.0.1');
       expect(result.log_level).toBe('info');
       expect(result.data_dir).toBe('~/.waiaas');
-      expect(result.session_default_ttl).toBe(3600);
       expect(result.policy_default_tier).toBe('INSTANT');
       expect(result.notification_channels).toEqual([]);
     });

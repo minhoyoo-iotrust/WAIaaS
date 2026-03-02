@@ -22,7 +22,9 @@ export interface McpSetupOptions {
   dataDir: string;
   baseUrl?: string;
   wallet?: string;
-  expiresIn?: number;
+  ttl?: number;
+  maxRenewals?: number;
+  absoluteLifetime?: number;
   masterPassword?: string;
   all?: boolean;
 }
@@ -56,18 +58,22 @@ async function setupWallet(opts: {
   dataDir: string;
   password: string;
   walletId: string;
-  expiresIn: number;
+  ttl?: number;
+  maxRenewals?: number;
+  absoluteLifetime?: number;
 }): Promise<{ token: string; expiresAt: number }> {
+  const body: Record<string, unknown> = { walletId: opts.walletId };
+  if (opts.ttl !== undefined) body['ttl'] = opts.ttl;
+  if (opts.maxRenewals !== undefined) body['maxRenewals'] = opts.maxRenewals;
+  if (opts.absoluteLifetime !== undefined) body['absoluteLifetime'] = opts.absoluteLifetime;
+
   const sessionRes = await fetch(`${opts.baseUrl}/v1/sessions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'X-Master-Password': opts.password,
     },
-    body: JSON.stringify({
-      walletId: opts.walletId,
-      expiresIn: opts.expiresIn,
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!sessionRes.ok) {
@@ -126,7 +132,6 @@ function printConfigPath(): void {
 
 export async function mcpSetupCommand(opts: McpSetupOptions): Promise<void> {
   const baseUrl = (opts.baseUrl ?? 'http://127.0.0.1:3100').replace(/\/+$/, '');
-  const expiresIn = opts.expiresIn ?? 86400;
 
   // Validate: --all and --wallet are mutually exclusive
   if (opts.all && opts.wallet) {
@@ -173,13 +178,19 @@ export async function mcpSetupCommand(opts: McpSetupOptions): Promise<void> {
         dataDir: opts.dataDir,
         password,
         walletId: wallet.id,
-        expiresIn,
+        ttl: opts.ttl,
+        maxRenewals: opts.maxRenewals,
+        absoluteLifetime: opts.absoluteLifetime,
       });
 
       const slug = slugMap.get(wallet.id)!;
       console.log(`MCP session created for ${wallet.name ?? wallet.id}!`);
       console.log(`  Token file: ${join(opts.dataDir, 'mcp-tokens', wallet.id)}`);
-      console.log(`  Expires at: ${new Date(result.expiresAt * 1000).toISOString()}`);
+      if (result.expiresAt === 0) {
+        console.log('  Expires: Never (unlimited)');
+      } else {
+        console.log(`  Expires at: ${new Date(result.expiresAt * 1000).toISOString()}`);
+      }
 
       mcpServers[`waiaas-${slug}`] = buildConfigEntry({
         dataDir: opts.dataDir,
@@ -195,11 +206,6 @@ export async function mcpSetupCommand(opts: McpSetupOptions): Promise<void> {
     console.log(JSON.stringify(configSnippet, null, 2));
     printConfigPath();
 
-    if (expiresIn === 86400) {
-      console.log('');
-      console.log('Note: Session expires in 24 hours by default.');
-      console.log('  Use --expires-in <seconds> to customize (e.g., --expires-in 604800 for 7 days).');
-    }
     return;
   }
 
@@ -256,7 +262,9 @@ export async function mcpSetupCommand(opts: McpSetupOptions): Promise<void> {
       dataDir: opts.dataDir,
       password,
       walletId,
-      expiresIn,
+      ttl: opts.ttl,
+      maxRenewals: opts.maxRenewals,
+      absoluteLifetime: opts.absoluteLifetime,
     });
   } catch (err) {
     if (err instanceof Error && 'code' in err) {
@@ -270,14 +278,12 @@ export async function mcpSetupCommand(opts: McpSetupOptions): Promise<void> {
   const tokenPath = join(opts.dataDir, 'mcp-tokens', walletId);
   console.log('MCP session created successfully!');
   console.log(`  Token file: ${tokenPath}`);
-  console.log(`  Expires at: ${new Date(result.expiresAt * 1000).toISOString()}`);
-  console.log(`  Wallet: ${walletId}`);
-
-  if (expiresIn === 86400) {
-    console.log('');
-    console.log('Note: Session expires in 24 hours by default.');
-    console.log('  Use --expires-in <seconds> to customize (e.g., --expires-in 604800 for 7 days).');
+  if (result.expiresAt === 0) {
+    console.log('  Expires: Never (unlimited)');
+  } else {
+    console.log(`  Expires at: ${new Date(result.expiresAt * 1000).toISOString()}`);
   }
+  console.log(`  Wallet: ${walletId}`);
 
   // Step 7: Print Claude Desktop config.json snippet (CLI-05 + CLIP-02/03)
   const slug = toSlug(walletName ?? walletId);
