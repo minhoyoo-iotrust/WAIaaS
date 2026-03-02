@@ -78,7 +78,7 @@ const LEGACY_NETWORK_NORMALIZE: Record<string, string> = {
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 31;
+export const LATEST_SCHEMA_VERSION = 32;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -110,7 +110,7 @@ function getCreateTableStatements(): string[] {
   usage_stats TEXT,
   revoked_at INTEGER,
   renewal_count INTEGER NOT NULL DEFAULT 0,
-  max_renewals INTEGER NOT NULL DEFAULT 30,
+  max_renewals INTEGER NOT NULL DEFAULT 0,
   last_renewed_at INTEGER,
   absolute_expires_at INTEGER NOT NULL,
   created_at INTEGER NOT NULL,
@@ -2238,6 +2238,20 @@ MIGRATIONS.push({
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 )`);
+  },
+});
+
+// v32: Change sessions DDL default max_renewals from 30 to 0 (unlimited).
+// This is a no-op migration: existing rows keep their values, and the Drizzle
+// schema (.default(0)) already handles the app-level default for new inserts.
+// The DDL default change only affects fresh databases via getCreateTableStatements().
+MIGRATIONS.push({
+  version: 32,
+  description: 'Session progressive security: default max_renewals 30 -> 0 (unlimited)',
+  up: (_sqlite) => {
+    // No DDL needed -- SQLite cannot ALTER TABLE ... ALTER COLUMN DEFAULT.
+    // Fresh databases use getCreateTableStatements() which already has DEFAULT 0.
+    // Existing sessions retain their max_renewals values unchanged.
   },
 });
 

@@ -489,6 +489,7 @@ describe('POST /v1/admin/agent-prompt', () => {
       headers: masterAuthJsonHeaders(),
       body: JSON.stringify({
         walletIds: [walletA, walletB],
+        ttl: 86400,
       }),
     });
     expect(res.status).toBe(201);
@@ -526,6 +527,7 @@ describe('POST /v1/admin/agent-prompt', () => {
       headers: masterAuthJsonHeaders(),
       body: JSON.stringify({
         walletIds: [walletA, walletB],
+        ttl: 86400,
       }),
     });
     expect(res.status).toBe(201);
@@ -555,11 +557,11 @@ describe('POST /v1/admin/agent-prompt', () => {
   });
 
   it('reuses existing valid session instead of creating new one', async () => {
-    // First call creates a new session
+    // First call creates a new session (ttl: 86400 so reuse threshold is passed)
     const res1 = await app.request('/v1/admin/agent-prompt', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
-      body: JSON.stringify({ walletIds: [walletA, walletB] }),
+      body: JSON.stringify({ walletIds: [walletA, walletB], ttl: 86400 }),
     });
     expect(res1.status).toBe(201);
 
@@ -575,7 +577,7 @@ describe('POST /v1/admin/agent-prompt', () => {
     const res2 = await app.request('/v1/admin/agent-prompt', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
-      body: JSON.stringify({ walletIds: [walletA, walletB] }),
+      body: JSON.stringify({ walletIds: [walletA, walletB], ttl: 86400 }),
     });
     expect(res2.status).toBe(201);
 
@@ -606,14 +608,14 @@ describe('POST /v1/admin/agent-prompt', () => {
     await app.request('/v1/admin/agent-prompt', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
-      body: JSON.stringify({ walletIds: [walletA] }),
+      body: JSON.stringify({ walletIds: [walletA], ttl: 86400 }),
     });
 
     // Request session for both walletA and walletB -- cannot reuse
     const res = await app.request('/v1/admin/agent-prompt', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
-      body: JSON.stringify({ walletIds: [walletA, walletB] }),
+      body: JSON.stringify({ walletIds: [walletA, walletB], ttl: 86400 }),
     });
     expect(res.status).toBe(201);
 
@@ -629,6 +631,7 @@ describe('POST /v1/admin/agent-prompt', () => {
       headers: masterAuthJsonHeaders(),
       body: JSON.stringify({
         walletIds: [walletA, walletB],
+        ttl: 86400,
       }),
     });
     expect(promptRes.status).toBe(201);
@@ -676,7 +679,7 @@ describe('POST /v1/admin/sessions/:id/reissue', () => {
     const promptRes = await app.request('/v1/admin/agent-prompt', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
-      body: JSON.stringify({ walletIds: [walletA] }),
+      body: JSON.stringify({ walletIds: [walletA], ttl: 86400 }),
     });
     expect(promptRes.status).toBe(201);
     const promptBody = await json(promptRes);
@@ -709,7 +712,7 @@ describe('POST /v1/admin/sessions/:id/reissue', () => {
     const promptRes = await app.request('/v1/admin/agent-prompt', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
-      body: JSON.stringify({ walletIds: [walletA] }),
+      body: JSON.stringify({ walletIds: [walletA], ttl: 86400 }),
     });
     const promptBody = await json(promptRes);
     const sid = (promptBody.prompt as string).match(/Session ID: (\S+)/)![1]!;
@@ -742,7 +745,7 @@ describe('POST /v1/admin/sessions/:id/reissue', () => {
     const createRes = await app.request('/v1/sessions', {
       method: 'POST',
       headers: masterAuthJsonHeaders(),
-      body: JSON.stringify({ walletId: walletA }),
+      body: JSON.stringify({ walletId: walletA, ttl: 3600 }),
     });
     const createBody = await json(createRes);
     const sid = createBody.id as string;

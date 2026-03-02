@@ -1,7 +1,8 @@
 # 마일스톤 m29-09: 세션 점진적 보안 모델
 
-- **Status:** PLANNED
-- **Milestone:** TBD
+- **Status:** SHIPPED
+- **Milestone:** v29.9
+- **Completed:** 2026-03-02
 
 ## 목표
 

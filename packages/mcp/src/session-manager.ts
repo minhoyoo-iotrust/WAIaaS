@@ -106,8 +106,12 @@ export class SessionManager {
   async start(): Promise<void> {
     await this.loadToken();
     if (this.state === 'active') {
-      this.scheduleRenewal();
-      console.error(`${LOG_PREFIX} Started with active session, renewal scheduled`);
+      if (this.expiresAt > 0) {
+        this.scheduleRenewal();
+        console.error(`${LOG_PREFIX} Started with active session, renewal scheduled`);
+      } else {
+        console.error(`${LOG_PREFIX} Started with unlimited session, no renewal needed`);
+      }
     } else {
       console.error(`${LOG_PREFIX} Started in ${this.state} state (degraded mode)`);
       this.startRecoveryLoop();
@@ -172,23 +176,6 @@ export class SessionManager {
       return false;
     }
 
-    // Validate exp range (C-03)
-    const exp = payload['exp'];
-    if (typeof exp !== 'number') {
-      this.state = 'error';
-      console.error(`${LOG_PREFIX} JWT missing exp claim`);
-      return false;
-    }
-
-    const now = Math.floor(Date.now() / 1000);
-    const tenYears = 10 * 365 * 24 * 60 * 60;
-    const oneYear = 365 * 24 * 60 * 60;
-    if (exp < now - tenYears || exp > now + oneYear) {
-      this.state = 'error';
-      console.error(`${LOG_PREFIX} JWT exp out of valid range`);
-      return false;
-    }
-
     // Extract sessionId (JWT standard 'sub' first, 'sessionId' fallback for compat)
     const sessionId = payload['sub'] ?? payload['sessionId'];
     if (typeof sessionId !== 'string' || !sessionId) {
@@ -197,20 +184,42 @@ export class SessionManager {
       return false;
     }
 
+    // Validate exp claim (C-03) — undefined means unlimited session (v29.9)
+    const exp = payload['exp'];
+    const now = Math.floor(Date.now() / 1000);
+
     this.token = rawToken;
     this.sessionId = sessionId;
-    this.expiresAt = exp;
 
-    // Check expiration
-    if (exp < now) {
-      this.state = 'expired';
-      console.error(`${LOG_PREFIX} Token already expired`);
-      return false;
-    } else {
+    if (exp !== undefined) {
+      if (typeof exp !== 'number') {
+        this.state = 'error';
+        console.error(`${LOG_PREFIX} JWT exp claim invalid type`);
+        return false;
+      }
+      const tenYears = 10 * 365 * 24 * 60 * 60;
+      const oneYear = 365 * 24 * 60 * 60;
+      if (exp < now - tenYears || exp > now + oneYear) {
+        this.state = 'error';
+        console.error(`${LOG_PREFIX} JWT exp out of valid range`);
+        return false;
+      }
+      this.expiresAt = exp;
+      if (exp < now) {
+        this.state = 'expired';
+        console.error(`${LOG_PREFIX} Token already expired`);
+        return false;
+      }
       this.state = 'active';
       console.error(`${LOG_PREFIX} Token loaded, expires in ${exp - now}s`);
       return true;
     }
+
+    // No exp claim → unlimited session
+    this.expiresAt = 0;
+    this.state = 'active';
+    console.error(`${LOG_PREFIX} Unlimited session loaded, no expiration`);
+    return true;
   }
 
   private scheduleRenewal(): void {

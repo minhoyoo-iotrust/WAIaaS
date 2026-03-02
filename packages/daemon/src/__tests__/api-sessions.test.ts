@@ -218,7 +218,7 @@ describe('Session CRUD API', () => {
     expect(first.status).toBe('ACTIVE');
     expect(first.walletId).toBe(testWalletId);
     expect(first.renewalCount).toBe(0);
-    expect(first.maxRenewals).toBe(12);
+    expect(first.maxRenewals).toBe(0); // v29.9: default 0 = unlimited renewals
     expect(typeof first.expiresAt).toBe('number');
     expect(typeof first.absoluteExpiresAt).toBe('number');
     expect(typeof first.createdAt).toBe('number');
@@ -354,12 +354,119 @@ describe('Session CRUD API', () => {
     // Verify expiresAt is approximately nowSec + 3600 (within 5 seconds tolerance)
     expect(row.expires_at).toBe(returnedExpiresAt);
 
-    // Verify absoluteExpiresAt is approximately nowSec + 365 days (session_absolute_lifetime default)
+    // Verify absoluteExpiresAt: no absoluteLifetime passed → 0 (unlimited)
     const nowSec = Math.floor(Date.now() / 1000);
-    const expectedAbsoluteExpiry = nowSec + 31536000;
-    expect(Math.abs(row.absolute_expires_at - expectedAbsoluteExpiry)).toBeLessThan(5);
+    expect(row.absolute_expires_at).toBe(0);
 
     // Verify createdAt is recent
     expect(Math.abs(row.created_at - nowSec)).toBeLessThan(5);
+  });
+
+  // -----------------------------------------------------------------------
+  // v29.9: Unlimited session tests
+  // -----------------------------------------------------------------------
+
+  it('POST /v1/sessions without TTL creates unlimited session (expiresAt=0)', async () => {
+    const res = await app.request('/v1/sessions', {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ walletId: testWalletId }),
+    });
+    expect(res.status).toBe(201);
+
+    const body = await json(res);
+    expect(body.expiresAt).toBe(0); // unlimited
+    expect(body.token).toBeDefined();
+
+    // Verify DB state
+    const row = sqlite.prepare('SELECT expires_at, max_renewals, absolute_expires_at FROM sessions WHERE id = ?').get(body.id as string) as {
+      expires_at: number;
+      max_renewals: number;
+      absolute_expires_at: number;
+    };
+    expect(row.expires_at).toBe(0); // unlimited
+    expect(row.max_renewals).toBe(0); // unlimited renewals
+    expect(row.absolute_expires_at).toBe(0); // no absolute lifetime cap
+  });
+
+  it('unlimited session JWT has no exp claim', async () => {
+    const res = await app.request('/v1/sessions', {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ walletId: testWalletId }),
+    });
+    const body = await json(res);
+    const token = body.token as string;
+
+    // Verify the JWT can be verified and has no exp
+    const payload = await jwtManager.verifyToken(token);
+    expect(payload.sub).toBe(body.id);
+    expect(payload.iat).toBeDefined();
+    expect(payload.exp).toBeUndefined(); // unlimited: no exp claim
+  });
+
+  it('unlimited session shows as ACTIVE in session list', async () => {
+    await app.request('/v1/sessions', {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ walletId: testWalletId }),
+    });
+
+    const listRes = await app.request(`/v1/sessions?walletId=${testWalletId}`, {
+      headers: masterAuthHeader(),
+    });
+    expect(listRes.status).toBe(200);
+
+    const sessions = (await listRes.json()) as Array<Record<string, unknown>>;
+    expect(sessions).toHaveLength(1);
+    expect(sessions[0]!.status).toBe('ACTIVE');
+    expect(sessions[0]!.expiresAt).toBe(0);
+  });
+
+  it('unlimited session counts toward session limit', async () => {
+    // Create 5 unlimited sessions (default max)
+    for (let i = 0; i < 5; i++) {
+      const res = await app.request('/v1/sessions', {
+        method: 'POST',
+        headers: masterAuthJsonHeaders(),
+        body: JSON.stringify({ walletId: testWalletId }),
+      });
+      expect(res.status).toBe(201);
+    }
+
+    // 6th should fail
+    const res = await app.request('/v1/sessions', {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ walletId: testWalletId }),
+    });
+    expect(res.status).toBe(403);
+
+    const body = await json(res);
+    expect(body.code).toBe('SESSION_LIMIT_EXCEEDED');
+  });
+
+  it('POST /v1/sessions with per-session maxRenewals and absoluteLifetime', async () => {
+    const res = await app.request('/v1/sessions', {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({
+        walletId: testWalletId,
+        ttl: 3600,
+        maxRenewals: 5,
+        absoluteLifetime: 86400,
+      }),
+    });
+    expect(res.status).toBe(201);
+
+    const body = await json(res);
+    const row = sqlite.prepare('SELECT max_renewals, absolute_expires_at, expires_at FROM sessions WHERE id = ?').get(body.id as string) as {
+      max_renewals: number;
+      absolute_expires_at: number;
+      expires_at: number;
+    };
+    expect(row.max_renewals).toBe(5);
+    expect(row.absolute_expires_at).toBeGreaterThan(0); // now + 86400
+    expect(row.expires_at).toBeGreaterThan(0); // now + 3600
   });
 });

@@ -20,7 +20,7 @@ export interface QuickstartOptions {
   baseUrl?: string;
   mode?: 'testnet' | 'mainnet';
   masterPassword?: string;
-  expiresIn?: number;
+  ttl?: number;
 }
 
 interface CreatedWallet {
@@ -51,7 +51,7 @@ function printConfigPath(): void {
 export async function quickstartCommand(opts: QuickstartOptions): Promise<void> {
   const baseUrl = (opts.baseUrl ?? 'http://127.0.0.1:3100').replace(/\/+$/, '');
   const mode = opts.mode ?? 'mainnet';
-  const ttl = opts.expiresIn ?? 2592000; // 30 days (matches config default)
+  const ttl = opts.ttl; // undefined = unlimited (v29.9)
 
   // Validate mode
   if (mode !== 'testnet' && mode !== 'mainnet') {
@@ -222,13 +222,17 @@ export async function quickstartCommand(opts: QuickstartOptions): Promise<void> 
   console.log('Multi-Wallet Session:');
   console.log(`  Session ID: ${sessionData.id}`);
   console.log(`  Connected Wallets: ${createdWallets.length} (${walletNames})`);
-  const expDate = new Date(sessionData.expiresAt * 1000);
-  const yyyy = expDate.getFullYear();
-  const mm = String(expDate.getMonth() + 1).padStart(2, '0');
-  const dd = String(expDate.getDate()).padStart(2, '0');
-  const hh = String(expDate.getHours()).padStart(2, '0');
-  const min = String(expDate.getMinutes()).padStart(2, '0');
-  console.log(`  Expires at: ${yyyy}-${mm}-${dd} ${hh}:${min}`);
+  if (sessionData.expiresAt === 0) {
+    console.log('  Expires: Never (unlimited)');
+  } else {
+    const expDate = new Date(sessionData.expiresAt * 1000);
+    const yyyy = expDate.getFullYear();
+    const mm = String(expDate.getMonth() + 1).padStart(2, '0');
+    const dd = String(expDate.getDate()).padStart(2, '0');
+    const hh = String(expDate.getHours()).padStart(2, '0');
+    const min = String(expDate.getMinutes()).padStart(2, '0');
+    console.log(`  Expires at: ${yyyy}-${mm}-${dd} ${hh}:${min}`);
+  }
 
   // Step 6: Single MCP config entry (no WAIAAS_WALLET_ID)
   const mcpServers: Record<string, Record<string, unknown>> = {

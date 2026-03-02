@@ -173,7 +173,7 @@ describe('SessionManager', () => {
       expect(sm.getToken()).toBeNull();
     });
 
-    it('invalid JWT (no exp) sets state to error', async () => {
+    it('JWT without exp is treated as unlimited session (active)', async () => {
       const token = createFakeJWT({ sub: 'sess-1' });
       const sm = new SessionManager({
         baseUrl: 'http://localhost:3100',
@@ -182,7 +182,8 @@ describe('SessionManager', () => {
 
       await sm.start();
 
-      expect(sm.getState()).toBe('error');
+      expect(sm.getState()).toBe('active');
+      expect(sm.getToken()).toBe(token);
     });
 
     it('expired token sets state to expired', async () => {

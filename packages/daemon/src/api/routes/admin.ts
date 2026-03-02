@@ -2367,11 +2367,10 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
     }
 
     const body = c.req.valid('json');
-    const config = deps.daemonConfig;
     const nowSec = Math.floor(Date.now() / 1000);
-    const ttl = body.ttl ?? 86400;
-    const expiresAt = nowSec + ttl;
-    const absoluteExpiresAt = nowSec + config.security.session_absolute_lifetime;
+    // v29.9: per-session TTL; omit = unlimited
+    const ttl = body.ttl; // undefined = unlimited session
+    const expiresAt = ttl !== undefined ? nowSec + ttl : 0; // 0 = unlimited
 
     // Get target wallets (with environment for prompt builder)
     let targetWallets: Array<{ id: string; name: string; chain: string; environment: string; publicKey: string }>;
@@ -2400,15 +2399,14 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
     // Try to reuse an existing valid session covering all target wallets
     const defaultWallet = targetWallets[0]!;
     const targetWalletIds = targetWallets.map((w) => w.id);
-    const minRemainingTtl = Math.max(Math.floor(ttl * 0.1), 3600); // 10% of TTL or 1 hour
-    const minExpiresAt = new Date((nowSec + minRemainingTtl) * 1000);
 
     let sessionId: string;
     let sessionReused = false;
     let sessionsCreated = 1;
     let actualExpiresAt = expiresAt;
 
-    // Find active sessions that cover all target wallets with sufficient TTL
+    // Find active sessions that cover all target wallets
+    // For unlimited sessions, include those with expiresAt=0
     const candidateSessions = deps.db
       .select({
         id: sessions.id,
@@ -2418,7 +2416,9 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
       .where(
         and(
           isNull(sessions.revokedAt),
-          gt(sessions.expiresAt, minExpiresAt),
+          ttl !== undefined
+            ? gt(sessions.expiresAt, new Date((nowSec + Math.max(Math.floor(ttl * 0.1), 3600)) * 1000))
+            : sql`(${sessions.expiresAt} = 0 OR ${sessions.expiresAt} > ${nowSec})`,
         ),
       )
       .all();
@@ -2462,10 +2462,10 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
         id: sessionId,
         tokenHash: '',
         expiresAt: new Date(expiresAt * 1000),
-        absoluteExpiresAt: new Date(absoluteExpiresAt * 1000),
+        absoluteExpiresAt: new Date(0), // unlimited
         createdAt: new Date(nowSec * 1000),
         renewalCount: 0,
-        maxRenewals: config.security.session_max_renewals,
+        maxRenewals: 0, // unlimited
         constraints: null,
         source: 'api',
       }).run();
@@ -2483,8 +2483,12 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
       void deps.notificationService?.notify('SESSION_CREATED', defaultWallet.id, { sessionId });
     }
 
-    // Sign JWT (new or re-signed for reused session)
-    const jwtPayload: JwtPayload = { sub: sessionId, iat: nowSec, exp: actualExpiresAt };
+    // Sign JWT (new or re-signed for reused session; unlimited sessions have no exp)
+    const jwtPayload: JwtPayload = {
+      sub: sessionId,
+      iat: nowSec,
+      exp: actualExpiresAt > 0 ? actualExpiresAt : undefined,
+    };
     const token = await deps.jwtSecretManager.signToken(jwtPayload);
 
     if (!sessionReused) {
@@ -2543,7 +2547,7 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
       }
     }
 
-    if (config.x402?.enabled === true) {
+    if (deps.daemonConfig?.x402?.enabled === true) {
       capabilities.push('x402');
     }
 

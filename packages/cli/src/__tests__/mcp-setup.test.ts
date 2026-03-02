@@ -63,7 +63,7 @@ function createSuccessFetchMock(walletId = 'wallet-1', walletName = 'Test Wallet
       return Promise.resolve(mockResponse(200, {
         id: 'session-123',
         token: 'jwt.token.here',
-        expiresAt: Math.floor(Date.now() / 1000) + 86400,
+        expiresAt: 0,
       }));
     }
     return Promise.reject(new Error(`Unexpected fetch: ${urlStr}`));
@@ -334,7 +334,7 @@ describe('mcpSetupCommand', () => {
     );
   });
 
-  it('--expires-in passed correctly', async () => {
+  it('--ttl passed correctly', async () => {
     const fetchMock = vi.fn((url: string | URL, init?: RequestInit) => {
       const urlStr = String(url);
       if (urlStr.includes('/health')) {
@@ -346,8 +346,8 @@ describe('mcpSetupCommand', () => {
         }));
       }
       if (urlStr.includes('/v1/sessions')) {
-        const body = JSON.parse(init?.body as string) as { expiresIn: number };
-        expect(body.expiresIn).toBe(7200); // Custom 2h
+        const body = JSON.parse(init?.body as string) as { ttl: number };
+        expect(body.ttl).toBe(7200); // Custom 2h
         return Promise.resolve(mockResponse(200, {
           id: 'session-123',
           token: 'jwt.token.here',
@@ -361,7 +361,7 @@ describe('mcpSetupCommand', () => {
     const { mcpSetupCommand } = await import('../commands/mcp-setup.js');
     await mcpSetupCommand({
       dataDir: testDir,
-      expiresIn: 7200,
+      ttl: 7200,
       masterPassword: 'test-pw',
     });
 
@@ -715,7 +715,7 @@ describe('mcpSetupCommand', () => {
     expect(allStderrCalls.every((s: string) => !s.includes('Run waiaas init first'))).toBe(true);
   });
 
-  it('MCP-01: default expiry shows 24h warning', async () => {
+  it('MCP-01: default unlimited session shows "Never" expiry', async () => {
     vi.stubGlobal('fetch', createSuccessFetchMock());
 
     const { mcpSetupCommand } = await import('../commands/mcp-setup.js');
@@ -723,18 +723,15 @@ describe('mcpSetupCommand', () => {
       dataDir: testDir,
       baseUrl: 'http://127.0.0.1:3100',
       masterPassword: 'test-pw',
-      // expiresIn NOT specified -> defaults to 86400
+      // ttl NOT specified -> unlimited
     });
 
     expect(mockStdout).toHaveBeenCalledWith(
-      'Note: Session expires in 24 hours by default.',
-    );
-    expect(mockStdout).toHaveBeenCalledWith(
-      expect.stringContaining('--expires-in'),
+      '  Expires: Never (unlimited)',
     );
   });
 
-  it('MCP-01: custom expiry does NOT show 24h warning', async () => {
+  it('MCP-01: custom TTL shows expiry date instead of "Never"', async () => {
     const fetchMock = vi.fn((url: string | URL) => {
       const urlStr = String(url);
       if (urlStr.includes('/health')) {
@@ -759,16 +756,16 @@ describe('mcpSetupCommand', () => {
     const { mcpSetupCommand } = await import('../commands/mcp-setup.js');
     await mcpSetupCommand({
       dataDir: testDir,
-      expiresIn: 7200, // Custom 2h
+      ttl: 7200, // Custom 2h
       masterPassword: 'test-pw',
     });
 
-    // Should NOT show 24h default warning
+    // Should NOT show unlimited
     const allStdoutCalls = mockStdout.mock.calls.map((c: unknown[]) => String(c[0]));
-    expect(allStdoutCalls.every((s: string) => !s.includes('Session expires in 24 hours by default'))).toBe(true);
+    expect(allStdoutCalls.every((s: string) => !s.includes('Never (unlimited)'))).toBe(true);
   });
 
-  it('MCP-01: --all mode shows default expiry warning', async () => {
+  it('MCP-01: --all mode shows unlimited expiry for default sessions', async () => {
     let sessionCallCount = 0;
     const fetchMock = vi.fn((url: string | URL, init?: RequestInit) => {
       const urlStr = String(url);
@@ -789,7 +786,7 @@ describe('mcpSetupCommand', () => {
         return Promise.resolve(mockResponse(200, {
           id: `session-${sessionCallCount}`,
           token: `token-for-${body.walletId}`,
-          expiresAt: Math.floor(Date.now() / 1000) + 86400,
+          expiresAt: 0,
         }));
       }
       return Promise.reject(new Error(`Unexpected: ${urlStr}`));
@@ -802,14 +799,11 @@ describe('mcpSetupCommand', () => {
       baseUrl: 'http://127.0.0.1:3100',
       all: true,
       masterPassword: 'test-pw',
-      // expiresIn NOT specified -> defaults to 86400
+      // ttl NOT specified -> unlimited
     });
 
     expect(mockStdout).toHaveBeenCalledWith(
-      'Note: Session expires in 24 hours by default.',
-    );
-    expect(mockStdout).toHaveBeenCalledWith(
-      expect.stringContaining('--expires-in'),
+      '  Expires: Never (unlimited)',
     );
   });
 });

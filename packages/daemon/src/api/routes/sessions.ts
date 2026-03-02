@@ -19,7 +19,7 @@
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { createHash } from 'node:crypto';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import { eq, and, isNull, gt, sql } from 'drizzle-orm';
+import { eq, and, isNull, sql } from 'drizzle-orm';
 import { WAIaaSError, type EventBus } from '@waiaas/core';
 import type { JwtSecretManager, JwtPayload } from '../../infrastructure/jwt/index.js';
 import { generateId } from '../../infrastructure/database/id.js';
@@ -129,6 +129,7 @@ const renewSessionRoute = createRoute({
       'SESSION_NOT_FOUND',
       'SESSION_REVOKED',
       'SESSION_RENEWAL_MISMATCH',
+      'RENEWAL_NOT_REQUIRED',
       'RENEWAL_LIMIT_REACHED',
       'SESSION_ABSOLUTE_LIFETIME_EXCEEDED',
       'RENEWAL_TOO_EARLY',
@@ -234,10 +235,10 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
 
     // Check active session count for each wallet (via session_wallets JOIN)
     const nowSec = Math.floor(Date.now() / 1000);
-    const nowDate = new Date(nowSec * 1000);
     const maxSessions = deps.config.security.max_sessions_per_wallet;
 
     for (const wId of walletIds) {
+      // Count active sessions: not revoked AND (unlimited OR not expired)
       const activeCountResult = deps.db
         .select({ count: sql<number>`count(*)` })
         .from(sessionWallets)
@@ -246,7 +247,7 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
           and(
             eq(sessionWallets.walletId, wId),
             isNull(sessions.revokedAt),
-            gt(sessions.expiresAt, nowDate),
+            sql`(${sessions.expiresAt} = 0 OR ${sessions.expiresAt} > ${nowSec})`,
           ),
         )
         .get();
@@ -262,16 +263,20 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
     // Generate session ID
     const sessionId = generateId();
 
-    // Compute TTL and expiry timestamps
-    const ttl = parsed.ttl ?? deps.config.security.session_ttl;
-    const expiresAt = nowSec + ttl;
-    const absoluteExpiresAt = nowSec + deps.config.security.session_absolute_lifetime;
+    // Compute TTL and expiry timestamps (v29.9: per-session, unlimited by default)
+    const ttl = parsed.ttl; // undefined = unlimited session
+    const expiresAt = ttl !== undefined ? nowSec + ttl : 0; // 0 = unlimited
+    const absoluteLifetime = parsed.absoluteLifetime;
+    const absoluteExpiresAt = absoluteLifetime !== undefined && absoluteLifetime > 0
+      ? nowSec + absoluteLifetime
+      : 0; // 0 = no absolute lifetime cap
+    const maxRenewals = parsed.maxRenewals ?? 0; // 0 = unlimited renewals
 
-    // Create JWT payload
+    // Create JWT payload (unlimited sessions have no exp claim)
     const jwtPayload: JwtPayload = {
       sub: sessionId,
       iat: nowSec,
-      exp: expiresAt,
+      exp: ttl !== undefined ? expiresAt : undefined,
     };
     const token = await deps.jwtSecretManager.signToken(jwtPayload);
 
@@ -286,7 +291,7 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
       absoluteExpiresAt: new Date(absoluteExpiresAt * 1000),
       createdAt: new Date(nowSec * 1000),
       renewalCount: 0,
-      maxRenewals: deps.config.security.session_max_renewals,
+      maxRenewals,
       constraints: parsed.constraints ? JSON.stringify(parsed.constraints) : null,
     }).run();
 
@@ -385,7 +390,8 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
 
     const result = sessionRows.map((row) => {
       const expiresAtSec = Math.floor(row.expiresAt.getTime() / 1000);
-      const status = expiresAtSec < nowSec ? 'EXPIRED' : 'ACTIVE';
+      // Unlimited sessions (expiresAt=0) are always ACTIVE
+      const status = expiresAtSec === 0 ? 'ACTIVE' : (expiresAtSec < nowSec ? 'EXPIRED' : 'ACTIVE');
 
       // Fetch wallets linked to this session
       const swRows = deps.db
@@ -493,25 +499,31 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
       throw new WAIaaSError('SESSION_REVOKED');
     }
 
+    // ----- Check 1b: Unlimited session does not require renewal -----
+    const expiresAtSec = Math.floor(session.expiresAt.getTime() / 1000);
+    if (expiresAtSec === 0) {
+      throw new WAIaaSError('RENEWAL_NOT_REQUIRED');
+    }
+
     // ----- Check 2: token_hash CAS (Compare-And-Swap) -----
     if (session.tokenHash !== currentTokenHash) {
       throw new WAIaaSError('SESSION_RENEWAL_MISMATCH');
     }
 
-    // ----- Check 3: maxRenewals limit -----
-    if (session.renewalCount >= session.maxRenewals) {
+    // ----- Check 3: maxRenewals limit (0 = unlimited renewals) -----
+    if (session.maxRenewals > 0 && session.renewalCount >= session.maxRenewals) {
       throw new WAIaaSError('RENEWAL_LIMIT_REACHED');
     }
 
-    // ----- Check 4: Absolute lifetime -----
+    // ----- Check 4: Absolute lifetime (0 = no cap) -----
     const nowSec = Math.floor(Date.now() / 1000);
     const absoluteExpiresAtSec = Math.floor(session.absoluteExpiresAt.getTime() / 1000);
-    if (nowSec >= absoluteExpiresAtSec) {
+    if (absoluteExpiresAtSec > 0 && nowSec >= absoluteExpiresAtSec) {
       throw new WAIaaSError('SESSION_ABSOLUTE_LIFETIME_EXCEEDED');
     }
 
     // ----- Check 5: 50% TTL elapsed -----
-    const currentTtl = jwtPayload.exp - jwtPayload.iat;
+    const currentTtl = jwtPayload.exp! - jwtPayload.iat;
     const elapsed = nowSec - jwtPayload.iat;
     if (elapsed < currentTtl * 0.5) {
       throw new WAIaaSError('RENEWAL_TOO_EARLY');
@@ -519,7 +531,9 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
 
     // ----- Issue new token -----
     const newTtl = currentTtl;
-    const newExpiresAt = Math.min(nowSec + newTtl, absoluteExpiresAtSec);
+    const newExpiresAt = absoluteExpiresAtSec > 0
+      ? Math.min(nowSec + newTtl, absoluteExpiresAtSec)
+      : nowSec + newTtl;
 
     const newPayload: JwtPayload = {
       sub: sessionId,
@@ -619,6 +633,7 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
     const nowDate = new Date(nowSec * 1000);
     const maxSessions = deps.config.security.max_sessions_per_wallet;
 
+    // Count active sessions: not revoked AND (unlimited OR not expired)
     const activeCountResult = deps.db
       .select({ count: sql<number>`count(*)` })
       .from(sessionWallets)
@@ -627,7 +642,7 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
         and(
           eq(sessionWallets.walletId, walletId),
           isNull(sessions.revokedAt),
-          gt(sessions.expiresAt, nowDate),
+          sql`(${sessions.expiresAt} = 0 OR ${sessions.expiresAt} > ${nowSec})`,
         ),
       )
       .get();

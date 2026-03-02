@@ -49,7 +49,9 @@ curl -s -X POST http://localhost:3100/v1/sessions \
 Body:
 - `walletIds`: string[] -- Connect multiple wallets
 - `walletId`: string -- Connect single wallet (backward compatible)
-- `expiresIn`?: number -- TTL in seconds
+- `ttl`?: number -- Session lifetime in seconds (omit for unlimited session)
+- `maxRenewals`?: number -- Max renewal count, 0 = unlimited (default: 0)
+- `absoluteLifetime`?: number -- Absolute session lifetime in seconds, 0 = unlimited (default: 0)
 
 ## Session-Wallet Management (masterAuth required)
 
@@ -409,7 +411,6 @@ curl -s http://localhost:3100/v1/admin/settings \
     "rpc.evm_base_sepolia": "https://base-sepolia.drpc.org"
   },
   "security": {
-    "security.session_ttl": "86400",
     "security.max_sessions_per_wallet": "5",
     "security.max_pending_tx": "10",
     "security.rate_limit_global_ip_rpm": "1000",
@@ -468,7 +469,7 @@ curl -s http://localhost:3100/v1/admin/settings \
 | --------------- | ------------------------------------------------------- | -------------------------------------- |
 | `notifications` | enabled, telegram_*, discord_*, ntfy_*, slack_*, locale, rate_limit_rpm | Notification channel configuration.  |
 | `rpc`           | solana_*, evm_*                                         | Blockchain RPC endpoint URLs.          |
-| `security`      | session_ttl, max_sessions_*, rate_limit_*, policy_defaults_* | Security and rate limiting.         |
+| `security`      | max_sessions_*, max_pending_tx, rate_limit_*, policy_defaults_* | Security and rate limiting.         |
 | `daemon`        | log_level                                               | Daemon runtime settings.               |
 | `walletconnect` | project_id                                              | WalletConnect project configuration.   |
 | `oracle`        | coingecko_api_key, cross_validation_threshold            | Price oracle configuration.            |
@@ -549,7 +550,6 @@ RPC:
 - `rpc.evm_base_sepolia` -- Base Sepolia testnet RPC URL
 
 Security:
-- `security.session_ttl` -- Default session TTL in seconds (default: "86400")
 - `security.max_sessions_per_wallet` -- Max concurrent sessions per wallet (default: "5")
 - `security.max_pending_tx` -- Max pending transactions per wallet (default: "10")
 - `security.rate_limit_global_ip_rpm` -- Global rate limit per IP (RPM, default: "1000")

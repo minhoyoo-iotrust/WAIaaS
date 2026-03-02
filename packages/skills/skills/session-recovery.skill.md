@@ -3,7 +3,7 @@ name: "WAIaaS Session Recovery"
 description: "Recover from expired or permanently expired session tokens"
 category: "api"
 tags: [wallet, blockchain, session, recovery, token, expired, waiass]
-version: "2.9.0-rc.4"
+version: "2.9.0-rc.7"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]
@@ -22,7 +22,8 @@ When you receive a `401` response with one of these error codes, your session ne
 | Error Code | Meaning | Recovery Path |
 |-----------|---------|---------------|
 | `TOKEN_EXPIRED` | Session TTL elapsed | Try renewal first |
-| `RENEWAL_LIMIT_REACHED` | Max renewals exceeded (default 12) | Request new session |
+| `RENEWAL_NOT_REQUIRED` | Unlimited session does not need renewal | No action needed |
+| `RENEWAL_LIMIT_REACHED` | Max renewals exceeded | Request new session |
 | `SESSION_REVOKED` | Session manually revoked by operator | Request new session |
 | `SESSION_NOT_FOUND` | Session deleted or invalid | Request new session |
 
@@ -47,9 +48,10 @@ curl -s -X PUT http://localhost:3100/v1/sessions/{sessionId}/renew \
 Update your session token with the new value and continue operating.
 
 **Safety checks that may block renewal:**
+- Unlimited session (expiresAt=0): returns `RENEWAL_NOT_REQUIRED` (400)
 - Less than 50% of TTL has elapsed (too early)
-- Renewal count exceeds max (default 12)
-- Absolute session lifetime exceeded (default 1 year)
+- Renewal count exceeds max (if maxRenewals > 0)
+- Absolute session lifetime exceeded (if absoluteLifetime > 0)
 - Token hash mismatch (concurrent renewal detected)
 
 ## Path B: Request New Session from Operator
@@ -83,7 +85,7 @@ This generates a new session with an AI-ready connection prompt.
 curl -s -X POST http://localhost:3100/v1/sessions \
   -H "Content-Type: application/json" \
   -H "X-Master-Password: <operator-enters-password>" \
-  -d '{"walletIds": ["<wallet-id>"], "ttl": 2592000}' | jq .
+  -d '{"walletIds": ["<wallet-id>"]}' | jq .
 ```
 
 ### Step 3: Apply the New Token
@@ -141,6 +143,7 @@ curl -s http://localhost:3100/v1/connect-info \
 
 ## Prevention Tips
 
-- **Check session expiry proactively**: The `connect-info` response includes `session.expiresAt` (Unix timestamp). Monitor this to renew before expiration.
-- **Renew early**: Call `PUT /v1/sessions/{id}/renew` when 60% of TTL has elapsed (MCP agents do this automatically).
-- **Use long TTL**: Default session TTL is 30 days. The operator can configure up to 1 year via Admin Settings.
+- **Use unlimited sessions (default)**: Sessions created without `ttl` never expire, eliminating the need for renewal entirely.
+- **Check session expiry proactively**: For finite sessions, the `connect-info` response includes `session.expiresAt` (Unix timestamp, 0 = unlimited). Monitor this to renew before expiration.
+- **Renew early**: For finite sessions, call `PUT /v1/sessions/{id}/renew` when 60% of TTL has elapsed (MCP agents do this automatically for finite sessions).
+- **Per-session TTL**: Session lifetime is configured per-session at creation time via `ttl`, `maxRenewals`, and `absoluteLifetime` parameters. There are no global session lifetime settings.

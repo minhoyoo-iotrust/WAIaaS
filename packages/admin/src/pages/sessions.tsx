@@ -75,9 +75,6 @@ const SESSIONS_TABS = [
 // ---------------------------------------------------------------------------
 
 const SESSION_KEYS = [
-  'security.session_ttl',
-  'security.session_absolute_lifetime',
-  'security.session_max_renewals',
   'security.max_sessions_per_wallet',
   'security.max_pending_tx',
   'security.rate_limit_session_rpm',
@@ -179,35 +176,8 @@ function SessionSettingsTab() {
           </p>
         </div>
         <div class="settings-category-body">
-          <FieldGroup legend="Lifetime" description="Session duration and renewal limits">
+          <FieldGroup legend="Limits" description="Session concurrency limits">
             <div class="settings-fields-grid">
-              <FormField
-                label={keyToLabel('session_ttl')}
-                name="security.session_ttl"
-                type="number"
-                value={Number(getEffectiveValue(settings.value, dirty.value, 'security', 'session_ttl')) || 0}
-                onChange={(v) => handleFieldChange('security.session_ttl', v)}
-                min={300}
-                description="How long a session token is valid before renewal"
-              />
-              <FormField
-                label={keyToLabel('session_absolute_lifetime')}
-                name="security.session_absolute_lifetime"
-                type="number"
-                value={Number(getEffectiveValue(settings.value, dirty.value, 'security', 'session_absolute_lifetime')) || 0}
-                onChange={(v) => handleFieldChange('security.session_absolute_lifetime', v)}
-                min={0}
-                description="Maximum total session duration regardless of renewals"
-              />
-              <FormField
-                label={keyToLabel('session_max_renewals')}
-                name="security.session_max_renewals"
-                type="number"
-                value={Number(getEffectiveValue(settings.value, dirty.value, 'security', 'session_max_renewals')) || 0}
-                onChange={(v) => handleFieldChange('security.session_max_renewals', v)}
-                min={0}
-                description="Maximum number of times a session can be renewed"
-              />
               <FormField
                 label={keyToLabel('max_sessions_per_wallet')}
                 name="security.max_sessions_per_wallet"
@@ -290,6 +260,10 @@ export default function SessionsPage() {
   // Multi-wallet session creation modal state
   const createModal = useSignal(false);
   const createSelectedIds = useSignal<Set<string>>(new Set());
+  const createAdvancedOpen = useSignal(false);
+  const createTtlDays = useSignal('');
+  const createMaxRenewals = useSignal('');
+  const createLifetimeDays = useSignal('');
 
   const fetchWallets = async () => {
     try {
@@ -336,10 +310,21 @@ export default function SessionsPage() {
       const body: Record<string, unknown> = ids.length === 1
         ? { walletId: ids[0] }
         : { walletIds: ids };
+      // Per-session TTL (days → seconds)
+      const ttlDays = Number(createTtlDays.value);
+      if (ttlDays > 0) body['ttl'] = ttlDays * 86400;
+      const maxR = Number(createMaxRenewals.value);
+      if (createMaxRenewals.value !== '' && maxR >= 0) body['maxRenewals'] = maxR;
+      const lifeDays = Number(createLifetimeDays.value);
+      if (lifeDays > 0) body['absoluteLifetime'] = lifeDays * 86400;
       const result = await apiPost<CreatedSession>(API.SESSIONS, body);
       createdToken.value = result.token;
       tokenModal.value = true;
       createModal.value = false;
+      createAdvancedOpen.value = false;
+      createTtlDays.value = '';
+      createMaxRenewals.value = '';
+      createLifetimeDays.value = '';
       await fetchSessions();
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
@@ -433,7 +418,7 @@ export default function SessionsPage() {
         </Badge>
       ),
     },
-    { key: 'expiresAt', header: 'Expires At', render: (s) => formatDate(s.expiresAt) },
+    { key: 'expiresAt', header: 'Expires At', render: (s) => s.expiresAt === 0 ? 'Never' : formatDate(s.expiresAt) },
     {
       key: 'renewals',
       header: 'Renewals',
@@ -587,6 +572,50 @@ export default function SessionsPage() {
                   </label>
                 ))}
               </div>
+            </div>
+            {/* Advanced Options — per-session TTL, renewals, lifetime */}
+            <div style={{ marginTop: 'var(--space-3)' }}>
+              <button
+                type="button"
+                onClick={() => { createAdvancedOpen.value = !createAdvancedOpen.value; }}
+                style={{ background: 'none', border: 'none', color: 'var(--color-primary)', cursor: 'pointer', padding: 0, fontSize: '0.85rem' }}
+              >
+                {createAdvancedOpen.value ? 'Hide' : 'Show'} Advanced Options
+              </button>
+              {createAdvancedOpen.value && (
+                <div style={{ marginTop: 'var(--space-2)', display: 'grid', gap: 'var(--space-2)' }}>
+                  <FormField
+                    label="TTL (days)"
+                    name="create-ttl"
+                    type="number"
+                    value={createTtlDays.value}
+                    onChange={(v) => { createTtlDays.value = String(v); }}
+                    min={0}
+                    description="Leave empty for unlimited session"
+                    placeholder="Unlimited"
+                  />
+                  <FormField
+                    label="Max Renewals"
+                    name="create-max-renewals"
+                    type="number"
+                    value={createMaxRenewals.value}
+                    onChange={(v) => { createMaxRenewals.value = String(v); }}
+                    min={0}
+                    description="0 = unlimited renewals"
+                    placeholder="Unlimited"
+                  />
+                  <FormField
+                    label="Absolute Lifetime (days)"
+                    name="create-lifetime"
+                    type="number"
+                    value={createLifetimeDays.value}
+                    onChange={(v) => { createLifetimeDays.value = String(v); }}
+                    min={0}
+                    description="Leave empty for unlimited lifetime"
+                    placeholder="Unlimited"
+                  />
+                </div>
+              )}
             </div>
           </Modal>
 

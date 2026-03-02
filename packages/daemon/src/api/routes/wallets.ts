@@ -429,15 +429,12 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
 
     if (parsed.createSession && deps.jwtSecretManager) {
       const nowSec = Math.floor(now.getTime() / 1000);
-      const ttl = deps.config.security.session_ttl;
-      const expiresAt = nowSec + ttl;
-      const absoluteExpiresAt = nowSec + deps.config.security.session_absolute_lifetime;
 
       const sessionId = generateId();
+      // v29.9: auto-created sessions are unlimited by default
       const jwtPayload: JwtPayload = {
         sub: sessionId,
         iat: nowSec,
-        exp: expiresAt,
       };
       const token = await deps.jwtSecretManager.signToken(jwtPayload);
       const tokenHash = createHash('sha256').update(token).digest('hex');
@@ -445,11 +442,11 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
       deps.db.insert(sessions).values({
         id: sessionId,
         tokenHash,
-        expiresAt: new Date(expiresAt * 1000),
-        absoluteExpiresAt: new Date(absoluteExpiresAt * 1000),
+        expiresAt: new Date(0), // unlimited
+        absoluteExpiresAt: new Date(0), // unlimited
         createdAt: now,
         renewalCount: 0,
-        maxRenewals: deps.config.security.session_max_renewals,
+        maxRenewals: 0, // unlimited
         constraints: null,
       }).run();
 
@@ -460,7 +457,7 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
         createdAt: now,
       }).run();
 
-      session = { id: sessionId, token, expiresAt };
+      session = { id: sessionId, token, expiresAt: 0 }; // unlimited
 
       void deps.notificationService?.notify('SESSION_CREATED', id, { sessionId });
       deps.eventBus?.emit('wallet:activity', {

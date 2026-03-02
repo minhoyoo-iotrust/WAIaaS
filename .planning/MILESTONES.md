@@ -1761,3 +1761,27 @@
 
 
 
+
+## v29.9 세션 점진적 보안 모델 (Shipped: 2026-03-02)
+
+**Delivered:** 세션 수명 모델을 글로벌 설정 기반에서 per-session 선택적 지정으로 전환하여, 기본 무제한 세션과 선택적 유한 세션이 공존하는 점진적 보안 구조를 완성한 마일스톤. 무제한 세션은 exp 클레임 없는 JWT를 발급하여 jose 검증 자동 통과, 갱신 시 RENEWAL_NOT_REQUIRED로 거부. Admin Settings 전역 세션 키 3개를 삭제하고 per-session TTL/maxRenewals/absoluteLifetime 파라미터로 전환. MCP SessionManager, CLI, SDK, Admin UI, Skill 파일 전 계층 동기화 완료.
+
+**Phases completed:** 300-301 (2 phases, 14 plans, 25 requirements)
+
+**Key accomplishments:**
+
+- 무제한 세션 기본값 전환 — per-session TTL/maxRenewals/absoluteLifetime 파라미터, 기본값 무제한(0)
+- JWT exp 조건부 생략 — 무제한 세션은 exp 클레임 없는 JWT 발급, jose 검증 자동 통과
+- 갱신 로직 점진적 보안 — 무제한 세션 RENEWAL_NOT_REQUIRED 거부, maxRenewals=0/absoluteLifetime=0 무제한 처리
+- Admin Settings 전역 세션 키 3개 삭제 — session_ttl/session_absolute_lifetime/session_max_renewals per-session으로 완전 이동
+- 전 계층 동기화 — MCP SessionManager 무제한 토큰 처리 + CLI --ttl 리네임 + SDK expiresIn→ttl + Admin UI Advanced 섹션 + Skill 파일 4개
+
+**Stats:**
+
+- 2 phases, 14 plans, 25 requirements, 15 commits
+- 93 files changed, +1,088 / -407 lines
+- ~233,440 LOC TypeScript total
+- Timeline: 1 day (2026-03-02)
+
+---
+

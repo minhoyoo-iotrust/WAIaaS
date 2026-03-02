@@ -223,9 +223,9 @@ describe('Session Renewal API', () => {
   it('renewal rejected when maxRenewals exceeded', async () => {
     const session = await createSessionViaApi(app, testWalletId, SESSION_TTL);
 
-    // Directly set renewalCount to maxRenewals (12) in DB
+    // Set maxRenewals=12 and renewalCount=12 in DB (v29.9: default is 0=unlimited)
     sqlite
-      .prepare('UPDATE sessions SET renewal_count = 12 WHERE id = ?')
+      .prepare('UPDATE sessions SET max_renewals = 12, renewal_count = 12 WHERE id = ?')
       .run(session.id);
 
     // Advance past 50% TTL
@@ -425,5 +425,65 @@ describe('Session Renewal API', () => {
     const body = await json(res);
     expect(body.id).toBe(session.id);
     expect(body.renewalCount).toBe(1);
+  });
+
+  // -----------------------------------------------------------------------
+  // v29.9: Unlimited session renewal tests
+  // -----------------------------------------------------------------------
+
+  it('unlimited session renewal returns 400 RENEWAL_NOT_REQUIRED', async () => {
+    // Create unlimited session (no TTL)
+    const res = await app.request('/v1/sessions', {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ walletId: testWalletId }),
+    });
+    expect(res.status).toBe(201);
+    const body = await json(res);
+    const sessionId = body.id as string;
+    const token = body.token as string;
+
+    // Attempt renewal on unlimited session
+    const renewRes = await renewSessionViaApi(app, sessionId, token);
+    expect(renewRes.status).toBe(400);
+
+    const renewBody = await json(renewRes);
+    expect(renewBody.code).toBe('RENEWAL_NOT_REQUIRED');
+  });
+
+  it('finite session with maxRenewals=0 allows unlimited renewals', async () => {
+    // Create session with TTL but maxRenewals=0 (unlimited renewals)
+    const session = await createSessionViaApi(app, testWalletId, SESSION_TTL);
+
+    // Verify maxRenewals is 0 (default)
+    const row = sqlite.prepare('SELECT max_renewals FROM sessions WHERE id = ?').get(session.id) as { max_renewals: number };
+    expect(row.max_renewals).toBe(0);
+
+    // Set renewal_count very high — should still allow renewal
+    sqlite.prepare('UPDATE sessions SET renewal_count = 999 WHERE id = ?').run(session.id);
+
+    // Advance past 50% TTL
+    vi.advanceTimersByTime(1801 * 1000);
+
+    const res = await renewSessionViaApi(app, session.id, session.token);
+    expect(res.status).toBe(200);
+
+    const body = await json(res);
+    expect(body.renewalCount).toBe(1000);
+  });
+
+  it('finite session with absoluteLifetime=0 skips absolute lifetime check', async () => {
+    const session = await createSessionViaApi(app, testWalletId, SESSION_TTL);
+
+    // Verify absoluteExpiresAt is 0 (default — no cap)
+    const row = sqlite.prepare('SELECT absolute_expires_at FROM sessions WHERE id = ?').get(session.id) as { absolute_expires_at: number };
+    expect(row.absolute_expires_at).toBe(0);
+
+    // Advance past 50% TTL
+    vi.advanceTimersByTime(1801 * 1000);
+
+    // Should succeed even though absolute_expires_at is 0 (no cap)
+    const res = await renewSessionViaApi(app, session.id, session.token);
+    expect(res.status).toBe(200);
   });
 });

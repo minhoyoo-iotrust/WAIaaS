@@ -89,7 +89,6 @@ export function keyToLabel(key: string): string {
     evm_optimism_sepolia: 'Optimism Sepolia',
     evm_base_mainnet: 'Base Mainnet',
     evm_base_sepolia: 'Base Sepolia',
-    session_ttl: 'Session TTL (seconds)',
     max_sessions_per_wallet: 'Max Sessions per Wallet',
     max_pending_tx: 'Max Pending Transactions',
     rate_limit_global_ip_rpm: 'Global IP Rate Limit (RPM)',
@@ -118,8 +117,6 @@ export function keyToLabel(key: string): string {
     // walletconnect keys
     relay_url: 'Relay URL',
     // session keys
-    session_absolute_lifetime: 'Absolute Lifetime (seconds)',
-    session_max_renewals: 'Max Renewals',
     // telegram bot keys
     bot_token: 'Bot Token',
     // signing_sdk keys

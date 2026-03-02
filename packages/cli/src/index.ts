@@ -93,7 +93,7 @@ const quicksetAction = async (opts: {
   dataDir?: string;
   baseUrl?: string;
   mode?: string;
-  expiresIn?: string;
+  ttl?: string;
   password?: string;
 }) => {
   const dataDir = resolveDataDir(opts);
@@ -106,7 +106,7 @@ const quicksetAction = async (opts: {
     dataDir,
     baseUrl: opts.baseUrl,
     mode: mode as 'testnet' | 'mainnet',
-    expiresIn: parseInt(opts.expiresIn ?? '86400', 10),
+    ttl: opts.ttl ? parseInt(opts.ttl, 10) : undefined,
     masterPassword: opts.password,
   });
 };
@@ -117,7 +117,7 @@ program
   .option('--data-dir <path>', 'Data directory path')
   .option('--base-url <url>', 'Daemon base URL', 'http://127.0.0.1:3100')
   .option('--mode <mode>', 'Environment mode: testnet or mainnet', 'mainnet')
-  .option('--expires-in <seconds>', 'Session expiration in seconds', '86400')
+  .option('--ttl <seconds>', 'Session TTL in seconds (omit for unlimited)')
   .option('--password <password>', 'Master password')
   .action(quicksetAction);
 
@@ -127,7 +127,7 @@ program
   .option('--data-dir <path>', 'Data directory path')
   .option('--base-url <url>', 'Daemon base URL', 'http://127.0.0.1:3100')
   .option('--mode <mode>', 'Environment mode: testnet or mainnet', 'mainnet')
-  .option('--expires-in <seconds>', 'Session expiration in seconds', '86400')
+  .option('--ttl <seconds>', 'Session TTL in seconds (omit for unlimited)')
   .option('--password <password>', 'Master password')
   .action(quicksetAction);
 
@@ -176,13 +176,13 @@ session
   .description('Generate agent connection prompt (magic word)')
   .option('--base-url <url>', 'Daemon base URL', 'http://127.0.0.1:3100')
   .option('--wallet <id>', 'Wallet ID or name (all ACTIVE wallets if omitted)')
-  .option('--expires-in <seconds>', 'Session TTL in seconds', '86400')
+  .option('--ttl <seconds>', 'Session TTL in seconds (omit for unlimited)')
   .option('--password <password>', 'Master password')
-  .action(async (opts: { baseUrl?: string; wallet?: string; expiresIn?: string; password?: string }) => {
+  .action(async (opts: { baseUrl?: string; wallet?: string; ttl?: string; password?: string }) => {
     await sessionPromptCommand({
       baseUrl: opts.baseUrl ?? 'http://127.0.0.1:3100',
       walletId: opts.wallet,
-      expiresIn: parseInt(opts.expiresIn ?? '86400', 10),
+      ttl: opts.ttl ? parseInt(opts.ttl, 10) : undefined,
       password: opts.password,
     });
   });
@@ -244,14 +244,18 @@ mcp
   .option('--base-url <url>', 'Daemon base URL', 'http://127.0.0.1:3100')
   .option('--wallet <id>', 'Wallet ID (auto-detected if only one)')
   .option('--all', 'Set up all wallets at once')
-  .option('--expires-in <seconds>', 'Session expiration in seconds', '86400')
+  .option('--ttl <seconds>', 'Session TTL in seconds (omit for unlimited)')
+  .option('--max-renewals <count>', 'Maximum session renewal count (0 = unlimited)')
+  .option('--lifetime <seconds>', 'Absolute session lifetime in seconds (0 = unlimited)')
   .option('--password <password>', 'Master password')
   .action(async (opts: {
     dataDir?: string;
     baseUrl?: string;
     wallet?: string;
     all?: boolean;
-    expiresIn?: string;
+    ttl?: string;
+    maxRenewals?: string;
+    lifetime?: string;
     password?: string;
   }) => {
     const dataDir = resolveDataDir(opts);
@@ -260,7 +264,9 @@ mcp
       baseUrl: opts.baseUrl,
       wallet: opts.wallet,
       all: opts.all ?? false,
-      expiresIn: parseInt(opts.expiresIn ?? '86400', 10),
+      ttl: opts.ttl ? parseInt(opts.ttl, 10) : undefined,
+      maxRenewals: opts.maxRenewals ? parseInt(opts.maxRenewals, 10) : undefined,
+      absoluteLifetime: opts.lifetime ? parseInt(opts.lifetime, 10) : undefined,
       masterPassword: opts.password,
     });
   });

@@ -305,9 +305,6 @@ function setupSessionsMocks() {
     if (url === '/v1/sessions' || url.includes('/v1/sessions?')) return Promise.resolve(mockSessionsFull);
     if (url === '/v1/admin/settings') return Promise.resolve({
       security: {
-        session_ttl: '3600',
-        session_absolute_lifetime: '86400',
-        session_max_renewals: '10',
         max_sessions_per_wallet: '5',
         max_pending_tx: '10',
         rate_limit_session_rpm: '60',
@@ -491,7 +488,7 @@ describe('SessionsPage - Settings tab', () => {
       expect(screen.getByText('Session Configuration')).toBeTruthy();
     });
 
-    expect(screen.getByText('Lifetime')).toBeTruthy();
+    expect(screen.getByText('Limits')).toBeTruthy();
     expect(screen.getByText('Rate Limits')).toBeTruthy();
   });
 
@@ -500,10 +497,7 @@ describe('SessionsPage - Settings tab', () => {
 
     const mockSessionSettings = {
       security: {
-        session_ttl: '7200',
-        session_absolute_lifetime: '86400',
-        session_max_renewals: '10',
-        max_sessions_per_wallet: '5',
+        max_sessions_per_wallet: '10',
         max_pending_tx: '10',
         rate_limit_session_rpm: '60',
         rate_limit_tx_rpm: '10',
@@ -524,8 +518,8 @@ describe('SessionsPage - Settings tab', () => {
     });
 
     // Change a field value
-    const ttlInput = screen.getByLabelText('Session TTL (seconds)') as HTMLInputElement;
-    fireEvent.input(ttlInput, { target: { value: '7200' } });
+    const maxSessionsInput = screen.getByLabelText('Max Sessions per Wallet') as HTMLInputElement;
+    fireEvent.input(maxSessionsInput, { target: { value: '10' } });
 
     // Save bar should appear
     await waitFor(() => {
@@ -537,7 +531,7 @@ describe('SessionsPage - Settings tab', () => {
     await waitFor(() => {
       expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/admin/settings', {
         settings: expect.arrayContaining([
-          expect.objectContaining({ key: 'security.session_ttl', value: '7200' }),
+          expect.objectContaining({ key: 'security.max_sessions_per_wallet', value: '10' }),
         ]),
       });
     });
@@ -559,8 +553,8 @@ describe('SessionsPage - Settings tab', () => {
     });
 
     // Change a field value
-    const ttlInput = screen.getByLabelText('Session TTL (seconds)') as HTMLInputElement;
-    fireEvent.input(ttlInput, { target: { value: '7200' } });
+    const maxSessionsInput = screen.getByLabelText('Max Sessions per Wallet') as HTMLInputElement;
+    fireEvent.input(maxSessionsInput, { target: { value: '10' } });
 
     // Click Discard
     await waitFor(() => {
@@ -588,8 +582,8 @@ describe('SessionsPage - Settings tab', () => {
       expect(screen.getByText('Session Configuration')).toBeTruthy();
     });
 
-    const ttlInput = screen.getByLabelText('Session TTL (seconds)') as HTMLInputElement;
-    fireEvent.input(ttlInput, { target: { value: '7200' } });
+    const maxSessionsInput = screen.getByLabelText('Max Sessions per Wallet') as HTMLInputElement;
+    fireEvent.input(maxSessionsInput, { target: { value: '10' } });
 
     await waitFor(() => {
       expect(screen.getByText('Save')).toBeTruthy();

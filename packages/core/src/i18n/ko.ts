@@ -19,6 +19,7 @@ export const messages: Messages = {
     SESSION_EXPIRED: '세션이 만료되었습니다',
     SESSION_LIMIT_EXCEEDED: '세션 제한을 초과했습니다',
     CONSTRAINT_VIOLATED: '세션 제약 조건을 위반했습니다',
+    RENEWAL_NOT_REQUIRED: '무제한 세션은 갱신이 필요하지 않습니다',
     RENEWAL_LIMIT_REACHED: '세션 갱신 제한에 도달했습니다',
     SESSION_ABSOLUTE_LIFETIME_EXCEEDED: '세션 절대 수명을 초과했습니다',
     RENEWAL_TOO_EARLY: '세션 갱신이 너무 이릅니다',

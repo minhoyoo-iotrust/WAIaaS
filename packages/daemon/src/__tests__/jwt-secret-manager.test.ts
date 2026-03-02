@@ -282,5 +282,47 @@ describe('JwtSecretManager', () => {
       const decoded = await manager.verifyToken(token);
       expect(decoded.sub).toBe('session-id-rotation');
     });
+
+    // v29.9: Unlimited session JWT tests
+    it('signToken() produces JWT without exp for unlimited sessions', async () => {
+      await manager.initialize();
+
+      const payload: JwtPayload = {
+        sub: 'session-unlimited',
+        iat: nowSeconds(),
+        exp: undefined, // unlimited session
+      };
+
+      const token = await manager.signToken(payload);
+      expect(token).toMatch(/^wai_sess_/);
+
+      const decoded = await manager.verifyToken(token);
+      expect(decoded.sub).toBe('session-unlimited');
+      expect(decoded.exp).toBeUndefined();
+    });
+
+    it('unlimited session JWT does not expire', async () => {
+      vi.useFakeTimers();
+      const baseTime = Date.now();
+      vi.setSystemTime(baseTime);
+
+      await manager.initialize();
+
+      const now = Math.floor(baseTime / 1000);
+      const payload: JwtPayload = {
+        sub: 'session-unlimited-forever',
+        iat: now,
+        exp: undefined,
+      };
+
+      const token = await manager.signToken(payload);
+
+      // Advance 1 year -- should still verify successfully
+      vi.setSystemTime(baseTime + 365 * 24 * 60 * 60 * 1000);
+
+      const decoded = await manager.verifyToken(token);
+      expect(decoded.sub).toBe('session-unlimited-forever');
+      expect(decoded.exp).toBeUndefined();
+    });
   });
 });

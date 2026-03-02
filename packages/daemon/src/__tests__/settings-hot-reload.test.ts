@@ -262,7 +262,7 @@ describe('HotReloadOrchestrator.handleChangedKeys', () => {
       adapterPool: mockPool,
     });
 
-    await orchestrator.handleChangedKeys(['security.session_ttl']);
+    await orchestrator.handleChangedKeys(['security.max_sessions_per_wallet']);
     expect(logSpy).toHaveBeenCalledWith(
       expect.stringContaining('Security parameters updated'),
     );

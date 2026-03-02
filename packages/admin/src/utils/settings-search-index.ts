@@ -49,9 +49,6 @@ export const SETTINGS_SEARCH_INDEX: SearchIndexEntry[] = [
   // =========================================================================
 
   // --- Settings tab ---
-  { id: 'sessions.settings.session_ttl', label: 'Session TTL (seconds)', description: 'How long a session token is valid before renewal', page: '/sessions', tab: 'settings', fieldName: 'security.session_ttl', keywords: ['session', 'ttl', 'lifetime', 'expiry', 'timeout'] },
-  { id: 'sessions.settings.session_absolute_lifetime', label: 'Absolute Lifetime (seconds)', description: 'Maximum total session duration regardless of renewals', page: '/sessions', tab: 'settings', fieldName: 'security.session_absolute_lifetime', keywords: ['session', 'lifetime', 'absolute', 'maximum'] },
-  { id: 'sessions.settings.session_max_renewals', label: 'Max Renewals', description: 'Maximum number of times a session can be renewed', page: '/sessions', tab: 'settings', fieldName: 'security.session_max_renewals', keywords: ['session', 'renewal', 'limit', 'maximum'] },
   { id: 'sessions.settings.max_sessions_per_wallet', label: 'Max Sessions per Wallet', description: 'Maximum concurrent sessions for a single wallet', page: '/sessions', tab: 'settings', fieldName: 'security.max_sessions_per_wallet', keywords: ['session', 'limit', 'concurrent', 'wallet'] },
   { id: 'sessions.settings.max_pending_tx', label: 'Max Pending Transactions', description: 'Maximum in-flight transactions per session', page: '/sessions', tab: 'settings', fieldName: 'security.max_pending_tx', keywords: ['transaction', 'pending', 'limit', 'queue'] },
   { id: 'sessions.settings.rate_limit_session_rpm', label: 'Session Rate Limit (RPM)', description: 'Max requests per minute per session', page: '/sessions', tab: 'settings', fieldName: 'security.rate_limit_session_rpm', keywords: ['rate', 'limit', 'rpm', 'session', 'throttle'] },

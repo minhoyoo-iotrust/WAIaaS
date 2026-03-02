@@ -579,8 +579,8 @@ describe('quicksetCommand (formerly quickstart)', () => {
 
     const body = JSON.parse((sessionCalls[0] as [string, RequestInit])[1].body as string) as Record<string, unknown>;
 
-    // Must send "ttl" (not "expiresIn")
-    expect(body['ttl']).toBe(2592000); // 30 days
+    // Must send "ttl" only if specified (not "expiresIn"); default = unlimited (no ttl)
+    expect(body['ttl']).toBeUndefined(); // unlimited by default
     expect(body['expiresIn']).toBeUndefined();
   });
 

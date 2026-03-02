@@ -236,6 +236,10 @@
 | 219 | BUG | CRITICAL | Push Relay 서버 시작 10초 후 강제 종료 — Shutdown 타이머 즉시 시작 | v29.8 | FIXED | 2026-03-01 |
 | 220 | MISSING | LOW | Push Relay 서버 버전 정보 노출 수단 없음 — health/로그/CLI 모두 미지원 | v29.9 | FIXED | 2026-03-02 |
 | 221 | BUG | HIGH | SignRequestSchema chain 열거값 불일치 — `'evm'` vs SSoT `'ethereum'` | v29.9 | FIXED | 2026-03-02 |
+| 222 | BUG | HIGH | Push Relay ntfy SSE gzip 미해제로 JSON 파싱 실패 | v29.9 | OPEN | — |
+| 223 | ENHANCEMENT | LOW | 프리셋 지갑의 Approval Method 변경 시 경고 미표시 | — | OPEN | — |
+| 224 | BUG | MEDIUM | Approval Method에서 Telegram 설정 상태를 불완전하게 체크 — notifications 토큰 폴백 미확인 | — | OPEN | — |
+| 225 | BUG | LOW | Approval Method 경고 메시지가 이전 메뉴 경로 참조 — System > Signing SDK (v29.7에서 이동됨) | — | OPEN | — |
 
 ## Type Legend
 
@@ -247,9 +251,9 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 4
 - **FIXED:** 221
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 221
+- **Total:** 225

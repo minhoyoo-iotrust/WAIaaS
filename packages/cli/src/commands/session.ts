@@ -11,7 +11,7 @@ interface SessionPromptOptions {
   baseUrl: string;
   password?: string;
   walletId?: string;
-  expiresIn?: number;
+  ttl?: number;
 }
 
 interface AgentPromptResponse {
@@ -30,7 +30,7 @@ export async function sessionPromptCommand(opts: SessionPromptOptions): Promise<
 
   const body: Record<string, unknown> = {};
   if (opts.walletId) body.walletIds = [opts.walletId];
-  if (opts.expiresIn) body.ttl = opts.expiresIn;
+  if (opts.ttl !== undefined) body.ttl = opts.ttl;
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -71,7 +71,10 @@ export async function sessionPromptCommand(opts: SessionPromptOptions): Promise<
   } else {
     console.log(`(Created ${data.sessionsCreated} new session${data.sessionsCreated > 1 ? 's' : ''})`);
   }
-  const expiresDate = new Date(data.expiresAt * 1000).toLocaleString();
-  console.log(`Expires: ${expiresDate}`);
+  if (data.expiresAt === 0) {
+    console.log('Expires: Never (unlimited)');
+  } else {
+    console.log(`Expires: ${new Date(data.expiresAt * 1000).toLocaleString()}`);
+  }
   console.log('');
 }
