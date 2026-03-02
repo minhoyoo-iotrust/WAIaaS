@@ -236,6 +236,14 @@ export function createWalletAppsRoutes(deps: WalletAppsRouteDeps): OpenAPIHono {
       return c.json({ success: false, error: 'Alerts are disabled for this app' }, 200);
     }
 
+    // Gate 4: Device registered (subscriptionToken exists)
+    if (!app.subscriptionToken) {
+      return c.json({
+        success: false,
+        error: 'No device registered for this wallet app. Register a device first.',
+      }, 200);
+    }
+
     // Resolve ntfy server and topic
     const ntfyServer = deps.settingsService?.get('notifications.ntfy_server') || 'https://ntfy.sh';
     const notifyTopic = app.notifyTopic || `waiaas-notify-${app.name}`;

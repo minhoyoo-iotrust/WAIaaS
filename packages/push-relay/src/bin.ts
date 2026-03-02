@@ -64,23 +64,46 @@ async function main(): Promise<void> {
     notifyTopicPrefix: config.relay.notify_topic_prefix,
     walletNames: config.relay.wallet_names,
     transformer,
-    onMessage: async (walletName, payload) => {
+    onMessage: async (walletName, payload, topic) => {
       console.log(
-        `[push-relay] Received ${payload.category} for wallet "${walletName}" (title=${payload.title ?? 'none'})`,
+        `[push-relay] Received ${payload.category} for wallet "${walletName}" on topic "${topic}" (title=${payload.title ?? 'none'})`,
       );
-      const tokens = registry.getTokensByWalletName(walletName);
-      if (tokens.length === 0) {
-        console.log(`[push-relay] No registered devices for wallet "${walletName}", skipping push`);
+
+      // Skip base topics — only device-specific topics trigger push
+      const signBase = `${config.relay.sign_topic_prefix}-${walletName}`;
+      const notifyBase = `${config.relay.notify_topic_prefix}-${walletName}`;
+      if (topic === signBase || topic === notifyBase) {
+        console.log(`[push-relay] Base topic "${topic}" — skipping push (no broadcast)`);
         return;
       }
 
-      const result = await provider.send(tokens, payload);
+      // Extract subscriptionToken from device topic suffix
+      let subscriptionToken: string | undefined;
+      if (topic.startsWith(`${signBase}-`)) {
+        subscriptionToken = topic.slice(signBase.length + 1);
+      } else if (topic.startsWith(`${notifyBase}-`)) {
+        subscriptionToken = topic.slice(notifyBase.length + 1);
+      }
+
+      if (!subscriptionToken) {
+        console.log(`[push-relay] Cannot extract subscriptionToken from topic "${topic}", skipping`);
+        return;
+      }
+
+      // Unicast to the specific device
+      const device = registry.getBySubscriptionToken(subscriptionToken);
+      if (!device) {
+        console.log(`[push-relay] No device found for subscriptionToken "${subscriptionToken}", skipping`);
+        return;
+      }
+
+      const result = await provider.send([device.pushToken], payload);
       if (result.invalidTokens.length > 0) {
         registry.removeTokens(result.invalidTokens);
         console.log(`[push-relay] Removed ${result.invalidTokens.length} invalid token(s)`);
       }
       console.log(
-        `[push-relay] ${payload.category} → ${walletName}: sent=${result.sent}, failed=${result.failed}`,
+        `[push-relay] ${payload.category} → ${walletName} (device=${subscriptionToken}): sent=${result.sent}, failed=${result.failed}`,
       );
     },
     onError: (err) => {
