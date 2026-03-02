@@ -2418,7 +2418,7 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
           isNull(sessions.revokedAt),
           ttl !== undefined
             ? gt(sessions.expiresAt, new Date((nowSec + Math.max(Math.floor(ttl * 0.1), 3600)) * 1000))
-            : sql`(${sessions.expiresAt} = 0 OR ${sessions.expiresAt} > ${new Date(nowSec * 1000)})`,
+            : sql`(${sessions.expiresAt} = 0 OR ${sessions.expiresAt} > ${nowSec})`,
         ),
       )
       .all();
@@ -2547,7 +2547,7 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
       }
     }
 
-    if (config.x402?.enabled === true) {
+    if (deps.daemonConfig?.x402?.enabled === true) {
       capabilities.push('x402');
     }
 

@@ -19,7 +19,7 @@
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { createHash } from 'node:crypto';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import { eq, and, isNull, gt, sql } from 'drizzle-orm';
+import { eq, and, isNull, sql } from 'drizzle-orm';
 import { WAIaaSError, type EventBus } from '@waiaas/core';
 import type { JwtSecretManager, JwtPayload } from '../../infrastructure/jwt/index.js';
 import { generateId } from '../../infrastructure/database/id.js';
@@ -235,7 +235,6 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
 
     // Check active session count for each wallet (via session_wallets JOIN)
     const nowSec = Math.floor(Date.now() / 1000);
-    const nowDate = new Date(nowSec * 1000);
     const maxSessions = deps.config.security.max_sessions_per_wallet;
 
     for (const wId of walletIds) {
@@ -248,7 +247,7 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
           and(
             eq(sessionWallets.walletId, wId),
             isNull(sessions.revokedAt),
-            sql`(${sessions.expiresAt} = 0 OR ${sessions.expiresAt} > ${nowDate})`,
+            sql`(${sessions.expiresAt} = 0 OR ${sessions.expiresAt} > ${nowSec})`,
           ),
         )
         .get();
@@ -643,7 +642,7 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
         and(
           eq(sessionWallets.walletId, walletId),
           isNull(sessions.revokedAt),
-          sql`(${sessions.expiresAt} = 0 OR ${sessions.expiresAt} > ${nowDate})`,
+          sql`(${sessions.expiresAt} = 0 OR ${sessions.expiresAt} > ${nowSec})`,
         ),
       )
       .get();

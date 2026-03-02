@@ -74,9 +74,7 @@ export class TelegramBotService {
   private locale: SupportedLocale;
   private killSwitchService?: KillSwitchService;
   private jwtSecretManager?: JwtSecretManager;
-  private settingsService?: SettingsService;
   private signResponseHandler?: SignResponseHandler;
-  private sessionTtl: number;
   private auth: TelegramAuth;
   private running = false;
   private offset = 0;
@@ -91,9 +89,7 @@ export class TelegramBotService {
     this.locale = opts.locale ?? 'en';
     this.killSwitchService = opts.killSwitchService;
     this.jwtSecretManager = opts.jwtSecretManager;
-    this.settingsService = opts.settingsService;
     this.signResponseHandler = opts.signResponseHandler;
-    this.sessionTtl = opts.sessionTtl ?? 3600; // default 1 hour
     this.auth = new TelegramAuth(opts.sqlite);
   }
 
