@@ -110,8 +110,9 @@ export class WalletNotificationChannel {
           }, priority);
         }),
       );
-    } catch {
-      // DAEMON-06: never throw
+    } catch (err) {
+      // DAEMON-06: never throw — but log for diagnostics
+      console.error('[WalletNotificationChannel] notify error:', err);
     }
   }
 
@@ -139,13 +140,18 @@ export class WalletNotificationChannel {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
     try {
+      // RFC 2047 encode non-ASCII title to avoid undici ByteString rejection
+      const safeTitle = /^[\x20-\x7E]*$/.test(message.title)
+        ? message.title
+        : `=?UTF-8?B?${Buffer.from(message.title, 'utf-8').toString('base64')}?=`;
+
       await fetch(url, {
         method: 'POST',
         body: encoded,
         signal: controller.signal,
         headers: {
           'Priority': String(priority),
-          'Title': message.title,
+          'Title': safeTitle,
           'Tags': `waiaas,${message.category}`,
         },
       });

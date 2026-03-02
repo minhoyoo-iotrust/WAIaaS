@@ -256,6 +256,7 @@
 | 239 | BUG | HIGH | 지갑 앱 테스트 알림이 plain text로 전송되어 Push Relay 파싱 실패 | — | FIXED | 2026-03-03 |
 | 240 | BUG | HIGH | Push Relay 기본 토픽 브로드캐스트 제거 — 디바이스 토픽 유니캐스트만 허용 | — | FIXED | 2026-03-03 |
 | 241 | BUG | MEDIUM | 지갑 앱 테스트 알림이 subscriptionToken 미설정 상태에서도 발송 성공 | — | FIXED | 2026-03-03 |
+| 242 | BUG | CRITICAL | WalletNotificationChannel 비ASCII Title 헤더로 ntfy 발송 silent failure | — | FIXED | 2026-03-03 |
 
 ## Type Legend
 
@@ -268,8 +269,8 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 241
+- **FIXED:** 242
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 242
+- **Total:** 243
