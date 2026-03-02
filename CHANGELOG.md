@@ -1,5 +1,31 @@
 # Changelog
 
+## [2.9.0-rc.6](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc.5...v2.9.0-rc.6) (2026-03-02)
+
+
+### Features
+
+* **297-01:** add IPerpProvider interface and Zod schemas ([774e9aa](https://github.com/minhoyoo-iotrust/WAIaaS/commit/774e9aafce347e0a8f9c58401fa9487f3e4b0ad4))
+* **297-01:** add MarginWarningEvent, perp policy types, and TransactionParam extensions ([4fd7528](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4fd7528e0077348788f23e9bfff9b483d69057c2))
+* **297-02:** add MarginMonitor for perp position margin ratio monitoring ([e893f11](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e893f1129339a7224e8f378425b517eb99e2c18c))
+* **297-02:** add perp policy evaluation (Step 4i) to DatabasePolicyEngine ([445987c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/445987ca15b39c1d60fab40faf4f0da4b829cdc2))
+* **298-01:** add DriftConfig type and 5 Zod input schemas for Drift perp actions ([80caef6](https://github.com/minhoyoo-iotrust/WAIaaS/commit/80caef6a5fc0be2b6b0ee24cde134b50a3c3ee74))
+* **298-01:** add IDriftSdkWrapper interface with MockDriftSdkWrapper and DriftSdkWrapper stub ([f90f741](https://github.com/minhoyoo-iotrust/WAIaaS/commit/f90f7418a3ac0ad4767f6890cf5b7b1cdb435236))
+* **298-02:** add DriftMarketData helper class ([1f3cad9](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1f3cad9ed7ded69c0d1e6082c2772d6c99f855f5))
+* **298-02:** add DriftPerpProvider with 5 perp actions + IPerpProvider + IPositionProvider ([7ec1117](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7ec1117e010bf4d0bde4dc3c6240a0671631b1dd))
+* **299-01:** register DriftPerpProvider in registerBuiltInProviders ([374526a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/374526a219e0213afbd227e2469ff6040fe668b1))
+* **299-02:** add Drift Perp card and advanced settings to Admin UI Actions page ([8741744](https://github.com/minhoyoo-iotrust/WAIaaS/commit/87417444027871278c14eca4bd7d8a48b850b016))
+* add WAIaaSClient.connect() for auto-discovery and auto-start ([#218](https://github.com/minhoyoo-iotrust/WAIaaS/issues/218)) ([ca41ecf](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ca41ecf3018e403e87daee549aa2612c98d9ade9))
+
+
+### Bug Fixes
+
+* **299-01:** add pendle_yield and drift_perp to BUILTIN_NAMES for hot-reload ([e868ba8](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e868ba8802da562bc1b9f6bf0bdbebe9144dd1f3))
+* move push-relay shutdown timer inside shutdown handler ([#219](https://github.com/minhoyoo-iotrust/WAIaaS/issues/219)) ([40f974a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/40f974a5f6f44d903c34cebf59b0c411c800d72d))
+* update PolicyType expectedCount to 17 in enum SSoT verifier ([fb681f6](https://github.com/minhoyoo-iotrust/WAIaaS/commit/fb681f6906cc9a7c0067f5cc76f75ce8db9f3abb))
+* update settings count assertions for 5 Drift Admin Settings keys ([204e25f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/204e25f3ee16ad0c87e2e6568e2745f251d88622))
+* update test assertions for Drift Perp provider additions ([dfcfb2a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/dfcfb2ac96aa60e7382da6f9e748a9b48a2908eb))
+
 ## [2.9.0-rc.5](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc.4...v2.9.0-rc.5) (2026-03-01)
 
 
