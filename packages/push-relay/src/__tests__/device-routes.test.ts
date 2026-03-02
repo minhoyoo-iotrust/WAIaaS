@@ -35,6 +35,7 @@ beforeEach(() => {
     provider: makeMockProvider(),
     apiKey: API_KEY,
     ntfyServer: 'https://ntfy.sh',
+    version: '1.0.0-test',
   });
 });
 
@@ -158,11 +159,13 @@ describe('GET /health', () => {
 
     const body = (await res.json()) as {
       status: string;
+      version: string;
       ntfy: { connected: boolean; topics: number };
       push: { provider: string; configured: boolean };
       devices: number;
     };
     expect(body.status).toBe('ok');
+    expect(body.version).toBe('1.0.0-test');
     expect(body.ntfy.connected).toBe(true);
     expect(body.ntfy.topics).toBe(2);
     expect(body.push.provider).toBe('mock');
