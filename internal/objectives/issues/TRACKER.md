@@ -244,6 +244,8 @@
 | 227 | BUG | MEDIUM | 지갑 앱 알림 발송이 notification_logs에 미기록 — Admin UI에 Telegram만 표시 | v29.10 | FIXED | 2026-03-02 |
 | 228 | BUG | MEDIUM | Admin UI ntfy Channel Status가 항상 "Not Configured" — 지갑별 토픽 미반영 | v29.10 | FIXED | 2026-03-02 |
 | 229 | ENHANCEMENT | HIGH | 지갑 앱 알림 설정을 Human Wallet Apps 페이지로 통합 + 테스트 버튼 | v29.10 | OPEN | — |
+| 230 | ENHANCEMENT | HIGH | wallet_apps wallet_type / name 분리 — 동일 지갑 종류 다중 디바이스 등록 | — | OPEN | — |
+| 231 | ENHANCEMENT | HIGH | 구독 토큰 기반 ntfy 토픽 라우팅 — 알림 격리 + 토픽 보안 (#230 선행) | — | OPEN | — |
 
 ## Type Legend
 
@@ -255,9 +257,9 @@
 
 ## Summary
 
-- **OPEN:** 1
+- **OPEN:** 3
 - **FIXED:** 228
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 229
+- **Total:** 231
