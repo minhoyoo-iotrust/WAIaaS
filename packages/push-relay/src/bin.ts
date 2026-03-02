@@ -65,8 +65,14 @@ async function main(): Promise<void> {
     walletNames: config.relay.wallet_names,
     transformer,
     onMessage: async (walletName, payload) => {
+      console.log(
+        `[push-relay] Received ${payload.category} for wallet "${walletName}" (title=${payload.title ?? 'none'})`,
+      );
       const tokens = registry.getTokensByWalletName(walletName);
-      if (tokens.length === 0) return;
+      if (tokens.length === 0) {
+        console.log(`[push-relay] No registered devices for wallet "${walletName}", skipping push`);
+        return;
+      }
 
       const result = await provider.send(tokens, payload);
       if (result.invalidTokens.length > 0) {
