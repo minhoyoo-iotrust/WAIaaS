@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.9.0-rc.16](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc.15...v2.9.0-rc.16) (2026-03-02)
+
+
+### Bug Fixes
+
+* **daemon:** send test notification in base64url JSON format for Push Relay compatibility ([#239](https://github.com/minhoyoo-iotrust/WAIaaS/issues/239)) ([243af53](https://github.com/minhoyoo-iotrust/WAIaaS/commit/243af53ed84ab3ba8ee3b307bf90daf32d481b7b))
+* **push-relay:** replace node:http SSE with fetch() for automatic decompression ([#238](https://github.com/minhoyoo-iotrust/WAIaaS/issues/238)) ([703858c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/703858c34c0db7128dc7d95d2f01336f3bc9ac8d))
+* **push-relay:** resolve SSE decompression + test notification format ([#236](https://github.com/minhoyoo-iotrust/WAIaaS/issues/236), [#237](https://github.com/minhoyoo-iotrust/WAIaaS/issues/237), [#238](https://github.com/minhoyoo-iotrust/WAIaaS/issues/238), [#239](https://github.com/minhoyoo-iotrust/WAIaaS/issues/239)) ([209a6b5](https://github.com/minhoyoo-iotrust/WAIaaS/commit/209a6b5c4821c299db43676042007bf8fd97e631))
+
 ## [2.9.0-rc.15](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc.14...v2.9.0-rc.15) (2026-03-02)
 
 
