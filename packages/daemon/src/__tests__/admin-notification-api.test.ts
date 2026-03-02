@@ -1,12 +1,14 @@
 /**
  * Tests for admin notification API endpoints.
  *
- * 11 tests covering:
+ * 13 tests covering:
  * 1. GET /admin/notifications/status returns channel status
  * 2. GET /admin/notifications/status returns all disabled when no service
  * 3. GET /admin/notifications/status never exposes credentials
  * 4. GET /admin/notifications/status requires masterAuth
  * 5. GET /admin/notifications/status reflects dynamic SettingsService changes
+ * 5b. GET /admin/notifications/status ntfy enabled when wallet_apps have topics
+ * 5c. GET /admin/notifications/status ntfy disabled when no wallet_apps have topics
  * 6. POST /admin/notifications/test sends test to active channels
  * 6. POST /admin/notifications/test returns failure for broken channel
  * 7. POST /admin/notifications/test requires masterAuth
@@ -172,11 +174,74 @@ describe('GET /admin/notifications/status', () => {
     const discord = channels.find((c) => c.name === 'discord');
     expect(discord?.enabled).toBe(true); // webhook_url + channel registered
 
-    const ntfy = channels.find((c) => c.name === 'ntfy');
-    expect(ntfy?.enabled).toBe(false); // ntfy channel not added to service
+    const ntfy = channels.find((c) => c.name === 'ntfy') as { name: string; enabled: boolean; configuredWallets?: number };
+    expect(ntfy?.enabled).toBe(false); // no wallet_apps with topics
+    expect(ntfy?.configuredWallets).toBe(0);
 
     const slack = channels.find((c) => c.name === 'slack');
     expect(slack?.enabled).toBe(false); // slack_webhook_url empty
+  });
+
+  it('should show ntfy enabled when wallet_apps have topics configured', async () => {
+    // Insert wallet_apps with ntfy topics
+    sqlite
+      .prepare(
+        `INSERT INTO wallet_apps (id, name, display_name, signing_enabled, alerts_enabled, sign_topic, notify_topic, created_at, updated_at)
+         VALUES (?, ?, ?, 1, 1, ?, ?, ?, ?)`,
+      )
+      .run('wa-1', 'dcent', 'D\'CENT', 'waiaas-sign-dcent', 'waiaas-notify-dcent', 1700000000, 1700000000);
+    sqlite
+      .prepare(
+        `INSERT INTO wallet_apps (id, name, display_name, signing_enabled, alerts_enabled, sign_topic, notify_topic, created_at, updated_at)
+         VALUES (?, ?, ?, 1, 1, ?, NULL, ?, ?)`,
+      )
+      .run('wa-2', 'test-app', 'Test App', 'waiaas-sign-test', 1700000000, 1700000000);
+
+    const config = fullConfig();
+    const app = createApp({
+      db,
+      masterPasswordHash: passwordHash,
+      config,
+    });
+
+    const res = await app.request('/v1/admin/notifications/status', {
+      headers: masterHeaders(),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await json(res);
+    const channels = body.channels as Array<{ name: string; enabled: boolean; configuredWallets?: number }>;
+    const ntfy = channels.find((c) => c.name === 'ntfy');
+    expect(ntfy?.enabled).toBe(true);
+    expect(ntfy?.configuredWallets).toBe(2);
+  });
+
+  it('should show ntfy disabled with configuredWallets=0 when no topics set', async () => {
+    // Insert wallet_app without any topics
+    sqlite
+      .prepare(
+        `INSERT INTO wallet_apps (id, name, display_name, signing_enabled, alerts_enabled, sign_topic, notify_topic, created_at, updated_at)
+         VALUES (?, ?, ?, 1, 1, NULL, NULL, ?, ?)`,
+      )
+      .run('wa-3', 'no-topic', 'No Topic App', 1700000000, 1700000000);
+
+    const config = fullConfig();
+    const app = createApp({
+      db,
+      masterPasswordHash: passwordHash,
+      config,
+    });
+
+    const res = await app.request('/v1/admin/notifications/status', {
+      headers: masterHeaders(),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await json(res);
+    const channels = body.channels as Array<{ name: string; enabled: boolean; configuredWallets?: number }>;
+    const ntfy = channels.find((c) => c.name === 'ntfy');
+    expect(ntfy?.enabled).toBe(false);
+    expect(ntfy?.configuredWallets).toBe(0);
   });
 
   it('should return all channels disabled when no service', async () => {

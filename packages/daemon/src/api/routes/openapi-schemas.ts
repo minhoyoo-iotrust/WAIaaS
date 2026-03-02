@@ -768,6 +768,7 @@ export const NotificationChannelStatusSchema = z
   .object({
     name: z.string(),
     enabled: z.boolean(),
+    configuredWallets: z.number().int().optional(),
   })
   .openapi('NotificationChannelStatus');
 

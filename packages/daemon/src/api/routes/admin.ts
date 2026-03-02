@@ -41,7 +41,7 @@ import type { INotificationChannel, NotificationPayload, ChainType, EnvironmentT
 import type { RpcPool } from '@waiaas/core';
 import { CurrencyCodeSchema, formatRatePreview } from '@waiaas/core';
 import type { JwtSecretManager, JwtPayload } from '../../infrastructure/jwt/jwt-secret-manager.js';
-import { wallets, sessions, sessionWallets, notificationLogs, policies, transactions, incomingTransactions, tokenRegistry } from '../../infrastructure/database/schema.js';
+import { wallets, sessions, sessionWallets, notificationLogs, policies, transactions, incomingTransactions, tokenRegistry, walletApps } from '../../infrastructure/database/schema.js';
 import { generateId } from '../../infrastructure/database/id.js';
 import { buildConnectInfoPrompt } from './connect-info.js';
 import type { DefaultDenyStatus } from './connect-info.js';
@@ -1402,14 +1402,19 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
           channelNames.includes('discord')
         ),
       },
-      {
-        name: 'ntfy',
-        enabled: !!(
-          // Global ntfy_topic from config.toml only (settings key removed in v29.10 -- per-wallet topics now in wallet_apps)
-          deps.notificationConfig?.ntfy_topic &&
-          channelNames.includes('ntfy')
-        ),
-      },
+      (() => {
+        // v29.10+: ntfy topics are per-wallet in wallet_apps table, not global config
+        const ntfyWalletCount = deps.db
+          .select({ count: sql<number>`count(*)` })
+          .from(walletApps)
+          .where(sql`${walletApps.signTopic} IS NOT NULL OR ${walletApps.notifyTopic} IS NOT NULL`)
+          .get()?.count ?? 0;
+        return {
+          name: 'ntfy' as const,
+          enabled: ntfyWalletCount > 0,
+          configuredWallets: ntfyWalletCount,
+        };
+      })(),
       {
         name: 'slack',
         enabled: !!(
