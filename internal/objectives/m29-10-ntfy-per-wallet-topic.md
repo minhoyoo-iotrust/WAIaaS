@@ -1,7 +1,7 @@
 # 마일스톤 m29-10: ntfy 토픽 지갑별 설정 전환
 
-- **Status:** PLANNED
-- **Milestone:** TBD
+- **Status:** IN_PROGRESS
+- **Milestone:** v29.10
 
 ## 목표
 
