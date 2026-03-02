@@ -71,7 +71,7 @@ export async function registerDevice(
       'X-API-Key': apiKey,
     },
     body: JSON.stringify({
-      token: opts.pushToken,
+      pushToken: opts.pushToken,
       walletName: opts.walletName,
       platform: opts.platform,
     }),

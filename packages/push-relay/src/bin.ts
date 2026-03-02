@@ -91,14 +91,21 @@ async function main(): Promise<void> {
         return;
       }
 
-      const result = await provider.send([route.device!.pushToken], payload);
-      if (result.invalidTokens.length > 0) {
-        registry.removeTokens(result.invalidTokens);
-        console.log(`[push-relay] Removed ${result.invalidTokens.length} invalid token(s)`);
+      try {
+        const result = await provider.send([route.device!.pushToken], payload);
+        if (result.invalidTokens.length > 0) {
+          registry.removeTokens(result.invalidTokens);
+          console.log(`[push-relay] Removed ${result.invalidTokens.length} invalid token(s)`);
+        }
+        console.log(
+          `[push-relay] ${payload.category} → ${walletName} (device=${route.subscriptionToken}): sent=${result.sent}, failed=${result.failed}`,
+        );
+      } catch (sendErr) {
+        console.error(
+          `[push-relay] Failed to send push to ${walletName} (device=${route.subscriptionToken}):`,
+          (sendErr as Error).message,
+        );
       }
-      console.log(
-        `[push-relay] ${payload.category} → ${walletName} (device=${route.subscriptionToken}): sent=${result.sent}, failed=${result.failed}`,
-      );
     },
     onError: (err) => {
       console.error('[push-relay] Error:', err.message);
