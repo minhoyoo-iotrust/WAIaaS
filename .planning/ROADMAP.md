@@ -35,46 +35,47 @@
 - ✅ **v29.7 D'CENT 직접 서명 + Human Wallet Apps 통합** -- Phases 291-296 (shipped 2026-03-01)
 - ✅ **v29.8 Solana Perp DEX (Drift) + Perp 프레임워크** -- Phases 297-299 (shipped 2026-03-02)
 - ✅ **v29.9 세션 점진적 보안 모델** -- Phases 300-301 (shipped 2026-03-02)
+- [ ] **v29.10 ntfy 토픽 지갑별 설정 전환** -- Phases 302-303 (in progress)
 
 ## Phases
 
 <details>
-<summary>✅ v0.1-v2.0 (Phases 1-173) -- SHIPPED 2026-02-18</summary>
+<summary>v0.1-v2.0 (Phases 1-173) -- SHIPPED 2026-02-18</summary>
 
 See `.planning/milestones/` for archived phase details (v0.1-ROADMAP.md through v2.0-ROADMAP.md).
 
 </details>
 
 <details>
-<summary>✅ v2.2-v2.5 (Phases 178-197) -- SHIPPED 2026-02-19</summary>
+<summary>v2.2-v2.5 (Phases 178-197) -- SHIPPED 2026-02-19</summary>
 
 See `.planning/milestones/` for archived phase details.
 
 </details>
 
 <details>
-<summary>✅ v2.6-v26.4 (Phases 198-214) -- SHIPPED 2026-02-21</summary>
+<summary>v2.6-v26.4 (Phases 198-214) -- SHIPPED 2026-02-21</summary>
 
 See `.planning/milestones/` for archived phase details.
 
 </details>
 
 <details>
-<summary>✅ v27.0-v27.4 (Phases 215-243) -- SHIPPED 2026-02-23</summary>
+<summary>v27.0-v27.4 (Phases 215-243) -- SHIPPED 2026-02-23</summary>
 
 See `.planning/milestones/` for archived phase details.
 
 </details>
 
 <details>
-<summary>✅ v28.0-v28.8 (Phases 244-267) -- SHIPPED 2026-02-26</summary>
+<summary>v28.0-v28.8 (Phases 244-267) -- SHIPPED 2026-02-26</summary>
 
 See `.planning/milestones/` for archived phase details.
 
 </details>
 
 <details>
-<summary>✅ v29.0-v29.9 (Phases 268-301) -- SHIPPED 2026-03-02</summary>
+<summary>v29.0-v29.9 (Phases 268-301) -- SHIPPED 2026-03-02</summary>
 
 - [x] Phase 268-273: 고급 DeFi 프로토콜 설계 (v29.0) -- completed 2026-02-26
 - [x] Phase 274-278: EVM Lending -- Aave V3 (v29.2) -- completed 2026-02-27
@@ -91,7 +92,49 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v29.9-ROADMAP.md` for full 
 
 </details>
 
+### v29.10 ntfy 토픽 지갑별 설정 전환 (In Progress)
+
+**Milestone Goal:** 글로벌 단일 ntfy_topic 설정을 제거하고, wallet_apps 테이블에서 지갑별 sign_topic/notify_topic을 관리하도록 전환하여 Push Relay 구독 토픽과 데몬 발송 토픽을 일치시키고 멀티 지갑 알림 구조를 정리한다.
+
+- [ ] **Phase 302: Per-Wallet Topic Backend** - DB 스키마 마이그레이션, 채널 토픽 소스 전환, REST API 확장, 글로벌 NtfyChannel 제거
+- [ ] **Phase 303: Admin UI + Skill Files** - Notifications 페이지 정리, Human Wallet Apps 토픽 표시/편집, 스킬 파일 동기화
+
+## Phase Details
+
+### Phase 302: Per-Wallet Topic Backend
+**Goal**: wallet_apps 테이블 기반 per-wallet ntfy 토픽 시스템이 동작하여, 서명 요청과 알림이 지갑 앱별 토픽으로 정확하게 발송된다
+**Depends on**: Nothing (first phase of v29.10)
+**Requirements**: DBSC-01, DBSC-02, DBSC-03, DBSC-04, CHAN-01, CHAN-02, CHAN-03, CHAN-04, CHAN-05, API-01, API-02, API-03, API-04, ASET-01, ASET-02, ASET-03
+**Success Criteria** (what must be TRUE):
+  1. 서명 요청이 wallet_apps.sign_topic에 저장된 토픽으로 ntfy에 발송된다 (prefix 기반 동적 조합이 아닌 DB 값 사용)
+  2. 일반 알림이 wallet_apps.notify_topic에 저장된 토픽으로 ntfy에 발송된다
+  3. 지갑 앱 등록 시 signTopic/notifyTopic을 지정하지 않으면 prefix+appName 기반 기본값이 자동 생성되고, API 응답에 토픽 필드가 포함된다
+  4. Telegram/Discord/Slack 알림 채널이 글로벌 NtfyChannel 제거 후에도 정상 동작한다
+  5. notifications.ntfy_topic 설정 키가 제거되고, ntfy_server와 prefix 설정은 유지된다
+**Plans**: TBD
+
+Plans:
+- [ ] 302-01: DB 스키마 마이그레이션 + 토픽 기본값 + 등록/조회 로직
+- [ ] 302-02: 채널 토픽 소스 전환 + 글로벌 NtfyChannel 제거 + REST API 확장
+
+### Phase 303: Admin UI + Skill Files
+**Goal**: 사용자가 Admin UI에서 per-wallet 토픽을 확인/편집할 수 있고, 글로벌 Ntfy 카드가 제거되어 혼란 없는 알림 관리 경험을 제공한다
+**Depends on**: Phase 302
+**Requirements**: ADUI-01, ADUI-02, ADUI-03, ADUI-04, SKIL-01
+**Success Criteria** (what must be TRUE):
+  1. Notifications 페이지에서 글로벌 Ntfy 채널 카드가 보이지 않고, Human Wallet Apps에서 ntfy를 관리하라는 안내가 표시된다
+  2. Human Wallet Apps 페이지에서 각 지갑 앱의 sign_topic과 notify_topic 값이 표시된다
+  3. 사용자가 Human Wallet Apps 페이지에서 토픽 값을 편집하고 저장하면 즉시 반영된다
+  4. admin.skill.md가 wallet-apps API의 signTopic/notifyTopic 필드 변경을 반영한다
+**Plans**: TBD
+
+Plans:
+- [ ] 303-01: Notifications 페이지 글로벌 Ntfy 카드 제거 + 안내 메시지
+- [ ] 303-02: Human Wallet Apps 토픽 표시/편집 UI + 스킬 파일 업데이트
+
 ## Progress
+
+**Execution Order:** 302 -> 303
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -102,6 +145,8 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v29.9-ROADMAP.md` for full 
 | 244-267 | v28.0-v28.8 | All | Complete | 2026-02-26 |
 | 268-299 | v29.0-v29.8 | All | Complete | 2026-03-02 |
 | 300-301 | v29.9 | 14/14 | Complete | 2026-03-02 |
+| 302. Per-Wallet Topic Backend | v29.10 | 0/2 | Not started | - |
+| 303. Admin UI + Skill Files | v29.10 | 0/2 | Not started | - |
 
 ---
-*Last updated: 2026-03-02 after v29.9 milestone completion*
+*Last updated: 2026-03-02 after v29.10 roadmap creation*

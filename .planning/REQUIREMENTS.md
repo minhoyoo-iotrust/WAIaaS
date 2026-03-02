@@ -67,33 +67,33 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DBSC-01 | — | Pending |
-| DBSC-02 | — | Pending |
-| DBSC-03 | — | Pending |
-| DBSC-04 | — | Pending |
-| CHAN-01 | — | Pending |
-| CHAN-02 | — | Pending |
-| CHAN-03 | — | Pending |
-| CHAN-04 | — | Pending |
-| CHAN-05 | — | Pending |
-| API-01 | — | Pending |
-| API-02 | — | Pending |
-| API-03 | — | Pending |
-| API-04 | — | Pending |
-| ASET-01 | — | Pending |
-| ASET-02 | — | Pending |
-| ASET-03 | — | Pending |
-| ADUI-01 | — | Pending |
-| ADUI-02 | — | Pending |
-| ADUI-03 | — | Pending |
-| ADUI-04 | — | Pending |
-| SKIL-01 | — | Pending |
+| DBSC-01 | Phase 302 | Pending |
+| DBSC-02 | Phase 302 | Pending |
+| DBSC-03 | Phase 302 | Pending |
+| DBSC-04 | Phase 302 | Pending |
+| CHAN-01 | Phase 302 | Pending |
+| CHAN-02 | Phase 302 | Pending |
+| CHAN-03 | Phase 302 | Pending |
+| CHAN-04 | Phase 302 | Pending |
+| CHAN-05 | Phase 302 | Pending |
+| API-01 | Phase 302 | Pending |
+| API-02 | Phase 302 | Pending |
+| API-03 | Phase 302 | Pending |
+| API-04 | Phase 302 | Pending |
+| ASET-01 | Phase 302 | Pending |
+| ASET-02 | Phase 302 | Pending |
+| ASET-03 | Phase 302 | Pending |
+| ADUI-01 | Phase 303 | Pending |
+| ADUI-02 | Phase 303 | Pending |
+| ADUI-03 | Phase 303 | Pending |
+| ADUI-04 | Phase 303 | Pending |
+| SKIL-01 | Phase 303 | Pending |
 
 **Coverage:**
 - v1 requirements: 21 total
-- Mapped to phases: 0
-- Unmapped: 21 ⚠️
+- Mapped to phases: 21
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-02*
-*Last updated: 2026-03-02 after initial definition*
+*Last updated: 2026-03-02 after roadmap creation (traceability updated)*
