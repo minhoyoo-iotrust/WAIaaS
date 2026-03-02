@@ -11,6 +11,8 @@
  * - T-HWUI-07: ntfy server URL displayed
  * - T-HWUI-08: Register App button opens modal
  * - T-HWUI-09: Remove button calls DELETE
+ * - T-HWUI-10: sign_topic and notify_topic displayed
+ * - T-HWUI-11: topic edit saves via PUT
  *
  * @see packages/admin/src/pages/human-wallet-apps.tsx
  * @see internal/objectives/m29-07-dcent-owner-signing.md
@@ -97,6 +99,8 @@ const mockApps = {
       display_name: "D'CENT Wallet",
       signing_enabled: true,
       alerts_enabled: true,
+      sign_topic: 'waiaas-sign-dcent',
+      notify_topic: 'waiaas-notify-dcent',
       used_by: [{ id: 'w1', label: 'wallet-1' }],
       created_at: 1700000000,
       updated_at: 1700000000,
@@ -107,6 +111,8 @@ const mockApps = {
       display_name: 'Custom Wallet',
       signing_enabled: false,
       alerts_enabled: true,
+      sign_topic: null,
+      notify_topic: null,
       used_by: [],
       created_at: 1700000100,
       updated_at: 1700000100,
@@ -303,6 +309,59 @@ describe('HumanWalletAppsPage', () => {
     render(<HumanWalletAppsPage />);
 
     expect(screen.getByText('Loading...')).toBeTruthy();
+  });
+
+  it('T-HWUI-10: sign_topic and notify_topic displayed in app cards', async () => {
+    mockApiCalls();
+    render(<HumanWalletAppsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+    });
+
+    // D'CENT has explicit topics
+    expect(screen.getByText('waiaas-sign-dcent')).toBeTruthy();
+    expect(screen.getByText('waiaas-notify-dcent')).toBeTruthy();
+
+    // Custom Wallet has null topics — should show "(default)"
+    const defaults = screen.getAllByText('(default)');
+    expect(defaults.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('T-HWUI-11: topic edit saves via PUT', async () => {
+    mockApiCalls();
+    vi.mocked(apiPut).mockResolvedValue({});
+
+    render(<HumanWalletAppsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+    });
+
+    // Click the first "Edit" button (in D'CENT card's topic section)
+    const editButtons = screen.getAllByText('Edit');
+    fireEvent.click(editButtons[0]!);
+
+    // Topic input fields should appear
+    await waitFor(() => {
+      const signInput = document.querySelector('input[name="sign-topic-app-1"]') as HTMLInputElement;
+      expect(signInput).toBeTruthy();
+      expect(signInput.value).toBe('waiaas-sign-dcent');
+    });
+
+    // Modify the sign topic
+    const signInput = document.querySelector('input[name="sign-topic-app-1"]') as HTMLInputElement;
+    fireEvent.input(signInput, { target: { value: 'custom-sign-topic' } });
+
+    // Click Save Topics
+    fireEvent.click(screen.getByText('Save Topics'));
+
+    await waitFor(() => {
+      expect(vi.mocked(apiPut)).toHaveBeenCalledWith(
+        '/v1/admin/wallet-apps/app-1',
+        expect.objectContaining({ sign_topic: 'custom-sign-topic' }),
+      );
+    });
   });
 });
 
