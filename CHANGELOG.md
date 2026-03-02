@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.9.0-rc.7](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc.6...v2.9.0-rc.7) (2026-03-02)
+
+
+### Features
+
+* expose Push Relay server version via health endpoint, startup log, and --version flag ([#220](https://github.com/minhoyoo-iotrust/WAIaaS/issues/220)) ([779c30e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/779c30e045ca3c50d2e6499a9cb9bf715865de3e))
+
+
+### Bug Fixes
+
+* align SignRequestSchema chain enum with ChainTypeEnum SSoT ([#221](https://github.com/minhoyoo-iotrust/WAIaaS/issues/221)) ([062c4d5](https://github.com/minhoyoo-iotrust/WAIaaS/commit/062c4d59cfb57c4d0d23b8f73115bbb670cd645c))
+* resolve open issues [#220](https://github.com/minhoyoo-iotrust/WAIaaS/issues/220) and [#221](https://github.com/minhoyoo-iotrust/WAIaaS/issues/221) ([5692b04](https://github.com/minhoyoo-iotrust/WAIaaS/commit/5692b04335603788179205f5eb620874494d15ea))
+
 ## [2.9.0-rc.6](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc.5...v2.9.0-rc.6) (2026-03-02)
 
 
