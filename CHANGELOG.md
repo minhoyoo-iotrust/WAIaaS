@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.9.0-rc.13](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc.12...v2.9.0-rc.13) (2026-03-02)
+
+
+### Features
+
+* **wallet-sdk:** add Push Relay device registration helpers ([#233](https://github.com/minhoyoo-iotrust/WAIaaS/issues/233)) ([934dcfd](https://github.com/minhoyoo-iotrust/WAIaaS/commit/934dcfda1093dea6f3282f6fc33b1ee60b6456eb))
+
+
+### Bug Fixes
+
+* **push-relay:** resolve DeviceRegistry UNIQUE migration and SSE decompression ([#234](https://github.com/minhoyoo-iotrust/WAIaaS/issues/234), [#235](https://github.com/minhoyoo-iotrust/WAIaaS/issues/235)) ([312963d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/312963df84330b7ed1e247da35d9a307dd230529))
+* **push-relay:** resolve issues [#233](https://github.com/minhoyoo-iotrust/WAIaaS/issues/233), [#234](https://github.com/minhoyoo-iotrust/WAIaaS/issues/234), [#235](https://github.com/minhoyoo-iotrust/WAIaaS/issues/235) ([10de881](https://github.com/minhoyoo-iotrust/WAIaaS/commit/10de881ee3f1bec45a6e5eadd964e58923916ee5))
+
 ## [2.9.0-rc.12](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc.11...v2.9.0-rc.12) (2026-03-02)
 
 
