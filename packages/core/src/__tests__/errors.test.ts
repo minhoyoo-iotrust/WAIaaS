@@ -2,10 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { WAIaaSError, ERROR_CODES } from '../index.js';
 
 describe('Error code matrix', () => {
-  it('has exactly 108 error codes', () => {
+  it('has exactly 109 error codes', () => {
     // v29.3: +WALLET_ID_REQUIRED, +NETWORK_REQUIRED, -CANNOT_REMOVE_DEFAULT_WALLET (net +1)
     // v29.7: +SIGNING_DISABLED, +WALLET_APP_DUPLICATE, +WALLET_APP_NOT_FOUND (+3)
-    expect(Object.keys(ERROR_CODES)).toHaveLength(108);
+    // v29.9: +RENEWAL_NOT_REQUIRED (+1)
+    expect(Object.keys(ERROR_CODES)).toHaveLength(109);
   });
 
   it('every error code entry has required fields', () => {
