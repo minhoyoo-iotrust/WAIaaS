@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
+import { gzipSync, deflateSync, brotliCompressSync } from 'node:zlib';
 import { NtfySubscriber } from '../subscriber/ntfy-subscriber.js';
 import { ConfigurablePayloadTransformer } from '../transformer/payload-transformer.js';
 
@@ -56,6 +57,32 @@ function createSseResponse(lines: string[]): Response {
   return new Response(createSseStream(lines), {
     status: 200,
     headers: { 'Content-Type': 'text/event-stream' },
+  });
+}
+
+function createCompressedSseResponse(
+  lines: string[],
+  encoding: 'gzip' | 'deflate' | 'br',
+): Response {
+  const text = lines.join('\n') + '\n';
+  const raw = Buffer.from(text, 'utf-8');
+  let compressed: Buffer;
+  if (encoding === 'gzip') compressed = gzipSync(raw);
+  else if (encoding === 'deflate') compressed = deflateSync(raw);
+  else compressed = brotliCompressSync(raw);
+
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new Uint8Array(compressed));
+      controller.close();
+    },
+  });
+  return new Response(stream, {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Content-Encoding': encoding,
+    },
   });
 }
 
@@ -481,5 +508,89 @@ describe('NtfySubscriber', () => {
     // No transformer fields should be present
     expect(payload.data).not.toHaveProperty('app_id');
     expect(payload.data).not.toHaveProperty('sound');
+  });
+
+  it.each(['gzip', 'deflate', 'br'] as const)(
+    'decompresses %s-encoded SSE responses',
+    async (encoding) => {
+      const onMessage = vi.fn().mockResolvedValue(undefined);
+      const encoded = encodeBase64url(validSignRequest);
+      const ntfyMessage = JSON.stringify({
+        topic: 'sign-w1',
+        message: encoded,
+        title: 'Sign Request',
+        priority: 5,
+      });
+
+      vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
+        const urlStr = url as string;
+        if (urlStr.includes('sign-w1')) {
+          return Promise.resolve(
+            createCompressedSseResponse([`data: ${ntfyMessage}`], encoding),
+          );
+        }
+        return new Promise(() => {});
+      });
+
+      const subscriber = new NtfySubscriber({
+        ntfyServer: 'https://ntfy.sh',
+        signTopicPrefix: 'sign',
+        notifyTopicPrefix: 'notify',
+        walletNames: ['w1'],
+        onMessage,
+      });
+
+      subscriber.start();
+      await new Promise((r) => setTimeout(r, 200));
+      await subscriber.stop();
+
+      expect(onMessage).toHaveBeenCalled();
+      const call = onMessage.mock.calls[0]!;
+      expect(call[0]).toBe('w1');
+      expect(call[1].category).toBe('sign_request');
+    },
+  );
+
+  it('passes through uncompressed (identity) SSE responses', async () => {
+    const onMessage = vi.fn().mockResolvedValue(undefined);
+    const encoded = encodeBase64url(validSignRequest);
+    const ntfyMessage = JSON.stringify({
+      topic: 'sign-w1',
+      message: encoded,
+      title: 'Sign Request',
+      priority: 5,
+    });
+
+    const stream = createSseStream([`data: ${ntfyMessage}`]);
+    const identityResponse = new Response(stream, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Content-Encoding': 'identity',
+      },
+    });
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
+      const urlStr = url as string;
+      if (urlStr.includes('sign-w1')) {
+        return Promise.resolve(identityResponse);
+      }
+      return new Promise(() => {});
+    });
+
+    const subscriber = new NtfySubscriber({
+      ntfyServer: 'https://ntfy.sh',
+      signTopicPrefix: 'sign',
+      notifyTopicPrefix: 'notify',
+      walletNames: ['w1'],
+      onMessage,
+    });
+
+    subscriber.start();
+    await new Promise((r) => setTimeout(r, 100));
+    await subscriber.stop();
+
+    expect(onMessage).toHaveBeenCalled();
+    expect(onMessage.mock.calls[0]![1].category).toBe('sign_request');
   });
 });
