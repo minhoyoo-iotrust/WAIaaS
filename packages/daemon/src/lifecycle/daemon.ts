@@ -1386,7 +1386,7 @@ export class DaemonLifecycle {
             if (this.notificationService) {
               try {
                 const expired = this.sqlite.prepare(
-                  "SELECT id, wallet_id FROM sessions WHERE expires_at < unixepoch() AND revoked_at IS NULL",
+                  "SELECT id, wallet_id FROM sessions WHERE expires_at > 0 AND expires_at < unixepoch() AND revoked_at IS NULL",
                 ).all() as Array<{ id: string; wallet_id: string }>;
                 for (const session of expired) {
                   void this.notificationService.notify('SESSION_EXPIRED', session.wallet_id, {
@@ -1398,7 +1398,7 @@ export class DaemonLifecycle {
               }
             }
             this.sqlite.exec(
-              "DELETE FROM sessions WHERE expires_at < unixepoch() AND revoked_at IS NULL",
+              "DELETE FROM sessions WHERE expires_at > 0 AND expires_at < unixepoch() AND revoked_at IS NULL",
             );
           }
         },

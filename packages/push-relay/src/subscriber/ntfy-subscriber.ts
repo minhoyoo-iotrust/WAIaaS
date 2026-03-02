@@ -73,7 +73,6 @@ export class NtfySubscriber {
       const url = `${this.opts.ntfyServer}/${topic}/sse`;
       const res = await fetch(url, {
         signal: controller.signal,
-        headers: { 'Accept-Encoding': 'identity' },
       });
 
       if (!res.ok || !res.body) {
