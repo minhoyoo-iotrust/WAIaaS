@@ -89,13 +89,19 @@ export class ApprovalChannelRouter {
       walletName: row.wallet_type || params.walletName,
     };
 
-    // Check wallet_apps.signing_enabled — block if signing is disabled for this app (v29.7)
+    // Check wallet_apps.signing_enabled — block if ALL apps of this wallet_type have signing disabled (v34)
     if (row.wallet_type) {
       const app = this.sqlite.prepare(
-        'SELECT signing_enabled FROM wallet_apps WHERE name = ?',
+        'SELECT signing_enabled FROM wallet_apps WHERE wallet_type = ? AND signing_enabled = 1 LIMIT 1',
       ).get(row.wallet_type) as { signing_enabled: number } | undefined;
-      if (app && app.signing_enabled === 0) {
-        throw new Error(`SIGNING_DISABLED: Signing disabled for wallet app: ${row.wallet_type}`);
+      if (!app) {
+        // No app with signing enabled for this wallet_type -- check if any app exists at all
+        const anyApp = this.sqlite.prepare(
+          'SELECT id FROM wallet_apps WHERE wallet_type = ? LIMIT 1',
+        ).get(row.wallet_type);
+        if (anyApp) {
+          throw new Error(`SIGNING_DISABLED: Signing disabled for wallet app: ${row.wallet_type}`);
+        }
       }
     }
 

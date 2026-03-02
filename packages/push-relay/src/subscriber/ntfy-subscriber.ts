@@ -13,6 +13,8 @@ export interface NtfySubscriberOpts {
   onMessage: (walletName: string, payload: PushPayload) => Promise<void>;
   onError?: (error: Error) => void;
   transformer?: IPayloadTransformer;
+  /** Per-wallet topic overrides (key: walletName). When set, uses these topics instead of prefix pattern. */
+  topicOverrides?: Map<string, { signTopic: string; notifyTopic: string }>;
 }
 
 export class NtfySubscriber {
@@ -37,8 +39,9 @@ export class NtfySubscriber {
 
   start(): void {
     for (const walletName of this.opts.walletNames) {
-      const signTopic = `${this.opts.signTopicPrefix}-${walletName}`;
-      const notifyTopic = `${this.opts.notifyTopicPrefix}-${walletName}`;
+      const override = this.opts.topicOverrides?.get(walletName);
+      const signTopic = override?.signTopic ?? `${this.opts.signTopicPrefix}-${walletName}`;
+      const notifyTopic = override?.notifyTopic ?? `${this.opts.notifyTopicPrefix}-${walletName}`;
 
       this.subscribeTopic(signTopic, walletName);
       this.subscribeTopic(notifyTopic, walletName);

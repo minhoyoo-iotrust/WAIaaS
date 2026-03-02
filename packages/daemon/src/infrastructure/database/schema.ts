@@ -522,10 +522,12 @@ export const walletApps = sqliteTable('wallet_apps', {
   id: text('id').primaryKey(),
   name: text('name').notNull().unique(),
   displayName: text('display_name').notNull(),
+  walletType: text('wallet_type').notNull().default(''),
   signingEnabled: integer('signing_enabled', { mode: 'boolean' }).notNull().default(true),
   alertsEnabled: integer('alerts_enabled', { mode: 'boolean' }).notNull().default(true),
   signTopic: text('sign_topic'),
   notifyTopic: text('notify_topic'),
+  subscriptionToken: text('subscription_token'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });

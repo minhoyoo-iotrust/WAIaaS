@@ -15,10 +15,12 @@ interface WalletAppApi {
   id: string;
   name: string;
   display_name: string;
+  wallet_type: string;
   signing_enabled: boolean;
   alerts_enabled: boolean;
   sign_topic: string | null;
   notify_topic: string | null;
+  subscription_token: string | null;
   used_by: Array<{ id: string; label: string }>;
   created_at: number;
   updated_at: number;
@@ -49,7 +51,12 @@ export default function HumanWalletAppsPage() {
   const registerModal = useSignal(false);
   const registerName = useSignal('');
   const registerDisplayName = useSignal('');
+  const registerWalletType = useSignal('');
   const registerSaving = useSignal(false);
+
+  // Subscription token editing state: maps app.id -> token value
+  const subTokenEditing = useSignal<Record<string, string>>({});
+  const subTokenSaving = useSignal<string | null>(null);
 
   // Toggle saving state
   const toggleSaving = useSignal<string | null>(null);
@@ -171,13 +178,18 @@ export default function HumanWalletAppsPage() {
     }
     registerSaving.value = true;
     try {
-      await apiPost(API.ADMIN_WALLET_APPS, {
+      const body: Record<string, string> = {
         name: registerName.value.trim(),
         display_name: registerDisplayName.value.trim(),
-      });
+      };
+      if (registerWalletType.value.trim()) {
+        body.wallet_type = registerWalletType.value.trim();
+      }
+      await apiPost(API.ADMIN_WALLET_APPS, body);
       registerModal.value = false;
       registerName.value = '';
       registerDisplayName.value = '';
+      registerWalletType.value = '';
       await fetchApps();
       showToast('Wallet app registered', 'success');
     } catch (err) {
@@ -188,6 +200,22 @@ export default function HumanWalletAppsPage() {
       }
     } finally {
       registerSaving.value = false;
+    }
+  };
+
+  const handleSetSubToken = async (app: WalletAppApi, token: string) => {
+    subTokenSaving.value = app.id;
+    try {
+      await apiPut(API.ADMIN_WALLET_APP(app.id), { subscription_token: token || '' });
+      const next = { ...subTokenEditing.value };
+      delete next[app.id];
+      subTokenEditing.value = next;
+      await fetchApps();
+      showToast(token ? 'Subscription token set' : 'Subscription token cleared', 'success');
+    } catch {
+      showToast('Failed to update subscription token', 'error');
+    } finally {
+      subTokenSaving.value = null;
     }
   };
 
@@ -350,7 +378,12 @@ export default function HumanWalletAppsPage() {
                 <div key={app.id} class="settings-category" style={{ border: '1px solid var(--border)', padding: '1rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
-                      <h4 style={{ margin: '0 0 0.25rem 0' }}>{app.display_name}</h4>
+                      <h4 style={{ margin: '0 0 0.25rem 0' }}>
+                        {app.display_name}
+                        {app.wallet_type && app.wallet_type !== app.name && (
+                          <Badge variant="info" style={{ marginLeft: '0.5rem', fontSize: '0.7rem' }}>{app.wallet_type}</Badge>
+                        )}
+                      </h4>
                       <code style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{app.name}</code>
                     </div>
                     <Button
@@ -417,6 +450,72 @@ export default function HumanWalletAppsPage() {
                             <a href={`#/wallets/${w.id}`} style={{ color: 'var(--primary)' }}>{w.label}</a>
                           </span>
                         ))}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Subscription Token */}
+                  <div style={{ marginTop: '0.75rem' }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>Subscription Token: </span>
+                    {subTokenEditing.value[app.id] !== undefined ? (
+                      <span style={{ display: 'inline-flex', gap: '0.5rem', alignItems: 'center' }}>
+                        <input
+                          type="text"
+                          value={subTokenEditing.value[app.id]}
+                          onInput={(e) => {
+                            subTokenEditing.value = {
+                              ...subTokenEditing.value,
+                              [app.id]: (e.target as HTMLInputElement).value,
+                            };
+                          }}
+                          placeholder="e.g., a1b2c3d4"
+                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.85rem', width: '140px' }}
+                        />
+                        <Button
+                          size="sm"
+                          onClick={() => handleSetSubToken(app, subTokenEditing.value[app.id]!)}
+                          disabled={subTokenSaving.value === app.id}
+                        >
+                          {subTokenSaving.value === app.id ? 'Saving...' : 'Set'}
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => {
+                            const next = { ...subTokenEditing.value };
+                            delete next[app.id];
+                            subTokenEditing.value = next;
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </span>
+                    ) : app.subscription_token ? (
+                      <span style={{ fontSize: '0.85rem' }}>
+                        <code>{app.subscription_token.slice(0, 4)}****</code>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => handleSetSubToken(app, '')}
+                          disabled={subTokenSaving.value === app.id}
+                          style={{ marginLeft: '0.5rem' }}
+                        >
+                          Clear
+                        </Button>
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: '0.85rem' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>Not set</span>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => {
+                            subTokenEditing.value = { ...subTokenEditing.value, [app.id]: '' };
+                          }}
+                          style={{ marginLeft: '0.5rem' }}
+                        >
+                          Set
+                        </Button>
                       </span>
                     )}
                   </div>
@@ -519,6 +618,15 @@ export default function HumanWalletAppsPage() {
             onChange={(v) => { registerDisplayName.value = String(v); }}
             placeholder="My Custom Wallet"
             description="Human-readable name shown in the UI"
+          />
+          <FormField
+            label="Wallet Type (optional)"
+            name="register-app-wallet-type"
+            type="text"
+            value={registerWalletType.value}
+            onChange={(v) => { registerWalletType.value = String(v); }}
+            placeholder="dcent, ledger, or custom"
+            description="Group multiple devices under the same wallet type. Defaults to app name."
           />
           <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
             <Button variant="secondary" onClick={() => { registerModal.value = false; }}>

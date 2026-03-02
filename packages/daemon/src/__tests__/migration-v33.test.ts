@@ -59,7 +59,7 @@ describe('Migration v33: sign_topic and notify_topic columns', () => {
     expect(columnNames).toContain('notify_topic');
     expect(columnNames).toContain('created_at');
     expect(columnNames).toContain('updated_at');
-    expect(columns).toHaveLength(9);
+    expect(columns).toHaveLength(11); // 9 original + wallet_type (v34) + subscription_token (v35)
   });
 
   it('T-DBSC-02: migration backfills existing rows with prefix+appName defaults', () => {
@@ -124,21 +124,21 @@ describe('Migration v33: sign_topic and notify_topic columns', () => {
     migDb.close();
   });
 
-  it('T-DBSC-03: fresh DB has LATEST_SCHEMA_VERSION=33', () => {
-    expect(LATEST_SCHEMA_VERSION).toBe(33);
+  it('T-DBSC-03: fresh DB has LATEST_SCHEMA_VERSION=35', () => {
+    expect(LATEST_SCHEMA_VERSION).toBe(35);
 
     const row = sqlite
       .prepare('SELECT MAX(version) AS max_version FROM schema_version')
       .get() as { max_version: number };
-    expect(row.max_version).toBe(33);
+    expect(row.max_version).toBe(35);
   });
 
   it('T-DBSC-04: NULL values are allowed in sign_topic and notify_topic columns', () => {
     const ts = nowTs();
     // INSERT with explicit NULL values
     sqlite.prepare(
-      'INSERT INTO wallet_apps (id, name, display_name, signing_enabled, alerts_enabled, sign_topic, notify_topic, created_at, updated_at) VALUES (?, ?, ?, 1, 1, NULL, NULL, ?, ?)',
-    ).run('null-topic-test', 'null-topic-app', 'Null Topic App', ts, ts);
+      'INSERT INTO wallet_apps (id, name, display_name, wallet_type, signing_enabled, alerts_enabled, sign_topic, notify_topic, created_at, updated_at) VALUES (?, ?, ?, ?, 1, 1, NULL, NULL, ?, ?)',
+    ).run('null-topic-test', 'null-topic-app', 'Null Topic App', 'null-topic-app', ts, ts);
 
     const row = sqlite.prepare(
       'SELECT sign_topic, notify_topic FROM wallet_apps WHERE id = ?',
@@ -154,8 +154,8 @@ describe('Migration v33: sign_topic and notify_topic columns', () => {
   it('sign_topic and notify_topic columns accept text values', () => {
     const ts = nowTs();
     sqlite.prepare(
-      'INSERT INTO wallet_apps (id, name, display_name, signing_enabled, alerts_enabled, sign_topic, notify_topic, created_at, updated_at) VALUES (?, ?, ?, 1, 1, ?, ?, ?, ?)',
-    ).run('text-topic-test', 'text-topic-app', 'Text Topic App', 'custom-sign', 'custom-notify', ts, ts);
+      'INSERT INTO wallet_apps (id, name, display_name, wallet_type, signing_enabled, alerts_enabled, sign_topic, notify_topic, created_at, updated_at) VALUES (?, ?, ?, ?, 1, 1, ?, ?, ?, ?)',
+    ).run('text-topic-test', 'text-topic-app', 'Text Topic App', 'text-topic-app', 'custom-sign', 'custom-notify', ts, ts);
 
     const row = sqlite.prepare(
       'SELECT sign_topic, notify_topic FROM wallet_apps WHERE id = ?',

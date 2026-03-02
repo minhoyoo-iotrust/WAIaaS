@@ -19,10 +19,12 @@ export interface WalletApp {
   id: string;
   name: string;
   displayName: string;
+  walletType: string;
   signingEnabled: boolean;
   alertsEnabled: boolean;
   signTopic: string | null;
   notifyTopic: string | null;
+  subscriptionToken: string | null;
   createdAt: number;
   updatedAt: number;
 }
@@ -42,7 +44,7 @@ export class WalletAppService {
    * Register a new wallet app. Throws 409 if name already exists.
    * Auto-generates signTopic/notifyTopic when not specified.
    */
-  register(name: string, displayName: string, opts?: { signTopic?: string; notifyTopic?: string }): WalletApp {
+  register(name: string, displayName: string, opts?: { signTopic?: string; notifyTopic?: string; walletType?: string; subscriptionToken?: string }): WalletApp {
     const existing = this.sqlite.prepare(
       'SELECT id FROM wallet_apps WHERE name = ?',
     ).get(name);
@@ -54,20 +56,24 @@ export class WalletAppService {
 
     const id = generateId();
     const now = Math.floor(Date.now() / 1000);
-    const signTopic = opts?.signTopic ?? `waiaas-sign-${name}`;
-    const notifyTopic = opts?.notifyTopic ?? `waiaas-notify-${name}`;
+    const walletType = opts?.walletType || name;
+    const token = opts?.subscriptionToken ?? null;
+    const signTopic = opts?.signTopic ?? (token ? `waiaas-sign-${walletType}-${token}` : `waiaas-sign-${name}`);
+    const notifyTopic = opts?.notifyTopic ?? (token ? `waiaas-notify-${walletType}-${token}` : `waiaas-notify-${name}`);
     this.sqlite.prepare(
-      'INSERT INTO wallet_apps (id, name, display_name, signing_enabled, alerts_enabled, sign_topic, notify_topic, created_at, updated_at) VALUES (?, ?, ?, 1, 1, ?, ?, ?, ?)',
-    ).run(id, name, displayName, signTopic, notifyTopic, now, now);
+      'INSERT INTO wallet_apps (id, name, display_name, wallet_type, signing_enabled, alerts_enabled, sign_topic, notify_topic, subscription_token, created_at, updated_at) VALUES (?, ?, ?, ?, 1, 1, ?, ?, ?, ?, ?)',
+    ).run(id, name, displayName, walletType, signTopic, notifyTopic, token, now, now);
 
     return {
       id,
       name,
       displayName,
+      walletType,
       signingEnabled: true,
       alertsEnabled: true,
       signTopic,
       notifyTopic,
+      subscriptionToken: token,
       createdAt: now,
       updatedAt: now,
     };
@@ -76,7 +82,7 @@ export class WalletAppService {
   /**
    * Idempotent register -- returns existing if name already exists.
    */
-  ensureRegistered(name: string, displayName: string, opts?: { signTopic?: string; notifyTopic?: string }): WalletApp {
+  ensureRegistered(name: string, displayName: string, opts?: { signTopic?: string; notifyTopic?: string; walletType?: string; subscriptionToken?: string }): WalletApp {
     const existing = this.getByName(name);
     if (existing) return existing;
     return this.register(name, displayName, opts);
@@ -87,7 +93,7 @@ export class WalletAppService {
    */
   getByName(name: string): WalletApp | undefined {
     const row = this.sqlite.prepare(
-      'SELECT id, name, display_name, signing_enabled, alerts_enabled, sign_topic, notify_topic, created_at, updated_at FROM wallet_apps WHERE name = ?',
+      'SELECT id, name, display_name, wallet_type, signing_enabled, alerts_enabled, sign_topic, notify_topic, subscription_token, created_at, updated_at FROM wallet_apps WHERE name = ?',
     ).get(name) as Record<string, unknown> | undefined;
     return row ? this.mapRow(row) : undefined;
   }
@@ -97,7 +103,7 @@ export class WalletAppService {
    */
   getById(id: string): WalletApp | undefined {
     const row = this.sqlite.prepare(
-      'SELECT id, name, display_name, signing_enabled, alerts_enabled, sign_topic, notify_topic, created_at, updated_at FROM wallet_apps WHERE id = ?',
+      'SELECT id, name, display_name, wallet_type, signing_enabled, alerts_enabled, sign_topic, notify_topic, subscription_token, created_at, updated_at FROM wallet_apps WHERE id = ?',
     ).get(id) as Record<string, unknown> | undefined;
     return row ? this.mapRow(row) : undefined;
   }
@@ -107,7 +113,7 @@ export class WalletAppService {
    */
   list(): WalletApp[] {
     const rows = this.sqlite.prepare(
-      'SELECT id, name, display_name, signing_enabled, alerts_enabled, sign_topic, notify_topic, created_at, updated_at FROM wallet_apps ORDER BY created_at ASC',
+      'SELECT id, name, display_name, wallet_type, signing_enabled, alerts_enabled, sign_topic, notify_topic, subscription_token, created_at, updated_at FROM wallet_apps ORDER BY created_at ASC',
     ).all() as Record<string, unknown>[];
     return rows.map((r) => this.mapRow(r));
   }
@@ -119,17 +125,21 @@ export class WalletAppService {
     const apps = this.list();
     return apps.map((app) => ({
       ...app,
-      usedBy: this.getUsedBy(app.name),
+      usedBy: this.getUsedBy(app.walletType),
     }));
   }
 
   /**
-   * Update wallet app toggles and topic fields.
+   * Update wallet app toggles, topic fields, and subscription token.
    * Throws 404 if not found.
+   * When subscriptionToken is set, sign_topic and notify_topic are auto-regenerated
+   * using the token unless explicit topic values are also provided.
    */
-  update(id: string, fields: { signingEnabled?: boolean; alertsEnabled?: boolean; signTopic?: string; notifyTopic?: string }): WalletApp {
-    const existing = this.sqlite.prepare('SELECT id FROM wallet_apps WHERE id = ?').get(id);
-    if (!existing) {
+  update(id: string, fields: { signingEnabled?: boolean; alertsEnabled?: boolean; signTopic?: string; notifyTopic?: string; subscriptionToken?: string }): WalletApp {
+    const existingApp = this.sqlite.prepare(
+      'SELECT id, wallet_type, name FROM wallet_apps WHERE id = ?',
+    ).get(id) as { id: string; wallet_type: string; name: string } | undefined;
+    if (!existingApp) {
       throw new WAIaaSError('WALLET_APP_NOT_FOUND', {
         message: `Wallet app not found: ${id}`,
       });
@@ -147,6 +157,22 @@ export class WalletAppService {
       setClauses.push('alerts_enabled = ?');
       params.push(fields.alertsEnabled ? 1 : 0);
     }
+
+    // When subscription token is updated, auto-regenerate topics unless explicitly provided
+    if (fields.subscriptionToken !== undefined) {
+      setClauses.push('subscription_token = ?');
+      params.push(fields.subscriptionToken || null);
+
+      if (fields.subscriptionToken && fields.signTopic === undefined) {
+        setClauses.push('sign_topic = ?');
+        params.push(`waiaas-sign-${existingApp.wallet_type}-${fields.subscriptionToken}`);
+      }
+      if (fields.subscriptionToken && fields.notifyTopic === undefined) {
+        setClauses.push('notify_topic = ?');
+        params.push(`waiaas-notify-${existingApp.wallet_type}-${fields.subscriptionToken}`);
+      }
+    }
+
     if (fields.signTopic !== undefined) {
       setClauses.push('sign_topic = ?');
       params.push(fields.signTopic);
@@ -181,7 +207,7 @@ export class WalletAppService {
    */
   getAlertEnabledApps(): WalletApp[] {
     const rows = this.sqlite.prepare(
-      'SELECT id, name, display_name, signing_enabled, alerts_enabled, sign_topic, notify_topic, created_at, updated_at FROM wallet_apps WHERE alerts_enabled = 1',
+      'SELECT id, name, display_name, wallet_type, signing_enabled, alerts_enabled, sign_topic, notify_topic, subscription_token, created_at, updated_at FROM wallet_apps WHERE alerts_enabled = 1',
     ).all() as Record<string, unknown>[];
     return rows.map((r) => this.mapRow(r));
   }
@@ -190,11 +216,11 @@ export class WalletAppService {
   // Private helpers
   // -------------------------------------------------------------------------
 
-  /** Get wallets using this app (by wallet_type = app name). */
-  private getUsedBy(name: string): Array<{ id: string; label: string }> {
+  /** Get wallets using this app (by wallet_type match). */
+  private getUsedBy(walletType: string): Array<{ id: string; label: string }> {
     const rows = this.sqlite.prepare(
       'SELECT id, name FROM wallets WHERE wallet_type = ?',
-    ).all(name) as Array<{ id: string; name: string }>;
+    ).all(walletType) as Array<{ id: string; name: string }>;
     return rows.map((r) => ({ id: r.id, label: r.name }));
   }
 
@@ -203,10 +229,12 @@ export class WalletAppService {
       id: row.id as string,
       name: row.name as string,
       displayName: row.display_name as string,
+      walletType: (row.wallet_type as string) || '',
       signingEnabled: (row.signing_enabled as number) === 1,
       alertsEnabled: (row.alerts_enabled as number) === 1,
       signTopic: (row.sign_topic as string) || null,
       notifyTopic: (row.notify_topic as string) || null,
+      subscriptionToken: (row.subscription_token as string) || null,
       createdAt: row.created_at as number,
       updatedAt: row.updated_at as number,
     };

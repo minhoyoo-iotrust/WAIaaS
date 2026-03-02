@@ -127,7 +127,7 @@ export class PresetAutoSetupService {
       // Step 5: Register wallet app in wallet_apps registry (v29.7)
       // Use preferredWallet as app name (matches wallet_type / BUILTIN_PRESETS key)
       if (this.walletAppService) {
-        this.walletAppService.ensureRegistered(preset.preferredWallet, preset.displayName);
+        this.walletAppService.ensureRegistered(preset.preferredWallet, preset.displayName, { walletType: preset.preferredWallet });
         applied.push(STEP_WALLET_APP_REGISTERED);
       }
 

@@ -41,10 +41,12 @@ function toApiResponse(app: WalletApp | WalletAppWithUsedBy) {
     id: app.id,
     name: app.name,
     display_name: app.displayName,
+    wallet_type: app.walletType,
     signing_enabled: app.signingEnabled,
     alerts_enabled: app.alertsEnabled,
     sign_topic: app.signTopic,
     notify_topic: app.notifyTopic,
+    subscription_token: app.subscriptionToken,
     used_by: 'usedBy' in app ? app.usedBy : [],
     created_at: app.createdAt,
     updated_at: app.updatedAt,
@@ -155,6 +157,7 @@ export function createWalletAppsRoutes(deps: WalletAppsRouteDeps): OpenAPIHono {
     const body = c.req.valid('json');
     try {
       const app = deps.walletAppService.register(body.name, body.display_name, {
+        walletType: body.wallet_type,
         signTopic: body.sign_topic,
         notifyTopic: body.notify_topic,
       });
@@ -177,6 +180,7 @@ export function createWalletAppsRoutes(deps: WalletAppsRouteDeps): OpenAPIHono {
         alertsEnabled: body.alerts_enabled,
         signTopic: body.sign_topic,
         notifyTopic: body.notify_topic,
+        subscriptionToken: body.subscription_token,
       });
       // Re-fetch with usedBy info
       const appWithUsedBy = deps.walletAppService.listWithUsedBy().find((a) => a.id === app.id);

@@ -1,9 +1,11 @@
 import Database from 'better-sqlite3';
+import { randomBytes } from 'node:crypto';
 
 export interface DeviceRecord {
   pushToken: string;
   walletName: string;
   platform: 'ios' | 'android';
+  subscriptionToken: string | null;
   createdAt: number;
   updatedAt: number;
 }
@@ -24,6 +26,7 @@ export class DeviceRegistry {
         push_token TEXT PRIMARY KEY,
         wallet_name TEXT NOT NULL,
         platform TEXT NOT NULL CHECK (platform IN ('ios', 'android')),
+        subscription_token TEXT UNIQUE,
         created_at INTEGER NOT NULL DEFAULT (unixepoch()),
         updated_at INTEGER NOT NULL DEFAULT (unixepoch())
       )
@@ -31,18 +34,35 @@ export class DeviceRegistry {
     this.db.exec(`
       CREATE INDEX IF NOT EXISTS idx_devices_wallet_name ON devices(wallet_name)
     `);
+    // Migration: add subscription_token column if missing (existing DBs)
+    const cols = (this.db.prepare("PRAGMA table_info('devices')").all() as Array<{ name: string }>).map(c => c.name);
+    if (!cols.includes('subscription_token')) {
+      this.db.exec(`ALTER TABLE devices ADD COLUMN subscription_token TEXT UNIQUE`);
+    }
   }
 
-  register(walletName: string, pushToken: string, platform: 'ios' | 'android'): void {
+  register(walletName: string, pushToken: string, platform: 'ios' | 'android'): { subscriptionToken: string } {
     const now = Math.floor(Date.now() / 1000);
+    const newToken = randomBytes(4).toString('hex');
     this.db.prepare(`
-      INSERT INTO devices (push_token, wallet_name, platform, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO devices (push_token, wallet_name, platform, subscription_token, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?)
       ON CONFLICT(push_token) DO UPDATE SET
         wallet_name = excluded.wallet_name,
         platform = excluded.platform,
+        subscription_token = COALESCE(devices.subscription_token, excluded.subscription_token),
         updated_at = excluded.updated_at
-    `).run(pushToken, walletName, platform, now, now);
+    `).run(pushToken, walletName, platform, newToken, now, now);
+    // Retrieve the actual token (may be the existing one on conflict)
+    const row = this.db.prepare('SELECT subscription_token FROM devices WHERE push_token = ?')
+      .get(pushToken) as { subscription_token: string };
+    return { subscriptionToken: row.subscription_token };
+  }
+
+  getSubscriptionToken(pushToken: string): string | null {
+    const row = this.db.prepare('SELECT subscription_token FROM devices WHERE push_token = ?')
+      .get(pushToken) as { subscription_token: string | null } | undefined;
+    return row?.subscription_token ?? null;
   }
 
   unregister(pushToken: string): boolean {
