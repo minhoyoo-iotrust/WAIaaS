@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.9.0-rc.9](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc.8...v2.9.0-rc.9) (2026-03-02)
+
+
+### Features
+
+* **302-01:** add sign_topic/notify_topic columns to wallet_apps (migration v33) ([b71a363](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b71a36377f6f1642842c9ef3eddb7906daa957a6))
+* **302-01:** add topic fields to WalletAppService/REST API and remove global ntfy_topic setting ([4934613](https://github.com/minhoyoo-iotrust/WAIaaS/commit/49346132823dfccd4f4cb1ee7e0dc9d949585c82))
+* **302-02:** switch channel topic sources to wallet_apps DB and remove global NtfyChannel ([78bdcb7](https://github.com/minhoyoo-iotrust/WAIaaS/commit/78bdcb77c9f6e1c3a3e58d1ca6aff8a1906b3956))
+* **303-01:** add sign_topic/notify_topic display and edit to Human Wallet Apps ([7d22702](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7d22702980ea47feb0bf30911b914df26c0964c1))
+* **303-01:** remove ntfy_topic field from Notifications, add per-wallet topic guidance ([9fd9ff0](https://github.com/minhoyoo-iotrust/WAIaaS/commit/9fd9ff070741115c0f109558b40e816b78fd7a52))
+
+
+### Bug Fixes
+
+* reorder Admin UI nav — Human Wallet Apps before Security ([7bc9108](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7bc9108c3f52787513eb8e05f6c600ab89e81cb4))
+* resolve 3 open issues ([#222](https://github.com/minhoyoo-iotrust/WAIaaS/issues/222), [#226](https://github.com/minhoyoo-iotrust/WAIaaS/issues/226), [#227](https://github.com/minhoyoo-iotrust/WAIaaS/issues/227)) ([718a8b0](https://github.com/minhoyoo-iotrust/WAIaaS/commit/718a8b0f2ee6ba6d55b3ef8247f757d7cddc3634))
+* resolve 4 open issues ([#222](https://github.com/minhoyoo-iotrust/WAIaaS/issues/222)-[#225](https://github.com/minhoyoo-iotrust/WAIaaS/issues/225)) ([3e0bd42](https://github.com/minhoyoo-iotrust/WAIaaS/commit/3e0bd42bcd4164874a33375aa1fcc3e37dacdc27))
+
 ## [2.9.0-rc.8](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc.7...v2.9.0-rc.8) (2026-03-02)
 
 
