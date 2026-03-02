@@ -13,6 +13,11 @@
  * - T-HWUI-09: Remove button calls DELETE
  * - T-HWUI-10: sign_topic and notify_topic displayed
  * - T-HWUI-11: topic edit saves via PUT
+ * - T-HWUI-12: Global notification toggle displays and saves via PUT
+ * - T-HWUI-13: Warning banner when toggle OFF + app alerts ON
+ * - T-HWUI-14: Test button visible only when alerts_enabled true
+ * - T-HWUI-15: Test button calls POST test-notification
+ * - T-HWUI-16: Test failure shows error toast
  *
  * @see packages/admin/src/pages/human-wallet-apps.tsx
  * @see internal/objectives/m29-07-dcent-owner-signing.md
@@ -110,7 +115,7 @@ const mockApps = {
       name: 'custom',
       display_name: 'Custom Wallet',
       signing_enabled: false,
-      alerts_enabled: true,
+      alerts_enabled: false,
       sign_topic: null,
       notify_topic: null,
       used_by: [],
@@ -121,10 +126,10 @@ const mockApps = {
 };
 
 const mockSettings = {
-  'signing_sdk.ntfy_server': {
-    value: 'https://ntfy.sh',
-    default_value: 'https://ntfy.sh',
-    source: 'default',
+  signing_sdk: {
+    ntfy_server: 'https://ntfy.sh',
+    enabled: 'true',
+    notifications_enabled: 'true',
   },
 };
 
@@ -199,11 +204,10 @@ describe('HumanWalletAppsPage', () => {
       expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
     });
 
-    // Find all Signing checkboxes — the first one belongs to D'CENT
+    // Find all Signing checkboxes — the first one belongs to the global notif toggle
     const checkboxes = document.querySelectorAll('input[type="checkbox"]') as NodeListOf<HTMLInputElement>;
-    // D'CENT card has 2 checkboxes (signing, alerts), Custom has 2 — total 4
-    // First checkbox is D'CENT signing
-    const signingCheckbox = checkboxes[0] as HTMLInputElement;
+    // Checkbox 0: global notif toggle, 1: D'CENT signing, 2: D'CENT alerts, 3: Custom signing, 4: Custom alerts
+    const signingCheckbox = checkboxes[1] as HTMLInputElement;
     expect(signingCheckbox.checked).toBe(true);
 
     // Mock the re-fetch after toggle
@@ -233,9 +237,9 @@ describe('HumanWalletAppsPage', () => {
       expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
     });
 
-    // Second checkbox is D'CENT alerts
+    // Checkbox 0: global notif toggle, 1: D'CENT signing, 2: D'CENT alerts
     const checkboxes = document.querySelectorAll('input[type="checkbox"]') as NodeListOf<HTMLInputElement>;
-    const alertsCheckbox = checkboxes[1] as HTMLInputElement;
+    const alertsCheckbox = checkboxes[2] as HTMLInputElement;
     expect(alertsCheckbox.checked).toBe(true);
 
     fireEvent.change(alertsCheckbox);
@@ -360,6 +364,147 @@ describe('HumanWalletAppsPage', () => {
       expect(vi.mocked(apiPut)).toHaveBeenCalledWith(
         '/v1/admin/wallet-apps/app-1',
         expect.objectContaining({ sign_topic: 'custom-sign-topic' }),
+      );
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // New tests: Global notification toggle + test button
+  // ---------------------------------------------------------------------------
+
+  it('T-HWUI-12: global notification toggle displays and saves via PUT', async () => {
+    mockApiCalls();
+    vi.mocked(apiPut).mockResolvedValue({});
+
+    render(<HumanWalletAppsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+    });
+
+    // Should show "Wallet App Notifications" section
+    expect(screen.getByText('Wallet App Notifications')).toBeTruthy();
+
+    // The global notif toggle should be checked (notifications_enabled: 'true')
+    const notifToggle = document.querySelector('[data-testid="notif-toggle"]') as HTMLInputElement;
+    expect(notifToggle).toBeTruthy();
+    expect(notifToggle.checked).toBe(true);
+
+    // Toggle it off
+    fireEvent.change(notifToggle);
+
+    await waitFor(() => {
+      expect(vi.mocked(apiPut)).toHaveBeenCalledWith(
+        '/v1/admin/settings',
+        { settings: [{ key: 'signing_sdk.notifications_enabled', value: 'false' }] },
+      );
+    });
+  });
+
+  it('T-HWUI-13: warning banner when toggle OFF + app alerts ON', async () => {
+    // Settings: notifications_enabled false, sdk enabled
+    const settingsNotifOff = {
+      signing_sdk: {
+        ntfy_server: 'https://ntfy.sh',
+        enabled: 'true',
+        notifications_enabled: 'false',
+      },
+    };
+
+    // Apps: one with alerts_enabled true
+    const appsWithAlerts = {
+      apps: [
+        {
+          id: 'app-1',
+          name: 'dcent',
+          display_name: "D'CENT Wallet",
+          signing_enabled: true,
+          alerts_enabled: true,
+          sign_topic: null,
+          notify_topic: null,
+          used_by: [],
+          created_at: 1700000000,
+          updated_at: 1700000000,
+        },
+      ],
+    };
+
+    vi.mocked(apiGet).mockImplementation(async (path: string) => {
+      if (path === '/v1/admin/wallet-apps') return appsWithAlerts;
+      if (path === '/v1/admin/settings') return settingsNotifOff;
+      return {};
+    });
+
+    render(<HumanWalletAppsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+    });
+
+    // Warning banner should appear
+    expect(screen.getByText(/Notifications are disabled but some apps have alerts enabled/)).toBeTruthy();
+  });
+
+  it('T-HWUI-14: Test button visible only when alerts_enabled is true', async () => {
+    mockApiCalls();
+    render(<HumanWalletAppsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+    });
+
+    // D'CENT (alerts_enabled: true) should have a "Test" button
+    // Custom Wallet (alerts_enabled: false) should NOT
+    // "Test" buttons only appear for apps with alerts_enabled = true
+    const testButtons = screen.getAllByText('Test');
+    // Only 1 Test button (D'CENT has alerts ON, Custom has alerts OFF)
+    expect(testButtons.length).toBe(1);
+  });
+
+  it('T-HWUI-15: Test button calls POST test-notification', async () => {
+    mockApiCalls();
+    vi.mocked(apiPost).mockResolvedValue({ success: true, topic: 'waiaas-notify-dcent' });
+
+    render(<HumanWalletAppsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+    });
+
+    // Click the Test button (only one exists — D'CENT's)
+    const testBtn = screen.getByText('Test');
+    fireEvent.click(testBtn);
+
+    await waitFor(() => {
+      expect(vi.mocked(apiPost)).toHaveBeenCalledWith(
+        '/v1/admin/wallet-apps/app-1/test-notification',
+        {},
+      );
+    });
+
+    expect(vi.mocked(showToast)).toHaveBeenCalledWith(
+      'Test notification sent to waiaas-notify-dcent',
+      'success',
+    );
+  });
+
+  it('T-HWUI-16: Test failure shows error toast', async () => {
+    mockApiCalls();
+    vi.mocked(apiPost).mockResolvedValue({ success: false, error: 'Signing SDK is disabled' });
+
+    render(<HumanWalletAppsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
+    });
+
+    const testBtn = screen.getByText('Test');
+    fireEvent.click(testBtn);
+
+    await waitFor(() => {
+      expect(vi.mocked(showToast)).toHaveBeenCalledWith(
+        'Signing SDK is disabled',
+        'error',
       );
     });
   });

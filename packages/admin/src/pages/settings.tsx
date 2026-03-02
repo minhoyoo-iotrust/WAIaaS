@@ -767,26 +767,6 @@ export default function SettingsPage() {
             to deliver sign requests.
           </div>
 
-          <div class="settings-subgroup" style={{ marginTop: '1rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
-            <div class="settings-subgroup-title">Wallet App Notifications</div>
-            <p class="settings-description" style={{ marginBottom: '0.75rem' }}>
-              Push notifications to wallet apps via ntfy side channel. Only applies to wallets with sdk_ntfy approval method.
-            </p>
-            <div class="settings-fields-grid">
-              <div class="settings-field-full">
-                <FormField
-                  label="Notifications Enabled"
-                  name="signing_sdk.notifications_enabled"
-                  type="checkbox"
-                  value={getEffectiveBoolValue('signing_sdk', 'notifications_enabled')}
-                  onChange={(v) => handleFieldChange('signing_sdk.notifications_enabled', v)}
-                />
-              </div>
-            </div>
-            <div class="settings-info-box" style={{ marginTop: '0.5rem' }}>
-              Category filtering is configured in Notifications &gt; Settings.
-            </div>
-          </div>
         </div>
       </div>
     );

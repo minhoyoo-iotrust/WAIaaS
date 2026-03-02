@@ -37,6 +37,14 @@ export default function HumanWalletAppsPage() {
   const ntfyServerOriginal = useSignal('');
   const ntfySaving = useSignal(false);
 
+  // Global notification toggle state
+  const notificationsEnabled = useSignal(false);
+  const sdkEnabled = useSignal(false);
+  const notifToggleSaving = useSignal(false);
+
+  // Test notification state
+  const testNotifSending = useSignal<string | null>(null);
+
   // Register modal
   const registerModal = useSignal(false);
   const registerName = useSignal('');
@@ -66,13 +74,19 @@ export default function HumanWalletAppsPage() {
   const fetchSettings = async () => {
     try {
       const data = await apiGet<SettingsData>(API.ADMIN_SETTINGS);
-      const ntfyEntry = data['signing_sdk.ntfy_server'];
-      if (ntfyEntry) {
-        ntfyServer.value = ntfyEntry.value || ntfyEntry.default_value || '';
-        ntfyServerOriginal.value = ntfyServer.value;
+      // Settings API returns nested: { signing_sdk: { ntfy_server: '...', enabled: '...', ... } }
+      const sdk = data['signing_sdk'];
+      if (sdk) {
+        const ntfyVal = sdk['ntfy_server'];
+        if (ntfyVal !== undefined) {
+          ntfyServer.value = String(ntfyVal) || '';
+          ntfyServerOriginal.value = ntfyServer.value;
+        }
+        sdkEnabled.value = String(sdk['enabled']) === 'true';
+        notificationsEnabled.value = String(sdk['notifications_enabled']) === 'true';
       }
     } catch {
-      // Settings may not have ntfy_server
+      // Settings may not be available
     }
   };
 
@@ -90,7 +104,7 @@ export default function HumanWalletAppsPage() {
     ntfySaving.value = true;
     try {
       await apiPut(API.ADMIN_SETTINGS, {
-        settings: { 'signing_sdk.ntfy_server': ntfyServer.value },
+        settings: [{ key: 'signing_sdk.ntfy_server', value: ntfyServer.value }],
       });
       ntfyServerOriginal.value = ntfyServer.value;
       showToast('ntfy server URL saved', 'success');
@@ -98,6 +112,22 @@ export default function HumanWalletAppsPage() {
       showToast('Failed to save ntfy server URL', 'error');
     } finally {
       ntfySaving.value = false;
+    }
+  };
+
+  const handleNotifToggle = async () => {
+    notifToggleSaving.value = true;
+    const newValue = !notificationsEnabled.value;
+    try {
+      await apiPut(API.ADMIN_SETTINGS, {
+        settings: [{ key: 'signing_sdk.notifications_enabled', value: String(newValue) }],
+      });
+      notificationsEnabled.value = newValue;
+      showToast(`Wallet app notifications ${newValue ? 'enabled' : 'disabled'}`, 'success');
+    } catch {
+      showToast('Failed to update notification setting', 'error');
+    } finally {
+      notifToggleSaving.value = false;
     }
   };
 
@@ -113,6 +143,25 @@ export default function HumanWalletAppsPage() {
       showToast('Failed to update toggle', 'error');
     } finally {
       toggleSaving.value = null;
+    }
+  };
+
+  const handleTestNotification = async (app: WalletAppApi) => {
+    testNotifSending.value = app.id;
+    try {
+      const result = await apiPost<{ success: boolean; topic?: string; error?: string }>(
+        API.ADMIN_WALLET_APP_TEST_NOTIFICATION(app.id),
+        {},
+      );
+      if (result.success) {
+        showToast(`Test notification sent to ${result.topic}`, 'success');
+      } else {
+        showToast(result.error || 'Test notification failed', 'error');
+      }
+    } catch {
+      showToast('Failed to send test notification', 'error');
+    } finally {
+      testNotifSending.value = null;
     }
   };
 
@@ -191,6 +240,9 @@ export default function HumanWalletAppsPage() {
     }
   };
 
+  // Check if any app has alerts enabled (for warning banner)
+  const hasAlertsEnabledApp = apps.value.some((a) => a.alerts_enabled);
+
   // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
@@ -233,6 +285,48 @@ export default function HumanWalletAppsPage() {
         </div>
       </div>
 
+      {/* Wallet App Notifications Toggle */}
+      <div class="settings-category" style={{ marginBottom: '1.5rem' }}>
+        <div class="settings-category-header">
+          <h3>Wallet App Notifications</h3>
+          <p class="settings-description">
+            Push event notifications (transaction alerts, balance changes) to registered wallet apps via ntfy
+          </p>
+        </div>
+        <div class="settings-category-body">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={notificationsEnabled.value}
+                onChange={handleNotifToggle}
+                disabled={notifToggleSaving.value}
+                data-testid="notif-toggle"
+              />
+              <span>Notifications</span>
+              <Badge variant={notificationsEnabled.value ? 'success' : 'muted'}>
+                {notificationsEnabled.value ? 'ON' : 'OFF'}
+              </Badge>
+            </label>
+            {notifToggleSaving.value && <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Saving...</span>}
+          </div>
+
+          {/* Warning: SDK disabled */}
+          {!sdkEnabled.value && (
+            <div class="settings-warning-box" style={{ marginTop: '0.75rem', padding: '0.75rem', background: 'var(--warning-bg, #fff3cd)', border: '1px solid var(--warning-border, #ffc107)', borderRadius: '4px', fontSize: '0.85rem' }}>
+              Signing SDK is disabled. Enable it in System &gt; Signing SDK to use wallet app notifications.
+            </div>
+          )}
+
+          {/* Warning: toggle off but apps have alerts enabled */}
+          {!notificationsEnabled.value && hasAlertsEnabledApp && (
+            <div class="settings-warning-box" style={{ marginTop: '0.75rem', padding: '0.75rem', background: 'var(--warning-bg, #fff3cd)', border: '1px solid var(--warning-border, #ffc107)', borderRadius: '4px', fontSize: '0.85rem' }}>
+              Notifications are disabled but some apps have alerts enabled. Enable notifications above for alerts to be delivered.
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* App Cards */}
       <div class="settings-category">
         <div class="settings-category-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -269,7 +363,7 @@ export default function HumanWalletAppsPage() {
                     </Button>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '2rem', marginTop: '1rem', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: '2rem', marginTop: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
                     {/* Signing toggle */}
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                       <input
@@ -297,6 +391,18 @@ export default function HumanWalletAppsPage() {
                         {app.alerts_enabled ? 'ON' : 'OFF'}
                       </Badge>
                     </label>
+
+                    {/* Test notification button */}
+                    {app.alerts_enabled && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleTestNotification(app)}
+                        disabled={testNotifSending.value === app.id}
+                      >
+                        {testNotifSending.value === app.id ? 'Sending...' : 'Test'}
+                      </Button>
+                    )}
                   </div>
 
                   {/* Used by */}

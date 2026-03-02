@@ -614,6 +614,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         '/v1',
         createWalletAppsRoutes({
           walletAppService: new WalletAppService(deps.sqlite),
+          settingsService: deps.settingsService,
         }),
       );
     }

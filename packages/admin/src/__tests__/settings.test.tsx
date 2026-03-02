@@ -648,22 +648,12 @@ describe('SettingsPage', () => {
     });
   });
 
-  // ---- Test 26: Renders Wallet App Notifications subgroup in Signing SDK section ----
-  it('renders Wallet App Notifications subgroup in Signing SDK section', async () => {
+  // ---- Test 26: Wallet App Notifications subgroup moved to Human Wallet Apps page (#229) ----
+  it('does NOT render Wallet App Notifications subgroup in Signing SDK section', async () => {
     mockApiCalls();
     await renderAndWaitForLoad();
 
-    expect(screen.getByText('Wallet App Notifications')).toBeTruthy();
-    expect(screen.getByText('Notifications Enabled')).toBeTruthy();
-    // Category filtering now in Notifications > Settings
-    expect(screen.getByText(/Category filtering is configured in Notifications/)).toBeTruthy();
-  });
-
-  // ---- Test 27: Category filter info box in Signing SDK section ----
-  it('shows category filter redirect info in Signing SDK section', async () => {
-    mockApiCalls();
-    await renderAndWaitForLoad();
-
-    expect(screen.getByText(/Category filtering is configured in Notifications/)).toBeTruthy();
+    // Moved to Human Wallet Apps page — should not appear here
+    expect(screen.queryByText('Wallet App Notifications')).toBeNull();
   });
 });

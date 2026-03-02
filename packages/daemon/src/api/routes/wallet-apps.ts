@@ -12,11 +12,13 @@
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { WAIaaSError } from '@waiaas/core';
 import type { WalletAppService, WalletApp, WalletAppWithUsedBy } from '../../services/signing-sdk/wallet-app-service.js';
+import type { SettingsService } from '../../infrastructure/settings/settings-service.js';
 import {
   WalletAppListResponseSchema,
   WalletAppCreateRequestSchema,
   WalletAppUpdateRequestSchema,
   WalletAppResponseSchema,
+  WalletAppTestNotificationResponseSchema,
   buildErrorResponses,
   openApiValidationHook,
 } from './openapi-schemas.js';
@@ -27,6 +29,7 @@ import {
 
 export interface WalletAppsRouteDeps {
   walletAppService: WalletAppService;
+  settingsService?: SettingsService;
 }
 
 // ---------------------------------------------------------------------------
@@ -117,6 +120,23 @@ const deleteAppRoute = createRoute({
   },
 });
 
+const testNotificationRoute = createRoute({
+  method: 'post',
+  path: '/admin/wallet-apps/{id}/test-notification',
+  tags: ['Admin'],
+  summary: 'Send a test notification to a wallet app',
+  request: {
+    params: z.object({ id: z.string() }),
+  },
+  responses: {
+    200: {
+      description: 'Test notification result',
+      content: { 'application/json': { schema: WalletAppTestNotificationResponseSchema } },
+    },
+    ...buildErrorResponses(['WALLET_APP_NOT_FOUND']),
+  },
+});
+
 // ---------------------------------------------------------------------------
 // Route handlers
 // ---------------------------------------------------------------------------
@@ -180,6 +200,56 @@ export function createWalletAppsRoutes(deps: WalletAppsRouteDeps): OpenAPIHono {
         throw err;
       }
       throw err;
+    }
+  });
+
+  // POST /admin/wallet-apps/:id/test-notification
+  router.openapi(testNotificationRoute, async (c) => {
+    const { id } = c.req.valid('param');
+
+    // Look up the wallet app
+    const app = deps.walletAppService.getById(id);
+    if (!app) {
+      throw new WAIaaSError('WALLET_APP_NOT_FOUND', { message: `Wallet app ${id} not found` });
+    }
+
+    // Gate 1: Signing SDK enabled
+    if (deps.settingsService) {
+      const sdkEnabled = deps.settingsService.get('signing_sdk.enabled');
+      if (sdkEnabled !== 'true') {
+        return c.json({ success: false, error: 'Signing SDK is disabled' }, 200);
+      }
+
+      // Gate 2: Notifications enabled
+      const notifEnabled = deps.settingsService.get('signing_sdk.notifications_enabled');
+      if (notifEnabled !== 'true') {
+        return c.json({ success: false, error: 'Wallet app notifications are disabled' }, 200);
+      }
+    }
+
+    // Gate 3: App alerts enabled
+    if (!app.alertsEnabled) {
+      return c.json({ success: false, error: 'Alerts are disabled for this app' }, 200);
+    }
+
+    // Resolve ntfy server and topic
+    const ntfyServer = deps.settingsService?.get('signing_sdk.ntfy_server') || 'https://ntfy.sh';
+    const notifyTopic = app.notifyTopic || `waiaas-notify-${app.name}`;
+    const url = `${ntfyServer}/${notifyTopic}`;
+
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: `WAIaaS test notification for ${app.displayName}`,
+      });
+      if (!res.ok) {
+        return c.json({ success: false, topic: notifyTopic, error: `ntfy returned ${res.status}` }, 200);
+      }
+      return c.json({ success: true, topic: notifyTopic }, 200);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      return c.json({ success: false, topic: notifyTopic, error: msg }, 200);
     }
   });
 
