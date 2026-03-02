@@ -184,6 +184,7 @@ describe('NtfySubscriber', () => {
     expect(call[0]).toBe('w1');
     expect(call[1].category).toBe('sign_request');
     expect(call[1].priority).toBe('high');
+    expect(call[2]).toBe('sign-w1'); // topic passed as 3rd arg
   });
 
   it('processes SSE notification messages', async () => {
@@ -217,6 +218,7 @@ describe('NtfySubscriber', () => {
     const call = onMessage.mock.calls[0]!;
     expect(call[1].category).toBe('notification');
     expect(call[1].priority).toBe('normal');
+    expect(call[2]).toBe('notify-w1'); // topic passed as 3rd arg
   });
 
   it('skips non-data SSE lines and empty messages', async () => {

@@ -12,6 +12,7 @@ import type { IPushProvider } from './providers/push-provider.js';
 import { ConfigurablePayloadTransformer } from './transformer/payload-transformer.js';
 import type { IPayloadTransformer } from './transformer/payload-transformer.js';
 import { createServer } from './server.js';
+import { routeByTopic } from './message-router.js';
 
 const require = createRequire(import.meta.url);
 const pkg = require('../package.json') as { version: string };
@@ -64,23 +65,39 @@ async function main(): Promise<void> {
     notifyTopicPrefix: config.relay.notify_topic_prefix,
     walletNames: config.relay.wallet_names,
     transformer,
-    onMessage: async (walletName, payload) => {
+    onMessage: async (walletName, payload, topic) => {
       console.log(
-        `[push-relay] Received ${payload.category} for wallet "${walletName}" (title=${payload.title ?? 'none'})`,
+        `[push-relay] Received ${payload.category} for wallet "${walletName}" on topic "${topic}" (title=${payload.title ?? 'none'})`,
       );
-      const tokens = registry.getTokensByWalletName(walletName);
-      if (tokens.length === 0) {
-        console.log(`[push-relay] No registered devices for wallet "${walletName}", skipping push`);
+
+      const route = routeByTopic(
+        walletName,
+        topic,
+        config.relay.sign_topic_prefix,
+        config.relay.notify_topic_prefix,
+        (token) => registry.getBySubscriptionToken(token),
+      );
+
+      if (route.action === 'skip_base') {
+        console.log(`[push-relay] Base topic "${topic}" — skipping push (no broadcast)`);
+        return;
+      }
+      if (route.action === 'skip_unknown') {
+        console.log(`[push-relay] Cannot extract subscriptionToken from topic "${topic}", skipping`);
+        return;
+      }
+      if (route.action === 'skip_no_device') {
+        console.log(`[push-relay] No device found for subscriptionToken "${route.subscriptionToken}", skipping`);
         return;
       }
 
-      const result = await provider.send(tokens, payload);
+      const result = await provider.send([route.device!.pushToken], payload);
       if (result.invalidTokens.length > 0) {
         registry.removeTokens(result.invalidTokens);
         console.log(`[push-relay] Removed ${result.invalidTokens.length} invalid token(s)`);
       }
       console.log(
-        `[push-relay] ${payload.category} → ${walletName}: sent=${result.sent}, failed=${result.failed}`,
+        `[push-relay] ${payload.category} → ${walletName} (device=${route.subscriptionToken}): sent=${result.sent}, failed=${result.failed}`,
       );
     },
     onError: (err) => {

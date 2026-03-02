@@ -60,6 +60,7 @@ const TEST_APP = {
   alertsEnabled: true,
   signTopic: 'waiaas-sign-dcent',
   notifyTopic: 'waiaas-notify-dcent',
+  subscriptionToken: 'a1b2c3d4',
   createdAt: 1700000000,
   updatedAt: 1700000000,
 };
@@ -129,6 +130,24 @@ describe('POST /admin/wallet-apps/:id/test-notification', () => {
     expect(res.status).toBe(200);
     expect(body.success).toBe(false);
     expect(body.error).toContain('Alerts are disabled');
+  });
+
+  it('returns error when no device registered (subscriptionToken null)', async () => {
+    const appNoDevice = { ...TEST_APP, subscriptionToken: null };
+    const walletAppService = mockWalletAppService({
+      getById: vi.fn().mockReturnValue(appNoDevice),
+    });
+    const settingsService = mockSettingsService();
+
+    const router = createWalletAppsRoutes({ walletAppService, settingsService });
+    const res = await router.request('/admin/wallet-apps/app-1/test-notification', { method: 'POST' });
+    const body = await res.json() as { success: boolean; error?: string };
+
+    expect(res.status).toBe(200);
+    expect(body.success).toBe(false);
+    expect(body.error).toContain('No device registered');
+    // Fetch should NOT have been called
+    expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 
   it('sends test notification in base64url JSON format', async () => {

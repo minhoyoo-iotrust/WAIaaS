@@ -254,6 +254,8 @@
 | 237 | MISSING | HIGH | Push Relay 디바이스 등록 시 subscription token 기반 토픽 동적 구독 미구현 | — | FIXED | 2026-03-02 |
 | 238 | ENHANCEMENT | HIGH | Push Relay SSE 구독을 fetch()로 단순화 — node:http 수동 디컴프레션 제거 | — | FIXED | 2026-03-03 |
 | 239 | BUG | HIGH | 지갑 앱 테스트 알림이 plain text로 전송되어 Push Relay 파싱 실패 | — | FIXED | 2026-03-03 |
+| 240 | BUG | HIGH | Push Relay 기본 토픽 브로드캐스트 제거 — 디바이스 토픽 유니캐스트만 허용 | — | FIXED | 2026-03-03 |
+| 241 | BUG | MEDIUM | 지갑 앱 테스트 알림이 subscriptionToken 미설정 상태에서도 발송 성공 | — | FIXED | 2026-03-03 |
 
 ## Type Legend
 
@@ -266,8 +268,8 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 239
+- **FIXED:** 241
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 240
+- **Total:** 242

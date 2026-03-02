@@ -10,7 +10,7 @@ export interface NtfySubscriberOpts {
   signTopicPrefix: string;
   notifyTopicPrefix: string;
   walletNames: string[];
-  onMessage: (walletName: string, payload: PushPayload) => Promise<void>;
+  onMessage: (walletName: string, payload: PushPayload, topic: string) => Promise<void>;
   onError?: (error: Error) => void;
   transformer?: IPayloadTransformer;
   /** Per-wallet topic overrides (key: walletName). When set, uses these topics instead of prefix pattern. */
@@ -152,7 +152,7 @@ export class NtfySubscriber {
             if (this.transformer) {
               payload = this.transformer.transform(payload);
             }
-            void this.opts.onMessage(walletName, payload);
+            void this.opts.onMessage(walletName, payload, effectiveTopic);
           } catch (err) {
             this.opts.onError?.(err instanceof Error ? err : new Error(String(err)));
           }
