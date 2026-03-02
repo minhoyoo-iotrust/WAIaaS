@@ -741,21 +741,17 @@ export class TelegramBotService {
     }
 
     const nowSec = Math.floor(Date.now() / 1000);
-    const expiresAt = nowSec + this.sessionTtl;
-    const absoluteLifetime = this.settingsService
-      ? parseInt(this.settingsService.get('security.session_absolute_lifetime'), 10) || 31536000
-      : 31536000;
-    const absoluteExpiresAt = nowSec + absoluteLifetime;
+    // v29.9: unlimited session by default
+    const expiresAt = 0;
 
     // Generate session ID (UUID v7 via uuidv7 package)
     const { uuidv7 } = await import('uuidv7');
     const sessionId = uuidv7();
 
-    // Create JWT payload and sign token
+    // Create JWT payload and sign token (unlimited: no exp)
     const jwtPayload: JwtPayload = {
       sub: sessionId,
       iat: nowSec,
-      exp: expiresAt,
     };
     const token = await this.jwtSecretManager.signToken(jwtPayload);
 
@@ -770,10 +766,8 @@ export class TelegramBotService {
       )
       .run(
         sessionId, tokenHash, expiresAt,
-        this.settingsService
-          ? parseInt(this.settingsService.get('security.session_max_renewals'), 10) || 12
-          : 12,
-        absoluteExpiresAt, nowSec,
+        0, // unlimited renewals
+        0, nowSec, // absoluteExpiresAt=0 (unlimited)
       );
     this.sqlite
       .prepare(

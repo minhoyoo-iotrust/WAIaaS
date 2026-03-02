@@ -354,7 +354,7 @@ describe('Session CRUD API', () => {
     // Verify expiresAt is approximately nowSec + 3600 (within 5 seconds tolerance)
     expect(row.expires_at).toBe(returnedExpiresAt);
 
-    // Verify absoluteExpiresAt is approximately nowSec + 365 days (session_absolute_lifetime default)
+    // Verify absoluteExpiresAt for unlimited session
     const nowSec = Math.floor(Date.now() / 1000);
     const expectedAbsoluteExpiry = nowSec + 31536000;
     expect(Math.abs(row.absolute_expires_at - expectedAbsoluteExpiry)).toBeLessThan(5);

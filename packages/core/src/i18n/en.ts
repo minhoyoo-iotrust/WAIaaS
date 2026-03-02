@@ -73,6 +73,7 @@ export const messages: Messages = {
     SESSION_EXPIRED: 'Session has expired',
     SESSION_LIMIT_EXCEEDED: 'Session limit exceeded',
     CONSTRAINT_VIOLATED: 'Session constraint violated',
+    RENEWAL_NOT_REQUIRED: 'Unlimited session does not require renewal',
     RENEWAL_LIMIT_REACHED: 'Session renewal limit reached',
     SESSION_ABSOLUTE_LIFETIME_EXCEEDED: 'Session absolute lifetime exceeded',
     RENEWAL_TOO_EARLY: 'Session renewal too early',

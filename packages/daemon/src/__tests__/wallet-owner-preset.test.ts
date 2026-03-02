@@ -127,9 +127,6 @@ beforeEach(async () => {
       port: 3100,
       rpc: {},
       security: {
-        session_ttl: 86400,
-        session_max_renewals: 5,
-        session_absolute_lifetime: 604800,
         idle_timeout: 0,
         time_delay_default: 0,
         time_delay_high: 0,

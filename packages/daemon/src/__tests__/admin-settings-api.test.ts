@@ -75,7 +75,7 @@ function fullConfig(overrides: Partial<DaemonConfig> = {}): DaemonConfig {
       rate_limit_rpm: 20,
     },
     security: {
-      session_ttl: 86400, session_absolute_lifetime: 31536000, session_max_renewals: 12, jwt_secret: '', max_sessions_per_wallet: 5, max_pending_tx: 10,
+      jwt_secret: '', max_sessions_per_wallet: 5, max_pending_tx: 10,
       nonce_storage: 'memory' as const, nonce_cache_max: 1000, nonce_cache_ttl: 300,
       rate_limit_global_ip_rpm: 1000, rate_limit_session_rpm: 300, rate_limit_tx_rpm: 10,
       cors_origins: ['http://localhost:3100'], autostop_consecutive_failures_threshold: 5,
@@ -338,7 +338,7 @@ describe('PUT /admin/settings', () => {
       body: JSON.stringify({
         settings: [
           { key: 'daemon.log_level', value: 'debug' },
-          { key: 'security.session_ttl', value: '3600' },
+          { key: 'security.max_sessions_per_wallet', value: '10' },
           { key: 'notifications.locale', value: 'ko' },
         ],
       }),
@@ -348,7 +348,7 @@ describe('PUT /admin/settings', () => {
     const body = await json(res);
     expect(body.updated).toBe(3);
     expect(settingsService.get('daemon.log_level')).toBe('debug');
-    expect(settingsService.get('security.session_ttl')).toBe('3600');
+    expect(settingsService.get('security.max_sessions_per_wallet')).toBe('10');
     expect(settingsService.get('notifications.locale')).toBe('ko');
   });
 
@@ -474,7 +474,7 @@ describe('PUT /admin/settings', () => {
       body: JSON.stringify({
         settings: [
           { key: 'daemon.log_level', value: 'debug' },
-          { key: 'security.session_ttl', value: '7200' },
+          { key: 'security.max_sessions_per_wallet', value: '10' },
         ],
       }),
     });
@@ -483,7 +483,7 @@ describe('PUT /admin/settings', () => {
     expect(changedCallback).toHaveBeenCalledTimes(1);
     expect(changedCallback).toHaveBeenCalledWith([
       'daemon.log_level',
-      'security.session_ttl',
+      'security.max_sessions_per_wallet',
     ]);
   });
 

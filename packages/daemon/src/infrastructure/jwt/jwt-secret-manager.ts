@@ -28,7 +28,7 @@ import { keyValueStore } from '../database/schema.js';
 export interface JwtPayload {
   sub: string; // sessionId
   iat: number; // issued at (epoch seconds)
-  exp: number; // expires at (epoch seconds)
+  exp?: number; // expires at (epoch seconds); undefined = unlimited session
 }
 
 interface StoredSecret {
@@ -206,13 +206,18 @@ export class JwtSecretManager {
 
     const secretKey = Buffer.from(this._currentSecret.secret, 'hex');
 
-    const jwt = await new SignJWT({
+    const builder = new SignJWT({
       sub: payload.sub,
     })
       .setProtectedHeader({ alg: 'HS256' })
-      .setIssuedAt(payload.iat)
-      .setExpirationTime(payload.exp)
-      .sign(secretKey);
+      .setIssuedAt(payload.iat);
+
+    // Unlimited sessions: no exp claim in JWT
+    if (payload.exp !== undefined && payload.exp > 0) {
+      builder.setExpirationTime(payload.exp);
+    }
+
+    const jwt = await builder.sign(secretKey);
 
     return TOKEN_PREFIX + jwt;
   }
@@ -243,7 +248,7 @@ export class JwtSecretManager {
         return {
           sub: payload.sub as string,
           iat: payload.iat as number,
-          exp: payload.exp as number,
+          exp: payload.exp as number | undefined,
         };
       } catch (err) {
         lastError = err;

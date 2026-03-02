@@ -131,17 +131,16 @@ export function mcpTokenRoutes(deps: McpTokenRouteDeps): OpenAPIHono {
       });
     }
 
-    // 3. Generate session ID, compute TTL
+    // 3. Generate session ID, compute TTL (v29.9: unlimited by default)
     const sessionId = generateId();
-    const ttl = parsed.expiresIn ?? deps.config.security.session_ttl;
-    const expiresAt = nowSec + ttl;
-    const absoluteExpiresAt = nowSec + deps.config.security.session_absolute_lifetime;
+    const ttl = parsed.expiresIn; // undefined = unlimited session
+    const expiresAt = ttl !== undefined ? nowSec + ttl : 0; // 0 = unlimited
 
-    // 4. Sign JWT
+    // 4. Sign JWT (unlimited sessions have no exp claim)
     const jwtPayload: JwtPayload = {
       sub: sessionId,
       iat: nowSec,
-      exp: expiresAt,
+      exp: ttl !== undefined ? expiresAt : undefined,
     };
     const token = await deps.jwtSecretManager.signToken(jwtPayload);
 
@@ -152,10 +151,10 @@ export function mcpTokenRoutes(deps: McpTokenRouteDeps): OpenAPIHono {
       id: sessionId,
       tokenHash,
       expiresAt: new Date(expiresAt * 1000),
-      absoluteExpiresAt: new Date(absoluteExpiresAt * 1000),
+      absoluteExpiresAt: new Date(0), // unlimited
       createdAt: new Date(nowSec * 1000),
       renewalCount: 0,
-      maxRenewals: deps.config.security.session_max_renewals,
+      maxRenewals: 0, // unlimited
       constraints: null,
       source: 'mcp',
     }).run();

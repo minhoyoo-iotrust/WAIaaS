@@ -105,7 +105,7 @@ export const sessions = sqliteTable(
     usageStats: text('usage_stats'),
     revokedAt: integer('revoked_at', { mode: 'timestamp' }),
     renewalCount: integer('renewal_count').notNull().default(0),
-    maxRenewals: integer('max_renewals').notNull().default(12),
+    maxRenewals: integer('max_renewals').notNull().default(0),
     lastRenewedAt: integer('last_renewed_at', { mode: 'timestamp' }),
     absoluteExpiresAt: integer('absolute_expires_at', { mode: 'timestamp' }).notNull(),
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),

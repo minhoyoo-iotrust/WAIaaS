@@ -113,6 +113,13 @@ export const ERROR_CODES = {
     retryable: false,
     message: 'Session constraint violated',
   },
+  RENEWAL_NOT_REQUIRED: {
+    code: 'RENEWAL_NOT_REQUIRED',
+    domain: 'SESSION',
+    httpStatus: 400,
+    retryable: false,
+    message: 'Unlimited session does not require renewal',
+  },
   RENEWAL_LIMIT_REACHED: {
     code: 'RENEWAL_LIMIT_REACHED',
     domain: 'SESSION',
