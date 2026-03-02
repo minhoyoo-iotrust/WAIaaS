@@ -337,7 +337,61 @@ Lifetime FieldGroup 축소: `max_sessions_per_wallet`만 남음.
 | Expires | `2026-03-31` | `—` |
 | Renewals | `2/12` | `—` |
 
-### 10. 세션 목록 API 응답 변경
+### 10. SDK 변경 (`@waiaas/sdk`)
+
+`packages/sdk/src/types.ts`:
+
+```typescript
+// 현재: expiresIn — API 스키마(ttl)와 필드명 불일치 버그
+export interface CreateSessionParams {
+  walletId?: string;
+  walletIds?: string[];
+  expiresIn?: number;     // ← API에 전송되나 스키마에 없어 무시됨
+  constraints?: Record<string, unknown>;
+  source?: 'api' | 'mcp';
+}
+
+// 변경: ttl로 리네임 + 신규 필드
+export interface CreateSessionParams {
+  walletId?: string;
+  walletIds?: string[];
+  ttl?: number;                // 초 단위, 생략 = 무제한
+  maxRenewals?: number;        // 생략 = 무제한
+  absoluteLifetime?: number;   // 초 단위, 생략 = 무제한
+  constraints?: Record<string, unknown>;
+  source?: 'api' | 'mcp';
+}
+```
+
+`packages/sdk/src/client.ts` — `createSession()` 본문 구성에서 `expiresIn` → `ttl`로 변경하고 `maxRenewals`, `absoluteLifetime`을 조건부 포함.
+
+### 11. Drizzle default 정합성
+
+`packages/daemon/src/infrastructure/db/schema.ts`:
+
+```typescript
+// 현재: behavioral default와 불일치
+maxRenewals: integer('max_renewals').notNull().default(12),
+
+// 변경: 새 behavioral default(0=무제한)와 일치
+maxRenewals: integer('max_renewals').notNull().default(0),
+```
+
+> 앱 레벨 default 변경으로 DDL/마이그레이션 불필요. 코드에서 항상 명시적으로 값을 전달하므로 기능 영향 없음. 정합성 확보 목적.
+
+### 12. Skill 파일 동기화
+
+| 파일 | 변경 내용 |
+|------|----------|
+| `skills/wallet.skill.md` | 세션 생성 파라미터: ttl 기본값 무제한, maxRenewals·absoluteLifetime 추가 |
+| `skills/quickstart.skill.md` | 세션 생성 예제: 기본 무제한 반영, ttl=2592000 예시 유지 |
+| `skills/admin.skill.md` | `expiresIn?` → `ttl?`, maxRenewals·absoluteLifetime 추가 |
+| `skills/session-recovery.skill.md` | 무제한 세션 갱신 거부(RENEWAL_NOT_REQUIRED) 동작 추가 |
+
+> CLAUDE.md 규칙: "REST API, SDK, or MCP interfaces change → skills/ files must be updated."
+> MCP 세션 도구는 존재하지 않음 (세션 관리는 transport 계층에서 처리). MCP 도구 변경 불필요.
+
+### 13. 세션 목록 API 응답 변경
 
 `GET /v1/sessions` 응답에서 무제한 값을 명확히 전달:
 
@@ -359,15 +413,13 @@ Lifetime FieldGroup 축소: `max_sessions_per_wallet`만 남음.
 // 현재: expiresAt=0(epoch 0)이면 항상 EXPIRED로 판정되는 버그
 const status = expiresAtSec < nowSec ? 'EXPIRED' : 'ACTIVE';
 
-// 변경: 0=무제한 분기 추가
-const status = session.revokedAt
-  ? 'REVOKED'
-  : expiresAtSec === 0 || expiresAtSec >= nowSec
-    ? 'ACTIVE'
-    : 'EXPIRED';
+// 변경: 0=무제한 분기 추가 (revokedAt 세션은 쿼리에서 이미 필터됨)
+const status = expiresAtSec === 0 || expiresAtSec >= nowSec
+  ? 'ACTIVE'
+  : 'EXPIRED';
 ```
 
-> **배경**: Drizzle `{ mode: 'timestamp' }`에서 `expiresAt=0`은 `new Date(0)` = 1970-01-01로 저장됨. 기존 `expiresAtSec < nowSec` 비교에서 0은 항상 현재보다 작으므로 무제한 세션이 EXPIRED로 잘못 표시됨.
+> **배경**: Drizzle `{ mode: 'timestamp' }`에서 `expiresAt=0`은 `new Date(0)` = 1970-01-01로 저장됨. 기존 `expiresAtSec < nowSec` 비교에서 0은 항상 현재보다 작으므로 무제한 세션이 EXPIRED로 잘못 표시됨. REVOKED 분기는 불필요 — 세션 목록 쿼리가 `.where(isNull(sessions.revokedAt))`로 revoked 세션을 이미 제외함.
 
 ---
 
@@ -384,6 +436,9 @@ const status = session.revokedAt
 | 7 | 만료 적용 계층 | JWT exp 클레임 (DB-level 아님) | 현재 구조가 이미 JWT 기반. DB-level 이중 체크는 선택적 방어 장치로만 추가. 핵심 변경은 `signToken()`에서 exp 조건부 생략 |
 | 8 | `JwtPayload.exp` 타입 | `exp?: number` (optional) | 무제한 세션의 JWT에 exp 클레임 자체가 없음. 타입 시스템으로 이를 반영. 갱신 로직에서 무제한 조기 거부 후에만 `exp!` 사용 |
 | 9 | CLI 필드명 버그 수정 | `expiresIn` → `ttl`로 통일 | 기존 CLI가 `{ expiresIn }` 전송 → API 스키마 `{ ttl }` 불일치로 24시간 기본값 미적용 버그. `--ttl` 리네임 시 자연 해결 |
+| 10 | Drizzle default 정합성 | `.default(12)` → `.default(0)` | DB 스키마 `maxRenewals` 컬럼의 Drizzle default가 12. 새 behavioral default(0=무제한)와 불일치. DDL 변경 아닌 앱 레벨 default만 수정. 코드에서 항상 명시적 값 전달하므로 기능 영향 없지만 정합성 확보 |
+| 11 | SDK `expiresIn` 필드명 | `expiresIn` → `ttl` 리네임 + 신규 필드 | SDK `CreateSessionParams.expiresIn`이 API 스키마 `ttl`과 불일치 (CLI와 동일 버그). `ttl`로 리네임하고 `maxRenewals`, `absoluteLifetime` 추가. `CreateSessionResponse.expiresAt`는 0=무제한 표현 |
+| 12 | Admin Settings DB 잔존 행 | 자동 제외 — 조치 불필요 | `getAllMasked()`는 `SETTING_DEFINITIONS` 레지스트리 기반으로 순회. 삭제된 키의 DB 행이 남아 있어도 API 응답에 포함되지 않음 |
 
 ---
 
@@ -429,7 +484,7 @@ const status = session.revokedAt
 | 1 | 무제한 토큰 유출 시 영구 접근 | 탈취된 토큰이 revoke 전까지 유효 | 셀프호스트 localhost 바인딩으로 탈취 경로 제한적. Kill Switch + 즉시 revoke로 대응. 보안 민감 Operator는 TTL 설정 |
 | 2 | 기존 세션 마이그레이션 | 이미 생성된 세션의 동작 변경 없음 | 기존 세션은 생성 시 설정된 값(expiresAt, maxRenewals, absoluteExpiresAt) 유지. 새 세션만 새 기본값 적용 |
 | 3 | JWT exp 클레임 처리 | 무제한 세션의 JWT에 exp를 어떻게 설정할지 | **해결됨**: jose 6.x에서 `setExpirationTime()` 미호출 시 JWT에 exp 클레임이 생략되며, `jwtVerify()`는 exp 없는 토큰을 정상 통과시킴 (exp 있을 때만 만료 검증). JWT 표준에서 exp 생략 = "만료 없음". 영향 범위: (1) `JwtPayload.exp` → optional 타입 변경, (2) `signToken()` → exp 조건부 설정, (3) `verifyToken()` → 반환 타입 수정, (4) 갱신 Check 5 → 무제한 조기 거부 후 `exp!` 사용, (5) MCP `applyToken()` → exp undefined 허용 + 범위 체크 조건부 |
-| 4 | Admin Settings 하위 호환 | 3키 삭제 시 기존 config.toml에 남아 있는 값 | config.toml 파싱에서 unknown key는 무시(Zod passthrough). 경고 로그 출력 |
+| 4 | Admin Settings 하위 호환 | 3키 삭제 시 기존 설정값 잔존 | config.toml: Zod passthrough로 unknown key 무시, 경고 로그 출력. Admin Settings DB: `getAllMasked()`가 `SETTING_DEFINITIONS` 레지스트리만 순회하므로 삭제된 키의 DB 행은 API 응답에 자동 제외. 별도 마이그레이션 불필요 |
 
 ---
 
@@ -449,6 +504,13 @@ const status = session.revokedAt
 | mcp | `session-manager.ts` | `applyToken()`: exp optional 검증. `start()`: 무제한 active 유지, 갱신/recovery 스킵 |
 | cli | `commands/mcp-setup.ts` | `--expires-in` → `--ttl`(일) 리네임 + 필드명 버그 수정(`expiresIn`→`ttl`), `--max-renewals`, `--lifetime`(일) 추가, 기본 무제한 |
 | admin | `pages/sessions.tsx` | Settings 탭 3키 제거, Create 모달 Advanced 섹션, 목록 무제한 표시(expiresAt=0 → `—`) |
+| sdk | `types.ts` | `CreateSessionParams.expiresIn` → `ttl` 리네임, `maxRenewals`·`absoluteLifetime` 추가. `CreateSessionResponse.expiresAt` 0=무제한 문서화 |
+| sdk | `client.ts` | `createSession()` 본문 구성: `expiresIn` → `ttl`, 신규 필드 조건부 포함 |
+| daemon | `infrastructure/db/schema.ts` | `sessions.maxRenewals` Drizzle `.default(12)` → `.default(0)` (앱 레벨 default 정합성, DDL 변경 아님) |
+| skills | `wallet.skill.md` | 세션 생성 파라미터: `ttl` 기본값 무제한, `maxRenewals`·`absoluteLifetime` 추가 |
+| skills | `quickstart.skill.md` | 세션 생성 예제: 기본 무제한 반영 |
+| skills | `admin.skill.md` | `expiresIn` → `ttl`, 신규 파라미터 추가 |
+| skills | `session-recovery.skill.md` | 무제한 세션 갱신 거부(RENEWAL_NOT_REQUIRED) 동작 반영 |
 
 ---
 
@@ -457,7 +519,7 @@ const status = session.revokedAt
 | 항목 | 예상 |
 |------|------|
 | 페이즈 | 2개 (API+로직+MCP 1 / Admin UI+CLI+테스트 1) |
-| 신규/수정 파일 | 11-14개 |
+| 신규/수정 파일 | 19-22개 |
 | 테스트 | 18-22개 |
 | DB 마이그레이션 | 불필요 — expiresAt, absoluteExpiresAt, maxRenewals 컬럼 이미 per-session 존재 |
 
@@ -465,4 +527,5 @@ const status = session.revokedAt
 
 *생성일: 2026-03-01*
 *검증일: 2026-03-02 — 코드베이스 대조 결과 반영 (섹션 3 재작성, 갭 4건 보완, 기술 결정 3건 추가)*
+*보완일: 2026-03-02 — SDK 변경·Drizzle default 정합성·Skill 파일 동기화·Admin Settings DB 잔존 행 처리 5건 보완 (기술 결정 10-12, 수정 대상 +8파일)*
 *관련: v0.8 Owner 점진적 보안 모델, v26.4 멀티 지갑 세션*
