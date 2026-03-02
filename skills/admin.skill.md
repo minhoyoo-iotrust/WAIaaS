@@ -325,7 +325,7 @@ curl -s -X POST http://localhost:3100/v1/admin/notifications/test \
 }
 ```
 
-> **ntfy channel:** In Admin UI, ntfy has its own section in Notifications Settings (separate from Other Channels). Per-app notification settings (Signing/Alerts toggles) are managed in Human Wallet Apps.
+> **ntfy channel:** Per-wallet ntfy topics (sign_topic, notify_topic) are managed in Human Wallet Apps (`POST/PUT /v1/admin/wallet-apps`). The ntfy server URL is a shared global setting (`notifications.ntfy_server`).
 
 ### GET /v1/admin/notifications/log -- Query Delivery Logs
 
@@ -390,7 +390,6 @@ curl -s http://localhost:3100/v1/admin/settings \
     "notifications.telegram_chat_id": "123456789",
     "notifications.discord_webhook_url": false,
     "notifications.ntfy_server": "https://ntfy.sh",
-    "notifications.ntfy_topic": "",
     "notifications.slack_webhook_url": false,
     "notifications.locale": "en",
     "notifications.rate_limit_rpm": "20"
@@ -467,7 +466,7 @@ curl -s http://localhost:3100/v1/admin/settings \
 
 | Category        | Keys                                                    | Description                            |
 | --------------- | ------------------------------------------------------- | -------------------------------------- |
-| `notifications` | enabled, telegram_*, discord_*, ntfy_*, slack_*, locale, rate_limit_rpm | Notification channel configuration.  |
+| `notifications` | enabled, telegram_*, discord_*, ntfy_server, slack_*, locale, rate_limit_rpm | Notification channel configuration.  |
 | `rpc`           | solana_*, evm_*                                         | Blockchain RPC endpoint URLs.          |
 | `security`      | max_sessions_*, max_pending_tx, rate_limit_*, policy_defaults_* | Security and rate limiting.         |
 | `daemon`        | log_level                                               | Daemon runtime settings.               |
@@ -529,7 +528,6 @@ Notifications:
 - `notifications.telegram_chat_id` -- Telegram chat ID
 - `notifications.discord_webhook_url` -- Discord webhook URL (credential, encrypted at rest)
 - `notifications.ntfy_server` -- ntfy server URL (default: "https://ntfy.sh")
-- `notifications.ntfy_topic` -- ntfy topic name
 - `notifications.slack_webhook_url` -- Slack webhook URL (credential, encrypted at rest)
 - `notifications.locale` -- Notification locale ("en", "ko", etc.)
 - `notifications.rate_limit_rpm` -- Notification rate limit (per minute)
@@ -878,7 +876,7 @@ If no key exists for the provider, returns 404 `ACTION_NOT_FOUND`.
 
 ## 8. Human Wallet Apps Management (v29.7)
 
-Manage Human Wallet Apps -- the wallet applications used by the human operator for signing requests and activity alerts. Apps are tied to ntfy notification topics (`waiaas-sign-{name}` for signing, `waiaas-notify-{name}` for alerts).
+Manage Human Wallet Apps -- the wallet applications used by the human operator for signing requests and activity alerts. Each app has explicit `sign_topic` and `notify_topic` fields for ntfy push notifications (defaults: `waiaas-sign-{name}`, `waiaas-notify-{name}`). Topics are editable per-app.
 
 When a wallet preset (e.g., D'CENT) is applied to a wallet via `PUT /v1/wallets/{id}/owner`, the corresponding app is automatically registered in the wallet_apps registry.
 
@@ -903,6 +901,8 @@ curl -s http://localhost:3100/v1/admin/wallet-apps \
       "display_name": "D'CENT Wallet",
       "signing_enabled": true,
       "alerts_enabled": true,
+      "sign_topic": "waiaas-sign-dcent",
+      "notify_topic": "waiaas-notify-dcent",
       "used_by": [
         {"id": "<wallet-uuid>", "label": "my-wallet"}
       ],
@@ -920,6 +920,8 @@ curl -s http://localhost:3100/v1/admin/wallet-apps \
 | `display_name` | string | Human-readable display name. |
 | `signing_enabled` | boolean | Whether signing requests are routed to this app. |
 | `alerts_enabled` | boolean | Whether activity alerts are sent to this app. |
+| `sign_topic` | string\|null | ntfy topic for signing requests (null = default `waiaas-sign-{name}`). |
+| `notify_topic` | string\|null | ntfy topic for activity alerts (null = default `waiaas-notify-{name}`). |
 | `used_by` | array | Wallets using this app (`wallet_type` = app name). |
 | `created_at` | integer | Unix timestamp (seconds). |
 | `updated_at` | integer | Unix timestamp (seconds). |
@@ -932,7 +934,7 @@ Register a new wallet app manually.
 curl -s -X POST http://localhost:3100/v1/admin/wallet-apps \
   -H 'Content-Type: application/json' \
   -H 'X-Master-Password: <password>' \
-  -d '{"name": "my-custom-wallet", "display_name": "My Custom Wallet"}'
+  -d '{"name": "my-custom-wallet", "display_name": "My Custom Wallet", "sign_topic": "custom-sign", "notify_topic": "custom-notify"}'
 ```
 
 **Request body:**
@@ -941,6 +943,8 @@ curl -s -X POST http://localhost:3100/v1/admin/wallet-apps \
 | ----- | ---- | -------- | ----------- |
 | `name` | string | Yes | Unique app identifier (lowercase, kebab-case). |
 | `display_name` | string | Yes | Human-readable display name. |
+| `sign_topic` | string | No | ntfy topic for signing requests (auto-generates `waiaas-sign-{name}` if omitted). |
+| `notify_topic` | string | No | ntfy topic for activity alerts (auto-generates `waiaas-notify-{name}` if omitted). |
 
 **Response (201):**
 ```json
@@ -951,6 +955,8 @@ curl -s -X POST http://localhost:3100/v1/admin/wallet-apps \
     "display_name": "My Custom Wallet",
     "signing_enabled": true,
     "alerts_enabled": true,
+    "sign_topic": "custom-sign",
+    "notify_topic": "custom-notify",
     "used_by": [],
     "created_at": 1707000000,
     "updated_at": 1707000000
@@ -960,15 +966,15 @@ curl -s -X POST http://localhost:3100/v1/admin/wallet-apps \
 
 Error: `WALLET_APP_DUPLICATE` (409) if an app with the same name already exists.
 
-### PUT /v1/admin/wallet-apps/{id} -- Update App Toggles
+### PUT /v1/admin/wallet-apps/{id} -- Update Wallet App
 
-Toggle signing and/or alerts for a wallet app.
+Update signing/alerts toggles and/or ntfy topics for a wallet app.
 
 ```bash
 curl -s -X PUT http://localhost:3100/v1/admin/wallet-apps/<app-uuid> \
   -H 'Content-Type: application/json' \
   -H 'X-Master-Password: <password>' \
-  -d '{"signing_enabled": true, "alerts_enabled": false}'
+  -d '{"signing_enabled": true, "alerts_enabled": false, "sign_topic": "my-sign-topic"}'
 ```
 
 **Request body:**
@@ -977,6 +983,8 @@ curl -s -X PUT http://localhost:3100/v1/admin/wallet-apps/<app-uuid> \
 | ----- | ---- | -------- | ----------- |
 | `signing_enabled` | boolean | No | Enable/disable signing request routing. |
 | `alerts_enabled` | boolean | No | Enable/disable activity alert notifications. |
+| `sign_topic` | string | No | Update ntfy signing request topic. |
+| `notify_topic` | string | No | Update ntfy activity alert topic. |
 
 **Response (200):** Same schema as POST response (includes `used_by`).
 
