@@ -76,37 +76,37 @@ None — all session progressive security features are in v1 scope.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SESS-01 | TBD | Pending |
-| SESS-02 | TBD | Pending |
-| SESS-03 | TBD | Pending |
-| SESS-04 | TBD | Pending |
-| SESS-05 | TBD | Pending |
-| JWT-01 | TBD | Pending |
-| JWT-02 | TBD | Pending |
-| JWT-03 | TBD | Pending |
-| RENW-01 | TBD | Pending |
-| RENW-02 | TBD | Pending |
-| RENW-03 | TBD | Pending |
-| RENW-04 | TBD | Pending |
-| CONF-01 | TBD | Pending |
-| CONF-02 | TBD | Pending |
-| MCP-01 | TBD | Pending |
-| MCP-02 | TBD | Pending |
-| CLI-01 | TBD | Pending |
-| CLI-02 | TBD | Pending |
-| CLI-03 | TBD | Pending |
-| ADUI-01 | TBD | Pending |
-| ADUI-02 | TBD | Pending |
-| ADUI-03 | TBD | Pending |
-| SDK-01 | TBD | Pending |
-| SDK-02 | TBD | Pending |
-| SKIL-01 | TBD | Pending |
+| SESS-01 | Phase 300 | Pending |
+| SESS-02 | Phase 300 | Pending |
+| SESS-03 | Phase 300 | Pending |
+| SESS-04 | Phase 300 | Pending |
+| SESS-05 | Phase 300 | Pending |
+| JWT-01 | Phase 300 | Pending |
+| JWT-02 | Phase 300 | Pending |
+| JWT-03 | Phase 300 | Pending |
+| RENW-01 | Phase 300 | Pending |
+| RENW-02 | Phase 300 | Pending |
+| RENW-03 | Phase 300 | Pending |
+| RENW-04 | Phase 300 | Pending |
+| CONF-01 | Phase 300 | Pending |
+| CONF-02 | Phase 300 | Pending |
+| MCP-01 | Phase 301 | Pending |
+| MCP-02 | Phase 301 | Pending |
+| CLI-01 | Phase 301 | Pending |
+| CLI-02 | Phase 301 | Pending |
+| CLI-03 | Phase 301 | Pending |
+| ADUI-01 | Phase 301 | Pending |
+| ADUI-02 | Phase 301 | Pending |
+| ADUI-03 | Phase 301 | Pending |
+| SDK-01 | Phase 301 | Pending |
+| SDK-02 | Phase 301 | Pending |
+| SKIL-01 | Phase 301 | Pending |
 
 **Coverage:**
 - v1 requirements: 25 total
-- Mapped to phases: 0
-- Unmapped: 25
+- Mapped to phases: 25
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-02*
-*Last updated: 2026-03-02 after initial definition*
+*Last updated: 2026-03-02 after roadmap creation (traceability updated)*

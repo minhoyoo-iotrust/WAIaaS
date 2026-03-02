@@ -34,6 +34,7 @@
 - ✅ **v29.6 Pendle Yield Trading + Yield 프레임워크** -- Phases 288-290 (shipped 2026-03-01)
 - ✅ **v29.7 D'CENT 직접 서명 + Human Wallet Apps 통합** -- Phases 291-296 (shipped 2026-03-01)
 - ✅ **v29.8 Solana Perp DEX (Drift) + Perp 프레임워크** -- Phases 297-299 (shipped 2026-03-02)
+- [ ] **v29.9 세션 점진적 보안 모델** -- Phases 300-301 (in progress)
 
 ## Phases
 
@@ -73,7 +74,7 @@ See `.planning/milestones/` for archived phase details.
 </details>
 
 <details>
-<summary>✅ v29.0-v29.7 (Phases 268-296) -- SHIPPED 2026-03-01</summary>
+<summary>✅ v29.0-v29.8 (Phases 268-299) -- SHIPPED 2026-03-02</summary>
 
 - [x] Phase 268-273: 고급 DeFi 프로토콜 설계 (v29.0) -- completed 2026-02-26
 - [x] Phase 274-278: EVM Lending -- Aave V3 (v29.2) -- completed 2026-02-27
@@ -82,71 +83,49 @@ See `.planning/milestones/` for archived phase details.
 - [x] Phase 285-287: 내부 일관성 정리 (v29.5) -- completed 2026-02-28
 - [x] Phase 288-290: Pendle Yield Trading + Yield 프레임워크 (v29.6) -- completed 2026-03-01
 - [x] Phase 291-296: D'CENT 직접 서명 + Human Wallet Apps 통합 (v29.7) -- completed 2026-03-01
+- [x] Phase 297-299: Solana Perp DEX (Drift) + Perp 프레임워크 (v29.8) -- completed 2026-03-02
 
-See `.planning/milestones/v29.0-ROADMAP.md` through `v29.7-ROADMAP.md` for full details.
+See `.planning/milestones/v29.0-ROADMAP.md` through `v29.8-ROADMAP.md` for full details.
 
 </details>
 
-### v29.8 Solana Perp DEX (Drift) + Perp 프레임워크 (Shipped 2026-03-02)
+### v29.9 세션 점진적 보안 모델 (In Progress)
 
-**Milestone Goal:** DeFi Perp(무기한 선물) 프레임워크를 구축하고 Drift Protocol을 첫 번째 Perp Provider로 구현하여 AI 에이전트가 Solana에서 레버리지 트레이딩을 정책 평가 하에 실행
+**Milestone Goal:** 세션 수명 모델을 글로벌 설정 기반에서 per-session 선택적 지정으로 전환하여, 기본 무제한 세션과 선택적 유한 세션이 공존하는 점진적 보안 구조를 완성한다
 
-- [x] **Phase 297: Perp 프레임워크** - IPerpProvider 인터페이스, PerpPositionTracker, MarginMonitor, PerpPolicyEvaluator (completed 2026-03-01)
-- [x] **Phase 298: Drift Provider** - DriftSdkWrapper, DriftMarketData, DriftPerpProvider 5 액션 구현 (completed 2026-03-01)
-- [x] **Phase 299: 통합** - MCP 5도구, Admin Settings/UI, actions.skill.md, TS/Python SDK, REST API, 자동 등록 (completed 2026-03-01)
+- [ ] **Phase 300: Session Core API + JWT + Renewal** - 무제한 세션 기본값, per-session TTL/갱신 제어, 글로벌 세션 설정 제거
+- [ ] **Phase 301: MCP + CLI + SDK + Admin UI + Skill Files** - 통합 계층 전체를 새 세션 모델에 맞춰 업데이트
 
 ## Phase Details
 
-### Phase 297: Perp 프레임워크
-**Goal**: AI 에이전트가 Perp 트레이딩을 위한 표준 인터페이스/추적/모니터링/정책 평가 인프라를 갖춘다
-**Depends on**: Nothing (first phase of v29.8; builds on existing IActionProvider, PositionTracker, HealthFactorMonitor, defi_positions 인프라)
-**Requirements**: PERP-01, PERP-02, PERP-03, PERP-04, PERP-05, PERP-06, PERP-07
+### Phase 300: Session Core API + JWT + Renewal
+**Goal**: 세션 수명 모델을 글로벌 설정 기반에서 per-session 선택적 지정으로 전환하여, 기본 무제한 세션과 선택적 유한 세션이 공존하는 구조를 완성한다
+**Depends on**: Nothing (first phase of v29.9; builds on existing SessionService, JwtService, renewal 5-step validation)
+**Requirements**: SESS-01, SESS-02, SESS-03, SESS-04, SESS-05, JWT-01, JWT-02, JWT-03, RENW-01, RENW-02, RENW-03, RENW-04, CONF-01, CONF-02
 **Success Criteria** (what must be TRUE):
-  1. IPerpProvider 인터페이스가 IActionProvider를 확장하여 5 표준 액션(open/close/modify_position, add/withdraw_margin)과 getPosition/getMarginInfo/getMarkets 메서드를 정의하며, 타입이 @waiaas/core에서 export된다
-  2. PerpPositionTracker가 defi_positions 테이블에 category='PERP' 포지션을 기록하고, metadata에 market/direction/size/entry_price/leverage/unrealized_pnl/margin/liquidation_price 필드가 저장된다
-  3. MarginMonitor가 마진 비율 임계값 접근 시 MARGIN_WARNING 알림을, 청산 가격 접근 시 LIQUIDATION_IMMINENT 경고를 EventBus로 발행하며, 위험 시 폴링 간격이 단축된다
-  4. PerpPolicyEvaluator가 max_leverage 초과, max_position_usd 초과, allowed_markets 미포함 요청에 대해 각각 거부/APPROVAL 격상을 수행한다
-**Plans**: 2 plans
+  1. TTL/maxRenewals/absoluteLifetime 없이 생성된 세션이 만료 없이 모든 API 엔드포인트에서 인증에 성공한다
+  2. TTL을 지정한 유한 세션의 JWT에 정확한 exp 클레임이 포함되고, 무제한 세션의 JWT에는 exp 클레임이 없다
+  3. 무제한 세션에 갱신 요청 시 400 RENEWAL_NOT_REQUIRED 에러가 반환되고, 유한 세션의 5단계 갱신 검증은 기존과 동일하게 동작한다
+  4. Admin Settings에서 session_ttl, session_absolute_lifetime, session_max_renewals 3개 키가 제거되고, DaemonConfig security 스키마에서도 해당 필드가 사라진다
+  5. 세션 목록 API에서 무제한 세션이 status=ACTIVE로 표시된다 (EXPIRED가 아닌)
+**Plans**: TBD
 
-Plans:
-- [x] 297-01-PLAN.md -- IPerpProvider 인터페이스 + Zod 스키마 + 이벤트/정책 타입 확장
-- [x] 297-02-PLAN.md -- MarginMonitor + PerpPolicyEvaluator 구현
-
-### Phase 298: Drift Provider
-**Goal**: AI 에이전트가 Drift Protocol에서 포지션 개설/청산/변경/마진 관리를 실행할 수 있다
-**Depends on**: Phase 297
-**Requirements**: DRIFT-01, DRIFT-02, DRIFT-03, DRIFT-04, DRIFT-05, DRIFT-06, DRIFT-07, DRIFT-08
+### Phase 301: MCP + CLI + SDK + Admin UI + Skill Files
+**Goal**: 모든 통합 계층(MCP, CLI, SDK, Admin UI, Skill Files)이 새 세션 점진적 보안 모델을 올바르게 반영하여, 사용자가 어떤 인터페이스에서든 무제한/유한 세션을 일관되게 생성하고 관리할 수 있다
+**Depends on**: Phase 300
+**Requirements**: MCP-01, MCP-02, CLI-01, CLI-02, CLI-03, ADUI-01, ADUI-02, ADUI-03, SDK-01, SDK-02, SKIL-01
 **Success Criteria** (what must be TRUE):
-  1. DriftSdkWrapper가 @drift-labs/sdk를 래핑하여 DriftClient 초기화, 오더 빌딩, 포지션/마진 조회를 추상화하며, @solana/web3.js 1.x 타입이 @solana/kit 6.x와 격리되어 호환성 문제가 없다
-  2. DriftPerpProvider가 open_position 액션으로 market/limit 주문을 통해 Drift 포지션을 개설하고, close_position으로 전체/부분 청산(percentage 파라미터)을 수행한다
-  3. DriftPerpProvider가 modify_position으로 포지션 크기/레버리지를 변경하고, add_margin/withdraw_margin으로 마진을 추가/출금한다
-  4. DriftMarketData가 Drift 시장 목록, 펀딩 레이트, 오라클 가격, 오픈 인터레스트를 조회하며, DriftPerpProvider.getMarkets()가 이 데이터를 반환한다
-**Plans**: 3 plans
-
-Plans:
-- [x] 298-01-PLAN.md -- DriftSdkWrapper + IDriftSdkWrapper 인터페이스 + MockDriftSdkWrapper + Zod 입력 스키마
-- [x] 298-02-PLAN.md -- DriftMarketData + DriftPerpProvider 5 액션 (IPerpProvider + IPositionProvider)
-- [x] 298-03-PLAN.md -- Drift Provider 유닛 테스트 (SDK wrapper + market data + provider)
-
-### Phase 299: 통합
-**Goal**: Drift Perp 트레이딩이 MCP/Admin/SDK/REST API 전 인터페이스에서 일관되게 사용 가능하다
-**Depends on**: Phase 298
-**Requirements**: INTG-01, INTG-02, INTG-03, INTG-04, INTG-05, INTG-06, INTG-07
-**Success Criteria** (what must be TRUE):
-  1. MCP 5개 Drift Perp 도구(open/close/modify_position, add/withdraw_margin)가 mcpExpose=true로 자동 노출되며, TS/Python SDK에서 executeAction으로 Drift Perp 액션을 실행할 수 있다
-  2. Admin Settings 5키(drift_enabled/max_leverage/max_position_usd/margin_warning_threshold_pct/position_sync_interval_sec)가 런타임 조정 가능하고, Admin UI Actions 페이지에 Drift Perp Trading 카드가 표시된다
-  3. registerBuiltInProviders에서 DriftPerpProvider가 자동 등록되며, actions.drift_enabled 설정으로 활성화/비활성화가 제어된다
-  4. GET /v1/wallets/:id/positions에서 Perp 포지션(category='PERP')이 Lending/Yield 포지션과 함께 통합 반환되고, actions.skill.md에 Drift Perp Trading 섹션이 추가된다
-**Plans**: 2 plans
-
-Plans:
-- [x] 299-01-PLAN.md -- registerBuiltInProviders 등록 + hot-reload BUILTIN_NAMES 추가
-- [x] 299-02-PLAN.md -- Admin UI Drift 카드 + actions.skill.md 섹션 추가
+  1. MCP SessionManager가 exp 클레임 없는 JWT를 수용하고, 무제한 세션에 대해 갱신 스케줄링과 복구를 건너뛴다
+  2. `waiaas mcp setup`이 기본으로 무제한 세션을 생성하고, --ttl/--max-renewals/--lifetime 플래그로 유한 세션을 생성할 수 있다
+  3. Admin UI Sessions Settings 탭에서 3개 세션 수명 키가 제거되고, Create Session 모달에 Advanced 섹션이 추가되어 per-session TTL/Renewals/Lifetime을 일 단위로 입력할 수 있다
+  4. SDK의 CreateSessionParams에서 expiresIn이 ttl로 리네이밍되고, maxRenewals와 absoluteLifetime 파라미터가 추가되어, createSession()이 새 API 형식으로 요청한다
+  5. 관련 skill 파일(wallet, quickstart, admin, session-recovery)이 새 세션 파라미터를 반영한다
+**Plans**: TBD
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 297 -> 298 -> 299
+Phases execute in numeric order: 300 -> 301
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -155,10 +134,9 @@ Phases execute in numeric order: 297 -> 298 -> 299
 | 198-214 | v2.6-v26.4 | All | Complete | 2026-02-21 |
 | 215-243 | v27.0-v27.4 | All | Complete | 2026-02-23 |
 | 244-267 | v28.0-v28.8 | All | Complete | 2026-02-26 |
-| 268-296 | v29.0-v29.7 | All | Complete | 2026-03-01 |
-| 297. Perp 프레임워크 | v29.8 | 2/2 | Complete | 2026-03-02 |
-| 298. Drift Provider | v29.8 | 3/3 | Complete | 2026-03-02 |
-| 299. 통합 | v29.8 | 2/2 | Complete | 2026-03-02 |
+| 268-299 | v29.0-v29.8 | All | Complete | 2026-03-02 |
+| 300. Session Core API + JWT + Renewal | v29.9 | 0/TBD | Not started | - |
+| 301. MCP + CLI + SDK + Admin UI + Skill Files | v29.9 | 0/TBD | Not started | - |
 
 ---
-*Last updated: 2026-03-02 after v29.8 milestone completion*
+*Last updated: 2026-03-02 after v29.9 roadmap creation*
