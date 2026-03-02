@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.9.0-rc.10](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc.9...v2.9.0-rc.10) (2026-03-02)
+
+
+### Bug Fixes
+
+* ntfy Channel Status shows per-wallet topic count ([#228](https://github.com/minhoyoo-iotrust/WAIaaS/issues/228)) ([7664430](https://github.com/minhoyoo-iotrust/WAIaaS/commit/76644307c623390560d5a4d0152128d1a9d78ce7))
+* ntfy Channel Status shows per-wallet topic count ([#228](https://github.com/minhoyoo-iotrust/WAIaaS/issues/228)) ([7c2a53a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7c2a53abe7f21383978ce354db6802cd96c33a92))
+
 ## [2.9.0-rc.9](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc.8...v2.9.0-rc.9) (2026-03-02)
 
 
