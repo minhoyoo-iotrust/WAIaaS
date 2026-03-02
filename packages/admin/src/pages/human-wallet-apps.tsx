@@ -151,7 +151,6 @@ export default function HumanWalletAppsPage() {
     try {
       const result = await apiPost<{ success: boolean; topic?: string; error?: string }>(
         API.ADMIN_WALLET_APP_TEST_NOTIFICATION(app.id),
-        {},
       );
       if (result.success) {
         showToast(`Test notification sent to ${result.topic}`, 'success');
