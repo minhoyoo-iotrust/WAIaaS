@@ -111,11 +111,11 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v29.9-ROADMAP.md` for full 
   3. 지갑 앱 등록 시 signTopic/notifyTopic을 지정하지 않으면 prefix+appName 기반 기본값이 자동 생성되고, API 응답에 토픽 필드가 포함된다
   4. Telegram/Discord/Slack 알림 채널이 글로벌 NtfyChannel 제거 후에도 정상 동작한다
   5. notifications.ntfy_topic 설정 키가 제거되고, ntfy_server와 prefix 설정은 유지된다
-**Plans**: TBD
+**Plans**: 2 plans (Wave 1 → Wave 2)
 
 Plans:
-- [ ] 302-01: DB 스키마 마이그레이션 + 토픽 기본값 + 등록/조회 로직
-- [ ] 302-02: 채널 토픽 소스 전환 + 글로벌 NtfyChannel 제거 + REST API 확장
+- [ ] 302-01-PLAN.md — DB migration v33 (sign_topic/notify_topic columns) + WalletAppService topic fields + REST API extension + Admin Settings cleanup
+- [ ] 302-02-PLAN.md — Channel topic source switch (SignRequestBuilder + WalletNotificationChannel) + global NtfyChannel removal + tests
 
 ### Phase 303: Admin UI + Skill Files
 **Goal**: 사용자가 Admin UI에서 per-wallet 토픽을 확인/편집할 수 있고, 글로벌 Ntfy 카드가 제거되어 혼란 없는 알림 관리 경험을 제공한다
