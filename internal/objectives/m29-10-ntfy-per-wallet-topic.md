@@ -207,12 +207,13 @@ const topic = walletApp.notifyTopic ?? `${fallbackPrefix}-${appName}`;
 |--------|------|----------|
 | daemon | `infrastructure/database/schema.ts` | `wallet_apps` 테이블에 `sign_topic`, `notify_topic` 컬럼 추가 |
 | daemon | `infrastructure/database/migrations/` | ALTER TABLE 마이그레이션 + 기존 행 기본값 채움 |
+| daemon | `services/signing-sdk/sign-request-builder.ts` | 토픽 결정 로직을 wallet_apps 테이블 기반으로 변경 |
 | daemon | `services/signing-sdk/channels/ntfy-signing-channel.ts` | 토픽 소스를 wallet_apps 테이블로 변경 |
 | daemon | `services/signing-sdk/channels/wallet-notification-channel.ts` | 토픽 소스를 wallet_apps 테이블로 변경 |
 | daemon | `lifecycle/daemon.ts` | NotificationService 글로벌 NtfyChannel 초기화 제거 |
 | daemon | `infrastructure/settings/setting-keys.ts` | `notifications.ntfy_topic` 키 삭제 |
 | daemon | `api/routes/admin.ts` | wallet-apps CRUD에 토픽 필드 추가, notifications status에서 글로벌 Ntfy 제거 |
-| core | `schemas/wallet-app.schema.ts` | WalletApp 스키마에 signTopic/notifyTopic 추가 |
+| daemon | `api/routes/openapi-schemas.ts` | WalletApp OpenAPI 스키마에 signTopic/notifyTopic 추가 |
 | admin | `pages/notifications.tsx` | 글로벌 Ntfy 채널 카드 제거 |
 | admin | `pages/wallets.tsx` (Human Wallet Apps) | 토픽 필드 표시/편집 UI 추가 |
 | skills | `admin.skill.md` | wallet-apps API 변경 반영 |
