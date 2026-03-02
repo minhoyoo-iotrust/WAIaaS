@@ -14,6 +14,7 @@
  */
 
 import {
+  type ChainType,
   type SignRequest,
   SignRequestSchema,
   WAIaaSError,
@@ -28,7 +29,7 @@ import { generateId } from '../../infrastructure/database/id.js';
 
 export interface BuildRequestParams {
   txId: string;
-  chain: 'solana' | 'evm';
+  chain: ChainType;
   network: string;
   type: string;
   from: string;

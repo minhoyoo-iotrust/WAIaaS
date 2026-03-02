@@ -219,7 +219,7 @@ describe('signing-sdk E2E integration', () => {
 
     const result = await channel.sendRequest({
       txId,
-      chain: 'evm',
+      chain: 'ethereum',
       network: 'ethereum-mainnet',
       type: 'TRANSFER',
       from: signerAddress,
@@ -290,7 +290,7 @@ describe('signing-sdk E2E integration', () => {
 
     await channel.sendRequest({
       txId,
-      chain: 'evm',
+      chain: 'ethereum',
       network: 'ethereum-mainnet',
       type: 'TRANSFER',
       from: signerAddress,
@@ -363,7 +363,7 @@ describe('signing-sdk E2E integration', () => {
 
       await shortChannel.sendRequest({
         txId,
-        chain: 'evm',
+        chain: 'ethereum',
         network: 'ethereum-mainnet',
         type: 'TRANSFER',
         from: signerAddress,
@@ -393,7 +393,7 @@ describe('signing-sdk E2E integration', () => {
     // Use the real builder to create a request
     const buildResult = builder.buildRequest({
       txId,
-      chain: 'evm',
+      chain: 'ethereum',
       network: 'ethereum-mainnet',
       type: 'TRANSFER',
       from: signerAddress,
@@ -493,7 +493,7 @@ describe('signing-sdk E2E integration', () => {
 
     await channel.sendRequest({
       txId,
-      chain: 'evm',
+      chain: 'ethereum',
       network: 'ethereum-mainnet',
       type: 'TRANSFER',
       from: signerAddress,

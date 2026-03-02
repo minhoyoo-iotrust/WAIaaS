@@ -121,14 +121,20 @@ describe('SignRequestSchema', () => {
     }
   });
 
-  it('parses a SignRequest with EVM chain', () => {
+  it('parses a SignRequest with ethereum chain', () => {
     const evmRequest = {
       ...validSignRequest,
-      chain: 'evm' as const,
+      chain: 'ethereum' as const,
       network: 'ethereum-mainnet',
     };
     const result = SignRequestSchema.parse(evmRequest);
-    expect(result.chain).toBe('evm');
+    expect(result.chain).toBe('ethereum');
+  });
+
+  it('rejects legacy evm chain value', () => {
+    expect(() =>
+      SignRequestSchema.parse({ ...validSignRequest, chain: 'evm' }),
+    ).toThrow();
   });
 
   it('rejects invalid version', () => {

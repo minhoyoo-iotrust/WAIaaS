@@ -42,7 +42,7 @@ import type { ApprovalWorkflow } from '../workflow/approval-workflow.js';
 import type { NotificationService } from '../notifications/notification-service.js';
 import type { SettingsService } from '../infrastructure/settings/settings-service.js';
 import type { IPriceOracle, IForexRateService, CurrencyCode } from '@waiaas/core';
-import { formatDisplayCurrency, formatAmount, type EventBus } from '@waiaas/core';
+import { formatDisplayCurrency, formatAmount, type EventBus, type ChainType } from '@waiaas/core';
 import type { WcSigningBridge } from '../services/wc-signing-bridge.js';
 import type { ApprovalChannelRouter } from '../services/signing-sdk/approval-channel-router.js';
 import { resolveEffectiveAmountUsd, type PriceResult } from './resolve-effective-amount-usd.js';
@@ -793,7 +793,7 @@ export async function stage4Wait(ctx: PipelineContext): Promise<void> {
       void ctx.approvalChannelRouter.route(ctx.walletId, {
         walletId: ctx.walletId,
         txId: ctx.txId,
-        chain: ctx.wallet.chain as 'solana' | 'evm',
+        chain: ctx.wallet.chain as ChainType,
         network: ctx.resolvedNetwork,
         type: (ctx.request as any).type ?? 'TRANSFER',
         from: ctx.wallet.publicKey,

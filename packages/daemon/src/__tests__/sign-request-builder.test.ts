@@ -81,7 +81,7 @@ function createMockWalletLinkRegistry() {
 
 const baseParams = {
   txId: '01935a3b-7c8d-7e00-b123-456789abcdef',
-  chain: 'evm' as const,
+  chain: 'ethereum' as const,
   network: 'ethereum-mainnet',
   type: 'TRANSFER',
   from: '0x1234567890abcdef1234567890abcdef12345678',
@@ -121,7 +121,7 @@ describe('SignRequestBuilder', () => {
     // SignRequest structure
     expect(result.request.version).toBe('1');
     expect(result.request.requestId).toBeDefined();
-    expect(result.request.chain).toBe('evm');
+    expect(result.request.chain).toBe('ethereum');
     expect(result.request.network).toBe('ethereum-mainnet');
     expect(result.request.metadata.txId).toBe(baseParams.txId);
     expect(result.request.metadata.type).toBe('TRANSFER');
