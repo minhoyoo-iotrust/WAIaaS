@@ -1015,6 +1015,44 @@ const notification = parseNotification(base64urlEncodedString);
 // notification: { version, eventType, walletId, walletName, category, title, body, details?, timestamp }
 ```
 
+## 14b. Wallet SDK: Push Relay Device Management
+
+The `@waiaas/wallet-sdk` package provides helper functions for registering and managing devices with the Push Relay server.
+
+### registerDevice(pushRelayUrl, apiKey, opts)
+
+Register a device for native push delivery via Push Relay.
+
+```typescript
+import { registerDevice } from '@waiaas/wallet-sdk';
+
+const { subscriptionToken } = await registerDevice(
+  'https://your-push-relay:3200',
+  'your-secret-api-key',
+  { walletName: 'my-wallet', pushToken: devicePushToken, platform: 'android' },
+);
+```
+
+### unregisterDevice(pushRelayUrl, apiKey, pushToken)
+
+Remove a device registration from Push Relay.
+
+```typescript
+import { unregisterDevice } from '@waiaas/wallet-sdk';
+
+await unregisterDevice('https://your-push-relay:3200', 'your-secret-api-key', devicePushToken);
+```
+
+### getSubscriptionToken(pushRelayUrl, apiKey, pushToken)
+
+Look up the subscription token for a registered device. Returns `null` if not found.
+
+```typescript
+import { getSubscriptionToken } from '@waiaas/wallet-sdk';
+
+const token = await getSubscriptionToken('https://your-push-relay:3200', 'your-secret-api-key', devicePushToken);
+```
+
 ### NotificationMessage Type
 
 ```typescript

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { mkdirSync, rmSync } from 'node:fs';
+import Database from 'better-sqlite3';
 import { DeviceRegistry } from '../registry/device-registry.js';
 
 let registry: DeviceRegistry;
@@ -75,5 +76,77 @@ describe('DeviceRegistry', () => {
     registry.register('dcent', 'token-1', 'ios');
     registry.register('dcent', 'token-2', 'android');
     expect(registry.count()).toBe(2);
+  });
+
+  it('enforces subscription_token uniqueness via index', () => {
+    registry.register('w1', 'token-1', 'ios');
+    const token1 = registry.getSubscriptionToken('token-1');
+    expect(token1).toBeTruthy();
+
+    // Force duplicate subscription_token via raw SQL
+    const dbPath = join(tmpDir, 'test.db');
+    const rawDb = new Database(dbPath);
+    expect(() => {
+      rawDb.prepare(
+        `INSERT INTO devices (push_token, wallet_name, platform, subscription_token, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`,
+      ).run('token-dup', 'w2', 'android', token1, 0, 0);
+    }).toThrow(/UNIQUE/);
+    rawDb.close();
+  });
+});
+
+describe('DeviceRegistry migration', () => {
+  it('migrates existing DB without subscription_token column', () => {
+    const dir = join(tmpdir(), `push-relay-mig-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    mkdirSync(dir, { recursive: true });
+    const dbPath = join(dir, 'legacy.db');
+
+    // Create legacy schema without subscription_token
+    const legacyDb = new Database(dbPath);
+    legacyDb.pragma('journal_mode = WAL');
+    legacyDb.exec(`
+      CREATE TABLE devices (
+        push_token TEXT PRIMARY KEY,
+        wallet_name TEXT NOT NULL,
+        platform TEXT NOT NULL CHECK (platform IN ('ios', 'android')),
+        created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+        updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+      )
+    `);
+    legacyDb.exec(`CREATE INDEX IF NOT EXISTS idx_devices_wallet_name ON devices(wallet_name)`);
+    legacyDb.prepare('INSERT INTO devices (push_token, wallet_name, platform, created_at, updated_at) VALUES (?, ?, ?, ?, ?)')
+      .run('existing-token', 'old-wallet', 'ios', 1000, 1000);
+    legacyDb.close();
+
+    // DeviceRegistry constructor triggers migration — should NOT crash
+    const reg = new DeviceRegistry(dbPath);
+    expect(reg.count()).toBe(1);
+
+    // subscription_token column should exist after migration
+    const result = reg.register('new-wallet', 'new-token', 'android');
+    expect(result.subscriptionToken).toBeTruthy();
+
+    // Existing row's subscription_token is null (not yet assigned)
+    expect(reg.getSubscriptionToken('existing-token')).toBeNull();
+
+    reg.close();
+    rmSync(dir, { recursive: true });
+  });
+
+  it('re-opening an already-migrated DB does not error', () => {
+    const dir = join(tmpdir(), `push-relay-reopen-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    mkdirSync(dir, { recursive: true });
+    const dbPath = join(dir, 'test.db');
+
+    const reg1 = new DeviceRegistry(dbPath);
+    reg1.register('w', 't', 'ios');
+    reg1.close();
+
+    // Second open — migration should be idempotent
+    const reg2 = new DeviceRegistry(dbPath);
+    expect(reg2.count()).toBe(1);
+    reg2.close();
+
+    rmSync(dir, { recursive: true });
   });
 });

@@ -9,6 +9,9 @@
  *   - formatDisplayMessage(request) - Human-readable transaction summary
  *   - sendViaNtfy(response, topic, serverUrl?) - Publish to ntfy response topic
  *   - sendViaRelay(response, topic, pushRelayUrl) - Send via Push Relay server
+ *   - registerDevice(pushRelayUrl, apiKey, opts) - Register device with Push Relay
+ *   - unregisterDevice(pushRelayUrl, apiKey, pushToken) - Unregister device from Push Relay
+ *   - getSubscriptionToken(pushRelayUrl, apiKey, pushToken) - Get subscription token for device
  *   - sendViaTelegram(response, botUsername) - Generate Telegram deeplink URL
  *   - subscribeToRequests(topic, callback, serverUrl?) - SSE subscription for sign requests
  *   - subscribeToNotifications(topic, callback, serverUrl?) - SSE subscription for notifications
@@ -29,6 +32,9 @@ export {
   subscribeToRequests,
   sendViaTelegram,
   sendViaRelay,
+  registerDevice,
+  unregisterDevice,
+  getSubscriptionToken,
   subscribeToNotifications,
   parseNotification,
 } from './channels/index.js';

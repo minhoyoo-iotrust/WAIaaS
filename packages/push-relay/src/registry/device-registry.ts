@@ -26,7 +26,7 @@ export class DeviceRegistry {
         push_token TEXT PRIMARY KEY,
         wallet_name TEXT NOT NULL,
         platform TEXT NOT NULL CHECK (platform IN ('ios', 'android')),
-        subscription_token TEXT UNIQUE,
+        subscription_token TEXT,
         created_at INTEGER NOT NULL DEFAULT (unixepoch()),
         updated_at INTEGER NOT NULL DEFAULT (unixepoch())
       )
@@ -35,10 +35,12 @@ export class DeviceRegistry {
       CREATE INDEX IF NOT EXISTS idx_devices_wallet_name ON devices(wallet_name)
     `);
     // Migration: add subscription_token column if missing (existing DBs)
+    // SQLite does not allow UNIQUE constraint in ALTER TABLE ADD COLUMN
     const cols = (this.db.prepare("PRAGMA table_info('devices')").all() as Array<{ name: string }>).map(c => c.name);
     if (!cols.includes('subscription_token')) {
-      this.db.exec(`ALTER TABLE devices ADD COLUMN subscription_token TEXT UNIQUE`);
+      this.db.exec(`ALTER TABLE devices ADD COLUMN subscription_token TEXT`);
     }
+    this.db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_devices_subscription_token ON devices(subscription_token)`);
   }
 
   register(walletName: string, pushToken: string, platform: 'ios' | 'android'): { subscriptionToken: string } {

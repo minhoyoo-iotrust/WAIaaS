@@ -1,6 +1,8 @@
 import type { PushPayload, ParsedNtfyMessage } from './message-parser.js';
 import { buildPushPayload, determineMessageType } from './message-parser.js';
 import type { IPayloadTransformer } from '../transformer/payload-transformer.js';
+import { createGunzip, createInflate, createBrotliDecompress } from 'node:zlib';
+import { Readable } from 'node:stream';
 
 const MAX_RECONNECT_DELAY_MS = 60_000;
 const INITIAL_RECONNECT_DELAY_MS = 1_000;
@@ -85,7 +87,26 @@ export class NtfySubscriber {
       // Reset reconnect delay on successful connection
       const nextDelay = INITIAL_RECONNECT_DELAY_MS;
 
-      const reader = (res.body as ReadableStream<Uint8Array>).getReader();
+      // Manual decompression — undici auto-decompression is unreliable for SSE streams
+      let bodyStream = res.body as ReadableStream<Uint8Array>;
+      const contentEncoding = res.headers.get('content-encoding');
+      if (contentEncoding && contentEncoding !== 'identity') {
+        const nodeStream = Readable.fromWeb(bodyStream as Parameters<typeof Readable.fromWeb>[0]);
+        let decompressor;
+        if (contentEncoding === 'gzip' || contentEncoding === 'x-gzip') {
+          decompressor = createGunzip();
+        } else if (contentEncoding === 'deflate') {
+          decompressor = createInflate();
+        } else if (contentEncoding === 'br') {
+          decompressor = createBrotliDecompress();
+        }
+        if (decompressor) {
+          const decompressed = nodeStream.pipe(decompressor);
+          bodyStream = Readable.toWeb(decompressed) as ReadableStream<Uint8Array>;
+        }
+      }
+
+      const reader = bodyStream.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
 
