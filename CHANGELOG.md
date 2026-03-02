@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.9.0-rc.17](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc.16...v2.9.0-rc.17) (2026-03-02)
+
+
+### Bug Fixes
+
+* **push-relay,daemon:** device-topic unicast routing and test notification device guard ([#240](https://github.com/minhoyoo-iotrust/WAIaaS/issues/240), [#241](https://github.com/minhoyoo-iotrust/WAIaaS/issues/241)) ([93aad14](https://github.com/minhoyoo-iotrust/WAIaaS/commit/93aad144a8af975f49ea9b29a052bec8114e9bea))
+* **push-relay,daemon:** device-topic unicast routing and test notification device guard ([#240](https://github.com/minhoyoo-iotrust/WAIaaS/issues/240), [#241](https://github.com/minhoyoo-iotrust/WAIaaS/issues/241)) ([5402372](https://github.com/minhoyoo-iotrust/WAIaaS/commit/5402372ffffea735eae2ba67af1e0a019393d473))
+
+
+### Code Refactoring
+
+* **push-relay:** extract topic routing logic into testable message-router module ([7125f25](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7125f2538956111875c44c391abaa2cfecac9ec7))
+
 ## [2.9.0-rc.16](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc.15...v2.9.0-rc.16) (2026-03-02)
 
 
