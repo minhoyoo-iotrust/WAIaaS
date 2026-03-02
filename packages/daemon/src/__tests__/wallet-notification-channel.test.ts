@@ -10,6 +10,8 @@
  * 6. SETTINGS-01/02: signing_sdk.enabled=false / notifications_enabled=false suppresses
  * 7. SETTINGS-03: notify_categories filters by category
  * 8. SETTINGS-04: notify_events filters by event
+ * 9. CHAN-02: notify_topic from wallet_apps DB used for ntfy publish URL
+ * 10. CHAN-05: system events reach all active wallet apps
  *
  * All HTTP calls mocked via globalThis.fetch -- no actual ntfy server.
  *
@@ -52,6 +54,7 @@ function createMockSettings(overrides: Record<string, string> = {}) {
 interface MockWalletAppRow {
   name: string;
   alerts_enabled: number;
+  notify_topic?: string | null;
 }
 
 function createMockSqlite(apps: MockWalletAppRow[]) {
@@ -59,7 +62,9 @@ function createMockSqlite(apps: MockWalletAppRow[]) {
     prepare: vi.fn((_sql: string) => ({
       all: vi.fn(() => {
         // wallet_apps WHERE alerts_enabled = 1
-        return apps.filter((a) => a.alerts_enabled === 1);
+        return apps
+          .filter((a) => a.alerts_enabled === 1)
+          .map((a) => ({ name: a.name, notify_topic: a.notify_topic ?? null }));
       }),
     })),
   } as any;
@@ -363,6 +368,71 @@ describe('WalletNotificationChannel', () => {
         Buffer.from(fetchMock.mock.calls[0]![1].body, 'base64url').toString('utf-8'),
       );
       expect(decoded.details).toEqual({ txId: 'abc-123', amount: '1.5' });
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // CHAN-02: notify_topic from wallet_apps DB used for ntfy publish URL
+  // -------------------------------------------------------------------------
+  describe('CHAN-02: DB-based notify_topic routing', () => {
+    it('T-CHAN-02a: uses custom notify_topic from DB for ntfy publish URL', async () => {
+      const settings = createMockSettings();
+      const appWithCustomTopic: MockWalletAppRow = {
+        name: 'dcent',
+        alerts_enabled: 1,
+        notify_topic: 'my-custom-notify-topic',
+      };
+      const sqlite = createMockSqlite([appWithCustomTopic]);
+      const channel = new WalletNotificationChannel({ sqlite, settingsService: settings });
+
+      await channel.notify('TX_CONFIRMED', SOME_WALLET_ID, 'Tx', 'Body');
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const url = fetchMock.mock.calls[0]![0];
+      expect(url).toBe('https://ntfy.sh/my-custom-notify-topic');
+    });
+
+    it('T-CHAN-02b: NULL notify_topic falls back to waiaas-notify-{appName}', async () => {
+      const settings = createMockSettings();
+      const appWithNullTopic: MockWalletAppRow = {
+        name: 'dcent',
+        alerts_enabled: 1,
+        notify_topic: null,
+      };
+      const sqlite = createMockSqlite([appWithNullTopic]);
+      const channel = new WalletNotificationChannel({ sqlite, settingsService: settings });
+
+      await channel.notify('TX_CONFIRMED', SOME_WALLET_ID, 'Tx', 'Body');
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const url = fetchMock.mock.calls[0]![0];
+      expect(url).toBe('https://ntfy.sh/waiaas-notify-dcent');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // CHAN-05: system events reach all active wallet apps
+  // -------------------------------------------------------------------------
+  describe('CHAN-05: system events broadcast to all alert-enabled apps', () => {
+    it('T-CHAN-05: broadcast event reaches all active wallet apps with correct topics', async () => {
+      const settings = createMockSettings();
+      const apps: MockWalletAppRow[] = [
+        { name: 'app-one', alerts_enabled: 1, notify_topic: 'custom-topic-one' },
+        { name: 'app-two', alerts_enabled: 1, notify_topic: 'custom-topic-two' },
+        { name: 'app-three', alerts_enabled: 1, notify_topic: null },
+      ];
+      const sqlite = createMockSqlite(apps);
+      const channel = new WalletNotificationChannel({ sqlite, settingsService: settings });
+
+      await channel.notify('UPDATE_AVAILABLE', SOME_WALLET_ID, 'Update', 'New version available');
+
+      // One fetch call per alert-enabled app
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+
+      const urls = fetchMock.mock.calls.map((c: any) => c[0]);
+      expect(urls).toContain('https://ntfy.sh/custom-topic-one');
+      expect(urls).toContain('https://ntfy.sh/custom-topic-two');
+      expect(urls).toContain('https://ntfy.sh/waiaas-notify-app-three'); // NULL fallback
     });
   });
 });
