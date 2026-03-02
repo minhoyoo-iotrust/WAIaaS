@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.9.0-rc.14](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc.13...v2.9.0-rc.14) (2026-03-02)
+
+
+### Bug Fixes
+
+* **push-relay:** replace Content-Encoding header check with magic-bytes compression detection ([#236](https://github.com/minhoyoo-iotrust/WAIaaS/issues/236)) ([55fbfdf](https://github.com/minhoyoo-iotrust/WAIaaS/commit/55fbfdf5d6135f9ded30ac0219173021e7717ed4))
+* **push-relay:** replace Content-Encoding header check with magic-bytes compression detection ([#236](https://github.com/minhoyoo-iotrust/WAIaaS/issues/236)) ([1158789](https://github.com/minhoyoo-iotrust/WAIaaS/commit/11587892a29438b9335a4d485eb8ee178842e515))
+
 ## [2.9.0-rc.13](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc.12...v2.9.0-rc.13) (2026-03-02)
 
 
