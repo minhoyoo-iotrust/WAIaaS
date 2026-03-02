@@ -234,7 +234,7 @@ async function createSession(
   const res = await app.request('/v1/sessions', {
     method: 'POST',
     headers: masterAuthJsonHeaders(),
-    body: JSON.stringify({ walletId }),
+    body: JSON.stringify({ walletId, ttl: 3600 }),
   });
   expect(res.status).toBe(201);
   const body = await json(res);
@@ -251,7 +251,7 @@ async function createMultiWalletSession(
   const res = await app.request('/v1/sessions', {
     method: 'POST',
     headers: masterAuthJsonHeaders(),
-    body: JSON.stringify({ walletIds }),
+    body: JSON.stringify({ walletIds, ttl: 3600 }),
   });
   expect(res.status).toBe(201);
   const body = await json(res);

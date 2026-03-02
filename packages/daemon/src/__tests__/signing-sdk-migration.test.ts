@@ -145,7 +145,7 @@ describe('v18 migration on existing DB', () => {
     // Since pushSchema records all versions, we test v18 in isolation
     const v18Migration: Migration[] = [
       {
-        version: 32, // Use 32 to avoid conflict with existing v18-v31
+        version: 33, // Use 33 to avoid conflict with existing v18-v32
         description: 'Test: Add owner_approval_method via ALTER (simulated)',
         up: (db) => {
           // Check column was already added by the real v18 migration
