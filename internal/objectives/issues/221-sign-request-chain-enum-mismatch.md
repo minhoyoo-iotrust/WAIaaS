@@ -2,8 +2,10 @@
 
 - **유형:** BUG
 - **심각도:** HIGH
-- **상태:** OPEN
+- **마일스톤:** v29.9
+- **상태:** FIXED
 - **발견일:** 2026-03-02
+- **수정일:** 2026-03-02
 - **컴포넌트:** `@waiaas/core` (signing-protocol), `@waiaas/daemon` (signing-sdk)
 
 ## 증상

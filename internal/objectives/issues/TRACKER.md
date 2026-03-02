@@ -234,8 +234,8 @@
 | 217 | BUG | HIGH | 기본 네트워크 제거 잔재 — Lido 팩토리 에러 + OpenAPI/코멘트 불일치 | v29.6 | FIXED | 2026-03-01 |
 | 218 | ENHANCEMENT | HIGH | SDK auto-connect — 데몬 자동 탐색 + 옵트인 자동 기동 | v29.8 | FIXED | 2026-03-02 |
 | 219 | BUG | CRITICAL | Push Relay 서버 시작 10초 후 강제 종료 — Shutdown 타이머 즉시 시작 | v29.8 | FIXED | 2026-03-01 |
-| 220 | MISSING | LOW | Push Relay 서버 버전 정보 노출 수단 없음 — health/로그/CLI 모두 미지원 | TBD | OPEN | — |
-| 221 | BUG | HIGH | SignRequestSchema chain 열거값 불일치 — `'evm'` vs SSoT `'ethereum'` | TBD | OPEN | — |
+| 220 | MISSING | LOW | Push Relay 서버 버전 정보 노출 수단 없음 — health/로그/CLI 모두 미지원 | v29.9 | FIXED | 2026-03-02 |
+| 221 | BUG | HIGH | SignRequestSchema chain 열거값 불일치 — `'evm'` vs SSoT `'ethereum'` | v29.9 | FIXED | 2026-03-02 |
 
 ## Type Legend
 
@@ -247,8 +247,8 @@
 
 ## Summary
 
-- **OPEN:** 2
-- **FIXED:** 219
+- **OPEN:** 0
+- **FIXED:** 221
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1
