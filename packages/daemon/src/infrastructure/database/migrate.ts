@@ -2265,8 +2265,9 @@ MIGRATIONS.push({
   version: 33,
   description: 'Add sign_topic and notify_topic columns to wallet_apps for per-wallet ntfy topic routing',
   up: (sqlite) => {
-    sqlite.exec(`ALTER TABLE wallet_apps ADD COLUMN sign_topic TEXT`);
-    sqlite.exec(`ALTER TABLE wallet_apps ADD COLUMN notify_topic TEXT`);
+    const cols = (sqlite.prepare("PRAGMA table_info('wallet_apps')").all() as Array<{ name: string }>).map(c => c.name);
+    if (!cols.includes('sign_topic')) sqlite.exec(`ALTER TABLE wallet_apps ADD COLUMN sign_topic TEXT`);
+    if (!cols.includes('notify_topic')) sqlite.exec(`ALTER TABLE wallet_apps ADD COLUMN notify_topic TEXT`);
     // Backfill existing rows with prefix+appName defaults
     const prefix = 'waiaas-sign';
     const notifyPrefix = 'waiaas-notify';
