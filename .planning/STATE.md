@@ -1,8 +1,8 @@
 ---
 gsd_state_version: 1.0
-milestone: v29.8
-milestone_name: Solana Perp DEX (Drift) + Perp 프레임워크
-status: complete
+milestone: v29.9
+milestone_name: 세션 점진적 보안 모델
+status: defining_requirements
 last_updated: "2026-03-02"
 progress:
   total_phases: 299
@@ -18,16 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-02)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v29.8 complete -- ready for next milestone
+**Current focus:** v29.9 세션 점진적 보안 모델
 
 ## Current Position
 
-Phase: 299 of 299 (통합) -- COMPLETE
-Plan: 7 of 7 in v29.8
-Status: Milestone shipped
-Last activity: 2026-03-02 -- v29.8 shipped (3 phases, 7 plans, 22 requirements, 133 new tests)
-
-Progress: [██████████] 100% (7/7 plans)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-02 — Milestone v29.9 started
 
 ## Performance Metrics
 
@@ -37,12 +35,7 @@ Progress: [██████████] 100% (7/7 plans)
 
 ### Decisions
 
-- v29.8: Perp 프레임워크 = IPerpProvider + MarginMonitor + PerpPolicyEvaluator (3 policy types)
-- v29.8: Drift SDK wrapper = IDriftSdkWrapper + MockDriftSdkWrapper + DriftSdkWrapper stub (mock-first)
-- v29.8: DriftPerpProvider in @waiaas/actions package (not daemon)
-- v29.8: 5 Admin Settings keys for drift configuration
-- v29.8: pendle_yield BUILTIN_NAMES gap fixed alongside drift_perp addition
-- v29.8: DB migration not needed (PERP category already in defi_positions CHECK)
+(None yet — milestone just started)
 
 ### Pending Todos
 
@@ -56,5 +49,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: v29.8 shipped -- ready for next milestone
-Resume command: /gsd:new-milestone or /gsd:progress
+Stopped at: v29.9 milestone started — defining requirements
+Resume command: /gsd:progress

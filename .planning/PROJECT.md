@@ -8,17 +8,17 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: v29.8 Solana Perp DEX (Drift) + Perp 프레임워크
+## Current Milestone: v29.9 세션 점진적 보안 모델
 
-**Goal:** DeFi Perp(무기한 선물) 프레임워크를 구축하고 Drift Protocol을 첫 번째 Perp Provider로 구현하여 AI 에이전트가 Solana에서 레버리지 트레이딩을 정책 평가 하에 실행
+**Goal:** 세션 토큰의 기본 만료 정책을 무제한으로 변경하고, TTL·갱신 횟수·절대 수명을 세션 생성 시 개별 설정할 수 있도록 전환하여 AI 에이전트 장기 자율 운영 지원
 
 **Target features:**
-- IPerpProvider 인터페이스 (IActionProvider 확장, 5 표준 액션: open/close/modify_position, add/withdraw_margin)
-- PerpPositionTracker (defi_positions category='PERP', metadata JSON 포지션 추적)
-- MarginMonitor (마진 비율 모니터링, MARGIN_WARNING + LIQUIDATION_IMMINENT 경고)
-- PerpPolicyEvaluator (최대 레버리지/최대 포지션 크기 USD/허용 시장 화이트리스트)
-- DriftPerpProvider (@drift-labs/sdk, Solana Perp 5 액션, DriftSdkWrapper)
-- MCP 5 도구 + Admin Settings 5키 + REST API + TS/Python SDK + actions.skill.md
+- 세션 생성 API per-session 파라미터 (ttl/maxRenewals/absoluteLifetime), 기본값 무제한(0)
+- JWT exp 클레임 조건부 생략 (무제한 세션 = exp 없는 JWT)
+- 무제한 세션 갱신 거부 (RENEWAL_NOT_REQUIRED 에러 코드)
+- Admin Settings 3키 삭제 (session_ttl/session_absolute_lifetime/session_max_renewals)
+- MCP SessionManager 무제한 토큰 처리 + CLI --ttl 리네임 + SDK expiresIn→ttl
+- Admin UI Create 모달 Advanced 섹션 + 무제한 표시 + Skill 파일 4개 동기화
 
 ## Current State
 
