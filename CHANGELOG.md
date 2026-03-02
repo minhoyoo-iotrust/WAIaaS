@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.9.0-rc.8](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc.7...v2.9.0-rc.8) (2026-03-02)
+
+
+### Features
+
+* complete Phase 300 session progressive security model (v29.9) ([6fccd39](https://github.com/minhoyoo-iotrust/WAIaaS/commit/6fccd397d6b8443d5dc5d55154f834fd4d1b03c4))
+* implement per-session TTL with unlimited sessions by default (Phase 300) ([709828f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/709828f3ba1471eb343084a1adf99956a999c55f))
+* update all integration layers for session progressive security (Phase 301) ([3cdf5ff](https://github.com/minhoyoo-iotrust/WAIaaS/commit/3cdf5ff6d4c3dc1adb4eac1807989dd37362a1d3))
+* update skill files and fix tests for session progressive security (Plan 301-7) ([f3ee4b2](https://github.com/minhoyoo-iotrust/WAIaaS/commit/f3ee4b2a21362662ba3769b13a0887b49d44b73f))
+
 ## [2.9.0-rc.7](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc.6...v2.9.0-rc.7) (2026-03-02)
 
 
