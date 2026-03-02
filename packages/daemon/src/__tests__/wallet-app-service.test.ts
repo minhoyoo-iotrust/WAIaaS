@@ -200,8 +200,8 @@ describe('WalletAppService', () => {
       // Insert directly with NULL topics (simulating pre-v33 row not backfilled)
       const ts = Math.floor(Date.now() / 1000);
       sqlite.prepare(
-        'INSERT INTO wallet_apps (id, name, display_name, signing_enabled, alerts_enabled, sign_topic, notify_topic, created_at, updated_at) VALUES (?, ?, ?, 1, 1, NULL, NULL, ?, ?)',
-      ).run('null-topic-id', 'null-topic-app', 'Null Topic App', ts, ts);
+        'INSERT INTO wallet_apps (id, name, display_name, wallet_type, signing_enabled, alerts_enabled, sign_topic, notify_topic, created_at, updated_at) VALUES (?, ?, ?, ?, 1, 1, NULL, NULL, ?, ?)',
+      ).run('null-topic-id', 'null-topic-app', 'Null Topic App', 'null-topic-app', ts, ts);
 
       const app = service.getByName('null-topic-app');
       expect(app).toBeTruthy();

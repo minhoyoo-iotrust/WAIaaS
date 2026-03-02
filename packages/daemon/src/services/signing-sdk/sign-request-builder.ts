@@ -166,11 +166,19 @@ export class SignRequestBuilder {
     const requestTopicPrefix = this.settings.get('signing_sdk.ntfy_request_topic_prefix') || 'waiaas-sign';
     let ntfyTopic = `${requestTopicPrefix}-${walletName}`; // fallback
     if (this.sqlite) {
+      // Try exact name match first, then fallback to wallet_type match
       const appRow = this.sqlite.prepare(
         'SELECT sign_topic FROM wallet_apps WHERE name = ?',
       ).get(walletName) as { sign_topic: string | null } | undefined;
       if (appRow?.sign_topic) {
         ntfyTopic = appRow.sign_topic;
+      } else {
+        const typeRow = this.sqlite.prepare(
+          'SELECT sign_topic FROM wallet_apps WHERE wallet_type = ? AND signing_enabled = 1 LIMIT 1',
+        ).get(walletName) as { sign_topic: string | null } | undefined;
+        if (typeRow?.sign_topic) {
+          ntfyTopic = typeRow.sign_topic;
+        }
       }
     }
 

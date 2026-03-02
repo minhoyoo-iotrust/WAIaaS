@@ -42,7 +42,7 @@ function mockSettingsService(values: Record<string, string> = {}): SettingsServi
       if (key in values) return values[key];
       if (key === 'signing_sdk.enabled') return 'true';
       if (key === 'signing_sdk.notifications_enabled') return 'true';
-      if (key === 'signing_sdk.ntfy_server') return 'https://ntfy.example.com';
+      if (key === 'notifications.ntfy_server') return 'https://ntfy.example.com';
       return '';
     }),
     set: vi.fn(),

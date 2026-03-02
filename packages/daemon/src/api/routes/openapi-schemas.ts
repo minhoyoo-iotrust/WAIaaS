@@ -300,16 +300,18 @@ export const PolicyDeleteResponseSchema = z
 export const WalletAppSchema = z
   .object({
     id: z.string().openapi({ description: 'Wallet app UUID', example: '01234567-89ab-cdef-0123-456789abcdef' }),
-    name: z.string().openapi({ description: 'App identifier (same namespace as wallet_type)', example: 'dcent' }),
+    name: z.string().openapi({ description: 'App identifier (unique name)', example: 'dcent' }),
     display_name: z.string().openapi({ description: 'Human-readable app name', example: "D'CENT Wallet" }),
+    wallet_type: z.string().openapi({ description: 'Wallet type for grouping (multiple apps can share a type)', example: 'dcent' }),
     signing_enabled: z.boolean().openapi({ description: 'Whether signing requests are sent to this app' }),
     alerts_enabled: z.boolean().openapi({ description: 'Whether activity alerts are sent to this app' }),
     sign_topic: z.string().nullable().openapi({ description: 'ntfy topic for signing requests' }),
     notify_topic: z.string().nullable().openapi({ description: 'ntfy topic for activity notifications' }),
+    subscription_token: z.string().nullable().openapi({ description: 'Subscription token for ntfy topic isolation' }),
     used_by: z.array(z.object({
       id: z.string(),
       label: z.string(),
-    })).openapi({ description: 'Wallets using this app (wallet_type = app name)' }),
+    })).openapi({ description: 'Wallets using this app (wallet_type match)' }),
     created_at: z.number().openapi({ description: 'Unix timestamp (seconds)' }),
     updated_at: z.number().openapi({ description: 'Unix timestamp (seconds)' }),
   })
@@ -325,6 +327,7 @@ export const WalletAppCreateRequestSchema = z
   .object({
     name: z.string().min(1).max(64).regex(/^[a-z0-9][a-z0-9-]*$/, 'Lowercase alphanumeric with hyphens').openapi({ description: 'App identifier', example: 'my-custom-wallet' }),
     display_name: z.string().min(1).max(128).openapi({ description: 'Display name', example: 'My Custom Wallet' }),
+    wallet_type: z.string().min(1).max(64).regex(/^[a-z0-9][a-z0-9-]*$/, 'Lowercase alphanumeric with hyphens').optional().openapi({ description: 'Wallet type for grouping (defaults to name)', example: 'dcent' }),
     sign_topic: z.string().max(256).optional().openapi({ description: 'Custom signing topic (auto-generated if omitted)' }),
     notify_topic: z.string().max(256).optional().openapi({ description: 'Custom notification topic (auto-generated if omitted)' }),
   })
@@ -336,6 +339,7 @@ export const WalletAppUpdateRequestSchema = z
     alerts_enabled: z.boolean().optional().openapi({ description: 'Toggle activity alerts' }),
     sign_topic: z.string().max(256).optional().openapi({ description: 'Custom signing topic' }),
     notify_topic: z.string().max(256).optional().openapi({ description: 'Custom notification topic' }),
+    subscription_token: z.string().max(64).optional().openapi({ description: 'Subscription token for ntfy topic isolation' }),
   })
   .openapi('WalletAppUpdateRequest');
 

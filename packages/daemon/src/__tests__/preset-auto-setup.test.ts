@@ -213,6 +213,7 @@ describe('PresetAutoSetupService', () => {
     expect(walletAppService.ensureRegistered).toHaveBeenCalledWith(
       BUILTIN_PRESETS.dcent.preferredWallet,
       BUILTIN_PRESETS.dcent.displayName,
+      { walletType: BUILTIN_PRESETS.dcent.preferredWallet },
     );
     expect(result.applied).toContain('wallet_app_registered');
   });

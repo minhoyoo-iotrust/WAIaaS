@@ -30,8 +30,18 @@ export function createDeviceRoutes(opts: DeviceRoutesOpts): Hono {
     }
 
     const { walletName, pushToken, platform } = parsed.data;
-    registry.register(walletName, pushToken, platform);
-    return c.json({ status: 'registered' }, 201);
+    const result = registry.register(walletName, pushToken, platform);
+    return c.json({ status: 'registered', subscription_token: result.subscriptionToken }, 201);
+  });
+
+  // GET /devices/:token/subscription-token — get subscription token for a device
+  app.get('/devices/:token/subscription-token', (c) => {
+    const token = c.req.param('token');
+    const subToken = registry.getSubscriptionToken(token);
+    if (subToken === null) {
+      return c.json({ error: 'Device not found' }, 404);
+    }
+    return c.json({ subscription_token: subToken });
   });
 
   // DELETE /devices/:token — unregister device token

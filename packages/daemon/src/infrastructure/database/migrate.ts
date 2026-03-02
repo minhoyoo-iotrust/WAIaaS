@@ -78,7 +78,7 @@ const LEGACY_NETWORK_NORMALIZE: Record<string, string> = {
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 33;
+export const LATEST_SCHEMA_VERSION = 35;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -321,15 +321,17 @@ function getCreateTableStatements(): string[] {
   updated_at INTEGER NOT NULL
 )`,
 
-    // Table 19: wallet_apps (Human Wallet Apps registry, v29.7, v29.10: sign_topic/notify_topic)
+    // Table 19: wallet_apps (Human Wallet Apps registry, v29.7, v29.10: sign_topic/notify_topic, v34: wallet_type, v35: subscription_token)
     `CREATE TABLE IF NOT EXISTS wallet_apps (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL UNIQUE,
   display_name TEXT NOT NULL,
+  wallet_type TEXT NOT NULL DEFAULT '',
   signing_enabled INTEGER NOT NULL DEFAULT 1,
   alerts_enabled INTEGER NOT NULL DEFAULT 1,
   sign_topic TEXT,
   notify_topic TEXT,
+  subscription_token TEXT,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 )`,
@@ -416,6 +418,9 @@ function getCreateIndexStatements(): string[] {
     'CREATE INDEX IF NOT EXISTS idx_defi_positions_wallet_provider ON defi_positions(wallet_id, provider)',
     'CREATE INDEX IF NOT EXISTS idx_defi_positions_status ON defi_positions(status)',
     'CREATE UNIQUE INDEX IF NOT EXISTS idx_defi_positions_unique ON defi_positions(wallet_id, provider, asset_id, category)',
+
+    // v34: wallet_apps.wallet_type index
+    'CREATE INDEX IF NOT EXISTS idx_wallet_apps_wallet_type ON wallet_apps(wallet_type)',
   ];
 }
 
@@ -2275,6 +2280,39 @@ MIGRATIONS.push({
     const stmt = sqlite.prepare('UPDATE wallet_apps SET sign_topic = ?, notify_topic = ? WHERE id = ?');
     for (const row of rows) {
       stmt.run(`${prefix}-${row.name}`, `${notifyPrefix}-${row.name}`, row.id);
+    }
+  },
+});
+
+// ---------------------------------------------------------------------------
+// v34: Add wallet_type column to wallet_apps (multi-device per wallet type)
+// ---------------------------------------------------------------------------
+
+MIGRATIONS.push({
+  version: 34,
+  description: 'Add wallet_type column to wallet_apps for multi-device per wallet type',
+  up: (sqlite) => {
+    const cols = (sqlite.prepare("PRAGMA table_info('wallet_apps')").all() as Array<{ name: string }>).map(c => c.name);
+    if (!cols.includes('wallet_type')) {
+      sqlite.exec(`ALTER TABLE wallet_apps ADD COLUMN wallet_type TEXT NOT NULL DEFAULT ''`);
+      // Backfill: set wallet_type = name for existing rows
+      sqlite.exec(`UPDATE wallet_apps SET wallet_type = name WHERE wallet_type = ''`);
+    }
+    sqlite.exec('CREATE INDEX IF NOT EXISTS idx_wallet_apps_wallet_type ON wallet_apps(wallet_type)');
+  },
+});
+
+// ---------------------------------------------------------------------------
+// v35: Add subscription_token column to wallet_apps (token-based ntfy topic routing)
+// ---------------------------------------------------------------------------
+
+MIGRATIONS.push({
+  version: 35,
+  description: 'Add subscription_token column to wallet_apps for token-based ntfy topic routing',
+  up: (sqlite) => {
+    const cols = (sqlite.prepare("PRAGMA table_info('wallet_apps')").all() as Array<{ name: string }>).map(c => c.name);
+    if (!cols.includes('subscription_token')) {
+      sqlite.exec(`ALTER TABLE wallet_apps ADD COLUMN subscription_token TEXT`);
     }
   },
 });

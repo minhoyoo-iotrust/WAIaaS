@@ -117,13 +117,13 @@ export class WalletNotificationChannel {
 
   /**
    * Query wallet_apps table for apps with alerts_enabled=1.
-   * Returns app names and notify_topic for topic routing (CHAN-02).
+   * Returns app names, wallet_type, and notify_topic for topic routing (CHAN-02).
    */
-  private resolveAlertApps(): Array<{ name: string; notifyTopic: string | null }> {
+  private resolveAlertApps(): Array<{ name: string; walletType: string; notifyTopic: string | null }> {
     const rows = this.sqlite.prepare(
-      'SELECT name, notify_topic FROM wallet_apps WHERE alerts_enabled = 1',
-    ).all() as Array<{ name: string; notify_topic: string | null }>;
-    return rows.map((r) => ({ name: r.name, notifyTopic: r.notify_topic }));
+      'SELECT name, wallet_type, notify_topic FROM wallet_apps WHERE alerts_enabled = 1',
+    ).all() as Array<{ name: string; wallet_type: string; notify_topic: string | null }>;
+    return rows.map((r) => ({ name: r.name, walletType: r.wallet_type || r.name, notifyTopic: r.notify_topic }));
   }
 
   private async publishNotification(
