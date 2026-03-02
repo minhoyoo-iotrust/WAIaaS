@@ -136,19 +136,23 @@ A session is already created in Step 2. Use this only if you need additional ses
 curl -s -X POST http://localhost:3100/v1/sessions \
   -H 'Content-Type: application/json' \
   -H 'X-Master-Password: your-master-password' \
-  -d '{"walletId": "01958f3a-1234-7000-8000-abcdef123456", "ttl": 2592000}'
+  -d '{"walletId": "01958f3a-1234-7000-8000-abcdef123456"}'
 ```
 
 Parameters:
 - `walletId` (required): UUID of the wallet from Step 2
-- `ttl` (optional): session lifetime in seconds, 300-31536000 (default: 2592000 = 30 days)
+- `ttl` (optional): session lifetime in seconds (omit for unlimited session)
+- `maxRenewals` (optional): max renewal count, 0 = unlimited (default: 0)
+- `absoluteLifetime` (optional): absolute session lifetime in seconds, 0 = unlimited (default: 0)
+
+By default, sessions are created with no expiration (unlimited). Specify `ttl` to create a finite session.
 
 Response (201):
 ```json
 {
   "id": "01958f3b-5678-7000-8000-abcdef654321",
   "token": "wai_sess_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "expiresAt": 1709592000,
+  "expiresAt": 0,
   "walletId": "01958f3a-1234-7000-8000-abcdef123456"
 }
 ```

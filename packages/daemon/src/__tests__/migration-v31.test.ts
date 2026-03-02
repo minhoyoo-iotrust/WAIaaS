@@ -75,12 +75,12 @@ describe('Migration v31: wallet_apps table', () => {
   });
 
   it('T-APP-01c: Fresh DB has LATEST_SCHEMA_VERSION=31', () => {
-    expect(LATEST_SCHEMA_VERSION).toBe(31);
+    expect(LATEST_SCHEMA_VERSION).toBe(32);
 
     const row = sqlite
       .prepare('SELECT MAX(version) AS max_version FROM schema_version')
       .get() as { max_version: number };
-    expect(row.max_version).toBe(31);
+    expect(row.max_version).toBe(32);
   });
 
   it('defaults: signing_enabled=1 and alerts_enabled=1', () => {

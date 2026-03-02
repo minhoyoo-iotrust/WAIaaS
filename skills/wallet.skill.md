@@ -667,12 +667,14 @@ One-stop provisioning for Claude Desktop MCP integration: creates a session, wri
 curl -s -X POST http://localhost:3100/v1/mcp/tokens \
   -H 'Content-Type: application/json' \
   -H 'X-Master-Password: your-master-password' \
-  -d '{"walletId": "01958f3a-1234-7000-8000-abcdef123456", "expiresIn": 604800}'
+  -d '{"walletId": "01958f3a-1234-7000-8000-abcdef123456"}'
 ```
 
 Parameters:
 - `walletId` (required): UUID of the wallet
-- `expiresIn` (optional): session TTL in seconds, 300-604800 (default: config session_ttl)
+- `ttl` (optional): session lifetime in seconds (omit for unlimited session)
+- `maxRenewals` (optional): max renewal count, 0 = unlimited (default: 0)
+- `absoluteLifetime` (optional): absolute session lifetime in seconds, 0 = unlimited (default: 0)
 
 Response (201):
 ```json

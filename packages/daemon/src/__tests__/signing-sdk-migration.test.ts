@@ -64,7 +64,7 @@ function getWalletColumns(): string[] {
 
 describe('LATEST_SCHEMA_VERSION', () => {
   it('should be 31', () => {
-    expect(LATEST_SCHEMA_VERSION).toBe(31);
+    expect(LATEST_SCHEMA_VERSION).toBe(32);
   });
 });
 
@@ -75,7 +75,7 @@ describe('Fresh DB (pushSchema)', () => {
   });
 
   it('schema_version max is 31', () => {
-    expect(getMaxVersion()).toBe(31);
+    expect(getMaxVersion()).toBe(32);
   });
 
   it('owner_approval_method defaults to NULL', () => {
