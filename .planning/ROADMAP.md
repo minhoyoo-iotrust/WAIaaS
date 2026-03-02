@@ -96,7 +96,7 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v29.9-ROADMAP.md` for full 
 
 **Milestone Goal:** 글로벌 단일 ntfy_topic 설정을 제거하고, wallet_apps 테이블에서 지갑별 sign_topic/notify_topic을 관리하도록 전환하여 Push Relay 구독 토픽과 데몬 발송 토픽을 일치시키고 멀티 지갑 알림 구조를 정리한다.
 
-- [ ] **Phase 302: Per-Wallet Topic Backend** - DB 스키마 마이그레이션, 채널 토픽 소스 전환, REST API 확장, 글로벌 NtfyChannel 제거
+- [x] **Phase 302: Per-Wallet Topic Backend** - DB 스키마 마이그레이션, 채널 토픽 소스 전환, REST API 확장, 글로벌 NtfyChannel 제거 (completed 2026-03-02)
 - [ ] **Phase 303: Admin UI + Skill Files** - Notifications 페이지 정리, Human Wallet Apps 토픽 표시/편집, 스킬 파일 동기화
 
 ## Phase Details
@@ -145,7 +145,7 @@ Plans:
 | 244-267 | v28.0-v28.8 | All | Complete | 2026-02-26 |
 | 268-299 | v29.0-v29.8 | All | Complete | 2026-03-02 |
 | 300-301 | v29.9 | 14/14 | Complete | 2026-03-02 |
-| 302. Per-Wallet Topic Backend | 1/2 | In Progress|  | - |
+| 302. Per-Wallet Topic Backend | 2/2 | Complete   | 2026-03-02 | - |
 | 303. Admin UI + Skill Files | v29.10 | 0/2 | Not started | - |
 
 ---

@@ -8,7 +8,7 @@ progress:
   total_phases: 2
   completed_phases: 0
   total_plans: 4
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 ## Current Position
 
 Phase: 302 (1 of 2) — Per-Wallet Topic Backend
-Plan: 1 of 2 in current phase
-Status: Executing — Plan 01 complete, Plan 02 pending
-Last activity: 2026-03-02 — Plan 302-01 executed (migration v33, topic CRUD, settings cleanup)
+Plan: 2 of 2 in current phase
+Status: Complete — All plans in phase 302 executed
+Last activity: 2026-03-02 — Plan 302-02 executed (channel topic source switch, global NtfyChannel removal)
 
-Progress: [██░░░░░░░░] 25%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
@@ -42,6 +42,7 @@ Progress: [██░░░░░░░░] 25%
 - v29.10: NULL 토픽은 prefix+appName 폴백으로 기존 동작 유지
 - v29.10: DB 스키마 v33 — wallet_apps에 sign_topic/notify_topic 컬럼 추가 완료
 - v29.10: 글로벌 ntfy_topic 설정 키 제거 → config.toml 폴백만 유지 (하위 호환)
+- [Phase 302]: SignRequestBuilder/WalletNotificationChannel switched to wallet_apps DB topic routing with prefix fallback
 
 ### Blockers/Concerns
 
@@ -50,5 +51,5 @@ Progress: [██░░░░░░░░] 25%
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 302-01-PLAN.md (per-wallet topic backend: DB + service + API + settings)
+Stopped at: Completed 302-02-PLAN.md (channel topic source switch, global NtfyChannel removal)
 Resume file: None

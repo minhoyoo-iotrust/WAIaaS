@@ -16,11 +16,11 @@ Requirements for v29.10. Each maps to roadmap phases.
 
 ### Channel Logic
 
-- [ ] **CHAN-01**: NtfySigningChannel reads sign_topic from wallet_apps table instead of prefix-based dynamic combination
-- [ ] **CHAN-02**: WalletNotificationChannel reads notify_topic from wallet_apps table instead of hardcoded prefix+walletName
-- [ ] **CHAN-03**: NotificationService no longer initializes global NtfyChannel instance (Path B ntfy removal)
-- [ ] **CHAN-04**: Telegram/Discord/Slack channels continue to function unchanged after global NtfyChannel removal
-- [ ] **CHAN-05**: System events (UPDATE_AVAILABLE etc.) reach all active wallet apps via WalletNotificationChannel (Path A)
+- [x] **CHAN-01**: NtfySigningChannel reads sign_topic from wallet_apps table instead of prefix-based dynamic combination
+- [x] **CHAN-02**: WalletNotificationChannel reads notify_topic from wallet_apps table instead of hardcoded prefix+walletName
+- [x] **CHAN-03**: NotificationService no longer initializes global NtfyChannel instance (Path B ntfy removal)
+- [x] **CHAN-04**: Telegram/Discord/Slack channels continue to function unchanged after global NtfyChannel removal
+- [x] **CHAN-05**: System events (UPDATE_AVAILABLE etc.) reach all active wallet apps via WalletNotificationChannel (Path A)
 
 ### REST API
 
@@ -71,11 +71,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DBSC-02 | Phase 302 | Complete |
 | DBSC-03 | Phase 302 | Complete |
 | DBSC-04 | Phase 302 | Complete |
-| CHAN-01 | Phase 302 | Pending |
-| CHAN-02 | Phase 302 | Pending |
-| CHAN-03 | Phase 302 | Pending |
-| CHAN-04 | Phase 302 | Pending |
-| CHAN-05 | Phase 302 | Pending |
+| CHAN-01 | Phase 302 | Complete |
+| CHAN-02 | Phase 302 | Complete |
+| CHAN-03 | Phase 302 | Complete |
+| CHAN-04 | Phase 302 | Complete |
+| CHAN-05 | Phase 302 | Complete |
 | API-01 | Phase 302 | Complete |
 | API-02 | Phase 302 | Complete |
 | API-03 | Phase 302 | Complete |
