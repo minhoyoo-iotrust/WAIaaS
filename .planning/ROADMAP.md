@@ -89,12 +89,12 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v29.8-ROADMAP.md` for full 
 
 </details>
 
-### v29.9 세션 점진적 보안 모델 (In Progress)
+### v29.9 세션 점진적 보안 모델 (Complete)
 
 **Milestone Goal:** 세션 수명 모델을 글로벌 설정 기반에서 per-session 선택적 지정으로 전환하여, 기본 무제한 세션과 선택적 유한 세션이 공존하는 점진적 보안 구조를 완성한다
 
-- [ ] **Phase 300: Session Core API + JWT + Renewal** - 무제한 세션 기본값, per-session TTL/갱신 제어, 글로벌 세션 설정 제거
-- [ ] **Phase 301: MCP + CLI + SDK + Admin UI + Skill Files** - 통합 계층 전체를 새 세션 모델에 맞춰 업데이트
+- [x] **Phase 300: Session Core API + JWT + Renewal** - 무제한 세션 기본값, per-session TTL/갱신 제어, 글로벌 세션 설정 제거
+- [x] **Phase 301: MCP + CLI + SDK + Admin UI + Skill Files** - 통합 계층 전체를 새 세션 모델에 맞춰 업데이트
 
 ## Phase Details
 
