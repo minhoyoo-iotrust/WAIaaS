@@ -501,7 +501,8 @@ describe('ApprovalChannelRouter - signing_enabled blocking (APP-08)', () => {
     // Mock: wallet has wallet_type='dcent', wallet_apps has signing_enabled=0
     const stmtGet = vi.fn()
       .mockReturnValueOnce({ owner_approval_method: 'sdk_ntfy', wallet_type: 'dcent' }) // wallet lookup
-      .mockReturnValueOnce({ signing_enabled: 0 }); // wallet_apps lookup
+      .mockReturnValueOnce(undefined) // wallet_apps lookup (no app with signing_enabled=1)
+      .mockReturnValueOnce({ id: 'app-dcent-001' }); // anyApp lookup (app exists → block)
     const sqlite = {
       prepare: vi.fn().mockReturnValue({ get: stmtGet }),
     } as unknown as Database;
