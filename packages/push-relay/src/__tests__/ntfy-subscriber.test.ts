@@ -492,7 +492,7 @@ describe('NtfySubscriber', () => {
   // ── Compression Tests ────────────────────────────────────────────────
 
   it.each(['gzip', 'deflate', 'br'] as const)(
-    'handles %s-encoded SSE responses via fetch auto-decompression',
+    'handles %s-encoded SSE responses via explicit zlib decompression',
     async (encoding) => {
       const onMessage = vi.fn().mockResolvedValue(undefined);
       const encoded = encodeBase64url(validSignRequest);

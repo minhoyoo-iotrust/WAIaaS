@@ -581,11 +581,11 @@ describe('registerDevice', () => {
       'X-API-Key': 'my-api-key',
     });
     const body = JSON.parse(opts.body as string) as {
-      token: string;
+      pushToken: string;
       walletName: string;
       platform: string;
     };
-    expect(body.token).toBe('device-token-123');
+    expect(body.pushToken).toBe('device-token-123');
     expect(body.walletName).toBe('my-wallet');
     expect(body.platform).toBe('android');
   });

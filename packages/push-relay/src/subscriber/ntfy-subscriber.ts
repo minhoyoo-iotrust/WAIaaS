@@ -1,6 +1,10 @@
 import type { PushPayload, ParsedNtfyMessage } from './message-parser.js';
 import { buildPushPayload, determineMessageType } from './message-parser.js';
 import type { IPayloadTransformer } from '../transformer/payload-transformer.js';
+import { get as httpsGet } from 'node:https';
+import { get as httpGet } from 'node:http';
+import type { IncomingMessage, ClientRequest } from 'node:http';
+import { createUnzip, createBrotliDecompress } from 'node:zlib';
 
 const MAX_RECONNECT_DELAY_MS = 60_000;
 const INITIAL_RECONNECT_DELAY_MS = 1_000;
@@ -106,58 +110,89 @@ export class NtfySubscriber {
 
     try {
       const url = `${this.opts.ntfyServer}/${topic}/sse`;
-      const res = await fetch(url, {
-        signal: controller.signal,
-        headers: { 'Accept': 'text/event-stream' },
+      const isHttps = url.startsWith('https');
+      const getter = isHttps ? httpsGet : httpGet;
+
+      const res = await new Promise<IncomingMessage>((resolve, reject) => {
+        const req: ClientRequest = getter(url, {
+          headers: { 'Accept': 'text/event-stream' },
+        }, resolve);
+        req.on('error', reject);
+        controller.signal.addEventListener('abort', () => req.destroy(), { once: true });
       });
 
-      if (!res.ok || !res.body) {
-        throw new Error(`SSE connection failed for ${topic}: HTTP ${String(res.status)}`);
+      if (!res.statusCode || res.statusCode < 200 || res.statusCode >= 300) {
+        res.resume(); // Drain
+        throw new Error(`SSE connection failed for ${topic}: HTTP ${String(res.statusCode)}`);
       }
 
       // Reset reconnect delay on successful connection
       const nextDelay = INITIAL_RECONNECT_DELAY_MS;
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
+      // Explicit decompression based on Content-Encoding header.
+      // node:http does NOT auto-decompress (unlike undici fetch), giving us full control.
+      // This is the definitive fix for #222, #235, #236, #238, #243 — undici fetch()
+      // has non-deterministic decompression behavior with Cloudflare CDN streaming.
+      const encoding = res.headers['content-encoding'];
+      let dataStream: NodeJS.ReadableStream = res;
+
+      if (encoding === 'gzip' || encoding === 'x-gzip' || encoding === 'deflate') {
+        dataStream = res.pipe(createUnzip());
+      } else if (encoding === 'br') {
+        dataStream = res.pipe(createBrotliDecompress());
+      }
+
+      // Wire abort to destroy streams
+      controller.signal.addEventListener('abort', () => {
+        res.destroy();
+      }, { once: true });
+
+      // SSE line-based parsing via Node.js Readable events
       let buffer = '';
 
-      while (!controller.signal.aborted) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      await new Promise<void>((resolve, reject) => {
+        dataStream.on('data', (chunk: Buffer) => {
+          if (controller.signal.aborted) return;
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() ?? '';
+          buffer += chunk.toString('utf-8');
+          const lines = buffer.split('\n');
+          buffer = lines.pop() ?? '';
 
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
 
-          const dataStr = line.slice(6).trim();
-          if (!dataStr) continue;
+            const dataStr = line.slice(6).trim();
+            if (!dataStr) continue;
 
-          try {
-            const ntfyMsg = JSON.parse(dataStr) as ParsedNtfyMessage;
-            if (!ntfyMsg.message) continue;
+            try {
+              const ntfyMsg = JSON.parse(dataStr) as ParsedNtfyMessage;
+              if (!ntfyMsg.message) continue;
 
-            const effectiveTopic = ntfyMsg.topic ?? topic;
-            const type = determineMessageType(
-              effectiveTopic,
-              this.opts.signTopicPrefix,
-              this.opts.notifyTopicPrefix,
-            );
-            if (!type) continue;
+              const effectiveTopic = ntfyMsg.topic ?? topic;
+              const type = determineMessageType(
+                effectiveTopic,
+                this.opts.signTopicPrefix,
+                this.opts.notifyTopicPrefix,
+              );
+              if (!type) continue;
 
-            let payload = buildPushPayload(ntfyMsg, type);
-            if (this.transformer) {
-              payload = this.transformer.transform(payload);
+              let payload = buildPushPayload(ntfyMsg, type);
+              if (this.transformer) {
+                payload = this.transformer.transform(payload);
+              }
+              void this.opts.onMessage(walletName, payload, effectiveTopic);
+            } catch (err) {
+              this.opts.onError?.(err instanceof Error ? err : new Error(String(err)));
             }
-            void this.opts.onMessage(walletName, payload, effectiveTopic);
-          } catch (err) {
-            this.opts.onError?.(err instanceof Error ? err : new Error(String(err)));
           }
-        }
-      }
+        });
+
+        dataStream.on('end', () => resolve());
+        dataStream.on('error', (err) => reject(err));
+
+        // Also resolve if the original response ends/closes
+        res.on('close', () => resolve());
+      });
 
       // Stream ended normally — reconnect
       if (!controller.signal.aborted) {

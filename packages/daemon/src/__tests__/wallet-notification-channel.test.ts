@@ -411,6 +411,77 @@ describe('WalletNotificationChannel', () => {
   });
 
   // -------------------------------------------------------------------------
+  // #242: non-ASCII Title header RFC 2047 encoding
+  // -------------------------------------------------------------------------
+  describe('#242: non-ASCII Title encoding', () => {
+    it('encodes non-ASCII title as RFC 2047 Base64 to avoid undici ByteString rejection', async () => {
+      const settings = createMockSettings();
+      const sqlite = createMockSqlite([APP_DCENT]);
+      const channel = new WalletNotificationChannel({ sqlite, settingsService: settings });
+
+      const koreanTitle = '송금 완료';
+      await channel.notify('TX_CONFIRMED', SOME_WALLET_ID, koreanTitle, 'Body');
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const headers = fetchMock.mock.calls[0]![1].headers;
+
+      // Must be RFC 2047 encoded
+      expect(headers.Title).toMatch(/^=\?UTF-8\?B\?.+\?=$/);
+
+      // Decode back and verify original text
+      const match = headers.Title.match(/^=\?UTF-8\?B\?(.+)\?=$/);
+      const decoded = Buffer.from(match[1], 'base64').toString('utf-8');
+      expect(decoded).toBe(koreanTitle);
+    });
+
+    it('does not encode ASCII-only title', async () => {
+      const settings = createMockSettings();
+      const sqlite = createMockSqlite([APP_DCENT]);
+      const channel = new WalletNotificationChannel({ sqlite, settingsService: settings });
+
+      await channel.notify('TX_CONFIRMED', SOME_WALLET_ID, 'Transfer Complete', 'Body');
+
+      const headers = fetchMock.mock.calls[0]![1].headers;
+      expect(headers.Title).toBe('Transfer Complete');
+    });
+
+    it('encodes Japanese/CJK title correctly', async () => {
+      const settings = createMockSettings();
+      const sqlite = createMockSqlite([APP_DCENT]);
+      const channel = new WalletNotificationChannel({ sqlite, settingsService: settings });
+
+      const japaneseTitle = '取引完了';
+      await channel.notify('TX_CONFIRMED', SOME_WALLET_ID, japaneseTitle, 'Body');
+
+      const headers = fetchMock.mock.calls[0]![1].headers;
+      expect(headers.Title).toMatch(/^=\?UTF-8\?B\?.+\?=$/);
+
+      const match = headers.Title.match(/^=\?UTF-8\?B\?(.+)\?=$/);
+      const decoded = Buffer.from(match[1], 'base64').toString('utf-8');
+      expect(decoded).toBe(japaneseTitle);
+    });
+
+    it('body still contains original non-ASCII title in base64url payload', async () => {
+      const settings = createMockSettings();
+      const sqlite = createMockSqlite([APP_DCENT]);
+      const channel = new WalletNotificationChannel({ sqlite, settingsService: settings });
+
+      const koreanTitle = '거래 확인';
+      await channel.notify('TX_CONFIRMED', SOME_WALLET_ID, koreanTitle, 'Body');
+
+      // Header is encoded
+      const headers = fetchMock.mock.calls[0]![1].headers;
+      expect(headers.Title).toMatch(/^=\?UTF-8\?B\?.+\?=$/);
+
+      // But base64url body contains original title
+      const decoded = JSON.parse(
+        Buffer.from(fetchMock.mock.calls[0]![1].body, 'base64url').toString('utf-8'),
+      );
+      expect(decoded.title).toBe(koreanTitle);
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // CHAN-05: system events reach all active wallet apps
   // -------------------------------------------------------------------------
   describe('CHAN-05: system events broadcast to all alert-enabled apps', () => {
