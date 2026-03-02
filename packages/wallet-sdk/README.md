@@ -156,6 +156,44 @@ Generate a Telegram deeplink URL for sending a SignResponse.
 
 Returns a `https://t.me/{botUsername}?text=...` URL.
 
+---
+
+#### `registerDevice(pushRelayUrl, apiKey, opts): Promise<{ subscriptionToken: string }>`
+
+Register a device with the Push Relay server for native push delivery.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `pushRelayUrl` | `string` | Push Relay server URL |
+| `apiKey` | `string` | Push Relay API key |
+| `opts.walletName` | `string` | Wallet name (must match relay config) |
+| `opts.pushToken` | `string` | FCM/Pushwoosh device token |
+| `opts.platform` | `'ios' \| 'android'` | Device platform |
+
+---
+
+#### `unregisterDevice(pushRelayUrl, apiKey, pushToken): Promise<void>`
+
+Unregister a device from the Push Relay server.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `pushRelayUrl` | `string` | Push Relay server URL |
+| `apiKey` | `string` | Push Relay API key |
+| `pushToken` | `string` | Device push token to unregister |
+
+---
+
+#### `getSubscriptionToken(pushRelayUrl, apiKey, pushToken): Promise<string | null>`
+
+Retrieve the subscription token for a registered device. Returns `null` if not found.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `pushRelayUrl` | `string` | Push Relay server URL |
+| `apiKey` | `string` | Push Relay API key |
+| `pushToken` | `string` | Device push token to look up |
+
 ### Error Classes
 
 | Error | When Thrown |
@@ -190,6 +228,14 @@ Uses a Telegram bot as relay. Wallet app receives requests via Telegram and send
 
 ```
 WAIaaS Daemon → Telegram Bot → User → Wallet App → Telegram Bot → WAIaaS Daemon
+```
+
+### Push Relay (Native Push)
+
+Uses `@waiaas/push-relay` as a bridge. Wallet apps register via `registerDevice()`, receive sign requests as native push notifications, and send responses back via `sendViaRelay()`.
+
+```
+WAIaaS Daemon → ntfy → Push Relay → FCM/Pushwoosh → Wallet App → Push Relay → ntfy → WAIaaS Daemon
 ```
 
 ## Universal Link Format

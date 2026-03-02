@@ -212,22 +212,37 @@ ntfy SSE → buildPushPayload() → ConfigurablePayloadTransformer → Push Prov
 
 #### Device Registration
 
-Wallet apps register their push token with the Push Relay server:
+Wallet apps register their push token with the Push Relay server using the SDK helper:
 
 ```typescript
+import { registerDevice } from '@waiaas/wallet-sdk';
+
 // On app startup, register device for push notifications
-await fetch('https://your-push-relay:3200/devices', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'X-API-Key': 'your-secret-api-key',
-  },
-  body: JSON.stringify({
-    token: devicePushToken,      // FCM/Pushwoosh device token
-    walletName: 'my-wallet',     // Must match relay config wallet_names
-    platform: 'android',         // "android" | "ios"
-  }),
-});
+const { subscriptionToken } = await registerDevice(
+  'https://your-push-relay:3200',
+  'your-secret-api-key',
+  { walletName: 'my-wallet', pushToken: devicePushToken, platform: 'android' },
+);
+```
+
+To look up an existing subscription token or unregister a device:
+
+```typescript
+import { getSubscriptionToken, unregisterDevice } from '@waiaas/wallet-sdk';
+
+// Check if already registered
+const token = await getSubscriptionToken(
+  'https://your-push-relay:3200',
+  'your-secret-api-key',
+  devicePushToken,
+);
+
+// Unregister on logout
+await unregisterDevice(
+  'https://your-push-relay:3200',
+  'your-secret-api-key',
+  devicePushToken,
+);
 ```
 
 #### Receiving Sign Requests via Native Push
