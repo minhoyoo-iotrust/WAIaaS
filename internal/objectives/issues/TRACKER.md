@@ -242,6 +242,7 @@
 | 225 | BUG | LOW | Approval Method 경고 메시지가 이전 메뉴 경로 참조 — System > Signing SDK (v29.7에서 이동됨) | v29.10 | FIXED | 2026-03-02 |
 | 226 | BUG | CRITICAL | 세션 클린업 워커가 무제한 세션(expires_at=0)을 만료로 삭제 — SESSION_NOT_FOUND | v29.10 | FIXED | 2026-03-02 |
 | 227 | BUG | MEDIUM | 지갑 앱 알림 발송이 notification_logs에 미기록 — Admin UI에 Telegram만 표시 | v29.10 | FIXED | 2026-03-02 |
+| 228 | BUG | MEDIUM | Admin UI ntfy Channel Status가 항상 "Not Configured" — 지갑별 토픽 미반영 | v29.10 | OPEN | — |
 
 ## Type Legend
 
@@ -253,9 +254,9 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 1
 - **FIXED:** 227
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 227
+- **Total:** 228
