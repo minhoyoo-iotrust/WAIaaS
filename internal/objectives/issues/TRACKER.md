@@ -236,6 +236,7 @@
 | 219 | BUG | CRITICAL | Push Relay 서버 시작 10초 후 강제 종료 — Shutdown 타이머 즉시 시작 | v29.8 | FIXED | 2026-03-01 |
 | 220 | MISSING | LOW | Push Relay 서버 버전 정보 노출 수단 없음 — health/로그/CLI 모두 미지원 | v29.9 | FIXED | 2026-03-02 |
 | 221 | BUG | HIGH | SignRequestSchema chain 열거값 불일치 — `'evm'` vs SSoT `'ethereum'` | v29.9 | FIXED | 2026-03-02 |
+| 222 | BUG | HIGH | Push Relay ntfy SSE gzip 미해제로 JSON 파싱 실패 | v29.9 | OPEN | — |
 
 ## Type Legend
 
@@ -247,9 +248,9 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 1
 - **FIXED:** 221
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 221
+- **Total:** 222
