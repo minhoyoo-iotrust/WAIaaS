@@ -9,10 +9,10 @@ Requirements for v29.10. Each maps to roadmap phases.
 
 ### DB Schema
 
-- [ ] **DBSC-01**: User can see sign_topic and notify_topic columns in wallet_apps table after DB migration
-- [ ] **DBSC-02**: Existing wallet_apps rows receive default topic values (prefix+appName) via migration
-- [ ] **DBSC-03**: New wallet app registration auto-generates sign_topic and notify_topic from prefix+appName when not specified
-- [ ] **DBSC-04**: NULL topic values fall back to prefix+appName combination at runtime
+- [x] **DBSC-01**: User can see sign_topic and notify_topic columns in wallet_apps table after DB migration
+- [x] **DBSC-02**: Existing wallet_apps rows receive default topic values (prefix+appName) via migration
+- [x] **DBSC-03**: New wallet app registration auto-generates sign_topic and notify_topic from prefix+appName when not specified
+- [x] **DBSC-04**: NULL topic values fall back to prefix+appName combination at runtime
 
 ### Channel Logic
 
@@ -24,16 +24,16 @@ Requirements for v29.10. Each maps to roadmap phases.
 
 ### REST API
 
-- [ ] **API-01**: User can specify optional signTopic/notifyTopic in POST /v1/admin/wallet-apps request
-- [ ] **API-02**: User can modify signTopic/notifyTopic via PUT /v1/admin/wallet-apps/{id}
-- [ ] **API-03**: GET /v1/admin/wallet-apps response includes signTopic and notifyTopic fields
-- [ ] **API-04**: OpenAPI schema reflects signTopic/notifyTopic fields on WalletApp model
+- [x] **API-01**: User can specify optional signTopic/notifyTopic in POST /v1/admin/wallet-apps request
+- [x] **API-02**: User can modify signTopic/notifyTopic via PUT /v1/admin/wallet-apps/{id}
+- [x] **API-03**: GET /v1/admin/wallet-apps response includes signTopic and notifyTopic fields
+- [x] **API-04**: OpenAPI schema reflects signTopic/notifyTopic fields on WalletApp model
 
 ### Admin Settings
 
-- [ ] **ASET-01**: notifications.ntfy_topic setting key is removed from SettingsService
-- [ ] **ASET-02**: notifications.ntfy_server setting remains available (global shared ntfy server URL)
-- [ ] **ASET-03**: signing_sdk.ntfy_request_topic_prefix remains available as fallback for new app topic defaults
+- [x] **ASET-01**: notifications.ntfy_topic setting key is removed from SettingsService
+- [x] **ASET-02**: notifications.ntfy_server setting remains available (global shared ntfy server URL)
+- [x] **ASET-03**: signing_sdk.ntfy_request_topic_prefix remains available as fallback for new app topic defaults
 
 ### Admin UI
 
@@ -67,22 +67,22 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DBSC-01 | Phase 302 | Pending |
-| DBSC-02 | Phase 302 | Pending |
-| DBSC-03 | Phase 302 | Pending |
-| DBSC-04 | Phase 302 | Pending |
+| DBSC-01 | Phase 302 | Complete |
+| DBSC-02 | Phase 302 | Complete |
+| DBSC-03 | Phase 302 | Complete |
+| DBSC-04 | Phase 302 | Complete |
 | CHAN-01 | Phase 302 | Pending |
 | CHAN-02 | Phase 302 | Pending |
 | CHAN-03 | Phase 302 | Pending |
 | CHAN-04 | Phase 302 | Pending |
 | CHAN-05 | Phase 302 | Pending |
-| API-01 | Phase 302 | Pending |
-| API-02 | Phase 302 | Pending |
-| API-03 | Phase 302 | Pending |
-| API-04 | Phase 302 | Pending |
-| ASET-01 | Phase 302 | Pending |
-| ASET-02 | Phase 302 | Pending |
-| ASET-03 | Phase 302 | Pending |
+| API-01 | Phase 302 | Complete |
+| API-02 | Phase 302 | Complete |
+| API-03 | Phase 302 | Complete |
+| API-04 | Phase 302 | Complete |
+| ASET-01 | Phase 302 | Complete |
+| ASET-02 | Phase 302 | Complete |
+| ASET-03 | Phase 302 | Complete |
 | ADUI-01 | Phase 303 | Pending |
 | ADUI-02 | Phase 303 | Pending |
 | ADUI-03 | Phase 303 | Pending |

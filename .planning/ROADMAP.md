@@ -145,7 +145,7 @@ Plans:
 | 244-267 | v28.0-v28.8 | All | Complete | 2026-02-26 |
 | 268-299 | v29.0-v29.8 | All | Complete | 2026-03-02 |
 | 300-301 | v29.9 | 14/14 | Complete | 2026-03-02 |
-| 302. Per-Wallet Topic Backend | v29.10 | 0/2 | Not started | - |
+| 302. Per-Wallet Topic Backend | 1/2 | In Progress|  | - |
 | 303. Admin UI + Skill Files | v29.10 | 0/2 | Not started | - |
 
 ---
