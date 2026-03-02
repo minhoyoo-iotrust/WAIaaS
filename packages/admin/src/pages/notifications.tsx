@@ -27,6 +27,7 @@ import { registerDirty, unregisterDirty } from '../utils/dirty-guard';
 interface ChannelStatus {
   name: string;
   enabled: boolean;
+  configuredWallets?: number;
 }
 
 interface NotificationStatus {
@@ -936,7 +937,11 @@ export default function NotificationsPage() {
                 <span class="channel-card-name">{ch.name}</span>
                 <div class="channel-card-actions">
                   <Badge variant={ch.enabled ? 'success' : 'neutral'}>
-                    {ch.enabled ? 'Connected' : 'Not Configured'}
+                    {ch.enabled
+                      ? ch.configuredWallets != null
+                        ? `${ch.configuredWallets} wallet${ch.configuredWallets !== 1 ? 's' : ''} configured`
+                        : 'Connected'
+                      : 'Not Configured'}
                   </Badge>
                   {ch.enabled && (
                     <Button
