@@ -247,7 +247,8 @@
 | 230 | ENHANCEMENT | HIGH | wallet_apps wallet_type / name 분리 — 동일 지갑 종류 다중 디바이스 등록 | — | FIXED | 2026-03-02 |
 | 231 | ENHANCEMENT | HIGH | 구독 토큰 기반 ntfy 토픽 라우팅 — 알림 격리 + 토픽 보안 (#230 선행) | — | FIXED | 2026-03-02 |
 | 232 | BUG | MEDIUM | Human Wallet Apps ntfy Server URL이 미등록 키 사용 — 설정 변경 무효 + Notifications와 중복 | — | FIXED | 2026-03-02 |
-| 233 | MISSING | MEDIUM | Wallet SDK에 Push Relay 디바이스 등록 헬퍼 추가 — registerDevice/unregisterDevice/getSubscriptionToken | — | OPEN | 2026-03-02 |
+| 233 | MISSING | MEDIUM | Wallet SDK에 Push Relay 디바이스 등록 헬퍼 추가 — registerDevice/unregisterDevice/getSubscriptionToken | — | FIXED | 2026-03-02 |
+| 234 | BUG | HIGH | Push Relay DeviceRegistry 마이그레이션 UNIQUE 컬럼 추가 실패 — SQLite ALTER TABLE 제약 | — | OPEN | 2026-03-02 |
 
 ## Type Legend
 
@@ -260,8 +261,8 @@
 ## Summary
 
 - **OPEN:** 1
-- **FIXED:** 232
+- **FIXED:** 233
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 233
+- **Total:** 234

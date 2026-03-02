@@ -52,10 +52,10 @@ getSubscriptionToken(pushRelayUrl: string, apiKey: string, pushToken: string): P
 
 ## 테스트 항목
 
-- [ ] `registerDevice` 정상 등록 시 `subscriptionToken` 반환 확인
-- [ ] `registerDevice` HTTP 에러 시 예외 throw 확인
-- [ ] `unregisterDevice` 정상 해제 시 204 처리 확인
-- [ ] `unregisterDevice` 미존재 토큰 시 404 예외 확인
-- [ ] `getSubscriptionToken` 정상 조회 확인
-- [ ] `getSubscriptionToken` 미존재 디바이스 시 null 반환 확인
-- [ ] 기본 URL trailing slash 정규화 확인
+- [x] `registerDevice` 정상 등록 시 `subscriptionToken` 반환 확인
+- [x] `registerDevice` HTTP 에러 시 예외 throw 확인
+- [x] `unregisterDevice` 정상 해제 시 204 처리 확인
+- [x] `unregisterDevice` 미존재 토큰 시 404 예외 확인
+- [x] `getSubscriptionToken` 정상 조회 확인
+- [x] `getSubscriptionToken` 미존재 디바이스 시 null 반환 확인
+- [x] 기본 URL trailing slash 정규화 확인
