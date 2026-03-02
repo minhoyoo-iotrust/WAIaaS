@@ -308,4 +308,113 @@ describe('SignRequestBuilder', () => {
       expect(result.request.responseChannel.serverUrl).toBeUndefined();
     }
   });
+
+  // -----------------------------------------------------------------------
+  // 11. DB-based topic lookup: exact name match (CHAN-01)
+  // -----------------------------------------------------------------------
+
+  it('uses sign_topic from wallet_apps DB when exact name match exists', () => {
+    const mockSqlite = {
+      prepare: vi.fn((sql: string) => {
+        if (sql.includes('WHERE name = ?')) {
+          return { get: vi.fn(() => ({ sign_topic: 'custom-sign-topic-dcent' })) };
+        }
+        return { get: vi.fn(() => undefined) };
+      }),
+    };
+
+    const dbBuilder = new SignRequestBuilder({
+      settingsService: mockSettings as any,
+      walletLinkRegistry: mockRegistry as any,
+      sqlite: mockSqlite as any,
+    });
+
+    const result = dbBuilder.buildRequest({ ...baseParams, amount: '1', symbol: 'ETH' });
+    expect(result.requestTopic).toBe('custom-sign-topic-dcent');
+  });
+
+  // -----------------------------------------------------------------------
+  // 12. DB-based topic lookup: fallback to wallet_type match
+  // -----------------------------------------------------------------------
+
+  it('falls back to wallet_type match when exact name not found in DB', () => {
+    const mockSqlite = {
+      prepare: vi.fn((sql: string) => {
+        if (sql.includes('WHERE name = ?')) {
+          return { get: vi.fn(() => undefined) }; // no exact name match
+        }
+        if (sql.includes('WHERE wallet_type = ?')) {
+          return { get: vi.fn(() => ({ sign_topic: 'type-based-sign-topic' })) };
+        }
+        return { get: vi.fn(() => undefined) };
+      }),
+    };
+
+    const dbBuilder = new SignRequestBuilder({
+      settingsService: mockSettings as any,
+      walletLinkRegistry: mockRegistry as any,
+      sqlite: mockSqlite as any,
+    });
+
+    const result = dbBuilder.buildRequest({ ...baseParams, amount: '1', symbol: 'ETH' });
+    expect(result.requestTopic).toBe('type-based-sign-topic');
+  });
+
+  // -----------------------------------------------------------------------
+  // 13. DB-based topic lookup: no match -> fallback to prefix-name
+  // -----------------------------------------------------------------------
+
+  it('uses prefix-name fallback when no DB match found', () => {
+    const mockSqlite = {
+      prepare: vi.fn(() => ({
+        get: vi.fn(() => undefined),
+      })),
+    };
+
+    const dbBuilder = new SignRequestBuilder({
+      settingsService: mockSettings as any,
+      walletLinkRegistry: mockRegistry as any,
+      sqlite: mockSqlite as any,
+    });
+
+    const result = dbBuilder.buildRequest({ ...baseParams, amount: '1', symbol: 'ETH' });
+    expect(result.requestTopic).toBe('waiaas-sign-dcent');
+  });
+
+  // -----------------------------------------------------------------------
+  // 14. Telegram response channel
+  // -----------------------------------------------------------------------
+
+  it('uses telegram response channel when preferred_channel is telegram', () => {
+    mockSettings = createMockSettingsService({
+      'signing_sdk.preferred_channel': 'telegram',
+      'telegram.bot_token': 'mock-bot-token',
+    });
+    builder = new SignRequestBuilder({
+      settingsService: mockSettings as any,
+      walletLinkRegistry: mockRegistry as any,
+    });
+
+    const result = builder.buildRequest({ ...baseParams, amount: '1', symbol: 'ETH' });
+    expect(result.request.responseChannel.type).toBe('telegram');
+    if (result.request.responseChannel.type === 'telegram') {
+      expect(result.request.responseChannel.botUsername).toBe('waiaas_bot');
+    }
+  });
+
+  // -----------------------------------------------------------------------
+  // 15. Display message without amount
+  // -----------------------------------------------------------------------
+
+  it('generates display message without amount for CONTRACT_CALL', () => {
+    const result = builder.buildRequest({
+      ...baseParams,
+      type: 'CONTRACT_CALL',
+    });
+
+    expect(result.request.displayMessage).toContain('CONTRACT_CALL');
+    expect(result.request.displayMessage).not.toContain('undefined');
+    expect(result.request.displayMessage).toContain('from');
+    expect(result.request.displayMessage).toContain('to');
+  });
 });
