@@ -252,6 +252,8 @@
 | 235 | BUG | HIGH | Push Relay ntfy SSE 수동 decompression 필요 — #222 수정 불완전, undici SSE auto-decompress 불안정 | — | FIXED | 2026-03-02 |
 | 236 | BUG | CRITICAL | Push Relay ntfy SSE 압축 해제 4회 수정 후 재발 — undici fetch() 완전 제거 필요 | — | FIXED | 2026-03-02 |
 | 237 | MISSING | HIGH | Push Relay 디바이스 등록 시 subscription token 기반 토픽 동적 구독 미구현 | — | FIXED | 2026-03-02 |
+| 238 | ENHANCEMENT | HIGH | Push Relay SSE 구독을 fetch()로 단순화 — node:http 수동 디컴프레션 제거 | — | FIXED | 2026-03-03 |
+| 239 | BUG | HIGH | 지갑 앱 테스트 알림이 plain text로 전송되어 Push Relay 파싱 실패 | — | FIXED | 2026-03-03 |
 
 ## Type Legend
 
@@ -264,8 +266,8 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 237
+- **FIXED:** 239
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 238
+- **Total:** 240
