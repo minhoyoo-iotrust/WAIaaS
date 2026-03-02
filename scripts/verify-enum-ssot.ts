@@ -83,7 +83,7 @@ const ENUMS: EnumDef[] = [
   { name: 'WalletStatus', array: WALLET_STATUSES, zodOptions: WalletStatusEnum.options, expectedCount: 5 },
   { name: 'TransactionStatus', array: TRANSACTION_STATUSES, zodOptions: TransactionStatusEnum.options, expectedCount: 11 },
   { name: 'TransactionType', array: TRANSACTION_TYPES, zodOptions: TransactionTypeEnum.options, expectedCount: 7 },
-  { name: 'PolicyType', array: POLICY_TYPES, zodOptions: PolicyTypeEnum.options, expectedCount: 14 },
+  { name: 'PolicyType', array: POLICY_TYPES, zodOptions: PolicyTypeEnum.options, expectedCount: 17 },
   { name: 'PolicyTier', array: POLICY_TIERS, zodOptions: PolicyTierEnum.options, expectedCount: 4 },
   { name: 'SessionStatus', array: SESSION_STATUSES, zodOptions: SessionStatusEnum.options, expectedCount: 3 },
   { name: 'NotificationEventType', array: NOTIFICATION_EVENT_TYPES, zodOptions: NotificationEventTypeEnum.options, expectedCount: 49 },

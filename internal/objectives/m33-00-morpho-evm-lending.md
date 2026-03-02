@@ -1,4 +1,4 @@
-# 마일스톤 m29-10: EVM Lending 확장 (Morpho)
+# 마일스톤 m33-00: EVM Lending 확장 (Morpho)
 
 - **Status:** PLANNED
 - **Milestone:** TBD

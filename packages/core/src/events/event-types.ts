@@ -9,6 +9,7 @@
  * - wallet:activity -- fired on wallet-related activities (TX_REQUESTED, TX_SUBMITTED, SESSION_CREATED, OWNER_SET)
  * - kill-switch:state-changed -- fired on kill switch state transitions (ACTIVE/SUSPENDED/LOCKED)
  * - approval:channel-switched -- fired when approval channel falls back (e.g. WC -> Telegram)
+ * - perp:margin-warning -- fired when perp position margin ratio crosses threshold (v29.8)
  *
  * These events are consumed by AutoStopService (Phase 141), BalanceMonitorService (Phase 142),
  * and IncomingTxMonitorService (Phase 226).
@@ -93,6 +94,19 @@ export interface YieldMaturityWarningEvent {
   timestamp: number;
 }
 
+// v29.8 perp margin warning event
+
+export interface MarginWarningEvent {
+  walletId: string;
+  positionId: string;
+  provider: string;
+  market: string;
+  marginRatio: number;
+  threshold: number;
+  severity: 'WARNING' | 'DANGER' | 'CRITICAL';
+  timestamp: number;
+}
+
 // ---------------------------------------------------------------------------
 // Event map (typed EventEmitter key -> payload mapping)
 // ---------------------------------------------------------------------------
@@ -106,4 +120,5 @@ export interface WaiaasEventMap {
   'kill-switch:state-changed': KillSwitchStateChangedEvent;
   'approval:channel-switched': ApprovalChannelSwitchedEvent;
   'yield:maturity-warning': YieldMaturityWarningEvent;
+  'perp:margin-warning': MarginWarningEvent;
 }

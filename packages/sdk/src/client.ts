@@ -17,12 +17,17 @@
  * sendToken() performs inline pre-validation before making the HTTP request.
  */
 
+import { readFile, access } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
+import { spawn, execSync } from 'node:child_process';
 import { HttpClient } from './internal/http.js';
 import { WAIaaSError } from './error.js';
 import { withRetry } from './retry.js';
 import { validateSendToken } from './validation.js';
 import { DEFAULT_TIMEOUT } from './internal/constants.js';
 import type {
+  ConnectOptions,
   WAIaaSClientOptions,
   RetryOptions,
   BalanceOptions,
@@ -75,6 +80,190 @@ export class WAIaaSClient {
     );
     this.sessionToken = options.sessionToken;
     this.retryOptions = options.retryOptions;
+  }
+
+  /**
+   * Auto-discover a running daemon and connect, or optionally auto-start one.
+   *
+   * @example
+   * ```typescript
+   * // Daemon already running — auto-discover + connect
+   * const client = await WAIaaSClient.connect();
+   *
+   * // Auto-start if not running (opt-in)
+   * const client = await WAIaaSClient.connect({ autoStart: true });
+   *
+   * // Direct connection (skip auto-discovery)
+   * const client = await WAIaaSClient.connect({ token: 'wai_sess_...', baseUrl: 'http://...' });
+   * ```
+   */
+  static async connect(options?: ConnectOptions): Promise<WAIaaSClient> {
+    const baseUrl = (options?.baseUrl ?? 'http://localhost:3100').replace(/\/+$/, '');
+    const dataDir = options?.dataDir ?? process.env['WAIAAS_DATA_DIR'] ?? join(homedir(), '.waiaas');
+    const autoStart = options?.autoStart ?? false;
+    const startTimeoutMs = options?.startTimeoutMs ?? 30_000;
+
+    // If token is explicitly provided, skip auto-discovery
+    if (options?.token) {
+      return new WAIaaSClient({
+        baseUrl,
+        sessionToken: options.token,
+        timeout: options?.timeout,
+        retryOptions: options?.retryOptions,
+      });
+    }
+
+    // 1. Check if daemon is running via health check
+    const running = await WAIaaSClient.checkHealth(baseUrl);
+
+    if (!running && !autoStart) {
+      throw new WAIaaSError({
+        code: 'DAEMON_NOT_RUNNING',
+        message:
+          'WAIaaS daemon is not running.\n' +
+          'Setup:\n' +
+          '  npx @waiaas/cli init --auto-provision\n' +
+          '  npx @waiaas/cli start &\n' +
+          '  npx @waiaas/cli quickset\n' +
+          'Docs: https://github.com/minhoyoo-iotrust/WAIaaS',
+        status: 0,
+        retryable: false,
+      });
+    }
+
+    if (!running && autoStart) {
+      await WAIaaSClient.autoStartDaemon(dataDir, baseUrl, startTimeoutMs);
+    }
+
+    // 2. Read token from file
+    const token = await WAIaaSClient.readTokenFile(dataDir);
+
+    return new WAIaaSClient({
+      baseUrl,
+      sessionToken: token,
+      timeout: options?.timeout,
+      retryOptions: options?.retryOptions,
+    });
+  }
+
+  /** @internal */
+  private static async checkHealth(baseUrl: string): Promise<boolean> {
+    try {
+      const res = await fetch(`${baseUrl}/health`, {
+        signal: AbortSignal.timeout(5_000),
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  /** @internal */
+  private static async readTokenFile(dataDir: string): Promise<string> {
+    const tokenPath = join(dataDir, 'mcp-token');
+    try {
+      const token = (await readFile(tokenPath, 'utf-8')).trim();
+      if (!token) {
+        throw new WAIaaSError({
+          code: 'TOKEN_NOT_FOUND',
+          message:
+            `Token file is empty: ${tokenPath}\n` +
+            'Run: npx @waiaas/cli quickset',
+          status: 0,
+          retryable: false,
+        });
+      }
+      return token;
+    } catch (err) {
+      if (err instanceof WAIaaSError) throw err;
+      throw new WAIaaSError({
+        code: 'TOKEN_NOT_FOUND',
+        message:
+          `Token file not found: ${tokenPath}\n` +
+          'Run: npx @waiaas/cli quickset',
+        status: 0,
+        retryable: false,
+      });
+    }
+  }
+
+  /** @internal */
+  private static resolveCliCommand(): { command: string; args: string[] } {
+    try {
+      execSync('which waiaas', { stdio: 'ignore' });
+      return { command: 'waiaas', args: [] };
+    } catch {
+      return { command: 'npx', args: ['@waiaas/cli'] };
+    }
+  }
+
+  /** @internal */
+  private static async autoStartDaemon(
+    dataDir: string,
+    baseUrl: string,
+    timeoutMs: number,
+  ): Promise<void> {
+    const cli = WAIaaSClient.resolveCliCommand();
+
+    // Ensure data dir exists (init --auto-provision if needed)
+    try {
+      await access(dataDir);
+    } catch {
+      const initArgs = [...cli.args, 'init', '--auto-provision', '--data-dir', dataDir];
+      await WAIaaSClient.runCliSync(cli.command, initArgs);
+    }
+
+    // Start daemon (detached)
+    const startArgs = [...cli.args, 'start', '--data-dir', dataDir];
+    const child = spawn(cli.command, startArgs, {
+      detached: true,
+      stdio: 'ignore',
+    });
+    child.unref();
+
+    // Poll for readiness
+    const deadline = Date.now() + timeoutMs;
+    const pollIntervalMs = 500;
+    let ready = false;
+    while (Date.now() < deadline) {
+      if (await WAIaaSClient.checkHealth(baseUrl)) {
+        ready = true;
+        break;
+      }
+      await new Promise((r) => setTimeout(r, pollIntervalMs));
+    }
+
+    if (!ready) {
+      throw new WAIaaSError({
+        code: 'START_TIMEOUT',
+        message: `Daemon did not become ready within ${timeoutMs}ms`,
+        status: 0,
+        retryable: false,
+      });
+    }
+
+    // Run quickset if token file doesn't exist
+    const tokenPath = join(dataDir, 'mcp-token');
+    try {
+      await access(tokenPath);
+    } catch {
+      const quicksetArgs = [...cli.args, 'quickset', '--data-dir', dataDir];
+      await WAIaaSClient.runCliSync(cli.command, quicksetArgs);
+    }
+  }
+
+  /** @internal */
+  private static runCliSync(command: string, args: string[]): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const child = spawn(command, args, { stdio: 'pipe' });
+      let stderr = '';
+      child.stderr?.on('data', (chunk: Buffer) => { stderr += chunk.toString(); });
+      child.on('close', (code) => {
+        if (code === 0) resolve();
+        else reject(new Error(`${command} ${args.join(' ')} exited with code ${code}: ${stderr}`));
+      });
+      child.on('error', reject);
+    });
   }
 
   // --- Token management ---

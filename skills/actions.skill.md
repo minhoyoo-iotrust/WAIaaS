@@ -2,7 +2,7 @@
 name: "WAIaaS Actions"
 description: "Action Provider framework: list providers, execute DeFi actions through the 6-stage transaction pipeline"
 category: "api"
-tags: [wallet, blockchain, defi, actions, waiass, jupiter, 0x, swap, lifi, bridge, cross-chain, lido, jito, staking, liquid-staking, pendle, yield, pt, yt]
+tags: [wallet, blockchain, defi, actions, waiass, jupiter, 0x, swap, lifi, bridge, cross-chain, lido, jito, staking, liquid-staking, pendle, yield, pt, yt, drift, perp, perpetual, leverage, futures]
 version: "2.8.5"
 dispatch:
   kind: "tool"
@@ -1400,7 +1400,182 @@ Pendle yield positions are automatically tracked via PositionTracker and stored 
 - **Positions**: `GET /v1/wallet/positions` or MCP tool `waiaas_get_defi_positions`
 - **Maturity alerts**: Configured via Admin UI > Settings > Actions > Pendle Yield > Maturity Warning Days
 
-## 11. Policy Integration
+## 11. Drift Perp Trading -- Built-in Provider (Solana)
+
+The Drift Perp Trading provider uses the [Drift Protocol V2](https://drift.trade/) to open, close, and modify leveraged perpetual futures positions on Solana. It supports LONG/SHORT positions with market and limit orders, margin management, and automated position/margin monitoring.
+
+> AI agents must NEVER request the master password. Use only your session token.
+
+### Configuration
+
+Enable Drift Perp Trading via **Admin UI > Settings > Actions > Drift Perp**, or environment variables. No API key is required.
+
+| Setting | Env Variable | Default | Description |
+| ------- | ------------ | ------- | ----------- |
+| Enabled | `WAIAAS_ACTIONS_DRIFT_ENABLED` | `false` | Enable Drift Perp Trading provider |
+| Max Leverage | `WAIAAS_ACTIONS_DRIFT_MAX_LEVERAGE` | `5` | Maximum allowed leverage multiplier (policy enforcement) |
+| Max Position Size (USD) | `WAIAAS_ACTIONS_DRIFT_MAX_POSITION_USD` | `10000` | Maximum single position size in USD (policy enforcement) |
+| Margin Warning Threshold | `WAIAAS_ACTIONS_DRIFT_MARGIN_WARNING_THRESHOLD_PCT` | `0.15` | Margin ratio threshold for warning alerts (lower = more dangerous) |
+| Position Sync Interval | `WAIAAS_ACTIONS_DRIFT_POSITION_SYNC_INTERVAL_SEC` | `60` | Position sync polling interval in seconds |
+
+### Available Actions
+
+| Action | Description | Chain | Risk | Tier |
+| ------ | ----------- | ----- | ---- | ---- |
+| `drift_open_position` | Open a leveraged perpetual position (LONG/SHORT) with market or limit order | solana | high | APPROVAL |
+| `drift_close_position` | Close a perpetual position (full or partial close) | solana | medium | DELAY |
+| `drift_modify_position` | Modify position size or pending order limit price | solana | high | APPROVAL |
+| `drift_add_margin` | Deposit collateral to increase available margin | solana | low | INSTANT |
+| `drift_withdraw_margin` | Withdraw excess collateral from margin account | solana | medium | DELAY |
+
+### Supported Chains
+
+| Network | WAIaaS Network Name |
+| ------- | ------------------- |
+| Solana Mainnet | `solana-mainnet` |
+
+### Open Position Parameters (drift_open_position)
+
+| Parameter | Type | Required | Description |
+| --------- | ---- | -------- | ----------- |
+| `market` | string | Yes | Market symbol (e.g., `"SOL-PERP"`) |
+| `direction` | string | Yes | Position direction: `"LONG"` or `"SHORT"` |
+| `size` | string | Yes | Base asset amount as string (e.g., `"100"`) |
+| `leverage` | number | No | Desired leverage multiplier (1-100, derived from margin if omitted) |
+| `orderType` | string | Yes | Order type: `"MARKET"` or `"LIMIT"` |
+| `limitPrice` | string | Conditional | Required when orderType is `"LIMIT"` |
+
+### Close Position Parameters (drift_close_position)
+
+| Parameter | Type | Required | Description |
+| --------- | ---- | -------- | ----------- |
+| `market` | string | Yes | Market symbol (e.g., `"SOL-PERP"`) |
+| `size` | string | No | Partial close amount; omit for full close |
+
+### Modify Position Parameters (drift_modify_position)
+
+| Parameter | Type | Required | Description |
+| --------- | ---- | -------- | ----------- |
+| `market` | string | Yes | Market symbol (e.g., `"SOL-PERP"`) |
+| `newSize` | string | No | New position size (at least one of newSize or newLimitPrice required) |
+| `newLimitPrice` | string | No | New limit price for pending order |
+
+### Add Margin Parameters (drift_add_margin)
+
+| Parameter | Type | Required | Description |
+| --------- | ---- | -------- | ----------- |
+| `amount` | string | Yes | Collateral amount as string (e.g., `"100"`) |
+| `asset` | string | Yes | CAIP-19 asset identifier for collateral token |
+
+### Withdraw Margin Parameters (drift_withdraw_margin)
+
+| Parameter | Type | Required | Description |
+| --------- | ---- | -------- | ----------- |
+| `amount` | string | Yes | Withdrawal amount as string |
+| `asset` | string | Yes | CAIP-19 asset identifier for collateral token |
+
+### Safety Features
+
+- **Policy enforcement**: PerpPolicyEvaluator enforces max_leverage and max_position_usd limits. Exceeding warning zone triggers DELAY tier; exceeding hard limit triggers DENY.
+- **Allowed markets**: PERP_ALLOWED_MARKETS policy restricts which markets can be traded (default-deny).
+- **Margin monitoring**: MarginMonitor polls margin ratios and sends MARGIN_WARNING notifications at configurable thresholds (0.30 = warning, 0.15 = danger, 0.10 = critical/liquidation imminent).
+- **Zod runtime validation**: All action inputs are validated against Zod schemas with refinement checks (e.g., limitPrice required for LIMIT orders).
+- **Provider-trust bypass**: When Drift is enabled in Admin Settings, the CONTRACT_WHITELIST policy check is skipped for Drift-resolved transactions.
+- **Position tracking**: Perp positions (category=PERP) are tracked in the defi_positions table with margin, leverage, unrealized PnL, and liquidation price metadata.
+
+### Example: Open Long Position
+
+**REST API:**
+```bash
+curl -s -X POST http://localhost:3100/v1/actions/drift_perp/drift_open_position \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -d '{
+    "params": {
+      "market": "SOL-PERP",
+      "direction": "LONG",
+      "size": "100",
+      "leverage": 5,
+      "orderType": "MARKET"
+    },
+    "network": "solana-mainnet"
+  }'
+```
+
+**MCP Tool:**
+```json
+{
+  "tool": "action_drift_perp_drift_open_position",
+  "params": {
+    "market": "SOL-PERP",
+    "direction": "LONG",
+    "size": "100",
+    "leverage": 5,
+    "orderType": "MARKET"
+  },
+  "network": "solana-mainnet"
+}
+```
+
+**TypeScript SDK:**
+```typescript
+import { WAIaaSClient } from '@waiaas/sdk';
+
+const client = new WAIaaSClient({ baseUrl: 'http://localhost:3100', token: 'wai_sess_...' });
+
+const tx = await client.executeAction('drift_perp', 'drift_open_position', {
+  params: {
+    market: 'SOL-PERP',
+    direction: 'LONG',
+    size: '100',
+    leverage: 5,
+    orderType: 'MARKET',
+  },
+  network: 'solana-mainnet',
+});
+console.log('Transaction ID:', tx.id);
+```
+
+**Python SDK:**
+```python
+from waiaas import WAIaaSClient
+
+async with WAIaaSClient(base_url="http://localhost:3100", token="wai_sess_...") as client:
+    tx = await client.execute_action("drift_perp", "drift_open_position", {
+        "market": "SOL-PERP",
+        "direction": "LONG",
+        "size": "100",
+        "leverage": 5,
+        "orderType": "MARKET",
+    }, network="solana-mainnet")
+    print("Transaction ID:", tx.id)
+```
+
+### Example: Add Margin
+
+**REST API:**
+```bash
+curl -s -X POST http://localhost:3100/v1/actions/drift_perp/drift_add_margin \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -d '{
+    "params": {
+      "amount": "50",
+      "asset": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/slip44:501"
+    },
+    "network": "solana-mainnet"
+  }'
+```
+
+### Position Monitoring
+
+Drift perp positions are automatically tracked via PositionTracker and stored in the defi_positions table (category=PERP). MarginMonitor checks margin ratios periodically and sends alerts.
+
+- **Positions**: `GET /v1/wallets/:id/positions` or MCP tool `waiaas_get_defi_positions`
+- **Margin alerts**: Automatic at thresholds 0.30 (warning), 0.15 (danger), 0.10 (critical)
+- **Liquidation alerts**: LIQUIDATION_IMMINENT notification when approaching liquidation price
+
+## 12. Policy Integration
 
 ### CONTRACT_WHITELIST
 
@@ -1427,7 +1602,7 @@ The swap/bridge input amount is converted to USD via IPriceOracle and evaluated 
 
 **LI.FI bridge reservation lifecycle:** Bridge amounts are reserved against the spending limit when the transaction is submitted. The reservation is released on terminal states (COMPLETED, FAILED, REFUNDED) but **held** on TIMEOUT to prevent double-spend during manual resolution. This means the spending budget is not freed until the bridge completes or fails definitively.
 
-## 12. Configuration via Admin Settings
+## 13. Configuration via Admin Settings
 
 Since v28.2, all action provider settings are managed via **Admin UI > Settings > Actions** (not config.toml). The Admin Settings UI provides:
 
@@ -1449,7 +1624,7 @@ The Admin UI shows a three-state status for each provider:
 - **Requires API Key** -- Provider is enabled but missing required API key (yellow, fires `ACTION_API_KEY_REQUIRED` notification)
 - **Inactive** -- Provider is disabled (gray)
 
-## 13. Error Reference
+## 14. Error Reference
 
 | Code | HTTP | Description | Recovery |
 |------|------|-------------|----------|
@@ -1465,7 +1640,7 @@ The Admin UI shows a three-state status for each provider:
 | `INVALID_INSTRUCTION` | 400 | Chain not supported by LI.FI integration. | Use one of the supported chains: solana, ethereum, polygon, arbitrum, optimism, base. |
 | `ACTION_API_ERROR` | 502 | LI.FI API returned an error. | Check LI.FI API status, verify parameters, retry. |
 
-## 14. MCP Auto-Registration
+## 15. MCP Auto-Registration
 
 When a provider has `mcpExpose: true` in its metadata, the MCP server automatically registers each action as an MCP tool using the naming convention:
 
@@ -1473,7 +1648,7 @@ When a provider has `mcpExpose: true` in its metadata, the MCP server automatica
 action_{provider_name}_{action_name}
 ```
 
-**Current MCP tools (21 action tools):**
+**Current MCP tools (26 action tools):**
 - `action_jupiter_swap_swap` -- Jupiter Swap on Solana
 - `action_zerox_swap_swap` -- 0x Swap on EVM chains
 - `action_lifi_cross_swap` -- LI.FI Cross-Chain Swap (multi-chain)
@@ -1495,6 +1670,11 @@ action_{provider_name}_{action_name}
 - `action_pendle_yield_redeem_pt` -- Pendle redeem matured PT (EVM)
 - `action_pendle_yield_add_liquidity` -- Pendle add LP (EVM)
 - `action_pendle_yield_remove_liquidity` -- Pendle remove LP (EVM)
+- `action_drift_perp_drift_open_position` -- Drift open perpetual position (Solana)
+- `action_drift_perp_drift_close_position` -- Drift close perpetual position (Solana)
+- `action_drift_perp_drift_modify_position` -- Drift modify perpetual position (Solana)
+- `action_drift_perp_drift_add_margin` -- Drift deposit margin collateral (Solana)
+- `action_drift_perp_drift_withdraw_margin` -- Drift withdraw margin collateral (Solana)
 
 Auto-registration happens after MCP server connection via `registerActionProviderTools()`. The tool list is refreshed on each session. If the REST API is unavailable, MCP enters degraded mode (14 built-in tools remain, action provider tools are skipped).
 
@@ -1503,7 +1683,7 @@ MCP tool parameters:
 - `network` (optional string): Target network
 - `wallet_id` (optional string): Target wallet ID
 
-## 15. Related Skill Files
+## 16. Related Skill Files
 
 - **admin.skill.md** -- API key management, Admin Settings, daemon admin
 - **transactions.skill.md** -- 5-type transaction reference (actions execute as CONTRACT_CALL)

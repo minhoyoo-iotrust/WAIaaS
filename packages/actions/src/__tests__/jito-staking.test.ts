@@ -5,7 +5,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { JitoStakingActionProvider } from '../providers/jito-staking/index.js';
-import { JITO_MAINNET_ADDRESSES } from '../providers/jito-staking/config.js';
+import { JITO_MAINNET_ADDRESSES, getJitoAddresses } from '../providers/jito-staking/config.js';
 import type { ActionContext, ContractCallRequest } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------
@@ -192,5 +192,23 @@ describe('JitoStakingActionProvider', () => {
       const amount = readLEu64(data, 1);
       expect(amount).toBe(999999999000000000n);
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getJitoAddresses helper
+// ---------------------------------------------------------------------------
+
+describe('getJitoAddresses', () => {
+  it('returns mainnet addresses for mainnet', () => {
+    const addrs = getJitoAddresses('mainnet');
+    expect(addrs.stakePoolAddress).toBe(JITO_MAINNET_ADDRESSES.stakePoolAddress);
+    expect(addrs.jitosolMint).toBe(JITO_MAINNET_ADDRESSES.jitosolMint);
+    expect(addrs.stakePoolProgram).toBe(JITO_MAINNET_ADDRESSES.stakePoolProgram);
+  });
+
+  it('returns mainnet addresses for testnet (mainnet-only pool)', () => {
+    const addrs = getJitoAddresses('testnet');
+    expect(addrs.stakePoolAddress).toBe(JITO_MAINNET_ADDRESSES.stakePoolAddress);
   });
 });

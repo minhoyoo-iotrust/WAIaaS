@@ -20,6 +20,8 @@ import { KaminoLendingProvider } from './providers/kamino/index.js';
 import type { KaminoConfig } from './providers/kamino/config.js';
 import { PendleYieldProvider } from './providers/pendle/index.js';
 import type { PendleConfig } from './providers/pendle/config.js';
+import { DriftPerpProvider } from './providers/drift/index.js';
+import type { DriftConfig } from './providers/drift/config.js';
 
 // Re-export provider classes
 export { JupiterSwapActionProvider } from './providers/jupiter-swap/index.js';
@@ -63,6 +65,12 @@ export { PendleYieldProvider } from './providers/pendle/index.js';
 export { PENDLE_DEFAULTS, PENDLE_CHAIN_ID_MAP, getPendleChainId } from './providers/pendle/config.js';
 export type { PendleConfig } from './providers/pendle/config.js';
 export { PendleApiClient } from './providers/pendle/pendle-api-client.js';
+
+export { DriftPerpProvider } from './providers/drift/index.js';
+export { DRIFT_DEFAULTS, DRIFT_PROGRAM_ID } from './providers/drift/config.js';
+export type { DriftConfig } from './providers/drift/config.js';
+export { MockDriftSdkWrapper } from './providers/drift/drift-sdk-wrapper.js';
+export type { IDriftSdkWrapper, DriftInstruction, DriftPosition, DriftMarginInfo } from './providers/drift/drift-sdk-wrapper.js';
 
 // Re-export common utilities
 export { ActionApiClient } from './common/action-api-client.js';
@@ -232,6 +240,17 @@ export function registerBuiltInProviders(
           requestTimeoutMs: Number(settingsReader.get('actions.pendle_yield_request_timeout_ms')) || 10_000,
         };
         return new PendleYieldProvider(config);
+      },
+    },
+    {
+      key: 'drift_perp',
+      enabledKey: 'actions.drift_enabled',
+      factory: () => {
+        const config: DriftConfig = {
+          enabled: true,
+          subAccount: 0,
+        };
+        return new DriftPerpProvider(config);
       },
     },
   ];

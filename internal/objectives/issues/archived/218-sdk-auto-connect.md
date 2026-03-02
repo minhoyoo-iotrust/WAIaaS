@@ -2,7 +2,7 @@
 
 - **유형:** ENHANCEMENT
 - **심각도:** HIGH
-- **상태:** OPEN
+- **상태:** FIXED
 - **패키지:** @waiaas/sdk
 
 ---

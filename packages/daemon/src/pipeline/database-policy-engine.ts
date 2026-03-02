@@ -25,6 +25,9 @@
  * 4g. Evaluate APPROVE_TIER_OVERRIDE: force tier for APPROVE (defaults to APPROVAL, skips SPENDING_LIMIT)
  * 4h. Evaluate LENDING_ASSET_WHITELIST: deny lending action if asset not whitelisted (default-deny)
  * 4h-b. Evaluate LENDING_LTV_LIMIT: deny borrow if projected LTV exceeds maxLtv
+ * 4i. Evaluate PERP_ALLOWED_MARKETS: deny perp action if market not whitelisted (default-deny)
+ * 4i-b. Evaluate PERP_MAX_LEVERAGE: deny open/modify if leverage exceeds max
+ * 4i-c. Evaluate PERP_MAX_POSITION_USD: deny open/modify if position USD exceeds max
  * 5. Evaluate SPENDING_LIMIT: classify amount into INSTANT/NOTIFY/DELAY/APPROVAL
  *    (skip for non-spending lending actions: supply/repay/withdraw)
  *
@@ -106,6 +109,23 @@ interface LendingAssetWhitelistRules {
   assets: Array<{ address: string; symbol?: string }>;
 }
 
+/** Perp max leverage restriction rules (Phase 297). */
+export interface PerpMaxLeverageRules {
+  maxLeverage: number;       // e.g., 10 (10x)
+  warningLeverage?: number;  // e.g., 5 (5x) -- DELAY tier
+}
+
+/** Perp max position USD restriction rules (Phase 297). */
+export interface PerpMaxPositionUsdRules {
+  maxPositionUsd: number;    // e.g., 10000 ($10,000)
+  warningPositionUsd?: number; // e.g., 8000 -- DELAY tier
+}
+
+/** Perp allowed markets whitelist rules (Phase 297). */
+export interface PerpAllowedMarketsRules {
+  markets: Array<{ market: string; name?: string }>;
+}
+
 /** Threshold for detecting "unlimited" approve amounts. */
 const UNLIMITED_THRESHOLD = (2n ** 256n - 1n) / 2n;
 
@@ -179,6 +199,10 @@ interface TransactionParam {
   actionProvider?: string;
   /** Action name for lending policy evaluation (supply/borrow/repay/withdraw). Set by ActionProviderRegistry. */
   actionName?: string;
+  /** Leverage for perp policy evaluation (open_position/modify_position). Set by ActionProviderRegistry. */
+  perpLeverage?: number;
+  /** Position size in USD for perp policy evaluation. Set by ActionProviderRegistry. */
+  perpSizeUsd?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -315,9 +339,21 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       return ltvResult;
     }
 
+    // Step 4i: Evaluate PERP_ALLOWED_MARKETS (default-deny for perp markets)
+    const perpMarketResult = this.evaluatePerpAllowedMarkets(resolved, transaction);
+    if (perpMarketResult !== null) return perpMarketResult;
+
+    // Step 4i-b: Evaluate PERP_MAX_LEVERAGE (deny if leverage exceeds max)
+    const leverageResult = this.evaluatePerpMaxLeverage(resolved, transaction);
+    if (leverageResult !== null) return leverageResult;
+
+    // Step 4i-c: Evaluate PERP_MAX_POSITION_USD (deny if position USD exceeds max)
+    const positionUsdResult = this.evaluatePerpMaxPositionUsd(resolved, transaction);
+    if (positionUsdResult !== null) return positionUsdResult;
+
     // Step 5: Non-spending classification for lending actions (LEND-08, research flag M6)
     // supply/repay/withdraw are non-spending — skip SPENDING_LIMIT entirely
-    const NON_SPENDING_ACTIONS = new Set(['supply', 'repay', 'withdraw']);
+    const NON_SPENDING_ACTIONS = new Set(['supply', 'repay', 'withdraw', 'close_position', 'add_margin']);
     if (transaction.actionName && NON_SPENDING_ACTIONS.has(transaction.actionName)) {
       return { allowed: true, tier: 'INSTANT' };
     }
@@ -517,6 +553,12 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       if (lendingAssetResult !== null) return lendingAssetResult;
     }
 
+    // PERP_ALLOWED_MARKETS applies to perp actions (CONTRACT_CALL with actionName)
+    if (instr.type === 'CONTRACT_CALL') {
+      const perpMarketResult = this.evaluatePerpAllowedMarkets(resolved, instr);
+      if (perpMarketResult !== null) return perpMarketResult;
+    }
+
     return null; // All applicable policies passed
   }
 
@@ -638,9 +680,21 @@ export class DatabasePolicyEngine implements IPolicyEngine {
         return ltvResult;
       }
 
+      // Step 4i: Evaluate PERP_ALLOWED_MARKETS (default-deny for perp markets)
+      const perpMarketResult = this.evaluatePerpAllowedMarkets(resolved, transaction);
+      if (perpMarketResult !== null) return perpMarketResult;
+
+      // Step 4i-b: Evaluate PERP_MAX_LEVERAGE
+      const leverageResult = this.evaluatePerpMaxLeverage(resolved, transaction);
+      if (leverageResult !== null) return leverageResult;
+
+      // Step 4i-c: Evaluate PERP_MAX_POSITION_USD
+      const positionUsdResult = this.evaluatePerpMaxPositionUsd(resolved, transaction);
+      if (positionUsdResult !== null) return positionUsdResult;
+
       // Step 5: Non-spending classification for lending actions (LEND-08, research flag M6)
       // supply/repay/withdraw are non-spending — skip SPENDING_LIMIT entirely
-      const NON_SPENDING_ACTIONS_R = new Set(['supply', 'repay', 'withdraw']);
+      const NON_SPENDING_ACTIONS_R = new Set(['supply', 'repay', 'withdraw', 'close_position', 'add_margin']);
       if (transaction.actionName && NON_SPENDING_ACTIONS_R.has(transaction.actionName)) {
         return { allowed: true, tier: 'INSTANT' as PolicyTier };
       }
@@ -1709,5 +1763,159 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       };
     }
     return null; // pass through
+  }
+
+  // -------------------------------------------------------------------------
+  // Private: PERP_ALLOWED_MARKETS evaluation (Step 4i)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Evaluate PERP_ALLOWED_MARKETS policy.
+   *
+   * Logic:
+   * - Only applies to perp actions (suffix matching: open_position, close_position,
+   *   modify_position, add_margin, withdraw_margin)
+   * - If no PERP_ALLOWED_MARKETS policy exists: deny (default-deny per CLAUDE.md)
+   * - If policy exists: check if transaction's market (from actionName prefix or params)
+   *   is in rules.markets[].market (case-insensitive)
+   *
+   * Market identification: TransactionParam.contractAddress is used as the market
+   * identifier for perp actions (the protocol program/contract address).
+   */
+  private evaluatePerpAllowedMarkets(
+    resolved: PolicyRow[],
+    transaction: TransactionParam,
+  ): PolicyEvaluation | null {
+    const PERP_ACTIONS = new Set([
+      'open_position', 'close_position', 'modify_position',
+      'add_margin', 'withdraw_margin',
+    ]);
+    // Suffix matching for prefixed actions (drift_open_position -> open_position)
+    const actionSuffix = transaction.actionName
+      ? [...PERP_ACTIONS].find((a) => transaction.actionName!.endsWith(a))
+      : undefined;
+    if (!actionSuffix) return null; // Not a perp action
+
+    const marketPolicy = resolved.find((p) => p.type === 'PERP_ALLOWED_MARKETS');
+    if (!marketPolicy) {
+      return {
+        allowed: false,
+        tier: 'INSTANT',
+        reason: 'No PERP_ALLOWED_MARKETS policy configured. Perp markets require explicit whitelist.',
+      };
+    }
+
+    const rules = JSON.parse(marketPolicy.rules) as PerpAllowedMarketsRules;
+    const targetMarket = transaction.contractAddress ?? transaction.toAddress;
+    const isAllowed = rules.markets.some(
+      (m) => m.market.toLowerCase() === targetMarket.toLowerCase(),
+    );
+
+    if (!isAllowed) {
+      return {
+        allowed: false,
+        tier: 'INSTANT',
+        reason: `Market ${targetMarket} not in perp allowed markets whitelist`,
+      };
+    }
+    return null;
+  }
+
+  // -------------------------------------------------------------------------
+  // Private: PERP_MAX_LEVERAGE evaluation (Step 4i-b)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Evaluate PERP_MAX_LEVERAGE policy.
+   *
+   * Logic:
+   * - Only applies to open_position and modify_position (suffix matching)
+   * - Reads perpLeverage from TransactionParam
+   * - Denies if perpLeverage > rules.maxLeverage
+   * - Returns DELAY tier if perpLeverage > rules.warningLeverage (optional)
+   */
+  private evaluatePerpMaxLeverage(
+    resolved: PolicyRow[],
+    transaction: TransactionParam,
+  ): PolicyEvaluation | null {
+    if (!transaction.actionName) return null;
+    const isLeverageAction =
+      transaction.actionName.endsWith('open_position') ||
+      transaction.actionName.endsWith('modify_position');
+    if (!isLeverageAction) return null;
+
+    const leveragePolicy = resolved.find((p) => p.type === 'PERP_MAX_LEVERAGE');
+    if (!leveragePolicy) return null; // No leverage policy -> pass through
+
+    const rules = JSON.parse(leveragePolicy.rules) as PerpMaxLeverageRules;
+    const leverage = transaction.perpLeverage;
+    if (typeof leverage !== 'number') return null; // No leverage info -> pass through
+
+    if (leverage > rules.maxLeverage) {
+      return {
+        allowed: false,
+        tier: 'INSTANT',
+        reason: `Leverage ${leverage}x exceeds max allowed (${rules.maxLeverage}x)`,
+      };
+    }
+
+    if (rules.warningLeverage && leverage > rules.warningLeverage) {
+      return {
+        allowed: true,
+        tier: 'DELAY' as PolicyTier,
+        reason: `Leverage ${leverage}x approaching limit (warning: ${rules.warningLeverage}x, max: ${rules.maxLeverage}x)`,
+      };
+    }
+
+    return null;
+  }
+
+  // -------------------------------------------------------------------------
+  // Private: PERP_MAX_POSITION_USD evaluation (Step 4i-c)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Evaluate PERP_MAX_POSITION_USD policy.
+   *
+   * Logic:
+   * - Only applies to open_position and modify_position (suffix matching)
+   * - Reads perpSizeUsd from TransactionParam
+   * - Denies if perpSizeUsd > rules.maxPositionUsd
+   * - Returns DELAY tier if perpSizeUsd > rules.warningPositionUsd (optional)
+   */
+  private evaluatePerpMaxPositionUsd(
+    resolved: PolicyRow[],
+    transaction: TransactionParam,
+  ): PolicyEvaluation | null {
+    if (!transaction.actionName) return null;
+    const isSizeAction =
+      transaction.actionName.endsWith('open_position') ||
+      transaction.actionName.endsWith('modify_position');
+    if (!isSizeAction) return null;
+
+    const sizePolicy = resolved.find((p) => p.type === 'PERP_MAX_POSITION_USD');
+    if (!sizePolicy) return null; // No size policy -> pass through
+
+    const rules = JSON.parse(sizePolicy.rules) as PerpMaxPositionUsdRules;
+    const sizeUsd = transaction.perpSizeUsd;
+    if (typeof sizeUsd !== 'number') return null; // No size info -> pass through
+
+    if (sizeUsd > rules.maxPositionUsd) {
+      return {
+        allowed: false,
+        tier: 'INSTANT',
+        reason: `Position size $${sizeUsd.toLocaleString()} exceeds max allowed ($${rules.maxPositionUsd.toLocaleString()})`,
+      };
+    }
+
+    if (rules.warningPositionUsd && sizeUsd > rules.warningPositionUsd) {
+      return {
+        allowed: true,
+        tier: 'DELAY' as PolicyTier,
+        reason: `Position size $${sizeUsd.toLocaleString()} approaching limit (warning: $${rules.warningPositionUsd.toLocaleString()}, max: $${rules.maxPositionUsd.toLocaleString()})`,
+      };
+    }
+
+    return null;
   }
 }

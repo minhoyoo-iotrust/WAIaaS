@@ -475,6 +475,7 @@ export class HotReloadOrchestrator {
       'jupiter_swap', 'zerox_swap', 'lifi',
       'lido_staking', 'jito_staking',
       'aave_v3', 'kamino',
+      'pendle_yield', 'drift_perp',
     ];
 
     // Unregister all built-in providers first

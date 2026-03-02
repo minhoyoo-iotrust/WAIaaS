@@ -10,4 +10,5 @@ export type {
   IncomingTxEvent,
   IncomingTxSuspiciousEvent,
   YieldMaturityWarningEvent,
+  MarginWarningEvent,
 } from './event-types.js';

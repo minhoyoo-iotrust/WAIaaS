@@ -102,6 +102,12 @@ async function main(): Promise<void> {
   async function shutdown(signal: string): Promise<void> {
     console.log(`[push-relay] ${signal} received, shutting down...`);
 
+    const shutdownTimer = setTimeout(() => {
+      console.error('[push-relay] Shutdown timeout, forcing exit');
+      process.exit(1);
+    }, SHUTDOWN_TIMEOUT_MS);
+    shutdownTimer.unref();
+
     // 1. Stop accepting new SSE messages
     await subscriber.stop();
 
@@ -111,15 +117,10 @@ async function main(): Promise<void> {
     // 3. Close database
     registry.close();
 
+    clearTimeout(shutdownTimer);
     console.log('[push-relay] Shutdown complete');
     process.exit(0);
   }
-
-  const shutdownTimer = setTimeout(() => {
-    console.error('[push-relay] Shutdown timeout, forcing exit');
-    process.exit(1);
-  }, SHUTDOWN_TIMEOUT_MS);
-  shutdownTimer.unref();
 
   process.on('SIGTERM', () => void shutdown('SIGTERM'));
   process.on('SIGINT', () => void shutdown('SIGINT'));

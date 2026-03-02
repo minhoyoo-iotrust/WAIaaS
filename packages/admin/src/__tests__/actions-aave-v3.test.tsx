@@ -215,8 +215,8 @@ describe('ActionsPage - Aave V3 Card', () => {
       expect(screen.getByText('Aave V3 Lending')).toBeTruthy();
     });
 
-    // All 8 providers disabled -> 8 Inactive badges
+    // All 9 providers disabled -> 9 Inactive badges (includes Drift)
     const inactiveBadges = screen.getAllByText('Inactive');
-    expect(inactiveBadges.length).toBe(8);
+    expect(inactiveBadges.length).toBe(9);
   });
 });
