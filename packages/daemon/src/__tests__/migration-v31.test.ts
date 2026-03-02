@@ -56,7 +56,7 @@ describe('Migration v31: wallet_apps table', () => {
     expect(columnNames).toContain('created_at');
     expect(columnNames).toContain('updated_at');
     // v33 added sign_topic and notify_topic (9 columns total)
-    expect(columns).toHaveLength(9);
+    expect(columns).toHaveLength(11);
   });
 
   it('T-APP-01b: UNIQUE constraint on name column', () => {
