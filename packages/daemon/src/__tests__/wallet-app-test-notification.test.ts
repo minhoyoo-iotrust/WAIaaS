@@ -131,7 +131,7 @@ describe('POST /admin/wallet-apps/:id/test-notification', () => {
     expect(body.error).toContain('Alerts are disabled');
   });
 
-  it('sends test notification on success', async () => {
+  it('sends test notification in base64url JSON format', async () => {
     const walletAppService = mockWalletAppService({
       getById: vi.fn().mockReturnValue(TEST_APP),
     });
@@ -145,14 +145,34 @@ describe('POST /admin/wallet-apps/:id/test-notification', () => {
     expect(body.success).toBe(true);
     expect(body.topic).toBe('waiaas-notify-dcent');
 
-    // Verify fetch was called
-    expect(globalThis.fetch).toHaveBeenCalledWith(
+    // Verify fetch was called with base64url-encoded JSON body + ntfy headers
+    const fetchMock = globalThis.fetch as ReturnType<typeof vi.fn>;
+    expect(fetchMock).toHaveBeenCalledWith(
       'https://ntfy.example.com/waiaas-notify-dcent',
       expect.objectContaining({
         method: 'POST',
-        body: expect.stringContaining("D'CENT Wallet"),
+        headers: expect.objectContaining({
+          'Priority': '3',
+          'Title': 'Test Notification',
+          'Tags': 'waiaas,system',
+        }),
       }),
     );
+
+    // Decode and validate the base64url body matches NotificationMessage schema
+    const callArgs = fetchMock.mock.calls[0] as [string, { body: string }];
+    const encodedBody = callArgs[1].body;
+    const decoded = JSON.parse(Buffer.from(encodedBody, 'base64url').toString('utf-8'));
+    expect(decoded).toMatchObject({
+      version: '1',
+      eventType: 'TEST',
+      walletId: '',
+      walletName: 'dcent',
+      category: 'system',
+      title: 'Test Notification',
+      body: expect.stringContaining("D'CENT Wallet"),
+    });
+    expect(typeof decoded.timestamp).toBe('number');
   });
 
   it('returns 404 when app not found', async () => {

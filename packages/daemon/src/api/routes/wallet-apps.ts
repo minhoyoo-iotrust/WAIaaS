@@ -242,10 +242,26 @@ export function createWalletAppsRoutes(deps: WalletAppsRouteDeps): OpenAPIHono {
     const url = `${ntfyServer}/${notifyTopic}`;
 
     try {
+      const message = {
+        version: '1' as const,
+        eventType: 'TEST',
+        walletId: '',
+        walletName: app.name,
+        category: 'system' as const,
+        title: 'Test Notification',
+        body: `WAIaaS test notification for ${app.displayName}`,
+        timestamp: Math.floor(Date.now() / 1000),
+      };
+      const encoded = Buffer.from(JSON.stringify(message), 'utf-8').toString('base64url');
+
       const res = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: `WAIaaS test notification for ${app.displayName}`,
+        body: encoded,
+        headers: {
+          'Priority': '3',
+          'Title': message.title,
+          'Tags': 'waiaas,system',
+        },
       });
       if (!res.ok) {
         return c.json({ success: false, topic: notifyTopic, error: `ntfy returned ${res.status}` }, 200);
