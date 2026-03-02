@@ -14,12 +14,14 @@ export interface DeviceRoutesOpts {
   registry: DeviceRegistry;
   subscriber: NtfySubscriber;
   provider: IPushProvider;
+  signTopicPrefix: string;
+  notifyTopicPrefix: string;
   version?: string;
 }
 
 export function createDeviceRoutes(opts: DeviceRoutesOpts): Hono {
   const app = new Hono();
-  const { registry, subscriber, provider, version } = opts;
+  const { registry, subscriber, provider, signTopicPrefix, notifyTopicPrefix, version } = opts;
 
   // POST /devices — register device token
   app.post('/devices', async (c) => {
@@ -31,7 +33,16 @@ export function createDeviceRoutes(opts: DeviceRoutesOpts): Hono {
 
     const { walletName, pushToken, platform } = parsed.data;
     const result = registry.register(walletName, pushToken, platform);
-    return c.json({ status: 'registered', subscription_token: result.subscriptionToken }, 201);
+    const token = result.subscriptionToken;
+
+    // Dynamically subscribe to subscription-token-based topics
+    subscriber.addTopics(
+      walletName,
+      `${signTopicPrefix}-${walletName}-${token}`,
+      `${notifyTopicPrefix}-${walletName}-${token}`,
+    );
+
+    return c.json({ status: 'registered', subscription_token: token }, 201);
   });
 
   // GET /devices/:token/subscription-token — get subscription token for a device
@@ -46,11 +57,23 @@ export function createDeviceRoutes(opts: DeviceRoutesOpts): Hono {
 
   // DELETE /devices/:token — unregister device token
   app.delete('/devices/:token', (c) => {
-    const token = c.req.param('token');
-    const removed = registry.unregister(token);
+    const pushToken = c.req.param('token');
+
+    // Look up device before deletion to get topic info
+    const device = registry.getByPushToken(pushToken);
+    const removed = registry.unregister(pushToken);
     if (!removed) {
       return c.json({ error: 'Token not found' }, 404);
     }
+
+    // Dynamically unsubscribe from subscription-token-based topics
+    if (device?.subscriptionToken) {
+      subscriber.removeTopics(
+        `${signTopicPrefix}-${device.walletName}-${device.subscriptionToken}`,
+        `${notifyTopicPrefix}-${device.walletName}-${device.subscriptionToken}`,
+      );
+    }
+
     return c.body(null, 204);
   });
 

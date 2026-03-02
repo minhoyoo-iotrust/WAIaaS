@@ -88,6 +88,23 @@ async function main(): Promise<void> {
     `[push-relay] Subscribing to ${config.relay.wallet_names.length} wallet(s): ${config.relay.wallet_names.join(', ')}`,
   );
 
+  // Restore subscription-token-based topics from DB
+  const devices = registry.listAll();
+  let restoredTopics = 0;
+  for (const device of devices) {
+    if (device.subscriptionToken) {
+      subscriber.addTopics(
+        device.walletName,
+        `${config.relay.sign_topic_prefix}-${device.walletName}-${device.subscriptionToken}`,
+        `${config.relay.notify_topic_prefix}-${device.walletName}-${device.subscriptionToken}`,
+      );
+      restoredTopics++;
+    }
+  }
+  if (restoredTopics > 0) {
+    console.log(`[push-relay] Restored ${restoredTopics} device topic(s) from DB`);
+  }
+
   // Create and start HTTP server
   const app = createServer({
     registry,
@@ -95,6 +112,8 @@ async function main(): Promise<void> {
     provider,
     apiKey: config.relay.server.api_key,
     ntfyServer: config.relay.ntfy_server,
+    signTopicPrefix: config.relay.sign_topic_prefix,
+    notifyTopicPrefix: config.relay.notify_topic_prefix,
     version: VERSION,
   });
 

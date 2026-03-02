@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
+import { createServer } from 'node:http';
+import type { Server, IncomingMessage, ServerResponse } from 'node:http';
 import { gzipSync, deflateSync, brotliCompressSync } from 'node:zlib';
-import { NtfySubscriber, isLikelyCompressed, selectDecompressor } from '../subscriber/ntfy-subscriber.js';
+import { NtfySubscriber } from '../subscriber/ntfy-subscriber.js';
 import { ConfigurablePayloadTransformer } from '../transformer/payload-transformer.js';
+import type { AddressInfo } from 'node:net';
 
 // ── Fixtures ──────────────────────────────────────────────────────────
 
@@ -40,251 +43,113 @@ const validNotification = {
   timestamp: 1700000000,
 };
 
-// ── Helpers ───────────────────────────────────────────────────────────
+// ── Test HTTP Server Helpers ──────────────────────────────────────────
 
-function createSseStream(lines: string[]): ReadableStream<Uint8Array> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(lines.join('\n') + '\n');
-  return new ReadableStream({
-    start(controller) {
-      controller.enqueue(data);
-      controller.close();
-    },
+type SseServerHandler = (req: IncomingMessage, res: ServerResponse) => void;
+
+function createTestServer(handler: SseServerHandler): Promise<{ server: Server; port: number }> {
+  return new Promise((resolve) => {
+    const server = createServer(handler);
+    server.listen(0, '127.0.0.1', () => {
+      const { port } = server.address() as AddressInfo;
+      resolve({ server, port });
+    });
   });
 }
 
-function createSseResponse(lines: string[]): Response {
-  return new Response(createSseStream(lines), {
-    status: 200,
-    headers: { 'Content-Type': 'text/event-stream' },
+function closeServer(server: Server): Promise<void> {
+  return new Promise((resolve) => {
+    server.close(() => resolve());
   });
 }
 
-function createCompressedSseResponse(
-  lines: string[],
-  encoding: 'gzip' | 'deflate' | 'br',
-): Response {
-  const text = lines.join('\n') + '\n';
-  const raw = Buffer.from(text, 'utf-8');
-  let compressed: Buffer;
-  if (encoding === 'gzip') compressed = gzipSync(raw);
-  else if (encoding === 'deflate') compressed = deflateSync(raw);
-  else compressed = brotliCompressSync(raw);
+function sseHandler(
+  topicData: Record<string, { lines: string[]; encoding?: 'gzip' | 'deflate' | 'br' }>,
+): SseServerHandler {
+  return (req, res) => {
+    // URL pattern: /{topic}/sse
+    const parts = req.url?.split('/').filter(Boolean) ?? [];
+    const topic = parts[0] ?? '';
 
-  const stream = new ReadableStream<Uint8Array>({
-    start(controller) {
-      controller.enqueue(new Uint8Array(compressed));
-      controller.close();
-    },
-  });
-  return new Response(stream, {
-    status: 200,
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Content-Encoding': encoding,
-    },
-  });
+    const entry = topicData[topic];
+    if (!entry) {
+      // Hang forever for topics we don't have data for (simulate long-poll SSE)
+      res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+      // Don't end — keep connection open
+      return;
+    }
+
+    const text = entry.lines.join('\n') + '\n';
+    const raw = Buffer.from(text, 'utf-8');
+
+    if (entry.encoding) {
+      let compressed: Buffer;
+      if (entry.encoding === 'gzip') compressed = gzipSync(raw);
+      else if (entry.encoding === 'deflate') compressed = deflateSync(raw);
+      else compressed = brotliCompressSync(raw);
+
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Content-Encoding': entry.encoding,
+      });
+      res.end(compressed);
+    } else {
+      res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+      res.end(raw);
+    }
+  };
 }
-
-/**
- * Create a compressed SSE response WITHOUT Content-Encoding header.
- * Simulates scenario B: CDN compresses but undici strips the header.
- */
-function createHeaderlessCompressedResponse(
-  lines: string[],
-  encoding: 'gzip' | 'deflate',
-): Response {
-  const text = lines.join('\n') + '\n';
-  const raw = Buffer.from(text, 'utf-8');
-  const compressed = encoding === 'gzip' ? gzipSync(raw) : deflateSync(raw);
-
-  const stream = new ReadableStream<Uint8Array>({
-    start(controller) {
-      controller.enqueue(new Uint8Array(compressed));
-      controller.close();
-    },
-  });
-  // NO Content-Encoding header — simulates undici stripping it
-  return new Response(stream, {
-    status: 200,
-    headers: { 'Content-Type': 'text/event-stream' },
-  });
-}
-
-/**
- * Create an UNCOMPRESSED SSE response WITH Content-Encoding header.
- * Simulates scenarios A/D: undici already decompressed but kept the header.
- */
-function createAlreadyDecompressedResponse(lines: string[]): Response {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(lines.join('\n') + '\n');
-  const stream = new ReadableStream<Uint8Array>({
-    start(controller) {
-      controller.enqueue(data);
-      controller.close();
-    },
-  });
-  // Plaintext body but header says 'deflate' — undici already decompressed
-  return new Response(stream, {
-    status: 200,
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Content-Encoding': 'deflate',
-    },
-  });
-}
-
-// ── Unit Tests: isLikelyCompressed ───────────────────────────────────
-
-describe('isLikelyCompressed', () => {
-  it('returns false for empty chunk', () => {
-    expect(isLikelyCompressed(new Uint8Array(0))).toBe(false);
-  });
-
-  it('returns false for SSE event: line', () => {
-    const chunk = new TextEncoder().encode('event: open\n');
-    expect(isLikelyCompressed(chunk)).toBe(false);
-  });
-
-  it('returns false for SSE data: line', () => {
-    const chunk = new TextEncoder().encode('data: {"topic":"test"}\n');
-    expect(isLikelyCompressed(chunk)).toBe(false);
-  });
-
-  it('returns false for SSE id: line', () => {
-    const chunk = new TextEncoder().encode('id: 123\n');
-    expect(isLikelyCompressed(chunk)).toBe(false);
-  });
-
-  it('returns false for SSE retry: line', () => {
-    const chunk = new TextEncoder().encode('retry: 5000\n');
-    expect(isLikelyCompressed(chunk)).toBe(false);
-  });
-
-  it('returns false for SSE comment (colon)', () => {
-    const chunk = new TextEncoder().encode(': keepalive\n');
-    expect(isLikelyCompressed(chunk)).toBe(false);
-  });
-
-  it('returns false for empty SSE line (newline)', () => {
-    const chunk = new TextEncoder().encode('\n');
-    expect(isLikelyCompressed(chunk)).toBe(false);
-  });
-
-  it('returns true for gzip magic bytes', () => {
-    const chunk = new Uint8Array([0x1f, 0x8b, 0x08, 0x00]);
-    expect(isLikelyCompressed(chunk)).toBe(true);
-  });
-
-  it('returns true for deflate (zlib) header', () => {
-    const chunk = new Uint8Array([0x78, 0x9c, 0x01, 0x02]);
-    expect(isLikelyCompressed(chunk)).toBe(true);
-  });
-
-  it('returns true for deflate CMF=0x58', () => {
-    // This is the exact byte pattern from issue #236
-    const chunk = new Uint8Array([0x58, 0x69, 0x01, 0x02]);
-    expect(isLikelyCompressed(chunk)).toBe(true);
-  });
-
-  it('returns true for actual gzip compressed data', () => {
-    const compressed = gzipSync(Buffer.from('data: {}\n'));
-    expect(isLikelyCompressed(new Uint8Array(compressed))).toBe(true);
-  });
-
-  it('returns true for actual deflate compressed data', () => {
-    const compressed = deflateSync(Buffer.from('data: {}\n'));
-    expect(isLikelyCompressed(new Uint8Array(compressed))).toBe(true);
-  });
-});
-
-describe('selectDecompressor', () => {
-  it('returns null for uncompressed SSE data', () => {
-    const chunk = new TextEncoder().encode('event: open\n');
-    expect(selectDecompressor(chunk, null)).toBeNull();
-  });
-
-  it('returns null for uncompressed data even with Content-Encoding header', () => {
-    // Scenario A/D: undici already decompressed but kept header
-    const chunk = new TextEncoder().encode('event: open\n');
-    expect(selectDecompressor(chunk, 'deflate')).toBeNull();
-  });
-
-  it('returns decompressor for compressed data without header', () => {
-    // Scenario B: undici stripped header but left data compressed
-    const compressed = gzipSync(Buffer.from('data: {}\n'));
-    const result = selectDecompressor(new Uint8Array(compressed), null);
-    expect(result).not.toBeNull();
-  });
-
-  it('returns brotli decompressor when header says br and data is compressed', () => {
-    const compressed = brotliCompressSync(Buffer.from('data: {}\n'));
-    const result = selectDecompressor(new Uint8Array(compressed), 'br');
-    expect(result).not.toBeNull();
-  });
-});
 
 // ── Integration Tests: NtfySubscriber ────────────────────────────────
 
 describe('NtfySubscriber', () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
+  let servers: Server[] = [];
+
+  afterEach(async () => {
+    for (const s of servers) {
+      await closeServer(s);
+    }
+    servers = [];
   });
 
-  it('sets connected and topicCount on start', () => {
+  it('sets connected and topicCount on start', async () => {
+    // Server that hangs all connections (never responds with data)
+    const { server, port } = await createTestServer((_req, res) => {
+      res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+    });
+    servers.push(server);
+
     const subscriber = new NtfySubscriber({
-      ntfyServer: 'https://ntfy.sh',
+      ntfyServer: `http://127.0.0.1:${port}`,
       signTopicPrefix: 'waiaas-sign',
       notifyTopicPrefix: 'waiaas-notify',
       walletNames: ['dcent', 'bot1'],
       onMessage: vi.fn(),
     });
 
-    vi.spyOn(globalThis, 'fetch').mockImplementation(
-      () => new Promise(() => {}),
-    );
-
     subscriber.start();
     expect(subscriber.connected).toBe(true);
     expect(subscriber.topicCount).toBe(4);
+    await subscriber.stop();
   });
 
   it('resets state on stop', async () => {
+    const { server, port } = await createTestServer((_req, res) => {
+      res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+    });
+    servers.push(server);
+
     const subscriber = new NtfySubscriber({
-      ntfyServer: 'https://ntfy.sh',
+      ntfyServer: `http://127.0.0.1:${port}`,
       signTopicPrefix: 'waiaas-sign',
       notifyTopicPrefix: 'waiaas-notify',
       walletNames: ['dcent'],
       onMessage: vi.fn(),
     });
 
-    vi.spyOn(globalThis, 'fetch').mockImplementation(
-      () => new Promise(() => {}),
-    );
-
     subscriber.start();
     await subscriber.stop();
     expect(subscriber.connected).toBe(false);
-  });
-
-  it('subscribes to correct ntfy SSE URLs', () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(
-      () => new Promise(() => {}),
-    );
-
-    const subscriber = new NtfySubscriber({
-      ntfyServer: 'https://ntfy.example.com',
-      signTopicPrefix: 'sign',
-      notifyTopicPrefix: 'notify',
-      walletNames: ['w1'],
-      onMessage: vi.fn(),
-    });
-
-    subscriber.start();
-
-    const urls = fetchSpy.mock.calls.map((c) => c[0] as string);
-    expect(urls).toContain('https://ntfy.example.com/sign-w1/sse');
-    expect(urls).toContain('https://ntfy.example.com/notify-w1/sse');
   });
 
   it('processes SSE sign_request messages and calls onMessage', async () => {
@@ -297,16 +162,13 @@ describe('NtfySubscriber', () => {
       priority: 5,
     });
 
-    vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
-      const urlStr = url as string;
-      if (urlStr.includes('sign-w1')) {
-        return Promise.resolve(createSseResponse([`data: ${ntfyMessage}`]));
-      }
-      return new Promise(() => {});
-    });
+    const { server, port } = await createTestServer(
+      sseHandler({ 'sign-w1': { lines: [`data: ${ntfyMessage}`] } }),
+    );
+    servers.push(server);
 
     const subscriber = new NtfySubscriber({
-      ntfyServer: 'https://ntfy.sh',
+      ntfyServer: `http://127.0.0.1:${port}`,
       signTopicPrefix: 'sign',
       notifyTopicPrefix: 'notify',
       walletNames: ['w1'],
@@ -314,7 +176,7 @@ describe('NtfySubscriber', () => {
     });
 
     subscriber.start();
-    await new Promise((r) => setTimeout(r, 100));
+    await new Promise((r) => setTimeout(r, 200));
     await subscriber.stop();
 
     expect(onMessage).toHaveBeenCalled();
@@ -334,16 +196,13 @@ describe('NtfySubscriber', () => {
       priority: 3,
     });
 
-    vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
-      const urlStr = url as string;
-      if (urlStr.includes('notify-w1')) {
-        return Promise.resolve(createSseResponse([`data: ${ntfyMessage}`]));
-      }
-      return new Promise(() => {});
-    });
+    const { server, port } = await createTestServer(
+      sseHandler({ 'notify-w1': { lines: [`data: ${ntfyMessage}`] } }),
+    );
+    servers.push(server);
 
     const subscriber = new NtfySubscriber({
-      ntfyServer: 'https://ntfy.sh',
+      ntfyServer: `http://127.0.0.1:${port}`,
       signTopicPrefix: 'sign',
       notifyTopicPrefix: 'notify',
       walletNames: ['w1'],
@@ -351,7 +210,7 @@ describe('NtfySubscriber', () => {
     });
 
     subscriber.start();
-    await new Promise((r) => setTimeout(r, 100));
+    await new Promise((r) => setTimeout(r, 200));
     await subscriber.stop();
 
     expect(onMessage).toHaveBeenCalled();
@@ -370,21 +229,22 @@ describe('NtfySubscriber', () => {
       priority: 3,
     });
 
-    vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
-      const urlStr = url as string;
-      if (urlStr.includes('sign-w1')) {
-        return Promise.resolve(createSseResponse([
-          'event: message',
-          ': comment',
-          'data: ',
-          `data: ${ntfyMessage}`,
-        ]));
-      }
-      return new Promise(() => {});
-    });
+    const { server, port } = await createTestServer(
+      sseHandler({
+        'sign-w1': {
+          lines: [
+            'event: message',
+            ': comment',
+            'data: ',
+            `data: ${ntfyMessage}`,
+          ],
+        },
+      }),
+    );
+    servers.push(server);
 
     const subscriber = new NtfySubscriber({
-      ntfyServer: 'https://ntfy.sh',
+      ntfyServer: `http://127.0.0.1:${port}`,
       signTopicPrefix: 'sign',
       notifyTopicPrefix: 'notify',
       walletNames: ['w1'],
@@ -392,7 +252,7 @@ describe('NtfySubscriber', () => {
     });
 
     subscriber.start();
-    await new Promise((r) => setTimeout(r, 100));
+    await new Promise((r) => setTimeout(r, 200));
     await subscriber.stop();
 
     expect(onMessage).toHaveBeenCalledTimes(1);
@@ -402,18 +262,13 @@ describe('NtfySubscriber', () => {
     const onError = vi.fn();
     const onMessage = vi.fn().mockResolvedValue(undefined);
 
-    vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
-      const urlStr = url as string;
-      if (urlStr.includes('sign-w1')) {
-        return Promise.resolve(createSseResponse([
-          'data: not-valid-json',
-        ]));
-      }
-      return new Promise(() => {});
-    });
+    const { server, port } = await createTestServer(
+      sseHandler({ 'sign-w1': { lines: ['data: not-valid-json'] } }),
+    );
+    servers.push(server);
 
     const subscriber = new NtfySubscriber({
-      ntfyServer: 'https://ntfy.sh',
+      ntfyServer: `http://127.0.0.1:${port}`,
       signTopicPrefix: 'sign',
       notifyTopicPrefix: 'notify',
       walletNames: ['w1'],
@@ -422,22 +277,24 @@ describe('NtfySubscriber', () => {
     });
 
     subscriber.start();
-    await new Promise((r) => setTimeout(r, 100));
+    await new Promise((r) => setTimeout(r, 200));
     await subscriber.stop();
 
     expect(onError).toHaveBeenCalled();
     expect(onMessage).not.toHaveBeenCalled();
   });
 
-  it('calls onError on connection failure', async () => {
+  it('calls onError on connection failure (500)', async () => {
     const onError = vi.fn();
 
-    vi.spyOn(globalThis, 'fetch').mockImplementation(() => {
-      return Promise.resolve(new Response(null, { status: 500 }));
+    const { server, port } = await createTestServer((_req, res) => {
+      res.writeHead(500);
+      res.end('Internal Server Error');
     });
+    servers.push(server);
 
     const subscriber = new NtfySubscriber({
-      ntfyServer: 'https://ntfy.sh',
+      ntfyServer: `http://127.0.0.1:${port}`,
       signTopicPrefix: 'sign',
       notifyTopicPrefix: 'notify',
       walletNames: ['w1'],
@@ -446,7 +303,7 @@ describe('NtfySubscriber', () => {
     });
 
     subscriber.start();
-    await new Promise((r) => setTimeout(r, 100));
+    await new Promise((r) => setTimeout(r, 200));
     await subscriber.stop();
 
     expect(onError).toHaveBeenCalled();
@@ -460,16 +317,13 @@ describe('NtfySubscriber', () => {
       priority: 3,
     });
 
-    vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
-      const urlStr = url as string;
-      if (urlStr.includes('sign-w1')) {
-        return Promise.resolve(createSseResponse([`data: ${ntfyMessage}`]));
-      }
-      return new Promise(() => {});
-    });
+    const { server, port } = await createTestServer(
+      sseHandler({ 'sign-w1': { lines: [`data: ${ntfyMessage}`] } }),
+    );
+    servers.push(server);
 
     const subscriber = new NtfySubscriber({
-      ntfyServer: 'https://ntfy.sh',
+      ntfyServer: `http://127.0.0.1:${port}`,
       signTopicPrefix: 'sign',
       notifyTopicPrefix: 'notify',
       walletNames: ['w1'],
@@ -477,7 +331,7 @@ describe('NtfySubscriber', () => {
     });
 
     subscriber.start();
-    await new Promise((r) => setTimeout(r, 100));
+    await new Promise((r) => setTimeout(r, 200));
     await subscriber.stop();
 
     expect(onMessage).not.toHaveBeenCalled();
@@ -492,16 +346,13 @@ describe('NtfySubscriber', () => {
       priority: 3,
     });
 
-    vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
-      const urlStr = url as string;
-      if (urlStr.includes('sign-w1')) {
-        return Promise.resolve(createSseResponse([`data: ${ntfyMessage}`]));
-      }
-      return new Promise(() => {});
-    });
+    const { server, port } = await createTestServer(
+      sseHandler({ 'sign-w1': { lines: [`data: ${ntfyMessage}`] } }),
+    );
+    servers.push(server);
 
     const subscriber = new NtfySubscriber({
-      ntfyServer: 'https://ntfy.sh',
+      ntfyServer: `http://127.0.0.1:${port}`,
       signTopicPrefix: 'sign',
       notifyTopicPrefix: 'notify',
       walletNames: ['w1'],
@@ -509,7 +360,7 @@ describe('NtfySubscriber', () => {
     });
 
     subscriber.start();
-    await new Promise((r) => setTimeout(r, 100));
+    await new Promise((r) => setTimeout(r, 200));
     await subscriber.stop();
 
     expect(onMessage).not.toHaveBeenCalled();
@@ -525,13 +376,10 @@ describe('NtfySubscriber', () => {
       priority: 5,
     });
 
-    vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
-      const urlStr = url as string;
-      if (urlStr.includes('sign-w1')) {
-        return Promise.resolve(createSseResponse([`data: ${ntfyMessage}`]));
-      }
-      return new Promise(() => {});
-    });
+    const { server, port } = await createTestServer(
+      sseHandler({ 'sign-w1': { lines: [`data: ${ntfyMessage}`] } }),
+    );
+    servers.push(server);
 
     const transformer = new ConfigurablePayloadTransformer({
       static_fields: { app_id: 'test-app' },
@@ -541,7 +389,7 @@ describe('NtfySubscriber', () => {
     });
 
     const subscriber = new NtfySubscriber({
-      ntfyServer: 'https://ntfy.sh',
+      ntfyServer: `http://127.0.0.1:${port}`,
       signTopicPrefix: 'sign',
       notifyTopicPrefix: 'notify',
       walletNames: ['w1'],
@@ -550,7 +398,7 @@ describe('NtfySubscriber', () => {
     });
 
     subscriber.start();
-    await new Promise((r) => setTimeout(r, 100));
+    await new Promise((r) => setTimeout(r, 200));
     await subscriber.stop();
 
     expect(onMessage).toHaveBeenCalled();
@@ -571,13 +419,10 @@ describe('NtfySubscriber', () => {
       priority: 3,
     });
 
-    vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
-      const urlStr = url as string;
-      if (urlStr.includes('notify-w1')) {
-        return Promise.resolve(createSseResponse([`data: ${ntfyMessage}`]));
-      }
-      return new Promise(() => {});
-    });
+    const { server, port } = await createTestServer(
+      sseHandler({ 'notify-w1': { lines: [`data: ${ntfyMessage}`] } }),
+    );
+    servers.push(server);
 
     const transformer = new ConfigurablePayloadTransformer({
       static_fields: { app_id: 'test-app' },
@@ -588,7 +433,7 @@ describe('NtfySubscriber', () => {
     });
 
     const subscriber = new NtfySubscriber({
-      ntfyServer: 'https://ntfy.sh',
+      ntfyServer: `http://127.0.0.1:${port}`,
       signTopicPrefix: 'sign',
       notifyTopicPrefix: 'notify',
       walletNames: ['w1'],
@@ -597,7 +442,7 @@ describe('NtfySubscriber', () => {
     });
 
     subscriber.start();
-    await new Promise((r) => setTimeout(r, 100));
+    await new Promise((r) => setTimeout(r, 200));
     await subscriber.stop();
 
     expect(onMessage).toHaveBeenCalled();
@@ -606,7 +451,6 @@ describe('NtfySubscriber', () => {
     expect(payload.data.app_id).toBe('test-app');
     expect(payload.data.sound).toBe('default');
     expect(payload.data.channel).toBe('info');
-    // sign_request category_map should not be applied
     expect(payload.data).not.toHaveProperty('badge');
   });
 
@@ -620,17 +464,13 @@ describe('NtfySubscriber', () => {
       priority: 5,
     });
 
-    vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
-      const urlStr = url as string;
-      if (urlStr.includes('sign-w1')) {
-        return Promise.resolve(createSseResponse([`data: ${ntfyMessage}`]));
-      }
-      return new Promise(() => {});
-    });
+    const { server, port } = await createTestServer(
+      sseHandler({ 'sign-w1': { lines: [`data: ${ntfyMessage}`] } }),
+    );
+    servers.push(server);
 
-    // No transformer provided — bypass
     const subscriber = new NtfySubscriber({
-      ntfyServer: 'https://ntfy.sh',
+      ntfyServer: `http://127.0.0.1:${port}`,
       signTopicPrefix: 'sign',
       notifyTopicPrefix: 'notify',
       walletNames: ['w1'],
@@ -638,12 +478,11 @@ describe('NtfySubscriber', () => {
     });
 
     subscriber.start();
-    await new Promise((r) => setTimeout(r, 100));
+    await new Promise((r) => setTimeout(r, 200));
     await subscriber.stop();
 
     expect(onMessage).toHaveBeenCalled();
     const payload = onMessage.mock.calls[0]![1];
-    // No transformer fields should be present
     expect(payload.data).not.toHaveProperty('app_id');
     expect(payload.data).not.toHaveProperty('sound');
   });
@@ -651,7 +490,7 @@ describe('NtfySubscriber', () => {
   // ── Compression Tests ────────────────────────────────────────────────
 
   it.each(['gzip', 'deflate', 'br'] as const)(
-    'decompresses %s-encoded SSE responses (with Content-Encoding header)',
+    'decompresses %s-encoded SSE responses (Content-Encoding header preserved by node:http)',
     async (encoding) => {
       const onMessage = vi.fn().mockResolvedValue(undefined);
       const encoded = encodeBase64url(validSignRequest);
@@ -662,18 +501,13 @@ describe('NtfySubscriber', () => {
         priority: 5,
       });
 
-      vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
-        const urlStr = url as string;
-        if (urlStr.includes('sign-w1')) {
-          return Promise.resolve(
-            createCompressedSseResponse([`data: ${ntfyMessage}`], encoding),
-          );
-        }
-        return new Promise(() => {});
-      });
+      const { server, port } = await createTestServer(
+        sseHandler({ 'sign-w1': { lines: [`data: ${ntfyMessage}`], encoding } }),
+      );
+      servers.push(server);
 
       const subscriber = new NtfySubscriber({
-        ntfyServer: 'https://ntfy.sh',
+        ntfyServer: `http://127.0.0.1:${port}`,
         signTopicPrefix: 'sign',
         notifyTopicPrefix: 'notify',
         walletNames: ['w1'],
@@ -681,7 +515,7 @@ describe('NtfySubscriber', () => {
       });
 
       subscriber.start();
-      await new Promise((r) => setTimeout(r, 200));
+      await new Promise((r) => setTimeout(r, 300));
       await subscriber.stop();
 
       expect(onMessage).toHaveBeenCalled();
@@ -691,7 +525,7 @@ describe('NtfySubscriber', () => {
     },
   );
 
-  it('passes through uncompressed (identity) SSE responses', async () => {
+  it('passes through uncompressed (no Content-Encoding) SSE responses', async () => {
     const onMessage = vi.fn().mockResolvedValue(undefined);
     const encoded = encodeBase64url(validSignRequest);
     const ntfyMessage = JSON.stringify({
@@ -701,25 +535,13 @@ describe('NtfySubscriber', () => {
       priority: 5,
     });
 
-    const stream = createSseStream([`data: ${ntfyMessage}`]);
-    const identityResponse = new Response(stream, {
-      status: 200,
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Content-Encoding': 'identity',
-      },
-    });
-
-    vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
-      const urlStr = url as string;
-      if (urlStr.includes('sign-w1')) {
-        return Promise.resolve(identityResponse);
-      }
-      return new Promise(() => {});
-    });
+    const { server, port } = await createTestServer(
+      sseHandler({ 'sign-w1': { lines: [`data: ${ntfyMessage}`] } }),
+    );
+    servers.push(server);
 
     const subscriber = new NtfySubscriber({
-      ntfyServer: 'https://ntfy.sh',
+      ntfyServer: `http://127.0.0.1:${port}`,
       signTopicPrefix: 'sign',
       notifyTopicPrefix: 'notify',
       walletNames: ['w1'],
@@ -727,93 +549,122 @@ describe('NtfySubscriber', () => {
     });
 
     subscriber.start();
-    await new Promise((r) => setTimeout(r, 100));
+    await new Promise((r) => setTimeout(r, 200));
     await subscriber.stop();
 
     expect(onMessage).toHaveBeenCalled();
     expect(onMessage.mock.calls[0]![1].category).toBe('sign_request');
   });
 
-  // ── #236 Scenario B: Compressed body WITHOUT Content-Encoding header ──
+  // ── Dynamic Topic Tests (#237) ────────────────────────────────────────
 
-  it.each(['gzip', 'deflate'] as const)(
-    'decompresses %s body when Content-Encoding header is stripped (scenario B, #236)',
-    async (encoding) => {
-      const onMessage = vi.fn().mockResolvedValue(undefined);
-      const encoded = encodeBase64url(validSignRequest);
-      const ntfyMessage = JSON.stringify({
-        topic: 'sign-w1',
-        message: encoded,
-        title: 'Sign Request',
-        priority: 5,
-      });
-
-      vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
-        const urlStr = url as string;
-        if (urlStr.includes('sign-w1')) {
-          return Promise.resolve(
-            createHeaderlessCompressedResponse([`data: ${ntfyMessage}`], encoding),
-          );
-        }
-        return new Promise(() => {});
-      });
-
-      const subscriber = new NtfySubscriber({
-        ntfyServer: 'https://ntfy.sh',
-        signTopicPrefix: 'sign',
-        notifyTopicPrefix: 'notify',
-        walletNames: ['w1'],
-        onMessage,
-      });
-
-      subscriber.start();
-      await new Promise((r) => setTimeout(r, 200));
-      await subscriber.stop();
-
-      expect(onMessage).toHaveBeenCalled();
-      const call = onMessage.mock.calls[0]!;
-      expect(call[0]).toBe('w1');
-      expect(call[1].category).toBe('sign_request');
-    },
-  );
-
-  // ── #236 Scenario A/D: Already decompressed body WITH Content-Encoding header ──
-
-  it('does not double-decompress when undici already decompressed but kept header (scenario A/D, #236)', async () => {
+  it('addTopics subscribes to new topics dynamically', async () => {
     const onMessage = vi.fn().mockResolvedValue(undefined);
     const encoded = encodeBase64url(validSignRequest);
     const ntfyMessage = JSON.stringify({
-      topic: 'sign-w1',
+      topic: 'sign-w1-abc123',
       message: encoded,
       title: 'Sign Request',
       priority: 5,
     });
 
-    vi.spyOn(globalThis, 'fetch').mockImplementation((url) => {
-      const urlStr = url as string;
-      if (urlStr.includes('sign-w1')) {
-        // Plaintext body but Content-Encoding: deflate header present
-        return Promise.resolve(
-          createAlreadyDecompressedResponse([`data: ${ntfyMessage}`]),
-        );
-      }
-      return new Promise(() => {});
-    });
+    const { server, port } = await createTestServer(
+      sseHandler({ 'sign-w1-abc123': { lines: [`data: ${ntfyMessage}`] } }),
+    );
+    servers.push(server);
 
     const subscriber = new NtfySubscriber({
-      ntfyServer: 'https://ntfy.sh',
+      ntfyServer: `http://127.0.0.1:${port}`,
       signTopicPrefix: 'sign',
       notifyTopicPrefix: 'notify',
-      walletNames: ['w1'],
+      walletNames: [],
       onMessage,
     });
 
     subscriber.start();
-    await new Promise((r) => setTimeout(r, 100));
+    expect(subscriber.topicCount).toBe(0);
+
+    // Dynamically add topics
+    subscriber.addTopics('w1', 'sign-w1-abc123', 'notify-w1-abc123');
+    expect(subscriber.topicCount).toBe(2);
+
+    await new Promise((r) => setTimeout(r, 300));
     await subscriber.stop();
 
-    // Should process normally — magic bytes detect plaintext, skip decompression
     expect(onMessage).toHaveBeenCalled();
     expect(onMessage.mock.calls[0]![1].category).toBe('sign_request');
+  });
+
+  it('removeTopics unsubscribes from existing topics', async () => {
+    const { server, port } = await createTestServer((_req, res) => {
+      res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+    });
+    servers.push(server);
+
+    const subscriber = new NtfySubscriber({
+      ntfyServer: `http://127.0.0.1:${port}`,
+      signTopicPrefix: 'sign',
+      notifyTopicPrefix: 'notify',
+      walletNames: [],
+      onMessage: vi.fn(),
+    });
+
+    subscriber.start();
+    subscriber.addTopics('w1', 'sign-w1-abc', 'notify-w1-abc');
+    expect(subscriber.topicCount).toBe(2);
+
+    subscriber.removeTopics('sign-w1-abc', 'notify-w1-abc');
+    expect(subscriber.topicCount).toBe(0);
+
+    await subscriber.stop();
+  });
+
+  it('addTopics does not duplicate already-subscribed topics', async () => {
+    const { server, port } = await createTestServer((_req, res) => {
+      res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+    });
+    servers.push(server);
+
+    const subscriber = new NtfySubscriber({
+      ntfyServer: `http://127.0.0.1:${port}`,
+      signTopicPrefix: 'sign',
+      notifyTopicPrefix: 'notify',
+      walletNames: [],
+      onMessage: vi.fn(),
+    });
+
+    subscriber.start();
+    subscriber.addTopics('w1', 'sign-w1-abc', 'notify-w1-abc');
+    expect(subscriber.topicCount).toBe(2);
+
+    // Adding same topics again should not increase count
+    subscriber.addTopics('w1', 'sign-w1-abc', 'notify-w1-abc');
+    expect(subscriber.topicCount).toBe(2);
+
+    await subscriber.stop();
+  });
+
+  it('removeTopics is safe for non-existent topics', async () => {
+    const { server, port } = await createTestServer((_req, res) => {
+      res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+    });
+    servers.push(server);
+
+    const subscriber = new NtfySubscriber({
+      ntfyServer: `http://127.0.0.1:${port}`,
+      signTopicPrefix: 'sign',
+      notifyTopicPrefix: 'notify',
+      walletNames: [],
+      onMessage: vi.fn(),
+    });
+
+    subscriber.start();
+    expect(subscriber.topicCount).toBe(0);
+
+    // Should not throw or go negative
+    subscriber.removeTopics('nonexistent-sign', 'nonexistent-notify');
+    expect(subscriber.topicCount).toBe(0);
+
+    await subscriber.stop();
   });
 });

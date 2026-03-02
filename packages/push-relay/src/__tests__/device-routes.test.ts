@@ -17,24 +17,33 @@ function makeMockProvider(): IPushProvider {
   };
 }
 
-function makeMockSubscriber(): NtfySubscriber {
-  return { connected: true, topicCount: 2 } as unknown as NtfySubscriber;
+function makeMockSubscriber(): NtfySubscriber & { addTopics: ReturnType<typeof vi.fn>; removeTopics: ReturnType<typeof vi.fn> } {
+  return {
+    connected: true,
+    topicCount: 2,
+    addTopics: vi.fn(),
+    removeTopics: vi.fn(),
+  } as unknown as NtfySubscriber & { addTopics: ReturnType<typeof vi.fn>; removeTopics: ReturnType<typeof vi.fn> };
 }
 
 let registry: DeviceRegistry;
 let tmpDir: string;
+let mockSubscriber: ReturnType<typeof makeMockSubscriber>;
 let app: ReturnType<typeof createServer>;
 
 beforeEach(() => {
   tmpDir = join(tmpdir(), `push-relay-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
   mkdirSync(tmpDir, { recursive: true });
   registry = new DeviceRegistry(join(tmpDir, 'test.db'));
+  mockSubscriber = makeMockSubscriber();
   app = createServer({
     registry,
-    subscriber: makeMockSubscriber(),
+    subscriber: mockSubscriber,
     provider: makeMockProvider(),
     apiKey: API_KEY,
     ntfyServer: 'https://ntfy.sh',
+    signTopicPrefix: 'waiaas-sign',
+    notifyTopicPrefix: 'waiaas-notify',
     version: '1.0.0-test',
   });
 });
@@ -60,9 +69,35 @@ describe('POST /devices', () => {
     });
 
     expect(res.status).toBe(201);
-    const body = (await res.json()) as { status: string };
+    const body = (await res.json()) as { status: string; subscription_token: string };
     expect(body.status).toBe('registered');
+    expect(body.subscription_token).toBeTruthy();
     expect(registry.count()).toBe(1);
+  });
+
+  it('calls subscriber.addTopics on registration', async () => {
+    const res = await app.request('/devices', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': API_KEY,
+      },
+      body: JSON.stringify({
+        walletName: 'dcent',
+        pushToken: 'test-token-123',
+        platform: 'ios',
+      }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { subscription_token: string };
+    const token = body.subscription_token;
+
+    expect(mockSubscriber.addTopics).toHaveBeenCalledWith(
+      'dcent',
+      `waiaas-sign-dcent-${token}`,
+      `waiaas-notify-dcent-${token}`,
+    );
   });
 
   it('rejects invalid platform', async () => {
@@ -138,6 +173,22 @@ describe('DELETE /devices/:token', () => {
 
     expect(res.status).toBe(204);
     expect(registry.count()).toBe(0);
+  });
+
+  it('calls subscriber.removeTopics on deletion', async () => {
+    const result = registry.register('dcent', 'token-to-delete', 'ios');
+    const subToken = result.subscriptionToken;
+
+    const res = await app.request('/devices/token-to-delete', {
+      method: 'DELETE',
+      headers: { 'X-API-Key': API_KEY },
+    });
+
+    expect(res.status).toBe(204);
+    expect(mockSubscriber.removeTopics).toHaveBeenCalledWith(
+      `waiaas-sign-dcent-${subToken}`,
+      `waiaas-notify-dcent-${subToken}`,
+    );
   });
 
   it('returns 404 for non-existent token', async () => {

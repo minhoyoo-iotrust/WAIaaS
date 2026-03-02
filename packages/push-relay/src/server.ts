@@ -12,15 +12,17 @@ export interface ServerOpts {
   provider: IPushProvider;
   apiKey: string;
   ntfyServer: string;
+  signTopicPrefix: string;
+  notifyTopicPrefix: string;
   version?: string;
 }
 
 export function createServer(opts: ServerOpts): Hono {
   const app = new Hono();
-  const { registry, subscriber, provider, apiKey, ntfyServer, version } = opts;
+  const { registry, subscriber, provider, apiKey, ntfyServer, signTopicPrefix, notifyTopicPrefix, version } = opts;
 
   // Health check is public
-  const deviceRoutes = createDeviceRoutes({ registry, subscriber, provider, version });
+  const deviceRoutes = createDeviceRoutes({ registry, subscriber, provider, signTopicPrefix, notifyTopicPrefix, version });
 
   // Sign response relay (public — wallet apps call this without API key)
   const signResponseRoutes = createSignResponseRoutes({ ntfyServer });

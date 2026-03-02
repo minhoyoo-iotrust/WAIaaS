@@ -1,45 +1,13 @@
 import type { PushPayload, ParsedNtfyMessage } from './message-parser.js';
 import { buildPushPayload, determineMessageType } from './message-parser.js';
 import type { IPayloadTransformer } from '../transformer/payload-transformer.js';
+import { get as httpsGet } from 'node:https';
+import { get as httpGet } from 'node:http';
+import type { IncomingMessage, ClientRequest } from 'node:http';
 import { createUnzip, createBrotliDecompress } from 'node:zlib';
-import type { Transform } from 'node:stream';
 
 const MAX_RECONNECT_DELAY_MS = 60_000;
 const INITIAL_RECONNECT_DELAY_MS = 1_000;
-
-/**
- * Detect if a chunk is likely compressed by checking if the first byte
- * is NOT a valid SSE line starter (event, data, id, retry, comment, empty).
- *
- * This is more reliable than checking Content-Encoding headers because
- * Node.js undici may auto-decompress, strip headers, or leave data compressed
- * inconsistently depending on the environment (#222, #235, #236).
- */
-export function isLikelyCompressed(chunk: Uint8Array): boolean {
-  if (chunk.length === 0) return false;
-  const b0 = chunk[0]!;
-  // Valid SSE first bytes: e(0x65=event), d(0x64=data), i(0x69=id),
-  // r(0x72=retry), :(0x3a=comment), \n(0x0a=empty line), space(0x20)
-  return b0 !== 0x65 && b0 !== 0x64 && b0 !== 0x69
-    && b0 !== 0x72 && b0 !== 0x3a && b0 !== 0x0a && b0 !== 0x20;
-}
-
-/**
- * Select appropriate decompressor based on data content and optional header hint.
- * Returns null if data appears uncompressed.
- */
-export function selectDecompressor(
-  firstChunk: Uint8Array,
-  contentEncoding: string | null,
-): Transform | null {
-  if (!isLikelyCompressed(firstChunk)) return null;
-
-  // Brotli can only be detected via header (no reliable magic bytes)
-  if (contentEncoding === 'br') return createBrotliDecompress();
-
-  // createUnzip auto-detects gzip vs zlib-wrapped deflate
-  return createUnzip();
-}
 
 export interface NtfySubscriberOpts {
   ntfyServer: string;
@@ -56,6 +24,8 @@ export interface NtfySubscriberOpts {
 export class NtfySubscriber {
   private readonly opts: NtfySubscriberOpts;
   private readonly abortControllers = new Map<string, AbortController>();
+  /** Reverse mapping: topic → walletName */
+  private readonly topicWalletMap = new Map<string, string>();
   private readonly transformer?: IPayloadTransformer;
   private _connected = false;
   private _topicCount = 0;
@@ -86,17 +56,47 @@ export class NtfySubscriber {
     this._connected = true;
   }
 
+  /** Dynamically add topics for a wallet (e.g. on device registration). */
+  addTopics(walletName: string, signTopic: string, notifyTopic: string): void {
+    if (!this.abortControllers.has(signTopic)) {
+      this.subscribeTopic(signTopic, walletName);
+      this._topicCount++;
+    }
+    if (!this.abortControllers.has(notifyTopic)) {
+      this.subscribeTopic(notifyTopic, walletName);
+      this._topicCount++;
+    }
+  }
+
+  /** Dynamically remove topics (e.g. on device unregistration). */
+  removeTopics(signTopic: string, notifyTopic: string): void {
+    if (this.abortControllers.has(signTopic)) {
+      this.abortControllers.get(signTopic)!.abort();
+      this.abortControllers.delete(signTopic);
+      this.topicWalletMap.delete(signTopic);
+      this._topicCount--;
+    }
+    if (this.abortControllers.has(notifyTopic)) {
+      this.abortControllers.get(notifyTopic)!.abort();
+      this.abortControllers.delete(notifyTopic);
+      this.topicWalletMap.delete(notifyTopic);
+      this._topicCount--;
+    }
+  }
+
   async stop(): Promise<void> {
     this._connected = false;
     for (const [, controller] of this.abortControllers) {
       controller.abort();
     }
     this.abortControllers.clear();
+    this.topicWalletMap.clear();
   }
 
   private subscribeTopic(topic: string, walletName: string): void {
     const controller = new AbortController();
     this.abortControllers.set(topic, controller);
+    this.topicWalletMap.set(topic, walletName);
     void this.connectSse(topic, walletName, controller, INITIAL_RECONNECT_DELAY_MS);
   }
 
@@ -110,83 +110,87 @@ export class NtfySubscriber {
 
     try {
       const url = `${this.opts.ntfyServer}/${topic}/sse`;
-      const res = await fetch(url, {
-        signal: controller.signal,
+      const isHttps = url.startsWith('https');
+      const getter = isHttps ? httpsGet : httpGet;
+
+      const res = await new Promise<IncomingMessage>((resolve, reject) => {
+        const req: ClientRequest = getter(url, {
+          headers: { 'Accept': 'text/event-stream' },
+        }, resolve);
+        req.on('error', reject);
+        controller.signal.addEventListener('abort', () => req.destroy(), { once: true });
       });
 
-      if (!res.ok || !res.body) {
-        throw new Error(`SSE connection failed for ${topic}: HTTP ${res.status}`);
+      if (!res.statusCode || res.statusCode < 200 || res.statusCode >= 300) {
+        res.resume(); // Drain
+        throw new Error(`SSE connection failed for ${topic}: HTTP ${res.statusCode}`);
       }
 
       // Reset reconnect delay on successful connection
       const nextDelay = INITIAL_RECONNECT_DELAY_MS;
 
-      // Peek first chunk for magic-bytes compression detection (#236).
-      // This replaces Content-Encoding header checks which are unreliable
-      // because undici may auto-decompress, strip headers, or leave data
-      // compressed depending on the CDN/network environment.
-      const rawReader = (res.body as ReadableStream<Uint8Array>).getReader();
-      const { done: firstDone, value: firstChunk } = await rawReader.read();
+      // Determine decompression based on Content-Encoding header.
+      // node:http preserves headers and does NOT auto-decompress (unlike undici fetch).
+      const encoding = res.headers['content-encoding'];
+      let dataStream: NodeJS.ReadableStream = res;
 
-      if (firstDone || !firstChunk || firstChunk.length === 0) {
-        // Empty response — reconnect
-        if (!controller.signal.aborted) {
-          await this.delay(nextDelay);
-          return this.connectSse(topic, walletName, controller, nextDelay);
-        }
-        return;
+      if (encoding === 'gzip' || encoding === 'x-gzip' || encoding === 'deflate') {
+        dataStream = res.pipe(createUnzip());
+      } else if (encoding === 'br') {
+        dataStream = res.pipe(createBrotliDecompress());
       }
 
-      const contentEncoding = res.headers.get('content-encoding');
-      const decompressor = selectDecompressor(firstChunk, contentEncoding);
+      // Wire abort to destroy streams
+      controller.signal.addEventListener('abort', () => {
+        res.destroy();
+      }, { once: true });
 
-      let reader: ReadableStreamDefaultReader<Uint8Array>;
-
-      if (decompressor) {
-        reader = this.buildDecompressedReader(firstChunk, rawReader, decompressor, controller);
-      } else {
-        reader = this.buildPassthroughReader(firstChunk, rawReader);
-      }
-
-      const decoder = new TextDecoder();
+      // SSE line-based parsing via Node.js Readable events
       let buffer = '';
 
-      while (!controller.signal.aborted) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      await new Promise<void>((resolve, reject) => {
+        dataStream.on('data', (chunk: Buffer) => {
+          if (controller.signal.aborted) return;
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() ?? '';
+          buffer += chunk.toString('utf-8');
+          const lines = buffer.split('\n');
+          buffer = lines.pop() ?? '';
 
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
 
-          const dataStr = line.slice(6).trim();
-          if (!dataStr) continue;
+            const dataStr = line.slice(6).trim();
+            if (!dataStr) continue;
 
-          try {
-            const ntfyMsg = JSON.parse(dataStr) as ParsedNtfyMessage;
-            if (!ntfyMsg.message) continue;
+            try {
+              const ntfyMsg = JSON.parse(dataStr) as ParsedNtfyMessage;
+              if (!ntfyMsg.message) continue;
 
-            const effectiveTopic = ntfyMsg.topic ?? topic;
-            const type = determineMessageType(
-              effectiveTopic,
-              this.opts.signTopicPrefix,
-              this.opts.notifyTopicPrefix,
-            );
-            if (!type) continue;
+              const effectiveTopic = ntfyMsg.topic ?? topic;
+              const type = determineMessageType(
+                effectiveTopic,
+                this.opts.signTopicPrefix,
+                this.opts.notifyTopicPrefix,
+              );
+              if (!type) continue;
 
-            let payload = buildPushPayload(ntfyMsg, type);
-            if (this.transformer) {
-              payload = this.transformer.transform(payload);
+              let payload = buildPushPayload(ntfyMsg, type);
+              if (this.transformer) {
+                payload = this.transformer.transform(payload);
+              }
+              void this.opts.onMessage(walletName, payload);
+            } catch (err) {
+              this.opts.onError?.(err instanceof Error ? err : new Error(String(err)));
             }
-            await this.opts.onMessage(walletName, payload);
-          } catch (err) {
-            this.opts.onError?.(err instanceof Error ? err : new Error(String(err)));
           }
-        }
-      }
+        });
+
+        dataStream.on('end', () => resolve());
+        dataStream.on('error', (err) => reject(err));
+
+        // Also resolve if the original response ends/closes
+        res.on('close', () => resolve());
+      });
 
       // Stream ended normally — reconnect
       if (!controller.signal.aborted) {
@@ -205,84 +209,6 @@ export class NtfySubscriber {
       await this.delay(reconnectDelay);
       return this.connectSse(topic, walletName, controller, nextDelay);
     }
-  }
-
-  /**
-   * Build a decompressed reader by piping raw chunks through a zlib decompressor.
-   * Feeds firstChunk immediately, then pumps remaining chunks asynchronously.
-   */
-  private buildDecompressedReader(
-    firstChunk: Uint8Array,
-    rawReader: ReadableStreamDefaultReader<Uint8Array>,
-    decompressor: Transform,
-    controller: AbortController,
-  ): ReadableStreamDefaultReader<Uint8Array> {
-    const stream = new ReadableStream<Uint8Array>({
-      start(c) {
-        decompressor.on('data', (chunk: Buffer) => {
-          try { c.enqueue(new Uint8Array(chunk)); } catch { /* closed */ }
-        });
-        decompressor.on('end', () => {
-          try { c.close(); } catch { /* closed */ }
-        });
-        decompressor.on('error', (err) => {
-          try { c.error(err); } catch { /* closed */ }
-        });
-
-        // Clean up on abort
-        controller.signal.addEventListener('abort', () => {
-          decompressor.destroy();
-          try { c.close(); } catch { /* closed */ }
-        }, { once: true });
-
-        // Feed first chunk
-        decompressor.write(Buffer.from(firstChunk));
-
-        // Pump remaining raw chunks into decompressor
-        void (async () => {
-          try {
-            while (!controller.signal.aborted) {
-              const { done, value } = await rawReader.read();
-              if (done) {
-                decompressor.end();
-                break;
-              }
-              decompressor.write(Buffer.from(value));
-            }
-          } catch {
-            decompressor.destroy();
-          }
-        })();
-      },
-    });
-    return stream.getReader();
-  }
-
-  /**
-   * Build a pass-through reader that yields firstChunk first, then remaining chunks.
-   */
-  private buildPassthroughReader(
-    firstChunk: Uint8Array,
-    rawReader: ReadableStreamDefaultReader<Uint8Array>,
-  ): ReadableStreamDefaultReader<Uint8Array> {
-    let firstConsumed = false;
-    const stream = new ReadableStream<Uint8Array>({
-      pull(c) {
-        if (!firstConsumed) {
-          firstConsumed = true;
-          c.enqueue(firstChunk);
-          return;
-        }
-        return rawReader.read().then(({ done, value }) => {
-          if (done) {
-            c.close();
-          } else {
-            c.enqueue(value);
-          }
-        });
-      },
-    });
-    return stream.getReader();
   }
 
   private delay(ms: number): Promise<void> {
