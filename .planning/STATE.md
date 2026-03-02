@@ -6,9 +6,9 @@ status: executing
 last_updated: "2026-03-02"
 progress:
   total_phases: 301
-  completed_phases: 299
-  total_plans: 673
-  completed_plans: 671
+  completed_phases: 300
+  total_plans: 680
+  completed_plans: 678
 ---
 
 # Project State
@@ -18,20 +18,20 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-02)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 300 - Session Core API + JWT + Renewal (partially complete)
+**Current focus:** Phase 301 - MCP + CLI + SDK + Admin UI + Skill Files (NOT STARTED)
 
 ## Current Position
 
-Phase: 1 of 2 (Session Core API + JWT + Renewal)
-Plan: 5 of 7 in current phase (Plans 300-1 through 300-5 committed)
-Status: Executing Phase 300 — core changes committed, remaining work below
-Last activity: 2026-03-02 -- Phase 300 Plans 1-5 committed (709828f3)
+Phase: 2 of 2 (MCP + CLI + SDK + Admin UI + Skill Files)
+Plan: 0 of TBD in current phase (Phase 301 needs planning)
+Status: Phase 300 COMPLETE. Phase 301 needs planning then execution.
+Last activity: 2026-03-02 -- Phase 300 fully completed (6fccd397)
 
-Progress: [█████░░░░░] 50%
+Progress: [██████░░░░] 60%
 
 ## Performance Metrics
 
-**Cumulative:** 75 milestones shipped, 299 phases completed, ~673 plans, ~1,899 reqs, ~5,728+ tests, ~226,000 LOC TS
+**Cumulative:** 75 milestones shipped, 300 phases completed, ~680 plans, ~1,913 reqs, ~5,737+ tests, ~226,000 LOC TS
 
 ## Accumulated Context
 
@@ -39,40 +39,42 @@ Progress: [█████░░░░░] 50%
 
 - D1: expiresAt=0 represents unlimited session (epoch 0 in DB)
 - D2: absoluteExpiresAt=0 means no absolute lifetime cap
-- D3: maxRenewals=0 means unlimited renewals (Drizzle default changed 12→0)
+- D3: maxRenewals=0 means unlimited renewals (DDL DEFAULT changed 30→0)
 - D4: JWT exp claim omitted for unlimited sessions (JwtPayload.exp optional)
 - D5: RENEWAL_NOT_REQUIRED (400) returned when renewing unlimited session
-- D6: Config fields session_ttl/session_absolute_lifetime/session_max_renewals fully removed
-- D7: All session creation points (sessions.ts, wallets.ts, mcp.ts, admin.ts, telegram) updated
+- D6: Config fields session_ttl/session_absolute_lifetime/session_max_renewals removed from daemon
+- D7: SQL template binding fix: use epoch seconds (not Date objects) in sql`` templates
+- D8: admin.ts agent-prompt uses deps.daemonConfig (not config) for x402 check
 
-### Phase 300 Remaining Work
+### Phase 300 COMPLETED — Key Changes
 
-**Committed (Plans 300-1 to 300-5):**
-- Core schemas (CreateSessionRequestSchema + error codes + i18n)
-- JwtSecretManager (optional exp, sign/verify)
-- Session routes (create, list, renewal with unlimited support)
-- Config removal (DaemonConfig + SETTING_DEFINITIONS + hot-reload)
-- All 32 test mock config objects cleaned
+1. **Bug fixes**: SQL Date binding → epoch seconds, admin.ts config reference, dead code removal
+2. **DDL**: migration v32, max_renewals DEFAULT 30→0
+3. **Tests**: 9 new tests (unlimited session create/list/JWT/renewal/limit), 3 assertion fixes
+4. **All 43 session tests passing**
+5. **Commits**: 709828f3 (original), 6fccd397 (fixes + tests + migration)
 
-**Remaining (Plans 300-6, 300-7):**
-1. **Plan 300-6: Tests** — Add new tests for unlimited sessions:
-   - api-sessions.test.ts: unlimited session create/list/status tests
-   - api-session-renewal.test.ts: RENEWAL_NOT_REQUIRED, maxRenewals=0, absoluteLifetime=0 tests
-   - jwt-secret-manager tests: sign/verify unlimited tokens
-   - Session limit tests: unlimited sessions counted as active
-   - Fix existing test assertions that expect old defaults (absoluteExpiresAt ~365 days → now 0)
+### Phase 301 Scope — MCP + CLI + SDK + Admin UI + Skill Files
 
-2. **Plan 300-7: DB Migration v32** — LATEST_SCHEMA_VERSION 31→32, DDL update for max_renewals DEFAULT 0
+**Key files to modify:**
+- `packages/mcp/src/session-manager.ts` — Handle unlimited sessions (exp undefined), skip renewal scheduling
+- `packages/daemon/src/cli/mcp-setup.ts` or CLI commands — Default unlimited session, --ttl/--max-renewals/--lifetime flags
+- `packages/admin/src/pages/sessions.tsx` — Remove global TTL settings from Settings tab, add per-session Create modal
+- `packages/admin/src/pages/settings.tsx` — Remove session_ttl field
+- `packages/admin/src/utils/settings-search-index.ts` — Remove 3 session entries
+- `packages/admin/src/utils/settings-helpers.ts` — Remove 3 label mappings
+- `packages/admin/src/__tests__/sessions.test.tsx` — Update test assertions
+- `packages/admin/src/__tests__/settings*.test.tsx` — Update test assertions
+- `packages/sdk/src/` — Rename expiresIn→ttl, add maxRenewals/absoluteLifetime params
+- `packages/core/src/schemas/config.schema.ts` — Remove session_default_ttl, session_max_ttl, session_max_renewals, session_absolute_lifetime
+- `skills/` — Update session-related skill files
 
-3. **Other packages still referencing removed fields:**
-   - `packages/core/src/schemas/config.schema.ts` — session_max_renewals, session_absolute_lifetime (lines 12-13)
-   - `packages/admin/src/utils/settings-helpers.ts` — session_ttl, session_absolute_lifetime, session_max_renewals (lines 92, 121-122)
-   - `packages/admin/src/utils/settings-search-index.ts` — 3 session settings entries (lines 52-54)
-   - These Admin UI changes belong to Phase 301 but config.schema.ts may need fixing for typecheck
-
-**After Phase 300:**
-- Phase 301: MCP + CLI + SDK + Admin UI + Skill Files
-- Milestone audit + PR
+**Success criteria (from ROADMAP):**
+1. MCP SessionManager accepts JWT without exp, skips renewal for unlimited
+2. CLI mcp setup creates unlimited sessions by default, supports --ttl flags
+3. Admin UI: remove 3 global session keys, add per-session Create modal Advanced section
+4. SDK: expiresIn→ttl rename, add maxRenewals/absoluteLifetime
+5. Skill files updated
 
 ### Pending Todos
 
@@ -80,11 +82,11 @@ None.
 
 ### Blockers/Concerns
 
-- #164: IncomingTxMonitorService 환경 기본 네트워크만 구독 (MEDIUM, 별도 마일스톤)
-- STO-03: Confirmation Worker RPC 콜백 미주입 (별도 마일스톤)
+- #164: IncomingTxMonitorService (별도 마일스톤)
+- STO-03: Confirmation Worker RPC (별도 마일스톤)
 
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Phase 300 Plans 1-5 committed. Remaining: tests (300-6), migration (300-7), then Phase 301
-Resume command: Continue Phase 300 execution — run typecheck, fix remaining refs (core/config.schema.ts), write tests, add migration, then proceed to Phase 301
+Stopped at: Phase 300 COMPLETE. Next: Plan Phase 301, then execute, audit, PR.
+Resume command: `/gsd:plan-phase` for Phase 301, then `/gsd:execute-phase`, then `/gsd:audit-milestone`
