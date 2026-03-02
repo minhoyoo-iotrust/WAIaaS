@@ -58,7 +58,7 @@ const NOTIFICATION_KEYS = new Set([
   'notifications.telegram_chat_id',
   'notifications.discord_webhook_url',
   'notifications.ntfy_server',
-  'notifications.ntfy_topic',
+  // notifications.ntfy_topic removed in v29.10 -- per-wallet topics now in wallet_apps table
   'notifications.slack_webhook_url',
   'notifications.locale',
   'notifications.rate_limit_rpm',
@@ -238,7 +238,8 @@ export class HotReloadOrchestrator {
     }
 
     // Dynamically import channel constructors (same pattern as daemon.ts Step 4d)
-    const { TelegramChannel, DiscordChannel, NtfyChannel, SlackChannel } = await import(
+    // NtfyChannel removed from hot-reload in v29.10 -- per-wallet topics now in wallet_apps table
+    const { TelegramChannel, DiscordChannel, SlackChannel } = await import(
       '../../notifications/index.js'
     );
 
@@ -261,14 +262,8 @@ export class HotReloadOrchestrator {
       newChannels.push(discord);
     }
 
-    // Ntfy
-    const ntfyTopic = ss.get('notifications.ntfy_topic');
-    if (ntfyTopic) {
-      const ntfyServer = ss.get('notifications.ntfy_server');
-      const ntfy = new NtfyChannel();
-      await ntfy.initialize({ ntfy_server: ntfyServer, ntfy_topic: ntfyTopic });
-      newChannels.push(ntfy);
-    }
+    // Ntfy: global ntfy_topic removed in v29.10 -- per-wallet topics now in wallet_apps table.
+    // Per-wallet ntfy channels are managed by the signing SDK / notification routing layer.
 
     // Slack
     const slackUrl = ss.get('notifications.slack_webhook_url');

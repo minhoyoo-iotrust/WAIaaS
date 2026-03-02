@@ -549,8 +549,8 @@ export class DaemonLifecycle {
           this.notificationService.addChannel(discord);
         }
 
-        const ntfyTopic = (ss ? ss.get('notifications.ntfy_topic') : null)
-          || notifConfig.ntfy_topic;
+        // Global ntfy_topic from config.toml (settings key removed in v29.10 -- per-wallet topics now in wallet_apps).
+        const ntfyTopic = notifConfig.ntfy_topic;
         if (ntfyTopic) {
           const ntfyServer = (ss ? ss.get('notifications.ntfy_server') : null)
             || notifConfig.ntfy_server;

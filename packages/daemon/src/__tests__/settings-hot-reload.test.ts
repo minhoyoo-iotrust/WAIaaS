@@ -390,7 +390,9 @@ describe('HotReloadOrchestrator.handleChangedKeys', () => {
   it('notification reload with enabled=true creates channels from settings', async () => {
     // Set notifications.enabled to true in settings DB
     settingsService.set('notifications.enabled', 'true');
-    settingsService.set('notifications.ntfy_topic', 'test-topic');
+    // v29.10: ntfy_topic removed from settings (per-wallet topics now in wallet_apps).
+    // Use discord_webhook_url to test notification channel creation via hot-reload.
+    settingsService.set('notifications.discord_webhook_url', 'https://discord.com/api/webhooks/test');
 
     const replaceSpy = vi.spyOn(notifService, 'replaceChannels');
     const updateSpy = vi.spyOn(notifService, 'updateConfig');
@@ -401,13 +403,13 @@ describe('HotReloadOrchestrator.handleChangedKeys', () => {
       adapterPool: mockPool,
     });
 
-    await orchestrator.handleChangedKeys(['notifications.ntfy_topic']);
+    await orchestrator.handleChangedKeys(['notifications.discord_webhook_url']);
 
-    // replaceChannels should have been called with 1 channel (ntfy)
+    // replaceChannels should have been called with 1 channel (discord)
     expect(replaceSpy).toHaveBeenCalledTimes(1);
     const channels = replaceSpy.mock.calls[0][0];
     expect(channels).toHaveLength(1);
-    expect(channels[0].name).toBe('ntfy');
+    expect(channels[0].name).toBe('discord');
 
     // updateConfig should have been called with locale and rateLimitRpm
     expect(updateSpy).toHaveBeenCalledWith({

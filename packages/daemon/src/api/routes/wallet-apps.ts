@@ -40,6 +40,8 @@ function toApiResponse(app: WalletApp | WalletAppWithUsedBy) {
     display_name: app.displayName,
     signing_enabled: app.signingEnabled,
     alerts_enabled: app.alertsEnabled,
+    sign_topic: app.signTopic,
+    notify_topic: app.notifyTopic,
     used_by: 'usedBy' in app ? app.usedBy : [],
     created_at: app.createdAt,
     updated_at: app.updatedAt,
@@ -132,7 +134,10 @@ export function createWalletAppsRoutes(deps: WalletAppsRouteDeps): OpenAPIHono {
   router.openapi(createAppRoute, (c) => {
     const body = c.req.valid('json');
     try {
-      const app = deps.walletAppService.register(body.name, body.display_name);
+      const app = deps.walletAppService.register(body.name, body.display_name, {
+        signTopic: body.sign_topic,
+        notifyTopic: body.notify_topic,
+      });
       return c.json({ app: toApiResponse(app) }, 201);
     } catch (err) {
       if (err instanceof WAIaaSError && err.code === 'WALLET_APP_DUPLICATE') {
@@ -150,6 +155,8 @@ export function createWalletAppsRoutes(deps: WalletAppsRouteDeps): OpenAPIHono {
       const app = deps.walletAppService.update(id, {
         signingEnabled: body.signing_enabled,
         alertsEnabled: body.alerts_enabled,
+        signTopic: body.sign_topic,
+        notifyTopic: body.notify_topic,
       });
       // Re-fetch with usedBy info
       const appWithUsedBy = deps.walletAppService.listWithUsedBy().find((a) => a.id === app.id);

@@ -1405,7 +1405,8 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
       {
         name: 'ntfy',
         enabled: !!(
-          (ss ? ss.get('notifications.ntfy_topic') : deps.notificationConfig?.ntfy_topic) &&
+          // Global ntfy_topic from config.toml only (settings key removed in v29.10 -- per-wallet topics now in wallet_apps)
+          deps.notificationConfig?.ntfy_topic &&
           channelNames.includes('ntfy')
         ),
       },
