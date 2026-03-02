@@ -126,8 +126,25 @@ export class NotificationService {
     // Placed BEFORE the channels.length guard so it fires even with zero configured channels.
     if (this.walletNotificationChannel) {
       const { title: sideTitle, body: sideBody } = getNotificationMessage(eventType, this.config.locale, mergedVars);
+      const sidePayload: NotificationPayload = {
+        eventType,
+        walletId,
+        walletName: walletInfo.walletName,
+        walletAddress: walletInfo.walletAddress,
+        network: vars?.network || walletInfo.network,
+        title: sideTitle,
+        body: sideBody,
+        message: `${sideTitle}\n${sideBody}`,
+        details,
+        timestamp: Math.floor(Date.now() / 1000),
+      };
       // Fire-and-forget with try/catch isolation (DAEMON-06)
-      this.walletNotificationChannel.notify(eventType, walletId, sideTitle, sideBody, details).catch(() => {});
+      this.walletNotificationChannel.notify(eventType, walletId, sideTitle, sideBody, details)
+        .then(() => { this.logDelivery('wallet_app', sidePayload, 'sent'); })
+        .catch((err) => {
+          const errorMsg = err instanceof Error ? err.message : String(err);
+          this.logDelivery('wallet_app', sidePayload, 'failed', errorMsg);
+        });
     }
 
     if (this.channels.length === 0) return; // No traditional channels configured

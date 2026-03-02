@@ -63,7 +63,7 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'notifications.telegram_chat_id', category: 'notifications', configPath: 'notifications.telegram_chat_id', defaultValue: '', isCredential: false },
   { key: 'notifications.discord_webhook_url', category: 'notifications', configPath: 'notifications.discord_webhook_url', defaultValue: '', isCredential: true },
   { key: 'notifications.ntfy_server', category: 'notifications', configPath: 'notifications.ntfy_server', defaultValue: 'https://ntfy.sh', isCredential: false },
-  { key: 'notifications.ntfy_topic', category: 'notifications', configPath: 'notifications.ntfy_topic', defaultValue: '', isCredential: false },
+  // notifications.ntfy_topic removed in v29.10 -- per-wallet topics are now stored in wallet_apps table
   { key: 'notifications.slack_webhook_url', category: 'notifications', configPath: 'notifications.slack_webhook_url', defaultValue: '', isCredential: true },
   { key: 'notifications.locale', category: 'notifications', configPath: 'notifications.locale', defaultValue: 'en', isCredential: false },
   { key: 'notifications.rate_limit_rpm', category: 'notifications', configPath: 'notifications.rate_limit_rpm', defaultValue: '20', isCredential: false },

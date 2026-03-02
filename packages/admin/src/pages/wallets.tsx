@@ -142,6 +142,11 @@ const PRESET_APPROVAL_PREVIEW: Record<string, string> = {
   dcent: 'Wallet App (ntfy)',
 };
 
+/** Maps preset value to its default approval method value (for change warnings). */
+const PRESET_APPROVAL_DEFAULTS: Record<string, string> = {
+  dcent: 'sdk_ntfy',
+};
+
 export function chainNetworkOptions(chain: string): { label: string; value: string }[] {
   if (chain === 'solana') {
     return [
@@ -226,14 +231,14 @@ const APPROVAL_OPTIONS: Array<{
     value: 'sdk_ntfy',
     label: 'Wallet App (ntfy)',
     description: 'Push sign request to wallet app via ntfy server',
-    warning: 'Signing SDK is not enabled. Go to System > Signing SDK settings.',
+    warning: 'Signing SDK is not enabled. Go to Wallets > Human Wallet Apps settings.',
     warningCondition: (s) => !s?.signingEnabled,
   },
   {
     value: 'sdk_telegram',
     label: 'Wallet App (Telegram)',
     description: 'Push sign request to wallet app via Telegram with universal link',
-    warning: 'Signing SDK or Telegram bot is not configured. Check System > Signing SDK and Notifications > Telegram settings.',
+    warning: 'Signing SDK or Telegram bot is not configured. Check Wallets > Human Wallet Apps and Notifications > Settings > Telegram.',
     warningCondition: (s) => !s?.signingEnabled || !s?.telegramBotConfigured,
   },
   {
@@ -640,7 +645,9 @@ function WalletDetailView({ id }: { id: string }) {
     try {
       const result = await apiGet<SettingsData>(API.ADMIN_SETTINGS);
       const signingEnabled = result['signing_sdk']?.['enabled'] === 'true';
-      const telegramBotConfigured = result['telegram']?.['bot_token'] === true; // credential: boolean means configured
+      const telegramBotConfigured =
+        result['telegram']?.['bot_token'] === true ||
+        result['notifications']?.['telegram_bot_token'] === true;
       const wcConfigured = !!result['walletconnect']?.['project_id'] && result['walletconnect']['project_id'] !== '';
       approvalSettings.value = { signingEnabled, telegramBotConfigured, wcConfigured };
     } catch {
@@ -649,6 +656,20 @@ function WalletDetailView({ id }: { id: string }) {
   };
 
   const handleApprovalMethodChange = async (method: string | null) => {
+    // Warn when changing away from preset default
+    const wt = wallet.value?.walletType;
+    if (wt) {
+      const preset = WALLET_PRESETS.find(p => p.value === wt);
+      const presetDefault = preset ? PRESET_APPROVAL_DEFAULTS[wt] : undefined;
+      if (presetDefault && method !== presetDefault) {
+        const presetLabel = preset!.label;
+        const defaultLabel = APPROVAL_OPTIONS.find(o => o.value === presetDefault)?.label ?? presetDefault;
+        const confirmed = confirm(
+          `${presetLabel} preset default is "${defaultLabel}". Changing the approval method may prevent sign requests from being delivered correctly.\n\nProceed with change?`,
+        );
+        if (!confirmed) return;
+      }
+    }
     try {
       await apiPut(API.WALLET_OWNER(id), {
         owner_address: wallet.value!.ownerAddress!,

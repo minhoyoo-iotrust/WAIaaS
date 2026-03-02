@@ -17,6 +17,8 @@ interface WalletAppApi {
   display_name: string;
   signing_enabled: boolean;
   alerts_enabled: boolean;
+  sign_topic: string | null;
+  notify_topic: string | null;
   used_by: Array<{ id: string; label: string }>;
   created_at: number;
   updated_at: number;
@@ -43,6 +45,10 @@ export default function HumanWalletAppsPage() {
 
   // Toggle saving state
   const toggleSaving = useSignal<string | null>(null);
+
+  // Topic editing state: maps app.id -> { signTopic, notifyTopic }
+  const topicEditing = useSignal<Record<string, { signTopic: string; notifyTopic: string }>>({});
+  const topicSaving = useSignal<string | null>(null);
 
   // ---------------------------------------------------------------------------
   // Data fetching
@@ -147,6 +153,41 @@ export default function HumanWalletAppsPage() {
       showToast(`${app.display_name} removed`, 'success');
     } catch {
       showToast('Failed to remove app', 'error');
+    }
+  };
+
+  const startTopicEdit = (app: WalletAppApi) => {
+    topicEditing.value = {
+      ...topicEditing.value,
+      [app.id]: {
+        signTopic: app.sign_topic ?? '',
+        notifyTopic: app.notify_topic ?? '',
+      },
+    };
+  };
+
+  const cancelTopicEdit = (appId: string) => {
+    const next = { ...topicEditing.value };
+    delete next[appId];
+    topicEditing.value = next;
+  };
+
+  const handleTopicSave = async (app: WalletAppApi) => {
+    const edit = topicEditing.value[app.id];
+    if (!edit) return;
+    topicSaving.value = app.id;
+    try {
+      await apiPut(API.ADMIN_WALLET_APP(app.id), {
+        sign_topic: edit.signTopic || null,
+        notify_topic: edit.notifyTopic || null,
+      });
+      cancelTopicEdit(app.id);
+      await fetchApps();
+      showToast('Topics updated', 'success');
+    } catch {
+      showToast('Failed to update topics', 'error');
+    } finally {
+      topicSaving.value = null;
     }
   };
 
@@ -274,6 +315,74 @@ export default function HumanWalletAppsPage() {
                       </span>
                     )}
                   </div>
+
+                  {/* ntfy Topics */}
+                  {topicEditing.value[app.id] ? (
+                    <div style={{ marginTop: '0.75rem', borderTop: '1px solid var(--border)', paddingTop: '0.75rem' }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 500, display: 'block', marginBottom: '0.5rem' }}>ntfy Topics</span>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                        <FormField
+                          label="Sign Topic"
+                          name={`sign-topic-${app.id}`}
+                          type="text"
+                          value={topicEditing.value[app.id]!.signTopic}
+                          onChange={(v) => {
+                            topicEditing.value = {
+                              ...topicEditing.value,
+                              [app.id]: { ...topicEditing.value[app.id]!, signTopic: String(v) },
+                            };
+                          }}
+                          placeholder={`waiaas-sign-${app.name}`}
+                          description="ntfy topic for signing requests"
+                        />
+                        <FormField
+                          label="Notify Topic"
+                          name={`notify-topic-${app.id}`}
+                          type="text"
+                          value={topicEditing.value[app.id]!.notifyTopic}
+                          onChange={(v) => {
+                            topicEditing.value = {
+                              ...topicEditing.value,
+                              [app.id]: { ...topicEditing.value[app.id]!, notifyTopic: String(v) },
+                            };
+                          }}
+                          placeholder={`waiaas-notify-${app.name}`}
+                          description="ntfy topic for activity alerts"
+                        />
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                        <Button variant="secondary" size="sm" onClick={() => cancelTopicEdit(app.id)}>
+                          Cancel
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => handleTopicSave(app)}
+                          disabled={topicSaving.value === app.id}
+                        >
+                          {topicSaving.value === app.id ? 'Saving...' : 'Save Topics'}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ marginTop: '0.75rem', borderTop: '1px solid var(--border)', paddingTop: '0.75rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>ntfy Topics</span>
+                        <Button variant="secondary" size="sm" onClick={() => startTopicEdit(app)}>
+                          Edit
+                        </Button>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.85rem' }}>
+                        <div>
+                          <span style={{ color: 'var(--text-muted)' }}>Sign Topic: </span>
+                          <code>{app.sign_topic ?? '(default)'}</code>
+                        </div>
+                        <div>
+                          <span style={{ color: 'var(--text-muted)' }}>Notify Topic: </span>
+                          <code>{app.notify_topic ?? '(default)'}</code>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

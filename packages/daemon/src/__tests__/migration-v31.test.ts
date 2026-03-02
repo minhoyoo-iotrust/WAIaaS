@@ -55,7 +55,8 @@ describe('Migration v31: wallet_apps table', () => {
     expect(columnNames).toContain('alerts_enabled');
     expect(columnNames).toContain('created_at');
     expect(columnNames).toContain('updated_at');
-    expect(columns).toHaveLength(7);
+    // v33 added sign_topic and notify_topic (9 columns total)
+    expect(columns).toHaveLength(9);
   });
 
   it('T-APP-01b: UNIQUE constraint on name column', () => {
@@ -74,13 +75,13 @@ describe('Migration v31: wallet_apps table', () => {
     sqlite.prepare('DELETE FROM wallet_apps WHERE id LIKE ?').run('unique-test-%');
   });
 
-  it('T-APP-01c: Fresh DB has LATEST_SCHEMA_VERSION=31', () => {
-    expect(LATEST_SCHEMA_VERSION).toBe(32);
+  it('T-APP-01c: Fresh DB has LATEST_SCHEMA_VERSION >= 31', () => {
+    expect(LATEST_SCHEMA_VERSION).toBeGreaterThanOrEqual(31);
 
     const row = sqlite
       .prepare('SELECT MAX(version) AS max_version FROM schema_version')
       .get() as { max_version: number };
-    expect(row.max_version).toBe(32);
+    expect(row.max_version).toBe(LATEST_SCHEMA_VERSION);
   });
 
   it('defaults: signing_enabled=1 and alerts_enabled=1', () => {

@@ -75,8 +75,8 @@ const NAV_ITEMS = [
   { path: '/actions', label: 'Actions' },
   { path: '/policies', label: 'Policies' },
   { path: '/notifications', label: 'Notifications' },
-  { path: '/security', label: 'Security' },
   { path: '/wallet-apps', label: 'Human Wallet Apps' },
+  { path: '/security', label: 'Security' },
   { path: '/system', label: 'System' },
 ];
 

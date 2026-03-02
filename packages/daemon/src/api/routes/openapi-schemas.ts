@@ -304,6 +304,8 @@ export const WalletAppSchema = z
     display_name: z.string().openapi({ description: 'Human-readable app name', example: "D'CENT Wallet" }),
     signing_enabled: z.boolean().openapi({ description: 'Whether signing requests are sent to this app' }),
     alerts_enabled: z.boolean().openapi({ description: 'Whether activity alerts are sent to this app' }),
+    sign_topic: z.string().nullable().openapi({ description: 'ntfy topic for signing requests' }),
+    notify_topic: z.string().nullable().openapi({ description: 'ntfy topic for activity notifications' }),
     used_by: z.array(z.object({
       id: z.string(),
       label: z.string(),
@@ -323,6 +325,8 @@ export const WalletAppCreateRequestSchema = z
   .object({
     name: z.string().min(1).max(64).regex(/^[a-z0-9][a-z0-9-]*$/, 'Lowercase alphanumeric with hyphens').openapi({ description: 'App identifier', example: 'my-custom-wallet' }),
     display_name: z.string().min(1).max(128).openapi({ description: 'Display name', example: 'My Custom Wallet' }),
+    sign_topic: z.string().max(256).optional().openapi({ description: 'Custom signing topic (auto-generated if omitted)' }),
+    notify_topic: z.string().max(256).optional().openapi({ description: 'Custom notification topic (auto-generated if omitted)' }),
   })
   .openapi('WalletAppCreateRequest');
 
@@ -330,6 +334,8 @@ export const WalletAppUpdateRequestSchema = z
   .object({
     signing_enabled: z.boolean().optional().openapi({ description: 'Toggle signing requests' }),
     alerts_enabled: z.boolean().optional().openapi({ description: 'Toggle activity alerts' }),
+    sign_topic: z.string().max(256).optional().openapi({ description: 'Custom signing topic' }),
+    notify_topic: z.string().max(256).optional().openapi({ description: 'Custom notification topic' }),
   })
   .openapi('WalletAppUpdateRequest');
 

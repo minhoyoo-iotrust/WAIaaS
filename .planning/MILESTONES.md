@@ -1785,3 +1785,13 @@
 
 ---
 
+
+## v29.10 ntfy 토픽 지갑별 설정 전환 (Shipped: 2026-03-02)
+
+**Phases completed:** 183 phases, 392 plans, 50 tasks
+
+**Key accomplishments:**
+- (none recorded)
+
+---
+

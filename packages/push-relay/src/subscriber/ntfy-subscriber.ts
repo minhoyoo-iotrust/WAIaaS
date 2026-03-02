@@ -71,7 +71,9 @@ export class NtfySubscriber {
 
     try {
       const url = `${this.opts.ntfyServer}/${topic}/sse`;
-      const res = await fetch(url, { signal: controller.signal });
+      const res = await fetch(url, {
+        signal: controller.signal,
+      });
 
       if (!res.ok || !res.body) {
         throw new Error(`SSE connection failed for ${topic}: HTTP ${res.status}`);

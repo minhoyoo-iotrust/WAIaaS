@@ -22,6 +22,7 @@ import {
 import type { SettingsService } from '../../infrastructure/settings/settings-service.js';
 import type { WalletLinkRegistry } from './wallet-link-registry.js';
 import { generateId } from '../../infrastructure/database/id.js';
+import type Database from 'better-sqlite3';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -53,13 +54,16 @@ export interface BuildRequestResult {
 export class SignRequestBuilder {
   private readonly settings: SettingsService;
   private readonly walletLinkRegistry: WalletLinkRegistry;
+  private readonly sqlite?: Database.Database;
 
   constructor(opts: {
     settingsService: SettingsService;
     walletLinkRegistry: WalletLinkRegistry;
+    sqlite?: Database.Database;
   }) {
     this.settings = opts.settingsService;
     this.walletLinkRegistry = opts.walletLinkRegistry;
+    this.sqlite = opts.sqlite;
   }
 
   // -------------------------------------------------------------------------
@@ -94,7 +98,7 @@ export class SignRequestBuilder {
     }
 
     // 3. Verify wallet exists (throws WALLET_NOT_REGISTERED if not found)
-    const walletConfig = this.walletLinkRegistry.getWallet(walletName);
+    this.walletLinkRegistry.getWallet(walletName);
 
     // 4. Generate requestId (UUID v7)
     const requestId = generateId();
@@ -158,9 +162,17 @@ export class SignRequestBuilder {
     // 10. Build universal link URL
     const universalLinkUrl = this.walletLinkRegistry.buildSignUrl(walletName, request);
 
-    // 11. Build request topic for ntfy publish
-    const requestTopicPrefix = this.settings.get('signing_sdk.ntfy_request_topic_prefix');
-    const ntfyTopic = walletConfig.ntfy?.requestTopic ?? `${requestTopicPrefix}-${walletName}`;
+    // 11. Build request topic for ntfy publish (CHAN-01: DB-based topic)
+    const requestTopicPrefix = this.settings.get('signing_sdk.ntfy_request_topic_prefix') || 'waiaas-sign';
+    let ntfyTopic = `${requestTopicPrefix}-${walletName}`; // fallback
+    if (this.sqlite) {
+      const appRow = this.sqlite.prepare(
+        'SELECT sign_topic FROM wallet_apps WHERE name = ?',
+      ).get(walletName) as { sign_topic: string | null } | undefined;
+      if (appRow?.sign_topic) {
+        ntfyTopic = appRow.sign_topic;
+      }
+    }
 
     return {
       request,

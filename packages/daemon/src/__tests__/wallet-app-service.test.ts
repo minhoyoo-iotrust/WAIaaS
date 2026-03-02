@@ -4,9 +4,10 @@
  * Tests cover:
  * - register(), ensureRegistered(), getByName(), getById()
  * - list(), listWithUsedBy(), getAlertEnabledApps()
- * - update() toggle fields
+ * - update() toggle fields and topic fields
  * - remove()
  * - Duplicate 409 and not-found 404 error cases
+ * - signTopic/notifyTopic auto-generation and custom values (v29.10)
  *
  * @see packages/daemon/src/services/signing-sdk/wallet-app-service.ts
  * @see internal/objectives/m29-07-dcent-owner-signing.md
@@ -72,6 +73,44 @@ describe('WalletAppService', () => {
       // Verify DB row
       const row = sqlite.prepare('SELECT * FROM wallet_apps WHERE id = ?').get(app.id);
       expect(row).toBeTruthy();
+    });
+
+    it('T-DBSC-05: auto-generates signTopic and notifyTopic with prefix+name', () => {
+      const app = service.register('dcent', "D'CENT Wallet");
+
+      expect(app.signTopic).toBe('waiaas-sign-dcent');
+      expect(app.notifyTopic).toBe('waiaas-notify-dcent');
+
+      // Verify in DB
+      const row = sqlite.prepare('SELECT sign_topic, notify_topic FROM wallet_apps WHERE id = ?')
+        .get(app.id) as { sign_topic: string; notify_topic: string };
+      expect(row.sign_topic).toBe('waiaas-sign-dcent');
+      expect(row.notify_topic).toBe('waiaas-notify-dcent');
+    });
+
+    it('T-DBSC-06: accepts custom signTopic and notifyTopic', () => {
+      const app = service.register('custom-app', 'Custom App', {
+        signTopic: 'my-custom-sign',
+        notifyTopic: 'my-custom-notify',
+      });
+
+      expect(app.signTopic).toBe('my-custom-sign');
+      expect(app.notifyTopic).toBe('my-custom-notify');
+
+      // Verify in DB
+      const row = sqlite.prepare('SELECT sign_topic, notify_topic FROM wallet_apps WHERE id = ?')
+        .get(app.id) as { sign_topic: string; notify_topic: string };
+      expect(row.sign_topic).toBe('my-custom-sign');
+      expect(row.notify_topic).toBe('my-custom-notify');
+    });
+
+    it('T-DBSC-07: partial opts -- signTopic custom, notifyTopic auto-generated', () => {
+      const app = service.register('partial-app', 'Partial App', {
+        signTopic: 'custom-sign-only',
+      });
+
+      expect(app.signTopic).toBe('custom-sign-only');
+      expect(app.notifyTopic).toBe('waiaas-notify-partial-app');
     });
 
     it('T-APP-07: duplicate name throws WALLET_APP_DUPLICATE (409)', () => {
@@ -156,6 +195,19 @@ describe('WalletAppService', () => {
     it('getById returns undefined for nonexistent', () => {
       expect(service.getById('nonexistent-id')).toBeUndefined();
     });
+
+    it('T-DBSC-11: NULL topic columns return null in WalletApp', () => {
+      // Insert directly with NULL topics (simulating pre-v33 row not backfilled)
+      const ts = Math.floor(Date.now() / 1000);
+      sqlite.prepare(
+        'INSERT INTO wallet_apps (id, name, display_name, signing_enabled, alerts_enabled, sign_topic, notify_topic, created_at, updated_at) VALUES (?, ?, ?, 1, 1, NULL, NULL, ?, ?)',
+      ).run('null-topic-id', 'null-topic-app', 'Null Topic App', ts, ts);
+
+      const app = service.getByName('null-topic-app');
+      expect(app).toBeTruthy();
+      expect(app!.signTopic).toBeNull();
+      expect(app!.notifyTopic).toBeNull();
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -177,6 +229,32 @@ describe('WalletAppService', () => {
       const updated = service.update(app.id, { alertsEnabled: false });
       expect(updated.alertsEnabled).toBe(false);
       expect(updated.signingEnabled).toBe(true); // unchanged
+    });
+
+    it('T-DBSC-08: updates signTopic', () => {
+      const app = service.register('topic-update', 'Topic Update');
+      expect(app.signTopic).toBe('waiaas-sign-topic-update');
+
+      const updated = service.update(app.id, { signTopic: 'new-sign-topic' });
+      expect(updated.signTopic).toBe('new-sign-topic');
+      expect(updated.notifyTopic).toBe('waiaas-notify-topic-update'); // unchanged
+    });
+
+    it('T-DBSC-09: updates notifyTopic', () => {
+      const app = service.register('notify-update', 'Notify Update');
+      const updated = service.update(app.id, { notifyTopic: 'new-notify-topic' });
+      expect(updated.notifyTopic).toBe('new-notify-topic');
+      expect(updated.signTopic).toBe('waiaas-sign-notify-update'); // unchanged
+    });
+
+    it('T-DBSC-10: updates both topics simultaneously', () => {
+      const app = service.register('both-update', 'Both Update');
+      const updated = service.update(app.id, {
+        signTopic: 'updated-sign',
+        notifyTopic: 'updated-notify',
+      });
+      expect(updated.signTopic).toBe('updated-sign');
+      expect(updated.notifyTopic).toBe('updated-notify');
     });
 
     it('T-APP-04b: throws WALLET_APP_NOT_FOUND for unknown id', () => {

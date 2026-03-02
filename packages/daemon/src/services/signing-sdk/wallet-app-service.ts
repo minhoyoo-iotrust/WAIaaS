@@ -21,6 +21,8 @@ export interface WalletApp {
   displayName: string;
   signingEnabled: boolean;
   alertsEnabled: boolean;
+  signTopic: string | null;
+  notifyTopic: string | null;
   createdAt: number;
   updatedAt: number;
 }
@@ -38,8 +40,9 @@ export class WalletAppService {
 
   /**
    * Register a new wallet app. Throws 409 if name already exists.
+   * Auto-generates signTopic/notifyTopic when not specified.
    */
-  register(name: string, displayName: string): WalletApp {
+  register(name: string, displayName: string, opts?: { signTopic?: string; notifyTopic?: string }): WalletApp {
     const existing = this.sqlite.prepare(
       'SELECT id FROM wallet_apps WHERE name = ?',
     ).get(name);
@@ -51,9 +54,11 @@ export class WalletAppService {
 
     const id = generateId();
     const now = Math.floor(Date.now() / 1000);
+    const signTopic = opts?.signTopic ?? `waiaas-sign-${name}`;
+    const notifyTopic = opts?.notifyTopic ?? `waiaas-notify-${name}`;
     this.sqlite.prepare(
-      'INSERT INTO wallet_apps (id, name, display_name, signing_enabled, alerts_enabled, created_at, updated_at) VALUES (?, ?, ?, 1, 1, ?, ?)',
-    ).run(id, name, displayName, now, now);
+      'INSERT INTO wallet_apps (id, name, display_name, signing_enabled, alerts_enabled, sign_topic, notify_topic, created_at, updated_at) VALUES (?, ?, ?, 1, 1, ?, ?, ?, ?)',
+    ).run(id, name, displayName, signTopic, notifyTopic, now, now);
 
     return {
       id,
@@ -61,6 +66,8 @@ export class WalletAppService {
       displayName,
       signingEnabled: true,
       alertsEnabled: true,
+      signTopic,
+      notifyTopic,
       createdAt: now,
       updatedAt: now,
     };
@@ -69,10 +76,10 @@ export class WalletAppService {
   /**
    * Idempotent register -- returns existing if name already exists.
    */
-  ensureRegistered(name: string, displayName: string): WalletApp {
+  ensureRegistered(name: string, displayName: string, opts?: { signTopic?: string; notifyTopic?: string }): WalletApp {
     const existing = this.getByName(name);
     if (existing) return existing;
-    return this.register(name, displayName);
+    return this.register(name, displayName, opts);
   }
 
   /**
@@ -80,7 +87,7 @@ export class WalletAppService {
    */
   getByName(name: string): WalletApp | undefined {
     const row = this.sqlite.prepare(
-      'SELECT id, name, display_name, signing_enabled, alerts_enabled, created_at, updated_at FROM wallet_apps WHERE name = ?',
+      'SELECT id, name, display_name, signing_enabled, alerts_enabled, sign_topic, notify_topic, created_at, updated_at FROM wallet_apps WHERE name = ?',
     ).get(name) as Record<string, unknown> | undefined;
     return row ? this.mapRow(row) : undefined;
   }
@@ -90,7 +97,7 @@ export class WalletAppService {
    */
   getById(id: string): WalletApp | undefined {
     const row = this.sqlite.prepare(
-      'SELECT id, name, display_name, signing_enabled, alerts_enabled, created_at, updated_at FROM wallet_apps WHERE id = ?',
+      'SELECT id, name, display_name, signing_enabled, alerts_enabled, sign_topic, notify_topic, created_at, updated_at FROM wallet_apps WHERE id = ?',
     ).get(id) as Record<string, unknown> | undefined;
     return row ? this.mapRow(row) : undefined;
   }
@@ -100,7 +107,7 @@ export class WalletAppService {
    */
   list(): WalletApp[] {
     const rows = this.sqlite.prepare(
-      'SELECT id, name, display_name, signing_enabled, alerts_enabled, created_at, updated_at FROM wallet_apps ORDER BY created_at ASC',
+      'SELECT id, name, display_name, signing_enabled, alerts_enabled, sign_topic, notify_topic, created_at, updated_at FROM wallet_apps ORDER BY created_at ASC',
     ).all() as Record<string, unknown>[];
     return rows.map((r) => this.mapRow(r));
   }
@@ -117,10 +124,10 @@ export class WalletAppService {
   }
 
   /**
-   * Update wallet app toggles (signing_enabled, alerts_enabled).
+   * Update wallet app toggles and topic fields.
    * Throws 404 if not found.
    */
-  update(id: string, fields: { signingEnabled?: boolean; alertsEnabled?: boolean }): WalletApp {
+  update(id: string, fields: { signingEnabled?: boolean; alertsEnabled?: boolean; signTopic?: string; notifyTopic?: string }): WalletApp {
     const existing = this.sqlite.prepare('SELECT id FROM wallet_apps WHERE id = ?').get(id);
     if (!existing) {
       throw new WAIaaSError('WALLET_APP_NOT_FOUND', {
@@ -139,6 +146,14 @@ export class WalletAppService {
     if (fields.alertsEnabled !== undefined) {
       setClauses.push('alerts_enabled = ?');
       params.push(fields.alertsEnabled ? 1 : 0);
+    }
+    if (fields.signTopic !== undefined) {
+      setClauses.push('sign_topic = ?');
+      params.push(fields.signTopic);
+    }
+    if (fields.notifyTopic !== undefined) {
+      setClauses.push('notify_topic = ?');
+      params.push(fields.notifyTopic);
     }
 
     params.push(id);
@@ -166,7 +181,7 @@ export class WalletAppService {
    */
   getAlertEnabledApps(): WalletApp[] {
     const rows = this.sqlite.prepare(
-      'SELECT id, name, display_name, signing_enabled, alerts_enabled, created_at, updated_at FROM wallet_apps WHERE alerts_enabled = 1',
+      'SELECT id, name, display_name, signing_enabled, alerts_enabled, sign_topic, notify_topic, created_at, updated_at FROM wallet_apps WHERE alerts_enabled = 1',
     ).all() as Record<string, unknown>[];
     return rows.map((r) => this.mapRow(r));
   }
@@ -190,6 +205,8 @@ export class WalletAppService {
       displayName: row.display_name as string,
       signingEnabled: (row.signing_enabled as number) === 1,
       alertsEnabled: (row.alerts_enabled as number) === 1,
+      signTopic: (row.sign_topic as string) || null,
+      notifyTopic: (row.notify_topic as string) || null,
       createdAt: row.created_at as number,
       updatedAt: row.updated_at as number,
     };

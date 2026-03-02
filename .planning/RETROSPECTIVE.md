@@ -156,6 +156,44 @@
 
 ---
 
+## Milestone: v29.10 — ntfy 토픽 지갑별 설정 전환
+
+**Shipped:** 2026-03-02
+**Phases:** 2 | **Plans:** 4 | **Sessions:** 1
+
+### What Was Built
+- DB migration v33: wallet_apps 테이블에 sign_topic/notify_topic 컬럼 추가, 기존 행 prefix+appName 기본값 backfill
+- SignRequestBuilder/WalletNotificationChannel DB 기반 per-wallet 토픽 라우팅 (NULL시 prefix fallback)
+- 글로벌 NtfyChannel 인스턴스 제거 (daemon.ts, hot-reload) — per-wallet 토픽이 유일한 알림 경로
+- REST API wallet-apps 엔드포인트에 sign_topic/notify_topic 필드 추가 (POST/PUT/GET)
+- Admin UI Notifications 페이지 글로벌 Ntfy 카드 제거 + Human Wallet Apps per-wallet 토픽 표시/인라인 편집
+- admin.skill.md per-wallet topic API 동기화
+
+### What Worked
+- v29.7에서 확립된 wallet_apps 테이블 패턴 활용으로 스키마 확장이 자연스러움 (sign_topic/notify_topic 2컬럼 추가만으로 해결)
+- 2 phase 4 plan으로 범위가 명확하게 제한되어 ~1.5시간 만에 전체 완료
+- NULL 토픽 = prefix fallback 전략으로 기존 동작 100% 하위호환 보장
+- 글로벌 NtfyChannel 제거가 실질적 기능 손실 없이 깔끔하게 정리 (Push Relay 미구독 토픽이었으므로)
+
+### What Was Inefficient
+- 302-02 SUMMARY에서 보고된 pre-existing test failures (signing-sdk-migration, settings-service, migration-chain) — 이전 plan에서 발생한 assertion 변경이 후속 정리 안 됨
+- Phase 303 ROADMAP.md에서 303-01 plan 체크박스가 unchecked(`[ ]`)인 채로 남음 — plan 완료 시 자동 반영 미구현 반복 이슈
+
+### Patterns Established
+- Per-wallet DB 토픽 라우팅 패턴: wallet_apps 컬럼 직접 저장 → channel에서 DB SELECT → NULL시 prefix 폴백
+- 글로벌 설정 → 엔티티별 설정 마이그레이션 패턴: 설정 키 삭제 + DB 컬럼 추가 + backfill + fallback
+
+### Key Lessons
+- 엔티티별 설정으로 전환 시 NULL fallback 전략이 하위 호환성의 핵심 — 기존 코드가 중단 없이 동작
+- Settings 키 삭제 시 hot-reload/daemon startup/admin 경로 3곳 동시 수정 필요 — 놓치면 런타임 crash
+
+### Cost Observations
+- Model mix: 100% opus (quality profile)
+- Sessions: 1
+- Notable: 범위가 작고 패턴이 확립되어 매우 효율적 (43 files, +2,877/-138 lines, 20 commits)
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -166,6 +204,7 @@
 | v29.5 | 1 | 3 | 이슈 기반 정리 마일스톤, 156 파일 변경 1일 완료 |
 | v29.6 | 1 | 3 | Yield Provider 패턴 확립, 50 파일 1일 완료 |
 | v29.7 | 1 | 6 | 풀스택(DB+API+UI) 구현, 73 파일 1일 완료 |
+| v29.10 | 1 | 2 | 글로벌→per-entity 설정 전환, 43 파일 1.5시간 완료 |
 
 ### Cumulative Quality
 
@@ -175,6 +214,7 @@
 | v29.5 | ~5,595 (+512) | maintained | +5 decisions |
 | v29.6 | ~5,595 (unchanged) | maintained | +4 decisions |
 | v29.7 | ~5,595 (unchanged) | maintained | +7 decisions |
+| v29.10 | ~5,737 (+142) | maintained | +8 decisions |
 
 ### Top Lessons (Verified Across Milestones)
 
