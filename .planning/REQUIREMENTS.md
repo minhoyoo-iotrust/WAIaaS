@@ -37,14 +37,14 @@ Requirements for v29.10. Each maps to roadmap phases.
 
 ### Admin UI
 
-- [ ] **ADUI-01**: Notifications page no longer shows global Ntfy channel card
-- [ ] **ADUI-02**: Human Wallet Apps page displays sign_topic and notify_topic for each wallet app
-- [ ] **ADUI-03**: User can edit sign_topic and notify_topic values in Human Wallet Apps page
-- [ ] **ADUI-04**: Notifications page provides guidance to manage ntfy via Human Wallet Apps
+- [x] **ADUI-01**: Notifications page no longer shows global Ntfy channel card
+- [x] **ADUI-02**: Human Wallet Apps page displays sign_topic and notify_topic for each wallet app
+- [x] **ADUI-03**: User can edit sign_topic and notify_topic values in Human Wallet Apps page
+- [x] **ADUI-04**: Notifications page provides guidance to manage ntfy via Human Wallet Apps
 
 ### Skill Files
 
-- [ ] **SKIL-01**: admin.skill.md reflects wallet-apps API changes (signTopic/notifyTopic fields)
+- [x] **SKIL-01**: admin.skill.md reflects wallet-apps API changes (signTopic/notifyTopic fields)
 
 ## v2 Requirements
 
@@ -83,11 +83,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ASET-01 | Phase 302 | Complete |
 | ASET-02 | Phase 302 | Complete |
 | ASET-03 | Phase 302 | Complete |
-| ADUI-01 | Phase 303 | Pending |
-| ADUI-02 | Phase 303 | Pending |
-| ADUI-03 | Phase 303 | Pending |
-| ADUI-04 | Phase 303 | Pending |
-| SKIL-01 | Phase 303 | Pending |
+| ADUI-01 | Phase 303 | Complete |
+| ADUI-02 | Phase 303 | Complete |
+| ADUI-03 | Phase 303 | Complete |
+| ADUI-04 | Phase 303 | Complete |
+| SKIL-01 | Phase 303 | Complete |
 
 **Coverage:**
 - v1 requirements: 21 total

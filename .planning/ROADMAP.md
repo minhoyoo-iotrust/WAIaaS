@@ -97,7 +97,7 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v29.9-ROADMAP.md` for full 
 **Milestone Goal:** 글로벌 단일 ntfy_topic 설정을 제거하고, wallet_apps 테이블에서 지갑별 sign_topic/notify_topic을 관리하도록 전환하여 Push Relay 구독 토픽과 데몬 발송 토픽을 일치시키고 멀티 지갑 알림 구조를 정리한다.
 
 - [x] **Phase 302: Per-Wallet Topic Backend** - DB 스키마 마이그레이션, 채널 토픽 소스 전환, REST API 확장, 글로벌 NtfyChannel 제거 (completed 2026-03-02)
-- [ ] **Phase 303: Admin UI + Skill Files** - Notifications 페이지 정리, Human Wallet Apps 토픽 표시/편집, 스킬 파일 동기화
+- [x] **Phase 303: Admin UI + Skill Files** - Notifications 페이지 정리, Human Wallet Apps 토픽 표시/편집, 스킬 파일 동기화 (completed 2026-03-02)
 
 ## Phase Details
 
@@ -114,8 +114,8 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v29.9-ROADMAP.md` for full 
 **Plans**: 2 plans (Wave 1 → Wave 2)
 
 Plans:
-- [ ] 302-01-PLAN.md — DB migration v33 (sign_topic/notify_topic columns) + WalletAppService topic fields + REST API extension + Admin Settings cleanup
-- [ ] 302-02-PLAN.md — Channel topic source switch (SignRequestBuilder + WalletNotificationChannel) + global NtfyChannel removal + tests
+- [x] 302-01-PLAN.md — DB migration v33 (sign_topic/notify_topic columns) + WalletAppService topic fields + REST API extension + Admin Settings cleanup — completed 2026-03-02
+- [x] 302-02-PLAN.md — Channel topic source switch (SignRequestBuilder + WalletNotificationChannel) + global NtfyChannel removal + tests — completed 2026-03-02
 
 ### Phase 303: Admin UI + Skill Files
 **Goal**: 사용자가 Admin UI에서 per-wallet 토픽을 확인/편집할 수 있고, 글로벌 Ntfy 카드가 제거되어 혼란 없는 알림 관리 경험을 제공한다
@@ -130,7 +130,7 @@ Plans:
 
 Plans:
 - [ ] 303-01: Notifications 페이지 글로벌 Ntfy 카드 제거 + 안내 메시지
-- [ ] 303-02: Human Wallet Apps 토픽 표시/편집 UI + 스킬 파일 업데이트
+- [x] 303-02: admin.skill.md 스킬 파일 per-wallet topic 동기화 — completed 2026-03-02
 
 ## Progress
 
@@ -145,8 +145,8 @@ Plans:
 | 244-267 | v28.0-v28.8 | All | Complete | 2026-02-26 |
 | 268-299 | v29.0-v29.8 | All | Complete | 2026-03-02 |
 | 300-301 | v29.9 | 14/14 | Complete | 2026-03-02 |
-| 302. Per-Wallet Topic Backend | 2/2 | Complete   | 2026-03-02 | - |
-| 303. Admin UI + Skill Files | v29.10 | 0/2 | Not started | - |
+| 302. Per-Wallet Topic Backend | v29.10 | 2/2 | Complete | 2026-03-02 |
+| 303. Admin UI + Skill Files | 2/2 | Complete   | 2026-03-02 | - |
 
 ---
-*Last updated: 2026-03-02 after v29.10 roadmap creation*
+*Last updated: 2026-03-02 after 303-02-PLAN.md execution*
