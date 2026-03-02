@@ -37,6 +37,8 @@ beforeEach(() => {
     provider: makeMockProvider(),
     apiKey: API_KEY,
     ntfyServer: NTFY_SERVER,
+    signTopicPrefix: 'waiaas-sign',
+    notifyTopicPrefix: 'waiaas-notify',
   });
 
   fetchMock = vi.fn();

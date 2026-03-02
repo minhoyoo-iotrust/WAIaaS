@@ -250,7 +250,8 @@
 | 233 | MISSING | MEDIUM | Wallet SDK에 Push Relay 디바이스 등록 헬퍼 추가 — registerDevice/unregisterDevice/getSubscriptionToken | — | FIXED | 2026-03-02 |
 | 234 | BUG | HIGH | Push Relay DeviceRegistry 마이그레이션 UNIQUE 컬럼 추가 실패 — SQLite ALTER TABLE 제약 | — | FIXED | 2026-03-02 |
 | 235 | BUG | HIGH | Push Relay ntfy SSE 수동 decompression 필요 — #222 수정 불완전, undici SSE auto-decompress 불안정 | — | FIXED | 2026-03-02 |
-| 236 | BUG | CRITICAL | Push Relay ntfy SSE 압축 해제 3회 수정 후 재발 — undici fetch() 환경별 동작 불일치 | — | FIXED | 2026-03-02 |
+| 236 | BUG | CRITICAL | Push Relay ntfy SSE 압축 해제 4회 수정 후 재발 — undici fetch() 완전 제거 필요 | — | FIXED | 2026-03-02 |
+| 237 | MISSING | HIGH | Push Relay 디바이스 등록 시 subscription token 기반 토픽 동적 구독 미구현 | — | FIXED | 2026-03-02 |
 
 ## Type Legend
 
@@ -263,8 +264,8 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 236
+- **FIXED:** 237
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 237
+- **Total:** 238

@@ -85,6 +85,43 @@ export class DeviceRegistry {
     this.db.prepare(`DELETE FROM devices WHERE push_token IN (${placeholders})`).run(...tokens);
   }
 
+  getByPushToken(pushToken: string): DeviceRecord | null {
+    const row = this.db.prepare(`
+      SELECT push_token, wallet_name, platform, subscription_token, created_at, updated_at
+      FROM devices WHERE push_token = ?
+    `).get(pushToken) as {
+      push_token: string; wallet_name: string; platform: string;
+      subscription_token: string | null; created_at: number; updated_at: number;
+    } | undefined;
+    if (!row) return null;
+    return {
+      pushToken: row.push_token,
+      walletName: row.wallet_name,
+      platform: row.platform as 'ios' | 'android',
+      subscriptionToken: row.subscription_token,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  }
+
+  listAll(): DeviceRecord[] {
+    const rows = this.db.prepare(`
+      SELECT push_token, wallet_name, platform, subscription_token, created_at, updated_at
+      FROM devices
+    `).all() as Array<{
+      push_token: string; wallet_name: string; platform: string;
+      subscription_token: string | null; created_at: number; updated_at: number;
+    }>;
+    return rows.map((row) => ({
+      pushToken: row.push_token,
+      walletName: row.wallet_name,
+      platform: row.platform as 'ios' | 'android',
+      subscriptionToken: row.subscription_token,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
+  }
+
   count(): number {
     const row = this.db.prepare('SELECT COUNT(*) as count FROM devices').get() as { count: number };
     return row.count;

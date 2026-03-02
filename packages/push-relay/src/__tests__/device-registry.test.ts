@@ -78,6 +78,36 @@ describe('DeviceRegistry', () => {
     expect(registry.count()).toBe(2);
   });
 
+  it('getByPushToken returns device record', () => {
+    registry.register('dcent', 'token-1', 'ios');
+    const device = registry.getByPushToken('token-1');
+    expect(device).not.toBeNull();
+    expect(device!.walletName).toBe('dcent');
+    expect(device!.platform).toBe('ios');
+    expect(device!.pushToken).toBe('token-1');
+    expect(device!.subscriptionToken).toBeTruthy();
+  });
+
+  it('getByPushToken returns null for unknown token', () => {
+    expect(registry.getByPushToken('nonexistent')).toBeNull();
+  });
+
+  it('listAll returns all devices', () => {
+    registry.register('w1', 'token-1', 'ios');
+    registry.register('w2', 'token-2', 'android');
+    registry.register('w1', 'token-3', 'ios');
+
+    const devices = registry.listAll();
+    expect(devices).toHaveLength(3);
+    const names = devices.map((d) => d.walletName);
+    expect(names).toContain('w1');
+    expect(names).toContain('w2');
+  });
+
+  it('listAll returns empty array when no devices', () => {
+    expect(registry.listAll()).toEqual([]);
+  });
+
   it('enforces subscription_token uniqueness via index', () => {
     registry.register('w1', 'token-1', 'ios');
     const token1 = registry.getSubscriptionToken('token-1');
