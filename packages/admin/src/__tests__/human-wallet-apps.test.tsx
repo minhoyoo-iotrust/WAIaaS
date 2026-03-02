@@ -8,7 +8,6 @@
  * - T-HWUI-04: Signing toggle calls PUT
  * - T-HWUI-05: Alerts toggle calls PUT
  * - T-HWUI-06: Used by wallets displayed
- * - T-HWUI-07: ntfy server URL displayed
  * - T-HWUI-08: Register App button opens modal
  * - T-HWUI-09: Remove button calls DELETE
  * - T-HWUI-10: sign_topic and notify_topic displayed
@@ -127,7 +126,6 @@ const mockApps = {
 
 const mockSettings = {
   signing_sdk: {
-    ntfy_server: 'https://ntfy.sh',
     enabled: 'true',
     notifications_enabled: 'true',
   },
@@ -173,19 +171,6 @@ describe('HumanWalletAppsPage', () => {
     expect(screen.getByText('wallet-1')).toBeTruthy();
     // Custom Wallet has no wallets — "No wallets" text
     expect(screen.getByText('No wallets')).toBeTruthy();
-  });
-
-  it('T-HWUI-07: ntfy server URL displayed', async () => {
-    mockApiCalls();
-    render(<HumanWalletAppsPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText("D'CENT Wallet")).toBeTruthy();
-    });
-
-    const input = document.querySelector('input[name="ntfy-server-url"]') as HTMLInputElement;
-    expect(input).toBeTruthy();
-    expect(input.value).toBe('https://ntfy.sh');
   });
 
   it('T-HWUI-04: signing toggle calls PUT', async () => {
@@ -405,7 +390,6 @@ describe('HumanWalletAppsPage', () => {
     // Settings: notifications_enabled false, sdk enabled
     const settingsNotifOff = {
       signing_sdk: {
-        ntfy_server: 'https://ntfy.sh',
         enabled: 'true',
         notifications_enabled: 'false',
       },
@@ -478,7 +462,6 @@ describe('HumanWalletAppsPage', () => {
     await waitFor(() => {
       expect(vi.mocked(apiPost)).toHaveBeenCalledWith(
         '/v1/admin/wallet-apps/app-1/test-notification',
-        {},
       );
     });
 

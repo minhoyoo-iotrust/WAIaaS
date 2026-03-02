@@ -237,7 +237,7 @@ export function createWalletAppsRoutes(deps: WalletAppsRouteDeps): OpenAPIHono {
     }
 
     // Resolve ntfy server and topic
-    const ntfyServer = deps.settingsService?.get('signing_sdk.ntfy_server') || 'https://ntfy.sh';
+    const ntfyServer = deps.settingsService?.get('notifications.ntfy_server') || 'https://ntfy.sh';
     const notifyTopic = app.notifyTopic || `waiaas-notify-${app.name}`;
     const url = `${ntfyServer}/${notifyTopic}`;
 

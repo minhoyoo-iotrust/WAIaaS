@@ -5,7 +5,6 @@ import { API } from '../api/endpoints';
 import { FormField, Button, Badge } from '../components/form';
 import { Modal } from '../components/modal';
 import { showToast } from '../components/toast';
-import type { SettingsData } from '../utils/settings-helpers';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -33,11 +32,6 @@ interface WalletAppApi {
 export default function HumanWalletAppsPage() {
   const apps = useSignal<WalletAppApi[]>([]);
   const loading = useSignal(true);
-
-  // ntfy server setting
-  const ntfyServer = useSignal('');
-  const ntfyServerOriginal = useSignal('');
-  const ntfySaving = useSignal(false);
 
   // Global notification toggle state
   const notificationsEnabled = useSignal(false);
@@ -80,15 +74,9 @@ export default function HumanWalletAppsPage() {
 
   const fetchSettings = async () => {
     try {
-      const data = await apiGet<SettingsData>(API.ADMIN_SETTINGS);
-      // Settings API returns nested: { signing_sdk: { ntfy_server: '...', enabled: '...', ... } }
+      const data = await apiGet<Record<string, Record<string, unknown>>>(API.ADMIN_SETTINGS);
       const sdk = data['signing_sdk'];
       if (sdk) {
-        const ntfyVal = sdk['ntfy_server'];
-        if (ntfyVal !== undefined) {
-          ntfyServer.value = String(ntfyVal) || '';
-          ntfyServerOriginal.value = ntfyServer.value;
-        }
         sdkEnabled.value = String(sdk['enabled']) === 'true';
         notificationsEnabled.value = String(sdk['notifications_enabled']) === 'true';
       }
@@ -106,21 +94,6 @@ export default function HumanWalletAppsPage() {
   // ---------------------------------------------------------------------------
   // Handlers
   // ---------------------------------------------------------------------------
-
-  const handleSaveNtfyServer = async () => {
-    ntfySaving.value = true;
-    try {
-      await apiPut(API.ADMIN_SETTINGS, {
-        settings: [{ key: 'signing_sdk.ntfy_server', value: ntfyServer.value }],
-      });
-      ntfyServerOriginal.value = ntfyServer.value;
-      showToast('ntfy server URL saved', 'success');
-    } catch {
-      showToast('Failed to save ntfy server URL', 'error');
-    } finally {
-      ntfySaving.value = false;
-    }
-  };
 
   const handleNotifToggle = async () => {
     notifToggleSaving.value = true;
@@ -280,38 +253,6 @@ export default function HumanWalletAppsPage() {
 
   return (
     <div class="human-wallet-apps-page">
-      {/* ntfy Server URL */}
-      <div class="settings-category" style={{ marginBottom: '1.5rem' }}>
-        <div class="settings-category-header">
-          <h3>Push Relay Server</h3>
-          <p class="settings-description">
-            ntfy server URL used for signing requests and wallet app notifications
-          </p>
-        </div>
-        <div class="settings-category-body">
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end' }}>
-            <div style={{ flex: 1 }}>
-              <FormField
-                label="ntfy Server URL"
-                name="ntfy-server-url"
-                type="text"
-                value={ntfyServer.value}
-                onChange={(v) => { ntfyServer.value = String(v); }}
-                placeholder="https://ntfy.sh"
-                description="Push notification relay server for signing requests"
-              />
-            </div>
-            <Button
-              onClick={handleSaveNtfyServer}
-              disabled={ntfySaving.value || ntfyServer.value === ntfyServerOriginal.value}
-              style={{ marginBottom: '0.25rem' }}
-            >
-              {ntfySaving.value ? 'Saving...' : 'Save'}
-            </Button>
-          </div>
-        </div>
-      </div>
-
       {/* Wallet App Notifications Toggle */}
       <div class="settings-category" style={{ marginBottom: '1.5rem' }}>
         <div class="settings-category-header">
