@@ -94,19 +94,21 @@ export class WalletNotificationChannel {
 
       // Send to all alert-enabled apps in parallel
       await Promise.allSettled(
-        appNames.map((appName) =>
-          this.publishNotification(ntfyServer, appName, {
+        appNames.map((app) => {
+          const fallbackPrefix = 'waiaas-notify';
+          const topic = app.notifyTopic || `${fallbackPrefix}-${app.name}`;
+          return this.publishNotification(ntfyServer, topic, {
             version: '1',
             eventType,
             walletId,
-            walletName: appName,
+            walletName: app.name,
             category,
             title,
             body,
             details,
             timestamp: Math.floor(Date.now() / 1000),
-          }, priority),
-        ),
+          }, priority);
+        }),
       );
     } catch {
       // DAEMON-06: never throw
@@ -115,22 +117,21 @@ export class WalletNotificationChannel {
 
   /**
    * Query wallet_apps table for apps with alerts_enabled=1.
-   * Returns app names for topic routing.
+   * Returns app names and notify_topic for topic routing (CHAN-02).
    */
-  private resolveAlertApps(): string[] {
+  private resolveAlertApps(): Array<{ name: string; notifyTopic: string | null }> {
     const rows = this.sqlite.prepare(
-      'SELECT name FROM wallet_apps WHERE alerts_enabled = 1',
-    ).all() as Array<{ name: string }>;
-    return rows.map((r) => r.name);
+      'SELECT name, notify_topic FROM wallet_apps WHERE alerts_enabled = 1',
+    ).all() as Array<{ name: string; notify_topic: string | null }>;
+    return rows.map((r) => ({ name: r.name, notifyTopic: r.notify_topic }));
   }
 
   private async publishNotification(
     ntfyServer: string,
-    walletName: string,
+    topic: string,
     message: NotificationMessage,
     priority: number,
   ): Promise<void> {
-    const topic = `waiaas-notify-${walletName}`;
     const json = JSON.stringify(message);
     const encoded = Buffer.from(json, 'utf-8').toString('base64url');
 

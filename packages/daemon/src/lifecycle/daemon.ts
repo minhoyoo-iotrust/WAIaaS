@@ -492,7 +492,7 @@ export class DaemonLifecycle {
       // Always create NotificationService regardless of config.toml enabled value.
       // When enabled=false, service starts with 0 channels (no notifications sent).
       // Admin UI can dynamically enable via hot-reload at runtime.
-      const { NotificationService, TelegramChannel, DiscordChannel, NtfyChannel, SlackChannel } =
+      const { NotificationService, TelegramChannel, DiscordChannel, SlackChannel } =
         await import('../notifications/index.js');
 
       // Read notification settings from SettingsService first, fall back to config.toml
@@ -549,18 +549,8 @@ export class DaemonLifecycle {
           this.notificationService.addChannel(discord);
         }
 
-        // Global ntfy_topic from config.toml (settings key removed in v29.10 -- per-wallet topics now in wallet_apps).
-        const ntfyTopic = notifConfig.ntfy_topic;
-        if (ntfyTopic) {
-          const ntfyServer = (ss ? ss.get('notifications.ntfy_server') : null)
-            || notifConfig.ntfy_server;
-          const ntfy = new NtfyChannel();
-          await ntfy.initialize({
-            ntfy_server: ntfyServer,
-            ntfy_topic: ntfyTopic,
-          });
-          this.notificationService.addChannel(ntfy);
-        }
+        // Global NtfyChannel removed in v29.10 -- per-wallet topics now in wallet_apps table.
+        // Per-wallet ntfy channels are managed by the signing SDK / notification routing layer.
 
         const slackUrl = (ss ? ss.get('notifications.slack_webhook_url') : null)
           || notifConfig.slack_webhook_url;
@@ -764,6 +754,7 @@ export class DaemonLifecycle {
         const signRequestBuilder = new SignRequestBuilder({
           settingsService: this._settingsService!,
           walletLinkRegistry,
+          sqlite: this.sqlite!,  // per-wallet topic lookup from wallet_apps table
         });
         const signResponseHandler = new SignResponseHandler({ sqlite: this.sqlite! });
         const ntfyChannel = new NtfySigningChannel({
