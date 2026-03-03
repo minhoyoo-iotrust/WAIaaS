@@ -12,6 +12,8 @@
  *      4c-10. AsyncPollingService (fail-soft)
  *      4c-10.5. PositionTracker (fail-soft)
  *      4c-11. DeFiMonitorService (fail-soft)
+ *      4h. EncryptedBackupService (fail-soft)
+ *      4i. WebhookService (fail-soft)
  *   5. HTTP server start (5s, fail-fast)
  *   6. Background workers + PID (no timeout, fail-soft)
  *
@@ -20,7 +22,7 @@
  *   2-4. HTTP server close
  *   5. In-flight signing -- STUB (Phase 50-04)
  *   6. Pending queue persistence -- STUB (Phase 50-04)
- *   6a. Stop PositionTracker, DeFiMonitorService, TelegramBot, WcSessionService, AutoStop, BalanceMonitor, IncomingTxMonitor
+ *   6a. Stop PositionTracker, DeFiMonitorService, TelegramBot, WcSessionService, AutoStop, BalanceMonitor, IncomingTxMonitor, WebhookService
  *   6b. Remove all EventBus listeners
  *   7. workers.stopAll()
  *   8. WAL checkpoint(TRUNCATE)
@@ -157,6 +159,7 @@ export class DaemonLifecycle {
   private positionTracker: import('../services/defi/position-tracker.js').PositionTracker | null = null;
   private defiMonitorService: import('../services/monitoring/defi-monitor-service.js').DeFiMonitorService | null = null;
   private _encryptedBackupService: import('../infrastructure/backup/encrypted-backup-service.js').EncryptedBackupService | null = null;
+  private webhookService: import('../services/webhook-service.js').WebhookService | null = null;
 
   /** Whether shutdown has been initiated. */
   get isShuttingDown(): boolean {
@@ -1283,6 +1286,19 @@ export class DaemonLifecycle {
     }
 
     // ------------------------------------------------------------------
+    // Step 4i: WebhookService (fail-soft)
+    // ------------------------------------------------------------------
+    try {
+      if (this.sqlite && this.eventBus) {
+        const { WebhookService } = await import('../services/webhook-service.js');
+        this.webhookService = new WebhookService(this.sqlite, this.eventBus, () => this.masterPassword);
+        console.debug('Step 4i: WebhookService created');
+      }
+    } catch (err) {
+      console.warn('Step 4i (fail-soft): WebhookService init warning:', err);
+    }
+
+    // ------------------------------------------------------------------
     // Step 5: HTTP server start (5s, fail-fast)
     // ------------------------------------------------------------------
     await withTimeout(
@@ -1624,6 +1640,10 @@ export class DaemonLifecycle {
 
       // Clear AsyncPollingService reference (workers.stopAll() handles the timer)
       this._asyncPollingService = null;
+
+      // WebhookService destroy (before removing EventBus listeners)
+      this.webhookService?.destroy();
+      this.webhookService = null;
 
       // Step 6b: Remove all EventBus listeners
       this.eventBus.removeAllListeners();

@@ -5,8 +5,16 @@
  * and enqueues delivery jobs to WebhookDeliveryQueue. Operates independently
  * from NotificationService (different concerns: N URLs + HMAC vs single channel).
  *
- * EventBus listener registration is done in Plan 03; this service exposes
- * dispatch() as public for both EventBus listeners and direct callers.
+ * EventBus listeners map internal events to webhook event types:
+ * - transaction:completed -> TX_CONFIRMED
+ * - transaction:failed -> TX_FAILED
+ * - wallet:activity -> TX_SUBMITTED / SESSION_CREATED / OWNER_REGISTERED
+ * - kill-switch:state-changed -> KILL_SWITCH_ACTIVATED / KILL_SWITCH_RECOVERED
+ * - transaction:incoming -> TX_SUBMITTED (incoming notification)
+ *
+ * Direct dispatch() calls handle: WALLET_CREATED, WALLET_SUSPENDED,
+ * SESSION_REVOKED, POLICY_DENIED, MASTER_AUTH_FAILED, AUTO_STOP_TRIGGERED,
+ * NOTIFICATION_TOTAL_FAILURE from their respective handlers.
  *
  * @see .planning/milestones/v30.0-phases/307/DESIGN-SPEC.md (OPS-04 section 7)
  */
@@ -28,6 +36,13 @@ interface WebhookRow {
   events: string; // JSON array
 }
 
+/** Maps wallet:activity event names to webhook event types. */
+const ACTIVITY_EVENT_MAP: Record<string, string> = {
+  TX_SUBMITTED: 'TX_SUBMITTED',
+  SESSION_CREATED: 'SESSION_CREATED',
+  OWNER_SET: 'OWNER_REGISTERED',
+};
+
 // ---------------------------------------------------------------------------
 // WebhookService
 // ---------------------------------------------------------------------------
@@ -35,8 +50,6 @@ interface WebhookRow {
 export class WebhookService {
   private readonly queue: WebhookDeliveryQueue;
   private disposed = false;
-
-  // eventBus stored for Plan 03 EventBus listener registration
   readonly eventBus: EventBus;
 
   constructor(
@@ -46,6 +59,72 @@ export class WebhookService {
   ) {
     this.eventBus = eventBus;
     this.queue = new WebhookDeliveryQueue(sqlite, getMasterPassword);
+    this.registerEventBusListeners();
+  }
+
+  /**
+   * Register EventBus listeners that map internal events to webhook event types.
+   */
+  private registerEventBusListeners(): void {
+    // transaction:completed -> TX_CONFIRMED
+    this.eventBus.on('transaction:completed', (e) => {
+      this.dispatch('TX_CONFIRMED', {
+        txId: e.txId,
+        txHash: e.txHash,
+        walletId: e.walletId,
+        network: e.network,
+        type: e.type,
+        amount: e.amount,
+      });
+    });
+
+    // transaction:failed -> TX_FAILED
+    this.eventBus.on('transaction:failed', (e) => {
+      this.dispatch('TX_FAILED', {
+        txId: e.txId,
+        error: e.error,
+        walletId: e.walletId,
+        network: e.network,
+        type: e.type,
+      });
+    });
+
+    // wallet:activity -> TX_SUBMITTED / SESSION_CREATED / OWNER_REGISTERED
+    this.eventBus.on('wallet:activity', (e) => {
+      const webhookEvent = ACTIVITY_EVENT_MAP[e.activity];
+      if (webhookEvent) {
+        this.dispatch(webhookEvent, {
+          walletId: e.walletId,
+          ...(e.details ?? {}),
+        });
+      }
+    });
+
+    // kill-switch:state-changed -> KILL_SWITCH_ACTIVATED / KILL_SWITCH_RECOVERED
+    this.eventBus.on('kill-switch:state-changed', (e) => {
+      if (e.state === 'SUSPENDED') {
+        this.dispatch('KILL_SWITCH_ACTIVATED', {
+          activatedBy: e.activatedBy,
+          previousState: e.previousState,
+        });
+      } else if (e.state === 'ACTIVE' && e.previousState !== 'ACTIVE') {
+        this.dispatch('KILL_SWITCH_RECOVERED', {
+          activatedBy: e.activatedBy,
+        });
+      }
+    });
+
+    // transaction:incoming -> TX_SUBMITTED (incoming notification)
+    this.eventBus.on('transaction:incoming', (e) => {
+      this.dispatch('TX_SUBMITTED', {
+        txHash: e.txHash,
+        fromAddress: e.fromAddress,
+        amount: e.amount,
+        walletId: e.walletId,
+        network: e.network,
+        status: e.status,
+      });
+    });
   }
 
   /**
