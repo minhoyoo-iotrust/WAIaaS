@@ -297,6 +297,7 @@ export const auditLog = sqliteTable(
     index('idx_audit_log_wallet_id').on(table.walletId),
     index('idx_audit_log_severity').on(table.severity),
     index('idx_audit_log_wallet_timestamp').on(table.walletId, table.timestamp),
+    index('idx_audit_log_tx_id').on(table.txId),
     check('check_severity', sql`severity IN ('info', 'warning', 'critical')`),
   ],
 );

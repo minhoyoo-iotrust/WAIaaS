@@ -51,6 +51,22 @@ export {
   type IncomingTransaction as IncomingTransactionDto,
 } from './incoming-transaction.schema.js';
 
+// v30.2 audit log schema (Zod SSoT)
+export {
+  AuditEventTypeSchema,
+  AuditSeveritySchema,
+  AUDIT_EVENT_TYPES,
+  AUDIT_SEVERITIES,
+  AuditLogItemSchema,
+  AuditLogResponseSchema,
+  AuditLogQuerySchema,
+  type AuditEventType,
+  type AuditSeverity,
+  type AuditLogItem,
+  type AuditLogResponse,
+  type AuditLogQuery,
+} from './audit.schema.js';
+
 // v30.2 dry-run simulation schema (Zod SSoT)
 export {
   DryRunSimulationResultSchema,

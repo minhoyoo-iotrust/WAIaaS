@@ -78,7 +78,7 @@ const LEGACY_NETWORK_NORMALIZE: Record<string, string> = {
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 35;
+export const LATEST_SCHEMA_VERSION = 36;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -383,6 +383,7 @@ function getCreateIndexStatements(): string[] {
     'CREATE INDEX IF NOT EXISTS idx_audit_log_wallet_id ON audit_log(wallet_id)',
     'CREATE INDEX IF NOT EXISTS idx_audit_log_severity ON audit_log(severity)',
     'CREATE INDEX IF NOT EXISTS idx_audit_log_wallet_timestamp ON audit_log(wallet_id, timestamp)',
+    'CREATE INDEX IF NOT EXISTS idx_audit_log_tx_id ON audit_log(tx_id)',
 
     // notification_logs indexes
     'CREATE INDEX IF NOT EXISTS idx_notification_logs_event_type ON notification_logs(event_type)',
@@ -2314,6 +2315,18 @@ MIGRATIONS.push({
     if (!cols.includes('subscription_token')) {
       sqlite.exec(`ALTER TABLE wallet_apps ADD COLUMN subscription_token TEXT`);
     }
+  },
+});
+
+// ---------------------------------------------------------------------------
+// v36: Add idx_audit_log_tx_id index for audit log tx_id filter queries (OPS-02)
+// ---------------------------------------------------------------------------
+
+MIGRATIONS.push({
+  version: 36,
+  description: 'Add idx_audit_log_tx_id index for audit log tx_id filter queries',
+  up: (sqlite) => {
+    sqlite.exec('CREATE INDEX IF NOT EXISTS idx_audit_log_tx_id ON audit_log(tx_id)');
   },
 });
 
