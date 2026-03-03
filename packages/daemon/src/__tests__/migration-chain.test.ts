@@ -1004,7 +1004,7 @@ describe('edge cases', () => {
     expect(row.message).toBeNull();
 
     // Verify LATEST_SCHEMA_VERSION is 28
-    expect(LATEST_SCHEMA_VERSION).toBe(35);
+    expect(LATEST_SCHEMA_VERSION).toBe(37);
   });
 
   it('T-13: existing notification_logs data preserved after v10 migration', () => {
@@ -1810,7 +1810,7 @@ describe('v24 migration: wallet_type column for preset auto-setup', () => {
     db = conn.sqlite;
     pushSchema(db);
 
-    expect(LATEST_SCHEMA_VERSION).toBe(35);
+    expect(LATEST_SCHEMA_VERSION).toBe(37);
 
     const versions = getVersions(db);
     expect(versions).toContain(24);

@@ -133,6 +133,8 @@ export const messages: Messages = {
     UNSUPPORTED_BACKUP_VERSION: '지원하지 않는 백업 포맷 버전입니다',
     BACKUP_CORRUPTED: '백업 아카이브가 손상되었거나 변조되었습니다',
     BACKUP_NOT_FOUND: '백업 파일을 찾을 수 없습니다',
+    // ADMIN domain (webhook)
+    WEBHOOK_NOT_FOUND: '웹훅을 찾을 수 없습니다',
   },
   // Notification templates (31 event types)
   notifications: {

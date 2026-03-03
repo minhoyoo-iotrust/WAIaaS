@@ -67,6 +67,24 @@ export {
   type AuditLogQuery,
 } from './audit.schema.js';
 
+// v30.2 webhook outbound schema (Zod SSoT)
+export {
+  WEBHOOK_EVENT_TYPES,
+  WebhookEventTypeSchema,
+  CreateWebhookRequestSchema,
+  WebhookResponseSchema,
+  CreateWebhookResponseSchema,
+  WEBHOOK_LOG_STATUSES,
+  WebhookLogSchema,
+  WebhookLogQuerySchema,
+  type WebhookEventType,
+  type CreateWebhookRequest,
+  type WebhookResponse,
+  type CreateWebhookResponse,
+  type WebhookLog,
+  type WebhookLogQuery,
+} from './webhook.schema.js';
+
 // v30.2 dry-run simulation schema (Zod SSoT)
 export {
   DryRunSimulationResultSchema,

@@ -187,6 +187,8 @@ export const messages: Messages = {
     UNSUPPORTED_BACKUP_VERSION: 'Unsupported backup format version',
     BACKUP_CORRUPTED: 'Backup archive is corrupted or has been tampered with',
     BACKUP_NOT_FOUND: 'Backup file not found',
+    // ADMIN domain (webhook)
+    WEBHOOK_NOT_FOUND: 'Webhook not found',
   },
   // Notification templates (30 event types)
   notifications: {

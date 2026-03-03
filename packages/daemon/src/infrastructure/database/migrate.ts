@@ -70,7 +70,7 @@ const LEGACY_NETWORK_NORMALIZE: Record<string, string> = {
 };
 
 // ---------------------------------------------------------------------------
-// DDL statements for all 19 tables (latest schema: wallets + wallet_id + session_wallets + token_registry + settings + telegram_users + wc_sessions + wc_store + incoming_transactions + incoming_tx_cursors + defi_positions + wallet_apps)
+// DDL statements for all 21 tables (latest schema: wallets + wallet_id + session_wallets + token_registry + settings + telegram_users + wc_sessions + wc_store + incoming_transactions + incoming_tx_cursors + defi_positions + wallet_apps + webhooks + webhook_logs)
 // ---------------------------------------------------------------------------
 
 /**
@@ -78,7 +78,7 @@ const LEGACY_NETWORK_NORMALIZE: Record<string, string> = {
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 36;
+export const LATEST_SCHEMA_VERSION = 37;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -335,6 +335,32 @@ function getCreateTableStatements(): string[] {
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 )`,
+
+    // Table 20: webhooks (webhook outbound subscriptions, v37 OPS-04)
+    `CREATE TABLE IF NOT EXISTS webhooks (
+  id TEXT PRIMARY KEY,
+  url TEXT NOT NULL,
+  secret_hash TEXT NOT NULL,
+  secret_encrypted TEXT NOT NULL,
+  events TEXT NOT NULL DEFAULT '[]',
+  description TEXT,
+  enabled INTEGER NOT NULL DEFAULT 1 CHECK (enabled IN (0, 1)),
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+)`,
+
+    // Table 21: webhook_logs (webhook delivery attempt history, v37 OPS-04)
+    `CREATE TABLE IF NOT EXISTS webhook_logs (
+  id TEXT PRIMARY KEY,
+  webhook_id TEXT NOT NULL REFERENCES webhooks(id) ON DELETE CASCADE,
+  event_type TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('success', 'failed')),
+  http_status INTEGER,
+  attempt INTEGER NOT NULL DEFAULT 1,
+  error TEXT,
+  request_duration INTEGER,
+  created_at INTEGER NOT NULL
+)`,
   ];
 }
 
@@ -422,6 +448,13 @@ function getCreateIndexStatements(): string[] {
 
     // v34: wallet_apps.wallet_type index
     'CREATE INDEX IF NOT EXISTS idx_wallet_apps_wallet_type ON wallet_apps(wallet_type)',
+
+    // v37: webhooks + webhook_logs indexes (OPS-04)
+    'CREATE INDEX IF NOT EXISTS idx_webhooks_enabled ON webhooks(enabled)',
+    'CREATE INDEX IF NOT EXISTS idx_webhook_logs_webhook_id ON webhook_logs(webhook_id)',
+    'CREATE INDEX IF NOT EXISTS idx_webhook_logs_event_type ON webhook_logs(event_type)',
+    'CREATE INDEX IF NOT EXISTS idx_webhook_logs_status ON webhook_logs(status)',
+    'CREATE INDEX IF NOT EXISTS idx_webhook_logs_created_at ON webhook_logs(created_at)',
   ];
 }
 
@@ -2327,6 +2360,52 @@ MIGRATIONS.push({
   description: 'Add idx_audit_log_tx_id index for audit log tx_id filter queries',
   up: (sqlite) => {
     sqlite.exec('CREATE INDEX IF NOT EXISTS idx_audit_log_tx_id ON audit_log(tx_id)');
+  },
+});
+
+// ---------------------------------------------------------------------------
+// v37: Create webhooks + webhook_logs tables for webhook outbound (OPS-04)
+// ---------------------------------------------------------------------------
+
+MIGRATIONS.push({
+  version: 37,
+  description: 'Create webhooks and webhook_logs tables for webhook outbound (OPS-04)',
+  up: (sqlite) => {
+    // Enable foreign keys for CASCADE support
+    sqlite.exec('PRAGMA foreign_keys = ON');
+
+    // Table 20: webhooks -- webhook subscription registry
+    sqlite.exec(`CREATE TABLE IF NOT EXISTS webhooks (
+  id TEXT PRIMARY KEY,
+  url TEXT NOT NULL,
+  secret_hash TEXT NOT NULL,
+  secret_encrypted TEXT NOT NULL,
+  events TEXT NOT NULL DEFAULT '[]',
+  description TEXT,
+  enabled INTEGER NOT NULL DEFAULT 1 CHECK (enabled IN (0, 1)),
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+)`);
+
+    sqlite.exec('CREATE INDEX IF NOT EXISTS idx_webhooks_enabled ON webhooks(enabled)');
+
+    // Table 21: webhook_logs -- webhook delivery attempt history
+    sqlite.exec(`CREATE TABLE IF NOT EXISTS webhook_logs (
+  id TEXT PRIMARY KEY,
+  webhook_id TEXT NOT NULL REFERENCES webhooks(id) ON DELETE CASCADE,
+  event_type TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('success', 'failed')),
+  http_status INTEGER,
+  attempt INTEGER NOT NULL DEFAULT 1,
+  error TEXT,
+  request_duration INTEGER,
+  created_at INTEGER NOT NULL
+)`);
+
+    sqlite.exec('CREATE INDEX IF NOT EXISTS idx_webhook_logs_webhook_id ON webhook_logs(webhook_id)');
+    sqlite.exec('CREATE INDEX IF NOT EXISTS idx_webhook_logs_event_type ON webhook_logs(event_type)');
+    sqlite.exec('CREATE INDEX IF NOT EXISTS idx_webhook_logs_status ON webhook_logs(status)');
+    sqlite.exec('CREATE INDEX IF NOT EXISTS idx_webhook_logs_created_at ON webhook_logs(created_at)');
   },
 });
 

@@ -855,6 +855,15 @@ export const ERROR_CODES = {
     retryable: false,
     message: 'Backup file not found',
   },
+
+  // --- ADMIN domain (webhook) ---
+  WEBHOOK_NOT_FOUND: {
+    code: 'WEBHOOK_NOT_FOUND',
+    domain: 'ADMIN',
+    httpStatus: 404,
+    retryable: false,
+    message: 'Webhook not found',
+  },
 } as const satisfies Record<string, ErrorCodeEntry>;
 
 export type ErrorCode = keyof typeof ERROR_CODES;

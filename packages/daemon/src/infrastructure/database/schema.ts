@@ -1,7 +1,7 @@
 /**
  * Drizzle ORM schema definitions for WAIaaS daemon SQLite database.
  *
- * 19 tables: wallets, sessions, session_wallets, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs, token_registry, settings, telegram_users, wc_sessions, wc_store, incoming_transactions, incoming_tx_cursors, defi_positions, wallet_apps
+ * 21 tables: wallets, sessions, session_wallets, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs, token_registry, settings, telegram_users, wc_sessions, wc_store, incoming_transactions, incoming_tx_cursors, defi_positions, wallet_apps, webhooks, webhook_logs
  *
  * CHECK constraints are derived from @waiaas/core enum SSoT arrays (not hardcoded strings).
  * All timestamps are Unix epoch seconds via { mode: 'timestamp' }.
@@ -532,3 +532,54 @@ export const walletApps = sqliteTable('wallet_apps', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
+
+// ---------------------------------------------------------------------------
+// Table 20: webhooks -- webhook outbound subscriptions (v37 OPS-04)
+// ---------------------------------------------------------------------------
+
+export const webhooks = sqliteTable(
+  'webhooks',
+  {
+    id: text('id').primaryKey(),
+    url: text('url').notNull(),
+    secretHash: text('secret_hash').notNull(),
+    secretEncrypted: text('secret_encrypted').notNull(),
+    events: text('events').notNull(), // JSON array
+    description: text('description'),
+    enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  },
+  (table) => [
+    index('idx_webhooks_enabled').on(table.enabled),
+    check('check_webhook_enabled', sql`enabled IN (0, 1)`),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Table 21: webhook_logs -- webhook delivery attempt history (v37 OPS-04)
+// ---------------------------------------------------------------------------
+
+export const webhookLogs = sqliteTable(
+  'webhook_logs',
+  {
+    id: text('id').primaryKey(),
+    webhookId: text('webhook_id')
+      .notNull()
+      .references(() => webhooks.id, { onDelete: 'cascade' }),
+    eventType: text('event_type').notNull(),
+    status: text('status').notNull(),
+    httpStatus: integer('http_status'),
+    attempt: integer('attempt').notNull().default(1),
+    error: text('error'),
+    requestDuration: integer('request_duration'),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  },
+  (table) => [
+    index('idx_webhook_logs_webhook_id').on(table.webhookId),
+    index('idx_webhook_logs_event_type').on(table.eventType),
+    index('idx_webhook_logs_status').on(table.status),
+    index('idx_webhook_logs_created_at').on(table.createdAt),
+    check('check_webhook_log_status', sql`status IN ('success', 'failed')`),
+  ],
+);
