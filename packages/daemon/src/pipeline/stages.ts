@@ -112,19 +112,19 @@ export interface PipelineContext {
 // ---------------------------------------------------------------------------
 
 /** Safely extract `amount` from SendTransactionRequest | TransactionRequest. */
-function getRequestAmount(req: SendTransactionRequest | TransactionRequest): string {
+export function getRequestAmount(req: SendTransactionRequest | TransactionRequest): string {
   if ('amount' in req && typeof req.amount === 'string') return req.amount;
   return '0';
 }
 
 /** Safely extract `to` from SendTransactionRequest | TransactionRequest. */
-function getRequestTo(req: SendTransactionRequest | TransactionRequest): string {
+export function getRequestTo(req: SendTransactionRequest | TransactionRequest): string {
   if ('to' in req && typeof req.to === 'string') return req.to;
   return '';
 }
 
 /** Safely extract `memo` from SendTransactionRequest | TransactionRequest. */
-function getRequestMemo(req: SendTransactionRequest | TransactionRequest): string | undefined {
+export function getRequestMemo(req: SendTransactionRequest | TransactionRequest): string | undefined {
   if ('memo' in req && typeof req.memo === 'string') return req.memo;
   return undefined;
 }
@@ -217,7 +217,7 @@ function extractPolicyType(reason: string | undefined): string {
 // Helper: build type-specific TransactionParam for policy evaluation
 // ---------------------------------------------------------------------------
 
-interface TransactionParam {
+export interface TransactionParam {
   type: string;
   amount: string;
   toAddress: string;
@@ -235,7 +235,7 @@ interface TransactionParam {
   actionProvider?: string;
 }
 
-function buildTransactionParam(
+export function buildTransactionParam(
   req: SendTransactionRequest | TransactionRequest,
   txType: string,
   chain: string,
@@ -831,7 +831,7 @@ export async function stage4Wait(ctx: PipelineContext): Promise<void> {
  * Build unsigned transaction by dispatching to the correct IChainAdapter method
  * based on request.type (TRANSFER/TOKEN_TRANSFER/CONTRACT_CALL/APPROVE/BATCH).
  */
-async function buildByType(
+export async function buildByType(
   adapter: IChainAdapter,
   request: SendTransactionRequest | TransactionRequest,
   walletPublicKey: string,

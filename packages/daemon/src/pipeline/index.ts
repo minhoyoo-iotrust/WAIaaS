@@ -21,3 +21,9 @@ export {
   type PriceResultOracleDown,
   type PriceResultNotListed,
 } from './resolve-effective-amount-usd.js';
+// v30.2 dry-run simulation
+export {
+  executeDryRun,
+  type DryRunDeps,
+  type DryRunCollector,
+} from './dry-run.js';

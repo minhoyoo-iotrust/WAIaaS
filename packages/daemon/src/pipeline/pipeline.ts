@@ -11,12 +11,14 @@ import { eq } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { WAIaaSError } from '@waiaas/core';
-import type { ChainType, NetworkType, EnvironmentType, IChainAdapter, IPolicyEngine, SendTransactionRequest, TransactionRequest } from '@waiaas/core';
+import type { ChainType, NetworkType, EnvironmentType, IChainAdapter, IPolicyEngine, SendTransactionRequest, TransactionRequest, DryRunSimulationResult, IPriceOracle } from '@waiaas/core';
 import { resolveNetwork } from './network-resolver.js';
+import { executeDryRun as executeDryRunFn } from './dry-run.js';
 import { wallets, transactions } from '../infrastructure/database/schema.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
 import type * as schema from '../infrastructure/database/schema.js';
 import type { NotificationService } from '../notifications/notification-service.js';
+import type { SettingsService } from '../infrastructure/settings/settings-service.js';
 import type { PipelineContext } from './stages.js';
 import {
   stage1Validate,
@@ -40,6 +42,9 @@ export interface PipelineDeps {
   masterPassword: string;
   sqlite?: SQLiteDatabase;
   notificationService?: NotificationService;
+  // v30.2: optional deps for dry-run simulation
+  priceOracle?: IPriceOracle;
+  settingsService?: SettingsService;
 }
 
 // ---------------------------------------------------------------------------
@@ -96,6 +101,56 @@ export class TransactionPipeline {
     await stage6Confirm(ctx);
 
     return ctx.txId;
+  }
+
+  /**
+   * Execute a dry-run simulation of a transaction.
+   *
+   * Returns DryRunSimulationResult with zero side effects.
+   * No DB writes, no signing, no notifications, no events.
+   *
+   * @param walletId - Wallet initiating the simulation
+   * @param request - Transaction request (5-type discriminatedUnion)
+   * @returns DryRunSimulationResult
+   * @throws WAIaaSError('WALLET_NOT_FOUND') if wallet doesn't exist
+   * @throws WAIaaSError('WALLET_TERMINATED') if wallet is terminated
+   */
+  async executeDryRun(walletId: string, request: TransactionRequest): Promise<DryRunSimulationResult> {
+    const wallet = await this.getWallet(walletId);
+    if (!wallet) {
+      throw new WAIaaSError('WALLET_NOT_FOUND', {
+        message: `Wallet '${walletId}' not found`,
+      });
+    }
+    if (wallet.status === 'TERMINATED') {
+      throw new WAIaaSError('WALLET_TERMINATED', {
+        message: `Wallet '${walletId}' is terminated`,
+      });
+    }
+
+    const resolvedNet = resolveNetwork(
+      (request as { network?: string }).network as NetworkType | undefined,
+      wallet.environment as EnvironmentType,
+      wallet.chain as ChainType,
+    );
+
+    return executeDryRunFn(
+      {
+        db: this.deps.db,
+        adapter: this.deps.adapter,
+        policyEngine: this.deps.policyEngine,
+        priceOracle: this.deps.priceOracle,
+        settingsService: this.deps.settingsService,
+      },
+      walletId,
+      request,
+      resolvedNet,
+      {
+        publicKey: wallet.publicKey,
+        chain: wallet.chain,
+        environment: wallet.environment,
+      },
+    );
   }
 
   /**
