@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v30.2
 milestone_name: 운영 기능 확장 구현
-status: in_progress
-last_updated: "2026-03-03T11:34:00Z"
+status: unknown
+last_updated: "2026-03-03T11:36:23.299Z"
 progress:
-  total_phases: 182
+  total_phases: 183
   completed_phases: 177
-  total_plans: 390
+  total_plans: 392
   completed_plans: 386
 ---
 
