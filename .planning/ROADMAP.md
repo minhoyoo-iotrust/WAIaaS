@@ -203,7 +203,7 @@ Phases execute in numeric order: 309 -> 310 -> 311 -> 312 -> 313
 | 310. Audit Log Query API | v30.2 | Complete    | 2026-03-03 | 2026-03-03 |
 | 311. Encrypted Backup & Restore | v30.2 | Complete    | 2026-03-03 | 2026-03-03 |
 | 312. Webhook Outbound | v30.2 | Complete    | 2026-03-03 | 2026-03-03 |
-| 313. Admin Stats + AutoStop Plugin | v30.2 | 3/3 | Complete | 2026-03-03 |
+| 313. Admin Stats + AutoStop Plugin | v30.2 | Complete    | 2026-03-03 | 2026-03-03 |
 
 ---
 *Last updated: 2026-03-03 -- Phase 313 complete (3 plans, 7 tasks, 6 commits, 31 new tests). v30.2 milestone all 5 phases done.*
