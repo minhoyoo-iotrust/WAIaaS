@@ -214,7 +214,7 @@ Phases execute in numeric order: 309 -> 310 -> 311 -> 312 -> 313 -> 313.1
 | 311. Encrypted Backup & Restore | v30.2 | Complete    | 2026-03-03 | 2026-03-03 |
 | 312. Webhook Outbound | v30.2 | Complete    | 2026-03-03 | 2026-03-03 |
 | 313. Admin Stats + AutoStop Plugin | v30.2 | Complete    | 2026-03-03 | 2026-03-03 |
-| 313.1. Gap Closure | v30.2 | 1/1 | Complete | 2026-03-03 |
+| 313.1. Gap Closure | v30.2 | Complete    | 2026-03-03 | 2026-03-03 |
 
 ---
 *Last updated: 2026-03-03 -- Phase 313.1 gap closure complete (1 plan, 2 tasks, 2 commits). All v30.2 gaps closed.*
