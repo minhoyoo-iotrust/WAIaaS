@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v30.2
 milestone_name: 운영 기능 확장 구현
-status: unknown
-last_updated: "2026-03-03T13:45:45.178Z"
+status: complete
+last_updated: "2026-03-03T14:06:38Z"
 progress:
   total_phases: 186
-  completed_phases: 180
-  total_plans: 401
-  completed_plans: 395
+  completed_phases: 181
+  total_plans: 402
+  completed_plans: 396
 ---
 
 # Project State
@@ -18,14 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-03)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v30.2 운영 기능 확장 구현 -- All 5 phases complete
+**Current focus:** v30.2 운영 기능 확장 구현 -- All 6 phases complete (including gap closure)
 
 ## Current Position
 
-Phase: 5 of 5 (Phase 313: Admin Stats + AutoStop Plugin)
-Plan: 3 of 3 in current phase (COMPLETE)
-Status: Phase 313 complete -- v30.2 milestone ready to ship
-Last activity: 2026-03-03 -- Phase 313 complete (3 plans, 7 tasks, 6 commits, 31 new tests)
+Phase: 6 of 6 (Phase 313.1: Gap Closure)
+Plan: 1 of 1 in current phase (COMPLETE)
+Status: Phase 313.1 gap closure complete -- v30.2 milestone ready to ship
+Last activity: 2026-03-03 -- Phase 313.1 complete (1 plan, 2 tasks, 2 commits, STAT-02/STAT-04 gaps closed)
 
 Progress: [██████████] 100%
 
@@ -68,6 +68,9 @@ Progress: [██████████] 100%
 - IMetricsCounter in @waiaas/core for future extensibility (Prometheus, OpenTelemetry)
 - Per-rule setting keys: autostop.rule.{id}.enabled with hot-reload wiring
 - masterAuth middleware registered per-path for /admin/stats and /admin/autostop/*
+- Setter injection (setMetricsCounter) for AutoStopService due to daemon lifecycle ordering
+- RPC metrics tracked at pipeline stage5 level as proxy for adapter-level calls
+- rpc.errors incremented on every ChainError catch (PERMANENT/TRANSIENT/STALE)
 
 ### Blockers/Concerns
 
@@ -76,5 +79,5 @@ Progress: [██████████] 100%
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Completed 313-03-PLAN.md (Phase 313 Admin Stats + AutoStop Plugin complete -- v30.2 milestone ready)
+Stopped at: Completed 313.1-01-PLAN.md (Phase 313.1 Gap Closure complete -- v30.2 milestone ready to ship)
 Resume file: None
