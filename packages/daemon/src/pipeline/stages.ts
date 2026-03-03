@@ -779,28 +779,41 @@ export async function stage4Wait(ctx: PipelineContext): Promise<void> {
     }
     ctx.approvalWorkflow.requestApproval(ctx.txId);
 
-    // v1.6.1: fire-and-forget WC signing request (non-blocking)
-    if (ctx.wcSigningBridge) {
+    // Route approval to the correct signing channel
+    if (ctx.approvalChannelRouter) {
+      // v2.6.1+: use ApprovalChannelRouter to determine the correct channel
+      void (async () => {
+        try {
+          const result = await ctx.approvalChannelRouter!.route(ctx.walletId, {
+            walletId: ctx.walletId,
+            txId: ctx.txId,
+            chain: ctx.wallet.chain as ChainType,
+            network: ctx.resolvedNetwork,
+            type: (ctx.request as any).type ?? 'TRANSFER',
+            from: ctx.wallet.publicKey,
+            to: getRequestTo(ctx.request),
+            amount: getRequestAmount(ctx.request),
+            policyTier: 'APPROVAL',
+          });
+          // Only invoke WC bridge when the router selects walletconnect
+          if (result.method === 'walletconnect' && ctx.wcSigningBridge) {
+            void ctx.wcSigningBridge.requestSignature(
+              ctx.walletId,
+              ctx.txId,
+              ctx.wallet.chain,
+            );
+          }
+        } catch {
+          // Channel routing errors are non-fatal; pipeline already halted
+        }
+      })();
+    } else if (ctx.wcSigningBridge) {
+      // Legacy: no router available, fall back to direct WC bridge
       void ctx.wcSigningBridge.requestSignature(
         ctx.walletId,
         ctx.txId,
         ctx.wallet.chain,
       );
-    }
-
-    // v2.6.1: fire-and-forget SDK signing channel routing (non-blocking)
-    if (ctx.approvalChannelRouter) {
-      void ctx.approvalChannelRouter.route(ctx.walletId, {
-        walletId: ctx.walletId,
-        txId: ctx.txId,
-        chain: ctx.wallet.chain as ChainType,
-        network: ctx.resolvedNetwork,
-        type: (ctx.request as any).type ?? 'TRANSFER',
-        from: ctx.wallet.publicKey,
-        to: getRequestTo(ctx.request),
-        amount: getRequestAmount(ctx.request),
-        policyTier: 'APPROVAL',
-      });
     }
 
     // Halt pipeline -- transaction will be picked up by approve/reject/expire

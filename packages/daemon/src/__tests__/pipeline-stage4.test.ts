@@ -11,7 +11,7 @@
  * Uses in-memory SQLite + Drizzle + pushSchema pattern.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
 import type { DatabaseConnection } from '../infrastructure/database/index.js';
@@ -610,6 +610,144 @@ describe('56-02 stage4Wait', () => {
         .get();
       expect(finalTx!.status).toBe('FAILED');
       expect(finalTx!.error).toContain('RPC unavailable');
+    });
+  });
+
+  // =========================================================================
+  // Test group 6: APPROVAL tier — WcSigningBridge conditional execution (#245)
+  // =========================================================================
+
+  describe('Test group 6: WcSigningBridge conditional on approvalChannelRouter (#245)', () => {
+    it('non-WC wallet (sdk_ntfy): wcSigningBridge NOT called when router selects sdk_ntfy', async () => {
+      const walletId = await insertTestAgent();
+      const txId = await insertPendingTransaction(walletId);
+
+      const delayQueue = new DelayQueue({ db: conn.db, sqlite: conn.sqlite });
+      const approvalWorkflow = new ApprovalWorkflow({
+        db: conn.db,
+        sqlite: conn.sqlite,
+        config: { policy_defaults_approval_timeout: 3600 },
+      });
+
+      const mockWcBridge = { requestSignature: vi.fn() };
+      const mockRouter = {
+        route: vi.fn().mockResolvedValue({ method: 'sdk_ntfy', channelResult: { requestId: 'r1' } }),
+      };
+
+      const ctx = createPipelineContext(walletId, txId, {
+        tier: 'APPROVAL',
+        delayQueue,
+        approvalWorkflow,
+        wcSigningBridge: mockWcBridge as any,
+        approvalChannelRouter: mockRouter as any,
+      });
+
+      await expect(stage4Wait(ctx)).rejects.toThrow();
+
+      // Wait for the async fire-and-forget to settle
+      await new Promise((r) => setTimeout(r, 50));
+
+      expect(mockRouter.route).toHaveBeenCalledOnce();
+      expect(mockWcBridge.requestSignature).not.toHaveBeenCalled();
+    });
+
+    it('WC wallet: wcSigningBridge IS called when router selects walletconnect', async () => {
+      const walletId = await insertTestAgent();
+      const txId = await insertPendingTransaction(walletId);
+
+      const delayQueue = new DelayQueue({ db: conn.db, sqlite: conn.sqlite });
+      const approvalWorkflow = new ApprovalWorkflow({
+        db: conn.db,
+        sqlite: conn.sqlite,
+        config: { policy_defaults_approval_timeout: 3600 },
+      });
+
+      const mockWcBridge = { requestSignature: vi.fn() };
+      const mockRouter = {
+        route: vi.fn().mockResolvedValue({ method: 'walletconnect', channelResult: null }),
+      };
+
+      const ctx = createPipelineContext(walletId, txId, {
+        tier: 'APPROVAL',
+        delayQueue,
+        approvalWorkflow,
+        wcSigningBridge: mockWcBridge as any,
+        approvalChannelRouter: mockRouter as any,
+      });
+
+      await expect(stage4Wait(ctx)).rejects.toThrow();
+
+      await new Promise((r) => setTimeout(r, 50));
+
+      expect(mockRouter.route).toHaveBeenCalledOnce();
+      expect(mockWcBridge.requestSignature).toHaveBeenCalledWith(walletId, txId, 'solana');
+    });
+
+    it('legacy (no router): wcSigningBridge called directly', async () => {
+      const walletId = await insertTestAgent();
+      const txId = await insertPendingTransaction(walletId);
+
+      const delayQueue = new DelayQueue({ db: conn.db, sqlite: conn.sqlite });
+      const approvalWorkflow = new ApprovalWorkflow({
+        db: conn.db,
+        sqlite: conn.sqlite,
+        config: { policy_defaults_approval_timeout: 3600 },
+      });
+
+      const mockWcBridge = { requestSignature: vi.fn() };
+
+      const ctx = createPipelineContext(walletId, txId, {
+        tier: 'APPROVAL',
+        delayQueue,
+        approvalWorkflow,
+        wcSigningBridge: mockWcBridge as any,
+        // No approvalChannelRouter
+      });
+
+      await expect(stage4Wait(ctx)).rejects.toThrow();
+
+      await new Promise((r) => setTimeout(r, 50));
+
+      expect(mockWcBridge.requestSignature).toHaveBeenCalledWith(walletId, txId, 'solana');
+    });
+
+    it('router error: wcSigningBridge NOT called, pipeline still halts', async () => {
+      const walletId = await insertTestAgent();
+      const txId = await insertPendingTransaction(walletId);
+
+      const delayQueue = new DelayQueue({ db: conn.db, sqlite: conn.sqlite });
+      const approvalWorkflow = new ApprovalWorkflow({
+        db: conn.db,
+        sqlite: conn.sqlite,
+        config: { policy_defaults_approval_timeout: 3600 },
+      });
+
+      const mockWcBridge = { requestSignature: vi.fn() };
+      const mockRouter = {
+        route: vi.fn().mockRejectedValue(new Error('router failed')),
+      };
+
+      const ctx = createPipelineContext(walletId, txId, {
+        tier: 'APPROVAL',
+        delayQueue,
+        approvalWorkflow,
+        wcSigningBridge: mockWcBridge as any,
+        approvalChannelRouter: mockRouter as any,
+      });
+
+      // Pipeline should still halt (PIPELINE_HALTED)
+      try {
+        await stage4Wait(ctx);
+        expect.unreachable('should throw');
+      } catch (error) {
+        expect(error).toBeInstanceOf(WAIaaSError);
+        expect((error as WAIaaSError).code).toBe('PIPELINE_HALTED');
+      }
+
+      await new Promise((r) => setTimeout(r, 50));
+
+      expect(mockRouter.route).toHaveBeenCalledOnce();
+      expect(mockWcBridge.requestSignature).not.toHaveBeenCalled();
     });
   });
 });

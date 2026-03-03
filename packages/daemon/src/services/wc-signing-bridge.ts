@@ -452,8 +452,7 @@ export class WcSigningBridge {
     void this.notificationService?.notify(
       'APPROVAL_CHANNEL_SWITCHED',
       walletId,
-      { from_channel: 'walletconnect', to_channel: 'telegram', reason },
-      { txId },
+      { from_channel: 'walletconnect', to_channel: 'telegram', reason, txId },
     );
 
     console.log(`[WcSigningBridge] Fallback to Telegram for ${txId}: ${reason}`);

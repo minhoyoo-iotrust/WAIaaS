@@ -742,12 +742,12 @@ describe('WcSigningBridge', () => {
         }),
       );
 
-      // NotificationService should notify
+      // NotificationService should notify with txId in vars (not details)
+      // so that {txId} template variable is interpolated (#244)
       expect(mockNotificationService.notify).toHaveBeenCalledWith(
         'APPROVAL_CHANNEL_SWITCHED',
         WALLET_ID,
-        { from_channel: 'walletconnect', to_channel: 'telegram', reason: 'wc_not_initialized' },
-        { txId: TX_ID },
+        { from_channel: 'walletconnect', to_channel: 'telegram', reason: 'wc_not_initialized', txId: TX_ID },
       );
     });
 
