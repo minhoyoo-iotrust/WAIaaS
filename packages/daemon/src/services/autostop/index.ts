@@ -16,3 +16,11 @@ export type {
 
 export type { IRuleRegistry } from './rule-registry.js';
 export { RuleRegistry } from './rule-registry.js';
+
+export { AutoStopService, DEFAULT_AUTOSTOP_CONFIG } from './autostop-service.js';
+export type { AutoStopConfig } from './autostop-service.js';
+
+export { ConsecutiveFailuresRule } from './rules/consecutive-failures.rule.js';
+export { UnusualActivityRule } from './rules/unusual-activity.rule.js';
+export { IdleTimeoutRule } from './rules/idle-timeout.rule.js';
+export type { IdleSession } from './rules/idle-timeout.rule.js';
