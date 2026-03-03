@@ -11,7 +11,7 @@ import { eq } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { WAIaaSError } from '@waiaas/core';
-import type { ChainType, NetworkType, EnvironmentType, IChainAdapter, IPolicyEngine, SendTransactionRequest, TransactionRequest, DryRunSimulationResult, IPriceOracle } from '@waiaas/core';
+import type { ChainType, NetworkType, EnvironmentType, IChainAdapter, IPolicyEngine, SendTransactionRequest, TransactionRequest, DryRunSimulationResult, IPriceOracle, IMetricsCounter } from '@waiaas/core';
 import { resolveNetwork } from './network-resolver.js';
 import { executeDryRun as executeDryRunFn } from './dry-run.js';
 import { wallets, transactions } from '../infrastructure/database/schema.js';
@@ -45,6 +45,8 @@ export interface PipelineDeps {
   // v30.2: optional deps for dry-run simulation
   priceOracle?: IPriceOracle;
   settingsService?: SettingsService;
+  // v30.2: metrics counter for tx/rpc instrumentation (STAT-02)
+  metricsCounter?: IMetricsCounter;
 }
 
 // ---------------------------------------------------------------------------

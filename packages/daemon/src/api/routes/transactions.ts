@@ -48,7 +48,7 @@ import type { ApprovalWorkflow } from '../../workflow/approval-workflow.js';
 import type { DelayQueue } from '../../workflow/delay-queue.js';
 import type { OwnerLifecycleService } from '../../workflow/owner-state.js';
 import type { NotificationService } from '../../notifications/notification-service.js';
-import type { IPriceOracle, IForexRateService, EventBus } from '@waiaas/core';
+import type { IPriceOracle, IForexRateService, EventBus, IMetricsCounter } from '@waiaas/core';
 import type { SettingsService } from '../../infrastructure/settings/settings-service.js';
 import type { WcSigningBridgeRef } from '../../services/wc-signing-bridge.js';
 import type { ApprovalChannelRouter } from '../../services/signing-sdk/approval-channel-router.js';
@@ -98,6 +98,8 @@ export interface TransactionRouteDeps {
   eventBus?: EventBus;
   wcSigningBridgeRef?: WcSigningBridgeRef;
   approvalChannelRouter?: ApprovalChannelRouter;
+  // v30.2: metrics counter for tx/rpc instrumentation (STAT-02)
+  metricsCounter?: IMetricsCounter;
 }
 
 // ---------------------------------------------------------------------------
@@ -401,6 +403,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
       eventBus: deps.eventBus,
       wcSigningBridge: deps.wcSigningBridgeRef?.current ?? undefined,
       approvalChannelRouter: deps.approvalChannelRouter,
+      metricsCounter: deps.metricsCounter,
     };
 
     // Stage 1: Validate + DB INSERT (synchronous -- assigns ctx.txId)

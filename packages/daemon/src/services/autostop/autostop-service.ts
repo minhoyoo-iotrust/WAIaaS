@@ -14,7 +14,7 @@
  */
 
 import type { Database } from 'better-sqlite3';
-import type { EventBus } from '@waiaas/core';
+import type { EventBus, IMetricsCounter } from '@waiaas/core';
 import type { KillSwitchService } from '../kill-switch-service.js';
 import type { NotificationService } from '../../notifications/notification-service.js';
 import { insertAuditLog } from '../../infrastructure/database/audit-helper.js';
@@ -55,6 +55,7 @@ export class AutoStopService {
   private eventBus: EventBus;
   private killSwitchService: KillSwitchService;
   private notificationService?: NotificationService;
+  private metricsCounter?: IMetricsCounter;
   private config: AutoStopConfig;
 
   // Registry-based rule storage (PLUG-01)
@@ -101,6 +102,11 @@ export class AutoStopService {
   /** Expose registry for external access (API routes, hot-reload). */
   get registry(): IRuleRegistry {
     return this._registry;
+  }
+
+  /** Inject metrics counter after construction (daemon lifecycle order). */
+  setMetricsCounter(mc: IMetricsCounter): void {
+    this.metricsCounter = mc;
   }
 
   // -----------------------------------------------------------------------
@@ -230,6 +236,9 @@ export class AutoStopService {
       details: { action: 'wallet_suspended', reason, walletId },
       severity: 'warning',
     });
+
+    // v30.2: increment autostop.triggered counter (STAT-02)
+    this.metricsCounter?.increment('autostop.triggered', { rule: reason });
 
     // Fire-and-forget notification (AUTO-06)
     void this.notificationService?.notify(

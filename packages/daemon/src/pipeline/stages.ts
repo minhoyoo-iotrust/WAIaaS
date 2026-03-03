@@ -42,7 +42,7 @@ import type { DelayQueue } from '../workflow/delay-queue.js';
 import type { ApprovalWorkflow } from '../workflow/approval-workflow.js';
 import type { NotificationService } from '../notifications/notification-service.js';
 import type { SettingsService } from '../infrastructure/settings/settings-service.js';
-import type { IPriceOracle, IForexRateService, CurrencyCode } from '@waiaas/core';
+import type { IPriceOracle, IForexRateService, CurrencyCode, IMetricsCounter } from '@waiaas/core';
 import { formatDisplayCurrency, formatAmount, type EventBus, type ChainType } from '@waiaas/core';
 import type { WcSigningBridge } from '../services/wc-signing-bridge.js';
 import type { ApprovalChannelRouter } from '../services/signing-sdk/approval-channel-router.js';
@@ -106,6 +106,8 @@ export interface PipelineContext {
   wcSigningBridge?: WcSigningBridge;
   // v2.6.1: signing SDK channel router for APPROVAL fire-and-forget
   approvalChannelRouter?: ApprovalChannelRouter;
+  // v30.2: metrics counter for tx/rpc/autostop instrumentation (STAT-02)
+  metricsCounter?: IMetricsCounter;
 }
 
 // ---------------------------------------------------------------------------
@@ -1001,9 +1003,14 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
       // Stage 5a: Build unsigned transaction (type-routed)
       ctx.unsignedTx = await buildByType(ctx.adapter, ctx.request, ctx.wallet.publicKey);
 
-      // Stage 5b: Simulate
+      // Stage 5b: Simulate (with RPC metrics)
+      const simStart = Date.now();
+      ctx.metricsCounter?.increment('rpc.calls', { network: ctx.resolvedNetwork });
       const simResult = await ctx.adapter.simulateTransaction(ctx.unsignedTx);
+      ctx.metricsCounter?.recordLatency('rpc.latency', Date.now() - simStart, { network: ctx.resolvedNetwork });
       if (!simResult.success) {
+        ctx.metricsCounter?.increment('rpc.errors', { network: ctx.resolvedNetwork });
+        ctx.metricsCounter?.increment('tx.failed', { network: ctx.resolvedNetwork });
         await ctx.db
           .update(transactions)
           .set({ status: 'FAILED', error: simResult.error ?? 'Simulation failed' })
@@ -1057,8 +1064,14 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
         }
       }
 
-      // Stage 5d: Submit
+      // Stage 5d: Submit (with RPC metrics)
+      const submitStart = Date.now();
+      ctx.metricsCounter?.increment('rpc.calls', { network: ctx.resolvedNetwork });
       ctx.submitResult = await ctx.adapter.submitTransaction(ctx.signedTx);
+      ctx.metricsCounter?.recordLatency('rpc.latency', Date.now() - submitStart, { network: ctx.resolvedNetwork });
+
+      // Success: increment tx.submitted counter
+      ctx.metricsCounter?.increment('tx.submitted', { network: ctx.resolvedNetwork });
 
       // Success: Update DB SUBMITTED + txHash
       await ctx.db
@@ -1113,6 +1126,8 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
       switch (err.category) {
         case 'PERMANENT': {
           // Immediate failure, no retry
+          ctx.metricsCounter?.increment('rpc.errors', { network: ctx.resolvedNetwork });
+          ctx.metricsCounter?.increment('tx.failed', { network: ctx.resolvedNetwork });
           await ctx.db
             .update(transactions)
             .set({ status: 'FAILED', error: err.message })
@@ -1156,8 +1171,10 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
         }
 
         case 'TRANSIENT': {
+          ctx.metricsCounter?.increment('rpc.errors', { network: ctx.resolvedNetwork });
           if (retryCount >= 3) {
             // Max retries exhausted
+            ctx.metricsCounter?.increment('tx.failed', { network: ctx.resolvedNetwork });
             await ctx.db
               .update(transactions)
               .set({ status: 'FAILED', error: `${err.code} (max retries exceeded)` })
@@ -1195,8 +1212,10 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
         }
 
         case 'STALE': {
+          ctx.metricsCounter?.increment('rpc.errors', { network: ctx.resolvedNetwork });
           if (retryCount >= 1) {
             // Stale retry exhausted (shared retryCount)
+            ctx.metricsCounter?.increment('tx.failed', { network: ctx.resolvedNetwork });
             await ctx.db
               .update(transactions)
               .set({ status: 'FAILED', error: `${err.code} (stale retry exhausted)` })

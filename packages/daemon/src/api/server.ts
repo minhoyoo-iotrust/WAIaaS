@@ -137,6 +137,8 @@ export interface CreateAppDeps {
   adminStatsService?: import('../services/admin-stats-service.js').AdminStatsService;
   /** AutoStopService for /admin/autostop routes (PLUG-03) */
   autoStopService?: import('../services/autostop/autostop-service.js').AutoStopService;
+  /** InMemoryCounter for tx/rpc metrics (STAT-02) */
+  metricsCounter?: import('@waiaas/core').IMetricsCounter;
 }
 
 /**
@@ -507,6 +509,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         eventBus: deps.eventBus,
         wcSigningBridgeRef: deps.wcSigningBridgeRef,
         approvalChannelRouter: deps.approvalChannelRouter,
+        metricsCounter: deps.metricsCounter,
       }),
     );
   }

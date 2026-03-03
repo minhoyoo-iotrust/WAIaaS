@@ -634,6 +634,11 @@ export class DaemonLifecycle {
       if (this.sqlite) {
         this.metricsCounter = new InMemoryCounter();
 
+        // v30.2: inject metricsCounter into AutoStopService (STAT-02)
+        if (this.autoStopService) {
+          this.autoStopService.setMetricsCounter(this.metricsCounter);
+        }
+
         const { version: daemonVersion } = require('../../package.json') as { version: string };
         this.adminStatsService = new AdminStatsService({
           sqlite: this.sqlite,
@@ -1388,6 +1393,7 @@ export class DaemonLifecycle {
           encryptedBackupService: this._encryptedBackupService ?? undefined,
           adminStatsService: this.adminStatsService ?? undefined,
           autoStopService: this.autoStopService ?? undefined,
+          metricsCounter: this.metricsCounter ?? undefined,
         });
 
         const hostname = this._config!.daemon.hostname;
