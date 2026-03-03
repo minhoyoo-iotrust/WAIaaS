@@ -85,6 +85,25 @@ export {
   type WebhookLogQuery,
 } from './webhook.schema.js';
 
+// v30.2 admin stats + autostop rules schema (Zod SSoT)
+export {
+  AdminStatsTransactionsSchema,
+  AdminStatsSessionsSchema,
+  AdminStatsWalletsSchema,
+  AdminStatsRpcSchema,
+  AdminStatsAutoStopSchema,
+  AdminStatsNotificationsSchema,
+  AdminStatsSystemSchema,
+  AdminStatsResponseSchema,
+  AutoStopRuleInfoSchema,
+  AutoStopRulesResponseSchema,
+  UpdateAutoStopRuleRequestSchema,
+  type AdminStatsResponse,
+  type AutoStopRuleInfo,
+  type AutoStopRulesResponse,
+  type UpdateAutoStopRuleRequest,
+} from './admin-stats.schema.js';
+
 // v30.2 dry-run simulation schema (Zod SSoT)
 export {
   DryRunSimulationResultSchema,
