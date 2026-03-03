@@ -1,5 +1,5 @@
 /**
- * Route barrel export: health, wallets, wallet, sessions, transactions, policies, nonce, admin, tokens, skills.
+ * Route barrel export: health, wallets, wallet, sessions, transactions, policies, nonce, admin, tokens, skills, audit-logs.
  */
 
 export { health } from './health.js';
@@ -15,3 +15,4 @@ export { adminRoutes, type AdminRouteDeps, type KillSwitchState } from './admin.
 export { tokenRegistryRoutes, type TokenRegistryRouteDeps } from './tokens.js';
 export { connectInfoRoutes, type ConnectInfoRouteDeps } from './connect-info.js';
 export { createWalletAppsRoutes, type WalletAppsRouteDeps } from './wallet-apps.js';
+export { auditLogRoutes, type AuditLogRouteDeps } from './audit-logs.js';

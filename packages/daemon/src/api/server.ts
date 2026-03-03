@@ -64,6 +64,7 @@ import type { KillSwitchState } from './routes/admin.js';
 import { createWalletAppsRoutes } from './routes/wallet-apps.js';
 import { tokenRegistryRoutes } from './routes/tokens.js';
 import { connectInfoRoutes } from './routes/connect-info.js';
+import { auditLogRoutes } from './routes/audit-logs.js';
 import { incomingRoutes } from './routes/incoming.js';
 import { createStakingRoutes } from './routes/staking.js';
 import { createDefiPositionRoutes } from './routes/defi-positions.js';
@@ -318,6 +319,8 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     app.use('/v1/admin/rpc-status', masterAuthForAdmin);
     app.use('/v1/admin/defi/*', masterAuthForAdmin);
     app.use('/v1/admin/master-password', masterAuthForAdmin);
+    // masterAuth for audit-logs query API (OPS-02)
+    app.use('/v1/audit-logs', masterAuthForAdmin);
     // masterAuth for GET /v1/actions/providers (Admin UI reads provider list)
     app.use('/v1/actions/providers', async (c, next) => {
       if (c.req.method === 'GET') {
@@ -643,6 +646,11 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
       });
       app.route('/v1', ownerKsRouter);
     }
+  }
+
+  // Register audit log query routes (masterAuth required)
+  if (deps.sqlite) {
+    app.route('/v1', auditLogRoutes({ sqlite: deps.sqlite }));
   }
 
   // Register token registry routes when DB is available
