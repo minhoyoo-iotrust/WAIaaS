@@ -128,16 +128,16 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. GET /v1/audit-logs로 cursor 기반 페이지네이션(기본 50, 최대 200)과 6가지 필터(wallet_id, event_type, severity, from/to, tx_id)로 감사 로그를 조회할 수 있다
   2. 20가지 감사 이벤트 타입(기존 9 + 신규 11)이 시스템 전반에서 insertAuditLog를 통해 자동 기록되며, 각 이벤트에 적절한 severity와 details가 매핑된다
-  3. DB migration v34가 무중단으로 적용되어 idx_audit_log_tx_id 인덱스가 생성된다
-**Plans**: TBD
+  3. DB migration v36이 무중단으로 적용되어 idx_audit_log_tx_id 인덱스가 생성된다
+**Plans**: 2 plans
 
 Plans:
-- [ ] 310-01: 감사 이벤트 타입 확대(9->20) + insertAuditLog 헬퍼 + DB migration v34
-- [ ] 310-02: GET /v1/audit-logs REST API (cursor pagination, 6 filters, include_total)
+- [ ] 310-01-PLAN.md -- 감사 이벤트 타입 확대(9->20) + insertAuditLog 헬퍼 + DB migration v36
+- [ ] 310-02-PLAN.md -- GET /v1/audit-logs REST API (cursor pagination, 6 filters, include_total)
 
 ### Phase 311: Encrypted Backup & Restore
 **Goal**: 관리자가 데몬의 전체 상태(DB + 설정 + 키스토어)를 암호화된 아카이브로 백업하고, 장애 시 CLI로 안전하게 복원할 수 있다
-**Depends on**: Phase 310 (DB migration v34 완료 후)
+**Depends on**: Phase 310 (DB migration v36 완료 후)
 **Requirements**: BKUP-01, BKUP-02, BKUP-03, BKUP-04, BKUP-05, BKUP-06
 **Success Criteria** (what must be TRUE):
   1. POST /v1/admin/backup으로 AES-256-GCM 암호화 아카이브가 생성되고, GET /v1/admin/backups로 백업 목록을 조회할 수 있다
@@ -161,11 +161,11 @@ Plans:
   2. Webhook 페이로드에 HMAC-SHA256 서명(X-WAIaaS-Signature), 이벤트 타입(X-WAIaaS-Event), 전송 ID(X-WAIaaS-Delivery), 타임스탬프(X-WAIaaS-Timestamp) 헤더가 포함된다
   3. 전송 실패 시 최대 4회(지수 백오프 0/1s/2s/4s) 재시도되고, 4xx 응답은 즉시 중단되며, 각 시도가 webhook_logs에 기록된다
   4. GET /v1/webhooks/:id/logs로 특정 webhook의 전송 이력을 상태/이벤트/건수 필터로 조회할 수 있다
-  5. DB migration v35로 webhooks + webhook_logs 2개 테이블이 생성된다 (19->21 테이블)
+  5. DB migration v37로 webhooks + webhook_logs 2개 테이블이 생성된다
 **Plans**: TBD
 
 Plans:
-- [ ] 312-01: DB migration v35 (webhooks + webhook_logs) + WebhookService + HMAC 서명
+- [ ] 312-01: DB migration v37 (webhooks + webhook_logs) + WebhookService + HMAC 서명
 - [ ] 312-02: Webhook CRUD REST API + WebhookDeliveryQueue 재시도 로직
 - [ ] 312-03: EventBus 이벤트 필터링 연동 + 전송 이력 API
 
@@ -206,4 +206,4 @@ Phases execute in numeric order: 309 -> 310 -> 311 -> 312 -> 313
 | 313. Admin Stats + AutoStop Plugin | v30.2 | 0/3 | Not started | - |
 
 ---
-*Last updated: 2026-03-03 -- Phase 309 complete (2/2 plans, 4 tasks, 4 commits)*
+*Last updated: 2026-03-03 -- Phase 310 planned (2 plans, 3 tasks)*
