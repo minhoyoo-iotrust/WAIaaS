@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v30.2
 milestone_name: 운영 기능 확장 구현
-status: unknown
-last_updated: "2026-03-03T13:05:17.662Z"
+status: complete
+last_updated: "2026-03-03T14:00:00.000Z"
 progress:
   total_phases: 185
-  completed_phases: 179
+  completed_phases: 185
   total_plans: 398
-  completed_plans: 392
+  completed_plans: 398
 ---
 
 # Project State
@@ -18,20 +18,20 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-03)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v30.2 운영 기능 확장 구현 -- Phase 312 (Webhook Outbound) complete
+**Current focus:** v30.2 운영 기능 확장 구현 -- All 5 phases complete
 
 ## Current Position
 
-Phase: 4 of 5 (Phase 312: Webhook Outbound)
+Phase: 5 of 5 (Phase 313: Admin Stats + AutoStop Plugin)
 Plan: 3 of 3 in current phase (COMPLETE)
-Status: Phase 312 complete -- ready for Phase 313
-Last activity: 2026-03-03 -- Phase 312 complete (3 plans, 5 tasks, 5 commits, 47 webhook tests)
+Status: Phase 313 complete -- v30.2 milestone ready to ship
+Last activity: 2026-03-03 -- Phase 313 complete (3 plans, 7 tasks, 6 commits, 31 new tests)
 
-Progress: [████████░░] 78%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
-**Cumulative:** 79 milestones (79 shipped), 310 phases completed, ~697 plans, ~1,973 reqs, ~5,755+ tests, ~233,440 LOC TS
+**Cumulative:** 79 milestones (79 shipped), 313 phases completed, ~700 plans, ~1,981 reqs, ~5,786+ tests, ~233,440 LOC TS
 
 ## Accumulated Context
 
@@ -62,6 +62,12 @@ Progress: [████████░░] 78%
 - WebhookService destroy uses disposed flag (not removeListener) since EventBus only exposes removeAllListeners()
 - Logs API: dynamic SQL with parameterized conditions for safe filtering (status/event_type/limit)
 - DB migration v37: webhooks + webhook_logs tables (21 total tables, LATEST_SCHEMA_VERSION=37)
+- IAutoStopRule plugin interface with evaluate/tick/getStatus/updateConfig/reset contract
+- RuleRegistry Map-based with register/unregister/setEnabled/getRulesForEvent/getTickableRules
+- AdminStatsService 7-category aggregator: DB queries + InMemoryCounter + service status (1-min TTL cache)
+- IMetricsCounter in @waiaas/core for future extensibility (Prometheus, OpenTelemetry)
+- Per-rule setting keys: autostop.rule.{id}.enabled with hot-reload wiring
+- masterAuth middleware registered per-path for /admin/stats and /admin/autostop/*
 
 ### Blockers/Concerns
 
@@ -70,5 +76,5 @@ Progress: [████████░░] 78%
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Completed 312-03-PLAN.md (Phase 312 Webhook Outbound complete)
+Stopped at: Completed 313-03-PLAN.md (Phase 313 Admin Stats + AutoStop Plugin complete -- v30.2 milestone ready)
 Resume file: None

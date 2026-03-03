@@ -102,7 +102,7 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v30.0-ROADMAP.md` for full 
 - [x] **Phase 310: Audit Log Query API** - 감사 로그 조회 엔드포인트 + 이벤트 타입 확대 + DB 인덱스 -- completed 2026-03-03
 - [x] **Phase 311: Encrypted Backup & Restore** - 암호화 백업 생성/복원 API + CLI + 자동 스케줄러 -- completed 2026-03-03
 - [x] **Phase 312: Webhook Outbound** - Webhook CRUD API + HMAC 서명 + 재시도 큐 + DB 테이블 -- completed 2026-03-03
-- [ ] **Phase 313: Admin Stats + AutoStop Plugin** - 운영 통계 API + AutoStop 규칙 플러그인 아키텍처
+- [x] **Phase 313: Admin Stats + AutoStop Plugin** - 운영 통계 API + AutoStop 규칙 플러그인 아키텍처 -- completed 2026-03-03
 
 ## Phase Details
 
@@ -182,9 +182,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 313-01-PLAN.md -- IAutoStopRule 인터페이스 + RuleRegistry + 기존 3규칙 리팩터링
-- [ ] 313-02-PLAN.md -- IMetricsCounter + AdminStatsService + GET /v1/admin/stats API
-- [ ] 313-03-PLAN.md -- AutoStop 규칙 REST API + Admin Settings 토글 + Admin UI 통계 카드
+- [x] 313-01-PLAN.md -- IAutoStopRule 인터페이스 + RuleRegistry + 기존 3규칙 리팩터링 -- completed 2026-03-03
+- [x] 313-02-PLAN.md -- IMetricsCounter + AdminStatsService + GET /v1/admin/stats API -- completed 2026-03-03
+- [x] 313-03-PLAN.md -- AutoStop 규칙 REST API + Admin Settings 토글 + Admin UI 통계 카드 -- completed 2026-03-03
 
 ## Progress
 
@@ -203,7 +203,7 @@ Phases execute in numeric order: 309 -> 310 -> 311 -> 312 -> 313
 | 310. Audit Log Query API | v30.2 | Complete    | 2026-03-03 | 2026-03-03 |
 | 311. Encrypted Backup & Restore | v30.2 | Complete    | 2026-03-03 | 2026-03-03 |
 | 312. Webhook Outbound | v30.2 | Complete    | 2026-03-03 | 2026-03-03 |
-| 313. Admin Stats + AutoStop Plugin | v30.2 | 0/3 | Not started | - |
+| 313. Admin Stats + AutoStop Plugin | v30.2 | 3/3 | Complete | 2026-03-03 |
 
 ---
-*Last updated: 2026-03-03 -- Phase 313 planned (3 plans, 6 tasks, 2 waves)*
+*Last updated: 2026-03-03 -- Phase 313 complete (3 plans, 7 tasks, 6 commits, 31 new tests). v30.2 milestone all 5 phases done.*

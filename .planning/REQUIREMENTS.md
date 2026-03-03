@@ -44,17 +44,17 @@ Requirements for v30.2. Each maps to roadmap phases.
 
 ### Admin Stats (STAT)
 
-- [ ] **STAT-01**: GET /v1/admin/stats returns 7-category JSON (transactions/sessions/wallets/rpc/autostop/notifications/system) with masterAuth
-- [ ] **STAT-02**: IMetricsCounter in-memory counters — increment/recordLatency/getCount/getAvgLatency/snapshot/reset, 6 counter hooks (rpc.calls, rpc.errors, rpc.latency, autostop.triggered, tx.submitted, tx.failed)
-- [ ] **STAT-03**: AdminStatsService with 1-minute TTL cache, 10 DB aggregate queries leveraging existing indexes, invalidateCache() for testing
-- [ ] **STAT-04**: Admin UI dashboard stats cards (RPC network table, AutoStop rules table, notification summary, system info) with 30s polling
+- [x] **STAT-01**: GET /v1/admin/stats returns 7-category JSON (transactions/sessions/wallets/rpc/autostop/notifications/system) with masterAuth
+- [x] **STAT-02**: IMetricsCounter in-memory counters — increment/recordLatency/getCount/getAvgLatency/snapshot/reset, 6 counter hooks (rpc.calls, rpc.errors, rpc.latency, autostop.triggered, tx.submitted, tx.failed)
+- [x] **STAT-03**: AdminStatsService with 1-minute TTL cache, 10 DB aggregate queries leveraging existing indexes, invalidateCache() for testing
+- [x] **STAT-04**: Admin UI dashboard stats cards (RPC network table, AutoStop rules table, notification summary, system info) with 30s polling
 
 ### AutoStop Plugin (PLUG)
 
-- [ ] **PLUG-01**: IAutoStopRule interface (evaluate/tick/getStatus/updateConfig/reset) + RuleResult/RuleAction types, existing 3 rules refactored into autostop/ directory structure without behavior change
-- [ ] **PLUG-02**: RuleRegistry (Map-based) — register/unregister/getRules/getEnabledRules/getRulesForEvent/getTickableRules/setEnabled, builtin 3 rules auto-registered
-- [ ] **PLUG-03**: GET /v1/admin/autostop/rules returns rules list + status/config, PUT /v1/admin/autostop/rules/:id updates enabled/config (masterAuth, RULE_NOT_FOUND 404)
-- [ ] **PLUG-04**: Per-rule enable/disable via Admin Settings (autostop.rule.consecutive_failures.enabled, autostop.rule.unusual_activity.enabled, autostop.rule.idle_timeout.enabled) with global master switch
+- [x] **PLUG-01**: IAutoStopRule interface (evaluate/tick/getStatus/updateConfig/reset) + RuleResult/RuleAction types, existing 3 rules refactored into autostop/ directory structure without behavior change
+- [x] **PLUG-02**: RuleRegistry (Map-based) — register/unregister/getRules/getEnabledRules/getRulesForEvent/getTickableRules/setEnabled, builtin 3 rules auto-registered
+- [x] **PLUG-03**: GET /v1/admin/autostop/rules returns rules list + status/config, PUT /v1/admin/autostop/rules/:id updates enabled/config (masterAuth, RULE_NOT_FOUND 404)
+- [x] **PLUG-04**: Per-rule enable/disable via Admin Settings (autostop.rule.consecutive_failures.enabled, autostop.rule.unusual_activity.enabled, autostop.rule.idle_timeout.enabled) with global master switch
 
 ## v2 Requirements
 
@@ -113,14 +113,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | HOOK-05 | Phase 312 | Complete |
 | HOOK-06 | Phase 312 | Complete |
 | HOOK-07 | Phase 312 | Complete |
-| STAT-01 | Phase 313 | Pending |
-| STAT-02 | Phase 313 | Pending |
-| STAT-03 | Phase 313 | Pending |
-| STAT-04 | Phase 313 | Pending |
-| PLUG-01 | Phase 313 | Pending |
-| PLUG-02 | Phase 313 | Pending |
-| PLUG-03 | Phase 313 | Pending |
-| PLUG-04 | Phase 313 | Pending |
+| STAT-01 | Phase 313 | Complete |
+| STAT-02 | Phase 313 | Complete |
+| STAT-03 | Phase 313 | Complete |
+| STAT-04 | Phase 313 | Complete |
+| PLUG-01 | Phase 313 | Complete |
+| PLUG-02 | Phase 313 | Complete |
+| PLUG-03 | Phase 313 | Complete |
+| PLUG-04 | Phase 313 | Complete |
 
 **Coverage:**
 - v1 requirements: 30 total
