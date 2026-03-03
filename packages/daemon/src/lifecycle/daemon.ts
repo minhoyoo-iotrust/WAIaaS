@@ -451,6 +451,7 @@ export class DaemonLifecycle {
         config: {
           policy_defaults_approval_timeout: this._config.security.policy_defaults_approval_timeout,
         },
+        onApproved: (txId) => this.handleApprovalApproved(txId),
       });
       console.debug('Step 4b: Workflow instances created (DelayQueue + ApprovalWorkflow)');
     }
@@ -679,6 +680,7 @@ export class DaemonLifecycle {
           killSwitchService: this.killSwitchService ?? undefined,
           notificationService: this.notificationService ?? undefined,
           settingsService: this._settingsService ?? undefined,
+          onApproved: (txId) => this.handleApprovalApproved(txId),
         });
         this.telegramBotService.start();
         this.telegramBotRef.current = this.telegramBotService;
@@ -756,7 +758,10 @@ export class DaemonLifecycle {
           walletLinkRegistry,
           sqlite: this.sqlite!,  // per-wallet topic lookup from wallet_apps table
         });
-        const signResponseHandler = new SignResponseHandler({ sqlite: this.sqlite! });
+        const signResponseHandler = new SignResponseHandler(
+          { sqlite: this.sqlite! },
+          { onApproved: (txId) => this.handleApprovalApproved(txId) },
+        );
         const ntfyChannel = new NtfySigningChannel({
           signRequestBuilder,
           signResponseHandler,
@@ -1764,10 +1769,35 @@ export class DaemonLifecycle {
   }
 
   /**
+   * Resume pipeline after APPROVAL tier owner sign-off (fix #246).
+   *
+   * Shared handler for all 4 approval paths:
+   * 1. REST API (ApprovalWorkflow.approve)
+   * 2. WalletConnect (WcSigningBridge -> ApprovalWorkflow.approve)
+   * 3. Signing SDK (SignResponseHandler.handleApprove)
+   * 4. Telegram Bot (TelegramBotService.handleApprove)
+   *
+   * Looks up the transaction's walletId, then delegates to executeFromStage5.
+   */
+  private handleApprovalApproved(txId: string): void {
+    try {
+      if (!this._db) return;
+
+      const tx = this._db.select().from(txTable).where(eq(txTable.id, txId)).get();
+      if (tx) {
+        void this.executeFromStage5(txId, tx.walletId);
+      }
+    } catch (error) {
+      console.warn(`[handleApprovalApproved] Failed for ${txId}:`, error);
+    }
+  }
+
+  /**
    * Re-enter the pipeline at stage5 for a delay-expired transaction.
    *
    * Called by the delay-expired BackgroundWorker when processExpired()
    * returns transactions whose cooldown has elapsed.
+   * Also called by handleApprovalApproved for APPROVAL tier transactions.
    *
    * @param txId - Transaction ID to execute
    * @param walletId - Wallet that owns the transaction

@@ -7,7 +7,7 @@
  * Uses in-memory SQLite + Drizzle (same pattern as database-policy-engine.test.ts).
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
 import type { DatabaseConnection } from '../infrastructure/database/index.js';
 import { wallets } from '../infrastructure/database/schema.js';
@@ -375,5 +375,55 @@ describe('ApprovalWorkflow - processExpiredApprovals', () => {
 
     const tx = getTxStatus(txId);
     expect(tx.reserved_amount).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// onApproved callback tests (fix #246)
+// ---------------------------------------------------------------------------
+
+describe('ApprovalWorkflow - onApproved callback (#246)', () => {
+  it('should call onApproved with txId after successful approve', () => {
+    const onApproved = vi.fn();
+    const wf = new ApprovalWorkflow({
+      db: conn.db,
+      sqlite: conn.sqlite,
+      config: { policy_defaults_approval_timeout: 7200 },
+      onApproved,
+    });
+
+    const txId = insertTransaction({ walletId });
+    wf.requestApproval(txId);
+    wf.approve(txId, 'owner-sig');
+
+    expect(onApproved).toHaveBeenCalledOnce();
+    expect(onApproved).toHaveBeenCalledWith(txId);
+  });
+
+  it('should not call onApproved on reject', () => {
+    const onApproved = vi.fn();
+    const wf = new ApprovalWorkflow({
+      db: conn.db,
+      sqlite: conn.sqlite,
+      config: { policy_defaults_approval_timeout: 7200 },
+      onApproved,
+    });
+
+    const txId = insertTransaction({ walletId });
+    wf.requestApproval(txId);
+    wf.reject(txId);
+
+    expect(onApproved).not.toHaveBeenCalled();
+  });
+
+  it('should work without onApproved callback (backward compat)', () => {
+    // Default workflow without onApproved -- should not throw
+    const txId = insertTransaction({ walletId });
+    workflow.requestApproval(txId);
+
+    expect(() => workflow.approve(txId, 'sig')).not.toThrow();
+
+    const tx = getTxStatus(txId);
+    expect(tx.status).toBe('EXECUTING');
   });
 });

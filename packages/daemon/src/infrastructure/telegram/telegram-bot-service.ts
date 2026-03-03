@@ -62,6 +62,7 @@ export interface TelegramBotServiceOptions {
   jwtSecretManager?: JwtSecretManager;
   signResponseHandler?: SignResponseHandler;
   sessionTtl?: number;
+  onApproved?: (txId: string) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -75,6 +76,7 @@ export class TelegramBotService {
   private killSwitchService?: KillSwitchService;
   private jwtSecretManager?: JwtSecretManager;
   private signResponseHandler?: SignResponseHandler;
+  private onApproved?: (txId: string) => void;
   private auth: TelegramAuth;
   private running = false;
   private offset = 0;
@@ -90,6 +92,7 @@ export class TelegramBotService {
     this.killSwitchService = opts.killSwitchService;
     this.jwtSecretManager = opts.jwtSecretManager;
     this.signResponseHandler = opts.signResponseHandler;
+    this.onApproved = opts.onApproved;
     this.auth = new TelegramAuth(opts.sqlite);
   }
 
@@ -551,6 +554,9 @@ export class TelegramBotService {
         'INSERT INTO audit_log (timestamp, event_type, actor, tx_id, details, severity) VALUES (?, ?, ?, ?, ?, ?)',
       )
       .run(now, 'TX_APPROVED_VIA_TELEGRAM', `telegram:${chatId}`, txId, JSON.stringify({ chatId, action: 'approve' }), 'info');
+
+    // Resume pipeline after successful approval (fix #246)
+    this.onApproved?.(txId);
 
     await this.api.sendMessage(chatId, messages.telegram.bot_approve_success);
   }

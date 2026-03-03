@@ -460,6 +460,68 @@ describe('TelegramBotService', () => {
   });
 
   // -----------------------------------------------------------------------
+  // onApproved callback (fix #246)
+  // -----------------------------------------------------------------------
+
+  describe('onApproved callback (#246)', () => {
+    it('calls onApproved with txId after /approve command', async () => {
+      const onApproved = vi.fn();
+      const now = Math.floor(Date.now() / 1000);
+
+      // Register ADMIN user
+      db.prepare('INSERT INTO telegram_users (chat_id, username, role, registered_at) VALUES (?, ?, ?, ?)').run(12345, null, 'ADMIN', now);
+
+      // Create wallet + transaction + pending_approval
+      db.prepare('INSERT INTO wallets (id, name, chain, environment, public_key, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run('w1', 'test', 'solana', 'testnet', 'pk1', 'ACTIVE', now, now);
+      db.prepare('INSERT INTO transactions (id, wallet_id, chain, type, status, to_address, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)').run('tx-246', 'w1', 'solana', 'TRANSFER', 'QUEUED', 'addr1', now);
+      db.prepare('INSERT INTO pending_approvals (id, tx_id, required_by, expires_at, created_at) VALUES (?, ?, ?, ?, ?)').run('pa1', 'tx-246', now, now + 3600, now);
+
+      const svc = new TelegramBotService({ sqlite: db, api, locale: 'en', onApproved });
+
+      const updates = [makeUpdate(12345, '/approve tx-246', 1)];
+      (api.getUpdates as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce(updates)
+        .mockImplementation(() => new Promise(() => {}));
+
+      svc.start();
+      await vi.waitFor(() => {
+        expect(onApproved).toHaveBeenCalledOnce();
+      }, { timeout: 3000 });
+      svc.stop();
+
+      expect(onApproved).toHaveBeenCalledWith('tx-246');
+    });
+
+    it('does not call onApproved on /reject command', async () => {
+      const onApproved = vi.fn();
+      const now = Math.floor(Date.now() / 1000);
+
+      // Register ADMIN user
+      db.prepare('INSERT INTO telegram_users (chat_id, username, role, registered_at) VALUES (?, ?, ?, ?)').run(99999, null, 'ADMIN', now);
+
+      // Create wallet + transaction + pending_approval
+      db.prepare('INSERT INTO wallets (id, name, chain, environment, public_key, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run('w2', 'test2', 'solana', 'testnet', 'pk2', 'ACTIVE', now, now);
+      db.prepare('INSERT INTO transactions (id, wallet_id, chain, type, status, to_address, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)').run('tx-reject', 'w2', 'solana', 'TRANSFER', 'QUEUED', 'addr2', now);
+      db.prepare('INSERT INTO pending_approvals (id, tx_id, required_by, expires_at, created_at) VALUES (?, ?, ?, ?, ?)').run('pa2', 'tx-reject', now, now + 3600, now);
+
+      const svc = new TelegramBotService({ sqlite: db, api, locale: 'en', onApproved });
+
+      const updates = [makeUpdate(99999, '/reject tx-reject', 1)];
+      (api.getUpdates as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce(updates)
+        .mockImplementation(() => new Promise(() => {}));
+
+      svc.start();
+      await vi.waitFor(() => {
+        expect(api.sendMessage).toHaveBeenCalled();
+      }, { timeout: 3000 });
+      svc.stop();
+
+      expect(onApproved).not.toHaveBeenCalled();
+    });
+  });
+
+  // -----------------------------------------------------------------------
   // MarkdownV2 escape utility
   // -----------------------------------------------------------------------
 
