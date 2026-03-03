@@ -84,7 +84,7 @@ export class EncryptedBackupService {
     try {
       this.sqlite.exec(`VACUUM INTO '${snapPath}'`);
     } catch (err) {
-      throw new WAIaaSError('INTERNAL_ERROR', {
+      throw new WAIaaSError('BACKUP_CORRUPTED', {
         message: `VACUUM INTO failed: ${err instanceof Error ? err.message : String(err)}`,
         cause: err instanceof Error ? err : undefined,
       });

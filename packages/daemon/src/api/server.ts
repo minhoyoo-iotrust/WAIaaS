@@ -60,6 +60,7 @@ import { nonceRoutes } from './routes/nonce.js';
 import { utilsRoutes } from './routes/utils.js';
 import { skillsRoutes } from './routes/skills.js';
 import { adminRoutes } from './routes/admin.js';
+import type { AdminRouteDeps } from './routes/admin.js';
 import type { KillSwitchState } from './routes/admin.js';
 import { createWalletAppsRoutes } from './routes/wallet-apps.js';
 import { tokenRegistryRoutes } from './routes/tokens.js';
@@ -129,6 +130,8 @@ export interface CreateAppDeps {
   versionCheckService?: VersionCheckService | null;
   /** Duck-typed to avoid circular dependency with IncomingTxMonitorService */
   incomingTxMonitorService?: { syncSubscriptions(): void | Promise<void> };
+  /** Duck-typed to avoid circular import with EncryptedBackupService */
+  encryptedBackupService?: { createBackup(password: string): Promise<{ path: string; filename: string; size: number; created_at: string; daemon_version: string; schema_version: number; file_count: number }>; listBackups(): Array<{ path: string; filename: string; size: number; created_at: string; daemon_version: string; schema_version: number; file_count: number }>; };
 }
 
 /**
@@ -321,6 +324,9 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     app.use('/v1/admin/master-password', masterAuthForAdmin);
     // masterAuth for audit-logs query API (OPS-02)
     app.use('/v1/audit-logs', masterAuthForAdmin);
+    // masterAuth for encrypted backup API (OPS-03)
+    app.use('/v1/admin/backup', masterAuthForAdmin);
+    app.use('/v1/admin/backups', masterAuthForAdmin);
     // masterAuth for GET /v1/actions/providers (Admin UI reads provider list)
     app.use('/v1/actions/providers', async (c, next) => {
       if (c.req.method === 'GET') {
@@ -609,6 +615,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         delayQueue: deps.delayQueue,
         approvalWorkflow: deps.approvalWorkflow,
         rpcPool: deps.adapterPool?.pool,
+        encryptedBackupService: deps.encryptedBackupService as AdminRouteDeps['encryptedBackupService'],
       }),
     );
 

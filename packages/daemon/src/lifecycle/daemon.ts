@@ -156,6 +156,7 @@ export class DaemonLifecycle {
   private _asyncPollingService: import('../services/async-polling-service.js').AsyncPollingService | null = null;
   private positionTracker: import('../services/defi/position-tracker.js').PositionTracker | null = null;
   private defiMonitorService: import('../services/monitoring/defi-monitor-service.js').DeFiMonitorService | null = null;
+  private _encryptedBackupService: import('../infrastructure/backup/encrypted-backup-service.js').EncryptedBackupService | null = null;
 
   /** Whether shutdown has been initiated. */
   get isShuttingDown(): boolean {
@@ -1266,6 +1267,22 @@ export class DaemonLifecycle {
     }
 
     // ------------------------------------------------------------------
+    // Step 4h: EncryptedBackupService (fail-soft)
+    // ------------------------------------------------------------------
+    try {
+      if (this.sqlite) {
+        const { isAbsolute } = await import('node:path');
+        const { EncryptedBackupService } = await import('../infrastructure/backup/encrypted-backup-service.js');
+        const backupDir = this._config!.backup?.dir ?? 'backups';
+        const backupsDir = isAbsolute(backupDir) ? backupDir : join(dataDir, backupDir);
+        this._encryptedBackupService = new EncryptedBackupService(dataDir, backupsDir, this.sqlite);
+        console.debug('Step 4h: EncryptedBackupService created');
+      }
+    } catch (err) {
+      console.warn('Step 4h (fail-soft): EncryptedBackupService init warning:', err);
+    }
+
+    // ------------------------------------------------------------------
     // Step 5: HTTP server start (5s, fail-fast)
     // ------------------------------------------------------------------
     await withTimeout(
@@ -1324,6 +1341,7 @@ export class DaemonLifecycle {
           wcSigningBridgeRef: this.wcSigningBridgeRef,
           approvalChannelRouter: this.approvalChannelRouter ?? undefined,
           versionCheckService: this._versionCheckService,
+          encryptedBackupService: this._encryptedBackupService ?? undefined,
         });
 
         const hostname = this._config!.daemon.hostname;

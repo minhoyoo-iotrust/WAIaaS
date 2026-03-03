@@ -1344,3 +1344,23 @@ export const RpcStatusResponseSchema = z.object({
   networks: z.record(z.array(RpcEndpointStatusSchema)),
   builtinUrls: z.record(z.array(z.string())),
 }).openapi('RpcStatusResponse');
+
+// ---------------------------------------------------------------------------
+// Backup Schemas (POST /v1/admin/backup, GET /v1/admin/backups)
+// ---------------------------------------------------------------------------
+
+export const BackupInfoResponseSchema = z.object({
+  path: z.string().openapi({ description: 'Absolute path to the backup file' }),
+  filename: z.string().openapi({ description: 'Backup filename' }),
+  size: z.number().int().openapi({ description: 'File size in bytes' }),
+  created_at: z.string().openapi({ description: 'ISO 8601 creation timestamp' }),
+  daemon_version: z.string().openapi({ description: 'Daemon version at backup time' }),
+  schema_version: z.number().int().openapi({ description: 'DB schema version at backup time' }),
+  file_count: z.number().int().openapi({ description: 'Number of files in the backup' }),
+}).openapi('BackupInfoResponse');
+
+export const BackupListResponseSchema = z.object({
+  backups: z.array(BackupInfoResponseSchema),
+  total: z.number().int(),
+  retention_count: z.number().int().openapi({ description: 'Configured retention count' }),
+}).openapi('BackupListResponse');

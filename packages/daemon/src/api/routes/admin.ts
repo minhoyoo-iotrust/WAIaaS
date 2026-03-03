@@ -85,9 +85,13 @@ import {
   SessionReissueResponseSchema,
   StakingPositionsResponseSchema,
   RpcStatusResponseSchema,
+  BackupInfoResponseSchema,
+  BackupListResponseSchema,
+  ErrorResponseSchema,
   buildErrorResponses,
   openApiValidationHook,
 } from './openapi-schemas.js';
+import type { EncryptedBackupService } from '../../infrastructure/backup/encrypted-backup-service.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -127,6 +131,7 @@ export interface AdminRouteDeps {
   delayQueue?: DelayQueue;
   approvalWorkflow?: ApprovalWorkflow;
   rpcPool?: RpcPool;
+  encryptedBackupService?: EncryptedBackupService;
 }
 
 // ---------------------------------------------------------------------------
@@ -2852,6 +2857,75 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
       worstHealthFactor,
       activeCount: positions.length,
     }, 200);
+  });
+
+  // ---------------------------------------------------------------------------
+  // POST /admin/backup (create encrypted backup)
+  // ---------------------------------------------------------------------------
+
+  const createBackupRoute = createRoute({
+    method: 'post',
+    path: '/admin/backup',
+    tags: ['Admin'],
+    summary: 'Create an encrypted backup',
+    responses: {
+      200: {
+        description: 'Backup created successfully',
+        content: { 'application/json': { schema: BackupInfoResponseSchema } },
+      },
+      401: {
+        description: 'Master password not available',
+        content: { 'application/json': { schema: ErrorResponseSchema } },
+      },
+      501: {
+        description: 'Backup service not configured',
+        content: { 'application/json': { schema: ErrorResponseSchema } },
+      },
+      ...buildErrorResponses(['INVALID_MASTER_PASSWORD']),
+    },
+  });
+
+  router.openapi(createBackupRoute, async (c) => {
+    if (!deps.encryptedBackupService) {
+      return c.json({ code: 'NOT_CONFIGURED', message: 'Backup service not configured', retryable: false }, 501);
+    }
+    if (!deps.passwordRef?.password) {
+      return c.json({ code: 'INVALID_MASTER_PASSWORD', message: 'Master password not available', retryable: false }, 401);
+    }
+
+    const info = await deps.encryptedBackupService.createBackup(deps.passwordRef.password);
+    return c.json(info, 200);
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /admin/backups (list backups)
+  // ---------------------------------------------------------------------------
+
+  const listBackupsRoute = createRoute({
+    method: 'get',
+    path: '/admin/backups',
+    tags: ['Admin'],
+    summary: 'List available backups',
+    responses: {
+      200: {
+        description: 'Backup list',
+        content: { 'application/json': { schema: BackupListResponseSchema } },
+      },
+      501: {
+        description: 'Backup service not configured',
+        content: { 'application/json': { schema: ErrorResponseSchema } },
+      },
+    },
+  });
+
+  router.openapi(listBackupsRoute, async (c) => {
+    if (!deps.encryptedBackupService) {
+      return c.json({ code: 'NOT_CONFIGURED', message: 'Backup service not configured', retryable: false }, 501);
+    }
+
+    const backups = deps.encryptedBackupService.listBackups();
+    const retentionCount = deps.daemonConfig?.backup?.retention_count ?? 7;
+    return c.json({ backups, total: backups.length, retention_count: retentionCount }, 200);
   });
 
   return router;
