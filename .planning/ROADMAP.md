@@ -199,7 +199,7 @@ Phases execute in numeric order: 309 -> 310 -> 311 -> 312 -> 313
 | 215-243 | v27.0-v27.4 | All | Complete | 2026-02-23 |
 | 244-267 | v28.0-v28.8 | All | Complete | 2026-02-26 |
 | 268-308 | v29.0-v30.0 | All | Complete | 2026-03-03 |
-| 309. Transaction Dry-Run | v30.2 | 2/2 | Complete | 2026-03-03 |
+| 309. Transaction Dry-Run | v30.2 | Complete    | 2026-03-03 | 2026-03-03 |
 | 310. Audit Log Query API | v30.2 | 0/2 | Not started | - |
 | 311. Encrypted Backup & Restore | v30.2 | 0/3 | Not started | - |
 | 312. Webhook Outbound | v30.2 | 0/3 | Not started | - |
