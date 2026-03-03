@@ -17,6 +17,30 @@ const DEFAULT_SERVER_URL = 'https://ntfy.sh';
 const MAX_RECONNECT_ATTEMPTS = 3;
 const RECONNECT_DELAY_MS = 5_000;
 
+/** Parsed ntfy SSE event with optional file attachment. */
+interface NtfyEvent {
+  message?: string;
+  title?: string;
+  priority?: number;
+  /** Present when message exceeds ntfy size limit (~4KB) and is auto-converted to file. */
+  attachment?: { url: string };
+}
+
+/**
+ * Resolve the actual encoded message from an ntfy event.
+ * When payload exceeds ntfy's size limit, the message is stored as a file
+ * attachment and must be downloaded to recover the original request body.
+ */
+async function resolveMessage(event: NtfyEvent): Promise<string | null> {
+  if (event.attachment?.url) {
+    const res = await fetch(event.attachment.url);
+    if (!res.ok) return null;
+    const body = (await res.json()) as Record<string, unknown>;
+    return typeof body.message === 'string' ? body.message : null;
+  }
+  return event.message ?? null;
+}
+
 /**
  * Publish a SignResponse to an ntfy response topic.
  *
@@ -102,10 +126,11 @@ export function subscribeToRequests(
           if (!dataStr) continue;
 
           try {
-            const event = JSON.parse(dataStr) as { message?: string };
-            if (!event.message) continue;
+            const event = JSON.parse(dataStr) as NtfyEvent;
+            const message = await resolveMessage(event);
+            if (!message) continue;
 
-            const json = Buffer.from(event.message, 'base64url').toString(
+            const json = Buffer.from(message, 'base64url').toString(
               'utf-8',
             );
             const parsed: unknown = JSON.parse(json);
@@ -216,10 +241,11 @@ export function subscribeToNotifications(
           if (!dataStr) continue;
 
           try {
-            const event = JSON.parse(dataStr) as { message?: string };
-            if (!event.message) continue;
+            const event = JSON.parse(dataStr) as NtfyEvent;
+            const message = await resolveMessage(event);
+            if (!message) continue;
 
-            const notification = parseNotification(event.message);
+            const notification = parseNotification(message);
             callback(notification);
           } catch {
             // Ignore malformed messages
