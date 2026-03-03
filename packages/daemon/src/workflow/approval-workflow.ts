@@ -41,6 +41,7 @@ interface ApprovalWorkflowDeps {
   config: {
     policy_defaults_approval_timeout: number;
   };
+  onApproved?: (txId: string) => void;
 }
 
 interface RequestApprovalOptions {
@@ -77,10 +78,12 @@ interface PendingApprovalRow {
 export class ApprovalWorkflow {
   private readonly sqlite: SQLiteDatabase;
   private readonly configTimeout: number;
+  private readonly onApproved?: (txId: string) => void;
 
   constructor(deps: ApprovalWorkflowDeps) {
     this.sqlite = deps.sqlite;
     this.configTimeout = deps.config.policy_defaults_approval_timeout;
+    this.onApproved = deps.onApproved;
   }
 
   // -------------------------------------------------------------------------
@@ -177,7 +180,12 @@ export class ApprovalWorkflow {
       return { txId, approvedAt: now };
     });
 
-    return txn.immediate();
+    const result = txn.immediate();
+
+    // Resume pipeline after successful approval (fix #246)
+    this.onApproved?.(txId);
+
+    return result;
   }
 
   // -------------------------------------------------------------------------

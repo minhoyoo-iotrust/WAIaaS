@@ -1,5 +1,29 @@
 # Project Milestones: WAIaaS
 
+## v30.0 운영 기능 확장 설계 (Shipped: 2026-03-03)
+
+**Delivered:** 운영 환경에서 필요한 6가지 기능(Transaction Dry-Run, Audit Log Query API, Encrypted Backup, Webhook Outbound, Admin Stats API, AutoStop Plugin Architecture)을 설계 수준에서 정의한 마일스톤. Zod 스키마, 인터페이스, 데이터 모델, 기존 설계 문서 통합 지점, 테스트 시나리오를 확정하여 구현 마일스톤의 입력을 생산.
+
+**Phases completed:** 304-308 (5 phases, 11 plans, 25 requirements)
+
+**Key accomplishments:**
+
+- Transaction Dry-Run 설계 — SimulationResult Zod 스키마(12 warning codes, policy/fee/balanceChanges/warnings 4-axis), PipelineContext dryRun 분기(Stage 1'->2'->3'->5a->5b), POST /v1/transactions/simulate + SDK simulate() + MCP tool 스펙
+- Audit Log Query API 설계 — AuditEventType 20개(기존 9 + 신규 11), id AUTOINCREMENT cursor pagination, GET /v1/audit-logs masterAuth 엔드포인트, insertAuditLog helper
+- Encrypted Backup & Restore 설계 — AES-256-GCM 암호화 아카이브 바이너리 포맷(60B 헤더), EncryptedBackupService(VACUUM INTO 원자적 스냅샷), CLI 4 커맨드(backup/restore/list/inspect), config.toml [backup] 3키
+- Webhook Outbound 설계 — webhooks+webhook_logs 2 DB 테이블, HMAC-SHA256 서명 프로토콜(X-WAIaaS-Signature), 4-attempt 재시도 큐(지수 백오프), REST API 4 엔드포인트, EventBus 이벤트 필터링
+- Admin Stats + AutoStop Plugin 설계 — AdminStatsResponseSchema 7-category Zod, IMetricsCounter 인메모리 카운터, IAutoStopRule 플러그인 인터페이스, RuleRegistry(런타임 등록/해제), per-rule Admin Settings 토글
+
+**Stats:**
+
+- 5 phases, 11 plans, 25 requirements, 20 commits
+- 30 files changed, +8,132 / -314 lines
+- Timeline: 2026-03-03 (~50 min)
+- Design decisions: 40+
+- Design specs: 5 DESIGN-SPEC.md (OPS-01~06)
+
+---
+
 ## v29.7 D'CENT 직접 서명 + Human Wallet Apps 통합 (Shipped: 2026-03-01)
 
 **Delivered:** D'CENT 프리셋의 승인 방식을 WalletConnect에서 Push Relay 기반 직접 서명(sdk_ntfy)으로 전환하고, 지갑별 wallet_type 기반 서명 토픽 라우팅을 구현한 마일스톤. "Signing SDK"를 "Human Wallet Apps"로 재구성하여 지갑 앱을 wallet_apps DB 테이블 기반 1급 엔티티로 관리하고, 앱별 Signing/Alerts 토글, 앱별 알림 토픽 라우팅, Admin UI Human Wallet Apps 최상위 메뉴, Notifications 페이지 ntfy 독립 섹션 분리까지 완료.

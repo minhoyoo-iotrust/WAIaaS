@@ -36,6 +36,7 @@
 - ✅ **v29.8 Solana Perp DEX (Drift) + Perp 프레임워크** -- Phases 297-299 (shipped 2026-03-02)
 - ✅ **v29.9 세션 점진적 보안 모델** -- Phases 300-301 (shipped 2026-03-02)
 - ✅ **v29.10 ntfy 토픽 지갑별 설정 전환** -- Phases 302-303 (shipped 2026-03-02)
+- ✅ **v30.0 운영 기능 확장 설계** -- Phases 304-308 (shipped 2026-03-03)
 
 ## Phases
 
@@ -75,7 +76,7 @@ See `.planning/milestones/` for archived phase details.
 </details>
 
 <details>
-<summary>v29.0-v29.10 (Phases 268-303) -- SHIPPED 2026-03-02</summary>
+<summary>v29.0-v30.0 (Phases 268-308) -- SHIPPED 2026-03-03</summary>
 
 - [x] Phase 268-273: 고급 DeFi 프로토콜 설계 (v29.0) -- completed 2026-02-26
 - [x] Phase 274-278: EVM Lending -- Aave V3 (v29.2) -- completed 2026-02-27
@@ -87,8 +88,9 @@ See `.planning/milestones/` for archived phase details.
 - [x] Phase 297-299: Solana Perp DEX (Drift) + Perp 프레임워크 (v29.8) -- completed 2026-03-02
 - [x] Phase 300-301: 세션 점진적 보안 모델 (v29.9) -- completed 2026-03-02
 - [x] Phase 302-303: ntfy 토픽 지갑별 설정 전환 (v29.10) -- completed 2026-03-02
+- [x] Phase 304-308: 운영 기능 확장 설계 (v30.0) -- completed 2026-03-03
 
-See `.planning/milestones/v29.0-ROADMAP.md` through `v29.10-ROADMAP.md` for full details.
+See `.planning/milestones/v29.0-ROADMAP.md` through `v30.0-ROADMAP.md` for full details.
 
 </details>
 
@@ -101,8 +103,7 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v29.10-ROADMAP.md` for full
 | 198-214 | v2.6-v26.4 | All | Complete | 2026-02-21 |
 | 215-243 | v27.0-v27.4 | All | Complete | 2026-02-23 |
 | 244-267 | v28.0-v28.8 | All | Complete | 2026-02-26 |
-| 268-301 | v29.0-v29.9 | All | Complete | 2026-03-02 |
-| 302-303 | v29.10 | 4/4 | Complete | 2026-03-02 |
+| 268-308 | v29.0-v30.0 | All | Complete | 2026-03-03 |
 
 ---
-*Last updated: 2026-03-02 after v29.10 milestone completion*
+*Last updated: 2026-03-03 -- v30.0 archived, ready for next milestone*

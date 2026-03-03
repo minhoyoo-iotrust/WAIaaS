@@ -137,16 +137,21 @@ export class SignResponseHandler {
   private readonly evmVerify: EvmVerifyFn;
   private readonly solanaVerify: SolanaVerifyFn;
 
+  /** Callback invoked after a successful approve (fix #246: resume pipeline) */
+  private readonly onApproved?: (txId: string) => void;
+
   constructor(
     deps: SignResponseHandlerDeps,
     opts?: {
       evmVerify?: EvmVerifyFn;
       solanaVerify?: SolanaVerifyFn;
+      onApproved?: (txId: string) => void;
     },
   ) {
     this.sqlite = deps.sqlite;
     this.evmVerify = opts?.evmVerify ?? defaultEvmVerify;
     this.solanaVerify = opts?.solanaVerify ?? defaultSolanaVerify;
+    this.onApproved = opts?.onApproved;
   }
 
   // -------------------------------------------------------------------------
@@ -321,6 +326,9 @@ export class SignResponseHandler {
     this.pendingRequests.delete(requestId);
     this.processedRequests.add(requestId);
     this.clearTimer(requestId);
+
+    // Resume pipeline after successful approval (fix #246)
+    this.onApproved?.(txId);
 
     return { action: 'approved', txId };
   }

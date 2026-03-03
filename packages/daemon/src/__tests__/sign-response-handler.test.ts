@@ -417,7 +417,48 @@ describe('SignResponseHandler', () => {
   });
 
   // -----------------------------------------------------------------------
-  // 12. registerRequest sets expiration timer
+  // 12. onApproved callback (fix #246)
+  // -----------------------------------------------------------------------
+
+  it('calls onApproved callback after successful approve', async () => {
+    const onApproved = vi.fn();
+    const callbackHandler = new SignResponseHandler(
+      { sqlite },
+      { evmVerify: mockEvmVerify, solanaVerify: mockSolanaVerify, onApproved },
+    );
+
+    const request = createTestRequest();
+    callbackHandler.registerRequest(request);
+
+    const response = createTestResponse();
+    await callbackHandler.handle(response);
+
+    expect(onApproved).toHaveBeenCalledOnce();
+    expect(onApproved).toHaveBeenCalledWith(txId);
+
+    callbackHandler.destroy();
+  });
+
+  it('does not call onApproved on reject', async () => {
+    const onApproved = vi.fn();
+    const callbackHandler = new SignResponseHandler(
+      { sqlite },
+      { evmVerify: mockEvmVerify, solanaVerify: mockSolanaVerify, onApproved },
+    );
+
+    const request = createTestRequest();
+    callbackHandler.registerRequest(request);
+
+    const response = createTestResponse({ action: 'reject', signature: undefined });
+    await callbackHandler.handle(response);
+
+    expect(onApproved).not.toHaveBeenCalled();
+
+    callbackHandler.destroy();
+  });
+
+  // -----------------------------------------------------------------------
+  // 13. registerRequest sets expiration timer
   // -----------------------------------------------------------------------
 
   it('auto-removes expired request from pending after timeout', async () => {
