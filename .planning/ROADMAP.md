@@ -97,8 +97,8 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v29.10-ROADMAP.md` for full
 
 **Milestone Goal:** 운영 환경에서 필요한 6가지 기능(Transaction Dry-Run, Audit Log Query API, Encrypted Backup, Webhook Outbound, Admin Stats API, AutoStop Plugin Architecture)을 설계 수준에서 정의한다. Zod 스키마, 인터페이스, 데이터 모델, 기존 설계 문서 통합 지점, 테스트 시나리오를 확정하여 구현 마일스톤의 입력을 생산한다.
 
-- [ ] **Phase 304: Transaction Dry-Run 설계** - PipelineContext dryRun 분기, SimulationResult 스키마, REST/SDK/MCP 확장 스펙 정의
-- [ ] **Phase 305: Audit Log Query API 설계** - 감사 이벤트 12개+ 확대, cursor pagination, AuditLog 조회 엔드포인트 스펙 정의
+- [x] **Phase 304: Transaction Dry-Run 설계** - PipelineContext dryRun 분기, SimulationResult 스키마, REST/SDK/MCP 확장 스펙 정의
+- [x] **Phase 305: Audit Log Query API 설계** - 감사 이벤트 12개+ 확대, cursor pagination, AuditLog 조회 엔드포인트 스펙 정의
 - [x] **Phase 306: Encrypted Backup & Restore 설계** - 암호화 아카이브 포맷, BackupService 확장, CLI 커맨드, config.toml 키 정의
 - [ ] **Phase 307: Webhook Outbound 설계** - DB 스키마, HMAC 서명 프로토콜, 재시도 큐, REST API, EventBus 연동 설계
 - [ ] **Phase 308: Admin Stats + AutoStop Plugin 설계** - 통합 통계 스키마, 인메모리 카운터, IAutoStopRule 인터페이스, RuleRegistry, Admin 토글
@@ -117,8 +117,8 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v29.10-ROADMAP.md` for full
 **Plans**: TBD
 
 Plans:
-- [ ] 304-01: SimulationResult 스키마 + PipelineContext dryRun 분기 설계
-- [ ] 304-02: REST API + SDK/MCP 확장 스펙 + 설계 문서 갱신
+- [x] 304-01: SimulationResult 스키마 + PipelineContext dryRun 분기 설계
+- [x] 304-02: REST API + SDK/MCP 확장 스펙 + 설계 문서 갱신
 
 ### Phase 305: Audit Log Query API 설계
 **Goal**: 감사 이벤트 커버리지가 12개+로 확대되고, 외부에서 필터/페이지네이션으로 감사 로그를 조회할 수 있는 API가 설계된다
@@ -132,8 +132,8 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 305-01: AuditEventType 확대 + 삽입 지점 매핑 + 쿼리/응답 스키마 설계
-- [ ] 305-02: cursor pagination + REST API 엔드포인트 스펙 + 설계 문서 갱신
+- [x] 305-01: AuditEventType 확대 + 삽입 지점 매핑 + 쿼리/응답 스키마 설계
+- [x] 305-02: cursor pagination + REST API 엔드포인트 스펙 + 설계 문서 갱신
 
 ### Phase 306: Encrypted Backup & Restore 설계
 **Goal**: 마스터 비밀번호 기반 암호화 백업/복원이 독립 CLI 커맨드로 사용 가능하도록 설계된다
@@ -196,11 +196,11 @@ Phases execute in numeric order: 304 → 305 → 306 → 307 → 308
 | 215-243 | v27.0-v27.4 | All | Complete | 2026-02-23 |
 | 244-267 | v28.0-v28.8 | All | Complete | 2026-02-26 |
 | 268-303 | v29.0-v29.10 | All | Complete | 2026-03-02 |
-| 304. Transaction Dry-Run 설계 | v30.0 | 0/2 | Not started | - |
-| 305. Audit Log Query API 설계 | v30.0 | 0/2 | Not started | - |
+| 304. Transaction Dry-Run 설계 | v30.0 | 2/2 | Complete | 2026-03-03 |
+| 305. Audit Log Query API 설계 | v30.0 | 2/2 | Complete | 2026-03-03 |
 | 306. Encrypted Backup & Restore 설계 | v30.0 | 2/2 | Complete | 2026-03-03 |
 | 307. Webhook Outbound 설계 | v30.0 | 0/2 | Not started | - |
 | 308. Admin Stats + AutoStop Plugin 설계 | v30.0 | 0/3 | Not started | - |
 
 ---
-*Last updated: 2026-03-03 after v30.0 roadmap creation*
+*Last updated: 2026-03-03 after Phase 305 completion*

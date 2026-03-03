@@ -9,17 +9,17 @@ Requirements for milestone v30.0. Each maps to roadmap phases.
 
 ### Simulation (Transaction Dry-Run)
 
-- [ ] **SIM-01**: SimulationResult Zod 스키마를 정의하여 정책 tier, 예상 수수료, 잔액 변화, 경고 목록을 표현한다
-- [ ] **SIM-02**: PipelineContext dryRun 플래그와 Stage 분기 설계를 정의하여 Stage 1→2→3→5b만 실행하고 부수 효과 없음을 보장한다
-- [ ] **SIM-03**: `POST /v1/transactions/simulate` 엔드포인트 스펙을 정의한다 (입력: 기존 TransactionRequest 5-type 재사용)
-- [ ] **SIM-04**: SDK simulate() 메서드와 MCP waiaas_simulate_transaction tool 확장 스펙을 정의한다
+- [x] **SIM-01**: SimulationResult Zod 스키마를 정의하여 정책 tier, 예상 수수료, 잔액 변화, 경고 목록을 표현한다
+- [x] **SIM-02**: PipelineContext dryRun 플래그와 Stage 분기 설계를 정의하여 Stage 1→2→3→5b만 실행하고 부수 효과 없음을 보장한다
+- [x] **SIM-03**: `POST /v1/transactions/simulate` 엔드포인트 스펙을 정의한다 (입력: 기존 TransactionRequest 5-type 재사용)
+- [x] **SIM-04**: SDK simulate() 메서드와 MCP waiaas_simulate_transaction tool 확장 스펙을 정의한다
 
 ### Audit Log (감사 로그 조회 + 이벤트 확대)
 
-- [ ] **AUDIT-01**: AuditLogQuerySchema와 AuditLogResponseSchema를 Zod로 정의한다 (필터: wallet_id, event_type, from/to, tx_id, severity)
-- [ ] **AUDIT-02**: cursor pagination 설계를 정의한다 (id AUTOINCREMENT 순서, 기본 50건, 최대 200건)
-- [ ] **AUDIT-03**: AuditEventType enum을 2개→12개+로 확대하고 각 이벤트의 발생 지점(서비스/스테이지)을 매핑한다
-- [ ] **AUDIT-04**: `GET /v1/audit-logs` 엔드포인트 스펙을 masterAuth 인증으로 정의한다
+- [x] **AUDIT-01**: AuditLogQuerySchema와 AuditLogResponseSchema를 Zod로 정의한다 (필터: wallet_id, event_type, from/to, tx_id, severity)
+- [x] **AUDIT-02**: cursor pagination 설계를 정의한다 (id AUTOINCREMENT 순서, 기본 50건, 최대 200건)
+- [x] **AUDIT-03**: AuditEventType enum을 2개→12개+로 확대하고 각 이벤트의 발생 지점(서비스/스테이지)을 매핑한다
+- [x] **AUDIT-04**: `GET /v1/audit-logs` 엔드포인트 스펙을 masterAuth 인증으로 정의한다
 
 ### Backup (암호화 백업/복원)
 
@@ -80,14 +80,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SIM-01 | Phase 304 | Pending |
-| SIM-02 | Phase 304 | Pending |
-| SIM-03 | Phase 304 | Pending |
-| SIM-04 | Phase 304 | Pending |
-| AUDIT-01 | Phase 305 | Pending |
-| AUDIT-02 | Phase 305 | Pending |
-| AUDIT-03 | Phase 305 | Pending |
-| AUDIT-04 | Phase 305 | Pending |
+| SIM-01 | Phase 304 | Complete |
+| SIM-02 | Phase 304 | Complete |
+| SIM-03 | Phase 304 | Complete |
+| SIM-04 | Phase 304 | Complete |
+| AUDIT-01 | Phase 305 | Complete |
+| AUDIT-02 | Phase 305 | Complete |
+| AUDIT-03 | Phase 305 | Complete |
+| AUDIT-04 | Phase 305 | Complete |
 | BKUP-01 | Phase 306 | Complete |
 | BKUP-02 | Phase 306 | Complete |
 | BKUP-03 | Phase 306 | Complete |
@@ -113,4 +113,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-03*
-*Last updated: 2026-03-03 after roadmap creation (traceability updated)*
+*Last updated: 2026-03-03 after Phase 305 completion (AUDIT-01~04 complete)*

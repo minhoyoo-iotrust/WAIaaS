@@ -45,6 +45,17 @@ Progress: [######....] 60%
 - Phase 306: VACUUM INTO replaces file copy for atomic DB snapshots
 - Phase 306: Backup via daemon REST API (VACUUM INTO needs DB connection), restore via CLI direct execution (daemon stopped)
 - Phase 306: config.toml [backup] section with 3 flat keys (dir, interval=0, retention_count=7)
+- Phase 304: Separate executeDryRun() method (not dryRun flag in existing stages) for code isolation and test safety
+- Phase 304: Policy denial returns HTTP 200 with success=false (separate HTTP status from business result)
+- Phase 304: Reuse TransactionRequestSchema for simulate input (copy-paste workflow for agents)
+- Phase 304: 12 warning codes for simulation results (INSUFFICIENT_BALANCE, ORACLE_PRICE_UNAVAILABLE, etc.)
+- Phase 305: 20 audit events (9 existing + 11 new) -- balanced coverage vs noise
+- Phase 305: Integer cursor (not Base64) for audit_log.id AUTOINCREMENT pagination
+- Phase 305: Default limit 50 / max 200 for admin-only audit log queries
+- Phase 305: raw SQL insertAuditLog helper for consistency across services without Drizzle dependency
+- Phase 305: Independent path /v1/audit-logs (not /admin/ subpath)
+- Phase 305: total field optional via include_total param to avoid COUNT(*) performance cost
+- Phase 305: INVALID_CURSOR error unnecessary -- Zod validation + empty result sufficient
 
 ### Blockers/Concerns
 
@@ -53,5 +64,5 @@ Progress: [######....] 60%
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Completed Phase 306 (Encrypted Backup & Restore design)
+Stopped at: Completed Phase 305 (Audit Log Query API design)
 Resume file: None
