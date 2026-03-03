@@ -260,6 +260,7 @@
 | 243 | BUG | CRITICAL | Push Relay SSE 압축 해제 5회차 재발 — 서명 요청 미수신 (#222,#235,#236,#238) | — | FIXED | 2026-03-03 |
 | 244 | BUG | MEDIUM | APPROVAL_CHANNEL_SWITCHED 알림 {txId} 미치환 — vars 대신 details에 전달 | — | FIXED | 2026-03-03 |
 | 245 | BUG | HIGH | Stage4 WcSigningBridge가 비WC 지갑에도 무조건 실행 — 거짓 채널 전환 알림 + DB 오염 | — | FIXED | 2026-03-03 |
+| 246 | BUG | CRITICAL | APPROVAL 티어 승인 후 파이프라인 미재개 — 모든 승인 경로에서 executeFromStage5 호출 누락 | — | OPEN | — |
 
 ## Type Legend
 
@@ -271,9 +272,9 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 1
 - **FIXED:** 245
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 246
+- **Total:** 247
