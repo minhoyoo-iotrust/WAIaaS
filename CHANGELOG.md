@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.9.0-rc.19](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc.18...v2.9.0-rc.19) (2026-03-03)
+
+
+### Bug Fixes
+
+* **daemon:** resolve approval channel issues ([#244](https://github.com/minhoyoo-iotrust/WAIaaS/issues/244), [#245](https://github.com/minhoyoo-iotrust/WAIaaS/issues/245)) ([bf89650](https://github.com/minhoyoo-iotrust/WAIaaS/commit/bf8965078c52fb5f93e3bbb60fd4e84bcb0c511d))
+* **daemon:** resolve approval channel issues ([#244](https://github.com/minhoyoo-iotrust/WAIaaS/issues/244), [#245](https://github.com/minhoyoo-iotrust/WAIaaS/issues/245)) ([e0585d2](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e0585d2f25cc4a38c3e04c9af7906cf837b3c4ff))
+* **push-relay:** exclude bin.ts from coverage measurement ([1b305b9](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1b305b9c67ccfc96bc4f1c1cde35c8905a8828d6))
+* **push-relay:** handle ntfy file attachment for messages exceeding size limit ([#243](https://github.com/minhoyoo-iotrust/WAIaaS/issues/243)) ([e29ca3f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e29ca3fd7368b239235698c35ac0053fb79be495))
+* **wallet-sdk:** handle ntfy file attachment in SSE subscribers ([#243](https://github.com/minhoyoo-iotrust/WAIaaS/issues/243)) ([192cb46](https://github.com/minhoyoo-iotrust/WAIaaS/commit/192cb46b5ae755dc168eb7c9ab36418b2dc8ade1))
+
 ## [2.9.0-rc.18](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc.17...v2.9.0-rc.18) (2026-03-02)
 
 
