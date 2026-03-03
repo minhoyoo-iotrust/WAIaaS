@@ -5,7 +5,7 @@
  * @see packages/daemon/src/services/admin-stats-service.ts
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { InMemoryCounter } from '../infrastructure/metrics/in-memory-counter.js';
 import { AdminStatsService } from '../services/admin-stats-service.js';
 import { AdminStatsResponseSchema } from '@waiaas/core';

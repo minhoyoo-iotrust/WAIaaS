@@ -2,11 +2,12 @@ import { describe, it, expect } from 'vitest';
 import { WAIaaSError, ERROR_CODES } from '../index.js';
 
 describe('Error code matrix', () => {
-  it('has exactly 109 error codes', () => {
+  it('has exactly 116 error codes', () => {
     // v29.3: +WALLET_ID_REQUIRED, +NETWORK_REQUIRED, -CANNOT_REMOVE_DEFAULT_WALLET (net +1)
     // v29.7: +SIGNING_DISABLED, +WALLET_APP_DUPLICATE, +WALLET_APP_NOT_FOUND (+3)
     // v29.9: +RENEWAL_NOT_REQUIRED (+1)
-    expect(Object.keys(ERROR_CODES)).toHaveLength(109);
+    // v30.2: +SIMULATION_TIMEOUT, +INVALID_BACKUP_FORMAT, +UNSUPPORTED_BACKUP_VERSION, +BACKUP_CORRUPTED, +BACKUP_NOT_FOUND, +WEBHOOK_NOT_FOUND, +RULE_NOT_FOUND (+7)
+    expect(Object.keys(ERROR_CODES)).toHaveLength(116);
   });
 
   it('every error code entry has required fields', () => {
@@ -42,10 +43,11 @@ describe('Error code matrix', () => {
     expect(authCodes).toHaveLength(8);
   });
 
-  it('TX domain has 29 codes', () => {
+  it('TX domain has 30 codes', () => {
     // v29.3: +NETWORK_REQUIRED
+    // v30.2: +SIMULATION_TIMEOUT
     const txCodes = Object.values(ERROR_CODES).filter((e) => e.domain === 'TX');
-    expect(txCodes).toHaveLength(29);
+    expect(txCodes).toHaveLength(30);
   });
 
   it('ACTION domain has 8 codes', () => {

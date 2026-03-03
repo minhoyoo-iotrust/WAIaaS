@@ -33,6 +33,7 @@
  */
 
 import { writeFileSync, unlinkSync, existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { join, dirname } from 'node:path';
 import type { Database as DatabaseType } from 'better-sqlite3';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
@@ -61,6 +62,8 @@ import { DatabasePolicyEngine } from '../pipeline/database-policy-engine.js';
 import { JwtSecretManager } from '../infrastructure/jwt/index.js';
 import argon2 from 'argon2';
 import type { IPriceOracle, IForexRateService } from '@waiaas/core';
+
+const esmRequire = createRequire(import.meta.url);
 
 // ---------------------------------------------------------------------------
 // proper-lockfile import (CJS package, use dynamic import)
@@ -639,7 +642,7 @@ export class DaemonLifecycle {
           this.autoStopService.setMetricsCounter(this.metricsCounter);
         }
 
-        const { version: daemonVersion } = require('../../package.json') as { version: string };
+        const { version: daemonVersion } = esmRequire('../../package.json') as { version: string };
         this.adminStatsService = new AdminStatsService({
           sqlite: this.sqlite,
           metricsCounter: this.metricsCounter,

@@ -126,6 +126,58 @@ const mockStatusActivated = {
   failedTxCount: 3,
 };
 
+const mockStats = {
+  transactions: {
+    total: 999,
+    byStatus: { CONFIRMED: 800, FAILED: 99, PENDING: 100 },
+    byType: { TRANSFER: 600, TOKEN_TRANSFER: 300, CONTRACT_CALL: 99 },
+    last24h: { count: 77, totalUsd: 5000 },
+    last7d: { count: 200, totalUsd: 25000 },
+  },
+  sessions: { active: 55, total: 150, revokedLast24h: 7 },
+  wallets: { total: 44, byStatus: { active: 40, suspended: 4 }, withOwner: 33 },
+  rpc: {
+    totalCalls: 1500,
+    totalErrors: 11,
+    avgLatencyMs: 120.5,
+    byNetwork: [
+      { network: 'solana-mainnet', calls: 1000, errors: 6, avgLatencyMs: 100.2 },
+      { network: 'ethereum-mainnet', calls: 500, errors: 4, avgLatencyMs: 160.8 },
+    ],
+  },
+  autostop: {
+    enabled: true,
+    triggeredTotal: 9,
+    rules: [
+      { id: 'rule-1', displayName: 'High value alert', enabled: true, trackedCount: 17 },
+    ],
+    lastTriggeredAt: null,
+  },
+  notifications: { sentLast24h: 15, failedLast24h: 2, channelStatus: {} },
+  system: {
+    uptimeSeconds: 86400,
+    version: '2.0.0',
+    schemaVersion: 33,
+    dbSizeBytes: 1048576,
+    nodeVersion: 'v22.0.0',
+    platform: 'darwin',
+    timestamp: Math.floor(Date.now() / 1000),
+  },
+};
+
+/**
+ * Helper: mock apiGet to return the correct data per endpoint URL.
+ * statusData is the admin status response; stats always returns mockStats.
+ */
+function setupApiGetMock(statusData: Record<string, unknown>) {
+  vi.mocked(apiGet).mockImplementation((path: string) => {
+    if (path.includes('/v1/admin/stats')) return Promise.resolve(mockStats);
+    if (path.includes('/v1/admin/defi/positions')) return Promise.reject(new Error('not found'));
+    if (path.includes('/v1/admin/transactions')) return Promise.resolve({ total: 91 });
+    return Promise.resolve(statusData);
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -134,7 +186,7 @@ describe('Dashboard coverage: StatCard with badge', () => {
   afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
   it('renders Kill Switch as NORMAL with success badge', async () => {
-    vi.mocked(apiGet).mockResolvedValue(mockStatusFull);
+    setupApiGetMock(mockStatusFull as unknown as Record<string, unknown>);
     vi.mocked(fetchDisplayCurrency).mockResolvedValue({ currency: 'USD', rate: 1 });
 
     render(<DashboardPage />);
@@ -149,7 +201,7 @@ describe('Dashboard coverage: StatCard with badge', () => {
   });
 
   it('renders Kill Switch as ACTIVATED with danger badge', async () => {
-    vi.mocked(apiGet).mockResolvedValue(mockStatusActivated);
+    setupApiGetMock(mockStatusActivated as unknown as Record<string, unknown>);
     vi.mocked(fetchDisplayCurrency).mockResolvedValue({ currency: 'USD', rate: 1 });
 
     render(<DashboardPage />);
@@ -163,7 +215,7 @@ describe('Dashboard coverage: StatCard with badge', () => {
   });
 
   it('renders failed tx count with danger badge when > 0', async () => {
-    vi.mocked(apiGet).mockResolvedValue(mockStatusActivated);
+    setupApiGetMock(mockStatusActivated as unknown as Record<string, unknown>);
     vi.mocked(fetchDisplayCurrency).mockResolvedValue({ currency: 'USD', rate: 1 });
 
     render(<DashboardPage />);
@@ -178,7 +230,7 @@ describe('Dashboard coverage: StatCard with badge', () => {
   });
 
   it('renders failed tx count with success badge when 0', async () => {
-    vi.mocked(apiGet).mockResolvedValue(mockStatusFull);
+    setupApiGetMock(mockStatusFull as unknown as Record<string, unknown>);
     vi.mocked(fetchDisplayCurrency).mockResolvedValue({ currency: 'USD', rate: 1 });
 
     render(<DashboardPage />);
@@ -195,7 +247,7 @@ describe('Dashboard coverage: StatCard with href', () => {
   afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
   it('renders Wallets card as link to #/wallets', async () => {
-    vi.mocked(apiGet).mockResolvedValue(mockStatusFull);
+    setupApiGetMock(mockStatusFull as unknown as Record<string, unknown>);
     vi.mocked(fetchDisplayCurrency).mockResolvedValue({ currency: 'USD', rate: 1 });
 
     render(<DashboardPage />);
@@ -210,7 +262,7 @@ describe('Dashboard coverage: StatCard with href', () => {
   });
 
   it('renders Sessions card as link to #/sessions', async () => {
-    vi.mocked(apiGet).mockResolvedValue(mockStatusFull);
+    setupApiGetMock(mockStatusFull as unknown as Record<string, unknown>);
     vi.mocked(fetchDisplayCurrency).mockResolvedValue({ currency: 'USD', rate: 1 });
 
     render(<DashboardPage />);
@@ -225,7 +277,7 @@ describe('Dashboard coverage: StatCard with href', () => {
   });
 
   it('renders Policies card as link to #/policies', async () => {
-    vi.mocked(apiGet).mockResolvedValue(mockStatusFull);
+    setupApiGetMock(mockStatusFull as unknown as Record<string, unknown>);
     vi.mocked(fetchDisplayCurrency).mockResolvedValue({ currency: 'USD', rate: 1 });
 
     render(<DashboardPage />);
@@ -240,7 +292,7 @@ describe('Dashboard coverage: StatCard with href', () => {
   });
 
   it('StatCard link contains arrow indicator', async () => {
-    vi.mocked(apiGet).mockResolvedValue(mockStatusFull);
+    setupApiGetMock(mockStatusFull as unknown as Record<string, unknown>);
     vi.mocked(fetchDisplayCurrency).mockResolvedValue({ currency: 'USD', rate: 1 });
 
     render(<DashboardPage />);
@@ -259,7 +311,7 @@ describe('Dashboard coverage: buildTxColumns', () => {
   afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
   it('renders transactions with USD amount formatting', async () => {
-    vi.mocked(apiGet).mockResolvedValue(mockStatusFull);
+    setupApiGetMock(mockStatusFull as unknown as Record<string, unknown>);
     vi.mocked(fetchDisplayCurrency).mockResolvedValue({ currency: 'USD', rate: 1 });
 
     render(<DashboardPage />);
@@ -278,7 +330,7 @@ describe('Dashboard coverage: buildTxColumns', () => {
   });
 
   it('renders tx with null amount as dash', async () => {
-    vi.mocked(apiGet).mockResolvedValue(mockStatusFull);
+    setupApiGetMock(mockStatusFull as unknown as Record<string, unknown>);
     vi.mocked(fetchDisplayCurrency).mockResolvedValue({ currency: 'USD', rate: 1 });
 
     render(<DashboardPage />);
@@ -296,7 +348,7 @@ describe('Dashboard coverage: buildTxColumns', () => {
   });
 
   it('renders CONFIRMED status with success badge', async () => {
-    vi.mocked(apiGet).mockResolvedValue(mockStatusFull);
+    setupApiGetMock(mockStatusFull as unknown as Record<string, unknown>);
     vi.mocked(fetchDisplayCurrency).mockResolvedValue({ currency: 'USD', rate: 1 });
 
     render(<DashboardPage />);
@@ -310,7 +362,7 @@ describe('Dashboard coverage: buildTxColumns', () => {
   });
 
   it('renders FAILED status with danger badge', async () => {
-    vi.mocked(apiGet).mockResolvedValue(mockStatusFull);
+    setupApiGetMock(mockStatusFull as unknown as Record<string, unknown>);
     vi.mocked(fetchDisplayCurrency).mockResolvedValue({ currency: 'USD', rate: 1 });
 
     render(<DashboardPage />);
@@ -324,7 +376,7 @@ describe('Dashboard coverage: buildTxColumns', () => {
   });
 
   it('renders PENDING status with warning badge', async () => {
-    vi.mocked(apiGet).mockResolvedValue(mockStatusFull);
+    setupApiGetMock(mockStatusFull as unknown as Record<string, unknown>);
     vi.mocked(fetchDisplayCurrency).mockResolvedValue({ currency: 'USD', rate: 1 });
 
     render(<DashboardPage />);
@@ -338,7 +390,7 @@ describe('Dashboard coverage: buildTxColumns', () => {
   });
 
   it('wallet name fallback to truncated walletId', async () => {
-    vi.mocked(apiGet).mockResolvedValue(mockStatusFull);
+    setupApiGetMock(mockStatusFull as unknown as Record<string, unknown>);
     vi.mocked(fetchDisplayCurrency).mockResolvedValue({ currency: 'USD', rate: 1 });
 
     render(<DashboardPage />);
@@ -352,7 +404,7 @@ describe('Dashboard coverage: buildTxColumns', () => {
   });
 
   it('tx with null createdAt shows dash', async () => {
-    vi.mocked(apiGet).mockResolvedValue(mockStatusFull);
+    setupApiGetMock(mockStatusFull as unknown as Record<string, unknown>);
     vi.mocked(fetchDisplayCurrency).mockResolvedValue({ currency: 'USD', rate: 1 });
 
     render(<DashboardPage />);
@@ -374,7 +426,7 @@ describe('Dashboard coverage: fetchDisplayCurrency', () => {
   afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
   it('uses non-USD currency when available', async () => {
-    vi.mocked(apiGet).mockResolvedValue(mockStatusFull);
+    setupApiGetMock(mockStatusFull as unknown as Record<string, unknown>);
     vi.mocked(fetchDisplayCurrency).mockResolvedValue({ currency: 'KRW', rate: 1450 });
 
     render(<DashboardPage />);
@@ -396,7 +448,7 @@ describe('Dashboard coverage: fetchDisplayCurrency', () => {
   });
 
   it('falls back to USD on fetchDisplayCurrency error', async () => {
-    vi.mocked(apiGet).mockResolvedValue(mockStatusFull);
+    setupApiGetMock(mockStatusFull as unknown as Record<string, unknown>);
     vi.mocked(fetchDisplayCurrency).mockRejectedValue(new Error('Network error'));
 
     render(<DashboardPage />);
@@ -413,7 +465,7 @@ describe('Dashboard coverage: fetchDisplayCurrency', () => {
 
   it('renders empty transaction table', async () => {
     const statusNoTx = { ...mockStatusFull, recentTransactions: [] };
-    vi.mocked(apiGet).mockResolvedValue(statusNoTx);
+    setupApiGetMock(statusNoTx as unknown as Record<string, unknown>);
     vi.mocked(fetchDisplayCurrency).mockResolvedValue({ currency: 'USD', rate: 1 });
 
     render(<DashboardPage />);
@@ -425,7 +477,7 @@ describe('Dashboard coverage: fetchDisplayCurrency', () => {
 
   it('renders update banner when updateAvailable is true', async () => {
     const statusWithUpdate = { ...mockStatusFull, latestVersion: '3.0.0', updateAvailable: true };
-    vi.mocked(apiGet).mockResolvedValue(statusWithUpdate);
+    setupApiGetMock(statusWithUpdate as unknown as Record<string, unknown>);
     vi.mocked(fetchDisplayCurrency).mockResolvedValue({ currency: 'USD', rate: 1 });
 
     render(<DashboardPage />);
@@ -439,7 +491,7 @@ describe('Dashboard coverage: fetchDisplayCurrency', () => {
   });
 
   it('does not render update banner when updateAvailable is false', async () => {
-    vi.mocked(apiGet).mockResolvedValue(mockStatusFull);
+    setupApiGetMock(mockStatusFull as unknown as Record<string, unknown>);
     vi.mocked(fetchDisplayCurrency).mockResolvedValue({ currency: 'USD', rate: 1 });
 
     render(<DashboardPage />);
@@ -467,7 +519,7 @@ describe('Dashboard coverage: Agent Connection Prompt card', () => {
   afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
   it('renders prompt card with Generate button', async () => {
-    vi.mocked(apiGet).mockResolvedValue(mockStatusFull);
+    setupApiGetMock(mockStatusFull as unknown as Record<string, unknown>);
     vi.mocked(fetchDisplayCurrency).mockResolvedValue({ currency: 'USD', rate: 1 });
 
     render(<DashboardPage />);
@@ -480,7 +532,7 @@ describe('Dashboard coverage: Agent Connection Prompt card', () => {
 
   it('generates prompt and shows Copy/Regenerate buttons', async () => {
     const { apiPost } = await import('../api/client');
-    vi.mocked(apiGet).mockResolvedValue(mockStatusFull);
+    setupApiGetMock(mockStatusFull as unknown as Record<string, unknown>);
     vi.mocked(fetchDisplayCurrency).mockResolvedValue({ currency: 'USD', rate: 1 });
     vi.mocked(apiPost).mockResolvedValueOnce({
       prompt: '[WAIaaS Connection]\n- URL: http://localhost:3100\n\nWallets:\n1. alpha-bot',
@@ -507,7 +559,7 @@ describe('Dashboard coverage: Agent Connection Prompt card', () => {
   it('shows warning toast when no wallets found', async () => {
     const { apiPost } = await import('../api/client');
     const { showToast } = await import('../components/toast');
-    vi.mocked(apiGet).mockResolvedValue(mockStatusFull);
+    setupApiGetMock(mockStatusFull as unknown as Record<string, unknown>);
     vi.mocked(fetchDisplayCurrency).mockResolvedValue({ currency: 'USD', rate: 1 });
     vi.mocked(apiPost).mockResolvedValueOnce({
       prompt: '',

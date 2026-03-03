@@ -19,7 +19,6 @@ import type {
   UnsignedTransaction,
   SimulationResult,
   BalanceInfo,
-  DryRunSimulationResult,
 } from '@waiaas/core';
 import { DryRunSimulationResultSchema } from '@waiaas/core';
 import { executeDryRun, type DryRunDeps } from '../pipeline/dry-run.js';

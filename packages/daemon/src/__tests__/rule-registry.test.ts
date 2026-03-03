@@ -7,7 +7,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { RuleRegistry } from '../services/autostop/rule-registry.js';
-import type { IAutoStopRule, AutoStopEvent, RuleResult, RuleTickResult, RuleStatus, AutoStopEventType } from '../services/autostop/types.js';
+import type { IAutoStopRule, AutoStopEvent, RuleTickResult } from '../services/autostop/types.js';
 import { AdminStatsResponseSchema, AutoStopRulesResponseSchema } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------
