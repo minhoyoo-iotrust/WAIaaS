@@ -179,12 +179,12 @@ Plans:
   3. Admin UI Dashboard에 통계 카드(RPC 네트워크 테이블, AutoStop 규칙 테이블, 알림 요약, 시스템 정보)가 30초 폴링으로 표시된다
   4. GET /v1/admin/autostop/rules로 규칙 목록과 상태를 조회하고, PUT /v1/admin/autostop/rules/:id로 개별 규칙의 enabled/config를 변경할 수 있다
   5. 기존 3개 AutoStop 규칙이 IAutoStopRule 인터페이스 기반 플러그인으로 리팩터링되어, RuleRegistry에 등록되고, Admin Settings에서 규칙별 토글이 가능하다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 313-01: IAutoStopRule 인터페이스 추출 + RuleRegistry + 기존 3규칙 리팩터링
-- [ ] 313-02: IMetricsCounter + AdminStatsService + GET /v1/admin/stats API
-- [ ] 313-03: AutoStop 규칙 REST API + Admin Settings 토글 + Admin UI 통계 카드
+- [ ] 313-01-PLAN.md -- IAutoStopRule 인터페이스 + RuleRegistry + 기존 3규칙 리팩터링
+- [ ] 313-02-PLAN.md -- IMetricsCounter + AdminStatsService + GET /v1/admin/stats API
+- [ ] 313-03-PLAN.md -- AutoStop 규칙 REST API + Admin Settings 토글 + Admin UI 통계 카드
 
 ## Progress
 
@@ -206,4 +206,4 @@ Phases execute in numeric order: 309 -> 310 -> 311 -> 312 -> 313
 | 313. Admin Stats + AutoStop Plugin | v30.2 | 0/3 | Not started | - |
 
 ---
-*Last updated: 2026-03-03 -- Phase 312 Webhook Outbound complete (3 plans, 5 tasks, 47 tests)*
+*Last updated: 2026-03-03 -- Phase 313 planned (3 plans, 6 tasks, 2 waves)*
