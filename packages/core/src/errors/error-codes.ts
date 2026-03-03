@@ -864,6 +864,15 @@ export const ERROR_CODES = {
     retryable: false,
     message: 'Webhook not found',
   },
+
+  // --- ADMIN domain (autostop) ---
+  RULE_NOT_FOUND: {
+    code: 'RULE_NOT_FOUND',
+    domain: 'ADMIN',
+    httpStatus: 404,
+    retryable: false,
+    message: 'AutoStop rule not found',
+  },
 } as const satisfies Record<string, ErrorCodeEntry>;
 
 export type ErrorCode = keyof typeof ERROR_CODES;

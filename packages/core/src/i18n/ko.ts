@@ -135,6 +135,8 @@ export const messages: Messages = {
     BACKUP_NOT_FOUND: '백업 파일을 찾을 수 없습니다',
     // ADMIN domain (webhook)
     WEBHOOK_NOT_FOUND: '웹훅을 찾을 수 없습니다',
+    // ADMIN domain (autostop)
+    RULE_NOT_FOUND: 'AutoStop 규칙을 찾을 수 없습니다',
   },
   // Notification templates (31 event types)
   notifications: {

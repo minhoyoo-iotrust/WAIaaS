@@ -122,6 +122,11 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'autostop.idle_check_interval_sec', category: 'autostop', configPath: 'security.autostop_idle_check_interval_sec', defaultValue: '60', isCredential: false },
   { key: 'autostop.enabled', category: 'autostop', configPath: 'security.autostop_enabled', defaultValue: 'true', isCredential: false },
 
+  // --- autostop per-rule enable (PLUG-04) ---
+  { key: 'autostop.rule.consecutive_failures.enabled', category: 'autostop', configPath: 'security.autostop_rule_consecutive_failures_enabled', defaultValue: 'true', isCredential: false },
+  { key: 'autostop.rule.unusual_activity.enabled', category: 'autostop', configPath: 'security.autostop_rule_unusual_activity_enabled', defaultValue: 'true', isCredential: false },
+  { key: 'autostop.rule.idle_timeout.enabled', category: 'autostop', configPath: 'security.autostop_rule_idle_timeout_enabled', defaultValue: 'true', isCredential: false },
+
   // --- monitoring category (BMON-05 runtime-overridable) ---
   { key: 'monitoring.check_interval_sec', category: 'monitoring', configPath: 'security.monitoring_check_interval_sec', defaultValue: '300', isCredential: false },
   { key: 'monitoring.low_balance_threshold_sol', category: 'monitoring', configPath: 'security.monitoring_low_balance_threshold_sol', defaultValue: '0.01', isCredential: false },

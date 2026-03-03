@@ -189,6 +189,8 @@ export const messages: Messages = {
     BACKUP_NOT_FOUND: 'Backup file not found',
     // ADMIN domain (webhook)
     WEBHOOK_NOT_FOUND: 'Webhook not found',
+    // ADMIN domain (autostop)
+    RULE_NOT_FOUND: 'AutoStop rule not found',
   },
   // Notification templates (30 event types)
   notifications: {

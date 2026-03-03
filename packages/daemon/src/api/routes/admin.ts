@@ -2956,5 +2956,121 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
     return c.json(stats, 200);
   });
 
+  // ---------------------------------------------------------------------------
+  // GET /admin/autostop/rules -- List AutoStop rules with status (PLUG-03)
+  // ---------------------------------------------------------------------------
+
+  const autostopRulesRoute = createRoute({
+    method: 'get',
+    path: '/admin/autostop/rules',
+    tags: ['Admin'],
+    summary: 'List AutoStop rules with status',
+    responses: {
+      200: {
+        description: 'AutoStop rules list',
+        content: { 'application/json': { schema: z.any() } },
+      },
+    },
+  });
+
+  router.openapi(autostopRulesRoute, async (c) => {
+    if (!deps.autoStopService) {
+      return c.json({ globalEnabled: false, rules: [] }, 200);
+    }
+
+    const status = deps.autoStopService.getStatus();
+    const registry = deps.autoStopService.registry;
+    const rules = registry.getRules().map((r) => {
+      const ruleStatus = r.getStatus();
+      return {
+        id: r.id,
+        displayName: r.displayName,
+        description: r.description,
+        enabled: r.enabled,
+        subscribedEvents: r.subscribedEvents,
+        config: ruleStatus.config,
+        state: ruleStatus.state,
+      };
+    });
+
+    return c.json({ globalEnabled: status.enabled, rules }, 200);
+  });
+
+  // ---------------------------------------------------------------------------
+  // PUT /admin/autostop/rules/:id -- Update AutoStop rule (PLUG-03)
+  // ---------------------------------------------------------------------------
+
+  const autostopRuleUpdateRoute = createRoute({
+    method: 'put',
+    path: '/admin/autostop/rules/{id}',
+    tags: ['Admin'],
+    summary: 'Update AutoStop rule enabled/config',
+    request: {
+      params: z.object({ id: z.string() }),
+      body: {
+        content: {
+          'application/json': {
+            schema: z.object({
+              enabled: z.boolean().optional(),
+              config: z.record(z.unknown()).optional(),
+            }),
+          },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: 'Rule updated',
+        content: { 'application/json': { schema: z.any() } },
+      },
+      404: {
+        description: 'Rule not found',
+        content: { 'application/json': { schema: z.any() } },
+      },
+    },
+  });
+
+  router.openapi(autostopRuleUpdateRoute, async (c) => {
+    if (!deps.autoStopService) {
+      throw new WAIaaSError('RULE_NOT_FOUND');
+    }
+
+    const { id } = c.req.valid('param');
+    const body = c.req.valid('json');
+    const registry = deps.autoStopService.registry;
+    const rule = registry.getRule(id);
+
+    if (!rule) {
+      throw new WAIaaSError('RULE_NOT_FOUND');
+    }
+
+    // Update enabled state
+    if (body.enabled !== undefined) {
+      registry.setEnabled(id, body.enabled);
+
+      // Persist to Admin Settings
+      if (deps.settingsService) {
+        deps.settingsService.set(`autostop.rule.${id}.enabled`, String(body.enabled));
+      }
+    }
+
+    // Update config
+    if (body.config) {
+      rule.updateConfig(body.config);
+    }
+
+    // Return updated rule info
+    const ruleStatus = rule.getStatus();
+    return c.json({
+      id: rule.id,
+      displayName: rule.displayName,
+      description: rule.description,
+      enabled: rule.enabled,
+      subscribedEvents: rule.subscribedEvents,
+      config: ruleStatus.config,
+      state: ruleStatus.state,
+    }, 200);
+  });
+
   return router;
 }

@@ -332,6 +332,9 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     // masterAuth for webhook CRUD API (OPS-04)
     app.use('/v1/webhooks', masterAuthForAdmin);
     app.use('/v1/webhooks/*', masterAuthForAdmin);
+    // masterAuth for admin stats + autostop rules API (STAT-01, PLUG-03)
+    app.use('/v1/admin/stats', masterAuthForAdmin);
+    app.use('/v1/admin/autostop/*', masterAuthForAdmin);
     // masterAuth for encrypted backup API (OPS-03)
     app.use('/v1/admin/backup', masterAuthForAdmin);
     app.use('/v1/admin/backups', masterAuthForAdmin);
