@@ -1479,6 +1479,34 @@ export class DaemonLifecycle {
         console.debug('Step 6: Version check disabled');
       }
 
+      // Register backup worker (auto-backup scheduler)
+      if (this._encryptedBackupService && this._config!.backup.interval > 0) {
+        const backupInterval = this._config!.backup.interval * 1000; // seconds -> ms
+        const retentionCount = this._config!.backup.retention_count;
+        const backupService = this._encryptedBackupService;
+        const masterPwd = this.masterPassword;
+
+        this.workers.register('backup-worker', {
+          interval: backupInterval,
+          handler: async () => {
+            if (this._isShuttingDown) return;
+            try {
+              const info = await backupService.createBackup(masterPwd);
+              console.log(`Auto-backup created: ${info.filename} (${info.size} bytes)`);
+              const pruned = backupService.pruneBackups(retentionCount);
+              if (pruned > 0) {
+                console.log(`Auto-backup: pruned ${pruned} old backup(s), keeping ${retentionCount}`);
+              }
+            } catch (err) {
+              console.error('Auto-backup failed:', err);
+            }
+          },
+        });
+        console.debug(`Step 6: Backup worker registered (interval=${this._config!.backup.interval}s, retention=${retentionCount})`);
+      } else {
+        console.debug('Step 6: Backup worker disabled (interval=0 or no backup service)');
+      }
+
       this.workers.startAll();
 
       // Write PID file
