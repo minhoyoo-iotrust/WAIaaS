@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v30.2
 milestone_name: 운영 기능 확장 구현
-status: unknown
-last_updated: "2026-03-03T12:20:31.538Z"
+status: active
+last_updated: "2026-03-03T22:05:00.000Z"
 progress:
   total_phases: 184
-  completed_phases: 178
+  completed_phases: 179
   total_plans: 395
-  completed_plans: 389
+  completed_plans: 392
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-03)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v30.2 운영 기능 확장 구현 -- Phase 311 (Encrypted Backup & Restore) complete
+**Current focus:** v30.2 운영 기능 확장 구현 -- Phase 312 (Webhook Outbound) complete
 
 ## Current Position
 
-Phase: 3 of 5 (Phase 311: Encrypted Backup & Restore)
+Phase: 4 of 5 (Phase 312: Webhook Outbound)
 Plan: 3 of 3 in current phase (COMPLETE)
-Status: Phase 311 complete -- ready for Phase 312
-Last activity: 2026-03-03 -- Phase 311 complete (3 plans, 6 tasks, 6 commits, 129 tests)
+Status: Phase 312 complete -- ready for Phase 313
+Last activity: 2026-03-03 -- Phase 312 complete (3 plans, 5 tasks, 5 commits, 47 webhook tests)
 
-Progress: [██████░░░░] 56%
+Progress: [████████░░] 78%
 
 ## Performance Metrics
 
@@ -56,6 +56,12 @@ Progress: [██████░░░░] 56%
 - BackupWorker does NOT set runImmediately: first backup after one interval
 - PID alive check separated from process.exit to avoid try/catch swallowing the throw
 - better-sqlite3 added as direct CLI dependency for PRAGMA integrity_check on restored DB
+- Webhook secret model: randomBytes(32) -> SHA-256 hash + AES-256-GCM encrypted, secret returned once on POST only
+- Fire-and-forget WebhookDeliveryQueue: 4 attempts, exponential backoff (0/1s/2s/4s), 10s timeout, 4xx stops immediately
+- EventBus event mapping: 5 internal events -> 7+ webhook event types via ACTIVITY_EVENT_MAP and direct handlers
+- WebhookService destroy uses disposed flag (not removeListener) since EventBus only exposes removeAllListeners()
+- Logs API: dynamic SQL with parameterized conditions for safe filtering (status/event_type/limit)
+- DB migration v37: webhooks + webhook_logs tables (21 total tables, LATEST_SCHEMA_VERSION=37)
 
 ### Blockers/Concerns
 
@@ -64,5 +70,5 @@ Progress: [██████░░░░] 56%
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Completed 311-03-PLAN.md (Phase 311 Encrypted Backup & Restore complete)
+Stopped at: Completed 312-03-PLAN.md (Phase 312 Webhook Outbound complete)
 Resume file: None

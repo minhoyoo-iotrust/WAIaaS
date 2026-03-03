@@ -101,7 +101,7 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v30.0-ROADMAP.md` for full 
 - [x] **Phase 309: Transaction Dry-Run** - 트랜잭션 시뮬레이션 API + SDK + MCP 구현 -- completed 2026-03-03
 - [x] **Phase 310: Audit Log Query API** - 감사 로그 조회 엔드포인트 + 이벤트 타입 확대 + DB 인덱스 -- completed 2026-03-03
 - [x] **Phase 311: Encrypted Backup & Restore** - 암호화 백업 생성/복원 API + CLI + 자동 스케줄러 -- completed 2026-03-03
-- [ ] **Phase 312: Webhook Outbound** - Webhook CRUD API + HMAC 서명 + 재시도 큐 + DB 테이블
+- [x] **Phase 312: Webhook Outbound** - Webhook CRUD API + HMAC 서명 + 재시도 큐 + DB 테이블 -- completed 2026-03-03
 - [ ] **Phase 313: Admin Stats + AutoStop Plugin** - 운영 통계 API + AutoStop 규칙 플러그인 아키텍처
 
 ## Phase Details
@@ -165,9 +165,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 312-01-PLAN.md -- DB migration v37 + Zod SSoT + WebhookService + WebhookDeliveryQueue + HMAC 서명
-- [ ] 312-02-PLAN.md -- Webhook CRUD REST API (POST/GET/DELETE /v1/webhooks)
-- [ ] 312-03-PLAN.md -- EventBus 이벤트 필터링 연동 + Daemon lifecycle + 전송 이력 API
+- [x] 312-01-PLAN.md -- DB migration v37 + Zod SSoT + WebhookService + WebhookDeliveryQueue + HMAC 서명 -- completed 2026-03-03
+- [x] 312-02-PLAN.md -- Webhook CRUD REST API (POST/GET/DELETE /v1/webhooks) -- completed 2026-03-03
+- [x] 312-03-PLAN.md -- EventBus 이벤트 필터링 연동 + Daemon lifecycle + 전송 이력 API -- completed 2026-03-03
 
 ### Phase 313: Admin Stats + AutoStop Plugin
 **Goal**: 관리자가 데몬의 운영 현황(트랜잭션/세션/RPC/알림 통계)을 한눈에 파악하고, AutoStop 규칙을 개별적으로 활성화/비활성화/설정 변경할 수 있다
@@ -202,8 +202,8 @@ Phases execute in numeric order: 309 -> 310 -> 311 -> 312 -> 313
 | 309. Transaction Dry-Run | v30.2 | Complete    | 2026-03-03 | 2026-03-03 |
 | 310. Audit Log Query API | v30.2 | Complete    | 2026-03-03 | 2026-03-03 |
 | 311. Encrypted Backup & Restore | v30.2 | Complete    | 2026-03-03 | 2026-03-03 |
-| 312. Webhook Outbound | v30.2 | 0/3 | Not started | - |
+| 312. Webhook Outbound | v30.2 | 3/3 | Complete | 2026-03-03 |
 | 313. Admin Stats + AutoStop Plugin | v30.2 | 0/3 | Not started | - |
 
 ---
-*Last updated: 2026-03-03 -- Phase 312 plans created (3 plans, 5 tasks)*
+*Last updated: 2026-03-03 -- Phase 312 Webhook Outbound complete (3 plans, 5 tasks, 47 tests)*

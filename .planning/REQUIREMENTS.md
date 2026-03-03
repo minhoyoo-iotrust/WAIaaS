@@ -34,13 +34,13 @@ Requirements for v30.2. Each maps to roadmap phases.
 
 ### Webhook Outbound (HOOK)
 
-- [ ] **HOOK-01**: POST /v1/webhooks registers webhook, returns 64-char hex secret once (SHA-256 hash for lookup + AES-256-GCM encrypted for HMAC signing, masterAuth, 201)
-- [ ] **HOOK-02**: GET /v1/webhooks lists webhooks (secret not exposed), DELETE /v1/webhooks/:id returns 204 with CASCADE logs deletion (masterAuth, WEBHOOK_NOT_FOUND 404)
-- [ ] **HOOK-03**: GET /v1/webhooks/:id/logs returns delivery history with status/event_type/limit filters (default 20, max 100, masterAuth)
-- [ ] **HOOK-04**: Webhook payloads signed with HMAC-SHA256 — X-WAIaaS-Signature (sha256={hex}), X-WAIaaS-Event, X-WAIaaS-Delivery (UUID), X-WAIaaS-Timestamp headers
-- [ ] **HOOK-05**: WebhookDeliveryQueue — max 4 attempts, exponential backoff (0/1s/2s/4s), 10s fetch timeout, 4xx immediate stop, per-attempt webhook_logs recording
-- [ ] **HOOK-06**: DB migration v35 creates webhooks (8 columns, 1 index, 1 CHECK) + webhook_logs (9 columns, 4 indexes, 1 CHECK) tables — total 19→21 tables
-- [ ] **HOOK-07**: WebhookService listens to EventBus events + direct invocations, filters via webhooks.events JSON array (empty = wildcard all 20 event types), independent from INotificationChannel
+- [x] **HOOK-01**: POST /v1/webhooks registers webhook, returns 64-char hex secret once (SHA-256 hash for lookup + AES-256-GCM encrypted for HMAC signing, masterAuth, 201)
+- [x] **HOOK-02**: GET /v1/webhooks lists webhooks (secret not exposed), DELETE /v1/webhooks/:id returns 204 with CASCADE logs deletion (masterAuth, WEBHOOK_NOT_FOUND 404)
+- [x] **HOOK-03**: GET /v1/webhooks/:id/logs returns delivery history with status/event_type/limit filters (default 20, max 100, masterAuth)
+- [x] **HOOK-04**: Webhook payloads signed with HMAC-SHA256 — X-WAIaaS-Signature (sha256={hex}), X-WAIaaS-Event, X-WAIaaS-Delivery (UUID), X-WAIaaS-Timestamp headers
+- [x] **HOOK-05**: WebhookDeliveryQueue — max 4 attempts, exponential backoff (0/1s/2s/4s), 10s fetch timeout, 4xx immediate stop, per-attempt webhook_logs recording
+- [x] **HOOK-06**: DB migration v37 creates webhooks (9 columns, 1 index, 1 CHECK) + webhook_logs (9 columns, 4 indexes, 1 CHECK) tables — total 19->21 tables
+- [x] **HOOK-07**: WebhookService listens to EventBus events + direct invocations, filters via webhooks.events JSON array (empty = wildcard all 20 event types), independent from INotificationChannel
 
 ### Admin Stats (STAT)
 
@@ -106,13 +106,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BKUP-04 | Phase 311 | Complete |
 | BKUP-05 | Phase 311 | Complete |
 | BKUP-06 | Phase 311 | Complete |
-| HOOK-01 | Phase 312 | Pending |
-| HOOK-02 | Phase 312 | Pending |
-| HOOK-03 | Phase 312 | Pending |
-| HOOK-04 | Phase 312 | Pending |
-| HOOK-05 | Phase 312 | Pending |
-| HOOK-06 | Phase 312 | Pending |
-| HOOK-07 | Phase 312 | Pending |
+| HOOK-01 | Phase 312 | Complete |
+| HOOK-02 | Phase 312 | Complete |
+| HOOK-03 | Phase 312 | Complete |
+| HOOK-04 | Phase 312 | Complete |
+| HOOK-05 | Phase 312 | Complete |
+| HOOK-06 | Phase 312 | Complete |
+| HOOK-07 | Phase 312 | Complete |
 | STAT-01 | Phase 313 | Pending |
 | STAT-02 | Phase 313 | Pending |
 | STAT-03 | Phase 313 | Pending |
@@ -129,4 +129,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-03*
-*Last updated: 2026-03-03 -- BKUP-01~06 complete (Phase 311), 16/30 remaining*
+*Last updated: 2026-03-03 -- HOOK-01~07 complete (Phase 312), 9/30 remaining*
