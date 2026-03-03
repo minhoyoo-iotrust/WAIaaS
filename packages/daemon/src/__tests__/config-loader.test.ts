@@ -698,3 +698,89 @@ jupiter_swap_max_price_impact_pct = 2.0
     expect(actionsKeys).toHaveLength(18); // 8 Jupiter + 5 0x + 5 LiFi
   });
 });
+
+// ---------------------------------------------------------------------------
+// [backup] section
+// ---------------------------------------------------------------------------
+
+describe('[backup] config section', () => {
+  it('produces backup defaults: { dir: backups, interval: 0, retention_count: 7 }', () => {
+    const config = DaemonConfigSchema.parse({});
+    expect(config.backup).toEqual({ dir: 'backups', interval: 0, retention_count: 7 });
+  });
+
+  it('parses custom backup values correctly', () => {
+    const config = DaemonConfigSchema.parse({
+      backup: { dir: 'my-backups', interval: 86400, retention_count: 14 },
+    });
+    expect(config.backup.dir).toBe('my-backups');
+    expect(config.backup.interval).toBe(86400);
+    expect(config.backup.retention_count).toBe(14);
+  });
+
+  it('rejects backup.interval < 0', () => {
+    expect(() =>
+      DaemonConfigSchema.parse({ backup: { interval: -1 } }),
+    ).toThrow();
+  });
+
+  it('rejects backup.interval > 604800', () => {
+    expect(() =>
+      DaemonConfigSchema.parse({ backup: { interval: 604801 } }),
+    ).toThrow();
+  });
+
+  it('rejects backup.retention_count < 1', () => {
+    expect(() =>
+      DaemonConfigSchema.parse({ backup: { retention_count: 0 } }),
+    ).toThrow();
+  });
+
+  it('rejects backup.retention_count > 100', () => {
+    expect(() =>
+      DaemonConfigSchema.parse({ backup: { retention_count: 101 } }),
+    ).toThrow();
+  });
+
+  it('WAIAAS_BACKUP_DIR env var overrides config.toml backup.dir', () => {
+    const dir = saveTempDir(createTempDir());
+    writeFileSync(join(dir, 'config.toml'), '[backup]\ndir = "from-toml"\n');
+    setEnv('WAIAAS_BACKUP_DIR', '/custom/backups');
+    const config = loadConfig(dir);
+    expect(config.backup.dir).toBe('/custom/backups');
+  });
+
+  it('WAIAAS_BACKUP_INTERVAL env var overrides config.toml backup.interval', () => {
+    const dir = saveTempDir(createTempDir());
+    writeFileSync(join(dir, 'config.toml'), '[backup]\ninterval = 3600\n');
+    setEnv('WAIAAS_BACKUP_INTERVAL', '7200');
+    const config = loadConfig(dir);
+    expect(config.backup.interval).toBe(7200);
+  });
+
+  it('WAIAAS_BACKUP_RETENTION_COUNT env var overrides config.toml backup.retention_count', () => {
+    const dir = saveTempDir(createTempDir());
+    writeFileSync(join(dir, 'config.toml'), '[backup]\nretention_count = 7\n');
+    setEnv('WAIAAS_BACKUP_RETENTION_COUNT', '21');
+    const config = loadConfig(dir);
+    expect(config.backup.retention_count).toBe(21);
+  });
+
+  it('[backup] is recognized as a valid known section', () => {
+    expect(() =>
+      detectNestedSections({ backup: { dir: 'backups' } }),
+    ).not.toThrow();
+  });
+
+  it('loadConfig with config.toml containing [backup] section parses correctly', () => {
+    const dir = saveTempDir(createTempDir());
+    writeFileSync(
+      join(dir, 'config.toml'),
+      '[backup]\ndir = "custom"\ninterval = 3600\nretention_count = 14\n',
+    );
+    const config = loadConfig(dir);
+    expect(config.backup.dir).toBe('custom');
+    expect(config.backup.interval).toBe(3600);
+    expect(config.backup.retention_count).toBe(14);
+  });
+});
