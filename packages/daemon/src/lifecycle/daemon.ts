@@ -40,6 +40,8 @@ import { WAIaaSError, getSingleNetwork, EventBus, RpcPool, BUILT_IN_RPC_DEFAULTS
 import { KillSwitchService } from '../services/kill-switch-service.js';
 import { AutoStopService } from '../services/autostop-service.js';
 import type { AutoStopConfig } from '../services/autostop-service.js';
+import { InMemoryCounter } from '../infrastructure/metrics/in-memory-counter.js';
+import { AdminStatsService } from '../services/admin-stats-service.js';
 import type { BalanceMonitorService, BalanceMonitorConfig } from '../services/monitoring/balance-monitor-service.js';
 import type { ChainType, NetworkType, EnvironmentType } from '@waiaas/core';
 import type { AdapterPool } from '../infrastructure/adapter-pool.js';
@@ -160,6 +162,9 @@ export class DaemonLifecycle {
   private defiMonitorService: import('../services/monitoring/defi-monitor-service.js').DeFiMonitorService | null = null;
   private _encryptedBackupService: import('../infrastructure/backup/encrypted-backup-service.js').EncryptedBackupService | null = null;
   private webhookService: import('../services/webhook-service.js').WebhookService | null = null;
+  private metricsCounter: InMemoryCounter | null = null;
+  private adminStatsService: AdminStatsService | null = null;
+  private daemonStartTime: number = Math.floor(Date.now() / 1000);
 
   /** Whether shutdown has been initiated. */
   get isShuttingDown(): boolean {
@@ -620,6 +625,29 @@ export class DaemonLifecycle {
     } catch (err) {
       console.warn('Step 4c-3 (fail-soft): AutoStop engine init warning:', err);
       this.autoStopService = null;
+    }
+
+    // ------------------------------------------------------------------
+    // Step 4c-3b: InMemoryCounter + AdminStatsService (fail-soft)
+    // ------------------------------------------------------------------
+    try {
+      if (this.sqlite) {
+        this.metricsCounter = new InMemoryCounter();
+
+        const { version: daemonVersion } = require('../../package.json') as { version: string };
+        this.adminStatsService = new AdminStatsService({
+          sqlite: this.sqlite,
+          metricsCounter: this.metricsCounter,
+          autoStopService: this.autoStopService ?? undefined,
+          startTime: this.daemonStartTime,
+          version: daemonVersion,
+          dataDir,
+        });
+        console.debug('Step 4c-3b: AdminStatsService created');
+      }
+    } catch (err) {
+      console.warn('Step 4c-3b (fail-soft): AdminStatsService init warning:', err);
+      this.adminStatsService = null;
     }
 
     // ------------------------------------------------------------------
@@ -1358,6 +1386,8 @@ export class DaemonLifecycle {
           approvalChannelRouter: this.approvalChannelRouter ?? undefined,
           versionCheckService: this._versionCheckService,
           encryptedBackupService: this._encryptedBackupService ?? undefined,
+          adminStatsService: this.adminStatsService ?? undefined,
+          autoStopService: this.autoStopService ?? undefined,
         });
 
         const hostname = this._config!.daemon.hostname;

@@ -133,6 +133,10 @@ export interface CreateAppDeps {
   incomingTxMonitorService?: { syncSubscriptions(): void | Promise<void> };
   /** Duck-typed to avoid circular import with EncryptedBackupService */
   encryptedBackupService?: { createBackup(password: string): Promise<{ path: string; filename: string; size: number; created_at: string; daemon_version: string; schema_version: number; file_count: number }>; listBackups(): Array<{ path: string; filename: string; size: number; created_at: string; daemon_version: string; schema_version: number; file_count: number }>; };
+  /** AdminStatsService for GET /admin/stats (STAT-01) */
+  adminStatsService?: import('../services/admin-stats-service.js').AdminStatsService;
+  /** AutoStopService for /admin/autostop routes (PLUG-03) */
+  autoStopService?: import('../services/autostop/autostop-service.js').AutoStopService;
 }
 
 /**
@@ -620,6 +624,8 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         approvalWorkflow: deps.approvalWorkflow,
         rpcPool: deps.adapterPool?.pool,
         encryptedBackupService: deps.encryptedBackupService as AdminRouteDeps['encryptedBackupService'],
+        adminStatsService: deps.adminStatsService,
+        autoStopService: deps.autoStopService,
       }),
     );
 

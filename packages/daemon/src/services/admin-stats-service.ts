@@ -9,7 +9,6 @@
  */
 
 import type { Database } from 'better-sqlite3';
-import type { IMetricsCounter } from '@waiaas/core';
 import type { AdminStatsResponse } from '@waiaas/core';
 import type { InMemoryCounter } from '../infrastructure/metrics/in-memory-counter.js';
 import { LATEST_SCHEMA_VERSION } from '../infrastructure/database/index.js';
@@ -108,7 +107,7 @@ export class AdminStatsService {
     const networkSet = new Set<string>();
     for (const k of [...rpcCallsByNetwork.keys(), ...rpcErrorsByNetwork.keys(), ...rpcLatByNetwork.keys()]) {
       const match = k.match(/network=([^|]+)/);
-      if (match) networkSet.add(match[1]);
+      if (match?.[1]) networkSet.add(match[1]);
     }
 
     const byNetwork = Array.from(networkSet).map((network) => {

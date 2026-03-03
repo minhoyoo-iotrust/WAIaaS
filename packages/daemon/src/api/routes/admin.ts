@@ -132,6 +132,8 @@ export interface AdminRouteDeps {
   approvalWorkflow?: ApprovalWorkflow;
   rpcPool?: RpcPool;
   encryptedBackupService?: EncryptedBackupService;
+  adminStatsService?: import('../../services/admin-stats-service.js').AdminStatsService;
+  autoStopService?: import('../../services/autostop/autostop-service.js').AutoStopService;
 }
 
 // ---------------------------------------------------------------------------
@@ -2926,6 +2928,32 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
     const backups = deps.encryptedBackupService.listBackups();
     const retentionCount = deps.daemonConfig?.backup?.retention_count ?? 7;
     return c.json({ backups, total: backups.length, retention_count: retentionCount }, 200);
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /admin/stats -- 7-category operational statistics (STAT-01)
+  // ---------------------------------------------------------------------------
+
+  const adminStatsRoute = createRoute({
+    method: 'get',
+    path: '/admin/stats',
+    tags: ['Admin'],
+    summary: 'Get operational statistics',
+    responses: {
+      200: {
+        description: 'Operational statistics (7 categories)',
+        content: { 'application/json': { schema: z.any() } },
+      },
+    },
+  });
+
+  router.openapi(adminStatsRoute, async (c) => {
+    if (!deps.adminStatsService) {
+      return c.json({ code: 'NOT_CONFIGURED', message: 'Stats service not configured', retryable: false }, 503 as any);
+    }
+
+    const stats = deps.adminStatsService.getStats();
+    return c.json(stats, 200);
   });
 
   return router;
