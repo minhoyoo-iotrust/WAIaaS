@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.9.1-rc](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0...v2.9.1-rc) (2026-03-03)
+
+
+### Bug Fixes
+
+* **#246:** resume pipeline after APPROVAL tier owner sign-off ([1009933](https://github.com/minhoyoo-iotrust/WAIaaS/commit/10099331f1d440045fe70ab0be1006dcbb795380))
+
 ## [2.9.0](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc.19...v2.9.0) (2026-03-03)
 
 
