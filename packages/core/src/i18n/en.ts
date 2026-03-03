@@ -182,6 +182,11 @@ export const messages: Messages = {
     // ADMIN domain (wallet apps)
     WALLET_APP_DUPLICATE: 'Wallet app already registered',
     WALLET_APP_NOT_FOUND: 'Wallet app not found',
+    // ADMIN domain (backup)
+    INVALID_BACKUP_FORMAT: 'Not a valid WAIaaS backup file (magic number mismatch)',
+    UNSUPPORTED_BACKUP_VERSION: 'Unsupported backup format version',
+    BACKUP_CORRUPTED: 'Backup archive is corrupted or has been tampered with',
+    BACKUP_NOT_FOUND: 'Backup file not found',
   },
   // Notification templates (30 event types)
   notifications: {

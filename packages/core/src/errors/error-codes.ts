@@ -825,6 +825,36 @@ export const ERROR_CODES = {
     retryable: false,
     message: 'Wallet app not found',
   },
+
+  // --- ADMIN domain (backup) ---
+  INVALID_BACKUP_FORMAT: {
+    code: 'INVALID_BACKUP_FORMAT',
+    domain: 'ADMIN',
+    httpStatus: 400,
+    retryable: false,
+    message: 'Not a valid WAIaaS backup file (magic number mismatch)',
+  },
+  UNSUPPORTED_BACKUP_VERSION: {
+    code: 'UNSUPPORTED_BACKUP_VERSION',
+    domain: 'ADMIN',
+    httpStatus: 400,
+    retryable: false,
+    message: 'Unsupported backup format version',
+  },
+  BACKUP_CORRUPTED: {
+    code: 'BACKUP_CORRUPTED',
+    domain: 'ADMIN',
+    httpStatus: 400,
+    retryable: false,
+    message: 'Backup archive is corrupted or has been tampered with',
+  },
+  BACKUP_NOT_FOUND: {
+    code: 'BACKUP_NOT_FOUND',
+    domain: 'ADMIN',
+    httpStatus: 404,
+    retryable: false,
+    message: 'Backup file not found',
+  },
 } as const satisfies Record<string, ErrorCodeEntry>;
 
 export type ErrorCode = keyof typeof ERROR_CODES;
