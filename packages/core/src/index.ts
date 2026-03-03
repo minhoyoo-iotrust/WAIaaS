@@ -406,6 +406,9 @@ export { getExplorerTxUrl } from './utils/index.js';
 // i18n (multilingual messages)
 export { getMessages, type SupportedLocale, type Messages } from './i18n/index.js';
 
+// v30.2 Metrics Counter (IMetricsCounter interface + snapshot type)
+export type { IMetricsCounter, MetricsSnapshot } from './metrics/metrics-counter.js';
+
 // v28.6 RPC Pool (priority-based URL rotation with cooldown)
 export {
   RpcPool,
