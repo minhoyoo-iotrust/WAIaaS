@@ -23,10 +23,10 @@ Requirements for milestone v30.0. Each maps to roadmap phases.
 
 ### Backup (암호화 백업/복원)
 
-- [ ] **BKUP-01**: 백업 아카이브 바이너리 포맷 사양을 정의한다 (헤더 + 메타데이터 + AES-256-GCM 암호화 페이로드)
-- [ ] **BKUP-02**: BackupService 암호화 확장 설계를 정의한다 (기존 인터페이스 유지, Argon2id KDF 키 유도, VACUUM INTO 원자적 스냅샷)
-- [ ] **BKUP-03**: `waiaas backup` / `waiaas restore` CLI 인터페이스와 안전 장치를 설계한다
-- [ ] **BKUP-04**: config.toml `[backup]` 섹션 키를 정의한다 (backup_dir, backup_interval, backup_retention_count)
+- [x] **BKUP-01**: 백업 아카이브 바이너리 포맷 사양을 정의한다 (헤더 + 메타데이터 + AES-256-GCM 암호화 페이로드)
+- [x] **BKUP-02**: BackupService 암호화 확장 설계를 정의한다 (기존 인터페이스 유지, Argon2id KDF 키 유도, VACUUM INTO 원자적 스냅샷)
+- [x] **BKUP-03**: `waiaas backup` / `waiaas restore` CLI 인터페이스와 안전 장치를 설계한다
+- [x] **BKUP-04**: config.toml `[backup]` 섹션 키를 정의한다 (backup_dir, backup_interval, backup_retention_count)
 
 ### Webhook (웹훅 아웃바운드)
 
@@ -88,10 +88,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AUDIT-02 | Phase 305 | Pending |
 | AUDIT-03 | Phase 305 | Pending |
 | AUDIT-04 | Phase 305 | Pending |
-| BKUP-01 | Phase 306 | Pending |
-| BKUP-02 | Phase 306 | Pending |
-| BKUP-03 | Phase 306 | Pending |
-| BKUP-04 | Phase 306 | Pending |
+| BKUP-01 | Phase 306 | Complete |
+| BKUP-02 | Phase 306 | Complete |
+| BKUP-03 | Phase 306 | Complete |
+| BKUP-04 | Phase 306 | Complete |
 | HOOK-01 | Phase 307 | Pending |
 | HOOK-02 | Phase 307 | Pending |
 | HOOK-03 | Phase 307 | Pending |

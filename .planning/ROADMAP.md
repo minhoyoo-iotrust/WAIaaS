@@ -99,7 +99,7 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v29.10-ROADMAP.md` for full
 
 - [ ] **Phase 304: Transaction Dry-Run 설계** - PipelineContext dryRun 분기, SimulationResult 스키마, REST/SDK/MCP 확장 스펙 정의
 - [ ] **Phase 305: Audit Log Query API 설계** - 감사 이벤트 12개+ 확대, cursor pagination, AuditLog 조회 엔드포인트 스펙 정의
-- [ ] **Phase 306: Encrypted Backup & Restore 설계** - 암호화 아카이브 포맷, BackupService 확장, CLI 커맨드, config.toml 키 정의
+- [x] **Phase 306: Encrypted Backup & Restore 설계** - 암호화 아카이브 포맷, BackupService 확장, CLI 커맨드, config.toml 키 정의
 - [ ] **Phase 307: Webhook Outbound 설계** - DB 스키마, HMAC 서명 프로토콜, 재시도 큐, REST API, EventBus 연동 설계
 - [ ] **Phase 308: Admin Stats + AutoStop Plugin 설계** - 통합 통계 스키마, 인메모리 카운터, IAutoStopRule 인터페이스, RuleRegistry, Admin 토글
 
@@ -147,8 +147,8 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 306-01: 아카이브 바이너리 포맷 + BackupService 암호화 확장 설계
-- [ ] 306-02: CLI 커맨드 + config.toml 키 + 설계 문서 갱신
+- [x] 306-01: 아카이브 바이너리 포맷 + BackupService 암호화 확장 설계
+- [x] 306-02: CLI 커맨드 + config.toml 키 + 설계 문서 갱신
 
 ### Phase 307: Webhook Outbound 설계
 **Goal**: 외부 시스템이 WAIaaS 이벤트를 프로그래밍 방식으로 구독하고 HMAC 서명으로 검증할 수 있는 webhook 메커니즘이 설계된다
@@ -198,7 +198,7 @@ Phases execute in numeric order: 304 → 305 → 306 → 307 → 308
 | 268-303 | v29.0-v29.10 | All | Complete | 2026-03-02 |
 | 304. Transaction Dry-Run 설계 | v30.0 | 0/2 | Not started | - |
 | 305. Audit Log Query API 설계 | v30.0 | 0/2 | Not started | - |
-| 306. Encrypted Backup & Restore 설계 | v30.0 | 0/2 | Not started | - |
+| 306. Encrypted Backup & Restore 설계 | v30.0 | 2/2 | Complete | 2026-03-03 |
 | 307. Webhook Outbound 설계 | v30.0 | 0/2 | Not started | - |
 | 308. Admin Stats + AutoStop Plugin 설계 | v30.0 | 0/3 | Not started | - |
 
