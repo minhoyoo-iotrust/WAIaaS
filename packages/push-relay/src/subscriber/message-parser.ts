@@ -15,6 +15,14 @@ export interface ParsedNtfyMessage {
   title?: string;
   priority?: number;
   tags?: string[];
+  /** Present when message exceeds ntfy size limit and is auto-converted to file attachment. */
+  attachment?: {
+    name: string;
+    type: string;
+    size: number;
+    expires: number;
+    url: string;
+  };
 }
 
 export function determineMessageType(
