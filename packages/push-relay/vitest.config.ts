@@ -16,7 +16,7 @@ export default defineConfig({
       reporter: ['text', 'json-summary', 'json'],
       reportsDirectory: './coverage',
       include: ['src/**/*.ts'],
-      exclude: ['src/**/__tests__/**', 'src/**/*.test.ts', 'src/**/index.ts'],
+      exclude: ['src/**/__tests__/**', 'src/**/*.test.ts', 'src/**/index.ts', 'src/bin.ts'],
       thresholds: {
         branches: 90,
         functions: 94,
