@@ -1,33 +1,31 @@
 ---
 gsd_state_version: 1.0
-milestone: v29.10
-milestone_name: ntfy 토픽 지갑별 설정 전환
-status: completed
-last_updated: "2026-03-02"
+milestone: v30.0
+milestone_name: 운영 기능 확장 설계
+status: in_progress
+last_updated: "2026-03-03"
 progress:
-  total_phases: 2
-  completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-02)
+See: .planning/PROJECT.md (updated 2026-03-03)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Planning next milestone
+**Current focus:** v30.0 운영 기능 확장 설계
 
 ## Current Position
 
-Phase: 303 (2 of 2) — Admin UI + Skill Files
-Plan: 2 of 2 in current phase
-Status: Milestone Complete
-Last activity: 2026-03-02 — v29.10 milestone archived
-
-Progress: [██████████] 100%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-03 — Milestone v30.0 started
 
 ## Performance Metrics
 
@@ -37,14 +35,14 @@ Progress: [██████████] 100%
 
 ### Decisions
 
-(Cleared at milestone completion — see PROJECT.md Key Decisions for full log)
+(New milestone — starting fresh)
 
 ### Blockers/Concerns
 
-(None — milestone complete)
+(None)
 
 ## Session Continuity
 
-Last session: 2026-03-02
-Stopped at: v29.10 milestone archived
+Last session: 2026-03-03
+Stopped at: Milestone v30.0 initialization
 Resume file: None

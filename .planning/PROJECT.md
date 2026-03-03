@@ -71,6 +71,7 @@ v29.10 ntfy 토픽 지갑별 설정 전환 shipped (2026-03-02). 12-패키지 �
 - ✅ v29.8 Solana Perp DEX (Drift) + Perp 프레임워크 — shipped 2026-03-02 (3 phases, 7 plans, 22 requirements)
 - ✅ v29.9 세션 점진적 보안 모델 — shipped 2026-03-02 (2 phases, 14 plans, 25 requirements, ~233,440 LOC TS)
 - ✅ v29.10 ntfy 토픽 지갑별 설정 전환 — shipped 2026-03-02 (2 phases, 4 plans, 21 requirements)
+- ◆ **v30.0 운영 기능 확장 설계** — Transaction Dry-Run, Audit Log Query API, Encrypted Backup, Webhook Outbound, Admin Stats API, AutoStop Plugin Architecture
 - 기본 거부 정책 토글 3개 (default_deny_tokens/contracts/spenders)
 - IForexRateService CoinGecko tether 기반 43개 법정 통화 환산 + display_currency
 - 누적 USD 지출 한도 (CUMULATIVE_SPENDING_DAILY/MONTHLY 롤링 윈도우, APPROVAL 격상, 80% 경고)
