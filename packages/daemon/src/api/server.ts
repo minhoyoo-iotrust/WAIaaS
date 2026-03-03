@@ -154,7 +154,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
 
   // Register route-level auth middleware on the app (before sub-routers)
   if (deps.masterPasswordHash !== undefined || deps.passwordRef) {
-    const masterAuth = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash, passwordRef: deps.passwordRef });
+    const masterAuth = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash, passwordRef: deps.passwordRef, sqlite: deps.sqlite });
     app.use('/v1/wallets', masterAuth);
     // /v1/policies: GET allows sessionAuth or masterAuth, others require masterAuth only
     app.use('/v1/policies', async (c, next) => {
@@ -187,7 +187,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
 
   // masterAuth for GET /v1/wallets/:id (wallet detail) -- skip sub-paths with own auth
   if (deps.masterPasswordHash !== undefined || deps.passwordRef) {
-    const masterAuthForWalletDetail = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash, passwordRef: deps.passwordRef });
+    const masterAuthForWalletDetail = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash, passwordRef: deps.passwordRef, sqlite: deps.sqlite });
     app.use('/v1/wallets/:id', async (c, next) => {
       // Skip sub-paths that have their own masterAuth registered below
       if (c.req.path.includes('/owner') || c.req.path.includes('/networks') || c.req.path.includes('/wc/')) {
@@ -200,14 +200,14 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
 
   // masterAuth for PUT /v1/wallets/:id/owner
   if (deps.masterPasswordHash !== undefined || deps.passwordRef) {
-    const masterAuthForOwner = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash, passwordRef: deps.passwordRef });
+    const masterAuthForOwner = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash, passwordRef: deps.passwordRef, sqlite: deps.sqlite });
     app.use('/v1/wallets/:id/owner', masterAuthForOwner);
     app.use('/v1/wallets/:id/networks', masterAuthForOwner);
   }
 
   // masterAuth for WalletConnect routes
   if (deps.masterPasswordHash !== undefined || deps.passwordRef) {
-    const masterAuthForWc = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash, passwordRef: deps.passwordRef });
+    const masterAuthForWc = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash, passwordRef: deps.passwordRef, sqlite: deps.sqlite });
     app.use('/v1/wallets/:id/wc/*', masterAuthForWc);
   }
 
@@ -275,7 +275,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
 
   // masterAuth for admin routes (except GET /admin/kill-switch which is public)
   if (deps.masterPasswordHash !== undefined || deps.passwordRef) {
-    const masterAuthForAdmin = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash, passwordRef: deps.passwordRef });
+    const masterAuthForAdmin = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash, passwordRef: deps.passwordRef, sqlite: deps.sqlite });
     app.use('/v1/admin/status', masterAuthForAdmin);
     app.use('/v1/admin/kill-switch', async (c, next) => {
       // POST requires masterAuth, GET is public
@@ -385,6 +385,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
       '/v1',
       sessionRoutes({
         db: deps.db,
+        sqlite: deps.sqlite,
         jwtSecretManager: deps.jwtSecretManager,
         config: deps.config,
         notificationService: deps.notificationService,

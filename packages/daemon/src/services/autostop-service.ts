@@ -23,6 +23,7 @@ import type { Database } from 'better-sqlite3';
 import type { EventBus } from '@waiaas/core';
 import type { KillSwitchService } from './kill-switch-service.js';
 import type { NotificationService } from '../notifications/notification-service.js';
+import { insertAuditLog } from '../infrastructure/database/audit-helper.js';
 import {
   ConsecutiveFailuresRule,
   UnusualActivityRule,
@@ -198,22 +199,14 @@ export class AutoStopService {
     // Reset failure counter after trigger (must accumulate N new failures to re-trigger)
     this.consecutiveFailuresRule.resetWallet(walletId);
 
-    // Audit log
-    try {
-      this.sqlite
-        .prepare(
-          'INSERT INTO audit_log (timestamp, event_type, actor, details, severity) VALUES (?, ?, ?, ?, ?)',
-        )
-        .run(
-          now,
-          'AUTO_STOP_TRIGGERED',
-          'autostop',
-          JSON.stringify({ action: 'wallet_suspended', reason, walletId }),
-          'warning',
-        );
-    } catch {
-      // Best-effort audit logging
-    }
+    // Audit log (best-effort via helper)
+    insertAuditLog(this.sqlite, {
+      eventType: 'AUTO_STOP_TRIGGERED',
+      actor: 'autostop',
+      walletId,
+      details: { action: 'wallet_suspended', reason, walletId },
+      severity: 'warning',
+    });
 
     // Fire-and-forget notification (AUTO-06)
     void this.notificationService?.notify(

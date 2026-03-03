@@ -31,8 +31,9 @@ import {
   type ContractCallRequest,
   type ApproveRequest,
 } from '@waiaas/core';
-import { wallets, transactions, auditLog } from '../infrastructure/database/schema.js';
+import { wallets, transactions } from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
+import { insertAuditLog } from '../infrastructure/database/audit-helper.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
 import type * as schema from '../infrastructure/database/schema.js';
 import { DatabasePolicyEngine } from './database-policy-engine.js';
@@ -453,6 +454,22 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
       adminLink: '/admin/policies',
     }, { txId: ctx.txId });
 
+    // Audit log: POLICY_DENIED
+    if (ctx.sqlite) {
+      insertAuditLog(ctx.sqlite, {
+        eventType: 'POLICY_DENIED',
+        actor: ctx.sessionId ?? 'system',
+        walletId: ctx.walletId,
+        txId: ctx.txId,
+        details: {
+          reason: evaluation.reason,
+          requestedAmount: getRequestAmount(ctx.request),
+          type: ('type' in ctx.request && ctx.request.type) ? ctx.request.type : 'TRANSFER',
+        },
+        severity: 'warning',
+      });
+    }
+
     throw new WAIaaSError('POLICY_DENIED', {
       message: evaluation.reason ?? 'Transaction denied by policy',
     });
@@ -463,20 +480,21 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
 
   // [Phase 127] PriceResult에 따른 후처리
   if (priceResult?.type === 'notListed') {
-    // 감사 로그: UNLISTED_TOKEN_TRANSFER
-    await ctx.db.insert(auditLog).values({
-      timestamp: new Date(Math.floor(Date.now() / 1000) * 1000),
-      eventType: 'UNLISTED_TOKEN_TRANSFER',
-      actor: ctx.sessionId ?? 'system',
-      walletId: ctx.walletId,
-      txId: ctx.txId,
-      details: JSON.stringify({
-        tokenAddress: priceResult.tokenAddress,
-        chain: priceResult.chain,
-        failedCount: priceResult.failedCount,
-      }),
-      severity: 'warning',
-    });
+    // Audit log: UNLISTED_TOKEN_TRANSFER (refactored to insertAuditLog)
+    if (ctx.sqlite) {
+      insertAuditLog(ctx.sqlite, {
+        eventType: 'UNLISTED_TOKEN_TRANSFER',
+        actor: ctx.sessionId ?? 'system',
+        walletId: ctx.walletId,
+        txId: ctx.txId,
+        details: {
+          tokenAddress: priceResult.tokenAddress,
+          chain: priceResult.chain,
+          failedCount: priceResult.failedCount,
+        },
+        severity: 'warning',
+      });
+    }
 
     // 최소 NOTIFY 격상 (evaluation tier와 NOTIFY 중 보수적)
     const TIER_ORDER: PolicyTier[] = ['INSTANT', 'NOTIFY', 'DELAY', 'APPROVAL'];
@@ -991,6 +1009,18 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
           .set({ status: 'FAILED', error: simResult.error ?? 'Simulation failed' })
           .where(eq(transactions.id, ctx.txId));
 
+        // Audit log: TX_FAILED (simulation failure)
+        if (ctx.sqlite) {
+          insertAuditLog(ctx.sqlite, {
+            eventType: 'TX_FAILED',
+            actor: ctx.sessionId ?? 'system',
+            walletId: ctx.walletId,
+            txId: ctx.txId,
+            details: { error: simResult.error ?? 'Simulation failed', stage: 5, chain: ctx.wallet.chain, network: ctx.resolvedNetwork },
+            severity: 'warning',
+          });
+        }
+
         // Fire-and-forget: notify TX_FAILED on simulation failure
         void ctx.notificationService?.notify('TX_FAILED', ctx.walletId, {
           txId: ctx.txId,
@@ -1036,6 +1066,23 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
         .set({ status: 'SUBMITTED', txHash: ctx.submitResult.txHash })
         .where(eq(transactions.id, ctx.txId));
 
+      // Audit log: TX_SUBMITTED
+      if (ctx.sqlite) {
+        insertAuditLog(ctx.sqlite, {
+          eventType: 'TX_SUBMITTED',
+          actor: ctx.sessionId ?? 'system',
+          walletId: ctx.walletId,
+          txId: ctx.txId,
+          details: {
+            txHash: ctx.submitResult.txHash,
+            chain: ctx.wallet.chain,
+            network: ctx.resolvedNetwork,
+            type: ('type' in ctx.request && ctx.request.type) ? ctx.request.type : 'TRANSFER',
+          },
+          severity: 'info',
+        });
+      }
+
       // Fire-and-forget: notify TX_SUBMITTED
       void ctx.notificationService?.notify('TX_SUBMITTED', ctx.walletId, {
         txId: ctx.txId,
@@ -1070,6 +1117,18 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
             .update(transactions)
             .set({ status: 'FAILED', error: err.message })
             .where(eq(transactions.id, ctx.txId));
+
+          // Audit log: TX_FAILED (permanent chain error)
+          if (ctx.sqlite) {
+            insertAuditLog(ctx.sqlite, {
+              eventType: 'TX_FAILED',
+              actor: ctx.sessionId ?? 'system',
+              walletId: ctx.walletId,
+              txId: ctx.txId,
+              details: { error: err.message, stage: 5, chain: ctx.wallet.chain, network: ctx.resolvedNetwork },
+              severity: 'warning',
+            });
+          }
 
           // Fire-and-forget: notify TX_FAILED
           void ctx.notificationService?.notify('TX_FAILED', ctx.walletId, {
@@ -1213,6 +1272,23 @@ export async function stage6Confirm(ctx: PipelineContext): Promise<void> {
       .set({ status: 'CONFIRMED', executedAt })
       .where(eq(transactions.id, ctx.txId));
 
+    // Audit log: TX_CONFIRMED
+    if (ctx.sqlite) {
+      insertAuditLog(ctx.sqlite, {
+        eventType: 'TX_CONFIRMED',
+        actor: ctx.sessionId ?? 'system',
+        walletId: ctx.walletId,
+        txId: ctx.txId,
+        details: {
+          txHash: ctx.submitResult!.txHash,
+          chain: ctx.wallet.chain,
+          network: ctx.resolvedNetwork,
+          executedAt: Math.floor(Date.now() / 1000),
+        },
+        severity: 'info',
+      });
+    }
+
     // Fire-and-forget: notify TX_CONFIRMED (never blocks pipeline)
     void ctx.notificationService?.notify('TX_CONFIRMED', ctx.walletId, {
       txId: ctx.txId,
@@ -1240,6 +1316,18 @@ export async function stage6Confirm(ctx: PipelineContext): Promise<void> {
       .update(transactions)
       .set({ status: 'FAILED', error: 'Transaction reverted on-chain' })
       .where(eq(transactions.id, ctx.txId));
+
+    // Audit log: TX_FAILED (on-chain revert)
+    if (ctx.sqlite) {
+      insertAuditLog(ctx.sqlite, {
+        eventType: 'TX_FAILED',
+        actor: ctx.sessionId ?? 'system',
+        walletId: ctx.walletId,
+        txId: ctx.txId,
+        details: { error: 'Transaction reverted on-chain', stage: 6, chain: ctx.wallet.chain, network: ctx.resolvedNetwork },
+        severity: 'warning',
+      });
+    }
 
     // Fire-and-forget: notify TX_FAILED on on-chain revert (never blocks pipeline)
     void ctx.notificationService?.notify('TX_FAILED', ctx.walletId, {
