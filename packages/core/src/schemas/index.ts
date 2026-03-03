@@ -50,3 +50,23 @@ export {
   IncomingTransactionSchema,
   type IncomingTransaction as IncomingTransactionDto,
 } from './incoming-transaction.schema.js';
+
+// v30.2 dry-run simulation schema (Zod SSoT)
+export {
+  DryRunSimulationResultSchema,
+  SimulationWarningCodeEnum,
+  PolicyResultSchema,
+  FeeEstimateResultSchema,
+  BalanceChangeSchema,
+  SimulationWarningSchema,
+  SimulationDetailSchema,
+  SimulationMetaSchema,
+  type DryRunSimulationResult,
+  type SimulationWarningCode,
+  type PolicyResult,
+  type FeeEstimateResult,
+  type BalanceChange,
+  type SimulationWarning,
+  type SimulationDetail,
+  type SimulationMeta,
+} from './simulation.schema.js';

@@ -124,6 +124,23 @@ export {
   type AssetInfoDto,
   IncomingTransactionSchema,
   type IncomingTransactionDto,
+  // v30.2 dry-run simulation schema (Zod SSoT)
+  DryRunSimulationResultSchema,
+  SimulationWarningCodeEnum,
+  PolicyResultSchema,
+  FeeEstimateResultSchema,
+  BalanceChangeSchema,
+  SimulationWarningSchema,
+  SimulationDetailSchema,
+  SimulationMetaSchema,
+  type DryRunSimulationResult,
+  type SimulationWarningCode,
+  type PolicyResult,
+  type FeeEstimateResult,
+  type BalanceChange,
+  type SimulationWarning,
+  type SimulationDetail,
+  type SimulationMeta,
 } from './schemas/index.js';
 
 // Wallet Preset (v28.8 builtin wallet preset registry)
