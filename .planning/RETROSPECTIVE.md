@@ -194,6 +194,44 @@
 
 ---
 
+## Milestone: v30.0 — 운영 기능 확장 설계
+
+**Shipped:** 2026-03-03
+**Phases:** 5 | **Plans:** 11 | **Sessions:** 1
+
+### What Was Built
+- Transaction Dry-Run 설계 — SimulationResult Zod 스키마(12 warning codes, 4-axis), PipelineContext dryRun 분기, REST/SDK/MCP 스펙
+- Audit Log Query API 설계 — AuditEventType 20개(9 기존 + 11 신규), cursor pagination, GET /v1/audit-logs masterAuth
+- Encrypted Backup & Restore 설계 — AES-256-GCM 암호화 아카이브 포맷(60B 헤더), EncryptedBackupService, CLI 4 커맨드
+- Webhook Outbound 설계 — HMAC-SHA256 서명, webhooks+webhook_logs DB, 4-attempt 재시도 큐, REST API 4 엔드포인트
+- Admin Stats + AutoStop Plugin 설계 — 7-category Zod 스키마, IMetricsCounter, IAutoStopRule 플러그인, RuleRegistry
+
+### What Worked
+- 5 phases 전체 ~50분 완료 — 기존 코드베이스(233K LOC)에 대한 깊은 이해로 설계 결정이 빠르게 수렴
+- 각 Phase DESIGN-SPEC.md에 Zod 스키마, 인터페이스, DB 스키마, API 스펙, 테스트 시나리오를 포함하여 구현 마일스톤의 입력이 완전함
+- Phase 간 의존성(305→307, 304+305→308)이 자연스럽게 이벤트 체계를 공유하도록 설계
+- 기존 패턴 재활용: insertAuditLog helper(raw SQL), IMetricsCounter(IForexRateService 패턴), RuleRegistry(ActionProviderRegistry 패턴)
+
+### What Was Inefficient
+- 없음 — 설계 전용 마일스톤이라 코드 변경 없이 순수 문서 작업
+
+### Patterns Established
+- OPS-* 설계 스펙 패턴: 각 기능을 독립 DESIGN-SPEC.md로 분리하되, 이벤트 체계(AuditEventType)를 공통 기반으로 공유
+- Plugin Architecture 패턴: IAutoStopRule + RuleRegistry로 하드코딩 없는 규칙 확장, ActionProvider와 동일한 등록 패턴
+- Secret dual-storage 패턴: 노출 방지용 해시 + 연산용 암호화 값 이중 저장
+
+### Key Lessons
+- 설계 전용 마일스톤은 50분 내 완료 가능 — 코드베이스 이해도가 높을 때 설계 결정이 빠르게 수렴
+- 이벤트 체계를 먼저 확립하면(Phase 305 → 307, 308) 하위 기능 설계가 자연스럽게 정렬됨
+- VACUUM INTO는 파일 복사보다 안전한 DB 스냅샷 방법 (WAL 일관성 보장)
+
+### Cost Observations
+- Model mix: 100% opus (quality profile)
+- Sessions: 1
+- Notable: 설계 전용 마일스톤 — 30 파일 ~50분 완료, +8,132 lines (대부분 DESIGN-SPEC.md)
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -205,6 +243,7 @@
 | v29.6 | 1 | 3 | Yield Provider 패턴 확립, 50 파일 1일 완료 |
 | v29.7 | 1 | 6 | 풀스택(DB+API+UI) 구현, 73 파일 1일 완료 |
 | v29.10 | 1 | 2 | 글로벌→per-entity 설정 전환, 43 파일 1.5시간 완료 |
+| v30.0 | 1 | 5 | 운영 기능 6개 설계 전용, 30 파일 50분 완료 |
 
 ### Cumulative Quality
 
@@ -215,6 +254,7 @@
 | v29.6 | ~5,595 (unchanged) | maintained | +4 decisions |
 | v29.7 | ~5,595 (unchanged) | maintained | +7 decisions |
 | v29.10 | ~5,737 (+142) | maintained | +8 decisions |
+| v30.0 | ~5,737 (unchanged) | unchanged | +40 decisions |
 
 ### Top Lessons (Verified Across Milestones)
 
