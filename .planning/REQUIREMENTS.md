@@ -67,12 +67,12 @@ Explicitly excluded. Documented to prevent scope creep.
 
 | Feature | Reason |
 |---------|--------|
-| 코드 구현 | 설계 마일스톤 — 구현은 별도 마일스톤 |
+| 코드 구현 | 설계 마일스톤 -- 구현은 별도 마일스톤 |
 | IP/Network ACL | 127.0.0.1 바인딩 + Host Guard + Docker 네트워크로 충분; 리버스 프록시 영역 |
 | Wallet Budget / Allowance | 별도 마일스톤 검토 |
-| Key Rotation | sweepAll 기반 — 별도 설계 필요 |
+| Key Rotation | sweepAll 기반 -- 별도 설계 필요 |
 | Hot/Cold Wallet 분리 | 대규모 운용 시나리오 |
-| Transaction Templates | DX 개선 — 별도 마일스톤 |
+| Transaction Templates | DX 개선 -- 별도 마일스톤 |
 
 ## Traceability
 
@@ -80,37 +80,37 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SIM-01 | — | Pending |
-| SIM-02 | — | Pending |
-| SIM-03 | — | Pending |
-| SIM-04 | — | Pending |
-| AUDIT-01 | — | Pending |
-| AUDIT-02 | — | Pending |
-| AUDIT-03 | — | Pending |
-| AUDIT-04 | — | Pending |
-| BKUP-01 | — | Pending |
-| BKUP-02 | — | Pending |
-| BKUP-03 | — | Pending |
-| BKUP-04 | — | Pending |
-| HOOK-01 | — | Pending |
-| HOOK-02 | — | Pending |
-| HOOK-03 | — | Pending |
-| HOOK-04 | — | Pending |
-| HOOK-05 | — | Pending |
-| STAT-01 | — | Pending |
-| STAT-02 | — | Pending |
-| STAT-03 | — | Pending |
-| STAT-04 | — | Pending |
-| PLUG-01 | — | Pending |
-| PLUG-02 | — | Pending |
-| PLUG-03 | — | Pending |
-| PLUG-04 | — | Pending |
+| SIM-01 | Phase 304 | Pending |
+| SIM-02 | Phase 304 | Pending |
+| SIM-03 | Phase 304 | Pending |
+| SIM-04 | Phase 304 | Pending |
+| AUDIT-01 | Phase 305 | Pending |
+| AUDIT-02 | Phase 305 | Pending |
+| AUDIT-03 | Phase 305 | Pending |
+| AUDIT-04 | Phase 305 | Pending |
+| BKUP-01 | Phase 306 | Pending |
+| BKUP-02 | Phase 306 | Pending |
+| BKUP-03 | Phase 306 | Pending |
+| BKUP-04 | Phase 306 | Pending |
+| HOOK-01 | Phase 307 | Pending |
+| HOOK-02 | Phase 307 | Pending |
+| HOOK-03 | Phase 307 | Pending |
+| HOOK-04 | Phase 307 | Pending |
+| HOOK-05 | Phase 307 | Pending |
+| STAT-01 | Phase 308 | Pending |
+| STAT-02 | Phase 308 | Pending |
+| STAT-03 | Phase 308 | Pending |
+| STAT-04 | Phase 308 | Pending |
+| PLUG-01 | Phase 308 | Pending |
+| PLUG-02 | Phase 308 | Pending |
+| PLUG-03 | Phase 308 | Pending |
+| PLUG-04 | Phase 308 | Pending |
 
 **Coverage:**
-- v1 requirements: 24 total
-- Mapped to phases: 0
-- Unmapped: 24
+- v1 requirements: 25 total
+- Mapped to phases: 25
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-03*
-*Last updated: 2026-03-03 after initial definition*
+*Last updated: 2026-03-03 after roadmap creation (traceability updated)*
