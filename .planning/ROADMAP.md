@@ -100,8 +100,8 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v29.10-ROADMAP.md` for full
 - [x] **Phase 304: Transaction Dry-Run 설계** - PipelineContext dryRun 분기, SimulationResult 스키마, REST/SDK/MCP 확장 스펙 정의
 - [x] **Phase 305: Audit Log Query API 설계** - 감사 이벤트 12개+ 확대, cursor pagination, AuditLog 조회 엔드포인트 스펙 정의
 - [x] **Phase 306: Encrypted Backup & Restore 설계** - 암호화 아카이브 포맷, BackupService 확장, CLI 커맨드, config.toml 키 정의
-- [ ] **Phase 307: Webhook Outbound 설계** - DB 스키마, HMAC 서명 프로토콜, 재시도 큐, REST API, EventBus 연동 설계
-- [ ] **Phase 308: Admin Stats + AutoStop Plugin 설계** - 통합 통계 스키마, 인메모리 카운터, IAutoStopRule 인터페이스, RuleRegistry, Admin 토글
+- [x] **Phase 307: Webhook Outbound 설계** - DB 스키마, HMAC 서명 프로토콜, 재시도 큐, REST API, EventBus 연동 설계
+- [x] **Phase 308: Admin Stats + AutoStop Plugin 설계** - 통합 통계 스키마, 인메모리 카운터, IAutoStopRule 인터페이스, RuleRegistry, Admin 토글
 
 ## Phase Details
 
@@ -163,8 +163,8 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 307-01: DB 스키마 + HMAC 서명 프로토콜 + 재시도 큐 설계
-- [ ] 307-02: REST API 스펙 + EventBus 연동 + 설계 문서 갱신
+- [x] 307-01: DB 스키마 + HMAC 서명 프로토콜 + 재시도 큐 설계
+- [x] 307-02: REST API 스펙 + EventBus 연동 + 설계 문서 갱신
 
 ### Phase 308: Admin Stats + AutoStop Plugin 설계
 **Goal**: 운영 통계를 단일 JSON 엔드포인트로 확인할 수 있고, AutoStop 규칙이 플러그인 구조로 확장 가능하도록 설계된다
@@ -179,9 +179,9 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 308-01: AdminStats 스키마 + 인메모리 카운터 + DB 집계 설계
-- [ ] 308-02: IAutoStopRule + RuleRegistry + 기존 규칙 리팩토링 설계
-- [ ] 308-03: REST API 스펙 + Admin Settings 토글 + 설계 문서 갱신
+- [x] 308-01: AdminStats 스키마 + 인메모리 카운터 + DB 집계 설계
+- [x] 308-02: IAutoStopRule + RuleRegistry + 기존 규칙 리팩토링 설계
+- [x] 308-03: REST API 스펙 + Admin Settings 토글 + 설계 문서 갱신
 
 ## Progress
 
@@ -199,8 +199,8 @@ Phases execute in numeric order: 304 → 305 → 306 → 307 → 308
 | 304. Transaction Dry-Run 설계 | v30.0 | 2/2 | Complete | 2026-03-03 |
 | 305. Audit Log Query API 설계 | v30.0 | 2/2 | Complete | 2026-03-03 |
 | 306. Encrypted Backup & Restore 설계 | v30.0 | 2/2 | Complete | 2026-03-03 |
-| 307. Webhook Outbound 설계 | v30.0 | 0/2 | Not started | - |
-| 308. Admin Stats + AutoStop Plugin 설계 | v30.0 | 0/3 | Not started | - |
+| 307. Webhook Outbound 설계 | v30.0 | 2/2 | Complete | 2026-03-03 |
+| 308. Admin Stats + AutoStop Plugin 설계 | v30.0 | 3/3 | Complete | 2026-03-03 |
 
 ---
-*Last updated: 2026-03-03 after Phase 305 completion*
+*Last updated: 2026-03-03 after Phase 307 completion*

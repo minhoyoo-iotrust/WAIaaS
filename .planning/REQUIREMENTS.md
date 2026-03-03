@@ -30,25 +30,25 @@ Requirements for milestone v30.0. Each maps to roadmap phases.
 
 ### Webhook (웹훅 아웃바운드)
 
-- [ ] **HOOK-01**: webhooks, webhook_logs 테이블 스키마를 정의한다 (Drizzle + Zod SSoT)
-- [ ] **HOOK-02**: HMAC-SHA256 서명 생성/검증 프로토콜을 정의한다 (X-WAIaaS-Signature 헤더)
-- [ ] **HOOK-03**: 비동기 재시도 큐 설계를 정의한다 (최대 3회, 지수 백오프 1s→2s→4s)
-- [ ] **HOOK-04**: REST API 4 엔드포인트 스펙을 정의한다 (POST/GET/DELETE webhooks, GET logs)
-- [ ] **HOOK-05**: EventBus 연동 및 이벤트 필터링 메커니즘을 설계한다
+- [x] **HOOK-01**: webhooks, webhook_logs 테이블 스키마를 정의한다 (Drizzle + Zod SSoT)
+- [x] **HOOK-02**: HMAC-SHA256 서명 생성/검증 프로토콜을 정의한다 (X-WAIaaS-Signature 헤더)
+- [x] **HOOK-03**: 비동기 재시도 큐 설계를 정의한다 (최대 3회, 지수 백오프 1s→2s→4s)
+- [x] **HOOK-04**: REST API 4 엔드포인트 스펙을 정의한다 (POST/GET/DELETE webhooks, GET logs)
+- [x] **HOOK-05**: EventBus 연동 및 이벤트 필터링 메커니즘을 설계한다
 
 ### Stats (운영 통계 API)
 
-- [ ] **STAT-01**: AdminStatsResponseSchema를 Zod로 정의한다 (transactions/sessions/wallets/rpc/autostop/system 7 카테고리)
-- [ ] **STAT-02**: 인메모리 카운터 인터페이스를 설계한다 (RPC 호출, 세션 카운트, TX 카운터)
-- [ ] **STAT-03**: DB 집계 쿼리와 1분 TTL 캐시 설계를 정의한다
-- [ ] **STAT-04**: `GET /v1/admin/stats` 엔드포인트 스펙과 Admin UI 대시보드 연동을 설계한다
+- [x] **STAT-01**: AdminStatsResponseSchema를 Zod로 정의한다 (transactions/sessions/wallets/rpc/autostop/system 7 카테고리)
+- [x] **STAT-02**: 인메모리 카운터 인터페이스를 설계한다 (RPC 호출, 세션 카운트, TX 카운터)
+- [x] **STAT-03**: DB 집계 쿼리와 1분 TTL 캐시 설계를 정의한다
+- [x] **STAT-04**: `GET /v1/admin/stats` 엔드포인트 스펙과 Admin UI 대시보드 연동을 설계한다
 
 ### AutoStop Plugin
 
-- [ ] **PLUG-01**: IAutoStopRule 인터페이스와 RuleResult 타입을 정의한다 (`evaluate(context): RuleResult`)
-- [ ] **PLUG-02**: RuleRegistry 설계를 정의한다 (런타임 등록/해제/조회)
-- [ ] **PLUG-03**: 기존 3개 규칙 클래스의 IAutoStopRule 구현체 리팩토링 설계를 정의한다
-- [ ] **PLUG-04**: 규칙별 enable/disable Admin Settings 토글과 `GET /v1/admin/autostop/rules` 응답 스키마를 정의한다
+- [x] **PLUG-01**: IAutoStopRule 인터페이스와 RuleResult 타입을 정의한다 (`evaluate(context): RuleResult`)
+- [x] **PLUG-02**: RuleRegistry 설계를 정의한다 (런타임 등록/해제/조회)
+- [x] **PLUG-03**: 기존 3개 규칙 클래스의 IAutoStopRule 구현체 리팩토링 설계를 정의한다
+- [x] **PLUG-04**: 규칙별 enable/disable Admin Settings 토글과 `GET /v1/admin/autostop/rules` 응답 스키마를 정의한다
 
 ## v2 Requirements
 
@@ -92,19 +92,19 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BKUP-02 | Phase 306 | Complete |
 | BKUP-03 | Phase 306 | Complete |
 | BKUP-04 | Phase 306 | Complete |
-| HOOK-01 | Phase 307 | Pending |
-| HOOK-02 | Phase 307 | Pending |
-| HOOK-03 | Phase 307 | Pending |
-| HOOK-04 | Phase 307 | Pending |
-| HOOK-05 | Phase 307 | Pending |
-| STAT-01 | Phase 308 | Pending |
-| STAT-02 | Phase 308 | Pending |
-| STAT-03 | Phase 308 | Pending |
-| STAT-04 | Phase 308 | Pending |
-| PLUG-01 | Phase 308 | Pending |
-| PLUG-02 | Phase 308 | Pending |
-| PLUG-03 | Phase 308 | Pending |
-| PLUG-04 | Phase 308 | Pending |
+| HOOK-01 | Phase 307 | Complete |
+| HOOK-02 | Phase 307 | Complete |
+| HOOK-03 | Phase 307 | Complete |
+| HOOK-04 | Phase 307 | Complete |
+| HOOK-05 | Phase 307 | Complete |
+| STAT-01 | Phase 308 | Complete |
+| STAT-02 | Phase 308 | Complete |
+| STAT-03 | Phase 308 | Complete |
+| STAT-04 | Phase 308 | Complete |
+| PLUG-01 | Phase 308 | Complete |
+| PLUG-02 | Phase 308 | Complete |
+| PLUG-03 | Phase 308 | Complete |
+| PLUG-04 | Phase 308 | Complete |
 
 **Coverage:**
 - v1 requirements: 25 total
@@ -113,4 +113,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-03*
-*Last updated: 2026-03-03 after Phase 305 completion (AUDIT-01~04 complete)*
+*Last updated: 2026-03-03 after Phase 307 completion (HOOK-01~05 complete)*
