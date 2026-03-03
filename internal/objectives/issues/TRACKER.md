@@ -258,6 +258,8 @@
 | 241 | BUG | MEDIUM | 지갑 앱 테스트 알림이 subscriptionToken 미설정 상태에서도 발송 성공 | — | FIXED | 2026-03-03 |
 | 242 | BUG | CRITICAL | WalletNotificationChannel 비ASCII Title 헤더로 ntfy 발송 silent failure | — | FIXED | 2026-03-03 |
 | 243 | BUG | CRITICAL | Push Relay SSE 압축 해제 5회차 재발 — 서명 요청 미수신 (#222,#235,#236,#238) | — | FIXED | 2026-03-03 |
+| 244 | BUG | MEDIUM | APPROVAL_CHANNEL_SWITCHED 알림 {txId} 미치환 — vars 대신 details에 전달 | — | FIXED | 2026-03-03 |
+| 245 | BUG | HIGH | Stage4 WcSigningBridge가 비WC 지갑에도 무조건 실행 — 거짓 채널 전환 알림 + DB 오염 | — | FIXED | 2026-03-03 |
 
 ## Type Legend
 
@@ -270,8 +272,8 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 243
+- **FIXED:** 245
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 244
+- **Total:** 246

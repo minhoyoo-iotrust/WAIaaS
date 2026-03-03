@@ -115,7 +115,10 @@ export class NtfySubscriber {
 
       const res = await new Promise<IncomingMessage>((resolve, reject) => {
         const req: ClientRequest = getter(url, {
-          headers: { 'Accept': 'text/event-stream' },
+          headers: {
+            'Accept': 'text/event-stream',
+            'Accept-Encoding': 'identity',
+          },
         }, resolve);
         req.on('error', reject);
         controller.signal.addEventListener('abort', () => req.destroy(), { once: true });
@@ -130,9 +133,7 @@ export class NtfySubscriber {
       const nextDelay = INITIAL_RECONNECT_DELAY_MS;
 
       // Explicit decompression based on Content-Encoding header.
-      // node:http does NOT auto-decompress (unlike undici fetch), giving us full control.
-      // This is the definitive fix for #222, #235, #236, #238, #243 — undici fetch()
-      // has non-deterministic decompression behavior with Cloudflare CDN streaming.
+      // node:http does NOT auto-decompress, giving us full control.
       const encoding = res.headers['content-encoding'];
       let dataStream: NodeJS.ReadableStream = res;
 
@@ -167,6 +168,13 @@ export class NtfySubscriber {
             try {
               const ntfyMsg = JSON.parse(dataStr) as ParsedNtfyMessage;
               if (!ntfyMsg.message) continue;
+
+              // ntfy converts messages exceeding size limit to file attachments.
+              // Download the attachment to recover the original message. (#243)
+              if (ntfyMsg.attachment?.url) {
+                void this.fetchAttachmentAndProcess(ntfyMsg, walletName, topic);
+                continue;
+              }
 
               const effectiveTopic = ntfyMsg.topic ?? topic;
               const type = determineMessageType(
@@ -210,6 +218,54 @@ export class NtfySubscriber {
       const nextDelay = Math.min(reconnectDelay * 2, MAX_RECONNECT_DELAY_MS);
       await this.delay(reconnectDelay);
       return this.connectSse(topic, walletName, controller, nextDelay);
+    }
+  }
+
+  /**
+   * Download ntfy file attachment and process as normal message.
+   * When message payload exceeds ntfy's size limit (~4KB), ntfy auto-converts
+   * to a file attachment. The attachment contains the original request JSON body.
+   */
+  private async fetchAttachmentAndProcess(
+    ntfyMsg: ParsedNtfyMessage,
+    walletName: string,
+    topic: string,
+  ): Promise<void> {
+    try {
+      const res = await fetch(ntfyMsg.attachment!.url);
+      if (!res.ok) {
+        throw new Error(`Attachment download failed: HTTP ${String(res.status)}`);
+      }
+
+      const body = await res.json() as Record<string, unknown>;
+
+      // The attachment contains the original ntfy request JSON body.
+      // Extract the encoded message field from it.
+      if (typeof body.message === 'string') {
+        ntfyMsg.message = body.message;
+      }
+      if (typeof body.title === 'string' && !ntfyMsg.title) {
+        ntfyMsg.title = body.title;
+      }
+      if (typeof body.priority === 'number' && !ntfyMsg.priority) {
+        ntfyMsg.priority = body.priority;
+      }
+
+      const effectiveTopic = ntfyMsg.topic ?? topic;
+      const type = determineMessageType(
+        effectiveTopic,
+        this.opts.signTopicPrefix,
+        this.opts.notifyTopicPrefix,
+      );
+      if (!type) return;
+
+      let payload = buildPushPayload(ntfyMsg, type);
+      if (this.transformer) {
+        payload = this.transformer.transform(payload);
+      }
+      await this.opts.onMessage(walletName, payload, effectiveTopic);
+    } catch (err) {
+      this.opts.onError?.(err instanceof Error ? err : new Error(String(err)));
     }
   }
 
