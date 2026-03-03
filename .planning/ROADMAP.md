@@ -145,12 +145,12 @@ Plans:
   3. waiaas restore --from <path>로 데몬 정지 상태에서 백업을 복원할 수 있으며, 기존 데이터는 .bak으로 보존되고 실패 시 자동 롤백된다
   4. config.toml [backup] 섹션으로 자동 백업 주기/보존 개수를 설정하면 BackupWorker가 스케줄에 따라 백업을 자동 생성한다
   5. 백업 아카이브가 60B 고정 헤더(매직 넘버 + 솔트 + 논스 + 인증 태그) + 평문 메타데이터 + 암호화 페이로드 바이너리 포맷을 따른다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 311-01: EncryptedBackupService + 바이너리 아카이브 포맷 + REST API
-- [ ] 311-02: CLI backup/restore/list/inspect 커맨드
-- [ ] 311-03: BackupWorker 자동 스케줄러 + config.toml [backup] 섹션
+- [ ] 311-01-PLAN.md -- EncryptedBackupService + 바이너리 아카이브 포맷 + REST API
+- [ ] 311-02-PLAN.md -- CLI backup/restore/list/inspect 커맨드
+- [ ] 311-03-PLAN.md -- BackupWorker 자동 스케줄러 + config.toml [backup] 섹션
 
 ### Phase 312: Webhook Outbound
 **Goal**: 외부 시스템이 WAIaaS 데몬의 이벤트(트랜잭션 완료, 정책 거부, Kill Switch 등)를 실시간으로 HTTP 콜백으로 수신할 수 있다
@@ -201,9 +201,9 @@ Phases execute in numeric order: 309 -> 310 -> 311 -> 312 -> 313
 | 268-308 | v29.0-v30.0 | All | Complete | 2026-03-03 |
 | 309. Transaction Dry-Run | v30.2 | Complete    | 2026-03-03 | 2026-03-03 |
 | 310. Audit Log Query API | v30.2 | Complete    | 2026-03-03 | 2026-03-03 |
-| 311. Encrypted Backup & Restore | v30.2 | 0/3 | Not started | - |
+| 311. Encrypted Backup & Restore | v30.2 | 0/3 | Planned | - |
 | 312. Webhook Outbound | v30.2 | 0/3 | Not started | - |
 | 313. Admin Stats + AutoStop Plugin | v30.2 | 0/3 | Not started | - |
 
 ---
-*Last updated: 2026-03-03 -- Phase 310 complete (2 plans, 3 tasks, 3 commits)*
+*Last updated: 2026-03-03 -- Phase 311 planned (3 plans, 6 tasks, 2 waves)*
