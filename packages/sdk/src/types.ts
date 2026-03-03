@@ -170,6 +170,53 @@ export interface SendTokenResponse {
   status: string;
 }
 
+/** v30.2 Dry-run simulation result (POST /v1/transactions/simulate). */
+export interface SimulateResponse {
+  success: boolean;
+  policy: {
+    tier: string;
+    allowed: boolean;
+    reason?: string;
+    delaySeconds?: number;
+    approvalReason?: string;
+    downgraded?: boolean;
+    cumulativeWarning?: { type: string; ratio: number; spent: number; limit: number };
+  };
+  fee: {
+    estimatedFee: string;
+    feeSymbol: string;
+    feeDecimals: number;
+    feeUsd: number | null;
+    needsAtaCreation?: boolean;
+    ataRentCost?: string;
+  } | null;
+  balanceChanges: Array<{
+    asset: string;
+    symbol: string;
+    decimals: number;
+    currentBalance: string;
+    changeAmount: string;
+    afterBalance: string;
+  }>;
+  warnings: Array<{
+    code: string;
+    message: string;
+    severity: 'info' | 'warning' | 'error';
+  }>;
+  simulation: {
+    success: boolean;
+    logs: string[];
+    unitsConsumed: string | null;
+    error: string | null;
+  };
+  meta: {
+    chain: string;
+    network: string;
+    transactionType: string;
+    durationMs: number;
+  };
+}
+
 export interface TransactionResponse {
   id: string;
   walletId: string;
