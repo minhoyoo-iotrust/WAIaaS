@@ -103,6 +103,7 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v30.0-ROADMAP.md` for full 
 - [x] **Phase 311: Encrypted Backup & Restore** - 암호화 백업 생성/복원 API + CLI + 자동 스케줄러 -- completed 2026-03-03
 - [x] **Phase 312: Webhook Outbound** - Webhook CRUD API + HMAC 서명 + 재시도 큐 + DB 테이블 -- completed 2026-03-03
 - [x] **Phase 313: Admin Stats + AutoStop Plugin** - 운영 통계 API + AutoStop 규칙 플러그인 아키텍처 -- completed 2026-03-03
+- [ ] **Phase 313.1: Gap Closure** - 감사에서 발견된 갭 수정 (InMemoryCounter 와이어링, 테스트 assertion, skill 파일 동기화)
 
 ## Phase Details
 
@@ -186,10 +187,19 @@ Plans:
 - [x] 313-02-PLAN.md -- IMetricsCounter + AdminStatsService + GET /v1/admin/stats API -- completed 2026-03-03
 - [x] 313-03-PLAN.md -- AutoStop 규칙 REST API + Admin Settings 토글 + Admin UI 통계 카드 -- completed 2026-03-03
 
+### Phase 313.1: Gap Closure (감사 갭 수정)
+**Goal**: v30.2 마일스톤 감사에서 발견된 STAT-02/STAT-04 미와이어링, 테스트 assertion 오류, skill 파일 미동기화를 수정한다
+**Depends on**: Phase 313
+**Requirements**: STAT-02, STAT-04
+**Plans**: 1 plan
+
+Plans:
+- [ ] 313.1-01-PLAN.md -- InMemoryCounter 프로덕션 와이어링 + 테스트 수정 + skill 파일 업데이트
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 309 -> 310 -> 311 -> 312 -> 313
+Phases execute in numeric order: 309 -> 310 -> 311 -> 312 -> 313 -> 313.1
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -204,6 +214,7 @@ Phases execute in numeric order: 309 -> 310 -> 311 -> 312 -> 313
 | 311. Encrypted Backup & Restore | v30.2 | Complete    | 2026-03-03 | 2026-03-03 |
 | 312. Webhook Outbound | v30.2 | Complete    | 2026-03-03 | 2026-03-03 |
 | 313. Admin Stats + AutoStop Plugin | v30.2 | Complete    | 2026-03-03 | 2026-03-03 |
+| 313.1. Gap Closure | v30.2 | 0/1 | In Progress | -- |
 
 ---
-*Last updated: 2026-03-03 -- Phase 313 complete (3 plans, 7 tasks, 6 commits, 31 new tests). v30.2 milestone all 5 phases done.*
+*Last updated: 2026-03-03 -- Phase 313.1 gap closure plan created (1 plan, 2 tasks). Closing STAT-02/STAT-04 gaps from milestone audit.*
