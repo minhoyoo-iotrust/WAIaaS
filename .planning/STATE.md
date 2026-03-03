@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-03)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v30.2 운영 기능 확장 구현 -- Phase 310 (Audit Log Query API) complete
+**Current focus:** v30.2 운영 기능 확장 구현 -- Phase 311 (Encrypted Backup & Restore) complete
 
 ## Current Position
 
-Phase: 2 of 5 (Phase 310: Audit Log Query API)
-Plan: 2 of 2 in current phase (COMPLETE)
-Status: Phase 310 complete -- ready for Phase 311
-Last activity: 2026-03-03 -- Phase 310 complete (2 plans, 3 tasks, 3 commits)
+Phase: 3 of 5 (Phase 311: Encrypted Backup & Restore)
+Plan: 3 of 3 in current phase (COMPLETE)
+Status: Phase 311 complete -- ready for Phase 312
+Last activity: 2026-03-03 -- Phase 311 complete (3 plans, 6 tasks, 6 commits, 129 tests)
 
-Progress: [████░░░░░░] 36%
+Progress: [██████░░░░] 56%
 
 ## Performance Metrics
 
@@ -50,6 +50,12 @@ Progress: [████░░░░░░] 36%
 - buildWhereClause helper shared between data query and count query (no duplication)
 - notification-service.ts keeps Drizzle insert for NOTIFICATION_TOTAL_FAILURE (no raw sqlite access)
 - TX_FAILED audit logged at key failure points (simulation, permanent error, on-chain revert), not every retry
+- BACKUP_CORRUPTED error code used for VACUUM INTO failures (no INTERNAL_ERROR in error-codes.ts)
+- config.toml [backup] section pulled forward to Plan 311-01 to fix typecheck blocking
+- Filename timestamps include milliseconds (YYYYMMDD-HHmmssSSS) to prevent backup collision
+- BackupWorker does NOT set runImmediately: first backup after one interval
+- PID alive check separated from process.exit to avoid try/catch swallowing the throw
+- better-sqlite3 added as direct CLI dependency for PRAGMA integrity_check on restored DB
 
 ### Blockers/Concerns
 
@@ -58,5 +64,5 @@ Progress: [████░░░░░░] 36%
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Completed 310-02-PLAN.md (Phase 310 Audit Log Query API complete)
+Stopped at: Completed 311-03-PLAN.md (Phase 311 Encrypted Backup & Restore complete)
 Resume file: None

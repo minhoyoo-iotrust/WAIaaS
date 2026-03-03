@@ -100,7 +100,7 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v30.0-ROADMAP.md` for full 
 
 - [x] **Phase 309: Transaction Dry-Run** - 트랜잭션 시뮬레이션 API + SDK + MCP 구현 -- completed 2026-03-03
 - [x] **Phase 310: Audit Log Query API** - 감사 로그 조회 엔드포인트 + 이벤트 타입 확대 + DB 인덱스 -- completed 2026-03-03
-- [ ] **Phase 311: Encrypted Backup & Restore** - 암호화 백업 생성/복원 API + CLI + 자동 스케줄러
+- [x] **Phase 311: Encrypted Backup & Restore** - 암호화 백업 생성/복원 API + CLI + 자동 스케줄러 -- completed 2026-03-03
 - [ ] **Phase 312: Webhook Outbound** - Webhook CRUD API + HMAC 서명 + 재시도 큐 + DB 테이블
 - [ ] **Phase 313: Admin Stats + AutoStop Plugin** - 운영 통계 API + AutoStop 규칙 플러그인 아키텍처
 
@@ -148,9 +148,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 311-01-PLAN.md -- EncryptedBackupService + 바이너리 아카이브 포맷 + REST API
-- [ ] 311-02-PLAN.md -- CLI backup/restore/list/inspect 커맨드
-- [ ] 311-03-PLAN.md -- BackupWorker 자동 스케줄러 + config.toml [backup] 섹션
+- [x] 311-01-PLAN.md -- EncryptedBackupService + 바이너리 아카이브 포맷 + REST API -- completed 2026-03-03
+- [x] 311-02-PLAN.md -- CLI backup/restore/list/inspect 커맨드 -- completed 2026-03-03
+- [x] 311-03-PLAN.md -- BackupWorker 자동 스케줄러 + config.toml [backup] 섹션 -- completed 2026-03-03
 
 ### Phase 312: Webhook Outbound
 **Goal**: 외부 시스템이 WAIaaS 데몬의 이벤트(트랜잭션 완료, 정책 거부, Kill Switch 등)를 실시간으로 HTTP 콜백으로 수신할 수 있다
@@ -201,9 +201,9 @@ Phases execute in numeric order: 309 -> 310 -> 311 -> 312 -> 313
 | 268-308 | v29.0-v30.0 | All | Complete | 2026-03-03 |
 | 309. Transaction Dry-Run | v30.2 | Complete    | 2026-03-03 | 2026-03-03 |
 | 310. Audit Log Query API | v30.2 | Complete    | 2026-03-03 | 2026-03-03 |
-| 311. Encrypted Backup & Restore | v30.2 | 0/3 | Planned | - |
+| 311. Encrypted Backup & Restore | v30.2 | 3/3 | Complete | 2026-03-03 |
 | 312. Webhook Outbound | v30.2 | 0/3 | Not started | - |
 | 313. Admin Stats + AutoStop Plugin | v30.2 | 0/3 | Not started | - |
 
 ---
-*Last updated: 2026-03-03 -- Phase 311 planned (3 plans, 6 tasks, 2 waves)*
+*Last updated: 2026-03-03 -- Phase 311 complete (3 plans, 6 tasks, 129 tests)*

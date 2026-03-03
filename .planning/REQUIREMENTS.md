@@ -25,12 +25,12 @@ Requirements for v30.2. Each maps to roadmap phases.
 
 ### Encrypted Backup (BKUP)
 
-- [ ] **BKUP-01**: POST /v1/admin/backup creates AES-256-GCM encrypted archive (Argon2id KDF, VACUUM INTO DB snapshot, masterAuth)
-- [ ] **BKUP-02**: GET /v1/admin/backups lists available backups with metadata (masterAuth)
-- [ ] **BKUP-03**: CLI waiaas backup / backup list / backup inspect commands (backup via daemon API, list/inspect offline)
-- [ ] **BKUP-04**: CLI waiaas restore --from restores from encrypted backup (daemon stopped required, existing data preserved as .bak, auto-rollback on failure, PRAGMA integrity_check)
-- [ ] **BKUP-05**: Backup archive binary format — 60B fixed header (magic WAIAAS\x00\x01 + format version + salt + nonce + auth tag) + plaintext metadata JSON + encrypted payload (DB + config.toml + keystore files)
-- [ ] **BKUP-06**: config.toml [backup] section (dir/interval/retention_count) + BackupWorker auto-scheduler integrated with BackgroundWorkers lifecycle
+- [x] **BKUP-01**: POST /v1/admin/backup creates AES-256-GCM encrypted archive (Argon2id KDF, VACUUM INTO DB snapshot, masterAuth)
+- [x] **BKUP-02**: GET /v1/admin/backups lists available backups with metadata (masterAuth)
+- [x] **BKUP-03**: CLI waiaas backup / backup list / backup inspect commands (backup via daemon API, list/inspect offline)
+- [x] **BKUP-04**: CLI waiaas restore --from restores from encrypted backup (daemon stopped required, existing data preserved as .bak, auto-rollback on failure, PRAGMA integrity_check)
+- [x] **BKUP-05**: Backup archive binary format — 60B fixed header (magic WAIAAS\x00\x01 + format version + salt + nonce + auth tag) + plaintext metadata JSON + encrypted payload (DB + config.toml + keystore files)
+- [x] **BKUP-06**: config.toml [backup] section (dir/interval/retention_count) + BackupWorker auto-scheduler integrated with BackgroundWorkers lifecycle
 
 ### Webhook Outbound (HOOK)
 
@@ -100,12 +100,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AUDIT-01 | Phase 310 | Complete |
 | AUDIT-02 | Phase 310 | Complete |
 | AUDIT-03 | Phase 310 | Complete |
-| BKUP-01 | Phase 311 | Pending |
-| BKUP-02 | Phase 311 | Pending |
-| BKUP-03 | Phase 311 | Pending |
-| BKUP-04 | Phase 311 | Pending |
-| BKUP-05 | Phase 311 | Pending |
-| BKUP-06 | Phase 311 | Pending |
+| BKUP-01 | Phase 311 | Complete |
+| BKUP-02 | Phase 311 | Complete |
+| BKUP-03 | Phase 311 | Complete |
+| BKUP-04 | Phase 311 | Complete |
+| BKUP-05 | Phase 311 | Complete |
+| BKUP-06 | Phase 311 | Complete |
 | HOOK-01 | Phase 312 | Pending |
 | HOOK-02 | Phase 312 | Pending |
 | HOOK-03 | Phase 312 | Pending |
@@ -129,4 +129,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-03*
-*Last updated: 2026-03-03 -- AUDIT-01~03 complete (Phase 310), 22/30 remaining*
+*Last updated: 2026-03-03 -- BKUP-01~06 complete (Phase 311), 16/30 remaining*
