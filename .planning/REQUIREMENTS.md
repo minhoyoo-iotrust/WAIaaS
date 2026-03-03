@@ -92,41 +92,41 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SIM-01 | TBD | Pending |
-| SIM-02 | TBD | Pending |
-| SIM-03 | TBD | Pending |
-| SIM-04 | TBD | Pending |
-| SIM-05 | TBD | Pending |
-| AUDIT-01 | TBD | Pending |
-| AUDIT-02 | TBD | Pending |
-| AUDIT-03 | TBD | Pending |
-| BKUP-01 | TBD | Pending |
-| BKUP-02 | TBD | Pending |
-| BKUP-03 | TBD | Pending |
-| BKUP-04 | TBD | Pending |
-| BKUP-05 | TBD | Pending |
-| BKUP-06 | TBD | Pending |
-| HOOK-01 | TBD | Pending |
-| HOOK-02 | TBD | Pending |
-| HOOK-03 | TBD | Pending |
-| HOOK-04 | TBD | Pending |
-| HOOK-05 | TBD | Pending |
-| HOOK-06 | TBD | Pending |
-| HOOK-07 | TBD | Pending |
-| STAT-01 | TBD | Pending |
-| STAT-02 | TBD | Pending |
-| STAT-03 | TBD | Pending |
-| STAT-04 | TBD | Pending |
-| PLUG-01 | TBD | Pending |
-| PLUG-02 | TBD | Pending |
-| PLUG-03 | TBD | Pending |
-| PLUG-04 | TBD | Pending |
+| SIM-01 | Phase 309 | Pending |
+| SIM-02 | Phase 309 | Pending |
+| SIM-03 | Phase 309 | Pending |
+| SIM-04 | Phase 309 | Pending |
+| SIM-05 | Phase 309 | Pending |
+| AUDIT-01 | Phase 310 | Pending |
+| AUDIT-02 | Phase 310 | Pending |
+| AUDIT-03 | Phase 310 | Pending |
+| BKUP-01 | Phase 311 | Pending |
+| BKUP-02 | Phase 311 | Pending |
+| BKUP-03 | Phase 311 | Pending |
+| BKUP-04 | Phase 311 | Pending |
+| BKUP-05 | Phase 311 | Pending |
+| BKUP-06 | Phase 311 | Pending |
+| HOOK-01 | Phase 312 | Pending |
+| HOOK-02 | Phase 312 | Pending |
+| HOOK-03 | Phase 312 | Pending |
+| HOOK-04 | Phase 312 | Pending |
+| HOOK-05 | Phase 312 | Pending |
+| HOOK-06 | Phase 312 | Pending |
+| HOOK-07 | Phase 312 | Pending |
+| STAT-01 | Phase 313 | Pending |
+| STAT-02 | Phase 313 | Pending |
+| STAT-03 | Phase 313 | Pending |
+| STAT-04 | Phase 313 | Pending |
+| PLUG-01 | Phase 313 | Pending |
+| PLUG-02 | Phase 313 | Pending |
+| PLUG-03 | Phase 313 | Pending |
+| PLUG-04 | Phase 313 | Pending |
 
 **Coverage:**
 - v1 requirements: 30 total
-- Mapped to phases: 0
-- Unmapped: 30 ⚠️
+- Mapped to phases: 30/30
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-03*
-*Last updated: 2026-03-03 after initial definition*
+*Last updated: 2026-03-03 after roadmap creation -- all 30 requirements mapped to phases 309-313*
