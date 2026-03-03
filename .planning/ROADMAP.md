@@ -36,7 +36,7 @@
 - ✅ **v29.8 Solana Perp DEX (Drift) + Perp 프레임워크** -- Phases 297-299 (shipped 2026-03-02)
 - ✅ **v29.9 세션 점진적 보안 모델** -- Phases 300-301 (shipped 2026-03-02)
 - ✅ **v29.10 ntfy 토픽 지갑별 설정 전환** -- Phases 302-303 (shipped 2026-03-02)
-- **v30.0 운영 기능 확장 설계** -- Phases 304-308 (in progress)
+- ✅ **v30.0 운영 기능 확장 설계** -- Phases 304-308 (shipped 2026-03-03)
 
 ## Phases
 
@@ -93,7 +93,7 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v29.10-ROADMAP.md` for full
 
 </details>
 
-### v30.0 운영 기능 확장 설계 (In Progress)
+### v30.0 운영 기능 확장 설계 (SHIPPED 2026-03-03)
 
 **Milestone Goal:** 운영 환경에서 필요한 6가지 기능(Transaction Dry-Run, Audit Log Query API, Encrypted Backup, Webhook Outbound, Admin Stats API, AutoStop Plugin Architecture)을 설계 수준에서 정의한다. Zod 스키마, 인터페이스, 데이터 모델, 기존 설계 문서 통합 지점, 테스트 시나리오를 확정하여 구현 마일스톤의 입력을 생산한다.
 
@@ -203,4 +203,4 @@ Phases execute in numeric order: 304 → 305 → 306 → 307 → 308
 | 308. Admin Stats + AutoStop Plugin 설계 | v30.0 | 3/3 | Complete | 2026-03-03 |
 
 ---
-*Last updated: 2026-03-03 after Phase 308 completion -- v30.0 milestone complete (5/5 phases, 11/11 plans)*
+*Last updated: 2026-03-03 -- v30.0 SHIPPED (5/5 phases, 11/11 plans, 25/25 requirements)*
