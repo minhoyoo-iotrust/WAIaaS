@@ -36,6 +36,7 @@ export const messages: Messages = {
     TX_ALREADY_PROCESSED: '이미 처리된 트랜잭션입니다',
     CHAIN_ERROR: '블록체인 오류가 발생했습니다',
     SIMULATION_FAILED: '트랜잭션 시뮬레이션에 실패했습니다',
+    SIMULATION_TIMEOUT: '트랜잭션 시뮬레이션 시간이 초과되었습니다',
     TOKEN_NOT_FOUND: '토큰을 찾을 수 없습니다',
     TOKEN_NOT_ALLOWED: '정책에 의해 허용되지 않는 토큰입니다',
     INSUFFICIENT_TOKEN_BALANCE: '토큰 잔액이 부족합니다',

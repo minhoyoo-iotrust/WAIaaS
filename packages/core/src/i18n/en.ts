@@ -90,6 +90,7 @@ export const messages: Messages = {
     TX_ALREADY_PROCESSED: 'Transaction already processed',
     CHAIN_ERROR: 'Blockchain error',
     SIMULATION_FAILED: 'Transaction simulation failed',
+    SIMULATION_TIMEOUT: 'Transaction simulation timed out',
     TOKEN_NOT_FOUND: 'Token not found',
     TOKEN_NOT_ALLOWED: 'Token not allowed by policy',
     INSUFFICIENT_TOKEN_BALANCE: 'Insufficient token balance',

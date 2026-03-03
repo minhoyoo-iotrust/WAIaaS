@@ -236,6 +236,13 @@ export const ERROR_CODES = {
     retryable: false,
     message: 'Transaction simulation failed',
   },
+  SIMULATION_TIMEOUT: {
+    code: 'SIMULATION_TIMEOUT',
+    domain: 'TX',
+    httpStatus: 504,
+    retryable: true,
+    message: 'Transaction simulation timed out',
+  },
   TOKEN_NOT_FOUND: {
     code: 'TOKEN_NOT_FOUND',
     domain: 'TX',
