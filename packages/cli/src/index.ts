@@ -38,6 +38,8 @@ import { sessionPromptCommand } from './commands/session.js';
 import { notificationSetupCommand } from './commands/notification-setup.js';
 import { updateCommand } from './commands/update.js';
 import { setMasterCommand } from './commands/set-master.js';
+import { backupCommand, backupListCommand, backupInspectCommand } from './commands/backup.js';
+import { restoreCommand } from './commands/restore.js';
 import { resolveDataDir } from './utils/data-dir.js';
 import { checkAndNotifyUpdate } from './utils/update-notify.js';
 
@@ -336,6 +338,49 @@ program
   .action(async (opts: { dataDir?: string; baseUrl?: string; password?: string }) => {
     const dataDir = resolveDataDir(opts);
     await setMasterCommand({ dataDir, baseUrl: opts.baseUrl, password: opts.password });
+  });
+
+// Backup subcommand group
+const backup = program.command('backup').description('Backup management commands');
+
+backup
+  .command('create')
+  .description('Create an encrypted backup (daemon must be running)')
+  .option('--base-url <url>', 'Daemon base URL', 'http://127.0.0.1:3100')
+  .option('--password <password>', 'Master password')
+  .option('--data-dir <path>', 'Data directory path')
+  .action(async (opts: { baseUrl?: string; password?: string; dataDir?: string }) => {
+    await backupCommand(opts);
+  });
+
+backup
+  .command('list')
+  .description('List available backups (offline)')
+  .option('--data-dir <path>', 'Data directory path')
+  .action(async (opts: { dataDir?: string }) => {
+    const dataDir = resolveDataDir(opts);
+    await backupListCommand({ dataDir });
+  });
+
+backup
+  .command('inspect')
+  .description('Inspect a backup file (offline, no password needed)')
+  .argument('<path>', 'Path to .waiaas-backup file')
+  .action(async (archivePath: string) => {
+    await backupInspectCommand(archivePath);
+  });
+
+// Restore command
+program
+  .command('restore')
+  .description('Restore from an encrypted backup (daemon must be stopped)')
+  .requiredOption('--from <path>', 'Path to .waiaas-backup file')
+  .option('--data-dir <path>', 'Data directory path')
+  .option('--password <password>', 'Master password')
+  .option('--force', 'Skip confirmation prompt')
+  .action(async (opts: { from: string; dataDir?: string; password?: string; force?: boolean }) => {
+    const dataDir = resolveDataDir(opts);
+    await restoreCommand({ ...opts, dataDir });
   });
 
 // Pre-parse --quiet and --data-dir from argv (program.opts() is empty before parseAsync)
