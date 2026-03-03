@@ -1,5 +1,31 @@
 # Project Milestones: WAIaaS
 
+## v30.2 운영 기능 확장 구현 (Shipped: 2026-03-04)
+
+**Delivered:** v30.0에서 설계한 6가지 운영 기능을 구현하여 WAIaaS 데몬이 운영 환경에서 트랜잭션 시뮬레이션, 감사 로그 조회, 암호화 백업/복원, Webhook 이벤트 전달, 운영 통계 대시보드, AutoStop 규칙 플러그인 관리가 가능한 상태.
+
+**Phases completed:** 309-313.1 (6 phases, 14 plans, 30 requirements)
+
+**Key accomplishments:**
+
+- Transaction Dry-Run — POST /v1/transactions/simulate로 정책 평가/수수료/잔액 변동/경고를 부수 효과 없이 사전 확인, SDK simulate() + MCP simulate_transaction 도구 제공
+- Audit Log Query API — GET /v1/audit-logs cursor pagination + 6 필터, 감사 이벤트 9→20개 확대, insertAuditLog 헬퍼로 8개 서비스 파일에서 자동 기록
+- Encrypted Backup & Restore — AES-256-GCM 암호화 아카이브(60B 바이너리 헤더), REST API + CLI 4 커맨드(backup/restore/list/inspect) + BackupWorker 자동 스케줄러
+- Webhook Outbound — HMAC-SHA256 서명 HTTP 콜백, 4-attempt 재시도 큐(지수 백오프), webhooks+webhook_logs DB 테이블, EventBus 5 이벤트 연동
+- Admin Stats + AutoStop Plugin — 7-category 운영 통계 API(30s 폴링 대시보드), IAutoStopRule 플러그인 인터페이스 + RuleRegistry, per-rule Admin Settings 토글
+- Gap Closure — InMemoryCounter 프로덕션 와이어링(14 increment 호출), 63 테스트 assertion 수정, admin.skill.md 10 엔드포인트 동기화
+
+**Stats:**
+
+- 6 phases, 14 plans, 30 requirements, 106 commits
+- 219 files changed, +31,274 / -1,023 lines
+- ~246,245 LOC TypeScript, ~6,413 test cases
+- DB: schema v37 (v36 audit index + v37 webhooks tables), 21 tables
+- New REST APIs: 11 endpoints, New CLI commands: 4, New error codes: 7
+- Timeline: 2026-03-03 ~ 2026-03-04
+
+---
+
 ## v30.0 운영 기능 확장 설계 (Shipped: 2026-03-03)
 
 **Delivered:** 운영 환경에서 필요한 6가지 기능(Transaction Dry-Run, Audit Log Query API, Encrypted Backup, Webhook Outbound, Admin Stats API, AutoStop Plugin Architecture)을 설계 수준에서 정의한 마일스톤. Zod 스키마, 인터페이스, 데이터 모델, 기존 설계 문서 통합 지점, 테스트 시나리오를 확정하여 구현 마일스톤의 입력을 생산.
