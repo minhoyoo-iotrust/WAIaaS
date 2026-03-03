@@ -98,7 +98,7 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v30.0-ROADMAP.md` for full 
 
 **Milestone Goal:** m30-02 -- 설계된 6가지 운영 기능(Dry-Run, Audit Log, Backup, Webhook, Stats, AutoStop Plugin)을 구현하여 데몬이 운영 환경에서 모니터링/감사/백업/보안 제어가 가능한 상태로 만든다.
 
-- [ ] **Phase 309: Transaction Dry-Run** - 트랜잭션 시뮬레이션 API + SDK + MCP 구현
+- [x] **Phase 309: Transaction Dry-Run** - 트랜잭션 시뮬레이션 API + SDK + MCP 구현 -- completed 2026-03-03
 - [ ] **Phase 310: Audit Log Query API** - 감사 로그 조회 엔드포인트 + 이벤트 타입 확대 + DB 인덱스
 - [ ] **Phase 311: Encrypted Backup & Restore** - 암호화 백업 생성/복원 API + CLI + 자동 스케줄러
 - [ ] **Phase 312: Webhook Outbound** - Webhook CRUD API + HMAC 서명 + 재시도 큐 + DB 테이블
@@ -118,8 +118,8 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v30.0-ROADMAP.md` for full 
 **Plans**: 2 plans
 
 Plans:
-- [ ] 309-01-PLAN.md -- DryRunSimulationResult Zod 스키마 + executeDryRun 파이프라인 분기
-- [ ] 309-02-PLAN.md -- POST /v1/transactions/simulate REST API + SDK simulate() + MCP simulate_transaction
+- [x] 309-01-PLAN.md -- DryRunSimulationResult Zod 스키마 + executeDryRun 파이프라인 분기 -- completed 2026-03-03
+- [x] 309-02-PLAN.md -- POST /v1/transactions/simulate REST API + SDK simulate() + MCP simulate_transaction -- completed 2026-03-03
 
 ### Phase 310: Audit Log Query API
 **Goal**: 관리자가 감사 로그를 시간/지갑/이벤트/심각도 기준으로 필터링하여 조회하고, 시스템 전반의 보안 이벤트를 추적할 수 있다
@@ -199,11 +199,11 @@ Phases execute in numeric order: 309 -> 310 -> 311 -> 312 -> 313
 | 215-243 | v27.0-v27.4 | All | Complete | 2026-02-23 |
 | 244-267 | v28.0-v28.8 | All | Complete | 2026-02-26 |
 | 268-308 | v29.0-v30.0 | All | Complete | 2026-03-03 |
-| 309. Transaction Dry-Run | v30.2 | 0/2 | Planned | - |
+| 309. Transaction Dry-Run | v30.2 | 2/2 | Complete | 2026-03-03 |
 | 310. Audit Log Query API | v30.2 | 0/2 | Not started | - |
 | 311. Encrypted Backup & Restore | v30.2 | 0/3 | Not started | - |
 | 312. Webhook Outbound | v30.2 | 0/3 | Not started | - |
 | 313. Admin Stats + AutoStop Plugin | v30.2 | 0/3 | Not started | - |
 
 ---
-*Last updated: 2026-03-03 -- Phase 309 plans created (2 plans, 2 waves)*
+*Last updated: 2026-03-03 -- Phase 309 complete (2/2 plans, 4 tasks, 4 commits)*

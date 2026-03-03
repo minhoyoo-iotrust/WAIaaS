@@ -11,11 +11,11 @@ Requirements for v30.2. Each maps to roadmap phases.
 
 ### Transaction Dry-Run (SIM)
 
-- [ ] **SIM-01**: POST /v1/transactions/simulate returns DryRunSimulationResult (policy/fee/balanceChanges/warnings/simulation/meta) with zero side effects — no DB writes, no signing, no notifications, no event emissions
-- [ ] **SIM-02**: Dry-run policy denial returns HTTP 200 with success=false, policy.allowed=false (business result separated from HTTP status)
-- [ ] **SIM-03**: SDK simulate() method mirrors sendToken() request shape with withRetry() wrapping
-- [ ] **SIM-04**: MCP simulate_transaction tool available for AI agents with same parameter structure as send_token
-- [ ] **SIM-05**: DryRunSimulationResultSchema Zod SSoT in @waiaas/core with 12 warning codes (INSUFFICIENT_BALANCE, ORACLE_PRICE_UNAVAILABLE, etc.)
+- [x] **SIM-01**: POST /v1/transactions/simulate returns DryRunSimulationResult (policy/fee/balanceChanges/warnings/simulation/meta) with zero side effects — no DB writes, no signing, no notifications, no event emissions
+- [x] **SIM-02**: Dry-run policy denial returns HTTP 200 with success=false, policy.allowed=false (business result separated from HTTP status)
+- [x] **SIM-03**: SDK simulate() method mirrors sendToken() request shape with withRetry() wrapping
+- [x] **SIM-04**: MCP simulate_transaction tool available for AI agents with same parameter structure as send_token
+- [x] **SIM-05**: DryRunSimulationResultSchema Zod SSoT in @waiaas/core with 12 warning codes (INSUFFICIENT_BALANCE, ORACLE_PRICE_UNAVAILABLE, etc.)
 
 ### Audit Log Query (AUDIT)
 
@@ -92,11 +92,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SIM-01 | Phase 309 | Pending |
-| SIM-02 | Phase 309 | Pending |
-| SIM-03 | Phase 309 | Pending |
-| SIM-04 | Phase 309 | Pending |
-| SIM-05 | Phase 309 | Pending |
+| SIM-01 | Phase 309 | Complete |
+| SIM-02 | Phase 309 | Complete |
+| SIM-03 | Phase 309 | Complete |
+| SIM-04 | Phase 309 | Complete |
+| SIM-05 | Phase 309 | Complete |
 | AUDIT-01 | Phase 310 | Pending |
 | AUDIT-02 | Phase 310 | Pending |
 | AUDIT-03 | Phase 310 | Pending |
@@ -129,4 +129,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-03*
-*Last updated: 2026-03-03 after roadmap creation -- all 30 requirements mapped to phases 309-313*
+*Last updated: 2026-03-03 -- SIM-01~05 complete (Phase 309), 25/30 remaining*

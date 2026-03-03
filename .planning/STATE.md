@@ -8,7 +8,7 @@ progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 13
-  completed_plans: 0
+  completed_plans: 2
 ---
 
 # Project State
@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-03-03)
 ## Current Position
 
 Phase: 1 of 5 (Phase 309: Transaction Dry-Run)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-03-03 -- Roadmap created (5 phases, 13 plans, 30 requirements)
+Plan: 2 of 2 in current phase (COMPLETE)
+Status: Phase 309 complete -- ready for Phase 310
+Last activity: 2026-03-03 -- Phase 309 complete (2 plans, 4 tasks, 4 commits)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██░░░░░░░░] 15%
 
 ## Performance Metrics
 
@@ -41,6 +41,10 @@ Progress: [░░░░░░░░░░] 0%
 - m30-02 objective: 원안 7->6개 조정 (IP/Network Access Control 제거, Metrics->Admin Stats 축소, Anomaly Detection->AutoStop Plugin 축소)
 - Phase 순서: Dry-Run > Audit > Backup > Webhook > Stats+AutoStop (의존성 + 우선순위)
 - DB migration 순서: v34 (AUDIT index) -> v35 (Webhook tables) -- 각각 Phase 310, 312에 배치
+- DryRunDeps excludes keyStore/masterPassword/notificationService/eventBus to enforce zero side effects at type level
+- IPolicyEngine.evaluate() used (not evaluateAndReserve()) for read-only policy evaluation
+- Policy denied returns HTTP 200 with success=false (not HTTP error) per SIM-D11
+- SDK simulate() reuses SendTokenParams type and validateSendToken() pre-validation
 
 ### Blockers/Concerns
 
@@ -49,5 +53,5 @@ Progress: [░░░░░░░░░░] 0%
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Roadmap created -- ready for Phase 309 planning
+Stopped at: Completed 309-02-PLAN.md (Phase 309 Transaction Dry-Run complete)
 Resume file: None
