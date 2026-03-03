@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.9.0-rc.18](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc.17...v2.9.0-rc.18) (2026-03-02)
+
+
+### Bug Fixes
+
+* **daemon:** RFC 2047 encode non-ASCII ntfy Title header to prevent silent failure ([#242](https://github.com/minhoyoo-iotrust/WAIaaS/issues/242)) ([a3eae46](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a3eae4677c5c6d7a742234b319edb7bcb44ebfba))
+* **push-relay:** replace fetch() with node:http + explicit zlib decompression for SSE ([#243](https://github.com/minhoyoo-iotrust/WAIaaS/issues/243)) ([7622768](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7622768334626c76d61d1635ef3a21293ffa3e4e))
+* **push-relay:** replace undici fetch with node:http SSE + explicit zlib decompression ([#243](https://github.com/minhoyoo-iotrust/WAIaaS/issues/243)) ([0ec502c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0ec502c3201b016d653c9d82097b2ae14762bcca))
+* **wallet-sdk,push-relay:** align registerDevice field name and catch provider errors ([6adf2d1](https://github.com/minhoyoo-iotrust/WAIaaS/commit/6adf2d1164ce98652bac35d56ba97135993163ed))
+
 ## [2.9.0-rc.17](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0-rc.16...v2.9.0-rc.17) (2026-03-02)
 
 
