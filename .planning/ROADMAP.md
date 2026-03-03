@@ -115,11 +115,11 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v30.0-ROADMAP.md` for full 
   2. 정책에 의해 거부된 트랜잭션을 시뮬레이션하면 HTTP 200에 success=false, policy.allowed=false가 반환된다 (HTTP 에러가 아닌 비즈니스 결과)
   3. SDK의 simulate() 메서드로 sendToken()과 동일한 파라미터 구조로 시뮬레이션을 요청할 수 있다
   4. MCP simulate_transaction 도구로 AI 에이전트가 전송 전 시뮬레이션을 실행할 수 있다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 309-01: DryRunSimulationResult Zod 스키마 + executeDryRun 파이프라인 분기
-- [ ] 309-02: POST /v1/transactions/simulate REST API + SDK simulate() + MCP simulate_transaction
+- [ ] 309-01-PLAN.md -- DryRunSimulationResult Zod 스키마 + executeDryRun 파이프라인 분기
+- [ ] 309-02-PLAN.md -- POST /v1/transactions/simulate REST API + SDK simulate() + MCP simulate_transaction
 
 ### Phase 310: Audit Log Query API
 **Goal**: 관리자가 감사 로그를 시간/지갑/이벤트/심각도 기준으로 필터링하여 조회하고, 시스템 전반의 보안 이벤트를 추적할 수 있다
@@ -199,11 +199,11 @@ Phases execute in numeric order: 309 -> 310 -> 311 -> 312 -> 313
 | 215-243 | v27.0-v27.4 | All | Complete | 2026-02-23 |
 | 244-267 | v28.0-v28.8 | All | Complete | 2026-02-26 |
 | 268-308 | v29.0-v30.0 | All | Complete | 2026-03-03 |
-| 309. Transaction Dry-Run | v30.2 | 0/2 | Not started | - |
+| 309. Transaction Dry-Run | v30.2 | 0/2 | Planned | - |
 | 310. Audit Log Query API | v30.2 | 0/2 | Not started | - |
 | 311. Encrypted Backup & Restore | v30.2 | 0/3 | Not started | - |
 | 312. Webhook Outbound | v30.2 | 0/3 | Not started | - |
 | 313. Admin Stats + AutoStop Plugin | v30.2 | 0/3 | Not started | - |
 
 ---
-*Last updated: 2026-03-03 -- v30.2 roadmap created*
+*Last updated: 2026-03-03 -- Phase 309 plans created (2 plans, 2 waves)*
