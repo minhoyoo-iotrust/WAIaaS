@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v30.2
 milestone_name: 운영 기능 확장 구현
-status: unknown
-last_updated: "2026-03-03T11:05:00.092Z"
+status: in_progress
+last_updated: "2026-03-03T11:34:00Z"
 progress:
   total_phases: 182
-  completed_phases: 176
+  completed_phases: 177
   total_plans: 390
-  completed_plans: 384
+  completed_plans: 386
 ---
 
 # Project State
@@ -18,20 +18,20 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-03)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v30.2 운영 기능 확장 구현 -- Phase 309 (Transaction Dry-Run)
+**Current focus:** v30.2 운영 기능 확장 구현 -- Phase 310 (Audit Log Query API) complete
 
 ## Current Position
 
-Phase: 1 of 5 (Phase 309: Transaction Dry-Run)
+Phase: 2 of 5 (Phase 310: Audit Log Query API)
 Plan: 2 of 2 in current phase (COMPLETE)
-Status: Phase 309 complete -- ready for Phase 310
-Last activity: 2026-03-03 -- Phase 309 complete (2 plans, 4 tasks, 4 commits)
+Status: Phase 310 complete -- ready for Phase 311
+Last activity: 2026-03-03 -- Phase 310 complete (2 plans, 3 tasks, 3 commits)
 
-Progress: [██░░░░░░░░] 15%
+Progress: [████░░░░░░] 36%
 
 ## Performance Metrics
 
-**Cumulative:** 79 milestones (79 shipped), 308 phases completed, ~695 plans, ~1,970 reqs, ~5,737+ tests, ~233,440 LOC TS
+**Cumulative:** 79 milestones (79 shipped), 310 phases completed, ~697 plans, ~1,973 reqs, ~5,755+ tests, ~233,440 LOC TS
 
 ## Accumulated Context
 
@@ -45,6 +45,11 @@ Progress: [██░░░░░░░░] 15%
 - IPolicyEngine.evaluate() used (not evaluateAndReserve()) for read-only policy evaluation
 - Policy denied returns HTTP 200 with success=false (not HTTP error) per SIM-D11
 - SDK simulate() reuses SendTokenParams type and validateSendToken() pre-validation
+- Raw SQL over Drizzle for dynamic WHERE clause in audit-logs query (cleaner with optional filters)
+- Route path /v1/audit-logs (not /v1/admin/audit-logs) per design spec OPS-02
+- buildWhereClause helper shared between data query and count query (no duplication)
+- notification-service.ts keeps Drizzle insert for NOTIFICATION_TOTAL_FAILURE (no raw sqlite access)
+- TX_FAILED audit logged at key failure points (simulation, permanent error, on-chain revert), not every retry
 
 ### Blockers/Concerns
 
@@ -53,5 +58,5 @@ Progress: [██░░░░░░░░] 15%
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Completed 309-02-PLAN.md (Phase 309 Transaction Dry-Run complete)
+Stopped at: Completed 310-02-PLAN.md (Phase 310 Audit Log Query API complete)
 Resume file: None

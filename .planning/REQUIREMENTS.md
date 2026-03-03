@@ -19,9 +19,9 @@ Requirements for v30.2. Each maps to roadmap phases.
 
 ### Audit Log Query (AUDIT)
 
-- [ ] **AUDIT-01**: GET /v1/audit-logs supports cursor pagination (id AUTOINCREMENT, default 50, max 200) with 6 filters (wallet_id, event_type, severity, from/to, tx_id) and optional include_total
-- [ ] **AUDIT-02**: 11 new audit event types added (total 20: WALLET_CREATED, WALLET_SUSPENDED, SESSION_CREATED, SESSION_REVOKED, TX_SUBMITTED, TX_CONFIRMED, TX_FAILED, POLICY_DENIED, KILL_SWITCH_RECOVERED, MASTER_AUTH_FAILED, OWNER_REGISTERED) with insertAuditLog helper and per-event severity/details mapping
-- [ ] **AUDIT-03**: DB migration v34 adds idx_audit_log_tx_id index (무중단 DDL)
+- [x] **AUDIT-01**: GET /v1/audit-logs supports cursor pagination (id AUTOINCREMENT, default 50, max 200) with 6 filters (wallet_id, event_type, severity, from/to, tx_id) and optional include_total
+- [x] **AUDIT-02**: 11 new audit event types added (total 20: WALLET_CREATED, WALLET_SUSPENDED, SESSION_CREATED, SESSION_REVOKED, TX_SUBMITTED, TX_CONFIRMED, TX_FAILED, POLICY_DENIED, KILL_SWITCH_RECOVERED, MASTER_AUTH_FAILED, OWNER_REGISTERED) with insertAuditLog helper and per-event severity/details mapping
+- [x] **AUDIT-03**: DB migration v36 adds idx_audit_log_tx_id index (무중단 DDL)
 
 ### Encrypted Backup (BKUP)
 
@@ -97,9 +97,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SIM-03 | Phase 309 | Complete |
 | SIM-04 | Phase 309 | Complete |
 | SIM-05 | Phase 309 | Complete |
-| AUDIT-01 | Phase 310 | Pending |
-| AUDIT-02 | Phase 310 | Pending |
-| AUDIT-03 | Phase 310 | Pending |
+| AUDIT-01 | Phase 310 | Complete |
+| AUDIT-02 | Phase 310 | Complete |
+| AUDIT-03 | Phase 310 | Complete |
 | BKUP-01 | Phase 311 | Pending |
 | BKUP-02 | Phase 311 | Pending |
 | BKUP-03 | Phase 311 | Pending |
@@ -129,4 +129,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-03*
-*Last updated: 2026-03-03 -- SIM-01~05 complete (Phase 309), 25/30 remaining*
+*Last updated: 2026-03-03 -- AUDIT-01~03 complete (Phase 310), 22/30 remaining*

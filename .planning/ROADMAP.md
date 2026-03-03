@@ -99,7 +99,7 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v30.0-ROADMAP.md` for full 
 **Milestone Goal:** m30-02 -- 설계된 6가지 운영 기능(Dry-Run, Audit Log, Backup, Webhook, Stats, AutoStop Plugin)을 구현하여 데몬이 운영 환경에서 모니터링/감사/백업/보안 제어가 가능한 상태로 만든다.
 
 - [x] **Phase 309: Transaction Dry-Run** - 트랜잭션 시뮬레이션 API + SDK + MCP 구현 -- completed 2026-03-03
-- [ ] **Phase 310: Audit Log Query API** - 감사 로그 조회 엔드포인트 + 이벤트 타입 확대 + DB 인덱스
+- [x] **Phase 310: Audit Log Query API** - 감사 로그 조회 엔드포인트 + 이벤트 타입 확대 + DB 인덱스 -- completed 2026-03-03
 - [ ] **Phase 311: Encrypted Backup & Restore** - 암호화 백업 생성/복원 API + CLI + 자동 스케줄러
 - [ ] **Phase 312: Webhook Outbound** - Webhook CRUD API + HMAC 서명 + 재시도 큐 + DB 테이블
 - [ ] **Phase 313: Admin Stats + AutoStop Plugin** - 운영 통계 API + AutoStop 규칙 플러그인 아키텍처
@@ -132,8 +132,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 310-01-PLAN.md -- 감사 이벤트 타입 확대(9->20) + insertAuditLog 헬퍼 + DB migration v36
-- [ ] 310-02-PLAN.md -- GET /v1/audit-logs REST API (cursor pagination, 6 filters, include_total)
+- [x] 310-01-PLAN.md -- 감사 이벤트 타입 확대(9->20) + insertAuditLog 헬퍼 + DB migration v36 -- completed 2026-03-03
+- [x] 310-02-PLAN.md -- GET /v1/audit-logs REST API (cursor pagination, 6 filters, include_total) -- completed 2026-03-03
 
 ### Phase 311: Encrypted Backup & Restore
 **Goal**: 관리자가 데몬의 전체 상태(DB + 설정 + 키스토어)를 암호화된 아카이브로 백업하고, 장애 시 CLI로 안전하게 복원할 수 있다
@@ -200,10 +200,10 @@ Phases execute in numeric order: 309 -> 310 -> 311 -> 312 -> 313
 | 244-267 | v28.0-v28.8 | All | Complete | 2026-02-26 |
 | 268-308 | v29.0-v30.0 | All | Complete | 2026-03-03 |
 | 309. Transaction Dry-Run | v30.2 | Complete    | 2026-03-03 | 2026-03-03 |
-| 310. Audit Log Query API | v30.2 | 0/2 | Not started | - |
+| 310. Audit Log Query API | v30.2 | 2/2 | Complete | 2026-03-03 |
 | 311. Encrypted Backup & Restore | v30.2 | 0/3 | Not started | - |
 | 312. Webhook Outbound | v30.2 | 0/3 | Not started | - |
 | 313. Admin Stats + AutoStop Plugin | v30.2 | 0/3 | Not started | - |
 
 ---
-*Last updated: 2026-03-03 -- Phase 310 planned (2 plans, 3 tasks)*
+*Last updated: 2026-03-03 -- Phase 310 complete (2 plans, 3 tasks, 3 commits)*
