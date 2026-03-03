@@ -1,5 +1,5 @@
 /**
- * Webhook CRUD routes: POST /v1/webhooks, GET /v1/webhooks, DELETE /v1/webhooks/:id
+ * Webhook CRUD + logs routes: POST/GET/DELETE /v1/webhooks, GET /v1/webhooks/:id/logs
  *
  * Manages webhook subscriptions for outbound event delivery.
  * Secret security model: generated as 64-char hex, stored as SHA-256 hash + AES-GCM encrypted,
@@ -16,6 +16,8 @@ import {
   CreateWebhookRequestSchema,
   WebhookResponseSchema,
   CreateWebhookResponseSchema,
+  WebhookLogSchema,
+  WebhookLogQuerySchema,
   WAIaaSError,
 } from '@waiaas/core';
 import { encryptSettingValue } from '../../infrastructure/settings/settings-crypto.js';
@@ -99,6 +101,33 @@ const deleteWebhookRoute = createRoute({
   responses: {
     204: {
       description: 'Webhook deleted',
+    },
+    ...buildErrorResponses(['INVALID_MASTER_PASSWORD', 'WEBHOOK_NOT_FOUND']),
+  },
+});
+
+const getWebhookLogsRoute = createRoute({
+  method: 'get',
+  path: '/webhooks/{id}/logs',
+  tags: ['Webhooks'],
+  summary: 'Get webhook delivery logs',
+  description: 'Returns delivery log entries for a specific webhook, sorted by created_at DESC.',
+  request: {
+    params: z.object({
+      id: z.string().uuid(),
+    }),
+    query: WebhookLogQuerySchema,
+  },
+  responses: {
+    200: {
+      description: 'Webhook delivery logs',
+      content: {
+        'application/json': {
+          schema: z.object({
+            data: z.array(WebhookLogSchema),
+          }),
+        },
+      },
     },
     ...buildErrorResponses(['INVALID_MASTER_PASSWORD', 'WEBHOOK_NOT_FOUND']),
   },
@@ -194,6 +223,69 @@ export function webhookRoutes(deps: WebhookRouteDeps): OpenAPIHono {
     deps.sqlite.prepare('DELETE FROM webhooks WHERE id = ?').run(id);
 
     return c.body(null, 204);
+  });
+
+  // GET /v1/webhooks/:id/logs -- delivery logs
+  router.openapi(getWebhookLogsRoute, (c) => {
+    const { id } = c.req.valid('param');
+    const query = c.req.valid('query');
+
+    // Check webhook exists
+    const existing = deps.sqlite
+      .prepare('SELECT id FROM webhooks WHERE id = ?')
+      .get(id) as { id: string } | undefined;
+
+    if (!existing) {
+      throw new WAIaaSError('WEBHOOK_NOT_FOUND');
+    }
+
+    // Build query with optional filters
+    const conditions: string[] = ['webhook_id = ?'];
+    const params: unknown[] = [id];
+
+    if (query.status) {
+      conditions.push('status = ?');
+      params.push(query.status);
+    }
+    if (query.event_type) {
+      conditions.push('event_type = ?');
+      params.push(query.event_type);
+    }
+
+    const limit = query.limit ?? 20;
+    params.push(limit);
+
+    const sql = `SELECT id, webhook_id, event_type, status, http_status, attempt, error, request_duration, created_at
+      FROM webhook_logs
+      WHERE ${conditions.join(' AND ')}
+      ORDER BY created_at DESC
+      LIMIT ?`;
+
+    const rows = deps.sqlite.prepare(sql).all(...params) as Array<{
+      id: string;
+      webhook_id: string;
+      event_type: string;
+      status: string;
+      http_status: number | null;
+      attempt: number;
+      error: string | null;
+      request_duration: number | null;
+      created_at: number;
+    }>;
+
+    const data = rows.map((row) => ({
+      id: row.id,
+      webhookId: row.webhook_id,
+      eventType: row.event_type,
+      status: row.status as 'success' | 'failed',
+      httpStatus: row.http_status,
+      attempt: row.attempt,
+      error: row.error,
+      requestDuration: row.request_duration,
+      createdAt: row.created_at,
+    }));
+
+    return c.json({ data }, 200);
   });
 
   return router;
