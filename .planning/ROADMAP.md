@@ -162,12 +162,12 @@ Plans:
   3. 전송 실패 시 최대 4회(지수 백오프 0/1s/2s/4s) 재시도되고, 4xx 응답은 즉시 중단되며, 각 시도가 webhook_logs에 기록된다
   4. GET /v1/webhooks/:id/logs로 특정 webhook의 전송 이력을 상태/이벤트/건수 필터로 조회할 수 있다
   5. DB migration v37로 webhooks + webhook_logs 2개 테이블이 생성된다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 312-01: DB migration v37 (webhooks + webhook_logs) + WebhookService + HMAC 서명
-- [ ] 312-02: Webhook CRUD REST API + WebhookDeliveryQueue 재시도 로직
-- [ ] 312-03: EventBus 이벤트 필터링 연동 + 전송 이력 API
+- [ ] 312-01-PLAN.md -- DB migration v37 + Zod SSoT + WebhookService + WebhookDeliveryQueue + HMAC 서명
+- [ ] 312-02-PLAN.md -- Webhook CRUD REST API (POST/GET/DELETE /v1/webhooks)
+- [ ] 312-03-PLAN.md -- EventBus 이벤트 필터링 연동 + Daemon lifecycle + 전송 이력 API
 
 ### Phase 313: Admin Stats + AutoStop Plugin
 **Goal**: 관리자가 데몬의 운영 현황(트랜잭션/세션/RPC/알림 통계)을 한눈에 파악하고, AutoStop 규칙을 개별적으로 활성화/비활성화/설정 변경할 수 있다
@@ -206,4 +206,4 @@ Phases execute in numeric order: 309 -> 310 -> 311 -> 312 -> 313
 | 313. Admin Stats + AutoStop Plugin | v30.2 | 0/3 | Not started | - |
 
 ---
-*Last updated: 2026-03-03 -- Phase 311 complete (3 plans, 6 tasks, 129 tests)*
+*Last updated: 2026-03-03 -- Phase 312 plans created (3 plans, 5 tasks)*
