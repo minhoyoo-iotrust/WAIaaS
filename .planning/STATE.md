@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v30.8
 milestone_name: ERC-8004 Trustless Agents 지원
 status: unknown
-last_updated: "2026-03-04T09:44:54.498Z"
+last_updated: "2026-03-04T10:12:17.000Z"
 progress:
   total_phases: 185
-  completed_phases: 179
+  completed_phases: 180
   total_plans: 396
-  completed_plans: 390
+  completed_plans: 392
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-04)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v30.8 Phase 321 -- EIP-712 Approval + Wallet Linking
+**Current focus:** v30.8 Phase 322 -- MCP + Admin UI Integration
 
 ## Current Position
 
-Phase: 320 (4 of 7) -- Reputation Policy Engine + Cache
+Phase: 321 (5 of 7) -- EIP-712 Approval + Wallet Linking
 Plan: 2 of 2 in current phase
-Status: Phase 320 completed, ready for Phase 321
-Last activity: 2026-03-04 -- Phase 320 Reputation Policy Engine + Cache completed (2 plans, 4 tasks, 25 tests)
+Status: Phase 321 completed, ready for Phase 322
+Last activity: 2026-03-04 -- Phase 321 EIP-712 Approval + Wallet Linking completed (2 plans, 4 tasks, 15 tests)
 
-Progress: [#####░░░░░] 57%
+Progress: [######░░░░] 71%
 
 ## Performance Metrics
 
@@ -43,6 +43,8 @@ Progress: [#####░░░░░] 57%
 | 319-02 | connect-info erc8004 Extension | 8min | 2 | 3 |
 | 320-01 | ReputationCacheService | 4min | 2 | 3 |
 | 320-02 | REPUTATION_THRESHOLD Policy | 8min | 2 | 6 |
+| 321-01 | EIP-712 Typed Data + ApprovalWorkflow | 8min | 2 | 12 |
+| 321-02 | set_agent_wallet EIP-712 Integration | 6min | 2 | 5 |
 
 ## Accumulated Context
 
@@ -71,6 +73,10 @@ Progress: [#####░░░░░] 57%
 - REPUTATION_THRESHOLD: reputation floor tier applied via maxTier (escalation only, never deny/downgrade)
 - evaluateAndReserve: async prefetch before IMMEDIATE txn (resolves async-in-sync constraint)
 - resolveAgentIdFromAddress: case-insensitive publicKey join (agent_identities + wallets)
+- Eip712Metadata defined in @waiaas/actions (co-located with provider), re-exported for daemon use
+- Owner address enrichment happens in actions route (wallet.ownerAddress from DB), not in actions provider
+- Calldata re-encoding in executeFromStage5 reads typed_data_json + owner_signature from pending_approvals
+- resolveChainId helper for EVM network-to-chainId mapping (10+ networks supported)
 
 ### Blockers/Concerns
 
@@ -80,5 +86,5 @@ Progress: [#####░░░░░] 57%
 ## Session Continuity
 
 Last session: 2026-03-04
-Stopped at: Completed 320-02-PLAN.md. Phase 320 Reputation Policy Engine + Cache complete (2 plans, 4 tasks, 25 tests).
+Stopped at: Completed 321-02-PLAN.md. Phase 321 EIP-712 Approval + Wallet Linking complete (2 plans, 4 tasks, 15 tests).
 Resume file: None

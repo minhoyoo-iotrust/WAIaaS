@@ -16,8 +16,8 @@ Requirements for v30.8 milestone. Each maps to roadmap phases.
 ### Identity Registry (IDEN)
 
 - [x] **IDEN-01**: Agent can register on Identity Registry (NFT minting) via `register_agent` action with APPROVAL tier
-- [ ] **IDEN-02**: Owner can link agentWallet via `set_agent_wallet` with corrected EIP-712 typed data signing (`AgentWalletSet` 4-field typehash) through extended ApprovalWorkflow
-- [ ] **IDEN-03**: Owner can unlink agentWallet via `unset_agent_wallet` with APPROVAL tier
+- [x] **IDEN-02**: Owner can link agentWallet via `set_agent_wallet` with corrected EIP-712 typed data signing (`AgentWalletSet` 4-field typehash) through extended ApprovalWorkflow
+- [x] **IDEN-03**: Owner can unlink agentWallet via `unset_agent_wallet` with APPROVAL tier
 - [x] **IDEN-04**: Agent can update registration file URI via `set_agent_uri` with DELAY tier
 - [x] **IDEN-05**: Agent can set/update metadata key-value pairs via `set_metadata` with NOTIFY tier
 - [x] **IDEN-06**: Registration file JSON is auto-generated with WAIaaS MCP/REST endpoints and served at public endpoint `GET /v1/erc8004/registration-file/:walletId`
@@ -117,8 +117,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PKG-02 | Phase 318 | Complete |
 | PKG-03 | Phase 317 | Complete |
 | IDEN-01 | Phase 318 | Complete |
-| IDEN-02 | Phase 321 | Pending |
-| IDEN-03 | Phase 321 | Pending |
+| IDEN-02 | Phase 321 | Complete |
+| IDEN-03 | Phase 321 | Complete |
 | IDEN-04 | Phase 318 | Complete |
 | IDEN-05 | Phase 318 | Complete |
 | IDEN-06 | Phase 319 | Complete |

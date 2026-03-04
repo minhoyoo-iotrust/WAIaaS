@@ -190,8 +190,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 321-01-PLAN.md -- EIP-712 typed data helper + ApprovalWorkflow approval_type 라우팅 + WcSigningBridge eth_signTypedData_v4 + approve endpoint EIP-712 검증 + DB v40
-- [ ] 321-02-PLAN.md -- set_agent_wallet EIP-712 통합 + pipeline calldata 재인코딩 + unset_agent_wallet SIWE APPROVAL
+- [x] 321-01: EIP-712 typed data helper + ApprovalWorkflow + WcSigningBridge + DB v40 -- completed 2026-03-04
+- [x] 321-02: set_agent_wallet EIP-712 통합 + pipeline calldata 재인코딩 -- completed 2026-03-04
 
 ### Phase 322: Admin UI + MCP + SDK
 **Goal**: Admin UI에서 ERC-8004 에이전트 등록/관리/평판 대시보드를 사용할 수 있고, MCP 11개 도구와 SDK 11개 메서드로 프로그래밍 접근이 가능한 상태
@@ -243,9 +243,9 @@ Phases execute in numeric order: 317 -> 318 -> 319 -> 320 -> 321 -> 322 -> 323
 | 318. ActionProvider + Registry Client | 2/2 | Complete    | 2026-03-04 | 2026-03-04 |
 | 319. Read-Only Routes + Registration File | v30.8 | Complete    | 2026-03-04 | 2026-03-04 |
 | 320. Reputation Policy Engine + Cache | v30.8 | Complete    | 2026-03-04 | 2026-03-04 |
-| 321. EIP-712 Approval + Wallet Linking | v30.8 | 0/2 | Not started | - |
+| 321. EIP-712 Approval + Wallet Linking | v30.8 | 2/2 | Complete | 2026-03-04 |
 | 322. Admin UI + MCP + SDK | v30.8 | 0/3 | Not started | - |
 | 323. Skills + Tests | v30.8 | 0/2 | Not started | - |
 
 ---
-*Last updated: 2026-03-04 -- Phase 321 plans created (2 plans, 4 tasks).*
+*Last updated: 2026-03-04 -- Phase 321 completed (2 plans, 4 tasks, 15 tests).*
