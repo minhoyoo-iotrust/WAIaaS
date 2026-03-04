@@ -36,7 +36,7 @@ Requirements for v30.8 milestone. Each maps to roadmap phases.
 
 ### Validation Registry (VALD)
 
-- [ ] **VALD-01**: Agent can request on-chain validation via `request_validation` action with DELAY tier — feature-gated (default disabled, Validation Registry not yet deployed on mainnet)
+- [ ] **VALD-01**: Agent can request on-chain validation via `request_validation` action with DELAY tier -- feature-gated (default disabled, Validation Registry not yet deployed on mainnet)
 - [ ] **VALD-02**: Validation status (validator, response, tag, lastUpdate) can be queried via `GET /v1/erc8004/validation/:requestHash`
 
 ### Database (DB)
@@ -44,7 +44,7 @@ Requirements for v30.8 milestone. Each maps to roadmap phases.
 - [ ] **DB-01**: Migration v39 creates `agent_identities` table (id, wallet_id, chain_agent_id, registry_address, chain_id, agent_uri, registration_file_url, status, created_at, updated_at) with indexes
 - [ ] **DB-02**: Migration v39 creates `reputation_cache` table (composite PK: agent_id + registry_address + tag1 + tag2) with score, decimals, count, cached_at
 - [ ] **DB-03**: Migration v39 adds `approval_type` TEXT column to `pending_approvals` (default 'SIWE', CHECK IN ('SIWE', 'EIP712'))
-- [ ] **DB-04**: Migration v39 recreates `policies` table with REPUTATION_THRESHOLD in CHECK constraint (CREATE→INSERT→DROP→RENAME pattern)
+- [ ] **DB-04**: Migration v39 recreates `policies` table with REPUTATION_THRESHOLD in CHECK constraint (CREATE->INSERT->DROP->RENAME pattern)
 
 ### Interfaces (API)
 
@@ -74,7 +74,7 @@ Requirements for v30.8 milestone. Each maps to roadmap phases.
 
 ### Tests (TEST)
 
-- [ ] **TEST-01**: 20 test scenarios (E1-E20) implemented with L0+L1 ≥ 55 tests passing, covering all three registries, policy evaluation, caching, DB migration, and Admin UI rendering
+- [ ] **TEST-01**: 20 test scenarios (E1-E20) implemented with L0+L1 >= 55 tests passing, covering all three registries, policy evaluation, caching, DB migration, and Admin UI rendering
 
 ## v2 Requirements
 
@@ -113,13 +113,51 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (Populated by roadmapper) | | |
+| PKG-01 | Phase 318 | Pending |
+| PKG-02 | Phase 318 | Pending |
+| PKG-03 | Phase 317 | Pending |
+| IDEN-01 | Phase 318 | Pending |
+| IDEN-02 | Phase 321 | Pending |
+| IDEN-03 | Phase 321 | Pending |
+| IDEN-04 | Phase 318 | Pending |
+| IDEN-05 | Phase 318 | Pending |
+| IDEN-06 | Phase 319 | Pending |
+| IDEN-07 | Phase 319 | Pending |
+| IDEN-08 | Phase 319 | Pending |
+| REPU-01 | Phase 320 | Pending |
+| REPU-02 | Phase 320 | Pending |
+| REPU-03 | Phase 319 | Pending |
+| REPU-04 | Phase 320 | Pending |
+| REPU-05 | Phase 320 | Pending |
+| REPU-06 | Phase 320 | Pending |
+| REPU-07 | Phase 320 | Pending |
+| VALD-01 | Phase 318 | Pending |
+| VALD-02 | Phase 319 | Pending |
+| DB-01 | Phase 317 | Pending |
+| DB-02 | Phase 317 | Pending |
+| DB-03 | Phase 317 | Pending |
+| DB-04 | Phase 317 | Pending |
+| API-01 | Phase 319 | Pending |
+| API-02 | Phase 322 | Pending |
+| API-03 | Phase 322 | Pending |
+| API-04 | Phase 322 | Pending |
+| UI-01 | Phase 322 | Pending |
+| UI-02 | Phase 322 | Pending |
+| UI-03 | Phase 322 | Pending |
+| UI-04 | Phase 322 | Pending |
+| UI-05 | Phase 322 | Pending |
+| UI-06 | Phase 322 | Pending |
+| UI-07 | Phase 322 | Pending |
+| NOTIF-01 | Phase 317 | Pending |
+| SKILL-01 | Phase 323 | Pending |
+| SKILL-02 | Phase 323 | Pending |
+| TEST-01 | Phase 323 | Pending |
 
 **Coverage:**
-- v1 requirements: 35 total
-- Mapped to phases: 0
-- Unmapped: 35 ⚠️
+- v1 requirements: 39 total
+- Mapped to phases: 39
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-04*
-*Last updated: 2026-03-04 after initial definition*
+*Last updated: 2026-03-04 -- Traceability populated by roadmapper (39/39 mapped)*
