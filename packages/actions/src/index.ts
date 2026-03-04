@@ -80,6 +80,9 @@ export type { Erc8004Config } from './providers/erc8004/config.js';
 export { ERC8004_MAINNET_ADDRESSES, ERC8004_TESTNET_ADDRESSES } from './providers/erc8004/constants.js';
 export { Erc8004RegistryClient } from './providers/erc8004/erc8004-registry-client.js';
 export { buildRegistrationFile } from './providers/erc8004/registration-file.js';
+export { IDENTITY_REGISTRY_ABI } from './providers/erc8004/identity-abi.js';
+export { REPUTATION_REGISTRY_ABI } from './providers/erc8004/reputation-abi.js';
+export { VALIDATION_REGISTRY_ABI } from './providers/erc8004/validation-abi.js';
 
 // Re-export common utilities
 export { ActionApiClient } from './common/action-api-client.js';

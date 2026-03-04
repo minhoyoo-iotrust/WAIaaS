@@ -66,6 +66,7 @@ import { createWalletAppsRoutes } from './routes/wallet-apps.js';
 import { tokenRegistryRoutes } from './routes/tokens.js';
 import { connectInfoRoutes } from './routes/connect-info.js';
 import { auditLogRoutes } from './routes/audit-logs.js';
+import { erc8004Routes } from './routes/erc8004.js';
 import { webhookRoutes } from './routes/webhooks.js';
 import { incomingRoutes } from './routes/incoming.js';
 import { createStakingRoutes } from './routes/staking.js';
@@ -256,6 +257,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     });
     app.use('/v1/x402/*', sessionAuth);
     app.use('/v1/connect-info', sessionAuth);
+    app.use('/v1/erc8004/*', sessionAuth);
     // sessionAuth for GET /v1/policies and GET /v1/tokens (dual-auth: agent read-only access)
     // Only apply sessionAuth when Bearer token is present; masterAuth GET is handled above.
     app.use('/v1/policies', async (c, next) => {
@@ -726,6 +728,14 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
       settingsService: deps.settingsService,
       actionProviderRegistry: deps.actionProviderRegistry,
       version: DAEMON_VERSION,
+    }));
+  }
+
+  // Register ERC-8004 read-only routes (sessionAuth via /v1/erc8004/* wildcard)
+  if (deps.db) {
+    app.route('/v1', erc8004Routes({
+      db: deps.db,
+      settingsService: deps.settingsService,
     }));
   }
 

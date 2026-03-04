@@ -1371,3 +1371,37 @@ export const BackupListResponseSchema = z.object({
   total: z.number().int(),
   retention_count: z.number().int().openapi({ description: 'Configured retention count' }),
 }).openapi('BackupListResponse');
+
+// ---------------------------------------------------------------------------
+// ERC-8004 Response Schemas (Phase 319)
+// ---------------------------------------------------------------------------
+
+export const Erc8004AgentInfoResponseSchema = z.object({
+  agentId: z.string().openapi({ description: 'On-chain agent ID' }),
+  wallet: z.string().openapi({ description: 'Agent wallet address (zero address if not set)' }),
+  uri: z.string().openapi({ description: 'Agent URI from Identity Registry' }),
+  metadata: z.record(z.unknown()).openapi({ description: 'Local metadata from agent_identities DB' }),
+  registryAddress: z.string().openapi({ description: 'Identity Registry contract address' }),
+  chainId: z.number().int().openapi({ description: 'EVM chain ID' }),
+}).openapi('Erc8004AgentInfoResponse');
+
+export const Erc8004ReputationResponseSchema = z.object({
+  agentId: z.string().openapi({ description: 'On-chain agent ID' }),
+  count: z.number().int().openapi({ description: 'Total feedback count' }),
+  score: z.string().openapi({ description: 'Summary reputation score (stringified int128)' }),
+  decimals: z.number().int().openapi({ description: 'Score decimal places (uint8)' }),
+  tag1: z.string().openapi({ description: 'Tag1 filter applied' }),
+  tag2: z.string().openapi({ description: 'Tag2 filter applied' }),
+}).openapi('Erc8004ReputationResponse');
+
+export const Erc8004RegistrationFileResponseSchema = z.any().openapi('Erc8004RegistrationFileResponse');
+
+export const Erc8004ValidationResponseSchema = z.object({
+  requestHash: z.string().openapi({ description: 'Validation request hash (bytes32)' }),
+  validator: z.string().openapi({ description: 'Validator address' }),
+  agentId: z.string().openapi({ description: 'Agent ID (stringified uint256)' }),
+  response: z.number().int().openapi({ description: 'Validation response code (uint8, 0-255)' }),
+  responseHash: z.string().openapi({ description: 'Response hash (bytes32)' }),
+  tag: z.string().openapi({ description: 'Validation tag' }),
+  lastUpdate: z.number().int().openapi({ description: 'Last update timestamp (uint256)' }),
+}).openapi('Erc8004ValidationResponse');
