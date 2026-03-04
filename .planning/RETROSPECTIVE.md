@@ -232,6 +232,44 @@
 
 ---
 
+## Milestone: v30.6 — ERC-4337 Account Abstraction 지원
+
+**Shipped:** 2026-03-04
+**Phases:** 3 | **Plans:** 10 | **Sessions:** 1
+
+### What Was Built
+- SmartAccountService — viem toSoladySmartAccount 기반 CREATE2 주소 예측, EntryPoint v0.7 전용
+- DB migration v38 — wallets 테이블에 account_type/signer_key/deployed/entry_point 4 컬럼 추가
+- Admin Settings 25개 — smart_account.enabled feature gate, bundler/paymaster URL, chain-specific overrides
+- UserOperation Pipeline — stage5Execute accountType 분기, BundlerClient/PaymasterClient 연동, BATCH 원자적 실행
+- Paymaster Gas Sponsorship — 자동 스폰서십 + rejection 패턴 감지 + agent 직접 가스 폴백
+- 전 인터페이스 확장 — CLI --account-type, SDK createWallet, MCP wallet detail, Admin UI Account Type 셀렉터
+
+### What Worked
+- 3 phases 전체 ~2h 완료 — 기존 pipeline 아키텍처가 accountType 분기만으로 확장 가능했음
+- viem/account-abstraction 모듈이 검증된 SmartAccount 구현체를 제공하여 커스텀 컨트랙트 불필요
+- 기존 5-type TransactionRequestSchema 변경 없이 내부 실행 경로만 분기하여 EOA 호환성 100% 유지
+- On-demand settings 패턴으로 hot-reload 인프라 불필요 — SmartAccountService가 요청 시마다 settings 읽기
+
+### What Was Inefficient
+- Phase 315 SUMMARY.md 미생성 — 4개 plan 실행 후 summary 파일 누락 (executor가 생성하지 않은 것으로 추정)
+- REQUIREMENTS.md traceability 상태 전부 Pending으로 아카이브 — 자동 상태 업데이트 여전히 미구현
+
+### Patterns Established
+- accountType 분기 패턴: stage5Execute에서 EOA/Smart 실행 경로 분리, 나머지 pipeline(정책, 감사, 알림) 공유
+- Paymaster rejection 패턴 매칭: error message에서 'paymaster'/'PM_'/'Paymaster' 문자열 감지
+
+### Key Lessons
+- viem 라이브러리의 타입 시스템이 극도로 복잡 — SmartAccountService.client에 `any` 사용이 실용적 선택
+- 기존 아키텍처가 잘 설계되어 있으면 새 기능 추가가 분기 한 줄로 가능 — accountType 분기가 전형적 사례
+
+### Cost Observations
+- Model mix: 100% opus (quality profile)
+- Sessions: 1
+- Notable: 3 phases, 10 plans, 21 commits, 49 files, +4,709 lines — ~2h 완료
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -244,6 +282,7 @@
 | v29.7 | 1 | 6 | 풀스택(DB+API+UI) 구현, 73 파일 1일 완료 |
 | v29.10 | 1 | 2 | 글로벌→per-entity 설정 전환, 43 파일 1.5시간 완료 |
 | v30.0 | 1 | 5 | 운영 기능 6개 설계 전용, 30 파일 50분 완료 |
+| v30.6 | 1 | 3 | ERC-4337 Smart Account, 49 파일 ~2h 완료 |
 
 ### Cumulative Quality
 
@@ -255,6 +294,7 @@
 | v29.7 | ~5,595 (unchanged) | maintained | +7 decisions |
 | v29.10 | ~5,737 (+142) | maintained | +8 decisions |
 | v30.0 | ~5,737 (unchanged) | unchanged | +40 decisions |
+| v30.6 | ~6,486 (+749) | maintained | +8 decisions |
 
 ### Top Lessons (Verified Across Milestones)
 

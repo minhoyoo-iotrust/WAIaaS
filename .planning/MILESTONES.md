@@ -1,5 +1,29 @@
 # Project Milestones: WAIaaS
 
+## v30.6 ERC-4337 Account Abstraction 지원 (Shipped: 2026-03-04)
+
+**Delivered:** EVM 지갑에 ERC-4337 스마트 어카운트 옵션을 추가하여 Paymaster 가스비 스폰서십, 네이티브 원자적 배치, UserOperation 기반 트랜잭션 실행이 가능한 상태.
+
+**Phases completed:** 314-316 (3 phases, 10 plans, 36 requirements)
+
+**Key accomplishments:**
+
+- SmartAccountService + DB v38 — AccountType enum(eoa/smart), CREATE2 주소 예측, Drizzle 4-column 확장, migration v38
+- Admin Settings 25개 정의 — smart_account.enabled feature gate, bundler/paymaster URL, chain-specific overrides, AES-GCM 암호화 API key
+- UserOperation Pipeline — stage5Execute accountType 분기, BundlerClient/PaymasterClient 연동, BATCH 원자적 실행(calls[] 단일 UserOp)
+- Paymaster Gas Sponsorship — paymaster_url 설정 시 가스비 스폰서십, rejection 패턴 감지(PAYMASTER_REJECTED), gas safety margin 120%
+- 전 인터페이스 확장 — CLI --account-type, SDK createWallet(accountType), MCP wallet detail fetch, Admin UI Account Type 셀렉터 + Smart Account 설정 섹션
+- Skill Files + Tests — wallet/quickstart/admin 스킬 파일 3개 업데이트, 86 새 테스트(13+59+14), 19 스냅샷 수정
+
+**Stats:**
+
+- 3 phases, 10 plans, 36 requirements, 21 commits
+- 49 files changed, +4,709 / -38 lines
+- Timeline: 2026-03-04 (~2h)
+- Git range: feat(314-01) → feat(316-03)
+
+---
+
 ## v30.2 운영 기능 확장 구현 (Shipped: 2026-03-04)
 
 **Delivered:** v30.0에서 설계한 6가지 운영 기능을 구현하여 WAIaaS 데몬이 운영 환경에서 트랜잭션 시뮬레이션, 감사 로그 조회, 암호화 백업/복원, Webhook 이벤트 전달, 운영 통계 대시보드, AutoStop 규칙 플러그인 관리가 가능한 상태.
