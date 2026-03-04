@@ -355,13 +355,149 @@ describe('WcSessionService', () => {
     });
 
     it('throws WC_SESSION_EXISTS when wallet already has active session', async () => {
-      // Set up a mock signClient so WC_NOT_CONFIGURED doesn't trigger
       (service as any).signClient = {};
-      // Add an active session
       (service as any).sessionMap.set('w-dup', 'topic-existing');
 
       await expect(service.createPairing('w-dup', 'mainnet', 'ethereum'))
         .rejects.toThrow('Wallet already has an active WC session');
+    });
+
+    it('returns existing pending pairing if not expired', async () => {
+      const futureExpiry = Math.floor(Date.now() / 1000) + 300;
+      (service as any).signClient = {};
+      (service as any).pendingPairing.set('w-reuse', { expiresAt: futureExpiry, uri: 'wc:existing-uri' });
+
+      const result = await service.createPairing('w-reuse', 'ethereum-sepolia', 'ethereum');
+      expect(result.uri).toBe('wc:existing-uri');
+      expect(result.qrDataUrl).toContain('data:image/png;base64');
+      expect(result.expiresAt).toBe(futureExpiry);
+    });
+
+    it('creates new pairing via signClient.connect for EVM', async () => {
+      const mockApproval = () => new Promise<any>(() => {}); // never resolves
+      const mockSignClient = {
+        connect: async () => ({ uri: 'wc:new-uri', approval: mockApproval }),
+      };
+      (service as any).signClient = mockSignClient;
+
+      const result = await service.createPairing('w-new', 'ethereum-sepolia', 'ethereum');
+      expect(result.uri).toBe('wc:new-uri');
+      expect(result.qrDataUrl).toContain('data:image/png;base64');
+      expect(result.expiresAt).toBeGreaterThan(Math.floor(Date.now() / 1000));
+    });
+
+    it('creates new pairing via signClient.connect for Solana', async () => {
+      const mockApproval = () => new Promise<any>(() => {}); // never resolves
+      const mockSignClient = {
+        connect: async () => ({ uri: 'wc:sol-uri', approval: mockApproval }),
+      };
+      (service as any).signClient = mockSignClient;
+
+      const result = await service.createPairing('w-sol', 'solana-devnet', 'solana');
+      expect(result.uri).toBe('wc:sol-uri');
+    });
+
+    it('throws when signClient.connect returns no URI', async () => {
+      const mockSignClient = {
+        connect: async () => ({ uri: undefined, approval: () => Promise.resolve() }),
+      };
+      (service as any).signClient = mockSignClient;
+
+      await expect(service.createPairing('w-fail', 'ethereum-sepolia', 'ethereum'))
+        .rejects.toThrow('Failed to generate pairing URI');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // waitForApproval
+  // -------------------------------------------------------------------------
+
+  describe('waitForApproval (private)', () => {
+    it('saves session to DB and sessionMap on successful approval', async () => {
+      const ts = now();
+      sqlite.prepare(
+        `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run('w-approve', 'Approve Wallet', 'ethereum', 'testnet', 'pk-a', 'ACTIVE', 0, ts, ts);
+
+      const mockSession = {
+        topic: 'topic-approved',
+        namespaces: { eip155: { accounts: ['eip155:11155111:0xApproved'] } },
+        peer: { metadata: { name: 'TestWallet', url: 'https://test.com' } },
+        expiry: ts + 86400,
+      };
+      const approval = () => Promise.resolve(mockSession);
+
+      (service as any).pendingPairing.set('w-approve', { expiresAt: ts + 300, uri: 'wc:x' });
+
+      (service as any).waitForApproval('w-approve', 'eip155:11155111', approval);
+
+      // Wait for the promise to settle
+      await new Promise(r => setTimeout(r, 50));
+
+      expect(service.hasActiveSession('w-approve')).toBe(true);
+      expect(service.getSessionTopic('w-approve')).toBe('topic-approved');
+      expect((service as any).pendingPairing.has('w-approve')).toBe(false);
+    });
+
+    it('rejects session when connected address does not match owner', async () => {
+      const ts = now();
+      sqlite.prepare(
+        `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, created_at, updated_at, owner_address)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run('w-mismatch', 'Mismatch', 'ethereum', 'testnet', 'pk-m', 'ACTIVE', 1, ts, ts, '0xRegisteredOwner');
+
+      const mockSession = {
+        topic: 'topic-mismatch',
+        namespaces: { eip155: { accounts: ['eip155:1:0xDifferentAddr'] } },
+        peer: { metadata: null },
+        expiry: ts + 86400,
+      };
+      const mockDisconnect = async () => {};
+      (service as any).signClient = { disconnect: mockDisconnect };
+      (service as any).pendingPairing.set('w-mismatch', { expiresAt: ts + 300, uri: 'wc:y' });
+
+      const approval = () => Promise.resolve(mockSession);
+      (service as any).waitForApproval('w-mismatch', 'eip155:1', approval);
+
+      await new Promise(r => setTimeout(r, 50));
+
+      expect(service.hasActiveSession('w-mismatch')).toBe(false);
+      expect((service as any).pendingPairing.has('w-mismatch')).toBe(false);
+    });
+
+    it('cleans up pending pairing on approval rejection', async () => {
+      (service as any).pendingPairing.set('w-reject', { expiresAt: 9999999999, uri: 'wc:z' });
+
+      const approval = () => Promise.reject(new Error('user rejected'));
+      (service as any).waitForApproval('w-reject', 'eip155:1', approval);
+
+      await new Promise(r => setTimeout(r, 50));
+
+      expect((service as any).pendingPairing.has('w-reject')).toBe(false);
+    });
+
+    it('matches owner case-insensitively for EVM chains', async () => {
+      const ts = now();
+      sqlite.prepare(
+        `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, created_at, updated_at, owner_address)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run('w-case', 'Case Wallet', 'ethereum', 'testnet', 'pk-c', 'ACTIVE', 1, ts, ts, '0xAbCdEf');
+
+      const mockSession = {
+        topic: 'topic-case',
+        namespaces: { eip155: { accounts: ['eip155:1:0xabcdef'] } },
+        peer: { metadata: null },
+        expiry: ts + 86400,
+      };
+      (service as any).pendingPairing.set('w-case', { expiresAt: ts + 300, uri: 'wc:c' });
+
+      const approval = () => Promise.resolve(mockSession);
+      (service as any).waitForApproval('w-case', 'eip155:1', approval);
+
+      await new Promise(r => setTimeout(r, 50));
+
+      expect(service.hasActiveSession('w-case')).toBe(true);
     });
   });
 
