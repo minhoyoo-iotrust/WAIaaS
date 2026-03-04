@@ -20,15 +20,15 @@ Requirements for v30.8 milestone. Each maps to roadmap phases.
 - [ ] **IDEN-03**: Owner can unlink agentWallet via `unset_agent_wallet` with APPROVAL tier
 - [x] **IDEN-04**: Agent can update registration file URI via `set_agent_uri` with DELAY tier
 - [x] **IDEN-05**: Agent can set/update metadata key-value pairs via `set_metadata` with NOTIFY tier
-- [ ] **IDEN-06**: Registration file JSON is auto-generated with WAIaaS MCP/REST endpoints and served at public endpoint `GET /v1/erc8004/registration-file/:walletId`
-- [ ] **IDEN-07**: `GET /v1/connect-info` includes `erc8004` field with agentId, registryAddress, chainId, registrationFileUrl, status when wallet is registered
-- [ ] **IDEN-08**: Agent info (ID, wallet, URI, metadata) can be queried via `GET /v1/erc8004/agent/:agentId`
+- [x] **IDEN-06**: Registration file JSON is auto-generated with WAIaaS MCP/REST endpoints and served at public endpoint `GET /v1/erc8004/registration-file/:walletId`
+- [x] **IDEN-07**: `GET /v1/connect-info` includes `erc8004` field with agentId, registryAddress, chainId, registrationFileUrl, status when wallet is registered
+- [x] **IDEN-08**: Agent info (ID, wallet, URI, metadata) can be queried via `GET /v1/erc8004/agent/:agentId`
 
 ### Reputation Registry (REPU)
 
 - [ ] **REPU-01**: Agent can post feedback on another agent via `give_feedback` action with NOTIFY tier
 - [ ] **REPU-02**: Agent can revoke posted feedback via `revoke_feedback` action with INSTANT tier
-- [ ] **REPU-03**: Reputation summary (count, score, decimals) can be queried via `GET /v1/erc8004/agent/:agentId/reputation` with tag filtering
+- [x] **REPU-03**: Reputation summary (count, score, decimals) can be queried via `GET /v1/erc8004/agent/:agentId/reputation` with tag filtering
 - [ ] **REPU-04**: Reputation scores are cached in-memory (configurable TTL, default 300s) with DB fallback for RPC failures
 - [ ] **REPU-05**: REPUTATION_THRESHOLD policy (18th PolicyType) evaluates reputation in Stage 3 policy pipeline at position 6 (after APPROVED_SPENDERS, before SPENDING_LIMIT)
 - [ ] **REPU-06**: Low reputation (score < min_score) triggers security tier escalation to below_threshold_tier (default: APPROVAL), tier only escalates (never downgrades)
@@ -37,7 +37,7 @@ Requirements for v30.8 milestone. Each maps to roadmap phases.
 ### Validation Registry (VALD)
 
 - [x] **VALD-01**: Agent can request on-chain validation via `request_validation` action with DELAY tier -- feature-gated (default disabled, Validation Registry not yet deployed on mainnet)
-- [ ] **VALD-02**: Validation status (validator, response, tag, lastUpdate) can be queried via `GET /v1/erc8004/validation/:requestHash`
+- [x] **VALD-02**: Validation status (validator, response, tag, lastUpdate) can be queried via `GET /v1/erc8004/validation/:requestHash`
 
 ### Database (DB)
 
@@ -48,7 +48,7 @@ Requirements for v30.8 milestone. Each maps to roadmap phases.
 
 ### Interfaces (API)
 
-- [ ] **API-01**: 5 read-only REST API endpoints serve ERC-8004 data (agent info, reputation, feedback, validation status, registration file)
+- [x] **API-01**: 5 read-only REST API endpoints serve ERC-8004 data (agent info, reputation, feedback, validation status, registration file)
 - [ ] **API-02**: 8 write actions auto-exposed as MCP tools via `mcpExpose: true`
 - [ ] **API-03**: 3 read-only MCP tools manually registered (erc8004_get_agent_info, erc8004_get_reputation, erc8004_get_validation_status)
 - [ ] **API-04**: TypeScript SDK extended with 11 methods (8 write via ActionProvider + 3 read via direct GET)
@@ -121,23 +121,23 @@ Which phases cover which requirements. Updated during roadmap creation.
 | IDEN-03 | Phase 321 | Pending |
 | IDEN-04 | Phase 318 | Complete |
 | IDEN-05 | Phase 318 | Complete |
-| IDEN-06 | Phase 319 | Pending |
-| IDEN-07 | Phase 319 | Pending |
-| IDEN-08 | Phase 319 | Pending |
+| IDEN-06 | Phase 319 | Complete |
+| IDEN-07 | Phase 319 | Complete |
+| IDEN-08 | Phase 319 | Complete |
 | REPU-01 | Phase 320 | Pending |
 | REPU-02 | Phase 320 | Pending |
-| REPU-03 | Phase 319 | Pending |
+| REPU-03 | Phase 319 | Complete |
 | REPU-04 | Phase 320 | Pending |
 | REPU-05 | Phase 320 | Pending |
 | REPU-06 | Phase 320 | Pending |
 | REPU-07 | Phase 320 | Pending |
 | VALD-01 | Phase 318 | Complete |
-| VALD-02 | Phase 319 | Pending |
+| VALD-02 | Phase 319 | Complete |
 | DB-01 | Phase 317 | Complete |
 | DB-02 | Phase 317 | Complete |
 | DB-03 | Phase 317 | Complete |
 | DB-04 | Phase 317 | Complete |
-| API-01 | Phase 319 | Pending |
+| API-01 | Phase 319 | Complete |
 | API-02 | Phase 322 | Pending |
 | API-03 | Phase 322 | Pending |
 | API-04 | Phase 322 | Pending |
@@ -160,4 +160,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-04*
-*Last updated: 2026-03-04 -- Phase 317 completed (DB-01~04, PKG-03, NOTIF-01 = 6/39 complete)*
+*Last updated: 2026-03-04 -- Phase 319 completed (IDEN-06~08, REPU-03, VALD-02, API-01 = 18/39 complete)*
