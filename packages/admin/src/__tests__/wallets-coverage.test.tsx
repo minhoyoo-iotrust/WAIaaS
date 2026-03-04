@@ -1076,6 +1076,94 @@ describe('WalletListContent', () => {
     });
   });
 
+  it('shows Account Type selector when chain is ethereum', async () => {
+    vi.mocked(apiGet).mockImplementation(async (path: string) => {
+      if (path === '/v1/wallets') return mockWalletList;
+      return {};
+    });
+
+    const { container } = render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Create Wallet')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('Create Wallet'));
+
+    await waitFor(() => {
+      expect(container.querySelector('.inline-form')).toBeTruthy();
+    });
+
+    // Select Ethereum chain
+    const chainSelect = container.querySelector('select[name="chain"]') as HTMLSelectElement;
+    expect(chainSelect).toBeTruthy();
+    fireEvent.change(chainSelect, { target: { value: 'ethereum' } });
+
+    // Account Type selector should appear
+    await waitFor(() => {
+      expect(container.querySelector('select[name="accountType"]')).toBeTruthy();
+    });
+  });
+
+  it('creates smart account wallet with accountType in POST body', async () => {
+    vi.mocked(apiGet).mockImplementation(async (path: string) => {
+      if (path === '/v1/wallets') return mockWalletList;
+      return {};
+    });
+    vi.mocked(apiPost).mockResolvedValue({
+      id: 'w-smart',
+      name: 'smart-test',
+      chain: 'ethereum',
+      network: 'ethereum-sepolia',
+      environment: 'testnet',
+      publicKey: '0xsmart123',
+      status: 'ACTIVE',
+      accountType: 'smart',
+      session: { id: 's1', token: 'wai_sess_abc', expiresAt: 999 },
+    });
+
+    const { container } = render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Create Wallet')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('Create Wallet'));
+
+    await waitFor(() => {
+      expect(container.querySelector('.inline-form')).toBeTruthy();
+    });
+
+    // Fill in name
+    const nameInput = container.querySelector('input[name="name"]') as HTMLInputElement;
+    fireEvent.input(nameInput, { target: { value: 'smart-test' } });
+
+    // Select Ethereum chain
+    const chainSelect = container.querySelector('select[name="chain"]') as HTMLSelectElement;
+    fireEvent.change(chainSelect, { target: { value: 'ethereum' } });
+
+    // Select Smart Account type
+    await waitFor(() => {
+      expect(container.querySelector('select[name="accountType"]')).toBeTruthy();
+    });
+    const accountTypeSelect = container.querySelector('select[name="accountType"]') as HTMLSelectElement;
+    fireEvent.change(accountTypeSelect, { target: { value: 'smart' } });
+
+    // Click Create
+    fireEvent.click(screen.getByText('Create'));
+
+    await waitFor(() => {
+      expect(vi.mocked(apiPost)).toHaveBeenCalledWith(
+        '/v1/wallets',
+        expect.objectContaining({
+          name: 'smart-test',
+          chain: 'ethereum',
+          accountType: 'smart',
+        }),
+      );
+    });
+  });
+
   it('shows error toast when wallet list fetch fails', async () => {
     vi.mocked(apiGet).mockRejectedValue(new ApiError(500, 'FETCH_FAIL', 'Failed'));
 

@@ -198,6 +198,7 @@ export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
         chain: wallets.chain,
         environment: wallets.environment,
         publicKey: wallets.publicKey,
+        accountType: wallets.accountType,
       })
       .from(sessionWallets)
       .innerJoin(wallets, eq(sessionWallets.walletId, wallets.id))
@@ -321,6 +322,7 @@ export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
           chain: w.chain,
           environment: w.environment!,
           address: w.publicKey,
+          accountType: (w.accountType as string) ?? 'eoa',
           availableNetworks: networks.map((n) => n),
         };
       }),
