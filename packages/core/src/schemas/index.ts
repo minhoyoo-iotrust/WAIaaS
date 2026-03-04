@@ -50,3 +50,76 @@ export {
   IncomingTransactionSchema,
   type IncomingTransaction as IncomingTransactionDto,
 } from './incoming-transaction.schema.js';
+
+// v30.2 audit log schema (Zod SSoT)
+export {
+  AuditEventTypeSchema,
+  AuditSeveritySchema,
+  AUDIT_EVENT_TYPES,
+  AUDIT_SEVERITIES,
+  AuditLogItemSchema,
+  AuditLogResponseSchema,
+  AuditLogQuerySchema,
+  type AuditEventType,
+  type AuditSeverity,
+  type AuditLogItem,
+  type AuditLogResponse,
+  type AuditLogQuery,
+} from './audit.schema.js';
+
+// v30.2 webhook outbound schema (Zod SSoT)
+export {
+  WEBHOOK_EVENT_TYPES,
+  WebhookEventTypeSchema,
+  CreateWebhookRequestSchema,
+  WebhookResponseSchema,
+  CreateWebhookResponseSchema,
+  WEBHOOK_LOG_STATUSES,
+  WebhookLogSchema,
+  WebhookLogQuerySchema,
+  type WebhookEventType,
+  type CreateWebhookRequest,
+  type WebhookResponse,
+  type CreateWebhookResponse,
+  type WebhookLog,
+  type WebhookLogQuery,
+} from './webhook.schema.js';
+
+// v30.2 admin stats + autostop rules schema (Zod SSoT)
+export {
+  AdminStatsTransactionsSchema,
+  AdminStatsSessionsSchema,
+  AdminStatsWalletsSchema,
+  AdminStatsRpcSchema,
+  AdminStatsAutoStopSchema,
+  AdminStatsNotificationsSchema,
+  AdminStatsSystemSchema,
+  AdminStatsResponseSchema,
+  AutoStopRuleInfoSchema,
+  AutoStopRulesResponseSchema,
+  UpdateAutoStopRuleRequestSchema,
+  type AdminStatsResponse,
+  type AutoStopRuleInfo,
+  type AutoStopRulesResponse,
+  type UpdateAutoStopRuleRequest,
+} from './admin-stats.schema.js';
+
+// v30.2 dry-run simulation schema (Zod SSoT)
+export {
+  DryRunSimulationResultSchema,
+  SimulationWarningCodeEnum,
+  PolicyResultSchema,
+  FeeEstimateResultSchema,
+  BalanceChangeSchema,
+  SimulationWarningSchema,
+  SimulationDetailSchema,
+  SimulationMetaSchema,
+  type DryRunSimulationResult,
+  type SimulationWarningCode,
+  type PolicyResult,
+  type FeeEstimateResult,
+  type BalanceChange,
+  type SimulationWarning,
+  type SimulationDetail,
+  type SimulationMeta,
+} from './simulation.schema.js';

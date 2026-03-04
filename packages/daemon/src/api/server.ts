@@ -60,10 +60,13 @@ import { nonceRoutes } from './routes/nonce.js';
 import { utilsRoutes } from './routes/utils.js';
 import { skillsRoutes } from './routes/skills.js';
 import { adminRoutes } from './routes/admin.js';
+import type { AdminRouteDeps } from './routes/admin.js';
 import type { KillSwitchState } from './routes/admin.js';
 import { createWalletAppsRoutes } from './routes/wallet-apps.js';
 import { tokenRegistryRoutes } from './routes/tokens.js';
 import { connectInfoRoutes } from './routes/connect-info.js';
+import { auditLogRoutes } from './routes/audit-logs.js';
+import { webhookRoutes } from './routes/webhooks.js';
 import { incomingRoutes } from './routes/incoming.js';
 import { createStakingRoutes } from './routes/staking.js';
 import { createDefiPositionRoutes } from './routes/defi-positions.js';
@@ -128,6 +131,14 @@ export interface CreateAppDeps {
   versionCheckService?: VersionCheckService | null;
   /** Duck-typed to avoid circular dependency with IncomingTxMonitorService */
   incomingTxMonitorService?: { syncSubscriptions(): void | Promise<void> };
+  /** Duck-typed to avoid circular import with EncryptedBackupService */
+  encryptedBackupService?: { createBackup(password: string): Promise<{ path: string; filename: string; size: number; created_at: string; daemon_version: string; schema_version: number; file_count: number }>; listBackups(): Array<{ path: string; filename: string; size: number; created_at: string; daemon_version: string; schema_version: number; file_count: number }>; };
+  /** AdminStatsService for GET /admin/stats (STAT-01) */
+  adminStatsService?: import('../services/admin-stats-service.js').AdminStatsService;
+  /** AutoStopService for /admin/autostop routes (PLUG-03) */
+  autoStopService?: import('../services/autostop/autostop-service.js').AutoStopService;
+  /** InMemoryCounter for tx/rpc metrics (STAT-02) */
+  metricsCounter?: import('@waiaas/core').IMetricsCounter;
 }
 
 /**
@@ -154,7 +165,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
 
   // Register route-level auth middleware on the app (before sub-routers)
   if (deps.masterPasswordHash !== undefined || deps.passwordRef) {
-    const masterAuth = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash, passwordRef: deps.passwordRef });
+    const masterAuth = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash, passwordRef: deps.passwordRef, sqlite: deps.sqlite });
     app.use('/v1/wallets', masterAuth);
     // /v1/policies: GET allows sessionAuth or masterAuth, others require masterAuth only
     app.use('/v1/policies', async (c, next) => {
@@ -187,7 +198,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
 
   // masterAuth for GET /v1/wallets/:id (wallet detail) -- skip sub-paths with own auth
   if (deps.masterPasswordHash !== undefined || deps.passwordRef) {
-    const masterAuthForWalletDetail = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash, passwordRef: deps.passwordRef });
+    const masterAuthForWalletDetail = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash, passwordRef: deps.passwordRef, sqlite: deps.sqlite });
     app.use('/v1/wallets/:id', async (c, next) => {
       // Skip sub-paths that have their own masterAuth registered below
       if (c.req.path.includes('/owner') || c.req.path.includes('/networks') || c.req.path.includes('/wc/')) {
@@ -200,14 +211,14 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
 
   // masterAuth for PUT /v1/wallets/:id/owner
   if (deps.masterPasswordHash !== undefined || deps.passwordRef) {
-    const masterAuthForOwner = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash, passwordRef: deps.passwordRef });
+    const masterAuthForOwner = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash, passwordRef: deps.passwordRef, sqlite: deps.sqlite });
     app.use('/v1/wallets/:id/owner', masterAuthForOwner);
     app.use('/v1/wallets/:id/networks', masterAuthForOwner);
   }
 
   // masterAuth for WalletConnect routes
   if (deps.masterPasswordHash !== undefined || deps.passwordRef) {
-    const masterAuthForWc = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash, passwordRef: deps.passwordRef });
+    const masterAuthForWc = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash, passwordRef: deps.passwordRef, sqlite: deps.sqlite });
     app.use('/v1/wallets/:id/wc/*', masterAuthForWc);
   }
 
@@ -275,7 +286,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
 
   // masterAuth for admin routes (except GET /admin/kill-switch which is public)
   if (deps.masterPasswordHash !== undefined || deps.passwordRef) {
-    const masterAuthForAdmin = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash, passwordRef: deps.passwordRef });
+    const masterAuthForAdmin = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash, passwordRef: deps.passwordRef, sqlite: deps.sqlite });
     app.use('/v1/admin/status', masterAuthForAdmin);
     app.use('/v1/admin/kill-switch', async (c, next) => {
       // POST requires masterAuth, GET is public
@@ -318,6 +329,17 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     app.use('/v1/admin/rpc-status', masterAuthForAdmin);
     app.use('/v1/admin/defi/*', masterAuthForAdmin);
     app.use('/v1/admin/master-password', masterAuthForAdmin);
+    // masterAuth for audit-logs query API (OPS-02)
+    app.use('/v1/audit-logs', masterAuthForAdmin);
+    // masterAuth for webhook CRUD API (OPS-04)
+    app.use('/v1/webhooks', masterAuthForAdmin);
+    app.use('/v1/webhooks/*', masterAuthForAdmin);
+    // masterAuth for admin stats + autostop rules API (STAT-01, PLUG-03)
+    app.use('/v1/admin/stats', masterAuthForAdmin);
+    app.use('/v1/admin/autostop/*', masterAuthForAdmin);
+    // masterAuth for encrypted backup API (OPS-03)
+    app.use('/v1/admin/backup', masterAuthForAdmin);
+    app.use('/v1/admin/backups', masterAuthForAdmin);
     // masterAuth for GET /v1/actions/providers (Admin UI reads provider list)
     app.use('/v1/actions/providers', async (c, next) => {
       if (c.req.method === 'GET') {
@@ -385,6 +407,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
       '/v1',
       sessionRoutes({
         db: deps.db,
+        sqlite: deps.sqlite,
         jwtSecretManager: deps.jwtSecretManager,
         config: deps.config,
         notificationService: deps.notificationService,
@@ -486,6 +509,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         eventBus: deps.eventBus,
         wcSigningBridgeRef: deps.wcSigningBridgeRef,
         approvalChannelRouter: deps.approvalChannelRouter,
+        metricsCounter: deps.metricsCounter,
       }),
     );
   }
@@ -605,6 +629,9 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         delayQueue: deps.delayQueue,
         approvalWorkflow: deps.approvalWorkflow,
         rpcPool: deps.adapterPool?.pool,
+        encryptedBackupService: deps.encryptedBackupService as AdminRouteDeps['encryptedBackupService'],
+        adminStatsService: deps.adminStatsService,
+        autoStopService: deps.autoStopService,
       }),
     );
 
@@ -642,6 +669,16 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
       });
       app.route('/v1', ownerKsRouter);
     }
+  }
+
+  // Register audit log query routes (masterAuth required)
+  if (deps.sqlite) {
+    app.route('/v1', auditLogRoutes({ sqlite: deps.sqlite }));
+  }
+
+  // Register webhook CRUD routes (masterAuth required)
+  if (deps.sqlite && effectiveMasterPassword) {
+    app.route('/v1', webhookRoutes({ sqlite: deps.sqlite, masterPassword: effectiveMasterPassword }));
   }
 
   // Register token registry routes when DB is available

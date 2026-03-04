@@ -51,7 +51,16 @@ vi.mock('../utils/error-messages', () => ({
   getErrorMessage: (code: string) => `Error: ${code}`,
 }));
 
+vi.mock('../utils/display-currency', async () => {
+  const actual = await vi.importActual<typeof import('../utils/display-currency')>('../utils/display-currency');
+  return {
+    ...actual,
+    fetchDisplayCurrency: vi.fn(),
+  };
+});
+
 import { apiGet } from '../api/client';
+import { fetchDisplayCurrency } from '../utils/display-currency';
 import DashboardPage from '../pages/dashboard';
 
 // ---------------------------------------------------------------------------
@@ -112,9 +121,11 @@ function mockApiCallsWithDefi(defiData: Record<string, unknown> = mockDefiPositi
   vi.mocked(apiGet).mockImplementation(async (path: string) => {
     if (path === '/v1/admin/status') return mockStatus;
     if (path === '/v1/admin/defi/positions') return defiData;
+    if (path.includes('/v1/admin/stats')) throw new Error('not found');
     if (path.includes('/v1/admin/transactions')) return { total: 0, transactions: [] };
     return {};
   });
+  vi.mocked(fetchDisplayCurrency).mockResolvedValue({ currency: 'USD', rate: 1 });
 }
 
 // ---------------------------------------------------------------------------

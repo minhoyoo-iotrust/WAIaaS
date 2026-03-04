@@ -37,6 +37,7 @@
 - ✅ **v29.9 세션 점진적 보안 모델** -- Phases 300-301 (shipped 2026-03-02)
 - ✅ **v29.10 ntfy 토픽 지갑별 설정 전환** -- Phases 302-303 (shipped 2026-03-02)
 - ✅ **v30.0 운영 기능 확장 설계** -- Phases 304-308 (shipped 2026-03-03)
+- ✅ **v30.2 운영 기능 확장 구현** -- Phases 309-313.1 (shipped 2026-03-04)
 
 ## Phases
 
@@ -76,7 +77,7 @@ See `.planning/milestones/` for archived phase details.
 </details>
 
 <details>
-<summary>v29.0-v30.0 (Phases 268-308) -- SHIPPED 2026-03-03</summary>
+<summary>v29.0-v30.2 (Phases 268-313.1) -- SHIPPED 2026-03-04</summary>
 
 - [x] Phase 268-273: 고급 DeFi 프로토콜 설계 (v29.0) -- completed 2026-02-26
 - [x] Phase 274-278: EVM Lending -- Aave V3 (v29.2) -- completed 2026-02-27
@@ -89,8 +90,14 @@ See `.planning/milestones/` for archived phase details.
 - [x] Phase 300-301: 세션 점진적 보안 모델 (v29.9) -- completed 2026-03-02
 - [x] Phase 302-303: ntfy 토픽 지갑별 설정 전환 (v29.10) -- completed 2026-03-02
 - [x] Phase 304-308: 운영 기능 확장 설계 (v30.0) -- completed 2026-03-03
+- [x] Phase 309: Transaction Dry-Run (v30.2) -- completed 2026-03-03
+- [x] Phase 310: Audit Log Query API (v30.2) -- completed 2026-03-03
+- [x] Phase 311: Encrypted Backup & Restore (v30.2) -- completed 2026-03-03
+- [x] Phase 312: Webhook Outbound (v30.2) -- completed 2026-03-03
+- [x] Phase 313: Admin Stats + AutoStop Plugin (v30.2) -- completed 2026-03-03
+- [x] Phase 313.1: Gap Closure (v30.2) -- completed 2026-03-03
 
-See `.planning/milestones/v29.0-ROADMAP.md` through `v30.0-ROADMAP.md` for full details.
+See `.planning/milestones/v29.0-ROADMAP.md` through `v30.2-ROADMAP.md` for full details.
 
 </details>
 
@@ -104,6 +111,7 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v30.0-ROADMAP.md` for full 
 | 215-243 | v27.0-v27.4 | All | Complete | 2026-02-23 |
 | 244-267 | v28.0-v28.8 | All | Complete | 2026-02-26 |
 | 268-308 | v29.0-v30.0 | All | Complete | 2026-03-03 |
+| 309-313.1 | v30.2 | 14/14 | Complete | 2026-03-04 |
 
 ---
-*Last updated: 2026-03-03 -- v30.0 archived, ready for next milestone*
+*Last updated: 2026-03-04 -- v30.2 운영 기능 확장 구현 milestone shipped. 80 milestones total.*

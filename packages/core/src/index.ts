@@ -124,6 +124,67 @@ export {
   type AssetInfoDto,
   IncomingTransactionSchema,
   type IncomingTransactionDto,
+  // v30.2 audit log schema (Zod SSoT)
+  AuditEventTypeSchema,
+  AuditSeveritySchema,
+  AUDIT_EVENT_TYPES,
+  AUDIT_SEVERITIES,
+  AuditLogItemSchema,
+  AuditLogResponseSchema,
+  AuditLogQuerySchema,
+  type AuditEventType,
+  type AuditSeverity,
+  type AuditLogItem,
+  type AuditLogResponse,
+  type AuditLogQuery,
+  // v30.2 webhook outbound schema (Zod SSoT)
+  WEBHOOK_EVENT_TYPES,
+  WebhookEventTypeSchema,
+  CreateWebhookRequestSchema,
+  WebhookResponseSchema,
+  CreateWebhookResponseSchema,
+  WEBHOOK_LOG_STATUSES,
+  WebhookLogSchema,
+  WebhookLogQuerySchema,
+  type WebhookEventType,
+  type CreateWebhookRequest,
+  type WebhookResponse,
+  type CreateWebhookResponse,
+  type WebhookLog,
+  type WebhookLogQuery,
+  // v30.2 admin stats + autostop rules schema (Zod SSoT)
+  AdminStatsTransactionsSchema,
+  AdminStatsSessionsSchema,
+  AdminStatsWalletsSchema,
+  AdminStatsRpcSchema,
+  AdminStatsAutoStopSchema,
+  AdminStatsNotificationsSchema,
+  AdminStatsSystemSchema,
+  AdminStatsResponseSchema,
+  AutoStopRuleInfoSchema,
+  AutoStopRulesResponseSchema,
+  UpdateAutoStopRuleRequestSchema,
+  type AdminStatsResponse,
+  type AutoStopRuleInfo,
+  type AutoStopRulesResponse,
+  type UpdateAutoStopRuleRequest,
+  // v30.2 dry-run simulation schema (Zod SSoT)
+  DryRunSimulationResultSchema,
+  SimulationWarningCodeEnum,
+  PolicyResultSchema,
+  FeeEstimateResultSchema,
+  BalanceChangeSchema,
+  SimulationWarningSchema,
+  SimulationDetailSchema,
+  SimulationMetaSchema,
+  type DryRunSimulationResult,
+  type SimulationWarningCode,
+  type PolicyResult,
+  type FeeEstimateResult,
+  type BalanceChange,
+  type SimulationWarning,
+  type SimulationDetail,
+  type SimulationMeta,
 } from './schemas/index.js';
 
 // Wallet Preset (v28.8 builtin wallet preset registry)
@@ -344,6 +405,9 @@ export { getExplorerTxUrl } from './utils/index.js';
 
 // i18n (multilingual messages)
 export { getMessages, type SupportedLocale, type Messages } from './i18n/index.js';
+
+// v30.2 Metrics Counter (IMetricsCounter interface + snapshot type)
+export type { IMetricsCounter, MetricsSnapshot } from './metrics/metrics-counter.js';
 
 // v28.6 RPC Pool (priority-based URL rotation with cooldown)
 export {

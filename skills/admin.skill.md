@@ -1,9 +1,9 @@
 ---
 name: "WAIaaS Admin"
-description: "Admin API: daemon status, kill switch, notifications, settings management, JWT rotation, shutdown, oracle status, API key management"
+description: "Admin API: daemon status, kill switch, notifications, settings management, JWT rotation, shutdown, oracle status, API key management, audit logs, backup, webhooks, stats, autostop"
 category: "api"
-tags: [wallet, blockchain, admin, security, oracle, defi, waiass]
-version: "2.5.0-rc"
+tags: [wallet, blockchain, admin, security, oracle, defi, waiass, audit, backup, webhook, stats, autostop]
+version: "3.0.0-rc"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]
@@ -1022,6 +1022,10 @@ Error: `WALLET_APP_NOT_FOUND` (404) if the app ID does not exist.
 | `ACTION_NOT_FOUND`       | 404  | Action provider or API key not found.           |
 | `WALLET_APP_DUPLICATE`   | 409  | Wallet app with the same name already exists.   |
 | `WALLET_APP_NOT_FOUND`   | 404  | Wallet app not found by ID.                     |
+| `WEBHOOK_NOT_FOUND`      | 404  | Webhook not found by ID.                        |
+| `RULE_NOT_FOUND`         | 404  | AutoStop rule not found by ID.                  |
+| `BACKUP_CORRUPTED`       | 500  | Backup archive corrupted or VACUUM INTO failed. |
+| `SIMULATION_FAILED`      | 400  | Transaction simulation failed (see also transactions.skill.md). |
 
 **Error response format:**
 ```json
@@ -1037,7 +1041,336 @@ Error: `WALLET_APP_NOT_FOUND` (404) if the app ID does not exist.
 
 ---
 
-## 10. Related Skill Files
+## 10. Audit Logs (v30.2)
+
+### GET /v1/audit-logs -- Query Audit Logs (masterAuth)
+
+Query system audit logs with cursor-based pagination and 6 filters.
+
+```bash
+curl -s 'http://localhost:3100/v1/audit-logs?event_type=TX_FAILED&severity=warning&limit=50' \
+  -H 'X-Master-Password: <password>'
+```
+
+**Query Parameters:**
+
+| Parameter       | Type    | Required | Default | Description                                    |
+| --------------- | ------- | -------- | ------- | ---------------------------------------------- |
+| `wallet_id`     | string  | No       | --      | Filter by wallet ID.                           |
+| `event_type`    | string  | No       | --      | Filter by event type (e.g., TX_FAILED).        |
+| `severity`      | string  | No       | --      | Filter by severity (info/warning/critical).    |
+| `from`          | integer | No       | --      | Start timestamp (epoch seconds).               |
+| `to`            | integer | No       | --      | End timestamp (epoch seconds).                 |
+| `tx_id`         | string  | No       | --      | Filter by transaction ID.                      |
+| `cursor`        | string  | No       | --      | Cursor for next page.                          |
+| `limit`         | integer | No       | 50      | Results per page (max 200).                    |
+| `include_total` | boolean | No       | false   | Include total count in response.               |
+
+**Response (200):**
+```json
+{
+  "logs": [
+    {
+      "id": "<uuid>",
+      "event_type": "TX_FAILED",
+      "actor": "session:abc",
+      "wallet_id": "<uuid>",
+      "session_id": "<uuid>",
+      "tx_id": "<uuid>",
+      "details": {"error": "Simulation failed"},
+      "severity": "warning",
+      "ip_address": "127.0.0.1",
+      "timestamp": 1707000000
+    }
+  ],
+  "cursor": "next-cursor-value",
+  "total": 142
+}
+```
+
+**20 Event Types:** WALLET_CREATED, WALLET_SUSPENDED, SESSION_CREATED, SESSION_REVOKED, TX_SUBMITTED, TX_CONFIRMED, TX_FAILED, POLICY_DENIED, KILL_SWITCH_RECOVERED, MASTER_AUTH_FAILED, OWNER_REGISTERED, WALLET_TERMINATED, SESSION_RENEWED, TX_CANCELLED, KILL_SWITCH_ACTIVATED, OWNER_UNREGISTERED, BACKUP_CREATED, BACKUP_RESTORED, WEBHOOK_CREATED, WEBHOOK_DELETED
+
+---
+
+## 11. Encrypted Backup (v30.2)
+
+### POST /v1/admin/backup -- Create Encrypted Backup (masterAuth)
+
+Create an AES-256-GCM encrypted backup archive of DB + config + keystore.
+
+```bash
+curl -s -X POST http://localhost:3100/v1/admin/backup \
+  -H 'X-Master-Password: <password>'
+```
+
+**Response (200):**
+```json
+{
+  "path": "/data/backups/waiaas-backup-20260303-143000000.wbk",
+  "filename": "waiaas-backup-20260303-143000000.wbk",
+  "size": 524288,
+  "created_at": "2026-03-03T14:30:00.000Z",
+  "daemon_version": "3.0.0-rc.1",
+  "schema_version": 37,
+  "file_count": 3
+}
+```
+
+### GET /v1/admin/backups -- List Backups (masterAuth)
+
+List all backup files in the backup directory.
+
+```bash
+curl -s http://localhost:3100/v1/admin/backups \
+  -H 'X-Master-Password: <password>'
+```
+
+**Response (200):**
+```json
+{
+  "backups": [
+    {
+      "path": "/data/backups/waiaas-backup-20260303-143000000.wbk",
+      "filename": "waiaas-backup-20260303-143000000.wbk",
+      "size": 524288,
+      "created_at": "2026-03-03T14:30:00.000Z",
+      "daemon_version": "3.0.0-rc.1",
+      "schema_version": 37,
+      "file_count": 3
+    }
+  ]
+}
+```
+
+**CLI Commands:**
+
+| Command | Description |
+|---------|-------------|
+| `waiaas backup` | Create backup (prompts for master password) |
+| `waiaas backup list` | List backups |
+| `waiaas backup inspect <path>` | Inspect backup metadata |
+| `waiaas restore --from <path>` | Restore from backup (daemon must be stopped) |
+
+---
+
+## 12. Webhooks (v30.2)
+
+### POST /v1/webhooks -- Register Webhook (masterAuth)
+
+Register a webhook endpoint. Returns the HMAC secret once (not stored in plaintext).
+
+```bash
+curl -s -X POST http://localhost:3100/v1/webhooks \
+  -H 'Content-Type: application/json' \
+  -H 'X-Master-Password: <password>' \
+  -d '{"url": "https://example.com/webhook", "events": ["tx.confirmed", "tx.failed"]}'
+```
+
+**Request body:**
+
+| Field    | Type     | Required | Description                           |
+| -------- | -------- | -------- | ------------------------------------- |
+| `url`    | string   | Yes      | Webhook endpoint URL (HTTPS).         |
+| `events` | string[] | Yes      | Event types to subscribe to.          |
+
+**Response (201):**
+```json
+{
+  "id": "<uuid>",
+  "url": "https://example.com/webhook",
+  "events": ["tx.confirmed", "tx.failed"],
+  "secret": "a1b2c3...64-char-hex",
+  "created_at": 1707000000
+}
+```
+
+**Webhook Headers:**
+
+| Header | Description |
+|--------|-------------|
+| `X-WAIaaS-Signature` | HMAC-SHA256 signature of the payload |
+| `X-WAIaaS-Event` | Event type (e.g., `tx.confirmed`) |
+| `X-WAIaaS-Delivery` | Unique delivery ID (UUID) |
+| `X-WAIaaS-Timestamp` | Delivery timestamp (epoch seconds) |
+
+**Retry Policy:** Max 4 attempts, exponential backoff (0/1s/2s/4s), 10s timeout. 4xx responses stop retries immediately.
+
+### GET /v1/webhooks -- List Webhooks (masterAuth)
+
+List all registered webhooks. Secrets are NOT exposed.
+
+```bash
+curl -s http://localhost:3100/v1/webhooks \
+  -H 'X-Master-Password: <password>'
+```
+
+### DELETE /v1/webhooks/:id -- Delete Webhook (masterAuth)
+
+Delete a webhook and CASCADE delete its delivery logs.
+
+```bash
+curl -s -X DELETE http://localhost:3100/v1/webhooks/<webhook-uuid> \
+  -H 'X-Master-Password: <password>'
+```
+
+### GET /v1/webhooks/:id/logs -- Query Delivery History (masterAuth)
+
+Query webhook delivery logs with optional filters.
+
+```bash
+curl -s 'http://localhost:3100/v1/webhooks/<webhook-uuid>/logs?status=failed&limit=50' \
+  -H 'X-Master-Password: <password>'
+```
+
+**Query Parameters:**
+
+| Parameter    | Type    | Required | Default | Description                        |
+| ------------ | ------- | -------- | ------- | ---------------------------------- |
+| `status`     | string  | No       | --      | Filter by status (success/failed). |
+| `event_type` | string  | No       | --      | Filter by event type.              |
+| `limit`      | integer | No       | 50      | Results per page (max 200).        |
+
+---
+
+## 13. Admin Stats (v30.2)
+
+### GET /v1/admin/stats -- Operational Statistics (masterAuth)
+
+Returns 7 categories of operational statistics with 1-minute TTL cache.
+
+```bash
+curl -s http://localhost:3100/v1/admin/stats \
+  -H 'X-Master-Password: <password>'
+```
+
+**Response (200):**
+```json
+{
+  "transactions": {
+    "total": 1234,
+    "confirmed": 1200,
+    "failed": 34,
+    "pending": 0,
+    "submitted": 10,
+    "failed_24h": 5
+  },
+  "sessions": {
+    "total": 50,
+    "active": 12,
+    "revoked": 38
+  },
+  "wallets": {
+    "total": 8,
+    "active": 6,
+    "suspended": 1,
+    "terminated": 1
+  },
+  "rpc": {
+    "calls": 5000,
+    "errors": 23,
+    "avgLatencyMs": 145
+  },
+  "autostop": {
+    "enabled": true,
+    "triggered": 2,
+    "rules": [
+      {"id": "consecutive-failures", "enabled": true, "trackedCount": 3},
+      {"id": "unusual-activity", "enabled": true, "trackedCount": 5},
+      {"id": "idle-timeout", "enabled": true, "trackedCount": 2}
+    ]
+  },
+  "notifications": {
+    "total": 300,
+    "sent": 290,
+    "failed": 10
+  },
+  "system": {
+    "uptimeSeconds": 86400,
+    "version": "3.0.0-rc.1",
+    "schemaVersion": 37,
+    "dbSizeBytes": 1048576,
+    "nodeVersion": "22.0.0"
+  }
+}
+```
+
+---
+
+## 14. AutoStop Rules (v30.2)
+
+### GET /v1/admin/autostop/rules -- List AutoStop Rules (masterAuth)
+
+Returns all registered AutoStop rules with their status and configuration.
+
+```bash
+curl -s http://localhost:3100/v1/admin/autostop/rules \
+  -H 'X-Master-Password: <password>'
+```
+
+**Response (200):**
+```json
+{
+  "rules": [
+    {
+      "id": "consecutive-failures",
+      "name": "Consecutive Failures",
+      "description": "Suspend wallet after N consecutive transaction failures",
+      "enabled": true,
+      "config": {"threshold": 5},
+      "status": {"trackedCount": 3}
+    },
+    {
+      "id": "unusual-activity",
+      "name": "Unusual Activity",
+      "description": "Suspend wallet on high-frequency activity",
+      "enabled": true,
+      "config": {"threshold": 20, "windowSec": 300},
+      "status": {"trackedCount": 5}
+    },
+    {
+      "id": "idle-timeout",
+      "name": "Idle Timeout",
+      "description": "Notify on idle sessions",
+      "enabled": true,
+      "config": {"idleTimeoutSec": 3600},
+      "status": {"trackedCount": 2}
+    }
+  ]
+}
+```
+
+### PUT /v1/admin/autostop/rules/:id -- Update Rule Config (masterAuth)
+
+Update enabled status and/or configuration of a specific AutoStop rule.
+
+```bash
+curl -s -X PUT http://localhost:3100/v1/admin/autostop/rules/consecutive-failures \
+  -H 'Content-Type: application/json' \
+  -H 'X-Master-Password: <password>' \
+  -d '{"enabled": true, "config": {"threshold": 10}}'
+```
+
+**Request body:**
+
+| Field    | Type    | Required | Description                          |
+| -------- | ------- | -------- | ------------------------------------ |
+| `enabled`| boolean | No       | Enable/disable the rule.             |
+| `config` | object  | No       | Rule-specific configuration update.  |
+
+**Response (200):**
+```json
+{
+  "id": "consecutive-failures",
+  "name": "Consecutive Failures",
+  "enabled": true,
+  "config": {"threshold": 10},
+  "status": {"trackedCount": 3}
+}
+```
+
+---
+
+## 15. Related Skill Files
 
 - **actions.skill.md** -- Action Provider REST API (DeFi actions)
 - **policies.skill.md** -- Policy management (10 policy types for transaction controls)

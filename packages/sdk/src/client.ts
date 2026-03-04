@@ -65,6 +65,7 @@ import type {
   ExecuteActionResponse,
   DeFiPositionsResponse,
   HealthFactorResponse,
+  SimulateResponse,
 } from './types.js';
 
 export class WAIaaSClient {
@@ -381,6 +382,19 @@ export class WAIaaSClient {
     return withRetry(
       () => this.http.post<SendTokenResponse>(
         '/v1/transactions/send',
+        params,
+        this.authHeaders(),
+      ),
+      this.retryOptions,
+    );
+  }
+
+  /** Simulate a transaction without executing it (dry-run). */
+  async simulate(params: SendTokenParams): Promise<SimulateResponse> {
+    validateSendToken(params);
+    return withRetry(
+      () => this.http.post<SimulateResponse>(
+        '/v1/transactions/simulate',
         params,
         this.authHeaders(),
       ),

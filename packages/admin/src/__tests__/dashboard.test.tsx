@@ -43,7 +43,16 @@ vi.mock('../utils/error-messages', () => ({
   },
 }));
 
+vi.mock('../utils/display-currency', async () => {
+  const actual = await vi.importActual<typeof import('../utils/display-currency')>('../utils/display-currency');
+  return {
+    ...actual,
+    fetchDisplayCurrency: vi.fn(),
+  };
+});
+
 import { apiGet, ApiError } from '../api/client';
+import { fetchDisplayCurrency } from '../utils/display-currency';
 import DashboardPage from '../pages/dashboard';
 
 const mockStatus = {
@@ -59,9 +68,19 @@ const mockStatus = {
   timestamp: Math.floor(Date.now() / 1000),
 };
 
+function setupApiGetMock(statusData: Record<string, unknown> = mockStatus) {
+  vi.mocked(apiGet).mockImplementation((path: string) => {
+    if (path.includes('/v1/admin/stats')) return Promise.reject(new Error('not found'));
+    if (path.includes('/v1/admin/defi/positions')) return Promise.reject(new Error('not found'));
+    if (path.includes('/v1/admin/transactions')) return Promise.resolve({ total: 0 });
+    return Promise.resolve(statusData);
+  });
+}
+
 describe('DashboardPage', () => {
   beforeEach(() => {
-    vi.mocked(apiGet).mockResolvedValue(mockStatus);
+    setupApiGetMock();
+    vi.mocked(fetchDisplayCurrency).mockResolvedValue({ currency: 'USD', rate: 1 });
   });
 
   afterEach(() => {
@@ -93,13 +112,13 @@ describe('DashboardPage', () => {
     const initialCalls = vi.mocked(apiGet).mock.calls.length;
     expect(initialCalls).toBeGreaterThanOrEqual(1);
 
-    // After 30s poll, fetchStatus + fetchDefi fire again (2 calls per interval)
+    // After 30s poll, fetchStatus + fetchDefi + fetchStats fire again (3 calls per interval)
     await vi.advanceTimersByTimeAsync(30_000);
-    expect(vi.mocked(apiGet)).toHaveBeenCalledTimes(initialCalls + 2);
+    expect(vi.mocked(apiGet)).toHaveBeenCalledTimes(initialCalls + 3);
 
     // After another 30s poll
     await vi.advanceTimersByTimeAsync(30_000);
-    expect(vi.mocked(apiGet)).toHaveBeenCalledTimes(initialCalls + 4);
+    expect(vi.mocked(apiGet)).toHaveBeenCalledTimes(initialCalls + 6);
 
     vi.useRealTimers();
   });
@@ -120,7 +139,7 @@ describe('DashboardPage', () => {
     expect(screen.getByText('Retry')).toBeTruthy();
 
     // Setup success response for retry
-    vi.mocked(apiGet).mockResolvedValueOnce(mockStatus);
+    setupApiGetMock();
 
     fireEvent.click(screen.getByText('Retry'));
 

@@ -38,6 +38,7 @@
 import type { Database } from 'better-sqlite3';
 import type { NotificationService } from '../notifications/notification-service.js';
 import type { EventBus } from '@waiaas/core';
+import { insertAuditLog } from '../infrastructure/database/audit-helper.js';
 
 const KV_KEY_STATE = 'kill_switch_state';
 const KV_KEY_ACTIVATED_AT = 'kill_switch_activated_at';
@@ -111,7 +112,16 @@ export class KillSwitchService {
    * Returns true on success, false on CAS failure (state was not SUSPENDED).
    */
   recoverFromSuspended(): boolean {
-    return this.casTransitionWithClear('SUSPENDED', 'ACTIVE');
+    const success = this.casTransitionWithClear('SUSPENDED', 'ACTIVE');
+    if (success) {
+      insertAuditLog(this.sqlite, {
+        eventType: 'KILL_SWITCH_RECOVERED',
+        actor: 'master',
+        details: { previousState: 'SUSPENDED', recoveredBy: 'master' },
+        severity: 'warning',
+      });
+    }
+    return success;
   }
 
   /**
@@ -119,7 +129,16 @@ export class KillSwitchService {
    * Returns true on success, false on CAS failure (state was not LOCKED).
    */
   recoverFromLocked(): boolean {
-    return this.casTransitionWithClear('LOCKED', 'ACTIVE');
+    const success = this.casTransitionWithClear('LOCKED', 'ACTIVE');
+    if (success) {
+      insertAuditLog(this.sqlite, {
+        eventType: 'KILL_SWITCH_RECOVERED',
+        actor: 'master',
+        details: { previousState: 'LOCKED', recoveredBy: 'master' },
+        severity: 'warning',
+      });
+    }
+    return success;
   }
 
   /**
@@ -180,25 +199,16 @@ export class KillSwitchService {
       { escalatedBy },
     );
 
-    // Step: Audit log
-    const now = Math.floor(Date.now() / 1000);
-    try {
-      this.sqlite
-        .prepare(
-          'INSERT INTO audit_log (timestamp, event_type, actor, details, severity) VALUES (?, ?, ?, ?, ?)',
-        )
-        .run(
-          now,
-          'KILL_SWITCH_ESCALATED',
-          escalatedBy,
-          JSON.stringify({ action: 'kill_switch_escalated', escalatedBy }),
-          'critical',
-        );
-    } catch {
-      // Best-effort audit logging
-    }
+    // Step: Audit log (best-effort via helper)
+    insertAuditLog(this.sqlite, {
+      eventType: 'KILL_SWITCH_ESCALATED',
+      actor: escalatedBy,
+      details: { action: 'kill_switch_escalated', escalatedBy },
+      severity: 'critical',
+    });
 
     // EventBus emit
+    const now = Math.floor(Date.now() / 1000);
     this.eventBus?.emit('kill-switch:state-changed', {
       state: 'LOCKED',
       previousState: 'SUSPENDED',
@@ -266,22 +276,13 @@ export class KillSwitchService {
       { activatedBy },
     );
 
-    // Step 6: Audit log
-    try {
-      this.sqlite
-        .prepare(
-          'INSERT INTO audit_log (timestamp, event_type, actor, details, severity) VALUES (?, ?, ?, ?, ?)',
-        )
-        .run(
-          now,
-          'KILL_SWITCH_ACTIVATED',
-          activatedBy,
-          JSON.stringify({ action: 'kill_switch_activated', activatedBy }),
-          'critical',
-        );
-    } catch {
-      // Best-effort audit logging
-    }
+    // Step 6: Audit log (best-effort via helper)
+    insertAuditLog(this.sqlite, {
+      eventType: 'KILL_SWITCH_ACTIVATED',
+      actor: activatedBy,
+      details: { action: 'kill_switch_activated', activatedBy },
+      severity: 'critical',
+    });
 
     // EventBus emit
     this.eventBus?.emit('kill-switch:state-changed', {

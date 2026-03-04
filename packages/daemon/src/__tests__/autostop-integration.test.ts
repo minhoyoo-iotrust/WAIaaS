@@ -140,9 +140,9 @@ describe('AutoStop config management', () => {
     expect(SETTING_CATEGORIES).toContain('autostop');
   });
 
-  it('SETTING_DEFINITIONS에 autostop 카테고리 6개 키 존재', () => {
+  it('SETTING_DEFINITIONS에 autostop 카테고리 9개 키 존재 (6 global + 3 per-rule)', () => {
     const autostopDefs = SETTING_DEFINITIONS.filter((d) => d.category === 'autostop');
-    expect(autostopDefs).toHaveLength(6);
+    expect(autostopDefs).toHaveLength(9);
 
     const keys = autostopDefs.map((d) => d.key);
     expect(keys).toContain('autostop.consecutive_failures_threshold');
@@ -151,6 +151,10 @@ describe('AutoStop config management', () => {
     expect(keys).toContain('autostop.idle_timeout_sec');
     expect(keys).toContain('autostop.idle_check_interval_sec');
     expect(keys).toContain('autostop.enabled');
+    // PLUG-04: per-rule enable/disable
+    expect(keys).toContain('autostop.rule.consecutive_failures.enabled');
+    expect(keys).toContain('autostop.rule.unusual_activity.enabled');
+    expect(keys).toContain('autostop.rule.idle_timeout.enabled');
   });
 });
 

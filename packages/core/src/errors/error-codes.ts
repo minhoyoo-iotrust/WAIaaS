@@ -236,6 +236,13 @@ export const ERROR_CODES = {
     retryable: false,
     message: 'Transaction simulation failed',
   },
+  SIMULATION_TIMEOUT: {
+    code: 'SIMULATION_TIMEOUT',
+    domain: 'TX',
+    httpStatus: 504,
+    retryable: true,
+    message: 'Transaction simulation timed out',
+  },
   TOKEN_NOT_FOUND: {
     code: 'TOKEN_NOT_FOUND',
     domain: 'TX',
@@ -817,6 +824,54 @@ export const ERROR_CODES = {
     httpStatus: 404,
     retryable: false,
     message: 'Wallet app not found',
+  },
+
+  // --- ADMIN domain (backup) ---
+  INVALID_BACKUP_FORMAT: {
+    code: 'INVALID_BACKUP_FORMAT',
+    domain: 'ADMIN',
+    httpStatus: 400,
+    retryable: false,
+    message: 'Not a valid WAIaaS backup file (magic number mismatch)',
+  },
+  UNSUPPORTED_BACKUP_VERSION: {
+    code: 'UNSUPPORTED_BACKUP_VERSION',
+    domain: 'ADMIN',
+    httpStatus: 400,
+    retryable: false,
+    message: 'Unsupported backup format version',
+  },
+  BACKUP_CORRUPTED: {
+    code: 'BACKUP_CORRUPTED',
+    domain: 'ADMIN',
+    httpStatus: 400,
+    retryable: false,
+    message: 'Backup archive is corrupted or has been tampered with',
+  },
+  BACKUP_NOT_FOUND: {
+    code: 'BACKUP_NOT_FOUND',
+    domain: 'ADMIN',
+    httpStatus: 404,
+    retryable: false,
+    message: 'Backup file not found',
+  },
+
+  // --- ADMIN domain (webhook) ---
+  WEBHOOK_NOT_FOUND: {
+    code: 'WEBHOOK_NOT_FOUND',
+    domain: 'ADMIN',
+    httpStatus: 404,
+    retryable: false,
+    message: 'Webhook not found',
+  },
+
+  // --- ADMIN domain (autostop) ---
+  RULE_NOT_FOUND: {
+    code: 'RULE_NOT_FOUND',
+    domain: 'ADMIN',
+    httpStatus: 404,
+    retryable: false,
+    message: 'AutoStop rule not found',
   },
 } as const satisfies Record<string, ErrorCodeEntry>;
 

@@ -90,6 +90,7 @@ export const messages: Messages = {
     TX_ALREADY_PROCESSED: 'Transaction already processed',
     CHAIN_ERROR: 'Blockchain error',
     SIMULATION_FAILED: 'Transaction simulation failed',
+    SIMULATION_TIMEOUT: 'Transaction simulation timed out',
     TOKEN_NOT_FOUND: 'Token not found',
     TOKEN_NOT_ALLOWED: 'Token not allowed by policy',
     INSUFFICIENT_TOKEN_BALANCE: 'Insufficient token balance',
@@ -181,6 +182,15 @@ export const messages: Messages = {
     // ADMIN domain (wallet apps)
     WALLET_APP_DUPLICATE: 'Wallet app already registered',
     WALLET_APP_NOT_FOUND: 'Wallet app not found',
+    // ADMIN domain (backup)
+    INVALID_BACKUP_FORMAT: 'Not a valid WAIaaS backup file (magic number mismatch)',
+    UNSUPPORTED_BACKUP_VERSION: 'Unsupported backup format version',
+    BACKUP_CORRUPTED: 'Backup archive is corrupted or has been tampered with',
+    BACKUP_NOT_FOUND: 'Backup file not found',
+    // ADMIN domain (webhook)
+    WEBHOOK_NOT_FOUND: 'Webhook not found',
+    // ADMIN domain (autostop)
+    RULE_NOT_FOUND: 'AutoStop rule not found',
   },
   // Notification templates (30 event types)
   notifications: {

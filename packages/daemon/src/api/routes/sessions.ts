@@ -19,12 +19,14 @@
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { createHash } from 'node:crypto';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { eq, and, isNull, sql } from 'drizzle-orm';
 import { WAIaaSError, type EventBus } from '@waiaas/core';
 import type { JwtSecretManager, JwtPayload } from '../../infrastructure/jwt/index.js';
 import { generateId } from '../../infrastructure/database/id.js';
 import { wallets, sessions, sessionWallets } from '../../infrastructure/database/schema.js';
 import type * as schema from '../../infrastructure/database/schema.js';
+import { insertAuditLog } from '../../infrastructure/database/audit-helper.js';
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
 import type { NotificationService } from '../../notifications/notification-service.js';
 import {
@@ -45,6 +47,7 @@ import {
 
 export interface SessionRouteDeps {
   db: BetterSQLite3Database<typeof schema>;
+  sqlite?: SQLiteDatabase;
   jwtSecretManager: JwtSecretManager;
   config: DaemonConfig;
   notificationService?: NotificationService;
@@ -310,6 +313,17 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
       return { id: w.id, name: w.name };
     });
 
+    // Audit log: SESSION_CREATED
+    if (deps.sqlite) {
+      insertAuditLog(deps.sqlite, {
+        eventType: 'SESSION_CREATED',
+        actor: 'master',
+        sessionId,
+        details: { walletIds, constraints: parsed.constraints ?? null },
+        severity: 'info',
+      });
+    }
+
     // Fire-and-forget: notify session creation (use first wallet as notification target)
     void deps.notificationService?.notify('SESSION_CREATED', walletIds[0]!, {
       sessionId,
@@ -459,6 +473,17 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
       .set({ revokedAt: new Date(nowSec * 1000) })
       .where(eq(sessions.id, sessionId))
       .run();
+
+    // Audit log: SESSION_REVOKED
+    if (deps.sqlite) {
+      insertAuditLog(deps.sqlite, {
+        eventType: 'SESSION_REVOKED',
+        actor: 'master',
+        sessionId,
+        details: { sessionId, revokedAt: nowSec },
+        severity: 'info',
+      });
+    }
 
     return c.json({ id: sessionId, status: 'REVOKED' }, 200);
   });

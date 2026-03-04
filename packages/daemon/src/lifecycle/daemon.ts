@@ -12,6 +12,8 @@
  *      4c-10. AsyncPollingService (fail-soft)
  *      4c-10.5. PositionTracker (fail-soft)
  *      4c-11. DeFiMonitorService (fail-soft)
+ *      4h. EncryptedBackupService (fail-soft)
+ *      4i. WebhookService (fail-soft)
  *   5. HTTP server start (5s, fail-fast)
  *   6. Background workers + PID (no timeout, fail-soft)
  *
@@ -20,7 +22,7 @@
  *   2-4. HTTP server close
  *   5. In-flight signing -- STUB (Phase 50-04)
  *   6. Pending queue persistence -- STUB (Phase 50-04)
- *   6a. Stop PositionTracker, DeFiMonitorService, TelegramBot, WcSessionService, AutoStop, BalanceMonitor, IncomingTxMonitor
+ *   6a. Stop PositionTracker, DeFiMonitorService, TelegramBot, WcSessionService, AutoStop, BalanceMonitor, IncomingTxMonitor, WebhookService
  *   6b. Remove all EventBus listeners
  *   7. workers.stopAll()
  *   8. WAL checkpoint(TRUNCATE)
@@ -31,6 +33,7 @@
  */
 
 import { writeFileSync, unlinkSync, existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { join, dirname } from 'node:path';
 import type { Database as DatabaseType } from 'better-sqlite3';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
@@ -38,6 +41,8 @@ import { WAIaaSError, getSingleNetwork, EventBus, RpcPool, BUILT_IN_RPC_DEFAULTS
 import { KillSwitchService } from '../services/kill-switch-service.js';
 import { AutoStopService } from '../services/autostop-service.js';
 import type { AutoStopConfig } from '../services/autostop-service.js';
+import { InMemoryCounter } from '../infrastructure/metrics/in-memory-counter.js';
+import { AdminStatsService } from '../services/admin-stats-service.js';
 import type { BalanceMonitorService, BalanceMonitorConfig } from '../services/monitoring/balance-monitor-service.js';
 import type { ChainType, NetworkType, EnvironmentType } from '@waiaas/core';
 import type { AdapterPool } from '../infrastructure/adapter-pool.js';
@@ -57,6 +62,8 @@ import { DatabasePolicyEngine } from '../pipeline/database-policy-engine.js';
 import { JwtSecretManager } from '../infrastructure/jwt/index.js';
 import argon2 from 'argon2';
 import type { IPriceOracle, IForexRateService } from '@waiaas/core';
+
+const esmRequire = createRequire(import.meta.url);
 
 // ---------------------------------------------------------------------------
 // proper-lockfile import (CJS package, use dynamic import)
@@ -156,6 +163,11 @@ export class DaemonLifecycle {
   private _asyncPollingService: import('../services/async-polling-service.js').AsyncPollingService | null = null;
   private positionTracker: import('../services/defi/position-tracker.js').PositionTracker | null = null;
   private defiMonitorService: import('../services/monitoring/defi-monitor-service.js').DeFiMonitorService | null = null;
+  private _encryptedBackupService: import('../infrastructure/backup/encrypted-backup-service.js').EncryptedBackupService | null = null;
+  private webhookService: import('../services/webhook-service.js').WebhookService | null = null;
+  private metricsCounter: InMemoryCounter | null = null;
+  private adminStatsService: AdminStatsService | null = null;
+  private daemonStartTime: number = Math.floor(Date.now() / 1000);
 
   /** Whether shutdown has been initiated. */
   get isShuttingDown(): boolean {
@@ -616,6 +628,34 @@ export class DaemonLifecycle {
     } catch (err) {
       console.warn('Step 4c-3 (fail-soft): AutoStop engine init warning:', err);
       this.autoStopService = null;
+    }
+
+    // ------------------------------------------------------------------
+    // Step 4c-3b: InMemoryCounter + AdminStatsService (fail-soft)
+    // ------------------------------------------------------------------
+    try {
+      if (this.sqlite) {
+        this.metricsCounter = new InMemoryCounter();
+
+        // v30.2: inject metricsCounter into AutoStopService (STAT-02)
+        if (this.autoStopService) {
+          this.autoStopService.setMetricsCounter(this.metricsCounter);
+        }
+
+        const { version: daemonVersion } = esmRequire('../../package.json') as { version: string };
+        this.adminStatsService = new AdminStatsService({
+          sqlite: this.sqlite,
+          metricsCounter: this.metricsCounter,
+          autoStopService: this.autoStopService ?? undefined,
+          startTime: this.daemonStartTime,
+          version: daemonVersion,
+          dataDir,
+        });
+        console.debug('Step 4c-3b: AdminStatsService created');
+      }
+    } catch (err) {
+      console.warn('Step 4c-3b (fail-soft): AdminStatsService init warning:', err);
+      this.adminStatsService = null;
     }
 
     // ------------------------------------------------------------------
@@ -1266,6 +1306,35 @@ export class DaemonLifecycle {
     }
 
     // ------------------------------------------------------------------
+    // Step 4h: EncryptedBackupService (fail-soft)
+    // ------------------------------------------------------------------
+    try {
+      if (this.sqlite) {
+        const { isAbsolute } = await import('node:path');
+        const { EncryptedBackupService } = await import('../infrastructure/backup/encrypted-backup-service.js');
+        const backupDir = this._config!.backup?.dir ?? 'backups';
+        const backupsDir = isAbsolute(backupDir) ? backupDir : join(dataDir, backupDir);
+        this._encryptedBackupService = new EncryptedBackupService(dataDir, backupsDir, this.sqlite);
+        console.debug('Step 4h: EncryptedBackupService created');
+      }
+    } catch (err) {
+      console.warn('Step 4h (fail-soft): EncryptedBackupService init warning:', err);
+    }
+
+    // ------------------------------------------------------------------
+    // Step 4i: WebhookService (fail-soft)
+    // ------------------------------------------------------------------
+    try {
+      if (this.sqlite && this.eventBus) {
+        const { WebhookService } = await import('../services/webhook-service.js');
+        this.webhookService = new WebhookService(this.sqlite, this.eventBus, () => this.masterPassword);
+        console.debug('Step 4i: WebhookService created');
+      }
+    } catch (err) {
+      console.warn('Step 4i (fail-soft): WebhookService init warning:', err);
+    }
+
+    // ------------------------------------------------------------------
     // Step 5: HTTP server start (5s, fail-fast)
     // ------------------------------------------------------------------
     await withTimeout(
@@ -1324,6 +1393,10 @@ export class DaemonLifecycle {
           wcSigningBridgeRef: this.wcSigningBridgeRef,
           approvalChannelRouter: this.approvalChannelRouter ?? undefined,
           versionCheckService: this._versionCheckService,
+          encryptedBackupService: this._encryptedBackupService ?? undefined,
+          adminStatsService: this.adminStatsService ?? undefined,
+          autoStopService: this.autoStopService ?? undefined,
+          metricsCounter: this.metricsCounter ?? undefined,
         });
 
         const hostname = this._config!.daemon.hostname;
@@ -1461,6 +1534,34 @@ export class DaemonLifecycle {
         console.debug('Step 6: Version check disabled');
       }
 
+      // Register backup worker (auto-backup scheduler)
+      if (this._encryptedBackupService && this._config!.backup.interval > 0) {
+        const backupInterval = this._config!.backup.interval * 1000; // seconds -> ms
+        const retentionCount = this._config!.backup.retention_count;
+        const backupService = this._encryptedBackupService;
+        const masterPwd = this.masterPassword;
+
+        this.workers.register('backup-worker', {
+          interval: backupInterval,
+          handler: async () => {
+            if (this._isShuttingDown) return;
+            try {
+              const info = await backupService.createBackup(masterPwd);
+              console.log(`Auto-backup created: ${info.filename} (${info.size} bytes)`);
+              const pruned = backupService.pruneBackups(retentionCount);
+              if (pruned > 0) {
+                console.log(`Auto-backup: pruned ${pruned} old backup(s), keeping ${retentionCount}`);
+              }
+            } catch (err) {
+              console.error('Auto-backup failed:', err);
+            }
+          },
+        });
+        console.debug(`Step 6: Backup worker registered (interval=${this._config!.backup.interval}s, retention=${retentionCount})`);
+      } else {
+        console.debug('Step 6: Backup worker disabled (interval=0 or no backup service)');
+      }
+
       this.workers.startAll();
 
       // Write PID file
@@ -1578,6 +1679,10 @@ export class DaemonLifecycle {
 
       // Clear AsyncPollingService reference (workers.stopAll() handles the timer)
       this._asyncPollingService = null;
+
+      // WebhookService destroy (before removing EventBus listeners)
+      this.webhookService?.destroy();
+      this.webhookService = null;
 
       // Step 6b: Remove all EventBus listeners
       this.eventBus.removeAllListeners();

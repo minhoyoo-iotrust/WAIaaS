@@ -24,6 +24,8 @@ export {
   incomingTransactions,
   incomingTxCursors,
 } from './schema.js';
+export { insertAuditLog } from './audit-helper.js';
+export type { AuditEntry } from './audit-helper.js';
 export { generateId } from './id.js';
 export { generateCheckConstraint } from './checks.js';
 export { checkSchemaCompatibility, MIN_COMPATIBLE_SCHEMA_VERSION } from './compatibility.js';

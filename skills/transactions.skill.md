@@ -901,3 +901,148 @@ Gas condition behavior is configured via Admin Settings (runtime-adjustable):
 - Policy evaluation occurs before gas waiting -- policy violations are rejected immediately
 - Nonce is assigned at execution time, not at gas-waiting entry
 - GAS_WAITING transactions are visible in `GET /v1/transactions/pending`
+
+## 15. Transaction Simulation (Dry-Run)
+
+Simulate a transaction without executing it. Returns policy evaluation result, estimated fees, balance changes, and warnings. No side effects -- no DB writes, no signing, no submission.
+
+### POST /v1/transactions/simulate
+
+**Auth:** sessionAuth (Bearer token)
+
+**Request Body:** Same as `POST /v1/transactions/send` (all 5 transaction types supported).
+
+```bash
+curl -s -X POST http://localhost:3100/v1/transactions/simulate \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -d '{
+    "type": "TRANSFER",
+    "to": "9aE476sH92Vz7DMPyq5WLPkrKWivxeuTKEFKd2sZZcde",
+    "amount": "100000000"
+  }'
+```
+
+**Response (200):**
+
+```json
+{
+  "success": true,
+  "policy": {
+    "tier": "INSTANT",
+    "allowed": true
+  },
+  "fee": {
+    "estimatedFee": "6000",
+    "feeSymbol": "SOL",
+    "feeDecimals": 9,
+    "feeUsd": 0.0012
+  },
+  "balanceChanges": [
+    {"asset": "SOL", "before": "1000000000", "after": "899994000", "delta": "-100006000"}
+  ],
+  "warnings": [],
+  "simulation": {
+    "simulated": true,
+    "gasUsed": "5000"
+  },
+  "meta": {
+    "chain": "solana",
+    "network": "solana-devnet",
+    "fromAddress": "7xKXtg...",
+    "toAddress": "9aE476sH...",
+    "simulatedAt": "2026-03-03T12:00:00.000Z"
+  }
+}
+```
+
+**Key Fields:**
+
+| Field | Description |
+|-------|-------------|
+| `success` | `true` if transaction would succeed; `false` if policy denied |
+| `policy.tier` | Assigned tier (INSTANT, NOTIFY, DELAY, APPROVAL) |
+| `policy.allowed` | Whether policy allows the transaction |
+| `policy.reason` | Denial reason when `allowed=false` |
+| `fee.estimatedFee` | Estimated fee with 20% safety margin, in smallest unit |
+| `balanceChanges` | Array of asset balance changes (before/after/delta) |
+| `warnings` | Array of warning objects with code and message |
+
+**Warning Codes:**
+
+| Code | Description |
+|------|-------------|
+| `INSUFFICIENT_BALANCE` | Not enough native balance for amount |
+| `INSUFFICIENT_BALANCE_WITH_FEE` | Balance insufficient when including fees |
+| `INSUFFICIENT_TOKEN_BALANCE` | Not enough token balance |
+| `HIGH_FEE_RATIO` | Fee exceeds 10% of transaction amount |
+| `APPROVAL_REQUIRED` | Owner approval required (APPROVAL tier) |
+| `DELAY_APPLIED` | Cooldown delay will be applied |
+| `DOWNGRADED_NO_OWNER` | APPROVAL downgraded to DELAY (no owner registered) |
+| `CUMULATIVE_LIMIT_WARNING` | Approaching cumulative spending limit |
+| `ORACLE_PRICE_UNAVAILABLE` | Price oracle data not available |
+| `SIMULATION_FAILED` | On-chain simulation returned an error |
+| `LOW_BALANCE_AFTER_TX` | Balance will be very low after transaction |
+| `NONCE_GAP_DETECTED` | Nonce gap detected (EVM) |
+
+**Policy Denied Response (200 with success=false):**
+
+```json
+{
+  "success": false,
+  "policy": {
+    "tier": "INSTANT",
+    "allowed": false,
+    "reason": "Token not in ALLOWED_TOKENS list"
+  },
+  "fee": null,
+  "balanceChanges": [],
+  "warnings": [],
+  "simulation": null,
+  "meta": {
+    "chain": "solana",
+    "network": "solana-devnet",
+    "fromAddress": "7xKXtg...",
+    "toAddress": "9aE476sH...",
+    "simulatedAt": "2026-03-03T12:00:00.000Z"
+  }
+}
+```
+
+### SDK Usage
+
+```typescript
+const result = await client.simulate({
+  to: '9aE476sH92Vz7DMPyq5WLPkrKWivxeuTKEFKd2sZZcde',
+  amount: '100000000',
+});
+if (result.success) {
+  console.log('Tier:', result.policy.tier);
+  console.log('Fee:', result.fee?.estimatedFee);
+} else {
+  console.log('Denied:', result.policy.reason);
+}
+```
+
+### MCP Tool
+
+`simulate_transaction` -- Simulate a transaction without executing it.
+
+Parameters: Same as `send_token` (to, amount, type, token, calldata, abi, value, programId, instructionData, accounts, spender, instructions, network, wallet_id, gas_condition).
+
+```json
+{
+  "tool": "simulate_transaction",
+  "arguments": {
+    "to": "9aE476sH92Vz7DMPyq5WLPkrKWivxeuTKEFKd2sZZcde",
+    "amount": "100000000"
+  }
+}
+```
+
+### Notes
+
+- Policy denied returns HTTP 200 with `success=false` (not an HTTP error)
+- gasCondition is accepted for request compatibility but ignored by simulation
+- No DB writes, no signing, no notifications, no events
+- Fee includes 20% safety margin: `(estimatedGas * 120) / 100`

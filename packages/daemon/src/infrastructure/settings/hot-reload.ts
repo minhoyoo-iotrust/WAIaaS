@@ -164,7 +164,7 @@ export class HotReloadOrchestrator {
 
     if (hasAutostopChanges) {
       try {
-        this.reloadAutoStop();
+        this.reloadAutoStop(changedKeys.filter((k) => k.startsWith(AUTOSTOP_KEYS_PREFIX)));
       } catch (err) {
         console.warn('Hot-reload autostop failed:', err);
       }
@@ -288,12 +288,37 @@ export class HotReloadOrchestrator {
   /**
    * Reload AutoStop engine with current settings from SettingsService.
    * Synchronous: reads new values and calls autoStopService.updateConfig().
+   * Also handles per-rule enable/disable via registry.setEnabled() (PLUG-04).
    */
-  private reloadAutoStop(): void {
+  private reloadAutoStop(changedKeys?: string[]): void {
     const svc = this.deps.autoStopService;
     if (!svc) return;
 
     const ss = this.deps.settingsService;
+
+    // Handle per-rule enable/disable settings (autostop.rule.{id}.enabled)
+    const rulePrefix = 'autostop.rule.';
+    const ruleEnableSuffix = '.enabled';
+    const perRuleKeys = changedKeys?.filter(
+      (k) => k.startsWith(rulePrefix) && k.endsWith(ruleEnableSuffix),
+    );
+
+    if (perRuleKeys && perRuleKeys.length > 0) {
+      const registry = svc.registry;
+      for (const key of perRuleKeys) {
+        // Extract rule ID from 'autostop.rule.{id}.enabled'
+        const ruleId = key.slice(rulePrefix.length, -ruleEnableSuffix.length);
+        const enabled = ss.get(key) === 'true';
+        try {
+          registry.setEnabled(ruleId, enabled);
+          console.log(`Hot-reload: AutoStop rule '${ruleId}' ${enabled ? 'enabled' : 'disabled'}`);
+        } catch {
+          // Rule not found in registry -- ignore
+        }
+      }
+    }
+
+    // Handle global autostop config changes
     const newConfig: Partial<AutoStopConfig> = {
       consecutiveFailuresThreshold: parseInt(ss.get('autostop.consecutive_failures_threshold'), 10),
       unusualActivityThreshold: parseInt(ss.get('autostop.unusual_activity_threshold'), 10),

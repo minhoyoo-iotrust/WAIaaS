@@ -60,6 +60,18 @@ export type { JwtPayload } from './infrastructure/jwt/index.js';
 
 // Backup module
 export { BackupService } from './infrastructure/backup/index.js';
+export { EncryptedBackupService } from './infrastructure/backup/index.js';
+export {
+  BACKUP_MAGIC,
+  BACKUP_FORMAT_VERSION,
+  BACKUP_HEADER_SIZE,
+  writeArchive,
+  readArchiveHeader,
+  readArchiveMetadata,
+  encodeEntries,
+  decodeEntries,
+} from './infrastructure/backup/index.js';
+export type { BackupMetadata, BackupInfo, ArchiveHeader } from './infrastructure/backup/index.js';
 
 // Pipeline module
 export { TransactionPipeline, DefaultPolicyEngine } from './pipeline/index.js';

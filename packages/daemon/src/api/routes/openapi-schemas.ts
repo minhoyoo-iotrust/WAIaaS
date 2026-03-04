@@ -1029,6 +1029,71 @@ export const TxSignResponseSchema = z
   .openapi('TxSignResponse');
 
 // ---------------------------------------------------------------------------
+// Dry-Run Simulation Result Schema (POST /v1/transactions/simulate)
+// ---------------------------------------------------------------------------
+
+export const DryRunSimulationResultOpenAPI = z
+  .object({
+    success: z.boolean(),
+    policy: z.object({
+      tier: z.string(),
+      allowed: z.boolean(),
+      reason: z.string().optional(),
+      delaySeconds: z.number().optional(),
+      approvalReason: z.string().optional(),
+      downgraded: z.boolean().optional(),
+      cumulativeWarning: z
+        .object({
+          type: z.string(),
+          ratio: z.number(),
+          spent: z.number(),
+          limit: z.number(),
+        })
+        .optional(),
+    }),
+    fee: z
+      .object({
+        estimatedFee: z.string(),
+        feeSymbol: z.string(),
+        feeDecimals: z.number(),
+        feeUsd: z.number().nullable(),
+        needsAtaCreation: z.boolean().optional(),
+        ataRentCost: z.string().optional(),
+      })
+      .nullable(),
+    balanceChanges: z.array(
+      z.object({
+        asset: z.string(),
+        symbol: z.string(),
+        decimals: z.number(),
+        currentBalance: z.string(),
+        changeAmount: z.string(),
+        afterBalance: z.string(),
+      }),
+    ),
+    warnings: z.array(
+      z.object({
+        code: z.string(),
+        message: z.string(),
+        severity: z.enum(['info', 'warning', 'error']),
+      }),
+    ),
+    simulation: z.object({
+      success: z.boolean(),
+      logs: z.array(z.string()),
+      unitsConsumed: z.string().nullable(),
+      error: z.string().nullable(),
+    }),
+    meta: z.object({
+      chain: z.string(),
+      network: z.string(),
+      transactionType: z.string(),
+      durationMs: z.number(),
+    }),
+  })
+  .openapi('DryRunSimulationResult');
+
+// ---------------------------------------------------------------------------
 // Oracle Status Schema (GET /v1/admin/oracle-status)
 // ---------------------------------------------------------------------------
 
@@ -1279,3 +1344,23 @@ export const RpcStatusResponseSchema = z.object({
   networks: z.record(z.array(RpcEndpointStatusSchema)),
   builtinUrls: z.record(z.array(z.string())),
 }).openapi('RpcStatusResponse');
+
+// ---------------------------------------------------------------------------
+// Backup Schemas (POST /v1/admin/backup, GET /v1/admin/backups)
+// ---------------------------------------------------------------------------
+
+export const BackupInfoResponseSchema = z.object({
+  path: z.string().openapi({ description: 'Absolute path to the backup file' }),
+  filename: z.string().openapi({ description: 'Backup filename' }),
+  size: z.number().int().openapi({ description: 'File size in bytes' }),
+  created_at: z.string().openapi({ description: 'ISO 8601 creation timestamp' }),
+  daemon_version: z.string().openapi({ description: 'Daemon version at backup time' }),
+  schema_version: z.number().int().openapi({ description: 'DB schema version at backup time' }),
+  file_count: z.number().int().openapi({ description: 'Number of files in the backup' }),
+}).openapi('BackupInfoResponse');
+
+export const BackupListResponseSchema = z.object({
+  backups: z.array(BackupInfoResponseSchema),
+  total: z.number().int(),
+  retention_count: z.number().int().openapi({ description: 'Configured retention count' }),
+}).openapi('BackupListResponse');

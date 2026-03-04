@@ -85,9 +85,13 @@ import {
   SessionReissueResponseSchema,
   StakingPositionsResponseSchema,
   RpcStatusResponseSchema,
+  BackupInfoResponseSchema,
+  BackupListResponseSchema,
+  ErrorResponseSchema,
   buildErrorResponses,
   openApiValidationHook,
 } from './openapi-schemas.js';
+import type { EncryptedBackupService } from '../../infrastructure/backup/encrypted-backup-service.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -127,6 +131,9 @@ export interface AdminRouteDeps {
   delayQueue?: DelayQueue;
   approvalWorkflow?: ApprovalWorkflow;
   rpcPool?: RpcPool;
+  encryptedBackupService?: EncryptedBackupService;
+  adminStatsService?: import('../../services/admin-stats-service.js').AdminStatsService;
+  autoStopService?: import('../../services/autostop/autostop-service.js').AutoStopService;
 }
 
 // ---------------------------------------------------------------------------
@@ -2851,6 +2858,217 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
       totalValueUsd,
       worstHealthFactor,
       activeCount: positions.length,
+    }, 200);
+  });
+
+  // ---------------------------------------------------------------------------
+  // POST /admin/backup (create encrypted backup)
+  // ---------------------------------------------------------------------------
+
+  const createBackupRoute = createRoute({
+    method: 'post',
+    path: '/admin/backup',
+    tags: ['Admin'],
+    summary: 'Create an encrypted backup',
+    responses: {
+      200: {
+        description: 'Backup created successfully',
+        content: { 'application/json': { schema: BackupInfoResponseSchema } },
+      },
+      401: {
+        description: 'Master password not available',
+        content: { 'application/json': { schema: ErrorResponseSchema } },
+      },
+      501: {
+        description: 'Backup service not configured',
+        content: { 'application/json': { schema: ErrorResponseSchema } },
+      },
+      ...buildErrorResponses(['INVALID_MASTER_PASSWORD']),
+    },
+  });
+
+  router.openapi(createBackupRoute, async (c) => {
+    if (!deps.encryptedBackupService) {
+      return c.json({ code: 'NOT_CONFIGURED', message: 'Backup service not configured', retryable: false }, 501);
+    }
+    if (!deps.passwordRef?.password) {
+      return c.json({ code: 'INVALID_MASTER_PASSWORD', message: 'Master password not available', retryable: false }, 401);
+    }
+
+    const info = await deps.encryptedBackupService.createBackup(deps.passwordRef.password);
+    return c.json(info, 200);
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /admin/backups (list backups)
+  // ---------------------------------------------------------------------------
+
+  const listBackupsRoute = createRoute({
+    method: 'get',
+    path: '/admin/backups',
+    tags: ['Admin'],
+    summary: 'List available backups',
+    responses: {
+      200: {
+        description: 'Backup list',
+        content: { 'application/json': { schema: BackupListResponseSchema } },
+      },
+      501: {
+        description: 'Backup service not configured',
+        content: { 'application/json': { schema: ErrorResponseSchema } },
+      },
+    },
+  });
+
+  router.openapi(listBackupsRoute, async (c) => {
+    if (!deps.encryptedBackupService) {
+      return c.json({ code: 'NOT_CONFIGURED', message: 'Backup service not configured', retryable: false }, 501);
+    }
+
+    const backups = deps.encryptedBackupService.listBackups();
+    const retentionCount = deps.daemonConfig?.backup?.retention_count ?? 7;
+    return c.json({ backups, total: backups.length, retention_count: retentionCount }, 200);
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /admin/stats -- 7-category operational statistics (STAT-01)
+  // ---------------------------------------------------------------------------
+
+  const adminStatsRoute = createRoute({
+    method: 'get',
+    path: '/admin/stats',
+    tags: ['Admin'],
+    summary: 'Get operational statistics',
+    responses: {
+      200: {
+        description: 'Operational statistics (7 categories)',
+        content: { 'application/json': { schema: z.any() } },
+      },
+    },
+  });
+
+  router.openapi(adminStatsRoute, async (c) => {
+    if (!deps.adminStatsService) {
+      return c.json({ code: 'NOT_CONFIGURED', message: 'Stats service not configured', retryable: false }, 503 as any);
+    }
+
+    const stats = deps.adminStatsService.getStats();
+    return c.json(stats, 200);
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /admin/autostop/rules -- List AutoStop rules with status (PLUG-03)
+  // ---------------------------------------------------------------------------
+
+  const autostopRulesRoute = createRoute({
+    method: 'get',
+    path: '/admin/autostop/rules',
+    tags: ['Admin'],
+    summary: 'List AutoStop rules with status',
+    responses: {
+      200: {
+        description: 'AutoStop rules list',
+        content: { 'application/json': { schema: z.any() } },
+      },
+    },
+  });
+
+  router.openapi(autostopRulesRoute, async (c) => {
+    if (!deps.autoStopService) {
+      return c.json({ globalEnabled: false, rules: [] }, 200);
+    }
+
+    const status = deps.autoStopService.getStatus();
+    const registry = deps.autoStopService.registry;
+    const rules = registry.getRules().map((r) => {
+      const ruleStatus = r.getStatus();
+      return {
+        id: r.id,
+        displayName: r.displayName,
+        description: r.description,
+        enabled: r.enabled,
+        subscribedEvents: r.subscribedEvents,
+        config: ruleStatus.config,
+        state: ruleStatus.state,
+      };
+    });
+
+    return c.json({ globalEnabled: status.enabled, rules }, 200);
+  });
+
+  // ---------------------------------------------------------------------------
+  // PUT /admin/autostop/rules/:id -- Update AutoStop rule (PLUG-03)
+  // ---------------------------------------------------------------------------
+
+  const autostopRuleUpdateRoute = createRoute({
+    method: 'put',
+    path: '/admin/autostop/rules/{id}',
+    tags: ['Admin'],
+    summary: 'Update AutoStop rule enabled/config',
+    request: {
+      params: z.object({ id: z.string() }),
+      body: {
+        content: {
+          'application/json': {
+            schema: z.object({
+              enabled: z.boolean().optional(),
+              config: z.record(z.unknown()).optional(),
+            }),
+          },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: 'Rule updated',
+        content: { 'application/json': { schema: z.any() } },
+      },
+      404: {
+        description: 'Rule not found',
+        content: { 'application/json': { schema: z.any() } },
+      },
+    },
+  });
+
+  router.openapi(autostopRuleUpdateRoute, async (c) => {
+    if (!deps.autoStopService) {
+      throw new WAIaaSError('RULE_NOT_FOUND');
+    }
+
+    const { id } = c.req.valid('param');
+    const body = c.req.valid('json');
+    const registry = deps.autoStopService.registry;
+    const rule = registry.getRule(id);
+
+    if (!rule) {
+      throw new WAIaaSError('RULE_NOT_FOUND');
+    }
+
+    // Update enabled state
+    if (body.enabled !== undefined) {
+      registry.setEnabled(id, body.enabled);
+
+      // Persist to Admin Settings
+      if (deps.settingsService) {
+        deps.settingsService.set(`autostop.rule.${id}.enabled`, String(body.enabled));
+      }
+    }
+
+    // Update config
+    if (body.config) {
+      rule.updateConfig(body.config);
+    }
+
+    // Return updated rule info
+    const ruleStatus = rule.getStatus();
+    return c.json({
+      id: rule.id,
+      displayName: rule.displayName,
+      description: rule.description,
+      enabled: rule.enabled,
+      subscribedEvents: rule.subscribedEvents,
+      config: ruleStatus.config,
+      state: ruleStatus.state,
     }, 200);
   });
 

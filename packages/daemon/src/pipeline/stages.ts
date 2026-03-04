@@ -31,8 +31,9 @@ import {
   type ContractCallRequest,
   type ApproveRequest,
 } from '@waiaas/core';
-import { wallets, transactions, auditLog } from '../infrastructure/database/schema.js';
+import { wallets, transactions } from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
+import { insertAuditLog } from '../infrastructure/database/audit-helper.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
 import type * as schema from '../infrastructure/database/schema.js';
 import { DatabasePolicyEngine } from './database-policy-engine.js';
@@ -41,7 +42,7 @@ import type { DelayQueue } from '../workflow/delay-queue.js';
 import type { ApprovalWorkflow } from '../workflow/approval-workflow.js';
 import type { NotificationService } from '../notifications/notification-service.js';
 import type { SettingsService } from '../infrastructure/settings/settings-service.js';
-import type { IPriceOracle, IForexRateService, CurrencyCode } from '@waiaas/core';
+import type { IPriceOracle, IForexRateService, CurrencyCode, IMetricsCounter } from '@waiaas/core';
 import { formatDisplayCurrency, formatAmount, type EventBus, type ChainType } from '@waiaas/core';
 import type { WcSigningBridge } from '../services/wc-signing-bridge.js';
 import type { ApprovalChannelRouter } from '../services/signing-sdk/approval-channel-router.js';
@@ -105,6 +106,8 @@ export interface PipelineContext {
   wcSigningBridge?: WcSigningBridge;
   // v2.6.1: signing SDK channel router for APPROVAL fire-and-forget
   approvalChannelRouter?: ApprovalChannelRouter;
+  // v30.2: metrics counter for tx/rpc/autostop instrumentation (STAT-02)
+  metricsCounter?: IMetricsCounter;
 }
 
 // ---------------------------------------------------------------------------
@@ -112,19 +115,19 @@ export interface PipelineContext {
 // ---------------------------------------------------------------------------
 
 /** Safely extract `amount` from SendTransactionRequest | TransactionRequest. */
-function getRequestAmount(req: SendTransactionRequest | TransactionRequest): string {
+export function getRequestAmount(req: SendTransactionRequest | TransactionRequest): string {
   if ('amount' in req && typeof req.amount === 'string') return req.amount;
   return '0';
 }
 
 /** Safely extract `to` from SendTransactionRequest | TransactionRequest. */
-function getRequestTo(req: SendTransactionRequest | TransactionRequest): string {
+export function getRequestTo(req: SendTransactionRequest | TransactionRequest): string {
   if ('to' in req && typeof req.to === 'string') return req.to;
   return '';
 }
 
 /** Safely extract `memo` from SendTransactionRequest | TransactionRequest. */
-function getRequestMemo(req: SendTransactionRequest | TransactionRequest): string | undefined {
+export function getRequestMemo(req: SendTransactionRequest | TransactionRequest): string | undefined {
   if ('memo' in req && typeof req.memo === 'string') return req.memo;
   return undefined;
 }
@@ -217,7 +220,7 @@ function extractPolicyType(reason: string | undefined): string {
 // Helper: build type-specific TransactionParam for policy evaluation
 // ---------------------------------------------------------------------------
 
-interface TransactionParam {
+export interface TransactionParam {
   type: string;
   amount: string;
   toAddress: string;
@@ -235,7 +238,7 @@ interface TransactionParam {
   actionProvider?: string;
 }
 
-function buildTransactionParam(
+export function buildTransactionParam(
   req: SendTransactionRequest | TransactionRequest,
   txType: string,
   chain: string,
@@ -453,6 +456,22 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
       adminLink: '/admin/policies',
     }, { txId: ctx.txId });
 
+    // Audit log: POLICY_DENIED
+    if (ctx.sqlite) {
+      insertAuditLog(ctx.sqlite, {
+        eventType: 'POLICY_DENIED',
+        actor: ctx.sessionId ?? 'system',
+        walletId: ctx.walletId,
+        txId: ctx.txId,
+        details: {
+          reason: evaluation.reason,
+          requestedAmount: getRequestAmount(ctx.request),
+          type: ('type' in ctx.request && ctx.request.type) ? ctx.request.type : 'TRANSFER',
+        },
+        severity: 'warning',
+      });
+    }
+
     throw new WAIaaSError('POLICY_DENIED', {
       message: evaluation.reason ?? 'Transaction denied by policy',
     });
@@ -463,20 +482,21 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
 
   // [Phase 127] PriceResult에 따른 후처리
   if (priceResult?.type === 'notListed') {
-    // 감사 로그: UNLISTED_TOKEN_TRANSFER
-    await ctx.db.insert(auditLog).values({
-      timestamp: new Date(Math.floor(Date.now() / 1000) * 1000),
-      eventType: 'UNLISTED_TOKEN_TRANSFER',
-      actor: ctx.sessionId ?? 'system',
-      walletId: ctx.walletId,
-      txId: ctx.txId,
-      details: JSON.stringify({
-        tokenAddress: priceResult.tokenAddress,
-        chain: priceResult.chain,
-        failedCount: priceResult.failedCount,
-      }),
-      severity: 'warning',
-    });
+    // Audit log: UNLISTED_TOKEN_TRANSFER (refactored to insertAuditLog)
+    if (ctx.sqlite) {
+      insertAuditLog(ctx.sqlite, {
+        eventType: 'UNLISTED_TOKEN_TRANSFER',
+        actor: ctx.sessionId ?? 'system',
+        walletId: ctx.walletId,
+        txId: ctx.txId,
+        details: {
+          tokenAddress: priceResult.tokenAddress,
+          chain: priceResult.chain,
+          failedCount: priceResult.failedCount,
+        },
+        severity: 'warning',
+      });
+    }
 
     // 최소 NOTIFY 격상 (evaluation tier와 NOTIFY 중 보수적)
     const TIER_ORDER: PolicyTier[] = ['INSTANT', 'NOTIFY', 'DELAY', 'APPROVAL'];
@@ -831,7 +851,7 @@ export async function stage4Wait(ctx: PipelineContext): Promise<void> {
  * Build unsigned transaction by dispatching to the correct IChainAdapter method
  * based on request.type (TRANSFER/TOKEN_TRANSFER/CONTRACT_CALL/APPROVE/BATCH).
  */
-async function buildByType(
+export async function buildByType(
   adapter: IChainAdapter,
   request: SendTransactionRequest | TransactionRequest,
   walletPublicKey: string,
@@ -983,13 +1003,30 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
       // Stage 5a: Build unsigned transaction (type-routed)
       ctx.unsignedTx = await buildByType(ctx.adapter, ctx.request, ctx.wallet.publicKey);
 
-      // Stage 5b: Simulate
+      // Stage 5b: Simulate (with RPC metrics)
+      const simStart = Date.now();
+      ctx.metricsCounter?.increment('rpc.calls', { network: ctx.resolvedNetwork });
       const simResult = await ctx.adapter.simulateTransaction(ctx.unsignedTx);
+      ctx.metricsCounter?.recordLatency('rpc.latency', Date.now() - simStart, { network: ctx.resolvedNetwork });
       if (!simResult.success) {
+        ctx.metricsCounter?.increment('rpc.errors', { network: ctx.resolvedNetwork });
+        ctx.metricsCounter?.increment('tx.failed', { network: ctx.resolvedNetwork });
         await ctx.db
           .update(transactions)
           .set({ status: 'FAILED', error: simResult.error ?? 'Simulation failed' })
           .where(eq(transactions.id, ctx.txId));
+
+        // Audit log: TX_FAILED (simulation failure)
+        if (ctx.sqlite) {
+          insertAuditLog(ctx.sqlite, {
+            eventType: 'TX_FAILED',
+            actor: ctx.sessionId ?? 'system',
+            walletId: ctx.walletId,
+            txId: ctx.txId,
+            details: { error: simResult.error ?? 'Simulation failed', stage: 5, chain: ctx.wallet.chain, network: ctx.resolvedNetwork },
+            severity: 'warning',
+          });
+        }
 
         // Fire-and-forget: notify TX_FAILED on simulation failure
         void ctx.notificationService?.notify('TX_FAILED', ctx.walletId, {
@@ -1027,14 +1064,37 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
         }
       }
 
-      // Stage 5d: Submit
+      // Stage 5d: Submit (with RPC metrics)
+      const submitStart = Date.now();
+      ctx.metricsCounter?.increment('rpc.calls', { network: ctx.resolvedNetwork });
       ctx.submitResult = await ctx.adapter.submitTransaction(ctx.signedTx);
+      ctx.metricsCounter?.recordLatency('rpc.latency', Date.now() - submitStart, { network: ctx.resolvedNetwork });
+
+      // Success: increment tx.submitted counter
+      ctx.metricsCounter?.increment('tx.submitted', { network: ctx.resolvedNetwork });
 
       // Success: Update DB SUBMITTED + txHash
       await ctx.db
         .update(transactions)
         .set({ status: 'SUBMITTED', txHash: ctx.submitResult.txHash })
         .where(eq(transactions.id, ctx.txId));
+
+      // Audit log: TX_SUBMITTED
+      if (ctx.sqlite) {
+        insertAuditLog(ctx.sqlite, {
+          eventType: 'TX_SUBMITTED',
+          actor: ctx.sessionId ?? 'system',
+          walletId: ctx.walletId,
+          txId: ctx.txId,
+          details: {
+            txHash: ctx.submitResult.txHash,
+            chain: ctx.wallet.chain,
+            network: ctx.resolvedNetwork,
+            type: ('type' in ctx.request && ctx.request.type) ? ctx.request.type : 'TRANSFER',
+          },
+          severity: 'info',
+        });
+      }
 
       // Fire-and-forget: notify TX_SUBMITTED
       void ctx.notificationService?.notify('TX_SUBMITTED', ctx.walletId, {
@@ -1066,10 +1126,24 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
       switch (err.category) {
         case 'PERMANENT': {
           // Immediate failure, no retry
+          ctx.metricsCounter?.increment('rpc.errors', { network: ctx.resolvedNetwork });
+          ctx.metricsCounter?.increment('tx.failed', { network: ctx.resolvedNetwork });
           await ctx.db
             .update(transactions)
             .set({ status: 'FAILED', error: err.message })
             .where(eq(transactions.id, ctx.txId));
+
+          // Audit log: TX_FAILED (permanent chain error)
+          if (ctx.sqlite) {
+            insertAuditLog(ctx.sqlite, {
+              eventType: 'TX_FAILED',
+              actor: ctx.sessionId ?? 'system',
+              walletId: ctx.walletId,
+              txId: ctx.txId,
+              details: { error: err.message, stage: 5, chain: ctx.wallet.chain, network: ctx.resolvedNetwork },
+              severity: 'warning',
+            });
+          }
 
           // Fire-and-forget: notify TX_FAILED
           void ctx.notificationService?.notify('TX_FAILED', ctx.walletId, {
@@ -1097,8 +1171,10 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
         }
 
         case 'TRANSIENT': {
+          ctx.metricsCounter?.increment('rpc.errors', { network: ctx.resolvedNetwork });
           if (retryCount >= 3) {
             // Max retries exhausted
+            ctx.metricsCounter?.increment('tx.failed', { network: ctx.resolvedNetwork });
             await ctx.db
               .update(transactions)
               .set({ status: 'FAILED', error: `${err.code} (max retries exceeded)` })
@@ -1136,8 +1212,10 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
         }
 
         case 'STALE': {
+          ctx.metricsCounter?.increment('rpc.errors', { network: ctx.resolvedNetwork });
           if (retryCount >= 1) {
             // Stale retry exhausted (shared retryCount)
+            ctx.metricsCounter?.increment('tx.failed', { network: ctx.resolvedNetwork });
             await ctx.db
               .update(transactions)
               .set({ status: 'FAILED', error: `${err.code} (stale retry exhausted)` })
@@ -1213,6 +1291,23 @@ export async function stage6Confirm(ctx: PipelineContext): Promise<void> {
       .set({ status: 'CONFIRMED', executedAt })
       .where(eq(transactions.id, ctx.txId));
 
+    // Audit log: TX_CONFIRMED
+    if (ctx.sqlite) {
+      insertAuditLog(ctx.sqlite, {
+        eventType: 'TX_CONFIRMED',
+        actor: ctx.sessionId ?? 'system',
+        walletId: ctx.walletId,
+        txId: ctx.txId,
+        details: {
+          txHash: ctx.submitResult!.txHash,
+          chain: ctx.wallet.chain,
+          network: ctx.resolvedNetwork,
+          executedAt: Math.floor(Date.now() / 1000),
+        },
+        severity: 'info',
+      });
+    }
+
     // Fire-and-forget: notify TX_CONFIRMED (never blocks pipeline)
     void ctx.notificationService?.notify('TX_CONFIRMED', ctx.walletId, {
       txId: ctx.txId,
@@ -1240,6 +1335,18 @@ export async function stage6Confirm(ctx: PipelineContext): Promise<void> {
       .update(transactions)
       .set({ status: 'FAILED', error: 'Transaction reverted on-chain' })
       .where(eq(transactions.id, ctx.txId));
+
+    // Audit log: TX_FAILED (on-chain revert)
+    if (ctx.sqlite) {
+      insertAuditLog(ctx.sqlite, {
+        eventType: 'TX_FAILED',
+        actor: ctx.sessionId ?? 'system',
+        walletId: ctx.walletId,
+        txId: ctx.txId,
+        details: { error: 'Transaction reverted on-chain', stage: 6, chain: ctx.wallet.chain, network: ctx.resolvedNetwork },
+        severity: 'warning',
+      });
+    }
 
     // Fire-and-forget: notify TX_FAILED on on-chain revert (never blocks pipeline)
     void ctx.notificationService?.notify('TX_FAILED', ctx.walletId, {

@@ -50,6 +50,49 @@ interface AgentPromptResult {
   expiresAt: number;
 }
 
+interface AdminStats {
+  transactions: {
+    total: number;
+    byStatus: Record<string, number>;
+    byType: Record<string, number>;
+    last24h: { count: number; totalUsd: number | null };
+    last7d: { count: number; totalUsd: number | null };
+  };
+  sessions: { active: number; total: number; revokedLast24h: number };
+  wallets: { total: number; byStatus: Record<string, number>; withOwner: number };
+  rpc: {
+    totalCalls: number;
+    totalErrors: number;
+    avgLatencyMs: number;
+    byNetwork: Array<{ network: string; calls: number; errors: number; avgLatencyMs: number }>;
+  };
+  autostop: {
+    enabled: boolean;
+    triggeredTotal: number;
+    rules: Array<{ id: string; displayName: string; enabled: boolean; trackedCount: number }>;
+    lastTriggeredAt: number | null;
+  };
+  notifications: { sentLast24h: number; failedLast24h: number; channelStatus: Record<string, unknown> };
+  system: {
+    uptimeSeconds: number;
+    version: string;
+    schemaVersion: number;
+    dbSizeBytes: number;
+    nodeVersion: string;
+    platform: string;
+    timestamp: number;
+  };
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  const k = 1024;
+  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), units.length - 1);
+  const value = bytes / Math.pow(k, i);
+  return `${value.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+}
+
 interface DefiPositionSummary {
   positions: Array<{
     id: string;
@@ -207,6 +250,19 @@ export default function DashboardPage() {
   const approvalCount = useSignal<number | null>(null);
   const defiData = useSignal<DefiPositionSummary | null>(null);
   const defiLoading = useSignal(true);
+  const statsData = useSignal<AdminStats | null>(null);
+  const statsLoading = useSignal(true);
+
+  const fetchStats = async () => {
+    try {
+      const result = await apiGet<AdminStats>(API.ADMIN_STATS);
+      statsData.value = result;
+    } catch {
+      // Stats not available -- keep null
+    } finally {
+      statsLoading.value = false;
+    }
+  };
 
   const fetchDefi = async () => {
     defiLoading.value = true;
@@ -267,6 +323,7 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchStatus();
     fetchDefi();
+    fetchStats();
     fetchDisplayCurrency()
       .then(({ currency, rate }) => {
         displayCurrency.value = currency;
@@ -276,7 +333,7 @@ export default function DashboardPage() {
     apiGet<{ total: number }>(API.ADMIN_TRANSACTIONS + '?status=APPROVED&limit=1')
       .then((res) => { approvalCount.value = res.total; })
       .catch(() => { /* fallback */ });
-    const interval = setInterval(() => { fetchStatus(); fetchDefi(); }, 30_000);
+    const interval = setInterval(() => { fetchStatus(); fetchDefi(); fetchStats(); }, 30_000);
     return () => clearInterval(interval);
   }, []);
 
@@ -439,6 +496,76 @@ export default function DashboardPage() {
           emptyMessage="No recent transactions"
         />
       </div>
+
+      {/* Operational Stats Section (from GET /admin/stats) */}
+      {statsData.value && (
+        <>
+          {/* RPC Network Stats Table */}
+          {statsData.value.rpc.byNetwork.length > 0 && (
+            <div style={{ marginTop: 'var(--space-4)' }}>
+              <h3 style={{ marginBottom: 'var(--space-3)' }}>RPC Network Status</h3>
+              <Table
+                columns={[
+                  { key: 'network', header: 'Network' } as Column<AdminStats['rpc']['byNetwork'][number]>,
+                  { key: 'calls', header: 'Total Calls' } as Column<AdminStats['rpc']['byNetwork'][number]>,
+                  { key: 'errors', header: 'Errors' } as Column<AdminStats['rpc']['byNetwork'][number]>,
+                  {
+                    key: 'avgLatencyMs',
+                    header: 'Avg Latency (ms)',
+                    render: (r: AdminStats['rpc']['byNetwork'][number]) => r.avgLatencyMs.toFixed(1),
+                  } as Column<AdminStats['rpc']['byNetwork'][number]>,
+                ]}
+                data={statsData.value.rpc.byNetwork}
+                emptyMessage="No RPC data available"
+              />
+            </div>
+          )}
+
+          {/* AutoStop Rules Table */}
+          <div style={{ marginTop: 'var(--space-4)' }}>
+            <h3 style={{ marginBottom: 'var(--space-3)' }}>AutoStop Rules</h3>
+            <Table
+              columns={[
+                { key: 'id', header: 'Rule' } as Column<AdminStats['autostop']['rules'][number]>,
+                { key: 'displayName', header: 'Name' } as Column<AdminStats['autostop']['rules'][number]>,
+                {
+                  key: 'enabled',
+                  header: 'Status',
+                  render: (r: AdminStats['autostop']['rules'][number]) => (
+                    <Badge variant={r.enabled ? 'success' : 'danger'}>
+                      {r.enabled ? 'Enabled' : 'Disabled'}
+                    </Badge>
+                  ),
+                } as Column<AdminStats['autostop']['rules'][number]>,
+                { key: 'trackedCount', header: 'Tracked' } as Column<AdminStats['autostop']['rules'][number]>,
+              ]}
+              data={statsData.value.autostop.rules}
+              emptyMessage="No rules configured"
+            />
+          </div>
+
+          {/* Notifications Summary */}
+          <div class="stat-grid" style={{ marginTop: 'var(--space-4)' }}>
+            <StatCard
+              label="Notifications Sent (24h)"
+              value={String(statsData.value.notifications.sentLast24h)}
+            />
+            <StatCard
+              label="Failed Notifications (24h)"
+              value={String(statsData.value.notifications.failedLast24h)}
+              badge={statsData.value.notifications.failedLast24h > 0 ? 'danger' : undefined}
+            />
+          </div>
+
+          {/* System Info */}
+          <div class="stat-grid" style={{ marginTop: 'var(--space-4)' }}>
+            <StatCard label="DB Size" value={formatBytes(statsData.value.system.dbSizeBytes)} />
+            <StatCard label="Schema Version" value={`v${statsData.value.system.schemaVersion}`} />
+            <StatCard label="Node.js" value={statsData.value.system.nodeVersion} />
+            <StatCard label="Platform" value={statsData.value.system.platform} />
+          </div>
+        </>
+      )}
     </div>
   );
 }

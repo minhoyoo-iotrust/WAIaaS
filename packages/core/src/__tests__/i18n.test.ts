@@ -41,12 +41,13 @@ describe('i18n message system', () => {
     expect(Object.keys(en.cli).sort()).toEqual(Object.keys(ko.cli).sort());
   });
 
-  it('all 109 error codes have corresponding messages', () => {
+  it('all 116 error codes have corresponding messages', () => {
     // v29.3: +WALLET_ID_REQUIRED, +NETWORK_REQUIRED, -CANNOT_REMOVE_DEFAULT_WALLET (net +1)
     // v29.7: +SIGNING_DISABLED, +WALLET_APP_DUPLICATE, +WALLET_APP_NOT_FOUND (+3)
     // v29.9: +RENEWAL_NOT_REQUIRED (+1)
+    // v30.2: +SIMULATION_TIMEOUT, +INVALID_BACKUP_FORMAT, +UNSUPPORTED_BACKUP_VERSION, +BACKUP_CORRUPTED, +BACKUP_NOT_FOUND, +WEBHOOK_NOT_FOUND, +RULE_NOT_FOUND (+7)
     const en = getMessages('en');
-    expect(Object.keys(en.errors).length).toBe(109);
+    expect(Object.keys(en.errors).length).toBe(116);
   });
 
   it('error code keys match ERROR_CODES keys', () => {

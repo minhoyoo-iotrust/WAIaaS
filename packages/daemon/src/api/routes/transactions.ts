@@ -48,7 +48,7 @@ import type { ApprovalWorkflow } from '../../workflow/approval-workflow.js';
 import type { DelayQueue } from '../../workflow/delay-queue.js';
 import type { OwnerLifecycleService } from '../../workflow/owner-state.js';
 import type { NotificationService } from '../../notifications/notification-service.js';
-import type { IPriceOracle, IForexRateService, EventBus } from '@waiaas/core';
+import type { IPriceOracle, IForexRateService, EventBus, IMetricsCounter } from '@waiaas/core';
 import type { SettingsService } from '../../infrastructure/settings/settings-service.js';
 import type { WcSigningBridgeRef } from '../../services/wc-signing-bridge.js';
 import type { ApprovalChannelRouter } from '../../services/signing-sdk/approval-channel-router.js';
@@ -69,10 +69,12 @@ import {
   TxCancelResponseSchema,
   TxSignRequestSchema,
   TxSignResponseSchema,
+  DryRunSimulationResultOpenAPI,
   buildErrorResponses,
   openApiValidationHook,
 } from './openapi-schemas.js';
 import { executeSignOnly } from '../../pipeline/sign-only.js';
+import { TransactionPipeline } from '../../pipeline/pipeline.js';
 import { resolveDisplayCurrencyCode, fetchDisplayRate, toDisplayAmount } from './display-currency-helper.js';
 import { resolveWalletId, verifyWalletAccess } from '../helpers/resolve-wallet-id.js';
 
@@ -96,6 +98,8 @@ export interface TransactionRouteDeps {
   eventBus?: EventBus;
   wcSigningBridgeRef?: WcSigningBridgeRef;
   approvalChannelRouter?: ApprovalChannelRouter;
+  // v30.2: metrics counter for tx/rpc instrumentation (STAT-02)
+  metricsCounter?: IMetricsCounter;
 }
 
 // ---------------------------------------------------------------------------
@@ -242,6 +246,29 @@ const listTransactionsRoute = createRoute({
   },
 });
 
+const simulateTransactionRoute = createRoute({
+  method: 'post',
+  path: '/transactions/simulate',
+  tags: ['Transactions'],
+  summary: 'Simulate a transaction (dry-run)',
+  description:
+    'Simulate a transaction without executing it. Returns policy tier, estimated fees, balance changes, and warnings. No side effects (no DB writes, signing, or notifications).',
+  request: {
+    body: {
+      content: {
+        'application/json': { schema: TransactionRequestOpenAPI },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Simulation result',
+      content: { 'application/json': { schema: DryRunSimulationResultOpenAPI } },
+    },
+    ...buildErrorResponses(['WALLET_NOT_FOUND', 'WALLET_TERMINATED', 'ACTION_VALIDATION_FAILED', 'SIMULATION_TIMEOUT']),
+  },
+});
+
 const pendingTransactionsRoute = createRoute({
   method: 'get',
   path: '/transactions/pending',
@@ -376,6 +403,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
       eventBus: deps.eventBus,
       wcSigningBridge: deps.wcSigningBridgeRef?.current ?? undefined,
       approvalChannelRouter: deps.approvalChannelRouter,
+      metricsCounter: deps.metricsCounter,
     };
 
     // Stage 1: Validate + DB INSERT (synchronous -- assigns ctx.txId)
@@ -428,6 +456,73 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
     })();
 
     return response;
+  });
+
+  // ---------------------------------------------------------------------------
+  // POST /transactions/simulate (sessionAuth -- dry-run simulation)
+  // ---------------------------------------------------------------------------
+
+  router.openapi(simulateTransactionRoute, async (c) => {
+    const request = await c.req.json();
+
+    // Resolve walletId from body.walletId > query > single-wallet auto-resolve
+    const walletId = resolveWalletId(c, deps.db, request.walletId);
+
+    // Look up wallet
+    const wallet = await deps.db.select().from(wallets).where(eq(wallets.id, walletId)).get();
+    if (!wallet) {
+      throw new WAIaaSError('WALLET_NOT_FOUND', {
+        message: `Wallet '${walletId}' not found`,
+      });
+    }
+    if (wallet.status === 'TERMINATED') {
+      throw new WAIaaSError('WALLET_TERMINATED');
+    }
+
+    // Resolve network
+    let resolvedNetwork: string;
+    try {
+      resolvedNetwork = resolveNetwork(
+        request.network as NetworkType | undefined,
+        wallet.environment as EnvironmentType,
+        wallet.chain as ChainType,
+      );
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('environment')) {
+        throw new WAIaaSError('ENVIRONMENT_NETWORK_MISMATCH', {
+          message: err.message,
+        });
+      }
+      throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
+        message: err instanceof Error ? err.message : 'Network validation failed',
+      });
+    }
+
+    // Resolve adapter from pool
+    const rpcUrl = resolveRpcUrl(
+      deps.config.rpc as unknown as Record<string, string>,
+      wallet.chain,
+      resolvedNetwork,
+    );
+    const adapter = await deps.adapterPool.resolve(
+      wallet.chain as ChainType,
+      resolvedNetwork as NetworkType,
+      rpcUrl,
+    );
+
+    // Create pipeline and execute dry-run (synchronous response)
+    const pipeline = new TransactionPipeline({
+      db: deps.db,
+      adapter,
+      keyStore: deps.keyStore,
+      policyEngine: deps.policyEngine,
+      masterPassword: deps.passwordRef?.password ?? deps.masterPassword,
+      priceOracle: deps.priceOracle,
+      settingsService: deps.settingsService,
+    });
+
+    const result = await pipeline.executeDryRun(walletId, request);
+    return c.json(result, 200);
   });
 
   // ---------------------------------------------------------------------------

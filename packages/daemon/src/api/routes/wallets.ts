@@ -22,6 +22,7 @@ import { WAIaaSError, getSingleNetwork, getNetworksForEnvironment, BUILTIN_PRESE
 import type { ChainType, EnvironmentType, NetworkType, EventBus } from '@waiaas/core';
 import { wallets, sessions, sessionWallets, transactions } from '../../infrastructure/database/schema.js';
 import { generateId } from '../../infrastructure/database/id.js';
+import { insertAuditLog } from '../../infrastructure/database/audit-helper.js';
 import type { MasterPasswordRef } from '../middleware/master-auth.js';
 import type { LocalKeyStore } from '../../infrastructure/keystore/keystore.js';
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
@@ -424,6 +425,15 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
       updatedAt: now,
     });
 
+    // Audit log: WALLET_CREATED
+    insertAuditLog(deps.sqlite, {
+      eventType: 'WALLET_CREATED',
+      actor: 'master',
+      walletId: id,
+      details: { chain: parsed.chain, environment, publicKey },
+      severity: 'info',
+    });
+
     // Auto-create session if requested (default: true)
     let session: { id: string; token: string; expiresAt: number } | null = null;
 
@@ -721,6 +731,15 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
       .where(eq(wallets.id, walletId))
       .run();
 
+    // Audit log: WALLET_SUSPENDED (manual suspend)
+    insertAuditLog(deps.sqlite, {
+      eventType: 'WALLET_SUSPENDED',
+      actor: 'master',
+      walletId,
+      details: { reason, previousStatus: wallet.status, trigger: 'manual' },
+      severity: 'warning',
+    });
+
     return c.json(
       {
         id: walletId,
@@ -877,6 +896,15 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
         ).run(body.approval_method, walletId);
       }
     }
+
+    // Audit log: OWNER_REGISTERED
+    insertAuditLog(deps.sqlite, {
+      eventType: 'OWNER_REGISTERED',
+      actor: 'master',
+      walletId,
+      details: { ownerAddress: normalizedAddress, chain: wallet.chain },
+      severity: 'info',
+    });
 
     // Fire-and-forget: notify owner set
     void deps.notificationService?.notify('OWNER_SET', walletId, {

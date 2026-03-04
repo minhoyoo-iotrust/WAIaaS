@@ -160,6 +160,13 @@ export const DaemonConfigSchema = z.object({
       wss_url: z.string().default(''),
     })
     .default({}),
+  backup: z
+    .object({
+      dir: z.string().default('backups'),
+      interval: z.number().int().min(0).max(86400).default(0),
+      retention_count: z.number().int().min(1).max(100).default(7),
+    })
+    .default({}),
   actions: z
     .object({
       jupiter_swap_enabled: z.boolean().default(true),
@@ -202,6 +209,7 @@ const KNOWN_SECTIONS = [
   'display',
   'telegram',
   'incoming',
+  'backup',
   'actions',
 ] as const;
 

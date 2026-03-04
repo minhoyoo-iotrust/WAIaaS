@@ -27,6 +27,7 @@ import { createHash } from 'node:crypto';
 import type { Database } from 'better-sqlite3';
 import type { SupportedLocale } from '@waiaas/core';
 import { getMessages, SignResponseSchema, WAIaaSError } from '@waiaas/core';
+import { insertAuditLog } from '../database/audit-helper.js';
 import type { TelegramApi } from './telegram-api.js';
 import type { TelegramUpdate, TelegramMessage } from './telegram-types.js';
 import type { KillSwitchService } from '../../services/kill-switch-service.js';
@@ -547,13 +548,14 @@ export class TelegramBotService {
       )
       .run(txId);
 
-    // Audit log
-    const now = Math.floor(Date.now() / 1000);
-    this.sqlite
-      .prepare(
-        'INSERT INTO audit_log (timestamp, event_type, actor, tx_id, details, severity) VALUES (?, ?, ?, ?, ?, ?)',
-      )
-      .run(now, 'TX_APPROVED_VIA_TELEGRAM', `telegram:${chatId}`, txId, JSON.stringify({ chatId, action: 'approve' }), 'info');
+    // Audit log (best-effort via helper)
+    insertAuditLog(this.sqlite, {
+      eventType: 'TX_APPROVED_VIA_TELEGRAM',
+      actor: `telegram:${chatId}`,
+      txId,
+      details: { chatId, action: 'approve' },
+      severity: 'info',
+    });
 
     // Resume pipeline after successful approval (fix #246)
     this.onApproved?.(txId);
@@ -601,13 +603,14 @@ export class TelegramBotService {
       )
       .run(txId);
 
-    // Audit log
-    const now = Math.floor(Date.now() / 1000);
-    this.sqlite
-      .prepare(
-        'INSERT INTO audit_log (timestamp, event_type, actor, tx_id, details, severity) VALUES (?, ?, ?, ?, ?, ?)',
-      )
-      .run(now, 'TX_REJECTED_VIA_TELEGRAM', `telegram:${chatId}`, txId, JSON.stringify({ chatId, action: 'reject' }), 'info');
+    // Audit log (best-effort via helper)
+    insertAuditLog(this.sqlite, {
+      eventType: 'TX_REJECTED_VIA_TELEGRAM',
+      actor: `telegram:${chatId}`,
+      txId,
+      details: { chatId, action: 'reject' },
+      severity: 'info',
+    });
 
     await this.api.sendMessage(chatId, messages.telegram.bot_reject_success);
   }
@@ -638,13 +641,14 @@ export class TelegramBotService {
       )
       .run(txId);
 
-    // Audit log
-    const now = Math.floor(Date.now() / 1000);
-    this.sqlite
-      .prepare(
-        'INSERT INTO audit_log (timestamp, event_type, actor, tx_id, details, severity) VALUES (?, ?, ?, ?, ?, ?)',
-      )
-      .run(now, 'TX_CANCELLED_VIA_TELEGRAM', `telegram:${chatId}`, txId, JSON.stringify({ chatId, action: 'cancel' }), 'info');
+    // Audit log (best-effort via helper)
+    insertAuditLog(this.sqlite, {
+      eventType: 'TX_CANCELLED_VIA_TELEGRAM',
+      actor: `telegram:${chatId}`,
+      txId,
+      details: { chatId, action: 'cancel' },
+      severity: 'info',
+    });
 
     await this.api.sendMessage(chatId, messages.telegram.bot_cancel_success);
   }
@@ -778,18 +782,13 @@ export class TelegramBotService {
       )
       .run(sessionId, walletId, nowSec);
 
-    // Audit log
-    this.sqlite
-      .prepare(
-        'INSERT INTO audit_log (timestamp, event_type, actor, details, severity) VALUES (?, ?, ?, ?, ?)',
-      )
-      .run(
-        nowSec,
-        'SESSION_ISSUED_VIA_TELEGRAM',
-        `telegram:${chatId}`,
-        JSON.stringify({ chatId, walletId, sessionId }),
-        'info',
-      );
+    // Audit log (best-effort via helper)
+    insertAuditLog(this.sqlite, {
+      eventType: 'SESSION_ISSUED_VIA_TELEGRAM',
+      actor: `telegram:${chatId}`,
+      details: { chatId, walletId, sessionId },
+      severity: 'info',
+    });
 
     // Send token to user (monospace in MarkdownV2)
     const msg = msgs.telegram.bot_newsession_created.replace('{token}', token);
