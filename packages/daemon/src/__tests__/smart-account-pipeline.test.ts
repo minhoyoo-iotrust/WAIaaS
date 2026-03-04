@@ -324,7 +324,7 @@ describe('error mapping', () => {
     await expect(stage5Execute(ctx)).rejects.toThrow(WAIaaSError);
     try {
       await stage5Execute(ctx);
-    } catch (err) {
+    } catch (_err) {
       // Reset mock for second call
     }
     // First call threw

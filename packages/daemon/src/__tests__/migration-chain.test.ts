@@ -1004,7 +1004,7 @@ describe('edge cases', () => {
     expect(row.message).toBeNull();
 
     // Verify LATEST_SCHEMA_VERSION is 28
-    expect(LATEST_SCHEMA_VERSION).toBe(37);
+    expect(LATEST_SCHEMA_VERSION).toBe(38);
   });
 
   it('T-13: existing notification_logs data preserved after v10 migration', () => {
@@ -1333,7 +1333,7 @@ describe('v12 migration: x402 CHECK constraints', () => {
     // Verify final version is 19
     const versions = getVersions(db);
     expect(versions).toContain(19);
-    expect(Math.max(...versions)).toBe(37);
+    expect(Math.max(...versions)).toBe(38);
 
     // Verify data survived the entire chain (v27 drops default_network)
     const wallet = db.prepare('SELECT * FROM wallets WHERE id = ?').get('a-chain-12') as { environment: string };
@@ -1513,7 +1513,7 @@ describe('v13 migration: amount_usd and reserved_amount_usd columns', () => {
     // Verify final version is 19
     const versions = getVersions(db);
     expect(versions).toContain(19);
-    expect(Math.max(...versions)).toBe(37);
+    expect(Math.max(...versions)).toBe(38);
 
     // Verify amount_usd columns exist and are NULL for migrated data
     const tx = db.prepare('SELECT amount_usd, reserved_amount_usd FROM transactions WHERE id = ?').get('tx-chain-13') as {
@@ -1728,7 +1728,7 @@ describe('v16 migration: WC infra tables + approval_channel', () => {
     // Verify final version is 19
     const versions = getVersions(db);
     expect(versions).toContain(19);
-    expect(Math.max(...versions)).toBe(37);
+    expect(Math.max(...versions)).toBe(38);
 
     // Verify wc_sessions and wc_store tables exist
     const wcSessions = db.prepare(
@@ -1805,12 +1805,12 @@ describe('v24 migration: wallet_type column for preset auto-setup', () => {
     expect(wallet.wallet_type).toBeNull();
   });
 
-  it('T-17b (T-v24-2): fresh DB LATEST_SCHEMA_VERSION is 30', () => {
+  it('T-17b (T-v24-2): fresh DB LATEST_SCHEMA_VERSION is 38', () => {
     const conn = createDatabase(':memory:');
     db = conn.sqlite;
     pushSchema(db);
 
-    expect(LATEST_SCHEMA_VERSION).toBe(37);
+    expect(LATEST_SCHEMA_VERSION).toBe(38);
 
     const versions = getVersions(db);
     expect(versions).toContain(24);
@@ -1873,10 +1873,10 @@ describe('v24 migration: wallet_type column for preset auto-setup', () => {
     const freshDb = connA.sqlite;
     pushSchema(freshDb);
 
-    // v23 migrated DB -> apply v24 through v27 for full equivalence
+    // v23 migrated DB -> apply v24+ for full equivalence
     db = createV23Database();
-    const v24to27 = MIGRATIONS.filter((m) => m.version >= 24 && m.version <= 27);
-    runMigrations(db, v24to27);
+    const v24plus = MIGRATIONS.filter((m) => m.version >= 24);
+    runMigrations(db, v24plus);
 
     // Compare wallets columns
     const freshCols = getTableColumns(freshDb, 'wallets');
@@ -1902,7 +1902,7 @@ describe('v24 migration: wallet_type column for preset auto-setup', () => {
     // Verify final version is 24
     const versions = getVersions(db);
     expect(versions).toContain(24);
-    expect(Math.max(...versions)).toBe(37);
+    expect(Math.max(...versions)).toBe(38);
 
     // Verify wallets table has wallet_type column
     const columns = getTableColumns(db, 'wallets');

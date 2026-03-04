@@ -391,7 +391,7 @@ describe('SettingsService', () => {
 
   describe('setting-keys', () => {
     it('all definitions have valid categories', () => {
-      const validCategories = new Set(['notifications', 'rpc', 'security', 'daemon', 'walletconnect', 'oracle', 'display', 'autostop', 'monitoring', 'telegram', 'signing_sdk', 'incoming', 'actions', 'policy', 'gas_condition', 'rpc_pool', 'position_tracker']);
+      const validCategories = new Set(['notifications', 'rpc', 'security', 'daemon', 'walletconnect', 'oracle', 'display', 'autostop', 'monitoring', 'telegram', 'signing_sdk', 'incoming', 'actions', 'policy', 'gas_condition', 'rpc_pool', 'position_tracker', 'smart_account']);
       for (const def of SETTING_DEFINITIONS) {
         expect(validCategories.has(def.category)).toBe(true);
       }
@@ -424,14 +424,15 @@ describe('SettingsService', () => {
             'notifications.telegram_bot_token', 'notifications.discord_webhook_url', 'notifications.slack_webhook_url',
             'oracle.coingecko_api_key', 'telegram.bot_token',
             'actions.jupiter_swap_api_key', 'actions.zerox_swap_api_key', 'actions.lifi_api_key', 'actions.pendle_yield_api_key',
+            'smart_account.paymaster_api_key',
           ].includes(def.key),
         ).toBe(true);
       }
     });
 
     it('has expected number of definitions', () => {
-      // 10 notifications + 13 rpc + 14 security + 1 daemon + 2 walletconnect + 2 oracle + 1 display + 6 autostop + 5 monitoring + 2 telegram + 8 signing_sdk + 7 incoming + 43 actions + 1 policy + 5 gas_condition + 13 rpc_pool + 1 position_tracker + 3 per-rule autostop = 146
-      expect(SETTING_DEFINITIONS.length).toBe(146);
+      // 10 notifications + 13 rpc + 14 security + 1 daemon + 2 walletconnect + 2 oracle + 1 display + 6 autostop + 5 monitoring + 2 telegram + 8 signing_sdk + 7 incoming + 43 actions + 1 policy + 5 gas_condition + 13 rpc_pool + 1 position_tracker + 3 per-rule autostop + N smart_account = 171
+      expect(SETTING_DEFINITIONS.length).toBe(171);
     });
   });
 

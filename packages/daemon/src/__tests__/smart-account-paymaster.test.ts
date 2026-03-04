@@ -71,7 +71,6 @@ import { stage5Execute } from '../pipeline/stages.js';
 import {
   resolveBundlerUrl,
   resolvePaymasterUrl,
-  createSmartAccountBundlerClient,
 } from '../infrastructure/smart-account/smart-account-clients.js';
 import { WAIaaSError } from '@waiaas/core';
 import type { PipelineContext } from '../pipeline/stages.js';
