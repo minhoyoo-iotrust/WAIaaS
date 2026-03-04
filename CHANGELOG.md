@@ -1,5 +1,38 @@
 # Changelog
 
+## [2.10.0-rc.2](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.1...v2.10.0-rc.2) (2026-03-04)
+
+
+### Features
+
+* **317-01:** add DB v39 migration for ERC-8004 foundation ([aeeeff7](https://github.com/minhoyoo-iotrust/WAIaaS/commit/aeeeff7279dcb6525ff20ca0ee465858f5fae4f6))
+* **317-02:** add 9 ERC-8004 Admin Settings keys and i18n ko.ts notification templates ([8ea95d4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8ea95d4ea5edeb5552e0cc1247cecc4a7097c592))
+* **317-02:** add ERC-8004 core enums, notification events, and reputation threshold policy schema ([280a9ed](https://github.com/minhoyoo-iotrust/WAIaaS/commit/280a9ede9a5bbd9ee21319b4da77b2e3d37ea70f))
+* **318-01:** add ERC-8004 ABI constants, addresses, config, and Zod schemas ([79085b7](https://github.com/minhoyoo-iotrust/WAIaaS/commit/79085b79ff01f3a1be12c6a3632ec74134329049))
+* **318-01:** add Erc8004RegistryClient with calldata encoding and tests ([8f399b4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8f399b4e20ddbd3a70af5b47801352696956b295))
+* **318-02:** implement Erc8004ActionProvider with 8 write actions ([fdfd8c9](https://github.com/minhoyoo-iotrust/WAIaaS/commit/fdfd8c933b32647aa5b5c67320c23fb6af477ff6))
+* **318-02:** register erc8004_agent in registerBuiltInProviders with tests ([4c2fa70](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4c2fa707429fc9c151d22271704686d5a82e7661))
+* **319-01:** add ERC-8004 read-only REST API routes and Zod schemas ([8d1e376](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8d1e376b5c4385c4f59a0cad10d58e389641e9d2))
+* **319-02:** extend connect-info with erc8004 per-wallet identity data ([d46776c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d46776ce2696c8ff18424c42d5eb60767e48fd0d))
+* **320-01:** add ReputationCacheService with 3-tier cache ([817054e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/817054e19312291e9323e2cd24fe59448833e711))
+* **320-02:** add REPUTATION_THRESHOLD policy evaluator with maxTier escalation ([007223e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/007223e5d493fbd17bf67b9c9d0761e4224338c1))
+* **321-01:** EIP-712 typed data helper + ApprovalWorkflow + WcSigningBridge + approve endpoint ([88c8e11](https://github.com/minhoyoo-iotrust/WAIaaS/commit/88c8e111f9c157d2cc7a23b2c0226d0f45367022))
+* **321-02:** set_agent_wallet EIP-712 integration + pipeline calldata re-encoding ([d5d5c1b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d5d5c1b058a5af0c2f10bfa7a026a8722a4a39e5))
+* **322-01:** add MCP 3 read-only tools + SDK 11 ERC-8004 methods ([3424695](https://github.com/minhoyoo-iotrust/WAIaaS/commit/34246954787a4c2548046d0cffddfdcefa4caaad))
+* **322-02:** add Admin UI ERC-8004 Identity management page ([145265b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/145265b7cc5302a3bcb361f1dba444754a31b965))
+* **322-03:** add reputation dashboard, policy form, and actions provider entry ([0398eab](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0398eabb076629bebdef606c293ca4e6cf716985))
+
+
+### Bug Fixes
+
+* **318-02:** remove unused ERC8004_DEFAULTS import in provider test ([1f49c28](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1f49c2841a72d8b726ba8f8643bbc94a7244d091))
+* **mcp:** update tool count assertion for ERC-8004 tools ([d010926](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d01092636af2675e72f7b369ee85ca0be3e35cc6))
+* resolve lint and typecheck errors in ERC-8004 test files ([c6d0ff7](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c6d0ff7004ff55baecf73badeb15677cad1b77e6))
+* update daemon test assertions for ERC-8004 schema changes ([8d768e0](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8d768e0f8e7ebad2850d96d97b494b73ed8c078e))
+* update enum SSoT expected counts for ERC-8004 additions ([fcaf06b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/fcaf06b42f125d66546c9db5290d4b05807aac9f))
+* update test assertions for ERC-8004 additions ([5ee99cb](https://github.com/minhoyoo-iotrust/WAIaaS/commit/5ee99cbb5616c9dd5d69fb6bf1d40097fe8eba1f))
+* **v30.8:** wire ERC-8004 notification events and cache invalidation ([a301333](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a301333587498b3d335017abc8fa9a4dbcaaaf1c))
+
 ## [2.10.0-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc...v2.10.0-rc.1) (2026-03-04)
 
 
