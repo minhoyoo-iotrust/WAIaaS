@@ -96,6 +96,10 @@ const ACTIONS_KEYS_PREFIX = 'actions.';
 
 const RPC_POOL_KEYS_PREFIX = 'rpc_pool.';
 
+// Smart Account (ERC-4337) settings -- no subsystem reload needed.
+// SmartAccountService reads settings on-demand per UserOperation.
+const SMART_ACCOUNT_KEYS_PREFIX = 'smart_account.';
+
 const TELEGRAM_BOT_KEYS = new Set([
   'telegram.bot_token',
   'telegram.locale',
@@ -131,6 +135,7 @@ export class HotReloadOrchestrator {
     const hasIncomingChanges = changedKeys.some((k) => k.startsWith(INCOMING_KEYS_PREFIX));
     const hasActionsChanges = changedKeys.some((k) => k.startsWith(ACTIONS_KEYS_PREFIX));
     const hasRpcPoolChanges = changedKeys.some((k) => k.startsWith(RPC_POOL_KEYS_PREFIX));
+    const hasSmartAccountChanges = changedKeys.some((k) => k.startsWith(SMART_ACCOUNT_KEYS_PREFIX));
 
     const reloads: Promise<void>[] = [];
 
@@ -216,6 +221,12 @@ export class HotReloadOrchestrator {
           console.warn('Hot-reload RPC pool failed:', err);
         }),
       );
+    }
+
+    if (hasSmartAccountChanges) {
+      // No-op: SmartAccountService reads settings on-demand per UserOperation.
+      // No subsystem restart or reload needed.
+      console.log('Hot-reload: Smart account settings updated (effective on next request)');
     }
 
     await Promise.all(reloads);
