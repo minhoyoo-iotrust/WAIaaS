@@ -121,11 +121,11 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v30.8-ROADMAP.md` for full 
   3. 프로바이더가 지원하지 않는 네트워크에서 트랜잭션 시도 시 프로바이더명과 미지원 네트워크를 명시한 400 에러가 반환된다
   4. 기존 글로벌 설정 23개 키가 제거되고, EOA/Solana 지갑은 프로바이더 설정 없이 기존 동작을 유지한다
   5. smart_account.enabled 기본값이 true이며, API 키는 AES-256-GCM으로 암호화 저장된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 324-01: TBD
-- [ ] 324-02: TBD
+- [ ] 324-01-PLAN.md -- Core enum + chain mapping + DB migration v41 + API key crypto
+- [ ] 324-02-PLAN.md -- Provider resolver refactoring + settings cleanup + pipeline integration
 
 ### Phase 325: REST API + Agent Self-Service
 **Goal**: 운영자가 REST API로 프로바이더를 관리하고, 에이전트가 sessionAuth로 자기 지갑의 프로바이더를 직접 등록/조회할 수 있는 상태
@@ -171,9 +171,9 @@ Phases execute in numeric order: 324 -> 325 -> 326
 | 244-267 | v28.0-v28.8 | All | Complete | 2026-02-26 |
 | 268-316 | v29.0-v30.6 | All | Complete | 2026-03-04 |
 | 317-323 | v30.8 | 15/15 | Complete | 2026-03-04 |
-| 324 | v30.9 | 0/0 | Not started | - |
+| 324 | v30.9 | 0/2 | Planning | - |
 | 325 | v30.9 | 0/0 | Not started | - |
 | 326 | v30.9 | 0/0 | Not started | - |
 
 ---
-*Last updated: 2026-03-04 -- v30.9 Smart Account DX 개선 roadmap created.*
+*Last updated: 2026-03-05 -- Phase 324 planned (2 plans in 2 waves).*
