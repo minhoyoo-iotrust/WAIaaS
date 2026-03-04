@@ -60,7 +60,6 @@ import {
   PatchWalletResponseSchema,
   SetProviderRequestSchema,
   SetProviderResponseSchema,
-  ProviderStatusSchema,
   buildErrorResponses,
   openApiValidationHook,
 } from './openapi-schemas.js';
@@ -1367,12 +1366,12 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
  * Build provider status from wallet DB record for API responses.
  * Returns null if wallet has no provider configured.
  */
-export function buildProviderStatus(wallet: { aaProvider: string | null; aaPaymasterUrl?: string | null }): { name: string; supportedChains: string[]; paymasterEnabled: boolean } | null {
+export function buildProviderStatus(wallet: { aaProvider: string | null; aaPaymasterUrl?: string | null }): { name: AaProviderName; supportedChains: string[]; paymasterEnabled: boolean } | null {
   if (!wallet.aaProvider) return null;
   const provider = wallet.aaProvider as AaProviderName;
   if (provider === 'custom') {
     return {
-      name: 'custom',
+      name: 'custom' as const,
       supportedChains: [],
       paymasterEnabled: !!wallet.aaPaymasterUrl,
     };
