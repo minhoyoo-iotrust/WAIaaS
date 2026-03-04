@@ -205,8 +205,8 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
   if (deps.masterPasswordHash !== undefined || deps.passwordRef) {
     const masterAuthForWalletDetail = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash, passwordRef: deps.passwordRef, sqlite: deps.sqlite });
     app.use('/v1/wallets/:id', async (c, next) => {
-      // Skip sub-paths that have their own masterAuth registered below
-      if (c.req.path.includes('/owner') || c.req.path.includes('/networks') || c.req.path.includes('/wc/')) {
+      // Skip sub-paths that have their own auth registered below
+      if (c.req.path.includes('/owner') || c.req.path.includes('/networks') || c.req.path.includes('/wc/') || c.req.path.includes('/provider')) {
         await next();
         return;
       }
@@ -219,6 +219,16 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     const masterAuthForOwner = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash, passwordRef: deps.passwordRef, sqlite: deps.sqlite });
     app.use('/v1/wallets/:id/owner', masterAuthForOwner);
     app.use('/v1/wallets/:id/networks', masterAuthForOwner);
+    // dual-auth for PUT /v1/wallets/:id/provider: sessionAuth (agent self-service) or masterAuth (admin)
+    app.use('/v1/wallets/:id/provider', async (c, next) => {
+      const authHeader = c.req.header('Authorization');
+      if (authHeader?.startsWith('Bearer wai_sess_')) {
+        // sessionAuth handles agent PUT (registered in the sessionAuth block below)
+        await next();
+        return;
+      }
+      return masterAuthForOwner(c, next);
+    });
   }
 
   // masterAuth for WalletConnect routes
@@ -232,6 +242,14 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     // sessionAuth for session renewal (uses own token)
     app.use('/v1/sessions/:id/renew', sessionAuth);
     app.use('/v1/wallet/*', sessionAuth);
+    // sessionAuth for PUT /v1/wallets/:id/provider (dual-auth: agent self-service)
+    app.use('/v1/wallets/:id/provider', async (c, next) => {
+      const authHeader = c.req.header('Authorization');
+      if (authHeader?.startsWith('Bearer wai_sess_')) {
+        return sessionAuth(c, next);
+      }
+      await next();
+    });
     // sessionAuth for GET /v1/transactions (exact path -- wildcard won't match base)
     app.use('/v1/transactions', sessionAuth);
     app.use('/v1/transactions/*', sessionAuth);

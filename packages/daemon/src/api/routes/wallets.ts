@@ -18,8 +18,8 @@ import { eq, and, inArray, sql } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { createHash } from 'node:crypto';
-import { WAIaaSError, getSingleNetwork, getNetworksForEnvironment, BUILTIN_PRESETS, type WalletPreset } from '@waiaas/core';
-import type { ChainType, EnvironmentType, NetworkType, EventBus } from '@waiaas/core';
+import { WAIaaSError, getSingleNetwork, getNetworksForEnvironment, BUILTIN_PRESETS, AA_PROVIDER_CHAIN_MAP, type WalletPreset } from '@waiaas/core';
+import type { ChainType, EnvironmentType, NetworkType, EventBus, AaProviderName } from '@waiaas/core';
 import { wallets, sessions, sessionWallets, transactions } from '../../infrastructure/database/schema.js';
 import { generateId } from '../../infrastructure/database/id.js';
 import { insertAuditLog } from '../../infrastructure/database/audit-helper.js';
@@ -35,6 +35,7 @@ import type { WalletLinkRegistry } from '../../services/signing-sdk/wallet-link-
 import type { WalletAppService } from '../../services/signing-sdk/wallet-app-service.js';
 import { PresetAutoSetupService } from '../../services/signing-sdk/preset-auto-setup.js';
 import { validateOwnerAddress } from '../middleware/address-validation.js';
+import { verifyWalletAccess } from '../helpers/resolve-wallet-id.js';
 import type { AdapterPool } from '../../infrastructure/adapter-pool.js';
 import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
 import type { SmartAccountService } from '../../infrastructure/smart-account/index.js';
@@ -57,6 +58,9 @@ import {
   WithdrawResponseSchema,
   PatchWalletRequestSchema,
   PatchWalletResponseSchema,
+  SetProviderRequestSchema,
+  SetProviderResponseSchema,
+  ProviderStatusSchema,
   buildErrorResponses,
   openApiValidationHook,
 } from './openapi-schemas.js';
@@ -293,6 +297,28 @@ const walletNetworksRoute = createRoute({
       content: { 'application/json': { schema: WalletNetworksResponseSchema } },
     },
     ...buildErrorResponses(['WALLET_NOT_FOUND']),
+  },
+});
+
+const setProviderRoute = createRoute({
+  method: 'put',
+  path: '/wallets/{id}/provider',
+  tags: ['Wallets'],
+  summary: 'Set wallet AA provider configuration',
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+    body: {
+      content: {
+        'application/json': { schema: SetProviderRequestSchema },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Provider updated',
+      content: { 'application/json': { schema: SetProviderResponseSchema } },
+    },
+    ...buildErrorResponses(['WALLET_NOT_FOUND', 'ACTION_VALIDATION_FAILED', 'WALLET_ACCESS_DENIED']),
   },
 });
 
@@ -1240,5 +1266,122 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
     );
   });
 
+  // ---------------------------------------------------------------------------
+  // PUT /wallets/:id/provider (set AA provider)
+  // ---------------------------------------------------------------------------
+
+  router.openapi(setProviderRoute, async (c) => {
+    const { id: walletId } = c.req.valid('param');
+
+    // SessionAuth access control: verify wallet ownership
+    const sessionId = c.get('sessionId' as never) as string | undefined;
+    if (sessionId) {
+      verifyWalletAccess(sessionId, walletId, deps.db);
+    }
+
+    const wallet = await deps.db
+      .select()
+      .from(wallets)
+      .where(eq(wallets.id, walletId))
+      .get();
+
+    if (!wallet) {
+      throw new WAIaaSError('WALLET_NOT_FOUND', {
+        message: `Wallet '${walletId}' not found`,
+      });
+    }
+
+    // Only smart account wallets can have providers
+    if ((wallet as any).accountType !== 'smart') {
+      throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
+        message: 'Provider configuration is only available for smart account wallets',
+      });
+    }
+
+    const body = c.req.valid('json');
+    const provider = body.provider;
+
+    // Encrypt API key if present
+    const currentPassword = deps.passwordRef?.password ?? deps.masterPassword;
+    const encryptedApiKey = body.apiKey
+      ? encryptProviderApiKey(body.apiKey, currentPassword)
+      : null;
+
+    // Determine bundler/paymaster URLs
+    let bundlerUrl: string | null = null;
+    let paymasterUrl: string | null = null;
+
+    if (provider === 'custom') {
+      bundlerUrl = body.bundlerUrl ?? null;
+      paymasterUrl = body.paymasterUrl ?? null;
+    }
+    // For preset providers, URLs are derived at runtime from chain mapping -- no need to store
+
+    const now = new Date(Math.floor(Date.now() / 1000) * 1000);
+    await deps.db
+      .update(wallets)
+      .set({
+        aaProvider: provider,
+        aaProviderApiKeyEncrypted: encryptedApiKey,
+        aaBundlerUrl: bundlerUrl,
+        aaPaymasterUrl: paymasterUrl,
+        updatedAt: now,
+      })
+      .where(eq(wallets.id, walletId))
+      .run();
+
+    // Build provider status for response
+    const providerStatus = buildProviderStatus({
+      aaProvider: provider,
+      aaPaymasterUrl: paymasterUrl,
+    })!;
+
+    // Audit log
+    const actor = sessionId ? `session:${sessionId}` : 'master';
+    insertAuditLog(deps.sqlite, {
+      eventType: 'PROVIDER_UPDATED',
+      actor,
+      walletId,
+      details: { provider },
+      severity: 'info',
+    });
+
+    return c.json(
+      {
+        id: walletId,
+        provider: providerStatus,
+        updatedAt: Math.floor(now.getTime() / 1000),
+      },
+      200,
+    );
+  });
+
   return router;
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Build provider status from wallet DB record for API responses.
+ * Returns null if wallet has no provider configured.
+ */
+export function buildProviderStatus(wallet: { aaProvider: string | null; aaPaymasterUrl?: string | null }): { name: string; supportedChains: string[]; paymasterEnabled: boolean } | null {
+  if (!wallet.aaProvider) return null;
+  const provider = wallet.aaProvider as AaProviderName;
+  if (provider === 'custom') {
+    return {
+      name: 'custom',
+      supportedChains: [],
+      paymasterEnabled: !!wallet.aaPaymasterUrl,
+    };
+  }
+  // Preset provider: derive supportedChains from AA_PROVIDER_CHAIN_MAP
+  const chains = Object.keys(AA_PROVIDER_CHAIN_MAP[provider]);
+  return {
+    name: provider,
+    supportedChains: chains,
+    paymasterEnabled: true,
+  };
 }

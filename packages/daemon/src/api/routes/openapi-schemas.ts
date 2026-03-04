@@ -25,6 +25,7 @@ import {
   BatchRequestSchema,
   ApprovalMethodSchema,
   WalletPresetTypeSchema,
+  AaProviderNameEnum,
 } from '@waiaas/core';
 import type { ErrorCode } from '@waiaas/core';
 
@@ -642,6 +643,59 @@ export const WalletResumeResponseSchema = z
     status: z.literal('ACTIVE'),
   })
   .openapi('WalletResumeResponse');
+
+// ---------------------------------------------------------------------------
+// Provider Status Schema (Phase 325: wallet provider status)
+// ---------------------------------------------------------------------------
+
+export const ProviderStatusSchema = z
+  .object({
+    name: AaProviderNameEnum,
+    supportedChains: z.array(z.string()),
+    paymasterEnabled: z.boolean(),
+  })
+  .openapi('ProviderStatus');
+
+// ---------------------------------------------------------------------------
+// Set Provider Request/Response Schemas (PUT /wallets/:id/provider)
+// ---------------------------------------------------------------------------
+
+export const SetProviderRequestSchema = z
+  .object({
+    provider: AaProviderNameEnum,
+    apiKey: z.string().min(1).optional(),
+    bundlerUrl: z.string().url().optional(),
+    paymasterUrl: z.string().url().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.provider === 'pimlico' || data.provider === 'alchemy') {
+      if (!data.apiKey) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `apiKey is required for ${data.provider} provider`,
+          path: ['apiKey'],
+        });
+      }
+    }
+    if (data.provider === 'custom') {
+      if (!data.bundlerUrl) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'bundlerUrl is required for custom provider',
+          path: ['bundlerUrl'],
+        });
+      }
+    }
+  })
+  .openapi('SetProviderRequest');
+
+export const SetProviderResponseSchema = z
+  .object({
+    id: z.string().uuid(),
+    provider: ProviderStatusSchema,
+    updatedAt: z.number().int(),
+  })
+  .openapi('SetProviderResponse');
 
 // ---------------------------------------------------------------------------
 // Admin Response Schemas (6 admin endpoints)

@@ -83,14 +83,14 @@ function sessionAuthJsonHeaders(token: string): Record<string, string> {
 // Seed helpers
 // ---------------------------------------------------------------------------
 
-function seedSmartWallet(sqlite: DatabaseType, walletId: string): void {
+function seedSmartWallet(sqlite: DatabaseType, walletId: string, pubKey?: string): void {
   const ts = Math.floor(Date.now() / 1000);
   sqlite
     .prepare(
       `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, account_type, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
-    .run(walletId, 'test-smart-wallet', 'ethereum', 'testnet', VALID_EVM_ADDRESS, 'ACTIVE', 0, 'smart', ts, ts);
+    .run(walletId, 'test-smart-wallet', 'ethereum', 'testnet', pubKey ?? VALID_EVM_ADDRESS, 'ACTIVE', 0, 'smart', ts, ts);
 }
 
 function seedEoaWallet(sqlite: DatabaseType, walletId: string): void {
@@ -370,7 +370,7 @@ describe('PUT /v1/wallets/:id/provider', () => {
   it('sessionAuth with other wallet returns 403', async () => {
     const sessionId = generateId();
     const otherWalletId = generateId();
-    seedSmartWallet(sqlite, otherWalletId);
+    seedSmartWallet(sqlite, otherWalletId, '0x9999999999999999999999999999999999999999');
 
     const jwtPayload = { sub: sessionId, iat: Math.floor(Date.now() / 1000) };
     const token = await jwtManager.signToken(jwtPayload);
