@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
-milestone: v30.8
-milestone_name: ERC-8004 Trustless Agents 지원
-status: shipped
-last_updated: "2026-03-04T11:30:00.000Z"
+milestone: v30.9
+milestone_name: Smart Account DX 개선
+status: active
+last_updated: "2026-03-04T12:00:00.000Z"
 progress:
-  total_phases: 189
-  completed_phases: 189
-  total_plans: 410
-  completed_plans: 410
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
@@ -18,16 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-04)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v30.8 shipped -- planning next milestone
+**Current focus:** v30.9 Smart Account DX 개선
 
 ## Current Position
 
-Phase: All complete
-Plan: All complete
-Status: v30.8 milestone shipped
-Last activity: 2026-03-04 -- v30.8 ERC-8004 Trustless Agents 지원 milestone archived
-
-Progress: [##########] 100%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-04 — Milestone v30.9 started
 
 ## Performance Metrics
 
@@ -37,14 +35,14 @@ Progress: [##########] 100%
 
 ### Decisions
 
-(Cleared -- see milestones/v30.8-ROADMAP.md for v30.8 decisions)
+(New milestone — no decisions yet)
 
 ### Blockers/Concerns
 
-- C1: EIP-712 typehash 온체인 검증 필요 (Anvil fork 테스트 deferred)
+- C1: EIP-712 typehash 온체인 검증 필요 (Anvil fork 테스트 deferred, from v30.8)
 
 ## Session Continuity
 
 Last session: 2026-03-04
-Stopped at: v30.8 milestone archived. Ready for /gsd:new-milestone.
+Stopped at: Milestone v30.9 started. Defining requirements.
 Resume file: None
