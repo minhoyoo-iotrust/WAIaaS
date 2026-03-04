@@ -715,6 +715,10 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
     const currencyCode = resolveDisplayCurrencyCode(queryCurrency, deps.settingsService);
     const displayRate = await fetchDisplayRate(currencyCode, deps.forexRateService);
 
+    // Check if this is an atomic smart account BATCH
+    const txWallet = await deps.db.select().from(wallets).where(eq(wallets.id, tx.walletId)).get();
+    const isAtomicBatch = tx.type === 'BATCH' && txWallet?.accountType === 'smart';
+
     return c.json(
       {
         id: tx.id,
@@ -731,6 +735,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
         createdAt: tx.createdAt ? Math.floor(tx.createdAt.getTime() / 1000) : null,
         displayAmount: toDisplayAmount(tx.amountUsd, currencyCode, displayRate),
         displayCurrency: currencyCode ?? null,
+        ...(tx.type === 'BATCH' ? { atomic: isAtomicBatch } : {}),
       },
       200,
     );

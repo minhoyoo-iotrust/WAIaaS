@@ -245,6 +245,7 @@ export const TxDetailResponseSchema = z
     createdAt: z.number().int().nullable(),
     displayAmount: z.string().nullable().optional(),
     displayCurrency: z.string().nullable().optional(),
+    atomic: z.boolean().optional(),
   })
   .openapi('TxDetailResponse');
 
