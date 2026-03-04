@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v30.8
 milestone_name: ERC-8004 Trustless Agents 지원
-status: unknown
-last_updated: "2026-03-04T10:15:01.570Z"
+status: in-progress
+last_updated: "2026-03-04T10:34:00.000Z"
 progress:
   total_phases: 186
-  completed_phases: 180
+  completed_phases: 181
   total_plans: 398
-  completed_plans: 392
+  completed_plans: 395
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-04)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v30.8 Phase 322 -- MCP + Admin UI Integration
+**Current focus:** v30.8 Phase 323 -- Skills + Tests
 
 ## Current Position
 
-Phase: 321 (5 of 7) -- EIP-712 Approval + Wallet Linking
-Plan: 2 of 2 in current phase
-Status: Phase 321 completed, ready for Phase 322
-Last activity: 2026-03-04 -- Phase 321 EIP-712 Approval + Wallet Linking completed (2 plans, 4 tasks, 15 tests)
+Phase: 322 (6 of 7) -- Admin UI + MCP + SDK
+Plan: 3 of 3 in current phase
+Status: Phase 322 completed, ready for Phase 323
+Last activity: 2026-03-04 -- Phase 322 Admin UI + MCP + SDK completed (3 plans, 6 tasks, 28 tests)
 
-Progress: [######░░░░] 71%
+Progress: [########░░] 86%
 
 ## Performance Metrics
 
@@ -45,6 +45,9 @@ Progress: [######░░░░] 71%
 | 320-02 | REPUTATION_THRESHOLD Policy | 8min | 2 | 6 |
 | 321-01 | EIP-712 Typed Data + ApprovalWorkflow | 8min | 2 | 12 |
 | 321-02 | set_agent_wallet EIP-712 Integration | 6min | 2 | 5 |
+| 322-01 | MCP 3 tools + SDK 11 methods | 4min | 2 | 8 |
+| 322-02 | Admin UI ERC-8004 Identity page | 4min | 2 | 4 |
+| 322-03 | Reputation + Policy Form + Actions | 3min | 2 | 7 |
 
 ## Accumulated Context
 
@@ -77,6 +80,11 @@ Progress: [######░░░░] 71%
 - Owner address enrichment happens in actions route (wallet.ownerAddress from DB), not in actions provider
 - Calldata re-encoding in executeFromStage5 reads typed_data_json + owner_signature from pending_approvals
 - resolveChainId helper for EVM network-to-chainId mapping (10+ networks supported)
+- MCP read-only tools use apiClient.get directly (no auth header needed, inherits from server context)
+- SDK write methods use executeAction wrapper with destructured params for clean API
+- Score badge thresholds: >= 50 success, >= 20 warning, < 20 danger
+- PolicyFormRouter expanded to 13 dedicated form components
+- BUILTIN_PROVIDERS expanded to 10 entries with erc8004_agent
 
 ### Blockers/Concerns
 
@@ -86,5 +94,5 @@ Progress: [######░░░░] 71%
 ## Session Continuity
 
 Last session: 2026-03-04
-Stopped at: Completed 321-02-PLAN.md. Phase 321 EIP-712 Approval + Wallet Linking complete (2 plans, 4 tasks, 15 tests).
+Stopped at: Completed 322-03-PLAN.md. Phase 322 Admin UI + MCP + SDK complete (3 plans, 6 tasks, 28 tests).
 Resume file: None

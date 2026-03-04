@@ -49,19 +49,19 @@ Requirements for v30.8 milestone. Each maps to roadmap phases.
 ### Interfaces (API)
 
 - [x] **API-01**: 5 read-only REST API endpoints serve ERC-8004 data (agent info, reputation, feedback, validation status, registration file)
-- [ ] **API-02**: 8 write actions auto-exposed as MCP tools via `mcpExpose: true`
-- [ ] **API-03**: 3 read-only MCP tools manually registered (erc8004_get_agent_info, erc8004_get_reputation, erc8004_get_validation_status)
-- [ ] **API-04**: TypeScript SDK extended with 11 methods (8 write via ActionProvider + 3 read via direct GET)
+- [x] **API-02**: 8 write actions auto-exposed as MCP tools via `mcpExpose: true`
+- [x] **API-03**: 3 read-only MCP tools manually registered (erc8004_get_agent_info, erc8004_get_reputation, erc8004_get_validation_status)
+- [x] **API-04**: TypeScript SDK extended with 11 methods (8 write via ActionProvider + 3 read via direct GET)
 
 ### Admin UI (UI)
 
-- [ ] **UI-01**: ERC-8004 Identity management page (`/erc8004`) with agent registration status table (walletId, agentId, status badge, registryAddress)
-- [ ] **UI-02**: Agent registration form with EVM wallet selection, name/description input, service endpoint auto-detection
-- [ ] **UI-03**: Wallet linking management (setAgentWallet with WalletConnect EIP-712 signing, unsetAgentWallet)
-- [ ] **UI-04**: Registration file JSON preview with tree viewer and hosting URL copy button
-- [ ] **UI-05**: Reputation dashboard with agent scores, received feedback list (filterable by tag), external agent reputation query
-- [ ] **UI-06**: REPUTATION_THRESHOLD policy form in Policies page (min_score slider, tier dropdowns, tag filters, check_counterparty toggle)
-- [ ] **UI-07**: Actions page `BUILTIN_PROVIDERS` includes `erc8004_agent` entry
+- [x] **UI-01**: ERC-8004 Identity management page (`/erc8004`) with agent registration status table (walletId, agentId, status badge, registryAddress)
+- [x] **UI-02**: Agent registration form with EVM wallet selection, name/description input, service endpoint auto-detection
+- [x] **UI-03**: Wallet linking management (setAgentWallet with WalletConnect EIP-712 signing, unsetAgentWallet)
+- [x] **UI-04**: Registration file JSON preview with tree viewer and hosting URL copy button
+- [x] **UI-05**: Reputation dashboard with agent scores, received feedback list (filterable by tag), external agent reputation query
+- [x] **UI-06**: REPUTATION_THRESHOLD policy form in Policies page (min_score slider, tier dropdowns, tag filters, check_counterparty toggle)
+- [x] **UI-07**: Actions page `BUILTIN_PROVIDERS` includes `erc8004_agent` entry
 
 ### Notifications (NOTIF)
 
@@ -138,16 +138,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DB-03 | Phase 317 | Complete |
 | DB-04 | Phase 317 | Complete |
 | API-01 | Phase 319 | Complete |
-| API-02 | Phase 322 | Pending |
-| API-03 | Phase 322 | Pending |
-| API-04 | Phase 322 | Pending |
-| UI-01 | Phase 322 | Pending |
-| UI-02 | Phase 322 | Pending |
-| UI-03 | Phase 322 | Pending |
-| UI-04 | Phase 322 | Pending |
-| UI-05 | Phase 322 | Pending |
-| UI-06 | Phase 322 | Pending |
-| UI-07 | Phase 322 | Pending |
+| API-02 | Phase 322 | Complete |
+| API-03 | Phase 322 | Complete |
+| API-04 | Phase 322 | Complete |
+| UI-01 | Phase 322 | Complete |
+| UI-02 | Phase 322 | Complete |
+| UI-03 | Phase 322 | Complete |
+| UI-04 | Phase 322 | Complete |
+| UI-05 | Phase 322 | Complete |
+| UI-06 | Phase 322 | Complete |
+| UI-07 | Phase 322 | Complete |
 | NOTIF-01 | Phase 317 | Complete |
 | SKILL-01 | Phase 323 | Pending |
 | SKILL-02 | Phase 323 | Pending |
