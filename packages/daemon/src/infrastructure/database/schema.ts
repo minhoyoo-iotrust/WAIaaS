@@ -45,6 +45,7 @@ import {
   INCOMING_TX_STATUSES,
   POSITION_CATEGORIES,
   POSITION_STATUSES,
+  ACCOUNT_TYPES,
 } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------
@@ -77,6 +78,10 @@ export const wallets = sqliteTable(
     ownerApprovalMethod: text('owner_approval_method'),
     monitorIncoming: integer('monitor_incoming', { mode: 'boolean' }).notNull().default(false),
     walletType: text('wallet_type'),
+    accountType: text('account_type').notNull().default('eoa'),
+    signerKey: text('signer_key'),
+    deployed: integer('deployed', { mode: 'boolean' }).notNull().default(true),
+    entryPoint: text('entry_point'),
   },
   (table) => [
     uniqueIndex('idx_wallets_public_key').on(table.publicKey),
@@ -87,6 +92,7 @@ export const wallets = sqliteTable(
     check('check_environment', buildCheckSql('environment', ENVIRONMENT_TYPES)),
     check('check_status', buildCheckSql('status', WALLET_STATUSES)),
     check('check_owner_verified', sql`owner_verified IN (0, 1)`),
+    check('check_account_type', buildCheckSql('account_type', ACCOUNT_TYPES)),
   ],
 );
 
