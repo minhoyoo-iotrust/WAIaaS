@@ -107,7 +107,7 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v30.6-ROADMAP.md` for full 
 
 - [x] **Phase 317: Foundation** - DB v39 마이그레이션, 코어 Enum 확장, Admin Settings 9키, 알림 이벤트 5종 정의 (completed 2026-03-04)
 - [x] **Phase 318: ActionProvider + Registry Client** - Erc8004ActionProvider 8 액션, RegistryClient viem 래퍼, 멀티체인 레지스트리 주소 (completed 2026-03-04)
-- [ ] **Phase 319: Read-Only Routes + Registration File** - REST API 5 GET 엔드포인트, 등록 파일 자동 생성, connect-info erc8004 확장
+- [ ] **Phase 319: Read-Only Routes + Registration File** - REST API 4 GET 엔드포인트, 등록 파일 자동 생성, connect-info erc8004 확장
 - [ ] **Phase 320: Reputation Policy Engine + Cache** - REPUTATION_THRESHOLD 정책 평가, ReputationCacheService, 피드백 액션 연동
 - [ ] **Phase 321: EIP-712 Approval + Wallet Linking** - setAgentWallet EIP-712 서명, ApprovalWorkflow 확장, WalletConnect eth_signTypedData_v4
 - [ ] **Phase 322: Admin UI + MCP + SDK** - ERC-8004 관리 페이지, 평판 대시보드, MCP 11 도구, SDK 11 메서드
@@ -159,8 +159,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 319-01: REST API 5 GET 엔드포인트 + 등록 파일 자동 생성
-- [ ] 319-02: connect-info erc8004 확장 + validation 조회
+- [ ] 319-01-PLAN.md -- ERC-8004 read-only REST API 4 GET 엔드포인트 + 등록 파일 자동 생성 + 테스트
+- [ ] 319-02-PLAN.md -- connect-info erc8004 확장 + 테스트
 
 ### Phase 320: Reputation Policy Engine + Cache
 **Goal**: REPUTATION_THRESHOLD 정책이 Stage 3에서 상대방 에이전트의 온체인 평판을 평가하여 보안 티어를 자동 조정하고, 평판 데이터가 인메모리 캐시 + DB 폴백으로 효율적으로 제공되는 상태
@@ -248,4 +248,4 @@ Phases execute in numeric order: 317 -> 318 -> 319 -> 320 -> 321 -> 322 -> 323
 | 323. Skills + Tests | v30.8 | 0/2 | Not started | - |
 
 ---
-*Last updated: 2026-03-04 -- Phase 318 ActionProvider + Registry Client completed (2/2 plans).*
+*Last updated: 2026-03-04 -- Phase 319 plans created (2 plans, 2 waves).*
