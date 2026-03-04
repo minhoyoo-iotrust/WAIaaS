@@ -282,6 +282,17 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'smart_account.paymaster_url.optimism-sepolia', category: 'smart_account', configPath: 'smart_account.paymaster_url.optimism-sepolia', defaultValue: '', isCredential: false },
   { key: 'smart_account.paymaster_url.base-mainnet', category: 'smart_account', configPath: 'smart_account.paymaster_url.base-mainnet', defaultValue: '', isCredential: false },
   { key: 'smart_account.paymaster_url.base-sepolia', category: 'smart_account', configPath: 'smart_account.paymaster_url.base-sepolia', defaultValue: '', isCredential: false },
+
+  // --- ERC-8004 Agent Identity ---
+  { key: 'actions.erc8004_agent_enabled', category: 'actions', configPath: 'actions.erc8004_agent_enabled', defaultValue: 'false', isCredential: false },
+  { key: 'actions.erc8004_identity_registry_address', category: 'actions', configPath: 'actions.erc8004_identity_registry_address', defaultValue: '0x8004A169FB4a3325136EB29fA0ceB6D2e539a432', isCredential: false },
+  { key: 'actions.erc8004_reputation_registry_address', category: 'actions', configPath: 'actions.erc8004_reputation_registry_address', defaultValue: '0x8004BAa17C55a88189AE136b182e5fdA19dE9b63', isCredential: false },
+  { key: 'actions.erc8004_validation_registry_address', category: 'actions', configPath: 'actions.erc8004_validation_registry_address', defaultValue: '', isCredential: false },
+  { key: 'actions.erc8004_registration_file_base_url', category: 'actions', configPath: 'actions.erc8004_registration_file_base_url', defaultValue: '', isCredential: false },
+  { key: 'actions.erc8004_auto_publish_registration', category: 'actions', configPath: 'actions.erc8004_auto_publish_registration', defaultValue: 'true', isCredential: false },
+  { key: 'actions.erc8004_reputation_cache_ttl_sec', category: 'actions', configPath: 'actions.erc8004_reputation_cache_ttl_sec', defaultValue: '300', isCredential: false },
+  { key: 'actions.erc8004_min_reputation_score', category: 'actions', configPath: 'actions.erc8004_min_reputation_score', defaultValue: '0', isCredential: false },
+  { key: 'actions.erc8004_reputation_rpc_timeout_ms', category: 'actions', configPath: 'actions.erc8004_reputation_rpc_timeout_ms', defaultValue: '3000', isCredential: false },
 ] as const;
 
 // ---------------------------------------------------------------------------

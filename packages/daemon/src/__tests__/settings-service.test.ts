@@ -431,8 +431,8 @@ describe('SettingsService', () => {
     });
 
     it('has expected number of definitions', () => {
-      // 10 notifications + 13 rpc + 14 security + 1 daemon + 2 walletconnect + 2 oracle + 1 display + 6 autostop + 5 monitoring + 2 telegram + 8 signing_sdk + 7 incoming + 43 actions + 1 policy + 5 gas_condition + 13 rpc_pool + 1 position_tracker + 3 per-rule autostop + N smart_account = 171
-      expect(SETTING_DEFINITIONS.length).toBe(171);
+      // 10 notifications + 13 rpc + 14 security + 1 daemon + 2 walletconnect + 2 oracle + 1 display + 6 autostop + 5 monitoring + 2 telegram + 8 signing_sdk + 7 incoming + 43 actions + 1 policy + 5 gas_condition + 13 rpc_pool + 1 position_tracker + 3 per-rule autostop + N smart_account + 9 erc8004 = 180
+      expect(SETTING_DEFINITIONS.length).toBe(180);
     });
   });
 
@@ -610,9 +610,9 @@ describe('SettingsService', () => {
       expect(all.actions!.zerox_swap_default_slippage_bps).toBe('100');
     });
 
-    it('actions category has 43 settings', () => {
+    it('actions category has 52 settings', () => {
       const actionsDefs = SETTING_DEFINITIONS.filter((d) => d.category === 'actions');
-      expect(actionsDefs.length).toBe(43);
+      expect(actionsDefs.length).toBe(52);
     });
 
     it('actions.jupiter_swap_api_key is a credential', () => {
@@ -625,6 +625,71 @@ describe('SettingsService', () => {
       const def = getSettingDefinition('actions.zerox_swap_api_key');
       expect(def).toBeDefined();
       expect(def!.isCredential).toBe(true);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // ERC-8004 Agent Identity settings (v30.8)
+  // -------------------------------------------------------------------------
+
+  describe('ERC-8004 settings', () => {
+    it('includes 9 ERC-8004 agent identity settings', () => {
+      const erc8004Keys = SETTING_DEFINITIONS.filter((d) => d.key.startsWith('actions.erc8004_'));
+      expect(erc8004Keys).toHaveLength(9);
+    });
+
+    it('erc8004_agent_enabled defaults to false (feature gate)', () => {
+      const def = getSettingDefinition('actions.erc8004_agent_enabled');
+      expect(def).toBeDefined();
+      expect(def!.defaultValue).toBe('false');
+      expect(def!.category).toBe('actions');
+      expect(def!.isCredential).toBe(false);
+    });
+
+    it('erc8004_identity_registry_address defaults to mainnet address', () => {
+      const def = getSettingDefinition('actions.erc8004_identity_registry_address');
+      expect(def).toBeDefined();
+      expect(def!.defaultValue).toBe('0x8004A169FB4a3325136EB29fA0ceB6D2e539a432');
+    });
+
+    it('erc8004_reputation_registry_address defaults to mainnet address', () => {
+      const def = getSettingDefinition('actions.erc8004_reputation_registry_address');
+      expect(def).toBeDefined();
+      expect(def!.defaultValue).toBe('0x8004BAa17C55a88189AE136b182e5fdA19dE9b63');
+    });
+
+    it('erc8004_validation_registry_address defaults to empty (not deployed)', () => {
+      const def = getSettingDefinition('actions.erc8004_validation_registry_address');
+      expect(def).toBeDefined();
+      expect(def!.defaultValue).toBe('');
+    });
+
+    it('erc8004_reputation_cache_ttl_sec defaults to 300', () => {
+      const def = getSettingDefinition('actions.erc8004_reputation_cache_ttl_sec');
+      expect(def).toBeDefined();
+      expect(def!.defaultValue).toBe('300');
+    });
+
+    it('erc8004_reputation_rpc_timeout_ms defaults to 3000', () => {
+      const def = getSettingDefinition('actions.erc8004_reputation_rpc_timeout_ms');
+      expect(def).toBeDefined();
+      expect(def!.defaultValue).toBe('3000');
+    });
+
+    it('erc8004_auto_publish_registration defaults to true', () => {
+      const def = getSettingDefinition('actions.erc8004_auto_publish_registration');
+      expect(def).toBeDefined();
+      expect(def!.defaultValue).toBe('true');
+    });
+
+    it('getSettingDefinition returns correct definition for erc8004_agent_enabled', () => {
+      const def = getSettingDefinition('actions.erc8004_agent_enabled');
+      expect(def).toBeDefined();
+      expect(def!.key).toBe('actions.erc8004_agent_enabled');
+      expect(def!.configPath).toBe('actions.erc8004_agent_enabled');
+      expect(def!.category).toBe('actions');
+      expect(def!.defaultValue).toBe('false');
+      expect(def!.isCredential).toBe(false);
     });
   });
 });
