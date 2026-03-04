@@ -127,8 +127,8 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v30.6-ROADMAP.md` for full 
 **Plans**: 2 plans
 
 Plans:
-- [ ] 317-01: DB v39 마이그레이션 (agent_identities + reputation_cache + approval_type + policies 재생성)
-- [ ] 317-02: 코어 Enum 확장 + Admin Settings 9키 + 알림 이벤트 5종
+- [x] 317-01: DB v39 마이그레이션 (agent_identities + reputation_cache + approval_type + policies 재생성) -- completed 2026-03-04
+- [x] 317-02: 코어 Enum 확장 + Admin Settings 9키 + 알림 이벤트 5종 -- completed 2026-03-04
 
 ### Phase 318: ActionProvider + Registry Client
 **Goal**: AI 에이전트가 Erc8004ActionProvider를 통해 온체인 Identity/Reputation/Validation 레지스트리에 쓰기 작업(등록, URI 설정, 메타데이터, 피드백, 검증 요청)을 수행할 수 있는 상태
@@ -239,7 +239,7 @@ Phases execute in numeric order: 317 -> 318 -> 319 -> 320 -> 321 -> 322 -> 323
 | 244-267 | v28.0-v28.8 | All | Complete | 2026-02-26 |
 | 268-313.1 | v29.0-v30.2 | All | Complete | 2026-03-04 |
 | 314-316 | v30.6 | 10/10 | Complete | 2026-03-04 |
-| 317. Foundation | v30.8 | 0/2 | Not started | - |
+| 317. Foundation | v30.8 | 2/2 | Complete | 2026-03-04 |
 | 318. ActionProvider + Registry Client | v30.8 | 0/2 | Not started | - |
 | 319. Read-Only Routes + Registration File | v30.8 | 0/2 | Not started | - |
 | 320. Reputation Policy Engine + Cache | v30.8 | 0/2 | Not started | - |
@@ -248,4 +248,4 @@ Phases execute in numeric order: 317 -> 318 -> 319 -> 320 -> 321 -> 322 -> 323
 | 323. Skills + Tests | v30.8 | 0/2 | Not started | - |
 
 ---
-*Last updated: 2026-03-04 -- Milestone v30.8 ERC-8004 Trustless Agents roadmap created.*
+*Last updated: 2026-03-04 -- Phase 317 Foundation completed (2/2 plans).*

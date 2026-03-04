@@ -11,7 +11,7 @@ Requirements for v30.8 milestone. Each maps to roadmap phases.
 
 - [ ] **PKG-01**: Erc8004ActionProvider is registered with registerBuiltInProviders and can be toggled via `actions.erc8004_agent_enabled` setting (default: false)
 - [ ] **PKG-02**: ActionProvider exposes 8 write actions (register_agent, set_agent_wallet, unset_agent_wallet, set_agent_uri, set_metadata, give_feedback, revoke_feedback, request_validation) with correct risk levels and default tiers
-- [ ] **PKG-03**: 9 Admin Settings keys are defined for ERC-8004 configuration with correct types and defaults
+- [x] **PKG-03**: 9 Admin Settings keys are defined for ERC-8004 configuration with correct types and defaults
 
 ### Identity Registry (IDEN)
 
@@ -41,10 +41,10 @@ Requirements for v30.8 milestone. Each maps to roadmap phases.
 
 ### Database (DB)
 
-- [ ] **DB-01**: Migration v39 creates `agent_identities` table (id, wallet_id, chain_agent_id, registry_address, chain_id, agent_uri, registration_file_url, status, created_at, updated_at) with indexes
-- [ ] **DB-02**: Migration v39 creates `reputation_cache` table (composite PK: agent_id + registry_address + tag1 + tag2) with score, decimals, count, cached_at
-- [ ] **DB-03**: Migration v39 adds `approval_type` TEXT column to `pending_approvals` (default 'SIWE', CHECK IN ('SIWE', 'EIP712'))
-- [ ] **DB-04**: Migration v39 recreates `policies` table with REPUTATION_THRESHOLD in CHECK constraint (CREATE->INSERT->DROP->RENAME pattern)
+- [x] **DB-01**: Migration v39 creates `agent_identities` table (id, wallet_id, chain_agent_id, registry_address, chain_id, agent_uri, registration_file_url, status, created_at, updated_at) with indexes
+- [x] **DB-02**: Migration v39 creates `reputation_cache` table (composite PK: agent_id + registry_address + tag1 + tag2) with score, decimals, count, cached_at
+- [x] **DB-03**: Migration v39 adds `approval_type` TEXT column to `pending_approvals` (default 'SIWE', CHECK IN ('SIWE', 'EIP712'))
+- [x] **DB-04**: Migration v39 recreates `policies` table with REPUTATION_THRESHOLD in CHECK constraint (CREATE->INSERT->DROP->RENAME pattern)
 
 ### Interfaces (API)
 
@@ -65,7 +65,7 @@ Requirements for v30.8 milestone. Each maps to roadmap phases.
 
 ### Notifications (NOTIF)
 
-- [ ] **NOTIF-01**: 5 new NotificationEventTypes added to @waiaas/core (AGENT_REGISTERED, AGENT_WALLET_LINKED, AGENT_WALLET_UNLINKED, REPUTATION_FEEDBACK_RECEIVED, REPUTATION_THRESHOLD_TRIGGERED) with correct categories and priorities
+- [x] **NOTIF-01**: 5 new NotificationEventTypes added to @waiaas/core (AGENT_REGISTERED, AGENT_WALLET_LINKED, AGENT_WALLET_UNLINKED, REPUTATION_FEEDBACK_RECEIVED, REPUTATION_THRESHOLD_TRIGGERED) with correct categories and priorities
 
 ### Skill Files (SKILL)
 
@@ -115,7 +115,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | PKG-01 | Phase 318 | Pending |
 | PKG-02 | Phase 318 | Pending |
-| PKG-03 | Phase 317 | Pending |
+| PKG-03 | Phase 317 | Complete |
 | IDEN-01 | Phase 318 | Pending |
 | IDEN-02 | Phase 321 | Pending |
 | IDEN-03 | Phase 321 | Pending |
@@ -133,10 +133,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REPU-07 | Phase 320 | Pending |
 | VALD-01 | Phase 318 | Pending |
 | VALD-02 | Phase 319 | Pending |
-| DB-01 | Phase 317 | Pending |
-| DB-02 | Phase 317 | Pending |
-| DB-03 | Phase 317 | Pending |
-| DB-04 | Phase 317 | Pending |
+| DB-01 | Phase 317 | Complete |
+| DB-02 | Phase 317 | Complete |
+| DB-03 | Phase 317 | Complete |
+| DB-04 | Phase 317 | Complete |
 | API-01 | Phase 319 | Pending |
 | API-02 | Phase 322 | Pending |
 | API-03 | Phase 322 | Pending |
@@ -148,7 +148,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | UI-05 | Phase 322 | Pending |
 | UI-06 | Phase 322 | Pending |
 | UI-07 | Phase 322 | Pending |
-| NOTIF-01 | Phase 317 | Pending |
+| NOTIF-01 | Phase 317 | Complete |
 | SKILL-01 | Phase 323 | Pending |
 | SKILL-02 | Phase 323 | Pending |
 | TEST-01 | Phase 323 | Pending |
@@ -160,4 +160,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-04*
-*Last updated: 2026-03-04 -- Traceability populated by roadmapper (39/39 mapped)*
+*Last updated: 2026-03-04 -- Phase 317 completed (DB-01~04, PKG-03, NOTIF-01 = 6/39 complete)*
