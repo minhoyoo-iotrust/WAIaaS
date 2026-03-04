@@ -8,7 +8,7 @@
 import { describe, it, expect } from 'vitest';
 import { decodeFunctionData } from 'viem';
 import { Erc8004ActionProvider } from '../providers/erc8004/index.js';
-import { ERC8004_DEFAULTS, type Erc8004Config } from '../providers/erc8004/config.js';
+import { type Erc8004Config } from '../providers/erc8004/config.js';
 import { ERC8004_MAINNET_ADDRESSES } from '../providers/erc8004/constants.js';
 import { buildRegistrationFile } from '../providers/erc8004/registration-file.js';
 import { IDENTITY_REGISTRY_ABI } from '../providers/erc8004/identity-abi.js';
