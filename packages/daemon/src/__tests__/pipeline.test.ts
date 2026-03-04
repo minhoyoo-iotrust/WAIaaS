@@ -484,3 +484,119 @@ describe('Full pipeline integration', () => {
     ).rejects.toThrow('Wallet');
   });
 });
+
+// ---------------------------------------------------------------------------
+// TransactionPipeline.getTransaction - TX_NOT_FOUND (1 test)
+// ---------------------------------------------------------------------------
+
+describe('TransactionPipeline.getTransaction', () => {
+  it('should throw TX_NOT_FOUND for non-existent transaction', async () => {
+    const pipeline = new TransactionPipeline({
+      db: conn.db,
+      adapter: createMockAdapter(),
+      keyStore: createMockKeyStore(),
+      policyEngine: new DefaultPolicyEngine(),
+      masterPassword: 'test-master',
+    });
+
+    await expect(
+      pipeline.getTransaction('00000000-0000-7000-8000-000000000000'),
+    ).rejects.toThrow('not found');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TransactionPipeline.executeDryRun (3 tests)
+// ---------------------------------------------------------------------------
+
+describe('TransactionPipeline.executeDryRun', () => {
+  it('should throw WALLET_NOT_FOUND for non-existent wallet', async () => {
+    const pipeline = new TransactionPipeline({
+      db: conn.db,
+      adapter: createMockAdapter(),
+      keyStore: createMockKeyStore(),
+      policyEngine: new DefaultPolicyEngine(),
+      masterPassword: 'test-master',
+    });
+
+    await expect(
+      pipeline.executeDryRun('00000000-0000-7000-8000-000000000000', {
+        type: 'TRANSFER',
+        to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
+        amount: '1000000000',
+      }),
+    ).rejects.toThrow('not found');
+  });
+
+  it('should throw WALLET_TERMINATED for terminated wallet', async () => {
+    const id = generateId();
+    const now = new Date(Math.floor(Date.now() / 1000) * 1000);
+    await conn.db.insert(wallets).values({
+      id,
+      name: 'terminated-wallet',
+      chain: 'solana',
+      environment: 'testnet',
+      publicKey: MOCK_PUBLIC_KEY,
+      status: 'TERMINATED',
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const pipeline = new TransactionPipeline({
+      db: conn.db,
+      adapter: createMockAdapter(),
+      keyStore: createMockKeyStore(),
+      policyEngine: new DefaultPolicyEngine(),
+      masterPassword: 'test-master',
+    });
+
+    await expect(
+      pipeline.executeDryRun(id, {
+        type: 'TRANSFER',
+        to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
+        amount: '1000000000',
+      }),
+    ).rejects.toThrow('is terminated');
+  });
+
+  it('should delegate to executeDryRunFn for active wallet', async () => {
+    const walletId = await insertTestAgent(conn);
+
+    const adapter = createMockAdapter({
+      buildTransaction: async () => ({
+        chain: 'solana' as const,
+        serialized: new Uint8Array(128),
+        estimatedFee: 5000n,
+        metadata: {},
+      }),
+      simulateTransaction: async () => ({
+        success: true,
+        logs: ['ok'],
+      }),
+      getBalance: async (addr: string) => ({
+        address: addr,
+        balance: 2_000_000_000n,
+        decimals: 9,
+        symbol: 'SOL',
+      }),
+    });
+
+    const pipeline = new TransactionPipeline({
+      db: conn.db,
+      adapter,
+      keyStore: createMockKeyStore(),
+      policyEngine: new DefaultPolicyEngine(),
+      masterPassword: 'test-master',
+    });
+
+    const result = await pipeline.executeDryRun(walletId, {
+      type: 'TRANSFER',
+      to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
+      amount: '1000000000',
+    });
+
+    expect(result).toBeDefined();
+    expect(result.policy).toBeDefined();
+    expect(result.fee).toBeDefined();
+  });
+});

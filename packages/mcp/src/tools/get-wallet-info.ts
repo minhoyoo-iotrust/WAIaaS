@@ -32,9 +32,17 @@ export function registerGetWalletInfo(server: McpServer, apiClient: ApiClient, w
         '/v1/wallets/' + walletId + '/networks',
       );
 
+      // Fetch wallet detail to get smart account fields (accountType, signerKey, deployed)
+      const detailResult = await apiClient.get<Record<string, unknown>>(
+        '/v1/wallets/' + walletId,
+      );
+
       const combined = {
         ...addressResult.data,
         networks: networksResult.ok ? networksResult.data.networks : [],
+        accountType: detailResult.ok ? (detailResult.data['accountType'] ?? 'eoa') : 'eoa',
+        signerKey: detailResult.ok ? (detailResult.data['signerKey'] ?? null) : null,
+        deployed: detailResult.ok ? (detailResult.data['deployed'] ?? true) : true,
       };
 
       return {

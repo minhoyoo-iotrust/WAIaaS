@@ -124,13 +124,13 @@ describe('Migration v33: sign_topic and notify_topic columns', () => {
     migDb.close();
   });
 
-  it('T-DBSC-03: fresh DB has LATEST_SCHEMA_VERSION=37', () => {
-    expect(LATEST_SCHEMA_VERSION).toBe(37);
+  it('T-DBSC-03: fresh DB has LATEST_SCHEMA_VERSION=38', () => {
+    expect(LATEST_SCHEMA_VERSION).toBe(38);
 
     const row = sqlite
       .prepare('SELECT MAX(version) AS max_version FROM schema_version')
       .get() as { max_version: number };
-    expect(row.max_version).toBe(37);
+    expect(row.max_version).toBe(38);
   });
 
   it('T-DBSC-04: NULL values are allowed in sign_topic and notify_topic columns', () => {

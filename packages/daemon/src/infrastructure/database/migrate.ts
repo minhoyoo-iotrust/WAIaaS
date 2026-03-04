@@ -39,6 +39,7 @@ import {
   POSITION_STATUSES,
   NETWORK_TO_CAIP2,
   tokenAssetId,
+  ACCOUNT_TYPES,
 } from '@waiaas/core';
 import type { NetworkType } from '@waiaas/core';
 
@@ -78,7 +79,7 @@ const LEGACY_NETWORK_NORMALIZE: Record<string, string> = {
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 37;
+export const LATEST_SCHEMA_VERSION = 38;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -98,7 +99,11 @@ function getCreateTableStatements(): string[] {
   suspension_reason TEXT,
   monitor_incoming INTEGER NOT NULL DEFAULT 0,
   owner_approval_method TEXT CHECK (owner_approval_method IS NULL OR owner_approval_method IN ('sdk_ntfy', 'sdk_telegram', 'walletconnect', 'telegram_bot', 'rest')),
-  wallet_type TEXT
+  wallet_type TEXT,
+  account_type TEXT NOT NULL DEFAULT 'eoa' CHECK (account_type IN (${inList(ACCOUNT_TYPES)})),
+  signer_key TEXT,
+  deployed INTEGER NOT NULL DEFAULT 1,
+  entry_point TEXT
 )`,
 
     // Table 2: sessions (v26.4: wallet_id removed, v26.5: token_issued_count added)
@@ -2406,6 +2411,21 @@ MIGRATIONS.push({
     sqlite.exec('CREATE INDEX IF NOT EXISTS idx_webhook_logs_event_type ON webhook_logs(event_type)');
     sqlite.exec('CREATE INDEX IF NOT EXISTS idx_webhook_logs_status ON webhook_logs(status)');
     sqlite.exec('CREATE INDEX IF NOT EXISTS idx_webhook_logs_created_at ON webhook_logs(created_at)');
+  },
+});
+
+// ---------------------------------------------------------------------------
+// v38: Add smart account columns to wallets table (ERC-4337 Account Abstraction)
+// ---------------------------------------------------------------------------
+
+MIGRATIONS.push({
+  version: 38,
+  description: 'Add smart account columns to wallets table (account_type, signer_key, deployed, entry_point)',
+  up: (sqlite) => {
+    sqlite.exec(`ALTER TABLE wallets ADD COLUMN account_type TEXT NOT NULL DEFAULT 'eoa'`);
+    sqlite.exec(`ALTER TABLE wallets ADD COLUMN signer_key TEXT`);
+    sqlite.exec(`ALTER TABLE wallets ADD COLUMN deployed INTEGER NOT NULL DEFAULT 1`);
+    sqlite.exec(`ALTER TABLE wallets ADD COLUMN entry_point TEXT`);
   },
 });
 

@@ -22,6 +22,9 @@ interface WalletListItem {
   environment: string;
   publicKey: string;
   status: string;
+  accountType?: string;
+  signerKey?: string | null;
+  deployed?: boolean;
 }
 
 interface NetworkInfo {
@@ -134,6 +137,11 @@ export async function walletInfoCommand(opts: WalletCommandOptions): Promise<voi
   console.log(`  Address:          ${wallet.publicKey}`);
   console.log(`  Available:        ${available}`);
   console.log(`  Status:           ${wallet.status}`);
+  console.log(`  Account Type:     ${wallet.accountType === 'smart' ? 'smart' : 'eoa'}`);
+  if (wallet.accountType === 'smart') {
+    console.log(`  Signer Key:       ${wallet.signerKey ?? '--'}`);
+    console.log(`  Deployed:         ${wallet.deployed ? 'yes' : 'no'}`);
+  }
   console.log('');
 }
 
@@ -144,6 +152,7 @@ export interface WalletCreateOptions {
   all?: boolean;
   mode?: string;
   name?: string;
+  accountType?: string;
 }
 
 interface CreatedWallet {
@@ -152,6 +161,9 @@ interface CreatedWallet {
   chain: string;
   environment: string;
   publicKey: string;
+  accountType?: string;
+  signerKey?: string | null;
+  deployed?: boolean;
 }
 
 const SUPPORTED_CHAINS = ['solana', 'ethereum'] as const;
@@ -175,6 +187,11 @@ export async function walletCreateCommand(opts: WalletCreateOptions): Promise<vo
     process.exit(1);
   }
 
+  if (opts.accountType && opts.accountType !== 'eoa' && opts.accountType !== 'smart') {
+    console.error("Error: Invalid account type. Use 'eoa' or 'smart'.");
+    process.exit(1);
+  }
+
   const password = opts.password ?? await resolvePassword();
   const mode = opts.mode ?? 'mainnet';
 
@@ -187,13 +204,17 @@ export async function walletCreateCommand(opts: WalletCreateOptions): Promise<vo
   for (const { chain, name } of chains) {
     let res: Response;
     try {
+      const createBody: Record<string, unknown> = { name, chain, environment: mode };
+      if (opts.accountType === 'smart') {
+        createBody.accountType = 'smart';
+      }
       res = await fetch(`${opts.baseUrl}/v1/wallets`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-Master-Password': password,
         },
-        body: JSON.stringify({ name, chain, environment: mode }),
+        body: JSON.stringify(createBody),
       });
     } catch {
       console.error('Error: Daemon is not running. Start it with `waiaas start`.');
@@ -242,6 +263,11 @@ export async function walletCreateCommand(opts: WalletCreateOptions): Promise<vo
     console.log(`  Environment:      ${w.environment}`);
     console.log(`  Address:          ${w.publicKey}`);
     console.log(`  Available:        ${available}`);
+    console.log(`  Account Type:     ${w.accountType === 'smart' ? 'smart' : 'eoa'}`);
+    if (w.accountType === 'smart') {
+      console.log(`  Signer Key:       ${w.signerKey ?? '--'}`);
+      console.log(`  Deployed:         ${w.deployed ? 'yes' : 'no'}`);
+    }
     console.log('');
   }
 }

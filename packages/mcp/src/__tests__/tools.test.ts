@@ -878,6 +878,7 @@ describe('get_wallet_info tool', () => {
     const responses = new Map<string, ApiResult<unknown>>([
       ['GET:/v1/wallet/address', { ok: true, data: { walletId: 'w1', chain: 'ethereum', network: 'ethereum-sepolia', address: '0xabc' } }],
       ['GET:/v1/wallets/w1/networks', { ok: true, data: { networks: [{ network: 'ethereum-sepolia', name: 'Sepolia' }] } }],
+      ['GET:/v1/wallets/w1', { ok: true, data: { accountType: 'eoa', signerKey: null, deployed: true } }],
     ]);
     const apiClient = createMockApiClient(responses);
     const handler = getToolHandler(registerGetWalletInfo, apiClient);
@@ -887,12 +888,14 @@ describe('get_wallet_info tool', () => {
     expect(parsed.walletId).toBe('w1');
     expect(parsed.networks).toHaveLength(1);
     expect(parsed.networks[0].network).toBe('ethereum-sepolia');
+    expect(parsed.accountType).toBe('eoa');
   });
 
   it('returns address info with empty networks on networks API failure', async () => {
     const responses = new Map<string, ApiResult<unknown>>([
       ['GET:/v1/wallet/address', { ok: true, data: { walletId: 'w1', chain: 'solana', network: 'devnet', address: 'abc' } }],
       ['GET:/v1/wallets/w1/networks', { ok: false, error: { code: 'NOT_FOUND', message: 'Not found', retryable: false } }],
+      ['GET:/v1/wallets/w1', { ok: true, data: { accountType: 'eoa', signerKey: null, deployed: true } }],
     ]);
     const apiClient = createMockApiClient(responses);
     const handler = getToolHandler(registerGetWalletInfo, apiClient);
@@ -913,6 +916,38 @@ describe('get_wallet_info tool', () => {
     const result = await handler({}) as { content: Array<{ text: string }>; isError?: boolean };
     // Session expired should NOT have isError (H-04)
     expect(result.isError).toBeUndefined();
+  });
+
+  it('includes smart account fields from wallet detail', async () => {
+    const responses = new Map<string, ApiResult<unknown>>([
+      ['GET:/v1/wallet/address', { ok: true, data: { walletId: 'w1', chain: 'ethereum', network: 'ethereum-sepolia', address: '0xabc' } }],
+      ['GET:/v1/wallets/w1/networks', { ok: true, data: { networks: [{ network: 'ethereum-sepolia' }] } }],
+      ['GET:/v1/wallets/w1', { ok: true, data: { accountType: 'smart', signerKey: '0xsigner', deployed: false } }],
+    ]);
+    const apiClient = createMockApiClient(responses);
+    const handler = getToolHandler(registerGetWalletInfo, apiClient);
+
+    const result = await handler({}) as { content: Array<{ text: string }> };
+    const parsed = JSON.parse(result.content[0]!.text);
+    expect(parsed.accountType).toBe('smart');
+    expect(parsed.signerKey).toBe('0xsigner');
+    expect(parsed.deployed).toBe(false);
+  });
+
+  it('defaults to eoa accountType when wallet detail API fails', async () => {
+    const responses = new Map<string, ApiResult<unknown>>([
+      ['GET:/v1/wallet/address', { ok: true, data: { walletId: 'w1', chain: 'solana', network: 'devnet', address: 'abc' } }],
+      ['GET:/v1/wallets/w1/networks', { ok: true, data: { networks: [] } }],
+      ['GET:/v1/wallets/w1', { ok: false, error: { code: 'FORBIDDEN', message: 'Forbidden', retryable: false } }],
+    ]);
+    const apiClient = createMockApiClient(responses);
+    const handler = getToolHandler(registerGetWalletInfo, apiClient);
+
+    const result = await handler({}) as { content: Array<{ text: string }> };
+    const parsed = JSON.parse(result.content[0]!.text);
+    expect(parsed.accountType).toBe('eoa');
+    expect(parsed.signerKey).toBeNull();
+    expect(parsed.deployed).toBe(true);
   });
 });
 

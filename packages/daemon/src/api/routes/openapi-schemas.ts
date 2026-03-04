@@ -75,6 +75,9 @@ export const WalletCrudResponseSchema = z
     ownerAddress: z.string().nullable(),
     ownerState: z.enum(['NONE', 'GRACE', 'LOCKED']),
     monitorIncoming: z.boolean(),
+    accountType: z.enum(['eoa', 'smart']).default('eoa'),
+    signerKey: z.string().nullable().default(null),
+    deployed: z.boolean().default(true),
     createdAt: z.number().int(),
   })
   .openapi('WalletCrudResponse');
@@ -242,6 +245,7 @@ export const TxDetailResponseSchema = z
     createdAt: z.number().int().nullable(),
     displayAmount: z.string().nullable().optional(),
     displayCurrency: z.string().nullable().optional(),
+    atomic: z.boolean().optional(),
   })
   .openapi('TxDetailResponse');
 
@@ -559,6 +563,9 @@ export const WalletDetailResponseSchema = z
     ownerState: z.enum(['NONE', 'GRACE', 'LOCKED']),
     approvalMethod: z.string().nullable().optional(),
     walletType: z.string().nullable().optional(),
+    accountType: z.enum(['eoa', 'smart']).default('eoa'),
+    signerKey: z.string().nullable().default(null),
+    deployed: z.boolean().default(true),
     suspendedAt: z.number().int().nullable().optional(),
     suspensionReason: z.string().nullable().optional(),
     createdAt: z.number().int(),

@@ -44,6 +44,9 @@ interface Wallet {
   ownerAddress: string | null;
   ownerState: 'NONE' | 'GRACE' | 'LOCKED';
   createdAt: number;
+  accountType?: string;
+  signerKey?: string | null;
+  deployed?: boolean;
 }
 
 interface WalletDetail extends Wallet {
@@ -55,6 +58,9 @@ interface WalletDetail extends Wallet {
   suspendedAt: number | null;
   suspensionReason: string | null;
   updatedAt: number | null;
+  accountType?: string;
+  signerKey?: string | null;
+  deployed?: boolean;
 }
 
 interface NetworkInfo {
@@ -738,6 +744,21 @@ function WalletDetailView({ id }: { id: string }) {
               {wallet.value.status}
             </Badge>
           </DetailRow>
+          <DetailRow label="Account Type">
+            <Badge variant={wallet.value.accountType === 'smart' ? 'info' : 'default'}>
+              {wallet.value.accountType === 'smart' ? 'Smart Account' : 'EOA'}
+            </Badge>
+          </DetailRow>
+          {wallet.value.accountType === 'smart' && (
+            <>
+              <DetailRow label="Signer Key" value={wallet.value.signerKey ?? '--'} copy />
+              <DetailRow label="Deployed">
+                <Badge variant={wallet.value.deployed ? 'success' : 'warning'}>
+                  {wallet.value.deployed ? 'Yes' : 'Not yet'}
+                </Badge>
+              </DetailRow>
+            </>
+          )}
           {wallet.value.status === 'SUSPENDED' && (
             <>
               <DetailRow label="Suspended At" value={wallet.value.suspendedAt ? formatDate(wallet.value.suspendedAt) : '--'} />
@@ -2146,6 +2167,7 @@ function WalletListContent() {
   const formName = useSignal('');
   const formChain = useSignal('solana');
   const formEnvironment = useSignal('testnet');
+  const formAccountType = useSignal('eoa');
   const formError = useSignal<string | null>(null);
   const formLoading = useSignal(false);
   const createdSessionToken = useSignal<string | null>(null);
@@ -2231,11 +2253,15 @@ function WalletListContent() {
     formError.value = null;
     formLoading.value = true;
     try {
-      const result = await apiPost<Wallet & { session?: { id: string; token: string; expiresAt: number } | null }>(API.WALLETS, {
+      const createBody: Record<string, unknown> = {
         name: formName.value.trim(),
         chain: formChain.value,
         environment: formEnvironment.value,
-      });
+      };
+      if (formAccountType.value === 'smart') {
+        createBody.accountType = 'smart';
+      }
+      const result = await apiPost<Wallet & { session?: { id: string; token: string; expiresAt: number } | null }>(API.WALLETS, createBody);
       if (result.session?.token) {
         createdSessionToken.value = result.session.token;
         showToast('success', 'Wallet created with session');
@@ -2245,6 +2271,7 @@ function WalletListContent() {
       formName.value = '';
       formChain.value = 'solana';
       formEnvironment.value = 'testnet';
+      formAccountType.value = 'eoa';
       showForm.value = false;
       loading.value = true;
       await fetchWallets();
@@ -2262,6 +2289,9 @@ function WalletListContent() {
 
   const handleChainChange = (value: string | number | boolean) => {
     formChain.value = value as string;
+    if (value === 'solana') {
+      formAccountType.value = 'eoa';
+    }
   };
 
   useEffect(() => {
@@ -2298,6 +2328,19 @@ function WalletListContent() {
               { label: 'Ethereum', value: 'ethereum' },
             ]}
           />
+          {formChain.value === 'ethereum' && (
+            <FormField
+              label="Account Type"
+              name="accountType"
+              type="select"
+              value={formAccountType.value}
+              onChange={(v) => { formAccountType.value = v as string; }}
+              options={[
+                { label: 'EOA (Standard)', value: 'eoa' },
+                { label: 'Smart Account (ERC-4337)', value: 'smart' },
+              ]}
+            />
+          )}
           <FormField
             label="Environment"
             name="environment"

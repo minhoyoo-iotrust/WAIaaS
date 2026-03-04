@@ -1451,4 +1451,105 @@ describe('WAIaaSClient', () => {
       expect(headers['User-Agent']).toBe('waiaas-sdk/0.0.0');
     });
   });
+
+  // -----------------------------------------------------------------------
+  // createWallet (masterAuth)
+  // -----------------------------------------------------------------------
+
+  describe('createWallet', () => {
+    it('sends POST /v1/wallets with accountType and master password header', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3100',
+        masterPassword: 'test-master',
+      });
+
+      fetchSpy.mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            id: 'w-smart-1',
+            name: 'smart-agent',
+            chain: 'ethereum',
+            network: 'ethereum-sepolia',
+            environment: 'testnet',
+            publicKey: '0x1234',
+            status: 'ACTIVE',
+            accountType: 'smart',
+            signerKey: '0xsigner',
+            deployed: false,
+            createdAt: 1707000000,
+            session: { id: 's-1', token: 'wai_sess_abc', expiresAt: 1709592000 },
+          }),
+          { status: 201, headers: { 'Content-Type': 'application/json' } },
+        ),
+      );
+
+      const result = await client.createWallet({
+        name: 'smart-agent',
+        chain: 'ethereum',
+        environment: 'testnet',
+        accountType: 'smart',
+      });
+
+      expect(result.accountType).toBe('smart');
+      expect(result.signerKey).toBe('0xsigner');
+      expect(result.deployed).toBe(false);
+      expect(result.session?.token).toBe('wai_sess_abc');
+
+      // Verify the request
+      const callOpts = fetchSpy.mock.calls[0]![1] as RequestInit;
+      const headers = callOpts.headers as Record<string, string>;
+      expect(headers['X-Master-Password']).toBe('test-master');
+      const body = JSON.parse(callOpts.body as string);
+      expect(body.accountType).toBe('smart');
+      expect(body.chain).toBe('ethereum');
+    });
+
+    it('sends minimal params without accountType when not specified', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3100',
+        masterPassword: 'test-master',
+      });
+
+      fetchSpy.mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            id: 'w-eoa-1',
+            name: 'basic-wallet',
+            chain: 'solana',
+            network: 'solana-devnet',
+            environment: 'testnet',
+            publicKey: '7xKXtg',
+            status: 'ACTIVE',
+            accountType: 'eoa',
+            signerKey: null,
+            deployed: true,
+            createdAt: 1707000000,
+          }),
+          { status: 201, headers: { 'Content-Type': 'application/json' } },
+        ),
+      );
+
+      const result = await client.createWallet({ name: 'basic-wallet' });
+
+      expect(result.accountType).toBe('eoa');
+
+      const callOpts = fetchSpy.mock.calls[0]![1] as RequestInit;
+      const body = JSON.parse(callOpts.body as string);
+      expect(body.name).toBe('basic-wallet');
+      expect(body.accountType).toBeUndefined();
+    });
+
+    it('throws MASTER_PASSWORD_REQUIRED when masterPassword not set', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3100',
+        sessionToken: mockToken,
+      });
+
+      await expect(client.createWallet({ name: 'test' })).rejects.toThrow(
+        expect.objectContaining({ code: 'MASTER_PASSWORD_REQUIRED' }),
+      );
+
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+  });
 });

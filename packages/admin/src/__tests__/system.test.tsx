@@ -96,6 +96,13 @@ const mockSettingsResponse = {
     max_timeout_sec: '86400',
     max_pending_count: '100',
   },
+  smart_account: {
+    enabled: 'false',
+    bundler_url: '',
+    paymaster_url: '',
+    paymaster_api_key: '',
+    entry_point: '',
+  },
 };
 
 const mockApiKeys = {
@@ -768,6 +775,55 @@ describe('SystemPage', () => {
         expect(
           document.querySelector('input[placeholder="SHUTDOWN"]'),
         ).toBeNull();
+      });
+    });
+  });
+
+  // Smart Account (ERC-4337) section
+  describe('Smart Account (ERC-4337) section', () => {
+    it('renders Smart Account section title and fields', async () => {
+      mockApiCalls();
+      render(<SystemPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Smart Account (ERC-4337)')).toBeTruthy();
+      });
+
+      // Check for key form fields
+      expect(document.querySelector('[name="smart_account.enabled"]')).toBeTruthy();
+      expect(document.querySelector('[name="smart_account.bundler_url"]')).toBeTruthy();
+      expect(document.querySelector('[name="smart_account.paymaster_url"]')).toBeTruthy();
+      expect(document.querySelector('[name="smart_account.paymaster_api_key"]')).toBeTruthy();
+      expect(document.querySelector('[name="smart_account.entry_point"]')).toBeTruthy();
+    });
+
+    it('includes smart_account settings in save payload', async () => {
+      mockApiCalls();
+      render(<SystemPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Smart Account (ERC-4337)')).toBeTruthy();
+      });
+
+      // Change bundler URL
+      const bundlerInput = document.querySelector('[name="smart_account.bundler_url"]') as HTMLInputElement;
+      fireEvent.input(bundlerInput, { target: { value: 'https://api.pimlico.io/v2/sepolia/rpc' } });
+
+      // Save bar should appear
+      await waitFor(() => {
+        expect(screen.getByText('Save')).toBeTruthy();
+      });
+
+      vi.mocked(apiPut).mockResolvedValueOnce({ updated: 1, settings: mockSettingsResponse });
+
+      fireEvent.click(screen.getByText('Save'));
+
+      await waitFor(() => {
+        expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/admin/settings', {
+          settings: expect.arrayContaining([
+            expect.objectContaining({ key: 'smart_account.bundler_url' }),
+          ]),
+        });
       });
     });
   });

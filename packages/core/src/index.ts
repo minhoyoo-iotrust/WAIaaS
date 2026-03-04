@@ -68,6 +68,9 @@ export {
   POSITION_STATUSES,
   type PositionStatus,
   PositionStatusEnum,
+  ACCOUNT_TYPES,
+  type AccountType,
+  AccountTypeEnum,
 } from './enums/index.js';
 
 // Schemas (5 domain Zod SSoT schemas + v1.4 discriminatedUnion 5-type)

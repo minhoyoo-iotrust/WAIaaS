@@ -268,8 +268,8 @@ describe('IT-04: expected CHECK constraints exist', () => {
       if (matches) inBasedCheckCount += matches.length;
     }
 
-    // 13 IN-based CHECK constraints (12 SSoT-derived + 1 owner_verified boolean)
-    expect(inBasedCheckCount).toBe(13);
+    // 14 IN-based CHECK constraints (13 SSoT-derived + 1 owner_verified boolean)
+    expect(inBasedCheckCount).toBe(14);
   });
 });
 

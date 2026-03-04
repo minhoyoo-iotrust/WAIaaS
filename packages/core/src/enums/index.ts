@@ -29,6 +29,9 @@ export {
   WALLET_STATUSES,
   type WalletStatus,
   WalletStatusEnum,
+  ACCOUNT_TYPES,
+  type AccountType,
+  AccountTypeEnum,
 } from './wallet.js';
 
 export {

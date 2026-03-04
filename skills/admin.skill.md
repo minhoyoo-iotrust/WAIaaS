@@ -458,6 +458,13 @@ curl -s http://localhost:3100/v1/admin/settings \
     "signing_sdk.preferred_wallet": "",
     "signing_sdk.ntfy_request_topic_prefix": "waiaas-sign",
     "signing_sdk.ntfy_response_topic_prefix": "waiaas-response"
+  },
+  "smart_account": {
+    "smart_account.enabled": "false",
+    "smart_account.bundler_url": "",
+    "smart_account.paymaster_url": "",
+    "smart_account.paymaster_api_key": false,
+    "smart_account.entry_point": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
   }
 }
 ```
@@ -477,6 +484,7 @@ curl -s http://localhost:3100/v1/admin/settings \
 | `monitoring`    | enabled, check_interval_sec, low_balance_threshold_*, cooldown_hours | Balance monitoring configuration. |
 | `telegram`      | enabled, bot_token, locale                               | Telegram Bot interactive commands.     |
 | `signing_sdk`   | enabled, request_expiry_min, preferred_channel, preferred_wallet, ntfy_*_topic_prefix | Human Wallet Apps (signing + alerts) configuration. Internal key prefix is signing_sdk for backward compatibility. |
+| `smart_account` | enabled, bundler_url, paymaster_url, paymaster_api_key, entry_point | ERC-4337 Account Abstraction configuration (EVM only). |
 
 ### PUT /v1/admin/settings -- Update Settings
 
@@ -596,6 +604,27 @@ Signing SDK:
 - `signing_sdk.preferred_wallet` -- Preferred wallet app name (default: "")
 - `signing_sdk.ntfy_request_topic_prefix` -- Ntfy request topic prefix (default: "waiaas-sign")
 - `signing_sdk.ntfy_response_topic_prefix` -- Ntfy response topic prefix (default: "waiaas-response")
+
+Smart Account (ERC-4337):
+- `smart_account.enabled` -- Enable smart account support ("true"/"false", default: "false")
+- `smart_account.bundler_url` -- ERC-4337 bundler endpoint URL (required when enabled)
+- `smart_account.paymaster_url` -- Paymaster service URL for gas sponsorship (optional)
+- `smart_account.paymaster_api_key` -- Paymaster API key (credential, encrypted at rest)
+- `smart_account.entry_point` -- EntryPoint contract address (default: "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789" -- v0.6)
+
+Example: Enable smart account via Admin Settings API:
+
+```bash
+curl -s -X PUT http://localhost:3100/v1/admin/settings \
+  -H 'Content-Type: application/json' \
+  -H 'X-Master-Password: <password>' \
+  -d '{
+    "settings": [
+      {"key": "smart_account.enabled", "value": "true"},
+      {"key": "smart_account.bundler_url", "value": "https://api.pimlico.io/v2/1/rpc?apikey=YOUR_KEY"}
+    ]
+  }'
+```
 
 ### POST /v1/admin/settings/test-rpc -- Test RPC Connectivity
 

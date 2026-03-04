@@ -22,7 +22,7 @@ import { registerDirty, unregisterDirty } from '../utils/dirty-guard';
 // System-relevant setting categories (used for save filtering)
 // ---------------------------------------------------------------------------
 
-const SYSTEM_PREFIXES = ['display.', 'daemon.', 'oracle.', 'gas_condition.'];
+const SYSTEM_PREFIXES = ['display.', 'daemon.', 'oracle.', 'gas_condition.', 'smart_account.'];
 const SYSTEM_EXACT_KEYS = new Set(['security.rate_limit_global_ip_rpm']);
 
 function isSystemSetting(key: string): boolean {
@@ -516,6 +516,77 @@ export default function SystemPage() {
     );
   }
 
+  function SmartAccountSection() {
+    return (
+      <div class="settings-category">
+        <div class="settings-category-header">
+          <h3>Smart Account (ERC-4337)</h3>
+          <p class="settings-description">
+            Configure ERC-4337 smart account infrastructure. Requires an external Bundler service (e.g., Pimlico, Stackup, Alchemy).
+          </p>
+        </div>
+        <div class="settings-category-body">
+          <div class="settings-fields-grid">
+            <FormField
+              label="Enabled"
+              name="smart_account.enabled"
+              type="select"
+              value={ev('smart_account', 'enabled') || 'false'}
+              onChange={(v) => handleFieldChange('smart_account.enabled', v)}
+              options={[
+                { label: 'Yes', value: 'true' },
+                { label: 'No', value: 'false' },
+              ]}
+              description="Enable smart account wallet creation. When disabled, only EOA wallets can be created."
+              data-field="smart_account.enabled"
+            />
+            <FormField
+              label="Bundler URL"
+              name="smart_account.bundler_url"
+              value={ev('smart_account', 'bundler_url')}
+              onChange={(v) => handleFieldChange('smart_account.bundler_url', v)}
+              placeholder="https://api.pimlico.io/v2/..."
+              description="Bundler RPC endpoint URL. Required for smart account transactions."
+              data-field="smart_account.bundler_url"
+            />
+            <FormField
+              label="Paymaster URL"
+              name="smart_account.paymaster_url"
+              value={ev('smart_account', 'paymaster_url')}
+              onChange={(v) => handleFieldChange('smart_account.paymaster_url', v)}
+              placeholder="https://api.pimlico.io/v2/..."
+              description="Paymaster RPC endpoint URL. Optional -- when set, gas fees are sponsored."
+              data-field="smart_account.paymaster_url"
+            />
+            <FormField
+              label="Paymaster API Key"
+              name="smart_account.paymaster_api_key"
+              type="password"
+              value={ev('smart_account', 'paymaster_api_key')}
+              onChange={(v) => handleFieldChange('smart_account.paymaster_api_key', v)}
+              placeholder="Enter API key"
+              description="Paymaster API key. Stored encrypted (AES-256-GCM)."
+              data-field="smart_account.paymaster_api_key"
+            />
+            <FormField
+              label="EntryPoint Address"
+              name="smart_account.entry_point"
+              value={ev('smart_account', 'entry_point')}
+              onChange={(v) => handleFieldChange('smart_account.entry_point', v)}
+              placeholder="0x0000000071727De22E5E9d8BAf0edAc6f37da032"
+              description="EntryPoint v0.7 contract address. Override only if using a custom deployment."
+              data-field="smart_account.entry_point"
+            />
+          </div>
+          <div class="settings-info-box">
+            Smart accounts enable gas-sponsored transactions via Paymaster, atomic batch execution,
+            and lazy contract deployment. Requires an ERC-4337 Bundler and optionally a Paymaster service.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // ---------------------------------------------------------------------------
   // Main render
   // ---------------------------------------------------------------------------
@@ -567,6 +638,9 @@ export default function SystemPage() {
 
           {/* 7. Gas Condition */}
           <GasConditionSection />
+
+          {/* 8. Smart Account (ERC-4337) */}
+          <SmartAccountSection />
         </>
       )}
 

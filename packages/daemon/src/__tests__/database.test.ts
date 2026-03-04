@@ -104,7 +104,11 @@ describe('Schema creation', () => {
     expect(colNames).toContain('owner_approval_method');
     expect(colNames).toContain('monitor_incoming');
     expect(colNames).toContain('wallet_type');
-    expect(colNames).toHaveLength(15);
+    expect(colNames).toContain('account_type');
+    expect(colNames).toContain('signer_key');
+    expect(colNames).toContain('deployed');
+    expect(colNames).toContain('entry_point');
+    expect(colNames).toHaveLength(19);
   });
 
   it('transactions table should have correct columns including v0.6 and v0.10 additions', () => {

@@ -3,6 +3,7 @@ import {
   ChainTypeEnum,
   EnvironmentTypeEnum,
   WalletStatusEnum,
+  AccountTypeEnum,
 } from '../enums/index.js';
 
 export const WalletSchema = z.object({
@@ -14,6 +15,10 @@ export const WalletSchema = z.object({
   status: WalletStatusEnum,
   ownerAddress: z.string().nullable(),
   ownerVerified: z.boolean(),
+  accountType: AccountTypeEnum.default('eoa'),
+  signerKey: z.string().nullable().default(null),
+  deployed: z.boolean().default(true),
+  entryPoint: z.string().nullable().default(null),
   createdAt: z.number().int(),
   updatedAt: z.number().int(),
 });
@@ -24,5 +29,6 @@ export const CreateWalletRequestSchema = z.object({
   chain: ChainTypeEnum.default('solana'),
   environment: EnvironmentTypeEnum.default('testnet'),
   createSession: z.boolean().default(true),
+  accountType: AccountTypeEnum.default('eoa'),
 });
 export type CreateWalletRequest = z.infer<typeof CreateWalletRequestSchema>;

@@ -137,6 +137,10 @@ export const messages: Messages = {
     WEBHOOK_NOT_FOUND: '웹훅을 찾을 수 없습니다',
     // ADMIN domain (autostop)
     RULE_NOT_FOUND: 'AutoStop 규칙을 찾을 수 없습니다',
+    // TX domain (ERC-4337 Account Abstraction)
+    PAYMASTER_REJECTED: 'Paymaster가 UserOperation을 거부했습니다',
+    TRANSACTION_TIMEOUT: '트랜잭션 확인 시간이 초과되었습니다',
+    TRANSACTION_REVERTED: '트랜잭션이 온체인에서 리버트되었습니다',
   },
   // Notification templates (31 event types)
   notifications: {

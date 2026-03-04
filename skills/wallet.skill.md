@@ -50,7 +50,10 @@ Parameters:
 - `name` (required): string, 1-100 characters
 - `chain` (optional): `"solana"` (default) or `"ethereum"`
 - `environment` (optional): `"mainnet"` (default) or `"testnet"` -- determines available networks
+- `accountType` (optional): `"eoa"` (default) or `"smart"` -- ERC-4337 Smart Account (EVM chains only)
 - `createSession` (optional): boolean, default `true` -- auto-creates a session token in the response
+
+Note: `accountType: "smart"` is only valid for EVM chains (ethereum). Attempting to create a smart account on Solana returns an error. Requires `smart_account.enabled=true` in Admin Settings.
 
 Response (201):
 ```json
@@ -72,6 +75,56 @@ Response (201):
 ```
 
 The `network` field shows the wallet's primary network (chain-dependent: Solana has a single auto-resolved network; EVM requires explicit network specification). The `session` field is included when `createSession` is `true` (default); set to `false` to create the wallet without a session.
+
+### Create Smart Account Wallet (EVM, ERC-4337)
+
+Create an ERC-4337 smart account wallet with Paymaster gas sponsorship and atomic batch support. Requires `smart_account.enabled=true` in Admin Settings and a configured Bundler URL.
+
+```bash
+curl -s -X POST http://localhost:3100/v1/wallets \
+  -H 'Content-Type: application/json' \
+  -H 'X-Master-Password: your-master-password' \
+  -d '{"name": "smart-agent", "chain": "ethereum", "environment": "testnet", "accountType": "smart"}'
+```
+
+Response (201):
+```json
+{
+  "id": "01958f3a-1234-7000-8000-abcdef123456",
+  "name": "smart-agent",
+  "chain": "ethereum",
+  "network": "ethereum-sepolia",
+  "environment": "testnet",
+  "publicKey": "0x1234567890abcdef1234567890abcdef12345678",
+  "status": "ACTIVE",
+  "accountType": "smart",
+  "signerKey": "0xabcdef1234567890abcdef1234567890abcdef12",
+  "deployed": false,
+  "createdAt": 1707000000,
+  "session": {
+    "id": "01958f3b-5678-7000-8000-abcdef654321",
+    "token": "wai_sess_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "expiresAt": 1709592000
+  }
+}
+```
+
+**Smart Account fields:**
+- `accountType`: `"smart"` -- ERC-4337 smart account
+- `signerKey`: EOA signer (owner) address that controls the smart account
+- `deployed`: `false` until the first transaction (lazy deployment via CREATE2)
+
+**Key differences from EOA:**
+- Gas can be sponsored by a Paymaster (agent needs no ETH for gas)
+- BATCH transactions execute atomically as a single UserOperation (all-or-nothing)
+- Address is predicted via CREATE2 before on-chain deployment
+- First transaction automatically deploys the smart account contract
+
+**Requirements:**
+- EVM chains only (ethereum). Solana does not support ERC-4337.
+- `smart_account.enabled` must be `true` in Admin Settings
+- `smart_account.bundler_url` must be configured (e.g., Pimlico, Stackup, Alchemy)
+- Optional: `smart_account.paymaster_url` for gas sponsorship
 
 ### GET /v1/wallets -- List Wallets (masterAuth)
 

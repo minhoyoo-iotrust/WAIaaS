@@ -37,6 +37,7 @@ import { PresetAutoSetupService } from '../../services/signing-sdk/preset-auto-s
 import { validateOwnerAddress } from '../middleware/address-validation.js';
 import type { AdapterPool } from '../../infrastructure/adapter-pool.js';
 import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
+import type { SmartAccountService } from '../../infrastructure/smart-account/index.js';
 import {
   CreateWalletRequestOpenAPI,
   WalletCreateResponseSchema,
@@ -79,6 +80,8 @@ export interface WalletCrudRouteDeps {
   walletLinkRegistry?: WalletLinkRegistry;
   /** WalletAppService for preset auto-registration (v29.7). Optional for backward compat. */
   walletAppService?: WalletAppService;
+  /** SmartAccountService for ERC-4337 CREATE2 address prediction. Optional for backward compat. */
+  smartAccountService?: SmartAccountService;
 }
 
 // ---------------------------------------------------------------------------
@@ -331,6 +334,9 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
             ownerVerified: a.ownerVerified,
           }),
           monitorIncoming: a.monitorIncoming ?? false,
+          accountType: (a as any).accountType ?? 'eoa',
+          signerKey: (a as any).signerKey ?? null,
+          deployed: (a as any).deployed ?? true,
           createdAt: a.createdAt ? Math.floor(a.createdAt.getTime() / 1000) : 0,
         })),
       },
@@ -376,6 +382,9 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
         ownerState,
         approvalMethod: wallet.ownerApprovalMethod ?? null,
         walletType: wallet.walletType ?? null,
+        accountType: (wallet as any).accountType ?? 'eoa',
+        signerKey: (wallet as any).signerKey ?? null,
+        deployed: (wallet as any).deployed ?? true,
         suspendedAt: wallet.suspendedAt ? Math.floor(wallet.suspendedAt.getTime() / 1000) : null,
         suspensionReason: wallet.suspensionReason ?? null,
         createdAt: wallet.createdAt ? Math.floor(wallet.createdAt.getTime() / 1000) : 0,
@@ -394,6 +403,33 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
     const parsed = c.req.valid('json');
     const chain = parsed.chain as ChainType;
     const environment = parsed.environment as EnvironmentType;
+    const accountType = (parsed as any).accountType ?? 'eoa';
+
+    // Smart account validation (ERC-4337)
+    if (accountType === 'smart') {
+      // Only EVM chains support smart accounts
+      if (chain === 'solana') {
+        throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
+          message: 'Smart accounts are only supported on EVM chains',
+        });
+      }
+
+      // Feature gate check via Admin Settings
+      const enabled = deps.settingsService?.get('smart_account.enabled');
+      if (enabled !== 'true') {
+        throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
+          message: 'Smart account feature is not enabled. Enable via Admin Settings: smart_account.enabled',
+        });
+      }
+
+      // Bundler URL must be configured
+      const bundlerUrl = deps.settingsService?.get('smart_account.bundler_url');
+      if (!bundlerUrl) {
+        throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
+          message: 'Bundler URL is not configured. Set via Admin Settings: smart_account.bundler_url',
+        });
+      }
+    }
 
     // Derive network for key generation (Solana: single network; EVM: first available)
     const network = getSingleNetwork(chain, environment)
@@ -402,7 +438,7 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
     // Generate wallet ID
     const id = generateId();
 
-    // Generate key pair via keystore
+    // Generate key pair via keystore (EOA signer for both EOA and smart accounts)
     const currentPassword = deps.passwordRef?.password ?? deps.masterPassword;
     const { publicKey } = await deps.keyStore.generateKeyPair(
       id,
@@ -410,6 +446,53 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
       network,
       currentPassword,
     );
+
+    // Smart account: predict CREATE2 address using the EOA signer
+    let walletPublicKey = publicKey;
+    let signerKey: string | null = null;
+    let deployed = true;
+    let entryPoint: string | null = null;
+
+    if (accountType === 'smart' && deps.smartAccountService) {
+      // The EOA key is the signer (owner) of the smart account
+      signerKey = publicKey;
+
+      // Get entry point from settings (or default v0.7)
+      entryPoint = deps.settingsService?.get('smart_account.entry_point')
+        ?? '0x0000000071727De22E5E9d8BAf0edAc6f37da032';
+
+      // Create viem client for address prediction
+      const rpcUrl = resolveRpcUrl(
+        deps.config.rpc as unknown as Record<string, string>,
+        chain,
+        network,
+      );
+      const { createPublicClient, http } = await import('viem');
+      const { privateKeyToAccount } = await import('viem/accounts');
+
+      // Get the private key from keystore to create a LocalAccount for viem
+      const privateKeyBytes = await deps.keyStore.decryptPrivateKey(id, currentPassword);
+      const privateKeyHex = `0x${Buffer.from(privateKeyBytes).toString('hex')}` as `0x${string}`;
+      const ownerAccount = privateKeyToAccount(privateKeyHex);
+
+      // Determine viem chain from network name using EVM_CHAIN_MAP
+      const { EVM_CHAIN_MAP } = await import('@waiaas/adapter-evm');
+      const chainEntry = EVM_CHAIN_MAP[network as keyof typeof EVM_CHAIN_MAP];
+      const viemChain = chainEntry?.viemChain;
+      const client = createPublicClient({
+        chain: viemChain,
+        transport: http(rpcUrl),
+      });
+
+      const smartAccountInfo = await deps.smartAccountService.createSmartAccount({
+        owner: ownerAccount,
+        client,
+        entryPoint: entryPoint as `0x${string}`,
+      });
+
+      walletPublicKey = smartAccountInfo.address;
+      deployed = false;
+    }
 
     // Insert into wallets table
     const now = new Date(Math.floor(Date.now() / 1000) * 1000); // truncate to seconds
@@ -419,8 +502,12 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
       name: parsed.name,
       chain: parsed.chain,
       environment,
-      publicKey,
+      publicKey: walletPublicKey,
       status: 'ACTIVE',
+      accountType,
+      signerKey,
+      deployed,
+      entryPoint,
       createdAt: now,
       updatedAt: now,
     });
@@ -486,11 +573,14 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
         chain: parsed.chain,
         network: network as string,
         environment,
-        publicKey,
+        publicKey: walletPublicKey,
         status: 'ACTIVE',
         ownerAddress: null,
         ownerState: 'NONE' as const,
         monitorIncoming: false,
+        accountType,
+        signerKey,
+        deployed,
         createdAt: Math.floor(now.getTime() / 1000),
         session,
       },
@@ -540,6 +630,9 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
           ownerVerified: wallet.ownerVerified,
         }),
         monitorIncoming: wallet.monitorIncoming ?? false,
+        accountType: (wallet as any).accountType ?? 'eoa',
+        signerKey: (wallet as any).signerKey ?? null,
+        deployed: (wallet as any).deployed ?? true,
         createdAt: wallet.createdAt ? Math.floor(wallet.createdAt.getTime() / 1000) : 0,
       },
       200,

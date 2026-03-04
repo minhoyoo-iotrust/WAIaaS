@@ -46,8 +46,9 @@ describe('i18n message system', () => {
     // v29.7: +SIGNING_DISABLED, +WALLET_APP_DUPLICATE, +WALLET_APP_NOT_FOUND (+3)
     // v29.9: +RENEWAL_NOT_REQUIRED (+1)
     // v30.2: +SIMULATION_TIMEOUT, +INVALID_BACKUP_FORMAT, +UNSUPPORTED_BACKUP_VERSION, +BACKUP_CORRUPTED, +BACKUP_NOT_FOUND, +WEBHOOK_NOT_FOUND, +RULE_NOT_FOUND (+7)
+    // v30.6: +PAYMASTER_REJECTED, +TRANSACTION_TIMEOUT, +TRANSACTION_REVERTED (+3)
     const en = getMessages('en');
-    expect(Object.keys(en.errors).length).toBe(116);
+    expect(Object.keys(en.errors).length).toBe(119);
   });
 
   it('error code keys match ERROR_CODES keys', () => {

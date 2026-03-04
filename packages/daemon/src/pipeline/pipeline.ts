@@ -87,6 +87,7 @@ export class TransactionPipeline {
         publicKey: wallet.publicKey,
         chain: wallet.chain,
         environment: wallet.environment,
+        accountType: wallet.accountType,
       },
       resolvedNetwork,
       request,
