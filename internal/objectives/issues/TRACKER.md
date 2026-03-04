@@ -261,7 +261,8 @@
 | 244 | BUG | MEDIUM | APPROVAL_CHANNEL_SWITCHED 알림 {txId} 미치환 — vars 대신 details에 전달 | — | FIXED | 2026-03-03 |
 | 245 | BUG | HIGH | Stage4 WcSigningBridge가 비WC 지갑에도 무조건 실행 — 거짓 채널 전환 알림 + DB 오염 | — | FIXED | 2026-03-03 |
 | 246 | BUG | CRITICAL | APPROVAL 티어 승인 후 파이프라인 미재개 — 모든 승인 경로에서 executeFromStage5 호출 누락 | — | FIXED | 2026-03-03 |
-| 247 | MISSING | MEDIUM | 범용 EIP-712 signTypedData API 지원 | — | OPEN | — |
+| 247 | MISSING | MEDIUM | 범용 EIP-712 signTypedData API 지원 | v30.9 | RESOLVED | 2026-03-05 |
+| 248 | ENHANCEMENT | MEDIUM | Admin 대시보드 Recent Activity 트랜잭션 금액이 raw 단위로 표시 | v30.9 | RESOLVED | 2026-03-05 |
 
 ## Type Legend
 
@@ -273,9 +274,9 @@
 
 ## Summary
 
-- **OPEN:** 1
+- **OPEN:** 2
 - **FIXED:** 246
 - **RESOLVED:** 0
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 248
+- **Total:** 249

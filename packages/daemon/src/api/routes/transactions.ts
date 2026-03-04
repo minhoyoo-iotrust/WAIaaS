@@ -69,11 +69,14 @@ import {
   TxCancelResponseSchema,
   TxSignRequestSchema,
   TxSignResponseSchema,
+  TxSignMessageRequestSchema,
+  TxSignMessageResponseSchema,
   DryRunSimulationResultOpenAPI,
   buildErrorResponses,
   openApiValidationHook,
 } from './openapi-schemas.js';
 import { executeSignOnly } from '../../pipeline/sign-only.js';
+import { executeSignMessage } from '../../pipeline/sign-message.js';
 import { TransactionPipeline } from '../../pipeline/pipeline.js';
 import { resolveDisplayCurrencyCode, fetchDisplayRate, toDisplayAmount } from './display-currency-helper.js';
 import { resolveWalletId, verifyWalletAccess } from '../helpers/resolve-wallet-id.js';
@@ -152,6 +155,32 @@ const signTransactionRoute = createRoute({
       'INVALID_TRANSACTION',
       'WALLET_NOT_SIGNER',
       'POLICY_DENIED',
+      'WALLET_NOT_FOUND',
+    ]),
+  },
+});
+
+const signMessageRoute = createRoute({
+  method: 'post',
+  path: '/transactions/sign-message',
+  tags: ['Transactions'],
+  summary: 'Sign a message (personal_sign or EIP-712 signTypedData)',
+  description:
+    'Sign a raw message (personal_sign) or EIP-712 typed data (signTypedData). Returns the signature synchronously. EIP-712 signTypedData is EVM-only.',
+  request: {
+    body: {
+      content: {
+        'application/json': { schema: TxSignMessageRequestSchema },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Message signed successfully',
+      content: { 'application/json': { schema: TxSignMessageResponseSchema } },
+    },
+    ...buildErrorResponses([
+      'ACTION_VALIDATION_FAILED',
       'WALLET_NOT_FOUND',
     ]),
   },
@@ -595,6 +624,42 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
       },
       200,
     );
+  });
+
+  // ---------------------------------------------------------------------------
+  // POST /transactions/sign-message (sessionAuth -- sign message or EIP-712 typed data)
+  // ---------------------------------------------------------------------------
+
+  router.openapi(signMessageRoute, async (c) => {
+    const body = c.req.valid('json');
+    const walletId = resolveWalletId(c, deps.db, body.walletId);
+    const sessionId = c.get('sessionId' as never) as string | undefined;
+
+    // Look up wallet
+    const wallet = await deps.db.select().from(wallets).where(eq(wallets.id, walletId)).get();
+    if (!wallet) {
+      throw new WAIaaSError('WALLET_NOT_FOUND', { message: `Wallet '${walletId}' not found` });
+    }
+    if (wallet.status === 'TERMINATED') {
+      throw new WAIaaSError('WALLET_TERMINATED');
+    }
+
+    // Execute sign-message pipeline (cast body to SignMessageRequest -- OpenAPI uses z.string() for network)
+    const result = await executeSignMessage(
+      {
+        db: deps.db,
+        keyStore: deps.keyStore,
+        masterPassword: deps.passwordRef?.password ?? deps.masterPassword,
+        notificationService: deps.notificationService,
+        eventBus: deps.eventBus,
+      },
+      walletId,
+      wallet.chain,
+      body as Parameters<typeof executeSignMessage>[3],
+      sessionId,
+    );
+
+    return c.json(result, 200);
   });
 
   // ---------------------------------------------------------------------------

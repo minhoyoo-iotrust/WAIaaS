@@ -21,6 +21,13 @@ export {
   type ApproveRequest,
   BatchRequestSchema,
   type BatchRequest,
+  // v30.9 sign message schemas (EIP-712 signTypedData)
+  SignMessageRequestSchema,
+  type SignMessageRequest,
+  Eip712TypedDataSchema,
+  type Eip712TypedData,
+  SignTypeEnum,
+  type SignType,
 } from './transaction.schema.js';
 export {
   PolicySchema,

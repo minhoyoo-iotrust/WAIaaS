@@ -189,3 +189,76 @@ export const TransactionRequestSchema = z.discriminatedUnion('type', [
   BatchRequestSchema,
 ]);
 export type TransactionRequest = z.infer<typeof TransactionRequestSchema>;
+
+// ---------------------------------------------------------------------------
+// Sign Message request schema (v30.9 -- EIP-712 signTypedData support)
+//
+// Supports two modes:
+// - personal: raw message signing (personal_sign, existing behavior)
+// - typedData: EIP-712 structured data signing (EVM only)
+// ---------------------------------------------------------------------------
+
+/** EIP-712 typed data structure (domain, types, primaryType, message). */
+export const Eip712TypedDataSchema = z.object({
+  /** EIP-712 domain separator. */
+  domain: z.object({
+    name: z.string().optional(),
+    version: z.string().optional(),
+    chainId: z.union([z.number(), z.bigint(), z.string()]).optional(),
+    verifyingContract: z.string().optional(),
+    salt: z.string().optional(),
+  }),
+  /** EIP-712 struct type definitions. Must NOT include EIP712Domain. */
+  types: z.record(
+    z.array(
+      z.object({
+        name: z.string(),
+        type: z.string(),
+      }),
+    ),
+  ),
+  /** Primary type to sign. */
+  primaryType: z.string().min(1),
+  /** The structured message to sign. */
+  message: z.record(z.unknown()),
+});
+export type Eip712TypedData = z.infer<typeof Eip712TypedDataSchema>;
+
+/** Sign type discriminator: 'personal' (raw message) or 'typedData' (EIP-712). */
+export const SignTypeEnum = z.enum(['personal', 'typedData']);
+export type SignType = z.infer<typeof SignTypeEnum>;
+
+/**
+ * Sign message request schema.
+ *
+ * When signType is 'personal' (default), `message` is required (hex or UTF-8 string).
+ * When signType is 'typedData', `typedData` is required (EIP-712 structure, EVM only).
+ */
+export const SignMessageRequestSchema = z.object({
+  /** Message to sign (hex 0x-prefixed or UTF-8 string). Required for signType='personal'. */
+  message: z.string().optional(),
+  /** Sign type: 'personal' (default) or 'typedData' (EIP-712). */
+  signType: SignTypeEnum.default('personal'),
+  /** EIP-712 typed data. Required when signType='typedData'. */
+  typedData: Eip712TypedDataSchema.optional(),
+  /** Target network. Required for EVM wallets. */
+  network: NetworkTypeEnumWithLegacy.optional(),
+  /** Target wallet ID (multi-wallet sessions). */
+  walletId: z.string().uuid().optional(),
+}).superRefine((data, ctx) => {
+  if (data.signType === 'personal' && !data.message) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'message is required when signType is "personal"',
+      path: ['message'],
+    });
+  }
+  if (data.signType === 'typedData' && !data.typedData) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'typedData is required when signType is "typedData"',
+      path: ['typedData'],
+    });
+  }
+});
+export type SignMessageRequest = z.infer<typeof SignMessageRequestSchema>;

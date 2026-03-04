@@ -728,6 +728,7 @@ export const AdminStatusResponseSchema = z
         status: z.string(),
         toAddress: z.string().nullable(),
         amount: z.string().nullable(),
+        formattedAmount: z.string().nullable(),
         amountUsd: z.number().nullable(),
         network: z.string().nullable(),
         txHash: z.string().nullable(),
@@ -1090,6 +1091,52 @@ export const TxSignResponseSchema = z
     }),
   })
   .openapi('TxSignResponse');
+
+// ---------------------------------------------------------------------------
+// Sign Message Schemas (POST /v1/transactions/sign-message)
+// ---------------------------------------------------------------------------
+
+export const TxSignMessageRequestSchema = z
+  .object({
+    message: z.string().optional().openapi({
+      description: 'Message to sign (hex 0x-prefixed or UTF-8 string). Required when signType is "personal".',
+    }),
+    signType: z.enum(['personal', 'typedData']).default('personal').openapi({
+      description: 'Sign type: "personal" (default) for raw message, "typedData" for EIP-712 structured data.',
+    }),
+    typedData: z
+      .object({
+        domain: z.object({
+          name: z.string().optional(),
+          version: z.string().optional(),
+          chainId: z.union([z.number(), z.string()]).optional(),
+          verifyingContract: z.string().optional(),
+          salt: z.string().optional(),
+        }),
+        types: z.record(z.array(z.object({ name: z.string(), type: z.string() }))),
+        primaryType: z.string(),
+        message: z.record(z.unknown()),
+      })
+      .optional()
+      .openapi({
+        description: 'EIP-712 typed data structure. Required when signType is "typedData".',
+      }),
+    network: z.string().optional().openapi({
+      description: 'Target network (optional)',
+    }),
+    walletId: z.string().uuid().optional().openapi({
+      description: 'Target wallet ID (optional -- auto-resolved if session has single wallet)',
+    }),
+  })
+  .openapi('TxSignMessageRequest');
+
+export const TxSignMessageResponseSchema = z
+  .object({
+    id: z.string().uuid(),
+    signature: z.string(),
+    signType: z.enum(['personal', 'typedData']),
+  })
+  .openapi('TxSignMessageResponse');
 
 // ---------------------------------------------------------------------------
 // Dry-Run Simulation Result Schema (POST /v1/transactions/simulate)
