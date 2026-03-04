@@ -8,7 +8,7 @@ progress:
   total_phases: 184
   completed_phases: 178
   total_plans: 394
-  completed_plans: 388
+  completed_plans: 390
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-04)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v30.8 Phase 320 -- Reputation Policy Engine + Cache
+**Current focus:** v30.8 Phase 321 -- EIP-712 Approval + Wallet Linking
 
 ## Current Position
 
 Phase: 320 (4 of 7) -- Reputation Policy Engine + Cache
-Plan: 0 of 2 in current phase
-Status: Phase 319 completed, ready for Phase 320
-Last activity: 2026-03-04 -- Phase 319 Read-Only Routes + Registration File completed (2 plans, 4 tasks, 14 tests)
+Plan: 2 of 2 in current phase
+Status: Phase 320 completed, ready for Phase 321
+Last activity: 2026-03-04 -- Phase 320 Reputation Policy Engine + Cache completed (2 plans, 4 tasks, 25 tests)
 
-Progress: [####░░░░░░] 43%
+Progress: [#####░░░░░] 57%
 
 ## Performance Metrics
 
@@ -41,6 +41,8 @@ Progress: [####░░░░░░] 43%
 | 318-02 | ActionProvider + registerBuiltIn | 12min | 2 | 4 |
 | 319-01 | Read-Only API + Registration File | 15min | 2 | 7 |
 | 319-02 | connect-info erc8004 Extension | 8min | 2 | 3 |
+| 320-01 | ReputationCacheService | 4min | 2 | 3 |
+| 320-02 | REPUTATION_THRESHOLD Policy | 8min | 2 | 6 |
 
 ## Accumulated Context
 
@@ -65,6 +67,10 @@ Progress: [####░░░░░░] 43%
 - 3 ABI constants re-exported from @waiaas/actions index for cross-package access
 - Registration file response uses z.any() for free-form JSON per ERC-8004 spec
 - PENDING identities excluded from connect-info erc8004 field (only REGISTERED/WALLET_LINKED/DEREGISTERED)
+- ReputationCacheService: 3-tier cache (memory -> DB -> RPC) with configurable TTL, RPC timeout returns null for unrated treatment
+- REPUTATION_THRESHOLD: reputation floor tier applied via maxTier (escalation only, never deny/downgrade)
+- evaluateAndReserve: async prefetch before IMMEDIATE txn (resolves async-in-sync constraint)
+- resolveAgentIdFromAddress: case-insensitive publicKey join (agent_identities + wallets)
 
 ### Blockers/Concerns
 
@@ -74,5 +80,5 @@ Progress: [####░░░░░░] 43%
 ## Session Continuity
 
 Last session: 2026-03-04
-Stopped at: Completed 319-02-PLAN.md. Phase 319 Read-Only Routes + Registration File complete (2 plans, 4 tasks, 14 tests).
+Stopped at: Completed 320-02-PLAN.md. Phase 320 Reputation Policy Engine + Cache complete (2 plans, 4 tasks, 25 tests).
 Resume file: None

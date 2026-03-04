@@ -26,13 +26,13 @@ Requirements for v30.8 milestone. Each maps to roadmap phases.
 
 ### Reputation Registry (REPU)
 
-- [ ] **REPU-01**: Agent can post feedback on another agent via `give_feedback` action with NOTIFY tier
-- [ ] **REPU-02**: Agent can revoke posted feedback via `revoke_feedback` action with INSTANT tier
+- [x] **REPU-01**: Agent can post feedback on another agent via `give_feedback` action with NOTIFY tier
+- [x] **REPU-02**: Agent can revoke posted feedback via `revoke_feedback` action with INSTANT tier
 - [x] **REPU-03**: Reputation summary (count, score, decimals) can be queried via `GET /v1/erc8004/agent/:agentId/reputation` with tag filtering
-- [ ] **REPU-04**: Reputation scores are cached in-memory (configurable TTL, default 300s) with DB fallback for RPC failures
-- [ ] **REPU-05**: REPUTATION_THRESHOLD policy (18th PolicyType) evaluates reputation in Stage 3 policy pipeline at position 6 (after APPROVED_SPENDERS, before SPENDING_LIMIT)
-- [ ] **REPU-06**: Low reputation (score < min_score) triggers security tier escalation to below_threshold_tier (default: APPROVAL), tier only escalates (never downgrades)
-- [ ] **REPU-07**: Unrated agents (no reputation data or RPC failure) receive configurable unrated_tier treatment (default: APPROVAL)
+- [x] **REPU-04**: Reputation scores are cached in-memory (configurable TTL, default 300s) with DB fallback for RPC failures
+- [x] **REPU-05**: REPUTATION_THRESHOLD policy (18th PolicyType) evaluates reputation in Stage 3 policy pipeline at position 6 (after APPROVED_SPENDERS, before SPENDING_LIMIT)
+- [x] **REPU-06**: Low reputation (score < min_score) triggers security tier escalation to below_threshold_tier (default: APPROVAL), tier only escalates (never downgrades)
+- [x] **REPU-07**: Unrated agents (no reputation data or RPC failure) receive configurable unrated_tier treatment (default: APPROVAL)
 
 ### Validation Registry (VALD)
 
@@ -124,13 +124,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | IDEN-06 | Phase 319 | Complete |
 | IDEN-07 | Phase 319 | Complete |
 | IDEN-08 | Phase 319 | Complete |
-| REPU-01 | Phase 320 | Pending |
-| REPU-02 | Phase 320 | Pending |
+| REPU-01 | Phase 320 | Complete |
+| REPU-02 | Phase 320 | Complete |
 | REPU-03 | Phase 319 | Complete |
-| REPU-04 | Phase 320 | Pending |
-| REPU-05 | Phase 320 | Pending |
-| REPU-06 | Phase 320 | Pending |
-| REPU-07 | Phase 320 | Pending |
+| REPU-04 | Phase 320 | Complete |
+| REPU-05 | Phase 320 | Complete |
+| REPU-06 | Phase 320 | Complete |
+| REPU-07 | Phase 320 | Complete |
 | VALD-01 | Phase 318 | Complete |
 | VALD-02 | Phase 319 | Complete |
 | DB-01 | Phase 317 | Complete |
@@ -160,4 +160,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-04*
-*Last updated: 2026-03-04 -- Phase 319 completed (IDEN-06~08, REPU-03, VALD-02, API-01 = 18/39 complete)*
+*Last updated: 2026-03-04 -- Phase 320 completed (REPU-01, REPU-02, REPU-04~07 = 24/39 complete)*
