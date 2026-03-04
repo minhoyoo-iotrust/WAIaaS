@@ -1,5 +1,28 @@
 # Changelog
 
+## [2.10.0-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc...v2.10.0-rc.1) (2026-03-04)
+
+
+### Features
+
+* **314-01:** add AccountType enum and extend wallet schemas ([fa873e3](https://github.com/minhoyoo-iotrust/WAIaaS/commit/fa873e3723e953fc6ab54a9aa79a1b325ff281b1))
+* **314-01:** extend Drizzle schema, add DB migration v38, create SmartAccountService ([5db4991](https://github.com/minhoyoo-iotrust/WAIaaS/commit/5db4991dd0bc7bd62d8d0a3c7b0cf28e0aff5ade))
+* **314-02:** add smart_account Admin Settings (25 definitions, chain-specific overrides) ([6a65b25](https://github.com/minhoyoo-iotrust/WAIaaS/commit/6a65b25d5bd2b9b3046549dba9ed139a9717d104))
+* **314-02:** register smart_account keys in HotReloadOrchestrator ([4186d26](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4186d2600eebb9796eca23c6832f15cea3fadea1))
+* **314-03:** extend wallet creation API for smart account support ([610905d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/610905d6060a627c3e04ef824d46f60819204a0c))
+* **315-01:** add BundlerClient/PaymasterClient factory + ERC-4337 error codes + PipelineContext accountType ([af312f8](https://github.com/minhoyoo-iotrust/WAIaaS/commit/af312f86f23d0373fbefae13e3a11f28ed44037d))
+* **315-02:** add UserOperation execution path to stage5Execute with accountType branching ([cacc7ec](https://github.com/minhoyoo-iotrust/WAIaaS/commit/cacc7eca6d2b989908a5fe0917520fb28280effa))
+* **315-03:** add BATCH atomic execution + lazy deployment + atomic response field ([6428492](https://github.com/minhoyoo-iotrust/WAIaaS/commit/64284929ba26d2ce6882f06d6cf0cb799197cd0a))
+* **315-04:** add Paymaster integration tests for gas margin and rejection handling ([1b3365a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1b3365a0a0b07070cb9315c6d540115688bab2c5))
+* **316-01:** add --account-type CLI option and SDK createWallet method ([70157e0](https://github.com/minhoyoo-iotrust/WAIaaS/commit/70157e0fdca68da6da3776335ded5ada685c2454))
+* **316-02:** MCP smart account fields + Admin UI account type selector + System settings ([2a59113](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2a591137d9cfea1d0b3db3e320d4ffcd6a4f9767))
+* **316-03:** update skill files with ERC-4337 smart account documentation ([66a9f4e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/66a9f4ed6fdf4dc78046df6791d224ae0980c88b))
+
+
+### Bug Fixes
+
+* **316:** revise plans based on checker feedback ([e67b6af](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e67b6afc3c86957e8a2205e5f8b2fc35f8187887))
+
 ## [2.10.0-rc](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.1-rc...v2.10.0-rc) (2026-03-04)
 
 
