@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v30.9
 milestone_name: Smart Account DX 개선
-status: executing
+status: planning
 stopped_at: Completed 325-02-PLAN.md (Phase 325 done). Ready for Phase 326 planning.
-last_updated: "2026-03-04T15:58:00.000Z"
+last_updated: "2026-03-04T15:59:03.311Z"
 last_activity: 2026-03-05 -- Phase 325 complete (REST API + Agent Self-Service)
 progress:
   total_phases: 3

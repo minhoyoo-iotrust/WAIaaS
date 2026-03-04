@@ -172,7 +172,7 @@ Phases execute in numeric order: 324 -> 325 -> 326
 | 268-316 | v29.0-v30.6 | All | Complete | 2026-03-04 |
 | 317-323 | v30.8 | 15/15 | Complete | 2026-03-04 |
 | 324 | v30.9 | 2/2 | Complete | 2026-03-05 |
-| 325 | v30.9 | 2/2 | Complete | 2026-03-05 |
+| 325 | v30.9 | Complete    | 2026-03-04 | 2026-03-05 |
 | 326 | v30.9 | 0/0 | Not started | - |
 
 ---
