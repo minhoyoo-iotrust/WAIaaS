@@ -314,7 +314,7 @@ describe('IT-06: CHECK constraint existence matrix', () => {
     { table: 'telegram_users', hasCheck: true, columns: ['role'] }, // role has CHECK, but hardcoded
     { table: 'sessions', hasCheck: false, columns: [] },
     { table: 'key_value_store', hasCheck: false, columns: [] },
-    { table: 'pending_approvals', hasCheck: false, columns: [] },
+    { table: 'pending_approvals', hasCheck: true, columns: ['approval_type'] },
     { table: 'settings', hasCheck: true, columns: ['encrypted'] }, // encrypted has IN(0,1)
   ];
 
