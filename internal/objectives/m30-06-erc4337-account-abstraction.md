@@ -1,7 +1,8 @@
 # 마일스톤 m30-06: ERC-4337 Account Abstraction 지원
 
-- **Status:** IN_PROGRESS
+- **Status:** SHIPPED
 - **Milestone:** v30.6
+- **Completed:** 2026-03-04
 
 ## 목표
 
