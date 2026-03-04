@@ -124,8 +124,8 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v30.8-ROADMAP.md` for full 
 **Plans**: 2 plans
 
 Plans:
-- [ ] 324-01-PLAN.md -- Core enum + chain mapping + DB migration v41 + API key crypto
-- [ ] 324-02-PLAN.md -- Provider resolver refactoring + settings cleanup + pipeline integration
+- [x] 324-01-PLAN.md -- Core enum + chain mapping + DB migration v41 + API key crypto
+- [x] 324-02-PLAN.md -- Provider resolver refactoring + settings cleanup + pipeline integration
 
 ### Phase 325: REST API + Agent Self-Service
 **Goal**: 운영자가 REST API로 프로바이더를 관리하고, 에이전트가 sessionAuth로 자기 지갑의 프로바이더를 직접 등록/조회할 수 있는 상태
@@ -136,11 +136,11 @@ Plans:
   2. 에이전트가 sessionAuth로 PUT /v1/wallets/:id/provider 호출하여 자기 지갑의 프로바이더를 설정할 수 있고, 다른 지갑 설정 시 403이 반환된다
   3. GET /v1/wallets/:id 응답에 provider.name, provider.supportedChains, provider.paymasterEnabled가 포함되고, 미설정 시 provider: null이 반환된다
   4. 에이전트가 서비스 프로바이더로부터 받은 스코프 API 키를 직접 등록하여 가스 대납 설정을 완료할 수 있다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 325-01: TBD
-- [ ] 325-02: TBD
+- [ ] 325-01-PLAN.md -- PUT /v1/wallets/:id/provider endpoint with dual-auth (masterAuth + sessionAuth)
+- [ ] 325-02-PLAN.md -- Wallet detail/list response extension with provider status
 
 ### Phase 326: Admin UI + MCP + Connect-Info
 **Goal**: Admin UI에서 프로바이더를 시각적으로 관리하고, 에이전트가 MCP/connect-info로 프로바이더 상태를 인지할 수 있는 상태
@@ -171,9 +171,9 @@ Phases execute in numeric order: 324 -> 325 -> 326
 | 244-267 | v28.0-v28.8 | All | Complete | 2026-02-26 |
 | 268-316 | v29.0-v30.6 | All | Complete | 2026-03-04 |
 | 317-323 | v30.8 | 15/15 | Complete | 2026-03-04 |
-| 324 | 2/2 | Complete    | 2026-03-04 | - |
-| 325 | v30.9 | 0/0 | Not started | - |
+| 324 | v30.9 | 2/2 | Complete | 2026-03-05 |
+| 325 | v30.9 | 0/2 | Not started | - |
 | 326 | v30.9 | 0/0 | Not started | - |
 
 ---
-*Last updated: 2026-03-05 -- Phase 324 planned (2 plans in 2 waves).*
+*Last updated: 2026-03-05 -- Phase 325 planned (2 plans in 1 wave).*
