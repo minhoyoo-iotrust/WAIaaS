@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { CreatePolicyRequestSchema } from '../schemas/policy.schema.js';
 
 /**
- * Tests for all 12 PolicyType superRefine rules validation.
+ * Tests for all 13 PolicyType superRefine rules validation.
  *
  * Each PolicyType has a type-specific rules schema validated via
  * superRefine on CreatePolicyRequestSchema.
@@ -361,6 +361,119 @@ describe('CreatePolicyRequestSchema superRefine validation', () => {
         rules: {},
       });
       expect(result.success).toBe(false);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // REPUTATION_THRESHOLD (v30.8 ERC-8004)
+  // -------------------------------------------------------------------------
+
+  describe('REPUTATION_THRESHOLD', () => {
+    it('accepts valid rules with min_score and default tiers', () => {
+      const result = CreatePolicyRequestSchema.safeParse({
+        type: 'REPUTATION_THRESHOLD',
+        rules: {
+          min_score: 50,
+        },
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts valid rules with all fields', () => {
+      const result = CreatePolicyRequestSchema.safeParse({
+        type: 'REPUTATION_THRESHOLD',
+        rules: {
+          min_score: 75,
+          below_threshold_tier: 'DELAY',
+          unrated_tier: 'APPROVAL',
+          tag1: 'defi',
+          tag2: 'lending',
+          check_counterparty: true,
+        },
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects min_score > 100', () => {
+      const result = CreatePolicyRequestSchema.safeParse({
+        type: 'REPUTATION_THRESHOLD',
+        rules: {
+          min_score: 150,
+        },
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const paths = result.error.issues.map((i) => i.path.join('.'));
+        expect(paths.some((p) => p.includes('min_score'))).toBe(true);
+      }
+    });
+
+    it('rejects min_score < 0', () => {
+      const result = CreatePolicyRequestSchema.safeParse({
+        type: 'REPUTATION_THRESHOLD',
+        rules: {
+          min_score: -10,
+        },
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects missing min_score', () => {
+      const result = CreatePolicyRequestSchema.safeParse({
+        type: 'REPUTATION_THRESHOLD',
+        rules: {},
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const paths = result.error.issues.map((i) => i.path.join('.'));
+        expect(paths).toContain('rules.min_score');
+      }
+    });
+
+    it('rejects invalid below_threshold_tier value', () => {
+      const result = CreatePolicyRequestSchema.safeParse({
+        type: 'REPUTATION_THRESHOLD',
+        rules: {
+          min_score: 50,
+          below_threshold_tier: 'INVALID',
+        },
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects tag1 longer than 32 characters', () => {
+      const result = CreatePolicyRequestSchema.safeParse({
+        type: 'REPUTATION_THRESHOLD',
+        rules: {
+          min_score: 50,
+          tag1: 'a'.repeat(33),
+        },
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('defaults below_threshold_tier to APPROVAL', () => {
+      const result = CreatePolicyRequestSchema.safeParse({
+        type: 'REPUTATION_THRESHOLD',
+        rules: { min_score: 50 },
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts min_score of 0 (no threshold)', () => {
+      const result = CreatePolicyRequestSchema.safeParse({
+        type: 'REPUTATION_THRESHOLD',
+        rules: { min_score: 0 },
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts min_score of 100 (maximum threshold)', () => {
+      const result = CreatePolicyRequestSchema.safeParse({
+        type: 'REPUTATION_THRESHOLD',
+        rules: { min_score: 100 },
+      });
+      expect(result.success).toBe(true);
     });
   });
 

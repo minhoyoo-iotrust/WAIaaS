@@ -181,6 +181,7 @@ export const NOTIFICATION_CATEGORIES = [
   'owner',
   'system',
   'defi_monitoring',
+  'identity',
 ] as const;
 export type NotificationCategory = (typeof NOTIFICATION_CATEGORIES)[number];
 
@@ -234,6 +235,11 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, NotificationCateg
   MARGIN_WARNING: 'defi_monitoring',
   LIQUIDATION_IMMINENT: 'security_alert',
   SESSION_IDLE: 'session',
+  AGENT_REGISTERED: 'identity',
+  AGENT_WALLET_LINKED: 'identity',
+  AGENT_WALLET_UNLINKED: 'identity',
+  REPUTATION_FEEDBACK_RECEIVED: 'identity',
+  REPUTATION_THRESHOLD_TRIGGERED: 'policy',
 };
 
 // ---------------------------------------------------------------------------
@@ -290,6 +296,11 @@ export const EVENT_DESCRIPTIONS: Record<NotificationEventType, string> = {
   MARGIN_WARNING: 'Margin ratio below safe level',
   LIQUIDATION_IMMINENT: 'Position at imminent liquidation risk',
   SESSION_IDLE: 'Session idle for extended period',
+  AGENT_REGISTERED: 'Agent registered on ERC-8004 Identity Registry',
+  AGENT_WALLET_LINKED: 'Agent wallet linked via EIP-712 signature',
+  AGENT_WALLET_UNLINKED: 'Agent wallet unlinked',
+  REPUTATION_FEEDBACK_RECEIVED: 'Reputation feedback received from another agent',
+  REPUTATION_THRESHOLD_TRIGGERED: 'Reputation threshold policy triggered tier escalation',
 };
 
 // ---------------------------------------------------------------------------

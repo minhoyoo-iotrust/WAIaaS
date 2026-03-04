@@ -432,7 +432,7 @@ describe('SIGNING domain error codes', () => {
 });
 
 describe('EVENT_CATEGORY_MAP', () => {
-  it('covers all 26 NotificationEventType values', () => {
+  it('covers all NotificationEventType values', () => {
     for (const eventType of NOTIFICATION_EVENT_TYPES) {
       expect(EVENT_CATEGORY_MAP[eventType]).toBeDefined();
       expect(NOTIFICATION_CATEGORIES).toContain(EVENT_CATEGORY_MAP[eventType]);
@@ -455,9 +455,11 @@ describe('EVENT_CATEGORY_MAP', () => {
     expect(EVENT_CATEGORY_MAP.LIQUIDATION_IMMINENT).toBe('security_alert');
   });
 
-  it('NOTIFICATION_CATEGORIES has 7 values including defi_monitoring', () => {
-    expect(NOTIFICATION_CATEGORIES).toHaveLength(7);
+  it('NOTIFICATION_CATEGORIES has 8 values including defi_monitoring and identity', () => {
+    expect(NOTIFICATION_CATEGORIES).toHaveLength(8);
     expect(NOTIFICATION_CATEGORIES).toContain('defi_monitoring');
+    // v30.8: ERC-8004 identity category
+    expect(NOTIFICATION_CATEGORIES).toContain('identity');
   });
 });
 

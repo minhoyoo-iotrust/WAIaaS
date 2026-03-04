@@ -202,8 +202,25 @@ export const X402AllowedDomainsRulesSchema = z.object({
 });
 export type X402AllowedDomainsRules = z.infer<typeof X402AllowedDomainsRulesSchema>;
 
+/** REPUTATION_THRESHOLD: ERC-8004 reputation-based security tier override. */
+export const ReputationThresholdRulesSchema = z.object({
+  /** Minimum reputation score (0-100 normalized). Below this triggers below_threshold_tier */
+  min_score: z.number().min(0).max(100),
+  /** Security tier to apply when score is below min_score */
+  below_threshold_tier: PolicyTierEnum.default('APPROVAL'),
+  /** Security tier to apply when agent has no reputation (new agent) */
+  unrated_tier: PolicyTierEnum.default('APPROVAL'),
+  /** Optional tag1 filter for reputation lookup */
+  tag1: z.string().max(32).optional(),
+  /** Optional tag2 filter for reputation lookup */
+  tag2: z.string().max(32).optional(),
+  /** Whether to also check counterparty (to address) agent reputation */
+  check_counterparty: z.boolean().default(false),
+});
+export type ReputationThresholdRules = z.infer<typeof ReputationThresholdRulesSchema>;
+
 // Map of policy types to their rules schemas for superRefine lookup.
-// All 12 PolicyTypes are now covered.
+// All 13 PolicyTypes with dedicated rules schemas are covered.
 const POLICY_RULES_SCHEMAS: Record<string, z.ZodTypeAny> = {
   ALLOWED_TOKENS: AllowedTokensRulesSchema,
   CONTRACT_WHITELIST: ContractWhitelistRulesSchema,
@@ -217,13 +234,14 @@ const POLICY_RULES_SCHEMAS: Record<string, z.ZodTypeAny> = {
   RATE_LIMIT: RateLimitRulesSchema,
   TIME_RESTRICTION: TimeRestrictionRulesSchema,
   X402_ALLOWED_DOMAINS: X402AllowedDomainsRulesSchema,
+  REPUTATION_THRESHOLD: ReputationThresholdRulesSchema,
 };
 
 /**
  * CreatePolicyRequestSchema - body for POST /v1/policies.
  *
  * walletId is optional (null = global policy).
- * rules is validated per-type via superRefine for all 12 PolicyTypes.
+ * rules is validated per-type via superRefine for all 13 PolicyTypes with dedicated schemas.
  */
 export const CreatePolicyRequestSchema = z.object({
   walletId: z.string().uuid().optional(),
@@ -234,7 +252,7 @@ export const CreatePolicyRequestSchema = z.object({
   network: NetworkTypeEnum.optional(),
 }).superRefine((data, ctx) => {
   const schema = POLICY_RULES_SCHEMAS[data.type];
-  if (!schema) return; // safety fallback (all 12 types are now registered)
+  if (!schema) return; // safety fallback (types without dedicated rules schema)
   const result = schema.safeParse(data.rules);
   if (!result.success) {
     for (const issue of result.error.issues) {
