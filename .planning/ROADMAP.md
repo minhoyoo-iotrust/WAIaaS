@@ -190,8 +190,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 321-01: EIP-712 typed data 승인 흐름 + ApprovalWorkflow approval_type 라우팅
-- [ ] 321-02: set_agent_wallet + unset_agent_wallet 액션 완성
+- [ ] 321-01-PLAN.md -- EIP-712 typed data helper + ApprovalWorkflow approval_type 라우팅 + WcSigningBridge eth_signTypedData_v4 + approve endpoint EIP-712 검증 + DB v40
+- [ ] 321-02-PLAN.md -- set_agent_wallet EIP-712 통합 + pipeline calldata 재인코딩 + unset_agent_wallet SIWE APPROVAL
 
 ### Phase 322: Admin UI + MCP + SDK
 **Goal**: Admin UI에서 ERC-8004 에이전트 등록/관리/평판 대시보드를 사용할 수 있고, MCP 11개 도구와 SDK 11개 메서드로 프로그래밍 접근이 가능한 상태
@@ -248,4 +248,4 @@ Phases execute in numeric order: 317 -> 318 -> 319 -> 320 -> 321 -> 322 -> 323
 | 323. Skills + Tests | v30.8 | 0/2 | Not started | - |
 
 ---
-*Last updated: 2026-03-04 -- Phase 320 completed (2 plans, 4 tasks, 25 tests).*
+*Last updated: 2026-03-04 -- Phase 321 plans created (2 plans, 4 tasks).*
