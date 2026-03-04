@@ -11,6 +11,7 @@ import { ApprovedSpendersForm } from './approved-spenders-form';
 import { TimeRestrictionForm } from './time-restriction-form';
 import { AllowedNetworksForm } from './allowed-networks-form';
 import { X402AllowedDomainsForm } from './x402-allowed-domains-form';
+import { ReputationThresholdForm } from './reputation-threshold-form';
 
 export interface PolicyFormProps {
   rules: Record<string, unknown>;
@@ -22,10 +23,10 @@ export interface PolicyFormProps {
 /**
  * PolicyFormRouter - routes to type-specific policy form components.
  *
- * Supports all 12 core types with dedicated forms:
+ * Supports all 13 core types with dedicated forms:
  * SPENDING_LIMIT, WHITELIST, RATE_LIMIT, APPROVE_AMOUNT_LIMIT, APPROVE_TIER_OVERRIDE,
  * ALLOWED_TOKENS, CONTRACT_WHITELIST, METHOD_WHITELIST, APPROVED_SPENDERS,
- * TIME_RESTRICTION, ALLOWED_NETWORKS, X402_ALLOWED_DOMAINS.
+ * TIME_RESTRICTION, ALLOWED_NETWORKS, X402_ALLOWED_DOMAINS, REPUTATION_THRESHOLD.
  */
 export function PolicyFormRouter({
   type,
@@ -59,6 +60,8 @@ export function PolicyFormRouter({
       return <AllowedNetworksForm rules={rules} onChange={onChange} errors={errors} />;
     case 'X402_ALLOWED_DOMAINS':
       return <X402AllowedDomainsForm rules={rules} onChange={onChange} errors={errors} />;
+    case 'REPUTATION_THRESHOLD':
+      return <ReputationThresholdForm rules={rules} onChange={onChange} errors={errors} />;
     default:
       return (
         <p class="policy-form-placeholder">

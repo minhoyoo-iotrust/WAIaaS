@@ -11,7 +11,7 @@ import { useSignal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
 import { apiGet, apiPost, ApiError } from '../api/client';
 import { API } from '../api/endpoints';
-import { FormField, Button, Badge } from '../components/form';
+import { Button, Badge } from '../components/form';
 import { Modal } from '../components/modal';
 import { CopyButton } from '../components/copy-button';
 import { EmptyState } from '../components/empty-state';
@@ -460,7 +460,8 @@ export default function Erc8004Page() {
       {/* Registration File Tab */}
       {!loading.value && activeTab.value === 'registration' && (
         <div>
-          <FormField label="Select Wallet">
+          <div class="form-field">
+            <label>Select Wallet</label>
             <select
               value={regFileWalletId.value}
               onChange={(e) => {
@@ -474,7 +475,7 @@ export default function Erc8004Page() {
                 <option key={w.id} value={w.id}>{w.name} ({w.id.slice(0, 8)}...)</option>
               ))}
             </select>
-          </FormField>
+          </div>
 
           {regFileWalletId.value && (
             <div style={{ marginTop: 'var(--space-3)' }}>
@@ -537,35 +538,38 @@ export default function Erc8004Page() {
 
           {/* Tag Filter */}
           <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
-            <FormField label="Tag1 Filter">
+            <div class="form-field">
+              <label>Tag1 Filter</label>
               <input
                 type="text"
                 value={repTag1.value}
                 onInput={(e) => { repTag1.value = (e.target as HTMLInputElement).value; }}
                 placeholder="e.g. reliability"
               />
-            </FormField>
-            <FormField label="Tag2 Filter">
+            </div>
+            <div class="form-field">
+              <label>Tag2 Filter</label>
               <input
                 type="text"
                 value={repTag2.value}
                 onInput={(e) => { repTag2.value = (e.target as HTMLInputElement).value; }}
                 placeholder="e.g. speed"
               />
-            </FormField>
+            </div>
           </div>
 
           {/* External Agent Lookup */}
           <h3>External Agent Lookup</h3>
           <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'flex-end' }}>
-            <FormField label="Agent ID">
+            <div class="form-field">
+              <label>Agent ID</label>
               <input
                 type="text"
                 value={lookupAgentId.value}
                 onInput={(e) => { lookupAgentId.value = (e.target as HTMLInputElement).value; }}
                 placeholder="Enter agent ID"
               />
-            </FormField>
+            </div>
             <Button variant="primary" onClick={handleLookup} loading={lookupLoading.value}>
               Query
             </Button>
@@ -596,7 +600,8 @@ export default function Erc8004Page() {
         loading={registerSaving.value}
         confirmDisabled={!registerWalletId.value || !registerName.value}
       >
-        <FormField label="EVM Wallet">
+        <div class="form-field">
+          <label>EVM Wallet</label>
           <select
             value={registerWalletId.value}
             onChange={(e) => { registerWalletId.value = (e.target as HTMLSelectElement).value; }}
@@ -606,23 +611,25 @@ export default function Erc8004Page() {
               <option key={w.id} value={w.id}>{w.name} ({w.id.slice(0, 8)}...)</option>
             ))}
           </select>
-        </FormField>
-        <FormField label="Name">
+        </div>
+        <div class="form-field">
+          <label>Name</label>
           <input
             type="text"
             value={registerName.value}
             onInput={(e) => { registerName.value = (e.target as HTMLInputElement).value; }}
             placeholder="Agent name"
           />
-        </FormField>
-        <FormField label="Description (optional)">
+        </div>
+        <div class="form-field">
+          <label>Description (optional)</label>
           <input
             type="text"
             value={registerDescription.value}
             onInput={(e) => { registerDescription.value = (e.target as HTMLInputElement).value; }}
             placeholder="Description"
           />
-        </FormField>
+        </div>
       </Modal>
     </div>
   );
