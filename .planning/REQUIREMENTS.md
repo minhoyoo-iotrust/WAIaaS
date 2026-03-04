@@ -69,39 +69,39 @@ Requirements for Smart Account DX 개선. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PROV-01 | — | Pending |
-| PROV-02 | — | Pending |
-| PROV-03 | — | Pending |
-| PROV-04 | — | Pending |
-| PROV-05 | — | Pending |
-| PROV-06 | — | Pending |
-| PROV-07 | — | Pending |
-| PROV-08 | — | Pending |
-| PROV-09 | — | Pending |
-| PROV-10 | — | Pending |
-| CMAP-01 | — | Pending |
-| CMAP-02 | — | Pending |
-| CMAP-03 | — | Pending |
-| GUID-01 | — | Pending |
-| GUID-02 | — | Pending |
-| GUID-03 | — | Pending |
-| ASSR-01 | — | Pending |
-| ASSR-02 | — | Pending |
-| ASSR-03 | — | Pending |
-| ASSR-04 | — | Pending |
-| STAT-01 | — | Pending |
-| STAT-02 | — | Pending |
-| STAT-03 | — | Pending |
-| STAT-04 | — | Pending |
-| STAT-05 | — | Pending |
-| DFLT-01 | — | Pending |
-| DFLT-02 | — | Pending |
+| PROV-01 | Phase 324 | Pending |
+| PROV-02 | Phase 324 | Pending |
+| PROV-03 | Phase 324 | Pending |
+| PROV-04 | Phase 324 | Pending |
+| PROV-05 | Phase 324 | Pending |
+| PROV-06 | Phase 326 | Pending |
+| PROV-07 | Phase 326 | Pending |
+| PROV-08 | Phase 325 | Pending |
+| PROV-09 | Phase 324 | Pending |
+| PROV-10 | Phase 324 | Pending |
+| CMAP-01 | Phase 324 | Pending |
+| CMAP-02 | Phase 324 | Pending |
+| CMAP-03 | Phase 324 | Pending |
+| GUID-01 | Phase 326 | Pending |
+| GUID-02 | Phase 326 | Pending |
+| GUID-03 | Phase 326 | Pending |
+| ASSR-01 | Phase 325 | Pending |
+| ASSR-02 | Phase 325 | Pending |
+| ASSR-03 | Phase 325 | Pending |
+| ASSR-04 | Phase 325 | Pending |
+| STAT-01 | Phase 325 | Pending |
+| STAT-02 | Phase 325 | Pending |
+| STAT-03 | Phase 325 | Pending |
+| STAT-04 | Phase 326 | Pending |
+| STAT-05 | Phase 326 | Pending |
+| DFLT-01 | Phase 324 | Pending |
+| DFLT-02 | Phase 324 | Pending |
 
 **Coverage:**
 - v30.9 requirements: 27 total
-- Mapped to phases: 0
-- Unmapped: 27 ⚠️
+- Mapped to phases: 27
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-04*
-*Last updated: 2026-03-04 after initial definition*
+*Last updated: 2026-03-04 after roadmap creation*

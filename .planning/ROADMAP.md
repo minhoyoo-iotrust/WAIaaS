@@ -40,6 +40,7 @@
 - ✅ **v30.2 운영 기능 확장 구현** -- Phases 309-313.1 (shipped 2026-03-04)
 - ✅ **v30.6 ERC-4337 Account Abstraction 지원** -- Phases 314-316 (shipped 2026-03-04)
 - ✅ **v30.8 ERC-8004 Trustless Agents 지원** -- Phases 317-323 (shipped 2026-03-04)
+- 🚧 **v30.9 Smart Account DX 개선** -- Phases 324-326 (in progress)
 
 ## Phases
 
@@ -100,7 +101,66 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v30.8-ROADMAP.md` for full 
 
 </details>
 
+### v30.9 Smart Account DX 개선 (In Progress)
+
+**Milestone Goal:** Smart Account 설정을 글로벌 config에서 지갑별 프로바이더 모델로 전환하여, 프로바이더 선택 + API 키 입력만으로 번들러/페이마스터가 자동 구성되고, 에이전트가 셀프서비스로 프로바이더를 등록/조회할 수 있는 상태.
+
+- [ ] **Phase 324: DB + Core Provider Model** - 지갑별 프로바이더 스키마, 리졸버, 체인 매핑, 글로벌 키 제거, AA 기본 활성화
+- [ ] **Phase 325: REST API + Agent Self-Service** - 프로바이더 CRUD 엔드포인트, 에이전트 셀프 등록, 지갑 응답 확장
+- [ ] **Phase 326: Admin UI + MCP + Connect-Info** - 지갑 폼 프로바이더 필드, API 키 안내 링크, connect-info 프롬프트, MCP 도구
+
+## Phase Details
+
+### Phase 324: DB + Core Provider Model
+**Goal**: Smart Account 지갑이 자체 프로바이더 설정을 보유하고, 프로바이더+API키로 번들러/페이마스터 URL이 자동 조합되는 상태
+**Depends on**: Nothing (first phase of v30.9)
+**Requirements**: PROV-01, PROV-02, PROV-03, PROV-04, PROV-05, PROV-09, PROV-10, CMAP-01, CMAP-02, CMAP-03, DFLT-01, DFLT-02
+**Success Criteria** (what must be TRUE):
+  1. Smart Account 지갑 생성 시 프로바이더(pimlico/alchemy/custom) + API 키를 설정할 수 있고, 미설정 시 400 에러가 반환된다
+  2. 프리셋 프로바이더 선택 시 API 키만으로 번들러 URL과 페이마스터 URL이 자동 조합되고, custom 선택 시 URL을 직접 입력할 수 있다
+  3. 프로바이더가 지원하지 않는 네트워크에서 트랜잭션 시도 시 프로바이더명과 미지원 네트워크를 명시한 400 에러가 반환된다
+  4. 기존 글로벌 설정 23개 키가 제거되고, EOA/Solana 지갑은 프로바이더 설정 없이 기존 동작을 유지한다
+  5. smart_account.enabled 기본값이 true이며, API 키는 AES-256-GCM으로 암호화 저장된다
+**Plans**: TBD
+
+Plans:
+- [ ] 324-01: TBD
+- [ ] 324-02: TBD
+
+### Phase 325: REST API + Agent Self-Service
+**Goal**: 운영자가 REST API로 프로바이더를 관리하고, 에이전트가 sessionAuth로 자기 지갑의 프로바이더를 직접 등록/조회할 수 있는 상태
+**Depends on**: Phase 324
+**Requirements**: PROV-08, ASSR-01, ASSR-02, ASSR-03, ASSR-04, STAT-01, STAT-02, STAT-03
+**Success Criteria** (what must be TRUE):
+  1. masterAuth로 PUT /v1/wallets/:id/provider 호출하여 지갑별 프로바이더 설정을 변경할 수 있다
+  2. 에이전트가 sessionAuth로 PUT /v1/wallets/:id/provider 호출하여 자기 지갑의 프로바이더를 설정할 수 있고, 다른 지갑 설정 시 403이 반환된다
+  3. GET /v1/wallets/:id 응답에 provider.name, provider.supportedChains, provider.paymasterEnabled가 포함되고, 미설정 시 provider: null이 반환된다
+  4. 에이전트가 서비스 프로바이더로부터 받은 스코프 API 키를 직접 등록하여 가스 대납 설정을 완료할 수 있다
+**Plans**: TBD
+
+Plans:
+- [ ] 325-01: TBD
+- [ ] 325-02: TBD
+
+### Phase 326: Admin UI + MCP + Connect-Info
+**Goal**: Admin UI에서 프로바이더를 시각적으로 관리하고, 에이전트가 MCP/connect-info로 프로바이더 상태를 인지할 수 있는 상태
+**Depends on**: Phase 325
+**Requirements**: PROV-06, PROV-07, GUID-01, GUID-02, GUID-03, STAT-04, STAT-05
+**Success Criteria** (what must be TRUE):
+  1. Admin UI 지갑 생성 폼에서 accountType: smart 선택 시에만 프로바이더/API키 필드가 노출되고, 프로바이더 변경 시 API 키 발급 대시보드 링크가 동적으로 전환된다
+  2. Admin UI 지갑 상세 페이지에서 Smart Account 지갑의 프로바이더 설정을 변경할 수 있다
+  3. connect-info 프롬프트에 프로바이더 상태(이름, 지원 체인, 페이마스터 활성 여부)가 포함되어 에이전트가 가스 대납 가능 여부를 인지할 수 있다
+  4. MCP 도구에서 프로바이더 상태를 조회할 수 있다
+**Plans**: TBD
+
+Plans:
+- [ ] 326-01: TBD
+- [ ] 326-02: TBD
+
 ## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 324 -> 325 -> 326
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -111,6 +171,9 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v30.8-ROADMAP.md` for full 
 | 244-267 | v28.0-v28.8 | All | Complete | 2026-02-26 |
 | 268-316 | v29.0-v30.6 | All | Complete | 2026-03-04 |
 | 317-323 | v30.8 | 15/15 | Complete | 2026-03-04 |
+| 324 | v30.9 | 0/0 | Not started | - |
+| 325 | v30.9 | 0/0 | Not started | - |
+| 326 | v30.9 | 0/0 | Not started | - |
 
 ---
-*Last updated: 2026-03-04 -- v30.8 ERC-8004 Trustless Agents 지원 milestone shipped.*
+*Last updated: 2026-03-04 -- v30.9 Smart Account DX 개선 roadmap created.*
