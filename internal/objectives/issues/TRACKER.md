@@ -274,9 +274,9 @@
 
 ## Summary
 
-- **OPEN:** 2
+- **OPEN:** 0
 - **FIXED:** 246
-- **RESOLVED:** 0
+- **RESOLVED:** 2
 - **VERIFIED:** 0
 - **WONTFIX:** 1
 - **Total:** 249

@@ -1023,6 +1023,9 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
         amountUsd: transactions.amountUsd,
         network: transactions.network,
         txHash: transactions.txHash,
+        chain: transactions.chain,
+        tokenMint: transactions.tokenMint,
+        contractAddress: transactions.contractAddress,
         createdAt: transactions.createdAt,
       })
       .from(transactions)
@@ -1031,7 +1034,9 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
       .limit(5)
       .all();
 
-    const recentTransactions = recentTxRows.map((tx) => ({
+    const recentTransactions = recentTxRows.map((tx) => {
+      const tokenAddr = tx.tokenMint ?? tx.contractAddress ?? null;
+      return {
       id: tx.id,
       walletId: tx.walletId,
       walletName: tx.walletName ?? null,
@@ -1039,13 +1044,15 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
       status: tx.status,
       toAddress: tx.toAddress ?? null,
       amount: tx.amount ?? null,
+      formattedAmount: formatTxAmount(tx.amount ?? null, tx.chain, tx.network ?? null, tokenAddr, deps.db),
       amountUsd: tx.amountUsd ?? null,
       network: tx.network ?? null,
       txHash: tx.txHash ?? null,
       createdAt: tx.createdAt instanceof Date
         ? Math.floor(tx.createdAt.getTime() / 1000)
         : (typeof tx.createdAt === 'number' ? tx.createdAt : null),
-    }));
+    };
+    });
 
     const ksState = deps.killSwitchService
       ? deps.killSwitchService.getState()
