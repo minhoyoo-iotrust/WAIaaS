@@ -74,6 +74,7 @@ v30.6 ERC-4337 Account Abstraction 지원 shipped (2026-03-04). 12-패키지 모
 - ✅ v30.0 운영 기능 확장 설계 — shipped 2026-03-03 (5 phases, 11 plans, 25 requirements, 40+ 설계 결정)
 - ✅ v30.2 운영 기능 확장 구현 — shipped 2026-03-04 (6 phases, 14 plans, 30 requirements, ~246,245 LOC TS)
 - ✅ v30.6 ERC-4337 Account Abstraction 지원 — shipped 2026-03-04 (3 phases, 10 plans, 36 requirements, ~281,265 LOC TS)
+- ◆ **v30.8 ERC-8004 Trustless Agents 지원** — in progress
 - 기본 거부 정책 토글 3개 (default_deny_tokens/contracts/spenders)
 - IForexRateService CoinGecko tether 기반 43개 법정 통화 환산 + display_currency
 - 누적 USD 지출 한도 (CUMULATIVE_SPENDING_DAILY/MONTHLY 롤링 윈도우, APPROVAL 격상, 80% 경고)

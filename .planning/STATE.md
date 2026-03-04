@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
-milestone: v30.6
-milestone_name: ERC-4337 Account Abstraction 지원
-status: shipped
+milestone: v30.8
+milestone_name: ERC-8004 Trustless Agents 지원
+status: active
 last_updated: "2026-03-04"
 progress:
-  total_phases: 182
-  completed_phases: 182
-  total_plans: 395
-  completed_plans: 395
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
@@ -18,16 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-04)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v30.6 shipped. Planning next milestone.
+**Current focus:** v30.8 ERC-8004 Trustless Agents 지원
 
 ## Current Position
 
-Phase: 316 of 316 complete
-Plan: All complete
-Status: Milestone v30.6 SHIPPED
-Last activity: 2026-03-04 -- Milestone v30.6 archived
-
-Progress: [██████████] 100% (All phases)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-04 — Milestone v30.8 started
 
 ## Performance Metrics
 
@@ -46,5 +44,5 @@ Progress: [██████████] 100% (All phases)
 ## Session Continuity
 
 Last session: 2026-03-04
-Stopped at: Milestone v30.6 archived. Ready for next milestone.
+Stopped at: Milestone v30.8 started. Defining requirements.
 Resume file: None
