@@ -109,7 +109,7 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v30.6-ROADMAP.md` for full 
 - [x] **Phase 318: ActionProvider + Registry Client** - Erc8004ActionProvider 8 액션, RegistryClient viem 래퍼, 멀티체인 레지스트리 주소 (completed 2026-03-04)
 - [x] **Phase 319: Read-Only Routes + Registration File** - REST API 4 GET 엔드포인트, 등록 파일 자동 생성, connect-info erc8004 확장 (completed 2026-03-04)
 - [x] **Phase 320: Reputation Policy Engine + Cache** - REPUTATION_THRESHOLD 정책 평가, ReputationCacheService, 피드백 액션 연동 (completed 2026-03-04)
-- [ ] **Phase 321: EIP-712 Approval + Wallet Linking** - setAgentWallet EIP-712 서명, ApprovalWorkflow 확장, WalletConnect eth_signTypedData_v4
+- [x] **Phase 321: EIP-712 Approval + Wallet Linking** - setAgentWallet EIP-712 서명, ApprovalWorkflow 확장, WalletConnect eth_signTypedData_v4 (completed 2026-03-04)
 - [ ] **Phase 322: Admin UI + MCP + SDK** - ERC-8004 관리 페이지, 평판 대시보드, MCP 11 도구, SDK 11 메서드
 - [ ] **Phase 323: Skills + Tests** - erc8004.skill.md 생성, 기존 스킬 파일 업데이트, E2E 테스트 55+건
 
@@ -243,7 +243,7 @@ Phases execute in numeric order: 317 -> 318 -> 319 -> 320 -> 321 -> 322 -> 323
 | 318. ActionProvider + Registry Client | 2/2 | Complete    | 2026-03-04 | 2026-03-04 |
 | 319. Read-Only Routes + Registration File | v30.8 | Complete    | 2026-03-04 | 2026-03-04 |
 | 320. Reputation Policy Engine + Cache | v30.8 | Complete    | 2026-03-04 | 2026-03-04 |
-| 321. EIP-712 Approval + Wallet Linking | v30.8 | 2/2 | Complete | 2026-03-04 |
+| 321. EIP-712 Approval + Wallet Linking | v30.8 | Complete    | 2026-03-04 | 2026-03-04 |
 | 322. Admin UI + MCP + SDK | v30.8 | 0/3 | Not started | - |
 | 323. Skills + Tests | v30.8 | 0/2 | Not started | - |
 

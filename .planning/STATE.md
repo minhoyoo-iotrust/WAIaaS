@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v30.8
 milestone_name: ERC-8004 Trustless Agents 지원
 status: unknown
-last_updated: "2026-03-04T10:12:17.000Z"
+last_updated: "2026-03-04T10:15:01.570Z"
 progress:
-  total_phases: 185
+  total_phases: 186
   completed_phases: 180
-  total_plans: 396
+  total_plans: 398
   completed_plans: 392
 ---
 
