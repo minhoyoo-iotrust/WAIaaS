@@ -18,6 +18,7 @@ export const POLICY_TYPES = [
   'PERP_MAX_LEVERAGE',
   'PERP_MAX_POSITION_USD',
   'PERP_ALLOWED_MARKETS',
+  'REPUTATION_THRESHOLD',
 ] as const;
 export type PolicyType = (typeof POLICY_TYPES)[number];
 export const PolicyTypeEnum = z.enum(POLICY_TYPES);
