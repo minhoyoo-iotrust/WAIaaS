@@ -151,11 +151,11 @@ Plans:
   2. Admin UI 지갑 상세 페이지에서 Smart Account 지갑의 프로바이더 설정을 변경할 수 있다
   3. connect-info 프롬프트에 프로바이더 상태(이름, 지원 체인, 페이마스터 활성 여부)가 포함되어 에이전트가 가스 대납 가능 여부를 인지할 수 있다
   4. MCP 도구에서 프로바이더 상태를 조회할 수 있다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 326-01: TBD
-- [ ] 326-02: TBD
+- [ ] 326-01-PLAN.md -- Admin UI provider fields in create form + detail page management
+- [ ] 326-02-PLAN.md -- connect-info provider prompt + MCP get_provider_status tool
 
 ## Progress
 
@@ -172,8 +172,8 @@ Phases execute in numeric order: 324 -> 325 -> 326
 | 268-316 | v29.0-v30.6 | All | Complete | 2026-03-04 |
 | 317-323 | v30.8 | 15/15 | Complete | 2026-03-04 |
 | 324 | v30.9 | 2/2 | Complete | 2026-03-05 |
-| 325 | v30.9 | Complete    | 2026-03-04 | 2026-03-05 |
-| 326 | v30.9 | 0/0 | Not started | - |
+| 325 | v30.9 | 2/2 | Complete | 2026-03-05 |
+| 326 | v30.9 | 0/2 | Not started | - |
 
 ---
-*Last updated: 2026-03-05 -- Phase 325 planned (2 plans in 1 wave).*
+*Last updated: 2026-03-05 -- Phase 326 planned (2 plans in 1 wave).*
