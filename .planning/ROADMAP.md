@@ -105,7 +105,7 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v30.8-ROADMAP.md` for full 
 
 **Milestone Goal:** Smart Account 설정을 글로벌 config에서 지갑별 프로바이더 모델로 전환하여, 프로바이더 선택 + API 키 입력만으로 번들러/페이마스터가 자동 구성되고, 에이전트가 셀프서비스로 프로바이더를 등록/조회할 수 있는 상태.
 
-- [ ] **Phase 324: DB + Core Provider Model** - 지갑별 프로바이더 스키마, 리졸버, 체인 매핑, 글로벌 키 제거, AA 기본 활성화
+- [x] **Phase 324: DB + Core Provider Model** - 지갑별 프로바이더 스키마, 리졸버, 체인 매핑, 글로벌 키 제거, AA 기본 활성화 (completed 2026-03-04)
 - [ ] **Phase 325: REST API + Agent Self-Service** - 프로바이더 CRUD 엔드포인트, 에이전트 셀프 등록, 지갑 응답 확장
 - [ ] **Phase 326: Admin UI + MCP + Connect-Info** - 지갑 폼 프로바이더 필드, API 키 안내 링크, connect-info 프롬프트, MCP 도구
 
@@ -171,7 +171,7 @@ Phases execute in numeric order: 324 -> 325 -> 326
 | 244-267 | v28.0-v28.8 | All | Complete | 2026-02-26 |
 | 268-316 | v29.0-v30.6 | All | Complete | 2026-03-04 |
 | 317-323 | v30.8 | 15/15 | Complete | 2026-03-04 |
-| 324 | v30.9 | 0/2 | Planning | - |
+| 324 | 2/2 | Complete   | 2026-03-04 | - |
 | 325 | v30.9 | 0/0 | Not started | - |
 | 326 | v30.9 | 0/0 | Not started | - |
 

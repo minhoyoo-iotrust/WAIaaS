@@ -3,12 +3,15 @@ gsd_state_version: 1.0
 milestone: v30.9
 milestone_name: Smart Account DX 개선
 status: active
-last_updated: "2026-03-04T13:00:00.000Z"
+stopped_at: "Completed 324-02-PLAN.md (Phase 324 done, 2/2 plans complete)"
+last_updated: "2026-03-05T00:25:00.000Z"
+last_activity: 2026-03-05 -- Phase 324 complete (4 tasks, 4 commits)
 progress:
   total_phases: 3
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  completed_phases: 1
+  total_plans: 4
+  completed_plans: 4
+  percent: 33
 ---
 
 # Project State
@@ -18,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-04)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v30.9 Smart Account DX 개선 -- Phase 324 ready to plan
+**Current focus:** v30.9 Smart Account DX 개선 -- Phase 324 complete, ready for Phase 325
 
 ## Current Position
 
-Phase: 324 of 326 (DB + Core Provider Model)
-Plan: --
+Phase: 325 of 326 (Admin UI + API Surface)
+Plan: 1 of N
 Status: Ready to plan
-Last activity: 2026-03-04 -- Roadmap created (3 phases, 27 requirements)
+Last activity: 2026-03-05 -- Phase 324 complete (DB + Core Provider Model)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
@@ -37,7 +40,11 @@ Progress: [░░░░░░░░░░] 0%
 
 ### Decisions
 
-(New milestone -- no decisions yet)
+- D1: Per-wallet provider model: each smart account wallet stores its own provider + encrypted API key (not global settings)
+- D2: HKDF info string 'aa-provider-key-encryption' for separate subkey from settings-crypto
+- D3: Pimlico/Alchemy use unified endpoint (bundler URL = paymaster URL)
+- D4: smart_account.enabled default changed to 'true' (AA is first-class)
+- D5: 23 global settings keys removed (clean break, not deprecated)
 
 ### Blockers/Concerns
 
@@ -45,6 +52,6 @@ Progress: [░░░░░░░░░░] 0%
 
 ## Session Continuity
 
-Last session: 2026-03-04
-Stopped at: Roadmap created for v30.9 (3 phases: 324-326). Ready to plan Phase 324.
+Last session: 2026-03-05
+Stopped at: Completed 324-02-PLAN.md (Phase 324 done). Ready for Phase 325 planning.
 Resume file: None

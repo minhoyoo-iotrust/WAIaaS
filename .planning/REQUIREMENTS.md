@@ -13,12 +13,12 @@ Requirements for Smart Account DX 개선. Each maps to roadmap phases.
 - [ ] **PROV-02**: 프로바이더 + API 키 → 번들러 URL + 페이마스터 URL 자동 조합
 - [ ] **PROV-03**: custom 선택 시 번들러 URL + 페이마스터 URL 직접 입력
 - [ ] **PROV-04**: API 키 AES-256-GCM 암호화 저장 (HKDF 기반 경량 KDF)
-- [ ] **PROV-05**: Smart Account 지갑 생성 시 프로바이더 설정 필수 (미설정 시 400 에러)
+- [x] **PROV-05**: Smart Account 지갑 생성 시 프로바이더 설정 필수 (미설정 시 400 에러)
 - [ ] **PROV-06**: Admin UI 지갑 생성 폼에서 accountType: smart 선택 시에만 프로바이더 필드 노출
 - [ ] **PROV-07**: Admin UI 지갑 상세 페이지에서 프로바이더 설정 변경 가능
 - [ ] **PROV-08**: REST API로 지갑별 프로바이더 설정 변경 가능 (masterAuth)
-- [ ] **PROV-09**: 기존 글로벌 설정 23개 키 제거 (smart_account.entry_point 유지)
-- [ ] **PROV-10**: EOA/Solana 지갑은 프로바이더 설정 불필요 — 기존 동작 유지
+- [x] **PROV-09**: 기존 글로벌 설정 23개 키 제거 (smart_account.entry_point 유지)
+- [x] **PROV-10**: EOA/Solana 지갑은 프로바이더 설정 불필요 — 기존 동작 유지
 
 ### Chain Mapping (프로바이더별 체인 매핑)
 
@@ -49,8 +49,8 @@ Requirements for Smart Account DX 개선. Each maps to roadmap phases.
 
 ### Default (AA 기본 활성화)
 
-- [ ] **DFLT-01**: smart_account.enabled 기본값 false → true 변경
-- [ ] **DFLT-02**: 프로바이더 미설정 시 지갑 생성 400 에러 가드 기존 유지
+- [x] **DFLT-01**: smart_account.enabled 기본값 false → true 변경
+- [x] **DFLT-02**: 프로바이더 미설정 시 지갑 생성 400 에러 가드 기존 유지
 
 ## Future Requirements
 
@@ -73,12 +73,12 @@ Requirements for Smart Account DX 개선. Each maps to roadmap phases.
 | PROV-02 | Phase 324 | Pending |
 | PROV-03 | Phase 324 | Pending |
 | PROV-04 | Phase 324 | Pending |
-| PROV-05 | Phase 324 | Pending |
+| PROV-05 | Phase 324 | Complete |
 | PROV-06 | Phase 326 | Pending |
 | PROV-07 | Phase 326 | Pending |
 | PROV-08 | Phase 325 | Pending |
-| PROV-09 | Phase 324 | Pending |
-| PROV-10 | Phase 324 | Pending |
+| PROV-09 | Phase 324 | Complete |
+| PROV-10 | Phase 324 | Complete |
 | CMAP-01 | Phase 324 | Pending |
 | CMAP-02 | Phase 324 | Pending |
 | CMAP-03 | Phase 324 | Pending |
@@ -94,8 +94,8 @@ Requirements for Smart Account DX 개선. Each maps to roadmap phases.
 | STAT-03 | Phase 325 | Pending |
 | STAT-04 | Phase 326 | Pending |
 | STAT-05 | Phase 326 | Pending |
-| DFLT-01 | Phase 324 | Pending |
-| DFLT-02 | Phase 324 | Pending |
+| DFLT-01 | Phase 324 | Complete |
+| DFLT-02 | Phase 324 | Complete |
 
 **Coverage:**
 - v30.9 requirements: 27 total
