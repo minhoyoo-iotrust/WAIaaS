@@ -1004,7 +1004,7 @@ describe('edge cases', () => {
     expect(row.message).toBeNull();
 
     // Verify LATEST_SCHEMA_VERSION is 28
-    expect(LATEST_SCHEMA_VERSION).toBe(38);
+    expect(LATEST_SCHEMA_VERSION).toBe(39);
   });
 
   it('T-13: existing notification_logs data preserved after v10 migration', () => {
@@ -1333,7 +1333,7 @@ describe('v12 migration: x402 CHECK constraints', () => {
     // Verify final version is 19
     const versions = getVersions(db);
     expect(versions).toContain(19);
-    expect(Math.max(...versions)).toBe(38);
+    expect(Math.max(...versions)).toBe(39);
 
     // Verify data survived the entire chain (v27 drops default_network)
     const wallet = db.prepare('SELECT * FROM wallets WHERE id = ?').get('a-chain-12') as { environment: string };
@@ -1513,7 +1513,7 @@ describe('v13 migration: amount_usd and reserved_amount_usd columns', () => {
     // Verify final version is 19
     const versions = getVersions(db);
     expect(versions).toContain(19);
-    expect(Math.max(...versions)).toBe(38);
+    expect(Math.max(...versions)).toBe(39);
 
     // Verify amount_usd columns exist and are NULL for migrated data
     const tx = db.prepare('SELECT amount_usd, reserved_amount_usd FROM transactions WHERE id = ?').get('tx-chain-13') as {
@@ -1704,10 +1704,15 @@ describe('v16 migration: WC infra tables + approval_channel', () => {
     const migratedWcStoreCols = getTableColumns(db, 'wc_store');
     expect(migratedWcStoreCols).toEqual(freshWcStoreCols);
 
-    // Compare pending_approvals columns (includes approval_channel)
-    const freshPaCols = getTableColumns(freshDb, 'pending_approvals');
+    // Compare pending_approvals columns (v16 adds approval_channel; v39 adds approval_type later)
+    // Migrated DB only has up to v16 columns, so check that v16 columns are a subset of fresh
     const migratedPaCols = getTableColumns(db, 'pending_approvals');
-    expect(migratedPaCols).toEqual(freshPaCols);
+    expect(migratedPaCols).toContain('approval_channel');
+    // Fresh DB has additional columns from later migrations (e.g. approval_type from v39)
+    const freshPaCols = getTableColumns(freshDb, 'pending_approvals');
+    for (const col of migratedPaCols) {
+      expect(freshPaCols).toContain(col);
+    }
 
     freshDb.close();
   });
@@ -1728,7 +1733,7 @@ describe('v16 migration: WC infra tables + approval_channel', () => {
     // Verify final version is 19
     const versions = getVersions(db);
     expect(versions).toContain(19);
-    expect(Math.max(...versions)).toBe(38);
+    expect(Math.max(...versions)).toBe(39);
 
     // Verify wc_sessions and wc_store tables exist
     const wcSessions = db.prepare(
@@ -1805,12 +1810,12 @@ describe('v24 migration: wallet_type column for preset auto-setup', () => {
     expect(wallet.wallet_type).toBeNull();
   });
 
-  it('T-17b (T-v24-2): fresh DB LATEST_SCHEMA_VERSION is 38', () => {
+  it('T-17b (T-v24-2): fresh DB LATEST_SCHEMA_VERSION is 39', () => {
     const conn = createDatabase(':memory:');
     db = conn.sqlite;
     pushSchema(db);
 
-    expect(LATEST_SCHEMA_VERSION).toBe(38);
+    expect(LATEST_SCHEMA_VERSION).toBe(39);
 
     const versions = getVersions(db);
     expect(versions).toContain(24);
@@ -1902,7 +1907,7 @@ describe('v24 migration: wallet_type column for preset auto-setup', () => {
     // Verify final version is 24
     const versions = getVersions(db);
     expect(versions).toContain(24);
-    expect(Math.max(...versions)).toBe(38);
+    expect(Math.max(...versions)).toBe(39);
 
     // Verify wallets table has wallet_type column
     const columns = getTableColumns(db, 'wallets');
