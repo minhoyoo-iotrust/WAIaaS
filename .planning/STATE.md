@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v30.9
 milestone_name: Smart Account DX 개선
-status: planning
-stopped_at: Completed 325-02-PLAN.md (Phase 325 done). Ready for Phase 326 planning.
-last_updated: "2026-03-04T15:59:03.311Z"
-last_activity: 2026-03-05 -- Phase 325 complete (REST API + Agent Self-Service)
+status: complete
+stopped_at: Completed 326-02-PLAN.md (Phase 326 done). Milestone v30.9 complete.
+last_updated: "2026-03-05T00:14:00.000Z"
+last_activity: 2026-03-05 -- Phase 326 complete (Admin UI + MCP + Connect-Info)
 progress:
   total_phases: 3
-  completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
-  percent: 67
+  completed_phases: 3
+  total_plans: 6
+  completed_plans: 6
+  percent: 100
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-04)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v30.9 Smart Account DX 개선 -- Phase 325 complete, ready for Phase 326
+**Current focus:** v30.9 Smart Account DX 개선 -- All phases complete
 
 ## Current Position
 
 Phase: 326 of 326 (Admin UI + MCP + Connect-Info)
-Plan: 1 of N
-Status: Ready to plan
-Last activity: 2026-03-05 -- Phase 325 complete (REST API + Agent Self-Service)
+Plan: 2 of 2
+Status: Complete
+Last activity: 2026-03-05 -- Phase 326 complete (Admin UI + MCP + Connect-Info)
 
-Progress: [██████░░░░] 67%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -48,6 +48,10 @@ Progress: [██████░░░░] 67%
 - D6: Dual-auth for PUT /v1/wallets/:id/provider: Bearer wai_sess_ prefix -> sessionAuth, otherwise masterAuth
 - D7: PROVIDER_UPDATED added as 21st audit event type
 - D8: Provider field added to ALL wallet response schemas (CRUD, Detail, Create) for consistency
+- D9: Mirror AA_PROVIDER_DASHBOARD_URLS in admin SPA (browser cannot import @waiaas/core)
+- D10: Inline edit form for provider change in detail page (not modal)
+- D11: Reuse buildProviderStatus from wallets.ts in connect-info route (DRY)
+- D12: smart_account added to connect-info capabilities when any wallet has provider
 
 ### Blockers/Concerns
 
@@ -56,5 +60,5 @@ Progress: [██████░░░░] 67%
 ## Session Continuity
 
 Last session: 2026-03-05
-Stopped at: Completed 325-02-PLAN.md (Phase 325 done). Ready for Phase 326 planning.
+Stopped at: Completed 326-02-PLAN.md (Phase 326 done). Milestone v30.9 complete.
 Resume file: None

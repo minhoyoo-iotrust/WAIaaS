@@ -107,7 +107,7 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v30.8-ROADMAP.md` for full 
 
 - [x] **Phase 324: DB + Core Provider Model** - 지갑별 프로바이더 스키마, 리졸버, 체인 매핑, 글로벌 키 제거, AA 기본 활성화 (completed 2026-03-04)
 - [x] **Phase 325: REST API + Agent Self-Service** - 프로바이더 CRUD 엔드포인트, 에이전트 셀프 등록, 지갑 응답 확장 (completed 2026-03-05)
-- [ ] **Phase 326: Admin UI + MCP + Connect-Info** - 지갑 폼 프로바이더 필드, API 키 안내 링크, connect-info 프롬프트, MCP 도구
+- [x] **Phase 326: Admin UI + MCP + Connect-Info** - 지갑 폼 프로바이더 필드, API 키 안내 링크, connect-info 프롬프트, MCP 도구 (completed 2026-03-05)
 
 ## Phase Details
 
@@ -154,8 +154,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 326-01-PLAN.md -- Admin UI provider fields in create form + detail page management
-- [ ] 326-02-PLAN.md -- connect-info provider prompt + MCP get_provider_status tool
+- [x] 326-01-PLAN.md -- Admin UI provider fields in create form + detail page management
+- [x] 326-02-PLAN.md -- connect-info provider prompt + MCP get_provider_status tool
 
 ## Progress
 
@@ -173,7 +173,7 @@ Phases execute in numeric order: 324 -> 325 -> 326
 | 317-323 | v30.8 | 15/15 | Complete | 2026-03-04 |
 | 324 | v30.9 | 2/2 | Complete | 2026-03-05 |
 | 325 | v30.9 | 2/2 | Complete | 2026-03-05 |
-| 326 | v30.9 | 0/2 | Not started | - |
+| 326 | v30.9 | 2/2 | Complete | 2026-03-05 |
 
 ---
-*Last updated: 2026-03-05 -- Phase 326 planned (2 plans in 1 wave).*
+*Last updated: 2026-03-05 -- Phase 326 complete (2/2 plans). Milestone v30.9 all phases done.*

@@ -14,8 +14,8 @@ Requirements for Smart Account DX 개선. Each maps to roadmap phases.
 - [ ] **PROV-03**: custom 선택 시 번들러 URL + 페이마스터 URL 직접 입력
 - [ ] **PROV-04**: API 키 AES-256-GCM 암호화 저장 (HKDF 기반 경량 KDF)
 - [x] **PROV-05**: Smart Account 지갑 생성 시 프로바이더 설정 필수 (미설정 시 400 에러)
-- [ ] **PROV-06**: Admin UI 지갑 생성 폼에서 accountType: smart 선택 시에만 프로바이더 필드 노출
-- [ ] **PROV-07**: Admin UI 지갑 상세 페이지에서 프로바이더 설정 변경 가능
+- [x] **PROV-06**: Admin UI 지갑 생성 폼에서 accountType: smart 선택 시에만 프로바이더 필드 노출
+- [x] **PROV-07**: Admin UI 지갑 상세 페이지에서 프로바이더 설정 변경 가능
 - [x] **PROV-08**: REST API로 지갑별 프로바이더 설정 변경 가능 (masterAuth)
 - [x] **PROV-09**: 기존 글로벌 설정 23개 키 제거 (smart_account.entry_point 유지)
 - [x] **PROV-10**: EOA/Solana 지갑은 프로바이더 설정 불필요 — 기존 동작 유지
@@ -28,9 +28,9 @@ Requirements for Smart Account DX 개선. Each maps to roadmap phases.
 
 ### Guide (API 키 발급 안내)
 
-- [ ] **GUID-01**: 프로바이더 선택 시 API 키 발급 대시보드 링크 Admin UI 표시
-- [ ] **GUID-02**: 기존 CoinGecko API 키 안내와 동일한 패턴
-- [ ] **GUID-03**: 프로바이더 변경 시 링크 동적 전환
+- [x] **GUID-01**: 프로바이더 선택 시 API 키 발급 대시보드 링크 Admin UI 표시
+- [x] **GUID-02**: 기존 CoinGecko API 키 안내와 동일한 패턴
+- [x] **GUID-03**: 프로바이더 변경 시 링크 동적 전환
 
 ### Agent Self-Service (에이전트 셀프 프로바이더 등록)
 
@@ -44,8 +44,8 @@ Requirements for Smart Account DX 개선. Each maps to roadmap phases.
 - [x] **STAT-01**: GET /v1/wallets/:id 응답에 프로바이더 상태 포함
 - [x] **STAT-02**: 응답 필드: provider.name, provider.supportedChains, provider.paymasterEnabled
 - [x] **STAT-03**: 프로바이더 미설정 시 provider: null
-- [ ] **STAT-04**: connect-info 프롬프트에 프로바이더 상태 포함
-- [ ] **STAT-05**: MCP 도구에서 프로바이더 상태 조회 가능
+- [x] **STAT-04**: connect-info 프롬프트에 프로바이더 상태 포함
+- [x] **STAT-05**: MCP 도구에서 프로바이더 상태 조회 가능
 
 ### Default (AA 기본 활성화)
 
@@ -74,17 +74,17 @@ Requirements for Smart Account DX 개선. Each maps to roadmap phases.
 | PROV-03 | Phase 324 | Pending |
 | PROV-04 | Phase 324 | Pending |
 | PROV-05 | Phase 324 | Complete |
-| PROV-06 | Phase 326 | Pending |
-| PROV-07 | Phase 326 | Pending |
+| PROV-06 | Phase 326 | Complete |
+| PROV-07 | Phase 326 | Complete |
 | PROV-08 | Phase 325 | Complete |
 | PROV-09 | Phase 324 | Complete |
 | PROV-10 | Phase 324 | Complete |
 | CMAP-01 | Phase 324 | Pending |
 | CMAP-02 | Phase 324 | Pending |
 | CMAP-03 | Phase 324 | Pending |
-| GUID-01 | Phase 326 | Pending |
-| GUID-02 | Phase 326 | Pending |
-| GUID-03 | Phase 326 | Pending |
+| GUID-01 | Phase 326 | Complete |
+| GUID-02 | Phase 326 | Complete |
+| GUID-03 | Phase 326 | Complete |
 | ASSR-01 | Phase 325 | Complete |
 | ASSR-02 | Phase 325 | Complete |
 | ASSR-03 | Phase 325 | Complete |
@@ -92,8 +92,8 @@ Requirements for Smart Account DX 개선. Each maps to roadmap phases.
 | STAT-01 | Phase 325 | Complete |
 | STAT-02 | Phase 325 | Complete |
 | STAT-03 | Phase 325 | Complete |
-| STAT-04 | Phase 326 | Pending |
-| STAT-05 | Phase 326 | Pending |
+| STAT-04 | Phase 326 | Complete |
+| STAT-05 | Phase 326 | Complete |
 | DFLT-01 | Phase 324 | Complete |
 | DFLT-02 | Phase 324 | Complete |
 
