@@ -1,5 +1,42 @@
 # Changelog
 
+## [2.10.0-rc](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.1-rc...v2.10.0-rc) (2026-03-04)
+
+
+### Features
+
+* **309-01:** add DryRunSimulationResult Zod SSoT schema with 12 warning codes ([0d1000d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0d1000ddfc85385b35f51c94047f3354b1a53d99))
+* **309-01:** add executeDryRun pipeline with zero side effects ([54a83a3](https://github.com/minhoyoo-iotrust/WAIaaS/commit/54a83a35588db5df83f6beea52ded3a1a0985e5d))
+* **309-02:** add POST /v1/transactions/simulate REST API route ([6fe43ac](https://github.com/minhoyoo-iotrust/WAIaaS/commit/6fe43ac3f03d437f9b1ebf28d236014a78d57216))
+* **309-02:** add SDK simulate() + MCP simulate_transaction tool ([59368d0](https://github.com/minhoyoo-iotrust/WAIaaS/commit/59368d09bd5aefa840a857e1f54f154a1e42b4e3))
+* **310-01:** add 11 new audit events + unify existing 9 raw SQL to insertAuditLog ([7d91d85](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7d91d856e38c27378b0c75127d4d659ab5b28252))
+* **310-01:** add AuditEventType Zod SSoT (20 events) + insertAuditLog helper + DB migration v36 ([dca30bc](https://github.com/minhoyoo-iotrust/WAIaaS/commit/dca30bc9f6205bf973675d98987b366532ded7f2))
+* **310-02:** GET /v1/audit-logs cursor-paginated query API ([931fb38](https://github.com/minhoyoo-iotrust/WAIaaS/commit/931fb38e919b2cd46450a1d840e2675cf645d015))
+* **311-01:** add EncryptedBackupService + binary archive format ([6fed576](https://github.com/minhoyoo-iotrust/WAIaaS/commit/6fed576ce3577c2142e6d410f1bc34baf6197ee0))
+* **311-01:** add POST /admin/backup + GET /admin/backups REST API ([71a9708](https://github.com/minhoyoo-iotrust/WAIaaS/commit/71a970859cd8944ab8c2e7c6c8d51e4df2fdedbf))
+* **311-02:** add waiaas backup create/list/inspect CLI commands ([2e1bc8e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2e1bc8ea4fbd9d4ab02704e62a744f4afd26d4ba))
+* **311-02:** add waiaas restore --from CLI command with safety checks ([ea2101d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ea2101d284dba8335e3c6bae8c584a364d1c6cf8))
+* **311-03:** add BackupWorker auto-scheduler in daemon lifecycle ([e838fdd](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e838fdda5789643d3946d56f12f932bb8302d8cd))
+* **312-01:** add webhook Zod schemas, DB migration v37, WEBHOOK_NOT_FOUND error ([e65ef07](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e65ef073a8512e0d6ab8951b96c4dd840c4967ca))
+* **312-01:** add WebhookService + WebhookDeliveryQueue with HMAC-SHA256 signing ([7f5eaec](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7f5eaec542df7550725dfef83684b58b95ff7dd8))
+* **312-02:** add webhook CRUD REST API (POST/GET/DELETE /v1/webhooks) ([cbad80e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/cbad80e981cfc8836163dc8270b6511cde524e55))
+* **312-03:** add GET /v1/webhooks/:id/logs delivery logs API ([50afae8](https://github.com/minhoyoo-iotrust/WAIaaS/commit/50afae8cb92115fc96b58afe35a4501176676dd2))
+* **312-03:** integrate WebhookService with EventBus and daemon lifecycle ([6ecb07c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/6ecb07cd26ecec60e7f5d8c6d1137dcd43650d9f))
+* **313-01:** add IAutoStopRule interface, RuleRegistry, and admin stats Zod schemas ([d900938](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d900938262ba3e7c3519900ae29a2323936a70fd))
+* **313-01:** refactor 3 AutoStop rules to IAutoStopRule + RuleRegistry-based service ([7740880](https://github.com/minhoyoo-iotrust/WAIaaS/commit/774088048440b418c525dec50cec90258ee97a43))
+* **313-02:** add GET /admin/stats endpoint and daemon lifecycle wiring ([fd35260](https://github.com/minhoyoo-iotrust/WAIaaS/commit/fd352605729f2d98f0f333557806d9c287b56ee0))
+* **313-02:** add IMetricsCounter interface, InMemoryCounter, and AdminStatsService ([d21ec8d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d21ec8d1c70009b99c90d8150d0a258d64a36029))
+* **313-03:** add Admin UI dashboard stats cards with 30s polling ([21fb974](https://github.com/minhoyoo-iotrust/WAIaaS/commit/21fb974ac7a4df41df3f8a33919f4f8bd26f6229))
+* **313-03:** add AutoStop rules REST API, per-rule settings, and hot-reload wiring ([ea29597](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ea295979c871ec95950f85c5ccca8ec0eb1cef1f))
+* **313.1-01:** wire InMemoryCounter into production code (STAT-02/STAT-04) ([d871f93](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d871f934ca15f40efb18a9b5854867fdb0753d45))
+
+
+### Bug Fixes
+
+* **313.1-01:** fix schema version assertions and sync admin skill file ([b3e13de](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b3e13def2270b2d3a1c554df232ed03166326ae9))
+* **admin:** add missing fetchDisplayCurrency mock to dashboard tests ([dccba57](https://github.com/minhoyoo-iotrust/WAIaaS/commit/dccba571e9ef579a8fba0026fca630f81adf02b7))
+* **v30.2:** resolve 63 test assertion failures and 7 lint errors ([64d8b2b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/64d8b2b480b6bc47ad48665a7ced6076d340eec4))
+
 ## [2.9.1-rc](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.9.0...v2.9.1-rc) (2026-03-03)
 
 
