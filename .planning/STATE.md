@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
-milestone: v30.2
-milestone_name: 운영 기능 확장 구현
-status: shipped
-last_updated: "2026-03-04T00:30:00.000Z"
+milestone: v30.6
+milestone_name: ERC-4337 Account Abstraction 지원
+status: active
+last_updated: "2026-03-04T12:00:00.000Z"
 progress:
-  total_phases: 187
-  completed_phases: 187
-  total_plans: 410
-  completed_plans: 410
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
@@ -18,16 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-04)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v30.2 shipped -- Planning next milestone
+**Current focus:** v30.6 ERC-4337 Account Abstraction 지원
 
 ## Current Position
 
-Phase: Complete (v30.2 shipped)
-Plan: All complete
-Status: Milestone v30.2 shipped -- ready for /gsd:new-milestone
-Last activity: 2026-03-04 -- v30.2 milestone archived
-
-Progress: [██████████] 100%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-04 — Milestone v30.6 started
 
 ## Performance Metrics
 
@@ -37,7 +35,7 @@ Progress: [██████████] 100%
 
 ### Decisions
 
-(Cleared at milestone boundary -- see .planning/milestones/v30.2-ROADMAP.md for v30.2 decisions)
+(New milestone -- clean slate)
 
 ### Blockers/Concerns
 
@@ -46,5 +44,5 @@ Progress: [██████████] 100%
 ## Session Continuity
 
 Last session: 2026-03-04
-Stopped at: v30.2 milestone archived and shipped
+Stopped at: Milestone v30.6 initialization
 Resume file: None
