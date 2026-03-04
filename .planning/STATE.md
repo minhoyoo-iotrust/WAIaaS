@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v30.9
 milestone_name: Smart Account DX 개선
-status: complete
+status: completed
 stopped_at: Completed 326-02-PLAN.md (Phase 326 done). Milestone v30.9 complete.
-last_updated: "2026-03-05T00:14:00.000Z"
+last_updated: "2026-03-04T16:15:33.199Z"
 last_activity: 2026-03-05 -- Phase 326 complete (Admin UI + MCP + Connect-Info)
 progress:
   total_phases: 3

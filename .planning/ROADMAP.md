@@ -173,7 +173,7 @@ Phases execute in numeric order: 324 -> 325 -> 326
 | 317-323 | v30.8 | 15/15 | Complete | 2026-03-04 |
 | 324 | v30.9 | 2/2 | Complete | 2026-03-05 |
 | 325 | v30.9 | 2/2 | Complete | 2026-03-05 |
-| 326 | v30.9 | 2/2 | Complete | 2026-03-05 |
+| 326 | v30.9 | Complete    | 2026-03-04 | 2026-03-05 |
 
 ---
 *Last updated: 2026-03-05 -- Phase 326 complete (2/2 plans). Milestone v30.9 all phases done.*
