@@ -100,6 +100,8 @@ export interface TransactionRouteDeps {
   approvalChannelRouter?: ApprovalChannelRouter;
   // v30.2: metrics counter for tx/rpc instrumentation (STAT-02)
   metricsCounter?: IMetricsCounter;
+  // v30.8: reputation cache for REPUTATION_THRESHOLD policy evaluation (Phase 320)
+  reputationCache?: import('../../services/erc8004/reputation-cache-service.js').ReputationCacheService;
 }
 
 // ---------------------------------------------------------------------------
@@ -405,6 +407,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
       wcSigningBridge: deps.wcSigningBridgeRef?.current ?? undefined,
       approvalChannelRouter: deps.approvalChannelRouter,
       metricsCounter: deps.metricsCounter,
+      reputationCache: deps.reputationCache,
     };
 
     // Stage 1: Validate + DB INSERT (synchronous -- assigns ctx.txId)

@@ -113,6 +113,8 @@ export interface PipelineContext {
   approvalChannelRouter?: ApprovalChannelRouter;
   // v30.2: metrics counter for tx/rpc/autostop instrumentation (STAT-02)
   metricsCounter?: IMetricsCounter;
+  // v30.8: reputation cache for REPUTATION_THRESHOLD policy evaluation (Phase 320)
+  reputationCache?: import('../services/erc8004/reputation-cache-service.js').ReputationCacheService;
 }
 
 // ---------------------------------------------------------------------------
@@ -430,6 +432,16 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
     // evaluateAndReserve에 usdAmount 전달 (Phase 127)
     const usdAmount = priceResult?.type === 'success' ? priceResult.usdAmount : undefined;
 
+    // [Phase 320] Pre-fetch reputation floor tier (async, before IMMEDIATE txn)
+    let reputationFloorTier: import('@waiaas/core').PolicyTier | undefined;
+    if (ctx.reputationCache && ctx.policyEngine instanceof DatabasePolicyEngine) {
+      reputationFloorTier = await ctx.policyEngine.prefetchReputationTier(
+        ctx.walletId,
+        txParam,
+        ctx.reputationCache,
+      );
+    }
+
     // Use evaluateAndReserve for TOCTOU-safe evaluation when DatabasePolicyEngine + sqlite available
     if (ctx.policyEngine instanceof DatabasePolicyEngine && ctx.sqlite) {
       evaluation = ctx.policyEngine.evaluateAndReserve(
@@ -437,6 +449,7 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
         txParam,
         ctx.txId,
         usdAmount,
+        reputationFloorTier,
       );
     } else {
       evaluation = await ctx.policyEngine.evaluate(ctx.walletId, txParam);

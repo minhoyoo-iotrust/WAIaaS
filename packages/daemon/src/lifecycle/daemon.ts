@@ -1360,6 +1360,10 @@ export class DaemonLifecycle {
           rpcCaller: this.rpcCaller ?? undefined,
         });
 
+        // [Phase 320] Create ReputationCacheService for REPUTATION_THRESHOLD policy evaluation
+        const { ReputationCacheService } = await import('../services/erc8004/index.js');
+        const reputationCacheService = new ReputationCacheService(this._db!, this._settingsService ?? undefined);
+
         const app = createApp({
           db: this._db!,
           sqlite: this.sqlite ?? undefined,
@@ -1373,7 +1377,9 @@ export class DaemonLifecycle {
             this._db!,
             this.sqlite ?? undefined,
             this._settingsService ?? undefined,
+            reputationCacheService,
           ),
+          reputationCache: reputationCacheService,
           jwtSecretManager: this.jwtSecretManager ?? undefined,
           delayQueue: this.delayQueue ?? undefined,
           approvalWorkflow: this.approvalWorkflow ?? undefined,

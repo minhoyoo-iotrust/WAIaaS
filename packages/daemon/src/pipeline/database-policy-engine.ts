@@ -45,9 +45,10 @@ import { parseCaip19 } from '@waiaas/core';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { eq, or, and, isNull, desc } from 'drizzle-orm';
-import { policies } from '../infrastructure/database/schema.js';
+import { policies, wallets, agentIdentities } from '../infrastructure/database/schema.js';
 import type * as schema from '../infrastructure/database/schema.js';
 import type { SettingsService } from '../infrastructure/settings/settings-service.js';
+import type { ReputationCacheService } from '../services/erc8004/reputation-cache-service.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -124,6 +125,16 @@ export interface PerpMaxPositionUsdRules {
 /** Perp allowed markets whitelist rules (Phase 297). */
 export interface PerpAllowedMarketsRules {
   markets: Array<{ market: string; name?: string }>;
+}
+
+/** Reputation threshold rules for counterparty reputation check (Phase 320). */
+interface ReputationThresholdRules {
+  min_score: number;
+  below_threshold_tier: string;
+  unrated_tier: string;
+  tag1?: string;
+  tag2?: string;
+  check_counterparty: boolean;
 }
 
 /** Threshold for detecting "unlimited" approve amounts. */
@@ -235,14 +246,17 @@ function maxTier(a: PolicyTier, b: PolicyTier): PolicyTier {
 export class DatabasePolicyEngine implements IPolicyEngine {
   private readonly sqlite: SQLiteDatabase | null;
   private readonly settingsService: SettingsService | null;
+  private readonly reputationCacheService: ReputationCacheService | null;
 
   constructor(
     private readonly db: BetterSQLite3Database<typeof schema>,
     sqlite?: SQLiteDatabase,
     settingsService?: SettingsService,
+    reputationCacheService?: ReputationCacheService,
   ) {
     this.sqlite = sqlite ?? null;
     this.settingsService = settingsService ?? null;
+    this.reputationCacheService = reputationCacheService ?? null;
   }
 
   /**
@@ -315,6 +329,9 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       return approvedSpendersResult;
     }
 
+    // Step 4e.5: Evaluate REPUTATION_THRESHOLD (counterparty reputation check, Phase 320)
+    const reputationFloorTier = await this.evaluateReputationThreshold(resolved, transaction);
+
     // Step 4f: Evaluate APPROVE_AMOUNT_LIMIT (unlimited approve block + amount cap)
     const approveAmountResult = this.evaluateApproveAmountLimit(resolved, transaction);
     if (approveAmountResult !== null) {
@@ -355,7 +372,9 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     // supply/repay/withdraw are non-spending — skip SPENDING_LIMIT entirely
     const NON_SPENDING_ACTIONS = new Set(['supply', 'repay', 'withdraw', 'close_position', 'add_margin']);
     if (transaction.actionName && NON_SPENDING_ACTIONS.has(transaction.actionName)) {
-      return { allowed: true, tier: 'INSTANT' };
+      const baseTier = 'INSTANT' as PolicyTier;
+      const finalTier = reputationFloorTier ? maxTier(baseTier, reputationFloorTier) : baseTier;
+      return { allowed: true, tier: finalTier };
     }
 
     // Step 5 (continued): Evaluate SPENDING_LIMIT (tier classification)
@@ -364,11 +383,18 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     const tokenContext = this.buildTokenContext(transaction, spendingPolicy);
     const spendingResult = this.evaluateSpendingLimit(resolved, transaction.amount, undefined, tokenContext);
     if (spendingResult !== null) {
+      // [Phase 320] Apply reputation floor tier via maxTier (escalation only)
+      if (reputationFloorTier) {
+        spendingResult.tier = maxTier(spendingResult.tier as PolicyTier, reputationFloorTier);
+      }
       return spendingResult;
     }
 
     // Default: INSTANT passthrough (no applicable rules)
-    return { allowed: true, tier: 'INSTANT' };
+    // [Phase 320] Apply reputation floor tier if set
+    const defaultTier = 'INSTANT' as PolicyTier;
+    const finalDefaultTier = reputationFloorTier ? maxTier(defaultTier, reputationFloorTier) : defaultTier;
+    return { allowed: true, tier: finalDefaultTier };
   }
 
   // -------------------------------------------------------------------------
@@ -589,6 +615,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     transaction: TransactionParam,
     txId: string,
     usdAmount?: number,
+    reputationFloorTier?: PolicyTier,
   ): PolicyEvaluation {
     if (!this.sqlite) {
       throw new Error('evaluateAndReserve requires raw sqlite instance in constructor');
@@ -610,9 +637,11 @@ export class DatabasePolicyEngine implements IPolicyEngine {
         )
         .all(walletId, transaction.network ?? null) as PolicyRow[];
 
-      // Step 2: No policies -> INSTANT passthrough
+      // Step 2: No policies -> INSTANT passthrough (apply reputation floor if set)
       if (policyRows.length === 0) {
-        return { allowed: true, tier: 'INSTANT' as PolicyTier };
+        const baseTier = 'INSTANT' as PolicyTier;
+        const effectiveTier = reputationFloorTier ? maxTier(baseTier, reputationFloorTier) : baseTier;
+        return { allowed: true, tier: effectiveTier };
       }
 
       // Step 3: Resolve overrides (4-level with network)
@@ -696,7 +725,9 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       // supply/repay/withdraw are non-spending — skip SPENDING_LIMIT entirely
       const NON_SPENDING_ACTIONS_R = new Set(['supply', 'repay', 'withdraw', 'close_position', 'add_margin']);
       if (transaction.actionName && NON_SPENDING_ACTIONS_R.has(transaction.actionName)) {
-        return { allowed: true, tier: 'INSTANT' as PolicyTier };
+        const baseTier = 'INSTANT' as PolicyTier;
+        const finalTier = reputationFloorTier ? maxTier(baseTier, reputationFloorTier) : baseTier;
+        return { allowed: true, tier: finalTier };
       }
 
       // Step 5 (continued): Compute reserved total for SPENDING_LIMIT evaluation
@@ -792,10 +823,13 @@ export class DatabasePolicyEngine implements IPolicyEngine {
               )
               .run(transaction.amount, usdAmount, usdAmount, txId);
 
+            // [Phase 320] Apply reputation floor tier via maxTier (escalation only)
+            const repFinalTier = reputationFloorTier ? maxTier(finalTier, reputationFloorTier) : finalTier;
+
             return {
               allowed: true,
-              tier: finalTier,
-              ...(spendingResult?.delaySeconds !== undefined && finalTier === 'DELAY' ? { delaySeconds: spendingResult.delaySeconds } : {}),
+              tier: repFinalTier,
+              ...(spendingResult?.delaySeconds !== undefined && repFinalTier === 'DELAY' ? { delaySeconds: spendingResult.delaySeconds } : {}),
               ...(approvalReason ? { approvalReason } : {}),
               ...(cumulativeWarning ? { cumulativeWarning } : {}),
             };
@@ -818,11 +852,18 @@ export class DatabasePolicyEngine implements IPolicyEngine {
             .run(transaction.amount, txId);
         }
 
-        return spendingResult ?? { allowed: true, tier: 'INSTANT' as PolicyTier };
+        // [Phase 320] Apply reputation floor tier via maxTier (escalation only)
+        const baseResult = spendingResult ?? { allowed: true, tier: 'INSTANT' as PolicyTier };
+        if (reputationFloorTier && baseResult.allowed) {
+          baseResult.tier = maxTier(baseResult.tier as PolicyTier, reputationFloorTier);
+        }
+        return baseResult;
       }
 
       // No SPENDING_LIMIT -> INSTANT passthrough (whitelist already passed)
-      return { allowed: true, tier: 'INSTANT' as PolicyTier };
+      // [Phase 320] Apply reputation floor tier if set
+      const noSpendingTier = reputationFloorTier ?? ('INSTANT' as PolicyTier);
+      return { allowed: true, tier: noSpendingTier };
     });
 
     // Execute with IMMEDIATE isolation
@@ -1917,5 +1958,170 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     }
 
     return null;
+  }
+
+  // -------------------------------------------------------------------------
+  // Private: REPUTATION_THRESHOLD evaluation (Phase 320)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Evaluate REPUTATION_THRESHOLD policy.
+   *
+   * Logic:
+   * - Find REPUTATION_THRESHOLD policy in resolved list
+   * - If not found or check_counterparty=false, return null (skip)
+   * - Resolve counterparty agentId from toAddress via agent_identities table
+   * - If no agentId found, treat as unrated
+   * - If no reputationCacheService, treat as unrated
+   * - Lookup reputation score via cache
+   * - If null (unrated/RPC failure), return unrated_tier
+   * - If score < min_score, return below_threshold_tier
+   * - If score >= min_score, return null (pass, continue evaluation)
+   *
+   * Returns the reputation floor tier (PolicyTier) or null if no escalation needed.
+   * The caller applies maxTier to the final result.
+   */
+  private async evaluateReputationThreshold(
+    resolved: PolicyRow[],
+    transaction: TransactionParam,
+  ): Promise<PolicyTier | null> {
+    const policy = resolved.find((p) => p.type === 'REPUTATION_THRESHOLD');
+    if (!policy) return null;
+
+    const rules: ReputationThresholdRules = JSON.parse(policy.rules);
+
+    // If check_counterparty is disabled, skip entirely
+    if (!rules.check_counterparty) return null;
+
+    // Resolve counterparty agentId from toAddress
+    const agentId = this.resolveAgentIdFromAddress(transaction.toAddress);
+
+    // No agent identity found -> treat as unrated
+    if (!agentId) {
+      return (rules.unrated_tier ?? 'APPROVAL') as PolicyTier;
+    }
+
+    // No reputation cache service -> treat as unrated
+    if (!this.reputationCacheService) {
+      return (rules.unrated_tier ?? 'APPROVAL') as PolicyTier;
+    }
+
+    // Lookup reputation
+    const reputation = await this.reputationCacheService.getReputation(
+      agentId,
+      rules.tag1 ?? '',
+      rules.tag2 ?? '',
+    );
+
+    // Unrated (no data or RPC failure)
+    if (!reputation) {
+      return (rules.unrated_tier ?? 'APPROVAL') as PolicyTier;
+    }
+
+    // Score below threshold -> escalate
+    if (reputation.score < rules.min_score) {
+      return (rules.below_threshold_tier ?? 'APPROVAL') as PolicyTier;
+    }
+
+    // Score meets threshold -> no escalation
+    return null;
+  }
+
+  /**
+   * Resolve ERC-8004 agentId from a counterparty address.
+   *
+   * Looks up agent_identities table via wallet publicKey join to find
+   * the chain_agent_id for the counterparty. Case-insensitive for EVM addresses.
+   *
+   * @returns chain_agent_id string if found, null otherwise
+   */
+  private resolveAgentIdFromAddress(toAddress: string): string | null {
+    if (!toAddress) return null;
+
+    const normalizedAddress = toAddress.toLowerCase();
+
+    // Join agent_identities + wallets to find chain_agent_id for the address.
+    // Case-insensitive comparison (EVM address case varies).
+    // Only consider REGISTERED or WALLET_LINKED identities.
+    const rows = this.db
+      .select({
+        chainAgentId: agentIdentities.chainAgentId,
+        publicKey: wallets.publicKey,
+        status: agentIdentities.status,
+      })
+      .from(agentIdentities)
+      .innerJoin(wallets, eq(agentIdentities.walletId, wallets.id))
+      .all();
+
+    const match = rows.find(
+      (r) =>
+        r.publicKey.toLowerCase() === normalizedAddress &&
+        (r.status === 'REGISTERED' || r.status === 'WALLET_LINKED'),
+    );
+
+    return match?.chainAgentId ?? null;
+  }
+
+  /**
+   * Pre-fetch reputation floor tier for use in evaluateAndReserve (synchronous context).
+   *
+   * Called from stage3Policy before entering the IMMEDIATE transaction, since
+   * evaluateReputationThreshold is async (RPC call) but evaluateAndReserve is sync.
+   *
+   * @returns PolicyTier if reputation escalation needed, undefined otherwise
+   */
+  async prefetchReputationTier(
+    walletId: string,
+    transaction: TransactionParam,
+    reputationCache: ReputationCacheService,
+  ): Promise<PolicyTier | undefined> {
+    // Load policies to check for REPUTATION_THRESHOLD
+    const rows = await this.db
+      .select()
+      .from(policies)
+      .where(
+        and(
+          or(eq(policies.walletId, walletId), isNull(policies.walletId)),
+          or(
+            transaction.network ? eq(policies.network, transaction.network) : isNull(policies.network),
+            isNull(policies.network),
+          ),
+          eq(policies.enabled, true),
+        ),
+      )
+      .orderBy(desc(policies.priority))
+      .all();
+
+    if (rows.length === 0) return undefined;
+
+    const resolved = this.resolveOverrides(rows as PolicyRow[], walletId, transaction.network);
+    const policy = resolved.find((p) => p.type === 'REPUTATION_THRESHOLD');
+    if (!policy) return undefined;
+
+    const rules: ReputationThresholdRules = JSON.parse(policy.rules);
+    if (!rules.check_counterparty) return undefined;
+
+    // Resolve counterparty agentId
+    const agentId = this.resolveAgentIdFromAddress(transaction.toAddress);
+    if (!agentId) {
+      return (rules.unrated_tier ?? 'APPROVAL') as PolicyTier;
+    }
+
+    // Lookup reputation via the provided cache
+    const reputation = await reputationCache.getReputation(
+      agentId,
+      rules.tag1 ?? '',
+      rules.tag2 ?? '',
+    );
+
+    if (!reputation) {
+      return (rules.unrated_tier ?? 'APPROVAL') as PolicyTier;
+    }
+
+    if (reputation.score < rules.min_score) {
+      return (rules.below_threshold_tier ?? 'APPROVAL') as PolicyTier;
+    }
+
+    return undefined; // Score meets threshold
   }
 }

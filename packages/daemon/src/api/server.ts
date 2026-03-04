@@ -142,6 +142,8 @@ export interface CreateAppDeps {
   metricsCounter?: import('@waiaas/core').IMetricsCounter;
   /** SmartAccountService for ERC-4337 CREATE2 address prediction (Phase 314) */
   smartAccountService?: import('../infrastructure/smart-account/index.js').SmartAccountService;
+  /** ReputationCacheService for REPUTATION_THRESHOLD policy evaluation (Phase 320) */
+  reputationCache?: import('../services/erc8004/reputation-cache-service.js').ReputationCacheService;
 }
 
 /**
@@ -515,6 +517,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         wcSigningBridgeRef: deps.wcSigningBridgeRef,
         approvalChannelRouter: deps.approvalChannelRouter,
         metricsCounter: deps.metricsCounter,
+        reputationCache: deps.reputationCache,
       }),
     );
   }
