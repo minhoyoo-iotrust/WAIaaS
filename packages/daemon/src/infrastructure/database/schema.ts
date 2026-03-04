@@ -47,6 +47,7 @@ import {
   POSITION_CATEGORIES,
   POSITION_STATUSES,
   ACCOUNT_TYPES,
+  AA_PROVIDER_NAMES,
 } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------
@@ -59,6 +60,7 @@ const buildCheckSql = (column: string, values: readonly string[]) =>
 // ---------------------------------------------------------------------------
 // Table 1: wallets -- wallet identity and lifecycle state (renamed from agents in v3)
 // v1.4.6: network replaced by environment (environment model). v29.3: default_network removed.
+// v30.9: aa_provider, aa_provider_api_key_encrypted, aa_bundler_url, aa_paymaster_url for per-wallet provider.
 // ---------------------------------------------------------------------------
 
 export const wallets = sqliteTable(
@@ -83,6 +85,10 @@ export const wallets = sqliteTable(
     signerKey: text('signer_key'),
     deployed: integer('deployed', { mode: 'boolean' }).notNull().default(true),
     entryPoint: text('entry_point'),
+    aaProvider: text('aa_provider'),
+    aaProviderApiKeyEncrypted: text('aa_provider_api_key_encrypted'),
+    aaBundlerUrl: text('aa_bundler_url'),
+    aaPaymasterUrl: text('aa_paymaster_url'),
   },
   (table) => [
     uniqueIndex('idx_wallets_public_key').on(table.publicKey),
@@ -94,6 +100,7 @@ export const wallets = sqliteTable(
     check('check_status', buildCheckSql('status', WALLET_STATUSES)),
     check('check_owner_verified', sql`owner_verified IN (0, 1)`),
     check('check_account_type', buildCheckSql('account_type', ACCOUNT_TYPES)),
+    check('check_aa_provider', sql.raw(`aa_provider IS NULL OR aa_provider IN (${AA_PROVIDER_NAMES.map(v => `'${v}'`).join(', ')})`)),
   ],
 );
 

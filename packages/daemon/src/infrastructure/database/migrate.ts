@@ -79,7 +79,7 @@ const LEGACY_NETWORK_NORMALIZE: Record<string, string> = {
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 40;
+export const LATEST_SCHEMA_VERSION = 41;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -103,7 +103,11 @@ function getCreateTableStatements(): string[] {
   account_type TEXT NOT NULL DEFAULT 'eoa' CHECK (account_type IN (${inList(ACCOUNT_TYPES)})),
   signer_key TEXT,
   deployed INTEGER NOT NULL DEFAULT 1,
-  entry_point TEXT
+  entry_point TEXT,
+  aa_provider TEXT CHECK (aa_provider IS NULL OR aa_provider IN ('pimlico', 'alchemy', 'custom')),
+  aa_provider_api_key_encrypted TEXT,
+  aa_bundler_url TEXT,
+  aa_paymaster_url TEXT
 )`,
 
     // Table 2: sessions (v26.4: wallet_id removed, v26.5: token_issued_count added)
@@ -2541,6 +2545,21 @@ MIGRATIONS.push({
     sqlite.exec(
       "ALTER TABLE pending_approvals ADD COLUMN typed_data_json TEXT",
     );
+  },
+});
+
+// ---------------------------------------------------------------------------
+// v41: Smart Account per-wallet provider columns (v30.9)
+// ---------------------------------------------------------------------------
+
+MIGRATIONS.push({
+  version: 41,
+  description: 'Smart Account per-wallet provider: aa_provider, aa_provider_api_key_encrypted, aa_bundler_url, aa_paymaster_url',
+  up: (sqlite) => {
+    sqlite.exec("ALTER TABLE wallets ADD COLUMN aa_provider TEXT CHECK (aa_provider IS NULL OR aa_provider IN ('pimlico', 'alchemy', 'custom'))");
+    sqlite.exec("ALTER TABLE wallets ADD COLUMN aa_provider_api_key_encrypted TEXT");
+    sqlite.exec("ALTER TABLE wallets ADD COLUMN aa_bundler_url TEXT");
+    sqlite.exec("ALTER TABLE wallets ADD COLUMN aa_paymaster_url TEXT");
   },
 });
 
