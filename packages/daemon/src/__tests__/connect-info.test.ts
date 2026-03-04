@@ -764,3 +764,114 @@ describe('POST /v1/admin/sessions/:id/reissue', () => {
     expect(res.status).toBe(401);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Tests: ERC-8004 connect-info extension (Phase 319-02)
+// ---------------------------------------------------------------------------
+
+describe('ERC-8004 connect-info extension', () => {
+  function seedAgentIdentity(
+    walletId: string,
+    opts: { chainAgentId?: string; registryAddress?: string; chainId?: number; status?: string } = {},
+  ): void {
+    const id = generateId();
+    const ts = Math.floor(Date.now() / 1000);
+    sqlite
+      .prepare(
+        `INSERT INTO agent_identities (id, wallet_id, chain_agent_id, registry_address, chain_id, status, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        id,
+        walletId,
+        opts.chainAgentId ?? '42',
+        opts.registryAddress ?? '0x8004A169FB4a3325136EB29fA0ceB6D2e539a432',
+        opts.chainId ?? 1,
+        opts.status ?? 'REGISTERED',
+        ts,
+        ts,
+      );
+  }
+
+  it('connect-info includes erc8004 for registered wallet', async () => {
+    seedAgentIdentity(walletA, {
+      chainAgentId: '42',
+      registryAddress: '0x8004A169FB4a3325136EB29fA0ceB6D2e539a432',
+      chainId: 1,
+      status: 'REGISTERED',
+    });
+
+    const res = await app.request('/v1/connect-info', {
+      headers: bearerHeader(sessionToken),
+    });
+    expect(res.status).toBe(200);
+
+    const body = await json(res);
+    const ws = body.wallets as Array<{ id: string; erc8004?: { agentId: string; registryAddress: string; chainId: number; status: string } }>;
+
+    const wA = ws.find((w) => w.id === walletA)!;
+    expect(wA.erc8004).toBeDefined();
+    expect(wA.erc8004!.agentId).toBe('42');
+    expect(wA.erc8004!.registryAddress).toBe('0x8004A169FB4a3325136EB29fA0ceB6D2e539a432');
+    expect(wA.erc8004!.chainId).toBe(1);
+    expect(wA.erc8004!.status).toBe('REGISTERED');
+  });
+
+  it('connect-info omits erc8004 for unregistered wallet', async () => {
+    // No agent_identities row for walletA
+    const res = await app.request('/v1/connect-info', {
+      headers: bearerHeader(sessionToken),
+    });
+    expect(res.status).toBe(200);
+
+    const body = await json(res);
+    const ws = body.wallets as Array<{ id: string; erc8004?: unknown }>;
+
+    const wA = ws.find((w) => w.id === walletA)!;
+    expect(wA.erc8004).toBeUndefined();
+  });
+
+  it('connect-info omits erc8004 for PENDING wallet', async () => {
+    seedAgentIdentity(walletA, { status: 'PENDING' });
+
+    const res = await app.request('/v1/connect-info', {
+      headers: bearerHeader(sessionToken),
+    });
+    expect(res.status).toBe(200);
+
+    const body = await json(res);
+    const ws = body.wallets as Array<{ id: string; erc8004?: unknown }>;
+
+    const wA = ws.find((w) => w.id === walletA)!;
+    expect(wA.erc8004).toBeUndefined();
+  });
+
+  it('connect-info prompt mentions ERC-8004 for registered wallet', async () => {
+    seedAgentIdentity(walletA, { chainAgentId: '42', status: 'REGISTERED' });
+
+    const res = await app.request('/v1/connect-info', {
+      headers: bearerHeader(sessionToken),
+    });
+    expect(res.status).toBe(200);
+
+    const body = await json(res);
+    const prompt = body.prompt as string;
+
+    expect(prompt).toContain('ERC-8004 Agent ID: 42');
+    expect(prompt).toContain('ERC-8004 Trust Network:');
+    expect(prompt).toContain('GET /v1/erc8004/agent/{agentId}');
+  });
+
+  it('connect-info capabilities includes erc8004 when registered', async () => {
+    seedAgentIdentity(walletA, { status: 'REGISTERED' });
+
+    const res = await app.request('/v1/connect-info', {
+      headers: bearerHeader(sessionToken),
+    });
+    expect(res.status).toBe(200);
+
+    const body = await json(res);
+    const caps = body.capabilities as string[];
+    expect(caps).toContain('erc8004');
+  });
+});
