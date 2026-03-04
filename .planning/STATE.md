@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v30.8
 milestone_name: ERC-8004 Trustless Agents 지원
-status: unknown
-last_updated: "2026-03-04T08:05:20.439Z"
+status: in-progress
+last_updated: "2026-03-04T08:35:00Z"
 progress:
   total_phases: 182
-  completed_phases: 176
+  completed_phases: 177
   total_plans: 390
-  completed_plans: 384
+  completed_plans: 386
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-04)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v30.8 Phase 318 -- Identity Registry ActionProvider
+**Current focus:** v30.8 Phase 319 -- Read-Only Routes + Registration File
 
 ## Current Position
 
-Phase: 318 (2 of 7) -- Identity Registry
+Phase: 319 (3 of 7) -- Read-Only Routes + Registration File
 Plan: 0 of 2 in current phase
-Status: Phase 317 completed, ready for Phase 318
-Last activity: 2026-03-04 -- Phase 317 Foundation completed (2 plans, 4 tasks, DB v39 + Core Enums + Settings)
+Status: Phase 318 completed, ready for Phase 319
+Last activity: 2026-03-04 -- Phase 318 ActionProvider + Registry Client completed (2 plans, 4 tasks, 44 tests)
 
-Progress: [##░░░░░░░░] 13%
+Progress: [###░░░░░░░] 27%
 
 ## Performance Metrics
 
@@ -37,6 +37,8 @@ Progress: [##░░░░░░░░] 13%
 |-------|------|----------|-------|-------|
 | 317-01 | DB v39 Migration | 17min | 2 | 16 |
 | 317-02 | Core Enum + Settings | 12min | 2 | 10 |
+| 318-01 | Registry Client + ABI + Schemas | 10min | 2 | 9 |
+| 318-02 | ActionProvider + registerBuiltIn | 12min | 2 | 4 |
 
 ## Accumulated Context
 
@@ -53,6 +55,10 @@ Progress: [##░░░░░░░░] 13%
 - REPUTATION_THRESHOLD_TRIGGERED maps to 'policy' category; other 4 ERC-8004 events map to 'identity'
 - ReputationThresholdRulesSchema uses PolicyTierEnum for tier fields with APPROVAL defaults
 - ERC-8004 feature gate (erc8004_agent_enabled) defaults to false for safe opt-in
+- viem added as direct dependency for @waiaas/actions (encodeFunctionData for ABI calldata)
+- set_agent_wallet uses placeholder '0x' signature (Phase 321 completes EIP-712 flow)
+- register_agent builds agentURI from registrationFileBaseUrl + walletId path
+- request_validation generates requestHash via keccak256(toHex(requestURI JSON))
 
 ### Blockers/Concerns
 
@@ -62,5 +68,5 @@ Progress: [##░░░░░░░░] 13%
 ## Session Continuity
 
 Last session: 2026-03-04
-Stopped at: Completed 317-02-PLAN.md. Phase 317 Foundation complete.
+Stopped at: Completed 318-02-PLAN.md. Phase 318 ActionProvider + Registry Client complete.
 Resume file: None

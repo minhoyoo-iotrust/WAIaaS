@@ -106,7 +106,7 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v30.6-ROADMAP.md` for full 
 **Milestone Goal:** ERC-8004 온체인 레지스트리(Identity/Reputation/Validation)를 WAIaaS에 통합하여, AI 에이전트가 온체인 신원 등록 + 평판 기반 신뢰 평가 + 검증 요청을 수행할 수 있고, REPUTATION_THRESHOLD 정책으로 상대방 평판에 따라 트랜잭션 보안 티어를 자동 조정할 수 있는 상태.
 
 - [x] **Phase 317: Foundation** - DB v39 마이그레이션, 코어 Enum 확장, Admin Settings 9키, 알림 이벤트 5종 정의 (completed 2026-03-04)
-- [ ] **Phase 318: ActionProvider + Registry Client** - Erc8004ActionProvider 8 액션, RegistryClient viem 래퍼, 멀티체인 레지스트리 주소
+- [x] **Phase 318: ActionProvider + Registry Client** - Erc8004ActionProvider 8 액션, RegistryClient viem 래퍼, 멀티체인 레지스트리 주소 (completed 2026-03-04)
 - [ ] **Phase 319: Read-Only Routes + Registration File** - REST API 5 GET 엔드포인트, 등록 파일 자동 생성, connect-info erc8004 확장
 - [ ] **Phase 320: Reputation Policy Engine + Cache** - REPUTATION_THRESHOLD 정책 평가, ReputationCacheService, 피드백 액션 연동
 - [ ] **Phase 321: EIP-712 Approval + Wallet Linking** - setAgentWallet EIP-712 서명, ApprovalWorkflow 확장, WalletConnect eth_signTypedData_v4
@@ -143,8 +143,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 318-01: Erc8004RegistryClient (viem 래퍼, ABI const, 멀티체인 주소 상수)
-- [ ] 318-02: Erc8004ActionProvider (8 write 액션, IActionProvider 구현, registerBuiltInProviders 등록)
+- [x] 318-01: Erc8004RegistryClient (viem 래퍼, ABI const, 멀티체인 주소 상수) -- completed 2026-03-04
+- [x] 318-02: Erc8004ActionProvider (8 write 액션, IActionProvider 구현, registerBuiltInProviders 등록) -- completed 2026-03-04
 
 ### Phase 319: Read-Only Routes + Registration File
 **Goal**: 에이전트 정보, 평판, 검증 상태를 REST API로 조회할 수 있고, 등록 파일이 자동 생성되어 공개 엔드포인트로 제공되며, connect-info에 ERC-8004 상태가 포함되는 상태
@@ -240,7 +240,7 @@ Phases execute in numeric order: 317 -> 318 -> 319 -> 320 -> 321 -> 322 -> 323
 | 268-313.1 | v29.0-v30.2 | All | Complete | 2026-03-04 |
 | 314-316 | v30.6 | 10/10 | Complete | 2026-03-04 |
 | 317. Foundation | v30.8 | Complete    | 2026-03-04 | 2026-03-04 |
-| 318. ActionProvider + Registry Client | v30.8 | 0/2 | Not started | - |
+| 318. ActionProvider + Registry Client | 2/2 | Complete   | 2026-03-04 | 2026-03-04 |
 | 319. Read-Only Routes + Registration File | v30.8 | 0/2 | Not started | - |
 | 320. Reputation Policy Engine + Cache | v30.8 | 0/2 | Not started | - |
 | 321. EIP-712 Approval + Wallet Linking | v30.8 | 0/2 | Not started | - |
@@ -248,4 +248,4 @@ Phases execute in numeric order: 317 -> 318 -> 319 -> 320 -> 321 -> 322 -> 323
 | 323. Skills + Tests | v30.8 | 0/2 | Not started | - |
 
 ---
-*Last updated: 2026-03-04 -- Phase 317 Foundation completed (2/2 plans).*
+*Last updated: 2026-03-04 -- Phase 318 ActionProvider + Registry Client completed (2/2 plans).*

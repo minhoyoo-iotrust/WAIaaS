@@ -9,17 +9,17 @@ Requirements for v30.8 milestone. Each maps to roadmap phases.
 
 ### ActionProvider (PKG)
 
-- [ ] **PKG-01**: Erc8004ActionProvider is registered with registerBuiltInProviders and can be toggled via `actions.erc8004_agent_enabled` setting (default: false)
-- [ ] **PKG-02**: ActionProvider exposes 8 write actions (register_agent, set_agent_wallet, unset_agent_wallet, set_agent_uri, set_metadata, give_feedback, revoke_feedback, request_validation) with correct risk levels and default tiers
+- [x] **PKG-01**: Erc8004ActionProvider is registered with registerBuiltInProviders and can be toggled via `actions.erc8004_agent_enabled` setting (default: false)
+- [x] **PKG-02**: ActionProvider exposes 8 write actions (register_agent, set_agent_wallet, unset_agent_wallet, set_agent_uri, set_metadata, give_feedback, revoke_feedback, request_validation) with correct risk levels and default tiers
 - [x] **PKG-03**: 9 Admin Settings keys are defined for ERC-8004 configuration with correct types and defaults
 
 ### Identity Registry (IDEN)
 
-- [ ] **IDEN-01**: Agent can register on Identity Registry (NFT minting) via `register_agent` action with APPROVAL tier
+- [x] **IDEN-01**: Agent can register on Identity Registry (NFT minting) via `register_agent` action with APPROVAL tier
 - [ ] **IDEN-02**: Owner can link agentWallet via `set_agent_wallet` with corrected EIP-712 typed data signing (`AgentWalletSet` 4-field typehash) through extended ApprovalWorkflow
 - [ ] **IDEN-03**: Owner can unlink agentWallet via `unset_agent_wallet` with APPROVAL tier
-- [ ] **IDEN-04**: Agent can update registration file URI via `set_agent_uri` with DELAY tier
-- [ ] **IDEN-05**: Agent can set/update metadata key-value pairs via `set_metadata` with NOTIFY tier
+- [x] **IDEN-04**: Agent can update registration file URI via `set_agent_uri` with DELAY tier
+- [x] **IDEN-05**: Agent can set/update metadata key-value pairs via `set_metadata` with NOTIFY tier
 - [ ] **IDEN-06**: Registration file JSON is auto-generated with WAIaaS MCP/REST endpoints and served at public endpoint `GET /v1/erc8004/registration-file/:walletId`
 - [ ] **IDEN-07**: `GET /v1/connect-info` includes `erc8004` field with agentId, registryAddress, chainId, registrationFileUrl, status when wallet is registered
 - [ ] **IDEN-08**: Agent info (ID, wallet, URI, metadata) can be queried via `GET /v1/erc8004/agent/:agentId`
@@ -36,7 +36,7 @@ Requirements for v30.8 milestone. Each maps to roadmap phases.
 
 ### Validation Registry (VALD)
 
-- [ ] **VALD-01**: Agent can request on-chain validation via `request_validation` action with DELAY tier -- feature-gated (default disabled, Validation Registry not yet deployed on mainnet)
+- [x] **VALD-01**: Agent can request on-chain validation via `request_validation` action with DELAY tier -- feature-gated (default disabled, Validation Registry not yet deployed on mainnet)
 - [ ] **VALD-02**: Validation status (validator, response, tag, lastUpdate) can be queried via `GET /v1/erc8004/validation/:requestHash`
 
 ### Database (DB)
@@ -113,14 +113,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PKG-01 | Phase 318 | Pending |
-| PKG-02 | Phase 318 | Pending |
+| PKG-01 | Phase 318 | Complete |
+| PKG-02 | Phase 318 | Complete |
 | PKG-03 | Phase 317 | Complete |
-| IDEN-01 | Phase 318 | Pending |
+| IDEN-01 | Phase 318 | Complete |
 | IDEN-02 | Phase 321 | Pending |
 | IDEN-03 | Phase 321 | Pending |
-| IDEN-04 | Phase 318 | Pending |
-| IDEN-05 | Phase 318 | Pending |
+| IDEN-04 | Phase 318 | Complete |
+| IDEN-05 | Phase 318 | Complete |
 | IDEN-06 | Phase 319 | Pending |
 | IDEN-07 | Phase 319 | Pending |
 | IDEN-08 | Phase 319 | Pending |
@@ -131,7 +131,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REPU-05 | Phase 320 | Pending |
 | REPU-06 | Phase 320 | Pending |
 | REPU-07 | Phase 320 | Pending |
-| VALD-01 | Phase 318 | Pending |
+| VALD-01 | Phase 318 | Complete |
 | VALD-02 | Phase 319 | Pending |
 | DB-01 | Phase 317 | Complete |
 | DB-02 | Phase 317 | Complete |
