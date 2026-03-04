@@ -106,7 +106,7 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v30.2-ROADMAP.md` for full 
 
 **Milestone Goal:** EVM 지갑에 ERC-4337 스마트 어카운트 옵션을 추가하여 Paymaster 가스비 스폰서십, 네이티브 원자적 배치, UserOperation 기반 트랜잭션 실행이 가능한 상태.
 
-- [ ] **Phase 314: SmartAccountService + DB Migration + Settings** - 스마트 어카운트 인프라 (생성/관리 서비스, DB v38, Admin Settings)
+- [x] **Phase 314: SmartAccountService + DB Migration + Settings** - 스마트 어카운트 인프라 (생성/관리 서비스, DB v38, Admin Settings) (completed 2026-03-04)
 - [ ] **Phase 315: UserOperation Pipeline + Paymaster** - 파이프라인 accountType 분기 + Bundler/Paymaster 연동
 - [ ] **Phase 316: CLI + SDK + MCP + Admin UI + Skills** - 전 인터페이스 스마트 어카운트 확장
 
@@ -125,9 +125,9 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v30.2-ROADMAP.md` for full 
 **Plans**: TBD
 
 Plans:
-- [ ] 314-01: SmartAccountService + AccountType enum + wallet schema extension
-- [ ] 314-02: DB migration v38 + Admin Settings smart_account keys
-- [ ] 314-03: REST API wallet creation accountType support + validation
+- [x] 314-01: SmartAccountService + AccountType enum + wallet schema extension (completed 2026-03-04)
+- [x] 314-02: DB migration v38 + Admin Settings smart_account keys (completed 2026-03-04)
+- [x] 314-03: REST API wallet creation accountType support + validation (completed 2026-03-04)
 
 ### Phase 315: UserOperation Pipeline + Paymaster
 **Goal**: Smart account transactions execute through UserOperation pipeline via Bundler, with optional Paymaster gas sponsorship, while EOA wallets continue unchanged
@@ -177,7 +177,7 @@ Phases execute in numeric order: 314 -> 315 -> 316
 | 244-267 | v28.0-v28.8 | All | Complete | 2026-02-26 |
 | 268-308 | v29.0-v30.0 | All | Complete | 2026-03-03 |
 | 309-313.1 | v30.2 | 14/14 | Complete | 2026-03-04 |
-| 314. SmartAccountService + DB + Settings | v30.6 | 0/3 | Not started | - |
+| 314. SmartAccountService + DB + Settings | v30.6 | 3/3 | Complete | 2026-03-04 |
 | 315. UserOp Pipeline + Paymaster | v30.6 | 0/4 | Not started | - |
 | 316. CLI + SDK + MCP + Admin UI + Skills | v30.6 | 0/3 | Not started | - |
 
