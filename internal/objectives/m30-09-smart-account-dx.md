@@ -8,6 +8,8 @@
 Smart Account(ERC-4337) 설정 과정을 단순화하여, 운영자가 스마트 계정 지갑 생성 시
 **프로바이더 선택 + API 키 입력**만으로 번들러·페이마스터를 한 번에 구성할 수 있는 상태.
 지갑별 프로바이더 설정으로 서비스 프로바이더가 특정 에이전트에게 가스비를 대납하는 시나리오도 지원한다.
+에이전트가 sessionAuth로 자기 지갑의 프로바이더를 직접 등록할 수 있고, 프로바이더 상태를
+조회하여 가스 대납 가능 여부를 판단할 수 있다.
 
 ---
 
@@ -27,6 +29,10 @@ v30.6에서 ERC-4337 Smart Account를 도입했으나 설정 DX에 다음 문제
 5. **API 키 발급 안내 없음** — 어디서 키를 받아야 하는지 Admin UI에서 안내하지 않음
 6. **글로벌 Paymaster만 지원** — 지갑별로 다른 프로바이더(= 다른 가스 스폰서)를 설정할 수 없어,
    서비스 프로바이더가 특정 에이전트에게만 가스비를 대납하는 시나리오 불가
+7. **에이전트 자력 설정 불가** — 프로바이더 설정이 masterAuth 전용이라, 에이전트가 서비스
+   프로바이더로부터 받은 스코프 키를 직접 등록할 수 없음
+8. **프로바이더 상태 조회 불가** — 에이전트가 자기 지갑의 프로바이더 설정 여부, 지원 체인,
+   가스 대납 가능 여부를 알 수 없음
 
 ### 프로바이더 번들러/페이마스터 통합 구조
 
@@ -46,10 +52,11 @@ v30.6에서 ERC-4337 Smart Account를 도입했으나 설정 DX에 다음 문제
   └─ Pimlico/Alchemy에 크레딧 충전 + 스폰서십 정책 생성
   └─ 정책 스코프 API 키 발급
         ↓
-WAIaaS 운영자
+WAIaaS 운영자 또는 에이전트 (sessionAuth)
   └─ 지갑별 프로바이더 설정 (서비스 프로바이더가 준 키)
         ↓
 AI 에이전트 (Smart Account)
+  └─ 프로바이더 상태 조회 → 가스 대납 가능 확인
   └─ 가스비 0으로 트랜잭션 실행 (Paymaster가 대납)
 ```
 
@@ -76,7 +83,7 @@ EOA 지갑과 Solana 지갑은 번들러/페이마스터가 필요 없으므로 
 - **R1-5.** Smart Account 지갑 생성 시 프로바이더 설정 필수 (미설정 시 400 에러)
 - **R1-6.** Admin UI 지갑 생성 폼에서 `accountType: smart` 선택 시에만 프로바이더 필드 노출
 - **R1-7.** Admin UI 지갑 상세 페이지에서 프로바이더 설정 변경 가능 (Smart Account만)
-- **R1-8.** REST API로 지갑별 프로바이더 설정 변경 가능
+- **R1-8.** REST API로 지갑별 프로바이더 설정 변경 가능 (masterAuth)
 - **R1-9.** 기존 글로벌 설정(`smart_account.bundler_url`, `smart_account.paymaster_url`,
   `smart_account.paymaster_api_key`, `smart_account.bundler_url.{networkId}`,
   `smart_account.paymaster_url.{networkId}`) 제거
@@ -114,10 +121,31 @@ EOA 지갑과 Solana 지갑은 번들러/페이마스터가 필요 없으므로 
 | Pimlico | https://dashboard.pimlico.io |
 | Alchemy | https://dashboard.alchemy.com |
 
-### R4. AA 기본 활성화
+### R4. 에이전트 셀프 프로바이더 등록
 
-- **R4-1.** `smart_account.enabled` 기본값을 `false` → `true`로 변경
-- **R4-2.** 프로바이더 미설정 시 지갑 생성 400 에러 가드는 기존 유지
+에이전트가 sessionAuth로 자기 지갑의 프로바이더를 직접 설정할 수 있다.
+시스템 전역 설정이 아닌 자기 지갑에만 영향하므로 masterAuth 불필요.
+
+- **R4-1.** `PUT /v1/wallets/:id/provider` — sessionAuth로 자기 지갑의 프로바이더 설정
+- **R4-2.** 요청 바디: `{ provider, apiKey }` 또는 `{ provider: 'custom', bundlerUrl, paymasterUrl }`
+- **R4-3.** 세션에 연결된 지갑만 설정 가능 (다른 지갑 설정 시 403)
+- **R4-4.** 서비스 프로바이더가 에이전트에게 스코프 키를 전달 → 에이전트가 자력 등록하는 플로우 지원
+
+### R5. 에이전트 프로바이더 상태 조회
+
+에이전트가 자기 지갑의 프로바이더 설정 상태를 조회하여 가스 대납 가능 여부를 판단할 수 있다.
+
+- **R5-1.** 지갑 정보 조회 응답(`GET /v1/wallets/:id`)에 프로바이더 상태 포함
+- **R5-2.** 응답 필드: `provider.name` (프로바이더명), `provider.supportedChains` (지원 체인 목록),
+  `provider.paymasterEnabled` (페이마스터 활성 여부)
+- **R5-3.** 프로바이더 미설정 시 `provider: null`
+- **R5-4.** connect-info 프롬프트에 프로바이더 상태 포함 — 에이전트가 가스 대납 가능 여부 인지
+- **R5-5.** MCP 도구에서 프로바이더 상태 조회 가능
+
+### R6. AA 기본 활성화
+
+- **R6-1.** `smart_account.enabled` 기본값을 `false` → `true`로 변경
+- **R6-2.** 프로바이더 미설정 시 지갑 생성 400 에러 가드는 기존 유지
 
 ---
 
@@ -131,4 +159,7 @@ EOA 지갑과 Solana 지갑은 번들러/페이마스터가 필요 없으므로 
 | `packages/admin/src/pages/wallets.tsx` | 지갑 생성 폼 + 상세 페이지 프로바이더 설정 UI (Smart Account 조건부 표시) |
 | `packages/daemon/src/infrastructure/settings/setting-keys.ts` | `enabled` 기본값 변경, 글로벌 번들러/페이마스터 키 제거 |
 | `packages/core/src/constants/` | 프로바이더별 chainId 매핑 테이블 |
-| `packages/core/src/schemas/wallet.schema.ts` | CreateWalletRequest에 프로바이더 필드 추가 |
+| `packages/core/src/schemas/wallet.schema.ts` | CreateWalletRequest + WalletResponse에 프로바이더 필드 추가 |
+| `packages/daemon/src/mcp/tools/` | 프로바이더 상태 조회 도구 확장 |
+| `packages/daemon/src/services/connect-info/` | 프롬프트에 프로바이더 상태 포함 |
+| `skills/` | 프로바이더 설정/조회 관련 스킬 파일 업데이트 |
