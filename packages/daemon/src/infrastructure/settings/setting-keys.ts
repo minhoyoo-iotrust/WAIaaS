@@ -255,33 +255,10 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'position_tracker.enabled', category: 'position_tracker', configPath: 'position_tracker.enabled', defaultValue: 'true', isCredential: false },
 
   // --- smart_account category (ERC-4337 Account Abstraction) ---
-  { key: 'smart_account.enabled', category: 'smart_account', configPath: 'smart_account.enabled', defaultValue: 'false', isCredential: false },
+  // v30.9: enabled default changed to 'true' (DFLT-01). bundler_url/paymaster_url/paymaster_api_key
+  // and all per-chain overrides removed (23 keys) -- replaced by per-wallet provider model (PROV-09).
+  { key: 'smart_account.enabled', category: 'smart_account', configPath: 'smart_account.enabled', defaultValue: 'true', isCredential: false },
   { key: 'smart_account.entry_point', category: 'smart_account', configPath: 'smart_account.entry_point', defaultValue: '0x0000000071727De22E5E9d8BAf0edAc6f37da032', isCredential: false },
-  { key: 'smart_account.bundler_url', category: 'smart_account', configPath: 'smart_account.bundler_url', defaultValue: '', isCredential: false },
-  { key: 'smart_account.paymaster_url', category: 'smart_account', configPath: 'smart_account.paymaster_url', defaultValue: '', isCredential: false },
-  { key: 'smart_account.paymaster_api_key', category: 'smart_account', configPath: 'smart_account.paymaster_api_key', defaultValue: '', isCredential: true },
-  // Per-chain bundler_url overrides (SET-05)
-  { key: 'smart_account.bundler_url.ethereum-mainnet', category: 'smart_account', configPath: 'smart_account.bundler_url.ethereum-mainnet', defaultValue: '', isCredential: false },
-  { key: 'smart_account.bundler_url.ethereum-sepolia', category: 'smart_account', configPath: 'smart_account.bundler_url.ethereum-sepolia', defaultValue: '', isCredential: false },
-  { key: 'smart_account.bundler_url.polygon-mainnet', category: 'smart_account', configPath: 'smart_account.bundler_url.polygon-mainnet', defaultValue: '', isCredential: false },
-  { key: 'smart_account.bundler_url.polygon-amoy', category: 'smart_account', configPath: 'smart_account.bundler_url.polygon-amoy', defaultValue: '', isCredential: false },
-  { key: 'smart_account.bundler_url.arbitrum-mainnet', category: 'smart_account', configPath: 'smart_account.bundler_url.arbitrum-mainnet', defaultValue: '', isCredential: false },
-  { key: 'smart_account.bundler_url.arbitrum-sepolia', category: 'smart_account', configPath: 'smart_account.bundler_url.arbitrum-sepolia', defaultValue: '', isCredential: false },
-  { key: 'smart_account.bundler_url.optimism-mainnet', category: 'smart_account', configPath: 'smart_account.bundler_url.optimism-mainnet', defaultValue: '', isCredential: false },
-  { key: 'smart_account.bundler_url.optimism-sepolia', category: 'smart_account', configPath: 'smart_account.bundler_url.optimism-sepolia', defaultValue: '', isCredential: false },
-  { key: 'smart_account.bundler_url.base-mainnet', category: 'smart_account', configPath: 'smart_account.bundler_url.base-mainnet', defaultValue: '', isCredential: false },
-  { key: 'smart_account.bundler_url.base-sepolia', category: 'smart_account', configPath: 'smart_account.bundler_url.base-sepolia', defaultValue: '', isCredential: false },
-  // Per-chain paymaster_url overrides (SET-05)
-  { key: 'smart_account.paymaster_url.ethereum-mainnet', category: 'smart_account', configPath: 'smart_account.paymaster_url.ethereum-mainnet', defaultValue: '', isCredential: false },
-  { key: 'smart_account.paymaster_url.ethereum-sepolia', category: 'smart_account', configPath: 'smart_account.paymaster_url.ethereum-sepolia', defaultValue: '', isCredential: false },
-  { key: 'smart_account.paymaster_url.polygon-mainnet', category: 'smart_account', configPath: 'smart_account.paymaster_url.polygon-mainnet', defaultValue: '', isCredential: false },
-  { key: 'smart_account.paymaster_url.polygon-amoy', category: 'smart_account', configPath: 'smart_account.paymaster_url.polygon-amoy', defaultValue: '', isCredential: false },
-  { key: 'smart_account.paymaster_url.arbitrum-mainnet', category: 'smart_account', configPath: 'smart_account.paymaster_url.arbitrum-mainnet', defaultValue: '', isCredential: false },
-  { key: 'smart_account.paymaster_url.arbitrum-sepolia', category: 'smart_account', configPath: 'smart_account.paymaster_url.arbitrum-sepolia', defaultValue: '', isCredential: false },
-  { key: 'smart_account.paymaster_url.optimism-mainnet', category: 'smart_account', configPath: 'smart_account.paymaster_url.optimism-mainnet', defaultValue: '', isCredential: false },
-  { key: 'smart_account.paymaster_url.optimism-sepolia', category: 'smart_account', configPath: 'smart_account.paymaster_url.optimism-sepolia', defaultValue: '', isCredential: false },
-  { key: 'smart_account.paymaster_url.base-mainnet', category: 'smart_account', configPath: 'smart_account.paymaster_url.base-mainnet', defaultValue: '', isCredential: false },
-  { key: 'smart_account.paymaster_url.base-sepolia', category: 'smart_account', configPath: 'smart_account.paymaster_url.base-sepolia', defaultValue: '', isCredential: false },
 
   // --- ERC-8004 Agent Identity ---
   { key: 'actions.erc8004_agent_enabled', category: 'actions', configPath: 'actions.erc8004_agent_enabled', defaultValue: 'false', isCredential: false },

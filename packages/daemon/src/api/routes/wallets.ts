@@ -38,6 +38,7 @@ import { validateOwnerAddress } from '../middleware/address-validation.js';
 import type { AdapterPool } from '../../infrastructure/adapter-pool.js';
 import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
 import type { SmartAccountService } from '../../infrastructure/smart-account/index.js';
+import { encryptProviderApiKey } from '../../infrastructure/smart-account/aa-provider-crypto.js';
 import {
   CreateWalletRequestOpenAPI,
   WalletCreateResponseSchema,
@@ -406,6 +407,11 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
     const accountType = (parsed as any).accountType ?? 'eoa';
 
     // Smart account validation (ERC-4337)
+    const aaProvider = (parsed as any).aaProvider ?? null;
+    const aaProviderApiKey = (parsed as any).aaProviderApiKey ?? null;
+    const aaBundlerUrl = (parsed as any).aaBundlerUrl ?? null;
+    const aaPaymasterUrl = (parsed as any).aaPaymasterUrl ?? null;
+
     if (accountType === 'smart') {
       // Only EVM chains support smart accounts
       if (chain === 'solana') {
@@ -422,11 +428,10 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
         });
       }
 
-      // Bundler URL must be configured
-      const bundlerUrl = deps.settingsService?.get('smart_account.bundler_url');
-      if (!bundlerUrl) {
+      // Provider must be configured (PROV-05)
+      if (!aaProvider) {
         throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
-          message: 'Bundler URL is not configured. Set via Admin Settings: smart_account.bundler_url',
+          message: 'Smart Account wallet requires provider configuration (aaProvider, aaProviderApiKey or custom URLs)',
         });
       }
     }
@@ -497,6 +502,11 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
     // Insert into wallets table
     const now = new Date(Math.floor(Date.now() / 1000) * 1000); // truncate to seconds
 
+    // Encrypt provider API key if present (PROV-04: AES-256-GCM)
+    const encryptedApiKey = aaProviderApiKey
+      ? encryptProviderApiKey(aaProviderApiKey, currentPassword)
+      : null;
+
     await deps.db.insert(wallets).values({
       id,
       name: parsed.name,
@@ -508,6 +518,10 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
       signerKey,
       deployed,
       entryPoint,
+      aaProvider,
+      aaProviderApiKeyEncrypted: encryptedApiKey,
+      aaBundlerUrl,
+      aaPaymasterUrl,
       createdAt: now,
       updatedAt: now,
     });

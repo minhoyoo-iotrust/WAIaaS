@@ -54,6 +54,8 @@ import { privateKeyToAccount } from 'viem/accounts';
 import { createPublicClient, http, encodeFunctionData, toHex, type Hex } from 'viem';
 import { SmartAccountService } from '../infrastructure/smart-account/smart-account-service.js';
 import { createSmartAccountBundlerClient } from '../infrastructure/smart-account/smart-account-clients.js';
+import type { WalletProviderData } from '../infrastructure/smart-account/smart-account-clients.js';
+import { decryptProviderApiKey } from '../infrastructure/smart-account/aa-provider-crypto.js';
 
 // v1.5: CoinGecko 키 안내 힌트 최초 1회 추적 (데몬 재시작 시 리셋 OK)
 const hintedTokens = new Set<string>();
@@ -74,7 +76,16 @@ export interface PipelineContext {
   masterPassword: string;
   // Request data
   walletId: string;
-  wallet: { publicKey: string; chain: string; environment: string; accountType?: string };
+  wallet: {
+    publicKey: string;
+    chain: string;
+    environment: string;
+    accountType?: string;
+    aaProvider?: string | null;
+    aaProviderApiKeyEncrypted?: string | null;
+    aaBundlerUrl?: string | null;
+    aaPaymasterUrl?: string | null;
+  };
   resolvedNetwork: string;
   request: SendTransactionRequest | TransactionRequest;
   // State accumulated through stages
@@ -1183,17 +1194,21 @@ async function stage5ExecuteSmartAccount(ctx: PipelineContext): Promise<void> {
       client: publicClient,
     });
 
-    // Step 3: Create BundlerClient (includes optional PaymasterClient)
-    if (!ctx.settingsService) {
-      throw new WAIaaSError('CHAIN_ERROR', {
-        message: 'SettingsService required for smart account transactions',
-      });
-    }
+    // Step 3: Create BundlerClient from wallet's provider data (v30.9)
+    const decryptedApiKey = ctx.wallet.aaProviderApiKeyEncrypted
+      ? decryptProviderApiKey(ctx.wallet.aaProviderApiKeyEncrypted, ctx.masterPassword)
+      : null;
+    const walletProvider: WalletProviderData = {
+      aaProvider: (ctx.wallet.aaProvider as WalletProviderData['aaProvider']) ?? null,
+      aaProviderApiKey: decryptedApiKey,
+      aaBundlerUrl: ctx.wallet.aaBundlerUrl ?? null,
+      aaPaymasterUrl: ctx.wallet.aaPaymasterUrl ?? null,
+    };
     const bundlerClient = createSmartAccountBundlerClient({
       client: publicClient as any,
       account: smartAccountInfo.account,
       networkId: ctx.resolvedNetwork,
-      settingsService: ctx.settingsService,
+      walletProvider,
     });
 
     // Step 4: Prepare UserOperation to get gas estimates

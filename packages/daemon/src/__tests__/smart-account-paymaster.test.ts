@@ -67,11 +67,17 @@ vi.mock('viem', async (importOriginal) => {
   };
 });
 
+// Mock AA provider crypto
+vi.mock('../infrastructure/smart-account/aa-provider-crypto.js', () => ({
+  decryptProviderApiKey: vi.fn().mockReturnValue('pk_test_mock_key'),
+}));
+
 import { stage5Execute } from '../pipeline/stages.js';
 import {
-  resolveBundlerUrl,
-  resolvePaymasterUrl,
+  resolveWalletBundlerUrl,
+  resolveWalletPaymasterUrl,
 } from '../infrastructure/smart-account/smart-account-clients.js';
+import type { WalletProviderData } from '../infrastructure/smart-account/smart-account-clients.js';
 import { WAIaaSError } from '@waiaas/core';
 import type { PipelineContext } from '../pipeline/stages.js';
 
@@ -119,6 +125,10 @@ function createMockContext(overrides: Partial<PipelineContext> = {}): PipelineCo
       chain: 'evm',
       environment: 'testnet',
       accountType: 'smart',
+      aaProvider: 'pimlico',
+      aaProviderApiKeyEncrypted: 'encrypted-mock-key',
+      aaBundlerUrl: null,
+      aaPaymasterUrl: null,
     },
     resolvedNetwork: 'ethereum-sepolia',
     request: {
@@ -129,24 +139,9 @@ function createMockContext(overrides: Partial<PipelineContext> = {}): PipelineCo
     },
     txId: 'tx-1',
     settingsService: {
-      get: vi.fn((key: string) => {
-        if (key === 'smart_account.bundler_url') return 'https://bundler.example.com';
-        if (key === 'smart_account.paymaster_url') return '';
-        if (key.startsWith('smart_account.bundler_url.')) return '';
-        if (key.startsWith('smart_account.paymaster_url.')) return '';
-        return '';
-      }),
+      get: vi.fn(() => ''),
     } as any,
     ...overrides,
-  } as any;
-}
-
-function mockSettingsService(overrides: Record<string, string> = {}) {
-  return {
-    get: vi.fn((key: string) => {
-      if (key in overrides) return overrides[key];
-      return '';
-    }),
   } as any;
 }
 
@@ -168,31 +163,32 @@ describe('Paymaster sponsorship flow', () => {
     });
   });
 
-  it('proceeds with Paymaster when paymaster_url is configured', async () => {
-    const ctx = createMockContext({
-      settingsService: {
-        get: vi.fn((key: string) => {
-          if (key === 'smart_account.bundler_url') return 'https://bundler.example.com';
-          if (key === 'smart_account.paymaster_url') return 'https://paymaster.example.com';
-          if (key.startsWith('smart_account.bundler_url.')) return '';
-          if (key.startsWith('smart_account.paymaster_url.')) return '';
-          return '';
-        }),
-      } as any,
-    });
+  it('proceeds with Paymaster for preset provider (unified endpoint)', async () => {
+    // Pimlico/alchemy uses unified endpoint: paymaster URL = bundler URL
+    const ctx = createMockContext();
 
     await stage5Execute(ctx);
 
-    // createPaymasterClient should have been called
+    // createPaymasterClient should have been called (unified endpoint for pimlico)
     expect(mockCreatePaymasterClient).toHaveBeenCalled();
     // createBundlerClient should have paymaster in options
     const bundlerArgs = mockCreateBundlerClient.mock.calls[0][0];
     expect(bundlerArgs).toHaveProperty('paymaster');
   });
 
-  it('proceeds WITHOUT Paymaster when paymaster_url is not configured', async () => {
-    const ctx = createMockContext();
-    // Default settingsService returns '' for paymaster_url
+  it('proceeds WITHOUT Paymaster when custom provider has no paymasterUrl', async () => {
+    const ctx = createMockContext({
+      wallet: {
+        publicKey: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        chain: 'evm',
+        environment: 'testnet',
+        accountType: 'smart',
+        aaProvider: 'custom',
+        aaProviderApiKeyEncrypted: null,
+        aaBundlerUrl: 'https://bundler.example.com',
+        aaPaymasterUrl: null,
+      },
+    });
 
     await stage5Execute(ctx);
 
@@ -309,44 +305,66 @@ describe('gas safety margin', () => {
   });
 });
 
-describe('per-chain Paymaster URL resolution', () => {
-  it('uses chain-specific paymaster URL when available', () => {
-    const settings = mockSettingsService({
-      'smart_account.paymaster_url.ethereum-sepolia': 'https://sepolia-pm.example.com',
-      'smart_account.paymaster_url': 'https://default-pm.example.com',
-    });
+describe('wallet-based URL resolution', () => {
+  it('resolves bundler URL for preset provider (pimlico)', () => {
+    const wallet: WalletProviderData = {
+      aaProvider: 'pimlico',
+      aaProviderApiKey: 'pk_test_key',
+      aaBundlerUrl: null,
+      aaPaymasterUrl: null,
+    };
 
-    const url = resolvePaymasterUrl(settings, 'ethereum-sepolia');
-    expect(url).toBe('https://sepolia-pm.example.com');
+    const url = resolveWalletBundlerUrl(wallet, 'ethereum-sepolia');
+    expect(url).toContain('pimlico');
+    expect(url).toContain('pk_test_key');
   });
 
-  it('falls back to default paymaster URL when chain-specific is not set', () => {
-    const settings = mockSettingsService({
-      'smart_account.paymaster_url.ethereum-sepolia': '',
-      'smart_account.paymaster_url': 'https://default-pm.example.com',
-    });
+  it('resolves paymaster URL as same as bundler for preset provider (unified endpoint)', () => {
+    const wallet: WalletProviderData = {
+      aaProvider: 'pimlico',
+      aaProviderApiKey: 'pk_test_key',
+      aaBundlerUrl: null,
+      aaPaymasterUrl: null,
+    };
 
-    const url = resolvePaymasterUrl(settings, 'ethereum-sepolia');
-    expect(url).toBe('https://default-pm.example.com');
+    const bundlerUrl = resolveWalletBundlerUrl(wallet, 'ethereum-sepolia');
+    const paymasterUrl = resolveWalletPaymasterUrl(wallet, 'ethereum-sepolia');
+    expect(paymasterUrl).toBe(bundlerUrl);
   });
 
-  it('uses chain-specific bundler URL when available', () => {
-    const settings = mockSettingsService({
-      'smart_account.bundler_url.ethereum-sepolia': 'https://sepolia-bundler.example.com',
-      'smart_account.bundler_url': 'https://default-bundler.example.com',
-    });
+  it('resolves custom bundler URL directly from wallet data', () => {
+    const wallet: WalletProviderData = {
+      aaProvider: 'custom',
+      aaProviderApiKey: null,
+      aaBundlerUrl: 'https://my-bundler.example.com',
+      aaPaymasterUrl: null,
+    };
 
-    const url = resolveBundlerUrl(settings, 'ethereum-sepolia');
-    expect(url).toBe('https://sepolia-bundler.example.com');
+    const url = resolveWalletBundlerUrl(wallet, 'ethereum-sepolia');
+    expect(url).toBe('https://my-bundler.example.com');
   });
 
-  it('falls back to default bundler URL when chain-specific is not set', () => {
-    const settings = mockSettingsService({
-      'smart_account.bundler_url.ethereum-sepolia': '',
-      'smart_account.bundler_url': 'https://default-bundler.example.com',
-    });
+  it('returns custom paymaster URL when configured', () => {
+    const wallet: WalletProviderData = {
+      aaProvider: 'custom',
+      aaProviderApiKey: null,
+      aaBundlerUrl: 'https://my-bundler.example.com',
+      aaPaymasterUrl: 'https://my-paymaster.example.com',
+    };
 
-    const url = resolveBundlerUrl(settings, 'ethereum-sepolia');
-    expect(url).toBe('https://default-bundler.example.com');
+    const url = resolveWalletPaymasterUrl(wallet, 'ethereum-sepolia');
+    expect(url).toBe('https://my-paymaster.example.com');
+  });
+
+  it('returns null paymaster URL when custom provider has none', () => {
+    const wallet: WalletProviderData = {
+      aaProvider: 'custom',
+      aaProviderApiKey: null,
+      aaBundlerUrl: 'https://my-bundler.example.com',
+      aaPaymasterUrl: null,
+    };
+
+    const url = resolveWalletPaymasterUrl(wallet, 'ethereum-sepolia');
+    expect(url).toBeNull();
   });
 });
