@@ -11,14 +11,26 @@
  * 7. Registration file endpoint returns 401 without session token
  * 8. Agent Identity CRUD lifecycle (E19)
  * 9. Provider-trust mechanism verification (E16)
- *
- * On-chain readContract calls are NOT tested here (mocked).
- * Full E2E tests with Anvil fork are in Phase 323.
+ * 10. On-chain route handlers (agent info, reputation, validation)
  *
  * @see Phase 319-01
  */
 
 import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
+
+// Mock viem's createPublicClient before any imports
+const { mockReadContract } = vi.hoisted(() => ({
+  mockReadContract: vi.fn(),
+}));
+vi.mock('viem', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('viem')>();
+  return {
+    ...actual,
+    createPublicClient: vi.fn().mockReturnValue({
+      readContract: mockReadContract,
+    }),
+  };
+});
 import type { Database as DatabaseType } from 'better-sqlite3';
 import argon2 from 'argon2';
 import { createDatabase, pushSchema, generateId } from '../infrastructure/database/index.js';
@@ -203,6 +215,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
+  mockReadContract.mockReset();
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-03-04T12:00:00Z'));
 
@@ -532,5 +545,133 @@ describe('Provider-trust mechanism verification (E16)', () => {
     // auto-tags it with actionProvider='erc8004_agent'. The policy engine then
     // checks if actions.erc8004_agent_enabled=true via SettingsService.
     // If enabled, CONTRACT_WHITELIST check is bypassed (provider-trust).
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: GET /v1/erc8004/agent/:agentId (on-chain route)
+// ---------------------------------------------------------------------------
+
+describe('GET /v1/erc8004/agent/:agentId', () => {
+  it('returns agent info when readContract succeeds', async () => {
+    // Mock getAgentWallet + tokenURI
+    mockReadContract
+      .mockResolvedValueOnce('0x1234567890abcdef1234567890abcdef12345678') // getAgentWallet
+      .mockResolvedValueOnce('https://example.com/agent/42.json'); // tokenURI
+
+    // Seed local identity for metadata enrichment
+    seedAgentIdentity(sqlite, walletA, {
+      chainAgentId: '42',
+      registryAddress: '0x8004A169FB4a3325136EB29fA0ceB6D2e539a432',
+      chainId: 1,
+      status: 'REGISTERED',
+    });
+
+    const res = await app.request('/v1/erc8004/agent/42', {
+      headers: bearerHeader(sessionToken),
+    });
+    expect(res.status).toBe(200);
+
+    const body = await json(res);
+    expect(body.agentId).toBe('42');
+    expect(body.wallet).toBe('0x1234567890abcdef1234567890abcdef12345678');
+    expect(body.uri).toBe('https://example.com/agent/42.json');
+    expect((body.metadata as Record<string, unknown>).status).toBe('REGISTERED');
+    expect(body.chainId).toBe(1);
+  });
+
+  it('returns agent info without local identity (empty metadata)', async () => {
+    mockReadContract
+      .mockResolvedValueOnce('0xABCD')
+      .mockResolvedValueOnce('ipfs://Qm...');
+
+    const res = await app.request('/v1/erc8004/agent/99', {
+      headers: bearerHeader(sessionToken),
+    });
+    expect(res.status).toBe(200);
+
+    const body = await json(res);
+    expect(body.agentId).toBe('99');
+    expect(body.metadata).toEqual({});
+    expect(body.chainId).toBe(1); // default
+  });
+
+  it('wraps readContract error as CHAIN_ERROR (502)', async () => {
+    mockReadContract.mockRejectedValueOnce(new Error('execution reverted'));
+
+    const res = await app.request('/v1/erc8004/agent/42', {
+      headers: bearerHeader(sessionToken),
+    });
+    expect(res.status).toBe(502);
+
+    const body = await json(res);
+    // WAIaaSError serialized as { code, message, ... }
+    expect(body.code ?? body.error).toBe('CHAIN_ERROR');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: GET /v1/erc8004/agent/:agentId/reputation (on-chain route)
+// ---------------------------------------------------------------------------
+
+describe('GET /v1/erc8004/agent/:agentId/reputation', () => {
+  it('returns reputation summary with getSummary mock', async () => {
+    // getSummary returns [count, summaryValue, decimals]
+    mockReadContract.mockResolvedValueOnce([10n, 850n, 2]);
+
+    const res = await app.request('/v1/erc8004/agent/42/reputation', {
+      headers: bearerHeader(sessionToken),
+    });
+    expect(res.status).toBe(200);
+
+    const body = await json(res);
+    expect(body.agentId).toBe('42');
+    expect(body.count).toBe(10);
+    expect(body.score).toBe('850');
+    expect(body.decimals).toBe(2);
+  });
+
+  it('passes tag1/tag2 query params to response', async () => {
+    mockReadContract.mockResolvedValueOnce([5n, 100n, 0]);
+
+    const res = await app.request('/v1/erc8004/agent/42/reputation?tag1=defi&tag2=swap', {
+      headers: bearerHeader(sessionToken),
+    });
+    expect(res.status).toBe(200);
+
+    const body = await json(res);
+    expect(body.tag1).toBe('defi');
+    expect(body.tag2).toBe('swap');
+  });
+
+  it('wraps readContract error as CHAIN_ERROR (502)', async () => {
+    mockReadContract.mockRejectedValueOnce(new Error('RPC timeout'));
+
+    const res = await app.request('/v1/erc8004/agent/42/reputation', {
+      headers: bearerHeader(sessionToken),
+    });
+    expect(res.status).toBe(502);
+
+    const body = await json(res);
+    expect(body.code ?? body.error).toBe('CHAIN_ERROR');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: GET /v1/erc8004/validation/:requestHash (on-chain route)
+// ---------------------------------------------------------------------------
+
+describe('GET /v1/erc8004/validation/:requestHash', () => {
+  const HASH = '0x0000000000000000000000000000000000000000000000000000000000000001';
+
+  it('returns ADAPTER_NOT_AVAILABLE when validation registry not deployed (feature-gated)', async () => {
+    // ERC8004_DEFAULTS.validation is '' (not deployed on mainnet)
+    const res = await app.request(`/v1/erc8004/validation/${HASH}`, {
+      headers: bearerHeader(sessionToken),
+    });
+    expect(res.status).toBe(503);
+
+    const body = await json(res);
+    expect(body.code ?? body.error).toBe('ADAPTER_NOT_AVAILABLE');
   });
 });
