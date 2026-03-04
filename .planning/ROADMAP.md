@@ -124,7 +124,7 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v30.6-ROADMAP.md` for full 
   2. Admin Settings에서 `actions.erc8004_*` 9개 키를 조회/수정할 수 있고, feature gate(erc8004_agent_enabled)가 기본 false로 동작한다
   3. @waiaas/core에 5개 NotificationEventType(AGENT_REGISTERED 등)이 추가되어 EventBus에서 emit 가능하다
   4. PolicyType enum에 REPUTATION_THRESHOLD가 18번째 타입으로 추가된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
 - [ ] 317-01: DB v39 마이그레이션 (agent_identities + reputation_cache + approval_type + policies 재생성)
@@ -140,7 +140,7 @@ Plans:
   3. set_agent_uri, set_metadata 액션이 각각 DELAY, NOTIFY 티어로 올바른 ContractCallRequest를 생성한다
   4. request_validation 액션이 feature gate(validation_registry_address 비어 있으면 비활성)로 보호되며, DELAY 티어로 동작한다
   5. 8개 write 액션 모두 resolve()에서 올바른 ABI 인코딩과 레지스트리 주소를 사용한다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
 - [ ] 318-01: Erc8004RegistryClient (viem 래퍼, ABI const, 멀티체인 주소 상수)
@@ -156,7 +156,7 @@ Plans:
   3. GET /v1/erc8004/registration-file/:walletId가 WAIaaS MCP/REST 엔드포인트가 포함된 등록 파일 JSON을 자동 생성하여 반환한다
   4. GET /v1/connect-info 응답에 erc8004 필드(agentId, registryAddress, chainId, status 등)가 등록된 지갑에 대해 포함된다
   5. GET /v1/erc8004/validation/:requestHash가 검증 상태를 반환한다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
 - [ ] 319-01: REST API 5 GET 엔드포인트 + 등록 파일 자동 생성
@@ -172,7 +172,7 @@ Plans:
   3. 평판 데이터가 없거나 RPC 실패 시 unrated_tier(기본 APPROVAL)가 적용된다
   4. ReputationCacheService가 인메모리 캐시(TTL 300s) + DB 폴백 + RPC 3s 타임아웃으로 동작한다
   5. give_feedback, revoke_feedback 액션 실행 후 관련 캐시가 무효화된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
 - [ ] 320-01: ReputationCacheService (인메모리 Map + DB reputation_cache + RPC 폴백)
@@ -187,7 +187,7 @@ Plans:
   2. WalletConnect eth_signTypedData_v4를 통해 Owner가 EIP-712 서명을 제공할 수 있다
   3. unset_agent_wallet 액션이 APPROVAL 티어로 동작하며 agentWallet 연결을 해제한다
   4. EIP-712 승인이 필요한 경우 ApprovalChannelRouter가 WC/Admin UI 채널로만 라우팅하고, ntfy/Telegram에는 Admin UI 링크가 포함된 알림만 전송한다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
 - [ ] 321-01: EIP-712 typed data 승인 흐름 + ApprovalWorkflow approval_type 라우팅
@@ -204,7 +204,7 @@ Plans:
   4. Admin UI 평판 대시보드에서 점수, 수신 피드백 목록(tag 필터), 외부 에이전트 평판 조회가 가능하다
   5. REPUTATION_THRESHOLD 정책 폼이 Policies 페이지에 추가되고, Actions 페이지의 BUILTIN_PROVIDERS에 erc8004_agent가 표시된다
   6. MCP에서 8개 write 도구(mcpExpose) + 3개 read-only 도구가 사용 가능하고, SDK에서 11개 메서드가 동작한다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
 - [ ] 322-01: MCP 11 도구 + SDK 11 메서드
@@ -219,7 +219,7 @@ Plans:
   1. skills/erc8004.skill.md에 모든 REST 엔드포인트, MCP 도구, SDK 메서드, 보안 안내가 문서화되어 있다
   2. skills/policies.skill.md에 REPUTATION_THRESHOLD가 추가되고, skills/admin.skill.md에 ERC-8004 설정이 추가된다
   3. E2E 테스트 55건 이상이 통과하며, 3개 레지스트리, 정책 평가, 캐싱, DB 마이그레이션, Admin UI 렌더링을 커버한다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
 - [ ] 323-01: erc8004.skill.md + 기존 스킬 파일 업데이트
