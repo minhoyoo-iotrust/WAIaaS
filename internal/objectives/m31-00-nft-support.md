@@ -187,3 +187,16 @@ ERC-721과 Metaplex는 항상 `amount: "1"`이다. 통합 스키마에서 `amoun
 | `packages/mcp/src/` | NFT MCP 도구 3개 |
 | `packages/sdk/src/` | NFT SDK 메서드 3개 |
 | `skills/` | nft.skill.md 신규, wallet/transactions 업데이트 |
+
+---
+
+## 향후 확장
+
+### NFT 마켓플레이스 연동
+
+본 마일스톤 범위 밖이며, NFT 기본 기능(조회/전송/승인)이 안정된 후 별도 마일스톤으로 검토한다.
+
+- **EVM**: OpenSea, Blur — 리스팅, 오퍼, 구매, 가격 조회
+- **Solana**: Magic Eden, Tensor — 리스팅, 구매, 컬렉션 탐색
+- **구현 방식**: DeFi 프로토콜과 동일하게 Action Provider 패턴으로 추가
+- **유스케이스**: 에이전트 자동 구매(멤버십/거버넌스 NFT), 포트폴리오 가치 평가, 리스팅 관리
