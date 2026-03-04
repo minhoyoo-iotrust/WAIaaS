@@ -363,6 +363,10 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
           accountType: (a as any).accountType ?? 'eoa',
           signerKey: (a as any).signerKey ?? null,
           deployed: (a as any).deployed ?? true,
+          provider: buildProviderStatus({
+            aaProvider: (a as any).aaProvider ?? null,
+            aaPaymasterUrl: (a as any).aaPaymasterUrl ?? null,
+          }),
           createdAt: a.createdAt ? Math.floor(a.createdAt.getTime() / 1000) : 0,
         })),
       },
@@ -411,6 +415,10 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
         accountType: (wallet as any).accountType ?? 'eoa',
         signerKey: (wallet as any).signerKey ?? null,
         deployed: (wallet as any).deployed ?? true,
+        provider: buildProviderStatus({
+          aaProvider: (wallet as any).aaProvider ?? null,
+          aaPaymasterUrl: (wallet as any).aaPaymasterUrl ?? null,
+        }),
         suspendedAt: wallet.suspendedAt ? Math.floor(wallet.suspendedAt.getTime() / 1000) : null,
         suspensionReason: wallet.suspensionReason ?? null,
         createdAt: wallet.createdAt ? Math.floor(wallet.createdAt.getTime() / 1000) : 0,
@@ -620,6 +628,10 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
         accountType,
         signerKey,
         deployed,
+        provider: buildProviderStatus({
+          aaProvider,
+          aaPaymasterUrl,
+        }),
         createdAt: Math.floor(now.getTime() / 1000),
         session,
       },
@@ -672,6 +684,10 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
         accountType: (wallet as any).accountType ?? 'eoa',
         signerKey: (wallet as any).signerKey ?? null,
         deployed: (wallet as any).deployed ?? true,
+        provider: buildProviderStatus({
+          aaProvider: (wallet as any).aaProvider ?? null,
+          aaPaymasterUrl: (wallet as any).aaPaymasterUrl ?? null,
+        }),
         createdAt: wallet.createdAt ? Math.floor(wallet.createdAt.getTime() / 1000) : 0,
       },
       200,

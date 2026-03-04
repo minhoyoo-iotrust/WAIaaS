@@ -61,6 +61,18 @@ export const HealthResponseSchema = z
   .openapi('HealthResponse');
 
 // ---------------------------------------------------------------------------
+// Provider Status Schema (Phase 325: wallet provider status)
+// ---------------------------------------------------------------------------
+
+export const ProviderStatusSchema = z
+  .object({
+    name: AaProviderNameEnum,
+    supportedChains: z.array(z.string()),
+    paymasterEnabled: z.boolean(),
+  })
+  .openapi('ProviderStatus');
+
+// ---------------------------------------------------------------------------
 // Wallet CRUD Response Schemas
 // ---------------------------------------------------------------------------
 
@@ -79,6 +91,7 @@ export const WalletCrudResponseSchema = z
     accountType: z.enum(['eoa', 'smart']).default('eoa'),
     signerKey: z.string().nullable().default(null),
     deployed: z.boolean().default(true),
+    provider: ProviderStatusSchema.nullable().default(null),
     createdAt: z.number().int(),
   })
   .openapi('WalletCrudResponse');
@@ -567,6 +580,7 @@ export const WalletDetailResponseSchema = z
     accountType: z.enum(['eoa', 'smart']).default('eoa'),
     signerKey: z.string().nullable().default(null),
     deployed: z.boolean().default(true),
+    provider: ProviderStatusSchema.nullable().default(null),
     suspendedAt: z.number().int().nullable().optional(),
     suspensionReason: z.string().nullable().optional(),
     createdAt: z.number().int(),
@@ -643,18 +657,6 @@ export const WalletResumeResponseSchema = z
     status: z.literal('ACTIVE'),
   })
   .openapi('WalletResumeResponse');
-
-// ---------------------------------------------------------------------------
-// Provider Status Schema (Phase 325: wallet provider status)
-// ---------------------------------------------------------------------------
-
-export const ProviderStatusSchema = z
-  .object({
-    name: AaProviderNameEnum,
-    supportedChains: z.array(z.string()),
-    paymasterEnabled: z.boolean(),
-  })
-  .openapi('ProviderStatus');
 
 // ---------------------------------------------------------------------------
 // Set Provider Request/Response Schemas (PUT /wallets/:id/provider)
