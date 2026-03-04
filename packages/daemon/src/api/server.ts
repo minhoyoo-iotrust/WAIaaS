@@ -551,6 +551,11 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         notificationService: deps.notificationService,
         priceOracle: deps.priceOracle,
         settingsService: deps.settingsService!,
+        // v30.8: Wire EIP-712 approval + ERC-8004 notification + cache invalidation deps
+        wcSigningBridgeRef: deps.wcSigningBridgeRef,
+        approvalChannelRouter: deps.approvalChannelRouter,
+        eventBus: deps.eventBus,
+        reputationCache: deps.reputationCache,
       }),
     );
   }

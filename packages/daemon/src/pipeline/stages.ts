@@ -443,11 +443,23 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
     // [Phase 320] Pre-fetch reputation floor tier (async, before IMMEDIATE txn)
     let reputationFloorTier: import('@waiaas/core').PolicyTier | undefined;
     if (ctx.reputationCache && ctx.policyEngine instanceof DatabasePolicyEngine) {
-      reputationFloorTier = await ctx.policyEngine.prefetchReputationTier(
+      const prefetchResult = await ctx.policyEngine.prefetchReputationTier(
         ctx.walletId,
         txParam,
         ctx.reputationCache,
       );
+      reputationFloorTier = prefetchResult?.tier;
+
+      // INT-01 fix: Emit REPUTATION_THRESHOLD_TRIGGERED when tier is escalated.
+      // This fires before the evaluation result is used, so the notification goes out
+      // regardless of whether the transaction is ultimately allowed or denied.
+      if (prefetchResult) {
+        void ctx.notificationService?.notify('REPUTATION_THRESHOLD_TRIGGERED', ctx.walletId, {
+          tier: prefetchResult.tier,
+          score: prefetchResult.score ?? '',
+          threshold: prefetchResult.threshold ?? '',
+        }, { txId: ctx.txId });
+      }
     }
 
     // Use evaluateAndReserve for TOCTOU-safe evaluation when DatabasePolicyEngine + sqlite available

@@ -37,6 +37,7 @@ import {
   stage4Wait,
   stage5Execute,
   stage6Confirm,
+  getRequestTo,
 } from '../../pipeline/stages.js';
 import type { PipelineContext } from '../../pipeline/stages.js';
 import { resolveNetwork } from '../../pipeline/network-resolver.js';
@@ -78,6 +79,8 @@ export interface ActionRouteDeps {
   wcSigningBridgeRef?: import('../../services/wc-signing-bridge.js').WcSigningBridgeRef;
   approvalChannelRouter?: import('../../services/signing-sdk/approval-channel-router.js').ApprovalChannelRouter;
   eventBus?: import('@waiaas/core').EventBus;
+  // v30.8: Reputation cache for post-execution invalidation after feedback actions (INT-02)
+  reputationCache?: import('../../services/erc8004/reputation-cache-service.js').ReputationCacheService;
 }
 
 // ---------------------------------------------------------------------------
@@ -426,6 +429,61 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
           await stage4Wait(ctx);
           await stage5Execute(ctx);
           await stage6Confirm(ctx);
+
+          // INT-01 fix: Emit ERC-8004 notification events after successful execution.
+          // These 4 identity/reputation events are defined in @waiaas/core but were
+          // never emitted -- wire them here in the post-execution flow.
+          if (provider === 'erc8004_agent' && deps.notificationService) {
+            const params = body.params ?? {};
+            const registryAddress = getRequestTo(ctx.request);
+            const erc8004NotifMap: Record<string, { event: string; vars: Record<string, string> }> = {
+              register_agent: {
+                event: 'AGENT_REGISTERED',
+                vars: {
+                  chainAgentId: String(params.agentId ?? ctx.txId),
+                  registryAddress,
+                },
+              },
+              set_agent_wallet: {
+                event: 'AGENT_WALLET_LINKED',
+                vars: { registryAddress },
+              },
+              unset_agent_wallet: {
+                event: 'AGENT_WALLET_UNLINKED',
+                vars: { registryAddress },
+              },
+              give_feedback: {
+                event: 'REPUTATION_FEEDBACK_RECEIVED',
+                vars: {
+                  score: String(params.score ?? ''),
+                  tag1: String(params.tag1 ?? ''),
+                  tag2: String(params.tag2 ?? ''),
+                },
+              },
+            };
+            const notifEntry = erc8004NotifMap[action];
+            if (notifEntry) {
+              void deps.notificationService.notify(
+                notifEntry.event as import('@waiaas/core').NotificationEventType,
+                walletId,
+                notifEntry.vars,
+                { txId: ctx.txId },
+              );
+            }
+          }
+
+          // INT-02 fix: Invalidate reputation cache after feedback actions complete.
+          // ReputationCacheService.invalidate() exists but was never called post-execution.
+          if (
+            provider === 'erc8004_agent' &&
+            (action === 'give_feedback' || action === 'revoke_feedback') &&
+            deps.reputationCache
+          ) {
+            const targetAgentId = String((body.params ?? {}).agentId ?? '');
+            if (targetAgentId) {
+              deps.reputationCache.invalidate(targetAgentId);
+            }
+          }
 
           // GAP-1 fix: Enroll staking unstake transactions in async tracking
           // Lido unstake -> lido-withdrawal tracker, Jito unstake -> jito-epoch tracker

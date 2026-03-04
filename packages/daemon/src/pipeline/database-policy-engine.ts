@@ -2068,13 +2068,13 @@ export class DatabasePolicyEngine implements IPolicyEngine {
    * Called from stage3Policy before entering the IMMEDIATE transaction, since
    * evaluateReputationThreshold is async (RPC call) but evaluateAndReserve is sync.
    *
-   * @returns PolicyTier if reputation escalation needed, undefined otherwise
+   * @returns Object with tier and notification context if escalation needed, undefined otherwise
    */
   async prefetchReputationTier(
     walletId: string,
     transaction: TransactionParam,
     reputationCache: ReputationCacheService,
-  ): Promise<PolicyTier | undefined> {
+  ): Promise<{ tier: PolicyTier; score?: string; threshold?: string } | undefined> {
     // Load policies to check for REPUTATION_THRESHOLD
     const rows = await this.db
       .select()
@@ -2104,7 +2104,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     // Resolve counterparty agentId
     const agentId = this.resolveAgentIdFromAddress(transaction.toAddress);
     if (!agentId) {
-      return (rules.unrated_tier ?? 'APPROVAL') as PolicyTier;
+      return { tier: (rules.unrated_tier ?? 'APPROVAL') as PolicyTier };
     }
 
     // Lookup reputation via the provided cache
@@ -2115,11 +2115,15 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     );
 
     if (!reputation) {
-      return (rules.unrated_tier ?? 'APPROVAL') as PolicyTier;
+      return { tier: (rules.unrated_tier ?? 'APPROVAL') as PolicyTier };
     }
 
     if (reputation.score < rules.min_score) {
-      return (rules.below_threshold_tier ?? 'APPROVAL') as PolicyTier;
+      return {
+        tier: (rules.below_threshold_tier ?? 'APPROVAL') as PolicyTier,
+        score: String(reputation.score),
+        threshold: String(rules.min_score),
+      };
     }
 
     return undefined; // Score meets threshold
