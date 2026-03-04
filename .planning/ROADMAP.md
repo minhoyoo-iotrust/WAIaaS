@@ -244,7 +244,7 @@ Phases execute in numeric order: 317 -> 318 -> 319 -> 320 -> 321 -> 322 -> 323
 | 319. Read-Only Routes + Registration File | v30.8 | Complete    | 2026-03-04 | 2026-03-04 |
 | 320. Reputation Policy Engine + Cache | v30.8 | Complete    | 2026-03-04 | 2026-03-04 |
 | 321. EIP-712 Approval + Wallet Linking | v30.8 | Complete    | 2026-03-04 | 2026-03-04 |
-| 322. Admin UI + MCP + SDK | v30.8 | 3/3 | Complete | 2026-03-04 |
+| 322. Admin UI + MCP + SDK | v30.8 | Complete    | 2026-03-04 | 2026-03-04 |
 | 323. Skills + Tests | v30.8 | 0/2 | Not started | - |
 
 ---
