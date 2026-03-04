@@ -39,7 +39,7 @@
 - ✅ **v30.0 운영 기능 확장 설계** -- Phases 304-308 (shipped 2026-03-03)
 - ✅ **v30.2 운영 기능 확장 구현** -- Phases 309-313.1 (shipped 2026-03-04)
 - ✅ **v30.6 ERC-4337 Account Abstraction 지원** -- Phases 314-316 (shipped 2026-03-04)
-- [ ] **v30.8 ERC-8004 Trustless Agents 지원** -- Phases 317-323 (in progress)
+- [x] **v30.8 ERC-8004 Trustless Agents 지원** -- Phases 317-323 (completed 2026-03-04)
 
 ## Phases
 
@@ -111,7 +111,7 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v30.6-ROADMAP.md` for full 
 - [x] **Phase 320: Reputation Policy Engine + Cache** - REPUTATION_THRESHOLD 정책 평가, ReputationCacheService, 피드백 액션 연동 (completed 2026-03-04)
 - [x] **Phase 321: EIP-712 Approval + Wallet Linking** - setAgentWallet EIP-712 서명, ApprovalWorkflow 확장, WalletConnect eth_signTypedData_v4 (completed 2026-03-04)
 - [x] **Phase 322: Admin UI + MCP + SDK** - ERC-8004 관리 페이지, 평판 대시보드, MCP 11 도구, SDK 11 메서드 (completed 2026-03-04)
-- [ ] **Phase 323: Skills + Tests** - erc8004.skill.md 생성, 기존 스킬 파일 업데이트, E2E 테스트 55+건
+- [x] **Phase 323: Skills + Tests** - erc8004.skill.md 생성, 기존 스킬 파일 업데이트, E2E 테스트 182건 (completed 2026-03-04)
 
 ## Phase Details
 
@@ -222,8 +222,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 323-01: erc8004.skill.md + 기존 스킬 파일 업데이트
-- [ ] 323-02: E2E 테스트 (3 레지스트리 + 정책 + 캐시 + DB + Admin UI)
+- [x] 323-01: erc8004.skill.md + 기존 스킬 파일 업데이트 -- completed 2026-03-04
+- [x] 323-02: E2E 테스트 (3 레지스트리 + 정책 + 캐시 + DB + Admin UI) -- completed 2026-03-04
 
 ## Progress
 
@@ -245,7 +245,7 @@ Phases execute in numeric order: 317 -> 318 -> 319 -> 320 -> 321 -> 322 -> 323
 | 320. Reputation Policy Engine + Cache | v30.8 | Complete    | 2026-03-04 | 2026-03-04 |
 | 321. EIP-712 Approval + Wallet Linking | v30.8 | Complete    | 2026-03-04 | 2026-03-04 |
 | 322. Admin UI + MCP + SDK | v30.8 | Complete    | 2026-03-04 | 2026-03-04 |
-| 323. Skills + Tests | v30.8 | 0/2 | Not started | - |
+| 323. Skills + Tests | v30.8 | 2/2 | Complete | 2026-03-04 |
 
 ---
-*Last updated: 2026-03-04 -- Phase 322 completed (3 plans, 6 tasks, 28 tests).*
+*Last updated: 2026-03-04 -- Phase 323 completed (2 plans, 3 tasks, 182 tests). All v30.8 phases shipped.*

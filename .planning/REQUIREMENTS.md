@@ -69,12 +69,12 @@ Requirements for v30.8 milestone. Each maps to roadmap phases.
 
 ### Skill Files (SKILL)
 
-- [ ] **SKILL-01**: New `skills/erc8004.skill.md` created with all endpoints, MCP tools, SDK methods, and security notice
-- [ ] **SKILL-02**: `skills/policies.skill.md` updated with REPUTATION_THRESHOLD and `skills/admin.skill.md` updated with ERC-8004 settings
+- [x] **SKILL-01**: New `skills/erc8004.skill.md` created with all endpoints, MCP tools, SDK methods, and security notice
+- [x] **SKILL-02**: `skills/policies.skill.md` updated with REPUTATION_THRESHOLD and `skills/admin.skill.md` updated with ERC-8004 settings
 
 ### Tests (TEST)
 
-- [ ] **TEST-01**: 20 test scenarios (E1-E20) implemented with L0+L1 >= 55 tests passing, covering all three registries, policy evaluation, caching, DB migration, and Admin UI rendering
+- [x] **TEST-01**: 20 test scenarios (E1-E20) implemented with L0+L1 = 182 tests passing, covering all three registries, policy evaluation, caching, DB migration, and Admin UI rendering
 
 ## v2 Requirements
 
@@ -149,9 +149,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | UI-06 | Phase 322 | Complete |
 | UI-07 | Phase 322 | Complete |
 | NOTIF-01 | Phase 317 | Complete |
-| SKILL-01 | Phase 323 | Pending |
-| SKILL-02 | Phase 323 | Pending |
-| TEST-01 | Phase 323 | Pending |
+| SKILL-01 | Phase 323 | Complete |
+| SKILL-02 | Phase 323 | Complete |
+| TEST-01 | Phase 323 | Complete |
 
 **Coverage:**
 - v1 requirements: 39 total
@@ -160,4 +160,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-04*
-*Last updated: 2026-03-04 -- Phase 320 completed (REPU-01, REPU-02, REPU-04~07 = 24/39 complete)*
+*Last updated: 2026-03-04 -- All v30.8 requirements complete (39/39)*

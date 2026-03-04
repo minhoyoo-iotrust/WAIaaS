@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v30.8
 milestone_name: ERC-8004 Trustless Agents 지원
-status: unknown
-last_updated: "2026-03-04T10:37:05.656Z"
+status: complete
+last_updated: "2026-03-04T10:53:04.000Z"
 progress:
   total_phases: 187
-  completed_phases: 181
+  completed_phases: 187
   total_plans: 401
-  completed_plans: 395
+  completed_plans: 401
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-04)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v30.8 Phase 323 -- Skills + Tests
+**Current focus:** v30.8 complete -- all 7 phases shipped
 
 ## Current Position
 
-Phase: 322 (6 of 7) -- Admin UI + MCP + SDK
-Plan: 3 of 3 in current phase
-Status: Phase 322 completed, ready for Phase 323
-Last activity: 2026-03-04 -- Phase 322 Admin UI + MCP + SDK completed (3 plans, 6 tasks, 28 tests)
+Phase: 323 (7 of 7) -- Skills + Tests
+Plan: 2 of 2 in current phase
+Status: All phases complete -- v30.8 ready for milestone PR
+Last activity: 2026-03-04 -- Phase 323 Skills + Tests completed (2 plans, 3 tasks, 182 ERC-8004 tests)
 
-Progress: [########░░] 86%
+Progress: [##########] 100%
 
 ## Performance Metrics
 
@@ -48,6 +48,8 @@ Progress: [########░░] 86%
 | 322-01 | MCP 3 tools + SDK 11 methods | 4min | 2 | 8 |
 | 322-02 | Admin UI ERC-8004 Identity page | 4min | 2 | 4 |
 | 322-03 | Reputation + Policy Form + Actions | 3min | 2 | 7 |
+| 323-01 | erc8004.skill.md + skill updates | 4min | 2 | 4 |
+| 323-02 | E2E test verification + fixes | 4min | 1 | 2 |
 
 ## Accumulated Context
 
@@ -85,6 +87,10 @@ Progress: [########░░] 86%
 - Score badge thresholds: >= 50 success, >= 20 warning, < 20 danger
 - PolicyFormRouter expanded to 13 dedicated form components
 - BUILTIN_PROVIDERS expanded to 10 entries with erc8004_agent
+- ERC-8004 skill file follows x402.skill.md structure pattern (frontmatter + numbered sections)
+- E16 provider-trust verified via generic PTRUST tests + erc8004-specific metadata verification
+- E19 CRUD lifecycle: 5 explicit tests (create, update, delete, FK cascade, unique index)
+- migration-v39 tests forward-compatible with LATEST_SCHEMA_VERSION >= 39 assertion
 
 ### Blockers/Concerns
 
@@ -94,5 +100,5 @@ Progress: [########░░] 86%
 ## Session Continuity
 
 Last session: 2026-03-04
-Stopped at: Completed 322-03-PLAN.md. Phase 322 Admin UI + MCP + SDK complete (3 plans, 6 tasks, 28 tests).
+Stopped at: Completed 323-02-PLAN.md. Phase 323 Skills + Tests complete (2 plans, 3 tasks, 182 tests). All v30.8 phases shipped.
 Resume file: None
