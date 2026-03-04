@@ -214,6 +214,198 @@ describe('WcSessionService', () => {
   });
 
   // -------------------------------------------------------------------------
+  // getSessionTopic
+  // -------------------------------------------------------------------------
+
+  describe('getSessionTopic', () => {
+    it('returns null when no session exists for wallet', () => {
+      expect(service.getSessionTopic('no-such-wallet')).toBeNull();
+    });
+
+    it('returns topic when session exists in memory map', () => {
+      const ts = now();
+      sqlite.prepare(
+        `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run('w-topic-1', 'Topic Wallet', 'ethereum', 'testnet', 'pk-t1', 'ACTIVE', 0, ts, ts);
+      sqlite.prepare(
+        `INSERT INTO wc_sessions (wallet_id, topic, chain_id, owner_address, expiry, created_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      ).run('w-topic-1', 'topic-xyz', 'eip155:11155111', '0xOwner', ts + 86400, ts);
+      (service as any).restoreSessions();
+
+      expect(service.getSessionTopic('w-topic-1')).toBe('topic-xyz');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // getSessionInfo
+  // -------------------------------------------------------------------------
+
+  describe('getSessionInfo', () => {
+    it('returns null when no session exists', () => {
+      expect(service.getSessionInfo('no-wallet')).toBeNull();
+    });
+
+    it('returns session info with parsed peer metadata', () => {
+      const ts = now();
+      sqlite.prepare(
+        `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run('w-info-1', 'Info Wallet', 'ethereum', 'testnet', 'pk-i1', 'ACTIVE', 0, ts, ts);
+      sqlite.prepare(
+        `INSERT INTO wc_sessions (wallet_id, topic, peer_meta, chain_id, owner_address, expiry, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      ).run('w-info-1', 'topic-info', JSON.stringify({ name: 'MetaMask', url: 'https://metamask.io' }), 'eip155:1', '0xAddr', ts + 86400, ts);
+
+      const info = service.getSessionInfo('w-info-1');
+      expect(info).not.toBeNull();
+      expect(info!.walletId).toBe('w-info-1');
+      expect(info!.topic).toBe('topic-info');
+      expect(info!.peerName).toBe('MetaMask');
+      expect(info!.peerUrl).toBe('https://metamask.io');
+      expect(info!.chainId).toBe('eip155:1');
+      expect(info!.ownerAddress).toBe('0xAddr');
+    });
+
+    it('returns null peer fields when peer_meta is null', () => {
+      const ts = now();
+      sqlite.prepare(
+        `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run('w-info-2', 'Info Wallet 2', 'solana', 'testnet', 'pk-i2', 'ACTIVE', 0, ts, ts);
+      sqlite.prepare(
+        `INSERT INTO wc_sessions (wallet_id, topic, peer_meta, chain_id, owner_address, expiry, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      ).run('w-info-2', 'topic-info-2', null, 'solana:devnet', 'SolAddr', ts + 86400, ts);
+
+      const info = service.getSessionInfo('w-info-2');
+      expect(info).not.toBeNull();
+      expect(info!.peerName).toBeNull();
+      expect(info!.peerUrl).toBeNull();
+    });
+
+    it('handles invalid peer_meta JSON gracefully', () => {
+      const ts = now();
+      sqlite.prepare(
+        `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run('w-info-3', 'Info Wallet 3', 'ethereum', 'testnet', 'pk-i3', 'ACTIVE', 0, ts, ts);
+      sqlite.prepare(
+        `INSERT INTO wc_sessions (wallet_id, topic, peer_meta, chain_id, owner_address, expiry, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      ).run('w-info-3', 'topic-info-3', 'not-json', 'eip155:1', '0xAddr3', ts + 86400, ts);
+
+      const info = service.getSessionInfo('w-info-3');
+      expect(info).not.toBeNull();
+      expect(info!.peerName).toBeNull();
+      expect(info!.peerUrl).toBeNull();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // getPairingStatus
+  // -------------------------------------------------------------------------
+
+  describe('getPairingStatus', () => {
+    it('returns "none" when no session or pending pairing exists', () => {
+      expect(service.getPairingStatus('w-none')).toBe('none');
+    });
+
+    it('returns "connected" when wallet has active session', () => {
+      const ts = now();
+      sqlite.prepare(
+        `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run('w-conn', 'Connected', 'ethereum', 'testnet', 'pk-c', 'ACTIVE', 0, ts, ts);
+      sqlite.prepare(
+        `INSERT INTO wc_sessions (wallet_id, topic, chain_id, owner_address, expiry, created_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      ).run('w-conn', 'topic-conn', 'eip155:1', '0xC', ts + 86400, ts);
+      (service as any).restoreSessions();
+
+      expect(service.getPairingStatus('w-conn')).toBe('connected');
+    });
+
+    it('returns "pending" when pairing is not yet expired', () => {
+      const futureExpiry = Math.floor(Date.now() / 1000) + 300;
+      (service as any).pendingPairing.set('w-pending', { expiresAt: futureExpiry, uri: 'wc:xxx' });
+
+      expect(service.getPairingStatus('w-pending')).toBe('pending');
+    });
+
+    it('returns "expired" and cleans up when pairing has expired', () => {
+      const pastExpiry = Math.floor(Date.now() / 1000) - 10;
+      (service as any).pendingPairing.set('w-expired', { expiresAt: pastExpiry, uri: 'wc:old' });
+
+      expect(service.getPairingStatus('w-expired')).toBe('expired');
+      // Verify cleanup
+      expect((service as any).pendingPairing.has('w-expired')).toBe(false);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // createPairing - error cases
+  // -------------------------------------------------------------------------
+
+  describe('createPairing', () => {
+    it('throws WC_NOT_CONFIGURED when signClient is null', async () => {
+      await expect(service.createPairing('w1', 'mainnet', 'ethereum'))
+        .rejects.toThrow('WalletConnect is not configured');
+    });
+
+    it('throws WC_SESSION_EXISTS when wallet already has active session', async () => {
+      // Set up a mock signClient so WC_NOT_CONFIGURED doesn't trigger
+      (service as any).signClient = {};
+      // Add an active session
+      (service as any).sessionMap.set('w-dup', 'topic-existing');
+
+      await expect(service.createPairing('w-dup', 'mainnet', 'ethereum'))
+        .rejects.toThrow('Wallet already has an active WC session');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // disconnectSession - error cases
+  // -------------------------------------------------------------------------
+
+  describe('disconnectSession', () => {
+    it('throws WC_NOT_CONFIGURED when signClient is null', async () => {
+      await expect(service.disconnectSession('w1'))
+        .rejects.toThrow('WalletConnect is not configured');
+    });
+
+    it('throws WC_SESSION_NOT_FOUND when wallet has no active session', async () => {
+      (service as any).signClient = {};
+      await expect(service.disconnectSession('w-no-session'))
+        .rejects.toThrow('No active WC session for this wallet');
+    });
+
+    it('calls signClient.disconnect and cleans up on success', async () => {
+      const ts = now();
+      sqlite.prepare(
+        `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run('w-disc', 'Disc Wallet', 'ethereum', 'testnet', 'pk-d', 'ACTIVE', 0, ts, ts);
+      sqlite.prepare(
+        `INSERT INTO wc_sessions (wallet_id, topic, chain_id, owner_address, expiry, created_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      ).run('w-disc', 'topic-disc', 'eip155:1', '0xD', ts + 86400, ts);
+      (service as any).restoreSessions();
+
+      // Mock signClient with disconnect
+      const mockDisconnect = async () => {};
+      (service as any).signClient = { disconnect: mockDisconnect };
+
+      await service.disconnectSession('w-disc');
+
+      expect(service.hasActiveSession('w-disc')).toBe(false);
+      const row = sqlite.prepare('SELECT * FROM wc_sessions WHERE wallet_id = ?').get('w-disc');
+      expect(row).toBeUndefined();
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // shutdown - storage closed guard
   // -------------------------------------------------------------------------
 
@@ -234,6 +426,44 @@ describe('WcSessionService', () => {
 
     it('does not throw when storage is null (WC not initialized)', async () => {
       await expect(service.shutdown()).resolves.not.toThrow();
+    });
+
+    it('clears signClient, sessionMap, and pendingPairing on shutdown', async () => {
+      // Simulate initialized state
+      const mockRelayer = { provider: { disconnect: async () => {} } };
+      (service as any).signClient = { core: { relayer: mockRelayer } };
+      (service as any).sessionMap.set('w1', 'topic1');
+      (service as any).pendingPairing.set('w2', { expiresAt: 999, uri: 'wc:x' });
+
+      const { SqliteKeyValueStorage } = await import('../services/wc-storage.js');
+      (service as any).storage = new SqliteKeyValueStorage(sqlite);
+
+      await service.shutdown();
+
+      expect(service.getSignClient()).toBeNull();
+      expect(service.hasActiveSession('w1')).toBe(false);
+      expect((service as any).pendingPairing.size).toBe(0);
+    });
+
+    it('handles relayer disconnect error gracefully', async () => {
+      const mockRelayer = {
+        provider: { disconnect: async () => { throw new Error('relay error'); } },
+      };
+      (service as any).signClient = { core: { relayer: mockRelayer } };
+
+      await expect(service.shutdown()).resolves.not.toThrow();
+      expect(service.getSignClient()).toBeNull();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // initialize - no-op when project_id not configured
+  // -------------------------------------------------------------------------
+
+  describe('initialize', () => {
+    it('does nothing when walletconnect.project_id is not set', async () => {
+      await service.initialize();
+      expect(service.getSignClient()).toBeNull();
     });
   });
 });
