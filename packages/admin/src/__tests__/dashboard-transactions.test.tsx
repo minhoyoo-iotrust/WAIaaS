@@ -40,7 +40,16 @@ vi.mock('../utils/error-messages', () => ({
   getErrorMessage: (code: string) => `Error: ${code}`,
 }));
 
+vi.mock('../utils/display-currency', async () => {
+  const actual = await vi.importActual<typeof import('../utils/display-currency')>('../utils/display-currency');
+  return {
+    ...actual,
+    fetchDisplayCurrency: vi.fn(),
+  };
+});
+
 import { apiGet } from '../api/client';
+import { fetchDisplayCurrency } from '../utils/display-currency';
 import DashboardPage from '../pages/dashboard';
 
 const mockStatus = {
@@ -94,9 +103,12 @@ function setupMocks(approvalResponse = mockApprovalResponse) {
   vi.mocked(apiGet).mockImplementation((url: string) => {
     if (url === '/v1/admin/status') return Promise.resolve(mockStatus);
     if (url.startsWith('/v1/admin/transactions?status=APPROVED')) return Promise.resolve(approvalResponse);
+    if (url.includes('/v1/admin/stats')) return Promise.reject(new Error('not found'));
+    if (url.includes('/v1/admin/defi/positions')) return Promise.reject(new Error('not found'));
     if (url === '/v1/admin/settings') return Promise.resolve(mockSettingsResponse);
     return Promise.resolve({});
   });
+  vi.mocked(fetchDisplayCurrency).mockResolvedValue({ currency: 'USD', rate: 1 });
 }
 
 describe('Dashboard Transactions Features', () => {
