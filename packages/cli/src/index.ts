@@ -144,14 +144,16 @@ wallet
   .option('--all', 'Create wallets for all supported chains')
   .option('--mode <mode>', 'Environment mode: testnet or mainnet', 'mainnet')
   .option('--name <name>', 'Wallet name (ignored with --all)')
+  .option('--account-type <type>', 'Account type: eoa (default) or smart')
   .option('--password <password>', 'Master password')
-  .action(async (opts: { baseUrl?: string; chain?: string; all?: boolean; mode?: string; name?: string; password?: string }) => {
+  .action(async (opts: { baseUrl?: string; chain?: string; all?: boolean; mode?: string; name?: string; accountType?: string; password?: string }) => {
     await walletCreateCommand({
       baseUrl: opts.baseUrl ?? 'http://127.0.0.1:3100',
       chain: opts.chain,
       all: opts.all,
       mode: opts.mode,
       name: opts.name,
+      accountType: opts.accountType,
       password: opts.password,
     });
   });

@@ -14,6 +14,8 @@ export interface WAIaaSClientOptions {
   baseUrl: string;
   /** Session token for authentication (Bearer token) */
   sessionToken?: string;
+  /** Master password for admin operations (e.g., createWallet) */
+  masterPassword?: string;
   /** Request timeout in milliseconds (default: 30000) */
   timeout?: number;
   /** Retry options (used by retry wrapper in 61-02) */
@@ -46,6 +48,42 @@ export interface RetryOptions {
   maxDelayMs?: number;
   /** HTTP status codes to retry on (default: [429, 500, 502, 503, 504]) */
   retryableStatuses?: number[];
+}
+
+// ---------------------------------------------------------------------------
+// Wallet Creation Types
+// ---------------------------------------------------------------------------
+
+export interface CreateWalletParams {
+  /** Wallet name */
+  name: string;
+  /** Chain type: solana or ethereum */
+  chain?: 'solana' | 'ethereum';
+  /** Environment: testnet or mainnet */
+  environment?: 'testnet' | 'mainnet';
+  /** Account type: eoa (default) or smart (ERC-4337, EVM only) */
+  accountType?: 'eoa' | 'smart';
+  /** Whether to create an initial session (default: true) */
+  createSession?: boolean;
+}
+
+export interface CreateWalletResponse {
+  id: string;
+  name: string;
+  chain: string;
+  network: string;
+  environment: string;
+  publicKey: string;
+  status: string;
+  accountType: string;
+  signerKey: string | null;
+  deployed: boolean;
+  createdAt: number;
+  session?: {
+    id: string;
+    token: string;
+    expiresAt: number;
+  } | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -306,6 +344,7 @@ export interface ConnectInfoWallet {
   chain: string;
   environment: string;
   address: string;
+  accountType?: string;
 }
 
 export interface ConnectInfoSession {
@@ -460,6 +499,9 @@ export interface WalletInfoResponse {
   environment: string;
   address: string;
   networks: WalletNetworkInfo[];
+  accountType?: string;
+  signerKey?: string | null;
+  deployed?: boolean;
 }
 
 // ---------------------------------------------------------------------------

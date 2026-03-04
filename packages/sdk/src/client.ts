@@ -66,12 +66,15 @@ import type {
   DeFiPositionsResponse,
   HealthFactorResponse,
   SimulateResponse,
+  CreateWalletParams,
+  CreateWalletResponse,
 } from './types.js';
 
 export class WAIaaSClient {
   private http: HttpClient;
   private sessionToken: string | undefined;
   private sessionId: string | undefined;
+  private masterPassword: string | undefined;
   private retryOptions?: RetryOptions;
 
   constructor(options: WAIaaSClientOptions) {
@@ -80,6 +83,7 @@ export class WAIaaSClient {
       options.timeout ?? DEFAULT_TIMEOUT,
     );
     this.sessionToken = options.sessionToken;
+    this.masterPassword = options.masterPassword;
     this.retryOptions = options.retryOptions;
   }
 
@@ -635,6 +639,33 @@ export class WAIaaSClient {
         `/v1/actions/${provider}/${action}`,
         body,
         this.authHeaders(),
+      ),
+      this.retryOptions,
+    );
+  }
+
+  // --- Wallet creation (masterAuth) ---
+  async createWallet(params: CreateWalletParams): Promise<CreateWalletResponse> {
+    if (!this.masterPassword) {
+      throw new WAIaaSError({
+        code: 'MASTER_PASSWORD_REQUIRED',
+        message: 'createWallet requires masterPassword in client options',
+        status: 0,
+        retryable: false,
+      });
+    }
+    const body: Record<string, unknown> = {
+      name: params.name,
+    };
+    if (params.chain) body.chain = params.chain;
+    if (params.environment) body.environment = params.environment;
+    if (params.accountType) body.accountType = params.accountType;
+    if (params.createSession !== undefined) body.createSession = params.createSession;
+    return withRetry(
+      () => this.http.post<CreateWalletResponse>(
+        '/v1/wallets',
+        body,
+        this.masterHeaders(this.masterPassword!),
       ),
       this.retryOptions,
     );

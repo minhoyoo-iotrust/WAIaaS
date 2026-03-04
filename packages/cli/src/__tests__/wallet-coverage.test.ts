@@ -388,6 +388,62 @@ describe('wallet commands', () => {
       expect(mockStdout).toHaveBeenCalledWith(expect.stringContaining('Available:        devnet, testnet'));
     });
 
+    it('displays smart account fields (accountType, signerKey, deployed)', async () => {
+      const smartWallet = {
+        ...WALLET_B,
+        accountType: 'smart',
+        signerKey: '0xsigner123',
+        deployed: false,
+      };
+      const fetchMock = vi.fn((url: string | URL) => {
+        const u = String(url);
+        if (u.endsWith('/v1/wallets')) {
+          return Promise.resolve(mockResponse(200, { items: [smartWallet] }));
+        }
+        if (u.includes('/networks')) {
+          return Promise.resolve(mockResponse(200, {
+            id: 'w-bbb',
+            chain: 'ethereum',
+            environment: 'testnet',
+            availableNetworks: [{ network: 'sepolia' }],
+          }));
+        }
+        return Promise.reject(new Error(`Unexpected: ${u}`));
+      });
+      vi.stubGlobal('fetch', fetchMock);
+
+      const { walletInfoCommand } = await import('../commands/wallet.js');
+      await walletInfoCommand({ baseUrl: BASE, password: TEST_PW });
+
+      expect(mockStdout).toHaveBeenCalledWith(expect.stringContaining('Account Type:     smart'));
+      expect(mockStdout).toHaveBeenCalledWith(expect.stringContaining('Signer Key:       0xsigner123'));
+      expect(mockStdout).toHaveBeenCalledWith(expect.stringContaining('Deployed:         no'));
+    });
+
+    it('displays eoa account type for standard wallet', async () => {
+      const fetchMock = vi.fn((url: string | URL) => {
+        const u = String(url);
+        if (u.endsWith('/v1/wallets')) {
+          return Promise.resolve(mockResponse(200, { items: [WALLET_A] }));
+        }
+        if (u.includes('/networks')) {
+          return Promise.resolve(mockResponse(200, {
+            id: 'w-aaa',
+            chain: 'solana',
+            environment: 'testnet',
+            availableNetworks: [{ network: 'devnet' }],
+          }));
+        }
+        return Promise.reject(new Error(`Unexpected: ${u}`));
+      });
+      vi.stubGlobal('fetch', fetchMock);
+
+      const { walletInfoCommand } = await import('../commands/wallet.js');
+      await walletInfoCommand({ baseUrl: BASE, password: TEST_PW });
+
+      expect(mockStdout).toHaveBeenCalledWith(expect.stringContaining('Account Type:     eoa'));
+    });
+
     it('empty availableNetworks: shows "none"', async () => {
       const fetchMock = vi.fn((url: string | URL) => {
         const u = String(url);
@@ -410,6 +466,113 @@ describe('wallet commands', () => {
       await walletInfoCommand({ baseUrl: BASE, password: TEST_PW });
 
       expect(mockStdout).toHaveBeenCalledWith(expect.stringContaining('Available:        none'));
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // walletCreateCommand
+  // -----------------------------------------------------------------------
+
+  describe('walletCreateCommand', () => {
+    it('sends accountType in POST body when --account-type smart', async () => {
+      let capturedBody: string | undefined;
+      const fetchMock = vi.fn((url: string | URL, init?: RequestInit) => {
+        const u = String(url);
+        if (u.endsWith('/v1/wallets') && init?.method === 'POST') {
+          capturedBody = init?.body as string;
+          return Promise.resolve(mockResponse(201, {
+            id: 'w-smart',
+            name: 'smart-test',
+            chain: 'ethereum',
+            environment: 'testnet',
+            publicKey: '0xsmart123',
+            accountType: 'smart',
+            signerKey: '0xsigner456',
+            deployed: false,
+          }));
+        }
+        if (u.includes('/networks')) {
+          return Promise.resolve(mockResponse(200, {
+            id: 'w-smart',
+            chain: 'ethereum',
+            environment: 'testnet',
+            availableNetworks: [{ network: 'sepolia' }],
+          }));
+        }
+        return Promise.reject(new Error(`Unexpected: ${u}`));
+      });
+      vi.stubGlobal('fetch', fetchMock);
+
+      const { walletCreateCommand } = await import('../commands/wallet.js');
+      await walletCreateCommand({
+        baseUrl: BASE,
+        password: TEST_PW,
+        chain: 'ethereum',
+        name: 'smart-test',
+        accountType: 'smart',
+      });
+
+      expect(capturedBody).toBeDefined();
+      const parsed = JSON.parse(capturedBody!);
+      expect(parsed.accountType).toBe('smart');
+      expect(mockStdout).toHaveBeenCalledWith(expect.stringContaining('Account Type:     smart'));
+      expect(mockStdout).toHaveBeenCalledWith(expect.stringContaining('Signer Key:'));
+    });
+
+    it('does not send accountType when not specified', async () => {
+      let capturedBody: string | undefined;
+      const fetchMock = vi.fn((url: string | URL, init?: RequestInit) => {
+        const u = String(url);
+        if (u.endsWith('/v1/wallets') && init?.method === 'POST') {
+          capturedBody = init?.body as string;
+          return Promise.resolve(mockResponse(201, {
+            id: 'w-eoa',
+            name: 'eoa-test',
+            chain: 'solana',
+            environment: 'testnet',
+            publicKey: '7xKXtg',
+          }));
+        }
+        if (u.includes('/networks')) {
+          return Promise.resolve(mockResponse(200, {
+            id: 'w-eoa',
+            chain: 'solana',
+            environment: 'testnet',
+            availableNetworks: [{ network: 'devnet' }],
+          }));
+        }
+        return Promise.reject(new Error(`Unexpected: ${u}`));
+      });
+      vi.stubGlobal('fetch', fetchMock);
+
+      const { walletCreateCommand } = await import('../commands/wallet.js');
+      await walletCreateCommand({
+        baseUrl: BASE,
+        password: TEST_PW,
+        chain: 'solana',
+        name: 'eoa-test',
+      });
+
+      expect(capturedBody).toBeDefined();
+      const parsed = JSON.parse(capturedBody!);
+      expect(parsed.accountType).toBeUndefined();
+    });
+
+    it('exits with error for invalid accountType', async () => {
+      const fetchMock = vi.fn();
+      vi.stubGlobal('fetch', fetchMock);
+
+      const { walletCreateCommand } = await import('../commands/wallet.js');
+      await expect(walletCreateCommand({
+        baseUrl: BASE,
+        password: TEST_PW,
+        chain: 'ethereum',
+        name: 'bad-type',
+        accountType: 'invalid',
+      })).rejects.toThrow(ExitError);
+
+      expect(mockStderr).toHaveBeenCalledWith(expect.stringContaining('Invalid account type'));
+      expect(fetchMock).not.toHaveBeenCalled();
     });
   });
 
