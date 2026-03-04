@@ -9,6 +9,8 @@
  * 5. Reputation endpoint returns 401 without session token
  * 6. Validation endpoint returns 401 without session token
  * 7. Registration file endpoint returns 401 without session token
+ * 8. Agent Identity CRUD lifecycle (E19)
+ * 9. Provider-trust mechanism verification (E16)
  *
  * On-chain readContract calls are NOT tested here (mocked).
  * Full E2E tests with Anvil fork are in Phase 323.
@@ -371,5 +373,164 @@ describe('ERC-8004 auth enforcement', () => {
       headers: { Host: HOST },
     });
     expect(res.status).toBe(401);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: Agent Identity CRUD lifecycle (E19)
+// ---------------------------------------------------------------------------
+
+describe('Agent Identity CRUD lifecycle (E19)', () => {
+  it('seedAgentIdentity creates valid agent_identities row with all columns', () => {
+    const identityId = seedAgentIdentity(sqlite, walletA, {
+      chainAgentId: '100',
+      registryAddress: '0xAbCdEf1234567890',
+      chainId: 137,
+      status: 'REGISTERED',
+    });
+    expect(identityId).toBeTruthy();
+
+    const row = sqlite
+      .prepare('SELECT * FROM agent_identities WHERE id = ?')
+      .get(identityId) as Record<string, unknown>;
+    expect(row).toBeDefined();
+    expect(row.wallet_id).toBe(walletA);
+    expect(row.chain_agent_id).toBe('100');
+    expect(row.registry_address).toBe('0xAbCdEf1234567890');
+    expect(row.chain_id).toBe(137);
+    expect(row.status).toBe('REGISTERED');
+    expect(row.created_at).toBeGreaterThan(0);
+    expect(row.updated_at).toBeGreaterThan(0);
+  });
+
+  it('agent_identities status can be updated from REGISTERED to WALLET_LINKED', () => {
+    const identityId = seedAgentIdentity(sqlite, walletA, {
+      chainAgentId: '101',
+      status: 'REGISTERED',
+    });
+
+    // Update status
+    const ts = Math.floor(Date.now() / 1000);
+    sqlite
+      .prepare('UPDATE agent_identities SET status = ?, updated_at = ? WHERE id = ?')
+      .run('WALLET_LINKED', ts, identityId);
+
+    const row = sqlite
+      .prepare('SELECT status, updated_at FROM agent_identities WHERE id = ?')
+      .get(identityId) as { status: string; updated_at: number };
+    expect(row.status).toBe('WALLET_LINKED');
+    expect(row.updated_at).toBe(ts);
+  });
+
+  it('agent_identities can be deleted', () => {
+    const identityId = seedAgentIdentity(sqlite, walletA, {
+      chainAgentId: '102',
+    });
+
+    // Verify exists
+    const before = sqlite
+      .prepare('SELECT id FROM agent_identities WHERE id = ?')
+      .get(identityId);
+    expect(before).toBeDefined();
+
+    // Delete
+    sqlite.prepare('DELETE FROM agent_identities WHERE id = ?').run(identityId);
+
+    // Verify gone
+    const after = sqlite
+      .prepare('SELECT id FROM agent_identities WHERE id = ?')
+      .get(identityId);
+    expect(after).toBeUndefined();
+  });
+
+  it('agent_identities respects wallets FK cascade on wallet delete', () => {
+    // Create a separate wallet for FK cascade test
+    const tempWalletId = generateId();
+    seedWallet(sqlite, tempWalletId, 'Temp Wallet', '0xtemp', 'ethereum', 'mainnet');
+    seedAgentIdentity(sqlite, tempWalletId, { chainAgentId: '103' });
+
+    // Verify identity exists
+    const before = sqlite
+      .prepare('SELECT COUNT(*) as cnt FROM agent_identities WHERE wallet_id = ?')
+      .get(tempWalletId) as { cnt: number };
+    expect(before.cnt).toBe(1);
+
+    // Delete wallet -- FK cascade should remove identities
+    sqlite.prepare('DELETE FROM wallets WHERE id = ?').run(tempWalletId);
+
+    const after = sqlite
+      .prepare('SELECT COUNT(*) as cnt FROM agent_identities WHERE wallet_id = ?')
+      .get(tempWalletId) as { cnt: number };
+    expect(after.cnt).toBe(0);
+  });
+
+  it('agent_identities UNIQUE index prevents duplicate (registry_address, chain_agent_id)', () => {
+    seedAgentIdentity(sqlite, walletA, {
+      chainAgentId: '104',
+      registryAddress: '0xUniqueTest',
+    });
+
+    // Second insert with same registry_address + chain_agent_id should fail
+    expect(() => {
+      seedAgentIdentity(sqlite, walletA, {
+        chainAgentId: '104',
+        registryAddress: '0xUniqueTest',
+      });
+    }).toThrow(/UNIQUE constraint failed/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: Provider-trust mechanism verification (E16)
+// ---------------------------------------------------------------------------
+
+describe('Provider-trust mechanism verification (E16)', () => {
+  it('erc8004_agent provider metadata has mcpExpose: true for auto-registration', async () => {
+    // Import the provider to verify metadata
+    const { Erc8004ActionProvider } = await import('@waiaas/actions');
+    const provider = new Erc8004ActionProvider({
+      enabled: true,
+      identityRegistryAddress: '0x1234',
+      reputationRegistryAddress: '0x5678',
+      validationRegistryAddress: '',
+      registrationFileBaseUrl: '',
+      autoPublishRegistration: true,
+      reputationCacheTtlSec: 300,
+    });
+    const meta = provider.metadata;
+    expect(meta.name).toBe('erc8004_agent');
+    expect(meta.mcpExpose).toBe(true);
+    // Provider-trust bypass relies on actionProvider field being auto-tagged
+    // by ActionProviderRegistry after Zod validation (generic mechanism).
+    // The erc8004_agent provider name matches the settings key pattern
+    // actions.erc8004_agent_enabled that SettingsService checks.
+    expect(meta.requiresApiKey).toBe(false);
+  });
+
+  it('erc8004_agent actions resolve to CONTRACT_CALL with contract addresses', async () => {
+    const { Erc8004ActionProvider } = await import('@waiaas/actions');
+    const provider = new Erc8004ActionProvider({
+      enabled: true,
+      identityRegistryAddress: '0x8004A169FB4a3325136EB29fA0ceB6D2e539a432',
+      reputationRegistryAddress: '0x8004BAa17C55a88189AE136b182e5fdA19dE9b63',
+      validationRegistryAddress: '',
+      registrationFileBaseUrl: '',
+      autoPublishRegistration: true,
+      reputationCacheTtlSec: 300,
+    });
+
+    // register_agent resolves to CONTRACT_CALL targeting identity registry
+    const result = await provider.resolve('register_agent', {
+      name: 'Test Agent',
+    }, { walletId: 'w1', publicKey: '0xABC', chain: 'ethereum' });
+
+    expect(result).toBeDefined();
+    const req = Array.isArray(result) ? result[0] : result;
+    expect(req!.to).toBe('0x8004A169FB4a3325136EB29fA0ceB6D2e539a432');
+    expect(req!.calldata).toBeTruthy();
+    // When this CONTRACT_CALL goes through the pipeline, ActionProviderRegistry
+    // auto-tags it with actionProvider='erc8004_agent'. The policy engine then
+    // checks if actions.erc8004_agent_enabled=true via SettingsService.
+    // If enabled, CONTRACT_WHITELIST check is bypassed (provider-trust).
   });
 });

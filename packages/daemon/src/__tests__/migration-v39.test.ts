@@ -26,12 +26,15 @@ function createV38Db(): InstanceType<typeof Database> {
   sqlite.pragma('foreign_keys = ON');
   pushSchema(sqlite);
 
-  // Downgrade: remove v39 artifacts to simulate a v38 DB
+  // Downgrade: remove v39 + v40 artifacts to simulate a v38 DB
+  sqlite.pragma('foreign_keys = OFF');
+
   // 1. Drop agent_identities and reputation_cache if they exist
   sqlite.exec('DROP TABLE IF EXISTS agent_identities');
   sqlite.exec('DROP TABLE IF EXISTS reputation_cache');
 
-  // 2. Remove approval_type column from pending_approvals by recreating
+  // 2. Remove approval_type and typed_data_json columns from pending_approvals by recreating
+  //    (v39 adds approval_type, v40 adds typed_data_json)
   sqlite.exec(`CREATE TABLE pending_approvals_old AS SELECT
     id, tx_id, required_by, expires_at, approved_at, rejected_at,
     owner_signature, approval_channel, created_at FROM pending_approvals`);
@@ -67,8 +70,8 @@ function createV38Db(): InstanceType<typeof Database> {
   sqlite.exec('INSERT INTO policies SELECT * FROM policies_old');
   sqlite.exec('DROP TABLE policies_old');
 
-  // 4. Remove v39 from schema_version
-  sqlite.exec('DELETE FROM schema_version WHERE version = 39');
+  // 4. Remove v39 and v40 from schema_version
+  sqlite.exec('DELETE FROM schema_version WHERE version >= 39');
 
   // Re-enable foreign keys
   sqlite.pragma('foreign_keys = ON');
@@ -231,16 +234,16 @@ describe('DB v39 Migration: ERC-8004 Foundation', () => {
   });
 
   // Test 6: Fresh DB via pushSchema
-  it('T6: fresh DB has agent_identities, reputation_cache and LATEST_SCHEMA_VERSION=39', () => {
+  it('T6: fresh DB has agent_identities, reputation_cache and LATEST_SCHEMA_VERSION>=39', () => {
     sqlite = new Database(':memory:');
     sqlite.pragma('journal_mode = WAL');
     sqlite.pragma('foreign_keys = ON');
     pushSchema(sqlite);
 
-    expect(LATEST_SCHEMA_VERSION).toBe(39);
+    expect(LATEST_SCHEMA_VERSION).toBeGreaterThanOrEqual(39);
     expect(tableExists(sqlite, 'agent_identities')).toBe(true);
     expect(tableExists(sqlite, 'reputation_cache')).toBe(true);
-    expect(getMaxVersion(sqlite)).toBe(39);
+    expect(getMaxVersion(sqlite)).toBe(LATEST_SCHEMA_VERSION);
   });
 
   // Test 7: agent_identities indexes
