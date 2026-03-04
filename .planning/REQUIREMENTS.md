@@ -94,13 +94,50 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (populated by roadmapper) | | |
+| SA-01 | Phase 314 | Pending |
+| SA-02 | Phase 314 | Pending |
+| SA-03 | Phase 314 | Pending |
+| SA-04 | Phase 314 | Pending |
+| SA-05 | Phase 314 | Pending |
+| SA-06 | Phase 314 | Pending |
+| SA-07 | Phase 314 | Pending |
+| SET-01 | Phase 314 | Pending |
+| SET-02 | Phase 314 | Pending |
+| SET-03 | Phase 314 | Pending |
+| SET-04 | Phase 314 | Pending |
+| SET-05 | Phase 314 | Pending |
+| SET-06 | Phase 314 | Pending |
+| UOP-01 | Phase 315 | Pending |
+| UOP-02 | Phase 315 | Pending |
+| UOP-03 | Phase 315 | Pending |
+| UOP-04 | Phase 315 | Pending |
+| UOP-05 | Phase 315 | Pending |
+| UOP-06 | Phase 315 | Pending |
+| UOP-07 | Phase 315 | Pending |
+| UOP-08 | Phase 315 | Pending |
+| UOP-09 | Phase 315 | Pending |
+| UOP-10 | Phase 315 | Pending |
+| UOP-11 | Phase 315 | Pending |
+| UOP-12 | Phase 315 | Pending |
+| UOP-13 | Phase 315 | Pending |
+| PAY-01 | Phase 315 | Pending |
+| PAY-02 | Phase 315 | Pending |
+| PAY-03 | Phase 315 | Pending |
+| PAY-04 | Phase 315 | Pending |
+| INT-01 | Phase 316 | Pending |
+| INT-02 | Phase 316 | Pending |
+| INT-03 | Phase 316 | Pending |
+| INT-04 | Phase 316 | Pending |
+| INT-05 | Phase 316 | Pending |
+| INT-06 | Phase 316 | Pending |
+| INT-07 | Phase 316 | Pending |
+| INT-08 | Phase 316 | Pending |
 
 **Coverage:**
 - v1 requirements: 36 total
-- Mapped to phases: 0
-- Unmapped: 36 ⚠️
+- Mapped to phases: 36
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-04*
-*Last updated: 2026-03-04 after initial definition*
+*Last updated: 2026-03-04 after roadmap creation -- traceability populated*
