@@ -32,6 +32,9 @@ export {
   ACCOUNT_TYPES,
   type AccountType,
   AccountTypeEnum,
+  AA_PROVIDER_NAMES,
+  type AaProviderName,
+  AaProviderNameEnum,
 } from './wallet.js';
 
 export {

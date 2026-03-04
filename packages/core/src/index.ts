@@ -71,6 +71,9 @@ export {
   ACCOUNT_TYPES,
   type AccountType,
   AccountTypeEnum,
+  AA_PROVIDER_NAMES,
+  type AaProviderName,
+  AaProviderNameEnum,
 } from './enums/index.js';
 
 // Schemas (5 domain Zod SSoT schemas + v1.4 discriminatedUnion 5-type)
@@ -422,6 +425,14 @@ export {
   type RpcRegistryEntry,
   type RpcPoolEvent,
 } from './rpc/index.js';
+
+// v30.9 AA Provider chain mapping (provider-specific chainId resolution + URL building)
+export {
+  AA_PROVIDER_CHAIN_MAP,
+  resolveProviderChainId,
+  buildProviderBundlerUrl,
+  AA_PROVIDER_DASHBOARD_URLS,
+} from './constants/index.js';
 
 // v1.6 Events (EventBus + 7 typed event definitions)
 export { EventBus } from './events/index.js';
