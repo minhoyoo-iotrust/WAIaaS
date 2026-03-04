@@ -240,7 +240,7 @@ Phases execute in numeric order: 317 -> 318 -> 319 -> 320 -> 321 -> 322 -> 323
 | 268-313.1 | v29.0-v30.2 | All | Complete | 2026-03-04 |
 | 314-316 | v30.6 | 10/10 | Complete | 2026-03-04 |
 | 317. Foundation | v30.8 | Complete    | 2026-03-04 | 2026-03-04 |
-| 318. ActionProvider + Registry Client | 2/2 | Complete   | 2026-03-04 | 2026-03-04 |
+| 318. ActionProvider + Registry Client | 2/2 | Complete    | 2026-03-04 | 2026-03-04 |
 | 319. Read-Only Routes + Registration File | v30.8 | 0/2 | Not started | - |
 | 320. Reputation Policy Engine + Cache | v30.8 | 0/2 | Not started | - |
 | 321. EIP-712 Approval + Wallet Linking | v30.8 | 0/2 | Not started | - |
