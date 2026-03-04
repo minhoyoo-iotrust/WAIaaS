@@ -75,6 +75,7 @@ export { MockDriftSdkWrapper } from './providers/drift/drift-sdk-wrapper.js';
 export type { IDriftSdkWrapper, DriftInstruction, DriftPosition, DriftMarginInfo } from './providers/drift/drift-sdk-wrapper.js';
 
 export { Erc8004ActionProvider } from './providers/erc8004/index.js';
+export type { Eip712Metadata } from './providers/erc8004/index.js';
 export { ERC8004_DEFAULTS } from './providers/erc8004/config.js';
 export type { Erc8004Config } from './providers/erc8004/config.js';
 export { ERC8004_MAINNET_ADDRESSES, ERC8004_TESTNET_ADDRESSES } from './providers/erc8004/constants.js';

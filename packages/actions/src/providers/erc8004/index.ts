@@ -34,6 +34,22 @@ import {
 import { buildRegistrationFile } from './registration-file.js';
 
 // ---------------------------------------------------------------------------
+// EIP-712 metadata type (attached to ContractCallRequest for EIP-712 approvals)
+// ---------------------------------------------------------------------------
+
+export interface Eip712Metadata {
+  approvalType: 'EIP712';
+  /** JSON-serialized EIP-712 typed data (domain, types, primaryType, message). */
+  typedDataJson: string;
+  /** Agent ID for calldata re-encoding on approval. */
+  agentId: string;
+  /** Wallet address for calldata re-encoding on approval. */
+  newWallet: string;
+  /** Deadline timestamp for calldata re-encoding on approval. */
+  deadline: string;
+}
+
+// ---------------------------------------------------------------------------
 // Provider implementation
 // ---------------------------------------------------------------------------
 
@@ -194,28 +210,68 @@ export class Erc8004ActionProvider implements IActionProvider {
   }
 
   /**
-   * Phase 321: EIP-712 signature will be provided via ApprovalWorkflow.
-   * Current implementation uses a placeholder '0x' signature.
+   * Resolve setAgentWallet with EIP-712 metadata for owner signature.
+   *
+   * Returns ContractCallRequest with a placeholder '0x' signature in calldata,
+   * plus eip712 metadata carrying field values for downstream typed data
+   * construction. The daemon pipeline will:
+   * 1. Build full EIP-712 typed data (with owner from DB) in stage4Wait
+   * 2. Send eth_signTypedData_v4 to Owner via WC or Admin UI
+   * 3. Re-encode calldata with the real signature on approval
    */
   private resolveSetAgentWallet(
     params: Record<string, unknown>,
     context: ActionContext,
-  ): ContractCallRequest {
+  ): ContractCallRequest & { eip712?: Eip712Metadata } {
     const input = SetAgentWalletInputSchema.parse(params);
     const agentId = this.toBigInt(input.agentId);
     const newWallet = context.walletAddress as Hex;
     const deadline = input.deadline
       ? BigInt(input.deadline)
       : BigInt(Math.floor(Date.now() / 1000) + 3600); // 1 hour from now
-    // Placeholder signature — Phase 321 will provide EIP-712 signature via ApprovalWorkflow
+    // Placeholder signature — real EIP-712 signature injected on approval
     const signature: Hex = '0x';
 
     const calldata = this.client.encodeSetAgentWallet(agentId, newWallet, deadline, signature);
 
+    const registryAddress = this.client.getRegistryAddress('identity');
+
+    // Build EIP-712 typed data JSON (owner placeholder -- filled by daemon pipeline)
+    const typedData = {
+      domain: {
+        name: 'ERC8004IdentityRegistry',
+        version: '1',
+        // chainId and verifyingContract filled by daemon
+        verifyingContract: registryAddress,
+      },
+      types: {
+        AgentWalletSet: [
+          { name: 'agentId', type: 'uint256' },
+          { name: 'newWallet', type: 'address' },
+          { name: 'owner', type: 'address' },
+          { name: 'deadline', type: 'uint256' },
+        ],
+      },
+      primaryType: 'AgentWalletSet',
+      message: {
+        agentId: input.agentId,
+        newWallet,
+        owner: '0x0000000000000000000000000000000000000000', // Placeholder -- filled by daemon
+        deadline: deadline.toString(),
+      },
+    };
+
     return {
       type: 'CONTRACT_CALL',
-      to: this.client.getRegistryAddress('identity'),
+      to: registryAddress,
       calldata,
+      eip712: {
+        approvalType: 'EIP712' as const,
+        typedDataJson: JSON.stringify(typedData),
+        agentId: input.agentId,
+        newWallet,
+        deadline: deadline.toString(),
+      },
     };
   }
 

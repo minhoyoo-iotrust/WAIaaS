@@ -74,6 +74,10 @@ export interface ActionRouteDeps {
   notificationService?: NotificationService;
   priceOracle?: IPriceOracle;
   settingsService: SettingsService;
+  // v30.8: WC signing bridge + channel router for EIP-712 approval routing (Phase 321)
+  wcSigningBridgeRef?: import('../../services/wc-signing-bridge.js').WcSigningBridgeRef;
+  approvalChannelRouter?: import('../../services/signing-sdk/approval-channel-router.js').ApprovalChannelRouter;
+  eventBus?: import('@waiaas/core').EventBus;
 }
 
 // ---------------------------------------------------------------------------
@@ -341,6 +345,29 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
         ? { ...contractCall, gasCondition: body.gasCondition }
         : contractCall;
 
+      // Extract EIP-712 metadata from resolve result (Phase 321)
+      const eip712 = (contractCall as any).eip712 as
+        | { approvalType: 'EIP712'; typedDataJson: string; agentId: string; newWallet: string; deadline: string }
+        | undefined;
+
+      // Build EIP-712 metadata for pipeline context (fill owner from wallet DB)
+      let eip712Metadata: PipelineContext['eip712Metadata'];
+      if (eip712) {
+        // Enrich typed data with owner address and chainId from wallet
+        const ownerAddress = wallet.ownerAddress || '0x0000000000000000000000000000000000000000';
+        const typedData = JSON.parse(eip712.typedDataJson);
+        typedData.message.owner = ownerAddress;
+        // Resolve chainId from network (ethereum-mainnet -> 1, etc.)
+        typedData.domain.chainId = resolveChainId(resolvedNetwork);
+        eip712Metadata = {
+          approvalType: 'EIP712',
+          typedDataJson: JSON.stringify(typedData),
+          agentId: eip712.agentId,
+          newWallet: eip712.newWallet,
+          deadline: eip712.deadline,
+        };
+      }
+
       // Build PipelineContext for this specific ContractCallRequest
       const ctx: PipelineContext = {
         db: deps.db,
@@ -361,6 +388,11 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
         notificationService: deps.notificationService,
         priceOracle: deps.priceOracle,
         settingsService: deps.settingsService,
+        // v30.8: EIP-712 + WC/channel router for set_agent_wallet approval (Phase 321)
+        eip712Metadata,
+        wcSigningBridge: deps.wcSigningBridgeRef?.current ?? undefined,
+        approvalChannelRouter: deps.approvalChannelRouter,
+        eventBus: deps.eventBus,
       };
 
       // Stage 1: Validate + DB INSERT (synchronous -- assigns ctx.txId)
@@ -469,4 +501,29 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
   });
 
   return router;
+}
+
+// ---------------------------------------------------------------------------
+// Helper: resolve EVM chainId from network identifier (Phase 321)
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolve numeric EVM chain ID from network identifier.
+ * Falls back to 1 (mainnet) for unknown networks.
+ */
+function resolveChainId(network: string): number {
+  const CHAIN_IDS: Record<string, number> = {
+    'ethereum-mainnet': 1,
+    'ethereum-sepolia': 11155111,
+    'ethereum-goerli': 5,
+    'polygon-mainnet': 137,
+    'polygon-mumbai': 80001,
+    'arbitrum-mainnet': 42161,
+    'arbitrum-sepolia': 421614,
+    'optimism-mainnet': 10,
+    'optimism-sepolia': 11155420,
+    'base-mainnet': 8453,
+    'base-sepolia': 84532,
+  };
+  return CHAIN_IDS[network] ?? 1;
 }
