@@ -6,9 +6,9 @@ status: in_progress
 last_updated: "2026-03-04"
 progress:
   total_phases: 182
-  completed_phases: 178
+  completed_phases: 182
   total_plans: 395
-  completed_plans: 392
+  completed_plans: 395
 ---
 
 # Project State
@@ -18,18 +18,25 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-04)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** v30.6 Phase 316 - CLI + SDK + MCP + Admin UI + Skills (next)
+**Current focus:** v30.6 milestone complete -- all 3 phases (314-316) done
 
 ## Current Position
 
-Phase: 315 of 316 complete (UserOperation Pipeline + Paymaster -- DONE)
-Plan: 4 of 4 complete in Phase 315
-Status: Phase 315 complete. Phase 316 ready for planning.
-Last activity: 2026-03-04 -- Phase 315 executed (4 plans, 17 requirements, 4 waves, 59 new tests)
+Phase: 316 of 316 complete (CLI + SDK + MCP + Admin UI + Skills -- DONE)
+Plan: 3 of 3 complete in Phase 316
+Status: All phases complete. Milestone v30.6 ready for completion.
+Last activity: 2026-03-04 -- Phase 316 executed (3 plans, 8 requirements, 2 waves, 14 new tests + 19 snapshot fixes)
 
-Progress: [██████████] 100% (Phase 315)
+Progress: [██████████] 100% (Phase 316)
 
 ## Performance Metrics
+
+**Phase 316 results:**
+- Plans: 3/3 complete
+- Tests: 14 new (8 CLI/SDK + 6 MCP/Admin) + 19 snapshot test fixes, all passing
+- Files: 28 modified
+- Commits: 4
+- Key implementations: CLI --account-type, SDK createWallet, MCP wallet detail fetch, Admin Account Type selector + SmartAccountSection, 3 skill files updated
 
 **Phase 315 results:**
 - Plans: 4/4 complete
@@ -45,7 +52,7 @@ Progress: [██████████] 100% (Phase 315)
 - Commits: 7
 - Duration: ~35 min
 
-**Cumulative:** 80 milestones (80 shipped), 315 phases completed (178/182 total), ~717 plans, ~2,041 reqs, ~6,485+ tests, ~247,000 LOC TS
+**Cumulative:** 80 milestones (80 shipped + v30.6 complete), 316 phases completed (182/182 total), ~720 plans, ~2,049 reqs, ~6,500+ tests, ~247,000 LOC TS
 
 ## Accumulated Context
 
@@ -72,5 +79,5 @@ Progress: [██████████] 100% (Phase 315)
 ## Session Continuity
 
 Last session: 2026-03-04
-Stopped at: Phase 315 complete, Phase 316 ready for planning
+Stopped at: Phase 316 complete. Milestone v30.6 complete -- all 3 phases done.
 Resume file: None

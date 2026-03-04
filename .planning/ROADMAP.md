@@ -108,7 +108,7 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v30.2-ROADMAP.md` for full 
 
 - [x] **Phase 314: SmartAccountService + DB Migration + Settings** - 스마트 어카운트 인프라 (생성/관리 서비스, DB v38, Admin Settings) (completed 2026-03-04)
 - [x] **Phase 315: UserOperation Pipeline + Paymaster** - 파이프라인 accountType 분기 + Bundler/Paymaster 연동 (completed 2026-03-04)
-- [ ] **Phase 316: CLI + SDK + MCP + Admin UI + Skills** - 전 인터페이스 스마트 어카운트 확장
+- [x] **Phase 316: CLI + SDK + MCP + Admin UI + Skills** - 전 인터페이스 스마트 어카운트 확장 (completed 2026-03-04)
 
 ## Phase Details
 
@@ -159,9 +159,9 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 316-01: CLI --account-type option + SDK createWallet/Wallet type extension
-- [ ] 316-02: MCP response extension + Admin UI wallet form + Smart Account settings section
-- [ ] 316-03: Skill files update (wallet.skill.md, quickstart.skill.md)
+- [x] 316-01: CLI --account-type option + SDK createWallet/Wallet type extension (completed 2026-03-04)
+- [x] 316-02: MCP response extension + Admin UI wallet form + Smart Account settings section (completed 2026-03-04)
+- [x] 316-03: Skill files update (wallet.skill.md, quickstart.skill.md, admin.skill.md) (completed 2026-03-04)
 
 ## Progress
 
@@ -179,7 +179,7 @@ Phases execute in numeric order: 314 -> 315 -> 316
 | 309-313.1 | v30.2 | 14/14 | Complete | 2026-03-04 |
 | 314. SmartAccountService + DB + Settings | v30.6 | 3/3 | Complete | 2026-03-04 |
 | 315. UserOp Pipeline + Paymaster | v30.6 | 4/4 | Complete | 2026-03-04 |
-| 316. CLI + SDK + MCP + Admin UI + Skills | v30.6 | 0/3 | Not started | - |
+| 316. CLI + SDK + MCP + Admin UI + Skills | v30.6 | 3/3 | Complete | 2026-03-04 |
 
 ---
-*Last updated: 2026-03-04 -- Phase 315 UserOperation Pipeline + Paymaster complete (4 plans, 17 requirements, 4 waves, 59 new tests).*
+*Last updated: 2026-03-04 -- Phase 316 CLI + SDK + MCP + Admin UI + Skills complete (3 plans, 8 requirements, 2 waves, 14 new tests + 19 snapshot fixes).*
