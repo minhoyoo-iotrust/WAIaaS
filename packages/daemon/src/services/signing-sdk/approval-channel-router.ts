@@ -107,6 +107,16 @@ export class ApprovalChannelRouter {
 
     const explicitMethod = row.owner_approval_method as ApprovalMethod | null;
 
+    // 1.5. EIP-712 constraint: only WC or REST can handle typed data signing
+    if (params.approvalType === 'EIP712') {
+      // EIP-712 requires WC (eth_signTypedData_v4) or REST (Admin UI).
+      // SDK channels (ntfy/telegram) cannot handle structured signing.
+      if (this.isWalletConnectConfigured()) {
+        return { method: 'walletconnect', channelResult: null };
+      }
+      return { method: 'rest', channelResult: null };
+    }
+
     // 2. If explicit method is set, try to use it
     if (explicitMethod) {
       const sdkEnabled = this.isSdkEnabled();

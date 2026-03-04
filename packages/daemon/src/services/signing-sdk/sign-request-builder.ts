@@ -39,6 +39,8 @@ export interface BuildRequestParams {
   symbol?: string;
   policyTier: 'APPROVAL' | 'DELAY';
   walletName?: string;
+  /** EIP-712 approval type constraint: restricts channels to WC/REST only. */
+  approvalType?: 'SIWE' | 'EIP712';
 }
 
 export interface BuildRequestResult {

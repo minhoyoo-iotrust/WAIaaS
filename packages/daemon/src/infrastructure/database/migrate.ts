@@ -79,7 +79,7 @@ const LEGACY_NETWORK_NORMALIZE: Record<string, string> = {
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 39;
+export const LATEST_SCHEMA_VERSION = 40;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -176,7 +176,7 @@ function getCreateTableStatements(): string[] {
   updated_at INTEGER NOT NULL
 )`,
 
-    // Table 5: pending_approvals (approval_channel added in v16, approval_type added in v39)
+    // Table 5: pending_approvals (approval_channel added in v16, approval_type added in v39, typed_data_json added in v40)
     `CREATE TABLE IF NOT EXISTS pending_approvals (
   id TEXT PRIMARY KEY,
   tx_id TEXT NOT NULL REFERENCES transactions(id) ON DELETE CASCADE,
@@ -187,6 +187,7 @@ function getCreateTableStatements(): string[] {
   owner_signature TEXT,
   approval_channel TEXT DEFAULT 'rest_api',
   approval_type TEXT NOT NULL DEFAULT 'SIWE' CHECK (approval_type IN ('SIWE', 'EIP712')),
+  typed_data_json TEXT,
   created_at INTEGER NOT NULL
 )`,
 
@@ -2526,6 +2527,20 @@ MIGRATIONS.push({
     sqlite.exec('CREATE INDEX IF NOT EXISTS idx_policies_network ON policies(network)');
 
     sqlite.exec('COMMIT');
+  },
+});
+
+// ---------------------------------------------------------------------------
+// v40: Add typed_data_json column to pending_approvals for EIP-712 approval flow
+// ---------------------------------------------------------------------------
+
+MIGRATIONS.push({
+  version: 40,
+  description: 'ERC-8004: pending_approvals.typed_data_json for EIP-712 approval payloads',
+  up: (sqlite) => {
+    sqlite.exec(
+      "ALTER TABLE pending_approvals ADD COLUMN typed_data_json TEXT",
+    );
   },
 });
 
