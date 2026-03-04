@@ -21,7 +21,7 @@ export interface ErrorCodeEntry {
 }
 
 /**
- * 105 error codes from SS10.12 unified error code matrix + signing protocol + session multi-wallet.
+ * 108 error codes from SS10.12 unified error code matrix + signing protocol + session multi-wallet + ERC-4337.
  * SSoT: 37-rest-api-complete-spec.md section 10.12 + 73-signing-protocol-v1.md
  * v29.3: +WALLET_ID_REQUIRED, +NETWORK_REQUIRED, -CANNOT_REMOVE_DEFAULT_WALLET (net +1)
  */
@@ -872,6 +872,29 @@ export const ERROR_CODES = {
     httpStatus: 404,
     retryable: false,
     message: 'AutoStop rule not found',
+  },
+
+  // --- TX domain (ERC-4337 Account Abstraction) ---
+  PAYMASTER_REJECTED: {
+    code: 'PAYMASTER_REJECTED',
+    domain: 'TX',
+    httpStatus: 502,
+    retryable: false,
+    message: 'Paymaster rejected the UserOperation',
+  },
+  TRANSACTION_TIMEOUT: {
+    code: 'TRANSACTION_TIMEOUT',
+    domain: 'TX',
+    httpStatus: 504,
+    retryable: true,
+    message: 'Transaction confirmation timed out',
+  },
+  TRANSACTION_REVERTED: {
+    code: 'TRANSACTION_REVERTED',
+    domain: 'TX',
+    httpStatus: 422,
+    retryable: false,
+    message: 'Transaction reverted on-chain',
   },
 } as const satisfies Record<string, ErrorCodeEntry>;
 

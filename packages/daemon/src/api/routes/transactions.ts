@@ -384,6 +384,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
         publicKey: wallet.publicKey,
         chain: wallet.chain,
         environment: wallet.environment,
+        accountType: wallet.accountType,
       },
       resolvedNetwork,
       request,

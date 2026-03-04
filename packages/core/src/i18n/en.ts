@@ -191,6 +191,10 @@ export const messages: Messages = {
     WEBHOOK_NOT_FOUND: 'Webhook not found',
     // ADMIN domain (autostop)
     RULE_NOT_FOUND: 'AutoStop rule not found',
+    // TX domain (ERC-4337 Account Abstraction)
+    PAYMASTER_REJECTED: 'Paymaster rejected the UserOperation',
+    TRANSACTION_TIMEOUT: 'Transaction confirmation timed out',
+    TRANSACTION_REVERTED: 'Transaction reverted on-chain',
   },
   // Notification templates (30 event types)
   notifications: {
