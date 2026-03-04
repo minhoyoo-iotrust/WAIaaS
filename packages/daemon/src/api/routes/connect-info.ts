@@ -23,7 +23,7 @@ import type { DaemonConfig } from '../../infrastructure/config/loader.js';
 import type { SettingsService } from '../../infrastructure/settings/index.js';
 import type { ActionProviderRegistry } from '../../infrastructure/action/action-provider-registry.js';
 import type * as schema from '../../infrastructure/database/schema.js';
-import { sessions, sessionWallets, wallets, policies } from '../../infrastructure/database/schema.js';
+import { sessions, sessionWallets, wallets, policies, agentIdentities } from '../../infrastructure/database/schema.js';
 import {
   ConnectInfoResponseSchema,
   buildErrorResponses,
@@ -62,6 +62,7 @@ export interface BuildConnectInfoPromptParams {
     address: string;
     networks: string[];
     policies: Array<{ type: string }>;
+    erc8004?: { agentId: string; registryAddress: string; status: string };
   }>;
   capabilities: string[];
   defaultDeny: DefaultDenyStatus;
@@ -111,6 +112,20 @@ export function buildConnectInfoPrompt(params: BuildConnectInfoPromptParams): st
     lines.push(`   Address: ${w.address}`);
     lines.push(`   Networks: ${w.networks.join(', ')}`);
     lines.push(`   Policies: ${policySummary}`);
+    if (w.erc8004) {
+      lines.push(`   ERC-8004 Agent ID: ${w.erc8004.agentId} (${w.erc8004.status})`);
+      lines.push(`   Registry: ${w.erc8004.registryAddress}`);
+    }
+    lines.push('');
+  }
+
+  // ERC-8004 Trust Network section (only if any wallet is registered)
+  const anyWalletHasErc8004 = ws.some((w) => w.erc8004);
+  if (anyWalletHasErc8004) {
+    lines.push('ERC-8004 Trust Network:');
+    lines.push('- GET /v1/erc8004/agent/{agentId} -- query agent identity');
+    lines.push('- GET /v1/erc8004/agent/{agentId}/reputation -- query reputation');
+    lines.push('- GET /v1/erc8004/registration-file/{walletId} -- get registration file');
     lines.push('');
   }
 
@@ -228,6 +243,31 @@ export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
       }));
     }
 
+    // d2. Query agent_identities for ERC-8004 status per wallet
+    const identitiesMap: Record<string, { agentId: string; registryAddress: string; chainId: number; registrationFileUrl: string | null; status: string }> = {};
+    for (const w of linkedWallets) {
+      const identity = deps.db
+        .select({
+          chainAgentId: agentIdentities.chainAgentId,
+          registryAddress: agentIdentities.registryAddress,
+          chainId: agentIdentities.chainId,
+          registrationFileUrl: agentIdentities.registrationFileUrl,
+          status: agentIdentities.status,
+        })
+        .from(agentIdentities)
+        .where(eq(agentIdentities.walletId, w.id))
+        .get();
+      if (identity && identity.status !== 'PENDING') {
+        identitiesMap[w.id] = {
+          agentId: identity.chainAgentId,
+          registryAddress: identity.registryAddress,
+          chainId: identity.chainId,
+          registrationFileUrl: identity.registrationFileUrl,
+          status: identity.status!,
+        };
+      }
+    }
+
     // e. Compute capabilities dynamically
     const capabilities: string[] = ['transfer', 'token_transfer', 'balance', 'assets'];
 
@@ -262,6 +302,11 @@ export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
       capabilities.push('x402');
     }
 
+    // erc8004: check if any wallet has registered identity
+    if (Object.keys(identitiesMap).length > 0) {
+      capabilities.push('erc8004');
+    }
+
     // f. Build daemon info
     const host = c.req.header('Host') ?? 'localhost:3100';
     const protocol = c.req.header('X-Forwarded-Proto') ?? 'http';
@@ -289,6 +334,7 @@ export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
         address: w.publicKey,
         networks: networks.map((n) => n),
         policies: policiesMap[w.id] ?? [],
+        ...(identitiesMap[w.id] ? { erc8004: identitiesMap[w.id] } : {}),
       };
     });
 
@@ -324,6 +370,7 @@ export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
           address: w.publicKey,
           accountType: (w.accountType as string) ?? 'eoa',
           availableNetworks: networks.map((n) => n),
+          ...(identitiesMap[w.id] ? { erc8004: identitiesMap[w.id] } : {}),
         };
       }),
       policies: policiesMap,

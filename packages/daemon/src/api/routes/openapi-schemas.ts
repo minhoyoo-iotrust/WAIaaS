@@ -1194,6 +1194,13 @@ export const ConnectInfoResponseSchema = z.object({
     environment: z.string(),
     address: z.string(),
     availableNetworks: z.array(z.string()),
+    erc8004: z.object({
+      agentId: z.string(),
+      registryAddress: z.string(),
+      chainId: z.number().int(),
+      registrationFileUrl: z.string().nullable(),
+      status: z.string(),
+    }).optional(),
   })),
   policies: z.record(z.string(), z.array(z.object({
     type: z.string(),
