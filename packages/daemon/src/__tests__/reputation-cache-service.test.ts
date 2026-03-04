@@ -7,13 +7,13 @@
  * Mocks viem createPublicClient for RPC scenarios.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi, type MockInstance } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
 import type { DatabaseConnection } from '../infrastructure/database/index.js';
 import { reputationCache } from '../infrastructure/database/schema.js';
 import { SettingsService } from '../infrastructure/settings/settings-service.js';
 import { DaemonConfigSchema } from '../infrastructure/config/loader.js';
-import { ReputationCacheService, type ReputationScore } from '../services/erc8004/reputation-cache-service.js';
+import { ReputationCacheService } from '../services/erc8004/reputation-cache-service.js';
 
 // ---------------------------------------------------------------------------
 // Mock viem

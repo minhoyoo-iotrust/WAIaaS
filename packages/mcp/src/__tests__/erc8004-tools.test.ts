@@ -63,7 +63,7 @@ describe('erc8004_get_agent_info tool', () => {
 
   it('returns isError=true on API error', async () => {
     const responses = new Map<string, ApiResult<unknown>>([
-      ['/v1/erc8004/agent/999', { ok: false, error: 'Not found' }],
+      ['/v1/erc8004/agent/999', { ok: false as const, error: { code: 'NOT_FOUND', message: 'Not found', retryable: false } }],
     ]);
     const apiClient = createMockApiClient(responses);
     const handler = getToolHandler(registerErc8004GetAgentInfo, apiClient);

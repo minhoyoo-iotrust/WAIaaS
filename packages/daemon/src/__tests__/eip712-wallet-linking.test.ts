@@ -5,10 +5,10 @@
  * calldata re-encoding on approval, unset_agent_wallet SIWE fallback.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
 import type { DatabaseConnection } from '../infrastructure/database/index.js';
-import { wallets, transactions } from '../infrastructure/database/schema.js';
+import { wallets } from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
 import { ApprovalWorkflow } from '../workflow/approval-workflow.js';
 
