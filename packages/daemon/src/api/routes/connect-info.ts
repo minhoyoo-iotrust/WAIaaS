@@ -29,6 +29,7 @@ import {
   buildErrorResponses,
   openApiValidationHook,
 } from './openapi-schemas.js';
+import { buildProviderStatus } from './wallets.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -63,6 +64,8 @@ export interface BuildConnectInfoPromptParams {
     networks: string[];
     policies: Array<{ type: string }>;
     erc8004?: { agentId: string; registryAddress: string; status: string };
+    accountType?: string;
+    provider?: { name: string; supportedChains: string[]; paymasterEnabled: boolean } | null;
   }>;
   capabilities: string[];
   defaultDeny: DefaultDenyStatus;
@@ -115,6 +118,13 @@ export function buildConnectInfoPrompt(params: BuildConnectInfoPromptParams): st
     if (w.erc8004) {
       lines.push(`   ERC-8004 Agent ID: ${w.erc8004.agentId} (${w.erc8004.status})`);
       lines.push(`   Registry: ${w.erc8004.registryAddress}`);
+    }
+    if (w.accountType === 'smart' && w.provider) {
+      lines.push(`   Smart Account: ${w.provider.name} provider`);
+      lines.push(`   Gas Sponsorship: ${w.provider.paymasterEnabled ? 'ENABLED (paymaster active)' : 'DISABLED'}`);
+      lines.push(`   Provider Chains: ${w.provider.supportedChains.join(', ')}`);
+    } else if (w.accountType === 'smart') {
+      lines.push(`   Smart Account: No provider configured (gas sponsorship unavailable)`);
     }
     lines.push('');
   }
@@ -214,6 +224,8 @@ export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
         environment: wallets.environment,
         publicKey: wallets.publicKey,
         accountType: wallets.accountType,
+        aaProvider: wallets.aaProvider,
+        aaPaymasterUrl: wallets.aaPaymasterUrl,
       })
       .from(sessionWallets)
       .innerJoin(wallets, eq(sessionWallets.walletId, wallets.id))
@@ -307,6 +319,11 @@ export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
       capabilities.push('erc8004');
     }
 
+    // smart_account: check if any wallet has a configured provider
+    if (linkedWallets.some((w) => w.accountType === 'smart' && w.aaProvider)) {
+      capabilities.push('smart_account');
+    }
+
     // f. Build daemon info
     const host = c.req.header('Host') ?? 'localhost:3100';
     const protocol = c.req.header('X-Forwarded-Proto') ?? 'http';
@@ -335,6 +352,8 @@ export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
         networks: networks.map((n) => n),
         policies: policiesMap[w.id] ?? [],
         ...(identitiesMap[w.id] ? { erc8004: identitiesMap[w.id] } : {}),
+        accountType: (w.accountType as string) ?? 'eoa',
+        provider: buildProviderStatus({ aaProvider: w.aaProvider, aaPaymasterUrl: w.aaPaymasterUrl }),
       };
     });
 
@@ -371,6 +390,7 @@ export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
           accountType: (w.accountType as string) ?? 'eoa',
           availableNetworks: networks.map((n) => n),
           ...(identitiesMap[w.id] ? { erc8004: identitiesMap[w.id] } : {}),
+          provider: buildProviderStatus({ aaProvider: w.aaProvider, aaPaymasterUrl: w.aaPaymasterUrl }),
         };
       }),
       policies: policiesMap,
