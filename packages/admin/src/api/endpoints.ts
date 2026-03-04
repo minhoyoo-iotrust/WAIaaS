@@ -52,4 +52,8 @@ export const API = {
   ADMIN_WALLET_APP_TEST_NOTIFICATION: (id: string) => `/v1/admin/wallet-apps/${id}/test-notification`,
   ADMIN_STATS: '/v1/admin/stats',
   ADMIN_AUTOSTOP_RULES: '/v1/admin/autostop/rules',
+  ERC8004_AGENT: (agentId: string) => `/v1/erc8004/agent/${agentId}`,
+  ERC8004_REPUTATION: (agentId: string) => `/v1/erc8004/agent/${agentId}/reputation`,
+  ERC8004_REGISTRATION_FILE: (walletId: string) => `/v1/erc8004/registration-file/${walletId}`,
+  ERC8004_VALIDATION: (hash: string) => `/v1/erc8004/validation/${hash}`,
 } as const;

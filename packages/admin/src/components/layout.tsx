@@ -15,6 +15,7 @@ import SecurityPage from '../pages/security';
 import SystemPage from '../pages/system';
 import ActionsPage from '../pages/actions';
 import HumanWalletAppsPage from '../pages/human-wallet-apps';
+import Erc8004Page from '../pages/erc8004';
 
 function extractPath(hash: string): string {
   const raw = hash.slice(1) || '/dashboard';
@@ -40,6 +41,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/notifications': 'Notifications',
   '/security': 'Security',
   '/wallet-apps': 'Human Wallet Apps',
+  '/erc8004': 'ERC-8004 Agents',
   '/system': 'System',
 };
 
@@ -54,6 +56,7 @@ const PAGE_SUBTITLES: Record<string, string> = {
   '/notifications': 'Channel status, delivery logs, and settings',
   '/security': 'Emergency controls and automatic protection rules',
   '/wallet-apps': 'Manage wallet apps for signing and notifications',
+  '/erc8004': 'On-chain agent identity, reputation, and wallet linking',
   '/system': 'API keys, display preferences, and daemon configuration',
 };
 
@@ -76,6 +79,7 @@ const NAV_ITEMS = [
   { path: '/policies', label: 'Policies' },
   { path: '/notifications', label: 'Notifications' },
   { path: '/wallet-apps', label: 'Human Wallet Apps' },
+  { path: '/erc8004', label: 'ERC-8004' },
   { path: '/security', label: 'Security' },
   { path: '/system', label: 'System' },
 ];
@@ -107,6 +111,7 @@ function PageRouter() {
   }
   if (path === '/security') return <SecurityPage />;
   if (path === '/wallet-apps') return <HumanWalletAppsPage />;
+  if (path === '/erc8004') return <Erc8004Page />;
   if (path === '/system') return <SystemPage />;
   if (path.startsWith('/wallets')) return <WalletsPage />;
   return <DashboardPage />;
