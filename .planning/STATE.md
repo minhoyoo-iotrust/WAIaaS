@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v30.9
 milestone_name: Smart Account DX 개선
-status: active
-stopped_at: "Completed 324-02-PLAN.md (Phase 324 done, 2/2 plans complete)"
-last_updated: "2026-03-05T00:25:00.000Z"
-last_activity: 2026-03-05 -- Phase 324 complete (4 tasks, 4 commits)
+status: planning
+stopped_at: Completed 324-02-PLAN.md (Phase 324 done). Ready for Phase 325 planning.
+last_updated: "2026-03-04T15:26:25.683Z"
+last_activity: 2026-03-05 -- Phase 324 complete (DB + Core Provider Model)
 progress:
   total_phases: 3
   completed_phases: 1
-  total_plans: 4
-  completed_plans: 4
+  total_plans: 2
+  completed_plans: 2
   percent: 33
 ---
 
