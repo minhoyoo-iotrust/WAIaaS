@@ -1399,10 +1399,31 @@ curl -s -X PUT http://localhost:3100/v1/admin/autostop/rules/consecutive-failure
 
 ---
 
-## 15. Related Skill Files
+## 15. ERC-8004 Settings
+
+ERC-8004 Trustless Agent settings (under `actions.*` namespace). Configure via Admin UI > Settings > Actions, or via the Settings API.
+
+| Setting Key | Type | Default | Description |
+| ----------- | ---- | ------- | ----------- |
+| `actions.erc8004_agent_enabled` | boolean | `false` | Master feature gate. Must be true to enable ERC-8004 agent identity, reputation, and validation features. |
+| `actions.erc8004_identity_registry_address` | string | `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432` | Identity Registry contract address (Ethereum mainnet). |
+| `actions.erc8004_reputation_registry_address` | string | `0x8004BAa17C55a88189AE136b182e5fdA19dE9b63` | Reputation Registry contract address (Ethereum mainnet). |
+| `actions.erc8004_validation_registry_address` | string | (empty) | Validation Registry address. Empty = validation feature disabled. |
+| `actions.erc8004_registration_file_base_url` | string | (empty) | Base URL for hosting agent registration files. Auto-detected from request Host header if empty. |
+| `actions.erc8004_auto_publish_registration` | boolean | `true` | Automatically generate and serve registration files for registered agents. |
+| `actions.erc8004_reputation_cache_ttl_sec` | number | `300` | Reputation data cache TTL in seconds. Balances freshness vs. RPC load. |
+| `actions.erc8004_min_reputation_score` | number | `0` | Global minimum reputation score threshold. |
+| `actions.erc8004_reputation_rpc_timeout_ms` | number | `3000` | RPC call timeout for reputation queries in milliseconds. On timeout, the agent is treated as unrated. |
+
+For full ERC-8004 documentation, see **erc8004.skill.md**.
+
+---
+
+## 16. Related Skill Files
 
 - **actions.skill.md** -- Action Provider REST API (DeFi actions)
-- **policies.skill.md** -- Policy management (10 policy types for transaction controls)
+- **policies.skill.md** -- Policy management (13 policy types for transaction controls)
 - **wallet.skill.md** -- Wallet CRUD, sessions, assets, tokens, MCP
 - **transactions.skill.md** -- 5-type transaction reference
 - **quickstart.skill.md** -- End-to-end quickstart workflow
+- **erc8004.skill.md** -- ERC-8004 trustless agent identity and reputation

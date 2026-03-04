@@ -205,6 +205,11 @@ export const messages: Messages = {
       body: '{walletName}이(가) 즉시 청산 위험에 처해 있습니다. 헬스 팩터: {healthFactor}. 즉각적인 조치가 필요합니다.',
     },
     SESSION_IDLE: { title: '세션 유휴 감지', body: '{walletName}의 세션 {sessionId}이(가) 장시간 사용되지 않고 있습니다. 필요 시 Admin UI에서 수동 취소하세요.' },
+    AGENT_REGISTERED: { title: '에이전트 등록 완료', body: '{walletName}이(가) ERC-8004 Identity Registry에 등록되었습니다. 체인 에이전트 ID: {chainAgentId}' },
+    AGENT_WALLET_LINKED: { title: '에이전트 지갑 연결', body: '{walletName}이(가) EIP-712 서명을 통해 에이전트 신원에 연결되었습니다. 레지스트리: {registryAddress}' },
+    AGENT_WALLET_UNLINKED: { title: '에이전트 지갑 연결 해제', body: '{walletName}이(가) 에이전트 신원에서 연결 해제되었습니다. 레지스트리: {registryAddress}' },
+    REPUTATION_FEEDBACK_RECEIVED: { title: '평판 피드백 수신', body: '{walletName}이(가) 평판 피드백을 수신했습니다. 점수: {score}, 태그: {tag1}/{tag2}' },
+    REPUTATION_THRESHOLD_TRIGGERED: { title: '평판 임계값 트리거', body: '{walletName} 트랜잭션 티어가 평판 점수 {score}이(가) 임계값 {threshold} 미만으로 {tier}(으)로 상향되었습니다' },
   },
   // System messages
   system: {

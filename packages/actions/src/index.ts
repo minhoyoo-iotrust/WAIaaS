@@ -22,6 +22,8 @@ import { PendleYieldProvider } from './providers/pendle/index.js';
 import type { PendleConfig } from './providers/pendle/config.js';
 import { DriftPerpProvider } from './providers/drift/index.js';
 import type { DriftConfig } from './providers/drift/config.js';
+import { Erc8004ActionProvider } from './providers/erc8004/index.js';
+import { type Erc8004Config, ERC8004_DEFAULTS } from './providers/erc8004/config.js';
 
 // Re-export provider classes
 export { JupiterSwapActionProvider } from './providers/jupiter-swap/index.js';
@@ -71,6 +73,17 @@ export { DRIFT_DEFAULTS, DRIFT_PROGRAM_ID } from './providers/drift/config.js';
 export type { DriftConfig } from './providers/drift/config.js';
 export { MockDriftSdkWrapper } from './providers/drift/drift-sdk-wrapper.js';
 export type { IDriftSdkWrapper, DriftInstruction, DriftPosition, DriftMarginInfo } from './providers/drift/drift-sdk-wrapper.js';
+
+export { Erc8004ActionProvider } from './providers/erc8004/index.js';
+export type { Eip712Metadata } from './providers/erc8004/index.js';
+export { ERC8004_DEFAULTS } from './providers/erc8004/config.js';
+export type { Erc8004Config } from './providers/erc8004/config.js';
+export { ERC8004_MAINNET_ADDRESSES, ERC8004_TESTNET_ADDRESSES } from './providers/erc8004/constants.js';
+export { Erc8004RegistryClient } from './providers/erc8004/erc8004-registry-client.js';
+export { buildRegistrationFile } from './providers/erc8004/registration-file.js';
+export { IDENTITY_REGISTRY_ABI } from './providers/erc8004/identity-abi.js';
+export { REPUTATION_REGISTRY_ABI } from './providers/erc8004/reputation-abi.js';
+export { VALIDATION_REGISTRY_ABI } from './providers/erc8004/validation-abi.js';
 
 // Re-export common utilities
 export { ActionApiClient } from './common/action-api-client.js';
@@ -251,6 +264,23 @@ export function registerBuiltInProviders(
           subAccount: 0,
         };
         return new DriftPerpProvider(config);
+      },
+    },
+    {
+      key: 'erc8004_agent',
+      enabledKey: 'actions.erc8004_agent_enabled',
+      factory: () => {
+        const config: Erc8004Config = {
+          ...ERC8004_DEFAULTS,
+          enabled: true,
+          identityRegistryAddress: settingsReader.get('actions.erc8004_identity_registry_address'),
+          reputationRegistryAddress: settingsReader.get('actions.erc8004_reputation_registry_address'),
+          validationRegistryAddress: settingsReader.get('actions.erc8004_validation_registry_address'),
+          registrationFileBaseUrl: settingsReader.get('actions.erc8004_registration_file_base_url'),
+          autoPublishRegistration: settingsReader.get('actions.erc8004_auto_publish_registration') === 'true',
+          reputationCacheTtlSec: Number(settingsReader.get('actions.erc8004_reputation_cache_ttl_sec')) || 300,
+        };
+        return new Erc8004ActionProvider(config);
       },
     },
   ];

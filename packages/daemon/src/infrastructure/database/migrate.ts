@@ -71,7 +71,7 @@ const LEGACY_NETWORK_NORMALIZE: Record<string, string> = {
 };
 
 // ---------------------------------------------------------------------------
-// DDL statements for all 21 tables (latest schema: wallets + wallet_id + session_wallets + token_registry + settings + telegram_users + wc_sessions + wc_store + incoming_transactions + incoming_tx_cursors + defi_positions + wallet_apps + webhooks + webhook_logs)
+// DDL statements for all 23 tables (latest schema: wallets + wallet_id + session_wallets + token_registry + settings + telegram_users + wc_sessions + wc_store + incoming_transactions + incoming_tx_cursors + defi_positions + wallet_apps + webhooks + webhook_logs + agent_identities + reputation_cache)
 // ---------------------------------------------------------------------------
 
 /**
@@ -79,7 +79,7 @@ const LEGACY_NETWORK_NORMALIZE: Record<string, string> = {
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 38;
+export const LATEST_SCHEMA_VERSION = 40;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -176,7 +176,7 @@ function getCreateTableStatements(): string[] {
   updated_at INTEGER NOT NULL
 )`,
 
-    // Table 5: pending_approvals (approval_channel added in v16)
+    // Table 5: pending_approvals (approval_channel added in v16, approval_type added in v39, typed_data_json added in v40)
     `CREATE TABLE IF NOT EXISTS pending_approvals (
   id TEXT PRIMARY KEY,
   tx_id TEXT NOT NULL REFERENCES transactions(id) ON DELETE CASCADE,
@@ -186,6 +186,8 @@ function getCreateTableStatements(): string[] {
   rejected_at INTEGER,
   owner_signature TEXT,
   approval_channel TEXT DEFAULT 'rest_api',
+  approval_type TEXT NOT NULL DEFAULT 'SIWE' CHECK (approval_type IN ('SIWE', 'EIP712')),
+  typed_data_json TEXT,
   created_at INTEGER NOT NULL
 )`,
 
@@ -366,6 +368,34 @@ function getCreateTableStatements(): string[] {
   request_duration INTEGER,
   created_at INTEGER NOT NULL
 )`,
+
+    // Table 22: agent_identities (ERC-8004 agent identity tracking, v39)
+    `CREATE TABLE IF NOT EXISTS agent_identities (
+  id TEXT PRIMARY KEY,
+  wallet_id TEXT NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
+  chain_agent_id TEXT NOT NULL,
+  registry_address TEXT NOT NULL,
+  chain_id INTEGER NOT NULL,
+  agent_uri TEXT,
+  registration_file_url TEXT,
+  status TEXT NOT NULL DEFAULT 'PENDING'
+    CHECK (status IN ('PENDING', 'REGISTERED', 'WALLET_LINKED', 'DEREGISTERED')),
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+)`,
+
+    // Table 23: reputation_cache (ERC-8004 reputation score cache, v39)
+    `CREATE TABLE IF NOT EXISTS reputation_cache (
+  agent_id TEXT NOT NULL,
+  registry_address TEXT NOT NULL,
+  tag1 TEXT NOT NULL DEFAULT '',
+  tag2 TEXT NOT NULL DEFAULT '',
+  score INTEGER NOT NULL,
+  score_decimals INTEGER NOT NULL DEFAULT 0,
+  feedback_count INTEGER NOT NULL DEFAULT 0,
+  cached_at INTEGER NOT NULL,
+  PRIMARY KEY (agent_id, registry_address, tag1, tag2)
+)`,
   ];
 }
 
@@ -460,6 +490,10 @@ function getCreateIndexStatements(): string[] {
     'CREATE INDEX IF NOT EXISTS idx_webhook_logs_event_type ON webhook_logs(event_type)',
     'CREATE INDEX IF NOT EXISTS idx_webhook_logs_status ON webhook_logs(status)',
     'CREATE INDEX IF NOT EXISTS idx_webhook_logs_created_at ON webhook_logs(created_at)',
+
+    // v39: agent_identities indexes (ERC-8004)
+    'CREATE INDEX IF NOT EXISTS idx_agent_identities_wallet ON agent_identities(wallet_id)',
+    'CREATE UNIQUE INDEX IF NOT EXISTS idx_agent_identities_chain ON agent_identities(registry_address, chain_agent_id)',
   ];
 }
 
@@ -2426,6 +2460,87 @@ MIGRATIONS.push({
     sqlite.exec(`ALTER TABLE wallets ADD COLUMN signer_key TEXT`);
     sqlite.exec(`ALTER TABLE wallets ADD COLUMN deployed INTEGER NOT NULL DEFAULT 1`);
     sqlite.exec(`ALTER TABLE wallets ADD COLUMN entry_point TEXT`);
+  },
+});
+
+// v39: ERC-8004 Trustless Agents Foundation
+// Creates agent_identities + reputation_cache tables, adds pending_approvals.approval_type,
+// recreates policies table with REPUTATION_THRESHOLD in CHECK constraint.
+MIGRATIONS.push({
+  version: 39,
+  description: 'ERC-8004: agent_identities + reputation_cache + pending_approvals.approval_type + policies CHECK update',
+  managesOwnTransaction: true,
+  up: (sqlite) => {
+    sqlite.exec('BEGIN');
+
+    // Step 1: Create agent_identities table
+    sqlite.exec(`CREATE TABLE IF NOT EXISTS agent_identities (
+  id TEXT PRIMARY KEY,
+  wallet_id TEXT NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
+  chain_agent_id TEXT NOT NULL,
+  registry_address TEXT NOT NULL,
+  chain_id INTEGER NOT NULL,
+  agent_uri TEXT,
+  registration_file_url TEXT,
+  status TEXT NOT NULL DEFAULT 'PENDING'
+    CHECK (status IN ('PENDING', 'REGISTERED', 'WALLET_LINKED', 'DEREGISTERED')),
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+)`);
+    sqlite.exec('CREATE INDEX IF NOT EXISTS idx_agent_identities_wallet ON agent_identities(wallet_id)');
+    sqlite.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_agent_identities_chain ON agent_identities(registry_address, chain_agent_id)');
+
+    // Step 2: Create reputation_cache table
+    sqlite.exec(`CREATE TABLE IF NOT EXISTS reputation_cache (
+  agent_id TEXT NOT NULL,
+  registry_address TEXT NOT NULL,
+  tag1 TEXT NOT NULL DEFAULT '',
+  tag2 TEXT NOT NULL DEFAULT '',
+  score INTEGER NOT NULL,
+  score_decimals INTEGER NOT NULL DEFAULT 0,
+  feedback_count INTEGER NOT NULL DEFAULT 0,
+  cached_at INTEGER NOT NULL,
+  PRIMARY KEY (agent_id, registry_address, tag1, tag2)
+)`);
+
+    // Step 3: Add approval_type to pending_approvals
+    sqlite.exec("ALTER TABLE pending_approvals ADD COLUMN approval_type TEXT NOT NULL DEFAULT 'SIWE' CHECK (approval_type IN ('SIWE', 'EIP712'))");
+
+    // Step 4: Recreate policies table with REPUTATION_THRESHOLD in CHECK constraint
+    // Uses same pattern as v11, v20, v27, v33 (INSERT → DROP → RENAME)
+    sqlite.exec(`CREATE TABLE policies_new (
+  id TEXT PRIMARY KEY,
+  wallet_id TEXT REFERENCES wallets(id) ON DELETE CASCADE,
+  type TEXT NOT NULL CHECK (type IN (${inList(POLICY_TYPES)})),
+  rules TEXT NOT NULL,
+  priority INTEGER NOT NULL DEFAULT 0,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES)})),
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+)`);
+    sqlite.exec('INSERT INTO policies_new SELECT * FROM policies');
+    sqlite.exec('DROP TABLE policies');
+    sqlite.exec('ALTER TABLE policies_new RENAME TO policies');
+    sqlite.exec('CREATE INDEX IF NOT EXISTS idx_policies_wallet_enabled ON policies(wallet_id, enabled)');
+    sqlite.exec('CREATE INDEX IF NOT EXISTS idx_policies_type ON policies(type)');
+    sqlite.exec('CREATE INDEX IF NOT EXISTS idx_policies_network ON policies(network)');
+
+    sqlite.exec('COMMIT');
+  },
+});
+
+// ---------------------------------------------------------------------------
+// v40: Add typed_data_json column to pending_approvals for EIP-712 approval flow
+// ---------------------------------------------------------------------------
+
+MIGRATIONS.push({
+  version: 40,
+  description: 'ERC-8004: pending_approvals.typed_data_json for EIP-712 approval payloads',
+  up: (sqlite) => {
+    sqlite.exec(
+      "ALTER TABLE pending_approvals ADD COLUMN typed_data_json TEXT",
+    );
   },
 });
 

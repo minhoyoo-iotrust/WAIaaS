@@ -164,6 +164,7 @@ function createMockApprovalWorkflow() {
     reject: vi.fn(),
     requestApproval: vi.fn(),
     processExpiredApprovals: vi.fn(),
+    getApprovalInfo: vi.fn().mockReturnValue(undefined),
   };
 }
 

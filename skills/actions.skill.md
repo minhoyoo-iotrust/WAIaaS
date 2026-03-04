@@ -1575,7 +1575,21 @@ Drift perp positions are automatically tracked via PositionTracker and stored in
 - **Margin alerts**: Automatic at thresholds 0.30 (warning), 0.15 (danger), 0.10 (critical)
 - **Liquidation alerts**: LIQUIDATION_IMMINENT notification when approaching liquidation price
 
-## 12. Policy Integration
+## 12. ERC-8004 Trustless Agents -- Built-in Provider (EVM)
+
+The ERC-8004 provider enables on-chain agent identity registration, reputation management, and third-party validation via three Ethereum mainnet registries. Unlike DeFi providers, ERC-8004 actions manage agent metadata and trust relationships rather than financial transactions.
+
+- **Provider name:** `erc8004_agent`
+- **Chains:** ethereum (EVM)
+- **Requires API key:** No
+- **Feature gate:** `actions.erc8004_agent_enabled` (default: false)
+- **Provider-trust bypass:** Yes (CONTRACT_WHITELIST bypassed when enabled)
+
+**8 actions:** register_agent, set_agent_wallet, unset_agent_wallet, set_agent_uri, set_metadata, give_feedback, revoke_feedback, request_validation.
+
+For full action documentation, input schemas, SDK methods, and MCP tools, see **erc8004.skill.md**.
+
+## 13. Policy Integration
 
 ### CONTRACT_WHITELIST
 
@@ -1602,7 +1616,7 @@ The swap/bridge input amount is converted to USD via IPriceOracle and evaluated 
 
 **LI.FI bridge reservation lifecycle:** Bridge amounts are reserved against the spending limit when the transaction is submitted. The reservation is released on terminal states (COMPLETED, FAILED, REFUNDED) but **held** on TIMEOUT to prevent double-spend during manual resolution. This means the spending budget is not freed until the bridge completes or fails definitively.
 
-## 13. Configuration via Admin Settings
+## 14. Configuration via Admin Settings
 
 Since v28.2, all action provider settings are managed via **Admin UI > Settings > Actions** (not config.toml). The Admin Settings UI provides:
 
@@ -1624,7 +1638,7 @@ The Admin UI shows a three-state status for each provider:
 - **Requires API Key** -- Provider is enabled but missing required API key (yellow, fires `ACTION_API_KEY_REQUIRED` notification)
 - **Inactive** -- Provider is disabled (gray)
 
-## 14. Error Reference
+## 15. Error Reference
 
 | Code | HTTP | Description | Recovery |
 |------|------|-------------|----------|
@@ -1640,7 +1654,7 @@ The Admin UI shows a three-state status for each provider:
 | `INVALID_INSTRUCTION` | 400 | Chain not supported by LI.FI integration. | Use one of the supported chains: solana, ethereum, polygon, arbitrum, optimism, base. |
 | `ACTION_API_ERROR` | 502 | LI.FI API returned an error. | Check LI.FI API status, verify parameters, retry. |
 
-## 15. MCP Auto-Registration
+## 16. MCP Auto-Registration
 
 When a provider has `mcpExpose: true` in its metadata, the MCP server automatically registers each action as an MCP tool using the naming convention:
 
@@ -1675,6 +1689,14 @@ action_{provider_name}_{action_name}
 - `action_drift_perp_drift_modify_position` -- Drift modify perpetual position (Solana)
 - `action_drift_perp_drift_add_margin` -- Drift deposit margin collateral (Solana)
 - `action_drift_perp_drift_withdraw_margin` -- Drift withdraw margin collateral (Solana)
+- `action_erc8004_agent_register_agent` -- Register agent on ERC-8004 Identity Registry (EVM)
+- `action_erc8004_agent_set_agent_wallet` -- Link wallet via EIP-712 signature (EVM)
+- `action_erc8004_agent_unset_agent_wallet` -- Unlink wallet from agent identity (EVM)
+- `action_erc8004_agent_set_agent_uri` -- Set registration file URI (EVM)
+- `action_erc8004_agent_set_metadata` -- Set agent metadata key-value (EVM)
+- `action_erc8004_agent_give_feedback` -- Submit reputation feedback (EVM)
+- `action_erc8004_agent_revoke_feedback` -- Revoke reputation feedback (EVM)
+- `action_erc8004_agent_request_validation` -- Request third-party validation (EVM)
 
 Auto-registration happens after MCP server connection via `registerActionProviderTools()`. The tool list is refreshed on each session. If the REST API is unavailable, MCP enters degraded mode (14 built-in tools remain, action provider tools are skipped).
 
@@ -1683,9 +1705,10 @@ MCP tool parameters:
 - `network` (optional string): Target network
 - `wallet_id` (optional string): Target wallet ID
 
-## 16. Related Skill Files
+## 17. Related Skill Files
 
 - **admin.skill.md** -- API key management, Admin Settings, daemon admin
 - **transactions.skill.md** -- 5-type transaction reference (actions execute as CONTRACT_CALL)
-- **policies.skill.md** -- Policy management (CONTRACT_WHITELIST, SPENDING_LIMIT)
+- **policies.skill.md** -- Policy management (CONTRACT_WHITELIST, SPENDING_LIMIT, REPUTATION_THRESHOLD)
 - **wallet.skill.md** -- Wallet CRUD, sessions, assets
+- **erc8004.skill.md** -- ERC-8004 trustless agent identity and reputation

@@ -1,6 +1,6 @@
 ---
 name: "WAIaaS Policies"
-description: "Policy engine CRUD: 12 policy types for spending limits, whitelists, time restrictions, rate limits, token/contract/approve controls, network restrictions, x402 domain controls"
+description: "Policy engine CRUD: 13 policy types for spending limits, whitelists, time restrictions, rate limits, token/contract/approve controls, network restrictions, x402 domain controls, reputation threshold"
 category: "api"
 tags: [wallet, blockchain, policies, security, waiass]
 version: "2.6.0-rc"
@@ -145,7 +145,7 @@ curl -s -X DELETE http://localhost:3100/v1/policies/<policy-uuid> \
 
 ---
 
-## 2. Policy Types (12 Types)
+## 2. Policy Types (13 Types)
 
 Each policy type has a specific `rules` schema. The `type` field determines which rules structure is required.
 
@@ -501,6 +501,44 @@ curl -s -X POST http://localhost:3100/v1/policies \
 
 Note: X402_ALLOWED_DOMAINS is default deny: once any policy of this type exists for a wallet, only listed domains can receive x402 payments.
 
+### m. REPUTATION_THRESHOLD (v30.8)
+
+Evaluate the counterparty agent's on-chain reputation score via the ERC-8004 Reputation Registry. When reputation is below the threshold, escalate the transaction security tier. Requires the ERC-8004 feature to be enabled (`actions.erc8004_agent_enabled=true` in Admin Settings).
+
+**Rules schema:**
+```json
+{
+  "min_score": 50,
+  "below_threshold_tier": "APPROVAL",
+  "unrated_tier": "APPROVAL",
+  "tag1": "",
+  "tag2": "",
+  "check_counterparty": true
+}
+```
+
+| Field                  | Type    | Required | Description                                                     |
+| ---------------------- | ------- | -------- | --------------------------------------------------------------- |
+| `min_score`            | number  | Yes      | Minimum acceptable reputation score (0-100).                    |
+| `below_threshold_tier` | string  | No       | Tier when score < min_score. One of: INSTANT, NOTIFY, DELAY, APPROVAL. Default: APPROVAL. |
+| `unrated_tier`         | string  | No       | Tier when counterparty has no reputation data or RPC fails. Default: APPROVAL. |
+| `tag1`                 | string  | No       | Reputation tag filter (max 32 chars). Empty = all categories.   |
+| `tag2`                 | string  | No       | Second reputation tag filter (max 32 chars).                    |
+| `check_counterparty`   | boolean | No       | Whether to check the counterparty's reputation. Default: true.  |
+
+**Tier escalation only:** The reputation policy can only escalate the tier, never downgrade. If a previous policy (e.g., SPENDING_LIMIT) already assigned APPROVAL, the reputation policy cannot lower it to NOTIFY. This uses `maxTier` logic -- the highest tier wins.
+
+**Evaluation position:** Stage 3, position 6 (after APPROVED_SPENDERS, before SPENDING_LIMIT).
+
+```bash
+curl -s -X POST http://localhost:3100/v1/policies \
+  -H 'Content-Type: application/json' \
+  -H 'X-Master-Password: <password>' \
+  -d '{"walletId":"<uuid>","type":"REPUTATION_THRESHOLD","rules":{"min_score":50,"below_threshold_tier":"APPROVAL","unrated_tier":"DELAY","check_counterparty":true}}'
+```
+
+For full ERC-8004 documentation, see **erc8004.skill.md**.
+
 ---
 
 ## 3. Policy Evaluation Flow
@@ -509,7 +547,7 @@ When a transaction is submitted (`POST /v1/transactions/send`), the policy engin
 
 1. **Collect policies** -- All enabled policies for the wallet + global policies, sorted by priority. If a policy has a `network` field set, it applies only to transactions on that specific network. Override priority: wallet+network > wallet+null > global+network > global+null.
 2. **Default deny checks** -- ALLOWED_TOKENS, CONTRACT_WHITELIST, and APPROVED_SPENDERS use **default deny**: if any policy of that type exists but the transaction's token/contract/spender is not in any matching policy, the transaction is blocked with `POLICY_VIOLATION`.
-3. **Tier assignment** -- SPENDING_LIMIT determines the transaction tier (INSTANT/NOTIFY/DELAY/APPROVAL) based on amount. APPROVE_TIER_OVERRIDE overrides the tier for APPROVE transactions.
+3. **Tier assignment** -- SPENDING_LIMIT determines the transaction tier (INSTANT/NOTIFY/DELAY/APPROVAL) based on amount. REPUTATION_THRESHOLD evaluates counterparty reputation and may escalate the tier (after APPROVED_SPENDERS, before SPENDING_LIMIT). APPROVE_TIER_OVERRIDE overrides the tier for APPROVE transactions.
 4. **Constraint checks** -- WHITELIST, TIME_RESTRICTION, RATE_LIMIT, METHOD_WHITELIST, APPROVE_AMOUNT_LIMIT, ALLOWED_NETWORKS are evaluated. Any violation blocks the transaction.
 5. **Tier execution** -- INSTANT executes immediately, NOTIFY executes + sends notification, DELAY waits for cooldown, APPROVAL requires owner approval via `POST /v1/transactions/{id}/approve`.
 
@@ -653,3 +691,4 @@ Native SOL transfers of <= 1 SOL are INSTANT. USDC transfers of <= 100 USDC are 
 - **transactions.skill.md** -- 5-type transaction reference (policies affect transaction execution)
 - **wallet.skill.md** -- Wallet CRUD and session management
 - **admin.skill.md** -- Admin API for daemon operations
+- **erc8004.skill.md** -- ERC-8004 trustless agent identity and reputation

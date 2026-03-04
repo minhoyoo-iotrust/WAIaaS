@@ -1,5 +1,31 @@
 # Project Milestones: WAIaaS
 
+## v30.8 ERC-8004 Trustless Agents 지원 (Shipped: 2026-03-04)
+
+**Delivered:** ERC-8004 온체인 레지스트리(Identity/Reputation/Validation)를 WAIaaS에 통합하여, AI 에이전트가 온체인 신원 등록 + 평판 기반 신뢰 평가 + 검증 요청을 수행하고, REPUTATION_THRESHOLD 정책으로 상대방 평판에 따라 보안 티어를 자동 조정할 수 있는 상태.
+
+**Phases completed:** 317-323 (7 phases, 15 plans, 39 requirements)
+
+**Key accomplishments:**
+
+- DB v39-40 Schema Extension — agent_identities(10 cols, wallet FK, status CHECK), reputation_cache(composite PK for tag filtering), approval_type dual-approval column, policies CHECK REPUTATION_THRESHOLD
+- Erc8004ActionProvider 8 Write Actions + RegistryClient — viem-based encode methods, register_agent/set_agent_wallet/set_agent_uri/set_metadata/give_feedback/revoke_feedback/request_validation + unset_agent_wallet
+- 4 Read-Only REST Endpoints + connect-info Extension — agent info, reputation, registration file auto-generation, validation status; per-wallet ERC-8004 identity data in connect-info
+- ReputationCacheService 3-Tier Cache + REPUTATION_THRESHOLD Policy — memory→DB→RPC fallback(TTL 300s), Stage 3 position 6 evaluation, maxTier escalation, unrated_tier treatment
+- EIP-712 Wallet Linking + ApprovalWorkflow — AgentWalletSet 4-field typehash, dual approval routing(SIWE/EIP712), WcSigningBridge eth_signTypedData_v4, calldata re-encoding with Owner signature
+- Admin UI + MCP 11 Tools + SDK 11 Methods — ERC-8004 Identity page(3 tabs), reputation dashboard, REPUTATION_THRESHOLD policy form, 13th PolicyFormRouter case
+- 182 Tests + erc8004.skill.md — E1-E20 test scenarios across 13 files, 612-line skill file, policies/admin skill updates
+
+**Stats:**
+
+- 7 phases, 15 plans, 39 requirements, 50 commits
+- 121 files changed, +15,921 / -151 lines
+- ~225,565 LOC TypeScript total
+- Timeline: 2026-03-04 (1 day)
+- Git range: 24d5ae3c..HEAD
+
+---
+
 ## v30.6 ERC-4337 Account Abstraction 지원 (Shipped: 2026-03-04)
 
 **Delivered:** EVM 지갑에 ERC-4337 스마트 어카운트 옵션을 추가하여 Paymaster 가스비 스폰서십, 네이티브 원자적 배치, UserOperation 기반 트랜잭션 실행이 가능한 상태.

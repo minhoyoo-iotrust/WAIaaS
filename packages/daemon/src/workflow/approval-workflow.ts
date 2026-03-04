@@ -46,6 +46,10 @@ interface ApprovalWorkflowDeps {
 
 interface RequestApprovalOptions {
   policyTimeoutSeconds?: number;
+  /** Approval signature type: SIWE (default) or EIP712. */
+  approvalType?: 'SIWE' | 'EIP712';
+  /** JSON-serialized EIP-712 typed data payload (only for EIP712). */
+  typedDataJson?: string;
 }
 
 interface RequestApprovalResult {
@@ -105,6 +109,8 @@ export class ApprovalWorkflow {
     const now = Math.floor(Date.now() / 1000);
     const timeout = this.resolveTimeout(options?.policyTimeoutSeconds);
     const expiresAt = now + timeout;
+    const approvalType = options?.approvalType ?? 'SIWE';
+    const typedDataJson = options?.typedDataJson ?? null;
 
     const txn = this.sqlite.transaction(() => {
       // Set transaction status to QUEUED
@@ -112,18 +118,48 @@ export class ApprovalWorkflow {
         .prepare('UPDATE transactions SET status = ? WHERE id = ?')
         .run('QUEUED', txId);
 
-      // Create pending_approvals record
+      // Create pending_approvals record (v40: includes approval_type + typed_data_json)
       this.sqlite
         .prepare(
-          `INSERT INTO pending_approvals (id, tx_id, required_by, expires_at, created_at)
-           VALUES (?, ?, ?, ?, ?)`,
+          `INSERT INTO pending_approvals (id, tx_id, required_by, expires_at, approval_type, typed_data_json, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
         )
-        .run(approvalId, txId, now, expiresAt, now);
+        .run(approvalId, txId, now, expiresAt, approvalType, typedDataJson, now);
     });
 
     txn.immediate();
 
     return { approvalId, expiresAt };
+  }
+
+  // -------------------------------------------------------------------------
+  // getApprovalInfo
+  // -------------------------------------------------------------------------
+
+  /**
+   * Get approval type and typed data for a pending approval.
+   *
+   * Used by WcSigningBridge (to choose signing method) and approve endpoint
+   * (to verify EIP-712 vs SIWE signatures).
+   *
+   * @param txId - The transaction ID
+   * @returns Approval info or undefined if not found
+   */
+  getApprovalInfo(txId: string): { approvalType: string; typedDataJson: string | null } | undefined {
+    const row = this.sqlite
+      .prepare(
+        `SELECT approval_type, typed_data_json
+         FROM pending_approvals
+         WHERE tx_id = ? AND approved_at IS NULL AND rejected_at IS NULL`,
+      )
+      .get(txId) as { approval_type: string; typed_data_json: string | null } | undefined;
+
+    if (!row) return undefined;
+
+    return {
+      approvalType: row.approval_type,
+      typedDataJson: row.typed_data_json,
+    };
   }
 
   // -------------------------------------------------------------------------

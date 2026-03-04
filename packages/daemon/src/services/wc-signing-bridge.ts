@@ -24,6 +24,7 @@ import { randomBytes } from 'node:crypto';
 import { createRequire } from 'node:module';
 import type { Database } from 'better-sqlite3';
 import { createSiweMessage } from 'viem/siwe';
+import { recoverTypedDataAddress } from 'viem';
 import type { EventBus } from '@waiaas/core';
 import { verifySIWE } from '../api/middleware/siwe-verify.js';
 import { decodeBase58 } from '../api/middleware/address-validation.js';
@@ -165,7 +166,16 @@ export class WcSigningBridge {
 
       const { ownerAddress, chainId } = sessionInfo;
 
-      // Build chain-specific signing request
+      // Check if this is an EIP-712 approval (Phase 321)
+      const approvalInfo = this.approvalWorkflow.getApprovalInfo(txId);
+      if (approvalInfo?.approvalType === 'EIP712' && approvalInfo.typedDataJson) {
+        await this.handleEip712Request(
+          txId, ownerAddress, topic, chainId, approvalInfo.typedDataJson, signClient,
+        );
+        return;
+      }
+
+      // Build chain-specific signing request (SIWE / Solana)
       const signRequest = this.buildSignRequest(chain, ownerAddress, txId, chainId);
 
       // Update approval_channel to 'walletconnect'
@@ -254,6 +264,84 @@ export class WcSigningBridge {
     const params = { message: base58Message, pubkey: ownerAddress };
 
     return { message, method: 'solana_signMessage', params };
+  }
+
+  // -------------------------------------------------------------------------
+  // Private: EIP-712 request handling (Phase 321)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Send eth_signTypedData_v4 request for EIP-712 approval.
+   */
+  private async handleEip712Request(
+    txId: string,
+    ownerAddress: string,
+    topic: string,
+    chainId: string,
+    typedDataJson: string,
+    signClient: any,
+  ): Promise<void> {
+    // Update approval_channel to 'walletconnect'
+    this.sqlite
+      .prepare(
+        `UPDATE pending_approvals SET approval_channel = 'walletconnect'
+         WHERE tx_id = ? AND approved_at IS NULL AND rejected_at IS NULL`,
+      )
+      .run(txId);
+
+    const timeoutSeconds = this.resolveWcExpiry(txId);
+
+    // eth_signTypedData_v4: params = [address, typedDataJsonString]
+    const result = await signClient.request({
+      topic,
+      chainId,
+      request: {
+        method: 'eth_signTypedData_v4',
+        params: [ownerAddress, typedDataJson],
+      },
+      expiry: timeoutSeconds,
+    });
+
+    // Verify EIP-712 signature using recoverTypedDataAddress
+    await this.handleEip712SignatureResponse(txId, typedDataJson, result, ownerAddress);
+  }
+
+  /**
+   * Verify EIP-712 signature and approve if valid.
+   */
+  private async handleEip712SignatureResponse(
+    txId: string,
+    typedDataJson: string,
+    result: unknown,
+    ownerAddress: string,
+  ): Promise<void> {
+    const signature = typeof result === 'string' ? result : '';
+
+    try {
+      const typedData = JSON.parse(typedDataJson);
+      const recovered = await recoverTypedDataAddress({
+        domain: typedData.domain,
+        types: typedData.types,
+        primaryType: typedData.primaryType,
+        message: typedData.message,
+        signature: signature as `0x${string}`,
+      });
+
+      if (recovered.toLowerCase() === ownerAddress.toLowerCase()) {
+        try {
+          this.approvalWorkflow.approve(txId, signature);
+        } catch (err) {
+          console.warn(`[WcSigningBridge] EIP-712 approve failed for ${txId}:`, err);
+        }
+      } else {
+        console.warn(
+          `[WcSigningBridge] EIP-712 signature address mismatch for ${txId}: ` +
+          `expected=${ownerAddress}, got=${recovered}`,
+        );
+      }
+    } catch (err) {
+      console.warn(`[WcSigningBridge] EIP-712 signature verification error for ${txId}:`, err);
+    }
   }
 
   // -------------------------------------------------------------------------

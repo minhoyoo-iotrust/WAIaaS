@@ -1360,6 +1360,10 @@ export class DaemonLifecycle {
           rpcCaller: this.rpcCaller ?? undefined,
         });
 
+        // [Phase 320] Create ReputationCacheService for REPUTATION_THRESHOLD policy evaluation
+        const { ReputationCacheService } = await import('../services/erc8004/index.js');
+        const reputationCacheService = new ReputationCacheService(this._db!, this._settingsService ?? undefined);
+
         const app = createApp({
           db: this._db!,
           sqlite: this.sqlite ?? undefined,
@@ -1373,7 +1377,9 @@ export class DaemonLifecycle {
             this._db!,
             this.sqlite ?? undefined,
             this._settingsService ?? undefined,
+            reputationCacheService,
           ),
+          reputationCache: reputationCacheService,
           jwtSecretManager: this.jwtSecretManager ?? undefined,
           delayQueue: this.delayQueue ?? undefined,
           approvalWorkflow: this.approvalWorkflow ?? undefined,
@@ -1953,11 +1959,43 @@ export class DaemonLifecycle {
 
       // Restore original request from metadata (#208)
       const meta = tx.metadata ? JSON.parse(tx.metadata) : {};
-      const request = meta.originalRequest ?? {
+      let request = meta.originalRequest ?? {
         to: tx.toAddress ?? '',
         amount: tx.amount ?? '0',
         memo: undefined,
       };
+
+      // Phase 321: Re-encode calldata for EIP-712 approvals (setAgentWallet)
+      // The original calldata has a placeholder '0x' signature. On approval,
+      // the Owner's real EIP-712 signature is stored in pending_approvals.
+      // Re-encode the calldata with the real signature before stage5Execute.
+      if (this.sqlite) {
+        const approvalRow = this.sqlite.prepare(
+          'SELECT approval_type, typed_data_json, owner_signature FROM pending_approvals WHERE tx_id = ?',
+        ).get(txId) as { approval_type: string; typed_data_json: string | null; owner_signature: string | null } | undefined;
+
+        if (approvalRow?.approval_type === 'EIP712' && approvalRow.typed_data_json && approvalRow.owner_signature) {
+          try {
+            const typedData = JSON.parse(approvalRow.typed_data_json);
+            const { encodeFunctionData } = await import('viem');
+            const { IDENTITY_REGISTRY_ABI } = await import('@waiaas/actions');
+            const reEncodedCalldata = encodeFunctionData({
+              abi: IDENTITY_REGISTRY_ABI,
+              functionName: 'setAgentWallet',
+              args: [
+                BigInt(typedData.message.agentId),
+                typedData.message.newWallet as `0x${string}`,
+                BigInt(typedData.message.deadline),
+                approvalRow.owner_signature as `0x${string}`,
+              ],
+            });
+            // Replace calldata in the request object
+            request = { ...request, calldata: reEncodedCalldata };
+          } catch (err) {
+            console.warn(`[executeFromStage5] EIP-712 calldata re-encoding failed for ${txId}:`, err);
+          }
+        }
+      }
 
       // Construct PipelineContext for stages 5-6
       const ctx: import('../pipeline/stages.js').PipelineContext = {

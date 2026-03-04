@@ -270,6 +270,48 @@
 
 ---
 
+## Milestone: v30.8 — ERC-8004 Trustless Agents 지원
+
+**Shipped:** 2026-03-04
+**Phases:** 7 | **Plans:** 15 | **Sessions:** 1
+
+### What Was Built
+- DB v39-40 (agent_identities, reputation_cache, approval_type, policies CHECK REPUTATION_THRESHOLD)
+- Erc8004ActionProvider 8 write actions + RegistryClient viem wrapper + 3 ABI constants
+- 4 read-only REST endpoints + connect-info erc8004 per-wallet extension
+- ReputationCacheService 3-tier cache (memory→DB→RPC) + REPUTATION_THRESHOLD policy engine (Stage 3 position 6)
+- EIP-712 typed data wallet linking + ApprovalWorkflow dual-routing (SIWE/EIP712) + WcSigningBridge
+- Admin UI ERC-8004 page (Identity/Registration File/Reputation 3 tabs) + PolicyFormRouter case 13
+- MCP 11 tools + SDK 11 methods + erc8004.skill.md (612 lines) + 182 tests (E1-E20)
+- Notification events wiring (5 events emit + cache invalidation post-feedback)
+
+### What Worked
+- Zero new dependencies: 전체 ERC-8004 통합을 viem/Zod/Drizzle/Hono 기존 스택으로 구현 — 의존성 충돌 없음
+- 7 phases 1일 완료 (50 commits, 121 files) — 설계 문서(m30-08) 상세도가 빠른 구현의 핵심
+- 3-tier cache 설계가 RPC 의존성을 효과적으로 차단 — TTL 기반 자동 갱신으로 운영 부담 최소화
+- milestone audit 사전 실행으로 INT-01/INT-02 갭을 아카이브 전에 수정
+
+### What Was Inefficient
+- SUMMARY.md one_liner 필드 미기재 — gsd-tools summary-extract가 null 반환, 수동 추출 필요
+- EIP-712 typehash 온체인 검증(C1)이 여전히 미완 — Anvil fork 테스트 필요하지만 계속 연기
+
+### Patterns Established
+- ERC 표준 통합 패턴: ABI constants → RegistryClient → ActionProvider → REST routes → Policy Engine → Admin UI → MCP/SDK
+- dual approval routing (SIWE/EIP712): approval_type DB 컬럼 + PipelineContext 분기, 향후 다른 서명 타입 확장 가능
+- 3-tier cache 패턴: 인메모리 Map(TTL) → DB 폴백 → RPC 원본, 다른 외부 데이터 캐싱에 재사용 가능
+
+### Key Lessons
+1. viem 네이티브 ABI 인코딩이 ethers.js SDK보다 번들 크기·호환성 모두 우위 — ERC 표준 연동에 최적
+2. maxTier 에스컬레이션 패턴(기존 티어 유지, 더 높은 것만 적용)이 복수 정책 간 충돌 방지에 효과적
+3. feature gate(default false) + validation registry gate 이중 보호가 Draft EIP 통합의 안전한 전략
+
+### Cost Observations
+- Model mix: ~100% opus (quality profile)
+- Sessions: 1
+- Notable: 121 files, +15,921/-151 lines, 1일 완료 — 5패키지 걸친 풀스택 ERC 표준 통합
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -283,6 +325,7 @@
 | v29.10 | 1 | 2 | 글로벌→per-entity 설정 전환, 43 파일 1.5시간 완료 |
 | v30.0 | 1 | 5 | 운영 기능 6개 설계 전용, 30 파일 50분 완료 |
 | v30.6 | 1 | 3 | ERC-4337 Smart Account, 49 파일 ~2h 완료 |
+| v30.8 | 1 | 7 | ERC-8004 Trustless Agents 5-package 통합, 121 파일 1일 완료 |
 
 ### Cumulative Quality
 
@@ -295,6 +338,7 @@
 | v29.10 | ~5,737 (+142) | maintained | +8 decisions |
 | v30.0 | ~5,737 (unchanged) | unchanged | +40 decisions |
 | v30.6 | ~6,486 (+749) | maintained | +8 decisions |
+| v30.8 | ~6,668 (+182) | maintained | +36 decisions |
 
 ### Top Lessons (Verified Across Milestones)
 

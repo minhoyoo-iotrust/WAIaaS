@@ -1,7 +1,7 @@
 /**
  * Drizzle ORM schema definitions for WAIaaS daemon SQLite database.
  *
- * 21 tables: wallets, sessions, session_wallets, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs, token_registry, settings, telegram_users, wc_sessions, wc_store, incoming_transactions, incoming_tx_cursors, defi_positions, wallet_apps, webhooks, webhook_logs
+ * 23 tables: wallets, sessions, session_wallets, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs, token_registry, settings, telegram_users, wc_sessions, wc_store, incoming_transactions, incoming_tx_cursors, defi_positions, wallet_apps, webhooks, webhook_logs, agent_identities, reputation_cache
  *
  * CHECK constraints are derived from @waiaas/core enum SSoT arrays (not hardcoded strings).
  * All timestamps are Unix epoch seconds via { mode: 'timestamp' }.
@@ -29,6 +29,7 @@ import {
   index,
   uniqueIndex,
   check,
+  primaryKey,
   type AnySQLiteColumn,
 } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
@@ -271,6 +272,8 @@ export const pendingApprovals = sqliteTable(
     rejectedAt: integer('rejected_at', { mode: 'timestamp' }),
     ownerSignature: text('owner_signature'),
     approvalChannel: text('approval_channel').default('rest_api'),
+    approvalType: text('approval_type').notNull().default('SIWE'),
+    typedDataJson: text('typed_data_json'),
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   },
   (table) => [
@@ -587,5 +590,54 @@ export const webhookLogs = sqliteTable(
     index('idx_webhook_logs_status').on(table.status),
     index('idx_webhook_logs_created_at').on(table.createdAt),
     check('check_webhook_log_status', sql`status IN ('success', 'failed')`),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Table 22: agent_identities -- ERC-8004 agent identity tracking (v39)
+// ---------------------------------------------------------------------------
+
+export const agentIdentities = sqliteTable(
+  'agent_identities',
+  {
+    id: text('id').primaryKey(),
+    walletId: text('wallet_id').notNull().references(() => wallets.id, { onDelete: 'cascade' }),
+    chainAgentId: text('chain_agent_id').notNull(),
+    registryAddress: text('registry_address').notNull(),
+    chainId: integer('chain_id').notNull(),
+    agentUri: text('agent_uri'),
+    registrationFileUrl: text('registration_file_url'),
+    status: text('status').notNull().default('PENDING'),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  },
+  (table) => [
+    index('idx_agent_identities_wallet').on(table.walletId),
+    uniqueIndex('idx_agent_identities_chain').on(table.registryAddress, table.chainAgentId),
+    check(
+      'check_agent_identity_status',
+      sql`status IN ('PENDING', 'REGISTERED', 'WALLET_LINKED', 'DEREGISTERED')`,
+    ),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Table 23: reputation_cache -- ERC-8004 reputation score cache (v39)
+// ---------------------------------------------------------------------------
+
+export const reputationCache = sqliteTable(
+  'reputation_cache',
+  {
+    agentId: text('agent_id').notNull(),
+    registryAddress: text('registry_address').notNull(),
+    tag1: text('tag1').notNull().default(''),
+    tag2: text('tag2').notNull().default(''),
+    score: integer('score').notNull(),
+    scoreDecimals: integer('score_decimals').notNull().default(0),
+    feedbackCount: integer('feedback_count').notNull().default(0),
+    cachedAt: integer('cached_at', { mode: 'timestamp' }).notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.agentId, table.registryAddress, table.tag1, table.tag2] }),
   ],
 );

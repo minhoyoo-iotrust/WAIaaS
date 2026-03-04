@@ -23,6 +23,8 @@ export {
   telegramUsers,
   incomingTransactions,
   incomingTxCursors,
+  agentIdentities,
+  reputationCache,
 } from './schema.js';
 export { insertAuditLog } from './audit-helper.js';
 export type { AuditEntry } from './audit-helper.js';

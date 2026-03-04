@@ -743,7 +743,125 @@ export type PolicyType =
   | 'APPROVE_AMOUNT_LIMIT'
   | 'APPROVE_TIER_OVERRIDE'
   | 'ALLOWED_NETWORKS'
-  | 'X402_ALLOWED_DOMAINS';
+  | 'X402_ALLOWED_DOMAINS'
+  | 'REPUTATION_THRESHOLD';
+
+// ---------------------------------------------------------------------------
+// ERC-8004 Types
+// ---------------------------------------------------------------------------
+
+export interface Erc8004AgentInfoResponse {
+  agentId: string;
+  wallet: string;
+  uri: string;
+  metadata: Record<string, unknown>;
+  registryAddress: string;
+  chainId: number;
+}
+
+export interface Erc8004ReputationResponse {
+  agentId: string;
+  count: number;
+  score: string;
+  decimals: number;
+  tag1: string;
+  tag2: string;
+}
+
+export interface Erc8004RegistrationFileResponse {
+  [key: string]: unknown;
+}
+
+export interface Erc8004ValidationResponse {
+  requestHash: string;
+  validator: string;
+  agentId: string;
+  response: number;
+  responseHash: string;
+  tag: string;
+  lastUpdate: number;
+}
+
+/** Params for registerAgent SDK method. */
+export interface Erc8004RegisterAgentParams {
+  name: string;
+  description?: string;
+  services?: Array<{ name: string; endpoint: string; version?: string }>;
+  metadata?: Record<string, string>;
+  network?: string;
+  walletId?: string;
+  gasCondition?: GasCondition;
+}
+
+/** Params for setAgentWallet SDK method. */
+export interface Erc8004SetAgentWalletParams {
+  agentId: string;
+  network?: string;
+  walletId?: string;
+  gasCondition?: GasCondition;
+}
+
+/** Params for unsetAgentWallet SDK method. */
+export interface Erc8004UnsetAgentWalletParams {
+  agentId: string;
+  network?: string;
+  walletId?: string;
+  gasCondition?: GasCondition;
+}
+
+/** Params for setAgentUri SDK method. */
+export interface Erc8004SetAgentUriParams {
+  agentId: string;
+  uri: string;
+  network?: string;
+  walletId?: string;
+  gasCondition?: GasCondition;
+}
+
+/** Params for setAgentMetadata SDK method. */
+export interface Erc8004SetAgentMetadataParams {
+  agentId: string;
+  key: string;
+  value: string;
+  network?: string;
+  walletId?: string;
+  gasCondition?: GasCondition;
+}
+
+/** Params for giveFeedback SDK method. */
+export interface Erc8004GiveFeedbackParams {
+  targetAgentId: string;
+  score: number;
+  tag1?: string;
+  tag2?: string;
+  network?: string;
+  walletId?: string;
+  gasCondition?: GasCondition;
+}
+
+/** Params for revokeFeedback SDK method. */
+export interface Erc8004RevokeFeedbackParams {
+  targetAgentId: string;
+  tag1?: string;
+  tag2?: string;
+  network?: string;
+  walletId?: string;
+  gasCondition?: GasCondition;
+}
+
+/** Params for requestValidation SDK method. */
+export interface Erc8004RequestValidationParams {
+  requestURI: string;
+  network?: string;
+  walletId?: string;
+  gasCondition?: GasCondition;
+}
+
+/** Params for getAgentReputation SDK method. */
+export interface Erc8004GetReputationOptions {
+  tag1?: string;
+  tag2?: string;
+}
 
 // ---------------------------------------------------------------------------
 // DeFi Position Types (API-01, API-02, API-05)

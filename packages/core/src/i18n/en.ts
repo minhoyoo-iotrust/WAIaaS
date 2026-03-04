@@ -259,6 +259,11 @@ export const messages: Messages = {
       body: '{walletName} is at imminent risk of liquidation. Health factor: {healthFactor}. Immediate action required.',
     },
     SESSION_IDLE: { title: 'Idle Session Detected', body: 'Session {sessionId} for {walletName} has been idle for an extended period. You can manually revoke it from the Admin UI if needed.' },
+    AGENT_REGISTERED: { title: 'Agent Registered', body: '{walletName} registered on ERC-8004 Identity Registry. Chain agent ID: {chainAgentId}' },
+    AGENT_WALLET_LINKED: { title: 'Agent Wallet Linked', body: '{walletName} linked to agent identity via EIP-712 signature. Registry: {registryAddress}' },
+    AGENT_WALLET_UNLINKED: { title: 'Agent Wallet Unlinked', body: '{walletName} unlinked from agent identity. Registry: {registryAddress}' },
+    REPUTATION_FEEDBACK_RECEIVED: { title: 'Reputation Feedback Received', body: '{walletName} received reputation feedback. Score: {score}, Tags: {tag1}/{tag2}' },
+    REPUTATION_THRESHOLD_TRIGGERED: { title: 'Reputation Threshold Triggered', body: '{walletName} transaction tier escalated to {tier} due to reputation score {score} below threshold {threshold}' },
   },
   // System messages
   system: {

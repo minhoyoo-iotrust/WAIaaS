@@ -1,7 +1,7 @@
 /**
  * WAIaaSClient - Core wallet client for WAIaaS daemon REST API.
  *
- * Wraps 21 REST API methods with typed responses:
+ * Wraps 32 REST API methods with typed responses:
  * - getBalance(), getAddress(), getAssets() (wallet queries)
  * - getWalletInfo() (wallet management)
  * - sendToken(), getTransaction(), listTransactions(), listPendingTransactions() (transactions)
@@ -12,6 +12,9 @@
  * - x402Fetch() (x402 auto-payment)
  * - wcConnect(), wcStatus(), wcDisconnect() (WalletConnect)
  * - executeAction() (action providers: DeFi swaps, etc.)
+ * - registerAgent(), setAgentWallet(), unsetAgentWallet(), setAgentUri(),
+ *   setAgentMetadata(), giveFeedback(), revokeFeedback(), requestValidation() (ERC-8004 write)
+ * - getAgentInfo(), getAgentReputation(), getValidationStatus() (ERC-8004 read)
  *
  * All methods use exponential backoff retry for 429/5xx responses.
  * sendToken() performs inline pre-validation before making the HTTP request.
@@ -68,6 +71,18 @@ import type {
   SimulateResponse,
   CreateWalletParams,
   CreateWalletResponse,
+  Erc8004AgentInfoResponse,
+  Erc8004ReputationResponse,
+  Erc8004ValidationResponse,
+  Erc8004RegisterAgentParams,
+  Erc8004SetAgentWalletParams,
+  Erc8004UnsetAgentWalletParams,
+  Erc8004SetAgentUriParams,
+  Erc8004SetAgentMetadataParams,
+  Erc8004GiveFeedbackParams,
+  Erc8004RevokeFeedbackParams,
+  Erc8004RequestValidationParams,
+  Erc8004GetReputationOptions,
 } from './types.js';
 
 export class WAIaaSClient {
@@ -638,6 +653,135 @@ export class WAIaaSClient {
       () => this.http.post<ExecuteActionResponse>(
         `/v1/actions/${provider}/${action}`,
         body,
+        this.authHeaders(),
+      ),
+      this.retryOptions,
+    );
+  }
+
+  // --- ERC-8004 write actions (via executeAction) ---
+
+  /** Register an agent on the ERC-8004 Identity Registry. */
+  async registerAgent(params: Erc8004RegisterAgentParams): Promise<ExecuteActionResponse> {
+    const { network, walletId, gasCondition, ...rest } = params;
+    return this.executeAction('erc8004_agent', 'register_agent', {
+      params: rest,
+      network,
+      walletId,
+      gasCondition,
+    });
+  }
+
+  /** Link an agent wallet via EIP-712 signature. */
+  async setAgentWallet(params: Erc8004SetAgentWalletParams): Promise<ExecuteActionResponse> {
+    const { network, walletId, gasCondition, ...rest } = params;
+    return this.executeAction('erc8004_agent', 'set_agent_wallet', {
+      params: rest,
+      network,
+      walletId,
+      gasCondition,
+    });
+  }
+
+  /** Unlink an agent wallet. */
+  async unsetAgentWallet(params: Erc8004UnsetAgentWalletParams): Promise<ExecuteActionResponse> {
+    const { network, walletId, gasCondition, ...rest } = params;
+    return this.executeAction('erc8004_agent', 'unset_agent_wallet', {
+      params: rest,
+      network,
+      walletId,
+      gasCondition,
+    });
+  }
+
+  /** Set the agent URI in the Identity Registry. */
+  async setAgentUri(params: Erc8004SetAgentUriParams): Promise<ExecuteActionResponse> {
+    const { network, walletId, gasCondition, ...rest } = params;
+    return this.executeAction('erc8004_agent', 'set_agent_uri', {
+      params: rest,
+      network,
+      walletId,
+      gasCondition,
+    });
+  }
+
+  /** Set agent metadata key-value pair. */
+  async setAgentMetadata(params: Erc8004SetAgentMetadataParams): Promise<ExecuteActionResponse> {
+    const { network, walletId, gasCondition, ...rest } = params;
+    return this.executeAction('erc8004_agent', 'set_metadata', {
+      params: rest,
+      network,
+      walletId,
+      gasCondition,
+    });
+  }
+
+  /** Give feedback (reputation score) to another agent. */
+  async giveFeedback(params: Erc8004GiveFeedbackParams): Promise<ExecuteActionResponse> {
+    const { network, walletId, gasCondition, ...rest } = params;
+    return this.executeAction('erc8004_agent', 'give_feedback', {
+      params: rest,
+      network,
+      walletId,
+      gasCondition,
+    });
+  }
+
+  /** Revoke previously given feedback. */
+  async revokeFeedback(params: Erc8004RevokeFeedbackParams): Promise<ExecuteActionResponse> {
+    const { network, walletId, gasCondition, ...rest } = params;
+    return this.executeAction('erc8004_agent', 'revoke_feedback', {
+      params: rest,
+      network,
+      walletId,
+      gasCondition,
+    });
+  }
+
+  /** Request validation from the ERC-8004 Validation Registry. */
+  async requestValidation(params: Erc8004RequestValidationParams): Promise<ExecuteActionResponse> {
+    const { network, walletId, gasCondition, ...rest } = params;
+    return this.executeAction('erc8004_agent', 'request_validation', {
+      params: rest,
+      network,
+      walletId,
+      gasCondition,
+    });
+  }
+
+  // --- ERC-8004 read queries ---
+
+  /** Get agent identity info from on-chain registry. */
+  async getAgentInfo(agentId: string): Promise<Erc8004AgentInfoResponse> {
+    return withRetry(
+      () => this.http.get<Erc8004AgentInfoResponse>(
+        `/v1/erc8004/agent/${agentId}`,
+        this.authHeaders(),
+      ),
+      this.retryOptions,
+    );
+  }
+
+  /** Get agent reputation summary from on-chain registry. */
+  async getAgentReputation(agentId: string, opts?: Erc8004GetReputationOptions): Promise<Erc8004ReputationResponse> {
+    const query = new URLSearchParams();
+    if (opts?.tag1) query.set('tag1', opts.tag1);
+    if (opts?.tag2) query.set('tag2', opts.tag2);
+    const qs = query.toString();
+    return withRetry(
+      () => this.http.get<Erc8004ReputationResponse>(
+        `/v1/erc8004/agent/${agentId}/reputation${qs ? `?${qs}` : ''}`,
+        this.authHeaders(),
+      ),
+      this.retryOptions,
+    );
+  }
+
+  /** Get validation request status. */
+  async getValidationStatus(requestHash: string): Promise<Erc8004ValidationResponse> {
+    return withRetry(
+      () => this.http.get<Erc8004ValidationResponse>(
+        `/v1/erc8004/validation/${requestHash}`,
         this.authHeaders(),
       ),
       this.retryOptions,
