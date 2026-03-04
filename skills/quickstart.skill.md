@@ -99,10 +99,22 @@ curl -s -X POST http://localhost:3100/v1/wallets \
   -d '{"name": "my-eth-wallet", "chain": "ethereum", "environment": "mainnet"}'
 ```
 
+**EVM Smart Account (ERC-4337):**
+
+```bash
+curl -s -X POST http://localhost:3100/v1/wallets \
+  -H 'Content-Type: application/json' \
+  -H 'X-Master-Password: your-master-password' \
+  -d '{"name": "my-smart-wallet", "chain": "ethereum", "environment": "mainnet", "accountType": "smart"}'
+```
+
+Smart accounts use ERC-4337 Account Abstraction. Transactions are bundled as UserOperations and submitted via a bundler. The wallet address is a counterfactual CREATE2 address (deployed on first transaction). See **wallet.skill.md** section "Create Smart Account Wallet" for full details.
+
 Parameters:
 - `name` (required): 1-100 characters
 - `chain` (optional): `"solana"` (default) or `"ethereum"`
 - `environment` (optional): `"mainnet"` (default) or `"testnet"` -- determines available networks
+- `accountType` (optional): `"eoa"` (default) or `"smart"` -- EVM only; smart creates an ERC-4337 account abstraction wallet
 - `createSession` (optional): boolean, default `true` -- auto-creates a session and includes it in the response
 
 Response (201):
@@ -297,6 +309,12 @@ waiaas quickset
 ```
 
 This creates Solana + EVM wallets in mainnet mode (default) and prints MCP configuration. Use `--mode testnet` for testnet.
+
+To create a smart account wallet via CLI:
+
+```bash
+waiaas wallet create --name my-smart-wallet --chain ethereum --account-type smart
+```
 
 ## Error Handling
 
