@@ -1,7 +1,8 @@
 # 마일스톤 m30-09: Smart Account DX 개선
 
-- **Status:** PLANNED
+- **Status:** SHIPPED
 - **Milestone:** v30.9
+- **Completed:** 2026-03-04
 
 ## 목표
 
@@ -79,14 +80,17 @@ EOA 지갑과 Solana 지갑은 번들러/페이마스터가 필요 없으므로 
 - **R1-1.** `accountType: smart` 지갑 단위로 프로바이더(`pimlico` / `alchemy` / `custom`) + API 키 설정
 - **R1-2.** 프로바이더 + API 키 → 해당 지갑의 번들러 URL + 페이마스터 URL 자동 조합
 - **R1-3.** `custom` 선택 시 번들러 URL + 페이마스터 URL 직접 입력
-- **R1-4.** API 키는 AES-256-GCM 암호화 저장 (기존 credential 패턴)
+- **R1-4.** API 키는 AES-256-GCM 암호화 저장 (`settings-crypto.ts`의 HKDF 기반 패턴 —
+  트랜잭션마다 복호화하므로 경량 KDF 사용, Argon2id keystore 패턴은 부적합)
 - **R1-5.** Smart Account 지갑 생성 시 프로바이더 설정 필수 (미설정 시 400 에러)
 - **R1-6.** Admin UI 지갑 생성 폼에서 `accountType: smart` 선택 시에만 프로바이더 필드 노출
 - **R1-7.** Admin UI 지갑 상세 페이지에서 프로바이더 설정 변경 가능 (Smart Account만)
 - **R1-8.** REST API로 지갑별 프로바이더 설정 변경 가능 (masterAuth)
 - **R1-9.** 기존 글로벌 설정(`smart_account.bundler_url`, `smart_account.paymaster_url`,
-  `smart_account.paymaster_api_key`, `smart_account.bundler_url.{networkId}`,
-  `smart_account.paymaster_url.{networkId}`) 제거
+  `smart_account.paymaster_api_key`, `smart_account.bundler_url.{networkId}` ×10,
+  `smart_account.paymaster_url.{networkId}` ×10) 제거 — 총 23개 키 삭제.
+  `smart_account.entry_point`는 유지 (ERC-4337 EntryPoint v0.7은 프로토콜 수준 싱글턴으로
+  모든 EVM 체인에 동일 주소 `0x0000000071727De22E5E9d8BAf0edAc6f37da032` 배포, 프로바이더 무관)
 - **R1-10.** EOA 지갑 및 Solana 지갑은 프로바이더 설정 불필요 — 기존 동작 유지
 
 ### R2. 프로바이더별 체인 매핑
@@ -161,5 +165,5 @@ EOA 지갑과 Solana 지갑은 번들러/페이마스터가 필요 없으므로 
 | `packages/core/src/constants/` | 프로바이더별 chainId 매핑 테이블 |
 | `packages/core/src/schemas/wallet.schema.ts` | CreateWalletRequest + WalletResponse에 프로바이더 필드 추가 |
 | `packages/daemon/src/mcp/tools/` | 프로바이더 상태 조회 도구 확장 |
-| `packages/daemon/src/services/connect-info/` | 프롬프트에 프로바이더 상태 포함 |
+| `packages/daemon/src/api/routes/connect-info.ts` | 프롬프트에 프로바이더 상태 포함 |
 | `skills/` | 프로바이더 설정/조회 관련 스킬 파일 업데이트 |

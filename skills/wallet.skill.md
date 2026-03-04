@@ -53,7 +53,7 @@ Parameters:
 - `accountType` (optional): `"eoa"` (default) or `"smart"` -- ERC-4337 Smart Account (EVM chains only)
 - `createSession` (optional): boolean, default `true` -- auto-creates a session token in the response
 
-Note: `accountType: "smart"` is only valid for EVM chains (ethereum). Attempting to create a smart account on Solana returns an error. Requires `smart_account.enabled=true` in Admin Settings.
+Note: `accountType: "smart"` is only valid for EVM chains (ethereum). Attempting to create a smart account on Solana returns an error. Smart account support is enabled by default (`smart_account.enabled=true` in Admin Settings). After creating a smart wallet, configure a provider via `PUT /v1/wallets/:id/provider`.
 
 Response (201):
 ```json
@@ -78,7 +78,7 @@ The `network` field shows the wallet's primary network (chain-dependent: Solana 
 
 ### Create Smart Account Wallet (EVM, ERC-4337)
 
-Create an ERC-4337 smart account wallet with Paymaster gas sponsorship and atomic batch support. Requires `smart_account.enabled=true` in Admin Settings and a configured Bundler URL.
+Create an ERC-4337 smart account wallet with Paymaster gas sponsorship and atomic batch support. Smart account support is enabled by default. After creation, configure a bundler/paymaster provider for this wallet via `PUT /v1/wallets/:id/provider`.
 
 ```bash
 curl -s -X POST http://localhost:3100/v1/wallets \
@@ -122,9 +122,26 @@ Response (201):
 
 **Requirements:**
 - EVM chains only (ethereum). Solana does not support ERC-4337.
-- `smart_account.enabled` must be `true` in Admin Settings
-- `smart_account.bundler_url` must be configured (e.g., Pimlico, Stackup, Alchemy)
-- Optional: `smart_account.paymaster_url` for gas sponsorship
+- `smart_account.enabled` must be `true` in Admin Settings (default: `true`)
+- A provider must be configured for the wallet via `PUT /v1/wallets/:id/provider`
+
+**Provider Setup (after wallet creation):**
+
+```bash
+# Option 1: Managed provider (pimlico or alchemy) -- auto-resolves bundler/paymaster URLs
+curl -s -X PUT http://localhost:3100/v1/wallets/WALLET_ID/provider \
+  -H 'Content-Type: application/json' \
+  -H 'X-Master-Password: your-master-password' \
+  -d '{"provider": "pimlico", "apiKey": "YOUR_PIMLICO_API_KEY"}'
+
+# Option 2: Custom provider -- explicit bundler/paymaster URLs
+curl -s -X PUT http://localhost:3100/v1/wallets/WALLET_ID/provider \
+  -H 'Content-Type: application/json' \
+  -H 'X-Master-Password: your-master-password' \
+  -d '{"provider": "custom", "bundlerUrl": "https://bundler.example.com", "paymasterUrl": "https://paymaster.example.com"}'
+```
+
+Both **masterAuth** and **sessionAuth** are supported for provider configuration. The provider status is included in `GET /v1/wallets/:id` responses.
 
 ### GET /v1/wallets -- List Wallets (masterAuth)
 

@@ -9,10 +9,10 @@ Requirements for Smart Account DX 개선. Each maps to roadmap phases.
 
 ### Provider (지갑별 프로바이더 설정)
 
-- [ ] **PROV-01**: Smart Account 지갑 단위로 프로바이더(pimlico/alchemy/custom) + API 키 설정
-- [ ] **PROV-02**: 프로바이더 + API 키 → 번들러 URL + 페이마스터 URL 자동 조합
-- [ ] **PROV-03**: custom 선택 시 번들러 URL + 페이마스터 URL 직접 입력
-- [ ] **PROV-04**: API 키 AES-256-GCM 암호화 저장 (HKDF 기반 경량 KDF)
+- [x] **PROV-01**: Smart Account 지갑 단위로 프로바이더(pimlico/alchemy/custom) + API 키 설정
+- [x] **PROV-02**: 프로바이더 + API 키 → 번들러 URL + 페이마스터 URL 자동 조합
+- [x] **PROV-03**: custom 선택 시 번들러 URL + 페이마스터 URL 직접 입력
+- [x] **PROV-04**: API 키 AES-256-GCM 암호화 저장 (HKDF 기반 경량 KDF)
 - [x] **PROV-05**: Smart Account 지갑 생성 시 프로바이더 설정 필수 (미설정 시 400 에러)
 - [x] **PROV-06**: Admin UI 지갑 생성 폼에서 accountType: smart 선택 시에만 프로바이더 필드 노출
 - [x] **PROV-07**: Admin UI 지갑 상세 페이지에서 프로바이더 설정 변경 가능
@@ -22,9 +22,9 @@ Requirements for Smart Account DX 개선. Each maps to roadmap phases.
 
 ### Chain Mapping (프로바이더별 체인 매핑)
 
-- [ ] **CMAP-01**: WAIaaS networkId → 프로바이더별 chainId 매핑 테이블 정의
-- [ ] **CMAP-02**: 프리셋 프로바이더 사용 시 매핑에 없는 networkId면 400 사전 차단
-- [ ] **CMAP-03**: 에러 메시지에 프로바이더명 + 미지원 네트워크 명시
+- [x] **CMAP-01**: WAIaaS networkId → 프로바이더별 chainId 매핑 테이블 정의
+- [x] **CMAP-02**: 프리셋 프로바이더 사용 시 매핑에 없는 networkId면 400 사전 차단
+- [x] **CMAP-03**: 에러 메시지에 프로바이더명 + 미지원 네트워크 명시
 
 ### Guide (API 키 발급 안내)
 
@@ -69,19 +69,19 @@ Requirements for Smart Account DX 개선. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PROV-01 | Phase 324 | Pending |
-| PROV-02 | Phase 324 | Pending |
-| PROV-03 | Phase 324 | Pending |
-| PROV-04 | Phase 324 | Pending |
+| PROV-01 | Phase 324 | Complete |
+| PROV-02 | Phase 324 | Complete |
+| PROV-03 | Phase 324 | Complete |
+| PROV-04 | Phase 324 | Complete |
 | PROV-05 | Phase 324 | Complete |
 | PROV-06 | Phase 326 | Complete |
 | PROV-07 | Phase 326 | Complete |
 | PROV-08 | Phase 325 | Complete |
 | PROV-09 | Phase 324 | Complete |
 | PROV-10 | Phase 324 | Complete |
-| CMAP-01 | Phase 324 | Pending |
-| CMAP-02 | Phase 324 | Pending |
-| CMAP-03 | Phase 324 | Pending |
+| CMAP-01 | Phase 324 | Complete |
+| CMAP-02 | Phase 324 | Complete |
+| CMAP-03 | Phase 324 | Complete |
 | GUID-01 | Phase 326 | Complete |
 | GUID-02 | Phase 326 | Complete |
 | GUID-03 | Phase 326 | Complete |
