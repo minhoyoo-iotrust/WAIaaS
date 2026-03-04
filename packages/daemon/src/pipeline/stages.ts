@@ -49,6 +49,11 @@ import type { ApprovalChannelRouter } from '../services/signing-sdk/approval-cha
 import { resolveEffectiveAmountUsd, type PriceResult } from './resolve-effective-amount-usd.js';
 import { sleep } from './sleep.js';
 import { rpcConfigKey } from '../infrastructure/adapter-pool.js';
+// v30.6: ERC-4337 smart account imports
+import { privateKeyToAccount } from 'viem/accounts';
+import { createPublicClient, http, encodeFunctionData, toHex, type Hex } from 'viem';
+import { SmartAccountService } from '../infrastructure/smart-account/smart-account-service.js';
+import { createSmartAccountBundlerClient } from '../infrastructure/smart-account/smart-account-clients.js';
 
 // v1.5: CoinGecko 키 안내 힌트 최초 1회 추적 (데몬 재시작 시 리셋 OK)
 const hintedTokens = new Set<string>();
@@ -971,11 +976,522 @@ export async function buildByType(
 }
 
 // ---------------------------------------------------------------------------
+// Stage 5: Smart account ERC-4337 UserOperation helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Minimal ERC-20 ABI for transfer/approve encoding in UserOperation calls.
+ * Inline to avoid cross-package import from @waiaas/adapters-evm.
+ */
+const ERC20_USEROP_ABI = [
+  { type: 'function', name: 'transfer', inputs: [{ name: 'to', type: 'address' }, { name: 'amount', type: 'uint256' }], outputs: [{ type: 'bool' }] },
+  { type: 'function', name: 'approve', inputs: [{ name: 'spender', type: 'address' }, { name: 'amount', type: 'uint256' }], outputs: [{ type: 'bool' }] },
+] as const;
+
+/**
+ * Convert a TransactionRequest to viem's calls[] format for UserOperation submission.
+ * Each call is { to, value, data } for the smart account to execute.
+ */
+export function buildUserOpCalls(
+  request: SendTransactionRequest | TransactionRequest,
+): Array<{ to: Hex; value: bigint; data: Hex }> {
+  const type = ('type' in request && request.type) || 'TRANSFER';
+
+  switch (type) {
+    case 'TRANSFER': {
+      return [{
+        to: getRequestTo(request) as Hex,
+        value: BigInt(getRequestAmount(request)),
+        data: '0x' as Hex,
+      }];
+    }
+
+    case 'TOKEN_TRANSFER': {
+      const req = request as TokenTransferRequest;
+      return [{
+        to: req.token.address as Hex,
+        value: 0n,
+        data: encodeFunctionData({
+          abi: ERC20_USEROP_ABI,
+          functionName: 'transfer',
+          args: [req.to as Hex, BigInt(req.amount)],
+        }),
+      }];
+    }
+
+    case 'CONTRACT_CALL': {
+      const req = request as ContractCallRequest;
+      return [{
+        to: req.to as Hex,
+        value: BigInt(req.value ?? '0'),
+        data: (req.calldata || '0x') as Hex,
+      }];
+    }
+
+    case 'APPROVE': {
+      const req = request as ApproveRequest;
+      return [{
+        to: req.token.address as Hex,
+        value: 0n,
+        data: encodeFunctionData({
+          abi: ERC20_USEROP_ABI,
+          functionName: 'approve',
+          args: [req.spender as Hex, BigInt(req.amount)],
+        }),
+      }];
+    }
+
+    case 'BATCH': {
+      const req = request as BatchRequest;
+      return req.instructions.map((instr) => {
+        if ('spender' in instr) {
+          // APPROVE instruction
+          const a = instr as { spender: string; token: { address: string; decimals: number }; amount: string };
+          return {
+            to: a.token.address as Hex,
+            value: 0n,
+            data: encodeFunctionData({
+              abi: ERC20_USEROP_ABI,
+              functionName: 'approve',
+              args: [a.spender as Hex, BigInt(a.amount)],
+            }),
+          };
+        }
+        if ('token' in instr) {
+          // TOKEN_TRANSFER instruction
+          const t = instr as { to: string; amount: string; token: { address: string } };
+          return {
+            to: t.token.address as Hex,
+            value: 0n,
+            data: encodeFunctionData({
+              abi: ERC20_USEROP_ABI,
+              functionName: 'transfer',
+              args: [t.to as Hex, BigInt(t.amount)],
+            }),
+          };
+        }
+        if ('calldata' in instr) {
+          // CONTRACT_CALL instruction (also used by ActionProvider resolve() output)
+          const c = instr as { to: string; calldata: string; value?: string };
+          return {
+            to: c.to as Hex,
+            value: BigInt(c.value ?? '0'),
+            data: (c.calldata || '0x') as Hex,
+          };
+        }
+        // TRANSFER instruction (native transfer)
+        const t = instr as { to: string; amount: string };
+        return {
+          to: t.to as Hex,
+          value: BigInt(t.amount),
+          data: '0x' as Hex,
+        };
+      });
+    }
+
+    default:
+      throw new WAIaaSError('CHAIN_ERROR', {
+        message: `Unknown transaction type for UserOp: ${type}`,
+      });
+  }
+}
+
+/**
+ * Stage 5 smart account path: execute via UserOperation through BundlerClient.
+ *
+ * Flow:
+ * 1. Decrypt signer key -> create LocalAccount via viem's privateKeyToAccount
+ * 2. Create SmartAccount instance via SmartAccountService
+ * 3. Create BundlerClient via createSmartAccountBundlerClient
+ * 4. Build calls[] from request via buildUserOpCalls
+ * 5. prepareUserOperation -> apply 120% gas safety margin
+ * 6. sendUserOperation -> waitForUserOperationReceipt
+ * 7. Update DB: SUBMITTED -> CONFIRMED, update deployed status if needed
+ *
+ * Error mapping:
+ * - Paymaster rejection (message contains 'paymaster'/'PM_') -> PAYMASTER_REJECTED
+ * - UserOperationReverted -> TRANSACTION_REVERTED
+ * - Receipt timeout -> TRANSACTION_TIMEOUT
+ * - Other -> CHAIN_ERROR
+ */
+async function stage5ExecuteSmartAccount(ctx: PipelineContext): Promise<void> {
+  const reqAmount = formatNotificationAmount(ctx.request, ctx.wallet.chain);
+  const reqTo = getRequestTo(ctx.request);
+
+  const displayAmount = await resolveDisplayAmount(
+    ctx.amountUsd ?? null, ctx.settingsService, ctx.forexRateService,
+  );
+
+  // Build calls[] from request
+  const calls = buildUserOpCalls(ctx.request);
+
+  // CRITICAL: key MUST be released in finally block
+  let privateKey: Uint8Array | null = null;
+  try {
+    // Step 1: Decrypt signer key
+    privateKey = await ctx.keyStore.decryptPrivateKey(ctx.walletId, ctx.masterPassword);
+    const hexKey = toHex(privateKey);
+    const localAccount = privateKeyToAccount(hexKey as Hex);
+
+    // Step 2: Create SmartAccount via SmartAccountService
+    const smartAccountService = new SmartAccountService();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const publicClient = createPublicClient({
+      chain: (ctx.adapter as any).viemChain ?? undefined,
+      transport: http((ctx.adapter as any).rpcUrl ?? undefined),
+    }) as any;
+    const smartAccountInfo = await smartAccountService.createSmartAccount({
+      owner: localAccount,
+      client: publicClient,
+    });
+
+    // Step 3: Create BundlerClient (includes optional PaymasterClient)
+    if (!ctx.settingsService) {
+      throw new WAIaaSError('CHAIN_ERROR', {
+        message: 'SettingsService required for smart account transactions',
+      });
+    }
+    const bundlerClient = createSmartAccountBundlerClient({
+      client: publicClient as any,
+      account: smartAccountInfo.account,
+      networkId: ctx.resolvedNetwork,
+      settingsService: ctx.settingsService,
+    });
+
+    // Step 4: Prepare UserOperation to get gas estimates
+    const prepared = await (bundlerClient as any).prepareUserOperation({ calls });
+
+    // Step 5: Apply 120% gas safety margin per CLAUDE.md rule
+    const safeCallGasLimit = (BigInt(prepared.callGasLimit) * 120n) / 100n;
+    const safeVerificationGasLimit = (BigInt(prepared.verificationGasLimit) * 120n) / 100n;
+    const safePreVerificationGas = (BigInt(prepared.preVerificationGas) * 120n) / 100n;
+
+    // Step 6: Submit UserOperation with overridden gas limits
+    ctx.metricsCounter?.increment('rpc.calls', { network: ctx.resolvedNetwork });
+    const userOpHash = await (bundlerClient as any).sendUserOperation({
+      calls,
+      userOperation: {
+        callGasLimit: safeCallGasLimit,
+        verificationGasLimit: safeVerificationGasLimit,
+        preVerificationGas: safePreVerificationGas,
+      },
+    });
+
+    ctx.metricsCounter?.increment('tx.submitted', { network: ctx.resolvedNetwork });
+
+    // Update DB: SUBMITTED with userOpHash
+    await ctx.db
+      .update(transactions)
+      .set({ status: 'SUBMITTED', txHash: userOpHash })
+      .where(eq(transactions.id, ctx.txId));
+
+    // Audit log: TX_SUBMITTED
+    if (ctx.sqlite) {
+      insertAuditLog(ctx.sqlite, {
+        eventType: 'TX_SUBMITTED',
+        actor: ctx.sessionId ?? 'system',
+        walletId: ctx.walletId,
+        txId: ctx.txId,
+        details: {
+          txHash: userOpHash,
+          chain: ctx.wallet.chain,
+          network: ctx.resolvedNetwork,
+          type: ('type' in ctx.request && ctx.request.type) ? ctx.request.type : 'TRANSFER',
+          accountType: 'smart',
+        },
+        severity: 'info',
+      });
+    }
+
+    // Notify TX_SUBMITTED
+    void ctx.notificationService?.notify('TX_SUBMITTED', ctx.walletId, {
+      txId: ctx.txId,
+      txHash: userOpHash,
+      amount: reqAmount,
+      to: reqTo,
+      display_amount: displayAmount,
+      network: ctx.resolvedNetwork,
+    }, { txId: ctx.txId });
+
+    // Emit wallet:activity
+    ctx.eventBus?.emit('wallet:activity', {
+      walletId: ctx.walletId,
+      activity: 'TX_SUBMITTED',
+      details: { txId: ctx.txId, txHash: userOpHash },
+      timestamp: Math.floor(Date.now() / 1000),
+    });
+
+    // Step 7: Wait for UserOperation receipt (120s timeout)
+    const receipt = await (bundlerClient as any).waitForUserOperationReceipt({
+      hash: userOpHash,
+      timeout: 120_000,
+    });
+
+    const txHash = receipt?.receipt?.transactionHash ?? userOpHash;
+
+    // Update DB: CONFIRMED with actual txHash
+    await ctx.db
+      .update(transactions)
+      .set({ status: 'CONFIRMED', txHash })
+      .where(eq(transactions.id, ctx.txId));
+
+    // Update deployed status if this was first UserOp (lazy deployment)
+    const walletRow = ctx.db.select().from(wallets).where(eq(wallets.id, ctx.walletId)).get();
+    if (walletRow && !walletRow.deployed) {
+      ctx.db.update(wallets).set({ deployed: true }).where(eq(wallets.id, ctx.walletId)).run();
+    }
+
+    ctx.metricsCounter?.increment('tx.confirmed', { network: ctx.resolvedNetwork });
+
+    // Store submitResult for Stage 6
+    ctx.submitResult = { txHash, status: 'confirmed' as const };
+
+    // Audit log: TX_CONFIRMED
+    if (ctx.sqlite) {
+      insertAuditLog(ctx.sqlite, {
+        eventType: 'TX_CONFIRMED',
+        actor: ctx.sessionId ?? 'system',
+        walletId: ctx.walletId,
+        txId: ctx.txId,
+        details: {
+          txHash,
+          chain: ctx.wallet.chain,
+          network: ctx.resolvedNetwork,
+          accountType: 'smart',
+        },
+        severity: 'info',
+      });
+    }
+
+    // Notify TX_CONFIRMED
+    void ctx.notificationService?.notify('TX_CONFIRMED', ctx.walletId, {
+      txId: ctx.txId,
+      txHash,
+      amount: reqAmount,
+      to: reqTo,
+      display_amount: displayAmount,
+      network: ctx.resolvedNetwork,
+    }, { txId: ctx.txId });
+
+    // Emit transaction:completed event
+    ctx.eventBus?.emit('transaction:completed', {
+      walletId: ctx.walletId,
+      txId: ctx.txId,
+      txHash,
+      network: ctx.resolvedNetwork,
+      type: ('type' in ctx.request && ctx.request.type) ? ctx.request.type : 'TRANSFER',
+      timestamp: Math.floor(Date.now() / 1000),
+    });
+
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    const errName = err instanceof Error ? err.name : '';
+
+    // Already a WAIaaSError? (e.g., CHAIN_ERROR from bundler URL not configured)
+    if (err instanceof WAIaaSError) {
+      // Update DB to FAILED
+      await ctx.db
+        .update(transactions)
+        .set({ status: 'FAILED', error: errMsg })
+        .where(eq(transactions.id, ctx.txId));
+
+      ctx.metricsCounter?.increment('tx.failed', { network: ctx.resolvedNetwork });
+
+      void ctx.notificationService?.notify('TX_FAILED', ctx.walletId, {
+        txId: ctx.txId,
+        error: errMsg,
+        amount: reqAmount,
+        display_amount: displayAmount,
+        network: ctx.resolvedNetwork,
+      }, { txId: ctx.txId });
+
+      ctx.eventBus?.emit('transaction:failed', {
+        walletId: ctx.walletId,
+        txId: ctx.txId,
+        error: errMsg,
+        network: ctx.resolvedNetwork,
+        type: ('type' in ctx.request && ctx.request.type) ? ctx.request.type : 'TRANSFER',
+        timestamp: Math.floor(Date.now() / 1000),
+      });
+
+      throw err;
+    }
+
+    // Paymaster rejection detection
+    if (
+      errMsg.toLowerCase().includes('paymaster') ||
+      errMsg.includes('PM_') ||
+      errName.includes('Paymaster')
+    ) {
+      await ctx.db
+        .update(transactions)
+        .set({ status: 'FAILED', error: `Paymaster rejected: ${errMsg}` })
+        .where(eq(transactions.id, ctx.txId));
+
+      ctx.metricsCounter?.increment('tx.failed', { network: ctx.resolvedNetwork });
+
+      if (ctx.sqlite) {
+        insertAuditLog(ctx.sqlite, {
+          eventType: 'TX_FAILED',
+          actor: ctx.sessionId ?? 'system',
+          walletId: ctx.walletId,
+          txId: ctx.txId,
+          details: { error: errMsg, stage: 5, reason: 'paymaster_rejected' },
+          severity: 'warning',
+        });
+      }
+
+      void ctx.notificationService?.notify('TX_FAILED', ctx.walletId, {
+        txId: ctx.txId,
+        error: `Paymaster rejected: ${errMsg}`,
+        amount: reqAmount,
+        display_amount: displayAmount,
+        network: ctx.resolvedNetwork,
+      }, { txId: ctx.txId });
+
+      ctx.eventBus?.emit('transaction:failed', {
+        walletId: ctx.walletId,
+        txId: ctx.txId,
+        error: `Paymaster rejected: ${errMsg}`,
+        network: ctx.resolvedNetwork,
+        type: ('type' in ctx.request && ctx.request.type) ? ctx.request.type : 'TRANSFER',
+        timestamp: Math.floor(Date.now() / 1000),
+      });
+
+      throw new WAIaaSError('PAYMASTER_REJECTED', {
+        message: `Paymaster rejected the UserOperation: ${errMsg}`,
+      });
+    }
+
+    // UserOperationReverted
+    if (errName === 'UserOperationReverted' || errMsg.includes('UserOperation reverted')) {
+      await ctx.db
+        .update(transactions)
+        .set({ status: 'FAILED', error: errMsg })
+        .where(eq(transactions.id, ctx.txId));
+
+      ctx.metricsCounter?.increment('tx.failed', { network: ctx.resolvedNetwork });
+
+      if (ctx.sqlite) {
+        insertAuditLog(ctx.sqlite, {
+          eventType: 'TX_FAILED',
+          actor: ctx.sessionId ?? 'system',
+          walletId: ctx.walletId,
+          txId: ctx.txId,
+          details: { error: errMsg, stage: 5, reason: 'user_op_reverted' },
+          severity: 'warning',
+        });
+      }
+
+      void ctx.notificationService?.notify('TX_FAILED', ctx.walletId, {
+        txId: ctx.txId,
+        error: errMsg,
+        amount: reqAmount,
+        display_amount: displayAmount,
+        network: ctx.resolvedNetwork,
+      }, { txId: ctx.txId });
+
+      ctx.eventBus?.emit('transaction:failed', {
+        walletId: ctx.walletId,
+        txId: ctx.txId,
+        error: errMsg,
+        network: ctx.resolvedNetwork,
+        type: ('type' in ctx.request && ctx.request.type) ? ctx.request.type : 'TRANSFER',
+        timestamp: Math.floor(Date.now() / 1000),
+      });
+
+      throw new WAIaaSError('TRANSACTION_REVERTED', {
+        message: errMsg,
+      });
+    }
+
+    // Receipt timeout
+    if (errName === 'WaitForUserOperationReceiptTimeoutError' || errMsg.includes('timed out')) {
+      await ctx.db
+        .update(transactions)
+        .set({ status: 'FAILED', error: `UserOp receipt timeout: ${errMsg}` })
+        .where(eq(transactions.id, ctx.txId));
+
+      ctx.metricsCounter?.increment('tx.failed', { network: ctx.resolvedNetwork });
+
+      if (ctx.sqlite) {
+        insertAuditLog(ctx.sqlite, {
+          eventType: 'TX_FAILED',
+          actor: ctx.sessionId ?? 'system',
+          walletId: ctx.walletId,
+          txId: ctx.txId,
+          details: { error: errMsg, stage: 5, reason: 'user_op_timeout' },
+          severity: 'warning',
+        });
+      }
+
+      void ctx.notificationService?.notify('TX_FAILED', ctx.walletId, {
+        txId: ctx.txId,
+        error: `Receipt timeout: ${errMsg}`,
+        amount: reqAmount,
+        display_amount: displayAmount,
+        network: ctx.resolvedNetwork,
+      }, { txId: ctx.txId });
+
+      ctx.eventBus?.emit('transaction:failed', {
+        walletId: ctx.walletId,
+        txId: ctx.txId,
+        error: `Receipt timeout: ${errMsg}`,
+        network: ctx.resolvedNetwork,
+        type: ('type' in ctx.request && ctx.request.type) ? ctx.request.type : 'TRANSFER',
+        timestamp: Math.floor(Date.now() / 1000),
+      });
+
+      throw new WAIaaSError('TRANSACTION_TIMEOUT', {
+        message: `UserOperation receipt timed out: ${errMsg}`,
+      });
+    }
+
+    // Generic fallback
+    await ctx.db
+      .update(transactions)
+      .set({ status: 'FAILED', error: errMsg })
+      .where(eq(transactions.id, ctx.txId));
+
+    ctx.metricsCounter?.increment('tx.failed', { network: ctx.resolvedNetwork });
+
+    void ctx.notificationService?.notify('TX_FAILED', ctx.walletId, {
+      txId: ctx.txId,
+      error: errMsg,
+      amount: reqAmount,
+      display_amount: displayAmount,
+      network: ctx.resolvedNetwork,
+    }, { txId: ctx.txId });
+
+    ctx.eventBus?.emit('transaction:failed', {
+      walletId: ctx.walletId,
+      txId: ctx.txId,
+      error: errMsg,
+      network: ctx.resolvedNetwork,
+      type: ('type' in ctx.request && ctx.request.type) ? ctx.request.type : 'TRANSFER',
+      timestamp: Math.floor(Date.now() / 1000),
+    });
+
+    throw new WAIaaSError('CHAIN_ERROR', { message: errMsg });
+
+  } finally {
+    if (privateKey) {
+      ctx.keyStore.releaseKey(privateKey);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Stage 5: On-chain execution (CONC-01 retry loop)
 // ---------------------------------------------------------------------------
 
 /**
  * Stage 5: Build -> Simulate -> Sign -> Submit with CONC-01 retry logic.
+ *
+ * For smart accounts (accountType === 'smart'), delegates to stage5ExecuteSmartAccount
+ * which uses the UserOperation pipeline (BundlerClient + PaymasterClient).
+ *
+ * For EOA accounts, uses the existing buildByType -> simulate -> sign -> submit path.
  *
  * ChainError category-based retry:
  * - PERMANENT: immediate FAILED, no retry
@@ -986,6 +1502,13 @@ export async function buildByType(
  * Total attempts: initial 1 + up to 3 retries = 4 max.
  */
 export async function stage5Execute(ctx: PipelineContext): Promise<void> {
+  // Smart account UserOperation path
+  if (ctx.wallet.accountType === 'smart') {
+    await stage5ExecuteSmartAccount(ctx);
+    return;
+  }
+
+  // --- EOA execution path (unchanged) ---
   const reqAmount = formatNotificationAmount(ctx.request, ctx.wallet.chain);
   const reqTo = getRequestTo(ctx.request);
 
