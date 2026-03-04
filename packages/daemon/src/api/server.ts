@@ -139,6 +139,8 @@ export interface CreateAppDeps {
   autoStopService?: import('../services/autostop/autostop-service.js').AutoStopService;
   /** InMemoryCounter for tx/rpc metrics (STAT-02) */
   metricsCounter?: import('@waiaas/core').IMetricsCounter;
+  /** SmartAccountService for ERC-4337 CREATE2 address prediction (Phase 314) */
+  smartAccountService?: import('../infrastructure/smart-account/index.js').SmartAccountService;
 }
 
 /**
@@ -397,6 +399,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         walletAppService: deps.sqlite
           ? new WalletAppService(deps.sqlite)
           : undefined,
+        smartAccountService: deps.smartAccountService,
       }),
     );
   }
