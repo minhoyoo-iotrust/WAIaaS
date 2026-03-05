@@ -35,7 +35,9 @@ export function parseKeyId(keyid: string): {
     );
   }
 
-  const [prefix, chainIdStr, address] = parts;
+  const prefix = parts[0]!;
+  const chainIdStr = parts[1]!;
+  const address = parts[2]!;
 
   if (prefix !== KEYID_PREFIX) {
     throw new Error(

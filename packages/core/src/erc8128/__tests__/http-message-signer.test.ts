@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { signHttpMessage } from '../http-message-signer.js';
 import { privateKeyToAccount } from 'viem/accounts';
 

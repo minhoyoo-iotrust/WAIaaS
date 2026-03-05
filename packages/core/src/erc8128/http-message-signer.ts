@@ -4,7 +4,6 @@
  * Composes foundation modules (keyid, content-digest, signature-input-builder)
  * into a complete signing flow using EIP-191 signMessage via viem.
  */
-import { type Hex } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { buildKeyId } from './keyid.js';
 import { buildContentDigest } from './content-digest.js';
@@ -62,9 +61,10 @@ export async function signHttpMessage(
   } = params;
 
   // 1. Resolve covered components
+  const presetComponents = DEFAULT_COVERED_COMPONENTS[preset] ?? DEFAULT_COVERED_COMPONENTS['standard']!;
   let coveredComponents = params.coveredComponents
     ? [...params.coveredComponents]
-    : [...(DEFAULT_COVERED_COMPONENTS[preset] ?? DEFAULT_COVERED_COMPONENTS.standard)];
+    : [...presetComponents!];
 
   // 2. Build headers copy with potential Content-Digest
   const headersCopy = { ...params.headers };
