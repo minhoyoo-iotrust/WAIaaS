@@ -36,12 +36,12 @@ const PAGE_TITLES: Record<string, string> = {
   '/transactions': 'Transactions',
   '/sessions': 'Sessions',
   '/tokens': 'Token Registry',
-  '/actions': 'Actions',
+  '/defi': 'DeFi',
+  '/agent-identity': 'Agent Identity',
   '/policies': 'Policies',
   '/notifications': 'Notifications',
   '/security': 'Security',
   '/wallet-apps': 'Human Wallet Apps',
-  '/erc8004': 'ERC-8004 Agents',
   '/system': 'System',
 };
 
@@ -51,12 +51,12 @@ const PAGE_SUBTITLES: Record<string, string> = {
   '/transactions': 'View all transactions and configure incoming monitoring',
   '/sessions': 'View and manage active sessions',
   '/tokens': 'Manage EVM token registry per network',
-  '/actions': 'Manage DeFi action providers and API keys',
+  '/defi': 'Manage DeFi action providers and API keys',
+  '/agent-identity': 'On-chain agent identity, reputation, and wallet linking',
   '/policies': 'Configure transaction policies and rules',
   '/notifications': 'Channel status, delivery logs, and settings',
   '/security': 'Emergency controls and automatic protection rules',
   '/wallet-apps': 'Manage wallet apps for signing and notifications',
-  '/erc8004': 'On-chain agent identity, reputation, and wallet linking',
   '/system': 'API keys, display preferences, and daemon configuration',
 };
 
@@ -75,11 +75,11 @@ const NAV_ITEMS = [
   { path: '/transactions', label: 'Transactions' },
   { path: '/sessions', label: 'Sessions' },
   { path: '/tokens', label: 'Tokens' },
-  { path: '/actions', label: 'Actions' },
+  { path: '/defi', label: 'DeFi' },
+  { path: '/agent-identity', label: 'Agent Identity' },
   { path: '/policies', label: 'Policies' },
   { path: '/notifications', label: 'Notifications' },
   { path: '/wallet-apps', label: 'Human Wallet Apps' },
-  { path: '/erc8004', label: 'ERC-8004' },
   { path: '/security', label: 'Security' },
   { path: '/system', label: 'System' },
 ];
@@ -92,7 +92,12 @@ function PageRouter() {
     return <TransactionsPage />;
   }
   if (path === '/tokens') return <TokensPage />;
-  if (path === '/actions') return <ActionsPage />;
+  if (path === '/defi') return <ActionsPage />;
+  if (path === '/actions') {
+    // Redirect legacy route to DeFi
+    window.location.hash = '#/defi';
+    return <ActionsPage />;
+  }
   if (path === '/sessions') return <SessionsPage />;
   if (path === '/policies') return <PoliciesPage />;
   if (path === '/notifications') return <NotificationsPage />;
@@ -111,7 +116,12 @@ function PageRouter() {
   }
   if (path === '/security') return <SecurityPage />;
   if (path === '/wallet-apps') return <HumanWalletAppsPage />;
-  if (path === '/erc8004') return <Erc8004Page />;
+  if (path === '/agent-identity') return <Erc8004Page />;
+  if (path === '/erc8004') {
+    // Redirect legacy route to Agent Identity
+    window.location.hash = '#/agent-identity';
+    return <Erc8004Page />;
+  }
   if (path === '/system') return <SystemPage />;
   if (path.startsWith('/wallets')) return <WalletsPage />;
   return <DashboardPage />;

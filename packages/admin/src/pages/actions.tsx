@@ -31,7 +31,6 @@ const BUILTIN_PROVIDERS: BuiltinProvider[] = [
   { key: 'kamino', name: 'Kamino Lending', description: 'Solana lending protocol (supply, borrow, repay, withdraw)', chain: 'solana', requiresApiKey: false, docsUrl: 'https://docs.kamino.finance' },
   { key: 'pendle_yield', name: 'Pendle Yield', description: 'EVM yield trading: buy/sell PT/YT, redeem at maturity, add/remove LP', chain: 'evm', requiresApiKey: false, docsUrl: 'https://docs.pendle.finance' },
   { key: 'drift_perp', name: 'Drift Perp', description: 'Solana perpetual futures trading (open, close, modify positions with leverage)', chain: 'solana', requiresApiKey: false, docsUrl: 'https://docs.drift.trade' },
-  { key: 'erc8004_agent', name: 'ERC-8004 Agent', description: 'On-chain agent identity, reputation, and validation (ERC-8004 Trustless Agents)', chain: 'evm', requiresApiKey: false, docsUrl: 'https://eips.ethereum.org/EIPS/eip-8004' },
 ];
 
 // ---------------------------------------------------------------------------
