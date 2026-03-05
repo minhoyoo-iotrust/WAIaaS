@@ -5,8 +5,11 @@ vi.mock('@waiaas/core', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@waiaas/core')>();
   return {
     ...actual,
-    signHttpMessage: vi.fn(),
-    verifyHttpSignature: vi.fn(),
+    erc8128: {
+      ...actual.erc8128,
+      signHttpMessage: vi.fn(),
+      verifyHttpSignature: vi.fn(),
+    },
   };
 });
 
@@ -27,7 +30,7 @@ vi.mock('../../src/pipeline/network-resolver.js', () => ({
 }));
 
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { signHttpMessage, verifyHttpSignature, NETWORK_TO_CAIP2, WAIaaSError } from '@waiaas/core';
+import { erc8128 as erc8128Core, NETWORK_TO_CAIP2, WAIaaSError } from '@waiaas/core';
 import { evaluateErc8128Domain, checkErc8128RateLimit } from '../services/erc8128/erc8128-domain-policy.js';
 import { resolveWalletId } from '../api/helpers/resolve-wallet-id.js';
 import { erc8128Routes, type Erc8128RouteDeps } from '../api/routes/erc8128.js';
@@ -126,7 +129,7 @@ describe('POST /v1/erc8128/sign', () => {
     });
 
     // Mock signHttpMessage
-    vi.mocked(signHttpMessage).mockResolvedValue({
+    vi.mocked(erc8128Core.signHttpMessage).mockResolvedValue({
       headers: {
         'Signature-Input': 'sig1=("@method" "@target-uri");created=1000;expires=1300',
         'Signature': 'sig1=:base64signature:',
@@ -323,7 +326,7 @@ describe('POST /v1/erc8128/verify', () => {
   });
 
   it('returns valid=true for valid signed request', async () => {
-    vi.mocked(verifyHttpSignature).mockResolvedValue({
+    vi.mocked(erc8128Core.verifyHttpSignature).mockResolvedValue({
       valid: true,
       recoveredAddress: '0x1234567890abcdef1234567890abcdef12345678',
       keyid: 'erc8128:1:0x1234567890abcdef1234567890abcdef12345678',
@@ -350,7 +353,7 @@ describe('POST /v1/erc8128/verify', () => {
   });
 
   it('returns valid=false for invalid signature', async () => {
-    vi.mocked(verifyHttpSignature).mockResolvedValue({
+    vi.mocked(erc8128Core.verifyHttpSignature).mockResolvedValue({
       valid: false,
       recoveredAddress: null,
       keyid: '',

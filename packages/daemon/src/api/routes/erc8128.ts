@@ -22,9 +22,8 @@
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { eq, or, and, isNull, desc } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import { WAIaaSError, NETWORK_TO_CAIP2, type NetworkType } from '@waiaas/core';
+import { WAIaaSError, NETWORK_TO_CAIP2, type NetworkType, erc8128 as erc8128Core } from '@waiaas/core';
 import type { EventBus } from '@waiaas/core';
-import { signHttpMessage, verifyHttpSignature } from '@waiaas/core';
 import type { MasterPasswordRef } from '../middleware/master-auth.js';
 import { wallets, policies } from '../../infrastructure/database/schema.js';
 import type * as schema from '../../infrastructure/database/schema.js';
@@ -342,7 +341,7 @@ export function erc8128Routes(deps: Erc8128RouteDeps): OpenAPIHono {
         (deps.settingsService?.get('erc8128.default_nonce') === 'false' ? false : undefined);
 
       // 12. Sign HTTP message
-      const result = await signHttpMessage({
+      const result = await erc8128Core.signHttpMessage({
         method: body.method ?? 'GET',
         url: body.url,
         headers: body.headers ?? {},
@@ -396,7 +395,7 @@ export function erc8128Routes(deps: Erc8128RouteDeps): OpenAPIHono {
     const body = c.req.valid('json');
 
     // 3. Verify signature
-    const result = await verifyHttpSignature({
+    const result = await erc8128Core.verifyHttpSignature({
       method: body.method ?? 'GET',
       url: body.url,
       headers: body.headers,
