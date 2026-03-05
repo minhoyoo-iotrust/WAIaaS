@@ -2386,12 +2386,12 @@ function WalletListContent() {
       if (formAccountType.value === 'smart') {
         createBody.accountType = 'smart';
         if (formProvider.value === 'custom') {
-          createBody.provider = 'custom';
-          createBody.bundlerUrl = formBundlerUrl.value;
-          if (formPaymasterUrl.value) createBody.paymasterUrl = formPaymasterUrl.value;
+          createBody.aaProvider = 'custom';
+          createBody.aaBundlerUrl = formBundlerUrl.value;
+          if (formPaymasterUrl.value) createBody.aaPaymasterUrl = formPaymasterUrl.value;
         } else {
-          createBody.provider = formProvider.value;
-          createBody.apiKey = formApiKey.value;
+          createBody.aaProvider = formProvider.value;
+          createBody.aaProviderApiKey = formApiKey.value;
         }
       }
       const result = await apiPost<Wallet & { session?: { id: string; token: string; expiresAt: number } | null }>(API.WALLETS, createBody);

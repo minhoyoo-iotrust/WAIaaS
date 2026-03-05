@@ -263,7 +263,7 @@
 | 246 | BUG | CRITICAL | APPROVAL 티어 승인 후 파이프라인 미재개 — 모든 승인 경로에서 executeFromStage5 호출 누락 | — | FIXED | 2026-03-03 |
 | 247 | MISSING | MEDIUM | 범용 EIP-712 signTypedData API 지원 | v30.9 | RESOLVED | 2026-03-05 |
 | 248 | ENHANCEMENT | MEDIUM | Admin 대시보드 Recent Activity 트랜잭션 금액이 raw 단위로 표시 | v30.9 | RESOLVED | 2026-03-05 |
-| 249 | BUG | HIGH | Admin UI Smart Account 생성 시 필드명 불일치 (provider→aaProvider 등) — validation 실패 | v30.9 | OPEN | 2026-03-05 |
+| 249 | BUG | HIGH | Admin UI Smart Account 생성 시 필드명 불일치 (provider→aaProvider 등) — validation 실패 | v30.9 | FIXED | 2026-03-05 |
 
 ## Type Legend
 
