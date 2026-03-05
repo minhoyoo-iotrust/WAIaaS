@@ -30,7 +30,7 @@ vi.mock('../../src/pipeline/network-resolver.js', () => ({
 }));
 
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { erc8128 as erc8128Core, NETWORK_TO_CAIP2, WAIaaSError } from '@waiaas/core';
+import { erc8128 as erc8128Core, WAIaaSError } from '@waiaas/core';
 import { evaluateErc8128Domain, checkErc8128RateLimit } from '../services/erc8128/erc8128-domain-policy.js';
 import { resolveWalletId } from '../api/helpers/resolve-wallet-id.js';
 import { erc8128Routes, type Erc8128RouteDeps } from '../api/routes/erc8128.js';
