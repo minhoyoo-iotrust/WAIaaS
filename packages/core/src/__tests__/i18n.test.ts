@@ -47,8 +47,9 @@ describe('i18n message system', () => {
     // v29.9: +RENEWAL_NOT_REQUIRED (+1)
     // v30.2: +SIMULATION_TIMEOUT, +INVALID_BACKUP_FORMAT, +UNSUPPORTED_BACKUP_VERSION, +BACKUP_CORRUPTED, +BACKUP_NOT_FOUND, +WEBHOOK_NOT_FOUND, +RULE_NOT_FOUND (+7)
     // v30.6: +PAYMASTER_REJECTED, +TRANSACTION_TIMEOUT, +TRANSACTION_REVERTED (+3)
+    // v30.10: +UNSUPPORTED_CHAIN, +ERC8128_DISABLED, +ERC8128_DOMAIN_NOT_ALLOWED, +ERC8128_RATE_LIMITED (+4)
     const en = getMessages('en');
-    expect(Object.keys(en.errors).length).toBe(119);
+    expect(Object.keys(en.errors).length).toBe(123);
   });
 
   it('error code keys match ERROR_CODES keys', () => {

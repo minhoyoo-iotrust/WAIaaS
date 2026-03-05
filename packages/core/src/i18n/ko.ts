@@ -141,6 +141,12 @@ export const messages: Messages = {
     PAYMASTER_REJECTED: 'Paymaster가 UserOperation을 거부했습니다',
     TRANSACTION_TIMEOUT: '트랜잭션 확인 시간이 초과되었습니다',
     TRANSACTION_REVERTED: '트랜잭션이 온체인에서 리버트되었습니다',
+    // Chain domain
+    UNSUPPORTED_CHAIN: '이 체인 타입에서는 해당 작업이 지원되지 않습니다',
+    // ERC-8128 domain
+    ERC8128_DISABLED: 'ERC-8128 서명된 HTTP 요청이 비활성화되어 있습니다',
+    ERC8128_DOMAIN_NOT_ALLOWED: '이 도메인은 ERC-8128 서명이 허용되지 않습니다',
+    ERC8128_RATE_LIMITED: '이 도메인에 대한 ERC-8128 서명 속도 제한을 초과했습니다',
   },
   // Notification templates (31 event types)
   notifications: {

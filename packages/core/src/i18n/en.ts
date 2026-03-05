@@ -195,6 +195,12 @@ export const messages: Messages = {
     PAYMASTER_REJECTED: 'Paymaster rejected the UserOperation',
     TRANSACTION_TIMEOUT: 'Transaction confirmation timed out',
     TRANSACTION_REVERTED: 'Transaction reverted on-chain',
+    // Chain domain
+    UNSUPPORTED_CHAIN: 'Operation not supported for this chain type',
+    // ERC-8128 domain
+    ERC8128_DISABLED: 'ERC-8128 signed HTTP requests are disabled',
+    ERC8128_DOMAIN_NOT_ALLOWED: 'Domain not allowed for ERC-8128 signing',
+    ERC8128_RATE_LIMITED: 'ERC-8128 signing rate limit exceeded for this domain',
   },
   // Notification templates (30 event types)
   notifications: {
