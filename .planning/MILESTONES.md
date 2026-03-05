@@ -1,5 +1,24 @@
 # Project Milestones: WAIaaS
 
+## v30.11 Admin UI DX 개선 (Shipped: 2026-03-05)
+
+**Delivered:** Admin UI의 액션 관리 경험을 개선하여 메뉴 이름을 DeFi/Agent Identity로 직관적으로 변경하고, ERC-8004 기능을 한 페이지에서 완결적으로 관리하며, 운영자가 액션별 보안 Tier를 드롭다운으로 조정 가능한 상태.
+
+**Phases completed:** 3 phases (330-332), 5 plans, 27 requirements
+
+**Key accomplishments:**
+- Admin UI 메뉴 DeFi/Agent Identity 재명명 + 라우트 변경 + 레거시 리다이렉트
+- ERC-8004 Agent Identity 페이지에 활성화/비활성화 토글 통합 — 한 페이지 완결적 관리
+- 전체 10개 액션 프로바이더 기본 활성화 + DB v42 마이그레이션 (INSERT OR IGNORE, 기존 설정 존중)
+- 액션별 보안 Tier 오버라이드 — Settings 기반 백엔드 + 파이프라인 floor 에스컬레이션 (max(policy, action))
+- Admin UI Description 컬럼 + Tier 드롭다운 + 오버라이드 인디케이터 + Reset to default
+
+**Stats:**
+- 3 phases, 5 plans, 27 requirements, 23 commits
+- 48 files changed, +2,984 / -370 lines, ~266,814 LOC TS
+
+---
+
 ## v30.10 ERC-8128 Signed HTTP Requests (Shipped: 2026-03-05)
 
 **Delivered:** ERC-8128 (Signed HTTP Requests with Ethereum) 표준을 WAIaaS에 통합하여, 관리 지갑이 외부 API 호출 시 RFC 9421 기반 HTTP 메시지 서명으로 인증 가능. x402(결제) + ERC-8004(신원) + ERC-8128(API 인증)으로 에이전트 웹 인증 3종 세트 완성.
