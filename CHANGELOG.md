@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.10.0-rc.6](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.5...v2.10.0-rc.6) (2026-03-05)
+
+
+### Bug Fixes
+
+* resolve issues [#250](https://github.com/minhoyoo-iotrust/WAIaaS/issues/250), [#251](https://github.com/minhoyoo-iotrust/WAIaaS/issues/251), [#252](https://github.com/minhoyoo-iotrust/WAIaaS/issues/252) — session rotate, Smart Account RPC URL, paymaster policy ID ([59e36fd](https://github.com/minhoyoo-iotrust/WAIaaS/commit/59e36fd61be200d19850adbbc247e6a599ac60c2))
+* resolve issues [#250](https://github.com/minhoyoo-iotrust/WAIaaS/issues/250), [#251](https://github.com/minhoyoo-iotrust/WAIaaS/issues/251), [#252](https://github.com/minhoyoo-iotrust/WAIaaS/issues/252) — Smart Account RPC URL, paymaster policy ID, session rotate ([e519e27](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e519e2767e9da93a7a7d604ae4beaa4cd8d2f532))
+* update test expectations for v43 migration ([2662800](https://github.com/minhoyoo-iotrust/WAIaaS/commit/266280025d5fd1bf12d812461a345327023c156b))
+
 ## [2.10.0-rc.5](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.4...v2.10.0-rc.5) (2026-03-05)
 
 
