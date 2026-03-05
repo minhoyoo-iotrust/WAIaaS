@@ -1411,13 +1411,13 @@ curl -s -X PUT http://localhost:3100/v1/admin/autostop/rules/consecutive-failure
 
 ---
 
-## 15. ERC-8004 Settings
+## 15. ERC-8004 / Agent Identity Settings
 
-ERC-8004 Trustless Agent settings (under `actions.*` namespace). Configure via Admin UI > Settings > Actions, or via the Settings API.
+ERC-8004 Trustless Agent settings (under `actions.*` namespace). Configure via Admin UI > Agent Identity (route: `#/agent-identity`), or via the Settings API.
 
 | Setting Key | Type | Default | Description |
 | ----------- | ---- | ------- | ----------- |
-| `actions.erc8004_agent_enabled` | boolean | `false` | Master feature gate. Must be true to enable ERC-8004 agent identity, reputation, and validation features. |
+| `actions.erc8004_agent_enabled` | boolean | `true` | Master feature gate. Enabled by default since v30.11. Set to false to disable ERC-8004 agent identity, reputation, and validation features. |
 | `actions.erc8004_identity_registry_address` | string | `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432` | Identity Registry contract address (Ethereum mainnet). |
 | `actions.erc8004_reputation_registry_address` | string | `0x8004BAa17C55a88189AE136b182e5fdA19dE9b63` | Reputation Registry contract address (Ethereum mainnet). |
 | `actions.erc8004_validation_registry_address` | string | (empty) | Validation Registry address. Empty = validation feature disabled. |
@@ -1428,6 +1428,27 @@ ERC-8004 Trustless Agent settings (under `actions.*` namespace). Configure via A
 | `actions.erc8004_reputation_rpc_timeout_ms` | number | `3000` | RPC call timeout for reputation queries in milliseconds. On timeout, the agent is treated as unrated. |
 
 For full ERC-8004 documentation, see **erc8004.skill.md**.
+
+### Action Tier Override (v30.11)
+
+Operators can override the default security tier for individual actions via Admin Settings. This allows fine-grained control over which actions require instant execution, notification, delay, or owner approval.
+
+**Setting key pattern:** `actions.{provider_key}_{action_name}_tier`
+
+**Allowed values:** `INSTANT`, `NOTIFY`, `DELAY`, `APPROVAL` (Zod enum). Empty string or unset = use provider hardcoded default.
+
+**Examples:**
+- `actions.jupiter_swap_swap_tier` -- Override tier for Jupiter swap action
+- `actions.erc8004_agent_register_agent_tier` -- Override tier for ERC-8004 agent registration
+- `actions.lido_staking_stake_tier` -- Override tier for Lido staking
+
+**Pipeline behavior:** `effectiveTier = max(policyTier, actionTier)` -- the action tier is a floor that can only escalate the security level, never downgrade it. For example, if a SPENDING_LIMIT policy assigns NOTIFY but the action tier override is DELAY, the effective tier is DELAY. If the policy assigns APPROVAL, it remains APPROVAL regardless of action tier.
+
+**Configuration:**
+- Admin UI > DeFi (route: `#/defi`) -- tier dropdown in Registered Actions table for DeFi providers
+- Admin UI > Agent Identity (route: `#/agent-identity`) -- tier dropdown for ERC-8004 actions
+- Settings API: `PUT /v1/admin/settings` with the tier key pattern above
+- Visual indicators: "customized" badge on overridden tiers, "Reset to default" button to restore provider defaults
 
 ---
 
