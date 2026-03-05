@@ -1,5 +1,34 @@
 # Changelog
 
+## [2.10.0-rc.3](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.2...v2.10.0-rc.3) (2026-03-05)
+
+
+### Features
+
+* **324-01:** add AA provider enum, chain mapping, schema, and crypto ([6a81ad7](https://github.com/minhoyoo-iotrust/WAIaaS/commit/6a81ad77dd9822c3372f0c070da88819e1e5ec11))
+* **324-01:** add DB migration v41 for per-wallet AA provider columns ([e239445](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e239445170af5b9657753fb50e9e4cd6ca8c2ae1))
+* **324-02:** integrate wallet-based provider into pipeline + cleanup settings ([e62a395](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e62a395f02258eb4cf15f49424f89b0802aa665e))
+* **324-02:** refactor smart-account-clients to wallet-based provider resolver ([8bcaf5b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8bcaf5bf6b80efe4cf39391d7dd02d8c62408775))
+* **325-01:** implement PUT /v1/wallets/:id/provider with dual-auth ([72475d1](https://github.com/minhoyoo-iotrust/WAIaaS/commit/72475d1b3cfae20cd4c3ee5d4fd2a24038e26bb2))
+* **325-02:** extend wallet detail/list responses with provider status ([9da0b02](https://github.com/minhoyoo-iotrust/WAIaaS/commit/9da0b02bc2fd087494aea7183a40d52dd307e38e))
+* **326-01:** add provider display + edit in wallet detail page ([d6e87fd](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d6e87fdad19165de2553f0ac02d919260224bba3))
+* **326-01:** add provider fields to Admin UI wallet create form ([e95a285](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e95a285d12a82f69633a1f57977226cc255ab381))
+* **326-02:** add MCP get_provider_status tool ([cda737b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/cda737b2ab87e4dc192c2163fd8f894c90a88d0a))
+* **326-02:** add provider status to connect-info prompt ([27e9b6e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/27e9b6e13190022fc4f9d0fa1e834586e376ae02))
+* add generic EIP-712 signTypedData API ([#247](https://github.com/minhoyoo-iotrust/WAIaaS/issues/247)) ([2950361](https://github.com/minhoyoo-iotrust/WAIaaS/commit/29503613c2c3eb04b486672f045f82419eba7220))
+
+
+### Bug Fixes
+
+* **325-01:** fix type errors and add PROVIDER_UPDATED audit event ([b96682f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b96682f8e236c36dcab458141ceff80eec79c61a))
+* add aaProvider to smart account test requests to pass Zod validation ([9ab2bc5](https://github.com/minhoyoo-iotrust/WAIaaS/commit/9ab2bc5d5aae82eca56a3d5ec336b01c6102ba5d))
+* close v30.9 audit gaps (skill files, requirements, objective status) ([4fca0d6](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4fca0d6bfcc64dad045d40166baa54bc822fc6a8))
+* format dashboard Recent Activity amounts in human-readable units ([#248](https://github.com/minhoyoo-iotrust/WAIaaS/issues/248)) ([7f1da93](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7f1da93388df086fa1a34cc7c78360b3d6ec5a32))
+* resolve unused variable lint errors in test files ([d1cdedd](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d1cdeddf165eddeb68e68219ccec8fc316f25b5f))
+* update remaining schema v41 test expectations and make migration idempotent ([1d41c14](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1d41c14caec746d8012e3e923e5d6337005c9600))
+* update test expectations for v30.9 per-wallet provider model ([c7994d7](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c7994d7ab031fbbf1a1122214a8a534f16531633))
+* update test snapshots for DB schema v41 (4 provider columns) ([5f3c965](https://github.com/minhoyoo-iotrust/WAIaaS/commit/5f3c9652b3ca9af42b2120da3ab0301b62e43735))
+
 ## [2.10.0-rc.2](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.1...v2.10.0-rc.2) (2026-03-04)
 
 
