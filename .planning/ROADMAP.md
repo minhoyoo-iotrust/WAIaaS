@@ -181,7 +181,7 @@ Phases execute in numeric order: 327 -> 328 -> 329
 | 268-326 | v29.0-v30.9 | All | Complete | 2026-03-05 |
 | 327. HTTP Message Signing Engine | 2/2 | Complete   | 2026-03-05 | - |
 | 328. REST API + Policy + Settings | v30.10 | Complete    | 2026-03-05 | 2026-03-05 |
-| 329. MCP + SDK + Admin UI + Skill Files | 3/3 | Complete   | 2026-03-05 | - |
+| 329. MCP + SDK + Admin UI + Skill Files | 3/3 | Complete    | 2026-03-05 | - |
 
 ---
 *Last updated: 2026-03-05 -- Phase 329 planned (3 plans, 1 wave). 9 requirements mapped.*

@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v30.10
 milestone_name: ERC-8128 Signed HTTP Requests
-status: complete
-stopped_at: Completed Phase 329 (329-01 + 329-02 + 329-03), all interfaces done -- milestone v30.10 complete
-last_updated: "2026-03-05T06:27:30.000Z"
-last_activity: 2026-03-05 -- Phase 329 complete, milestone v30.10 done
+status: completed
+stopped_at: Completed Phase 329 (329-01 + 329-02 + 329-03), all interfaces done
+last_updated: "2026-03-05T06:28:12.095Z"
+last_activity: 2026-03-05 -- Phase 329 complete
 progress:
   total_phases: 3
   completed_phases: 3
