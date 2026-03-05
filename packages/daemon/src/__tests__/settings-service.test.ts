@@ -12,7 +12,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import type { Database as DatabaseType } from 'better-sqlite3';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { eq } from 'drizzle-orm';
-import { createDatabase, pushSchema, settings } from '../infrastructure/database/index.js';
+import { createDatabase, pushSchema, settings, runMigrations, MIGRATIONS } from '../infrastructure/database/index.js';
 import type * as schema from '../infrastructure/database/schema.js';
 import { DaemonConfigSchema } from '../infrastructure/config/loader.js';
 import type { DaemonConfig } from '../infrastructure/config/loader.js';
@@ -637,10 +637,10 @@ describe('SettingsService', () => {
       expect(erc8004Keys).toHaveLength(9);
     });
 
-    it('erc8004_agent_enabled defaults to false (feature gate)', () => {
+    it('erc8004_agent_enabled defaults to true (all providers enabled by default)', () => {
       const def = getSettingDefinition('actions.erc8004_agent_enabled');
       expect(def).toBeDefined();
-      expect(def!.defaultValue).toBe('false');
+      expect(def!.defaultValue).toBe('true');
       expect(def!.category).toBe('actions');
       expect(def!.isCredential).toBe(false);
     });
@@ -687,8 +687,42 @@ describe('SettingsService', () => {
       expect(def!.key).toBe('actions.erc8004_agent_enabled');
       expect(def!.configPath).toBe('actions.erc8004_agent_enabled');
       expect(def!.category).toBe('actions');
-      expect(def!.defaultValue).toBe('false');
+      expect(def!.defaultValue).toBe('true');
       expect(def!.isCredential).toBe(false);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // v42 migration: INSERT OR IGNORE preserves existing settings
+  // -------------------------------------------------------------------------
+
+  describe('v42 migration: action provider defaults', () => {
+    it('preserves manually-set false values while seeding new keys', () => {
+      const { sqlite: testSqlite } = createTestDb();
+      const now = Math.floor(Date.now() / 1000);
+
+      // Pre-set kamino_enabled to false (simulating an operator who disabled it)
+      testSqlite.prepare(
+        "INSERT INTO settings (key, value, encrypted, category, updated_at) VALUES (?, ?, 0, 'actions', ?)",
+      ).run('actions.kamino_enabled', 'false', now);
+
+      // Run v42 migration
+      const v42Only = MIGRATIONS.filter((m) => m.version === 42);
+
+      // Delete schema_version entry for 42 so migration runs
+      testSqlite.prepare('DELETE FROM schema_version WHERE version = 42').run();
+
+      runMigrations(testSqlite, v42Only);
+
+      // kamino_enabled should still be 'false' (INSERT OR IGNORE preserved it)
+      const kamino = testSqlite.prepare("SELECT value FROM settings WHERE key = 'actions.kamino_enabled'").get() as { value: string };
+      expect(kamino.value).toBe('false');
+
+      // drift_enabled should be 'true' (newly seeded)
+      const drift = testSqlite.prepare("SELECT value FROM settings WHERE key = 'actions.drift_enabled'").get() as { value: string };
+      expect(drift.value).toBe('true');
+
+      testSqlite.close();
     });
   });
 });
