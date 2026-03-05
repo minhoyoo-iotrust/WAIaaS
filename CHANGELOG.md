@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.10.0-rc.5](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.4...v2.10.0-rc.5) (2026-03-05)
+
+
+### Features
+
+* **330-01:** change all 10 action provider defaults to true + DB v42 migration ([cb6c89f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/cb6c89faf9ddd76bcebcbdebb2ee355f788c2637))
+* **330-02:** add enable/disable toggle to Agent Identity page + unify settings parsing ([50da645](https://github.com/minhoyoo-iotrust/WAIaaS/commit/50da645e9d4b97b946879fcdafb82da3dccf9467))
+* **330-02:** rename menus to DeFi/Agent Identity + remove ERC-8004 card from DeFi page ([0e9ee6c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0e9ee6c4c550e3babffaea947af3fa422bfa4993))
+* **331-01:** action tier override via Settings with pipeline floor integration ([a76f08a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a76f08ab9bbd9be367e6cfb21da08daa5671d86e))
+* **331-02:** Agent Identity page Registered Actions table with tier dropdown ([d5c8d63](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d5c8d639bc34169fb0d016971013f6deaa5fa611))
+* **331-02:** DeFi page Description column + tier dropdown with override/reset ([674292f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/674292fc6e2e6d1a312cf46a702cfee3b2935fc2))
+
+
+### Bug Fixes
+
+* **admin:** add missing providers mock to erc8004-reputation tests ([f00645b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/f00645b62a6097dd92cbbb9c347c7b27dd2653fa))
+* **admin:** correct Smart Account field names in wallet creation form ([#249](https://github.com/minhoyoo-iotrust/WAIaaS/issues/249)) ([92cef54](https://github.com/minhoyoo-iotrust/WAIaaS/commit/92cef542be60bb2de14ed83cace8a492a2b3a33e))
+* **admin:** remove orphaned Smart Account bundler/paymaster fields from System settings ([e4d62b3](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e4d62b31988d45d2abd23cac3ef26424a3df1096))
+
 ## [2.10.0-rc.4](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.3...v2.10.0-rc.4) (2026-03-05)
 
 
