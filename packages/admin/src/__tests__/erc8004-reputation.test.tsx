@@ -69,6 +69,12 @@ const mockSettingsEnabled = {
   },
 };
 
+const mockProvidersResponse = {
+  providers: [
+    { name: 'erc8004_agent', actions: [{ name: 'register', description: 'Register agent', chain: 'ethereum', riskLevel: 'LOW', defaultTier: 'standard' }] },
+  ],
+};
+
 const mockWallets = [
   { id: 'w1', name: 'test-wallet', chain: 'ethereum', network: 'ethereum-mainnet', publicKey: '0xabc', status: 'ACTIVE' },
 ];
@@ -111,6 +117,7 @@ describe('Erc8004Page Reputation tab', () => {
     const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
     mockApiGet
       .mockResolvedValueOnce(mockSettingsEnabled)
+      .mockResolvedValueOnce(mockProvidersResponse)
       .mockResolvedValueOnce(mockWallets)
       .mockResolvedValueOnce(mockRegFileWithAgent)
       .mockResolvedValueOnce(mockReputation);
@@ -134,6 +141,7 @@ describe('Erc8004Page Reputation tab', () => {
     const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
     mockApiGet
       .mockResolvedValueOnce(mockSettingsEnabled)
+      .mockResolvedValueOnce(mockProvidersResponse)
       .mockResolvedValueOnce(mockWallets)
       .mockResolvedValueOnce(mockRegFileWithAgent)
       .mockResolvedValueOnce(mockReputation) // My agent score
@@ -169,6 +177,7 @@ describe('Erc8004Page Reputation tab', () => {
     const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
     mockApiGet
       .mockResolvedValueOnce(mockSettingsEnabled)
+      .mockResolvedValueOnce(mockProvidersResponse)
       .mockResolvedValueOnce(mockWallets)
       .mockResolvedValueOnce(mockRegFileWithAgent)
       .mockResolvedValueOnce(mockReputation);
@@ -191,6 +200,7 @@ describe('Erc8004Page Reputation tab', () => {
     const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
     mockApiGet
       .mockResolvedValueOnce(mockSettingsEnabled)
+      .mockResolvedValueOnce(mockProvidersResponse)
       .mockResolvedValueOnce(mockWallets)
       .mockResolvedValueOnce(mockRegFileWithAgent)
       .mockResolvedValueOnce(mockReputation)   // My agent score
