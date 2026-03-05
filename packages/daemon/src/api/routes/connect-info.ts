@@ -324,6 +324,17 @@ export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
       capabilities.push('smart_account');
     }
 
+    // erc8128: check if enabled via settings
+    if (deps.settingsService) {
+      try {
+        if (deps.settingsService.get('erc8128.enabled') === 'true') {
+          capabilities.push('erc8128');
+        }
+      } catch {
+        // Setting not found -- erc8128 not available
+      }
+    }
+
     // f. Build daemon info
     const host = c.req.header('Host') ?? 'localhost:3100';
     const protocol = c.req.header('X-Forwarded-Proto') ?? 'http';
