@@ -265,6 +265,8 @@
 | 248 | ENHANCEMENT | MEDIUM | Admin 대시보드 Recent Activity 트랜잭션 금액이 raw 단위로 표시 | v30.9 | RESOLVED | 2026-03-05 |
 | 249 | BUG | HIGH | Admin UI Smart Account 생성 시 필드명 불일치 (provider→aaProvider 등) — validation 실패 | v30.9 | FIXED | 2026-03-05 |
 | 250 | ENHANCEMENT | MEDIUM | 세션 토큰 재발급(Rotate) 기능 — 메타데이터 유지하며 토큰만 교체, Admin UI 복사 다이얼로그 | — | OPEN | 2026-03-05 |
+| 251 | BUG | HIGH | Smart Account 파이프라인에서 RPC URL 미해석 — adapter private 필드 참조로 전 네트워크 AA 전송 실패 | — | OPEN | 2026-03-05 |
+| 252 | ENHANCEMENT | MEDIUM | Smart Account 페이마스터 Policy ID 전달 경로 추가 — Alchemy 대납 필수, Pimlico 한도 제어 | — | OPEN | 2026-03-05 |
 
 ## Type Legend
 
@@ -276,9 +278,9 @@
 
 ## Summary
 
-- **OPEN:** 1
+- **OPEN:** 3
 - **FIXED:** 247
 - **RESOLVED:** 2
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 251
+- **Total:** 253
