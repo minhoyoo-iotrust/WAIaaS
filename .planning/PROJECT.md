@@ -8,7 +8,20 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Latest Milestone: v30.9 Smart Account DX 개선 — SHIPPED 2026-03-05
+## Current Milestone: v30.10 ERC-8128 Signed HTTP Requests 지원
+
+**Goal:** ERC-8128 (Signed HTTP Requests with Ethereum) 표준을 WAIaaS에 통합하여, WAIaaS 관리 지갑이 외부 API 호출 시 RFC 9421 기반 HTTP 메시지 서명으로 인증할 수 있는 상태. x402(결제) + ERC-8004(신원) + ERC-8128(API 인증)으로 에이전트 웹 인증 3종 세트 완성.
+
+**Target features:**
+- SIG-01: HTTP 메시지 서명 엔진 (RFC 9421 + EIP-191, packages/core/src/erc8128/)
+- SIG-02: REST API (POST /v1/erc8128/sign, /verify) + MCP 2 tools + SDK 2 methods + fetchWithErc8128 헬퍼 + connect-info capabilities
+- SIG-03: ERC8128_ALLOWED_DOMAINS 정책 (default-deny, 와일드카드, rate limit)
+- SIG-04: 서명 검증 유틸리티 (디버깅/테스트용)
+- SIG-05: Admin UI 설정 (System 페이지 ERC-8128 섹션 + Policies 폼)
+- SIG-06: Skill 파일 업데이트 (wallet/policies/admin)
+- SIG-07: NotificationEventType 2개 추가 (ERC8128_SIGNATURE_CREATED, ERC8128_DOMAIN_BLOCKED)
+
+## Previous Milestone: v30.9 Smart Account DX 개선 — SHIPPED 2026-03-05
 
 Smart Account 설정을 글로벌 config(23개 키)에서 지갑별 프로바이더 모델로 전환. 프로바이더(Pimlico/Alchemy/Custom) 선택 + API 키 입력만으로 번들러/페이마스터 자동 구성. 에이전트 셀프서비스 프로바이더 등록(dual-auth PUT), connect-info/MCP 프로바이더 상태 인지, Admin UI 프로바이더 관리. 74 new tests, 33 commits.
 

@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v30.9
-milestone_name: Smart Account DX 개선
-status: completed
-stopped_at: Milestone v30.9 archived. Ready for next milestone.
+milestone: v30.10
+milestone_name: ERC-8128 Signed HTTP Requests 지원
+status: active
+stopped_at: null
 last_updated: "2026-03-05"
-last_activity: 2026-03-05 -- Milestone v30.9 shipped and archived
+last_activity: 2026-03-05 -- Milestone v30.10 started
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 6
-  completed_plans: 6
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -21,16 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Planning next milestone
+**Current focus:** Defining requirements for v30.10
 
 ## Current Position
 
-Phase: All phases complete (326 total)
-Plan: N/A
-Status: Milestone v30.9 shipped
-Last activity: 2026-03-05 -- Milestone v30.9 archived
-
-Progress: [██████████] 100%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-05 — Milestone v30.10 started
 
 ## Performance Metrics
 
@@ -40,15 +38,16 @@ Progress: [██████████] 100%
 
 ### Decisions
 
-(Cleared at milestone boundary — see PROJECT.md Key Decisions table for full log)
+(New milestone — decisions will be logged here)
 
 ### Blockers/Concerns
 
 - C1: EIP-712 typehash 온체인 검증 필요 (Anvil fork 테스트 deferred, from v30.8)
 - C2: SDK missing provider management methods (setProvider/getProviderStatus) — deferred to future milestone
+- C3: ERC-8128 is Draft status — spec may change (keyid format, nonce strategy, algorithm)
 
 ## Session Continuity
 
 Last session: 2026-03-05
-Stopped at: Milestone v30.9 archived. Ready for next milestone.
+Stopped at: null
 Resume file: None
