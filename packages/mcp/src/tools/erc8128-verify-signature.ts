@@ -30,14 +30,17 @@ export function registerErc8128VerifySignature(
       content_digest: z.string().optional().describe('Content-Digest header value'),
     },
     async (args) => {
+      // Merge signature headers into the headers dict (REST API extracts from headers)
+      const headers = { ...args.headers };
+      headers['signature-input'] = args.signature_input;
+      headers['signature'] = args.signature;
+      if (args.content_digest) headers['content-digest'] = args.content_digest;
+
       const requestBody: Record<string, unknown> = {
         method: args.method,
         url: args.url,
-        headers: args.headers,
-        signatureInput: args.signature_input,
-        signature: args.signature,
+        headers,
       };
-      if (args.content_digest) requestBody['contentDigest'] = args.content_digest;
       const result = await apiClient.post('/v1/erc8128/verify', requestBody);
       return toToolResult(result);
     },

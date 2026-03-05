@@ -123,8 +123,8 @@ export const SETTINGS_SEARCH_INDEX: SearchIndexEntry[] = [
   // --- ERC-8128 settings on System page ---
   { id: 'system..erc8128_enabled', label: 'ERC-8128 Enabled', description: 'Enable ERC-8128 HTTP message signing', page: '/system', tab: '', fieldName: 'erc8128.enabled', keywords: ['erc8128', 'signing', 'http', 'rfc9421', 'enable'] },
   { id: 'system..erc8128_default_preset', label: 'Default Preset', description: 'Default covered components preset for ERC-8128', page: '/system', tab: '', fieldName: 'erc8128.default_preset', keywords: ['erc8128', 'preset', 'minimal', 'standard', 'strict'] },
-  { id: 'system..erc8128_default_ttl', label: 'Default TTL', description: 'Default signature TTL in seconds', page: '/system', tab: '', fieldName: 'erc8128.default_ttl', keywords: ['erc8128', 'ttl', 'expiry', 'timeout'] },
-  { id: 'system..erc8128_include_nonce', label: 'Include Nonce', description: 'Include nonce in ERC-8128 signatures by default', page: '/system', tab: '', fieldName: 'erc8128.include_nonce', keywords: ['erc8128', 'nonce', 'replay'] },
-  { id: 'system..erc8128_algorithm', label: 'Algorithm', description: 'ERC-8128 signing algorithm', page: '/system', tab: '', fieldName: 'erc8128.algorithm', keywords: ['erc8128', 'algorithm', 'eip191'] },
-  { id: 'system..erc8128_rate_limit', label: 'Rate Limit', description: 'ERC-8128 rate limit per domain per minute', page: '/system', tab: '', fieldName: 'erc8128.rate_limit_per_minute', keywords: ['erc8128', 'rate', 'limit', 'throttle'] },
+  { id: 'system..erc8128_default_ttl_sec', label: 'Default TTL', description: 'Default signature TTL in seconds', page: '/system', tab: '', fieldName: 'erc8128.default_ttl_sec', keywords: ['erc8128', 'ttl', 'expiry', 'timeout'] },
+  { id: 'system..erc8128_default_nonce', label: 'Include Nonce', description: 'Include nonce in ERC-8128 signatures by default', page: '/system', tab: '', fieldName: 'erc8128.default_nonce', keywords: ['erc8128', 'nonce', 'replay'] },
+  { id: 'system..erc8128_default_algorithm', label: 'Algorithm', description: 'ERC-8128 signing algorithm', page: '/system', tab: '', fieldName: 'erc8128.default_algorithm', keywords: ['erc8128', 'algorithm', 'eip191'] },
+  { id: 'system..erc8128_default_rate_limit_rpm', label: 'Rate Limit', description: 'ERC-8128 rate limit per domain per minute', page: '/system', tab: '', fieldName: 'erc8128.default_rate_limit_rpm', keywords: ['erc8128', 'rate', 'limit', 'throttle'] },
 ];

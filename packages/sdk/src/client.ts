@@ -640,10 +640,16 @@ export class WAIaaSClient {
 
   /** Verify an ERC-8128 HTTP message signature. */
   async verifyHttpSignature(params: Erc8128VerifyParams): Promise<Erc8128VerifyResponse> {
+    // REST API expects signature headers inside the headers dict, not as top-level fields
+    const headers = { ...params.headers };
+    headers['signature-input'] = params.signatureInput;
+    headers['signature'] = params.signature;
+    if (params.contentDigest) headers['content-digest'] = params.contentDigest;
+
     return withRetry(
       () => this.http.post<Erc8128VerifyResponse>(
         '/v1/erc8128/verify',
-        params,
+        { method: params.method, url: params.url, headers },
         this.authHeaders(),
       ),
       this.retryOptions,

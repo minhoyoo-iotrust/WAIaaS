@@ -627,39 +627,39 @@ export default function SystemPage() {
             />
             <FormField
               label="Default TTL (seconds)"
-              name="erc8128.default_ttl"
-              value={ev('erc8128', 'default_ttl') || '300'}
-              onChange={(v) => handleFieldChange('erc8128.default_ttl', v)}
+              name="erc8128.default_ttl_sec"
+              value={ev('erc8128', 'default_ttl_sec') || '300'}
+              onChange={(v) => handleFieldChange('erc8128.default_ttl_sec', v)}
               placeholder="300"
               description="Default signature TTL in seconds."
-              data-field="erc8128.default_ttl"
+              data-field="erc8128.default_ttl_sec"
             />
             <FormField
               label="Include Nonce"
-              name="erc8128.include_nonce"
+              name="erc8128.default_nonce"
               type="checkbox"
-              value={ebv('erc8128', 'include_nonce')}
-              onChange={(v) => handleFieldChange('erc8128.include_nonce', v)}
+              value={ebv('erc8128', 'default_nonce')}
+              onChange={(v) => handleFieldChange('erc8128.default_nonce', v)}
               description="Include a UUID v4 nonce in signatures by default for replay protection."
-              data-field="erc8128.include_nonce"
+              data-field="erc8128.default_nonce"
             />
             <FormField
               label="Algorithm"
-              name="erc8128.algorithm"
-              value={ev('erc8128', 'algorithm') || 'eip191'}
-              onChange={(v) => handleFieldChange('erc8128.algorithm', v)}
-              placeholder="eip191"
-              description="Signing algorithm. Currently only eip191 (personal_sign) is supported."
-              data-field="erc8128.algorithm"
+              name="erc8128.default_algorithm"
+              value={ev('erc8128', 'default_algorithm') || 'ethereum-eip191'}
+              onChange={(v) => handleFieldChange('erc8128.default_algorithm', v)}
+              placeholder="ethereum-eip191"
+              description="Signing algorithm. Currently only ethereum-eip191 (personal_sign) is supported."
+              data-field="erc8128.default_algorithm"
             />
             <FormField
               label="Rate Limit (per minute)"
-              name="erc8128.rate_limit_per_minute"
-              value={ev('erc8128', 'rate_limit_per_minute') || '60'}
-              onChange={(v) => handleFieldChange('erc8128.rate_limit_per_minute', v)}
+              name="erc8128.default_rate_limit_rpm"
+              value={ev('erc8128', 'default_rate_limit_rpm') || '60'}
+              onChange={(v) => handleFieldChange('erc8128.default_rate_limit_rpm', v)}
               placeholder="60"
               description="Maximum signing requests per domain per minute."
-              data-field="erc8128.rate_limit_per_minute"
+              data-field="erc8128.default_rate_limit_rpm"
             />
           </div>
           <div class="settings-info-box">
