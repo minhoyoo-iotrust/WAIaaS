@@ -35,6 +35,7 @@ import {
   SessionListItemSchema,
   SessionRevokeResponseSchema,
   SessionRenewResponseSchema,
+  SessionRotateResponseSchema,
   SessionWalletSchema,
   SessionWalletListSchema,
   buildErrorResponses,
@@ -137,6 +138,24 @@ const renewSessionRoute = createRoute({
       'SESSION_ABSOLUTE_LIFETIME_EXCEEDED',
       'RENEWAL_TOO_EARLY',
     ]),
+  },
+});
+
+// #250: Rotate session token (masterAuth)
+const rotateSessionTokenRoute = createRoute({
+  method: 'post',
+  path: '/sessions/{id}/rotate',
+  tags: ['Sessions'],
+  summary: 'Rotate session token (replace token, preserve metadata)',
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+  },
+  responses: {
+    200: {
+      description: 'Token rotated — old token immediately invalidated',
+      content: { 'application/json': { schema: SessionRotateResponseSchema } },
+    },
+    ...buildErrorResponses(['SESSION_NOT_FOUND', 'SESSION_REVOKED']),
   },
 });
 
@@ -794,6 +813,80 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
     }));
 
     return c.json({ wallets: walletsList }, 200);
+  });
+
+  // -------------------------------------------------------------------------
+  // POST /sessions/:id/rotate -- rotate token (masterAuth, #250)
+  // -------------------------------------------------------------------------
+  router.openapi(rotateSessionTokenRoute, async (c) => {
+    if (!deps.jwtSecretManager) {
+      throw new WAIaaSError('ADAPTER_NOT_AVAILABLE', { message: 'JWT signing not available' });
+    }
+
+    const { id: sessionId } = c.req.valid('param');
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    // 1. Session exists and not revoked
+    const session = deps.db
+      .select()
+      .from(sessions)
+      .where(eq(sessions.id, sessionId))
+      .get();
+
+    if (!session) {
+      throw new WAIaaSError('SESSION_NOT_FOUND');
+    }
+    if (session.revokedAt !== null) {
+      throw new WAIaaSError('SESSION_REVOKED');
+    }
+
+    // 2. Compute expiry — preserve original expiry (0 = unlimited)
+    const expiresAtSec = Math.floor(session.expiresAt.getTime() / 1000);
+
+    // 3. Check expiry (skip for unlimited sessions where expiresAt=0)
+    if (expiresAtSec > 0 && expiresAtSec <= nowSec) {
+      throw new WAIaaSError('SESSION_NOT_FOUND', { message: 'Session expired' });
+    }
+
+    // 4. Sign new JWT
+    const jwtPayload: JwtPayload = {
+      sub: sessionId,
+      iat: nowSec,
+      ...(expiresAtSec > 0 ? { exp: expiresAtSec } : {}),
+    };
+    const newToken = await deps.jwtSecretManager.signToken(jwtPayload);
+    const newTokenHash = createHash('sha256').update(newToken).digest('hex');
+    const oldTokenHash = session.tokenHash;
+
+    // 5. Atomic CAS update — replace token hash, increment issued count
+    const newCount = (session.tokenIssuedCount ?? 1) + 1;
+    const result = deps.db
+      .update(sessions)
+      .set({
+        tokenHash: newTokenHash,
+        tokenIssuedCount: newCount,
+      })
+      .where(
+        and(
+          eq(sessions.id, sessionId),
+          eq(sessions.tokenHash, oldTokenHash), // CAS guard
+        ),
+      )
+      .run();
+
+    if (result.changes === 0) {
+      throw new WAIaaSError('SESSION_RENEWAL_MISMATCH');
+    }
+
+    return c.json(
+      {
+        id: sessionId,
+        token: newToken,
+        expiresAt: expiresAtSec,
+        tokenIssuedCount: newCount,
+      },
+      200,
+    );
   });
 
   return router;

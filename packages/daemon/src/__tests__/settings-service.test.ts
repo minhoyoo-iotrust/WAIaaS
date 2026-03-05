@@ -709,8 +709,8 @@ describe('SettingsService', () => {
       // Run v42 migration
       const v42Only = MIGRATIONS.filter((m) => m.version === 42);
 
-      // Delete schema_version entry for 42 so migration runs
-      testSqlite.prepare('DELETE FROM schema_version WHERE version = 42').run();
+      // Delete schema_version entries for 42+ so migration runs (MAX must be < 42)
+      testSqlite.prepare('DELETE FROM schema_version WHERE version >= 42').run();
 
       runMigrations(testSqlite, v42Only);
 

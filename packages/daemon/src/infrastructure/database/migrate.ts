@@ -79,7 +79,7 @@ const LEGACY_NETWORK_NORMALIZE: Record<string, string> = {
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 42;
+export const LATEST_SCHEMA_VERSION = 43;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -107,7 +107,8 @@ function getCreateTableStatements(): string[] {
   aa_provider TEXT CHECK (aa_provider IS NULL OR aa_provider IN ('pimlico', 'alchemy', 'custom')),
   aa_provider_api_key_encrypted TEXT,
   aa_bundler_url TEXT,
-  aa_paymaster_url TEXT
+  aa_paymaster_url TEXT,
+  aa_paymaster_policy_id TEXT
 )`,
 
     // Table 2: sessions (v26.4: wallet_id removed, v26.5: token_issued_count added)
@@ -2603,6 +2604,21 @@ MIGRATIONS.push({
     );
     for (const key of keys) {
       stmt.run(key, now);
+    }
+  },
+});
+
+// ---------------------------------------------------------------------------
+// #252: Paymaster Policy ID column
+// ---------------------------------------------------------------------------
+MIGRATIONS.push({
+  version: 43,
+  description: 'Add aa_paymaster_policy_id column to wallets for paymaster context (sponsorshipPolicyId)',
+  up: (sqlite) => {
+    const cols = sqlite.pragma('table_info(wallets)') as Array<{ name: string }>;
+    const has = (n: string) => cols.some((c) => c.name === n);
+    if (!has('aa_paymaster_policy_id')) {
+      sqlite.exec('ALTER TABLE wallets ADD COLUMN aa_paymaster_policy_id TEXT');
     }
   },
 });

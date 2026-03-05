@@ -85,6 +85,7 @@ export interface PipelineContext {
     aaProviderApiKeyEncrypted?: string | null;
     aaBundlerUrl?: string | null;
     aaPaymasterUrl?: string | null;
+    aaPaymasterPolicyId?: string | null;
   };
   resolvedNetwork: string;
   request: SendTransactionRequest | TransactionRequest;
@@ -138,6 +139,8 @@ export interface PipelineContext {
   actionProviderKey?: string;
   actionName?: string;
   actionDefaultTier?: PolicyTier;
+  // #251: resolved RPC URL for Smart Account publicClient creation
+  resolvedRpcUrl?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -1229,10 +1232,13 @@ async function stage5ExecuteSmartAccount(ctx: PipelineContext): Promise<void> {
 
     // Step 2: Create SmartAccount via SmartAccountService
     const smartAccountService = new SmartAccountService();
+    // #251: Resolve viem Chain from EVM_CHAIN_MAP using network ID
+    const { EVM_CHAIN_MAP } = await import('@waiaas/adapter-evm');
+    const chainEntry = EVM_CHAIN_MAP[ctx.resolvedNetwork as import('@waiaas/core').EvmNetworkType];
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const publicClient = createPublicClient({
-      chain: (ctx.adapter as any).viemChain ?? undefined,
-      transport: http((ctx.adapter as any).rpcUrl ?? undefined),
+      chain: chainEntry?.viemChain,
+      transport: http(ctx.resolvedRpcUrl),
     }) as any;
     const smartAccountInfo = await smartAccountService.createSmartAccount({
       owner: localAccount,
@@ -1248,6 +1254,7 @@ async function stage5ExecuteSmartAccount(ctx: PipelineContext): Promise<void> {
       aaProviderApiKey: decryptedApiKey,
       aaBundlerUrl: ctx.wallet.aaBundlerUrl ?? null,
       aaPaymasterUrl: ctx.wallet.aaPaymasterUrl ?? null,
+      aaPaymasterPolicyId: ctx.wallet.aaPaymasterPolicyId ?? null,
     };
     const bundlerClient = createSmartAccountBundlerClient({
       client: publicClient as any,

@@ -444,6 +444,7 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
     const aaProviderApiKey = (parsed as any).aaProviderApiKey ?? null;
     const aaBundlerUrl = (parsed as any).aaBundlerUrl ?? null;
     const aaPaymasterUrl = (parsed as any).aaPaymasterUrl ?? null;
+    const aaPaymasterPolicyId = (parsed as any).aaPaymasterPolicyId ?? null;
 
     if (accountType === 'smart') {
       // Only EVM chains support smart accounts
@@ -555,6 +556,7 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
       aaProviderApiKeyEncrypted: encryptedApiKey,
       aaBundlerUrl,
       aaPaymasterUrl,
+      aaPaymasterPolicyId,
       createdAt: now,
       updatedAt: now,
     });
@@ -1332,6 +1334,9 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
     }
     // For preset providers, URLs are derived at runtime from chain mapping -- no need to store
 
+    // #252: policyId applies to all provider types (Alchemy required, Pimlico optional)
+    const policyId = body.policyId ?? null;
+
     const now = new Date(Math.floor(Date.now() / 1000) * 1000);
     await deps.db
       .update(wallets)
@@ -1340,6 +1345,7 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
         aaProviderApiKeyEncrypted: encryptedApiKey,
         aaBundlerUrl: bundlerUrl,
         aaPaymasterUrl: paymasterUrl,
+        aaPaymasterPolicyId: policyId,
         updatedAt: now,
       })
       .where(eq(wallets.id, walletId))

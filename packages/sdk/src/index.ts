@@ -44,6 +44,7 @@ export type {
   CreateSessionResponse,
   CreateSessionWallet,
   RenewSessionResponse,
+  RotateSessionTokenResponse,
   ConnectInfoResponse,
   ConnectInfoWallet,
   ConnectInfoPolicyEntry,

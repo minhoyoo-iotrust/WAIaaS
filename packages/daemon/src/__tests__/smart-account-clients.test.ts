@@ -74,6 +74,7 @@ describe('smart-account-clients (wallet-based provider)', () => {
         aaProviderApiKey: 'pk_test_123',
         aaBundlerUrl: null,
         aaPaymasterUrl: null,
+        aaPaymasterPolicyId: null,
       };
       const url = resolveWalletBundlerUrl(wallet, 'ethereum-sepolia');
       expect(url).toBe('https://api.pimlico.io/v2/sepolia/rpc?apikey=pk_test_123');
@@ -85,6 +86,7 @@ describe('smart-account-clients (wallet-based provider)', () => {
         aaProviderApiKey: 'ak_test_456',
         aaBundlerUrl: null,
         aaPaymasterUrl: null,
+        aaPaymasterPolicyId: null,
       };
       const url = resolveWalletBundlerUrl(wallet, 'base-mainnet');
       expect(url).toBe('https://base-mainnet.g.alchemy.com/v2/ak_test_456');
@@ -96,6 +98,7 @@ describe('smart-account-clients (wallet-based provider)', () => {
         aaProviderApiKey: null,
         aaBundlerUrl: 'https://my-bundler.example.com/rpc',
         aaPaymasterUrl: null,
+        aaPaymasterPolicyId: null,
       };
       const url = resolveWalletBundlerUrl(wallet, 'ethereum-sepolia');
       expect(url).toBe('https://my-bundler.example.com/rpc');
@@ -107,6 +110,7 @@ describe('smart-account-clients (wallet-based provider)', () => {
         aaProviderApiKey: 'pk_test_123',
         aaBundlerUrl: null,
         aaPaymasterUrl: null,
+        aaPaymasterPolicyId: null,
       };
       expect(() => resolveWalletBundlerUrl(wallet, 'solana-mainnet')).toThrow(/pimlico/);
       expect(() => resolveWalletBundlerUrl(wallet, 'solana-mainnet')).toThrow(/solana-mainnet/);
@@ -118,6 +122,7 @@ describe('smart-account-clients (wallet-based provider)', () => {
         aaProviderApiKey: null,
         aaBundlerUrl: null,
         aaPaymasterUrl: null,
+        aaPaymasterPolicyId: null,
       };
       expect(() => resolveWalletBundlerUrl(wallet, 'ethereum-sepolia')).toThrow(/not configured/i);
     });
@@ -128,6 +133,7 @@ describe('smart-account-clients (wallet-based provider)', () => {
         aaProviderApiKey: null,
         aaBundlerUrl: null,
         aaPaymasterUrl: null,
+        aaPaymasterPolicyId: null,
       };
       expect(() => resolveWalletBundlerUrl(wallet, 'ethereum-sepolia')).toThrow();
     });
@@ -144,6 +150,7 @@ describe('smart-account-clients (wallet-based provider)', () => {
         aaProviderApiKey: 'pk_test_123',
         aaBundlerUrl: null,
         aaPaymasterUrl: null,
+        aaPaymasterPolicyId: null,
       };
       const url = resolveWalletPaymasterUrl(wallet, 'ethereum-sepolia');
       expect(url).toBe('https://api.pimlico.io/v2/sepolia/rpc?apikey=pk_test_123');
@@ -166,6 +173,7 @@ describe('smart-account-clients (wallet-based provider)', () => {
         aaProviderApiKey: null,
         aaBundlerUrl: 'https://bundler.example.com',
         aaPaymasterUrl: null,
+        aaPaymasterPolicyId: null,
       };
       const url = resolveWalletPaymasterUrl(wallet, 'ethereum-sepolia');
       expect(url).toBeNull();
@@ -177,6 +185,7 @@ describe('smart-account-clients (wallet-based provider)', () => {
         aaProviderApiKey: null,
         aaBundlerUrl: null,
         aaPaymasterUrl: null,
+        aaPaymasterPolicyId: null,
       };
       const url = resolveWalletPaymasterUrl(wallet, 'ethereum-sepolia');
       expect(url).toBeNull();
@@ -194,6 +203,7 @@ describe('smart-account-clients (wallet-based provider)', () => {
         aaProviderApiKey: 'pk_test_123',
         aaBundlerUrl: null,
         aaPaymasterUrl: null,
+        aaPaymasterPolicyId: null,
       };
 
       const result = createSmartAccountBundlerClient({
@@ -216,6 +226,7 @@ describe('smart-account-clients (wallet-based provider)', () => {
         aaProviderApiKey: null,
         aaBundlerUrl: null,
         aaPaymasterUrl: null,
+        aaPaymasterPolicyId: null,
       };
 
       expect(() =>
@@ -234,6 +245,7 @@ describe('smart-account-clients (wallet-based provider)', () => {
         aaProviderApiKey: 'ak_test_456',
         aaBundlerUrl: null,
         aaPaymasterUrl: null,
+        aaPaymasterPolicyId: null,
       };
 
       createSmartAccountBundlerClient({
@@ -255,6 +267,7 @@ describe('smart-account-clients (wallet-based provider)', () => {
         aaProviderApiKey: null,
         aaBundlerUrl: 'https://bundler.example.com/rpc',
         aaPaymasterUrl: null,
+        aaPaymasterPolicyId: null,
       };
 
       createSmartAccountBundlerClient({
