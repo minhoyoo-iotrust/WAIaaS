@@ -136,9 +136,11 @@ describe('erc8128_verify_signature tool', () => {
     expect(apiClient.post).toHaveBeenCalledWith('/v1/erc8128/verify', {
       method: 'GET',
       url: 'https://api.example.com/data',
-      headers: { 'Accept': 'application/json' },
-      signatureInput: 'sig1=("@method" "@target-uri");created=1700000000',
-      signature: 'sig1=:base64sig:',
+      headers: {
+        'Accept': 'application/json',
+        'signature-input': 'sig1=("@method" "@target-uri");created=1700000000',
+        'signature': 'sig1=:base64sig:',
+      },
     });
     const parsed = JSON.parse(result.content[0]!.text) as Record<string, unknown>;
     expect(parsed['valid']).toBe(true);
@@ -164,10 +166,12 @@ describe('erc8128_verify_signature tool', () => {
     expect(apiClient.post).toHaveBeenCalledWith('/v1/erc8128/verify', {
       method: 'POST',
       url: 'https://api.example.com/submit',
-      headers: { 'Content-Type': 'application/json' },
-      signatureInput: 'sig1=...',
-      signature: 'sig1=:...:',
-      contentDigest: 'sha-256=:abc123base64:',
+      headers: {
+        'Content-Type': 'application/json',
+        'signature-input': 'sig1=...',
+        'signature': 'sig1=:...:',
+        'content-digest': 'sha-256=:abc123base64:',
+      },
     });
   });
 });
