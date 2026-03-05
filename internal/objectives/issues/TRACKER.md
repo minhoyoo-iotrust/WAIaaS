@@ -278,8 +278,8 @@
 
 ## Summary
 
-- **OPEN:** 3
-- **FIXED:** 247
+- **OPEN:** 0
+- **FIXED:** 250
 - **RESOLVED:** 2
 - **VERIFIED:** 0
 - **WONTFIX:** 1
