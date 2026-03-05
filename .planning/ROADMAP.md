@@ -130,8 +130,8 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v30.9-ROADMAP.md` for full 
 **Plans**: 2 plans
 
 Plans:
-- [ ] 327-01-PLAN.md -- Types, constants, keyid, Content-Digest, Signature-Input builder
-- [ ] 327-02-PLAN.md -- HTTP Message Signer, Verifier, barrel export
+- [x] 327-01-PLAN.md -- Types, constants, keyid, Content-Digest, Signature-Input builder
+- [x] 327-02-PLAN.md -- HTTP Message Signer, Verifier, barrel export
 
 ### Phase 328: REST API + Policy + Settings
 **Goal**: Users can sign and verify HTTP messages via REST API with domain-level access control and configurable settings
@@ -143,12 +143,11 @@ Plans:
   3. User can set ERC8128_ALLOWED_DOMAINS policy with domain list including wildcards (*.example.com), and requests to unlisted domains are blocked by default-deny
   4. User can enable/disable ERC-8128 feature gate and configure default preset/TTL/nonce/algorithm via Admin Settings
   5. User receives ERC8128_SIGNATURE_CREATED notification on successful signing and ERC8128_DOMAIN_BLOCKED notification when domain is blocked
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 328-01: TBD
-- [ ] 328-02: TBD
-- [ ] 328-03: TBD
+- [ ] 328-01-PLAN.md -- Policy type, domain evaluator, Admin Settings keys, notification events
+- [ ] 328-02-PLAN.md -- REST API endpoints (sign + verify), server wiring
 
 ### Phase 329: MCP + SDK + Admin UI + Skill Files
 **Goal**: Users can access ERC-8128 signing from all interface surfaces (MCP, SDK, Admin UI) and discover capability via connect-info
@@ -181,8 +180,8 @@ Phases execute in numeric order: 327 -> 328 -> 329
 | 244-267 | v28.0-v28.8 | All | Complete | 2026-02-26 |
 | 268-326 | v29.0-v30.9 | All | Complete | 2026-03-05 |
 | 327. HTTP Message Signing Engine | 2/2 | Complete   | 2026-03-05 | - |
-| 328. REST API + Policy + Settings | v30.10 | 0/TBD | Not started | - |
+| 328. REST API + Policy + Settings | v30.10 | 0/2 | Not started | - |
 | 329. MCP + SDK + Admin UI + Skill Files | v30.10 | 0/TBD | Not started | - |
 
 ---
-*Last updated: 2026-03-05 -- Phase 327 planned (2 plans, 2 waves). 7 requirements mapped.*
+*Last updated: 2026-03-05 -- Phase 328 planned (2 plans, 2 waves). 10 requirements mapped.*
