@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v30.11
 milestone_name: Admin UI DX 개선
-status: executing
+status: planning
 stopped_at: Completed Phase 331, ready for Phase 332
-last_updated: "2026-03-05T10:28:00Z"
+last_updated: "2026-03-05T10:30:11.625Z"
 last_activity: 2026-03-05 -- Phase 331 complete (2 plans, 4 commits)
 progress:
   total_phases: 3
