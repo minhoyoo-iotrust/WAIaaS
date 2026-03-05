@@ -1,5 +1,35 @@
 # Changelog
 
+## [2.10.0-rc.4](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.3...v2.10.0-rc.4) (2026-03-05)
+
+
+### Features
+
+* **327-01:** add ERC-8128 types, constants, keyid, and Content-Digest modules ([72b922c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/72b922c967d6a02c23a17233f897c6d33719912e))
+* **327-01:** add Signature-Input builder and Signature Base construction ([1047d51](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1047d5199f4a366e225b8129913d4603da11f216))
+* **327-02:** add HTTP Message Signer with EIP-191 signing via viem ([4f52828](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4f5282807632d721ce7eb29102f870a70cc172e6))
+* **327-02:** add Verifier, barrel export, and wire erc8128 into @waiaas/core ([601315d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/601315d7955cada4865b5da2e0ca47202fce107e))
+* **328-01:** add ERC-8128 admin settings, notification events, and i18n ([2db3cc2](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2db3cc25cbee5f0cc2a012d4615055d7268300f7))
+* **328-01:** add ERC8128_ALLOWED_DOMAINS policy type and domain evaluator ([5bae991](https://github.com/minhoyoo-iotrust/WAIaaS/commit/5bae9913c729ea2e29b53f8b50f036986a9ff15c))
+* **328-02:** add ERC-8128 sign and verify REST API endpoints ([5c80b10](https://github.com/minhoyoo-iotrust/WAIaaS/commit/5c80b105dfe468f611e517435be77792577ea723))
+* **328-02:** wire ERC-8128 routes into server with sessionAuth ([0a3f77d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0a3f77d446fc124337f3c403bf3522a0134c0b97))
+* **329-01:** add connect-info erc8128 capability and MCP tool tests ([789e5d1](https://github.com/minhoyoo-iotrust/WAIaaS/commit/789e5d11608e3bc54b65611a6bde0c81a7f21b65))
+* **329-01:** add MCP erc8128_sign_request and erc8128_verify_signature tools ([cfe19ba](https://github.com/minhoyoo-iotrust/WAIaaS/commit/cfe19bac9e9d3c3c81612e19ac629db27433ca5d))
+* **329-02:** add SDK ERC-8128 methods (signHttpRequest, verifyHttpSignature, fetchWithErc8128) ([4fc1a0d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4fc1a0d5f40d849e44ab078c10b93fc5cf2123cf))
+* **329-03:** add Admin UI ERC-8128 policy form and system settings ([a2d0e81](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a2d0e81d45e7b37df74a69da8b8b207ec8a79c69))
+* **329-03:** add erc8128.skill.md and update existing skill files ([3be3b53](https://github.com/minhoyoo-iotrust/WAIaaS/commit/3be3b537dab2762a92242076612d2259ebb23651))
+
+
+### Bug Fixes
+
+* **329-01:** update server test tool count from 30 to 32 ([dd0403d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/dd0403d863d95fa27ccd8b5041091ba4f7bd601b))
+* remove unused NETWORK_TO_CAIP2 import in erc8128 route tests ([4290afa](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4290afa816feeb6eb6c4c12d20e96a52ee113cf8))
+* update enum SSoT expected counts for PolicyType (19) and NotificationEventType (56) ([6081fad](https://github.com/minhoyoo-iotrust/WAIaaS/commit/6081fad4f52094c35eb835b3604d5d9d51bc8c23))
+* update MCP erc8128 verify test assertions to match DEFECT-02 fix ([ff042c6](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ff042c62bc98262661874687ade96417eba4b174))
+* update notification event count assertion from 54 to 56 ([ce7e4e2](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ce7e4e2b8db54903b61119dc95ed9354312759dc))
+* **v30.10:** resolve 3 milestone audit defects ([0cb7da4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0cb7da439053c7037f48b0d16f59536a903e7df7))
+* **v30.10:** resolve milestone audit defects and mark shipped ([1cce6bd](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1cce6bd8c08255343f1a7220e65a943a4daf7b1c))
+
 ## [2.10.0-rc.3](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.2...v2.10.0-rc.3) (2026-03-05)
 
 
