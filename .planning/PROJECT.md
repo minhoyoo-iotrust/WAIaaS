@@ -8,6 +8,10 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
+## Latest Milestone: v30.9 Smart Account DX 개선 — SHIPPED 2026-03-05
+
+Smart Account 설정을 글로벌 config(23개 키)에서 지갑별 프로바이더 모델로 전환. 프로바이더(Pimlico/Alchemy/Custom) 선택 + API 키 입력만으로 번들러/페이마스터 자동 구성. 에이전트 셀프서비스 프로바이더 등록(dual-auth PUT), connect-info/MCP 프로바이더 상태 인지, Admin UI 프로바이더 관리. 74 new tests, 33 commits.
+
 ## Current State
 
 v30.8 ERC-8004 Trustless Agents 지원 shipped (2026-03-04). 12-패키지 모노레포(packages/actions/) + Python SDK, ~225,565 LOC TypeScript, ~6,486+ 테스트 통과. **ERC-8004 Trustless Agents**: Erc8004ActionProvider(8 write actions: register/wallet/uri/metadata/feedback/validation), Erc8004RegistryClient(viem 래퍼, 3 ABI 상수), DB v39-40(agent_identities/reputation_cache/approval_type/policies CHECK), ReputationCacheService(인메모리→DB→RPC 3-tier, TTL 300s), REPUTATION_THRESHOLD 정책(Stage 3 position 6, maxTier 에스컬레이션, unrated_tier), EIP-712 typed data 월렛 링킹(AgentWalletSet 4-field typehash, ApprovalWorkflow dual-routing SIWE/EIP712, WcSigningBridge eth_signTypedData_v4, calldata re-encoding), 4 GET REST 엔드포인트 + connect-info erc8004 확장, MCP 11 도구(8 write auto-expose + 3 read-only), SDK 11 메서드, Admin UI ERC-8004 페이지(Identity/Registration File/Reputation 3탭) + REPUTATION_THRESHOLD 정책 폼 + BUILTIN_PROVIDERS erc8004_agent, erc8004.skill.md 612 lines, 182 새 테스트(E1-E20 시나리오). **ERC-4337 Smart Account**: SmartAccountService(viem toSoladySmartAccount, CREATE2 주소 예측), DB v38(account_type/signer_key/deployed/entry_point 4 컬럼), Admin Settings 25개 정의(feature gate + bundler/paymaster URL + chain overrides), UserOperation Pipeline(stage5Execute accountType 분기, BundlerClient/PaymasterClient, BATCH 원자적 실행), Paymaster Gas Sponsorship(자동 감지/rejection 처리), 전 인터페이스 확장(CLI --account-type, SDK createWallet, MCP wallet detail, Admin UI Account Type 셀렉터 + Smart Account 설정, 3 skill files 업데이트). **Ops Design Specs (OPS-01~06)**: Transaction Dry-Run(SimulationResult Zod 스키마, PipelineContext dryRun 분기, POST /v1/transactions/simulate), Audit Log Query API(AuditEventType 20개, cursor pagination, GET /v1/audit-logs), Encrypted Backup(AES-256-GCM 아카이브 포맷, EncryptedBackupService, CLI backup/restore), Webhook Outbound(HMAC-SHA256, webhooks+webhook_logs DB, 재시도 큐, REST API 4개), Admin Stats(7-category Zod, IMetricsCounter, 1분 TTL 캐시), AutoStop Plugin(IAutoStopRule, RuleRegistry, per-rule 토글). 설계 문서 48개 + objective 9개. MIT 라이선스, npm 10개 패키지(@waiaas/push-relay 추가) OIDC Trusted Publishing 발행, Sigstore provenance 배지 확보, Docker Hub/GHCR dual push(daemon + push-relay), 설계 문서 47개(신규 73/74/75 + 기존 44개 갱신) 교차 검증 PASS, 설계 부채 0건, 영문 README + CONTRIBUTING + 배포 가이드 + API 레퍼런스 + CHANGELOG 완비, @waiaas/skills npx 패키지 + examples/simple-agent 예제. CLI로 init → start → quickstart --mode testnet/mainnet → 세션 생성 → 정책 설정(USD 기준, 12개 타입별 전용 폼, 누적 지출 한도 daily/monthly, 표시 통화 43개) → SOL/SPL/ETH/ERC-20 전송(네트워크 선택, USD 환산 정책 평가) → 컨트랙트 호출 → Approve → 배치 → 외부 dApp unsigned tx 서명(sign-only) → Action Provider 플러그인 실행 → x402 유료 API 자동 결제 → Owner 승인/거절(SIWS/SIWE + WalletConnect v2 QR 페어링 + 서명 요청 + Telegram Fallback 자동 전환) + Kill Switch 3-state 긴급 정지(6-step cascade + dual-auth 복구) + AutoStop 4-규칙 자동 정지 엔진 + 잔액 모니터링(LOW_BALANCE 사전 알림) + Telegram Bot 원격 관리(10개 명령어 + 2-Tier 인증 + i18n) + SDK/MCP로 프로그래밍 접근(18개 도구 + 스킬 리소스 + Action Provider 동적 도구) + Telegram/Discord/ntfy/Slack 알림(APPROVAL_CHANNEL_SWITCHED 추가) + Admin Web UI(`/admin`) 관리(Kill Switch 3-state UI + WalletConnect 세션 관리 페이지 + Telegram Users 관리 + AutoStop/Monitoring Settings + 12개 정책 폼 + PolicyRulesSummary 시각화) + Docker 원클릭 배포(Multi-stage + Secrets + non-root) + 토큰 레지스트리 관리 + API 스킬 파일(skills/ 7개) 제공까지 동작. **v1.8에서 추가:** VersionCheckService npm registry 24h 주기 자동 체크 + CLI stderr 업그레이드 알림(24h dedup, --quiet) + `waiaas upgrade` 7단계 시퀀스(--check/--to/--rollback) + BackupService DB+config 백업/복원(5개 보존) + 호환성 매트릭스(코드-DB 스키마 3-시나리오 판별) + Health API 확장(latestVersion/updateAvailable/schemaVersion) + Docker Watchtower+OCI 라벨 + GHCR 3-tier 태깅 + release-please 2-게이트 릴리스(Conventional Commits→Release PR→deploy 수동 승인) + SDK HealthResponse 타입 + 19건 E2E 통합 테스트.
@@ -75,6 +79,7 @@ v30.8 ERC-8004 Trustless Agents 지원 shipped (2026-03-04). 12-패키지 모노
 - ✅ v30.2 운영 기능 확장 구현 — shipped 2026-03-04 (6 phases, 14 plans, 30 requirements, ~246,245 LOC TS)
 - ✅ v30.6 ERC-4337 Account Abstraction 지원 — shipped 2026-03-04 (3 phases, 10 plans, 36 requirements, ~281,265 LOC TS)
 - ✅ v30.8 ERC-8004 Trustless Agents 지원 — shipped 2026-03-04 (7 phases, 15 plans, 39 requirements, ~225,565 LOC TS)
+- ✅ v30.9 Smart Account DX 개선 — shipped 2026-03-05 (3 phases, 6 plans, 27 requirements, ~262,608 LOC TS)
 - 기본 거부 정책 토글 3개 (default_deny_tokens/contracts/spenders)
 - IForexRateService CoinGecko tether 기반 43개 법정 통화 환산 + display_currency
 - 누적 USD 지출 한도 (CUMULATIVE_SPENDING_DAILY/MONTHLY 롤링 윈도우, APPROVAL 격상, 80% 경고)
@@ -601,6 +606,13 @@ v30.8 ERC-8004 Trustless Agents 지원 shipped (2026-03-04). 12-패키지 모노
 - ✓ CLI/SDK/MCP/Admin UI 확장 — --account-type, createWallet(accountType), MCP wallet detail, Admin UI 셀렉터 — v30.6 (INT-01~08)
 - ✓ Skill Files 업데이트 — wallet/quickstart/admin 스킬 파일 스마트 어카운트 가이드 추가 — v30.6 (INT-07, INT-08)
 
+- ✓ Per-wallet Provider Model — AA_PROVIDER_NAMES enum, DB v41 4 columns, 23 global settings 제거 — v30.9 (PROV-01~10)
+- ✓ Provider Chain Mapping — AA_PROVIDER_CHAIN_MAP(10 networks × 2 providers), 미지원 네트워크 사전 차단 — v30.9 (CMAP-01~03)
+- ✓ Agent Self-Service Provider — PUT /v1/wallets/:id/provider dual-auth, wallet ownership 검증 — v30.9 (ASSR-01~04)
+- ✓ Provider Status Query — 지갑 응답 provider 필드, connect-info prompt, MCP get_provider_status — v30.9 (STAT-01~05)
+- ✓ Admin UI Provider Management — 조건부 필드 노출, dashboard link, detail page inline edit — v30.9 (PROV-06~07, GUID-01~03)
+- ✓ AA Default Enabled — smart_account.enabled 기본값 true, AES-256-GCM API key 암호화 — v30.9 (DFLT-01~02, PROV-04)
+
 ### 활성
 
 <!-- Deferred -->
@@ -623,7 +635,7 @@ v30.8 ERC-8004 Trustless Agents 지원 shipped (2026-03-04). 12-패키지 모노
 
 ## 컨텍스트
 
-**누적:** 79 milestones (v0.1-v30.0), 308 phases, ~695 plans, ~1,970 requirements, 48 설계 문서(24-76 + m29-00), 10 objective 문서, ~233,440 LOC TS, ~5,737+ 테스트
+**누적:** 83 milestones (v0.1-v30.9), 326 phases, ~743 plans, ~2,119 requirements, 48 설계 문서(24-76 + m29-00), 10 objective 문서, ~262,608 LOC TS, ~6,742+ 테스트
 
 v0.1~v0.10 설계 완료 (2026-02-05~09). 44 페이즈, 110 플랜, 286 요구사항, 30 설계 문서(24-64).
 v1.0 구현 계획 수립 완료 (2026-02-09). 8개 objective 문서, 설계 부채 추적, 문서 매핑 검증.
@@ -1118,6 +1130,12 @@ v29.10 ntfy 토픽 지갑별 설정 전환 shipped (2026-03-02). 2 페이즈, 4 
 | On-demand settings (hot-reload 불필요) | SmartAccountService가 요청 시마다 settings 읽기, 인프라 단순화 | ✓ Good — v30.6 |
 | Paymaster rejection 패턴 매칭 | error message에서 'paymaster'/'PM_'/'Paymaster' 감지 → PAYMASTER_REJECTED | ✓ Good — v30.6 |
 | any 타입 SmartAccountService.client | viem 복잡한 generic 회피, 런타임 동작 정확 | — Pending — v30.6 |
+| Per-wallet provider model (글로벌 설정 제거) | 지갑별 프로바이더 선택으로 멀티 프로바이더 환경 지원 | ✓ Good — v30.9 |
+| Pimlico/Alchemy unified endpoint | bundler URL = paymaster URL, 단일 API 키로 양쪽 자동 구성 | ✓ Good — v30.9 |
+| 23 global settings 일괄 제거 (deprecated 없이) | Clean break, 하위 호환 불필요 (v30.6 직후) | ✓ Good — v30.9 |
+| Dual-auth via Bearer token prefix 감지 | wai_sess_ prefix → sessionAuth, otherwise masterAuth | ✓ Good — v30.9 |
+| HKDF info 'aa-provider-key-encryption' | settings-crypto와 별도 subkey 파생 | ✓ Good — v30.9 |
+| Admin UI dashboard URL 브라우저 사이드 미러 | @waiaas/core import 불가, AA_PROVIDER_DASHBOARD_URLS 인라인 | ✓ Good — v30.9 |
 
 ## Shipped: v27.2 CAIP-19 자산 식별 표준
 
@@ -1212,5 +1230,9 @@ v30.6 shipped. EVM 지갑에 ERC-4337 스마트 어카운트 옵션 추가. Smar
 
 v30.8 shipped. ERC-8004 온체인 레지스트리(Identity/Reputation/Validation)를 WAIaaS에 통합. Erc8004ActionProvider(8 write actions), Erc8004RegistryClient(viem 래퍼), DB v39-40(agent_identities+reputation_cache+approval_type+policies CHECK), ReputationCacheService(3-tier cache: memory→DB→RPC, TTL 300s), REPUTATION_THRESHOLD 정책(Stage 3 position 6, maxTier 에스컬레이션, unrated_tier 처리), EIP-712 typed data 월렛 링킹(AgentWalletSet typehash, dual approval SIWE/EIP712, WcSigningBridge calldata re-encoding), 4 GET REST 엔드포인트 + connect-info erc8004 확장, MCP 11도구 + SDK 11메서드, Admin UI ERC-8004 페이지(3탭) + 정책 폼 + BUILTIN_PROVIDERS, erc8004.skill.md 612 lines, 182 새 테스트. 50 commits, 121 files, +15,921 lines. 39/39 requirements PASS.
 
+## Shipped: v30.9 Smart Account DX 개선
+
+v30.9 shipped. Smart Account 글로벌 설정(23개 키)을 지갑별 프로바이더 모델로 전환. AA_PROVIDER_NAMES enum(pimlico/alchemy/custom), AA_PROVIDER_CHAIN_MAP(10 EVM networks × 2 providers), DB v41(aa_provider/aa_api_key_encrypted/aa_bundler_url/aa_paymaster_url 4 컬럼), AES-256-GCM API key 암호화(HKDF 기반). Provider resolver 리팩토링(WalletProviderData → smart-account-clients.ts), smart_account.enabled 기본값 true. PUT /v1/wallets/:id/provider dual-auth(masterAuth + sessionAuth, wallet ownership 검증), PROVIDER_UPDATED 21st audit event. Wallet 응답 provider 필드 확장(name/supportedChains/paymasterEnabled). Admin UI 조건부 프로바이더 필드 + dashboard link 동적 전환 + detail page inline edit. connect-info provider prompt + MCP get_provider_status 29th tool + smart_account capability. 74 새 테스트, 33 commits, 73 files, +7,214 lines.
+
 ---
-*최종 업데이트: 2026-03-04 after v30.8 milestone*
+*최종 업데이트: 2026-03-05 after v30.9 milestone*

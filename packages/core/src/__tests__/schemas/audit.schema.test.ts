@@ -10,9 +10,9 @@ import {
 } from '../../index.js';
 
 describe('Audit Zod SSoT schemas', () => {
-  // ---------- Test 1: AuditEventTypeSchema parses all 20 event types ----------
-  it('parses all 20 event types', () => {
-    expect(AUDIT_EVENT_TYPES).toHaveLength(20);
+  // ---------- Test 1: AuditEventTypeSchema parses all 21 event types ----------
+  it('parses all 21 event types', () => {
+    expect(AUDIT_EVENT_TYPES).toHaveLength(21);
     for (const eventType of AUDIT_EVENT_TYPES) {
       expect(AuditEventTypeSchema.parse(eventType)).toBe(eventType);
     }

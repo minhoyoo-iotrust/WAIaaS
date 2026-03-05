@@ -669,6 +669,100 @@ curl -s -X POST http://localhost:3100/v1/transactions/sign \
 - Signed results are recorded in the transactions table with type='SIGN', status='SIGNED'
 - Amounts are accumulated in reserved_amount to prevent double-spending against SPENDING_LIMIT
 
+## 11.5. Sign Message (personal_sign / EIP-712 signTypedData)
+
+Sign a raw message or EIP-712 structured data. Returns the signature without submitting anything on-chain. EIP-712 signTypedData is EVM-only.
+
+### POST /v1/transactions/sign-message
+
+**Auth:** sessionAuth (Bearer token)
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| message | string | Conditional | Message to sign (hex 0x-prefixed or UTF-8). Required when signType is "personal". |
+| signType | string | No | "personal" (default) or "typedData" |
+| typedData | object | Conditional | EIP-712 typed data structure. Required when signType is "typedData". |
+| network | string | No | Target network (optional) |
+| walletId | string | No | Target wallet ID (auto-resolved for single wallet sessions) |
+
+**typedData Object:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| domain | object | EIP-712 domain separator (name, version, chainId, verifyingContract, salt -- all optional) |
+| types | object | Struct type definitions (record of arrays of {name, type}) |
+| primaryType | string | Primary type to sign |
+| message | object | The structured message to sign |
+
+**Response (200):**
+
+```json
+{
+  "id": "01958f3c-9999-7000-8000-abcdef999999",
+  "signature": "0x...",
+  "signType": "personal"
+}
+```
+
+**Example (personal_sign):**
+
+```bash
+curl -s -X POST http://localhost:3100/v1/transactions/sign-message \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -d '{
+    "message": "Hello, World!"
+  }'
+```
+
+**Example (EIP-712 signTypedData):**
+
+```bash
+curl -s -X POST http://localhost:3100/v1/transactions/sign-message \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -d '{
+    "signType": "typedData",
+    "typedData": {
+      "domain": {
+        "name": "MyDApp",
+        "version": "1",
+        "chainId": 1,
+        "verifyingContract": "0x1234567890abcdef1234567890abcdef12345678"
+      },
+      "types": {
+        "Order": [
+          {"name": "maker", "type": "address"},
+          {"name": "amount", "type": "uint256"}
+        ]
+      },
+      "primaryType": "Order",
+      "message": {
+        "maker": "0xabcdef1234567890abcdef1234567890abcdef12",
+        "amount": "1000000"
+      }
+    }
+  }'
+```
+
+**Error Codes:**
+
+| Code | Status | Description |
+|------|--------|-------------|
+| `ACTION_VALIDATION_FAILED` | 400 | Missing message/typedData, or signType "typedData" on Solana wallet |
+| `WALLET_NOT_FOUND` | 404 | Wallet does not exist |
+| `CHAIN_ERROR` | 500 | Signing failed |
+
+**MCP Tool:** `sign_message` with parameters `message`, `sign_type`, `typed_data`, `network`, `wallet_id`
+
+**Notes:**
+- signType defaults to "personal" when omitted (backward compatible)
+- EIP-712 signTypedData is EVM-only. Solana wallets return 400 error.
+- No policy evaluation (message signing has no on-chain impact)
+- Results are recorded in transactions table with type='SIGN', status='SIGNED'
+
 ## 12. Encode Calldata (EVM Utility)
 
 Encode an EVM function call into hex calldata. This utility helps construct the `calldata` parameter for `CONTRACT_CALL` transactions without needing an ABI encoding library.

@@ -40,6 +40,7 @@
 - ✅ **v30.2 운영 기능 확장 구현** -- Phases 309-313.1 (shipped 2026-03-04)
 - ✅ **v30.6 ERC-4337 Account Abstraction 지원** -- Phases 314-316 (shipped 2026-03-04)
 - ✅ **v30.8 ERC-8004 Trustless Agents 지원** -- Phases 317-323 (shipped 2026-03-04)
+- ✅ **v30.9 Smart Account DX 개선** -- Phases 324-326 (shipped 2026-03-05)
 
 ## Phases
 
@@ -79,7 +80,7 @@ See `.planning/milestones/` for archived phase details.
 </details>
 
 <details>
-<summary>v29.0-v30.8 (Phases 268-323) -- SHIPPED 2026-03-04</summary>
+<summary>v29.0-v30.9 (Phases 268-326) -- SHIPPED 2026-03-05</summary>
 
 - [x] Phase 268-273: 고급 DeFi 프로토콜 설계 (v29.0) -- completed 2026-02-26
 - [x] Phase 274-278: EVM Lending -- Aave V3 (v29.2) -- completed 2026-02-27
@@ -95,8 +96,9 @@ See `.planning/milestones/` for archived phase details.
 - [x] Phase 309-313.1: 운영 기능 확장 구현 (v30.2) -- completed 2026-03-04
 - [x] Phase 314-316: ERC-4337 Account Abstraction (v30.6) -- completed 2026-03-04
 - [x] Phase 317-323: ERC-8004 Trustless Agents (v30.8) -- completed 2026-03-04
+- [x] Phase 324-326: Smart Account DX 개선 (v30.9) -- completed 2026-03-05
 
-See `.planning/milestones/v29.0-ROADMAP.md` through `v30.8-ROADMAP.md` for full details.
+See `.planning/milestones/v29.0-ROADMAP.md` through `v30.9-ROADMAP.md` for full details.
 
 </details>
 
@@ -109,8 +111,8 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v30.8-ROADMAP.md` for full 
 | 198-214 | v2.6-v26.4 | All | Complete | 2026-02-21 |
 | 215-243 | v27.0-v27.4 | All | Complete | 2026-02-23 |
 | 244-267 | v28.0-v28.8 | All | Complete | 2026-02-26 |
-| 268-316 | v29.0-v30.6 | All | Complete | 2026-03-04 |
-| 317-323 | v30.8 | 15/15 | Complete | 2026-03-04 |
+| 268-323 | v29.0-v30.8 | All | Complete | 2026-03-04 |
+| 324-326 | v30.9 | 6/6 | Complete | 2026-03-05 |
 
 ---
-*Last updated: 2026-03-04 -- v30.8 ERC-8004 Trustless Agents 지원 milestone shipped.*
+*Last updated: 2026-03-05 -- Milestone v30.9 shipped. All 326 phases complete.*

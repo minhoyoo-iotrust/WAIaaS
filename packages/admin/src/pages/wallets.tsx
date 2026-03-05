@@ -47,6 +47,7 @@ interface Wallet {
   accountType?: string;
   signerKey?: string | null;
   deployed?: boolean;
+  provider?: { name: string; supportedChains: string[]; paymasterEnabled: boolean } | null;
 }
 
 interface WalletDetail extends Wallet {
@@ -151,6 +152,19 @@ const PRESET_APPROVAL_PREVIEW: Record<string, string> = {
 /** Maps preset value to its default approval method value (for change warnings). */
 const PRESET_APPROVAL_DEFAULTS: Record<string, string> = {
   dcent: 'sdk_ntfy',
+};
+
+/** AA provider options for Smart Account wallet create/edit forms. */
+const AA_PROVIDER_OPTIONS = [
+  { value: 'pimlico', label: 'Pimlico' },
+  { value: 'alchemy', label: 'Alchemy' },
+  { value: 'custom', label: 'Custom' },
+] as const;
+
+/** Dashboard URLs for AA provider API key acquisition (mirrored from @waiaas/core). */
+const AA_PROVIDER_DASHBOARD_URLS: Record<string, string> = {
+  pimlico: 'https://dashboard.pimlico.io',
+  alchemy: 'https://dashboard.alchemy.com',
 };
 
 export function chainNetworkOptions(chain: string): { label: string; value: string }[] {
@@ -348,6 +362,12 @@ function WalletDetailView({ id }: { id: string }) {
   const displayRate = useSignal<number | null>(1);
   const stakingPositions = useSignal<StakingPosition[]>([]);
   const stakingLoading = useSignal(true);
+  const providerEditing = useSignal(false);
+  const editProvider = useSignal('pimlico');
+  const editApiKey = useSignal('');
+  const editBundlerUrl = useSignal('');
+  const editPaymasterUrl = useSignal('');
+  const providerEditLoading = useSignal(false);
 
   const fetchWallet = async () => {
     try {
@@ -420,6 +440,34 @@ function WalletDetailView({ id }: { id: string }) {
     } finally {
       resumeLoading.value = false;
     }
+  };
+
+  const handleProviderUpdate = async () => {
+    providerEditLoading.value = true;
+    try {
+      const body = editProvider.value === 'custom'
+        ? { provider: 'custom', bundlerUrl: editBundlerUrl.value, paymasterUrl: editPaymasterUrl.value || undefined }
+        : { provider: editProvider.value, apiKey: editApiKey.value };
+      await apiPut(API.WALLET_PROVIDER(id), body);
+      showToast('success', 'Provider updated');
+      providerEditing.value = false;
+      editApiKey.value = '';
+      editBundlerUrl.value = '';
+      editPaymasterUrl.value = '';
+      await fetchWallet();
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      providerEditLoading.value = false;
+    }
+  };
+
+  const startProviderEdit = () => {
+    if (wallet.value?.provider) {
+      editProvider.value = wallet.value.provider.name;
+    }
+    providerEditing.value = true;
   };
 
   const startEdit = () => {
@@ -757,6 +805,79 @@ function WalletDetailView({ id }: { id: string }) {
                   {wallet.value.deployed ? 'Yes' : 'Not yet'}
                 </Badge>
               </DetailRow>
+              {wallet.value.provider ? (
+                <>
+                  <DetailRow label="Provider">
+                    <Badge variant="info">{wallet.value.provider.name}</Badge>
+                  </DetailRow>
+                  <DetailRow label="Supported Chains" value={wallet.value.provider.supportedChains.join(', ') || '--'} />
+                  <DetailRow label="Paymaster">
+                    <Badge variant={wallet.value.provider.paymasterEnabled ? 'success' : 'neutral'}>
+                      {wallet.value.provider.paymasterEnabled ? 'Enabled' : 'Disabled'}
+                    </Badge>
+                  </DetailRow>
+                </>
+              ) : (
+                <DetailRow label="Provider" value="Not configured" />
+              )}
+              {!providerEditing.value ? (
+                <div style={{ marginTop: 'var(--space-2)' }}>
+                  <Button variant="secondary" size="sm" onClick={startProviderEdit}>
+                    Change Provider
+                  </Button>
+                </div>
+              ) : (
+                <div class="inline-form" style={{ marginTop: 'var(--space-3)', padding: 'var(--space-3)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)' }}>
+                  <FormField
+                    label="Provider"
+                    name="editProvider"
+                    type="select"
+                    value={editProvider.value}
+                    onChange={(v) => { editProvider.value = v as string; }}
+                    options={AA_PROVIDER_OPTIONS.map((o) => ({ label: o.label, value: o.value }))}
+                  />
+                  {editProvider.value !== 'custom' ? (
+                    <>
+                      <FormField
+                        label="API Key"
+                        name="editApiKey"
+                        value={editApiKey.value}
+                        onChange={(v) => { editApiKey.value = v as string; }}
+                        placeholder="Paste your provider API key"
+                      />
+                      {AA_PROVIDER_DASHBOARD_URLS[editProvider.value] && (
+                        <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', margin: '0 0 0.5rem 0' }}>
+                          Get your API key at:{' '}
+                          <a href={AA_PROVIDER_DASHBOARD_URLS[editProvider.value]} target="_blank" rel="noopener noreferrer">
+                            {AA_PROVIDER_OPTIONS.find((o) => o.value === editProvider.value)?.label} Dashboard
+                          </a>
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <FormField
+                        label="Bundler URL"
+                        name="editBundlerUrl"
+                        value={editBundlerUrl.value}
+                        onChange={(v) => { editBundlerUrl.value = v as string; }}
+                        placeholder="https://..."
+                      />
+                      <FormField
+                        label="Paymaster URL (optional)"
+                        name="editPaymasterUrl"
+                        value={editPaymasterUrl.value}
+                        onChange={(v) => { editPaymasterUrl.value = v as string; }}
+                        placeholder="https://..."
+                      />
+                    </>
+                  )}
+                  <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-2)' }}>
+                    <Button onClick={handleProviderUpdate} loading={providerEditLoading.value}>Save</Button>
+                    <Button variant="secondary" onClick={() => { providerEditing.value = false; }}>Cancel</Button>
+                  </div>
+                </div>
+              )}
             </>
           )}
           {wallet.value.status === 'SUSPENDED' && (
@@ -2168,6 +2289,10 @@ function WalletListContent() {
   const formChain = useSignal('solana');
   const formEnvironment = useSignal('testnet');
   const formAccountType = useSignal('eoa');
+  const formProvider = useSignal('pimlico');
+  const formApiKey = useSignal('');
+  const formBundlerUrl = useSignal('');
+  const formPaymasterUrl = useSignal('');
   const formError = useSignal<string | null>(null);
   const formLoading = useSignal(false);
   const createdSessionToken = useSignal<string | null>(null);
@@ -2260,6 +2385,14 @@ function WalletListContent() {
       };
       if (formAccountType.value === 'smart') {
         createBody.accountType = 'smart';
+        if (formProvider.value === 'custom') {
+          createBody.provider = 'custom';
+          createBody.bundlerUrl = formBundlerUrl.value;
+          if (formPaymasterUrl.value) createBody.paymasterUrl = formPaymasterUrl.value;
+        } else {
+          createBody.provider = formProvider.value;
+          createBody.apiKey = formApiKey.value;
+        }
       }
       const result = await apiPost<Wallet & { session?: { id: string; token: string; expiresAt: number } | null }>(API.WALLETS, createBody);
       if (result.session?.token) {
@@ -2272,6 +2405,10 @@ function WalletListContent() {
       formChain.value = 'solana';
       formEnvironment.value = 'testnet';
       formAccountType.value = 'eoa';
+      formProvider.value = 'pimlico';
+      formApiKey.value = '';
+      formBundlerUrl.value = '';
+      formPaymasterUrl.value = '';
       showForm.value = false;
       loading.value = true;
       await fetchWallets();
@@ -2291,6 +2428,10 @@ function WalletListContent() {
     formChain.value = value as string;
     if (value === 'solana') {
       formAccountType.value = 'eoa';
+      formProvider.value = 'pimlico';
+      formApiKey.value = '';
+      formBundlerUrl.value = '';
+      formPaymasterUrl.value = '';
     }
   };
 
@@ -2340,6 +2481,54 @@ function WalletListContent() {
                 { label: 'Smart Account (ERC-4337)', value: 'smart' },
               ]}
             />
+          )}
+          {formAccountType.value === 'smart' && formChain.value === 'ethereum' && (
+            <>
+              <FormField
+                label="Provider"
+                name="provider"
+                type="select"
+                value={formProvider.value}
+                onChange={(v) => { formProvider.value = v as string; }}
+                options={AA_PROVIDER_OPTIONS.map((o) => ({ label: o.label, value: o.value }))}
+              />
+              {formProvider.value !== 'custom' ? (
+                <>
+                  <FormField
+                    label="API Key"
+                    name="apiKey"
+                    value={formApiKey.value}
+                    onChange={(v) => { formApiKey.value = v as string; }}
+                    placeholder="Paste your provider API key"
+                  />
+                  {AA_PROVIDER_DASHBOARD_URLS[formProvider.value] && (
+                    <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', margin: '0 0 0.5rem 0' }}>
+                      Get your API key at:{' '}
+                      <a href={AA_PROVIDER_DASHBOARD_URLS[formProvider.value]} target="_blank" rel="noopener noreferrer">
+                        {AA_PROVIDER_OPTIONS.find((o) => o.value === formProvider.value)?.label} Dashboard
+                      </a>
+                    </p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <FormField
+                    label="Bundler URL"
+                    name="bundlerUrl"
+                    value={formBundlerUrl.value}
+                    onChange={(v) => { formBundlerUrl.value = v as string; }}
+                    placeholder="https://..."
+                  />
+                  <FormField
+                    label="Paymaster URL (optional)"
+                    name="paymasterUrl"
+                    value={formPaymasterUrl.value}
+                    onChange={(v) => { formPaymasterUrl.value = v as string; }}
+                    placeholder="https://..."
+                  />
+                </>
+              )}
+            </>
           )}
           <FormField
             label="Environment"

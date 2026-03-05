@@ -114,6 +114,10 @@ function createMockContext(overrides: Partial<PipelineContext> = {}): PipelineCo
       chain: 'evm',
       environment: 'testnet',
       accountType: 'smart',
+      aaProvider: 'custom',
+      aaProviderApiKeyEncrypted: null,
+      aaBundlerUrl: 'https://bundler.example.com',
+      aaPaymasterUrl: null,
     },
     resolvedNetwork: 'ethereum-sepolia',
     request: {

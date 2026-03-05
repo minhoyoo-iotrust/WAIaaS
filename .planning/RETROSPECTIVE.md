@@ -312,6 +312,46 @@
 
 ---
 
+## Milestone: v30.9 — Smart Account DX 개선
+
+**Shipped:** 2026-03-05
+**Phases:** 3 | **Plans:** 6 | **Sessions:** 1
+
+### What Was Built
+- Per-wallet provider model — AA_PROVIDER_NAMES enum(pimlico/alchemy/custom), DB v41 4 columns, 23 global settings 제거
+- Auto URL assembly — AA_PROVIDER_CHAIN_MAP(10 networks × 2 providers), API key AES-256-GCM 암호화
+- Agent self-service — PUT /v1/wallets/:id/provider dual-auth, PROVIDER_UPDATED audit event
+- Wallet response provider status — name/supportedChains/paymasterEnabled or null
+- Admin UI — 조건부 프로바이더 필드, dashboard link 동적 전환, detail page inline edit
+- Agent discovery — connect-info provider prompt, MCP get_provider_status 29th tool
+
+### What Worked
+- v30.6 Smart Account 기반이 잘 준비되어 provider 모델 전환이 명확한 리팩토링으로 완료
+- 23개 글로벌 설정 일괄 제거를 clean break로 처리 — deprecated 과도기 없이 깔끔
+- Dual-auth 패턴(Bearer prefix 감지)으로 sessionAuth/masterAuth 분기가 단일 엔드포인트에서 자연스럽게 동작
+- buildProviderStatus 헬퍼를 wallets.ts에서 정의 후 connect-info에서 재사용(DRY)
+
+### What Was Inefficient
+- REQUIREMENTS.md 7개 checkbox가 Phase 324 구현 시 미갱신 — 감사에서 발견 후 일괄 수정 (반복 이슈)
+- Skill files 업데이트가 Phase 326까지 누락 — 감사에서 HIGH severity로 발견 후 수정
+
+### Patterns Established
+- Per-wallet provider model: 글로벌 설정을 엔티티(지갑) 레벨로 내리는 패턴 (v29.10 ntfy와 동일 흐름)
+- HKDF 서브키 분리: 'aa-provider-key-encryption' info string으로 settings-crypto와 독립 키 파생
+- Admin UI dashboard URL 브라우저 사이드 미러: @waiaas/core 미사용 환경에서 상수 인라인
+
+### Key Lessons
+- REQUIREMENTS.md checkbox 갱신을 plan 실행 단계에서 자동화해야 반복 누락 방지 가능
+- Skill files는 API 변경과 동시에 업데이트해야 함 — Phase별로 체크리스트에 포함 필요
+- 글로벌→per-entity 전환 시 clean break(deprecated 없이 삭제)가 v30.6 직후라서 가능했음
+
+### Cost Observations
+- Model mix: 100% opus (quality profile)
+- Sessions: 1
+- Notable: 73 files, +7,214/-419 lines, 2일 완료 — DB+API+UI+MCP 풀스택 프로바이더 모델 전환
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -326,6 +366,7 @@
 | v30.0 | 1 | 5 | 운영 기능 6개 설계 전용, 30 파일 50분 완료 |
 | v30.6 | 1 | 3 | ERC-4337 Smart Account, 49 파일 ~2h 완료 |
 | v30.8 | 1 | 7 | ERC-8004 Trustless Agents 5-package 통합, 121 파일 1일 완료 |
+| v30.9 | 1 | 3 | Smart Account DX 개선 per-wallet provider 전환, 73 파일 2일 완료 |
 
 ### Cumulative Quality
 
@@ -339,6 +380,7 @@
 | v30.0 | ~5,737 (unchanged) | unchanged | +40 decisions |
 | v30.6 | ~6,486 (+749) | maintained | +8 decisions |
 | v30.8 | ~6,668 (+182) | maintained | +36 decisions |
+| v30.9 | ~6,742 (+74) | maintained | +12 decisions |
 
 ### Top Lessons (Verified Across Milestones)
 

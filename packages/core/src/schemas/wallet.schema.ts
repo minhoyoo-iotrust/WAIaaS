@@ -4,6 +4,7 @@ import {
   EnvironmentTypeEnum,
   WalletStatusEnum,
   AccountTypeEnum,
+  AaProviderNameEnum,
 } from '../enums/index.js';
 
 export const WalletSchema = z.object({
@@ -19,16 +20,55 @@ export const WalletSchema = z.object({
   signerKey: z.string().nullable().default(null),
   deployed: z.boolean().default(true),
   entryPoint: z.string().nullable().default(null),
+  aaProvider: AaProviderNameEnum.nullable().default(null),
+  aaBundlerUrl: z.string().nullable().default(null),
+  aaPaymasterUrl: z.string().nullable().default(null),
   createdAt: z.number().int(),
   updatedAt: z.number().int(),
 });
 export type Wallet = z.infer<typeof WalletSchema>;
 
-export const CreateWalletRequestSchema = z.object({
+/** Base shape for wallet creation request (before superRefine). */
+const CreateWalletRequestBaseSchema = z.object({
   name: z.string().min(1).max(100),
   chain: ChainTypeEnum.default('solana'),
   environment: EnvironmentTypeEnum.default('testnet'),
   createSession: z.boolean().default(true),
   accountType: AccountTypeEnum.default('eoa'),
+  aaProvider: AaProviderNameEnum.optional(),
+  aaProviderApiKey: z.string().min(1).optional(),
+  aaBundlerUrl: z.string().url().optional(),
+  aaPaymasterUrl: z.string().url().optional(),
+});
+
+export const CreateWalletRequestSchema = CreateWalletRequestBaseSchema.superRefine((data, ctx) => {
+  if (data.accountType === 'smart') {
+    if (!data.aaProvider) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Smart Account wallet requires provider configuration (aaProvider)',
+        path: ['aaProvider'],
+      });
+      return;
+    }
+    if (data.aaProvider === 'pimlico' || data.aaProvider === 'alchemy') {
+      if (!data.aaProviderApiKey) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Provider '${data.aaProvider}' requires an API key (aaProviderApiKey)`,
+          path: ['aaProviderApiKey'],
+        });
+      }
+    }
+    if (data.aaProvider === 'custom') {
+      if (!data.aaBundlerUrl) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Custom provider requires bundler URL (aaBundlerUrl)",
+          path: ['aaBundlerUrl'],
+        });
+      }
+    }
+  }
 });
 export type CreateWalletRequest = z.infer<typeof CreateWalletRequestSchema>;

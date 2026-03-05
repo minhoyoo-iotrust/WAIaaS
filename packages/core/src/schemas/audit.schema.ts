@@ -13,7 +13,7 @@
 import { z } from 'zod';
 
 // ---------------------------------------------------------------------------
-// AuditEventType (20 events -- OPS-02 section 2.1)
+// AuditEventType (21 events -- OPS-02 section 2.1 + PROVIDER_UPDATED)
 // ---------------------------------------------------------------------------
 
 export const AUDIT_EVENT_TYPES = [
@@ -36,6 +36,7 @@ export const AUDIT_EVENT_TYPES = [
   'AUTO_STOP_TRIGGERED',
   'MASTER_AUTH_FAILED',
   'OWNER_REGISTERED',
+  'PROVIDER_UPDATED',
   'NOTIFICATION_TOTAL_FAILURE',
 ] as const;
 

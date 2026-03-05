@@ -25,6 +25,7 @@ import {
   BatchRequestSchema,
   ApprovalMethodSchema,
   WalletPresetTypeSchema,
+  AaProviderNameEnum,
 } from '@waiaas/core';
 import type { ErrorCode } from '@waiaas/core';
 
@@ -60,6 +61,18 @@ export const HealthResponseSchema = z
   .openapi('HealthResponse');
 
 // ---------------------------------------------------------------------------
+// Provider Status Schema (Phase 325: wallet provider status)
+// ---------------------------------------------------------------------------
+
+export const ProviderStatusSchema = z
+  .object({
+    name: AaProviderNameEnum,
+    supportedChains: z.array(z.string()),
+    paymasterEnabled: z.boolean(),
+  })
+  .openapi('ProviderStatus');
+
+// ---------------------------------------------------------------------------
 // Wallet CRUD Response Schemas
 // ---------------------------------------------------------------------------
 
@@ -78,6 +91,7 @@ export const WalletCrudResponseSchema = z
     accountType: z.enum(['eoa', 'smart']).default('eoa'),
     signerKey: z.string().nullable().default(null),
     deployed: z.boolean().default(true),
+    provider: ProviderStatusSchema.nullable().default(null),
     createdAt: z.number().int(),
   })
   .openapi('WalletCrudResponse');
@@ -566,6 +580,7 @@ export const WalletDetailResponseSchema = z
     accountType: z.enum(['eoa', 'smart']).default('eoa'),
     signerKey: z.string().nullable().default(null),
     deployed: z.boolean().default(true),
+    provider: ProviderStatusSchema.nullable().default(null),
     suspendedAt: z.number().int().nullable().optional(),
     suspensionReason: z.string().nullable().optional(),
     createdAt: z.number().int(),
@@ -644,6 +659,47 @@ export const WalletResumeResponseSchema = z
   .openapi('WalletResumeResponse');
 
 // ---------------------------------------------------------------------------
+// Set Provider Request/Response Schemas (PUT /wallets/:id/provider)
+// ---------------------------------------------------------------------------
+
+export const SetProviderRequestSchema = z
+  .object({
+    provider: AaProviderNameEnum,
+    apiKey: z.string().min(1).optional(),
+    bundlerUrl: z.string().url().optional(),
+    paymasterUrl: z.string().url().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.provider === 'pimlico' || data.provider === 'alchemy') {
+      if (!data.apiKey) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `apiKey is required for ${data.provider} provider`,
+          path: ['apiKey'],
+        });
+      }
+    }
+    if (data.provider === 'custom') {
+      if (!data.bundlerUrl) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'bundlerUrl is required for custom provider',
+          path: ['bundlerUrl'],
+        });
+      }
+    }
+  })
+  .openapi('SetProviderRequest');
+
+export const SetProviderResponseSchema = z
+  .object({
+    id: z.string().uuid(),
+    provider: ProviderStatusSchema,
+    updatedAt: z.number().int(),
+  })
+  .openapi('SetProviderResponse');
+
+// ---------------------------------------------------------------------------
 // Admin Response Schemas (6 admin endpoints)
 // ---------------------------------------------------------------------------
 
@@ -672,6 +728,7 @@ export const AdminStatusResponseSchema = z
         status: z.string(),
         toAddress: z.string().nullable(),
         amount: z.string().nullable(),
+        formattedAmount: z.string().nullable(),
         amountUsd: z.number().nullable(),
         network: z.string().nullable(),
         txHash: z.string().nullable(),
@@ -1034,6 +1091,52 @@ export const TxSignResponseSchema = z
     }),
   })
   .openapi('TxSignResponse');
+
+// ---------------------------------------------------------------------------
+// Sign Message Schemas (POST /v1/transactions/sign-message)
+// ---------------------------------------------------------------------------
+
+export const TxSignMessageRequestSchema = z
+  .object({
+    message: z.string().optional().openapi({
+      description: 'Message to sign (hex 0x-prefixed or UTF-8 string). Required when signType is "personal".',
+    }),
+    signType: z.enum(['personal', 'typedData']).default('personal').openapi({
+      description: 'Sign type: "personal" (default) for raw message, "typedData" for EIP-712 structured data.',
+    }),
+    typedData: z
+      .object({
+        domain: z.object({
+          name: z.string().optional(),
+          version: z.string().optional(),
+          chainId: z.union([z.number(), z.string()]).optional(),
+          verifyingContract: z.string().optional(),
+          salt: z.string().optional(),
+        }),
+        types: z.record(z.array(z.object({ name: z.string(), type: z.string() }))),
+        primaryType: z.string(),
+        message: z.record(z.unknown()),
+      })
+      .optional()
+      .openapi({
+        description: 'EIP-712 typed data structure. Required when signType is "typedData".',
+      }),
+    network: z.string().optional().openapi({
+      description: 'Target network (optional)',
+    }),
+    walletId: z.string().uuid().optional().openapi({
+      description: 'Target wallet ID (optional -- auto-resolved if session has single wallet)',
+    }),
+  })
+  .openapi('TxSignMessageRequest');
+
+export const TxSignMessageResponseSchema = z
+  .object({
+    id: z.string().uuid(),
+    signature: z.string(),
+    signType: z.enum(['personal', 'typedData']),
+  })
+  .openapi('TxSignMessageResponse');
 
 // ---------------------------------------------------------------------------
 // Dry-Run Simulation Result Schema (POST /v1/transactions/simulate)

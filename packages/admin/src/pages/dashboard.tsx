@@ -19,6 +19,7 @@ interface RecentTransaction {
   status: string;
   toAddress: string | null;
   amount: string | null;
+  formattedAmount: string | null;
   amountUsd: number | null;
   network: string | null;
   txHash: string | null;
@@ -171,8 +172,9 @@ function buildTxColumns(
       header: 'Amount',
       render: (tx) => {
         if (!tx.amount) return '\u2014';
+        const amountText = tx.formattedAmount ?? tx.amount;
         const display = formatWithDisplay(tx.amountUsd, displayCurrency, displayRate);
-        return display ? `${tx.amount} (${display})` : tx.amount;
+        return display ? `${amountText} (${display})` : amountText;
       },
     },
     {

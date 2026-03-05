@@ -197,7 +197,7 @@ describe('Smart Account Wallet Creation', () => {
     const res = await app.request('/v1/wallets', {
       method: 'POST',
       headers: masterAuthHeaders(),
-      body: JSON.stringify({ name: 'Smart', chain: 'ethereum', environment: 'testnet', accountType: 'smart' }),
+      body: JSON.stringify({ name: 'Smart', chain: 'ethereum', environment: 'testnet', accountType: 'smart', aaProvider: 'pimlico', aaProviderApiKey: 'test-key' }),
     });
 
     expect(res.status).toBe(400);
@@ -220,7 +220,7 @@ describe('Smart Account Wallet Creation', () => {
     const res = await app.request('/v1/wallets', {
       method: 'POST',
       headers: masterAuthHeaders(),
-      body: JSON.stringify({ name: 'Smart', chain: 'solana', environment: 'testnet', accountType: 'smart' }),
+      body: JSON.stringify({ name: 'Smart', chain: 'solana', environment: 'testnet', accountType: 'smart', aaProvider: 'pimlico', aaProviderApiKey: 'test-key' }),
     });
 
     expect(res.status).toBe(400);
@@ -232,23 +232,25 @@ describe('Smart Account Wallet Creation', () => {
   // Bundler URL validation
   // -----------------------------------------------------------------------
 
-  it('POST /wallets with accountType smart without bundler_url returns 400', async () => {
+  it('POST /wallets with accountType smart custom provider without bundler_url returns 400', async () => {
     createTestApp({
       settingsOverrides: {
         'smart_account.enabled': 'true',
-        'smart_account.bundler_url': '',
       },
     });
 
     const res = await app.request('/v1/wallets', {
       method: 'POST',
       headers: masterAuthHeaders(),
-      body: JSON.stringify({ name: 'Smart', chain: 'ethereum', environment: 'testnet', accountType: 'smart' }),
+      body: JSON.stringify({ name: 'Smart', chain: 'ethereum', environment: 'testnet', accountType: 'smart', aaProvider: 'custom' }),
     });
 
     expect(res.status).toBe(400);
     const body = await json(res);
-    expect((body as any).error?.message || (body as any).message).toContain('Bundler URL');
+    // Zod superRefine error is wrapped in OpenAPI validation hook with details.issues
+    const issues = (body as any).details?.issues ?? [];
+    const issueMessages = issues.map((i: any) => i.message).join(' ');
+    expect(issueMessages).toContain('bundler');
   });
 
   // -----------------------------------------------------------------------

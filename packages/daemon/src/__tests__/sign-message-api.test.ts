@@ -1,0 +1,546 @@
+/**
+ * Integration tests for POST /v1/transactions/sign-message (sign message pipeline REST API).
+ *
+ * Tests:
+ * 1. 200: signType 'personal' with message string -> signature returned
+ * 2. 200: signType omitted defaults to 'personal'
+ * 3. 200: signType 'typedData' with valid EIP-712 data -> signature returned (EVM)
+ * 4. 400: signType 'typedData' without typedData field
+ * 5. 400: signType 'typedData' on Solana wallet (EVM only)
+ * 6. 200: signType 'personal' with hex message (0x-prefixed)
+ * 7. 400: signType 'personal' without message field
+ * 8. DB record: type='SIGN', status='SIGNED'
+ *
+ * @see packages/daemon/src/api/routes/transactions.ts (signMessageRoute)
+ * @see packages/daemon/src/pipeline/sign-message.ts (executeSignMessage)
+ */
+
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import argon2 from 'argon2';
+import { createApp } from '../api/server.js';
+import { createDatabase, pushSchema, generateId } from '../infrastructure/database/index.js';
+import { JwtSecretManager, type JwtPayload } from '../infrastructure/jwt/index.js';
+import type { DatabaseConnection } from '../infrastructure/database/index.js';
+import type { DaemonConfig } from '../infrastructure/config/loader.js';
+import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
+import { DatabasePolicyEngine } from '../pipeline/database-policy-engine.js';
+import type {
+  IChainAdapter,
+  BalanceInfo,
+  HealthInfo,
+  UnsignedTransaction,
+  SimulationResult,
+  SubmitResult,
+  ParsedTransaction,
+  SignedTransaction,
+} from '@waiaas/core';
+import type { AdapterPool } from '../infrastructure/adapter-pool.js';
+import type { OpenAPIHono } from '@hono/zod-openapi';
+import { privateKeyToAccount, generatePrivateKey } from 'viem/accounts';
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+async function json(res: Response): Promise<Record<string, unknown>> {
+  return (await res.json()) as Record<string, unknown>;
+}
+
+const HOST = '127.0.0.1:3100';
+const TEST_MASTER_PASSWORD = 'test-master-password';
+
+function mockConfig(): DaemonConfig {
+  return {
+    daemon: {
+      port: 3100,
+      hostname: '127.0.0.1',
+      log_level: 'info',
+      log_file: 'logs/daemon.log',
+      log_max_size: '50MB',
+      log_max_files: 5,
+      pid_file: 'daemon.pid',
+      shutdown_timeout: 30,
+      dev_mode: false,
+      admin_ui: true,
+      admin_timeout: 900,
+    },
+    keystore: {
+      argon2_memory: 65536,
+      argon2_time: 3,
+      argon2_parallelism: 4,
+      backup_on_rotate: true,
+    },
+    database: {
+      path: ':memory:',
+      wal_checkpoint_interval: 300,
+      busy_timeout: 5000,
+      cache_size: 64000,
+      mmap_size: 268435456,
+    },
+    rpc: {
+      solana_mainnet: 'https://api.mainnet-beta.solana.com',
+      solana_devnet: 'https://api.devnet.solana.com',
+      solana_testnet: 'https://api.testnet.solana.com',
+      solana_ws_mainnet: 'wss://api.mainnet-beta.solana.com',
+      solana_ws_devnet: 'wss://api.devnet.solana.com',
+      evm_ethereum_mainnet: 'https://eth.drpc.org',
+      evm_ethereum_sepolia: 'https://sepolia.drpc.org',
+      evm_polygon_mainnet: 'https://polygon.drpc.org',
+      evm_polygon_amoy: 'https://polygon-amoy.drpc.org',
+      evm_arbitrum_mainnet: 'https://arbitrum.drpc.org',
+      evm_arbitrum_sepolia: 'https://arbitrum-sepolia.drpc.org',
+      evm_optimism_mainnet: 'https://optimism.drpc.org',
+      evm_optimism_sepolia: 'https://optimism-sepolia.drpc.org',
+      evm_base_mainnet: 'https://base.drpc.org',
+      evm_base_sepolia: 'https://base-sepolia.drpc.org',
+    },
+    notifications: {
+      enabled: false,
+      min_channels: 2,
+      health_check_interval: 300,
+      log_retention_days: 30,
+      dedup_ttl: 300,
+      telegram_bot_token: '',
+      telegram_chat_id: '',
+      discord_webhook_url: '',
+      ntfy_server: 'https://ntfy.sh',
+      ntfy_topic: '',
+      locale: 'en' as const,
+      rate_limit_rpm: 20,
+    },
+    security: {
+      jwt_secret: '',
+      max_sessions_per_wallet: 5,
+      max_pending_tx: 10,
+      nonce_storage: 'memory',
+      nonce_cache_max: 1000,
+      nonce_cache_ttl: 300,
+      rate_limit_global_ip_rpm: 1000,
+      rate_limit_session_rpm: 300,
+      rate_limit_tx_rpm: 10,
+      cors_origins: ['http://localhost:3100'],
+      autostop_consecutive_failures_threshold: 5,
+      policy_defaults_delay_seconds: 300,
+      policy_defaults_approval_timeout: 3600,
+      kill_switch_recovery_cooldown: 1800,
+      kill_switch_max_recovery_attempts: 3,
+    },
+    walletconnect: {
+      project_id: '',
+    },
+  };
+}
+
+// Use a real private key so viem signing actually works
+const REAL_PRIVATE_KEY = generatePrivateKey();
+const REAL_ACCOUNT = privateKeyToAccount(REAL_PRIVATE_KEY);
+const EVM_PUBLIC_KEY = REAL_ACCOUNT.address;
+const SOLANA_PUBLIC_KEY = '11111111111111111111111111111112';
+
+function mockKeyStore(): LocalKeyStore {
+  const keyBytes = Buffer.from(REAL_PRIVATE_KEY.slice(2), 'hex');
+  return {
+    generateKeyPair: async () => ({
+      publicKey: EVM_PUBLIC_KEY,
+      encryptedPrivateKey: new Uint8Array(64),
+    }),
+    decryptPrivateKey: async () => new Uint8Array(keyBytes),
+    releaseKey: vi.fn(),
+    hasKey: async () => true,
+    deleteKey: async () => {},
+    lockAll: () => {},
+    sodiumAvailable: true,
+  } as unknown as LocalKeyStore;
+}
+
+const DEFAULT_PARSED_TX: ParsedTransaction = {
+  operations: [{ type: 'NATIVE_TRANSFER', to: '0x1234', amount: 1_000_000_000n }],
+  rawTx: 'base64-unsigned-tx',
+};
+const DEFAULT_SIGNED_TX: SignedTransaction = {
+  signedTransaction: 'signed-base64-tx',
+  txHash: 'mock-tx-hash-123',
+};
+
+function mockAdapter(): IChainAdapter {
+  return {
+    chain: 'evm' as const,
+    network: 'ethereum-mainnet',
+    connect: async () => {},
+    disconnect: async () => {},
+    isConnected: () => true,
+    getHealth: async (): Promise<HealthInfo> => ({ healthy: true, latencyMs: 1 }),
+    getBalance: async (addr: string): Promise<BalanceInfo> => ({
+      address: addr,
+      balance: 1_000_000_000_000_000_000n,
+      decimals: 18,
+      symbol: 'ETH',
+    }),
+    buildTransaction: async (): Promise<UnsignedTransaction> => ({
+      chain: 'evm',
+      serialized: new Uint8Array(128),
+      estimatedFee: 5000n,
+      metadata: {},
+    }),
+    simulateTransaction: async (): Promise<SimulationResult> => ({
+      success: true,
+      logs: ['success'],
+    }),
+    signTransaction: async (): Promise<Uint8Array> => new Uint8Array(256),
+    submitTransaction: async (): Promise<SubmitResult> => ({
+      txHash: 'mock-tx-hash-' + Date.now(),
+      status: 'submitted',
+    }),
+    waitForConfirmation: async (txHash: string): Promise<SubmitResult> => ({
+      txHash,
+      status: 'confirmed',
+      confirmations: 1,
+    }),
+    getAssets: async () => [],
+    estimateFee: async () => { throw new Error('not implemented'); },
+    buildTokenTransfer: async () => { throw new Error('not implemented'); },
+    getTokenInfo: async () => { throw new Error('not implemented'); },
+    buildContractCall: async () => { throw new Error('not implemented'); },
+    buildApprove: async () => { throw new Error('not implemented'); },
+    buildBatch: async () => { throw new Error('not implemented'); },
+    getTransactionFee: async () => { throw new Error('not implemented'); },
+    getCurrentNonce: async () => 0,
+    sweepAll: async () => { throw new Error('not implemented'); },
+    parseTransaction: vi.fn().mockResolvedValue(DEFAULT_PARSED_TX),
+    signExternalTransaction: vi.fn().mockResolvedValue(DEFAULT_SIGNED_TX),
+  } as unknown as IChainAdapter;
+}
+
+function mockAdapterPool(): AdapterPool {
+  const a = mockAdapter();
+  return {
+    resolve: vi.fn().mockResolvedValue(a),
+    disconnectAll: vi.fn().mockResolvedValue(undefined),
+    get size() { return 0; },
+  } as unknown as AdapterPool;
+}
+
+// ---------------------------------------------------------------------------
+// Test setup
+// ---------------------------------------------------------------------------
+
+let conn: DatabaseConnection;
+let app: OpenAPIHono;
+let jwtSecretManager: JwtSecretManager;
+let policyEngine: DatabasePolicyEngine;
+
+beforeEach(async () => {
+  conn = createDatabase(':memory:');
+  pushSchema(conn.sqlite);
+
+  const masterPasswordHash = await argon2.hash(TEST_MASTER_PASSWORD, {
+    type: argon2.argon2id,
+    memoryCost: 4096,
+    timeCost: 2,
+    parallelism: 1,
+  });
+
+  jwtSecretManager = new JwtSecretManager(conn.db);
+  await jwtSecretManager.initialize();
+
+  policyEngine = new DatabasePolicyEngine(conn.db, conn.sqlite);
+
+  app = createApp({
+    db: conn.db,
+    sqlite: conn.sqlite,
+    keyStore: mockKeyStore(),
+    masterPassword: TEST_MASTER_PASSWORD,
+    masterPasswordHash,
+    config: mockConfig(),
+    adapterPool: mockAdapterPool(),
+    policyEngine,
+    jwtSecretManager,
+  });
+});
+
+afterEach(() => {
+  conn.sqlite.close();
+});
+
+// ---------------------------------------------------------------------------
+// Auth helpers
+// ---------------------------------------------------------------------------
+
+/** Create a wallet via raw SQL INSERT and return its ID. */
+function createTestWallet(chain: 'evm' | 'solana' = 'evm'): string {
+  const id = generateId();
+  const now = Math.floor(Date.now() / 1000);
+  const publicKey = chain === 'evm' ? EVM_PUBLIC_KEY : SOLANA_PUBLIC_KEY;
+  const _environment = chain === 'evm' ? 'production' : 'testnet';
+  conn.sqlite
+    .prepare(
+      `INSERT INTO wallets (id, name, chain, environment, public_key, status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(id, `test-${chain}-wallet`, chain === 'evm' ? 'ethereum' : 'solana', chain === 'evm' ? 'mainnet' : 'testnet', publicKey, 'ACTIVE', now, now);
+  return id;
+}
+
+/** Create a session token for the given wallet. Returns "Bearer <token>". */
+async function createSessionToken(walletId: string): Promise<string> {
+  const sessionId = generateId();
+  const now = Math.floor(Date.now() / 1000);
+
+  conn.sqlite
+    .prepare(
+      `INSERT INTO sessions (id, token_hash, expires_at, absolute_expires_at, created_at)
+       VALUES (?, ?, ?, ?, ?)`,
+    )
+    .run(sessionId, `hash-${sessionId}`, now + 86400, now + 86400 * 30, now);
+  conn.sqlite
+    .prepare(
+      `INSERT INTO session_wallets (session_id, wallet_id, created_at)
+       VALUES (?, ?, ?)`,
+    )
+    .run(sessionId, walletId, now);
+
+  const payload: JwtPayload = {
+    sub: sessionId,
+    iat: now,
+    exp: now + 3600,
+  };
+  const token = await jwtSecretManager.signToken(payload);
+  return `Bearer ${token}`;
+}
+
+// ---------------------------------------------------------------------------
+// POST /v1/transactions/sign-message (8 tests)
+// ---------------------------------------------------------------------------
+
+describe('POST /v1/transactions/sign-message', () => {
+  // Test 1: personal sign with message string
+  it('should return 200 with signature for personal sign', async () => {
+    const walletId = createTestWallet('evm');
+    const authHeader = await createSessionToken(walletId);
+
+    const res = await app.request('/v1/transactions/sign-message', {
+      method: 'POST',
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        Authorization: authHeader,
+      },
+      body: JSON.stringify({
+        message: 'Hello, World!',
+        signType: 'personal',
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await json(res);
+    expect(body.signature).toBeDefined();
+    expect(typeof body.signature).toBe('string');
+    expect((body.signature as string).startsWith('0x')).toBe(true);
+    expect(body.signType).toBe('personal');
+    expect(body.id).toBeDefined();
+  });
+
+  // Test 2: signType omitted defaults to personal
+  it('should default signType to personal when omitted', async () => {
+    const walletId = createTestWallet('evm');
+    const authHeader = await createSessionToken(walletId);
+
+    const res = await app.request('/v1/transactions/sign-message', {
+      method: 'POST',
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        Authorization: authHeader,
+      },
+      body: JSON.stringify({
+        message: 'Default sign type test',
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await json(res);
+    expect(body.signType).toBe('personal');
+    expect(body.signature).toBeDefined();
+  });
+
+  // Test 3: EIP-712 typedData signing (EVM)
+  it('should return 200 with signature for EIP-712 typedData', async () => {
+    const walletId = createTestWallet('evm');
+    const authHeader = await createSessionToken(walletId);
+
+    const res = await app.request('/v1/transactions/sign-message', {
+      method: 'POST',
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        Authorization: authHeader,
+      },
+      body: JSON.stringify({
+        signType: 'typedData',
+        typedData: {
+          domain: {
+            name: 'TestDApp',
+            version: '1',
+            chainId: 1,
+            verifyingContract: '0x1234567890abcdef1234567890abcdef12345678',
+          },
+          types: {
+            Order: [
+              { name: 'maker', type: 'address' },
+              { name: 'amount', type: 'uint256' },
+            ],
+          },
+          primaryType: 'Order',
+          message: {
+            maker: '0xabcdef1234567890abcdef1234567890abcdef12',
+            amount: '1000000',
+          },
+        },
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await json(res);
+    expect(body.signature).toBeDefined();
+    expect(typeof body.signature).toBe('string');
+    expect((body.signature as string).startsWith('0x')).toBe(true);
+    expect(body.signType).toBe('typedData');
+    expect(body.id).toBeDefined();
+  });
+
+  // Test 4: signType 'typedData' without typedData field -> 400
+  it('should return 400 when signType is typedData but typedData field is missing', async () => {
+    const walletId = createTestWallet('evm');
+    const authHeader = await createSessionToken(walletId);
+
+    const res = await app.request('/v1/transactions/sign-message', {
+      method: 'POST',
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        Authorization: authHeader,
+      },
+      body: JSON.stringify({
+        signType: 'typedData',
+      }),
+    });
+
+    expect(res.status).toBe(400);
+  });
+
+  // Test 5: Solana wallet with signType 'typedData' -> 400 (EVM only)
+  it('should return 400 when signType is typedData on Solana wallet', async () => {
+    const walletId = createTestWallet('solana');
+    const authHeader = await createSessionToken(walletId);
+
+    const res = await app.request('/v1/transactions/sign-message', {
+      method: 'POST',
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        Authorization: authHeader,
+      },
+      body: JSON.stringify({
+        signType: 'typedData',
+        typedData: {
+          domain: {
+            name: 'TestDApp',
+            version: '1',
+            chainId: 1,
+            verifyingContract: '0x1234567890abcdef1234567890abcdef12345678',
+          },
+          types: {
+            Order: [
+              { name: 'maker', type: 'address' },
+              { name: 'amount', type: 'uint256' },
+            ],
+          },
+          primaryType: 'Order',
+          message: {
+            maker: '0xabcdef1234567890abcdef1234567890abcdef12',
+            amount: '1000000',
+          },
+        },
+      }),
+    });
+
+    expect(res.status).toBe(400);
+    const body = await json(res);
+    expect(body.code).toBe('ACTION_VALIDATION_FAILED');
+  });
+
+  // Test 6: personal sign with hex message
+  it('should return 200 with signature for hex message (0x-prefixed)', async () => {
+    const walletId = createTestWallet('evm');
+    const authHeader = await createSessionToken(walletId);
+
+    const res = await app.request('/v1/transactions/sign-message', {
+      method: 'POST',
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        Authorization: authHeader,
+      },
+      body: JSON.stringify({
+        message: '0xdeadbeef',
+        signType: 'personal',
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await json(res);
+    expect(body.signature).toBeDefined();
+    expect(body.signType).toBe('personal');
+  });
+
+  // Test 7: personal sign without message -> 400
+  it('should return 400 when signType is personal but message is missing', async () => {
+    const walletId = createTestWallet('evm');
+    const authHeader = await createSessionToken(walletId);
+
+    const res = await app.request('/v1/transactions/sign-message', {
+      method: 'POST',
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        Authorization: authHeader,
+      },
+      body: JSON.stringify({
+        signType: 'personal',
+      }),
+    });
+
+    expect(res.status).toBe(400);
+  });
+
+  // Test 8: DB record created with type='SIGN', status='SIGNED'
+  it('should create DB record with type=SIGN and status=SIGNED', async () => {
+    const walletId = createTestWallet('evm');
+    const authHeader = await createSessionToken(walletId);
+
+    const res = await app.request('/v1/transactions/sign-message', {
+      method: 'POST',
+      headers: {
+        Host: HOST,
+        'Content-Type': 'application/json',
+        Authorization: authHeader,
+      },
+      body: JSON.stringify({
+        message: 'DB record test',
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await json(res);
+    const txId = body.id as string;
+
+    // Query DB directly via raw SQL
+    const row = conn.sqlite
+      .prepare('SELECT type, status, wallet_id FROM transactions WHERE id = ?')
+      .get(txId) as { type: string; status: string; wallet_id: string } | undefined;
+    expect(row).toBeDefined();
+    expect(row!.type).toBe('SIGN');
+    expect(row!.status).toBe('SIGNED');
+    expect(row!.wallet_id).toBe(walletId);
+  });
+});

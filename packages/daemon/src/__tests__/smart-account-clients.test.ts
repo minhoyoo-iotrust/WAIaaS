@@ -1,8 +1,8 @@
 /**
- * BundlerClient/PaymasterClient factory unit tests.
+ * Tests for wallet-based AA provider URL resolution.
  *
- * Tests URL resolution (chain-specific override priority), client creation,
- * and error handling when bundler URL is not configured.
+ * Verifies resolveWalletBundlerUrl, resolveWalletPaymasterUrl, and
+ * createSmartAccountBundlerClient with WalletProviderData interface.
  *
  * @see packages/daemon/src/infrastructure/smart-account/smart-account-clients.ts
  */
@@ -29,31 +29,16 @@ vi.mock('viem', () => ({
 }));
 
 import {
-  resolveBundlerUrl,
-  resolvePaymasterUrl,
+  resolveWalletBundlerUrl,
+  resolveWalletPaymasterUrl,
   createSmartAccountBundlerClient,
-  createSmartAccountPaymasterClient,
 } from '../infrastructure/smart-account/smart-account-clients.js';
+import type { WalletProviderData } from '../infrastructure/smart-account/smart-account-clients.js';
 import { WAIaaSError } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function mockSettingsService(overrides: Record<string, string> = {}) {
-  return {
-    get: vi.fn((key: string) => {
-      if (key in overrides) return overrides[key];
-      // For keys not in overrides, return empty string (mimics default empty setting)
-      return '';
-    }),
-    set: vi.fn(),
-    getAll: vi.fn(),
-    getAllMasked: vi.fn(),
-    importFromConfig: vi.fn(),
-    setMany: vi.fn(),
-  } as any;
-}
 
 function mockSmartAccount() {
   return {
@@ -73,77 +58,128 @@ function mockPublicClient() {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('smart-account-clients', () => {
+describe('smart-account-clients (wallet-based provider)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   // -------------------------------------------------------------------------
-  // resolveBundlerUrl
+  // resolveWalletBundlerUrl
   // -------------------------------------------------------------------------
 
-  describe('resolveBundlerUrl', () => {
-    it('returns chain-specific URL when available', () => {
-      const settings = mockSettingsService({
-        'smart_account.bundler_url.ethereum-sepolia': 'https://sepolia-bundler.example.com',
-        'smart_account.bundler_url': 'https://default-bundler.example.com',
-      });
-
-      const result = resolveBundlerUrl(settings, 'ethereum-sepolia');
-      expect(result).toBe('https://sepolia-bundler.example.com');
+  describe('resolveWalletBundlerUrl', () => {
+    it('resolves pimlico + apiKey + ethereum-sepolia', () => {
+      const wallet: WalletProviderData = {
+        aaProvider: 'pimlico',
+        aaProviderApiKey: 'pk_test_123',
+        aaBundlerUrl: null,
+        aaPaymasterUrl: null,
+      };
+      const url = resolveWalletBundlerUrl(wallet, 'ethereum-sepolia');
+      expect(url).toBe('https://api.pimlico.io/v2/sepolia/rpc?apikey=pk_test_123');
     });
 
-    it('returns default URL when chain-specific is empty', () => {
-      const settings = mockSettingsService({
-        'smart_account.bundler_url.ethereum-sepolia': '',
-        'smart_account.bundler_url': 'https://default-bundler.example.com',
-      });
-
-      const result = resolveBundlerUrl(settings, 'ethereum-sepolia');
-      expect(result).toBe('https://default-bundler.example.com');
+    it('resolves alchemy + apiKey + base-mainnet', () => {
+      const wallet: WalletProviderData = {
+        aaProvider: 'alchemy',
+        aaProviderApiKey: 'ak_test_456',
+        aaBundlerUrl: null,
+        aaPaymasterUrl: null,
+      };
+      const url = resolveWalletBundlerUrl(wallet, 'base-mainnet');
+      expect(url).toBe('https://base-mainnet.g.alchemy.com/v2/ak_test_456');
     });
 
-    it('returns null when no URL is configured', () => {
-      const settings = mockSettingsService({
-        'smart_account.bundler_url': '',
-      });
+    it('resolves custom provider with aaBundlerUrl', () => {
+      const wallet: WalletProviderData = {
+        aaProvider: 'custom',
+        aaProviderApiKey: null,
+        aaBundlerUrl: 'https://my-bundler.example.com/rpc',
+        aaPaymasterUrl: null,
+      };
+      const url = resolveWalletBundlerUrl(wallet, 'ethereum-sepolia');
+      expect(url).toBe('https://my-bundler.example.com/rpc');
+    });
 
-      const result = resolveBundlerUrl(settings, 'ethereum-sepolia');
-      expect(result).toBeNull();
+    it('throws CHAIN_ERROR for pimlico + unsupported solana-mainnet', () => {
+      const wallet: WalletProviderData = {
+        aaProvider: 'pimlico',
+        aaProviderApiKey: 'pk_test_123',
+        aaBundlerUrl: null,
+        aaPaymasterUrl: null,
+      };
+      expect(() => resolveWalletBundlerUrl(wallet, 'solana-mainnet')).toThrow(/pimlico/);
+      expect(() => resolveWalletBundlerUrl(wallet, 'solana-mainnet')).toThrow(/solana-mainnet/);
+    });
+
+    it('throws CHAIN_ERROR when no provider configured (null)', () => {
+      const wallet: WalletProviderData = {
+        aaProvider: null,
+        aaProviderApiKey: null,
+        aaBundlerUrl: null,
+        aaPaymasterUrl: null,
+      };
+      expect(() => resolveWalletBundlerUrl(wallet, 'ethereum-sepolia')).toThrow(/not configured/i);
+    });
+
+    it('throws when custom provider has no bundlerUrl', () => {
+      const wallet: WalletProviderData = {
+        aaProvider: 'custom',
+        aaProviderApiKey: null,
+        aaBundlerUrl: null,
+        aaPaymasterUrl: null,
+      };
+      expect(() => resolveWalletBundlerUrl(wallet, 'ethereum-sepolia')).toThrow();
     });
   });
 
   // -------------------------------------------------------------------------
-  // resolvePaymasterUrl
+  // resolveWalletPaymasterUrl
   // -------------------------------------------------------------------------
 
-  describe('resolvePaymasterUrl', () => {
-    it('returns chain-specific URL when available', () => {
-      const settings = mockSettingsService({
-        'smart_account.paymaster_url.ethereum-sepolia': 'https://sepolia-pm.example.com',
-        'smart_account.paymaster_url': 'https://default-pm.example.com',
-      });
-
-      const result = resolvePaymasterUrl(settings, 'ethereum-sepolia');
-      expect(result).toBe('https://sepolia-pm.example.com');
+  describe('resolveWalletPaymasterUrl', () => {
+    it('returns same URL as bundler for pimlico (unified endpoint)', () => {
+      const wallet: WalletProviderData = {
+        aaProvider: 'pimlico',
+        aaProviderApiKey: 'pk_test_123',
+        aaBundlerUrl: null,
+        aaPaymasterUrl: null,
+      };
+      const url = resolveWalletPaymasterUrl(wallet, 'ethereum-sepolia');
+      expect(url).toBe('https://api.pimlico.io/v2/sepolia/rpc?apikey=pk_test_123');
     });
 
-    it('returns default URL when chain-specific is not set', () => {
-      const settings = mockSettingsService({
-        'smart_account.paymaster_url': 'https://default-pm.example.com',
-      });
-
-      const result = resolvePaymasterUrl(settings, 'ethereum-sepolia');
-      expect(result).toBe('https://default-pm.example.com');
+    it('returns aaPaymasterUrl for custom provider', () => {
+      const wallet: WalletProviderData = {
+        aaProvider: 'custom',
+        aaProviderApiKey: null,
+        aaBundlerUrl: 'https://bundler.example.com',
+        aaPaymasterUrl: 'https://paymaster.example.com',
+      };
+      const url = resolveWalletPaymasterUrl(wallet, 'ethereum-sepolia');
+      expect(url).toBe('https://paymaster.example.com');
     });
 
-    it('returns null when paymaster_url is not set', () => {
-      const settings = mockSettingsService({
-        'smart_account.paymaster_url': '',
-      });
+    it('returns null for custom provider without paymasterUrl', () => {
+      const wallet: WalletProviderData = {
+        aaProvider: 'custom',
+        aaProviderApiKey: null,
+        aaBundlerUrl: 'https://bundler.example.com',
+        aaPaymasterUrl: null,
+      };
+      const url = resolveWalletPaymasterUrl(wallet, 'ethereum-sepolia');
+      expect(url).toBeNull();
+    });
 
-      const result = resolvePaymasterUrl(settings, 'ethereum-sepolia');
-      expect(result).toBeNull();
+    it('returns null when no provider configured', () => {
+      const wallet: WalletProviderData = {
+        aaProvider: null,
+        aaProviderApiKey: null,
+        aaBundlerUrl: null,
+        aaPaymasterUrl: null,
+      };
+      const url = resolveWalletPaymasterUrl(wallet, 'ethereum-sepolia');
+      expect(url).toBeNull();
     });
   });
 
@@ -152,108 +188,85 @@ describe('smart-account-clients', () => {
   // -------------------------------------------------------------------------
 
   describe('createSmartAccountBundlerClient', () => {
-    it('creates BundlerClient when bundler_url is configured', () => {
-      const settings = mockSettingsService({
-        'smart_account.bundler_url': 'https://bundler.example.com',
-        'smart_account.paymaster_url': '',
-      });
+    it('creates BundlerClient with wallet provider data', () => {
+      const walletProvider: WalletProviderData = {
+        aaProvider: 'pimlico',
+        aaProviderApiKey: 'pk_test_123',
+        aaBundlerUrl: null,
+        aaPaymasterUrl: null,
+      };
 
       const result = createSmartAccountBundlerClient({
         client: mockPublicClient(),
         account: mockSmartAccount(),
         networkId: 'ethereum-sepolia',
-        settingsService: settings,
+        walletProvider,
       });
 
       expect(result).toBeDefined();
       expect(mockCreateBundlerClient).toHaveBeenCalledOnce();
-      expect(mockHttp).toHaveBeenCalledWith('https://bundler.example.com');
+      expect(mockHttp).toHaveBeenCalledWith(
+        'https://api.pimlico.io/v2/sepolia/rpc?apikey=pk_test_123',
+      );
     });
 
-    it('throws CHAIN_ERROR when no bundler URL is set', () => {
-      const settings = mockSettingsService({
-        'smart_account.bundler_url': '',
-      });
+    it('throws CHAIN_ERROR when no provider configured', () => {
+      const walletProvider: WalletProviderData = {
+        aaProvider: null,
+        aaProviderApiKey: null,
+        aaBundlerUrl: null,
+        aaPaymasterUrl: null,
+      };
 
       expect(() =>
         createSmartAccountBundlerClient({
           client: mockPublicClient(),
           account: mockSmartAccount(),
           networkId: 'ethereum-sepolia',
-          settingsService: settings,
+          walletProvider,
         }),
       ).toThrow(WAIaaSError);
-
-      try {
-        createSmartAccountBundlerClient({
-          client: mockPublicClient(),
-          account: mockSmartAccount(),
-          networkId: 'ethereum-sepolia',
-          settingsService: settings,
-        });
-      } catch (err) {
-        expect((err as WAIaaSError).code).toBe('CHAIN_ERROR');
-      }
     });
 
-    it('includes paymaster when paymaster_url is configured', () => {
-      const settings = mockSettingsService({
-        'smart_account.bundler_url': 'https://bundler.example.com',
-        'smart_account.paymaster_url': 'https://paymaster.example.com',
-      });
+    it('includes paymaster for preset provider (unified endpoint)', () => {
+      const walletProvider: WalletProviderData = {
+        aaProvider: 'alchemy',
+        aaProviderApiKey: 'ak_test_456',
+        aaBundlerUrl: null,
+        aaPaymasterUrl: null,
+      };
 
       createSmartAccountBundlerClient({
         client: mockPublicClient(),
         account: mockSmartAccount(),
         networkId: 'ethereum-sepolia',
-        settingsService: settings,
+        walletProvider,
       });
 
-      // createPaymasterClient should be called for the paymaster URL
+      // PaymasterClient should be created (same URL as bundler for preset)
       expect(mockCreatePaymasterClient).toHaveBeenCalled();
-      // createBundlerClient should have paymaster in its options
       const bundlerArgs = mockCreateBundlerClient.mock.calls[0][0];
       expect(bundlerArgs).toHaveProperty('paymaster');
     });
-  });
 
-  // -------------------------------------------------------------------------
-  // createSmartAccountPaymasterClient
-  // -------------------------------------------------------------------------
+    it('no paymaster for custom provider without paymasterUrl', () => {
+      const walletProvider: WalletProviderData = {
+        aaProvider: 'custom',
+        aaProviderApiKey: null,
+        aaBundlerUrl: 'https://bundler.example.com/rpc',
+        aaPaymasterUrl: null,
+      };
 
-  describe('createSmartAccountPaymasterClient', () => {
-    it('returns PaymasterClient when paymaster_url is set', () => {
-      const settings = mockSettingsService({
-        'smart_account.paymaster_url': 'https://paymaster.example.com',
+      createSmartAccountBundlerClient({
+        client: mockPublicClient(),
+        account: mockSmartAccount(),
+        networkId: 'ethereum-sepolia',
+        walletProvider,
       });
 
-      const result = createSmartAccountPaymasterClient(settings, 'ethereum-sepolia');
-
-      expect(result).toBeDefined();
-      expect(mockCreatePaymasterClient).toHaveBeenCalled();
-      expect(mockHttp).toHaveBeenCalledWith('https://paymaster.example.com');
-    });
-
-    it('returns null when paymaster_url is not set', () => {
-      const settings = mockSettingsService({
-        'smart_account.paymaster_url': '',
-      });
-
-      const result = createSmartAccountPaymasterClient(settings, 'ethereum-sepolia');
-
-      expect(result).toBeNull();
       expect(mockCreatePaymasterClient).not.toHaveBeenCalled();
-    });
-
-    it('uses chain-specific paymaster URL over default', () => {
-      const settings = mockSettingsService({
-        'smart_account.paymaster_url.ethereum-sepolia': 'https://sepolia-pm.example.com',
-        'smart_account.paymaster_url': 'https://default-pm.example.com',
-      });
-
-      createSmartAccountPaymasterClient(settings, 'ethereum-sepolia');
-
-      expect(mockHttp).toHaveBeenCalledWith('https://sepolia-pm.example.com');
+      const bundlerArgs = mockCreateBundlerClient.mock.calls[0][0];
+      expect(bundlerArgs).not.toHaveProperty('paymaster');
     });
   });
 });

@@ -1,5 +1,30 @@
 # Project Milestones: WAIaaS
 
+## v30.9 Smart Account DX 개선 (Shipped: 2026-03-05)
+
+**Delivered:** Smart Account 설정을 글로벌 config에서 지갑별 프로바이더 모델로 전환하여, 프로바이더 선택 + API 키 입력만으로 번들러/페이마스터가 자동 구성되고, 에이전트가 셀프서비스로 프로바이더를 등록/조회할 수 있는 상태.
+
+**Phases completed:** 324-326 (3 phases, 6 plans, 27 requirements)
+
+**Key accomplishments:**
+
+- Per-wallet provider model — AA_PROVIDER_NAMES enum(pimlico/alchemy/custom), DB v41 4 columns, AES-256-GCM API key encryption, 23 global settings removed
+- Auto URL assembly — AA_PROVIDER_CHAIN_MAP(10 EVM networks × 2 providers), resolveProviderChainId + buildProviderBundlerUrl, custom URL direct input
+- Agent self-service — PUT /v1/wallets/:id/provider with dual-auth(masterAuth + sessionAuth), wallet ownership enforcement, PROVIDER_UPDATED audit event
+- Wallet response extension — provider.name/supportedChains/paymasterEnabled in GET/POST/PUT responses, ProviderStatusSchema.nullable()
+- Admin UI provider management — accountType conditional fields, dashboard link dynamic switching, detail page inline edit form
+- Agent discovery — connect-info provider prompt(name, gas sponsorship, chains), MCP get_provider_status tool(29th tool), smart_account capability
+
+**Stats:**
+
+- 3 phases, 6 plans, 27 requirements, 74 new tests
+- 73 files changed, +7,214 / -419 lines
+- ~262,608 LOC TypeScript total
+- Timeline: 2026-03-04 ~ 2026-03-05 (2 days)
+- Git range: milestone/v30.9 (33 commits)
+
+---
+
 ## v30.8 ERC-8004 Trustless Agents 지원 (Shipped: 2026-03-04)
 
 **Delivered:** ERC-8004 온체인 레지스트리(Identity/Reputation/Validation)를 WAIaaS에 통합하여, AI 에이전트가 온체인 신원 등록 + 평판 기반 신뢰 평가 + 검증 요청을 수행하고, REPUTATION_THRESHOLD 정책으로 상대방 평판에 따라 보안 티어를 자동 조정할 수 있는 상태.

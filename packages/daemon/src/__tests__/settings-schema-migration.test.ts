@@ -300,11 +300,11 @@ describe('Fresh DB: settings table via pushSchema', () => {
     const row = freshSqlite
       .prepare('SELECT MAX(version) AS max_version FROM schema_version')
       .get() as { max_version: number };
-    expect(row.max_version).toBe(40);
+    expect(row.max_version).toBe(41);
   });
 
-  it('LATEST_SCHEMA_VERSION should be 39', () => {
-    expect(LATEST_SCHEMA_VERSION).toBe(40);
+  it('LATEST_SCHEMA_VERSION should be 41', () => {
+    expect(LATEST_SCHEMA_VERSION).toBe(41);
   });
 });
 
@@ -386,6 +386,91 @@ describe('settings-crypto: AES-256-GCM encrypt/decrypt', () => {
 // ---------------------------------------------------------------------------
 // CREDENTIAL_KEYS tests
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// v41 migration tests: per-wallet AA provider columns
+// ---------------------------------------------------------------------------
+
+describe('v41 migration: per-wallet AA provider columns', () => {
+  let freshSqlite: DatabaseType;
+
+  beforeEach(() => {
+    const conn = createDatabase(':memory:');
+    freshSqlite = conn.sqlite;
+    pushSchema(freshSqlite);
+  });
+
+  afterEach(() => {
+    try {
+      freshSqlite.close();
+    } catch {
+      /* already closed */
+    }
+  });
+
+  it('fresh DB should have aa_provider columns in wallets', () => {
+    const columns = freshSqlite.prepare("PRAGMA table_info('wallets')").all() as Array<{
+      name: string;
+      type: string;
+      notnull: number;
+    }>;
+    const colNames = columns.map((c) => c.name);
+    expect(colNames).toContain('aa_provider');
+    expect(colNames).toContain('aa_provider_api_key_encrypted');
+    expect(colNames).toContain('aa_bundler_url');
+    expect(colNames).toContain('aa_paymaster_url');
+  });
+
+  it('aa_provider columns should be nullable', () => {
+    const columns = freshSqlite.prepare("PRAGMA table_info('wallets')").all() as Array<{
+      name: string;
+      notnull: number;
+    }>;
+    const aaProviderCol = columns.find((c) => c.name === 'aa_provider');
+    expect(aaProviderCol!.notnull).toBe(0);
+  });
+
+  it('should accept valid aa_provider values', () => {
+    const ts = Math.floor(Date.now() / 1000);
+    for (const provider of ['pimlico', 'alchemy', 'custom']) {
+      expect(() => {
+        freshSqlite
+          .prepare(
+            `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, account_type, deployed, created_at, updated_at, aa_provider)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          )
+          .run(`w-${provider}`, `Test ${provider}`, 'ethereum', 'testnet', `pk-${provider}`, 'ACTIVE', 0, 'smart', 1, ts, ts, provider);
+      }).not.toThrow();
+    }
+  });
+
+  it('should reject invalid aa_provider value via CHECK constraint', () => {
+    const ts = Math.floor(Date.now() / 1000);
+    expect(() => {
+      freshSqlite
+        .prepare(
+          `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, account_type, deployed, created_at, updated_at, aa_provider)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run('w-bad', 'Bad Provider', 'ethereum', 'testnet', 'pk-bad', 'ACTIVE', 0, 'smart', 1, ts, ts, 'gelato');
+    }).toThrow(/CHECK/i);
+  });
+
+  it('should allow NULL aa_provider', () => {
+    const ts = Math.floor(Date.now() / 1000);
+    expect(() => {
+      freshSqlite
+        .prepare(
+          `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, account_type, deployed, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run('w-eoa', 'EOA Wallet', 'ethereum', 'testnet', 'pk-eoa', 'ACTIVE', 0, 'eoa', 1, ts, ts);
+    }).not.toThrow();
+
+    const wallet = freshSqlite.prepare('SELECT aa_provider FROM wallets WHERE id = ?').get('w-eoa') as Record<string, unknown>;
+    expect(wallet.aa_provider).toBeNull();
+  });
+});
 
 describe('CREDENTIAL_KEYS', () => {
   it('should contain telegram_bot_token', () => {

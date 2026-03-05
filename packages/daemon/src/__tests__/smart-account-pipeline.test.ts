@@ -62,6 +62,11 @@ vi.mock('viem', async (importOriginal) => {
   };
 });
 
+// Mock AA provider crypto
+vi.mock('../infrastructure/smart-account/aa-provider-crypto.js', () => ({
+  decryptProviderApiKey: vi.fn().mockReturnValue('pk_test_mock_key'),
+}));
+
 import { buildUserOpCalls, stage5Execute } from '../pipeline/stages.js';
 import { WAIaaSError } from '@waiaas/core';
 import type { PipelineContext } from '../pipeline/stages.js';
@@ -110,6 +115,10 @@ function createMockContext(overrides: Partial<PipelineContext> = {}): PipelineCo
       chain: 'evm',
       environment: 'testnet',
       accountType: 'smart',
+      aaProvider: 'pimlico',
+      aaProviderApiKeyEncrypted: 'encrypted-mock-key', // decryptProviderApiKey mock returns 'pk_test_mock_key'
+      aaBundlerUrl: null,
+      aaPaymasterUrl: null,
     },
     resolvedNetwork: 'ethereum-sepolia',
     request: {
@@ -120,11 +129,7 @@ function createMockContext(overrides: Partial<PipelineContext> = {}): PipelineCo
     },
     txId: 'tx-1',
     settingsService: {
-      get: vi.fn((key: string) => {
-        if (key === 'smart_account.bundler_url') return 'https://bundler.example.com';
-        if (key === 'smart_account.paymaster_url') return '';
-        if (key.startsWith('smart_account.bundler_url.')) return '';
-        if (key.startsWith('smart_account.paymaster_url.')) return '';
+      get: vi.fn((_key: string) => {
         return '';
       }),
     } as any,

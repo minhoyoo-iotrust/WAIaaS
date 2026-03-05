@@ -110,7 +110,7 @@ describe('Schema creation', () => {
     expect(colNames).toContain('signer_key');
     expect(colNames).toContain('deployed');
     expect(colNames).toContain('entry_point');
-    expect(colNames).toHaveLength(19);
+    expect(colNames).toHaveLength(23);
   });
 
   it('transactions table should have correct columns including v0.6 and v0.10 additions', () => {
