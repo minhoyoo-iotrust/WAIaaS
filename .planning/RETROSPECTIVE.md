@@ -388,6 +388,43 @@
 - Sessions: 1
 - Notable: 3 phases + audit + defect fix all in 1 session, ~76 files +7,280 lines
 
+## Milestone: v30.11 — Admin UI DX 개선
+
+**Shipped:** 2026-03-05
+**Phases:** 3 | **Plans:** 5 | **Sessions:** 1
+
+### What Was Built
+- Admin UI 메뉴 DeFi/Agent Identity 재명명 + 라우트 변경 + 레거시 리다이렉트
+- ERC-8004 Agent Identity 페이지에 활성화/비활성화 토글 통합
+- 전체 10개 액션 프로바이더 기본 활성화 + DB v42 마이그레이션 (INSERT OR IGNORE)
+- 액션별 보안 Tier 오버라이드 — Settings 기반 동적 키 + 파이프라인 floor 에스컬레이션
+- Admin UI Description 컬럼 + Tier 드롭다운 + 오버라이드 인디케이터 + Reset to default
+- 4개 스킬 파일 동기화 (admin/erc8004/actions/policies)
+
+### What Worked
+- 3 phases 전체 1일 완료 — 기존 Admin UI 패턴(SettingsData, FieldGroup) 재활용으로 빠른 구현
+- INSERT OR IGNORE 마이그레이션 전략이 기존 운영자 설정을 안전하게 존중하면서 신규 기본값 적용
+- 동적 tier key regex 패턴으로 30+ 정적 설정 정의 없이 유연한 확장 달성
+- Audit 27/27 requirements + 8/8 integration + 4/4 flows 전체 패스
+
+### What Was Inefficient
+- ROADMAP.md의 Plan checklist에서 332-01이 `[ ]` 미갱신 상태로 아카이브 (반복 이슈)
+
+### Patterns Established
+- 동적 Settings 키 패턴: `actions.{provider}_{action}_tier` regex 기반 해석, 30+ 정적 키 대신 런타임 동적 생성
+- Tier floor 에스컬레이션: max(policyTier, actionTier) — 오버라이드는 항상 상향만 가능
+
+### Key Lessons
+- INSERT OR IGNORE가 마이그레이션에서 기존 설정 존중 + 신규 기본값 시딩을 동시에 해결하는 안전한 패턴
+- native `<select>` 드롭다운이 커스텀 컴포넌트보다 Admin UI 맥락에서 충분하고 더 빠름
+
+### Cost Observations
+- Model mix: 100% opus
+- Sessions: 1
+- Notable: 48 files, 23 commits in ~1 day — small focused milestone
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -404,6 +441,7 @@
 | v30.8 | 1 | 7 | ERC-8004 Trustless Agents 5-package 통합, 121 파일 1일 완료 |
 | v30.9 | 1 | 3 | Smart Account DX 개선 per-wallet provider 전환, 73 파일 2일 완료 |
 | v30.10 | 1 | 3 | ERC-8128 Signed HTTP Requests, 76 파일 1일 완료 |
+| v30.11 | 1 | 3 | Admin UI DX 개선, 48 파일 1일 완료 |
 
 ### Cumulative Quality
 
@@ -419,6 +457,7 @@
 | v30.8 | ~6,668 (+182) | maintained | +36 decisions |
 | v30.9 | ~6,742 (+74) | maintained | +12 decisions |
 | v30.10 | ~6,822 (+80) | maintained | +11 decisions |
+| v30.11 | ~6,822 (unchanged) | maintained | +9 decisions |
 
 ### Top Lessons (Verified Across Milestones)
 
