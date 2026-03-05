@@ -47,10 +47,10 @@ Requirements for Admin UI DX 개선 — 메뉴 재구성 + 액션 Tier 오버라
 
 ### Skill (스킬 파일 동기화)
 
-- [ ] **SKIL-01**: admin.skill.md — 메뉴 이름 변경, tier 오버라이드 설정 방법 추가
-- [ ] **SKIL-02**: erc8004.skill.md — 메뉴 경로 변경, 기본 활성화 반영
-- [ ] **SKIL-03**: actions.skill.md — 메뉴 이름 변경, tier 오버라이드 기능 문서화, 전 프로바이더 기본 활성화 반영
-- [ ] **SKIL-04**: policies.skill.md — tier 오버라이드와 정책 tier 에스컬레이션의 관계 명시
+- [x] **SKIL-01**: admin.skill.md — 메뉴 이름 변경, tier 오버라이드 설정 방법 추가
+- [x] **SKIL-02**: erc8004.skill.md — 메뉴 경로 변경, 기본 활성화 반영
+- [x] **SKIL-03**: actions.skill.md — 메뉴 이름 변경, tier 오버라이드 기능 문서화, 전 프로바이더 기본 활성화 반영
+- [x] **SKIL-04**: policies.skill.md — tier 오버라이드와 정책 tier 에스컬레이션의 관계 명시
 
 ## Out of Scope
 
@@ -87,10 +87,10 @@ Requirements for Admin UI DX 개선 — 메뉴 재구성 + 액션 Tier 오버라
 | TIER-06 | Phase 331 | Complete |
 | TIER-07 | Phase 331 | Complete |
 | TIER-08 | Phase 331 | Complete |
-| SKIL-01 | Phase 332 | Pending |
-| SKIL-02 | Phase 332 | Pending |
-| SKIL-03 | Phase 332 | Pending |
-| SKIL-04 | Phase 332 | Pending |
+| SKIL-01 | Phase 332 | Complete |
+| SKIL-02 | Phase 332 | Complete |
+| SKIL-03 | Phase 332 | Complete |
+| SKIL-04 | Phase 332 | Complete |
 
 **Coverage:**
 - v30.11 requirements: 27 total
