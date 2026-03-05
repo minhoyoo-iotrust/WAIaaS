@@ -140,11 +140,11 @@ Plans:
   2. Registered Actions 테이블의 Tier 셀이 드롭다운이며, INSTANT/NOTIFY/DELAY/APPROVAL 중 선택하면 즉시 Settings에 반영된다
   3. 오버라이드된 tier는 시각적으로 구분되고(뱃지 색상 또는 "customized" 라벨), Reset to default로 프로바이더 기본값 복원이 가능하다
   4. 파이프라인에서 트랜잭션 실행 시 Settings override가 프로바이더 하드코딩 기본값보다 우선 적용된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 331-01: TBD
-- [ ] 331-02: TBD
+- [ ] 331-01-PLAN.md -- Backend: tier override setting keys + pipeline integration + resolveActionTier helper
+- [ ] 331-02-PLAN.md -- Admin UI: Description column + tier dropdown + override indicator + reset on DeFi and Agent Identity pages
 
 ### Phase 332: 스킬 파일 동기화
 **Goal**: 스킬 파일이 v30.11의 메뉴 변경, tier 오버라이드, 기본 활성화 변경을 정확히 반영하는 상태
@@ -174,8 +174,8 @@ Phases execute in numeric order: 330 -> 331 -> 332
 | 244-267 | v28.0-v28.8 | All | Complete | 2026-02-26 |
 | 268-329 | v29.0-v30.10 | All | Complete | 2026-03-05 |
 | 330. UI 재구성 + Feature Gate 정비 | v30.11 | Complete    | 2026-03-05 | 2026-03-05 |
-| 331. 액션 메타데이터 + Tier 오버라이드 | v30.11 | 0/? | Not started | - |
+| 331. 액션 메타데이터 + Tier 오버라이드 | v30.11 | 0/2 | Not started | - |
 | 332. 스킬 파일 동기화 | v30.11 | 0/? | Not started | - |
 
 ---
-*Last updated: 2026-03-05 -- Phase 330 complete (2/2 plans).*
+*Last updated: 2026-03-05 -- Phase 331 planned (2 plans in 2 waves).*
