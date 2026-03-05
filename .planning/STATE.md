@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
-milestone: null
-milestone_name: null
-status: idle
-stopped_at: v30.10 milestone archived
-last_updated: "2026-03-05T08:30:00.000Z"
-last_activity: 2026-03-05 -- v30.10 milestone completed and archived
+milestone: v30.11
+milestone_name: Admin UI DX 개선 — 메뉴 재구성 + 액션 Tier 오버라이드
+status: defining_requirements
+stopped_at: null
+last_updated: "2026-03-05T09:00:00.000Z"
+last_activity: 2026-03-05 -- Milestone v30.11 started
 progress:
   total_phases: 0
   completed_phases: 0
@@ -21,11 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Planning next milestone
+**Current focus:** Milestone v30.11 — Admin UI DX 개선
 
 ## Current Position
 
-No active milestone. v30.10 shipped and archived.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-05 — Milestone v30.11 started
 
 ## Performance Metrics
 
@@ -35,7 +38,7 @@ No active milestone. v30.10 shipped and archived.
 
 ### Decisions
 
-(Milestone complete -- see .planning/milestones/v30.10-ROADMAP.md for archived decisions)
+(New milestone — no decisions yet)
 
 ### Blockers/Concerns
 
@@ -46,5 +49,5 @@ No active milestone. v30.10 shipped and archived.
 ## Session Continuity
 
 Last session: 2026-03-05
-Stopped at: v30.10 milestone archived
+Stopped at: Defining requirements for v30.11
 Resume file: None

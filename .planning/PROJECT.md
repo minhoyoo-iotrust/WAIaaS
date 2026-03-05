@@ -8,6 +8,18 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
+## Current Milestone: v30.11 Admin UI DX 개선 — 메뉴 재구성 + 액션 Tier 오버라이드
+
+**Goal:** Admin UI의 액션 관리 경험을 개선하여 메뉴 이름을 직관적으로 변경하고, ERC-8004 기능을 한 페이지에서 완결적으로 관리하며, 운영자가 액션별 보안 Tier를 조정할 수 있는 상태.
+
+**Target features:**
+- 메뉴 이름 변경 (Actions→DeFi, ERC-8004→Agent Identity) + 라우트/순서 변경
+- ERC-8004 토글을 Agent Identity 페이지로 통합 + DeFi 페이지에서 분리
+- Feature gate 버그 수정 + 전 프로바이더 기본 활성화 (10개, DB v42)
+- Registered Actions 설명(description) 추가
+- 액션별 Tier 오버라이드 프레임워크 (Settings 기반, 드롭다운 UI, hot-reload)
+- 스킬 파일 동기화 (admin/erc8004/actions/policies)
+
 ## Previous Milestone: v30.10 ERC-8128 Signed HTTP Requests — SHIPPED 2026-03-05
 
 ERC-8128 (Signed HTTP Requests with Ethereum) 표준 통합. RFC 9421 Signature Base + RFC 9530 Content-Digest + EIP-191 signing engine, REST API 2 endpoints, ERC8128_ALLOWED_DOMAINS policy (default-deny, wildcard, rate limit), MCP 2 tools + SDK 3 methods (fetchWithErc8128 포함), Admin UI settings + policy form, connect-info capability, erc8128.skill.md. x402(결제) + ERC-8004(신원) + ERC-8128(API 인증) 에이전트 웹 인증 3종 세트 완성. 80 new tests, 23 commits.
