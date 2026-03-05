@@ -186,6 +186,19 @@ export class SettingsService {
       }
     }
 
+    // [Phase 331] Include dynamic tier override keys from DB
+    // These are not in SETTING_DEFINITIONS but follow pattern actions.*_tier
+    for (const [key, row] of dbMap) {
+      if (key.startsWith('actions.') && key.endsWith('_tier')) {
+        const fieldName = key.split('.').slice(1).join('.');
+        if (!result['actions']![fieldName]) {
+          result['actions']![fieldName] = row.encrypted
+            ? decryptSettingValue(row.value, this.currentPassword)
+            : row.value;
+        }
+      }
+    }
+
     return result;
   }
 
@@ -238,6 +251,16 @@ export class SettingsService {
           catObj[fieldName] = configValue !== undefined
             ? String(configValue)
             : def.defaultValue;
+        }
+      }
+    }
+
+    // [Phase 331] Include dynamic tier override keys from DB (non-credential)
+    for (const [key, row] of dbMap) {
+      if (key.startsWith('actions.') && key.endsWith('_tier')) {
+        const fieldName = key.split('.').slice(1).join('.');
+        if (!result['actions']![fieldName]) {
+          result['actions']![fieldName] = row.value;
         }
       }
     }

@@ -396,6 +396,10 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
         wcSigningBridge: deps.wcSigningBridgeRef?.current ?? undefined,
         approvalChannelRouter: deps.approvalChannelRouter,
         eventBus: deps.eventBus,
+        // v30.11 Phase 331: action tier override context
+        actionProviderKey: provider,
+        actionName: action,
+        actionDefaultTier: entry.action.defaultTier as import('@waiaas/core').PolicyTier,
       };
 
       // Stage 1: Validate + DB INSERT (synchronous -- assigns ctx.txId)

@@ -134,6 +134,39 @@ export interface PipelineContext {
     newWallet: string;
     deadline: string;
   };
+  // v30.11 Phase 331: action tier override context
+  actionProviderKey?: string;
+  actionName?: string;
+  actionDefaultTier?: PolicyTier;
+}
+
+// ---------------------------------------------------------------------------
+// [Phase 331] Action tier override resolution
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolve the effective tier for an action.
+ * Priority: Settings override > provider hardcoded defaultTier.
+ *
+ * @param providerKey - Provider key, e.g. 'jupiter_swap'
+ * @param actionName - Action name, e.g. 'swap'
+ * @param actionDefaultTier - Provider hardcoded default tier
+ * @param settingsService - SettingsService (optional, undefined = use default)
+ * @returns The effective tier for this action
+ */
+export function resolveActionTier(
+  providerKey: string,
+  actionName: string,
+  actionDefaultTier: PolicyTier,
+  settingsService?: SettingsService,
+): PolicyTier {
+  if (!settingsService) return actionDefaultTier;
+  const tierKey = `actions.${providerKey}_${actionName}_tier`;
+  try {
+    const override = settingsService.get(tierKey);
+    if (override && override !== '') return override as PolicyTier;
+  } catch { /* key not found -- use default */ }
+  return actionDefaultTier;
 }
 
 // ---------------------------------------------------------------------------
@@ -528,6 +561,18 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
 
   let tier = evaluation.tier;
   let downgraded = false;
+
+  // [Phase 331] Action tier override: Settings > provider default > no floor
+  if (ctx.actionProviderKey && ctx.actionName && ctx.actionDefaultTier) {
+    const actionTier = resolveActionTier(
+      ctx.actionProviderKey, ctx.actionName, ctx.actionDefaultTier, ctx.settingsService,
+    );
+    // Action tier acts as a FLOOR -- escalate but never downgrade
+    const TIER_ORDER_331: PolicyTier[] = ['INSTANT', 'NOTIFY', 'DELAY', 'APPROVAL'];
+    if (TIER_ORDER_331.indexOf(actionTier) > TIER_ORDER_331.indexOf(tier)) {
+      tier = actionTier;
+    }
+  }
 
   // [Phase 127] PriceResult에 따른 후처리
   if (priceResult?.type === 'notListed') {

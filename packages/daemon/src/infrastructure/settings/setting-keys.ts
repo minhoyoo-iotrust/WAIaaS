@@ -9,6 +9,8 @@
  * @see packages/daemon/src/infrastructure/config/loader.ts for DaemonConfigSchema defaults
  */
 
+import { z } from 'zod';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -283,6 +285,38 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
 ] as const;
 
 // ---------------------------------------------------------------------------
+// [Phase 331] Action tier override Zod schema
+// ---------------------------------------------------------------------------
+
+/** Valid values for action tier override: INSTANT/NOTIFY/DELAY/APPROVAL or '' (use provider default). */
+export const ActionTierOverrideSchema = z.enum(['INSTANT', 'NOTIFY', 'DELAY', 'APPROVAL', '']);
+
+// ---------------------------------------------------------------------------
+// [Phase 331] Dynamic tier key pattern
+// ---------------------------------------------------------------------------
+
+/**
+ * Regex matching dynamic tier override keys: `actions.{providerKey}_{actionName}_tier`
+ * e.g. `actions.jupiter_swap_swap_tier`, `actions.erc8004_agent_register_agent_tier`
+ */
+const TIER_KEY_PATTERN = /^actions\.[a-z][a-z0-9_]*_tier$/;
+
+/**
+ * Generate a dynamic SettingDefinition for an action tier override key.
+ * Returns undefined if the key doesn't match the tier key pattern.
+ */
+function getDynamicTierDefinition(key: string): SettingDefinition | undefined {
+  if (!TIER_KEY_PATTERN.test(key)) return undefined;
+  return {
+    key,
+    category: 'actions',
+    configPath: key,
+    defaultValue: '',
+    isCredential: false,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Lookup helpers
 // ---------------------------------------------------------------------------
 
@@ -291,7 +325,8 @@ const definitionMap = new Map<string, SettingDefinition>(
   SETTING_DEFINITIONS.map((def) => [def.key, def]),
 );
 
-/** Get a setting definition by key, or undefined if not found */
+/** Get a setting definition by key, or undefined if not found.
+ * Checks static definitions first, then falls back to dynamic tier key pattern. */
 export function getSettingDefinition(key: string): SettingDefinition | undefined {
-  return definitionMap.get(key);
+  return definitionMap.get(key) ?? getDynamicTierDefinition(key);
 }
