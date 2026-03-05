@@ -83,38 +83,38 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ENG-01 | — | Pending |
-| ENG-02 | — | Pending |
-| ENG-03 | — | Pending |
-| ENG-04 | — | Pending |
-| ENG-05 | — | Pending |
-| API-01 | — | Pending |
-| API-02 | — | Pending |
-| API-03 | — | Pending |
-| API-04 | — | Pending |
-| API-05 | — | Pending |
-| API-06 | — | Pending |
-| API-07 | — | Pending |
-| POL-01 | — | Pending |
-| POL-02 | — | Pending |
-| POL-03 | — | Pending |
-| POL-04 | — | Pending |
-| VER-01 | — | Pending |
-| VER-02 | — | Pending |
-| ADM-01 | — | Pending |
-| ADM-02 | — | Pending |
-| ADM-03 | — | Pending |
-| ADM-04 | — | Pending |
-| INT-01 | — | Pending |
-| INT-02 | — | Pending |
-| INT-03 | — | Pending |
-| INT-04 | — | Pending |
+| ENG-01 | Phase 327 | Pending |
+| ENG-02 | Phase 327 | Pending |
+| ENG-03 | Phase 327 | Pending |
+| ENG-04 | Phase 327 | Pending |
+| ENG-05 | Phase 327 | Pending |
+| API-01 | Phase 328 | Pending |
+| API-02 | Phase 328 | Pending |
+| API-03 | Phase 329 | Pending |
+| API-04 | Phase 329 | Pending |
+| API-05 | Phase 329 | Pending |
+| API-06 | Phase 329 | Pending |
+| API-07 | Phase 329 | Pending |
+| POL-01 | Phase 328 | Pending |
+| POL-02 | Phase 328 | Pending |
+| POL-03 | Phase 328 | Pending |
+| POL-04 | Phase 328 | Pending |
+| VER-01 | Phase 327 | Pending |
+| VER-02 | Phase 327 | Pending |
+| ADM-01 | Phase 328 | Pending |
+| ADM-02 | Phase 328 | Pending |
+| ADM-03 | Phase 329 | Pending |
+| ADM-04 | Phase 329 | Pending |
+| INT-01 | Phase 329 | Pending |
+| INT-02 | Phase 328 | Pending |
+| INT-03 | Phase 328 | Pending |
+| INT-04 | Phase 329 | Pending |
 
 **Coverage:**
 - v1 requirements: 26 total
-- Mapped to phases: 0
-- Unmapped: 26 ⚠️
+- Mapped to phases: 26
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-05*
-*Last updated: 2026-03-05 after initial definition*
+*Last updated: 2026-03-05 after roadmap creation*
