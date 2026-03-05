@@ -9,25 +9,25 @@ Requirements for Admin UI DX 개선 — 메뉴 재구성 + 액션 Tier 오버라
 
 ### Menu (메뉴 재구성)
 
-- [ ] **MENU-01**: Actions 메뉴를 DeFi로 변경 (페이지 타이틀, 네비게이션 라벨, 서브타이틀)
-- [ ] **MENU-02**: ERC-8004 메뉴를 Agent Identity로 변경 (페이지 타이틀, 네비게이션 라벨, 서브타이틀)
-- [ ] **MENU-03**: URL 해시 라우트 변경 (`#/actions` → `#/defi`, `#/erc8004` → `#/agent-identity`)
-- [ ] **MENU-04**: Agent Identity 메뉴를 DeFi 바로 다음에 배치
+- [x] **MENU-01**: Actions 메뉴를 DeFi로 변경 (페이지 타이틀, 네비게이션 라벨, 서브타이틀)
+- [x] **MENU-02**: ERC-8004 메뉴를 Agent Identity로 변경 (페이지 타이틀, 네비게이션 라벨, 서브타이틀)
+- [x] **MENU-03**: URL 해시 라우트 변경 (`#/actions` → `#/defi`, `#/erc8004` → `#/agent-identity`)
+- [x] **MENU-04**: Agent Identity 메뉴를 DeFi 바로 다음에 배치
 
 ### Toggle (ERC-8004 토글 통합)
 
-- [ ] **TOGL-01**: DeFi 페이지(구 Actions)에서 ERC-8004 프로바이더 카드 제거
-- [ ] **TOGL-02**: Agent Identity 페이지(구 ERC-8004) 상단에 활성화/비활성화 토글 배치
-- [ ] **TOGL-03**: 토글 변경 시 PUT /v1/admin/settings 호출하여 actions.erc8004_agent_enabled 값 변경
-- [ ] **TOGL-04**: 비활성 상태에서도 토글은 항상 표시 — 토글 아래에 비활성 안내 메시지
-- [ ] **TOGL-05**: 비활성 시 Registered Actions 테이블 읽기 전용 표시 (Tier 드롭다운 disabled) + 관리 탭 숨김, 활성화 시 전체 UI 렌더링
+- [x] **TOGL-01**: DeFi 페이지(구 Actions)에서 ERC-8004 프로바이더 카드 제거
+- [x] **TOGL-02**: Agent Identity 페이지(구 ERC-8004) 상단에 활성화/비활성화 토글 배치
+- [x] **TOGL-03**: 토글 변경 시 PUT /v1/admin/settings 호출하여 actions.erc8004_agent_enabled 값 변경
+- [x] **TOGL-04**: 비활성 상태에서도 토글은 항상 표시 — 토글 아래에 비활성 안내 메시지
+- [x] **TOGL-05**: 비활성 시 Registered Actions 테이블 읽기 전용 표시 (Tier 드롭다운 disabled) + 관리 탭 숨김, 활성화 시 전체 UI 렌더링
 
 ### Gate (Feature gate 수정 + 기본 활성화)
 
-- [ ] **GATE-01**: Agent Identity 페이지의 settings 파싱을 Actions 페이지와 동일한 방식으로 통일
-- [ ] **GATE-02**: 전체 액션 프로바이더 10개 기본값을 true로 변경 (jupiter_swap, zerox_swap, lifi, lido_staking, jito_staking, aave_v3, kamino, pendle_yield, drift_perp, erc8004_agent)
-- [ ] **GATE-03**: DB v42 마이그레이션 — 10개 _enabled 설정 INSERT OR IGNORE (기존 운영자 설정 존중)
-- [ ] **GATE-04**: 기본값 변경에 따른 기존 feature gate 및 등록 테스트 수정
+- [x] **GATE-01**: Agent Identity 페이지의 settings 파싱을 Actions 페이지와 동일한 방식으로 통일
+- [x] **GATE-02**: 전체 액션 프로바이더 10개 기본값을 true로 변경 (jupiter_swap, zerox_swap, lifi, lido_staking, jito_staking, aave_v3, kamino, pendle_yield, drift_perp, erc8004_agent)
+- [x] **GATE-03**: DB v42 마이그레이션 — 10개 _enabled 설정 INSERT OR IGNORE (기존 운영자 설정 존중)
+- [x] **GATE-04**: 기본값 변경에 따른 기존 feature gate 및 등록 테스트 수정
 
 ### Desc (액션 설명 추가)
 
@@ -64,19 +64,19 @@ Requirements for Admin UI DX 개선 — 메뉴 재구성 + 액션 Tier 오버라
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MENU-01 | Phase 330 | Pending |
-| MENU-02 | Phase 330 | Pending |
-| MENU-03 | Phase 330 | Pending |
-| MENU-04 | Phase 330 | Pending |
-| TOGL-01 | Phase 330 | Pending |
-| TOGL-02 | Phase 330 | Pending |
-| TOGL-03 | Phase 330 | Pending |
-| TOGL-04 | Phase 330 | Pending |
-| TOGL-05 | Phase 330 | Pending |
-| GATE-01 | Phase 330 | Pending |
-| GATE-02 | Phase 330 | Pending |
-| GATE-03 | Phase 330 | Pending |
-| GATE-04 | Phase 330 | Pending |
+| MENU-01 | Phase 330 | Complete |
+| MENU-02 | Phase 330 | Complete |
+| MENU-03 | Phase 330 | Complete |
+| MENU-04 | Phase 330 | Complete |
+| TOGL-01 | Phase 330 | Complete |
+| TOGL-02 | Phase 330 | Complete |
+| TOGL-03 | Phase 330 | Complete |
+| TOGL-04 | Phase 330 | Complete |
+| TOGL-05 | Phase 330 | Complete |
+| GATE-01 | Phase 330 | Complete |
+| GATE-02 | Phase 330 | Complete |
+| GATE-03 | Phase 330 | Complete |
+| GATE-04 | Phase 330 | Complete |
 | DESC-01 | Phase 331 | Pending |
 | DESC-02 | Phase 331 | Pending |
 | TIER-01 | Phase 331 | Pending |
@@ -99,4 +99,4 @@ Requirements for Admin UI DX 개선 — 메뉴 재구성 + 액션 Tier 오버라
 
 ---
 *Requirements defined: 2026-03-05*
-*Last updated: 2026-03-05 after roadmap creation*
+*Last updated: 2026-03-05 -- Phase 330 complete (13/27 requirements)*

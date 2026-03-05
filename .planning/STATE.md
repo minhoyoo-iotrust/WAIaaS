@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v30.11
 milestone_name: Admin UI DX 개선 — 메뉴 재구성 + 액션 Tier 오버라이드
-status: ready_to_plan
+status: in_progress
 stopped_at: null
-last_updated: "2026-03-05T10:00:00.000Z"
-last_activity: 2026-03-05 -- Roadmap created (3 phases, 27 requirements)
+last_updated: "2026-03-05T09:50:00.000Z"
+last_activity: 2026-03-05 -- Phase 330 complete (2 plans, 4 commits)
 progress:
   total_phases: 3
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 1
+  total_plans: 2
+  completed_plans: 2
+  percent: 33
 ---
 
 # Project State
@@ -21,26 +21,33 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 330 -- UI 재구성 + Feature Gate 정비
+**Current focus:** Phase 331 -- 액션 메타데이터 + Tier 오버라이드
 
 ## Current Position
 
-Phase: 330 (1 of 3) -- UI 재구성 + Feature Gate 정비
+Phase: 331 (2 of 3) -- 액션 메타데이터 + Tier 오버라이드
 Plan: --
 Status: Ready to plan
-Last activity: 2026-03-05 -- Roadmap created (3 phases, 27 requirements)
+Last activity: 2026-03-05 -- Phase 330 complete (2 plans, 4 commits)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [###░░░░░░░] 33%
 
 ## Performance Metrics
 
-**Cumulative:** 84 milestones shipped, 329 phases completed, ~750 plans, ~2,145 reqs, ~6,822+ tests, ~232,614 LOC TS
+**Cumulative:** 84 milestones shipped, 330 phases completed, ~752 plans, ~2,145 reqs, ~6,822+ tests, ~232,614 LOC TS
+
+| Phase | Plan | Duration | Tasks | Files |
+|-------|------|----------|-------|-------|
+| 330 | 01 | 15m | 2 | 14 |
+| 330 | 02 | 10m | 2 | 8 |
 
 ## Accumulated Context
 
 ### Decisions
 
-(New milestone -- no decisions yet)
+- D1: INSERT OR IGNORE chosen for v42 migration to preserve existing operator settings
+- D2: Nested SettingsData format unified across DeFi and Agent Identity pages
+- D3: Legacy routes (#/actions, #/erc8004) redirect to new routes instead of 404
 
 ### Blockers/Concerns
 
@@ -51,5 +58,5 @@ Progress: [░░░░░░░░░░] 0%
 ## Session Continuity
 
 Last session: 2026-03-05
-Stopped at: Roadmap created for v30.11, ready to plan Phase 330
+Stopped at: Completed Phase 330, ready for Phase 331
 Resume file: None

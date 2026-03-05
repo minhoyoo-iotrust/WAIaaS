@@ -128,8 +128,8 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v30.10-ROADMAP.md` for full
 **Plans**: 2 plans
 
 Plans:
-- [ ] 330-01-PLAN.md -- Backend: 10 provider defaults to true + DB v42 migration + test updates
-- [ ] 330-02-PLAN.md -- Admin UI: menu/route rename + ERC-8004 toggle integration + settings parsing unification
+- [x] 330-01-PLAN.md -- Backend: 10 provider defaults to true + DB v42 migration + test updates
+- [x] 330-02-PLAN.md -- Admin UI: menu/route rename + ERC-8004 toggle integration + settings parsing unification
 
 ### Phase 331: 액션 메타데이터 + Tier 오버라이드
 **Goal**: 운영자가 각 액션의 설명을 확인하고, 액션별 보안 Tier를 드롭다운으로 조정할 수 있는 상태
@@ -173,9 +173,9 @@ Phases execute in numeric order: 330 -> 331 -> 332
 | 215-243 | v27.0-v27.4 | All | Complete | 2026-02-23 |
 | 244-267 | v28.0-v28.8 | All | Complete | 2026-02-26 |
 | 268-329 | v29.0-v30.10 | All | Complete | 2026-03-05 |
-| 330. UI 재구성 + Feature Gate 정비 | v30.11 | 0/2 | Not started | - |
+| 330. UI 재구성 + Feature Gate 정비 | v30.11 | 2/2 | Complete | 2026-03-05 |
 | 331. 액션 메타데이터 + Tier 오버라이드 | v30.11 | 0/? | Not started | - |
 | 332. 스킬 파일 동기화 | v30.11 | 0/? | Not started | - |
 
 ---
-*Last updated: 2026-03-05 -- Phase 330 planned (2 plans).*
+*Last updated: 2026-03-05 -- Phase 330 complete (2/2 plans).*
