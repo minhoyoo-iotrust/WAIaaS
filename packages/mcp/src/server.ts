@@ -1,5 +1,5 @@
 /**
- * createMcpServer: factory that creates an MCP server with 30 tools + 4 resource groups (3 static + 1 template).
+ * createMcpServer: factory that creates an MCP server with 32 tools + 4 resource groups (3 static + 1 template).
  *
  * Each tool/resource is registered via a dedicated register function
  * from its own module, following Dependency Injection pattern.
@@ -42,6 +42,8 @@ import { registerErc8004GetReputation } from './tools/erc8004-get-reputation.js'
 import { registerErc8004GetValidationStatus } from './tools/erc8004-get-validation-status.js';
 import { registerGetProviderStatus } from './tools/get-provider-status.js';
 import { registerSignMessage } from './tools/sign-message.js';
+import { registerErc8128SignRequest } from './tools/erc8128-sign-request.js';
+import { registerErc8128VerifySignature } from './tools/erc8128-verify-signature.js';
 
 // Resource registrations (Task 2)
 import { registerWalletBalance } from './resources/wallet-balance.js';
@@ -70,7 +72,7 @@ export function createMcpServer(apiClient: ApiClient, walletContext?: WalletCont
     version: '0.0.0',
   });
 
-  // Register 30 tools
+  // Register 32 tools
   registerConnectInfo(server, apiClient);
   registerGetPolicies(server, apiClient, walletContext);
   registerGetTokens(server, apiClient, walletContext);
@@ -101,6 +103,8 @@ export function createMcpServer(apiClient: ApiClient, walletContext?: WalletCont
   registerErc8004GetValidationStatus(server, apiClient, walletContext);
   registerGetProviderStatus(server, apiClient, walletContext);
   registerSignMessage(server, apiClient, walletContext);
+  registerErc8128SignRequest(server, apiClient, walletContext);
+  registerErc8128VerifySignature(server, apiClient, walletContext);
 
   // Register 4 resource groups (3 static + 1 template)
   registerWalletBalance(server, apiClient, walletContext);
