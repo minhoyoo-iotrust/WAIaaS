@@ -129,6 +129,7 @@ function createMockContext(overrides: Partial<PipelineContext> = {}): PipelineCo
       aaProviderApiKeyEncrypted: 'encrypted-mock-key',
       aaBundlerUrl: null,
       aaPaymasterUrl: null,
+      aaPaymasterPolicyId: null,
     },
     resolvedNetwork: 'ethereum-sepolia',
     request: {
@@ -187,6 +188,7 @@ describe('Paymaster sponsorship flow', () => {
         aaProviderApiKeyEncrypted: null,
         aaBundlerUrl: 'https://bundler.example.com',
         aaPaymasterUrl: null,
+      aaPaymasterPolicyId: null,
       },
     });
 
@@ -312,6 +314,7 @@ describe('wallet-based URL resolution', () => {
       aaProviderApiKey: 'pk_test_key',
       aaBundlerUrl: null,
       aaPaymasterUrl: null,
+      aaPaymasterPolicyId: null,
     };
 
     const url = resolveWalletBundlerUrl(wallet, 'ethereum-sepolia');
@@ -325,6 +328,7 @@ describe('wallet-based URL resolution', () => {
       aaProviderApiKey: 'pk_test_key',
       aaBundlerUrl: null,
       aaPaymasterUrl: null,
+      aaPaymasterPolicyId: null,
     };
 
     const bundlerUrl = resolveWalletBundlerUrl(wallet, 'ethereum-sepolia');
@@ -338,6 +342,7 @@ describe('wallet-based URL resolution', () => {
       aaProviderApiKey: null,
       aaBundlerUrl: 'https://my-bundler.example.com',
       aaPaymasterUrl: null,
+      aaPaymasterPolicyId: null,
     };
 
     const url = resolveWalletBundlerUrl(wallet, 'ethereum-sepolia');
@@ -350,6 +355,7 @@ describe('wallet-based URL resolution', () => {
       aaProviderApiKey: null,
       aaBundlerUrl: 'https://my-bundler.example.com',
       aaPaymasterUrl: 'https://my-paymaster.example.com',
+      aaPaymasterPolicyId: null,
     };
 
     const url = resolveWalletPaymasterUrl(wallet, 'ethereum-sepolia');
@@ -362,6 +368,7 @@ describe('wallet-based URL resolution', () => {
       aaProviderApiKey: null,
       aaBundlerUrl: 'https://my-bundler.example.com',
       aaPaymasterUrl: null,
+      aaPaymasterPolicyId: null,
     };
 
     const url = resolveWalletPaymasterUrl(wallet, 'ethereum-sepolia');

@@ -334,6 +334,13 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
       publicKey: wallet.publicKey,
       chain: wallet.chain,
       environment: wallet.environment,
+      // #251: pass AA fields for Smart Account action execution
+      accountType: wallet.accountType,
+      aaProvider: wallet.aaProvider,
+      aaProviderApiKeyEncrypted: wallet.aaProviderApiKeyEncrypted,
+      aaBundlerUrl: wallet.aaBundlerUrl,
+      aaPaymasterUrl: wallet.aaPaymasterUrl,
+      aaPaymasterPolicyId: wallet.aaPaymasterPolicyId,
     };
     const pipelineConfig = {
       policy_defaults_delay_seconds: deps.config.security.policy_defaults_delay_seconds,
@@ -381,6 +388,7 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
         walletId,
         wallet: walletData,
         resolvedNetwork,
+        resolvedRpcUrl: rpcUrl,
         request: requestWithGas, // ContractCallRequest with optional gasCondition
         txId: '', // stage1Validate will assign
         sessionId,

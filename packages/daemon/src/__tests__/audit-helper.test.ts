@@ -143,7 +143,7 @@ describe('DB migration v36', () => {
 
   // ---------- Test 16: LATEST_SCHEMA_VERSION is 39 ----------
   it('LATEST_SCHEMA_VERSION is 39', () => {
-    expect(LATEST_SCHEMA_VERSION).toBe(42);
+    expect(LATEST_SCHEMA_VERSION).toBe(43);
   });
 
   // ---------- Test 16b: Migration is idempotent ----------

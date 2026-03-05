@@ -47,6 +47,8 @@ export interface PipelineDeps {
   settingsService?: SettingsService;
   // v30.2: metrics counter for tx/rpc instrumentation (STAT-02)
   metricsCounter?: IMetricsCounter;
+  // #251: resolved RPC URL for Smart Account publicClient creation
+  resolvedRpcUrl?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -88,6 +90,11 @@ export class TransactionPipeline {
         chain: wallet.chain,
         environment: wallet.environment,
         accountType: wallet.accountType,
+        aaProvider: wallet.aaProvider,
+        aaProviderApiKeyEncrypted: wallet.aaProviderApiKeyEncrypted,
+        aaBundlerUrl: wallet.aaBundlerUrl,
+        aaPaymasterUrl: wallet.aaPaymasterUrl,
+        aaPaymasterPolicyId: wallet.aaPaymasterPolicyId,
       },
       resolvedNetwork,
       request,

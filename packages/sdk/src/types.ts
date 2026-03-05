@@ -327,6 +327,13 @@ export interface RenewSessionResponse {
   renewalCount: number;
 }
 
+export interface RotateSessionTokenResponse {
+  id: string;
+  token: string;
+  expiresAt: number;
+  tokenIssuedCount: number;
+}
+
 // ---------------------------------------------------------------------------
 // Connect Info (Discovery) Types
 // ---------------------------------------------------------------------------

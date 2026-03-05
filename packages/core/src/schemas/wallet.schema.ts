@@ -39,6 +39,7 @@ const CreateWalletRequestBaseSchema = z.object({
   aaProviderApiKey: z.string().min(1).optional(),
   aaBundlerUrl: z.string().url().optional(),
   aaPaymasterUrl: z.string().url().optional(),
+  aaPaymasterPolicyId: z.string().min(1).optional(),
 });
 
 export const CreateWalletRequestSchema = CreateWalletRequestBaseSchema.superRefine((data, ctx) => {

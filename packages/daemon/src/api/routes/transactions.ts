@@ -420,8 +420,10 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
         aaProviderApiKeyEncrypted: wallet.aaProviderApiKeyEncrypted,
         aaBundlerUrl: wallet.aaBundlerUrl,
         aaPaymasterUrl: wallet.aaPaymasterUrl,
+        aaPaymasterPolicyId: wallet.aaPaymasterPolicyId,
       },
       resolvedNetwork,
+      resolvedRpcUrl: rpcUrl,
       request,
       txId: '', // stage1Validate will assign
       sessionId: c.get('sessionId' as never) as string | undefined,

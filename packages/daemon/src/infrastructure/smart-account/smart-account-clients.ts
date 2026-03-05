@@ -35,6 +35,7 @@ export interface WalletProviderData {
   aaProviderApiKey: string | null; // decrypted plaintext
   aaBundlerUrl: string | null; // for custom provider
   aaPaymasterUrl: string | null; // for custom provider
+  aaPaymasterPolicyId: string | null; // #252: sponsorshipPolicyId for paymaster context
 }
 
 export interface BundlerClientOptions {
@@ -123,13 +124,22 @@ export function createSmartAccountBundlerClient(opts: BundlerClientOptions): Bun
   const paymasterUrl = resolveWalletPaymasterUrl(opts.walletProvider, opts.networkId);
 
   // Build paymaster option: if URL exists, create PaymasterClient and use its methods
+  // #252: wrap with context if policyId is set (required for Alchemy, optional for Pimlico)
+  const policyId = opts.walletProvider.aaPaymasterPolicyId;
   const paymasterOpt = paymasterUrl
     ? (() => {
         const pmClient = createPaymasterClient({ transport: http(paymasterUrl) });
-        return {
-          getPaymasterData: pmClient.getPaymasterData,
-          getPaymasterStubData: pmClient.getPaymasterStubData,
-        };
+        return policyId
+          ? {
+              getPaymasterData: (params: any) =>
+                pmClient.getPaymasterData({ ...params, context: { sponsorshipPolicyId: policyId } }),
+              getPaymasterStubData: (params: any) =>
+                pmClient.getPaymasterStubData({ ...params, context: { sponsorshipPolicyId: policyId } }),
+            }
+          : {
+              getPaymasterData: pmClient.getPaymasterData,
+              getPaymasterStubData: pmClient.getPaymasterStubData,
+            };
       })()
     : undefined;
 

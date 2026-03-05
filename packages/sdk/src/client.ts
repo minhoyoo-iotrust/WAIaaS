@@ -49,6 +49,7 @@ import type {
   CreateSessionParams,
   CreateSessionResponse,
   RenewSessionResponse,
+  RotateSessionTokenResponse,
   ConnectInfoResponse,
   EncodeCalldataParams,
   EncodeCalldataResponse,
@@ -552,6 +553,22 @@ export class WAIaaSClient {
     );
     // Auto-update token after successful renewal
     this.sessionToken = result.token;
+    return result;
+  }
+
+  async rotateSessionToken(sessionId: string, masterPassword?: string): Promise<RotateSessionTokenResponse> {
+    const pw = masterPassword ?? this.masterPassword;
+    if (!pw) {
+      throw new WAIaaSError({ code: 'NO_MASTER_PASSWORD', message: 'Master password required for rotate', status: 0, retryable: false });
+    }
+    const result = await withRetry(
+      () => this.http.post<RotateSessionTokenResponse>(
+        `/v1/sessions/${sessionId}/rotate`,
+        {},
+        this.masterHeaders(pw),
+      ),
+      this.retryOptions,
+    );
     return result;
   }
 

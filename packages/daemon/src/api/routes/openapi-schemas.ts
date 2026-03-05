@@ -668,6 +668,7 @@ export const SetProviderRequestSchema = z
     apiKey: z.string().min(1).optional(),
     bundlerUrl: z.string().url().optional(),
     paymasterUrl: z.string().url().optional(),
+    policyId: z.string().min(1).optional(),
   })
   .superRefine((data, ctx) => {
     if (data.provider === 'pimlico' || data.provider === 'alchemy') {
@@ -763,6 +764,15 @@ export const SessionReissueResponseSchema = z
     expiresAt: z.number().int(),
   })
   .openapi('SessionReissueResponse');
+
+export const SessionRotateResponseSchema = z
+  .object({
+    id: z.string().uuid(),
+    token: z.string(),
+    expiresAt: z.number().int(),
+    tokenIssuedCount: z.number().int(),
+  })
+  .openapi('SessionRotateResponse');
 
 export const KillSwitchResponseSchema = z
   .object({
