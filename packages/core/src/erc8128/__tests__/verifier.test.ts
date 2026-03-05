@@ -183,4 +183,92 @@ describe('verifyHttpSignature', () => {
     expect(result.valid).toBe(false);
     expect(result.error).toBe('Missing Signature-Input header');
   });
+
+  it('returns invalid with malformed Signature-Input (bad label)', async () => {
+    const result = await verifyHttpSignature({
+      method: 'GET',
+      url: 'https://example.com/',
+      headers: {
+        'Signature-Input': 'bad=("@method");created=123',
+        Signature: 'sig1=:abc=:',
+      },
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.error).toBe('Failed to parse Signature-Input');
+  });
+
+  it('returns invalid with malformed Signature-Input (no parens)', async () => {
+    const result = await verifyHttpSignature({
+      method: 'GET',
+      url: 'https://example.com/',
+      headers: {
+        'Signature-Input': 'sig1=@method;created=123',
+        Signature: 'sig1=:abc=:',
+      },
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.error).toBe('Failed to parse Signature-Input');
+  });
+
+  it('returns invalid with malformed Signature format', async () => {
+    const result = await verifyHttpSignature({
+      method: 'GET',
+      url: 'https://example.com/',
+      headers: {
+        'Signature-Input': 'sig1=("@method");created=123;keyid="erc8128:1:0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";alg="eip191"',
+        Signature: 'sig1=notbase64format',
+      },
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.error).toBe('Invalid Signature format');
+  });
+
+  it('returns invalid with corrupted signature bytes (ecrecover failure)', async () => {
+    const result = await verifyHttpSignature({
+      method: 'GET',
+      url: 'https://example.com/',
+      headers: {
+        'Signature-Input': 'sig1=("@method");created=123;keyid="erc8128:1:0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";alg="eip191"',
+        Signature: 'sig1=:AAAA:',
+      },
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.error).toBe('Failed to recover address from signature');
+  });
+
+  it('returns invalid with malformed keyid in Signature-Input', async () => {
+    // Sign a valid message first to get valid signature bytes
+    const signed = await signHttpMessage({
+      method: 'GET',
+      url: 'https://example.com/',
+      headers: {},
+      privateKey: TEST_PRIVATE_KEY,
+      chainId: TEST_CHAIN_ID,
+      address: TEST_ADDRESS,
+      preset: 'minimal',
+      nonce: false,
+    });
+
+    // Replace keyid with invalid format
+    const tamperedInput = signed.headers['Signature-Input'].replace(
+      /;keyid="[^"]*"/,
+      ';keyid="not-a-valid-keyid"',
+    );
+
+    const result = await verifyHttpSignature({
+      method: 'GET',
+      url: 'https://example.com/',
+      headers: {
+        'Signature-Input': tamperedInput,
+        Signature: signed.headers['Signature'],
+      },
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.error).toBe('Invalid keyid format');
+  });
 });
