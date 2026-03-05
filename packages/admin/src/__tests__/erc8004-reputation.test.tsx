@@ -64,7 +64,15 @@ import Erc8004Page from '../pages/erc8004';
 // ---------------------------------------------------------------------------
 
 const mockSettingsEnabled = {
-  'actions.erc8004_agent_enabled': { value: 'true', source: 'admin' },
+  actions: {
+    erc8004_agent_enabled: 'true',
+  },
+};
+
+const mockProvidersResponse = {
+  providers: [
+    { name: 'erc8004_agent', actions: [{ name: 'register', description: 'Register agent', chain: 'ethereum', riskLevel: 'LOW', defaultTier: 'standard' }] },
+  ],
 };
 
 const mockWallets = [
@@ -109,6 +117,7 @@ describe('Erc8004Page Reputation tab', () => {
     const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
     mockApiGet
       .mockResolvedValueOnce(mockSettingsEnabled)
+      .mockResolvedValueOnce(mockProvidersResponse)
       .mockResolvedValueOnce(mockWallets)
       .mockResolvedValueOnce(mockRegFileWithAgent)
       .mockResolvedValueOnce(mockReputation);
@@ -132,6 +141,7 @@ describe('Erc8004Page Reputation tab', () => {
     const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
     mockApiGet
       .mockResolvedValueOnce(mockSettingsEnabled)
+      .mockResolvedValueOnce(mockProvidersResponse)
       .mockResolvedValueOnce(mockWallets)
       .mockResolvedValueOnce(mockRegFileWithAgent)
       .mockResolvedValueOnce(mockReputation) // My agent score
@@ -167,6 +177,7 @@ describe('Erc8004Page Reputation tab', () => {
     const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
     mockApiGet
       .mockResolvedValueOnce(mockSettingsEnabled)
+      .mockResolvedValueOnce(mockProvidersResponse)
       .mockResolvedValueOnce(mockWallets)
       .mockResolvedValueOnce(mockRegFileWithAgent)
       .mockResolvedValueOnce(mockReputation);
@@ -189,6 +200,7 @@ describe('Erc8004Page Reputation tab', () => {
     const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
     mockApiGet
       .mockResolvedValueOnce(mockSettingsEnabled)
+      .mockResolvedValueOnce(mockProvidersResponse)
       .mockResolvedValueOnce(mockWallets)
       .mockResolvedValueOnce(mockRegFileWithAgent)
       .mockResolvedValueOnce(mockReputation)   // My agent score

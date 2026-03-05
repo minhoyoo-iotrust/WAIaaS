@@ -31,7 +31,6 @@ const BUILTIN_PROVIDERS: BuiltinProvider[] = [
   { key: 'kamino', name: 'Kamino Lending', description: 'Solana lending protocol (supply, borrow, repay, withdraw)', chain: 'solana', requiresApiKey: false, docsUrl: 'https://docs.kamino.finance' },
   { key: 'pendle_yield', name: 'Pendle Yield', description: 'EVM yield trading: buy/sell PT/YT, redeem at maturity, add/remove LP', chain: 'evm', requiresApiKey: false, docsUrl: 'https://docs.pendle.finance' },
   { key: 'drift_perp', name: 'Drift Perp', description: 'Solana perpetual futures trading (open, close, modify positions with leverage)', chain: 'solana', requiresApiKey: false, docsUrl: 'https://docs.drift.trade' },
-  { key: 'erc8004_agent', name: 'ERC-8004 Agent', description: 'On-chain agent identity, reputation, and validation (ERC-8004 Trustless Agents)', chain: 'evm', requiresApiKey: false, docsUrl: 'https://eips.ethereum.org/EIPS/eip-8004' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -40,6 +39,7 @@ const BUILTIN_PROVIDERS: BuiltinProvider[] = [
 
 interface ProviderAction {
   name: string;
+  description: string;
   chain: string;
   riskLevel: string;
   defaultTier: string;
@@ -218,6 +218,48 @@ export default function ActionsPage() {
     return providers.value.find(
       (p) => p.name.toLowerCase().replace(/[\s-]/g, '_') === providerKey || p.name.toLowerCase().includes(providerKey.replace(/_/g, ' ')),
     );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Tier override helpers (Phase 331)
+  // ---------------------------------------------------------------------------
+
+  function getTierOverride(providerKey: string, actionName: string): string {
+    const cat = settings.value['actions'] as Record<string, string> | undefined;
+    return cat?.[`${providerKey}_${actionName}_tier`] || '';
+  }
+
+  function isOverridden(providerKey: string, actionName: string): boolean {
+    const override = getTierOverride(providerKey, actionName);
+    return override !== '' && override !== undefined;
+  }
+
+  async function handleTierChange(providerKey: string, actionName: string, newTier: string) {
+    const settingKey = `actions.${providerKey}_${actionName}_tier`;
+    try {
+      const result = await apiPut<{ updated: number; settings: SettingsData }>(API.ADMIN_SETTINGS, {
+        settings: [{ key: settingKey, value: newTier }],
+      });
+      settings.value = result.settings;
+      showToast('success', `Tier updated for ${providerKey}/${actionName}`);
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    }
+  }
+
+  async function handleTierReset(providerKey: string, actionName: string) {
+    const settingKey = `actions.${providerKey}_${actionName}_tier`;
+    try {
+      const result = await apiPut<{ updated: number; settings: SettingsData }>(API.ADMIN_SETTINGS, {
+        settings: [{ key: settingKey, value: '' }],
+      });
+      settings.value = result.settings;
+      showToast('success', `Tier reset to default for ${providerKey}/${actionName}`);
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    }
   }
 
   function getStatus(bp: BuiltinProvider): { label: string; variant: 'success' | 'warning' | 'neutral' } {
@@ -461,18 +503,44 @@ export default function ActionsPage() {
                     <thead>
                       <tr>
                         <th>Name</th>
+                        <th>Description</th>
                         <th>Chain</th>
                         <th>Risk Level</th>
-                        <th>Default Tier</th>
+                        <th>Tier</th>
                       </tr>
                     </thead>
                     <tbody>
                       {registered.actions.map((action) => (
                         <tr key={action.name}>
                           <td>{action.name}</td>
+                          <td style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)', maxWidth: '300px' }}>{action.description}</td>
                           <td><Badge variant="info">{action.chain}</Badge></td>
                           <td>{action.riskLevel}</td>
-                          <td>{action.defaultTier}</td>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                              <select
+                                value={getTierOverride(bp.key, action.name) || action.defaultTier}
+                                onChange={(e) => handleTierChange(bp.key, action.name, (e.target as HTMLSelectElement).value)}
+                                style={{ padding: '2px 4px', fontSize: 'var(--font-size-sm)', borderRadius: 'var(--radius-sm)' }}
+                              >
+                                {['INSTANT', 'NOTIFY', 'DELAY', 'APPROVAL'].map(t => (
+                                  <option key={t} value={t}>{t}</option>
+                                ))}
+                              </select>
+                              {isOverridden(bp.key, action.name) && (
+                                <>
+                                  <Badge variant="warning">customized</Badge>
+                                  <button
+                                    onClick={() => handleTierReset(bp.key, action.name)}
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 'var(--font-size-xs)', color: 'var(--text-secondary)', textDecoration: 'underline' }}
+                                    title="Reset to provider default"
+                                  >
+                                    reset
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>

@@ -522,7 +522,7 @@ export default function SystemPage() {
         <div class="settings-category-header">
           <h3>Smart Account (ERC-4337)</h3>
           <p class="settings-description">
-            Configure ERC-4337 smart account infrastructure. Requires an external Bundler service (e.g., Pimlico, Stackup, Alchemy).
+            Global smart account feature toggle. Bundler and Paymaster are configured per-wallet.
           </p>
         </div>
         <div class="settings-category-body">
@@ -541,34 +541,6 @@ export default function SystemPage() {
               data-field="smart_account.enabled"
             />
             <FormField
-              label="Bundler URL"
-              name="smart_account.bundler_url"
-              value={ev('smart_account', 'bundler_url')}
-              onChange={(v) => handleFieldChange('smart_account.bundler_url', v)}
-              placeholder="https://api.pimlico.io/v2/..."
-              description="Bundler RPC endpoint URL. Required for smart account transactions."
-              data-field="smart_account.bundler_url"
-            />
-            <FormField
-              label="Paymaster URL"
-              name="smart_account.paymaster_url"
-              value={ev('smart_account', 'paymaster_url')}
-              onChange={(v) => handleFieldChange('smart_account.paymaster_url', v)}
-              placeholder="https://api.pimlico.io/v2/..."
-              description="Paymaster RPC endpoint URL. Optional -- when set, gas fees are sponsored."
-              data-field="smart_account.paymaster_url"
-            />
-            <FormField
-              label="Paymaster API Key"
-              name="smart_account.paymaster_api_key"
-              type="password"
-              value={ev('smart_account', 'paymaster_api_key')}
-              onChange={(v) => handleFieldChange('smart_account.paymaster_api_key', v)}
-              placeholder="Enter API key"
-              description="Paymaster API key. Stored encrypted (AES-256-GCM)."
-              data-field="smart_account.paymaster_api_key"
-            />
-            <FormField
               label="EntryPoint Address"
               name="smart_account.entry_point"
               value={ev('smart_account', 'entry_point')}
@@ -580,7 +552,8 @@ export default function SystemPage() {
           </div>
           <div class="settings-info-box">
             Smart accounts enable gas-sponsored transactions via Paymaster, atomic batch execution,
-            and lazy contract deployment. Requires an ERC-4337 Bundler and optionally a Paymaster service.
+            and lazy contract deployment. Bundler and Paymaster settings are configured individually
+            on each wallet (Wallets → Edit → AA Provider).
           </div>
         </div>
       </div>

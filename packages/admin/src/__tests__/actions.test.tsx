@@ -117,10 +117,18 @@ const mockProvidersJupiter = {
       requiresApiKey: false,
       hasApiKey: false,
       actions: [
-        { name: 'swap', chain: 'solana', riskLevel: 'medium', defaultTier: 'standard' },
+        { name: 'swap', description: 'Swap tokens on Solana via Jupiter aggregator with best price routing', chain: 'solana', riskLevel: 'medium', defaultTier: 'DELAY' },
       ],
     },
   ],
+};
+
+const mockSettingsWithTierOverride = {
+  actions: {
+    jupiter_swap_enabled: 'true',
+    zerox_swap_enabled: 'false',
+    jupiter_swap_swap_tier: 'APPROVAL',
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -170,9 +178,9 @@ describe('ActionsPage', () => {
       expect(screen.getByText('Lido Staking')).toBeTruthy();
       expect(screen.getByText('Jito Staking')).toBeTruthy();
 
-      // All 10 should show Inactive (5 original + Aave V3 + Kamino + Pendle + Drift + ERC-8004)
+      // All 9 should show Inactive (5 original + Aave V3 + Kamino + Pendle + Drift; ERC-8004 moved to Agent Identity page)
       const inactiveBadges = screen.getAllByText('Inactive');
-      expect(inactiveBadges.length).toBe(10);
+      expect(inactiveBadges.length).toBe(9);
     });
 
     it('renders provider descriptions', async () => {
@@ -383,6 +391,96 @@ describe('ActionsPage', () => {
         expect(screen.getByText('Registered Actions')).toBeTruthy();
       });
       expect(screen.getByText('swap')).toBeTruthy();
+    });
+  });
+
+  describe('description column and tier dropdown (Phase 331)', () => {
+    it('renders Description column in Registered Actions table', async () => {
+      mockApiCalls(mockSettingsJupiterEnabled, mockEmptyApiKeys, mockProvidersJupiter);
+      render(<ActionsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Description')).toBeTruthy();
+      });
+      expect(screen.getByText(/Swap tokens on Solana via Jupiter/)).toBeTruthy();
+    });
+
+    it('renders Tier column header instead of Default Tier', async () => {
+      mockApiCalls(mockSettingsJupiterEnabled, mockEmptyApiKeys, mockProvidersJupiter);
+      render(<ActionsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Tier')).toBeTruthy();
+      });
+      expect(screen.queryByText('Default Tier')).toBeNull();
+    });
+
+    it('renders tier dropdown with correct current value', async () => {
+      mockApiCalls(mockSettingsJupiterEnabled, mockEmptyApiKeys, mockProvidersJupiter);
+      render(<ActionsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Registered Actions')).toBeTruthy();
+      });
+
+      const select = document.querySelector('select') as HTMLSelectElement;
+      expect(select).toBeTruthy();
+      expect(select.value).toBe('DELAY');
+    });
+
+    it('dropdown change calls PUT /v1/admin/settings with correct key', async () => {
+      mockApiCalls(mockSettingsJupiterEnabled, mockEmptyApiKeys, mockProvidersJupiter);
+      render(<ActionsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Registered Actions')).toBeTruthy();
+      });
+
+      const select = document.querySelector('select') as HTMLSelectElement;
+      vi.mocked(apiPut).mockResolvedValueOnce({
+        updated: 1,
+        settings: { actions: { jupiter_swap_enabled: 'true', jupiter_swap_swap_tier: 'APPROVAL' } },
+      });
+
+      fireEvent.change(select, { target: { value: 'APPROVAL' } });
+
+      await waitFor(() => {
+        expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/admin/settings', {
+          settings: [{ key: 'actions.jupiter_swap_swap_tier', value: 'APPROVAL' }],
+        });
+      });
+    });
+
+    it('shows customized badge when tier is overridden', async () => {
+      mockApiCalls(mockSettingsWithTierOverride, mockEmptyApiKeys, mockProvidersJupiter);
+      render(<ActionsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('customized')).toBeTruthy();
+      });
+      expect(screen.getByText('reset')).toBeTruthy();
+    });
+
+    it('reset button calls PUT with empty value', async () => {
+      mockApiCalls(mockSettingsWithTierOverride, mockEmptyApiKeys, mockProvidersJupiter);
+      render(<ActionsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('reset')).toBeTruthy();
+      });
+
+      vi.mocked(apiPut).mockResolvedValueOnce({
+        updated: 1,
+        settings: { actions: { jupiter_swap_enabled: 'true' } },
+      });
+
+      fireEvent.click(screen.getByText('reset'));
+
+      await waitFor(() => {
+        expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/admin/settings', {
+          settings: [{ key: 'actions.jupiter_swap_swap_tier', value: '' }],
+        });
+      });
     });
   });
 });

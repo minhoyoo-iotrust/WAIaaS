@@ -570,8 +570,11 @@ When a transaction is submitted (`POST /v1/transactions/send`), the policy engin
 1. **Collect policies** -- All enabled policies for the wallet + global policies, sorted by priority. If a policy has a `network` field set, it applies only to transactions on that specific network. Override priority: wallet+network > wallet+null > global+network > global+null.
 2. **Default deny checks** -- ALLOWED_TOKENS, CONTRACT_WHITELIST, and APPROVED_SPENDERS use **default deny**: if any policy of that type exists but the transaction's token/contract/spender is not in any matching policy, the transaction is blocked with `POLICY_VIOLATION`.
 3. **Tier assignment** -- SPENDING_LIMIT determines the transaction tier (INSTANT/NOTIFY/DELAY/APPROVAL) based on amount. REPUTATION_THRESHOLD evaluates counterparty reputation and may escalate the tier (after APPROVED_SPENDERS, before SPENDING_LIMIT). APPROVE_TIER_OVERRIDE overrides the tier for APPROVE transactions.
+   - **Action tier override (v30.11):** When a transaction is executed via the Action Provider framework, the action's tier override (configured via Admin Settings key `actions.{provider}_{action}_tier`) is combined with the policy-assigned tier using escalation-only logic: `effectiveTier = max(policyTier, actionTier)`. The action tier can only raise the security level, never lower it. For example, if a SPENDING_LIMIT policy assigns NOTIFY but the action tier override is DELAY, the effective tier is DELAY. If the policy assigns APPROVAL, it remains APPROVAL regardless of action tier.
 4. **Constraint checks** -- WHITELIST, TIME_RESTRICTION, RATE_LIMIT, METHOD_WHITELIST, APPROVE_AMOUNT_LIMIT, ALLOWED_NETWORKS are evaluated. Any violation blocks the transaction.
 5. **Tier execution** -- INSTANT executes immediately, NOTIFY executes + sends notification, DELAY waits for cooldown, APPROVAL requires owner approval via `POST /v1/transactions/{id}/approve`.
+
+For action tier configuration, see **actions.skill.md** Section 14 and **admin.skill.md** Section 15.
 
 ### Default Deny Policy Types
 

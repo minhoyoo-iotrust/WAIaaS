@@ -334,4 +334,141 @@ describe('Wallet Provider UI', () => {
       });
     });
   });
+
+  it('sends aaProvider/aaProviderApiKey fields when creating smart account with pimlico', async () => {
+    (currentPath as unknown as { value: string }).value = '/wallets';
+
+    vi.mocked(apiPost).mockResolvedValue({
+      id: 'w3',
+      name: 'test-smart-new',
+      chain: 'ethereum',
+      network: 'ethereum-sepolia',
+      environment: 'testnet',
+      publicKey: '0xnew',
+      status: 'ACTIVE',
+      accountType: 'smart',
+    } as never);
+
+    render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Create Wallet')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('Create Wallet'));
+
+    // Fill name
+    const nameInput = screen.getByPlaceholderText('e.g. trading-bot');
+    fireEvent.input(nameInput, { target: { value: 'test-smart-new' } });
+
+    // Select ethereum chain
+    const chainSelect = screen.getByLabelText('Chain');
+    fireEvent.change(chainSelect, { target: { value: 'ethereum' } });
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Account Type')).toBeTruthy();
+    });
+
+    // Select smart account type
+    const accountTypeSelect = screen.getByLabelText('Account Type');
+    fireEvent.change(accountTypeSelect, { target: { value: 'smart' } });
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Provider')).toBeTruthy();
+    });
+
+    // Fill API key
+    const apiKeyInput = screen.getByLabelText('API Key');
+    fireEvent.input(apiKeyInput, { target: { value: 'pimlico-key-123' } });
+
+    // Submit
+    fireEvent.click(screen.getByText('Create'));
+
+    await waitFor(() => {
+      expect(apiPost).toHaveBeenCalled();
+      const callArgs = vi.mocked(apiPost).mock.calls[0];
+      const body = callArgs[1] as Record<string, unknown>;
+      // Must use aaProvider/aaProviderApiKey (not provider/apiKey)
+      expect(body.aaProvider).toBe('pimlico');
+      expect(body.aaProviderApiKey).toBe('pimlico-key-123');
+      expect(body.accountType).toBe('smart');
+      expect(body).not.toHaveProperty('provider');
+      expect(body).not.toHaveProperty('apiKey');
+    });
+  });
+
+  it('sends aaProvider/aaBundlerUrl/aaPaymasterUrl fields when creating smart account with custom provider', async () => {
+    (currentPath as unknown as { value: string }).value = '/wallets';
+
+    vi.mocked(apiPost).mockResolvedValue({
+      id: 'w4',
+      name: 'test-smart-custom',
+      chain: 'ethereum',
+      network: 'ethereum-sepolia',
+      environment: 'testnet',
+      publicKey: '0xcustom',
+      status: 'ACTIVE',
+      accountType: 'smart',
+    } as never);
+
+    render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Create Wallet')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('Create Wallet'));
+
+    // Fill name
+    const nameInput = screen.getByPlaceholderText('e.g. trading-bot');
+    fireEvent.input(nameInput, { target: { value: 'test-smart-custom' } });
+
+    // Select ethereum chain
+    const chainSelect = screen.getByLabelText('Chain');
+    fireEvent.change(chainSelect, { target: { value: 'ethereum' } });
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Account Type')).toBeTruthy();
+    });
+
+    // Select smart account type
+    const accountTypeSelect = screen.getByLabelText('Account Type');
+    fireEvent.change(accountTypeSelect, { target: { value: 'smart' } });
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Provider')).toBeTruthy();
+    });
+
+    // Select custom provider
+    const providerSelect = screen.getByLabelText('Provider');
+    fireEvent.change(providerSelect, { target: { value: 'custom' } });
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Bundler URL')).toBeTruthy();
+    });
+
+    // Fill bundler URL and paymaster URL
+    const bundlerInput = screen.getByLabelText('Bundler URL');
+    fireEvent.input(bundlerInput, { target: { value: 'https://bundler.example.com' } });
+
+    const paymasterInput = screen.getByLabelText('Paymaster URL (optional)');
+    fireEvent.input(paymasterInput, { target: { value: 'https://paymaster.example.com' } });
+
+    // Submit
+    fireEvent.click(screen.getByText('Create'));
+
+    await waitFor(() => {
+      expect(apiPost).toHaveBeenCalled();
+      const callArgs = vi.mocked(apiPost).mock.calls[0];
+      const body = callArgs[1] as Record<string, unknown>;
+      // Must use aa-prefixed fields (not provider/bundlerUrl/paymasterUrl)
+      expect(body.aaProvider).toBe('custom');
+      expect(body.aaBundlerUrl).toBe('https://bundler.example.com');
+      expect(body.aaPaymasterUrl).toBe('https://paymaster.example.com');
+      expect(body.accountType).toBe('smart');
+      expect(body).not.toHaveProperty('provider');
+      expect(body).not.toHaveProperty('bundlerUrl');
+      expect(body).not.toHaveProperty('paymasterUrl');
+    });
+  });
 });

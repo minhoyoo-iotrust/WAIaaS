@@ -789,12 +789,12 @@ describe('SystemPage', () => {
         expect(screen.getByText('Smart Account (ERC-4337)')).toBeTruthy();
       });
 
-      // Check for key form fields
+      // Check for key form fields (bundler/paymaster are per-wallet, not system-level)
       expect(document.querySelector('[name="smart_account.enabled"]')).toBeTruthy();
-      expect(document.querySelector('[name="smart_account.bundler_url"]')).toBeTruthy();
-      expect(document.querySelector('[name="smart_account.paymaster_url"]')).toBeTruthy();
-      expect(document.querySelector('[name="smart_account.paymaster_api_key"]')).toBeTruthy();
       expect(document.querySelector('[name="smart_account.entry_point"]')).toBeTruthy();
+      expect(document.querySelector('[name="smart_account.bundler_url"]')).toBeFalsy();
+      expect(document.querySelector('[name="smart_account.paymaster_url"]')).toBeFalsy();
+      expect(document.querySelector('[name="smart_account.paymaster_api_key"]')).toBeFalsy();
     });
 
     it('includes smart_account settings in save payload', async () => {
@@ -805,9 +805,9 @@ describe('SystemPage', () => {
         expect(screen.getByText('Smart Account (ERC-4337)')).toBeTruthy();
       });
 
-      // Change bundler URL
-      const bundlerInput = document.querySelector('[name="smart_account.bundler_url"]') as HTMLInputElement;
-      fireEvent.input(bundlerInput, { target: { value: 'https://api.pimlico.io/v2/sepolia/rpc' } });
+      // Change entry_point (bundler/paymaster are per-wallet now)
+      const entryPointInput = document.querySelector('[name="smart_account.entry_point"]') as HTMLInputElement;
+      fireEvent.input(entryPointInput, { target: { value: '0x1234567890abcdef1234567890abcdef12345678' } });
 
       // Save bar should appear
       await waitFor(() => {
@@ -821,7 +821,7 @@ describe('SystemPage', () => {
       await waitFor(() => {
         expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/admin/settings', {
           settings: expect.arrayContaining([
-            expect.objectContaining({ key: 'smart_account.bundler_url' }),
+            expect.objectContaining({ key: 'smart_account.entry_point' }),
           ]),
         });
       });

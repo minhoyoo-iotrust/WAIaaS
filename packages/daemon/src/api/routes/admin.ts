@@ -49,7 +49,7 @@ import type * as schema from '../../infrastructure/database/schema.js';
 import type { NotificationService } from '../../notifications/notification-service.js';
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
 import type { SettingsService } from '../../infrastructure/settings/index.js';
-import { getSettingDefinition } from '../../infrastructure/settings/index.js';
+import { getSettingDefinition, ActionTierOverrideSchema } from '../../infrastructure/settings/index.js';
 import type { AdapterPool } from '../../infrastructure/adapter-pool.js';
 import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
 // ApiKeyStore removed in v29.5 (#214) -- API keys now managed by SettingsService
@@ -1598,13 +1598,22 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
     const body = c.req.valid('json');
     const entries = body.settings;
 
-    // Validate all keys exist in SETTING_DEFINITIONS
+    // Validate all keys exist in SETTING_DEFINITIONS (or dynamic tier pattern)
     for (const entry of entries) {
       const def = getSettingDefinition(entry.key);
       if (!def) {
         throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
           message: `Unknown setting key: ${entry.key}`,
         });
+      }
+      // [Phase 331] Validate tier override values
+      if (entry.key.startsWith('actions.') && entry.key.endsWith('_tier')) {
+        const parsed = ActionTierOverrideSchema.safeParse(entry.value);
+        if (!parsed.success) {
+          throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
+            message: `Invalid tier value '${entry.value}' for key '${entry.key}'. Must be one of: INSTANT, NOTIFY, DELAY, APPROVAL, or empty string.`,
+          });
+        }
       }
     }
 

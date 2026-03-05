@@ -79,7 +79,7 @@ const LEGACY_NETWORK_NORMALIZE: Record<string, string> = {
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 41;
+export const LATEST_SCHEMA_VERSION = 42;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -2573,6 +2573,36 @@ MIGRATIONS.push({
     }
     if (!has('aa_paymaster_url')) {
       sqlite.exec("ALTER TABLE wallets ADD COLUMN aa_paymaster_url TEXT");
+    }
+  },
+});
+
+// ---------------------------------------------------------------------------
+// v42: Seed all 10 action provider _enabled defaults to true
+// ---------------------------------------------------------------------------
+
+MIGRATIONS.push({
+  version: 42,
+  description: 'Seed all 10 action provider _enabled defaults to true (INSERT OR IGNORE preserves existing)',
+  up: (sqlite) => {
+    const keys = [
+      'actions.jupiter_swap_enabled',
+      'actions.zerox_swap_enabled',
+      'actions.lifi_enabled',
+      'actions.lido_staking_enabled',
+      'actions.jito_staking_enabled',
+      'actions.aave_v3_enabled',
+      'actions.kamino_enabled',
+      'actions.pendle_yield_enabled',
+      'actions.drift_enabled',
+      'actions.erc8004_agent_enabled',
+    ];
+    const now = Math.floor(Date.now() / 1000);
+    const stmt = sqlite.prepare(
+      "INSERT OR IGNORE INTO settings (key, value, encrypted, category, updated_at) VALUES (?, 'true', 0, 'actions', ?)",
+    );
+    for (const key of keys) {
+      stmt.run(key, now);
     }
   },
 });
