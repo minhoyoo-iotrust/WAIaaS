@@ -159,12 +159,12 @@ Plans:
   3. User can manage ERC8128_ALLOWED_DOMAINS policy via Admin UI Policies form and view ERC-8128 settings in Admin UI System page
   4. User can discover ERC-8128 support via connect-info capabilities.erc8128Support field
   5. User can reference ERC-8128 usage in updated skill files (wallet, policies, admin)
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 329-01: TBD
-- [ ] 329-02: TBD
-- [ ] 329-03: TBD
+- [ ] 329-01-PLAN.md -- MCP tools (erc8128_sign_request + erc8128_verify_signature) + connect-info capability + skill resource
+- [ ] 329-02-PLAN.md -- SDK methods (signHttpRequest + verifyHttpSignature + fetchWithErc8128)
+- [ ] 329-03-PLAN.md -- Admin UI (policy form + system settings) + skill files
 
 ## Progress
 
@@ -180,8 +180,8 @@ Phases execute in numeric order: 327 -> 328 -> 329
 | 244-267 | v28.0-v28.8 | All | Complete | 2026-02-26 |
 | 268-326 | v29.0-v30.9 | All | Complete | 2026-03-05 |
 | 327. HTTP Message Signing Engine | 2/2 | Complete   | 2026-03-05 | - |
-| 328. REST API + Policy + Settings | v30.10 | 2/2 | Complete | 2026-03-05 |
-| 329. MCP + SDK + Admin UI + Skill Files | v30.10 | 0/TBD | Not started | - |
+| 328. REST API + Policy + Settings | v30.10 | Complete    | 2026-03-05 | 2026-03-05 |
+| 329. MCP + SDK + Admin UI + Skill Files | v30.10 | 0/3 | Not started | - |
 
 ---
-*Last updated: 2026-03-05 -- Phase 328 planned (2 plans, 2 waves). 10 requirements mapped.*
+*Last updated: 2026-03-05 -- Phase 329 planned (3 plans, 1 wave). 9 requirements mapped.*
