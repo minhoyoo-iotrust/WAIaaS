@@ -2556,10 +2556,24 @@ MIGRATIONS.push({
   version: 41,
   description: 'Smart Account per-wallet provider: aa_provider, aa_provider_api_key_encrypted, aa_bundler_url, aa_paymaster_url',
   up: (sqlite) => {
-    sqlite.exec("ALTER TABLE wallets ADD COLUMN aa_provider TEXT CHECK (aa_provider IS NULL OR aa_provider IN ('pimlico', 'alchemy', 'custom'))");
-    sqlite.exec("ALTER TABLE wallets ADD COLUMN aa_provider_api_key_encrypted TEXT");
-    sqlite.exec("ALTER TABLE wallets ADD COLUMN aa_bundler_url TEXT");
-    sqlite.exec("ALTER TABLE wallets ADD COLUMN aa_paymaster_url TEXT");
+    // Skip if columns already exist (e.g. fresh DDL via pushSchema includes them)
+    const columns = sqlite
+      .prepare("PRAGMA table_info('wallets')")
+      .all() as Array<{ name: string }>;
+    const has = (name: string) => columns.some((c) => c.name === name);
+
+    if (!has('aa_provider')) {
+      sqlite.exec("ALTER TABLE wallets ADD COLUMN aa_provider TEXT CHECK (aa_provider IS NULL OR aa_provider IN ('pimlico', 'alchemy', 'custom'))");
+    }
+    if (!has('aa_provider_api_key_encrypted')) {
+      sqlite.exec("ALTER TABLE wallets ADD COLUMN aa_provider_api_key_encrypted TEXT");
+    }
+    if (!has('aa_bundler_url')) {
+      sqlite.exec("ALTER TABLE wallets ADD COLUMN aa_bundler_url TEXT");
+    }
+    if (!has('aa_paymaster_url')) {
+      sqlite.exec("ALTER TABLE wallets ADD COLUMN aa_paymaster_url TEXT");
+    }
   },
 });
 

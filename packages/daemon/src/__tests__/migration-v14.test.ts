@@ -356,7 +356,7 @@ describe('v14 migration: kill_switch_state value conversion', () => {
 
     const versions = getVersions(db);
     expect(versions).toContain(21);
-    expect(Math.max(...versions)).toBe(40);
+    expect(Math.max(...versions)).toBe(41);
   });
 
   it('updated_at is refreshed on conversion', () => {
