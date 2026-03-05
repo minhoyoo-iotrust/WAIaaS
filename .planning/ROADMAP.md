@@ -155,10 +155,10 @@ Plans:
   2. erc8004.skill.md에 `#/agent-identity` 경로와 기본 활성화 상태가 반영되어 있다
   3. actions.skill.md에 DeFi 메뉴 이름, tier 오버라이드 기능, 전 프로바이더 기본 활성화가 반영되어 있다
   4. policies.skill.md에 tier 오버라이드와 정책 tier 에스컬레이션의 관계가 명시되어 있다
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 332-01: TBD
+- [ ] 332-01-PLAN.md -- Sync 4 skill files with v30.11 changes (menu rename, tier override, default-enabled)
 
 ## Progress
 
@@ -175,7 +175,7 @@ Phases execute in numeric order: 330 -> 331 -> 332
 | 268-329 | v29.0-v30.10 | All | Complete | 2026-03-05 |
 | 330. UI 재구성 + Feature Gate 정비 | v30.11 | Complete    | 2026-03-05 | 2026-03-05 |
 | 331. 액션 메타데이터 + Tier 오버라이드 | v30.11 | Complete    | 2026-03-05 | 2026-03-05 |
-| 332. 스킬 파일 동기화 | v30.11 | 0/? | Not started | - |
+| 332. 스킬 파일 동기화 | v30.11 | 0/1 | Not started | - |
 
 ---
-*Last updated: 2026-03-05 -- Phase 331 complete (2 plans, 4 commits, 24 new tests).*
+*Last updated: 2026-03-05 -- Phase 332 planned (1 plan, wave 1).*
