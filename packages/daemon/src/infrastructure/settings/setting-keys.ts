@@ -211,12 +211,12 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'actions.aave_v3_max_ltv_pct', category: 'actions', configPath: 'actions.aave_v3_max_ltv_pct', defaultValue: '0.8', isCredential: false },
 
   // --- Kamino Lending ---
-  { key: 'actions.kamino_enabled', category: 'actions', configPath: 'actions.kamino_enabled', defaultValue: 'false', isCredential: false },
+  { key: 'actions.kamino_enabled', category: 'actions', configPath: 'actions.kamino_enabled', defaultValue: 'true', isCredential: false },
   { key: 'actions.kamino_market', category: 'actions', configPath: 'actions.kamino_market', defaultValue: 'main', isCredential: false },
   { key: 'actions.kamino_hf_threshold', category: 'actions', configPath: 'actions.kamino_hf_threshold', defaultValue: '1.2', isCredential: false },
 
   // --- Pendle Yield ---
-  { key: 'actions.pendle_yield_enabled', category: 'actions', configPath: 'actions.pendle_yield_enabled', defaultValue: 'false', isCredential: false },
+  { key: 'actions.pendle_yield_enabled', category: 'actions', configPath: 'actions.pendle_yield_enabled', defaultValue: 'true', isCredential: false },
   { key: 'actions.pendle_yield_api_base_url', category: 'actions', configPath: 'actions.pendle_yield_api_base_url', defaultValue: 'https://api-v2.pendle.finance', isCredential: false },
   { key: 'actions.pendle_yield_api_key', category: 'actions', configPath: 'actions.pendle_yield_api_key', defaultValue: '', isCredential: true },
   { key: 'actions.pendle_yield_default_slippage_bps', category: 'actions', configPath: 'actions.pendle_yield_default_slippage_bps', defaultValue: '100', isCredential: false },
@@ -225,7 +225,7 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'actions.pendle_yield_maturity_warning_days', category: 'actions', configPath: 'actions.pendle_yield_maturity_warning_days', defaultValue: '7', isCredential: false },
 
   // --- Drift Perp ---
-  { key: 'actions.drift_enabled', category: 'actions', configPath: 'actions.drift_enabled', defaultValue: 'false', isCredential: false },
+  { key: 'actions.drift_enabled', category: 'actions', configPath: 'actions.drift_enabled', defaultValue: 'true', isCredential: false },
   { key: 'actions.drift_max_leverage', category: 'actions', configPath: 'actions.drift_max_leverage', defaultValue: '5', isCredential: false },
   { key: 'actions.drift_max_position_usd', category: 'actions', configPath: 'actions.drift_max_position_usd', defaultValue: '10000', isCredential: false },
   { key: 'actions.drift_margin_warning_threshold_pct', category: 'actions', configPath: 'actions.drift_margin_warning_threshold_pct', defaultValue: '0.15', isCredential: false },
@@ -263,7 +263,7 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'smart_account.entry_point', category: 'smart_account', configPath: 'smart_account.entry_point', defaultValue: '0x0000000071727De22E5E9d8BAf0edAc6f37da032', isCredential: false },
 
   // --- ERC-8004 Agent Identity ---
-  { key: 'actions.erc8004_agent_enabled', category: 'actions', configPath: 'actions.erc8004_agent_enabled', defaultValue: 'false', isCredential: false },
+  { key: 'actions.erc8004_agent_enabled', category: 'actions', configPath: 'actions.erc8004_agent_enabled', defaultValue: 'true', isCredential: false },
   { key: 'actions.erc8004_identity_registry_address', category: 'actions', configPath: 'actions.erc8004_identity_registry_address', defaultValue: '0x8004A169FB4a3325136EB29fA0ceB6D2e539a432', isCredential: false },
   { key: 'actions.erc8004_reputation_registry_address', category: 'actions', configPath: 'actions.erc8004_reputation_registry_address', defaultValue: '0x8004BAa17C55a88189AE136b182e5fdA19dE9b63', isCredential: false },
   { key: 'actions.erc8004_validation_registry_address', category: 'actions', configPath: 'actions.erc8004_validation_registry_address', defaultValue: '', isCredential: false },
