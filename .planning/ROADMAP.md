@@ -175,7 +175,7 @@ Phases execute in numeric order: 330 -> 331 -> 332
 | 268-329 | v29.0-v30.10 | All | Complete | 2026-03-05 |
 | 330. UI 재구성 + Feature Gate 정비 | v30.11 | Complete    | 2026-03-05 | 2026-03-05 |
 | 331. 액션 메타데이터 + Tier 오버라이드 | v30.11 | Complete    | 2026-03-05 | 2026-03-05 |
-| 332. 스킬 파일 동기화 | 1/1 | Complete   | 2026-03-05 | - |
+| 332. 스킬 파일 동기화 | 1/1 | Complete    | 2026-03-05 | - |
 
 ---
 *Last updated: 2026-03-05 -- Phase 332 planned (1 plan, wave 1).*

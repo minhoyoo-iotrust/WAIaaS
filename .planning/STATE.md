@@ -4,7 +4,7 @@ milestone: v30.11
 milestone_name: Admin UI DX 개선
 status: planning
 stopped_at: Completed 332-01-PLAN.md
-last_updated: "2026-03-05T10:37:38.281Z"
+last_updated: "2026-03-05T10:38:10.819Z"
 last_activity: 2026-03-05 -- Phase 331 complete (2 plans, 4 commits)
 progress:
   total_phases: 3
