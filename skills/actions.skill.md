@@ -31,7 +31,7 @@ All action endpoints require **sessionAuth** via `Authorization: Bearer <token>`
 
 ### Admin (masterAuth -- prerequisite)
 - Register API keys for action providers via Admin UI Settings
-- Enable/configure built-in providers via Admin UI > Settings > Actions
+- Enable/configure built-in providers via Admin UI > DeFi (`#/defi`) or Agent Identity (`#/agent-identity`)
 - Configure CONTRACT_WHITELIST/ALLOWED_TOKENS policies for provider contracts (or use provider-trust bypass)
 
 ```
@@ -187,7 +187,7 @@ The transaction follows the standard lifecycle (PENDING -> QUEUED -> CONFIRMED/F
 
 **Prerequisites:**
 
-1. The provider must be enabled via Admin UI > Settings > Actions.
+1. The provider must be enabled (all 10 providers are enabled by default since v30.11).
 2. If the provider requires an API key (`requiresApiKey: true`), the key must be configured in Admin Settings.
 3. Either a **CONTRACT_WHITELIST** policy must include the resolved contract, or **provider-trust bypass** applies (see Section 6).
 
@@ -195,7 +195,7 @@ The transaction follows the standard lifecycle (PENDING -> QUEUED -> CONFIRMED/F
 
 ### Configuration
 
-Enable Jupiter Swap via **Admin UI > Settings > Actions > Jupiter Swap**, or environment variables:
+Enable Jupiter Swap via **Admin UI > DeFi (`#/defi`) > Jupiter Swap**, or environment variables:
 
 | Setting | Env Variable | Default | Description |
 | ------- | ------------ | ------- | ----------- |
@@ -298,7 +298,7 @@ The 0x Swap provider uses the [0x Swap API v2](https://0x.org/docs/api#tag/Swap)
 
 ### Configuration
 
-Enable 0x Swap via **Admin UI > Settings > Actions > 0x Swap**. A 0x API key is **required** (`requiresApiKey: true`). Get a free key at [0x Dashboard](https://dashboard.0x.org/).
+Enable 0x Swap via **Admin UI > DeFi (`#/defi`) > 0x Swap**. A 0x API key is **required** (`requiresApiKey: true`). Get a free key at [0x Dashboard](https://dashboard.0x.org/).
 
 | Setting | Env Variable | Default | Description |
 | ------- | ------------ | ------- | ----------- |
@@ -449,7 +449,7 @@ The LI.FI provider uses the [LI.FI API](https://docs.li.fi/) to aggregate 100+ b
 
 ### Configuration
 
-Enable LI.FI via **Admin UI > Settings > Actions > LI.FI**, or environment variables. No API key is required -- LI.FI works without a key but with rate limits. An optional API key relaxes rate limits.
+Enable LI.FI via **Admin UI > DeFi (`#/defi`) > LI.FI**, or environment variables. No API key is required -- LI.FI works without a key but with rate limits. An optional API key relaxes rate limits.
 
 | Setting | Env Variable | Default | Description |
 | ------- | ------------ | ------- | ----------- |
@@ -664,7 +664,7 @@ The Lido Staking provider uses the [Lido Protocol](https://lido.fi/) to stake ET
 
 ### Configuration
 
-Enable Lido Staking via **Admin UI > Settings > Actions > Lido Staking**, or environment variables. No API key is required.
+Enable Lido Staking via **Admin UI > DeFi (`#/defi`) > Lido Staking**, or environment variables. No API key is required.
 
 | Setting | Env Variable | Default | Description |
 | ------- | ------------ | ------- | ----------- |
@@ -803,7 +803,7 @@ The Jito Staking provider uses the [Jito Stake Pool](https://www.jito.network/) 
 
 ### Configuration
 
-Enable Jito Staking via **Admin UI > Settings > Actions > Jito Staking**, or environment variables. No API key is required.
+Enable Jito Staking via **Admin UI > DeFi (`#/defi`) > Jito Staking**, or environment variables. No API key is required.
 
 | Setting | Env Variable | Default | Description |
 | ------- | ------------ | ------- | ----------- |
@@ -936,7 +936,7 @@ The Aave V3 Lending provider uses the [Aave Protocol V3](https://aave.com/) to s
 
 ### Configuration
 
-Enable Aave V3 Lending via **Admin UI > Settings > Actions > Aave V3 Lending**, or environment variables. No API key is required -- Aave V3 operates via on-chain contracts with RPC calls.
+Enable Aave V3 Lending via **Admin UI > DeFi (`#/defi`) > Aave V3 Lending**, or environment variables. No API key is required -- Aave V3 operates via on-chain contracts with RPC calls.
 
 | Setting | Env Variable | Default | Description |
 | ------- | ------------ | ------- | ----------- |
@@ -1104,7 +1104,7 @@ The Kamino Lending provider uses the [Kamino K-Lend](https://kamino.finance/) pr
 
 ### Configuration
 
-Enable Kamino Lending via **Admin UI > Settings > Actions > Kamino Lending**, or environment variables. No API key is required -- Kamino operates via on-chain Solana programs.
+Enable Kamino Lending via **Admin UI > DeFi (`#/defi`) > Kamino Lending**, or environment variables. No API key is required -- Kamino operates via on-chain Solana programs.
 
 | Setting | Environment Variable | Default | Description |
 |---------|---------------------|---------|-------------|
@@ -1215,7 +1215,7 @@ The Pendle Yield Trading provider uses the [Pendle Finance](https://pendle.finan
 
 ### Configuration
 
-Enable Pendle Yield Trading via **Admin UI > Settings > Actions > Pendle Yield**, or environment variables. API key is optional but recommended for higher rate limits.
+Enable Pendle Yield Trading via **Admin UI > DeFi (`#/defi`) > Pendle Yield**, or environment variables. API key is optional but recommended for higher rate limits.
 
 | Setting | Env Variable | Default | Description |
 | ------- | ------------ | ------- | ----------- |
@@ -1398,7 +1398,7 @@ curl -s -X POST http://localhost:3100/v1/actions/pendle_yield/redeem_pt \
 Pendle yield positions are automatically tracked via PositionTracker and stored in the defi_positions table (category=YIELD). Use the position query endpoints:
 
 - **Positions**: `GET /v1/wallet/positions` or MCP tool `waiaas_get_defi_positions`
-- **Maturity alerts**: Configured via Admin UI > Settings > Actions > Pendle Yield > Maturity Warning Days
+- **Maturity alerts**: Configured via Admin UI > DeFi (`#/defi`) > Pendle Yield > Maturity Warning Days
 
 ## 11. Drift Perp Trading -- Built-in Provider (Solana)
 
@@ -1408,7 +1408,7 @@ The Drift Perp Trading provider uses the [Drift Protocol V2](https://drift.trade
 
 ### Configuration
 
-Enable Drift Perp Trading via **Admin UI > Settings > Actions > Drift Perp**, or environment variables. No API key is required.
+Enable Drift Perp Trading via **Admin UI > DeFi (`#/defi`) > Drift Perp**, or environment variables. No API key is required.
 
 | Setting | Env Variable | Default | Description |
 | ------- | ------------ | ------- | ----------- |
@@ -1582,7 +1582,7 @@ The ERC-8004 provider enables on-chain agent identity registration, reputation m
 - **Provider name:** `erc8004_agent`
 - **Chains:** ethereum (EVM)
 - **Requires API key:** No
-- **Feature gate:** `actions.erc8004_agent_enabled` (default: false)
+- **Feature gate:** `actions.erc8004_agent_enabled` (default: true since v30.11)
 - **Provider-trust bypass:** Yes (CONTRACT_WHITELIST bypassed when enabled)
 
 **8 actions:** register_agent, set_agent_wallet, unset_agent_wallet, set_agent_uri, set_metadata, give_feedback, revoke_feedback, request_validation.
@@ -1618,7 +1618,7 @@ The swap/bridge input amount is converted to USD via IPriceOracle and evaluated 
 
 ## 14. Configuration via Admin Settings
 
-Since v28.2, all action provider settings are managed via **Admin UI > Settings > Actions** (not config.toml). The Admin Settings UI provides:
+Since v28.2, all action provider settings are managed via **Admin UI > DeFi (`#/defi`)** for DeFi providers and **Admin UI > Agent Identity (`#/agent-identity`)** for ERC-8004 (not config.toml). The Admin Settings UI provides:
 
 - **Enable/disable toggle** per provider (takes effect immediately, no daemon restart)
 - **API key management** (required for 0x Swap, optional for Jupiter Swap and LI.FI)
@@ -1629,7 +1629,11 @@ Settings are stored in the database and take precedence over config.toml default
 
 **Settings read priority:** Database (Admin UI) > Environment Variable > config.toml default > Code default.
 
-Admin UI path: **Settings > Actions > [Provider Name]**
+Admin UI paths:
+- **DeFi (`#/defi`)** -- DeFi provider configuration (Jupiter, 0x, LI.FI, Lido, Jito, Aave, Kamino, Pendle, Drift)
+- **Agent Identity (`#/agent-identity`)** -- ERC-8004 provider configuration
+
+Since v30.11, all 10 built-in providers are enabled by default on fresh install. No manual enablement is needed.
 
 ### Provider Status in Admin UI
 
@@ -1638,12 +1642,26 @@ The Admin UI shows a three-state status for each provider:
 - **Requires API Key** -- Provider is enabled but missing required API key (yellow, fires `ACTION_API_KEY_REQUIRED` notification)
 - **Inactive** -- Provider is disabled (gray)
 
+### Action Tier Override (v30.11)
+
+Operators can override the default security tier for individual actions. This allows fine-grained control independent of policy tier assignment.
+
+**Setting key pattern:** `actions.{provider}_{action}_tier` (e.g., `actions.jupiter_swap_swap_tier`, `actions.aave_v3_aave_supply_tier`)
+
+**Values:** `INSTANT` / `NOTIFY` / `DELAY` / `APPROVAL` -- empty string or unset uses the provider's hardcoded default tier.
+
+**Pipeline:** `effectiveTier = max(policyTier, actionTier)` -- the action tier is a floor that can only escalate the security level, never downgrade it. For example, if a SPENDING_LIMIT policy assigns INSTANT but the action tier override is DELAY, the effective tier is DELAY.
+
+**Admin UI:** The tier dropdown appears in the Registered Actions table on both DeFi and Agent Identity pages. Overridden tiers show a "customized" badge. A "Reset to default" button restores the provider's hardcoded default.
+
+**Cross-reference:** Policy tier escalation rules apply on top of action tier. See **policies.skill.md** Section 3.
+
 ## 15. Error Reference
 
 | Code | HTTP | Description | Recovery |
 |------|------|-------------|----------|
 | `ACTION_NOT_FOUND` | 404 | Provider or action not registered. | Check available providers with GET /v1/actions/providers. |
-| `API_KEY_REQUIRED` | 403 | Provider requires API key not configured. | Set API key via Admin UI > Settings > Actions. |
+| `API_KEY_REQUIRED` | 403 | Provider requires API key not configured. | Set API key via Admin UI > DeFi (`#/defi`). |
 | `ACTION_VALIDATION_FAILED` | 400 | Input parameters failed validation. | Check params format in provider docs. |
 | `ACTION_RESOLVE_FAILED` | 502 | Provider's resolve() call failed. | Check provider logs, verify params. |
 | `ACTION_RETURN_INVALID` | 500 | Provider returned invalid ContractCallRequest. | Report to provider maintainer. |
