@@ -111,7 +111,7 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v30.9-ROADMAP.md` for full 
 - Integer phases (327, 328, 329): Planned milestone work
 - Decimal phases (327.1, etc.): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 327: HTTP Message Signing Engine** - RFC 9421 Signature Base + Content-Digest + EIP-191 signing + verification core
+- [x] **Phase 327: HTTP Message Signing Engine** - RFC 9421 Signature Base + Content-Digest + EIP-191 signing + verification core (completed 2026-03-05)
 - [ ] **Phase 328: REST API + Policy + Settings** - Dedicated endpoints, ERC8128_ALLOWED_DOMAINS policy, Admin Settings, notifications
 - [ ] **Phase 329: MCP + SDK + Admin UI + Skill Files** - Interface extensions wrapping REST API
 
@@ -180,7 +180,7 @@ Phases execute in numeric order: 327 -> 328 -> 329
 | 215-243 | v27.0-v27.4 | All | Complete | 2026-02-23 |
 | 244-267 | v28.0-v28.8 | All | Complete | 2026-02-26 |
 | 268-326 | v29.0-v30.9 | All | Complete | 2026-03-05 |
-| 327. HTTP Message Signing Engine | v30.10 | 0/2 | Not started | - |
+| 327. HTTP Message Signing Engine | 2/2 | Complete   | 2026-03-05 | - |
 | 328. REST API + Policy + Settings | v30.10 | 0/TBD | Not started | - |
 | 329. MCP + SDK + Admin UI + Skill Files | v30.10 | 0/TBD | Not started | - |
 

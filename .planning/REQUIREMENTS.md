@@ -9,11 +9,11 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Signing Engine
 
-- [ ] **ENG-01**: User can request ERC-8128 HTTP message signature with RFC 9421 compliant Signature Base construction
-- [ ] **ENG-02**: User can auto-generate Content-Digest (SHA-256) for request body per RFC 9530
-- [ ] **ENG-03**: User can select Covered Components preset (minimal/standard/strict) or specify custom components
-- [ ] **ENG-04**: User can configure Nonce (UUID v4 auto-generation, optional disable) and TTL (10-3600s, default 300s)
-- [ ] **ENG-05**: User can verify keyid format (`erc8128:<chainId>:<address>`) is correctly generated from wallet
+- [x] **ENG-01**: User can request ERC-8128 HTTP message signature with RFC 9421 compliant Signature Base construction
+- [x] **ENG-02**: User can auto-generate Content-Digest (SHA-256) for request body per RFC 9530
+- [x] **ENG-03**: User can select Covered Components preset (minimal/standard/strict) or specify custom components
+- [x] **ENG-04**: User can configure Nonce (UUID v4 auto-generation, optional disable) and TTL (10-3600s, default 300s)
+- [x] **ENG-05**: User can verify keyid format (`erc8128:<chainId>:<address>`) is correctly generated from wallet
 
 ### API & Interfaces
 
@@ -34,8 +34,8 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Verification
 
-- [ ] **VER-01**: User can verify ERC-8128 signature via ecrecover and confirm recovered address matches keyid
-- [ ] **VER-02**: User can validate Content-Digest integrity as part of signature verification
+- [x] **VER-01**: User can verify ERC-8128 signature via ecrecover and confirm recovered address matches keyid
+- [x] **VER-02**: User can validate Content-Digest integrity as part of signature verification
 
 ### Admin & Settings
 
@@ -83,11 +83,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ENG-01 | Phase 327 | Pending |
-| ENG-02 | Phase 327 | Pending |
-| ENG-03 | Phase 327 | Pending |
-| ENG-04 | Phase 327 | Pending |
-| ENG-05 | Phase 327 | Pending |
+| ENG-01 | Phase 327 | Complete |
+| ENG-02 | Phase 327 | Complete |
+| ENG-03 | Phase 327 | Complete |
+| ENG-04 | Phase 327 | Complete |
+| ENG-05 | Phase 327 | Complete |
 | API-01 | Phase 328 | Pending |
 | API-02 | Phase 328 | Pending |
 | API-03 | Phase 329 | Pending |
@@ -99,8 +99,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | POL-02 | Phase 328 | Pending |
 | POL-03 | Phase 328 | Pending |
 | POL-04 | Phase 328 | Pending |
-| VER-01 | Phase 327 | Pending |
-| VER-02 | Phase 327 | Pending |
+| VER-01 | Phase 327 | Complete |
+| VER-02 | Phase 327 | Complete |
 | ADM-01 | Phase 328 | Pending |
 | ADM-02 | Phase 328 | Pending |
 | ADM-03 | Phase 329 | Pending |

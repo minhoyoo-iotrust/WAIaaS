@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
 milestone: v30.10
-milestone_name: ERC-8128 Signed HTTP Requests 지원
+milestone_name: ERC-8128 Signed HTTP Requests
 status: active
-stopped_at: null
-last_updated: "2026-03-05"
-last_activity: 2026-03-05 -- Roadmap created (3 phases, 26 requirements)
+stopped_at: Completed Phase 327 (327-01 + 327-02), HTTP Message Signing Engine done
+last_updated: "2026-03-05T05:39:06.761Z"
+last_activity: 2026-03-05 -- Phase 327 complete (2 plans, 48 tests)
 progress:
   total_phases: 3
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 1
+  total_plans: 2
+  completed_plans: 2
+  percent: 33
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 327 -- HTTP Message Signing Engine
+**Current focus:** Phase 328 -- REST API + Policy + Settings
 
 ## Current Position
 
-Phase: 327 of 329 (HTTP Message Signing Engine)
-Plan: --
+Phase: 328 of 329 (REST API + Policy + Settings)
+Plan: 1 of TBD
 Status: Ready to plan
-Last activity: 2026-03-05 -- Roadmap created
+Last activity: 2026-03-05 -- Phase 327 complete
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
@@ -45,6 +45,9 @@ Progress: [░░░░░░░░░░] 0%
 - Architecture: sign-only pattern (no proxy), bypasses transaction pipeline (x402 precedent)
 - Dependency: only `structured-headers` new production dependency
 - Self-implementation of RFC 9421 Signature Base (~150 LOC, no mature library available)
+- [Phase 327]: Added viem as @waiaas/core dependency for ERC-8128 keyid checksum and signing
+- [Phase 327]: signHttpMessage takes raw privateKey (daemon decrypts from keystore before calling)
+- [Phase 327]: Self-implemented RFC 9421 Signature Base via string formatting (no structured-headers library)
 
 ### Blockers/Concerns
 
@@ -54,6 +57,6 @@ Progress: [░░░░░░░░░░] 0%
 
 ## Session Continuity
 
-Last session: 2026-03-05
-Stopped at: Roadmap created, ready for phase 327 planning
+Last session: 2026-03-05T05:39:06.757Z
+Stopped at: Completed Phase 327 (327-01 + 327-02), HTTP Message Signing Engine done
 Resume file: None
