@@ -92,7 +92,8 @@ Admin UI의 액션 관리 경험을 개선하여, (1) 메뉴 이름이 사용자
 운영자가 Admin UI에서 액션별 기본 보안 Tier를 변경할 수 있는 프레임워크.
 전 액션 프로바이더 공통 적용 (ERC-8004 + DeFi 모두).
 
-- **R5-1.** Settings 키 패턴: `actions.{provider_key}.{action_name}.tier` (예: `actions.erc8004_agent.register_agent.tier`)
+- **R5-1.** Settings 키 패턴: `actions.{provider_key}_{action_name}_tier` (예: `actions.erc8004_agent_register_agent_tier`)
+  - ⚠️ 점(`.`) 3단계 이상은 config.toml `detectNestedSections()` 차단 + 환경변수 파싱 불가. 기존 패턴(`actions.{key}_{field}`)과 일관되게 밑줄 구분 사용.
 - **R5-2.** 허용 값: `INSTANT` / `NOTIFY` / `DELAY` / `APPROVAL` — Zod enum으로 검증
 - **R5-3.** 미설정 시 프로바이더 코드의 하드코딩 기본값 유지 (fallback)
 - **R5-4.** 파이프라인 Stage에서 tier 결정 시 Settings override → 프로바이더 기본값 순으로 조회
