@@ -110,7 +110,7 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v30.10-ROADMAP.md` for full
 **Milestone Goal:** Admin UI의 액션 관리 경험을 개선하여 메뉴 이름을 직관적으로 변경하고, ERC-8004 기능을 한 페이지에서 완결적으로 관리하며, 운영자가 액션별 보안 Tier를 조정할 수 있는 상태.
 
 - [x] **Phase 330: UI 재구성 + Feature Gate 정비** - 메뉴 이름/라우트 변경, ERC-8004 토글 통합, 전 프로바이더 기본 활성화 + DB v42 (completed 2026-03-05)
-- [ ] **Phase 331: 액션 메타데이터 + Tier 오버라이드** - 액션 description 필드 추가, Settings 기반 Tier 오버라이드 백엔드 + Admin UI 드롭다운
+- [x] **Phase 331: 액션 메타데이터 + Tier 오버라이드** - 액션 description 필드 추가, Settings 기반 Tier 오버라이드 백엔드 + Admin UI 드롭다운 (completed 2026-03-05)
 - [ ] **Phase 332: 스킬 파일 동기화** - admin/erc8004/actions/policies 스킬 파일 업데이트
 
 ## Phase Details
@@ -143,8 +143,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 331-01-PLAN.md -- Backend: tier override setting keys + pipeline integration + resolveActionTier helper
-- [ ] 331-02-PLAN.md -- Admin UI: Description column + tier dropdown + override indicator + reset on DeFi and Agent Identity pages
+- [x] 331-01-PLAN.md -- Backend: tier override setting keys + pipeline integration + resolveActionTier helper
+- [x] 331-02-PLAN.md -- Admin UI: Description column + tier dropdown + override indicator + reset on DeFi and Agent Identity pages
 
 ### Phase 332: 스킬 파일 동기화
 **Goal**: 스킬 파일이 v30.11의 메뉴 변경, tier 오버라이드, 기본 활성화 변경을 정확히 반영하는 상태
@@ -174,8 +174,8 @@ Phases execute in numeric order: 330 -> 331 -> 332
 | 244-267 | v28.0-v28.8 | All | Complete | 2026-02-26 |
 | 268-329 | v29.0-v30.10 | All | Complete | 2026-03-05 |
 | 330. UI 재구성 + Feature Gate 정비 | v30.11 | Complete    | 2026-03-05 | 2026-03-05 |
-| 331. 액션 메타데이터 + Tier 오버라이드 | v30.11 | 0/2 | Not started | - |
+| 331. 액션 메타데이터 + Tier 오버라이드 | v30.11 | 2/2 | Complete | 2026-03-05 |
 | 332. 스킬 파일 동기화 | v30.11 | 0/? | Not started | - |
 
 ---
-*Last updated: 2026-03-05 -- Phase 331 planned (2 plans in 2 waves).*
+*Last updated: 2026-03-05 -- Phase 331 complete (2 plans, 4 commits, 24 new tests).*

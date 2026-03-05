@@ -11,7 +11,7 @@ Requirements for Admin UI DX 개선 — 메뉴 재구성 + 액션 Tier 오버라
 
 - [x] **MENU-01**: Actions 메뉴를 DeFi로 변경 (페이지 타이틀, 네비게이션 라벨, 서브타이틀)
 - [x] **MENU-02**: ERC-8004 메뉴를 Agent Identity로 변경 (페이지 타이틀, 네비게이션 라벨, 서브타이틀)
-- [x] **MENU-03**: URL 해시 라우트 변경 (`#/actions` → `#/defi`, `#/erc8004` → `#/agent-identity`)
+- [x] **MENU-03**: URL 해시 라우트 변경 (`#/actions` -> `#/defi`, `#/erc8004` -> `#/agent-identity`)
 - [x] **MENU-04**: Agent Identity 메뉴를 DeFi 바로 다음에 배치
 
 ### Toggle (ERC-8004 토글 통합)
@@ -31,19 +31,19 @@ Requirements for Admin UI DX 개선 — 메뉴 재구성 + 액션 Tier 오버라
 
 ### Desc (액션 설명 추가)
 
-- [ ] **DESC-01**: 액션 프로바이더 메타데이터에 description 필드 추가 (각 액션의 영문 한 줄 설명)
-- [ ] **DESC-02**: DeFi + Agent Identity 페이지의 Registered Actions 테이블에 Description 컬럼 추가
+- [x] **DESC-01**: 액션 프로바이더 메타데이터에 description 필드 추가 (각 액션의 영문 한 줄 설명)
+- [x] **DESC-02**: DeFi + Agent Identity 페이지의 Registered Actions 테이블에 Description 컬럼 추가
 
 ### Tier (액션별 Tier 오버라이드)
 
-- [ ] **TIER-01**: Settings 키 패턴 `actions.{provider_key}_{action_name}_tier` 정의 (밑줄 구분, 점 3단계 회피)
-- [ ] **TIER-02**: 허용 값 INSTANT/NOTIFY/DELAY/APPROVAL — Zod enum 검증
-- [ ] **TIER-03**: 미설정 시 프로바이더 코드의 하드코딩 기본값 유지 (fallback)
-- [ ] **TIER-04**: 파이프라인 Stage에서 tier 결정 시 Settings override → 프로바이더 기본값 순으로 조회
-- [ ] **TIER-05**: Admin UI Registered Actions 테이블의 Default Tier 셀을 드롭다운으로 변경
-- [ ] **TIER-06**: 드롭다운 변경 시 PUT /v1/admin/settings로 즉시 반영 (hot-reload)
-- [ ] **TIER-07**: 오버라이드된 tier 시각적 구분 표시 (뱃지 색상 변경 또는 "customized" 라벨)
-- [ ] **TIER-08**: Reset to default 기능 — 오버라이드 제거 시 프로바이더 기본값으로 복원
+- [x] **TIER-01**: Settings 키 패턴 `actions.{provider_key}_{action_name}_tier` 정의 (밑줄 구분, 점 3단계 회피)
+- [x] **TIER-02**: 허용 값 INSTANT/NOTIFY/DELAY/APPROVAL — Zod enum 검증
+- [x] **TIER-03**: 미설정 시 프로바이더 코드의 하드코딩 기본값 유지 (fallback)
+- [x] **TIER-04**: 파이프라인 Stage에서 tier 결정 시 Settings override -> 프로바이더 기본값 순으로 조회
+- [x] **TIER-05**: Admin UI Registered Actions 테이블의 Default Tier 셀을 드롭다운으로 변경
+- [x] **TIER-06**: 드롭다운 변경 시 PUT /v1/admin/settings로 즉시 반영 (hot-reload)
+- [x] **TIER-07**: 오버라이드된 tier 시각적 구분 표시 (뱃지 색상 변경 또는 "customized" 라벨)
+- [x] **TIER-08**: Reset to default 기능 — 오버라이드 제거 시 프로바이더 기본값으로 복원
 
 ### Skill (스킬 파일 동기화)
 
@@ -77,16 +77,16 @@ Requirements for Admin UI DX 개선 — 메뉴 재구성 + 액션 Tier 오버라
 | GATE-02 | Phase 330 | Complete |
 | GATE-03 | Phase 330 | Complete |
 | GATE-04 | Phase 330 | Complete |
-| DESC-01 | Phase 331 | Pending |
-| DESC-02 | Phase 331 | Pending |
-| TIER-01 | Phase 331 | Pending |
-| TIER-02 | Phase 331 | Pending |
-| TIER-03 | Phase 331 | Pending |
-| TIER-04 | Phase 331 | Pending |
-| TIER-05 | Phase 331 | Pending |
-| TIER-06 | Phase 331 | Pending |
-| TIER-07 | Phase 331 | Pending |
-| TIER-08 | Phase 331 | Pending |
+| DESC-01 | Phase 331 | Complete |
+| DESC-02 | Phase 331 | Complete |
+| TIER-01 | Phase 331 | Complete |
+| TIER-02 | Phase 331 | Complete |
+| TIER-03 | Phase 331 | Complete |
+| TIER-04 | Phase 331 | Complete |
+| TIER-05 | Phase 331 | Complete |
+| TIER-06 | Phase 331 | Complete |
+| TIER-07 | Phase 331 | Complete |
+| TIER-08 | Phase 331 | Complete |
 | SKIL-01 | Phase 332 | Pending |
 | SKIL-02 | Phase 332 | Pending |
 | SKIL-03 | Phase 332 | Pending |
@@ -99,4 +99,4 @@ Requirements for Admin UI DX 개선 — 메뉴 재구성 + 액션 Tier 오버라
 
 ---
 *Requirements defined: 2026-03-05*
-*Last updated: 2026-03-05 -- Phase 330 complete (13/27 requirements)*
+*Last updated: 2026-03-05 -- Phase 331 complete (23/27 requirements)*
