@@ -462,6 +462,14 @@ curl -s http://localhost:3100/v1/admin/settings \
   "smart_account": {
     "smart_account.enabled": "true",
     "smart_account.entry_point": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
+  },
+  "erc8128": {
+    "erc8128.enabled": "false",
+    "erc8128.default_preset": "standard",
+    "erc8128.default_ttl": "300",
+    "erc8128.include_nonce": "true",
+    "erc8128.algorithm": "eip191",
+    "erc8128.rate_limit_per_minute": "60"
   }
 }
 ```
@@ -482,6 +490,7 @@ curl -s http://localhost:3100/v1/admin/settings \
 | `telegram`      | enabled, bot_token, locale                               | Telegram Bot interactive commands.     |
 | `signing_sdk`   | enabled, request_expiry_min, preferred_channel, preferred_wallet, ntfy_*_topic_prefix | Human Wallet Apps (signing + alerts) configuration. Internal key prefix is signing_sdk for backward compatibility. |
 | `smart_account` | enabled, entry_point | ERC-4337 Account Abstraction global toggle and EntryPoint address (EVM only). Bundler/paymaster URLs are configured per-wallet via `PUT /v1/wallets/:id/provider`. |
+| `erc8128`       | enabled, default_preset, default_ttl, include_nonce, algorithm, rate_limit_per_minute | ERC-8128 HTTP message signing (RFC 9421 + EIP-191). |
 
 ### PUT /v1/admin/settings -- Update Settings
 
@@ -605,6 +614,14 @@ Signing SDK:
 Smart Account (ERC-4337):
 - `smart_account.enabled` -- Enable smart account support ("true"/"false", default: "true")
 - `smart_account.entry_point` -- EntryPoint contract address (default: "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789" -- v0.6)
+
+ERC-8128 Signed HTTP Requests:
+- `erc8128.enabled` -- Enable ERC-8128 HTTP message signing ("true"/"false", default: "false")
+- `erc8128.default_preset` -- Default covered components preset ("minimal", "standard", "strict", default: "standard")
+- `erc8128.default_ttl` -- Default signature TTL in seconds (default: "300")
+- `erc8128.include_nonce` -- Include UUID v4 nonce by default ("true"/"false", default: "true")
+- `erc8128.algorithm` -- Signing algorithm (default: "eip191")
+- `erc8128.rate_limit_per_minute` -- Max signing requests per domain per minute (default: "60")
 
 Note: Bundler/paymaster URLs are no longer global settings. They are configured **per-wallet** via `PUT /v1/wallets/:id/provider` (see wallet.skill.md). Supported providers: `pimlico`, `alchemy`, `custom`.
 
@@ -1417,8 +1434,9 @@ For full ERC-8004 documentation, see **erc8004.skill.md**.
 ## 16. Related Skill Files
 
 - **actions.skill.md** -- Action Provider REST API (DeFi actions)
-- **policies.skill.md** -- Policy management (13 policy types for transaction controls)
+- **policies.skill.md** -- Policy management (14 policy types for transaction controls)
 - **wallet.skill.md** -- Wallet CRUD, sessions, assets, tokens, MCP
 - **transactions.skill.md** -- 5-type transaction reference
+- **erc8128.skill.md** -- ERC-8128 HTTP message signing (RFC 9421 + EIP-191)
 - **quickstart.skill.md** -- End-to-end quickstart workflow
 - **erc8004.skill.md** -- ERC-8004 trustless agent identity and reputation

@@ -355,7 +355,7 @@ curl -s http://localhost:3100/v1/connect-info \
   -H 'Authorization: Bearer <session-token>'
 ```
 
-Returns wallets with their addresses and chains, applicable policies per wallet, available capabilities (transfer, token_transfer, balance, assets, sign, actions, x402), and an AI-ready prompt.
+Returns wallets with their addresses and chains, applicable policies per wallet, available capabilities (transfer, token_transfer, balance, assets, sign, actions, x402, erc8004, erc8128, smart_account), and an AI-ready prompt.
 
 ## 3. Wallet Query (Session-Scoped)
 
