@@ -129,7 +129,7 @@ function createMockContext(overrides: Partial<PipelineContext> = {}): PipelineCo
     },
     txId: 'tx-1',
     settingsService: {
-      get: vi.fn((key: string) => {
+      get: vi.fn((_key: string) => {
         return '';
       }),
     } as any,

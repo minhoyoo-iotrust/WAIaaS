@@ -271,7 +271,7 @@ function createTestWallet(chain: 'evm' | 'solana' = 'evm'): string {
   const id = generateId();
   const now = Math.floor(Date.now() / 1000);
   const publicKey = chain === 'evm' ? EVM_PUBLIC_KEY : SOLANA_PUBLIC_KEY;
-  const environment = chain === 'evm' ? 'production' : 'testnet';
+  const _environment = chain === 'evm' ? 'production' : 'testnet';
   conn.sqlite
     .prepare(
       `INSERT INTO wallets (id, name, chain, environment, public_key, status, created_at, updated_at)
