@@ -49,6 +49,7 @@ export const SETTING_CATEGORIES = [
   'rpc_pool',
   'position_tracker',
   'smart_account',
+  'erc8128',
 ] as const;
 
 export type SettingCategory = (typeof SETTING_CATEGORIES)[number];
@@ -100,6 +101,7 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'policy.default_deny_contracts', category: 'policy', configPath: 'security.default_deny_contracts', defaultValue: 'true', isCredential: false },
   { key: 'policy.default_deny_spenders', category: 'policy', configPath: 'security.default_deny_spenders', defaultValue: 'true', isCredential: false },
   { key: 'policy.default_deny_x402_domains', category: 'policy', configPath: 'security.default_deny_x402_domains', defaultValue: 'true', isCredential: false },
+  { key: 'policy.default_deny_erc8128_domains', category: 'policy', configPath: 'security.default_deny_erc8128_domains', defaultValue: 'true', isCredential: false },
 
   // --- daemon category ---
   { key: 'daemon.log_level', category: 'daemon', configPath: 'daemon.log_level', defaultValue: 'info', isCredential: false },
@@ -270,6 +272,14 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'actions.erc8004_reputation_cache_ttl_sec', category: 'actions', configPath: 'actions.erc8004_reputation_cache_ttl_sec', defaultValue: '300', isCredential: false },
   { key: 'actions.erc8004_min_reputation_score', category: 'actions', configPath: 'actions.erc8004_min_reputation_score', defaultValue: '0', isCredential: false },
   { key: 'actions.erc8004_reputation_rpc_timeout_ms', category: 'actions', configPath: 'actions.erc8004_reputation_rpc_timeout_ms', defaultValue: '3000', isCredential: false },
+
+  // --- erc8128 category (ERC-8128 Signed HTTP Requests) ---
+  { key: 'erc8128.enabled', category: 'erc8128', configPath: 'erc8128.enabled', defaultValue: 'false', isCredential: false },
+  { key: 'erc8128.default_preset', category: 'erc8128', configPath: 'erc8128.default_preset', defaultValue: 'standard', isCredential: false },
+  { key: 'erc8128.default_ttl_sec', category: 'erc8128', configPath: 'erc8128.default_ttl_sec', defaultValue: '300', isCredential: false },
+  { key: 'erc8128.default_nonce', category: 'erc8128', configPath: 'erc8128.default_nonce', defaultValue: 'true', isCredential: false },
+  { key: 'erc8128.default_algorithm', category: 'erc8128', configPath: 'erc8128.default_algorithm', defaultValue: 'ethereum-eip191', isCredential: false },
+  { key: 'erc8128.default_rate_limit_rpm', category: 'erc8128', configPath: 'erc8128.default_rate_limit_rpm', defaultValue: '60', isCredential: false },
 ] as const;
 
 // ---------------------------------------------------------------------------

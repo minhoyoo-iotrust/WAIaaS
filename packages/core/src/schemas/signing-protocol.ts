@@ -240,6 +240,8 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, NotificationCateg
   AGENT_WALLET_UNLINKED: 'identity',
   REPUTATION_FEEDBACK_RECEIVED: 'identity',
   REPUTATION_THRESHOLD_TRIGGERED: 'policy',
+  ERC8128_SIGNATURE_CREATED: 'security_alert',
+  ERC8128_DOMAIN_BLOCKED: 'policy',
 };
 
 // ---------------------------------------------------------------------------
@@ -301,6 +303,8 @@ export const EVENT_DESCRIPTIONS: Record<NotificationEventType, string> = {
   AGENT_WALLET_UNLINKED: 'Agent wallet unlinked',
   REPUTATION_FEEDBACK_RECEIVED: 'Reputation feedback received from another agent',
   REPUTATION_THRESHOLD_TRIGGERED: 'Reputation threshold policy triggered tier escalation',
+  ERC8128_SIGNATURE_CREATED: 'ERC-8128 HTTP message signature created',
+  ERC8128_DOMAIN_BLOCKED: 'ERC-8128 signing blocked for unlisted domain',
 };
 
 // ---------------------------------------------------------------------------

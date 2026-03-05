@@ -210,6 +210,8 @@ export const messages: Messages = {
     AGENT_WALLET_UNLINKED: { title: '에이전트 지갑 연결 해제', body: '{walletName}이(가) 에이전트 신원에서 연결 해제되었습니다. 레지스트리: {registryAddress}' },
     REPUTATION_FEEDBACK_RECEIVED: { title: '평판 피드백 수신', body: '{walletName}이(가) 평판 피드백을 수신했습니다. 점수: {score}, 태그: {tag1}/{tag2}' },
     REPUTATION_THRESHOLD_TRIGGERED: { title: '평판 임계값 트리거', body: '{walletName} 트랜잭션 티어가 평판 점수 {score}이(가) 임계값 {threshold} 미만으로 {tier}(으)로 상향되었습니다' },
+    ERC8128_SIGNATURE_CREATED: { title: 'ERC-8128 서명 생성', body: '{walletName}이(가) {domain}에 대한 HTTP 요청에 서명했습니다. 메서드: {method}, 프리셋: {preset}' },
+    ERC8128_DOMAIN_BLOCKED: { title: 'ERC-8128 도메인 차단', body: '{walletName}이(가) 차단된 도메인 {domain}에 대한 HTTP 요청 서명을 시도했습니다. 사유: {reason}' },
   },
   // System messages
   system: {

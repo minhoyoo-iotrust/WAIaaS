@@ -56,6 +56,8 @@ export const NOTIFICATION_EVENT_TYPES = [
   'AGENT_WALLET_UNLINKED',
   'REPUTATION_FEEDBACK_RECEIVED',
   'REPUTATION_THRESHOLD_TRIGGERED',
+  'ERC8128_SIGNATURE_CREATED',
+  'ERC8128_DOMAIN_BLOCKED',
 ] as const;
 export type NotificationEventType = (typeof NOTIFICATION_EVENT_TYPES)[number];
 export const NotificationEventTypeEnum = z.enum(NOTIFICATION_EVENT_TYPES);

@@ -117,8 +117,8 @@ describe('Enum SSoT', () => {
     expect(SESSION_STATUSES).toHaveLength(3);
   });
 
-  it('NotificationEventType has 54 values', () => {
-    expect(NOTIFICATION_EVENT_TYPES).toHaveLength(54);
+  it('NotificationEventType has 56 values', () => {
+    expect(NOTIFICATION_EVENT_TYPES).toHaveLength(56);
     // v28.5: gas condition events
     expect(NOTIFICATION_EVENT_TYPES).toContain('TX_GAS_WAITING');
     expect(NOTIFICATION_EVENT_TYPES).toContain('TX_GAS_CONDITION_MET');
@@ -138,6 +138,9 @@ describe('Enum SSoT', () => {
     expect(NOTIFICATION_EVENT_TYPES).toContain('AGENT_WALLET_UNLINKED');
     expect(NOTIFICATION_EVENT_TYPES).toContain('REPUTATION_FEEDBACK_RECEIVED');
     expect(NOTIFICATION_EVENT_TYPES).toContain('REPUTATION_THRESHOLD_TRIGGERED');
+    // v30.10: ERC-8128 signed HTTP requests events
+    expect(NOTIFICATION_EVENT_TYPES).toContain('ERC8128_SIGNATURE_CREATED');
+    expect(NOTIFICATION_EVENT_TYPES).toContain('ERC8128_DOMAIN_BLOCKED');
   });
 
   it('NotificationLogStatus has 2 values', () => {

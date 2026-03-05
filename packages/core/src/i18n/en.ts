@@ -264,6 +264,8 @@ export const messages: Messages = {
     AGENT_WALLET_UNLINKED: { title: 'Agent Wallet Unlinked', body: '{walletName} unlinked from agent identity. Registry: {registryAddress}' },
     REPUTATION_FEEDBACK_RECEIVED: { title: 'Reputation Feedback Received', body: '{walletName} received reputation feedback. Score: {score}, Tags: {tag1}/{tag2}' },
     REPUTATION_THRESHOLD_TRIGGERED: { title: 'Reputation Threshold Triggered', body: '{walletName} transaction tier escalated to {tier} due to reputation score {score} below threshold {threshold}' },
+    ERC8128_SIGNATURE_CREATED: { title: 'ERC-8128 Signature Created', body: '{walletName} signed HTTP request to {domain}. Method: {method}, Preset: {preset}' },
+    ERC8128_DOMAIN_BLOCKED: { title: 'ERC-8128 Domain Blocked', body: '{walletName} attempted to sign HTTP request to blocked domain {domain}. Reason: {reason}' },
   },
   // System messages
   system: {
