@@ -1,10 +1,10 @@
 ---
 gsd_state_version: 1.0
 milestone: v30.11
-milestone_name: Admin UI DX 개선 — 메뉴 재구성 + 액션 Tier 오버라이드
-status: in_progress
-stopped_at: null
-last_updated: "2026-03-05T09:50:00.000Z"
+milestone_name: Admin UI DX 개선
+status: planning
+stopped_at: Completed Phase 330, ready for Phase 331
+last_updated: "2026-03-05T10:11:17.470Z"
 last_activity: 2026-03-05 -- Phase 330 complete (2 plans, 4 commits)
 progress:
   total_phases: 3

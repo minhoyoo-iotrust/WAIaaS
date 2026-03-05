@@ -109,7 +109,7 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v30.10-ROADMAP.md` for full
 
 **Milestone Goal:** Admin UI의 액션 관리 경험을 개선하여 메뉴 이름을 직관적으로 변경하고, ERC-8004 기능을 한 페이지에서 완결적으로 관리하며, 운영자가 액션별 보안 Tier를 조정할 수 있는 상태.
 
-- [ ] **Phase 330: UI 재구성 + Feature Gate 정비** - 메뉴 이름/라우트 변경, ERC-8004 토글 통합, 전 프로바이더 기본 활성화 + DB v42
+- [x] **Phase 330: UI 재구성 + Feature Gate 정비** - 메뉴 이름/라우트 변경, ERC-8004 토글 통합, 전 프로바이더 기본 활성화 + DB v42 (completed 2026-03-05)
 - [ ] **Phase 331: 액션 메타데이터 + Tier 오버라이드** - 액션 description 필드 추가, Settings 기반 Tier 오버라이드 백엔드 + Admin UI 드롭다운
 - [ ] **Phase 332: 스킬 파일 동기화** - admin/erc8004/actions/policies 스킬 파일 업데이트
 
@@ -173,7 +173,7 @@ Phases execute in numeric order: 330 -> 331 -> 332
 | 215-243 | v27.0-v27.4 | All | Complete | 2026-02-23 |
 | 244-267 | v28.0-v28.8 | All | Complete | 2026-02-26 |
 | 268-329 | v29.0-v30.10 | All | Complete | 2026-03-05 |
-| 330. UI 재구성 + Feature Gate 정비 | v30.11 | 2/2 | Complete | 2026-03-05 |
+| 330. UI 재구성 + Feature Gate 정비 | v30.11 | Complete    | 2026-03-05 | 2026-03-05 |
 | 331. 액션 메타데이터 + Tier 오버라이드 | v30.11 | 0/? | Not started | - |
 | 332. 스킬 파일 동기화 | v30.11 | 0/? | Not started | - |
 
