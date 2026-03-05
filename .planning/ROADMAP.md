@@ -125,11 +125,11 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v30.10-ROADMAP.md` for full
   3. 토글을 끄면 Registered Actions 테이블이 읽기 전용으로 표시되고 관리 탭이 숨겨지며, 토글을 켜면 전체 UI가 렌더링된다
   4. 신규 설치 시 10개 액션 프로바이더가 모두 활성화 상태이고, 기존 운영자의 수동 설정은 DB v42 마이그레이션에서 존중된다
   5. 기존 테스트가 기본값 변경과 통합된 settings 파싱 방식에 맞게 업데이트되어 통과한다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 330-01: TBD
-- [ ] 330-02: TBD
+- [ ] 330-01-PLAN.md -- Backend: 10 provider defaults to true + DB v42 migration + test updates
+- [ ] 330-02-PLAN.md -- Admin UI: menu/route rename + ERC-8004 toggle integration + settings parsing unification
 
 ### Phase 331: 액션 메타데이터 + Tier 오버라이드
 **Goal**: 운영자가 각 액션의 설명을 확인하고, 액션별 보안 Tier를 드롭다운으로 조정할 수 있는 상태
@@ -173,9 +173,9 @@ Phases execute in numeric order: 330 -> 331 -> 332
 | 215-243 | v27.0-v27.4 | All | Complete | 2026-02-23 |
 | 244-267 | v28.0-v28.8 | All | Complete | 2026-02-26 |
 | 268-329 | v29.0-v30.10 | All | Complete | 2026-03-05 |
-| 330. UI 재구성 + Feature Gate 정비 | v30.11 | 0/? | Not started | - |
+| 330. UI 재구성 + Feature Gate 정비 | v30.11 | 0/2 | Not started | - |
 | 331. 액션 메타데이터 + Tier 오버라이드 | v30.11 | 0/? | Not started | - |
 | 332. 스킬 파일 동기화 | v30.11 | 0/? | Not started | - |
 
 ---
-*Last updated: 2026-03-05 -- v30.11 roadmap created.*
+*Last updated: 2026-03-05 -- Phase 330 planned (2 plans).*
