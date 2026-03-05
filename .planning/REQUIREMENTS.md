@@ -64,39 +64,39 @@ Requirements for Admin UI DX 개선 — 메뉴 재구성 + 액션 Tier 오버라
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MENU-01 | — | Pending |
-| MENU-02 | — | Pending |
-| MENU-03 | — | Pending |
-| MENU-04 | — | Pending |
-| TOGL-01 | — | Pending |
-| TOGL-02 | — | Pending |
-| TOGL-03 | — | Pending |
-| TOGL-04 | — | Pending |
-| TOGL-05 | — | Pending |
-| GATE-01 | — | Pending |
-| GATE-02 | — | Pending |
-| GATE-03 | — | Pending |
-| GATE-04 | — | Pending |
-| DESC-01 | — | Pending |
-| DESC-02 | — | Pending |
-| TIER-01 | — | Pending |
-| TIER-02 | — | Pending |
-| TIER-03 | — | Pending |
-| TIER-04 | — | Pending |
-| TIER-05 | — | Pending |
-| TIER-06 | — | Pending |
-| TIER-07 | — | Pending |
-| TIER-08 | — | Pending |
-| SKIL-01 | — | Pending |
-| SKIL-02 | — | Pending |
-| SKIL-03 | — | Pending |
-| SKIL-04 | — | Pending |
+| MENU-01 | Phase 330 | Pending |
+| MENU-02 | Phase 330 | Pending |
+| MENU-03 | Phase 330 | Pending |
+| MENU-04 | Phase 330 | Pending |
+| TOGL-01 | Phase 330 | Pending |
+| TOGL-02 | Phase 330 | Pending |
+| TOGL-03 | Phase 330 | Pending |
+| TOGL-04 | Phase 330 | Pending |
+| TOGL-05 | Phase 330 | Pending |
+| GATE-01 | Phase 330 | Pending |
+| GATE-02 | Phase 330 | Pending |
+| GATE-03 | Phase 330 | Pending |
+| GATE-04 | Phase 330 | Pending |
+| DESC-01 | Phase 331 | Pending |
+| DESC-02 | Phase 331 | Pending |
+| TIER-01 | Phase 331 | Pending |
+| TIER-02 | Phase 331 | Pending |
+| TIER-03 | Phase 331 | Pending |
+| TIER-04 | Phase 331 | Pending |
+| TIER-05 | Phase 331 | Pending |
+| TIER-06 | Phase 331 | Pending |
+| TIER-07 | Phase 331 | Pending |
+| TIER-08 | Phase 331 | Pending |
+| SKIL-01 | Phase 332 | Pending |
+| SKIL-02 | Phase 332 | Pending |
+| SKIL-03 | Phase 332 | Pending |
+| SKIL-04 | Phase 332 | Pending |
 
 **Coverage:**
 - v30.11 requirements: 27 total
-- Mapped to phases: 0
-- Unmapped: 27 ⚠️
+- Mapped to phases: 27
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-05*
-*Last updated: 2026-03-05 after initial definition*
+*Last updated: 2026-03-05 after roadmap creation*
