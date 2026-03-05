@@ -64,7 +64,9 @@ import Erc8004Page from '../pages/erc8004';
 // ---------------------------------------------------------------------------
 
 const mockSettingsEnabled = {
-  'actions.erc8004_agent_enabled': { value: 'true', source: 'admin' },
+  actions: {
+    erc8004_agent_enabled: 'true',
+  },
 };
 
 const mockWallets = [

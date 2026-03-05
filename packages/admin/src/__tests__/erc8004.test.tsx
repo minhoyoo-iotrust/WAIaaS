@@ -1,9 +1,11 @@
 /**
- * ERC-8004 Identity page UI tests.
+ * ERC-8004 Agent Identity page UI tests.
  *
  * Tests cover:
- * - Feature gate disabled: EmptyState rendered
- * - Feature gate enabled: Identity table headers rendered
+ * - Toggle visible in both enabled and disabled states
+ * - Feature gate disabled: disabled message + read-only table
+ * - Feature gate enabled: full Identity table with action buttons
+ * - Management tabs hidden when disabled
  * - Register Agent modal open/close
  * - Registration File tab: JSON viewer rendered
  * - Link Wallet button calls WC pair API
@@ -57,19 +59,23 @@ vi.mock('../utils/dirty-guard', () => ({
   hasDirty: { value: false },
 }));
 
-import { apiGet, apiPost } from '../api/client';
+import { apiGet, apiPost, apiPut } from '../api/client';
 import Erc8004Page from '../pages/erc8004';
 
 // ---------------------------------------------------------------------------
-// Mock data
+// Mock data (nested SettingsData format)
 // ---------------------------------------------------------------------------
 
 const mockSettingsDisabled = {
-  'actions.erc8004_agent_enabled': { value: 'false', source: 'default' },
+  actions: {
+    erc8004_agent_enabled: 'false',
+  },
 };
 
 const mockSettingsEnabled = {
-  'actions.erc8004_agent_enabled': { value: 'true', source: 'admin' },
+  actions: {
+    erc8004_agent_enabled: 'true',
+  },
 };
 
 const mockWallets = [
@@ -94,18 +100,24 @@ describe('Erc8004Page', () => {
     vi.clearAllMocks();
   });
 
-  it('shows EmptyState when feature gate is disabled', async () => {
+  it('shows toggle and disabled message when feature gate is disabled', async () => {
     const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
-    mockApiGet.mockResolvedValueOnce(mockSettingsDisabled);
+    mockApiGet
+      .mockResolvedValueOnce(mockSettingsDisabled)  // settings
+      .mockResolvedValueOnce([])  // wallets (always loaded now)
+    ;
 
     render(<Erc8004Page />);
 
     await waitFor(() => {
-      expect(screen.getByText('ERC-8004 Agent feature is disabled')).toBeTruthy();
+      // Toggle should be visible
+      expect(screen.getByText('Enabled')).toBeTruthy();
+      // Disabled message should appear
+      expect(screen.getByText(/Agent Identity features are disabled/)).toBeTruthy();
     });
   });
 
-  it('renders table headers when feature gate is enabled', async () => {
+  it('shows toggle in enabled state with table headers', async () => {
     const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
     mockApiGet
       .mockResolvedValueOnce(mockSettingsEnabled) // settings
@@ -115,9 +127,47 @@ describe('Erc8004Page', () => {
     render(<Erc8004Page />);
 
     await waitFor(() => {
+      // Toggle should be visible
+      expect(screen.getByText('Enabled')).toBeTruthy();
+      // Table headers should render
       expect(screen.getByText('Wallet Name')).toBeTruthy();
       expect(screen.getByText('Status')).toBeTruthy();
       expect(screen.getByText('Agent ID')).toBeTruthy();
+    });
+  });
+
+  it('hides management tabs when disabled', async () => {
+    const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
+    mockApiGet
+      .mockResolvedValueOnce(mockSettingsDisabled) // settings
+      .mockResolvedValueOnce(mockWallets) // wallets
+      .mockResolvedValueOnce(mockRegFile); // registration file for w1
+
+    render(<Erc8004Page />);
+
+    await waitFor(() => {
+      // Identity tab should be visible
+      expect(screen.getByText('Identity')).toBeTruthy();
+    });
+
+    // Registration File and Reputation tabs should NOT be visible when disabled
+    expect(screen.queryByText('Registration File')).toBeNull();
+    expect(screen.queryByText('Reputation')).toBeNull();
+  });
+
+  it('shows all tabs when enabled', async () => {
+    const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
+    mockApiGet
+      .mockResolvedValueOnce(mockSettingsEnabled) // settings
+      .mockResolvedValueOnce(mockWallets) // wallets
+      .mockResolvedValueOnce(mockRegFile); // registration file for w1
+
+    render(<Erc8004Page />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Identity')).toBeTruthy();
+      expect(screen.getByText('Registration File')).toBeTruthy();
+      expect(screen.getByText('Reputation')).toBeTruthy();
     });
   });
 
@@ -202,5 +252,34 @@ describe('Erc8004Page', () => {
     render(<Erc8004Page />);
 
     expect(screen.getByText('Loading...')).toBeTruthy();
+  });
+
+  it('calls PUT settings API when toggle is clicked', async () => {
+    const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
+    const mockApiPut = apiPut as ReturnType<typeof vi.fn>;
+
+    mockApiGet
+      .mockResolvedValueOnce(mockSettingsDisabled) // initial settings
+      .mockResolvedValueOnce([]) // wallets
+      .mockResolvedValueOnce(mockSettingsEnabled) // settings after toggle
+      .mockResolvedValueOnce(mockWallets); // wallets after reload
+
+    mockApiPut.mockResolvedValueOnce({ updated: 1, settings: mockSettingsEnabled });
+
+    render(<Erc8004Page />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Enabled')).toBeTruthy();
+    });
+
+    // Find and click the checkbox
+    const checkbox = screen.getByRole('checkbox');
+    fireEvent.click(checkbox);
+
+    await waitFor(() => {
+      expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', {
+        settings: [{ key: 'actions.erc8004_agent_enabled', value: 'true' }],
+      });
+    });
   });
 });

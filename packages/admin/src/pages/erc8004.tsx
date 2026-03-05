@@ -1,17 +1,20 @@
 /**
- * ERC-8004 Agents page.
+ * Agent Identity page (ERC-8004).
  *
  * Three tabs:
  * 1. Identity - Agent registration table, register modal, wallet linking
  * 2. Registration File - JSON tree viewer + URL copy
  * 3. Reputation - Score dashboard, tag filter, external lookup
+ *
+ * Toggle at the top enables/disables the feature (persisted via PUT /v1/admin/settings).
+ * When disabled: read-only Identity tab shown, management tabs hidden.
  */
 
 import { useSignal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
-import { apiGet, apiPost, ApiError } from '../api/client';
+import { apiGet, apiPost, apiPut, ApiError } from '../api/client';
 import { API } from '../api/endpoints';
-import { Button, Badge } from '../components/form';
+import { Button, Badge, FormField } from '../components/form';
 import { Modal } from '../components/modal';
 import { CopyButton } from '../components/copy-button';
 import { EmptyState } from '../components/empty-state';
@@ -54,7 +57,7 @@ interface ReputationData {
 // Tabs
 // ---------------------------------------------------------------------------
 
-const TABS = [
+const ALL_TABS = [
   { key: 'identity', label: 'Identity' },
   { key: 'registration', label: 'Registration File' },
   { key: 'reputation', label: 'Reputation' },
@@ -124,6 +127,9 @@ export default function Erc8004Page() {
   const wallets = useSignal<Wallet[]>([]);
   const agents = useSignal<AgentEntry[]>([]);
 
+  // Toggle state
+  const toggleSaving = useSignal(false);
+
   // Register modal state
   const showRegisterModal = useSignal(false);
   const registerWalletId = useSignal('');
@@ -156,17 +162,12 @@ export default function Erc8004Page() {
   async function loadData() {
     loading.value = true;
     try {
-      // Check feature gate
+      // Check feature gate (unified nested SettingsData format)
       const settings = await apiGet<SettingsData>(API.ADMIN_SETTINGS);
-      const enabledSetting = settings['actions.erc8004_agent_enabled'];
-      featureEnabled.value = enabledSetting?.value === 'true';
+      const actionsCategory = settings['actions'] as Record<string, string> | undefined;
+      featureEnabled.value = actionsCategory?.['erc8004_agent_enabled'] === 'true';
 
-      if (!featureEnabled.value) {
-        loading.value = false;
-        return;
-      }
-
-      // Load wallets
+      // Always load wallets and agent entries (for read-only table when disabled)
       const walletList = await apiGet<Wallet[]>(API.WALLETS);
       wallets.value = walletList;
 
@@ -205,6 +206,27 @@ export default function Erc8004Page() {
   }
 
   useEffect(() => { loadData(); }, []);
+
+  // -----------------------------------------------------------------------
+  // Toggle handler
+  // -----------------------------------------------------------------------
+
+  async function handleToggleEnabled(newEnabled: boolean) {
+    toggleSaving.value = true;
+    try {
+      await apiPut(API.ADMIN_SETTINGS, {
+        settings: [{ key: 'actions.erc8004_agent_enabled', value: String(newEnabled) }],
+      });
+      featureEnabled.value = newEnabled;
+      showToast(`Agent Identity ${newEnabled ? 'enabled' : 'disabled'}`, 'success');
+      // Reload data to refresh UI
+      await loadData();
+    } catch (err) {
+      if (err instanceof ApiError) showToast(getErrorMessage(err.code), 'error');
+    } finally {
+      toggleSaving.value = false;
+    }
+  }
 
   // -----------------------------------------------------------------------
   // Register agent
@@ -356,18 +378,14 @@ export default function Erc8004Page() {
   }
 
   // -----------------------------------------------------------------------
-  // Feature gate
+  // Tab filtering: only show Identity tab when disabled
   // -----------------------------------------------------------------------
 
-  if (!loading.value && !featureEnabled.value) {
-    return (
-      <EmptyState
-        title="ERC-8004 Agent feature is disabled"
-        description="Enable it in Settings > Actions > erc8004_agent_enabled"
-        actionLabel="Go to System Settings"
-        onAction={() => { window.location.hash = '#/system'; }}
-      />
-    );
+  const visibleTabs = featureEnabled.value ? ALL_TABS : ALL_TABS.filter(t => t.key === 'identity');
+
+  // Reset to identity tab if current tab is hidden
+  if (!visibleTabs.some(t => t.key === activeTab.value)) {
+    activeTab.value = 'identity';
   }
 
   // -----------------------------------------------------------------------
@@ -382,213 +400,249 @@ export default function Erc8004Page() {
 
   return (
     <div>
-      <TabNav tabs={TABS} activeTab={activeTab.value} onTabChange={(k) => { activeTab.value = k; }} />
-
-      {loading.value && <p class="loading-text">Loading...</p>}
-
-      {/* Identity Tab */}
-      {!loading.value && activeTab.value === 'identity' && (
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
-            <h3 style={{ margin: 0 }}>Registered Agents</h3>
-            <Button variant="primary" onClick={() => { showRegisterModal.value = true; }}>
-              Register Agent
-            </Button>
+      {/* Toggle section -- always visible */}
+      <div class="settings-category" style={{ marginBottom: 'var(--space-4)' }}>
+        <div class="settings-category-header">
+          <h3 style={{ margin: 0 }}>ERC-8004 Agent Identity</h3>
+        </div>
+        <div class="settings-category-body">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+            <FormField
+              label="Enabled"
+              name="actions.erc8004_agent_enabled"
+              type="checkbox"
+              value={featureEnabled.value}
+              onChange={(v) => handleToggleEnabled(!!v)}
+              disabled={toggleSaving.value}
+            />
+            {toggleSaving.value && <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)' }}>Saving...</span>}
           </div>
+        </div>
+      </div>
 
-          {agents.value.length === 0 ? (
-            <EmptyState title="No EVM wallets found" description="Create an EVM wallet first to register agents." />
-          ) : (
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Wallet Name</th>
-                  <th>Wallet ID</th>
-                  <th>Status</th>
-                  <th>Agent ID</th>
-                  <th>Registry Address</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {agents.value.map(a => (
-                  <tr key={a.walletId}>
-                    <td>{a.walletName}</td>
-                    <td title={a.walletId}>{a.walletId.slice(0, 8)}...</td>
-                    <td>
-                      <Badge variant={a.status === 'REGISTERED' ? 'success' : a.status === 'WALLET_LINKED' ? 'info' : 'default'}>
-                        {a.status}
-                      </Badge>
-                    </td>
-                    <td>{a.agentId ?? '-'}</td>
-                    <td title={a.registryAddress}>{a.registryAddress ? `${a.registryAddress.slice(0, 10)}...` : '-'}</td>
-                    <td>
-                      {a.agentId && a.status === 'REGISTERED' && (
-                        <Button
-                          variant="secondary"
-                          onClick={() => handleLinkWallet(a.walletId, a.agentId!)}
-                          disabled={linkingWalletId.value === a.walletId}
-                        >
-                          {linkingWalletId.value === a.walletId ? 'Linking...' : 'Link Wallet'}
-                        </Button>
-                      )}
-                      {a.agentId && a.status === 'WALLET_LINKED' && (
-                        <Button variant="danger" onClick={() => handleUnlinkWallet(a.walletId, a.agentId!)}>
-                          Unlink
-                        </Button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-
-          {/* WC Pairing URI display */}
-          {linkingWalletId.value && linkingUri.value && (
-            <div style={{ marginTop: 'var(--space-3)', padding: 'var(--space-3)', background: 'var(--color-bg-secondary)', borderRadius: 'var(--radius-md)' }}>
-              <p style={{ fontWeight: 'bold' }}>WalletConnect Pairing URI</p>
-              <code style={{ wordBreak: 'break-all', fontSize: 'var(--font-sm)' }}>{linkingUri.value}</code>
-              <div style={{ marginTop: 'var(--space-2)' }}>
-                <CopyButton value={linkingUri.value} label="Copy URI" />
-              </div>
-            </div>
-          )}
+      {/* Disabled message */}
+      {!loading.value && !featureEnabled.value && (
+        <div class="empty-state" style={{ marginTop: 'var(--space-3)' }}>
+          <p>Agent Identity features are disabled. Enable the toggle above to manage agent registrations, reputation, and wallet linking.</p>
         </div>
       )}
 
-      {/* Registration File Tab */}
-      {!loading.value && activeTab.value === 'registration' && (
-        <div>
-          <div class="form-field">
-            <label>Select Wallet</label>
-            <select
-              value={regFileWalletId.value}
-              onChange={(e) => {
-                const wid = (e.target as HTMLSelectElement).value;
-                regFileWalletId.value = wid;
-                if (wid) loadRegistrationFile(wid);
-              }}
-            >
-              <option value="">-- Select wallet --</option>
-              {evmWallets.map(w => (
-                <option key={w.id} value={w.id}>{w.name} ({w.id.slice(0, 8)}...)</option>
-              ))}
-            </select>
-          </div>
+      {/* Tabs + content */}
+      {!loading.value && (
+        <>
+          <TabNav tabs={visibleTabs} activeTab={activeTab.value} onTabChange={(k) => { activeTab.value = k; }} />
 
-          {regFileWalletId.value && (
-            <div style={{ marginTop: 'var(--space-3)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
-                <h4 style={{ margin: 0 }}>Registration File</h4>
-                <CopyButton
-                  value={`${window.location.origin}/v1/erc8004/registration-file/${regFileWalletId.value}`}
-                  label="Copy URL"
-                />
+          {/* Identity Tab -- shown in both enabled and disabled states */}
+          {activeTab.value === 'identity' && (
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
+                <h3 style={{ margin: 0 }}>Registered Agents</h3>
+                {featureEnabled.value && (
+                  <Button variant="primary" onClick={() => { showRegisterModal.value = true; }}>
+                    Register Agent
+                  </Button>
+                )}
               </div>
 
-              {regFileLoading.value ? (
-                <p class="loading-text">Loading...</p>
-              ) : regFileData.value ? (
-                <div style={{ fontFamily: 'monospace', fontSize: 'var(--font-sm)', background: 'var(--color-bg-secondary)', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', overflow: 'auto' }}>
-                  <JsonTree data={regFileData.value} />
-                </div>
+              {agents.value.length === 0 ? (
+                <EmptyState title="No EVM wallets found" description="Create an EVM wallet first to register agents." />
               ) : (
-                <p>No registration file available for this wallet.</p>
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Wallet Name</th>
+                      <th>Wallet ID</th>
+                      <th>Status</th>
+                      <th>Agent ID</th>
+                      <th>Registry Address</th>
+                      {featureEnabled.value && <th>Actions</th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {agents.value.map(a => (
+                      <tr key={a.walletId}>
+                        <td>{a.walletName}</td>
+                        <td title={a.walletId}>{a.walletId.slice(0, 8)}...</td>
+                        <td>
+                          <Badge variant={a.status === 'REGISTERED' ? 'success' : a.status === 'WALLET_LINKED' ? 'info' : 'default'}>
+                            {a.status}
+                          </Badge>
+                        </td>
+                        <td>{a.agentId ?? '-'}</td>
+                        <td title={a.registryAddress}>{a.registryAddress ? `${a.registryAddress.slice(0, 10)}...` : '-'}</td>
+                        {featureEnabled.value && (
+                          <td>
+                            {a.agentId && a.status === 'REGISTERED' && (
+                              <Button
+                                variant="secondary"
+                                onClick={() => handleLinkWallet(a.walletId, a.agentId!)}
+                                disabled={linkingWalletId.value === a.walletId}
+                              >
+                                {linkingWalletId.value === a.walletId ? 'Linking...' : 'Link Wallet'}
+                              </Button>
+                            )}
+                            {a.agentId && a.status === 'WALLET_LINKED' && (
+                              <Button variant="danger" onClick={() => handleUnlinkWallet(a.walletId, a.agentId!)}>
+                                Unlink
+                              </Button>
+                            )}
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+
+              {/* WC Pairing URI display */}
+              {linkingWalletId.value && linkingUri.value && (
+                <div style={{ marginTop: 'var(--space-3)', padding: 'var(--space-3)', background: 'var(--color-bg-secondary)', borderRadius: 'var(--radius-md)' }}>
+                  <p style={{ fontWeight: 'bold' }}>WalletConnect Pairing URI</p>
+                  <code style={{ wordBreak: 'break-all', fontSize: 'var(--font-sm)' }}>{linkingUri.value}</code>
+                  <div style={{ marginTop: 'var(--space-2)' }}>
+                    <CopyButton value={linkingUri.value} label="Copy URI" />
+                  </div>
+                </div>
               )}
             </div>
           )}
-        </div>
-      )}
 
-      {/* Reputation Tab */}
-      {!loading.value && activeTab.value === 'reputation' && (
-        <div>
-          {/* My Agent Score */}
-          <h3>My Agent Score</h3>
-          {agents.value.filter(a => a.agentId).length === 0 ? (
-            <p>No registered agents. Register an agent first.</p>
-          ) : (
+          {/* Registration File Tab -- only when enabled */}
+          {featureEnabled.value && activeTab.value === 'registration' && (
             <div>
-              {agents.value.filter(a => a.agentId).map(a => {
-                // Load reputation on first render
-                if (!reputationData.value || reputationData.value.agentId !== a.agentId) {
-                  loadReputation(a.agentId!);
-                }
-                return (
-                  <div key={a.agentId} style={{ padding: 'var(--space-3)', background: 'var(--color-bg-secondary)', borderRadius: 'var(--radius-md)', marginBottom: 'var(--space-2)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                      <strong>Agent #{a.agentId}</strong>
-                      {reputationData.value && reputationData.value.agentId === a.agentId && (
-                        <>
-                          <span style={{ fontSize: 'var(--font-xl)', fontWeight: 'bold' }}>
-                            {Number(reputationData.value.score) / Math.pow(10, reputationData.value.decimals)}
-                          </span>
-                          <Badge variant={getScoreBadgeVariant(Number(reputationData.value.score) / Math.pow(10, reputationData.value.decimals))}>
-                            {reputationData.value.count} feedback(s)
-                          </Badge>
-                        </>
-                      )}
-                    </div>
+              <div class="form-field">
+                <label>Select Wallet</label>
+                <select
+                  value={regFileWalletId.value}
+                  onChange={(e) => {
+                    const wid = (e.target as HTMLSelectElement).value;
+                    regFileWalletId.value = wid;
+                    if (wid) loadRegistrationFile(wid);
+                  }}
+                >
+                  <option value="">-- Select wallet --</option>
+                  {evmWallets.map(w => (
+                    <option key={w.id} value={w.id}>{w.name} ({w.id.slice(0, 8)}...)</option>
+                  ))}
+                </select>
+              </div>
+
+              {regFileWalletId.value && (
+                <div style={{ marginTop: 'var(--space-3)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
+                    <h4 style={{ margin: 0 }}>Registration File</h4>
+                    <CopyButton
+                      value={`${window.location.origin}/v1/erc8004/registration-file/${regFileWalletId.value}`}
+                      label="Copy URL"
+                    />
                   </div>
-                );
-              })}
+
+                  {regFileLoading.value ? (
+                    <p class="loading-text">Loading...</p>
+                  ) : regFileData.value ? (
+                    <div style={{ fontFamily: 'monospace', fontSize: 'var(--font-sm)', background: 'var(--color-bg-secondary)', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', overflow: 'auto' }}>
+                      <JsonTree data={regFileData.value} />
+                    </div>
+                  ) : (
+                    <p>No registration file available for this wallet.</p>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
-          {/* Tag Filter */}
-          <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
-            <div class="form-field">
-              <label>Tag1 Filter</label>
-              <input
-                type="text"
-                value={repTag1.value}
-                onInput={(e) => { repTag1.value = (e.target as HTMLInputElement).value; }}
-                placeholder="e.g. reliability"
-              />
-            </div>
-            <div class="form-field">
-              <label>Tag2 Filter</label>
-              <input
-                type="text"
-                value={repTag2.value}
-                onInput={(e) => { repTag2.value = (e.target as HTMLInputElement).value; }}
-                placeholder="e.g. speed"
-              />
-            </div>
-          </div>
+          {/* Reputation Tab -- only when enabled */}
+          {featureEnabled.value && activeTab.value === 'reputation' && (
+            <div>
+              {/* My Agent Score */}
+              <h3>My Agent Score</h3>
+              {agents.value.filter(a => a.agentId).length === 0 ? (
+                <p>No registered agents. Register an agent first.</p>
+              ) : (
+                <div>
+                  {agents.value.filter(a => a.agentId).map(a => {
+                    // Load reputation on first render
+                    if (!reputationData.value || reputationData.value.agentId !== a.agentId) {
+                      loadReputation(a.agentId!);
+                    }
+                    return (
+                      <div key={a.agentId} style={{ padding: 'var(--space-3)', background: 'var(--color-bg-secondary)', borderRadius: 'var(--radius-md)', marginBottom: 'var(--space-2)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                          <strong>Agent #{a.agentId}</strong>
+                          {reputationData.value && reputationData.value.agentId === a.agentId && (
+                            <>
+                              <span style={{ fontSize: 'var(--font-xl)', fontWeight: 'bold' }}>
+                                {Number(reputationData.value.score) / Math.pow(10, reputationData.value.decimals)}
+                              </span>
+                              <Badge variant={getScoreBadgeVariant(Number(reputationData.value.score) / Math.pow(10, reputationData.value.decimals))}>
+                                {reputationData.value.count} feedback(s)
+                              </Badge>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
-          {/* External Agent Lookup */}
-          <h3>External Agent Lookup</h3>
-          <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'flex-end' }}>
-            <div class="form-field">
-              <label>Agent ID</label>
-              <input
-                type="text"
-                value={lookupAgentId.value}
-                onInput={(e) => { lookupAgentId.value = (e.target as HTMLInputElement).value; }}
-                placeholder="Enter agent ID"
-              />
-            </div>
-            <Button variant="primary" onClick={handleLookup} loading={lookupLoading.value}>
-              Query
-            </Button>
-          </div>
+              {/* Tag Filter */}
+              <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
+                <div class="form-field">
+                  <label>Tag1 Filter</label>
+                  <input
+                    type="text"
+                    value={repTag1.value}
+                    onInput={(e) => { repTag1.value = (e.target as HTMLInputElement).value; }}
+                    placeholder="e.g. reliability"
+                  />
+                </div>
+                <div class="form-field">
+                  <label>Tag2 Filter</label>
+                  <input
+                    type="text"
+                    value={repTag2.value}
+                    onInput={(e) => { repTag2.value = (e.target as HTMLInputElement).value; }}
+                    placeholder="e.g. speed"
+                  />
+                </div>
+              </div>
 
-          {lookupResult.value && (
-            <div style={{ marginTop: 'var(--space-3)', padding: 'var(--space-3)', background: 'var(--color-bg-secondary)', borderRadius: 'var(--radius-md)' }}>
-              <p><strong>Agent #{lookupResult.value.agentId}</strong></p>
-              <p>Score: {Number(lookupResult.value.score) / Math.pow(10, lookupResult.value.decimals)}</p>
-              <p>Feedback count: {lookupResult.value.count}</p>
-              {lookupResult.value.tag1 && <p>Tag1: {lookupResult.value.tag1}</p>}
-              {lookupResult.value.tag2 && <p>Tag2: {lookupResult.value.tag2}</p>}
-              <Badge variant={getScoreBadgeVariant(Number(lookupResult.value.score) / Math.pow(10, lookupResult.value.decimals))}>
-                {Number(lookupResult.value.score) / Math.pow(10, lookupResult.value.decimals) >= 50 ? 'Good' : Number(lookupResult.value.score) / Math.pow(10, lookupResult.value.decimals) >= 20 ? 'Fair' : 'Low'}
-              </Badge>
+              {/* External Agent Lookup */}
+              <h3>External Agent Lookup</h3>
+              <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'flex-end' }}>
+                <div class="form-field">
+                  <label>Agent ID</label>
+                  <input
+                    type="text"
+                    value={lookupAgentId.value}
+                    onInput={(e) => { lookupAgentId.value = (e.target as HTMLInputElement).value; }}
+                    placeholder="Enter agent ID"
+                  />
+                </div>
+                <Button variant="primary" onClick={handleLookup} loading={lookupLoading.value}>
+                  Query
+                </Button>
+              </div>
+
+              {lookupResult.value && (
+                <div style={{ marginTop: 'var(--space-3)', padding: 'var(--space-3)', background: 'var(--color-bg-secondary)', borderRadius: 'var(--radius-md)' }}>
+                  <p><strong>Agent #{lookupResult.value.agentId}</strong></p>
+                  <p>Score: {Number(lookupResult.value.score) / Math.pow(10, lookupResult.value.decimals)}</p>
+                  <p>Feedback count: {lookupResult.value.count}</p>
+                  {lookupResult.value.tag1 && <p>Tag1: {lookupResult.value.tag1}</p>}
+                  {lookupResult.value.tag2 && <p>Tag2: {lookupResult.value.tag2}</p>}
+                  <Badge variant={getScoreBadgeVariant(Number(lookupResult.value.score) / Math.pow(10, lookupResult.value.decimals))}>
+                    {Number(lookupResult.value.score) / Math.pow(10, lookupResult.value.decimals) >= 50 ? 'Good' : Number(lookupResult.value.score) / Math.pow(10, lookupResult.value.decimals) >= 20 ? 'Fair' : 'Low'}
+                  </Badge>
+                </div>
+              )}
             </div>
           )}
-        </div>
+        </>
       )}
+
+      {loading.value && <p class="loading-text">Loading...</p>}
 
       {/* Register Agent Modal */}
       <Modal
