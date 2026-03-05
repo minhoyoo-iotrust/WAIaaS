@@ -120,12 +120,28 @@ function JsonTree({ data, depth = 0 }: { data: unknown; depth?: number }) {
 // Component
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Types for provider actions
+// ---------------------------------------------------------------------------
+
+interface ProviderAction {
+  name: string;
+  description: string;
+  chain: string;
+  riskLevel: string;
+  defaultTier: string;
+}
+
 export default function Erc8004Page() {
   const activeTab = useSignal('identity');
   const loading = useSignal(true);
   const featureEnabled = useSignal(false);
   const wallets = useSignal<Wallet[]>([]);
+  const erc8004Actions = useSignal<ProviderAction[]>([]);
   const agents = useSignal<AgentEntry[]>([]);
+
+  // Settings state for tier overrides
+  const settings = useSignal<SettingsData>({});
 
   // Toggle state
   const toggleSaving = useSignal(false);
@@ -163,9 +179,17 @@ export default function Erc8004Page() {
     loading.value = true;
     try {
       // Check feature gate (unified nested SettingsData format)
-      const settings = await apiGet<SettingsData>(API.ADMIN_SETTINGS);
-      const actionsCategory = settings['actions'] as Record<string, string> | undefined;
+      const settingsData = await apiGet<SettingsData>(API.ADMIN_SETTINGS);
+      settings.value = settingsData;
+      const actionsCategory = settingsData['actions'] as Record<string, string> | undefined;
       featureEnabled.value = actionsCategory?.['erc8004_agent_enabled'] === 'true';
+
+      // Fetch erc8004_agent actions from providers list
+      try {
+        const result = await apiGet<{ providers: Array<{ name: string; actions: ProviderAction[] }> }>(API.ACTIONS_PROVIDERS);
+        const erc8004 = result.providers?.find(p => p.name === 'erc8004_agent');
+        erc8004Actions.value = erc8004?.actions ?? [];
+      } catch { /* keep empty */ }
 
       // Always load wallets and agent entries (for read-only table when disabled)
       const walletList = await apiGet<Wallet[]>(API.WALLETS);
@@ -378,6 +402,46 @@ export default function Erc8004Page() {
   }
 
   // -----------------------------------------------------------------------
+  // Tier override helpers (Phase 331)
+  // -----------------------------------------------------------------------
+
+  function getTierOverride(providerKey: string, actionName: string): string {
+    const cat = settings.value['actions'] as Record<string, string> | undefined;
+    return cat?.[`${providerKey}_${actionName}_tier`] || '';
+  }
+
+  function isOverridden(providerKey: string, actionName: string): boolean {
+    const override = getTierOverride(providerKey, actionName);
+    return override !== '' && override !== undefined;
+  }
+
+  async function handleTierChange(providerKey: string, actionName: string, newTier: string) {
+    const settingKey = `actions.${providerKey}_${actionName}_tier`;
+    try {
+      const result = await apiPut<{ updated: number; settings: SettingsData }>(API.ADMIN_SETTINGS, {
+        settings: [{ key: settingKey, value: newTier }],
+      });
+      settings.value = result.settings;
+      showToast(`Tier updated for ${providerKey}/${actionName}`, 'success');
+    } catch (err) {
+      if (err instanceof ApiError) showToast(getErrorMessage(err.code), 'error');
+    }
+  }
+
+  async function handleTierReset(providerKey: string, actionName: string) {
+    const settingKey = `actions.${providerKey}_${actionName}_tier`;
+    try {
+      const result = await apiPut<{ updated: number; settings: SettingsData }>(API.ADMIN_SETTINGS, {
+        settings: [{ key: settingKey, value: '' }],
+      });
+      settings.value = result.settings;
+      showToast(`Tier reset to default for ${providerKey}/${actionName}`, 'success');
+    } catch (err) {
+      if (err instanceof ApiError) showToast(getErrorMessage(err.code), 'error');
+    }
+  }
+
+  // -----------------------------------------------------------------------
   // Tab filtering: only show Identity tab when disabled
   // -----------------------------------------------------------------------
 
@@ -502,6 +566,60 @@ export default function Erc8004Page() {
                   <div style={{ marginTop: 'var(--space-2)' }}>
                     <CopyButton value={linkingUri.value} label="Copy URI" />
                   </div>
+                </div>
+              )}
+
+              {/* Registered Actions section (Phase 331) */}
+              {erc8004Actions.value.length > 0 && (
+                <div style={{ marginTop: 'var(--space-4)', borderTop: '1px solid var(--border)', paddingTop: 'var(--space-3)' }}>
+                  <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-2)', color: 'var(--text-secondary)' }}>
+                    Registered Actions
+                  </div>
+                  <table class="table">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Description</th>
+                        <th>Risk Level</th>
+                        <th>Tier</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {erc8004Actions.value.map(action => (
+                        <tr key={action.name}>
+                          <td>{action.name}</td>
+                          <td style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)', maxWidth: '300px' }}>{action.description}</td>
+                          <td>{action.riskLevel}</td>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                              <select
+                                value={getTierOverride('erc8004_agent', action.name) || action.defaultTier}
+                                onChange={(e) => handleTierChange('erc8004_agent', action.name, (e.target as HTMLSelectElement).value)}
+                                style={{ padding: '2px 4px', fontSize: 'var(--font-size-sm)', borderRadius: 'var(--radius-sm)' }}
+                                disabled={!featureEnabled.value}
+                              >
+                                {['INSTANT', 'NOTIFY', 'DELAY', 'APPROVAL'].map(t => (
+                                  <option key={t} value={t}>{t}</option>
+                                ))}
+                              </select>
+                              {isOverridden('erc8004_agent', action.name) && featureEnabled.value && (
+                                <>
+                                  <Badge variant="warning">customized</Badge>
+                                  <button
+                                    onClick={() => handleTierReset('erc8004_agent', action.name)}
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 'var(--font-size-xs)', color: 'var(--text-secondary)', textDecoration: 'underline' }}
+                                    title="Reset to provider default"
+                                  >
+                                    reset
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
