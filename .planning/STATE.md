@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v30.10
 milestone_name: ERC-8128 Signed HTTP Requests
-status: active
-stopped_at: Completed Phase 328 (328-01 + 328-02), REST API + Policy + Settings done
-last_updated: "2026-03-05T06:04:26.648Z"
-last_activity: 2026-03-05 -- Phase 328 complete (2 plans, 29 tests)
+status: complete
+stopped_at: Completed Phase 329 (329-01 + 329-02 + 329-03), all interfaces done -- milestone v30.10 complete
+last_updated: "2026-03-05T06:27:30.000Z"
+last_activity: 2026-03-05 -- Phase 329 complete, milestone v30.10 done
 progress:
   total_phases: 3
-  completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
-  percent: 67
+  completed_phases: 3
+  total_plans: 7
+  completed_plans: 7
+  percent: 100
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 329 -- MCP + SDK + Admin UI + Skill Files
+**Current focus:** Milestone v30.10 complete -- all phases done
 
 ## Current Position
 
 Phase: 329 of 329 (MCP + SDK + Admin UI + Skill Files)
-Plan: 1 of TBD
-Status: Ready to plan
-Last activity: 2026-03-05 -- Phase 328 complete
+Plan: 3 of 3
+Status: Complete
+Last activity: 2026-03-05 -- Phase 329 complete
 
-Progress: [██████░░░░] 67%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -51,6 +51,8 @@ Progress: [██████░░░░] 67%
 - [Phase 328]: Import erc8128 as namespace from @waiaas/core (exported as namespace module)
 - [Phase 328]: Added UNSUPPORTED_CHAIN, ERC8128_DISABLED/DOMAIN_NOT_ALLOWED/RATE_LIMITED error codes with CHAIN/ERC8128 ErrorDomain
 - [Phase 328]: ERC8128_SIGNATURE_CREATED mapped to security_alert category (not security)
+- [Phase 329]: erc8128 capability uses settingsService.get pattern (same as signing_sdk)
+- [Phase 329]: fetchWithErc8128 is client-side compose (sign via API + fetch directly)
 
 ### Blockers/Concerns
 
@@ -60,6 +62,6 @@ Progress: [██████░░░░] 67%
 
 ## Session Continuity
 
-Last session: 2026-03-05T06:04:26.645Z
-Stopped at: Completed Phase 328 (328-01 + 328-02), REST API + Policy + Settings done
+Last session: 2026-03-05T06:27:16.956Z
+Stopped at: Completed Phase 329 (329-01 + 329-02 + 329-03), all interfaces done
 Resume file: None

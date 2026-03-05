@@ -19,11 +19,11 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 - [x] **API-01**: User can generate ERC-8128 signature headers via POST /v1/erc8128/sign (sessionAuth)
 - [x] **API-02**: User can verify ERC-8128 signatures via POST /v1/erc8128/verify (sessionAuth, debug/test)
-- [ ] **API-03**: User can sign HTTP requests via MCP `erc8128_sign_request` tool
-- [ ] **API-04**: User can verify signatures via MCP `erc8128_verify_signature` tool
-- [ ] **API-05**: User can sign HTTP requests via SDK `signHttpRequest()` method
-- [ ] **API-06**: User can verify signatures via SDK `verifyHttpSignature()` method
-- [ ] **API-07**: User can sign + fetch in one call via SDK `fetchWithErc8128()` helper
+- [x] **API-03**: User can sign HTTP requests via MCP `erc8128_sign_request` tool
+- [x] **API-04**: User can verify signatures via MCP `erc8128_verify_signature` tool
+- [x] **API-05**: User can sign HTTP requests via SDK `signHttpRequest()` method
+- [x] **API-06**: User can verify signatures via SDK `verifyHttpSignature()` method
+- [x] **API-07**: User can sign + fetch in one call via SDK `fetchWithErc8128()` helper
 
 ### Policy
 
@@ -41,15 +41,15 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 - [x] **ADM-01**: User can enable/disable ERC-8128 via Admin Settings (erc8128.enabled feature gate)
 - [x] **ADM-02**: User can configure default preset, TTL, nonce, algorithm via Admin Settings (4 keys)
-- [ ] **ADM-03**: User can manage ERC8128_ALLOWED_DOMAINS policy via Admin UI Policies form
-- [ ] **ADM-04**: User can view ERC-8128 settings in Admin UI System page
+- [x] **ADM-03**: User can manage ERC8128_ALLOWED_DOMAINS policy via Admin UI Policies form
+- [x] **ADM-04**: User can view ERC-8128 settings in Admin UI System page
 
 ### Integration
 
-- [ ] **INT-01**: User can discover ERC-8128 support via connect-info capabilities.erc8128Support
+- [x] **INT-01**: User can discover ERC-8128 support via connect-info capabilities.erc8128Support
 - [x] **INT-02**: User receives ERC8128_SIGNATURE_CREATED notification on successful signing
 - [x] **INT-03**: User receives ERC8128_DOMAIN_BLOCKED notification when domain is blocked by policy
-- [ ] **INT-04**: User can reference ERC-8128 usage in skill files (wallet/policies/admin updated)
+- [x] **INT-04**: User can reference ERC-8128 usage in skill files (wallet/policies/admin updated)
 
 ## v2 Requirements
 
@@ -90,11 +90,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ENG-05 | Phase 327 | Complete |
 | API-01 | Phase 328 | Complete |
 | API-02 | Phase 328 | Complete |
-| API-03 | Phase 329 | Pending |
-| API-04 | Phase 329 | Pending |
-| API-05 | Phase 329 | Pending |
-| API-06 | Phase 329 | Pending |
-| API-07 | Phase 329 | Pending |
+| API-03 | Phase 329 | Complete |
+| API-04 | Phase 329 | Complete |
+| API-05 | Phase 329 | Complete |
+| API-06 | Phase 329 | Complete |
+| API-07 | Phase 329 | Complete |
 | POL-01 | Phase 328 | Complete |
 | POL-02 | Phase 328 | Complete |
 | POL-03 | Phase 328 | Complete |
@@ -103,12 +103,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | VER-02 | Phase 327 | Complete |
 | ADM-01 | Phase 328 | Complete |
 | ADM-02 | Phase 328 | Complete |
-| ADM-03 | Phase 329 | Pending |
-| ADM-04 | Phase 329 | Pending |
-| INT-01 | Phase 329 | Pending |
+| ADM-03 | Phase 329 | Complete |
+| ADM-04 | Phase 329 | Complete |
+| INT-01 | Phase 329 | Complete |
 | INT-02 | Phase 328 | Complete |
 | INT-03 | Phase 328 | Complete |
-| INT-04 | Phase 329 | Pending |
+| INT-04 | Phase 329 | Complete |
 
 **Coverage:**
 - v1 requirements: 26 total

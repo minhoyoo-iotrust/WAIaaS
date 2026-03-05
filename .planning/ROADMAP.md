@@ -113,7 +113,7 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v30.9-ROADMAP.md` for full 
 
 - [x] **Phase 327: HTTP Message Signing Engine** - RFC 9421 Signature Base + Content-Digest + EIP-191 signing + verification core (completed 2026-03-05)
 - [x] **Phase 328: REST API + Policy + Settings** - Dedicated endpoints, ERC8128_ALLOWED_DOMAINS policy, Admin Settings, notifications (completed 2026-03-05)
-- [ ] **Phase 329: MCP + SDK + Admin UI + Skill Files** - Interface extensions wrapping REST API
+- [x] **Phase 329: MCP + SDK + Admin UI + Skill Files** - Interface extensions wrapping REST API (completed 2026-03-05)
 
 ## Phase Details
 
@@ -181,7 +181,7 @@ Phases execute in numeric order: 327 -> 328 -> 329
 | 268-326 | v29.0-v30.9 | All | Complete | 2026-03-05 |
 | 327. HTTP Message Signing Engine | 2/2 | Complete   | 2026-03-05 | - |
 | 328. REST API + Policy + Settings | v30.10 | Complete    | 2026-03-05 | 2026-03-05 |
-| 329. MCP + SDK + Admin UI + Skill Files | v30.10 | 0/3 | Not started | - |
+| 329. MCP + SDK + Admin UI + Skill Files | 3/3 | Complete   | 2026-03-05 | - |
 
 ---
 *Last updated: 2026-03-05 -- Phase 329 planned (3 plans, 1 wave). 9 requirements mapped.*
