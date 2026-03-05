@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v30.10
 milestone_name: ERC-8128 Signed HTTP Requests
 status: active
-stopped_at: Completed Phase 327 (327-01 + 327-02), HTTP Message Signing Engine done
-last_updated: "2026-03-05T05:39:06.761Z"
-last_activity: 2026-03-05 -- Phase 327 complete (2 plans, 48 tests)
+stopped_at: Completed Phase 328 (328-01 + 328-02), REST API + Policy + Settings done
+last_updated: "2026-03-05T06:04:26.648Z"
+last_activity: 2026-03-05 -- Phase 328 complete (2 plans, 29 tests)
 progress:
   total_phases: 3
-  completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
-  percent: 33
+  completed_phases: 2
+  total_plans: 4
+  completed_plans: 4
+  percent: 67
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 328 -- REST API + Policy + Settings
+**Current focus:** Phase 329 -- MCP + SDK + Admin UI + Skill Files
 
 ## Current Position
 
-Phase: 328 of 329 (REST API + Policy + Settings)
+Phase: 329 of 329 (MCP + SDK + Admin UI + Skill Files)
 Plan: 1 of TBD
 Status: Ready to plan
-Last activity: 2026-03-05 -- Phase 327 complete
+Last activity: 2026-03-05 -- Phase 328 complete
 
-Progress: [███░░░░░░░] 33%
+Progress: [██████░░░░] 67%
 
 ## Performance Metrics
 
@@ -48,6 +48,9 @@ Progress: [███░░░░░░░] 33%
 - [Phase 327]: Added viem as @waiaas/core dependency for ERC-8128 keyid checksum and signing
 - [Phase 327]: signHttpMessage takes raw privateKey (daemon decrypts from keystore before calling)
 - [Phase 327]: Self-implemented RFC 9421 Signature Base via string formatting (no structured-headers library)
+- [Phase 328]: Import erc8128 as namespace from @waiaas/core (exported as namespace module)
+- [Phase 328]: Added UNSUPPORTED_CHAIN, ERC8128_DISABLED/DOMAIN_NOT_ALLOWED/RATE_LIMITED error codes with CHAIN/ERC8128 ErrorDomain
+- [Phase 328]: ERC8128_SIGNATURE_CREATED mapped to security_alert category (not security)
 
 ### Blockers/Concerns
 
@@ -57,6 +60,6 @@ Progress: [███░░░░░░░] 33%
 
 ## Session Continuity
 
-Last session: 2026-03-05T05:39:06.757Z
-Stopped at: Completed Phase 327 (327-01 + 327-02), HTTP Message Signing Engine done
+Last session: 2026-03-05T06:04:26.645Z
+Stopped at: Completed Phase 328 (328-01 + 328-02), REST API + Policy + Settings done
 Resume file: None

@@ -17,8 +17,8 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### API & Interfaces
 
-- [ ] **API-01**: User can generate ERC-8128 signature headers via POST /v1/erc8128/sign (sessionAuth)
-- [ ] **API-02**: User can verify ERC-8128 signatures via POST /v1/erc8128/verify (sessionAuth, debug/test)
+- [x] **API-01**: User can generate ERC-8128 signature headers via POST /v1/erc8128/sign (sessionAuth)
+- [x] **API-02**: User can verify ERC-8128 signatures via POST /v1/erc8128/verify (sessionAuth, debug/test)
 - [ ] **API-03**: User can sign HTTP requests via MCP `erc8128_sign_request` tool
 - [ ] **API-04**: User can verify signatures via MCP `erc8128_verify_signature` tool
 - [ ] **API-05**: User can sign HTTP requests via SDK `signHttpRequest()` method
@@ -27,10 +27,10 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Policy
 
-- [ ] **POL-01**: User can set ERC8128_ALLOWED_DOMAINS policy with allowed domain list
-- [ ] **POL-02**: User can use wildcard domain matching (*.example.com)
-- [ ] **POL-03**: User can configure default-deny behavior (unsigned domains blocked when policy not set)
-- [ ] **POL-04**: User can set rate limit per minute per domain (in-memory counter)
+- [x] **POL-01**: User can set ERC8128_ALLOWED_DOMAINS policy with allowed domain list
+- [x] **POL-02**: User can use wildcard domain matching (*.example.com)
+- [x] **POL-03**: User can configure default-deny behavior (unsigned domains blocked when policy not set)
+- [x] **POL-04**: User can set rate limit per minute per domain (in-memory counter)
 
 ### Verification
 
@@ -39,16 +39,16 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Admin & Settings
 
-- [ ] **ADM-01**: User can enable/disable ERC-8128 via Admin Settings (erc8128.enabled feature gate)
-- [ ] **ADM-02**: User can configure default preset, TTL, nonce, algorithm via Admin Settings (4 keys)
+- [x] **ADM-01**: User can enable/disable ERC-8128 via Admin Settings (erc8128.enabled feature gate)
+- [x] **ADM-02**: User can configure default preset, TTL, nonce, algorithm via Admin Settings (4 keys)
 - [ ] **ADM-03**: User can manage ERC8128_ALLOWED_DOMAINS policy via Admin UI Policies form
 - [ ] **ADM-04**: User can view ERC-8128 settings in Admin UI System page
 
 ### Integration
 
 - [ ] **INT-01**: User can discover ERC-8128 support via connect-info capabilities.erc8128Support
-- [ ] **INT-02**: User receives ERC8128_SIGNATURE_CREATED notification on successful signing
-- [ ] **INT-03**: User receives ERC8128_DOMAIN_BLOCKED notification when domain is blocked by policy
+- [x] **INT-02**: User receives ERC8128_SIGNATURE_CREATED notification on successful signing
+- [x] **INT-03**: User receives ERC8128_DOMAIN_BLOCKED notification when domain is blocked by policy
 - [ ] **INT-04**: User can reference ERC-8128 usage in skill files (wallet/policies/admin updated)
 
 ## v2 Requirements
@@ -88,26 +88,26 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ENG-03 | Phase 327 | Complete |
 | ENG-04 | Phase 327 | Complete |
 | ENG-05 | Phase 327 | Complete |
-| API-01 | Phase 328 | Pending |
-| API-02 | Phase 328 | Pending |
+| API-01 | Phase 328 | Complete |
+| API-02 | Phase 328 | Complete |
 | API-03 | Phase 329 | Pending |
 | API-04 | Phase 329 | Pending |
 | API-05 | Phase 329 | Pending |
 | API-06 | Phase 329 | Pending |
 | API-07 | Phase 329 | Pending |
-| POL-01 | Phase 328 | Pending |
-| POL-02 | Phase 328 | Pending |
-| POL-03 | Phase 328 | Pending |
-| POL-04 | Phase 328 | Pending |
+| POL-01 | Phase 328 | Complete |
+| POL-02 | Phase 328 | Complete |
+| POL-03 | Phase 328 | Complete |
+| POL-04 | Phase 328 | Complete |
 | VER-01 | Phase 327 | Complete |
 | VER-02 | Phase 327 | Complete |
-| ADM-01 | Phase 328 | Pending |
-| ADM-02 | Phase 328 | Pending |
+| ADM-01 | Phase 328 | Complete |
+| ADM-02 | Phase 328 | Complete |
 | ADM-03 | Phase 329 | Pending |
 | ADM-04 | Phase 329 | Pending |
 | INT-01 | Phase 329 | Pending |
-| INT-02 | Phase 328 | Pending |
-| INT-03 | Phase 328 | Pending |
+| INT-02 | Phase 328 | Complete |
+| INT-03 | Phase 328 | Complete |
 | INT-04 | Phase 329 | Pending |
 
 **Coverage:**

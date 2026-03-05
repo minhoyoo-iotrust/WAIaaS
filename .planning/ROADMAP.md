@@ -112,7 +112,7 @@ See `.planning/milestones/v29.0-ROADMAP.md` through `v30.9-ROADMAP.md` for full 
 - Decimal phases (327.1, etc.): Urgent insertions (marked with INSERTED)
 
 - [x] **Phase 327: HTTP Message Signing Engine** - RFC 9421 Signature Base + Content-Digest + EIP-191 signing + verification core (completed 2026-03-05)
-- [ ] **Phase 328: REST API + Policy + Settings** - Dedicated endpoints, ERC8128_ALLOWED_DOMAINS policy, Admin Settings, notifications
+- [x] **Phase 328: REST API + Policy + Settings** - Dedicated endpoints, ERC8128_ALLOWED_DOMAINS policy, Admin Settings, notifications (completed 2026-03-05)
 - [ ] **Phase 329: MCP + SDK + Admin UI + Skill Files** - Interface extensions wrapping REST API
 
 ## Phase Details
@@ -146,8 +146,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 328-01-PLAN.md -- Policy type, domain evaluator, Admin Settings keys, notification events
-- [ ] 328-02-PLAN.md -- REST API endpoints (sign + verify), server wiring
+- [x] 328-01-PLAN.md -- Policy type, domain evaluator, Admin Settings keys, notification events
+- [x] 328-02-PLAN.md -- REST API endpoints (sign + verify), server wiring
 
 ### Phase 329: MCP + SDK + Admin UI + Skill Files
 **Goal**: Users can access ERC-8128 signing from all interface surfaces (MCP, SDK, Admin UI) and discover capability via connect-info
@@ -180,7 +180,7 @@ Phases execute in numeric order: 327 -> 328 -> 329
 | 244-267 | v28.0-v28.8 | All | Complete | 2026-02-26 |
 | 268-326 | v29.0-v30.9 | All | Complete | 2026-03-05 |
 | 327. HTTP Message Signing Engine | 2/2 | Complete   | 2026-03-05 | - |
-| 328. REST API + Policy + Settings | v30.10 | 0/2 | Not started | - |
+| 328. REST API + Policy + Settings | v30.10 | 2/2 | Complete | 2026-03-05 |
 | 329. MCP + SDK + Admin UI + Skill Files | v30.10 | 0/TBD | Not started | - |
 
 ---
