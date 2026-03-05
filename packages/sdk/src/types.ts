@@ -576,6 +576,116 @@ export interface X402FetchResponse {
 }
 
 // ---------------------------------------------------------------------------
+// ERC-8128 Signed HTTP Requests
+// ---------------------------------------------------------------------------
+
+export interface Erc8128SignParams {
+  /** HTTP method */
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+  /** Target URL to sign for */
+  url: string;
+  /** HTTP headers to include in signature */
+  headers?: Record<string, string>;
+  /** Request body (used for Content-Digest) */
+  body?: string;
+  /** Target wallet ID (required for multi-wallet sessions) */
+  walletId?: string;
+  /** Network ID (e.g., evm-ethereum-mainnet) */
+  network?: string;
+  /** Covered Components preset (default: standard) */
+  preset?: 'minimal' | 'standard' | 'strict';
+  /** Signature TTL in seconds (default: 300) */
+  ttlSeconds?: number;
+  /** Include nonce (default: true) */
+  includeNonce?: boolean;
+  /** Signing algorithm (default: eip191) */
+  algorithm?: string;
+}
+
+export interface Erc8128SignResponse {
+  /** Signature-Input header value */
+  signatureInput: string;
+  /** Signature header value */
+  signature: string;
+  /** Content-Digest header value (present when body was provided) */
+  contentDigest?: string;
+  /** keyid in erc8128:<chainId>:<address> format */
+  keyid: string;
+  /** Preset used */
+  preset: string;
+  /** TTL used in seconds */
+  ttlSeconds: number;
+  /** Nonce (present when includeNonce is true) */
+  nonce?: string;
+  /** Algorithm used */
+  algorithm: string;
+}
+
+export interface Erc8128VerifyParams {
+  /** HTTP method */
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+  /** Request URL */
+  url: string;
+  /** HTTP headers from the signed request */
+  headers: Record<string, string>;
+  /** Signature-Input header value */
+  signatureInput: string;
+  /** Signature header value */
+  signature: string;
+  /** Content-Digest header value */
+  contentDigest?: string;
+}
+
+export interface Erc8128VerifyResponse {
+  /** Whether the signature is valid */
+  valid: boolean;
+  /** Recovered Ethereum address */
+  recoveredAddress?: string;
+  /** keyid from Signature-Input */
+  keyid?: string;
+  /** Signature expiry timestamp (ISO-8601) */
+  expiresAt?: string;
+  /** Whether the signature has expired */
+  expired?: boolean;
+  /** Error message if invalid */
+  error?: string;
+}
+
+export interface Erc8128FetchParams {
+  /** HTTP method (default: GET) */
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+  /** Target URL to fetch with ERC-8128 signature */
+  url: string;
+  /** Additional HTTP headers */
+  headers?: Record<string, string>;
+  /** Request body string */
+  body?: string;
+  /** Target wallet ID */
+  walletId?: string;
+  /** Network ID */
+  network?: string;
+  /** Covered Components preset */
+  preset?: 'minimal' | 'standard' | 'strict';
+  /** Signature TTL in seconds */
+  ttlSeconds?: number;
+}
+
+export interface Erc8128FetchResponse {
+  /** HTTP status code from the external server */
+  status: number;
+  /** Response headers from the external server */
+  headers: Record<string, string>;
+  /** Response body string from the external server */
+  body: string;
+  /** Signature headers that were sent */
+  signatureHeaders: {
+    signatureInput: string;
+    signature: string;
+    contentDigest?: string;
+  };
+}
+
+// ---------------------------------------------------------------------------
 // WalletConnect Responses
 // ---------------------------------------------------------------------------
 

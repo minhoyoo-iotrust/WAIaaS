@@ -352,6 +352,42 @@
 
 ---
 
+## Milestone: v30.10 — ERC-8128 Signed HTTP Requests
+
+**Shipped:** 2026-03-05
+**Phases:** 3 | **Plans:** 7 | **Sessions:** 1
+
+### What Was Built
+- RFC 9421 Signature Base + RFC 9530 Content-Digest + EIP-191 signing engine (packages/core/src/erc8128/, 7 modules)
+- REST API 2 endpoints (POST /v1/erc8128/sign, /verify) with sessionAuth, domain policy, rate limiting
+- ERC8128_ALLOWED_DOMAINS policy (default-deny, wildcard matching, per-domain rate limit 60s sliding window)
+- MCP 2 tools + SDK 3 methods (signHttpRequest, verifyHttpSignature, fetchWithErc8128) + connect-info capability
+- Admin UI policy form + system settings (6 keys) + erc8128.skill.md + 3 skill files updated
+- 2 notification events (ERC8128_SIGNATURE_CREATED, ERC8128_DOMAIN_BLOCKED)
+
+### What Worked
+- sign-only pattern (x402 precedent) 재활용으로 트랜잭션 파이프라인 우회, 구현 범위 최소화
+- ERC-8128 모듈을 @waiaas/core에 격리하여 spec-dependent 값을 keyid.ts/constants.ts에 집중 — 향후 spec 변경 시 수정 범위 제한
+- Milestone audit가 DEFECT-01 (Admin UI settings key mismatch), DEFECT-02 (verify param wiring), DEFECT-03 (stale test counts) 3건을 사전 발견하여 ship 전 수정
+- 3 phases 전체 1일 완료 — 설계 패턴(policy evaluator, settings keys, MCP tool wrapping)이 기존 x402/ERC-8004와 동일
+
+### What Was Inefficient
+- SUMMARY.md one_liner 필드 미기입 — summary-extract 자동 추출 실패, 수동 accomplishment 작성 필요 (반복 이슈)
+- Audit가 defects 발견 후 별도 gap closure phase 없이 직접 fix commit — 프로세스 경량화는 좋지만 추적성 저하
+
+### Patterns Established
+- ERC 표준 3종 세트 통합 패턴: x402(결제) + ERC-8004(신원) + ERC-8128(API 인증) — 각각 sign-only, ActionProvider, core module 방식
+- connect-info capabilities 동적 확장 패턴: settingsService.get('{feature}.enabled') → capabilities 배열 추가
+
+### Key Lessons
+- RFC 표준 자체 구현이 외부 라이브러리보다 안정적일 수 있다 (structured-headers 의존 제거, ~150 LOC 자체 구현)
+- Milestone audit의 E2E flow 검증이 DEFECT-01(설정 키 불일치) 같은 integration 결함을 설계/단위 테스트에서 발견하기 어려운 문제를 포착
+
+### Cost Observations
+- Model mix: 100% opus
+- Sessions: 1
+- Notable: 3 phases + audit + defect fix all in 1 session, ~76 files +7,280 lines
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -367,6 +403,7 @@
 | v30.6 | 1 | 3 | ERC-4337 Smart Account, 49 파일 ~2h 완료 |
 | v30.8 | 1 | 7 | ERC-8004 Trustless Agents 5-package 통합, 121 파일 1일 완료 |
 | v30.9 | 1 | 3 | Smart Account DX 개선 per-wallet provider 전환, 73 파일 2일 완료 |
+| v30.10 | 1 | 3 | ERC-8128 Signed HTTP Requests, 76 파일 1일 완료 |
 
 ### Cumulative Quality
 
@@ -381,6 +418,7 @@
 | v30.6 | ~6,486 (+749) | maintained | +8 decisions |
 | v30.8 | ~6,668 (+182) | maintained | +36 decisions |
 | v30.9 | ~6,742 (+74) | maintained | +12 decisions |
+| v30.10 | ~6,822 (+80) | maintained | +11 decisions |
 
 ### Top Lessons (Verified Across Milestones)
 

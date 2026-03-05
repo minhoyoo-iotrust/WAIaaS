@@ -51,6 +51,7 @@ const POLICY_TYPES = [
   { label: 'Approve Tier Override', value: 'APPROVE_TIER_OVERRIDE' },
   { label: 'Allowed Networks', value: 'ALLOWED_NETWORKS' },
   { label: 'x402 Allowed Domains', value: 'X402_ALLOWED_DOMAINS' },
+  { label: 'ERC-8128 Allowed Domains', value: 'ERC8128_ALLOWED_DOMAINS' },
   { label: 'Reputation Threshold', value: 'REPUTATION_THRESHOLD' },
 ];
 
@@ -68,6 +69,7 @@ const POLICY_DESCRIPTIONS: Record<string, string> = {
   APPROVE_TIER_OVERRIDE: 'Force a specific security tier for all token approval transactions.',
   ALLOWED_NETWORKS: 'Restrict transactions to specific blockchain networks only.',
   X402_ALLOWED_DOMAINS: 'Allow x402 payments only to pre-approved domains.',
+  ERC8128_ALLOWED_DOMAINS: 'Allow ERC-8128 HTTP message signing only for pre-approved API domains.',
   REPUTATION_THRESHOLD: 'Adjust security tier based on counterparty agent on-chain reputation score (ERC-8004).',
 };
 
@@ -93,6 +95,7 @@ const DEFAULT_RULES: Record<string, Record<string, unknown>> = {
   APPROVE_TIER_OVERRIDE: { tier: 'DELAY' },
   ALLOWED_NETWORKS: { networks: [] },
   X402_ALLOWED_DOMAINS: { domains: [] },
+  ERC8128_ALLOWED_DOMAINS: { domains: [] },
   REPUTATION_THRESHOLD: { min_score: 50, below_threshold_tier: 'APPROVAL', unrated_tier: 'APPROVAL', check_counterparty: false },
 };
 
@@ -259,6 +262,7 @@ const POLICY_DEFAULTS_KEYS = [
   'policy.default_deny_contracts',
   'policy.default_deny_spenders',
   'policy.default_deny_x402_domains',
+  'policy.default_deny_erc8128_domains',
 ];
 
 function PolicyDefaultsTab() {
@@ -412,6 +416,14 @@ function PolicyDefaultsTab() {
                 value={getEffectiveBoolValue(settings.value, dirty.value, 'policy', 'default_deny_x402_domains')}
                 onChange={(v) => handleFieldChange('policy.default_deny_x402_domains', v)}
                 description="Deny x402 payments unless a matching domain whitelist policy exists"
+              />
+              <FormField
+                label={keyToLabel('default_deny_erc8128_domains')}
+                name="policy.default_deny_erc8128_domains"
+                type="checkbox"
+                value={getEffectiveBoolValue(settings.value, dirty.value, 'policy', 'default_deny_erc8128_domains')}
+                onChange={(v) => handleFieldChange('policy.default_deny_erc8128_domains', v)}
+                description="Deny ERC-8128 signing unless a matching domain whitelist policy exists"
               />
             </div>
           </div>

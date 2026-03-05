@@ -1,5 +1,30 @@
 # Project Milestones: WAIaaS
 
+## v30.10 ERC-8128 Signed HTTP Requests (Shipped: 2026-03-05)
+
+**Delivered:** ERC-8128 (Signed HTTP Requests with Ethereum) 표준을 WAIaaS에 통합하여, 관리 지갑이 외부 API 호출 시 RFC 9421 기반 HTTP 메시지 서명으로 인증 가능. x402(결제) + ERC-8004(신원) + ERC-8128(API 인증)으로 에이전트 웹 인증 3종 세트 완성.
+
+**Phases completed:** 327-329 (3 phases, 7 plans, 26 requirements)
+
+**Key accomplishments:**
+
+- RFC 9421 Signature Base + RFC 9530 Content-Digest + EIP-191 signing engine (packages/core/src/erc8128/, 7 modules)
+- REST API 2 endpoints (POST /v1/erc8128/sign, /verify) with sessionAuth + erc8128.enabled feature gate
+- ERC8128_ALLOWED_DOMAINS policy (default-deny, wildcard matching, per-domain rate limiting 60s sliding window)
+- MCP 2 tools (erc8128_sign_request, erc8128_verify_signature) + SDK 3 methods (signHttpRequest, verifyHttpSignature, fetchWithErc8128)
+- Admin UI policy form + system settings (6 keys) + connect-info erc8128 capability
+- erc8128.skill.md + 3 existing skill files updated, 2 notification events (ERC8128_SIGNATURE_CREATED, ERC8128_DOMAIN_BLOCKED)
+
+**Stats:**
+
+- 3 phases, 7 plans, 26 requirements, 80 new tests
+- 76 files changed, +7,280 / -150 lines
+- ~232,614 LOC TypeScript total
+- Timeline: 2026-03-05 (1 day)
+- Git range: milestone/v30.10 (23 commits)
+
+---
+
 ## v30.9 Smart Account DX 개선 (Shipped: 2026-03-05)
 
 **Delivered:** Smart Account 설정을 글로벌 config에서 지갑별 프로바이더 모델로 전환하여, 프로바이더 선택 + API 키 입력만으로 번들러/페이마스터가 자동 구성되고, 에이전트가 셀프서비스로 프로바이더를 등록/조회할 수 있는 상태.

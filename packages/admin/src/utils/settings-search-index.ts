@@ -64,6 +64,7 @@ export const SETTINGS_SEARCH_INDEX: SearchIndexEntry[] = [
   { id: 'policies.defaults.default_deny_tokens', label: 'Default Deny: Token Transfers', description: 'Deny token transfers unless a matching whitelist policy exists', page: '/policies', tab: 'defaults', fieldName: 'policy.default_deny_tokens', keywords: ['policy', 'deny', 'token', 'transfer', 'default', 'security'] },
   { id: 'policies.defaults.default_deny_contracts', label: 'Default Deny: Contract Calls', description: 'Deny contract calls unless a matching whitelist policy exists', page: '/policies', tab: 'defaults', fieldName: 'policy.default_deny_contracts', keywords: ['policy', 'deny', 'contract', 'call', 'default', 'security'] },
   { id: 'policies.defaults.default_deny_spenders', label: 'Default Deny: Token Approvals', description: 'Deny token approvals unless a matching whitelist policy exists', page: '/policies', tab: 'defaults', fieldName: 'policy.default_deny_spenders', keywords: ['policy', 'deny', 'spender', 'approval', 'default', 'security'] },
+  { id: 'policies.defaults.default_deny_erc8128_domains', label: 'Default Deny: ERC-8128 Domains', description: 'Deny ERC-8128 signing unless a matching domain whitelist policy exists', page: '/policies', tab: 'defaults', fieldName: 'policy.default_deny_erc8128_domains', keywords: ['erc8128', 'deny', 'domain', 'whitelist', 'policy'] },
 
   // =========================================================================
   // Notifications Page
@@ -118,4 +119,12 @@ export const SETTINGS_SEARCH_INDEX: SearchIndexEntry[] = [
   { id: 'system..signing_sdk_request_expiry', label: 'Request Expiry (min)', description: 'Minutes before a sign request expires', page: '/system', tab: '', fieldName: 'signing_sdk.request_expiry_min', keywords: ['signing', 'sdk', 'expiry', 'timeout', 'request'] },
   { id: 'system..signing_sdk_preferred_channel', label: 'Preferred Channel', description: 'Preferred signing channel for SDK requests', page: '/system', tab: '', fieldName: 'signing_sdk.preferred_channel', keywords: ['signing', 'sdk', 'channel', 'ntfy', 'telegram'] },
   { id: 'wallet-apps..signing_sdk_notifications', label: 'Notifications Enabled', description: 'Push event notifications to wallet apps', page: '/wallet-apps', tab: '', fieldName: 'signing_sdk.notifications_enabled', keywords: ['signing', 'sdk', 'notification', 'wallet', 'push'] },
+
+  // --- ERC-8128 settings on System page ---
+  { id: 'system..erc8128_enabled', label: 'ERC-8128 Enabled', description: 'Enable ERC-8128 HTTP message signing', page: '/system', tab: '', fieldName: 'erc8128.enabled', keywords: ['erc8128', 'signing', 'http', 'rfc9421', 'enable'] },
+  { id: 'system..erc8128_default_preset', label: 'Default Preset', description: 'Default covered components preset for ERC-8128', page: '/system', tab: '', fieldName: 'erc8128.default_preset', keywords: ['erc8128', 'preset', 'minimal', 'standard', 'strict'] },
+  { id: 'system..erc8128_default_ttl_sec', label: 'Default TTL', description: 'Default signature TTL in seconds', page: '/system', tab: '', fieldName: 'erc8128.default_ttl_sec', keywords: ['erc8128', 'ttl', 'expiry', 'timeout'] },
+  { id: 'system..erc8128_default_nonce', label: 'Include Nonce', description: 'Include nonce in ERC-8128 signatures by default', page: '/system', tab: '', fieldName: 'erc8128.default_nonce', keywords: ['erc8128', 'nonce', 'replay'] },
+  { id: 'system..erc8128_default_algorithm', label: 'Algorithm', description: 'ERC-8128 signing algorithm', page: '/system', tab: '', fieldName: 'erc8128.default_algorithm', keywords: ['erc8128', 'algorithm', 'eip191'] },
+  { id: 'system..erc8128_default_rate_limit_rpm', label: 'Rate Limit', description: 'ERC-8128 rate limit per domain per minute', page: '/system', tab: '', fieldName: 'erc8128.default_rate_limit_rpm', keywords: ['erc8128', 'rate', 'limit', 'throttle'] },
 ];

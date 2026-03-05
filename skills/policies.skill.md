@@ -1,6 +1,6 @@
 ---
 name: "WAIaaS Policies"
-description: "Policy engine CRUD: 13 policy types for spending limits, whitelists, time restrictions, rate limits, token/contract/approve controls, network restrictions, x402 domain controls, reputation threshold"
+description: "Policy engine CRUD: 14 policy types for spending limits, whitelists, time restrictions, rate limits, token/contract/approve controls, network restrictions, x402 domain controls, ERC-8128 domain controls, reputation threshold"
 category: "api"
 tags: [wallet, blockchain, policies, security, waiass]
 version: "2.6.0-rc"
@@ -501,7 +501,29 @@ curl -s -X POST http://localhost:3100/v1/policies \
 
 Note: X402_ALLOWED_DOMAINS is default deny: once any policy of this type exists for a wallet, only listed domains can receive x402 payments.
 
-### m. REPUTATION_THRESHOLD (v30.8)
+### m. ERC8128_ALLOWED_DOMAINS (v30.10)
+
+Allowed domains for ERC-8128 HTTP message signing. **Default deny**: if `policy.default_deny_erc8128_domains` is enabled (Admin Settings), signing requests to unlisted domains are blocked.
+
+**Rules schema:**
+```json
+{
+  "domains": ["api.example.com", "*.service.io"]
+}
+```
+
+Supports wildcard patterns: `*.example.com` matches any subdomain of example.com.
+
+```bash
+curl -s -X POST http://localhost:3100/v1/policies \
+  -H 'Content-Type: application/json' \
+  -H 'X-Master-Password: <password>' \
+  -d '{"walletId":"<uuid>","type":"ERC8128_ALLOWED_DOMAINS","rules":{"domains":["api.example.com","*.openai.com"]}}'
+```
+
+Note: ERC8128_ALLOWED_DOMAINS is default deny when enabled: only listed domains can be signed for. For full ERC-8128 documentation, see **erc8128.skill.md**.
+
+### n. REPUTATION_THRESHOLD (v30.8)
 
 Evaluate the counterparty agent's on-chain reputation score via the ERC-8004 Reputation Registry. When reputation is below the threshold, escalate the transaction security tier. Requires the ERC-8004 feature to be enabled (`actions.erc8004_agent_enabled=true` in Admin Settings).
 

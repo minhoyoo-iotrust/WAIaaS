@@ -95,8 +95,8 @@ describe('Enum SSoT', () => {
     expect(TRANSACTION_TYPES).toContain('X402_PAYMENT');
   });
 
-  it('PolicyType has 18 values', () => {
-    expect(POLICY_TYPES).toHaveLength(18);
+  it('PolicyType has 19 values', () => {
+    expect(POLICY_TYPES).toHaveLength(19);
     expect(POLICY_TYPES).toContain('X402_ALLOWED_DOMAINS');
     expect(POLICY_TYPES).toContain('LENDING_LTV_LIMIT');
     expect(POLICY_TYPES).toContain('LENDING_ASSET_WHITELIST');
@@ -105,6 +105,8 @@ describe('Enum SSoT', () => {
     expect(POLICY_TYPES).toContain('PERP_ALLOWED_MARKETS');
     // v30.8: ERC-8004 reputation threshold
     expect(POLICY_TYPES).toContain('REPUTATION_THRESHOLD');
+    // v30.10: ERC-8128 allowed domains
+    expect(POLICY_TYPES).toContain('ERC8128_ALLOWED_DOMAINS');
   });
 
   it('PolicyTier has 4 values', () => {
@@ -115,8 +117,8 @@ describe('Enum SSoT', () => {
     expect(SESSION_STATUSES).toHaveLength(3);
   });
 
-  it('NotificationEventType has 54 values', () => {
-    expect(NOTIFICATION_EVENT_TYPES).toHaveLength(54);
+  it('NotificationEventType has 56 values', () => {
+    expect(NOTIFICATION_EVENT_TYPES).toHaveLength(56);
     // v28.5: gas condition events
     expect(NOTIFICATION_EVENT_TYPES).toContain('TX_GAS_WAITING');
     expect(NOTIFICATION_EVENT_TYPES).toContain('TX_GAS_CONDITION_MET');
@@ -136,6 +138,9 @@ describe('Enum SSoT', () => {
     expect(NOTIFICATION_EVENT_TYPES).toContain('AGENT_WALLET_UNLINKED');
     expect(NOTIFICATION_EVENT_TYPES).toContain('REPUTATION_FEEDBACK_RECEIVED');
     expect(NOTIFICATION_EVENT_TYPES).toContain('REPUTATION_THRESHOLD_TRIGGERED');
+    // v30.10: ERC-8128 signed HTTP requests events
+    expect(NOTIFICATION_EVENT_TYPES).toContain('ERC8128_SIGNATURE_CREATED');
+    expect(NOTIFICATION_EVENT_TYPES).toContain('ERC8128_DOMAIN_BLOCKED');
   });
 
   it('NotificationLogStatus has 2 values', () => {

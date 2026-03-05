@@ -195,6 +195,12 @@ export const messages: Messages = {
     PAYMASTER_REJECTED: 'Paymaster rejected the UserOperation',
     TRANSACTION_TIMEOUT: 'Transaction confirmation timed out',
     TRANSACTION_REVERTED: 'Transaction reverted on-chain',
+    // Chain domain
+    UNSUPPORTED_CHAIN: 'Operation not supported for this chain type',
+    // ERC-8128 domain
+    ERC8128_DISABLED: 'ERC-8128 signed HTTP requests are disabled',
+    ERC8128_DOMAIN_NOT_ALLOWED: 'Domain not allowed for ERC-8128 signing',
+    ERC8128_RATE_LIMITED: 'ERC-8128 signing rate limit exceeded for this domain',
   },
   // Notification templates (30 event types)
   notifications: {
@@ -264,6 +270,8 @@ export const messages: Messages = {
     AGENT_WALLET_UNLINKED: { title: 'Agent Wallet Unlinked', body: '{walletName} unlinked from agent identity. Registry: {registryAddress}' },
     REPUTATION_FEEDBACK_RECEIVED: { title: 'Reputation Feedback Received', body: '{walletName} received reputation feedback. Score: {score}, Tags: {tag1}/{tag2}' },
     REPUTATION_THRESHOLD_TRIGGERED: { title: 'Reputation Threshold Triggered', body: '{walletName} transaction tier escalated to {tier} due to reputation score {score} below threshold {threshold}' },
+    ERC8128_SIGNATURE_CREATED: { title: 'ERC-8128 Signature Created', body: '{walletName} signed HTTP request to {domain}. Method: {method}, Preset: {preset}' },
+    ERC8128_DOMAIN_BLOCKED: { title: 'ERC-8128 Domain Blocked', body: '{walletName} attempted to sign HTTP request to blocked domain {domain}. Reason: {reason}' },
   },
   // System messages
   system: {

@@ -22,7 +22,7 @@ import { registerDirty, unregisterDirty } from '../utils/dirty-guard';
 // System-relevant setting categories (used for save filtering)
 // ---------------------------------------------------------------------------
 
-const SYSTEM_PREFIXES = ['display.', 'daemon.', 'oracle.', 'gas_condition.', 'smart_account.'];
+const SYSTEM_PREFIXES = ['display.', 'daemon.', 'oracle.', 'gas_condition.', 'smart_account.', 'erc8128.'];
 const SYSTEM_EXACT_KEYS = new Set(['security.rate_limit_global_ip_rpm']);
 
 function isSystemSetting(key: string): boolean {
@@ -587,6 +587,90 @@ export default function SystemPage() {
     );
   }
 
+  function Erc8128Section() {
+    return (
+      <div class="settings-category">
+        <div class="settings-category-header">
+          <h3>ERC-8128 Signed HTTP Requests</h3>
+          <p class="settings-description">
+            Configure ERC-8128 HTTP message signing (RFC 9421 + EIP-191). Enables wallets to authenticate API requests with cryptographic signatures.
+          </p>
+        </div>
+        <div class="settings-category-body">
+          <div class="settings-fields-grid">
+            <FormField
+              label="Enabled"
+              name="erc8128.enabled"
+              type="select"
+              value={ev('erc8128', 'enabled') || 'false'}
+              onChange={(v) => handleFieldChange('erc8128.enabled', v)}
+              options={[
+                { label: 'Yes', value: 'true' },
+                { label: 'No', value: 'false' },
+              ]}
+              description="Enable ERC-8128 HTTP message signing. When disabled, sign/verify endpoints return 403."
+              data-field="erc8128.enabled"
+            />
+            <FormField
+              label="Default Preset"
+              name="erc8128.default_preset"
+              type="select"
+              value={ev('erc8128', 'default_preset') || 'standard'}
+              onChange={(v) => handleFieldChange('erc8128.default_preset', v)}
+              options={[
+                { label: 'Minimal', value: 'minimal' },
+                { label: 'Standard', value: 'standard' },
+                { label: 'Strict', value: 'strict' },
+              ]}
+              description="Default covered components preset for signatures."
+              data-field="erc8128.default_preset"
+            />
+            <FormField
+              label="Default TTL (seconds)"
+              name="erc8128.default_ttl_sec"
+              value={ev('erc8128', 'default_ttl_sec') || '300'}
+              onChange={(v) => handleFieldChange('erc8128.default_ttl_sec', v)}
+              placeholder="300"
+              description="Default signature TTL in seconds."
+              data-field="erc8128.default_ttl_sec"
+            />
+            <FormField
+              label="Include Nonce"
+              name="erc8128.default_nonce"
+              type="checkbox"
+              value={ebv('erc8128', 'default_nonce')}
+              onChange={(v) => handleFieldChange('erc8128.default_nonce', v)}
+              description="Include a UUID v4 nonce in signatures by default for replay protection."
+              data-field="erc8128.default_nonce"
+            />
+            <FormField
+              label="Algorithm"
+              name="erc8128.default_algorithm"
+              value={ev('erc8128', 'default_algorithm') || 'ethereum-eip191'}
+              onChange={(v) => handleFieldChange('erc8128.default_algorithm', v)}
+              placeholder="ethereum-eip191"
+              description="Signing algorithm. Currently only ethereum-eip191 (personal_sign) is supported."
+              data-field="erc8128.default_algorithm"
+            />
+            <FormField
+              label="Rate Limit (per minute)"
+              name="erc8128.default_rate_limit_rpm"
+              value={ev('erc8128', 'default_rate_limit_rpm') || '60'}
+              onChange={(v) => handleFieldChange('erc8128.default_rate_limit_rpm', v)}
+              placeholder="60"
+              description="Maximum signing requests per domain per minute."
+              data-field="erc8128.default_rate_limit_rpm"
+            />
+          </div>
+          <div class="settings-info-box">
+            ERC-8128 enables wallet-based HTTP API authentication using RFC 9421 message signatures
+            signed with EIP-191 (personal_sign). Requires ERC8128_ALLOWED_DOMAINS policy for domain whitelisting.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // ---------------------------------------------------------------------------
   // Main render
   // ---------------------------------------------------------------------------
@@ -641,6 +725,9 @@ export default function SystemPage() {
 
           {/* 8. Smart Account (ERC-4337) */}
           <SmartAccountSection />
+
+          {/* 9. ERC-8128 Signed HTTP Requests */}
+          <Erc8128Section />
         </>
       )}
 

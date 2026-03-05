@@ -10,7 +10,9 @@ export type ErrorDomain =
   | 'ACTION'
   | 'ADMIN'
   | 'X402'
-  | 'SIGNING';
+  | 'SIGNING'
+  | 'CHAIN'
+  | 'ERC8128';
 
 export interface ErrorCodeEntry {
   code: string;
@@ -895,6 +897,38 @@ export const ERROR_CODES = {
     httpStatus: 422,
     retryable: false,
     message: 'Transaction reverted on-chain',
+  },
+
+  // --- Chain domain (1) ---
+  UNSUPPORTED_CHAIN: {
+    code: 'UNSUPPORTED_CHAIN',
+    domain: 'CHAIN',
+    httpStatus: 400,
+    retryable: false,
+    message: 'Operation not supported for this chain type',
+  },
+
+  // --- ERC-8128 domain (3) ---
+  ERC8128_DISABLED: {
+    code: 'ERC8128_DISABLED',
+    domain: 'ERC8128',
+    httpStatus: 403,
+    retryable: false,
+    message: 'ERC-8128 signed HTTP requests are disabled',
+  },
+  ERC8128_DOMAIN_NOT_ALLOWED: {
+    code: 'ERC8128_DOMAIN_NOT_ALLOWED',
+    domain: 'ERC8128',
+    httpStatus: 403,
+    retryable: false,
+    message: 'Domain not allowed for ERC-8128 signing',
+  },
+  ERC8128_RATE_LIMITED: {
+    code: 'ERC8128_RATE_LIMITED',
+    domain: 'ERC8128',
+    httpStatus: 429,
+    retryable: true,
+    message: 'ERC-8128 signing rate limit exceeded for this domain',
   },
 } as const satisfies Record<string, ErrorCodeEntry>;
 

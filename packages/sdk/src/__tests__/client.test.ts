@@ -1552,4 +1552,189 @@ describe('WAIaaSClient', () => {
       expect(fetchSpy).not.toHaveBeenCalled();
     });
   });
+
+  // =========================================================================
+  // ERC-8128 Signed HTTP Requests
+  // =========================================================================
+
+  describe('ERC-8128', () => {
+    describe('signHttpRequest', () => {
+      it('calls POST /v1/erc8128/sign with params', async () => {
+        const client = new WAIaaSClient({
+          baseUrl: 'http://localhost:3100',
+          sessionToken: mockToken,
+        });
+
+        const expected = {
+          signatureInput: 'sig1=("@method" "@target-uri");created=1700000000',
+          signature: 'sig1=:base64sig:',
+          keyid: 'erc8128:1:0xabc',
+          preset: 'standard',
+          ttlSeconds: 300,
+          algorithm: 'eip191',
+        };
+
+        fetchSpy.mockResolvedValue(mockResponse(expected));
+
+        const result = await client.signHttpRequest({
+          method: 'GET',
+          url: 'https://api.example.com/data',
+        });
+
+        expect(result).toEqual(expected);
+        const calledUrl = fetchSpy.mock.calls[0]![0] as string;
+        expect(calledUrl).toBe('http://localhost:3100/v1/erc8128/sign');
+      });
+
+      it('passes optional parameters', async () => {
+        const client = new WAIaaSClient({
+          baseUrl: 'http://localhost:3100',
+          sessionToken: mockToken,
+        });
+
+        fetchSpy.mockResolvedValue(
+          mockResponse({
+            signatureInput: 'sig1=...',
+            signature: 'sig1=:...:',
+            keyid: 'erc8128:1:0xabc',
+            preset: 'strict',
+            ttlSeconds: 600,
+            algorithm: 'eip191',
+          }),
+        );
+
+        await client.signHttpRequest({
+          method: 'POST',
+          url: 'https://api.example.com/submit',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{"data":"test"}',
+          walletId: 'wallet-123',
+          network: 'evm-ethereum-mainnet',
+          preset: 'strict',
+          ttlSeconds: 600,
+        });
+
+        const body = JSON.parse(fetchSpy.mock.calls[0]![1]?.body as string) as Record<string, unknown>;
+        expect(body['method']).toBe('POST');
+        expect(body['url']).toBe('https://api.example.com/submit');
+        expect(body['walletId']).toBe('wallet-123');
+        expect(body['preset']).toBe('strict');
+        expect(body['ttlSeconds']).toBe(600);
+      });
+    });
+
+    describe('verifyHttpSignature', () => {
+      it('calls POST /v1/erc8128/verify with params', async () => {
+        const client = new WAIaaSClient({
+          baseUrl: 'http://localhost:3100',
+          sessionToken: mockToken,
+        });
+
+        const expected = {
+          valid: true,
+          recoveredAddress: '0xabcdef1234567890abcdef1234567890abcdef12',
+          keyid: 'erc8128:1:0xabc',
+        };
+
+        fetchSpy.mockResolvedValue(mockResponse(expected));
+
+        const result = await client.verifyHttpSignature({
+          method: 'GET',
+          url: 'https://api.example.com/data',
+          headers: { 'Accept': 'application/json' },
+          signatureInput: 'sig1=("@method");created=1700000000',
+          signature: 'sig1=:base64sig:',
+        });
+
+        expect(result).toEqual(expected);
+        const calledUrl = fetchSpy.mock.calls[0]![0] as string;
+        expect(calledUrl).toBe('http://localhost:3100/v1/erc8128/verify');
+      });
+    });
+
+    describe('fetchWithErc8128', () => {
+      it('signs then fetches with signature headers', async () => {
+        const client = new WAIaaSClient({
+          baseUrl: 'http://localhost:3100',
+          sessionToken: mockToken,
+        });
+
+        // First call: signHttpRequest -> POST /v1/erc8128/sign
+        const signResponse = {
+          signatureInput: 'sig1=("@method" "@target-uri");created=1700000000',
+          signature: 'sig1=:base64sig:',
+          keyid: 'erc8128:1:0xabc',
+          preset: 'standard',
+          ttlSeconds: 300,
+          algorithm: 'eip191',
+        };
+
+        fetchSpy
+          .mockResolvedValueOnce(mockResponse(signResponse)) // sign call
+          .mockResolvedValueOnce(
+            new Response('{"data":"result"}', {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' },
+            }),
+          ); // fetch call
+
+        const result = await client.fetchWithErc8128({
+          url: 'https://api.example.com/data',
+        });
+
+        // Verify sign was called
+        expect(fetchSpy).toHaveBeenCalledTimes(2);
+        const signUrl = fetchSpy.mock.calls[0]![0] as string;
+        expect(signUrl).toBe('http://localhost:3100/v1/erc8128/sign');
+
+        // Verify fetch was called with signature headers
+        const fetchUrl = fetchSpy.mock.calls[1]![0] as string;
+        expect(fetchUrl).toBe('https://api.example.com/data');
+        const fetchInit = fetchSpy.mock.calls[1]![1] as RequestInit;
+        const fetchHeaders = fetchInit.headers as Record<string, string>;
+        expect(fetchHeaders['Signature-Input']).toBe(signResponse.signatureInput);
+        expect(fetchHeaders['Signature']).toBe(signResponse.signature);
+
+        // Verify response
+        expect(result.status).toBe(200);
+        expect(result.body).toBe('{"data":"result"}');
+        expect(result.signatureHeaders.signatureInput).toBe(signResponse.signatureInput);
+      });
+
+      it('includes Content-Digest when body is provided', async () => {
+        const client = new WAIaaSClient({
+          baseUrl: 'http://localhost:3100',
+          sessionToken: mockToken,
+        });
+
+        const signResponse = {
+          signatureInput: 'sig1=...',
+          signature: 'sig1=:...:',
+          contentDigest: 'sha-256=:abc123:',
+          keyid: 'erc8128:1:0xabc',
+          preset: 'standard',
+          ttlSeconds: 300,
+          algorithm: 'eip191',
+        };
+
+        fetchSpy
+          .mockResolvedValueOnce(mockResponse(signResponse))
+          .mockResolvedValueOnce(
+            new Response('ok', { status: 200 }),
+          );
+
+        const result = await client.fetchWithErc8128({
+          method: 'POST',
+          url: 'https://api.example.com/submit',
+          body: '{"data":"test"}',
+        });
+
+        const fetchInit = fetchSpy.mock.calls[1]![1] as RequestInit;
+        const fetchHeaders = fetchInit.headers as Record<string, string>;
+        expect(fetchHeaders['Content-Digest']).toBe('sha-256=:abc123:');
+        expect(fetchInit.body).toBe('{"data":"test"}');
+        expect(result.signatureHeaders.contentDigest).toBe('sha-256=:abc123:');
+      });
+    });
+  });
 });

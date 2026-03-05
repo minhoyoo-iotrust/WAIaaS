@@ -1,7 +1,7 @@
 /**
  * WAIaaSClient - Core wallet client for WAIaaS daemon REST API.
  *
- * Wraps 32 REST API methods with typed responses:
+ * Wraps 34 REST API methods + 1 client-side helper with typed responses:
  * - getBalance(), getAddress(), getAssets() (wallet queries)
  * - getWalletInfo() (wallet management)
  * - sendToken(), getTransaction(), listTransactions(), listPendingTransactions() (transactions)
@@ -10,6 +10,8 @@
  * - getConnectInfo() (discovery)
  * - encodeCalldata(), signTransaction() (utils)
  * - x402Fetch() (x402 auto-payment)
+ * - signHttpRequest(), verifyHttpSignature() (ERC-8128 signing)
+ * - fetchWithErc8128() (ERC-8128 sign+fetch helper)
  * - wcConnect(), wcStatus(), wcDisconnect() (WalletConnect)
  * - executeAction() (action providers: DeFi swaps, etc.)
  * - registerAgent(), setAgentWallet(), unsetAgentWallet(), setAgentUri(),
@@ -83,6 +85,12 @@ import type {
   Erc8004RevokeFeedbackParams,
   Erc8004RequestValidationParams,
   Erc8004GetReputationOptions,
+  Erc8128SignParams,
+  Erc8128SignResponse,
+  Erc8128VerifyParams,
+  Erc8128VerifyResponse,
+  Erc8128FetchParams,
+  Erc8128FetchResponse,
 } from './types.js';
 
 export class WAIaaSClient {
@@ -614,6 +622,90 @@ export class WAIaaSClient {
       ),
       this.retryOptions,
     );
+  }
+
+  // --- ERC-8128 ---
+
+  /** Sign an HTTP request using ERC-8128 (RFC 9421 + EIP-191). */
+  async signHttpRequest(params: Erc8128SignParams): Promise<Erc8128SignResponse> {
+    return withRetry(
+      () => this.http.post<Erc8128SignResponse>(
+        '/v1/erc8128/sign',
+        params,
+        this.authHeaders(),
+      ),
+      this.retryOptions,
+    );
+  }
+
+  /** Verify an ERC-8128 HTTP message signature. */
+  async verifyHttpSignature(params: Erc8128VerifyParams): Promise<Erc8128VerifyResponse> {
+    // REST API expects signature headers inside the headers dict, not as top-level fields
+    const headers = { ...params.headers };
+    headers['signature-input'] = params.signatureInput;
+    headers['signature'] = params.signature;
+    if (params.contentDigest) headers['content-digest'] = params.contentDigest;
+
+    return withRetry(
+      () => this.http.post<Erc8128VerifyResponse>(
+        '/v1/erc8128/verify',
+        { method: params.method, url: params.url, headers },
+        this.authHeaders(),
+      ),
+      this.retryOptions,
+    );
+  }
+
+  /** Sign an HTTP request and fetch the URL in one call. Signs via ERC-8128, attaches signature headers, then fetches. */
+  async fetchWithErc8128(params: Erc8128FetchParams): Promise<Erc8128FetchResponse> {
+    // Step 1: Sign the request
+    const method = params.method ?? 'GET';
+    const signResult = await this.signHttpRequest({
+      method,
+      url: params.url,
+      headers: params.headers,
+      body: params.body,
+      walletId: params.walletId,
+      network: params.network,
+      preset: params.preset,
+      ttlSeconds: params.ttlSeconds,
+    });
+
+    // Step 2: Fetch with signed headers
+    const fetchHeaders: Record<string, string> = {
+      ...params.headers,
+      'Signature-Input': signResult.signatureInput,
+      'Signature': signResult.signature,
+    };
+    if (signResult.contentDigest) {
+      fetchHeaders['Content-Digest'] = signResult.contentDigest;
+    }
+
+    const fetchOptions: RequestInit = {
+      method,
+      headers: fetchHeaders,
+    };
+    if (params.body) {
+      fetchOptions.body = params.body;
+    }
+
+    const response = await fetch(params.url, fetchOptions);
+
+    const responseHeaders: Record<string, string> = {};
+    response.headers.forEach((value, key) => {
+      responseHeaders[key] = value;
+    });
+
+    return {
+      status: response.status,
+      headers: responseHeaders,
+      body: await response.text(),
+      signatureHeaders: {
+        signatureInput: signResult.signatureInput,
+        signature: signResult.signature,
+        contentDigest: signResult.contentDigest,
+      },
+    };
   }
 
   // --- WalletConnect ---

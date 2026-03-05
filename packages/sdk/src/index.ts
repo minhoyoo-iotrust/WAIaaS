@@ -74,4 +74,10 @@ export type {
   IncomingSummaryEntry,
   IncomingTransactionSummaryResponse,
   GetIncomingTransactionSummaryParams,
+  Erc8128SignParams,
+  Erc8128SignResponse,
+  Erc8128VerifyParams,
+  Erc8128VerifyResponse,
+  Erc8128FetchParams,
+  Erc8128FetchResponse,
 } from './types.js';

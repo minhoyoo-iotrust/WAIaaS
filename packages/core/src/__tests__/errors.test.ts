@@ -2,13 +2,15 @@ import { describe, it, expect } from 'vitest';
 import { WAIaaSError, ERROR_CODES } from '../index.js';
 
 describe('Error code matrix', () => {
-  it('has exactly 119 error codes', () => {
+  it('has exactly 123 error codes', () => {
     // v29.3: +WALLET_ID_REQUIRED, +NETWORK_REQUIRED, -CANNOT_REMOVE_DEFAULT_WALLET (net +1)
     // v29.7: +SIGNING_DISABLED, +WALLET_APP_DUPLICATE, +WALLET_APP_NOT_FOUND (+3)
     // v29.9: +RENEWAL_NOT_REQUIRED (+1)
     // v30.2: +SIMULATION_TIMEOUT, +INVALID_BACKUP_FORMAT, +UNSUPPORTED_BACKUP_VERSION, +BACKUP_CORRUPTED, +BACKUP_NOT_FOUND, +WEBHOOK_NOT_FOUND, +RULE_NOT_FOUND (+7)
     // v30.6: +PAYMASTER_REJECTED, +TRANSACTION_TIMEOUT, +TRANSACTION_REVERTED (+3)
-    expect(Object.keys(ERROR_CODES)).toHaveLength(119);
+    // v30.8: +ERC8004_UNAUTHORIZED (+1)
+    // v30.10: +ERC8128_DISABLED, +ERC8128_DOMAIN_NOT_ALLOWED, +ERC8128_RATE_LIMITED (+3)
+    expect(Object.keys(ERROR_CODES)).toHaveLength(123);
   });
 
   it('every error code entry has required fields', () => {
@@ -22,7 +24,7 @@ describe('Error code matrix', () => {
     }
   });
 
-  it('covers all 12 domains', () => {
+  it('covers all 14 domains', () => {
     const domains = new Set(Object.values(ERROR_CODES).map((e) => e.domain));
     expect(domains).toContain('AUTH');
     expect(domains).toContain('SESSION');
@@ -36,7 +38,9 @@ describe('Error code matrix', () => {
     expect(domains).toContain('ADMIN');
     expect(domains).toContain('X402');
     expect(domains).toContain('SIGNING');
-    expect(domains.size).toBe(12);
+    expect(domains).toContain('CHAIN');    // v30.8
+    expect(domains).toContain('ERC8128');  // v30.10
+    expect(domains.size).toBe(14);
   });
 
   it('AUTH domain has 8 codes', () => {

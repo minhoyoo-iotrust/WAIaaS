@@ -1,573 +1,441 @@
-# Architecture: Aave V3 EVM Lending + Lending Framework
+# Architecture Patterns: ERC-8128 Signed HTTP Requests Integration
 
-**Domain:** DeFi Lending integration for AI wallet system
-**Researched:** 2026-02-26
-**Confidence:** HIGH (design doc m29-00 shipped, existing ActionProvider patterns verified, Aave V3 ABI verified against official docs)
+**Domain:** HTTP message signing for AI agent authentication (ERC-8128 + RFC 9421)
+**Researched:** 2026-03-05
+**Overall confidence:** HIGH (existing codebase patterns well-established, design decisions documented in m30-10 objective)
+
+---
 
 ## Recommended Architecture
 
-The Lending framework introduces **stateful position management** on top of the existing stateless ActionProvider pipeline. The key architectural insight: resolve() continues to produce ContractCallRequest objects flowing through the existing 6-stage pipeline, but new services (PositionTracker, HealthFactorMonitor, LendingPolicyEvaluator) wrap around the pipeline to manage position lifecycle.
+ERC-8128 integrates as a **dedicated route module** following the established x402 pattern, not through the 6-stage transaction pipeline. This is the correct architectural choice because ERC-8128 produces HTTP signature headers (not on-chain transactions), making the pipeline's parse-validate-policy-approve-execute-record stages inapplicable.
 
-```
-                         [AI Agent / MCP / REST API]
-                                    |
-                     POST /v1/actions/aave_v3/{supply|borrow|repay|withdraw}
-                                    |
-                     [ActionProviderRegistry.executeResolve()]
-                                    |
-                     [AaveV3LendingProvider.resolve()]
-                                    |
-                         ContractCallRequest[]
-                           (approve + action)
-                                    |
-                     [6-Stage Pipeline: validate -> policy -> ... -> confirm]
-                           |                    |
-              [LendingPolicyEvaluator]    [Stage 5: EvmAdapter]
-              (step 4h: LTV + asset        (viem sendTransaction)
-               whitelist evaluation)            |
-                                    [PositionTracker (5-min sync)]
-                                         |            |
-                                  [defi_positions]  [HealthFactorMonitor]
-                                         |            (adaptive polling)
-                                  [REST API]              |
-                                  [Admin UI]     [LIQUIDATION_WARNING]
-```
+### Architecture Decision: Dedicated Route (x402 Pattern)
+
+**Decision:** Use dedicated `POST /v1/erc8128/sign` and `POST /v1/erc8128/verify` routes, bypassing the 6-stage pipeline entirely.
+
+**Why NOT the SIGN pipeline:**
+
+| Concern | SIGN Pipeline | Dedicated Route (Chosen) |
+|---------|---------------|--------------------------|
+| Data flow | `signMessage(arbitrary_bytes)` -- single call | Multi-step: Content-Digest -> Signature-Input -> Signature Base -> signMessage -> header assembly |
+| Policy type | Uses Stage 3 `DatabasePolicyEngine.evaluate()` | Domain policy (like X402_ALLOWED_DOMAINS), evaluated in route handler |
+| Transaction record | Creates DB record in `transactions` table | No DB record needed (stateless signing, no financial risk) |
+| Pipeline context | Requires `PipelineContext` with chain/network/amount fields | Needs HTTP request context (method, url, headers, body) |
+| Covered Components | N/A | RFC 9421 specific: must build Signature-Input from covered components |
+
+**Precedent:** x402 also uses a dedicated route (`POST /v1/x402/fetch`) with domain policy evaluation in the route handler, not in `DatabasePolicyEngine.evaluate()`. This is the WAIaaS pattern for domain-scoped features.
 
 ### Component Boundaries
 
-| Component | Package | Responsibility | Communicates With |
-|-----------|---------|---------------|-------------------|
-| ILendingProvider | @waiaas/core (interface) | Type contract: 4 actions + 3 query methods | ActionProviderRegistry, PositionTracker |
-| IPositionProvider | @waiaas/core (interface) | Type contract: position data source for PositionTracker | PositionTracker |
-| AaveV3LendingProvider | @waiaas/actions | Resolves supply/borrow/repay/withdraw to ContractCallRequest, queries positions/health-factor/markets via Aave V3 Pool ABI | ActionProviderRegistry, PositionTracker, REST API |
-| AaveContractHelper | @waiaas/actions | ABI encoding + chain-specific Pool/Oracle address mapping | AaveV3LendingProvider |
-| PositionTracker | @waiaas/daemon (service) | 5-min sync of defi_positions, PositionWriteQueue batch upsert | IPositionProvider implementations, SQLite |
-| HealthFactorMonitor | @waiaas/daemon (service) | Adaptive polling (5min-5sec), LIQUIDATION_WARNING alerts | defi_positions table, NotificationService, EventBus |
-| LendingPolicyEvaluator | @waiaas/daemon (pipeline) | LENDING_LTV_LIMIT + LENDING_ASSET_WHITELIST evaluation | DatabasePolicyEngine (step 4h), defi_positions table |
-| DeFi Position Routes | @waiaas/daemon (routes) | GET /positions, GET /health-factor | defi_positions table, ILendingProvider.getHealthFactor() |
-| Admin Portfolio View | @waiaas/admin | DeFi positions panel, health factor display | REST API |
+| Component | Location | Responsibility | Communicates With |
+|-----------|----------|---------------|-------------------|
+| **Signing Engine** | `packages/core/src/erc8128/` | RFC 9421 signature construction, Content-Digest, Signature-Input building, EIP-191 signing, keyid management | Consumed by daemon route handler |
+| **Route Handler** | `packages/daemon/src/api/routes/erc8128.ts` | Request validation, feature gate check, EVM chain verification, domain policy evaluation, orchestration | Calls signing engine + policy evaluator + SettingsService |
+| **Domain Policy** | `packages/daemon/src/services/erc8128/erc8128-domain-policy.ts` | `ERC8128_ALLOWED_DOMAINS` evaluation (default-deny, wildcard, rate limit) | Called by route handler |
+| **Policy Type** | `packages/core/src/enums/policy.ts` | `ERC8128_ALLOWED_DOMAINS` enum value (19th policy type) | Referenced by domain policy evaluator |
+| **Admin Settings** | `packages/daemon/src/infrastructure/settings/setting-keys.ts` | 5 setting keys (`erc8128.*`) | Read by route handler, managed by SettingsService |
+| **MCP Tools** | `packages/mcp/src/tools/erc8128-sign.ts`, `erc8128-verify.ts` | MCP tool wrappers calling REST API | Calls `POST /v1/erc8128/sign` via ApiClient |
+| **SDK Methods** | `packages/sdk/src/client.ts` | `signHttpRequest()`, `verifyHttpSignature()`, `fetchWithErc8128()` | Calls REST API |
+| **Notification Events** | `packages/core/src/enums/notification.ts` | 2 new event types | Emitted by route handler |
+| **connect-info** | `packages/daemon/src/api/routes/connect-info.ts` | `capabilities.erc8128Support` | Reads `erc8128.enabled` from SettingsService |
 
 ### Data Flow
 
-**Supply flow (happy path):**
-
 ```
-1. Agent: POST /v1/actions/aave_v3/supply { params: { asset: "eip155:1/erc20:0xA0b8...3", amount: "1000" } }
-2. ActionProviderRegistry.executeResolve("aave_v3/supply", params, context)
-3. AaveV3LendingProvider.resolve("supply", params, context):
-   a. Parse CAIP-19 asset -> token address 0xA0b8...
-   b. Check ERC-20 allowance for Pool contract
-   c. If allowance insufficient: return [approveReq, supplyReq]
-   d. Else: return [supplyReq]
-   e. supplyReq = ContractCallRequest {
-        type: 'CONTRACT_CALL',
-        to: POOL_ADDRESS,  // chain-specific
-        calldata: encodeFunctionData('supply(address,uint256,address,uint16)', [token, amount, wallet, 0]),
-        value: '0',
-        actionProvider: 'aave_v3'  // auto-tagged by registry
-      }
-4. For each ContractCallRequest in array:
-   a. Stage 1: Validate + INSERT PENDING tx
-   b. Stage 2: Auth (session check)
-   c. Stage 3: Policy evaluation:
-      - Step 4d: CONTRACT_WHITELIST (Pool address must be whitelisted)
-      - Step 4h-a: LENDING_ASSET_WHITELIST (asset must be in collateralAssets)
-      - Step 4h-b: LENDING_LTV_LIMIT (N/A for supply, only borrow)
-      - Step 5: SPENDING_LIMIT (USD amount evaluation)
-   d. Stage 3.5: GasCondition (if specified)
-   e. Stage 4: Wait (DELAY/APPROVAL tier)
-   f. Stage 5: EvmAdapter signs + broadcasts
-   g. Stage 6: Confirmation wait
-5. PositionTracker (next 5-min cycle): syncs aToken balance -> defi_positions
-```
-
-**Borrow flow (policy integration):**
-
-```
-1. Agent: POST /v1/actions/aave_v3/borrow { params: { asset: "eip155:1/erc20:0xdAC1...", amount: "5000" } }
-2. AaveV3LendingProvider.resolve("borrow", ...):
-   -> ContractCallRequest { calldata: Pool.borrow(asset, amount, 2, 0, wallet) }
-3. Policy evaluation at Stage 3:
-   Step 4h-a: LENDING_ASSET_WHITELIST -> check asset in borrowAssets
-   Step 4h-b: LENDING_LTV_LIMIT:
-     a. Read defi_positions (PositionTracker cache)
-     b. currentDebtUsd = sum of existing BORROW positions
-     c. newBorrowUsd = amount * IPriceOracle.getPrice()
-     d. projectedLtv = (currentDebtUsd + newBorrowUsd) / totalCollateralUsd
-     e. if projectedLtv > maxLtv (0.75) -> DENY
-     f. if projectedLtv > warningLtv (0.65) -> upgrade tier to DELAY
-     g. else -> pass through
-4. If borrow defaultTier=APPROVAL, owner must approve
-5. After confirmation: PositionTracker syncs variableDebtToken balance
+Agent -> POST /v1/erc8128/sign (sessionAuth)
+         |
+         v
+    [1] Feature gate: SettingsService.get('erc8128.enabled') === 'true'
+         |
+         v
+    [2] Wallet lookup + EVM chain verification (ERC-8128 is Ethereum-only)
+         |
+         v
+    [3] Domain policy: load ERC8128_ALLOWED_DOMAINS from policies table
+        -> evaluateErc8128Domain(policies, targetDomain, settingsService)
+        -> default-deny if no policy configured
+        -> wildcard matching (*.example.com)
+        -> rate limit check (in-memory counter)
+         |
+         v
+    [4] Signing engine (packages/core/src/erc8128/):
+        a. Content-Digest: SHA-256 of body -> RFC 9530 header
+        b. Signature-Input: covered components + params -> RFC 9421 Structured Fields
+        c. Signature Base: canonical representation per RFC 9421 section 2.5
+        d. EIP-191 signMessage(signatureBase) via keyStore
+        e. Assemble Signature header
+         |
+         v
+    [5] Return { headers: { Signature-Input, Signature, Content-Digest }, keyid, ... }
+         |
+         v
+Agent -> Adds returned headers to original HTTP request -> External API
 ```
 
-## New Components (detailed)
-
-### 1. ILendingProvider extends IActionProvider (core interface)
-
-**File:** `packages/core/src/interfaces/lending-provider.types.ts`
-
-```typescript
-export interface ILendingProvider extends IActionProvider {
-  getPosition(walletId: string, context: ActionContext): Promise<LendingPositionSummary[]>;
-  getHealthFactor(walletId: string, context: ActionContext): Promise<HealthFactor>;
-  getMarkets(chain: string, network?: string): Promise<MarketInfo[]>;
-}
-```
-
-ILendingProvider extends IActionProvider (not a separate interface) because:
-- resolve() stays in the same class, feeding directly into the 6-stage pipeline
-- ActionProviderRegistry.register() works unchanged (it accepts IActionProvider)
-- Query methods (getPosition, getHealthFactor, getMarkets) are accessed via type narrowing when the route handler knows it has a lending provider
-
-**IPositionProvider** is a separate interface (NOT extending IActionProvider) because PositionTracker needs pure read-only access without execution dependencies:
-
-```typescript
-export interface IPositionProvider {
-  getPositions(walletId: string): Promise<PositionUpdate[]>;
-  getProviderName(): string;
-  getSupportedCategories(): PositionCategory[];
-}
-```
-
-The same class implements both: `class AaveV3LendingProvider implements ILendingProvider, IPositionProvider`
-
-### 2. AaveV3LendingProvider (actions package)
-
-**File:** `packages/actions/src/providers/aave-v3/index.ts`
-
-Follows the exact pattern of LidoStakingActionProvider:
-- Constructor receives config (Pool addresses, thresholds)
-- metadata: name='aave_v3', chains=['evm'], mcpExpose=true
-- 4 actions: supply, borrow, repay, withdraw
-- resolve() returns ContractCallRequest or ContractCallRequest[] (approve+action pattern)
-- Additionally implements IPositionProvider for PositionTracker integration
-
-**Key difference from existing providers:** Also implements 3 query methods (getPosition, getHealthFactor, getMarkets) that make on-chain RPC calls via viem publicClient. These are NOT called through the pipeline -- they are called directly by REST API route handlers and PositionTracker.
-
-### 3. AaveContractHelper (actions package)
-
-**File:** `packages/actions/src/providers/aave-v3/aave-contracts.ts`
-
-Hardcoded chain-specific address mapping (same pattern as LidoStakingConfig addresses):
-
-```typescript
-const AAVE_V3_ADDRESSES: Record<string, AaveV3Addresses> = {
-  'ethereum-mainnet': {
-    pool: '0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2',
-    poolDataProvider: '0x0a16f2FCC0D44FaE41cc54e079281D84A363bECD',
-    oracle: '0x54586bE62E3c3580375aE3723C145253060Ca0C2',
-  },
-  'arbitrum-mainnet': {
-    pool: '0x794a61358D6845594F94dc1DB02A252b5b4814aD',
-    poolDataProvider: '0x69FA688f1Dc47d4B5d8029D5a35FB7a548310654',
-    oracle: '0xb56c2F0B653B2e0b10C9b928C8580Ac5Df02C7C7',
-  },
-  'optimism-mainnet': {
-    pool: '0x794a61358D6845594F94dc1DB02A252b5b4814aD',
-    poolDataProvider: '...',
-    oracle: '...',
-  },
-  'base-mainnet': {
-    pool: '0xA238Dd80C259a72e81d7e4664a9801593F98d1c5',
-    poolDataProvider: '...',
-    oracle: '...',
-  },
-  'polygon-mainnet': {
-    pool: '0x794a61358D6845594F94dc1DB02A252b5b4814aD',
-    poolDataProvider: '...',
-    oracle: '...',
-  },
-};
-```
-
-ABI encoding uses viem's `encodeFunctionData` -- no Aave SDK dependency needed. The Pool ABI for the 4 core functions:
-
-```typescript
-const POOL_ABI = [
-  // supply(address asset, uint256 amount, address onBehalfOf, uint16 referralCode)
-  { name: 'supply', type: 'function', inputs: [...], outputs: [] },
-  // borrow(address asset, uint256 amount, uint256 interestRateMode, uint16 referralCode, address onBehalfOf)
-  { name: 'borrow', type: 'function', inputs: [...], outputs: [] },
-  // repay(address asset, uint256 amount, uint256 interestRateMode, address onBehalfOf) returns (uint256)
-  { name: 'repay', type: 'function', inputs: [...], outputs: [{ type: 'uint256' }] },
-  // withdraw(address asset, uint256 amount, address to) returns (uint256)
-  { name: 'withdraw', type: 'function', inputs: [...], outputs: [{ type: 'uint256' }] },
-  // getUserAccountData(address user) returns (totalCollateralBase, totalDebtBase, availableBorrowsBase, currentLiquidationThreshold, ltv, healthFactor)
-  { name: 'getUserAccountData', type: 'function', inputs: [...], outputs: [...] },
-  // getReservesList() returns (address[])
-  { name: 'getReservesList', type: 'function', inputs: [], outputs: [{ type: 'address[]' }] },
-] as const;
-```
-
-### 4. PositionTracker (daemon service)
-
-**File:** `packages/daemon/src/services/defi/position-tracker.ts`
-
-Independent service with internal setInterval management (NOT using BackgroundWorkers, because it needs 4 different intervals for 4 categories). Follows BalanceMonitorService pattern.
-
-```
-Lifecycle:
-  DaemonLifecycle Step 4c-10.5 (after AsyncPollingService)
-  -> new PositionTracker({ sqlite, db, eventBus })
-  -> positionTracker.registerProvider('aave_v3', aaveProvider)
-  -> positionTracker.start()
-  -> [4 category timers: LENDING=5min, STAKING=15min, YIELD=1hr, PERP=1min]
-
-Shutdown:
-  -> positionTracker.stop()
-  -> clearInterval all timers
-  -> writeQueue.flush() (drain remaining)
-```
-
-The PositionWriteQueue uses the IncomingTxQueue pattern:
-- Map<string, PositionUpsert> for dedup (key: walletId:provider:assetId:category)
-- flush() with BEGIN IMMEDIATE transaction
-- ON CONFLICT(wallet_id, provider, asset_id, category) DO UPDATE for upsert
-- MAX_BATCH=100
-
-### 5. HealthFactorMonitor (daemon service)
-
-**File:** `packages/daemon/src/services/defi/health-factor-monitor.ts`
-
-Implements IDeFiMonitor interface. Uses adaptive polling (recursive setTimeout, not setInterval):
-
-| Health Factor | Severity | Polling Interval | Notification |
-|--------------|----------|-----------------|--------------|
-| >= 2.0 | SAFE | 5 minutes | None |
-| 1.5 - 2.0 | WARNING | 1 minute | LIQUIDATION_WARNING |
-| 1.2 - 1.5 | DANGER | 15 seconds | LIQUIDATION_WARNING |
-| < 1.2 | CRITICAL | 5 seconds | LIQUIDATION_IMMINENT |
-
-Data source: reads from defi_positions table ONLY (DEC-MON-03). Never makes direct RPC calls. PositionTracker is responsible for data freshness.
-
-When DANGER or CRITICAL is detected, requests on-demand PositionTracker sync via `positionTracker.syncCategory('LENDING')`.
-
-### 6. LendingPolicyEvaluator (pipeline extension)
-
-**File:** `packages/daemon/src/pipeline/database-policy-engine.ts` (modification)
-
-Two new policy types added to DatabasePolicyEngine.evaluate() at step 4h:
-
-**Step 4h-a: LENDING_ASSET_WHITELIST**
-- Default-deny: no policy configured = all lending actions denied
-- Checks ContractCallRequest.metadata.actionName to identify lending actions
-- supply/withdraw: asset must be in collateralAssets
-- borrow/repay: asset must be in borrowAssets
-
-**Step 4h-b: LENDING_LTV_LIMIT**
-- Only applies to borrow actions
-- Reads current positions from defi_positions (cached, not live RPC)
-- Calculates projectedLtv = (currentDebt + newBorrow) / totalCollateral
-- maxLtv exceeded -> DENY
-- warningLtv exceeded -> upgrade to DELAY tier
-
-Identification mechanism: ContractCallRequest.metadata already exists as an extension point. The action route handler auto-tags metadata with `{ provider: 'aave_v3', action: 'borrow' }`. No new discriminatedUnion type needed -- preserves the 5-type pipeline invariant.
-
-### 7. DB Migration: defi_positions table
-
-**Schema version:** 24 -> 25
-
-```sql
-CREATE TABLE IF NOT EXISTS defi_positions (
-  id TEXT PRIMARY KEY,
-  wallet_id TEXT NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
-  category TEXT NOT NULL CHECK(category IN ('LENDING','YIELD','PERP','STAKING')),
-  provider TEXT NOT NULL,
-  chain TEXT NOT NULL CHECK(chain IN ('solana','evm')),
-  network TEXT,
-  asset_id TEXT,
-  amount TEXT NOT NULL,
-  amount_usd REAL,
-  metadata TEXT,
-  status TEXT NOT NULL DEFAULT 'ACTIVE' CHECK(status IN ('ACTIVE','CLOSED','LIQUIDATED')),
-  opened_at INTEGER NOT NULL,
-  closed_at INTEGER,
-  last_synced_at INTEGER NOT NULL,
-  created_at INTEGER NOT NULL,
-  updated_at INTEGER NOT NULL
-);
-
-CREATE INDEX idx_defi_positions_wallet_category ON defi_positions(wallet_id, category);
-CREATE INDEX idx_defi_positions_wallet_provider ON defi_positions(wallet_id, provider);
-CREATE INDEX idx_defi_positions_status ON defi_positions(status);
-CREATE UNIQUE INDEX idx_defi_positions_unique ON defi_positions(wallet_id, provider, asset_id, category);
-```
-
-Key design decisions:
-- `defi_positions` (not `positions`) to avoid naming collision with wallet positions concept
-- metadata is JSON string, parsed only at API response time (write path skips Zod validation)
-- UNIQUE key on (wallet_id, provider, asset_id, category) for upsert
-- Category discriminated (LENDING/YIELD/PERP/STAKING) -- future providers reuse same table
-- CHECK constraints built from SSoT arrays via buildCheckSql()
-
-## Modified Components (existing files)
-
-### 1. SSoT Enum Extensions
-
-| File | Changes |
-|------|---------|
-| `packages/core/src/enums/notification.ts` | +4 event types: LIQUIDATION_WARNING, MATURITY_WARNING, MARGIN_WARNING, LIQUIDATION_IMMINENT |
-| `packages/core/src/enums/defi.ts` (NEW) | POSITION_CATEGORIES, POSITION_STATUSES arrays + types |
-| `packages/core/src/enums/index.ts` | Re-export new enums |
-
-### 2. Policy Engine Extension
-
-| File | Changes |
-|------|---------|
-| `packages/daemon/src/pipeline/database-policy-engine.ts` | Add step 4h-a (LENDING_ASSET_WHITELIST) + step 4h-b (LENDING_LTV_LIMIT) |
-| `packages/core/src/schemas/policy.schema.ts` (or equivalent) | Add LENDING_LTV_LIMIT, LENDING_ASSET_WHITELIST to PolicyTypeEnum |
-
-### 3. Provider Registration
-
-| File | Changes |
-|------|---------|
-| `packages/actions/src/index.ts` | Export AaveV3LendingProvider, add to registerBuiltInProviders() |
-| `packages/daemon/src/lifecycle/daemon.ts` | Step 4c-10.5: Create PositionTracker, register provider, start() |
-
-### 4. Notification System
-
-| File | Changes |
-|------|---------|
-| `packages/daemon/src/services/notification/message-templates.ts` | +4 DeFi event message templates |
-| `packages/daemon/src/services/notification/` (filter config) | EVENT_CATEGORY_MAP: new 'defi' category |
-
-### 5. REST API + MCP
-
-| File | Changes |
-|------|---------|
-| `packages/daemon/src/api/routes/defi-positions.ts` (NEW) | GET /v1/wallets/:id/positions, GET /v1/wallets/:id/health-factor |
-| `packages/daemon/src/api/routes/wallets.ts` | Link to defi-positions sub-router |
-| MCP tool registration | 5 new tools auto-generated from mcpExpose=true: waiaas_aave_supply, waiaas_aave_borrow, waiaas_aave_repay, waiaas_aave_withdraw, waiaas_aave_positions |
-
-### 6. Admin UI
-
-| File | Changes |
-|------|---------|
-| `packages/admin/src/components/` (NEW) | DeFiPortfolioPanel, HealthFactorGauge, PositionTable |
-| `packages/admin/src/pages/` | Wallet detail: new DeFi tab or Portfolio section |
-| Policy forms | 2 new policy type forms: LTV limit slider, asset whitelist picker |
-
-### 7. DB Migration
-
-| File | Changes |
-|------|---------|
-| `packages/daemon/src/infrastructure/database/schema.ts` | Add defiPositions Drizzle table definition |
-| `packages/daemon/src/infrastructure/database/migrate.ts` | Add migration v25: CREATE TABLE defi_positions + indexes, LATEST_SCHEMA_VERSION 24->25 |
-| Tests | Update LATEST_SCHEMA_VERSION assertions (24->25), add migration chain test |
+---
 
 ## Patterns to Follow
 
-### Pattern 1: Provider implements both ILendingProvider + IPositionProvider
+### Pattern 1: Domain Policy in Route Handler (x402 Pattern)
 
-**What:** Single class implements both the execution interface (resolve -> ContractCallRequest) and the read-only position query interface (getPositions -> PositionUpdate[]).
+**What:** Evaluate `ERC8128_ALLOWED_DOMAINS` policy directly in the route handler, not in `DatabasePolicyEngine.evaluate()`.
 
-**When:** Every lending/yield/perp provider needs this dual interface pattern.
+**Why:** `DatabasePolicyEngine` operates on `TransactionParam` which has amount/toAddress/chain fields -- not URL/domain fields. Domain policies are a distinct concept from transaction policies.
 
-**Example:**
+**Implementation reference:** `packages/daemon/src/services/x402/x402-domain-policy.ts`
+
 ```typescript
-class AaveV3LendingProvider implements ILendingProvider, IPositionProvider {
-  // IActionProvider (inherited via ILendingProvider)
-  readonly metadata: ActionProviderMetadata = { name: 'aave_v3', ... };
-  readonly actions: readonly ActionDefinition[] = [/* supply, borrow, repay, withdraw */];
-  async resolve(actionName, params, context) { /* -> ContractCallRequest[] */ }
+// packages/daemon/src/services/erc8128/erc8128-domain-policy.ts
+// Follows exact same pattern as evaluateX402Domain
 
-  // ILendingProvider query methods
-  async getPosition(walletId, context) { /* -> LendingPositionSummary[] */ }
-  async getHealthFactor(walletId, context) { /* -> HealthFactor */ }
-  async getMarkets(chain, network?) { /* -> MarketInfo[] */ }
+export function evaluateErc8128Domain(
+  resolved: PolicyRow[],
+  targetDomain: string,
+  settingsService?: SettingsReader,
+): PolicyEvaluation | null {
+  const policy = resolved.find((p) => p.type === 'ERC8128_ALLOWED_DOMAINS');
 
-  // IPositionProvider (for PositionTracker)
-  async getPositions(walletId) { /* -> PositionUpdate[] */ }
-  getProviderName() { return 'aave_v3'; }
-  getSupportedCategories() { return ['LENDING']; }
+  // No policy -> default deny (always, no toggle)
+  if (!policy) {
+    return {
+      allowed: false,
+      tier: 'INSTANT' as PolicyTier,
+      reason: 'ERC-8128 signing disabled: no ERC8128_ALLOWED_DOMAINS policy configured',
+    };
+  }
+
+  const rules = JSON.parse(policy.rules);
+  // ... wildcard matching + rate limit check ...
 }
 ```
 
-### Pattern 2: Approve + Action multi-step resolve (existing pattern)
+**Key difference from x402:** No `default_deny_erc8128_domains` toggle in settings. ERC-8128 domain policy is always default-deny (no opt-out). Rationale: signing HTTP requests with wallet keys is a sensitive operation; always require explicit domain whitelisting.
 
-**What:** ERC-20 tokens require approve before Pool interaction. resolve() returns [approveReq, actionReq] array.
+### Pattern 2: Feature Gate via SettingsService (Hot-Reload)
 
-**When:** supply (approve token -> Pool), repay (approve token -> Pool).
+**What:** Check `erc8128.enabled` Admin Setting before processing requests, using SettingsService instead of config.toml for hot-reload support.
 
-**Example:** Same pattern as LidoStakingActionProvider.resolveUnstake() which returns [approveReq, withdrawReq].
+**Why:** x402 uses the older `deps.config.x402?.enabled` pattern (config.toml, requires restart). ERC-8128 should use the newer SettingsService pattern for hot-reload consistency, following CLAUDE.md guidance: "Prefer Admin Settings over config.toml."
 
-### Pattern 3: PositionWriteQueue batch upsert (IncomingTxQueue pattern)
+```typescript
+// In route handler
+const enabled = deps.settingsService?.get('erc8128.enabled') === 'true';
+if (!enabled) {
+  throw new WAIaaSError('ERC8128_DISABLED', {
+    message: 'ERC-8128 signed HTTP requests are disabled',
+  });
+}
+```
 
-**What:** Buffer position updates in a Map, flush with BEGIN IMMEDIATE + ON CONFLICT upsert.
+### Pattern 3: Signing Engine as Pure Core Module
 
-**When:** Every PositionTracker sync cycle.
+**What:** The RFC 9421 signing logic lives in `packages/core/src/erc8128/` as pure functions with no daemon dependencies.
 
-**Why:** Prevents SQLite write contention. Same pattern proven in IncomingTxQueue (v27.1).
+**Why:** (1) SDK needs verification utilities, (2) testability -- pure functions are easy to unit test against RFC test vectors, (3) same pattern as `packages/core/src/interfaces/x402.types.ts` for type definitions.
 
-### Pattern 4: Adaptive polling (HealthFactorMonitor)
+```
+packages/core/src/erc8128/
+  index.ts                    # Public API exports
+  http-message-signer.ts      # signHttpRequest() orchestrator
+  signature-input-builder.ts  # RFC 9421 Structured Fields builder
+  content-digest.ts           # RFC 9530 SHA-256 digest
+  signature-base-builder.ts   # RFC 9421 section 2.5 canonical form
+  keyid.ts                    # erc8128:<chainId>:<address> format
+  verifier.ts                 # ecrecover-based verification
+  types.ts                    # Zod schemas (SSoT)
+  constants.ts                # Algorithm registry, covered component presets
+```
 
-**What:** setTimeout-based polling where interval changes based on current state severity.
+### Pattern 4: MCP Tool as Thin REST Wrapper
 
-**When:** HealthFactorMonitor needs faster polling as health factor deteriorates.
+**What:** MCP tools call the REST API via ApiClient, no business logic in MCP layer.
 
-**Contrast:** PositionTracker uses fixed setInterval (predictable load). HealthFactorMonitor uses recursive setTimeout (dynamic interval).
+**Reference:** `packages/mcp/src/tools/x402-fetch.ts` -- 45 lines total, just maps args to API call.
+
+```typescript
+// packages/mcp/src/tools/erc8128-sign.ts
+export function registerErc8128Sign(
+  server: McpServer, apiClient: ApiClient, walletContext?: WalletContext,
+): void {
+  server.tool('erc8128_sign_request', ..., async (args) => {
+    const result = await apiClient.post('/v1/erc8128/sign', {
+      method: args.method,
+      url: args.url,
+      headers: args.headers,
+      body: args.body,
+      walletId: args.wallet_id,
+      network: args.network,
+      preset: args.preset,
+    });
+    return toToolResult(result);
+  });
+}
+```
+
+### Pattern 5: connect-info Capability Extension
+
+**What:** Add `erc8128` to capabilities array when enabled.
+
+**Reference:** x402 checks `deps.config.x402?.enabled`, erc8004 checks `Object.keys(identitiesMap).length > 0`.
+
+```typescript
+// In connect-info.ts, after existing capability checks:
+if (deps.settingsService?.get('erc8128.enabled') === 'true') {
+  capabilities.push('erc8128');
+}
+```
+
+### Pattern 6: Route Registration in server.ts
+
+**What:** Register ERC-8128 routes with sessionAuth middleware.
+
+**Reference pattern from x402 and erc8004:**
+
+```typescript
+// In server.ts:
+// Middleware
+app.use('/v1/erc8128/*', sessionAuth);
+
+// Route registration
+app.route('/v1', erc8128Routes({
+  db: deps.db,
+  sqlite: deps.sqlite,
+  keyStore: deps.keyStore,
+  config: deps.config,
+  notificationService: deps.notificationService,
+  settingsService: deps.settingsService,
+  passwordRef: deps.passwordRef,
+  masterPassword: deps.masterPassword,
+  eventBus: deps.eventBus,
+}));
+```
+
+### Pattern 7: 4-Level Policy Override Resolution
+
+**What:** Domain policies support 4-level override: wallet+network > wallet+null > global+network > global+null.
+
+**Reference:** `resolveX402DomainPolicies()` in `packages/daemon/src/api/routes/x402.ts` (lines 614-667). ERC-8128 should reuse the exact same resolution logic.
+
+```typescript
+// Can extract resolveX402DomainPolicies as a shared utility:
+// packages/daemon/src/services/shared/resolve-domain-policies.ts
+export function resolveDomainPolicies(
+  rows: PolicyRow[], walletId: string, policyType: string,
+): PolicyRow[] { ... }
+```
+
+---
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: Direct RPC calls from monitors
+### Anti-Pattern 1: Routing ERC-8128 Through SIGN Pipeline
 
-**What:** HealthFactorMonitor making its own RPC calls to fetch positions.
-**Why bad:** (1) RPC rate limit saturation, (2) Data inconsistency with PositionTracker, (3) Timing coupling between monitoring and data freshness.
-**Instead:** Monitors read from defi_positions table (PositionTracker's cache). PositionTracker is the single owner of RPC position queries (DEC-MON-03).
+**What:** Using the existing SIGN pipeline type to handle ERC-8128 requests.
 
-### Anti-Pattern 2: Adding new discriminatedUnion types for lending
+**Why bad:** SIGN pipeline is `signMessage(arbitrary_data)` -- a single-step operation. ERC-8128 requires multi-step construction (Content-Digest -> Signature-Input -> Signature Base -> sign -> assemble headers). Forcing this through SIGN would require special-casing every pipeline stage with `if (isErc8128) { ... }` branching, violating the pipeline's single-responsibility design.
 
-**What:** Adding SUPPLY/BORROW/REPAY/WITHDRAW to the 5-type discriminatedUnion.
-**Why bad:** Changes cascade through entire pipeline (validator, policy, signing, broadcast, confirmation). Every stage would need handling for new types.
-**Instead:** Lending actions flow as CONTRACT_CALL type. ContractCallRequest.metadata identifies them as lending actions for policy evaluation (DEC-LEND-09).
+**Instead:** Dedicated route with signing engine, as x402 demonstrates.
 
-### Anti-Pattern 3: Extending BackgroundWorkers for PositionTracker
+### Anti-Pattern 2: Adding ERC-8128 to DatabasePolicyEngine.evaluate()
 
-**What:** Using daemon's BackgroundWorkers for PositionTracker timers.
-**Why bad:** BackgroundWorkers provides worker-per-interval. PositionTracker needs 4 different intervals for 4 categories.
-**Instead:** Internal setInterval management within PositionTracker (same pattern as BalanceMonitorService) (DEC-MON-02).
+**What:** Inserting `ERC8128_ALLOWED_DOMAINS` evaluation into the Stage 3 policy evaluation sequence.
 
-### Anti-Pattern 4: Aave SDK dependency
+**Why bad:** `DatabasePolicyEngine.evaluate()` operates on `TransactionParam` (amount, toAddress, chain). ERC-8128 has no amount/toAddress -- it has URL/domain. Injecting URL-based evaluation into a transaction-oriented engine would pollute the interface.
 
-**What:** Adding @aave/aave-v3-core or @aave/aave-utilities as dependencies.
-**Why bad:** Heavy dependency for 4 function calls. viem's encodeFunctionData handles ABI encoding natively.
-**Instead:** Minimal ABI fragments + viem encoding. Same approach used for Lido (lido-contract.ts) and 0x (DEC m29-02 decision 3).
+**Instead:** Separate domain policy evaluator function called from the route handler (exact x402 pattern: `evaluateX402Domain()` in `x402-domain-policy.ts`).
 
-## DaemonLifecycle Integration Order
+### Anti-Pattern 3: Recording ERC-8128 Signatures in transactions Table
 
-Current Step 4c sequence ends at 4c-10 (AsyncPollingService). New services slot in after:
+**What:** Creating a DB record for each ERC-8128 signing operation.
 
-```
-Step 4c-10: AsyncPollingService (existing)
-Step 4c-10.5: PositionTracker initialization (NEW)
-  - Create PositionTracker instance
-  - Register IPositionProvider implementations (aave_v3)
-  - positionTracker.start() (begins category timers)
-Step 4c-11: DeFiMonitorService (NEW)
-  - Create DeFiMonitorService
-  - Register HealthFactorMonitor
-  - deFiMonitorService.start()
-  - Depends on: PositionTracker (reads defi_positions), NotificationService
-Step 5: HTTP server start (existing)
-Step 6: Background workers (existing)
-```
+**Why bad:** ERC-8128 is a stateless, zero-financial-risk operation (signing HTTP headers, not spending funds). DB records would grow unboundedly with high-frequency API calls, add latency, and provide no security value.
 
-**Registration in registerBuiltInProviders():**
+**Instead:** Fire-and-forget notifications only (`ERC8128_SIGNATURE_CREATED` at low priority). Rate limiting via in-memory counter (resets on restart -- acceptable for non-financial operations).
 
-```typescript
-// packages/actions/src/index.ts -- extended
-{
-  key: 'aave_v3',
-  enabledKey: 'actions.aave_v3_enabled',
-  factory: () => {
-    const config: AaveV3Config = {
-      enabled: true,
-      healthFactorWarningThreshold: Number(settingsReader.get('actions.aave_v3_health_factor_warning_threshold')),
-      positionSyncIntervalSec: Number(settingsReader.get('actions.aave_v3_position_sync_interval_sec')),
-      maxLtvPct: Number(settingsReader.get('actions.aave_v3_max_ltv_pct')),
-    };
-    return new AaveV3LendingProvider(config);
-  },
-}
-```
+### Anti-Pattern 4: Proxying External API Calls
 
-AaveV3LendingProvider is registered with BOTH:
-1. ActionProviderRegistry (for resolve -> pipeline execution)
-2. PositionTracker (for getPositions -> defi_positions sync)
+**What:** Having the daemon fetch the external API on behalf of the agent (like x402 does).
+
+**Why bad:** x402 proxies because it needs to intercept the 402 response and inject payment headers. ERC-8128 has no such requirement -- the agent just needs signature headers to add to its own request. Opening outbound network connections from the daemon increases attack surface unnecessarily.
+
+**Instead:** Return signature headers only; agent performs the external API call directly.
+
+### Anti-Pattern 5: Adding New discriminatedUnion Type
+
+**What:** Adding `ERC8128_SIGN` to the 7-type discriminatedUnion (TRANSFER/TOKEN_TRANSFER/CONTRACT_CALL/APPROVE/BATCH/SIGN/X402_PAYMENT).
+
+**Why bad:** Changes cascade through entire pipeline. Every stage validator, policy evaluator, and handler would need new case branches for a type that never enters the pipeline.
+
+**Instead:** No new discriminatedUnion type. ERC-8128 is a dedicated route that directly uses the signing engine, completely outside the pipeline.
+
+---
+
+## Integration Points: New vs. Modified Components
+
+### New Components (Create)
+
+| # | File | Package | Purpose |
+|---|------|---------|---------|
+| 1 | `src/erc8128/index.ts` | core | Public API exports |
+| 2 | `src/erc8128/http-message-signer.ts` | core | RFC 9421 signing orchestrator |
+| 3 | `src/erc8128/signature-input-builder.ts` | core | Structured Fields builder |
+| 4 | `src/erc8128/content-digest.ts` | core | RFC 9530 Content-Digest |
+| 5 | `src/erc8128/signature-base-builder.ts` | core | RFC 9421 section 2.5 |
+| 6 | `src/erc8128/keyid.ts` | core | keyid format utils |
+| 7 | `src/erc8128/verifier.ts` | core | Signature verification |
+| 8 | `src/erc8128/types.ts` | core | Zod schemas |
+| 9 | `src/erc8128/constants.ts` | core | Algorithm registry, presets |
+| 10 | `src/api/routes/erc8128.ts` | daemon | Route handler (sign + verify) |
+| 11 | `src/services/erc8128/erc8128-domain-policy.ts` | daemon | Domain policy evaluator |
+| 12 | `src/tools/erc8128-sign.ts` | mcp | MCP sign tool |
+| 13 | `src/tools/erc8128-verify.ts` | mcp | MCP verify tool |
+| 14 | `src/erc8128.ts` (or inline in client.ts) | sdk | `fetchWithErc8128()` helper |
+| 15 | `__tests__/erc8128-*.test.ts` | core/daemon/mcp/sdk | Test files (~48 tests) |
+
+### Modified Components (Update)
+
+| # | File | Package | Change |
+|---|------|---------|--------|
+| 1 | `src/enums/policy.ts` | core | Add `'ERC8128_ALLOWED_DOMAINS'` (19th policy type) |
+| 2 | `src/enums/notification.ts` | core | Add `ERC8128_SIGNATURE_CREATED`, `ERC8128_DOMAIN_BLOCKED` |
+| 3 | `src/schemas/policy.schema.ts` | core | Add superRefine rules for ERC8128_ALLOWED_DOMAINS |
+| 4 | `src/errors/error-codes.ts` | core | Add 5 error codes (ERC8128_DISABLED, ERC8128_DOMAIN_NOT_ALLOWED, INVALID_COVERED_COMPONENTS, BODY_REQUIRED_FOR_DIGEST, EVM_NETWORK_REQUIRED) |
+| 5 | `src/index.ts` | core | Re-export erc8128 module |
+| 6 | `src/api/server.ts` | daemon | Register erc8128 routes + `app.use('/v1/erc8128/*', sessionAuth)` |
+| 7 | `src/api/routes/openapi-schemas.ts` | daemon | Add ERC8128 error responses to `buildErrorResponses` |
+| 8 | `src/api/routes/connect-info.ts` | daemon | Add `erc8128` to capabilities array |
+| 9 | `src/infrastructure/settings/setting-keys.ts` | daemon | Add 5 `erc8128.*` setting definitions + `erc8128` to SETTING_CATEGORIES |
+| 10 | `src/server.ts` | mcp | Register 2 new tools (`registerErc8128Sign`, `registerErc8128Verify`) |
+| 11 | `src/client.ts` | sdk | Add `signHttpRequest()`, `verifyHttpSignature()` methods |
+| 12 | `src/types.ts` | sdk | Add request/response types |
+| 13 | Policy form component | admin | Add ERC8128_ALLOWED_DOMAINS form (domains list + rate_limit + default_deny) |
+| 14 | System settings page | admin | Add ERC-8128 section (enabled toggle, preset, TTL, nonce) |
+| 15 | `src/utils/settings-helpers.ts` | admin | Add erc8128 label mappings |
+| 16 | `skills/wallet.skill.md` | skills | Add ERC-8128 signing section |
+| 17 | `skills/policies.skill.md` | skills | Add ERC8128_ALLOWED_DOMAINS policy type |
+| 18 | `skills/admin.skill.md` | skills | Add ERC-8128 settings documentation |
+| 19 | `__tests__/enums.test.ts` | core | Update POLICY_TYPES count (18->19), NOTIFICATION_EVENT_TYPES count (49->51) |
+
+### No Changes Required
+
+| Component | Why Not |
+|-----------|---------|
+| `DatabasePolicyEngine` | Domain policy evaluated in route handler, not Stage 3 |
+| `transactions` table / DB schema | No DB records for ERC-8128 (stateless, no financial risk) |
+| 6-stage pipeline | ERC-8128 bypasses pipeline entirely |
+| `discriminatedUnion` 7-type | No new transaction type added |
+| Chain adapters (IChainAdapter) | ERC-8128 uses `signMessage()` directly via keyStore, not chain adapter |
+| `DaemonConfig` / `config.toml` | All settings via SettingsService (hot-reload, per CLAUDE.md preference) |
+| DB migration / schema version | No new tables or columns needed |
+
+---
 
 ## Suggested Build Order
 
-Based on dependency analysis:
+Build order follows dependency graph, enabling incremental testing at each phase.
 
-### Phase 1: SSoT Enum + DB Migration + Core Interfaces
+### Phase 1: Core Signing Engine (SIG-01)
 
-**Dependencies:** None (foundation layer)
+**Dependencies:** None (pure functions, no external deps)
+**Output:** `packages/core/src/erc8128/` module with full unit test coverage
+**Tests:** ~30 unit tests (S1-S8 from test matrix)
 
-| Component | Details |
-|-----------|---------|
-| `packages/core/src/enums/defi.ts` | POSITION_CATEGORIES, POSITION_STATUSES |
-| `packages/core/src/enums/notification.ts` | +4 DeFi notification events |
-| `packages/core/src/interfaces/lending-provider.types.ts` | ILendingProvider interface |
-| `packages/core/src/interfaces/position-provider.types.ts` | IPositionProvider interface |
-| `packages/core/src/schemas/position.schema.ts` | Position Zod schemas |
-| `packages/core/src/schemas/lending.schema.ts` | LendingPositionSummary, HealthFactor schemas |
-| DB migration v25 | defi_positions table + indexes |
-| schema.ts | Drizzle table definition |
-| Tests | Migration chain test, LATEST_SCHEMA_VERSION assertion updates |
+Build order within phase:
+1. `types.ts` + `constants.ts` -- Zod schemas, presets, algorithm registry
+2. `keyid.ts` -- keyid format generation/parsing
+3. `content-digest.ts` -- RFC 9530 SHA-256
+4. `signature-input-builder.ts` -- RFC 9421 Structured Fields
+5. `signature-base-builder.ts` -- RFC 9421 section 2.5 canonical form
+6. `http-message-signer.ts` -- orchestrates steps 2-5
+7. `verifier.ts` -- ecrecover verification
+8. `index.ts` -- public exports
+9. Update `packages/core/src/index.ts` re-exports
 
-### Phase 2: Lending Framework (PositionTracker + HealthFactorMonitor)
+**Rationale:** Core engine has zero external dependencies, enables all subsequent phases. Pure functions are highly testable without mocks.
 
-**Dependencies:** Phase 1 (defi_positions table, IPositionProvider interface)
+### Phase 2: Policy + Error Codes + Settings + Notifications (SIG-03 + SIG-07)
 
-| Component | Details |
-|-----------|---------|
-| `packages/daemon/src/services/defi/position-tracker.ts` | PositionTracker service |
-| `packages/daemon/src/services/defi/position-write-queue.ts` | Batch upsert queue |
-| `packages/daemon/src/services/defi/health-factor-monitor.ts` | Adaptive polling monitor |
-| `packages/daemon/src/services/defi/defi-monitor-service.ts` | IDeFiMonitor registry + lifecycle |
-| Notification templates | +4 DeFi event message templates |
-| DaemonLifecycle | Step 4c-10.5 + 4c-11 integration |
-| Tests | PositionTracker sync, HealthFactorMonitor thresholds, notification firing |
+**Dependencies:** Phase 1 (types only)
+**Output:** Policy type enum, error codes, settings definitions, domain policy evaluator, notification events
 
-### Phase 3: Aave V3 Provider + Contract Integration
+Build order within phase:
+1. `packages/core/src/enums/policy.ts` -- add `ERC8128_ALLOWED_DOMAINS` (18->19)
+2. `packages/core/src/enums/notification.ts` -- add 2 event types (49->51)
+3. `packages/core/src/errors/error-codes.ts` -- add 5 ERC8128 error codes
+4. `packages/core/src/schemas/policy.schema.ts` -- add superRefine for `ERC8128_ALLOWED_DOMAINS` rules schema
+5. `packages/daemon/src/infrastructure/settings/setting-keys.ts` -- add 5 `erc8128.*` keys + `erc8128` category
+6. `packages/daemon/src/services/erc8128/erc8128-domain-policy.ts` -- domain policy evaluator (reuse `matchDomain` from x402)
+7. Update enum tests (`enums.test.ts` count assertions, policy-superrefine tests)
 
-**Dependencies:** Phase 1 (ILendingProvider), Phase 2 (PositionTracker registration)
+**Rationale:** Route handler needs policy + settings + error codes to function. Notifications are simple enum additions.
 
-| Component | Details |
-|-----------|---------|
-| `packages/actions/src/providers/aave-v3/aave-contracts.ts` | ABI + address mapping |
-| `packages/actions/src/providers/aave-v3/schemas.ts` | Input Zod schemas |
-| `packages/actions/src/providers/aave-v3/config.ts` | AaveV3Config type |
-| `packages/actions/src/providers/aave-v3/market-data.ts` | Market data queries |
-| `packages/actions/src/providers/aave-v3/index.ts` | AaveV3LendingProvider class |
-| `packages/actions/src/index.ts` | registerBuiltInProviders() extension |
-| Tests | resolve() unit tests for supply/borrow/repay/withdraw, ABI encoding verification |
+### Phase 3: REST API Route (SIG-02 partial)
 
-### Phase 4: Policy Integration + REST API + MCP
+**Dependencies:** Phase 1 (signing engine), Phase 2 (policy, settings, errors)
+**Output:** `POST /v1/erc8128/sign`, `POST /v1/erc8128/verify` endpoints
+**Tests:** ~10 integration tests (S9-S11, S20-S22)
 
-**Dependencies:** Phase 3 (AaveV3LendingProvider), Phase 2 (defi_positions)
+Build order within phase:
+1. `packages/daemon/src/api/routes/erc8128.ts` -- route handler with sign + verify endpoints
+2. `packages/daemon/src/api/server.ts` -- register routes + sessionAuth middleware
+3. `packages/daemon/src/api/routes/openapi-schemas.ts` -- add error responses
+4. `packages/daemon/src/api/routes/connect-info.ts` -- add `erc8128` capability
+5. Integration tests (route tests, feature gate tests, domain policy integration)
 
-| Component | Details |
-|-----------|---------|
-| DatabasePolicyEngine | Step 4h-a LENDING_ASSET_WHITELIST + step 4h-b LENDING_LTV_LIMIT |
-| PolicyTypeEnum | Add 2 new types |
-| `packages/daemon/src/api/routes/defi-positions.ts` | GET /positions, GET /health-factor |
-| MCP tools | Auto-generated from mcpExpose=true (5 tools) |
-| SDK extension | executeAction('aave_supply', params) |
-| Skill files update | actions.skill.md |
-| Tests | Policy evaluation tests (LTV deny, asset whitelist deny), API integration tests |
+**Rationale:** REST API is the foundation for MCP + SDK integration. Everything downstream wraps these endpoints.
 
-### Phase 5: Admin UI + E2E
+### Phase 4: MCP + SDK (SIG-02 completion)
 
-**Dependencies:** Phase 4 (REST API endpoints)
+**Dependencies:** Phase 3 (REST API)
+**Output:** 2 MCP tools, 3 SDK methods
+**Tests:** ~8 tests (S16-S18)
 
-| Component | Details |
-|-----------|---------|
-| Admin DeFi portfolio panel | Position table, health factor gauge |
-| Admin policy forms | LENDING_LTV_LIMIT slider, LENDING_ASSET_WHITELIST picker |
-| Admin Settings | aave_v3.* settings entries |
-| E2E scenarios | Full supply->position-sync->health-check flow |
+Build order within phase:
+1. `packages/mcp/src/tools/erc8128-sign.ts` -- MCP sign tool
+2. `packages/mcp/src/tools/erc8128-verify.ts` -- MCP verify tool
+3. `packages/mcp/src/server.ts` -- register 2 tools
+4. `packages/sdk/src/types.ts` -- add request/response types
+5. `packages/sdk/src/client.ts` -- add `signHttpRequest()`, `verifyHttpSignature()`
+6. `packages/sdk/src/erc8128.ts` -- `fetchWithErc8128()` convenience helper
+7. Tests (MCP tool tests, SDK client tests, fetchWithErc8128 E2E)
+
+### Phase 5: Admin UI + Skills (SIG-05 + SIG-06)
+
+**Dependencies:** Phase 2 (settings keys), Phase 3 (API endpoints)
+**Output:** Admin UI sections, skill file updates
+**Tests:** ~2 UI tests (S19)
+
+Build order within phase:
+1. `packages/admin/src/utils/settings-helpers.ts` -- add erc8128 label mappings
+2. Admin UI: System page ERC-8128 settings section (enabled toggle, preset, TTL, nonce)
+3. Admin UI: Policies page ERC8128_ALLOWED_DOMAINS form (domains list, rate_limit, default_deny)
+4. Skill files: `wallet.skill.md`, `policies.skill.md`, `admin.skill.md`
+5. UI render tests
+
+---
 
 ## Scalability Considerations
 
-| Concern | At 1 wallet | At 10 wallets | At 100+ wallets |
-|---------|-------------|---------------|-----------------|
-| Position sync RPC calls | 1 getUserAccountData / 5 min | 10 calls / 5 min | Rate limit concern -- batch with multicall |
-| defi_positions rows | ~5-10 rows | ~50-100 rows | PositionWriteQueue handles batching |
-| HealthFactorMonitor polling | 1 position check | 10 position checks | Read from DB cache, not RPC -- scales linearly |
-| Admin UI portfolio render | Instant | Instant | Paginate positions query |
+| Concern | Current (Single Daemon) | Notes |
+|---------|------------------------|-------|
+| Rate limit counter | In-memory `Map<domain, {count, windowStart}>`, resets on restart | Acceptable: ERC-8128 is non-financial, counter is DX convenience not security boundary |
+| Signing throughput | viem signMessage is synchronous crypto (~1ms per signature) | No bottleneck expected even at high frequency |
+| Policy DB queries | 1 query per request (policies table, same indexes as x402) | No index changes needed |
+| No DB writes | Stateless signing, no transactions table insertion | No growth in DB size from ERC-8128 usage |
+| Memory overhead | 5 Admin Settings keys + 1 rate limit Map | Negligible |
 
-**RPC optimization for scale:** Aave V3 getUserAccountData() returns the full account summary in one call. Per-asset positions require additional aToken/debtToken balanceOf calls. For 10+ wallets, consider batching via viem's multicall (one RPC request for multiple balanceOf).
+---
 
 ## Sources
 
-- [Aave V3 Pool Documentation](https://aave.com/docs/aave-v3/smart-contracts/pool) -- function signatures verified (HIGH confidence)
-- [Aave V3 Pool Contract on Etherscan](https://etherscan.io/address/0x87870bca3f3fd6335c3f4ce8392d69350b4fa4e2) -- Ethereum mainnet address verified (HIGH confidence)
-- [Aave V3 Pool on Arbitrum](https://arbiscan.io/address/0x794a61358d6845594f94dc1db02a252b5b4814ad) -- Arbitrum address verified (HIGH confidence)
-- [Aave V3 Pool on Polygon](https://polygonscan.com/address/0x794a61358D6845594F94dc1DB02A252b5b4814aD) -- Polygon address verified (HIGH confidence)
-- [Aave Addresses Dashboard](https://aave.com/docs/resources/addresses) -- official deployment addresses (HIGH confidence)
-- [@bgd-labs/aave-address-book](https://www.npmjs.com/package/@bgd-labs/aave-address-book) -- programmatic address lookup (HIGH confidence)
-- m29-00 design document (shipped) -- ILendingProvider, PositionTracker, HealthFactorMonitor, LendingPolicyEvaluator complete specifications (HIGH confidence)
-- m29-02 objective document -- Aave V3 integration scope and E2E scenarios (HIGH confidence)
-- Existing codebase: IActionProvider, ActionProviderRegistry, LidoStakingActionProvider, DatabasePolicyEngine -- verified patterns (HIGH confidence)
+- Codebase analysis: `packages/daemon/src/api/routes/x402.ts` (x402 dedicated route pattern, 668 lines) -- HIGH confidence
+- Codebase analysis: `packages/daemon/src/services/x402/x402-domain-policy.ts` (domain policy evaluation pattern, matchDomain reuse) -- HIGH confidence
+- Codebase analysis: `packages/daemon/src/api/routes/connect-info.ts` (capabilities extension pattern, 408 lines) -- HIGH confidence
+- Codebase analysis: `packages/daemon/src/api/server.ts` (route registration + sessionAuth middleware pattern) -- HIGH confidence
+- Codebase analysis: `packages/core/src/enums/policy.ts` (18 existing policy types) -- HIGH confidence
+- Codebase analysis: `packages/core/src/enums/notification.ts` (49 existing event types) -- HIGH confidence
+- Codebase analysis: `packages/mcp/src/tools/x402-fetch.ts` (thin REST wrapper MCP tool pattern) -- HIGH confidence
+- Codebase analysis: `packages/sdk/src/client.ts` (`x402Fetch()` method pattern) -- HIGH confidence
+- Codebase analysis: `packages/daemon/src/infrastructure/settings/setting-keys.ts` (17 setting categories, definition structure) -- HIGH confidence
+- Design document: `internal/objectives/m30-10-erc8128-signed-http-requests.md` (14 design decisions, 22 test scenarios) -- HIGH confidence

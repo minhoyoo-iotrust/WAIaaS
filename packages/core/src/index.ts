@@ -441,6 +441,9 @@ export {
   AA_PROVIDER_DASHBOARD_URLS,
 } from './constants/index.js';
 
+// v30.10 ERC-8128 Signed HTTP Requests (RFC 9421 + EIP-191)
+export * as erc8128 from './erc8128/index.js';
+
 // v1.6 Events (EventBus + 7 typed event definitions)
 export { EventBus } from './events/index.js';
 export type {

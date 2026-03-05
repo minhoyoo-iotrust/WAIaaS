@@ -27,6 +27,7 @@ import { DaemonConfigSchema } from '../infrastructure/config/loader.js';
 import type { DaemonConfig } from '../infrastructure/config/loader.js';
 import { createApp } from '../api/server.js';
 import { DatabasePolicyEngine } from '../pipeline/database-policy-engine.js';
+import { SettingsService } from '../infrastructure/settings/settings-service.js';
 import type { IChainAdapter } from '@waiaas/core';
 import type { AdapterPool } from '../infrastructure/adapter-pool.js';
 import type { OpenAPIHono } from '@hono/zod-openapi';
@@ -873,5 +874,44 @@ describe('ERC-8004 connect-info extension', () => {
     const body = await json(res);
     const caps = body.capabilities as string[];
     expect(caps).toContain('erc8004');
+  });
+
+  it('capabilities includes erc8128 when setting enabled', async () => {
+    const settingsService = new SettingsService({ db, config, masterPassword: TEST_PASSWORD });
+    settingsService.set('erc8128.enabled', 'true');
+
+    const appWithErc8128 = createApp({
+      db,
+      sqlite,
+      jwtSecretManager: jwtManager,
+      masterPasswordHash: passwordHash,
+      masterPassword: TEST_PASSWORD,
+      config,
+      adapterPool: createMockAdapterPool(),
+      keyStore: createMockKeyStore(),
+      policyEngine,
+      settingsService,
+    });
+
+    const res = await appWithErc8128.request('/v1/connect-info', {
+      headers: bearerHeader(sessionToken),
+    });
+    expect(res.status).toBe(200);
+
+    const body = await json(res);
+    const caps = body.capabilities as string[];
+    expect(caps).toContain('erc8128');
+  });
+
+  it('capabilities excludes erc8128 when setting disabled or not set', async () => {
+    // No settingsService → no erc8128
+    const res = await app.request('/v1/connect-info', {
+      headers: bearerHeader(sessionToken),
+    });
+    expect(res.status).toBe(200);
+
+    const body = await json(res);
+    const caps = body.capabilities as string[];
+    expect(caps).not.toContain('erc8128');
   });
 });
