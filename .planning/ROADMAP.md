@@ -130,12 +130,12 @@ Plans:
   3. Admin Settings에서 dcent_swap 설정을 관리하고, connect-info에 dcent_swap capability가 노출된다
   4. Currency 변환, DEX Swap, Exchange, 라우팅, 에러, 정책, MCP/SDK 전 영역의 테스트가 통과한다
   5. transactions.skill.md 등 스킬 파일이 DCent Swap 기능을 반영하여 업데이트되어 있다
-**Plans**: TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 346-01: DcentSwapActionProvider + MCP 도구 + SDK 메서드 구현
-- [ ] 346-02: 정책 엔진 통합 + Admin Settings + connect-info + 스킬 파일
-- [ ] 346-03: 전 영역 테스트 작성 (단위 + 통합)
+- [ ] 346-01-PLAN.md -- 데몬 라이프사이클 등록 + Admin Settings + connect-info
+- [ ] 346-02-PLAN.md -- SDK 편의 메서드 + 스킬 파일 업데이트
+- [ ] 346-03-PLAN.md -- 전 영역 통합 테스트 작성
 
 ## Progress
 
