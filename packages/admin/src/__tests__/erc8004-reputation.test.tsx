@@ -118,7 +118,7 @@ describe('Erc8004Page Reputation tab', () => {
     mockApiGet
       .mockResolvedValueOnce(mockSettingsEnabled)
       .mockResolvedValueOnce(mockProvidersResponse)
-      .mockResolvedValueOnce(mockWallets)
+      .mockResolvedValueOnce({ items: mockWallets })
       .mockResolvedValueOnce(mockRegFileWithAgent)
       .mockResolvedValueOnce(mockReputation);
 
@@ -142,7 +142,7 @@ describe('Erc8004Page Reputation tab', () => {
     mockApiGet
       .mockResolvedValueOnce(mockSettingsEnabled)
       .mockResolvedValueOnce(mockProvidersResponse)
-      .mockResolvedValueOnce(mockWallets)
+      .mockResolvedValueOnce({ items: mockWallets })
       .mockResolvedValueOnce(mockRegFileWithAgent)
       .mockResolvedValueOnce(mockReputation) // My agent score
       .mockResolvedValueOnce(mockReputationLow); // Lookup result
@@ -178,7 +178,7 @@ describe('Erc8004Page Reputation tab', () => {
     mockApiGet
       .mockResolvedValueOnce(mockSettingsEnabled)
       .mockResolvedValueOnce(mockProvidersResponse)
-      .mockResolvedValueOnce(mockWallets)
+      .mockResolvedValueOnce({ items: mockWallets })
       .mockResolvedValueOnce(mockRegFileWithAgent)
       .mockResolvedValueOnce(mockReputation);
 
@@ -201,7 +201,7 @@ describe('Erc8004Page Reputation tab', () => {
     mockApiGet
       .mockResolvedValueOnce(mockSettingsEnabled)
       .mockResolvedValueOnce(mockProvidersResponse)
-      .mockResolvedValueOnce(mockWallets)
+      .mockResolvedValueOnce({ items: mockWallets })
       .mockResolvedValueOnce(mockRegFileWithAgent)
       .mockResolvedValueOnce(mockReputation)   // My agent score
       .mockResolvedValueOnce(mockReputationLow); // Lookup result
