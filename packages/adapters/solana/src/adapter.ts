@@ -347,7 +347,7 @@ export class SolanaAdapter implements IChainAdapter {
         success: simValue.err === null,
         logs: simValue.logs ?? [],
         unitsConsumed: simValue.unitsConsumed != null ? BigInt(simValue.unitsConsumed) : undefined,
-        error: simValue.err ? JSON.stringify(simValue.err) : undefined,
+        error: simValue.err ? JSON.stringify(simValue.err, (_, v) => typeof v === 'bigint' ? v.toString() : v) : undefined,
       };
     } catch (error) {
       if (error instanceof WAIaaSError) throw error;
