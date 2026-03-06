@@ -183,11 +183,9 @@ describe('dcent-auto-router', () => {
     });
 
     it('returns 2-hop routes via intermediate when direct route fails', async () => {
-      let callCount = 0;
       server.use(
         http.post(`${BASE_URL}/api/swap/v3/get_quotes`, async ({ request }) => {
           const body = await request.json() as Record<string, unknown>;
-          callCount++;
 
           // Direct UNI -> LINK: no route
           if (body.fromId === 'ERC20/0x1f9840a85d5af5bf1d1762f925bdaddc4201f984' &&
