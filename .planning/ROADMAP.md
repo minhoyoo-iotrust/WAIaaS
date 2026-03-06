@@ -144,7 +144,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 342. Research & Design | 1/1 | Complete   | 2026-03-06 | - |
+| 342. Research & Design | 1/1 | Complete    | 2026-03-06 | - |
 | 343. Currency Mapping + DEX Swap | v31.3 | 0/2 | Not started | - |
 | 344. Exchange + Status Tracking | v31.3 | 0/2 | Not started | - |
 | 345. Auto Routing | v31.3 | 0/2 | Not started | - |
