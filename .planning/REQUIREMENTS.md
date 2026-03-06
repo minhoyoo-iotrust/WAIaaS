@@ -9,12 +9,12 @@ Requirements for DCent Swap Aggregator integration. Each maps to roadmap phases.
 
 ### Research & Design (RSRCH)
 
-- [ ] **RSRCH-01**: DCent Swap API 엔드포인트 7개의 응답 구조를 심층 리서치하고 WAIaaS 통합 설계 문서를 작성한다
-- [ ] **RSRCH-02**: CAIP-19 자산 식별자 ↔ DCent Currency ID 양방향 변환 매핑 전략을 설계한다
-- [ ] **RSRCH-03**: Exchange(payInAddress) 플로우 → WAIaaS TRANSFER 파이프라인 매핑을 설계한다
-- [ ] **RSRCH-04**: DEX Swap(txdata) 플로우 → WAIaaS CONTRACT_CALL + BATCH 파이프라인 매핑을 설계한다
-- [ ] **RSRCH-05**: DCent API의 multi-hop 자체 지원 여부를 검증하여 Phase 3(자동 라우팅) 범위를 확정한다
-- [ ] **RSRCH-06**: DcentSwapActionProvider 인터페이스와 MCP/SDK/정책 통합 설계를 완성한다
+- [x] **RSRCH-01**: DCent Swap API 엔드포인트 7개의 응답 구조를 심층 리서치하고 WAIaaS 통합 설계 문서를 작성한다
+- [x] **RSRCH-02**: CAIP-19 자산 식별자 ↔ DCent Currency ID 양방향 변환 매핑 전략을 설계한다
+- [x] **RSRCH-03**: Exchange(payInAddress) 플로우 → WAIaaS TRANSFER 파이프라인 매핑을 설계한다
+- [x] **RSRCH-04**: DEX Swap(txdata) 플로우 → WAIaaS CONTRACT_CALL + BATCH 파이프라인 매핑을 설계한다
+- [x] **RSRCH-05**: DCent API의 multi-hop 자체 지원 여부를 검증하여 Phase 3(자동 라우팅) 범위를 확정한다
+- [x] **RSRCH-06**: DcentSwapActionProvider 인터페이스와 MCP/SDK/정책 통합 설계를 완성한다
 
 ### Currency Mapping (CMAP)
 
@@ -85,12 +85,12 @@ Requirements for DCent Swap Aggregator integration. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| RSRCH-01 | Phase 342 | Pending |
-| RSRCH-02 | Phase 342 | Pending |
-| RSRCH-03 | Phase 342 | Pending |
-| RSRCH-04 | Phase 342 | Pending |
-| RSRCH-05 | Phase 342 | Pending |
-| RSRCH-06 | Phase 342 | Pending |
+| RSRCH-01 | Phase 342 | Complete |
+| RSRCH-02 | Phase 342 | Complete |
+| RSRCH-03 | Phase 342 | Complete |
+| RSRCH-04 | Phase 342 | Complete |
+| RSRCH-05 | Phase 342 | Complete |
+| RSRCH-06 | Phase 342 | Complete |
 | CMAP-01 | Phase 343 | Pending |
 | CMAP-02 | Phase 343 | Pending |
 | CMAP-03 | Phase 343 | Pending |
