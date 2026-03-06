@@ -2033,7 +2033,18 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
       let totalUnstaked = 0n;
 
       for (const row of stakeRows) {
-        if (!row.amount) continue;
+        // Fallback: if amount is NULL, try extracting from metadata (CONTRACT_CALL value)
+        let effectiveAmount = row.amount;
+        if (!effectiveAmount && row.metadata) {
+          try {
+            const meta = JSON.parse(row.metadata) as Record<string, unknown>;
+            const origReq = meta.originalRequest as Record<string, unknown> | undefined;
+            if (origReq?.value && typeof origReq.value === 'string') {
+              effectiveAmount = origReq.value;
+            }
+          } catch { /* ignore */ }
+        }
+        if (!effectiveAmount) continue;
         let isUnstake = false;
         if (row.metadata) {
           try {
@@ -2042,7 +2053,7 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
           } catch { /* ignore */ }
         }
         try {
-          const amountBig = BigInt(row.amount);
+          const amountBig = BigInt(effectiveAmount);
           if (isUnstake) totalUnstaked += amountBig;
           else totalStaked += amountBig;
         } catch { /* skip */ }
@@ -2664,12 +2675,16 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
       ? Math.floor(session.expiresAt.getTime() / 1000)
       : (session.expiresAt as number);
 
-    if (expiresAtSec <= nowSec) {
+    if (expiresAtSec > 0 && expiresAtSec <= nowSec) {
       throw new WAIaaSError('SESSION_NOT_FOUND', { message: 'Session expired' });
     }
 
     // Re-sign JWT (no wallet claim needed -- walletId resolved at request time)
-    const jwtPayload: JwtPayload = { sub: sessionId, iat: nowSec, exp: expiresAtSec };
+    const jwtPayload: JwtPayload = {
+      sub: sessionId,
+      iat: nowSec,
+      ...(expiresAtSec > 0 ? { exp: expiresAtSec } : {}),
+    };
     const token = await deps.jwtSecretManager.signToken(jwtPayload);
 
     // Increment token_issued_count

@@ -400,7 +400,11 @@ export async function stage1Validate(ctx: PipelineContext): Promise<void> {
   const now = new Date(Math.floor(Date.now() / 1000) * 1000);
 
   // Extract common and type-specific fields for DB INSERT
-  const amount = 'amount' in req ? (req as { amount?: string }).amount : undefined;
+  let amount = 'amount' in req ? (req as { amount?: string }).amount : undefined;
+  // CONTRACT_CALL uses 'value' for native token amount (e.g. ETH sent with contract call)
+  if (!amount && 'value' in req) {
+    amount = (req as { value?: string }).value;
+  }
   const toAddress = 'to' in req ? (req as { to?: string }).to : undefined;
 
   // Serialize original request for pipeline re-entry (#208)
