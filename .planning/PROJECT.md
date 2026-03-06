@@ -8,6 +8,20 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
+## Current Milestone: v31.3 DCent Swap Aggregator 통합
+
+**Goal:** DCent Swap Backend API를 WAIaaS에 통합하여 다중 프로바이더 스왑(동일체인 DEX + 크로스체인 Exchange)을 지원한다.
+
+**Target features:**
+- DCent Swap API 리서치 및 통합 설계
+- 지원 통화 조회/캐싱 + CAIP-19 ↔ DCent Currency ID 변환
+- DEX Swap 실행 (approve + txdata, BATCH 파이프라인)
+- Exchange 실행 (payInAddress → TRANSFER 파이프라인)
+- 스왑 견적 조회 + 프로바이더별 비교 + 최적 견적 추천
+- 자동 라우팅 (조건부 — DCent 자체 multi-hop 미지원 시)
+- DcentSwapActionProvider + MCP 도구 + SDK 메서드
+- 트랜잭션 상태 추적 + 정책 엔진 통합
+
 ## Previous Milestone: v31.2 UserOp Build/Sign API — SHIPPED 2026-03-06
 
 Smart Account 지갑에서 프로바이더 없이 UserOperation을 구성/서명할 수 있는 Build/Sign API. Provider Lite/Full 모드 자동 분기, unsigned UserOp 구성(nonce, callData, factory 자동 감지, Bundler 불필요), callData 이중 검증 + 정책 평가 + 서명, DB v45 userop_builds 테이블(TTL 10분 + cleanup 워커), MCP 2도구 + SDK 2메서드, Admin UI Lite/Full 모드 표시, 스킬 파일 3개. 4 phases, 8 plans, 58 requirements, 27 commits, +6,821 lines.

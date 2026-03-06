@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v31.2
-milestone_name: UserOp Build/Sign API
-status: shipped
-stopped_at: Milestone v31.2 shipped
-last_updated: "2026-03-06T10:10:00.000Z"
-last_activity: 2026-03-06 -- Milestone v31.2 shipped
+milestone: v31.3
+milestone_name: DCent Swap Aggregator 통합
+status: active
+stopped_at: null
+last_updated: "2026-03-06T12:00:00.000Z"
+last_activity: 2026-03-06 -- Milestone v31.3 started
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 8
-  completed_plans: 8
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -21,29 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-06)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Planning next milestone
+**Current focus:** Milestone v31.3 DCent Swap Aggregator 통합
 
 ## Current Position
 
-Milestone: v31.2 UserOp Build/Sign API -- SHIPPED 2026-03-06
-Status: Milestone complete, ready for next milestone
-Last activity: 2026-03-06 -- Milestone v31.2 shipped
-
-Progress: [██████████] 100%
-
-## Performance Metrics
-
-**Cumulative:** 87 milestones shipped, 341 phases completed, ~775 plans, ~2,347 reqs, ~6,993+ tests, ~278,864 LOC TS
-
-| Phase | Plan | Duration | Tasks | Files |
-|-------|------|----------|-------|-------|
-| 338 | 01 | 5min | 2 | 4 |
-| 338 | 02 | 5min | 2 | 12 |
-| 339 | 01+02 | 9min | 2 | 7 |
-| 340 | 01 | 5min | 2 | 5 |
-| 340 | 02 | 2min | 1 | 2 |
-| 341 | 01 | 5min | 2 | 8 |
-| 341 | 02 | 5min | 2 | 7 |
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-06 — Milestone v31.3 started
 
 ## Accumulated Context
 
@@ -59,6 +44,6 @@ Progress: [██████████] 100%
 
 ## Session Continuity
 
-Last session: 2026-03-06T10:10:00.000Z
-Stopped at: Milestone v31.2 shipped
+Last session: 2026-03-06T12:00:00.000Z
+Stopped at: null
 Resume file: None
