@@ -9,11 +9,11 @@ Requirements for UserOp Build/Sign API (플랫폼 대납 지원). Each maps to r
 
 ### Provider Mode
 
-- [ ] **PROV-01**: Smart Account 지갑 생성 시 aaProvider 필수 검증 제거, 프로바이더 없이 생성 허용
-- [ ] **PROV-02**: Lite 모드(프로바이더 미설정): userop/build + userop/sign API만 사용 가능
-- [ ] **PROV-03**: Full 모드(프로바이더 설정): 기존 전체 AA 기능 + UserOp API 모두 사용 가능
-- [ ] **PROV-04**: Lite 모드에서 POST /transactions/send 호출 시 CHAIN_ERROR + userop API 안내 메시지
-- [ ] **PROV-05**: PUT /wallets/:id/provider로 프로바이더 추가 시 Full 모드 전환
+- [x] **PROV-01**: Smart Account 지갑 생성 시 aaProvider 필수 검증 제거, 프로바이더 없이 생성 허용
+- [x] **PROV-02**: Lite 모드(프로바이더 미설정): userop/build + userop/sign API만 사용 가능
+- [x] **PROV-03**: Full 모드(프로바이더 설정): 기존 전체 AA 기능 + UserOp API 모두 사용 가능
+- [x] **PROV-04**: Lite 모드에서 POST /transactions/send 호출 시 CHAIN_ERROR + userop API 안내 메시지
+- [x] **PROV-05**: PUT /wallets/:id/provider로 프로바이더 추가 시 Full 모드 전환
 
 ### UserOp Build
 
@@ -56,24 +56,24 @@ Requirements for UserOp Build/Sign API (플랫폼 대납 지원). Each maps to r
 
 ### Schema
 
-- [ ] **SCHM-01**: UserOpBuildRequestSchema — TransactionRequest 재사용 + network 필수
-- [ ] **SCHM-02**: UserOpBuildResponseSchema — sender, nonce, callData, factory?, factoryData?, entryPoint, buildId
-- [ ] **SCHM-03**: UserOpSignRequestSchema — buildId + userOperation
-- [ ] **SCHM-04**: UserOpSignResponseSchema — signedUserOperation + txId
-- [ ] **SCHM-05**: UserOperationV07Schema — EntryPoint v0.7 필드 정의
+- [x] **SCHM-01**: UserOpBuildRequestSchema — TransactionRequest 재사용 + network 필수
+- [x] **SCHM-02**: UserOpBuildResponseSchema — sender, nonce, callData, factory?, factoryData?, entryPoint, buildId
+- [x] **SCHM-03**: UserOpSignRequestSchema — buildId + userOperation
+- [x] **SCHM-04**: UserOpSignResponseSchema — signedUserOperation + txId
+- [x] **SCHM-05**: UserOperationV07Schema — EntryPoint v0.7 필드 정의
 
 ### Error Codes
 
-- [ ] **ERR-01**: EXPIRED_BUILD (400)
-- [ ] **ERR-02**: BUILD_NOT_FOUND (404)
-- [ ] **ERR-03**: BUILD_ALREADY_USED (409)
-- [ ] **ERR-04**: CALLDATA_MISMATCH (400)
-- [ ] **ERR-05**: SENDER_MISMATCH (400)
+- [x] **ERR-01**: EXPIRED_BUILD (400)
+- [x] **ERR-02**: BUILD_NOT_FOUND (404)
+- [x] **ERR-03**: BUILD_ALREADY_USED (409)
+- [x] **ERR-04**: CALLDATA_MISMATCH (400)
+- [x] **ERR-05**: SENDER_MISMATCH (400)
 
 ### DB Migration
 
-- [ ] **DB-01**: v45 마이그레이션 — userop_builds 테이블 생성
-- [ ] **DB-02**: 마이그레이션 테스트 — 스키마 스냅샷 + 빈 테이블 생성 검증
+- [x] **DB-01**: v45 마이그레이션 — userop_builds 테이블 생성
+- [x] **DB-02**: 마이그레이션 테스트 — 스키마 스냅샷 + 빈 테이블 생성 검증
 
 ### Notification
 
@@ -116,23 +116,23 @@ Requirements for UserOp Build/Sign API (플랫폼 대납 지원). Each maps to r
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PROV-01 | Phase 338 | Pending |
-| PROV-02 | Phase 338 | Pending |
-| PROV-03 | Phase 338 | Pending |
-| PROV-04 | Phase 338 | Pending |
-| PROV-05 | Phase 338 | Pending |
-| SCHM-01 | Phase 338 | Pending |
-| SCHM-02 | Phase 338 | Pending |
-| SCHM-03 | Phase 338 | Pending |
-| SCHM-04 | Phase 338 | Pending |
-| SCHM-05 | Phase 338 | Pending |
-| ERR-01 | Phase 338 | Pending |
-| ERR-02 | Phase 338 | Pending |
-| ERR-03 | Phase 338 | Pending |
-| ERR-04 | Phase 338 | Pending |
-| ERR-05 | Phase 338 | Pending |
-| DB-01 | Phase 338 | Pending |
-| DB-02 | Phase 338 | Pending |
+| PROV-01 | Phase 338 | Complete |
+| PROV-02 | Phase 338 | Complete |
+| PROV-03 | Phase 338 | Complete |
+| PROV-04 | Phase 338 | Complete |
+| PROV-05 | Phase 338 | Complete |
+| SCHM-01 | Phase 338 | Complete |
+| SCHM-02 | Phase 338 | Complete |
+| SCHM-03 | Phase 338 | Complete |
+| SCHM-04 | Phase 338 | Complete |
+| SCHM-05 | Phase 338 | Complete |
+| ERR-01 | Phase 338 | Complete |
+| ERR-02 | Phase 338 | Complete |
+| ERR-03 | Phase 338 | Complete |
+| ERR-04 | Phase 338 | Complete |
+| ERR-05 | Phase 338 | Complete |
+| DB-01 | Phase 338 | Complete |
+| DB-02 | Phase 338 | Complete |
 | BUILD-01 | Phase 339 | Pending |
 | BUILD-02 | Phase 339 | Pending |
 | BUILD-03 | Phase 339 | Pending |

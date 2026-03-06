@@ -113,7 +113,7 @@ See `.planning/milestones/` for archived phase details.
 
 **Milestone Goal:** Smart Account 지갑에서 프로바이더 없이도 UserOperation을 구성하고 서명할 수 있는 API를 제공하여, 외부 플랫폼이 가스 대납을 중계하는 아키텍처를 지원한다.
 
-- [ ] **Phase 338: Foundation** - Zod 스키마, 에러 코드, DB v45, Provider Lite/Full 모드
+- [x] **Phase 338: Foundation** - Zod 스키마, 에러 코드, DB v45, Provider Lite/Full 모드
 - [ ] **Phase 339: UserOp Build API** - unsigned UserOp 구성 + build 데이터 관리
 - [ ] **Phase 340: UserOp Sign API** - sponsored UserOp 서명 + connect-info + 감사/알림
 - [ ] **Phase 341: Interface Integration** - Admin UI, MCP, SDK, 스킬 파일
@@ -133,8 +133,8 @@ See `.planning/milestones/` for archived phase details.
 **Plans**: 2 plans
 
 Plans:
-- [ ] 338-01: Provider Lite/Full 모드 분기 + 지갑 생성 검증 제거
-- [ ] 338-02: Zod 스키마 + 에러 코드 + DB v45 마이그레이션
+- [x] 338-01: Provider Lite/Full 모드 분기 + 지갑 생성 검증 제거
+- [x] 338-02: Zod 스키마 + 에러 코드 + DB v45 마이그레이션
 
 ### Phase 339: UserOp Build API
 **Goal**: 에이전트/플랫폼이 Smart Account 지갑의 트랜잭션 요청을 unsigned UserOp으로 변환하여 받을 수 있는 상태
@@ -197,7 +197,7 @@ Phases execute in numeric order: 338 -> 339 -> 340 -> 341
 | 215-243 | v27.0-v27.4 | All | Complete | 2026-02-23 |
 | 244-267 | v28.0-v28.8 | All | Complete | 2026-02-26 |
 | 268-337 | v29.0-v31.0 | All | Complete | 2026-03-06 |
-| 338. Foundation | v31.2 | 0/2 | Not started | - |
+| 338. Foundation | 2/2 | Complete   | 2026-03-06 | 2026-03-06 |
 | 339. UserOp Build API | v31.2 | 0/2 | Not started | - |
 | 340. UserOp Sign API | v31.2 | 0/2 | Not started | - |
 | 341. Interface Integration | v31.2 | 0/2 | Not started | - |
