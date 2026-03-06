@@ -160,11 +160,11 @@ Plans:
   2. masterAuth로 GET /v1/wallets/{id}/nfts 호출 시 지정 지갑의 NFT 목록이 반환되며, 두 엔드포인트 모두 network 쿼리 파라미터가 필수다
   3. NFT 목록이 커서 기반 페이지네이션을 지원하고, groupBy=collection 옵션으로 컬렉션별 그룹핑이 가능하다
   4. GET /v1/wallet/nfts/{tokenIdentifier}로 개별 NFT 메타데이터(EVM: tokenURI IPFS gateway 변환, Solana: Metaplex JSON, attributes/traits 포함)가 조회되며 24시간 TTL로 DB 캐싱된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 335-01: NFT 목록 REST 라우트 (session/master) + 페이지네이션 + 컬렉션 그룹핑
-- [ ] 335-02: NFT 메타데이터 조회 라우트 + IPFS gateway 변환 + Metaplex 파싱 + DB 캐싱
+- [ ] 335-01-PLAN.md -- NFT 목록 REST 라우트 (session/master) + 페이지네이션 + 컬렉션 그룹핑
+- [ ] 335-02-PLAN.md -- NFT 메타데이터 조회 라우트 + IPFS gateway 변환 + Metaplex 파싱 + DB 캐싱
 
 ### Phase 336: NFT Transfer + Approval Pipeline
 **Goal**: NFT_TRANSFER가 6-stage 파이프라인을 통과하여 EVM/Solana NFT 전송이 실행되고, NFT 승인 관리와 정책이 적용되는 상태
@@ -217,4 +217,4 @@ Phase 333 -> 334 -> 335 (parallel with 336) -> 337
 | 337. Interface Integration | v31.0 | 0/3 | Not started | - |
 
 ---
-*Last updated: 2026-03-06 -- Phase 334 plans created.*
+*Last updated: 2026-03-06 -- Phase 335 plans created.*
