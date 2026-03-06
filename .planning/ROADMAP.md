@@ -178,8 +178,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 336-01-PLAN.md -- NFT_TRANSFER 파이프라인 통합 (Stage 1-6) + Smart Account 호환
-- [ ] 336-02-PLAN.md -- NFT 승인 체인 메서드 + 승인 상태 조회 API + 정책 적용 (RATE_LIMIT, CONTRACT_WHITELIST, default tier)
+- [x] 336-01-PLAN.md -- NFT_TRANSFER 파이프라인 통합 (Stage 1-6) + Smart Account 호환
+- [x] 336-02-PLAN.md -- NFT 승인 체인 메서드 + 승인 상태 조회 API + 정책 적용 (RATE_LIMIT, CONTRACT_WHITELIST, default tier)
 
 ### Phase 337: Interface Integration
 **Goal**: MCP, SDK, Admin UI, 스킬 파일로 NFT 기능이 전 인터페이스에 노출되어 에이전트와 운영자가 활용할 수 있는 상태
@@ -190,12 +190,12 @@ Plans:
   2. connect-info에 NFT 보유 요약이 포함되며, 인덱서 미설정 시 NFT 섹션이 graceful하게 생략된다
   3. Admin UI 지갑 상세에 NFT 탭이 있으며 그리드/리스트 뷰, NFT 이미지 썸네일(CSP img-src: ipfs.io, cloudflare-ipfs.com, w3s.link, nftstorage.link, arweave.net), 상세 모달(메타데이터+attributes)이 동작한다
   4. System Settings에 인덱서 API 키 설정 UI가 존재하며, nft.skill.md가 신규 생성되고 wallet.skill.md/transactions.skill.md가 NFT 내용으로 업데이트되어 있다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 337-01: MCP 3도구 + SDK 3메서드 + connect-info NFT 확장
-- [ ] 337-02: Admin UI NFT 탭 (그리드/리스트 뷰 + 이미지 썸네일 + 상세 모달 + CSP 업데이트) + 인덱서 설정 UI
-- [ ] 337-03: 스킬 파일 (nft.skill.md 신규 + wallet.skill.md/transactions.skill.md 업데이트)
+- [ ] 337-01-PLAN.md -- MCP 3도구 + SDK 3메서드 + connect-info NFT 확장
+- [ ] 337-02-PLAN.md -- Admin UI NFT 탭 (그리드/리스트 뷰 + 이미지 썸네일 + 상세 모달 + CSP 업데이트) + 인덱서 설정 UI
+- [ ] 337-03-PLAN.md -- 스킬 파일 (nft.skill.md 신규 + wallet.skill.md/transactions.skill.md 업데이트)
 
 ## Progress
 
@@ -217,4 +217,4 @@ Phase 333 -> 334 -> 335 (parallel with 336) -> 337
 | 337. Interface Integration | v31.0 | 0/3 | Not started | - |
 
 ---
-*Last updated: 2026-03-06 -- Phase 336 plans created.*
+*Last updated: 2026-03-06 -- Phase 337 plans created.*
