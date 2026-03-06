@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v31.3
 milestone_name: DCent Swap Aggregator 통합
 status: planning
-stopped_at: Completed 345-01-PLAN.md
-last_updated: "2026-03-06T14:09:05.612Z"
+stopped_at: Completed 345-02-PLAN.md
+last_updated: "2026-03-06T14:12:49.646Z"
 last_activity: 2026-03-06 — Roadmap created
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
   percent: 0
 ---
 
@@ -51,6 +51,7 @@ Progress: [░░░░░░░░░░] 0%
 - [Phase 343]: DS-07: get_quotes informational, queryQuotes() for MCP/SDK direct access
 - [Phase 344]: Exchange providers sorted by expectedAmount, ExchangeStatusTracker with notificationEvent in details
 - [Phase 345]: tryGetDcentQuotes returns discriminated union for error-as-data flow
+- [Phase 345]: Auto-routing fallback only triggers on no-route errors via isNoRouteError guard
 
 ### Blockers/Concerns
 
@@ -61,6 +62,6 @@ Progress: [░░░░░░░░░░] 0%
 
 ## Session Continuity
 
-Last session: 2026-03-06T14:09:05.608Z
-Stopped at: Completed 345-01-PLAN.md
+Last session: 2026-03-06T14:12:49.642Z
+Stopped at: Completed 345-02-PLAN.md
 Resume file: None
