@@ -1,5 +1,5 @@
 /**
- * createMcpServer: factory that creates an MCP server with 35 tools + 4 resource groups (3 static + 1 template).
+ * createMcpServer: factory that creates an MCP server with 37 tools + 4 resource groups (3 static + 1 template).
  *
  * Each tool/resource is registered via a dedicated register function
  * from its own module, following Dependency Injection pattern.
@@ -47,6 +47,8 @@ import { registerErc8128VerifySignature } from './tools/erc8128-verify-signature
 import { registerListNfts } from './tools/list-nfts.js';
 import { registerGetNftMetadata } from './tools/get-nft-metadata.js';
 import { registerTransferNft } from './tools/transfer-nft.js';
+import { registerBuildUserop } from './tools/build-userop.js';
+import { registerSignUserop } from './tools/sign-userop.js';
 
 // Resource registrations (Task 2)
 import { registerWalletBalance } from './resources/wallet-balance.js';
@@ -75,7 +77,7 @@ export function createMcpServer(apiClient: ApiClient, walletContext?: WalletCont
     version: '0.0.0',
   });
 
-  // Register 35 tools
+  // Register 37 tools
   registerConnectInfo(server, apiClient);
   registerGetPolicies(server, apiClient, walletContext);
   registerGetTokens(server, apiClient, walletContext);
@@ -111,6 +113,8 @@ export function createMcpServer(apiClient: ApiClient, walletContext?: WalletCont
   registerListNfts(server, apiClient, walletContext);
   registerGetNftMetadata(server, apiClient, walletContext);
   registerTransferNft(server, apiClient, walletContext);
+  registerBuildUserop(server, apiClient, walletContext);
+  registerSignUserop(server, apiClient, walletContext);
 
   // Register 4 resource groups (3 static + 1 template)
   registerWalletBalance(server, apiClient, walletContext);
