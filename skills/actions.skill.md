@@ -2,8 +2,8 @@
 name: "WAIaaS Actions"
 description: "Action Provider framework: list providers, execute DeFi actions through the 6-stage transaction pipeline"
 category: "api"
-tags: [wallet, blockchain, defi, actions, waiass, jupiter, 0x, swap, lifi, bridge, cross-chain, lido, jito, staking, liquid-staking, pendle, yield, pt, yt, drift, perp, perpetual, leverage, futures]
-version: "2.8.5"
+tags: [wallet, blockchain, defi, actions, waiass, jupiter, 0x, swap, lifi, bridge, cross-chain, lido, jito, staking, liquid-staking, pendle, yield, pt, yt, drift, perp, perpetual, leverage, futures, dcent-swap, dcent, exchange, cross-chain-exchange, aggregator]
+version: "2.9.0-rc"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]
@@ -1589,7 +1589,98 @@ The ERC-8004 provider enables on-chain agent identity registration, reputation m
 
 For full action documentation, input schemas, SDK methods, and MCP tools, see **erc8004.skill.md**.
 
-## 13. Policy Integration
+## 13. DCent Swap Aggregator -- Built-in Provider (Multi-Chain)
+
+DCent Swap aggregates multiple DEX and Exchange providers to offer optimal swap routes across chains. Supports same-chain DEX swaps (approve+txdata BATCH), cross-chain exchanges (payInAddress TRANSFER), and 2-hop auto-routing fallback when direct routes are unavailable.
+
+- **Provider name:** `dcent_swap`
+- **Chains:** ethereum, solana (multi-chain via provider network)
+- **Requires API key:** No
+- **Feature gate:** `actions.dcent_swap_enabled` (default: true)
+- **Aggregated providers:** 1inch, SushiSwap, Uniswap Labs, SwapScanner, Rubic, ButterSwap, LI.FI, Changelly, ChangeNOW, Exolix
+- **Provider types:** `swap` (same-chain DEX), `cross_swap` (cross-chain DEX), `exchange` (custodial cross-chain)
+
+### Actions (4)
+
+| Action | Description | Tier | Risk |
+|--------|-------------|------|------|
+| `get_quotes` | Get swap quotes with provider comparison (informational) | INSTANT | low |
+| `dex_swap` | Execute DEX swap (approve+txdata BATCH for ERC-20, single CONTRACT_CALL for native) | DELAY | high |
+| `exchange` | Execute cross-chain exchange (payInAddress TRANSFER) | APPROVAL | high |
+| `swap_status` | Check swap/exchange transaction status | INSTANT | low |
+
+### Admin Settings Keys (7)
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `actions.dcent_swap_enabled` | `true` | Enable/disable DCent Swap provider |
+| `actions.dcent_swap_api_url` | `https://swapbuy-beta.dcentwallet.com` | DCent API base URL |
+| `actions.dcent_swap_default_slippage_bps` | `100` | Default slippage (1%) |
+| `actions.dcent_swap_max_slippage_bps` | `500` | Maximum slippage (5%) |
+| `actions.dcent_swap_exchange_poll_interval_ms` | `30000` | Exchange status poll interval |
+| `actions.dcent_swap_exchange_poll_max_ms` | `3600000` | Exchange poll max duration |
+| `actions.dcent_swap_currency_cache_ttl_ms` | `86400000` | Currency list cache TTL (24h) |
+
+### Example: Get Quotes
+
+```bash
+curl -s -X POST http://localhost:3100/v1/actions/dcent_swap/get_quotes \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -d '{
+    "params": {
+      "fromAsset": "eip155:1/slip44:60",
+      "toAsset": "eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "amount": "1000000000000000000",
+      "fromDecimals": 18,
+      "toDecimals": 6
+    },
+    "network": "ethereum-mainnet"
+  }'
+```
+
+### Example: DEX Swap
+
+```bash
+curl -s -X POST http://localhost:3100/v1/actions/dcent_swap/dex_swap \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -d '{
+    "params": {
+      "fromAsset": "eip155:1/slip44:60",
+      "toAsset": "eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "amount": "1000000000000000000",
+      "fromDecimals": 18,
+      "toDecimals": 6,
+      "slippageBps": 100
+    },
+    "network": "ethereum-mainnet"
+  }'
+```
+
+### Policy Interaction
+
+- **DEX Swap (dex_swap):** Resolves to CONTRACT_CALL targeting DEX router address. Subject to CONTRACT_WHITELIST (provider-trust bypass applies when enabled), ALLOWED_TOKENS, APPROVED_SPENDERS, and SPENDING_LIMIT policies.
+- **Exchange (exchange):** Resolves to TRANSFER to payInAddress. Subject to ALLOWED_TOKENS and SPENDING_LIMIT. CONTRACT_WHITELIST does not apply (TRANSFER type, DS-09).
+- **2-hop auto-routing:** When direct route unavailable (`fail_no_available_provider`), attempts intermediate token (ETH/USDC/USDT) routing. Multi-step BATCH with cumulative fee/slippage calculation.
+
+### SDK Methods
+
+```typescript
+const quotes = await client.getDcentQuotes({ fromAsset, toAsset, amount, fromDecimals, toDecimals, network });
+const swap = await client.dcentDexSwap({ fromAsset, toAsset, amount, fromDecimals, toDecimals, network });
+const exchange = await client.dcentExchange({ fromAsset, toAsset, amount, fromDecimals, toDecimals, toAddress, network });
+const status = await client.getDcentSwapStatus({ transactionId, providerId, network });
+```
+
+### MCP Tools
+
+- `action_dcent_swap_get_quotes` -- Get swap quotes from DCent aggregator
+- `action_dcent_swap_dex_swap` -- Execute DEX swap via DCent aggregator
+- `action_dcent_swap_exchange` -- Execute cross-chain exchange via DCent aggregator
+- `action_dcent_swap_swap_status` -- Check swap/exchange transaction status
+
+## 14. Policy Integration
 
 ### CONTRACT_WHITELIST
 
@@ -1616,7 +1707,7 @@ The swap/bridge input amount is converted to USD via IPriceOracle and evaluated 
 
 **LI.FI bridge reservation lifecycle:** Bridge amounts are reserved against the spending limit when the transaction is submitted. The reservation is released on terminal states (COMPLETED, FAILED, REFUNDED) but **held** on TIMEOUT to prevent double-spend during manual resolution. This means the spending budget is not freed until the bridge completes or fails definitively.
 
-## 14. Configuration via Admin Settings
+## 15. Configuration via Admin Settings
 
 Since v28.2, all action provider settings are managed via **Admin UI > DeFi (`#/defi`)** for DeFi providers and **Admin UI > Agent Identity (`#/agent-identity`)** for ERC-8004 (not config.toml). The Admin Settings UI provides:
 
@@ -1656,7 +1747,7 @@ Operators can override the default security tier for individual actions. This al
 
 **Cross-reference:** Policy tier escalation rules apply on top of action tier. See **policies.skill.md** Section 3.
 
-## 15. Error Reference
+## 16. Error Reference
 
 | Code | HTTP | Description | Recovery |
 |------|------|-------------|----------|
@@ -1672,7 +1763,7 @@ Operators can override the default security tier for individual actions. This al
 | `INVALID_INSTRUCTION` | 400 | Chain not supported by LI.FI integration. | Use one of the supported chains: solana, ethereum, polygon, arbitrum, optimism, base. |
 | `ACTION_API_ERROR` | 502 | LI.FI API returned an error. | Check LI.FI API status, verify parameters, retry. |
 
-## 16. MCP Auto-Registration
+## 17. MCP Auto-Registration
 
 When a provider has `mcpExpose: true` in its metadata, the MCP server automatically registers each action as an MCP tool using the naming convention:
 
@@ -1723,7 +1814,7 @@ MCP tool parameters:
 - `network` (optional string): Target network
 - `wallet_id` (optional string): Target wallet ID
 
-## 17. Related Skill Files
+## 18. Related Skill Files
 
 - **admin.skill.md** -- API key management, Admin Settings, daemon admin
 - **transactions.skill.md** -- 5-type transaction reference (actions execute as CONTRACT_CALL)
