@@ -24,20 +24,20 @@ Requirements for NFT support milestone. Each maps to roadmap phases.
 ### NFT Transfer (전송)
 
 - [x] **NFTT-01**: NFT_TRANSFER type added to TransactionRequestSchema (6th discriminatedUnion type)
-- [ ] **NFTT-02**: EVM ERC-721 transfer via `safeTransferFrom(from, to, tokenId)`
-- [ ] **NFTT-03**: EVM ERC-1155 transfer via `safeTransferFrom(from, to, tokenId, amount, data)`
-- [ ] **NFTT-04**: Solana Metaplex transfer via SPL Token transfer instruction
-- [ ] **NFTT-05**: NFT_TRANSFER passes through 6-stage pipeline
-- [ ] **NFTT-06**: Smart Account (ERC-4337) compatible via `buildUserOpCalls()` NFT_TRANSFER conversion
+- [x] **NFTT-02**: EVM ERC-721 transfer via `safeTransferFrom(from, to, tokenId)`
+- [x] **NFTT-03**: EVM ERC-1155 transfer via `safeTransferFrom(from, to, tokenId, amount, data)`
+- [x] **NFTT-04**: Solana Metaplex transfer via SPL Token transfer instruction
+- [x] **NFTT-05**: NFT_TRANSFER passes through 6-stage pipeline
+- [x] **NFTT-06**: Smart Account (ERC-4337) compatible via `buildUserOpCalls()` NFT_TRANSFER conversion
 - [x] **NFTT-07**: NFT_TRANSFER request body supports type/to/token/amount/network fields
 
 ### NFT Approval (승인)
 
-- [ ] **NFTA-01**: EVM `approve` for single NFT approval
-- [ ] **NFTA-02**: EVM `setApprovalForAll` for collection-wide approval
-- [ ] **NFTA-03**: Solana `delegate` for token delegation
+- [x] **NFTA-01**: EVM `approve` for single NFT approval
+- [x] **NFTA-02**: EVM `setApprovalForAll` for collection-wide approval
+- [x] **NFTA-03**: Solana `delegate` for token delegation
 - [x] **NFTA-04**: Existing APPROVE type extended with optional `nft` field (`{ tokenId, standard }`)
-- [ ] **NFTA-05**: Approval status query API (`GET /v1/wallet/nfts/{tokenIdentifier}/approvals`)
+- [x] **NFTA-05**: Approval status query API (`GET /v1/wallet/nfts/{tokenIdentifier}/approvals`)
 
 ### Indexer (인덱서)
 
@@ -71,9 +71,9 @@ Requirements for NFT support milestone. Each maps to roadmap phases.
 
 ### Policy (정책)
 
-- [ ] **PLCY-01**: RATE_LIMIT applied to NFT_TRANSFER (count-based, separate `nft_count` counter)
-- [ ] **PLCY-02**: CONTRACT_WHITELIST restricts allowed NFT contracts
-- [ ] **PLCY-03**: NFT transfer default tier: APPROVAL
+- [x] **PLCY-01**: RATE_LIMIT applied to NFT_TRANSFER (count-based, separate `nft_count` counter)
+- [x] **PLCY-02**: CONTRACT_WHITELIST restricts allowed NFT contracts
+- [x] **PLCY-03**: NFT transfer default tier: APPROVAL
 
 ### CAIP-19
 
@@ -164,18 +164,18 @@ Requirements for NFT support milestone. Each maps to roadmap phases.
 | NFTQ-09 | Phase 335 | Pending |
 | NFTQ-10 | Phase 335 | Pending |
 | NFTQ-11 | Phase 335 | Pending |
-| NFTT-02 | Phase 336 | Pending |
-| NFTT-03 | Phase 336 | Pending |
-| NFTT-04 | Phase 336 | Pending |
-| NFTT-05 | Phase 336 | Pending |
-| NFTT-06 | Phase 336 | Pending |
-| NFTA-01 | Phase 336 | Pending |
-| NFTA-02 | Phase 336 | Pending |
-| NFTA-03 | Phase 336 | Pending |
-| NFTA-05 | Phase 336 | Pending |
-| PLCY-01 | Phase 336 | Pending |
-| PLCY-02 | Phase 336 | Pending |
-| PLCY-03 | Phase 336 | Pending |
+| NFTT-02 | Phase 336 | Complete |
+| NFTT-03 | Phase 336 | Complete |
+| NFTT-04 | Phase 336 | Complete |
+| NFTT-05 | Phase 336 | Complete |
+| NFTT-06 | Phase 336 | Complete |
+| NFTA-01 | Phase 336 | Complete |
+| NFTA-02 | Phase 336 | Complete |
+| NFTA-03 | Phase 336 | Complete |
+| NFTA-05 | Phase 336 | Complete |
+| PLCY-01 | Phase 336 | Complete |
+| PLCY-02 | Phase 336 | Complete |
+| PLCY-03 | Phase 336 | Complete |
 | MCPSK-01 | Phase 337 | Pending |
 | MCPSK-02 | Phase 337 | Pending |
 | MCPSK-03 | Phase 337 | Pending |

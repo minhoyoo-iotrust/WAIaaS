@@ -113,7 +113,7 @@ See `.planning/milestones/` for archived phase details.
 - [x] **Phase 333: NFT Foundation** - Zod 스키마(NFT_TRANSFER 6th type, APPROVE nft 확장), DB v44 마이그레이션, CAIP-19 NFT 네임스페이스, 에러 코드
 - [x] **Phase 334: Indexer + Chain Adapter** - INftIndexer 인터페이스 + Alchemy/Helius 구현체, IChainAdapter NFT 메서드 + SolanaAdapter/EvmAdapter 구현
 - [ ] **Phase 335: NFT Query API** - NFT 목록/메타데이터 REST 조회 라우트, 메타데이터 캐싱, 페이지네이션, 컬렉션 그룹핑
-- [ ] **Phase 336: NFT Transfer + Approval Pipeline** - NFT_TRANSFER 6-stage 파이프라인 통과, NFT 승인 체인 메서드, Smart Account 호환, 정책 적용
+- [x] **Phase 336: NFT Transfer + Approval Pipeline** - NFT_TRANSFER 6-stage 파이프라인 통과, NFT 승인 체인 메서드, Smart Account 호환, 정책 적용 (completed 2026-03-06)
 - [ ] **Phase 337: Interface Integration** - MCP 3도구 + SDK 3메서드, Admin UI NFT 탭 + 인덱서 설정, 스킬 파일 3개
 
 ## Phase Details
@@ -213,7 +213,7 @@ Phase 333 -> 334 -> 335 (parallel with 336) -> 337
 | 333. NFT Foundation | 2/2 | Complete    | 2026-03-06 | 2026-03-06 |
 | 334. Indexer + Chain Adapter | v31.0 | Complete    | 2026-03-06 | 2026-03-06 |
 | 335. NFT Query API | v31.0 | 0/2 | Not started | - |
-| 336. NFT Transfer + Approval Pipeline | v31.0 | 0/2 | Not started | - |
+| 336. NFT Transfer + Approval Pipeline | 2/2 | Complete   | 2026-03-06 | - |
 | 337. Interface Integration | v31.0 | 0/3 | Not started | - |
 
 ---
