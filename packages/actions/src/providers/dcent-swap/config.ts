@@ -16,6 +16,10 @@ export interface DcentSwapConfig {
   maxSlippageBps: number;
   /** Currency cache TTL in milliseconds (DS-05). */
   currencyCacheTtlMs: number;
+  /** Exchange status polling interval in milliseconds (doc 77 section 8.4). */
+  exchangePollIntervalMs: number;
+  /** Exchange status polling maximum duration in milliseconds. */
+  exchangePollMaxMs: number;
 }
 
 /**
@@ -30,4 +34,6 @@ export const DCENT_SWAP_DEFAULTS: DcentSwapConfig = {
   defaultSlippageBps: 100,  // 1%
   maxSlippageBps: 500,      // 5%
   currencyCacheTtlMs: 86_400_000, // 24 hours
+  exchangePollIntervalMs: 30_000,    // 30 seconds
+  exchangePollMaxMs: 3_600_000,      // 1 hour
 };

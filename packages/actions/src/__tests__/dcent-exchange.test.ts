@@ -283,8 +283,8 @@ describe('executeExchange', () => {
       providerId: 'changenow_exchange_flexible',
     });
 
-    expect(result.exchangeMetadata.dcentProviderId).toBe('changelly_exchange_flexible');
-    // Note: provider selection is in get_quotes bestOrder; create_exchange uses providerId from selection
+    expect(result.exchangeMetadata.dcentProviderId).toBe('changenow_exchange_flexible');
+    // Provider selection respects explicit providerId from params
   });
 });
 
