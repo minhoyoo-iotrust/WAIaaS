@@ -19,7 +19,6 @@ import type * as schema from '../infrastructure/database/schema.js';
 // Constants used in mocks -- vi.mock is hoisted so we use inline literals below.
 const MOCK_SENDER = '0x1234567890abcdef1234567890abcdef12345678';
 const MOCK_CALL_DATA = '0xaabbccdd';
-const MOCK_SIGNATURE = '0xsig1234';
 const MOCK_ENTRY_POINT = '0x0000000071727De22E5E9d8BAf0edAc6f37da032';
 
 // Mock viem/accounts
@@ -86,7 +85,6 @@ vi.mock('../infrastructure/smart-account/smart-account-clients.js', () => ({
 import { userOpRoutes } from '../api/routes/userop.js';
 import type { UserOpRouteDeps } from '../api/routes/userop.js';
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { generateId } from '../infrastructure/database/id.js';
 import { errorHandler } from '../api/middleware/error-handler.js';
 
 // ---------------------------------------------------------------------------
