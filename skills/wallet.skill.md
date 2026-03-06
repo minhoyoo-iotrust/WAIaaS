@@ -78,9 +78,18 @@ Response (201):
 
 The `network` field shows the wallet's primary network (chain-dependent: Solana has a single auto-resolved network; EVM requires explicit network specification). The `session` field is included when `createSession` is `true` (default); set to `false` to create the wallet without a session.
 
+### Smart Account Modes
+
+Smart Account wallets operate in two modes:
+
+- **Lite mode**: Created without an AA provider (`aaProvider` omitted). Only `userop/build` + `userop/sign` API available. The platform handles gas sponsorship and bundler submission externally.
+- **Full mode**: Created with an AA provider (pimlico/alchemy/custom). Full AA functionality including `POST /v1/transactions/send` for automatic bundler submission.
+
+Switch from Lite to Full: `PUT /v1/wallets/{id}/provider` with provider config.
+
 ### Create Smart Account Wallet (EVM, ERC-4337)
 
-Create an ERC-4337 smart account wallet with Paymaster gas sponsorship and atomic batch support. Smart account support is enabled by default. After creation, configure a bundler/paymaster provider for this wallet via `PUT /v1/wallets/:id/provider`.
+Create an ERC-4337 smart account wallet. Without `aaProvider`, the wallet is in **Lite mode** (UserOp API only). Add a provider for **Full mode** (automatic bundler submission). Smart account support is enabled by default.
 
 ```bash
 curl -s -X POST http://localhost:3100/v1/wallets \

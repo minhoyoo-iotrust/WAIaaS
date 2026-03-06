@@ -1452,7 +1452,24 @@ Operators can override the default security tier for individual actions via Admi
 
 ---
 
-## 16. Related Skill Files
+## 16. Smart Account Lite Mode
+
+Create Smart Account wallets without a bundler provider for platform-sponsored gas:
+
+```bash
+curl -s -X POST http://localhost:3100/v1/wallets \
+  -H 'Content-Type: application/json' \
+  -H 'X-Master-Password: your-master-password' \
+  -d '{"name": "lite-wallet", "chain": "ethereum", "environment": "testnet", "accountType": "smart"}'
+```
+
+No `aaProvider` field = **Lite mode**. The wallet can use `userop/build` and `userop/sign` endpoints for building and signing UserOperations. The platform fills gas/paymaster fields and submits to a bundler externally.
+
+Add a provider later with `PUT /v1/wallets/{id}/provider` to enable **Full mode** (automatic bundler submission via `POST /v1/transactions/send`).
+
+In Admin UI, the wallet create form defaults to **None (Lite mode)** for the Provider dropdown. Lite/Full mode is shown as badges in the wallet list and detail pages.
+
+## 17. Related Skill Files
 
 - **actions.skill.md** -- Action Provider REST API (DeFi actions)
 - **policies.skill.md** -- Policy management (14 policy types for transaction controls)
