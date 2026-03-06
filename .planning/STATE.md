@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v31.2
 milestone_name: UserOp Build/Sign API
-status: executing
-stopped_at: Completed 338-02-PLAN.md
-last_updated: "2026-03-06T08:50:00.000Z"
-last_activity: 2026-03-06 -- Phase 338 Foundation completed (2/2 plans)
+status: completed
+stopped_at: Completed 338-02-PLAN.md (Phase 338 Foundation -- 2/2 plans)
+last_updated: "2026-03-06T08:52:46.617Z"
+last_activity: 2026-03-06 -- Phase 338 Foundation completed
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 8
+  total_plans: 2
   completed_plans: 2
   percent: 25
 ---
