@@ -205,6 +205,17 @@ export {
   type SimulationWarning,
   type SimulationDetail,
   type SimulationMeta,
+  // v31.2 UserOp Build/Sign API schemas (Phase 338)
+  UserOperationV07Schema,
+  UserOpBuildRequestSchema,
+  UserOpBuildResponseSchema,
+  UserOpSignRequestSchema,
+  UserOpSignResponseSchema,
+  type UserOperationV07,
+  type UserOpBuildRequest,
+  type UserOpBuildResponse,
+  type UserOpSignRequest,
+  type UserOpSignResponse,
 } from './schemas/index.js';
 
 // Wallet Preset (v28.8 builtin wallet preset registry)

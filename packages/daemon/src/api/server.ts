@@ -69,6 +69,7 @@ import { NftIndexerClient } from '../infrastructure/nft/nft-indexer-client.js';
 import { NftMetadataCacheService } from '../services/nft-metadata-cache.js';
 import { nftRoutes } from './routes/nfts.js';
 import { nftApprovalRoutes } from './routes/nft-approvals.js';
+import { userOpRoutes } from './routes/userop.js';
 import { auditLogRoutes } from './routes/audit-logs.js';
 import { erc8004Routes } from './routes/erc8004.js';
 import { erc8128Routes } from './routes/erc8128.js';
@@ -509,6 +510,22 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
       nftApprovalRoutes({
         db: deps.db,
         adapterPool: deps.adapterPool,
+      }),
+    );
+  }
+
+  // Register UserOp routes (masterAuth via /v1/wallets/:id/userop/*)
+  if (deps.db && deps.sqlite && deps.keyStore && effectiveMasterPassword) {
+    app.route(
+      '/v1',
+      userOpRoutes({
+        db: deps.db,
+        sqlite: deps.sqlite,
+        keyStore: deps.keyStore,
+        masterPassword: effectiveMasterPassword,
+        passwordRef: deps.passwordRef,
+        rpcConfig: deps.config?.rpc as unknown as Record<string, string>,
+        metricsCounter: deps.metricsCounter,
       }),
     );
   }
