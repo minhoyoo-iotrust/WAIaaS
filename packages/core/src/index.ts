@@ -391,6 +391,8 @@ export {
   nativeAssetId,
   tokenAssetId,
   isNativeAsset,
+  nftAssetId,
+  isNftAsset,
 } from './interfaces/index.js';
 
 // v29.2 Lending Provider Zod schemas (value exports)
