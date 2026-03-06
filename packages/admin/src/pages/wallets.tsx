@@ -62,7 +62,13 @@ interface WalletDetail extends Wallet {
   accountType?: string;
   signerKey?: string | null;
   deployed?: boolean;
+  factoryAddress?: string | null;
+  factorySupportedNetworks?: string[] | null;
+  factoryVerifiedOnNetwork?: boolean | null;
 }
+
+/** Solady factory address — Smart Accounts using this factory are deprecated (v31.3+). */
+const SOLADY_FACTORY_ADDRESS = '0x5d82735936c6Cd5DE57cC3c1A799f6B2E6F933Df';
 
 interface NetworkInfo {
   network: string;
@@ -874,8 +880,40 @@ function WalletDetailView({ id }: { id: string }) {
               {wallet.value.accountType === 'smart' ? 'Smart Account' : 'EOA'}
             </Badge>
           </DetailRow>
+          {wallet.value.accountType === 'smart' && wallet.value.factoryAddress?.toLowerCase() === SOLADY_FACTORY_ADDRESS.toLowerCase() && (
+            <div style={{ background: 'var(--color-danger-bg, #fef2f2)', border: '1px solid var(--color-danger, #ef4444)', borderRadius: 'var(--radius)', padding: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
+              <strong style={{ color: 'var(--color-danger, #ef4444)' }}>Deprecated Smart Account</strong>
+              <p style={{ margin: '0.25rem 0 0', fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)' }}>
+                This Smart Account uses a deprecated factory (Solady). Transactions and UserOp operations will be rejected. Please create a new Smart Account wallet to continue.
+              </p>
+            </div>
+          )}
           {wallet.value.accountType === 'smart' && (
             <>
+              {wallet.value.factoryAddress && (
+                <DetailRow label="Factory Address" value={wallet.value.factoryAddress} copy />
+              )}
+              {wallet.value.factorySupportedNetworks && wallet.value.factorySupportedNetworks.length > 0 && (
+                <DetailRow label="Factory Networks">
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+                    {wallet.value.factorySupportedNetworks.map((n: string) => (
+                      <Badge key={n} variant="default">{n}</Badge>
+                    ))}
+                  </div>
+                </DetailRow>
+              )}
+              {wallet.value.factoryVerifiedOnNetwork !== null && wallet.value.factoryVerifiedOnNetwork !== undefined && (
+                <DetailRow label="Verified on Network">
+                  <Badge variant={wallet.value.factoryVerifiedOnNetwork ? 'success' : 'danger'}>
+                    {wallet.value.factoryVerifiedOnNetwork ? 'Verified' : 'Not Verified'}
+                  </Badge>
+                  {!wallet.value.factoryVerifiedOnNetwork && (
+                    <span style={{ marginLeft: '0.5rem', fontSize: '0.85rem', color: 'var(--color-danger, #ef4444)' }}>
+                      Factory may not be deployed on this network
+                    </span>
+                  )}
+                </DetailRow>
+              )}
               <DetailRow label="Signer Key" value={wallet.value.signerKey ?? '--'} copy />
               <DetailRow label="Deployed">
                 <Badge variant={wallet.value.deployed ? 'success' : 'warning'}>
@@ -2691,8 +2729,12 @@ function WalletListContent() {
     {
       key: 'accountType',
       header: 'Type',
-      render: (a) => {
+      render: (a: any) => {
         if (a.accountType !== 'smart') return <Badge variant="default">EOA</Badge>;
+        const isDeprecated = a.factoryAddress?.toLowerCase() === SOLADY_FACTORY_ADDRESS.toLowerCase();
+        if (isDeprecated) {
+          return <Badge variant="danger">Deprecated</Badge>;
+        }
         return (
           <Badge variant={a.provider ? 'info' : 'warning'}>
             {a.provider ? 'Smart (Full)' : 'Smart (Lite)'}

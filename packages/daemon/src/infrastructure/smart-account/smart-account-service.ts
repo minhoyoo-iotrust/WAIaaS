@@ -52,7 +52,85 @@ export interface SmartAccountInfo {
   account: SmartAccount;
 }
 
+/**
+ * Static mapping of factory addresses to known supported networks.
+ * Primary source for factory network compatibility — used before runtime verification.
+ */
+export const FACTORY_SUPPORTED_NETWORKS: Record<string, string[]> = {
+  [DEFAULT_SIMPLE_ACCOUNT_FACTORY_V07.toLowerCase()]: [
+    'ethereum-mainnet', 'ethereum-sepolia',
+    'base-mainnet', 'base-sepolia',
+    'polygon-mainnet', 'polygon-amoy',
+    'arbitrum-mainnet', 'arbitrum-sepolia',
+    'optimism-mainnet', 'optimism-sepolia',
+  ],
+  [SOLADY_FACTORY_ADDRESS.toLowerCase()]: [
+    'ethereum-mainnet', 'ethereum-sepolia',
+  ],
+};
+
+/**
+ * Get factory-supported networks from the static list.
+ * Returns empty array for unknown (custom) factories.
+ */
+export function getFactorySupportedNetworks(factoryAddress: string | null): string[] {
+  if (!factoryAddress) return [];
+  return FACTORY_SUPPORTED_NETWORKS[factoryAddress.toLowerCase()] ?? [];
+}
+
+/** Cache entry for eth_getCode verification */
+interface FactoryVerificationEntry {
+  verified: boolean;
+  timestamp: number;
+}
+
+/** 24-hour TTL for factory verification cache */
+const FACTORY_VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
+
 export class SmartAccountService {
+  /** Cache: "factoryAddress:networkId" → verification result */
+  private readonly _verifyCache = new Map<string, FactoryVerificationEntry>();
+
+  /**
+   * Verify factory contract exists on a specific network via eth_getCode.
+   * Results are cached with 24h TTL.
+   * Returns null on RPC failure (caller should fall back to static list).
+   */
+  async verifyFactoryOnNetwork(
+    factoryAddress: string,
+    networkId: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    publicClient: any,
+  ): Promise<boolean | null> {
+    const cacheKey = `${factoryAddress.toLowerCase()}:${networkId}`;
+    const cached = this._verifyCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < FACTORY_VERIFY_TTL_MS) {
+      return cached.verified;
+    }
+
+    try {
+      const code: string = await publicClient.getCode({ address: factoryAddress as Address });
+      const verified = !!code && code !== '0x';
+      this._verifyCache.set(cacheKey, { verified, timestamp: Date.now() });
+      return verified;
+    } catch {
+      // RPC failure — return null to signal fallback to static list
+      return null;
+    }
+  }
+
+  /**
+   * Clear expired entries from the verification cache.
+   */
+  clearExpiredCache(): void {
+    const now = Date.now();
+    for (const [key, entry] of this._verifyCache) {
+      if (now - entry.timestamp >= FACTORY_VERIFY_TTL_MS) {
+        this._verifyCache.delete(key);
+      }
+    }
+  }
+
   /**
    * Create a SmartAccount instance and predict its CREATE2 address.
    *

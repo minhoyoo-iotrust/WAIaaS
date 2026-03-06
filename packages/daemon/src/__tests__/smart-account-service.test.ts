@@ -21,7 +21,13 @@ vi.mock('viem/account-abstraction', () => ({
   entryPoint07Address: '0x0000000071727De22E5E9d8BAf0edAc6f37da032',
 }));
 
-import { SmartAccountService, DEFAULT_SIMPLE_ACCOUNT_FACTORY_V07 } from '../infrastructure/smart-account/smart-account-service.js';
+import {
+  SmartAccountService,
+  DEFAULT_SIMPLE_ACCOUNT_FACTORY_V07,
+  SOLADY_FACTORY_ADDRESS,
+  FACTORY_SUPPORTED_NETWORKS,
+  getFactorySupportedNetworks,
+} from '../infrastructure/smart-account/smart-account-service.js';
 
 // Constants for assertions (safe to use outside vi.mock factory)
 const MOCK_SMART_ACCOUNT_ADDRESS = '0x1234567890abcdef1234567890abcdef12345678';
@@ -139,5 +145,152 @@ describe('SmartAccountService', () => {
         version: '0.7',
       },
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Factory Supported Networks (static list)
+// ---------------------------------------------------------------------------
+
+describe('getFactorySupportedNetworks', () => {
+  it('returns supported networks for v0.7 SimpleAccount factory', () => {
+    const networks = getFactorySupportedNetworks(DEFAULT_SIMPLE_ACCOUNT_FACTORY_V07);
+    expect(networks).toContain('ethereum-mainnet');
+    expect(networks).toContain('base-mainnet');
+    expect(networks).toContain('polygon-mainnet');
+    expect(networks).toContain('arbitrum-mainnet');
+    expect(networks).toContain('optimism-mainnet');
+    expect(networks.length).toBeGreaterThanOrEqual(10);
+  });
+
+  it('returns limited networks for deprecated Solady factory', () => {
+    const networks = getFactorySupportedNetworks(SOLADY_FACTORY_ADDRESS);
+    expect(networks).toEqual(['ethereum-mainnet', 'ethereum-sepolia']);
+  });
+
+  it('returns empty array for unknown (custom) factory', () => {
+    const networks = getFactorySupportedNetworks('0x0000000000000000000000000000000000000001');
+    expect(networks).toEqual([]);
+  });
+
+  it('returns empty array for null factory address', () => {
+    const networks = getFactorySupportedNetworks(null);
+    expect(networks).toEqual([]);
+  });
+
+  it('is case-insensitive for factory address lookup', () => {
+    const lower = getFactorySupportedNetworks(DEFAULT_SIMPLE_ACCOUNT_FACTORY_V07.toLowerCase());
+    const upper = getFactorySupportedNetworks(DEFAULT_SIMPLE_ACCOUNT_FACTORY_V07.toUpperCase());
+    expect(lower).toEqual(upper);
+    expect(lower.length).toBeGreaterThan(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FACTORY_SUPPORTED_NETWORKS constant
+// ---------------------------------------------------------------------------
+
+describe('FACTORY_SUPPORTED_NETWORKS', () => {
+  it('contains v0.7 SimpleAccount factory', () => {
+    const key = DEFAULT_SIMPLE_ACCOUNT_FACTORY_V07.toLowerCase();
+    expect(FACTORY_SUPPORTED_NETWORKS[key]).toBeDefined();
+  });
+
+  it('contains Solady factory', () => {
+    const key = SOLADY_FACTORY_ADDRESS.toLowerCase();
+    expect(FACTORY_SUPPORTED_NETWORKS[key]).toBeDefined();
+  });
+
+  it('all networks are valid format (chain-network pattern)', () => {
+    for (const [, networks] of Object.entries(FACTORY_SUPPORTED_NETWORKS)) {
+      for (const n of networks) {
+        expect(n).toMatch(/^[a-z]+-[a-z]+$/);
+      }
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Runtime Verification (eth_getCode cache)
+// ---------------------------------------------------------------------------
+
+describe('SmartAccountService.verifyFactoryOnNetwork', () => {
+  let service: SmartAccountService;
+
+  beforeEach(() => {
+    service = new SmartAccountService();
+  });
+
+  it('returns true when factory has code deployed', async () => {
+    const mockClient = { getCode: vi.fn().mockResolvedValue('0x608060') };
+    const result = await service.verifyFactoryOnNetwork(
+      DEFAULT_SIMPLE_ACCOUNT_FACTORY_V07, 'ethereum-mainnet', mockClient,
+    );
+    expect(result).toBe(true);
+    expect(mockClient.getCode).toHaveBeenCalledWith({
+      address: DEFAULT_SIMPLE_ACCOUNT_FACTORY_V07,
+    });
+  });
+
+  it('returns false when factory has no code (0x)', async () => {
+    const mockClient = { getCode: vi.fn().mockResolvedValue('0x') };
+    const result = await service.verifyFactoryOnNetwork(
+      DEFAULT_SIMPLE_ACCOUNT_FACTORY_V07, 'ethereum-mainnet', mockClient,
+    );
+    expect(result).toBe(false);
+  });
+
+  it('returns null on RPC failure', async () => {
+    const mockClient = { getCode: vi.fn().mockRejectedValue(new Error('RPC error')) };
+    const result = await service.verifyFactoryOnNetwork(
+      DEFAULT_SIMPLE_ACCOUNT_FACTORY_V07, 'ethereum-mainnet', mockClient,
+    );
+    expect(result).toBe(null);
+  });
+
+  it('caches results and does not re-call RPC within TTL', async () => {
+    const mockClient = { getCode: vi.fn().mockResolvedValue('0x608060') };
+
+    // First call — hits RPC
+    await service.verifyFactoryOnNetwork(DEFAULT_SIMPLE_ACCOUNT_FACTORY_V07, 'ethereum-mainnet', mockClient);
+    expect(mockClient.getCode).toHaveBeenCalledTimes(1);
+
+    // Second call — cached
+    const result = await service.verifyFactoryOnNetwork(DEFAULT_SIMPLE_ACCOUNT_FACTORY_V07, 'ethereum-mainnet', mockClient);
+    expect(result).toBe(true);
+    expect(mockClient.getCode).toHaveBeenCalledTimes(1); // no additional call
+  });
+
+  it('separate cache keys for different networks', async () => {
+    const mockClient = {
+      getCode: vi.fn()
+        .mockResolvedValueOnce('0x608060')
+        .mockResolvedValueOnce('0x'),
+    };
+
+    const r1 = await service.verifyFactoryOnNetwork(DEFAULT_SIMPLE_ACCOUNT_FACTORY_V07, 'ethereum-mainnet', mockClient);
+    const r2 = await service.verifyFactoryOnNetwork(DEFAULT_SIMPLE_ACCOUNT_FACTORY_V07, 'base-mainnet', mockClient);
+
+    expect(r1).toBe(true);
+    expect(r2).toBe(false);
+    expect(mockClient.getCode).toHaveBeenCalledTimes(2);
+  });
+
+  it('clearExpiredCache removes stale entries', async () => {
+    const mockClient = { getCode: vi.fn().mockResolvedValue('0x608060') };
+
+    // Populate cache
+    await service.verifyFactoryOnNetwork(DEFAULT_SIMPLE_ACCOUNT_FACTORY_V07, 'ethereum-mainnet', mockClient);
+    expect(mockClient.getCode).toHaveBeenCalledTimes(1);
+
+    // Manually expire the cache entry
+    const cacheKey = `${DEFAULT_SIMPLE_ACCOUNT_FACTORY_V07.toLowerCase()}:ethereum-mainnet`;
+    (service as any)._verifyCache.set(cacheKey, { verified: true, timestamp: 0 }); // epoch = expired
+
+    service.clearExpiredCache();
+
+    // Next call should hit RPC again
+    await service.verifyFactoryOnNetwork(DEFAULT_SIMPLE_ACCOUNT_FACTORY_V07, 'ethereum-mainnet', mockClient);
+    expect(mockClient.getCode).toHaveBeenCalledTimes(2);
   });
 });

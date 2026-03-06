@@ -39,6 +39,7 @@ import { verifyWalletAccess } from '../helpers/resolve-wallet-id.js';
 import type { AdapterPool } from '../../infrastructure/adapter-pool.js';
 import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
 import type { SmartAccountService } from '../../infrastructure/smart-account/index.js';
+import { getFactorySupportedNetworks } from '../../infrastructure/smart-account/smart-account-service.js';
 import { encryptProviderApiKey } from '../../infrastructure/smart-account/aa-provider-crypto.js';
 import {
   CreateWalletRequestOpenAPI,
@@ -363,6 +364,7 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
           accountType: (a as any).accountType ?? 'eoa',
           signerKey: (a as any).signerKey ?? null,
           deployed: (a as any).deployed ?? true,
+          factoryAddress: (a as any).factoryAddress ?? null,
           provider: buildProviderStatus({
             aaProvider: (a as any).aaProvider ?? null,
             aaPaymasterUrl: (a as any).aaPaymasterUrl ?? null,
@@ -398,12 +400,42 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
       ownerVerified: wallet.ownerVerified,
     });
 
+    const accountType = (wallet as any).accountType ?? 'eoa';
+    const factoryAddr: string | null = (wallet as any).factoryAddress ?? null;
+    const networkId = getSingleNetwork(wallet.chain as ChainType, wallet.environment as EnvironmentType) ?? wallet.chain;
+
+    // Factory supported networks (static list + optional runtime verification)
+    let factorySupportedNetworks: string[] | null = null;
+    let factoryVerifiedOnNetwork: boolean | null = null;
+    if (accountType === 'smart' && factoryAddr) {
+      factorySupportedNetworks = getFactorySupportedNetworks(factoryAddr);
+      // Runtime verification via eth_getCode (best-effort, non-blocking)
+      if (deps.smartAccountService && wallet.chain === 'ethereum') {
+        try {
+          const rpcUrl = resolveRpcUrl(
+            deps.config.rpc as unknown as Record<string, string>,
+            wallet.chain as ChainType,
+            networkId,
+          );
+          if (rpcUrl) {
+            const { createPublicClient, http } = await import('viem');
+            const client = createPublicClient({ transport: http(rpcUrl) });
+            factoryVerifiedOnNetwork = await deps.smartAccountService.verifyFactoryOnNetwork(
+              factoryAddr, networkId, client,
+            );
+          }
+        } catch {
+          // RPC failure — leave as null (fallback to static list)
+        }
+      }
+    }
+
     return c.json(
       {
         id: wallet.id,
         name: wallet.name,
         chain: wallet.chain,
-        network: getSingleNetwork(wallet.chain as ChainType, wallet.environment as EnvironmentType) ?? wallet.chain,
+        network: networkId,
         environment: wallet.environment!,
         publicKey: wallet.publicKey,
         status: wallet.status,
@@ -412,9 +444,12 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
         ownerState,
         approvalMethod: wallet.ownerApprovalMethod ?? null,
         walletType: wallet.walletType ?? null,
-        accountType: (wallet as any).accountType ?? 'eoa',
+        accountType,
         signerKey: (wallet as any).signerKey ?? null,
         deployed: (wallet as any).deployed ?? true,
+        factoryAddress: factoryAddr,
+        factorySupportedNetworks,
+        factoryVerifiedOnNetwork,
         provider: buildProviderStatus({
           aaProvider: (wallet as any).aaProvider ?? null,
           aaPaymasterUrl: (wallet as any).aaPaymasterUrl ?? null,

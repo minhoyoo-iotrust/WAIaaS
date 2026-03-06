@@ -124,6 +124,9 @@ Response (201):
 - `accountType`: `"smart"` -- ERC-4337 smart account
 - `signerKey`: EOA signer (owner) address that controls the smart account
 - `deployed`: `false` until the first transaction (lazy deployment via CREATE2)
+- `factoryAddress`: The factory contract address used to create this smart account
+- `factorySupportedNetworks`: Array of network IDs where the factory contract is deployed (e.g., `["ethereum-mainnet", "base-mainnet", ...]`). `null` for EOA wallets.
+- `factoryVerifiedOnNetwork`: `true` if the factory was verified via `eth_getCode` on the current network, `false` if not found, `null` if verification was skipped or failed
 
 **Key differences from EOA:**
 - Gas can be sponsored by a Paymaster (agent needs no ETH for gas)

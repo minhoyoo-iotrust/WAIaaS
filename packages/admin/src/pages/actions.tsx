@@ -12,26 +12,32 @@ import type { SettingsData, ApiKeyEntry } from '../utils/settings-helpers';
 // Built-in provider definitions (client-side static list)
 // ---------------------------------------------------------------------------
 
+type ProviderCategory = 'Swap' | 'Bridge' | 'Staking' | 'Lending' | 'Yield' | 'Perp';
+
 interface BuiltinProvider {
   key: string;
   name: string;
   description: string;
   chain: 'solana' | 'evm' | 'multi';
+  category: ProviderCategory;
   requiresApiKey: boolean;
   docsUrl?: string;
 }
 
 const BUILTIN_PROVIDERS: BuiltinProvider[] = [
-  { key: 'jupiter_swap', name: 'Jupiter Swap', description: 'Solana DEX aggregator', chain: 'solana', requiresApiKey: false, docsUrl: 'https://station.jup.ag/docs' },
-  { key: 'zerox_swap', name: '0x Swap', description: 'EVM DEX aggregator (AllowanceHolder)', chain: 'evm', requiresApiKey: true, docsUrl: 'https://dashboard.0x.org' },
-  { key: 'lifi', name: 'LI.FI', description: 'Multi-chain DEX/bridge aggregator', chain: 'multi', requiresApiKey: false, docsUrl: 'https://docs.li.fi' },
-  { key: 'lido_staking', name: 'Lido Staking', description: 'ETH liquid staking (stETH/wstETH)', chain: 'evm', requiresApiKey: false, docsUrl: 'https://docs.lido.fi' },
-  { key: 'jito_staking', name: 'Jito Staking', description: 'SOL liquid staking (JitoSOL)', chain: 'solana', requiresApiKey: false, docsUrl: 'https://www.jito.network/docs' },
-  { key: 'aave_v3', name: 'Aave V3 Lending', description: 'EVM lending protocol (supply, borrow, repay, withdraw)', chain: 'evm', requiresApiKey: false, docsUrl: 'https://docs.aave.com/developers' },
-  { key: 'kamino', name: 'Kamino Lending', description: 'Solana lending protocol (supply, borrow, repay, withdraw)', chain: 'solana', requiresApiKey: false, docsUrl: 'https://docs.kamino.finance' },
-  { key: 'pendle_yield', name: 'Pendle Yield', description: 'EVM yield trading: buy/sell PT/YT, redeem at maturity, add/remove LP', chain: 'evm', requiresApiKey: false, docsUrl: 'https://docs.pendle.finance' },
-  { key: 'drift', name: 'Drift Perp', description: 'Solana perpetual futures trading (open, close, modify positions with leverage)', chain: 'solana', requiresApiKey: false, docsUrl: 'https://docs.drift.trade' },
+  { key: 'jupiter_swap', name: 'Jupiter Swap', description: 'Solana DEX aggregator', chain: 'solana', category: 'Swap', requiresApiKey: false, docsUrl: 'https://station.jup.ag/docs' },
+  { key: 'zerox_swap', name: '0x Swap', description: 'EVM DEX aggregator (AllowanceHolder)', chain: 'evm', category: 'Swap', requiresApiKey: true, docsUrl: 'https://dashboard.0x.org' },
+  { key: 'dcent_swap', name: "D'CENT Swap", description: 'DEX swap & cross-chain exchange aggregator (6 EVM chains)', chain: 'evm', category: 'Swap', requiresApiKey: false, docsUrl: 'https://dcentwallet.com' },
+  { key: 'lifi', name: 'LI.FI', description: 'Multi-chain DEX/bridge aggregator', chain: 'multi', category: 'Bridge', requiresApiKey: false, docsUrl: 'https://docs.li.fi' },
+  { key: 'lido_staking', name: 'Lido Staking', description: 'ETH liquid staking (stETH/wstETH)', chain: 'evm', category: 'Staking', requiresApiKey: false, docsUrl: 'https://docs.lido.fi' },
+  { key: 'jito_staking', name: 'Jito Staking', description: 'SOL liquid staking (JitoSOL)', chain: 'solana', category: 'Staking', requiresApiKey: false, docsUrl: 'https://www.jito.network/docs' },
+  { key: 'aave_v3', name: 'Aave V3 Lending', description: 'EVM lending protocol (supply, borrow, repay, withdraw)', chain: 'evm', category: 'Lending', requiresApiKey: false, docsUrl: 'https://docs.aave.com/developers' },
+  { key: 'kamino', name: 'Kamino Lending', description: 'Solana lending protocol (supply, borrow, repay, withdraw)', chain: 'solana', category: 'Lending', requiresApiKey: false, docsUrl: 'https://docs.kamino.finance' },
+  { key: 'pendle_yield', name: 'Pendle Yield', description: 'EVM yield trading: buy/sell PT/YT, redeem at maturity, add/remove LP', chain: 'evm', category: 'Yield', requiresApiKey: false, docsUrl: 'https://docs.pendle.finance' },
+  { key: 'drift', name: 'Drift Perp', description: 'Solana perpetual futures trading (open, close, modify positions with leverage)', chain: 'solana', category: 'Perp', requiresApiKey: false, docsUrl: 'https://docs.drift.trade' },
 ];
+
+const CATEGORY_ORDER: ProviderCategory[] = ['Swap', 'Bridge', 'Staking', 'Lending', 'Yield', 'Perp'];
 
 // ---------------------------------------------------------------------------
 // Types for provider API response
@@ -289,9 +295,18 @@ export default function ActionsPage() {
     );
   }
 
+  const groupedProviders = CATEGORY_ORDER
+    .map((cat) => ({ category: cat, items: BUILTIN_PROVIDERS.filter((bp) => bp.category === cat) }))
+    .filter((g) => g.items.length > 0);
+
   return (
     <div class="page">
-      {BUILTIN_PROVIDERS.map((bp) => {
+      {groupedProviders.map((group) => (
+        <div key={group.category}>
+          <h2 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 600, margin: 'var(--space-4) 0 var(--space-2)', borderBottom: '1px solid var(--border)', paddingBottom: 'var(--space-2)' }}>
+            {group.category}
+          </h2>
+          {group.items.map((bp) => {
         const status = getStatus(bp);
         const enabled = isEnabled(bp.key);
         const registered = getRegisteredProvider(bp.key);
@@ -493,6 +508,41 @@ export default function ActionsPage() {
                 </div>
               )}
 
+              {/* D'CENT Swap Advanced Settings -- only when D'CENT Swap is enabled */}
+              {bp.key === 'dcent_swap' && enabled && (
+                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
+                  <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-2)', color: 'var(--text-secondary)' }}>
+                    Advanced Settings
+                  </div>
+                  {(['dcent_swap_api_url', 'dcent_swap_default_slippage_bps', 'dcent_swap_max_slippage_bps', 'dcent_swap_exchange_poll_interval_ms', 'dcent_swap_exchange_poll_max_ms'] as const).map((shortKey) => {
+                    const cat = settings.value['actions'] as Record<string, string> | undefined;
+                    const currentValue = advancedDirty.value[shortKey] ?? cat?.[shortKey] ?? '';
+                    return (
+                      <div
+                        key={shortKey}
+                        style={{ marginBottom: 'var(--space-2)' }}
+                        onBlur={() => {
+                          const val = advancedDirty.value[shortKey];
+                          if (val !== undefined) {
+                            void handleAdvancedSave(shortKey, val);
+                          }
+                        }}
+                      >
+                        <FormField
+                          label={keyToLabel(shortKey)}
+                          name={`actions.${shortKey}`}
+                          type="text"
+                          value={currentValue}
+                          onChange={(v) => {
+                            advancedDirty.value = { ...advancedDirty.value, [shortKey]: String(v) };
+                          }}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
               {/* Actions list -- only when provider is enabled and registered */}
               {enabled && registered && registered.actions.length > 0 && (
                 <div style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--space-3)' }}>
@@ -550,7 +600,9 @@ export default function ActionsPage() {
             </div>
           </div>
         );
-      })}
+          })}
+        </div>
+      ))}
 
       {BUILTIN_PROVIDERS.length === 0 && (
         <div class="empty-state">

@@ -2,7 +2,7 @@
 
 - **유형:** BUG
 - **심각도:** HIGH
-- **상태:** OPEN
+- **상태:** FIXED
 - **발견일:** 2026-03-07
 - **마일스톤:** —
 - **영향 범위:** `packages/actions/src/index.ts`, `packages/actions/src/providers/kamino/index.ts`, `packages/actions/src/providers/drift/index.ts`

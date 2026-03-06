@@ -178,9 +178,9 @@ describe('ActionsPage', () => {
       expect(screen.getByText('Lido Staking')).toBeTruthy();
       expect(screen.getByText('Jito Staking')).toBeTruthy();
 
-      // All 9 should show Inactive (5 original + Aave V3 + Kamino + Pendle + Drift; ERC-8004 moved to Agent Identity page)
+      // All 10 should show Inactive (Jupiter, 0x, D'CENT, LI.FI, Lido, Jito, Aave V3, Kamino, Pendle, Drift)
       const inactiveBadges = screen.getAllByText('Inactive');
-      expect(inactiveBadges.length).toBe(9);
+      expect(inactiveBadges.length).toBe(10);
     });
 
     it('renders provider descriptions', async () => {
@@ -191,6 +191,20 @@ describe('ActionsPage', () => {
         expect(screen.getByText(/Solana DEX aggregator/)).toBeTruthy();
       });
       expect(screen.getByText(/EVM DEX aggregator \(AllowanceHolder\)/)).toBeTruthy();
+    });
+
+    it('renders category section headers', async () => {
+      mockApiCalls();
+      render(<ActionsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Swap')).toBeTruthy();
+      });
+      expect(screen.getByText('Bridge')).toBeTruthy();
+      expect(screen.getByText('Staking')).toBeTruthy();
+      expect(screen.getByText('Lending')).toBeTruthy();
+      expect(screen.getByText('Yield')).toBeTruthy();
+      expect(screen.getByText('Perp')).toBeTruthy();
     });
 
     it('renders chain badges', async () => {
