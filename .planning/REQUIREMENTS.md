@@ -9,17 +9,17 @@ Requirements for NFT support milestone. Each maps to roadmap phases.
 
 ### NFT Query (조회)
 
-- [ ] **NFTQ-01**: User can list NFTs owned by session wallet (`GET /v1/wallet/nfts`, sessionAuth)
-- [ ] **NFTQ-02**: Admin can list NFTs for any wallet (`GET /v1/wallets/{id}/nfts`, masterAuth)
-- [ ] **NFTQ-03**: NFT list includes tokenId, contractAddress/mintAddress, standard, name, image, description, amount, collection, assetId
-- [ ] **NFTQ-04**: NFT list supports cursor-based pagination
-- [ ] **NFTQ-05**: NFT list requires `network` query parameter
-- [ ] **NFTQ-06**: NFT list supports collection grouping (`?groupBy=collection`)
-- [ ] **NFTQ-07**: User can get individual NFT metadata (`GET /v1/wallet/nfts/{tokenIdentifier}`)
-- [ ] **NFTQ-08**: EVM metadata parsed from tokenURI with IPFS gateway auto-conversion
-- [ ] **NFTQ-09**: Solana metadata parsed from Metaplex JSON
-- [ ] **NFTQ-10**: Metadata cached in DB with 24h TTL (`nft_metadata_cache`)
-- [ ] **NFTQ-11**: Metadata includes attributes/traits array
+- [x] **NFTQ-01**: User can list NFTs owned by session wallet (`GET /v1/wallet/nfts`, sessionAuth)
+- [x] **NFTQ-02**: Admin can list NFTs for any wallet (`GET /v1/wallets/{id}/nfts`, masterAuth)
+- [x] **NFTQ-03**: NFT list includes tokenId, contractAddress/mintAddress, standard, name, image, description, amount, collection, assetId
+- [x] **NFTQ-04**: NFT list supports cursor-based pagination
+- [x] **NFTQ-05**: NFT list requires `network` query parameter
+- [x] **NFTQ-06**: NFT list supports collection grouping (`?groupBy=collection`)
+- [x] **NFTQ-07**: User can get individual NFT metadata (`GET /v1/wallet/nfts/{tokenIdentifier}`)
+- [x] **NFTQ-08**: EVM metadata parsed from tokenURI with IPFS gateway auto-conversion
+- [x] **NFTQ-09**: Solana metadata parsed from Metaplex JSON
+- [x] **NFTQ-10**: Metadata cached in DB with 24h TTL (`nft_metadata_cache`)
+- [x] **NFTQ-11**: Metadata includes attributes/traits array
 
 ### NFT Transfer (전송)
 
@@ -153,17 +153,17 @@ Requirements for NFT support milestone. Each maps to roadmap phases.
 | CHADP-02 | Phase 334 | Complete |
 | CHADP-03 | Phase 334 | Complete |
 | CHADP-04 | Phase 334 | Complete |
-| NFTQ-01 | Phase 335 | Pending |
-| NFTQ-02 | Phase 335 | Pending |
-| NFTQ-03 | Phase 335 | Pending |
-| NFTQ-04 | Phase 335 | Pending |
-| NFTQ-05 | Phase 335 | Pending |
-| NFTQ-06 | Phase 335 | Pending |
-| NFTQ-07 | Phase 335 | Pending |
-| NFTQ-08 | Phase 335 | Pending |
-| NFTQ-09 | Phase 335 | Pending |
-| NFTQ-10 | Phase 335 | Pending |
-| NFTQ-11 | Phase 335 | Pending |
+| NFTQ-01 | Phase 335 | Complete |
+| NFTQ-02 | Phase 335 | Complete |
+| NFTQ-03 | Phase 335 | Complete |
+| NFTQ-04 | Phase 335 | Complete |
+| NFTQ-05 | Phase 335 | Complete |
+| NFTQ-06 | Phase 335 | Complete |
+| NFTQ-07 | Phase 335 | Complete |
+| NFTQ-08 | Phase 335 | Complete |
+| NFTQ-09 | Phase 335 | Complete |
+| NFTQ-10 | Phase 335 | Complete |
+| NFTQ-11 | Phase 335 | Complete |
 | NFTT-02 | Phase 336 | Complete |
 | NFTT-03 | Phase 336 | Complete |
 | NFTT-04 | Phase 336 | Complete |

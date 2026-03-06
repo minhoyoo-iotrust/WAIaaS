@@ -40,6 +40,7 @@ Progress: [████████░░] 80%
 |-------|------|----------|-------|-------|
 | 333   | 01-02 | 8 min | 3 | 12 |
 | 334   | 01-03 | 14 min | 5 | 19 |
+| 335   | 01-02 | 12 min | 3 | 10 |
 | Phase 336 P01-02 | 12 min | 4 tasks | 8 files |
 
 ## Accumulated Context
@@ -64,6 +65,9 @@ D16: NftIndexerClient: retry max 3 (1s/2s/4s), Retry-After respected, cache TTL 
 D17: IChainAdapter extended to 25 methods (+3 NFT: buildNftTransferTx, transferNft, approveNft)
 D18: ERC-1155 single approval not supported, Solana collection-wide approval not supported
 D19: Metaplex NFT transfer reuses SPL token transfer with decimals=0
+D20: OpenAPI NFT schemas redefined with @hono/zod-openapi z (core uses plain zod)
+D21: tokenIdentifier uses lastIndexOf colon for EVM, direct mint for Solana
+D22: NftMetadataCacheService is optional dep in NftRouteDeps (graceful degradation)
 - [Phase 336]: buildUserOpCalls extended with optional walletAddress for NFT safeTransferFrom from param
 - [Phase 336]: APPROVE amount=0 -> single NFT approve, amount!=0 -> setApprovalForAll
 - [Phase 336]: NFT_TRANSFER default tier APPROVAL with settings override fallback
