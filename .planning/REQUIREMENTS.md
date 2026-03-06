@@ -84,9 +84,9 @@ Requirements for NFT support milestone. Each maps to roadmap phases.
 
 ### Skill Files (스킬)
 
-- [ ] **SKIL-01**: `skills/nft.skill.md` created with NFT query/transfer/approval docs
-- [ ] **SKIL-02**: `skills/wallet.skill.md` updated with NFT tab info
-- [ ] **SKIL-03**: `skills/transactions.skill.md` updated with NFT_TRANSFER type
+- [x] **SKIL-01**: `skills/nft.skill.md` created with NFT query/transfer/approval docs
+- [x] **SKIL-02**: `skills/wallet.skill.md` updated with NFT tab info
+- [x] **SKIL-03**: `skills/transactions.skill.md` updated with NFT_TRANSFER type
 
 ### Error Codes (에러)
 
@@ -183,9 +183,9 @@ Requirements for NFT support milestone. Each maps to roadmap phases.
 | ADUI-02 | Phase 337 | Pending |
 | ADUI-03 | Phase 337 | Pending |
 | ADUI-04 | Phase 337 | Pending |
-| SKIL-01 | Phase 337 | Pending |
-| SKIL-02 | Phase 337 | Pending |
-| SKIL-03 | Phase 337 | Pending |
+| SKIL-01 | Phase 337 | Complete |
+| SKIL-02 | Phase 337 | Complete |
+| SKIL-03 | Phase 337 | Complete |
 
 **Coverage:**
 - v31.0 requirements: 58 total
