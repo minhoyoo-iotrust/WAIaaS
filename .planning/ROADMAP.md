@@ -199,7 +199,7 @@ Phases execute in numeric order: 338 -> 339 -> 340 -> 341
 | 268-337 | v29.0-v31.0 | All | Complete | 2026-03-06 |
 | 338. Foundation | 2/2 | Complete    | 2026-03-06 | 2026-03-06 |
 | 339. UserOp Build API | 2/2 | Complete    | 2026-03-06 | - |
-| 340. UserOp Sign API | v31.2 | 2/2 | Complete | 2026-03-06 |
+| 340. UserOp Sign API | v31.2 | Complete    | 2026-03-06 | 2026-03-06 |
 | 341. Interface Integration | v31.2 | 0/2 | Not started | - |
 
 ---
