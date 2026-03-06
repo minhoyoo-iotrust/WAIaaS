@@ -23,6 +23,12 @@ const mockPrepareUserOperation = vi.fn().mockResolvedValue({
   preVerificationGas: 21000n,
 });
 
+vi.mock('permissionless/accounts', () => ({
+  toSimpleSmartAccount: vi.fn().mockResolvedValue({
+    address: '0xSmartAccountAddress1234567890abcdef12345678',
+  }),
+}));
+
 vi.mock('viem/account-abstraction', () => ({
   createBundlerClient: vi.fn().mockReturnValue({
     sendUserOperation: (...args: unknown[]) => mockSendUserOperation(...args),
@@ -32,9 +38,6 @@ vi.mock('viem/account-abstraction', () => ({
   createPaymasterClient: vi.fn().mockReturnValue({
     getPaymasterData: vi.fn(),
     getPaymasterStubData: vi.fn(),
-  }),
-  toSoladySmartAccount: vi.fn().mockResolvedValue({
-    address: '0xSmartAccountAddress1234567890abcdef12345678',
   }),
   entryPoint07Address: '0x0000000071727De22E5E9d8BAf0edAc6f37da032',
   entryPoint07Abi: [{ type: 'function', name: 'handleOps' }],

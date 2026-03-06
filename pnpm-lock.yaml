@@ -222,6 +222,9 @@ importers:
       jose:
         specifier: ^6.1.3
         version: 6.1.3
+      permissionless:
+        specifier: ^0.3.4
+        version: 0.3.4(viem@2.45.3(typescript@5.9.3)(zod@3.25.76))
       proper-lockfile:
         specifier: ^4.1.2
         version: 4.1.2
@@ -3415,6 +3418,15 @@ packages:
   pathval@2.0.1:
     resolution: {integrity: sha512-//nshmD55c46FuFw26xV/xFAaB5HF9Xdap7HJBBnrKdAd6/GxDBaNA1870O79+9ueg61cZLSVc+OaFlfmObYVQ==}
     engines: {node: '>= 14.16'}
+
+  permissionless@0.3.4:
+    resolution: {integrity: sha512-pml3Do0e/AMoAq89tzpXlhhxmVdOigQCCoC+df/kRCVFiJ9pQTgzKQKhxYTWWB2xW/AOgwBwGzLBfqFZrDpFiA==}
+    peerDependencies:
+      ox: ^0.11.3
+      viem: ^2.44.4
+    peerDependenciesMeta:
+      ox:
+        optional: true
 
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
@@ -7430,6 +7442,10 @@ snapshots:
   pathe@2.0.3: {}
 
   pathval@2.0.1: {}
+
+  permissionless@0.3.4(viem@2.45.3(typescript@5.9.3)(zod@3.25.76)):
+    dependencies:
+      viem: 2.45.3(typescript@5.9.3)(zod@3.25.76)
 
   picocolors@1.1.1: {}
 

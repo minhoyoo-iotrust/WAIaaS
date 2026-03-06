@@ -242,6 +242,10 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, NotificationCateg
   REPUTATION_THRESHOLD_TRIGGERED: 'policy',
   ERC8128_SIGNATURE_CREATED: 'security_alert',
   ERC8128_DOMAIN_BLOCKED: 'policy',
+  EXCHANGE_COMPLETED: 'transaction',
+  EXCHANGE_FAILED: 'transaction',
+  EXCHANGE_REFUNDED: 'transaction',
+  EXCHANGE_TIMEOUT: 'transaction',
 };
 
 // ---------------------------------------------------------------------------
@@ -305,6 +309,10 @@ export const EVENT_DESCRIPTIONS: Record<NotificationEventType, string> = {
   REPUTATION_THRESHOLD_TRIGGERED: 'Reputation threshold policy triggered tier escalation',
   ERC8128_SIGNATURE_CREATED: 'ERC-8128 HTTP message signature created',
   ERC8128_DOMAIN_BLOCKED: 'ERC-8128 signing blocked for unlisted domain',
+  EXCHANGE_COMPLETED: 'Cross-chain exchange completed',
+  EXCHANGE_FAILED: 'Cross-chain exchange failed',
+  EXCHANGE_REFUNDED: 'Cross-chain exchange refunded',
+  EXCHANGE_TIMEOUT: 'Cross-chain exchange monitoring timed out',
 };
 
 // ---------------------------------------------------------------------------

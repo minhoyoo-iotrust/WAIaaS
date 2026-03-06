@@ -159,6 +159,7 @@ export const messages: Messages = {
     BUILD_ALREADY_USED: '빌드 데이터가 이미 서명에 사용되었습니다',
     CALLDATA_MISMATCH: 'UserOperation callData가 빌드 데이터와 일치하지 않습니다',
     SENDER_MISMATCH: 'UserOperation sender가 지갑 주소와 일치하지 않습니다',
+    DEPRECATED_SMART_ACCOUNT: '이 Smart Account는 더 이상 사용되지 않는 factory로 생성되었습니다. 새 Smart Account 지갑을 생성해 주세요.',
   },
   // Notification templates (31 event types)
   notifications: {
@@ -230,6 +231,10 @@ export const messages: Messages = {
     REPUTATION_THRESHOLD_TRIGGERED: { title: '평판 임계값 트리거', body: '{walletName} 트랜잭션 티어가 평판 점수 {score}이(가) 임계값 {threshold} 미만으로 {tier}(으)로 상향되었습니다' },
     ERC8128_SIGNATURE_CREATED: { title: 'ERC-8128 서명 생성', body: '{walletName}이(가) {domain}에 대한 HTTP 요청에 서명했습니다. 메서드: {method}, 프리셋: {preset}' },
     ERC8128_DOMAIN_BLOCKED: { title: 'ERC-8128 도메인 차단', body: '{walletName}이(가) 차단된 도메인 {domain}에 대한 HTTP 요청 서명을 시도했습니다. 사유: {reason}' },
+    EXCHANGE_COMPLETED: { title: '크로스체인 교환 완료', body: '{providerId}를 통한 교환이 완료되었습니다. 트랜잭션 {transactionId}. 추적: {transactionStatusUrl}' },
+    EXCHANGE_FAILED: { title: '크로스체인 교환 실패', body: '{providerId}를 통한 교환이 실패했습니다. 트랜잭션 {transactionId}. 상태 확인: {transactionStatusUrl}' },
+    EXCHANGE_REFUNDED: { title: '크로스체인 교환 환불', body: '교환 {transactionId}이(가) {providerId}에 의해 환불되었습니다. 자금이 원본 지갑으로 반환되었습니다.' },
+    EXCHANGE_TIMEOUT: { title: '크로스체인 교환 모니터링 타임아웃', body: '교환 {transactionId} 모니터링이 1시간 후 시간 초과되었습니다. 수동으로 상태를 확인하세요: {transactionStatusUrl}' },
   },
   // System messages
   system: {

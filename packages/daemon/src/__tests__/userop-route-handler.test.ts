@@ -49,12 +49,26 @@ vi.mock('viem/account-abstraction', () => ({
   entryPoint07Abi: [],
 }));
 
+// Mock permissionless/accounts (used by SmartAccountService)
+vi.mock('permissionless/accounts', () => ({
+  toSimpleSmartAccount: vi.fn().mockResolvedValue({
+    address: '0x1234567890abcdef1234567890abcdef12345678',
+    encodeCalls: vi.fn(async () => '0xaabbccdd'),
+    getFactoryArgs: vi.fn(async () => ({
+      factory: '0xfactory0000000000000000000000000000000001',
+      factoryData: '0xfactorydata1234',
+    })),
+    signUserOperation: vi.fn(async () => '0xsig1234'),
+  }),
+}));
+
 // Mock SmartAccountService
 vi.mock('../infrastructure/smart-account/smart-account-service.js', () => ({
   SmartAccountService: vi.fn().mockImplementation(() => ({
     createSmartAccount: vi.fn(async () => ({
       address: '0x1234567890abcdef1234567890abcdef12345678',
       entryPoint: '0x0000000071727De22E5E9d8BAf0edAc6f37da032',
+      factoryAddress: '0x91E60e0613810449d098b0b5Ec8b51A0FE8c8985',
       account: {
         encodeCalls: vi.fn(async () => '0xaabbccdd'),
         getFactoryArgs: vi.fn(async () => ({
@@ -65,6 +79,8 @@ vi.mock('../infrastructure/smart-account/smart-account-service.js', () => ({
       },
     })),
   })),
+  SOLADY_FACTORY_ADDRESS: '0x5d82735936c6Cd5DE57cC3c1A799f6B2E6F933Df',
+  DEFAULT_SIMPLE_ACCOUNT_FACTORY_V07: '0x91E60e0613810449d098b0b5Ec8b51A0FE8c8985',
 }));
 
 // Mock @waiaas/adapter-evm
@@ -339,6 +355,24 @@ describe('POST /v1/wallets/:id/userop/build (route handler)', () => {
     }));
   });
 
+  it('rejects deprecated Solady factory wallet with DEPRECATED_SMART_ACCOUNT', async () => {
+    seedWallet({ factory_address: '0x5d82735936c6Cd5DE57cC3c1A799f6B2E6F933Df' });
+    const res = await app.request(
+      makeRequest(`/v1/wallets/${WALLET_ID}/userop/build`, {
+        request: {
+          type: 'TRANSFER',
+          to: '0x0000000000000000000000000000000000000001',
+          amount: '1000',
+        },
+        network: 'ethereum-sepolia',
+      }),
+    );
+
+    expect(res.status).toBe(410);
+    const body = await json(res);
+    expect(body.code).toBe('DEPRECATED_SMART_ACCOUNT');
+  });
+
   it('deployed wallet returns factory=null, factoryData=null', async () => {
     seedWallet({ deployed: 1 });
     const res = await app.request(
@@ -434,6 +468,21 @@ describe('POST /v1/wallets/:id/userop/sign (route handler)', () => {
     expect(res.status).toBe(400);
     const body = await json(res);
     expect(body.code).toBe('ACTION_VALIDATION_FAILED');
+  });
+
+  it('rejects deprecated Solady factory wallet with DEPRECATED_SMART_ACCOUNT', async () => {
+    seedWallet({ factory_address: '0x5d82735936c6Cd5DE57cC3c1A799f6B2E6F933Df' });
+    seedBuildRecord();
+    const res = await app.request(
+      makeRequest(`/v1/wallets/${WALLET_ID}/userop/sign`, {
+        buildId: '019548e8-f7a0-7000-8000-000000000099',
+        userOperation: validUserOp,
+      }),
+    );
+
+    expect(res.status).toBe(410);
+    const body = await json(res);
+    expect(body.code).toBe('DEPRECATED_SMART_ACCOUNT');
   });
 
   it('returns BUILD_NOT_FOUND for non-existent build', async () => {

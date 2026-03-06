@@ -27,7 +27,7 @@ import type * as schema from '../../infrastructure/database/schema.js';
 import type { LocalKeyStore } from '../../infrastructure/keystore/keystore.js';
 import type { MasterPasswordRef } from '../middleware/master-auth.js';
 import { buildUserOpCalls } from '../../pipeline/stages.js';
-import { SmartAccountService } from '../../infrastructure/smart-account/smart-account-service.js';
+import { SmartAccountService, SOLADY_FACTORY_ADDRESS } from '../../infrastructure/smart-account/smart-account-service.js';
 import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
 import { insertAuditLog } from '../../infrastructure/database/audit-helper.js';
 import type { NotificationService } from '../../notifications/notification-service.js';
@@ -101,6 +101,7 @@ const buildUserOpRoute = createRoute({
     ...buildErrorResponses([
       'WALLET_NOT_FOUND',
       'ACTION_VALIDATION_FAILED',
+      'DEPRECATED_SMART_ACCOUNT',
     ]),
   },
 });
@@ -141,6 +142,11 @@ export function userOpRoutes(deps: UserOpRouteDeps) {
       throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
         message: 'UserOp Build is only available for EVM wallets. Solana wallets are not supported.',
       });
+    }
+
+    // Check for deprecated Solady factory
+    if (wallet.factoryAddress?.toLowerCase() === SOLADY_FACTORY_ADDRESS.toLowerCase()) {
+      throw new WAIaaSError('DEPRECATED_SMART_ACCOUNT');
     }
 
     // -----------------------------------------------------------------------
@@ -337,6 +343,7 @@ export function userOpRoutes(deps: UserOpRouteDeps) {
       ...buildErrorResponses([
         'WALLET_NOT_FOUND',
         'ACTION_VALIDATION_FAILED',
+        'DEPRECATED_SMART_ACCOUNT',
         'BUILD_NOT_FOUND',
         'EXPIRED_BUILD',
         'BUILD_ALREADY_USED',
@@ -373,6 +380,11 @@ export function userOpRoutes(deps: UserOpRouteDeps) {
       throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
         message: 'UserOp Sign is only available for EVM wallets. Solana wallets are not supported.',
       });
+    }
+
+    // Check for deprecated Solady factory
+    if (wallet.factoryAddress?.toLowerCase() === SOLADY_FACTORY_ADDRESS.toLowerCase()) {
+      throw new WAIaaSError('DEPRECATED_SMART_ACCOUNT');
     }
 
     // -----------------------------------------------------------------------

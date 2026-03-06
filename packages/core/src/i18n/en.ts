@@ -213,6 +213,7 @@ export const messages: Messages = {
     BUILD_ALREADY_USED: 'Build data has already been used for signing',
     CALLDATA_MISMATCH: 'UserOperation callData does not match build data',
     SENDER_MISMATCH: 'UserOperation sender does not match wallet address',
+    DEPRECATED_SMART_ACCOUNT: 'This Smart Account was created with a deprecated factory. Please create a new Smart Account wallet.',
   },
   // Notification templates (30 event types)
   notifications: {
@@ -284,6 +285,10 @@ export const messages: Messages = {
     REPUTATION_THRESHOLD_TRIGGERED: { title: 'Reputation Threshold Triggered', body: '{walletName} transaction tier escalated to {tier} due to reputation score {score} below threshold {threshold}' },
     ERC8128_SIGNATURE_CREATED: { title: 'ERC-8128 Signature Created', body: '{walletName} signed HTTP request to {domain}. Method: {method}, Preset: {preset}' },
     ERC8128_DOMAIN_BLOCKED: { title: 'ERC-8128 Domain Blocked', body: '{walletName} attempted to sign HTTP request to blocked domain {domain}. Reason: {reason}' },
+    EXCHANGE_COMPLETED: { title: 'Cross-chain Exchange Completed', body: 'Exchange completed via {providerId}. Transaction {transactionId}. Track: {transactionStatusUrl}' },
+    EXCHANGE_FAILED: { title: 'Cross-chain Exchange Failed', body: 'Exchange failed via {providerId}. Transaction {transactionId}. Check status: {transactionStatusUrl}' },
+    EXCHANGE_REFUNDED: { title: 'Cross-chain Exchange Refunded', body: 'Exchange {transactionId} was refunded by {providerId}. Funds returned to source wallet.' },
+    EXCHANGE_TIMEOUT: { title: 'Cross-chain Exchange Monitoring Timeout', body: 'Exchange {transactionId} monitoring timed out after 1 hour. Check status manually: {transactionStatusUrl}' },
   },
   // System messages
   system: {

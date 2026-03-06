@@ -5,6 +5,7 @@ import { parse as parseToml } from 'smol-toml';
 const PushwooshConfigSchema = z.object({
   api_token: z.string().min(1),
   application_code: z.string().min(1),
+  api_url: z.string().url().default('https://api.pushwoosh.com/json/1.3/createMessage'),
 });
 
 const FcmConfigSchema = z.object({

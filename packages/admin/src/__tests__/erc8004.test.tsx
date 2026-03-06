@@ -129,7 +129,7 @@ describe('Erc8004Page', () => {
     mockApiGet
       .mockResolvedValueOnce(mockSettingsDisabled)  // settings
       .mockResolvedValueOnce({ providers: [] })  // providers
-      .mockResolvedValueOnce([])  // wallets (always loaded now)
+      .mockResolvedValueOnce({ items: [] })  // wallets (always loaded now)
     ;
 
     render(<Erc8004Page />);
@@ -147,7 +147,7 @@ describe('Erc8004Page', () => {
     mockApiGet
       .mockResolvedValueOnce(mockSettingsEnabled) // settings
       .mockResolvedValueOnce({ providers: [] }) // providers
-      .mockResolvedValueOnce(mockWallets) // wallets
+      .mockResolvedValueOnce({ items: mockWallets }) // wallets
       .mockResolvedValueOnce(mockRegFile); // registration file for w1
 
     render(<Erc8004Page />);
@@ -167,7 +167,7 @@ describe('Erc8004Page', () => {
     mockApiGet
       .mockResolvedValueOnce(mockSettingsDisabled) // settings
       .mockResolvedValueOnce({ providers: [] }) // providers
-      .mockResolvedValueOnce(mockWallets) // wallets
+      .mockResolvedValueOnce({ items: mockWallets }) // wallets
       .mockResolvedValueOnce(mockRegFile); // registration file for w1
 
     render(<Erc8004Page />);
@@ -187,7 +187,7 @@ describe('Erc8004Page', () => {
     mockApiGet
       .mockResolvedValueOnce(mockSettingsEnabled) // settings
       .mockResolvedValueOnce({ providers: [] }) // providers
-      .mockResolvedValueOnce(mockWallets) // wallets
+      .mockResolvedValueOnce({ items: mockWallets }) // wallets
       .mockResolvedValueOnce(mockRegFile); // registration file for w1
 
     render(<Erc8004Page />);
@@ -204,7 +204,7 @@ describe('Erc8004Page', () => {
     mockApiGet
       .mockResolvedValueOnce(mockSettingsEnabled)
       .mockResolvedValueOnce({ providers: [] }) // providers
-      .mockResolvedValueOnce(mockWallets)
+      .mockResolvedValueOnce({ items: mockWallets })
       .mockResolvedValueOnce(mockRegFile);
 
     render(<Erc8004Page />);
@@ -232,7 +232,7 @@ describe('Erc8004Page', () => {
     mockApiGet
       .mockResolvedValueOnce(mockSettingsEnabled)
       .mockResolvedValueOnce({ providers: [] }) // providers
-      .mockResolvedValueOnce(mockWallets)
+      .mockResolvedValueOnce({ items: mockWallets })
       .mockResolvedValueOnce(mockRegFile)
       .mockResolvedValueOnce(mockRegFile); // For registration file load
 
@@ -258,7 +258,7 @@ describe('Erc8004Page', () => {
     mockApiGet
       .mockResolvedValueOnce(mockSettingsEnabled)
       .mockResolvedValueOnce({ providers: [] }) // providers
-      .mockResolvedValueOnce(mockWallets)
+      .mockResolvedValueOnce({ items: mockWallets })
       .mockResolvedValueOnce(mockRegFile);
 
     mockApiPost.mockResolvedValueOnce({ uri: 'wc:test-uri@2' });
@@ -295,7 +295,7 @@ describe('Erc8004Page', () => {
       .mockResolvedValueOnce([]) // wallets
       .mockResolvedValueOnce(mockSettingsEnabled) // settings after toggle
       .mockResolvedValueOnce({ providers: [] }) // providers reload
-      .mockResolvedValueOnce(mockWallets); // wallets after reload
+      .mockResolvedValueOnce({ items: mockWallets }); // wallets after reload
 
     mockApiPut.mockResolvedValueOnce({ updated: 1, settings: mockSettingsEnabled });
 
@@ -322,7 +322,7 @@ describe('Erc8004Page', () => {
       mockApiGet
         .mockResolvedValueOnce(mockSettingsEnabled) // settings
         .mockResolvedValueOnce(mockProvidersWithErc8004) // providers
-        .mockResolvedValueOnce(mockWallets) // wallets
+        .mockResolvedValueOnce({ items: mockWallets }) // wallets
         .mockResolvedValueOnce(mockRegFile); // registration file
 
       render(<Erc8004Page />);
@@ -339,7 +339,7 @@ describe('Erc8004Page', () => {
       mockApiGet
         .mockResolvedValueOnce(mockSettingsEnabled)
         .mockResolvedValueOnce(mockProvidersWithErc8004)
-        .mockResolvedValueOnce(mockWallets)
+        .mockResolvedValueOnce({ items: mockWallets })
         .mockResolvedValueOnce(mockRegFile);
 
       render(<Erc8004Page />);
@@ -355,7 +355,7 @@ describe('Erc8004Page', () => {
       mockApiGet
         .mockResolvedValueOnce(mockSettingsDisabled)
         .mockResolvedValueOnce(mockProvidersWithErc8004)
-        .mockResolvedValueOnce(mockWallets)
+        .mockResolvedValueOnce({ items: mockWallets })
         .mockResolvedValueOnce(mockRegFile);
 
       render(<Erc8004Page />);
@@ -376,7 +376,7 @@ describe('Erc8004Page', () => {
       mockApiGet
         .mockResolvedValueOnce(mockSettingsEnabled)
         .mockResolvedValueOnce(mockProvidersWithErc8004)
-        .mockResolvedValueOnce(mockWallets)
+        .mockResolvedValueOnce({ items: mockWallets })
         .mockResolvedValueOnce(mockRegFile);
 
       render(<Erc8004Page />);
@@ -399,7 +399,7 @@ describe('Erc8004Page', () => {
       mockApiGet
         .mockResolvedValueOnce(mockSettingsEnabled)
         .mockResolvedValueOnce(mockProvidersWithErc8004)
-        .mockResolvedValueOnce(mockWallets)
+        .mockResolvedValueOnce({ items: mockWallets })
         .mockResolvedValueOnce(mockRegFile);
 
       mockApiPut.mockResolvedValueOnce({

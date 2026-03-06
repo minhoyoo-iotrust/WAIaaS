@@ -1,4 +1,4 @@
-export { SmartAccountService } from './smart-account-service.js';
+export { SmartAccountService, SOLADY_FACTORY_ADDRESS, DEFAULT_SIMPLE_ACCOUNT_FACTORY_V07 } from './smart-account-service.js';
 export type { SmartAccountCreateOptions, SmartAccountInfo } from './smart-account-service.js';
 export {
   createSmartAccountBundlerClient,

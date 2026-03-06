@@ -18,11 +18,13 @@ function createV44Db(): InstanceType<typeof Database> {
   sqlite.pragma('foreign_keys = ON');
   pushSchema(sqlite);
 
-  // Downgrade: remove v45 artifacts to simulate a v44 DB
+  // Downgrade: remove v45+ artifacts to simulate a v44 DB
   sqlite.pragma('foreign_keys = OFF');
   sqlite.exec('DROP TABLE IF EXISTS userop_builds');
   sqlite.exec('DROP INDEX IF EXISTS idx_userop_builds_wallet_id');
   sqlite.exec('DROP INDEX IF EXISTS idx_userop_builds_expires');
+  // v47 adds factory_address column to wallets -- drop it to allow re-migration
+  sqlite.exec('ALTER TABLE wallets DROP COLUMN factory_address');
   sqlite.exec('DELETE FROM schema_version WHERE version >= 45');
   sqlite.pragma('foreign_keys = ON');
 
@@ -70,7 +72,7 @@ describe('DB v45 Migration: userop_builds', () => {
 
   // Test 1: LATEST_SCHEMA_VERSION === 45
   it('T1: LATEST_SCHEMA_VERSION is 45', () => {
-    expect(LATEST_SCHEMA_VERSION).toBe(45);
+    expect(LATEST_SCHEMA_VERSION).toBe(47);
   });
 
   // Test 2: userop_builds table exists with 9 columns
@@ -155,7 +157,7 @@ describe('DB v45 Migration: userop_builds', () => {
     runMigrations(sqlite);
 
     expect(tableExists(sqlite, 'userop_builds')).toBe(true);
-    expect(getMaxVersion(sqlite)).toBe(45);
+    expect(getMaxVersion(sqlite)).toBe(47);
 
     const cols = getTableColumns(sqlite, 'userop_builds');
     expect(cols).toContain('id');

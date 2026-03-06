@@ -90,6 +90,7 @@ export const wallets = sqliteTable(
     aaBundlerUrl: text('aa_bundler_url'),
     aaPaymasterUrl: text('aa_paymaster_url'),
     aaPaymasterPolicyId: text('aa_paymaster_policy_id'),
+    factoryAddress: text('factory_address'),
   },
   (table) => [
     uniqueIndex('idx_wallets_public_key').on(table.publicKey),

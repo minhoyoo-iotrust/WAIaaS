@@ -504,6 +504,47 @@
 
 ---
 
+## Milestone: v31.3 — DCent Swap Aggregator 통합
+
+**Shipped:** 2026-03-07
+**Phases:** 5 | **Plans:** 9 | **Sessions:** 1
+
+### What Was Built
+- DCent Swap API 7-endpoint deep research + 936-line design doc (doc 77, 17 design decisions)
+- CAIP-19 ↔ DCent Currency ID bidirectional converter (8 native token mappings, 24h stale-while-revalidate cache)
+- DEX Swap execution: approve+txdata BATCH pipeline, min/max validation, provider sorting by rate
+- Cross-chain Exchange: payInAddress TRANSFER + ExchangeStatusTracker polling + 4 EXCHANGE_* notification events
+- 2-hop auto-routing fallback: 6 EVM chains intermediate tokens, isNoRouteError guard, partial failure handling
+- DcentSwapActionProvider (IActionProvider, 4 actions) + 4 MCP tools + 4 SDK methods + 7 Admin Settings + connect-info capability
+
+### What Worked
+- 5 phases 전체 1일 완료 (54 commits, 110 files) — 기존 ActionProvider/pipeline 패턴 완전 재활용
+- Phase 342 리서치에서 DCent API의 multi-hop 자체 지원(DS-04) 확인으로 Phase 345 범위를 폴백으로 축소 — 불필요한 구현 제거
+- settings-driven factory 패턴으로 DcentSwapActionProvider 등록이 기존 erc8004_agent 패턴과 일관됨
+- MSW(Mock Service Worker) 도입으로 HTTP-level DCent API 모킹이 깔끔하게 구현
+
+### What Was Inefficient
+- ExchangeStatusTracker 구현 후 daemon 라이프사이클 등록 누락 — 감사에서 XCHG-03/XCHG-04 partial 발견 후 별도 fix commit
+- hot-reload BUILTIN_NAMES에 dcent_swap 미등록 — 감사에서 발견 후 수정 (erc8004_agent도 동일 이슈, pre-existing)
+- VERIFICATION.md 5 phases 전부 미생성 — 프로세스 갭 (코드 품질에는 영향 없음)
+
+### Patterns Established
+- DCent Swap dual-flow 패턴: DEX(txdata→BATCH[approve,CONTRACT_CALL]) vs Exchange(payInAddress→TRANSFER+polling)
+- Currency mapper 패턴: 하드코딩 네이티브 토큰 맵 + 규칙 기반 토큰 변환(token standard prefix + address)
+- auto-routing fallback 패턴: isNoRouteError guard → Promise.allSettled intermediate probing → 2-hop BATCH
+
+### Key Lessons
+1. ExchangeStatusTracker 등록 누락처럼 "구현은 했지만 wiring 누락"이 반복됨 — 체크리스트에 "daemon lifecycle registration" 항목 필수
+2. buildCaip19 내부 헬퍼 도입으로 Zod v3 compat 문제 회피 — 테스트 환경과 런타임 Zod 버전 차이 주의
+3. DCent Swap 같은 외부 API aggregator 통합 시 리서치 phase가 구현 범위를 정확히 잡아줌 — Phase 345 축소 결정이 대표 사례
+
+### Cost Observations
+- Model mix: ~100% opus (quality profile)
+- Sessions: 1
+- Notable: 110 files, +11,612/-211 lines, 1일 완료 — 외부 API 통합 마일스톤이 리서치 선행으로 빠르게 수렴
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -523,6 +564,7 @@
 | v30.11 | 1 | 3 | Admin UI DX 개선, 48 파일 1일 완료 |
 | v31.0 | 1 | 5 | NFT 풀스택(타입+인덱서+어댑터+파이프라인+UI), 112 파일 2.5시간 완료 |
 | v31.2 | 1 | 4 | UserOp Build/Sign API, 64 파일 1.5시간 완료 |
+| v31.3 | 1 | 5 | DCent Swap Aggregator 통합, 110 파일 1일 완료 |
 
 ### Cumulative Quality
 
@@ -541,6 +583,7 @@
 | v30.11 | ~6,822 (unchanged) | maintained | +9 decisions |
 | v31.0 | ~6,930 (+108) | maintained | +24 decisions |
 | v31.2 | ~6,993 (+63) | maintained | +15 decisions |
+| v31.3 | ~7,109 (+116) | maintained | +17 decisions |
 
 ### Top Lessons (Verified Across Milestones)
 

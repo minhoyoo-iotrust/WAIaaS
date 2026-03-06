@@ -12,7 +12,8 @@ describe('Error code matrix', () => {
     // v30.10: +ERC8128_DISABLED, +ERC8128_DOMAIN_NOT_ALLOWED, +ERC8128_RATE_LIMITED (+3)
     // v31.0: +NFT_NOT_FOUND, +INDEXER_NOT_CONFIGURED, +UNSUPPORTED_NFT_STANDARD, +INDEXER_API_ERROR, +NFT_METADATA_FETCH_FAILED (+5)
     // v31.2: +EXPIRED_BUILD, +BUILD_NOT_FOUND, +BUILD_ALREADY_USED, +CALLDATA_MISMATCH, +SENDER_MISMATCH (+5)
-    expect(Object.keys(ERROR_CODES)).toHaveLength(133);
+    // v31.3: +DEPRECATED_SMART_ACCOUNT (+1)
+    expect(Object.keys(ERROR_CODES)).toHaveLength(134);
   });
 
   it('every error code entry has required fields', () => {

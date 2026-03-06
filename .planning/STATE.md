@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v31.2
-milestone_name: UserOp Build/Sign API
-status: shipped
-stopped_at: Milestone v31.2 shipped
-last_updated: "2026-03-06T10:10:00.000Z"
-last_activity: 2026-03-06 -- Milestone v31.2 shipped
+milestone: v31.3
+milestone_name: DCent Swap Aggregator 통합
+status: archived
+stopped_at: Milestone v31.3 archived
+last_updated: "2026-03-07T00:00:00.000Z"
+last_activity: 2026-03-07 — Milestone v31.3 archived
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 8
-  completed_plans: 8
+  total_phases: 5
+  completed_phases: 5
+  total_plans: 9
+  completed_plans: 9
   percent: 100
 ---
 
@@ -18,38 +18,25 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-06)
+See: .planning/PROJECT.md (updated 2026-03-07)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
 **Current focus:** Planning next milestone
 
 ## Current Position
 
-Milestone: v31.2 UserOp Build/Sign API -- SHIPPED 2026-03-06
-Status: Milestone complete, ready for next milestone
-Last activity: 2026-03-06 -- Milestone v31.2 shipped
+Phase: N/A — Milestone v31.3 archived
+Plan: N/A
+Status: Ready for next milestone
+Last activity: 2026-03-07 — Milestone v31.3 archived
 
-Progress: [██████████] 100%
-
-## Performance Metrics
-
-**Cumulative:** 87 milestones shipped, 341 phases completed, ~775 plans, ~2,347 reqs, ~6,993+ tests, ~278,864 LOC TS
-
-| Phase | Plan | Duration | Tasks | Files |
-|-------|------|----------|-------|-------|
-| 338 | 01 | 5min | 2 | 4 |
-| 338 | 02 | 5min | 2 | 12 |
-| 339 | 01+02 | 9min | 2 | 7 |
-| 340 | 01 | 5min | 2 | 5 |
-| 340 | 02 | 2min | 1 | 2 |
-| 341 | 01 | 5min | 2 | 8 |
-| 341 | 02 | 5min | 2 | 7 |
+Progress: [██████████] 100% (milestone archived)
 
 ## Accumulated Context
 
 ### Decisions
 
-(Cleared -- see PROJECT.md for full decision log)
+(Cleared for next milestone — see .planning/milestones/v31.3-ROADMAP.md for archived decisions)
 
 ### Blockers/Concerns
 
@@ -59,6 +46,6 @@ Progress: [██████████] 100%
 
 ## Session Continuity
 
-Last session: 2026-03-06T10:10:00.000Z
-Stopped at: Milestone v31.2 shipped
+Last session: 2026-03-07
+Stopped at: Milestone v31.3 archived
 Resume file: None

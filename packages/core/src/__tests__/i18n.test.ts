@@ -51,7 +51,8 @@ describe('i18n message system', () => {
     // v31.0: +NFT_NOT_FOUND, +INDEXER_NOT_CONFIGURED, +UNSUPPORTED_NFT_STANDARD, +INDEXER_API_ERROR, +NFT_METADATA_FETCH_FAILED (+5)
     // v31.2: +EXPIRED_BUILD, +BUILD_NOT_FOUND, +BUILD_ALREADY_USED, +CALLDATA_MISMATCH, +SENDER_MISMATCH (+5)
     const en = getMessages('en');
-    expect(Object.keys(en.errors).length).toBe(133);
+    // v31.3: +DEPRECATED_SMART_ACCOUNT (+1)
+    expect(Object.keys(en.errors).length).toBe(134);
   });
 
   it('error code keys match ERROR_CODES keys', () => {

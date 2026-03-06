@@ -269,6 +269,13 @@
 | 252 | ENHANCEMENT | MEDIUM | Smart Account 페이마스터 Policy ID 전달 경로 추가 — Alchemy 대납 필수, Pimlico 한도 제어 | — | FIXED | 2026-03-06 |
 | 253 | ENHANCEMENT | MEDIUM | Push Relay 서버 --debug 모드 추가 — 로그 레벨 시스템 + 상세 디버깅 로그 | v31.2 | FIXED | 2026-03-06 |
 | 254 | BUG | HIGH | Push Relay 서버 CORS 미들웨어 미설정으로 cross-origin 디바이스 등록 차단 | v31.2 | FIXED | 2026-03-06 |
+| 255 | ENHANCEMENT | MEDIUM | Pushwoosh API base URL 설정 가능하도록 개선 — 기본값 api.pushwoosh.com 변경 + config.toml api_url 옵션 | v31.3 | FIXED | 2026-03-07 |
+| 256 | ENHANCEMENT | HIGH | Smart Account 멀티체인 Factory 전환 (permissionless.js) — Solady factory 2개 체인 제한 해소 + 기존 AA 지갑 deprecation | v31.3 | FIXED | 2026-03-07 |
+| 257 | BUG | MEDIUM | Admin UI Drift Perp 활성화 상태가 항상 Inactive — BUILTIN_PROVIDERS key `drift_perp` vs DB key `drift` 불일치 | — | FIXED | 2026-03-07 |
+| 258 | BUG | HIGH | Admin 세션 Reissue가 무제한 세션을 만료로 판정 — expiresAt=0 가드 누락 + 헬퍼 함수 도입으로 재발 방지 | v31.3 | FIXED | 2026-03-07 |
+| 259 | BUG | HIGH | Admin UI ERC-8004 페이지 wallets API 응답 형식 불일치로 무한 로딩 | v31.3 | FIXED | 2026-03-07 |
+| 260 | BUG | HIGH | 스테이킹 포지션 미표시 — CONTRACT_CALL amount NULL 저장 | v31.3 | FIXED | 2026-03-07 |
+| 261 | BUG | HIGH | Solana simulateTransaction 에러 객체 BigInt JSON 직렬화 실패 — 실패 사유 마스킹 | — | FIXED | 2026-03-07 |
 
 ## Type Legend
 
@@ -281,8 +288,8 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 252
+- **FIXED:** 259
 - **RESOLVED:** 2
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 255
+- **Total:** 262

@@ -3,7 +3,7 @@ name: "WAIaaS Transactions"
 description: "All 6 transaction types (TRANSFER, TOKEN_TRANSFER, CONTRACT_CALL, APPROVE, BATCH, NFT_TRANSFER) with lifecycle management"
 category: "api"
 tags: [wallet, blockchain, solana, ethereum, transactions, waiass]
-version: "2.5.0-rc"
+version: "2.6.0-rc"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]
@@ -49,7 +49,7 @@ All transaction types accept a `network` parameter to specify the target network
 
 ## 2. Type 1: TRANSFER (Native SOL/ETH)
 
-Transfer native tokens to a recipient address. No policy prerequisite -- subject to SPENDING_LIMIT if configured.
+Transfer native tokens to a recipient address. No policy prerequisite -- subject to SPENDING_LIMIT if configured. DCent Exchange uses TRANSFER to send funds to the exchange service's payInAddress for cross-chain swaps.
 
 ### Request
 
@@ -274,7 +274,7 @@ Parameters:
 
 ## 6. Type 5: BATCH (Multiple Instructions)
 
-Execute multiple instructions in a single transaction. **Solana only** -- EVM returns `BATCH_NOT_SUPPORTED` error.
+Execute multiple instructions in a single transaction. **Solana only** -- EVM returns `BATCH_NOT_SUPPORTED` error. DCent DEX Swap uses BATCH with approve + swap txdata for ERC-20 sell orders (resolved internally by the action provider, not user-facing BATCH).
 
 ### Request
 

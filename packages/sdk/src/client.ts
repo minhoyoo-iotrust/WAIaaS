@@ -101,6 +101,10 @@ import type {
   NftMetadataParams,
   NftMetadataResponse,
   TransferNftParams,
+  DcentQuoteParams,
+  DcentDexSwapParams,
+  DcentExchangeParams,
+  DcentSwapStatusParams,
 } from './types.js';
 
 export class WAIaaSClient {
@@ -856,6 +860,40 @@ export class WAIaaSClient {
       ),
       this.retryOptions,
     );
+  }
+
+  // --- DCent Swap convenience methods ---
+
+  /** Get DCent swap quotes (informational -- no transaction created). */
+  async getDcentQuotes(params: DcentQuoteParams): Promise<ExecuteActionResponse> {
+    const { network, walletId, ...rest } = params;
+    return this.executeAction('dcent_swap', 'get_quotes', {
+      params: rest, network, walletId,
+    });
+  }
+
+  /** Execute DCent DEX swap (same-chain, approve+txdata BATCH). */
+  async dcentDexSwap(params: DcentDexSwapParams): Promise<ExecuteActionResponse> {
+    const { network, walletId, gasCondition, ...rest } = params;
+    return this.executeAction('dcent_swap', 'dex_swap', {
+      params: rest, network, walletId, gasCondition,
+    });
+  }
+
+  /** Execute DCent cross-chain exchange (payInAddress TRANSFER). */
+  async dcentExchange(params: DcentExchangeParams): Promise<ExecuteActionResponse> {
+    const { network, walletId, gasCondition, ...rest } = params;
+    return this.executeAction('dcent_swap', 'exchange', {
+      params: rest, network, walletId, gasCondition,
+    });
+  }
+
+  /** Get DCent swap/exchange status (informational -- no transaction created). */
+  async getDcentSwapStatus(params: DcentSwapStatusParams): Promise<ExecuteActionResponse> {
+    const { network, walletId, ...rest } = params;
+    return this.executeAction('dcent_swap', 'swap_status', {
+      params: rest, network, walletId,
+    });
   }
 
   // --- ERC-8004 write actions (via executeAction) ---

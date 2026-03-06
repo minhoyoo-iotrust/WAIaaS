@@ -53,7 +53,7 @@ import { rpcConfigKey } from '../infrastructure/adapter-pool.js';
 // v30.6: ERC-4337 smart account imports
 import { privateKeyToAccount } from 'viem/accounts';
 import { createPublicClient, http, encodeFunctionData, toHex, type Hex } from 'viem';
-import { SmartAccountService } from '../infrastructure/smart-account/smart-account-service.js';
+import { SmartAccountService, SOLADY_FACTORY_ADDRESS } from '../infrastructure/smart-account/smart-account-service.js';
 import { createSmartAccountBundlerClient } from '../infrastructure/smart-account/smart-account-clients.js';
 import type { WalletProviderData } from '../infrastructure/smart-account/smart-account-clients.js';
 import { decryptProviderApiKey } from '../infrastructure/smart-account/aa-provider-crypto.js';
@@ -87,6 +87,7 @@ export interface PipelineContext {
     aaBundlerUrl?: string | null;
     aaPaymasterUrl?: string | null;
     aaPaymasterPolicyId?: string | null;
+    factoryAddress?: string | null;
   };
   resolvedNetwork: string;
   request: SendTransactionRequest | TransactionRequest;
@@ -400,7 +401,11 @@ export async function stage1Validate(ctx: PipelineContext): Promise<void> {
   const now = new Date(Math.floor(Date.now() / 1000) * 1000);
 
   // Extract common and type-specific fields for DB INSERT
-  const amount = 'amount' in req ? (req as { amount?: string }).amount : undefined;
+  let amount = 'amount' in req ? (req as { amount?: string }).amount : undefined;
+  // CONTRACT_CALL uses 'value' for native token amount (e.g. ETH sent with contract call)
+  if (!amount && 'value' in req) {
+    amount = (req as { value?: string }).value;
+  }
   const toAddress = 'to' in req ? (req as { to?: string }).to : undefined;
 
   // Serialize original request for pipeline re-entry (#208)
@@ -1346,6 +1351,11 @@ export function buildUserOpCalls(
  * - Other -> CHAIN_ERROR
  */
 async function stage5ExecuteSmartAccount(ctx: PipelineContext): Promise<void> {
+  // Check for deprecated Solady factory before proceeding
+  if (ctx.wallet.factoryAddress?.toLowerCase() === SOLADY_FACTORY_ADDRESS.toLowerCase()) {
+    throw new WAIaaSError('DEPRECATED_SMART_ACCOUNT');
+  }
+
   const reqAmount = formatNotificationAmount(ctx.request, ctx.wallet.chain);
   const reqTo = getRequestTo(ctx.request);
 

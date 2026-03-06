@@ -35,12 +35,15 @@ const mockCreatePaymasterClient = vi.fn().mockReturnValue({
   getPaymasterStubData: vi.fn(),
 });
 
+vi.mock('permissionless/accounts', () => ({
+  toSimpleSmartAccount: vi.fn().mockResolvedValue({
+    address: '0xSmartAccountAddress1234567890abcdef12345678',
+  }),
+}));
+
 vi.mock('viem/account-abstraction', () => ({
   createBundlerClient: (...args: unknown[]) => mockCreateBundlerClient(...args),
   createPaymasterClient: (...args: unknown[]) => mockCreatePaymasterClient(...args),
-  toSoladySmartAccount: vi.fn().mockResolvedValue({
-    address: '0xSmartAccountAddress1234567890abcdef12345678',
-  }),
   entryPoint07Address: '0x0000000071727De22E5E9d8BAf0edAc6f37da032',
   entryPoint07Abi: [{ type: 'function', name: 'handleOps' }],
 }));

@@ -58,6 +58,7 @@ function mockSmartAccountService(): SmartAccountService {
       address: MOCK_SMART_ACCOUNT_ADDRESS,
       signerKey: MOCK_EOA_PUBLIC_KEY,
       entryPoint: '0x0000000071727De22E5E9d8BAf0edAc6f37da032',
+      factoryAddress: '0x91E60e0613810449d098b0b5Ec8b51A0FE8c8985',
       account: { address: MOCK_SMART_ACCOUNT_ADDRESS },
     }),
     getDefaultEntryPoint: () => '0x0000000071727De22E5E9d8BAf0edAc6f37da032' as `0x${string}`,
@@ -256,6 +257,26 @@ describe('Smart Account Wallet Creation', () => {
   // -----------------------------------------------------------------------
   // DB migration v38 backward compatibility
   // -----------------------------------------------------------------------
+
+  it('smart account creation saves factoryAddress in DB', () => {
+    // Verify via direct DB insert/read that factoryAddress is persisted in the schema
+    const conn = createDatabase(':memory:');
+    const rawSqlite = conn.sqlite;
+    pushSchema(rawSqlite);
+
+    const ts = Math.floor(Date.now() / 1000);
+    const walletId = generateId();
+    rawSqlite.prepare(
+      `INSERT INTO wallets (id, name, chain, environment, public_key, status, owner_verified, account_type, signer_key, deployed, entry_point, factory_address, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(walletId, 'Smart Wallet', 'ethereum', 'testnet', '0xSMART', 'ACTIVE', 0, 'smart', '0xEOA', 0, '0x0000000071727De22E5E9d8BAf0edAc6f37da032', '0x91E60e0613810449d098b0b5Ec8b51A0FE8c8985', ts, ts);
+
+    const row = rawSqlite.prepare('SELECT factory_address FROM wallets WHERE id = ?').get(walletId) as any;
+    expect(row).toBeDefined();
+    expect(row.factory_address).toBe('0x91E60e0613810449d098b0b5Ec8b51A0FE8c8985');
+
+    rawSqlite.close();
+  });
 
   it('DB migration v38 preserves existing EOA wallets with defaults', () => {
     // Create a fresh DB and push schema (includes v38 columns in DDL)

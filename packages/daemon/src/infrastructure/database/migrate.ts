@@ -79,7 +79,7 @@ const LEGACY_NETWORK_NORMALIZE: Record<string, string> = {
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 45;
+export const LATEST_SCHEMA_VERSION = 47;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -108,7 +108,8 @@ function getCreateTableStatements(): string[] {
   aa_provider_api_key_encrypted TEXT,
   aa_bundler_url TEXT,
   aa_paymaster_url TEXT,
-  aa_paymaster_policy_id TEXT
+  aa_paymaster_policy_id TEXT,
+  factory_address TEXT
 )`,
 
     // Table 2: sessions (v26.4: wallet_id removed, v26.5: token_issued_count added)
@@ -2704,6 +2705,38 @@ MIGRATIONS.push({
     `);
     sqlite.exec('CREATE INDEX IF NOT EXISTS idx_userop_builds_wallet_id ON userop_builds(wallet_id)');
     sqlite.exec('CREATE INDEX IF NOT EXISTS idx_userop_builds_expires ON userop_builds(expires_at)');
+  },
+});
+
+// ── v46: Backfill CONTRACT_CALL amount from metadata (#260) ──────────
+MIGRATIONS.push({
+  version: 46,
+  description: 'Backfill CONTRACT_CALL amount from metadata.originalRequest.value',
+  up: (sqlite) => {
+    sqlite.exec(`
+      UPDATE transactions
+      SET amount = json_extract(metadata, '$.originalRequest.value')
+      WHERE type = 'CONTRACT_CALL'
+        AND amount IS NULL
+        AND json_extract(metadata, '$.originalRequest.value') IS NOT NULL
+    `);
+  },
+});
+
+// ── v47: Add factory_address column to wallets (#256) ────────────────
+MIGRATIONS.push({
+  version: 47,
+  description: 'Add factory_address column to wallets for multichain Smart Account factory tracking',
+  up: (sqlite) => {
+    // Add nullable factory_address column
+    sqlite.exec(`ALTER TABLE wallets ADD COLUMN factory_address TEXT`);
+
+    // Backfill: existing smart accounts used the Solady factory
+    sqlite.exec(`
+      UPDATE wallets
+      SET factory_address = '0x5d82735936c6Cd5DE57cC3c1A799f6B2E6F933Df'
+      WHERE account_type = 'smart' AND factory_address IS NULL
+    `);
   },
 });
 
