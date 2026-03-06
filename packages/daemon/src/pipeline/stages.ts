@@ -1116,12 +1116,39 @@ const ERC20_USEROP_ABI = [
   { type: 'function', name: 'approve', inputs: [{ name: 'spender', type: 'address' }, { name: 'amount', type: 'uint256' }], outputs: [{ type: 'bool' }] },
 ] as const;
 
+/** ERC-721 ABI for NFT UserOp calls (safeTransferFrom, approve, setApprovalForAll). */
+export const ERC721_USEROP_ABI = [
+  { type: 'function', name: 'safeTransferFrom', inputs: [
+    { name: 'from', type: 'address' }, { name: 'to', type: 'address' }, { name: 'tokenId', type: 'uint256' },
+  ], outputs: [] },
+  { type: 'function', name: 'approve', inputs: [
+    { name: 'to', type: 'address' }, { name: 'tokenId', type: 'uint256' },
+  ], outputs: [] },
+  { type: 'function', name: 'setApprovalForAll', inputs: [
+    { name: 'operator', type: 'address' }, { name: 'approved', type: 'bool' },
+  ], outputs: [] },
+] as const;
+
+/** ERC-1155 ABI for NFT UserOp calls (safeTransferFrom, setApprovalForAll). */
+export const ERC1155_USEROP_ABI = [
+  { type: 'function', name: 'safeTransferFrom', inputs: [
+    { name: 'from', type: 'address' }, { name: 'to', type: 'address' },
+    { name: 'id', type: 'uint256' }, { name: 'amount', type: 'uint256' }, { name: 'data', type: 'bytes' },
+  ], outputs: [] },
+  { type: 'function', name: 'setApprovalForAll', inputs: [
+    { name: 'operator', type: 'address' }, { name: 'approved', type: 'bool' },
+  ], outputs: [] },
+] as const;
+
 /**
  * Convert a TransactionRequest to viem's calls[] format for UserOperation submission.
  * Each call is { to, value, data } for the smart account to execute.
+ *
+ * @param walletAddress - Smart account address (required for NFT_TRANSFER safeTransferFrom 'from' param)
  */
 export function buildUserOpCalls(
   request: SendTransactionRequest | TransactionRequest,
+  walletAddress?: string,
 ): Array<{ to: Hex; value: bigint; data: Hex }> {
   const type = ('type' in request && request.type) || 'TRANSFER';
 
@@ -1217,6 +1244,37 @@ export function buildUserOpCalls(
       });
     }
 
+    case 'NFT_TRANSFER': {
+      const req = request as NftTransferRequest;
+      if (req.token.standard === 'METAPLEX') {
+        throw new WAIaaSError('CHAIN_ERROR', {
+          message: 'Smart Account (ERC-4337) does not support Solana METAPLEX NFT transfers',
+        });
+      }
+      const from = (walletAddress ?? '0x0000000000000000000000000000000000000000') as Hex;
+      if (req.token.standard === 'ERC-721') {
+        return [{
+          to: req.token.address as Hex,
+          value: 0n,
+          data: encodeFunctionData({
+            abi: ERC721_USEROP_ABI,
+            functionName: 'safeTransferFrom',
+            args: [from, req.to as Hex, BigInt(req.token.tokenId)],
+          }),
+        }];
+      }
+      // ERC-1155
+      return [{
+        to: req.token.address as Hex,
+        value: 0n,
+        data: encodeFunctionData({
+          abi: ERC1155_USEROP_ABI,
+          functionName: 'safeTransferFrom',
+          args: [from, req.to as Hex, BigInt(req.token.tokenId), BigInt(req.amount ?? '1'), '0x' as Hex],
+        }),
+      }];
+    }
+
     default:
       throw new WAIaaSError('CHAIN_ERROR', {
         message: `Unknown transaction type for UserOp: ${type}`,
@@ -1250,8 +1308,8 @@ async function stage5ExecuteSmartAccount(ctx: PipelineContext): Promise<void> {
     ctx.amountUsd ?? null, ctx.settingsService, ctx.forexRateService,
   );
 
-  // Build calls[] from request
-  const calls = buildUserOpCalls(ctx.request);
+  // Build calls[] from request (pass wallet address for NFT safeTransferFrom 'from' param)
+  const calls = buildUserOpCalls(ctx.request, ctx.wallet.publicKey);
 
   // CRITICAL: key MUST be released in finally block
   let privateKey: Uint8Array | null = null;
