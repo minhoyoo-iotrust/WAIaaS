@@ -131,6 +131,7 @@ export function buildConnectInfoPrompt(params: BuildConnectInfoPromptParams): st
       lines.push(`   Provider Chains: ${w.provider.supportedChains.join(', ')}`);
     } else if (w.accountType === 'smart') {
       lines.push(`   Smart Account: No provider configured (gas sponsorship unavailable)`);
+      lines.push(`   UserOp API: POST /v1/wallets/${w.id}/userop/build, POST /v1/wallets/${w.id}/userop/sign`);
     }
     lines.push('');
   }
@@ -149,6 +150,7 @@ export function buildConnectInfoPrompt(params: BuildConnectInfoPromptParams): st
   lines.push('');
   lines.push('Use GET /v1/wallet/balance to check balances.');
   lines.push('Use POST /v1/transactions/send to transfer funds.');
+  lines.push('For Smart Account wallets without provider, use UserOp Build/Sign API (POST /v1/wallets/{id}/userop/build then /userop/sign).');
   lines.push('Specify walletId parameter (UUID from the ID field above) to target a specific wallet.');
   lines.push('Append ?network=<network> to query a specific network (required for EVM wallets, auto-resolved for Solana).');
   lines.push('When session expires (401 TOKEN_EXPIRED), renew with PUT /v1/sessions/{sessionId}/renew.');
@@ -328,6 +330,11 @@ export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
     // smart_account: check if any wallet has a configured provider
     if (linkedWallets.some((w) => w.accountType === 'smart' && w.aaProvider)) {
       capabilities.push('smart_account');
+    }
+
+    // userop: any Smart Account wallet (Lite or Full) can use UserOp Build/Sign API
+    if (linkedWallets.some((w) => w.accountType === 'smart')) {
+      capabilities.push('userop');
     }
 
     // erc8128: check if enabled via settings
