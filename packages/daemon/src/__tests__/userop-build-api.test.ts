@@ -6,7 +6,7 @@
  * and build data persistence.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { UserOpBuildRequestSchema, UserOpBuildResponseSchema } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------
@@ -37,8 +37,8 @@ function createWallet(overrides: Record<string, unknown> = {}) {
 
 /** Fake encoded callData from SmartAccount.encodeCalls */
 const FAKE_CALL_DATA = '0xaabbccdd' as const;
-const FAKE_SENDER = '0xSmartAccountAddress1234567890abcdef12345678' as const;
-const FAKE_NONCE = 42n;
+const _FAKE_SENDER = '0xSmartAccountAddress1234567890abcdef12345678' as const;
+const _FAKE_NONCE = 42n;
 const FAKE_ENTRY_POINT = '0x0000000071727De22E5E9d8BAf0edAc6f37da032' as const;
 
 // ---------------------------------------------------------------------------
@@ -129,7 +129,7 @@ describe('POST /v1/wallets/:id/userop/build', () => {
     expect(wallet.chain).toBe('solana');
     // When chain !== 'ethereum', the endpoint returns ACTION_VALIDATION_FAILED
     // This is validated in the route handler -- schema test confirms request is valid
-    const request = {
+    const _request = {
       request: {
         type: 'TRANSFER',
         to: 'SomeSolanaAddress',

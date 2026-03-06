@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { CreateWalletRequestSchema, type CreateWalletRequest } from '@waiaas/core';
+import { CreateWalletRequestSchema } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------
 // Task 1: Schema validation + buildProviderStatus
