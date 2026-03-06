@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v31.0
 milestone_name: NFT 지원
-status: active
-stopped_at: "Completed 333-01 and 333-02 (Phase 333 complete)"
-last_updated: "2026-03-06T02:14:28Z"
-last_activity: 2026-03-06 -- Phase 333 NFT Foundation complete (2 plans, 3 tasks)
+status: completed
+stopped_at: Phase 333 complete -- ready for Phase 334 (Indexer + Chain Adapter)
+last_updated: "2026-03-06T02:17:18.000Z"
+last_activity: 2026-03-06 -- Phase 333 complete (2 plans, 3 tasks, 26 tests)
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 12
+  total_plans: 2
   completed_plans: 2
   percent: 17
 ---
