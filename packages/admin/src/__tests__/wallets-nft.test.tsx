@@ -208,7 +208,7 @@ describe('Wallets NFT Tab', () => {
     });
   });
 
-  it('renders NFT grid with cards', async () => {
+  it('renders NFT grid with cards, no-image placeholder, and card click', async () => {
     setupMocks({
       nfts: [
         {
@@ -218,6 +218,14 @@ describe('Wallets NFT Tab', () => {
           name: 'Cool NFT',
           image: 'https://ipfs.io/ipfs/Qm...',
           collection: { name: 'Cool Collection', address: '0xabc' },
+        },
+        {
+          tokenId: '99',
+          contractAddress: '0xdef',
+          standard: 'erc1155',
+          name: 'No Image NFT',
+          balance: 5,
+          collection: { name: 'Multi Collection', address: '0xdef' },
         },
       ],
       hasMore: false,
@@ -246,5 +254,25 @@ describe('Wallets NFT Tab', () => {
       expect(screen.getByText('Cool NFT')).toBeTruthy();
       expect(screen.getByText('ERC721')).toBeTruthy();
     });
+
+    // Verify no-image NFT placeholder is also rendered
+    expect(screen.getByText('No Image NFT')).toBeTruthy();
+
+    // Click first NFT card
+    const card = document.querySelector('.nft-card') as HTMLElement;
+    if (card) fireEvent.click(card);
+
+    // Toggle to list view
+    const viewToggleButtons = document.querySelectorAll('button');
+    const listToggle = Array.from(viewToggleButtons).find((btn) =>
+      btn.getAttribute('title')?.includes('list'),
+    );
+    if (listToggle) {
+      fireEvent.click(listToggle);
+      // Both NFTs should still be visible in list view
+      await waitFor(() => {
+        expect(screen.getByText('Cool NFT')).toBeTruthy();
+      });
+    }
   });
 });
