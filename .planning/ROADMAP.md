@@ -175,11 +175,11 @@ Plans:
   2. Smart Account(accountType=smart)에서 NFT_TRANSFER가 buildUserOpCalls()를 통해 UserOperation으로 변환되어 실행된다
   3. APPROVE 타입에 nft 필드를 포함하여 NFT approve/setApprovalForAll/delegate가 실행되고, 승인 상태 조회 API(GET /v1/wallet/nfts/{tokenIdentifier}/approvals)가 동작한다
   4. RATE_LIMIT 정책이 nft_count 카운터로 NFT 전송을 제한하고, CONTRACT_WHITELIST가 NFT 컨트랙트를 검증하며, NFT 전송 기본 tier가 APPROVAL이다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 336-01: NFT_TRANSFER 파이프라인 통합 (Stage 1-6) + Smart Account 호환
-- [ ] 336-02: NFT 승인 체인 메서드 + 승인 상태 조회 API + 정책 적용 (RATE_LIMIT, CONTRACT_WHITELIST, default tier)
+- [ ] 336-01-PLAN.md -- NFT_TRANSFER 파이프라인 통합 (Stage 1-6) + Smart Account 호환
+- [ ] 336-02-PLAN.md -- NFT 승인 체인 메서드 + 승인 상태 조회 API + 정책 적용 (RATE_LIMIT, CONTRACT_WHITELIST, default tier)
 
 ### Phase 337: Interface Integration
 **Goal**: MCP, SDK, Admin UI, 스킬 파일로 NFT 기능이 전 인터페이스에 노출되어 에이전트와 운영자가 활용할 수 있는 상태
@@ -217,4 +217,4 @@ Phase 333 -> 334 -> 335 (parallel with 336) -> 337
 | 337. Interface Integration | v31.0 | 0/3 | Not started | - |
 
 ---
-*Last updated: 2026-03-06 -- Phase 335 plans created.*
+*Last updated: 2026-03-06 -- Phase 336 plans created.*
