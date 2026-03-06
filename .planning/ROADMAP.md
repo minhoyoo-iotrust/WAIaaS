@@ -146,5 +146,5 @@ Plans:
 | 342. Research & Design | 1/1 | Complete    | 2026-03-06 | - |
 | 343. Currency Mapping + DEX Swap | 2/2 | Complete    | 2026-03-06 | - |
 | 344. Exchange + Status Tracking | 1/1 | Complete    | 2026-03-06 | - |
-| 345. Auto Routing | 2/2 | Complete   | 2026-03-06 | - |
+| 345. Auto Routing | 2/2 | Complete    | 2026-03-06 | - |
 | 346. Integration + Testing | v31.3 | 0/3 | Not started | - |
