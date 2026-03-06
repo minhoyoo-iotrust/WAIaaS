@@ -462,12 +462,8 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
         });
       }
 
-      // Provider must be configured (PROV-05)
-      if (!aaProvider) {
-        throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
-          message: 'Smart Account wallet requires provider configuration (aaProvider, aaProviderApiKey or custom URLs)',
-        });
-      }
+      // aaProvider is optional: omitting creates Lite mode (UserOp Build/Sign API only)
+      // Full mode requires provider configuration (set via PUT /wallets/:id/provider)
     }
 
     // Derive network for key generation (Solana: single network; EVM: first available)

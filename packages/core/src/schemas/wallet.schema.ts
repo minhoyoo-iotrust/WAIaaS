@@ -44,13 +44,10 @@ const CreateWalletRequestBaseSchema = z.object({
 
 export const CreateWalletRequestSchema = CreateWalletRequestBaseSchema.superRefine((data, ctx) => {
   if (data.accountType === 'smart') {
+    // aaProvider is optional: omitting it creates a Lite mode smart account
+    // (no bundler/paymaster -- UserOp Build/Sign API only, external sponsorship)
     if (!data.aaProvider) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Smart Account wallet requires provider configuration (aaProvider)',
-        path: ['aaProvider'],
-      });
-      return;
+      return; // Lite mode: no provider validation needed
     }
     if (data.aaProvider === 'pimlico' || data.aaProvider === 'alchemy') {
       if (!data.aaProviderApiKey) {
