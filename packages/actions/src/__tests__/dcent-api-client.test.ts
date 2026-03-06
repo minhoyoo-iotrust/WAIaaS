@@ -7,7 +7,6 @@ import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from 'vitest
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { DcentSwapApiClient } from '../providers/dcent-swap/dcent-api-client.js';
-import { DCENT_SWAP_DEFAULTS } from '../providers/dcent-swap/config.js';
 import { ChainError } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------
@@ -573,7 +572,7 @@ describe('DcentSwapApiClient', () => {
 
       // Temporarily replace the base class post to throw a non-Error
       Object.getPrototypeOf(Object.getPrototypeOf(client)).post = async () => {
-        throw 'some string error'; // eslint-disable-line no-throw-literal
+        throw 'some string error';
       };
 
       try {
