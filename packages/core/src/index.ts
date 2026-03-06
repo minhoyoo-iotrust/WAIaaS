@@ -76,7 +76,7 @@ export {
   AaProviderNameEnum,
 } from './enums/index.js';
 
-// Schemas (5 domain Zod SSoT schemas + v1.4 discriminatedUnion 5-type)
+// Schemas (5 domain Zod SSoT schemas + v1.4 discriminatedUnion 6-type)
 export {
   WalletSchema,
   type Wallet,
@@ -93,7 +93,7 @@ export {
   // v28.5 gas condition schema
   GasConditionSchema,
   type GasCondition,
-  // v1.4 discriminatedUnion 5-type transaction request schemas
+  // v1.4 discriminatedUnion 6-type transaction request schemas
   TransactionRequestSchema,
   type TransactionRequest,
   TransferRequestSchema,
@@ -106,6 +106,13 @@ export {
   type ApproveRequest,
   BatchRequestSchema,
   type BatchRequest,
+  // v31.0 NFT_TRANSFER (6th type) + NFT standard enum
+  NftTransferRequestSchema,
+  type NftTransferRequest,
+  NftStandardEnum,
+  type NftStandard,
+  NftTokenInfoSchema,
+  type NftTokenInfo,
   // v30.9 sign message schemas (EIP-712 signTypedData)
   SignMessageRequestSchema,
   type SignMessageRequest,

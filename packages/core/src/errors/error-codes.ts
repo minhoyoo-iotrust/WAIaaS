@@ -12,7 +12,8 @@ export type ErrorDomain =
   | 'X402'
   | 'SIGNING'
   | 'CHAIN'
-  | 'ERC8128';
+  | 'ERC8128'
+  | 'NFT';
 
 export interface ErrorCodeEntry {
   code: string;
@@ -929,6 +930,42 @@ export const ERROR_CODES = {
     httpStatus: 429,
     retryable: true,
     message: 'ERC-8128 signing rate limit exceeded for this domain',
+  },
+  // --- NFT domain (5) ---
+  NFT_NOT_FOUND: {
+    code: 'NFT_NOT_FOUND',
+    domain: 'NFT',
+    httpStatus: 404,
+    retryable: false,
+    message: 'NFT not found',
+  },
+  INDEXER_NOT_CONFIGURED: {
+    code: 'INDEXER_NOT_CONFIGURED',
+    domain: 'NFT',
+    httpStatus: 400,
+    retryable: false,
+    message: 'NFT indexer is not configured',
+  },
+  UNSUPPORTED_NFT_STANDARD: {
+    code: 'UNSUPPORTED_NFT_STANDARD',
+    domain: 'NFT',
+    httpStatus: 400,
+    retryable: false,
+    message: 'Unsupported NFT standard',
+  },
+  INDEXER_API_ERROR: {
+    code: 'INDEXER_API_ERROR',
+    domain: 'NFT',
+    httpStatus: 502,
+    retryable: true,
+    message: 'NFT indexer API error',
+  },
+  NFT_METADATA_FETCH_FAILED: {
+    code: 'NFT_METADATA_FETCH_FAILED',
+    domain: 'NFT',
+    httpStatus: 502,
+    retryable: true,
+    message: 'Failed to fetch NFT metadata',
   },
 } as const satisfies Record<string, ErrorCodeEntry>;
 

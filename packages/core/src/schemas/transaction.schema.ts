@@ -50,16 +50,16 @@ export const SendTransactionRequestSchema = z.object({
 export type SendTransactionRequest = z.infer<typeof SendTransactionRequestSchema>;
 
 // ---------------------------------------------------------------------------
-// discriminatedUnion 5-type transaction request schemas (v1.4)
+// discriminatedUnion 6-type transaction request schemas (v1.4 + v31.0 NFT)
 //
-// These schemas validate incoming API requests for all 5 transaction types.
+// These schemas validate incoming API requests for all 6 transaction types.
 // The existing SendTransactionRequestSchema is kept for backward compatibility.
 // Stage 1 of the pipeline will switch to TransactionRequestSchema in Phase 81.
 // ---------------------------------------------------------------------------
 
 const numericStringPattern = /^\d+$/;
 
-/** Optional gas condition (shared across all 5 request types). */
+/** Optional gas condition (shared across all 6 request types). */
 const gasConditionField = { gasCondition: GasConditionSchema.optional() } as const;
 
 /** Type 1: TRANSFER -- native token transfer (SOL/ETH). */
@@ -147,13 +147,31 @@ export const ContractCallRequestSchema = z.object({
 });
 export type ContractCallRequest = z.infer<typeof ContractCallRequestSchema>;
 
-/** Type 4: APPROVE -- token spending approval (ERC-20 approve / SPL delegate). */
+/** NFT standard enum: ERC-721, ERC-1155 (EVM), METAPLEX (Solana). */
+export const NftStandardEnum = z.enum(['ERC-721', 'ERC-1155', 'METAPLEX']);
+export type NftStandard = z.infer<typeof NftStandardEnum>;
+
+/** NFT token info for NFT_TRANSFER requests. */
+export const NftTokenInfoSchema = z.object({
+  address: z.string().min(1), // contract address (EVM) or mint address (Solana)
+  tokenId: z.string().min(1), // token ID within the collection
+  standard: NftStandardEnum,
+  assetId: Caip19Schema.optional(), // CAIP-19 NFT asset identifier
+});
+export type NftTokenInfo = z.infer<typeof NftTokenInfoSchema>;
+
+/** Type 4: APPROVE -- token spending approval (ERC-20 approve / SPL delegate / NFT approval). */
 export const ApproveRequestSchema = z.object({
   type: z.literal('APPROVE'),
   spender: z.string().min(1),
   token: TokenInfoSchema,
   amount: z.string().regex(numericStringPattern, 'amount must be a numeric string'),
   network: NetworkTypeEnumWithLegacy.optional(),
+  /** Optional NFT approval info. When present, this is an NFT approval (not ERC-20). */
+  nft: z.object({
+    tokenId: z.string().min(1),
+    standard: NftStandardEnum,
+  }).optional(),
   ...gasConditionField,
 });
 export type ApproveRequest = z.infer<typeof ApproveRequestSchema>;
@@ -177,8 +195,19 @@ export const BatchRequestSchema = z.object({
 });
 export type BatchRequest = z.infer<typeof BatchRequestSchema>;
 
+/** Type 6: NFT_TRANSFER -- ERC-721/ERC-1155/Metaplex NFT transfer. */
+export const NftTransferRequestSchema = z.object({
+  type: z.literal('NFT_TRANSFER'),
+  to: z.string().min(1),
+  token: NftTokenInfoSchema,
+  amount: z.string().regex(numericStringPattern, 'amount must be a numeric string').default('1'),
+  network: NetworkTypeEnumWithLegacy.optional(),
+  ...gasConditionField,
+});
+export type NftTransferRequest = z.infer<typeof NftTransferRequestSchema>;
+
 /**
- * discriminatedUnion 5-type transaction request schema.
+ * discriminatedUnion 6-type transaction request schema.
  * Identifies the correct schema variant via the `type` field.
  */
 export const TransactionRequestSchema = z.discriminatedUnion('type', [
@@ -187,6 +216,7 @@ export const TransactionRequestSchema = z.discriminatedUnion('type', [
   ContractCallRequestSchema,
   ApproveRequestSchema,
   BatchRequestSchema,
+  NftTransferRequestSchema,
 ]);
 export type TransactionRequest = z.infer<typeof TransactionRequestSchema>;
 

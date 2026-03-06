@@ -147,6 +147,12 @@ export const messages: Messages = {
     ERC8128_DISABLED: 'ERC-8128 서명된 HTTP 요청이 비활성화되어 있습니다',
     ERC8128_DOMAIN_NOT_ALLOWED: '이 도메인은 ERC-8128 서명이 허용되지 않습니다',
     ERC8128_RATE_LIMITED: '이 도메인에 대한 ERC-8128 서명 속도 제한을 초과했습니다',
+    // NFT domain
+    NFT_NOT_FOUND: 'NFT를 찾을 수 없습니다',
+    INDEXER_NOT_CONFIGURED: 'NFT 인덱서가 설정되지 않았습니다',
+    UNSUPPORTED_NFT_STANDARD: '지원되지 않는 NFT 표준입니다',
+    INDEXER_API_ERROR: 'NFT 인덱서 API 오류가 발생했습니다',
+    NFT_METADATA_FETCH_FAILED: 'NFT 메타데이터를 가져오는데 실패했습니다',
   },
   // Notification templates (31 event types)
   notifications: {
