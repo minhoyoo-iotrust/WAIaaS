@@ -122,14 +122,14 @@ describe('CreateWalletRequestSchema provider validation', () => {
     expect(result.success).toBe(true);
   });
 
-  it('rejects smart account without provider', () => {
+  it('allows smart account without provider (Lite mode)', () => {
     const result = CreateWalletRequestSchema.safeParse({
       name: 'test-smart',
       chain: 'ethereum',
       environment: 'testnet',
       accountType: 'smart',
     });
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
   });
 
   it('allows EOA without provider', () => {
