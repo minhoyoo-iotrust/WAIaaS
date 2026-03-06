@@ -128,6 +128,30 @@ export async function getDcentQuotes(
 }
 
 // ---------------------------------------------------------------------------
+// Non-throwing quote variant (for auto-router)
+// ---------------------------------------------------------------------------
+
+/**
+ * Non-throwing variant of getDcentQuotes for auto-routing.
+ * Returns `{ result }` on success or `{ noRoute: true }` when no providers available.
+ * Keeps getDcentQuotes backward-compatible (still throws).
+ */
+export async function tryGetDcentQuotes(
+  client: DcentSwapApiClient,
+  params: GetQuotesParams,
+): Promise<{ result: DcentQuoteResult } | { noRoute: true }> {
+  try {
+    const result = await getDcentQuotes(client, params);
+    return { result };
+  } catch (err) {
+    if (err instanceof ChainError && err.message.includes('No swap route available')) {
+      return { noRoute: true };
+    }
+    throw err;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // DEX Swap execution
 // ---------------------------------------------------------------------------
 
