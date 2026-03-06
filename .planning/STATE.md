@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v31.3
 milestone_name: DCent Swap Aggregator 통합
 status: planning
-stopped_at: Completed 342-01-PLAN.md
-last_updated: "2026-03-06T13:16:35.454Z"
+stopped_at: Completed 343-01-PLAN.md
+last_updated: "2026-03-06T13:36:56.470Z"
 last_activity: 2026-03-06 — Roadmap created
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 1
-  completed_plans: 1
+  total_plans: 3
+  completed_plans: 2
   percent: 0
 ---
 
@@ -47,6 +47,7 @@ Progress: [░░░░░░░░░░] 0%
 - [Phase 342]: DS-01: swapbuy-beta endpoint (includes Exchange providers)
 - [Phase 342]: DS-04: Phase 345 reduced to fallback (DCent handles multi-hop)
 - [Phase 342]: DS-02: Self-encode ERC-20 approve (DCent API partially unimplemented)
+- [Phase 343]: Used buildCaip19 internal helper to avoid Zod v3 compat regex issue in vitest
 
 ### Blockers/Concerns
 
@@ -57,6 +58,6 @@ Progress: [░░░░░░░░░░] 0%
 
 ## Session Continuity
 
-Last session: 2026-03-06T13:16:11.543Z
-Stopped at: Completed 342-01-PLAN.md
+Last session: 2026-03-06T13:36:56.466Z
+Stopped at: Completed 343-01-PLAN.md
 Resume file: None

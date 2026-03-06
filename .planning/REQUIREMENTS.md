@@ -18,10 +18,10 @@ Requirements for DCent Swap Aggregator integration. Each maps to roadmap phases.
 
 ### Currency Mapping (CMAP)
 
-- [ ] **CMAP-01**: CAIP-19 → DCent Currency ID 변환 함수를 구현한다 (eip155:1/erc20:0x... → ERC20/0x...)
-- [ ] **CMAP-02**: DCent Currency ID → CAIP-19 역방향 변환 함수를 구현한다
-- [ ] **CMAP-03**: 네이티브 토큰 매핑을 지원한다 (ETHEREUM ↔ eip155:1/slip44:60, SOLANA ↔ solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/slip44:501 등)
-- [ ] **CMAP-04**: DCent get_supported_currencies 응답을 조회하고 24h TTL로 캐싱한다
+- [x] **CMAP-01**: CAIP-19 → DCent Currency ID 변환 함수를 구현한다 (eip155:1/erc20:0x... → ERC20/0x...)
+- [x] **CMAP-02**: DCent Currency ID → CAIP-19 역방향 변환 함수를 구현한다
+- [x] **CMAP-03**: 네이티브 토큰 매핑을 지원한다 (ETHEREUM ↔ eip155:1/slip44:60, SOLANA ↔ solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/slip44:501 등)
+- [x] **CMAP-04**: DCent get_supported_currencies 응답을 조회하고 24h TTL로 캐싱한다
 
 ### DEX Swap (DSWP)
 
@@ -91,10 +91,10 @@ Requirements for DCent Swap Aggregator integration. Each maps to roadmap phases.
 | RSRCH-04 | Phase 342 | Complete |
 | RSRCH-05 | Phase 342 | Complete |
 | RSRCH-06 | Phase 342 | Complete |
-| CMAP-01 | Phase 343 | Pending |
-| CMAP-02 | Phase 343 | Pending |
-| CMAP-03 | Phase 343 | Pending |
-| CMAP-04 | Phase 343 | Pending |
+| CMAP-01 | Phase 343 | Complete |
+| CMAP-02 | Phase 343 | Complete |
+| CMAP-03 | Phase 343 | Complete |
+| CMAP-04 | Phase 343 | Complete |
 | DSWP-01 | Phase 343 | Pending |
 | DSWP-02 | Phase 343 | Pending |
 | DSWP-03 | Phase 343 | Pending |
