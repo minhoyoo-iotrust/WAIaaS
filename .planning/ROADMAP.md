@@ -212,8 +212,8 @@ Phase 333 -> 334 -> 335 (parallel with 336) -> 337
 | 268-332 | v29.0-v30.11 | All | Complete | 2026-03-05 |
 | 333. NFT Foundation | 2/2 | Complete    | 2026-03-06 | 2026-03-06 |
 | 334. Indexer + Chain Adapter | v31.0 | Complete    | 2026-03-06 | 2026-03-06 |
-| 335. NFT Query API | v31.0 | 2/2 | Complete | 2026-03-06 |
-| 336. NFT Transfer + Approval Pipeline | 2/2 | Complete   | 2026-03-06 | - |
+| 335. NFT Query API | v31.0 | Complete    | 2026-03-06 | 2026-03-06 |
+| 336. NFT Transfer + Approval Pipeline | 2/2 | Complete    | 2026-03-06 | - |
 | 337. Interface Integration | v31.0 | 0/3 | Not started | - |
 
 ---
