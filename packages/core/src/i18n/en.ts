@@ -213,6 +213,7 @@ export const messages: Messages = {
     BUILD_ALREADY_USED: 'Build data has already been used for signing',
     CALLDATA_MISMATCH: 'UserOperation callData does not match build data',
     SENDER_MISMATCH: 'UserOperation sender does not match wallet address',
+    DEPRECATED_SMART_ACCOUNT: 'This Smart Account was created with a deprecated factory. Please create a new Smart Account wallet.',
   },
   // Notification templates (30 event types)
   notifications: {

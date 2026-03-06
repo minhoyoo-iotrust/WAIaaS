@@ -1,20 +1,31 @@
 /**
  * SmartAccountService -- creates and manages ERC-4337 smart account instances.
  *
- * Wraps viem's toSoladySmartAccount() to create SmartAccount objects from EOA signers.
+ * Uses permissionless.js toSimpleSmartAccount() with the v0.7 SimpleAccount factory
+ * (0x91E60e0613810449d098b0b5Ec8b51A0FE8c8985) which is deployed on most major EVM chains.
+ *
  * Provides CREATE2 address prediction for lazy deployment (deployed=false until first tx).
  *
  * Uses EntryPoint v0.7 exclusively.
  *
  * @see internal/objectives/m30-06-erc4337-account-abstraction.md
  */
-import {
-  toSoladySmartAccount,
-  entryPoint07Address,
-  entryPoint07Abi,
-} from 'viem/account-abstraction';
+import { toSimpleSmartAccount } from 'permissionless/accounts';
+import { entryPoint07Address } from 'viem/account-abstraction';
 import type { SmartAccount } from 'viem/account-abstraction';
 import type { Address, LocalAccount } from 'viem';
+
+/**
+ * Solady ERC4337Factory -- only deployed on ethereum-mainnet + ethereum-sepolia.
+ * Smart Accounts created with this factory are deprecated and cannot transact on other chains.
+ */
+export const SOLADY_FACTORY_ADDRESS = '0x5d82735936c6Cd5DE57cC3c1A799f6B2E6F933Df' as Address;
+
+/**
+ * Default v0.7 SimpleAccount factory (eth-infinitism reference implementation).
+ * Deployed on most major EVM chains including Base, Polygon, Arbitrum, Optimism, etc.
+ */
+export const DEFAULT_SIMPLE_ACCOUNT_FACTORY_V07 = '0x91E60e0613810449d098b0b5Ec8b51A0FE8c8985' as Address;
 
 export interface SmartAccountCreateOptions {
   /** The EOA signer (owner) of the smart account */
@@ -24,6 +35,8 @@ export interface SmartAccountCreateOptions {
   client: any;
   /** Optional custom EntryPoint address (defaults to v0.7) */
   entryPoint?: Address;
+  /** Optional custom factory address (defaults to SimpleAccount v0.7 factory) */
+  factoryAddress?: Address;
 }
 
 export interface SmartAccountInfo {
@@ -33,6 +46,8 @@ export interface SmartAccountInfo {
   signerKey: Address;
   /** The EntryPoint contract address */
   entryPoint: Address;
+  /** The factory address used to create this smart account */
+  factoryAddress: Address;
   /** The viem SmartAccount instance (for later UserOp submission) */
   account: SmartAccount;
 }
@@ -47,12 +62,13 @@ export class SmartAccountService {
    */
   async createSmartAccount(opts: SmartAccountCreateOptions): Promise<SmartAccountInfo> {
     const epAddress = opts.entryPoint ?? entryPoint07Address;
+    const factory = opts.factoryAddress ?? DEFAULT_SIMPLE_ACCOUNT_FACTORY_V07;
 
-    const account = await toSoladySmartAccount({
+    const account = await toSimpleSmartAccount({
       client: opts.client,
       owner: opts.owner,
+      factoryAddress: factory,
       entryPoint: {
-        abi: entryPoint07Abi,
         address: epAddress,
         version: '0.7',
       },
@@ -62,6 +78,7 @@ export class SmartAccountService {
       address: account.address,
       signerKey: opts.owner.address,
       entryPoint: epAddress,
+      factoryAddress: factory,
       account,
     };
   }

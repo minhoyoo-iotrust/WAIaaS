@@ -18,11 +18,13 @@ function createV43Db(): InstanceType<typeof Database> {
   sqlite.pragma('foreign_keys = ON');
   pushSchema(sqlite);
 
-  // Downgrade: remove v44 artifacts to simulate a v43 DB
+  // Downgrade: remove v44+ artifacts to simulate a v43 DB
   sqlite.pragma('foreign_keys = OFF');
   sqlite.exec('DROP TABLE IF EXISTS nft_metadata_cache');
   sqlite.exec('DROP INDEX IF EXISTS idx_nft_cache_unique');
   sqlite.exec('DROP INDEX IF EXISTS idx_nft_cache_expires');
+  // Remove factory_address column added by v47
+  sqlite.exec('ALTER TABLE wallets DROP COLUMN factory_address');
   sqlite.exec('DELETE FROM schema_version WHERE version >= 44');
   sqlite.pragma('foreign_keys = ON');
 
@@ -75,8 +77,8 @@ describe('DB v44 Migration: nft_metadata_cache', () => {
     sqlite.pragma('foreign_keys = ON');
     pushSchema(sqlite);
 
-    expect(LATEST_SCHEMA_VERSION).toBe(45);
-    expect(getMaxVersion(sqlite)).toBe(45);
+    expect(LATEST_SCHEMA_VERSION).toBe(47);
+    expect(getMaxVersion(sqlite)).toBe(47);
   });
 
   // Test 2: nft_metadata_cache table exists with correct columns
@@ -162,7 +164,7 @@ describe('DB v44 Migration: nft_metadata_cache', () => {
     runMigrations(sqlite);
 
     expect(tableExists(sqlite, 'nft_metadata_cache')).toBe(true);
-    expect(getMaxVersion(sqlite)).toBe(45);
+    expect(getMaxVersion(sqlite)).toBe(47);
 
     const cols = getTableColumns(sqlite, 'nft_metadata_cache');
     expect(cols).toContain('id');

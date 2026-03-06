@@ -113,7 +113,8 @@ describe('Schema creation', () => {
     expect(colNames).toContain('deployed');
     expect(colNames).toContain('entry_point');
     expect(colNames).toContain('aa_paymaster_policy_id');
-    expect(colNames).toHaveLength(24);
+    expect(colNames).toContain('factory_address');
+    expect(colNames).toHaveLength(25);
   });
 
   it('transactions table should have correct columns including v0.6 and v0.10 additions', () => {

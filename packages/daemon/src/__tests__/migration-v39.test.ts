@@ -70,7 +70,10 @@ function createV38Db(): InstanceType<typeof Database> {
   sqlite.exec('INSERT INTO policies SELECT * FROM policies_old');
   sqlite.exec('DROP TABLE policies_old');
 
-  // 4. Remove v39 and v40 from schema_version
+  // 4. Remove factory_address column added by v47
+  sqlite.exec('ALTER TABLE wallets DROP COLUMN factory_address');
+
+  // 5. Remove v39+ from schema_version
   sqlite.exec('DELETE FROM schema_version WHERE version >= 39');
 
   // Re-enable foreign keys

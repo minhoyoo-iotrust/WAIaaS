@@ -487,6 +487,7 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
     let signerKey: string | null = null;
     let deployed = true;
     let entryPoint: string | null = null;
+    let factoryAddress: string | null = null;
 
     if (accountType === 'smart' && deps.smartAccountService) {
       // The EOA key is the signer (owner) of the smart account
@@ -526,6 +527,7 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
       });
 
       walletPublicKey = smartAccountInfo.address;
+      factoryAddress = smartAccountInfo.factoryAddress;
       deployed = false;
     }
 
@@ -553,6 +555,7 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
       aaBundlerUrl,
       aaPaymasterUrl,
       aaPaymasterPolicyId,
+      factoryAddress,
       createdAt: now,
       updatedAt: now,
     });

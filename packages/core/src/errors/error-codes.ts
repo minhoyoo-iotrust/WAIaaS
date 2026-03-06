@@ -968,6 +968,15 @@ export const ERROR_CODES = {
     retryable: true,
     message: 'Failed to fetch NFT metadata',
   },
+  // --- WALLET domain (deprecated factory) ---
+  DEPRECATED_SMART_ACCOUNT: {
+    code: 'DEPRECATED_SMART_ACCOUNT',
+    domain: 'WALLET',
+    httpStatus: 410,
+    retryable: false,
+    message: 'This Smart Account was created with a deprecated factory. Please create a new Smart Account wallet.',
+  },
+
   // --- USEROP domain (5) -- UserOp Build/Sign API (v31.2) ---
   EXPIRED_BUILD: {
     code: 'EXPIRED_BUILD',

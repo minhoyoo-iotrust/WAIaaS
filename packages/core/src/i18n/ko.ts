@@ -159,6 +159,7 @@ export const messages: Messages = {
     BUILD_ALREADY_USED: '빌드 데이터가 이미 서명에 사용되었습니다',
     CALLDATA_MISMATCH: 'UserOperation callData가 빌드 데이터와 일치하지 않습니다',
     SENDER_MISMATCH: 'UserOperation sender가 지갑 주소와 일치하지 않습니다',
+    DEPRECATED_SMART_ACCOUNT: '이 Smart Account는 더 이상 사용되지 않는 factory로 생성되었습니다. 새 Smart Account 지갑을 생성해 주세요.',
   },
   // Notification templates (31 event types)
   notifications: {
