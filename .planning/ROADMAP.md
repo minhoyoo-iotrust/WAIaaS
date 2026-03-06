@@ -128,11 +128,11 @@ See `.planning/milestones/` for archived phase details.
   3. DB v44 마이그레이션이 nft_metadata_cache 테이블(contract_address, token_id, chain, metadata_json, cached_at, expires_at)을 생성하며 마이그레이션 테스트가 통과한다
   4. nftAssetId() 헬퍼가 erc721/erc1155/metaplex 네임스페이스의 CAIP-19 식별자를 올바르게 생성하고, ALLOWED_TOKENS 정책이 NFT CAIP-19를 매칭한다
   5. NFT_NOT_FOUND, INDEXER_NOT_CONFIGURED, UNSUPPORTED_NFT_STANDARD, INDEXER_API_ERROR, NFT_METADATA_FETCH_FAILED 에러 코드가 정의되어 있다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 333-01: NFT_TRANSFER Zod 스키마 + APPROVE nft 확장 + NFT 응답 스키마 + 에러 코드
-- [ ] 333-02: DB v44 마이그레이션 + CAIP-19 NFT 네임스페이스 + nftAssetId 헬퍼
+- [ ] 333-01-PLAN.md -- NFT_TRANSFER Zod 스키마 + APPROVE nft 확장 + NFT 응답 스키마 + 에러 코드
+- [ ] 333-02-PLAN.md -- DB v44 마이그레이션 + CAIP-19 NFT 네임스페이스 + nftAssetId 헬퍼
 
 ### Phase 334: Indexer + Chain Adapter
 **Goal**: NFT 인덱서 프로바이더와 체인 어댑터 NFT 메서드가 구현되어 NFT 데이터 조회와 온체인 트랜잭션 빌딩이 가능한 상태
@@ -217,4 +217,4 @@ Phase 333 -> 334 -> 335 (parallel with 336) -> 337
 | 337. Interface Integration | v31.0 | 0/3 | Not started | - |
 
 ---
-*Last updated: 2026-03-06 -- v31.0 roadmap created.*
+*Last updated: 2026-03-06 -- Phase 333 plans created.*
