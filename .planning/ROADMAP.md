@@ -165,8 +165,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 340-01-PLAN.md -- UserOp Sign endpoint + callData verification + policy + audit + notifications
-- [ ] 340-02-PLAN.md -- connect-info userop capability + prompt guidance
+- [x] 340-01: UserOp Sign endpoint + callData verification + policy + audit + notifications
+- [x] 340-02: connect-info userop capability + prompt guidance
 
 ### Phase 341: Interface Integration
 **Goal**: Admin UI에서 Lite/Full 모드를 시각적으로 확인하고, MCP/SDK/스킬 파일을 통해 에이전트가 UserOp API를 사용할 수 있는 상태
@@ -178,11 +178,11 @@ Plans:
   3. MCP build_userop/sign_userop 도구로 UserOp 구성/서명이 가능하다
   4. SDK buildUserOp()/signUserOp() 메서드가 동작한다
   5. transactions/wallet/admin 스킬 파일에 UserOp API와 Lite/Full 모드가 문서화되어 있다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 341-01: Admin UI Lite/Full 모드 표시 (생성 폼, 상세, 목록)
-- [ ] 341-02: MCP 2도구 + SDK 2메서드 + 스킬 파일 3개
+- [ ] 341-01-PLAN.md -- Admin UI Lite/Full 모드 표시 (생성 폼, 상세, 목록)
+- [ ] 341-02-PLAN.md -- MCP 2도구 + SDK 2메서드 + 스킬 파일 3개
 
 ## Progress
 
@@ -203,4 +203,4 @@ Phases execute in numeric order: 338 -> 339 -> 340 -> 341
 | 341. Interface Integration | v31.2 | 0/2 | Not started | - |
 
 ---
-*Last updated: 2026-03-06 after Phase 340 planning.*
+*Last updated: 2026-03-06 after Phase 341 planning.*
