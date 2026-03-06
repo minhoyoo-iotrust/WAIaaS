@@ -526,6 +526,9 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         passwordRef: deps.passwordRef,
         rpcConfig: deps.config?.rpc as unknown as Record<string, string>,
         metricsCounter: deps.metricsCounter,
+        policyEngine: deps.policyEngine,
+        notificationService: deps.notificationService,
+        eventBus: deps.eventBus,
       }),
     );
   }
