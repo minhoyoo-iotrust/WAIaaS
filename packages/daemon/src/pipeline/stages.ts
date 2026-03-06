@@ -30,6 +30,7 @@ import {
   type TokenTransferRequest,
   type ContractCallRequest,
   type ApproveRequest,
+  type NftTransferRequest,
 } from '@waiaas/core';
 import { wallets, transactions } from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
@@ -227,6 +228,11 @@ function formatNotificationAmount(
       return `${formatAmount(BigInt(raw), decimals)} ${symbol}`;
     }
 
+    if ('type' in req && req.type === 'NFT_TRANSFER') {
+      const r = req as NftTransferRequest;
+      return `${r.amount ?? '1'} NFT (${r.token.standard})`;
+    }
+
     // Native transfer / CONTRACT_CALL with value
     const decimals = NATIVE_DECIMALS[chain] ?? 18;
     const symbol = NATIVE_SYMBOLS[chain] ?? chain.toUpperCase();
@@ -343,6 +349,17 @@ export function buildTransactionParam(
         spenderAddress: r.spender,
         approveAmount: r.amount,
         tokenDecimals: r.token.decimals,
+      };
+    }
+    case 'NFT_TRANSFER': {
+      const r = req as NftTransferRequest;
+      return {
+        type: 'NFT_TRANSFER',
+        amount: r.amount ?? '1',
+        toAddress: r.to,
+        chain,
+        contractAddress: r.token.address,
+        assetId: r.token.assetId,
       };
     }
     case 'TRANSFER':
@@ -1004,6 +1021,20 @@ export async function buildByType(
         spender: req.spender,
         token: req.token,
         amount: BigInt(req.amount),
+      });
+    }
+
+    case 'NFT_TRANSFER': {
+      const req = request as NftTransferRequest;
+      return adapter.buildNftTransferTx({
+        from: walletPublicKey,
+        to: req.to,
+        token: {
+          address: req.token.address,
+          tokenId: req.token.tokenId,
+          standard: req.token.standard,
+        },
+        amount: BigInt(req.amount ?? '1'),
       });
     }
 
