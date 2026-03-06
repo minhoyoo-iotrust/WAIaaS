@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v31.3
 milestone_name: DCent Swap Aggregator 통합
-status: planning
-stopped_at: Completed 345-02-PLAN.md
-last_updated: "2026-03-06T14:13:37.024Z"
-last_activity: 2026-03-06 — Roadmap created
+status: complete
+stopped_at: Completed 346-03-PLAN.md (final phase)
+last_updated: "2026-03-06T14:37:00Z"
+last_activity: 2026-03-06 — Phase 346 Integration + Testing complete
 progress:
   total_phases: 5
-  completed_phases: 4
-  total_plans: 6
-  completed_plans: 6
-  percent: 0
+  completed_phases: 5
+  total_plans: 12
+  completed_plans: 12
+  percent: 100
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-06)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 342 Research & Design (v31.3 DCent Swap Aggregator 통합)
+**Current focus:** Milestone v31.3 complete -- all 5 phases done
 
 ## Current Position
 
-Phase: 342 (1 of 5) — Research & Design
-Plan: 0 of 1 in current phase
-Status: Ready to plan
-Last activity: 2026-03-06 — Roadmap created
+Phase: 346 (5 of 5) — Integration + Testing
+Plan: 3 of 3 in current phase (ALL COMPLETE)
+Status: Milestone complete
+Last activity: 2026-03-06 — Phase 346 Integration + Testing complete
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: —
-- Total execution time: 0 hours
+- Total plans completed: 12
+- Average duration: ~12 min/plan
+- Total execution time: ~2.4 hours
 
 ## Accumulated Context
 
@@ -52,6 +52,9 @@ Progress: [░░░░░░░░░░] 0%
 - [Phase 344]: Exchange providers sorted by expectedAmount, ExchangeStatusTracker with notificationEvent in details
 - [Phase 345]: tryGetDcentQuotes returns discriminated union for error-as-data flow
 - [Phase 345]: Auto-routing fallback only triggers on no-route errors via isNoRouteError guard
+- [Phase 346]: Settings-driven factory pattern for DcentSwapActionProvider registration
+- [Phase 346]: DCent Swap enabled by default for zero-config DX
+- [Phase 346]: MSW-based HTTP mocking for integration tests
 
 ### Blockers/Concerns
 
@@ -62,6 +65,6 @@ Progress: [░░░░░░░░░░] 0%
 
 ## Session Continuity
 
-Last session: 2026-03-06T14:12:49.642Z
-Stopped at: Completed 345-02-PLAN.md
+Last session: 2026-03-06T14:37:00Z
+Stopped at: Completed 346-03-PLAN.md (milestone v31.3 complete)
 Resume file: None

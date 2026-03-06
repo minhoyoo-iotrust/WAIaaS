@@ -57,7 +57,7 @@
 - [x] **Phase 343: Currency Mapping + DEX Swap** - CAIP-19 변환 인프라 + DEX Swap 실행 (completed 2026-03-06)
 - [x] **Phase 344: Exchange + Status Tracking** - 크로스체인 Exchange 실행 + 상태 폴링 (completed 2026-03-06)
 - [x] **Phase 345: Auto Routing** - 조건부 2-hop 자동 라우팅 (completed 2026-03-06)
-- [ ] **Phase 346: Integration + Testing** - ActionProvider, MCP, SDK, 정책, 테스트
+- [x] **Phase 346: Integration + Testing** - ActionProvider, MCP, SDK, 정책, 테스트 (completed 2026-03-06)
 
 ## Phase Details
 
@@ -130,7 +130,7 @@ Plans:
   3. Admin Settings에서 dcent_swap 설정을 관리하고, connect-info에 dcent_swap capability가 노출된다
   4. Currency 변환, DEX Swap, Exchange, 라우팅, 에러, 정책, MCP/SDK 전 영역의 테스트가 통과한다
   5. transactions.skill.md 등 스킬 파일이 DCent Swap 기능을 반영하여 업데이트되어 있다
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 
 Plans:
 - [ ] 346-01-PLAN.md -- 데몬 라이프사이클 등록 + Admin Settings + connect-info
@@ -147,4 +147,4 @@ Plans:
 | 343. Currency Mapping + DEX Swap | 2/2 | Complete    | 2026-03-06 | - |
 | 344. Exchange + Status Tracking | 1/1 | Complete    | 2026-03-06 | - |
 | 345. Auto Routing | 2/2 | Complete    | 2026-03-06 | - |
-| 346. Integration + Testing | v31.3 | 0/3 | Not started | - |
+| 346. Integration + Testing | 3/3 | Complete   | 2026-03-06 | - |

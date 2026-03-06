@@ -47,23 +47,23 @@ Requirements for DCent Swap Aggregator integration. Each maps to roadmap phases.
 
 ### Integration (INTG)
 
-- [ ] **INTG-01**: DcentSwapActionProvider를 IActionProvider 패턴으로 구현한다
-- [ ] **INTG-02**: MCP 도구를 노출한다 (dcent_get_quotes, dcent_swap, dcent_exchange, dcent_swap_status)
-- [ ] **INTG-03**: SDK 메서드를 추가한다 (getDcentQuotes, dcentSwap, dcentExchange, getDcentSwapStatus)
-- [ ] **INTG-04**: 정책 엔진과 통합한다 (스왑 한도, CONTRACT_WHITELIST, ALLOWED_TOKENS)
-- [ ] **INTG-05**: Admin Settings에 DCent Swap 설정 키를 추가한다 (dcent_swap.enabled, dcent_swap.api_url 등)
-- [ ] **INTG-06**: connect-info에 dcent_swap capability를 노출한다
-- [ ] **INTG-07**: 스킬 파일을 업데이트한다 (transactions.skill.md 등)
+- [x] **INTG-01**: DcentSwapActionProvider를 IActionProvider 패턴으로 구현한다
+- [x] **INTG-02**: MCP 도구를 노출한다 (dcent_get_quotes, dcent_swap, dcent_exchange, dcent_swap_status)
+- [x] **INTG-03**: SDK 메서드를 추가한다 (getDcentQuotes, dcentSwap, dcentExchange, getDcentSwapStatus)
+- [x] **INTG-04**: 정책 엔진과 통합한다 (스왑 한도, CONTRACT_WHITELIST, ALLOWED_TOKENS)
+- [x] **INTG-05**: Admin Settings에 DCent Swap 설정 키를 추가한다 (dcent_swap.enabled, dcent_swap.api_url 등)
+- [x] **INTG-06**: connect-info에 dcent_swap capability를 노출한다
+- [x] **INTG-07**: 스킬 파일을 업데이트한다 (transactions.skill.md 등)
 
 ### Testing (TEST)
 
-- [ ] **TEST-01**: Currency ID 변환 (CAIP-19 ↔ DCent) 양방향 단위 테스트를 작성한다
-- [ ] **TEST-02**: Mock API 기반 DEX Swap 플로우 (approve + txdata) 통합 테스트를 작성한다
-- [ ] **TEST-03**: Mock API 기반 Exchange 플로우 (payInAddress → TRANSFER) 통합 테스트를 작성한다
-- [ ] **TEST-04**: 자동 라우팅 경로 탐색/실행 테스트를 작성한다 (ROUT phase 구현 시)
-- [ ] **TEST-05**: 에러 핸들링 테스트를 작성한다 (empty providers, min/max amount, rate expired, insufficient liquidity)
-- [ ] **TEST-06**: 정책 엔진 연동 (스왑 한도) 테스트를 작성한다
-- [ ] **TEST-07**: MCP 도구 + SDK 메서드 통합 테스트를 작성한다
+- [x] **TEST-01**: Currency ID 변환 (CAIP-19 ↔ DCent) 양방향 단위 테스트를 작성한다
+- [x] **TEST-02**: Mock API 기반 DEX Swap 플로우 (approve + txdata) 통합 테스트를 작성한다
+- [x] **TEST-03**: Mock API 기반 Exchange 플로우 (payInAddress → TRANSFER) 통합 테스트를 작성한다
+- [x] **TEST-04**: 자동 라우팅 경로 탐색/실행 테스트를 작성한다 (ROUT phase 구현 시)
+- [x] **TEST-05**: 에러 핸들링 테스트를 작성한다 (empty providers, min/max amount, rate expired, insufficient liquidity)
+- [x] **TEST-06**: 정책 엔진 연동 (스왑 한도) 테스트를 작성한다
+- [x] **TEST-07**: MCP 도구 + SDK 메서드 통합 테스트를 작성한다
 
 ## Future Requirements
 
@@ -108,20 +108,20 @@ Requirements for DCent Swap Aggregator integration. Each maps to roadmap phases.
 | ROUT-03 | Phase 345 | Complete |
 | ROUT-04 | Phase 345 | Complete |
 | ROUT-05 | Phase 345 | Complete |
-| INTG-01 | Phase 346 | Pending |
-| INTG-02 | Phase 346 | Pending |
-| INTG-03 | Phase 346 | Pending |
-| INTG-04 | Phase 346 | Pending |
-| INTG-05 | Phase 346 | Pending |
-| INTG-06 | Phase 346 | Pending |
-| INTG-07 | Phase 346 | Pending |
-| TEST-01 | Phase 346 | Pending |
-| TEST-02 | Phase 346 | Pending |
-| TEST-03 | Phase 346 | Pending |
-| TEST-04 | Phase 346 | Pending |
-| TEST-05 | Phase 346 | Pending |
-| TEST-06 | Phase 346 | Pending |
-| TEST-07 | Phase 346 | Pending |
+| INTG-01 | Phase 346 | Complete |
+| INTG-02 | Phase 346 | Complete |
+| INTG-03 | Phase 346 | Complete |
+| INTG-04 | Phase 346 | Complete |
+| INTG-05 | Phase 346 | Complete |
+| INTG-06 | Phase 346 | Complete |
+| INTG-07 | Phase 346 | Complete |
+| TEST-01 | Phase 346 | Complete |
+| TEST-02 | Phase 346 | Complete |
+| TEST-03 | Phase 346 | Complete |
+| TEST-04 | Phase 346 | Complete |
+| TEST-05 | Phase 346 | Complete |
+| TEST-06 | Phase 346 | Complete |
+| TEST-07 | Phase 346 | Complete |
 
 **Coverage:**
 - v31.3 requirements: 37 total
