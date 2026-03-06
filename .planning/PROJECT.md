@@ -8,6 +8,23 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
+## Current Milestone: v31.0 NFT 지원 (EVM + Solana)
+
+**Goal:** WAIaaS에 EVM(ERC-721/ERC-1155)과 Solana(Metaplex) NFT를 통합하여, AI 에이전트가 지갑이 보유한 NFT를 조회하고, 전송하며, 승인을 관리할 수 있는 상태.
+
+**Target features:**
+- NFT 목록/메타데이터 조회 (인덱서 기반: Alchemy NFT API / Helius DAS API)
+- NFT 전송 (NFT_TRANSFER — TransactionRequestSchema 6번째 타입)
+- NFT 승인 관리 (기존 APPROVE 타입 확장, nft 선택 필드)
+- 인덱서 프로바이더 프레임워크 (INftIndexer 인터페이스)
+- IChainAdapter NFT 메서드 확장 (transferNft, approveNft, buildNftTransferTx)
+- Admin UI 지갑 상세 NFT 탭 + 인덱서 설정
+- MCP 3도구 + SDK 3메서드
+- CAIP-19 NFT 네임스페이스 (erc721/erc1155/metaplex)
+- 정책 적용 (RATE_LIMIT, CONTRACT_WHITELIST, 기본 tier APPROVAL)
+- DB v44 마이그레이션 (nft_metadata_cache)
+- 스킬 파일 (nft.skill.md 신규 + wallet/transactions 업데이트)
+
 ## Previous Milestone: v30.11 Admin UI DX 개선 — SHIPPED 2026-03-05
 
 Admin UI 메뉴를 DeFi/Agent Identity로 직관적으로 재명명, ERC-8004 토글을 Agent Identity 페이지에 통합하여 한 페이지 완결 관리, 전 10개 프로바이더 기본 활성화(DB v42 INSERT OR IGNORE), 액션별 Tier 오버라이드 프레임워크(Settings 기반 + 파이프라인 floor 에스컬레이션), Admin UI Description 컬럼 + Tier 드롭다운 + 오버라이드/Reset 기능, 4개 스킬 파일 동기화. 23 commits, 48 files, +2,984/-370 lines.
