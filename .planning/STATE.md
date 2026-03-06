@@ -4,13 +4,13 @@ milestone: v31.0
 milestone_name: NFT 지원
 status: completed
 stopped_at: Phase 337 complete -- all 5 phases done, milestone v31.0 ready
-last_updated: "2026-03-06T03:42:00.000Z"
-last_activity: 2026-03-06 -- Phase 337 complete (3 plans, 4 tasks, skill files + MCP + SDK + Admin UI)
+last_updated: "2026-03-06T03:40:47.279Z"
+last_activity: 2026-03-06 -- Phase 337 complete (3 plans, skill files + MCP + SDK + Admin UI)
 progress:
   total_phases: 5
   completed_phases: 5
   total_plans: 12
-  completed_plans: 15
+  completed_plans: 12
   percent: 100
 ---
 

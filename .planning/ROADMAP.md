@@ -214,7 +214,7 @@ Phase 333 -> 334 -> 335 (parallel with 336) -> 337
 | 334. Indexer + Chain Adapter | v31.0 | Complete    | 2026-03-06 | 2026-03-06 |
 | 335. NFT Query API | v31.0 | Complete    | 2026-03-06 | 2026-03-06 |
 | 336. NFT Transfer + Approval Pipeline | 2/2 | Complete    | 2026-03-06 | - |
-| 337. Interface Integration | 3/3 | Complete   | 2026-03-06 | - |
+| 337. Interface Integration | 3/3 | Complete    | 2026-03-06 | - |
 
 ---
 *Last updated: 2026-03-06 -- Phase 337 plans created.*
