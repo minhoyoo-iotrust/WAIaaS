@@ -409,6 +409,136 @@ describe('WalletListContent - search and filter', () => {
   });
 });
 
+describe('WalletListContent - Smart Account type column', () => {
+  beforeEach(() => {
+    currentPath.value = '/wallets';
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  const SOLADY_FACTORY = '0x5d82735936c6Cd5DE57cC3c1A799f6B2E6F933Df';
+
+  const mockWalletsWithSmartAccounts = {
+    items: [
+      {
+        id: 'wallet-eoa',
+        name: 'eoa-wallet',
+        chain: 'evm',
+        network: 'ethereum-sepolia',
+        environment: 'testnet',
+        publicKey: '0xeoa123',
+        status: 'ACTIVE',
+        createdAt: 1707609600,
+        accountType: 'eoa',
+      },
+      {
+        id: 'wallet-smart-deprecated',
+        name: 'deprecated-sa',
+        chain: 'evm',
+        network: 'ethereum-sepolia',
+        environment: 'testnet',
+        publicKey: '0xdeprecated123',
+        status: 'ACTIVE',
+        createdAt: 1707609600,
+        accountType: 'smart',
+        factoryAddress: SOLADY_FACTORY,
+        provider: null,
+      },
+      {
+        id: 'wallet-smart-full',
+        name: 'full-sa',
+        chain: 'evm',
+        network: 'ethereum-sepolia',
+        environment: 'testnet',
+        publicKey: '0xfull123',
+        status: 'ACTIVE',
+        createdAt: 1707609600,
+        accountType: 'smart',
+        factoryAddress: '0x1234567890abcdef1234567890abcdef12345678',
+        provider: 'pimlico',
+      },
+      {
+        id: 'wallet-smart-lite',
+        name: 'lite-sa',
+        chain: 'evm',
+        network: 'ethereum-sepolia',
+        environment: 'testnet',
+        publicKey: '0xlite123',
+        status: 'ACTIVE',
+        createdAt: 1707609600,
+        accountType: 'smart',
+        factoryAddress: '0xabcdef1234567890abcdef1234567890abcdef12',
+        provider: null,
+      },
+    ],
+  };
+
+  it('shows Deprecated badge for Smart Account with Solady factory in list', async () => {
+    vi.mocked(apiGet).mockImplementation((path: string) => {
+      if (path === '/v1/wallets') return Promise.resolve(mockWalletsWithSmartAccounts);
+      return Promise.resolve({});
+    });
+
+    render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('deprecated-sa')).toBeTruthy();
+    });
+
+    expect(screen.getByText('Deprecated')).toBeTruthy();
+  });
+
+  it('shows Smart (Full) badge for Smart Account with provider', async () => {
+    vi.mocked(apiGet).mockImplementation((path: string) => {
+      if (path === '/v1/wallets') return Promise.resolve(mockWalletsWithSmartAccounts);
+      return Promise.resolve({});
+    });
+
+    render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('full-sa')).toBeTruthy();
+    });
+
+    expect(screen.getByText('Smart (Full)')).toBeTruthy();
+  });
+
+  it('shows Smart (Lite) badge for Smart Account without provider', async () => {
+    vi.mocked(apiGet).mockImplementation((path: string) => {
+      if (path === '/v1/wallets') return Promise.resolve(mockWalletsWithSmartAccounts);
+      return Promise.resolve({});
+    });
+
+    render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('lite-sa')).toBeTruthy();
+    });
+
+    expect(screen.getByText('Smart (Lite)')).toBeTruthy();
+  });
+
+  it('shows EOA badge for non-smart accounts', async () => {
+    vi.mocked(apiGet).mockImplementation((path: string) => {
+      if (path === '/v1/wallets') return Promise.resolve(mockWalletsWithSmartAccounts);
+      return Promise.resolve({});
+    });
+
+    render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('eoa-wallet')).toBeTruthy();
+    });
+
+    // EOA badges - there should be at least one
+    const eoaBadges = screen.getAllByText('EOA');
+    expect(eoaBadges.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
 describe('chainNetworkOptions', () => {
   it('all Solana option values are valid SOLANA_NETWORK_TYPES', () => {
     const options = chainNetworkOptions('solana');
