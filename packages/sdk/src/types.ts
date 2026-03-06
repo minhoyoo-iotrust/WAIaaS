@@ -981,6 +981,75 @@ export interface Erc8004GetReputationOptions {
 }
 
 // ---------------------------------------------------------------------------
+// NFT Types
+// ---------------------------------------------------------------------------
+
+export interface ListNftsParams {
+  /** Network identifier (required) */
+  network: string;
+  /** Pagination cursor */
+  cursor?: string;
+  /** Max items per page */
+  limit?: number;
+  /** Group NFTs by collection */
+  groupBy?: 'collection';
+  /** Target wallet ID (multi-wallet sessions) */
+  walletId?: string;
+}
+
+export interface NftItemResponse {
+  tokenId: string;
+  contractAddress: string;
+  standard: string;
+  name?: string;
+  image?: string;
+  description?: string;
+  amount?: string;
+  collection?: { name?: string; address: string };
+  assetId?: string;
+}
+
+export interface NftListResponse {
+  nfts: NftItemResponse[];
+  cursor?: string;
+  hasMore: boolean;
+}
+
+export interface NftMetadataParams {
+  /** Network identifier (required) */
+  network: string;
+  /** Target wallet ID (multi-wallet sessions) */
+  walletId?: string;
+}
+
+export interface NftMetadataResponse {
+  tokenId: string;
+  contractAddress: string;
+  standard: string;
+  name?: string;
+  image?: string;
+  description?: string;
+  attributes?: Array<{ traitType: string; value: string }>;
+  metadata?: Record<string, unknown>;
+  assetId?: string;
+}
+
+export interface TransferNftParams {
+  /** Recipient address */
+  to: string;
+  /** NFT token info */
+  token: { address: string; tokenId: string; standard: string };
+  /** Network identifier */
+  network: string;
+  /** Amount (default "1", relevant for ERC-1155) */
+  amount?: string;
+  /** Target wallet ID (multi-wallet sessions) */
+  walletId?: string;
+  /** Gas price condition */
+  gasCondition?: GasCondition;
+}
+
+// ---------------------------------------------------------------------------
 // DeFi Position Types (API-01, API-02, API-05)
 // ---------------------------------------------------------------------------
 

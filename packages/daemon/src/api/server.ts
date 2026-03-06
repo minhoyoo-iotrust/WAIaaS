@@ -65,6 +65,7 @@ import type { KillSwitchState } from './routes/admin.js';
 import { createWalletAppsRoutes } from './routes/wallet-apps.js';
 import { tokenRegistryRoutes } from './routes/tokens.js';
 import { connectInfoRoutes } from './routes/connect-info.js';
+import { NftIndexerClient } from '../infrastructure/nft/nft-indexer-client.js';
 import { auditLogRoutes } from './routes/audit-logs.js';
 import { erc8004Routes } from './routes/erc8004.js';
 import { erc8128Routes } from './routes/erc8128.js';
@@ -750,11 +751,15 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
 
   // Register connect-info route (sessionAuth, no masterAuth)
   if (deps.db) {
+    const nftIndexerClient = deps.settingsService
+      ? new NftIndexerClient({ settingsService: deps.settingsService })
+      : undefined;
     app.route('/v1', connectInfoRoutes({
       db: deps.db,
       config: deps.config ?? {} as DaemonConfig,
       settingsService: deps.settingsService,
       actionProviderRegistry: deps.actionProviderRegistry,
+      nftIndexerClient,
       version: DAEMON_VERSION,
     }));
   }
