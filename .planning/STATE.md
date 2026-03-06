@@ -4,7 +4,7 @@ milestone: v31.3
 milestone_name: DCent Swap Aggregator 통합
 status: planning
 stopped_at: Completed 343-02-PLAN.md
-last_updated: "2026-03-06T13:41:45.854Z"
+last_updated: "2026-03-06T13:42:13.624Z"
 last_activity: 2026-03-06 — Roadmap created
 progress:
   total_phases: 5
