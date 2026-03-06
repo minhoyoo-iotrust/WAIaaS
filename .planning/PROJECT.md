@@ -8,6 +8,22 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
+## Current Milestone: v31.2 UserOp Build/Sign API (플랫폼 대납 지원)
+
+**Goal:** Smart Account 지갑에서 프로바이더(Bundler/Paymaster) 없이도 UserOperation을 구성하고 서명할 수 있는 API를 제공하여, 외부 플랫폼이 가스 대납(Gas Sponsorship)을 중계하는 아키텍처를 지원한다.
+
+**Target features:**
+- Smart Account 프로바이더 선택화 (Lite/Full 모드)
+- UserOp Build API (unsigned UserOp 구성, callData 인코딩, nonce 조회)
+- UserOp Sign API (sponsored UserOp 서명, callData 이중 검증, sign-only 패턴)
+- Build 데이터 관리 (TTL, 재사용 방지, 주기적 정리)
+- connect-info `userop` capability
+- DB v45 마이그레이션 (userop_builds 테이블)
+- 감사 로그 (USEROP_BUILD, USEROP_SIGNED) + 알림 이벤트
+- Admin UI Lite/Full 모드 표시 (생성 폼, 상세, 목록)
+- MCP 2도구 (build_userop, sign_userop) + SDK 2메서드
+- 스킬 파일 3개 업데이트
+
 ## Previous Milestone: v31.0 NFT 지원 (EVM + Solana) — SHIPPED 2026-03-06
 
 EVM(ERC-721/ERC-1155)과 Solana(Metaplex) NFT 통합. NFT_TRANSFER 6번째 discriminatedUnion type, INftIndexer(Alchemy/Helius), IChainAdapter 25 메서드, 6-stage 파이프라인 NFT_TRANSFER + Smart Account UserOp 호환, NFT Query API(커서 페이지네이션/컬렉션 그룹핑/메타데이터 캐싱), MCP 3도구 + SDK 3메서드, Admin UI NFT 탭 + 인덱서 설정, 스킬 파일 3개, CAIP-19 NFT 네임스페이스, 정책 적용(RATE_LIMIT nft_count/CONTRACT_WHITELIST/기본 APPROVAL). 5 phases, 12 plans, 58 requirements, 38 commits, +12,784 lines.
