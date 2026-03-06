@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v31.2
 milestone_name: UserOp Build/Sign API
 status: completed
-stopped_at: Completed 338-02-PLAN.md (Phase 338 Foundation -- 2/2 plans)
-last_updated: "2026-03-06T08:52:46.617Z"
-last_activity: 2026-03-06 -- Phase 338 Foundation completed
+stopped_at: Completed Phase 339 UserOp Build API -- 2/2 plans
+last_updated: "2026-03-06T09:10:59.963Z"
+last_activity: 2026-03-06 -- Phase 339 UserOp Build API completed
 progress:
   total_phases: 4
-  completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  completed_phases: 2
+  total_plans: 4
+  completed_plans: 4
   percent: 25
 ---
 
@@ -21,25 +21,26 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-06)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 339 UserOp Build API (v31.2 UserOp Build/Sign API)
+**Current focus:** Phase 340 UserOp Sign API (v31.2 UserOp Build/Sign API)
 
 ## Current Position
 
-Phase: 339 (2 of 4) -- UserOp Build API
+Phase: 340 (3 of 4) -- UserOp Sign API
 Plan: Not started
-Status: Phase 338 complete, ready for Phase 339
-Last activity: 2026-03-06 -- Phase 338 Foundation completed
+Status: Phase 339 complete, ready for Phase 340
+Last activity: 2026-03-06 -- Phase 339 UserOp Build API completed
 
-Progress: [##░░░░░░░░] 25%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
-**Cumulative:** 86 milestones shipped, 338 phases completed, ~769 plans, ~2,258 reqs, ~6,950+ tests, ~239,575 LOC TS
+**Cumulative:** 86 milestones shipped, 339 phases completed, ~771 plans, ~2,273 reqs, ~6,969+ tests, ~239,575 LOC TS
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
 | 338 | 01 | 5min | 2 | 4 |
 | 338 | 02 | 5min | 2 | 12 |
+| 339 | 01+02 | 9min | 2 | 7 |
 
 ## Accumulated Context
 
@@ -50,6 +51,10 @@ Progress: [##░░░░░░░░] 25%
 - D3: USEROP domain for all UserOp Build/Sign error codes
 - D4: userop_builds.wallet_id is TEXT (not FK) for simplicity
 - D5: HexAddress regex strict 40-char, HexString arbitrary 0x-prefixed
+- [Phase 339]: D6: Nonce read from EntryPoint v0.7 readContract (no Bundler dependency)
+- [Phase 339]: D7: releaseKey takes Uint8Array privateKey, not walletId string
+- [Phase 339]: D8: Factory detection uses getCode on-chain check before getFactoryArgs
+- [Phase 339]: D9: All expired build records cleaned regardless of used status
 
 ### Blockers/Concerns
 
@@ -59,6 +64,6 @@ Progress: [##░░░░░░░░] 25%
 
 ## Session Continuity
 
-Last session: 2026-03-06
-Stopped at: Completed 338-02-PLAN.md (Phase 338 Foundation -- 2/2 plans)
+Last session: 2026-03-06T09:10:59.959Z
+Stopped at: Completed Phase 339 UserOp Build API -- 2/2 plans
 Resume file: None

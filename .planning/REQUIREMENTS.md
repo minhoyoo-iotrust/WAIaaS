@@ -17,17 +17,17 @@ Requirements for UserOp Build/Sign API (플랫폼 대납 지원). Each maps to r
 
 ### UserOp Build
 
-- [ ] **BUILD-01**: POST /v1/wallets/:id/userop/build — unsigned UserOp 구성 (sessionAuth + masterAuth)
-- [ ] **BUILD-02**: 요청 바디 기존 TransactionRequest 스키마 재사용 (5 type)
-- [ ] **BUILD-03**: 응답: sender, nonce, callData, factory?, factoryData?, entryPoint, buildId
-- [ ] **BUILD-04**: buildUserOpCalls() 재사용하여 request → calls 변환
-- [ ] **BUILD-05**: SmartAccount.encodeCalls(calls) → callData 인코딩
-- [ ] **BUILD-06**: EntryPoint RPC로 nonce 조회 (Bundler 불필요)
-- [ ] **BUILD-07**: 미배포 시 factory/factoryData 자동 포함
-- [ ] **BUILD-08**: deployed 상태 자동 감지 — getCode(sender) 확인 → DB 업데이트
-- [ ] **BUILD-09**: buildId + callData + walletId DB 저장 (sign 무결성 검증용)
-- [ ] **BUILD-10**: EVM 전용 — Solana 호출 시 ACTION_VALIDATION_FAILED
-- [ ] **BUILD-11**: gas/paymaster 필드 미포함
+- [x] **BUILD-01**: POST /v1/wallets/:id/userop/build — unsigned UserOp 구성 (sessionAuth + masterAuth)
+- [x] **BUILD-02**: 요청 바디 기존 TransactionRequest 스키마 재사용 (5 type)
+- [x] **BUILD-03**: 응답: sender, nonce, callData, factory?, factoryData?, entryPoint, buildId
+- [x] **BUILD-04**: buildUserOpCalls() 재사용하여 request → calls 변환
+- [x] **BUILD-05**: SmartAccount.encodeCalls(calls) → callData 인코딩
+- [x] **BUILD-06**: EntryPoint RPC로 nonce 조회 (Bundler 불필요)
+- [x] **BUILD-07**: 미배포 시 factory/factoryData 자동 포함
+- [x] **BUILD-08**: deployed 상태 자동 감지 — getCode(sender) 확인 → DB 업데이트
+- [x] **BUILD-09**: buildId + callData + walletId DB 저장 (sign 무결성 검증용)
+- [x] **BUILD-10**: EVM 전용 — Solana 호출 시 ACTION_VALIDATION_FAILED
+- [x] **BUILD-11**: gas/paymaster 필드 미포함
 
 ### UserOp Sign
 
@@ -44,10 +44,10 @@ Requirements for UserOp Build/Sign API (플랫폼 대납 지원). Each maps to r
 
 ### Build Data
 
-- [ ] **DATA-01**: userop_builds 테이블: buildId PK, walletId, callData, sender, nonce, createdAt, expiresAt, used
-- [ ] **DATA-02**: build 데이터 TTL 기본 10분, 만료 시 EXPIRED_BUILD 에러
-- [ ] **DATA-03**: sign 성공 시 used = true (재사용 방지)
-- [ ] **DATA-04**: 만료 레코드 주기적 정리 — WorkerScheduler userop-build-cleanup 워커
+- [x] **DATA-01**: userop_builds 테이블: buildId PK, walletId, callData, sender, nonce, createdAt, expiresAt, used
+- [x] **DATA-02**: build 데이터 TTL 기본 10분, 만료 시 EXPIRED_BUILD 에러
+- [x] **DATA-03**: sign 성공 시 used = true (재사용 방지)
+- [x] **DATA-04**: 만료 레코드 주기적 정리 — WorkerScheduler userop-build-cleanup 워커
 
 ### connect-info
 
@@ -133,21 +133,21 @@ Requirements for UserOp Build/Sign API (플랫폼 대납 지원). Each maps to r
 | ERR-05 | Phase 338 | Complete |
 | DB-01 | Phase 338 | Complete |
 | DB-02 | Phase 338 | Complete |
-| BUILD-01 | Phase 339 | Pending |
-| BUILD-02 | Phase 339 | Pending |
-| BUILD-03 | Phase 339 | Pending |
-| BUILD-04 | Phase 339 | Pending |
-| BUILD-05 | Phase 339 | Pending |
-| BUILD-06 | Phase 339 | Pending |
-| BUILD-07 | Phase 339 | Pending |
-| BUILD-08 | Phase 339 | Pending |
-| BUILD-09 | Phase 339 | Pending |
-| BUILD-10 | Phase 339 | Pending |
-| BUILD-11 | Phase 339 | Pending |
-| DATA-01 | Phase 339 | Pending |
-| DATA-02 | Phase 339 | Pending |
-| DATA-03 | Phase 339 | Pending |
-| DATA-04 | Phase 339 | Pending |
+| BUILD-01 | Phase 339 | Complete |
+| BUILD-02 | Phase 339 | Complete |
+| BUILD-03 | Phase 339 | Complete |
+| BUILD-04 | Phase 339 | Complete |
+| BUILD-05 | Phase 339 | Complete |
+| BUILD-06 | Phase 339 | Complete |
+| BUILD-07 | Phase 339 | Complete |
+| BUILD-08 | Phase 339 | Complete |
+| BUILD-09 | Phase 339 | Complete |
+| BUILD-10 | Phase 339 | Complete |
+| BUILD-11 | Phase 339 | Complete |
+| DATA-01 | Phase 339 | Complete |
+| DATA-02 | Phase 339 | Complete |
+| DATA-03 | Phase 339 | Complete |
+| DATA-04 | Phase 339 | Complete |
 | SIGN-01 | Phase 340 | Pending |
 | SIGN-02 | Phase 340 | Pending |
 | SIGN-03 | Phase 340 | Pending |
