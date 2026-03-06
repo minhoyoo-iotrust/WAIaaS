@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v31.0
 milestone_name: NFT 지원
-status: completed
-stopped_at: Phase 333 complete -- ready for Phase 334 (Indexer + Chain Adapter)
-last_updated: "2026-03-06T02:17:18.000Z"
-last_activity: 2026-03-06 -- Phase 333 complete (2 plans, 3 tasks, 26 tests)
+status: in_progress
+stopped_at: Phase 334 complete -- ready for Phase 335 (NFT Query API)
+last_updated: "2026-03-06T02:39:00.000Z"
+last_activity: 2026-03-06 -- Phase 334 complete (3 plans, 5 tasks, 48 tests)
 progress:
   total_phases: 5
-  completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
-  percent: 17
+  completed_phases: 2
+  total_plans: 5
+  completed_plans: 5
+  percent: 40
 ---
 
 # Project State
@@ -21,20 +21,25 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-06)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 333 - NFT Foundation
+**Current focus:** Phase 335 - NFT Query API
 
 ## Current Position
 
-Phase: 2 of 5 (Phase 334: Indexer + Chain Adapter)
-Plan: 0 of 3 in current phase
-Status: Phase 333 complete, ready for Phase 334
-Last activity: 2026-03-06 -- Phase 333 complete (2 plans, 3 tasks, 26 tests)
+Phase: 3 of 5 (Phase 335: NFT Query API)
+Plan: 0 of 2 in current phase
+Status: Phase 334 complete, ready for Phase 335
+Last activity: 2026-03-06 -- Phase 334 complete (3 plans, 5 tasks, 48 tests)
 
-Progress: [██░░░░░░░░] 17%
+Progress: [████░░░░░░] 40%
 
 ## Performance Metrics
 
-**Cumulative:** 85 milestones shipped, 332 phases completed, ~755 plans, ~2,172 reqs, ~6,822+ tests, ~266,814 LOC TS
+**Cumulative:** 85 milestones shipped, 334 phases completed, ~760 plans, ~2,183 reqs, ~6,870+ tests, ~266,814 LOC TS
+
+| Phase | Plan | Duration | Tasks | Files |
+|-------|------|----------|-------|-------|
+| 333   | 01-02 | 8 min | 3 | 12 |
+| 334   | 01-03 | 14 min | 5 | 19 |
 
 ## Accumulated Context
 
@@ -52,6 +57,12 @@ D10: NftTokenInfoSchema separate from TokenInfoSchema (no decimals/symbol for NF
 D11: EVM NFT CAIP-19 uses address-tokenId hyphen separator in assetReference
 D12: Metaplex uses mint address directly (unique per NFT, no tokenId needed)
 D13: DB v44: nft_metadata_cache unique on (contract_address, token_id, chain, network)
+D14: INftIndexer 3-method interface (listNfts, getNftMetadata, getNftsByCollection)
+D15: AlchemyNftIndexer maps 10 EVM networks, HeliusNftIndexer uses DAS JSON-RPC
+D16: NftIndexerClient: retry max 3 (1s/2s/4s), Retry-After respected, cache TTL 300s default
+D17: IChainAdapter extended to 25 methods (+3 NFT: buildNftTransferTx, transferNft, approveNft)
+D18: ERC-1155 single approval not supported, Solana collection-wide approval not supported
+D19: Metaplex NFT transfer reuses SPL token transfer with decimals=0
 
 ### Blockers/Concerns
 
@@ -62,5 +73,5 @@ D13: DB v44: nft_metadata_cache unique on (contract_address, token_id, chain, ne
 ## Session Continuity
 
 Last session: 2026-03-06
-Stopped at: Phase 333 complete -- ready for Phase 334 (Indexer + Chain Adapter)
+Stopped at: Phase 334 complete -- ready for Phase 335 (NFT Query API)
 Resume file: None

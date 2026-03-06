@@ -111,7 +111,7 @@ See `.planning/milestones/` for archived phase details.
 **Milestone Goal:** AI 에이전트가 EVM(ERC-721/ERC-1155)과 Solana(Metaplex) NFT를 조회하고, 전송하며, 승인을 관리할 수 있는 상태
 
 - [x] **Phase 333: NFT Foundation** - Zod 스키마(NFT_TRANSFER 6th type, APPROVE nft 확장), DB v44 마이그레이션, CAIP-19 NFT 네임스페이스, 에러 코드
-- [ ] **Phase 334: Indexer + Chain Adapter** - INftIndexer 인터페이스 + Alchemy/Helius 구현체, IChainAdapter NFT 메서드 + SolanaAdapter/EvmAdapter 구현
+- [x] **Phase 334: Indexer + Chain Adapter** - INftIndexer 인터페이스 + Alchemy/Helius 구현체, IChainAdapter NFT 메서드 + SolanaAdapter/EvmAdapter 구현
 - [ ] **Phase 335: NFT Query API** - NFT 목록/메타데이터 REST 조회 라우트, 메타데이터 캐싱, 페이지네이션, 컬렉션 그룹핑
 - [ ] **Phase 336: NFT Transfer + Approval Pipeline** - NFT_TRANSFER 6-stage 파이프라인 통과, NFT 승인 체인 메서드, Smart Account 호환, 정책 적용
 - [ ] **Phase 337: Interface Integration** - MCP 3도구 + SDK 3메서드, Admin UI NFT 탭 + 인덱서 설정, 스킬 파일 3개
@@ -147,9 +147,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 334-01-PLAN.md -- INftIndexer 인터페이스 + Alchemy NFT API v3 구현체
-- [ ] 334-02-PLAN.md -- Helius DAS API 구현체 + 인덱서 설정/캐싱/재시도 (NftIndexerClient)
-- [ ] 334-03-PLAN.md -- IChainAdapter NFT 메서드 + SolanaAdapter/EvmAdapter NFT 구현
+- [x] 334-01-PLAN.md -- INftIndexer 인터페이스 + Alchemy NFT API v3 구현체
+- [x] 334-02-PLAN.md -- Helius DAS API 구현체 + 인덱서 설정/캐싱/재시도 (NftIndexerClient)
+- [x] 334-03-PLAN.md -- IChainAdapter NFT 메서드 + SolanaAdapter/EvmAdapter NFT 구현
 
 ### Phase 335: NFT Query API
 **Goal**: 사용자가 REST API로 지갑의 NFT 목록과 개별 메타데이터를 조회할 수 있는 상태
@@ -211,7 +211,7 @@ Phase 333 -> 334 -> 335 (parallel with 336) -> 337
 | 244-267 | v28.0-v28.8 | All | Complete | 2026-02-26 |
 | 268-332 | v29.0-v30.11 | All | Complete | 2026-03-05 |
 | 333. NFT Foundation | 2/2 | Complete    | 2026-03-06 | 2026-03-06 |
-| 334. Indexer + Chain Adapter | v31.0 | 0/3 | Not started | - |
+| 334. Indexer + Chain Adapter | v31.0 | 3/3 | Complete | 2026-03-06 |
 | 335. NFT Query API | v31.0 | 0/2 | Not started | - |
 | 336. NFT Transfer + Approval Pipeline | v31.0 | 0/2 | Not started | - |
 | 337. Interface Integration | v31.0 | 0/3 | Not started | - |

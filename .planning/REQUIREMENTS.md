@@ -41,20 +41,20 @@ Requirements for NFT support milestone. Each maps to roadmap phases.
 
 ### Indexer (인덱서)
 
-- [ ] **INDX-01**: `INftIndexer` interface defined with `listNfts()`, `getNftMetadata()`, `getNftsByCollection()`
-- [ ] **INDX-02**: EVM indexer: Alchemy NFT API implementation
-- [ ] **INDX-03**: Solana indexer: Helius DAS API implementation
-- [ ] **INDX-04**: Indexer API keys stored in settings table (AES-256-GCM encrypted)
-- [ ] **INDX-05**: Graceful fallback when indexer not configured (transfer still works)
-- [ ] **INDX-06**: Indexer response caching with configurable TTL
-- [ ] **INDX-07**: Rate limit/retry with exponential backoff (max 3 retries, Retry-After)
+- [x] **INDX-01**: `INftIndexer` interface defined with `listNfts()`, `getNftMetadata()`, `getNftsByCollection()`
+- [x] **INDX-02**: EVM indexer: Alchemy NFT API implementation
+- [x] **INDX-03**: Solana indexer: Helius DAS API implementation
+- [x] **INDX-04**: Indexer API keys stored in settings table (AES-256-GCM encrypted)
+- [x] **INDX-05**: Graceful fallback when indexer not configured (transfer still works)
+- [x] **INDX-06**: Indexer response caching with configurable TTL
+- [x] **INDX-07**: Rate limit/retry with exponential backoff (max 3 retries, Retry-After)
 
 ### Chain Adapter (체인 어댑터)
 
-- [ ] **CHADP-01**: IChainAdapter extended with `transferNft()`, `approveNft()`, `buildNftTransferTx()`
-- [ ] **CHADP-02**: SolanaAdapter Metaplex NFT transfer implementation
-- [ ] **CHADP-03**: EvmAdapter ERC-721/ERC-1155 transfer implementation
-- [ ] **CHADP-04**: NFT standard auto-detection via ERC-165 `supportsInterface`
+- [x] **CHADP-01**: IChainAdapter extended with `transferNft()`, `approveNft()`, `buildNftTransferTx()`
+- [x] **CHADP-02**: SolanaAdapter Metaplex NFT transfer implementation
+- [x] **CHADP-03**: EvmAdapter ERC-721/ERC-1155 transfer implementation
+- [x] **CHADP-04**: NFT standard auto-detection via ERC-165 `supportsInterface`
 
 ### Admin UI
 
@@ -142,17 +142,17 @@ Requirements for NFT support milestone. Each maps to roadmap phases.
 | CAIP-02 | Phase 333 | Complete |
 | CAIP-03 | Phase 333 | Complete |
 | CAIP-04 | Phase 333 | Complete |
-| INDX-01 | Phase 334 | Pending |
-| INDX-02 | Phase 334 | Pending |
-| INDX-03 | Phase 334 | Pending |
-| INDX-04 | Phase 334 | Pending |
-| INDX-05 | Phase 334 | Pending |
-| INDX-06 | Phase 334 | Pending |
-| INDX-07 | Phase 334 | Pending |
-| CHADP-01 | Phase 334 | Pending |
-| CHADP-02 | Phase 334 | Pending |
-| CHADP-03 | Phase 334 | Pending |
-| CHADP-04 | Phase 334 | Pending |
+| INDX-01 | Phase 334 | Complete |
+| INDX-02 | Phase 334 | Complete |
+| INDX-03 | Phase 334 | Complete |
+| INDX-04 | Phase 334 | Complete |
+| INDX-05 | Phase 334 | Complete |
+| INDX-06 | Phase 334 | Complete |
+| INDX-07 | Phase 334 | Complete |
+| CHADP-01 | Phase 334 | Complete |
+| CHADP-02 | Phase 334 | Complete |
+| CHADP-03 | Phase 334 | Complete |
+| CHADP-04 | Phase 334 | Complete |
 | NFTQ-01 | Phase 335 | Pending |
 | NFTQ-02 | Phase 335 | Pending |
 | NFTQ-03 | Phase 335 | Pending |
