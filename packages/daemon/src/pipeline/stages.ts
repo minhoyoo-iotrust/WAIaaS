@@ -1016,6 +1016,20 @@ export async function buildByType(
 
     case 'APPROVE': {
       const req = request as ApproveRequest;
+      // v31.0: NFT approval routing
+      if (req.nft) {
+        const approvalType = req.amount === '0' ? 'single' : 'all' as const;
+        return adapter.approveNft({
+          from: walletPublicKey,
+          spender: req.spender,
+          token: {
+            address: req.token.address,
+            tokenId: req.nft.tokenId,
+            standard: req.nft.standard,
+          },
+          approvalType,
+        });
+      }
       return adapter.buildApprove({
         from: walletPublicKey,
         spender: req.spender,
@@ -1185,6 +1199,37 @@ export function buildUserOpCalls(
 
     case 'APPROVE': {
       const req = request as ApproveRequest;
+      // v31.0: NFT approval routing for Smart Account
+      if (req.nft) {
+        const approvalType = req.amount === '0' ? 'single' : 'all';
+        if (req.nft.standard === 'METAPLEX') {
+          throw new WAIaaSError('CHAIN_ERROR', {
+            message: 'Smart Account (ERC-4337) does not support Solana METAPLEX NFT approvals',
+          });
+        }
+        if (approvalType === 'single' && req.nft.standard === 'ERC-721') {
+          return [{
+            to: req.token.address as Hex,
+            value: 0n,
+            data: encodeFunctionData({
+              abi: ERC721_USEROP_ABI,
+              functionName: 'approve',
+              args: [req.spender as Hex, BigInt(req.nft.tokenId)],
+            }),
+          }];
+        }
+        // setApprovalForAll (ERC-721 all / ERC-1155 all)
+        const nftAbi = req.nft.standard === 'ERC-721' ? ERC721_USEROP_ABI : ERC1155_USEROP_ABI;
+        return [{
+          to: req.token.address as Hex,
+          value: 0n,
+          data: encodeFunctionData({
+            abi: nftAbi,
+            functionName: 'setApprovalForAll',
+            args: [req.spender as Hex, true],
+          }),
+        }];
+      }
       return [{
         to: req.token.address as Hex,
         value: 0n,
