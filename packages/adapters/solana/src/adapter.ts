@@ -56,6 +56,8 @@ import type {
   BatchParams,
   ParsedTransaction,
   SignedTransaction,
+  NftTransferParams,
+  NftApproveParams,
 } from '@waiaas/core';
 import { WAIaaSError, ChainError } from '@waiaas/core';
 import { parseSolanaTransaction } from './tx-parser.js';
@@ -1311,6 +1313,255 @@ export class SolanaAdapter implements IChainAdapter {
       if (error instanceof ChainError) throw error;
       throw new ChainError('INVALID_RAW_TRANSACTION', 'solana', {
         message: `Failed to sign external transaction: ${error instanceof Error ? error.message : String(error)}`,
+      });
+    }
+  }
+
+  // -- NFT operations (3) -- v31.0
+
+  async buildNftTransferTx(request: NftTransferParams): Promise<UnsignedTransaction> {
+    const rpc = this.getRpc();
+    try {
+      if (request.token.standard !== 'METAPLEX') {
+        throw new WAIaaSError('UNSUPPORTED_NFT_STANDARD', {
+          message: `Solana adapter only supports METAPLEX NFTs, got: ${request.token.standard}`,
+        });
+      }
+
+      const from = address(request.from);
+      const to = address(request.to);
+      const mintAddr = address(request.token.address);
+
+      // Metaplex NFTs are SPL tokens with decimals=0
+      const mintAccountInfo = await rpc
+        .getAccountInfo(mintAddr, { encoding: 'base64' })
+        .send();
+
+      if (!mintAccountInfo.value) {
+        throw new ChainError('TOKEN_ACCOUNT_NOT_FOUND', 'solana', {
+          message: `NFT mint not found: ${request.token.address}`,
+        });
+      }
+
+      const mintOwner = String(mintAccountInfo.value.owner);
+      let tokenProgramId: string;
+
+      if (mintOwner === SPL_TOKEN_PROGRAM_ID) {
+        tokenProgramId = SPL_TOKEN_PROGRAM_ID;
+      } else if (mintOwner === TOKEN_2022_PROGRAM_ID) {
+        tokenProgramId = TOKEN_2022_PROGRAM_ID;
+      } else {
+        throw new ChainError('INVALID_INSTRUCTION', 'solana', {
+          message: 'Invalid NFT mint: owner is not a token program',
+        });
+      }
+
+      // Find source and destination ATAs
+      const [sourceAta] = await findAssociatedTokenPda({
+        owner: from,
+        tokenProgram: address(tokenProgramId),
+        mint: mintAddr,
+      });
+
+      const [destinationAta] = await findAssociatedTokenPda({
+        owner: to,
+        tokenProgram: address(tokenProgramId),
+        mint: mintAddr,
+      });
+
+      // Check if destination ATA exists
+      const destAtaInfo = await rpc
+        .getAccountInfo(destinationAta, { encoding: 'base64' })
+        .send();
+      const needCreateAta = !destAtaInfo.value;
+
+      // Get blockhash
+      const { value: blockhashInfo } = await rpc.getLatestBlockhash().send();
+
+      const fromSigner = createNoopSigner(from);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const instructions: any[] = [];
+
+      if (needCreateAta) {
+        instructions.push(
+          getCreateAssociatedTokenIdempotentInstruction({
+            payer: fromSigner,
+            ata: destinationAta,
+            owner: to,
+            mint: mintAddr,
+            tokenProgram: address(tokenProgramId),
+          }),
+        );
+      }
+
+      // NFT transfer: amount = request.amount (typically 1), decimals = 0
+      instructions.push(
+        getTransferCheckedInstruction(
+          {
+            source: sourceAta,
+            mint: mintAddr,
+            destination: destinationAta,
+            authority: fromSigner,
+            amount: request.amount,
+            decimals: 0,
+          },
+          { programAddress: address(tokenProgramId) },
+        ),
+      );
+
+      let txMessage = pipe(
+        createTransactionMessage({ version: 0 }),
+        (tx) => setTransactionMessageFeePayer(from, tx),
+        (tx) =>
+          setTransactionMessageLifetimeUsingBlockhash(
+            {
+              blockhash: blockhashInfo.blockhash,
+              lastValidBlockHeight: blockhashInfo.lastValidBlockHeight,
+            },
+            tx,
+          ),
+      );
+
+      for (const ix of instructions) {
+        txMessage = appendTransactionMessageInstruction(ix, txMessage) as unknown as typeof txMessage;
+      }
+
+      const compiled = compileTransaction(txMessage);
+      const serialized = new Uint8Array(txEncoder.encode(compiled));
+      const estimatedFee = DEFAULT_SOL_TRANSFER_FEE + (needCreateAta ? ATA_RENT_LAMPORTS : 0n);
+
+      return {
+        chain: 'solana',
+        serialized,
+        estimatedFee,
+        expiresAt: new Date(Date.now() + 60_000),
+        metadata: {
+          blockhash: blockhashInfo.blockhash,
+          lastValidBlockHeight: Number(blockhashInfo.lastValidBlockHeight),
+          version: 0,
+          tokenProgram: tokenProgramId,
+          needCreateAta,
+          nftStandard: 'METAPLEX',
+          tokenMint: request.token.address,
+        },
+      };
+    } catch (error) {
+      if (error instanceof ChainError) throw error;
+      if (error instanceof WAIaaSError) throw error;
+      throw new WAIaaSError('CHAIN_ERROR', {
+        message: `Failed to build NFT transfer: ${error instanceof Error ? error.message : String(error)}`,
+        cause: error instanceof Error ? error : undefined,
+      });
+    }
+  }
+
+  async transferNft(request: NftTransferParams, privateKey: Uint8Array): Promise<SubmitResult> {
+    const unsignedTx = await this.buildNftTransferTx(request);
+    const signedTx = await this.signTransaction(unsignedTx, privateKey);
+    return this.submitTransaction(signedTx);
+  }
+
+  async approveNft(request: NftApproveParams): Promise<UnsignedTransaction> {
+    const rpc = this.getRpc();
+    try {
+      if (request.approvalType === 'all') {
+        throw new WAIaaSError('UNSUPPORTED_NFT_STANDARD', {
+          message: 'Solana does not support collection-wide NFT approval',
+        });
+      }
+
+      if (request.token.standard !== 'METAPLEX') {
+        throw new WAIaaSError('UNSUPPORTED_NFT_STANDARD', {
+          message: `Solana adapter only supports METAPLEX NFTs, got: ${request.token.standard}`,
+        });
+      }
+
+      const from = address(request.from);
+      const mintAddr = address(request.token.address);
+
+      // Query mint account for token program
+      const mintAccountInfo = await rpc
+        .getAccountInfo(mintAddr, { encoding: 'base64' })
+        .send();
+
+      if (!mintAccountInfo.value) {
+        throw new ChainError('TOKEN_ACCOUNT_NOT_FOUND', 'solana', {
+          message: `NFT mint not found: ${request.token.address}`,
+        });
+      }
+
+      const mintOwner = String(mintAccountInfo.value.owner);
+      let tokenProgramId: string;
+
+      if (mintOwner === SPL_TOKEN_PROGRAM_ID) {
+        tokenProgramId = SPL_TOKEN_PROGRAM_ID;
+      } else if (mintOwner === TOKEN_2022_PROGRAM_ID) {
+        tokenProgramId = TOKEN_2022_PROGRAM_ID;
+      } else {
+        throw new ChainError('INVALID_INSTRUCTION', 'solana', {
+          message: 'Invalid NFT mint: owner is not a token program',
+        });
+      }
+
+      // Find owner's ATA
+      const [ownerAta] = await findAssociatedTokenPda({
+        owner: from,
+        tokenProgram: address(tokenProgramId),
+        mint: mintAddr,
+      });
+
+      // Delegate with amount=1, decimals=0 for NFT
+      const instruction = getApproveCheckedInstruction({
+        source: ownerAta,
+        mint: mintAddr,
+        delegate: address(request.spender),
+        owner: createNoopSigner(from),
+        amount: 1n,
+        decimals: 0,
+      }, { programAddress: address(tokenProgramId) });
+
+      const { value: blockhashInfo } = await rpc.getLatestBlockhash().send();
+
+      let txMessage = pipe(
+        createTransactionMessage({ version: 0 }),
+        (tx) => setTransactionMessageFeePayer(from, tx),
+        (tx) =>
+          setTransactionMessageLifetimeUsingBlockhash(
+            {
+              blockhash: blockhashInfo.blockhash,
+              lastValidBlockHeight: blockhashInfo.lastValidBlockHeight,
+            },
+            tx,
+          ),
+      );
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      txMessage = appendTransactionMessageInstruction(instruction as any, txMessage) as unknown as typeof txMessage;
+
+      const compiled = compileTransaction(txMessage);
+      const serialized = new Uint8Array(txEncoder.encode(compiled));
+
+      return {
+        chain: 'solana',
+        serialized,
+        estimatedFee: DEFAULT_SOL_TRANSFER_FEE,
+        expiresAt: new Date(Date.now() + 60_000),
+        metadata: {
+          blockhash: blockhashInfo.blockhash,
+          lastValidBlockHeight: Number(blockhashInfo.lastValidBlockHeight),
+          version: 0,
+          nftStandard: 'METAPLEX',
+          tokenMint: request.token.address,
+          spender: request.spender,
+          approvalType: request.approvalType,
+        },
+      };
+    } catch (error) {
+      if (error instanceof ChainError) throw error;
+      if (error instanceof WAIaaSError) throw error;
+      throw new WAIaaSError('CHAIN_ERROR', {
+        message: `Failed to build NFT approval: ${error instanceof Error ? error.message : String(error)}`,
+        cause: error instanceof Error ? error : undefined,
       });
     }
   }

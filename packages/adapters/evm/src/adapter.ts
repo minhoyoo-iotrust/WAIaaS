@@ -52,9 +52,14 @@ import type {
   BatchParams,
   ParsedTransaction,
   SignedTransaction,
+  NftTransferParams,
+  NftApproveParams,
 } from '@waiaas/core';
 import { WAIaaSError, ChainError } from '@waiaas/core';
 import { ERC20_ABI } from './abi/erc20.js';
+import { ERC721_ABI } from './abi/erc721.js';
+import { ERC1155_ABI } from './abi/erc1155.js';
+import { ERC165_ABI, ERC_INTERFACE_IDS } from './abi/erc165.js';
 
 /** Gas safety margin multiplier: 1.2x (120/100). */
 const GAS_SAFETY_NUMERATOR = 120n;
@@ -840,6 +845,233 @@ export class EvmAdapter implements IChainAdapter {
       throw new ChainError('INVALID_RAW_TRANSACTION', 'evm', {
         message: `Failed to sign external transaction: ${error instanceof Error ? error.message : String(error)}`,
         cause: error instanceof Error ? error : undefined,
+      });
+    }
+  }
+
+  // -- NFT operations (3) -- v31.0
+
+  async buildNftTransferTx(request: NftTransferParams): Promise<UnsignedTransaction> {
+    const client = this.getClient();
+    try {
+      const fromAddr = request.from as `0x${string}`;
+      const toAddr = request.to as `0x${string}`;
+      const contractAddr = request.token.address as `0x${string}`;
+
+      let data: `0x${string}`;
+
+      if (request.token.standard === 'ERC-721') {
+        // safeTransferFrom(address from, address to, uint256 tokenId)
+        data = encodeFunctionData({
+          abi: ERC721_ABI,
+          functionName: 'safeTransferFrom',
+          args: [fromAddr, toAddr, BigInt(request.token.tokenId)],
+        });
+      } else if (request.token.standard === 'ERC-1155') {
+        // safeTransferFrom(address from, address to, uint256 id, uint256 amount, bytes data)
+        data = encodeFunctionData({
+          abi: ERC1155_ABI,
+          functionName: 'safeTransferFrom',
+          args: [fromAddr, toAddr, BigInt(request.token.tokenId), request.amount, '0x'],
+        });
+      } else {
+        throw new WAIaaSError('UNSUPPORTED_NFT_STANDARD', {
+          message: `EVM adapter does not support NFT standard: ${request.token.standard}`,
+        });
+      }
+
+      const nonce = await client.getTransactionCount({ address: fromAddr });
+      const fees = await client.estimateFeesPerGas();
+      const estimatedGas = await client.estimateGas({
+        account: fromAddr,
+        to: contractAddr,
+        data,
+      });
+      const gasLimit = (estimatedGas * GAS_SAFETY_NUMERATOR) / GAS_SAFETY_DENOMINATOR;
+      const maxFeePerGas = fees.maxFeePerGas!;
+      const maxPriorityFeePerGas = fees.maxPriorityFeePerGas!;
+      const chainId = client.chain?.id ?? 1;
+
+      const txRequest = {
+        type: 'eip1559' as const,
+        to: contractAddr,
+        value: 0n,
+        nonce,
+        gas: gasLimit,
+        maxFeePerGas,
+        maxPriorityFeePerGas,
+        chainId,
+        data,
+      };
+
+      const serializedHex = serializeTransaction(txRequest);
+      const serializedBytes = hexToBytes(serializedHex);
+      const estimatedFee = gasLimit * maxFeePerGas;
+
+      return {
+        chain: 'ethereum',
+        serialized: serializedBytes,
+        estimatedFee,
+        expiresAt: undefined,
+        metadata: {
+          from: request.from,
+          nonce,
+          chainId,
+          maxFeePerGas,
+          maxPriorityFeePerGas,
+          gasLimit,
+          type: 'eip1559',
+          nftStandard: request.token.standard,
+          tokenId: request.token.tokenId,
+          contractAddress: request.token.address,
+        },
+        nonce,
+      };
+    } catch (error) {
+      if (error instanceof ChainError || error instanceof WAIaaSError) throw error;
+      throw this.mapError(error, 'Failed to build NFT transfer transaction');
+    }
+  }
+
+  async transferNft(request: NftTransferParams, privateKey: Uint8Array): Promise<SubmitResult> {
+    const unsignedTx = await this.buildNftTransferTx(request);
+    const signedTx = await this.signTransaction(unsignedTx, privateKey);
+    return this.submitTransaction(signedTx);
+  }
+
+  async approveNft(request: NftApproveParams): Promise<UnsignedTransaction> {
+    const client = this.getClient();
+    try {
+      const fromAddr = request.from as `0x${string}`;
+      const contractAddr = request.token.address as `0x${string}`;
+      const spenderAddr = request.spender as `0x${string}`;
+
+      let data: `0x${string}`;
+
+      if (request.token.standard === 'ERC-721') {
+        if (request.approvalType === 'single') {
+          // approve(address to, uint256 tokenId)
+          data = encodeFunctionData({
+            abi: ERC721_ABI,
+            functionName: 'approve',
+            args: [spenderAddr, BigInt(request.token.tokenId)],
+          });
+        } else {
+          // setApprovalForAll(address operator, bool approved)
+          data = encodeFunctionData({
+            abi: ERC721_ABI,
+            functionName: 'setApprovalForAll',
+            args: [spenderAddr, true],
+          });
+        }
+      } else if (request.token.standard === 'ERC-1155') {
+        if (request.approvalType === 'single') {
+          // ERC-1155 does not support single token approval
+          throw new WAIaaSError('UNSUPPORTED_NFT_STANDARD', {
+            message: 'ERC-1155 does not support single token approval. Use approvalType "all" for setApprovalForAll.',
+          });
+        }
+        // setApprovalForAll(address operator, bool approved)
+        data = encodeFunctionData({
+          abi: ERC1155_ABI,
+          functionName: 'setApprovalForAll',
+          args: [spenderAddr, true],
+        });
+      } else {
+        throw new WAIaaSError('UNSUPPORTED_NFT_STANDARD', {
+          message: `EVM adapter does not support NFT standard: ${request.token.standard}`,
+        });
+      }
+
+      const nonce = await client.getTransactionCount({ address: fromAddr });
+      const fees = await client.estimateFeesPerGas();
+      const estimatedGas = await client.estimateGas({
+        account: fromAddr,
+        to: contractAddr,
+        data,
+      });
+      const gasLimit = (estimatedGas * GAS_SAFETY_NUMERATOR) / GAS_SAFETY_DENOMINATOR;
+      const maxFeePerGas = fees.maxFeePerGas!;
+      const maxPriorityFeePerGas = fees.maxPriorityFeePerGas!;
+      const chainId = client.chain?.id ?? 1;
+
+      const txRequest = {
+        type: 'eip1559' as const,
+        to: contractAddr,
+        value: 0n,
+        nonce,
+        gas: gasLimit,
+        maxFeePerGas,
+        maxPriorityFeePerGas,
+        chainId,
+        data,
+      };
+
+      const serializedHex = serializeTransaction(txRequest);
+      const serializedBytes = hexToBytes(serializedHex);
+      const estimatedFee = gasLimit * maxFeePerGas;
+
+      return {
+        chain: 'ethereum',
+        serialized: serializedBytes,
+        estimatedFee,
+        expiresAt: undefined,
+        metadata: {
+          from: request.from,
+          nonce,
+          chainId,
+          maxFeePerGas,
+          maxPriorityFeePerGas,
+          gasLimit,
+          type: 'eip1559',
+          nftStandard: request.token.standard,
+          tokenId: request.token.tokenId,
+          contractAddress: request.token.address,
+          spender: request.spender,
+          approvalType: request.approvalType,
+        },
+        nonce,
+      };
+    } catch (error) {
+      if (error instanceof ChainError || error instanceof WAIaaSError) throw error;
+      throw this.mapError(error, 'Failed to build NFT approval transaction');
+    }
+  }
+
+  /**
+   * Detect NFT standard via ERC-165 supportsInterface.
+   * Returns 'ERC-721' or 'ERC-1155', throws UNSUPPORTED_NFT_STANDARD if neither.
+   */
+  async detectNftStandard(contractAddress: string): Promise<'ERC-721' | 'ERC-1155'> {
+    const client = this.getClient();
+    const addr = contractAddress as `0x${string}`;
+
+    try {
+      // Check ERC-721 (0x80ac58cd)
+      const isErc721 = await client.readContract({
+        address: addr,
+        abi: ERC165_ABI,
+        functionName: 'supportsInterface',
+        args: [ERC_INTERFACE_IDS.ERC721],
+      });
+      if (isErc721) return 'ERC-721';
+
+      // Check ERC-1155 (0xd9b67a26)
+      const isErc1155 = await client.readContract({
+        address: addr,
+        abi: ERC165_ABI,
+        functionName: 'supportsInterface',
+        args: [ERC_INTERFACE_IDS.ERC1155],
+      });
+      if (isErc1155) return 'ERC-1155';
+
+      throw new WAIaaSError('UNSUPPORTED_NFT_STANDARD', {
+        message: `Contract ${contractAddress} does not support ERC-721 or ERC-1155`,
+      });
+    } catch (error) {
+      if (error instanceof WAIaaSError) throw error;
+      throw new WAIaaSError('UNSUPPORTED_NFT_STANDARD', {
+        message: `Failed to detect NFT standard for ${contractAddress}: ${error instanceof Error ? error.message : String(error)}`,
       });
     }
   }
