@@ -57,4 +57,6 @@ export const API = {
   ERC8004_REGISTRATION_FILE: (walletId: string) => `/v1/erc8004/registration-file/${walletId}`,
   ERC8004_VALIDATION: (hash: string) => `/v1/erc8004/validation/${hash}`,
   WALLET_PROVIDER: (id: string) => `/v1/wallets/${id}/provider`,
+  ADMIN_WALLET_NFTS: (id: string) => `/v1/wallets/${id}/nfts`,
+  ADMIN_WALLET_NFT_METADATA: (id: string, tokenId: string) => `/v1/wallets/${id}/nfts/${tokenId}`,
 } as const;
