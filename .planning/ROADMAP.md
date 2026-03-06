@@ -162,11 +162,11 @@ Plans:
   3. 만료/미존재/이미 사용된 buildId에 대해 각각 EXPIRED_BUILD/BUILD_NOT_FOUND/BUILD_ALREADY_USED 에러가 반환된다
   4. GET /v1/connect-info 응답에 Smart Account 지갑 존재 시 userop capability가 포함된다
   5. build/sign 시 USEROP_BUILD/USEROP_SIGNED 감사 로그가 기록되고, TX_REQUESTED/TX_SUBMITTED 알림이 발생한다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 340-01: UserOp Sign 엔드포인트 + callData 이중 검증 + 정책 평가
-- [ ] 340-02: connect-info userop capability + 감사 로그 + 알림 이벤트
+- [ ] 340-01-PLAN.md -- UserOp Sign endpoint + callData verification + policy + audit + notifications
+- [ ] 340-02-PLAN.md -- connect-info userop capability + prompt guidance
 
 ### Phase 341: Interface Integration
 **Goal**: Admin UI에서 Lite/Full 모드를 시각적으로 확인하고, MCP/SDK/스킬 파일을 통해 에이전트가 UserOp API를 사용할 수 있는 상태
@@ -203,4 +203,4 @@ Phases execute in numeric order: 338 -> 339 -> 340 -> 341
 | 341. Interface Integration | v31.2 | 0/2 | Not started | - |
 
 ---
-*Last updated: 2026-03-06 after Phase 339 planning.*
+*Last updated: 2026-03-06 after Phase 340 planning.*
