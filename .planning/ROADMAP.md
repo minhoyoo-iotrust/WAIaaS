@@ -71,10 +71,10 @@
   3. DEX Swap(txdata) -> CONTRACT_CALL+BATCH, Exchange(payInAddress) -> TRANSFER 파이프라인 매핑이 설계되어 있다
   4. DCent API의 multi-hop 자체 지원 여부가 확인되어 Phase 345 범위가 확정되어 있다
   5. DcentSwapActionProvider 인터페이스와 MCP/SDK/정책 통합 설계가 완성되어 있다
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 342-01: DCent Swap API 심층 리서치 + 통합 설계 문서 작성
+- [ ] 342-01-PLAN.md -- DCent Swap API 심층 리서치 + 통합 설계 문서 작성
 
 ### Phase 343: Currency Mapping + DEX Swap
 **Goal**: CAIP-19 <-> DCent Currency ID 양방향 변환이 동작하고, DEX Swap을 approve+txdata BATCH 파이프라인으로 실행할 수 있다
