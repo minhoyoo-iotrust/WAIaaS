@@ -144,12 +144,12 @@ Plans:
   3. IChainAdapter의 transferNft/approveNft/buildNftTransferTx 메서드가 SolanaAdapter와 EvmAdapter 양쪽에 구현되어 있다
   4. EVM에서 ERC-165 supportsInterface로 ERC-721/ERC-1155 표준이 자동 감지된다
   5. 인덱서 API 호출에 지수 백오프 재시도(최대 3회, Retry-After 존중)와 응답 캐싱(TTL 설정 가능)이 적용된다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 334-01: INftIndexer 인터페이스 + Alchemy NFT API 구현체
-- [ ] 334-02: Helius DAS API 구현체 + 인덱서 설정/캐싱/재시도
-- [ ] 334-03: IChainAdapter NFT 메서드 + SolanaAdapter/EvmAdapter NFT 구현
+- [ ] 334-01-PLAN.md -- INftIndexer 인터페이스 + Alchemy NFT API v3 구현체
+- [ ] 334-02-PLAN.md -- Helius DAS API 구현체 + 인덱서 설정/캐싱/재시도 (NftIndexerClient)
+- [ ] 334-03-PLAN.md -- IChainAdapter NFT 메서드 + SolanaAdapter/EvmAdapter NFT 구현
 
 ### Phase 335: NFT Query API
 **Goal**: 사용자가 REST API로 지갑의 NFT 목록과 개별 메타데이터를 조회할 수 있는 상태
@@ -217,4 +217,4 @@ Phase 333 -> 334 -> 335 (parallel with 336) -> 337
 | 337. Interface Integration | v31.0 | 0/3 | Not started | - |
 
 ---
-*Last updated: 2026-03-06 -- Phase 333 plans created.*
+*Last updated: 2026-03-06 -- Phase 334 plans created.*
