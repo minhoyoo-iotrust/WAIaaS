@@ -151,6 +151,9 @@ export function buildConnectInfoPrompt(params: BuildConnectInfoPromptParams): st
   lines.push('Use GET /v1/wallet/balance to check balances.');
   lines.push('Use POST /v1/transactions/send to transfer funds.');
   lines.push('For Smart Account wallets without provider, use UserOp Build/Sign API (POST /v1/wallets/{id}/userop/build then /userop/sign).');
+  if (capabilities.includes('dcent_swap')) {
+    lines.push('DCent Swap: Use action_dcent_swap_* tools for multi-provider DEX swaps and cross-chain exchanges.');
+  }
   lines.push('Specify walletId parameter (UUID from the ID field above) to target a specific wallet.');
   lines.push('Append ?network=<network> to query a specific network (required for EVM wallets, auto-resolved for Solana).');
   lines.push('When session expires (401 TOKEN_EXPIRED), renew with PUT /v1/sessions/{sessionId}/renew.');
@@ -345,6 +348,17 @@ export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
         }
       } catch {
         // Setting not found -- erc8128 not available
+      }
+    }
+
+    // dcent_swap: check if enabled via settings
+    if (deps.settingsService) {
+      try {
+        if (deps.settingsService.get('actions.dcent_swap_enabled') === 'true') {
+          capabilities.push('dcent_swap');
+        }
+      } catch {
+        // Setting not found -- dcent_swap not available
       }
     }
 
