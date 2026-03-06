@@ -55,7 +55,7 @@
 
 - [x] **Phase 342: Research & Design** - DCent API 리서치 + 통합 설계 문서 작성 (completed 2026-03-06)
 - [x] **Phase 343: Currency Mapping + DEX Swap** - CAIP-19 변환 인프라 + DEX Swap 실행 (completed 2026-03-06)
-- [ ] **Phase 344: Exchange + Status Tracking** - 크로스체인 Exchange 실행 + 상태 폴링
+- [x] **Phase 344: Exchange + Status Tracking** - 크로스체인 Exchange 실행 + 상태 폴링 (completed 2026-03-06)
 - [ ] **Phase 345: Auto Routing** - 조건부 2-hop 자동 라우팅
 - [ ] **Phase 346: Integration + Testing** - ActionProvider, MCP, SDK, 정책, 테스트
 
@@ -100,7 +100,7 @@ Plans:
   2. 사용자가 Exchange를 실행하면 create_exchange_transaction -> payInAddress TRANSFER 파이프라인으로 처리된다
   3. Exchange 트랜잭션 상태가 get_transactions_status 폴링으로 추적되어 진행 상황을 확인할 수 있다
   4. Exchange 완료 또는 실패 시 알림 채널을 통해 사용자에게 통지된다
-**Plans:** 1 plans
+**Plans:** 1/1 plans complete
 
 Plans:
 - [ ] 344-01-PLAN.md -- Exchange 견적/실행/상태추적/알림 전체 구현
@@ -145,6 +145,6 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 342. Research & Design | 1/1 | Complete    | 2026-03-06 | - |
 | 343. Currency Mapping + DEX Swap | 2/2 | Complete    | 2026-03-06 | - |
-| 344. Exchange + Status Tracking | v31.3 | 0/1 | Not started | - |
+| 344. Exchange + Status Tracking | 1/1 | Complete   | 2026-03-06 | - |
 | 345. Auto Routing | v31.3 | 0/2 | Not started | - |
 | 346. Integration + Testing | v31.3 | 0/3 | Not started | - |

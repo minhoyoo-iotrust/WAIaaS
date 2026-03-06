@@ -32,10 +32,10 @@ Requirements for DCent Swap Aggregator integration. Each maps to roadmap phases.
 
 ### Exchange (XCHG)
 
-- [ ] **XCHG-01**: User can request exchange quotes for cross-chain swaps from DCent API
-- [ ] **XCHG-02**: User can execute exchange via create_exchange_transaction → payInAddress TRANSFER pipeline
-- [ ] **XCHG-03**: Exchange transaction status is tracked via get_transactions_status polling
-- [ ] **XCHG-04**: User is notified of exchange completion/failure via notification channels
+- [x] **XCHG-01**: User can request exchange quotes for cross-chain swaps from DCent API
+- [x] **XCHG-02**: User can execute exchange via create_exchange_transaction → payInAddress TRANSFER pipeline
+- [x] **XCHG-03**: Exchange transaction status is tracked via get_transactions_status polling
+- [x] **XCHG-04**: User is notified of exchange completion/failure via notification channels
 
 ### Auto Routing (ROUT)
 
@@ -99,10 +99,10 @@ Requirements for DCent Swap Aggregator integration. Each maps to roadmap phases.
 | DSWP-02 | Phase 343 | Complete |
 | DSWP-03 | Phase 343 | Complete |
 | DSWP-04 | Phase 343 | Complete |
-| XCHG-01 | Phase 344 | Pending |
-| XCHG-02 | Phase 344 | Pending |
-| XCHG-03 | Phase 344 | Pending |
-| XCHG-04 | Phase 344 | Pending |
+| XCHG-01 | Phase 344 | Complete |
+| XCHG-02 | Phase 344 | Complete |
+| XCHG-03 | Phase 344 | Complete |
+| XCHG-04 | Phase 344 | Complete |
 | ROUT-01 | Phase 345 | Pending |
 | ROUT-02 | Phase 345 | Pending |
 | ROUT-03 | Phase 345 | Pending |
