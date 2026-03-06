@@ -11,6 +11,11 @@ describe('getErrorMessage', () => {
   it('should return fallback for unknown code', () => {
     expect(getErrorMessage('UNKNOWN_CODE_XYZ')).toBe('An error occurred (UNKNOWN_CODE_XYZ).');
   });
+
+  it('should prefer server message for SERVER_MESSAGE_PREFERRED codes', () => {
+    expect(getErrorMessage('ACTION_VALIDATION_FAILED', 'Custom server msg')).toBe('Custom server msg');
+    expect(getErrorMessage('INVALID_ADDRESS', 'Bad address format')).toBe('Bad address format');
+  });
 });
 
 describe('formatUptime', () => {
