@@ -195,11 +195,48 @@ describe('EvmAdapter NFT methods', () => {
 
   describe('detectNftStandard', () => {
     it('detects ERC-721 via ERC-165 supportsInterface', async () => {
-      // First call returns true for ERC-721 interface ID
       mockClient.readContract.mockResolvedValueOnce(true);
 
-      // Call buildNftTransferTx with an NFT that has standard set
-      // (detectNftStandard is a private method, test via public API behavior)
+      const result = await adapter.detectNftStandard('0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D');
+      expect(result).toBe('ERC-721');
+    });
+
+    it('detects ERC-1155 when ERC-721 returns false', async () => {
+      mockClient.readContract.mockResolvedValueOnce(false); // ERC-721 = false
+      mockClient.readContract.mockResolvedValueOnce(true);  // ERC-1155 = true
+
+      const result = await adapter.detectNftStandard('0x495f947276749Ce646f68AC8c248420045cb7b5e');
+      expect(result).toBe('ERC-1155');
+    });
+
+    it('throws UNSUPPORTED_NFT_STANDARD when neither ERC-721 nor ERC-1155', async () => {
+      mockClient.readContract.mockResolvedValueOnce(false); // ERC-721 = false
+      mockClient.readContract.mockResolvedValueOnce(false); // ERC-1155 = false
+
+      try {
+        await adapter.detectNftStandard('0xdeadbeef');
+        expect.fail('should have thrown');
+      } catch (error: unknown) {
+        expect((error as { code: string }).code).toBe('UNSUPPORTED_NFT_STANDARD');
+      }
+    });
+
+    it('wraps RPC errors as UNSUPPORTED_NFT_STANDARD', async () => {
+      mockClient.readContract.mockRejectedValueOnce(new Error('RPC call failed'));
+
+      try {
+        await adapter.detectNftStandard('0xdeadbeef');
+        expect.fail('should have thrown');
+      } catch (error: unknown) {
+        expect((error as { code: string }).code).toBe('UNSUPPORTED_NFT_STANDARD');
+      }
+    });
+  });
+
+  describe('error paths', () => {
+    it('buildNftTransferTx wraps unknown errors via mapError', async () => {
+      mockClient.getTransactionCount.mockRejectedValueOnce(new Error('connection refused'));
+
       const params: NftTransferParams = {
         from: '0x1111111111111111111111111111111111111111',
         to: '0x2222222222222222222222222222222222222222',
@@ -211,8 +248,24 @@ describe('EvmAdapter NFT methods', () => {
         amount: 1n,
       };
 
-      const tx = await adapter.buildNftTransferTx(params);
-      expect(tx.metadata.nftStandard).toBe('ERC-721');
+      await expect(adapter.buildNftTransferTx(params)).rejects.toThrow();
+    });
+
+    it('approveNft wraps unknown errors via mapError', async () => {
+      mockClient.getTransactionCount.mockRejectedValueOnce(new Error('timeout exceeded'));
+
+      const params: NftApproveParams = {
+        from: '0x1111111111111111111111111111111111111111',
+        spender: '0x3333333333333333333333333333333333333333',
+        token: {
+          address: '0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D',
+          tokenId: '1234',
+          standard: 'ERC-721',
+        },
+        approvalType: 'single',
+      };
+
+      await expect(adapter.approveNft(params)).rejects.toThrow();
     });
   });
 });
