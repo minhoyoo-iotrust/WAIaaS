@@ -15,9 +15,9 @@ export const DcentCurrencySchema = z.object({
   tokenDeviceId: z.string(),
   currencyName: z.string(),
   contractTokenSupport: z.string().optional(),
-  providers: z.array(z.string()).optional().default([]),
-  providerTickers: z.record(z.unknown()).optional().default({}),
-  contractTokens: z.array(z.unknown()).optional().default([]),
+  providers: z.array(z.string()).optional(),
+  providerTickers: z.record(z.unknown()).optional(),
+  contractTokens: z.array(z.unknown()).optional(),
   cgkId: z.string().optional(),
 });
 
@@ -57,8 +57,8 @@ export const DcentQuotesResponseSchema = z.object({
   fromId: z.string().optional(),
   toId: z.string().optional(),
   providers: z.object({
-    bestOrder: z.array(z.string()).optional().default([]),
-    common: z.array(DcentQuoteProviderSchema).optional().default([]),
+    bestOrder: z.array(z.string()).optional(),
+    common: z.array(DcentQuoteProviderSchema).optional(),
   }).optional(),
 });
 
