@@ -85,11 +85,11 @@ Plans:
   2. DCent get_supported_currencies 응답이 24h TTL로 캐싱되어 반복 호출을 최소화한다
   3. 사용자가 DEX Swap 견적을 요청하면 프로바이더별 비교와 최적 추천을 받을 수 있다
   4. 사용자가 DEX Swap을 실행하면 approve+txdata가 BATCH 파이프라인으로 처리되고, min/max 한도가 검증된다
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 343-01: CAIP-19 <-> DCent Currency ID 양방향 변환 구현 + 캐싱
-- [ ] 343-02: DEX Swap 견적 조회 + 실행 (approve+txdata BATCH)
+- [ ] 343-01-PLAN.md -- CAIP-19 <-> DCent Currency ID 양방향 변환 구현 + 캐싱
+- [ ] 343-02-PLAN.md -- DEX Swap 견적 조회 + 실행 (approve+txdata BATCH)
 
 ### Phase 344: Exchange + Status Tracking
 **Goal**: 크로스체인 Exchange를 payInAddress TRANSFER 파이프라인으로 실행하고, 상태를 폴링하여 완료/실패를 알린다
