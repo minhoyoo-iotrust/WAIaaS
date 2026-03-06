@@ -267,8 +267,8 @@
 | 250 | ENHANCEMENT | MEDIUM | 세션 토큰 재발급(Rotate) 기능 — 메타데이터 유지하며 토큰만 교체, Admin UI 복사 다이얼로그 | — | FIXED | 2026-03-06 |
 | 251 | BUG | HIGH | Smart Account 파이프라인에서 RPC URL 미해석 — adapter private 필드 참조로 전 네트워크 AA 전송 실패 | — | FIXED | 2026-03-06 |
 | 252 | ENHANCEMENT | MEDIUM | Smart Account 페이마스터 Policy ID 전달 경로 추가 — Alchemy 대납 필수, Pimlico 한도 제어 | — | FIXED | 2026-03-06 |
-| 253 | ENHANCEMENT | MEDIUM | Push Relay 서버 --debug 모드 추가 — 로그 레벨 시스템 + 상세 디버깅 로그 | — | OPEN | — |
-| 254 | BUG | HIGH | Push Relay 서버 CORS 미들웨어 미설정으로 cross-origin 디바이스 등록 차단 | — | OPEN | — |
+| 253 | ENHANCEMENT | MEDIUM | Push Relay 서버 --debug 모드 추가 — 로그 레벨 시스템 + 상세 디버깅 로그 | v31.2 | FIXED | 2026-03-06 |
+| 254 | BUG | HIGH | Push Relay 서버 CORS 미들웨어 미설정으로 cross-origin 디바이스 등록 차단 | v31.2 | FIXED | 2026-03-06 |
 
 ## Type Legend
 
@@ -280,8 +280,8 @@
 
 ## Summary
 
-- **OPEN:** 2
-- **FIXED:** 250
+- **OPEN:** 0
+- **FIXED:** 252
 - **RESOLVED:** 2
 - **VERIFIED:** 0
 - **WONTFIX:** 1

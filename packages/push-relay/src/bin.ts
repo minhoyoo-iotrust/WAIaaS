@@ -13,6 +13,7 @@ import { ConfigurablePayloadTransformer } from './transformer/payload-transforme
 import type { IPayloadTransformer } from './transformer/payload-transformer.js';
 import { createServer } from './server.js';
 import { routeByTopic } from './message-router.js';
+import { info, error, debug, setDebug, isDebug } from './logger.js';
 
 const require = createRequire(import.meta.url);
 const pkg = require('../package.json') as { version: string };
@@ -24,30 +25,47 @@ if (process.argv.includes('--version')) {
   process.exit(0);
 }
 
+// --debug flag or DEBUG=1 env
+if (process.argv.includes('--debug') || process.env['DEBUG'] === '1') {
+  setDebug(true);
+}
+
 const CONFIG_PATH = process.env['RELAY_CONFIG'] ?? resolve(process.cwd(), 'config.toml');
 const DB_PATH = process.env['RELAY_DB'] ?? resolve(process.cwd(), 'relay.db');
 
 async function main(): Promise<void> {
-  console.log('[push-relay] Loading config from', CONFIG_PATH);
+  info('Loading config from', CONFIG_PATH);
   const config = loadConfig(CONFIG_PATH);
+
+  if (isDebug()) {
+    debug('Config loaded:', JSON.stringify({
+      ntfy_server: config.relay.ntfy_server,
+      sign_topic_prefix: config.relay.sign_topic_prefix,
+      notify_topic_prefix: config.relay.notify_topic_prefix,
+      wallet_names: config.relay.wallet_names,
+      server: { host: config.relay.server.host, port: config.relay.server.port },
+      push_provider: config.relay.push.provider,
+    }, null, 2));
+  }
 
   // Initialize device registry
   const registry = new DeviceRegistry(DB_PATH);
+  debug('Device registry initialized at', DB_PATH);
 
   // Initialize push provider
   let provider: IPushProvider;
   if (config.relay.push.provider === 'pushwoosh') {
     provider = new PushwooshProvider(config.relay.push.pushwoosh!);
-    console.log('[push-relay] Push provider: Pushwoosh');
+    info('Push provider: Pushwoosh');
   } else {
     provider = new FcmProvider(config.relay.push.fcm!);
-    console.log('[push-relay] Push provider: FCM');
+    info('Push provider: FCM');
   }
 
   // Validate provider config
   const valid = await provider.validateConfig();
   if (!valid) {
-    console.error('[push-relay] Push provider config validation failed');
+    error('Push provider config validation failed');
     process.exit(1);
   }
 
@@ -55,7 +73,7 @@ async function main(): Promise<void> {
   let transformer: IPayloadTransformer | undefined;
   if (config.relay.push.payload) {
     transformer = new ConfigurablePayloadTransformer(config.relay.push.payload);
-    console.log('[push-relay] Payload transformer: enabled (static_fields + category_map)');
+    info('Payload transformer: enabled (static_fields + category_map)');
   }
 
   // Initialize ntfy subscriber
@@ -66,9 +84,10 @@ async function main(): Promise<void> {
     walletNames: config.relay.wallet_names,
     transformer,
     onMessage: async (walletName, payload, topic) => {
-      console.log(
-        `[push-relay] Received ${payload.category} for wallet "${walletName}" on topic "${topic}" (title=${payload.title ?? 'none'})`,
+      info(
+        `Received ${payload.category} for wallet "${walletName}" on topic "${topic}" (title=${payload.title ?? 'none'})`,
       );
+      debug('Message payload:', JSON.stringify(payload));
 
       const route = routeByTopic(
         walletName,
@@ -79,43 +98,44 @@ async function main(): Promise<void> {
       );
 
       if (route.action === 'skip_base') {
-        console.log(`[push-relay] Base topic "${topic}" — skipping push (no broadcast)`);
+        info(`Base topic "${topic}" — skipping push (no broadcast)`);
         return;
       }
       if (route.action === 'skip_unknown') {
-        console.log(`[push-relay] Cannot extract subscriptionToken from topic "${topic}", skipping`);
+        info(`Cannot extract subscriptionToken from topic "${topic}", skipping`);
         return;
       }
       if (route.action === 'skip_no_device') {
-        console.log(`[push-relay] No device found for subscriptionToken "${route.subscriptionToken}", skipping`);
+        info(`No device found for subscriptionToken "${route.subscriptionToken}", skipping`);
         return;
       }
 
       try {
+        debug(`Sending push to device: pushToken=${route.device!.pushToken.slice(0, 8)}...`);
         const result = await provider.send([route.device!.pushToken], payload);
         if (result.invalidTokens.length > 0) {
           registry.removeTokens(result.invalidTokens);
-          console.log(`[push-relay] Removed ${result.invalidTokens.length} invalid token(s)`);
+          info(`Removed ${result.invalidTokens.length} invalid token(s)`);
         }
-        console.log(
-          `[push-relay] ${payload.category} → ${walletName} (device=${route.subscriptionToken}): sent=${result.sent}, failed=${result.failed}`,
+        info(
+          `${payload.category} → ${walletName} (device=${route.subscriptionToken}): sent=${result.sent}, failed=${result.failed}`,
         );
       } catch (sendErr) {
-        console.error(
-          `[push-relay] Failed to send push to ${walletName} (device=${route.subscriptionToken}):`,
+        error(
+          `Failed to send push to ${walletName} (device=${route.subscriptionToken}):`,
           (sendErr as Error).message,
         );
       }
     },
     onError: (err) => {
-      console.error('[push-relay] Error:', err.message);
+      error('Error:', err.message);
     },
   });
 
   // Start ntfy subscription
   subscriber.start();
-  console.log(
-    `[push-relay] Subscribing to ${config.relay.wallet_names.length} wallet(s): ${config.relay.wallet_names.join(', ')}`,
+  info(
+    `Subscribing to ${config.relay.wallet_names.length} wallet(s): ${config.relay.wallet_names.join(', ')}`,
   );
 
   // Restore subscription-token-based topics from DB
@@ -129,10 +149,11 @@ async function main(): Promise<void> {
         `${config.relay.notify_topic_prefix}-${device.walletName}-${device.subscriptionToken}`,
       );
       restoredTopics++;
+      debug(`Restored topics for device: wallet=${device.walletName}, token=${device.subscriptionToken}`);
     }
   }
   if (restoredTopics > 0) {
-    console.log(`[push-relay] Restored ${restoredTopics} device topic(s) from DB`);
+    info(`Restored ${restoredTopics} device topic(s) from DB`);
   }
 
   // Create and start HTTP server
@@ -153,18 +174,19 @@ async function main(): Promise<void> {
     hostname: config.relay.server.host,
   });
 
-  console.log(
-    `[push-relay] v${VERSION} listening on ${config.relay.server.host}:${config.relay.server.port}`,
-  );
+  info(`v${VERSION} listening on ${config.relay.server.host}:${config.relay.server.port}`);
+  if (isDebug()) {
+    info('Debug mode enabled');
+  }
 
   // Graceful shutdown
   const SHUTDOWN_TIMEOUT_MS = 10_000;
 
   async function shutdown(signal: string): Promise<void> {
-    console.log(`[push-relay] ${signal} received, shutting down...`);
+    info(`${signal} received, shutting down...`);
 
     const shutdownTimer = setTimeout(() => {
-      console.error('[push-relay] Shutdown timeout, forcing exit');
+      error('Shutdown timeout, forcing exit');
       process.exit(1);
     }, SHUTDOWN_TIMEOUT_MS);
     shutdownTimer.unref();
@@ -179,7 +201,7 @@ async function main(): Promise<void> {
     registry.close();
 
     clearTimeout(shutdownTimer);
-    console.log('[push-relay] Shutdown complete');
+    info('Shutdown complete');
     process.exit(0);
   }
 

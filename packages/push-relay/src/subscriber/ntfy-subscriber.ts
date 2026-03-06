@@ -5,6 +5,7 @@ import { get as httpsGet } from 'node:https';
 import { get as httpGet } from 'node:http';
 import type { IncomingMessage, ClientRequest } from 'node:http';
 import { createUnzip, createBrotliDecompress } from 'node:zlib';
+import { debug } from '../logger.js';
 
 const MAX_RECONNECT_DELAY_MS = 60_000;
 const INITIAL_RECONNECT_DELAY_MS = 1_000;
@@ -94,6 +95,7 @@ export class NtfySubscriber {
   }
 
   private subscribeTopic(topic: string, walletName: string): void {
+    debug(`Subscribing to topic: ${topic} (wallet=${walletName})`);
     const controller = new AbortController();
     this.abortControllers.set(topic, controller);
     this.topicWalletMap.set(topic, walletName);
@@ -110,6 +112,7 @@ export class NtfySubscriber {
 
     try {
       const url = `${this.opts.ntfyServer}/${topic}/sse`;
+      debug(`SSE connecting: ${url}`);
       const isHttps = url.startsWith('https');
       const getter = isHttps ? httpsGet : httpGet;
 
@@ -131,6 +134,7 @@ export class NtfySubscriber {
 
       // Reset reconnect delay on successful connection
       const nextDelay = INITIAL_RECONNECT_DELAY_MS;
+      debug(`SSE connected: ${topic} (HTTP ${res.statusCode}, encoding=${res.headers['content-encoding'] ?? 'none'})`);
 
       // Explicit decompression based on Content-Encoding header.
       // node:http does NOT auto-decompress, giving us full control.
@@ -172,6 +176,7 @@ export class NtfySubscriber {
               // ntfy converts messages exceeding size limit to file attachments.
               // Download the attachment to recover the original message. (#243)
               if (ntfyMsg.attachment?.url) {
+                debug(`Message has attachment, downloading: ${ntfyMsg.attachment.url}`);
                 void this.fetchAttachmentAndProcess(ntfyMsg, walletName, topic);
                 continue;
               }
@@ -204,6 +209,7 @@ export class NtfySubscriber {
 
       // Stream ended normally — reconnect
       if (!controller.signal.aborted) {
+        debug(`SSE stream ended for ${topic}, reconnecting in ${nextDelay}ms`);
         await this.delay(nextDelay);
         return this.connectSse(topic, walletName, controller, nextDelay);
       }
@@ -216,6 +222,7 @@ export class NtfySubscriber {
 
       // Exponential backoff reconnect
       const nextDelay = Math.min(reconnectDelay * 2, MAX_RECONNECT_DELAY_MS);
+      debug(`SSE error for ${topic}, reconnecting in ${reconnectDelay}ms (next=${nextDelay}ms)`);
       await this.delay(reconnectDelay);
       return this.connectSse(topic, walletName, controller, nextDelay);
     }
