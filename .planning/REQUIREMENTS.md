@@ -85,13 +85,49 @@ Requirements for DCent Swap Aggregator integration. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (To be filled by roadmapper) | | |
+| RSRCH-01 | Phase 342 | Pending |
+| RSRCH-02 | Phase 342 | Pending |
+| RSRCH-03 | Phase 342 | Pending |
+| RSRCH-04 | Phase 342 | Pending |
+| RSRCH-05 | Phase 342 | Pending |
+| RSRCH-06 | Phase 342 | Pending |
+| CMAP-01 | Phase 343 | Pending |
+| CMAP-02 | Phase 343 | Pending |
+| CMAP-03 | Phase 343 | Pending |
+| CMAP-04 | Phase 343 | Pending |
+| DSWP-01 | Phase 343 | Pending |
+| DSWP-02 | Phase 343 | Pending |
+| DSWP-03 | Phase 343 | Pending |
+| DSWP-04 | Phase 343 | Pending |
+| XCHG-01 | Phase 344 | Pending |
+| XCHG-02 | Phase 344 | Pending |
+| XCHG-03 | Phase 344 | Pending |
+| XCHG-04 | Phase 344 | Pending |
+| ROUT-01 | Phase 345 | Pending |
+| ROUT-02 | Phase 345 | Pending |
+| ROUT-03 | Phase 345 | Pending |
+| ROUT-04 | Phase 345 | Pending |
+| ROUT-05 | Phase 345 | Pending |
+| INTG-01 | Phase 346 | Pending |
+| INTG-02 | Phase 346 | Pending |
+| INTG-03 | Phase 346 | Pending |
+| INTG-04 | Phase 346 | Pending |
+| INTG-05 | Phase 346 | Pending |
+| INTG-06 | Phase 346 | Pending |
+| INTG-07 | Phase 346 | Pending |
+| TEST-01 | Phase 346 | Pending |
+| TEST-02 | Phase 346 | Pending |
+| TEST-03 | Phase 346 | Pending |
+| TEST-04 | Phase 346 | Pending |
+| TEST-05 | Phase 346 | Pending |
+| TEST-06 | Phase 346 | Pending |
+| TEST-07 | Phase 346 | Pending |
 
 **Coverage:**
-- v31.3 requirements: 31 total
-- Mapped to phases: 0
-- Unmapped: 31 ⚠️
+- v31.3 requirements: 37 total
+- Mapped to phases: 37
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-06*
-*Last updated: 2026-03-06 after initial definition*
+*Last updated: 2026-03-06 after roadmap creation*
