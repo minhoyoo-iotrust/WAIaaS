@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v31.0
 milestone_name: NFT 지원
-status: in_progress
+status: completed
 stopped_at: Phase 334 complete -- ready for Phase 335 (NFT Query API)
-last_updated: "2026-03-06T02:39:00.000Z"
+last_updated: "2026-03-06T02:44:31.620Z"
 last_activity: 2026-03-06 -- Phase 334 complete (3 plans, 5 tasks, 48 tests)
 progress:
   total_phases: 5
