@@ -130,7 +130,7 @@ See `.planning/milestones/` for archived phase details.
   3. PUT /wallets/:id/provider로 프로바이더 추가 시 Full 모드로 전환되어 기존 AA 기능이 동작한다
   4. UserOp v0.7 Zod 스키마(Build Request/Response, Sign Request/Response, UserOperation)가 정의되어 있고 TypeScript 타입이 추론된다
   5. DB v45 마이그레이션으로 userop_builds 테이블이 생성되며, 스키마 스냅샷 테스트가 통과한다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
 - [ ] 338-01: Provider Lite/Full 모드 분기 + 지갑 생성 검증 제거
