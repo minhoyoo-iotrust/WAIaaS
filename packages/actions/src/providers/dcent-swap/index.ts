@@ -28,6 +28,7 @@ import {
   type ExecuteExchangeParams,
   type ExchangeResult,
 } from './exchange.js';
+import { findTwoHopRoutes, executeTwoHopSwap, type TwoHopQuoteResult } from './auto-router.js';
 
 // ---------------------------------------------------------------------------
 // Input schemas (Zod SSoT)
@@ -65,6 +66,16 @@ const SwapStatusInputSchema = z.object({
   transactionId: z.string().min(1),
   providerId: z.string().min(1),
 });
+
+// ---------------------------------------------------------------------------
+// Helper
+// ---------------------------------------------------------------------------
+
+/** Check if a ChainError indicates no swap route available. */
+function isNoRouteError(err: ChainError): boolean {
+  return err.message.includes('No swap route available') ||
+    err.message.includes('No DEX swap route available');
+}
 
 // ---------------------------------------------------------------------------
 // Provider implementation
@@ -151,14 +162,31 @@ export class DcentSwapActionProvider implements IActionProvider {
 
       case 'dex_swap': {
         const input = DexSwapInputSchema.parse(params);
-        return executeDexSwap(
-          this.getClient(),
-          {
-            ...input,
-            walletAddress: context.walletAddress,
-          },
-          this.config,
-        );
+        try {
+          return await executeDexSwap(
+            this.getClient(),
+            {
+              ...input,
+              walletAddress: context.walletAddress,
+            },
+            this.config,
+          );
+        } catch (err) {
+          // DS-04: Fallback to 2-hop auto-routing when direct route unavailable
+          if (err instanceof ChainError && isNoRouteError(err)) {
+            const twoHopResult = await executeTwoHopSwap(
+              this.getClient(),
+              {
+                ...input,
+                walletAddress: context.walletAddress,
+              },
+              this.config,
+            );
+            // Return flat BATCH requests (pipeline handles execution)
+            return twoHopResult.requests;
+          }
+          throw err;
+        }
       }
 
       case 'exchange': {
@@ -223,6 +251,15 @@ export class DcentSwapActionProvider implements IActionProvider {
   }
 
   /**
+   * Query 2-hop swap routes via intermediate tokens.
+   * Returns available routes when direct route is unavailable.
+   * DS-04: fallback strategy for fail_no_available_provider.
+   */
+  async queryTwoHopRoutes(params: GetQuotesParams): Promise<TwoHopQuoteResult> {
+    return findTwoHopRoutes(this.getClient(), params);
+  }
+
+  /**
    * Query swap/exchange transaction status.
    * Calls DCent get_transactions_status API directly.
    */
@@ -256,3 +293,10 @@ export { type ExchangeQuoteResult, type ExecuteExchangeParams, type ExchangeResu
 export { ExchangeStatusTracker } from './exchange-status-tracker.js';
 export { caip19ToDcentId, dcentIdToCaip19 } from './currency-mapper.js';
 export { DcentSwapApiClient } from './dcent-api-client.js';
+export {
+  findTwoHopRoutes,
+  executeTwoHopSwap,
+  type TwoHopRoute,
+  type TwoHopQuoteResult,
+  type TwoHopExecutionResult,
+} from './auto-router.js';
