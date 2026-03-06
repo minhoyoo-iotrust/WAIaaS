@@ -17,6 +17,7 @@ export function formatDate(timestamp: number): string {
 
 /** Truncate blockchain address: first 4 + ".." + last 4 */
 export function formatAddress(address: string): string {
+  if (!address) return '';
   if (address.length <= 10) return address;
   return `${address.slice(0, 4)}..${address.slice(-4)}`;
 }

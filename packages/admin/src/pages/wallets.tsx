@@ -1706,10 +1706,10 @@ function WalletDetailView({ id }: { id: string }) {
               <div class="detail-grid" style={{ marginBottom: 'var(--space-3)' }}>
                 <DetailRow label="Token ID" value={selectedNft.value.tokenId} />
                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                  <DetailRow label="Contract" value={formatAddress(selectedNft.value.contractAddress)} />
-                  <CopyButton value={selectedNft.value.contractAddress} />
+                  <DetailRow label="Contract" value={formatAddress(selectedNft.value.contractAddress ?? '')} />
+                  <CopyButton value={selectedNft.value.contractAddress ?? ''} />
                 </div>
-                <DetailRow label="Standard" value={selectedNft.value.standard.toUpperCase()} />
+                <DetailRow label="Standard" value={(selectedNft.value.standard ?? '').toUpperCase()} />
                 {selectedNft.value.collection?.name && (
                   <DetailRow label="Collection" value={selectedNft.value.collection.name} />
                 )}
