@@ -17,12 +17,14 @@ import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { WAIaaSError, validateNetworkEnvironment } from '@waiaas/core';
 import type { ChainType, NftItem, NftCollection } from '@waiaas/core';
 import type { NftIndexerClient } from '../../infrastructure/nft/nft-indexer-client.js';
+import type { NftMetadataCacheService } from '../../services/nft-metadata-cache.js';
 import { wallets } from '../../infrastructure/database/schema.js';
 import type * as schema from '../../infrastructure/database/schema.js';
 import { resolveWalletId } from '../helpers/resolve-wallet-id.js';
 import {
   NftListResponseSchema,
   NftListGroupedResponseSchema,
+  NftMetadataResponseSchema,
   buildErrorResponses,
   openApiValidationHook,
 } from './openapi-schemas.js';
@@ -34,6 +36,8 @@ import {
 export interface NftRouteDeps {
   db: BetterSQLite3Database<typeof schema>;
   nftIndexerClient: NftIndexerClient;
+  /** Added in Plan 335-02 for metadata caching. */
+  nftMetadataCacheService?: NftMetadataCacheService;
 }
 
 // ---------------------------------------------------------------------------
@@ -126,20 +130,75 @@ const masterNftListRoute = createRoute({
 });
 
 // ---------------------------------------------------------------------------
+// Metadata route definitions
+// ---------------------------------------------------------------------------
+
+const nftMetadataQuerySchema = z.object({
+  network: z.string().openapi({ example: 'ethereum-mainnet' }),
+  walletId: z.string().uuid().optional(),
+});
+
+const sessionNftMetadataRoute = createRoute({
+  method: 'get',
+  path: '/wallet/nfts/{tokenIdentifier}',
+  tags: ['NFT'],
+  summary: 'Get NFT metadata',
+  request: {
+    params: z.object({
+      tokenIdentifier: z.string().openapi({
+        description: 'EVM: contractAddress:tokenId, Solana: mintAddress',
+        example: '0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D:42',
+      }),
+    }),
+    query: nftMetadataQuerySchema,
+  },
+  responses: {
+    200: {
+      description: 'NFT metadata with attributes',
+      content: { 'application/json': { schema: NftMetadataResponseSchema } },
+    },
+    ...buildErrorResponses(['NFT_NOT_FOUND', 'INDEXER_NOT_CONFIGURED', 'WALLET_NOT_FOUND', 'NFT_METADATA_FETCH_FAILED']),
+  },
+});
+
+const masterNftMetadataRoute = createRoute({
+  method: 'get',
+  path: '/wallets/{id}/nfts/{tokenIdentifier}',
+  tags: ['Wallets'],
+  summary: 'Get NFT metadata for a specific wallet (admin)',
+  request: {
+    params: z.object({
+      id: z.string().uuid(),
+      tokenIdentifier: z.string(),
+    }),
+    query: z.object({
+      network: z.string().openapi({ example: 'ethereum-mainnet' }),
+    }),
+  },
+  responses: {
+    200: {
+      description: 'NFT metadata with attributes',
+      content: { 'application/json': { schema: NftMetadataResponseSchema } },
+    },
+    ...buildErrorResponses(['NFT_NOT_FOUND', 'INDEXER_NOT_CONFIGURED', 'WALLET_NOT_FOUND', 'NFT_METADATA_FETCH_FAILED']),
+  },
+});
+
+// ---------------------------------------------------------------------------
 // Route factory
 // ---------------------------------------------------------------------------
 
 /**
  * Create NFT route sub-router.
  *
- * Session: GET /wallet/nfts (sessionAuth via /v1/wallet/* wildcard)
- * Master:  GET /wallets/:id/nfts (masterAuth)
+ * Session: GET /wallet/nfts, GET /wallet/nfts/:tokenIdentifier
+ * Master:  GET /wallets/:id/nfts, GET /wallets/:id/nfts/:tokenIdentifier
  */
 export function nftRoutes(deps: NftRouteDeps): OpenAPIHono {
   const router = new OpenAPIHono({ defaultHook: openApiValidationHook });
 
   // ---------------------------------------------------------------------------
-  // GET /wallet/nfts (session)
+  // GET /wallet/nfts (session list)
   // ---------------------------------------------------------------------------
 
   router.openapi(sessionNftListRoute, async (c) => {
@@ -149,13 +208,34 @@ export function nftRoutes(deps: NftRouteDeps): OpenAPIHono {
   });
 
   // ---------------------------------------------------------------------------
-  // GET /wallets/:id/nfts (master)
+  // GET /wallet/nfts/:tokenIdentifier (session metadata)
+  // ---------------------------------------------------------------------------
+
+  router.openapi(sessionNftMetadataRoute, async (c) => {
+    const { tokenIdentifier } = c.req.valid('param');
+    const query = c.req.valid('query');
+    const walletId = resolveWalletId(c, deps.db, query.walletId);
+    return handleNftMetadata(c, deps, walletId, tokenIdentifier, query.network);
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /wallets/:id/nfts (master list)
   // ---------------------------------------------------------------------------
 
   router.openapi(masterNftListRoute, async (c) => {
     const { id: walletId } = c.req.valid('param');
     const query = c.req.valid('query');
     return handleNftList(c, deps, walletId, query);
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /wallets/:id/nfts/:tokenIdentifier (master metadata)
+  // ---------------------------------------------------------------------------
+
+  router.openapi(masterNftMetadataRoute, async (c) => {
+    const { id: walletId, tokenIdentifier } = c.req.valid('param');
+    const query = c.req.valid('query');
+    return handleNftMetadata(c, deps, walletId, tokenIdentifier, query.network);
   });
 
   return router;
@@ -206,4 +286,64 @@ async function handleNftList(
     },
     200,
   );
+}
+
+// ---------------------------------------------------------------------------
+// Shared metadata handler
+// ---------------------------------------------------------------------------
+
+/**
+ * Parse tokenIdentifier into contractAddress + tokenId.
+ *
+ * EVM format: contractAddress:tokenId (e.g., 0xBC4CA...:42)
+ * Solana format: mintAddress (no colon, used as both contract and tokenId)
+ */
+function parseTokenIdentifier(
+  tokenIdentifier: string,
+  chain: ChainType,
+): { contractAddress: string; tokenId: string } {
+  if (chain === 'solana' || !tokenIdentifier.includes(':')) {
+    // Solana Metaplex: mint address is both contract and token ID
+    return { contractAddress: tokenIdentifier, tokenId: tokenIdentifier };
+  }
+
+  // EVM: contractAddress:tokenId
+  const colonIndex = tokenIdentifier.lastIndexOf(':');
+  return {
+    contractAddress: tokenIdentifier.slice(0, colonIndex),
+    tokenId: tokenIdentifier.slice(colonIndex + 1),
+  };
+}
+
+async function handleNftMetadata(
+  c: any,
+  deps: NftRouteDeps,
+  walletId: string,
+  tokenIdentifier: string,
+  network: string,
+) {
+  // Look up wallet from DB
+  const wallet = deps.db.select().from(wallets).where(eq(wallets.id, walletId)).get();
+  if (!wallet) {
+    throw new WAIaaSError('WALLET_NOT_FOUND', { message: `Wallet '${walletId}' not found` });
+  }
+
+  const chain = wallet.chain as ChainType;
+  const environment = wallet.environment as 'mainnet' | 'testnet';
+
+  // Validate network matches wallet's environment
+  validateNetworkEnvironment(chain, environment, network as any);
+
+  // Parse token identifier
+  const { contractAddress, tokenId } = parseTokenIdentifier(tokenIdentifier, chain);
+
+  // Fetch metadata via cache service (if available) or directly via indexer
+  let metadata;
+  if (deps.nftMetadataCacheService) {
+    metadata = await deps.nftMetadataCacheService.getMetadata(chain, network, contractAddress, tokenId);
+  } else {
+    metadata = await deps.nftIndexerClient.getNftMetadata(chain, network, contractAddress, tokenId);
+  }
+
+  return c.json(metadata, 200);
 }
