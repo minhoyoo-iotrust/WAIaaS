@@ -466,6 +466,44 @@
 
 ---
 
+## Milestone: v31.2 — UserOp Build/Sign API
+
+**Shipped:** 2026-03-06
+**Phases:** 4 | **Plans:** 8 | **Sessions:** 1
+
+### What Was Built
+- Provider Lite/Full 모드 — Smart Account 프로바이더 없이 생성(Lite), aaProvider 설정 시 Full 전환
+- UserOp Build API — unsigned UserOp 구성 (nonce EntryPoint v0.7 직접 조회, factory 자동 감지, Bundler 불필요)
+- UserOp Sign API — callData 이중 검증 + sender 일치 + INSTANT 정책 + 서명 + 감사 로그
+- DB v45 userop_builds 테이블 (TTL 10분) + cleanup 워커
+- MCP build_userop/sign_userop + SDK buildUserOp()/signUserOp() + Admin UI Lite/Full 배지
+
+### What Worked
+- 4 phases 1일 완료 (27 commits, 64 files) — 기존 SmartAccount 인프라(v30.6/v30.9) 위에 구축하여 빠른 구현
+- build→sign 분리 아키텍처가 플랫폼 대납 패턴에 자연스럽게 매핑 — Bundler 의존성 완전 제거
+- callData 이중 검증 설계가 보안과 UX를 동시에 충족 — build 시점 정책 검증 + sign 시점 재검증
+- userop capability와 smart_account capability 분리로 기능별 세밀한 노출 가능
+
+### What Was Inefficient
+- REQUIREMENTS.md traceability 상태 반영 누락 (반복 이슈) — Phase 341 완료 후 ADMIN/INTF/SKILL 요구사항이 Pending 상태 유지
+- ROADMAP.md Phase 341 plan checkboxes `[ ]` 미갱신 (반복 이슈) — 감사에서 발견
+
+### Patterns Established
+- build-sign 분리 패턴: unsigned UserOp 구성 → 외부에서 gas/paymaster 채움 → 서명만 WAIaaS 담당
+- buildId DB 트래킹: TTL 기반 일회성 build 레코드 + callData 무결성 검증 + 주기적 cleanup
+
+### Key Lessons
+- REQUIREMENTS.md / ROADMAP.md 상태 동기화 자동화가 여전히 미구현 — 매 마일스톤 반복되는 이슈
+- Lite/Full 모드 같은 기능 분기는 첫 단계에서 helper 함수로 격리하면 후속 단계에서 일관된 조건 판단 가능
+- userop_builds 테이블에 network 컬럼 미포함 → sign 시 heuristic 네트워크 해결 필요 (향후 개선 권장)
+
+### Cost Observations
+- Model mix: 100% opus
+- Sessions: 1
+- Notable: 64 files, 27 commits in ~1.5 hours — small focused milestone on existing infrastructure
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -484,6 +522,7 @@
 | v30.10 | 1 | 3 | ERC-8128 Signed HTTP Requests, 76 파일 1일 완료 |
 | v30.11 | 1 | 3 | Admin UI DX 개선, 48 파일 1일 완료 |
 | v31.0 | 1 | 5 | NFT 풀스택(타입+인덱서+어댑터+파이프라인+UI), 112 파일 2.5시간 완료 |
+| v31.2 | 1 | 4 | UserOp Build/Sign API, 64 파일 1.5시간 완료 |
 
 ### Cumulative Quality
 
@@ -501,6 +540,7 @@
 | v30.10 | ~6,822 (+80) | maintained | +11 decisions |
 | v30.11 | ~6,822 (unchanged) | maintained | +9 decisions |
 | v31.0 | ~6,930 (+108) | maintained | +24 decisions |
+| v31.2 | ~6,993 (+63) | maintained | +15 decisions |
 
 ### Top Lessons (Verified Across Milestones)
 
