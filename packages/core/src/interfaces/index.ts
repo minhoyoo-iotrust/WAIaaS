@@ -145,3 +145,20 @@ export {
   MarginInfoSchema,
   PerpMarketInfoSchema,
 } from './perp-provider.types.js';
+
+// v31.0 NFT Indexer types (Zod SSoT)
+export type {
+  INftIndexer,
+  NftItem,
+  NftMetadata,
+  NftCollection,
+  NftListOptions,
+  NftListResult,
+} from './nft-indexer.types.js';
+export {
+  NftItemSchema,
+  NftMetadataSchema,
+  NftCollectionSchema,
+  NftListOptionsSchema,
+  NftListResultSchema,
+} from './nft-indexer.types.js';

@@ -342,6 +342,13 @@ export type {
   MarginInfo,
   PerpMarketInfo,
   IPerpProvider,
+  // v31.0 NFT indexer types
+  INftIndexer,
+  NftItem,
+  NftMetadata,
+  NftCollection,
+  NftListOptions,
+  NftListResult,
 } from './interfaces/index.js';
 
 // v27.1 connection state machine (value exports)
@@ -414,6 +421,15 @@ export {
   PerpPositionSummarySchema,
   MarginInfoSchema,
   PerpMarketInfoSchema,
+} from './interfaces/index.js';
+
+// v31.0 NFT Indexer Zod schemas (value exports)
+export {
+  NftItemSchema,
+  NftMetadataSchema,
+  NftCollectionSchema,
+  NftListOptionsSchema,
+  NftListResultSchema,
 } from './interfaces/index.js';
 
 // v1.5.3 Currency formatting utilities
