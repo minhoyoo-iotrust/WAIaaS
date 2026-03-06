@@ -295,7 +295,7 @@ describe('dcent-dex-swap', () => {
         walletAddress: '0xwallet',
       }, DEFAULT_CONFIG);
 
-      const approveCalldata = result[0]!.calldata;
+      const approveCalldata = result[0]!.calldata!;
       // selector: 0x095ea7b3
       expect(approveCalldata.slice(0, 10)).toBe('0x095ea7b3');
       // spender padded to 32 bytes (64 hex chars)
