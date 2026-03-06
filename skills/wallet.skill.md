@@ -20,6 +20,7 @@ Complete reference for wallet CRUD operations, asset queries, session management
 - Send transactions via transaction endpoints (see transactions.skill.md)
 - Get registered tokens via `GET /v1/tokens`
 - Get applied policies via `GET /v1/policies`
+- Query NFT holdings via `GET /v1/wallet/nfts` (see nft.skill.md)
 
 ### Operator only (masterAuth) — NOT for AI agents
 - Create/list/update/delete wallets
@@ -28,6 +29,7 @@ Complete reference for wallet CRUD operations, asset queries, session management
 - Register/remove custom tokens
 - Set owner addresses, manage networks
 - WalletConnect pairing management
+- Query any wallet's NFTs via `GET /v1/wallets/{id}/nfts`
 
 > AI agents must NEVER request the master password. Use only your session token.
 
@@ -1401,3 +1403,14 @@ async with WAIaaSClient("http://localhost:3100", "wai_sess_...") as client:
     # Get health factor for a specific wallet and network
     wallet_health = await client.get_health_factor(wallet_id="wlt-123", network="ethereum-mainnet")
 ```
+
+## 17. NFT Support
+
+For full NFT query, transfer, and approval documentation, see **nft.skill.md**.
+
+Key capabilities:
+- **Query**: List NFTs, get metadata (ERC-721, ERC-1155, Metaplex)
+- **Transfer**: `POST /v1/transactions/send` with `type: "NFT_TRANSFER"`
+- **Approve**: `POST /v1/transactions/send` with `type: "APPROVE"` and `nft` field
+
+The Admin UI wallet detail page includes an **NFTs** tab showing NFT grid/list views with metadata modal. NFT indexer API keys (Alchemy for EVM, Helius for Solana) can be configured in **Settings > NFT Indexer**.

@@ -1,6 +1,6 @@
 ---
 name: "WAIaaS Transactions"
-description: "All 5 transaction types (TRANSFER, TOKEN_TRANSFER, CONTRACT_CALL, APPROVE, BATCH) with lifecycle management"
+description: "All 6 transaction types (TRANSFER, TOKEN_TRANSFER, CONTRACT_CALL, APPROVE, BATCH, NFT_TRANSFER) with lifecycle management"
 category: "api"
 tags: [wallet, blockchain, solana, ethereum, transactions, waiass]
 version: "2.5.0-rc"
@@ -11,14 +11,14 @@ dispatch:
 
 # WAIaaS Transactions
 
-Complete reference for all 5 transaction types, lifecycle management, and policy interaction. All endpoints use base URL `http://localhost:3100`. Transaction endpoints require **sessionAuth** (`Authorization: Bearer <token>`) unless noted otherwise.
+Complete reference for all 6 transaction types, lifecycle management, and policy interaction. All endpoints use base URL `http://localhost:3100`. Transaction endpoints require **sessionAuth** (`Authorization: Bearer <token>`) unless noted otherwise.
 
 > AI agents must NEVER request the master password. Use only your session token.
 
 ## Permissions
 
 ### Agent (sessionAuth)
-- Send all 5 transaction types via `POST /v1/transactions/send`
+- Send all 6 transaction types via `POST /v1/transactions/send`
 - Sign raw transactions via `POST /v1/transactions/sign`
 - Query transaction status and history
 - Renew session tokens
@@ -31,7 +31,7 @@ Complete reference for all 5 transaction types, lifecycle management, and policy
 
 ## 1. Overview
 
-WAIaaS uses a **discriminatedUnion 5-type** system for transactions. The `type` field in the request body determines which transaction variant to execute:
+WAIaaS uses a **discriminatedUnion 6-type** system for transactions. The `type` field in the request body determines which transaction variant to execute:
 
 | Type | Description | Policy Prerequisite |
 |------|-------------|---------------------|
@@ -40,6 +40,7 @@ WAIaaS uses a **discriminatedUnion 5-type** system for transactions. The `type` 
 | `CONTRACT_CALL` | Arbitrary contract invocation | CONTRACT_WHITELIST policy |
 | `APPROVE` | Token spending approval | APPROVED_SPENDERS policy |
 | `BATCH` | Multiple instructions (Solana only) | Depends on instruction types |
+| `NFT_TRANSFER` | ERC-721/ERC-1155/Metaplex NFT transfer | None (CONTRACT_WHITELIST optional) |
 | `X402_PAYMENT` | x402 auto-payment (USDC) | X402_ALLOWED_DOMAINS policy |
 
 All transaction types use `POST /v1/transactions/send` with the appropriate `type` field.
@@ -322,6 +323,67 @@ Constraints:
 - Minimum 2 instructions, maximum 20 instructions
 - Solana only -- EVM wallets return error `BATCH_NOT_SUPPORTED`
 - Each instruction is subject to its own policy checks
+
+## 6.5. Type 6: NFT_TRANSFER (ERC-721/ERC-1155/Metaplex)
+
+Transfer an NFT to a recipient address. Supports ERC-721 and ERC-1155 on EVM chains, and Metaplex on Solana. Default tier: **APPROVAL** (owner must approve unless tier overridden via settings).
+
+### Request
+
+```bash
+curl -s -X POST http://localhost:3100/v1/transactions/send \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -d '{
+    "type": "NFT_TRANSFER",
+    "to": "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD16",
+    "token": {
+      "address": "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D",
+      "tokenId": "42",
+      "standard": "erc721"
+    },
+    "network": "ethereum-mainnet"
+  }'
+```
+
+Parameters:
+- `type` (required): `"NFT_TRANSFER"`
+- `to` (required): recipient address
+- `token` (required): NFT token info
+  - `address` (required): contract address (EVM) or mint address (Solana)
+  - `tokenId` (required): token ID within the contract. Use `"0"` for Solana Metaplex.
+  - `standard` (required): `"erc721"`, `"erc1155"`, or `"metaplex"`
+- `network` (required): target network
+- `amount` (optional): amount to transfer (default: `"1"`). Relevant for ERC-1155 multi-copy NFTs.
+- `walletId` (optional): target wallet ID for multi-wallet sessions
+
+### Policies
+
+- **RATE_LIMIT**: `nft_count` counter limits NFT transfers per period
+- **CONTRACT_WHITELIST**: NFT contract must be whitelisted when policy is configured
+
+### APPROVE Type Extension for NFTs
+
+The APPROVE transaction type supports an optional `nft` field for NFT-specific approvals:
+
+```bash
+curl -s -X POST http://localhost:3100/v1/transactions/send \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -d '{
+    "type": "APPROVE",
+    "to": "0xMarketplaceAddress",
+    "token": { "address": "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D" },
+    "nft": { "tokenId": "42", "standard": "erc721" },
+    "network": "ethereum-mainnet",
+    "amount": "0"
+  }'
+```
+
+- `amount: "0"` triggers single NFT approve (`approve(spender, tokenId)`)
+- `amount != "0"` triggers collection-wide approve (`setApprovalForAll` for ERC-721/1155, `delegate` for Solana)
+
+For full NFT documentation including query, metadata, and MCP/SDK methods, see **nft.skill.md**.
 
 ## 7. Transaction Lifecycle
 
