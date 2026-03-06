@@ -109,3 +109,37 @@ describe('buildProviderStatus Lite/Full mode', () => {
     expect(withPaymaster!.paymasterEnabled).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Task 2: Lite mode send blocking
+// ---------------------------------------------------------------------------
+
+describe('Lite mode send blocking', () => {
+  // Test 9: isLiteModeSmartAccount returns true for smart + no provider
+  it('T9: isLiteModeSmartAccount returns true for smart + aaProvider=null', async () => {
+    const { isLiteModeSmartAccount } = await import('../api/routes/wallets.js');
+    expect(isLiteModeSmartAccount({ accountType: 'smart', aaProvider: null })).toBe(true);
+  });
+
+  // Test 10: isLiteModeSmartAccount returns false for smart + provider set
+  it('T10: isLiteModeSmartAccount returns false for smart + aaProvider=pimlico', async () => {
+    const { isLiteModeSmartAccount } = await import('../api/routes/wallets.js');
+    expect(isLiteModeSmartAccount({ accountType: 'smart', aaProvider: 'pimlico' })).toBe(false);
+  });
+
+  // Test 11: isLiteModeSmartAccount returns false for EOA
+  it('T11: isLiteModeSmartAccount returns false for EOA wallet', async () => {
+    const { isLiteModeSmartAccount } = await import('../api/routes/wallets.js');
+    expect(isLiteModeSmartAccount({ accountType: 'eoa', aaProvider: null })).toBe(false);
+  });
+
+  // Test 12: getLiteModeError returns WAIaaSError with correct message
+  it('T12: getLiteModeError returns CHAIN_ERROR with userop API guidance', async () => {
+    const { getLiteModeError } = await import('../api/routes/wallets.js');
+    const error = getLiteModeError();
+    expect(error.code).toBe('CHAIN_ERROR');
+    expect(error.message).toContain('userop/build');
+    expect(error.message).toContain('userop/sign');
+    expect(error.message).toContain('Lite mode');
+  });
+});

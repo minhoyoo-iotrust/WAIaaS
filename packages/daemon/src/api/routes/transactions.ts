@@ -80,6 +80,7 @@ import { executeSignMessage } from '../../pipeline/sign-message.js';
 import { TransactionPipeline } from '../../pipeline/pipeline.js';
 import { resolveDisplayCurrencyCode, fetchDisplayRate, toDisplayAmount } from './display-currency-helper.js';
 import { resolveWalletId, verifyWalletAccess } from '../helpers/resolve-wallet-id.js';
+import { isLiteModeSmartAccount, getLiteModeError } from './wallets.js';
 
 export interface TransactionRouteDeps {
   db: BetterSQLite3Database<typeof schema>;
@@ -365,6 +366,11 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
     }
     if (wallet.status === 'TERMINATED') {
       throw new WAIaaSError('WALLET_TERMINATED');
+    }
+
+    // Block Lite mode Smart Account from sending transactions directly
+    if (isLiteModeSmartAccount({ accountType: wallet.accountType, aaProvider: wallet.aaProvider })) {
+      throw getLiteModeError();
     }
 
     // Resolve network: request > getSingleNetwork auto-resolve
