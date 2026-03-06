@@ -23,20 +23,20 @@ Requirements for NFT support milestone. Each maps to roadmap phases.
 
 ### NFT Transfer (전송)
 
-- [ ] **NFTT-01**: NFT_TRANSFER type added to TransactionRequestSchema (6th discriminatedUnion type)
+- [x] **NFTT-01**: NFT_TRANSFER type added to TransactionRequestSchema (6th discriminatedUnion type)
 - [ ] **NFTT-02**: EVM ERC-721 transfer via `safeTransferFrom(from, to, tokenId)`
 - [ ] **NFTT-03**: EVM ERC-1155 transfer via `safeTransferFrom(from, to, tokenId, amount, data)`
 - [ ] **NFTT-04**: Solana Metaplex transfer via SPL Token transfer instruction
 - [ ] **NFTT-05**: NFT_TRANSFER passes through 6-stage pipeline
 - [ ] **NFTT-06**: Smart Account (ERC-4337) compatible via `buildUserOpCalls()` NFT_TRANSFER conversion
-- [ ] **NFTT-07**: NFT_TRANSFER request body supports type/to/token/amount/network fields
+- [x] **NFTT-07**: NFT_TRANSFER request body supports type/to/token/amount/network fields
 
 ### NFT Approval (승인)
 
 - [ ] **NFTA-01**: EVM `approve` for single NFT approval
 - [ ] **NFTA-02**: EVM `setApprovalForAll` for collection-wide approval
 - [ ] **NFTA-03**: Solana `delegate` for token delegation
-- [ ] **NFTA-04**: Existing APPROVE type extended with optional `nft` field (`{ tokenId, standard }`)
+- [x] **NFTA-04**: Existing APPROVE type extended with optional `nft` field (`{ tokenId, standard }`)
 - [ ] **NFTA-05**: Approval status query API (`GET /v1/wallet/nfts/{tokenIdentifier}/approvals`)
 
 ### Indexer (인덱서)
@@ -77,10 +77,10 @@ Requirements for NFT support milestone. Each maps to roadmap phases.
 
 ### CAIP-19
 
-- [ ] **CAIP-01**: NFT namespaces added: `erc721`, `erc1155`, `metaplex`
-- [ ] **CAIP-02**: `nftAssetId()` helper in `asset-helpers.ts`
-- [ ] **CAIP-03**: NFT responses include optional `assetId` field
-- [ ] **CAIP-04**: ALLOWED_TOKENS policy supports NFT CAIP-19 matching
+- [x] **CAIP-01**: NFT namespaces added: `erc721`, `erc1155`, `metaplex`
+- [x] **CAIP-02**: `nftAssetId()` helper in `asset-helpers.ts`
+- [x] **CAIP-03**: NFT responses include optional `assetId` field
+- [x] **CAIP-04**: ALLOWED_TOKENS policy supports NFT CAIP-19 matching
 
 ### Skill Files (스킬)
 
@@ -90,16 +90,16 @@ Requirements for NFT support milestone. Each maps to roadmap phases.
 
 ### Error Codes (에러)
 
-- [ ] **ERRC-01**: `NFT_NOT_FOUND` (404)
-- [ ] **ERRC-02**: `INDEXER_NOT_CONFIGURED` (400)
-- [ ] **ERRC-03**: `UNSUPPORTED_NFT_STANDARD` (400)
-- [ ] **ERRC-04**: `INDEXER_API_ERROR` (502)
-- [ ] **ERRC-05**: `NFT_METADATA_FETCH_FAILED` (502)
+- [x] **ERRC-01**: `NFT_NOT_FOUND` (404)
+- [x] **ERRC-02**: `INDEXER_NOT_CONFIGURED` (400)
+- [x] **ERRC-03**: `UNSUPPORTED_NFT_STANDARD` (400)
+- [x] **ERRC-04**: `INDEXER_API_ERROR` (502)
+- [x] **ERRC-05**: `NFT_METADATA_FETCH_FAILED` (502)
 
 ### DB Migration (마이그레이션)
 
-- [ ] **DBMG-01**: v44 migration: `nft_metadata_cache` table
-- [ ] **DBMG-02**: Migration test: schema snapshot + data transformation
+- [x] **DBMG-01**: v44 migration: `nft_metadata_cache` table
+- [x] **DBMG-02**: Migration test: schema snapshot + data transformation
 
 ## Future Requirements
 
@@ -128,20 +128,20 @@ Requirements for NFT support milestone. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| NFTT-01 | Phase 333 | Pending |
-| NFTT-07 | Phase 333 | Pending |
-| NFTA-04 | Phase 333 | Pending |
-| ERRC-01 | Phase 333 | Pending |
-| ERRC-02 | Phase 333 | Pending |
-| ERRC-03 | Phase 333 | Pending |
-| ERRC-04 | Phase 333 | Pending |
-| ERRC-05 | Phase 333 | Pending |
-| DBMG-01 | Phase 333 | Pending |
-| DBMG-02 | Phase 333 | Pending |
-| CAIP-01 | Phase 333 | Pending |
-| CAIP-02 | Phase 333 | Pending |
-| CAIP-03 | Phase 333 | Pending |
-| CAIP-04 | Phase 333 | Pending |
+| NFTT-01 | Phase 333 | Complete |
+| NFTT-07 | Phase 333 | Complete |
+| NFTA-04 | Phase 333 | Complete |
+| ERRC-01 | Phase 333 | Complete |
+| ERRC-02 | Phase 333 | Complete |
+| ERRC-03 | Phase 333 | Complete |
+| ERRC-04 | Phase 333 | Complete |
+| ERRC-05 | Phase 333 | Complete |
+| DBMG-01 | Phase 333 | Complete |
+| DBMG-02 | Phase 333 | Complete |
+| CAIP-01 | Phase 333 | Complete |
+| CAIP-02 | Phase 333 | Complete |
+| CAIP-03 | Phase 333 | Complete |
+| CAIP-04 | Phase 333 | Complete |
 | INDX-01 | Phase 334 | Pending |
 | INDX-02 | Phase 334 | Pending |
 | INDX-03 | Phase 334 | Pending |

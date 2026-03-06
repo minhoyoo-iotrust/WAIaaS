@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
 milestone: v31.0
-milestone_name: NFT 지원 (EVM + Solana)
+milestone_name: NFT 지원
 status: active
-stopped_at: null
-last_updated: "2026-03-06"
-last_activity: 2026-03-06 -- Roadmap created (5 phases, 12 plans, 58 reqs)
+stopped_at: "Completed 333-01 and 333-02 (Phase 333 complete)"
+last_updated: "2026-03-06T02:14:28Z"
+last_activity: 2026-03-06 -- Phase 333 NFT Foundation complete (2 plans, 3 tasks)
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 12
-  completed_plans: 0
-  percent: 0
+  completed_plans: 2
+  percent: 17
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-03-06)
 
 ## Current Position
 
-Phase: 1 of 5 (Phase 333: NFT Foundation)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-03-06 — Roadmap created
+Phase: 2 of 5 (Phase 334: Indexer + Chain Adapter)
+Plan: 0 of 3 in current phase
+Status: Phase 333 complete, ready for Phase 334
+Last activity: 2026-03-06 -- Phase 333 complete (2 plans, 3 tasks, 26 tests)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██░░░░░░░░] 17%
 
 ## Performance Metrics
 
@@ -48,6 +48,10 @@ D6: APPROVE type extended with nft field for NFT approvals
 D7: CAIP-19 NFT namespaces: erc721/erc1155/metaplex (WAIaaS extension)
 D8: Smart Account compatible via buildUserOpCalls() NFT_TRANSFER conversion
 D9: Dry-Run and Batch compatible (existing patterns apply)
+D10: NftTokenInfoSchema separate from TokenInfoSchema (no decimals/symbol for NFTs)
+D11: EVM NFT CAIP-19 uses address-tokenId hyphen separator in assetReference
+D12: Metaplex uses mint address directly (unique per NFT, no tokenId needed)
+D13: DB v44: nft_metadata_cache unique on (contract_address, token_id, chain, network)
 
 ### Blockers/Concerns
 
@@ -58,5 +62,5 @@ D9: Dry-Run and Batch compatible (existing patterns apply)
 ## Session Continuity
 
 Last session: 2026-03-06
-Stopped at: Roadmap created -- ready to plan Phase 333
+Stopped at: Phase 333 complete -- ready for Phase 334 (Indexer + Chain Adapter)
 Resume file: None

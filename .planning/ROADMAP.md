@@ -110,7 +110,7 @@ See `.planning/milestones/` for archived phase details.
 
 **Milestone Goal:** AI 에이전트가 EVM(ERC-721/ERC-1155)과 Solana(Metaplex) NFT를 조회하고, 전송하며, 승인을 관리할 수 있는 상태
 
-- [ ] **Phase 333: NFT Foundation** - Zod 스키마(NFT_TRANSFER 6th type, APPROVE nft 확장), DB v44 마이그레이션, CAIP-19 NFT 네임스페이스, 에러 코드
+- [x] **Phase 333: NFT Foundation** - Zod 스키마(NFT_TRANSFER 6th type, APPROVE nft 확장), DB v44 마이그레이션, CAIP-19 NFT 네임스페이스, 에러 코드
 - [ ] **Phase 334: Indexer + Chain Adapter** - INftIndexer 인터페이스 + Alchemy/Helius 구현체, IChainAdapter NFT 메서드 + SolanaAdapter/EvmAdapter 구현
 - [ ] **Phase 335: NFT Query API** - NFT 목록/메타데이터 REST 조회 라우트, 메타데이터 캐싱, 페이지네이션, 컬렉션 그룹핑
 - [ ] **Phase 336: NFT Transfer + Approval Pipeline** - NFT_TRANSFER 6-stage 파이프라인 통과, NFT 승인 체인 메서드, Smart Account 호환, 정책 적용
@@ -131,8 +131,8 @@ See `.planning/milestones/` for archived phase details.
 **Plans**: 2 plans
 
 Plans:
-- [ ] 333-01-PLAN.md -- NFT_TRANSFER Zod 스키마 + APPROVE nft 확장 + NFT 응답 스키마 + 에러 코드
-- [ ] 333-02-PLAN.md -- DB v44 마이그레이션 + CAIP-19 NFT 네임스페이스 + nftAssetId 헬퍼
+- [x] 333-01-PLAN.md -- NFT_TRANSFER Zod 스키마 + APPROVE nft 확장 + NFT 응답 스키마 + 에러 코드
+- [x] 333-02-PLAN.md -- DB v44 마이그레이션 + CAIP-19 NFT 네임스페이스 + nftAssetId 헬퍼
 
 ### Phase 334: Indexer + Chain Adapter
 **Goal**: NFT 인덱서 프로바이더와 체인 어댑터 NFT 메서드가 구현되어 NFT 데이터 조회와 온체인 트랜잭션 빌딩이 가능한 상태
@@ -210,7 +210,7 @@ Phase 333 -> 334 -> 335 (parallel with 336) -> 337
 | 215-243 | v27.0-v27.4 | All | Complete | 2026-02-23 |
 | 244-267 | v28.0-v28.8 | All | Complete | 2026-02-26 |
 | 268-332 | v29.0-v30.11 | All | Complete | 2026-03-05 |
-| 333. NFT Foundation | v31.0 | 0/2 | Not started | - |
+| 333. NFT Foundation | 2/2 | Complete   | 2026-03-06 | 2026-03-06 |
 | 334. Indexer + Chain Adapter | v31.0 | 0/3 | Not started | - |
 | 335. NFT Query API | v31.0 | 0/2 | Not started | - |
 | 336. NFT Transfer + Approval Pipeline | v31.0 | 0/2 | Not started | - |
