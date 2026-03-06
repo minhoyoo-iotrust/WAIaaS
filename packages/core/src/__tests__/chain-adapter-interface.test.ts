@@ -15,15 +15,15 @@ import type {
 } from '../index.js';
 
 /**
- * IChainAdapter 22-method interface verification.
+ * IChainAdapter 25-method interface verification.
  *
  * This test documents the complete method list and verifies type-level
  * correctness via TypeScript compilation. If the interface changes in
  * an incompatible way, these tests will fail to compile.
  */
-describe('IChainAdapter 22-method interface', () => {
+describe('IChainAdapter 25-method interface', () => {
   /**
-   * The complete list of 22 methods in IChainAdapter.
+   * The complete list of 25 methods in IChainAdapter.
    * This serves as living documentation of the interface contract.
    */
   const EXPECTED_METHODS = [
@@ -60,10 +60,14 @@ describe('IChainAdapter 22-method interface', () => {
     // Sign-only operations (2) -- v1.4.7
     'parseTransaction',
     'signExternalTransaction',
+    // NFT operations (3) -- v31.0
+    'buildNftTransferTx',
+    'transferNft',
+    'approveNft',
   ] as const;
 
-  it('should have exactly 22 methods defined', () => {
-    expect(EXPECTED_METHODS).toHaveLength(22);
+  it('should have exactly 25 methods defined', () => {
+    expect(EXPECTED_METHODS).toHaveLength(25);
   });
 
   it('v1.4 new types are importable (FeeEstimate, TokenInfo, SweepResult)', () => {
@@ -127,8 +131,11 @@ describe('IChainAdapter 22-method interface', () => {
       sweepAll: true,
       parseTransaction: true,
       signExternalTransaction: true,
+      buildNftTransferTx: true,
+      transferNft: true,
+      approveNft: true,
     } satisfies Record<MethodKeys, true>;
 
-    expect(Object.keys(_check)).toHaveLength(22);
+    expect(Object.keys(_check)).toHaveLength(25);
   });
 });

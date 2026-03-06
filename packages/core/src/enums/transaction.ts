@@ -22,6 +22,7 @@ export const TRANSACTION_TYPES = [
   'CONTRACT_CALL',
   'APPROVE',
   'BATCH',
+  'NFT_TRANSFER',
   'SIGN',
   'X402_PAYMENT',
 ] as const;

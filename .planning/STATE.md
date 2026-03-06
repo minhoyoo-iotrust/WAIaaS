@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v30.11
-milestone_name: Admin UI DX 개선
-status: shipped
-stopped_at: Milestone complete
-last_updated: "2026-03-05"
-last_activity: 2026-03-05 -- v30.11 milestone shipped
+milestone: v31.0
+milestone_name: NFT 지원
+status: archived
+stopped_at: Milestone v31.0 archived
+last_updated: "2026-03-06T05:10:00.000Z"
+last_activity: 2026-03-06 -- Milestone v31.0 archived (5 phases, 12 plans, 58 requirements)
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 5
-  completed_plans: 5
+  total_phases: 5
+  completed_phases: 5
+  total_plans: 12
+  completed_plans: 12
   percent: 100
 ---
 
@@ -18,54 +18,34 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-05)
+See: .planning/PROJECT.md (updated 2026-03-06)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
 **Current focus:** Planning next milestone
 
 ## Current Position
 
-Phase: -- (milestone complete)
-Plan: --
-Status: Shipped
-Last activity: 2026-03-05 -- v30.11 milestone shipped
-
-Progress: [##########] 100%
+Milestone v31.0 NFT 지원 archived.
+Next: `/gsd:new-milestone` to start next milestone.
 
 ## Performance Metrics
 
-**Cumulative:** 85 milestones shipped, 332 phases completed, ~755 plans, ~2,172 reqs, ~6,822+ tests, ~266,814 LOC TS
-
-| Phase | Plan | Duration | Tasks | Files |
-|-------|------|----------|-------|-------|
-| 330 | 01 | 15m | 2 | 14 |
-| 330 | 02 | 10m | 2 | 8 |
-| 331 | 01 | 5m | 1 | 7 |
-| 331 | 02 | 5m | 2 | 4 |
-| 332 | 01 | 3m | 2 | 4 |
+**Cumulative:** 86 milestones shipped, 337 phases completed, ~767 plans, ~2,241 reqs, ~6,930+ tests, ~239,575 LOC TS
 
 ## Accumulated Context
 
 ### Decisions
 
-- D1: INSERT OR IGNORE chosen for v42 migration to preserve existing operator settings
-- D2: Nested SettingsData format unified across DeFi and Agent Identity pages
-- D3: Legacy routes (#/actions, #/erc8004) redirect to new routes instead of 404
-- D4: Dynamic tier keys use regex pattern instead of 30+ static SETTING_DEFINITIONS entries
-- D5: Action tier is a FLOOR (escalation only) -- max(policyTier, actionTier)
-- D6: Empty string '' means "use provider default" for tier override
-- D7: Tier dropdown uses native <select> rather than custom component for simplicity
-- D8: Override detection reads from settings signal (actions category) not separate state
-- D9: All Settings > Actions references replaced with DeFi (#/defi) or Agent Identity (#/agent-identity)
+(Cleared -- see milestones/v31.0-ROADMAP.md for archived decisions)
 
 ### Blockers/Concerns
 
 - C1: EIP-712 typehash 온체인 검증 필요 (Anvil fork 테스트 deferred, from v30.8)
-- C2: SDK missing provider management methods (setProvider/getProviderStatus) -- deferred to future milestone
-- C3: ERC-8128 is Draft status -- spec may change (keyid format, nonce strategy, algorithm)
+- C2: SDK missing provider management methods (deferred)
+- C3: ERC-8128 is Draft status -- spec may change
 
 ## Session Continuity
 
-Last session: 2026-03-05
-Stopped at: Milestone complete
+Last session: 2026-03-06
+Stopped at: Milestone v31.0 archived
 Resume file: None

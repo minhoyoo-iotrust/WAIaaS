@@ -424,14 +424,15 @@ describe('SettingsService', () => {
             'notifications.telegram_bot_token', 'notifications.discord_webhook_url', 'notifications.slack_webhook_url',
             'oracle.coingecko_api_key', 'telegram.bot_token',
             'actions.jupiter_swap_api_key', 'actions.zerox_swap_api_key', 'actions.lifi_api_key', 'actions.pendle_yield_api_key',
+            'actions.alchemy_nft_api_key', 'actions.helius_das_api_key',
           ].includes(def.key),
         ).toBe(true);
       }
     });
 
     it('has expected number of definitions', () => {
-      // 10 notifications + 13 rpc + 14 security + 1 daemon + 2 walletconnect + 2 oracle + 1 display + 6 autostop + 5 monitoring + 2 telegram + 8 signing_sdk + 7 incoming + 43 actions + 1 policy + 5 gas_condition + 13 rpc_pool + 1 position_tracker + 3 per-rule autostop + 9 erc8004 + 1 policy.default_deny_erc8128_domains + 6 erc8128 = 164
-      expect(SETTING_DEFINITIONS.length).toBe(164);
+      // 10 notifications + 13 rpc + 14 security + 1 daemon + 2 walletconnect + 2 oracle + 1 display + 6 autostop + 5 monitoring + 2 telegram + 8 signing_sdk + 7 incoming + 46 actions (43+3 NFT) + 1 policy + 5 gas_condition + 13 rpc_pool + 1 position_tracker + 3 per-rule autostop + 9 erc8004 + 1 policy.default_deny_erc8128_domains + 6 erc8128 = 167
+      expect(SETTING_DEFINITIONS.length).toBe(167);
     });
   });
 
@@ -609,9 +610,9 @@ describe('SettingsService', () => {
       expect(all.actions!.zerox_swap_default_slippage_bps).toBe('100');
     });
 
-    it('actions category has 52 settings', () => {
+    it('actions category has 55 settings', () => {
       const actionsDefs = SETTING_DEFINITIONS.filter((d) => d.category === 'actions');
-      expect(actionsDefs.length).toBe(52);
+      expect(actionsDefs.length).toBe(55);
     });
 
     it('actions.jupiter_swap_api_key is a credential', () => {

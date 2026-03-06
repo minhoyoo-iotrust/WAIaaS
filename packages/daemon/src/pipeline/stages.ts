@@ -30,6 +30,7 @@ import {
   type TokenTransferRequest,
   type ContractCallRequest,
   type ApproveRequest,
+  type NftTransferRequest,
 } from '@waiaas/core';
 import { wallets, transactions } from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
@@ -227,6 +228,11 @@ function formatNotificationAmount(
       return `${formatAmount(BigInt(raw), decimals)} ${symbol}`;
     }
 
+    if ('type' in req && req.type === 'NFT_TRANSFER') {
+      const r = req as NftTransferRequest;
+      return `${r.amount ?? '1'} NFT (${r.token.standard})`;
+    }
+
     // Native transfer / CONTRACT_CALL with value
     const decimals = NATIVE_DECIMALS[chain] ?? 18;
     const symbol = NATIVE_SYMBOLS[chain] ?? chain.toUpperCase();
@@ -343,6 +349,17 @@ export function buildTransactionParam(
         spenderAddress: r.spender,
         approveAmount: r.amount,
         tokenDecimals: r.token.decimals,
+      };
+    }
+    case 'NFT_TRANSFER': {
+      const r = req as NftTransferRequest;
+      return {
+        type: 'NFT_TRANSFER',
+        amount: r.amount ?? '1',
+        toAddress: r.to,
+        chain,
+        contractAddress: r.token.address,
+        assetId: r.token.assetId,
       };
     }
     case 'TRANSFER':
@@ -999,11 +1016,39 @@ export async function buildByType(
 
     case 'APPROVE': {
       const req = request as ApproveRequest;
+      // v31.0: NFT approval routing
+      if (req.nft) {
+        const approvalType = req.amount === '0' ? 'single' : 'all' as const;
+        return adapter.approveNft({
+          from: walletPublicKey,
+          spender: req.spender,
+          token: {
+            address: req.token.address,
+            tokenId: req.nft.tokenId,
+            standard: req.nft.standard,
+          },
+          approvalType,
+        });
+      }
       return adapter.buildApprove({
         from: walletPublicKey,
         spender: req.spender,
         token: req.token,
         amount: BigInt(req.amount),
+      });
+    }
+
+    case 'NFT_TRANSFER': {
+      const req = request as NftTransferRequest;
+      return adapter.buildNftTransferTx({
+        from: walletPublicKey,
+        to: req.to,
+        token: {
+          address: req.token.address,
+          tokenId: req.token.tokenId,
+          standard: req.token.standard,
+        },
+        amount: BigInt(req.amount ?? '1'),
       });
     }
 
@@ -1085,12 +1130,39 @@ const ERC20_USEROP_ABI = [
   { type: 'function', name: 'approve', inputs: [{ name: 'spender', type: 'address' }, { name: 'amount', type: 'uint256' }], outputs: [{ type: 'bool' }] },
 ] as const;
 
+/** ERC-721 ABI for NFT UserOp calls (safeTransferFrom, approve, setApprovalForAll). */
+export const ERC721_USEROP_ABI = [
+  { type: 'function', name: 'safeTransferFrom', inputs: [
+    { name: 'from', type: 'address' }, { name: 'to', type: 'address' }, { name: 'tokenId', type: 'uint256' },
+  ], outputs: [] },
+  { type: 'function', name: 'approve', inputs: [
+    { name: 'to', type: 'address' }, { name: 'tokenId', type: 'uint256' },
+  ], outputs: [] },
+  { type: 'function', name: 'setApprovalForAll', inputs: [
+    { name: 'operator', type: 'address' }, { name: 'approved', type: 'bool' },
+  ], outputs: [] },
+] as const;
+
+/** ERC-1155 ABI for NFT UserOp calls (safeTransferFrom, setApprovalForAll). */
+export const ERC1155_USEROP_ABI = [
+  { type: 'function', name: 'safeTransferFrom', inputs: [
+    { name: 'from', type: 'address' }, { name: 'to', type: 'address' },
+    { name: 'id', type: 'uint256' }, { name: 'amount', type: 'uint256' }, { name: 'data', type: 'bytes' },
+  ], outputs: [] },
+  { type: 'function', name: 'setApprovalForAll', inputs: [
+    { name: 'operator', type: 'address' }, { name: 'approved', type: 'bool' },
+  ], outputs: [] },
+] as const;
+
 /**
  * Convert a TransactionRequest to viem's calls[] format for UserOperation submission.
  * Each call is { to, value, data } for the smart account to execute.
+ *
+ * @param walletAddress - Smart account address (required for NFT_TRANSFER safeTransferFrom 'from' param)
  */
 export function buildUserOpCalls(
   request: SendTransactionRequest | TransactionRequest,
+  walletAddress?: string,
 ): Array<{ to: Hex; value: bigint; data: Hex }> {
   const type = ('type' in request && request.type) || 'TRANSFER';
 
@@ -1127,6 +1199,37 @@ export function buildUserOpCalls(
 
     case 'APPROVE': {
       const req = request as ApproveRequest;
+      // v31.0: NFT approval routing for Smart Account
+      if (req.nft) {
+        const approvalType = req.amount === '0' ? 'single' : 'all';
+        if (req.nft.standard === 'METAPLEX') {
+          throw new WAIaaSError('CHAIN_ERROR', {
+            message: 'Smart Account (ERC-4337) does not support Solana METAPLEX NFT approvals',
+          });
+        }
+        if (approvalType === 'single' && req.nft.standard === 'ERC-721') {
+          return [{
+            to: req.token.address as Hex,
+            value: 0n,
+            data: encodeFunctionData({
+              abi: ERC721_USEROP_ABI,
+              functionName: 'approve',
+              args: [req.spender as Hex, BigInt(req.nft.tokenId)],
+            }),
+          }];
+        }
+        // setApprovalForAll (ERC-721 all / ERC-1155 all)
+        const nftAbi = req.nft.standard === 'ERC-721' ? ERC721_USEROP_ABI : ERC1155_USEROP_ABI;
+        return [{
+          to: req.token.address as Hex,
+          value: 0n,
+          data: encodeFunctionData({
+            abi: nftAbi,
+            functionName: 'setApprovalForAll',
+            args: [req.spender as Hex, true],
+          }),
+        }];
+      }
       return [{
         to: req.token.address as Hex,
         value: 0n,
@@ -1186,6 +1289,37 @@ export function buildUserOpCalls(
       });
     }
 
+    case 'NFT_TRANSFER': {
+      const req = request as NftTransferRequest;
+      if (req.token.standard === 'METAPLEX') {
+        throw new WAIaaSError('CHAIN_ERROR', {
+          message: 'Smart Account (ERC-4337) does not support Solana METAPLEX NFT transfers',
+        });
+      }
+      const from = (walletAddress ?? '0x0000000000000000000000000000000000000000') as Hex;
+      if (req.token.standard === 'ERC-721') {
+        return [{
+          to: req.token.address as Hex,
+          value: 0n,
+          data: encodeFunctionData({
+            abi: ERC721_USEROP_ABI,
+            functionName: 'safeTransferFrom',
+            args: [from, req.to as Hex, BigInt(req.token.tokenId)],
+          }),
+        }];
+      }
+      // ERC-1155
+      return [{
+        to: req.token.address as Hex,
+        value: 0n,
+        data: encodeFunctionData({
+          abi: ERC1155_USEROP_ABI,
+          functionName: 'safeTransferFrom',
+          args: [from, req.to as Hex, BigInt(req.token.tokenId), BigInt(req.amount ?? '1'), '0x' as Hex],
+        }),
+      }];
+    }
+
     default:
       throw new WAIaaSError('CHAIN_ERROR', {
         message: `Unknown transaction type for UserOp: ${type}`,
@@ -1219,8 +1353,8 @@ async function stage5ExecuteSmartAccount(ctx: PipelineContext): Promise<void> {
     ctx.amountUsd ?? null, ctx.settingsService, ctx.forexRateService,
   );
 
-  // Build calls[] from request
-  const calls = buildUserOpCalls(ctx.request);
+  // Build calls[] from request (pass wallet address for NFT safeTransferFrom 'from' param)
+  const calls = buildUserOpCalls(ctx.request, ctx.wallet.publicKey);
 
   // CRITICAL: key MUST be released in finally block
   let privateKey: Uint8Array | null = null;

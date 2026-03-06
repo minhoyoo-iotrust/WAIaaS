@@ -21,6 +21,9 @@ export type {
   ParsedOperation,
   ParsedTransaction,
   SignedTransaction,
+  // v31.0 NFT chain adapter types
+  NftTransferParams,
+  NftApproveParams,
 } from './chain-adapter.types.js';
 
 // Interfaces
@@ -97,6 +100,8 @@ export {
   nativeAssetId,
   tokenAssetId,
   isNativeAsset,
+  nftAssetId,
+  isNftAsset,
 } from '../caip/index.js';
 
 // v29.2 Lending Provider types (Zod SSoT)
@@ -143,3 +148,20 @@ export {
   MarginInfoSchema,
   PerpMarketInfoSchema,
 } from './perp-provider.types.js';
+
+// v31.0 NFT Indexer types (Zod SSoT)
+export type {
+  INftIndexer,
+  NftItem,
+  NftMetadata,
+  NftCollection,
+  NftListOptions,
+  NftListResult,
+} from './nft-indexer.types.js';
+export {
+  NftItemSchema,
+  NftMetadataSchema,
+  NftCollectionSchema,
+  NftListOptionsSchema,
+  NftListResultSchema,
+} from './nft-indexer.types.js';

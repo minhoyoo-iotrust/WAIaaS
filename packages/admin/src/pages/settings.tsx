@@ -878,6 +878,123 @@ export default function SettingsPage() {
   }
 
   // ---------------------------------------------------------------------------
+  // Section: NFT Indexer
+  // ---------------------------------------------------------------------------
+
+  const NFT_INDEXER_PROVIDERS: Record<string, { label: string; description: string }> = {
+    alchemy_nft: { label: 'Alchemy NFT', description: 'EVM NFT indexing (ERC-721, ERC-1155)' },
+    helius: { label: 'Helius', description: 'Solana NFT indexing (Metaplex)' },
+  };
+
+  function NftIndexerSection() {
+    const indexerKeys = apiKeys.value.filter((k) => k.providerName in NFT_INDEXER_PROVIDERS);
+    // If no indexer providers registered yet, show manual instructions
+    if (indexerKeys.length === 0 && !apiKeysLoading.value) {
+      return (
+        <div class="settings-category">
+          <div class="settings-category-header">
+            <h3>NFT Indexer</h3>
+            <p class="settings-description">Configure API keys for NFT indexing (required for NFT query operations)</p>
+          </div>
+          <div class="settings-category-body">
+            <div class="settings-field-row">
+              <div class="settings-field-label">
+                <span>Alchemy NFT</span>
+                <Badge variant="neutral">Not registered</Badge>
+              </div>
+              <div class="settings-field-value">
+                <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.85em' }}>
+                  EVM NFT indexing -- configure via API Keys above
+                </span>
+              </div>
+            </div>
+            <div class="settings-field-row">
+              <div class="settings-field-label">
+                <span>Helius</span>
+                <Badge variant="neutral">Not registered</Badge>
+              </div>
+              <div class="settings-field-value">
+                <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.85em' }}>
+                  Solana NFT indexing -- configure via API Keys above
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (indexerKeys.length === 0) return null;
+
+    return (
+      <div class="settings-category">
+        <div class="settings-category-header">
+          <h3>NFT Indexer</h3>
+          <p class="settings-description">API keys for NFT indexing services</p>
+        </div>
+        <div class="settings-category-body">
+          {indexerKeys.map((entry) => {
+            const info = NFT_INDEXER_PROVIDERS[entry.providerName]!;
+            return (
+              <div class="settings-field-row" key={entry.providerName}>
+                <div class="settings-field-label">
+                  <span>{info.label}</span>
+                  <span style={{ fontSize: '0.8em', color: 'var(--color-text-secondary)' }}>{info.description}</span>
+                  {entry.hasKey ? (
+                    <Badge variant="success">Configured</Badge>
+                  ) : (
+                    <Badge variant="neutral">Not configured</Badge>
+                  )}
+                </div>
+                <div class="settings-field-value">
+                  {apiKeyEditing.value === entry.providerName ? (
+                    <div class="api-key-edit-row">
+                      <FormField
+                        label="API Key"
+                        type="password"
+                        name={`nft-apikey-${entry.providerName}`}
+                        value={apiKeyInput.value}
+                        onChange={(v) => { apiKeyInput.value = String(v); }}
+                        placeholder="Enter API key"
+                      />
+                      <Button
+                        onClick={() => handleSaveApiKey(entry.providerName)}
+                        loading={apiKeySaving.value}
+                        size="sm"
+                      >Save</Button>
+                      <Button
+                        variant="ghost"
+                        onClick={() => { apiKeyEditing.value = null; apiKeyInput.value = ''; }}
+                        size="sm"
+                      >Cancel</Button>
+                    </div>
+                  ) : (
+                    <div class="api-key-display-row">
+                      <span class="api-key-masked">{entry.hasKey ? entry.maskedKey : 'Not set'}</span>
+                      <Button
+                        variant="ghost"
+                        onClick={() => { apiKeyEditing.value = entry.providerName; apiKeyInput.value = ''; }}
+                        size="sm"
+                      >{entry.hasKey ? 'Change' : 'Set'}</Button>
+                      {entry.hasKey && (
+                        <Button
+                          variant="danger"
+                          onClick={() => handleDeleteApiKey(entry.providerName)}
+                          size="sm"
+                        >Delete</Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
   // Section: Daemon
   // ---------------------------------------------------------------------------
 
@@ -1074,6 +1191,7 @@ export default function SettingsPage() {
           <DaemonSettings />
           <DisplaySettings />
           <ApiKeysSection />
+          <NftIndexerSection />
           <AutoStopSettings />
           <MonitoringSettings />
         </>

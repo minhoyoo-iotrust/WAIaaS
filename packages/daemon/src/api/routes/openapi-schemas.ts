@@ -1525,3 +1525,72 @@ export const Erc8004ValidationResponseSchema = z.object({
   tag: z.string().openapi({ description: 'Validation tag' }),
   lastUpdate: z.number().int().openapi({ description: 'Last update timestamp (uint256)' }),
 }).openapi('Erc8004ValidationResponse');
+
+// ---------------------------------------------------------------------------
+// NFT Schemas (Phase 335)
+// ---------------------------------------------------------------------------
+
+export const NftListResponseSchema = z
+  .object({
+    items: z.array(z.object({
+      tokenId: z.string(),
+      contractAddress: z.string(),
+      standard: z.string(),
+      name: z.string().optional(),
+      image: z.string().optional(),
+      description: z.string().optional(),
+      amount: z.string(),
+      collection: z.object({ name: z.string(), slug: z.string().optional() }).optional(),
+      assetId: z.string().optional(),
+    })),
+    pageKey: z.string().optional(),
+    totalCount: z.number().optional(),
+  })
+  .openapi('NftListResponse');
+
+export const NftListGroupedResponseSchema = z
+  .object({
+    collections: z.array(
+      z.object({
+        collection: z.object({
+          name: z.string(),
+          slug: z.string().optional(),
+          contractAddress: z.string(),
+          totalCount: z.number(),
+        }),
+        nfts: z.array(z.object({
+          tokenId: z.string(),
+          contractAddress: z.string(),
+          standard: z.string(),
+          name: z.string().optional(),
+          image: z.string().optional(),
+          description: z.string().optional(),
+          amount: z.string(),
+          collection: z.object({ name: z.string(), slug: z.string().optional() }).optional(),
+          assetId: z.string().optional(),
+        })),
+      }),
+    ),
+    pageKey: z.string().optional(),
+  })
+  .openapi('NftListGroupedResponse');
+
+export const NftMetadataResponseSchema = z
+  .object({
+    tokenId: z.string(),
+    contractAddress: z.string(),
+    standard: z.string(),
+    name: z.string().optional(),
+    image: z.string().optional(),
+    description: z.string().optional(),
+    amount: z.string(),
+    collection: z.object({ name: z.string(), slug: z.string().optional() }).optional(),
+    assetId: z.string().optional(),
+    attributes: z.array(z.object({
+      trait_type: z.string(),
+      value: z.union([z.string(), z.number()]),
+    })),
+    tokenUri: z.string().optional(),
+    rawMetadata: z.unknown().optional(),
+  })
+  .openapi('NftMetadataResponse');

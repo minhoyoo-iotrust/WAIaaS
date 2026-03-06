@@ -43,6 +43,7 @@
 - ✅ **v30.9 Smart Account DX 개선** -- Phases 324-326 (shipped 2026-03-05)
 - ✅ **v30.10 ERC-8128 Signed HTTP Requests** -- Phases 327-329 (shipped 2026-03-05)
 - ✅ **v30.11 Admin UI DX 개선** -- Phases 330-332 (shipped 2026-03-05)
+- ✅ **v31.0 NFT 지원 (EVM + Solana)** -- Phases 333-337 (shipped 2026-03-06)
 
 ## Phases
 
@@ -82,7 +83,7 @@ See `.planning/milestones/` for archived phase details.
 </details>
 
 <details>
-<summary>v29.0-v30.11 (Phases 268-332) -- SHIPPED 2026-03-05</summary>
+<summary>v29.0-v31.0 (Phases 268-337) -- SHIPPED 2026-03-06</summary>
 
 - [x] Phase 268-273: 고급 DeFi 프로토콜 설계 (v29.0) -- completed 2026-02-26
 - [x] Phase 274-278: EVM Lending -- Aave V3 (v29.2) -- completed 2026-02-27
@@ -101,15 +102,13 @@ See `.planning/milestones/` for archived phase details.
 - [x] Phase 324-326: Smart Account DX 개선 (v30.9) -- completed 2026-03-05
 - [x] Phase 327-329: ERC-8128 Signed HTTP Requests (v30.10) -- completed 2026-03-05
 - [x] Phase 330-332: Admin UI DX 개선 (v30.11) -- completed 2026-03-05
+- [x] Phase 333-337: NFT 지원 (v31.0) -- completed 2026-03-06
 
 See `.planning/milestones/` for archived phase details.
 
 </details>
 
 ## Progress
-
-**Execution Order:**
-Phases execute in numeric order: 330 -> 331 -> 332
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -119,6 +118,7 @@ Phases execute in numeric order: 330 -> 331 -> 332
 | 215-243 | v27.0-v27.4 | All | Complete | 2026-02-23 |
 | 244-267 | v28.0-v28.8 | All | Complete | 2026-02-26 |
 | 268-332 | v29.0-v30.11 | All | Complete | 2026-03-05 |
+| 333-337 | v31.0 NFT | 12/12 | Complete | 2026-03-06 |
 
 ---
-*Last updated: 2026-03-05 -- v30.11 milestone shipped.*
+*Last updated: 2026-03-06 after v31.0 milestone completion.*

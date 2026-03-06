@@ -1,5 +1,25 @@
 # Project Milestones: WAIaaS
 
+## v31.0 NFT 지원 (Shipped: 2026-03-06)
+
+**Delivered:** EVM(ERC-721/ERC-1155)과 Solana(Metaplex) NFT 통합. 인덱서 인프라(Alchemy/Helius), 6-stage 파이프라인 NFT_TRANSFER 지원, Smart Account 호환, REST/MCP/SDK/Admin UI 전 인터페이스 노출.
+
+**Phases completed:** 5 phases (333-337), 12 plans, 58 requirements
+
+**Key accomplishments:**
+- NFT_TRANSFER 6번째 discriminatedUnion type + APPROVE nft 확장 + DB v44 마이그레이션 + CAIP-19 NFT 네임스페이스(erc721/erc1155/metaplex)
+- INftIndexer 인터페이스 + Alchemy NFT API v3(EVM) + Helius DAS API(Solana) + 재시도/캐싱/암호화 API 키
+- IChainAdapter 25 메서드 확장 — ERC-721/ERC-1155 safeTransferFrom, ERC-165 표준 감지, Metaplex SPL 전송
+- NFT Query API — 커서 페이지네이션, 컬렉션 그룹핑, 메타데이터 24h TTL 캐싱, IPFS/Arweave 게이트웨이 변환
+- NFT_TRANSFER 6-stage 파이프라인 통과 + Smart Account UserOp 호환 + RATE_LIMIT/CONTRACT_WHITELIST 정책
+- MCP 3도구 + SDK 3메서드 + Admin UI NFT 탭(그리드/리스트 뷰) + 인덱서 설정 UI + 스킬 파일 3개
+
+**Stats:**
+- 5 phases, 12 plans, 58 requirements, 38 commits
+- 112 files changed, +12,784 / -146 lines, ~239,575 LOC TS
+
+---
+
 ## v30.11 Admin UI DX 개선 (Shipped: 2026-03-05)
 
 **Delivered:** Admin UI의 액션 관리 경험을 개선하여 메뉴 이름을 DeFi/Agent Identity로 직관적으로 변경하고, ERC-8004 기능을 한 페이지에서 완결적으로 관리하며, 운영자가 액션별 보안 Tier를 드롭다운으로 조정 가능한 상태.

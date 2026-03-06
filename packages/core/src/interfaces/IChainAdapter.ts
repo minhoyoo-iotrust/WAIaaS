@@ -16,6 +16,8 @@ import type {
   BatchParams,
   ParsedTransaction,
   SignedTransaction,
+  NftTransferParams,
+  NftApproveParams,
 } from './chain-adapter.types.js';
 
 /**
@@ -27,6 +29,7 @@ import type {
  * v1.3 scope: +1 method (getAssets). Total: 11.
  * v1.4 scope: +9 methods (fee estimation 1, token ops 2, contract ops 2, batch 1, utility 3). Total: 20.
  * v1.4.7 scope: +2 methods (sign-only parse/sign). Total: 22.
+ * v31.0 scope: +3 methods (NFT ops 3). Total: 25.
  */
 export interface IChainAdapter {
   readonly chain: ChainType;
@@ -119,4 +122,15 @@ export interface IChainAdapter {
 
   /** Sign an unsigned external transaction with wallet's private key. */
   signExternalTransaction(rawTx: string, privateKey: Uint8Array): Promise<SignedTransaction>;
+
+  // -- NFT operations (3) -- v31.0
+
+  /** Build and return unsigned NFT transfer transaction. */
+  buildNftTransferTx(request: NftTransferParams): Promise<UnsignedTransaction>;
+
+  /** Build, sign, and submit NFT transfer. */
+  transferNft(request: NftTransferParams, privateKey: Uint8Array): Promise<SubmitResult>;
+
+  /** Build NFT approval transaction (single approve or collection-wide approval). */
+  approveNft(request: NftApproveParams): Promise<UnsignedTransaction>;
 }

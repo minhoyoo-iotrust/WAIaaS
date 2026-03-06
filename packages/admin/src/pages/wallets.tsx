@@ -123,6 +123,23 @@ interface WcPairingStatus {
   session?: WcSession | null;
 }
 
+interface NftItem {
+  tokenId: string;
+  contractAddress: string;
+  standard: string;
+  name?: string;
+  image?: string;
+  description?: string;
+  amount?: string;
+  collection?: { name?: string; address: string };
+  assetId?: string;
+}
+
+interface NftMetadata extends NftItem {
+  attributes?: Array<{ traitType: string; value: string }>;
+  metadata?: Record<string, unknown>;
+}
+
 interface StakingPosition {
   protocol: 'lido' | 'jito';
   chain: 'ethereum' | 'solana';
@@ -287,6 +304,7 @@ const DETAIL_TABS = [
   { key: 'transactions', label: 'Transactions' },
   { key: 'owner', label: 'Owner' },
   { key: 'staking', label: 'Staking' },
+  { key: 'nfts', label: 'NFTs' },
   { key: 'mcp', label: 'MCP' },
 ];
 
@@ -306,6 +324,7 @@ const TX_TYPE_OPTIONS = [
   { value: 'CONTRACT_CALL', label: 'CONTRACT_CALL' },
   { value: 'APPROVE', label: 'APPROVE' },
   { value: 'BATCH', label: 'BATCH' },
+  { value: 'NFT_TRANSFER', label: 'NFT_TRANSFER' },
 ];
 
 const TX_FILTER_FIELDS: FilterField[] = [
@@ -362,6 +381,16 @@ function WalletDetailView({ id }: { id: string }) {
   const displayRate = useSignal<number | null>(1);
   const stakingPositions = useSignal<StakingPosition[]>([]);
   const stakingLoading = useSignal(true);
+  // NFT state
+  const nfts = useSignal<NftItem[]>([]);
+  const nftsLoading = useSignal(false);
+  const nftsError = useSignal<string | null>(null);
+  const nftViewMode = useSignal<'grid' | 'list'>('grid');
+  const selectedNft = useSignal<NftMetadata | null>(null);
+  const nftDetailLoading = useSignal(false);
+  const nftNetwork = useSignal('');
+  const nftCursor = useSignal<string | null>(null);
+  const nftHasMore = useSignal(false);
   const providerEditing = useSignal(false);
   const editProvider = useSignal('pimlico');
   const editApiKey = useSignal('');
@@ -554,6 +583,53 @@ function WalletDetailView({ id }: { id: string }) {
       stakingPositions.value = [];
     } finally {
       stakingLoading.value = false;
+    }
+  };
+
+  const fetchNfts = async (network?: string, cursor?: string) => {
+    const net = network ?? nftNetwork.value;
+    if (!net) return;
+    nftsLoading.value = true;
+    nftsError.value = null;
+    try {
+      const params = new URLSearchParams({ network: net });
+      if (cursor) params.set('cursor', cursor);
+      params.set('limit', '20');
+      const result = await apiGet<{ nfts: NftItem[]; cursor?: string; hasMore: boolean }>(
+        `${API.ADMIN_WALLET_NFTS(id)}?${params.toString()}`,
+      );
+      if (cursor) {
+        nfts.value = [...nfts.value, ...result.nfts];
+      } else {
+        nfts.value = result.nfts;
+      }
+      nftCursor.value = result.cursor ?? null;
+      nftHasMore.value = result.hasMore;
+    } catch (e) {
+      if (e instanceof ApiError && e.code === 'INDEXER_NOT_CONFIGURED') {
+        nftsError.value = 'INDEXER_NOT_CONFIGURED';
+      } else {
+        nftsError.value = 'FETCH_ERROR';
+      }
+      nfts.value = [];
+    } finally {
+      nftsLoading.value = false;
+    }
+  };
+
+  const fetchNftMetadata = async (tokenIdentifier: string) => {
+    if (!nftNetwork.value) return;
+    nftDetailLoading.value = true;
+    try {
+      const params = new URLSearchParams({ network: nftNetwork.value });
+      const result = await apiGet<NftMetadata>(
+        `${API.ADMIN_WALLET_NFT_METADATA(id, encodeURIComponent(tokenIdentifier))}?${params.toString()}`,
+      );
+      selectedNft.value = result;
+    } catch {
+      // Silently fail -- modal will show what we have
+    } finally {
+      nftDetailLoading.value = false;
     }
   };
 
@@ -1415,6 +1491,266 @@ function WalletDetailView({ id }: { id: string }) {
   }
 
   // -------------------------------------------------------------------------
+  // NFT Tab
+  // -------------------------------------------------------------------------
+  function NftTab() {
+    const walletNetworks: string[] = wallet.value?.networks?.map((n: { network: string }) => n.network) ?? [];
+
+    return (
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
+          <h3 style={{ margin: 0 }}>NFTs</h3>
+          <FormField
+            label=""
+            name="nft-network"
+            type="select"
+            value={nftNetwork.value}
+            onChange={(v) => {
+              nftNetwork.value = String(v);
+              nftCursor.value = null;
+              fetchNfts(String(v));
+            }}
+            options={[
+              { value: '', label: 'Select network...' },
+              ...walletNetworks.map((n) => ({ value: n, label: n })),
+            ]}
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => { nftViewMode.value = nftViewMode.value === 'grid' ? 'list' : 'grid'; }}
+            title={nftViewMode.value === 'grid' ? 'Switch to list view' : 'Switch to grid view'}
+          >
+            {nftViewMode.value === 'grid' ? '\u2630' : '\u25A6'}
+          </Button>
+          {nftNetwork.value && (
+            <Button variant="secondary" size="sm" onClick={() => fetchNfts()} loading={nftsLoading.value}>
+              Refresh
+            </Button>
+          )}
+        </div>
+
+        {!nftNetwork.value ? (
+          <EmptyState title="Select a network" description="Choose a network to view NFTs." />
+        ) : nftsLoading.value && nfts.value.length === 0 ? (
+          <div class="stat-skeleton" style={{ height: '120px' }} />
+        ) : nftsError.value === 'INDEXER_NOT_CONFIGURED' ? (
+          <EmptyState
+            title="NFT indexer not configured"
+            description="Set up an Alchemy (EVM) or Helius (Solana) API key in Settings > API Keys to view NFTs."
+          />
+        ) : nftsError.value ? (
+          <EmptyState title="Failed to load NFTs" description="An error occurred while fetching NFTs." />
+        ) : nfts.value.length === 0 ? (
+          <EmptyState title="No NFTs found" description="This wallet has no NFTs on the selected network." />
+        ) : nftViewMode.value === 'grid' ? (
+          <div>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+              gap: 'var(--space-3)',
+            }}>
+              {nfts.value.map((nft) => (
+                <div
+                  key={`${nft.contractAddress}-${nft.tokenId}`}
+                  class="nft-card"
+                  style={{
+                    border: '1px solid var(--color-border)',
+                    borderRadius: 'var(--radius-lg)',
+                    padding: 'var(--space-2)',
+                    cursor: 'pointer',
+                    textAlign: 'center',
+                  }}
+                  onClick={() => {
+                    selectedNft.value = nft;
+                    const tokenIdentifier = nft.contractAddress.includes(':')
+                      ? nft.contractAddress
+                      : `${nft.contractAddress}:${nft.tokenId}`;
+                    fetchNftMetadata(tokenIdentifier);
+                  }}
+                >
+                  {nft.image ? (
+                    <img
+                      src={nft.image}
+                      alt={nft.name ?? 'NFT'}
+                      style={{
+                        width: '96px',
+                        height: '96px',
+                        objectFit: 'cover',
+                        borderRadius: 'var(--radius-md)',
+                        margin: '0 auto var(--space-2)',
+                        display: 'block',
+                      }}
+                    />
+                  ) : (
+                    <div style={{
+                      width: '96px',
+                      height: '96px',
+                      background: 'var(--color-bg-secondary)',
+                      borderRadius: 'var(--radius-md)',
+                      margin: '0 auto var(--space-2)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'var(--color-text-secondary)',
+                      fontSize: '0.8em',
+                    }}>
+                      No image
+                    </div>
+                  )}
+                  <div style={{ fontSize: '0.85em', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {nft.name ?? `#${nft.tokenId}`}
+                  </div>
+                  <Badge variant="neutral">{nft.standard.toUpperCase()}</Badge>
+                </div>
+              ))}
+            </div>
+            {nftHasMore.value && (
+              <div style={{ textAlign: 'center', marginTop: 'var(--space-3)' }}>
+                <Button variant="secondary" onClick={() => fetchNfts(undefined, nftCursor.value ?? undefined)} loading={nftsLoading.value}>
+                  Load more
+                </Button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div>
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Image</th>
+                    <th>Name</th>
+                    <th>Token ID</th>
+                    <th>Standard</th>
+                    <th>Collection</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {nfts.value.map((nft) => (
+                    <tr
+                      key={`${nft.contractAddress}-${nft.tokenId}`}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => {
+                        selectedNft.value = nft;
+                        const tokenIdentifier = nft.contractAddress.includes(':')
+                          ? nft.contractAddress
+                          : `${nft.contractAddress}:${nft.tokenId}`;
+                        fetchNftMetadata(tokenIdentifier);
+                      }}
+                    >
+                      <td>
+                        {nft.image ? (
+                          <img
+                            src={nft.image}
+                            alt={nft.name ?? 'NFT'}
+                            style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: 'var(--radius-sm)' }}
+                          />
+                        ) : (
+                          <div style={{
+                            width: '48px',
+                            height: '48px',
+                            background: 'var(--color-bg-secondary)',
+                            borderRadius: 'var(--radius-sm)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '0.7em',
+                            color: 'var(--color-text-secondary)',
+                          }}>-</div>
+                        )}
+                      </td>
+                      <td>{nft.name ?? '-'}</td>
+                      <td style={{ fontFamily: 'monospace', fontSize: '0.85em' }}>{nft.tokenId}</td>
+                      <td><Badge variant="neutral">{nft.standard.toUpperCase()}</Badge></td>
+                      <td>{nft.collection?.name ?? '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {nftHasMore.value && (
+              <div style={{ textAlign: 'center', marginTop: 'var(--space-3)' }}>
+                <Button variant="secondary" onClick={() => fetchNfts(undefined, nftCursor.value ?? undefined)} loading={nftsLoading.value}>
+                  Load more
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* NFT Detail Modal */}
+        <Modal
+          open={!!selectedNft.value}
+          title={selectedNft.value?.name ?? 'NFT Details'}
+          onCancel={() => { selectedNft.value = null; }}
+          onConfirm={() => { selectedNft.value = null; }}
+          confirmText="Close"
+        >
+          {selectedNft.value && (
+            <div>
+              {selectedNft.value.image && (
+                <div style={{ textAlign: 'center', marginBottom: 'var(--space-3)' }}>
+                  <img
+                    src={selectedNft.value.image}
+                    alt={selectedNft.value.name ?? 'NFT'}
+                    style={{ maxWidth: '300px', maxHeight: '300px', borderRadius: 'var(--radius-lg)' }}
+                  />
+                </div>
+              )}
+              {selectedNft.value.description && (
+                <p style={{ color: 'var(--color-text-secondary)', marginBottom: 'var(--space-3)' }}>
+                  {selectedNft.value.description}
+                </p>
+              )}
+              <div class="detail-grid" style={{ marginBottom: 'var(--space-3)' }}>
+                <DetailRow label="Token ID" value={selectedNft.value.tokenId} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                  <DetailRow label="Contract" value={formatAddress(selectedNft.value.contractAddress ?? '')} />
+                  <CopyButton value={selectedNft.value.contractAddress ?? ''} />
+                </div>
+                <DetailRow label="Standard" value={(selectedNft.value.standard ?? '').toUpperCase()} />
+                {selectedNft.value.collection?.name && (
+                  <DetailRow label="Collection" value={selectedNft.value.collection.name} />
+                )}
+                {selectedNft.value.assetId && (
+                  <DetailRow label="CAIP-19" value={selectedNft.value.assetId} />
+                )}
+              </div>
+              {selectedNft.value.attributes && selectedNft.value.attributes.length > 0 && (
+                <div style={{ marginBottom: 'var(--space-3)' }}>
+                  <strong>Attributes</strong>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)', marginTop: 'var(--space-2)' }}>
+                    {selectedNft.value.attributes.map((attr, i) => (
+                      <Badge key={i} variant="info">{attr.traitType}: {attr.value}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {selectedNft.value.metadata && (
+                <details style={{ marginTop: 'var(--space-2)' }}>
+                  <summary style={{ cursor: 'pointer', fontWeight: 600 }}>Raw Metadata</summary>
+                  <pre style={{
+                    background: 'var(--color-bg-secondary)',
+                    padding: 'var(--space-2)',
+                    borderRadius: 'var(--radius-md)',
+                    overflow: 'auto',
+                    maxHeight: '200px',
+                    fontSize: '0.8em',
+                    marginTop: 'var(--space-2)',
+                  }}>
+                    {JSON.stringify(selectedNft.value.metadata, null, 2)}
+                  </pre>
+                </details>
+              )}
+            </div>
+          )}
+        </Modal>
+      </div>
+    );
+  }
+
+  // -------------------------------------------------------------------------
   // MCP Tab
   // -------------------------------------------------------------------------
   function McpTab() {
@@ -1530,6 +1866,7 @@ function WalletDetailView({ id }: { id: string }) {
           {activeDetailTab.value === 'transactions' && <TransactionsTab />}
           {activeDetailTab.value === 'owner' && <OwnerTab />}
           {activeDetailTab.value === 'staking' && <StakingTab />}
+          {activeDetailTab.value === 'nfts' && <NftTab />}
           {activeDetailTab.value === 'mcp' && <McpTab />}
 
           <Modal

@@ -76,7 +76,7 @@ export {
   AaProviderNameEnum,
 } from './enums/index.js';
 
-// Schemas (5 domain Zod SSoT schemas + v1.4 discriminatedUnion 5-type)
+// Schemas (5 domain Zod SSoT schemas + v1.4 discriminatedUnion 6-type)
 export {
   WalletSchema,
   type Wallet,
@@ -93,7 +93,7 @@ export {
   // v28.5 gas condition schema
   GasConditionSchema,
   type GasCondition,
-  // v1.4 discriminatedUnion 5-type transaction request schemas
+  // v1.4 discriminatedUnion 6-type transaction request schemas
   TransactionRequestSchema,
   type TransactionRequest,
   TransferRequestSchema,
@@ -106,6 +106,13 @@ export {
   type ApproveRequest,
   BatchRequestSchema,
   type BatchRequest,
+  // v31.0 NFT_TRANSFER (6th type) + NFT standard enum
+  NftTransferRequestSchema,
+  type NftTransferRequest,
+  NftStandardEnum,
+  type NftStandard,
+  NftTokenInfoSchema,
+  type NftTokenInfo,
   // v30.9 sign message schemas (EIP-712 signTypedData)
   SignMessageRequestSchema,
   type SignMessageRequest,
@@ -274,6 +281,9 @@ export type {
   ParsedOperation,
   ParsedTransaction,
   SignedTransaction,
+  // v31.0 NFT chain adapter types
+  NftTransferParams,
+  NftApproveParams,
   IChainAdapter,
   ILocalKeyStore,
   IPolicyEngine,
@@ -335,6 +345,13 @@ export type {
   MarginInfo,
   PerpMarketInfo,
   IPerpProvider,
+  // v31.0 NFT indexer types
+  INftIndexer,
+  NftItem,
+  NftMetadata,
+  NftCollection,
+  NftListOptions,
+  NftListResult,
 } from './interfaces/index.js';
 
 // v27.1 connection state machine (value exports)
@@ -384,6 +401,8 @@ export {
   nativeAssetId,
   tokenAssetId,
   isNativeAsset,
+  nftAssetId,
+  isNftAsset,
 } from './interfaces/index.js';
 
 // v29.2 Lending Provider Zod schemas (value exports)
@@ -405,6 +424,15 @@ export {
   PerpPositionSummarySchema,
   MarginInfoSchema,
   PerpMarketInfoSchema,
+} from './interfaces/index.js';
+
+// v31.0 NFT Indexer Zod schemas (value exports)
+export {
+  NftItemSchema,
+  NftMetadataSchema,
+  NftCollectionSchema,
+  NftListOptionsSchema,
+  NftListResultSchema,
 } from './interfaces/index.js';
 
 // v1.5.3 Currency formatting utilities

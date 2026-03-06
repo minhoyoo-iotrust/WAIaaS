@@ -79,7 +79,7 @@ const LEGACY_NETWORK_NORMALIZE: Record<string, string> = {
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 43;
+export const LATEST_SCHEMA_VERSION = 44;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -401,6 +401,18 @@ function getCreateTableStatements(): string[] {
   cached_at INTEGER NOT NULL,
   PRIMARY KEY (agent_id, registry_address, tag1, tag2)
 )`,
+
+    // Table 24: nft_metadata_cache (NFT metadata caching with TTL, v44)
+    `CREATE TABLE IF NOT EXISTS nft_metadata_cache (
+  id TEXT PRIMARY KEY,
+  contract_address TEXT NOT NULL,
+  token_id TEXT NOT NULL,
+  chain TEXT NOT NULL CHECK (chain IN (${inList(CHAIN_TYPES)})),
+  network TEXT NOT NULL CHECK (network IN (${inList(NETWORK_TYPES)})),
+  metadata_json TEXT NOT NULL,
+  cached_at INTEGER NOT NULL,
+  expires_at INTEGER NOT NULL
+)`,
   ];
 }
 
@@ -499,6 +511,10 @@ function getCreateIndexStatements(): string[] {
     // v39: agent_identities indexes (ERC-8004)
     'CREATE INDEX IF NOT EXISTS idx_agent_identities_wallet ON agent_identities(wallet_id)',
     'CREATE UNIQUE INDEX IF NOT EXISTS idx_agent_identities_chain ON agent_identities(registry_address, chain_agent_id)',
+
+    // v44: nft_metadata_cache indexes
+    'CREATE UNIQUE INDEX IF NOT EXISTS idx_nft_cache_unique ON nft_metadata_cache(contract_address, token_id, chain, network)',
+    'CREATE INDEX IF NOT EXISTS idx_nft_cache_expires ON nft_metadata_cache(expires_at)',
   ];
 }
 
@@ -2620,6 +2636,34 @@ MIGRATIONS.push({
     if (!has('aa_paymaster_policy_id')) {
       sqlite.exec('ALTER TABLE wallets ADD COLUMN aa_paymaster_policy_id TEXT');
     }
+  },
+});
+
+// v44: Create nft_metadata_cache table for NFT metadata caching (24h TTL)
+MIGRATIONS.push({
+  version: 44,
+  description: 'Create nft_metadata_cache table for NFT metadata caching (24h TTL)',
+  up: (sqlite) => {
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS nft_metadata_cache (
+        id TEXT PRIMARY KEY,
+        contract_address TEXT NOT NULL,
+        token_id TEXT NOT NULL,
+        chain TEXT NOT NULL CHECK (chain IN (${inList(CHAIN_TYPES)})),
+        network TEXT NOT NULL CHECK (network IN (${inList(NETWORK_TYPES)})),
+        metadata_json TEXT NOT NULL,
+        cached_at INTEGER NOT NULL,
+        expires_at INTEGER NOT NULL
+      )
+    `);
+    sqlite.exec(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_nft_cache_unique
+      ON nft_metadata_cache (contract_address, token_id, chain, network)
+    `);
+    sqlite.exec(`
+      CREATE INDEX IF NOT EXISTS idx_nft_cache_expires
+      ON nft_metadata_cache (expires_at)
+    `);
   },
 });
 

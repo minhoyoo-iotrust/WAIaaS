@@ -89,10 +89,11 @@ describe('Enum SSoT', () => {
     expect(TRANSACTION_STATUSES).toContain('GAS_WAITING');
   });
 
-  it('TransactionType has 7 values', () => {
-    expect(TRANSACTION_TYPES).toHaveLength(7);
+  it('TransactionType has 8 values', () => {
+    expect(TRANSACTION_TYPES).toHaveLength(8);
     expect(TRANSACTION_TYPES).toContain('SIGN');
     expect(TRANSACTION_TYPES).toContain('X402_PAYMENT');
+    expect(TRANSACTION_TYPES).toContain('NFT_TRANSFER');
   });
 
   it('PolicyType has 19 values', () => {

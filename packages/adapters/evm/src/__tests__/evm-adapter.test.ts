@@ -1016,4 +1016,116 @@ describe('EvmAdapter', () => {
       await polyAdapter.disconnect();
     });
   });
+
+  // -- error path coverage --
+
+  describe('error paths', () => {
+    beforeEach(async () => {
+      await adapter.connect('https://eth-mainnet.example.com');
+    });
+
+    it('getBalance throws CHAIN_ERROR on RPC failure', async () => {
+      mockClient.getBalance.mockRejectedValue(new Error('RPC unavailable'));
+
+      try {
+        await adapter.getBalance(TEST_ADDRESS_FROM);
+        expect.fail('Should have thrown');
+      } catch (error) {
+        expect(error).toBeInstanceOf(WAIaaSError);
+        expect((error as WAIaaSError).code).toBe('CHAIN_ERROR');
+      }
+    });
+
+    it('getAssets maps unknown errors via mapError', async () => {
+      mockClient.getBalance.mockRejectedValue(new Error('timed out'));
+
+      await expect(adapter.getAssets(TEST_ADDRESS_FROM)).rejects.toThrow();
+    });
+
+    it('buildTransaction maps timeout errors to RPC_TIMEOUT', async () => {
+      mockClient.getTransactionCount.mockRejectedValue(new Error('request timed out'));
+
+      try {
+        await adapter.buildTransaction({
+          from: TEST_ADDRESS_FROM,
+          to: TEST_ADDRESS_TO,
+          amount: 1000000000000000000n,
+        });
+        expect.fail('Should have thrown');
+      } catch (error) {
+        expect(error).toBeInstanceOf(ChainError);
+        expect((error as ChainError).code).toBe('RPC_TIMEOUT');
+      }
+    });
+
+    it('buildTransaction maps unknown errors to CHAIN_ERROR', async () => {
+      mockClient.getTransactionCount.mockRejectedValue(new Error('some unknown error'));
+
+      await expect(
+        adapter.buildTransaction({
+          from: TEST_ADDRESS_FROM,
+          to: TEST_ADDRESS_TO,
+          amount: 1000000000000000000n,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it('buildTokenTransfer maps connection errors to RPC_CONNECTION_ERROR', async () => {
+      mockClient.getTransactionCount.mockRejectedValue(new Error('ECONNREFUSED'));
+
+      try {
+        await adapter.buildTokenTransfer({
+          from: TEST_ADDRESS_FROM,
+          to: TEST_ADDRESS_TO,
+          amount: 1000000n,
+          token: { address: TEST_TOKEN_ADDRESS, decimals: 6, symbol: 'USDC' },
+        });
+        expect.fail('Should have thrown');
+      } catch (error) {
+        expect(error).toBeInstanceOf(ChainError);
+        expect((error as ChainError).code).toBe('RPC_CONNECTION_ERROR');
+      }
+    });
+
+    it('buildContractCall maps insufficient funds error', async () => {
+      mockClient.getTransactionCount.mockRejectedValue(new Error('insufficient funds for gas'));
+
+      try {
+        await adapter.buildContractCall({
+          from: TEST_ADDRESS_FROM,
+          to: TEST_ADDRESS_TO,
+          calldata: '0xa9059cbb0000000000000000000000000000000000000000000000000000000000000001',
+        });
+        expect.fail('Should have thrown');
+      } catch (error) {
+        expect(error).toBeInstanceOf(ChainError);
+        expect((error as ChainError).code).toBe('INSUFFICIENT_BALANCE');
+      }
+    });
+
+    it('buildApprove maps nonce too low error', async () => {
+      mockClient.getTransactionCount.mockRejectedValue(new Error('nonce too low'));
+
+      try {
+        await adapter.buildApprove({
+          from: TEST_ADDRESS_FROM,
+          spender: TEST_ADDRESS_TO,
+          token: { address: TEST_TOKEN_ADDRESS, decimals: 6, symbol: 'USDC' },
+          amount: 1000000n,
+        });
+        expect.fail('Should have thrown');
+      } catch (error) {
+        expect(error).toBeInstanceOf(ChainError);
+        expect((error as ChainError).code).toBe('NONCE_TOO_LOW');
+      }
+    });
+
+    it('getHealth returns healthy:false on error', async () => {
+      mockClient.getBlockNumber.mockRejectedValue(new Error('connection reset'));
+
+      const result = await adapter.getHealth();
+      expect(result.healthy).toBe(false);
+      expect(result.latencyMs).toBe(0);
+    });
+  });
 });

@@ -344,6 +344,20 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       return approveTierResult; // FINAL result, skips SPENDING_LIMIT (including token_limits)
     }
 
+    // Step 4g.5: NFT_TRANSFER default tier APPROVAL (PLCY-03, v31.0)
+    // NFT transfers default to APPROVAL tier (owner approval required) unless overridden.
+    if (transaction.type === 'NFT_TRANSFER') {
+      let nftTierOverride: string | null = null;
+      try {
+        nftTierOverride = this.settingsService?.get('policy.nft_transfer_default_tier') ?? null;
+      } catch {
+        // Setting key not registered yet -- use default
+      }
+      const nftTier = (nftTierOverride ?? 'APPROVAL') as PolicyTier;
+      const finalTier = reputationFloorTier ? maxTier(nftTier, reputationFloorTier) : nftTier;
+      return { allowed: true, tier: finalTier };
+    }
+
     // Step 4h: Evaluate LENDING_ASSET_WHITELIST (default-deny for lending assets)
     const lendingAssetResult = this.evaluateLendingAssetWhitelist(resolved, transaction);
     if (lendingAssetResult !== null) {
@@ -1192,8 +1206,8 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     resolved: PolicyRow[],
     transaction: TransactionParam,
   ): PolicyEvaluation | null {
-    // Only evaluate for CONTRACT_CALL transactions
-    if (transaction.type !== 'CONTRACT_CALL') return null;
+    // Evaluate for CONTRACT_CALL and NFT_TRANSFER transactions (v31.0)
+    if (transaction.type !== 'CONTRACT_CALL' && transaction.type !== 'NFT_TRANSFER') return null;
 
     // Provider-trust: skip CONTRACT_WHITELIST for trusted action providers
     if (transaction.actionProvider && this.settingsService) {

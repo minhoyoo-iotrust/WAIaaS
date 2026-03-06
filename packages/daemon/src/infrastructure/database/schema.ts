@@ -1,7 +1,7 @@
 /**
  * Drizzle ORM schema definitions for WAIaaS daemon SQLite database.
  *
- * 23 tables: wallets, sessions, session_wallets, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs, token_registry, settings, telegram_users, wc_sessions, wc_store, incoming_transactions, incoming_tx_cursors, defi_positions, wallet_apps, webhooks, webhook_logs, agent_identities, reputation_cache
+ * 24 tables: wallets, sessions, session_wallets, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs, token_registry, settings, telegram_users, wc_sessions, wc_store, incoming_transactions, incoming_tx_cursors, defi_positions, wallet_apps, webhooks, webhook_logs, agent_identities, reputation_cache, nft_metadata_cache
  *
  * CHECK constraints are derived from @waiaas/core enum SSoT arrays (not hardcoded strings).
  * All timestamps are Unix epoch seconds via { mode: 'timestamp' }.
@@ -647,5 +647,29 @@ export const reputationCache = sqliteTable(
   },
   (table) => [
     primaryKey({ columns: [table.agentId, table.registryAddress, table.tag1, table.tag2] }),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Table 24: nft_metadata_cache -- NFT metadata caching with TTL (v44)
+// ---------------------------------------------------------------------------
+
+export const nftMetadataCache = sqliteTable(
+  'nft_metadata_cache',
+  {
+    id: text('id').primaryKey(),
+    contractAddress: text('contract_address').notNull(),
+    tokenId: text('token_id').notNull(),
+    chain: text('chain').notNull(),
+    network: text('network').notNull(),
+    metadataJson: text('metadata_json').notNull(),
+    cachedAt: integer('cached_at', { mode: 'timestamp' }).notNull(),
+    expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+  },
+  (table) => [
+    uniqueIndex('idx_nft_cache_unique').on(table.contractAddress, table.tokenId, table.chain, table.network),
+    index('idx_nft_cache_expires').on(table.expiresAt),
+    check('check_nft_cache_chain', sql`chain IN (${sql.raw(CHAIN_TYPES.map((v) => `'${v}'`).join(', '))})`),
+    check('check_nft_cache_network', sql`network IN (${sql.raw(NETWORK_TYPES.map((v) => `'${v}'`).join(', '))})`),
   ],
 );

@@ -92,6 +92,11 @@ import type {
   Erc8128VerifyResponse,
   Erc8128FetchParams,
   Erc8128FetchResponse,
+  ListNftsParams,
+  NftListResponse,
+  NftMetadataParams,
+  NftMetadataResponse,
+  TransferNftParams,
 } from './types.js';
 
 export class WAIaaSClient {
@@ -369,6 +374,58 @@ export class WAIaaSClient {
     return withRetry(
       () => this.http.get<MultiNetworkAssetsResponse>(
         '/v1/wallet/assets?network=all',
+        this.authHeaders(),
+      ),
+      this.retryOptions,
+    );
+  }
+
+  // --- NFT queries ---
+  async listNfts(options: ListNftsParams): Promise<NftListResponse> {
+    const query = new URLSearchParams();
+    query.set('network', options.network);
+    if (options.cursor) query.set('cursor', options.cursor);
+    if (options.limit !== undefined) query.set('limit', String(options.limit));
+    if (options.groupBy) query.set('groupBy', options.groupBy);
+    if (options.walletId) query.set('walletId', options.walletId);
+    const qs = query.toString();
+    return withRetry(
+      () => this.http.get<NftListResponse>(
+        `/v1/wallet/nfts${qs ? `?${qs}` : ''}`,
+        this.authHeaders(),
+      ),
+      this.retryOptions,
+    );
+  }
+
+  async getNftMetadata(tokenIdentifier: string, options: NftMetadataParams): Promise<NftMetadataResponse> {
+    const query = new URLSearchParams();
+    query.set('network', options.network);
+    if (options.walletId) query.set('walletId', options.walletId);
+    const qs = query.toString();
+    return withRetry(
+      () => this.http.get<NftMetadataResponse>(
+        `/v1/wallet/nfts/${encodeURIComponent(tokenIdentifier)}${qs ? `?${qs}` : ''}`,
+        this.authHeaders(),
+      ),
+      this.retryOptions,
+    );
+  }
+
+  async transferNft(params: TransferNftParams): Promise<SendTokenResponse> {
+    const body: Record<string, unknown> = {
+      type: 'NFT_TRANSFER',
+      to: params.to,
+      token: params.token,
+      network: params.network,
+    };
+    if (params.amount !== undefined) body.amount = params.amount;
+    if (params.walletId) body.walletId = params.walletId;
+    if (params.gasCondition) body.gasCondition = params.gasCondition;
+    return withRetry(
+      () => this.http.post<SendTokenResponse>(
+        '/v1/transactions/send',
+        body,
         this.authHeaders(),
       ),
       this.retryOptions,

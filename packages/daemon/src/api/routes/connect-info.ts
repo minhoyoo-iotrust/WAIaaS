@@ -22,6 +22,7 @@ import type { ChainType, EnvironmentType } from '@waiaas/core';
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
 import type { SettingsService } from '../../infrastructure/settings/index.js';
 import type { ActionProviderRegistry } from '../../infrastructure/action/action-provider-registry.js';
+import type { NftIndexerClient } from '../../infrastructure/nft/nft-indexer-client.js';
 import type * as schema from '../../infrastructure/database/schema.js';
 import { sessions, sessionWallets, wallets, policies, agentIdentities } from '../../infrastructure/database/schema.js';
 import {
@@ -40,6 +41,7 @@ export interface ConnectInfoRouteDeps {
   config: DaemonConfig;
   settingsService?: SettingsService;
   actionProviderRegistry?: ActionProviderRegistry;
+  nftIndexerClient?: NftIndexerClient;
   version: string;
 }
 
@@ -66,6 +68,7 @@ export interface BuildConnectInfoPromptParams {
     erc8004?: { agentId: string; registryAddress: string; status: string };
     accountType?: string;
     provider?: { name: string; supportedChains: string[]; paymasterEnabled: boolean } | null;
+    nftSummary?: { count: number; collections: number };
   }>;
   capabilities: string[];
   defaultDeny: DefaultDenyStatus;
@@ -118,6 +121,9 @@ export function buildConnectInfoPrompt(params: BuildConnectInfoPromptParams): st
     if (w.erc8004) {
       lines.push(`   ERC-8004 Agent ID: ${w.erc8004.agentId} (${w.erc8004.status})`);
       lines.push(`   Registry: ${w.erc8004.registryAddress}`);
+    }
+    if (w.nftSummary) {
+      lines.push(`   NFTs: ${w.nftSummary.count} items in ${w.nftSummary.collections} collections`);
     }
     if (w.accountType === 'smart' && w.provider) {
       lines.push(`   Smart Account: ${w.provider.name} provider`);
@@ -196,7 +202,7 @@ const connectInfoRoute = createRoute({
 export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
   const router = new OpenAPIHono({ defaultHook: openApiValidationHook });
 
-  router.openapi(connectInfoRoute, (c) => {
+  router.openapi(connectInfoRoute, async (c) => {
     // a. Read session context set by sessionAuth middleware
     const sessionId = c.get('sessionId' as never) as string;
 
@@ -335,7 +341,40 @@ export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
       }
     }
 
-    // f. Build daemon info
+    // f. Fetch NFT summary per wallet (graceful degradation)
+    const nftSummaryMap: Record<string, { count: number; collections: number }> = {};
+    if (deps.nftIndexerClient) {
+      for (const w of linkedWallets) {
+        try {
+          const networks = getNetworksForEnvironment(
+            w.chain as ChainType,
+            w.environment as EnvironmentType,
+          );
+          let totalCount = 0;
+          const collectionSet = new Set<string>();
+          // Query first network only to avoid latency
+          const primaryNetwork = networks[0];
+          if (primaryNetwork) {
+            const result = await deps.nftIndexerClient.listNfts(w.chain as ChainType, {
+              owner: w.publicKey,
+              network: primaryNetwork,
+              pageSize: 100,
+            });
+            totalCount += result.items.length;
+            for (const nft of result.items) {
+              if (nft.collection?.name) collectionSet.add(nft.collection.name);
+            }
+          }
+          if (totalCount > 0) {
+            nftSummaryMap[w.id] = { count: totalCount, collections: collectionSet.size };
+          }
+        } catch {
+          // Graceful degradation: omit nftSummary on error
+        }
+      }
+    }
+
+    // g. Build daemon info
     const host = c.req.header('Host') ?? 'localhost:3100';
     const protocol = c.req.header('X-Forwarded-Proto') ?? 'http';
     const baseUrl = `${protocol}://${host}`;
@@ -365,6 +404,7 @@ export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
         ...(identitiesMap[w.id] ? { erc8004: identitiesMap[w.id] } : {}),
         accountType: (w.accountType as string) ?? 'eoa',
         provider: buildProviderStatus({ aaProvider: w.aaProvider, aaPaymasterUrl: w.aaPaymasterUrl }),
+        ...(nftSummaryMap[w.id] ? { nftSummary: nftSummaryMap[w.id] } : {}),
       };
     });
 
@@ -402,6 +442,7 @@ export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
           availableNetworks: networks.map((n) => n),
           ...(identitiesMap[w.id] ? { erc8004: identitiesMap[w.id] } : {}),
           provider: buildProviderStatus({ aaProvider: w.aaProvider, aaPaymasterUrl: w.aaPaymasterUrl }),
+          ...(nftSummaryMap[w.id] ? { nftSummary: nftSummaryMap[w.id] } : {}),
         };
       }),
       policies: policiesMap,

@@ -275,6 +275,11 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'actions.erc8004_min_reputation_score', category: 'actions', configPath: 'actions.erc8004_min_reputation_score', defaultValue: '0', isCredential: false },
   { key: 'actions.erc8004_reputation_rpc_timeout_ms', category: 'actions', configPath: 'actions.erc8004_reputation_rpc_timeout_ms', defaultValue: '3000', isCredential: false },
 
+  // --- NFT Indexer ---
+  { key: 'actions.alchemy_nft_api_key', category: 'actions', configPath: 'actions.alchemy_nft_api_key', defaultValue: '', isCredential: true },
+  { key: 'actions.helius_das_api_key', category: 'actions', configPath: 'actions.helius_das_api_key', defaultValue: '', isCredential: true },
+  { key: 'actions.nft_indexer_cache_ttl_sec', category: 'actions', configPath: 'actions.nft_indexer_cache_ttl_sec', defaultValue: '300', isCredential: false },
+
   // --- erc8128 category (ERC-8128 Signed HTTP Requests) ---
   { key: 'erc8128.enabled', category: 'erc8128', configPath: 'erc8128.enabled', defaultValue: 'false', isCredential: false },
   { key: 'erc8128.default_preset', category: 'erc8128', configPath: 'erc8128.default_preset', defaultValue: 'standard', isCredential: false },

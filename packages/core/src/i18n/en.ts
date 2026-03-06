@@ -201,6 +201,12 @@ export const messages: Messages = {
     ERC8128_DISABLED: 'ERC-8128 signed HTTP requests are disabled',
     ERC8128_DOMAIN_NOT_ALLOWED: 'Domain not allowed for ERC-8128 signing',
     ERC8128_RATE_LIMITED: 'ERC-8128 signing rate limit exceeded for this domain',
+    // NFT domain
+    NFT_NOT_FOUND: 'NFT not found',
+    INDEXER_NOT_CONFIGURED: 'NFT indexer is not configured',
+    UNSUPPORTED_NFT_STANDARD: 'Unsupported NFT standard',
+    INDEXER_API_ERROR: 'NFT indexer API error',
+    NFT_METADATA_FETCH_FAILED: 'Failed to fetch NFT metadata',
   },
   // Notification templates (30 event types)
   notifications: {

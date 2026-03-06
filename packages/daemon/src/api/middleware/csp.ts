@@ -21,7 +21,7 @@ const CSP_VALUE = [
   "script-src 'self'",
   "style-src 'self' 'unsafe-inline'",
   "connect-src 'self'",
-  "img-src 'self' data:",
+  "img-src 'self' data: https://ipfs.io https://cloudflare-ipfs.com https://w3s.link https://nftstorage.link https://arweave.net",
   "font-src 'self'",
   "base-uri 'self'",
   "form-action 'self'",

@@ -65,6 +65,10 @@ import type { KillSwitchState } from './routes/admin.js';
 import { createWalletAppsRoutes } from './routes/wallet-apps.js';
 import { tokenRegistryRoutes } from './routes/tokens.js';
 import { connectInfoRoutes } from './routes/connect-info.js';
+import { NftIndexerClient } from '../infrastructure/nft/nft-indexer-client.js';
+import { NftMetadataCacheService } from '../services/nft-metadata-cache.js';
+import { nftRoutes } from './routes/nfts.js';
+import { nftApprovalRoutes } from './routes/nft-approvals.js';
 import { auditLogRoutes } from './routes/audit-logs.js';
 import { erc8004Routes } from './routes/erc8004.js';
 import { erc8128Routes } from './routes/erc8128.js';
@@ -207,7 +211,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     const masterAuthForWalletDetail = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash, passwordRef: deps.passwordRef, sqlite: deps.sqlite });
     app.use('/v1/wallets/:id', async (c, next) => {
       // Skip sub-paths that have their own auth registered below
-      if (c.req.path.includes('/owner') || c.req.path.includes('/networks') || c.req.path.includes('/wc/') || c.req.path.includes('/provider')) {
+      if (c.req.path.includes('/owner') || c.req.path.includes('/networks') || c.req.path.includes('/wc/') || c.req.path.includes('/provider') || c.req.path.includes('/nfts')) {
         await next();
         return;
       }
@@ -220,6 +224,8 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     const masterAuthForOwner = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash, passwordRef: deps.passwordRef, sqlite: deps.sqlite });
     app.use('/v1/wallets/:id/owner', masterAuthForOwner);
     app.use('/v1/wallets/:id/networks', masterAuthForOwner);
+    app.use('/v1/wallets/:id/nfts', masterAuthForOwner);
+    app.use('/v1/wallets/:id/nfts/*', masterAuthForOwner);
     // dual-auth for PUT /v1/wallets/:id/provider: sessionAuth (agent self-service) or masterAuth (admin)
     app.use('/v1/wallets/:id/provider', async (c, next) => {
       const authHeader = c.req.header('Authorization');
@@ -478,6 +484,31 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         priceOracle: deps.priceOracle,
         forexRateService: deps.forexRateService,
         settingsService: deps.settingsService,
+      }),
+    );
+  }
+
+  // Register NFT query routes (sessionAuth via /v1/wallet/*, masterAuth via /v1/wallets/:id/nfts)
+  if (deps.db && deps.settingsService) {
+    const nftIndexerClient = new NftIndexerClient({ settingsService: deps.settingsService });
+    const nftMetadataCacheService = new NftMetadataCacheService({ db: deps.db, nftIndexerClient });
+    app.route(
+      '/v1',
+      nftRoutes({
+        db: deps.db,
+        nftIndexerClient,
+        nftMetadataCacheService,
+      }),
+    );
+  }
+
+  // Register NFT approval routes (sessionAuth via /v1/wallet/*, masterAuth via /v1/wallets/:id/nfts/*)
+  if (deps.db && deps.adapterPool) {
+    app.route(
+      '/v1',
+      nftApprovalRoutes({
+        db: deps.db,
+        adapterPool: deps.adapterPool,
       }),
     );
   }
@@ -750,11 +781,15 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
 
   // Register connect-info route (sessionAuth, no masterAuth)
   if (deps.db) {
+    const nftIndexerClient = deps.settingsService
+      ? new NftIndexerClient({ settingsService: deps.settingsService })
+      : undefined;
     app.route('/v1', connectInfoRoutes({
       db: deps.db,
       config: deps.config ?? {} as DaemonConfig,
       settingsService: deps.settingsService,
       actionProviderRegistry: deps.actionProviderRegistry,
+      nftIndexerClient,
       version: DAEMON_VERSION,
     }));
   }

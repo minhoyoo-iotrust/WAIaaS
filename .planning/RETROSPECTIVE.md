@@ -425,6 +425,47 @@
 
 ---
 
+## Milestone: v31.0 — NFT 지원 (EVM + Solana)
+
+**Shipped:** 2026-03-06
+**Phases:** 5 | **Plans:** 12 | **Sessions:** 1
+
+### What Was Built
+- NFT_TRANSFER 6번째 discriminatedUnion type + APPROVE nft 확장 + DB v44 마이그레이션 + CAIP-19 NFT 네임스페이스
+- INftIndexer 인터페이스 + Alchemy(EVM) + Helius(Solana) 인덱서 구현체 + NftIndexerClient 재시도/캐싱
+- IChainAdapter 25 메서드 확장 — ERC-721/1155 safeTransferFrom + ERC-165 감지 + Metaplex SPL transfer
+- NFT Query API — 커서 페이지네이션, 컬렉션 그룹핑, 메타데이터 24h TTL DB 캐싱, IPFS/Arweave 게이트웨이
+- NFT_TRANSFER 6-stage 파이프라인 + Smart Account UserOp + 정책(RATE_LIMIT nft_count, CONTRACT_WHITELIST)
+- MCP 3도구 + SDK 3메서드 + Admin UI NFT 탭 + 인덱서 설정 UI + 스킬 파일 3개
+
+### What Worked
+- 5 phases 전체 1일 완료 (10:21→12:56, ~2.5시간) — 기존 패턴(파이프라인 dispatch, 인덱서 프레임워크, Admin UI 탭) 완전 재활용
+- INftIndexer 인터페이스 설계가 Alchemy/Helius 차이를 깔끔하게 추상화 — chain-specific 코드가 구현체에만 존재
+- NFT_TRANSFER를 기존 /v1/transactions/send 파이프라인에 통합하여 새 엔드포인트 불필요
+- APPROVE nft 확장이 기존 APPROVE 인프라를 완전히 재활용
+
+### What Was Inefficient
+- NFT REST 라우트 server.ts 마운트 누락 (CRITICAL-01) — Phase 335에서 구현했으나 server.ts wiring이 Phase 337에서 빠짐, 감사에서 발견
+- IChainAdapter 테스트 목 미업데이트 (CRITICAL-02) — 인터페이스 25 메서드 확장 시 기존 목 업데이트 누락으로 typecheck 실패
+- REQUIREMENTS.md traceability 상태 반영 누락 (반복 이슈) — Phase 337 완료 후 Pending 상태 유지
+
+### Patterns Established
+- INftIndexer 프로바이더 패턴: 체인별 인덱서 구현체 + NftIndexerClient 통합 클라이언트 + 재시도/캐시 일괄 적용
+- NftTokenInfoSchema: 기존 TokenInfoSchema와 분리 (NFT에는 decimals/symbol이 불필요)
+- tokenIdentifier 파싱: lastIndexOf(':') for EVM(address:tokenId), direct mint for Solana
+
+### Key Lessons
+- server.ts 라우트 마운트는 가장 마지막 통합 단계에서 빠지기 쉬움 — Phase 별 체크리스트에 "server.ts wiring 확인" 추가 필요
+- 인터페이스 메서드 확장 시 모든 기존 테스트 목 업데이트를 자동화/체크하는 패턴 필요
+- 기존 파이프라인에 새 타입을 추가하는 것이 새 파이프라인보다 훨씬 효율적 (NFT_TRANSFER → 기존 6-stage 재활용)
+
+### Cost Observations
+- Model mix: 100% opus
+- Sessions: 1
+- Notable: 112 files, 38 commits in ~2.5 hours — medium-sized focused milestone
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -442,6 +483,7 @@
 | v30.9 | 1 | 3 | Smart Account DX 개선 per-wallet provider 전환, 73 파일 2일 완료 |
 | v30.10 | 1 | 3 | ERC-8128 Signed HTTP Requests, 76 파일 1일 완료 |
 | v30.11 | 1 | 3 | Admin UI DX 개선, 48 파일 1일 완료 |
+| v31.0 | 1 | 5 | NFT 풀스택(타입+인덱서+어댑터+파이프라인+UI), 112 파일 2.5시간 완료 |
 
 ### Cumulative Quality
 
@@ -458,6 +500,7 @@
 | v30.9 | ~6,742 (+74) | maintained | +12 decisions |
 | v30.10 | ~6,822 (+80) | maintained | +11 decisions |
 | v30.11 | ~6,822 (unchanged) | maintained | +9 decisions |
+| v31.0 | ~6,930 (+108) | maintained | +24 decisions |
 
 ### Top Lessons (Verified Across Milestones)
 

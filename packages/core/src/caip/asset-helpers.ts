@@ -77,3 +77,52 @@ export function tokenAssetId(network: NetworkType, address: string): string {
 export function isNativeAsset(caip19: string): boolean {
   return parseCaip19(caip19).assetNamespace === 'slip44';
 }
+
+// ── NFT CAIP-19 helpers ──────────────────────────────────────────
+
+/** NFT namespaces recognized by WAIaaS (WAIaaS extension to CAIP-19). */
+const NFT_NAMESPACES = new Set(['erc721', 'erc1155', 'metaplex']);
+
+/**
+ * Generate CAIP-19 asset type URI for an NFT.
+ *
+ * NFT CAIP-19 uses WAIaaS extension namespaces:
+ * - EVM ERC-721: erc721 namespace, reference = lowercased(address)-tokenId
+ * - EVM ERC-1155: erc1155 namespace, reference = lowercased(address)-tokenId
+ * - Solana Metaplex: metaplex namespace, reference = mintAddress (original case)
+ *
+ * Note: tokenId is embedded in assetReference (after hyphen) for EVM NFTs because
+ * CAIP-19 assetReference is limited to 128 chars and NFTs need both contract + token ID.
+ * For Metaplex, each NFT has a unique mint address so tokenId is not needed.
+ *
+ * @example nftAssetId('ethereum-mainnet', '0xBC4C...', '1234', 'erc721')
+ *          => 'eip155:1/erc721:0xbc4c...-1234'
+ */
+export function nftAssetId(
+  network: NetworkType,
+  contractAddress: string,
+  tokenId: string,
+  standard: 'erc721' | 'erc1155' | 'metaplex',
+): string {
+  const caip2 = networkToCaip2(network);
+  const { namespace } = parseCaip2(caip2);
+
+  if (standard === 'metaplex') {
+    // Metaplex: each NFT is a unique mint, use mint address directly (preserve case)
+    return formatCaip19(caip2, 'metaplex', contractAddress);
+  }
+
+  // EVM (erc721/erc1155): lowercase address + hyphen + tokenId
+  if (namespace === 'eip155') {
+    return formatCaip19(caip2, standard, `${contractAddress.toLowerCase()}-${tokenId}`);
+  }
+
+  throw new Error(`Unsupported chain namespace for NFT asset: ${namespace}`);
+}
+
+/**
+ * Check if a CAIP-19 asset type URI refers to an NFT (erc721/erc1155/metaplex namespace).
+ */
+export function isNftAsset(caip19: string): boolean {
+  return NFT_NAMESPACES.has(parseCaip19(caip19).assetNamespace);
+}
