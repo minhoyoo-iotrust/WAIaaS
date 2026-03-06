@@ -100,11 +100,10 @@ Plans:
   2. 사용자가 Exchange를 실행하면 create_exchange_transaction -> payInAddress TRANSFER 파이프라인으로 처리된다
   3. Exchange 트랜잭션 상태가 get_transactions_status 폴링으로 추적되어 진행 상황을 확인할 수 있다
   4. Exchange 완료 또는 실패 시 알림 채널을 통해 사용자에게 통지된다
-**Plans**: TBD
+**Plans:** 1 plans
 
 Plans:
-- [ ] 344-01: Exchange 견적 조회 + 실행 (payInAddress TRANSFER)
-- [ ] 344-02: Exchange 상태 폴링 + 알림 연동
+- [ ] 344-01-PLAN.md -- Exchange 견적/실행/상태추적/알림 전체 구현
 
 ### Phase 345: Auto Routing
 **Goal**: 직접 경로가 없는 토큰 페어에 대해 2-hop 자동 라우팅으로 스왑을 완료할 수 있다
@@ -146,6 +145,6 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 342. Research & Design | 1/1 | Complete    | 2026-03-06 | - |
 | 343. Currency Mapping + DEX Swap | 2/2 | Complete    | 2026-03-06 | - |
-| 344. Exchange + Status Tracking | v31.3 | 0/2 | Not started | - |
+| 344. Exchange + Status Tracking | v31.3 | 0/1 | Not started | - |
 | 345. Auto Routing | v31.3 | 0/2 | Not started | - |
 | 346. Integration + Testing | v31.3 | 0/3 | Not started | - |
