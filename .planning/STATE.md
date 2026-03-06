@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v31.2
 milestone_name: UserOp Build/Sign API
 status: completed
-stopped_at: Completed Phase 339 UserOp Build API -- 2/2 plans
-last_updated: "2026-03-06T09:12:20.673Z"
-last_activity: 2026-03-06 -- Phase 339 UserOp Build API completed
+stopped_at: Completed Phase 340 UserOp Sign API -- 2/2 plans
+last_updated: "2026-03-06T09:26:25.763Z"
+last_activity: 2026-03-06 -- Phase 340 UserOp Sign API completed
 progress:
   total_phases: 4
-  completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
-  percent: 50
+  completed_phases: 3
+  total_plans: 8
+  completed_plans: 8
+  percent: 75
 ---
 
 # Project State
@@ -21,26 +21,28 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-06)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 340 UserOp Sign API (v31.2 UserOp Build/Sign API)
+**Current focus:** Phase 341 Interface Integration (v31.2 UserOp Build/Sign API)
 
 ## Current Position
 
-Phase: 340 (3 of 4) -- UserOp Sign API
+Phase: 341 (4 of 4) -- Interface Integration
 Plan: Not started
-Status: Phase 339 complete, ready for Phase 340
-Last activity: 2026-03-06 -- Phase 339 UserOp Build API completed
+Status: Phase 340 complete, ready for Phase 341
+Last activity: 2026-03-06 -- Phase 340 UserOp Sign API completed
 
-Progress: [█████░░░░░] 50%
+Progress: [████████░░] 75%
 
 ## Performance Metrics
 
-**Cumulative:** 86 milestones shipped, 339 phases completed, ~771 plans, ~2,273 reqs, ~6,969+ tests, ~239,575 LOC TS
+**Cumulative:** 86 milestones shipped, 340 phases completed, ~773 plans, ~2,289 reqs, ~6,993+ tests, ~239,575 LOC TS
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
 | 338 | 01 | 5min | 2 | 4 |
 | 338 | 02 | 5min | 2 | 12 |
 | 339 | 01+02 | 9min | 2 | 7 |
+| 340 | 01 | 5min | 2 | 5 |
+| 340 | 02 | 2min | 1 | 2 |
 
 ## Accumulated Context
 
@@ -55,6 +57,9 @@ Progress: [█████░░░░░] 50%
 - [Phase 339]: D7: releaseKey takes Uint8Array privateKey, not walletId string
 - [Phase 339]: D8: Factory detection uses getCode on-chain check before getFactoryArgs
 - [Phase 339]: D9: All expired build records cleaned regardless of used status
+- [Phase 340]: D10: Policy evaluation uses CONTRACT_CALL param with sender as target for INSTANT tier check
+- [Phase 340]: D11: Network resolution for sign uses RPC config key parsing (build record lacks network)
+- [Phase 340]: D12: userop capability separate from smart_account (any Smart Account vs aaProvider required)
 
 ### Blockers/Concerns
 
@@ -64,6 +69,6 @@ Progress: [█████░░░░░] 50%
 
 ## Session Continuity
 
-Last session: 2026-03-06T09:10:59.959Z
-Stopped at: Completed Phase 339 UserOp Build API -- 2/2 plans
+Last session: 2026-03-06T09:26:00.000Z
+Stopped at: Completed Phase 340 UserOp Sign API -- 2/2 plans
 Resume file: None

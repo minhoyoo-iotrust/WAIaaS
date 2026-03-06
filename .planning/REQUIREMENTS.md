@@ -31,16 +31,16 @@ Requirements for UserOp Build/Sign API (플랫폼 대납 지원). Each maps to r
 
 ### UserOp Sign
 
-- [ ] **SIGN-01**: POST /v1/wallets/:id/userop/sign — sponsored UserOp 서명 (sessionAuth + masterAuth)
-- [ ] **SIGN-02**: 요청 바디: buildId + UserOp v0.7 전체 필드 (gas + paymaster 포함)
-- [ ] **SIGN-03**: 응답: signedUserOperation (signature 추가) + txId
-- [ ] **SIGN-04**: callData 이중 검증 — DB 비교 + 정책 재평가
-- [ ] **SIGN-05**: sender가 지갑 Smart Account 주소와 일치 검증
-- [ ] **SIGN-06**: 정책 평가 sign-only 패턴 (INSTANT tier만 허용)
-- [ ] **SIGN-07**: smartAccount.signUserOperation() → signature 생성
-- [ ] **SIGN-08**: 서명 후 키 즉시 해제 (keyStore.releaseKey())
-- [ ] **SIGN-09**: DB 트랜잭션 기록 type='SIGN', status='SIGNED'
-- [ ] **SIGN-10**: USEROP_SIGNED 감사 로그
+- [x] **SIGN-01**: POST /v1/wallets/:id/userop/sign — sponsored UserOp 서명 (sessionAuth + masterAuth)
+- [x] **SIGN-02**: 요청 바디: buildId + UserOp v0.7 전체 필드 (gas + paymaster 포함)
+- [x] **SIGN-03**: 응답: signedUserOperation (signature 추가) + txId
+- [x] **SIGN-04**: callData 이중 검증 — DB 비교 + 정책 재평가
+- [x] **SIGN-05**: sender가 지갑 Smart Account 주소와 일치 검증
+- [x] **SIGN-06**: 정책 평가 sign-only 패턴 (INSTANT tier만 허용)
+- [x] **SIGN-07**: smartAccount.signUserOperation() → signature 생성
+- [x] **SIGN-08**: 서명 후 키 즉시 해제 (keyStore.releaseKey())
+- [x] **SIGN-09**: DB 트랜잭션 기록 type='SIGN', status='SIGNED'
+- [x] **SIGN-10**: USEROP_SIGNED 감사 로그
 
 ### Build Data
 
@@ -51,8 +51,8 @@ Requirements for UserOp Build/Sign API (플랫폼 대납 지원). Each maps to r
 
 ### connect-info
 
-- [ ] **CONN-01**: Smart Account 지갑 존재 시 (프로바이더 유무 무관) userop capability 추가
-- [ ] **CONN-02**: 기존 smart_account capability는 프로바이더 설정 시에만 노출 (유지)
+- [x] **CONN-01**: Smart Account 지갑 존재 시 (프로바이더 유무 무관) userop capability 추가
+- [x] **CONN-02**: 기존 smart_account capability는 프로바이더 설정 시에만 노출 (유지)
 
 ### Schema
 
@@ -77,10 +77,10 @@ Requirements for UserOp Build/Sign API (플랫폼 대납 지원). Each maps to r
 
 ### Notification
 
-- [ ] **NTFY-01**: userop/build 시 USEROP_BUILD 감사 로그
-- [ ] **NTFY-02**: userop/sign 성공 시 USEROP_SIGNED 감사 로그
-- [ ] **NTFY-03**: TX_REQUESTED (build), TX_SUBMITTED (sign) 알림
-- [ ] **NTFY-04**: EventBus wallet:activity 이벤트
+- [x] **NTFY-01**: userop/build 시 USEROP_BUILD 감사 로그
+- [x] **NTFY-02**: userop/sign 성공 시 USEROP_SIGNED 감사 로그
+- [x] **NTFY-03**: TX_REQUESTED (build), TX_SUBMITTED (sign) 알림
+- [x] **NTFY-04**: EventBus wallet:activity 이벤트
 
 ### Admin UI
 
@@ -148,22 +148,22 @@ Requirements for UserOp Build/Sign API (플랫폼 대납 지원). Each maps to r
 | DATA-02 | Phase 339 | Complete |
 | DATA-03 | Phase 339 | Complete |
 | DATA-04 | Phase 339 | Complete |
-| SIGN-01 | Phase 340 | Pending |
-| SIGN-02 | Phase 340 | Pending |
-| SIGN-03 | Phase 340 | Pending |
-| SIGN-04 | Phase 340 | Pending |
-| SIGN-05 | Phase 340 | Pending |
-| SIGN-06 | Phase 340 | Pending |
-| SIGN-07 | Phase 340 | Pending |
-| SIGN-08 | Phase 340 | Pending |
-| SIGN-09 | Phase 340 | Pending |
-| SIGN-10 | Phase 340 | Pending |
-| CONN-01 | Phase 340 | Pending |
-| CONN-02 | Phase 340 | Pending |
-| NTFY-01 | Phase 340 | Pending |
-| NTFY-02 | Phase 340 | Pending |
-| NTFY-03 | Phase 340 | Pending |
-| NTFY-04 | Phase 340 | Pending |
+| SIGN-01 | Phase 340 | Complete |
+| SIGN-02 | Phase 340 | Complete |
+| SIGN-03 | Phase 340 | Complete |
+| SIGN-04 | Phase 340 | Complete |
+| SIGN-05 | Phase 340 | Complete |
+| SIGN-06 | Phase 340 | Complete |
+| SIGN-07 | Phase 340 | Complete |
+| SIGN-08 | Phase 340 | Complete |
+| SIGN-09 | Phase 340 | Complete |
+| SIGN-10 | Phase 340 | Complete |
+| CONN-01 | Phase 340 | Complete |
+| CONN-02 | Phase 340 | Complete |
+| NTFY-01 | Phase 340 | Complete |
+| NTFY-02 | Phase 340 | Complete |
+| NTFY-03 | Phase 340 | Complete |
+| NTFY-04 | Phase 340 | Complete |
 | ADMIN-01 | Phase 341 | Pending |
 | ADMIN-02 | Phase 341 | Pending |
 | ADMIN-03 | Phase 341 | Pending |
