@@ -1,5 +1,29 @@
 # Changelog
 
+## [2.10.0-rc.8](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.7...v2.10.0-rc.8) (2026-03-06)
+
+
+### Features
+
+* **338-01:** allow Smart Account creation without provider (Lite mode) ([ae0f514](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ae0f5147da71a1020031d1e4615e5790d8bc0075))
+* **338-01:** block Lite mode Smart Account send with CHAIN_ERROR + userop guidance ([ef52df3](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ef52df38fca545b7605dedd6412dce1f99b65ea8))
+* **338-02:** add UserOp v0.7 Zod schemas and 5 USEROP error codes ([8359257](https://github.com/minhoyoo-iotrust/WAIaaS/commit/83592575fe9fd81cb89135731cf74eb5d32ab165))
+* **338-02:** DB v45 migration with userop_builds table + Drizzle schema ([c2f27d7](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c2f27d717eeb25f9a4c75e620b4aff9307c82abe))
+* **339-01:** POST /v1/wallets/:id/userop/build endpoint ([5901f13](https://github.com/minhoyoo-iotrust/WAIaaS/commit/5901f1393d2333f90d1913f5bd9a9b6425473da0))
+* **339-02:** userop-build-cleanup worker for expired build records ([e7751e4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e7751e4f0b10b95e37920f881f6314f9dcdf1024))
+* **340-01:** POST /v1/wallets/:id/userop/sign endpoint with callData verification ([0f52247](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0f52247a19b90da620bfa4eebce1fd323677611f))
+* **340-02:** add userop capability to connect-info + prompt guidance ([e27e5aa](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e27e5aaa851bc8c08603d54cf8a5b5a0ae1eb571))
+* **341-01:** add Provider None (Lite mode) option and Lite/Full badges in Admin UI ([08b3798](https://github.com/minhoyoo-iotrust/WAIaaS/commit/08b3798cc89627a1c978920397127ee58233596e))
+* **341-02:** add MCP build_userop and sign_userop tools with 4 tests ([22ce828](https://github.com/minhoyoo-iotrust/WAIaaS/commit/22ce828e36ba84dd8be1b95fa0cb3472702ca4ff))
+* **341-02:** add SDK buildUserOp/signUserOp methods and update 3 skill files ([2d46da2](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2d46da2d363555604cf525377cfcd7e4cd296bfa))
+
+
+### Bug Fixes
+
+* add Push Relay CORS middleware and --debug mode ([#253](https://github.com/minhoyoo-iotrust/WAIaaS/issues/253), [#254](https://github.com/minhoyoo-iotrust/WAIaaS/issues/254)) ([d5e0439](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d5e0439a0f38bd488991137a7d2ed2a9b5ebab1d))
+* remove unused variables in userop route handler tests ([a7c8689](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a7c8689cb7e3940f82efd2e08a8df8e8abc146e7))
+* resolve lint errors in v31.2 test files ([67c85f5](https://github.com/minhoyoo-iotrust/WAIaaS/commit/67c85f544dc1f027b2f6fd8684232413235280f8))
+
 ## [2.10.0-rc.7](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.6...v2.10.0-rc.7) (2026-03-06)
 
 
