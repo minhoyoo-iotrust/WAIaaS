@@ -1,5 +1,38 @@
 # Changelog
 
+## [2.10.0-rc.7](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.6...v2.10.0-rc.7) (2026-03-06)
+
+
+### Features
+
+* **333-01:** add NFT_TRANSFER 6th discriminatedUnion type + APPROVE nft extension + NFT error codes ([586fe54](https://github.com/minhoyoo-iotrust/WAIaaS/commit/586fe54c66f37c942757ad4bc01b5d1c099c0224))
+* **333-02:** add DB v44 migration for nft_metadata_cache table + Drizzle schema ([5202e9f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/5202e9f94206df7b985ebaa102a3b182c6282934))
+* **333-02:** add nftAssetId() and isNftAsset() CAIP-19 helpers for NFT namespaces ([fc4f5e8](https://github.com/minhoyoo-iotrust/WAIaaS/commit/fc4f5e8d03ed24a78b0fe040c962da26a2945393))
+* **334-01:** add AlchemyNftIndexer with Alchemy NFT API v3 ([eab4989](https://github.com/minhoyoo-iotrust/WAIaaS/commit/eab4989c30b25a8b054ccd962b6832dd4efb8b8f))
+* **334-01:** add INftIndexer interface with Zod schemas ([0b662ae](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0b662ae2cc94da17979e8ae8e03dfcdaf39d2f34))
+* **334-02:** add HeliusNftIndexer, NftIndexerClient, and indexer settings ([e062b93](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e062b93302724b7503820f1d63d2bbd170edc016))
+* **334-03:** extend IChainAdapter with NFT methods + EVM ABI files ([4f29976](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4f29976060227a06d0b00731f99f8cfdd2b4fd22))
+* **334-03:** implement NFT methods in EvmAdapter and SolanaAdapter ([c3bd5d1](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c3bd5d135080be4b6555c421dd20ad52f8f9c954))
+* **335-01:** add NFT list REST routes with pagination and collection grouping ([e6c4ff8](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e6c4ff88157889c75e088c840b3d0dc5b8c10b81))
+* **335-02:** add NFT metadata endpoint with tokenIdentifier parsing and cache integration ([d4bc0d9](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d4bc0d9a12601f47bd282dfdf902719712f8edfc))
+* **335-02:** add NftMetadataCacheService with DB caching and IPFS/Arweave gateway conversion ([7221479](https://github.com/minhoyoo-iotrust/WAIaaS/commit/722147996b28009c9d9f62df4bd4c026cf202782))
+* **336-01:** add NFT_TRANSFER case to pipeline switch functions ([47ff779](https://github.com/minhoyoo-iotrust/WAIaaS/commit/47ff77909f34a7654b8ce4a718780f376e15d4e7))
+* **336-01:** add NFT_TRANSFER Smart Account UserOp support ([fc08600](https://github.com/minhoyoo-iotrust/WAIaaS/commit/fc086000c25e6db2597bbc3d46595d55c7e2b533))
+* **336-02:** add APPROVE+nft routing and NFT_TRANSFER policy evaluation ([075c99d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/075c99d34dc0df0fa3e539ce96e1065d0e4ca12c))
+* **336-02:** add NFT approval status query API ([04704f8](https://github.com/minhoyoo-iotrust/WAIaaS/commit/04704f8d668957473ec1ae5fe508380a2a5c6c24))
+* **337-01:** add MCP NFT tools, SDK NFT methods, connect-info NFT summary ([c932b39](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c932b39cffe65b5ab9219bbf2759908d137e097f))
+* **337-02:** add Admin UI NFT tab, CSP IPFS/Arweave gateways, indexer settings ([8e06fa4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8e06fa4d9273c56784fe78770e011517dbf231ca))
+* **337-03:** create nft.skill.md and update wallet/transactions skills ([24fd339](https://github.com/minhoyoo-iotrust/WAIaaS/commit/24fd33928d0fee411d056381a07efdc0880abf49))
+
+
+### Bug Fixes
+
+* **335-01:** fix type errors in NFT indexer implementations and remove unused function ([bae11a2](https://github.com/minhoyoo-iotrust/WAIaaS/commit/bae11a2a4a7a5eed21640e548f818052f211fbd7))
+* **admin:** guard against undefined NFT fields in detail modal ([00366b5](https://github.com/minhoyoo-iotrust/WAIaaS/commit/00366b579ea4f25567c9560ece8337e3e74d7261))
+* **mcp:** update tool count assertion to include 3 NFT tools ([a4a6702](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a4a6702affc16d5ad5a5008671a441ac7af4e229))
+* **scripts:** update TransactionType expectedCount to 8 for NFT_TRANSFER ([ff83e65](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ff83e6546c21e6b019c8710830ae89b3e3718f69))
+* **v31.0:** mount NFT routes in server.ts + fix typecheck/lint errors ([3b53785](https://github.com/minhoyoo-iotrust/WAIaaS/commit/3b53785b8bbfde5d09821b46ba0975139eb7debb))
+
 ## [2.10.0-rc.6](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.5...v2.10.0-rc.6) (2026-03-05)
 
 
