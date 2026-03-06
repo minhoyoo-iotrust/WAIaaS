@@ -57,6 +57,20 @@ export {
   type X402AllowedDomainsRules,
 } from './policy.schema.js';
 export { ConfigSchema, type Config } from './config.schema.js';
+
+// v31.2 UserOp Build/Sign API schemas (Zod SSoT)
+export {
+  UserOperationV07Schema,
+  UserOpBuildRequestSchema,
+  UserOpBuildResponseSchema,
+  UserOpSignRequestSchema,
+  UserOpSignResponseSchema,
+  type UserOperationV07,
+  type UserOpBuildRequest,
+  type UserOpBuildResponse,
+  type UserOpSignRequest,
+  type UserOpSignResponse,
+} from './userop.schema.js';
 export { AssetInfoSchema, type AssetInfoDto } from './asset.schema.js';
 
 // v27.1 incoming transaction schema (Zod SSoT)

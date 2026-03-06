@@ -153,6 +153,12 @@ export const messages: Messages = {
     UNSUPPORTED_NFT_STANDARD: '지원되지 않는 NFT 표준입니다',
     INDEXER_API_ERROR: 'NFT 인덱서 API 오류가 발생했습니다',
     NFT_METADATA_FETCH_FAILED: 'NFT 메타데이터를 가져오는데 실패했습니다',
+    // USEROP domain
+    EXPIRED_BUILD: '빌드 데이터가 만료되었습니다',
+    BUILD_NOT_FOUND: '빌드 데이터를 찾을 수 없습니다',
+    BUILD_ALREADY_USED: '빌드 데이터가 이미 서명에 사용되었습니다',
+    CALLDATA_MISMATCH: 'UserOperation callData가 빌드 데이터와 일치하지 않습니다',
+    SENDER_MISMATCH: 'UserOperation sender가 지갑 주소와 일치하지 않습니다',
   },
   // Notification templates (31 event types)
   notifications: {
