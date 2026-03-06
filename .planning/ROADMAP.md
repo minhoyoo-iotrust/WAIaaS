@@ -116,7 +116,7 @@ See `.planning/milestones/` for archived phase details.
 - [x] **Phase 338: Foundation** - Zod 스키마, 에러 코드, DB v45, Provider Lite/Full 모드
 - [x] **Phase 339: UserOp Build API** - unsigned UserOp 구성 + build 데이터 관리 (completed 2026-03-06)
 - [x] **Phase 340: UserOp Sign API** - sponsored UserOp 서명 + connect-info + 감사/알림 (completed 2026-03-06)
-- [ ] **Phase 341: Interface Integration** - Admin UI, MCP, SDK, 스킬 파일
+- [x] **Phase 341: Interface Integration** - Admin UI, MCP, SDK, 스킬 파일 (completed 2026-03-06)
 
 ## Phase Details
 
@@ -200,7 +200,7 @@ Phases execute in numeric order: 338 -> 339 -> 340 -> 341
 | 338. Foundation | 2/2 | Complete    | 2026-03-06 | 2026-03-06 |
 | 339. UserOp Build API | 2/2 | Complete    | 2026-03-06 | - |
 | 340. UserOp Sign API | v31.2 | Complete    | 2026-03-06 | 2026-03-06 |
-| 341. Interface Integration | v31.2 | 0/2 | Not started | - |
+| 341. Interface Integration | v31.2 | Complete    | 2026-03-06 | - |
 
 ---
 *Last updated: 2026-03-06 after Phase 341 planning.*

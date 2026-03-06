@@ -4,7 +4,7 @@ milestone: v31.2
 milestone_name: UserOp Build/Sign API
 status: completed
 stopped_at: Completed Phase 340 UserOp Sign API -- 2/2 plans
-last_updated: "2026-03-06T09:46:00.907Z"
+last_updated: "2026-03-06T09:46:32.990Z"
 last_activity: 2026-03-06 -- Phase 340 UserOp Sign API completed
 progress:
   total_phases: 4
