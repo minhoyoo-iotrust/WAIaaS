@@ -146,11 +146,11 @@ Plans:
   3. gas/paymaster 필드가 응답에 포함되지 않는다 (플랫폼이 채워야 할 영역)
   4. Solana 지갑에서 호출 시 ACTION_VALIDATION_FAILED 에러가 반환된다
   5. build 데이터가 TTL(10분)로 관리되며, 만료 레코드는 WorkerScheduler가 주기적으로 정리한다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 339-01: UserOp Build 엔드포인트 + SmartAccount callData 인코딩
-- [ ] 339-02: Build 데이터 관리 (DB 저장, TTL, 정리 워커)
+- [ ] 339-01-PLAN.md -- UserOp Build endpoint + SmartAccount callData encoding
+- [ ] 339-02-PLAN.md -- Build data cleanup worker (TTL enforcement)
 
 ### Phase 340: UserOp Sign API
 **Goal**: 플랫폼이 가스/페이마스터 필드를 채운 UserOp을 WAIaaS에 제출하면 서명된 UserOp을 받을 수 있으며, 모든 활동이 감사 로그와 알림으로 추적되는 상태
@@ -203,4 +203,4 @@ Phases execute in numeric order: 338 -> 339 -> 340 -> 341
 | 341. Interface Integration | v31.2 | 0/2 | Not started | - |
 
 ---
-*Last updated: 2026-03-06 after v31.2 roadmap creation.*
+*Last updated: 2026-03-06 after Phase 339 planning.*
