@@ -71,7 +71,7 @@ const LEGACY_NETWORK_NORMALIZE: Record<string, string> = {
 };
 
 // ---------------------------------------------------------------------------
-// DDL statements for all 23 tables (latest schema: wallets + wallet_id + session_wallets + token_registry + settings + telegram_users + wc_sessions + wc_store + incoming_transactions + incoming_tx_cursors + defi_positions + wallet_apps + webhooks + webhook_logs + agent_identities + reputation_cache)
+// DDL statements for all 25 tables (latest schema: wallets + wallet_id + session_wallets + token_registry + settings + telegram_users + wc_sessions + wc_store + incoming_transactions + incoming_tx_cursors + defi_positions + wallet_apps + webhooks + webhook_logs + agent_identities + reputation_cache + nft_metadata_cache + userop_builds)
 // ---------------------------------------------------------------------------
 
 /**
@@ -79,7 +79,7 @@ const LEGACY_NETWORK_NORMALIZE: Record<string, string> = {
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 44;
+export const LATEST_SCHEMA_VERSION = 45;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -413,6 +413,19 @@ function getCreateTableStatements(): string[] {
   cached_at INTEGER NOT NULL,
   expires_at INTEGER NOT NULL
 )`,
+
+    // Table 25: userop_builds (UserOp Build/Sign API data, v45)
+    `CREATE TABLE IF NOT EXISTS userop_builds (
+  id TEXT PRIMARY KEY,
+  wallet_id TEXT NOT NULL,
+  call_data TEXT NOT NULL,
+  sender TEXT NOT NULL,
+  nonce TEXT NOT NULL,
+  entry_point TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  expires_at INTEGER NOT NULL,
+  used INTEGER NOT NULL DEFAULT 0 CHECK (used IN (0, 1))
+)`,
   ];
 }
 
@@ -515,6 +528,10 @@ function getCreateIndexStatements(): string[] {
     // v44: nft_metadata_cache indexes
     'CREATE UNIQUE INDEX IF NOT EXISTS idx_nft_cache_unique ON nft_metadata_cache(contract_address, token_id, chain, network)',
     'CREATE INDEX IF NOT EXISTS idx_nft_cache_expires ON nft_metadata_cache(expires_at)',
+
+    // v45: userop_builds indexes
+    'CREATE INDEX IF NOT EXISTS idx_userop_builds_wallet_id ON userop_builds(wallet_id)',
+    'CREATE INDEX IF NOT EXISTS idx_userop_builds_expires ON userop_builds(expires_at)',
   ];
 }
 
@@ -2664,6 +2681,29 @@ MIGRATIONS.push({
       CREATE INDEX IF NOT EXISTS idx_nft_cache_expires
       ON nft_metadata_cache (expires_at)
     `);
+  },
+});
+
+// v45: Create userop_builds table for UserOp Build/Sign API (v31.2)
+MIGRATIONS.push({
+  version: 45,
+  description: 'Create userop_builds table for UserOp Build/Sign API',
+  up: (sqlite) => {
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS userop_builds (
+        id TEXT PRIMARY KEY,
+        wallet_id TEXT NOT NULL,
+        call_data TEXT NOT NULL,
+        sender TEXT NOT NULL,
+        nonce TEXT NOT NULL,
+        entry_point TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        expires_at INTEGER NOT NULL,
+        used INTEGER NOT NULL DEFAULT 0 CHECK (used IN (0, 1))
+      )
+    `);
+    sqlite.exec('CREATE INDEX IF NOT EXISTS idx_userop_builds_wallet_id ON userop_builds(wallet_id)');
+    sqlite.exec('CREATE INDEX IF NOT EXISTS idx_userop_builds_expires ON userop_builds(expires_at)');
   },
 });
 

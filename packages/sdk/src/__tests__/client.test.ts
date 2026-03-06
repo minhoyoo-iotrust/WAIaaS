@@ -1737,4 +1737,94 @@ describe('WAIaaSClient', () => {
       });
     });
   });
+
+  // =========================================================================
+  // buildUserOp
+  // =========================================================================
+
+  describe('buildUserOp', () => {
+    it('should call POST /v1/wallets/{id}/userop/build with correct body', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        masterPassword: 'test-pw',
+      });
+
+      const expected = {
+        sender: '0xabc',
+        nonce: '0x0',
+        callData: '0xdef',
+        factory: null,
+        factoryData: null,
+        entryPoint: '0x0000000071727De22E5E9d8BAf0edAc6f37da032',
+        buildId: 'build-001',
+      };
+
+      fetchSpy.mockResolvedValue(mockResponse(expected));
+
+      const result = await client.buildUserOp('w1', {
+        request: { type: 'TRANSFER', to: '0xRecipient', amount: '1000000000000000000' },
+        network: 'ethereum-sepolia',
+      });
+
+      expect(result).toEqual(expected);
+
+      const calledUrl = fetchSpy.mock.calls[0]![0] as string;
+      expect(calledUrl).toBe('http://localhost:3000/v1/wallets/w1/userop/build');
+
+      const opts = fetchSpy.mock.calls[0]![1] as RequestInit;
+      expect(opts.method).toBe('POST');
+      const body = JSON.parse(opts.body as string) as Record<string, unknown>;
+      expect(body['network']).toBe('ethereum-sepolia');
+      expect((body['request'] as Record<string, unknown>)['type']).toBe('TRANSFER');
+
+      const headers = opts.headers as Record<string, string>;
+      expect(headers['X-Master-Password']).toBe('test-pw');
+    });
+  });
+
+  // =========================================================================
+  // signUserOp
+  // =========================================================================
+
+  describe('signUserOp', () => {
+    it('should call POST /v1/wallets/{id}/userop/sign with buildId and userOperation', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        masterPassword: 'test-pw',
+      });
+
+      const expected = {
+        signedUserOperation: { sender: '0xabc', signature: '0xsig' },
+        txId: 'tx-001',
+      };
+
+      fetchSpy.mockResolvedValue(mockResponse(expected));
+
+      const result = await client.signUserOp('w1', {
+        buildId: 'build-001',
+        userOperation: {
+          sender: '0xabc',
+          nonce: '0x0',
+          callData: '0xdef',
+          callGasLimit: '0x5208',
+          verificationGasLimit: '0x10000',
+          preVerificationGas: '0x5000',
+          maxFeePerGas: '0x3b9aca00',
+          maxPriorityFeePerGas: '0x59682f00',
+          signature: '0x',
+        },
+      });
+
+      expect(result).toEqual(expected);
+
+      const calledUrl = fetchSpy.mock.calls[0]![0] as string;
+      expect(calledUrl).toBe('http://localhost:3000/v1/wallets/w1/userop/sign');
+
+      const opts = fetchSpy.mock.calls[0]![1] as RequestInit;
+      expect(opts.method).toBe('POST');
+      const body = JSON.parse(opts.body as string) as Record<string, unknown>;
+      expect(body['buildId']).toBe('build-001');
+      expect(body['userOperation']).toBeDefined();
+    });
+  });
 });

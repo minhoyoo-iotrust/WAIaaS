@@ -492,6 +492,37 @@ export interface SignTransactionResponse {
 }
 
 // ---------------------------------------------------------------------------
+// UserOp Types
+// ---------------------------------------------------------------------------
+
+export interface BuildUserOpParams {
+  /** Standard TransactionRequest object */
+  request: Record<string, unknown>;
+  /** EVM network identifier (e.g., 'ethereum-sepolia') */
+  network: string;
+}
+
+export interface BuildUserOpResponse {
+  sender: string;
+  nonce: string;
+  callData: string;
+  factory: string | null;
+  factoryData: string | null;
+  entryPoint: string;
+  buildId: string;
+}
+
+export interface SignUserOpParams {
+  buildId: string;
+  userOperation: Record<string, unknown>;
+}
+
+export interface SignUserOpResponse {
+  signedUserOperation: Record<string, unknown>;
+  txId: string;
+}
+
+// ---------------------------------------------------------------------------
 // Wallet Info Types
 // ---------------------------------------------------------------------------
 

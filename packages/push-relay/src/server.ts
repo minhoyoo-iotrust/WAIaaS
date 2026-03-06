@@ -1,5 +1,7 @@
 import { Hono } from 'hono';
+import { cors } from 'hono/cors';
 import { apiKeyAuth } from './middleware/api-key-auth.js';
+import { debug } from './logger.js';
 import { createDeviceRoutes } from './registry/device-routes.js';
 import { createSignResponseRoutes } from './relay/sign-response-routes.js';
 import type { DeviceRegistry } from './registry/device-registry.js';
@@ -20,6 +22,19 @@ export interface ServerOpts {
 export function createServer(opts: ServerOpts): Hono {
   const app = new Hono();
   const { registry, subscriber, provider, apiKey, ntfyServer, signTopicPrefix, notifyTopicPrefix, version } = opts;
+
+  // Request logging (debug mode)
+  app.use('/*', async (c, next) => {
+    debug(`→ ${c.req.method} ${c.req.path}`);
+    await next();
+  });
+
+  // CORS — allow cross-origin requests from wallet apps
+  app.use('/*', cors({
+    origin: '*',
+    allowHeaders: ['Content-Type', 'X-API-Key'],
+    allowMethods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
+  }));
 
   // Health check is public
   const deviceRoutes = createDeviceRoutes({ registry, subscriber, provider, signTopicPrefix, notifyTopicPrefix, version });

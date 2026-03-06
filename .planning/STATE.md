@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v31.0
-milestone_name: NFT 지원
-status: archived
-stopped_at: Milestone v31.0 archived
-last_updated: "2026-03-06T05:10:00.000Z"
-last_activity: 2026-03-06 -- Milestone v31.0 archived (5 phases, 12 plans, 58 requirements)
+milestone: v31.2
+milestone_name: UserOp Build/Sign API
+status: shipped
+stopped_at: Milestone v31.2 shipped
+last_updated: "2026-03-06T10:10:00.000Z"
+last_activity: 2026-03-06 -- Milestone v31.2 shipped
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 12
-  completed_plans: 12
+  total_phases: 4
+  completed_phases: 4
+  total_plans: 8
+  completed_plans: 8
   percent: 100
 ---
 
@@ -25,18 +25,31 @@ See: .planning/PROJECT.md (updated 2026-03-06)
 
 ## Current Position
 
-Milestone v31.0 NFT 지원 archived.
-Next: `/gsd:new-milestone` to start next milestone.
+Milestone: v31.2 UserOp Build/Sign API -- SHIPPED 2026-03-06
+Status: Milestone complete, ready for next milestone
+Last activity: 2026-03-06 -- Milestone v31.2 shipped
+
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
-**Cumulative:** 86 milestones shipped, 337 phases completed, ~767 plans, ~2,241 reqs, ~6,930+ tests, ~239,575 LOC TS
+**Cumulative:** 87 milestones shipped, 341 phases completed, ~775 plans, ~2,347 reqs, ~6,993+ tests, ~278,864 LOC TS
+
+| Phase | Plan | Duration | Tasks | Files |
+|-------|------|----------|-------|-------|
+| 338 | 01 | 5min | 2 | 4 |
+| 338 | 02 | 5min | 2 | 12 |
+| 339 | 01+02 | 9min | 2 | 7 |
+| 340 | 01 | 5min | 2 | 5 |
+| 340 | 02 | 2min | 1 | 2 |
+| 341 | 01 | 5min | 2 | 8 |
+| 341 | 02 | 5min | 2 | 7 |
 
 ## Accumulated Context
 
 ### Decisions
 
-(Cleared -- see milestones/v31.0-ROADMAP.md for archived decisions)
+(Cleared -- see PROJECT.md for full decision log)
 
 ### Blockers/Concerns
 
@@ -46,6 +59,6 @@ Next: `/gsd:new-milestone` to start next milestone.
 
 ## Session Continuity
 
-Last session: 2026-03-06
-Stopped at: Milestone v31.0 archived
+Last session: 2026-03-06T10:10:00.000Z
+Stopped at: Milestone v31.2 shipped
 Resume file: None

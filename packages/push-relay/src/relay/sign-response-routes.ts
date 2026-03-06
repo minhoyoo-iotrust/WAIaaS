@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
+import { debug } from '../logger.js';
 
 const SignResponseRelaySchema = z.object({
   requestId: z.string().uuid(),
@@ -25,6 +26,7 @@ export function createSignResponseRoutes(opts: SignResponseRoutesOpts): Hono {
     }
 
     const { requestId, action, signature, signerAddress, responseTopic } = parsed.data;
+    debug(`POST /v1/sign-response: requestId=${requestId}, action=${action}, topic=${responseTopic}`);
 
     // Build a full SignResponse object
     const signResponse = {
@@ -47,12 +49,14 @@ export function createSignResponseRoutes(opts: SignResponseRoutesOpts): Hono {
     });
 
     if (!ntfyRes.ok) {
+      debug(`ntfy relay failed: HTTP ${ntfyRes.status}, url=${ntfyUrl}`);
       return c.json(
         { error: 'Failed to relay response to ntfy', status: ntfyRes.status },
         502,
       );
     }
 
+    debug(`Sign response relayed: requestId=${requestId}`);
     return c.json({ status: 'relayed', requestId }, 200);
   });
 

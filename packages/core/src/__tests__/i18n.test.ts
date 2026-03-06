@@ -41,7 +41,7 @@ describe('i18n message system', () => {
     expect(Object.keys(en.cli).sort()).toEqual(Object.keys(ko.cli).sort());
   });
 
-  it('all 116 error codes have corresponding messages', () => {
+  it('all 121 error codes have corresponding messages', () => {
     // v29.3: +WALLET_ID_REQUIRED, +NETWORK_REQUIRED, -CANNOT_REMOVE_DEFAULT_WALLET (net +1)
     // v29.7: +SIGNING_DISABLED, +WALLET_APP_DUPLICATE, +WALLET_APP_NOT_FOUND (+3)
     // v29.9: +RENEWAL_NOT_REQUIRED (+1)
@@ -49,8 +49,9 @@ describe('i18n message system', () => {
     // v30.6: +PAYMASTER_REJECTED, +TRANSACTION_TIMEOUT, +TRANSACTION_REVERTED (+3)
     // v30.10: +UNSUPPORTED_CHAIN, +ERC8128_DISABLED, +ERC8128_DOMAIN_NOT_ALLOWED, +ERC8128_RATE_LIMITED (+4)
     // v31.0: +NFT_NOT_FOUND, +INDEXER_NOT_CONFIGURED, +UNSUPPORTED_NFT_STANDARD, +INDEXER_API_ERROR, +NFT_METADATA_FETCH_FAILED (+5)
+    // v31.2: +EXPIRED_BUILD, +BUILD_NOT_FOUND, +BUILD_ALREADY_USED, +CALLDATA_MISMATCH, +SENDER_MISMATCH (+5)
     const en = getMessages('en');
-    expect(Object.keys(en.errors).length).toBe(128);
+    expect(Object.keys(en.errors).length).toBe(133);
   });
 
   it('error code keys match ERROR_CODES keys', () => {

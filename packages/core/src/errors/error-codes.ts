@@ -13,7 +13,8 @@ export type ErrorDomain =
   | 'SIGNING'
   | 'CHAIN'
   | 'ERC8128'
-  | 'NFT';
+  | 'NFT'
+  | 'USEROP';
 
 export interface ErrorCodeEntry {
   code: string;
@@ -966,6 +967,42 @@ export const ERROR_CODES = {
     httpStatus: 502,
     retryable: true,
     message: 'Failed to fetch NFT metadata',
+  },
+  // --- USEROP domain (5) -- UserOp Build/Sign API (v31.2) ---
+  EXPIRED_BUILD: {
+    code: 'EXPIRED_BUILD',
+    domain: 'USEROP',
+    httpStatus: 400,
+    retryable: false,
+    message: 'Build data has expired',
+  },
+  BUILD_NOT_FOUND: {
+    code: 'BUILD_NOT_FOUND',
+    domain: 'USEROP',
+    httpStatus: 404,
+    retryable: false,
+    message: 'Build data not found',
+  },
+  BUILD_ALREADY_USED: {
+    code: 'BUILD_ALREADY_USED',
+    domain: 'USEROP',
+    httpStatus: 409,
+    retryable: false,
+    message: 'Build data has already been used for signing',
+  },
+  CALLDATA_MISMATCH: {
+    code: 'CALLDATA_MISMATCH',
+    domain: 'USEROP',
+    httpStatus: 400,
+    retryable: false,
+    message: 'UserOperation callData does not match build data',
+  },
+  SENDER_MISMATCH: {
+    code: 'SENDER_MISMATCH',
+    domain: 'USEROP',
+    httpStatus: 400,
+    retryable: false,
+    message: 'UserOperation sender does not match wallet address',
   },
 } as const satisfies Record<string, ErrorCodeEntry>;
 

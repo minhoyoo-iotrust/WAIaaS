@@ -140,7 +140,7 @@ describe('Wallet Provider UI', () => {
     vi.clearAllMocks();
   });
 
-  it('shows provider fields when accountType is smart', async () => {
+  it('shows provider fields when accountType is smart (default None hides API Key)', async () => {
     (currentPath as unknown as { value: string }).value = '/wallets';
     render(<WalletsPage />);
 
@@ -165,6 +165,16 @@ describe('Wallet Provider UI', () => {
 
     await waitFor(() => {
       expect(screen.getByLabelText('Provider')).toBeTruthy();
+    });
+
+    // Default provider is None (Lite) -- API Key should be hidden
+    expect(screen.queryByLabelText('API Key')).toBeNull();
+
+    // Switch to pimlico to show API Key
+    const providerSelect = screen.getByLabelText('Provider');
+    fireEvent.change(providerSelect, { target: { value: 'pimlico' } });
+
+    await waitFor(() => {
       expect(screen.getByLabelText('API Key')).toBeTruthy();
     });
   });
@@ -215,11 +225,15 @@ describe('Wallet Provider UI', () => {
       expect(screen.getByLabelText('Provider')).toBeTruthy();
     });
 
-    // Default is pimlico - check dashboard link
-    expect(screen.getByText('Pimlico Dashboard')).toBeTruthy();
+    // Default is None (Lite) -- switch to pimlico first
+    const providerSelect = screen.getByLabelText('Provider');
+    fireEvent.change(providerSelect, { target: { value: 'pimlico' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('Pimlico Dashboard')).toBeTruthy();
+    });
 
     // Switch to alchemy
-    const providerSelect = screen.getByLabelText('Provider');
     fireEvent.change(providerSelect, { target: { value: 'alchemy' } });
 
     await waitFor(() => {
@@ -377,6 +391,14 @@ describe('Wallet Provider UI', () => {
       expect(screen.getByLabelText('Provider')).toBeTruthy();
     });
 
+    // Select pimlico provider (default is None/Lite)
+    const providerSelect = screen.getByLabelText('Provider');
+    fireEvent.change(providerSelect, { target: { value: 'pimlico' } });
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('API Key')).toBeTruthy();
+    });
+
     // Fill API key
     const apiKeyInput = screen.getByLabelText('API Key');
     fireEvent.input(apiKeyInput, { target: { value: 'pimlico-key-123' } });
@@ -395,6 +417,214 @@ describe('Wallet Provider UI', () => {
       expect(body).not.toHaveProperty('provider');
       expect(body).not.toHaveProperty('apiKey');
     });
+  });
+
+  // =========================================================================
+  // Lite/Full Mode Tests
+  // =========================================================================
+
+  it('shows None (Lite mode) as first option in Provider dropdown', async () => {
+    (currentPath as unknown as { value: string }).value = '/wallets';
+    render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Create Wallet')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('Create Wallet'));
+
+    const chainSelect = screen.getByLabelText('Chain');
+    fireEvent.change(chainSelect, { target: { value: 'ethereum' } });
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Account Type')).toBeTruthy();
+    });
+
+    const accountTypeSelect = screen.getByLabelText('Account Type');
+    fireEvent.change(accountTypeSelect, { target: { value: 'smart' } });
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Provider')).toBeTruthy();
+    });
+
+    // None (Lite mode) option should exist
+    const providerSelect = screen.getByLabelText('Provider') as HTMLSelectElement;
+    const options = Array.from(providerSelect.querySelectorAll('option'));
+    expect(options[0]?.textContent).toBe('None (Lite mode)');
+    expect(options[0]?.value).toBe('none');
+  });
+
+  it('hides API Key and URL fields when None (Lite) is selected', async () => {
+    (currentPath as unknown as { value: string }).value = '/wallets';
+    render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Create Wallet')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('Create Wallet'));
+
+    const chainSelect = screen.getByLabelText('Chain');
+    fireEvent.change(chainSelect, { target: { value: 'ethereum' } });
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Account Type')).toBeTruthy();
+    });
+
+    const accountTypeSelect = screen.getByLabelText('Account Type');
+    fireEvent.change(accountTypeSelect, { target: { value: 'smart' } });
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Provider')).toBeTruthy();
+    });
+
+    // Default is None -- API Key, Bundler URL, Paymaster URL should all be hidden
+    expect(screen.queryByLabelText('API Key')).toBeNull();
+    expect(screen.queryByLabelText('Bundler URL')).toBeNull();
+    expect(screen.queryByLabelText('Paymaster URL (optional)')).toBeNull();
+  });
+
+  it('sends only accountType=smart (no aaProvider) when creating with None provider', async () => {
+    (currentPath as unknown as { value: string }).value = '/wallets';
+
+    vi.mocked(apiPost).mockResolvedValue({
+      id: 'w-lite',
+      name: 'lite-wallet',
+      chain: 'ethereum',
+      network: 'ethereum-sepolia',
+      environment: 'testnet',
+      publicKey: '0xlite',
+      status: 'ACTIVE',
+      accountType: 'smart',
+    } as never);
+
+    render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Create Wallet')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('Create Wallet'));
+
+    const nameInput = screen.getByPlaceholderText('e.g. trading-bot');
+    fireEvent.input(nameInput, { target: { value: 'lite-wallet' } });
+
+    const chainSelect = screen.getByLabelText('Chain');
+    fireEvent.change(chainSelect, { target: { value: 'ethereum' } });
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Account Type')).toBeTruthy();
+    });
+
+    const accountTypeSelect = screen.getByLabelText('Account Type');
+    fireEvent.change(accountTypeSelect, { target: { value: 'smart' } });
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Provider')).toBeTruthy();
+    });
+
+    // Keep default None -- submit
+    fireEvent.click(screen.getByText('Create'));
+
+    await waitFor(() => {
+      expect(apiPost).toHaveBeenCalled();
+      const callArgs = vi.mocked(apiPost).mock.calls[0];
+      const body = callArgs[1] as Record<string, unknown>;
+      expect(body.accountType).toBe('smart');
+      // No aaProvider fields
+      expect(body).not.toHaveProperty('aaProvider');
+      expect(body).not.toHaveProperty('aaProviderApiKey');
+      expect(body).not.toHaveProperty('aaBundlerUrl');
+    });
+  });
+
+  it('shows Smart (Lite) badge in list for smart account without provider', async () => {
+    const walletsWithLite = {
+      items: [
+        ...mockWallets.items,
+        {
+          id: 'w-lite',
+          name: 'lite-wallet',
+          chain: 'ethereum',
+          network: 'ethereum-sepolia',
+          environment: 'testnet',
+          publicKey: '0xlite',
+          status: 'ACTIVE',
+          ownerAddress: null,
+          ownerState: 'NONE',
+          createdAt: 1700000000,
+          accountType: 'smart',
+          signerKey: '0xsigner2',
+          deployed: false,
+          provider: null,
+        },
+      ],
+    };
+    vi.mocked(apiGet).mockResolvedValue(walletsWithLite as never);
+    (currentPath as unknown as { value: string }).value = '/wallets';
+    render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Smart (Lite)')).toBeTruthy();
+    });
+  });
+
+  it('shows Smart (Full) badge in list for smart account with provider', async () => {
+    (currentPath as unknown as { value: string }).value = '/wallets';
+    render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Smart (Full)')).toBeTruthy();
+    });
+  });
+
+  it('shows Lite mode badge in detail page for smart account without provider', async () => {
+    const liteWalletDetail = {
+      ...mockSmartWalletDetail,
+      id: 'w-lite',
+      provider: null,
+    };
+    (currentPath as unknown as { value: string }).value = '/wallets/w-lite';
+
+    vi.mocked(apiGet).mockImplementation(async (url: string) => {
+      if (url.includes('/networks')) return { networks: [] } as never;
+      if (url.includes('/balance')) return { balances: [] } as never;
+      if (url.includes('/transactions')) return { items: [], total: 0 } as never;
+      if (url.includes('/wc/session')) throw new Error('not found');
+      if (url.includes('/staking')) return { positions: [] } as never;
+      return liteWalletDetail as never;
+    });
+
+    render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Lite')).toBeTruthy();
+    });
+
+    // Check UserOp guidance text
+    expect(screen.getByText('Use UserOp API for gas-sponsored transactions')).toBeTruthy();
+  });
+
+  it('shows Full mode badge in detail page for smart account with provider', async () => {
+    (currentPath as unknown as { value: string }).value = '/wallets/w2';
+
+    vi.mocked(apiGet).mockImplementation(async (url: string) => {
+      if (url.includes('/networks')) return { networks: [] } as never;
+      if (url.includes('/balance')) return { balances: [] } as never;
+      if (url.includes('/transactions')) return { items: [], total: 0 } as never;
+      if (url.includes('/wc/session')) throw new Error('not found');
+      if (url.includes('/staking')) return { positions: [] } as never;
+      return mockSmartWalletDetail as never;
+    });
+
+    render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Full')).toBeTruthy();
+    });
+
+    // No UserOp guidance text when Full mode
+    expect(screen.queryByText('Use UserOp API for gas-sponsored transactions')).toBeNull();
   });
 
   it('sends aaProvider/aaBundlerUrl/aaPaymasterUrl fields when creating smart account with custom provider', async () => {

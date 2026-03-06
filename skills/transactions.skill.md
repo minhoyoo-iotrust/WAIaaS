@@ -1202,3 +1202,85 @@ Parameters: Same as `send_token` (to, amount, type, token, calldata, abi, value,
 - gasCondition is accepted for request compatibility but ignored by simulation
 - No DB writes, no signing, no notifications, no events
 - Fee includes 20% safety margin: `(estimatedGas * 120) / 100`
+
+## 12. UserOp Build/Sign API (Smart Account)
+
+For Smart Account wallets in **Lite mode** (no bundler provider), the UserOp API allows building and signing ERC-4337 UserOperations without requiring a bundler. The platform fills gas/paymaster fields externally and submits to a bundler of its choice.
+
+### POST /v1/wallets/{id}/userop/build (masterAuth)
+
+Build an unsigned UserOperation from a standard TransactionRequest.
+
+**Request:**
+```json
+{
+  "request": { "type": "TRANSFER", "to": "0x...", "amount": "1000000000000000000" },
+  "network": "ethereum-sepolia"
+}
+```
+
+**Response:**
+```json
+{
+  "sender": "0x...",
+  "nonce": "0x0",
+  "callData": "0x...",
+  "factory": "0x..." ,
+  "factoryData": "0x...",
+  "entryPoint": "0x0000000071727De22E5E9d8BAf0edAc6f37da032",
+  "buildId": "uuid"
+}
+```
+
+`factory`/`factoryData` are `null` for already-deployed accounts. The platform must fill gas fields (`callGasLimit`, `verificationGasLimit`, `preVerificationGas`, `maxFeePerGas`, `maxPriorityFeePerGas`) and optional paymaster fields before signing.
+
+### POST /v1/wallets/{id}/userop/sign (masterAuth)
+
+Sign a completed UserOperation (platform must fill gas and paymaster fields first).
+
+**Request:**
+```json
+{
+  "buildId": "uuid",
+  "userOperation": {
+    "sender": "0x...", "nonce": "0x0", "callData": "0x...",
+    "callGasLimit": "0x...", "verificationGasLimit": "0x...",
+    "preVerificationGas": "0x...", "maxFeePerGas": "0x...",
+    "maxPriorityFeePerGas": "0x...", "signature": "0x"
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "signedUserOperation": { "sender": "0x...", "signature": "0x..." },
+  "txId": "uuid"
+}
+```
+
+**Error codes:**
+- `EXPIRED_BUILD` (400): Build data TTL (10 min) expired
+- `BUILD_NOT_FOUND` (404): Invalid buildId
+- `BUILD_ALREADY_USED` (409): Build already signed
+- `CALLDATA_MISMATCH` (400): callData differs from build time
+- `SENDER_MISMATCH` (400): sender does not match wallet address
+
+### MCP Tools
+
+- `build_userop`: Build unsigned UserOp (wallet_id, type, to, amount, network, ...)
+- `sign_userop`: Sign completed UserOp (wallet_id, build_id, sender, nonce, call_data, gas fields, ...)
+
+### SDK Methods
+
+```typescript
+const build = await client.buildUserOp('wallet-id', {
+  request: { type: 'TRANSFER', to: '0x...', amount: '1000000000000000000' },
+  network: 'ethereum-sepolia',
+});
+// Platform fills gas/paymaster fields...
+const signed = await client.signUserOp('wallet-id', {
+  buildId: build.buildId,
+  userOperation: { ...build, callGasLimit: '0x...', ... },
+});
+```

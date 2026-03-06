@@ -207,6 +207,12 @@ export const messages: Messages = {
     UNSUPPORTED_NFT_STANDARD: 'Unsupported NFT standard',
     INDEXER_API_ERROR: 'NFT indexer API error',
     NFT_METADATA_FETCH_FAILED: 'Failed to fetch NFT metadata',
+    // USEROP domain
+    EXPIRED_BUILD: 'Build data has expired',
+    BUILD_NOT_FOUND: 'Build data not found',
+    BUILD_ALREADY_USED: 'Build data has already been used for signing',
+    CALLDATA_MISMATCH: 'UserOperation callData does not match build data',
+    SENDER_MISMATCH: 'UserOperation sender does not match wallet address',
   },
   // Notification templates (30 event types)
   notifications: {

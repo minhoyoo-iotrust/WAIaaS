@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { DeviceRegistry } from './device-registry.js';
 import type { NtfySubscriber } from '../subscriber/ntfy-subscriber.js';
 import type { IPushProvider } from '../providers/push-provider.js';
+import { debug } from '../logger.js';
 
 const DeviceRegistrationSchema = z.object({
   walletName: z.string().min(1),
@@ -32,8 +33,10 @@ export function createDeviceRoutes(opts: DeviceRoutesOpts): Hono {
     }
 
     const { walletName, pushToken, platform } = parsed.data;
+    debug(`POST /devices: wallet=${walletName}, platform=${platform}, pushToken=${pushToken.slice(0, 8)}...`);
     const result = registry.register(walletName, pushToken, platform);
     const token = result.subscriptionToken;
+    debug(`Device registered: subscriptionToken=${token}`);
 
     // Dynamically subscribe to subscription-token-based topics
     subscriber.addTopics(
@@ -58,6 +61,7 @@ export function createDeviceRoutes(opts: DeviceRoutesOpts): Hono {
   // DELETE /devices/:token — unregister device token
   app.delete('/devices/:token', (c) => {
     const pushToken = c.req.param('token');
+    debug(`DELETE /devices/${pushToken.slice(0, 8)}...`);
 
     // Look up device before deletion to get topic info
     const device = registry.getByPushToken(pushToken);

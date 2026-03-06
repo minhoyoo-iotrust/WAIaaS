@@ -1,7 +1,7 @@
 /**
  * Drizzle ORM schema definitions for WAIaaS daemon SQLite database.
  *
- * 24 tables: wallets, sessions, session_wallets, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs, token_registry, settings, telegram_users, wc_sessions, wc_store, incoming_transactions, incoming_tx_cursors, defi_positions, wallet_apps, webhooks, webhook_logs, agent_identities, reputation_cache, nft_metadata_cache
+ * 25 tables: wallets, sessions, session_wallets, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs, token_registry, settings, telegram_users, wc_sessions, wc_store, incoming_transactions, incoming_tx_cursors, defi_positions, wallet_apps, webhooks, webhook_logs, agent_identities, reputation_cache, nft_metadata_cache, userop_builds
  *
  * CHECK constraints are derived from @waiaas/core enum SSoT arrays (not hardcoded strings).
  * All timestamps are Unix epoch seconds via { mode: 'timestamp' }.
@@ -671,5 +671,29 @@ export const nftMetadataCache = sqliteTable(
     index('idx_nft_cache_expires').on(table.expiresAt),
     check('check_nft_cache_chain', sql`chain IN (${sql.raw(CHAIN_TYPES.map((v) => `'${v}'`).join(', '))})`),
     check('check_nft_cache_network', sql`network IN (${sql.raw(NETWORK_TYPES.map((v) => `'${v}'`).join(', '))})`),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Table 25: userop_builds -- UserOp Build/Sign API data (v45)
+// ---------------------------------------------------------------------------
+
+export const useropBuilds = sqliteTable(
+  'userop_builds',
+  {
+    id: text('id').primaryKey(),
+    walletId: text('wallet_id').notNull(),
+    callData: text('call_data').notNull(),
+    sender: text('sender').notNull(),
+    nonce: text('nonce').notNull(),
+    entryPoint: text('entry_point').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+    expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+    used: integer('used').notNull().default(0),
+  },
+  (table) => [
+    index('idx_userop_builds_wallet_id').on(table.walletId),
+    index('idx_userop_builds_expires').on(table.expiresAt),
+    check('check_userop_builds_used', sql`used IN (0, 1)`),
   ],
 );

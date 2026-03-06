@@ -462,12 +462,8 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
         });
       }
 
-      // Provider must be configured (PROV-05)
-      if (!aaProvider) {
-        throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
-          message: 'Smart Account wallet requires provider configuration (aaProvider, aaProviderApiKey or custom URLs)',
-        });
-      }
+      // aaProvider is optional: omitting creates Lite mode (UserOp Build/Sign API only)
+      // Full mode requires provider configuration (set via PUT /wallets/:id/provider)
     }
 
     // Derive network for key generation (Solana: single network; EVM: first available)
@@ -1383,6 +1379,25 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/**
+ * Check if a wallet is a Lite mode Smart Account (no provider configured).
+ * Lite mode wallets cannot send transactions directly -- they must use the
+ * UserOp Build/Sign API for external gas sponsorship.
+ */
+export function isLiteModeSmartAccount(wallet: { accountType: string; aaProvider: string | null }): boolean {
+  return wallet.accountType === 'smart' && !wallet.aaProvider;
+}
+
+/**
+ * Create a WAIaaSError for Lite mode send attempts.
+ * Returns CHAIN_ERROR with guidance to use userop API.
+ */
+export function getLiteModeError(): WAIaaSError {
+  return new WAIaaSError('CHAIN_ERROR', {
+    message: 'Smart Account in Lite mode cannot send transactions directly. Use POST /v1/wallets/:id/userop/build and POST /v1/wallets/:id/userop/sign to construct and sign UserOperations for external sponsorship.',
+  });
+}
 
 /**
  * Build provider status from wallet DB record for API responses.

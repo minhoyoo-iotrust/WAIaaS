@@ -173,6 +173,7 @@ const PRESET_APPROVAL_DEFAULTS: Record<string, string> = {
 
 /** AA provider options for Smart Account wallet create/edit forms. */
 const AA_PROVIDER_OPTIONS = [
+  { value: 'none', label: 'None (Lite mode)' },
   { value: 'pimlico', label: 'Pimlico' },
   { value: 'alchemy', label: 'Alchemy' },
   { value: 'custom', label: 'Custom' },
@@ -880,6 +881,16 @@ function WalletDetailView({ id }: { id: string }) {
                 <Badge variant={wallet.value.deployed ? 'success' : 'warning'}>
                   {wallet.value.deployed ? 'Yes' : 'Not yet'}
                 </Badge>
+              </DetailRow>
+              <DetailRow label="Mode">
+                <Badge variant={wallet.value.provider ? 'success' : 'warning'}>
+                  {wallet.value.provider ? 'Full' : 'Lite'}
+                </Badge>
+                {!wallet.value.provider && (
+                  <span style={{ marginLeft: '0.5rem', fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
+                    Use UserOp API for gas-sponsored transactions
+                  </span>
+                )}
               </DetailRow>
               {wallet.value.provider ? (
                 <>
@@ -2626,7 +2637,7 @@ function WalletListContent() {
   const formChain = useSignal('solana');
   const formEnvironment = useSignal('testnet');
   const formAccountType = useSignal('eoa');
-  const formProvider = useSignal('pimlico');
+  const formProvider = useSignal('none');
   const formApiKey = useSignal('');
   const formBundlerUrl = useSignal('');
   const formPaymasterUrl = useSignal('');
@@ -2678,6 +2689,18 @@ function WalletListContent() {
       ),
     },
     {
+      key: 'accountType',
+      header: 'Type',
+      render: (a) => {
+        if (a.accountType !== 'smart') return <Badge variant="default">EOA</Badge>;
+        return (
+          <Badge variant={a.provider ? 'info' : 'warning'}>
+            {a.provider ? 'Smart (Full)' : 'Smart (Lite)'}
+          </Badge>
+        );
+      },
+    },
+    {
       key: 'publicKey',
       header: 'Public Key',
       render: (a) => (
@@ -2722,14 +2745,17 @@ function WalletListContent() {
       };
       if (formAccountType.value === 'smart') {
         createBody.accountType = 'smart';
-        if (formProvider.value === 'custom') {
-          createBody.aaProvider = 'custom';
-          createBody.aaBundlerUrl = formBundlerUrl.value;
-          if (formPaymasterUrl.value) createBody.aaPaymasterUrl = formPaymasterUrl.value;
-        } else {
-          createBody.aaProvider = formProvider.value;
-          createBody.aaProviderApiKey = formApiKey.value;
+        if (formProvider.value !== 'none') {
+          if (formProvider.value === 'custom') {
+            createBody.aaProvider = 'custom';
+            createBody.aaBundlerUrl = formBundlerUrl.value;
+            if (formPaymasterUrl.value) createBody.aaPaymasterUrl = formPaymasterUrl.value;
+          } else {
+            createBody.aaProvider = formProvider.value;
+            createBody.aaProviderApiKey = formApiKey.value;
+          }
         }
+        // 'none' -> aaProvider not set = Lite mode
       }
       const result = await apiPost<Wallet & { session?: { id: string; token: string; expiresAt: number } | null }>(API.WALLETS, createBody);
       if (result.session?.token) {
@@ -2742,7 +2768,7 @@ function WalletListContent() {
       formChain.value = 'solana';
       formEnvironment.value = 'testnet';
       formAccountType.value = 'eoa';
-      formProvider.value = 'pimlico';
+      formProvider.value = 'none';
       formApiKey.value = '';
       formBundlerUrl.value = '';
       formPaymasterUrl.value = '';
@@ -2765,7 +2791,7 @@ function WalletListContent() {
     formChain.value = value as string;
     if (value === 'solana') {
       formAccountType.value = 'eoa';
-      formProvider.value = 'pimlico';
+      formProvider.value = 'none';
       formApiKey.value = '';
       formBundlerUrl.value = '';
       formPaymasterUrl.value = '';
@@ -2829,7 +2855,7 @@ function WalletListContent() {
                 onChange={(v) => { formProvider.value = v as string; }}
                 options={AA_PROVIDER_OPTIONS.map((o) => ({ label: o.label, value: o.value }))}
               />
-              {formProvider.value !== 'custom' ? (
+              {formProvider.value === 'none' ? null : formProvider.value !== 'custom' ? (
                 <>
                   <FormField
                     label="API Key"

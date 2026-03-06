@@ -1,7 +1,7 @@
 /**
  * WAIaaSClient - Core wallet client for WAIaaS daemon REST API.
  *
- * Wraps 34 REST API methods + 1 client-side helper with typed responses:
+ * Wraps 36 REST API methods + 1 client-side helper with typed responses:
  * - getBalance(), getAddress(), getAssets() (wallet queries)
  * - getWalletInfo() (wallet management)
  * - sendToken(), getTransaction(), listTransactions(), listPendingTransactions() (transactions)
@@ -55,6 +55,10 @@ import type {
   EncodeCalldataResponse,
   SignTransactionParams,
   SignTransactionResponse,
+  BuildUserOpParams,
+  BuildUserOpResponse,
+  SignUserOpParams,
+  SignUserOpResponse,
   WalletInfoResponse,
   MultiNetworkBalanceResponse,
   MultiNetworkAssetsResponse,
@@ -658,6 +662,35 @@ export class WAIaaSClient {
         '/v1/transactions/sign',
         params,
         this.authHeaders(),
+      ),
+      this.retryOptions,
+    );
+  }
+
+  // --- UserOp Build/Sign (masterAuth) ---
+  async buildUserOp(walletId: string, params: BuildUserOpParams): Promise<BuildUserOpResponse> {
+    if (!this.masterPassword) {
+      throw new WAIaaSError({ code: 'NO_MASTER_PASSWORD', message: 'Master password required for UserOp build', status: 0, retryable: false });
+    }
+    return withRetry(
+      () => this.http.post<BuildUserOpResponse>(
+        `/v1/wallets/${walletId}/userop/build`,
+        params,
+        this.masterHeaders(this.masterPassword!),
+      ),
+      this.retryOptions,
+    );
+  }
+
+  async signUserOp(walletId: string, params: SignUserOpParams): Promise<SignUserOpResponse> {
+    if (!this.masterPassword) {
+      throw new WAIaaSError({ code: 'NO_MASTER_PASSWORD', message: 'Master password required for UserOp sign', status: 0, retryable: false });
+    }
+    return withRetry(
+      () => this.http.post<SignUserOpResponse>(
+        `/v1/wallets/${walletId}/userop/sign`,
+        params,
+        this.masterHeaders(this.masterPassword!),
       ),
       this.retryOptions,
     );

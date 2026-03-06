@@ -11,7 +11,8 @@ describe('Error code matrix', () => {
     // v30.8: +ERC8004_UNAUTHORIZED (+1)
     // v30.10: +ERC8128_DISABLED, +ERC8128_DOMAIN_NOT_ALLOWED, +ERC8128_RATE_LIMITED (+3)
     // v31.0: +NFT_NOT_FOUND, +INDEXER_NOT_CONFIGURED, +UNSUPPORTED_NFT_STANDARD, +INDEXER_API_ERROR, +NFT_METADATA_FETCH_FAILED (+5)
-    expect(Object.keys(ERROR_CODES)).toHaveLength(128);
+    // v31.2: +EXPIRED_BUILD, +BUILD_NOT_FOUND, +BUILD_ALREADY_USED, +CALLDATA_MISMATCH, +SENDER_MISMATCH (+5)
+    expect(Object.keys(ERROR_CODES)).toHaveLength(133);
   });
 
   it('every error code entry has required fields', () => {
@@ -42,7 +43,8 @@ describe('Error code matrix', () => {
     expect(domains).toContain('CHAIN');    // v30.8
     expect(domains).toContain('ERC8128');  // v30.10
     expect(domains).toContain('NFT');     // v31.0
-    expect(domains.size).toBe(15);
+    expect(domains).toContain('USEROP'); // v31.2
+    expect(domains.size).toBe(16);
   });
 
   it('AUTH domain has 8 codes', () => {

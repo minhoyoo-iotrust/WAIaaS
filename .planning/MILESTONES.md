@@ -1,5 +1,25 @@
 # Project Milestones: WAIaaS
 
+## v31.2 UserOp Build/Sign API (Shipped: 2026-03-06)
+
+**Delivered:** Smart Account 지갑에서 프로바이더 없이 UserOperation을 구성/서명할 수 있는 Build/Sign API를 제공하여, 외부 플랫폼이 가스 대납을 중계하는 아키텍처 지원.
+
+**Phases completed:** 4 phases (338-341), 8 plans, 58 requirements
+
+**Key accomplishments:**
+- Provider Lite/Full 모드 — Smart Account를 프로바이더 없이 생성 가능 (Lite), aaProvider 설정 시 Full 모드 전환
+- UserOp Build API — POST /v1/wallets/:id/userop/build, unsigned UserOp 구성 (nonce, callData, factory 자동 감지, Bundler 불필요)
+- UserOp Sign API — callData 이중 검증 + sender 일치 확인 + INSTANT 정책 평가 + 서명 + USEROP_SIGNED 감사 로그
+- DB v45 마이그레이션 — userop_builds 테이블 (buildId, callData, TTL 10분) + cleanup 워커
+- MCP build_userop/sign_userop 도구 + SDK buildUserOp()/signUserOp() 메서드 + 스킬 파일 3개 업데이트
+- Admin UI — Provider None (Lite mode) 옵션 + Lite/Full 배지 (상세/목록)
+
+**Stats:**
+- 4 phases, 8 plans, 58 requirements, 27 commits
+- 64 files changed, +6,821 / -186 lines, ~278,864 LOC TS
+
+---
+
 ## v31.0 NFT 지원 (Shipped: 2026-03-06)
 
 **Delivered:** EVM(ERC-721/ERC-1155)과 Solana(Metaplex) NFT 통합. 인덱서 인프라(Alchemy/Helius), 6-stage 파이프라인 NFT_TRANSFER 지원, Smart Account 호환, REST/MCP/SDK/Admin UI 전 인터페이스 노출.

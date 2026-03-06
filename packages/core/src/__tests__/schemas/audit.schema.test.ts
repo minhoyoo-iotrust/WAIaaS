@@ -10,12 +10,22 @@ import {
 } from '../../index.js';
 
 describe('Audit Zod SSoT schemas', () => {
-  // ---------- Test 1: AuditEventTypeSchema parses all 21 event types ----------
-  it('parses all 21 event types', () => {
-    expect(AUDIT_EVENT_TYPES).toHaveLength(21);
+  // ---------- Test 1: AuditEventTypeSchema parses all 23 event types ----------
+  it('parses all 23 event types', () => {
+    expect(AUDIT_EVENT_TYPES).toHaveLength(23);
     for (const eventType of AUDIT_EVENT_TYPES) {
       expect(AuditEventTypeSchema.parse(eventType)).toBe(eventType);
     }
+  });
+
+  // ---------- Test 1b: USEROP_BUILD parses successfully ----------
+  it('parses USEROP_BUILD event type', () => {
+    expect(AuditEventTypeSchema.parse('USEROP_BUILD')).toBe('USEROP_BUILD');
+  });
+
+  // ---------- Test 1c: USEROP_SIGNED parses successfully ----------
+  it('parses USEROP_SIGNED event type', () => {
+    expect(AuditEventTypeSchema.parse('USEROP_SIGNED')).toBe('USEROP_SIGNED');
   });
 
   // ---------- Test 2: AuditEventTypeSchema rejects invalid event type ----------

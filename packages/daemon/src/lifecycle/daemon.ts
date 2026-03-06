@@ -1515,6 +1515,18 @@ export class DaemonLifecycle {
         });
       }
 
+      // Register userop-build-cleanup worker (5 min = 300s)
+      // Deletes expired build records from userop_builds table (10-min TTL)
+      this.workers.register('userop-build-cleanup', {
+        interval: 300_000,
+        handler: () => {
+          if (this.sqlite && !this._isShuttingDown) {
+            const now = Math.floor(Date.now() / 1000);
+            this.sqlite.prepare('DELETE FROM userop_builds WHERE expires_at < ?').run(now);
+          }
+        },
+      });
+
       // Register async-status polling worker (30s)
       if (this._asyncPollingService) {
         const pollingService = this._asyncPollingService;
