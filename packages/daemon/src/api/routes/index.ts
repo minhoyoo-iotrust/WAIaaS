@@ -18,3 +18,4 @@ export { createWalletAppsRoutes, type WalletAppsRouteDeps } from './wallet-apps.
 export { auditLogRoutes, type AuditLogRouteDeps } from './audit-logs.js';
 export { erc8004Routes, type Erc8004RouteDeps } from './erc8004.js';
 export { erc8128Routes, type Erc8128RouteDeps } from './erc8128.js';
+export { nftRoutes, type NftRouteDeps } from './nfts.js';
