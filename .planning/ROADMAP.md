@@ -114,11 +114,11 @@ Plans:
   2. 2-hop 경로의 총 비용(수수료+슬리피지 누적)이 사전에 계산되어 사용자에게 표시된다
   3. 2-hop 경로가 BATCH 파이프라인으로 순차 실행되며, 부분 실패 시 중간 토큰 잔액이 안내된다
   4. 사용자에게 2-hop 경로임이 명시되어 수수료 투명성이 보장된다
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 345-01: 중간 토큰 후보 선정 + 2-hop 경로 탐색/비용 계산
-- [ ] 345-02: 2-hop 경로 BATCH 실행 + 부분 실패 처리
+- [ ] 345-01-PLAN.md -- 중간 토큰 후보 선정 + 2-hop 경로 탐색/비용 계산
+- [ ] 345-02-PLAN.md -- 2-hop 경로 BATCH 실행 + 부분 실패 처리 + Provider 통합
 
 ### Phase 346: Integration + Testing
 **Goal**: DcentSwapActionProvider가 MCP/SDK/정책/Admin Settings/connect-info/스킬 파일과 완전히 통합되고, 전 기능이 테스트로 검증된다
