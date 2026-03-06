@@ -39,11 +39,11 @@ Requirements for DCent Swap Aggregator integration. Each maps to roadmap phases.
 
 ### Auto Routing (ROUT)
 
-- [ ] **ROUT-01**: 직접 경로 없는 페어에 대해 중간 토큰 후보를 선정한다 (ETH, USDC, USDT 등)
-- [ ] **ROUT-02**: 2-hop 경로를 탐색하고 총 비용(수수료 + 슬리피지 누적)을 계산한다
+- [x] **ROUT-01**: 직접 경로 없는 페어에 대해 중간 토큰 후보를 선정한다 (ETH, USDC, USDT 등)
+- [x] **ROUT-02**: 2-hop 경로를 탐색하고 총 비용(수수료 + 슬리피지 누적)을 계산한다
 - [ ] **ROUT-03**: 최적 2-hop 경로를 BATCH 파이프라인으로 순차 실행한다
 - [ ] **ROUT-04**: 부분 실패 처리 시 중간 토큰 잔액을 사용자에게 안내한다
-- [ ] **ROUT-05**: 2-hop 경로임을 명시하여 수수료 투명성을 보장한다
+- [x] **ROUT-05**: 2-hop 경로임을 명시하여 수수료 투명성을 보장한다
 
 ### Integration (INTG)
 
@@ -103,11 +103,11 @@ Requirements for DCent Swap Aggregator integration. Each maps to roadmap phases.
 | XCHG-02 | Phase 344 | Complete |
 | XCHG-03 | Phase 344 | Complete |
 | XCHG-04 | Phase 344 | Complete |
-| ROUT-01 | Phase 345 | Pending |
-| ROUT-02 | Phase 345 | Pending |
+| ROUT-01 | Phase 345 | Complete |
+| ROUT-02 | Phase 345 | Complete |
 | ROUT-03 | Phase 345 | Pending |
 | ROUT-04 | Phase 345 | Pending |
-| ROUT-05 | Phase 345 | Pending |
+| ROUT-05 | Phase 345 | Complete |
 | INTG-01 | Phase 346 | Pending |
 | INTG-02 | Phase 346 | Pending |
 | INTG-03 | Phase 346 | Pending |

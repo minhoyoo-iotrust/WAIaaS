@@ -114,7 +114,7 @@ Plans:
   2. 2-hop 경로의 총 비용(수수료+슬리피지 누적)이 사전에 계산되어 사용자에게 표시된다
   3. 2-hop 경로가 BATCH 파이프라인으로 순차 실행되며, 부분 실패 시 중간 토큰 잔액이 안내된다
   4. 사용자에게 2-hop 경로임이 명시되어 수수료 투명성이 보장된다
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 345-01-PLAN.md -- 중간 토큰 후보 선정 + 2-hop 경로 탐색/비용 계산
@@ -146,5 +146,5 @@ Plans:
 | 342. Research & Design | 1/1 | Complete    | 2026-03-06 | - |
 | 343. Currency Mapping + DEX Swap | 2/2 | Complete    | 2026-03-06 | - |
 | 344. Exchange + Status Tracking | 1/1 | Complete    | 2026-03-06 | - |
-| 345. Auto Routing | v31.3 | 0/2 | Not started | - |
+| 345. Auto Routing | 1/2 | In Progress|  | - |
 | 346. Integration + Testing | v31.3 | 0/3 | Not started | - |
