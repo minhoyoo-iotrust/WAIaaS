@@ -1340,3 +1340,112 @@ describe('WalletConnectTab', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Deprecated Smart Account warning + Factory supported networks (v31.3)
+// ---------------------------------------------------------------------------
+
+describe('Smart Account deprecated warning and factory networks', () => {
+  beforeEach(() => { currentPath.value = '/wallets/test-wallet-1'; });
+  afterEach(() => { cleanup(); vi.clearAllMocks(); });
+
+  const mockSmartWalletDeprecated = {
+    ...mockWalletDetail,
+    chain: 'evm',
+    network: 'ethereum-sepolia',
+    accountType: 'smart',
+    factoryAddress: '0x5d82735936c6Cd5DE57cC3c1A799f6B2E6F933Df',
+    factorySupportedNetworks: null,
+    factoryVerifiedOnNetwork: null,
+    deployed: false,
+  };
+
+  const mockSmartWalletWithNetworks = {
+    ...mockWalletDetail,
+    chain: 'evm',
+    network: 'ethereum-sepolia',
+    accountType: 'smart',
+    factoryAddress: '0x1234567890abcdef1234567890abcdef12345678',
+    factorySupportedNetworks: ['ethereum-mainnet', 'ethereum-sepolia', 'polygon-mainnet'],
+    factoryVerifiedOnNetwork: true,
+    deployed: true,
+  };
+
+  it('renders deprecated warning banner for Smart Account with Solady factory', async () => {
+    vi.mocked(apiGet).mockImplementation(async (path: string) => {
+      if (path === `/v1/wallets/test-wallet-1`) return mockSmartWalletDeprecated;
+      if (path.includes('/networks')) return mockNetworks;
+      if (path.includes('/balance')) return mockBalance;
+      if (path.includes('/transactions')) return mockTransactions;
+      if (path.includes('/wc/session')) throw new Error('No session');
+      return {};
+    });
+
+    render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Deprecated Smart Account')).toBeTruthy();
+    });
+
+    expect(screen.getByText(/This Smart Account uses a deprecated factory/)).toBeTruthy();
+  });
+
+  it('does not render deprecated warning for Smart Account with different factory', async () => {
+    vi.mocked(apiGet).mockImplementation(async (path: string) => {
+      if (path === `/v1/wallets/test-wallet-1`) return mockSmartWalletWithNetworks;
+      if (path.includes('/networks')) return mockNetworks;
+      if (path.includes('/balance')) return mockBalance;
+      if (path.includes('/transactions')) return mockTransactions;
+      if (path.includes('/wc/session')) throw new Error('No session');
+      return {};
+    });
+
+    render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('trading-bot')).toBeTruthy();
+    });
+
+    expect(screen.queryByText('Deprecated Smart Account')).toBeNull();
+  });
+
+  it('renders factory supported networks badges', async () => {
+    vi.mocked(apiGet).mockImplementation(async (path: string) => {
+      if (path === `/v1/wallets/test-wallet-1`) return mockSmartWalletWithNetworks;
+      if (path.includes('/networks')) return mockNetworks;
+      if (path.includes('/balance')) return mockBalance;
+      if (path.includes('/transactions')) return mockTransactions;
+      if (path.includes('/wc/session')) throw new Error('No session');
+      return {};
+    });
+
+    render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('trading-bot')).toBeTruthy();
+    });
+
+    // Should render Factory Networks section with network badges
+    expect(screen.getByText('Factory Networks')).toBeTruthy();
+    expect(screen.getByText('ethereum-mainnet')).toBeTruthy();
+    expect(screen.getByText('ethereum-sepolia')).toBeTruthy();
+    expect(screen.getByText('polygon-mainnet')).toBeTruthy();
+  });
+
+  it('renders Smart Account badge in detail view', async () => {
+    vi.mocked(apiGet).mockImplementation(async (path: string) => {
+      if (path === `/v1/wallets/test-wallet-1`) return mockSmartWalletWithNetworks;
+      if (path.includes('/networks')) return mockNetworks;
+      if (path.includes('/balance')) return mockBalance;
+      if (path.includes('/transactions')) return mockTransactions;
+      if (path.includes('/wc/session')) throw new Error('No session');
+      return {};
+    });
+
+    render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Smart Account')).toBeTruthy();
+    });
+  });
+});
+

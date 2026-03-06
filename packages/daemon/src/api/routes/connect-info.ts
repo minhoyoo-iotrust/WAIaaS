@@ -31,6 +31,7 @@ import {
   openApiValidationHook,
 } from './openapi-schemas.js';
 import { buildProviderStatus } from './wallets.js';
+import { getFactorySupportedNetworks } from '../../infrastructure/smart-account/smart-account-service.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -67,6 +68,7 @@ export interface BuildConnectInfoPromptParams {
     policies: Array<{ type: string }>;
     erc8004?: { agentId: string; registryAddress: string; status: string };
     accountType?: string;
+    factorySupportedNetworks?: string[];
     provider?: { name: string; supportedChains: string[]; paymasterEnabled: boolean } | null;
     nftSummary?: { count: number; collections: number };
   }>;
@@ -132,6 +134,9 @@ export function buildConnectInfoPrompt(params: BuildConnectInfoPromptParams): st
     } else if (w.accountType === 'smart') {
       lines.push(`   Smart Account: No provider configured (gas sponsorship unavailable)`);
       lines.push(`   UserOp API: POST /v1/wallets/${w.id}/userop/build, POST /v1/wallets/${w.id}/userop/sign`);
+    }
+    if (w.accountType === 'smart' && w.factorySupportedNetworks && w.factorySupportedNetworks.length > 0) {
+      lines.push(`   Factory Supported Networks: ${w.factorySupportedNetworks.join(', ')}`);
     }
     lines.push('');
   }
@@ -235,6 +240,7 @@ export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
         environment: wallets.environment,
         publicKey: wallets.publicKey,
         accountType: wallets.accountType,
+        factoryAddress: wallets.factoryAddress,
         aaProvider: wallets.aaProvider,
         aaPaymasterUrl: wallets.aaPaymasterUrl,
       })
@@ -424,6 +430,9 @@ export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
         policies: policiesMap[w.id] ?? [],
         ...(identitiesMap[w.id] ? { erc8004: identitiesMap[w.id] } : {}),
         accountType: (w.accountType as string) ?? 'eoa',
+        factorySupportedNetworks: (w.accountType === 'smart' && w.factoryAddress)
+          ? getFactorySupportedNetworks(w.factoryAddress)
+          : [],
         provider: buildProviderStatus({ aaProvider: w.aaProvider, aaPaymasterUrl: w.aaPaymasterUrl }),
         ...(nftSummaryMap[w.id] ? { nftSummary: nftSummaryMap[w.id] } : {}),
       };

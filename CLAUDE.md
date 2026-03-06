@@ -14,7 +14,7 @@
 ## Schema & Type System
 
 - **Zod SSoT**: Zod schemas are the single source of truth. Derivation order: Zod → TypeScript types → OpenAPI → Drizzle schema → DB CHECK constraints.
-- **discriminatedUnion 7-type**: Discriminate on the `type` field: TRANSFER / TOKEN_TRANSFER / CONTRACT_CALL / APPROVE / BATCH / SIGN / X402_PAYMENT.
+- **discriminatedUnion 8-type**: Discriminate on the `type` field: TRANSFER / TOKEN_TRANSFER / CONTRACT_CALL / APPROVE / BATCH / SIGN / X402_PAYMENT / NFT_TRANSFER.
 - ChainError extends Error (not WAIaaSError). Convert to WAIaaSError in Stage 5.
 - Gas safety margin: `(estimatedGas * 120n) / 100n` bigint arithmetic.
 

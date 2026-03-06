@@ -178,9 +178,9 @@ describe('ActionsPage', () => {
       expect(screen.getByText('Lido Staking')).toBeTruthy();
       expect(screen.getByText('Jito Staking')).toBeTruthy();
 
-      // All 9 should show Inactive (5 original + Aave V3 + Kamino + Pendle + Drift; ERC-8004 moved to Agent Identity page)
+      // All 10 should show Inactive (Jupiter, 0x, D'CENT, LI.FI, Lido, Jito, Aave V3, Kamino, Pendle, Drift)
       const inactiveBadges = screen.getAllByText('Inactive');
-      expect(inactiveBadges.length).toBe(9);
+      expect(inactiveBadges.length).toBe(10);
     });
 
     it('renders provider descriptions', async () => {
@@ -191,6 +191,20 @@ describe('ActionsPage', () => {
         expect(screen.getByText(/Solana DEX aggregator/)).toBeTruthy();
       });
       expect(screen.getByText(/EVM DEX aggregator \(AllowanceHolder\)/)).toBeTruthy();
+    });
+
+    it('renders category section headers', async () => {
+      mockApiCalls();
+      render(<ActionsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Swap')).toBeTruthy();
+      });
+      expect(screen.getByText('Bridge')).toBeTruthy();
+      expect(screen.getByText('Staking')).toBeTruthy();
+      expect(screen.getByText('Lending')).toBeTruthy();
+      expect(screen.getByText('Yield')).toBeTruthy();
+      expect(screen.getByText('Perp')).toBeTruthy();
     });
 
     it('renders chain badges', async () => {
@@ -481,6 +495,133 @@ describe('ActionsPage', () => {
           settings: [{ key: 'actions.jupiter_swap_swap_tier', value: '' }],
         });
       });
+    });
+  });
+
+  describe("D'CENT Swap advanced settings", () => {
+    const mockSettingsDcentEnabled = {
+      actions: {
+        jupiter_swap_enabled: 'false',
+        zerox_swap_enabled: 'false',
+        dcent_swap_enabled: 'true',
+      },
+    };
+
+    it('renders Advanced Settings section when D\'CENT Swap is enabled', async () => {
+      mockApiCalls(mockSettingsDcentEnabled, mockEmptyApiKeys, mockEmptyProviders);
+      render(<ActionsPage />);
+
+      await waitFor(() => {
+        // D'CENT Swap card should render with enabled state
+        expect(screen.getByText("D'CENT Swap")).toBeTruthy();
+      });
+
+      // The D'CENT Swap advanced settings section should appear
+      // There are multiple "Advanced Settings" labels (one per provider that supports it)
+      const advancedLabels = screen.getAllByText('Advanced Settings');
+      expect(advancedLabels.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('renders all D\'CENT Swap advanced setting fields', async () => {
+      mockApiCalls(mockSettingsDcentEnabled, mockEmptyApiKeys, mockEmptyProviders);
+      render(<ActionsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("D'CENT Swap")).toBeTruthy();
+      });
+
+      // Should render the DCent-specific advanced setting labels
+      // keyToLabel converts snake_case keys to Title Case labels
+      expect(screen.getByText(/Dcent Swap Api Url/i)).toBeTruthy();
+      expect(screen.getByText(/Dcent Swap Default Slippage Bps/i)).toBeTruthy();
+      expect(screen.getByText(/Dcent Swap Max Slippage Bps/i)).toBeTruthy();
+    });
+
+    it('updates dirty state when editing D\'CENT Swap advanced field', async () => {
+      mockApiCalls(mockSettingsDcentEnabled, mockEmptyApiKeys, mockEmptyProviders);
+      render(<ActionsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("D'CENT Swap")).toBeTruthy();
+      });
+
+      // Find the dcent_swap_api_url input
+      const input = document.querySelector('input[name="actions.dcent_swap_api_url"]') as HTMLInputElement;
+      expect(input).toBeTruthy();
+
+      // Type a value
+      fireEvent.input(input, { target: { value: 'https://custom-api.test' } });
+
+      expect(input.value).toBe('https://custom-api.test');
+    });
+
+    it('saves D\'CENT Swap advanced field on blur', async () => {
+      mockApiCalls(mockSettingsDcentEnabled, mockEmptyApiKeys, mockEmptyProviders);
+      render(<ActionsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("D'CENT Swap")).toBeTruthy();
+      });
+
+      const input = document.querySelector('input[name="actions.dcent_swap_api_url"]') as HTMLInputElement;
+      expect(input).toBeTruthy();
+
+      // Change the value
+      fireEvent.input(input, { target: { value: 'https://custom-api.test' } });
+
+      vi.mocked(apiPut).mockResolvedValueOnce({
+        updated: 1,
+        settings: { actions: { dcent_swap_api_url: 'https://custom-api.test' } },
+      });
+
+      // Blur the parent div to trigger save
+      const parentDiv = input.closest('div[style]');
+      if (parentDiv) {
+        fireEvent.blur(parentDiv);
+      }
+
+      await waitFor(() => {
+        expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/admin/settings', {
+          settings: [{ key: 'actions.dcent_swap_api_url', value: 'https://custom-api.test' }],
+        });
+      });
+    });
+
+    it('does not render D\'CENT Swap advanced settings when provider is disabled', async () => {
+      mockApiCalls(mockSettingsDisabled, mockEmptyApiKeys, mockEmptyProviders);
+      render(<ActionsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("D'CENT Swap")).toBeTruthy();
+      });
+
+      // Advanced settings for dcent_swap should NOT appear
+      const dcentInput = document.querySelector('input[name="actions.dcent_swap_api_url"]');
+      expect(dcentInput).toBeNull();
+    });
+
+    it('shows existing settings values in D\'CENT Swap advanced fields', async () => {
+      const settingsWithValues = {
+        actions: {
+          ...mockSettingsDcentEnabled.actions,
+          dcent_swap_api_url: 'https://existing-api.com',
+          dcent_swap_default_slippage_bps: '100',
+        },
+      };
+      mockApiCalls(settingsWithValues, mockEmptyApiKeys, mockEmptyProviders);
+      render(<ActionsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("D'CENT Swap")).toBeTruthy();
+      });
+
+      const urlInput = document.querySelector('input[name="actions.dcent_swap_api_url"]') as HTMLInputElement;
+      expect(urlInput).toBeTruthy();
+      expect(urlInput.value).toBe('https://existing-api.com');
+
+      const slippageInput = document.querySelector('input[name="actions.dcent_swap_default_slippage_bps"]') as HTMLInputElement;
+      expect(slippageInput).toBeTruthy();
+      expect(slippageInput.value).toBe('100');
     });
   });
 });

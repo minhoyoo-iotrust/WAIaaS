@@ -26,6 +26,8 @@ import { Erc8004ActionProvider } from './providers/erc8004/index.js';
 import { type Erc8004Config, ERC8004_DEFAULTS } from './providers/erc8004/config.js';
 import { DcentSwapActionProvider } from './providers/dcent-swap/index.js';
 import type { DcentSwapConfig } from './providers/dcent-swap/config.js';
+import { KaminoSdkWrapper } from './providers/kamino/kamino-sdk-wrapper.js';
+import { DriftSdkWrapper } from './providers/drift/drift-sdk-wrapper.js';
 
 // Re-export provider classes
 export { JupiterSwapActionProvider } from './providers/jupiter-swap/index.js';
@@ -248,7 +250,7 @@ export function registerBuiltInProviders(
           market: settingsReader.get('actions.kamino_market') || 'main',
           hfThreshold: Number(settingsReader.get('actions.kamino_hf_threshold')) || 1.2,
         };
-        return new KaminoLendingProvider(config);
+        return new KaminoLendingProvider(config, new KaminoSdkWrapper(''));
       },
     },
     {
@@ -274,7 +276,7 @@ export function registerBuiltInProviders(
           enabled: true,
           subAccount: 0,
         };
-        return new DriftPerpProvider(config);
+        return new DriftPerpProvider(config, new DriftSdkWrapper('', config.subAccount));
       },
     },
     {

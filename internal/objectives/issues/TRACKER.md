@@ -276,6 +276,11 @@
 | 259 | BUG | HIGH | Admin UI ERC-8004 페이지 wallets API 응답 형식 불일치로 무한 로딩 | v31.3 | FIXED | 2026-03-07 |
 | 260 | BUG | HIGH | 스테이킹 포지션 미표시 — CONTRACT_CALL amount NULL 저장 | v31.3 | FIXED | 2026-03-07 |
 | 261 | BUG | HIGH | Solana simulateTransaction 에러 객체 BigInt JSON 직렬화 실패 — 실패 사유 마스킹 | — | FIXED | 2026-03-07 |
+| 262 | MISSING | MEDIUM | Admin UI Actions 페이지에 D'CENT Swap 프로바이더 미표시 — BUILTIN_PROVIDERS 누락 | — | FIXED | 2026-03-07 |
+| 263 | BUG | HIGH | DeFi 포지션 대시보드에 Mock 데이터 오염 — Mock SDK wrapper가 가짜 포지션 대량 생성 | — | FIXED | 2026-03-07 |
+| 264 | MISSING | HIGH | Admin UI에서 deprecated Smart Account(Solady factory) 지갑 경고 미표시 — factoryAddress API 응답 누락 | — | FIXED | 2026-03-07 |
+| 265 | ENHANCEMENT | LOW | Admin UI Actions 페이지 프로바이더 카테고리별 그룹핑 (Swap/Bridge/Staking/Lending/Yield/Perp) | — | FIXED | 2026-03-07 |
+| 266 | ENHANCEMENT | MEDIUM | Smart Account 팩토리별 지원 네트워크 표시 — 정적 리스트 + eth_getCode 런타임 검증 하이브리드 | — | FIXED | 2026-03-07 |
 
 ## Type Legend
 
@@ -288,8 +293,8 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 259
+- **FIXED:** 264
 - **RESOLVED:** 2
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 262
+- **Total:** 267
