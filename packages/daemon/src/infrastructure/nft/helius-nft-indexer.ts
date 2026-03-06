@@ -39,12 +39,13 @@ export class HeliusNftIndexer implements INftIndexer {
     const network = options.network as NetworkType;
     const page = options.pageKey ? parseInt(options.pageKey, 10) : 1;
 
-    const result = await this._rpc('getAssetsByOwner', {
+    const raw = await this._rpc('getAssetsByOwner', {
       ownerAddress: options.owner,
       limit: options.pageSize ?? 50,
       page,
       sortBy: { sortBy: 'created', sortDirection: 'desc' },
     });
+    const result = raw as { items?: HeliusDasAsset[]; total?: unknown };
 
     const items: NftItem[] = (result.items ?? []).map((asset: HeliusDasAsset) =>
       this.normalizeAsset(asset, network),
@@ -55,7 +56,7 @@ export class HeliusNftIndexer implements INftIndexer {
     return {
       items,
       pageKey: nextPage,
-      totalCount: result.total,
+      totalCount: typeof result.total === 'number' ? result.total : undefined,
     };
   }
 
@@ -65,11 +66,11 @@ export class HeliusNftIndexer implements INftIndexer {
     _tokenId: string,
   ): Promise<NftMetadata> {
     // For Metaplex, contractAddress IS the mint address
-    const result = await this._rpc('getAsset', { id: contractAddress });
+    const result = await this._rpc('getAsset', { id: contractAddress }) as unknown as HeliusDasAsset;
 
     const metadata = result.content?.metadata ?? {};
     const attributes = Array.isArray(metadata.attributes)
-      ? metadata.attributes.map((a: { trait_type: string; value: string | number }) => ({
+      ? (metadata.attributes as Array<{ trait_type: string; value: string | number }>).map((a) => ({
           trait_type: a.trait_type,
           value: a.value,
         }))
@@ -82,13 +83,13 @@ export class HeliusNftIndexer implements INftIndexer {
       tokenId: mintAddress,
       contractAddress: mintAddress,
       standard: 'METAPLEX',
-      name: metadata.name ?? undefined,
-      image: result.content?.links?.image ?? undefined,
-      description: metadata.description ?? undefined,
+      name: typeof metadata.name === 'string' ? metadata.name : undefined,
+      image: typeof result.content?.links?.image === 'string' ? result.content.links.image : undefined,
+      description: typeof metadata.description === 'string' ? metadata.description : undefined,
       amount: '1',
       assetId: assetIdStr,
       attributes,
-      tokenUri: result.content?.json_uri ?? undefined,
+      tokenUri: typeof result.content?.json_uri === 'string' ? result.content.json_uri : undefined,
       rawMetadata: metadata,
     };
   }
@@ -100,12 +101,13 @@ export class HeliusNftIndexer implements INftIndexer {
   ): Promise<NftListResult> {
     const page = pageKey ? parseInt(pageKey, 10) : 1;
 
-    const result = await this._rpc('getAssetsByGroup', {
+    const raw = await this._rpc('getAssetsByGroup', {
       groupKey: 'collection',
       groupValue: collectionAddress,
       limit: 50,
       page,
     });
+    const result = raw as { items?: HeliusDasAsset[]; total?: unknown };
 
     const items: NftItem[] = (result.items ?? []).map((asset: HeliusDasAsset) =>
       this.normalizeAsset(asset, network),
@@ -116,7 +118,7 @@ export class HeliusNftIndexer implements INftIndexer {
     return {
       items,
       pageKey: nextPage,
-      totalCount: result.total,
+      totalCount: typeof result.total === 'number' ? result.total : undefined,
     };
   }
 
@@ -136,9 +138,9 @@ export class HeliusNftIndexer implements INftIndexer {
       tokenId: mintAddress,
       contractAddress: mintAddress,
       standard: 'METAPLEX',
-      name: metadata.name ?? undefined,
-      image: asset.content?.links?.image ?? undefined,
-      description: metadata.description ?? undefined,
+      name: typeof metadata.name === 'string' ? metadata.name : undefined,
+      image: typeof asset.content?.links?.image === 'string' ? asset.content.links.image : undefined,
+      description: typeof metadata.description === 'string' ? metadata.description : undefined,
       amount: '1',
       collection: collectionGrouping
         ? { name: collectionGrouping.group_value }

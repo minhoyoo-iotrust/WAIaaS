@@ -40,12 +40,6 @@ export interface NftRouteDeps {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Derive chain type from network string prefix. */
-function chainFromNetwork(network: string): ChainType {
-  if (network.startsWith('solana')) return 'solana';
-  return 'ethereum';
-}
-
 /** Group flat NFT items by collection address. */
 function groupByCollection(items: NftItem[]): {
   collections: Array<{ collection: NftCollection; nfts: NftItem[] }>;

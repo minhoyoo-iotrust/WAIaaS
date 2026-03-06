@@ -82,7 +82,7 @@ export class AlchemyNftIndexer implements INftIndexer {
     if (options.collection) params.set('contractAddresses[]', options.collection);
 
     const url = `${baseUrl}/getNFTsForOwner?${params.toString()}`;
-    const data = await this._fetch(url);
+    const data = await this._fetch(url) as unknown as AlchemyListResponse;
 
     const items: NftItem[] = (data.ownedNfts ?? []).map((nft: AlchemyOwnedNft) =>
       this.normalizeNft(nft, options.network as NetworkType),
@@ -106,7 +106,7 @@ export class AlchemyNftIndexer implements INftIndexer {
       tokenId,
     });
     const url = `${baseUrl}/getNFTMetadata?${params.toString()}`;
-    const data = await this._fetch(url);
+    const data = await this._fetch(url) as unknown as AlchemyMetadataResponse;
 
     const standard = mapTokenType(data.tokenType);
     const ns = standardToNamespace(standard);
@@ -114,7 +114,7 @@ export class AlchemyNftIndexer implements INftIndexer {
 
     const rawMetadata = data.raw?.metadata ?? {};
     const attributes = Array.isArray(rawMetadata.attributes)
-      ? rawMetadata.attributes.map((a: { trait_type: string; value: string | number }) => ({
+      ? (rawMetadata.attributes as Array<{ trait_type: string; value: string | number }>).map((a) => ({
           trait_type: a.trait_type,
           value: a.value,
         }))
@@ -124,9 +124,9 @@ export class AlchemyNftIndexer implements INftIndexer {
       tokenId: data.tokenId ?? tokenId,
       contractAddress: data.contract?.address ?? contractAddress,
       standard,
-      name: data.name ?? rawMetadata.name ?? undefined,
-      image: data.image?.cachedUrl ?? rawMetadata.image ?? undefined,
-      description: data.description ?? rawMetadata.description ?? undefined,
+      name: data.name ?? (typeof rawMetadata.name === 'string' ? rawMetadata.name : undefined),
+      image: data.image?.cachedUrl ?? (typeof rawMetadata.image === 'string' ? rawMetadata.image : undefined),
+      description: data.description ?? (typeof rawMetadata.description === 'string' ? rawMetadata.description : undefined),
       amount: data.balance ?? '1',
       collection: data.collection ? { name: data.collection.name, slug: data.collection.slug } : undefined,
       assetId: assetIdStr,
@@ -149,7 +149,7 @@ export class AlchemyNftIndexer implements INftIndexer {
     if (pageKey) params.set('startToken', pageKey);
 
     const url = `${baseUrl}/getNFTsForCollection?${params.toString()}`;
-    const data = await this._fetch(url);
+    const data = await this._fetch(url) as unknown as AlchemyCollectionResponse;
 
     const items: NftItem[] = (data.nfts ?? []).map((nft: AlchemyOwnedNft) =>
       this.normalizeNft(nft, network),
@@ -184,9 +184,9 @@ export class AlchemyNftIndexer implements INftIndexer {
       tokenId: nft.tokenId,
       contractAddress: nft.contract.address,
       standard,
-      name: nft.name ?? rawMetadata.name ?? undefined,
-      image: nft.image?.cachedUrl ?? rawMetadata.image ?? undefined,
-      description: nft.description ?? rawMetadata.description ?? undefined,
+      name: nft.name ?? (typeof rawMetadata.name === 'string' ? rawMetadata.name : undefined),
+      image: nft.image?.cachedUrl ?? (typeof rawMetadata.image === 'string' ? rawMetadata.image : undefined),
+      description: nft.description ?? (typeof rawMetadata.description === 'string' ? rawMetadata.description : undefined),
       amount: standard === 'ERC-1155' ? (nft.balance ?? '1') : '1',
       collection: nft.collection ? { name: nft.collection.name, slug: nft.collection.slug } : undefined,
       assetId: assetIdStr,
@@ -233,4 +233,22 @@ interface AlchemyOwnedNft {
     tokenUri?: string;
   };
   collection?: { name: string; slug?: string } | null;
+}
+
+/** Alchemy getNFTsForOwner response shape. */
+interface AlchemyListResponse {
+  ownedNfts?: AlchemyOwnedNft[];
+  pageKey?: string;
+  totalCount?: number;
+}
+
+/** Alchemy getNFTMetadata response shape. */
+interface AlchemyMetadataResponse extends AlchemyOwnedNft {
+  // same fields as AlchemyOwnedNft
+}
+
+/** Alchemy getNFTsForCollection response shape. */
+interface AlchemyCollectionResponse {
+  nfts?: AlchemyOwnedNft[];
+  nextToken?: string;
 }
