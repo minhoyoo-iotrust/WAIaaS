@@ -281,6 +281,9 @@ export type {
   ParsedOperation,
   ParsedTransaction,
   SignedTransaction,
+  // v31.0 NFT chain adapter types
+  NftTransferParams,
+  NftApproveParams,
   IChainAdapter,
   ILocalKeyStore,
   IPolicyEngine,

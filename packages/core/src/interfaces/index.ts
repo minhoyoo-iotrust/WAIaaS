@@ -21,6 +21,9 @@ export type {
   ParsedOperation,
   ParsedTransaction,
   SignedTransaction,
+  // v31.0 NFT chain adapter types
+  NftTransferParams,
+  NftApproveParams,
 } from './chain-adapter.types.js';
 
 // Interfaces

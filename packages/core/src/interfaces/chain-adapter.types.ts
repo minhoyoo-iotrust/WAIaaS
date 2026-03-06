@@ -193,6 +193,39 @@ export interface BatchParams {
 }
 
 // ---------------------------------------------------------------------------
+// v31.0 NFT types for transferNft / approveNft / buildNftTransferTx
+// ---------------------------------------------------------------------------
+
+/** NFT transfer request for transferNft() / buildNftTransferTx(). */
+export interface NftTransferParams {
+  from: string;
+  to: string;
+  token: {
+    /** Contract address (EVM) or mint address (Solana). */
+    address: string;
+    /** Token ID (EVM) or mint address (Solana). */
+    tokenId: string;
+    /** NFT standard. */
+    standard: 'ERC-721' | 'ERC-1155' | 'METAPLEX';
+  };
+  /** 1n for ERC-721/Metaplex, variable for ERC-1155. */
+  amount: bigint;
+}
+
+/** NFT approve request for approveNft(). */
+export interface NftApproveParams {
+  from: string;
+  spender: string;
+  token: {
+    address: string;
+    tokenId: string;
+    standard: 'ERC-721' | 'ERC-1155' | 'METAPLEX';
+  };
+  /** 'single' for approve(tokenId), 'all' for setApprovalForAll / Solana delegate. */
+  approvalType: 'single' | 'all';
+}
+
+// ---------------------------------------------------------------------------
 // v1.4.7 sign-only types for parseTransaction / signExternalTransaction
 // ---------------------------------------------------------------------------
 
