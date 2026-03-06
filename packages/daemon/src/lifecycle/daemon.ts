@@ -1271,7 +1271,26 @@ export class DaemonLifecycle {
     }
 
     // ------------------------------------------------------------------
-    // Step 4f-5: Register IPositionProvider implementations with PositionTracker
+    // Step 4f-5: Register DCent Exchange status tracker
+    // ------------------------------------------------------------------
+    if (this._asyncPollingService) {
+      try {
+        if (this._settingsService?.get('actions.dcent_swap_enabled') === 'true') {
+          const { ExchangeStatusTracker, DCENT_SWAP_DEFAULTS } = await import('@waiaas/actions');
+          const dcentConfig = {
+            ...DCENT_SWAP_DEFAULTS,
+            apiBaseUrl: this._settingsService!.get('actions.dcent_swap_api_url') ?? DCENT_SWAP_DEFAULTS.apiBaseUrl,
+          };
+          this._asyncPollingService.registerTracker(new ExchangeStatusTracker(dcentConfig));
+          console.debug('Step 4f-5: DCent Exchange status tracker registered');
+        }
+      } catch (err) {
+        console.warn('Step 4f-5 (fail-soft): DCent Exchange tracker registration failed:', err);
+      }
+    }
+
+    // ------------------------------------------------------------------
+    // Step 4f-6: Register IPositionProvider implementations with PositionTracker
     // ------------------------------------------------------------------
     if (this.positionTracker && this.actionProviderRegistry) {
       try {

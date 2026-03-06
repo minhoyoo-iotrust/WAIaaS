@@ -504,6 +504,7 @@ export class HotReloadOrchestrator {
       'lido_staking', 'jito_staking',
       'aave_v3', 'kamino',
       'pendle_yield', 'drift_perp',
+      'dcent_swap',
     ];
 
     // Unregister all built-in providers first

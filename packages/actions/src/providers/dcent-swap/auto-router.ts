@@ -305,7 +305,7 @@ export async function executeTwoHopSwap(
       },
       config,
     );
-  } catch (err) {
+  } catch {
     // Partial failure: hop 1 may have succeeded but hop 2 failed
     throw new ChainError('INVALID_INSTRUCTION', 'ethereum', {
       message: `2-hop swap partially completed. Hop 1 succeeded but Hop 2 failed. ` +
