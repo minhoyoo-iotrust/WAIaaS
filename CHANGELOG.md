@@ -1,5 +1,31 @@
 # Changelog
 
+## [2.10.0-rc.9](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.8...v2.10.0-rc.9) (2026-03-06)
+
+
+### Features
+
+* **343-01:** add DcentSwapApiClient HTTP client with 24h currency caching ([8e58cd0](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8e58cd0351a16a3e7fa56b18cd6aa2f53e5dc69a))
+* **343-01:** implement CAIP-19 &lt;-&gt; DCent Currency ID converter with Zod schemas ([05de72f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/05de72f998b3d72b1ca2674af9d2c310bb0cf84d))
+* **343-02:** add DcentSwapActionProvider implementing IActionProvider ([5d5d8d6](https://github.com/minhoyoo-iotrust/WAIaaS/commit/5d5d8d6e8ec59fcda61d6494d651e5d43f16ac3a))
+* **343-02:** implement DEX Swap quote retrieval and execution pipeline ([3410f22](https://github.com/minhoyoo-iotrust/WAIaaS/commit/3410f22b1993d71cc1dad4398e21a6f28dd92c07))
+* **344-01:** extend DcentSwapActionProvider with exchange/status actions and notification events ([49670f7](https://github.com/minhoyoo-iotrust/WAIaaS/commit/49670f78b0a38450fc8cf2d443fc186dab09dfb9))
+* **344-01:** implement exchange quotes, execution, and status tracker ([2387f7c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2387f7c23dcb26a4dd40e7c3fe3a2b3a8693d1a3))
+* **345-01:** implement 2-hop auto-routing with fallback route discovery ([d6962ad](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d6962ada4f92947535dc97d2ddeeb62703e964fa))
+* **345-02:** integrate auto-routing fallback into DcentSwapActionProvider ([4d98ede](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4d98ede4d47e9e3e0f4c0d9d089caec664b3dd06))
+* **346-01:** register DcentSwapActionProvider in daemon lifecycle ([bc13930](https://github.com/minhoyoo-iotrust/WAIaaS/commit/bc13930ef427009c3710414b434f937dcd211fd3))
+* **346-02:** add SDK DCent Swap methods and update skill files ([2122292](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2122292f98e8ecc49b004da6ab7c63b3abb0e758))
+* add DB v46-v47 schema changes and update test fixtures ([47e88ea](https://github.com/minhoyoo-iotrust/WAIaaS/commit/47e88ea6e1afefddb480695e1d67c2522feb730e))
+
+
+### Bug Fixes
+
+* **actions:** remove unused callCount variable in dcent-auto-router test ([30424a1](https://github.com/minhoyoo-iotrust/WAIaaS/commit/30424a1a720defe1cd46964c47a170962fadc5f4))
+* **admin:** wrap mock wallets response in { items: [] } to match API format ([b459fd2](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b459fd21088d76d59f0ae03cd3fe4fe75452d9a9))
+* **dcent-swap:** register ExchangeStatusTracker, add hot-reload support, fix lint ([d3b7563](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d3b7563ff4de2cba404100c06cd4f2728fe1d16e))
+* resolve 3 open issues ([#255](https://github.com/minhoyoo-iotrust/WAIaaS/issues/255), [#258](https://github.com/minhoyoo-iotrust/WAIaaS/issues/258), [#260](https://github.com/minhoyoo-iotrust/WAIaaS/issues/260)) ([7d547aa](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7d547aa368f8c80c3d8947d4e2babd02cd6e03e0))
+* resolve 3 open issues ([#257](https://github.com/minhoyoo-iotrust/WAIaaS/issues/257), [#259](https://github.com/minhoyoo-iotrust/WAIaaS/issues/259), [#261](https://github.com/minhoyoo-iotrust/WAIaaS/issues/261)) ([d3ea5ec](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d3ea5ec391b84ded1ccedcfecac74db782d2314b))
+
 ## [2.10.0-rc.8](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.7...v2.10.0-rc.8) (2026-03-06)
 
 
