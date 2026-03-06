@@ -116,13 +116,70 @@ Requirements for UserOp Build/Sign API (플랫폼 대납 지원). Each maps to r
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (To be filled by roadmapper) | | |
+| PROV-01 | Phase 338 | Pending |
+| PROV-02 | Phase 338 | Pending |
+| PROV-03 | Phase 338 | Pending |
+| PROV-04 | Phase 338 | Pending |
+| PROV-05 | Phase 338 | Pending |
+| SCHM-01 | Phase 338 | Pending |
+| SCHM-02 | Phase 338 | Pending |
+| SCHM-03 | Phase 338 | Pending |
+| SCHM-04 | Phase 338 | Pending |
+| SCHM-05 | Phase 338 | Pending |
+| ERR-01 | Phase 338 | Pending |
+| ERR-02 | Phase 338 | Pending |
+| ERR-03 | Phase 338 | Pending |
+| ERR-04 | Phase 338 | Pending |
+| ERR-05 | Phase 338 | Pending |
+| DB-01 | Phase 338 | Pending |
+| DB-02 | Phase 338 | Pending |
+| BUILD-01 | Phase 339 | Pending |
+| BUILD-02 | Phase 339 | Pending |
+| BUILD-03 | Phase 339 | Pending |
+| BUILD-04 | Phase 339 | Pending |
+| BUILD-05 | Phase 339 | Pending |
+| BUILD-06 | Phase 339 | Pending |
+| BUILD-07 | Phase 339 | Pending |
+| BUILD-08 | Phase 339 | Pending |
+| BUILD-09 | Phase 339 | Pending |
+| BUILD-10 | Phase 339 | Pending |
+| BUILD-11 | Phase 339 | Pending |
+| DATA-01 | Phase 339 | Pending |
+| DATA-02 | Phase 339 | Pending |
+| DATA-03 | Phase 339 | Pending |
+| DATA-04 | Phase 339 | Pending |
+| SIGN-01 | Phase 340 | Pending |
+| SIGN-02 | Phase 340 | Pending |
+| SIGN-03 | Phase 340 | Pending |
+| SIGN-04 | Phase 340 | Pending |
+| SIGN-05 | Phase 340 | Pending |
+| SIGN-06 | Phase 340 | Pending |
+| SIGN-07 | Phase 340 | Pending |
+| SIGN-08 | Phase 340 | Pending |
+| SIGN-09 | Phase 340 | Pending |
+| SIGN-10 | Phase 340 | Pending |
+| CONN-01 | Phase 340 | Pending |
+| CONN-02 | Phase 340 | Pending |
+| NTFY-01 | Phase 340 | Pending |
+| NTFY-02 | Phase 340 | Pending |
+| NTFY-03 | Phase 340 | Pending |
+| NTFY-04 | Phase 340 | Pending |
+| ADMIN-01 | Phase 341 | Pending |
+| ADMIN-02 | Phase 341 | Pending |
+| ADMIN-03 | Phase 341 | Pending |
+| ADMIN-04 | Phase 341 | Pending |
+| INTF-01 | Phase 341 | Pending |
+| INTF-02 | Phase 341 | Pending |
+| INTF-03 | Phase 341 | Pending |
+| SKILL-01 | Phase 341 | Pending |
+| SKILL-02 | Phase 341 | Pending |
+| SKILL-03 | Phase 341 | Pending |
 
 **Coverage:**
-- v31.2 requirements: 55 total
-- Mapped to phases: 0
-- Unmapped: 55 ⚠️
+- v31.2 requirements: 58 total (12 categories)
+- Mapped to phases: 58/58
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-06*
-*Last updated: 2026-03-06 after initial definition*
+*Last updated: 2026-03-06 after roadmap creation -- traceability table populated*
