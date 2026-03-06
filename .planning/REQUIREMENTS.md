@@ -126,17 +126,77 @@ Requirements for NFT support milestone. Each maps to roadmap phases.
 
 ## Traceability
 
-Which phases cover which requirements. Updated during roadmap creation.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (populated during roadmap creation) | | |
+| NFTT-01 | Phase 333 | Pending |
+| NFTT-07 | Phase 333 | Pending |
+| NFTA-04 | Phase 333 | Pending |
+| ERRC-01 | Phase 333 | Pending |
+| ERRC-02 | Phase 333 | Pending |
+| ERRC-03 | Phase 333 | Pending |
+| ERRC-04 | Phase 333 | Pending |
+| ERRC-05 | Phase 333 | Pending |
+| DBMG-01 | Phase 333 | Pending |
+| DBMG-02 | Phase 333 | Pending |
+| CAIP-01 | Phase 333 | Pending |
+| CAIP-02 | Phase 333 | Pending |
+| CAIP-03 | Phase 333 | Pending |
+| CAIP-04 | Phase 333 | Pending |
+| INDX-01 | Phase 334 | Pending |
+| INDX-02 | Phase 334 | Pending |
+| INDX-03 | Phase 334 | Pending |
+| INDX-04 | Phase 334 | Pending |
+| INDX-05 | Phase 334 | Pending |
+| INDX-06 | Phase 334 | Pending |
+| INDX-07 | Phase 334 | Pending |
+| CHADP-01 | Phase 334 | Pending |
+| CHADP-02 | Phase 334 | Pending |
+| CHADP-03 | Phase 334 | Pending |
+| CHADP-04 | Phase 334 | Pending |
+| NFTQ-01 | Phase 335 | Pending |
+| NFTQ-02 | Phase 335 | Pending |
+| NFTQ-03 | Phase 335 | Pending |
+| NFTQ-04 | Phase 335 | Pending |
+| NFTQ-05 | Phase 335 | Pending |
+| NFTQ-06 | Phase 335 | Pending |
+| NFTQ-07 | Phase 335 | Pending |
+| NFTQ-08 | Phase 335 | Pending |
+| NFTQ-09 | Phase 335 | Pending |
+| NFTQ-10 | Phase 335 | Pending |
+| NFTQ-11 | Phase 335 | Pending |
+| NFTT-02 | Phase 336 | Pending |
+| NFTT-03 | Phase 336 | Pending |
+| NFTT-04 | Phase 336 | Pending |
+| NFTT-05 | Phase 336 | Pending |
+| NFTT-06 | Phase 336 | Pending |
+| NFTA-01 | Phase 336 | Pending |
+| NFTA-02 | Phase 336 | Pending |
+| NFTA-03 | Phase 336 | Pending |
+| NFTA-05 | Phase 336 | Pending |
+| PLCY-01 | Phase 336 | Pending |
+| PLCY-02 | Phase 336 | Pending |
+| PLCY-03 | Phase 336 | Pending |
+| MCPSK-01 | Phase 337 | Pending |
+| MCPSK-02 | Phase 337 | Pending |
+| MCPSK-03 | Phase 337 | Pending |
+| ADUI-01 | Phase 337 | Pending |
+| ADUI-02 | Phase 337 | Pending |
+| ADUI-03 | Phase 337 | Pending |
+| ADUI-04 | Phase 337 | Pending |
+| SKIL-01 | Phase 337 | Pending |
+| SKIL-02 | Phase 337 | Pending |
+| SKIL-03 | Phase 337 | Pending |
 
 **Coverage:**
-- v31.0 requirements: 48 total
-- Mapped to phases: 0
-- Unmapped: 48
+- v31.0 requirements: 58 total
+- Mapped to phases: 58
+- Unmapped: 0
+- Phase 333: 14 requirements (NFTT-01, NFTT-07, NFTA-04, ERRC-01~05, DBMG-01~02, CAIP-01~04)
+- Phase 334: 11 requirements (INDX-01~07, CHADP-01~04)
+- Phase 335: 11 requirements (NFTQ-01~11)
+- Phase 336: 12 requirements (NFTT-02~06, NFTA-01~03, NFTA-05, PLCY-01~03)
+- Phase 337: 10 requirements (MCPSK-01~03, ADUI-01~04, SKIL-01~03)
 
 ---
 *Requirements defined: 2026-03-06*
-*Last updated: 2026-03-06 after initial definition*
+*Last updated: 2026-03-06 after roadmap creation -- traceability populated*
