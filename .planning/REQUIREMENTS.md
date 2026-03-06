@@ -1,0 +1,128 @@
+# Requirements: WAIaaS
+
+**Defined:** 2026-03-06
+**Core Value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
+
+## v31.2 Requirements
+
+Requirements for UserOp Build/Sign API (플랫폼 대납 지원). Each maps to roadmap phases.
+
+### Provider Mode
+
+- [ ] **PROV-01**: Smart Account 지갑 생성 시 aaProvider 필수 검증 제거, 프로바이더 없이 생성 허용
+- [ ] **PROV-02**: Lite 모드(프로바이더 미설정): userop/build + userop/sign API만 사용 가능
+- [ ] **PROV-03**: Full 모드(프로바이더 설정): 기존 전체 AA 기능 + UserOp API 모두 사용 가능
+- [ ] **PROV-04**: Lite 모드에서 POST /transactions/send 호출 시 CHAIN_ERROR + userop API 안내 메시지
+- [ ] **PROV-05**: PUT /wallets/:id/provider로 프로바이더 추가 시 Full 모드 전환
+
+### UserOp Build
+
+- [ ] **BUILD-01**: POST /v1/wallets/:id/userop/build — unsigned UserOp 구성 (sessionAuth + masterAuth)
+- [ ] **BUILD-02**: 요청 바디 기존 TransactionRequest 스키마 재사용 (5 type)
+- [ ] **BUILD-03**: 응답: sender, nonce, callData, factory?, factoryData?, entryPoint, buildId
+- [ ] **BUILD-04**: buildUserOpCalls() 재사용하여 request → calls 변환
+- [ ] **BUILD-05**: SmartAccount.encodeCalls(calls) → callData 인코딩
+- [ ] **BUILD-06**: EntryPoint RPC로 nonce 조회 (Bundler 불필요)
+- [ ] **BUILD-07**: 미배포 시 factory/factoryData 자동 포함
+- [ ] **BUILD-08**: deployed 상태 자동 감지 — getCode(sender) 확인 → DB 업데이트
+- [ ] **BUILD-09**: buildId + callData + walletId DB 저장 (sign 무결성 검증용)
+- [ ] **BUILD-10**: EVM 전용 — Solana 호출 시 ACTION_VALIDATION_FAILED
+- [ ] **BUILD-11**: gas/paymaster 필드 미포함
+
+### UserOp Sign
+
+- [ ] **SIGN-01**: POST /v1/wallets/:id/userop/sign — sponsored UserOp 서명 (sessionAuth + masterAuth)
+- [ ] **SIGN-02**: 요청 바디: buildId + UserOp v0.7 전체 필드 (gas + paymaster 포함)
+- [ ] **SIGN-03**: 응답: signedUserOperation (signature 추가) + txId
+- [ ] **SIGN-04**: callData 이중 검증 — DB 비교 + 정책 재평가
+- [ ] **SIGN-05**: sender가 지갑 Smart Account 주소와 일치 검증
+- [ ] **SIGN-06**: 정책 평가 sign-only 패턴 (INSTANT tier만 허용)
+- [ ] **SIGN-07**: smartAccount.signUserOperation() → signature 생성
+- [ ] **SIGN-08**: 서명 후 키 즉시 해제 (keyStore.releaseKey())
+- [ ] **SIGN-09**: DB 트랜잭션 기록 type='SIGN', status='SIGNED'
+- [ ] **SIGN-10**: USEROP_SIGNED 감사 로그
+
+### Build Data
+
+- [ ] **DATA-01**: userop_builds 테이블: buildId PK, walletId, callData, sender, nonce, createdAt, expiresAt, used
+- [ ] **DATA-02**: build 데이터 TTL 기본 10분, 만료 시 EXPIRED_BUILD 에러
+- [ ] **DATA-03**: sign 성공 시 used = true (재사용 방지)
+- [ ] **DATA-04**: 만료 레코드 주기적 정리 — WorkerScheduler userop-build-cleanup 워커
+
+### connect-info
+
+- [ ] **CONN-01**: Smart Account 지갑 존재 시 (프로바이더 유무 무관) userop capability 추가
+- [ ] **CONN-02**: 기존 smart_account capability는 프로바이더 설정 시에만 노출 (유지)
+
+### Schema
+
+- [ ] **SCHM-01**: UserOpBuildRequestSchema — TransactionRequest 재사용 + network 필수
+- [ ] **SCHM-02**: UserOpBuildResponseSchema — sender, nonce, callData, factory?, factoryData?, entryPoint, buildId
+- [ ] **SCHM-03**: UserOpSignRequestSchema — buildId + userOperation
+- [ ] **SCHM-04**: UserOpSignResponseSchema — signedUserOperation + txId
+- [ ] **SCHM-05**: UserOperationV07Schema — EntryPoint v0.7 필드 정의
+
+### Error Codes
+
+- [ ] **ERR-01**: EXPIRED_BUILD (400)
+- [ ] **ERR-02**: BUILD_NOT_FOUND (404)
+- [ ] **ERR-03**: BUILD_ALREADY_USED (409)
+- [ ] **ERR-04**: CALLDATA_MISMATCH (400)
+- [ ] **ERR-05**: SENDER_MISMATCH (400)
+
+### DB Migration
+
+- [ ] **DB-01**: v45 마이그레이션 — userop_builds 테이블 생성
+- [ ] **DB-02**: 마이그레이션 테스트 — 스키마 스냅샷 + 빈 테이블 생성 검증
+
+### Notification
+
+- [ ] **NTFY-01**: userop/build 시 USEROP_BUILD 감사 로그
+- [ ] **NTFY-02**: userop/sign 성공 시 USEROP_SIGNED 감사 로그
+- [ ] **NTFY-03**: TX_REQUESTED (build), TX_SUBMITTED (sign) 알림
+- [ ] **NTFY-04**: EventBus wallet:activity 이벤트
+
+### Admin UI
+
+- [ ] **ADMIN-01**: 지갑 생성 폼에 None (Lite mode) 옵션 추가, 선택 시 API Key/URL 필드 숨김
+- [ ] **ADMIN-02**: 지갑 상세 Mode 행 — Lite/Full 배지 + 안내 텍스트
+- [ ] **ADMIN-03**: 지갑 목록 Smart Account 배지에 모드 구분 표시
+- [ ] **ADMIN-04**: Provider 편집 UI 변경 없음 (기존 동작 유지)
+
+### Skill Files
+
+- [ ] **SKILL-01**: transactions.skill.md — UserOp Build/Sign API 추가
+- [ ] **SKILL-02**: wallet.skill.md — Lite/Full 모드 설명
+- [ ] **SKILL-03**: admin.skill.md — Smart Account Lite 모드 설정 안내
+
+### MCP + SDK
+
+- [ ] **INTF-01**: MCP build_userop 도구
+- [ ] **INTF-02**: MCP sign_userop 도구
+- [ ] **INTF-03**: SDK buildUserOp() + signUserOp() 메서드
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| 플랫폼 백엔드 연동/통신 | WAIaaS는 UserOp 구성/서명만 담당, 플랫폼 통신은 에이전트 책임 |
+| Alchemy Admin API (Policy CRUD) | WAIaaS가 Alchemy를 모르는 것이 설계 의도 |
+| Gas 대납 비용 추적/집계 | Lite 모드에서 receipt을 모름 |
+| Webhook 엔드포인트 | 플랫폼이 Alchemy webhook 수신 |
+| UserOp 제출 (submit) API | Lite 모드에서 Bundler에 제출하지 않음 |
+| EntryPoint v0.6 지원 | WAIaaS는 v0.7 전용 |
+
+## Traceability
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| (To be filled by roadmapper) | | |
+
+**Coverage:**
+- v31.2 requirements: 55 total
+- Mapped to phases: 0
+- Unmapped: 55 ⚠️
+
+---
+*Requirements defined: 2026-03-06*
+*Last updated: 2026-03-06 after initial definition*
