@@ -1,0 +1,264 @@
+/**
+ * DCent Swap policy engine integration tests.
+ *
+ * Verifies that DcentSwapActionProvider outputs the correct
+ * request types for policy evaluation:
+ * - DEX Swap -> ContractCallRequest[] (CONTRACT_CALL type, subject to CONTRACT_WHITELIST)
+ * - Exchange -> TRANSFER type (not subject to CONTRACT_WHITELIST, DS-09)
+ *
+ * Phase 346-03 Task 2: TEST-06
+ */
+import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
+import { http, HttpResponse } from 'msw';
+import { setupServer } from 'msw/node';
+import { DcentSwapActionProvider } from '../providers/dcent-swap/index.js';
+import type { ActionContext } from '@waiaas/core';
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const BASE_URL = 'https://swapbuy-beta.dcentwallet.com';
+const ETH_CAIP19 = 'eip155:1/slip44:60';
+const USDC_CAIP19 = 'eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48';
+const USDC_ADDRESS = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48';
+const SOL_CAIP19 = 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/slip44:501';
+
+const SUSHI_SPENDER = '0xAC4c6e212A361c968F1725b4d055b47E63F80b75';
+const WALLET_ADDRESS = '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045';
+
+const CONTEXT: ActionContext = {
+  chain: 'ethereum',
+  walletAddress: WALLET_ADDRESS,
+  walletId: 'test-wallet-uuid',
+};
+
+// ---------------------------------------------------------------------------
+// MSW server
+// ---------------------------------------------------------------------------
+
+const server = setupServer(
+  http.get(`${BASE_URL}/api/swap/v3/get_supported_currencies`, () =>
+    HttpResponse.json([
+      { currencyId: 'ETHEREUM', tokenDeviceId: 'ERC20', providers: ['sushi_swap'] },
+    ]),
+  ),
+  // Default: native sell (ETH -> USDC)
+  http.post(`${BASE_URL}/api/swap/v3/get_quotes`, () =>
+    HttpResponse.json({
+      status: 'success',
+      fromId: 'ETHEREUM',
+      toId: 'ERC20/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+      providers: {
+        bestOrder: ['sushi_swap'],
+        common: [{
+          id: 'sushi_swap',
+          status: 'success',
+          providerId: 'sushi_swap',
+          providerType: 'swap',
+          name: 'Sushi',
+          fromAmount: '1000000000000000000',
+          quoteType: 'flexible',
+          expectedAmount: '2049257221',
+          spenderContractAddress: SUSHI_SPENDER,
+        }],
+      },
+    }),
+  ),
+  http.post(`${BASE_URL}/api/swap/v3/get_dex_swap_transaction_data`, () =>
+    HttpResponse.json({
+      status: 'success',
+      txdata: {
+        from: WALLET_ADDRESS,
+        to: SUSHI_SPENDER,
+        data: '0x5f3bd1c8000000000000000000000000',
+        value: '1000000000000000000',
+      },
+      networkFee: { gas: '275841', gasPrice: '121236406' },
+    }),
+  ),
+);
+
+beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+
+function createProvider(): DcentSwapActionProvider {
+  return new DcentSwapActionProvider({
+    apiBaseUrl: BASE_URL,
+    requestTimeoutMs: 5_000,
+    defaultSlippageBps: 100,
+    maxSlippageBps: 500,
+    currencyCacheTtlMs: 86_400_000,
+    exchangePollIntervalMs: 30_000,
+    exchangePollMaxMs: 3_600_000,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+describe('DCent Swap policy integration', () => {
+  describe('DEX Swap -> CONTRACT_CALL pipeline', () => {
+    it('native sell returns ContractCallRequest with correct to, calldata, value', async () => {
+      const provider = createProvider();
+      const result = await provider.resolve('dex_swap', {
+        fromAsset: ETH_CAIP19,
+        toAsset: USDC_CAIP19,
+        amount: '1000000000000000000',
+        fromDecimals: 18,
+        toDecimals: 6,
+      }, CONTEXT);
+
+      const requests = Array.isArray(result) ? result : [result];
+      const swap = requests[0]!;
+
+      // to = DEX router address (subject to CONTRACT_WHITELIST)
+      expect(swap.to.toLowerCase()).toBe(SUSHI_SPENDER.toLowerCase());
+      // calldata = swap transaction data (0x prefixed hex)
+      expect(swap.calldata).toMatch(/^0x/);
+      // value = native amount being sent
+      expect(swap.value).toBe('1000000000000000000');
+    });
+
+    it('ERC-20 sell returns approve + swap ContractCallRequests', async () => {
+      server.use(
+        http.post(`${BASE_URL}/api/swap/v3/get_quotes`, () =>
+          HttpResponse.json({
+            status: 'success',
+            fromId: 'ERC20/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+            toId: 'ETHEREUM',
+            providers: {
+              bestOrder: ['sushi_swap'],
+              common: [{
+                id: 'sushi_swap',
+                status: 'success',
+                providerId: 'sushi_swap',
+                providerType: 'swap',
+                name: 'Sushi',
+                fromAmount: '2000000000',
+                quoteType: 'flexible',
+                expectedAmount: '900000000000000000',
+                spenderContractAddress: SUSHI_SPENDER,
+              }],
+            },
+          }),
+        ),
+        http.post(`${BASE_URL}/api/swap/v3/get_dex_swap_transaction_data`, () =>
+          HttpResponse.json({
+            status: 'success',
+            txdata: {
+              from: WALLET_ADDRESS,
+              to: SUSHI_SPENDER,
+              data: '0xswapdata',
+              value: '0',
+            },
+            networkFee: { gas: '200000' },
+          }),
+        ),
+      );
+
+      const provider = createProvider();
+      const result = await provider.resolve('dex_swap', {
+        fromAsset: USDC_CAIP19,
+        toAsset: ETH_CAIP19,
+        amount: '2000000000',
+        fromDecimals: 6,
+        toDecimals: 18,
+      }, CONTEXT);
+
+      const requests = Array.isArray(result) ? result : [result];
+      expect(requests.length).toBe(2);
+
+      // First request: approve (to = ERC-20 token contract)
+      const approve = requests[0]!;
+      expect(approve.to.toLowerCase()).toBe(USDC_ADDRESS);
+      // approve(address,uint256) selector = 0x095ea7b3
+      expect(approve.calldata).toContain('0x095ea7b3');
+      expect(approve.value).toBe('0');
+
+      // Second request: swap (to = DEX router, subject to CONTRACT_WHITELIST)
+      const swap = requests[1]!;
+      expect(swap.to.toLowerCase()).toBe(SUSHI_SPENDER.toLowerCase());
+      expect(swap.calldata).toBeDefined();
+    });
+  });
+
+  describe('Exchange -> TRANSFER pipeline (DS-09)', () => {
+    it('executeExchangeAction returns TRANSFER request with payInAddress', async () => {
+      server.use(
+        http.post(`${BASE_URL}/api/swap/v3/get_quotes`, () =>
+          HttpResponse.json({
+            status: 'success',
+            fromId: 'ETHEREUM',
+            toId: 'SOLANA',
+            providers: {
+              bestOrder: ['changelly_exchange_flexible'],
+              common: [{
+                id: 'changelly_exchange_flexible',
+                status: 'success',
+                providerId: 'changelly_exchange_flexible',
+                providerType: 'exchange',
+                name: 'Changelly',
+                fromAmount: '1000000000000000000',
+                quoteType: 'flexible',
+                expectedAmount: '23552793560',
+              }],
+            },
+          }),
+        ),
+        http.post(`${BASE_URL}/api/swap/v3/create_exchange_transaction`, () =>
+          HttpResponse.json({
+            status: 'success',
+            transactionId: '95jr30stfzpf0tr1',
+            transactionStatusUrl: 'https://changelly.com/track/95jr30stfzpf0tr1',
+            payInAddress: '0xbff7d6ba1201304af302f12265cfa435539d5502',
+            fromAmount: '1000000000000000000',
+            toAmount: '23543037760',
+          }),
+        ),
+      );
+
+      const provider = createProvider();
+      const result = await provider.executeExchangeAction({
+        fromAsset: ETH_CAIP19,
+        toAsset: SOL_CAIP19,
+        amount: '1000000000000000000',
+        fromDecimals: 18,
+        toDecimals: 9,
+        fromWalletAddress: WALLET_ADDRESS,
+        toWalletAddress: '7EcDhSYGxXyscszYEp35KHN8vvw3svAuLKTzXwCFLtV',
+      });
+
+      // Result should be a TRANSFER request (not CONTRACT_CALL)
+      expect(result.transferRequest).toBeDefined();
+      expect(result.transferRequest.to).toBe('0xbff7d6ba1201304af302f12265cfa435539d5502');
+      expect(result.transferRequest.amount).toBe('1000000000000000000');
+      // Exchange metadata
+      expect(result.exchangeMetadata.dcentTransactionId).toBe('95jr30stfzpf0tr1');
+      // payInAddress is the transferRequest.to field
+      expect(result.exchangeMetadata.dcentProviderId).toBe('changelly_exchange_flexible');
+    });
+  });
+
+  describe('metadata validation', () => {
+    it('provider metadata indicates no API key required', () => {
+      const provider = createProvider();
+      expect(provider.metadata.name).toBe('dcent_swap');
+      expect(provider.metadata.requiresApiKey).toBe(false);
+      expect(provider.metadata.chains).toContain('ethereum');
+      expect(provider.metadata.chains).toContain('solana');
+    });
+
+    it('provider has 4 actions defined', () => {
+      const provider = createProvider();
+      expect(provider.actions.length).toBe(4);
+      const actionNames = provider.actions.map((a) => a.name);
+      expect(actionNames).toContain('get_quotes');
+      expect(actionNames).toContain('dex_swap');
+      expect(actionNames).toContain('exchange');
+      expect(actionNames).toContain('swap_status');
+    });
+  });
+});

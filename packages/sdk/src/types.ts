@@ -1081,6 +1081,57 @@ export interface TransferNftParams {
 }
 
 // ---------------------------------------------------------------------------
+// DCent Swap Types
+// ---------------------------------------------------------------------------
+
+/** Params for getDcentQuotes SDK method. */
+export interface DcentQuoteParams {
+  fromAsset: string;    // CAIP-19 identifier
+  toAsset: string;      // CAIP-19 identifier
+  amount: string;       // from token smallest unit
+  fromDecimals: number;
+  toDecimals: number;
+  network?: string;
+  walletId?: string;
+}
+
+/** Params for dcentDexSwap SDK method. */
+export interface DcentDexSwapParams {
+  fromAsset: string;
+  toAsset: string;
+  amount: string;
+  fromDecimals: number;
+  toDecimals: number;
+  providerId?: string;
+  slippageBps?: number;
+  network?: string;
+  walletId?: string;
+  gasCondition?: GasCondition;
+}
+
+/** Params for dcentExchange SDK method. */
+export interface DcentExchangeParams {
+  fromAsset: string;
+  toAsset: string;
+  amount: string;
+  fromDecimals: number;
+  toDecimals: number;
+  toAddress: string;
+  providerId?: string;
+  network?: string;
+  walletId?: string;
+  gasCondition?: GasCondition;
+}
+
+/** Params for getDcentSwapStatus SDK method. */
+export interface DcentSwapStatusParams {
+  transactionId: string;
+  providerId: string;
+  network?: string;
+  walletId?: string;
+}
+
+// ---------------------------------------------------------------------------
 // DeFi Position Types (API-01, API-02, API-05)
 // ---------------------------------------------------------------------------
 

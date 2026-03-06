@@ -79,7 +79,7 @@ const LEGACY_NETWORK_NORMALIZE: Record<string, string> = {
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 45;
+export const LATEST_SCHEMA_VERSION = 46;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -2704,6 +2704,21 @@ MIGRATIONS.push({
     `);
     sqlite.exec('CREATE INDEX IF NOT EXISTS idx_userop_builds_wallet_id ON userop_builds(wallet_id)');
     sqlite.exec('CREATE INDEX IF NOT EXISTS idx_userop_builds_expires ON userop_builds(expires_at)');
+  },
+});
+
+// ── v46: Backfill CONTRACT_CALL amount from metadata (#260) ──────────
+MIGRATIONS.push({
+  version: 46,
+  description: 'Backfill CONTRACT_CALL amount from metadata.originalRequest.value',
+  up: (sqlite) => {
+    sqlite.exec(`
+      UPDATE transactions
+      SET amount = json_extract(metadata, '$.originalRequest.value')
+      WHERE type = 'CONTRACT_CALL'
+        AND amount IS NULL
+        AND json_extract(metadata, '$.originalRequest.value') IS NOT NULL
+    `);
   },
 });
 

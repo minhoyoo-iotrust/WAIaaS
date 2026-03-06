@@ -1,7 +1,8 @@
 # 마일스톤 m31-03: DCent Swap Aggregator 통합
 
-- **Status:** PLANNED
+- **Status:** SHIPPED
 - **Milestone:** v31.3
+- **Completed:** 2026-03-07
 
 ## 목표
 

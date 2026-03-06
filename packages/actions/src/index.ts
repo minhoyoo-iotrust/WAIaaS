@@ -24,6 +24,8 @@ import { DriftPerpProvider } from './providers/drift/index.js';
 import type { DriftConfig } from './providers/drift/config.js';
 import { Erc8004ActionProvider } from './providers/erc8004/index.js';
 import { type Erc8004Config, ERC8004_DEFAULTS } from './providers/erc8004/config.js';
+import { DcentSwapActionProvider } from './providers/dcent-swap/index.js';
+import type { DcentSwapConfig } from './providers/dcent-swap/config.js';
 
 // Re-export provider classes
 export { JupiterSwapActionProvider } from './providers/jupiter-swap/index.js';
@@ -290,6 +292,22 @@ export function registerBuiltInProviders(
           reputationCacheTtlSec: Number(settingsReader.get('actions.erc8004_reputation_cache_ttl_sec')) || 300,
         };
         return new Erc8004ActionProvider(config);
+      },
+    },
+    {
+      key: 'dcent_swap',
+      enabledKey: 'actions.dcent_swap_enabled',
+      factory: () => {
+        const dcentConfig: DcentSwapConfig = {
+          apiBaseUrl: settingsReader.get('actions.dcent_swap_api_url'),
+          requestTimeoutMs: 15_000,
+          defaultSlippageBps: Number(settingsReader.get('actions.dcent_swap_default_slippage_bps')),
+          maxSlippageBps: Number(settingsReader.get('actions.dcent_swap_max_slippage_bps')),
+          currencyCacheTtlMs: Number(settingsReader.get('actions.dcent_swap_currency_cache_ttl_ms')),
+          exchangePollIntervalMs: Number(settingsReader.get('actions.dcent_swap_exchange_poll_interval_ms')),
+          exchangePollMaxMs: Number(settingsReader.get('actions.dcent_swap_exchange_poll_max_ms')),
+        };
+        return new DcentSwapActionProvider(dcentConfig);
       },
     },
   ];

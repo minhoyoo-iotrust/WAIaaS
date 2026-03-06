@@ -3,16 +3,16 @@ import type { IPushProvider, PushResult } from './push-provider.js';
 import { withRetry, isRetryableHttpError } from './push-provider.js';
 import type { PushwooshConfig } from '../config.js';
 
-const PUSHWOOSH_API_URL = 'https://cp.pushwoosh.com/json/1.3/createMessage';
-
 export class PushwooshProvider implements IPushProvider {
   readonly name = 'pushwoosh';
   private readonly apiToken: string;
   private readonly applicationCode: string;
+  private readonly apiUrl: string;
 
   constructor(config: PushwooshConfig) {
     this.apiToken = config.api_token;
     this.applicationCode = config.application_code;
+    this.apiUrl = config.api_url;
   }
 
   async send(tokens: string[], payload: PushPayload): Promise<PushResult> {
@@ -48,7 +48,7 @@ export class PushwooshProvider implements IPushProvider {
 
     const result = await withRetry(
       async () => {
-        const res = await fetch(PUSHWOOSH_API_URL, {
+        const res = await fetch(this.apiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),

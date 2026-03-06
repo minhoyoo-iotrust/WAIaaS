@@ -30,7 +30,7 @@ const BUILTIN_PROVIDERS: BuiltinProvider[] = [
   { key: 'aave_v3', name: 'Aave V3 Lending', description: 'EVM lending protocol (supply, borrow, repay, withdraw)', chain: 'evm', requiresApiKey: false, docsUrl: 'https://docs.aave.com/developers' },
   { key: 'kamino', name: 'Kamino Lending', description: 'Solana lending protocol (supply, borrow, repay, withdraw)', chain: 'solana', requiresApiKey: false, docsUrl: 'https://docs.kamino.finance' },
   { key: 'pendle_yield', name: 'Pendle Yield', description: 'EVM yield trading: buy/sell PT/YT, redeem at maturity, add/remove LP', chain: 'evm', requiresApiKey: false, docsUrl: 'https://docs.pendle.finance' },
-  { key: 'drift_perp', name: 'Drift Perp', description: 'Solana perpetual futures trading (open, close, modify positions with leverage)', chain: 'solana', requiresApiKey: false, docsUrl: 'https://docs.drift.trade' },
+  { key: 'drift', name: 'Drift Perp', description: 'Solana perpetual futures trading (open, close, modify positions with leverage)', chain: 'solana', requiresApiKey: false, docsUrl: 'https://docs.drift.trade' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -459,7 +459,7 @@ export default function ActionsPage() {
               )}
 
               {/* Drift Perp Advanced Settings -- only when Drift is enabled */}
-              {bp.key === 'drift_perp' && enabled && (
+              {bp.key === 'drift' && enabled && (
                 <div style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
                   <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-2)', color: 'var(--text-secondary)' }}>
                     Advanced Settings

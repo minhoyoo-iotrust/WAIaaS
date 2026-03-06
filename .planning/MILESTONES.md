@@ -1,5 +1,25 @@
 # Project Milestones: WAIaaS
 
+## v31.3 DCent Swap Aggregator 통합 (Shipped: 2026-03-07)
+
+**Delivered:** DCent Swap Backend API를 WAIaaS에 통합하여 다중 프로바이더 DEX Swap(동일체인) + Exchange(크로스체인) + 자동 라우팅 2-hop 폴백을 지원하는 스왑 애그리게이터 구현.
+
+**Phases completed:** 5 phases (342-346), 9 plans, 37 requirements
+
+**Key accomplishments:**
+- DCent Swap API 7-endpoint deep research + 936-line integration design doc (doc 77, 17 design decisions)
+- CAIP-19 ↔ DCent Currency ID bidirectional converter with 24h stale-while-revalidate cache (8 native token mappings)
+- DEX Swap execution via approve+txdata BATCH pipeline with min/max validation and provider sorting
+- Cross-chain Exchange execution via payInAddress TRANSFER + ExchangeStatusTracker polling + 4 notification events
+- 2-hop auto-routing fallback for no-route token pairs (6 EVM chains, ETH/USDC/USDT intermediate tokens)
+- Full integration: DcentSwapActionProvider (IActionProvider) + 4 MCP tools + 4 SDK methods + policy engine + 7 Admin Settings keys + connect-info capability + skill files + 116 tests
+
+**Stats:**
+- 5 phases, 9 plans, 37 requirements, 54 commits
+- 110 files changed, +11,612 / -211 lines, ~248,459 LOC TS
+
+---
+
 ## v31.2 UserOp Build/Sign API (Shipped: 2026-03-06)
 
 **Delivered:** Smart Account 지갑에서 프로바이더 없이 UserOperation을 구성/서명할 수 있는 Build/Sign API를 제공하여, 외부 플랫폼이 가스 대납을 중계하는 아키텍처 지원.

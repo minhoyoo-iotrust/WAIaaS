@@ -108,7 +108,18 @@ function aggregateStakingBalance(
   let totalUnstaked = 0n;
 
   for (const row of stakeRows) {
-    if (!row.amount) continue;
+    // Fallback: if amount is NULL, try extracting from metadata (CONTRACT_CALL value)
+    let effectiveAmount = row.amount;
+    if (!effectiveAmount && row.metadata) {
+      try {
+        const meta = JSON.parse(row.metadata) as Record<string, unknown>;
+        const origReq = meta.originalRequest as Record<string, unknown> | undefined;
+        if (origReq?.value && typeof origReq.value === 'string') {
+          effectiveAmount = origReq.value;
+        }
+      } catch { /* ignore */ }
+    }
+    if (!effectiveAmount) continue;
 
     // Parse metadata to determine if it's a stake or unstake action
     let isUnstake = false;
@@ -124,7 +135,7 @@ function aggregateStakingBalance(
     }
 
     try {
-      const amountBig = BigInt(row.amount);
+      const amountBig = BigInt(effectiveAmount);
       if (isUnstake) {
         totalUnstaked += amountBig;
       } else {

@@ -10,6 +10,7 @@ provider = "pushwoosh"
 [relay.push.pushwoosh]
 api_token = "XXXXXX-XXXXXX"
 application_code = "ABCDE-12345"
+# api_url = "https://api.pushwoosh.com/json/1.3/createMessage"  # default; override for Private Cloud
 
 # Or use FCM:
 # [relay.push.fcm]

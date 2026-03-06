@@ -192,7 +192,8 @@ export default function Erc8004Page() {
       } catch { /* keep empty */ }
 
       // Always load wallets and agent entries (for read-only table when disabled)
-      const walletList = await apiGet<Wallet[]>(API.WALLETS);
+      const result = await apiGet<{ items: Wallet[] }>(API.WALLETS);
+      const walletList = result.items ?? [];
       wallets.value = walletList;
 
       // Build agent entries for EVM wallets
