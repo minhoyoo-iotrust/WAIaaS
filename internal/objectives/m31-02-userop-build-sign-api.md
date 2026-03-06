@@ -1,7 +1,9 @@
 # 마일스톤 m31-02: UserOp Build/Sign API (플랫폼 대납 지원)
 
-- **Status:** PLANNED
+- **Status:** SHIPPED
 - **Milestone:** v31.2
+- **Package:** v2.10.0-rc
+- **Completed:** 2026-03-06
 
 ## 목표
 
