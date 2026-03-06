@@ -54,7 +54,7 @@
 **Milestone Goal:** DCent Swap Backend API를 WAIaaS에 통합하여 다중 프로바이더 스왑(동일체인 DEX + 크로스체인 Exchange)을 지원한다.
 
 - [x] **Phase 342: Research & Design** - DCent API 리서치 + 통합 설계 문서 작성 (completed 2026-03-06)
-- [ ] **Phase 343: Currency Mapping + DEX Swap** - CAIP-19 변환 인프라 + DEX Swap 실행
+- [x] **Phase 343: Currency Mapping + DEX Swap** - CAIP-19 변환 인프라 + DEX Swap 실행 (completed 2026-03-06)
 - [ ] **Phase 344: Exchange + Status Tracking** - 크로스체인 Exchange 실행 + 상태 폴링
 - [ ] **Phase 345: Auto Routing** - 조건부 2-hop 자동 라우팅
 - [ ] **Phase 346: Integration + Testing** - ActionProvider, MCP, SDK, 정책, 테스트
@@ -85,7 +85,7 @@ Plans:
   2. DCent get_supported_currencies 응답이 24h TTL로 캐싱되어 반복 호출을 최소화한다
   3. 사용자가 DEX Swap 견적을 요청하면 프로바이더별 비교와 최적 추천을 받을 수 있다
   4. 사용자가 DEX Swap을 실행하면 approve+txdata가 BATCH 파이프라인으로 처리되고, min/max 한도가 검증된다
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 343-01-PLAN.md -- CAIP-19 <-> DCent Currency ID 양방향 변환 구현 + 캐싱
@@ -145,7 +145,7 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 342. Research & Design | 1/1 | Complete    | 2026-03-06 | - |
-| 343. Currency Mapping + DEX Swap | 1/2 | In Progress|  | - |
+| 343. Currency Mapping + DEX Swap | 2/2 | Complete   | 2026-03-06 | - |
 | 344. Exchange + Status Tracking | v31.3 | 0/2 | Not started | - |
 | 345. Auto Routing | v31.3 | 0/2 | Not started | - |
 | 346. Integration + Testing | v31.3 | 0/3 | Not started | - |

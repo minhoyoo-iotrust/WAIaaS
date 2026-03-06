@@ -25,10 +25,10 @@ Requirements for DCent Swap Aggregator integration. Each maps to roadmap phases.
 
 ### DEX Swap (DSWP)
 
-- [ ] **DSWP-01**: User can request DEX swap quotes from DCent API and see provider-by-provider comparison
-- [ ] **DSWP-02**: User can execute DEX swap via approve + txdata BATCH pipeline (ERC20 approve calldata + swap txdata)
-- [ ] **DSWP-03**: Swap execution validates amount against min/max limits from quote
-- [ ] **DSWP-04**: User receives optimal quote recommendation based on rate, fee, and estimatedTime
+- [x] **DSWP-01**: User can request DEX swap quotes from DCent API and see provider-by-provider comparison
+- [x] **DSWP-02**: User can execute DEX swap via approve + txdata BATCH pipeline (ERC20 approve calldata + swap txdata)
+- [x] **DSWP-03**: Swap execution validates amount against min/max limits from quote
+- [x] **DSWP-04**: User receives optimal quote recommendation based on rate, fee, and estimatedTime
 
 ### Exchange (XCHG)
 
@@ -95,10 +95,10 @@ Requirements for DCent Swap Aggregator integration. Each maps to roadmap phases.
 | CMAP-02 | Phase 343 | Complete |
 | CMAP-03 | Phase 343 | Complete |
 | CMAP-04 | Phase 343 | Complete |
-| DSWP-01 | Phase 343 | Pending |
-| DSWP-02 | Phase 343 | Pending |
-| DSWP-03 | Phase 343 | Pending |
-| DSWP-04 | Phase 343 | Pending |
+| DSWP-01 | Phase 343 | Complete |
+| DSWP-02 | Phase 343 | Complete |
+| DSWP-03 | Phase 343 | Complete |
+| DSWP-04 | Phase 343 | Complete |
 | XCHG-01 | Phase 344 | Pending |
 | XCHG-02 | Phase 344 | Pending |
 | XCHG-03 | Phase 344 | Pending |
