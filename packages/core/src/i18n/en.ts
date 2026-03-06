@@ -284,6 +284,10 @@ export const messages: Messages = {
     REPUTATION_THRESHOLD_TRIGGERED: { title: 'Reputation Threshold Triggered', body: '{walletName} transaction tier escalated to {tier} due to reputation score {score} below threshold {threshold}' },
     ERC8128_SIGNATURE_CREATED: { title: 'ERC-8128 Signature Created', body: '{walletName} signed HTTP request to {domain}. Method: {method}, Preset: {preset}' },
     ERC8128_DOMAIN_BLOCKED: { title: 'ERC-8128 Domain Blocked', body: '{walletName} attempted to sign HTTP request to blocked domain {domain}. Reason: {reason}' },
+    EXCHANGE_COMPLETED: { title: 'Cross-chain Exchange Completed', body: 'Exchange completed via {providerId}. Transaction {transactionId}. Track: {transactionStatusUrl}' },
+    EXCHANGE_FAILED: { title: 'Cross-chain Exchange Failed', body: 'Exchange failed via {providerId}. Transaction {transactionId}. Check status: {transactionStatusUrl}' },
+    EXCHANGE_REFUNDED: { title: 'Cross-chain Exchange Refunded', body: 'Exchange {transactionId} was refunded by {providerId}. Funds returned to source wallet.' },
+    EXCHANGE_TIMEOUT: { title: 'Cross-chain Exchange Monitoring Timeout', body: 'Exchange {transactionId} monitoring timed out after 1 hour. Check status manually: {transactionStatusUrl}' },
   },
   // System messages
   system: {

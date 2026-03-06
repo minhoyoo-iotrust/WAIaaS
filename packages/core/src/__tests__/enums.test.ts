@@ -118,8 +118,8 @@ describe('Enum SSoT', () => {
     expect(SESSION_STATUSES).toHaveLength(3);
   });
 
-  it('NotificationEventType has 56 values', () => {
-    expect(NOTIFICATION_EVENT_TYPES).toHaveLength(56);
+  it('NotificationEventType has 60 values', () => {
+    expect(NOTIFICATION_EVENT_TYPES).toHaveLength(60);
     // v28.5: gas condition events
     expect(NOTIFICATION_EVENT_TYPES).toContain('TX_GAS_WAITING');
     expect(NOTIFICATION_EVENT_TYPES).toContain('TX_GAS_CONDITION_MET');

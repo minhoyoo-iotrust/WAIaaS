@@ -94,7 +94,7 @@ export class ExchangeStatusTracker implements IAsyncStatusTracker {
   private readonly apiClient: DcentSwapApiClient;
 
   constructor(config: DcentSwapConfig) {
-    this.pollIntervalMs = (config as Record<string, unknown>).exchangePollIntervalMs as number ?? 30_000;
+    this.pollIntervalMs = config.exchangePollIntervalMs ?? 30_000;
     this.apiClient = new DcentSwapApiClient(config);
   }
 

@@ -150,8 +150,8 @@ describe('getExchangeQuotes', () => {
     });
 
     expect(result.providers).toHaveLength(2); // Only successful exchange providers
-    expect(result.providers[0].providerId).toBe('changelly_exchange_flexible');
-    expect(result.providers[1].providerId).toBe('changenow_exchange_flexible');
+    expect(result.providers[0]!.providerId).toBe('changelly_exchange_flexible');
+    expect(result.providers[1]!.providerId).toBe('changenow_exchange_flexible');
     expect(result.bestProvider).toBeDefined();
     expect(result.bestProvider!.providerId).toBe('changelly_exchange_flexible');
   });

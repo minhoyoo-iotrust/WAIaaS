@@ -85,6 +85,15 @@ export { IDENTITY_REGISTRY_ABI } from './providers/erc8004/identity-abi.js';
 export { REPUTATION_REGISTRY_ABI } from './providers/erc8004/reputation-abi.js';
 export { VALIDATION_REGISTRY_ABI } from './providers/erc8004/validation-abi.js';
 
+export { DcentSwapActionProvider } from './providers/dcent-swap/index.js';
+export { DCENT_SWAP_DEFAULTS } from './providers/dcent-swap/config.js';
+export type { DcentSwapConfig } from './providers/dcent-swap/config.js';
+export { DcentSwapApiClient } from './providers/dcent-swap/dcent-api-client.js';
+export { caip19ToDcentId, dcentIdToCaip19 } from './providers/dcent-swap/currency-mapper.js';
+export { ExchangeStatusTracker } from './providers/dcent-swap/exchange-status-tracker.js';
+export type { ExchangeQuoteResult, ExecuteExchangeParams, ExchangeResult } from './providers/dcent-swap/exchange.js';
+export type { DcentQuoteResult, GetQuotesParams } from './providers/dcent-swap/dex-swap.js';
+
 // Re-export common utilities
 export { ActionApiClient } from './common/action-api-client.js';
 export { asBps, asPct, clampSlippageBps, bpsToPct, pctToBps } from './common/slippage.js';
