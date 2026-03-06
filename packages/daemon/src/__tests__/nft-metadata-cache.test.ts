@@ -39,7 +39,7 @@ function makeMockMetadata(overrides: Partial<NftMetadata> = {}): NftMetadata {
 // ---------------------------------------------------------------------------
 
 function createMockDb() {
-  const rows = new Map<string, Record<string, unknown>>();
+  const _rows = new Map<string, Record<string, unknown>>();
 
   const get = vi.fn().mockImplementation(() => null);
   const all = vi.fn().mockImplementation(() => []);

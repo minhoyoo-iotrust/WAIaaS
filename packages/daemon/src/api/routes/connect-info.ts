@@ -360,9 +360,9 @@ export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
               network: primaryNetwork,
               pageSize: 100,
             });
-            totalCount += result.nfts.length;
-            for (const nft of result.nfts) {
-              if (nft.collection?.address) collectionSet.add(nft.collection.address);
+            totalCount += result.items.length;
+            for (const nft of result.items) {
+              if (nft.collection?.name) collectionSet.add(nft.collection.name);
             }
           }
           if (totalCount > 0) {

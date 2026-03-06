@@ -242,10 +242,8 @@ interface AlchemyListResponse {
   totalCount?: number;
 }
 
-/** Alchemy getNFTMetadata response shape. */
-interface AlchemyMetadataResponse extends AlchemyOwnedNft {
-  // same fields as AlchemyOwnedNft
-}
+/** Alchemy getNFTMetadata response shape (same as AlchemyOwnedNft). */
+type AlchemyMetadataResponse = AlchemyOwnedNft;
 
 /** Alchemy getNFTsForCollection response shape. */
 interface AlchemyCollectionResponse {

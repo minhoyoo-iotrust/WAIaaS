@@ -6,7 +6,6 @@ import { describe, it, expect } from 'vitest';
 import type {
   NftTransferParams,
   NftApproveParams,
-  IChainAdapter,
   UnsignedTransaction,
   SubmitResult,
 } from '../interfaces/index.js';

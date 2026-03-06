@@ -14,9 +14,6 @@ import {
 } from '../interfaces/nft-indexer.types.js';
 import type {
   INftIndexer,
-  NftItem,
-  NftMetadata,
-  NftCollection,
   NftListOptions,
   NftListResult,
 } from '../interfaces/nft-indexer.types.js';
@@ -78,7 +75,8 @@ describe('INftIndexer interface and types', () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.attributes).toHaveLength(2);
-      expect(result.data.attributes[0].trait_type).toBe('Background');
+      const attrs = result.data.attributes;
+      expect(attrs[0]!.trait_type).toBe('Background');
       expect(result.data.tokenUri).toBe('https://api.example.com/token/42');
     }
   });

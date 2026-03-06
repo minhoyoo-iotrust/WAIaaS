@@ -12,7 +12,7 @@ import { createDatabase, pushSchema } from '../infrastructure/database/index.js'
 import type { DatabaseConnection } from '../infrastructure/database/index.js';
 import { wallets } from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
-import type { AdapterPool } from '../infrastructure/adapter-pool.js';
+
 import { nftApprovalRoutes, type NftApprovalRouteDeps } from '../api/routes/nft-approvals.js';
 
 // ---------------------------------------------------------------------------

@@ -6,7 +6,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NftIndexerClient } from '../infrastructure/nft/nft-indexer-client.js';
-import { WAIaaSError } from '@waiaas/core';
+
 
 // Mock settings service
 const mockSettingsService = {

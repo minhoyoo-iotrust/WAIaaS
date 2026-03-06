@@ -1,7 +1,7 @@
 /**
  * Contract Test: MockChainAdapter
  *
- * Verifies that a complete 22-method MockChainAdapter passes the shared
+ * Verifies that a complete 25-method MockChainAdapter passes the shared
  * IChainAdapter contract test suite. This serves as the baseline --
  * if Mock passes, any real adapter that also passes the same suite is
  * guaranteed to have identical return-type shapes.
@@ -30,15 +30,17 @@ import type {
   BatchParams,
   ParsedTransaction,
   SignedTransaction,
+  NftTransferParams,
+  NftApproveParams,
 } from '../../index.js';
 import { chainAdapterContractTests } from './chain-adapter.contract.js';
 
 // ---------------------------------------------------------------------------
-// Complete MockChainAdapter (22 methods)
+// Complete MockChainAdapter (25 methods)
 // ---------------------------------------------------------------------------
 
 /**
- * Contract-test-specific MockChainAdapter implementing all 22 IChainAdapter methods.
+ * Contract-test-specific MockChainAdapter implementing all 25 IChainAdapter methods.
  *
  * This is separate from the daemon-harness MockChainAdapter (which only has 10 methods).
  * Returns deterministic mock data conforming to each interface's shape.
@@ -219,6 +221,33 @@ class ContractTestMockChainAdapter implements IChainAdapter {
 
   async signExternalTransaction(_rawTx: string, _privateKey: Uint8Array): Promise<SignedTransaction> {
     return { signedTransaction: 'mock-signed-external-tx' };
+  }
+
+  // -- NFT operations (3) -- v31.0
+
+  async buildNftTransferTx(_request: NftTransferParams): Promise<UnsignedTransaction> {
+    return {
+      chain: this.chain,
+      serialized: new Uint8Array(300),
+      estimatedFee: 5000n,
+      metadata: { type: 'nft_transfer' },
+    };
+  }
+
+  async transferNft(_request: NftTransferParams, _privateKey: Uint8Array): Promise<SubmitResult> {
+    return {
+      txHash: 'mock-nft-transfer-tx',
+      status: 'submitted',
+    };
+  }
+
+  async approveNft(_request: NftApproveParams): Promise<UnsignedTransaction> {
+    return {
+      chain: this.chain,
+      serialized: new Uint8Array(250),
+      estimatedFee: 5000n,
+      metadata: { type: 'nft_approve' },
+    };
   }
 }
 
