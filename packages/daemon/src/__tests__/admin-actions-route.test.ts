@@ -69,7 +69,7 @@ describe('adminActionRoutes', () => {
     const app = new Hono();
     app.route('/v1', router);
 
-    const res = await app.request('/v1/admin/actions/unknown_provider/unknown_action', {
+    await app.request('/v1/admin/actions/unknown_provider/unknown_action', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ walletId: '019cc695-e499-7ddb-a9e5-7e46f7cb81cd' }),
@@ -92,7 +92,7 @@ describe('adminActionRoutes', () => {
     const app = new Hono();
     app.route('/v1', router);
 
-    const res = await app.request('/v1/admin/actions/paid_provider/test', {
+    await app.request('/v1/admin/actions/paid_provider/test', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ walletId: '019cc695-e499-7ddb-a9e5-7e46f7cb81cd' }),
@@ -118,7 +118,7 @@ describe('adminActionRoutes', () => {
     const app = new Hono();
     app.route('/v1', router);
 
-    const res = await app.request('/v1/admin/actions/test_provider/test_action', {
+    await app.request('/v1/admin/actions/test_provider/test_action', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ walletId: '019cc695-e499-7ddb-a9e5-7e46f7cb81cd' }),
