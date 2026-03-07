@@ -71,7 +71,7 @@ export class DcentSwapActionProvider implements IActionProvider {
 
     this.metadata = {
       name: 'dcent_swap',
-      description: "D'CENT Swap Aggregator supporting multi-provider DEX swaps",
+      description: "D'CENT Swap Aggregator supporting multi-chain DEX swaps including cross-chain swaps",
       version: '1.0.0',
       chains: ['ethereum', 'solana'],
       mcpExpose: true,
@@ -82,7 +82,7 @@ export class DcentSwapActionProvider implements IActionProvider {
     this.actions = [
       {
         name: 'get_quotes',
-        description: "Get swap quotes from D'CENT Swap Aggregator with provider comparison (informational)",
+        description: "Get swap quotes from D'CENT Swap Aggregator with provider comparison — supports same-chain and cross-chain swaps (informational)",
         chain: 'ethereum',
         inputSchema: GetQuotesInputSchema,
         riskLevel: 'low',
@@ -90,7 +90,7 @@ export class DcentSwapActionProvider implements IActionProvider {
       },
       {
         name: 'dex_swap',
-        description: "Execute DEX swap via D'CENT Swap Aggregator with approve and txdata BATCH pipeline",
+        description: "Execute DEX swap via D'CENT Swap Aggregator — supports same-chain and cross-chain swaps with approve and txdata BATCH pipeline",
         chain: 'ethereum',
         inputSchema: DexSwapInputSchema,
         riskLevel: 'high',

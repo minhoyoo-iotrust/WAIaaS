@@ -888,52 +888,21 @@ export default function SettingsPage() {
 
   function NftIndexerSection() {
     const indexerKeys = apiKeys.value.filter((k) => k.providerName in NFT_INDEXER_PROVIDERS);
-    // If no indexer providers registered yet, show manual instructions
-    if (indexerKeys.length === 0 && !apiKeysLoading.value) {
-      return (
-        <div class="settings-category">
-          <div class="settings-category-header">
-            <h3>NFT Indexer</h3>
-            <p class="settings-description">Configure API keys for NFT indexing (required for NFT query operations)</p>
-          </div>
-          <div class="settings-category-body">
-            <div class="settings-field-row">
-              <div class="settings-field-label">
-                <span>Alchemy NFT</span>
-                <Badge variant="neutral">Not registered</Badge>
-              </div>
-              <div class="settings-field-value">
-                <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.85em' }}>
-                  EVM NFT indexing -- configure via API Keys above
-                </span>
-              </div>
-            </div>
-            <div class="settings-field-row">
-              <div class="settings-field-label">
-                <span>Helius</span>
-                <Badge variant="neutral">Not registered</Badge>
-              </div>
-              <div class="settings-field-value">
-                <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.85em' }}>
-                  Solana NFT indexing -- configure via API Keys above
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    if (indexerKeys.length === 0) return null;
+    // Build a merged list: registered entries from API + unregistered entries with direct input
+    const providerNames = Object.keys(NFT_INDEXER_PROVIDERS);
+    const entries = providerNames.map((name) => {
+      const existing = indexerKeys.find((k) => k.providerName === name);
+      return existing ?? { providerName: name, hasKey: false, maskedKey: '' };
+    });
 
     return (
       <div class="settings-category">
         <div class="settings-category-header">
           <h3>NFT Indexer</h3>
-          <p class="settings-description">API keys for NFT indexing services</p>
+          <p class="settings-description">Configure API keys for NFT indexing (required for NFT query operations)</p>
         </div>
         <div class="settings-category-body">
-          {indexerKeys.map((entry) => {
+          {entries.map((entry) => {
             const info = NFT_INDEXER_PROVIDERS[entry.providerName]!;
             return (
               <div class="settings-field-row" key={entry.providerName}>
