@@ -14,7 +14,7 @@ import { ChainError } from '@waiaas/core';
 // Constants
 // ---------------------------------------------------------------------------
 
-const BASE_URL = 'https://swapbuy-beta.dcentwallet.com';
+const BASE_URL = 'https://agent-swap.dcentwallet.com';
 const SOLANA_CAIP2 = 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp';
 
 const ETH_CAIP19 = 'eip155:1/slip44:60';
@@ -56,14 +56,6 @@ function makeQuotesResponse(overrides: Record<string, unknown> = {}) {
           quoteType: 'flexible',
           expectedAmount: '2040000000',
           spenderContractAddress: '0xUniswapRouter',
-        },
-        {
-          id: 'changelly_exchange_flexible',
-          status: 'success',
-          providerId: 'changelly_exchange_flexible',
-          providerType: 'exchange',
-          name: 'Changelly',
-          expectedAmount: '23552793560',
         },
         {
           id: 'rubic_swap',
@@ -136,7 +128,7 @@ const DEFAULT_CONFIG: DcentSwapConfig = { ...DCENT_SWAP_DEFAULTS, apiBaseUrl: BA
 
 describe('dcent-dex-swap', () => {
   describe('getDcentQuotes', () => {
-    it('filters exchange providers and returns only DEX providers', async () => {
+    it('returns DEX providers', async () => {
       const client = createClient();
       const result = await getDcentQuotes(client, {
         fromAsset: ETH_CAIP19,
@@ -147,7 +139,6 @@ describe('dcent-dex-swap', () => {
       });
 
       expect(result.dexProviders).toHaveLength(2);
-      expect(result.exchangeProviders).toHaveLength(1);
       expect(result.dexProviders[0]?.providerId).toBe('sushi_swap');
       expect(result.bestDexProvider?.providerId).toBe('sushi_swap');
     });
@@ -320,25 +311,14 @@ describe('dcent-dex-swap', () => {
       ).rejects.toThrow(ChainError);
     });
 
-    it('throws when no DEX providers available (only exchange)', async () => {
+    it('throws when no DEX providers available', async () => {
       server.use(
         http.post(`${BASE_URL}/api/swap/v3/get_quotes`, () => {
           return HttpResponse.json({
-            status: 'success',
+            status: 'fail_no_available_provider',
             fromId: 'ETHEREUM',
-            toId: 'SOLANA',
-            providers: {
-              bestOrder: ['changelly_exchange_flexible'],
-              common: [
-                {
-                  id: 'changelly_exchange_flexible',
-                  status: 'success',
-                  providerId: 'changelly_exchange_flexible',
-                  providerType: 'exchange',
-                  expectedAmount: '23000000000',
-                },
-              ],
-            },
+            toId: 'UNKNOWN',
+            providers: { bestOrder: [], common: [] },
           });
         }),
       );

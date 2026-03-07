@@ -22,8 +22,6 @@ import { clampSlippageBps, asBps } from '../../common/slippage.js';
 export interface DcentQuoteResult {
   /** DEX providers (swap + cross_swap), sorted by expectedAmount descending. */
   dexProviders: DcentQuoteProvider[];
-  /** Exchange providers (cross-chain custodial). */
-  exchangeProviders: DcentQuoteProvider[];
   /** Best DEX provider (highest expectedAmount), or null if none. */
   bestDexProvider: DcentQuoteProvider | null;
   /** Original bestOrder from DCent API. */
@@ -104,11 +102,9 @@ export async function getDcentQuotes(
   // Filter to successful providers only
   const successProviders = allProviders.filter(p => p.status === 'success');
 
-  // Separate DEX (swap + cross_swap) from Exchange
+  // Filter to DEX providers (swap + cross_swap)
   const dexProviders = successProviders
     .filter(p => p.providerType === 'swap' || p.providerType === 'cross_swap');
-  const exchangeProviders = successProviders
-    .filter(p => p.providerType === 'exchange');
 
   // Sort DEX providers by expectedAmount descending (BigInt comparison)
   dexProviders.sort((a, b) => {
@@ -121,7 +117,6 @@ export async function getDcentQuotes(
 
   return {
     dexProviders,
-    exchangeProviders,
     bestDexProvider: dexProviders[0] ?? null,
     bestOrder,
   };

@@ -77,7 +77,7 @@ describe('connect-info dcent_swap capability', () => {
     const capabilities = ['transfer', 'token_transfer', 'balance', 'assets', 'dcent_swap'];
     const prompt = buildConnectInfoPrompt(createPromptParams({ capabilities }));
 
-    expect(prompt).toContain('DCent Swap');
+    expect(prompt).toContain("D'CENT Swap Aggregator");
     expect(prompt).toContain('action_dcent_swap_*');
   });
 

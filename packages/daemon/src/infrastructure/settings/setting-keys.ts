@@ -280,13 +280,11 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'actions.helius_das_api_key', category: 'actions', configPath: 'actions.helius_das_api_key', defaultValue: '', isCredential: true },
   { key: 'actions.nft_indexer_cache_ttl_sec', category: 'actions', configPath: 'actions.nft_indexer_cache_ttl_sec', defaultValue: '300', isCredential: false },
 
-  // --- DCent Swap Aggregator ---
+  // --- D'CENT Swap Aggregator ---
   { key: 'actions.dcent_swap_enabled', category: 'actions', configPath: 'actions.dcent_swap_enabled', defaultValue: 'true', isCredential: false },
-  { key: 'actions.dcent_swap_api_url', category: 'actions', configPath: 'actions.dcent_swap_api_url', defaultValue: 'https://swapbuy-beta.dcentwallet.com', isCredential: false },
+  { key: 'actions.dcent_swap_api_url', category: 'actions', configPath: 'actions.dcent_swap_api_url', defaultValue: 'https://agent-swap.dcentwallet.com', isCredential: false },
   { key: 'actions.dcent_swap_default_slippage_bps', category: 'actions', configPath: 'actions.dcent_swap_default_slippage_bps', defaultValue: '100', isCredential: false },
   { key: 'actions.dcent_swap_max_slippage_bps', category: 'actions', configPath: 'actions.dcent_swap_max_slippage_bps', defaultValue: '500', isCredential: false },
-  { key: 'actions.dcent_swap_exchange_poll_interval_ms', category: 'actions', configPath: 'actions.dcent_swap_exchange_poll_interval_ms', defaultValue: '30000', isCredential: false },
-  { key: 'actions.dcent_swap_exchange_poll_max_ms', category: 'actions', configPath: 'actions.dcent_swap_exchange_poll_max_ms', defaultValue: '3600000', isCredential: false },
   { key: 'actions.dcent_swap_currency_cache_ttl_ms', category: 'actions', configPath: 'actions.dcent_swap_currency_cache_ttl_ms', defaultValue: '86400000', isCredential: false },
 
   // --- erc8128 category (ERC-8128 Signed HTTP Requests) ---

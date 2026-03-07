@@ -13,7 +13,7 @@ import { ChainError } from '@waiaas/core';
 // Constants
 // ---------------------------------------------------------------------------
 
-const BASE_URL = 'https://swapbuy-beta.dcentwallet.com';
+const BASE_URL = 'https://agent-swap.dcentwallet.com';
 
 // ---------------------------------------------------------------------------
 // Mock data
@@ -57,26 +57,6 @@ const TX_DATA_RESPONSE = {
   networkFee: { gas: '275841', gasPrice: '121236406' },
 };
 
-const EXCHANGE_RESPONSE = {
-  status: 'success',
-  transactionId: 'tx-abc-123',
-  transactionStatusUrl: 'https://example.com/status/tx-abc-123',
-  payInAddress: '0xPayInAddress',
-  fromAmount: '1000000000000000000',
-  toAmount: '2049257221',
-};
-
-const STATUS_RESPONSE = [
-  {
-    providerId: 'changelly',
-    status: 'exchanging' as const,
-    txId: 'tx-abc-123',
-    payInAddress: '0xPayInAddress',
-    payOutAddress: '0xPayOutAddress',
-    fromAmount: '1000000000000000000',
-    toAmount: '2049257221',
-  },
-];
 
 // ---------------------------------------------------------------------------
 // MSW server
@@ -91,12 +71,6 @@ const server = setupServer(
   }),
   http.post(`${BASE_URL}/api/swap/v3/get_dex_swap_transaction_data`, () => {
     return HttpResponse.json(TX_DATA_RESPONSE);
-  }),
-  http.post(`${BASE_URL}/api/swap/v3/create_exchange_transaction`, () => {
-    return HttpResponse.json(EXCHANGE_RESPONSE);
-  }),
-  http.post(`${BASE_URL}/api/swap/v3/get_transactions_status`, () => {
-    return HttpResponse.json(STATUS_RESPONSE);
   }),
 );
 
@@ -380,81 +354,6 @@ describe('DcentSwapApiClient', () => {
     });
   });
 
-  // -----------------------------------------------------------------------
-  // createExchangeTransaction
-  // -----------------------------------------------------------------------
-  describe('createExchangeTransaction', () => {
-    it('returns exchange transaction on success', async () => {
-      const client = createClient();
-      const result = await client.createExchangeTransaction({
-        fromId: 'ETHEREUM',
-        toId: 'SOLANA',
-        fromAmount: '1000000000000000000',
-        fromDecimals: 18,
-        toDecimals: 9,
-        fromWalletAddress: '0xwallet',
-        toWalletAddress: 'SolanaAddress123',
-        providerId: 'changelly',
-      });
-
-      expect(result.status).toBe('success');
-      expect(result.transactionId).toBe('tx-abc-123');
-      expect(result.payInAddress).toBe('0xPayInAddress');
-    });
-
-    it('throws ChainError on API failure', async () => {
-      server.use(
-        http.post(`${BASE_URL}/api/swap/v3/create_exchange_transaction`, () => {
-          return new HttpResponse('Bad Request', { status: 400 });
-        }),
-      );
-
-      const client = createClient();
-      await expect(
-        client.createExchangeTransaction({
-          fromId: 'ETHEREUM',
-          toId: 'SOLANA',
-          fromAmount: '1',
-          fromDecimals: 18,
-          toDecimals: 9,
-          fromWalletAddress: '0xwallet',
-          toWalletAddress: 'addr',
-          providerId: 'changelly',
-        }),
-      ).rejects.toThrow(ChainError);
-    });
-  });
-
-  // -----------------------------------------------------------------------
-  // getTransactionsStatus
-  // -----------------------------------------------------------------------
-  describe('getTransactionsStatus', () => {
-    it('returns transaction statuses on success', async () => {
-      const client = createClient();
-      const result = await client.getTransactionsStatus([
-        { txId: 'tx-abc-123', providerId: 'changelly' },
-      ]);
-
-      expect(result).toHaveLength(1);
-      expect(result[0]!.status).toBe('exchanging');
-      expect(result[0]!.txId).toBe('tx-abc-123');
-    });
-
-    it('throws ChainError on API failure', async () => {
-      server.use(
-        http.post(`${BASE_URL}/api/swap/v3/get_transactions_status`, () => {
-          return new HttpResponse('Error', { status: 502 });
-        }),
-      );
-
-      const client = createClient();
-      await expect(
-        client.getTransactionsStatus([
-          { txId: 'tx-abc-123', providerId: 'changelly' },
-        ]),
-      ).rejects.toThrow(ChainError);
-    });
-  });
 
   // -----------------------------------------------------------------------
   // isCurrencySupported

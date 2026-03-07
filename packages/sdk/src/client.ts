@@ -103,8 +103,6 @@ import type {
   TransferNftParams,
   DcentQuoteParams,
   DcentDexSwapParams,
-  DcentExchangeParams,
-  DcentSwapStatusParams,
 } from './types.js';
 
 export class WAIaaSClient {
@@ -880,21 +878,6 @@ export class WAIaaSClient {
     });
   }
 
-  /** Execute DCent cross-chain exchange (payInAddress TRANSFER). */
-  async dcentExchange(params: DcentExchangeParams): Promise<ExecuteActionResponse> {
-    const { network, walletId, gasCondition, ...rest } = params;
-    return this.executeAction('dcent_swap', 'exchange', {
-      params: rest, network, walletId, gasCondition,
-    });
-  }
-
-  /** Get DCent swap/exchange status (informational -- no transaction created). */
-  async getDcentSwapStatus(params: DcentSwapStatusParams): Promise<ExecuteActionResponse> {
-    const { network, walletId, ...rest } = params;
-    return this.executeAction('dcent_swap', 'swap_status', {
-      params: rest, network, walletId,
-    });
-  }
 
   // --- ERC-8004 write actions (via executeAction) ---
 

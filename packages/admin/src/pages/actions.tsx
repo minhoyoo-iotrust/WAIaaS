@@ -5,7 +5,7 @@ import { API } from '../api/endpoints';
 import { FormField, Button, Badge } from '../components/form';
 import { showToast } from '../components/toast';
 import { getErrorMessage } from '../utils/error-messages';
-import { keyToLabel } from '../utils/settings-helpers';
+import { keyToLabel, isSlippageBpsKey, bpsToPercent, percentToBps } from '../utils/settings-helpers';
 import type { SettingsData, ApiKeyEntry } from '../utils/settings-helpers';
 
 // ---------------------------------------------------------------------------
@@ -27,7 +27,7 @@ interface BuiltinProvider {
 const BUILTIN_PROVIDERS: BuiltinProvider[] = [
   { key: 'jupiter_swap', name: 'Jupiter Swap', description: 'Solana DEX aggregator', chain: 'solana', category: 'Swap', requiresApiKey: false, docsUrl: 'https://station.jup.ag/docs' },
   { key: 'zerox_swap', name: '0x Swap', description: 'EVM DEX aggregator (AllowanceHolder)', chain: 'evm', category: 'Swap', requiresApiKey: true, docsUrl: 'https://dashboard.0x.org' },
-  { key: 'dcent_swap', name: "D'CENT Swap", description: 'DEX swap & cross-chain exchange aggregator (6 EVM chains)', chain: 'evm', category: 'Swap', requiresApiKey: false, docsUrl: 'https://dcentwallet.com' },
+  { key: 'dcent_swap', name: "D'CENT Swap Aggregator", description: 'DEX swap aggregator (6 EVM chains)', chain: 'evm', category: 'Swap', requiresApiKey: false, docsUrl: 'https://dcentwallet.com' },
   { key: 'lifi', name: 'LI.FI', description: 'Multi-chain DEX/bridge aggregator', chain: 'multi', category: 'Bridge', requiresApiKey: false, docsUrl: 'https://docs.li.fi' },
   { key: 'lido_staking', name: 'Lido Staking', description: 'ETH liquid staking (stETH/wstETH)', chain: 'evm', category: 'Staking', requiresApiKey: false, docsUrl: 'https://docs.lido.fi' },
   { key: 'jito_staking', name: 'Jito Staking', description: 'SOL liquid staking (JitoSOL)', chain: 'solana', category: 'Staking', requiresApiKey: false, docsUrl: 'https://www.jito.network/docs' },
@@ -182,9 +182,10 @@ export default function ActionsPage() {
 
   const handleAdvancedSave = async (settingKey: string, value: string) => {
     const fullKey = `actions.${settingKey}`;
+    const saveValue = isSlippageBpsKey(settingKey) ? percentToBps(value) : value;
     try {
       const result = await apiPut<{ updated: number; settings: SettingsData }>(API.ADMIN_SETTINGS, {
-        settings: [{ key: fullKey, value }],
+        settings: [{ key: fullKey, value: saveValue }],
       });
       settings.value = result.settings;
       // Clear dirty for this key
@@ -266,6 +267,15 @@ export default function ActionsPage() {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
     }
+  }
+
+  /** Get display value for an advanced setting, applying bps→% conversion for slippage keys */
+  function getAdvancedDisplayValue(shortKey: string): string {
+    const cat = settings.value['actions'] as Record<string, string> | undefined;
+    const raw = advancedDirty.value[shortKey] ?? cat?.[shortKey] ?? '';
+    // dirty values are already in display format (%), raw DB values need conversion
+    if (advancedDirty.value[shortKey] !== undefined) return advancedDirty.value[shortKey];
+    return isSlippageBpsKey(shortKey) ? bpsToPercent(raw) : raw;
   }
 
   function getStatus(bp: BuiltinProvider): { label: string; variant: 'success' | 'warning' | 'neutral' } {
@@ -403,6 +413,74 @@ export default function ActionsPage() {
                 </div>
               )}
 
+              {/* Jupiter Swap Advanced Settings -- slippage only */}
+              {bp.key === 'jupiter_swap' && enabled && (
+                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
+                  <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-2)', color: 'var(--text-secondary)' }}>
+                    Advanced Settings
+                  </div>
+                  {(['jupiter_swap_default_slippage_bps', 'jupiter_swap_max_slippage_bps'] as const).map((shortKey) => {
+                    const currentValue = getAdvancedDisplayValue(shortKey);
+                    return (
+                      <div
+                        key={shortKey}
+                        style={{ marginBottom: 'var(--space-2)' }}
+                        onBlur={() => {
+                          const val = advancedDirty.value[shortKey];
+                          if (val !== undefined) {
+                            void handleAdvancedSave(shortKey, val);
+                          }
+                        }}
+                      >
+                        <FormField
+                          label={keyToLabel(shortKey)}
+                          name={`actions.${shortKey}`}
+                          type="text"
+                          value={currentValue}
+                          onChange={(v) => {
+                            advancedDirty.value = { ...advancedDirty.value, [shortKey]: String(v) };
+                          }}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* 0x Swap Advanced Settings -- slippage only */}
+              {bp.key === 'zerox_swap' && enabled && (
+                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
+                  <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-2)', color: 'var(--text-secondary)' }}>
+                    Advanced Settings
+                  </div>
+                  {(['zerox_swap_default_slippage_bps', 'zerox_swap_max_slippage_bps'] as const).map((shortKey) => {
+                    const currentValue = getAdvancedDisplayValue(shortKey);
+                    return (
+                      <div
+                        key={shortKey}
+                        style={{ marginBottom: 'var(--space-2)' }}
+                        onBlur={() => {
+                          const val = advancedDirty.value[shortKey];
+                          if (val !== undefined) {
+                            void handleAdvancedSave(shortKey, val);
+                          }
+                        }}
+                      >
+                        <FormField
+                          label={keyToLabel(shortKey)}
+                          name={`actions.${shortKey}`}
+                          type="text"
+                          value={currentValue}
+                          onChange={(v) => {
+                            advancedDirty.value = { ...advancedDirty.value, [shortKey]: String(v) };
+                          }}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
               {/* Aave V3 Advanced Settings -- only when Aave V3 is enabled */}
               {bp.key === 'aave_v3' && enabled && (
                 <div style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
@@ -410,8 +488,7 @@ export default function ActionsPage() {
                     Advanced Settings
                   </div>
                   {(['aave_v3_health_factor_warning_threshold', 'aave_v3_position_sync_interval_sec', 'aave_v3_max_ltv_pct'] as const).map((shortKey) => {
-                    const cat = settings.value['actions'] as Record<string, string> | undefined;
-                    const currentValue = advancedDirty.value[shortKey] ?? cat?.[shortKey] ?? '';
+                    const currentValue = getAdvancedDisplayValue(shortKey);
                     return (
                       <div
                         key={shortKey}
@@ -445,8 +522,7 @@ export default function ActionsPage() {
                     Advanced Settings
                   </div>
                   {(['kamino_market', 'kamino_hf_threshold'] as const).map((shortKey) => {
-                    const cat = settings.value['actions'] as Record<string, string> | undefined;
-                    const currentValue = advancedDirty.value[shortKey] ?? cat?.[shortKey] ?? '';
+                    const currentValue = getAdvancedDisplayValue(shortKey);
                     return (
                       <div
                         key={shortKey}
@@ -480,8 +556,41 @@ export default function ActionsPage() {
                     Advanced Settings
                   </div>
                   {(['drift_max_leverage', 'drift_max_position_usd', 'drift_margin_warning_threshold_pct', 'drift_position_sync_interval_sec'] as const).map((shortKey) => {
-                    const cat = settings.value['actions'] as Record<string, string> | undefined;
-                    const currentValue = advancedDirty.value[shortKey] ?? cat?.[shortKey] ?? '';
+                    const currentValue = getAdvancedDisplayValue(shortKey);
+                    return (
+                      <div
+                        key={shortKey}
+                        style={{ marginBottom: 'var(--space-2)' }}
+                        onBlur={() => {
+                          const val = advancedDirty.value[shortKey];
+                          if (val !== undefined) {
+                            void handleAdvancedSave(shortKey, val);
+                          }
+                        }}
+                      >
+                        <FormField
+                          label={keyToLabel(shortKey)}
+                          name={`actions.${shortKey}`}
+                          type="text"
+                          value={currentValue}
+                          onChange={(v) => {
+                            advancedDirty.value = { ...advancedDirty.value, [shortKey]: String(v) };
+                          }}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Pendle Yield Advanced Settings -- slippage only */}
+              {bp.key === 'pendle_yield' && enabled && (
+                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
+                  <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-2)', color: 'var(--text-secondary)' }}>
+                    Advanced Settings
+                  </div>
+                  {(['pendle_yield_default_slippage_bps', 'pendle_yield_max_slippage_bps'] as const).map((shortKey) => {
+                    const currentValue = getAdvancedDisplayValue(shortKey);
                     return (
                       <div
                         key={shortKey}
@@ -514,9 +623,8 @@ export default function ActionsPage() {
                   <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-2)', color: 'var(--text-secondary)' }}>
                     Advanced Settings
                   </div>
-                  {(['dcent_swap_api_url', 'dcent_swap_default_slippage_bps', 'dcent_swap_max_slippage_bps', 'dcent_swap_exchange_poll_interval_ms', 'dcent_swap_exchange_poll_max_ms'] as const).map((shortKey) => {
-                    const cat = settings.value['actions'] as Record<string, string> | undefined;
-                    const currentValue = advancedDirty.value[shortKey] ?? cat?.[shortKey] ?? '';
+                  {(['dcent_swap_api_url', 'dcent_swap_default_slippage_bps', 'dcent_swap_max_slippage_bps'] as const).map((shortKey) => {
+                    const currentValue = getAdvancedDisplayValue(shortKey);
                     return (
                       <div
                         key={shortKey}

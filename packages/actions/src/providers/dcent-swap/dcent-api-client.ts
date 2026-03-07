@@ -13,13 +13,9 @@ import {
   DcentCurrenciesResponseSchema,
   DcentQuotesResponseSchema,
   DcentTxDataResponseSchema,
-  DcentExchangeResponseSchema,
-  DcentStatusResponseSchema,
   type DcentCurrency,
   type DcentQuotesResponse,
   type DcentTxDataResponse,
-  type DcentExchangeResponse,
-  type DcentStatusResponse,
 } from './schemas.js';
 import { type DcentSwapConfig, DCENT_SWAP_DEFAULTS } from './config.js';
 
@@ -48,21 +44,6 @@ export interface DexSwapTxParams {
   slippage: number;
 }
 
-export interface ExchangeParams {
-  fromId: string;
-  toId: string;
-  fromAmount: string;
-  fromDecimals: number;
-  toDecimals: number;
-  fromWalletAddress: string;
-  toWalletAddress: string;
-  providerId: string;
-}
-
-export interface StatusParams {
-  txId: string;
-  providerId: string;
-}
 
 // ---------------------------------------------------------------------------
 // Client implementation
@@ -149,37 +130,6 @@ export class DcentSwapApiClient extends ActionApiClient {
     }
   }
 
-  /**
-   * POST /api/swap/v3/create_exchange_transaction
-   * Create an exchange transaction for cross-chain swaps.
-   */
-  async createExchangeTransaction(params: ExchangeParams): Promise<DcentExchangeResponse> {
-    try {
-      return await this.post(
-        'api/swap/v3/create_exchange_transaction',
-        params,
-        DcentExchangeResponseSchema,
-      );
-    } catch (err) {
-      throw this.mapError(err);
-    }
-  }
-
-  /**
-   * POST /api/swap/v3/get_transactions_status
-   * Get status of exchange transactions.
-   */
-  async getTransactionsStatus(params: StatusParams[]): Promise<DcentStatusResponse> {
-    try {
-      return await this.post(
-        'api/swap/v3/get_transactions_status',
-        params,
-        DcentStatusResponseSchema,
-      );
-    } catch (err) {
-      throw this.mapError(err);
-    }
-  }
 
   // -----------------------------------------------------------------------
   // Cache helpers

@@ -261,7 +261,7 @@ export default function Erc8004Page() {
     if (!registerWalletId.value || !registerName.value) return;
     registerSaving.value = true;
     try {
-      await apiPost(`${API.ACTIONS_PROVIDERS}/erc8004_agent/register_agent`, {
+      await apiPost(`${API.ADMIN_ACTIONS}/erc8004_agent/register_agent`, {
         params: {
           name: registerName.value,
           ...(registerDescription.value ? { description: registerDescription.value } : {}),
@@ -303,7 +303,7 @@ export default function Erc8004Page() {
             linkingConnected.value = true;
 
             // Trigger set_agent_wallet
-            await apiPost(`${API.ACTIONS_PROVIDERS}/erc8004_agent/set_agent_wallet`, {
+            await apiPost(`${API.ADMIN_ACTIONS}/erc8004_agent/set_agent_wallet`, {
               params: { agentId },
               walletId,
             });
@@ -332,7 +332,7 @@ export default function Erc8004Page() {
 
   async function handleUnlinkWallet(walletId: string, agentId: string) {
     try {
-      await apiPost(`${API.ACTIONS_PROVIDERS}/erc8004_agent/unset_agent_wallet`, {
+      await apiPost(`${API.ADMIN_ACTIONS}/erc8004_agent/unset_agent_wallet`, {
         params: { agentId },
         walletId,
       });

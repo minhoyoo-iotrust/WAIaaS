@@ -100,6 +100,7 @@ import { TokenRegistryService } from '../infrastructure/token-registry/index.js'
 import { WalletLinkRegistry } from '../services/signing-sdk/wallet-link-registry.js';
 import { WalletAppService } from '../services/signing-sdk/wallet-app-service.js';
 import { actionRoutes } from './routes/actions.js';
+import { adminActionRoutes } from './routes/admin-actions.js';
 import { x402Routes } from './routes/x402.js';
 import { wcRoutes, wcSessionRoutes } from './routes/wc.js';
 import { DatabasePolicyEngine } from '../pipeline/database-policy-engine.js';
@@ -373,6 +374,8 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     // masterAuth for encrypted backup API (OPS-03)
     app.use('/v1/admin/backup', masterAuthForAdmin);
     app.use('/v1/admin/backups', masterAuthForAdmin);
+    // masterAuth for POST /v1/admin/actions/* (Admin UI action execution -- #273)
+    app.use('/v1/admin/actions/*', masterAuthForAdmin);
     // masterAuth for GET /v1/actions/providers (Admin UI reads provider list)
     app.use('/v1/actions/providers', async (c, next) => {
       if (c.req.method === 'GET') {
@@ -623,6 +626,31 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         priceOracle: deps.priceOracle,
         settingsService: deps.settingsService!,
         // v30.8: Wire EIP-712 approval + ERC-8004 notification + cache invalidation deps
+        wcSigningBridgeRef: deps.wcSigningBridgeRef,
+        approvalChannelRouter: deps.approvalChannelRouter,
+        eventBus: deps.eventBus,
+        reputationCache: deps.reputationCache,
+      }),
+    );
+
+    // Register admin action routes (masterAuth -- #273)
+    app.route(
+      '/v1',
+      adminActionRoutes({
+        registry: deps.actionProviderRegistry,
+        db: deps.db,
+        adapterPool: deps.adapterPool,
+        config: deps.config,
+        keyStore: deps.keyStore,
+        policyEngine: deps.policyEngine,
+        masterPassword: effectiveMasterPassword,
+        passwordRef: deps.passwordRef,
+        approvalWorkflow: deps.approvalWorkflow,
+        delayQueue: deps.delayQueue,
+        sqlite: deps.sqlite,
+        notificationService: deps.notificationService,
+        priceOracle: deps.priceOracle,
+        settingsService: deps.settingsService!,
         wcSigningBridgeRef: deps.wcSigningBridgeRef,
         approvalChannelRouter: deps.approvalChannelRouter,
         eventBus: deps.eventBus,

@@ -1,7 +1,7 @@
 /**
- * DCent Swap Action Provider.
+ * D'CENT Swap Aggregator Action Provider.
  *
- * Implements IActionProvider to resolve DCent DEX swap requests
+ * Implements IActionProvider to resolve D'CENT DEX swap requests
  * into ContractCallRequest arrays for the sequential pipeline.
  *
  * - dex_swap: approve + txdata BATCH (ERC-20 sell) or single swap (native sell)
@@ -21,13 +21,6 @@ import type {
 import { DcentSwapApiClient } from './dcent-api-client.js';
 import { type DcentSwapConfig, DCENT_SWAP_DEFAULTS } from './config.js';
 import { getDcentQuotes, executeDexSwap, type DcentQuoteResult, type GetQuotesParams } from './dex-swap.js';
-import {
-  getExchangeQuotes,
-  executeExchange,
-  type ExchangeQuoteResult,
-  type ExecuteExchangeParams,
-  type ExchangeResult,
-} from './exchange.js';
 import { findTwoHopRoutes, executeTwoHopSwap, type TwoHopQuoteResult } from './auto-router.js';
 
 // ---------------------------------------------------------------------------
@@ -50,21 +43,6 @@ const DexSwapInputSchema = z.object({
   toDecimals: z.number().int().min(0).max(18),
   providerId: z.string().optional(),
   slippageBps: z.number().int().optional(),
-});
-
-const ExchangeInputSchema = z.object({
-  fromAsset: z.string().min(1),
-  toAsset: z.string().min(1),
-  amount: z.string().min(1),
-  fromDecimals: z.number().int().min(0).max(18),
-  toDecimals: z.number().int().min(0).max(18),
-  toAddress: z.string().min(1),
-  providerId: z.string().optional(),
-});
-
-const SwapStatusInputSchema = z.object({
-  transactionId: z.string().min(1),
-  providerId: z.string().min(1),
 });
 
 // ---------------------------------------------------------------------------
@@ -93,7 +71,7 @@ export class DcentSwapActionProvider implements IActionProvider {
 
     this.metadata = {
       name: 'dcent_swap',
-      description: 'DCent Swap aggregator supporting multi-provider DEX swaps and cross-chain exchanges',
+      description: "D'CENT Swap Aggregator supporting multi-provider DEX swaps",
       version: '1.0.0',
       chains: ['ethereum', 'solana'],
       mcpExpose: true,
@@ -104,7 +82,7 @@ export class DcentSwapActionProvider implements IActionProvider {
     this.actions = [
       {
         name: 'get_quotes',
-        description: 'Get swap quotes from DCent aggregator with provider comparison (informational)',
+        description: "Get swap quotes from D'CENT Swap Aggregator with provider comparison (informational)",
         chain: 'ethereum',
         inputSchema: GetQuotesInputSchema,
         riskLevel: 'low',
@@ -112,27 +90,11 @@ export class DcentSwapActionProvider implements IActionProvider {
       },
       {
         name: 'dex_swap',
-        description: 'Execute DEX swap via DCent aggregator with approve and txdata BATCH pipeline',
+        description: "Execute DEX swap via D'CENT Swap Aggregator with approve and txdata BATCH pipeline",
         chain: 'ethereum',
         inputSchema: DexSwapInputSchema,
         riskLevel: 'high',
         defaultTier: 'DELAY',
-      },
-      {
-        name: 'exchange',
-        description: 'Execute cross-chain exchange via DCent aggregator with payInAddress TRANSFER pipeline',
-        chain: 'ethereum',
-        inputSchema: ExchangeInputSchema,
-        riskLevel: 'high',
-        defaultTier: 'APPROVAL',
-      },
-      {
-        name: 'swap_status',
-        description: 'Check DCent swap or exchange transaction status',
-        chain: 'ethereum',
-        inputSchema: SwapStatusInputSchema,
-        riskLevel: 'low',
-        defaultTier: 'INSTANT',
       },
     ] as const;
   }
@@ -154,7 +116,6 @@ export class DcentSwapActionProvider implements IActionProvider {
         throw new ChainError('INVALID_INSTRUCTION', context.chain, {
           message: `get_quotes is informational. Use queryQuotes() query method. Result: ${JSON.stringify({
             dexProviders: result.dexProviders.length,
-            exchangeProviders: result.exchangeProviders.length,
             bestDexProvider: result.bestDexProvider?.providerId ?? null,
           })}`,
         });
@@ -189,32 +150,6 @@ export class DcentSwapActionProvider implements IActionProvider {
         }
       }
 
-      case 'exchange': {
-        // DS-07: Exchange returns TRANSFER, not ContractCallRequest.
-        // Use executeExchangeAction() for direct access from MCP/SDK.
-        const input = ExchangeInputSchema.parse(params);
-        const result = await this.executeExchangeAction({
-          ...input,
-          fromWalletAddress: context.walletAddress,
-          toWalletAddress: input.toAddress,
-        });
-        throw new ChainError('INVALID_INSTRUCTION', context.chain, {
-          message: `exchange action returns TRANSFER, not ContractCallRequest. Use executeExchangeAction(). Result: ${JSON.stringify({
-            payInAddress: result.transferRequest.to,
-            transactionId: result.exchangeMetadata.dcentTransactionId,
-          })}`,
-        });
-      }
-
-      case 'swap_status': {
-        // DS-07: swap_status is informational. Use querySwapStatus() for direct access.
-        const input = SwapStatusInputSchema.parse(params);
-        const result = await this.querySwapStatus(input);
-        throw new ChainError('INVALID_INSTRUCTION', context.chain, {
-          message: `swap_status is informational. Use querySwapStatus(). Result: ${JSON.stringify(result)}`,
-        });
-      }
-
       default:
         throw new ChainError('INVALID_INSTRUCTION', context.chain, {
           message: `Unknown action: ${actionName}`,
@@ -235,39 +170,12 @@ export class DcentSwapActionProvider implements IActionProvider {
   }
 
   /**
-   * Query exchange-only quotes.
-   * Returns exchange providers sorted by expectedAmount.
-   */
-  async queryExchangeQuotes(params: GetQuotesParams): Promise<ExchangeQuoteResult> {
-    return getExchangeQuotes(this.getClient(), params);
-  }
-
-  /**
-   * Execute a cross-chain exchange.
-   * Returns TRANSFER request + exchange metadata for pipeline submission.
-   */
-  async executeExchangeAction(params: ExecuteExchangeParams): Promise<ExchangeResult> {
-    return executeExchange(this.getClient(), params);
-  }
-
-  /**
    * Query 2-hop swap routes via intermediate tokens.
    * Returns available routes when direct route is unavailable.
    * DS-04: fallback strategy for fail_no_available_provider.
    */
   async queryTwoHopRoutes(params: GetQuotesParams): Promise<TwoHopQuoteResult> {
     return findTwoHopRoutes(this.getClient(), params);
-  }
-
-  /**
-   * Query swap/exchange transaction status.
-   * Calls DCent get_transactions_status API directly.
-   */
-  async querySwapStatus(params: { transactionId: string; providerId: string }) {
-    const response = await this.getClient().getTransactionsStatus([
-      { txId: params.transactionId, providerId: params.providerId },
-    ]);
-    return response[0] ?? null;
   }
 
   // -----------------------------------------------------------------------
@@ -289,8 +197,6 @@ export class DcentSwapActionProvider implements IActionProvider {
 
 export { type DcentSwapConfig, DCENT_SWAP_DEFAULTS } from './config.js';
 export { type DcentQuoteResult, type GetQuotesParams } from './dex-swap.js';
-export { type ExchangeQuoteResult, type ExecuteExchangeParams, type ExchangeResult } from './exchange.js';
-export { ExchangeStatusTracker } from './exchange-status-tracker.js';
 export { caip19ToDcentId, dcentIdToCaip19 } from './currency-mapper.js';
 export { DcentSwapApiClient } from './dcent-api-client.js';
 export {

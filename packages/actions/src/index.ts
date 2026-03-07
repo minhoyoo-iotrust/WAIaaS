@@ -94,8 +94,6 @@ export { DCENT_SWAP_DEFAULTS } from './providers/dcent-swap/config.js';
 export type { DcentSwapConfig } from './providers/dcent-swap/config.js';
 export { DcentSwapApiClient } from './providers/dcent-swap/dcent-api-client.js';
 export { caip19ToDcentId, dcentIdToCaip19 } from './providers/dcent-swap/currency-mapper.js';
-export { ExchangeStatusTracker } from './providers/dcent-swap/exchange-status-tracker.js';
-export type { ExchangeQuoteResult, ExecuteExchangeParams, ExchangeResult } from './providers/dcent-swap/exchange.js';
 export type { DcentQuoteResult, GetQuotesParams } from './providers/dcent-swap/dex-swap.js';
 
 // Re-export common utilities
@@ -306,8 +304,6 @@ export function registerBuiltInProviders(
           defaultSlippageBps: Number(settingsReader.get('actions.dcent_swap_default_slippage_bps')),
           maxSlippageBps: Number(settingsReader.get('actions.dcent_swap_max_slippage_bps')),
           currencyCacheTtlMs: Number(settingsReader.get('actions.dcent_swap_currency_cache_ttl_ms')),
-          exchangePollIntervalMs: Number(settingsReader.get('actions.dcent_swap_exchange_poll_interval_ms')),
-          exchangePollMaxMs: Number(settingsReader.get('actions.dcent_swap_exchange_poll_max_ms')),
         };
         return new DcentSwapActionProvider(dcentConfig);
       },

@@ -33,7 +33,7 @@ export const DcentQuoteProviderSchema = z.object({
   id: z.string(),
   status: z.string(),
   providerId: z.string(),
-  providerType: z.enum(['swap', 'cross_swap', 'exchange']),
+  providerType: z.enum(['swap', 'cross_swap']),
   name: z.string().optional(),
   iconUrl: z.string().optional(),
   fromAmount: z.string().optional(),
@@ -84,52 +84,3 @@ export const DcentTxDataResponseSchema = z.object({
 
 export type DcentTxDataResponse = z.infer<typeof DcentTxDataResponseSchema>;
 
-// ---------------------------------------------------------------------------
-// POST /api/swap/v3/create_exchange_transaction
-// ---------------------------------------------------------------------------
-
-export const DcentExchangeResponseSchema = z.object({
-  status: z.string(),
-  transactionId: z.string().optional(),
-  transactionStatusUrl: z.string().optional(),
-  payInAddress: z.string().optional(),
-  fromAmount: z.string().optional(),
-  toAmount: z.string().optional(),
-  extraId: z.string().optional(),
-});
-
-export type DcentExchangeResponse = z.infer<typeof DcentExchangeResponseSchema>;
-
-// ---------------------------------------------------------------------------
-// POST /api/swap/v3/get_transactions_status
-// ---------------------------------------------------------------------------
-
-export const DcentExchangeStatus = z.enum([
-  'waiting',
-  'confirming',
-  'exchanging',
-  'sending',
-  'finished',
-  'failed',
-  'refunded',
-  'error',
-]);
-
-export type DcentExchangeStatusType = z.infer<typeof DcentExchangeStatus>;
-
-export const DcentStatusResponseItemSchema = z.object({
-  providerId: z.string(),
-  status: DcentExchangeStatus,
-  txId: z.string(),
-  contactEmail: z.array(z.string()).optional(),
-  payInAddress: z.string().optional(),
-  payOutAddress: z.string().optional(),
-  fromAmount: z.string().optional(),
-  toAmount: z.string().optional(),
-});
-
-export type DcentStatusResponseItem = z.infer<typeof DcentStatusResponseItemSchema>;
-
-export const DcentStatusResponseSchema = z.array(DcentStatusResponseItemSchema);
-
-export type DcentStatusResponse = z.infer<typeof DcentStatusResponseSchema>;

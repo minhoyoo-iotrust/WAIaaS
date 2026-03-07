@@ -16,7 +16,7 @@ import { tryGetDcentQuotes } from '../providers/dcent-swap/dex-swap.js';
 // Constants
 // ---------------------------------------------------------------------------
 
-const BASE_URL = 'https://swapbuy-beta.dcentwallet.com';
+const BASE_URL = 'https://agent-swap.dcentwallet.com';
 
 const ETH_CAIP19 = 'eip155:1/slip44:60';
 const USDC_CAIP19 = 'eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48';
