@@ -31,10 +31,16 @@ vi.mock('viem', () => ({
 import {
   resolveWalletBundlerUrl,
   resolveWalletPaymasterUrl,
+  resolvePaymasterPolicyId,
   createSmartAccountBundlerClient,
 } from '../infrastructure/smart-account/smart-account-clients.js';
 import type { WalletProviderData } from '../infrastructure/smart-account/smart-account-clients.js';
 import { WAIaaSError } from '@waiaas/core';
+
+/** Minimal SettingsService mock */
+function mockSettingsService(overrides: Record<string, string> = {}) {
+  return { get: (key: string) => overrides[key] ?? '' } as any;
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -280,6 +286,110 @@ describe('smart-account-clients (wallet-based provider)', () => {
       expect(mockCreatePaymasterClient).not.toHaveBeenCalled();
       const bundlerArgs = mockCreateBundlerClient.mock.calls[0][0];
       expect(bundlerArgs).not.toHaveProperty('paymaster');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Global default fallback (#275)
+  // -------------------------------------------------------------------------
+
+  describe('global default fallback (#275)', () => {
+    it('resolveWalletBundlerUrl falls back to global API key when per-wallet is null', () => {
+      const wallet: WalletProviderData = {
+        aaProvider: 'pimlico',
+        aaProviderApiKey: null,
+        aaBundlerUrl: null,
+        aaPaymasterUrl: null,
+        aaPaymasterPolicyId: null,
+      };
+      const settings = mockSettingsService({ 'smart_account.pimlico.api_key': 'global_pk_123' });
+      const url = resolveWalletBundlerUrl(wallet, 'ethereum-sepolia', settings);
+      expect(url).toBe('https://api.pimlico.io/v2/sepolia/rpc?apikey=global_pk_123');
+    });
+
+    it('per-wallet API key takes priority over global default', () => {
+      const wallet: WalletProviderData = {
+        aaProvider: 'pimlico',
+        aaProviderApiKey: 'per_wallet_key',
+        aaBundlerUrl: null,
+        aaPaymasterUrl: null,
+        aaPaymasterPolicyId: null,
+      };
+      const settings = mockSettingsService({ 'smart_account.pimlico.api_key': 'global_pk_123' });
+      const url = resolveWalletBundlerUrl(wallet, 'ethereum-sepolia', settings);
+      expect(url).toContain('per_wallet_key');
+      expect(url).not.toContain('global_pk_123');
+    });
+
+    it('throws CHAIN_ERROR when both per-wallet and global API key are absent', () => {
+      const wallet: WalletProviderData = {
+        aaProvider: 'alchemy',
+        aaProviderApiKey: null,
+        aaBundlerUrl: null,
+        aaPaymasterUrl: null,
+        aaPaymasterPolicyId: null,
+      };
+      const settings = mockSettingsService({});
+      expect(() => resolveWalletBundlerUrl(wallet, 'ethereum-sepolia', settings)).toThrow(/requires an API key/);
+    });
+
+    it('custom provider does not use global fallback', () => {
+      const wallet: WalletProviderData = {
+        aaProvider: 'custom',
+        aaProviderApiKey: null,
+        aaBundlerUrl: null,
+        aaPaymasterUrl: null,
+        aaPaymasterPolicyId: null,
+      };
+      const settings = mockSettingsService({ 'smart_account.custom.api_key': 'should_not_use' });
+      expect(() => resolveWalletBundlerUrl(wallet, 'ethereum-sepolia', settings)).toThrow(/bundler URL/);
+    });
+
+    it('resolvePaymasterPolicyId falls back to global default', () => {
+      const wallet: WalletProviderData = {
+        aaProvider: 'alchemy',
+        aaProviderApiKey: 'key',
+        aaBundlerUrl: null,
+        aaPaymasterUrl: null,
+        aaPaymasterPolicyId: null,
+      };
+      const settings = mockSettingsService({ 'smart_account.alchemy.paymaster_policy_id': 'pol_global_789' });
+      expect(resolvePaymasterPolicyId(wallet, settings)).toBe('pol_global_789');
+    });
+
+    it('per-wallet policyId takes priority over global default', () => {
+      const wallet: WalletProviderData = {
+        aaProvider: 'alchemy',
+        aaProviderApiKey: 'key',
+        aaBundlerUrl: null,
+        aaPaymasterUrl: null,
+        aaPaymasterPolicyId: 'pol_wallet_abc',
+      };
+      const settings = mockSettingsService({ 'smart_account.alchemy.paymaster_policy_id': 'pol_global_789' });
+      expect(resolvePaymasterPolicyId(wallet, settings)).toBe('pol_wallet_abc');
+    });
+
+    it('resolvePaymasterPolicyId returns null when both absent', () => {
+      const wallet: WalletProviderData = {
+        aaProvider: 'pimlico',
+        aaProviderApiKey: 'key',
+        aaBundlerUrl: null,
+        aaPaymasterUrl: null,
+        aaPaymasterPolicyId: null,
+      };
+      expect(resolvePaymasterPolicyId(wallet)).toBeNull();
+    });
+
+    it('Lite mode (aaProvider=null) ignores global settings', () => {
+      const wallet: WalletProviderData = {
+        aaProvider: null,
+        aaProviderApiKey: null,
+        aaBundlerUrl: null,
+        aaPaymasterUrl: null,
+        aaPaymasterPolicyId: null,
+      };
+      const settings = mockSettingsService({ 'smart_account.pimlico.api_key': 'global' });
+      expect(resolvePaymasterPolicyId(wallet, settings)).toBeNull();
     });
   });
 });

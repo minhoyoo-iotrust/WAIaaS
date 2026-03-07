@@ -998,6 +998,75 @@ export default function SettingsPage() {
   // Section: Daemon
   // ---------------------------------------------------------------------------
 
+  // ---------------------------------------------------------------------------
+  // Section: Smart Account (AA Provider Global Defaults)
+  // ---------------------------------------------------------------------------
+
+  function SmartAccountSettings() {
+    return (
+      <div class="settings-category">
+        <div class="settings-category-header">
+          <h3>Smart Account</h3>
+          <p class="settings-description">
+            Global default API keys for ERC-4337 bundler providers. Per-wallet keys override these defaults.
+          </p>
+        </div>
+        <div class="settings-category-body">
+          <div class="settings-subgroup" style={{ marginBottom: '1rem' }}>
+            <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Pimlico</h4>
+            <div class="settings-fields-grid">
+              <FormField
+                label="API Key"
+                name="smart_account.pimlico.api_key"
+                type="password"
+                value={getEffectiveValue('smart_account', 'pimlico.api_key')}
+                onChange={(v) => handleFieldChange('smart_account.pimlico.api_key', v)}
+                placeholder={isCredentialConfigured('smart_account', 'pimlico.api_key') ? '(configured)' : 'Enter Pimlico API key'}
+              />
+              <FormField
+                label="Paymaster Policy ID"
+                name="smart_account.pimlico.paymaster_policy_id"
+                type="text"
+                value={getEffectiveValue('smart_account', 'pimlico.paymaster_policy_id')}
+                onChange={(v) => handleFieldChange('smart_account.pimlico.paymaster_policy_id', v)}
+                placeholder="Optional sponsorship policy ID"
+              />
+            </div>
+          </div>
+          <div class="settings-subgroup">
+            <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Alchemy</h4>
+            <div class="settings-fields-grid">
+              <FormField
+                label="API Key"
+                name="smart_account.alchemy.api_key"
+                type="password"
+                value={getEffectiveValue('smart_account', 'alchemy.api_key')}
+                onChange={(v) => handleFieldChange('smart_account.alchemy.api_key', v)}
+                placeholder={isCredentialConfigured('smart_account', 'alchemy.api_key') ? '(configured)' : 'Enter Alchemy API key'}
+              />
+              <FormField
+                label="Paymaster Policy ID"
+                name="smart_account.alchemy.paymaster_policy_id"
+                type="text"
+                value={getEffectiveValue('smart_account', 'alchemy.paymaster_policy_id')}
+                onChange={(v) => handleFieldChange('smart_account.alchemy.paymaster_policy_id', v)}
+                placeholder="Required for Alchemy paymaster"
+              />
+            </div>
+          </div>
+          <div class="settings-info-box">
+            Set global provider API keys here so you don't need to enter them for every smart account wallet.
+            Per-wallet API keys always take priority over these global defaults.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Section: Daemon
+  // ---------------------------------------------------------------------------
+
   function DaemonSettings() {
     return (
       <div class="settings-category">
@@ -1188,6 +1257,7 @@ export default function SettingsPage() {
           <WalletConnectSettings />
           <TelegramBotSettings />
           <SigningSDKSettings />
+          <SmartAccountSettings />
           <DaemonSettings />
           <DisplaySettings />
           <ApiKeysSection />

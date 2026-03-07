@@ -25,6 +25,7 @@ import {
   buildProviderBundlerUrl,
 } from '@waiaas/core';
 import type { AaProviderName } from '@waiaas/core';
+import type { SettingsService } from '../settings/settings-service.js';
 
 /**
  * Per-wallet provider data for bundler/paymaster URL resolution.
@@ -38,6 +39,34 @@ export interface WalletProviderData {
   aaPaymasterPolicyId: string | null; // #252: sponsorshipPolicyId for paymaster context
 }
 
+/**
+ * Resolve the effective API key for a preset provider (pimlico/alchemy).
+ * Priority: per-wallet > global default (Admin Settings) > null.
+ */
+function resolveApiKey(
+  wallet: WalletProviderData,
+  settingsService?: SettingsService,
+): string | null {
+  if (wallet.aaProviderApiKey) return wallet.aaProviderApiKey;
+  if (!settingsService || !wallet.aaProvider || wallet.aaProvider === 'custom') return null;
+  const globalKey = settingsService.get(`smart_account.${wallet.aaProvider}.api_key`);
+  return globalKey || null;
+}
+
+/**
+ * Resolve the effective paymaster policy ID for a preset provider.
+ * Priority: per-wallet > global default (Admin Settings) > null.
+ */
+export function resolvePaymasterPolicyId(
+  wallet: WalletProviderData,
+  settingsService?: SettingsService,
+): string | null {
+  if (wallet.aaPaymasterPolicyId) return wallet.aaPaymasterPolicyId;
+  if (!settingsService || !wallet.aaProvider || wallet.aaProvider === 'custom') return null;
+  const globalId = settingsService.get(`smart_account.${wallet.aaProvider}.paymaster_policy_id`);
+  return globalId || null;
+}
+
 export interface BundlerClientOptions {
   /** viem PublicClient for the target chain */
   client: PublicClient;
@@ -47,6 +76,8 @@ export interface BundlerClientOptions {
   networkId: string;
   /** Wallet provider data (replaces SettingsService) */
   walletProvider: WalletProviderData;
+  /** SettingsService for global default API key / policy ID fallback (#275) */
+  settingsService?: SettingsService;
 }
 
 /**
@@ -58,7 +89,11 @@ export interface BundlerClientOptions {
  *
  * @throws WAIaaSError('CHAIN_ERROR') if provider not configured or network unsupported
  */
-export function resolveWalletBundlerUrl(wallet: WalletProviderData, networkId: string): string {
+export function resolveWalletBundlerUrl(
+  wallet: WalletProviderData,
+  networkId: string,
+  settingsService?: SettingsService,
+): string {
   if (!wallet.aaProvider) {
     throw new WAIaaSError('CHAIN_ERROR', {
       message: 'Provider not configured for this wallet. Set aaProvider when creating the wallet.',
@@ -82,13 +117,14 @@ export function resolveWalletBundlerUrl(wallet: WalletProviderData, networkId: s
     });
   }
 
-  if (!wallet.aaProviderApiKey) {
+  const apiKey = resolveApiKey(wallet, settingsService);
+  if (!apiKey) {
     throw new WAIaaSError('CHAIN_ERROR', {
       message: `Provider ${wallet.aaProvider} requires an API key`,
     });
   }
 
-  return buildProviderBundlerUrl(wallet.aaProvider, chainId, wallet.aaProviderApiKey);
+  return buildProviderBundlerUrl(wallet.aaProvider, chainId, apiKey);
 }
 
 /**
@@ -98,7 +134,11 @@ export function resolveWalletBundlerUrl(wallet: WalletProviderData, networkId: s
  * - custom: returns wallet's aaPaymasterUrl (nullable)
  * - null: returns null (no provider configured)
  */
-export function resolveWalletPaymasterUrl(wallet: WalletProviderData, networkId: string): string | null {
+export function resolveWalletPaymasterUrl(
+  wallet: WalletProviderData,
+  networkId: string,
+  settingsService?: SettingsService,
+): string | null {
   if (!wallet.aaProvider) return null;
 
   if (wallet.aaProvider === 'custom') {
@@ -107,9 +147,10 @@ export function resolveWalletPaymasterUrl(wallet: WalletProviderData, networkId:
 
   // Preset provider: same URL as bundler (unified endpoint)
   const chainId = resolveProviderChainId(wallet.aaProvider, networkId);
-  if (!chainId || !wallet.aaProviderApiKey) return null;
+  const apiKey = resolveApiKey(wallet, settingsService);
+  if (!chainId || !apiKey) return null;
 
-  return buildProviderBundlerUrl(wallet.aaProvider, chainId, wallet.aaProviderApiKey);
+  return buildProviderBundlerUrl(wallet.aaProvider, chainId, apiKey);
 }
 
 /**
@@ -119,13 +160,14 @@ export function resolveWalletPaymasterUrl(wallet: WalletProviderData, networkId:
  * Optionally includes a PaymasterClient if paymaster URL is available.
  */
 export function createSmartAccountBundlerClient(opts: BundlerClientOptions): BundlerClient {
-  const bundlerUrl = resolveWalletBundlerUrl(opts.walletProvider, opts.networkId);
+  const bundlerUrl = resolveWalletBundlerUrl(opts.walletProvider, opts.networkId, opts.settingsService);
 
-  const paymasterUrl = resolveWalletPaymasterUrl(opts.walletProvider, opts.networkId);
+  const paymasterUrl = resolveWalletPaymasterUrl(opts.walletProvider, opts.networkId, opts.settingsService);
 
   // Build paymaster option: if URL exists, create PaymasterClient and use its methods
   // #252: wrap with context if policyId is set (required for Alchemy, optional for Pimlico)
-  const policyId = opts.walletProvider.aaPaymasterPolicyId;
+  // #275: policyId also falls back to global default
+  const policyId = resolvePaymasterPolicyId(opts.walletProvider, opts.settingsService);
   const paymasterOpt = paymasterUrl
     ? (() => {
         const pmClient = createPaymasterClient({ transport: http(paymasterUrl) });
