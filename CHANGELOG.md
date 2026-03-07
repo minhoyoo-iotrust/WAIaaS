@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.10.0-rc.12](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.11...v2.10.0-rc.12) (2026-03-07)
+
+
+### Features
+
+* add AA provider global default API key and policy ID ([#275](https://github.com/minhoyoo-iotrust/WAIaaS/issues/275)) ([56ebdcd](https://github.com/minhoyoo-iotrust/WAIaaS/commit/56ebdcd5d66ca974069f6f0b59725a1f42e4cda2))
+
+
+### Bug Fixes
+
+* include unlimited sessions (expires_at=0) in active session count ([#274](https://github.com/minhoyoo-iotrust/WAIaaS/issues/274)) ([581ecb2](https://github.com/minhoyoo-iotrust/WAIaaS/commit/581ecb241ecffc0bedf835466e4c6fbb25ed6af3))
+* resolve issues [#277](https://github.com/minhoyoo-iotrust/WAIaaS/issues/277) and [#278](https://github.com/minhoyoo-iotrust/WAIaaS/issues/278) — NFT indexer settings visibility and D'CENT Swap multi-chain exposure ([d00713f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d00713f0da86ae9cf7798876cf07957ab03b3132))
+* resolve open issues [#274](https://github.com/minhoyoo-iotrust/WAIaaS/issues/274)-[#278](https://github.com/minhoyoo-iotrust/WAIaaS/issues/278) ([ba99699](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ba996999356ad7e4c4050e8f3c418072a7231436))
+* spending limit tier bar reads USD keys for correct visualization ([#276](https://github.com/minhoyoo-iotrust/WAIaaS/issues/276)) ([4d2213c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4d2213c081b9691cd3fad2af57fed7cea9dc8caa))
+* update tests for new AA provider global default setting keys ([5d632db](https://github.com/minhoyoo-iotrust/WAIaaS/commit/5d632dbcd0e33c12bd6b061cc5bb5091721a6275))
+* wallets.tsx ternary syntax error in provider form ([#275](https://github.com/minhoyoo-iotrust/WAIaaS/issues/275)) ([95123e9](https://github.com/minhoyoo-iotrust/WAIaaS/commit/95123e9a9d7406b3c11bd9b8c2de6e582ae753e9))
+
 ## [2.10.0-rc.11](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.10...v2.10.0-rc.11) (2026-03-07)
 
 
