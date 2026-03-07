@@ -62,13 +62,9 @@ vi.mock('../pipeline/network-resolver.js', () => ({
   resolveNetwork: mockResolveNetwork,
 }));
 
-vi.mock('../infrastructure/adapter-pool.js', async (importOriginal) => {
-  const original = await importOriginal<typeof import('../infrastructure/adapter-pool.js')>();
-  return {
-    ...original,
-    resolveRpcUrl: mockResolveRpcUrl,
-  };
-});
+vi.mock('../infrastructure/adapter-pool.js', () => ({
+  resolveRpcUrl: mockResolveRpcUrl,
+}));
 
 import { adminActionRoutes } from '../api/routes/admin-actions.js';
 
