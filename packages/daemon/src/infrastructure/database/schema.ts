@@ -688,6 +688,7 @@ export const useropBuilds = sqliteTable(
     sender: text('sender').notNull(),
     nonce: text('nonce').notNull(),
     entryPoint: text('entry_point').notNull(),
+    network: text('network'),
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
     expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
     used: integer('used').notNull().default(0),

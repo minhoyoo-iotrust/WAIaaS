@@ -259,6 +259,7 @@ export function userOpRoutes(deps: UserOpRouteDeps) {
           nonce,
           callData,
           entryPoint,
+          network,
           createdAt: new Date(now * 1000),
           expiresAt: new Date(expiresAt * 1000),
           used: 0,
@@ -429,28 +430,19 @@ export function userOpRoutes(deps: UserOpRouteDeps) {
     // -----------------------------------------------------------------------
     // 5. Validate sender + Create SmartAccount (SIGN-05)
     // -----------------------------------------------------------------------
-    const rpcConfig = deps.rpcConfig ?? {};
-    // Determine network from build record nonce context -- use build.entryPoint or fallback
-    // We need the network to resolve RPC. The build record doesn't store network directly,
-    // so we'll look for a matching RPC URL from the build sender.
-    // Simplest approach: iterate rpc config keys for ethereum_* and try the first one.
-    // Better: store network in userop_builds. For now, find first matching.
-    let network: string | undefined;
-    for (const key of Object.keys(rpcConfig)) {
-      if (key.startsWith('evm_') || key.startsWith('ethereum_')) {
-        network = key.replace(/^evm_/, '').replace(/^ethereum_/, '');
-        break;
-      }
-    }
-    // Fallback: try ethereum-sepolia or ethereum-mainnet
+    // Read network from build record (stored during Build phase, v50)
+    const network = build.network as string | null;
     if (!network) {
-      network = 'ethereum-sepolia';
+      throw new WAIaaSError('CHAIN_ERROR', {
+        message: 'Build record missing network. Re-run the build step to generate a new buildId.',
+      });
     }
 
+    const rpcConfig = deps.rpcConfig ?? {};
     const rpcUrl = resolveRpcUrl(rpcConfig, 'ethereum', network);
     if (!rpcUrl) {
       throw new WAIaaSError('CHAIN_ERROR', {
-        message: `No RPC URL configured. Configure rpc.evm_* in config.toml.`,
+        message: `No RPC URL configured for network ${network}. Configure rpc.evm_* in config.toml.`,
       });
     }
 

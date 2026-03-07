@@ -147,6 +147,7 @@ function seedBuildRecord(overrides: Record<string, unknown> = {}) {
     nonce: '0x2a',
     call_data: MOCK_CALL_DATA,
     entry_point: MOCK_ENTRY_POINT,
+    network: 'ethereum-sepolia',
     created_at: now,
     expires_at: now + 600,
     used: 0,
@@ -154,11 +155,11 @@ function seedBuildRecord(overrides: Record<string, unknown> = {}) {
   };
 
   sqlite.prepare(
-    `INSERT INTO userop_builds (id, wallet_id, sender, nonce, call_data, entry_point, created_at, expires_at, used)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO userop_builds (id, wallet_id, sender, nonce, call_data, entry_point, network, created_at, expires_at, used)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     defaults.id, defaults.wallet_id, defaults.sender, defaults.nonce,
-    defaults.call_data, defaults.entry_point, defaults.created_at,
+    defaults.call_data, defaults.entry_point, defaults.network, defaults.created_at,
     defaults.expires_at, defaults.used,
   );
 }
@@ -527,5 +528,149 @@ describe('POST /v1/wallets/:id/userop/sign (route handler)', () => {
     expect(res.status).toBe(400);
     const body = await json(res);
     expect(body.code).toBe('CALLDATA_MISMATCH');
+  });
+
+  it('returns 200 with signed UserOp for valid request (happy path)', async () => {
+    seedWallet();
+    seedBuildRecord();
+    const res = await app.request(
+      makeRequest(`/v1/wallets/${WALLET_ID}/userop/sign`, {
+        buildId: '019548e8-f7a0-7000-8000-000000000099',
+        userOperation: validUserOp,
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    const body = await json(res);
+    expect(body.signedUserOperation).toBeDefined();
+    const signed = body.signedUserOperation as Record<string, unknown>;
+    expect(signed.signature).toBe('0xsig1234');
+    expect(signed.sender).toBe(MOCK_SENDER);
+    expect(signed.callData).toBe(MOCK_CALL_DATA);
+    expect(body.txId).toBeDefined();
+
+    // Verify build marked as used
+    const buildRow = sqlite.prepare('SELECT used FROM userop_builds WHERE id = ?').get('019548e8-f7a0-7000-8000-000000000099') as Record<string, unknown>;
+    expect(buildRow.used).toBe(1);
+
+    // Verify transaction record created
+    const txRow = sqlite.prepare('SELECT * FROM transactions WHERE wallet_id = ? AND type = ?').get(WALLET_ID, 'SIGN') as Record<string, unknown>;
+    expect(txRow).toBeDefined();
+    expect(txRow.network).toBe('ethereum-sepolia');
+    expect(txRow.status).toBe('SIGNED');
+  });
+
+  it('resolves network from build record — not from rpcConfig keys (#279)', async () => {
+    seedWallet();
+    // Build record with ethereum-mainnet network, rpcConfig has both mainnet and sepolia
+    seedBuildRecord({ network: 'ethereum-mainnet' });
+
+    // Add mainnet RPC URL to deps
+    deps.rpcConfig = {
+      evm_ethereum_sepolia: 'https://rpc.sepolia.example.com',
+      evm_ethereum_mainnet: 'https://rpc.mainnet.example.com',
+    };
+
+    const res = await app.request(
+      makeRequest(`/v1/wallets/${WALLET_ID}/userop/sign`, {
+        buildId: '019548e8-f7a0-7000-8000-000000000099',
+        userOperation: validUserOp,
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    const body = await json(res);
+    expect(body.signedUserOperation).toBeDefined();
+
+    // Transaction record should use network from build, not first rpcConfig key
+    const txRow = sqlite.prepare('SELECT network FROM transactions WHERE wallet_id = ? AND type = ?').get(WALLET_ID, 'SIGN') as Record<string, unknown>;
+    expect(txRow.network).toBe('ethereum-mainnet');
+  });
+
+  it('returns CHAIN_ERROR when build record has no network (pre-v50 build)', async () => {
+    seedWallet();
+    seedBuildRecord({ network: null });
+
+    const res = await app.request(
+      makeRequest(`/v1/wallets/${WALLET_ID}/userop/sign`, {
+        buildId: '019548e8-f7a0-7000-8000-000000000099',
+        userOperation: validUserOp,
+      }),
+    );
+
+    expect(res.status).toBe(502);
+    const body = await json(res);
+    expect(body.code).toBe('CHAIN_ERROR');
+  });
+
+  it('releases key after successful sign', async () => {
+    seedWallet();
+    seedBuildRecord();
+    await app.request(
+      makeRequest(`/v1/wallets/${WALLET_ID}/userop/sign`, {
+        buildId: '019548e8-f7a0-7000-8000-000000000099',
+        userOperation: validUserOp,
+      }),
+    );
+
+    expect(deps.keyStore.releaseKey).toHaveBeenCalled();
+  });
+
+  it('emits audit log and notifications on successful sign', async () => {
+    seedWallet();
+    seedBuildRecord();
+    await app.request(
+      makeRequest(`/v1/wallets/${WALLET_ID}/userop/sign`, {
+        buildId: '019548e8-f7a0-7000-8000-000000000099',
+        userOperation: validUserOp,
+      }),
+    );
+
+    // Verify audit log
+    const auditRow = sqlite.prepare(
+      "SELECT * FROM audit_log WHERE event_type = 'USEROP_SIGNED'",
+    ).get() as Record<string, unknown> | undefined;
+    expect(auditRow).toBeDefined();
+
+    // Verify notification called
+    expect(deps.notificationService!.notify).toHaveBeenCalledWith(
+      'TX_SUBMITTED',
+      WALLET_ID,
+      expect.objectContaining({ network: 'ethereum-sepolia' }),
+      expect.objectContaining({ signOnly: true }),
+    );
+
+    expect(deps.eventBus!.emit).toHaveBeenCalledWith('wallet:activity', expect.objectContaining({
+      walletId: WALLET_ID,
+      activity: 'TX_SUBMITTED',
+    }));
+  });
+});
+
+// ===========================================================================
+// Build → Sign integration (network persistence)
+// ===========================================================================
+
+describe('Build → Sign network persistence (#279)', () => {
+  it('build stores network in DB, sign reads it', async () => {
+    seedWallet();
+    const buildRes = await app.request(
+      makeRequest(`/v1/wallets/${WALLET_ID}/userop/build`, {
+        request: {
+          type: 'TRANSFER',
+          to: '0x0000000000000000000000000000000000000001',
+          amount: '1000000000000000000',
+        },
+        network: 'ethereum-sepolia',
+      }),
+    );
+
+    expect(buildRes.status).toBe(200);
+    const buildBody = await json(buildRes);
+    const buildId = buildBody.buildId as string;
+
+    // Verify network stored in DB
+    const buildRow = sqlite.prepare('SELECT network FROM userop_builds WHERE id = ?').get(buildId) as Record<string, unknown>;
+    expect(buildRow.network).toBe('ethereum-sepolia');
   });
 });
