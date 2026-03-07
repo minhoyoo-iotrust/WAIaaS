@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.10.0-rc.11](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.10...v2.10.0-rc.11) (2026-03-07)
+
+
+### Bug Fixes
+
+* remove unused res variables in admin-actions-route test (lint) ([6e98b1c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/6e98b1c023ebe0fb2f3b87c3db5e1d07e5ce4465))
+* resolve open issues [#267](https://github.com/minhoyoo-iotrust/WAIaaS/issues/267)-[#273](https://github.com/minhoyoo-iotrust/WAIaaS/issues/273) ([92da49b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/92da49b4832072fe7eab853d5e90bbd85e7a42b9))
+* resolve open issues [#267](https://github.com/minhoyoo-iotrust/WAIaaS/issues/267)-[#273](https://github.com/minhoyoo-iotrust/WAIaaS/issues/273) — DCent DEX-only cleanup, admin UI fixes, builtin token, AA wallet address ([4c51e0e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4c51e0e09f30b660fd14dc7f875999c8cbd24105))
+* simplify adapter-pool mock to avoid async importOriginal CI failure ([9676517](https://github.com/minhoyoo-iotrust/WAIaaS/commit/9676517e754b232eec1a7775fc2b7e0cb45a5463))
+
 ## [2.10.0-rc.10](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.9...v2.10.0-rc.10) (2026-03-06)
 
 
