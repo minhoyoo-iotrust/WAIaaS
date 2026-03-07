@@ -4,6 +4,7 @@ export {
   createSmartAccountBundlerClient,
   resolveWalletBundlerUrl,
   resolveWalletPaymasterUrl,
+  resolvePaymasterPolicyId,
 } from './smart-account-clients.js';
 export type { BundlerClientOptions, WalletProviderData } from './smart-account-clients.js';
 export {

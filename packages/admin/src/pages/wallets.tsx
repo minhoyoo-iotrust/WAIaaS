@@ -403,6 +403,7 @@ function WalletDetailView({ id }: { id: string }) {
   const editApiKey = useSignal('');
   const editBundlerUrl = useSignal('');
   const editPaymasterUrl = useSignal('');
+  const editPolicyId = useSignal('');
   const providerEditLoading = useSignal(false);
 
   const fetchWallet = async () => {
@@ -483,13 +484,14 @@ function WalletDetailView({ id }: { id: string }) {
     try {
       const body = editProvider.value === 'custom'
         ? { provider: 'custom', bundlerUrl: editBundlerUrl.value, paymasterUrl: editPaymasterUrl.value || undefined }
-        : { provider: editProvider.value, apiKey: editApiKey.value };
+        : { provider: editProvider.value, apiKey: editApiKey.value || undefined, policyId: editPolicyId.value || undefined };
       await apiPut(API.WALLET_PROVIDER(id), body);
       showToast('success', 'Provider updated');
       providerEditing.value = false;
       editApiKey.value = '';
       editBundlerUrl.value = '';
       editPaymasterUrl.value = '';
+      editPolicyId.value = '';
       await fetchWallet();
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
@@ -961,25 +963,36 @@ function WalletDetailView({ id }: { id: string }) {
                     onChange={(v) => { editProvider.value = v as string; }}
                     options={AA_PROVIDER_OPTIONS.map((o) => ({ label: o.label, value: o.value }))}
                   />
-                  {editProvider.value !== 'custom' ? (
+                  {editProvider.value !== 'custom' && editProvider.value !== 'none' ? (
                     <>
                       <FormField
                         label="API Key"
                         name="editApiKey"
                         value={editApiKey.value}
                         onChange={(v) => { editApiKey.value = v as string; }}
-                        placeholder="Paste your provider API key"
+                        placeholder="Leave empty to use global default"
                       />
-                      {AA_PROVIDER_DASHBOARD_URLS[editProvider.value] && (
-                        <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', margin: '0 0 0.5rem 0' }}>
-                          Get your API key at:{' '}
-                          <a href={AA_PROVIDER_DASHBOARD_URLS[editProvider.value]} target="_blank" rel="noopener noreferrer">
-                            {AA_PROVIDER_OPTIONS.find((o) => o.value === editProvider.value)?.label} Dashboard
-                          </a>
-                        </p>
-                      )}
+                      <FormField
+                        label="Paymaster Policy ID"
+                        name="editPolicyId"
+                        value={editPolicyId.value}
+                        onChange={(v) => { editPolicyId.value = v as string; }}
+                        placeholder="Leave empty to use global default"
+                      />
+                      <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', margin: '0 0 0.5rem 0' }}>
+                        Global defaults can be configured in{' '}
+                        <a href="/settings" style={{ color: 'var(--color-primary)' }}>Settings &gt; Smart Account</a>.
+                        {AA_PROVIDER_DASHBOARD_URLS[editProvider.value] && (
+                          <>
+                            {' '}Get API key at{' '}
+                            <a href={AA_PROVIDER_DASHBOARD_URLS[editProvider.value]} target="_blank" rel="noopener noreferrer">
+                              {AA_PROVIDER_OPTIONS.find((o) => o.value === editProvider.value)?.label} Dashboard
+                            </a>.
+                          </>
+                        )}
+                      </p>
                     </>
-                  ) : (
+                  ) : editProvider.value === 'custom' ? (
                     <>
                       <FormField
                         label="Bundler URL"
@@ -996,7 +1009,7 @@ function WalletDetailView({ id }: { id: string }) {
                         placeholder="https://..."
                       />
                     </>
-                  )}
+                  ) : null}
                   <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-2)' }}>
                     <Button onClick={handleProviderUpdate} loading={providerEditLoading.value}>Save</Button>
                     <Button variant="secondary" onClick={() => { providerEditing.value = false; }}>Cancel</Button>

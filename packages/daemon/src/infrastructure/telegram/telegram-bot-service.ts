@@ -407,7 +407,7 @@ export class TelegramBotService {
     // Active sessions
     const sessionRow = this.sqlite
       .prepare(
-        'SELECT COUNT(*) AS active FROM sessions WHERE revoked_at IS NULL AND expires_at > unixepoch()',
+        'SELECT COUNT(*) AS active FROM sessions WHERE revoked_at IS NULL AND (expires_at = 0 OR expires_at > unixepoch())',
       )
       .get() as { active: number };
 

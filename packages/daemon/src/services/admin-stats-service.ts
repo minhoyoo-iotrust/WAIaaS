@@ -81,7 +81,7 @@ export class AdminStatsService {
 
     // 2. Sessions
     const sessTotal = (sqlite.prepare('SELECT COUNT(*) as c FROM sessions').get() as { c: number }).c;
-    const sessActive = (sqlite.prepare('SELECT COUNT(*) as c FROM sessions WHERE revoked_at IS NULL AND expires_at > ?').get(nowSec) as { c: number }).c;
+    const sessActive = (sqlite.prepare('SELECT COUNT(*) as c FROM sessions WHERE revoked_at IS NULL AND (expires_at = 0 OR expires_at > ?)').get(nowSec) as { c: number }).c;
     const sessRevoked24h = (sqlite.prepare('SELECT COUNT(*) as c FROM sessions WHERE revoked_at IS NOT NULL AND revoked_at >= ?').get(day24h) as { c: number }).c;
 
     // 3. Wallets

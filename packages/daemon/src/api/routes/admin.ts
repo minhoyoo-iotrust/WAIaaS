@@ -979,7 +979,7 @@ export function adminRoutes(deps: AdminRouteDeps): OpenAPIHono {
       .select({ count: sql<number>`count(*)` })
       .from(sessions)
       .where(
-        sql`${sessions.revokedAt} IS NULL AND ${sessions.expiresAt} > ${nowSec}`,
+        sql`${sessions.revokedAt} IS NULL AND (${sessions.expiresAt} = 0 OR ${sessions.expiresAt} > ${nowSec})`,
       )
       .get();
     const activeSessionCount = activeSessionResult?.count ?? 0;

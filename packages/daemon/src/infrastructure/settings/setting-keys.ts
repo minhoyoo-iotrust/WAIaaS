@@ -263,6 +263,10 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   // and all per-chain overrides removed (23 keys) -- replaced by per-wallet provider model (PROV-09).
   { key: 'smart_account.enabled', category: 'smart_account', configPath: 'smart_account.enabled', defaultValue: 'true', isCredential: false },
   { key: 'smart_account.entry_point', category: 'smart_account', configPath: 'smart_account.entry_point', defaultValue: '0x0000000071727De22E5E9d8BAf0edAc6f37da032', isCredential: false },
+  { key: 'smart_account.pimlico.api_key', category: 'smart_account', configPath: 'smart_account.pimlico.api_key', defaultValue: '', isCredential: true },
+  { key: 'smart_account.pimlico.paymaster_policy_id', category: 'smart_account', configPath: 'smart_account.pimlico.paymaster_policy_id', defaultValue: '', isCredential: false },
+  { key: 'smart_account.alchemy.api_key', category: 'smart_account', configPath: 'smart_account.alchemy.api_key', defaultValue: '', isCredential: true },
+  { key: 'smart_account.alchemy.paymaster_policy_id', category: 'smart_account', configPath: 'smart_account.alchemy.paymaster_policy_id', defaultValue: '', isCredential: false },
 
   // --- ERC-8004 Agent Identity ---
   { key: 'actions.erc8004_agent_enabled', category: 'actions', configPath: 'actions.erc8004_agent_enabled', defaultValue: 'true', isCredential: false },

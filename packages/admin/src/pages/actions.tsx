@@ -27,7 +27,7 @@ interface BuiltinProvider {
 const BUILTIN_PROVIDERS: BuiltinProvider[] = [
   { key: 'jupiter_swap', name: 'Jupiter Swap', description: 'Solana DEX aggregator', chain: 'solana', category: 'Swap', requiresApiKey: false, docsUrl: 'https://station.jup.ag/docs' },
   { key: 'zerox_swap', name: '0x Swap', description: 'EVM DEX aggregator (AllowanceHolder)', chain: 'evm', category: 'Swap', requiresApiKey: true, docsUrl: 'https://dashboard.0x.org' },
-  { key: 'dcent_swap', name: "D'CENT Swap Aggregator", description: 'DEX swap aggregator (6 EVM chains)', chain: 'evm', category: 'Swap', requiresApiKey: false, docsUrl: 'https://dcentwallet.com' },
+  { key: 'dcent_swap', name: "D'CENT Swap Aggregator", description: 'Multi-chain DEX swap aggregator with cross-chain support (6 EVM + Solana)', chain: 'multi', category: 'Swap', requiresApiKey: false, docsUrl: 'https://dcentwallet.com' },
   { key: 'lifi', name: 'LI.FI', description: 'Multi-chain DEX/bridge aggregator', chain: 'multi', category: 'Bridge', requiresApiKey: false, docsUrl: 'https://docs.li.fi' },
   { key: 'lido_staking', name: 'Lido Staking', description: 'ETH liquid staking (stETH/wstETH)', chain: 'evm', category: 'Staking', requiresApiKey: false, docsUrl: 'https://docs.lido.fi' },
   { key: 'jito_staking', name: 'Jito Staking', description: 'SOL liquid staking (JitoSOL)', chain: 'solana', category: 'Staking', requiresApiKey: false, docsUrl: 'https://www.jito.network/docs' },
@@ -672,7 +672,12 @@ export default function ActionsPage() {
                         <tr key={action.name}>
                           <td>{action.name}</td>
                           <td style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)', maxWidth: '300px' }}>{action.description}</td>
-                          <td><Badge variant="info">{action.chain}</Badge></td>
+                          <td>
+                            {registered.chains.length > 1
+                              ? registered.chains.map((c) => <Badge key={c} variant="info">{c}</Badge>)
+                              : <Badge variant="info">{action.chain}</Badge>
+                            }
+                          </td>
                           <td>{action.riskLevel}</td>
                           <td>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>

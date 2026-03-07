@@ -1405,6 +1405,7 @@ async function stage5ExecuteSmartAccount(ctx: PipelineContext): Promise<void> {
       account: smartAccountInfo.account,
       networkId: ctx.resolvedNetwork,
       walletProvider,
+      settingsService: ctx.settingsService,
     });
 
     // Step 4: Prepare UserOperation to get gas estimates

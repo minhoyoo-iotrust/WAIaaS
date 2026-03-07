@@ -204,6 +204,27 @@ describe('AdminStatsService', () => {
     expect(stats1.transactions.total).toBe(stats2.transactions.total);
   });
 
+  it('counts unlimited sessions (expires_at=0) as active', () => {
+    const now = Math.floor(Date.now() / 1000);
+    // Add unlimited session (expires_at=0)
+    sqlite.prepare(
+      'INSERT INTO sessions (id, token_hash, expires_at, absolute_expires_at, created_at) VALUES (?, ?, ?, ?, ?)',
+    ).run('s-unlimited', 'hash-ul', 0, 0, now);
+
+    const service = new AdminStatsService({
+      sqlite,
+      metricsCounter: counter,
+      startTime: now,
+      version: '2.9.0',
+    });
+
+    const stats = service.getStats();
+    // s1 (active, future expiry) + s-unlimited (active, never expires) = 2 active
+    // s2 is revoked so not active
+    expect(stats.sessions.active).toBe(2);
+    expect(stats.sessions.total).toBe(3);
+  });
+
   it('includes RPC metrics from InMemoryCounter', () => {
     counter.increment('rpc.calls', { network: 'solana-mainnet' });
     counter.increment('rpc.calls', { network: 'solana-mainnet' });

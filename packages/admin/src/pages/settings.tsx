@@ -888,52 +888,21 @@ export default function SettingsPage() {
 
   function NftIndexerSection() {
     const indexerKeys = apiKeys.value.filter((k) => k.providerName in NFT_INDEXER_PROVIDERS);
-    // If no indexer providers registered yet, show manual instructions
-    if (indexerKeys.length === 0 && !apiKeysLoading.value) {
-      return (
-        <div class="settings-category">
-          <div class="settings-category-header">
-            <h3>NFT Indexer</h3>
-            <p class="settings-description">Configure API keys for NFT indexing (required for NFT query operations)</p>
-          </div>
-          <div class="settings-category-body">
-            <div class="settings-field-row">
-              <div class="settings-field-label">
-                <span>Alchemy NFT</span>
-                <Badge variant="neutral">Not registered</Badge>
-              </div>
-              <div class="settings-field-value">
-                <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.85em' }}>
-                  EVM NFT indexing -- configure via API Keys above
-                </span>
-              </div>
-            </div>
-            <div class="settings-field-row">
-              <div class="settings-field-label">
-                <span>Helius</span>
-                <Badge variant="neutral">Not registered</Badge>
-              </div>
-              <div class="settings-field-value">
-                <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.85em' }}>
-                  Solana NFT indexing -- configure via API Keys above
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    if (indexerKeys.length === 0) return null;
+    // Build a merged list: registered entries from API + unregistered entries with direct input
+    const providerNames = Object.keys(NFT_INDEXER_PROVIDERS);
+    const entries = providerNames.map((name) => {
+      const existing = indexerKeys.find((k) => k.providerName === name);
+      return existing ?? { providerName: name, hasKey: false, maskedKey: '' };
+    });
 
     return (
       <div class="settings-category">
         <div class="settings-category-header">
           <h3>NFT Indexer</h3>
-          <p class="settings-description">API keys for NFT indexing services</p>
+          <p class="settings-description">Configure API keys for NFT indexing (required for NFT query operations)</p>
         </div>
         <div class="settings-category-body">
-          {indexerKeys.map((entry) => {
+          {entries.map((entry) => {
             const info = NFT_INDEXER_PROVIDERS[entry.providerName]!;
             return (
               <div class="settings-field-row" key={entry.providerName}>
@@ -989,6 +958,75 @@ export default function SettingsPage() {
               </div>
             );
           })}
+        </div>
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Section: Daemon
+  // ---------------------------------------------------------------------------
+
+  // ---------------------------------------------------------------------------
+  // Section: Smart Account (AA Provider Global Defaults)
+  // ---------------------------------------------------------------------------
+
+  function SmartAccountSettings() {
+    return (
+      <div class="settings-category">
+        <div class="settings-category-header">
+          <h3>Smart Account</h3>
+          <p class="settings-description">
+            Global default API keys for ERC-4337 bundler providers. Per-wallet keys override these defaults.
+          </p>
+        </div>
+        <div class="settings-category-body">
+          <div class="settings-subgroup" style={{ marginBottom: '1rem' }}>
+            <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Pimlico</h4>
+            <div class="settings-fields-grid">
+              <FormField
+                label="API Key"
+                name="smart_account.pimlico.api_key"
+                type="password"
+                value={getEffectiveValue('smart_account', 'pimlico.api_key')}
+                onChange={(v) => handleFieldChange('smart_account.pimlico.api_key', v)}
+                placeholder={isCredentialConfigured('smart_account', 'pimlico.api_key') ? '(configured)' : 'Enter Pimlico API key'}
+              />
+              <FormField
+                label="Paymaster Policy ID"
+                name="smart_account.pimlico.paymaster_policy_id"
+                type="text"
+                value={getEffectiveValue('smart_account', 'pimlico.paymaster_policy_id')}
+                onChange={(v) => handleFieldChange('smart_account.pimlico.paymaster_policy_id', v)}
+                placeholder="Optional sponsorship policy ID"
+              />
+            </div>
+          </div>
+          <div class="settings-subgroup">
+            <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Alchemy</h4>
+            <div class="settings-fields-grid">
+              <FormField
+                label="API Key"
+                name="smart_account.alchemy.api_key"
+                type="password"
+                value={getEffectiveValue('smart_account', 'alchemy.api_key')}
+                onChange={(v) => handleFieldChange('smart_account.alchemy.api_key', v)}
+                placeholder={isCredentialConfigured('smart_account', 'alchemy.api_key') ? '(configured)' : 'Enter Alchemy API key'}
+              />
+              <FormField
+                label="Paymaster Policy ID"
+                name="smart_account.alchemy.paymaster_policy_id"
+                type="text"
+                value={getEffectiveValue('smart_account', 'alchemy.paymaster_policy_id')}
+                onChange={(v) => handleFieldChange('smart_account.alchemy.paymaster_policy_id', v)}
+                placeholder="Required for Alchemy paymaster"
+              />
+            </div>
+          </div>
+          <div class="settings-info-box">
+            Set global provider API keys here so you don't need to enter them for every smart account wallet.
+            Per-wallet API keys always take priority over these global defaults.
+          </div>
         </div>
       </div>
     );
@@ -1188,6 +1226,7 @@ export default function SettingsPage() {
           <WalletConnectSettings />
           <TelegramBotSettings />
           <SigningSDKSettings />
+          <SmartAccountSettings />
           <DaemonSettings />
           <DisplaySettings />
           <ApiKeysSection />

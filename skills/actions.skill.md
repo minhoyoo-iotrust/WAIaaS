@@ -1591,7 +1591,7 @@ For full action documentation, input schemas, SDK methods, and MCP tools, see **
 
 ## 13. D'CENT Swap Aggregator -- Built-in Provider (Multi-Chain)
 
-D'CENT Swap Aggregator aggregates multiple DEX providers to offer optimal swap routes across EVM chains. Supports same-chain DEX swaps (approve+txdata BATCH) and 2-hop auto-routing fallback when direct routes are unavailable.
+D'CENT Swap Aggregator aggregates multiple DEX providers to offer optimal swap routes across EVM chains and Solana. Supports same-chain DEX swaps (approve+txdata BATCH), cross-chain swaps (`cross_swap` providerType), and 2-hop auto-routing fallback when direct routes are unavailable.
 
 - **Provider name:** `dcent_swap`
 - **Chains:** ethereum, solana (multi-chain via provider network)
@@ -1604,8 +1604,8 @@ D'CENT Swap Aggregator aggregates multiple DEX providers to offer optimal swap r
 
 | Action | Description | Tier | Risk |
 |--------|-------------|------|------|
-| `get_quotes` | Get swap quotes with provider comparison (informational) | INSTANT | low |
-| `dex_swap` | Execute DEX swap (approve+txdata BATCH for ERC-20, single CONTRACT_CALL for native) | DELAY | high |
+| `get_quotes` | Get swap quotes with provider comparison — supports same-chain and cross-chain swaps (informational) | INSTANT | low |
+| `dex_swap` | Execute DEX swap — supports same-chain and cross-chain swaps (approve+txdata BATCH for ERC-20, single CONTRACT_CALL for native) | DELAY | high |
 
 ### Admin Settings Keys (5)
 

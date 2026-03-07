@@ -43,6 +43,40 @@ describe('PolicyRulesSummary', () => {
     expect(screen.getByText('$50,000')).toBeDefined();
   });
 
+  it('SPENDING_LIMIT: renders tier bars with USD keys', () => {
+    render(
+      <PolicyRulesSummary
+        type="SPENDING_LIMIT"
+        rules={{ instant_max_usd: '1', notify_max_usd: '10', delay_max_usd: '100' }}
+      />,
+    );
+
+    expect(screen.getByText('$1')).toBeDefined();
+    expect(screen.getByText('$10')).toBeDefined();
+    expect(screen.getByText('$100')).toBeDefined();
+  });
+
+  it('SPENDING_LIMIT: USD keys take priority over non-USD keys', () => {
+    render(
+      <PolicyRulesSummary
+        type="SPENDING_LIMIT"
+        rules={{
+          instant_max: '999',
+          instant_max_usd: '5',
+          notify_max: '888',
+          notify_max_usd: '50',
+          delay_max: '777',
+          delay_max_usd: '500',
+        }}
+      />,
+    );
+
+    expect(screen.getByText('$5')).toBeDefined();
+    expect(screen.getByText('$50')).toBeDefined();
+    expect(screen.getByText('$500')).toBeDefined();
+    expect(screen.queryByText('999')).toBeNull();
+  });
+
   it('SPENDING_LIMIT: no cumulative section when limits absent', () => {
     render(
       <PolicyRulesSummary
