@@ -498,6 +498,32 @@ describe('ActionsPage', () => {
     });
   });
 
+  describe('Pendle Yield advanced settings', () => {
+    const mockSettingsPendleEnabled = {
+      actions: {
+        pendle_yield_enabled: 'true',
+        jupiter_swap_enabled: 'false',
+        zerox_swap_enabled: 'false',
+      },
+    };
+
+    it('renders Advanced Settings section when Pendle Yield is enabled', async () => {
+      mockApiCalls(mockSettingsPendleEnabled, mockEmptyApiKeys, mockEmptyProviders);
+      render(<ActionsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Pendle Yield')).toBeTruthy();
+      });
+
+      const advancedLabels = screen.getAllByText('Advanced Settings');
+      expect(advancedLabels.length).toBeGreaterThanOrEqual(1);
+
+      // Pendle uses slippage (%) labels
+      const defaultSlippageLabels = screen.getAllByText(/Default Slippage \(%\)/i);
+      expect(defaultSlippageLabels.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
   describe("D'CENT Swap advanced settings", () => {
     const mockSettingsDcentEnabled = {
       actions: {
