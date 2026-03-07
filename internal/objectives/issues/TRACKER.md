@@ -281,6 +281,13 @@
 | 264 | MISSING | HIGH | Admin UI에서 deprecated Smart Account(Solady factory) 지갑 경고 미표시 — factoryAddress API 응답 누락 | — | FIXED | 2026-03-07 |
 | 265 | ENHANCEMENT | LOW | Admin UI Actions 페이지 프로바이더 카테고리별 그룹핑 (Swap/Bridge/Staking/Lending/Yield/Perp) | — | FIXED | 2026-03-07 |
 | 266 | ENHANCEMENT | MEDIUM | Smart Account 팩토리별 지원 네트워크 표시 — 정적 리스트 + eth_getCode 런타임 검증 하이브리드 | — | FIXED | 2026-03-07 |
+| 267 | ENHANCEMENT | HIGH | D'CENT Swap Aggregator DEX-only 정리 — Exchange 완전 제거 + URL/이름 변경 | — | OPEN | — |
+| 268 | ENHANCEMENT | LOW | Admin UI 슬리피지 설정 단위를 % 표시로 변경 — 전 프로바이더 동일 적용 (Jupiter/0x/Pendle/DCent) | — | OPEN | — |
+| 269 | BUG | HIGH | DeFi 포지션 Mock 오염 데이터 미정리 — #263 코드 수정 후 DB 마이그레이션 누락 | — | OPEN | — |
+| 270 | ENHANCEMENT | LOW | 빌트인 토큰 레지스트리에 PIM (Pimlico Test Token) 테스트넷 토큰 추가 | — | OPEN | — |
+| 271 | BUG | HIGH | Admin UI NFT 탭 네트워크 셀렉터가 항상 비어있음 — wallet.networks 미존재 필드 참조 | — | OPEN | — |
+| 272 | BUG | CRITICAL | Smart Account 지갑 주소가 EOA signer 주소로 저장됨 — daemon.ts createApp()에 smartAccountService 미주입 | — | OPEN | — |
+| 273 | BUG | HIGH | Admin UI ERC-8004 에이전트 등록 시 sessionAuth 인증 실패 — POST /v1/actions/* masterAuth 미허용 | — | OPEN | — |
 
 ## Type Legend
 
@@ -292,9 +299,9 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 7
 - **FIXED:** 264
 - **RESOLVED:** 2
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 267
+- **Total:** 274
