@@ -99,6 +99,9 @@ describe('Wallets NFT Tab', () => {
         if (nftError) throw nftError;
         return nftResponse ?? { nfts: [], hasMore: false };
       }
+      if (url.includes('/v1/wallets/w1/networks')) {
+        return { availableNetworks: [{ network: 'ethereum-mainnet', chain: 'ethereum', environment: 'mainnet' }] };
+      }
       if (url.includes('/v1/wallets/w1/transactions')) {
         return { items: [], cursor: null, hasMore: false };
       }

@@ -513,7 +513,7 @@ describe('ActionsPage', () => {
 
       await waitFor(() => {
         // D'CENT Swap card should render with enabled state
-        expect(screen.getByText("D'CENT Swap")).toBeTruthy();
+        expect(screen.getByText("D'CENT Swap Aggregator")).toBeTruthy();
       });
 
       // The D'CENT Swap advanced settings section should appear
@@ -527,14 +527,17 @@ describe('ActionsPage', () => {
       render(<ActionsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText("D'CENT Swap")).toBeTruthy();
+        expect(screen.getByText("D'CENT Swap Aggregator")).toBeTruthy();
       });
 
       // Should render the DCent-specific advanced setting labels
-      // keyToLabel converts snake_case keys to Title Case labels
+      // keyToLabel maps slippage_bps keys to "Default Slippage (%)" / "Max Slippage (%)"
       expect(screen.getByText(/Dcent Swap Api Url/i)).toBeTruthy();
-      expect(screen.getByText(/Dcent Swap Default Slippage Bps/i)).toBeTruthy();
-      expect(screen.getByText(/Dcent Swap Max Slippage Bps/i)).toBeTruthy();
+      // Multiple providers share the same "Default Slippage (%)" label
+      const defaultSlippageLabels = screen.getAllByText(/Default Slippage \(%\)/i);
+      expect(defaultSlippageLabels.length).toBeGreaterThanOrEqual(1);
+      const maxSlippageLabels = screen.getAllByText(/Max Slippage \(%\)/i);
+      expect(maxSlippageLabels.length).toBeGreaterThanOrEqual(1);
     });
 
     it('updates dirty state when editing D\'CENT Swap advanced field', async () => {
@@ -542,7 +545,7 @@ describe('ActionsPage', () => {
       render(<ActionsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText("D'CENT Swap")).toBeTruthy();
+        expect(screen.getByText("D'CENT Swap Aggregator")).toBeTruthy();
       });
 
       // Find the dcent_swap_api_url input
@@ -560,7 +563,7 @@ describe('ActionsPage', () => {
       render(<ActionsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText("D'CENT Swap")).toBeTruthy();
+        expect(screen.getByText("D'CENT Swap Aggregator")).toBeTruthy();
       });
 
       const input = document.querySelector('input[name="actions.dcent_swap_api_url"]') as HTMLInputElement;
@@ -592,7 +595,7 @@ describe('ActionsPage', () => {
       render(<ActionsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText("D'CENT Swap")).toBeTruthy();
+        expect(screen.getByText("D'CENT Swap Aggregator")).toBeTruthy();
       });
 
       // Advanced settings for dcent_swap should NOT appear
@@ -612,7 +615,7 @@ describe('ActionsPage', () => {
       render(<ActionsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText("D'CENT Swap")).toBeTruthy();
+        expect(screen.getByText("D'CENT Swap Aggregator")).toBeTruthy();
       });
 
       const urlInput = document.querySelector('input[name="actions.dcent_swap_api_url"]') as HTMLInputElement;
@@ -621,7 +624,8 @@ describe('ActionsPage', () => {
 
       const slippageInput = document.querySelector('input[name="actions.dcent_swap_default_slippage_bps"]') as HTMLInputElement;
       expect(slippageInput).toBeTruthy();
-      expect(slippageInput.value).toBe('100');
+      // bps 100 is displayed as 1% after bpsToPercent conversion
+      expect(slippageInput.value).toBe('1');
     });
   });
 });
