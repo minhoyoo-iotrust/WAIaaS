@@ -2,7 +2,7 @@
 name: "WAIaaS Actions"
 description: "Action Provider framework: list providers, execute DeFi actions through the 6-stage transaction pipeline"
 category: "api"
-tags: [wallet, blockchain, defi, actions, waiass, jupiter, 0x, swap, lifi, bridge, cross-chain, lido, jito, staking, liquid-staking, pendle, yield, pt, yt, drift, perp, perpetual, leverage, futures, dcent-swap, dcent, exchange, cross-chain-exchange, aggregator]
+tags: [wallet, blockchain, defi, actions, waiass, jupiter, 0x, swap, lifi, bridge, cross-chain, lido, jito, staking, liquid-staking, pendle, yield, pt, yt, drift, perp, perpetual, leverage, futures, dcent-swap, dcent, aggregator]
 version: "2.9.0-rc"
 dispatch:
   kind: "tool"
@@ -1589,36 +1589,32 @@ The ERC-8004 provider enables on-chain agent identity registration, reputation m
 
 For full action documentation, input schemas, SDK methods, and MCP tools, see **erc8004.skill.md**.
 
-## 13. DCent Swap Aggregator -- Built-in Provider (Multi-Chain)
+## 13. D'CENT Swap Aggregator -- Built-in Provider (Multi-Chain)
 
-DCent Swap aggregates multiple DEX and Exchange providers to offer optimal swap routes across chains. Supports same-chain DEX swaps (approve+txdata BATCH), cross-chain exchanges (payInAddress TRANSFER), and 2-hop auto-routing fallback when direct routes are unavailable.
+D'CENT Swap Aggregator aggregates multiple DEX providers to offer optimal swap routes across EVM chains. Supports same-chain DEX swaps (approve+txdata BATCH) and 2-hop auto-routing fallback when direct routes are unavailable.
 
 - **Provider name:** `dcent_swap`
 - **Chains:** ethereum, solana (multi-chain via provider network)
 - **Requires API key:** No
 - **Feature gate:** `actions.dcent_swap_enabled` (default: true)
-- **Aggregated providers:** 1inch, SushiSwap, Uniswap Labs, SwapScanner, Rubic, ButterSwap, LI.FI, Changelly, ChangeNOW, Exolix
-- **Provider types:** `swap` (same-chain DEX), `cross_swap` (cross-chain DEX), `exchange` (custodial cross-chain)
+- **Aggregated providers:** 1inch, SushiSwap, Uniswap Labs, SwapScanner, Rubic, ButterSwap, LI.FI
+- **Provider types:** `swap` (same-chain DEX), `cross_swap` (cross-chain DEX)
 
-### Actions (4)
+### Actions (2)
 
 | Action | Description | Tier | Risk |
 |--------|-------------|------|------|
 | `get_quotes` | Get swap quotes with provider comparison (informational) | INSTANT | low |
 | `dex_swap` | Execute DEX swap (approve+txdata BATCH for ERC-20, single CONTRACT_CALL for native) | DELAY | high |
-| `exchange` | Execute cross-chain exchange (payInAddress TRANSFER) | APPROVAL | high |
-| `swap_status` | Check swap/exchange transaction status | INSTANT | low |
 
-### Admin Settings Keys (7)
+### Admin Settings Keys (5)
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `actions.dcent_swap_enabled` | `true` | Enable/disable DCent Swap provider |
-| `actions.dcent_swap_api_url` | `https://swapbuy-beta.dcentwallet.com` | DCent API base URL |
+| `actions.dcent_swap_enabled` | `true` | Enable/disable D'CENT Swap Aggregator |
+| `actions.dcent_swap_api_url` | `https://agent-swap.dcentwallet.com` | D'CENT Swap API base URL |
 | `actions.dcent_swap_default_slippage_bps` | `100` | Default slippage (1%) |
 | `actions.dcent_swap_max_slippage_bps` | `500` | Maximum slippage (5%) |
-| `actions.dcent_swap_exchange_poll_interval_ms` | `30000` | Exchange status poll interval |
-| `actions.dcent_swap_exchange_poll_max_ms` | `3600000` | Exchange poll max duration |
 | `actions.dcent_swap_currency_cache_ttl_ms` | `86400000` | Currency list cache TTL (24h) |
 
 ### Example: Get Quotes
@@ -1661,7 +1657,6 @@ curl -s -X POST http://localhost:3100/v1/actions/dcent_swap/dex_swap \
 ### Policy Interaction
 
 - **DEX Swap (dex_swap):** Resolves to CONTRACT_CALL targeting DEX router address. Subject to CONTRACT_WHITELIST (provider-trust bypass applies when enabled), ALLOWED_TOKENS, APPROVED_SPENDERS, and SPENDING_LIMIT policies.
-- **Exchange (exchange):** Resolves to TRANSFER to payInAddress. Subject to ALLOWED_TOKENS and SPENDING_LIMIT. CONTRACT_WHITELIST does not apply (TRANSFER type, DS-09).
 - **2-hop auto-routing:** When direct route unavailable (`fail_no_available_provider`), attempts intermediate token (ETH/USDC/USDT) routing. Multi-step BATCH with cumulative fee/slippage calculation.
 
 ### SDK Methods
@@ -1669,16 +1664,12 @@ curl -s -X POST http://localhost:3100/v1/actions/dcent_swap/dex_swap \
 ```typescript
 const quotes = await client.getDcentQuotes({ fromAsset, toAsset, amount, fromDecimals, toDecimals, network });
 const swap = await client.dcentDexSwap({ fromAsset, toAsset, amount, fromDecimals, toDecimals, network });
-const exchange = await client.dcentExchange({ fromAsset, toAsset, amount, fromDecimals, toDecimals, toAddress, network });
-const status = await client.getDcentSwapStatus({ transactionId, providerId, network });
 ```
 
 ### MCP Tools
 
-- `action_dcent_swap_get_quotes` -- Get swap quotes from DCent aggregator
-- `action_dcent_swap_dex_swap` -- Execute DEX swap via DCent aggregator
-- `action_dcent_swap_exchange` -- Execute cross-chain exchange via DCent aggregator
-- `action_dcent_swap_swap_status` -- Check swap/exchange transaction status
+- `action_dcent_swap_get_quotes` -- Get swap quotes from D'CENT Swap Aggregator
+- `action_dcent_swap_dex_swap` -- Execute DEX swap via D'CENT Swap Aggregator
 
 ## 14. Policy Integration
 

@@ -157,7 +157,7 @@ export function buildConnectInfoPrompt(params: BuildConnectInfoPromptParams): st
   lines.push('Use POST /v1/transactions/send to transfer funds.');
   lines.push('For Smart Account wallets without provider, use UserOp Build/Sign API (POST /v1/wallets/{id}/userop/build then /userop/sign).');
   if (capabilities.includes('dcent_swap')) {
-    lines.push('DCent Swap: Use action_dcent_swap_* tools for multi-provider DEX swaps and cross-chain exchanges.');
+    lines.push("D'CENT Swap Aggregator: Use action_dcent_swap_* tools for multi-provider DEX swaps.");
   }
   lines.push('Specify walletId parameter (UUID from the ID field above) to target a specific wallet.');
   lines.push('Append ?network=<network> to query a specific network (required for EVM wallets, auto-resolved for Solana).');

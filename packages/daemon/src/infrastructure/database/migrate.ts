@@ -79,7 +79,7 @@ const LEGACY_NETWORK_NORMALIZE: Record<string, string> = {
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 47;
+export const LATEST_SCHEMA_VERSION = 49;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -2736,6 +2736,34 @@ MIGRATIONS.push({
       UPDATE wallets
       SET factory_address = '0x5d82735936c6Cd5DE57cC3c1A799f6B2E6F933Df'
       WHERE account_type = 'smart' AND factory_address IS NULL
+    `);
+  },
+});
+
+// ── v48: Purge mock defi_positions data from Kamino/Drift (#263/#269) ──
+MIGRATIONS.push({
+  version: 48,
+  description: 'Purge mock defi_positions data from Kamino/Drift (#263)',
+  up: (sqlite) => {
+    sqlite.exec(`DELETE FROM defi_positions WHERE provider IN ('kamino', 'drift_perp')`);
+  },
+});
+
+// ── v49: Fix bugged smart account wallets — convert to EOA (#272) ─────
+MIGRATIONS.push({
+  version: 49,
+  description: 'Convert bugged smart account wallets (missing signerKey) to EOA (#272)',
+  up: (sqlite) => {
+    // Smart account wallets created while smartAccountService was not injected
+    // have accountType='smart' but signerKey=NULL (signer_key column).
+    // Their publicKey is already the EOA address, so convert them to EOA type.
+    sqlite.exec(`
+      UPDATE wallets
+      SET account_type = 'eoa',
+          deployed = 1,
+          entry_point = NULL,
+          factory_address = NULL
+      WHERE account_type = 'smart' AND signer_key IS NULL
     `);
   },
 });

@@ -18,11 +18,10 @@ import type { ActionContext } from '@waiaas/core';
 // Constants
 // ---------------------------------------------------------------------------
 
-const BASE_URL = 'https://swapbuy-beta.dcentwallet.com';
+const BASE_URL = 'https://agent-swap.dcentwallet.com';
 const ETH_CAIP19 = 'eip155:1/slip44:60';
 const USDC_CAIP19 = 'eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48';
 const USDC_ADDRESS = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48';
-const SOL_CAIP19 = 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/slip44:501';
 
 const SUSHI_SPENDER = '0xAC4c6e212A361c968F1725b4d055b47E63F80b75';
 const WALLET_ADDRESS = '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045';
@@ -90,8 +89,6 @@ function createProvider(): DcentSwapActionProvider {
     defaultSlippageBps: 100,
     maxSlippageBps: 500,
     currencyCacheTtlMs: 86_400_000,
-    exchangePollIntervalMs: 30_000,
-    exchangePollMaxMs: 3_600_000,
   });
 }
 
@@ -185,63 +182,6 @@ describe('DCent Swap policy integration', () => {
     });
   });
 
-  describe('Exchange -> TRANSFER pipeline (DS-09)', () => {
-    it('executeExchangeAction returns TRANSFER request with payInAddress', async () => {
-      server.use(
-        http.post(`${BASE_URL}/api/swap/v3/get_quotes`, () =>
-          HttpResponse.json({
-            status: 'success',
-            fromId: 'ETHEREUM',
-            toId: 'SOLANA',
-            providers: {
-              bestOrder: ['changelly_exchange_flexible'],
-              common: [{
-                id: 'changelly_exchange_flexible',
-                status: 'success',
-                providerId: 'changelly_exchange_flexible',
-                providerType: 'exchange',
-                name: 'Changelly',
-                fromAmount: '1000000000000000000',
-                quoteType: 'flexible',
-                expectedAmount: '23552793560',
-              }],
-            },
-          }),
-        ),
-        http.post(`${BASE_URL}/api/swap/v3/create_exchange_transaction`, () =>
-          HttpResponse.json({
-            status: 'success',
-            transactionId: '95jr30stfzpf0tr1',
-            transactionStatusUrl: 'https://changelly.com/track/95jr30stfzpf0tr1',
-            payInAddress: '0xbff7d6ba1201304af302f12265cfa435539d5502',
-            fromAmount: '1000000000000000000',
-            toAmount: '23543037760',
-          }),
-        ),
-      );
-
-      const provider = createProvider();
-      const result = await provider.executeExchangeAction({
-        fromAsset: ETH_CAIP19,
-        toAsset: SOL_CAIP19,
-        amount: '1000000000000000000',
-        fromDecimals: 18,
-        toDecimals: 9,
-        fromWalletAddress: WALLET_ADDRESS,
-        toWalletAddress: '7EcDhSYGxXyscszYEp35KHN8vvw3svAuLKTzXwCFLtV',
-      });
-
-      // Result should be a TRANSFER request (not CONTRACT_CALL)
-      expect(result.transferRequest).toBeDefined();
-      expect(result.transferRequest.to).toBe('0xbff7d6ba1201304af302f12265cfa435539d5502');
-      expect(result.transferRequest.amount).toBe('1000000000000000000');
-      // Exchange metadata
-      expect(result.exchangeMetadata.dcentTransactionId).toBe('95jr30stfzpf0tr1');
-      // payInAddress is the transferRequest.to field
-      expect(result.exchangeMetadata.dcentProviderId).toBe('changelly_exchange_flexible');
-    });
-  });
-
   describe('metadata validation', () => {
     it('provider metadata indicates no API key required', () => {
       const provider = createProvider();
@@ -251,14 +191,12 @@ describe('DCent Swap policy integration', () => {
       expect(provider.metadata.chains).toContain('solana');
     });
 
-    it('provider has 4 actions defined', () => {
+    it('provider has 2 actions defined (DEX-only)', () => {
       const provider = createProvider();
-      expect(provider.actions.length).toBe(4);
+      expect(provider.actions.length).toBe(2);
       const actionNames = provider.actions.map((a) => a.name);
       expect(actionNames).toContain('get_quotes');
       expect(actionNames).toContain('dex_swap');
-      expect(actionNames).toContain('exchange');
-      expect(actionNames).toContain('swap_status');
     });
   });
 });

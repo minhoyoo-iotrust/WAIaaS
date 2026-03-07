@@ -1543,7 +1543,7 @@ function WalletDetailView({ id }: { id: string }) {
   // NFT Tab
   // -------------------------------------------------------------------------
   function NftTab() {
-    const walletNetworks: string[] = wallet.value?.networks?.map((n: { network: string }) => n.network) ?? [];
+    const walletNetworks: string[] = networks.value.map((n) => n.network);
 
     return (
       <div>

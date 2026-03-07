@@ -152,6 +152,15 @@ export function keyToLabel(key: string): string {
     default_timeout_sec: 'Default Timeout (seconds)',
     max_timeout_sec: 'Max Timeout (seconds)',
     max_pending_count: 'Max Pending Count',
+    // slippage keys (bps → % display)
+    jupiter_swap_default_slippage_bps: 'Default Slippage (%)',
+    jupiter_swap_max_slippage_bps: 'Max Slippage (%)',
+    zerox_swap_default_slippage_bps: 'Default Slippage (%)',
+    zerox_swap_max_slippage_bps: 'Max Slippage (%)',
+    pendle_yield_default_slippage_bps: 'Default Slippage (%)',
+    pendle_yield_max_slippage_bps: 'Max Slippage (%)',
+    dcent_swap_default_slippage_bps: 'Default Slippage (%)',
+    dcent_swap_max_slippage_bps: 'Max Slippage (%)',
   };
   return map[key] ?? key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
@@ -198,6 +207,40 @@ export function getEffectiveBoolValue(
   const catValue = catData[shortKey];
   if (typeof catValue === 'boolean') return catValue;
   return catValue === 'true';
+}
+
+// ---------------------------------------------------------------------------
+// Slippage BPS ↔ % conversion helpers
+// ---------------------------------------------------------------------------
+
+const SLIPPAGE_BPS_KEYS = new Set([
+  'jupiter_swap_default_slippage_bps',
+  'jupiter_swap_max_slippage_bps',
+  'zerox_swap_default_slippage_bps',
+  'zerox_swap_max_slippage_bps',
+  'pendle_yield_default_slippage_bps',
+  'pendle_yield_max_slippage_bps',
+  'dcent_swap_default_slippage_bps',
+  'dcent_swap_max_slippage_bps',
+]);
+
+/** Check if a setting key is a slippage BPS field */
+export function isSlippageBpsKey(key: string): boolean {
+  return SLIPPAGE_BPS_KEYS.has(key);
+}
+
+/** Convert BPS value to % for display (e.g. 100 → "1") */
+export function bpsToPercent(bpsValue: string): string {
+  const num = Number(bpsValue);
+  if (isNaN(num) || bpsValue === '') return bpsValue;
+  return String(num / 100);
+}
+
+/** Convert % value to BPS for storage (e.g. "1" → "100") */
+export function percentToBps(pctValue: string): string {
+  const num = Number(pctValue);
+  if (isNaN(num) || pctValue === '') return pctValue;
+  return String(Math.round(num * 100));
 }
 
 /** Check if a credential field is configured (GET returned true) */

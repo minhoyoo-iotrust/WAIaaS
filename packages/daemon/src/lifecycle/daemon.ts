@@ -1270,24 +1270,6 @@ export class DaemonLifecycle {
       }
     }
 
-    // ------------------------------------------------------------------
-    // Step 4f-5: Register DCent Exchange status tracker
-    // ------------------------------------------------------------------
-    if (this._asyncPollingService) {
-      try {
-        if (this._settingsService?.get('actions.dcent_swap_enabled') === 'true') {
-          const { ExchangeStatusTracker, DCENT_SWAP_DEFAULTS } = await import('@waiaas/actions');
-          const dcentConfig = {
-            ...DCENT_SWAP_DEFAULTS,
-            apiBaseUrl: this._settingsService!.get('actions.dcent_swap_api_url') ?? DCENT_SWAP_DEFAULTS.apiBaseUrl,
-          };
-          this._asyncPollingService.registerTracker(new ExchangeStatusTracker(dcentConfig));
-          console.debug('Step 4f-5: DCent Exchange status tracker registered');
-        }
-      } catch (err) {
-        console.warn('Step 4f-5 (fail-soft): DCent Exchange tracker registration failed:', err);
-      }
-    }
 
     // ------------------------------------------------------------------
     // Step 4f-6: Register IPositionProvider implementations with PositionTracker
@@ -1383,6 +1365,10 @@ export class DaemonLifecycle {
         const { ReputationCacheService } = await import('../services/erc8004/index.js');
         const reputationCacheService = new ReputationCacheService(this._db!, this._settingsService ?? undefined);
 
+        // [#272] Create SmartAccountService for ERC-4337 CREATE2 address prediction
+        const { SmartAccountService } = await import('../infrastructure/smart-account/smart-account-service.js');
+        const smartAccountService = new SmartAccountService();
+
         const app = createApp({
           db: this._db!,
           sqlite: this.sqlite ?? undefined,
@@ -1406,6 +1392,7 @@ export class DaemonLifecycle {
           settingsService: this._settingsService ?? undefined,
           priceOracle: this.priceOracle,
           actionProviderRegistry: this.actionProviderRegistry ?? undefined,
+          smartAccountService,
           // apiKeyStore removed in v29.5 -- API keys via SettingsService
           onSettingsChanged: (changedKeys: string[]) => {
             void hotReloader.handleChangedKeys(changedKeys);

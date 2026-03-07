@@ -1109,27 +1109,6 @@ export interface DcentDexSwapParams {
   gasCondition?: GasCondition;
 }
 
-/** Params for dcentExchange SDK method. */
-export interface DcentExchangeParams {
-  fromAsset: string;
-  toAsset: string;
-  amount: string;
-  fromDecimals: number;
-  toDecimals: number;
-  toAddress: string;
-  providerId?: string;
-  network?: string;
-  walletId?: string;
-  gasCondition?: GasCondition;
-}
-
-/** Params for getDcentSwapStatus SDK method. */
-export interface DcentSwapStatusParams {
-  transactionId: string;
-  providerId: string;
-  network?: string;
-  walletId?: string;
-}
 
 // ---------------------------------------------------------------------------
 // DeFi Position Types (API-01, API-02, API-05)

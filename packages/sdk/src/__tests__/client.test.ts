@@ -1879,47 +1879,5 @@ describe('WAIaaSClient', () => {
       expect(calledUrl).toBe('http://localhost:3000/v1/actions/dcent_swap/dex_swap');
     });
 
-    it('dcentExchange delegates to executeAction', async () => {
-      const client = new WAIaaSClient({
-        baseUrl: 'http://localhost:3000',
-        sessionToken: mockToken,
-      });
-
-      fetchSpy.mockResolvedValue(mockResponse({ id: 'tx-2', status: 'PENDING' }));
-
-      await client.dcentExchange({
-        network: 'ethereum-mainnet',
-        walletId: 'w1',
-        fromAsset: 'bip122:000000000019d6689c085ae165831e93/slip44:0',
-        toAsset: 'eip155:1/slip44:60',
-        amount: '10000000',
-        fromDecimals: 8,
-        toDecimals: 18,
-        toAddress: '0x1234567890abcdef1234567890abcdef12345678',
-      });
-
-      const calledUrl = fetchSpy.mock.calls[0]![0] as string;
-      expect(calledUrl).toBe('http://localhost:3000/v1/actions/dcent_swap/exchange');
-    });
-
-    it('getDcentSwapStatus delegates to executeAction', async () => {
-      const client = new WAIaaSClient({
-        baseUrl: 'http://localhost:3000',
-        sessionToken: mockToken,
-      });
-
-      fetchSpy.mockResolvedValue(mockResponse({ status: 'completed' }));
-
-      const result = await client.getDcentSwapStatus({
-        network: 'ethereum-mainnet',
-        walletId: 'w1',
-        transactionId: 'tx-abc',
-        providerId: 'changenow',
-      });
-
-      expect(result).toEqual({ status: 'completed' });
-      const calledUrl = fetchSpy.mock.calls[0]![0] as string;
-      expect(calledUrl).toBe('http://localhost:3000/v1/actions/dcent_swap/swap_status');
-    });
   });
 });

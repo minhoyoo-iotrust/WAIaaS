@@ -2,7 +2,8 @@
 
 - **유형:** BUG
 - **심각도:** HIGH
-- **상태:** OPEN
+- **상태:** FIXED
+- **수정일:** 2026-03-07
 - **발견일:** 2026-03-07
 - **마일스톤:** —
 - **영향 범위:** `packages/daemon/src/infrastructure/database/migrate.ts`, Admin UI 대시보드 DeFi Positions
