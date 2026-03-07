@@ -329,8 +329,8 @@ describe('Settings coverage: API key management', () => {
     // coingecko has key -> shows masked
     expect(screen.getByText('CG-****abc')).toBeTruthy();
     // openai has no key -> shows "Not set" and Required badge
-    expect(screen.getByText('Not set')).toBeTruthy();
-    expect(screen.getByText('Required')).toBeTruthy();
+    expect(screen.getAllByText('Not set').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Required').length).toBeGreaterThanOrEqual(1);
   });
 
   it('handleSaveApiKey: edits and saves an API key', async () => {
@@ -426,8 +426,12 @@ describe('Settings coverage: API key management', () => {
 
     vi.mocked(apiPut).mockResolvedValueOnce(undefined);
 
-    // Click "Set" on openai (which has no key)
-    const setButton = screen.getByText('Set');
+    // Click "Set" on openai (which has no key) — multiple "Set" buttons may exist due to AA provider keys
+    const setButtons = screen.getAllByText('Set');
+    const setButton = setButtons.find((b) => {
+      const row = b.closest('.api-key-row');
+      return row?.textContent?.includes('openai');
+    }) ?? setButtons[0];
     fireEvent.click(setButton);
 
     const keyInput = document.querySelector('input[name="apikey-openai"]') as HTMLInputElement;

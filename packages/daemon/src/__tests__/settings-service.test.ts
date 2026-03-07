@@ -425,14 +425,15 @@ describe('SettingsService', () => {
             'oracle.coingecko_api_key', 'telegram.bot_token',
             'actions.jupiter_swap_api_key', 'actions.zerox_swap_api_key', 'actions.lifi_api_key', 'actions.pendle_yield_api_key',
             'actions.alchemy_nft_api_key', 'actions.helius_das_api_key',
+            'smart_account.pimlico.api_key', 'smart_account.alchemy.api_key',
           ].includes(def.key),
         ).toBe(true);
       }
     });
 
     it('has expected number of definitions', () => {
-      // 10 notifications + 13 rpc + 14 security + 1 daemon + 2 walletconnect + 2 oracle + 1 display + 6 autostop + 5 monitoring + 2 telegram + 8 signing_sdk + 7 incoming + 51 actions + 1 policy + 5 gas_condition + 13 rpc_pool + 1 position_tracker + 3 per-rule autostop + 9 erc8004 + 1 policy.default_deny_erc8128_domains + 6 erc8128 = 172
-      expect(SETTING_DEFINITIONS.length).toBe(172);
+      // 10 notifications + 13 rpc + 14 security + 1 daemon + 2 walletconnect + 2 oracle + 1 display + 6 autostop + 5 monitoring + 2 telegram + 8 signing_sdk + 7 incoming + 51 actions + 1 policy + 5 gas_condition + 13 rpc_pool + 1 position_tracker + 3 per-rule autostop + 9 erc8004 + 1 policy.default_deny_erc8128_domains + 6 erc8128 + 4 smart_account (pimlico/alchemy api_key + paymaster_policy_id) = 176
+      expect(SETTING_DEFINITIONS.length).toBe(176);
     });
   });
 
