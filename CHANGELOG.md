@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.10.0-rc.10](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.9...v2.10.0-rc.10) (2026-03-06)
+
+
+### Bug Fixes
+
+* remove unused import and eslint-disable in dcent-api-client test ([10fa5b5](https://github.com/minhoyoo-iotrust/WAIaaS/commit/10fa5b5f16c4875d72296e0a92cea07f36d20ee6))
+* resolve open issues [#262](https://github.com/minhoyoo-iotrust/WAIaaS/issues/262)-266 ([d16660b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d16660b5d4c561e2fa2ee44a56ee627eb5bceb41))
+* resolve open issues [#262](https://github.com/minhoyoo-iotrust/WAIaaS/issues/262)-266 — DCent Swap provider, mock data cleanup, deprecated SA warning, action categories, factory supported networks ([65c65a6](https://github.com/minhoyoo-iotrust/WAIaaS/commit/65c65a6cb58ead0706b97d1a73d5c620547c20c9))
+
 ## [2.10.0-rc.9](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.8...v2.10.0-rc.9) (2026-03-06)
 
 
