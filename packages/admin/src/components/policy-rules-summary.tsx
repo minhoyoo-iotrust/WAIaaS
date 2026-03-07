@@ -42,15 +42,16 @@ function pad2(n: number): string {
 }
 
 function TierVisualization({ rules }: { rules: Record<string, unknown> }) {
-  const instantMax = Number(rules.instant_max ?? 0);
-  const notifyMax = Number(rules.notify_max ?? 0);
-  const delayMax = Number(rules.delay_max ?? 0);
+  const instantMax = Number(rules.instant_max_usd ?? rules.instant_max ?? 0);
+  const notifyMax = Number(rules.notify_max_usd ?? rules.notify_max ?? 0);
+  const delayMax = Number(rules.delay_max_usd ?? rules.delay_max ?? 0);
+  const isUsd = !!(rules.instant_max_usd || rules.notify_max_usd || rules.delay_max_usd);
   const maxValue = Math.max(instantMax, notifyMax, delayMax, 1);
 
   const tiers = [
-    { label: 'Instant', value: rules.instant_max as string, width: (instantMax / maxValue) * 100, cls: 'instant' },
-    { label: 'Notify', value: rules.notify_max as string, width: (notifyMax / maxValue) * 100, cls: 'notify' },
-    { label: 'Delay', value: rules.delay_max as string, width: (delayMax / maxValue) * 100, cls: 'delay' },
+    { label: 'Instant', value: (rules.instant_max_usd ?? rules.instant_max) as string, width: (instantMax / maxValue) * 100, cls: 'instant' },
+    { label: 'Notify', value: (rules.notify_max_usd ?? rules.notify_max) as string, width: (notifyMax / maxValue) * 100, cls: 'notify' },
+    { label: 'Delay', value: (rules.delay_max_usd ?? rules.delay_max) as string, width: (delayMax / maxValue) * 100, cls: 'delay' },
     { label: 'Approval', value: '', width: 100, cls: 'approval' },
   ];
 
@@ -66,7 +67,7 @@ function TierVisualization({ rules }: { rules: Record<string, unknown> }) {
             />
           </div>
           <span class="tier-bar-value">
-            {tier.value ? formatNumber(tier.value) : ''}
+            {tier.value ? `${isUsd ? '$' : ''}${formatNumber(tier.value)}` : ''}
           </span>
         </div>
       ))}
