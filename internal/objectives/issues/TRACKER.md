@@ -288,6 +288,7 @@
 | 271 | BUG | HIGH | Admin UI NFT 탭 네트워크 셀렉터가 항상 비어있음 — wallet.networks 미존재 필드 참조 | — | FIXED | 2026-03-07 |
 | 272 | BUG | CRITICAL | Smart Account 지갑 주소가 EOA signer 주소로 저장됨 — daemon.ts createApp()에 smartAccountService 미주입 | — | FIXED | 2026-03-07 |
 | 273 | BUG | HIGH | Admin UI ERC-8004 에이전트 등록 시 sessionAuth 인증 실패 — POST /v1/actions/* masterAuth 미허용 | — | FIXED | 2026-03-07 |
+| 274 | BUG | HIGH | 무제한 세션(expires_at=0)이 활성 세션 카운트에서 누락 — Admin 대시보드/Stats/Telegram Bot 3곳 | — | OPEN | — |
 
 ## Type Legend
 
@@ -299,9 +300,9 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 1
 - **FIXED:** 271
 - **RESOLVED:** 2
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 274
+- **Total:** 275
