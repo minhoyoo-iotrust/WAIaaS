@@ -1009,7 +1009,7 @@ function WalletDetailView({ id }: { id: string }) {
                         placeholder="https://..."
                       />
                     </>
-                  )}
+                  ) : null}
                   <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-2)' }}>
                     <Button onClick={handleProviderUpdate} loading={providerEditLoading.value}>Save</Button>
                     <Button variant="secondary" onClick={() => { providerEditing.value = false; }}>Cancel</Button>
