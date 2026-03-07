@@ -2774,7 +2774,10 @@ MIGRATIONS.push({
   version: 50,
   description: 'Add network column to userop_builds for Sign route RPC resolve (#279)',
   up: (sqlite) => {
-    sqlite.exec(`ALTER TABLE userop_builds ADD COLUMN network TEXT`);
+    const cols = sqlite.prepare("PRAGMA table_info('userop_builds')").all() as Array<{ name: string }>;
+    if (!cols.some((c) => c.name === 'network')) {
+      sqlite.exec(`ALTER TABLE userop_builds ADD COLUMN network TEXT`);
+    }
   },
 });
 
