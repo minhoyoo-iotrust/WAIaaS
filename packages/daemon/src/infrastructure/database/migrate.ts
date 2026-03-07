@@ -79,7 +79,7 @@ const LEGACY_NETWORK_NORMALIZE: Record<string, string> = {
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 49;
+export const LATEST_SCHEMA_VERSION = 50;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -415,7 +415,7 @@ function getCreateTableStatements(): string[] {
   expires_at INTEGER NOT NULL
 )`,
 
-    // Table 25: userop_builds (UserOp Build/Sign API data, v45)
+    // Table 25: userop_builds (UserOp Build/Sign API data, v45, network added v50)
     `CREATE TABLE IF NOT EXISTS userop_builds (
   id TEXT PRIMARY KEY,
   wallet_id TEXT NOT NULL,
@@ -423,6 +423,7 @@ function getCreateTableStatements(): string[] {
   sender TEXT NOT NULL,
   nonce TEXT NOT NULL,
   entry_point TEXT NOT NULL,
+  network TEXT,
   created_at INTEGER NOT NULL,
   expires_at INTEGER NOT NULL,
   used INTEGER NOT NULL DEFAULT 0 CHECK (used IN (0, 1))
@@ -2765,6 +2766,18 @@ MIGRATIONS.push({
           factory_address = NULL
       WHERE account_type = 'smart' AND signer_key IS NULL
     `);
+  },
+});
+
+// ── v50: Add network column to userop_builds (#279) ──────────────────
+MIGRATIONS.push({
+  version: 50,
+  description: 'Add network column to userop_builds for Sign route RPC resolve (#279)',
+  up: (sqlite) => {
+    const cols = sqlite.prepare("PRAGMA table_info('userop_builds')").all() as Array<{ name: string }>;
+    if (!cols.some((c) => c.name === 'network')) {
+      sqlite.exec(`ALTER TABLE userop_builds ADD COLUMN network TEXT`);
+    }
   },
 });
 
