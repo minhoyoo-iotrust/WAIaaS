@@ -291,6 +291,7 @@
 | 274 | BUG | HIGH | 무제한 세션(expires_at=0)이 활성 세션 카운트에서 누락 — Admin 대시보드/Stats/Telegram Bot 3곳 | — | FIXED | 2026-03-07 |
 | 275 | ENHANCEMENT | HIGH | AA 프로바이더 글로벌 기본 API Key / Policy ID — per-wallet 반복 입력 제거 + policyId Admin UI 노출 | — | FIXED | 2026-03-07 |
 | 276 | BUG | MEDIUM | Spending Limit 정책 목록 티어 바가 USD 키 불일치로 항상 빈 바 표시 | — | FIXED | 2026-03-07 |
+| 277 | BUG | HIGH | Admin UI NFT Indexer 설정 섹션 미표시 — API 키 직접 입력 불가 | — | OPEN | — |
 
 ## Type Legend
 
@@ -302,9 +303,9 @@
 
 ## Summary
 
-- **OPEN:** 3
+- **OPEN:** 4
 - **FIXED:** 271
 - **RESOLVED:** 2
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 277
+- **Total:** 278
