@@ -51,12 +51,12 @@ Requirements for Across Protocol cross-chain bridge integration. Each maps to ro
 
 ### Test (테스트)
 
-- [ ] **TST-01**: Mock API 기반 AcrossApiClient 단위 테스트 (quote, routes, limits, status)
-- [ ] **TST-02**: SpokePool depositV3 calldata 인코딩 검증 테스트
-- [ ] **TST-03**: ERC-20 approve+deposit BATCH 파이프라인 통합 테스트
-- [ ] **TST-04**: 네이티브 ETH 브릿지 (msg.value) 테스트
-- [ ] **TST-05**: 에러 핸들링 테스트 (insufficient liquidity, unsupported route, deadline expired)
-- [ ] **TST-06**: Bridge status tracker polling 테스트
+- [x] **TST-01**: Mock API 기반 AcrossApiClient 단위 테스트 (quote, routes, limits, status)
+- [x] **TST-02**: SpokePool depositV3 calldata 인코딩 검증 테스트
+- [x] **TST-03**: ERC-20 approve+deposit BATCH 파이프라인 통합 테스트
+- [x] **TST-04**: 네이티브 ETH 브릿지 (msg.value) 테스트
+- [x] **TST-05**: 에러 핸들링 테스트 (insufficient liquidity, unsupported route, deadline expired)
+- [x] **TST-06**: Bridge status tracker polling 테스트
 
 ## Future Requirements
 
@@ -113,12 +113,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INT-04 | Phase 355 | Complete |
 | INT-05 | Phase 355 | Complete |
 | INT-06 | Phase 355 | Complete |
-| TST-01 | Phase 356 | Pending |
-| TST-02 | Phase 356 | Pending |
-| TST-03 | Phase 356 | Pending |
-| TST-04 | Phase 356 | Pending |
-| TST-05 | Phase 356 | Pending |
-| TST-06 | Phase 356 | Pending |
+| TST-01 | Phase 356 | Complete |
+| TST-02 | Phase 356 | Complete |
+| TST-03 | Phase 356 | Complete |
+| TST-04 | Phase 356 | Complete |
+| TST-05 | Phase 356 | Complete |
+| TST-06 | Phase 356 | Complete |
 
 **Coverage:**
 - v31.6 requirements: 33 total

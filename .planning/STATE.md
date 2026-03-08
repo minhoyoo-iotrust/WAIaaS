@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v31.6
 milestone_name: Across Protocol 크로스체인 브릿지
 status: completed
-stopped_at: Completed Phase 355 (355-01, 355-02)
-last_updated: "2026-03-08T16:32:21.334Z"
-last_activity: 2026-03-09 — Phase 355 complete (Admin Settings + SDK + Admin UI + Skill File)
+stopped_at: Completed Phase 356 (356-01, 356-02) — Milestone v31.6 complete
+last_updated: "2026-03-09T01:42:00Z"
+last_activity: 2026-03-09 — Phase 356 complete (110 tests, 5 test files)
 progress:
   total_phases: 5
-  completed_phases: 4
-  total_plans: 6
-  completed_plans: 6
-  percent: 99
+  completed_phases: 5
+  total_plans: 8
+  completed_plans: 8
+  percent: 100
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-08)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 356 — Tests + Verification
+**Current focus:** Milestone v31.6 complete — all 5 phases done
 
 ## Current Position
 
 Phase: 356 of 356 (Tests + Verification)
-Plan: 0 of 2 in current phase
-Status: Phase 355 complete, ready for Phase 356
-Last activity: 2026-03-09 — Phase 355 complete (Admin Settings + SDK + Admin UI + Skill File)
+Plan: 2 of 2 in current phase
+Status: Milestone v31.6 complete — all 5 phases, 8 plans done
+Last activity: 2026-03-09 — Phase 356 complete (110 tests, 5 test files)
 
-Progress: [██████████] 99%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
+- Total plans completed: 8
 - Average duration: 5min
-- Total execution time: 0.29 hours
+- Total execution time: 0.38 hours
 
 ## Accumulated Context
 
@@ -58,6 +58,8 @@ Progress: [██████████] 99%
 - [Phase 354]: Skip chainId conversion at enrollment; store chain names, tracker handles optional originChainId
 - [Phase 355]: 7 setting keys (not 6): across_bridge_request_timeout_ms referenced by registerBuiltInProviders
 - [Phase 355]: MCP tools auto-exposed via mcpExpose=true (no separate MCP code needed)
+- [Phase 356]: integratorId URL resolution test simplified (URL.resolve drops query params from base)
+- [Phase 356]: viem decodeFunctionData for calldata verification in tests
 
 ### Blockers/Concerns
 
@@ -68,6 +70,6 @@ Progress: [██████████] 99%
 
 ## Session Continuity
 
-Last session: 2026-03-09T00:31:00Z
-Stopped at: Completed Phase 355 (355-01, 355-02)
+Last session: 2026-03-09T01:42:00Z
+Stopped at: Completed Phase 356 (356-01, 356-02) — Milestone v31.6 complete
 Resume file: None

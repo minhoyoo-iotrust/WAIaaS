@@ -63,7 +63,7 @@
 - [x] **Phase 353: API Client + Bridge Provider** - AcrossApiClient 5 엔드포인트 래핑 + AcrossBridgeActionProvider 5 actions 구현 (completed 2026-03-09)
 - [x] **Phase 354: Status Tracking + Daemon Integration** - 2-phase polling 상태 추적 + Daemon tracker/enrollment 등록 (completed 2026-03-08)
 - [x] **Phase 355: Interface Integration** - MCP 도구 + SDK 메서드 + Admin Settings + Admin UI + Skill Files + connect-info (completed 2026-03-09)
-- [ ] **Phase 356: Tests + Verification** - Mock 기반 단위 테스트 + 파이프라인 통합 테스트 + 에러 핸들링 검증
+- [x] **Phase 356: Tests + Verification** - Mock 기반 단위 테스트 + 파이프라인 통합 테스트 + 에러 핸들링 검증 (completed 2026-03-09)
 
 ## Phase Details
 
@@ -139,8 +139,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 356-01-PLAN.md — AcrossApiClient + Config helpers + Zod 스키마 단위 테스트
-- [ ] 356-02-PLAN.md — AcrossBridgeActionProvider 통합 테스트 + 에러 핸들링 + StatusTracker 테스트
+- [x] 356-01-PLAN.md — AcrossApiClient + Config helpers + Zod 스키마 단위 테스트
+- [x] 356-02-PLAN.md — AcrossBridgeActionProvider 통합 테스트 + 에러 핸들링 + StatusTracker 테스트
 
 ## Progress
 
@@ -153,4 +153,4 @@ Phases execute in numeric order: 352 -> 353 -> 354 -> 355 -> 356
 | 353. API Client + Bridge Provider | 2/2 | Complete    | 2026-03-08 |
 | 354. Status Tracking + Daemon Integration | 1/1 | Complete    | 2026-03-08 |
 | 355. Interface Integration | 2/2 | Complete    | 2026-03-08 |
-| 356. Tests + Verification | 0/2 | Not started | - |
+| 356. Tests + Verification | 2/2 | Complete   | 2026-03-08 |
