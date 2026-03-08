@@ -250,6 +250,292 @@ ChainError -> WAIaaSError 변환: Stage 5에서 `provider.resolve()` 실패 시 
 
 ---
 
+## 설계 확정: HDESIGN-02 EIP-712 서명
+
+### 1. 두 서명 스키마 비교
+
+| 항목 | L1 Action (Phantom Agent) | User-Signed Action |
+|------|--------------------------|-------------------|
+| 용도 | 주문/취소/레버리지/마진모드 등 거래 액션 | 입출금/내부이체/Sub-account 생성/API Wallet 등록 |
+| Domain name | 'Exchange' | 'HyperliquidSignTransaction' |
+| Domain version | '1' | '1' |
+| Domain chainId | 1337 (mainnet, testnet 동일) | 42161 (mainnet) / 421614 (testnet) |
+| Domain verifyingContract | 0x0000...0000 | 0x0000...0000 |
+| Primary type | 'Agent' | 'HyperliquidTransaction:{ActionType}' |
+| 서명 대상 | phantom agent { source, connectionId } | action payload 직접 |
+| msgpack 필요 | YES (action -> msgpack -> keccak256 -> connectionId) | NO |
+| @msgpack/msgpack 의존성 | 필수 | 불필요 |
+
+### 2. Phantom Agent 서명 상세 (L1 Actions)
+
+`HyperliquidSigner.signL1Action()` 메서드 설계:
+
+```typescript
+async signL1Action(
+  action: Record<string, unknown>,
+  nonce: number,          // Date.now() ms timestamp
+  isMainnet: boolean,
+  privateKey: Hex,
+  vaultAddress?: Hex,     // Sub-account인 경우
+): Promise<{ r: Hex; s: Hex; v: number }> {
+  // Step 1: trailing zero 제거 (price, size, trigger 등 decimal string 필드)
+  const normalized = removeTrailingZeros(action);
+
+  // Step 2: msgpack encode (canonical field order!)
+  // CRITICAL: 필드 순서는 Python SDK signing.py의 order_type_to_wire() 기준
+  // 예: { a: assetIndex, b: isBuy, p: price, s: size, r: reduceOnly, t: orderType, c: cloid }
+  const encoded = encode(normalized);
+
+  // Step 3: nonce + vaultAddress 직렬화
+  const nonceBytes = Buffer.alloc(8);
+  nonceBytes.writeBigUInt64BE(BigInt(nonce));
+  // vaultAddress: 0x01 + 20 bytes if present, 0x00 if absent
+  const vaultBytes = vaultAddress
+    ? Buffer.concat([Buffer.from([0x01]), hexToBytes(vaultAddress)])
+    : Buffer.from([0x00]);
+
+  // Step 4: keccak256(encoded + nonceBytes + vaultBytes) -> connectionId
+  const connectionId = keccak256(
+    concat([encoded, nonceBytes, vaultBytes])
+  );
+
+  // Step 5: phantom agent 구성
+  const phantomAgent = {
+    source: isMainnet ? 'a' : 'b',
+    connectionId,
+  };
+
+  // Step 6: EIP-712 서명
+  const account = privateKeyToAccount(privateKey);
+  const signature = await account.signTypedData({
+    domain: {
+      name: 'Exchange',
+      version: '1',
+      chainId: 1337,
+      verifyingContract: '0x0000000000000000000000000000000000000000',
+    },
+    types: {
+      Agent: [
+        { name: 'source', type: 'string' },
+        { name: 'connectionId', type: 'bytes32' },
+      ],
+    },
+    primaryType: 'Agent',
+    message: phantomAgent,
+  });
+
+  // Step 7: {r, s, v} 분리
+  return parseSignature(signature);
+}
+```
+
+### 3. msgpack 정규 필드 순서 (Python SDK signing.py 기준)
+
+| Action type | Wire 필드 순서 (msgpack key order) |
+|------------|----------------------------------|
+| order | a(asset), b(isBuy), p(limitPx), s(sz), r(reduceOnly), t(orderType), c(cloid) |
+| cancel | a(asset), o(oid) |
+| cancelByCloid | asset, cloid |
+| modify | oid, order(nested: a,b,p,s,r,t,c), traderAddress? |
+| batchModify | modifies(array of modify wire) |
+| updateLeverage | asset, isCross, leverage |
+| updateIsolatedMargin | asset, isBuy, ntli |
+
+trailing zero 제거 규칙:
+- price, size, trigger 등 decimal string: "100.00" -> "100", "1.50" -> "1.5", "0.0010" -> "0.001"
+- 정수는 변환 불필요: 10 -> 10
+- 함수: `function removeTrailingZeros(s: string): string { return s.replace(/\.?0+$/, ''); }`
+
+### 4. User-Signed Action 서명 상세
+
+`HyperliquidSigner.signUserSignedAction()` 메서드 설계:
+
+```typescript
+async signUserSignedAction(
+  actionType: string,     // e.g., 'UsdSend', 'Withdraw', 'CreateSubAccount'
+  action: Record<string, unknown>,
+  isMainnet: boolean,
+  privateKey: Hex,
+): Promise<{ r: Hex; s: Hex; v: number }> {
+  const account = privateKeyToAccount(privateKey);
+  const signature = await account.signTypedData({
+    domain: {
+      name: 'HyperliquidSignTransaction',
+      version: '1',
+      chainId: isMainnet ? 42161 : 421614,
+      verifyingContract: '0x0000000000000000000000000000000000000000',
+    },
+    types: USER_ACTION_TYPES[actionType],  // 아래 매핑 테이블
+    primaryType: `HyperliquidTransaction:${actionType}`,
+    message: action,
+  });
+  return parseSignature(signature);
+}
+```
+
+User-Signed Action types 매핑:
+
+| Action Type | EIP-712 Types |
+|------------|---------------|
+| UsdSend | { hyperliquidChain: 'string', destination: 'string', amount: 'string', time: 'uint64' } |
+| Withdraw | { hyperliquidChain: 'string', destination: 'string', amount: 'string', time: 'uint64' } |
+| UsdClassTransfer | { hyperliquidChain: 'string', amount: 'string', toPerp: 'bool', nonce: 'uint64' } |
+| CreateSubAccount | { hyperliquidChain: 'string', name: 'string', time: 'uint64' } |
+| SubAccountTransfer | { hyperliquidChain: 'string', subAccountUser: 'string', isDeposit: 'bool', usd: 'uint64', time: 'uint64' } |
+| ApproveAgent | { hyperliquidChain: 'string', agentAddress: 'address', agentName: 'string', nonce: 'uint64' } |
+
+hyperliquidChain 값: mainnet -> 'Mainnet', testnet -> 'Testnet'
+
+---
+
+## 설계 확정: HDESIGN-03 ExchangeClient 공유 구조
+
+### 1. HyperliquidExchangeClient 클래스 설계
+
+```typescript
+// packages/actions/src/providers/hyperliquid/exchange-client.ts
+export class HyperliquidExchangeClient {
+  constructor(
+    private readonly apiUrl: string,     // from Admin Settings
+    private readonly rateLimiter: HyperliquidRateLimiter,
+  ) {}
+
+  // Exchange endpoint: POST /exchange
+  async exchange(request: {
+    action: Record<string, unknown>;
+    nonce: number;
+    signature: { r: Hex; s: Hex; v: number };
+    vaultAddress?: Hex;
+  }): Promise<ExchangeResponse> {
+    await this.rateLimiter.acquire(1);  // weight=1 for exchange actions
+    return this.post('/exchange', request, ExchangeResponseSchema);
+  }
+
+  // Info endpoint: POST /info
+  async info<T>(request: InfoRequest, schema: z.ZodType<T>): Promise<T> {
+    const weight = INFO_WEIGHTS[request.type] ?? 2;
+    await this.rateLimiter.acquire(weight);
+    return this.post('/info', request, schema);
+  }
+
+  private async post<T>(path: string, body: unknown, schema: z.ZodType<T>): Promise<T> {
+    // native fetch + AbortController (10s timeout)
+    // Zod schema.parse() on response
+    // HL_API_ERROR on non-200
+  }
+}
+```
+
+### 2. Info API 요청 가중치 테이블
+
+| Info type | Weight | 설명 |
+|-----------|--------|------|
+| clearinghouseState | 20 | Perp 포지션 + 잔액 |
+| spotClearinghouseState | 20 | Spot 잔액 |
+| openOrders | 20 | 오픈 주문 목록 |
+| userFills | 20 | 최근 체결 내역 |
+| meta | 2 | Perp 마켓 메타데이터 |
+| spotMeta | 2 | Spot 마켓 메타데이터 |
+| allMids | 2 | 모든 마켓 중간가 |
+| fundingHistory | 2 | 펀딩 레이트 이력 |
+| subAccounts | 20 | Sub-account 목록 + 잔액 |
+
+### 3. Rate Limiter 설계
+
+가중치 기반 rate limiter (Hyperliquid 공식: IP당 1200 weight/min):
+
+```typescript
+class HyperliquidRateLimiter {
+  private totalWeight = 0;
+  private windowStart = Date.now();
+  private readonly maxWeightPerMin: number;  // default: 600 (보수적, 공식 1200의 50%)
+
+  async acquire(weight: number): Promise<void> {
+    const now = Date.now();
+    if (now - this.windowStart > 60_000) {
+      this.totalWeight = 0;
+      this.windowStart = now;
+    }
+    if (this.totalWeight + weight > this.maxWeightPerMin) {
+      const waitMs = 60_000 - (now - this.windowStart);
+      await new Promise(resolve => setTimeout(resolve, waitMs));
+      this.totalWeight = 0;
+      this.windowStart = Date.now();
+    }
+    this.totalWeight += weight;
+  }
+}
+```
+
+`maxWeightPerMin`은 Admin Settings `HYPERLIQUID_RATE_LIMIT_WEIGHT_PER_MIN`으로 런타임 조정 가능.
+
+### 4. HyperliquidMarketData 설계
+
+Info API 래퍼 (read-only, 파이프라인 밖에서 사용):
+
+```typescript
+class HyperliquidMarketData {
+  constructor(private readonly client: HyperliquidExchangeClient) {}
+
+  // 파이프라인 없이 직접 호출 (MCP query tools, Admin UI)
+  async getPositions(walletAddress: Hex, subAccount?: Hex): Promise<Position[]>
+  async getOpenOrders(walletAddress: Hex, subAccount?: Hex): Promise<OpenOrder[]>
+  async getMarkets(): Promise<MarketMeta[]>
+  async getSpotMarkets(): Promise<SpotMarketMeta[]>
+  async getFundingHistory(market: string, startTime: number): Promise<FundingRate[]>
+  async getAllMidPrices(): Promise<Record<string, string>>
+  async getAccountState(walletAddress: Hex): Promise<ClearinghouseState>
+  async getSpotState(walletAddress: Hex): Promise<SpotClearinghouseState>
+  async getSubAccounts(walletAddress: Hex): Promise<SubAccountState[]>
+  async getUserFills(walletAddress: Hex, limit?: number): Promise<Fill[]>
+}
+```
+
+### 5. 컴포넌트 의존성 그래프
+
+```
+HyperliquidRateLimiter
+  |
+HyperliquidExchangeClient (Exchange + Info 래핑)
+  |
+  +-- HyperliquidSigner (EIP-712 서명만 담당, ExchangeClient 미사용)
+  |
+  +-- HyperliquidMarketData (Info API read-only 래핑)
+  |
+  +-- HyperliquidPerpProvider (resolve: Signer.signL1Action -> Client.exchange)
+  |     uses: Signer, Client, MarketData (가격 조회)
+  |
+  +-- HyperliquidSpotProvider (resolve: Signer.signL1Action -> Client.exchange)
+  |     uses: Signer, Client, MarketData
+  |
+  +-- HyperliquidSubAccountService (Signer.signUserSignedAction -> Client.exchange)
+        uses: Signer, Client
+```
+
+### 6. 신규 의존성
+
+| 패키지 | 버전 | 용도 | 기존 의존성 여부 |
+|--------|------|------|----------------|
+| @msgpack/msgpack | ^3.0.0 | phantom agent 서명의 msgpack 직렬화 | 신규 (0 transitive deps) |
+| viem | ^2.21.0 | signTypedData, keccak256, parseSignature | 기존 |
+
+파일 구조:
+
+```
+packages/actions/src/providers/hyperliquid/
+  config.ts              -- API endpoints, rate limits, defaults, Admin Settings keys
+  schemas.ts             -- Zod input schemas for all actions + API response schemas
+  exchange-client.ts     -- HyperliquidExchangeClient
+  signer.ts              -- HyperliquidSigner (signL1Action + signUserSignedAction)
+  market-data.ts         -- HyperliquidMarketData
+  perp-provider.ts       -- HyperliquidPerpProvider : IPerpProvider
+  spot-provider.ts       -- HyperliquidSpotProvider : IActionProvider
+  sub-account-service.ts -- Sub-account CRUD + transfer
+  index.ts               -- Re-exports + registerHyperliquidProviders()
+```
+
+---
+
 ## 기술적 고려사항
 
 1. **파이프라인 분기**: Hyperliquid L1 거래는 온체인 TX가 아닌 API 콜이므로 기존 6-stage 파이프라인과 다른 플로우 필요. 별도 `HyperliquidExchangeClient` 또는 Stage 5 분기로 처리.
