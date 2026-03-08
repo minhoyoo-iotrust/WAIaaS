@@ -97,7 +97,13 @@ Plans:
   3. User가 Cross/Isolated 마진 모드와 레버리지 배율을 설정할 수 있다
   4. Perp/Spot 거래에 기존 지출 한도 정책이 적용되고, Admin Settings에 Hyperliquid 설정이 존재하며, connect-info에 hyperliquid capability가 포함되고, Skill 파일이 업데이트되어 있다
   5. Admin UI에서 Hyperliquid 포지션과 주문 현황을 확인할 수 있다
-**Plans**: TBD
+**Plans:** 5 plans
+Plans:
+- [ ] 349-01-PLAN.md — ApiDirectResult 타입 + Stage 5 분기 + requiresSigningKey 파이프라인
+- [ ] 349-02-PLAN.md — HyperliquidSigner + ExchangeClient + MarketData + DB v51
+- [ ] 349-03-PLAN.md — HyperliquidPerpProvider + 정책 통합 + 레지스트리 등록
+- [ ] 349-04-PLAN.md — REST API + MCP 13도구 + SDK 13메서드 + connect-info
+- [ ] 349-05-PLAN.md — Admin UI Hyperliquid 페이지 + Admin Settings + Skill 파일
 
 ### Phase 350: Spot Trading
 **Goal**: User가 WAIaaS를 통해 Hyperliquid Spot 거래를 수행할 수 있다
@@ -129,6 +135,6 @@ Note: Phase 350과 351은 Phase 349에만 의존하므로 병렬 실행 가능
 |-------|----------------|--------|-----------|
 | 347. HyperEVM 체인 등록 | 1/1 | Complete    | 2026-03-08 |
 | 348. Hyperliquid DEX 설계 문서 | 2/2 | Complete    | 2026-03-08 |
-| 349. Core Infrastructure + Perp Trading | 0/TBD | Not started | - |
+| 349. Core Infrastructure + Perp Trading | 0/5 | Not started | - |
 | 350. Spot Trading | 0/TBD | Not started | - |
 | 351. Sub-account 관리 | 0/TBD | Not started | - |
