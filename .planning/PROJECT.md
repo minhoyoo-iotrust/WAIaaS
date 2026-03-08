@@ -8,6 +8,18 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
+## Current Milestone: v31.4 Hyperliquid 생태계 통합
+
+**Goal:** HyperEVM 체인 지원과 Hyperliquid DEX(Perp/Spot) 거래, Sub-accounts를 통합하여 WAIaaS에서 Hyperliquid 생태계를 활용할 수 있도록 한다.
+
+**Target features:**
+- HyperEVM Mainnet/Testnet 체인 추가 (viem 빌트인 chain)
+- Hyperliquid L1 DEX 리서치 & 설계 문서 (API 사양, EIP-712 서명, Sub-account 모델)
+- Hyperliquid Perp 거래 (Market/Limit/Stop-Loss/TP, 포지션/레버리지 관리)
+- Hyperliquid Spot 거래 (Market/Limit, 잔액/주문 관리)
+- Sub-account 관리 (생성/자금이동/포지션 조회)
+- 전 인터페이스 통합 (MCP/SDK/Admin UI/Admin Settings/Skill Files)
+
 ## Previous Milestone: v31.3 DCent Swap Aggregator 통합 — SHIPPED 2026-03-07
 
 DCent Swap Backend API를 WAIaaS에 통합하여 다중 프로바이더 스왑(동일체인 DEX + 크로스체인 Exchange) + 2-hop 자동 라우팅 폴백 지원. DcentSwapApiClient(7 endpoints, 24h currency cache), currency-mapper(CAIP-19 ↔ DCent Currency ID 양방향 변환, 8 native token mappings), DEX Swap(approve+txdata BATCH, min/max validation, provider sorting), Exchange(payInAddress TRANSFER + ExchangeStatusTracker polling + 4 notification events), auto-router(6 EVM chains intermediate tokens, 2-hop fallback on no-route error), DcentSwapActionProvider(IActionProvider, 4 actions), 4 MCP tools + 4 SDK methods + 7 Admin Settings keys + connect-info capability + policy engine integration + skill files 2개 업데이트 + design doc 77 (936 lines). 5 phases, 9 plans, 37 requirements, 54 commits, 110 files, +11,612 lines, 116 tests.
