@@ -113,7 +113,10 @@ Plans:
   1. User가 Hyperliquid Spot Market/Limit 주문을 생성하고 취소할 수 있다
   2. User가 Spot 계정 토큰 잔액과 Spot 마켓 정보(페어/가격/거래량)를 조회할 수 있다
   3. Spot 기능이 MCP 도구 + SDK 메서드로 노출되고, HyperliquidSpotActionProvider가 IActionProvider로 등록된다
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 350-01-PLAN.md — SpotProvider + Spot Zod 스키마 + MarketData Spot 메서드 + 테스트
+- [ ] 350-02-PLAN.md — REST API + MCP 5도구 + SDK 5메서드 + Admin UI Spot 탭 + Skill 파일
 
 ### Phase 351: Sub-account 관리
 **Goal**: User가 Hyperliquid Sub-account를 통해 전략별 자금을 격리하고 관리할 수 있다
@@ -136,5 +139,5 @@ Note: Phase 350과 351은 Phase 349에만 의존하므로 병렬 실행 가능
 | 347. HyperEVM 체인 등록 | 1/1 | Complete    | 2026-03-08 |
 | 348. Hyperliquid DEX 설계 문서 | 2/2 | Complete    | 2026-03-08 |
 | 349. Core Infrastructure + Perp Trading | 5/5 | Complete    | 2026-03-08 |
-| 350. Spot Trading | 0/TBD | Not started | - |
+| 350. Spot Trading | 0/2 | Not started | - |
 | 351. Sub-account 관리 | 0/TBD | Not started | - |
