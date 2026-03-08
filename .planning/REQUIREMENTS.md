@@ -25,20 +25,20 @@ Requirements for Hyperliquid ecosystem integration. Each maps to roadmap phases.
 
 ### Hyperliquid Perp
 
-- [ ] **HPERP-01**: User가 Hyperliquid Perp Market 주문을 생성할 수 있다
-- [ ] **HPERP-02**: User가 Hyperliquid Perp Limit 주문 (GTC/IoC/Post-Only)을 생성할 수 있다
-- [ ] **HPERP-03**: User가 Stop-Loss 주문을 설정할 수 있다
-- [ ] **HPERP-04**: User가 Take-Profit 주문을 설정할 수 있다
-- [ ] **HPERP-05**: User가 미실현 PnL, 레버리지, 마진, 청산가를 포함한 포지션을 조회할 수 있다
-- [ ] **HPERP-06**: User가 Cross/Isolated 마진 모드와 레버리지 배율을 설정할 수 있다
-- [ ] **HPERP-07**: User가 단건/다건 주문을 취소할 수 있다
-- [ ] **HPERP-08**: User가 주문 상태 (대기/체결/취소/거부)를 조회할 수 있다
-- [ ] **HPERP-09**: User가 펀딩 레이트를 조회할 수 있다
-- [ ] **HPERP-10**: User가 마진 정보 (여유 마진, 마진 비율)를 조회할 수 있다
-- [ ] **HPERP-11**: User가 거래 가능 마켓 목록, 최대 레버리지, OI를 조회할 수 있다
-- [ ] **HPERP-12**: Perp 기능이 MCP 도구 + SDK 메서드로 노출된다
-- [ ] **HPERP-13**: Perp 기능이 Admin UI에 포지션/주문 현황으로 표시된다
-- [ ] **HPERP-14**: HyperliquidPerpActionProvider가 IActionProvider로 등록된다
+- [x] **HPERP-01**: User가 Hyperliquid Perp Market 주문을 생성할 수 있다
+- [x] **HPERP-02**: User가 Hyperliquid Perp Limit 주문 (GTC/IoC/Post-Only)을 생성할 수 있다
+- [x] **HPERP-03**: User가 Stop-Loss 주문을 설정할 수 있다
+- [x] **HPERP-04**: User가 Take-Profit 주문을 설정할 수 있다
+- [x] **HPERP-05**: User가 미실현 PnL, 레버리지, 마진, 청산가를 포함한 포지션을 조회할 수 있다
+- [x] **HPERP-06**: User가 Cross/Isolated 마진 모드와 레버리지 배율을 설정할 수 있다
+- [x] **HPERP-07**: User가 단건/다건 주문을 취소할 수 있다
+- [x] **HPERP-08**: User가 주문 상태 (대기/체결/취소/거부)를 조회할 수 있다
+- [x] **HPERP-09**: User가 펀딩 레이트를 조회할 수 있다
+- [x] **HPERP-10**: User가 마진 정보 (여유 마진, 마진 비율)를 조회할 수 있다
+- [x] **HPERP-11**: User가 거래 가능 마켓 목록, 최대 레버리지, OI를 조회할 수 있다
+- [x] **HPERP-12**: Perp 기능이 MCP 도구 + SDK 메서드로 노출된다
+- [x] **HPERP-13**: Perp 기능이 Admin UI에 포지션/주문 현황으로 표시된다
+- [x] **HPERP-14**: HyperliquidPerpActionProvider가 IActionProvider로 등록된다
 
 ### Hyperliquid Spot
 
@@ -59,21 +59,21 @@ Requirements for Hyperliquid ecosystem integration. Each maps to roadmap phases.
 
 ### Account State
 
-- [ ] **HACCT-01**: User가 Perp/Spot 잔액을 통합 조회할 수 있다
-- [ ] **HACCT-02**: User가 모든 오픈 주문을 조회할 수 있다
-- [ ] **HACCT-03**: User가 최근 거래 이력을 조회할 수 있다
-- [ ] **HACCT-04**: User가 USDC를 Spot과 Perp 계정 간 이동할 수 있다
+- [x] **HACCT-01**: User가 Perp/Spot 잔액을 통합 조회할 수 있다
+- [x] **HACCT-02**: User가 모든 오픈 주문을 조회할 수 있다
+- [x] **HACCT-03**: User가 최근 거래 이력을 조회할 수 있다
+- [x] **HACCT-04**: User가 USDC를 Spot과 Perp 계정 간 이동할 수 있다
 
 ### Policy Integration
 
-- [ ] **HPOL-01**: Perp 거래에 기존 지출 한도 정책이 notional value 기준으로 적용된다
-- [ ] **HPOL-02**: Spot 거래에 기존 지출 한도 정책이 주문 금액 기준으로 적용된다
+- [x] **HPOL-01**: Perp 거래에 기존 지출 한도 정책이 notional value 기준으로 적용된다
+- [x] **HPOL-02**: Spot 거래에 기존 지출 한도 정책이 주문 금액 기준으로 적용된다
 
 ### Integration
 
-- [ ] **HINT-01**: Admin Settings에 Hyperliquid 관련 키가 등록된다 (API endpoint, testnet 전환 등)
-- [ ] **HINT-02**: connect-info에 hyperliquid capability가 포함된다
-- [ ] **HINT-03**: Skill 파일 (transactions.skill.md 등)이 업데이트된다
+- [x] **HINT-01**: Admin Settings에 Hyperliquid 관련 키가 등록된다 (API endpoint, testnet 전환 등)
+- [x] **HINT-02**: connect-info에 hyperliquid capability가 포함된다
+- [x] **HINT-03**: Skill 파일 (transactions.skill.md 등)이 업데이트된다
 
 ## Future Requirements
 
@@ -127,20 +127,20 @@ Which phases cover which requirements. Updated during roadmap creation.
 | HDESIGN-05 | Phase 348 | Complete |
 | HDESIGN-06 | Phase 348 | Complete |
 | HDESIGN-07 | Phase 348 | Complete |
-| HPERP-01 | Phase 349 | Pending |
-| HPERP-02 | Phase 349 | Pending |
-| HPERP-03 | Phase 349 | Pending |
-| HPERP-04 | Phase 349 | Pending |
-| HPERP-05 | Phase 349 | Pending |
-| HPERP-06 | Phase 349 | Pending |
-| HPERP-07 | Phase 349 | Pending |
-| HPERP-08 | Phase 349 | Pending |
-| HPERP-09 | Phase 349 | Pending |
-| HPERP-10 | Phase 349 | Pending |
-| HPERP-11 | Phase 349 | Pending |
-| HPERP-12 | Phase 349 | Pending |
-| HPERP-13 | Phase 349 | Pending |
-| HPERP-14 | Phase 349 | Pending |
+| HPERP-01 | Phase 349 | Complete |
+| HPERP-02 | Phase 349 | Complete |
+| HPERP-03 | Phase 349 | Complete |
+| HPERP-04 | Phase 349 | Complete |
+| HPERP-05 | Phase 349 | Complete |
+| HPERP-06 | Phase 349 | Complete |
+| HPERP-07 | Phase 349 | Complete |
+| HPERP-08 | Phase 349 | Complete |
+| HPERP-09 | Phase 349 | Complete |
+| HPERP-10 | Phase 349 | Complete |
+| HPERP-11 | Phase 349 | Complete |
+| HPERP-12 | Phase 349 | Complete |
+| HPERP-13 | Phase 349 | Complete |
+| HPERP-14 | Phase 349 | Complete |
 | HSPOT-01 | Phase 350 | Pending |
 | HSPOT-02 | Phase 350 | Pending |
 | HSPOT-03 | Phase 350 | Pending |
@@ -152,15 +152,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 | HSUB-02 | Phase 351 | Pending |
 | HSUB-03 | Phase 351 | Pending |
 | HSUB-04 | Phase 351 | Pending |
-| HACCT-01 | Phase 349 | Pending |
-| HACCT-02 | Phase 349 | Pending |
-| HACCT-03 | Phase 349 | Pending |
-| HACCT-04 | Phase 349 | Pending |
-| HPOL-01 | Phase 349 | Pending |
-| HPOL-02 | Phase 349 | Pending |
-| HINT-01 | Phase 349 | Pending |
-| HINT-02 | Phase 349 | Pending |
-| HINT-03 | Phase 349 | Pending |
+| HACCT-01 | Phase 349 | Complete |
+| HACCT-02 | Phase 349 | Complete |
+| HACCT-03 | Phase 349 | Complete |
+| HACCT-04 | Phase 349 | Complete |
+| HPOL-01 | Phase 349 | Complete |
+| HPOL-02 | Phase 349 | Complete |
+| HINT-01 | Phase 349 | Complete |
+| HINT-02 | Phase 349 | Complete |
+| HINT-03 | Phase 349 | Complete |
 
 **Coverage:**
 - v31.4 requirements: 44 total

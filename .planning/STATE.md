@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v31.4
 milestone_name: Hyperliquid 생태계 통합
-status: planning
-stopped_at: Completed 348-02-PLAN.md
-last_updated: "2026-03-08T03:38:25.805Z"
-last_activity: 2026-03-08 — Phase 348 design complete
+status: executing
+stopped_at: Completed 349-05-PLAN.md
+last_updated: "2026-03-08T04:42:00.000Z"
+last_activity: 2026-03-08 — Phase 349 Core Infrastructure + Perp Trading complete
 progress:
   total_phases: 5
-  completed_phases: 2
-  total_plans: 3
-  completed_plans: 3
-  percent: 40
+  completed_phases: 3
+  total_plans: 8
+  completed_plans: 8
+  percent: 60
 ---
 
 # Project State
@@ -21,29 +21,36 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-08)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 349 Core Infrastructure + Perp Trading
+**Current focus:** Phase 349 complete. Next: Phase 350 Spot Trading or Phase 351 Sub-account
 
 ## Current Position
 
 Phase: 349 of 351 (Core Infrastructure + Perp Trading) — 3 of 5 phases
-Plan: —
-Status: Ready to plan
-Last activity: 2026-03-08 — Phase 348 design complete
+Plan: 5 of 5 (complete)
+Status: Phase 349 complete
+Last activity: 2026-03-08 — Phase 349 Core Infrastructure + Perp Trading complete
 
-Progress: [████░░░░░░] 40%
+Progress: [██████░░░░] 60%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: —
-- Total execution time: 0 hours
+- Total plans completed: 8 (3 design + 5 implementation)
+- Average duration: ~20 min per implementation plan
+- Total execution time: ~2 hours
+
+| Phase | Plan | Duration | Tasks | Files |
+|-------|------|----------|-------|-------|
+| 349   | 01   | 10min    | 2     | 28    |
+| 349   | 02   | 45min    | 2     | 15    |
+| 349   | 03   | 25min    | 2     | 4     |
+| 349   | 04   | 20min    | 2     | 7     |
+| 349   | 05   | 15min    | 2     | 11    |
 
 ## Accumulated Context
 
 ### Decisions
 
-(New milestone — )
 - [Phase 347]: SLIP-44 coin type 999 (chain ID) used for HYPE native asset
 - [Phase 347]: HyperEVM classified as chain:ethereum (EVM-compatible) in CAIP-2 mapping
 - [Phase 348]: ApiDirectResult uses __apiDirect discriminant for type guard
@@ -57,17 +64,24 @@ Progress: [████░░░░░░] 40%
 - [Phase 348]: Close/sell/cancel actions are policy-exempt ($0 spending)
 - [Phase 348]: Wallet-level spending scope: master + all sub-accounts combined
 - [Phase 348]: DB v51 for orders (Phase 349), v52 for sub-accounts (Phase 351)
+- [Phase 349]: HL_ERRORS maps to existing ChainErrorCode values (ACTION_API_ERROR, ACTION_RATE_LIMITED)
+- [Phase 349]: ChainError uses chain name 'HYPERLIQUID' as second constructor argument
+- [Phase 349]: Stage 5 ApiDirectResult uses CONFIRMED status (not COMPLETED)
+- [Phase 349]: Query routes use plain Hono (not OpenAPIHono) for dynamic response types
+- [Phase 349]: Action tools auto-registered via mcpExpose=true, query tools manual
+- [Phase 349]: createHyperliquidClient takes direct params (ESM compatible)
+- [Phase 349]: Hyperliquid page as standalone route (/hyperliquid) in Admin UI
+- [Phase 349]: PositionsTable auto-refreshes every 10 seconds
 
 ### Blockers/Concerns
 
 - C1: EIP-712 typehash 온체인 검증 필요 (Anvil fork 테스트 deferred, from v30.8)
 - C2: SDK missing provider management methods (deferred)
 - C3: ERC-8128 is Draft status -- spec may change
-- C4: ApiDirectResult는 WAIaaS 신규 패턴 -- Phase 348 설계에서 파이프라인 영향 범위 확정 필요
 - C5: phantom agent msgpack 필드 순서 민감 -- Python SDK 테스트 벡터 기반 검증 필수
 
 ## Session Continuity
 
-Last session: 2026-03-08T03:36:57.591Z
-Stopped at: Completed 348-02-PLAN.md
+Last session: 2026-03-08T04:42:00.000Z
+Stopped at: Completed 349-05-PLAN.md
 Resume file: None

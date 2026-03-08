@@ -55,7 +55,7 @@
 
 - [x] **Phase 347: HyperEVM 체인 등록** - HyperEVM Mainnet/Testnet을 EVM_CHAIN_MAP에 추가하여 기존 EVM 기능 즉시 동작 (completed 2026-03-08)
 - [x] **Phase 348: Hyperliquid DEX 설계 문서** - L1 DEX API 통합 아키텍처, EIP-712 서명, Sub-account, 정책 적용 방안 확정 (completed 2026-03-08)
-- [ ] **Phase 349: Core Infrastructure + Perp Trading** - 공유 인프라(ExchangeClient/Signer/MarketData) + Perp 거래 + Account State + 정책 + 전 인터페이스
+- [x] **Phase 349: Core Infrastructure + Perp Trading** - 공유 인프라(ExchangeClient/Signer/MarketData) + Perp 거래 + Account State + 정책 + 전 인터페이스 (completed 2026-03-08)
 - [ ] **Phase 350: Spot Trading** - Spot Market/Limit 주문, 잔액/마켓 조회, MCP/SDK 통합
 - [ ] **Phase 351: Sub-account 관리** - Sub-account 생성/자금이동/포지션 조회, MCP/SDK 통합
 
@@ -97,13 +97,13 @@ Plans:
   3. User가 Cross/Isolated 마진 모드와 레버리지 배율을 설정할 수 있다
   4. Perp/Spot 거래에 기존 지출 한도 정책이 적용되고, Admin Settings에 Hyperliquid 설정이 존재하며, connect-info에 hyperliquid capability가 포함되고, Skill 파일이 업데이트되어 있다
   5. Admin UI에서 Hyperliquid 포지션과 주문 현황을 확인할 수 있다
-**Plans:** 5 plans
+**Plans:** 5/5 plans complete
 Plans:
-- [ ] 349-01-PLAN.md — ApiDirectResult 타입 + Stage 5 분기 + requiresSigningKey 파이프라인
-- [ ] 349-02-PLAN.md — HyperliquidSigner + ExchangeClient + MarketData + DB v51
-- [ ] 349-03-PLAN.md — HyperliquidPerpProvider + 정책 통합 + 레지스트리 등록
-- [ ] 349-04-PLAN.md — REST API + MCP 13도구 + SDK 13메서드 + connect-info
-- [ ] 349-05-PLAN.md — Admin UI Hyperliquid 페이지 + Admin Settings + Skill 파일
+- [x] 349-01-PLAN.md — ApiDirectResult 타입 + Stage 5 분기 + requiresSigningKey 파이프라인
+- [x] 349-02-PLAN.md — HyperliquidSigner + ExchangeClient + MarketData + DB v51
+- [x] 349-03-PLAN.md — HyperliquidPerpProvider + 정책 통합 + 레지스트리 등록
+- [x] 349-04-PLAN.md — REST API + MCP 13도구 + SDK 13메서드 + connect-info
+- [x] 349-05-PLAN.md — Admin UI Hyperliquid 페이지 + Admin Settings + Skill 파일
 
 ### Phase 350: Spot Trading
 **Goal**: User가 WAIaaS를 통해 Hyperliquid Spot 거래를 수행할 수 있다
@@ -135,6 +135,6 @@ Note: Phase 350과 351은 Phase 349에만 의존하므로 병렬 실행 가능
 |-------|----------------|--------|-----------|
 | 347. HyperEVM 체인 등록 | 1/1 | Complete    | 2026-03-08 |
 | 348. Hyperliquid DEX 설계 문서 | 2/2 | Complete    | 2026-03-08 |
-| 349. Core Infrastructure + Perp Trading | 0/5 | Not started | - |
+| 349. Core Infrastructure + Perp Trading | 5/5 | Complete    | 2026-03-08 |
 | 350. Spot Trading | 0/TBD | Not started | - |
 | 351. Sub-account 관리 | 0/TBD | Not started | - |
