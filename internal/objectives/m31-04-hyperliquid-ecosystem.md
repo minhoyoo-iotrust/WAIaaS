@@ -536,6 +536,118 @@ packages/actions/src/providers/hyperliquid/
 
 ---
 
+## 설계 확정: HDESIGN-04 Sub-account 매핑 모델
+
+### 1. Sub-account-to-Wallet 매핑 모델
+
+```
+WAIaaS Wallet (EVM, hyperevm-mainnet)
+  |-- publicKey: 0xMaster... (Hyperliquid master account = EVM 지갑 주소)
+  |-- [hyperliquid_sub_accounts]
+  |     |-- sub_account_address: 0xSub1... (name: "Trend Following")
+  |     |-- sub_account_address: 0xSub2... (name: "Mean Reversion")
+  |-- [정책 적용 범위]: master + 모든 sub-accounts 합산
+```
+
+핵심 설계 결정:
+- 1 WAIaaS Wallet = 1 Hyperliquid Master Account + N Sub-accounts
+- Sub-account는 별도 WAIaaS 지갑으로 생성하지 않음 (private key 없음, master 서명으로 동작)
+- Sub-account는 `hyperliquid_sub_accounts` 테이블에 메타데이터로 저장
+- action params의 `subAccount` 필드로 대상 sub-account 지정 (생략 시 master)
+- Signer의 `vaultAddress` 파라미터로 sub-account 주소 전달
+
+### 2. Sub-account 생성 제약
+
+- Hyperliquid 정책: $100K 거래량 이상의 계정만 sub-account 생성 가능
+- Testnet에서는 제약 없을 수 있음 (Phase 351 착수 시 검증)
+- 생성 시 User-Signed Action 서명 (`signUserSignedAction('CreateSubAccount', ...)`)
+- 생성 후 Hyperliquid가 sub-account 주소를 반환 -> DB에 저장
+
+### 3. Sub-account 간 자금 이동 정책
+
+- Master -> Sub-account (Deposit): User-Signed Action 'SubAccountTransfer'
+- Sub-account -> Master (Withdraw): User-Signed Action 'SubAccountTransfer'
+- 두 방향 모두 정책 엔진 SPENDING_LIMIT 평가 대상 (자금 이동이므로 TRANSFER와 동일 취급)
+- 정책 평가 기준: 이체 금액 (USD)
+- Sub-account 간 직접 이체는 Hyperliquid API에서 미지원 -> master 경유 필수
+
+---
+
+## 설계 확정: HDESIGN-07 정책 엔진 적용 방안
+
+### 1. 정책 평가 기준 테이블
+
+| 액션 유형 | 정책 평가 금액 기준 | 산출 방식 | 근거 |
+|-----------|-------------------|-----------|------|
+| Perp 주문 (open) | Margin 금액 | size * price / leverage | 실제 위험 노출 = 증거금. Notional은 레버리지로 인해 과대 평가 가능 |
+| Perp 주문 (close) | $0 (면제) | - | 포지션 청산은 위험 감소 행위, 지출 아님 |
+| Spot 주문 (buy) | 주문 총액 | size * price | Spot은 레버리지 없으므로 notional = 실제 지출 |
+| Spot 주문 (sell) | $0 (면제) | - | 기존 자산 매도는 지출 아님 |
+| 레버리지 변경 | $0 (면제) | - | 설정 변경이지 지출 아님 |
+| 주문 취소 | $0 (면제) | - | 지출 아님 |
+| Sub-account 이체 | 이체 금액 | amount (USD) | 자금 이동은 TRANSFER와 동일 |
+| USDC 입금/출금 | 입출금 금액 | amount (USD) | 외부 자금 이동 |
+
+### 2. riskLevel + defaultTier 매핑
+
+| 액션 | riskLevel | defaultTier | 근거 |
+|------|-----------|-------------|------|
+| hl_open_position | high | APPROVAL | 레버리지 포지션 오픈은 고위험 |
+| hl_close_position | medium | DELAY | 포지션 청산은 중위험 (위험 감소 행위이나 실행 결과 확인 필요) |
+| hl_place_order | high | APPROVAL | 지정가 주문도 체결 시 포지션 오픈과 동일 |
+| hl_cancel_order | low | INSTANT | 주문 취소는 위험 감소 |
+| hl_set_leverage | medium | DELAY | 레버리지 변경은 위험 프로파일 변경 |
+| hl_set_margin_mode | medium | DELAY | 마진 모드 변경은 청산 조건 변경 |
+| hl_spot_buy | medium | DELAY | Spot 구매는 레버리지 없어 중위험 |
+| hl_spot_sell | low | INSTANT | Spot 매도는 저위험 |
+| hl_sub_transfer | medium | DELAY | 내부 자금 이동은 중위험 |
+| hl_create_sub_account | medium | DELAY | 계정 구조 변경 |
+
+### 3. 정책 금액 추출 로직 설계
+
+ActionProviderRegistry가 `resolve()` 호출 전에 금액을 추출하는 로직:
+
+```typescript
+// HyperliquidPerpProvider 내부
+getSpendingAmount(actionName: string, params: Record<string, unknown>): {
+  amount: bigint;  // USD 기준 (6 decimals, USDC)
+  asset: string;   // 'USDC' (Hyperliquid는 USDC settlement)
+} {
+  switch (actionName) {
+    case 'hl_open_position': {
+      const size = parseFloat(params.size as string);
+      const price = parseFloat(params.price as string || midPrice); // market order시 midPrice 사용
+      const leverage = params.leverage as number || 1;
+      const margin = (size * price) / leverage;
+      return { amount: BigInt(Math.ceil(margin * 1e6)), asset: 'USDC' };
+    }
+    case 'hl_close_position':
+    case 'hl_cancel_order':
+    case 'hl_set_leverage':
+    case 'hl_set_margin_mode':
+      return { amount: 0n, asset: 'USDC' };  // 면제
+    case 'hl_spot_buy': {
+      const size = parseFloat(params.size as string);
+      const price = parseFloat(params.price as string || midPrice);
+      return { amount: BigInt(Math.ceil(size * price * 1e6)), asset: 'USDC' };
+    }
+    case 'hl_spot_sell':
+      return { amount: 0n, asset: 'USDC' };  // 면제
+    case 'hl_sub_transfer':
+      return { amount: BigInt(Math.ceil(parseFloat(params.amount as string) * 1e6)), asset: 'USDC' };
+  }
+}
+```
+
+### 4. 정책 적용 범위
+
+- SPENDING_LIMIT: master wallet 단위로 합산 (모든 sub-account 포함)
+- TOKEN_SPENDING_LIMIT: USDC 기준 (Hyperliquid settlement currency)
+- Sub-account별 독립 한도는 지원하지 않음 (WAIaaS 정책은 wallet 단위)
+- Default-deny: SPENDING_LIMIT 미설정 시 Hyperliquid 액션 거부 (기존 default-deny 정책)
+
+---
+
 ## 기술적 고려사항
 
 1. **파이프라인 분기**: Hyperliquid L1 거래는 온체인 TX가 아닌 API 콜이므로 기존 6-stage 파이프라인과 다른 플로우 필요. 별도 `HyperliquidExchangeClient` 또는 Stage 5 분기로 처리.
