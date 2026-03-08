@@ -53,7 +53,7 @@
 
 **Milestone Goal:** HyperEVM 체인 지원과 Hyperliquid L1 DEX(Perp/Spot) 거래, Sub-account를 통합하여 WAIaaS에서 Hyperliquid 생태계를 활용할 수 있도록 한다. L1 DEX는 온체인 TX가 아닌 EIP-712 서명 + REST API 방식이므로 ApiDirectResult 패턴으로 기존 파이프라인과 통합한다.
 
-- [ ] **Phase 347: HyperEVM 체인 등록** - HyperEVM Mainnet/Testnet을 EVM_CHAIN_MAP에 추가하여 기존 EVM 기능 즉시 동작
+- [x] **Phase 347: HyperEVM 체인 등록** - HyperEVM Mainnet/Testnet을 EVM_CHAIN_MAP에 추가하여 기존 EVM 기능 즉시 동작 (completed 2026-03-08)
 - [ ] **Phase 348: Hyperliquid DEX 설계 문서** - L1 DEX API 통합 아키텍처, EIP-712 서명, Sub-account, 정책 적용 방안 확정
 - [ ] **Phase 349: Core Infrastructure + Perp Trading** - 공유 인프라(ExchangeClient/Signer/MarketData) + Perp 거래 + Account State + 정책 + 전 인터페이스
 - [ ] **Phase 350: Spot Trading** - Spot Market/Limit 주문, 잔액/마켓 조회, MCP/SDK 통합
@@ -69,7 +69,7 @@
   1. User가 HyperEVM Mainnet (Chain ID 999) 네트워크에서 EVM 지갑을 사용하여 ETH 전송/토큰 전송/컨트랙트 호출을 할 수 있다
   2. User가 HyperEVM Testnet (Chain ID 998) 네트워크에서 EVM 지갑을 사용하여 동일한 기능이 동작한다
   3. HyperEVM이 ALLOWED_NETWORKS 정책과 connect-info 네트워크 목록에 표시된다
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 Plans:
 - [ ] 347-01-PLAN.md — HyperEVM Mainnet/Testnet 체인 등록 + 테스트
 
@@ -124,7 +124,7 @@ Note: Phase 350과 351은 Phase 349에만 의존하므로 병렬 실행 가능
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 347. HyperEVM 체인 등록 | 0/1 | Not started | - |
+| 347. HyperEVM 체인 등록 | 1/1 | Complete   | 2026-03-08 |
 | 348. Hyperliquid DEX 설계 문서 | 0/TBD | Not started | - |
 | 349. Core Infrastructure + Perp Trading | 0/TBD | Not started | - |
 | 350. Spot Trading | 0/TBD | Not started | - |

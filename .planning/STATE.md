@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v31.4
 milestone_name: Hyperliquid 생태계 통합
-status: active
-stopped_at: null
-last_updated: "2026-03-08T00:00:00.000Z"
-last_activity: 2026-03-08 — Roadmap created (5 phases, 44 requirements)
+status: planning
+stopped_at: Completed 347-01-PLAN.md
+last_updated: "2026-03-08T03:20:19.122Z"
+last_activity: 2026-03-08 — Roadmap created
 progress:
   total_phases: 5
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  completed_phases: 1
+  total_plans: 1
+  completed_plans: 1
   percent: 0
 ---
 
@@ -43,7 +43,9 @@ Progress: [░░░░░░░░░░] 0%
 
 ### Decisions
 
-(New milestone — no decisions yet)
+(New milestone — )
+- [Phase 347]: SLIP-44 coin type 999 (chain ID) used for HYPE native asset
+- [Phase 347]: HyperEVM classified as chain:ethereum (EVM-compatible) in CAIP-2 mapping
 
 ### Blockers/Concerns
 
@@ -55,6 +57,6 @@ Progress: [░░░░░░░░░░] 0%
 
 ## Session Continuity
 
-Last session: 2026-03-08
-Stopped at: Roadmap created, ready to plan Phase 347
+Last session: 2026-03-08T03:20:19.119Z
+Stopped at: Completed 347-01-PLAN.md
 Resume file: None

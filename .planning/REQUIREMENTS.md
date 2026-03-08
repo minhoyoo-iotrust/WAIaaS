@@ -9,9 +9,9 @@ Requirements for Hyperliquid ecosystem integration. Each maps to roadmap phases.
 
 ### HyperEVM Chain
 
-- [ ] **HCHAIN-01**: HyperEVM Mainnet (Chain ID 999) 체인이 EVM_CHAIN_MAP에 등록된다
-- [ ] **HCHAIN-02**: HyperEVM Testnet (Chain ID 998) 체인이 EVM_CHAIN_MAP에 등록된다
-- [ ] **HCHAIN-03**: 기존 EVM 지갑이 HyperEVM 네트워크에서 ETH 전송/토큰 전송/컨트랙트 호출이 동작한다
+- [x] **HCHAIN-01**: HyperEVM Mainnet (Chain ID 999) 체인이 EVM_CHAIN_MAP에 등록된다
+- [x] **HCHAIN-02**: HyperEVM Testnet (Chain ID 998) 체인이 EVM_CHAIN_MAP에 등록된다
+- [x] **HCHAIN-03**: 기존 EVM 지갑이 HyperEVM 네트워크에서 ETH 전송/토큰 전송/컨트랙트 호출이 동작한다
 
 ### Hyperliquid Design
 
@@ -117,9 +117,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| HCHAIN-01 | Phase 347 | Pending |
-| HCHAIN-02 | Phase 347 | Pending |
-| HCHAIN-03 | Phase 347 | Pending |
+| HCHAIN-01 | Phase 347 | Complete |
+| HCHAIN-02 | Phase 347 | Complete |
+| HCHAIN-03 | Phase 347 | Complete |
 | HDESIGN-01 | Phase 348 | Pending |
 | HDESIGN-02 | Phase 348 | Pending |
 | HDESIGN-03 | Phase 348 | Pending |
