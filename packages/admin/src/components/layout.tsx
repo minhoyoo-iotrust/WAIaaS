@@ -16,6 +16,7 @@ import SystemPage from '../pages/system';
 import ActionsPage from '../pages/actions';
 import HumanWalletAppsPage from '../pages/human-wallet-apps';
 import Erc8004Page from '../pages/erc8004';
+import HyperliquidPage from '../pages/hyperliquid';
 
 function extractPath(hash: string): string {
   const raw = hash.slice(1) || '/dashboard';
@@ -37,6 +38,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/sessions': 'Sessions',
   '/tokens': 'Token Registry',
   '/defi': 'DeFi',
+  '/hyperliquid': 'Hyperliquid',
   '/agent-identity': 'Agent Identity',
   '/policies': 'Policies',
   '/notifications': 'Notifications',
@@ -52,6 +54,7 @@ const PAGE_SUBTITLES: Record<string, string> = {
   '/sessions': 'View and manage active sessions',
   '/tokens': 'Manage EVM token registry per network',
   '/defi': 'Manage DeFi action providers and API keys',
+  '/hyperliquid': 'Hyperliquid perpetual trading positions, orders, and settings',
   '/agent-identity': 'On-chain agent identity, reputation, and wallet linking',
   '/policies': 'Configure transaction policies and rules',
   '/notifications': 'Channel status, delivery logs, and settings',
@@ -76,6 +79,7 @@ const NAV_ITEMS = [
   { path: '/sessions', label: 'Sessions' },
   { path: '/tokens', label: 'Tokens' },
   { path: '/defi', label: 'DeFi' },
+  { path: '/hyperliquid', label: 'Hyperliquid' },
   { path: '/agent-identity', label: 'Agent Identity' },
   { path: '/policies', label: 'Policies' },
   { path: '/notifications', label: 'Notifications' },
@@ -98,6 +102,7 @@ function PageRouter() {
     window.location.hash = '#/defi';
     return <ActionsPage />;
   }
+  if (path === '/hyperliquid') return <HyperliquidPage />;
   if (path === '/sessions') return <SessionsPage />;
   if (path === '/policies') return <PoliciesPage />;
   if (path === '/notifications') return <NotificationsPage />;
