@@ -105,10 +105,10 @@ Plans:
   1. Bridge deposit 성공 후 2-phase polling(15s active + 5min monitoring)이 자동으로 시작된다
   2. fill 완료/실패/만료 시 BRIDGE_COMPLETED/BRIDGE_FAILED 등 알림 이벤트가 발행된다
   3. 기존 transactions.bridge_status/bridge_metadata 컬럼을 재사용하여 DB 마이그레이션 없이 동작한다
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 354-01: AcrossBridgeStatusTracker + Daemon enrollment + 알림 이벤트 연결
+- [ ] 354-01-PLAN.md — AcrossBridgeStatusTracker 2-phase polling + Daemon tracker 등록 + actions route bridge enrollment
 
 ### Phase 355: Interface Integration
 **Goal**: AI 에이전트와 관리자가 MCP/SDK/Admin UI를 통해 Across 브릿지 기능에 접근할 수 있다
