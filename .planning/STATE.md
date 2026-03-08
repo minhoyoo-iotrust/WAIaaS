@@ -4,7 +4,7 @@ milestone: v31.6
 milestone_name: Across Protocol 크로스체인 브릿지
 status: completed
 stopped_at: Completed Phase 356 (356-01, 356-02) — Milestone v31.6 complete
-last_updated: "2026-03-09T01:42:00Z"
+last_updated: "2026-03-08T16:45:15.191Z"
 last_activity: 2026-03-09 — Phase 356 complete (110 tests, 5 test files)
 progress:
   total_phases: 5
