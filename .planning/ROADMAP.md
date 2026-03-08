@@ -71,7 +71,7 @@
   3. HyperEVM이 ALLOWED_NETWORKS 정책과 connect-info 네트워크 목록에 표시된다
 **Plans:** 1/1 plans complete
 Plans:
-- [ ] 347-01-PLAN.md — HyperEVM Mainnet/Testnet 체인 등록 + 테스트
+- [x] 347-01-PLAN.md — HyperEVM Mainnet/Testnet 체인 등록 + 테스트
 
 ### Phase 348: Hyperliquid DEX 설계 문서
 **Goal**: Hyperliquid L1 DEX 통합의 아키텍처 결정이 모두 확정되어 구현 Phase에서 설계 모호성이 없다
@@ -82,7 +82,10 @@ Plans:
   2. EIP-712 두 서명 스키마(phantom agent L1 Action vs user-signed HyperliquidSignTransaction)의 domain/types/필드 순서가 상세히 문서화되어 있다
   3. Sub-account-to-wallet 매핑 모델과 정책 엔진 적용 규칙(notional vs margin 기준)이 확정되어 있다
   4. DB 스키마 변경, MCP/SDK/Admin UI 인터페이스 설계가 확정되어 있다
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 348-01-PLAN.md — ApiDirectResult 패턴 + EIP-712 서명 + ExchangeClient 공유 구조 설계
+- [ ] 348-02-PLAN.md — Sub-account 매핑 + 정책 엔진 + MCP/SDK/Admin 인터페이스 + DB 스키마 설계
 
 ### Phase 349: Core Infrastructure + Perp Trading
 **Goal**: User가 WAIaaS를 통해 Hyperliquid에서 Perp 거래를 완전히 수행할 수 있고, 기존 정책 엔진이 적용된다
@@ -125,7 +128,7 @@ Note: Phase 350과 351은 Phase 349에만 의존하므로 병렬 실행 가능
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 347. HyperEVM 체인 등록 | 1/1 | Complete    | 2026-03-08 |
-| 348. Hyperliquid DEX 설계 문서 | 0/TBD | Not started | - |
+| 348. Hyperliquid DEX 설계 문서 | 0/2 | Not started | - |
 | 349. Core Infrastructure + Perp Trading | 0/TBD | Not started | - |
 | 350. Spot Trading | 0/TBD | Not started | - |
 | 351. Sub-account 관리 | 0/TBD | Not started | - |
