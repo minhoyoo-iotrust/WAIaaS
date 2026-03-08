@@ -50,8 +50,10 @@ HyperEVM Mainnet/Testnet을 EVM 지원 체인에 추가한다.
 
 | 네트워크 | viem export | Chain ID | 네이티브 토큰 |
 |----------|-------------|----------|---------------|
-| HyperEVM Mainnet | `hyperEvm` (검증 필요) | 999 | HYPE |
-| HyperEVM Testnet | `hyperliquidEvmTestnet` (검증 필요) | 998 | HYPE |
+| HyperEVM Mainnet | `hyperEvm` (Phase 1 착수 시 viem 소스에서 검증) | 999 | HYPE |
+| HyperEVM Testnet | `hyperliquidEvmTestnet` (Phase 1 착수 시 viem 소스에서 검증) | 998 | HYPE |
+
+> **Fallback**: viem 빌트인에 해당 chain export가 없을 경우 `defineChain`으로 커스텀 체인 정의.
 
 ### Phase 2: Hyperliquid DEX 리서치 및 설계
 
@@ -96,6 +98,8 @@ Hyperliquid Perpetual Futures 거래를 구현한다.
 - 레버리지 설정
 - MCP 도구 + SDK 메서드
 - Action Provider 패턴 구현
+- Admin UI: Perp 포지션/주문 현황 표시
+- 관련 skill 파일 업데이트 (transactions.skill.md 등)
 
 ### Phase 4: Hyperliquid Spot 구현
 
@@ -109,6 +113,8 @@ Hyperliquid Spot 마켓 거래를 구현한다.
 - 주문 취소 / 주문 상태 조회
 - 마켓 정보 조회 (가격, 거래량)
 - MCP 도구 + SDK 메서드
+- Admin UI: Spot 잔액/주문 현황 표시
+- 관련 skill 파일 업데이트
 
 ### Phase 5: Sub-accounts
 
@@ -121,6 +127,126 @@ Hyperliquid Sub-account 기능을 WAIaaS 월렛 모델과 통합한다.
 - Master ↔ Sub-account 간 자금 이동 (internal transfer)
 - Sub-account별 포지션/잔액 조회
 - WAIaaS 월렛과의 매핑 전략 (1 wallet = 1 sub-account 또는 N:1)
+- Admin UI: Sub-account 관리 표시
+- 관련 skill 파일 업데이트
+
+---
+
+## 설계 확정: HDESIGN-01 파이프라인 통합
+
+### 1. ApiDirectResult 인터페이스 정의
+
+코드 수준 확정 (`packages/core/src/interfaces/action-provider.types.ts`에 추가):
+
+```typescript
+export interface ApiDirectResult {
+  __apiDirect: true;
+  externalId: string;
+  status: 'success' | 'partial' | 'pending';
+  provider: string;      // e.g., 'hyperliquid_perp'
+  action: string;        // e.g., 'hl_open_position'
+  data: Record<string, unknown>;
+  metadata?: {
+    market?: string;
+    side?: string;
+    size?: string;
+    price?: string;
+    [key: string]: unknown;
+  };
+}
+
+export function isApiDirectResult(result: unknown): result is ApiDirectResult {
+  return typeof result === 'object' && result !== null && '__apiDirect' in result && (result as any).__apiDirect === true;
+}
+```
+
+IActionProvider.resolve() 반환 타입 확장:
+
+```typescript
+resolve(
+  actionName: string,
+  params: Record<string, unknown>,
+  context: ActionContext,
+): Promise<ContractCallRequest | ContractCallRequest[] | ApiDirectResult>;
+```
+
+ActionContext 확장 (requiresSigningKey 지원):
+
+```typescript
+interface ActionContext {
+  // ... existing fields
+  privateKey?: Hex;  // Only provided when provider.requiresSigningKey === true
+}
+```
+
+IActionProvider 메타데이터 확장:
+
+```typescript
+interface ActionProviderMetadata {
+  // ... existing fields
+  requiresSigningKey?: boolean;  // default: false
+}
+```
+
+### 2. Stage 5 분기 설계
+
+기존 `stages.ts`의 Stage 5 (execute) 내부에 분기 추가. 파이프라인 순서:
+
+```
+Stage 1 (Validate) -> Stage 2 (Auth) -> Stage 3 (Policy) -> Stage 4 (Delay/Approval)
+  -> [NEW] Pre-Stage 5: requiresSigningKey 확인 -> key decrypt
+  -> Stage 5: isApiDirectResult(result) 분기
+    YES -> DB UPDATE (status=COMPLETED, metadata에 externalId/provider response 저장)
+         -> Provider-specific DB INSERT (hyperliquid_orders 등)
+         -> Skip on-chain execution entirely
+    NO  -> 기존 온체인 실행 플로우 (build -> simulate -> sign -> submit)
+  -> Stage 6 (Notification): 동일하게 실행 (TRANSACTION_COMPLETED 이벤트)
+```
+
+key decryption 흐름 상세:
+
+1. ActionProviderRegistry가 `provider.metadata.requiresSigningKey` 확인
+2. true인 경우 Stage 4 완료 후 `keyStore.decrypt(walletId, masterPassword)` 호출
+3. 복호화된 privateKey를 ActionContext에 추가하여 `provider.resolve()`에 전달
+4. `resolve()` 완료 후 즉시 메모리에서 privateKey 참조 해제 (GC 대상)
+5. 기존 `sign-message.ts`의 패턴과 동일: decrypt -> use -> release
+
+### 3. 기존 파이프라인 영향 범위 분석
+
+| 파일 | 변경 | 변경 내용 |
+|------|------|-----------|
+| `packages/core/src/interfaces/action-provider.types.ts` | 수정 | ApiDirectResult 타입 + isApiDirectResult() + ActionContext.privateKey + requiresSigningKey |
+| `packages/daemon/src/pipeline/stages.ts` | 수정 | Stage 5 분기 (isApiDirectResult 분기 로직 ~20줄 추가) |
+| `packages/daemon/src/infrastructure/action-provider-registry.ts` | 수정 | requiresSigningKey 시 key decrypt 로직 추가 |
+| discriminatedUnion 8-type | 변경 없음 | API-direct 액션은 파이프라인 타입과 무관 |
+| PolicyEngine | 변경 없음 | 기존 riskLevel/defaultTier 기반 평가 그대로 |
+| NotificationService | 변경 없음 | TRANSACTION_COMPLETED 이벤트 재사용 |
+
+### 4. ApiDirectResult vs ContractCallRequest 비교
+
+| 항목 | ContractCallRequest (기존) | ApiDirectResult (신규) |
+|------|---------------------------|----------------------|
+| 실행 방식 | 온체인 TX (sign -> submit) | Provider 내부 (sign -> API POST) |
+| 결과 식별자 | txHash | externalId (provider-specific) |
+| Gas | 필요 (estimateGas + safety margin) | 불필요 (Hyperliquid API는 gasless) |
+| 확인 방식 | on-chain polling (confirmation worker) | API 응답 즉시 완료 |
+| DB 기록 | transactions 테이블 (txHash, status) | transactions 테이블 (metadata에 externalId) + provider별 테이블 |
+| Stage 5 | 전체 실행 (build/simulate/sign/submit) | skip (provider가 이미 실행 완료) |
+
+### 5. 에러 처리 설계
+
+ApiDirectResult 전용 에러 코드 (기존 DeFi 에러 체계에 추가):
+
+| 코드 | HTTP | 설명 |
+|------|------|------|
+| HL_API_ERROR | 502 | Hyperliquid Exchange API 호출 실패 |
+| HL_RATE_LIMITED | 429 | Hyperliquid rate limit 초과 (1200 weight/min) |
+| HL_INSUFFICIENT_MARGIN | 422 | 마진 부족으로 주문 거부 |
+| HL_ORDER_REJECTED | 422 | Hyperliquid가 주문 거부 (사유 포함) |
+| HL_SIGNING_FAILED | 500 | EIP-712 서명 생성 실패 |
+| HL_INVALID_MARKET | 404 | 존재하지 않는 마켓 |
+
+ChainError -> WAIaaSError 변환: Stage 5에서 `provider.resolve()` 실패 시 ChainError를 catch하여 WAIaaSError로 변환 (기존 패턴 그대로).
 
 ---
 
@@ -130,10 +256,10 @@ Hyperliquid Sub-account 기능을 WAIaaS 월렛 모델과 통합한다.
 2. **서명 방식**: EIP-712 typed data signing — 기존 `EvmAdapter.signTypedData` 활용 가능.
 3. **discriminatedUnion 타입**: L1 API 거래는 기존 8-type (TRANSFER/TOKEN_TRANSFER/CONTRACT_CALL/APPROVE/BATCH/SIGN/X402_PAYMENT/NFT_TRANSFER) 어디에도 직접 매핑되지 않음. SIGN type 재활용 또는 신규 type 도입 여부를 Phase 2 설계에서 확정.
 4. **정책 엔진 적용**: API 기반 거래에 기존 정책(지출 한도, 토큰별 한도)을 적용하려면 금액 환산 로직 필요. Phase 2 설계에서 정책 매핑 방안 확정.
-5. **WebSocket**: 실시간 주문/포지션 업데이트를 위한 WebSocket 연결 관리 필요.
+5. **WebSocket**: 실시간 주문/포지션 업데이트를 위한 WebSocket 연결 관리 필요. Phase 2 설계에서 필요성과 범위를 확정하고, 구현 Phase(3/4) 또는 별도 Phase로 배정.
 6. **Rate Limiting**: Hyperliquid API rate limit 준수 (기존 RPC Pool 패턴 참고).
 7. **Testnet 지원**: Hyperliquid testnet(api.hyperliquid-testnet.xyz) 환경 분리.
-8. **DB 마이그레이션**: Sub-account 매핑, 주문 이력 등에 필요한 테이블 추가 시 incremental ALTER TABLE 방식 준수 (v45 이후 버전).
+8. **DB 마이그레이션**: Sub-account 매핑, 주문 이력 등에 필요한 테이블 추가 시 incremental ALTER TABLE 방식 준수 (현재 DB v50 기준, v51부터 할당).
 9. **Admin Settings / UI**: API endpoint, rate limit 등 런타임 설정은 Admin Settings로 노출. 포지션/주문 현황은 Admin UI에 표시.
 
 ---
@@ -147,3 +273,6 @@ Hyperliquid Sub-account 기능을 WAIaaS 월렛 모델과 통합한다.
 - Sub-account 생성/이동 테스트
 - MCP 도구 + SDK 메서드 통합 테스트
 - 에러 핸들링 (API 에러, rate limit, insufficient margin 등)
+- 정책 엔진 적용 테스트 (API 기반 거래에 지출 한도/토큰별 한도 적용 검증)
+- Admin Settings 저장/로드 및 런타임 반영 테스트
+- Admin UI 컴포넌트 테스트 (포지션/주문 현황, Sub-account 관리 표시)
