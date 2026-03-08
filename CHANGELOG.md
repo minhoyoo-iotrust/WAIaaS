@@ -1,5 +1,40 @@
 # Changelog
 
+## [2.10.0-rc.14](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.13...v2.10.0-rc.14) (2026-03-08)
+
+
+### Features
+
+* **347-01:** register HyperEVM Mainnet/Testnet in EVM chain registry ([a214a10](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a214a10f9e9ebea04009931be84ddc823c662b9b))
+* **349-01:** add ApiDirectResult type, isApiDirectResult guard, requiresSigningKey ([1fbd53f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1fbd53fd6ef58f8aaed42abdc3b5a4e9c7e52f16))
+* **349-01:** add Stage 5 ApiDirectResult branch and requiresSigningKey support ([7f544cd](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7f544cdc40a3311685a9fba983a144923a7c80db))
+* **349-02:** add Hyperliquid shared infrastructure and DB v51 ([00d94ce](https://github.com/minhoyoo-iotrust/WAIaaS/commit/00d94cefd852bc4b1d42a1b364aa26e1278c45a8))
+* **349-03:** implement HyperliquidPerpProvider with 7 actions ([25fb2c7](https://github.com/minhoyoo-iotrust/WAIaaS/commit/25fb2c79f2c440eaacb4348c3a730c238a133699))
+* **349-03:** register HyperliquidPerpProvider in built-in providers ([6fb1cbe](https://github.com/minhoyoo-iotrust/WAIaaS/commit/6fb1cbea0d33561370e3843efbe825f7816141eb))
+* **349-04:** add Hyperliquid REST API routes, MCP tools, and SDK methods ([0589453](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0589453d45f237adf9e439b9fb3499cb72569c1b))
+* **349-05:** add Admin UI Hyperliquid page with positions, orders, and settings ([1e2bcd8](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1e2bcd8e4d4088a9bcd9a56f1e81f7ec1299e9ec))
+* **349-05:** add Hyperliquid Admin Settings defaults and update skill files ([ef6f45a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ef6f45ae04f66afad02cc1b6639522db27970872))
+* **350-01:** add HyperliquidSpotProvider with 3 actions + tests ([d35c461](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d35c461217b4236e38df2ed576d6c068aa76d9cd))
+* **350-01:** add Spot Zod schemas + MarketData typed Spot methods ([8c4bf2e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8c4bf2ec109fac8d945da6373e73a9f43c2198f0))
+* **350-02:** add Admin UI Spot tab with balances and orders tables ([9a126c9](https://github.com/minhoyoo-iotrust/WAIaaS/commit/9a126c9352c138dedb0428f72ba99bd742e2da89))
+* **350-02:** add Spot REST API + MCP tools + SDK methods + connect-info + skill ([15b0b22](https://github.com/minhoyoo-iotrust/WAIaaS/commit/15b0b22a9909031bd2441e6710ea77e138419123))
+* **351-01:** add DB v52 migration for hyperliquid_sub_accounts table ([02b4e2e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/02b4e2e1cad80ffc684261d9500cdebff17cd7ae))
+* **351-01:** add HyperliquidSubAccountService with typed schemas ([1f35061](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1f35061868f00728c0e813f7a7104e71427d5336))
+* **351-02:** add Admin UI Sub-accounts tab and skill file documentation ([499996d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/499996d44520333c9513c693c807cd16ac5984df))
+* **351-02:** add SubAccountProvider + REST/MCP/SDK endpoints + connect-info ([c9cfff7](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c9cfff70a853d38ad930f099ff1476a3a1dff1b1))
+
+
+### Bug Fixes
+
+* **actions:** correct ActionContext type in sub-account provider test ([84aa68e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/84aa68e5f2397ae07b67b781c87a4e2ccf2605f4))
+* **admin:** update provider card count from 10 to 12 for Hyperliquid ([40ef790](https://github.com/minhoyoo-iotrust/WAIaaS/commit/40ef7904bd3c5fc119baf43e1d718d0515a375b0))
+* **core:** update environment and x402 tests for HyperEVM networks ([382858c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/382858c6e0c955544f2bfa1640f71327bce114a5))
+* **daemon:** update test assertions for Hyperliquid DB and HyperEVM networks ([af09449](https://github.com/minhoyoo-iotrust/WAIaaS/commit/af09449e61c6da7c25b4cc08a395450021692d51))
+* **mcp:** update server test for 47 tools including Hyperliquid ([a223137](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a2231373d4fd7975827afc3cdf2a2bdd7639732b))
+* remove unused vi import in pipeline-api-direct test ([1c30471](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1c30471d26ace7c825dae70ffb433baef7f900e3))
+* **sdk:** correct DCent test params to match DcentQuoteParams type ([f492a43](https://github.com/minhoyoo-iotrust/WAIaaS/commit/f492a43ddade5e80cb6ce29b4ddc588a5ede5f89))
+* update enum SSoT counts for HyperEVM networks ([73e5e28](https://github.com/minhoyoo-iotrust/WAIaaS/commit/73e5e2840acc157103bb5e5749301a2751249e66))
+
 ## [2.10.0-rc.13](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.12...v2.10.0-rc.13) (2026-03-07)
 
 
