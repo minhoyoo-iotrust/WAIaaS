@@ -4,14 +4,14 @@ milestone: v31.6
 milestone_name: Across Protocol 크로스체인 브릿지
 status: completed
 stopped_at: Completed Phase 354 (354-01)
-last_updated: "2026-03-08T16:17:27.643Z"
+last_updated: "2026-03-08T16:18:34.540Z"
 last_activity: 2026-03-09 — Phase 354 complete (AcrossBridgeStatusTracker 2-phase polling + Daemon integration)
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 4
   completed_plans: 4
-  percent: 60
+  percent: 98
 ---
 
 # Project State
