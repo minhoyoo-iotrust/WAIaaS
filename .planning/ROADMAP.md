@@ -49,4 +49,81 @@
 
 ## Phases
 
-(No active phases — milestone complete. Use `/gsd:new-milestone` to start next milestone.)
+### v31.4 Hyperliquid 생태계 통합
+
+**Milestone Goal:** HyperEVM 체인 지원과 Hyperliquid L1 DEX(Perp/Spot) 거래, Sub-account를 통합하여 WAIaaS에서 Hyperliquid 생태계를 활용할 수 있도록 한다. L1 DEX는 온체인 TX가 아닌 EIP-712 서명 + REST API 방식이므로 ApiDirectResult 패턴으로 기존 파이프라인과 통합한다.
+
+- [ ] **Phase 347: HyperEVM 체인 등록** - HyperEVM Mainnet/Testnet을 EVM_CHAIN_MAP에 추가하여 기존 EVM 기능 즉시 동작
+- [ ] **Phase 348: Hyperliquid DEX 설계 문서** - L1 DEX API 통합 아키텍처, EIP-712 서명, Sub-account, 정책 적용 방안 확정
+- [ ] **Phase 349: Core Infrastructure + Perp Trading** - 공유 인프라(ExchangeClient/Signer/MarketData) + Perp 거래 + Account State + 정책 + 전 인터페이스
+- [ ] **Phase 350: Spot Trading** - Spot Market/Limit 주문, 잔액/마켓 조회, MCP/SDK 통합
+- [ ] **Phase 351: Sub-account 관리** - Sub-account 생성/자금이동/포지션 조회, MCP/SDK 통합
+
+## Phase Details
+
+### Phase 347: HyperEVM 체인 등록
+**Goal**: 기존 EVM 지갑이 HyperEVM 네트워크에서 즉시 동작한다
+**Depends on**: Nothing (first phase)
+**Requirements**: HCHAIN-01, HCHAIN-02, HCHAIN-03
+**Success Criteria** (what must be TRUE):
+  1. User가 HyperEVM Mainnet (Chain ID 999) 네트워크에서 EVM 지갑을 사용하여 ETH 전송/토큰 전송/컨트랙트 호출을 할 수 있다
+  2. User가 HyperEVM Testnet (Chain ID 998) 네트워크에서 EVM 지갑을 사용하여 동일한 기능이 동작한다
+  3. HyperEVM이 ALLOWED_NETWORKS 정책과 connect-info 네트워크 목록에 표시된다
+**Plans**: TBD
+
+### Phase 348: Hyperliquid DEX 설계 문서
+**Goal**: Hyperliquid L1 DEX 통합의 아키텍처 결정이 모두 확정되어 구현 Phase에서 설계 모호성이 없다
+**Depends on**: Phase 347
+**Requirements**: HDESIGN-01, HDESIGN-02, HDESIGN-03, HDESIGN-04, HDESIGN-05, HDESIGN-06, HDESIGN-07
+**Success Criteria** (what must be TRUE):
+  1. ApiDirectResult 패턴과 Stage 5 분기 설계가 확정되어 기존 파이프라인 영향 범위가 명확하다
+  2. EIP-712 두 서명 스키마(phantom agent L1 Action vs user-signed HyperliquidSignTransaction)의 domain/types/필드 순서가 상세히 문서화되어 있다
+  3. Sub-account-to-wallet 매핑 모델과 정책 엔진 적용 규칙(notional vs margin 기준)이 확정되어 있다
+  4. DB 스키마 변경, MCP/SDK/Admin UI 인터페이스 설계가 확정되어 있다
+**Plans**: TBD
+
+### Phase 349: Core Infrastructure + Perp Trading
+**Goal**: User가 WAIaaS를 통해 Hyperliquid에서 Perp 거래를 완전히 수행할 수 있고, 기존 정책 엔진이 적용된다
+**Depends on**: Phase 348
+**Requirements**: HPERP-01, HPERP-02, HPERP-03, HPERP-04, HPERP-05, HPERP-06, HPERP-07, HPERP-08, HPERP-09, HPERP-10, HPERP-11, HPERP-12, HPERP-13, HPERP-14, HACCT-01, HACCT-02, HACCT-03, HACCT-04, HPOL-01, HPOL-02, HINT-01, HINT-02, HINT-03
+**Success Criteria** (what must be TRUE):
+  1. User가 MCP/SDK를 통해 Hyperliquid Perp Market/Limit/Stop-Loss/Take-Profit 주문을 생성하고 취소할 수 있다
+  2. User가 포지션(PnL/레버리지/마진/청산가), 오픈 주문, 거래 이력, 펀딩 레이트, 마켓 목록을 조회할 수 있다
+  3. User가 Cross/Isolated 마진 모드와 레버리지 배율을 설정할 수 있다
+  4. Perp/Spot 거래에 기존 지출 한도 정책이 적용되고, Admin Settings에 Hyperliquid 설정이 존재하며, connect-info에 hyperliquid capability가 포함되고, Skill 파일이 업데이트되어 있다
+  5. Admin UI에서 Hyperliquid 포지션과 주문 현황을 확인할 수 있다
+**Plans**: TBD
+
+### Phase 350: Spot Trading
+**Goal**: User가 WAIaaS를 통해 Hyperliquid Spot 거래를 수행할 수 있다
+**Depends on**: Phase 349
+**Requirements**: HSPOT-01, HSPOT-02, HSPOT-03, HSPOT-04, HSPOT-05, HSPOT-06, HSPOT-07
+**Success Criteria** (what must be TRUE):
+  1. User가 Hyperliquid Spot Market/Limit 주문을 생성하고 취소할 수 있다
+  2. User가 Spot 계정 토큰 잔액과 Spot 마켓 정보(페어/가격/거래량)를 조회할 수 있다
+  3. Spot 기능이 MCP 도구 + SDK 메서드로 노출되고, HyperliquidSpotActionProvider가 IActionProvider로 등록된다
+**Plans**: TBD
+
+### Phase 351: Sub-account 관리
+**Goal**: User가 Hyperliquid Sub-account를 통해 전략별 자금을 격리하고 관리할 수 있다
+**Depends on**: Phase 349
+**Requirements**: HSUB-01, HSUB-02, HSUB-03, HSUB-04
+**Success Criteria** (what must be TRUE):
+  1. User가 Hyperliquid Sub-account를 생성하고 목록을 조회할 수 있다
+  2. User가 Master와 Sub-account 간 자금(USDC/토큰)을 이동할 수 있다
+  3. User가 Sub-account별 포지션과 잔액을 조회할 수 있고, 해당 기능이 MCP 도구 + SDK 메서드로 노출된다
+**Plans**: TBD
+
+## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 347 -> 348 -> 349 -> 350 -> 351
+Note: Phase 350과 351은 Phase 349에만 의존하므로 병렬 실행 가능
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 347. HyperEVM 체인 등록 | 0/TBD | Not started | - |
+| 348. Hyperliquid DEX 설계 문서 | 0/TBD | Not started | - |
+| 349. Core Infrastructure + Perp Trading | 0/TBD | Not started | - |
+| 350. Spot Trading | 0/TBD | Not started | - |
+| 351. Sub-account 관리 | 0/TBD | Not started | - |

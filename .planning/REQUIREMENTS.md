@@ -117,56 +117,56 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| HCHAIN-01 | — | Pending |
-| HCHAIN-02 | — | Pending |
-| HCHAIN-03 | — | Pending |
-| HDESIGN-01 | — | Pending |
-| HDESIGN-02 | — | Pending |
-| HDESIGN-03 | — | Pending |
-| HDESIGN-04 | — | Pending |
-| HDESIGN-05 | — | Pending |
-| HDESIGN-06 | — | Pending |
-| HDESIGN-07 | — | Pending |
-| HPERP-01 | — | Pending |
-| HPERP-02 | — | Pending |
-| HPERP-03 | — | Pending |
-| HPERP-04 | — | Pending |
-| HPERP-05 | — | Pending |
-| HPERP-06 | — | Pending |
-| HPERP-07 | — | Pending |
-| HPERP-08 | — | Pending |
-| HPERP-09 | — | Pending |
-| HPERP-10 | — | Pending |
-| HPERP-11 | — | Pending |
-| HPERP-12 | — | Pending |
-| HPERP-13 | — | Pending |
-| HPERP-14 | — | Pending |
-| HSPOT-01 | — | Pending |
-| HSPOT-02 | — | Pending |
-| HSPOT-03 | — | Pending |
-| HSPOT-04 | — | Pending |
-| HSPOT-05 | — | Pending |
-| HSPOT-06 | — | Pending |
-| HSPOT-07 | — | Pending |
-| HSUB-01 | — | Pending |
-| HSUB-02 | — | Pending |
-| HSUB-03 | — | Pending |
-| HSUB-04 | — | Pending |
-| HACCT-01 | — | Pending |
-| HACCT-02 | — | Pending |
-| HACCT-03 | — | Pending |
-| HACCT-04 | — | Pending |
-| HPOL-01 | — | Pending |
-| HPOL-02 | — | Pending |
-| HINT-01 | — | Pending |
-| HINT-02 | — | Pending |
-| HINT-03 | — | Pending |
+| HCHAIN-01 | Phase 347 | Pending |
+| HCHAIN-02 | Phase 347 | Pending |
+| HCHAIN-03 | Phase 347 | Pending |
+| HDESIGN-01 | Phase 348 | Pending |
+| HDESIGN-02 | Phase 348 | Pending |
+| HDESIGN-03 | Phase 348 | Pending |
+| HDESIGN-04 | Phase 348 | Pending |
+| HDESIGN-05 | Phase 348 | Pending |
+| HDESIGN-06 | Phase 348 | Pending |
+| HDESIGN-07 | Phase 348 | Pending |
+| HPERP-01 | Phase 349 | Pending |
+| HPERP-02 | Phase 349 | Pending |
+| HPERP-03 | Phase 349 | Pending |
+| HPERP-04 | Phase 349 | Pending |
+| HPERP-05 | Phase 349 | Pending |
+| HPERP-06 | Phase 349 | Pending |
+| HPERP-07 | Phase 349 | Pending |
+| HPERP-08 | Phase 349 | Pending |
+| HPERP-09 | Phase 349 | Pending |
+| HPERP-10 | Phase 349 | Pending |
+| HPERP-11 | Phase 349 | Pending |
+| HPERP-12 | Phase 349 | Pending |
+| HPERP-13 | Phase 349 | Pending |
+| HPERP-14 | Phase 349 | Pending |
+| HSPOT-01 | Phase 350 | Pending |
+| HSPOT-02 | Phase 350 | Pending |
+| HSPOT-03 | Phase 350 | Pending |
+| HSPOT-04 | Phase 350 | Pending |
+| HSPOT-05 | Phase 350 | Pending |
+| HSPOT-06 | Phase 350 | Pending |
+| HSPOT-07 | Phase 350 | Pending |
+| HSUB-01 | Phase 351 | Pending |
+| HSUB-02 | Phase 351 | Pending |
+| HSUB-03 | Phase 351 | Pending |
+| HSUB-04 | Phase 351 | Pending |
+| HACCT-01 | Phase 349 | Pending |
+| HACCT-02 | Phase 349 | Pending |
+| HACCT-03 | Phase 349 | Pending |
+| HACCT-04 | Phase 349 | Pending |
+| HPOL-01 | Phase 349 | Pending |
+| HPOL-02 | Phase 349 | Pending |
+| HINT-01 | Phase 349 | Pending |
+| HINT-02 | Phase 349 | Pending |
+| HINT-03 | Phase 349 | Pending |
 
 **Coverage:**
 - v31.4 requirements: 44 total
-- Mapped to phases: 0
-- Unmapped: 44 ⚠️
+- Mapped to phases: 44
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-08*
-*Last updated: 2026-03-08 after initial definition*
+*Last updated: 2026-03-08 after roadmap creation*
