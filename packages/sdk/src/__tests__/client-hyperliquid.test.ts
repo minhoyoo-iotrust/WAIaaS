@@ -52,20 +52,20 @@ describe('WAIaaSClient Hyperliquid & DCent methods', () => {
   describe('getDcentQuotes()', () => {
     it('calls executeAction with dcent_swap / get_quotes', async () => {
       fetchSpy.mockResolvedValue(mockResponse(actionResponse));
-      await client.getDcentQuotes({ network: 'ethereum-mainnet', fromToken: '0xA', toToken: '0xB', amount: '1' });
+      await client.getDcentQuotes({ network: 'ethereum-mainnet', fromAsset: 'eip155:1/erc20:0xA', toAsset: 'eip155:1/erc20:0xB', amount: '1000', fromDecimals: 18, toDecimals: 6 });
       const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
       expect(url).toBe('http://localhost:3000/v1/actions/dcent_swap/get_quotes');
-      expect(JSON.parse(init.body as string)).toMatchObject({ params: { fromToken: '0xA', toToken: '0xB', amount: '1' } });
+      expect(JSON.parse(init.body as string)).toMatchObject({ params: { fromAsset: 'eip155:1/erc20:0xA', toAsset: 'eip155:1/erc20:0xB', amount: '1000' } });
     });
   });
 
   describe('dcentDexSwap()', () => {
     it('calls executeAction with dcent_swap / dex_swap', async () => {
       fetchSpy.mockResolvedValue(mockResponse(actionResponse));
-      await client.dcentDexSwap({ network: 'ethereum-mainnet', fromToken: '0xA', toToken: '0xB', amount: '1', slippage: 0.5 });
+      await client.dcentDexSwap({ network: 'ethereum-mainnet', fromAsset: 'eip155:1/erc20:0xA', toAsset: 'eip155:1/erc20:0xB', amount: '1000', fromDecimals: 18, toDecimals: 6, slippageBps: 50 });
       const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
       expect(url).toBe('http://localhost:3000/v1/actions/dcent_swap/dex_swap');
-      expect(JSON.parse(init.body as string)).toMatchObject({ params: { fromToken: '0xA', toToken: '0xB', amount: '1', slippage: 0.5 } });
+      expect(JSON.parse(init.body as string)).toMatchObject({ params: { fromAsset: 'eip155:1/erc20:0xA', toAsset: 'eip155:1/erc20:0xB', amount: '1000', slippageBps: 50 } });
     });
   });
 
