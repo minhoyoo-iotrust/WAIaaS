@@ -27,6 +27,9 @@ export {
   HlSetLeverageInputSchema,
   HlSetMarginModeInputSchema,
   HlTransferUsdcInputSchema,
+  HlSpotBuyInputSchema,
+  HlSpotSellInputSchema,
+  HlSpotCancelInputSchema,
   ExchangeResponseSchema,
   PositionSchema,
   ClearinghouseStateSchema,
@@ -35,6 +38,9 @@ export {
   MarketMetaSchema,
   FundingRateSchema,
   AllMidsSchema,
+  SpotMetaSchema,
+  SpotBalanceSchema,
+  SpotClearinghouseStateSchema,
   USER_ACTION_TYPES,
   type ExchangeResponse,
   type Position,
@@ -46,6 +52,10 @@ export {
   type AllMids,
   type OrderWire,
   type OrderTypeWire,
+  type SpotMeta,
+  type SpotBalance,
+  type SpotClearinghouseState,
+  type SpotMarketInfo,
 } from './schemas.js';
 
 // Signer
@@ -65,3 +75,6 @@ export { HyperliquidMarketData, type MarketInfo } from './market-data.js';
 
 // Perp Provider
 export { HyperliquidPerpProvider } from './perp-provider.js';
+
+// Spot Provider
+export { HyperliquidSpotProvider } from './spot-provider.js';
