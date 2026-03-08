@@ -4,8 +4,8 @@ milestone: v31.4
 milestone_name: Hyperliquid 생태계 통합
 status: completed
 stopped_at: Completed 351-02-PLAN.md (final phase of v31.4)
-last_updated: "2026-03-08T05:30:45.391Z"
-last_activity: 2026-03-08 — Phase 351 Sub-account complete (milestone v31.4 done)
+last_updated: "2026-03-08T05:32:03.190Z"
+last_activity: 2026-03-08 — Phase 351 Sub-account complete
 progress:
   total_phases: 5
   completed_phases: 5

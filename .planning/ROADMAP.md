@@ -143,4 +143,4 @@ Note: Phase 350과 351은 Phase 349에만 의존하므로 병렬 실행 가능
 | 348. Hyperliquid DEX 설계 문서 | 2/2 | Complete    | 2026-03-08 |
 | 349. Core Infrastructure + Perp Trading | 5/5 | Complete    | 2026-03-08 |
 | 350. Spot Trading | 2/2 | Complete    | 2026-03-08 |
-| 351. Sub-account 관리 | 2/2 | Complete   | 2026-03-08 |
+| 351. Sub-account 관리 | 2/2 | Complete    | 2026-03-08 |
