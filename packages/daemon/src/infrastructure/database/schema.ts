@@ -1,7 +1,7 @@
 /**
  * Drizzle ORM schema definitions for WAIaaS daemon SQLite database.
  *
- * 25 tables: wallets, sessions, session_wallets, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs, token_registry, settings, telegram_users, wc_sessions, wc_store, incoming_transactions, incoming_tx_cursors, defi_positions, wallet_apps, webhooks, webhook_logs, agent_identities, reputation_cache, nft_metadata_cache, userop_builds
+ * 26 tables: wallets, sessions, session_wallets, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs, token_registry, settings, telegram_users, wc_sessions, wc_store, incoming_transactions, incoming_tx_cursors, defi_positions, wallet_apps, webhooks, webhook_logs, agent_identities, reputation_cache, nft_metadata_cache, userop_builds, hyperliquid_orders, hyperliquid_sub_accounts
  *
  * CHECK constraints are derived from @waiaas/core enum SSoT arrays (not hardcoded strings).
  * All timestamps are Unix epoch seconds via { mode: 'timestamp' }.
@@ -733,6 +733,27 @@ export const hyperliquidOrders = sqliteTable(
       'check_hl_orders_margin_mode',
       sql`margin_mode IS NULL OR margin_mode IN ('CROSS', 'ISOLATED')`,
     ),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Hyperliquid sub-accounts (v52)
+// ---------------------------------------------------------------------------
+
+export const hyperliquidSubAccounts = sqliteTable(
+  'hyperliquid_sub_accounts',
+  {
+    id: text('id').primaryKey(),
+    walletId: text('wallet_id')
+      .notNull()
+      .references(() => wallets.id),
+    subAccountAddress: text('sub_account_address').notNull(),
+    name: text('name'),
+    createdAt: integer('created_at', { mode: 'number' }).notNull().default(sql`(unixepoch())`),
+  },
+  (table) => [
+    index('idx_hl_sub_wallet').on(table.walletId),
+    uniqueIndex('idx_hl_sub_unique').on(table.walletId, table.subAccountAddress),
   ],
 );
 

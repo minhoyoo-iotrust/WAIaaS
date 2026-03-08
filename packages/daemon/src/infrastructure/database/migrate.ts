@@ -79,7 +79,7 @@ const LEGACY_NETWORK_NORMALIZE: Record<string, string> = {
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 51;
+export const LATEST_SCHEMA_VERSION = 52;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -456,6 +456,16 @@ function getCreateTableStatements(): string[] {
   created_at INTEGER NOT NULL DEFAULT (unixepoch()),
   updated_at INTEGER NOT NULL DEFAULT (unixepoch())
 )`,
+
+    // Table 27: hyperliquid_sub_accounts (Hyperliquid Sub-account mapping, v52)
+    `CREATE TABLE IF NOT EXISTS hyperliquid_sub_accounts (
+  id TEXT PRIMARY KEY,
+  wallet_id TEXT NOT NULL REFERENCES wallets(id),
+  sub_account_address TEXT NOT NULL,
+  name TEXT,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  UNIQUE(wallet_id, sub_account_address)
+)`,
   ];
 }
 
@@ -569,6 +579,9 @@ function getCreateIndexStatements(): string[] {
     'CREATE INDEX IF NOT EXISTS idx_hl_orders_market ON hyperliquid_orders(market)',
     'CREATE INDEX IF NOT EXISTS idx_hl_orders_status ON hyperliquid_orders(status)',
     'CREATE INDEX IF NOT EXISTS idx_hl_orders_created ON hyperliquid_orders(created_at)',
+
+    // v52: hyperliquid_sub_accounts index
+    'CREATE INDEX IF NOT EXISTS idx_hl_sub_wallet ON hyperliquid_sub_accounts(wallet_id)',
   ];
 }
 
@@ -2859,6 +2872,31 @@ MIGRATIONS.push({
       CREATE INDEX idx_hl_orders_market ON hyperliquid_orders(market);
       CREATE INDEX idx_hl_orders_status ON hyperliquid_orders(status);
       CREATE INDEX idx_hl_orders_created ON hyperliquid_orders(created_at);
+    `);
+  },
+});
+
+// ── v52: Hyperliquid sub-accounts table ──────────────────────────────
+MIGRATIONS.push({
+  version: 52,
+  description: 'Create hyperliquid_sub_accounts table for Hyperliquid Sub-account management',
+  up: (sqlite) => {
+    // Idempotent check
+    const tables = sqlite
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='hyperliquid_sub_accounts'")
+      .all() as Array<{ name: string }>;
+    if (tables.length > 0) return;
+
+    sqlite.exec(`
+      CREATE TABLE hyperliquid_sub_accounts (
+        id TEXT PRIMARY KEY,
+        wallet_id TEXT NOT NULL REFERENCES wallets(id),
+        sub_account_address TEXT NOT NULL,
+        name TEXT,
+        created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+        UNIQUE(wallet_id, sub_account_address)
+      );
+      CREATE INDEX idx_hl_sub_wallet ON hyperliquid_sub_accounts(wallet_id);
     `);
   },
 });
