@@ -1763,11 +1763,11 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
   // v31.4: ApiDirectResult path -- skip on-chain execution entirely (HDESIGN-01)
   if (ctx.actionResult) {
     const result = ctx.actionResult;
-    // Update transaction status to COMPLETED with API direct result metadata
+    // Update transaction status to CONFIRMED with API direct result metadata
     await ctx.db
       .update(transactions)
       .set({
-        status: 'COMPLETED',
+        status: 'CONFIRMED',
         metadata: JSON.stringify({
           apiDirect: true,
           provider: result.provider,
@@ -1777,14 +1777,13 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
           data: result.data,
           ...(result.metadata ?? {}),
         }),
-        completedAt: Math.floor(Date.now() / 1000),
       })
       .where(eq(transactions.id, ctx.txId));
 
-    // Audit log: TX_COMPLETED (API direct)
+    // Audit log: TX_CONFIRMED (API direct)
     if (ctx.sqlite) {
       insertAuditLog(ctx.sqlite, {
-        eventType: 'TX_COMPLETED',
+        eventType: 'TX_CONFIRMED',
         actor: ctx.sessionId ?? 'system',
         walletId: ctx.walletId,
         txId: ctx.txId,
@@ -1800,8 +1799,8 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
       });
     }
 
-    // Fire-and-forget: notify TX_COMPLETED
-    void ctx.notificationService?.notify('TX_COMPLETED', ctx.walletId, {
+    // Fire-and-forget: notify TX_CONFIRMED
+    void ctx.notificationService?.notify('TX_CONFIRMED', ctx.walletId, {
       txId: ctx.txId,
       provider: result.provider,
       action: result.action,
@@ -1809,10 +1808,11 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
       network: ctx.resolvedNetwork,
     }, { txId: ctx.txId });
 
-    // Emit transaction:completed event
+    // Emit transaction:completed event (txHash = externalId for API direct)
     ctx.eventBus?.emit('transaction:completed', {
       walletId: ctx.walletId,
       txId: ctx.txId,
+      txHash: result.externalId,
       network: ctx.resolvedNetwork,
       type: 'CONTRACT_CALL',
       timestamp: Math.floor(Date.now() / 1000),

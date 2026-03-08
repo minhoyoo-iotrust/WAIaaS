@@ -1,0 +1,64 @@
+/**
+ * Hyperliquid DEX integration - shared infrastructure.
+ *
+ * Re-exports all components for Perp/Spot/Sub-account providers.
+ *
+ * @see HDESIGN-03: Component dependency graph
+ */
+
+// Config
+export {
+  HL_MAINNET_API_URL,
+  HL_TESTNET_API_URL,
+  HL_L1_DOMAIN,
+  hlUserSignedDomain,
+  INFO_WEIGHTS,
+  HL_DEFAULTS,
+  HL_SETTINGS,
+  HL_ERRORS,
+} from './config.js';
+
+// Schemas
+export {
+  HlOpenPositionInputSchema,
+  HlPlaceOrderInputSchema,
+  HlClosePositionInputSchema,
+  HlCancelOrderInputSchema,
+  HlSetLeverageInputSchema,
+  HlSetMarginModeInputSchema,
+  HlTransferUsdcInputSchema,
+  ExchangeResponseSchema,
+  PositionSchema,
+  ClearinghouseStateSchema,
+  OpenOrderSchema,
+  FillSchema,
+  MarketMetaSchema,
+  FundingRateSchema,
+  AllMidsSchema,
+  USER_ACTION_TYPES,
+  type ExchangeResponse,
+  type Position,
+  type ClearinghouseState,
+  type OpenOrder,
+  type Fill,
+  type MarketMeta,
+  type FundingRate,
+  type AllMids,
+  type OrderWire,
+  type OrderTypeWire,
+} from './schemas.js';
+
+// Signer
+export { HyperliquidSigner, removeTrailingZeros, orderToWire } from './signer.js';
+
+// Exchange Client
+export {
+  HyperliquidExchangeClient,
+  HyperliquidRateLimiter,
+  createHyperliquidClient,
+  type ExchangeRequest,
+  type InfoRequest,
+} from './exchange-client.js';
+
+// Market Data
+export { HyperliquidMarketData, type MarketInfo } from './market-data.js';

@@ -72,7 +72,7 @@ describe('DB v45 Migration: userop_builds', () => {
 
   // Test 1: LATEST_SCHEMA_VERSION === 45
   it('T1: LATEST_SCHEMA_VERSION is 45', () => {
-    expect(LATEST_SCHEMA_VERSION).toBe(50);
+    expect(LATEST_SCHEMA_VERSION).toBe(51);
   });
 
   // Test 2: userop_builds table exists with 9 columns
