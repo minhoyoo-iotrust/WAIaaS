@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v31.6
 milestone_name: Across Protocol 크로스체인 브릿지
-status: in_progress
+status: completed
 stopped_at: Completed Phase 355 (355-01, 355-02)
-last_updated: "2026-03-09T00:31:00Z"
+last_updated: "2026-03-08T16:32:21.334Z"
 last_activity: 2026-03-09 — Phase 355 complete (Admin Settings + SDK + Admin UI + Skill File)
 progress:
   total_phases: 5
