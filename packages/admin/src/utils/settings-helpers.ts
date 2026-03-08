@@ -161,6 +161,14 @@ export function keyToLabel(key: string): string {
     pendle_yield_max_slippage_bps: 'Max Slippage (%)',
     dcent_swap_default_slippage_bps: 'Default Slippage (%)',
     dcent_swap_max_slippage_bps: 'Max Slippage (%)',
+    // across_bridge keys
+    across_bridge_enabled: 'Across Bridge Enabled',
+    across_bridge_api_base_url: 'API Base URL',
+    across_bridge_integrator_id: 'Integrator ID',
+    across_bridge_fill_deadline_buffer_sec: 'Fill Deadline Buffer (seconds)',
+    across_bridge_default_slippage_pct: 'Default Slippage (%)',
+    across_bridge_max_slippage_pct: 'Max Slippage (%)',
+    across_bridge_request_timeout_ms: 'Request Timeout (ms)',
   };
   return map[key] ?? key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }

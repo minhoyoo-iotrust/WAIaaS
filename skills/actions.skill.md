@@ -2,7 +2,7 @@
 name: "WAIaaS Actions"
 description: "Action Provider framework: list providers, execute DeFi actions through the 6-stage transaction pipeline"
 category: "api"
-tags: [wallet, blockchain, defi, actions, waiass, jupiter, 0x, swap, lifi, bridge, cross-chain, lido, jito, staking, liquid-staking, pendle, yield, pt, yt, drift, perp, perpetual, leverage, futures, dcent-swap, dcent, aggregator]
+tags: [wallet, blockchain, defi, actions, waiass, jupiter, 0x, swap, lifi, bridge, cross-chain, lido, jito, staking, liquid-staking, pendle, yield, pt, yt, drift, perp, perpetual, leverage, futures, dcent-swap, dcent, aggregator, across, across-bridge]
 version: "2.9.0-rc"
 dispatch:
   kind: "tool"
@@ -1671,7 +1671,80 @@ const swap = await client.dcentDexSwap({ fromAsset, toAsset, amount, fromDecimal
 - `action_dcent_swap_get_quotes` -- Get swap quotes from D'CENT Swap Aggregator
 - `action_dcent_swap_dex_swap` -- Execute DEX swap via D'CENT Swap Aggregator
 
-## 14. Policy Integration
+## 14. Across Bridge -- Built-in Provider (EVM)
+
+Intent-based cross-chain bridge with fast relayer fills (2-10 seconds). Supports Ethereum, Arbitrum, Optimism, Base, Polygon, Linea.
+
+### Prerequisites (Admin)
+- Enable via Admin Settings: `actions.across_bridge_enabled = true`
+- Add SpokePool addresses to CONTRACT_WHITELIST for each chain (or rely on provider-trust bypass)
+
+### Admin Settings
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `actions.across_bridge_enabled` | `false` | Enable Across Bridge |
+| `actions.across_bridge_api_base_url` | `https://app.across.to/api` | API base URL |
+| `actions.across_bridge_integrator_id` | (empty) | Integrator ID |
+| `actions.across_bridge_fill_deadline_buffer_sec` | `21600` | Fill deadline buffer (6h) |
+| `actions.across_bridge_default_slippage_pct` | `0.01` | Default slippage (1%) |
+| `actions.across_bridge_max_slippage_pct` | `0.03` | Max slippage (3%) |
+| `actions.across_bridge_request_timeout_ms` | `10000` | Request timeout (ms) |
+
+### Available Actions
+
+#### across_bridge / quote -- Get Bridge Quote
+
+```bash
+curl -s -X POST http://localhost:3100/v1/actions/across_bridge/quote \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -H 'Content-Type: application/json' \
+  -d '{"params":{"fromChain":"ethereum","toChain":"arbitrum","inputToken":"0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48","outputToken":"0xaf88d065e77c8cC2239327C5EDb3A432268e5831","amount":"1000000000"}}'
+```
+
+Returns: inputAmount, outputAmount, totalFee, feeBreakdown (lpFee, relayerCapitalFee, relayerGasFee), estimatedFillTimeSec, limits.
+
+#### across_bridge / execute -- Execute Cross-chain Bridge
+
+```bash
+curl -s -X POST http://localhost:3100/v1/actions/across_bridge/execute \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -H 'Content-Type: application/json' \
+  -d '{"params":{"fromChain":"ethereum","toChain":"arbitrum","inputToken":"0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48","outputToken":"0xaf88d065e77c8cC2239327C5EDb3A432268e5831","amount":"1000000000"}}'
+```
+
+Executes approve+depositV3 BATCH (ERC-20) or single depositV3 with msg.value (native ETH). Bridge status tracked automatically via 2-phase polling.
+
+#### across_bridge / status -- Check Bridge Status
+
+```bash
+curl -s -X POST http://localhost:3100/v1/actions/across_bridge/status \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -H 'Content-Type: application/json' \
+  -d '{"params":{"depositTxHash":"0xabc..."}}'
+```
+
+Returns: status (filled/pending/expired/refunded), fillTxHash, depositId.
+
+#### across_bridge / routes -- List Available Routes
+
+```bash
+curl -s -X POST http://localhost:3100/v1/actions/across_bridge/routes \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -H 'Content-Type: application/json' \
+  -d '{"params":{}}'
+```
+
+Returns supported chain/token route combinations.
+
+### MCP Tools (auto-registered)
+
+- `action_across_bridge_quote` -- Get Across bridge quote
+- `action_across_bridge_execute` -- Execute cross-chain bridge
+- `action_across_bridge_status` -- Check bridge deposit status
+- `action_across_bridge_routes` -- List available routes
+
+## 15. Policy Integration
 
 ### CONTRACT_WHITELIST
 
@@ -1698,7 +1771,7 @@ The swap/bridge input amount is converted to USD via IPriceOracle and evaluated 
 
 **LI.FI bridge reservation lifecycle:** Bridge amounts are reserved against the spending limit when the transaction is submitted. The reservation is released on terminal states (COMPLETED, FAILED, REFUNDED) but **held** on TIMEOUT to prevent double-spend during manual resolution. This means the spending budget is not freed until the bridge completes or fails definitively.
 
-## 15. Configuration via Admin Settings
+## 16. Configuration via Admin Settings
 
 Since v28.2, all action provider settings are managed via **Admin UI > DeFi (`#/defi`)** for DeFi providers and **Admin UI > Agent Identity (`#/agent-identity`)** for ERC-8004 (not config.toml). The Admin Settings UI provides:
 
@@ -1738,7 +1811,7 @@ Operators can override the default security tier for individual actions. This al
 
 **Cross-reference:** Policy tier escalation rules apply on top of action tier. See **policies.skill.md** Section 3.
 
-## 16. Error Reference
+## 17. Error Reference
 
 | Code | HTTP | Description | Recovery |
 |------|------|-------------|----------|
@@ -1754,7 +1827,7 @@ Operators can override the default security tier for individual actions. This al
 | `INVALID_INSTRUCTION` | 400 | Chain not supported by LI.FI integration. | Use one of the supported chains: solana, ethereum, polygon, arbitrum, optimism, base. |
 | `ACTION_API_ERROR` | 502 | LI.FI API returned an error. | Check LI.FI API status, verify parameters, retry. |
 
-## 17. MCP Auto-Registration
+## 18. MCP Auto-Registration
 
 When a provider has `mcpExpose: true` in its metadata, the MCP server automatically registers each action as an MCP tool using the naming convention:
 
@@ -1805,7 +1878,7 @@ MCP tool parameters:
 - `network` (optional string): Target network
 - `wallet_id` (optional string): Target wallet ID
 
-## 18. Related Skill Files
+## 19. Related Skill Files
 
 - **admin.skill.md** -- API key management, Admin Settings, daemon admin
 - **transactions.skill.md** -- 5-type transaction reference (actions execute as CONTRACT_CALL)
