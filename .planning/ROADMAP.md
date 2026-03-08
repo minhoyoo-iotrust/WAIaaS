@@ -114,7 +114,6 @@ Plans:
   2. User가 Spot 계정 토큰 잔액과 Spot 마켓 정보(페어/가격/거래량)를 조회할 수 있다
   3. Spot 기능이 MCP 도구 + SDK 메서드로 노출되고, HyperliquidSpotActionProvider가 IActionProvider로 등록된다
 **Plans:** 2/2 plans complete
-**Plans:** 2/2 plans complete
 Plans:
 - [x] 350-01-PLAN.md — SpotProvider + Spot Zod 스키마 + MarketData Spot 메서드 + 테스트
 - [x] 350-02-PLAN.md — REST API + MCP 5도구 + SDK 5메서드 + Admin UI Spot 탭 + Skill 파일
@@ -127,7 +126,10 @@ Plans:
   1. User가 Hyperliquid Sub-account를 생성하고 목록을 조회할 수 있다
   2. User가 Master와 Sub-account 간 자금(USDC/토큰)을 이동할 수 있다
   3. User가 Sub-account별 포지션과 잔액을 조회할 수 있고, 해당 기능이 MCP 도구 + SDK 메서드로 노출된다
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 351-01-PLAN.md — SubAccountService + Zod 스키마 + DB v52 마이그레이션 + 테스트
+- [ ] 351-02-PLAN.md — REST API + MCP 4도구 + SDK 4메서드 + Admin UI Sub-accounts 탭 + Skill 파일
 
 ## Progress
 
@@ -141,4 +143,4 @@ Note: Phase 350과 351은 Phase 349에만 의존하므로 병렬 실행 가능
 | 348. Hyperliquid DEX 설계 문서 | 2/2 | Complete    | 2026-03-08 |
 | 349. Core Infrastructure + Perp Trading | 5/5 | Complete    | 2026-03-08 |
 | 350. Spot Trading | 2/2 | Complete    | 2026-03-08 |
-| 351. Sub-account 관리 | 0/TBD | Not started | - |
+| 351. Sub-account 관리 | 0/2 | Not started | - |
