@@ -529,6 +529,38 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
                 .where(eq(transactions.id, ctx.txId));
             }
           }
+
+          // STS-01: Enroll Across bridge execute transactions in async tracking
+          // AsyncPollingService.pollAll() picks up bridge_status='PENDING' with tracker='across-bridge'
+          if (provider === 'across_bridge' && action === 'execute') {
+            const confirmedTx = await deps.db
+              .select()
+              .from(transactions)
+              .where(eq(transactions.id, ctx.txId))
+              .get();
+            const txHash = confirmedTx?.txHash ?? null;
+
+            if (txHash) {
+              const execParams = body.params ?? {};
+              await deps.db
+                .update(transactions)
+                .set({
+                  bridgeStatus: 'PENDING',
+                  bridgeMetadata: JSON.stringify({
+                    tracker: 'across-bridge',
+                    txHash,
+                    fromChain: String(execParams.fromChain ?? ''),
+                    toChain: String(execParams.toChain ?? ''),
+                    inputToken: String(execParams.inputToken ?? ''),
+                    outputToken: String(execParams.outputToken ?? ''),
+                    inputAmount: String(execParams.amount ?? ''),
+                    notificationEvent: 'BRIDGE_COMPLETED',
+                    enrolledAt: Date.now(),
+                  }),
+                })
+                .where(eq(transactions.id, ctx.txId));
+            }
+          }
         } catch (error) {
           // PIPELINE_HALTED is intentional -- transaction is QUEUED
           if (error instanceof WAIaaSError && error.code === 'PIPELINE_HALTED') {

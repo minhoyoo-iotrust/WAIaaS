@@ -1233,6 +1233,29 @@ export class DaemonLifecycle {
     }
 
     // ------------------------------------------------------------------
+    // Step 4f-2a: Register Across bridge status trackers when across_bridge is enabled
+    // ------------------------------------------------------------------
+    if (this._asyncPollingService && this._settingsService?.get('actions.across_bridge_enabled') === 'true') {
+      try {
+        const { AcrossBridgeStatusTracker, AcrossBridgeMonitoringTracker } = await import('@waiaas/actions');
+        const acrossConfig = {
+          enabled: true,
+          apiBaseUrl: this._settingsService!.get('actions.across_bridge_api_base_url') || 'https://app.across.to/api',
+          integratorId: this._settingsService!.get('actions.across_bridge_integrator_id') || '',
+          fillDeadlineBufferSec: Number(this._settingsService!.get('actions.across_bridge_fill_deadline_buffer_sec')) || 21600,
+          defaultSlippagePct: Number(this._settingsService!.get('actions.across_bridge_default_slippage_pct')) || 0.01,
+          maxSlippagePct: Number(this._settingsService!.get('actions.across_bridge_max_slippage_pct')) || 0.03,
+          requestTimeoutMs: 10_000,
+        };
+        this._asyncPollingService.registerTracker(new AcrossBridgeStatusTracker(acrossConfig));
+        this._asyncPollingService.registerTracker(new AcrossBridgeMonitoringTracker(acrossConfig));
+        console.debug('Step 4f-2a: Across bridge status trackers registered (across-bridge + across-bridge-monitoring)');
+      } catch (err) {
+        console.warn('Step 4f-2a (fail-soft): Across bridge tracker registration failed:', err);
+      }
+    }
+
+    // ------------------------------------------------------------------
     // Step 4f-3: Register staking status trackers when lido/jito is enabled
     // ------------------------------------------------------------------
     if (this._asyncPollingService) {
