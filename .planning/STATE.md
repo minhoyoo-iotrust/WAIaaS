@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v31.4
 milestone_name: Hyperliquid 생태계 통합
-status: executing
+status: completed
 stopped_at: Completed 349-05-PLAN.md
-last_updated: "2026-03-08T04:42:00.000Z"
+last_updated: "2026-03-08T04:45:31.476Z"
 last_activity: 2026-03-08 — Phase 349 Core Infrastructure + Perp Trading complete
 progress:
   total_phases: 5
