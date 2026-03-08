@@ -12,11 +12,16 @@ import {
   FundingRateSchema,
   FillSchema,
   OpenOrderSchema,
+  SpotMetaSchema,
+  SpotClearinghouseStateSchema,
   type ClearinghouseState,
   type Position,
   type OpenOrder,
   type Fill,
   type FundingRate,
+  type SpotMeta,
+  type SpotBalance,
+  type SpotMarketInfo,
 } from './schemas.js';
 import { z } from 'zod';
 import type { Hex } from 'viem';
@@ -106,12 +111,34 @@ export class HyperliquidMarketData {
   }
 
   /**
-   * Get spot clearinghouse state.
+   * Get spot token balances for a wallet.
    */
-  async getSpotState(walletAddress: Hex): Promise<unknown> {
-    return this.client.info(
+  async getSpotBalances(walletAddress: Hex): Promise<SpotBalance[]> {
+    const state = await this.client.info(
       { type: 'spotClearinghouseState', user: walletAddress },
-      z.unknown(),
+      SpotClearinghouseStateSchema,
+    );
+    return state.balances;
+  }
+
+  /**
+   * Get spot market universe (pairs list).
+   */
+  async getSpotMarkets(): Promise<SpotMarketInfo[]> {
+    const meta = await this.client.info(
+      { type: 'spotMeta' },
+      SpotMetaSchema,
+    );
+    return meta.universe;
+  }
+
+  /**
+   * Get full spot metadata including tokens array.
+   */
+  async getSpotMeta(): Promise<SpotMeta> {
+    return this.client.info(
+      { type: 'spotMeta' },
+      SpotMetaSchema,
     );
   }
 

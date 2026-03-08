@@ -224,6 +224,113 @@ export const AllMidsSchema = z.record(z.string(), z.string());
 export type AllMids = z.infer<typeof AllMidsSchema>;
 
 // ---------------------------------------------------------------------------
+// Spot Schemas (Phase 350)
+// ---------------------------------------------------------------------------
+
+/** Spot buy input. */
+export const HlSpotBuyInputSchema = z
+  .object({
+    /** Spot market pair (e.g., "HYPE/USDC"). */
+    market: z.string().min(1),
+    /** Order size as decimal string. */
+    size: z.string().min(1),
+    /** Limit price as decimal string. Required for LIMIT orders. */
+    price: z.string().optional(),
+    /** Order type. */
+    orderType: z.enum(['MARKET', 'LIMIT']),
+    /** Time-in-force. */
+    tif: z.enum(['GTC', 'IOC', 'ALO']).optional(),
+    /** Client order ID (128-bit hex). */
+    cloid: z.string().optional(),
+    /** Sub-account address (hex, 42 chars). */
+    subAccount: z.string().optional(),
+  })
+  .refine((d) => d.orderType !== 'LIMIT' || d.price !== undefined, {
+    message: 'price is required for LIMIT orders',
+    path: ['price'],
+  });
+
+/** Spot sell input. */
+export const HlSpotSellInputSchema = z
+  .object({
+    market: z.string().min(1),
+    size: z.string().min(1),
+    price: z.string().optional(),
+    orderType: z.enum(['MARKET', 'LIMIT']),
+    tif: z.enum(['GTC', 'IOC', 'ALO']).optional(),
+    cloid: z.string().optional(),
+    subAccount: z.string().optional(),
+  })
+  .refine((d) => d.orderType !== 'LIMIT' || d.price !== undefined, {
+    message: 'price is required for LIMIT orders',
+    path: ['price'],
+  });
+
+/** Spot cancel input. */
+export const HlSpotCancelInputSchema = z.object({
+  market: z.string().min(1),
+  /** Hyperliquid order ID. Omit to cancel all for market. */
+  oid: z.number().optional(),
+  /** Client order ID. Alternative to oid. */
+  cloid: z.string().optional(),
+  subAccount: z.string().optional(),
+});
+
+/** Spot market universe entry from spotMeta response. */
+export const SpotUniverseEntrySchema = z.object({
+  name: z.string(),
+  tokens: z.array(z.number()),
+  index: z.number(),
+  isCanonical: z.boolean().optional(),
+  evmContract: z.string().nullable().optional(),
+}).passthrough();
+
+/** Spot token metadata from spotMeta response. */
+export const SpotTokenSchema = z.object({
+  name: z.string(),
+  szDecimals: z.number(),
+  weiDecimals: z.number(),
+  index: z.number(),
+  tokenId: z.string(),
+  isCanonical: z.boolean().optional(),
+  evmContract: z.string().nullable().optional(),
+}).passthrough();
+
+/** Full spotMeta response. */
+export const SpotMetaSchema = z.object({
+  universe: z.array(SpotUniverseEntrySchema),
+  tokens: z.array(SpotTokenSchema),
+}).passthrough();
+
+export type SpotMeta = z.infer<typeof SpotMetaSchema>;
+
+/** Spot balance entry. */
+export const SpotBalanceSchema = z.object({
+  coin: z.string(),
+  hold: z.string(),
+  token: z.number(),
+  total: z.string(),
+  entryNtl: z.string().optional(),
+}).passthrough();
+
+export type SpotBalance = z.infer<typeof SpotBalanceSchema>;
+
+/** Spot clearinghouse state. */
+export const SpotClearinghouseStateSchema = z.object({
+  balances: z.array(SpotBalanceSchema),
+}).passthrough();
+
+export type SpotClearinghouseState = z.infer<typeof SpotClearinghouseStateSchema>;
+
+/** Spot market info (derived from SpotMeta universe entry). */
+export interface SpotMarketInfo {
+  name: string;
+  tokens: number[];
+  index: number;
+  isCanonical?: boolean;
+}
+
+// ---------------------------------------------------------------------------
 // Wire format types (internal, for signer)
 // ---------------------------------------------------------------------------
 
