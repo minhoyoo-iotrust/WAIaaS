@@ -33,7 +33,7 @@ describe('ENVIRONMENT_TYPES SSoT', () => {
 // ─── 2. ENVIRONMENT_NETWORK_MAP coverage ────────────────────────
 
 describe('ENVIRONMENT_NETWORK_MAP', () => {
-  it('should cover all 13 NETWORK_TYPES without duplicates or omissions', () => {
+  it('should cover all 15 NETWORK_TYPES without duplicates or omissions', () => {
     const allMapped = Object.values(ENVIRONMENT_NETWORK_MAP).flat();
     const sorted = [...allMapped].sort();
     const expected = [...NETWORK_TYPES].sort();
@@ -62,23 +62,25 @@ describe('getNetworksForEnvironment', () => {
     ]);
   });
 
-  it('ethereum mainnet -> 5 EVM mainnet networks', () => {
+  it('ethereum mainnet -> 6 EVM mainnet networks', () => {
     expect(getNetworksForEnvironment('ethereum', 'mainnet')).toEqual([
       'ethereum-mainnet',
       'polygon-mainnet',
       'arbitrum-mainnet',
       'optimism-mainnet',
       'base-mainnet',
+      'hyperevm-mainnet',
     ]);
   });
 
-  it('ethereum testnet -> 5 EVM testnet networks', () => {
+  it('ethereum testnet -> 6 EVM testnet networks', () => {
     expect(getNetworksForEnvironment('ethereum', 'testnet')).toEqual([
       'ethereum-sepolia',
       'polygon-amoy',
       'arbitrum-sepolia',
       'optimism-sepolia',
       'base-sepolia',
+      'hyperevm-testnet',
     ]);
   });
 });
@@ -124,10 +126,10 @@ describe('ENVIRONMENT_SINGLE_NETWORK', () => {
   });
 });
 
-// ─── 5. deriveEnvironment() -- 13-value exhaustive ──────────────
+// ─── 5. deriveEnvironment() -- 15-value exhaustive ──────────────
 
 describe('deriveEnvironment', () => {
-  // 6 mainnet networks
+  // 7 mainnet networks
   it.each([
     'solana-mainnet',
     'ethereum-mainnet',
@@ -135,11 +137,12 @@ describe('deriveEnvironment', () => {
     'arbitrum-mainnet',
     'optimism-mainnet',
     'base-mainnet',
+    'hyperevm-mainnet',
   ] as const)('%s -> mainnet', (network) => {
     expect(deriveEnvironment(network)).toBe('mainnet');
   });
 
-  // 7 testnet networks
+  // 8 testnet networks
   it.each([
     'solana-devnet',
     'solana-testnet',
@@ -148,6 +151,7 @@ describe('deriveEnvironment', () => {
     'arbitrum-sepolia',
     'optimism-sepolia',
     'base-sepolia',
+    'hyperevm-testnet',
   ] as const)('%s -> testnet', (network) => {
     expect(deriveEnvironment(network)).toBe('testnet');
   });

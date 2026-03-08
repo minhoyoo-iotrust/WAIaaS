@@ -84,19 +84,25 @@ describe('createMcpServer', () => {
     const apiClient = createMockApiClient();
     createMcpServer(apiClient, { walletName: 'trading-bot' });
 
-    // 37 tools should be registered (26 wallet + 3 NFT + 3 ERC-8004 + 2 ERC-8128 + 2 UserOp + connect_info)
-    expect(mockTool).toHaveBeenCalledTimes(37);
+    // 47 tools: 26 wallet + 3 NFT + 3 ERC-8004 + 2 ERC-8128 + 2 UserOp + connect_info + 10 Hyperliquid
+    expect(mockTool).toHaveBeenCalledTimes(47);
 
-    // connect_info (first tool) has no wallet prefix (not wallet-scoped)
-    // All other tool calls' second argument (description) should have the prefix
-    const [connectInfoCall, ...walletToolCalls] = mockTool.mock.calls;
-    expect(connectInfoCall).toBeDefined();
-    expect(connectInfoCall![0]).toBe('connect_info');
-    expect(connectInfoCall![1]).not.toMatch(/^\[trading-bot\] /);
+    // Some tools are not wallet-scoped (no prefix): connect_info, global market data tools
+    const nonWalletScopedTools = new Set([
+      'connect_info',
+      'waiaas_hl_get_markets',
+      'waiaas_hl_get_funding_rates',
+      'waiaas_hl_get_spot_markets',
+    ]);
 
-    for (const call of walletToolCalls) {
+    for (const call of mockTool.mock.calls) {
+      const toolName = call[0] as string;
       const description = call[1] as string;
-      expect(description).toMatch(/^\[trading-bot\] /);
+      if (nonWalletScopedTools.has(toolName)) {
+        expect(description).not.toMatch(/^\[trading-bot\] /);
+      } else {
+        expect(description).toMatch(/^\[trading-bot\] /);
+      }
     }
   });
 

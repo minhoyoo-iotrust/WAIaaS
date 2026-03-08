@@ -1,7 +1,7 @@
 /**
  * Drizzle ORM schema definitions for WAIaaS daemon SQLite database.
  *
- * 25 tables: wallets, sessions, session_wallets, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs, token_registry, settings, telegram_users, wc_sessions, wc_store, incoming_transactions, incoming_tx_cursors, defi_positions, wallet_apps, webhooks, webhook_logs, agent_identities, reputation_cache, nft_metadata_cache, userop_builds
+ * 26 tables: wallets, sessions, session_wallets, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs, token_registry, settings, telegram_users, wc_sessions, wc_store, incoming_transactions, incoming_tx_cursors, defi_positions, wallet_apps, webhooks, webhook_logs, agent_identities, reputation_cache, nft_metadata_cache, userop_builds, hyperliquid_orders, hyperliquid_sub_accounts
  *
  * CHECK constraints are derived from @waiaas/core enum SSoT arrays (not hardcoded strings).
  * All timestamps are Unix epoch seconds via { mode: 'timestamp' }.
@@ -677,6 +677,88 @@ export const nftMetadataCache = sqliteTable(
 
 // ---------------------------------------------------------------------------
 // Table 25: userop_builds -- UserOp Build/Sign API data (v45)
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Hyperliquid orders (v51)
+// ---------------------------------------------------------------------------
+
+export const hyperliquidOrders = sqliteTable(
+  'hyperliquid_orders',
+  {
+    id: text('id').primaryKey(),
+    walletId: text('wallet_id')
+      .notNull()
+      .references(() => wallets.id),
+    subAccountAddress: text('sub_account_address'),
+    oid: integer('oid'),
+    cloid: text('cloid'),
+    transactionId: text('transaction_id').references(() => transactions.id),
+    market: text('market').notNull(),
+    assetIndex: integer('asset_index').notNull(),
+    side: text('side').notNull(), // BUY | SELL
+    orderType: text('order_type').notNull(), // MARKET | LIMIT | STOP_MARKET | STOP_LIMIT | TAKE_PROFIT
+    size: text('size').notNull(),
+    price: text('price'),
+    triggerPrice: text('trigger_price'),
+    tif: text('tif'), // GTC | IOC | ALO
+    reduceOnly: integer('reduce_only').notNull().default(0),
+    status: text('status').notNull(), // PENDING | RESTING | FILLED | PARTIALLY_FILLED | CANCELLED | REJECTED | TRIGGERED
+    filledSize: text('filled_size'),
+    avgFillPrice: text('avg_fill_price'),
+    isSpot: integer('is_spot').notNull().default(0),
+    leverage: integer('leverage'),
+    marginMode: text('margin_mode'), // CROSS | ISOLATED
+    responseData: text('response_data'),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (table) => [
+    index('idx_hl_orders_wallet').on(table.walletId),
+    index('idx_hl_orders_oid').on(table.oid),
+    index('idx_hl_orders_market').on(table.market),
+    index('idx_hl_orders_status').on(table.status),
+    index('idx_hl_orders_created').on(table.createdAt),
+    check('check_hl_orders_side', sql`side IN ('BUY', 'SELL')`),
+    check(
+      'check_hl_orders_order_type',
+      sql`order_type IN ('MARKET', 'LIMIT', 'STOP_MARKET', 'STOP_LIMIT', 'TAKE_PROFIT')`,
+    ),
+    check(
+      'check_hl_orders_status',
+      sql`status IN ('PENDING', 'RESTING', 'FILLED', 'PARTIALLY_FILLED', 'CANCELLED', 'REJECTED', 'TRIGGERED')`,
+    ),
+    check('check_hl_orders_tif', sql`tif IS NULL OR tif IN ('GTC', 'IOC', 'ALO')`),
+    check(
+      'check_hl_orders_margin_mode',
+      sql`margin_mode IS NULL OR margin_mode IN ('CROSS', 'ISOLATED')`,
+    ),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Hyperliquid sub-accounts (v52)
+// ---------------------------------------------------------------------------
+
+export const hyperliquidSubAccounts = sqliteTable(
+  'hyperliquid_sub_accounts',
+  {
+    id: text('id').primaryKey(),
+    walletId: text('wallet_id')
+      .notNull()
+      .references(() => wallets.id),
+    subAccountAddress: text('sub_account_address').notNull(),
+    name: text('name'),
+    createdAt: integer('created_at', { mode: 'number' }).notNull().default(sql`(unixepoch())`),
+  },
+  (table) => [
+    index('idx_hl_sub_wallet').on(table.walletId),
+    uniqueIndex('idx_hl_sub_unique').on(table.walletId, table.subAccountAddress),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// UserOp builds (v45)
 // ---------------------------------------------------------------------------
 
 export const useropBuilds = sqliteTable(

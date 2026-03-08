@@ -1,347 +1,272 @@
-# Technology Stack: Advanced DeFi Protocol Integration
+# Technology Stack: Hyperliquid 생태계 통합
 
-**Project:** WAIaaS Advanced DeFi (Lending/Yield/Perp/Intent)
-**Researched:** 2026-02-26
-**Overall confidence:** HIGH (verified via npm registry, official docs, contract sources)
-
-## Critical Design Principle: Zero External SDK
-
-WAIaaS follows a **zero external SDK** pattern for DeFi integrations. Existing providers (Lido, Jito, Jupiter, 0x, LI.FI) demonstrate two approaches:
-
-1. **Direct ABI/instruction encoding** (Lido: manual `encodeSubmitCalldata`, Jito: raw SPL instruction bytes)
-2. **REST API calldata** (Jupiter, 0x, LI.FI: fetch calldata from API, pass to pipeline)
-
-Both patterns return `ContractCallRequest` objects with zero external Solana/EVM SDK dependencies in `@waiaas/actions`. The daemon holds `viem ^2.21.0` and `@solana/kit ^6.0.1` -- these MUST NOT leak into the actions package.
-
-**This principle must continue.** Adding heavy SDKs like `@drift-labs/sdk` (26+ deps, `@solana/web3.js 1.x` legacy) or `@kamino-finance/klend-sdk` (20+ deps, `@coral-xyz/anchor 0.28`) would:
-- Create dependency conflicts with `@solana/kit 6.x` (incompatible with legacy `@solana/web3.js 1.x`)
-- Bloat the package from 2 deps to 30+ deps
-- Introduce version pinning fragility (Anchor 0.28 vs 0.29 vs 0.30 conflicts)
-
----
+**Project:** WAIaaS v31.4 Hyperliquid Ecosystem
+**Researched:** 2026-03-08
 
 ## Recommended Stack
 
-### New npm Dependencies: 0
+### HyperEVM Chain (viem 빌트인)
 
-No new npm packages needed. All integrations use one of:
-- Manual ABI encoding (EVM protocols: Aave V3, Morpho Blue, Pendle Router)
-- REST API calldata (Pendle Hosted SDK, CoW Protocol OrderBook API)
-- Manual instruction encoding (Solana protocols: Kamino, Drift)
-- Existing viem utilities (EIP-712 signing via `viem/accounts` already in daemon)
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| viem `hyperEvm` | ^2.21.0 (기존) | HyperEVM Mainnet (Chain ID 999) | viem 빌트인 chain export. `import { hyperEvm } from 'viem/chains'`로 즉시 사용. `hyperliquid` alias도 export됨 |
+| viem `hyperliquidEvmTestnet` | ^2.21.0 (기존) | HyperEVM Testnet (Chain ID 998) | viem 빌트인 chain export. `import { hyperliquidEvmTestnet } from 'viem/chains'` |
 
-### Protocol Integration Approaches
+**Confidence: HIGH** — viem GitHub `src/chains/index.ts`에서 `hyperEvm` (alias `hyperliquid`)과 `hyperliquidEvmTestnet` export 확인됨. `defineChain` fallback 불필요.
 
-| Protocol | Chain | Approach | Complexity | Rationale |
-|----------|-------|----------|------------|-----------|
-| **Aave V3** | EVM | Direct ABI encode | Medium | Simple 4-function ABI (supply/borrow/repay/withdraw). Same pattern as Lido. Pool ABI is stable since 2023. |
-| **Morpho Blue** | EVM | Direct ABI encode | Medium | Minimal 5-function ABI. Single contract `0xBBBBBBBBbb9cc5e90e3b3Af64bdAF62C37EEFFCb`. |
-| **Kamino** | Solana | klend-sdk instruction builder OR REST API | High | Anchor IDL-based program. Raw instruction encoding is complex (many accounts). Evaluate REST API option. |
-| **Pendle** | EVM | Hosted SDK REST API | Low | Official hosted API returns tx calldata directly. Same pattern as Jupiter/0x/LI.FI. |
-| **Drift** | Solana | Gateway REST API | Medium | Self-hosted Rust gateway exposes REST endpoints returning tx data. Too complex for raw instruction encoding. |
-| **CoW Protocol** | EVM | Direct EIP-712 + OrderBook REST API | Medium | EIP-712 signing via viem + REST API for order submission. No SDK needed. |
-
----
-
-## Protocol-by-Protocol Stack Details
-
-### 1. Aave V3 (ILendingProvider -- EVM)
-
-**Integration: Direct ABI encoding (same as Lido pattern)**
-
-| Item | Value | Source |
-|------|-------|--------|
-| Contract | Pool: `0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2` (Ethereum mainnet) | [Etherscan](https://etherscan.io/address/0x87870bca3f3fd6335c3f4ce8392d69350b4fa4e2) |
-| L2 Pools | `0x794a61358D6845594F94dc1DB02A252b5b4814aD` (Arbitrum, Polygon, Optimism) | [Aave Addresses](https://aave.com/docs/resources/addresses) |
-| Functions | `supply(address,uint256,address,uint16)`, `borrow(address,uint256,uint256,uint16,address)`, `repay(address,uint256,uint256,address)`, `withdraw(address,uint256,address)` | [Aave Docs](https://aave.com/docs/aave-v3/smart-contracts/pool) |
-| Health Factor | `getUserAccountData(address)` returns `healthFactor` as uint256 (1e18 scale) | Aave Pool contract |
-| New deps | 0 | Manual ABI encoding like `lido-contract.ts` |
-| Confidence | HIGH | Function signatures verified against official docs + Etherscan ABI |
-
-**Why NOT @aave/client:** The official `@aave/client` (v0.9.2) has peerDeps on `viem ^2.31.6`, `ethers ^6.14.4`, AND `thirdweb ^5.105.25` -- adding 3 heavy peer deps for 4 function calls is unacceptable. Direct ABI encoding is trivial for these simple functions.
-
+**EVM_CHAIN_MAP 추가만으로 완료:**
 ```typescript
-// Example: supply function selector = keccak256("supply(address,uint256,address,uint16)") = 0x617ba037
-function encodeAaveSupply(asset: string, amount: bigint, onBehalfOf: string): string {
-  const selector = '0x617ba037';
-  return `${selector}${padAddress(asset)}${padUint256(amount)}${padAddress(onBehalfOf)}${padUint16(0n)}`;
-}
+import { hyperEvm, hyperliquidEvmTestnet } from 'viem/chains';
+
+// EVM_CHAIN_MAP에 추가
+'hyperevm-mainnet': { chain: hyperEvm, nativeToken: 'HYPE' },
+'hyperevm-testnet': { chain: hyperliquidEvmTestnet, nativeToken: 'HYPE' },
 ```
 
-### 2. Morpho Blue (ILendingProvider -- EVM)
+### Hyperliquid L1 DEX Client — 자체 구현 권장 (외부 SDK 미사용)
 
-**Integration: Direct ABI encoding**
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| 자체 `HyperliquidExchangeClient` | N/A | Exchange/Info/WebSocket API 래퍼 | 외부 SDK 의존성 추가 불필요. Hyperliquid REST API는 단순한 POST 요청 + EIP-712 서명이며, 기존 패턴(DcentSwapApiClient, 0xSwapClient 등)과 동일한 구조로 구현 가능 |
+| `@msgpack/msgpack` | ^3.0.0 | L1 action hash 계산 | phantom agent 서명에 필수. action을 msgpack으로 직렬화 -> nonce append -> keccak256 해시 -> connectionId 생성. 공식 msgpack 패키지, TypeScript 지원, 0 dependencies |
+| viem `keccak256` | ^2.21.0 (기존) | action hash 계산 | msgpack 직렬화 결과의 keccak256 해시 계산. viem 내장 유틸리티 사용 |
+| viem `signTypedData` | ^2.21.0 (기존) | EIP-712 서명 | 기존 EvmAdapter.signTypedData 활용. L1 action과 user-signed action 모두 EIP-712 |
 
-| Item | Value | Source |
-|------|-------|--------|
-| Contract | `0xBBBBBBBBbb9cc5e90e3b3Af64bdAF62C37EEFFCb` (Ethereum, Base, Optimism) | [Etherscan](https://etherscan.io/address/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb) |
-| Functions | `supply(MarketParams,uint256,uint256,address,bytes)`, `supplyCollateral(MarketParams,uint256,address,bytes)`, `borrow(MarketParams,uint256,uint256,address,address)`, `repay(MarketParams,uint256,uint256,address,bytes)`, `withdrawCollateral(MarketParams,uint256,address,address)` | [Morpho Docs](https://docs.morpho.org/build/borrow/tutorials/assets-flow/) |
-| MarketParams struct | `(address loanToken, address collateralToken, address oracle, address irm, uint256 lltv)` | [GitHub](https://github.com/morpho-org/morpho-blue/blob/main/src/Morpho.sol) |
-| New deps | 0 | Manual ABI encoding; MarketParams is a 5-field tuple |
-| Confidence | HIGH | Verified via GitHub source + Etherscan |
+**외부 SDK를 사용하지 않는 이유:**
 
-**Why NOT @morpho-org/blue-sdk-viem:** The SDK (v4.4.0) has peerDeps `viem ^2.0.0`, `@morpho-org/blue-sdk ^5.16.0`, `@morpho-org/morpho-ts ^2.4.6`. The blue-sdk itself uses lodash. For 5 ABI-encoded function calls, the overhead is not justified.
+| SDK | Version | Weekly Downloads | 미사용 이유 |
+|-----|---------|-----------------|-------------|
+| `hyperliquid` (nomeida) | 1.7.7 | ~4,200 | ethers.js 의존성 (WAIaaS는 viem 전용), Node 22+ 필수(native WebSocket), 커뮤니티 유지보수 |
+| `@nktkas/hyperliquid` | 0.30.2 | ~500 | valibot 스키마 도입(v0.25+)으로 viem과 별도 validation 레이어 추가, 0.x 버전 불안정, API 표면이 너무 넓음 |
+| `@hyper-d3x/hyperliquid-ts-sdk` | N/A | ~62 | 매우 낮은 사용량, 유지보수 불확실 |
 
-**Encoding complexity:** MarketParams is a struct, requiring ABI tuple encoding. This is more complex than Aave's flat parameters but still straightforward with manual encoding. viem's `encodeAbiParameters` could be used in the daemon if needed, but the actions package should use pure manual encoding.
+**자체 구현이 적합한 이유:**
+1. Hyperliquid REST API는 단 2개 엔드포인트(Exchange POST, Info POST)로 구성 — 복잡도 낮음
+2. 기존 `DcentSwapApiClient`, `ZeroExSwapClient`, `LiFiBridgeClient` 등과 동일한 HTTP client 패턴
+3. EIP-712 서명은 viem `signTypedData` 그대로 사용 — 외부 SDK의 서명 래퍼 불필요
+4. WAIaaS의 에러 핸들링/재시도/Admin Settings 패턴과 직접 통합 가능
+5. 공식 TypeScript SDK 부재 (공식은 Python SDK만 제공) — 커뮤니티 SDK 의존성 리스크
 
-### 3. Kamino (ILendingProvider -- Solana)
+### EIP-712 서명 구성
 
-**Integration: REST API preferred, raw instruction encoding as fallback**
+| 구분 | Domain Name | Version | Chain ID | Verifying Contract |
+|------|-------------|---------|----------|-------------------|
+| L1 Action (거래) | `"Exchange"` | `"1"` | `1337` (고정) | `0x0000...0000` |
+| User-Signed Action (계정) | `"HyperliquidSignTransaction"` | `"1"` | `42161` (mainnet) / `421614` (testnet) | `0x0000...0000` |
 
-| Item | Value | Source |
-|------|-------|--------|
-| Program ID | `KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD` | [Solscan](https://solscan.io/account/KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD) |
-| SDK | `@kamino-finance/klend-sdk` v7.3.20 | npm registry |
-| SDK deps | 20+ including `@coral-xyz/anchor ^0.28`, `@solana/kit ^2.3.0` (CONFLICT with our ^6.0.1) | npm registry |
-| New deps | 0 | Use Kamino REST API or manual instruction building |
-| Confidence | MEDIUM | REST API needs verification; raw instruction encoding requires IDL analysis |
+**Confidence: HIGH** — 공식 Python SDK signing.py, Chainstack 문서, 다수 구현체에서 일관되게 확인됨.
 
-**Why NOT @kamino-finance/klend-sdk:** Uses `@coral-xyz/anchor ^0.28.0` and `@solana/kit ^2.3.0` -- both incompatible with WAIaaS's `@solana/kit ^6.0.1`. Would require a dependency shimming layer or create version conflicts. Also pulls in farms-sdk, scope-sdk, kliquidity-sdk as transitive deps.
+**L1 Action Phantom Agent 서명 플로우:**
+```typescript
+// 1. action을 msgpack으로 직렬화 (필드 순서 중요!)
+const packed = msgpack.encode(action);
 
-**Recommended approach:**
-1. **Primary:** Check if Kamino provides a REST API endpoint (similar to Jupiter) that returns transaction instructions. The Kamino docs mention REST APIs for market data and positions.
-2. **Fallback:** Parse the Anchor IDL from the klend program and manually encode instruction data + account metas (similar to Jito's SPL Stake Pool pattern but using Anchor discriminator hashing).
+// 2. nonce(8 bytes LE) + vaultAddress(20 bytes, 없으면 0x00) append
+const data = Buffer.concat([packed, nonceBytes, vaultBytes]);
 
-### 4. Pendle (IYieldProvider -- EVM)
+// 3. keccak256 해시 -> connectionId
+const connectionId = keccak256(data);
 
-**Integration: Hosted SDK REST API (same pattern as Jupiter/0x/LI.FI)**
-
-| Item | Value | Source |
-|------|-------|--------|
-| API Base | `https://api-v2.pendle.finance/core/v2/sdk/` | [Pendle Docs](https://docs.pendle.finance/pendle-v2/Developers/Backend/HostedSdk) |
-| Primary endpoint | `GET /v2/sdk/{chainId}/convert` | Pendle Hosted SDK |
-| Parameters | `tokensIn`, `amountsIn`, `tokensOut`, `receiver`, `slippage`, `enableAggregator` | Pendle API docs |
-| Response | `tx.data` (calldata), `tx.to`, `tx.from`, `tx.value` | Pendle API docs |
-| Chains | Ethereum (1), Arbitrum (42161), Base (8453) | [Pendle Deployments](https://docs.pendle.finance/pendle-v2/Developers/Deployments) |
-| New deps | 0 | REST API via ActionApiClient (existing base class) |
-| Confidence | HIGH | Official hosted SDK, same pattern as existing providers |
-
-**Why NOT @pendle/sdk-v2:** The npm package uses ethers.js (not viem), is published only as beta versions, and the Pendle team themselves recommend the Hosted SDK for backend integrations because it "ensures consistent output with Pendle's UI" and "keeps up-to-date with protocol changes."
-
-**Why Hosted SDK is ideal:** Pendle yield tokenization involves complex router interactions (Diamond Pattern, multiple facets). The hosted API abstracts this complexity and returns ready-to-execute calldata -- exactly the pattern WAIaaS already uses for Jupiter, 0x, and LI.FI.
-
-### 5. Drift (IPerpProvider -- Solana)
-
-**Integration: Gateway REST API (self-hosted or Drift-hosted)**
-
-| Item | Value | Source |
-|------|-------|--------|
-| Program ID | `dRiftyHA39MWEi3m9aunc5MzRF1JYuBsbn6VPcn33UH` | [Drift Docs](https://docs.drift.trade/) |
-| Gateway repo | `drift-labs/gateway` (Rust) | [GitHub](https://github.com/drift-labs/gateway) |
-| Key endpoints | `POST /v2/orders` (place), `GET /v2/positions`, `GET /v2/user/marginInfo`, `GET /v2/collateral` | Gateway README |
-| New deps | 0 | REST API via ActionApiClient |
-| Confidence | MEDIUM | Gateway is well-documented but requires self-hosted instance or Drift API access |
-
-**Why NOT @drift-labs/sdk:** The SDK (v2.158.0-beta) has 26+ dependencies including `@coral-xyz/anchor 0.29.0`, `@solana/web3.js 1.98.0` (legacy, incompatible with `@solana/kit 6.x`), `@project-serum/serum`, `@pythnetwork/client`, `@switchboard-xyz/*`, `solana-bankrun`, etc. This is a MASSIVE dependency tree that would double the project's node_modules.
-
-**Recommended approach:**
-1. **Primary:** Use Drift Gateway REST API -- the gateway is a self-hosted Rust binary that handles all the complexity and exposes simple REST endpoints.
-2. **Configuration:** Add `actions.drift_perp_gateway_url` setting (user provides their own gateway endpoint or uses Drift's hosted API).
-3. **Health monitoring:** `GET /v2/user/marginInfo` provides margin health data for the PositionTracker.
-
-### 6. CoW Protocol (Intent/EIP-712 -- EVM)
-
-**Integration: Direct EIP-712 signing via viem + OrderBook REST API**
-
-| Item | Value | Source |
-|------|-------|--------|
-| Settlement contract | `0x9008D19f58AAbD9eD0D60971565AA8510560ab41` (all chains) | [Etherscan](https://etherscan.io/address/0x9008d19f58aabd9ed0d60971565aa8510560ab41) |
-| OrderBook API | `https://api.cow.fi/mainnet/api/v1/orders` | [CoW Docs](https://docs.cow.fi/) |
-| EIP-712 Domain | `{name: "Gnosis Protocol", version: "v2", chainId, verifyingContract: "0x9008...ab41"}` | [Signing Schemes](https://docs.cow.fi/cow-protocol/reference/core/signing-schemes) |
-| Order type | 12 fields: `sellToken, buyToken, receiver, sellAmount, buyAmount, validTo, appData, feeAmount, kind, partiallyFillable, sellTokenBalance, buyTokenBalance` | [GPv2Order.sol](https://github.com/cowprotocol/contracts/blob/main/src/contracts/libraries/GPv2Order.sol) |
-| viem support | `signTypedData()` from `viem/accounts` -- already available in daemon | [viem docs](https://viem.sh/docs/accounts/local/signTypedData) |
-| New deps | 0 | EIP-712 via viem (existing), REST API via ActionApiClient |
-| Confidence | HIGH | EIP-712 domain params verified via docs + contract source |
-
-**Why NOT @cowprotocol/cow-sdk:** The SDK (v7.3.7) is a meta-package wrapping 7 sub-packages. Its peerDeps include `cross-fetch ^3.x`, `ipfs-only-hash ^4.x`, `multiformats ^9.x`, `@openzeppelin/merkle-tree ^1.x`. For signing orders (EIP-712) and submitting to the API, we only need viem's `signTypedData` + fetch.
-
-**EIP-712 signing pattern for WAIaaS:**
-- SIGN type in discriminatedUnion is already supported (7th type)
-- CoW orders are signed EIP-712 messages, then submitted to the CoW OrderBook API via REST
-- The intent flow: sign order -> submit to API -> CoW solvers find best execution -> settlement on-chain
-
----
-
-## PositionTracker (New Core Component)
-
-**No new dependencies needed.** Extends the existing `IAsyncStatusTracker` pattern.
-
-| Component | Approach | Deps |
-|-----------|----------|------|
-| PositionTracker table | New SQLite table via Drizzle migration | Existing drizzle-orm |
-| Health factor polling | EventBus timer + protocol-specific API calls | Existing EventBus |
-| Aave health | `getUserAccountData()` ABI call via daemon's viem | Existing viem |
-| Morpho health | Market data + position shares calculation | Manual encoding |
-| Pendle maturity | Track `expiry` timestamp from API response | REST API |
-| Drift margin | `GET /v2/user/marginInfo` from gateway | REST API |
-| Kamino health | Market data from Kamino API | REST API |
-
-**DB Migration (v25+):**
-
-```sql
-CREATE TABLE defi_positions (
-  id TEXT PRIMARY KEY,           -- UUIDv7
-  wallet_id TEXT NOT NULL,       -- FK wallets.id
-  provider TEXT NOT NULL,        -- 'aave_v3' | 'morpho' | 'kamino' | 'pendle' | 'drift'
-  position_type TEXT NOT NULL,   -- 'SUPPLY' | 'BORROW' | 'LP' | 'PERP'
-  chain TEXT NOT NULL,
-  network TEXT NOT NULL,
-  protocol_position_id TEXT,     -- protocol-specific ID
-  asset_id TEXT,                 -- CAIP-19
-  amount TEXT NOT NULL,          -- human-readable
-  metadata TEXT,                 -- JSON: health_factor, margin_ratio, maturity, etc.
-  status TEXT NOT NULL DEFAULT 'ACTIVE',  -- ACTIVE | CLOSED | LIQUIDATED
-  opened_at INTEGER NOT NULL,
-  closed_at INTEGER,
-  last_checked_at INTEGER,
-  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
-  updated_at INTEGER NOT NULL DEFAULT (unixepoch())
-);
+// 4. phantom agent 구조로 EIP-712 서명
+const types = {
+  Agent: [
+    { name: 'source', type: 'string' },      // "a" mainnet, "b" testnet
+    { name: 'connectionId', type: 'bytes32' }  // keccak256 해시
+  ]
+};
+const domain = {
+  name: 'Exchange',
+  version: '1',
+  chainId: 1337,
+  verifyingContract: '0x0000000000000000000000000000000000000000'
+};
 ```
 
----
+**User-Signed Action 타입 구조:**
+```typescript
+// UsdSend
+{ 'HyperliquidTransaction:UsdSend': [
+  { name: 'hyperliquidChain', type: 'string' },  // "Mainnet" or "Testnet"
+  { name: 'destination', type: 'string' },
+  { name: 'amount', type: 'string' },
+  { name: 'time', type: 'uint64' }
+]}
 
-## DeFi Monitoring (Extends BalanceMonitorService Pattern)
+// SpotSend
+{ 'HyperliquidTransaction:SpotSend': [
+  { name: 'hyperliquidChain', type: 'string' },
+  { name: 'destination', type: 'string' },
+  { name: 'token', type: 'string' },
+  { name: 'amount', type: 'string' },
+  { name: 'time', type: 'uint64' }
+]}
 
-**No new dependencies needed.** Follows the existing BalanceMonitorService polling pattern.
+// ApproveAgent
+{ 'HyperliquidTransaction:ApproveAgent': [
+  { name: 'hyperliquidChain', type: 'string' },
+  { name: 'agentAddress', type: 'address' },
+  { name: 'agentName', type: 'string' },
+  { name: 'nonce', type: 'uint64' }
+]}
+```
 
-| Monitor | Trigger | Source | Alert |
-|---------|---------|--------|-------|
-| Health Factor | health < 1.5 (warning), < 1.2 (critical) | Aave `getUserAccountData`, Morpho calculation | DEFI_HEALTH_WARNING, DEFI_LIQUIDATION_RISK |
-| Maturity | expiry within 24h (warning), expired (critical) | Pendle position metadata | DEFI_MATURITY_WARNING, DEFI_MATURITY_EXPIRED |
-| Margin | margin ratio < 20% (warning), < 10% (critical) | Drift `/v2/user/marginInfo` | DEFI_MARGIN_WARNING, DEFI_MARGIN_CRITICAL |
-| Position value | value change > 10% in 1h | Price oracle + position amount | DEFI_POSITION_VALUE_CHANGE |
+### WebSocket — Node.js 내장 WebSocket 사용
 
----
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| Node.js native WebSocket | Node 22+ | 실시간 주문/포지션 업데이트 | Node 22+ 빌트인 WebSocket API 사용. 추가 라이브러리 불필요. WAIaaS는 이미 Node 22 타겟 |
 
-## What NOT to Add
+**WebSocket 엔드포인트:**
+- Mainnet: `wss://api.hyperliquid.xyz/ws`
+- Testnet: `wss://api.hyperliquid-testnet.xyz/ws`
+- 구독 제한: IP당 1,000 WebSocket 구독
 
-| Package | Why NOT |
-|---------|---------|
-| `@aave/client` | peerDeps: viem + ethers + thirdweb. 4 function calls don't justify 3 peer deps. |
-| `@morpho-org/blue-sdk-viem` | peerDeps: viem + blue-sdk + morpho-ts + lodash. 5 ABI calls don't justify it. |
-| `@kamino-finance/klend-sdk` | 20+ deps, Anchor 0.28, @solana/kit 2.3 (CONFLICT with our 6.x). |
-| `@drift-labs/sdk` | 26+ deps, @solana/web3.js 1.x (legacy, incompatible), anchor 0.29. |
-| `@pendle/sdk-v2` | ethers-based (not viem), beta-only releases, team recommends Hosted SDK. |
-| `@cowprotocol/cow-sdk` | 7 sub-packages + 4 peer deps for EIP-712 signing + REST call. |
-| `ethers` | Project uses viem exclusively. Adding ethers would create dual-library confusion. |
-| `@coral-xyz/anchor` | WAIaaS uses @solana/kit 6.x. Anchor pulls in legacy web3.js. |
+**구독 채널:** allMids, l2Book, trades, orderUpdates, userEvents, candle 등
 
----
+### Rate Limiting — 기존 패턴 충분
+
+| 항목 | 제한 | 비고 |
+|------|------|------|
+| REST 총 가중치 | 1,200/분 | Info + Exchange 합산 |
+| Info 엔드포인트 (기본) | 가중치 20 | l2Book, clearinghouseState 등은 가중치 2 |
+| Exchange 엔드포인트 | 가중치 1 | 주문/취소 등 |
+| 누적 거래량 기반 | 1 req / 1 USDC 거래량 | 초기 10,000 req 버퍼 |
+| 추가 용량 구매 | `reserveRequestWeight` action | 런타임 확장 가능 |
+
+**기존 RPC Pool 패턴으로 충분한 이유:**
+- Hyperliquid는 단일 API 서버(로테이션 불필요) -> 단순 rate limiter로 충분
+- 가중치 기반 -> 엔드포인트별 가중치를 추적하는 간단한 슬라이딩 윈도우 카운터
+- 새 라이브러리 불필요 — `HyperliquidExchangeClient` 내부에 rate limit 카운터 구현
+
+### Supporting Libraries (신규 추가 1개만)
+
+| Library | Version | Purpose | When to Use |
+|---------|---------|---------|-------------|
+| `@msgpack/msgpack` | ^3.0.0 | L1 action hash의 msgpack 직렬화 | L1 action 서명 시 phantom agent connectionId 계산에 필수 |
+
+**추가하지 않는 것:**
+- WebSocket 라이브러리 (Node 22 내장)
+- Hyperliquid SDK (자체 client 구현)
+- Rate limiting 라이브러리 (자체 구현)
+- EIP-712 라이브러리 (viem 내장)
+- keccak256 라이브러리 (viem 내장)
+
+## API 엔드포인트 정리
+
+| 네트워크 | Exchange API | Info API | WebSocket |
+|----------|-------------|----------|-----------|
+| Mainnet | `https://api.hyperliquid.xyz/exchange` | `https://api.hyperliquid.xyz/info` | `wss://api.hyperliquid.xyz/ws` |
+| Testnet | `https://api.hyperliquid-testnet.xyz/exchange` | `https://api.hyperliquid-testnet.xyz/info` | `wss://api.hyperliquid-testnet.xyz/ws` |
+
+## Exchange Action Types (구현 대상)
+
+### Perp 거래 (Phase 3)
+| Action | Purpose |
+|--------|---------|
+| `order` | Market/Limit/Trigger 주문 |
+| `cancel` / `cancelByCloid` | 주문 취소 |
+| `modify` / `batchModify` | 주문 수정 |
+| `updateLeverage` | 레버리지 설정 |
+| `updateIsolatedMargin` | 격리 마진 조정 |
+| `twapOrder` / `twapCancel` | TWAP 주문 |
+
+### Spot 거래 (Phase 4)
+| Action | Purpose |
+|--------|---------|
+| `order` (spot market) | Spot 주문 (같은 order action, asset ID로 구분) |
+| `cancel` / `cancelByCloid` | Spot 주문 취소 |
+| `usdClassTransfer` | Perp <-> Spot 자금 이동 |
+
+### Sub-account (Phase 5)
+| Action | Purpose |
+|--------|---------|
+| `createSubAccount` | Sub-account 생성 (Private key 없음) |
+| `subAccountTransfer` / `sendAsset` | Master <-> Sub 간 자금 이동 |
+| `vaultAddress` 필드 | Sub-account 대리 거래 시 master가 서명 |
+
+### 계정 관리
+| Action | Purpose |
+|--------|---------|
+| `usdSend` | USDC 전송 (user-signed) |
+| `spotSend` | Spot 자산 전송 (user-signed) |
+| `withdraw3` | Bridge 출금 (user-signed) |
+| `approveAgent` | API 지갑 승인 (user-signed) |
+
+## Sub-account 핵심 특성
+
+- Sub-account는 **Private key가 없음** — master 계정이 서명하고 `vaultAddress` 필드에 sub-account 주소를 지정
+- WAIaaS 매핑: 1 WAIaaS wallet = 1 master account, sub-account는 wallet 내부 개념으로 관리
+- Sub-account 주소는 42자 hex 형식 (`subAccountUser` 필드)
+- Master <-> Sub 간 자금 이동은 L1 action (`sendAsset`)으로 처리
+
+## Signing 주의 사항 (공식 문서 기반)
+
+1. **두 가지 서명 스키마 구분 필수**: L1 action (phantom agent, chainId 1337) vs user-signed action (HyperliquidSignTransaction, chainId 42161/421614)
+2. **msgpack 필드 순서 중요**: action 객체의 필드 순서가 msgpack 직렬화에 영향. 공식 Python SDK의 필드 순서를 따라야 함
+3. **숫자 trailing zeros 제거**: price/size 필드에서 불필요한 trailing zeros 제거 후 직렬화
+4. **주소 소문자화**: 서명 전 모든 주소를 lowercase로 변환 (네트워크가 bytes 파싱 시 자동 소문자화)
+5. **서명 검증 함정**: 로컬에서 signer 복구가 정상이어도 payload가 올바르다는 보장 없음 — 테스트넷 검증 필수
 
 ## Alternatives Considered
 
-| Category | Recommended | Alternative | Why Not Alternative |
-|----------|-------------|-------------|---------------------|
-| Aave integration | Manual ABI encoding | @aave/client | Triple peerDep (viem+ethers+thirdweb) for 4 functions |
-| Morpho integration | Manual ABI encoding | @morpho-org/blue-sdk-viem | lodash + 2 extra peer packages for 5 functions |
-| Kamino integration | REST API + manual instruction | @kamino-finance/klend-sdk | @solana/kit version conflict (2.3 vs 6.0), 20+ transitive deps |
-| Pendle integration | Hosted SDK REST API | @pendle/sdk-v2 | ethers dependency, beta versions only, team recommends Hosted SDK |
-| Drift integration | Gateway REST API | @drift-labs/sdk | @solana/web3.js 1.x legacy, 26+ deps, massive bundle |
-| CoW integration | viem signTypedData + REST | @cowprotocol/cow-sdk | 7 sub-packages + IPFS deps for 1 signing function + 1 REST call |
-| EIP-712 signing | viem (already in daemon) | ethers | Project standardized on viem; no need for ethers |
-
----
-
-## Integration Points with Existing Architecture
-
-### IActionProvider Pattern (Unchanged)
-
-All 6 new providers implement `IActionProvider` and return `ContractCallRequest` or `ContractCallRequest[]`. The pipeline, policy engine, signing, and submission paths remain unchanged.
-
-### New Interface Abstractions
-
-```typescript
-// ILendingProvider extends IActionProvider with position awareness
-interface ILendingProvider extends IActionProvider {
-  getHealthFactor(walletAddress: string, network: NetworkType): Promise<number | null>;
-  getPositions(walletAddress: string, network: NetworkType): Promise<LendingPosition[]>;
-}
-
-// IYieldProvider extends IActionProvider with maturity tracking
-interface IYieldProvider extends IActionProvider {
-  getMaturity(positionId: string): Promise<Date | null>;
-  getPositions(walletAddress: string, network: NetworkType): Promise<YieldPosition[]>;
-}
-
-// IPerpProvider extends IActionProvider with margin info
-interface IPerpProvider extends IActionProvider {
-  getMarginInfo(walletAddress: string): Promise<MarginInfo | null>;
-  getPositions(walletAddress: string): Promise<PerpPosition[]>;
-}
-```
-
-### Settings Registration
-
-New Admin Settings keys follow existing pattern:
-
-```
-actions.aave_v3_enabled = "true"
-actions.aave_v3_pool_address_ethereum = "0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2"
-actions.morpho_enabled = "true"
-actions.kamino_enabled = "true"
-actions.kamino_api_base_url = ""
-actions.pendle_enabled = "true"
-actions.pendle_api_base_url = "https://api-v2.pendle.finance/core/v2/sdk/"
-actions.drift_perp_enabled = "false"  -- disabled by default (requires gateway)
-actions.drift_perp_gateway_url = ""
-actions.cow_swap_enabled = "true"
-actions.cow_swap_api_base_url = "https://api.cow.fi"
-```
-
-### Notification Events (New)
-
-```
-DEFI_HEALTH_WARNING     -- health factor approaching threshold
-DEFI_LIQUIDATION_RISK   -- health factor critical
-DEFI_MATURITY_WARNING   -- yield position approaching maturity
-DEFI_MATURITY_EXPIRED   -- yield position matured
-DEFI_MARGIN_WARNING     -- perp margin approaching maintenance
-DEFI_MARGIN_CRITICAL    -- perp margin below maintenance
-DEFI_POSITION_OPENED    -- new DeFi position detected
-DEFI_POSITION_CLOSED    -- position closed/repaid
-```
-
----
+| Category | Recommended | Alternative | Why Not |
+|----------|-------------|-------------|---------|
+| Hyperliquid Client | 자체 `HyperliquidExchangeClient` | `hyperliquid` npm (nomeida) | ethers.js 의존성, WAIaaS는 viem 전용. 서명 로직 래퍼가 불필요한 추상화 추가 |
+| Hyperliquid Client | 자체 구현 | `@nktkas/hyperliquid` npm | 0.x 불안정, valibot 의존성 추가, API 표면 과잉 |
+| msgpack | `@msgpack/msgpack` | `msgpackr` | 공식 msgpack org 패키지, TypeScript d.ts 번들, 0 dependencies, 더 넓은 커뮤니티 |
+| WebSocket | Node 22 native | `ws` npm | Node 22에서 native WebSocket 충분, 추가 의존성 불필요 |
+| Rate Limiter | 자체 슬라이딩 윈도우 | `bottleneck` npm | Hyperliquid는 단일 서버, 가중치 기반 -> 50줄 내외 자체 구현으로 충분 |
 
 ## Installation
 
 ```bash
-# No new packages to install.
-# All protocols use existing dependencies:
-# - viem ^2.21.0 (EVM ABI encoding + EIP-712 signing)
-# - @solana/kit ^6.0.1 (Solana if needed for instruction building)
-# - zod ^3.24.0 (schema validation)
-# - ActionApiClient (REST API calls -- existing in @waiaas/actions)
+# 신규 의존성 (1개만)
+cd packages/actions
+pnpm add @msgpack/msgpack
 
-# New files to create (all within packages/actions/src/providers/):
-# - aave-v3/         (ILendingProvider, ABI encoding)
-# - morpho/          (ILendingProvider, ABI encoding)
-# - kamino/          (ILendingProvider, REST API or instruction building)
-# - pendle/          (IYieldProvider, Hosted SDK REST API)
-# - drift-perp/      (IPerpProvider, Gateway REST API)
-# - cow-swap/        (Intent provider, EIP-712 + OrderBook API)
+# 기존 의존성 활용 (추가 설치 불필요)
+# - viem (hyperEvm, hyperliquidEvmTestnet chain exports)
+# - viem (keccak256, signTypedData)
+# - Node 22 (native WebSocket)
 ```
 
----
+## 기존 인프라 재활용 정리
+
+| 기존 컴포넌트 | Hyperliquid 활용 |
+|---------------|-----------------|
+| `EvmAdapter.signTypedData` | EIP-712 서명 (L1 action phantom agent + user-signed action) |
+| `EVM_CHAIN_MAP` | hyperEvm / hyperliquidEvmTestnet 체인 등록 |
+| `IPerpProvider` (Drift 패턴) | Hyperliquid Perp 구현 인터페이스 |
+| `IActionProvider` | HyperliquidPerpActionProvider, HyperliquidSpotActionProvider |
+| `ActionProviderRegistry` | 액션 프로바이더 등록/노출 |
+| Admin Settings 패턴 | API endpoint, testnet 전환, rate limit 설정 |
+| 6-stage pipeline SIGN type | L1 action을 SIGN type으로 매핑 (EIP-712 서명만 수행, 온체인 TX 없음) |
+| RPC Pool rate limit 패턴 | 가중치 기반 rate limiter 구현 참고 |
+
+## Confidence Assessment
+
+| Area | Confidence | Notes |
+|------|------------|-------|
+| viem chain exports | HIGH | GitHub src/chains/index.ts에서 `hyperEvm`, `hyperliquidEvmTestnet` 확인 |
+| EIP-712 서명 구조 | HIGH | 공식 Python SDK, Chainstack docs, 다수 구현체에서 일관된 정보 |
+| Rate limiting | HIGH | 공식 Hyperliquid docs에서 상세 가중치 시스템 문서화 |
+| WebSocket | MEDIUM | 공식 docs 확인, 단 Node 22 native WebSocket의 reconnect 안정성은 검증 필요 |
+| Sub-account API | MEDIUM | 공식 docs + ccxt 이슈에서 확인, 단 세부 필드 구조는 구현 시 검증 필요 |
+| 외부 SDK 미사용 결정 | HIGH | API가 단순(2 엔드포인트), 기존 client 패턴과 동일, 공식 TS SDK 부재 |
 
 ## Sources
 
-- [Aave V3 Pool Contract Docs](https://aave.com/docs/aave-v3/smart-contracts/pool) -- HIGH confidence
-- [Aave V3 Pool on Etherscan](https://etherscan.io/address/0x87870bca3f3fd6335c3f4ce8392d69350b4fa4e2) -- HIGH confidence
-- [Morpho Blue Contract Docs](https://docs.morpho.org/build/borrow/tutorials/assets-flow/) -- HIGH confidence
-- [Morpho Blue on Etherscan](https://etherscan.io/address/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb) -- HIGH confidence
-- [Morpho Blue Solidity Source](https://github.com/morpho-org/morpho-blue/blob/main/src/Morpho.sol) -- HIGH confidence
-- [Kamino klend-sdk on npm](https://www.npmjs.com/package/@kamino-finance/klend-sdk) -- HIGH confidence (deps verified)
-- [Kamino klend Program on Solscan](https://solscan.io/account/KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD) -- HIGH confidence
-- [Pendle Hosted SDK](https://docs.pendle.finance/pendle-v2/Developers/Backend/HostedSdk) -- HIGH confidence
-- [Pendle V2 API Docs](https://api-v2.pendle.finance/core/docs) -- HIGH confidence
-- [Drift Gateway](https://github.com/drift-labs/gateway) -- MEDIUM confidence (requires self-hosting evaluation)
-- [Drift SDK on npm](https://www.npmjs.com/package/@drift-labs/sdk) -- HIGH confidence (deps verified)
-- [Drift Protocol Docs](https://docs.drift.trade/) -- MEDIUM confidence
-- [CoW Protocol Signing Schemes](https://docs.cow.fi/cow-protocol/reference/core/signing-schemes) -- HIGH confidence
-- [CoW GPv2Settlement on Etherscan](https://etherscan.io/address/0x9008d19f58aabd9ed0d60971565aa8510560ab41) -- HIGH confidence
-- [CoW GPv2Order.sol](https://github.com/cowprotocol/contracts/blob/main/src/contracts/libraries/GPv2Order.sol) -- HIGH confidence
-- [@aave/client on npm](https://www.npmjs.com/package/@aave/client) -- HIGH confidence (deps verified via npm registry)
-- [@morpho-org/blue-sdk-viem on npm](https://www.npmjs.com/package/@morpho-org/blue-sdk-viem) -- HIGH confidence
-- [viem signTypedData](https://viem.sh/docs/accounts/local/signTypedData) -- HIGH confidence
+- [viem chains index.ts](https://github.com/wevm/viem/blob/main/src/chains/index.ts) — hyperEvm, hyperliquidEvmTestnet export 확인
+- [Hyperliquid Exchange Endpoint Docs](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/exchange-endpoint) — 전체 action type 목록
+- [Hyperliquid Rate Limits Docs](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/rate-limits-and-user-limits) — 가중치 기반 rate limit 상세
+- [Hyperliquid Signing Docs](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/signing) — 서명 가이드
+- [Hyperliquid Python SDK signing.py](https://github.com/hyperliquid-dex/hyperliquid-python-sdk/blob/master/hyperliquid/utils/signing.py) — 공식 참조 구현
+- [Chainstack Hyperliquid Auth Guide](https://docs.chainstack.com/docs/hyperliquid-authentication-guide) — EIP-712 domain 상세
+- [DeepWiki nomeida/hyperliquid Auth](https://deepwiki.com/nomeida/hyperliquid/6.1-authentication-and-signing) — phantom agent 구조 분석
+- [@nktkas/hyperliquid npm](https://www.npmjs.com/package/@nktkas/hyperliquid) — 커뮤니티 SDK 비교
+- [hyperliquid npm (nomeida)](https://www.npmjs.com/package/hyperliquid) — 커뮤니티 SDK 비교
+- [@msgpack/msgpack npm](https://www.npmjs.com/package/@msgpack/msgpack) — msgpack 패키지
+- [Hyperliquid WebSocket Docs](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/websocket) — WebSocket API 사양
+- [Turnkey x Hyperliquid EIP-712](https://www.turnkey.com/blog/hyperliquid-secure-eip-712-signing) — EIP-712 구현 사례
+- [Hyperliquid Sub-accounts Info](https://docs.chainstack.com/reference/hyperliquid-info-subaccounts) — Sub-account API
+- [Hyperliquid Nonces and API Wallets](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/nonces-and-api-wallets) — Nonce 관리

@@ -278,12 +278,12 @@ describe('CAIP-19 roundtrip', () => {
 // ─── Network Map (CAIP-2 <-> NetworkType) ───────────────────────
 
 describe('CAIP2_TO_NETWORK / NETWORK_TO_CAIP2 maps', () => {
-  it('CAIP2_TO_NETWORK has 13 entries', () => {
-    expect(Object.keys(CAIP2_TO_NETWORK)).toHaveLength(13);
+  it('CAIP2_TO_NETWORK has 15 entries', () => {
+    expect(Object.keys(CAIP2_TO_NETWORK)).toHaveLength(15);
   });
 
-  it('NETWORK_TO_CAIP2 has 13 entries', () => {
-    expect(Object.keys(NETWORK_TO_CAIP2)).toHaveLength(13);
+  it('NETWORK_TO_CAIP2 has 15 entries', () => {
+    expect(Object.keys(NETWORK_TO_CAIP2)).toHaveLength(15);
   });
 
   it('every value maps to valid ChainType and NetworkType', () => {
@@ -293,10 +293,10 @@ describe('CAIP2_TO_NETWORK / NETWORK_TO_CAIP2 maps', () => {
     }
   });
 
-  it('has 10 EVM entries and 3 Solana entries', () => {
+  it('has 12 EVM entries and 3 Solana entries', () => {
     const evmEntries = Object.keys(CAIP2_TO_NETWORK).filter((k) => k.startsWith('eip155:'));
     const solanaEntries = Object.keys(CAIP2_TO_NETWORK).filter((k) => k.startsWith('solana:'));
-    expect(evmEntries).toHaveLength(10);
+    expect(evmEntries).toHaveLength(12);
     expect(solanaEntries).toHaveLength(3);
   });
 
@@ -316,7 +316,15 @@ describe('networkToCaip2()', () => {
     expect(networkToCaip2('solana-mainnet')).toBe('solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp');
   });
 
-  it('all 13 NetworkType values resolve without error', () => {
+  it('returns eip155:999 for hyperevm-mainnet', () => {
+    expect(networkToCaip2('hyperevm-mainnet')).toBe('eip155:999');
+  });
+
+  it('returns eip155:998 for hyperevm-testnet', () => {
+    expect(networkToCaip2('hyperevm-testnet')).toBe('eip155:998');
+  });
+
+  it('all 15 NetworkType values resolve without error', () => {
     for (const network of NETWORK_TYPES) {
       expect(() => networkToCaip2(network)).not.toThrow();
     }
@@ -342,8 +350,22 @@ describe('caip2ToNetwork()', () => {
     });
   });
 
+  it('returns { chain: ethereum, network: hyperevm-mainnet } for eip155:999', () => {
+    expect(caip2ToNetwork('eip155:999')).toEqual({
+      chain: 'ethereum',
+      network: 'hyperevm-mainnet',
+    });
+  });
+
+  it('returns { chain: ethereum, network: hyperevm-testnet } for eip155:998', () => {
+    expect(caip2ToNetwork('eip155:998')).toEqual({
+      chain: 'ethereum',
+      network: 'hyperevm-testnet',
+    });
+  });
+
   it('throws for unknown CAIP-2 string', () => {
-    expect(() => caip2ToNetwork('eip155:999')).toThrow('Unknown CAIP-2 chain ID');
+    expect(() => caip2ToNetwork('eip155:12345')).toThrow('Unknown CAIP-2 chain ID');
   });
 });
 
@@ -372,7 +394,15 @@ describe('nativeAssetId()', () => {
     expect(nativeAssetId('base-mainnet')).toBe('eip155:8453/slip44:60');
   });
 
-  it('all 13 native asset IDs are valid CAIP-19 strings', () => {
+  it('returns eip155:999/slip44:999 for hyperevm-mainnet', () => {
+    expect(nativeAssetId('hyperevm-mainnet')).toBe('eip155:999/slip44:999');
+  });
+
+  it('returns eip155:998/slip44:999 for hyperevm-testnet', () => {
+    expect(nativeAssetId('hyperevm-testnet')).toBe('eip155:998/slip44:999');
+  });
+
+  it('all 15 native asset IDs are valid CAIP-19 strings', () => {
     for (const network of NETWORK_TYPES) {
       const assetId = nativeAssetId(network);
       expect(() => Caip19Schema.parse(assetId)).not.toThrow();

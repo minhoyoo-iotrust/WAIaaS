@@ -179,6 +179,7 @@ describe('IYieldProvider type conformance', () => {
         mcpExpose: true,
         requiresApiKey: false,
         requiredApis: [],
+        requiresSigningKey: false,
       },
       actions: [],
       resolve: async () => ({

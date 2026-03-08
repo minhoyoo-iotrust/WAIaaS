@@ -94,6 +94,7 @@ function makeRawProvider(
       mcpExpose: false,
       requiresApiKey: false,
       requiredApis: [],
+      requiresSigningKey: false,
       ...overrides?.metadata,
     },
     actions: overrides?.actions ?? [defaultAction],

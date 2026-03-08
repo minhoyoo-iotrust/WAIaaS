@@ -16,7 +16,7 @@
 
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { eq } from 'drizzle-orm';
-import { WAIaaSError } from '@waiaas/core';
+import { WAIaaSError, isApiDirectResult } from '@waiaas/core';
 import type { ChainType, NetworkType, EnvironmentType, IPolicyEngine } from '@waiaas/core';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
@@ -350,6 +350,15 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
     const pipelineResults: Array<{ id: string; status: string }> = [];
 
     for (const contractCall of contractCalls) {
+      // v31.4: ApiDirectResult bypass -- skip pipeline for API-direct providers
+      if (isApiDirectResult(contractCall)) {
+        pipelineResults.push({
+          id: contractCall.externalId,
+          status: contractCall.status,
+        });
+        continue;
+      }
+
       // Inject gasCondition into the pipeline request if provided
       const requestWithGas = body.gasCondition
         ? { ...contractCall, gasCondition: body.gasCondition }

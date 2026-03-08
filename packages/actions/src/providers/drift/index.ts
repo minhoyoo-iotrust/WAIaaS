@@ -105,6 +105,7 @@ export class DriftPerpProvider implements IPerpProvider, IPositionProvider {
       mcpExpose: true,
       requiresApiKey: false,
       requiredApis: [],
+      requiresSigningKey: false,
     };
 
     this.actions = [

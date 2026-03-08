@@ -50,6 +50,9 @@ importers:
 
   packages/actions:
     dependencies:
+      '@msgpack/msgpack':
+        specifier: ^3.1.3
+        version: 3.1.3
       '@waiaas/core':
         specifier: workspace:*
         version: link:../core

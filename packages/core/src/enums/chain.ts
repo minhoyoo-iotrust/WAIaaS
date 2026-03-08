@@ -13,6 +13,8 @@ export const NETWORK_TYPES = [
   'arbitrum-mainnet', 'arbitrum-sepolia',
   'optimism-mainnet', 'optimism-sepolia',
   'base-mainnet', 'base-sepolia',
+  // HyperEVM (Hyperliquid)
+  'hyperevm-mainnet', 'hyperevm-testnet',
 ] as const;
 export type NetworkType = (typeof NETWORK_TYPES)[number];
 export const NetworkTypeEnum = z.enum(NETWORK_TYPES);
@@ -26,6 +28,7 @@ export const EVM_NETWORK_TYPES = [
   'arbitrum-mainnet', 'arbitrum-sepolia',
   'optimism-mainnet', 'optimism-sepolia',
   'base-mainnet', 'base-sepolia',
+  'hyperevm-mainnet', 'hyperevm-testnet',
 ] as const;
 export type EvmNetworkType = (typeof EVM_NETWORK_TYPES)[number];
 export const EvmNetworkTypeEnum = z.enum(EVM_NETWORK_TYPES);
@@ -72,6 +75,7 @@ export const ENVIRONMENT_NETWORK_MAP: Record<
     'arbitrum-mainnet',
     'optimism-mainnet',
     'base-mainnet',
+    'hyperevm-mainnet',
   ],
   'ethereum:testnet': [
     'ethereum-sepolia',
@@ -79,6 +83,7 @@ export const ENVIRONMENT_NETWORK_MAP: Record<
     'arbitrum-sepolia',
     'optimism-sepolia',
     'base-sepolia',
+    'hyperevm-testnet',
   ],
 } as const;
 
@@ -133,6 +138,7 @@ const MAINNET_NETWORKS: readonly NetworkType[] = [
   'arbitrum-mainnet',
   'optimism-mainnet',
   'base-mainnet',
+  'hyperevm-mainnet',
 ];
 
 /**

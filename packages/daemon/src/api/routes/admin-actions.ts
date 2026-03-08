@@ -10,7 +10,7 @@
 
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { eq } from 'drizzle-orm';
-import { WAIaaSError } from '@waiaas/core';
+import { WAIaaSError, isApiDirectResult } from '@waiaas/core';
 import type { ChainType, NetworkType, EnvironmentType, IPolicyEngine } from '@waiaas/core';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
@@ -262,6 +262,15 @@ export function adminActionRoutes(deps: AdminActionRouteDeps): OpenAPIHono {
     const pipelineResults: Array<{ id: string; status: string }> = [];
 
     for (const contractCall of contractCalls) {
+      // v31.4: ApiDirectResult bypass -- skip pipeline for API-direct providers
+      if (isApiDirectResult(contractCall)) {
+        pipelineResults.push({
+          id: contractCall.externalId,
+          status: contractCall.status,
+        });
+        continue;
+      }
+
       // Extract EIP-712 metadata from resolve result
       const eip712 = (contractCall as any).eip712 as
         | { approvalType: 'EIP712'; typedDataJson: string; agentId: string; newWallet: string; deadline: string }

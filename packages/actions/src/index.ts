@@ -26,6 +26,7 @@ import { Erc8004ActionProvider } from './providers/erc8004/index.js';
 import { type Erc8004Config, ERC8004_DEFAULTS } from './providers/erc8004/config.js';
 import { DcentSwapActionProvider } from './providers/dcent-swap/index.js';
 import type { DcentSwapConfig } from './providers/dcent-swap/config.js';
+import { HyperliquidPerpProvider, HyperliquidSpotProvider, HyperliquidSubAccountService, HyperliquidSubAccountProvider, HyperliquidExchangeClient, HyperliquidMarketData, HyperliquidRateLimiter, HL_DEFAULTS, HL_MAINNET_API_URL, HL_TESTNET_API_URL } from './providers/hyperliquid/index.js';
 import { KaminoSdkWrapper } from './providers/kamino/kamino-sdk-wrapper.js';
 import { DriftSdkWrapper } from './providers/drift/drift-sdk-wrapper.js';
 
@@ -95,6 +96,13 @@ export type { DcentSwapConfig } from './providers/dcent-swap/config.js';
 export { DcentSwapApiClient } from './providers/dcent-swap/dcent-api-client.js';
 export { caip19ToDcentId, dcentIdToCaip19 } from './providers/dcent-swap/currency-mapper.js';
 export type { DcentQuoteResult, GetQuotesParams } from './providers/dcent-swap/dex-swap.js';
+
+export { HyperliquidPerpProvider } from './providers/hyperliquid/index.js';
+export { HyperliquidSpotProvider, HyperliquidSubAccountService, HyperliquidSubAccountProvider } from './providers/hyperliquid/index.js';
+export { HyperliquidExchangeClient, HyperliquidRateLimiter, createHyperliquidClient, HyperliquidMarketData } from './providers/hyperliquid/index.js';
+export { HyperliquidSigner } from './providers/hyperliquid/index.js';
+export { HL_MAINNET_API_URL, HL_TESTNET_API_URL, HL_DEFAULTS as HL_DEFAULTS_CONFIG, HL_SETTINGS, HL_ERRORS } from './providers/hyperliquid/index.js';
+export type { MarketInfo as HlMarketInfo, ExchangeRequest as HlExchangeRequest } from './providers/hyperliquid/index.js';
 
 // Re-export common utilities
 export { ActionApiClient } from './common/action-api-client.js';
@@ -292,6 +300,34 @@ export function registerBuiltInProviders(
           reputationCacheTtlSec: Number(settingsReader.get('actions.erc8004_reputation_cache_ttl_sec')) || 300,
         };
         return new Erc8004ActionProvider(config);
+      },
+    },
+    {
+      key: 'hyperliquid_perp',
+      enabledKey: 'actions.hyperliquid_enabled',
+      factory: () => {
+        const isMainnet = settingsReader.get('actions.hyperliquid_network') !== 'testnet';
+        const apiUrlOverride = settingsReader.get('actions.hyperliquid_api_url');
+        const apiUrl = apiUrlOverride || (isMainnet ? HL_MAINNET_API_URL : HL_TESTNET_API_URL);
+        const rateLimit = Number(settingsReader.get('actions.hyperliquid_rate_limit_weight_per_min')) || HL_DEFAULTS.RATE_LIMIT_WEIGHT_PER_MIN;
+        const timeoutMs = Number(settingsReader.get('actions.hyperliquid_request_timeout_ms')) || HL_DEFAULTS.REQUEST_TIMEOUT_MS;
+
+        const rateLimiter = new HyperliquidRateLimiter(rateLimit);
+        const client = new HyperliquidExchangeClient(apiUrl, rateLimiter, timeoutMs);
+        const marketData = new HyperliquidMarketData(client);
+
+        // Register spot and sub-account providers alongside perp (shared client/marketData)
+        try {
+          registry.register(new HyperliquidSpotProvider(client, marketData, isMainnet));
+          loaded.push('hyperliquid_spot');
+        } catch { /* spot registration failed, continue */ }
+        try {
+          const subService = new HyperliquidSubAccountService(client, marketData, isMainnet);
+          registry.register(new HyperliquidSubAccountProvider(subService));
+          loaded.push('hyperliquid_sub');
+        } catch { /* sub registration failed, continue */ }
+
+        return new HyperliquidPerpProvider(client, marketData, isMainnet);
       },
     },
     {

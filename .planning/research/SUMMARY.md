@@ -1,238 +1,171 @@
 # Project Research Summary
 
-**Project:** WAIaaS Advanced DeFi Protocol Integration (m29)
-**Domain:** Lending (Aave V3 / Kamino / Morpho), Yield Tokenization (Pendle PT/YT), Perpetual Trading (Drift), Intent-Based Trading (CoW Protocol), Position Tracking, DeFi Monitoring
-**Researched:** 2026-02-26
-**Confidence:** HIGH (stack and architecture grounded in existing codebase + official docs; protocol specifics verified via npm registry, Etherscan, official docs)
+**Project:** WAIaaS v31.4 Hyperliquid Ecosystem Integration
+**Domain:** DeFi DEX (Perp/Spot) + Off-chain Order Signing + Sub-accounts on HyperEVM
+**Researched:** 2026-03-08
+**Confidence:** HIGH
 
 ## Executive Summary
 
-WAIaaS m29 adds advanced DeFi protocol support — lending, yield tokenization, perpetual trading, and intent-based trading — to an AI agent wallet that already has swaps, staking, and cross-chain bridging. The correct architecture extends the existing IActionProvider framework: every new protocol (Aave, Kamino, Pendle, Drift, CoW) becomes a new IActionProvider implementation that resolves to ContractCallRequest[], flows through the existing 6-stage pipeline, and is automatically exposed as MCP tools. No new pipeline variants, no new transaction types, and critically, zero new npm dependencies for EVM protocols. All EVM integrations (Aave, Morpho, Pendle, CoW) use direct ABI encoding or REST API calldata — the same pattern proven by Lido, Jupiter, 0x, and LI.FI.
+Hyperliquid 생태계 통합은 두 가지 독립적인 작업으로 구성된다. 첫째, HyperEVM (Chain ID 999/998)은 표준 EVM 체인이므로 viem 빌트인 chain export(`hyperEvm`, `hyperliquidEvmTestnet`)를 `EVM_CHAIN_MAP`에 추가하는 것만으로 기존 EVM 기능이 즉시 동작한다. 둘째, Hyperliquid L1 DEX는 온체인 트랜잭션이 아닌 EIP-712 서명 + REST API 호출 방식이므로, 기존 6-stage 파이프라인과 근본적으로 다른 실행 경로가 필요하다. 이 두 번째 부분이 이 마일스톤의 핵심 아키텍처 도전이다.
 
-The recommended delivery order is infrastructure-first: build the positions table and PositionTracker service before any protocol, then add the DeFiMonitorService (health factor / maturity / margin rules), then implement protocols in order of simplicity and TVL priority: Aave V3 (largest TVL, simplest ABI), Kamino (Solana lending parity), Pendle (fixed yield via Hosted SDK REST API), and Drift perps (most complex, requires Gateway REST API). CoW Protocol intent-based trading rounds out the feature set and requires extending IChainAdapter with EIP-712 signTypedData support. Morpho Blue is a valid addition but lower priority than Kamino for the Solana-first user base.
+권장 접근법은 외부 SDK 없이 자체 `HyperliquidExchangeClient`를 구현하는 것이다. Hyperliquid REST API는 단 2개 엔드포인트(Exchange POST, Info POST)로 단순하며, 기존 DcentSwapApiClient/ZeroExSwapClient 패턴과 동일한 구조다. 유일한 신규 의존성은 `@msgpack/msgpack`(phantom agent 서명용)이며, EIP-712 서명은 viem 내장, WebSocket은 Node 22 내장을 활용한다. 파이프라인 통합은 새로운 discriminatedUnion 타입을 추가하지 않고, `ApiDirectResult` 패턴으로 Stage 5에서 분기하여 API 직접 실행 경로를 만드는 것이 최선이다.
 
-The primary risks are operational, not architectural. Stale health factor data during volatile markets is the most dangerous failure mode — the solution is adaptive polling (5 min safe, 1 min warning, 15 sec danger, 5 sec critical) rather than a fixed interval. SQLite write contention from high-frequency position updates requires batch writes in a dedicated BackgroundWorker, never inline with the pipeline. Intent signatures require strict EIP-712 domain binding with short deadlines (2-5 minutes for AI agents) and server-side nonce tracking to prevent replay attacks. Finally, scope discipline is critical: this milestone provides DeFi execution primitives for AI agents, not a DeFi dashboard for humans. Resist impermanent loss calculators, portfolio aggregation, and yield comparison matrices — the AI agent needs structured risk assessments, not charts.
+핵심 리스크는 세 가지다: (1) L1 Action(phantom agent, chainId 1337)과 User-Signed Action(HyperliquidSignTransaction, chainId 42161/421614) 두 가지 서명 스키마 혼동, (2) msgpack 필드 순서가 해시에 영향을 주므로 공식 Python SDK 테스트 벡터로 검증 필수, (3) Sub-account가 private key 없이 master 서명으로 동작하므로 정책 엔진의 지출 한도 우회 가능성. 이 세 가지 모두 Phase 2 설계 문서에서 명확히 정의하고 Phase 3에서 테스트 벡터 기반 검증으로 예방해야 한다.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The zero-external-SDK principle established in v28.x continues to hold for all EVM protocols. Aave V3 (supply/borrow/repay/withdraw) is encoded directly against the Pool contract ABI using the same `encodeXxxCalldata()` pattern as `lido-contract.ts`. Morpho Blue follows the same approach with a 5-field MarketParams struct. Pendle uses its official Hosted SDK REST API — identical to the Jupiter/0x/LI.FI pattern that returns transaction calldata directly. CoW Protocol order signing uses `viem`'s `signTypedData()` which is already present in the daemon, plus the CoW OrderBook REST API for submission. No new npm packages are needed for any of these.
-
-The two Solana protocols are the exceptions. The `@kamino-finance/klend-sdk` v7.3.20 is incompatible with WAIaaS's `@solana/kit ^6.0.1` (the SDK requires `@solana/kit ^2.3.0` and `@coral-xyz/anchor ^0.28`). The recommended path is the Kamino REST API (if available) or manual Anchor IDL-based instruction encoding. Drift is the one unavoidable external dependency situation: `@drift-labs/sdk` (26+ transitive packages) is the only practical approach for building valid Drift instructions. The Drift Gateway REST API (`drift-labs/gateway`, a self-hosted Rust binary) is the recommended integration path — the Gateway shields `@waiaas/actions` from direct SDK coupling.
+신규 의존성은 `@msgpack/msgpack` 1개뿐이다. viem 2.21.0+에 `hyperEvm`과 `hyperliquidEvmTestnet` chain export가 빌트인되어 있어 `defineChain` 없이 바로 사용 가능하다. 외부 Hyperliquid SDK는 모두 부적합하다: `hyperliquid`(nomeida)는 ethers.js 의존성, `@nktkas/hyperliquid`는 0.x 불안정 + valibot 추가 의존성, 공식 TS SDK는 부재.
 
 **Core technologies:**
-- viem `^2.21.0` — EVM ABI encoding + EIP-712 signing; already in daemon, zero new cost
-- @solana/kit `^6.0.1` — Solana instruction building if manual encoding needed for Kamino; already present
-- Drift Gateway REST API — self-hosted Rust binary exposing `/v2/orders`, `/v2/positions`, `/v2/user/marginInfo`; avoids `@drift-labs/sdk` in monorepo
-- Pendle Hosted SDK `https://api-v2.pendle.finance/core/v2/sdk/` — REST API returning calldata, same pattern as Jupiter
-- CoW OrderBook API `https://api.cow.fi` — REST API for intent submission after EIP-712 signing
-- Drizzle ORM + SQLite — new `positions` table, DB migration v25
-
-**What not to add:**
-- `@aave/client` — peerDeps: viem + ethers + thirdweb; 4 ABI calls don't justify 3 peer deps
-- `@morpho-org/blue-sdk-viem` — peerDeps: viem + blue-sdk + morpho-ts + lodash; 5 ABI calls don't justify it
-- `@kamino-finance/klend-sdk` — `@solana/kit ^2.3.0` conflicts with our `^6.0.1`; 20+ transitive deps
-- `@drift-labs/sdk` — `@solana/web3.js 1.x` legacy (incompatible with `@solana/kit 6.x`); 26+ deps; use Gateway instead
-- `@pendle/sdk-v2` — ethers-based (not viem), beta-only releases; Pendle team recommends Hosted SDK for backends
-- `@cowprotocol/cow-sdk` — 7 sub-packages + IPFS deps for 1 signing function + 1 REST call
+- `viem hyperEvm/hyperliquidEvmTestnet` -- HyperEVM 체인 정의, viem 빌트인으로 추가 설치 불필요
+- `@msgpack/msgpack ^3.0.0` -- L1 action phantom agent 서명의 msgpack 직렬화에 필수. 0 dependencies, TypeScript 지원
+- `viem signTypedData + keccak256` -- EIP-712 서명과 해시 계산, 기존 인프라 재활용
+- `Node 22 native WebSocket` -- 실시간 구독(향후), 추가 라이브러리 불필요
 
 ### Expected Features
 
 **Must have (table stakes):**
-- Aave V3 supply, borrow, repay, withdraw (EVM) — largest lending protocol by TVL; foundation for health factor monitoring
-- Health factor query per lending position — without this, agent operates blind; prerequisite for safe autonomous borrowing
-- PositionTracker service + `positions` DB table — unified position state across all protocols, survives daemon restarts
-- DeFiMonitorService with HealthFactorRule, MaturityRule, MarginRule — the critical safety layer for autonomous agents
-- Notification events for liquidation risk, maturity approaching, margin warning — routes to existing 4-channel pipeline
-- GET /v1/positions REST endpoint + `list_positions` MCP tool — agent API surface for position awareness
-- Kamino lending supply/borrow (Solana) — Solana lending parity with EVM
-- CONTRACT_WHITELIST and SPENDING_LIMIT policy integration for all new protocols
+- Perp Trading: Market/Limit/Stop-Loss/Take-Profit 주문, 포지션/마진/마켓 조회, 레버리지 설정, 주문 취소/상태 조회
+- Spot Trading: Market/Limit 주문, Spot 잔액 조회, Spot-Perp 잔액 이동
+- Account State: 통합 잔액 조회, 오픈 주문 조회, 거래 이력 조회
+- HyperEVM Chain: Mainnet/Testnet 체인 등록 (기존 EVM 기능 자동 호환)
 
-**Should have (competitive):**
-- Pendle PT buy/sell/redeem (fixed yield, EVM) — uniquely valuable for AI treasury management; no competitor offers this
-- Drift perp open/close/query (Solana) — hedging and leveraged speculation via Gateway REST API
-- CoW Protocol EIP-712 intent signing (MEV protection) — differentiator over direct 0x swaps
-- EIP-712 `signTypedData()` extension to IChainAdapter + EvmAdapter
-- Proactive auto-repay on HF critical threshold — "AI agent safety net" feature
-- Admin UI DeFi positions panel (Phase 2 / later milestone)
+**Should have (differentiators):**
+- TWAP 주문 -- 대량 주문 분할 실행, AI 에이전트에 유용
+- Sub-account 관리 -- 전략별 자금 격리, AI 에이전트 격리
+- Dead Man's Switch -- 연결 끊김 시 자동 주문 취소 안전장치
+- 주문 수정 (Modify) -- 취소/재주문 없이 원자적 수정
 
-**Defer (v2+ or later phases):**
-- Morpho Blue isolated market lending — valid but Kamino is higher priority for Solana user base
-- Cross-protocol position dashboard with historical charts — AI agents need structured assessments, not charts
-- Automated yield farming / LP management — 10x scope, impermanent loss complexity
-- Custom liquidation bot — MEV extraction role, ethical concerns, out of scope
-- Advanced perp strategies (grid trading, basis trading, funding rate arbitrage) — agent application logic, not wallet infrastructure
-- Flash loan strategies — separate milestone with dedicated risk analysis
+**Defer (v2+):**
+- WebSocket 실시간 구독 -- REST polling으로 충분, 복잡도 급증
+- Vault 운용 -- WAIaaS 개별 월렛 모델과 불일치
+- Portfolio Margin -- Pre-alpha 상태, 불안정
+- Staking/Delegation -- 별도 도메인
+- HyperEVM 스마트 컨트랙트 DEX 연동 -- 범위 초과
 
 ### Architecture Approach
 
-All new protocols plug into the existing IActionProvider framework without modifications to the 6-stage pipeline, policy engine, or signing infrastructure. The key architecture addition is the `positions` table (DB v25 migration) with a dedicated `PositionTracker` BackgroundWorker — separate from AsyncPollingService, which handles finite transaction lifecycles, not perpetual position monitoring. The `DeFiMonitorService` is a single BackgroundWorker with pluggable `IDeFiMonitorRule` implementations (HealthFactorRule, MaturityRule, MarginRule), feeding into the existing NotificationService. Intent-based protocols (CoW) require adding an optional `resolveIntent()` method to IActionProvider and `signTypedData()` to IChainAdapter, extending the existing sign-only pipeline variant.
+핵심 설계 결정은 `ApiDirectResult` 패턴 도입이다. 새로운 discriminatedUnion 타입을 추가하면 수백 개 파일에 영향이 가므로, 대신 `IActionProvider.resolve()`가 `ContractCallRequest` 대신 `ApiDirectResult`를 반환할 수 있게 확장한다. Stage 1-4(Validate/Auth/Policy/Delay)는 그대로 실행하되, Stage 5에서 `ApiDirectResult` 여부를 확인하여 온체인 실행 대신 API 응답을 DB에 기록한다. Provider는 `requiresSigningKey: true`를 선언하여 Stage 4 이후 복호화된 private key를 받아 EIP-712 서명 + API 제출을 원자적으로 수행한다.
 
 **Major components:**
-1. **AaveLendingActionProvider** (packages/actions) — IActionProvider impl; direct ABI encoding for supply/borrow/repay/withdraw; produces ContractCallRequest[]
-2. **KaminoLendingActionProvider** (packages/actions) — Solana lending via REST API or manual instruction encoding; same IActionProvider contract
-3. **PendleYieldActionProvider** (packages/actions) — Hosted SDK REST API (calldata pattern identical to Jupiter); IActionProvider impl
-4. **DriftPerpActionProvider** (packages/actions) — Drift Gateway REST API; IActionProvider impl; avoids direct SDK
-5. **CoWIntentActionProvider** (packages/actions) — EIP-712 signing + OrderBook API; extends IActionProvider with optional `resolveIntent()`
-6. **IPositionReader** (packages/core) — new interface for reading on-chain position state, implemented per-protocol alongside each ActionProvider
-7. **PositionTracker** (packages/daemon) — BackgroundWorker; polls OPEN positions, calls IPositionReader, updates positions table; adaptive polling frequency based on risk_score
-8. **DeFiMonitorService** (packages/daemon) — BackgroundWorker; evaluates IDeFiMonitorRule instances per position snapshot; emits DeFi alerts via existing NotificationService
-9. **positions table** (DB v25 migration) — UUIDv7 PK, wallet_id FK, protocol, position_type, status, metrics (JSON), risk_score, lifecycle timestamps
-
-**Key patterns to follow:**
-- One ActionProvider per protocol (consistent with Jupiter/0x/LiFi/Lido/Jito separation)
-- ABI encoding in dedicated module (like `lido-contract.ts` — keep encoding functions separate from provider class)
-- PositionReader separate from ActionProvider (reads = different lifecycle from writes)
-- Metrics as JSON in DB (flexible blob like `bridgeMetadata`, not per-metric columns)
-- Max 6 new notification event types (hierarchical POSITION_WARNING / POSITION_CRITICAL pattern, not per-state-per-protocol)
+1. `HyperliquidExchangeClient` -- Exchange/Info REST API 래퍼, 가중치 기반 rate limiting (1200 weight/min)
+2. `HyperliquidSigner` -- L1 Action phantom agent 서명 + User-Signed Action 서명 (두 스키마 명확 분리)
+3. `HyperliquidPerpProvider` -- IPerpProvider 구현 (open/close/modify/leverage/cancel, riskLevel/defaultTier 선언)
+4. `HyperliquidSpotProvider` -- IActionProvider 구현 (spot buy/sell/cancel, asset index 10000+ 규칙)
+5. `HyperliquidMarketData` -- Info API 기반 마켓/포지션/주문/펀딩레이트 조회
+6. `HyperliquidSubAccountService` -- Sub-account CRUD + 내부 이체, vaultAddress 전파
 
 ### Critical Pitfalls
 
-1. **Stale health factor data during volatile markets (C1)** — Never cache HF as a single value; implement adaptive polling (5 min safe, 1 min warning, 15 sec danger, 5 sec critical); always use on-chain `getUserAccountData()` as authoritative source; include `positionLastSyncedAt` in every API response.
-
-2. **SQLite write contention from position tracking (C2)** — Position updates must be batched in a single transaction per polling cycle from a dedicated BackgroundWorker; never update positions inline with the pipeline; monitor p99 write duration; consider a separate SQLite file for positions if contention is measurable.
-
-3. **Intent signature replay / cross-chain replay (C3)** — Every EIP-712 intent must include `chainId`, `verifyingContract`, `nonce` (server-side monotonic counter per wallet+chain), and `deadline` (max 5 minutes for AI agents); enforce chain match before accessing private key.
-
-4. **Liquidation alert arrives after liquidation occurs (C4)** — Set aggressive thresholds (WARNING at HF < 1.5, CRITICAL at HF < 1.3); implement auto-repay for autonomous agents at configurable threshold; never document this as "liquidation protection" — it is best-effort monitoring.
-
-5. **Over-engineering for human users instead of AI agents (C5)** — Design API responses for AI consumption first: `{ healthFactor, risk, suggestedAction, liquidationPrice }` — not raw position data. Admin UI position panel is Phase 2. No historical data in Phase 1. Maximum 15 fields per endpoint.
+1. **두 가지 서명 스키마 혼동** -- `HyperliquidSigner`에 `signL1Action()`과 `signUserSignedAction()` 두 메서드를 명확히 분리. Python SDK `signing_test.py` 테스트 벡터로 바이트 단위 검증
+2. **API 거래를 6-stage 파이프라인에 강제 삽입** -- `ApiDirectResult` 패턴으로 Stage 5에서 분기. 새 discriminatedUnion 타입 추가 금지. `if (isHyperliquid)` 분기가 stage 내부에 나타나면 설계 오류
+3. **Nonce 밀리초 타임스탬프 충돌** -- `Date.now()` + monotonic counter로 burst 시 충돌 방지. 100개 최고 nonce 윈도우 인지. Sub-account별 별도 API wallet 사용
+4. **Sub-account 보안: 정책 우회 가능** -- Sub-account 간 이체를 정책 엔진에서 별도 스코프로 평가. Default-deny. 감사 로그에 `HYPERLIQUID_SUBACCOUNT_TRANSFER` 이벤트 기록
+5. **msgpack 필드 순서 민감성** -- 정규 필드 순서 배열 정의 후 순회하며 객체 생성. trailing zeros 제거, 주소 소문자화 필수. Python SDK 참조 구현과 바이트 단위 비교
 
 ## Implications for Roadmap
 
-Based on research, the build order must be infrastructure-first. No protocol implementation starts until position tracking infrastructure is ready, and no protocol is production-ready without the monitoring service active.
+### Phase 1: HyperEVM 체인 등록
+**Rationale:** 독립적이고 복잡도 최소. `EVM_CHAIN_MAP` + `NETWORK_TYPES` 추가만으로 완료. 나머지 Phase의 네트워크 전제 조건
+**Delivers:** HyperEVM Mainnet(999)/Testnet(998) 체인 지원, 네이티브 토큰 HYPE, 기존 EVM 기능(전송, 토큰, 컨트랙트) 즉시 활용
+**Addresses:** HyperEVM Chain table stakes (체인 등록, 기존 EVM 기능 호환)
+**Avoids:** Pitfall 9 (testnet/mainnet 엔드포인트 혼동) -- 네트워크별 API endpoint 설정 분리, Pitfall 13 (HyperEVM RPC vs L1 API rate limit 혼동) -- 별도 rate limiter 구조
 
-### Phase 1: Position Infrastructure (Foundation)
+### Phase 2: 설계 문서 (Hyperliquid DEX 아키텍처 확정)
+**Rationale:** Pitfall 1(서명 스키마), 2(파이프라인 통합), 4(Sub-account 보안), 8(정책 엔진)이 모두 설계 단계에서 해결해야 할 아키텍처 결정. 구현 전 반드시 확정 필요
+**Delivers:** ApiDirectResult 인터페이스 정의, 파이프라인 Stage 5 분기 설계, EIP-712 두 서명 스키마 상세, Sub-account-to-wallet 매핑 모델, 정책 엔진 적용 규칙 (margin vs notional), DB v51-52 스키마, API wallet 라이프사이클 전략
+**Uses:** STACK.md의 EIP-712 서명 구성(L1 domain chainId 1337, user-signed domain chainId 42161/421614)
+**Implements:** IActionProvider.resolve() 반환 타입 확장 설계, HyperliquidSigner 두 스키마 분리 설계, requiresSigningKey 패턴 설계
 
-**Rationale:** All 5 new providers depend on the positions table and PositionTracker. Building this first means every subsequent protocol gets monitoring for free immediately upon integration. Building protocols before this foundation would require retrofitting — the riskiest implementation pattern.
-**Delivers:** `positions` table (DB v25 migration), IPositionReader interface in packages/core, PositionTracker BackgroundWorker in packages/daemon, DeFiPositionEvent in EventBus, GET /v1/positions REST endpoints, `list_positions` MCP tool.
-**Avoids:** C2 (SQLite contention — batch write design established from day 1), M2 (AsyncPollingService overload — dedicated worker pattern, not reusing AsyncPollingService), N1 (migration complexity — single-purpose v25 migration, no combined schema changes).
+### Phase 3: Core Infrastructure + Perp Trading
+**Rationale:** 모든 공유 인프라(ExchangeClient, Signer, MarketData, ApiDirectResult)와 핵심 MVP(Perp)를 함께 구현. Spot/Sub-account의 전제 조건. 분할 불가 -- 인프라만으로는 의미 있는 테스트 불가능
+**Delivers:** HyperliquidExchangeClient(rate limiter 포함), HyperliquidSigner(phantom agent + user-signed), HyperliquidMarketData, ApiDirectResult 인터페이스 + ActionProviderRegistry 업데이트 + Stage 5 분기, DB v51(hyperliquid_orders), HyperliquidPerpProvider(Market/Limit/SL/TP/cancel/modify/leverage), MCP 도구 + SDK 메서드 자동 생성, Admin Settings 7개
+**Addresses:** Perp Trading table stakes 전체, Account State table stakes
+**Avoids:** Pitfall 1(서명 스키마 분리), Pitfall 3(HyperliquidNonceManager), Pitfall 5(가중치 기반 rate limiter), Pitfall 10(msgpack 필드 순서 -- 정규 배열 + 테스트 벡터)
 
-### Phase 2: DeFi Monitor Service
+### Phase 4: Spot Trading
+**Rationale:** Phase 3의 ExchangeClient/Signer/orders 테이블 재활용. Perp와 코드 공유 높음 (같은 `action: "order"` 구조, asset index만 다름). Phase 5와 병렬 가능
+**Delivers:** HyperliquidSpotProvider(Market/Limit buy/sell, cancel), Spot 잔액 조회(spotClearinghouseState), Spot-Perp 잔액 이동(usdClassTransfer), Spot 마켓 정보(spotMeta), MCP 도구 + SDK 메서드
+**Addresses:** Spot Trading table stakes 전체
 
-**Rationale:** Build the monitoring rules engine before any protocol so that when protocols are added in subsequent phases, monitoring is immediately operational. Testing health factor rules, maturity rules, and margin rules without real positions is straightforward using MockPositionProvider. Adding monitoring after protocols means retrofitting — historically the riskiest approach.
-**Delivers:** DeFiMonitorService (BackgroundWorker), IDeFiMonitorRule interface, HealthFactorRule + MaturityRule + MarginRule, 6 DEFI_* notification event types, Admin Settings for thresholds.
-**Avoids:** C4 (liquidation timing — aggressive thresholds established in monitor design), M6 (event type explosion — hierarchical event pattern, max 6 types), M1 (resource exhaustion — adaptive polling interval logic built once, shared by all monitors).
-**Uses:** existing NotificationService, existing EVENT_CATEGORY_MAP extension pattern, existing BackgroundWorkers framework.
+### Phase 5: Sub-account 관리
+**Rationale:** Phase 3에 의존하나 Phase 4와 병렬 가능. Sub-account 보안 설계(Phase 2)가 전제. 독립적인 DB 마이그레이션(v52)
+**Delivers:** DB v52(hyperliquid_sub_accounts), HyperliquidSubAccountService(create/list/transfer), vaultAddress 전파(Signer/ExchangeClient), Sub-account별 포지션/잔액 조회, per-sub-account API wallet 생성(nonce 충돌 방지), MCP 도구 + SDK 메서드
+**Addresses:** Sub-account differentiators 전체
+**Avoids:** Pitfall 4(Sub-account 보안 -- 정책 스코프 분리, default-deny 이체), Pitfall 3(Sub-account별 nonce 분리 -- 별도 API wallet)
 
-### Phase 3: Aave V3 Lending (EVM)
-
-**Rationale:** Largest DeFi TVL category ($35B+). Simplest integration (4 ABI-encoded calls, zero new deps). Establishes the lending provider pattern reused by Kamino and Morpho. Health factor monitoring becomes immediately operational via Phase 2's DeFiMonitorService.
-**Delivers:** AaveLendingActionProvider (supply/borrow/repay/withdraw), AavePositionReader, aave-contracts.ts ABI encodings, per-chain Pool address config, CONTRACT_WHITELIST + SPENDING_LIMIT integration, MCP tools auto-generated via mcpExpose=true.
-**Avoids:** C1 (stale data — AavePositionReader uses `getUserAccountData()` directly, tiered polling from Phase 2), C5 (over-engineering — 4 actions only, 3 query methods max).
-**Implements:** Pattern to be reused for all subsequent lending providers.
-
-### Phase 4: Kamino Lending (Solana)
-
-**Rationale:** Solana lending parity with EVM. Reuses the ILendingProvider action pattern established in Phase 3. Kamino is Solana's dominant lending protocol. The DeFiMonitorService extends to Kamino health monitoring via obligation account calculation.
-**Delivers:** KaminoLendingActionProvider (supply/borrow/repay/withdraw), KaminoPositionReader, DeFiMonitorService extension for Kamino HF via obligation account.
-**Avoids:** N4 (Solana program incompatibility — reuses existing instructionData + accounts pattern from Jupiter/Jito), dependency conflict with @kamino-finance/klend-sdk.
-**Research flag:** Verify Kamino REST API availability and response format before implementation begins. If unavailable, assess Anchor IDL-based instruction encoding complexity and timeline impact.
-
-### Phase 5: Pendle Yield Tokenization (EVM)
-
-**Rationale:** Fixed yield is uniquely valuable for AI agents managing treasury (predictable returns, principal protected at maturity). Lower risk than perps. Integration is straightforward — Hosted SDK REST API follows the exact Jupiter/LI.FI calldata pattern. Maturity tracking extends DeFiMonitorService's MaturityRule built in Phase 2.
-**Delivers:** PendleYieldActionProvider (buy PT / sell PT / buy YT / redeem at maturity), PendlePositionReader, market discovery API integration, PT_MATURITY_APPROACHING notifications via existing DeFiMonitorService.
-**Avoids:** M4 (lock-up mismanagement — `earliestWithdrawAt` mandatory in position metadata from deposit result), M7 (IActionProvider strain — Pendle Hosted SDK returns calldata directly, no interface extension needed).
-**Standard patterns:** REST API + calldata pattern well-established; research phase not needed.
-
-### Phase 6: Drift Perpetual Trading (Solana)
-
-**Rationale:** Highest complexity and highest risk — deferred until phases 1-5 are stable. Requires Drift Gateway REST API (self-hosted Rust binary). New MAX_LEVERAGE policy type needed. MarginRule from Phase 2 becomes active for Drift positions automatically.
-**Delivers:** DriftPerpActionProvider (open/close position, place orders, query PnL/margin), DriftPositionReader, MarginRule integration, DEFI_MARGIN_WARNING / DEFI_MARGIN_CRITICAL notifications, MAX_LEVERAGE PolicyType.
-**Avoids:** M5 (funding rate blindness — cumulative funding cost tracked in position metadata per polling cycle), M3 (policy explosion — only 1 new PolicyType: MAX_LEVERAGE), N3 (scope creep — no solver network, no grid trading, no market making).
-**Research flag:** Evaluate Drift Gateway self-hosting requirements (Docker image, binary release, config format) and confirm API endpoint surface matches expected contract (`POST /v2/orders`, `GET /v2/positions`, `GET /v2/user/marginInfo`).
-
-### Phase 7: CoW Protocol Intent Trading (EVM)
-
-**Rationale:** Intent-based MEV protection is a differentiator over 0x swaps. Deferred last because it requires extending IActionProvider with optional `resolveIntent()` and IChainAdapter with `signTypedData()` — interface-level changes that affect all providers and must not create churn during other protocol implementations. Phase 7 allows these interfaces to stabilize after concrete usage in phases 3-6.
-**Delivers:** CoWIntentActionProvider, EIP-712 order signing, CoW OrderBook API submission, intent nonce tracking table, `resolveIntent()` extension to IActionProvider, `signTypedData()` on IChainAdapter + EvmAdapter.
-**Avoids:** C3 (replay attacks — short deadlines, server-side nonces, chainId enforcement before key access), N3 (scope creep — sign and submit only, no solver implementation, no keeper network).
-**Research flag:** Verify CoW API order status polling semantics and settlement timeline; confirm EIP-712 domain parameters for each supported chain (Ethereum, Arbitrum, Base).
-
-### Phase 8: Admin UI DeFi Panel + DX Polish
-
-**Rationale:** Admin UI for DeFi positions is explicitly Phase 2 in scope (enforcing C5 prevention — AI agents use API, humans use Admin UI later). All AI agent needs are served by the API and MCP tools delivered in phases 1-7. This phase adds operator visibility and DX completeness.
-**Delivers:** DeFi positions viewer in Admin UI, position detail modal with risk score, monitor threshold settings UI, `defi.skill.md` skill file (new domain), updates to wallet.skill.md and transactions.skill.md, MCP tool updates.
-**Avoids:** C5 (over-engineering — human UI follows AI API, not the other way around).
+### Phase 6: Admin UI + 통합 완성
+**Rationale:** Phase 3-5 완료 후 운영 가시성 및 DX 마무리. AI 에이전트 API는 이미 Phase 3-5에서 완성
+**Delivers:** Admin UI Hyperliquid 포지션/주문 대시보드, Sub-account 관리 뷰, Skill files 업데이트(transactions.skill.md, admin.skill.md), connect-info `hyperliquid` capability
 
 ### Phase Ordering Rationale
 
-- Infrastructure before protocols (phases 1-2) ensures every protocol gets monitoring automatically — no retrofitting
-- Aave before Kamino (phase 3 before 4) because Aave establishes the lending provider pattern with zero dependencies, making it the safest first protocol implementation
-- Pendle before Drift (phase 5 before 6) because Pendle is simpler (REST calldata pattern, no external deps) and lower risk (no leverage), building confidence before the most complex integration
-- CoW Protocol last among protocol phases (phase 7) because its interface changes (`resolveIntent`, `signTypedData`) must not create churn during other protocol implementations
-- Admin UI last (phase 8) enforcing the AI-agent-first design principle from PITFALLS.md C5
+- Phase 1은 독립적이며 나머지 Phase의 네트워크 전제 조건. 빌트인 프리셋(v28.8 패턴) 추가만으로 완료
+- Phase 2는 Pitfall 1, 2, 4, 8의 아키텍처 결정을 구현 전에 확정하기 위해 반드시 Phase 3 전에 수행. ApiDirectResult는 WAIaaS에 신규 패턴이므로 설계 문서 필수
+- Phase 3이 가장 크지만 분할 불가 -- ExchangeClient/Signer/MarketData/ApiDirectResult가 모두 PerpProvider와 결합되어야 end-to-end 테스트 가능
+- Phase 4와 5는 Phase 3의 공유 인프라에만 의존하므로 병렬 가능. Spot은 Perp와 코드 공유가 높고, Sub-account는 별도 DB 스키마
+- Phase 6은 모든 기능이 완료된 후 UI/DX 통합. AI 에이전트 우선 설계 원칙 준수
 
 ### Research Flags
 
-Phases needing deeper research before planning begins:
+Phases likely needing deeper research during planning:
+- **Phase 2 (설계):** ApiDirectResult 패턴의 기존 파이프라인 영향 범위 분석 필요. `ActionProviderRegistry.resolveAction()` 호출 경로와 `stages.ts` Stage 5 정확한 분기 지점 코드 리딩 필수
+- **Phase 3 (Perp):** phantom agent msgpack 직렬화의 정확한 필드 순서를 Python SDK `signing.py`에서 추출 필요. 테스트넷에서 실제 서명 검증 필수 (`api.hyperliquid-testnet.xyz`)
+- **Phase 5 (Sub-account):** Sub-account 생성의 거래량 요건($100K)이 testnet에도 적용되는지 확인 필요. Account Abstraction 모드별 API 응답 구조 차이 확인
 
-- **Phase 4 (Kamino):** Verify REST API availability and endpoint contract. If the Kamino REST API does not return transaction instructions (analogous to Jupiter's `/swap-instructions`), the fallback is manual Anchor IDL-based instruction encoding — a significantly more complex approach that needs dedicated planning.
-- **Phase 6 (Drift):** Evaluate Drift Gateway self-hosting requirements — Docker image availability, binary release cadence, configuration format, operator burden. Determine whether WAIaaS (a) requires operators to run the gateway externally, (b) bundles the gateway as a Docker Compose sidecar, or (c) defers Drift until a simpler integration path exists.
-- **Phase 7 (CoW):** Verify EIP-712 domain parameters and nonce schema per supported chain; confirm order status polling semantics (solver settlement latency, timeout behavior, partial fill handling).
-
-Phases with standard patterns (research phase not needed):
-
-- **Phase 1 (Infrastructure):** SQLite + Drizzle migration patterns are well-established in WAIaaS (v24 migrations, MIG-01~06 strategy)
-- **Phase 2 (Monitor Service):** Follows existing BalanceMonitorService and IncomingTxMonitorService BackgroundWorker patterns exactly
-- **Phase 3 (Aave V3):** Direct ABI encoding pattern fully proven by LidoStakingActionProvider; function signatures verified against Etherscan; 4 functions only
-- **Phase 5 (Pendle):** Hosted SDK REST API follows Jupiter/0x/LI.FI calldata pattern exactly; no novel integration patterns
-- **Phase 8 (Admin UI):** Admin UI component patterns well-established across v1.3.2, v2.3, v27.4 milestones
+Phases with standard patterns (skip research-phase):
+- **Phase 1 (HyperEVM 체인):** viem chain export 확인 완료 (GitHub 소스). EVM_CHAIN_MAP 추가만으로 완료. 기존 v28.8 빌트인 프리셋 패턴 그대로
+- **Phase 4 (Spot):** Phase 3의 ExchangeClient 재활용. Spot asset index 규칙(10000+)만 적용. 기존 Perp 주문 코드와 거의 동일 구조
+- **Phase 6 (Admin UI):** 기존 Admin UI 패턴 그대로. 신규 아키텍처 결정 불필요
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Zero new deps for EVM protocols verified against npm registry. Drift Gateway approach is MEDIUM — depends on self-hosting viability and endpoint contract match. |
-| Features | HIGH | Protocol docs verified (Aave, Morpho, Pendle, CoW via official sources + Etherscan). Drift feature set MEDIUM — Gateway API surface needs pre-implementation verification. Kamino MEDIUM — REST API availability unconfirmed. |
-| Architecture | HIGH | Grounded in deep codebase analysis of all 5 existing providers, 17-table DB schema, 6-stage pipeline, 3 existing BackgroundWorkers, and existing AsyncPollingService pattern. |
-| Pitfalls | HIGH (system) / MEDIUM (DeFi-specific) | System-level pitfalls (SQLite contention, EventBus limits, RPC budget, BackgroundWorker accumulation) verified from codebase. DeFi-specific pitfalls (liquidation timing, funding rate compounding) from research + community sources. |
+| Stack | HIGH | viem chain export GitHub 소스 확인, 외부 SDK 3개 비교 분석 완료, 신규 의존성 @msgpack/msgpack 1개만. 기존 인프라 재활용률 높음 |
+| Features | HIGH | Hyperliquid 공식 gitbook 전체 API 문서 기반. 모든 Exchange/Info action type 검증. Rate limit 가중치 시스템 상세 문서화 확인 |
+| Architecture | MEDIUM | ApiDirectResult 패턴은 WAIaaS에 신규 개념 -- IActionProvider.resolve() 반환 타입 확장과 Stage 5 분기가 기존 코드베이스에 미치는 영향 범위 검증 필요 |
+| Pitfalls | HIGH | 공식 서명 문서, Python SDK signing.py/signing_test.py, Chainstack/Turnkey 서드파티 구현 사례에서 교차 검증. 14개 pitfall 도출 |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Kamino REST API availability:** STACK.md recommends REST API as primary integration path, but the endpoint contract has not been fully verified. Before Phase 4 planning, confirm that Kamino exposes a REST endpoint returning transaction instructions analogous to Jupiter's `/swap-instructions`. If unavailable, the fallback (manual Anchor IDL instruction encoding) is significantly more complex and needs its own research sprint.
-
-- **Drift Gateway hosting model:** The integration depends on operators providing a self-hosted Drift Gateway instance (Rust binary). This adds operational complexity. The milestone planning must commit to one of: (a) external operator-provided gateway, (b) Docker Compose sidecar bundled with WAIaaS, (c) defer Drift. This is a product decision, not a technical one.
-
-- **Table naming inconsistency:** STACK.md calls the new table `defi_positions` while ARCHITECTURE.md calls it `positions`. The planning phase must canonicalize the name before the migration is written. Recommendation: `defi_positions` (more specific, avoids collision risk with future non-DeFi position tracking).
-
-- **New PolicyType count:** PITFALLS.md M3 recommends max 2 new PolicyTypes for the entire DeFi expansion. FEATURES.md suggests MAX_LEVERAGE and MAX_BORROW_UTILIZATION. The planning phase must commit to exactly which PolicyTypes are added (suggestion: MAX_LEVERAGE only in Phase 6, MAX_BORROW_UTILIZATION deferred) and which controls move to Admin Settings as provider-level configuration.
-
-- **Intent nonce table:** PITFALLS.md C3 recommends server-side nonce tracking via an `intent_nonces` table. This is a new DB table not reflected in the positions table design. Include in either the Phase 1 positions migration (as a separate table) or Phase 7 CoW migration.
+- **ApiDirectResult 파이프라인 통합 상세:** `ActionProviderRegistry`와 `stages.ts`의 정확한 분기 지점은 Phase 2 설계 시 코드 리딩으로 확정. 특히 `requiresSigningKey` 패턴이 기존 key decryption 흐름과 어떻게 결합되는지 상세 설계 필요
+- **Python SDK 테스트 벡터 추출:** phantom agent 서명의 정확한 입출력 매핑(action -> msgpack bytes -> keccak256 -> connectionId -> EIP-712 signature)은 Phase 3 구현 시 `signing_test.py`에서 직접 포팅. 구현 전 테스트 벡터 확보 우선
+- **Sub-account 생성 요건:** testnet에서의 $100K 거래량 요건 적용 여부 -- Phase 5 착수 전 testnet 실제 호출로 확인
+- **Account Abstraction 모드별 API 응답 차이:** Unified 모드에서 spotClearinghouseState 응답 구조가 Standard 모드와 다른지 -- Phase 4 설계 시 확인
+- **정책 엔진 적용 기준:** SPENDING_LIMIT가 margin 금액에 적용되는지 notional value(size * price)에 적용되는지 -- Phase 2 설계에서 결정. 레버리지 거래는 margin 기준 권장 (실제 위험 노출 금액)
+- **WebSocket 도입 시점:** 초기 구현은 REST polling으로 충분하나, 주문 상태 동기화 지연이 UX 문제가 될 경우 Phase 3 내에서 선택적 도입 검토. 1000 구독 제한과 30 connections/min 제한 인지
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- [Aave V3 Pool Contract Docs](https://aave.com/docs/aave-v3/smart-contracts/pool) — supply/borrow/repay/withdraw ABI signatures
-- [Aave V3 Pool on Etherscan](https://etherscan.io/address/0x87870bca3f3fd6335c3f4ce8392d69350b4fa4e2) — ABI and address verification
-- [Morpho Blue Solidity Source](https://github.com/morpho-org/morpho-blue/blob/main/src/Morpho.sol) — MarketParams struct, function signatures
-- [Pendle Hosted SDK Docs](https://docs.pendle.finance/pendle-v2/Developers/Backend/HostedSdk) — REST API endpoint, calldata response pattern
-- [CoW Protocol Signing Schemes](https://docs.cow.fi/cow-protocol/reference/core/signing-schemes) — EIP-712 domain parameters per chain
-- [CoW GPv2Order.sol](https://github.com/cowprotocol/contracts/blob/main/src/contracts/libraries/GPv2Order.sol) — 12-field order struct
-- [viem signTypedData](https://viem.sh/docs/accounts/local/signTypedData) — EIP-712 signing via existing viem dependency
-- WAIaaS codebase: `packages/actions/src/providers/lido-staking/` — ABI encoding pattern (directly applicable to Aave)
-- WAIaaS codebase: `packages/actions/src/providers/lifi/` — REST calldata pattern (directly applicable to Pendle)
-- WAIaaS codebase: `packages/daemon/src/services/monitoring/balance-monitor-service.ts` — BackgroundWorker pattern for DeFiMonitorService
-- WAIaaS codebase: `packages/daemon/src/lifecycle/workers.ts` — BackgroundWorkers framework
-- WAIaaS codebase: `packages/daemon/src/infrastructure/database/schema.ts` — 17-table schema baseline for v25 migration
+- [Hyperliquid Exchange Endpoint Docs](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/exchange-endpoint) -- 전체 action type, 서명 요구사항
+- [Hyperliquid Info Endpoint Docs](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint) -- 조회 API 전체
+- [Hyperliquid Signing Docs](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/signing) -- 두 서명 스키마, 필드 순서 주의사항
+- [Hyperliquid Rate Limits](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/rate-limits-and-user-limits) -- 가중치 기반 rate limit 상세
+- [Hyperliquid Nonces and API Wallets](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/nonces-and-api-wallets) -- Nonce 형식(ms timestamp), 100개 윈도우, API wallet 제한
+- [Hyperliquid Python SDK signing.py](https://github.com/hyperliquid-dex/hyperliquid-python-sdk/blob/master/hyperliquid/utils/signing.py) -- 공식 참조 구현
+- [Hyperliquid Python SDK signing_test.py](https://github.com/hyperliquid-dex/hyperliquid-python-sdk/blob/master/tests/signing_test.py) -- 서명 테스트 벡터
+- [viem chains index.ts](https://github.com/wevm/viem/blob/main/src/chains/index.ts) -- hyperEvm, hyperliquidEvmTestnet export 확인
+- WAIaaS codebase: `packages/actions/src/providers/drift/` -- IPerpProvider 패턴 (Hyperliquid Perp 참조 구조)
+- WAIaaS codebase: `packages/core/src/interfaces/action-provider.types.ts` -- IActionProvider.resolve() 계약
+- WAIaaS codebase: `packages/daemon/src/pipeline/stages.ts` -- 6-stage pipeline, Stage 5 분기 대상
 
 ### Secondary (MEDIUM confidence)
-- [Drift Gateway GitHub](https://github.com/drift-labs/gateway) — REST endpoint list; self-hosting model requires operator evaluation
-- [Kamino Developer Docs](https://docs.kamino.finance/) — klend-sdk entry point; REST API availability unconfirmed
-- [Kamino klend-sdk on npm](https://www.npmjs.com/package/@kamino-finance/klend-sdk) — dependency analysis (version conflicts confirmed HIGH)
-- [Drift SDK on npm](https://www.npmjs.com/package/@drift-labs/sdk) — 26+ transitive deps, @solana/web3.js 1.x conflict confirmed HIGH
-- [EIP-712 implementation issues](https://www.coinspect.com/blog/chainid-eip-712-implementation-issue/) — replay attack research (40+ wallets affected)
-- [AI agent DeFi trading incident ($450K)](https://www.cryptotimes.io/2026/02/23/ai-agent-accidentally-sends-450k-sparks-autonomous-trading-debate/) — autonomous agent risk validation
+- [Chainstack Hyperliquid Auth Guide](https://docs.chainstack.com/docs/hyperliquid-authentication-guide) -- EIP-712 domain 파라미터 교차 확인
+- [Turnkey x Hyperliquid EIP-712](https://www.turnkey.com/blog/hyperliquid-secure-eip-712-signing) -- 서드파티 EIP-712 구현 사례, domain 파라미터 확인
+- [DeepWiki nomeida/hyperliquid Auth](https://deepwiki.com/nomeida/hyperliquid/6.1-authentication-and-signing) -- phantom agent 구조 분석
+- [Chainstack: Hyperliquid Sub-accounts](https://docs.chainstack.com/reference/hyperliquid-info-subaccounts) -- Sub-account API 참조
 
 ### Tertiary (LOW confidence)
-- [Kamino V2 Modular Lending architecture](https://docs.kamino.finance/) — V2 changes may affect integration surface; verify during Phase 4 planning
-- [Pendle Solana expansion](https://blockworks.co/news/pendle-2025-outlook) — PT-only via CCIP bridge, not full Pendle protocol on Solana
-- [CoW Protocol Solana/Cosmos expansion plans](https://coinmarketcap.com/cmc-ai/cow-protocol/latest-updates/) — future roadmap, not relevant to current implementation scope
+- [@nktkas/hyperliquid npm](https://www.npmjs.com/package/@nktkas/hyperliquid) -- 커뮤니티 SDK 비교 참고 (0.x 불안정)
+- [hyperliquid npm (nomeida)](https://www.npmjs.com/package/hyperliquid) -- 커뮤니티 SDK 비교 참고 (ethers.js 의존성)
 
 ---
-*Research completed: 2026-02-26*
+*Research completed: 2026-03-08*
 *Ready for roadmap: yes*

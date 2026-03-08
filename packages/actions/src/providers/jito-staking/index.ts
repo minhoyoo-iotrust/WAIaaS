@@ -57,6 +57,7 @@ export class JitoStakingActionProvider implements IActionProvider {
       mcpExpose: true,
       requiresApiKey: false,
       requiredApis: [],
+      requiresSigningKey: false,
     };
 
     this.actions = [

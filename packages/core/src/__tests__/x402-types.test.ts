@@ -15,12 +15,12 @@ import {
 } from '../index.js';
 
 describe('CAIP-2 Mapping', () => {
-  it('CAIP2_TO_NETWORK has 13 entries', () => {
-    expect(Object.keys(CAIP2_TO_NETWORK)).toHaveLength(13);
+  it('CAIP2_TO_NETWORK has 15 entries', () => {
+    expect(Object.keys(CAIP2_TO_NETWORK)).toHaveLength(15);
   });
 
-  it('NETWORK_TO_CAIP2 has 13 entries', () => {
-    expect(Object.keys(NETWORK_TO_CAIP2)).toHaveLength(13);
+  it('NETWORK_TO_CAIP2 has 15 entries', () => {
+    expect(Object.keys(NETWORK_TO_CAIP2)).toHaveLength(15);
   });
 
   it('every CAIP-2 entry maps to a valid NetworkType', () => {
@@ -35,10 +35,10 @@ describe('CAIP-2 Mapping', () => {
     }
   });
 
-  it('has 10 EVM entries and 3 Solana entries', () => {
+  it('has 12 EVM entries and 3 Solana entries', () => {
     const evmEntries = Object.keys(CAIP2_TO_NETWORK).filter((k) => k.startsWith('eip155:'));
     const solanaEntries = Object.keys(CAIP2_TO_NETWORK).filter((k) => k.startsWith('solana:'));
-    expect(evmEntries).toHaveLength(10);
+    expect(evmEntries).toHaveLength(12);
     expect(solanaEntries).toHaveLength(3);
   });
 
@@ -62,8 +62,13 @@ describe('resolveX402Network', () => {
     expect(resolveX402Network('solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1')).toEqual({ chain: 'solana', network: 'solana-devnet' });
   });
 
+  it('returns correct chain+network for HyperEVM CAIP-2 IDs', () => {
+    expect(resolveX402Network('eip155:999')).toEqual({ chain: 'ethereum', network: 'hyperevm-mainnet' });
+    expect(resolveX402Network('eip155:998')).toEqual({ chain: 'ethereum', network: 'hyperevm-testnet' });
+  });
+
   it('throws for unknown CAIP-2 ID', () => {
-    expect(() => resolveX402Network('eip155:999')).toThrow('Unsupported x402 network');
+    expect(() => resolveX402Network('eip155:12345')).toThrow('Unsupported x402 network');
     expect(() => resolveX402Network('bitcoin:mainnet')).toThrow('Unsupported x402 network');
   });
 });
