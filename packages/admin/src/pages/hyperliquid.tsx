@@ -4,6 +4,8 @@ import { apiGet } from '../api/client';
 import { AccountSummary } from '../components/hyperliquid/AccountSummary';
 import { PositionsTable } from '../components/hyperliquid/PositionsTable';
 import { OpenOrdersTable } from '../components/hyperliquid/OpenOrdersTable';
+import { SpotBalancesTable } from '../components/hyperliquid/SpotBalancesTable';
+import { SpotOrdersTable } from '../components/hyperliquid/SpotOrdersTable';
 import { SettingsPanel } from '../components/hyperliquid/SettingsPanel';
 
 interface Wallet {
@@ -13,7 +15,7 @@ interface Wallet {
   network: string;
 }
 
-type Tab = 'overview' | 'orders' | 'settings';
+type Tab = 'overview' | 'orders' | 'spot' | 'settings';
 
 const tabStyle = {
   display: 'flex',
@@ -104,6 +106,12 @@ export default function HyperliquidPage() {
           Orders
         </button>
         <button
+          style={tabButton(activeTab.value === 'spot')}
+          onClick={() => { activeTab.value = 'spot'; }}
+        >
+          Spot
+        </button>
+        <button
           style={tabButton(activeTab.value === 'settings')}
           onClick={() => { activeTab.value = 'settings'; }}
         >
@@ -124,6 +132,14 @@ export default function HyperliquidPage() {
         <div>
           <h3 style={{ marginBottom: 'var(--space-3)' }}>Open Orders</h3>
           <OpenOrdersTable walletId={selectedWalletId.value} />
+        </div>
+      )}
+      {activeTab.value === 'spot' && (
+        <div>
+          <h3 style={{ marginBottom: 'var(--space-3)' }}>Spot Balances</h3>
+          <SpotBalancesTable walletId={selectedWalletId.value} />
+          <h3 style={{ marginTop: 'var(--space-4)', marginBottom: 'var(--space-3)' }}>Spot Orders</h3>
+          <SpotOrdersTable walletId={selectedWalletId.value} />
         </div>
       )}
       {activeTab.value === 'settings' && (
