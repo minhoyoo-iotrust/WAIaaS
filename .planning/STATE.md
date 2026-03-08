@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v31.6
 milestone_name: Across Protocol 크로스체인 브릿지
-status: ready_to_plan
-stopped_at: null
-last_updated: "2026-03-08"
-last_activity: 2026-03-08 — Roadmap created (5 phases, 33 requirements)
+status: executing
+stopped_at: Completed Phase 352 (1/1 plans)
+last_updated: "2026-03-08T15:50:20.611Z"
+last_activity: 2026-03-09 — Phase 352 complete (design doc 79)
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 8
-  completed_plans: 0
-  percent: 0
+  completed_plans: 1
+  percent: 12
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-08)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 352 — Research + Design (Across Protocol doc 79)
+**Current focus:** Phase 353 — API Client + Bridge Provider
 
 ## Current Position
 
-Phase: 352 of 356 (Research + Design)
-Plan: 0 of 1 in current phase
-Status: Ready to plan
-Last activity: 2026-03-08 — Roadmap created (5 phases, 33 requirements)
+Phase: 353 of 356 (API Client + Bridge Provider)
+Plan: 0 of 2 in current phase
+Status: Phase 352 complete, ready for Phase 353
+Last activity: 2026-03-09 — Phase 352 complete (design doc 79)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█░░░░░░░░░] 12%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: -
-- Total execution time: 0 hours
+- Total plans completed: 1
+- Average duration: 5min
+- Total execution time: 0.08 hours
 
 ## Accumulated Context
 
@@ -46,6 +46,11 @@ Progress: [░░░░░░░░░░] 0%
 - Across SDK 거부: @across-protocol/sdk(ethers.js 의존)과 @across-protocol/app-sdk(frontend 중심) 대신 REST API 직접 호출
 - DB 마이그레이션 불필요: 기존 bridge_status/bridge_metadata 컬럼 재사용 (LI.FI v28.3 선례)
 - 신규 npm 의존성 없음: viem + zod + @waiaas/core 기존 의존성만 사용
+- [Phase 352]: DS-01: REST API direct call (no Across SDK)
+- [Phase 352]: DS-02: bridge_status/bridge_metadata reuse (no DB migration)
+- [Phase 352]: DS-04: Late-bind quote at Stage 5 for fresh quoteTimestamp
+- [Phase 352]: DS-07: outputAmount = inputAmount - totalRelayFee.total (absolute)
+- [Phase 352]: DS-08: 15s active polling (faster than LI.FI 30s)
 
 ### Blockers/Concerns
 
@@ -56,6 +61,6 @@ Progress: [░░░░░░░░░░] 0%
 
 ## Session Continuity
 
-Last session: 2026-03-08
-Stopped at: Roadmap created, ready to plan Phase 352
+Last session: 2026-03-08T15:50:20.608Z
+Stopped at: Completed 352-01-PLAN.md
 Resume file: None

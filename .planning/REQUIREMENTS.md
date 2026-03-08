@@ -9,12 +9,12 @@ Requirements for Across Protocol cross-chain bridge integration. Each maps to ro
 
 ### Design (설계)
 
-- [ ] **DES-01**: Across Protocol API(suggested-fees, limits, available-routes, deposit/status) 사양을 리서치하여 설계 문서(doc 79)에 반영
-- [ ] **DES-02**: SpokePool depositV3 컨트랙트 인터페이스(12 파라미터)와 체인별 주소를 리서치하여 문서화
-- [ ] **DES-03**: 수수료 모델(LP fee, relayer fee, gas fee)과 outputAmount 계산 공식을 설계 문서에 명시
-- [ ] **DES-04**: 브릿지 상태 추적 방식(DB 재사용 vs 신규 테이블)을 설계 문서에서 확정
-- [ ] **DES-05**: fillDeadline/exclusivityDeadline 기본값 전략을 설계 문서에서 확정
-- [ ] **DES-06**: AcrossBridgeActionProvider 인터페이스와 MCP/SDK 설계를 문서화
+- [x] **DES-01**: Across Protocol API(suggested-fees, limits, available-routes, deposit/status) 사양을 리서치하여 설계 문서(doc 79)에 반영
+- [x] **DES-02**: SpokePool depositV3 컨트랙트 인터페이스(12 파라미터)와 체인별 주소를 리서치하여 문서화
+- [x] **DES-03**: 수수료 모델(LP fee, relayer fee, gas fee)과 outputAmount 계산 공식을 설계 문서에 명시
+- [x] **DES-04**: 브릿지 상태 추적 방식(DB 재사용 vs 신규 테이블)을 설계 문서에서 확정
+- [x] **DES-05**: fillDeadline/exclusivityDeadline 기본값 전략을 설계 문서에서 확정
+- [x] **DES-06**: AcrossBridgeActionProvider 인터페이스와 MCP/SDK 설계를 문서화
 
 ### API Client (API 클라이언트)
 
@@ -86,12 +86,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DES-01 | Phase 352 | Pending |
-| DES-02 | Phase 352 | Pending |
-| DES-03 | Phase 352 | Pending |
-| DES-04 | Phase 352 | Pending |
-| DES-05 | Phase 352 | Pending |
-| DES-06 | Phase 352 | Pending |
+| DES-01 | Phase 352 | Complete |
+| DES-02 | Phase 352 | Complete |
+| DES-03 | Phase 352 | Complete |
+| DES-04 | Phase 352 | Complete |
+| DES-05 | Phase 352 | Complete |
+| DES-06 | Phase 352 | Complete |
 | API-01 | Phase 353 | Pending |
 | API-02 | Phase 353 | Pending |
 | API-03 | Phase 353 | Pending |
