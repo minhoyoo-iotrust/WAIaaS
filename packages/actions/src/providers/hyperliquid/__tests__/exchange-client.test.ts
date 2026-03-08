@@ -2,7 +2,7 @@
  * Tests for HyperliquidExchangeClient and HyperliquidRateLimiter.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { HyperliquidExchangeClient, HyperliquidRateLimiter } from '../exchange-client.js';
+import { HyperliquidExchangeClient, HyperliquidRateLimiter, createHyperliquidClient } from '../exchange-client.js';
 import { z } from 'zod';
 
 // ---------------------------------------------------------------------------
@@ -146,6 +146,48 @@ describe('HyperliquidExchangeClient', () => {
           z.record(z.string(), z.string()),
         ),
       ).rejects.toThrow();
+    });
+  });
+
+  describe('timeout handling', () => {
+    it('throws ACTION_API_TIMEOUT on AbortError', async () => {
+      const abortError = new DOMException('signal is aborted', 'AbortError');
+      mockFetch.mockRejectedValue(abortError);
+
+      const client = createClient();
+      await expect(
+        client.exchange({
+          action: { type: 'order' },
+          nonce: Date.now(),
+          signature: { r: '0x1' as any, s: '0x2' as any, v: 27 },
+        }),
+      ).rejects.toThrow('Hyperliquid API request timeout');
+    });
+
+    it('wraps non-ChainError exceptions as API_ERROR', async () => {
+      mockFetch.mockRejectedValue(new TypeError('fetch failed'));
+
+      const client = createClient();
+      await expect(
+        client.exchange({
+          action: { type: 'order' },
+          nonce: Date.now(),
+          signature: { r: '0x1' as any, s: '0x2' as any, v: 27 },
+        }),
+      ).rejects.toThrow('Hyperliquid API error: fetch failed');
+    });
+  });
+
+  describe('createHyperliquidClient factory', () => {
+    it('creates client with defaults', () => {
+      const client = createHyperliquidClient('https://api.hyperliquid.xyz');
+      expect(client).toBeInstanceOf(HyperliquidExchangeClient);
+    });
+
+    it('creates client with custom rate limiter', () => {
+      const limiter = new HyperliquidRateLimiter(300);
+      const client = createHyperliquidClient('https://api.hyperliquid.xyz', limiter, 10000);
+      expect(client).toBeInstanceOf(HyperliquidExchangeClient);
     });
   });
 });
