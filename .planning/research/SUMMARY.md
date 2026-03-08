@@ -1,170 +1,190 @@
 # Project Research Summary
 
-**Project:** WAIaaS v31.4 Hyperliquid Ecosystem Integration
-**Domain:** DeFi DEX (Perp/Spot) + Off-chain Order Signing + Sub-accounts on HyperEVM
+**Project:** WAIaaS v31.6 Across Protocol Cross-Chain Bridge Integration
+**Domain:** DeFi Cross-Chain Bridge (Intent-based, EVM-only)
 **Researched:** 2026-03-08
 **Confidence:** HIGH
 
 ## Executive Summary
 
-Hyperliquid 생태계 통합은 두 가지 독립적인 작업으로 구성된다. 첫째, HyperEVM (Chain ID 999/998)은 표준 EVM 체인이므로 viem 빌트인 chain export(`hyperEvm`, `hyperliquidEvmTestnet`)를 `EVM_CHAIN_MAP`에 추가하는 것만으로 기존 EVM 기능이 즉시 동작한다. 둘째, Hyperliquid L1 DEX는 온체인 트랜잭션이 아닌 EIP-712 서명 + REST API 호출 방식이므로, 기존 6-stage 파이프라인과 근본적으로 다른 실행 경로가 필요하다. 이 두 번째 부분이 이 마일스톤의 핵심 아키텍처 도전이다.
+Across Protocol 통합은 WAIaaS 기존 아키텍처와 매우 높은 호환성을 보이며, 네 연구 파일 모두 동일한 결론에 수렴했다. SpokePool의 `depositV3()`는 일반 EVM 컨트랙트 호출이므로 기존 6-stage 파이프라인의 `CONTRACT_CALL`/`BATCH` type으로 그대로 처리된다. LI.FI(v28.3)에서 구축한 `IActionProvider`, `IAsyncStatusTracker`, `AsyncPollingService`, `bridge_status`/`bridge_metadata` DB 컬럼이 모두 직접 재사용 가능하다. 신규 DB 마이그레이션도 불필요하다.
 
-권장 접근법은 외부 SDK 없이 자체 `HyperliquidExchangeClient`를 구현하는 것이다. Hyperliquid REST API는 단 2개 엔드포인트(Exchange POST, Info POST)로 단순하며, 기존 DcentSwapApiClient/ZeroExSwapClient 패턴과 동일한 구조다. 유일한 신규 의존성은 `@msgpack/msgpack`(phantom agent 서명용)이며, EIP-712 서명은 viem 내장, WebSocket은 Node 22 내장을 활용한다. 파이프라인 통합은 새로운 discriminatedUnion 타입을 추가하지 않고, `ApiDirectResult` 패턴으로 Stage 5에서 분기하여 API 직접 실행 경로를 만드는 것이 최선이다.
+권장 구현 방식은 Across SDK(`@across-protocol/sdk`, `@across-protocol/app-sdk`) 없이 REST API 직접 호출이다. 기존 `ActionApiClient`를 확장하여 Across 5개 엔드포인트(`/suggested-fees`, `/available-routes`, `/limits`, `/deposit/status`, SpokePool `depositV3` on-chain 호출)를 래핑하고, viem `encodeFunctionData`로 calldata를 인코딩한다. 신규 npm 의존성이 없으므로 번들 크기와 보안 노출이 증가하지 않는다. Across SDK는 ethers.js 의존성을 포함하여 WAIaaS의 viem 전용 아키텍처와 충돌한다.
 
-핵심 리스크는 세 가지다: (1) L1 Action(phantom agent, chainId 1337)과 User-Signed Action(HyperliquidSignTransaction, chainId 42161/421614) 두 가지 서명 스키마 혼동, (2) msgpack 필드 순서가 해시에 영향을 주므로 공식 Python SDK 테스트 벡터로 검증 필수, (3) Sub-account가 private key 없이 master 서명으로 동작하므로 정책 엔진의 지출 한도 우회 가능성. 이 세 가지 모두 Phase 2 설계 문서에서 명확히 정의하고 Phase 3에서 테스트 벡터 기반 검증으로 예방해야 한다.
+가장 중요한 운영 위험은 quote staleness다. Across 공식 문서는 `/suggested-fees` 응답 캐싱을 명시적으로 금지한다(LP fee는 utilization 기반 실시간 변동). 캐시된 quote로 `depositV3`를 호출하면 Relayer가 fill하지 않아 자금이 SpokePool에 fillDeadline까지 잠긴다. 이를 방지하려면 매 실행마다 fresh quote 조회, `quoteTimestamp` 10분 유효 창 준수, `outputAmount = inputAmount - totalRelayFee.total` 정확한 계산이 필수다. 네이티브 ETH 브릿지 시 `inputToken`에 WETH 주소(체인별 매핑)를 사용하고 `msg.value`에 amount를 전달하는 것도 쉽게 간과되는 pitfall이다.
 
 ## Key Findings
 
 ### Recommended Stack
 
-신규 의존성은 `@msgpack/msgpack` 1개뿐이다. viem 2.21.0+에 `hyperEvm`과 `hyperliquidEvmTestnet` chain export가 빌트인되어 있어 `defineChain` 없이 바로 사용 가능하다. 외부 Hyperliquid SDK는 모두 부적합하다: `hyperliquid`(nomeida)는 ethers.js 의존성, `@nktkas/hyperliquid`는 0.x 불안정 + valibot 추가 의존성, 공식 TS SDK는 부재.
+신규 npm 의존성이 전혀 필요 없다. 세 가지 기존 의존성만으로 완전한 구현이 가능하며, Across SDK 3종(`@across-protocol/app-sdk`, `@across-protocol/sdk`, `@across-protocol/contracts`)은 모두 명시적으로 거부된다.
 
 **Core technologies:**
-- `viem hyperEvm/hyperliquidEvmTestnet` -- HyperEVM 체인 정의, viem 빌트인으로 추가 설치 불필요
-- `@msgpack/msgpack ^3.0.0` -- L1 action phantom agent 서명의 msgpack 직렬화에 필수. 0 dependencies, TypeScript 지원
-- `viem signTypedData + keccak256` -- EIP-712 서명과 해시 계산, 기존 인프라 재활용
-- `Node 22 native WebSocket` -- 실시간 구독(향후), 추가 라이브러리 불필요
+- `viem ^2.21.0`: `encodeFunctionData` + `parseAbi`로 SpokePool `depositV3` calldata 인코딩 — 이미 설치됨, ABI 인라인 정의로 contracts 패키지 불필요
+- `zod ^3.24.0`: Across API 5개 엔드포인트 응답 스키마 검증 — 이미 설치됨, `AcrossSuggestedFeesSchema` 등 4개 스키마 신규 정의
+- `@waiaas/core (workspace:*)`: `ActionApiClient` 베이스, `IActionProvider`, `IAsyncStatusTracker` 인터페이스 — LI.FI와 동일한 통합 패턴
+
+**거부된 패키지:**
+- `@across-protocol/app-sdk` v0.4.4: Frontend/React/wagmi 중심, 서버사이드 부적합
+- `@across-protocol/sdk` v4.1.32: ethers.js 의존, WAIaaS viem 전용 아키텍처와 충돌
+- `@across-protocol/contracts` v4.1.3: `depositV3` 1개 함수를 위해 전체 패키지 추가 불필요
 
 ### Expected Features
 
 **Must have (table stakes):**
-- Perp Trading: Market/Limit/Stop-Loss/Take-Profit 주문, 포지션/마진/마켓 조회, 레버리지 설정, 주문 취소/상태 조회
-- Spot Trading: Market/Limit 주문, Spot 잔액 조회, Spot-Perp 잔액 이동
-- Account State: 통합 잔액 조회, 오픈 주문 조회, 거래 이력 조회
-- HyperEVM Chain: Mainnet/Testnet 체인 등록 (기존 EVM 기능 자동 호환)
+- Bridge Quote (`/suggested-fees`) — 수수료, 수령액, 예상 시간 사전 확인 필수
+- ERC-20 Bridge Execute (approve + `depositV3` BATCH) — 핵심 기능, 12개 파라미터 인코딩
+- Native Token Bridge (ETH, `msg.value` + WETH 주소 치환) — 가장 흔한 브릿지 유스케이스
+- Bridge Status Tracking (`/deposit/status` 폴링) — 크로스체인 TX 완료까지 비동기 추적 필수
+- Available Routes (`/available-routes`) — 에이전트가 가능한 경로 파악
+- Transfer Limits (`/limits`) — minDeposit/maxDeposit 사전 검증으로 실패 방지
+- MCP Tool Exposure (5개: quote/execute/status/routes/limits) — AI 에이전트 접근성
+- SDK Methods (5개: quote/execute/status/routes/limits) — 프로그래밍 접근
+- Admin Settings (6개 키: enabled, api_base_url, integrator_id, fill_deadline_buffer 등)
 
 **Should have (differentiators):**
-- TWAP 주문 -- 대량 주문 분할 실행, AI 에이전트에 유용
-- Sub-account 관리 -- 전략별 자금 격리, AI 에이전트 격리
-- Dead Man's Switch -- 연결 끊김 시 자동 주문 취소 안전장치
-- 주문 수정 (Modify) -- 취소/재주문 없이 원자적 수정
+- 초고속 Fill 알림 (Across 2-10초 fill 완료 시 `BRIDGE_COMPLETED` 알림)
+- Bridge Limits 사전 검증 (`isAmountTooLow` 플래그 + limits 범위 교차 검증)
+- Refund 감지 (expired → refunded 상태 전이 감지 및 알림)
+- IncomingTxMonitor 연동 (목적지 체인 Relayer fill 자동 감지 — 추가 구현 불필요)
+- Integrator ID 설정 (rate limit 완화, Across 대시보드 통계)
+- connect-info capability (`across_bridge: true` 자기 발견)
 
 **Defer (v2+):**
-- WebSocket 실시간 구독 -- REST polling으로 충분, 복잡도 급증
-- Vault 운용 -- WAIaaS 개별 월렛 모델과 불일치
-- Portfolio Margin -- Pre-alpha 상태, 불안정
-- Staking/Delegation -- 별도 도메인
-- HyperEVM 스마트 컨트랙트 DEX 연동 -- 범위 초과
+- LI.FI vs Across 자동 라우팅 비교 — 브릿지 애그리게이션 레이어 별도 마일스톤
+- Cross-chain message passing (`depositV3.message` 파라미터) — 보안 검증 필요, 범위 외
+- Solana bridge — Across EVM-only 우선, Solana 지원은 별도 평가
+- Swap API (`/swap/approval`) 통합 — bridge와 다른 API, DCent Swap이 이미 커버
 
 ### Architecture Approach
 
-핵심 설계 결정은 `ApiDirectResult` 패턴 도입이다. 새로운 discriminatedUnion 타입을 추가하면 수백 개 파일에 영향이 가므로, 대신 `IActionProvider.resolve()`가 `ContractCallRequest` 대신 `ApiDirectResult`를 반환할 수 있게 확장한다. Stage 1-4(Validate/Auth/Policy/Delay)는 그대로 실행하되, Stage 5에서 `ApiDirectResult` 여부를 확인하여 온체인 실행 대신 API 응답을 DB에 기록한다. Provider는 `requiresSigningKey: true`를 선언하여 Stage 4 이후 복호화된 private key를 받아 EIP-712 서명 + API 제출을 원자적으로 수행한다.
+Across 통합은 LI.FI(v28.3) 패턴을 그대로 따른다. `AcrossBridgeActionProvider`(`IActionProvider`)가 5개 action을 노출하고, quote/execute는 `AcrossApiClient.getSuggestedFees()` 호출 후 `ContractCallRequest[]`를 반환한다. ERC-20은 `[approve, depositV3]` BATCH, 네이티브 토큰은 `[depositV3 with value]` 단일 `CONTRACT_CALL`이다. 실행 후 `bridge_status='PENDING'` 등록으로 `AsyncPollingService`가 `AcrossBridgeStatusTracker`를 통해 `/deposit/status` API를 폴링한다. Across Intent fill은 2-10초 내 완료되므로 폴링 간격은 LI.FI(30초) 대비 15초로 단축된다.
 
 **Major components:**
-1. `HyperliquidExchangeClient` -- Exchange/Info REST API 래퍼, 가중치 기반 rate limiting (1200 weight/min)
-2. `HyperliquidSigner` -- L1 Action phantom agent 서명 + User-Signed Action 서명 (두 스키마 명확 분리)
-3. `HyperliquidPerpProvider` -- IPerpProvider 구현 (open/close/modify/leverage/cancel, riskLevel/defaultTier 선언)
-4. `HyperliquidSpotProvider` -- IActionProvider 구현 (spot buy/sell/cancel, asset index 10000+ 규칙)
-5. `HyperliquidMarketData` -- Info API 기반 마켓/포지션/주문/펀딩레이트 조회
-6. `HyperliquidSubAccountService` -- Sub-account CRUD + 내부 이체, vaultAddress 전파
+1. `AcrossApiClient` (`ActionApiClient` 확장) — 5개 Across REST API 엔드포인트 래핑, Zod 응답 검증
+2. `AcrossBridgeActionProvider` (`IActionProvider` 구현) — quote/execute/status/routes/limits 5 actions, SpokePool calldata 인코딩
+3. `AcrossBridgeStatusTracker` + `AcrossBridgeMonitoringTracker` (`IAsyncStatusTracker`) — 2-phase polling (15s x 480 = 2h active, 5min x 264 = 22h monitoring)
+4. Bridge Enrollment 로직 (daemon `actions.ts` post-execution) — `bridge_status='PENDING'` + metadata 등록
+5. `AcrossConfig` — 설정 타입, 기본값, 체인별 chain ID 매핑, WETH 주소 매핑
+
+**새로 생성하는 파일 (`packages/actions/src/providers/across-bridge/`):**
+- `index.ts`, `across-api-client.ts`, `schemas.ts`, `config.ts`, `bridge-status-tracker.ts`
+
+**수정하는 파일:**
+- `packages/actions/src/index.ts` (export 추가)
+- `packages/daemon/src/lifecycle/daemon.ts` (tracker 등록)
+- `packages/daemon/src/api/routes/actions.ts` (bridge enrollment)
+- Admin Settings definitions, SDK, skill files
+
+**변경 불필요:**
+- DB schema (v52) — `bridge_status` + `bridge_metadata` 기존 컬럼으로 충분
+- DB migration — 불필요
+- 6-stage 파이프라인 — `CONTRACT_CALL`/`BATCH` 기존 type으로 처리
+- Policy engine — 기존 `SPENDING_LIMIT`, `RATE_LIMIT`, `CONTRACT_WHITELIST` 그대로 적용
+- `AsyncPollingService` — `registerTracker()`로 등록만 하면 자동 폴링
 
 ### Critical Pitfalls
 
-1. **두 가지 서명 스키마 혼동** -- `HyperliquidSigner`에 `signL1Action()`과 `signUserSignedAction()` 두 메서드를 명확히 분리. Python SDK `signing_test.py` 테스트 벡터로 바이트 단위 검증
-2. **API 거래를 6-stage 파이프라인에 강제 삽입** -- `ApiDirectResult` 패턴으로 Stage 5에서 분기. 새 discriminatedUnion 타입 추가 금지. `if (isHyperliquid)` 분기가 stage 내부에 나타나면 설계 오류
-3. **Nonce 밀리초 타임스탬프 충돌** -- `Date.now()` + monotonic counter로 burst 시 충돌 방지. 100개 최고 nonce 윈도우 인지. Sub-account별 별도 API wallet 사용
-4. **Sub-account 보안: 정책 우회 가능** -- Sub-account 간 이체를 정책 엔진에서 별도 스코프로 평가. Default-deny. 감사 로그에 `HYPERLIQUID_SUBACCOUNT_TRANSFER` 이벤트 기록
-5. **msgpack 필드 순서 민감성** -- 정규 필드 순서 배열 정의 후 순회하며 객체 생성. trailing zeros 제거, 주소 소문자화 필수. Python SDK 참조 구현과 바이트 단위 비교
+1. **outputAmount 계산 오류 → 자금 장기 락업** — `outputAmount = BigInt(inputAmount) - BigInt(totalRelayFee.total)` 공식 엄수. 절대 LP/relayer fee를 개별 조합하여 계산하지 않는다. Zod로 `outputAmount < inputAmount` 런타임 검증 필수.
+
+2. **`/suggested-fees` 응답 캐싱 → Relayer fill 거부** — Across 공식 캐싱 금지 정책. LP fee는 매 블록 변동. 매 요청마다 fresh API 호출 강제. `/available-routes`만 5분 캐시 허용.
+
+3. **`quoteTimestamp` 만료 → `depositV3` on-chain revert** — SpokePool은 `quoteTimestamp`이 현재 블록 기준 10분 이내여야 통과. Stage 4(Owner 승인 대기) 후 시간이 경과하면 Stage 5 직전에 quote 재조회 필요. Admin Settings에 quote 재조회 임계시간 설정.
+
+4. **네이티브 ETH 브릿지 시 WETH 주소 혼동 → revert** — ETH 브릿지 시 `inputToken`은 체인별 WETH 주소(예: Ethereum `0xC02a...6Cc2`)여야 한다. `0xEee...Eee`(ETH placeholder)나 zero address를 넣으면 SpokePool이 거부. 체인별 WETH 매핑 테이블 필수 관리.
+
+5. **Bridge Enrollment 누락 → 상태 추적 불가** — `depositV3` 성공 후 `bridge_status='PENDING'` 등록을 `actions.ts`에 명시적으로 구현하지 않으면 `AsyncPollingService`가 추적하지 않는다. `bridge_metadata`에 `txHash`, `originChainId`, `destChainId` 포함 필수.
 
 ## Implications for Roadmap
 
-### Phase 1: HyperEVM 체인 등록
-**Rationale:** 독립적이고 복잡도 최소. `EVM_CHAIN_MAP` + `NETWORK_TYPES` 추가만으로 완료. 나머지 Phase의 네트워크 전제 조건
-**Delivers:** HyperEVM Mainnet(999)/Testnet(998) 체인 지원, 네이티브 토큰 HYPE, 기존 EVM 기능(전송, 토큰, 컨트랙트) 즉시 활용
-**Addresses:** HyperEVM Chain table stakes (체인 등록, 기존 EVM 기능 호환)
-**Avoids:** Pitfall 9 (testnet/mainnet 엔드포인트 혼동) -- 네트워크별 API endpoint 설정 분리, Pitfall 13 (HyperEVM RPC vs L1 API rate limit 혼동) -- 별도 rate limiter 구조
+Based on research, suggested phase structure:
 
-### Phase 2: 설계 문서 (Hyperliquid DEX 아키텍처 확정)
-**Rationale:** Pitfall 1(서명 스키마), 2(파이프라인 통합), 4(Sub-account 보안), 8(정책 엔진)이 모두 설계 단계에서 해결해야 할 아키텍처 결정. 구현 전 반드시 확정 필요
-**Delivers:** ApiDirectResult 인터페이스 정의, 파이프라인 Stage 5 분기 설계, EIP-712 두 서명 스키마 상세, Sub-account-to-wallet 매핑 모델, 정책 엔진 적용 규칙 (margin vs notional), DB v51-52 스키마, API wallet 라이프사이클 전략
-**Uses:** STACK.md의 EIP-712 서명 구성(L1 domain chainId 1337, user-signed domain chainId 42161/421614)
-**Implements:** IActionProvider.resolve() 반환 타입 확장 설계, HyperliquidSigner 두 스키마 분리 설계, requiresSigningKey 패턴 설계
+### Phase 1: Across API Client + 스키마 + 설정
+**Rationale:** `AcrossApiClient`, Zod 스키마, `AcrossConfig`(WETH 주소 매핑 포함)는 `AcrossBridgeActionProvider`와 `AcrossBridgeStatusTracker` 양쪽의 기반 의존성이다. 먼저 구축해야 후속 컴포넌트가 임포트 가능하다.
+**Delivers:** `AcrossApiClient` (5 endpoints), Zod response schemas (4개), `AcrossConfig` (chain ID map + WETH map + Admin Settings keys)
+**Addresses:** API 스펙 확정, quote staleness 방지(no-cache 정책 API 레이어에서 강제), WETH 주소 매핑 초기 정의
+**Avoids:** 하드코딩 SpokePool 주소(API `spokePoolAddress` 동적 조회 패턴 설정), 응답 스키마 drift(Zod `.passthrough()` 사용)
 
-### Phase 3: Core Infrastructure + Perp Trading
-**Rationale:** 모든 공유 인프라(ExchangeClient, Signer, MarketData, ApiDirectResult)와 핵심 MVP(Perp)를 함께 구현. Spot/Sub-account의 전제 조건. 분할 불가 -- 인프라만으로는 의미 있는 테스트 불가능
-**Delivers:** HyperliquidExchangeClient(rate limiter 포함), HyperliquidSigner(phantom agent + user-signed), HyperliquidMarketData, ApiDirectResult 인터페이스 + ActionProviderRegistry 업데이트 + Stage 5 분기, DB v51(hyperliquid_orders), HyperliquidPerpProvider(Market/Limit/SL/TP/cancel/modify/leverage), MCP 도구 + SDK 메서드 자동 생성, Admin Settings 7개
-**Addresses:** Perp Trading table stakes 전체, Account State table stakes
-**Avoids:** Pitfall 1(서명 스키마 분리), Pitfall 3(HyperliquidNonceManager), Pitfall 5(가중치 기반 rate limiter), Pitfall 10(msgpack 필드 순서 -- 정규 배열 + 테스트 벡터)
+### Phase 2: AcrossBridgeActionProvider (quote/execute/routes/limits)
+**Rationale:** Phase 1의 `AcrossApiClient` 완성 후 Provider 구현 가능. quote와 execute가 없으면 추적할 대상이 없으므로 StatusTracker보다 먼저.
+**Delivers:** `AcrossBridgeActionProvider` (5 actions), `depositV3` calldata 인코딩, ERC-20 BATCH (approve + depositV3), 네이티브 ETH `msg.value` 처리
+**Uses:** viem `encodeFunctionData` + `parseAbi` (SPOKE_POOL_ABI 인라인), `AcrossApiClient`, 기존 6-stage 파이프라인 `CONTRACT_CALL`/`BATCH`
+**Implements:** `IActionProvider` 패턴 (LI.FI 선례 그대로)
+**Avoids:** `outputAmount` 오계산(totalRelayFee.total 사용), WETH 주소 혼동(Phase 1 매핑 활용), approve + deposit 순서 오류
 
-### Phase 4: Spot Trading
-**Rationale:** Phase 3의 ExchangeClient/Signer/orders 테이블 재활용. Perp와 코드 공유 높음 (같은 `action: "order"` 구조, asset index만 다름). Phase 5와 병렬 가능
-**Delivers:** HyperliquidSpotProvider(Market/Limit buy/sell, cancel), Spot 잔액 조회(spotClearinghouseState), Spot-Perp 잔액 이동(usdClassTransfer), Spot 마켓 정보(spotMeta), MCP 도구 + SDK 메서드
-**Addresses:** Spot Trading table stakes 전체
+### Phase 3: Bridge Status Tracker + Daemon Integration
+**Rationale:** StatusTracker는 Phase 2 execute action이 완성되어야 추적할 대상이 생긴다. Daemon enrollment 로직도 Phase 2 Provider가 임포트 가능해야 등록할 수 있다.
+**Delivers:** `AcrossBridgeStatusTracker` + `AcrossBridgeMonitoringTracker` (2-phase polling), Daemon tracker 등록, `actions.ts` bridge enrollment (`bridge_status='PENDING'` + metadata), Admin Settings 6개 키
+**Avoids:** bridge enrollment 누락(enrollment 통합 테스트 필수), `/deposit/status` indexer 지연 오탐(첫 폴링 15초 후 시작)
 
-### Phase 5: Sub-account 관리
-**Rationale:** Phase 3에 의존하나 Phase 4와 병렬 가능. Sub-account 보안 설계(Phase 2)가 전제. 독립적인 DB 마이그레이션(v52)
-**Delivers:** DB v52(hyperliquid_sub_accounts), HyperliquidSubAccountService(create/list/transfer), vaultAddress 전파(Signer/ExchangeClient), Sub-account별 포지션/잔액 조회, per-sub-account API wallet 생성(nonce 충돌 방지), MCP 도구 + SDK 메서드
-**Addresses:** Sub-account differentiators 전체
-**Avoids:** Pitfall 4(Sub-account 보안 -- 정책 스코프 분리, default-deny 이체), Pitfall 3(Sub-account별 nonce 분리 -- 별도 API wallet)
+### Phase 4: MCP / SDK / Skill Files
+**Rationale:** Phase 2-3의 Provider 등록 후에야 MCP 자동 노출(`mcpExpose=true`)과 SDK 메서드가 의미가 있다. 인터페이스 레이어는 비즈니스 로직 완성 후.
+**Delivers:** MCP tools (across-bridge-quote, across-bridge-execute, across-bridge-status, across-bridge-routes, across-bridge-limits), SDK 5 메서드, `skills/defi.skill.md` Across 브릿지 섹션 추가, connect-info capability
+**Avoids:** MCP quote 응답의 수수료 표시 혼란(inputAmount/outputAmount/fee 3값 명시)
 
-### Phase 6: Admin UI + 통합 완성
-**Rationale:** Phase 3-5 완료 후 운영 가시성 및 DX 마무리. AI 에이전트 API는 이미 Phase 3-5에서 완성
-**Delivers:** Admin UI Hyperliquid 포지션/주문 대시보드, Sub-account 관리 뷰, Skill files 업데이트(transactions.skill.md, admin.skill.md), connect-info `hyperliquid` capability
+### Phase 5: 테스트 및 검증
+**Rationale:** 전체 컴포넌트 완성 후 단위+통합 테스트로 전체 검증. testnet E2E는 마지막에.
+**Delivers:** Mock 기반 단위 테스트 (`AcrossApiClient`, `outputAmount` 계산, `depositV3` calldata 인코딩, BATCH 순서), 통합 테스트 (bridge enrollment, StatusTracker 상태 매핑), E2E 선택 (testnet, mock 우선)
+**Avoids:** testnet fill 지연 오판(mock 우선, testnet timeout 2분+), `fillDeadline`/`quoteTimestamp` ms/s 혼동
 
 ### Phase Ordering Rationale
 
-- Phase 1은 독립적이며 나머지 Phase의 네트워크 전제 조건. 빌트인 프리셋(v28.8 패턴) 추가만으로 완료
-- Phase 2는 Pitfall 1, 2, 4, 8의 아키텍처 결정을 구현 전에 확정하기 위해 반드시 Phase 3 전에 수행. ApiDirectResult는 WAIaaS에 신규 패턴이므로 설계 문서 필수
-- Phase 3이 가장 크지만 분할 불가 -- ExchangeClient/Signer/MarketData/ApiDirectResult가 모두 PerpProvider와 결합되어야 end-to-end 테스트 가능
-- Phase 4와 5는 Phase 3의 공유 인프라에만 의존하므로 병렬 가능. Spot은 Perp와 코드 공유가 높고, Sub-account는 별도 DB 스키마
-- Phase 6은 모든 기능이 완료된 후 UI/DX 통합. AI 에이전트 우선 설계 원칙 준수
+- **의존성 체인:** ApiClient → Provider → Tracker → Daemon integration → MCP/SDK. 각 단계가 이전 단계의 타입과 인스턴스를 임포트하므로 순서가 강제된다.
+- **DB 마이그레이션 없음:** 기존 `bridge_status`/`bridge_metadata` 컬럼 재사용으로 Phase 1에 DB 설계 비용이 없다. LI.FI 선례 덕분에 스키마 설계 위험이 제거됨.
+- **신규 의존성 없음:** Phase 1부터 `pnpm install` 없이 시작 가능. 빌드/CI 영향 없음.
+- **Pitfall 우선 처리:** WETH 주소 매핑(Phase 1), `outputAmount` 검증(Phase 2), bridge enrollment(Phase 3) 순서로 가장 위험한 pitfall을 구현 시점에 즉시 처리.
 
 ### Research Flags
 
 Phases likely needing deeper research during planning:
-- **Phase 2 (설계):** ApiDirectResult 패턴의 기존 파이프라인 영향 범위 분석 필요. `ActionProviderRegistry.resolveAction()` 호출 경로와 `stages.ts` Stage 5 정확한 분기 지점 코드 리딩 필수
-- **Phase 3 (Perp):** phantom agent msgpack 직렬화의 정확한 필드 순서를 Python SDK `signing.py`에서 추출 필요. 테스트넷에서 실제 서명 검증 필수 (`api.hyperliquid-testnet.xyz`)
-- **Phase 5 (Sub-account):** Sub-account 생성의 거래량 요건($100K)이 testnet에도 적용되는지 확인 필요. Account Abstraction 모드별 API 응답 구조 차이 확인
+- **Phase 1 (API Client):** `/deposit/status` 응답의 전체 필드 목록을 실제 API 호출로 확인 필요. 문서에서 status enum 4값은 확인했으나 나머지 필드 정확도 MEDIUM. Zod `.passthrough()` 사용 권장.
+- **Phase 2 (Provider):** 체인별 SpokePool 주소 확정 필요 (Ethereum만 Etherscan 확인됨, 나머지는 Across GitHub `deployments.json` 참조). 체인별 WETH 주소 매핑 완성 필요.
+- **Phase 3 (Daemon):** 현재 LI.FI bridge의 `bridge_status` enrollment 코드 존재 여부 확인 필요. LI.FI enrollment가 없다면 Across와 함께 LI.FI enrollment도 구현해야 할 수 있음.
 
 Phases with standard patterns (skip research-phase):
-- **Phase 1 (HyperEVM 체인):** viem chain export 확인 완료 (GitHub 소스). EVM_CHAIN_MAP 추가만으로 완료. 기존 v28.8 빌트인 프리셋 패턴 그대로
-- **Phase 4 (Spot):** Phase 3의 ExchangeClient 재활용. Spot asset index 규칙(10000+)만 적용. 기존 Perp 주문 코드와 거의 동일 구조
-- **Phase 6 (Admin UI):** 기존 Admin UI 패턴 그대로. 신규 아키텍처 결정 불필요
+- **Phase 4 (MCP/SDK):** `mcpExpose=true`로 MCP 자동 노출. SDK 메서드는 기존 패턴 반복. 추가 리서치 불필요.
+- **Phase 5 (Tests):** Mock 기반 단위 테스트 패턴은 기존 provider 테스트와 동일. 추가 리서치 불필요.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | viem chain export GitHub 소스 확인, 외부 SDK 3개 비교 분석 완료, 신규 의존성 @msgpack/msgpack 1개만. 기존 인프라 재활용률 높음 |
-| Features | HIGH | Hyperliquid 공식 gitbook 전체 API 문서 기반. 모든 Exchange/Info action type 검증. Rate limit 가중치 시스템 상세 문서화 확인 |
-| Architecture | MEDIUM | ApiDirectResult 패턴은 WAIaaS에 신규 개념 -- IActionProvider.resolve() 반환 타입 확장과 Stage 5 분기가 기존 코드베이스에 미치는 영향 범위 검증 필요 |
-| Pitfalls | HIGH | 공식 서명 문서, Python SDK signing.py/signing_test.py, Chainstack/Turnkey 서드파티 구현 사례에서 교차 검증. 14개 pitfall 도출 |
+| Stack | HIGH | 신규 의존성 없음 확인. LI.FI 동일 패턴 검증 완료. viem ABI encoding 공식 문서 교차 검증 |
+| Features | HIGH | Across API 5 endpoints + depositV3 공식 문서 확인. 4개 연구 파일 동일 결론 |
+| Architecture | HIGH | LI.FI/DCent/Staking 11개 provider 선례와 동일 패턴. 기존 코드 직접 검증 완료 |
+| Pitfalls | MEDIUM | quote staleness, WETH 혼동은 공식 문서 기반. 실 운영 경험 없음. 핵심 5개 pitfall 모두 공식 문서에서 확인됨 |
+| API Stability | MEDIUM | depositV3는 안정적. `/deposit/status` 응답 전체 필드 목록 미확인. V3 마이그레이션 완료 상태이나 추가 변경 가능성 |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **ApiDirectResult 파이프라인 통합 상세:** `ActionProviderRegistry`와 `stages.ts`의 정확한 분기 지점은 Phase 2 설계 시 코드 리딩으로 확정. 특히 `requiresSigningKey` 패턴이 기존 key decryption 흐름과 어떻게 결합되는지 상세 설계 필요
-- **Python SDK 테스트 벡터 추출:** phantom agent 서명의 정확한 입출력 매핑(action -> msgpack bytes -> keccak256 -> connectionId -> EIP-712 signature)은 Phase 3 구현 시 `signing_test.py`에서 직접 포팅. 구현 전 테스트 벡터 확보 우선
-- **Sub-account 생성 요건:** testnet에서의 $100K 거래량 요건 적용 여부 -- Phase 5 착수 전 testnet 실제 호출로 확인
-- **Account Abstraction 모드별 API 응답 차이:** Unified 모드에서 spotClearinghouseState 응답 구조가 Standard 모드와 다른지 -- Phase 4 설계 시 확인
-- **정책 엔진 적용 기준:** SPENDING_LIMIT가 margin 금액에 적용되는지 notional value(size * price)에 적용되는지 -- Phase 2 설계에서 결정. 레버리지 거래는 margin 기준 권장 (실제 위험 노출 금액)
-- **WebSocket 도입 시점:** 초기 구현은 REST polling으로 충분하나, 주문 상태 동기화 지연이 UX 문제가 될 경우 Phase 3 내에서 선택적 도입 검토. 1000 구독 제한과 30 connections/min 제한 인지
+- **/deposit/status 응답 스키마 검증:** status 4값(filled/pending/expired/refunded)은 확인. `fillTxnRef`, `depositId`, `actionsSucceeded` 등 세부 필드는 실제 API 호출로 검증 필요. Zod `.passthrough()` + 런타임 로깅으로 Phase 1에서 보완.
+- **체인별 SpokePool 주소 확정:** Ethereum(`0x5c7B...35C5`), Polygon(`0x69B5...7920`) 확인. Arbitrum/Optimism/Base는 Across GitHub `deployments/README.md`에서 Phase 2 초기에 확정.
+- **체인별 WETH 주소 매핑 완성:** Ethereum WETH(`0xC02a...6Cc2`), Arbitrum WETH(`0x82aF...`) 등 WAIaaS 지원 체인 전체 매핑. Phase 1 `config.ts`에서 정의.
+- **LI.FI bridge enrollment 현황 확인:** 현재 LI.FI `bridge_status` enrollment가 `actions.ts`에 있는지 코드 확인 필요. 없다면 Across와 LI.FI 모두 Phase 3에서 구현.
+- **zkSync/Scroll WAIaaS 지원 여부:** Across 지원 체인 중 zkSync(324), Scroll(534352)의 WAIaaS 네트워크 지원 여부 미확인. Phase 2에서 WAIaaS 네트워크 목록과 대조.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- [Hyperliquid Exchange Endpoint Docs](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/exchange-endpoint) -- 전체 action type, 서명 요구사항
-- [Hyperliquid Info Endpoint Docs](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint) -- 조회 API 전체
-- [Hyperliquid Signing Docs](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/signing) -- 두 서명 스키마, 필드 순서 주의사항
-- [Hyperliquid Rate Limits](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/rate-limits-and-user-limits) -- 가중치 기반 rate limit 상세
-- [Hyperliquid Nonces and API Wallets](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/nonces-and-api-wallets) -- Nonce 형식(ms timestamp), 100개 윈도우, API wallet 제한
-- [Hyperliquid Python SDK signing.py](https://github.com/hyperliquid-dex/hyperliquid-python-sdk/blob/master/hyperliquid/utils/signing.py) -- 공식 참조 구현
-- [Hyperliquid Python SDK signing_test.py](https://github.com/hyperliquid-dex/hyperliquid-python-sdk/blob/master/tests/signing_test.py) -- 서명 테스트 벡터
-- [viem chains index.ts](https://github.com/wevm/viem/blob/main/src/chains/index.ts) -- hyperEvm, hyperliquidEvmTestnet export 확인
-- WAIaaS codebase: `packages/actions/src/providers/drift/` -- IPerpProvider 패턴 (Hyperliquid Perp 참조 구조)
-- WAIaaS codebase: `packages/core/src/interfaces/action-provider.types.ts` -- IActionProvider.resolve() 계약
-- WAIaaS codebase: `packages/daemon/src/pipeline/stages.ts` -- 6-stage pipeline, Stage 5 분기 대상
+- [Across API Reference](https://docs.across.to/reference/api-reference) — suggested-fees, deposit/status, limits, available-routes 엔드포인트
+- [Across Selected Contract Functions](https://docs.across.to/reference/selected-contract-functions) — depositV3 시그니처, fillDeadline/quoteTimestamp 검증 규칙
+- [Across Intent Lifecycle](https://docs.across.to/concepts/intent-lifecycle-in-across) — Relayer fill 흐름, 2-10초 완료 타임라인
+- [Across Bridge Guide](https://docs.across.to/developer-quickstart/bridge) — 통합 흐름, WETH inputToken 패턴
+- [SpokePool.sol (GitHub)](https://github.com/across-protocol/contracts/blob/master/contracts/SpokePool.sol) — 컨트랙트 소스, depositV3 payable 검증
+- [Ethereum SpokePool (Etherscan)](https://etherscan.io/address/0x5c7bcd6e7de5423a257d81b442095a1a6ced35c5) — 배포 주소 확인
+- 기존 WAIaaS 코드: `packages/actions/src/providers/lifi/` — LI.FI 선례 패턴 직접 검증
 
 ### Secondary (MEDIUM confidence)
-- [Chainstack Hyperliquid Auth Guide](https://docs.chainstack.com/docs/hyperliquid-authentication-guide) -- EIP-712 domain 파라미터 교차 확인
-- [Turnkey x Hyperliquid EIP-712](https://www.turnkey.com/blog/hyperliquid-secure-eip-712-signing) -- 서드파티 EIP-712 구현 사례, domain 파라미터 확인
-- [DeepWiki nomeida/hyperliquid Auth](https://deepwiki.com/nomeida/hyperliquid/6.1-authentication-and-signing) -- phantom agent 구조 분석
-- [Chainstack: Hyperliquid Sub-accounts](https://docs.chainstack.com/reference/hyperliquid-info-subaccounts) -- Sub-account API 참조
+- [Across Fees in the System](https://docs.across.to/reference/fees-in-the-system) — LP fee 이자율 모델, relayer capital/gas fee 구조
+- [Across Tracking Events](https://docs.across.to/reference/tracking-events) — V3FundsDeposited 이벤트, depositId 추출
+- [Across Migration V2 to V3](https://docs.across.to/introduction/migration-guides/migration-from-v2-to-v3) — 2025-01-23 컨트랙트 마이그레이션 이력
+- [Across GitHub Deployments](https://github.com/across-protocol/contracts/blob/master/deployments/README.md) — 체인별 SpokePool 주소 (미확인 체인 존재)
 
 ### Tertiary (LOW confidence)
-- [@nktkas/hyperliquid npm](https://www.npmjs.com/package/@nktkas/hyperliquid) -- 커뮤니티 SDK 비교 참고 (0.x 불안정)
-- [hyperliquid npm (nomeida)](https://www.npmjs.com/package/hyperliquid) -- 커뮤니티 SDK 비교 참고 (ethers.js 의존성)
+- [@across-protocol/app-sdk npm](https://www.npmjs.com/package/@across-protocol/app-sdk) — v0.4.4 frontend SDK (명시적 거부, WAIaaS 부적합 확인용으로만 참조)
+- [@across-protocol/sdk npm](https://www.npmjs.com/package/@across-protocol/sdk) — v4.1.32 relayer SDK (명시적 거부, ethers.js 의존성 확인용)
 
 ---
 *Research completed: 2026-03-08*
