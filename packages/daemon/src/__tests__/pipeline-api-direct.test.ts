@@ -3,7 +3,7 @@
  *
  * @see HDESIGN-01: ApiDirectResult pipeline integration
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { isApiDirectResult, type ApiDirectResult } from '@waiaas/core';
 import { ActionProviderRegistry } from '../infrastructure/action/action-provider-registry.js';
 import { z } from 'zod';
