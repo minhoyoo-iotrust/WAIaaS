@@ -52,10 +52,10 @@ Requirements for Hyperliquid ecosystem integration. Each maps to roadmap phases.
 
 ### Sub-account
 
-- [ ] **HSUB-01**: User가 Hyperliquid Sub-account를 생성할 수 있다
-- [ ] **HSUB-02**: User가 Master ↔ Sub-account 간 자금 이동 (USDC/토큰)을 할 수 있다
-- [ ] **HSUB-03**: User가 Sub-account별 포지션/잔액을 조회할 수 있다
-- [ ] **HSUB-04**: Sub-account 기능이 MCP 도구 + SDK 메서드로 노출된다
+- [x] **HSUB-01**: User가 Hyperliquid Sub-account를 생성할 수 있다
+- [x] **HSUB-02**: User가 Master ↔ Sub-account 간 자금 이동 (USDC/토큰)을 할 수 있다
+- [x] **HSUB-03**: User가 Sub-account별 포지션/잔액을 조회할 수 있다
+- [x] **HSUB-04**: Sub-account 기능이 MCP 도구 + SDK 메서드로 노출된다
 
 ### Account State
 
@@ -148,10 +148,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | HSPOT-05 | Phase 350 | Complete |
 | HSPOT-06 | Phase 350 | Complete |
 | HSPOT-07 | Phase 350 | Complete |
-| HSUB-01 | Phase 351 | Pending |
-| HSUB-02 | Phase 351 | Pending |
-| HSUB-03 | Phase 351 | Pending |
-| HSUB-04 | Phase 351 | Pending |
+| HSUB-01 | Phase 351 | Complete |
+| HSUB-02 | Phase 351 | Complete |
+| HSUB-03 | Phase 351 | Complete |
+| HSUB-04 | Phase 351 | Complete |
 | HACCT-01 | Phase 349 | Complete |
 | HACCT-02 | Phase 349 | Complete |
 | HACCT-03 | Phase 349 | Complete |

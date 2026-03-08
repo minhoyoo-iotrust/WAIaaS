@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v31.4
 milestone_name: Hyperliquid 생태계 통합
 status: completed
-stopped_at: Completed 350-02-PLAN.md
-last_updated: "2026-03-08T05:05:34.169Z"
-last_activity: 2026-03-08 — Phase 350 Spot Trading complete
+stopped_at: Completed 351-02-PLAN.md (final phase of v31.4)
+last_updated: "2026-03-08T05:30:45.391Z"
+last_activity: 2026-03-08 — Phase 351 Sub-account complete (milestone v31.4 done)
 progress:
   total_phases: 5
-  completed_phases: 4
-  total_plans: 10
-  completed_plans: 10
-  percent: 80
+  completed_phases: 5
+  total_plans: 12
+  completed_plans: 12
+  percent: 100
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-08)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 350 complete. Next: Phase 351 Sub-account
+**Current focus:** Milestone v31.4 complete. All 5 phases done (347-351).
 
 ## Current Position
 
-Phase: 350 of 351 (Spot Trading) — 4 of 5 phases
+Phase: 351 of 351 (Sub-account) — 5 of 5 phases
 Plan: 2 of 2 (complete)
-Status: Phase 350 complete
-Last activity: 2026-03-08 — Phase 350 Spot Trading complete
+Status: Milestone v31.4 complete
+Last activity: 2026-03-08 — Phase 351 Sub-account complete
 
-Progress: [████████░░] 80%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10 (3 design + 7 implementation)
-- Average duration: ~15 min per implementation plan
-- Total execution time: ~2.5 hours
+- Total plans completed: 12 (3 design + 9 implementation)
+- Average duration: ~13 min per implementation plan
+- Total execution time: ~3 hours
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -48,6 +48,8 @@ Progress: [████████░░] 80%
 | 349   | 05   | 15min    | 2     | 11    |
 | 350   | 01   | 5min     | 2     | 5     |
 | 350   | 02   | 8min     | 2     | 9     |
+| 351   | 01   | 5min     | 2     | 8     |
+| 351   | 02   | 8min     | 2     | 11    |
 
 ## Accumulated Context
 
@@ -77,6 +79,9 @@ Progress: [████████░░] 80%
 - [Phase 350]: Spot asset index = 10000 + spotMeta.universe.findIndex()
 - [Phase 350]: Spot buy spending = size*price (no leverage), sell/cancel = $0
 - [Phase 350]: SpotOrdersTable filters by "/" in coin name (spot pairs vs perp symbols)
+- [Phase 351]: HyperliquidSpotProvider co-registered in perp factory (was never registered -- bug fix)
+- [Phase 351]: SubAccountProvider uses thin IActionProvider wrapper pattern over SubAccountService
+- [Phase 351]: Sub-account create/transfer through pipeline for policy; list/positions are REST GET queries
 
 ### Blockers/Concerns
 
@@ -87,6 +92,6 @@ Progress: [████████░░] 80%
 
 ## Session Continuity
 
-Last session: 2026-03-08T05:05:00.000Z
-Stopped at: Completed 350-02-PLAN.md
+Last session: 2026-03-08T05:30:45.387Z
+Stopped at: Completed 351-02-PLAN.md (final phase of v31.4)
 Resume file: None
