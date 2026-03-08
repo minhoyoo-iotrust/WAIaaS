@@ -315,6 +315,8 @@ export type {
   ActionDefinition,
   ActionContext,
   IActionProvider,
+  // v31.4: API-direct result type for non-on-chain providers (HDESIGN-01)
+  ApiDirectResult,
   // v1.5.1 x402 types
   X402FetchRequest,
   X402FetchResponse,
@@ -383,6 +385,8 @@ export {
   ActionProviderMetadataSchema,
   ActionDefinitionSchema,
   ActionContextSchema,
+  // v31.4: type guard for API-direct results
+  isApiDirectResult,
 } from './interfaces/index.js';
 
 // v1.5.1 x402 Zod schemas + CAIP-2 mapping (value exports)

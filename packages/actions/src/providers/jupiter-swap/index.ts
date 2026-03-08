@@ -51,6 +51,7 @@ export class JupiterSwapActionProvider implements IActionProvider {
       mcpExpose: true,
       requiresApiKey: false,
       requiredApis: ['jupiter'],
+      requiresSigningKey: false,
     };
 
     this.actions = [

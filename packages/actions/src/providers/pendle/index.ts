@@ -52,6 +52,7 @@ export class PendleYieldProvider implements IYieldProvider, IPositionProvider {
       mcpExpose: true,
       requiresApiKey: false,
       requiredApis: ['pendle'],
+      requiresSigningKey: false,
     };
 
     this.actions = [

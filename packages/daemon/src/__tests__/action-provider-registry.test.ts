@@ -77,6 +77,7 @@ function createMockProvider(
     mcpExpose: overrides?.mcpExpose ?? false,
     requiresApiKey: overrides?.requiresApiKey ?? false,
     requiredApis: [],
+      requiresSigningKey: false,
   };
 
   return {

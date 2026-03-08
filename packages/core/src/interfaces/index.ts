@@ -42,11 +42,15 @@ export type {
   ActionDefinition,
   ActionContext,
   IActionProvider,
+  // v31.4: API-direct result type for non-on-chain providers (HDESIGN-01)
+  ApiDirectResult,
 } from './action-provider.types.js';
 export {
   ActionProviderMetadataSchema,
   ActionDefinitionSchema,
   ActionContextSchema,
+  // v31.4: type guard for API-direct results
+  isApiDirectResult,
 } from './action-provider.types.js';
 
 // v1.5.3 Forex Rate types (Zod SSoT)

@@ -98,6 +98,7 @@ export class AaveV3LendingProvider implements ILendingProvider, IPositionProvide
       mcpExpose: true,
       requiresApiKey: false,
       requiredApis: [],
+      requiresSigningKey: false,
     };
 
     this.actions = [
