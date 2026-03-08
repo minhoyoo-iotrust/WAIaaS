@@ -1284,3 +1284,111 @@ const signed = await client.signUserOp('wallet-id', {
   userOperation: { ...build, callGasLimit: '0x...', ... },
 });
 ```
+
+## Hyperliquid Perp Trading
+
+Hyperliquid perpetual futures trading via the action provider pipeline. Requires `actions.hyperliquid_enabled=true` in Admin Settings.
+
+> AI agents must NEVER request the master password. Use only your session token.
+
+### Action Endpoints (through pipeline)
+
+Actions go through the standard `/v1/actions/hyperliquid_perp/{action}` route with policy evaluation.
+
+```bash
+# Open a market long position (10x leverage, 1 ETH)
+curl -X POST http://localhost:3100/v1/actions/hyperliquid_perp/hl_open_position \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"wallet_id":"wid","market":"ETH","side":"LONG","size":"1","leverage":10,"order_type":"MARKET"}'
+
+# Place a limit buy order
+curl -X POST http://localhost:3100/v1/actions/hyperliquid_perp/hl_place_order \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"wallet_id":"wid","market":"ETH","side":"BUY","size":"0.5","price":"2000","order_type":"LIMIT","time_in_force":"GTC"}'
+
+# Set stop-loss (trigger order)
+curl -X POST http://localhost:3100/v1/actions/hyperliquid_perp/hl_place_order \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"wallet_id":"wid","market":"ETH","side":"SELL","size":"1","price":"1800","order_type":"STOP","trigger_price":"1810","time_in_force":"GTC","reduce_only":true}'
+
+# Close a position
+curl -X POST http://localhost:3100/v1/actions/hyperliquid_perp/hl_close_position \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"wallet_id":"wid","market":"ETH"}'
+
+# Set leverage for a market
+curl -X POST http://localhost:3100/v1/actions/hyperliquid_perp/hl_set_leverage \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"wallet_id":"wid","market":"ETH","leverage":5,"is_cross":true}'
+```
+
+### Query Endpoints (no pipeline, direct)
+
+```bash
+# Get positions
+curl http://localhost:3100/v1/wallets/$WID/hyperliquid/positions \
+  -H "X-Master-Password: $PASS"
+
+# Get open orders
+curl http://localhost:3100/v1/wallets/$WID/hyperliquid/orders \
+  -H "X-Master-Password: $PASS"
+
+# Get account state (balances, margins)
+curl http://localhost:3100/v1/wallets/$WID/hyperliquid/account \
+  -H "X-Master-Password: $PASS"
+
+# Get trade history
+curl http://localhost:3100/v1/wallets/$WID/hyperliquid/fills?limit=50 \
+  -H "X-Master-Password: $PASS"
+
+# Get market list (no wallet needed)
+curl http://localhost:3100/v1/hyperliquid/markets \
+  -H "X-Master-Password: $PASS"
+
+# Get funding rates
+curl http://localhost:3100/v1/hyperliquid/funding-rates?market=ETH \
+  -H "X-Master-Password: $PASS"
+```
+
+### MCP Tools
+
+Action tools (7, auto-registered via provider):
+- `hl_open_position`: Open a perp position (market/limit)
+- `hl_close_position`: Close a perp position
+- `hl_place_order`: Place an order (limit/stop/take-profit)
+- `hl_cancel_order`: Cancel an open order
+- `hl_set_leverage`: Set leverage for a market
+- `hl_set_margin_mode`: Set margin mode (cross/isolated)
+- `hl_transfer_usdc`: Transfer USDC between spot and perp
+
+Query tools (6, manually registered):
+- `waiaas_hl_get_positions`: Get perp positions
+- `waiaas_hl_get_open_orders`: Get open orders
+- `waiaas_hl_get_markets`: Get market list
+- `waiaas_hl_get_funding_rates`: Get funding rate history
+- `waiaas_hl_get_account_state`: Get account state
+- `waiaas_hl_get_trade_history`: Get trade history (fills)
+
+### SDK Methods
+
+```typescript
+// Action methods (through pipeline)
+await client.hlOpenPosition('wallet-id', { market: 'ETH', side: 'LONG', size: '1', leverage: 10 });
+await client.hlClosePosition('wallet-id', { market: 'ETH' });
+await client.hlPlaceOrder('wallet-id', { market: 'ETH', side: 'BUY', size: '0.5', price: '2000', order_type: 'LIMIT' });
+await client.hlCancelOrder('wallet-id', { market: 'ETH', oid: 12345 });
+await client.hlSetLeverage('wallet-id', { market: 'ETH', leverage: 5, is_cross: true });
+
+// Query methods (direct)
+const positions = await client.hlGetPositions('wallet-id');
+const orders = await client.hlGetOpenOrders('wallet-id');
+const markets = await client.hlGetMarkets();
+const rates = await client.hlGetFundingRates('ETH');
+const account = await client.hlGetAccountState('wallet-id');
+const fills = await client.hlGetTradeHistory('wallet-id', 50);
+```
