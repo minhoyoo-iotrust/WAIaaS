@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v31.4
 milestone_name: Hyperliquid 생태계 통합
-status: executing
+status: planning
 stopped_at: Completed 348-02-PLAN.md
-last_updated: "2026-03-08T03:36:57.591Z"
+last_updated: "2026-03-08T03:38:25.805Z"
 last_activity: 2026-03-08 — Phase 348 design complete
 progress:
   total_phases: 5

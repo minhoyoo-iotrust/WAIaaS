@@ -82,7 +82,7 @@ Plans:
   2. EIP-712 두 서명 스키마(phantom agent L1 Action vs user-signed HyperliquidSignTransaction)의 domain/types/필드 순서가 상세히 문서화되어 있다
   3. Sub-account-to-wallet 매핑 모델과 정책 엔진 적용 규칙(notional vs margin 기준)이 확정되어 있다
   4. DB 스키마 변경, MCP/SDK/Admin UI 인터페이스 설계가 확정되어 있다
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 Plans:
 - [x] 348-01-PLAN.md — ApiDirectResult 패턴 + EIP-712 서명 + ExchangeClient 공유 구조 설계
 - [x] 348-02-PLAN.md — Sub-account 매핑 + 정책 엔진 + MCP/SDK/Admin 인터페이스 + DB 스키마 설계
@@ -128,7 +128,7 @@ Note: Phase 350과 351은 Phase 349에만 의존하므로 병렬 실행 가능
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 347. HyperEVM 체인 등록 | 1/1 | Complete    | 2026-03-08 |
-| 348. Hyperliquid DEX 설계 문서 | 2/2 | Complete | 2026-03-08 |
+| 348. Hyperliquid DEX 설계 문서 | 2/2 | Complete    | 2026-03-08 |
 | 349. Core Infrastructure + Perp Trading | 0/TBD | Not started | - |
 | 350. Spot Trading | 0/TBD | Not started | - |
 | 351. Sub-account 관리 | 0/TBD | Not started | - |
