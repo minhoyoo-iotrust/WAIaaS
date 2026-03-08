@@ -150,7 +150,7 @@ Phases execute in numeric order: 352 -> 353 -> 354 -> 355 -> 356
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 352. Research + Design | 1/1 | Complete    | 2026-03-08 |
-| 353. API Client + Bridge Provider | 2/2 | Complete | 2026-03-09 |
+| 353. API Client + Bridge Provider | 2/2 | Complete    | 2026-03-08 |
 | 354. Status Tracking + Daemon Integration | 0/1 | Not started | - |
 | 355. Interface Integration | 0/2 | Not started | - |
 | 356. Tests + Verification | 0/2 | Not started | - |
