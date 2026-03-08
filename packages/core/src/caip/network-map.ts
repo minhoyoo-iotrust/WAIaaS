@@ -21,6 +21,9 @@ export const CAIP2_TO_NETWORK: Record<string, { chain: ChainType; network: Netwo
   'eip155:11155420': { chain: 'ethereum', network: 'optimism-sepolia' },
   'eip155:8453':     { chain: 'ethereum', network: 'base-mainnet' },
   'eip155:84532':    { chain: 'ethereum', network: 'base-sepolia' },
+  // HyperEVM (Hyperliquid)
+  'eip155:999':      { chain: 'ethereum', network: 'hyperevm-mainnet' },
+  'eip155:998':      { chain: 'ethereum', network: 'hyperevm-testnet' },
   // Solana
   'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp': { chain: 'solana', network: 'solana-mainnet' },
   'solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1':  { chain: 'solana', network: 'solana-devnet' },
