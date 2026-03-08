@@ -1,7 +1,8 @@
 # 마일스톤 m31-04: Hyperliquid 생태계 통합
 
-- **Status:** PLANNED
+- **Status:** SHIPPED
 - **Milestone:** v31.4
+- **Completed:** 2026-03-08
 
 ## 목표
 

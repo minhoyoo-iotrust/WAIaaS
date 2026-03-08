@@ -128,8 +128,8 @@ Plans:
   3. User가 Sub-account별 포지션과 잔액을 조회할 수 있고, 해당 기능이 MCP 도구 + SDK 메서드로 노출된다
 **Plans:** 2/2 plans complete
 Plans:
-- [ ] 351-01-PLAN.md — SubAccountService + Zod 스키마 + DB v52 마이그레이션 + 테스트
-- [ ] 351-02-PLAN.md — REST API + MCP 4도구 + SDK 4메서드 + Admin UI Sub-accounts 탭 + Skill 파일
+- [x] 351-01-PLAN.md — SubAccountService + Zod 스키마 + DB v52 마이그레이션 + 테스트
+- [x] 351-02-PLAN.md — REST API + MCP 4도구 + SDK 4메서드 + Admin UI Sub-accounts 탭 + Skill 파일
 
 ## Progress
 
