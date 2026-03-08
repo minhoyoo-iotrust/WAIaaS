@@ -1008,6 +1008,94 @@ export class WAIaaSClient {
     );
   }
 
+  // --- Hyperliquid Perp convenience methods ---
+
+  /** Open a Hyperliquid perpetual position. */
+  async hlOpenPosition(walletId: string, params: Record<string, unknown>): Promise<ExecuteActionResponse> {
+    return this.executeAction('hyperliquid_perp', 'hl_open_position', { params, walletId });
+  }
+
+  /** Close a Hyperliquid perpetual position. */
+  async hlClosePosition(walletId: string, params: Record<string, unknown>): Promise<ExecuteActionResponse> {
+    return this.executeAction('hyperliquid_perp', 'hl_close_position', { params, walletId });
+  }
+
+  /** Place a conditional order (stop-loss, take-profit). */
+  async hlPlaceOrder(walletId: string, params: Record<string, unknown>): Promise<ExecuteActionResponse> {
+    return this.executeAction('hyperliquid_perp', 'hl_place_order', { params, walletId });
+  }
+
+  /** Cancel one or all orders for a market. */
+  async hlCancelOrder(walletId: string, params: Record<string, unknown>): Promise<ExecuteActionResponse> {
+    return this.executeAction('hyperliquid_perp', 'hl_cancel_order', { params, walletId });
+  }
+
+  /** Set leverage for a market. */
+  async hlSetLeverage(walletId: string, params: Record<string, unknown>): Promise<ExecuteActionResponse> {
+    return this.executeAction('hyperliquid_perp', 'hl_set_leverage', { params, walletId });
+  }
+
+  /** Set margin mode (CROSS or ISOLATED). */
+  async hlSetMarginMode(walletId: string, params: Record<string, unknown>): Promise<ExecuteActionResponse> {
+    return this.executeAction('hyperliquid_perp', 'hl_set_margin_mode', { params, walletId });
+  }
+
+  /** Transfer USDC between Spot and Perp accounts. */
+  async hlTransferUsdc(walletId: string, params: Record<string, unknown>): Promise<ExecuteActionResponse> {
+    return this.executeAction('hyperliquid_perp', 'hl_transfer_usdc', { params, walletId });
+  }
+
+  /** Get Hyperliquid perp positions. */
+  async hlGetPositions(walletId: string): Promise<unknown> {
+    return withRetry(
+      () => this.http.get<unknown>(`/v1/wallets/${walletId}/hyperliquid/positions`, this.authHeaders()),
+      this.retryOptions,
+    );
+  }
+
+  /** Get Hyperliquid open orders. */
+  async hlGetOpenOrders(walletId: string): Promise<unknown> {
+    return withRetry(
+      () => this.http.get<unknown>(`/v1/wallets/${walletId}/hyperliquid/orders`, this.authHeaders()),
+      this.retryOptions,
+    );
+  }
+
+  /** Get Hyperliquid perp markets. */
+  async hlGetMarkets(): Promise<unknown> {
+    return withRetry(
+      () => this.http.get<unknown>('/v1/hyperliquid/markets', this.authHeaders()),
+      this.retryOptions,
+    );
+  }
+
+  /** Get funding rate history. */
+  async hlGetFundingRates(market: string, startTime?: number): Promise<unknown> {
+    const params = new URLSearchParams({ market });
+    if (startTime !== undefined) params.set('startTime', String(startTime));
+    return withRetry(
+      () => this.http.get<unknown>(`/v1/hyperliquid/funding-rates?${params.toString()}`, this.authHeaders()),
+      this.retryOptions,
+    );
+  }
+
+  /** Get Hyperliquid account state. */
+  async hlGetAccountState(walletId: string): Promise<unknown> {
+    return withRetry(
+      () => this.http.get<unknown>(`/v1/wallets/${walletId}/hyperliquid/account`, this.authHeaders()),
+      this.retryOptions,
+    );
+  }
+
+  /** Get Hyperliquid trade history (fills). */
+  async hlGetTradeHistory(walletId: string, limit?: number): Promise<unknown> {
+    const params = limit ? `?limit=${limit}` : '';
+    return withRetry(
+      () => this.http.get<unknown>(`/v1/wallets/${walletId}/hyperliquid/fills${params}`, this.authHeaders()),
+      this.retryOptions,
+    );
+  }
+
   // --- Wallet creation (masterAuth) ---
   async createWallet(params: CreateWalletParams): Promise<CreateWalletResponse> {
     if (!this.masterPassword) {

@@ -159,6 +159,9 @@ export function buildConnectInfoPrompt(params: BuildConnectInfoPromptParams): st
   if (capabilities.includes('dcent_swap')) {
     lines.push("D'CENT Swap Aggregator: Use action_dcent_swap_* tools for multi-chain DEX swaps including cross-chain swaps.");
   }
+  if (capabilities.includes('hyperliquid')) {
+    lines.push('Hyperliquid Perp Trading: Use hl_* action tools for perpetual trading (open/close positions, place/cancel orders, set leverage). Query endpoints: GET /v1/wallets/{id}/hyperliquid/positions, /orders, /account, /fills. Market data: GET /v1/hyperliquid/markets, /funding-rates.');
+  }
   lines.push('Specify walletId parameter (UUID from the ID field above) to target a specific wallet.');
   lines.push('Append ?network=<network> to query a specific network (required for EVM wallets, auto-resolved for Solana).');
   lines.push('When session expires (401 TOKEN_EXPIRED), renew with PUT /v1/sessions/{sessionId}/renew.');
@@ -365,6 +368,17 @@ export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
         }
       } catch {
         // Setting not found -- dcent_swap not available
+      }
+    }
+
+    // hyperliquid: check if enabled via settings
+    if (deps.settingsService) {
+      try {
+        if (deps.settingsService.get('actions.hyperliquid_enabled') === 'true') {
+          capabilities.push('hyperliquid');
+        }
+      } catch {
+        // Setting not found -- hyperliquid not available
       }
     }
 
