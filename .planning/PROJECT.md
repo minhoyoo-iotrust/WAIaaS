@@ -8,6 +8,19 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
+## Current Milestone: v31.6 Across Protocol 크로스체인 브릿지
+
+**Goal:** Across Protocol을 WAIaaS에 통합하여 Intent 기반 고속 크로스체인 브릿지 지원. SpokePool depositV3를 기존 CONTRACT_CALL 파이프라인으로 실행하고, Relayer 선지급 구조의 수초 내 완결성을 활용한다.
+
+**Target features:**
+- Across Protocol 리서치 및 설계 문서 (doc 79)
+- AcrossBridgeActionProvider (IActionProvider) — quote/execute/status/routes/limits
+- SpokePool depositV3 via CONTRACT_CALL + ERC-20 approve BATCH
+- 네이티브 토큰 브릿지 (msg.value)
+- 브릿지 상태 추적 (deposit → Relayer fill 완료)
+- MCP 도구 + SDK 메서드 + Admin Settings + Admin UI
+- 정책 엔진 통합 (크로스체인 전송 한도)
+
 ## Previous Milestone: v31.4 Hyperliquid 생태계 통합 — SHIPPED 2026-03-08
 
 HyperEVM 체인 지원과 Hyperliquid L1 DEX(Perp/Spot) 거래 + Sub-account 관리를 ApiDirectResult 패턴으로 기존 파이프라인에 통합. HyperEVM Mainnet/Testnet (Chain ID 999/998) 체인 등록, EIP-712 서명 기반 off-chain DEX API(7 Perp actions + 3 Spot actions + 2 Sub-account actions), Stage 5 ApiDirectResult 분기(on-chain TX 없이 CONFIRMED), margin 기반 정책 평가(Perp) + size*price 정책(Spot), HyperliquidSigner(L1 + User-Signed dual EIP-712), ExchangeClient(RateLimiter 600 weight/min), MarketData(positions/orders/fills/funding/markets/balances/sub-accounts), DB v51 hyperliquid_orders + DB v52 hyperliquid_sub_accounts, 22 MCP tools + 22 SDK methods + 9 Admin Settings + Admin UI 5-tab page + connect-info capability + skill files 3개. 5 phases, 12 plans, 44 requirements, 38 commits, 112 files, +12,755 lines.
@@ -1297,4 +1310,4 @@ v31.3 shipped. DCent Swap Backend API 통합. DcentSwapApiClient(7 endpoints, 24
 v31.4 shipped. HyperEVM Mainnet/Testnet(Chain ID 999/998) 체인 등록 + Hyperliquid L1 DEX(Perp/Spot) + Sub-account 관리. ApiDirectResult 패턴(off-chain DEX API → Stage 5 CONFIRMED 분기), EIP-712 dual signing(phantom agent L1 Action chainId 1337 + User-Signed HyperliquidSignTransaction chainId 42161), HyperliquidSigner + ExchangeClient(RateLimiter 600 weight/min) + MarketData(15 query methods) 공유 인프라, HyperliquidPerpProvider(7 actions: market/limit/SL/TP/cancel/leverage/margin mode, margin 기반 정책 평가), HyperliquidSpotProvider(3 actions: buy/sell/cancel, asset index 10000+ 매핑, size*price 정책), HyperliquidSubAccountProvider(create/transfer User-Signed Actions), DB v51 hyperliquid_orders + DB v52 hyperliquid_sub_accounts, 22 MCP tools + 22 SDK methods + 9 Admin Settings + Admin UI 5-tab page(Overview/Orders/Spot/Sub-accounts/Settings, 10s auto-refresh) + connect-info hyperliquid capability + skill files 3개. 5 phases, 12 plans, 44 requirements, 38 commits, 112 files, +12,755 lines, design doc 78.
 
 ---
-*최종 업데이트: 2026-03-08 after v31.4 milestone*
+*최종 업데이트: 2026-03-08 after v31.6 milestone started*
