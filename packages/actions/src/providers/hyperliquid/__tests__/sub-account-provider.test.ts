@@ -29,9 +29,9 @@ function createContext(privateKey = '0xabcd'): ActionContext {
   return {
     privateKey,
     walletId: 'wlt-1',
-    chainId: 42161,
-    network: 'arbitrum-mainnet',
-  } as ActionContext;
+    chain: 'ethereum',
+    walletAddress: '0x1234567890abcdef1234567890abcdef12345678',
+  } as unknown as ActionContext;
 }
 
 describe('HyperliquidSubAccountProvider', () => {
