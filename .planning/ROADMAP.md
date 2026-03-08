@@ -76,7 +76,7 @@
   2. SpokePool depositV3 12개 파라미터와 체인별 SpokePool/WETH 주소가 문서화되어 있다
   3. outputAmount 계산 공식(inputAmount - totalRelayFee.total)과 fillDeadline/exclusivityDeadline 기본값 전략이 확정되어 있다
   4. AcrossBridgeActionProvider 인터페이스와 MCP/SDK 설계가 문서화되어 있다
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
 - [ ] 352-01: Across Protocol 리서치 + 설계 문서(doc 79) 작성
