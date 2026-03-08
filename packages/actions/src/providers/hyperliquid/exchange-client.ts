@@ -150,15 +150,10 @@ export class HyperliquidExchangeClient {
  * Create a configured HyperliquidExchangeClient.
  */
 export function createHyperliquidClient(
-  isMainnet: boolean,
-  options?: {
-    apiUrl?: string;
-    maxWeightPerMin?: number;
-    timeoutMs?: number;
-  },
+  apiUrl: string,
+  rateLimiter?: HyperliquidRateLimiter,
+  timeoutMs?: number,
 ): HyperliquidExchangeClient {
-  const { HL_MAINNET_API_URL, HL_TESTNET_API_URL } = require('./config.js');
-  const url = options?.apiUrl ?? (isMainnet ? HL_MAINNET_API_URL : HL_TESTNET_API_URL);
-  const limiter = new HyperliquidRateLimiter(options?.maxWeightPerMin);
-  return new HyperliquidExchangeClient(url, limiter, options?.timeoutMs);
+  const limiter = rateLimiter ?? new HyperliquidRateLimiter();
+  return new HyperliquidExchangeClient(apiUrl, limiter, timeoutMs);
 }
