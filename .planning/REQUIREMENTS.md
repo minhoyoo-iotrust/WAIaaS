@@ -36,9 +36,9 @@ Requirements for Across Protocol cross-chain bridge integration. Each maps to ro
 
 ### Status Tracking (상태 추적)
 
-- [ ] **STS-01**: Bridge deposit 후 2-phase polling으로 fill 완료를 자동 추적
-- [ ] **STS-02**: 상태 변경 시 알림 이벤트 발행 (BRIDGE_COMPLETED, BRIDGE_FAILED 등)
-- [ ] **STS-03**: 기존 transactions.bridge_status/bridge_metadata 컬럼을 재사용하여 DB 마이그레이션 불필요
+- [x] **STS-01**: Bridge deposit 후 2-phase polling으로 fill 완료를 자동 추적
+- [x] **STS-02**: 상태 변경 시 알림 이벤트 발행 (BRIDGE_COMPLETED, BRIDGE_FAILED 등)
+- [x] **STS-03**: 기존 transactions.bridge_status/bridge_metadata 컬럼을 재사용하여 DB 마이그레이션 불필요
 
 ### Interface (인터페이스)
 
@@ -104,9 +104,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BRG-05 | Phase 353 | Complete |
 | BRG-06 | Phase 353 | Complete |
 | BRG-07 | Phase 353 | Complete |
-| STS-01 | Phase 354 | Pending |
-| STS-02 | Phase 354 | Pending |
-| STS-03 | Phase 354 | Pending |
+| STS-01 | Phase 354 | Complete |
+| STS-02 | Phase 354 | Complete |
+| STS-03 | Phase 354 | Complete |
 | INT-01 | Phase 355 | Pending |
 | INT-02 | Phase 355 | Pending |
 | INT-03 | Phase 355 | Pending |

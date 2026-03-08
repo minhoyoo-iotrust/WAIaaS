@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v31.6
 milestone_name: Across Protocol 크로스체인 브릿지
 status: completed
-stopped_at: Completed Phase 353 (353-01, 353-02)
-last_updated: "2026-03-08T16:06:55.409Z"
-last_activity: 2026-03-09 — Phase 353 complete (AcrossApiClient + AcrossBridgeActionProvider)
+stopped_at: Completed Phase 354 (354-01)
+last_updated: "2026-03-08T16:17:27.643Z"
+last_activity: 2026-03-09 — Phase 354 complete (AcrossBridgeStatusTracker 2-phase polling + Daemon integration)
 progress:
   total_phases: 5
-  completed_phases: 2
-  total_plans: 3
-  completed_plans: 3
-  percent: 40
+  completed_phases: 3
+  total_plans: 4
+  completed_plans: 4
+  percent: 60
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-08)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 354 — Status Tracking + Daemon Integration
+**Current focus:** Phase 355 — Interface Integration
 
 ## Current Position
 
-Phase: 354 of 356 (Status Tracking + Daemon Integration)
-Plan: 0 of 1 in current phase
-Status: Phase 353 complete, ready for Phase 354
-Last activity: 2026-03-09 — Phase 353 complete (AcrossApiClient + AcrossBridgeActionProvider)
+Phase: 355 of 356 (Interface Integration)
+Plan: 0 of 2 in current phase
+Status: Phase 354 complete, ready for Phase 355
+Last activity: 2026-03-09 — Phase 354 complete (AcrossBridgeStatusTracker 2-phase polling + Daemon integration)
 
-Progress: [████░░░░░░] 40%
+Progress: [██████████] 98%
 
 ## Performance Metrics
 
@@ -54,6 +54,8 @@ Progress: [████░░░░░░] 40%
 - [Phase 353]: Read-only actions (quote/status/routes/limits) return ApiDirectResult to satisfy IActionProvider interface
 - [Phase 353]: approve exact inputAmount, not MaxUint256 (Pitfall 10, WAIaaS security principle)
 - [Phase 353]: Removed .default([]) from Zod schema to fix type inference with ActionApiClient.get<T>
+- [Phase 354]: Tracker name across-bridge (not bridge) to avoid LI.FI collision
+- [Phase 354]: Skip chainId conversion at enrollment; store chain names, tracker handles optional originChainId
 
 ### Blockers/Concerns
 
@@ -64,6 +66,6 @@ Progress: [████░░░░░░] 40%
 
 ## Session Continuity
 
-Last session: 2026-03-09T16:04:00.000Z
-Stopped at: Completed Phase 353 (353-01, 353-02)
+Last session: 2026-03-08T16:17:27.639Z
+Stopped at: Completed Phase 354 (354-01)
 Resume file: None

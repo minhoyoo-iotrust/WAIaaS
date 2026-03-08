@@ -61,7 +61,7 @@
 
 - [x] **Phase 352: Research + Design** - Across Protocol API/SpokePool/수수료 모델 리서치 및 설계 문서(doc 79) 작성 (completed 2026-03-08)
 - [x] **Phase 353: API Client + Bridge Provider** - AcrossApiClient 5 엔드포인트 래핑 + AcrossBridgeActionProvider 5 actions 구현 (completed 2026-03-09)
-- [ ] **Phase 354: Status Tracking + Daemon Integration** - 2-phase polling 상태 추적 + Daemon tracker/enrollment 등록
+- [x] **Phase 354: Status Tracking + Daemon Integration** - 2-phase polling 상태 추적 + Daemon tracker/enrollment 등록 (completed 2026-03-08)
 - [ ] **Phase 355: Interface Integration** - MCP 도구 + SDK 메서드 + Admin Settings + Admin UI + Skill Files + connect-info
 - [ ] **Phase 356: Tests + Verification** - Mock 기반 단위 테스트 + 파이프라인 통합 테스트 + 에러 핸들링 검증
 
@@ -151,6 +151,6 @@ Phases execute in numeric order: 352 -> 353 -> 354 -> 355 -> 356
 |-------|----------------|--------|-----------|
 | 352. Research + Design | 1/1 | Complete    | 2026-03-08 |
 | 353. API Client + Bridge Provider | 2/2 | Complete    | 2026-03-08 |
-| 354. Status Tracking + Daemon Integration | 0/1 | Not started | - |
+| 354. Status Tracking + Daemon Integration | 1/1 | Complete   | 2026-03-08 |
 | 355. Interface Integration | 0/2 | Not started | - |
 | 356. Tests + Verification | 0/2 | Not started | - |
