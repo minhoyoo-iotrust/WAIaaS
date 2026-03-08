@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.10.0-rc.13](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.12...v2.10.0-rc.13) (2026-03-07)
+
+
+### Bug Fixes
+
+* resolve UserOp Sign route network double-replace bug ([#279](https://github.com/minhoyoo-iotrust/WAIaaS/issues/279)) ([db53024](https://github.com/minhoyoo-iotrust/WAIaaS/commit/db53024bc7552f17c7248939003a63cd72a68f9b))
+* resolve UserOp Sign route network double-replace bug ([#279](https://github.com/minhoyoo-iotrust/WAIaaS/issues/279)) ([eb2b509](https://github.com/minhoyoo-iotrust/WAIaaS/commit/eb2b5091d78a0a85a56c03ac4c73276cae665739))
+* update all test schema version refs from 49 to 50 (DB v50) ([767a88c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/767a88cf4a4833e1aa131640347b897548e622d8))
+* update tests for new schema version 50 (DB migration v50) ([ca462cb](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ca462cbfbbaeca9f2b410f1566c99dbbf09deed9))
+
 ## [2.10.0-rc.12](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.11...v2.10.0-rc.12) (2026-03-07)
 
 
