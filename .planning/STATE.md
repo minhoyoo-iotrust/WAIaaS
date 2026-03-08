@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v31.4
 milestone_name: Hyperliquid 생태계 통합
-status: planning
-stopped_at: Completed 347-01-PLAN.md
-last_updated: "2026-03-08T03:21:01.710Z"
-last_activity: 2026-03-08 — Roadmap created
+status: executing
+stopped_at: Completed 348-02-PLAN.md
+last_updated: "2026-03-08T03:36:57.591Z"
+last_activity: 2026-03-08 — Phase 348 design complete
 progress:
   total_phases: 5
-  completed_phases: 1
-  total_plans: 1
-  completed_plans: 1
-  percent: 0
+  completed_phases: 2
+  total_plans: 3
+  completed_plans: 3
+  percent: 40
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-08)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 347 HyperEVM 체인 등록
+**Current focus:** Phase 349 Core Infrastructure + Perp Trading
 
 ## Current Position
 
-Phase: 347 of 351 (HyperEVM 체인 등록) — 1 of 5 phases
+Phase: 349 of 351 (Core Infrastructure + Perp Trading) — 3 of 5 phases
 Plan: —
 Status: Ready to plan
-Last activity: 2026-03-08 — Roadmap created
+Last activity: 2026-03-08 — Phase 348 design complete
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [████░░░░░░] 40%
 
 ## Performance Metrics
 
@@ -46,6 +46,17 @@ Progress: [░░░░░░░░░░] 0%
 (New milestone — )
 - [Phase 347]: SLIP-44 coin type 999 (chain ID) used for HYPE native asset
 - [Phase 347]: HyperEVM classified as chain:ethereum (EVM-compatible) in CAIP-2 mapping
+- [Phase 348]: ApiDirectResult uses __apiDirect discriminant for type guard
+- [Phase 348]: Stage 5 branches on isApiDirectResult() to skip on-chain execution
+- [Phase 348]: requiresSigningKey triggers key decrypt before provider.resolve()
+- [Phase 348]: Phantom agent signing uses chainId 1337 (mainnet/testnet same)
+- [Phase 348]: User-signed actions use chainId 42161 (mainnet) / 421614 (testnet)
+- [Phase 348]: Rate limiter defaults to 600 weight/min (50% of Hyperliquid 1200 limit)
+- [Phase 348]: Sub-accounts are metadata rows, not separate WAIaaS wallets
+- [Phase 348]: Perp policy uses margin (not notional) to avoid leverage over-estimation
+- [Phase 348]: Close/sell/cancel actions are policy-exempt ($0 spending)
+- [Phase 348]: Wallet-level spending scope: master + all sub-accounts combined
+- [Phase 348]: DB v51 for orders (Phase 349), v52 for sub-accounts (Phase 351)
 
 ### Blockers/Concerns
 
@@ -57,6 +68,6 @@ Progress: [░░░░░░░░░░] 0%
 
 ## Session Continuity
 
-Last session: 2026-03-08T03:20:19.119Z
-Stopped at: Completed 347-01-PLAN.md
+Last session: 2026-03-08T03:36:57.591Z
+Stopped at: Completed 348-02-PLAN.md
 Resume file: None

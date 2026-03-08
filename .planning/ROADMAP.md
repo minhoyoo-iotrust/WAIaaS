@@ -54,7 +54,7 @@
 **Milestone Goal:** HyperEVM 체인 지원과 Hyperliquid L1 DEX(Perp/Spot) 거래, Sub-account를 통합하여 WAIaaS에서 Hyperliquid 생태계를 활용할 수 있도록 한다. L1 DEX는 온체인 TX가 아닌 EIP-712 서명 + REST API 방식이므로 ApiDirectResult 패턴으로 기존 파이프라인과 통합한다.
 
 - [x] **Phase 347: HyperEVM 체인 등록** - HyperEVM Mainnet/Testnet을 EVM_CHAIN_MAP에 추가하여 기존 EVM 기능 즉시 동작 (completed 2026-03-08)
-- [ ] **Phase 348: Hyperliquid DEX 설계 문서** - L1 DEX API 통합 아키텍처, EIP-712 서명, Sub-account, 정책 적용 방안 확정
+- [x] **Phase 348: Hyperliquid DEX 설계 문서** - L1 DEX API 통합 아키텍처, EIP-712 서명, Sub-account, 정책 적용 방안 확정 (completed 2026-03-08)
 - [ ] **Phase 349: Core Infrastructure + Perp Trading** - 공유 인프라(ExchangeClient/Signer/MarketData) + Perp 거래 + Account State + 정책 + 전 인터페이스
 - [ ] **Phase 350: Spot Trading** - Spot Market/Limit 주문, 잔액/마켓 조회, MCP/SDK 통합
 - [ ] **Phase 351: Sub-account 관리** - Sub-account 생성/자금이동/포지션 조회, MCP/SDK 통합
@@ -84,8 +84,8 @@ Plans:
   4. DB 스키마 변경, MCP/SDK/Admin UI 인터페이스 설계가 확정되어 있다
 **Plans:** 2 plans
 Plans:
-- [ ] 348-01-PLAN.md — ApiDirectResult 패턴 + EIP-712 서명 + ExchangeClient 공유 구조 설계
-- [ ] 348-02-PLAN.md — Sub-account 매핑 + 정책 엔진 + MCP/SDK/Admin 인터페이스 + DB 스키마 설계
+- [x] 348-01-PLAN.md — ApiDirectResult 패턴 + EIP-712 서명 + ExchangeClient 공유 구조 설계
+- [x] 348-02-PLAN.md — Sub-account 매핑 + 정책 엔진 + MCP/SDK/Admin 인터페이스 + DB 스키마 설계
 
 ### Phase 349: Core Infrastructure + Perp Trading
 **Goal**: User가 WAIaaS를 통해 Hyperliquid에서 Perp 거래를 완전히 수행할 수 있고, 기존 정책 엔진이 적용된다
@@ -128,7 +128,7 @@ Note: Phase 350과 351은 Phase 349에만 의존하므로 병렬 실행 가능
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 347. HyperEVM 체인 등록 | 1/1 | Complete    | 2026-03-08 |
-| 348. Hyperliquid DEX 설계 문서 | 0/2 | Not started | - |
+| 348. Hyperliquid DEX 설계 문서 | 2/2 | Complete | 2026-03-08 |
 | 349. Core Infrastructure + Perp Trading | 0/TBD | Not started | - |
 | 350. Spot Trading | 0/TBD | Not started | - |
 | 351. Sub-account 관리 | 0/TBD | Not started | - |

@@ -15,13 +15,13 @@ Requirements for Hyperliquid ecosystem integration. Each maps to roadmap phases.
 
 ### Hyperliquid Design
 
-- [ ] **HDESIGN-01**: Hyperliquid L1 DEX API와 WAIaaS 파이프라인 통합 방안을 설계 문서로 확정한다
-- [ ] **HDESIGN-02**: EIP-712 서명 플로우 (Phantom Agent + User-Signed Action) 매핑을 설계한다
-- [ ] **HDESIGN-03**: HyperliquidExchangeClient 공유 구조를 설계한다
-- [ ] **HDESIGN-04**: Sub-account ↔ WAIaaS 월렛 모델 매핑을 설계한다
-- [ ] **HDESIGN-05**: MCP 도구/SDK 메서드/Admin Settings/Admin UI 표시를 설계한다
-- [ ] **HDESIGN-06**: DB 스키마 변경 범위 (주문 이력, Sub-account 매핑)를 설계한다
-- [ ] **HDESIGN-07**: 정책 엔진 적용 방안 (API 기반 거래에 지출 한도/토큰별 한도)을 설계한다
+- [x] **HDESIGN-01**: Hyperliquid L1 DEX API와 WAIaaS 파이프라인 통합 방안을 설계 문서로 확정한다
+- [x] **HDESIGN-02**: EIP-712 서명 플로우 (Phantom Agent + User-Signed Action) 매핑을 설계한다
+- [x] **HDESIGN-03**: HyperliquidExchangeClient 공유 구조를 설계한다
+- [x] **HDESIGN-04**: Sub-account ↔ WAIaaS 월렛 모델 매핑을 설계한다
+- [x] **HDESIGN-05**: MCP 도구/SDK 메서드/Admin Settings/Admin UI 표시를 설계한다
+- [x] **HDESIGN-06**: DB 스키마 변경 범위 (주문 이력, Sub-account 매핑)를 설계한다
+- [x] **HDESIGN-07**: 정책 엔진 적용 방안 (API 기반 거래에 지출 한도/토큰별 한도)을 설계한다
 
 ### Hyperliquid Perp
 
@@ -120,13 +120,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | HCHAIN-01 | Phase 347 | Complete |
 | HCHAIN-02 | Phase 347 | Complete |
 | HCHAIN-03 | Phase 347 | Complete |
-| HDESIGN-01 | Phase 348 | Pending |
-| HDESIGN-02 | Phase 348 | Pending |
-| HDESIGN-03 | Phase 348 | Pending |
-| HDESIGN-04 | Phase 348 | Pending |
-| HDESIGN-05 | Phase 348 | Pending |
-| HDESIGN-06 | Phase 348 | Pending |
-| HDESIGN-07 | Phase 348 | Pending |
+| HDESIGN-01 | Phase 348 | Complete |
+| HDESIGN-02 | Phase 348 | Complete |
+| HDESIGN-03 | Phase 348 | Complete |
+| HDESIGN-04 | Phase 348 | Complete |
+| HDESIGN-05 | Phase 348 | Complete |
+| HDESIGN-06 | Phase 348 | Complete |
+| HDESIGN-07 | Phase 348 | Complete |
 | HPERP-01 | Phase 349 | Pending |
 | HPERP-02 | Phase 349 | Pending |
 | HPERP-03 | Phase 349 | Pending |
