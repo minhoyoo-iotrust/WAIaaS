@@ -113,7 +113,7 @@ Plans:
   1. User가 Hyperliquid Spot Market/Limit 주문을 생성하고 취소할 수 있다
   2. User가 Spot 계정 토큰 잔액과 Spot 마켓 정보(페어/가격/거래량)를 조회할 수 있다
   3. Spot 기능이 MCP 도구 + SDK 메서드로 노출되고, HyperliquidSpotActionProvider가 IActionProvider로 등록된다
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 **Plans:** 2/2 plans complete
 Plans:
 - [x] 350-01-PLAN.md — SpotProvider + Spot Zod 스키마 + MarketData Spot 메서드 + 테스트

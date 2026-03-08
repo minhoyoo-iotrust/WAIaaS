@@ -4,7 +4,7 @@ milestone: v31.4
 milestone_name: Hyperliquid 생태계 통합
 status: completed
 stopped_at: Completed 350-02-PLAN.md
-last_updated: "2026-03-08T05:05:00.000Z"
+last_updated: "2026-03-08T05:05:34.169Z"
 last_activity: 2026-03-08 — Phase 350 Spot Trading complete
 progress:
   total_phases: 5
