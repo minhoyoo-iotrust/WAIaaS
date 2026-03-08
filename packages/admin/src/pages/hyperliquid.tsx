@@ -6,6 +6,8 @@ import { PositionsTable } from '../components/hyperliquid/PositionsTable';
 import { OpenOrdersTable } from '../components/hyperliquid/OpenOrdersTable';
 import { SpotBalancesTable } from '../components/hyperliquid/SpotBalancesTable';
 import { SpotOrdersTable } from '../components/hyperliquid/SpotOrdersTable';
+import { SubAccountList } from '../components/hyperliquid/SubAccountList';
+import { SubAccountDetail } from '../components/hyperliquid/SubAccountDetail';
 import { SettingsPanel } from '../components/hyperliquid/SettingsPanel';
 
 interface Wallet {
@@ -15,7 +17,7 @@ interface Wallet {
   network: string;
 }
 
-type Tab = 'overview' | 'orders' | 'spot' | 'settings';
+type Tab = 'overview' | 'orders' | 'spot' | 'subaccounts' | 'settings';
 
 const tabStyle = {
   display: 'flex',
@@ -40,6 +42,7 @@ export default function HyperliquidPage() {
   const wallets = useSignal<Wallet[]>([]);
   const selectedWalletId = useSignal<string | null>(null);
   const activeTab = useSignal<Tab>('overview');
+  const selectedSubAccount = useSignal<string | null>(null);
   const loading = useSignal(true);
 
   useEffect(() => {
@@ -112,6 +115,12 @@ export default function HyperliquidPage() {
           Spot
         </button>
         <button
+          style={tabButton(activeTab.value === 'subaccounts')}
+          onClick={() => { activeTab.value = 'subaccounts'; selectedSubAccount.value = null; }}
+        >
+          Sub-accounts
+        </button>
+        <button
           style={tabButton(activeTab.value === 'settings')}
           onClick={() => { activeTab.value = 'settings'; }}
         >
@@ -140,6 +149,23 @@ export default function HyperliquidPage() {
           <SpotBalancesTable walletId={selectedWalletId.value} />
           <h3 style={{ marginTop: 'var(--space-4)', marginBottom: 'var(--space-3)' }}>Spot Orders</h3>
           <SpotOrdersTable walletId={selectedWalletId.value} />
+        </div>
+      )}
+      {activeTab.value === 'subaccounts' && (
+        <div>
+          <h3 style={{ marginBottom: 'var(--space-3)' }}>Sub-accounts</h3>
+          <SubAccountList
+            walletId={selectedWalletId.value}
+            onSelect={(addr) => { selectedSubAccount.value = addr; }}
+          />
+          {selectedSubAccount.value && (
+            <div style={{ marginTop: 'var(--space-4)' }}>
+              <SubAccountDetail
+                walletId={selectedWalletId.value}
+                subAccountAddress={selectedSubAccount.value}
+              />
+            </div>
+          )}
         </div>
       )}
       {activeTab.value === 'settings' && (

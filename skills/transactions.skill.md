@@ -1470,3 +1470,67 @@ await client.hlSpotCancel('wallet-id', { market: 'HYPE/USDC', oid: 12345 });
 const spotBalances = await client.hlGetSpotBalances('wallet-id');
 const spotMarkets = await client.hlGetSpotMarkets();
 ```
+
+## Hyperliquid Sub-account Management
+
+Hyperliquid sub-account management for isolating funds per strategy. Requires `actions.hyperliquid_enabled=true` in Admin Settings.
+
+> AI agents must NEVER request the master password. Use only your session token.
+
+### Action Endpoints (through pipeline)
+
+Actions go through the standard `/v1/actions/hyperliquid_sub/{action}` route with policy evaluation.
+
+```bash
+# Create a new sub-account
+curl -X POST http://localhost:3100/v1/actions/hyperliquid_sub/hl_create_sub_account \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"wallet_id":"wid","name":"Trend Following"}'
+
+# Transfer USDC: master -> sub-account
+curl -X POST http://localhost:3100/v1/actions/hyperliquid_sub/hl_sub_transfer \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"wallet_id":"wid","subAccount":"0xSub...","amount":"1000","isDeposit":true}'
+
+# Transfer USDC: sub-account -> master
+curl -X POST http://localhost:3100/v1/actions/hyperliquid_sub/hl_sub_transfer \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"wallet_id":"wid","subAccount":"0xSub...","amount":"500","isDeposit":false}'
+```
+
+### Query Endpoints (no pipeline, direct)
+
+```bash
+# List sub-accounts
+curl http://localhost:3100/v1/wallets/$WID/hyperliquid/sub-accounts \
+  -H "X-Master-Password: $PASS"
+
+# Get sub-account positions
+curl http://localhost:3100/v1/wallets/$WID/hyperliquid/sub-accounts/0xSub.../positions \
+  -H "X-Master-Password: $PASS"
+```
+
+### MCP Tools
+
+Action tools (2, auto-registered via provider):
+- `hl_create_sub_account`: Create a new Hyperliquid sub-account
+- `hl_sub_transfer`: Transfer USDC between master and sub-account
+
+Query tools (2, manually registered):
+- `waiaas_hl_list_sub_accounts`: List sub-accounts for a wallet
+- `waiaas_hl_get_sub_positions`: Get positions for a sub-account
+
+### SDK Methods
+
+```typescript
+// Action methods (through pipeline)
+await client.hlCreateSubAccount('wallet-id', { name: 'Trend Following' });
+await client.hlSubTransfer('wallet-id', { subAccount: '0xSub...', amount: '1000', isDeposit: true });
+
+// Query methods (direct)
+const subAccounts = await client.hlListSubAccounts('wallet-id');
+const positions = await client.hlGetSubPositions('wallet-id', '0xSubAddress');
+```

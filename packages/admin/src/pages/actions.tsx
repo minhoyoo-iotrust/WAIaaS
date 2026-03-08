@@ -37,6 +37,7 @@ const BUILTIN_PROVIDERS: BuiltinProvider[] = [
   { key: 'drift', name: 'Drift Perp', description: 'Solana perpetual futures trading (open, close, modify positions with leverage)', chain: 'solana', category: 'Perp', requiresApiKey: false, docsUrl: 'https://docs.drift.trade' },
   { key: 'hyperliquid_perp', name: 'Hyperliquid Perp', description: 'Hyperliquid perpetual futures trading with EIP-712 signing', chain: 'evm', category: 'Perp', requiresApiKey: false, docsUrl: 'https://hyperliquid.gitbook.io/hyperliquid-docs' },
   { key: 'hyperliquid_spot', name: 'Hyperliquid Spot', description: 'Hyperliquid spot market trading (buy, sell, cancel)', chain: 'evm', category: 'Swap', requiresApiKey: false, docsUrl: 'https://hyperliquid.gitbook.io/hyperliquid-docs' },
+  { key: 'hyperliquid_sub', name: 'Hyperliquid Sub', description: 'Hyperliquid sub-account management (create, transfer USDC)', chain: 'evm', category: 'DeFi', requiresApiKey: false, docsUrl: 'https://hyperliquid.gitbook.io/hyperliquid-docs' },
 ];
 
 const CATEGORY_ORDER: ProviderCategory[] = ['Swap', 'Bridge', 'Staking', 'Lending', 'Yield', 'Perp'];
