@@ -220,14 +220,15 @@ describe('GET /v1/wallets/:id/networks', () => {
     expect(body.chain).toBe('ethereum');
     expect(body.environment).toBe('testnet');
     const networks = body.availableNetworks as Array<{ network: string }>;
-    expect(networks).toHaveLength(5);
+    expect(networks).toHaveLength(6);
 
-    // Check all 5 EVM testnets are present
+    // Check all 6 EVM testnets are present
     const networkNames = networks.map((n) => n.network).sort();
     expect(networkNames).toEqual([
       'arbitrum-sepolia',
       'base-sepolia',
       'ethereum-sepolia',
+      'hyperevm-testnet',
       'optimism-sepolia',
       'polygon-amoy',
     ]);
@@ -506,10 +507,10 @@ describe('GET /v1/wallet/balance?network=all', () => {
     expect(body.chain).toBe('ethereum');
     expect(body.environment).toBe('testnet');
     const balances = body.balances as Array<Record<string, unknown>>;
-    expect(balances).toHaveLength(5); // 5 EVM testnets
+    expect(balances).toHaveLength(6); // 6 EVM testnets
     const networks = balances.map((b) => b.network).sort();
     expect(networks).toEqual([
-      'arbitrum-sepolia', 'base-sepolia', 'ethereum-sepolia', 'optimism-sepolia', 'polygon-amoy',
+      'arbitrum-sepolia', 'base-sepolia', 'ethereum-sepolia', 'hyperevm-testnet', 'optimism-sepolia', 'polygon-amoy',
     ]);
     // Check one entry
     const ethSepolia = balances.find((b) => b.network === 'ethereum-sepolia');
@@ -540,7 +541,7 @@ describe('GET /v1/wallet/balance?network=all', () => {
     expect(res.status).toBe(200);
     const body = await json(res);
     const balances = body.balances as Array<Record<string, unknown>>;
-    expect(balances).toHaveLength(5);
+    expect(balances).toHaveLength(6);
 
     // polygon-amoy should have error
     const failed = balances.find((b) => b.network === 'polygon-amoy');
@@ -677,11 +678,11 @@ describe('GET /v1/wallet/assets?network=all', () => {
     expect(body.chain).toBe('ethereum');
     expect(body.environment).toBe('testnet');
     const networkAssets = body.networkAssets as Array<Record<string, unknown>>;
-    expect(networkAssets).toHaveLength(5);
+    expect(networkAssets).toHaveLength(6);
 
     const networks = networkAssets.map((n) => n.network).sort();
     expect(networks).toEqual([
-      'arbitrum-sepolia', 'base-sepolia', 'ethereum-sepolia', 'optimism-sepolia', 'polygon-amoy',
+      'arbitrum-sepolia', 'base-sepolia', 'ethereum-sepolia', 'hyperevm-testnet', 'optimism-sepolia', 'polygon-amoy',
     ]);
 
     // Each network should have assets array

@@ -197,14 +197,15 @@ describe('IncomingTxMonitorService', () => {
 
       // Verify subscriber factory was called for all networks:
       // solana:mainnet → ['solana-mainnet'] (1 network)
-      // ethereum:testnet → ['ethereum-sepolia', 'polygon-amoy', 'arbitrum-sepolia', 'optimism-sepolia', 'base-sepolia'] (5 networks)
-      expect(subscriberFactory).toHaveBeenCalledTimes(6);
+      // ethereum:testnet → ['ethereum-sepolia', 'polygon-amoy', 'arbitrum-sepolia', 'optimism-sepolia', 'base-sepolia', 'hyperevm-testnet'] (6 networks)
+      expect(subscriberFactory).toHaveBeenCalledTimes(7);
       expect(subscriberFactory).toHaveBeenCalledWith('solana', 'solana-mainnet');
       expect(subscriberFactory).toHaveBeenCalledWith('ethereum', 'ethereum-sepolia');
       expect(subscriberFactory).toHaveBeenCalledWith('ethereum', 'polygon-amoy');
       expect(subscriberFactory).toHaveBeenCalledWith('ethereum', 'arbitrum-sepolia');
       expect(subscriberFactory).toHaveBeenCalledWith('ethereum', 'optimism-sepolia');
       expect(subscriberFactory).toHaveBeenCalledWith('ethereum', 'base-sepolia');
+      expect(subscriberFactory).toHaveBeenCalledWith('ethereum', 'hyperevm-testnet');
     });
 
     it('registers 6 background workers', async () => {
