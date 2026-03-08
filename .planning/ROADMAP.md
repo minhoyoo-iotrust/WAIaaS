@@ -120,11 +120,11 @@ Plans:
   3. Admin Settings에서 fillDeadline, exclusivityDeadline 등을 런타임으로 설정할 수 있다
   4. Admin UI에서 최근 브릿지 트랜잭션 상태를 확인할 수 있다
   5. connect-info에 across_bridge capability가 노출되어 에이전트가 자기 발견할 수 있다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 355-01: MCP 도구 + SDK 메서드 + connect-info capability
-- [ ] 355-02: Admin Settings + Admin UI 브릿지 상태 표시 + Skill Files 업데이트
+- [ ] 355-01-PLAN.md — Admin Settings 키 + hot-reload + connect-info + SDK 4 메서드
+- [ ] 355-02-PLAN.md — Admin UI BUILTIN_PROVIDERS + Settings 라벨 + Skill File 업데이트
 
 ### Phase 356: Tests + Verification
 **Goal**: Across 브릿지 전체 기능이 Mock 기반 단위 테스트와 통합 테스트로 검증된다
