@@ -1111,6 +1111,50 @@ export interface DcentDexSwapParams {
 
 
 // ---------------------------------------------------------------------------
+// Across Bridge Types
+// ---------------------------------------------------------------------------
+
+export interface AcrossBridgeQuoteParams {
+  fromChain: string;
+  toChain: string;
+  inputToken: string;
+  outputToken: string;
+  amount: string;
+  recipient?: string;
+  walletId?: string;
+  network?: string;
+}
+
+export interface AcrossBridgeExecuteParams {
+  fromChain: string;
+  toChain: string;
+  inputToken: string;
+  outputToken: string;
+  amount: string;
+  recipient?: string;
+  slippage?: number;
+  walletId?: string;
+  network?: string;
+  gasCondition?: Record<string, unknown>;
+}
+
+export interface AcrossBridgeStatusParams {
+  depositTxHash: string;
+  originChainId?: number;
+  walletId?: string;
+  network?: string;
+}
+
+export interface AcrossBridgeRoutesParams {
+  fromChain?: string;
+  toChain?: string;
+  inputToken?: string;
+  outputToken?: string;
+  walletId?: string;
+  network?: string;
+}
+
+// ---------------------------------------------------------------------------
 // DeFi Position Types (API-01, API-02, API-05)
 // ---------------------------------------------------------------------------
 

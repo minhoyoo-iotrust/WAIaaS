@@ -505,6 +505,7 @@ export class HotReloadOrchestrator {
       'aave_v3', 'kamino',
       'pendle_yield', 'drift_perp',
       'dcent_swap',
+      'across_bridge',
     ];
 
     // Unregister all built-in providers first

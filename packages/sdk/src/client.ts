@@ -1,7 +1,7 @@
 /**
  * WAIaaSClient - Core wallet client for WAIaaS daemon REST API.
  *
- * Wraps 36 REST API methods + 1 client-side helper with typed responses:
+ * Wraps 40 REST API methods + 1 client-side helper with typed responses:
  * - getBalance(), getAddress(), getAssets() (wallet queries)
  * - getWalletInfo() (wallet management)
  * - sendToken(), getTransaction(), listTransactions(), listPendingTransactions() (transactions)
@@ -17,6 +17,7 @@
  * - registerAgent(), setAgentWallet(), unsetAgentWallet(), setAgentUri(),
  *   setAgentMetadata(), giveFeedback(), revokeFeedback(), requestValidation() (ERC-8004 write)
  * - getAgentInfo(), getAgentReputation(), getValidationStatus() (ERC-8004 read)
+ * - acrossBridgeQuote(), acrossBridgeExecute(), acrossBridgeStatus(), acrossBridgeRoutes() (Across bridge)
  *
  * All methods use exponential backoff retry for 429/5xx responses.
  * sendToken() performs inline pre-validation before making the HTTP request.
@@ -103,6 +104,10 @@ import type {
   TransferNftParams,
   DcentQuoteParams,
   DcentDexSwapParams,
+  AcrossBridgeQuoteParams,
+  AcrossBridgeExecuteParams,
+  AcrossBridgeStatusParams,
+  AcrossBridgeRoutesParams,
 } from './types.js';
 
 export class WAIaaSClient {
@@ -1155,6 +1160,32 @@ export class WAIaaSClient {
       () => this.http.get<unknown>(`/v1/wallets/${walletId}/hyperliquid/sub-accounts/${subAccount}/positions`, this.authHeaders()),
       this.retryOptions,
     );
+  }
+
+  // --- Across Bridge convenience methods ---
+
+  /** Get Across bridge quote (fees, limits, estimated fill time). */
+  async acrossBridgeQuote(params: AcrossBridgeQuoteParams): Promise<ExecuteActionResponse> {
+    const { walletId, network, ...rest } = params;
+    return this.executeAction('across_bridge', 'quote', { params: rest, walletId, network });
+  }
+
+  /** Execute Across bridge (approve+depositV3 BATCH for ERC-20 or msg.value for native ETH). */
+  async acrossBridgeExecute(params: AcrossBridgeExecuteParams): Promise<ExecuteActionResponse> {
+    const { walletId, network, gasCondition, ...rest } = params;
+    return this.executeAction('across_bridge', 'execute', { params: rest, walletId, network, gasCondition });
+  }
+
+  /** Check Across bridge deposit status (filled/pending/expired/refunded). */
+  async acrossBridgeStatus(params: AcrossBridgeStatusParams): Promise<ExecuteActionResponse> {
+    const { walletId, network, ...rest } = params;
+    return this.executeAction('across_bridge', 'status', { params: rest, walletId, network });
+  }
+
+  /** List available Across bridge routes (supported chain/token combinations). */
+  async acrossBridgeRoutes(params?: AcrossBridgeRoutesParams): Promise<ExecuteActionResponse> {
+    const { walletId, network, ...rest } = params ?? {};
+    return this.executeAction('across_bridge', 'routes', { params: rest, walletId, network });
   }
 
   // --- Wallet creation (masterAuth) ---

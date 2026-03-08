@@ -302,6 +302,15 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'actions.hyperliquid_builder_fee', category: 'actions', configPath: 'actions.hyperliquid_builder_fee', defaultValue: '0', isCredential: false },
   { key: 'actions.hyperliquid_order_status_poll_interval_ms', category: 'actions', configPath: 'actions.hyperliquid_order_status_poll_interval_ms', defaultValue: '2000', isCredential: false },
 
+  // --- Across Bridge ---
+  { key: 'actions.across_bridge_enabled', category: 'actions', configPath: 'actions.across_bridge_enabled', defaultValue: 'false', isCredential: false },
+  { key: 'actions.across_bridge_api_base_url', category: 'actions', configPath: 'actions.across_bridge_api_base_url', defaultValue: 'https://app.across.to/api', isCredential: false },
+  { key: 'actions.across_bridge_integrator_id', category: 'actions', configPath: 'actions.across_bridge_integrator_id', defaultValue: '', isCredential: false },
+  { key: 'actions.across_bridge_fill_deadline_buffer_sec', category: 'actions', configPath: 'actions.across_bridge_fill_deadline_buffer_sec', defaultValue: '21600', isCredential: false },
+  { key: 'actions.across_bridge_default_slippage_pct', category: 'actions', configPath: 'actions.across_bridge_default_slippage_pct', defaultValue: '0.01', isCredential: false },
+  { key: 'actions.across_bridge_max_slippage_pct', category: 'actions', configPath: 'actions.across_bridge_max_slippage_pct', defaultValue: '0.03', isCredential: false },
+  { key: 'actions.across_bridge_request_timeout_ms', category: 'actions', configPath: 'actions.across_bridge_request_timeout_ms', defaultValue: '10000', isCredential: false },
+
   // --- erc8128 category (ERC-8128 Signed HTTP Requests) ---
   { key: 'erc8128.enabled', category: 'erc8128', configPath: 'erc8128.enabled', defaultValue: 'false', isCredential: false },
   { key: 'erc8128.default_preset', category: 'erc8128', configPath: 'erc8128.default_preset', defaultValue: 'standard', isCredential: false },
