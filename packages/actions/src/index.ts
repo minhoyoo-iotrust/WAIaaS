@@ -26,6 +26,9 @@ import { Erc8004ActionProvider } from './providers/erc8004/index.js';
 import { type Erc8004Config, ERC8004_DEFAULTS } from './providers/erc8004/config.js';
 import { DcentSwapActionProvider } from './providers/dcent-swap/index.js';
 import type { DcentSwapConfig } from './providers/dcent-swap/config.js';
+import { AcrossBridgeActionProvider } from './providers/across/index.js';
+import { ACROSS_DEFAULTS } from './providers/across/config.js';
+import type { AcrossConfig } from './providers/across/config.js';
 import { HyperliquidPerpProvider, HyperliquidSpotProvider, HyperliquidSubAccountService, HyperliquidSubAccountProvider, HyperliquidExchangeClient, HyperliquidMarketData, HyperliquidRateLimiter, HL_DEFAULTS, HL_MAINNET_API_URL, HL_TESTNET_API_URL } from './providers/hyperliquid/index.js';
 import { KaminoSdkWrapper } from './providers/kamino/kamino-sdk-wrapper.js';
 import { DriftSdkWrapper } from './providers/drift/drift-sdk-wrapper.js';
@@ -96,6 +99,11 @@ export type { DcentSwapConfig } from './providers/dcent-swap/config.js';
 export { DcentSwapApiClient } from './providers/dcent-swap/dcent-api-client.js';
 export { caip19ToDcentId, dcentIdToCaip19 } from './providers/dcent-swap/currency-mapper.js';
 export type { DcentQuoteResult, GetQuotesParams } from './providers/dcent-swap/dex-swap.js';
+
+export { AcrossBridgeActionProvider } from './providers/across/index.js';
+export { ACROSS_DEFAULTS, ACROSS_CHAIN_MAP, getAcrossChainId } from './providers/across/config.js';
+export type { AcrossConfig } from './providers/across/config.js';
+export { AcrossApiClient } from './providers/across/across-api-client.js';
 
 export { HyperliquidPerpProvider } from './providers/hyperliquid/index.js';
 export { HyperliquidSpotProvider, HyperliquidSubAccountService, HyperliquidSubAccountProvider } from './providers/hyperliquid/index.js';
@@ -342,6 +350,22 @@ export function registerBuiltInProviders(
           currencyCacheTtlMs: Number(settingsReader.get('actions.dcent_swap_currency_cache_ttl_ms')),
         };
         return new DcentSwapActionProvider(dcentConfig);
+      },
+    },
+    {
+      key: 'across_bridge',
+      enabledKey: 'actions.across_bridge_enabled',
+      factory: () => {
+        const acrossConfig: AcrossConfig = {
+          enabled: true,
+          apiBaseUrl: settingsReader.get('actions.across_bridge_api_base_url') || ACROSS_DEFAULTS.apiBaseUrl,
+          integratorId: settingsReader.get('actions.across_bridge_integrator_id') || ACROSS_DEFAULTS.integratorId,
+          fillDeadlineBufferSec: Number(settingsReader.get('actions.across_bridge_fill_deadline_buffer_sec')) || ACROSS_DEFAULTS.fillDeadlineBufferSec,
+          defaultSlippagePct: Number(settingsReader.get('actions.across_bridge_default_slippage_pct')) || ACROSS_DEFAULTS.defaultSlippagePct,
+          maxSlippagePct: Number(settingsReader.get('actions.across_bridge_max_slippage_pct')) || ACROSS_DEFAULTS.maxSlippagePct,
+          requestTimeoutMs: Number(settingsReader.get('actions.across_bridge_request_timeout_ms')) || ACROSS_DEFAULTS.requestTimeoutMs,
+        };
+        return new AcrossBridgeActionProvider(acrossConfig);
       },
     },
   ];
