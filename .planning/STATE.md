@@ -4,7 +4,7 @@ milestone: v31.4
 milestone_name: Hyperliquid 생태계 통합
 status: planning
 stopped_at: Completed 347-01-PLAN.md
-last_updated: "2026-03-08T03:20:19.122Z"
+last_updated: "2026-03-08T03:20:37.175Z"
 last_activity: 2026-03-08 — Roadmap created
 progress:
   total_phases: 5
