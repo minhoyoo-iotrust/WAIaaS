@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v31.6
 milestone_name: Across Protocol 크로스체인 브릿지
-status: executing
-stopped_at: Completed Phase 352 (1/1 plans)
-last_updated: "2026-03-08T15:50:20.611Z"
+status: completed
+stopped_at: Completed 352-01-PLAN.md
+last_updated: "2026-03-08T15:51:07.211Z"
 last_activity: 2026-03-09 — Phase 352 complete (design doc 79)
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 8
+  total_plans: 1
   completed_plans: 1
   percent: 12
 ---
