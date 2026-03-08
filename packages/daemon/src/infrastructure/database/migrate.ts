@@ -79,7 +79,7 @@ const LEGACY_NETWORK_NORMALIZE: Record<string, string> = {
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 50;
+export const LATEST_SCHEMA_VERSION = 52;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -428,6 +428,44 @@ function getCreateTableStatements(): string[] {
   expires_at INTEGER NOT NULL,
   used INTEGER NOT NULL DEFAULT 0 CHECK (used IN (0, 1))
 )`,
+
+    // Table 26: hyperliquid_orders (Hyperliquid DEX order history, v51)
+    `CREATE TABLE IF NOT EXISTS hyperliquid_orders (
+  id TEXT PRIMARY KEY,
+  wallet_id TEXT NOT NULL REFERENCES wallets(id),
+  sub_account_address TEXT,
+  oid INTEGER,
+  cloid TEXT,
+  transaction_id TEXT REFERENCES transactions(id),
+  market TEXT NOT NULL,
+  asset_index INTEGER NOT NULL,
+  side TEXT NOT NULL CHECK(side IN ('BUY', 'SELL')),
+  order_type TEXT NOT NULL CHECK(order_type IN ('MARKET', 'LIMIT', 'STOP_MARKET', 'STOP_LIMIT', 'TAKE_PROFIT')),
+  size TEXT NOT NULL,
+  price TEXT,
+  trigger_price TEXT,
+  tif TEXT CHECK(tif IN ('GTC', 'IOC', 'ALO')),
+  reduce_only INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL CHECK(status IN ('PENDING', 'RESTING', 'FILLED', 'PARTIALLY_FILLED', 'CANCELLED', 'REJECTED', 'TRIGGERED')),
+  filled_size TEXT,
+  avg_fill_price TEXT,
+  is_spot INTEGER NOT NULL DEFAULT 0,
+  leverage INTEGER,
+  margin_mode TEXT CHECK(margin_mode IN ('CROSS', 'ISOLATED')),
+  response_data TEXT,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+)`,
+
+    // Table 27: hyperliquid_sub_accounts (Hyperliquid Sub-account mapping, v52)
+    `CREATE TABLE IF NOT EXISTS hyperliquid_sub_accounts (
+  id TEXT PRIMARY KEY,
+  wallet_id TEXT NOT NULL REFERENCES wallets(id),
+  sub_account_address TEXT NOT NULL,
+  name TEXT,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  UNIQUE(wallet_id, sub_account_address)
+)`,
   ];
 }
 
@@ -534,6 +572,16 @@ function getCreateIndexStatements(): string[] {
     // v45: userop_builds indexes
     'CREATE INDEX IF NOT EXISTS idx_userop_builds_wallet_id ON userop_builds(wallet_id)',
     'CREATE INDEX IF NOT EXISTS idx_userop_builds_expires ON userop_builds(expires_at)',
+
+    // v51: hyperliquid_orders indexes
+    'CREATE INDEX IF NOT EXISTS idx_hl_orders_wallet ON hyperliquid_orders(wallet_id)',
+    'CREATE INDEX IF NOT EXISTS idx_hl_orders_oid ON hyperliquid_orders(oid)',
+    'CREATE INDEX IF NOT EXISTS idx_hl_orders_market ON hyperliquid_orders(market)',
+    'CREATE INDEX IF NOT EXISTS idx_hl_orders_status ON hyperliquid_orders(status)',
+    'CREATE INDEX IF NOT EXISTS idx_hl_orders_created ON hyperliquid_orders(created_at)',
+
+    // v52: hyperliquid_sub_accounts index
+    'CREATE INDEX IF NOT EXISTS idx_hl_sub_wallet ON hyperliquid_sub_accounts(wallet_id)',
   ];
 }
 
@@ -2778,6 +2826,78 @@ MIGRATIONS.push({
     if (!cols.some((c) => c.name === 'network')) {
       sqlite.exec(`ALTER TABLE userop_builds ADD COLUMN network TEXT`);
     }
+  },
+});
+
+// ── v51: Hyperliquid order history table ─────────────────────────────
+MIGRATIONS.push({
+  version: 51,
+  description: 'Create hyperliquid_orders table for Hyperliquid DEX integration',
+  up: (sqlite) => {
+    // Idempotent check
+    const tables = sqlite
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='hyperliquid_orders'")
+      .all() as Array<{ name: string }>;
+    if (tables.length > 0) return;
+
+    sqlite.exec(`
+      CREATE TABLE hyperliquid_orders (
+        id TEXT PRIMARY KEY,
+        wallet_id TEXT NOT NULL REFERENCES wallets(id),
+        sub_account_address TEXT,
+        oid INTEGER,
+        cloid TEXT,
+        transaction_id TEXT REFERENCES transactions(id),
+        market TEXT NOT NULL,
+        asset_index INTEGER NOT NULL,
+        side TEXT NOT NULL CHECK(side IN ('BUY', 'SELL')),
+        order_type TEXT NOT NULL CHECK(order_type IN ('MARKET', 'LIMIT', 'STOP_MARKET', 'STOP_LIMIT', 'TAKE_PROFIT')),
+        size TEXT NOT NULL,
+        price TEXT,
+        trigger_price TEXT,
+        tif TEXT CHECK(tif IN ('GTC', 'IOC', 'ALO')),
+        reduce_only INTEGER NOT NULL DEFAULT 0,
+        status TEXT NOT NULL CHECK(status IN ('PENDING', 'RESTING', 'FILLED', 'PARTIALLY_FILLED', 'CANCELLED', 'REJECTED', 'TRIGGERED')),
+        filled_size TEXT,
+        avg_fill_price TEXT,
+        is_spot INTEGER NOT NULL DEFAULT 0,
+        leverage INTEGER,
+        margin_mode TEXT CHECK(margin_mode IN ('CROSS', 'ISOLATED')),
+        response_data TEXT,
+        created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+        updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+      );
+      CREATE INDEX idx_hl_orders_wallet ON hyperliquid_orders(wallet_id);
+      CREATE INDEX idx_hl_orders_oid ON hyperliquid_orders(oid);
+      CREATE INDEX idx_hl_orders_market ON hyperliquid_orders(market);
+      CREATE INDEX idx_hl_orders_status ON hyperliquid_orders(status);
+      CREATE INDEX idx_hl_orders_created ON hyperliquid_orders(created_at);
+    `);
+  },
+});
+
+// ── v52: Hyperliquid sub-accounts table ──────────────────────────────
+MIGRATIONS.push({
+  version: 52,
+  description: 'Create hyperliquid_sub_accounts table for Hyperliquid Sub-account management',
+  up: (sqlite) => {
+    // Idempotent check
+    const tables = sqlite
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='hyperliquid_sub_accounts'")
+      .all() as Array<{ name: string }>;
+    if (tables.length > 0) return;
+
+    sqlite.exec(`
+      CREATE TABLE hyperliquid_sub_accounts (
+        id TEXT PRIMARY KEY,
+        wallet_id TEXT NOT NULL REFERENCES wallets(id),
+        sub_account_address TEXT NOT NULL,
+        name TEXT,
+        created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+        UNIQUE(wallet_id, sub_account_address)
+      );
+      CREATE INDEX idx_hl_sub_wallet ON hyperliquid_sub_accounts(wallet_id);
+    `);
   },
 });
 

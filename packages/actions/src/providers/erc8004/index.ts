@@ -72,6 +72,7 @@ export class Erc8004ActionProvider implements IActionProvider {
       mcpExpose: true,
       requiresApiKey: false,
       requiredApis: [],
+      requiresSigningKey: false,
     };
 
     this.actions = [

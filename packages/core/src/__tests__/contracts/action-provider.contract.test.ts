@@ -29,6 +29,7 @@ class InlineMockActionProvider implements IActionProvider {
     mcpExpose: false,
     requiresApiKey: false,
     requiredApis: [],
+    requiresSigningKey: false,
   };
 
   readonly actions: readonly ActionDefinition[] = [
@@ -72,6 +73,7 @@ class TestESMPlugin implements IActionProvider {
     mcpExpose: false,
     requiresApiKey: false,
     requiredApis: [],
+    requiresSigningKey: false,
   };
 
   readonly actions: readonly ActionDefinition[] = [

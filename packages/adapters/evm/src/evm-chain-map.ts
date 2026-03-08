@@ -5,6 +5,7 @@ import {
   arbitrum, arbitrumSepolia,
   optimism, optimismSepolia,
   base, baseSepolia,
+  hyperEvm, hyperliquidEvmTestnet,
 } from 'viem/chains';
 import type { EvmNetworkType } from '@waiaas/core';
 
@@ -26,4 +27,6 @@ export const EVM_CHAIN_MAP: Record<EvmNetworkType, EvmChainEntry> = {
   'optimism-sepolia': { viemChain: optimismSepolia, chainId: 11155420, nativeSymbol: 'ETH', nativeName: 'Ether' },
   'base-mainnet': { viemChain: base, chainId: 8453, nativeSymbol: 'ETH', nativeName: 'Ether' },
   'base-sepolia': { viemChain: baseSepolia, chainId: 84532, nativeSymbol: 'ETH', nativeName: 'Ether' },
+  'hyperevm-mainnet': { viemChain: hyperEvm, chainId: 999, nativeSymbol: 'HYPE', nativeName: 'HYPE' },
+  'hyperevm-testnet': { viemChain: hyperliquidEvmTestnet, chainId: 998, nativeSymbol: 'HYPE', nativeName: 'HYPE' },
 };

@@ -230,6 +230,7 @@ function createTestProvider(): IActionProvider {
       mcpExpose: false,
       requiresApiKey: false,
       requiredApis: [],
+      requiresSigningKey: false,
     },
     actions: [
       {
@@ -265,6 +266,7 @@ function createMultiStepProvider(): IActionProvider {
       mcpExpose: false,
       requiresApiKey: false,
       requiredApis: [],
+      requiresSigningKey: false,
     },
     actions: [
       {

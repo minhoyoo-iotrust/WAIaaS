@@ -1469,7 +1469,39 @@ Add a provider later with `PUT /v1/wallets/{id}/provider` to enable **Full mode*
 
 In Admin UI, the wallet create form defaults to **None (Lite mode)** for the Provider dropdown. Lite/Full mode is shown as badges in the wallet list and detail pages.
 
-## 17. Related Skill Files
+## 17. Hyperliquid Settings
+
+Hyperliquid Perp Trading settings under the `actions` category:
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `actions.hyperliquid_enabled` | boolean | `false` | Enable Hyperliquid Perp trading |
+| `actions.hyperliquid_network` | string | `mainnet` | `mainnet` or `testnet` |
+| `actions.hyperliquid_api_url` | string | `` | Custom API URL (overrides network default) |
+| `actions.hyperliquid_rate_limit_weight_per_min` | number | `600` | Rate limit weight per minute (Hyperliquid max: 1200) |
+| `actions.hyperliquid_default_leverage` | number | `1` | Default leverage for new positions |
+| `actions.hyperliquid_default_margin_mode` | string | `CROSS` | Default margin mode: `CROSS` or `ISOLATED` |
+| `actions.hyperliquid_builder_address` | string | `` | Builder fee recipient address |
+| `actions.hyperliquid_builder_fee` | number | `0` | Builder fee in basis points |
+| `actions.hyperliquid_order_status_poll_interval_ms` | number | `2000` | Order status polling interval |
+
+```bash
+# Enable Hyperliquid and set default leverage to 3x
+curl -X PUT http://localhost:3100/v1/admin/settings \
+  -H "X-Master-Password: $PASS" \
+  -H "Content-Type: application/json" \
+  -d '{"settings":{"actions.hyperliquid_enabled":"true","actions.hyperliquid_default_leverage":"3"}}'
+
+# Switch to testnet
+curl -X PUT http://localhost:3100/v1/admin/settings \
+  -H "X-Master-Password: $PASS" \
+  -H "Content-Type: application/json" \
+  -d '{"settings":{"actions.hyperliquid_network":"testnet"}}'
+```
+
+Admin UI: DeFi > Hyperliquid > Settings tab provides a form editor for all runtime keys.
+
+## 18. Related Skill Files
 
 - **actions.skill.md** -- Action Provider REST API (DeFi actions)
 - **policies.skill.md** -- Policy management (14 policy types for transaction controls)

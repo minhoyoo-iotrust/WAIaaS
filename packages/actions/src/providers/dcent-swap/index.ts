@@ -77,6 +77,7 @@ export class DcentSwapActionProvider implements IActionProvider {
       mcpExpose: true,
       requiresApiKey: false,
       requiredApis: [],
+      requiresSigningKey: false,
     };
 
     this.actions = [

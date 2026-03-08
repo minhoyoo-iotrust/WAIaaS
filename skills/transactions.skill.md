@@ -1284,3 +1284,253 @@ const signed = await client.signUserOp('wallet-id', {
   userOperation: { ...build, callGasLimit: '0x...', ... },
 });
 ```
+
+## Hyperliquid Perp Trading
+
+Hyperliquid perpetual futures trading via the action provider pipeline. Requires `actions.hyperliquid_enabled=true` in Admin Settings.
+
+> AI agents must NEVER request the master password. Use only your session token.
+
+### Action Endpoints (through pipeline)
+
+Actions go through the standard `/v1/actions/hyperliquid_perp/{action}` route with policy evaluation.
+
+```bash
+# Open a market long position (10x leverage, 1 ETH)
+curl -X POST http://localhost:3100/v1/actions/hyperliquid_perp/hl_open_position \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"wallet_id":"wid","market":"ETH","side":"LONG","size":"1","leverage":10,"order_type":"MARKET"}'
+
+# Place a limit buy order
+curl -X POST http://localhost:3100/v1/actions/hyperliquid_perp/hl_place_order \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"wallet_id":"wid","market":"ETH","side":"BUY","size":"0.5","price":"2000","order_type":"LIMIT","time_in_force":"GTC"}'
+
+# Set stop-loss (trigger order)
+curl -X POST http://localhost:3100/v1/actions/hyperliquid_perp/hl_place_order \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"wallet_id":"wid","market":"ETH","side":"SELL","size":"1","price":"1800","order_type":"STOP","trigger_price":"1810","time_in_force":"GTC","reduce_only":true}'
+
+# Close a position
+curl -X POST http://localhost:3100/v1/actions/hyperliquid_perp/hl_close_position \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"wallet_id":"wid","market":"ETH"}'
+
+# Set leverage for a market
+curl -X POST http://localhost:3100/v1/actions/hyperliquid_perp/hl_set_leverage \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"wallet_id":"wid","market":"ETH","leverage":5,"is_cross":true}'
+```
+
+### Query Endpoints (no pipeline, direct)
+
+```bash
+# Get positions
+curl http://localhost:3100/v1/wallets/$WID/hyperliquid/positions \
+  -H "X-Master-Password: $PASS"
+
+# Get open orders
+curl http://localhost:3100/v1/wallets/$WID/hyperliquid/orders \
+  -H "X-Master-Password: $PASS"
+
+# Get account state (balances, margins)
+curl http://localhost:3100/v1/wallets/$WID/hyperliquid/account \
+  -H "X-Master-Password: $PASS"
+
+# Get trade history
+curl http://localhost:3100/v1/wallets/$WID/hyperliquid/fills?limit=50 \
+  -H "X-Master-Password: $PASS"
+
+# Get market list (no wallet needed)
+curl http://localhost:3100/v1/hyperliquid/markets \
+  -H "X-Master-Password: $PASS"
+
+# Get funding rates
+curl http://localhost:3100/v1/hyperliquid/funding-rates?market=ETH \
+  -H "X-Master-Password: $PASS"
+```
+
+### MCP Tools
+
+Action tools (7, auto-registered via provider):
+- `hl_open_position`: Open a perp position (market/limit)
+- `hl_close_position`: Close a perp position
+- `hl_place_order`: Place an order (limit/stop/take-profit)
+- `hl_cancel_order`: Cancel an open order
+- `hl_set_leverage`: Set leverage for a market
+- `hl_set_margin_mode`: Set margin mode (cross/isolated)
+- `hl_transfer_usdc`: Transfer USDC between spot and perp
+
+Query tools (6, manually registered):
+- `waiaas_hl_get_positions`: Get perp positions
+- `waiaas_hl_get_open_orders`: Get open orders
+- `waiaas_hl_get_markets`: Get market list
+- `waiaas_hl_get_funding_rates`: Get funding rate history
+- `waiaas_hl_get_account_state`: Get account state
+- `waiaas_hl_get_trade_history`: Get trade history (fills)
+
+### SDK Methods
+
+```typescript
+// Action methods (through pipeline)
+await client.hlOpenPosition('wallet-id', { market: 'ETH', side: 'LONG', size: '1', leverage: 10 });
+await client.hlClosePosition('wallet-id', { market: 'ETH' });
+await client.hlPlaceOrder('wallet-id', { market: 'ETH', side: 'BUY', size: '0.5', price: '2000', order_type: 'LIMIT' });
+await client.hlCancelOrder('wallet-id', { market: 'ETH', oid: 12345 });
+await client.hlSetLeverage('wallet-id', { market: 'ETH', leverage: 5, is_cross: true });
+
+// Query methods (direct)
+const positions = await client.hlGetPositions('wallet-id');
+const orders = await client.hlGetOpenOrders('wallet-id');
+const markets = await client.hlGetMarkets();
+const rates = await client.hlGetFundingRates('ETH');
+const account = await client.hlGetAccountState('wallet-id');
+const fills = await client.hlGetTradeHistory('wallet-id', 50);
+```
+
+## Hyperliquid Spot Trading
+
+Hyperliquid spot market trading via the action provider pipeline. Requires `actions.hyperliquid_enabled=true` in Admin Settings.
+
+> AI agents must NEVER request the master password. Use only your session token.
+
+### Action Endpoints (through pipeline)
+
+Actions go through the standard `/v1/actions/hyperliquid_spot/{action}` route with policy evaluation.
+
+```bash
+# Buy 100 HYPE at market price
+curl -X POST http://localhost:3100/v1/actions/hyperliquid_spot/hl_spot_buy \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"wallet_id":"wid","market":"HYPE/USDC","size":"100","orderType":"MARKET"}'
+
+# Place a limit buy order for HYPE at $24.50
+curl -X POST http://localhost:3100/v1/actions/hyperliquid_spot/hl_spot_buy \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"wallet_id":"wid","market":"HYPE/USDC","size":"100","price":"24.5","orderType":"LIMIT","tif":"GTC"}'
+
+# Sell 50 HYPE at market price
+curl -X POST http://localhost:3100/v1/actions/hyperliquid_spot/hl_spot_sell \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"wallet_id":"wid","market":"HYPE/USDC","size":"50","orderType":"MARKET"}'
+
+# Cancel a specific spot order
+curl -X POST http://localhost:3100/v1/actions/hyperliquid_spot/hl_spot_cancel \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"wallet_id":"wid","market":"HYPE/USDC","oid":12345}'
+
+# Cancel all spot orders for a market
+curl -X POST http://localhost:3100/v1/actions/hyperliquid_spot/hl_spot_cancel \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"wallet_id":"wid","market":"HYPE/USDC"}'
+```
+
+### Query Endpoints (no pipeline, direct)
+
+```bash
+# Get spot token balances
+curl http://localhost:3100/v1/wallets/$WID/hyperliquid/spot/balances \
+  -H "X-Master-Password: $PASS"
+
+# Get spot market list
+curl http://localhost:3100/v1/hyperliquid/spot/markets \
+  -H "X-Master-Password: $PASS"
+```
+
+### MCP Tools
+
+Action tools (3, auto-registered via provider):
+- `hl_spot_buy`: Buy tokens on Hyperliquid spot (market/limit)
+- `hl_spot_sell`: Sell tokens on Hyperliquid spot (market/limit)
+- `hl_spot_cancel`: Cancel spot orders (single or all for a market)
+
+Query tools (2, manually registered):
+- `waiaas_hl_get_spot_balances`: Get spot token balances
+- `waiaas_hl_get_spot_markets`: Get spot market list
+
+### SDK Methods
+
+```typescript
+// Action methods (through pipeline)
+await client.hlSpotBuy('wallet-id', { market: 'HYPE/USDC', size: '100', orderType: 'MARKET' });
+await client.hlSpotSell('wallet-id', { market: 'HYPE/USDC', size: '50', orderType: 'MARKET' });
+await client.hlSpotCancel('wallet-id', { market: 'HYPE/USDC', oid: 12345 });
+
+// Query methods (direct)
+const spotBalances = await client.hlGetSpotBalances('wallet-id');
+const spotMarkets = await client.hlGetSpotMarkets();
+```
+
+## Hyperliquid Sub-account Management
+
+Hyperliquid sub-account management for isolating funds per strategy. Requires `actions.hyperliquid_enabled=true` in Admin Settings.
+
+> AI agents must NEVER request the master password. Use only your session token.
+
+### Action Endpoints (through pipeline)
+
+Actions go through the standard `/v1/actions/hyperliquid_sub/{action}` route with policy evaluation.
+
+```bash
+# Create a new sub-account
+curl -X POST http://localhost:3100/v1/actions/hyperliquid_sub/hl_create_sub_account \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"wallet_id":"wid","name":"Trend Following"}'
+
+# Transfer USDC: master -> sub-account
+curl -X POST http://localhost:3100/v1/actions/hyperliquid_sub/hl_sub_transfer \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"wallet_id":"wid","subAccount":"0xSub...","amount":"1000","isDeposit":true}'
+
+# Transfer USDC: sub-account -> master
+curl -X POST http://localhost:3100/v1/actions/hyperliquid_sub/hl_sub_transfer \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"wallet_id":"wid","subAccount":"0xSub...","amount":"500","isDeposit":false}'
+```
+
+### Query Endpoints (no pipeline, direct)
+
+```bash
+# List sub-accounts
+curl http://localhost:3100/v1/wallets/$WID/hyperliquid/sub-accounts \
+  -H "X-Master-Password: $PASS"
+
+# Get sub-account positions
+curl http://localhost:3100/v1/wallets/$WID/hyperliquid/sub-accounts/0xSub.../positions \
+  -H "X-Master-Password: $PASS"
+```
+
+### MCP Tools
+
+Action tools (2, auto-registered via provider):
+- `hl_create_sub_account`: Create a new Hyperliquid sub-account
+- `hl_sub_transfer`: Transfer USDC between master and sub-account
+
+Query tools (2, manually registered):
+- `waiaas_hl_list_sub_accounts`: List sub-accounts for a wallet
+- `waiaas_hl_get_sub_positions`: Get positions for a sub-account
+
+### SDK Methods
+
+```typescript
+// Action methods (through pipeline)
+await client.hlCreateSubAccount('wallet-id', { name: 'Trend Following' });
+await client.hlSubTransfer('wallet-id', { subAccount: '0xSub...', amount: '1000', isDeposit: true });
+
+// Query methods (direct)
+const subAccounts = await client.hlListSubAccounts('wallet-id');
+const positions = await client.hlGetSubPositions('wallet-id', '0xSubAddress');
+```

@@ -100,6 +100,7 @@ function createMockJupiterProvider(overrides?: {
       mcpExpose: true,
       requiresApiKey: false,
       requiredApis: [],
+      requiresSigningKey: false,
     },
     actions: [action],
     async resolve(_actionName, params, _context): Promise<ContractCallRequest> {

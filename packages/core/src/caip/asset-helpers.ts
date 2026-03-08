@@ -26,6 +26,9 @@ const NATIVE_SLIP44: Record<string, number> = {
   'eip155:11155420': 60,
   'eip155:8453': 60,
   'eip155:84532': 60,
+  // HyperEVM (HYPE) — no official SLIP-44; use chain ID as project-internal coin type
+  'eip155:999': 999,
+  'eip155:998': 999,
   'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp': 501,
   'solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1': 501,
   'solana:4uhcVJyU9pJkvQyS88uRDiswHXSCkY3z': 501,

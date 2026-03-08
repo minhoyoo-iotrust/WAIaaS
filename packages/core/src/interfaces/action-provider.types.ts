@@ -32,6 +32,14 @@ export const ActionProviderMetadataSchema = z.object({
   requiresApiKey: z.boolean().default(false),
   /** List of required external API identifiers. Defaults to []. */
   requiredApis: z.array(z.string()).optional().default([]),
+  /**
+   * Whether this provider requires the wallet's decrypted private key
+   * to be injected into ActionContext before resolve().
+   * Used by providers that sign externally (e.g., Hyperliquid EIP-712).
+   * Defaults to false.
+   * @see HDESIGN-01: requiresSigningKey pipeline flow
+   */
+  requiresSigningKey: z.boolean().default(false),
 });
 
 /** Action Provider metadata. Derived from ActionProviderMetadataSchema via z.infer. */
@@ -74,10 +82,65 @@ export const ActionContextSchema = z.object({
   walletId: z.string(),
   /** Session UUID (optional for admin-initiated actions). */
   sessionId: z.string().optional(),
+  /**
+   * Decrypted private key (Hex string).
+   * Only provided when the action provider has requiresSigningKey=true.
+   * Cleared from memory immediately after resolve() returns.
+   * @see HDESIGN-01: requiresSigningKey pipeline flow
+   */
+  privateKey: z.string().optional(),
 });
 
 /** Execution context for action resolution. Derived from ActionContextSchema via z.infer. */
 export type ActionContext = z.infer<typeof ActionContextSchema>;
+
+// ---------------------------------------------------------------------------
+// ApiDirectResult (v31.4: API-based trading, HDESIGN-01)
+// ---------------------------------------------------------------------------
+
+/**
+ * Result type for providers that execute via external API rather than
+ * on-chain transactions. Stage 5 branches on this type to skip
+ * the build/simulate/sign/submit flow.
+ *
+ * @see HDESIGN-01: ApiDirectResult pipeline integration
+ */
+export interface ApiDirectResult {
+  /** Discriminant field -- always true for API-direct results. */
+  readonly __apiDirect: true;
+  /** External identifier from the API (e.g., Hyperliquid order ID). */
+  externalId: string;
+  /** Execution status. */
+  status: 'success' | 'partial' | 'pending';
+  /** Provider name that produced this result. */
+  provider: string;
+  /** Action name that was executed. */
+  action: string;
+  /** Provider-specific response data. */
+  data: Record<string, unknown>;
+  /** Optional metadata for display/logging. */
+  metadata?: {
+    market?: string;
+    side?: string;
+    size?: string;
+    price?: string;
+    [key: string]: unknown;
+  };
+}
+
+/**
+ * Type guard for ApiDirectResult.
+ * Checks for __apiDirect === true discriminant.
+ */
+export function isApiDirectResult(result: unknown): result is ApiDirectResult {
+  return (
+    typeof result === 'object' &&
+    result !== null &&
+    !Array.isArray(result) &&
+    '__apiDirect' in result &&
+    (result as Record<string, unknown>).__apiDirect === true
+  );
+}
 
 // ---------------------------------------------------------------------------
 // IActionProvider interface
@@ -90,7 +153,8 @@ export type ActionContext = z.infer<typeof ActionContextSchema>;
  * that are then fed into the existing 6-stage pipeline for policy evaluation,
  * signing, and submission.
  *
- * resolve() MUST return a ContractCallRequest -- never sign or submit directly.
+ * Providers with requiresSigningKey=true may return ApiDirectResult instead,
+ * which causes Stage 5 to skip on-chain execution entirely.
  */
 export interface IActionProvider {
   /** Provider metadata (name, version, chains, flags). */
@@ -98,16 +162,17 @@ export interface IActionProvider {
   /** Available actions exposed by this provider. */
   readonly actions: readonly ActionDefinition[];
   /**
-   * Resolve action parameters into a ContractCallRequest or an array of
-   * ContractCallRequest[] for multi-step operations (e.g., approve + swap).
-   * Each element is executed sequentially through the pipeline.
+   * Resolve action parameters into a ContractCallRequest, an array of
+   * ContractCallRequest[] for multi-step operations (e.g., approve + swap),
+   * or an ApiDirectResult for API-based execution (e.g., Hyperliquid DEX).
    *
-   * The return value is re-validated via ContractCallRequestSchema.parse()
-   * by ActionProviderRegistry to prevent policy bypass.
+   * For ContractCallRequest returns, values are re-validated via
+   * ContractCallRequestSchema.parse() by ActionProviderRegistry.
+   * For ApiDirectResult returns, Stage 5 skips on-chain execution.
    */
   resolve(
     actionName: string,
     params: Record<string, unknown>,
     context: ActionContext,
-  ): Promise<ContractCallRequest | ContractCallRequest[]>;
+  ): Promise<ContractCallRequest | ContractCallRequest[] | ApiDirectResult>;
 }

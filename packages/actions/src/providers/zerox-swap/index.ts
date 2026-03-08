@@ -79,6 +79,7 @@ export class ZeroExSwapActionProvider implements IActionProvider {
       mcpExpose: true,
       requiresApiKey: true,
       requiredApis: ['0x'],
+      requiresSigningKey: false,
     };
 
     this.actions = [

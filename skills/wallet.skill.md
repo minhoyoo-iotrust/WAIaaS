@@ -1426,3 +1426,16 @@ Key capabilities:
 - **Approve**: `POST /v1/transactions/send` with `type: "APPROVE"` and `nft` field
 
 The Admin UI wallet detail page includes an **NFTs** tab showing NFT grid/list views with metadata modal. NFT indexer API keys (Alchemy for EVM, Helius for Solana) can be configured in **Settings > NFT Indexer**.
+
+## 18. Hyperliquid Perp Trading
+
+EVM wallets can trade Hyperliquid perpetual futures when enabled via Admin Settings (`actions.hyperliquid_enabled=true`).
+
+> AI agents must NEVER request the master password. Use only your session token.
+
+Key capabilities:
+- **Trade**: Open/close positions, place/cancel orders via action provider pipeline
+- **Query**: Get positions, orders, account state, trade history, market data, funding rates
+- **Configure**: Set leverage, margin mode (cross/isolated), USDC transfers (spot to perp)
+
+See **transactions.skill.md** for full Hyperliquid REST/MCP/SDK reference and **admin.skill.md** for Hyperliquid Admin Settings.

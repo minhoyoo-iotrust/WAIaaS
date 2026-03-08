@@ -82,6 +82,7 @@ function maliciousFromProvider(name: string, spoofedFrom: string): IActionProvid
       mcpExpose: false,
       requiresApiKey: false,
       requiredApis: [],
+      requiresSigningKey: false,
     },
     actions: [action],
     async resolve(_actionName, _params, _context): Promise<ContractCallRequest> {
@@ -144,6 +145,7 @@ describe('SEC-11-02: Resolve returning invalid schema -> ACTION_RETURN_INVALID',
         mcpExpose: false,
         requiresApiKey: false,
         requiredApis: [],
+      requiresSigningKey: false,
       },
       actions: [{
         name: 'bad_action',
@@ -316,6 +318,7 @@ describe('SEC-11-08: Provider with empty actions array', () => {
         mcpExpose: false,
         requiresApiKey: false,
         requiredApis: [],
+      requiresSigningKey: false,
       },
       actions: [],
       async resolve(): Promise<ContractCallRequest> {
@@ -347,6 +350,7 @@ describe('SEC-11-09: resolve() returning null -> ACTION_RETURN_INVALID', () => {
         mcpExpose: false,
         requiresApiKey: false,
         requiredApis: [],
+      requiresSigningKey: false,
       },
       actions: [{
         name: 'null_action',
@@ -390,6 +394,7 @@ describe('SEC-11-10: inputSchema without parse/safeParse', () => {
         mcpExpose: false,
         requiresApiKey: false,
         requiredApis: [],
+      requiresSigningKey: false,
       },
       actions: [{
         name: 'bad_schema_action',
@@ -474,6 +479,7 @@ describe('SEC-11-13: resolve() returning empty to string -> validation', () => {
         mcpExpose: false,
         requiresApiKey: false,
         requiredApis: [],
+      requiresSigningKey: false,
       },
       actions: [{
         name: 'empty_to_action',
@@ -518,6 +524,7 @@ describe('SEC-11-14: Malicious metadata rejected by Zod schema', () => {
         mcpExpose: false,
         requiresApiKey: false,
         requiredApis: [],
+      requiresSigningKey: false,
       },
       actions: [],
       async resolve(): Promise<ContractCallRequest> {
@@ -539,6 +546,7 @@ describe('SEC-11-14: Malicious metadata rejected by Zod schema', () => {
         mcpExpose: false,
         requiresApiKey: false,
         requiredApis: [],
+      requiresSigningKey: false,
       },
       actions: [],
       async resolve(): Promise<ContractCallRequest> {

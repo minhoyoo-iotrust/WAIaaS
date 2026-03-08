@@ -1,7 +1,8 @@
 # 마일스톤 m31-04: Hyperliquid 생태계 통합
 
-- **Status:** PLANNED
+- **Status:** SHIPPED
 - **Milestone:** v31.4
+- **Completed:** 2026-03-08
 
 ## 목표
 
@@ -50,8 +51,10 @@ HyperEVM Mainnet/Testnet을 EVM 지원 체인에 추가한다.
 
 | 네트워크 | viem export | Chain ID | 네이티브 토큰 |
 |----------|-------------|----------|---------------|
-| HyperEVM Mainnet | `hyperEvm` (검증 필요) | 999 | HYPE |
-| HyperEVM Testnet | `hyperliquidEvmTestnet` (검증 필요) | 998 | HYPE |
+| HyperEVM Mainnet | `hyperEvm` (Phase 1 착수 시 viem 소스에서 검증) | 999 | HYPE |
+| HyperEVM Testnet | `hyperliquidEvmTestnet` (Phase 1 착수 시 viem 소스에서 검증) | 998 | HYPE |
+
+> **Fallback**: viem 빌트인에 해당 chain export가 없을 경우 `defineChain`으로 커스텀 체인 정의.
 
 ### Phase 2: Hyperliquid DEX 리서치 및 설계
 
@@ -96,6 +99,8 @@ Hyperliquid Perpetual Futures 거래를 구현한다.
 - 레버리지 설정
 - MCP 도구 + SDK 메서드
 - Action Provider 패턴 구현
+- Admin UI: Perp 포지션/주문 현황 표시
+- 관련 skill 파일 업데이트 (transactions.skill.md 등)
 
 ### Phase 4: Hyperliquid Spot 구현
 
@@ -109,6 +114,8 @@ Hyperliquid Spot 마켓 거래를 구현한다.
 - 주문 취소 / 주문 상태 조회
 - 마켓 정보 조회 (가격, 거래량)
 - MCP 도구 + SDK 메서드
+- Admin UI: Spot 잔액/주문 현황 표시
+- 관련 skill 파일 업데이트
 
 ### Phase 5: Sub-accounts
 
@@ -121,6 +128,753 @@ Hyperliquid Sub-account 기능을 WAIaaS 월렛 모델과 통합한다.
 - Master ↔ Sub-account 간 자금 이동 (internal transfer)
 - Sub-account별 포지션/잔액 조회
 - WAIaaS 월렛과의 매핑 전략 (1 wallet = 1 sub-account 또는 N:1)
+- Admin UI: Sub-account 관리 표시
+- 관련 skill 파일 업데이트
+
+---
+
+## 설계 확정: HDESIGN-01 파이프라인 통합
+
+### 1. ApiDirectResult 인터페이스 정의
+
+코드 수준 확정 (`packages/core/src/interfaces/action-provider.types.ts`에 추가):
+
+```typescript
+export interface ApiDirectResult {
+  __apiDirect: true;
+  externalId: string;
+  status: 'success' | 'partial' | 'pending';
+  provider: string;      // e.g., 'hyperliquid_perp'
+  action: string;        // e.g., 'hl_open_position'
+  data: Record<string, unknown>;
+  metadata?: {
+    market?: string;
+    side?: string;
+    size?: string;
+    price?: string;
+    [key: string]: unknown;
+  };
+}
+
+export function isApiDirectResult(result: unknown): result is ApiDirectResult {
+  return typeof result === 'object' && result !== null && '__apiDirect' in result && (result as any).__apiDirect === true;
+}
+```
+
+IActionProvider.resolve() 반환 타입 확장:
+
+```typescript
+resolve(
+  actionName: string,
+  params: Record<string, unknown>,
+  context: ActionContext,
+): Promise<ContractCallRequest | ContractCallRequest[] | ApiDirectResult>;
+```
+
+ActionContext 확장 (requiresSigningKey 지원):
+
+```typescript
+interface ActionContext {
+  // ... existing fields
+  privateKey?: Hex;  // Only provided when provider.requiresSigningKey === true
+}
+```
+
+IActionProvider 메타데이터 확장:
+
+```typescript
+interface ActionProviderMetadata {
+  // ... existing fields
+  requiresSigningKey?: boolean;  // default: false
+}
+```
+
+### 2. Stage 5 분기 설계
+
+기존 `stages.ts`의 Stage 5 (execute) 내부에 분기 추가. 파이프라인 순서:
+
+```
+Stage 1 (Validate) -> Stage 2 (Auth) -> Stage 3 (Policy) -> Stage 4 (Delay/Approval)
+  -> [NEW] Pre-Stage 5: requiresSigningKey 확인 -> key decrypt
+  -> Stage 5: isApiDirectResult(result) 분기
+    YES -> DB UPDATE (status=COMPLETED, metadata에 externalId/provider response 저장)
+         -> Provider-specific DB INSERT (hyperliquid_orders 등)
+         -> Skip on-chain execution entirely
+    NO  -> 기존 온체인 실행 플로우 (build -> simulate -> sign -> submit)
+  -> Stage 6 (Notification): 동일하게 실행 (TRANSACTION_COMPLETED 이벤트)
+```
+
+key decryption 흐름 상세:
+
+1. ActionProviderRegistry가 `provider.metadata.requiresSigningKey` 확인
+2. true인 경우 Stage 4 완료 후 `keyStore.decrypt(walletId, masterPassword)` 호출
+3. 복호화된 privateKey를 ActionContext에 추가하여 `provider.resolve()`에 전달
+4. `resolve()` 완료 후 즉시 메모리에서 privateKey 참조 해제 (GC 대상)
+5. 기존 `sign-message.ts`의 패턴과 동일: decrypt -> use -> release
+
+### 3. 기존 파이프라인 영향 범위 분석
+
+| 파일 | 변경 | 변경 내용 |
+|------|------|-----------|
+| `packages/core/src/interfaces/action-provider.types.ts` | 수정 | ApiDirectResult 타입 + isApiDirectResult() + ActionContext.privateKey + requiresSigningKey |
+| `packages/daemon/src/pipeline/stages.ts` | 수정 | Stage 5 분기 (isApiDirectResult 분기 로직 ~20줄 추가) |
+| `packages/daemon/src/infrastructure/action-provider-registry.ts` | 수정 | requiresSigningKey 시 key decrypt 로직 추가 |
+| discriminatedUnion 8-type | 변경 없음 | API-direct 액션은 파이프라인 타입과 무관 |
+| PolicyEngine | 변경 없음 | 기존 riskLevel/defaultTier 기반 평가 그대로 |
+| NotificationService | 변경 없음 | TRANSACTION_COMPLETED 이벤트 재사용 |
+
+### 4. ApiDirectResult vs ContractCallRequest 비교
+
+| 항목 | ContractCallRequest (기존) | ApiDirectResult (신규) |
+|------|---------------------------|----------------------|
+| 실행 방식 | 온체인 TX (sign -> submit) | Provider 내부 (sign -> API POST) |
+| 결과 식별자 | txHash | externalId (provider-specific) |
+| Gas | 필요 (estimateGas + safety margin) | 불필요 (Hyperliquid API는 gasless) |
+| 확인 방식 | on-chain polling (confirmation worker) | API 응답 즉시 완료 |
+| DB 기록 | transactions 테이블 (txHash, status) | transactions 테이블 (metadata에 externalId) + provider별 테이블 |
+| Stage 5 | 전체 실행 (build/simulate/sign/submit) | skip (provider가 이미 실행 완료) |
+
+### 5. 에러 처리 설계
+
+ApiDirectResult 전용 에러 코드 (기존 DeFi 에러 체계에 추가):
+
+| 코드 | HTTP | 설명 |
+|------|------|------|
+| HL_API_ERROR | 502 | Hyperliquid Exchange API 호출 실패 |
+| HL_RATE_LIMITED | 429 | Hyperliquid rate limit 초과 (1200 weight/min) |
+| HL_INSUFFICIENT_MARGIN | 422 | 마진 부족으로 주문 거부 |
+| HL_ORDER_REJECTED | 422 | Hyperliquid가 주문 거부 (사유 포함) |
+| HL_SIGNING_FAILED | 500 | EIP-712 서명 생성 실패 |
+| HL_INVALID_MARKET | 404 | 존재하지 않는 마켓 |
+
+ChainError -> WAIaaSError 변환: Stage 5에서 `provider.resolve()` 실패 시 ChainError를 catch하여 WAIaaSError로 변환 (기존 패턴 그대로).
+
+---
+
+## 설계 확정: HDESIGN-02 EIP-712 서명
+
+### 1. 두 서명 스키마 비교
+
+| 항목 | L1 Action (Phantom Agent) | User-Signed Action |
+|------|--------------------------|-------------------|
+| 용도 | 주문/취소/레버리지/마진모드 등 거래 액션 | 입출금/내부이체/Sub-account 생성/API Wallet 등록 |
+| Domain name | 'Exchange' | 'HyperliquidSignTransaction' |
+| Domain version | '1' | '1' |
+| Domain chainId | 1337 (mainnet, testnet 동일) | 42161 (mainnet) / 421614 (testnet) |
+| Domain verifyingContract | 0x0000...0000 | 0x0000...0000 |
+| Primary type | 'Agent' | 'HyperliquidTransaction:{ActionType}' |
+| 서명 대상 | phantom agent { source, connectionId } | action payload 직접 |
+| msgpack 필요 | YES (action -> msgpack -> keccak256 -> connectionId) | NO |
+| @msgpack/msgpack 의존성 | 필수 | 불필요 |
+
+### 2. Phantom Agent 서명 상세 (L1 Actions)
+
+`HyperliquidSigner.signL1Action()` 메서드 설계:
+
+```typescript
+async signL1Action(
+  action: Record<string, unknown>,
+  nonce: number,          // Date.now() ms timestamp
+  isMainnet: boolean,
+  privateKey: Hex,
+  vaultAddress?: Hex,     // Sub-account인 경우
+): Promise<{ r: Hex; s: Hex; v: number }> {
+  // Step 1: trailing zero 제거 (price, size, trigger 등 decimal string 필드)
+  const normalized = removeTrailingZeros(action);
+
+  // Step 2: msgpack encode (canonical field order!)
+  // CRITICAL: 필드 순서는 Python SDK signing.py의 order_type_to_wire() 기준
+  // 예: { a: assetIndex, b: isBuy, p: price, s: size, r: reduceOnly, t: orderType, c: cloid }
+  const encoded = encode(normalized);
+
+  // Step 3: nonce + vaultAddress 직렬화
+  const nonceBytes = Buffer.alloc(8);
+  nonceBytes.writeBigUInt64BE(BigInt(nonce));
+  // vaultAddress: 0x01 + 20 bytes if present, 0x00 if absent
+  const vaultBytes = vaultAddress
+    ? Buffer.concat([Buffer.from([0x01]), hexToBytes(vaultAddress)])
+    : Buffer.from([0x00]);
+
+  // Step 4: keccak256(encoded + nonceBytes + vaultBytes) -> connectionId
+  const connectionId = keccak256(
+    concat([encoded, nonceBytes, vaultBytes])
+  );
+
+  // Step 5: phantom agent 구성
+  const phantomAgent = {
+    source: isMainnet ? 'a' : 'b',
+    connectionId,
+  };
+
+  // Step 6: EIP-712 서명
+  const account = privateKeyToAccount(privateKey);
+  const signature = await account.signTypedData({
+    domain: {
+      name: 'Exchange',
+      version: '1',
+      chainId: 1337,
+      verifyingContract: '0x0000000000000000000000000000000000000000',
+    },
+    types: {
+      Agent: [
+        { name: 'source', type: 'string' },
+        { name: 'connectionId', type: 'bytes32' },
+      ],
+    },
+    primaryType: 'Agent',
+    message: phantomAgent,
+  });
+
+  // Step 7: {r, s, v} 분리
+  return parseSignature(signature);
+}
+```
+
+### 3. msgpack 정규 필드 순서 (Python SDK signing.py 기준)
+
+| Action type | Wire 필드 순서 (msgpack key order) |
+|------------|----------------------------------|
+| order | a(asset), b(isBuy), p(limitPx), s(sz), r(reduceOnly), t(orderType), c(cloid) |
+| cancel | a(asset), o(oid) |
+| cancelByCloid | asset, cloid |
+| modify | oid, order(nested: a,b,p,s,r,t,c), traderAddress? |
+| batchModify | modifies(array of modify wire) |
+| updateLeverage | asset, isCross, leverage |
+| updateIsolatedMargin | asset, isBuy, ntli |
+
+trailing zero 제거 규칙:
+- price, size, trigger 등 decimal string: "100.00" -> "100", "1.50" -> "1.5", "0.0010" -> "0.001"
+- 정수는 변환 불필요: 10 -> 10
+- 함수: `function removeTrailingZeros(s: string): string { return s.replace(/\.?0+$/, ''); }`
+
+### 4. User-Signed Action 서명 상세
+
+`HyperliquidSigner.signUserSignedAction()` 메서드 설계:
+
+```typescript
+async signUserSignedAction(
+  actionType: string,     // e.g., 'UsdSend', 'Withdraw', 'CreateSubAccount'
+  action: Record<string, unknown>,
+  isMainnet: boolean,
+  privateKey: Hex,
+): Promise<{ r: Hex; s: Hex; v: number }> {
+  const account = privateKeyToAccount(privateKey);
+  const signature = await account.signTypedData({
+    domain: {
+      name: 'HyperliquidSignTransaction',
+      version: '1',
+      chainId: isMainnet ? 42161 : 421614,
+      verifyingContract: '0x0000000000000000000000000000000000000000',
+    },
+    types: USER_ACTION_TYPES[actionType],  // 아래 매핑 테이블
+    primaryType: `HyperliquidTransaction:${actionType}`,
+    message: action,
+  });
+  return parseSignature(signature);
+}
+```
+
+User-Signed Action types 매핑:
+
+| Action Type | EIP-712 Types |
+|------------|---------------|
+| UsdSend | { hyperliquidChain: 'string', destination: 'string', amount: 'string', time: 'uint64' } |
+| Withdraw | { hyperliquidChain: 'string', destination: 'string', amount: 'string', time: 'uint64' } |
+| UsdClassTransfer | { hyperliquidChain: 'string', amount: 'string', toPerp: 'bool', nonce: 'uint64' } |
+| CreateSubAccount | { hyperliquidChain: 'string', name: 'string', time: 'uint64' } |
+| SubAccountTransfer | { hyperliquidChain: 'string', subAccountUser: 'string', isDeposit: 'bool', usd: 'uint64', time: 'uint64' } |
+| ApproveAgent | { hyperliquidChain: 'string', agentAddress: 'address', agentName: 'string', nonce: 'uint64' } |
+
+hyperliquidChain 값: mainnet -> 'Mainnet', testnet -> 'Testnet'
+
+---
+
+## 설계 확정: HDESIGN-03 ExchangeClient 공유 구조
+
+### 1. HyperliquidExchangeClient 클래스 설계
+
+```typescript
+// packages/actions/src/providers/hyperliquid/exchange-client.ts
+export class HyperliquidExchangeClient {
+  constructor(
+    private readonly apiUrl: string,     // from Admin Settings
+    private readonly rateLimiter: HyperliquidRateLimiter,
+  ) {}
+
+  // Exchange endpoint: POST /exchange
+  async exchange(request: {
+    action: Record<string, unknown>;
+    nonce: number;
+    signature: { r: Hex; s: Hex; v: number };
+    vaultAddress?: Hex;
+  }): Promise<ExchangeResponse> {
+    await this.rateLimiter.acquire(1);  // weight=1 for exchange actions
+    return this.post('/exchange', request, ExchangeResponseSchema);
+  }
+
+  // Info endpoint: POST /info
+  async info<T>(request: InfoRequest, schema: z.ZodType<T>): Promise<T> {
+    const weight = INFO_WEIGHTS[request.type] ?? 2;
+    await this.rateLimiter.acquire(weight);
+    return this.post('/info', request, schema);
+  }
+
+  private async post<T>(path: string, body: unknown, schema: z.ZodType<T>): Promise<T> {
+    // native fetch + AbortController (10s timeout)
+    // Zod schema.parse() on response
+    // HL_API_ERROR on non-200
+  }
+}
+```
+
+### 2. Info API 요청 가중치 테이블
+
+| Info type | Weight | 설명 |
+|-----------|--------|------|
+| clearinghouseState | 20 | Perp 포지션 + 잔액 |
+| spotClearinghouseState | 20 | Spot 잔액 |
+| openOrders | 20 | 오픈 주문 목록 |
+| userFills | 20 | 최근 체결 내역 |
+| meta | 2 | Perp 마켓 메타데이터 |
+| spotMeta | 2 | Spot 마켓 메타데이터 |
+| allMids | 2 | 모든 마켓 중간가 |
+| fundingHistory | 2 | 펀딩 레이트 이력 |
+| subAccounts | 20 | Sub-account 목록 + 잔액 |
+
+### 3. Rate Limiter 설계
+
+가중치 기반 rate limiter (Hyperliquid 공식: IP당 1200 weight/min):
+
+```typescript
+class HyperliquidRateLimiter {
+  private totalWeight = 0;
+  private windowStart = Date.now();
+  private readonly maxWeightPerMin: number;  // default: 600 (보수적, 공식 1200의 50%)
+
+  async acquire(weight: number): Promise<void> {
+    const now = Date.now();
+    if (now - this.windowStart > 60_000) {
+      this.totalWeight = 0;
+      this.windowStart = now;
+    }
+    if (this.totalWeight + weight > this.maxWeightPerMin) {
+      const waitMs = 60_000 - (now - this.windowStart);
+      await new Promise(resolve => setTimeout(resolve, waitMs));
+      this.totalWeight = 0;
+      this.windowStart = Date.now();
+    }
+    this.totalWeight += weight;
+  }
+}
+```
+
+`maxWeightPerMin`은 Admin Settings `HYPERLIQUID_RATE_LIMIT_WEIGHT_PER_MIN`으로 런타임 조정 가능.
+
+### 4. HyperliquidMarketData 설계
+
+Info API 래퍼 (read-only, 파이프라인 밖에서 사용):
+
+```typescript
+class HyperliquidMarketData {
+  constructor(private readonly client: HyperliquidExchangeClient) {}
+
+  // 파이프라인 없이 직접 호출 (MCP query tools, Admin UI)
+  async getPositions(walletAddress: Hex, subAccount?: Hex): Promise<Position[]>
+  async getOpenOrders(walletAddress: Hex, subAccount?: Hex): Promise<OpenOrder[]>
+  async getMarkets(): Promise<MarketMeta[]>
+  async getSpotMarkets(): Promise<SpotMarketMeta[]>
+  async getFundingHistory(market: string, startTime: number): Promise<FundingRate[]>
+  async getAllMidPrices(): Promise<Record<string, string>>
+  async getAccountState(walletAddress: Hex): Promise<ClearinghouseState>
+  async getSpotState(walletAddress: Hex): Promise<SpotClearinghouseState>
+  async getSubAccounts(walletAddress: Hex): Promise<SubAccountState[]>
+  async getUserFills(walletAddress: Hex, limit?: number): Promise<Fill[]>
+}
+```
+
+### 5. 컴포넌트 의존성 그래프
+
+```
+HyperliquidRateLimiter
+  |
+HyperliquidExchangeClient (Exchange + Info 래핑)
+  |
+  +-- HyperliquidSigner (EIP-712 서명만 담당, ExchangeClient 미사용)
+  |
+  +-- HyperliquidMarketData (Info API read-only 래핑)
+  |
+  +-- HyperliquidPerpProvider (resolve: Signer.signL1Action -> Client.exchange)
+  |     uses: Signer, Client, MarketData (가격 조회)
+  |
+  +-- HyperliquidSpotProvider (resolve: Signer.signL1Action -> Client.exchange)
+  |     uses: Signer, Client, MarketData
+  |
+  +-- HyperliquidSubAccountService (Signer.signUserSignedAction -> Client.exchange)
+        uses: Signer, Client
+```
+
+### 6. 신규 의존성
+
+| 패키지 | 버전 | 용도 | 기존 의존성 여부 |
+|--------|------|------|----------------|
+| @msgpack/msgpack | ^3.0.0 | phantom agent 서명의 msgpack 직렬화 | 신규 (0 transitive deps) |
+| viem | ^2.21.0 | signTypedData, keccak256, parseSignature | 기존 |
+
+파일 구조:
+
+```
+packages/actions/src/providers/hyperliquid/
+  config.ts              -- API endpoints, rate limits, defaults, Admin Settings keys
+  schemas.ts             -- Zod input schemas for all actions + API response schemas
+  exchange-client.ts     -- HyperliquidExchangeClient
+  signer.ts              -- HyperliquidSigner (signL1Action + signUserSignedAction)
+  market-data.ts         -- HyperliquidMarketData
+  perp-provider.ts       -- HyperliquidPerpProvider : IPerpProvider
+  spot-provider.ts       -- HyperliquidSpotProvider : IActionProvider
+  sub-account-service.ts -- Sub-account CRUD + transfer
+  index.ts               -- Re-exports + registerHyperliquidProviders()
+```
+
+---
+
+## 설계 확정: HDESIGN-04 Sub-account 매핑 모델
+
+### 1. Sub-account-to-Wallet 매핑 모델
+
+```
+WAIaaS Wallet (EVM, hyperevm-mainnet)
+  |-- publicKey: 0xMaster... (Hyperliquid master account = EVM 지갑 주소)
+  |-- [hyperliquid_sub_accounts]
+  |     |-- sub_account_address: 0xSub1... (name: "Trend Following")
+  |     |-- sub_account_address: 0xSub2... (name: "Mean Reversion")
+  |-- [정책 적용 범위]: master + 모든 sub-accounts 합산
+```
+
+핵심 설계 결정:
+- 1 WAIaaS Wallet = 1 Hyperliquid Master Account + N Sub-accounts
+- Sub-account는 별도 WAIaaS 지갑으로 생성하지 않음 (private key 없음, master 서명으로 동작)
+- Sub-account는 `hyperliquid_sub_accounts` 테이블에 메타데이터로 저장
+- action params의 `subAccount` 필드로 대상 sub-account 지정 (생략 시 master)
+- Signer의 `vaultAddress` 파라미터로 sub-account 주소 전달
+
+### 2. Sub-account 생성 제약
+
+- Hyperliquid 정책: $100K 거래량 이상의 계정만 sub-account 생성 가능
+- Testnet에서는 제약 없을 수 있음 (Phase 351 착수 시 검증)
+- 생성 시 User-Signed Action 서명 (`signUserSignedAction('CreateSubAccount', ...)`)
+- 생성 후 Hyperliquid가 sub-account 주소를 반환 -> DB에 저장
+
+### 3. Sub-account 간 자금 이동 정책
+
+- Master -> Sub-account (Deposit): User-Signed Action 'SubAccountTransfer'
+- Sub-account -> Master (Withdraw): User-Signed Action 'SubAccountTransfer'
+- 두 방향 모두 정책 엔진 SPENDING_LIMIT 평가 대상 (자금 이동이므로 TRANSFER와 동일 취급)
+- 정책 평가 기준: 이체 금액 (USD)
+- Sub-account 간 직접 이체는 Hyperliquid API에서 미지원 -> master 경유 필수
+
+---
+
+## 설계 확정: HDESIGN-07 정책 엔진 적용 방안
+
+### 1. 정책 평가 기준 테이블
+
+| 액션 유형 | 정책 평가 금액 기준 | 산출 방식 | 근거 |
+|-----------|-------------------|-----------|------|
+| Perp 주문 (open) | Margin 금액 | size * price / leverage | 실제 위험 노출 = 증거금. Notional은 레버리지로 인해 과대 평가 가능 |
+| Perp 주문 (close) | $0 (면제) | - | 포지션 청산은 위험 감소 행위, 지출 아님 |
+| Spot 주문 (buy) | 주문 총액 | size * price | Spot은 레버리지 없으므로 notional = 실제 지출 |
+| Spot 주문 (sell) | $0 (면제) | - | 기존 자산 매도는 지출 아님 |
+| 레버리지 변경 | $0 (면제) | - | 설정 변경이지 지출 아님 |
+| 주문 취소 | $0 (면제) | - | 지출 아님 |
+| Sub-account 이체 | 이체 금액 | amount (USD) | 자금 이동은 TRANSFER와 동일 |
+| USDC 입금/출금 | 입출금 금액 | amount (USD) | 외부 자금 이동 |
+
+### 2. riskLevel + defaultTier 매핑
+
+| 액션 | riskLevel | defaultTier | 근거 |
+|------|-----------|-------------|------|
+| hl_open_position | high | APPROVAL | 레버리지 포지션 오픈은 고위험 |
+| hl_close_position | medium | DELAY | 포지션 청산은 중위험 (위험 감소 행위이나 실행 결과 확인 필요) |
+| hl_place_order | high | APPROVAL | 지정가 주문도 체결 시 포지션 오픈과 동일 |
+| hl_cancel_order | low | INSTANT | 주문 취소는 위험 감소 |
+| hl_set_leverage | medium | DELAY | 레버리지 변경은 위험 프로파일 변경 |
+| hl_set_margin_mode | medium | DELAY | 마진 모드 변경은 청산 조건 변경 |
+| hl_spot_buy | medium | DELAY | Spot 구매는 레버리지 없어 중위험 |
+| hl_spot_sell | low | INSTANT | Spot 매도는 저위험 |
+| hl_sub_transfer | medium | DELAY | 내부 자금 이동은 중위험 |
+| hl_create_sub_account | medium | DELAY | 계정 구조 변경 |
+
+### 3. 정책 금액 추출 로직 설계
+
+ActionProviderRegistry가 `resolve()` 호출 전에 금액을 추출하는 로직:
+
+```typescript
+// HyperliquidPerpProvider 내부
+getSpendingAmount(actionName: string, params: Record<string, unknown>): {
+  amount: bigint;  // USD 기준 (6 decimals, USDC)
+  asset: string;   // 'USDC' (Hyperliquid는 USDC settlement)
+} {
+  switch (actionName) {
+    case 'hl_open_position': {
+      const size = parseFloat(params.size as string);
+      const price = parseFloat(params.price as string || midPrice); // market order시 midPrice 사용
+      const leverage = params.leverage as number || 1;
+      const margin = (size * price) / leverage;
+      return { amount: BigInt(Math.ceil(margin * 1e6)), asset: 'USDC' };
+    }
+    case 'hl_close_position':
+    case 'hl_cancel_order':
+    case 'hl_set_leverage':
+    case 'hl_set_margin_mode':
+      return { amount: 0n, asset: 'USDC' };  // 면제
+    case 'hl_spot_buy': {
+      const size = parseFloat(params.size as string);
+      const price = parseFloat(params.price as string || midPrice);
+      return { amount: BigInt(Math.ceil(size * price * 1e6)), asset: 'USDC' };
+    }
+    case 'hl_spot_sell':
+      return { amount: 0n, asset: 'USDC' };  // 면제
+    case 'hl_sub_transfer':
+      return { amount: BigInt(Math.ceil(parseFloat(params.amount as string) * 1e6)), asset: 'USDC' };
+  }
+}
+```
+
+### 4. 정책 적용 범위
+
+- SPENDING_LIMIT: master wallet 단위로 합산 (모든 sub-account 포함)
+- TOKEN_SPENDING_LIMIT: USDC 기준 (Hyperliquid settlement currency)
+- Sub-account별 독립 한도는 지원하지 않음 (WAIaaS 정책은 wallet 단위)
+- Default-deny: SPENDING_LIMIT 미설정 시 Hyperliquid 액션 거부 (기존 default-deny 정책)
+
+---
+
+## 설계 확정: HDESIGN-05 MCP/SDK/Admin 인터페이스
+
+### 1. MCP 도구 목록
+
+| MCP Tool | Provider | 설명 | Phase |
+|----------|----------|------|-------|
+| hl_open_position | HyperliquidPerpProvider | Perp 포지션 오픈 (market/limit) | 349 |
+| hl_close_position | HyperliquidPerpProvider | Perp 포지션 클로즈 (market/limit) | 349 |
+| hl_place_order | HyperliquidPerpProvider | Perp 지정가/Stop/TP 주문 | 349 |
+| hl_cancel_order | HyperliquidPerpProvider | 주문 취소 (단건/다건) | 349 |
+| hl_set_leverage | HyperliquidPerpProvider | 레버리지 설정 | 349 |
+| hl_set_margin_mode | HyperliquidPerpProvider | Cross/Isolated 마진 모드 설정 | 349 |
+| hl_get_positions | HyperliquidMarketData | 포지션 조회 (PnL/마진/청산가) | 349 |
+| hl_get_open_orders | HyperliquidMarketData | 오픈 주문 목록 | 349 |
+| hl_get_markets | HyperliquidMarketData | 거래 가능 마켓 목록 | 349 |
+| hl_get_funding_rates | HyperliquidMarketData | 펀딩 레이트 조회 | 349 |
+| hl_get_account_state | HyperliquidMarketData | 통합 계정 상태 (잔액/마진) | 349 |
+| hl_get_trade_history | HyperliquidMarketData | 최근 거래 이력 | 349 |
+| hl_transfer_usdc | HyperliquidPerpProvider | Spot-Perp 간 USDC 이동 | 349 |
+| hl_spot_buy | HyperliquidSpotProvider | Spot 매수 (market/limit) | 350 |
+| hl_spot_sell | HyperliquidSpotProvider | Spot 매도 (market/limit) | 350 |
+| hl_spot_cancel | HyperliquidSpotProvider | Spot 주문 취소 | 350 |
+| hl_get_spot_balances | HyperliquidMarketData | Spot 토큰 잔액 | 350 |
+| hl_get_spot_markets | HyperliquidMarketData | Spot 마켓 정보 | 350 |
+| hl_create_sub_account | HyperliquidSubAccountService | Sub-account 생성 | 351 |
+| hl_list_sub_accounts | HyperliquidSubAccountService | Sub-account 목록 | 351 |
+| hl_sub_transfer | HyperliquidSubAccountService | Sub-account 자금 이동 | 351 |
+| hl_get_sub_positions | HyperliquidMarketData | Sub-account별 포지션/잔액 | 351 |
+
+총 22개 MCP 도구 (Phase 349: 13개, Phase 350: 5개, Phase 351: 4개).
+
+Query 도구(`hl_get_*`)는 파이프라인 거치지 않고 `MarketData.info()` 직접 호출 (read-only). Action 도구(`hl_open_*`, `hl_close_*`, `hl_place_*`, `hl_spot_*`)는 파이프라인 Stage 1-5 거침.
+
+### 2. SDK 메서드 목록
+
+SDK 메서드는 MCP 도구와 1:1 대응. `@waiaas/sdk` 패키지에 추가:
+
+```typescript
+class WAIaaSClient {
+  // Perp (Phase 349)
+  async hlOpenPosition(walletId: string, params: HlOpenPositionParams): Promise<ActionResult>
+  async hlClosePosition(walletId: string, params: HlClosePositionParams): Promise<ActionResult>
+  async hlPlaceOrder(walletId: string, params: HlPlaceOrderParams): Promise<ActionResult>
+  async hlCancelOrder(walletId: string, params: HlCancelOrderParams): Promise<ActionResult>
+  async hlSetLeverage(walletId: string, params: HlSetLeverageParams): Promise<ActionResult>
+  async hlSetMarginMode(walletId: string, params: HlSetMarginModeParams): Promise<ActionResult>
+  async hlGetPositions(walletId: string): Promise<Position[]>
+  async hlGetOpenOrders(walletId: string): Promise<OpenOrder[]>
+  async hlGetMarkets(): Promise<Market[]>
+  async hlGetFundingRates(market: string): Promise<FundingRate[]>
+  async hlGetAccountState(walletId: string): Promise<AccountState>
+  async hlGetTradeHistory(walletId: string, limit?: number): Promise<Fill[]>
+  async hlTransferUsdc(walletId: string, params: HlTransferParams): Promise<ActionResult>
+
+  // Spot (Phase 350)
+  async hlSpotBuy(walletId: string, params: HlSpotOrderParams): Promise<ActionResult>
+  async hlSpotSell(walletId: string, params: HlSpotOrderParams): Promise<ActionResult>
+  async hlSpotCancel(walletId: string, params: HlCancelParams): Promise<ActionResult>
+  async hlGetSpotBalances(walletId: string): Promise<SpotBalance[]>
+  async hlGetSpotMarkets(): Promise<SpotMarket[]>
+
+  // Sub-account (Phase 351)
+  async hlCreateSubAccount(walletId: string, name: string): Promise<SubAccount>
+  async hlListSubAccounts(walletId: string): Promise<SubAccount[]>
+  async hlSubTransfer(walletId: string, params: HlSubTransferParams): Promise<ActionResult>
+  async hlGetSubPositions(walletId: string, subAccount: string): Promise<Position[]>
+}
+```
+
+### 3. Admin Settings 키 목록
+
+| Key | Type | Default | 범위 | 설명 |
+|-----|------|---------|------|------|
+| HYPERLIQUID_ENABLED | boolean | true | config.toml | 기능 게이트 (재시작 필요) |
+| HYPERLIQUID_API_URL | string | https://api.hyperliquid.xyz | config.toml | Mainnet API (재시작 필요) |
+| HYPERLIQUID_TESTNET_API_URL | string | https://api.hyperliquid-testnet.xyz | config.toml | Testnet API (재시작 필요) |
+| HYPERLIQUID_RATE_LIMIT_WEIGHT_PER_MIN | number | 600 | Admin Settings | 분당 가중치 한도 (런타임) |
+| HYPERLIQUID_DEFAULT_LEVERAGE | number | 1 | Admin Settings | 기본 레버리지 (런타임) |
+| HYPERLIQUID_DEFAULT_MARGIN_MODE | string | 'CROSS' | Admin Settings | 기본 마진 모드 (런타임) |
+| HYPERLIQUID_BUILDER_ADDRESS | string | '' | Admin Settings | Builder fee 수취 주소 (런타임, 선택) |
+| HYPERLIQUID_BUILDER_FEE | number | 0 | Admin Settings | Builder fee (tenths of bps, 런타임, 선택) |
+| HYPERLIQUID_ORDER_STATUS_POLL_INTERVAL_MS | number | 2000 | Admin Settings | 주문 상태 확인 간격 (런타임) |
+
+config.toml vs Admin Settings 경계 원칙: 인프라/보안 = config.toml (재시작), 운영 파라미터 = Admin Settings (런타임 hot-reload).
+
+### 4. Admin UI 표시 설계
+
+Hyperliquid 전용 탭을 DeFi 섹션 내에 추가:
+
+```
+Admin UI -> DeFi -> Hyperliquid
+  |-- Overview Tab
+  |     |-- AccountSummary (Perp equity + Spot balances + margin info)
+  |     |-- PositionsTable (market, side, size, entry, markPrice, PnL, leverage, liquidation)
+  |
+  |-- Orders Tab
+  |     |-- OpenOrdersTable (market, side, type, size, price, status, created)
+  |     |-- OrderHistoryTable (최근 50개, hyperliquid_orders 테이블에서)
+  |
+  |-- Spot Tab (Phase 350)
+  |     |-- SpotBalancesTable (token, balance, midPrice, value)
+  |     |-- SpotOrdersTable
+  |
+  |-- Sub-accounts Tab (Phase 351)
+  |     |-- SubAccountList (address, name, equity)
+  |     |-- SubAccountDetail (포지션, 잔액, 이체 이력)
+  |
+  |-- Settings Tab
+  |     |-- Admin Settings 편집 (HYPERLIQUID_* 키들)
+```
+
+모든 데이터는 MarketData Info API 실시간 조회 (DB 저장 X, on-demand fetch).
+주문 이력만 `hyperliquid_orders` 테이블에서 로드 (WAIaaS가 생성한 주문만).
+
+### 5. connect-info hyperliquid capability
+
+```typescript
+// connect-info response에 추가
+{
+  capabilities: {
+    // ... existing
+    hyperliquid: {
+      enabled: true,
+      perp: true,      // Phase 349
+      spot: true,       // Phase 350
+      subAccounts: true, // Phase 351
+      networks: ['hyperevm-mainnet'],  // HyperEVM 네트워크에서만 사용 가능
+    }
+  }
+}
+```
+
+### 6. Skill 파일 업데이트 범위
+
+| Skill 파일 | 추가 내용 |
+|-----------|----------|
+| transactions.skill.md | Hyperliquid Perp/Spot 주문 실행 예시 |
+| admin.skill.md | Hyperliquid Admin Settings 관리 예시 |
+| wallet.skill.md | HyperEVM 네트워크에서의 지갑 사용 안내 |
+
+---
+
+## 설계 확정: HDESIGN-06 DB 스키마
+
+### 1. DB v51: hyperliquid_orders
+
+```sql
+-- Migration v51: Hyperliquid Order History
+CREATE TABLE hyperliquid_orders (
+  id TEXT PRIMARY KEY,                              -- UUID v7
+  wallet_id TEXT NOT NULL REFERENCES wallets(id),
+  sub_account_address TEXT,                         -- NULL = master account
+  oid INTEGER,                                      -- Hyperliquid order ID
+  cloid TEXT,                                       -- Client order ID (128-bit hex)
+  transaction_id TEXT REFERENCES transactions(id),  -- pipeline TX record link
+  market TEXT NOT NULL,                             -- e.g., 'ETH', 'BTC'
+  asset_index INTEGER NOT NULL,                     -- Perp: direct, Spot: 10000+
+  side TEXT NOT NULL CHECK(side IN ('BUY', 'SELL')),
+  order_type TEXT NOT NULL CHECK(order_type IN ('MARKET', 'LIMIT', 'STOP_MARKET', 'STOP_LIMIT', 'TAKE_PROFIT')),
+  size TEXT NOT NULL,                               -- Decimal string
+  price TEXT,                                       -- Decimal string (NULL for market)
+  trigger_price TEXT,                               -- Stop/TP orders
+  tif TEXT CHECK(tif IN ('GTC', 'IOC', 'ALO')),
+  reduce_only INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL CHECK(status IN ('PENDING', 'RESTING', 'FILLED', 'PARTIALLY_FILLED', 'CANCELLED', 'REJECTED', 'TRIGGERED')),
+  filled_size TEXT,
+  avg_fill_price TEXT,
+  is_spot INTEGER NOT NULL DEFAULT 0,               -- 0=perp, 1=spot
+  leverage INTEGER,                                  -- Perp only
+  margin_mode TEXT CHECK(margin_mode IN ('CROSS', 'ISOLATED')),
+  response_data TEXT,                                -- JSON blob
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+
+CREATE INDEX idx_hl_orders_wallet ON hyperliquid_orders(wallet_id);
+CREATE INDEX idx_hl_orders_oid ON hyperliquid_orders(oid);
+CREATE INDEX idx_hl_orders_market ON hyperliquid_orders(market);
+CREATE INDEX idx_hl_orders_status ON hyperliquid_orders(status);
+CREATE INDEX idx_hl_orders_created ON hyperliquid_orders(created_at);
+```
+
+### 2. DB v52: hyperliquid_sub_accounts
+
+```sql
+-- Migration v52: Hyperliquid Sub-accounts
+CREATE TABLE hyperliquid_sub_accounts (
+  id TEXT PRIMARY KEY,                              -- UUID v7
+  wallet_id TEXT NOT NULL REFERENCES wallets(id),
+  sub_account_address TEXT NOT NULL,                -- 42-char hex (0x prefixed)
+  name TEXT,                                        -- User-assigned label
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  UNIQUE(wallet_id, sub_account_address)
+);
+
+CREATE INDEX idx_hl_sub_wallet ON hyperliquid_sub_accounts(wallet_id);
+```
+
+### 3. DB 마이그레이션 전략
+
+- 현재 DB 버전: v50 (v31.3 기준)
+- v51: Phase 349에서 생성 (hyperliquid_orders + indexes)
+- v52: Phase 351에서 생성 (hyperliquid_sub_accounts + index)
+- incremental ALTER TABLE 방식 준수 (기존 CLAUDE.md 규칙)
+- `schema_version` 테이블 업데이트 포함
+- 기존 테이블 변경 없음 (transactions 테이블의 metadata 필드에 JSON으로 Hyperliquid 응답 저장)
+
+### 4. transactions 테이블과의 관계
+
+- Hyperliquid 주문은 기존 transactions 테이블에도 기록 (파이프라인 Stage 5 결과)
+- `transactions.metadata`에 `{ provider: 'hyperliquid_perp', externalId: '...', hlResponse: {...} }` 저장
+- `hyperliquid_orders` 테이블은 Hyperliquid 전용 필드 (market, leverage, margin_mode 등)를 정규화하여 저장
+- `hyperliquid_orders.transaction_id` -> `transactions.id` (1:1 관계)
+- Query 전용 액션 (`hl_get_positions` 등)은 transactions 테이블에 기록하지 않음 (read-only)
+
+### 5. Drizzle 스키마 정의 위치
+
+```
+packages/daemon/src/infrastructure/database/
+  schema/
+    hyperliquid-orders.ts    -- v51 Drizzle table definition
+    hyperliquid-sub-accounts.ts -- v52 Drizzle table definition
+  migrations/
+    v51-hyperliquid-orders.ts
+    v52-hyperliquid-sub-accounts.ts
+```
 
 ---
 
@@ -130,10 +884,10 @@ Hyperliquid Sub-account 기능을 WAIaaS 월렛 모델과 통합한다.
 2. **서명 방식**: EIP-712 typed data signing — 기존 `EvmAdapter.signTypedData` 활용 가능.
 3. **discriminatedUnion 타입**: L1 API 거래는 기존 8-type (TRANSFER/TOKEN_TRANSFER/CONTRACT_CALL/APPROVE/BATCH/SIGN/X402_PAYMENT/NFT_TRANSFER) 어디에도 직접 매핑되지 않음. SIGN type 재활용 또는 신규 type 도입 여부를 Phase 2 설계에서 확정.
 4. **정책 엔진 적용**: API 기반 거래에 기존 정책(지출 한도, 토큰별 한도)을 적용하려면 금액 환산 로직 필요. Phase 2 설계에서 정책 매핑 방안 확정.
-5. **WebSocket**: 실시간 주문/포지션 업데이트를 위한 WebSocket 연결 관리 필요.
+5. **WebSocket**: 실시간 주문/포지션 업데이트를 위한 WebSocket 연결 관리 필요. Phase 2 설계에서 필요성과 범위를 확정하고, 구현 Phase(3/4) 또는 별도 Phase로 배정.
 6. **Rate Limiting**: Hyperliquid API rate limit 준수 (기존 RPC Pool 패턴 참고).
 7. **Testnet 지원**: Hyperliquid testnet(api.hyperliquid-testnet.xyz) 환경 분리.
-8. **DB 마이그레이션**: Sub-account 매핑, 주문 이력 등에 필요한 테이블 추가 시 incremental ALTER TABLE 방식 준수 (v45 이후 버전).
+8. **DB 마이그레이션**: Sub-account 매핑, 주문 이력 등에 필요한 테이블 추가 시 incremental ALTER TABLE 방식 준수 (현재 DB v50 기준, v51부터 할당).
 9. **Admin Settings / UI**: API endpoint, rate limit 등 런타임 설정은 Admin Settings로 노출. 포지션/주문 현황은 Admin UI에 표시.
 
 ---
@@ -147,3 +901,6 @@ Hyperliquid Sub-account 기능을 WAIaaS 월렛 모델과 통합한다.
 - Sub-account 생성/이동 테스트
 - MCP 도구 + SDK 메서드 통합 테스트
 - 에러 핸들링 (API 에러, rate limit, insufficient margin 등)
+- 정책 엔진 적용 테스트 (API 기반 거래에 지출 한도/토큰별 한도 적용 검증)
+- Admin Settings 저장/로드 및 런타임 반영 테스트
+- Admin UI 컴포넌트 테스트 (포지션/주문 현황, Sub-account 관리 표시)

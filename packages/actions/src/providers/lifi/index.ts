@@ -55,6 +55,7 @@ export class LiFiActionProvider implements IActionProvider {
       mcpExpose: true,
       requiresApiKey: false,            // LI.FI works without API key (rate limited)
       requiredApis: ['lifi'],
+      requiresSigningKey: false,
     };
 
     this.actions = [

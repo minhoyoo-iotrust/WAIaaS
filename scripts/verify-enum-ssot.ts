@@ -76,9 +76,9 @@ interface CheckTarget {
 
 const ENUMS: EnumDef[] = [
   { name: 'ChainType', array: CHAIN_TYPES, zodOptions: ChainTypeEnum.options, expectedCount: 2 },
-  { name: 'NetworkType', array: NETWORK_TYPES, zodOptions: NetworkTypeEnum.options, expectedCount: 13 },
+  { name: 'NetworkType', array: NETWORK_TYPES, zodOptions: NetworkTypeEnum.options, expectedCount: 15 },
   { name: 'SolanaNetworkType', array: SOLANA_NETWORK_TYPES, zodOptions: SOLANA_NETWORK_TYPES, expectedCount: 3 },
-  { name: 'EvmNetworkType', array: EVM_NETWORK_TYPES, zodOptions: EvmNetworkTypeEnum.options, expectedCount: 10 },
+  { name: 'EvmNetworkType', array: EVM_NETWORK_TYPES, zodOptions: EvmNetworkTypeEnum.options, expectedCount: 12 },
   { name: 'EnvironmentType', array: ENVIRONMENT_TYPES, zodOptions: EnvironmentTypeEnum.options, expectedCount: 2 },
   { name: 'WalletStatus', array: WALLET_STATUSES, zodOptions: WalletStatusEnum.options, expectedCount: 5 },
   { name: 'TransactionStatus', array: TRANSACTION_STATUSES, zodOptions: TransactionStatusEnum.options, expectedCount: 11 },

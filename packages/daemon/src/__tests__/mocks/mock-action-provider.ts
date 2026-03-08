@@ -31,6 +31,7 @@ const DEFAULT_METADATA: ActionProviderMetadata = {
   mcpExpose: false,
   requiresApiKey: false,
   requiredApis: [],
+  requiresSigningKey: false,
 };
 
 /** Default action definition. */

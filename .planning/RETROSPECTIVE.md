@@ -545,6 +545,43 @@
 
 ---
 
+## Milestone: v31.4 — Hyperliquid 생태계 통합
+
+**Shipped:** 2026-03-08
+**Phases:** 5 | **Plans:** 12 | **Sessions:** 1
+
+### What Was Built
+- HyperEVM Mainnet/Testnet (Chain ID 999/998) 체인 등록 — 기존 EVM 지갑 즉시 동작
+- ApiDirectResult 패턴 — off-chain DEX API를 Stage 5에서 on-chain TX 없이 CONFIRMED 처리
+- Hyperliquid Perp Trading (7 actions, margin 기반 정책), Spot Trading (3 actions, asset index 10000+ 매핑)
+- Sub-account 관리 (Create/Transfer User-Signed EIP-712, DB v52)
+- 22 MCP tools + 22 SDK methods + 9 Admin Settings + Admin UI 5-tab page + connect-info
+
+### What Worked
+- 설계 문서(Phase 348) 2 plans가 구현 방향을 명확히 정의하여 Phase 349-351 구현이 빠름
+- ApiDirectResult 패턴이 기존 파이프라인 변경을 최소화하면서 off-chain API 통합을 깔끔하게 해결
+- 공유 인프라(ExchangeClient/Signer/MarketData/RateLimiter) 팩토리 패턴으로 3개 프로바이더 간 리소스 효율적 공유
+- Phase 350/351 병렬 가능 구조 — Phase 349 인프라만 의존하므로 독립 진행
+
+### What Was Inefficient
+- gsd-tools summary-extract one_liner 필드가 null 반환 — SUMMARY 포맷이 도구 기대와 불일치 (반복 이슈)
+- Phase 348 설계 결정이 27개 — 일부 세부 결정은 구현 시 자연스럽게 도출될 수 있었음
+
+### Patterns Established
+- ApiDirectResult 패턴: on-chain TX가 아닌 외부 API 호출 결과를 파이프라인에 통합하는 범용 패턴 (향후 다른 off-chain 서비스에 재사용 가능)
+- requiresSigningKey 메타데이터: 파이프라인 Stage 5 전에 키 복호화를 트리거하는 선언적 플래그
+- 팩토리 co-registration: 하나의 팩토리에서 여러 프로바이더를 동시 등록하고 공유 리소스 주입
+
+### Key Lessons
+- EIP-712 서명은 domain/types/value 순서가 바이트 레벨에서 중요 — TypedData 스키마를 설계 시점에 확정하는 것이 필수
+- Off-chain DEX는 "API 호출 = 거래 실행"이므로 dry-run 불가 — 정책 평가가 유일한 사전 차단 수단
+- 3개 프로바이더 co-registration 시 factory init 순서와 공유 자원 생명주기 관리가 핵심
+
+### Cost Observations
+- Model mix: ~90% opus, ~10% haiku
+- Sessions: 1
+- Notable: 12 plans (설계 3 + 구현 9) 완료, ~3시간 총 실행 시간
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -565,6 +602,7 @@
 | v31.0 | 1 | 5 | NFT 풀스택(타입+인덱서+어댑터+파이프라인+UI), 112 파일 2.5시간 완료 |
 | v31.2 | 1 | 4 | UserOp Build/Sign API, 64 파일 1.5시간 완료 |
 | v31.3 | 1 | 5 | DCent Swap Aggregator 통합, 110 파일 1일 완료 |
+| v31.4 | 1 | 5 | Hyperliquid 생태계(Perp/Spot/Sub-account), 112 파일 ~3시간 완료 |
 
 ### Cumulative Quality
 
@@ -584,6 +622,7 @@
 | v31.0 | ~6,930 (+108) | maintained | +24 decisions |
 | v31.2 | ~6,993 (+63) | maintained | +15 decisions |
 | v31.3 | ~7,109 (+116) | maintained | +17 decisions |
+| v31.4 | ~7,109 (unchanged) | maintained | +27 decisions |
 
 ### Top Lessons (Verified Across Milestones)
 

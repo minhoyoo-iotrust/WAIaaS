@@ -90,6 +90,7 @@ function createMockProvider(opts: {
       mcpExpose: false,
       requiresApiKey: opts.requiresApiKey,
       requiredApis: [],
+      requiresSigningKey: false,
     },
     actions: [action],
     resolve: async (

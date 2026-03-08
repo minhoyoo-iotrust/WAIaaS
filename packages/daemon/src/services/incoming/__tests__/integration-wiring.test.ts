@@ -286,8 +286,8 @@ describe('BUG-2: Polling Worker Handlers', () => {
     vi.useRealTimers();
 
     // Assert subscriber.pollAll() was called for each ethereum network
-    // ethereum:mainnet expands to 5 networks, all sharing the same mock subscriber
-    expect(mockPollAll).toHaveBeenCalledTimes(5);
+    // ethereum:mainnet expands to 6 networks (incl. hyperevm-mainnet), all sharing the same mock subscriber
+    expect(mockPollAll).toHaveBeenCalledTimes(6);
 
     await service.stop();
   });

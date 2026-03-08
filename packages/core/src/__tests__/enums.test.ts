@@ -49,8 +49,8 @@ describe('Enum SSoT', () => {
     expect(CHAIN_TYPES).toContain('ethereum');
   });
 
-  it('NetworkType has 13 values', () => {
-    expect(NETWORK_TYPES).toHaveLength(13);
+  it('NetworkType has 15 values', () => {
+    expect(NETWORK_TYPES).toHaveLength(15);
     // Solana networks
     expect(NETWORK_TYPES).toContain('solana-mainnet');
     expect(NETWORK_TYPES).toContain('solana-devnet');
@@ -66,6 +66,8 @@ describe('Enum SSoT', () => {
     expect(NETWORK_TYPES).toContain('optimism-sepolia');
     expect(NETWORK_TYPES).toContain('base-mainnet');
     expect(NETWORK_TYPES).toContain('base-sepolia');
+    expect(NETWORK_TYPES).toContain('hyperevm-mainnet');
+    expect(NETWORK_TYPES).toContain('hyperevm-testnet');
   });
 
   it('EnvironmentType has 2 values', () => {
@@ -197,8 +199,8 @@ describe('Enum SSoT', () => {
 
   // EVM NetworkType subset
   describe('EVM NetworkType subset', () => {
-    it('EVM_NETWORK_TYPES has 10 values', () => {
-      expect(EVM_NETWORK_TYPES).toHaveLength(10);
+    it('EVM_NETWORK_TYPES has 12 values', () => {
+      expect(EVM_NETWORK_TYPES).toHaveLength(12);
       expect(EVM_NETWORK_TYPES).toContain('ethereum-mainnet');
       expect(EVM_NETWORK_TYPES).toContain('ethereum-sepolia');
       expect(EVM_NETWORK_TYPES).toContain('polygon-mainnet');
@@ -209,10 +211,14 @@ describe('Enum SSoT', () => {
       expect(EVM_NETWORK_TYPES).toContain('optimism-sepolia');
       expect(EVM_NETWORK_TYPES).toContain('base-mainnet');
       expect(EVM_NETWORK_TYPES).toContain('base-sepolia');
+      expect(EVM_NETWORK_TYPES).toContain('hyperevm-mainnet');
+      expect(EVM_NETWORK_TYPES).toContain('hyperevm-testnet');
     });
 
     it('EvmNetworkTypeEnum validates EVM networks', () => {
       expect(EvmNetworkTypeEnum.parse('ethereum-sepolia')).toBe('ethereum-sepolia');
+      expect(EvmNetworkTypeEnum.parse('hyperevm-mainnet')).toBe('hyperevm-mainnet');
+      expect(EvmNetworkTypeEnum.parse('hyperevm-testnet')).toBe('hyperevm-testnet');
       expect(() => EvmNetworkTypeEnum.parse('solana-devnet')).toThrow();
     });
 

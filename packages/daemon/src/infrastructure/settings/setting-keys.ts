@@ -291,6 +291,17 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'actions.dcent_swap_max_slippage_bps', category: 'actions', configPath: 'actions.dcent_swap_max_slippage_bps', defaultValue: '500', isCredential: false },
   { key: 'actions.dcent_swap_currency_cache_ttl_ms', category: 'actions', configPath: 'actions.dcent_swap_currency_cache_ttl_ms', defaultValue: '86400000', isCredential: false },
 
+  // --- Hyperliquid Perp Trading (Phase 349) ---
+  { key: 'actions.hyperliquid_enabled', category: 'actions', configPath: 'actions.hyperliquid_enabled', defaultValue: 'false', isCredential: false },
+  { key: 'actions.hyperliquid_network', category: 'actions', configPath: 'actions.hyperliquid_network', defaultValue: 'mainnet', isCredential: false },
+  { key: 'actions.hyperliquid_api_url', category: 'actions', configPath: 'actions.hyperliquid_api_url', defaultValue: '', isCredential: false },
+  { key: 'actions.hyperliquid_rate_limit_weight_per_min', category: 'actions', configPath: 'actions.hyperliquid_rate_limit_weight_per_min', defaultValue: '600', isCredential: false },
+  { key: 'actions.hyperliquid_default_leverage', category: 'actions', configPath: 'actions.hyperliquid_default_leverage', defaultValue: '1', isCredential: false },
+  { key: 'actions.hyperliquid_default_margin_mode', category: 'actions', configPath: 'actions.hyperliquid_default_margin_mode', defaultValue: 'CROSS', isCredential: false },
+  { key: 'actions.hyperliquid_builder_address', category: 'actions', configPath: 'actions.hyperliquid_builder_address', defaultValue: '', isCredential: false },
+  { key: 'actions.hyperliquid_builder_fee', category: 'actions', configPath: 'actions.hyperliquid_builder_fee', defaultValue: '0', isCredential: false },
+  { key: 'actions.hyperliquid_order_status_poll_interval_ms', category: 'actions', configPath: 'actions.hyperliquid_order_status_poll_interval_ms', defaultValue: '2000', isCredential: false },
+
   // --- erc8128 category (ERC-8128 Signed HTTP Requests) ---
   { key: 'erc8128.enabled', category: 'erc8128', configPath: 'erc8128.enabled', defaultValue: 'false', isCredential: false },
   { key: 'erc8128.default_preset', category: 'erc8128', configPath: 'erc8128.default_preset', defaultValue: 'standard', isCredential: false },

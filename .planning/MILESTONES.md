@@ -1,5 +1,25 @@
 # Project Milestones: WAIaaS
 
+## v31.4 Hyperliquid 생태계 통합 (Shipped: 2026-03-08)
+
+**Delivered:** HyperEVM 체인 지원과 Hyperliquid L1 DEX(Perp/Spot) 거래 + Sub-account 관리를 ApiDirectResult 패턴으로 기존 파이프라인에 통합. EIP-712 서명 기반 off-chain DEX API를 WAIaaS의 6-stage 파이프라인과 정책 엔진에 연결.
+
+**Phases completed:** 5 phases (347-351), 12 plans, 44 requirements
+
+**Key accomplishments:**
+- HyperEVM Mainnet/Testnet (Chain ID 999/998) 체인 등록 — 기존 EVM 지갑이 HyperEVM에서 즉시 동작
+- ApiDirectResult 패턴 — off-chain DEX API 결과를 Stage 5에서 on-chain TX 없이 CONFIRMED 처리하는 파이프라인 분기
+- Hyperliquid Perp Trading — 7 actions (Market/Limit/Stop-Loss/Take-Profit/Cancel/Leverage/Margin Mode), margin 기반 정책 평가
+- Hyperliquid Spot Trading — 3 actions (Buy/Sell/Cancel), spot asset index 10000+ 매핑, size*price 정책 평가
+- Sub-account 관리 — Create/Transfer via User-Signed Action EIP-712, DB v52 hyperliquid_sub_accounts
+- 전 인터페이스 통합 — 22 MCP tools + 22 SDK methods + 9 Admin Settings + Admin UI 5-tab page (Overview/Orders/Spot/Sub-accounts/Settings) + connect-info capability + skill files 3개 업데이트
+
+**Stats:**
+- 5 phases, 12 plans, 44 requirements, 38 commits
+- 112 files changed, +12,755 / -166 lines, ~337,060 LOC TS
+
+---
+
 ## v31.3 DCent Swap Aggregator 통합 (Shipped: 2026-03-07)
 
 **Delivered:** DCent Swap Backend API를 WAIaaS에 통합하여 다중 프로바이더 DEX Swap(동일체인) + Exchange(크로스체인) + 자동 라우팅 2-hop 폴백을 지원하는 스왑 애그리게이터 구현.

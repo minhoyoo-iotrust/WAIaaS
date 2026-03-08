@@ -46,7 +46,8 @@
 - ✅ **v31.0 NFT 지원 (EVM + Solana)** -- Phases 333-337 (shipped 2026-03-06)
 - ✅ **v31.2 UserOp Build/Sign API** -- Phases 338-341 (shipped 2026-03-06)
 - ✅ **v31.3 DCent Swap Aggregator 통합** -- Phases 342-346 (shipped 2026-03-07)
+- ✅ **v31.4 Hyperliquid 생태계 통합** -- Phases 347-351 (shipped 2026-03-08)
 
 ## Phases
 
-(No active phases — milestone complete. Use `/gsd:new-milestone` to start next milestone.)
+(No active phases — next milestone pending)

@@ -142,9 +142,16 @@ export function actionProviderContractTests(
         const result = Array.isArray(rawResult) ? rawResult[0]! : rawResult;
 
         expect(result).toBeDefined();
-        expect(result.type).toBe('CONTRACT_CALL');
-        expect(typeof result.to).toBe('string');
-        expect(result.to.length).toBeGreaterThan(0);
+        // Support both ContractCallRequest and ApiDirectResult returns
+        if ('__apiDirect' in result && (result as unknown as { __apiDirect: unknown }).__apiDirect === true) {
+          expect((result as unknown as { externalId: unknown }).externalId).toBeDefined();
+          expect((result as unknown as { provider: unknown }).provider).toBeDefined();
+        } else {
+          const ccr = result as { type: string; to: string };
+          expect(ccr.type).toBe('CONTRACT_CALL');
+          expect(typeof ccr.to).toBe('string');
+          expect(ccr.to.length).toBeGreaterThan(0);
+        }
       });
 
       it('throws for a non-existent actionName', async () => {

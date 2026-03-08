@@ -3,8 +3,8 @@ import { EVM_CHAIN_MAP } from '../evm-chain-map.js';
 import { EVM_NETWORK_TYPES } from '@waiaas/core';
 
 describe('EVM_CHAIN_MAP', () => {
-  it('has exactly 10 entries (one per EVM network)', () => {
-    expect(Object.keys(EVM_CHAIN_MAP)).toHaveLength(10);
+  it('has exactly 12 entries (one per EVM network)', () => {
+    expect(Object.keys(EVM_CHAIN_MAP)).toHaveLength(12);
   });
 
   it('keys match EVM_NETWORK_TYPES exactly', () => {
@@ -105,6 +105,20 @@ describe('EVM_CHAIN_MAP', () => {
       expect(entry.chainId).toBe(84532);
       expect(entry.nativeSymbol).toBe('ETH');
       expect(entry.nativeName).toBe('Ether');
+    });
+
+    it('hyperevm-mainnet: chainId=999, HYPE', () => {
+      const entry = EVM_CHAIN_MAP['hyperevm-mainnet'];
+      expect(entry.chainId).toBe(999);
+      expect(entry.nativeSymbol).toBe('HYPE');
+      expect(entry.nativeName).toBe('HYPE');
+    });
+
+    it('hyperevm-testnet: chainId=998, HYPE', () => {
+      const entry = EVM_CHAIN_MAP['hyperevm-testnet'];
+      expect(entry.chainId).toBe(998);
+      expect(entry.nativeSymbol).toBe('HYPE');
+      expect(entry.nativeName).toBe('HYPE');
     });
   });
 
