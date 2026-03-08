@@ -42,12 +42,12 @@ Requirements for Across Protocol cross-chain bridge integration. Each maps to ro
 
 ### Interface (인터페이스)
 
-- [ ] **INT-01**: MCP 도구로 bridge-quote, bridge-execute, bridge-status, bridge-routes 노출
-- [ ] **INT-02**: SDK 메서드로 acrossBridgeQuote, acrossBridgeExecute, acrossBridgeStatus 등 제공
-- [ ] **INT-03**: Admin Settings에서 fillDeadline, exclusivityDeadline 등 런타임 설정 가능
-- [ ] **INT-04**: Admin UI에서 최근 브릿지 트랜잭션 상태를 확인 가능
-- [ ] **INT-05**: defi.skill.md 등 관련 skill 파일을 Across bridge 기능에 맞게 업데이트
-- [ ] **INT-06**: connect-info에 across capability 노출
+- [x] **INT-01**: MCP 도구로 bridge-quote, bridge-execute, bridge-status, bridge-routes 노출
+- [x] **INT-02**: SDK 메서드로 acrossBridgeQuote, acrossBridgeExecute, acrossBridgeStatus 등 제공
+- [x] **INT-03**: Admin Settings에서 fillDeadline, exclusivityDeadline 등 런타임 설정 가능
+- [x] **INT-04**: Admin UI에서 최근 브릿지 트랜잭션 상태를 확인 가능
+- [x] **INT-05**: defi.skill.md 등 관련 skill 파일을 Across bridge 기능에 맞게 업데이트
+- [x] **INT-06**: connect-info에 across capability 노출
 
 ### Test (테스트)
 
@@ -107,12 +107,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | STS-01 | Phase 354 | Complete |
 | STS-02 | Phase 354 | Complete |
 | STS-03 | Phase 354 | Complete |
-| INT-01 | Phase 355 | Pending |
-| INT-02 | Phase 355 | Pending |
-| INT-03 | Phase 355 | Pending |
-| INT-04 | Phase 355 | Pending |
-| INT-05 | Phase 355 | Pending |
-| INT-06 | Phase 355 | Pending |
+| INT-01 | Phase 355 | Complete |
+| INT-02 | Phase 355 | Complete |
+| INT-03 | Phase 355 | Complete |
+| INT-04 | Phase 355 | Complete |
+| INT-05 | Phase 355 | Complete |
+| INT-06 | Phase 355 | Complete |
 | TST-01 | Phase 356 | Pending |
 | TST-02 | Phase 356 | Pending |
 | TST-03 | Phase 356 | Pending |
@@ -127,4 +127,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-08*
-*Last updated: 2026-03-08 after roadmap creation*
+*Last updated: 2026-03-09 after Phase 355 completion*

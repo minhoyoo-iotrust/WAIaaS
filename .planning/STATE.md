@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v31.6
 milestone_name: Across Protocol 크로스체인 브릿지
-status: completed
-stopped_at: Completed Phase 354 (354-01)
-last_updated: "2026-03-08T16:18:34.540Z"
-last_activity: 2026-03-09 — Phase 354 complete (AcrossBridgeStatusTracker 2-phase polling + Daemon integration)
+status: in_progress
+stopped_at: Completed Phase 355 (355-01, 355-02)
+last_updated: "2026-03-09T00:31:00Z"
+last_activity: 2026-03-09 — Phase 355 complete (Admin Settings + SDK + Admin UI + Skill File)
 progress:
   total_phases: 5
-  completed_phases: 3
-  total_plans: 4
-  completed_plans: 4
-  percent: 98
+  completed_phases: 4
+  total_plans: 6
+  completed_plans: 6
+  percent: 99
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-08)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 355 — Interface Integration
+**Current focus:** Phase 356 — Tests + Verification
 
 ## Current Position
 
-Phase: 355 of 356 (Interface Integration)
+Phase: 356 of 356 (Tests + Verification)
 Plan: 0 of 2 in current phase
-Status: Phase 354 complete, ready for Phase 355
-Last activity: 2026-03-09 — Phase 354 complete (AcrossBridgeStatusTracker 2-phase polling + Daemon integration)
+Status: Phase 355 complete, ready for Phase 356
+Last activity: 2026-03-09 — Phase 355 complete (Admin Settings + SDK + Admin UI + Skill File)
 
-Progress: [██████████] 98%
+Progress: [██████████] 99%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 6min
-- Total execution time: 0.21 hours
+- Total plans completed: 6
+- Average duration: 5min
+- Total execution time: 0.29 hours
 
 ## Accumulated Context
 
@@ -56,6 +56,8 @@ Progress: [██████████] 98%
 - [Phase 353]: Removed .default([]) from Zod schema to fix type inference with ActionApiClient.get<T>
 - [Phase 354]: Tracker name across-bridge (not bridge) to avoid LI.FI collision
 - [Phase 354]: Skip chainId conversion at enrollment; store chain names, tracker handles optional originChainId
+- [Phase 355]: 7 setting keys (not 6): across_bridge_request_timeout_ms referenced by registerBuiltInProviders
+- [Phase 355]: MCP tools auto-exposed via mcpExpose=true (no separate MCP code needed)
 
 ### Blockers/Concerns
 
@@ -66,6 +68,6 @@ Progress: [██████████] 98%
 
 ## Session Continuity
 
-Last session: 2026-03-08T16:17:27.639Z
-Stopped at: Completed Phase 354 (354-01)
+Last session: 2026-03-09T00:31:00Z
+Stopped at: Completed Phase 355 (355-01, 355-02)
 Resume file: None
