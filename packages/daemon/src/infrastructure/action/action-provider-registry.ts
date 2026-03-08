@@ -18,11 +18,13 @@ import {
   ContractCallRequestSchema,
   ActionProviderMetadataSchema,
   ActionDefinitionSchema,
+  isApiDirectResult,
   type IActionProvider,
   type ActionDefinition,
   type ActionContext,
   type ContractCallRequest,
   type ActionProviderMetadata,
+  type ApiDirectResult,
 } from '@waiaas/core';
 
 /**
@@ -153,10 +155,12 @@ export class ActionProviderRegistry {
    * 1. Lookup action by key
    * 2. Validate input params via action.inputSchema.parse()
    * 3. Call provider.resolve()
-   * 4. Normalize to array, re-validate each via ContractCallRequestSchema.parse()
-   * 5. Auto-tag each result with actionProvider = provider name
+   * 4. Check for ApiDirectResult -- if so, return as-is (skip ContractCallRequest validation)
+   * 5. Otherwise normalize to array, re-validate each via ContractCallRequestSchema.parse()
+   * 6. Auto-tag each result with actionProvider = provider name
    *
    * Always returns an array (single results are wrapped).
+   * For ApiDirectResult providers, the array contains a single ApiDirectResult.
    *
    * @throws WAIaaSError('ACTION_NOT_FOUND') if action key not found
    * @throws WAIaaSError('ACTION_VALIDATION_FAILED') if input validation fails
@@ -166,7 +170,7 @@ export class ActionProviderRegistry {
     actionKey: string,
     params: Record<string, unknown>,
     context: ActionContext,
-  ): Promise<ContractCallRequest[]> {
+  ): Promise<(ContractCallRequest | ApiDirectResult)[]> {
     // 1. Lookup action
     const entry = this.actions.get(actionKey);
     if (!entry) {
@@ -194,10 +198,15 @@ export class ActionProviderRegistry {
       context,
     );
 
-    // 4. Normalize to array
+    // 4. v31.4: ApiDirectResult branch -- skip ContractCallRequest validation
+    if (isApiDirectResult(rawResult)) {
+      return [rawResult];
+    }
+
+    // 5. Normalize to array
     const results = Array.isArray(rawResult) ? rawResult : [rawResult];
 
-    // 5. Re-validate each element + auto-tag with actionProvider
+    // 6. Re-validate each element + auto-tag with actionProvider
     const validated: ContractCallRequest[] = [];
     for (const item of results) {
       try {

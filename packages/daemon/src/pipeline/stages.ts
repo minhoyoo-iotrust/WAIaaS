@@ -143,6 +143,8 @@ export interface PipelineContext {
   actionDefaultTier?: PolicyTier;
   // #251: resolved RPC URL for Smart Account publicClient creation
   resolvedRpcUrl?: string;
+  // v31.4: ApiDirectResult from action provider resolve() (HDESIGN-01)
+  actionResult?: import('@waiaas/core').ApiDirectResult;
 }
 
 // ---------------------------------------------------------------------------
@@ -1756,6 +1758,70 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
   if (ctx.wallet.accountType === 'smart') {
     await stage5ExecuteSmartAccount(ctx);
     return;
+  }
+
+  // v31.4: ApiDirectResult path -- skip on-chain execution entirely (HDESIGN-01)
+  if (ctx.actionResult) {
+    const result = ctx.actionResult;
+    // Update transaction status to COMPLETED with API direct result metadata
+    await ctx.db
+      .update(transactions)
+      .set({
+        status: 'COMPLETED',
+        metadata: JSON.stringify({
+          apiDirect: true,
+          provider: result.provider,
+          action: result.action,
+          externalId: result.externalId,
+          resultStatus: result.status,
+          data: result.data,
+          ...(result.metadata ?? {}),
+        }),
+        completedAt: Math.floor(Date.now() / 1000),
+      })
+      .where(eq(transactions.id, ctx.txId));
+
+    // Audit log: TX_COMPLETED (API direct)
+    if (ctx.sqlite) {
+      insertAuditLog(ctx.sqlite, {
+        eventType: 'TX_COMPLETED',
+        actor: ctx.sessionId ?? 'system',
+        walletId: ctx.walletId,
+        txId: ctx.txId,
+        details: {
+          provider: result.provider,
+          action: result.action,
+          externalId: result.externalId,
+          apiDirect: true,
+          chain: ctx.wallet.chain,
+          network: ctx.resolvedNetwork,
+        },
+        severity: 'info',
+      });
+    }
+
+    // Fire-and-forget: notify TX_COMPLETED
+    void ctx.notificationService?.notify('TX_COMPLETED', ctx.walletId, {
+      txId: ctx.txId,
+      provider: result.provider,
+      action: result.action,
+      externalId: result.externalId,
+      network: ctx.resolvedNetwork,
+    }, { txId: ctx.txId });
+
+    // Emit transaction:completed event
+    ctx.eventBus?.emit('transaction:completed', {
+      walletId: ctx.walletId,
+      txId: ctx.txId,
+      network: ctx.resolvedNetwork,
+      type: 'CONTRACT_CALL',
+      timestamp: Math.floor(Date.now() / 1000),
+    });
+
+    // Increment metrics
+    ctx.metricsCounter?.increment('tx.completed', { network: ctx.resolvedNetwork });
+
+    return; // Skip on-chain execution
   }
 
   // --- EOA execution path (unchanged) ---
