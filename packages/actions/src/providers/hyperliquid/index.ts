@@ -62,3 +62,6 @@ export {
 
 // Market Data
 export { HyperliquidMarketData, type MarketInfo } from './market-data.js';
+
+// Perp Provider
+export { HyperliquidPerpProvider } from './perp-provider.js';
