@@ -91,7 +91,7 @@ Plans:
   3. 사용자가 네이티브 ETH를 msg.value로 크로스체인 전송할 수 있다
   4. 지원하지 않는 route나 유동성 부족 시 명확한 에러 메시지가 반환된다
   5. Stage 5 실행 직전에 fresh quote를 재조회하여 stale quote로 인한 실패를 방지한다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
 - [ ] 353-01: AcrossApiClient + Zod 스키마 + AcrossConfig 구현
