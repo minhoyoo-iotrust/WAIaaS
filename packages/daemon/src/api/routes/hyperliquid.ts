@@ -124,5 +124,21 @@ export function createHyperliquidRoutes(deps: HyperliquidRouteDeps) {
     return c.json({ fills });
   });
 
+  // GET /v1/wallets/:walletId/hyperliquid/spot/balances
+  app.get('/v1/wallets/:walletId/hyperliquid/spot/balances', async (c) => {
+    const md = ensureMarketData(deps.marketData);
+    const walletId = c.req.param('walletId');
+    const address = await resolveWalletAddress(deps.db, walletId);
+    const balances = await md.getSpotBalances(address as Hex);
+    return c.json({ balances });
+  });
+
+  // GET /v1/hyperliquid/spot/markets
+  app.get('/v1/hyperliquid/spot/markets', async (c) => {
+    const md = ensureMarketData(deps.marketData);
+    const markets = await md.getSpotMarkets();
+    return c.json({ markets });
+  });
+
   return app;
 }

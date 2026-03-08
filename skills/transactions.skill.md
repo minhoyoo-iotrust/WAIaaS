@@ -1392,3 +1392,81 @@ const rates = await client.hlGetFundingRates('ETH');
 const account = await client.hlGetAccountState('wallet-id');
 const fills = await client.hlGetTradeHistory('wallet-id', 50);
 ```
+
+## Hyperliquid Spot Trading
+
+Hyperliquid spot market trading via the action provider pipeline. Requires `actions.hyperliquid_enabled=true` in Admin Settings.
+
+> AI agents must NEVER request the master password. Use only your session token.
+
+### Action Endpoints (through pipeline)
+
+Actions go through the standard `/v1/actions/hyperliquid_spot/{action}` route with policy evaluation.
+
+```bash
+# Buy 100 HYPE at market price
+curl -X POST http://localhost:3100/v1/actions/hyperliquid_spot/hl_spot_buy \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"wallet_id":"wid","market":"HYPE/USDC","size":"100","orderType":"MARKET"}'
+
+# Place a limit buy order for HYPE at $24.50
+curl -X POST http://localhost:3100/v1/actions/hyperliquid_spot/hl_spot_buy \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"wallet_id":"wid","market":"HYPE/USDC","size":"100","price":"24.5","orderType":"LIMIT","tif":"GTC"}'
+
+# Sell 50 HYPE at market price
+curl -X POST http://localhost:3100/v1/actions/hyperliquid_spot/hl_spot_sell \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"wallet_id":"wid","market":"HYPE/USDC","size":"50","orderType":"MARKET"}'
+
+# Cancel a specific spot order
+curl -X POST http://localhost:3100/v1/actions/hyperliquid_spot/hl_spot_cancel \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"wallet_id":"wid","market":"HYPE/USDC","oid":12345}'
+
+# Cancel all spot orders for a market
+curl -X POST http://localhost:3100/v1/actions/hyperliquid_spot/hl_spot_cancel \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"wallet_id":"wid","market":"HYPE/USDC"}'
+```
+
+### Query Endpoints (no pipeline, direct)
+
+```bash
+# Get spot token balances
+curl http://localhost:3100/v1/wallets/$WID/hyperliquid/spot/balances \
+  -H "X-Master-Password: $PASS"
+
+# Get spot market list
+curl http://localhost:3100/v1/hyperliquid/spot/markets \
+  -H "X-Master-Password: $PASS"
+```
+
+### MCP Tools
+
+Action tools (3, auto-registered via provider):
+- `hl_spot_buy`: Buy tokens on Hyperliquid spot (market/limit)
+- `hl_spot_sell`: Sell tokens on Hyperliquid spot (market/limit)
+- `hl_spot_cancel`: Cancel spot orders (single or all for a market)
+
+Query tools (2, manually registered):
+- `waiaas_hl_get_spot_balances`: Get spot token balances
+- `waiaas_hl_get_spot_markets`: Get spot market list
+
+### SDK Methods
+
+```typescript
+// Action methods (through pipeline)
+await client.hlSpotBuy('wallet-id', { market: 'HYPE/USDC', size: '100', orderType: 'MARKET' });
+await client.hlSpotSell('wallet-id', { market: 'HYPE/USDC', size: '50', orderType: 'MARKET' });
+await client.hlSpotCancel('wallet-id', { market: 'HYPE/USDC', oid: 12345 });
+
+// Query methods (direct)
+const spotBalances = await client.hlGetSpotBalances('wallet-id');
+const spotMarkets = await client.hlGetSpotMarkets();
+```

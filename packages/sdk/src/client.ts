@@ -1096,6 +1096,39 @@ export class WAIaaSClient {
     );
   }
 
+  // --- Hyperliquid Spot (Phase 350) ---
+
+  /** Place a spot buy order on Hyperliquid. */
+  async hlSpotBuy(walletId: string, params: Record<string, unknown>): Promise<ExecuteActionResponse> {
+    return this.executeAction('hyperliquid_spot', 'hl_spot_buy', { params, walletId });
+  }
+
+  /** Place a spot sell order on Hyperliquid. */
+  async hlSpotSell(walletId: string, params: Record<string, unknown>): Promise<ExecuteActionResponse> {
+    return this.executeAction('hyperliquid_spot', 'hl_spot_sell', { params, walletId });
+  }
+
+  /** Cancel a spot order on Hyperliquid. */
+  async hlSpotCancel(walletId: string, params: Record<string, unknown>): Promise<ExecuteActionResponse> {
+    return this.executeAction('hyperliquid_spot', 'hl_spot_cancel', { params, walletId });
+  }
+
+  /** Get Hyperliquid spot token balances. */
+  async hlGetSpotBalances(walletId: string): Promise<unknown> {
+    return withRetry(
+      () => this.http.get<unknown>(`/v1/wallets/${walletId}/hyperliquid/spot/balances`, this.authHeaders()),
+      this.retryOptions,
+    );
+  }
+
+  /** Get Hyperliquid spot market list. */
+  async hlGetSpotMarkets(): Promise<unknown> {
+    return withRetry(
+      () => this.http.get<unknown>('/v1/hyperliquid/spot/markets', this.authHeaders()),
+      this.retryOptions,
+    );
+  }
+
   // --- Wallet creation (masterAuth) ---
   async createWallet(params: CreateWalletParams): Promise<CreateWalletResponse> {
     if (!this.masterPassword) {

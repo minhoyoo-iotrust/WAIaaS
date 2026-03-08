@@ -113,4 +113,29 @@ export function registerHyperliquidTools(
       return toToolResult(result);
     },
   );
+
+  // hl_get_spot_balances
+  server.tool(
+    'waiaas_hl_get_spot_balances',
+    withWalletPrefix('Get Hyperliquid spot token balances for a wallet.', walletContext?.walletName),
+    {
+      wallet_id: z.string().optional().describe('Wallet ID. Auto-resolved for single-wallet sessions.'),
+    },
+    async (args) => {
+      const walletId = args.wallet_id || 'default';
+      const result = await apiClient.get(`/v1/wallets/${walletId}/hyperliquid/spot/balances`);
+      return toToolResult(result);
+    },
+  );
+
+  // hl_get_spot_markets
+  server.tool(
+    'waiaas_hl_get_spot_markets',
+    'Get Hyperliquid spot market list (trading pairs, token info).',
+    {},
+    async () => {
+      const result = await apiClient.get('/v1/hyperliquid/spot/markets');
+      return toToolResult(result);
+    },
+  );
 }
