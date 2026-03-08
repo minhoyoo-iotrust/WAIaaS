@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v31.6
 milestone_name: Across Protocol 크로스체인 브릿지
-status: defining_requirements
+status: ready_to_plan
 stopped_at: null
 last_updated: "2026-03-08"
-last_activity: 2026-03-08 — Milestone v31.6 started
+last_activity: 2026-03-08 — Roadmap created (5 phases, 33 requirements)
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
-  total_plans: 0
+  total_plans: 8
   completed_plans: 0
   percent: 0
 ---
@@ -21,20 +21,31 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-08)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Milestone v31.6 — Across Protocol 크로스체인 브릿지
+**Current focus:** Phase 352 — Research + Design (Across Protocol doc 79)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-03-08 — Milestone v31.6 started
+Phase: 352 of 356 (Research + Design)
+Plan: 0 of 1 in current phase
+Status: Ready to plan
+Last activity: 2026-03-08 — Roadmap created (5 phases, 33 requirements)
+
+Progress: [░░░░░░░░░░] 0%
+
+## Performance Metrics
+
+**Velocity:**
+- Total plans completed: 0
+- Average duration: -
+- Total execution time: 0 hours
 
 ## Accumulated Context
 
 ### Decisions
 
-(Cleared — see PROJECT.md Key Decisions for full history)
+- Across SDK 거부: @across-protocol/sdk(ethers.js 의존)과 @across-protocol/app-sdk(frontend 중심) 대신 REST API 직접 호출
+- DB 마이그레이션 불필요: 기존 bridge_status/bridge_metadata 컬럼 재사용 (LI.FI v28.3 선례)
+- 신규 npm 의존성 없음: viem + zod + @waiaas/core 기존 의존성만 사용
 
 ### Blockers/Concerns
 
@@ -46,5 +57,5 @@ Last activity: 2026-03-08 — Milestone v31.6 started
 ## Session Continuity
 
 Last session: 2026-03-08
-Stopped at: Milestone v31.6 requirements definition
+Stopped at: Roadmap created, ready to plan Phase 352
 Resume file: None

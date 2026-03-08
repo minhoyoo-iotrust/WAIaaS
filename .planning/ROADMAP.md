@@ -47,7 +47,110 @@
 - ✅ **v31.2 UserOp Build/Sign API** -- Phases 338-341 (shipped 2026-03-06)
 - ✅ **v31.3 DCent Swap Aggregator 통합** -- Phases 342-346 (shipped 2026-03-07)
 - ✅ **v31.4 Hyperliquid 생태계 통합** -- Phases 347-351 (shipped 2026-03-08)
+- 🚧 **v31.6 Across Protocol 크로스체인 브릿지** -- Phases 352-356 (in progress)
 
 ## Phases
 
-(No active phases — next milestone pending)
+### 🚧 v31.6 Across Protocol 크로스체인 브릿지 (In Progress)
+
+**Milestone Goal:** Across Protocol을 WAIaaS에 통합하여 Intent 기반 고속 크로스체인 EVM 브릿지를 지원한다. SpokePool depositV3를 기존 CONTRACT_CALL 파이프라인으로 실행하고, LI.FI(v28.3) 선례 패턴을 따르며 신규 npm 의존성과 DB 마이그레이션 없이 완료한다.
+
+**Phase Numbering:**
+- Integer phases (352, 353, ...): Planned milestone work
+- Decimal phases (352.1, 352.2): Urgent insertions (marked with INSERTED)
+
+- [ ] **Phase 352: Research + Design** - Across Protocol API/SpokePool/수수료 모델 리서치 및 설계 문서(doc 79) 작성
+- [ ] **Phase 353: API Client + Bridge Provider** - AcrossApiClient 5 엔드포인트 래핑 + AcrossBridgeActionProvider 5 actions 구현
+- [ ] **Phase 354: Status Tracking + Daemon Integration** - 2-phase polling 상태 추적 + Daemon tracker/enrollment 등록
+- [ ] **Phase 355: Interface Integration** - MCP 도구 + SDK 메서드 + Admin Settings + Admin UI + Skill Files + connect-info
+- [ ] **Phase 356: Tests + Verification** - Mock 기반 단위 테스트 + 파이프라인 통합 테스트 + 에러 핸들링 검증
+
+## Phase Details
+
+### Phase 352: Research + Design
+**Goal**: Across Protocol 통합의 기술적 세부사항이 설계 문서(doc 79)에 확정되어 후속 구현이 설계 참조만으로 진행 가능
+**Depends on**: Nothing (first phase)
+**Requirements**: DES-01, DES-02, DES-03, DES-04, DES-05, DES-06
+**Success Criteria** (what must be TRUE):
+  1. 설계 문서(doc 79)에 Across API 5개 엔드포인트 사양과 Zod 스키마가 명시되어 있다
+  2. SpokePool depositV3 12개 파라미터와 체인별 SpokePool/WETH 주소가 문서화되어 있다
+  3. outputAmount 계산 공식(inputAmount - totalRelayFee.total)과 fillDeadline/exclusivityDeadline 기본값 전략이 확정되어 있다
+  4. AcrossBridgeActionProvider 인터페이스와 MCP/SDK 설계가 문서화되어 있다
+**Plans**: TBD
+
+Plans:
+- [ ] 352-01: Across Protocol 리서치 + 설계 문서(doc 79) 작성
+
+### Phase 353: API Client + Bridge Provider
+**Goal**: 사용자가 Across Protocol을 통해 ERC-20 토큰과 네이티브 ETH를 크로스체인 브릿지할 수 있다
+**Depends on**: Phase 352
+**Requirements**: API-01, API-02, API-03, API-04, API-05, BRG-01, BRG-02, BRG-03, BRG-04, BRG-05, BRG-06, BRG-07
+**Success Criteria** (what must be TRUE):
+  1. 사용자가 source/destination chain, token, amount로 브릿지 견적(수수료, 수령액, 예상 시간)을 조회할 수 있다
+  2. 사용자가 ERC-20 토큰을 approve+depositV3 BATCH로 크로스체인 전송할 수 있다
+  3. 사용자가 네이티브 ETH를 msg.value로 크로스체인 전송할 수 있다
+  4. 지원하지 않는 route나 유동성 부족 시 명확한 에러 메시지가 반환된다
+  5. Stage 5 실행 직전에 fresh quote를 재조회하여 stale quote로 인한 실패를 방지한다
+**Plans**: TBD
+
+Plans:
+- [ ] 353-01: AcrossApiClient + Zod 스키마 + AcrossConfig 구현
+- [ ] 353-02: AcrossBridgeActionProvider 구현 (quote/execute/routes/limits)
+
+### Phase 354: Status Tracking + Daemon Integration
+**Goal**: 브릿지 deposit 후 fill 완료까지 자동으로 상태를 추적하고 알림을 발행한다
+**Depends on**: Phase 353
+**Requirements**: STS-01, STS-02, STS-03
+**Success Criteria** (what must be TRUE):
+  1. Bridge deposit 성공 후 2-phase polling(15s active + 5min monitoring)이 자동으로 시작된다
+  2. fill 완료/실패/만료 시 BRIDGE_COMPLETED/BRIDGE_FAILED 등 알림 이벤트가 발행된다
+  3. 기존 transactions.bridge_status/bridge_metadata 컬럼을 재사용하여 DB 마이그레이션 없이 동작한다
+**Plans**: TBD
+
+Plans:
+- [ ] 354-01: AcrossBridgeStatusTracker + Daemon enrollment + 알림 이벤트 연결
+
+### Phase 355: Interface Integration
+**Goal**: AI 에이전트와 관리자가 MCP/SDK/Admin UI를 통해 Across 브릿지 기능에 접근할 수 있다
+**Depends on**: Phase 354
+**Requirements**: INT-01, INT-02, INT-03, INT-04, INT-05, INT-06
+**Success Criteria** (what must be TRUE):
+  1. MCP 도구(bridge-quote/execute/status/routes)로 AI 에이전트가 브릿지 기능을 사용할 수 있다
+  2. SDK 메서드(acrossBridgeQuote/Execute/Status 등)로 프로그래밍 방식 접근이 가능하다
+  3. Admin Settings에서 fillDeadline, exclusivityDeadline 등을 런타임으로 설정할 수 있다
+  4. Admin UI에서 최근 브릿지 트랜잭션 상태를 확인할 수 있다
+  5. connect-info에 across_bridge capability가 노출되어 에이전트가 자기 발견할 수 있다
+**Plans**: TBD
+
+Plans:
+- [ ] 355-01: MCP 도구 + SDK 메서드 + connect-info capability
+- [ ] 355-02: Admin Settings + Admin UI 브릿지 상태 표시 + Skill Files 업데이트
+
+### Phase 356: Tests + Verification
+**Goal**: Across 브릿지 전체 기능이 Mock 기반 단위 테스트와 통합 테스트로 검증된다
+**Depends on**: Phase 355
+**Requirements**: TST-01, TST-02, TST-03, TST-04, TST-05, TST-06
+**Success Criteria** (what must be TRUE):
+  1. AcrossApiClient의 quote/routes/limits/status 응답이 Mock API 기반으로 검증된다
+  2. SpokePool depositV3 calldata 인코딩과 outputAmount 계산이 정확히 검증된다
+  3. ERC-20 approve+deposit BATCH와 네이티브 ETH 브릿지가 파이프라인 통합 테스트로 통과한다
+  4. insufficient liquidity, unsupported route, deadline expired 등 에러 시나리오가 검증된다
+  5. Bridge status tracker의 polling과 상태 전이(PENDING->FILLED/EXPIRED)가 검증된다
+**Plans**: TBD
+
+Plans:
+- [ ] 356-01: AcrossApiClient + calldata 인코딩 단위 테스트
+- [ ] 356-02: 파이프라인 통합 테스트 + 에러 핸들링 + StatusTracker 테스트
+
+## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 352 -> 353 -> 354 -> 355 -> 356
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 352. Research + Design | 0/1 | Not started | - |
+| 353. API Client + Bridge Provider | 0/2 | Not started | - |
+| 354. Status Tracking + Daemon Integration | 0/1 | Not started | - |
+| 355. Interface Integration | 0/2 | Not started | - |
+| 356. Tests + Verification | 0/2 | Not started | - |

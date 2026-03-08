@@ -86,45 +86,45 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DES-01 | — | Pending |
-| DES-02 | — | Pending |
-| DES-03 | — | Pending |
-| DES-04 | — | Pending |
-| DES-05 | — | Pending |
-| DES-06 | — | Pending |
-| API-01 | — | Pending |
-| API-02 | — | Pending |
-| API-03 | — | Pending |
-| API-04 | — | Pending |
-| API-05 | — | Pending |
-| BRG-01 | — | Pending |
-| BRG-02 | — | Pending |
-| BRG-03 | — | Pending |
-| BRG-04 | — | Pending |
-| BRG-05 | — | Pending |
-| BRG-06 | — | Pending |
-| BRG-07 | — | Pending |
-| STS-01 | — | Pending |
-| STS-02 | — | Pending |
-| STS-03 | — | Pending |
-| INT-01 | — | Pending |
-| INT-02 | — | Pending |
-| INT-03 | — | Pending |
-| INT-04 | — | Pending |
-| INT-05 | — | Pending |
-| INT-06 | — | Pending |
-| TST-01 | — | Pending |
-| TST-02 | — | Pending |
-| TST-03 | — | Pending |
-| TST-04 | — | Pending |
-| TST-05 | — | Pending |
-| TST-06 | — | Pending |
+| DES-01 | Phase 352 | Pending |
+| DES-02 | Phase 352 | Pending |
+| DES-03 | Phase 352 | Pending |
+| DES-04 | Phase 352 | Pending |
+| DES-05 | Phase 352 | Pending |
+| DES-06 | Phase 352 | Pending |
+| API-01 | Phase 353 | Pending |
+| API-02 | Phase 353 | Pending |
+| API-03 | Phase 353 | Pending |
+| API-04 | Phase 353 | Pending |
+| API-05 | Phase 353 | Pending |
+| BRG-01 | Phase 353 | Pending |
+| BRG-02 | Phase 353 | Pending |
+| BRG-03 | Phase 353 | Pending |
+| BRG-04 | Phase 353 | Pending |
+| BRG-05 | Phase 353 | Pending |
+| BRG-06 | Phase 353 | Pending |
+| BRG-07 | Phase 353 | Pending |
+| STS-01 | Phase 354 | Pending |
+| STS-02 | Phase 354 | Pending |
+| STS-03 | Phase 354 | Pending |
+| INT-01 | Phase 355 | Pending |
+| INT-02 | Phase 355 | Pending |
+| INT-03 | Phase 355 | Pending |
+| INT-04 | Phase 355 | Pending |
+| INT-05 | Phase 355 | Pending |
+| INT-06 | Phase 355 | Pending |
+| TST-01 | Phase 356 | Pending |
+| TST-02 | Phase 356 | Pending |
+| TST-03 | Phase 356 | Pending |
+| TST-04 | Phase 356 | Pending |
+| TST-05 | Phase 356 | Pending |
+| TST-06 | Phase 356 | Pending |
 
 **Coverage:**
 - v31.6 requirements: 33 total
-- Mapped to phases: 0
-- Unmapped: 33 ⚠️
+- Mapped to phases: 33
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-08*
-*Last updated: 2026-03-08 after initial definition*
+*Last updated: 2026-03-08 after roadmap creation*
