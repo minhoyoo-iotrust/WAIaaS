@@ -18,21 +18,21 @@ Requirements for Across Protocol cross-chain bridge integration. Each maps to ro
 
 ### API Client (API 클라이언트)
 
-- [ ] **API-01**: User can query Across bridge quote with source/destination chain, token, amount
-- [ ] **API-02**: User can query supported bridge routes (source/destination chain + token combinations)
-- [ ] **API-03**: User can query bridge limits (min/max amounts per route)
-- [ ] **API-04**: User can check bridge deposit status (filled/pending/expired/refunded)
-- [ ] **API-05**: AcrossApiClient가 /suggested-fees 응답을 캐싱하지 않고 매번 fresh quote를 요청
+- [x] **API-01**: User can query Across bridge quote with source/destination chain, token, amount
+- [x] **API-02**: User can query supported bridge routes (source/destination chain + token combinations)
+- [x] **API-03**: User can query bridge limits (min/max amounts per route)
+- [x] **API-04**: User can check bridge deposit status (filled/pending/expired/refunded)
+- [x] **API-05**: AcrossApiClient가 /suggested-fees 응답을 캐싱하지 않고 매번 fresh quote를 요청
 
 ### Bridge Execution (브릿지 실행)
 
-- [ ] **BRG-01**: User can bridge ERC-20 tokens cross-chain via approve+depositV3 BATCH
-- [ ] **BRG-02**: User can bridge native ETH cross-chain via depositV3 with msg.value
-- [ ] **BRG-03**: outputAmount를 /suggested-fees totalRelayFee 기반으로 정확히 계산
-- [ ] **BRG-04**: fillDeadline/exclusivityDeadline를 Admin Settings에서 설정 가능
-- [ ] **BRG-05**: 견적 만료 시 Stage 5 실행 직전에 fresh quote를 재조회 (late-bind)
-- [ ] **BRG-06**: 지원하지 않는 route 요청 시 명확한 에러 메시지 반환
-- [ ] **BRG-07**: liquidity 부족 시 명확한 에러 메시지 반환
+- [x] **BRG-01**: User can bridge ERC-20 tokens cross-chain via approve+depositV3 BATCH
+- [x] **BRG-02**: User can bridge native ETH cross-chain via depositV3 with msg.value
+- [x] **BRG-03**: outputAmount를 /suggested-fees totalRelayFee 기반으로 정확히 계산
+- [x] **BRG-04**: fillDeadline/exclusivityDeadline를 Admin Settings에서 설정 가능
+- [x] **BRG-05**: 견적 만료 시 Stage 5 실행 직전에 fresh quote를 재조회 (late-bind)
+- [x] **BRG-06**: 지원하지 않는 route 요청 시 명확한 에러 메시지 반환
+- [x] **BRG-07**: liquidity 부족 시 명확한 에러 메시지 반환
 
 ### Status Tracking (상태 추적)
 
@@ -92,18 +92,18 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DES-04 | Phase 352 | Complete |
 | DES-05 | Phase 352 | Complete |
 | DES-06 | Phase 352 | Complete |
-| API-01 | Phase 353 | Pending |
-| API-02 | Phase 353 | Pending |
-| API-03 | Phase 353 | Pending |
-| API-04 | Phase 353 | Pending |
-| API-05 | Phase 353 | Pending |
-| BRG-01 | Phase 353 | Pending |
-| BRG-02 | Phase 353 | Pending |
-| BRG-03 | Phase 353 | Pending |
-| BRG-04 | Phase 353 | Pending |
-| BRG-05 | Phase 353 | Pending |
-| BRG-06 | Phase 353 | Pending |
-| BRG-07 | Phase 353 | Pending |
+| API-01 | Phase 353 | Complete |
+| API-02 | Phase 353 | Complete |
+| API-03 | Phase 353 | Complete |
+| API-04 | Phase 353 | Complete |
+| API-05 | Phase 353 | Complete |
+| BRG-01 | Phase 353 | Complete |
+| BRG-02 | Phase 353 | Complete |
+| BRG-03 | Phase 353 | Complete |
+| BRG-04 | Phase 353 | Complete |
+| BRG-05 | Phase 353 | Complete |
+| BRG-06 | Phase 353 | Complete |
+| BRG-07 | Phase 353 | Complete |
 | STS-01 | Phase 354 | Pending |
 | STS-02 | Phase 354 | Pending |
 | STS-03 | Phase 354 | Pending |

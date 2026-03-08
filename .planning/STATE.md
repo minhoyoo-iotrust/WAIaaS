@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v31.6
 milestone_name: Across Protocol 크로스체인 브릿지
 status: completed
-stopped_at: Completed 352-01-PLAN.md
-last_updated: "2026-03-08T15:51:07.211Z"
-last_activity: 2026-03-09 — Phase 352 complete (design doc 79)
+stopped_at: Completed Phase 353 (353-01, 353-02)
+last_updated: "2026-03-09T16:04:00.000Z"
+last_activity: 2026-03-09 — Phase 353 complete (AcrossApiClient + AcrossBridgeActionProvider)
 progress:
   total_phases: 5
-  completed_phases: 1
-  total_plans: 1
-  completed_plans: 1
-  percent: 12
+  completed_phases: 2
+  total_plans: 3
+  completed_plans: 3
+  percent: 40
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-08)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 353 — API Client + Bridge Provider
+**Current focus:** Phase 354 — Status Tracking + Daemon Integration
 
 ## Current Position
 
-Phase: 353 of 356 (API Client + Bridge Provider)
-Plan: 0 of 2 in current phase
-Status: Phase 352 complete, ready for Phase 353
-Last activity: 2026-03-09 — Phase 352 complete (design doc 79)
+Phase: 354 of 356 (Status Tracking + Daemon Integration)
+Plan: 0 of 1 in current phase
+Status: Phase 353 complete, ready for Phase 354
+Last activity: 2026-03-09 — Phase 353 complete (AcrossApiClient + AcrossBridgeActionProvider)
 
-Progress: [█░░░░░░░░░] 12%
+Progress: [████░░░░░░] 40%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
-- Average duration: 5min
-- Total execution time: 0.08 hours
+- Total plans completed: 3
+- Average duration: 6min
+- Total execution time: 0.21 hours
 
 ## Accumulated Context
 
@@ -51,6 +51,9 @@ Progress: [█░░░░░░░░░] 12%
 - [Phase 352]: DS-04: Late-bind quote at Stage 5 for fresh quoteTimestamp
 - [Phase 352]: DS-07: outputAmount = inputAmount - totalRelayFee.total (absolute)
 - [Phase 352]: DS-08: 15s active polling (faster than LI.FI 30s)
+- [Phase 353]: Read-only actions (quote/status/routes/limits) return ApiDirectResult to satisfy IActionProvider interface
+- [Phase 353]: approve exact inputAmount, not MaxUint256 (Pitfall 10, WAIaaS security principle)
+- [Phase 353]: Removed .default([]) from Zod schema to fix type inference with ActionApiClient.get<T>
 
 ### Blockers/Concerns
 
@@ -61,6 +64,6 @@ Progress: [█░░░░░░░░░] 12%
 
 ## Session Continuity
 
-Last session: 2026-03-08T15:50:20.608Z
-Stopped at: Completed 352-01-PLAN.md
+Last session: 2026-03-09T16:04:00.000Z
+Stopped at: Completed Phase 353 (353-01, 353-02)
 Resume file: None

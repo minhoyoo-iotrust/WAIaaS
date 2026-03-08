@@ -60,7 +60,7 @@
 - Decimal phases (352.1, 352.2): Urgent insertions (marked with INSERTED)
 
 - [x] **Phase 352: Research + Design** - Across Protocol API/SpokePool/수수료 모델 리서치 및 설계 문서(doc 79) 작성 (completed 2026-03-08)
-- [ ] **Phase 353: API Client + Bridge Provider** - AcrossApiClient 5 엔드포인트 래핑 + AcrossBridgeActionProvider 5 actions 구현
+- [x] **Phase 353: API Client + Bridge Provider** - AcrossApiClient 5 엔드포인트 래핑 + AcrossBridgeActionProvider 5 actions 구현 (completed 2026-03-09)
 - [ ] **Phase 354: Status Tracking + Daemon Integration** - 2-phase polling 상태 추적 + Daemon tracker/enrollment 등록
 - [ ] **Phase 355: Interface Integration** - MCP 도구 + SDK 메서드 + Admin Settings + Admin UI + Skill Files + connect-info
 - [ ] **Phase 356: Tests + Verification** - Mock 기반 단위 테스트 + 파이프라인 통합 테스트 + 에러 핸들링 검증
@@ -94,8 +94,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 353-01: AcrossApiClient + Zod 스키마 + AcrossConfig 구현
-- [ ] 353-02: AcrossBridgeActionProvider 구현 (quote/execute/routes/limits)
+- [x] 353-01: AcrossApiClient + Zod 스키마 + AcrossConfig 구현
+- [x] 353-02: AcrossBridgeActionProvider 구현 (quote/execute/routes/limits)
 
 ### Phase 354: Status Tracking + Daemon Integration
 **Goal**: 브릿지 deposit 후 fill 완료까지 자동으로 상태를 추적하고 알림을 발행한다
@@ -150,7 +150,7 @@ Phases execute in numeric order: 352 -> 353 -> 354 -> 355 -> 356
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 352. Research + Design | 1/1 | Complete    | 2026-03-08 |
-| 353. API Client + Bridge Provider | 0/2 | Not started | - |
+| 353. API Client + Bridge Provider | 2/2 | Complete | 2026-03-09 |
 | 354. Status Tracking + Daemon Integration | 0/1 | Not started | - |
 | 355. Interface Integration | 0/2 | Not started | - |
 | 356. Tests + Verification | 0/2 | Not started | - |
