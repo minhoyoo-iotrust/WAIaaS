@@ -648,6 +648,235 @@ getSpendingAmount(actionName: string, params: Record<string, unknown>): {
 
 ---
 
+## 설계 확정: HDESIGN-05 MCP/SDK/Admin 인터페이스
+
+### 1. MCP 도구 목록
+
+| MCP Tool | Provider | 설명 | Phase |
+|----------|----------|------|-------|
+| hl_open_position | HyperliquidPerpProvider | Perp 포지션 오픈 (market/limit) | 349 |
+| hl_close_position | HyperliquidPerpProvider | Perp 포지션 클로즈 (market/limit) | 349 |
+| hl_place_order | HyperliquidPerpProvider | Perp 지정가/Stop/TP 주문 | 349 |
+| hl_cancel_order | HyperliquidPerpProvider | 주문 취소 (단건/다건) | 349 |
+| hl_set_leverage | HyperliquidPerpProvider | 레버리지 설정 | 349 |
+| hl_set_margin_mode | HyperliquidPerpProvider | Cross/Isolated 마진 모드 설정 | 349 |
+| hl_get_positions | HyperliquidMarketData | 포지션 조회 (PnL/마진/청산가) | 349 |
+| hl_get_open_orders | HyperliquidMarketData | 오픈 주문 목록 | 349 |
+| hl_get_markets | HyperliquidMarketData | 거래 가능 마켓 목록 | 349 |
+| hl_get_funding_rates | HyperliquidMarketData | 펀딩 레이트 조회 | 349 |
+| hl_get_account_state | HyperliquidMarketData | 통합 계정 상태 (잔액/마진) | 349 |
+| hl_get_trade_history | HyperliquidMarketData | 최근 거래 이력 | 349 |
+| hl_transfer_usdc | HyperliquidPerpProvider | Spot-Perp 간 USDC 이동 | 349 |
+| hl_spot_buy | HyperliquidSpotProvider | Spot 매수 (market/limit) | 350 |
+| hl_spot_sell | HyperliquidSpotProvider | Spot 매도 (market/limit) | 350 |
+| hl_spot_cancel | HyperliquidSpotProvider | Spot 주문 취소 | 350 |
+| hl_get_spot_balances | HyperliquidMarketData | Spot 토큰 잔액 | 350 |
+| hl_get_spot_markets | HyperliquidMarketData | Spot 마켓 정보 | 350 |
+| hl_create_sub_account | HyperliquidSubAccountService | Sub-account 생성 | 351 |
+| hl_list_sub_accounts | HyperliquidSubAccountService | Sub-account 목록 | 351 |
+| hl_sub_transfer | HyperliquidSubAccountService | Sub-account 자금 이동 | 351 |
+| hl_get_sub_positions | HyperliquidMarketData | Sub-account별 포지션/잔액 | 351 |
+
+총 22개 MCP 도구 (Phase 349: 13개, Phase 350: 5개, Phase 351: 4개).
+
+Query 도구(`hl_get_*`)는 파이프라인 거치지 않고 `MarketData.info()` 직접 호출 (read-only). Action 도구(`hl_open_*`, `hl_close_*`, `hl_place_*`, `hl_spot_*`)는 파이프라인 Stage 1-5 거침.
+
+### 2. SDK 메서드 목록
+
+SDK 메서드는 MCP 도구와 1:1 대응. `@waiaas/sdk` 패키지에 추가:
+
+```typescript
+class WAIaaSClient {
+  // Perp (Phase 349)
+  async hlOpenPosition(walletId: string, params: HlOpenPositionParams): Promise<ActionResult>
+  async hlClosePosition(walletId: string, params: HlClosePositionParams): Promise<ActionResult>
+  async hlPlaceOrder(walletId: string, params: HlPlaceOrderParams): Promise<ActionResult>
+  async hlCancelOrder(walletId: string, params: HlCancelOrderParams): Promise<ActionResult>
+  async hlSetLeverage(walletId: string, params: HlSetLeverageParams): Promise<ActionResult>
+  async hlSetMarginMode(walletId: string, params: HlSetMarginModeParams): Promise<ActionResult>
+  async hlGetPositions(walletId: string): Promise<Position[]>
+  async hlGetOpenOrders(walletId: string): Promise<OpenOrder[]>
+  async hlGetMarkets(): Promise<Market[]>
+  async hlGetFundingRates(market: string): Promise<FundingRate[]>
+  async hlGetAccountState(walletId: string): Promise<AccountState>
+  async hlGetTradeHistory(walletId: string, limit?: number): Promise<Fill[]>
+  async hlTransferUsdc(walletId: string, params: HlTransferParams): Promise<ActionResult>
+
+  // Spot (Phase 350)
+  async hlSpotBuy(walletId: string, params: HlSpotOrderParams): Promise<ActionResult>
+  async hlSpotSell(walletId: string, params: HlSpotOrderParams): Promise<ActionResult>
+  async hlSpotCancel(walletId: string, params: HlCancelParams): Promise<ActionResult>
+  async hlGetSpotBalances(walletId: string): Promise<SpotBalance[]>
+  async hlGetSpotMarkets(): Promise<SpotMarket[]>
+
+  // Sub-account (Phase 351)
+  async hlCreateSubAccount(walletId: string, name: string): Promise<SubAccount>
+  async hlListSubAccounts(walletId: string): Promise<SubAccount[]>
+  async hlSubTransfer(walletId: string, params: HlSubTransferParams): Promise<ActionResult>
+  async hlGetSubPositions(walletId: string, subAccount: string): Promise<Position[]>
+}
+```
+
+### 3. Admin Settings 키 목록
+
+| Key | Type | Default | 범위 | 설명 |
+|-----|------|---------|------|------|
+| HYPERLIQUID_ENABLED | boolean | true | config.toml | 기능 게이트 (재시작 필요) |
+| HYPERLIQUID_API_URL | string | https://api.hyperliquid.xyz | config.toml | Mainnet API (재시작 필요) |
+| HYPERLIQUID_TESTNET_API_URL | string | https://api.hyperliquid-testnet.xyz | config.toml | Testnet API (재시작 필요) |
+| HYPERLIQUID_RATE_LIMIT_WEIGHT_PER_MIN | number | 600 | Admin Settings | 분당 가중치 한도 (런타임) |
+| HYPERLIQUID_DEFAULT_LEVERAGE | number | 1 | Admin Settings | 기본 레버리지 (런타임) |
+| HYPERLIQUID_DEFAULT_MARGIN_MODE | string | 'CROSS' | Admin Settings | 기본 마진 모드 (런타임) |
+| HYPERLIQUID_BUILDER_ADDRESS | string | '' | Admin Settings | Builder fee 수취 주소 (런타임, 선택) |
+| HYPERLIQUID_BUILDER_FEE | number | 0 | Admin Settings | Builder fee (tenths of bps, 런타임, 선택) |
+| HYPERLIQUID_ORDER_STATUS_POLL_INTERVAL_MS | number | 2000 | Admin Settings | 주문 상태 확인 간격 (런타임) |
+
+config.toml vs Admin Settings 경계 원칙: 인프라/보안 = config.toml (재시작), 운영 파라미터 = Admin Settings (런타임 hot-reload).
+
+### 4. Admin UI 표시 설계
+
+Hyperliquid 전용 탭을 DeFi 섹션 내에 추가:
+
+```
+Admin UI -> DeFi -> Hyperliquid
+  |-- Overview Tab
+  |     |-- AccountSummary (Perp equity + Spot balances + margin info)
+  |     |-- PositionsTable (market, side, size, entry, markPrice, PnL, leverage, liquidation)
+  |
+  |-- Orders Tab
+  |     |-- OpenOrdersTable (market, side, type, size, price, status, created)
+  |     |-- OrderHistoryTable (최근 50개, hyperliquid_orders 테이블에서)
+  |
+  |-- Spot Tab (Phase 350)
+  |     |-- SpotBalancesTable (token, balance, midPrice, value)
+  |     |-- SpotOrdersTable
+  |
+  |-- Sub-accounts Tab (Phase 351)
+  |     |-- SubAccountList (address, name, equity)
+  |     |-- SubAccountDetail (포지션, 잔액, 이체 이력)
+  |
+  |-- Settings Tab
+  |     |-- Admin Settings 편집 (HYPERLIQUID_* 키들)
+```
+
+모든 데이터는 MarketData Info API 실시간 조회 (DB 저장 X, on-demand fetch).
+주문 이력만 `hyperliquid_orders` 테이블에서 로드 (WAIaaS가 생성한 주문만).
+
+### 5. connect-info hyperliquid capability
+
+```typescript
+// connect-info response에 추가
+{
+  capabilities: {
+    // ... existing
+    hyperliquid: {
+      enabled: true,
+      perp: true,      // Phase 349
+      spot: true,       // Phase 350
+      subAccounts: true, // Phase 351
+      networks: ['hyperevm-mainnet'],  // HyperEVM 네트워크에서만 사용 가능
+    }
+  }
+}
+```
+
+### 6. Skill 파일 업데이트 범위
+
+| Skill 파일 | 추가 내용 |
+|-----------|----------|
+| transactions.skill.md | Hyperliquid Perp/Spot 주문 실행 예시 |
+| admin.skill.md | Hyperliquid Admin Settings 관리 예시 |
+| wallet.skill.md | HyperEVM 네트워크에서의 지갑 사용 안내 |
+
+---
+
+## 설계 확정: HDESIGN-06 DB 스키마
+
+### 1. DB v51: hyperliquid_orders
+
+```sql
+-- Migration v51: Hyperliquid Order History
+CREATE TABLE hyperliquid_orders (
+  id TEXT PRIMARY KEY,                              -- UUID v7
+  wallet_id TEXT NOT NULL REFERENCES wallets(id),
+  sub_account_address TEXT,                         -- NULL = master account
+  oid INTEGER,                                      -- Hyperliquid order ID
+  cloid TEXT,                                       -- Client order ID (128-bit hex)
+  transaction_id TEXT REFERENCES transactions(id),  -- pipeline TX record link
+  market TEXT NOT NULL,                             -- e.g., 'ETH', 'BTC'
+  asset_index INTEGER NOT NULL,                     -- Perp: direct, Spot: 10000+
+  side TEXT NOT NULL CHECK(side IN ('BUY', 'SELL')),
+  order_type TEXT NOT NULL CHECK(order_type IN ('MARKET', 'LIMIT', 'STOP_MARKET', 'STOP_LIMIT', 'TAKE_PROFIT')),
+  size TEXT NOT NULL,                               -- Decimal string
+  price TEXT,                                       -- Decimal string (NULL for market)
+  trigger_price TEXT,                               -- Stop/TP orders
+  tif TEXT CHECK(tif IN ('GTC', 'IOC', 'ALO')),
+  reduce_only INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL CHECK(status IN ('PENDING', 'RESTING', 'FILLED', 'PARTIALLY_FILLED', 'CANCELLED', 'REJECTED', 'TRIGGERED')),
+  filled_size TEXT,
+  avg_fill_price TEXT,
+  is_spot INTEGER NOT NULL DEFAULT 0,               -- 0=perp, 1=spot
+  leverage INTEGER,                                  -- Perp only
+  margin_mode TEXT CHECK(margin_mode IN ('CROSS', 'ISOLATED')),
+  response_data TEXT,                                -- JSON blob
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+
+CREATE INDEX idx_hl_orders_wallet ON hyperliquid_orders(wallet_id);
+CREATE INDEX idx_hl_orders_oid ON hyperliquid_orders(oid);
+CREATE INDEX idx_hl_orders_market ON hyperliquid_orders(market);
+CREATE INDEX idx_hl_orders_status ON hyperliquid_orders(status);
+CREATE INDEX idx_hl_orders_created ON hyperliquid_orders(created_at);
+```
+
+### 2. DB v52: hyperliquid_sub_accounts
+
+```sql
+-- Migration v52: Hyperliquid Sub-accounts
+CREATE TABLE hyperliquid_sub_accounts (
+  id TEXT PRIMARY KEY,                              -- UUID v7
+  wallet_id TEXT NOT NULL REFERENCES wallets(id),
+  sub_account_address TEXT NOT NULL,                -- 42-char hex (0x prefixed)
+  name TEXT,                                        -- User-assigned label
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  UNIQUE(wallet_id, sub_account_address)
+);
+
+CREATE INDEX idx_hl_sub_wallet ON hyperliquid_sub_accounts(wallet_id);
+```
+
+### 3. DB 마이그레이션 전략
+
+- 현재 DB 버전: v50 (v31.3 기준)
+- v51: Phase 349에서 생성 (hyperliquid_orders + indexes)
+- v52: Phase 351에서 생성 (hyperliquid_sub_accounts + index)
+- incremental ALTER TABLE 방식 준수 (기존 CLAUDE.md 규칙)
+- `schema_version` 테이블 업데이트 포함
+- 기존 테이블 변경 없음 (transactions 테이블의 metadata 필드에 JSON으로 Hyperliquid 응답 저장)
+
+### 4. transactions 테이블과의 관계
+
+- Hyperliquid 주문은 기존 transactions 테이블에도 기록 (파이프라인 Stage 5 결과)
+- `transactions.metadata`에 `{ provider: 'hyperliquid_perp', externalId: '...', hlResponse: {...} }` 저장
+- `hyperliquid_orders` 테이블은 Hyperliquid 전용 필드 (market, leverage, margin_mode 등)를 정규화하여 저장
+- `hyperliquid_orders.transaction_id` -> `transactions.id` (1:1 관계)
+- Query 전용 액션 (`hl_get_positions` 등)은 transactions 테이블에 기록하지 않음 (read-only)
+
+### 5. Drizzle 스키마 정의 위치
+
+```
+packages/daemon/src/infrastructure/database/
+  schema/
+    hyperliquid-orders.ts    -- v51 Drizzle table definition
+    hyperliquid-sub-accounts.ts -- v52 Drizzle table definition
+  migrations/
+    v51-hyperliquid-orders.ts
+    v52-hyperliquid-sub-accounts.ts
+```
+
+---
+
 ## 기술적 고려사항
 
 1. **파이프라인 분기**: Hyperliquid L1 거래는 온체인 TX가 아닌 API 콜이므로 기존 6-stage 파이프라인과 다른 플로우 필요. 별도 `HyperliquidExchangeClient` 또는 Stage 5 분기로 처리.
