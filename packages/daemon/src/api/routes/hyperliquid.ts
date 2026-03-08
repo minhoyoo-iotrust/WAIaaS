@@ -140,5 +140,24 @@ export function createHyperliquidRoutes(deps: HyperliquidRouteDeps) {
     return c.json({ markets });
   });
 
+  // GET /v1/wallets/:walletId/hyperliquid/sub-accounts
+  app.get('/v1/wallets/:walletId/hyperliquid/sub-accounts', async (c) => {
+    const md = ensureMarketData(deps.marketData);
+    const walletId = c.req.param('walletId');
+    const address = await resolveWalletAddress(deps.db, walletId);
+    const subAccounts = await md.getSubAccounts(address as Hex);
+    return c.json({ subAccounts });
+  });
+
+  // GET /v1/wallets/:walletId/hyperliquid/sub-accounts/:subAddress/positions
+  app.get('/v1/wallets/:walletId/hyperliquid/sub-accounts/:subAddress/positions', async (c) => {
+    const md = ensureMarketData(deps.marketData);
+    const walletId = c.req.param('walletId');
+    const subAddress = c.req.param('subAddress');
+    const address = await resolveWalletAddress(deps.db, walletId);
+    const positions = await md.getSubAccountPositions(address as Hex, subAddress as Hex);
+    return c.json({ positions });
+  });
+
   return app;
 }

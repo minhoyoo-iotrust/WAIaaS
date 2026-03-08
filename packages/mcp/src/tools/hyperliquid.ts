@@ -1,8 +1,8 @@
 /**
- * Hyperliquid query MCP tools (6 tools).
+ * Hyperliquid query MCP tools (8 tools).
  *
- * Action tools (7) are auto-registered via action-provider.ts (mcpExpose=true).
- * These are the 6 read-only query tools that bypass the pipeline.
+ * Action tools (9) are auto-registered via action-provider.ts (mcpExpose=true).
+ * These are the 8 read-only query tools that bypass the pipeline.
  *
  * @see HDESIGN-05: MCP tool list
  */
@@ -135,6 +135,35 @@ export function registerHyperliquidTools(
     {},
     async () => {
       const result = await apiClient.get('/v1/hyperliquid/spot/markets');
+      return toToolResult(result);
+    },
+  );
+
+  // hl_list_sub_accounts
+  server.tool(
+    'waiaas_hl_list_sub_accounts',
+    withWalletPrefix('List Hyperliquid sub-accounts for a wallet.', walletContext?.walletName),
+    {
+      wallet_id: z.string().optional().describe('Wallet ID. Auto-resolved for single-wallet sessions.'),
+    },
+    async (args) => {
+      const walletId = args.wallet_id || 'default';
+      const result = await apiClient.get(`/v1/wallets/${walletId}/hyperliquid/sub-accounts`);
+      return toToolResult(result);
+    },
+  );
+
+  // hl_get_sub_positions
+  server.tool(
+    'waiaas_hl_get_sub_positions',
+    withWalletPrefix('Get positions for a Hyperliquid sub-account.', walletContext?.walletName),
+    {
+      wallet_id: z.string().optional().describe('Wallet ID.'),
+      sub_account: z.string().describe('Sub-account address (hex, 42 chars).'),
+    },
+    async (args) => {
+      const walletId = args.wallet_id || 'default';
+      const result = await apiClient.get(`/v1/wallets/${walletId}/hyperliquid/sub-accounts/${args.sub_account}/positions`);
       return toToolResult(result);
     },
   );

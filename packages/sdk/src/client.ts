@@ -1129,6 +1129,34 @@ export class WAIaaSClient {
     );
   }
 
+  // --- Hyperliquid Sub-account (Phase 351) ---
+
+  /** Create a new Hyperliquid sub-account. */
+  async hlCreateSubAccount(walletId: string, params: Record<string, unknown>): Promise<ExecuteActionResponse> {
+    return this.executeAction('hyperliquid_sub', 'hl_create_sub_account', { params, walletId });
+  }
+
+  /** Transfer USDC between master and sub-account. */
+  async hlSubTransfer(walletId: string, params: Record<string, unknown>): Promise<ExecuteActionResponse> {
+    return this.executeAction('hyperliquid_sub', 'hl_sub_transfer', { params, walletId });
+  }
+
+  /** List Hyperliquid sub-accounts. */
+  async hlListSubAccounts(walletId: string): Promise<unknown> {
+    return withRetry(
+      () => this.http.get<unknown>(`/v1/wallets/${walletId}/hyperliquid/sub-accounts`, this.authHeaders()),
+      this.retryOptions,
+    );
+  }
+
+  /** Get positions for a Hyperliquid sub-account. */
+  async hlGetSubPositions(walletId: string, subAccount: string): Promise<unknown> {
+    return withRetry(
+      () => this.http.get<unknown>(`/v1/wallets/${walletId}/hyperliquid/sub-accounts/${subAccount}/positions`, this.authHeaders()),
+      this.retryOptions,
+    );
+  }
+
   // --- Wallet creation (masterAuth) ---
   async createWallet(params: CreateWalletParams): Promise<CreateWalletResponse> {
     if (!this.masterPassword) {

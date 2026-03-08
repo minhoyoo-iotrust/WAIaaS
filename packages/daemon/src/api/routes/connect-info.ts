@@ -162,6 +162,7 @@ export function buildConnectInfoPrompt(params: BuildConnectInfoPromptParams): st
   if (capabilities.includes('hyperliquid')) {
     lines.push('Hyperliquid Perp Trading: Use hl_* action tools for perpetual trading (open/close positions, place/cancel orders, set leverage). Query endpoints: GET /v1/wallets/{id}/hyperliquid/positions, /orders, /account, /fills. Market data: GET /v1/hyperliquid/markets, /funding-rates.');
     lines.push('Hyperliquid Spot Trading: Use hl_spot_buy/hl_spot_sell/hl_spot_cancel action tools for spot trading. Query: GET /v1/wallets/{id}/hyperliquid/spot/balances, GET /v1/hyperliquid/spot/markets.');
+    lines.push('Hyperliquid Sub-accounts: Use hl_create_sub_account/hl_sub_transfer action tools for sub-account management. Query: GET /v1/wallets/{id}/hyperliquid/sub-accounts, GET /v1/wallets/{id}/hyperliquid/sub-accounts/{addr}/positions.');
   }
   lines.push('Specify walletId parameter (UUID from the ID field above) to target a specific wallet.');
   lines.push('Append ?network=<network> to query a specific network (required for EVM wallets, auto-resolved for Solana).');

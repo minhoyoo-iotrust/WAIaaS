@@ -87,5 +87,6 @@ export { HyperliquidPerpProvider } from './perp-provider.js';
 // Spot Provider
 export { HyperliquidSpotProvider } from './spot-provider.js';
 
-// Sub-account Service
+// Sub-account Service + Provider
 export { HyperliquidSubAccountService } from './sub-account-service.js';
+export { HyperliquidSubAccountProvider } from './sub-account-provider.js';

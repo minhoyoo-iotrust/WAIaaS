@@ -26,7 +26,7 @@ import { Erc8004ActionProvider } from './providers/erc8004/index.js';
 import { type Erc8004Config, ERC8004_DEFAULTS } from './providers/erc8004/config.js';
 import { DcentSwapActionProvider } from './providers/dcent-swap/index.js';
 import type { DcentSwapConfig } from './providers/dcent-swap/config.js';
-import { HyperliquidPerpProvider, HyperliquidExchangeClient, HyperliquidMarketData, HyperliquidRateLimiter, HL_DEFAULTS, HL_MAINNET_API_URL, HL_TESTNET_API_URL } from './providers/hyperliquid/index.js';
+import { HyperliquidPerpProvider, HyperliquidSpotProvider, HyperliquidSubAccountService, HyperliquidSubAccountProvider, HyperliquidExchangeClient, HyperliquidMarketData, HyperliquidRateLimiter, HL_DEFAULTS, HL_MAINNET_API_URL, HL_TESTNET_API_URL } from './providers/hyperliquid/index.js';
 import { KaminoSdkWrapper } from './providers/kamino/kamino-sdk-wrapper.js';
 import { DriftSdkWrapper } from './providers/drift/drift-sdk-wrapper.js';
 
@@ -98,6 +98,7 @@ export { caip19ToDcentId, dcentIdToCaip19 } from './providers/dcent-swap/currenc
 export type { DcentQuoteResult, GetQuotesParams } from './providers/dcent-swap/dex-swap.js';
 
 export { HyperliquidPerpProvider } from './providers/hyperliquid/index.js';
+export { HyperliquidSpotProvider, HyperliquidSubAccountService, HyperliquidSubAccountProvider } from './providers/hyperliquid/index.js';
 export { HyperliquidExchangeClient, HyperliquidRateLimiter, createHyperliquidClient, HyperliquidMarketData } from './providers/hyperliquid/index.js';
 export { HyperliquidSigner } from './providers/hyperliquid/index.js';
 export { HL_MAINNET_API_URL, HL_TESTNET_API_URL, HL_DEFAULTS as HL_DEFAULTS_CONFIG, HL_SETTINGS, HL_ERRORS } from './providers/hyperliquid/index.js';
@@ -314,6 +315,18 @@ export function registerBuiltInProviders(
         const rateLimiter = new HyperliquidRateLimiter(rateLimit);
         const client = new HyperliquidExchangeClient(apiUrl, rateLimiter, timeoutMs);
         const marketData = new HyperliquidMarketData(client);
+
+        // Register spot and sub-account providers alongside perp (shared client/marketData)
+        try {
+          registry.register(new HyperliquidSpotProvider(client, marketData, isMainnet));
+          loaded.push('hyperliquid_spot');
+        } catch { /* spot registration failed, continue */ }
+        try {
+          const subService = new HyperliquidSubAccountService(client, marketData, isMainnet);
+          registry.register(new HyperliquidSubAccountProvider(subService));
+          loaded.push('hyperliquid_sub');
+        } catch { /* sub registration failed, continue */ }
+
         return new HyperliquidPerpProvider(client, marketData, isMainnet);
       },
     },
