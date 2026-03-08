@@ -136,11 +136,11 @@ Plans:
   3. ERC-20 approve+deposit BATCH와 네이티브 ETH 브릿지가 파이프라인 통합 테스트로 통과한다
   4. insufficient liquidity, unsupported route, deadline expired 등 에러 시나리오가 검증된다
   5. Bridge status tracker의 polling과 상태 전이(PENDING->FILLED/EXPIRED)가 검증된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 356-01: AcrossApiClient + calldata 인코딩 단위 테스트
-- [ ] 356-02: 파이프라인 통합 테스트 + 에러 핸들링 + StatusTracker 테스트
+- [ ] 356-01-PLAN.md — AcrossApiClient + Config helpers + Zod 스키마 단위 테스트
+- [ ] 356-02-PLAN.md — AcrossBridgeActionProvider 통합 테스트 + 에러 핸들링 + StatusTracker 테스트
 
 ## Progress
 
