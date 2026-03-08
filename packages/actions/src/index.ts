@@ -104,6 +104,7 @@ export { AcrossBridgeActionProvider } from './providers/across/index.js';
 export { ACROSS_DEFAULTS, ACROSS_CHAIN_MAP, getAcrossChainId } from './providers/across/config.js';
 export type { AcrossConfig } from './providers/across/config.js';
 export { AcrossApiClient } from './providers/across/across-api-client.js';
+export { AcrossBridgeStatusTracker, AcrossBridgeMonitoringTracker } from './providers/across/bridge-status-tracker.js';
 
 export { HyperliquidPerpProvider } from './providers/hyperliquid/index.js';
 export { HyperliquidSpotProvider, HyperliquidSubAccountService, HyperliquidSubAccountProvider } from './providers/hyperliquid/index.js';
