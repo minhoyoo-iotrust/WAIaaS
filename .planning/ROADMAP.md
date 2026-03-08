@@ -69,7 +69,9 @@
   1. User가 HyperEVM Mainnet (Chain ID 999) 네트워크에서 EVM 지갑을 사용하여 ETH 전송/토큰 전송/컨트랙트 호출을 할 수 있다
   2. User가 HyperEVM Testnet (Chain ID 998) 네트워크에서 EVM 지갑을 사용하여 동일한 기능이 동작한다
   3. HyperEVM이 ALLOWED_NETWORKS 정책과 connect-info 네트워크 목록에 표시된다
-**Plans**: TBD
+**Plans:** 1 plan
+Plans:
+- [ ] 347-01-PLAN.md — HyperEVM Mainnet/Testnet 체인 등록 + 테스트
 
 ### Phase 348: Hyperliquid DEX 설계 문서
 **Goal**: Hyperliquid L1 DEX 통합의 아키텍처 결정이 모두 확정되어 구현 Phase에서 설계 모호성이 없다
@@ -122,7 +124,7 @@ Note: Phase 350과 351은 Phase 349에만 의존하므로 병렬 실행 가능
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 347. HyperEVM 체인 등록 | 0/TBD | Not started | - |
+| 347. HyperEVM 체인 등록 | 0/1 | Not started | - |
 | 348. Hyperliquid DEX 설계 문서 | 0/TBD | Not started | - |
 | 349. Core Infrastructure + Perp Trading | 0/TBD | Not started | - |
 | 350. Spot Trading | 0/TBD | Not started | - |
