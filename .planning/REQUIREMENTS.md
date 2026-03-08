@@ -42,13 +42,13 @@ Requirements for Hyperliquid ecosystem integration. Each maps to roadmap phases.
 
 ### Hyperliquid Spot
 
-- [ ] **HSPOT-01**: User가 Hyperliquid Spot Market 주문을 생성할 수 있다
-- [ ] **HSPOT-02**: User가 Hyperliquid Spot Limit 주문 (GTC/IoC/Post-Only)을 생성할 수 있다
-- [ ] **HSPOT-03**: User가 Spot 계정 토큰 잔액을 조회할 수 있다
-- [ ] **HSPOT-04**: User가 Spot 주문을 취소하고 상태를 조회할 수 있다
-- [ ] **HSPOT-05**: User가 Spot 마켓 정보 (페어, 가격, 거래량)를 조회할 수 있다
-- [ ] **HSPOT-06**: Spot 기능이 MCP 도구 + SDK 메서드로 노출된다
-- [ ] **HSPOT-07**: HyperliquidSpotActionProvider가 IActionProvider로 등록된다
+- [x] **HSPOT-01**: User가 Hyperliquid Spot Market 주문을 생성할 수 있다
+- [x] **HSPOT-02**: User가 Hyperliquid Spot Limit 주문 (GTC/IoC/Post-Only)을 생성할 수 있다
+- [x] **HSPOT-03**: User가 Spot 계정 토큰 잔액을 조회할 수 있다
+- [x] **HSPOT-04**: User가 Spot 주문을 취소하고 상태를 조회할 수 있다
+- [x] **HSPOT-05**: User가 Spot 마켓 정보 (페어, 가격, 거래량)를 조회할 수 있다
+- [x] **HSPOT-06**: Spot 기능이 MCP 도구 + SDK 메서드로 노출된다
+- [x] **HSPOT-07**: HyperliquidSpotActionProvider가 IActionProvider로 등록된다
 
 ### Sub-account
 
@@ -141,13 +141,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | HPERP-12 | Phase 349 | Complete |
 | HPERP-13 | Phase 349 | Complete |
 | HPERP-14 | Phase 349 | Complete |
-| HSPOT-01 | Phase 350 | Pending |
-| HSPOT-02 | Phase 350 | Pending |
-| HSPOT-03 | Phase 350 | Pending |
-| HSPOT-04 | Phase 350 | Pending |
-| HSPOT-05 | Phase 350 | Pending |
-| HSPOT-06 | Phase 350 | Pending |
-| HSPOT-07 | Phase 350 | Pending |
+| HSPOT-01 | Phase 350 | Complete |
+| HSPOT-02 | Phase 350 | Complete |
+| HSPOT-03 | Phase 350 | Complete |
+| HSPOT-04 | Phase 350 | Complete |
+| HSPOT-05 | Phase 350 | Complete |
+| HSPOT-06 | Phase 350 | Complete |
+| HSPOT-07 | Phase 350 | Complete |
 | HSUB-01 | Phase 351 | Pending |
 | HSUB-02 | Phase 351 | Pending |
 | HSUB-03 | Phase 351 | Pending |

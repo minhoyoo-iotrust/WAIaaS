@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v31.4
 milestone_name: Hyperliquid 생태계 통합
 status: completed
-stopped_at: Completed 349-05-PLAN.md
-last_updated: "2026-03-08T04:45:31.476Z"
-last_activity: 2026-03-08 — Phase 349 Core Infrastructure + Perp Trading complete
+stopped_at: Completed 350-02-PLAN.md
+last_updated: "2026-03-08T05:05:00.000Z"
+last_activity: 2026-03-08 — Phase 350 Spot Trading complete
 progress:
   total_phases: 5
-  completed_phases: 3
-  total_plans: 8
-  completed_plans: 8
-  percent: 60
+  completed_phases: 4
+  total_plans: 10
+  completed_plans: 10
+  percent: 80
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-08)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Phase 349 complete. Next: Phase 350 Spot Trading or Phase 351 Sub-account
+**Current focus:** Phase 350 complete. Next: Phase 351 Sub-account
 
 ## Current Position
 
-Phase: 349 of 351 (Core Infrastructure + Perp Trading) — 3 of 5 phases
-Plan: 5 of 5 (complete)
-Status: Phase 349 complete
-Last activity: 2026-03-08 — Phase 349 Core Infrastructure + Perp Trading complete
+Phase: 350 of 351 (Spot Trading) — 4 of 5 phases
+Plan: 2 of 2 (complete)
+Status: Phase 350 complete
+Last activity: 2026-03-08 — Phase 350 Spot Trading complete
 
-Progress: [██████░░░░] 60%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8 (3 design + 5 implementation)
-- Average duration: ~20 min per implementation plan
-- Total execution time: ~2 hours
+- Total plans completed: 10 (3 design + 7 implementation)
+- Average duration: ~15 min per implementation plan
+- Total execution time: ~2.5 hours
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -46,6 +46,8 @@ Progress: [██████░░░░] 60%
 | 349   | 03   | 25min    | 2     | 4     |
 | 349   | 04   | 20min    | 2     | 7     |
 | 349   | 05   | 15min    | 2     | 11    |
+| 350   | 01   | 5min     | 2     | 5     |
+| 350   | 02   | 8min     | 2     | 9     |
 
 ## Accumulated Context
 
@@ -72,6 +74,9 @@ Progress: [██████░░░░] 60%
 - [Phase 349]: createHyperliquidClient takes direct params (ESM compatible)
 - [Phase 349]: Hyperliquid page as standalone route (/hyperliquid) in Admin UI
 - [Phase 349]: PositionsTable auto-refreshes every 10 seconds
+- [Phase 350]: Spot asset index = 10000 + spotMeta.universe.findIndex()
+- [Phase 350]: Spot buy spending = size*price (no leverage), sell/cancel = $0
+- [Phase 350]: SpotOrdersTable filters by "/" in coin name (spot pairs vs perp symbols)
 
 ### Blockers/Concerns
 
@@ -82,6 +87,6 @@ Progress: [██████░░░░] 60%
 
 ## Session Continuity
 
-Last session: 2026-03-08T04:42:00.000Z
-Stopped at: Completed 349-05-PLAN.md
+Last session: 2026-03-08T05:05:00.000Z
+Stopped at: Completed 350-02-PLAN.md
 Resume file: None

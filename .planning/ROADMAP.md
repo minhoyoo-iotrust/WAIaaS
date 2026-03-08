@@ -56,7 +56,7 @@
 - [x] **Phase 347: HyperEVM 체인 등록** - HyperEVM Mainnet/Testnet을 EVM_CHAIN_MAP에 추가하여 기존 EVM 기능 즉시 동작 (completed 2026-03-08)
 - [x] **Phase 348: Hyperliquid DEX 설계 문서** - L1 DEX API 통합 아키텍처, EIP-712 서명, Sub-account, 정책 적용 방안 확정 (completed 2026-03-08)
 - [x] **Phase 349: Core Infrastructure + Perp Trading** - 공유 인프라(ExchangeClient/Signer/MarketData) + Perp 거래 + Account State + 정책 + 전 인터페이스 (completed 2026-03-08)
-- [ ] **Phase 350: Spot Trading** - Spot Market/Limit 주문, 잔액/마켓 조회, MCP/SDK 통합
+- [x] **Phase 350: Spot Trading** - Spot Market/Limit 주문, 잔액/마켓 조회, MCP/SDK 통합 (completed 2026-03-08)
 - [ ] **Phase 351: Sub-account 관리** - Sub-account 생성/자금이동/포지션 조회, MCP/SDK 통합
 
 ## Phase Details
@@ -114,9 +114,10 @@ Plans:
   2. User가 Spot 계정 토큰 잔액과 Spot 마켓 정보(페어/가격/거래량)를 조회할 수 있다
   3. Spot 기능이 MCP 도구 + SDK 메서드로 노출되고, HyperliquidSpotActionProvider가 IActionProvider로 등록된다
 **Plans:** 2 plans
+**Plans:** 2/2 plans complete
 Plans:
-- [ ] 350-01-PLAN.md — SpotProvider + Spot Zod 스키마 + MarketData Spot 메서드 + 테스트
-- [ ] 350-02-PLAN.md — REST API + MCP 5도구 + SDK 5메서드 + Admin UI Spot 탭 + Skill 파일
+- [x] 350-01-PLAN.md — SpotProvider + Spot Zod 스키마 + MarketData Spot 메서드 + 테스트
+- [x] 350-02-PLAN.md — REST API + MCP 5도구 + SDK 5메서드 + Admin UI Spot 탭 + Skill 파일
 
 ### Phase 351: Sub-account 관리
 **Goal**: User가 Hyperliquid Sub-account를 통해 전략별 자금을 격리하고 관리할 수 있다
@@ -139,5 +140,5 @@ Note: Phase 350과 351은 Phase 349에만 의존하므로 병렬 실행 가능
 | 347. HyperEVM 체인 등록 | 1/1 | Complete    | 2026-03-08 |
 | 348. Hyperliquid DEX 설계 문서 | 2/2 | Complete    | 2026-03-08 |
 | 349. Core Infrastructure + Perp Trading | 5/5 | Complete    | 2026-03-08 |
-| 350. Spot Trading | 0/2 | Not started | - |
+| 350. Spot Trading | 2/2 | Complete    | 2026-03-08 |
 | 351. Sub-account 관리 | 0/TBD | Not started | - |
