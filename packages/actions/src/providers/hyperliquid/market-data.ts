@@ -14,6 +14,7 @@ import {
   OpenOrderSchema,
   SpotMetaSchema,
   SpotClearinghouseStateSchema,
+  SubAccountInfoSchema,
   type ClearinghouseState,
   type Position,
   type OpenOrder,
@@ -22,6 +23,7 @@ import {
   type SpotMeta,
   type SpotBalance,
   type SpotMarketInfo,
+  type SubAccountInfo,
 } from './schemas.js';
 import { z } from 'zod';
 import type { Hex } from 'viem';
@@ -154,12 +156,19 @@ export class HyperliquidMarketData {
   }
 
   /**
-   * Get sub-accounts for a wallet.
+   * Get sub-accounts for a wallet (typed response).
    */
-  async getSubAccounts(walletAddress: Hex): Promise<unknown[]> {
+  async getSubAccounts(walletAddress: Hex): Promise<SubAccountInfo[]> {
     return this.client.info(
       { type: 'subAccounts', user: walletAddress },
-      z.array(z.unknown()),
+      z.array(SubAccountInfoSchema),
     );
+  }
+
+  /**
+   * Get positions for a specific sub-account.
+   */
+  async getSubAccountPositions(walletAddress: Hex, subAccountAddress: Hex): Promise<Position[]> {
+    return this.getPositions(walletAddress, subAccountAddress);
   }
 }

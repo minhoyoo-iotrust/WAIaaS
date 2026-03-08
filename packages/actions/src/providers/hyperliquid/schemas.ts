@@ -331,6 +331,49 @@ export interface SpotMarketInfo {
 }
 
 // ---------------------------------------------------------------------------
+// Sub-account Schemas (Phase 351)
+// ---------------------------------------------------------------------------
+
+/** Create a new Hyperliquid Sub-account. */
+export const HlCreateSubAccountInputSchema = z.object({
+  /** Sub-account name (1-64 chars). */
+  name: z.string().min(1).max(64),
+});
+
+export type HlCreateSubAccountInput = z.infer<typeof HlCreateSubAccountInputSchema>;
+
+/** Transfer USDC between Master and Sub-account. */
+export const HlSubTransferInputSchema = z.object({
+  /** Sub-account address (hex, 42 chars). */
+  subAccount: z.string().min(1),
+  /** Amount as decimal string (e.g., "1000.50"). */
+  amount: z.string().min(1),
+  /** True = master -> sub, False = sub -> master. */
+  isDeposit: z.boolean(),
+});
+
+export type HlSubTransferInput = z.infer<typeof HlSubTransferInputSchema>;
+
+/** Get sub-account positions. */
+export const HlGetSubPositionsInputSchema = z.object({
+  /** Sub-account address (hex, 42 chars). */
+  subAccount: z.string().min(1),
+});
+
+export type HlGetSubPositionsInput = z.infer<typeof HlGetSubPositionsInputSchema>;
+
+/** Sub-account info from Hyperliquid /info subAccounts response. */
+export const SubAccountInfoSchema = z.object({
+  subAccountUser: z.string(),
+  name: z.string(),
+  master: z.string(),
+  clearinghouseState: ClearinghouseStateSchema.optional(),
+  spotState: SpotClearinghouseStateSchema.optional(),
+}).passthrough();
+
+export type SubAccountInfo = z.infer<typeof SubAccountInfoSchema>;
+
+// ---------------------------------------------------------------------------
 // Wire format types (internal, for signer)
 // ---------------------------------------------------------------------------
 

@@ -30,6 +30,10 @@ export {
   HlSpotBuyInputSchema,
   HlSpotSellInputSchema,
   HlSpotCancelInputSchema,
+  HlCreateSubAccountInputSchema,
+  HlSubTransferInputSchema,
+  HlGetSubPositionsInputSchema,
+  SubAccountInfoSchema,
   ExchangeResponseSchema,
   PositionSchema,
   ClearinghouseStateSchema,
@@ -56,6 +60,10 @@ export {
   type SpotBalance,
   type SpotClearinghouseState,
   type SpotMarketInfo,
+  type HlCreateSubAccountInput,
+  type HlSubTransferInput,
+  type HlGetSubPositionsInput,
+  type SubAccountInfo,
 } from './schemas.js';
 
 // Signer
@@ -78,3 +86,6 @@ export { HyperliquidPerpProvider } from './perp-provider.js';
 
 // Spot Provider
 export { HyperliquidSpotProvider } from './spot-provider.js';
+
+// Sub-account Service
+export { HyperliquidSubAccountService } from './sub-account-service.js';
