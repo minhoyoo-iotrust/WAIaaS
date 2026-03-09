@@ -121,7 +121,7 @@ Note: Phase 359 and 360 can execute in parallel (both depend on 358 only). Phase
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 357. E2E 테스트 인프라 | 0/3 | Planning complete | - |
+| 357. E2E 테스트 인프라 | 3/3 | Complete | 2026-03-09 |
 | 358. 오프체인 Smoke -- 코어 | 0/? | Not started | - |
 | 359. 오프체인 Smoke -- 인터페이스 | 0/? | Not started | - |
 | 360. 오프체인 Smoke -- 고급 | 0/? | Not started | - |

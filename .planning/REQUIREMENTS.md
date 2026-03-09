@@ -9,13 +9,13 @@ Requirements for E2E automated verification system. Each maps to roadmap phases.
 
 ### 인프라 (INFRA)
 
-- [ ] **INFRA-01**: packages/e2e-tests/ 독립 패키지 셋업 (vitest, 스크립트 구조)
-- [ ] **INFRA-02**: 데몬 라이프사이클 관리 유틸리티 (설치→config 생성→기동→health check→종료)
-- [ ] **INFRA-03**: Push Relay 라이프사이클 관리 유틸리티 (설치→config 생성→기동→health check→종료)
-- [ ] **INFRA-04**: 테스트 세션 관리 유틸리티 (마스터 패스워드 설정, 세션 생성/정리)
-- [ ] **INFRA-05**: HTTP 클라이언트 헬퍼 (REST API 호출, 응답 검증)
-- [ ] **INFRA-06**: E2EScenario 타입 인터페이스 (offchain/onchain 트랙 구분, 시나리오 등록)
-- [ ] **INFRA-07**: 테스트 리포트 포맷 (통과/실패/스킵 요약 출력)
+- [x] **INFRA-01**: packages/e2e-tests/ 독립 패키지 셋업 (vitest, 스크립트 구조)
+- [x] **INFRA-02**: 데몬 라이프사이클 관리 유틸리티 (설치→config 생성→기동→health check→종료)
+- [x] **INFRA-03**: Push Relay 라이프사이클 관리 유틸리티 (설치→config 생성→기동→health check→종료)
+- [x] **INFRA-04**: 테스트 세션 관리 유틸리티 (마스터 패스워드 설정, 세션 생성/정리)
+- [x] **INFRA-05**: HTTP 클라이언트 헬퍼 (REST API 호출, 응답 검증)
+- [x] **INFRA-06**: E2EScenario 타입 인터페이스 (offchain/onchain 트랙 구분, 시나리오 등록)
+- [x] **INFRA-07**: 테스트 리포트 포맷 (통과/실패/스킵 요약 출력)
 
 ### 오프체인 코어 (CORE)
 
@@ -98,13 +98,13 @@ Requirements for E2E automated verification system. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INFRA-01 | Phase 357 | Pending |
-| INFRA-02 | Phase 357 | Pending |
-| INFRA-03 | Phase 357 | Pending |
-| INFRA-04 | Phase 357 | Pending |
-| INFRA-05 | Phase 357 | Pending |
-| INFRA-06 | Phase 357 | Pending |
-| INFRA-07 | Phase 357 | Pending |
+| INFRA-01 | Phase 357 | Complete |
+| INFRA-02 | Phase 357 | Complete |
+| INFRA-03 | Phase 357 | Complete |
+| INFRA-04 | Phase 357 | Complete |
+| INFRA-05 | Phase 357 | Complete |
+| INFRA-06 | Phase 357 | Complete |
+| INFRA-07 | Phase 357 | Complete |
 | CORE-01 | Phase 358 | Pending |
 | CORE-02 | Phase 358 | Pending |
 | CORE-03 | Phase 358 | Pending |
