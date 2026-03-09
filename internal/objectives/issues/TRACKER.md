@@ -303,6 +303,7 @@
 | 286 | BUG | MEDIUM | E2E Admin UI 정적 파일 미빌드로 root path 404 — turbo 빌드 의존성 누락 | v31.8 | FIXED | 2026-03-09 |
 | 287 | BUG | HIGH | E2E interface 테스트 API 형식 불일치 — PUT settings body + SDK walletId 미해석 | v31.8 | FIXED | 2026-03-09 |
 | 288 | BUG | MEDIUM | E2E audit-log 테스트 응답 필드 불일치 — items vs data | v31.8 | FIXED | 2026-03-09 |
+| 289 | BUG | HIGH | E2E 스모크 워크플로우가 RC 대신 stable 릴리스를 설치 — /releases/latest가 prerelease 제외 | v31.8 | OPEN | |
 
 ## Type Legend
 
@@ -314,10 +315,10 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 1
 - **FIXED:** 286
 - **RESOLVED:** 4
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 291
+- **Total:** 292
 
