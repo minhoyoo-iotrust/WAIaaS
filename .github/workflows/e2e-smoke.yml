@@ -67,9 +67,9 @@ jobs:
           MAX_ATTEMPTS=5
           ATTEMPT=1
           while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
-            echo "Attempt $ATTEMPT/$MAX_ATTEMPTS: npm install -g @waiaas/daemon@$VERSION"
-            if npm install -g "@waiaas/daemon@$VERSION" 2>&1; then
-              echo "Successfully installed @waiaas/daemon@$VERSION"
+            echo "Attempt $ATTEMPT/$MAX_ATTEMPTS: npm install -g @waiaas/cli@$VERSION"
+            if npm install -g "@waiaas/cli@$VERSION" 2>&1; then
+              echo "Successfully installed @waiaas/cli@$VERSION"
               # Capture actual CLI path for explicit passing (avoids PATH propagation issues in pnpm/vitest)
               CLI_PATH="$NPM_GLOBAL_BIN/waiaas"
               echo "cli_path=$CLI_PATH" >> "$GITHUB_OUTPUT"
@@ -83,7 +83,7 @@ jobs:
             fi
             ATTEMPT=$((ATTEMPT + 1))
           done
-          echo "::error::Failed to install @waiaas/daemon@$VERSION after $MAX_ATTEMPTS attempts"
+          echo "::error::Failed to install @waiaas/cli@$VERSION after $MAX_ATTEMPTS attempts"
           exit 1
 
       - name: Run offchain E2E tests
