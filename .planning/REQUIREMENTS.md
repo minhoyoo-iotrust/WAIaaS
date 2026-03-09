@@ -1,0 +1,157 @@
+# Requirements: WAIaaS E2E 자동 검증 체계
+
+**Defined:** 2026-03-09
+**Core Value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
+
+## v31.7 Requirements
+
+Requirements for E2E automated verification system. Each maps to roadmap phases.
+
+### 인프라 (INFRA)
+
+- [ ] **INFRA-01**: packages/e2e-tests/ 독립 패키지 셋업 (vitest, 스크립트 구조)
+- [ ] **INFRA-02**: 데몬 라이프사이클 관리 유틸리티 (설치→config 생성→기동→health check→종료)
+- [ ] **INFRA-03**: Push Relay 라이프사이클 관리 유틸리티 (설치→config 생성→기동→health check→종료)
+- [ ] **INFRA-04**: 테스트 세션 관리 유틸리티 (마스터 패스워드 설정, 세션 생성/정리)
+- [ ] **INFRA-05**: HTTP 클라이언트 헬퍼 (REST API 호출, 응답 검증)
+- [ ] **INFRA-06**: E2EScenario 타입 인터페이스 (offchain/onchain 트랙 구분, 시나리오 등록)
+- [ ] **INFRA-07**: 테스트 리포트 포맷 (통과/실패/스킵 요약 출력)
+
+### 오프체인 코어 (CORE)
+
+- [ ] **CORE-01**: 인증 플로우 E2E (마스터 패스워드 설정→세션 생성/갱신/삭제)
+- [ ] **CORE-02**: 지갑 CRUD E2E (EVM/Solana 지갑 생성→목록 조회→삭제)
+- [ ] **CORE-03**: 다중 지갑 세션 E2E (세션에 지갑 연결/해제, session_wallets junction 검증)
+- [ ] **CORE-04**: 정책 CRUD + dry-run 평가 E2E (생성→조회→수정→삭제→dry-run 평가)
+
+### 오프체인 인터페이스 (IFACE)
+
+- [ ] **IFACE-01**: Admin UI 접근 E2E (HTTP 200, Settings CRUD)
+- [ ] **IFACE-02**: MCP 서버 E2E (@modelcontextprotocol/sdk stdio 연결→tool listing→기본 도구 호출)
+- [ ] **IFACE-03**: SDK 연결성 E2E (createSession→listWallets→기본 조회 API)
+- [ ] **IFACE-04**: 알림 채널 설정 + 이벤트 발행 확인 E2E
+- [ ] **IFACE-05**: 토큰 레지스트리 CRUD E2E
+- [ ] **IFACE-06**: connect-info 자기 발견 엔드포인트 E2E (userop capability 포함)
+- [ ] **IFACE-07**: 감사 로그 생성 확인 E2E (작업 후 로그 존재 검증)
+- [ ] **IFACE-08**: 백업 → 복원 → 데이터 일치 확인 E2E
+
+### 오프체인 고급 (ADV)
+
+- [ ] **ADV-01**: Smart Account 생성/조회 + Lite/Full 모드 확인 E2E
+- [ ] **ADV-02**: UserOp Build/Sign + TTL 만료 확인 E2E
+- [ ] **ADV-03**: Owner 인증 (SIWE/SIWS) 챌린지 발급→서명 검증 E2E (테스트 키 사용)
+- [ ] **ADV-04**: x402 결제 설정 CRUD + dry-run 평가 E2E
+- [ ] **ADV-05**: ERC-8004 에이전트 등록/해제/권한 조회 E2E (오프체인 설정 검증)
+- [ ] **ADV-06**: ERC-8128 서명 생성/검증 E2E (테스트 키 사용)
+- [ ] **ADV-07**: DeFi 프로토콜별 Admin Settings CRUD E2E (slippage, gas limit 등)
+- [ ] **ADV-08**: Push Relay 기동 + 디바이스 등록/해제 E2E (오프체인, mock push)
+
+### CI/CD (CICD)
+
+- [ ] **CICD-01**: GitHub Actions workflow (e2e-smoke.yml) 생성
+- [ ] **CICD-02**: RC publish 트리거 (release: published) + workflow_dispatch 수동 트리거
+- [ ] **CICD-03**: RC 버전 명시적 설치 (npx @waiaas/daemon@${RELEASE_TAG})
+- [ ] **CICD-04**: 테스트 결과 리포트 (GitHub Actions summary)
+- [ ] **CICD-05**: 실패 시 알림 (ntfy 또는 GitHub Issue 자동 생성)
+- [ ] **CICD-06**: #282 네트워크 설정 키 완전성 검증 스크립트 + CI 스텝
+- [ ] **CICD-07**: #283 README 테스트 배지 동적 업데이트 (Gist 기반 shields.io endpoint)
+
+### 온체인 (ONCH)
+
+- [ ] **ONCH-01**: 사전 조건 체커 (데몬 접속 확인, 지갑 존재, 네트워크별 잔액, 부족 리포트)
+- [ ] **ONCH-02**: 인터랙티브 프롬프트 (가능한 것만 실행 / 중단 후 준비 선택)
+- [ ] **ONCH-03**: 네트워크/프로토콜 필터 옵션 (--network sepolia, --only swap,bridge)
+- [ ] **ONCH-04**: ETH(Sepolia) / SOL(Devnet) 기본 전송 E2E
+- [ ] **ONCH-05**: ERC-20(Sepolia) / SPL(Devnet) 토큰 전송 E2E
+- [ ] **ONCH-06**: IncomingTxMonitor 수신 트랜잭션 감지 E2E
+- [ ] **ONCH-07**: Lido Staking (Holesky testnet) stake/unstake E2E
+- [ ] **ONCH-08**: Hyperliquid testnet Spot/Perp 주문 + Sub Account E2E
+- [ ] **ONCH-09**: NFT 전송 ERC-721/ERC-1155 (Sepolia) E2E
+- [ ] **ONCH-10**: testnet 미지원 프로토콜 skip 처리 + 잔액 부족 시 skip (fail이 아닌 skip)
+
+### 시나리오 강제 (ENFORCE)
+
+- [ ] **ENFORCE-01**: Action Provider ↔ E2E 시나리오 매핑 검증 스크립트
+- [ ] **ENFORCE-02**: REST API 엔드포인트 ↔ 오프체인 시나리오 매핑 검증 스크립트
+- [ ] **ENFORCE-03**: CI workflow에 검증 스텝 추가 (PR 시 실행, 미등록 시 즉시 CI fail)
+- [ ] **ENFORCE-04**: 시나리오 파일 내 최소 1개 테스트 케이스 존재 검증 (빈 파일 방지)
+
+## Future Requirements
+
+### 온체인 E2E 확장
+
+- **ONCH-F01**: mainnet-only 프로토콜 E2E (Jupiter, 0x, LI.FI, Aave, Kamino 등 — mainnet fork 또는 향후 testnet 지원 시)
+- **ONCH-F02**: Solana NFT (Metaplex) E2E (Devnet NFT 사전 민팅 인프라 필요)
+- **ONCH-F03**: WalletConnect Owner 승인 E2E (QR 스캔 자동화 어려움)
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| Mainnet E2E | 실제 자금 필요, testnet으로 검증 |
+| WalletConnect E2E 자동화 | QR 스캔 기반이라 자동화 어려움 |
+| Telegram Bot E2E | 외부 서비스 의존, mock 기반 단위테스트로 커버 |
+| Performance/Load 테스트 | 별도 마일스톤으로 분리 |
+| Solana NFT (Metaplex) 온체인 E2E | Devnet 사전 민팅 복잡, EVM NFT로 파이프라인 검증 |
+
+## Traceability
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| INFRA-01 | Phase 357 | Pending |
+| INFRA-02 | Phase 357 | Pending |
+| INFRA-03 | Phase 357 | Pending |
+| INFRA-04 | Phase 357 | Pending |
+| INFRA-05 | Phase 357 | Pending |
+| INFRA-06 | Phase 357 | Pending |
+| INFRA-07 | Phase 357 | Pending |
+| CORE-01 | Phase 358 | Pending |
+| CORE-02 | Phase 358 | Pending |
+| CORE-03 | Phase 358 | Pending |
+| CORE-04 | Phase 358 | Pending |
+| IFACE-01 | Phase 359 | Pending |
+| IFACE-02 | Phase 359 | Pending |
+| IFACE-03 | Phase 359 | Pending |
+| IFACE-04 | Phase 359 | Pending |
+| IFACE-05 | Phase 359 | Pending |
+| IFACE-06 | Phase 359 | Pending |
+| IFACE-07 | Phase 359 | Pending |
+| IFACE-08 | Phase 359 | Pending |
+| ADV-01 | Phase 360 | Pending |
+| ADV-02 | Phase 360 | Pending |
+| ADV-03 | Phase 360 | Pending |
+| ADV-04 | Phase 360 | Pending |
+| ADV-05 | Phase 360 | Pending |
+| ADV-06 | Phase 360 | Pending |
+| ADV-07 | Phase 360 | Pending |
+| ADV-08 | Phase 360 | Pending |
+| CICD-01 | Phase 361 | Pending |
+| CICD-02 | Phase 361 | Pending |
+| CICD-03 | Phase 361 | Pending |
+| CICD-04 | Phase 361 | Pending |
+| CICD-05 | Phase 361 | Pending |
+| CICD-06 | Phase 361 | Pending |
+| CICD-07 | Phase 361 | Pending |
+| ONCH-01 | Phase 362 | Pending |
+| ONCH-02 | Phase 362 | Pending |
+| ONCH-03 | Phase 362 | Pending |
+| ONCH-04 | Phase 363 | Pending |
+| ONCH-05 | Phase 363 | Pending |
+| ONCH-06 | Phase 363 | Pending |
+| ONCH-07 | Phase 363 | Pending |
+| ONCH-08 | Phase 363 | Pending |
+| ONCH-09 | Phase 363 | Pending |
+| ONCH-10 | Phase 363 | Pending |
+| ENFORCE-01 | Phase 364 | Pending |
+| ENFORCE-02 | Phase 364 | Pending |
+| ENFORCE-03 | Phase 364 | Pending |
+| ENFORCE-04 | Phase 364 | Pending |
+
+**Coverage:**
+- v31.7 requirements: 47 total
+- Mapped to phases: 47
+- Unmapped: 0
+
+---
+*Requirements defined: 2026-03-09*
+*Last updated: 2026-03-09 after initial definition*
