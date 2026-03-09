@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.10.0-rc.22](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.21...v2.10.0-rc.22) (2026-03-09)
+
+
+### Bug Fixes
+
+* add missing network query param to E2E onchain balance precondition check ([#298](https://github.com/minhoyoo-iotrust/WAIaaS/issues/298)) ([ac49563](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ac495637ce2b241ba42231710b8037b5ca9a9211))
+* change E2E onchain default port from 3000 to 3100 to match daemon default ([#295](https://github.com/minhoyoo-iotrust/WAIaaS/issues/295)) ([35f2268](https://github.com/minhoyoo-iotrust/WAIaaS/commit/35f2268c983d52e85bfbf57f7d5248d8c043f1fd))
+* remove deprecated Holesky testnet references and E2E staking tests ([#299](https://github.com/minhoyoo-iotrust/WAIaaS/issues/299)) ([0f5a60e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0f5a60ed61a523849ffef721856aed0b8db3a7a2))
+* replace txId with txHash in E2E onchain test assertions to match API response ([#300](https://github.com/minhoyoo-iotrust/WAIaaS/issues/300)) ([ed8b13b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ed8b13bd57314ed5f3cc7cbdce9f725f42f6f020))
+* resolve E2E offchain test failures for Admin UI path, settings key, and SDK auth ([#292](https://github.com/minhoyoo-iotrust/WAIaaS/issues/292), [#293](https://github.com/minhoyoo-iotrust/WAIaaS/issues/293), [#294](https://github.com/minhoyoo-iotrust/WAIaaS/issues/294)) ([931d239](https://github.com/minhoyoo-iotrust/WAIaaS/commit/931d2393138c3b475f2c5e941a52a2a6538cd3e2))
+* resolve E2E smoke CI failures ([#289](https://github.com/minhoyoo-iotrust/WAIaaS/issues/289), [#290](https://github.com/minhoyoo-iotrust/WAIaaS/issues/290), [#291](https://github.com/minhoyoo-iotrust/WAIaaS/issues/291)) ([4d482b3](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4d482b324ac46c62356b84b880e0a29c21fcbdc5))
+* update E2E onchain tests to use v29.5 unified network IDs and fix settings response access ([#296](https://github.com/minhoyoo-iotrust/WAIaaS/issues/296), [#297](https://github.com/minhoyoo-iotrust/WAIaaS/issues/297)) ([fd1c8b4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/fd1c8b4fed6a0fd9381b2d677b09eed54ca13f77))
+
 ## [2.10.0-rc.21](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.20...v2.10.0-rc.21) (2026-03-09)
 
 
