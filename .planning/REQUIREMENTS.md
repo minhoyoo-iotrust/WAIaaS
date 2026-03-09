@@ -17,22 +17,22 @@
 
 ### Testnet Scenarios (TEST)
 
-- [ ] **TEST-01**: ETH 전송 시나리오 (Sepolia) — 자기 전송 → 잔액 확인
-- [ ] **TEST-02**: SOL 전송 시나리오 (Devnet) — 자기 전송 → 잔액 확인
-- [ ] **TEST-03**: ERC-20 토큰 전송 시나리오 (Sepolia) — 테스트 토큰 → 잔액 확인
-- [ ] **TEST-04**: SPL 토큰 전송 시나리오 (Devnet) — 테스트 토큰 → 잔액 확인
-- [ ] **TEST-05**: Hyperliquid 시나리오 (testnet) — Spot/Perp 주문 생성/취소, Sub Account
-- [ ] **TEST-06**: NFT 전송 시나리오 (Sepolia) — ERC-721/ERC-1155 전송
-- [ ] **TEST-07**: 수신 트랜잭션 감지 시나리오 (Sepolia/Devnet) — 외부 전송 → IncomingTxMonitor 감지
+- [x] **TEST-01**: ETH 전송 시나리오 (Sepolia) — 자기 전송 → 잔액 확인
+- [x] **TEST-02**: SOL 전송 시나리오 (Devnet) — 자기 전송 → 잔액 확인
+- [x] **TEST-03**: ERC-20 토큰 전송 시나리오 (Sepolia) — 테스트 토큰 → 잔액 확인
+- [x] **TEST-04**: SPL 토큰 전송 시나리오 (Devnet) — 테스트 토큰 → 잔액 확인
+- [x] **TEST-05**: Hyperliquid 시나리오 (testnet) — Spot/Perp 주문 생성/취소, Sub Account
+- [x] **TEST-06**: NFT 전송 시나리오 (Sepolia) — ERC-721/ERC-1155 전송
+- [x] **TEST-07**: 수신 트랜잭션 감지 시나리오 (Sepolia/Devnet) — 외부 전송 → IncomingTxMonitor 감지
 
 ### Mainnet Transfer Scenarios (XFER)
 
-- [ ] **XFER-01**: ETH 전송 시나리오 (ethereum-mainnet) — 자기 전송 → 잔액 확인
-- [ ] **XFER-02**: SOL 전송 시나리오 (solana-mainnet) — 자기 전송 → 잔액 확인
-- [ ] **XFER-03**: ERC-20 토큰 전송 시나리오 (ethereum-mainnet) — USDC/USDT → 잔액 확인
-- [ ] **XFER-04**: SPL 토큰 전송 시나리오 (solana-mainnet) — USDC → 잔액 확인
-- [ ] **XFER-05**: L2 네이티브 전송 시나리오 (Polygon/Arbitrum/Base) — 자기 전송
-- [ ] **XFER-06**: NFT 전송 시나리오 (보유 NFT 있는 경우) — ERC-721/ERC-1155
+- [x] **XFER-01**: ETH 전송 시나리오 (ethereum-mainnet) — 자기 전송 → 잔액 확인
+- [x] **XFER-02**: SOL 전송 시나리오 (solana-mainnet) — 자기 전송 → 잔액 확인
+- [x] **XFER-03**: ERC-20 토큰 전송 시나리오 (ethereum-mainnet) — USDC/USDT → 잔액 확인
+- [x] **XFER-04**: SPL 토큰 전송 시나리오 (solana-mainnet) — USDC → 잔액 확인
+- [x] **XFER-05**: L2 네이티브 전송 시나리오 (Polygon/Arbitrum/Base) — 자기 전송
+- [x] **XFER-06**: NFT 전송 시나리오 (보유 NFT 있는 경우) — ERC-721/ERC-1155
 
 ### DeFi Protocol Scenarios (DEFI)
 
@@ -105,19 +105,19 @@ None — 전체 범위가 이번 마일스톤에 포함.
 | INFRA-05 | Phase 365 | Complete |
 | INFRA-06 | Phase 365 | Complete |
 | INFRA-07 | Phase 365 | Complete |
-| TEST-01 | Phase 366 | Pending |
-| TEST-02 | Phase 366 | Pending |
-| TEST-03 | Phase 366 | Pending |
-| TEST-04 | Phase 366 | Pending |
-| TEST-05 | Phase 366 | Pending |
-| TEST-06 | Phase 366 | Pending |
-| TEST-07 | Phase 366 | Pending |
-| XFER-01 | Phase 366 | Pending |
-| XFER-02 | Phase 366 | Pending |
-| XFER-03 | Phase 366 | Pending |
-| XFER-04 | Phase 366 | Pending |
-| XFER-05 | Phase 366 | Pending |
-| XFER-06 | Phase 366 | Pending |
+| TEST-01 | Phase 366 | Complete |
+| TEST-02 | Phase 366 | Complete |
+| TEST-03 | Phase 366 | Complete |
+| TEST-04 | Phase 366 | Complete |
+| TEST-05 | Phase 366 | Complete |
+| TEST-06 | Phase 366 | Complete |
+| TEST-07 | Phase 366 | Complete |
+| XFER-01 | Phase 366 | Complete |
+| XFER-02 | Phase 366 | Complete |
+| XFER-03 | Phase 366 | Complete |
+| XFER-04 | Phase 366 | Complete |
+| XFER-05 | Phase 366 | Complete |
+| XFER-06 | Phase 366 | Complete |
 | DEFI-01 | Phase 367 | Pending |
 | DEFI-02 | Phase 367 | Pending |
 | DEFI-03 | Phase 367 | Pending |

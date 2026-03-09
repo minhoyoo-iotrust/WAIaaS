@@ -11,7 +11,7 @@ AI 에이전트가 마크다운 시나리오를 읽고 사용자와 인터랙티
 - Decimal phases (365.1, 365.2): Urgent insertions (marked with INSERTED)
 
 - [x] **Phase 365: Agent UAT 시나리오 포맷 및 인프라** - 마크다운 시나리오 포맷 정의, skill 파일, 인덱스, 지갑 선택/dry-run/리포트 인프라
-- [ ] **Phase 366: Testnet + 기본 전송 시나리오** - Testnet 7개 + Mainnet 기본 전송 6개 시나리오 작성
+- [x] **Phase 366: Testnet + 기본 전송 시나리오** - Testnet 7개 + Mainnet 기본 전송 6개 시나리오 작성
 - [ ] **Phase 367: DeFi 프로토콜 시나리오** - 12개 DeFi 프로토콜(Jupiter, 0x, LI.FI, Across, Lido, Jito, Aave, Kamino, Pendle, Drift, Hyperliquid, DCent) 시나리오 작성
 - [ ] **Phase 368: 고급 기능 + 관리자 기능 시나리오** - Smart Account, WalletConnect, x402, 수신 TX, 가스 조건부 + Admin UI 검증 13개 시나리오
 - [ ] **Phase 369: CI 시나리오 등록 강제** - Provider/시나리오 매핑 검증, 파일 유효성, 인덱스 등록, Admin 라우트 일관성, CI workflow 통합
@@ -47,8 +47,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 366-01-PLAN.md -- Testnet 시나리오 7개 작성 (ETH/SOL/ERC-20/SPL/Hyperliquid/NFT/수신TX)
-- [ ] 366-02-PLAN.md -- Mainnet 기본 전송 시나리오 6개 작성 (ETH/SOL/ERC-20/SPL/L2/NFT) + _index.md 업데이트
+- [x] 366-01-PLAN.md -- Testnet 시나리오 7개 작성 (ETH/SOL/ERC-20/SPL/Hyperliquid/NFT/수신TX)
+- [x] 366-02-PLAN.md -- Mainnet 기본 전송 시나리오 6개 작성 (ETH/SOL/ERC-20/SPL/L2/NFT) + _index.md 업데이트
 
 ### Phase 367: DeFi 프로토콜 시나리오
 **Goal**: 12개 DeFi 프로토콜 시나리오가 완비되어 에이전트가 각 프로토콜의 핵심 기능을 인터랙티브하게 검증할 수 있다
@@ -105,7 +105,7 @@ Phases execute in numeric order: 365 -> 366 -> 367 -> 368 -> 369
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 365. Agent UAT 시나리오 포맷 및 인프라 | 2/2 | Complete    | 2026-03-09 |
-| 366. Testnet + 기본 전송 시나리오 | 0/2 | Not started | - |
+| 366. Testnet + 기본 전송 시나리오 | 2/2 | Complete | 2026-03-09 |
 | 367. DeFi 프로토콜 시나리오 | 0/3 | Not started | - |
 | 368. 고급 기능 + 관리자 기능 시나리오 | 0/3 | Not started | - |
 | 369. CI 시나리오 등록 강제 | 0/2 | Not started | - |
