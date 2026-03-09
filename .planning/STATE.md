@@ -1,10 +1,10 @@
 ---
 gsd_state_version: 1.0
-milestone: v31.7
-milestone_name: E2E 자동 검증 체계
-status: active
-stopped_at: "Completed Phase 361 (CI/CD workflow)"
-last_updated: "2026-03-09T07:41:00Z"
+milestone: v0.1
+milestone_name: milestone
+status: planning
+stopped_at: Completed Phase 361 (CI/CD workflow)
+last_updated: "2026-03-09T07:43:03.337Z"
 last_activity: 2026-03-09 -- Phase 361 complete (3 plans, 67 new tests, e2e-smoke.yml + ci-reporter + badges)
 progress:
   total_phases: 8

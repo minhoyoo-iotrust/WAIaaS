@@ -144,7 +144,7 @@ Note: Phase 359 and 360 can execute in parallel (both depend on 358 only). Phase
 | 358. 오프체인 Smoke -- 코어 | 2/2 | Complete    | 2026-03-09 |
 | 359. 오프체인 Smoke -- 인터페이스 | 3/3 | Complete    | 2026-03-09 |
 | 360. 오프체인 Smoke -- 고급 | 3/3 | Complete    | 2026-03-09 |
-| 361. CI/CD 워크플로우 | 3/3 | Complete | 2026-03-09 |
+| 361. CI/CD 워크플로우 | 3/3 | Complete    | 2026-03-09 |
 | 362. 온체인 사전 조건 체커 | 0/? | Not started | - |
 | 363. 온체인 E2E 시나리오 | 0/? | Not started | - |
 | 364. E2E 시나리오 등록 강제 | 0/? | Not started | - |
