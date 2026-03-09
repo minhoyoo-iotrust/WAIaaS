@@ -309,6 +309,7 @@
 | 292 | BUG | MEDIUM | E2E Admin UI root path 테스트가 잘못된 경로(/) 사용 — 실제 서빙 경로는 /admin/ | v31.8 | FIXED | 2026-03-09 |
 | 293 | BUG | MEDIUM | E2E Settings PUT 테스트가 잘못된 설정 키(display_currency) 사용 — 실제 키는 display.currency | v31.8 | FIXED | 2026-03-09 |
 | 294 | BUG | HIGH | E2E SDK getWalletInfo 실패 — /v1/wallets/:id/networks GET에 masterAuth 불필요 적용 (미들웨어 모순) | v31.8 | FIXED | 2026-03-09 |
+| 295 | BUG | MEDIUM | E2E 온체인 테스트 기본 포트 3000 — 데몬 기본 포트 3100과 불일치 | v31.8 | OPEN | |
 
 ## Type Legend
 
@@ -320,10 +321,10 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 1
 - **FIXED:** 294
 - **RESOLVED:** 4
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 297
+- **Total:** 300
 
