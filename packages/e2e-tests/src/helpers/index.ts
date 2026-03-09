@@ -14,3 +14,8 @@ export {
   type CheckResult,
   type NetworkFilter,
 } from './precondition-checker.js';
+export {
+  promptPreconditionAction,
+  parseCliFilters,
+  type PreconditionAction,
+} from './precondition-prompt.js';

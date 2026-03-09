@@ -6,7 +6,8 @@
   "scripts": {
     "test": "vitest run",
     "test:offchain": "vitest run --project offchain",
-    "test:onchain": "vitest run --project onchain"
+    "test:onchain": "vitest run --project onchain",
+    "test:onchain:check": "tsx src/run-onchain.ts"
   },
   "devDependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",
