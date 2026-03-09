@@ -312,6 +312,7 @@
 | 295 | BUG | MEDIUM | E2E 온체인 테스트 기본 포트 3000 — 데몬 기본 포트 3100과 불일치 | v31.8 | FIXED | 2026-03-09 |
 | 296 | BUG | HIGH | E2E 온체인 테스트가 구버전 네트워크 ID 사용 — v29.5 통일 형식(ethereum-sepolia 등) 미반영 | v31.8 | FIXED | 2026-03-09 |
 | 297 | BUG | MEDIUM | E2E Settings GET 응답 구조 불일치 — 플랫 키 접근 vs 카테고리별 중첩 객체 응답 | v31.8 | FIXED | 2026-03-09 |
+| 298 | BUG | HIGH | E2E 온체인 사전 조건 잔액 체크에 network 파라미터 누락 — EVM 네트워크 전부 FAIL | v31.8 | FIXED | 2026-03-09 |
 
 ## Type Legend
 
@@ -324,9 +325,9 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 297
+- **FIXED:** 298
 - **RESOLVED:** 4
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 302
+- **Total:** 303
 

@@ -199,7 +199,7 @@ export class PreconditionChecker {
         balance: string;
         decimals: number;
         symbol: string;
-      }>('/v1/wallet/balance');
+      }>(`/v1/wallet/balance?network=${encodeURIComponent(network)}`);
 
       // Clean up: delete the temporary session
       await this.http.delete(`/v1/sessions/${sessionRes.body.id}`, {
