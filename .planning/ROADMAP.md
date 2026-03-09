@@ -59,12 +59,12 @@ Plans:
   2. EVM DeFi 시나리오(0x Swap, Lido Staking, Aave V3 Lending, Pendle Yield, DCent Swap)에서 에이전트가 swap/stake/supply/trade 후 결과를 확인할 수 있다
   3. 크로스체인 브릿지 시나리오(LI.FI L1->L2, Across L2->L2)에서 에이전트가 브릿지 전송 후 상태를 추적할 수 있다
   4. Hyperliquid Perp/Spot 시나리오에서 에이전트가 주문 생성/취소 후 포지션을 확인할 수 있다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 367-01: Solana DeFi 시나리오 4개 (Jupiter, Jito, Kamino, Drift)
-- [ ] 367-02: EVM DeFi 시나리오 5개 (0x, Lido, Aave, Pendle, DCent)
-- [ ] 367-03: 크로스체인 + Hyperliquid 시나리오 3개 (LI.FI, Across, Hyperliquid)
+- [ ] 367-01-PLAN.md -- Solana DeFi 시나리오 4개 (Jupiter, Jito, Kamino, Drift)
+- [ ] 367-02-PLAN.md -- EVM DeFi 시나리오 5개 (0x, Lido, Aave, Pendle, DCent)
+- [ ] 367-03-PLAN.md -- 크로스체인 + Hyperliquid 시나리오 3개 (LI.FI, Across, Hyperliquid) + _index.md 업데이트
 
 ### Phase 368: 고급 기능 + 관리자 기능 시나리오
 **Goal**: Smart Account/WalletConnect/x402 등 고급 기능과 Admin UI 전체 검증 시나리오가 완비되어 에이전트가 전 기능을 인터랙티브하게 검증할 수 있다
