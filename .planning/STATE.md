@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v31.8
 milestone_name: milestone
 status: executing
-stopped_at: Completed 367-03-PLAN.md (Phase 367 complete)
-last_updated: "2026-03-09T14:44:52.531Z"
-last_activity: 2026-03-09 — Phase 367 complete (3/3 plans)
+stopped_at: Completed 368-03-PLAN.md (Phase 368 complete)
+last_updated: "2026-03-10T00:02:00.000Z"
+last_activity: 2026-03-10 — Phase 368 complete (3/3 plans)
 progress:
   total_phases: 5
-  completed_phases: 3
-  total_plans: 7
-  completed_plans: 7
-  percent: 58
+  completed_phases: 4
+  total_plans: 10
+  completed_plans: 10
+  percent: 80
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-09)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Phase 368 - 고급 기능 + 관리자 기능 시나리오
+**Current focus:** Phase 369 - CI 시나리오 등록 강제
 
 ## Current Position
 
-Phase: 368 (4 of 5) — 고급 기능 + 관리자 기능 시나리오
-Plan: 0 of 3 in current phase
+Phase: 369 (5 of 5) — CI 시나리오 등록 강제
+Plan: 0 of 2 in current phase
 Status: Ready to execute
-Last activity: 2026-03-09 — Phase 367 complete (3/3 plans)
+Last activity: 2026-03-10 — Phase 368 complete (3/3 plans)
 
-Progress: [█████░░░░░] 58%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7
-- Average duration: 2.7 min
-- Total execution time: 0.32 hours
+- Total plans completed: 10
+- Average duration: 2.9 min
+- Total execution time: 0.47 hours
 
 **By Phase:**
 
@@ -46,6 +46,7 @@ Progress: [█████░░░░░] 58%
 | 365 | 2 | 5 min | 2.5 min |
 | 366 | 2 | 6 min | 3 min |
 | 367 | 3 | 9 min | 3 min |
+| 368 | 3 | 9 min | 3 min |
 
 **Recent Trend:**
 - Last 5 plans: 3min, 3min, 3min, 3min, 3min
@@ -69,6 +70,11 @@ Recent decisions affecting current work:
 - DeFi scenario pattern: balance check -> dry-run -> user approval -> execute -> verify position
 - EVM DeFi scenarios recommend Polygon alternative for gas savings where applicable
 - Bridge scenarios include 30-second polling interval for status tracking
+- WalletConnect scenario is signature-only ($0 cost, no execution)
+- x402 scenario gracefully degrades to dry-run when no x402 service available
+- Gas conditional scenario uses dry-run only for logic verification
+- Admin CRUD scenarios include Cleanup section for test data removal
+- DeFi positions use 1% tolerance for interest accrual comparison
 
 ### Pending Todos
 
@@ -80,6 +86,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-09
-Stopped at: Completed 367-03-PLAN.md (Phase 367 complete)
+Last session: 2026-03-10
+Stopped at: Completed 368-03-PLAN.md (Phase 368 complete)
 Resume file: None

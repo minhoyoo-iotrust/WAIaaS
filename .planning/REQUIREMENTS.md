@@ -51,28 +51,28 @@
 
 ### Advanced Feature Scenarios (ADV)
 
-- [ ] **ADV-01**: Smart Account 트랜잭션 시나리오 — UserOp Build → Sign → 실행 확인
-- [ ] **ADV-02**: WalletConnect Owner 승인 시나리오 — 트랜잭션 승인 요청 → Owner 서명
-- [ ] **ADV-03**: x402 결제 시나리오 — x402 지원 서비스에 결제 요청 (가능한 경우)
-- [ ] **ADV-04**: 수신 트랜잭션 감지 시나리오 (mainnet) — 외부 전송 → IncomingTxMonitor 감지
-- [ ] **ADV-05**: 잔액 모니터링 시나리오 — 잔액 변동 알림 발생 확인
-- [ ] **ADV-06**: 가스비 조건부 실행 시나리오 — 가스 상한 설정 → 조건 미충족 시 대기 확인
+- [x] **ADV-01**: Smart Account 트랜잭션 시나리오 — UserOp Build → Sign → 실행 확인
+- [x] **ADV-02**: WalletConnect Owner 승인 시나리오 — 트랜잭션 승인 요청 → Owner 서명
+- [x] **ADV-03**: x402 결제 시나리오 — x402 지원 서비스에 결제 요청 (가능한 경우)
+- [x] **ADV-04**: 수신 트랜잭션 감지 시나리오 (mainnet) — 외부 전송 → IncomingTxMonitor 감지
+- [x] **ADV-05**: 잔액 모니터링 시나리오 — 잔액 변동 알림 발생 확인
+- [x] **ADV-06**: 가스비 조건부 실행 시나리오 — 가스 상한 설정 → 조건 미충족 시 대기 확인
 
 ### Admin Feature Scenarios (ADMIN)
 
-- [ ] **ADMIN-01**: Admin UI 전체 페이지 접근 검증 — 모든 메뉴 URL → HTTP 200 확인
-- [ ] **ADMIN-02**: Admin 인증 시나리오 — 마스터 패스워드로 Admin UI 접근
-- [ ] **ADMIN-03**: Dashboard 정확성 — 실제 지갑 수, 총 잔액, 최근 트랜잭션과 일치 확인
-- [ ] **ADMIN-04**: Admin Settings 반영 — 설정 변경 → 실제 트랜잭션에서 적용 확인
-- [ ] **ADMIN-05**: 정책 관리 플로우 — Admin에서 정책 생성 → dry-run으로 적용 확인
-- [ ] **ADMIN-06**: 지갑 관리 탭 — 실제 온체인 잔액과 Admin UI 표시 잔액 일치
-- [ ] **ADMIN-07**: NFT 탭 — 실제 보유 NFT와 Admin UI 표시 일치 (보유 시)
-- [ ] **ADMIN-08**: DeFi 포지션 탭 — 실제 온체인 포지션과 일치 (포지션 보유 시)
-- [ ] **ADMIN-09**: 알림 설정 + 수신 — 알림 채널 설정 → 트랜잭션 → 실제 알림 수신
-- [ ] **ADMIN-10**: 감사 로그 정확성 — 실행한 작업들의 감사 로그가 정확히 기록
-- [ ] **ADMIN-11**: 백업/복원 무결성 — 백업 생성 → 복원 → 데이터 정확히 복원
-- [ ] **ADMIN-12**: 토큰 레지스트리 — 커스텀 토큰 등록 → 잔액 조회에 반영
-- [ ] **ADMIN-13**: 통계/모니터링 — Stats API 정확성 확인
+- [x] **ADMIN-01**: Admin UI 전체 페이지 접근 검증 — 모든 메뉴 URL → HTTP 200 확인
+- [x] **ADMIN-02**: Admin 인증 시나리오 — 마스터 패스워드로 Admin UI 접근
+- [x] **ADMIN-03**: Dashboard 정확성 — 실제 지갑 수, 총 잔액, 최근 트랜잭션과 일치 확인
+- [x] **ADMIN-04**: Admin Settings 반영 — 설정 변경 → 실제 트랜잭션에서 적용 확인
+- [x] **ADMIN-05**: 정책 관리 플로우 — Admin에서 정책 생성 → dry-run으로 적용 확인
+- [x] **ADMIN-06**: 지갑 관리 탭 — 실제 온체인 잔액과 Admin UI 표시 잔액 일치
+- [x] **ADMIN-07**: NFT 탭 — 실제 보유 NFT와 Admin UI 표시 일치 (보유 시)
+- [x] **ADMIN-08**: DeFi 포지션 탭 — 실제 온체인 포지션과 일치 (포지션 보유 시)
+- [x] **ADMIN-09**: 알림 설정 + 수신 — 알림 채널 설정 → 트랜잭션 → 실제 알림 수신
+- [x] **ADMIN-10**: 감사 로그 정확성 — 실행한 작업들의 감사 로그가 정확히 기록
+- [x] **ADMIN-11**: 백업/복원 무결성 — 백업 생성 → 복원 → 데이터 정확히 복원
+- [x] **ADMIN-12**: 토큰 레지스트리 — 커스텀 토큰 등록 → 잔액 조회에 반영
+- [x] **ADMIN-13**: 통계/모니터링 — Stats API 정확성 확인
 
 ### CI Enforcement (CI)
 
@@ -130,25 +130,25 @@ None — 전체 범위가 이번 마일스톤에 포함.
 | DEFI-10 | Phase 367 | Complete |
 | DEFI-11 | Phase 367 | Complete |
 | DEFI-12 | Phase 367 | Complete |
-| ADV-01 | Phase 368 | Pending |
-| ADV-02 | Phase 368 | Pending |
-| ADV-03 | Phase 368 | Pending |
-| ADV-04 | Phase 368 | Pending |
-| ADV-05 | Phase 368 | Pending |
-| ADV-06 | Phase 368 | Pending |
-| ADMIN-01 | Phase 368 | Pending |
-| ADMIN-02 | Phase 368 | Pending |
-| ADMIN-03 | Phase 368 | Pending |
-| ADMIN-04 | Phase 368 | Pending |
-| ADMIN-05 | Phase 368 | Pending |
-| ADMIN-06 | Phase 368 | Pending |
-| ADMIN-07 | Phase 368 | Pending |
-| ADMIN-08 | Phase 368 | Pending |
-| ADMIN-09 | Phase 368 | Pending |
-| ADMIN-10 | Phase 368 | Pending |
-| ADMIN-11 | Phase 368 | Pending |
-| ADMIN-12 | Phase 368 | Pending |
-| ADMIN-13 | Phase 368 | Pending |
+| ADV-01 | Phase 368 | Complete |
+| ADV-02 | Phase 368 | Complete |
+| ADV-03 | Phase 368 | Complete |
+| ADV-04 | Phase 368 | Complete |
+| ADV-05 | Phase 368 | Complete |
+| ADV-06 | Phase 368 | Complete |
+| ADMIN-01 | Phase 368 | Complete |
+| ADMIN-02 | Phase 368 | Complete |
+| ADMIN-03 | Phase 368 | Complete |
+| ADMIN-04 | Phase 368 | Complete |
+| ADMIN-05 | Phase 368 | Complete |
+| ADMIN-06 | Phase 368 | Complete |
+| ADMIN-07 | Phase 368 | Complete |
+| ADMIN-08 | Phase 368 | Complete |
+| ADMIN-09 | Phase 368 | Complete |
+| ADMIN-10 | Phase 368 | Complete |
+| ADMIN-11 | Phase 368 | Complete |
+| ADMIN-12 | Phase 368 | Complete |
+| ADMIN-13 | Phase 368 | Complete |
 | CI-01 | Phase 369 | Pending |
 | CI-02 | Phase 369 | Pending |
 | CI-03 | Phase 369 | Pending |
@@ -162,4 +162,4 @@ None — 전체 범위가 이번 마일스톤에 포함.
 
 ---
 *Requirements defined: 2026-03-09*
-*Last updated: 2026-03-09 after roadmap creation*
+*Last updated: 2026-03-10 after Phase 368 completion*
