@@ -49,21 +49,20 @@ interface OnchainRequirement {
 
 /** Default minimum balance requirements per network. */
 const DEFAULT_REQUIREMENTS: OnchainRequirement[] = [
-  { network: 'sepolia', chain: 'ethereum', minBalance: '10000000000000000', symbol: 'ETH', decimals: 18 },
-  { network: 'holesky', chain: 'ethereum', minBalance: '10000000000000000', symbol: 'ETH', decimals: 18 },
-  { network: 'devnet', chain: 'solana', minBalance: '500000000', symbol: 'SOL', decimals: 9 },
+  { network: 'ethereum-sepolia', chain: 'ethereum', minBalance: '10000000000000000', symbol: 'ETH', decimals: 18 },
+  { network: 'solana-devnet', chain: 'solana', minBalance: '500000000', symbol: 'SOL', decimals: 9 },
 ];
 
 /** Protocol -> required networks mapping. */
 const PROTOCOL_NETWORK_MAP: Record<string, string[]> = {
-  transfer: ['sepolia', 'devnet'],
-  swap: ['sepolia'],
-  bridge: ['sepolia'],
-  staking: ['holesky'],
-  lending: ['sepolia'],
-  nft: ['sepolia', 'devnet'],
-  perp: ['sepolia'],
-  yield: ['sepolia'],
+  transfer: ['ethereum-sepolia', 'solana-devnet'],
+  swap: ['ethereum-sepolia'],
+  bridge: ['ethereum-sepolia'],
+  staking: ['ethereum-sepolia'],
+  lending: ['ethereum-sepolia'],
+  nft: ['ethereum-sepolia', 'solana-devnet'],
+  perp: ['ethereum-sepolia'],
+  yield: ['ethereum-sepolia'],
 };
 
 /* ------------------------------------------------------------------ */
@@ -199,7 +198,7 @@ export class PreconditionChecker {
         balance: string;
         decimals: number;
         symbol: string;
-      }>('/v1/wallet/balance');
+      }>(`/v1/wallet/balance?network=${encodeURIComponent(network)}`);
 
       // Clean up: delete the temporary session
       await this.http.delete(`/v1/sessions/${sessionRes.body.id}`, {

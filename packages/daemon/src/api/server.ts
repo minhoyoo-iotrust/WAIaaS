@@ -229,7 +229,17 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
   if (deps.masterPasswordHash !== undefined || deps.passwordRef) {
     const masterAuthForOwner = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash, passwordRef: deps.passwordRef, sqlite: deps.sqlite });
     app.use('/v1/wallets/:id/owner', masterAuthForOwner);
-    app.use('/v1/wallets/:id/networks', masterAuthForOwner);
+    // dual-auth for /v1/wallets/:id/networks: GET with sessionAuth (agent SDK), mutation with masterAuth
+    app.use('/v1/wallets/:id/networks', async (c, next) => {
+      if (c.req.method === 'GET') {
+        const authHeader = c.req.header('Authorization');
+        if (authHeader?.startsWith('Bearer wai_sess_')) {
+          await next();
+          return;
+        }
+      }
+      return masterAuthForOwner(c, next);
+    });
     app.use('/v1/wallets/:id/nfts', masterAuthForOwner);
     app.use('/v1/wallets/:id/nfts/*', masterAuthForOwner);
     // dual-auth for PUT /v1/wallets/:id/provider: sessionAuth (agent self-service) or masterAuth (admin)
@@ -255,6 +265,16 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     // sessionAuth for session renewal (uses own token)
     app.use('/v1/sessions/:id/renew', sessionAuth);
     app.use('/v1/wallet/*', sessionAuth);
+    // sessionAuth for GET /v1/wallets/:id/networks (dual-auth: agent SDK read)
+    app.use('/v1/wallets/:id/networks', async (c, next) => {
+      if (c.req.method === 'GET') {
+        const authHeader = c.req.header('Authorization');
+        if (authHeader?.startsWith('Bearer wai_sess_')) {
+          return sessionAuth(c, next);
+        }
+      }
+      await next();
+    });
     // sessionAuth for PUT /v1/wallets/:id/provider (dual-auth: agent self-service)
     app.use('/v1/wallets/:id/provider', async (c, next) => {
       const authHeader = c.req.header('Authorization');

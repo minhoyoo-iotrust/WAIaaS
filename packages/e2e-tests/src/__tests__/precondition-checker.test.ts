@@ -126,17 +126,16 @@ describe.skipIf(!!skipReason)('PreconditionChecker', { timeout: 60_000 }, () => 
     for (const check of balanceChecks) {
       expect(check.name).toContain('sepolia');
     }
-    // Should NOT have holesky or devnet balance checks
-    const holeskyChecks = report.checks.filter((c) => c.name.includes('holesky'));
-    expect(holeskyChecks.length).toBe(0);
+    // Should NOT have devnet balance checks
+    const devnetChecks = report.checks.filter((c) => c.name.includes('devnet'));
+    expect(devnetChecks.length).toBe(0);
   });
 
   it('runAll with protocol filter checks only protocol-related networks', async () => {
     const checker = new PreconditionChecker(baseUrl, masterPassword);
     const report = await checker.runAll({ protocols: ['staking'] });
-    // Staking maps to holesky only — should not have devnet
+    // Staking maps to ethereum-sepolia — should not have devnet
     const walletChecks = report.checks.filter((c) => c.name.includes('wallet'));
-    const balanceChecks = report.checks.filter((c) => c.name.includes('balance'));
     // Staking only needs ethereum chain
     const evmWallet = walletChecks.find((c) => c.name.includes('ethereum'));
     expect(evmWallet).toBeDefined();

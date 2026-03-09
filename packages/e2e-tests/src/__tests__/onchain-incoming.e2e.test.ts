@@ -18,7 +18,7 @@ import { shouldSkipNetwork } from '../helpers/onchain-skip.js';
 // Import scenario registrations (side-effect)
 import '../scenarios/onchain-incoming.js';
 
-const DAEMON_URL = process.env.WAIAAS_E2E_DAEMON_URL ?? 'http://127.0.0.1:3000';
+const DAEMON_URL = process.env.WAIAAS_E2E_DAEMON_URL ?? 'http://127.0.0.1:3100';
 const MASTER_PASSWORD = process.env.WAIAAS_E2E_MASTER_PASSWORD ?? 'e2e-test-password-12345';
 
 interface WalletInfo {
@@ -54,7 +54,7 @@ afterAll(async () => {
 }, 10_000);
 
 describe('incoming-tx-detection', () => {
-  it.skipIf(shouldSkipNetwork('sepolia'))(
+  it.skipIf(shouldSkipNetwork('ethereum-sepolia'))(
     'detects incoming ETH after self-transfer on Sepolia',
     async () => {
       expect(evmWallet).toBeTruthy();
@@ -67,7 +67,7 @@ describe('incoming-tx-detection', () => {
           type: 'TRANSFER',
           to: evmWallet!.publicKey,
           amount: '1',
-          network: 'sepolia',
+          network: 'ethereum-sepolia',
         },
       );
       expect(sendRes.status).toBe(201);
@@ -80,10 +80,10 @@ describe('incoming-tx-detection', () => {
         const { status, body } = await session!.http.get<{
           id: string;
           status: string;
-          txId?: string;
+          txHash?: string;
         }>(`/v1/transactions/${sendRes.body.id}`);
         if (status === 200 && (body.status === 'CONFIRMED' || body.status === 'COMPLETED')) {
-          txHash = body.txId;
+          txHash = body.txHash;
           break;
         }
         if (status === 200 && body.status === 'FAILED') {

@@ -37,8 +37,8 @@ describe('parseCliFilters', () => {
   });
 
   it('ignores unknown flags', () => {
-    const filter = parseCliFilters(['--verbose', '--network', 'holesky', '--debug']);
-    expect(filter.networks).toEqual(['holesky']);
+    const filter = parseCliFilters(['--verbose', '--network', 'sepolia', '--debug']);
+    expect(filter.networks).toEqual(['sepolia']);
     expect(filter.protocols).toBeUndefined();
   });
 });

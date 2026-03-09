@@ -14,7 +14,7 @@ registry.register({
   name: 'Hyperliquid Spot Order',
   track: 'onchain',
   category: 'hyperliquid',
-  networks: ['sepolia'],
+  networks: ['ethereum-sepolia'],
   protocols: ['swap'],
   description:
     'Place a limit buy order on Hyperliquid testnet Spot (PURR/USDC), verify ApiDirectResult',
@@ -25,7 +25,7 @@ registry.register({
   name: 'Hyperliquid Perp Order',
   track: 'onchain',
   category: 'hyperliquid',
-  networks: ['sepolia'],
+  networks: ['ethereum-sepolia'],
   protocols: ['perp'],
   description:
     'Place a limit buy order on Hyperliquid testnet Perp (ETH), verify ApiDirectResult',

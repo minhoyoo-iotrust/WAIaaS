@@ -18,7 +18,7 @@ import { shouldSkipNetwork } from '../helpers/onchain-skip.js';
 // Import scenario registrations (side-effect)
 import '../scenarios/onchain-hyperliquid.js';
 
-const DAEMON_URL = process.env.WAIAAS_E2E_DAEMON_URL ?? 'http://127.0.0.1:3000';
+const DAEMON_URL = process.env.WAIAAS_E2E_DAEMON_URL ?? 'http://127.0.0.1:3100';
 const MASTER_PASSWORD = process.env.WAIAAS_E2E_MASTER_PASSWORD ?? 'e2e-test-password-12345';
 const HYPERLIQUID_ENABLED = process.env.WAIAAS_E2E_HYPERLIQUID_ENABLED === 'true';
 
@@ -34,7 +34,7 @@ const adminHeaders = { headers: { 'X-Master-Password': MASTER_PASSWORD } };
 let evmWallet: WalletInfo | undefined;
 let session: SessionManager | undefined;
 
-const skipAll = !HYPERLIQUID_ENABLED || shouldSkipNetwork('sepolia');
+const skipAll = !HYPERLIQUID_ENABLED || shouldSkipNetwork('ethereum-sepolia');
 
 beforeAll(async () => {
   if (skipAll) return;

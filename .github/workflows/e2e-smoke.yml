@@ -39,7 +39,7 @@ jobs:
             VERSION="${{ inputs.version }}"
           else
             # Get latest release tag from GitHub API
-            TAG=$(gh api repos/${{ github.repository }}/releases/latest --jq '.tag_name' 2>/dev/null || echo "")
+            TAG=$(gh api repos/${{ github.repository }}/releases --jq '.[0].tag_name' 2>/dev/null || echo "")
             if [ -z "$TAG" ]; then
               echo "::error::Could not determine release version"
               exit 1
@@ -51,12 +51,17 @@ jobs:
           echo "Testing version: $VERSION"
 
       - name: Build e2e-tests package
-        run: pnpm turbo run build --filter=@waiaas/e2e-tests
+        run: pnpm turbo run build --filter=@waiaas/e2e-tests --filter=@waiaas/push-relay
 
       - name: Install daemon globally
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
+          # Add npm global bin to PATH (pnpm setup only adds PNPM_HOME)
+          NPM_GLOBAL_BIN="$(npm prefix -g)/bin"
+          echo "$NPM_GLOBAL_BIN" >> "$GITHUB_PATH"
+          export PATH="$NPM_GLOBAL_BIN:$PATH"
+
           # Retry with backoff — npm registry propagation may take a few minutes
           MAX_ATTEMPTS=5
           ATTEMPT=1

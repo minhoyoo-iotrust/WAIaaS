@@ -26,8 +26,8 @@ export const providerCoverage: Record<string, string[]> = {
 
   // Providers with dedicated onchain tests
   'hyperliquid': ['onchain-hyperliquid.ts', 'advanced-defi-settings-push-relay.ts'],
-  'lido-staking': ['onchain-staking.ts'],
-  'jito-staking': ['onchain-staking.ts'],
+  'lido-staking': ['advanced-defi-settings-push-relay.ts'],
+  'jito-staking': ['advanced-defi-settings-push-relay.ts'],
 
   // ERC-8004 provider
   'erc8004': ['advanced-x402-erc8004-erc8128.ts'],
@@ -68,7 +68,7 @@ export const routeCoverage: Record<string, string[]> = {
 
   // Chain-specific
   'actions': ['advanced-defi-settings-push-relay.ts'],
-  'staking': ['onchain-staking.ts'],
+  'staking': ['advanced-defi-settings-push-relay.ts'],
   'hyperliquid': ['onchain-hyperliquid.ts'],
   'incoming': ['onchain-incoming.ts'],
   'nfts': ['onchain-nft.ts'],

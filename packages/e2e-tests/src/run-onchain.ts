@@ -5,10 +5,10 @@
  * onchain E2E tests via vitest.
  *
  * Usage:
- *   tsx src/run-onchain.ts [--network sepolia,devnet] [--only swap,staking]
+ *   tsx src/run-onchain.ts [--network ethereum-sepolia,solana-devnet] [--only swap,staking]
  *
  * Environment:
- *   WAIAAS_E2E_DAEMON_URL   - Daemon base URL (default: http://127.0.0.1:3000)
+ *   WAIAAS_E2E_DAEMON_URL   - Daemon base URL (default: http://127.0.0.1:3100)
  *   WAIAAS_E2E_MASTER_PASSWORD - Master password (default: e2e-test-password-12345)
  */
 
@@ -16,7 +16,7 @@ import { execSync } from 'node:child_process';
 import { PreconditionChecker } from './helpers/precondition-checker.js';
 import { parseCliFilters, promptPreconditionAction } from './helpers/precondition-prompt.js';
 
-const DEFAULT_DAEMON_URL = 'http://127.0.0.1:3000';
+const DEFAULT_DAEMON_URL = 'http://127.0.0.1:3100';
 const DEFAULT_MASTER_PASSWORD = 'e2e-test-password-12345';
 
 async function main(): Promise<void> {

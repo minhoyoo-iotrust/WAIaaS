@@ -8,7 +8,6 @@
 |------|------|
 | OPEN | 미처리 — 수정 필요 |
 | FIXED | 수정 완료 — 코드 반영됨 |
-| VERIFIED | 수정 후 검증 완료 |
 | WONTFIX | 수정하지 않음 (의도된 동작 또는 해당 없음) |
 
 ## Active Issues
@@ -261,8 +260,8 @@
 | 244 | BUG | MEDIUM | APPROVAL_CHANNEL_SWITCHED 알림 {txId} 미치환 — vars 대신 details에 전달 | — | FIXED | 2026-03-03 |
 | 245 | BUG | HIGH | Stage4 WcSigningBridge가 비WC 지갑에도 무조건 실행 — 거짓 채널 전환 알림 + DB 오염 | — | FIXED | 2026-03-03 |
 | 246 | BUG | CRITICAL | APPROVAL 티어 승인 후 파이프라인 미재개 — 모든 승인 경로에서 executeFromStage5 호출 누락 | — | FIXED | 2026-03-03 |
-| 247 | MISSING | MEDIUM | 범용 EIP-712 signTypedData API 지원 | v30.9 | RESOLVED | 2026-03-05 |
-| 248 | ENHANCEMENT | MEDIUM | Admin 대시보드 Recent Activity 트랜잭션 금액이 raw 단위로 표시 | v30.9 | RESOLVED | 2026-03-05 |
+| 247 | MISSING | MEDIUM | 범용 EIP-712 signTypedData API 지원 | v30.9 | FIXED | 2026-03-05 |
+| 248 | ENHANCEMENT | MEDIUM | Admin 대시보드 Recent Activity 트랜잭션 금액이 raw 단위로 표시 | v30.9 | FIXED | 2026-03-05 |
 | 249 | BUG | HIGH | Admin UI Smart Account 생성 시 필드명 불일치 (provider→aaProvider 등) — validation 실패 | v30.9 | FIXED | 2026-03-05 |
 | 250 | ENHANCEMENT | MEDIUM | 세션 토큰 재발급(Rotate) 기능 — 메타데이터 유지하며 토큰만 교체, Admin UI 복사 다이얼로그 | — | FIXED | 2026-03-06 |
 | 251 | BUG | HIGH | Smart Account 파이프라인에서 RPC URL 미해석 — adapter private 필드 참조로 전 네트워크 AA 전송 실패 | — | FIXED | 2026-03-06 |
@@ -296,16 +295,25 @@
 | 279 | BUG | CRITICAL | UserOp Sign 라우트 network 이중 replace 버그로 RPC URL 해석 실패 — Sign 100% 불가 | — | FIXED | 2026-03-08 |
 | 280 | BUG | HIGH | HyperEVM RPC 설정 키 미등록 — IncomingTxMonitor 구독 실패 | v31.6 | FIXED | 2026-03-09 |
 | 281 | BUG | HIGH | HyperEVM incoming.wss_url 설정 키 미등록 — IncomingTxMonitor 구독 실패 | — | FIXED | 2026-03-09 |
-| 282 | ENHANCEMENT | HIGH | 네트워크 설정 키 완전성 자동 검증 테스트 — NETWORK_TYPES SSoT 기반 동적 검증 | v31.7 | RESOLVED | 2026-03-09 |
-| 283 | ENHANCEMENT | LOW | README 테스트 배지 자동 업데이트 — 하드코딩 제거, Gist + shields.io endpoint 동적 배지 | v31.7 | RESOLVED | 2026-03-09 |
+| 282 | ENHANCEMENT | HIGH | 네트워크 설정 키 완전성 자동 검증 테스트 — NETWORK_TYPES SSoT 기반 동적 검증 | v31.7 | FIXED | 2026-03-09 |
+| 283 | ENHANCEMENT | LOW | README 테스트 배지 자동 업데이트 — 하드코딩 제거, Gist + shields.io endpoint 동적 배지 | v31.7 | FIXED | 2026-03-09 |
 | 284 | BUG | HIGH | E2E Smoke 워크플로우가 npm publish 전에 실행되어 실패 — workflow_run 전환 필요 | v31.7 | FIXED | 2026-03-09 |
 | 285 | BUG | HIGH | E2E DaemonManager가 E2E_DAEMON_INSTALL_MODE=global 미지원 — CI에서 전 테스트 skip | v31.8 | FIXED | 2026-03-09 |
 | 286 | BUG | MEDIUM | E2E Admin UI 정적 파일 미빌드로 root path 404 — turbo 빌드 의존성 누락 | v31.8 | FIXED | 2026-03-09 |
 | 287 | BUG | HIGH | E2E interface 테스트 API 형식 불일치 — PUT settings body + SDK walletId 미해석 | v31.8 | FIXED | 2026-03-09 |
 | 288 | BUG | MEDIUM | E2E audit-log 테스트 응답 필드 불일치 — items vs data | v31.8 | FIXED | 2026-03-09 |
-| 289 | BUG | HIGH | E2E 스모크 워크플로우가 RC 대신 stable 릴리스를 설치 — /releases/latest가 prerelease 제외 | v31.8 | OPEN | |
-| 290 | BUG | CRITICAL | E2E 스모크 CI에서 npm global bin 경로가 PATH에 없어 waiaas 실행 실패 | v31.8 | OPEN | |
-| 291 | BUG | HIGH | E2E 스모크 CI에서 push-relay 빌드 누락으로 bin.js 미존재 실패 | v31.8 | OPEN | |
+| 289 | BUG | HIGH | E2E 스모크 워크플로우가 RC 대신 stable 릴리스를 설치 — /releases/latest가 prerelease 제외 | v31.8 | FIXED | 2026-03-09 |
+| 290 | BUG | CRITICAL | E2E 스모크 CI에서 npm global bin 경로가 PATH에 없어 waiaas 실행 실패 | v31.8 | FIXED | 2026-03-09 |
+| 291 | BUG | HIGH | E2E 스모크 CI에서 push-relay 빌드 누락으로 bin.js 미존재 실패 | v31.8 | FIXED | 2026-03-09 |
+| 292 | BUG | MEDIUM | E2E Admin UI root path 테스트가 잘못된 경로(/) 사용 — 실제 서빙 경로는 /admin/ | v31.8 | FIXED | 2026-03-09 |
+| 293 | BUG | MEDIUM | E2E Settings PUT 테스트가 잘못된 설정 키(display_currency) 사용 — 실제 키는 display.currency | v31.8 | FIXED | 2026-03-09 |
+| 294 | BUG | HIGH | E2E SDK getWalletInfo 실패 — /v1/wallets/:id/networks GET에 masterAuth 불필요 적용 (미들웨어 모순) | v31.8 | FIXED | 2026-03-09 |
+| 295 | BUG | MEDIUM | E2E 온체인 테스트 기본 포트 3000 — 데몬 기본 포트 3100과 불일치 | v31.8 | FIXED | 2026-03-09 |
+| 296 | BUG | HIGH | E2E 온체인 테스트가 구버전 네트워크 ID 사용 — v29.5 통일 형식(ethereum-sepolia 등) 미반영 | v31.8 | FIXED | 2026-03-09 |
+| 297 | BUG | MEDIUM | E2E Settings GET 응답 구조 불일치 — 플랫 키 접근 vs 카테고리별 중첩 객체 응답 | v31.8 | FIXED | 2026-03-09 |
+| 298 | BUG | HIGH | E2E 온체인 사전 조건 잔액 체크에 network 파라미터 누락 — EVM 네트워크 전부 FAIL | v31.8 | FIXED | 2026-03-09 |
+| 299 | BUG | HIGH | Holesky 테스트넷 종료 — Holesky 참조 제거 + E2E 스테이킹 테스트 제거 | v31.8 | FIXED | 2026-03-09 |
+| 300 | BUG | HIGH | E2E 온체인 전송 테스트 txId 필드명 불일치 — 실제 API는 txHash 반환 | v31.8 | FIXED | 2026-03-09 |
 
 ## Type Legend
 
@@ -317,10 +325,8 @@
 
 ## Summary
 
-- **OPEN:** 3
-- **FIXED:** 286
-- **RESOLVED:** 4
-- **VERIFIED:** 0
+- **OPEN:** 0
+- **FIXED:** 299
 - **WONTFIX:** 1
-- **Total:** 294
+- **Total:** 300
 

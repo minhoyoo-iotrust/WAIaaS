@@ -16,7 +16,7 @@ import { shouldSkipNetwork } from '../helpers/onchain-skip.js';
 // Import scenario registrations (side-effect)
 import '../scenarios/onchain-transfer.js';
 
-const DAEMON_URL = process.env.WAIAAS_E2E_DAEMON_URL ?? 'http://127.0.0.1:3000';
+const DAEMON_URL = process.env.WAIAAS_E2E_DAEMON_URL ?? 'http://127.0.0.1:3100';
 const MASTER_PASSWORD = process.env.WAIAAS_E2E_MASTER_PASSWORD ?? 'e2e-test-password-12345';
 
 // ---- helpers ----
@@ -48,10 +48,10 @@ async function pollTxStatus(
   http: E2EHttpClient,
   txId: string,
   timeoutMs = 60_000,
-): Promise<{ status: string; txId?: string }> {
+): Promise<{ status: string; txHash?: string }> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
-    const { status, body } = await http.get<{ id: string; status: string; txId?: string }>(
+    const { status, body } = await http.get<{ id: string; status: string; txHash?: string }>(
       `/v1/transactions/${txId}`,
     );
     if (status === 200 && (body.status === 'CONFIRMED' || body.status === 'COMPLETED')) {
@@ -103,7 +103,7 @@ afterAll(async () => {
 // ---------------------------------------------------------------------------
 
 describe('eth-transfer', () => {
-  it.skipIf(shouldSkipNetwork('sepolia'))('sends 1 wei ETH to self on Sepolia', async () => {
+  it.skipIf(shouldSkipNetwork('ethereum-sepolia'))('sends 1 wei ETH to self on Sepolia', async () => {
     expect(evmWallet).toBeTruthy();
     expect(evmSession).toBeTruthy();
 
@@ -111,7 +111,7 @@ describe('eth-transfer', () => {
       type: 'TRANSFER',
       to: evmWallet!.publicKey,
       amount: '1',
-      network: 'sepolia',
+      network: 'ethereum-sepolia',
     });
 
     expect(res.status).toBe(201);
@@ -120,8 +120,8 @@ describe('eth-transfer', () => {
     // Poll until confirmed
     const result = await pollTxStatus(evmSession!.http, res.body.id, 90_000);
     expect(['CONFIRMED', 'COMPLETED']).toContain(result.status);
-    expect(result.txId).toBeTruthy();
-    expect(result.txId!.startsWith('0x')).toBe(true);
+    expect(result.txHash).toBeTruthy();
+    expect(result.txHash!.startsWith('0x')).toBe(true);
   });
 });
 
@@ -130,7 +130,7 @@ describe('eth-transfer', () => {
 // ---------------------------------------------------------------------------
 
 describe('sol-transfer', () => {
-  it.skipIf(shouldSkipNetwork('devnet'))('sends 1 lamport SOL to self on Devnet', async () => {
+  it.skipIf(shouldSkipNetwork('solana-devnet'))('sends 1 lamport SOL to self on Devnet', async () => {
     expect(solWallet).toBeTruthy();
     expect(solSession).toBeTruthy();
 
@@ -146,9 +146,9 @@ describe('sol-transfer', () => {
     // Poll until confirmed
     const result = await pollTxStatus(solSession!.http, res.body.id, 60_000);
     expect(['CONFIRMED', 'COMPLETED']).toContain(result.status);
-    expect(result.txId).toBeTruthy();
-    // Solana txId is base58 (alphanumeric, no 0x prefix)
-    expect(result.txId!.length).toBeGreaterThan(30);
+    expect(result.txHash).toBeTruthy();
+    // Solana txHash is base58 (alphanumeric, no 0x prefix)
+    expect(result.txHash!.length).toBeGreaterThan(30);
   });
 });
 
@@ -157,7 +157,7 @@ describe('sol-transfer', () => {
 // ---------------------------------------------------------------------------
 
 describe('erc20-transfer', () => {
-  it.skipIf(shouldSkipNetwork('sepolia'))('sends ERC-20 token to self on Sepolia (or skips)', async () => {
+  it.skipIf(shouldSkipNetwork('ethereum-sepolia'))('sends ERC-20 token to self on Sepolia (or skips)', async () => {
     expect(evmWallet).toBeTruthy();
     expect(evmSession).toBeTruthy();
 
@@ -174,7 +174,7 @@ describe('erc20-transfer', () => {
       to: evmWallet!.publicKey,
       amount: '1',
       token: testToken,
-      network: 'sepolia',
+      network: 'ethereum-sepolia',
     });
 
     // 4xx means no token balance or token not configured -> skip gracefully
@@ -200,7 +200,7 @@ describe('erc20-transfer', () => {
 // ---------------------------------------------------------------------------
 
 describe('spl-transfer', () => {
-  it.skipIf(shouldSkipNetwork('devnet'))('sends SPL token to self on Devnet (or skips)', async () => {
+  it.skipIf(shouldSkipNetwork('solana-devnet'))('sends SPL token to self on Devnet (or skips)', async () => {
     expect(solWallet).toBeTruthy();
     expect(solSession).toBeTruthy();
 

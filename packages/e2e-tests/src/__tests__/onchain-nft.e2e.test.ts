@@ -17,7 +17,7 @@ import { shouldSkipNetwork } from '../helpers/onchain-skip.js';
 // Import scenario registrations (side-effect)
 import '../scenarios/onchain-nft.js';
 
-const DAEMON_URL = process.env.WAIAAS_E2E_DAEMON_URL ?? 'http://127.0.0.1:3000';
+const DAEMON_URL = process.env.WAIAAS_E2E_DAEMON_URL ?? 'http://127.0.0.1:3100';
 const MASTER_PASSWORD = process.env.WAIAAS_E2E_MASTER_PASSWORD ?? 'e2e-test-password-12345';
 
 interface WalletInfo {
@@ -71,10 +71,10 @@ async function pollTxStatus(
   http: E2EHttpClient,
   txId: string,
   timeoutMs = 90_000,
-): Promise<{ status: string; txId?: string }> {
+): Promise<{ status: string; txHash?: string }> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
-    const { status, body } = await http.get<{ id: string; status: string; txId?: string }>(
+    const { status, body } = await http.get<{ id: string; status: string; txHash?: string }>(
       `/v1/transactions/${txId}`,
     );
     if (status === 200 && ['CONFIRMED', 'COMPLETED', 'FAILED'].includes(body.status)) {
@@ -90,7 +90,7 @@ async function pollTxStatus(
 // ---------------------------------------------------------------------------
 
 describe('nft-erc721-transfer', () => {
-  it.skipIf(shouldSkipNetwork('sepolia'))(
+  it.skipIf(shouldSkipNetwork('ethereum-sepolia'))(
     'self-transfers an ERC-721 NFT on Sepolia',
     async () => {
       expect(evmWallet).toBeTruthy();
@@ -112,7 +112,7 @@ describe('nft-erc721-transfer', () => {
             tokenId: erc721.tokenId,
             standard: 'ERC-721',
           },
-          network: 'sepolia',
+          network: 'ethereum-sepolia',
         },
       );
 
@@ -132,7 +132,7 @@ describe('nft-erc721-transfer', () => {
       }
 
       expect(['CONFIRMED', 'COMPLETED']).toContain(result.status);
-      expect(result.txId).toBeTruthy();
+      expect(result.txHash).toBeTruthy();
     },
   );
 });
@@ -142,7 +142,7 @@ describe('nft-erc721-transfer', () => {
 // ---------------------------------------------------------------------------
 
 describe('nft-erc1155-transfer', () => {
-  it.skipIf(shouldSkipNetwork('sepolia'))(
+  it.skipIf(shouldSkipNetwork('ethereum-sepolia'))(
     'self-transfers an ERC-1155 NFT on Sepolia',
     async () => {
       expect(evmWallet).toBeTruthy();
@@ -165,7 +165,7 @@ describe('nft-erc1155-transfer', () => {
             standard: 'ERC-1155',
           },
           amount: '1',
-          network: 'sepolia',
+          network: 'ethereum-sepolia',
         },
       );
 
@@ -184,7 +184,7 @@ describe('nft-erc1155-transfer', () => {
       }
 
       expect(['CONFIRMED', 'COMPLETED']).toContain(result.status);
-      expect(result.txId).toBeTruthy();
+      expect(result.txHash).toBeTruthy();
     },
   );
 });
