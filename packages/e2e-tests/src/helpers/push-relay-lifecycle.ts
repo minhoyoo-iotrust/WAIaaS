@@ -84,7 +84,7 @@ api_key = "e2e-test-api-key"
     const child = fork(binPath, [], {
       env: {
         ...process.env,
-        PUSH_RELAY_CONFIG: join(dataDir, 'config.toml'),
+        RELAY_CONFIG: join(dataDir, 'config.toml'),
       },
       stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
       silent: true,
