@@ -1,6 +1,6 @@
 ---
 title: "Agent UAT Scenario Index"
-updated: "2026-03-09"
+updated: "2026-03-10"
 ---
 
 # Agent UAT Scenario Index
@@ -11,8 +11,8 @@ updated: "2026-03-09"
 | testnet | 8 | Testnet 기능 검증 |
 | mainnet | 6 | Mainnet 전송 검증 |
 | defi | 12 | DeFi 프로토콜 검증 |
-| admin | 0 | Admin UI 검증 |
-| advanced | 0 | 고급 기능 검증 |
+| admin | 13 | Admin UI 검증 |
+| advanced | 6 | 고급 기능 검증 |
 
 ## Categories
 
@@ -54,28 +54,49 @@ updated: "2026-03-09"
 | defi-11 | Hyperliquid Mainnet Perp/Spot | hyperliquid-mainnet | Yes | $0 | medium |
 | defi-12 | DCent Swap Aggregator | ethereum-mainnet | Yes | $5.00 | medium |
 
-### Admin
-_No scenarios yet._
-
 ### Advanced
-_No scenarios yet._
+| ID | Title | Network | Funds | Cost | Risk |
+|----|-------|---------|-------|------|------|
+| advanced-01 | Smart Account UserOp Build/Sign | ethereum-sepolia | Yes | $0.02 | low |
+| advanced-02 | WalletConnect Owner 승인 | ethereum-mainnet | No | $0 | none |
+| advanced-03 | x402 HTTP 결제 | ethereum-mainnet, base-mainnet | Yes | $1.00 | medium |
+| advanced-04 | Mainnet 수신 트랜잭션 감지 | ethereum-mainnet, solana-mainnet | Yes | $0.50 | medium |
+| advanced-05 | 잔액 모니터링 | ethereum-mainnet, solana-mainnet | Yes | $0.50 | medium |
+| advanced-06 | 가스 조건부 실행 | ethereum-mainnet | No | $0 | none |
+
+### Admin
+| ID | Title | Network | Funds | Cost | Risk |
+|----|-------|---------|-------|------|------|
+| admin-01 | Admin UI 전체 페이지 접근 검증 | all | No | $0 | none |
+| admin-02 | Admin 마스터 패스워드 인증 | all | No | $0 | none |
+| admin-03 | Admin Dashboard 데이터 정확성 검증 | all | No | $0 | none |
+| admin-04 | Admin Settings 변경 및 반영 검증 | all | Yes | $0.01 | low |
+| admin-05 | 정책 관리 CRUD 검증 | all | No | $0 | none |
+| admin-06 | Admin 지갑 관리 및 잔액 검증 | ethereum-mainnet, solana-mainnet | No | $0 | none |
+| admin-07 | Admin NFT 탭 검증 | ethereum-mainnet, solana-mainnet | No | $0 | none |
+| admin-08 | Admin DeFi 포지션 탭 검증 | ethereum-mainnet, solana-mainnet | No | $0 | none |
+| admin-09 | Admin 알림 설정 및 수신 검증 | all | Yes | $0.01 | low |
+| admin-10 | Admin 감사 로그 정확성 검증 | all | No | $0 | none |
+| admin-11 | Admin 백업/복원 무결성 검증 | all | No | $0 | low |
+| admin-12 | Admin 토큰 레지스트리 검증 | ethereum-mainnet | No | $0 | none |
+| admin-13 | Admin 통계/모니터링 API 검증 | all | No | $0 | none |
 
 ## Network Index
 | Network | Scenarios |
 |---------|-----------|
-| all | testnet-01 |
-| ethereum-sepolia | testnet-02, testnet-04, testnet-07, testnet-08 |
+| all | testnet-01, admin-01, admin-02, admin-03, admin-04, admin-05, admin-09, admin-10, admin-11, admin-13 |
+| ethereum-sepolia | testnet-02, testnet-04, testnet-07, testnet-08, advanced-01, admin-09 |
 | solana-devnet | testnet-03, testnet-05, testnet-08 |
 | hyperliquid-testnet | testnet-06 |
-| ethereum-mainnet | mainnet-01, mainnet-03, mainnet-06, defi-02, defi-03, defi-05, defi-07, defi-09, defi-12 |
-| solana-mainnet | mainnet-02, mainnet-04, defi-01, defi-06, defi-08, defi-10 |
+| ethereum-mainnet | mainnet-01, mainnet-03, mainnet-06, defi-02, defi-03, defi-05, defi-07, defi-09, defi-12, advanced-02, advanced-03, advanced-04, advanced-05, advanced-06, admin-06, admin-07, admin-08, admin-12 |
+| solana-mainnet | mainnet-02, mainnet-04, defi-01, defi-06, defi-08, defi-10, advanced-04, advanced-05, admin-06, admin-07, admin-08 |
 | polygon-mainnet | mainnet-05, defi-02, defi-07 |
 | arbitrum-mainnet | mainnet-05, defi-03, defi-04 |
-| base-mainnet | mainnet-05, defi-04 |
+| base-mainnet | mainnet-05, defi-04, advanced-03 |
 | hyperliquid-mainnet | defi-11 |
 
 ## Quick Filters
-- **무료 (no funds)**: testnet-01
-- **Low risk**: testnet-02, testnet-03, testnet-04, testnet-05, testnet-07, testnet-08
-- **Medium risk**: testnet-06, mainnet-01, mainnet-02, mainnet-03, mainnet-04, mainnet-05, mainnet-06, defi-01, defi-02, defi-03, defi-04, defi-05, defi-06, defi-07, defi-08, defi-09, defi-10, defi-11, defi-12
+- **무료 (no funds)**: testnet-01, advanced-02, advanced-06, admin-01, admin-02, admin-03, admin-05, admin-06, admin-07, admin-08, admin-10, admin-11, admin-12, admin-13
+- **Low risk**: testnet-02, testnet-03, testnet-04, testnet-05, testnet-07, testnet-08, advanced-01, admin-04, admin-09, admin-11
+- **Medium risk**: testnet-06, mainnet-01, mainnet-02, mainnet-03, mainnet-04, mainnet-05, mainnet-06, defi-01, defi-02, defi-03, defi-04, defi-05, defi-06, defi-07, defi-08, defi-09, defi-10, defi-11, defi-12, advanced-03, advanced-04, advanced-05
 - **High risk**: (none yet)
