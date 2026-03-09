@@ -8,6 +8,17 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
+## Current Milestone: v31.7 E2E 자동 검증 체계
+
+**Goal:** RC 발행 후 수동 기능 검증을 자동화하여, 오프체인 기능은 CI/CD에서 RC publish 시 자동 실행하고, 온체인 기능은 로컬에서 사전 조건 확인 후 자동 테스트하며, 신규 기능 추가 시 E2E 시나리오 등록을 CI로 강제한다.
+
+**Target features:**
+- E2E 테스트 인프라 (packages/e2e-tests/, 데몬/Push Relay 라이프사이클 관리)
+- 오프체인 Smoke 시나리오 (코어: 인증/지갑/세션/정책, 인터페이스: Admin/MCP/SDK/알림, 고급: Smart Account/ERC-8004/8128/DeFi)
+- CI/CD 워크플로우 통합 (e2e-smoke.yml, RC publish 트리거, #282/#283 이슈 해결)
+- 온체인 E2E 시나리오 (사전 조건 체커, testnet 전송/스테이킹/NFT/Hyperliquid)
+- E2E 시나리오 등록 강제 (Provider↔시나리오 매핑, API↔시나리오 매핑, CI fail)
+
 ## Previous Milestone: v31.6 Across Protocol 크로스체인 브릿지 — SHIPPED 2026-03-09
 
 Across Protocol Intent 기반 고속 크로스체인 브릿지 통합. AcrossApiClient(5 REST endpoints) + AcrossBridgeActionProvider(5 actions: quote/execute/status/routes/limits), SpokePool depositV3 via CONTRACT_CALL(ERC-20 approve BATCH + native ETH msg.value), Late-bind quote(Stage 5 fresh /suggested-fees), 2-phase polling status tracker(15s active + 5min monitoring, bridge_status/bridge_metadata reuse), 7 Admin Settings + connect-info + 4 SDK methods + Admin UI + skill file, 110 tests(67 unit + 43 integration), design doc 79, no DB migration, no new npm deps. 5 phases, 8 plans, 33 requirements, 31 commits, 66 files, +8,815 lines.

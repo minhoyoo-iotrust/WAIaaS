@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v31.6
-milestone_name: Across Protocol 크로스체인 브릿지
-status: archived
-stopped_at: Milestone v31.6 archived
-last_updated: "2026-03-09T08:33:00.000Z"
-last_activity: 2026-03-09 — Milestone v31.6 archived
+milestone: v31.7
+milestone_name: E2E 자동 검증 체계
+status: active
+stopped_at: null
+last_updated: "2026-03-09T09:00:00.000Z"
+last_activity: 2026-03-09 — Milestone v31.7 started
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 8
-  completed_plans: 8
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -21,22 +21,20 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-09)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Planning next milestone
+**Current focus:** Milestone v31.7 E2E 자동 검증 체계
 
 ## Current Position
 
-Phase: None — milestone v31.6 archived
-Plan: None
-Status: Ready for next milestone
-Last activity: 2026-03-09 — Milestone v31.6 archived
-
-Progress: [██████████] 100%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-09 — Milestone v31.7 started
 
 ## Accumulated Context
 
 ### Decisions
 
-(Cleared — see milestones/v31.6-ROADMAP.md for v31.6 decisions)
+(None yet — milestone v31.7 starting)
 
 ### Blockers/Concerns
 
@@ -47,6 +45,6 @@ Progress: [██████████] 100%
 
 ## Session Continuity
 
-Last session: 2026-03-09T08:33:00Z
-Stopped at: Milestone v31.6 archived
+Last session: 2026-03-09T09:00:00Z
+Stopped at: Milestone v31.7 started
 Resume file: None
