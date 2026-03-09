@@ -14,3 +14,10 @@ export {
 } from './types.js';
 
 export { E2EReporter } from './reporter.js';
+
+export {
+  DaemonManager,
+  type DaemonInstance,
+  PushRelayManager,
+  type PushRelayInstance,
+} from './helpers/index.js';
