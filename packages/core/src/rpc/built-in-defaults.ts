@@ -1,5 +1,5 @@
 /**
- * Built-in RPC defaults for 13 networks (6 mainnet + 7 testnet).
+ * Built-in RPC defaults for 15 networks (8 mainnet + 7 testnet).
  *
  * These are public, free-tier RPC endpoints. They provide a working
  * out-of-the-box experience without any configuration. Users should
@@ -11,16 +11,17 @@
 /**
  * Built-in default RPC URLs for all supported networks.
  *
- * - **Mainnet (6):** solana-mainnet, ethereum-mainnet, arbitrum-mainnet,
- *   optimism-mainnet, base-mainnet, polygon-mainnet
+ * - **Mainnet (8):** solana-mainnet, ethereum-mainnet, arbitrum-mainnet,
+ *   optimism-mainnet, base-mainnet, polygon-mainnet, hyperevm-mainnet
  * - **Testnet (7):** solana-devnet, solana-testnet, ethereum-sepolia,
- *   arbitrum-sepolia, optimism-sepolia, base-sepolia, polygon-amoy
+ *   arbitrum-sepolia, optimism-sepolia, base-sepolia, polygon-amoy,
+ *   hyperevm-testnet
  *
  * URLs are ordered by priority (index 0 = highest priority).
  * All URLs use https:// protocol.
  */
 export const BUILT_IN_RPC_DEFAULTS: Readonly<Record<string, readonly string[]>> = {
-  // ─── Mainnet (6 networks) ──────────────────────────────────────
+  // ─── Mainnet (8 networks) ──────────────────────────────────────
   'solana-mainnet': [
     'https://api.mainnet-beta.solana.com',
     'https://rpc.ankr.com/solana',
@@ -49,8 +50,11 @@ export const BUILT_IN_RPC_DEFAULTS: Readonly<Record<string, readonly string[]>> 
     'https://polygon-rpc.com',
     'https://polygon.publicnode.com',
   ],
+  'hyperevm-mainnet': [
+    'https://rpc.hyperliquid.xyz/evm',
+  ],
 
-  // ─── Testnet (7 networks) ─────────────────────────────────────
+  // ─── Testnet (8 networks) ─────────────────────────────────────
   'solana-devnet': [
     'https://api.devnet.solana.com',
     'https://rpc.ankr.com/solana_devnet',
@@ -81,5 +85,8 @@ export const BUILT_IN_RPC_DEFAULTS: Readonly<Record<string, readonly string[]>> 
     'https://polygon-amoy.drpc.org',
     'https://rpc-amoy.polygon.technology',
     'https://polygon-amoy-bor-rpc.publicnode.com',
+  ],
+  'hyperevm-testnet': [
+    'https://rpc.hyperliquid-testnet.xyz/evm',
   ],
 } as const;
