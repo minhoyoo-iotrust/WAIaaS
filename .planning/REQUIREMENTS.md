@@ -98,68 +98,68 @@ None — 전체 범위가 이번 마일스톤에 포함.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INFRA-01 | — | Pending |
-| INFRA-02 | — | Pending |
-| INFRA-03 | — | Pending |
-| INFRA-04 | — | Pending |
-| INFRA-05 | — | Pending |
-| INFRA-06 | — | Pending |
-| INFRA-07 | — | Pending |
-| TEST-01 | — | Pending |
-| TEST-02 | — | Pending |
-| TEST-03 | — | Pending |
-| TEST-04 | — | Pending |
-| TEST-05 | — | Pending |
-| TEST-06 | — | Pending |
-| TEST-07 | — | Pending |
-| XFER-01 | — | Pending |
-| XFER-02 | — | Pending |
-| XFER-03 | — | Pending |
-| XFER-04 | — | Pending |
-| XFER-05 | — | Pending |
-| XFER-06 | — | Pending |
-| DEFI-01 | — | Pending |
-| DEFI-02 | — | Pending |
-| DEFI-03 | — | Pending |
-| DEFI-04 | — | Pending |
-| DEFI-05 | — | Pending |
-| DEFI-06 | — | Pending |
-| DEFI-07 | — | Pending |
-| DEFI-08 | — | Pending |
-| DEFI-09 | — | Pending |
-| DEFI-10 | — | Pending |
-| DEFI-11 | — | Pending |
-| DEFI-12 | — | Pending |
-| ADV-01 | — | Pending |
-| ADV-02 | — | Pending |
-| ADV-03 | — | Pending |
-| ADV-04 | — | Pending |
-| ADV-05 | — | Pending |
-| ADV-06 | — | Pending |
-| ADMIN-01 | — | Pending |
-| ADMIN-02 | — | Pending |
-| ADMIN-03 | — | Pending |
-| ADMIN-04 | — | Pending |
-| ADMIN-05 | — | Pending |
-| ADMIN-06 | — | Pending |
-| ADMIN-07 | — | Pending |
-| ADMIN-08 | — | Pending |
-| ADMIN-09 | — | Pending |
-| ADMIN-10 | — | Pending |
-| ADMIN-11 | — | Pending |
-| ADMIN-12 | — | Pending |
-| ADMIN-13 | — | Pending |
-| CI-01 | — | Pending |
-| CI-02 | — | Pending |
-| CI-03 | — | Pending |
-| CI-04 | — | Pending |
-| CI-05 | — | Pending |
+| INFRA-01 | Phase 365 | Pending |
+| INFRA-02 | Phase 365 | Pending |
+| INFRA-03 | Phase 365 | Pending |
+| INFRA-04 | Phase 365 | Pending |
+| INFRA-05 | Phase 365 | Pending |
+| INFRA-06 | Phase 365 | Pending |
+| INFRA-07 | Phase 365 | Pending |
+| TEST-01 | Phase 366 | Pending |
+| TEST-02 | Phase 366 | Pending |
+| TEST-03 | Phase 366 | Pending |
+| TEST-04 | Phase 366 | Pending |
+| TEST-05 | Phase 366 | Pending |
+| TEST-06 | Phase 366 | Pending |
+| TEST-07 | Phase 366 | Pending |
+| XFER-01 | Phase 366 | Pending |
+| XFER-02 | Phase 366 | Pending |
+| XFER-03 | Phase 366 | Pending |
+| XFER-04 | Phase 366 | Pending |
+| XFER-05 | Phase 366 | Pending |
+| XFER-06 | Phase 366 | Pending |
+| DEFI-01 | Phase 367 | Pending |
+| DEFI-02 | Phase 367 | Pending |
+| DEFI-03 | Phase 367 | Pending |
+| DEFI-04 | Phase 367 | Pending |
+| DEFI-05 | Phase 367 | Pending |
+| DEFI-06 | Phase 367 | Pending |
+| DEFI-07 | Phase 367 | Pending |
+| DEFI-08 | Phase 367 | Pending |
+| DEFI-09 | Phase 367 | Pending |
+| DEFI-10 | Phase 367 | Pending |
+| DEFI-11 | Phase 367 | Pending |
+| DEFI-12 | Phase 367 | Pending |
+| ADV-01 | Phase 368 | Pending |
+| ADV-02 | Phase 368 | Pending |
+| ADV-03 | Phase 368 | Pending |
+| ADV-04 | Phase 368 | Pending |
+| ADV-05 | Phase 368 | Pending |
+| ADV-06 | Phase 368 | Pending |
+| ADMIN-01 | Phase 368 | Pending |
+| ADMIN-02 | Phase 368 | Pending |
+| ADMIN-03 | Phase 368 | Pending |
+| ADMIN-04 | Phase 368 | Pending |
+| ADMIN-05 | Phase 368 | Pending |
+| ADMIN-06 | Phase 368 | Pending |
+| ADMIN-07 | Phase 368 | Pending |
+| ADMIN-08 | Phase 368 | Pending |
+| ADMIN-09 | Phase 368 | Pending |
+| ADMIN-10 | Phase 368 | Pending |
+| ADMIN-11 | Phase 368 | Pending |
+| ADMIN-12 | Phase 368 | Pending |
+| ADMIN-13 | Phase 368 | Pending |
+| CI-01 | Phase 369 | Pending |
+| CI-02 | Phase 369 | Pending |
+| CI-03 | Phase 369 | Pending |
+| CI-04 | Phase 369 | Pending |
+| CI-05 | Phase 369 | Pending |
 
 **Coverage:**
-- v1 requirements: 52 total
-- Mapped to phases: 0
-- Unmapped: 52
+- v1 requirements: 56 total
+- Mapped to phases: 56
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-09*
-*Last updated: 2026-03-09 after initial definition*
+*Last updated: 2026-03-09 after roadmap creation*

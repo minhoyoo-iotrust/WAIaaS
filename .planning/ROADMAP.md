@@ -1,163 +1,111 @@
-# Roadmap: WAIaaS
+# Roadmap: WAIaaS v31.8 Agent UAT (메인넷 인터랙티브 검증)
 
-## Milestones
+## Overview
 
-- ✅ **v0.1-v2.0** -- Phases 1-173 (shipped 2026-02-05 ~ 2026-02-18) -- See milestones/ archive
-- ✅ **v2.2-v31.6** -- Phases 178-356 (shipped 2026-02-18 ~ 2026-03-09) -- See milestones/ archive
-- ✅ **v31.7 E2E 자동 검증 체계** -- Phases 357-364 (shipped 2026-03-09) -- See milestones/ archive
+AI 에이전트가 마크다운 시나리오를 읽고 사용자와 인터랙티브하게 메인넷/테스트넷에서 실제 기능을 검증하는 Agent UAT 체계를 구축한다. 시나리오 포맷 정의 + skill 파일부터 시작하여, testnet/mainnet 전송, DeFi 프로토콜, 고급/관리자 기능 시나리오를 순차적으로 작성하고, CI 강제 검증으로 시나리오 누락을 방지한다.
 
 ## Phases
 
-- [x] **Phase 357: E2E 테스트 인프라 및 공통 유틸리티** - 독립 패키지, 데몬/Push Relay 라이프사이클, 세션/HTTP 헬퍼, 시나리오 타입 (completed 2026-03-09)
-- [x] **Phase 358: 오프체인 Smoke -- 코어 기능** - 인증/지갑/세션/정책 CRUD E2E 시나리오 (completed 2026-03-09)
-- [x] **Phase 359: 오프체인 Smoke -- 인터페이스 및 운영** - Admin/MCP/SDK/알림/토큰/connect-info/감사/백업 E2E (completed 2026-03-09)
-- [x] **Phase 360: 오프체인 Smoke -- 고급 프로토콜** - Smart Account/UserOp/Owner Auth/x402/ERC-8004/8128/DeFi/Push Relay E2E (completed 2026-03-09)
-- [x] **Phase 361: CI/CD 워크플로우 통합** - e2e-smoke.yml, RC 트리거, 리포트, 알림, #282/#283 이슈 해결 (completed 2026-03-09)
-- [x] **Phase 362: 온체인 사전 조건 체커** - 데몬/지갑/잔액 확인, 인터랙티브 프롬프트, 네트워크 필터 (completed 2026-03-09)
-- [x] **Phase 363: 온체인 E2E 시나리오** - testnet 전송/토큰/수신감지/스테이킹/Hyperliquid/NFT + skip 처리 (completed 2026-03-09)
-- [x] **Phase 364: E2E 시나리오 등록 강제** - Provider/API 매핑 검증, CI fail, 빈 파일 방지 (completed 2026-03-09)
+**Phase Numbering:**
+- Integer phases (365, 366, ...): Planned milestone work
+- Decimal phases (365.1, 365.2): Urgent insertions (marked with INSERTED)
+
+- [ ] **Phase 365: Agent UAT 시나리오 포맷 및 인프라** - 마크다운 시나리오 포맷 정의, skill 파일, 인덱스, 지갑 선택/dry-run/리포트 인프라
+- [ ] **Phase 366: Testnet + 기본 전송 시나리오** - Testnet 7개 + Mainnet 기본 전송 6개 시나리오 작성
+- [ ] **Phase 367: DeFi 프로토콜 시나리오** - 12개 DeFi 프로토콜(Jupiter, 0x, LI.FI, Across, Lido, Jito, Aave, Kamino, Pendle, Drift, Hyperliquid, DCent) 시나리오 작성
+- [ ] **Phase 368: 고급 기능 + 관리자 기능 시나리오** - Smart Account, WalletConnect, x402, 수신 TX, 가스 조건부 + Admin UI 검증 13개 시나리오
+- [ ] **Phase 369: CI 시나리오 등록 강제** - Provider/시나리오 매핑 검증, 파일 유효성, 인덱스 등록, Admin 라우트 일관성, CI workflow 통합
 
 ## Phase Details
 
-### Phase 357: E2E 테스트 인프라 및 공통 유틸리티
-**Goal**: E2E 테스트를 작성할 수 있는 독립 패키지와 공통 유틸리티가 갖춰져, 이후 시나리오 작성에 즉시 착수할 수 있다
+### Phase 365: Agent UAT 시나리오 포맷 및 인프라
+**Goal**: 에이전트가 시나리오 마크다운을 읽고 인터랙티브하게 실행할 수 있는 기반 구조가 완성된다
 **Depends on**: Nothing (first phase)
 **Requirements**: INFRA-01, INFRA-02, INFRA-03, INFRA-04, INFRA-05, INFRA-06, INFRA-07
 **Success Criteria** (what must be TRUE):
-  1. `pnpm turbo run test --filter=@waiaas/e2e-tests` 명령이 패키지를 인식하고 빈 테스트 스위트가 통과한다
-  2. 테스트 코드에서 데몬을 기동하고 health check 후 종료하는 유틸리티가 동작한다
-  3. Push Relay를 기동하고 health check 후 종료하는 유틸리티가 동작한다
-  4. 마스터 패스워드 설정 + 세션 생성 + REST API 호출이 헬퍼 함수 한 줄로 가능하다
-  5. E2EScenario 타입으로 offchain/onchain 트랙을 구분하여 시나리오를 등록할 수 있고, 테스트 리포트가 통과/실패/스킵을 요약 출력한다
-**Plans:** 3/3 plans complete
+  1. 시나리오 마크다운 파일이 표준 섹션(메타데이터, 사전 조건, 시나리오 단계, 검증 항목, 예상 비용, 실패 시 조치)을 갖추고 있어 에이전트가 파싱할 수 있다
+  2. `/agent-uat` 커맨드로 skill 파일이 트리거되고, help/run/run testnet/run mainnet/run defi/run admin/run transfer/run --network 서브커맨드가 동작한다
+  3. `_index.md`에서 전체 시나리오를 카테고리별/네트워크별로 조회할 수 있다
+  4. 에이전트가 세션 지갑 목록에서 네트워크별 지갑을 자동 선택하고, dry-run으로 예상 가스비를 표시한 후, 실행 완료 시 요약 리포트를 출력한다
+  5. 지갑 CRUD 검증 시나리오가 생성->테스트->삭제를 원자적으로 묶어 기존 지갑을 오염시키지 않는다
+**Plans**: TBD
 
 Plans:
-- [x] 357-01-PLAN.md — 패키지 셋업 + E2EScenario 타입 시스템 + 리포터
-- [x] 357-02-PLAN.md — 데몬/Push Relay 라이프사이클 관리 유틸리티
-- [x] 357-03-PLAN.md — 세션 관리 + HTTP 클라이언트 헬퍼
+- [ ] 365-01: 시나리오 마크다운 포맷 정의 + 템플릿
+- [ ] 365-02: skill 파일 + 인덱스 + 인프라 지침 (지갑 선택, dry-run, 리포트)
 
-### Phase 358: 오프체인 Smoke -- 코어 기능
-**Goal**: WAIaaS의 핵심 기능(인증, 지갑, 세션, 정책)이 E2E 시나리오로 자동 검증된다
-**Depends on**: Phase 357
-**Requirements**: CORE-01, CORE-02, CORE-03, CORE-04
+### Phase 366: Testnet + 기본 전송 시나리오
+**Goal**: Testnet과 Mainnet 기본 전송 시나리오가 완비되어 에이전트가 인터랙티브하게 전송 기능을 검증할 수 있다
+**Depends on**: Phase 365
+**Requirements**: TEST-01, TEST-02, TEST-03, TEST-04, TEST-05, TEST-06, TEST-07, XFER-01, XFER-02, XFER-03, XFER-04, XFER-05, XFER-06
 **Success Criteria** (what must be TRUE):
-  1. 마스터 패스워드 설정 -> 세션 생성 -> 갱신 -> 삭제가 하나의 테스트로 통과한다
-  2. EVM/Solana 지갑 생성 -> 목록 조회 -> 삭제가 테스트로 검증된다
-  3. 다중 지갑 세션에서 지갑 연결/해제 후 session_wallets 상태가 올바르다
-  4. 정책 CRUD(생성/조회/수정/삭제) + dry-run 평가가 테스트로 검증된다
-**Plans:** 2/2 plans complete
+  1. Sepolia ETH/ERC-20 전송과 Devnet SOL/SPL 전송 시나리오를 에이전트가 읽고 자기 전송 후 잔액을 확인할 수 있다
+  2. Testnet Hyperliquid Spot/Perp 주문 생성/취소 시나리오와 NFT 전송(ERC-721/1155) 시나리오가 실행 가능하다
+  3. 수신 트랜잭션 감지 시나리오(Sepolia/Devnet)에서 외부 전송 후 IncomingTxMonitor 감지를 확인할 수 있다
+  4. Mainnet ETH/SOL/ERC-20(USDC)/SPL(USDC)/L2 네이티브/NFT 전송 시나리오가 자기 전송 패턴으로 작성되어 있다
+  5. 모든 시나리오가 표준 포맷을 따르고 `_index.md`에 등록되어 있다
+**Plans**: TBD
 
 Plans:
-- [x] 358-01-PLAN.md — 인증 + 지갑 CRUD + 다중 지갑 세션 E2E
-- [x] 358-02-PLAN.md — 정책 CRUD + dry-run 평가 E2E
+- [ ] 366-01: Testnet 시나리오 7개 작성 (ETH/SOL/ERC-20/SPL/Hyperliquid/NFT/수신TX)
+- [ ] 366-02: Mainnet 기본 전송 시나리오 6개 작성 (ETH/SOL/ERC-20/SPL/L2/NFT)
 
-### Phase 359: 오프체인 Smoke -- 인터페이스 및 운영
-**Goal**: REST API 외 모든 인터페이스(Admin UI, MCP, SDK)와 운영 기능(알림, 토큰, 감사, 백업)이 E2E로 검증된다
-**Depends on**: Phase 358
-**Requirements**: IFACE-01, IFACE-02, IFACE-03, IFACE-04, IFACE-05, IFACE-06, IFACE-07, IFACE-08
+### Phase 367: DeFi 프로토콜 시나리오
+**Goal**: 12개 DeFi 프로토콜 시나리오가 완비되어 에이전트가 각 프로토콜의 핵심 기능을 인터랙티브하게 검증할 수 있다
+**Depends on**: Phase 366
+**Requirements**: DEFI-01, DEFI-02, DEFI-03, DEFI-04, DEFI-05, DEFI-06, DEFI-07, DEFI-08, DEFI-09, DEFI-10, DEFI-11, DEFI-12
 **Success Criteria** (what must be TRUE):
-  1. Admin UI가 HTTP 200으로 접근 가능하고 Settings API CRUD가 동작한다
-  2. MCP 서버에 stdio로 연결하여 tool listing과 기본 도구 호출이 성공한다
-  3. SDK로 세션 생성 -> 지갑 목록 조회 -> connect-info 확인이 동작한다
-  4. 알림 채널 설정 후 이벤트 발행, 토큰 레지스트리 CRUD, 감사 로그 존재, 백업->복원->데이터 일치가 각각 검증된다
-**Plans:** 3/3 plans complete
+  1. Solana DeFi 시나리오(Jupiter Swap, Jito Staking, Kamino Lending, Drift Perp)에서 에이전트가 swap/stake/supply/deposit 후 결과를 확인할 수 있다
+  2. EVM DeFi 시나리오(0x Swap, Lido Staking, Aave V3 Lending, Pendle Yield, DCent Swap)에서 에이전트가 swap/stake/supply/trade 후 결과를 확인할 수 있다
+  3. 크로스체인 브릿지 시나리오(LI.FI L1->L2, Across L2->L2)에서 에이전트가 브릿지 전송 후 상태를 추적할 수 있다
+  4. Hyperliquid Perp/Spot 시나리오에서 에이전트가 주문 생성/취소 후 포지션을 확인할 수 있다
+**Plans**: TBD
 
 Plans:
-- [x] 359-01-PLAN.md — Admin UI + MCP stdio + SDK 인터페이스 E2E
-- [x] 359-02-PLAN.md — 알림 채널 + 토큰 레지스트리 + connect-info E2E
-- [x] 359-03-PLAN.md — 감사 로그 + 백업/복원 E2E
+- [ ] 367-01: Solana DeFi 시나리오 4개 (Jupiter, Jito, Kamino, Drift)
+- [ ] 367-02: EVM DeFi 시나리오 5개 (0x, Lido, Aave, Pendle, DCent)
+- [ ] 367-03: 크로스체인 + Hyperliquid 시나리오 3개 (LI.FI, Across, Hyperliquid)
 
-### Phase 360: 오프체인 Smoke -- 고급 프로토콜
-**Goal**: Smart Account, Owner Auth, x402, ERC-8004/8128, DeFi 설정 등 고급 기능이 E2E로 검증된다
-**Depends on**: Phase 358
-**Requirements**: ADV-01, ADV-02, ADV-03, ADV-04, ADV-05, ADV-06, ADV-07, ADV-08
+### Phase 368: 고급 기능 + 관리자 기능 시나리오
+**Goal**: Smart Account/WalletConnect/x402 등 고급 기능과 Admin UI 전체 검증 시나리오가 완비되어 에이전트가 전 기능을 인터랙티브하게 검증할 수 있다
+**Depends on**: Phase 367
+**Requirements**: ADV-01, ADV-02, ADV-03, ADV-04, ADV-05, ADV-06, ADMIN-01, ADMIN-02, ADMIN-03, ADMIN-04, ADMIN-05, ADMIN-06, ADMIN-07, ADMIN-08, ADMIN-09, ADMIN-10, ADMIN-11, ADMIN-12, ADMIN-13
 **Success Criteria** (what must be TRUE):
-  1. Smart Account 생성/조회 + Lite/Full 모드 판별이 테스트로 확인된다
-  2. UserOp Build/Sign + TTL 만료, Owner Auth 챌린지 발급/서명 검증이 테스트로 확인된다
-  3. x402 설정 CRUD + dry-run, ERC-8004 등록/해제/권한 조회, ERC-8128 서명 생성/검증이 각각 테스트로 확인된다
-  4. DeFi 프로토콜별 Admin Settings CRUD와 Push Relay 디바이스 등록/해제가 테스트로 확인된다
-**Plans:** 3/3 plans complete
+  1. Smart Account UserOp Build/Sign, WalletConnect Owner 승인, x402 결제, 수신 TX 감지(mainnet), 잔액 모니터링, 가스 조건부 실행 시나리오가 각각 독립적으로 실행 가능하다
+  2. Admin UI 전체 페이지 접근(HTTP 200), 마스터 패스워드 인증, Dashboard 정확성, Settings 반영, 정책 관리 플로우가 시나리오로 검증 가능하다
+  3. Admin UI 지갑 잔액/NFT/DeFi 포지션 표시가 온체인 실제 데이터와 일치하는지 확인하는 시나리오가 있다
+  4. 알림 설정+수신, 감사 로그 정확성, 백업/복원, 토큰 레지스트리, 통계/모니터링 검증 시나리오가 있다
+**Plans**: TBD
 
 Plans:
-- [x] 360-01-PLAN.md — Smart Account/UserOp/Owner Auth E2E
-- [x] 360-02-PLAN.md — x402/ERC-8004/ERC-8128 E2E
-- [x] 360-03-PLAN.md — DeFi Settings/Push Relay E2E
+- [ ] 368-01: 고급 기능 시나리오 6개 (Smart Account, WalletConnect, x402, 수신TX, 잔액 모니터링, 가스 조건부)
+- [ ] 368-02: Admin UI 검증 시나리오 전반부 (페이지 접근, 인증, Dashboard, Settings, 정책, 지갑)
+- [ ] 368-03: Admin UI 검증 시나리오 후반부 (NFT, DeFi, 알림, 감사로그, 백업, 토큰, 통계)
 
-### Phase 361: CI/CD 워크플로우 통합
-**Goal**: 오프체인 E2E 테스트가 RC publish 시 자동 실행되고, 실패 시 알림이 전달되며, 기존 이슈(#282, #283)가 해결된다
-**Depends on**: Phase 359, Phase 360
-**Requirements**: CICD-01, CICD-02, CICD-03, CICD-04, CICD-05, CICD-06, CICD-07
+### Phase 369: CI 시나리오 등록 강제
+**Goal**: CI에서 시나리오 누락/무효/미등록/Admin 라우트 불일치를 자동 감지하여 PR 시 차단한다
+**Depends on**: Phase 368
+**Requirements**: CI-01, CI-02, CI-03, CI-04, CI-05
 **Success Criteria** (what must be TRUE):
-  1. e2e-smoke.yml이 release published 이벤트와 workflow_dispatch로 트리거된다
-  2. RC 버전을 npx로 명시적 설치하여 테스트를 실행하고, 결과가 GitHub Actions Summary에 표시된다
-  3. 테스트 실패 시 ntfy 알림 또는 GitHub Issue가 자동 생성된다
-  4. #282 네트워크 설정 키 완전성 검증 스크립트가 CI에서 실행되고, #283 README 배지가 동적 업데이트된다
-**Plans:** 3/3 plans complete
+  1. Action Provider 디렉토리가 존재하면 대응하는 Agent UAT 시나리오 .md 파일이 반드시 존재하며, 없으면 CI가 실패한다
+  2. 시나리오 파일이 필수 섹션(메타데이터, 사전 조건, 시나리오, 검증 항목)을 갖추지 않으면 CI가 실패한다
+  3. `_index.md`에 등록되지 않은 고아 시나리오가 있으면 CI가 실패한다
+  4. Admin UI 메뉴 항목과 라우트 정의가 불일치하면 CI가 실패한다
+**Plans**: TBD
 
 Plans:
-- [x] 361-01-PLAN.md — e2e-smoke.yml 워크플로우 + RC 트리거 + Summary 리포트
-- [x] 361-02-PLAN.md — #282 설정 키 완전성 테스트 + #283 README 배지 동적 업데이트
-- [x] 361-03-PLAN.md — E2E 실패 알림 + CI 통합 + 이슈 상태 업데이트
-
-### Phase 362: 온체인 사전 조건 체커
-**Goal**: 온체인 E2E 실행 전 필요한 사전 조건(데몬, 지갑, 잔액)을 자동으로 확인하고, 부족 시 명확한 리포트를 제공한다
-**Depends on**: Phase 357
-**Requirements**: ONCH-01, ONCH-02, ONCH-03
-**Success Criteria** (what must be TRUE):
-  1. 데몬 접속, 지갑 존재, 네트워크별 잔액을 확인하고 부족한 항목을 리포트한다
-  2. 인터랙티브 프롬프트로 "가능한 것만 실행" 또는 "중단 후 준비" 중 선택할 수 있다
-  3. --network, --only 옵션으로 특정 네트워크/프로토콜만 필터링하여 실행할 수 있다
-**Plans:** 2/2 plans complete
-
-Plans:
-- [x] 362-01-PLAN.md — PreconditionChecker 코어 (데몬/지갑/잔액 체크 + 네트워크 필터)
-- [x] 362-02-PLAN.md — 인터랙티브 프롬프트 + 온체인 러너 진입점
-
-### Phase 363: 온체인 E2E 시나리오
-**Goal**: testnet에서 실제 트랜잭션(전송, 토큰, 스테이킹, DEX, NFT)이 자동으로 실행되고 검증된다
-**Depends on**: Phase 362
-**Requirements**: ONCH-04, ONCH-05, ONCH-06, ONCH-07, ONCH-08, ONCH-09, ONCH-10
-**Success Criteria** (what must be TRUE):
-  1. Sepolia ETH / Devnet SOL 기본 전송과 ERC-20 / SPL 토큰 전송이 성공한다
-  2. IncomingTxMonitor가 수신 트랜잭션을 감지하고 Lido Holesky stake/unstake가 실행된다
-  3. Hyperliquid testnet Spot/Perp 주문과 NFT ERC-721/ERC-1155 전송이 성공한다
-  4. testnet 미지원 프로토콜과 잔액 부족 시나리오는 fail이 아닌 skip으로 처리된다
-**Plans:** 3/3 plans complete
-
-Plans:
-- [x] 363-01-PLAN.md — Skip 유틸리티 + vitest 설정 + ETH/SOL/ERC-20/SPL 전송 E2E
-- [x] 363-02-PLAN.md — 수신 TX 감지 + Lido Staking + Hyperliquid Spot/Perp E2E
-- [x] 363-03-PLAN.md — NFT ERC-721/ERC-1155 전송 E2E
-
-### Phase 364: E2E 시나리오 등록 강제
-**Goal**: 신규 기능(Action Provider, REST API) 추가 시 대응하는 E2E 시나리오가 없으면 CI가 실패하여, 테스트 누락을 구조적으로 방지한다
-**Depends on**: Phase 361
-**Requirements**: ENFORCE-01, ENFORCE-02, ENFORCE-03, ENFORCE-04
-**Success Criteria** (what must be TRUE):
-  1. Action Provider 목록과 E2E 시나리오 매핑을 검증하는 스크립트가 미등록 Provider를 탐지한다
-  2. REST API 엔드포인트와 오프체인 시나리오 매핑을 검증하는 스크립트가 미등록 엔드포인트를 탐지한다
-  3. PR 시 CI에서 검증 스텝이 실행되어 미등록 시나리오가 있으면 즉시 fail한다
-  4. 시나리오 파일에 최소 1개 테스트 케이스가 존재하는지 검증하여 빈 파일을 방지한다
-**Plans:** 2/2 plans complete
-
-Plans:
-- [x] 364-01-PLAN.md — E2E 커버리지 매핑 레지스트리 + 검증 스크립트
-- [x] 364-02-PLAN.md — CI workflow E2E 커버리지 검증 스텝 추가
+- [ ] 369-01: 검증 스크립트 4개 (Provider 매핑, 파일 유효성, 인덱스 등록, Admin 라우트)
+- [ ] 369-02: CI workflow 통합 + 전체 검증
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 357 -> 358 -> 359/360 (parallel) -> 361 -> 362 -> 363 -> 364
-
-Note: Phase 359 and 360 can execute in parallel (both depend on 358 only). Phase 362 can start after 357 (independent of offchain smoke phases).
+Phases execute in numeric order: 365 -> 366 -> 367 -> 368 -> 369
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 357. E2E 테스트 인프라 | 3/3 | Complete    | 2026-03-09 |
-| 358. 오프체인 Smoke -- 코어 | 2/2 | Complete    | 2026-03-09 |
-| 359. 오프체인 Smoke -- 인터페이스 | 3/3 | Complete    | 2026-03-09 |
-| 360. 오프체인 Smoke -- 고급 | 3/3 | Complete    | 2026-03-09 |
-| 361. CI/CD 워크플로우 | 3/3 | Complete    | 2026-03-09 |
-| 362. 온체인 사전 조건 체커 | 2/2 | Complete    | 2026-03-09 |
-| 363. 온체인 E2E 시나리오 | 3/3 | Complete    | 2026-03-09 |
-| 364. E2E 시나리오 등록 강제 | 2/2 | Complete    | 2026-03-09 |
+| 365. Agent UAT 시나리오 포맷 및 인프라 | 0/2 | Not started | - |
+| 366. Testnet + 기본 전송 시나리오 | 0/2 | Not started | - |
+| 367. DeFi 프로토콜 시나리오 | 0/3 | Not started | - |
+| 368. 고급 기능 + 관리자 기능 시나리오 | 0/3 | Not started | - |
+| 369. CI 시나리오 등록 강제 | 0/2 | Not started | - |
