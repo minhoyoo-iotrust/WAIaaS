@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.10.0-rc.19](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.18...v2.10.0-rc.19) (2026-03-09)
+
+
+### Bug Fixes
+
+* use workflow_run trigger for E2E smoke tests ([#284](https://github.com/minhoyoo-iotrust/WAIaaS/issues/284)) ([8d7828e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8d7828ed8c0d617db3e7f421c42871a35a191a72))
+* use workflow_run trigger for E2E smoke tests to avoid race condition ([299bad3](https://github.com/minhoyoo-iotrust/WAIaaS/commit/299bad38eb3786676281724e7c106eed3a6497a7)), closes [#284](https://github.com/minhoyoo-iotrust/WAIaaS/issues/284)
+
 ## [2.10.0-rc.18](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.17...v2.10.0-rc.18) (2026-03-09)
 
 
