@@ -20,4 +20,8 @@ export {
   type DaemonInstance,
   PushRelayManager,
   type PushRelayInstance,
+  E2EHttpClient,
+  type HttpResponse,
+  SessionManager,
+  setupDaemonSession,
 } from './helpers/index.js';
