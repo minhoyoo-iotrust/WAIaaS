@@ -14,7 +14,7 @@ AI 에이전트가 마크다운 시나리오를 읽고 사용자와 인터랙티
 - [x] **Phase 366: Testnet + 기본 전송 시나리오** - Testnet 7개 + Mainnet 기본 전송 6개 시나리오 작성
 - [x] **Phase 367: DeFi 프로토콜 시나리오** - 12개 DeFi 프로토콜(Jupiter, 0x, LI.FI, Across, Lido, Jito, Aave, Kamino, Pendle, Drift, Hyperliquid, DCent) 시나리오 작성 (completed 2026-03-09)
 - [x] **Phase 368: 고급 기능 + 관리자 기능 시나리오** - Smart Account, WalletConnect, x402, 수신 TX, 가스 조건부 + Admin UI 검증 13개 시나리오 (completed 2026-03-10)
-- [ ] **Phase 369: CI 시나리오 등록 강제** - Provider/시나리오 매핑 검증, 파일 유효성, 인덱스 등록, Admin 라우트 일관성, CI workflow 통합
+- [x] **Phase 369: CI 시나리오 등록 강제** - Provider/시나리오 매핑 검증, 파일 유효성, 인덱스 등록, Admin 라우트 일관성, CI workflow 통합 (completed 2026-03-10)
 
 ## Phase Details
 
@@ -108,4 +108,4 @@ Phases execute in numeric order: 365 -> 366 -> 367 -> 368 -> 369
 | 366. Testnet + 기본 전송 시나리오 | 2/2 | Complete    | 2026-03-09 |
 | 367. DeFi 프로토콜 시나리오 | 3/3 | Complete    | 2026-03-09 |
 | 368. 고급 기능 + 관리자 기능 시나리오 | 3/3 | Complete    | 2026-03-09 |
-| 369. CI 시나리오 등록 강제 | 0/2 | Not started | - |
+| 369. CI 시나리오 등록 강제 | 2/2 | Complete    | 2026-03-10 |

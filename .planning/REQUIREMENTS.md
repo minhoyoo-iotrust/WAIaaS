@@ -76,11 +76,11 @@
 
 ### CI Enforcement (CI)
 
-- [ ] **CI-01**: Action Provider ↔ Agent UAT 시나리오 매핑 검증 스크립트 — Provider 디렉토리 존재 시 대응 시나리오 `.md` 파일 확인
-- [ ] **CI-02**: 시나리오 파일 유효성 검증 — 필수 섹션(메타데이터, 사전 조건, 시나리오, 검증 항목) 파싱 확인, 빈 시나리오 방지
-- [ ] **CI-03**: `_index.md`에 시나리오 등록 여부 검증 — 고아 시나리오 방지
-- [ ] **CI-04**: Admin UI 라우트/메뉴 일관성 검증 스크립트 — 메뉴 항목 ↔ 라우트 정의 정적 분석
-- [ ] **CI-05**: CI workflow에 검증 스텝 추가 — PR 시 실행, 미등록 시 CI fail
+- [x] **CI-01**: Action Provider ↔ Agent UAT 시나리오 매핑 검증 스크립트 — Provider 디렉토리 존재 시 대응 시나리오 `.md` 파일 확인
+- [x] **CI-02**: 시나리오 파일 유효성 검증 — 필수 섹션(메타데이터, 사전 조건, 시나리오, 검증 항목) 파싱 확인, 빈 시나리오 방지
+- [x] **CI-03**: `_index.md`에 시나리오 등록 여부 검증 — 고아 시나리오 방지
+- [x] **CI-04**: Admin UI 라우트/메뉴 일관성 검증 스크립트 — 메뉴 항목 ↔ 라우트 정의 정적 분석
+- [x] **CI-05**: CI workflow에 검증 스텝 추가 — PR 시 실행, 미등록 시 CI fail
 
 ## v2 Requirements
 
@@ -149,11 +149,11 @@ None — 전체 범위가 이번 마일스톤에 포함.
 | ADMIN-11 | Phase 368 | Complete |
 | ADMIN-12 | Phase 368 | Complete |
 | ADMIN-13 | Phase 368 | Complete |
-| CI-01 | Phase 369 | Pending |
-| CI-02 | Phase 369 | Pending |
-| CI-03 | Phase 369 | Pending |
-| CI-04 | Phase 369 | Pending |
-| CI-05 | Phase 369 | Pending |
+| CI-01 | Phase 369 | Complete |
+| CI-02 | Phase 369 | Complete |
+| CI-03 | Phase 369 | Complete |
+| CI-04 | Phase 369 | Complete |
+| CI-05 | Phase 369 | Complete |
 
 **Coverage:**
 - v1 requirements: 56 total
@@ -162,4 +162,4 @@ None — 전체 범위가 이번 마일스톤에 포함.
 
 ---
 *Requirements defined: 2026-03-09*
-*Last updated: 2026-03-10 after Phase 368 completion*
+*Last updated: 2026-03-10 after Phase 369 completion — all requirements complete*
