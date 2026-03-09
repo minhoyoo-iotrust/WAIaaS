@@ -19,10 +19,10 @@ Requirements for E2E automated verification system. Each maps to roadmap phases.
 
 ### 오프체인 코어 (CORE)
 
-- [ ] **CORE-01**: 인증 플로우 E2E (마스터 패스워드 설정→세션 생성/갱신/삭제)
-- [ ] **CORE-02**: 지갑 CRUD E2E (EVM/Solana 지갑 생성→목록 조회→삭제)
-- [ ] **CORE-03**: 다중 지갑 세션 E2E (세션에 지갑 연결/해제, session_wallets junction 검증)
-- [ ] **CORE-04**: 정책 CRUD + dry-run 평가 E2E (생성→조회→수정→삭제→dry-run 평가)
+- [x] **CORE-01**: 인증 플로우 E2E (마스터 패스워드 설정→세션 생성/갱신/삭제)
+- [x] **CORE-02**: 지갑 CRUD E2E (EVM/Solana 지갑 생성→목록 조회→삭제)
+- [x] **CORE-03**: 다중 지갑 세션 E2E (세션에 지갑 연결/해제, session_wallets junction 검증)
+- [x] **CORE-04**: 정책 CRUD + dry-run 평가 E2E (생성→조회→수정→삭제→dry-run 평가)
 
 ### 오프체인 인터페이스 (IFACE)
 
@@ -105,10 +105,10 @@ Requirements for E2E automated verification system. Each maps to roadmap phases.
 | INFRA-05 | Phase 357 | Complete |
 | INFRA-06 | Phase 357 | Complete |
 | INFRA-07 | Phase 357 | Complete |
-| CORE-01 | Phase 358 | Pending |
-| CORE-02 | Phase 358 | Pending |
-| CORE-03 | Phase 358 | Pending |
-| CORE-04 | Phase 358 | Pending |
+| CORE-01 | Phase 358 | Complete |
+| CORE-02 | Phase 358 | Complete |
+| CORE-03 | Phase 358 | Complete |
+| CORE-04 | Phase 358 | Complete |
 | IFACE-01 | Phase 359 | Pending |
 | IFACE-02 | Phase 359 | Pending |
 | IFACE-03 | Phase 359 | Pending |

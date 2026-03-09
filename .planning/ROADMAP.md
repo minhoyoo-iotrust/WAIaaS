@@ -9,7 +9,7 @@
 ## Phases
 
 - [x] **Phase 357: E2E 테스트 인프라 및 공통 유틸리티** - 독립 패키지, 데몬/Push Relay 라이프사이클, 세션/HTTP 헬퍼, 시나리오 타입 (completed 2026-03-09)
-- [ ] **Phase 358: 오프체인 Smoke -- 코어 기능** - 인증/지갑/세션/정책 CRUD E2E 시나리오
+- [x] **Phase 358: 오프체인 Smoke -- 코어 기능** - 인증/지갑/세션/정책 CRUD E2E 시나리오 (completed 2026-03-09)
 - [ ] **Phase 359: 오프체인 Smoke -- 인터페이스 및 운영** - Admin/MCP/SDK/알림/토큰/connect-info/감사/백업 E2E
 - [ ] **Phase 360: 오프체인 Smoke -- 고급 프로토콜** - Smart Account/UserOp/Owner Auth/x402/ERC-8004/8128/DeFi/Push Relay E2E
 - [ ] **Phase 361: CI/CD 워크플로우 통합** - e2e-smoke.yml, RC 트리거, 리포트, 알림, #282/#283 이슈 해결
@@ -45,11 +45,11 @@ Plans:
   2. EVM/Solana 지갑 생성 -> 목록 조회 -> 삭제가 테스트로 검증된다
   3. 다중 지갑 세션에서 지갑 연결/해제 후 session_wallets 상태가 올바르다
   4. 정책 CRUD(생성/조회/수정/삭제) + dry-run 평가가 테스트로 검증된다
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
-- [ ] 358-01-PLAN.md — 인증 + 지갑 CRUD + 다중 지갑 세션 E2E
-- [ ] 358-02-PLAN.md — 정책 CRUD + dry-run 평가 E2E
+- [x] 358-01-PLAN.md — 인증 + 지갑 CRUD + 다중 지갑 세션 E2E
+- [x] 358-02-PLAN.md — 정책 CRUD + dry-run 평가 E2E
 
 ### Phase 359: 오프체인 Smoke -- 인터페이스 및 운영
 **Goal**: REST API 외 모든 인터페이스(Admin UI, MCP, SDK)와 운영 기능(알림, 토큰, 감사, 백업)이 E2E로 검증된다
@@ -126,7 +126,7 @@ Note: Phase 359 and 360 can execute in parallel (both depend on 358 only). Phase
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 357. E2E 테스트 인프라 | 3/3 | Complete    | 2026-03-09 |
-| 358. 오프체인 Smoke -- 코어 | 0/2 | Not started | - |
+| 358. 오프체인 Smoke -- 코어 | 2/2 | Complete    | 2026-03-09 |
 | 359. 오프체인 Smoke -- 인터페이스 | 0/? | Not started | - |
 | 360. 오프체인 Smoke -- 고급 | 0/? | Not started | - |
 | 361. CI/CD 워크플로우 | 0/? | Not started | - |

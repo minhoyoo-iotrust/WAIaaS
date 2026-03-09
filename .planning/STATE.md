@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: milestone
 status: completed
-stopped_at: "Completed Phase 357 (3 plans: 357-01, 357-02, 357-03)"
-last_updated: "2026-03-09T06:34:10.123Z"
-last_activity: 2026-03-09 -- Phase 357 complete (3 plans, 7 tests, 14 files)
+stopped_at: "Completed Phase 358 (2 plans: 358-01, 358-02)"
+last_updated: "2026-03-09T06:47:00Z"
+last_activity: 2026-03-09 -- Phase 358 complete (2 plans, 15 tests, 4 files)
 progress:
   total_phases: 8
-  completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
-  percent: 12
+  completed_phases: 2
+  total_plans: 7
+  completed_plans: 7
+  percent: 25
 ---
 
 # Project State
@@ -21,33 +21,34 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-09)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Phase 358 - 오프체인 Smoke -- 코어 기능
+**Current focus:** Phase 358 complete, ready for Phase 359/360
 
 ## Current Position
 
-Phase: 2 of 8 (Phase 358: 오프체인 Smoke -- 코어 기능)
-Plan: 0 of ? in current phase
-Status: Phase 357 complete, ready for Phase 358
-Last activity: 2026-03-09 -- Phase 357 complete (3 plans, 7 tests, 14 files)
+Phase: 3 of 8 (Phase 358 complete, ready for 359/360)
+Plan: 2 of 2 in current phase (complete)
+Status: Phase 358 complete, ready for Phase 359/360 (parallel)
+Last activity: 2026-03-09 -- Phase 358 complete (2 plans, 15 tests, 4 files)
 
-Progress: [#░░░░░░░░░] 12%
+Progress: [##░░░░░░░░] 25%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 5.7min
-- Total execution time: 0.3 hours
+- Total plans completed: 5
+- Average duration: 5.0min
+- Total execution time: 0.4 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 357: E2E 테스트 인프라 | 3/3 | 14min | 4.7min |
+| 358: 오프체인 Smoke -- 코어 | 2/2 | 5min | 2.5min |
 
 **Recent Trend:**
-- Last 3 plans: 4min, 5min, 8min
-- Trend: stable
+- Last 3 plans: 8min, 3min, 2min
+- Trend: accelerating
 
 *Updated after each plan completion*
 
@@ -64,6 +65,10 @@ Recent decisions affecting current work:
 - E2E SessionManager uses dual-client pattern: adminClient (X-Master-Password) + sessionClient (Bearer token)
 - setupDaemonSession creates wallet with createSession:true (no separate master password setup API)
 - E2E tests use token rotation instead of renewal (renewal requires 50% TTL elapsed)
+- chain: 'ethereum' (not 'evm') in ChainTypeEnum
+- GET /v1/wallets returns { items: [...] }, GET /v1/sessions/:id/wallets returns { wallets: [...] }
+- SPENDING_LIMIT is the actual policy type (not DAILY_LIMIT/TRANSACTION_LIMIT)
+- Simulate uses TransactionRequest { type: 'TRANSFER', to, amount } body
 
 ### Pending Todos
 
@@ -76,5 +81,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-09
-Stopped at: Completed Phase 357 (3 plans: 357-01, 357-02, 357-03)
+Stopped at: Completed Phase 358 (2 plans: 358-01, 358-02)
 Resume file: None
