@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v31.6
 milestone_name: Across Protocol 크로스체인 브릿지
-status: completed
-stopped_at: Completed Phase 356 (356-01, 356-02) — Milestone v31.6 complete
-last_updated: "2026-03-08T16:45:15.191Z"
-last_activity: 2026-03-09 — Phase 356 complete (110 tests, 5 test files)
+status: archived
+stopped_at: Milestone v31.6 archived
+last_updated: "2026-03-09T08:33:00.000Z"
+last_activity: 2026-03-09 — Milestone v31.6 archived
 progress:
   total_phases: 5
   completed_phases: 5
@@ -18,48 +18,25 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-08)
+See: .planning/PROJECT.md (updated 2026-03-09)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
-**Current focus:** Milestone v31.6 complete — all 5 phases done
+**Current focus:** Planning next milestone
 
 ## Current Position
 
-Phase: 356 of 356 (Tests + Verification)
-Plan: 2 of 2 in current phase
-Status: Milestone v31.6 complete — all 5 phases, 8 plans done
-Last activity: 2026-03-09 — Phase 356 complete (110 tests, 5 test files)
+Phase: None — milestone v31.6 archived
+Plan: None
+Status: Ready for next milestone
+Last activity: 2026-03-09 — Milestone v31.6 archived
 
 Progress: [██████████] 100%
-
-## Performance Metrics
-
-**Velocity:**
-- Total plans completed: 8
-- Average duration: 5min
-- Total execution time: 0.38 hours
 
 ## Accumulated Context
 
 ### Decisions
 
-- Across SDK 거부: @across-protocol/sdk(ethers.js 의존)과 @across-protocol/app-sdk(frontend 중심) 대신 REST API 직접 호출
-- DB 마이그레이션 불필요: 기존 bridge_status/bridge_metadata 컬럼 재사용 (LI.FI v28.3 선례)
-- 신규 npm 의존성 없음: viem + zod + @waiaas/core 기존 의존성만 사용
-- [Phase 352]: DS-01: REST API direct call (no Across SDK)
-- [Phase 352]: DS-02: bridge_status/bridge_metadata reuse (no DB migration)
-- [Phase 352]: DS-04: Late-bind quote at Stage 5 for fresh quoteTimestamp
-- [Phase 352]: DS-07: outputAmount = inputAmount - totalRelayFee.total (absolute)
-- [Phase 352]: DS-08: 15s active polling (faster than LI.FI 30s)
-- [Phase 353]: Read-only actions (quote/status/routes/limits) return ApiDirectResult to satisfy IActionProvider interface
-- [Phase 353]: approve exact inputAmount, not MaxUint256 (Pitfall 10, WAIaaS security principle)
-- [Phase 353]: Removed .default([]) from Zod schema to fix type inference with ActionApiClient.get<T>
-- [Phase 354]: Tracker name across-bridge (not bridge) to avoid LI.FI collision
-- [Phase 354]: Skip chainId conversion at enrollment; store chain names, tracker handles optional originChainId
-- [Phase 355]: 7 setting keys (not 6): across_bridge_request_timeout_ms referenced by registerBuiltInProviders
-- [Phase 355]: MCP tools auto-exposed via mcpExpose=true (no separate MCP code needed)
-- [Phase 356]: integratorId URL resolution test simplified (URL.resolve drops query params from base)
-- [Phase 356]: viem decodeFunctionData for calldata verification in tests
+(Cleared — see milestones/v31.6-ROADMAP.md for v31.6 decisions)
 
 ### Blockers/Concerns
 
@@ -70,6 +47,6 @@ Progress: [██████████] 100%
 
 ## Session Continuity
 
-Last session: 2026-03-09T01:42:00Z
-Stopped at: Completed Phase 356 (356-01, 356-02) — Milestone v31.6 complete
+Last session: 2026-03-09T08:33:00Z
+Stopped at: Milestone v31.6 archived
 Resume file: None

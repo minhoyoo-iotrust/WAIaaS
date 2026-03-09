@@ -582,6 +582,44 @@
 - Sessions: 1
 - Notable: 12 plans (설계 3 + 구현 9) 완료, ~3시간 총 실행 시간
 
+## Milestone: v31.6 — Across Protocol 크로스체인 브릿지
+
+**Shipped:** 2026-03-09
+**Phases:** 5 | **Plans:** 8 | **Sessions:** 1
+
+### What Was Built
+- Across Protocol 설계 문서(doc 79) — 5 API endpoints, SpokePool depositV3, fee model, 12 design decisions
+- AcrossApiClient(5 REST endpoints) + AcrossBridgeActionProvider(5 actions: quote/execute/status/routes/limits)
+- Late-bind quote pattern — Stage 5 직전 fresh /suggested-fees 재조회로 stale quote 방지
+- 2-phase polling status tracker(15s active + 5min monitoring) — bridge_status/bridge_metadata 재사용
+- 7 Admin Settings + connect-info + 4 SDK methods + Admin UI BUILTIN_PROVIDERS + skill file
+- 110 tests(67 unit + 43 integration) — calldata encoding, pipeline flow, error handling 검증
+
+### What Worked
+- LI.FI(v28.3) 선례 패턴 완전 활용 — bridge_status/bridge_metadata 재사용, IAsyncStatusTracker, bridge enrollment 패턴 모두 기존 코드 참조
+- DB 마이그레이션 0건 + npm 의존성 0건 추가 — 기존 인프라만으로 완전한 브릿지 통합
+- REST API 직접 호출 결정(@across-protocol/sdk ethers.js 의존 회피)이 번들 크기와 의존성 트리 깔끔하게 유지
+- mcpExpose=true 자동 도구 노출 — 별도 MCP 코드 작성 없이 4개 도구 즉시 등록
+
+### What Was Inefficient
+- ROADMAP.md의 352-01 Plan checklist `[ ]` 미갱신 (수동 체크리스트 반복 이슈)
+- SUMMARY.md one_liner 필드 미작성 — gsd-tools summary-extract 자동 추출 불가
+
+### Patterns Established
+- Late-bind quote pattern: 견적 API 응답에 시간 의존적 값이 있을 때 Stage 5 직전 재조회하여 freshness 보장
+- Tracker naming convention: provider별 고유 이름(across-bridge, lifi-bridge, dcent-exchange) 충돌 방지
+
+### Key Lessons
+- Intent 기반 브릿지는 outputAmount 계산이 핵심 — absolute fee 차감 방식이 percentage 방식보다 정확
+- 15s polling이 LI.FI 30s 대비 Across fill 감지에 더 적합 (Relayer 선지급 구조 때문)
+
+### Cost Observations
+- Model mix: 100% opus
+- Sessions: 1
+- Notable: 5 phases in ~2 days, 66 files changed
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -603,6 +641,7 @@
 | v31.2 | 1 | 4 | UserOp Build/Sign API, 64 파일 1.5시간 완료 |
 | v31.3 | 1 | 5 | DCent Swap Aggregator 통합, 110 파일 1일 완료 |
 | v31.4 | 1 | 5 | Hyperliquid 생태계(Perp/Spot/Sub-account), 112 파일 ~3시간 완료 |
+| v31.6 | 1 | 5 | Across Protocol 브릿지, 66 파일 2일 완료 |
 
 ### Cumulative Quality
 
@@ -623,6 +662,7 @@
 | v31.2 | ~6,993 (+63) | maintained | +15 decisions |
 | v31.3 | ~7,109 (+116) | maintained | +17 decisions |
 | v31.4 | ~7,109 (unchanged) | maintained | +27 decisions |
+| v31.6 | ~7,219 (+110) | maintained | +12 decisions |
 
 ### Top Lessons (Verified Across Milestones)
 

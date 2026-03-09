@@ -1,5 +1,25 @@
 # Project Milestones: WAIaaS
 
+## v31.6 Across Protocol 크로스체인 브릿지 (Shipped: 2026-03-09)
+
+**Delivered:** Across Protocol Intent 기반 고속 크로스체인 브릿지를 WAIaaS에 통합. SpokePool depositV3를 기존 CONTRACT_CALL 파이프라인으로 실행하며, 신규 npm 의존성과 DB 마이그레이션 없이 완료.
+
+**Phases completed:** 5 phases (352-356), 8 plans, 33 requirements
+
+**Key accomplishments:**
+- Across Protocol bridge design doc (doc 79) — 5 API endpoints spec, SpokePool depositV3 12 params, fee model, 12 design decisions
+- AcrossApiClient (5 REST endpoints) + AcrossBridgeActionProvider (5 actions: quote/execute/status/routes/limits)
+- Late-bind quote pattern — Stage 5 실행 직전 fresh /suggested-fees 재조회로 stale quote 방지
+- 2-phase polling status tracker (15s active + 5min monitoring) — bridge_status/bridge_metadata 컬럼 재사용 (no DB migration)
+- 전 인터페이스 통합 — 7 Admin Settings keys + connect-info + 4 SDK methods + Admin UI + skill file 업데이트
+- 110 tests (67 unit + 43 integration) — calldata encoding, pipeline flow, error handling, status tracker 검증
+
+**Stats:**
+- 5 phases, 8 plans, 33 requirements, 31 commits
+- 66 files changed, +8,815 / -373 lines, ~259,644 LOC TS
+
+---
+
 ## v31.4 Hyperliquid 생태계 통합 (Shipped: 2026-03-08)
 
 **Delivered:** HyperEVM 체인 지원과 Hyperliquid L1 DEX(Perp/Spot) 거래 + Sub-account 관리를 ApiDirectResult 패턴으로 기존 파이프라인에 통합. EIP-712 서명 기반 off-chain DEX API를 WAIaaS의 6-stage 파이프라인과 정책 엔진에 연결.
