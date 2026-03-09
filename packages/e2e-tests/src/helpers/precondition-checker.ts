@@ -50,7 +50,6 @@ interface OnchainRequirement {
 /** Default minimum balance requirements per network. */
 const DEFAULT_REQUIREMENTS: OnchainRequirement[] = [
   { network: 'ethereum-sepolia', chain: 'ethereum', minBalance: '10000000000000000', symbol: 'ETH', decimals: 18 },
-  { network: 'ethereum-holesky', chain: 'ethereum', minBalance: '10000000000000000', symbol: 'ETH', decimals: 18 },
   { network: 'solana-devnet', chain: 'solana', minBalance: '500000000', symbol: 'SOL', decimals: 9 },
 ];
 
@@ -59,7 +58,7 @@ const PROTOCOL_NETWORK_MAP: Record<string, string[]> = {
   transfer: ['ethereum-sepolia', 'solana-devnet'],
   swap: ['ethereum-sepolia'],
   bridge: ['ethereum-sepolia'],
-  staking: ['ethereum-holesky'],
+  staking: ['ethereum-sepolia'],
   lending: ['ethereum-sepolia'],
   nft: ['ethereum-sepolia', 'solana-devnet'],
   perp: ['ethereum-sepolia'],
