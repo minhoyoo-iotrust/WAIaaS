@@ -13,7 +13,7 @@
 - [x] **Phase 359: 오프체인 Smoke -- 인터페이스 및 운영** - Admin/MCP/SDK/알림/토큰/connect-info/감사/백업 E2E (completed 2026-03-09)
 - [x] **Phase 360: 오프체인 Smoke -- 고급 프로토콜** - Smart Account/UserOp/Owner Auth/x402/ERC-8004/8128/DeFi/Push Relay E2E (completed 2026-03-09)
 - [x] **Phase 361: CI/CD 워크플로우 통합** - e2e-smoke.yml, RC 트리거, 리포트, 알림, #282/#283 이슈 해결 (completed 2026-03-09)
-- [ ] **Phase 362: 온체인 사전 조건 체커** - 데몬/지갑/잔액 확인, 인터랙티브 프롬프트, 네트워크 필터
+- [x] **Phase 362: 온체인 사전 조건 체커** - 데몬/지갑/잔액 확인, 인터랙티브 프롬프트, 네트워크 필터 (completed 2026-03-09)
 - [ ] **Phase 363: 온체인 E2E 시나리오** - testnet 전송/토큰/수신감지/스테이킹/Hyperliquid/NFT + skip 처리
 - [ ] **Phase 364: E2E 시나리오 등록 강제** - Provider/API 매핑 검증, CI fail, 빈 파일 방지
 

@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: milestone
 status: planning
-stopped_at: Completed Phase 362 (온체인 사전 조건 체커)
-last_updated: "2026-03-09T07:57:00Z"
+stopped_at: Completed Phase 362 (onchain precondition checker)
+last_updated: "2026-03-09T07:58:29.034Z"
 last_activity: 2026-03-09 -- Phase 362 complete (2 plans, 21 new tests, PreconditionChecker + interactive prompt + run-onchain)
 progress:
   total_phases: 8
