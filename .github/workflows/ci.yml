@@ -59,6 +59,9 @@ jobs:
         env:
           TURBO_SCM_BASE: ${{ steps.affected-base.outputs.base }}
 
+      - name: E2E Coverage Check
+        run: pnpm verify:e2e-coverage
+
   # Stage 2: PR only - full suite + coverage gate + coverage reports
   stage2:
     if: github.event_name != 'push'
