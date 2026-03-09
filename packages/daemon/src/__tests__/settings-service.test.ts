@@ -432,8 +432,8 @@ describe('SettingsService', () => {
     });
 
     it('has expected number of definitions', () => {
-      // 10 notifications + 13 rpc + 14 security + 1 daemon + 2 walletconnect + 2 oracle + 1 display + 6 autostop + 5 monitoring + 2 telegram + 8 signing_sdk + 7 incoming + 76 actions + 1 policy + 5 gas_condition + 13 rpc_pool + 1 position_tracker + 3 per-rule autostop + 9 erc8004 + 1 policy.default_deny_erc8128_domains + 6 erc8128 + 4 smart_account (pimlico/alchemy api_key + paymaster_policy_id) = 192
-      expect(SETTING_DEFINITIONS.length).toBe(192);
+      // 10 notifications + 15 rpc + 14 security + 1 daemon + 2 walletconnect + 2 oracle + 1 display + 6 autostop + 5 monitoring + 2 telegram + 8 signing_sdk + 7 incoming + 76 actions + 1 policy + 5 gas_condition + 15 rpc_pool + 1 position_tracker + 3 per-rule autostop + 9 erc8004 + 1 policy.default_deny_erc8128_domains + 6 erc8128 + 4 smart_account (pimlico/alchemy api_key + paymaster_policy_id) = 196
+      expect(SETTING_DEFINITIONS.length).toBe(196);
     });
   });
 

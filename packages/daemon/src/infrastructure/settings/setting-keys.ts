@@ -74,7 +74,7 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'notifications.notify_categories', category: 'notifications', configPath: 'notifications.notify_categories', defaultValue: '[]', isCredential: false },
   { key: 'notifications.notify_events', category: 'notifications', configPath: 'notifications.notify_events', defaultValue: '[]', isCredential: false },
 
-  // --- rpc category (Solana 3 + EVM 10) ---
+  // --- rpc category (Solana 3 + EVM 12) ---
   { key: 'rpc.solana_mainnet', category: 'rpc', configPath: 'rpc.solana_mainnet', defaultValue: 'https://api.mainnet-beta.solana.com', isCredential: false },
   { key: 'rpc.solana_devnet', category: 'rpc', configPath: 'rpc.solana_devnet', defaultValue: 'https://api.devnet.solana.com', isCredential: false },
   { key: 'rpc.solana_testnet', category: 'rpc', configPath: 'rpc.solana_testnet', defaultValue: 'https://api.testnet.solana.com', isCredential: false },
@@ -88,6 +88,8 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'rpc.evm_optimism_sepolia', category: 'rpc', configPath: 'rpc.evm_optimism_sepolia', defaultValue: 'https://optimism-sepolia.drpc.org', isCredential: false },
   { key: 'rpc.evm_base_mainnet', category: 'rpc', configPath: 'rpc.evm_base_mainnet', defaultValue: 'https://base.drpc.org', isCredential: false },
   { key: 'rpc.evm_base_sepolia', category: 'rpc', configPath: 'rpc.evm_base_sepolia', defaultValue: 'https://base-sepolia.drpc.org', isCredential: false },
+  { key: 'rpc.evm_hyperevm_mainnet', category: 'rpc', configPath: 'rpc.evm_hyperevm_mainnet', defaultValue: 'https://rpc.hyperliquid.xyz/evm', isCredential: false },
+  { key: 'rpc.evm_hyperevm_testnet', category: 'rpc', configPath: 'rpc.evm_hyperevm_testnet', defaultValue: 'https://rpc.hyperliquid-testnet.xyz/evm', isCredential: false },
 
   // --- security category ---
   { key: 'security.max_sessions_per_wallet', category: 'security', configPath: 'security.max_sessions_per_wallet', defaultValue: '5', isCredential: false },
@@ -254,6 +256,8 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'rpc_pool.base-sepolia', category: 'rpc_pool', configPath: 'rpc_pool.base-sepolia', defaultValue: '[]', isCredential: false },
   { key: 'rpc_pool.polygon-mainnet', category: 'rpc_pool', configPath: 'rpc_pool.polygon-mainnet', defaultValue: '[]', isCredential: false },
   { key: 'rpc_pool.polygon-amoy', category: 'rpc_pool', configPath: 'rpc_pool.polygon-amoy', defaultValue: '[]', isCredential: false },
+  { key: 'rpc_pool.hyperevm-mainnet', category: 'rpc_pool', configPath: 'rpc_pool.hyperevm-mainnet', defaultValue: '[]', isCredential: false },
+  { key: 'rpc_pool.hyperevm-testnet', category: 'rpc_pool', configPath: 'rpc_pool.hyperevm-testnet', defaultValue: '[]', isCredential: false },
 
   // --- position_tracker category (DeFi position sync) ---
   { key: 'position_tracker.enabled', category: 'position_tracker', configPath: 'position_tracker.enabled', defaultValue: 'true', isCredential: false },

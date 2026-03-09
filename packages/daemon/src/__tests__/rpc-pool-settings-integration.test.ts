@@ -29,7 +29,7 @@ import { HotReloadOrchestrator } from '../infrastructure/settings/hot-reload.js'
 
 const TEST_MASTER_PASSWORD = 'test-master-password';
 
-/** All 13 network keys matching BUILT_IN_RPC_DEFAULTS */
+/** All 15 network keys matching BUILT_IN_RPC_DEFAULTS */
 const ALL_NETWORK_KEYS = [
   'solana-mainnet', 'solana-devnet', 'solana-testnet',
   'ethereum-mainnet', 'ethereum-sepolia',
@@ -37,6 +37,7 @@ const ALL_NETWORK_KEYS = [
   'optimism-mainnet', 'optimism-sepolia',
   'base-mainnet', 'base-sepolia',
   'polygon-mainnet', 'polygon-amoy',
+  'hyperevm-mainnet', 'hyperevm-testnet',
 ] as const;
 
 function createTestDb(): { sqlite: DatabaseType; db: BetterSQLite3Database<typeof schema> } {
@@ -58,9 +59,9 @@ describe('rpc_pool.* SettingDefinitions', () => {
     expect((SETTING_CATEGORIES as readonly string[]).includes('rpc_pool')).toBe(true);
   });
 
-  it('13 rpc_pool.* keys are registered in SETTING_DEFINITIONS', () => {
+  it('15 rpc_pool.* keys are registered in SETTING_DEFINITIONS', () => {
     const poolDefs = SETTING_DEFINITIONS.filter((d) => d.category === 'rpc_pool');
-    expect(poolDefs).toHaveLength(13);
+    expect(poolDefs).toHaveLength(15);
 
     const keys = poolDefs.map((d) => d.key);
     for (const network of ALL_NETWORK_KEYS) {

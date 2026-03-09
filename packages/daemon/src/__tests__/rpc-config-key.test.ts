@@ -26,6 +26,8 @@ const EVM_NETWORKS = [
   'optimism-sepolia',
   'base-mainnet',
   'base-sepolia',
+  'hyperevm-mainnet',
+  'hyperevm-testnet',
 ] as const;
 
 // Expected setting keys (without `rpc.` prefix) from setting-keys.ts
@@ -40,6 +42,8 @@ const EXPECTED_EVM_KEYS: Record<string, string> = {
   'optimism-sepolia': 'evm_optimism_sepolia',
   'base-mainnet': 'evm_base_mainnet',
   'base-sepolia': 'evm_base_sepolia',
+  'hyperevm-mainnet': 'evm_hyperevm_mainnet',
+  'hyperevm-testnet': 'evm_hyperevm_testnet',
 };
 
 describe('rpcConfigKey', () => {
