@@ -296,7 +296,8 @@
 | 279 | BUG | CRITICAL | UserOp Sign 라우트 network 이중 replace 버그로 RPC URL 해석 실패 — Sign 100% 불가 | — | FIXED | 2026-03-08 |
 | 280 | BUG | HIGH | HyperEVM RPC 설정 키 미등록 — IncomingTxMonitor 구독 실패 | v31.6 | FIXED | 2026-03-09 |
 | 281 | BUG | HIGH | HyperEVM incoming.wss_url 설정 키 미등록 — IncomingTxMonitor 구독 실패 | — | FIXED | 2026-03-09 |
-| 282 | ENHANCEMENT | HIGH | 네트워크 설정 키 완전성 자동 검증 테스트 — NETWORK_TYPES SSoT 기반 동적 검증 | — | OPEN | — |
+| 282 | ENHANCEMENT | HIGH | 네트워크 설정 키 완전성 자동 검증 테스트 — NETWORK_TYPES SSoT 기반 동적 검증 | v31.7 | RESOLVED | 2026-03-09 |
+| 283 | ENHANCEMENT | LOW | README 테스트 배지 자동 업데이트 — 하드코딩 제거, Gist + shields.io endpoint 동적 배지 | v31.7 | RESOLVED | 2026-03-09 |
 
 ## Type Legend
 
@@ -308,9 +309,9 @@
 
 ## Summary
 
-- **OPEN:** 2
+- **OPEN:** 1
 - **FIXED:** 278
-- **RESOLVED:** 2
+- **RESOLVED:** 4
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 283
+- **Total:** 284

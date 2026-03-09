@@ -79,6 +79,9 @@ jobs:
       - name: Unit Tests - Full
         run: pnpm turbo run test:unit -- --coverage
 
+      - name: Network Setting Keys Completeness (#282)
+        run: pnpm --filter @waiaas/daemon test:unit -- --run src/__tests__/network-setting-keys-completeness.test.ts
+
       - name: Integration Tests
         run: pnpm turbo run test:integration
 
