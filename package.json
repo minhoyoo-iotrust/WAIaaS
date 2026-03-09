@@ -29,6 +29,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "verify:enums": "tsx scripts/verify-enum-ssot.ts",
+    "verify:e2e-coverage": "tsx scripts/verify-e2e-coverage.ts",
     "validate:openapi": "tsx scripts/validate-openapi.ts",
     "test:smoke": "bash scripts/smoke-test-published.sh"
   },
