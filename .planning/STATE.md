@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: milestone
 status: completed
-stopped_at: Completed Phase 363 (onchain E2E scenarios)
-last_updated: "2026-03-09T08:12:28.207Z"
-last_activity: 2026-03-09 -- Phase 363 complete (3 plans, 11 onchain scenarios, skip utility + transfer/incoming/staking/hyperliquid/NFT E2E)
+stopped_at: Completed Phase 364 (E2E scenario enforce)
+last_updated: "2026-03-09T08:21:10.521Z"
+last_activity: 2026-03-09 -- Phase 364 complete (2 plans, coverage map + verify script + CI step)
 progress:
   total_phases: 8
-  completed_phases: 7
-  total_plans: 19
-  completed_plans: 19
-  percent: 87
+  completed_phases: 8
+  total_plans: 21
+  completed_plans: 21
+  percent: 100
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-09)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Phase 364 - E2E 시나리오 등록 강제
+**Current focus:** Milestone v31.7 complete - all 8 phases done
 
 ## Current Position
 
-Phase: 7 of 8 (Phase 363: 온체인 E2E 시나리오) -- COMPLETE
-Plan: 3 of 3 in current phase
-Status: Phase 363 complete, ready for Phase 364
-Last activity: 2026-03-09 -- Phase 363 complete (3 plans, 11 onchain scenarios, skip utility + transfer/incoming/staking/hyperliquid/NFT E2E)
+Phase: 8 of 8 (Phase 364: E2E 시나리오 등록 강제) -- COMPLETE
+Plan: 2 of 2 in current phase
+Status: All phases complete, milestone ready for PR
+Last activity: 2026-03-09 -- Phase 364 complete (2 plans, coverage map + verify script + CI step)
 
-Progress: [########░░] 87%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 19
-- Average duration: 3.7min
-- Total execution time: 1.1 hours
+- Total plans completed: 21
+- Average duration: 3.5min
+- Total execution time: 1.2 hours
 
 **By Phase:**
 
@@ -50,12 +50,14 @@ Progress: [########░░] 87%
 | 361: CI/CD 워크플로우 | 3/3 | 10min | 3.3min |
 | 362: 온체인 사전 조건 체커 | 2/2 | 8min | 4.0min |
 | 363: 온체인 E2E 시나리오 | 3/3 | 8min | 2.7min |
+| 364: E2E 시나리오 등록 강제 | 2/2 | 3min | 1.5min |
 
 **Recent Trend:**
-- Last 5 plans: 5min, 3min, 3min, 3min, 2min
+- Last 5 plans: 3min, 3min, 3min, 2min, 3min
 - Trend: steady
 
 *Updated after each plan completion*
+| Phase 364 P01+02 | 3min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -94,6 +96,8 @@ Recent decisions affecting current work:
 - Onchain tests use 120s timeout, single fork (sequential execution)
 - Token/NFT transfer tests use graceful return (not test.skip) on 4xx
 - Hyperliquid tests gated by WAIAAS_E2E_HYPERLIQUID_ENABLED env
+- [Phase 364]: Fix hints always shown on failure for developer convenience
+- [Phase 364]: E2E coverage check in CI stage1 (not stage2) for fastest feedback
 
 ### Pending Todos
 
@@ -105,6 +109,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-09
-Stopped at: Completed Phase 363 (onchain E2E scenarios)
+Last session: 2026-03-09T08:21:10.517Z
+Stopped at: Completed Phase 364 (E2E scenario enforce)
 Resume file: None

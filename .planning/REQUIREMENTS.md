@@ -71,10 +71,10 @@ Requirements for E2E automated verification system. Each maps to roadmap phases.
 
 ### 시나리오 강제 (ENFORCE)
 
-- [ ] **ENFORCE-01**: Action Provider ↔ E2E 시나리오 매핑 검증 스크립트
-- [ ] **ENFORCE-02**: REST API 엔드포인트 ↔ 오프체인 시나리오 매핑 검증 스크립트
-- [ ] **ENFORCE-03**: CI workflow에 검증 스텝 추가 (PR 시 실행, 미등록 시 즉시 CI fail)
-- [ ] **ENFORCE-04**: 시나리오 파일 내 최소 1개 테스트 케이스 존재 검증 (빈 파일 방지)
+- [x] **ENFORCE-01**: Action Provider ↔ E2E 시나리오 매핑 검증 스크립트
+- [x] **ENFORCE-02**: REST API 엔드포인트 ↔ 오프체인 시나리오 매핑 검증 스크립트
+- [x] **ENFORCE-03**: CI workflow에 검증 스텝 추가 (PR 시 실행, 미등록 시 즉시 CI fail)
+- [x] **ENFORCE-04**: 시나리오 파일 내 최소 1개 테스트 케이스 존재 검증 (빈 파일 방지)
 
 ## Future Requirements
 
@@ -142,10 +142,10 @@ Requirements for E2E automated verification system. Each maps to roadmap phases.
 | ONCH-08 | Phase 363 | Complete |
 | ONCH-09 | Phase 363 | Complete |
 | ONCH-10 | Phase 363 | Complete |
-| ENFORCE-01 | Phase 364 | Pending |
-| ENFORCE-02 | Phase 364 | Pending |
-| ENFORCE-03 | Phase 364 | Pending |
-| ENFORCE-04 | Phase 364 | Pending |
+| ENFORCE-01 | Phase 364 | Complete |
+| ENFORCE-02 | Phase 364 | Complete |
+| ENFORCE-03 | Phase 364 | Complete |
+| ENFORCE-04 | Phase 364 | Complete |
 
 **Coverage:**
 - v31.7 requirements: 47 total

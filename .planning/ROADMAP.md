@@ -15,7 +15,7 @@
 - [x] **Phase 361: CI/CD 워크플로우 통합** - e2e-smoke.yml, RC 트리거, 리포트, 알림, #282/#283 이슈 해결 (completed 2026-03-09)
 - [x] **Phase 362: 온체인 사전 조건 체커** - 데몬/지갑/잔액 확인, 인터랙티브 프롬프트, 네트워크 필터 (completed 2026-03-09)
 - [x] **Phase 363: 온체인 E2E 시나리오** - testnet 전송/토큰/수신감지/스테이킹/Hyperliquid/NFT + skip 처리 (completed 2026-03-09)
-- [ ] **Phase 364: E2E 시나리오 등록 강제** - Provider/API 매핑 검증, CI fail, 빈 파일 방지
+- [x] **Phase 364: E2E 시나리오 등록 강제** - Provider/API 매핑 검증, CI fail, 빈 파일 방지 (completed 2026-03-09)
 
 ## Phase Details
 
@@ -138,7 +138,7 @@ Plans:
   2. REST API 엔드포인트와 오프체인 시나리오 매핑을 검증하는 스크립트가 미등록 엔드포인트를 탐지한다
   3. PR 시 CI에서 검증 스텝이 실행되어 미등록 시나리오가 있으면 즉시 fail한다
   4. 시나리오 파일에 최소 1개 테스트 케이스가 존재하는지 검증하여 빈 파일을 방지한다
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 364-01-PLAN.md — E2E 커버리지 매핑 레지스트리 + 검증 스크립트
@@ -160,4 +160,4 @@ Note: Phase 359 and 360 can execute in parallel (both depend on 358 only). Phase
 | 361. CI/CD 워크플로우 | 3/3 | Complete    | 2026-03-09 |
 | 362. 온체인 사전 조건 체커 | 2/2 | Complete    | 2026-03-09 |
 | 363. 온체인 E2E 시나리오 | 3/3 | Complete    | 2026-03-09 |
-| 364. E2E 시나리오 등록 강제 | 0/2 | Not started | - |
+| 364. E2E 시나리오 등록 강제 | 2/2 | Complete   | 2026-03-09 |
