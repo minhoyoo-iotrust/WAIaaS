@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.10.0-rc.16](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.15...v2.10.0-rc.16) (2026-03-09)
+
+
+### Bug Fixes
+
+* **daemon:** add HyperEVM RPC and rpc_pool setting keys to SETTING_DEFINITIONS ([01ff13d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/01ff13d0b2327438c2a8df2fa94b0d03cc7aa0d2)), closes [#280](https://github.com/minhoyoo-iotrust/WAIaaS/issues/280)
+* **daemon:** add HyperEVM RPC setting keys to SETTING_DEFINITIONS ([145a24c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/145a24c79aae4059ee476ef69ac2788b957f567b))
+* **daemon:** add HyperEVM to BUILT_IN_RPC_DEFAULTS and rpc_pool settings ([f3dd6f7](https://github.com/minhoyoo-iotrust/WAIaaS/commit/f3dd6f75e7f4778a93a0fb13364428d86c8a3968))
+* **issues:** register [#280](https://github.com/minhoyoo-iotrust/WAIaaS/issues/280) HyperEVM RPC setting keys missing from SETTING_DEFINITIONS ([b19e674](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b19e67487ebe5669f06710b7735cd07d996ff7e2))
+
 ## [2.10.0-rc.15](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.14...v2.10.0-rc.15) (2026-03-09)
 
 
