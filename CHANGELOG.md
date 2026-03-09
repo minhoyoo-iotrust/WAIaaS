@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.10.0-rc.20](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.19...v2.10.0-rc.20) (2026-03-09)
+
+
+### Bug Fixes
+
+* support E2E_DAEMON_INSTALL_MODE=global in DaemonManager and PushRelayManager ([b932100](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b9321004fd40417e62f7436d205d2da168fafb57))
+
 ## [2.10.0-rc.19](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.18...v2.10.0-rc.19) (2026-03-09)
 
 
