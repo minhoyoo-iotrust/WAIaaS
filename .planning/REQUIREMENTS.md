@@ -37,14 +37,14 @@ Requirements for E2E automated verification system. Each maps to roadmap phases.
 
 ### 오프체인 고급 (ADV)
 
-- [ ] **ADV-01**: Smart Account 생성/조회 + Lite/Full 모드 확인 E2E
-- [ ] **ADV-02**: UserOp Build/Sign + TTL 만료 확인 E2E
-- [ ] **ADV-03**: Owner 인증 (SIWE/SIWS) 챌린지 발급→서명 검증 E2E (테스트 키 사용)
-- [ ] **ADV-04**: x402 결제 설정 CRUD + dry-run 평가 E2E
-- [ ] **ADV-05**: ERC-8004 에이전트 등록/해제/권한 조회 E2E (오프체인 설정 검증)
-- [ ] **ADV-06**: ERC-8128 서명 생성/검증 E2E (테스트 키 사용)
-- [ ] **ADV-07**: DeFi 프로토콜별 Admin Settings CRUD E2E (slippage, gas limit 등)
-- [ ] **ADV-08**: Push Relay 기동 + 디바이스 등록/해제 E2E (오프체인, mock push)
+- [x] **ADV-01**: Smart Account 생성/조회 + Lite/Full 모드 확인 E2E
+- [x] **ADV-02**: UserOp Build/Sign + TTL 만료 확인 E2E
+- [x] **ADV-03**: Owner 인증 (SIWE/SIWS) 챌린지 발급→서명 검증 E2E (테스트 키 사용)
+- [x] **ADV-04**: x402 결제 설정 CRUD + dry-run 평가 E2E
+- [x] **ADV-05**: ERC-8004 에이전트 등록/해제/권한 조회 E2E (오프체인 설정 검증)
+- [x] **ADV-06**: ERC-8128 서명 생성/검증 E2E (테스트 키 사용)
+- [x] **ADV-07**: DeFi 프로토콜별 Admin Settings CRUD E2E (slippage, gas limit 등)
+- [x] **ADV-08**: Push Relay 기동 + 디바이스 등록/해제 E2E (오프체인, mock push)
 
 ### CI/CD (CICD)
 
@@ -117,14 +117,14 @@ Requirements for E2E automated verification system. Each maps to roadmap phases.
 | IFACE-06 | Phase 359 | Complete |
 | IFACE-07 | Phase 359 | Complete |
 | IFACE-08 | Phase 359 | Complete |
-| ADV-01 | Phase 360 | Pending |
-| ADV-02 | Phase 360 | Pending |
-| ADV-03 | Phase 360 | Pending |
-| ADV-04 | Phase 360 | Pending |
-| ADV-05 | Phase 360 | Pending |
-| ADV-06 | Phase 360 | Pending |
-| ADV-07 | Phase 360 | Pending |
-| ADV-08 | Phase 360 | Pending |
+| ADV-01 | Phase 360 | Complete |
+| ADV-02 | Phase 360 | Complete |
+| ADV-03 | Phase 360 | Complete |
+| ADV-04 | Phase 360 | Complete |
+| ADV-05 | Phase 360 | Complete |
+| ADV-06 | Phase 360 | Complete |
+| ADV-07 | Phase 360 | Complete |
+| ADV-08 | Phase 360 | Complete |
 | CICD-01 | Phase 361 | Pending |
 | CICD-02 | Phase 361 | Pending |
 | CICD-03 | Phase 361 | Pending |
