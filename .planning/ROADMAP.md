@@ -44,11 +44,11 @@ Plans:
   3. 수신 트랜잭션 감지 시나리오(Sepolia/Devnet)에서 외부 전송 후 IncomingTxMonitor 감지를 확인할 수 있다
   4. Mainnet ETH/SOL/ERC-20(USDC)/SPL(USDC)/L2 네이티브/NFT 전송 시나리오가 자기 전송 패턴으로 작성되어 있다
   5. 모든 시나리오가 표준 포맷을 따르고 `_index.md`에 등록되어 있다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 366-01: Testnet 시나리오 7개 작성 (ETH/SOL/ERC-20/SPL/Hyperliquid/NFT/수신TX)
-- [ ] 366-02: Mainnet 기본 전송 시나리오 6개 작성 (ETH/SOL/ERC-20/SPL/L2/NFT)
+- [ ] 366-01-PLAN.md -- Testnet 시나리오 7개 작성 (ETH/SOL/ERC-20/SPL/Hyperliquid/NFT/수신TX)
+- [ ] 366-02-PLAN.md -- Mainnet 기본 전송 시나리오 6개 작성 (ETH/SOL/ERC-20/SPL/L2/NFT) + _index.md 업데이트
 
 ### Phase 367: DeFi 프로토콜 시나리오
 **Goal**: 12개 DeFi 프로토콜 시나리오가 완비되어 에이전트가 각 프로토콜의 핵심 기능을 인터랙티브하게 검증할 수 있다
