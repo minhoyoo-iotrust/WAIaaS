@@ -9,29 +9,29 @@ See: .planning/PROJECT.md (updated 2026-03-09)
 
 ## Current Position
 
-Phase: 365 (1 of 5) — Agent UAT 시나리오 포맷 및 인프라
+Phase: 366 (2 of 5) — Testnet + 기본 전송 시나리오
 Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-03-09 — Roadmap created for v31.8 Agent UAT
+Status: Ready to execute
+Last activity: 2026-03-09 — Phase 365 complete (2/2 plans)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██░░░░░░░░] 17%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: -
-- Total execution time: 0 hours
+- Total plans completed: 2
+- Average duration: 2.5 min
+- Total execution time: 0.08 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 365 | 2 | 5 min | 2.5 min |
 
 **Recent Trend:**
-- Last 5 plans: -
-- Trend: -
+- Last 5 plans: 3min, 2min
+- Trend: stable
 
 *Updated after each plan completion*
 
@@ -42,7 +42,9 @@ Progress: [░░░░░░░░░░] 0%
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
-- None yet.
+- 6 mandatory sections for scenario format: Metadata, Prerequisites, Scenario Steps, Verification, Estimated Cost, Troubleshooting
+- Skill dispatch.kind=prompt for interactive multi-step UAT flows
+- Dry-run cost warning threshold: 2x estimated_cost_usd
 
 ### Pending Todos
 
@@ -55,5 +57,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-09
-Stopped at: Roadmap created, ready to plan Phase 365
+Stopped at: Completed 365-02-PLAN.md (Phase 365 complete)
 Resume file: None

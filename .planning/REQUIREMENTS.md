@@ -7,13 +7,13 @@
 
 ### Scenario Infrastructure (INFRA)
 
-- [ ] **INFRA-01**: Agent UAT 마크다운 시나리오 포맷이 정의되어 있다 (메타데이터, 사전 조건, 시나리오 단계, 검증 항목, 예상 비용, 실패 시 조치 섹션)
-- [ ] **INFRA-02**: `_index.md`가 전체 시나리오 목록을 카테고리별로 그룹핑하고 네트워크별 필터링을 지원한다
-- [ ] **INFRA-03**: `.claude/skills/agent-uat/SKILL.md` skill 파일이 `/agent-uat` 커맨드로 트리거되며, help/run/run testnet/run mainnet/run defi/run admin/run transfer/run --network 서브커맨드를 지원한다
-- [ ] **INFRA-04**: 에이전트가 세션에 연결된 지갑 목록을 조회하고 네트워크별로 자동 선택하여 사용자에게 확인한다
-- [ ] **INFRA-05**: 모든 시나리오에서 dry-run을 먼저 실행하여 예상 가스비를 사용자에게 표시한다
-- [ ] **INFRA-06**: 전체 실행 후 리포트를 출력한다 (실행/스킵/실패 요약, 총 소비 가스비)
-- [ ] **INFRA-07**: 기존 지갑 재사용 원칙을 따르며, 지갑 CRUD 검증 시 생성→테스트→삭제를 원자적으로 묶는다
+- [x] **INFRA-01**: Agent UAT 마크다운 시나리오 포맷이 정의되어 있다 (메타데이터, 사전 조건, 시나리오 단계, 검증 항목, 예상 비용, 실패 시 조치 섹션)
+- [x] **INFRA-02**: `_index.md`가 전체 시나리오 목록을 카테고리별로 그룹핑하고 네트워크별 필터링을 지원한다
+- [x] **INFRA-03**: `.claude/skills/agent-uat/SKILL.md` skill 파일이 `/agent-uat` 커맨드로 트리거되며, help/run/run testnet/run mainnet/run defi/run admin/run transfer/run --network 서브커맨드를 지원한다
+- [x] **INFRA-04**: 에이전트가 세션에 연결된 지갑 목록을 조회하고 네트워크별로 자동 선택하여 사용자에게 확인한다
+- [x] **INFRA-05**: 모든 시나리오에서 dry-run을 먼저 실행하여 예상 가스비를 사용자에게 표시한다
+- [x] **INFRA-06**: 전체 실행 후 리포트를 출력한다 (실행/스킵/실패 요약, 총 소비 가스비)
+- [x] **INFRA-07**: 기존 지갑 재사용 원칙을 따르며, 지갑 CRUD 검증 시 생성→테스트→삭제를 원자적으로 묶는다
 
 ### Testnet Scenarios (TEST)
 
@@ -98,13 +98,13 @@ None — 전체 범위가 이번 마일스톤에 포함.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INFRA-01 | Phase 365 | Pending |
-| INFRA-02 | Phase 365 | Pending |
-| INFRA-03 | Phase 365 | Pending |
-| INFRA-04 | Phase 365 | Pending |
-| INFRA-05 | Phase 365 | Pending |
-| INFRA-06 | Phase 365 | Pending |
-| INFRA-07 | Phase 365 | Pending |
+| INFRA-01 | Phase 365 | Complete |
+| INFRA-02 | Phase 365 | Complete |
+| INFRA-03 | Phase 365 | Complete |
+| INFRA-04 | Phase 365 | Complete |
+| INFRA-05 | Phase 365 | Complete |
+| INFRA-06 | Phase 365 | Complete |
+| INFRA-07 | Phase 365 | Complete |
 | TEST-01 | Phase 366 | Pending |
 | TEST-02 | Phase 366 | Pending |
 | TEST-03 | Phase 366 | Pending |
