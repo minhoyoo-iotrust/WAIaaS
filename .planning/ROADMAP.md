@@ -8,7 +8,7 @@
 
 ## Phases
 
-- [ ] **Phase 357: E2E 테스트 인프라 및 공통 유틸리티** - 독립 패키지, 데몬/Push Relay 라이프사이클, 세션/HTTP 헬퍼, 시나리오 타입
+- [x] **Phase 357: E2E 테스트 인프라 및 공통 유틸리티** - 독립 패키지, 데몬/Push Relay 라이프사이클, 세션/HTTP 헬퍼, 시나리오 타입 (completed 2026-03-09)
 - [ ] **Phase 358: 오프체인 Smoke -- 코어 기능** - 인증/지갑/세션/정책 CRUD E2E 시나리오
 - [ ] **Phase 359: 오프체인 Smoke -- 인터페이스 및 운영** - Admin/MCP/SDK/알림/토큰/connect-info/감사/백업 E2E
 - [ ] **Phase 360: 오프체인 Smoke -- 고급 프로토콜** - Smart Account/UserOp/Owner Auth/x402/ERC-8004/8128/DeFi/Push Relay E2E
@@ -29,7 +29,7 @@
   3. Push Relay를 기동하고 health check 후 종료하는 유틸리티가 동작한다
   4. 마스터 패스워드 설정 + 세션 생성 + REST API 호출이 헬퍼 함수 한 줄로 가능하다
   5. E2EScenario 타입으로 offchain/onchain 트랙을 구분하여 시나리오를 등록할 수 있고, 테스트 리포트가 통과/실패/스킵을 요약 출력한다
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 
 Plans:
 - [ ] 357-01-PLAN.md — 패키지 셋업 + E2EScenario 타입 시스템 + 리포터
@@ -121,7 +121,7 @@ Note: Phase 359 and 360 can execute in parallel (both depend on 358 only). Phase
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 357. E2E 테스트 인프라 | 3/3 | Complete | 2026-03-09 |
+| 357. E2E 테스트 인프라 | 3/3 | Complete    | 2026-03-09 |
 | 358. 오프체인 Smoke -- 코어 | 0/? | Not started | - |
 | 359. 오프체인 Smoke -- 인터페이스 | 0/? | Not started | - |
 | 360. 오프체인 Smoke -- 고급 | 0/? | Not started | - |
