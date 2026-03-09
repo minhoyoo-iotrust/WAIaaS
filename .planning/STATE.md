@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: milestone
-status: planning
+status: completed
 stopped_at: Completed Phase 363 (onchain E2E scenarios)
-last_updated: "2026-03-09T08:11:03Z"
+last_updated: "2026-03-09T08:12:28.207Z"
 last_activity: 2026-03-09 -- Phase 363 complete (3 plans, 11 onchain scenarios, skip utility + transfer/incoming/staking/hyperliquid/NFT E2E)
 progress:
   total_phases: 8
