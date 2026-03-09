@@ -1,5 +1,34 @@
 # Changelog
 
+## [2.10.0-rc.23](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.22...v2.10.0-rc.23) (2026-03-09)
+
+
+### Features
+
+* **366-01:** add 3 advanced testnet scenarios (Hyperliquid/NFT/IncomingTX) ([55eb88c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/55eb88c8ddf4e9bf28cf25e7365af5de1ca30445))
+* **366-01:** add 4 testnet transfer scenarios (ETH/SOL/ERC-20/SPL) ([0200bdd](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0200bddd59eb0412e949443708e145c69ba5afea))
+* **366-02:** add 6 mainnet transfer scenarios (ETH/SOL/ERC-20/SPL/L2/NFT) ([755da57](https://github.com/minhoyoo-iotrust/WAIaaS/commit/755da57faa1534ececc721822e6c6039807a21ab))
+* **367-01:** add Jupiter Swap and Jito Staking scenarios ([09cafdc](https://github.com/minhoyoo-iotrust/WAIaaS/commit/09cafdcbb28de7142f72ff6ea5d5f4a74138acbd))
+* **367-01:** add Kamino Lending and Drift Perp scenarios ([1ad1d41](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1ad1d41fb30a02da45fceecff796ec03aede08d2))
+* **367-02:** add 0x Swap, Lido Staking, and DCent Swap scenarios ([ccf3d06](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ccf3d0640aaf663ee76cffd38d78f3e7aab317b5))
+* **367-02:** add Aave V3 Lending and Pendle Yield scenarios ([068f73b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/068f73bd0a7f0cbe9e0ac65e446b4c305cdac782))
+* **367-03:** add LI.FI Bridge, Across Bridge, and Hyperliquid Mainnet scenarios ([7871548](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7871548914443e9f4bf3f47668ebb86df3a2d31d))
+* **367-03:** register all 12 DeFi scenarios in _index.md ([5050cbb](https://github.com/minhoyoo-iotrust/WAIaaS/commit/5050cbb912819c627c0027362e171e4b8c6c4f85))
+* **368-01:** add advanced scenarios for incoming TX, balance monitoring, gas conditional ([41e5042](https://github.com/minhoyoo-iotrust/WAIaaS/commit/41e50424291504ed155476532b334186e9f768d4))
+* **368-01:** add advanced scenarios for Smart Account, WalletConnect, x402 ([c5d76b8](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c5d76b84aedb56451e71fbcd74bd72e103eb315a))
+* **368-02:** add admin UI scenarios for page access, authentication, dashboard ([a64b57a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a64b57ac253572b3e25dca7b730234c3cd918a49))
+* **368-02:** add admin UI scenarios for settings, policy management, wallet management ([2895928](https://github.com/minhoyoo-iotrust/WAIaaS/commit/28959283fc8af150c23b5a5f6bf6078f7fbae63a))
+* **368-03:** add admin scenarios for backup, tokens, stats + update _index.md ([17ea361](https://github.com/minhoyoo-iotrust/WAIaaS/commit/17ea361beb4b27dfa9422b1323fcfc2b5e76f27a))
+* **368-03:** add admin UI scenarios for NFT, DeFi, notifications, audit logs ([1a0f517](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1a0f517547a8605f8123c2aaf863794ba547d245))
+* **369-01:** add index registration and admin route consistency scripts ([6785e36](https://github.com/minhoyoo-iotrust/WAIaaS/commit/6785e368cecaecf43373f5800072bea75fce5f5e))
+* **369-01:** add provider mapping and format verification scripts ([3c2cf2b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/3c2cf2bc01467abdf7ed7d346df97471b1609f9b))
+* **369-02:** integrate agent UAT verification into CI workflow ([915e774](https://github.com/minhoyoo-iotrust/WAIaaS/commit/915e77485e6fef00f554befaa8792c960e537ac5))
+
+
+### Bug Fixes
+
+* **e2e:** resolve global CLI PATH regression and add L2 testnet coverage ([#301](https://github.com/minhoyoo-iotrust/WAIaaS/issues/301), [#302](https://github.com/minhoyoo-iotrust/WAIaaS/issues/302)) ([a3ad32a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a3ad32a30a03f8cb48d9dab4eec5e4c7ae52ae58))
+
 ## [2.10.0-rc.22](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.21...v2.10.0-rc.22) (2026-03-09)
 
 
