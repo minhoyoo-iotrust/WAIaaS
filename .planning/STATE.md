@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v31.8
 milestone_name: milestone
 status: executing
-stopped_at: Completed 366-02-PLAN.md (Phase 366 complete)
-last_updated: "2026-03-09T14:28:05.496Z"
-last_activity: 2026-03-09 — Phase 366 complete (2/2 plans)
+stopped_at: Completed 367-03-PLAN.md (Phase 367 complete)
+last_updated: "2026-03-09T14:43:10Z"
+last_activity: 2026-03-09 — Phase 367 complete (3/3 plans)
 progress:
   total_phases: 5
-  completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
-  percent: 33
+  completed_phases: 3
+  total_plans: 7
+  completed_plans: 7
+  percent: 58
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-09)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Phase 367 - DeFi 프로토콜 시나리오
+**Current focus:** Phase 368 - 고급 기능 + 관리자 기능 시나리오
 
 ## Current Position
 
-Phase: 367 (3 of 5) — DeFi 프로토콜 시나리오
+Phase: 368 (4 of 5) — 고급 기능 + 관리자 기능 시나리오
 Plan: 0 of 3 in current phase
 Status: Ready to execute
-Last activity: 2026-03-09 — Phase 366 complete (2/2 plans)
+Last activity: 2026-03-09 — Phase 367 complete (3/3 plans)
 
-Progress: [███░░░░░░░] 33%
+Progress: [█████░░░░░] 58%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 2.8 min
-- Total execution time: 0.18 hours
+- Total plans completed: 7
+- Average duration: 2.7 min
+- Total execution time: 0.32 hours
 
 **By Phase:**
 
@@ -45,9 +45,10 @@ Progress: [███░░░░░░░] 33%
 |-------|-------|-------|----------|
 | 365 | 2 | 5 min | 2.5 min |
 | 366 | 2 | 6 min | 3 min |
+| 367 | 3 | 9 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 3min, 2min, 3min, 3min
+- Last 5 plans: 3min, 3min, 3min, 3min, 3min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -65,6 +66,9 @@ Recent decisions affecting current work:
 - Self-transfer pattern (to=own address) for all on-chain UAT scenarios
 - Mainnet scenarios require dry-run user approval (risk_level=medium)
 - Hyperliquid orders use far-from-market prices to prevent accidental fills
+- DeFi scenario pattern: balance check -> dry-run -> user approval -> execute -> verify position
+- EVM DeFi scenarios recommend Polygon alternative for gas savings where applicable
+- Bridge scenarios include 30-second polling interval for status tracking
 
 ### Pending Todos
 
@@ -77,5 +81,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-09
-Stopped at: Completed 366-02-PLAN.md (Phase 366 complete)
+Stopped at: Completed 367-03-PLAN.md (Phase 367 complete)
 Resume file: None

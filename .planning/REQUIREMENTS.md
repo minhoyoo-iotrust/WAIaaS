@@ -36,18 +36,18 @@
 
 ### DeFi Protocol Scenarios (DEFI)
 
-- [ ] **DEFI-01**: Jupiter Swap 시나리오 (solana-mainnet) — SOL → USDC 스왑 → 잔액 확인
-- [ ] **DEFI-02**: 0x EVM DEX Swap 시나리오 (ethereum-mainnet/polygon) — ETH → USDC 스왑
-- [ ] **DEFI-03**: LI.FI Bridge 시나리오 (크로스체인) — L1 → L2 브릿지 전송
-- [ ] **DEFI-04**: Across Bridge 시나리오 (크로스체인) — L2 → L2 브릿지 전송
-- [ ] **DEFI-05**: Lido Staking 시나리오 (ethereum-mainnet) — ETH → stETH stake
-- [ ] **DEFI-06**: Jito Staking 시나리오 (solana-mainnet) — SOL → JitoSOL stake
-- [ ] **DEFI-07**: Aave V3 Lending 시나리오 (ethereum-mainnet/polygon) — USDC supply → 포지션 확인
-- [ ] **DEFI-08**: Kamino Lending 시나리오 (solana-mainnet) — USDC supply → 포지션 확인
-- [ ] **DEFI-09**: Pendle Yield 시나리오 (ethereum-mainnet) — PT/YT 토큰 매매
-- [ ] **DEFI-10**: Drift Perp 시나리오 (solana-mainnet) — USDC deposit → 포지션 개설/종료
-- [ ] **DEFI-11**: Hyperliquid Perp/Spot 시나리오 — 주문 생성/취소 → 포지션 확인
-- [ ] **DEFI-12**: DCent Swap 시나리오 (ethereum-mainnet) — 스왑 실행 → 잔액 확인
+- [x] **DEFI-01**: Jupiter Swap 시나리오 (solana-mainnet) — SOL → USDC 스왑 → 잔액 확인
+- [x] **DEFI-02**: 0x EVM DEX Swap 시나리오 (ethereum-mainnet/polygon) — ETH → USDC 스왑
+- [x] **DEFI-03**: LI.FI Bridge 시나리오 (크로스체인) — L1 → L2 브릿지 전송
+- [x] **DEFI-04**: Across Bridge 시나리오 (크로스체인) — L2 → L2 브릿지 전송
+- [x] **DEFI-05**: Lido Staking 시나리오 (ethereum-mainnet) — ETH → stETH stake
+- [x] **DEFI-06**: Jito Staking 시나리오 (solana-mainnet) — SOL → JitoSOL stake
+- [x] **DEFI-07**: Aave V3 Lending 시나리오 (ethereum-mainnet/polygon) — USDC supply → 포지션 확인
+- [x] **DEFI-08**: Kamino Lending 시나리오 (solana-mainnet) — USDC supply → 포지션 확인
+- [x] **DEFI-09**: Pendle Yield 시나리오 (ethereum-mainnet) — PT/YT 토큰 매매
+- [x] **DEFI-10**: Drift Perp 시나리오 (solana-mainnet) — USDC deposit → 포지션 개설/종료
+- [x] **DEFI-11**: Hyperliquid Perp/Spot 시나리오 — 주문 생성/취소 → 포지션 확인
+- [x] **DEFI-12**: DCent Swap 시나리오 (ethereum-mainnet) — 스왑 실행 → 잔액 확인
 
 ### Advanced Feature Scenarios (ADV)
 
@@ -118,18 +118,18 @@ None — 전체 범위가 이번 마일스톤에 포함.
 | XFER-04 | Phase 366 | Complete |
 | XFER-05 | Phase 366 | Complete |
 | XFER-06 | Phase 366 | Complete |
-| DEFI-01 | Phase 367 | Pending |
-| DEFI-02 | Phase 367 | Pending |
-| DEFI-03 | Phase 367 | Pending |
-| DEFI-04 | Phase 367 | Pending |
-| DEFI-05 | Phase 367 | Pending |
-| DEFI-06 | Phase 367 | Pending |
-| DEFI-07 | Phase 367 | Pending |
-| DEFI-08 | Phase 367 | Pending |
-| DEFI-09 | Phase 367 | Pending |
-| DEFI-10 | Phase 367 | Pending |
-| DEFI-11 | Phase 367 | Pending |
-| DEFI-12 | Phase 367 | Pending |
+| DEFI-01 | Phase 367 | Complete |
+| DEFI-02 | Phase 367 | Complete |
+| DEFI-03 | Phase 367 | Complete |
+| DEFI-04 | Phase 367 | Complete |
+| DEFI-05 | Phase 367 | Complete |
+| DEFI-06 | Phase 367 | Complete |
+| DEFI-07 | Phase 367 | Complete |
+| DEFI-08 | Phase 367 | Complete |
+| DEFI-09 | Phase 367 | Complete |
+| DEFI-10 | Phase 367 | Complete |
+| DEFI-11 | Phase 367 | Complete |
+| DEFI-12 | Phase 367 | Complete |
 | ADV-01 | Phase 368 | Pending |
 | ADV-02 | Phase 368 | Pending |
 | ADV-03 | Phase 368 | Pending |
