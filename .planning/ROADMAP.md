@@ -47,7 +47,8 @@
 - ✅ **v31.2 UserOp Build/Sign API** -- Phases 338-341 (shipped 2026-03-06)
 - ✅ **v31.3 DCent Swap Aggregator 통합** -- Phases 342-346 (shipped 2026-03-07)
 - ✅ **v31.4 Hyperliquid 생태계 통합** -- Phases 347-351 (shipped 2026-03-08)
+- ✅ **v31.6 Across Protocol 크로스체인 브릿지** -- Phases 352-356 (shipped 2026-03-09)
 
 ## Phases
 
-(No active phases — next milestone pending)
+(No active milestone — use `/gsd:new-milestone` to start next)

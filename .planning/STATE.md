@@ -1,40 +1,42 @@
 ---
 gsd_state_version: 1.0
-milestone: (none)
-milestone_name: (pending next milestone)
-status: idle
-stopped_at: Milestone v31.4 archived
-last_updated: "2026-03-08"
-last_activity: 2026-03-08 — Milestone v31.4 Hyperliquid 생태계 통합 archived
+milestone: v31.6
+milestone_name: Across Protocol 크로스체인 브릿지
+status: archived
+stopped_at: Milestone v31.6 archived
+last_updated: "2026-03-09T08:33:00.000Z"
+last_activity: 2026-03-09 — Milestone v31.6 archived
 progress:
-  total_phases: 0
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_phases: 5
+  completed_phases: 5
+  total_plans: 8
+  completed_plans: 8
+  percent: 100
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-08)
+See: .planning/PROJECT.md (updated 2026-03-09)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서.
 **Current focus:** Planning next milestone
 
 ## Current Position
 
-Phase: (none)
-Plan: (none)
-Status: Between milestones — v31.4 shipped, next milestone pending
-Last activity: 2026-03-08 — Milestone v31.4 archived
+Phase: None — milestone v31.6 archived
+Plan: None
+Status: Ready for next milestone
+Last activity: 2026-03-09 — Milestone v31.6 archived
+
+Progress: [██████████] 100%
 
 ## Accumulated Context
 
 ### Decisions
 
-(Cleared — see PROJECT.md Key Decisions for full history)
+(Cleared — see milestones/v31.6-ROADMAP.md for v31.6 decisions)
 
 ### Blockers/Concerns
 
@@ -45,6 +47,6 @@ Last activity: 2026-03-08 — Milestone v31.4 archived
 
 ## Session Continuity
 
-Last session: 2026-03-08
-Stopped at: Milestone v31.4 archived
+Last session: 2026-03-09T08:33:00Z
+Stopped at: Milestone v31.6 archived
 Resume file: None

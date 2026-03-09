@@ -178,9 +178,9 @@ describe('ActionsPage', () => {
       expect(screen.getByText('Lido Staking')).toBeTruthy();
       expect(screen.getByText('Jito Staking')).toBeTruthy();
 
-      // All 12 should show Inactive (Jupiter, 0x, D'CENT, LI.FI, Lido, Jito, Aave V3, Kamino, Pendle, Drift, HL Perp, HL Spot)
+      // All 13 should show Inactive (Jupiter, 0x, D'CENT, LI.FI, Lido, Jito, Aave V3, Kamino, Pendle, Drift, HL Perp, HL Spot, Across)
       const inactiveBadges = screen.getAllByText('Inactive');
-      expect(inactiveBadges.length).toBe(12);
+      expect(inactiveBadges.length).toBe(13);
     });
 
     it('renders provider descriptions', async () => {

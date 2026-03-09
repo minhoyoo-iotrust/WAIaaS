@@ -218,8 +218,8 @@ describe('ActionsPage - Kamino Lending Card', () => {
       expect(screen.getByText('Kamino Lending')).toBeTruthy();
     });
 
-    // All 12 providers disabled -> 12 Inactive badges (ERC-8004 moved to Agent Identity page)
+    // All 13 providers disabled -> 13 Inactive badges (ERC-8004 moved to Agent Identity page)
     const inactiveBadges = screen.getAllByText('Inactive');
-    expect(inactiveBadges.length).toBe(12);
+    expect(inactiveBadges.length).toBe(13);
   });
 });

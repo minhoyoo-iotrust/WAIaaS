@@ -38,6 +38,7 @@ const BUILTIN_PROVIDERS: BuiltinProvider[] = [
   { key: 'hyperliquid_perp', name: 'Hyperliquid Perp', description: 'Hyperliquid perpetual futures trading with EIP-712 signing', chain: 'evm', category: 'Perp', requiresApiKey: false, docsUrl: 'https://hyperliquid.gitbook.io/hyperliquid-docs' },
   { key: 'hyperliquid_spot', name: 'Hyperliquid Spot', description: 'Hyperliquid spot market trading (buy, sell, cancel)', chain: 'evm', category: 'Swap', requiresApiKey: false, docsUrl: 'https://hyperliquid.gitbook.io/hyperliquid-docs' },
   { key: 'hyperliquid_sub', name: 'Hyperliquid Sub', description: 'Hyperliquid sub-account management (create, transfer USDC)', chain: 'evm', category: 'DeFi', requiresApiKey: false, docsUrl: 'https://hyperliquid.gitbook.io/hyperliquid-docs' },
+  { key: 'across_bridge', name: 'Across Bridge', description: 'Intent-based cross-chain EVM bridge with fast relayer fills (2-10 sec)', chain: 'evm', category: 'Bridge', requiresApiKey: false, docsUrl: 'https://docs.across.to' },
 ];
 
 const CATEGORY_ORDER: ProviderCategory[] = ['Swap', 'Bridge', 'Staking', 'Lending', 'Yield', 'Perp'];
