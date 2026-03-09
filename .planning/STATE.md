@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v31.7
 milestone_name: E2E 자동 검증 체계
 status: active
-stopped_at: "Completed Phase 359 + 360 (parallel)"
-last_updated: "2026-03-09T12:30:00Z"
-last_activity: 2026-03-09 -- Phase 359+360 complete (6 plans, 38 tests, 12 files)
+stopped_at: "Completed Phase 361 (CI/CD workflow)"
+last_updated: "2026-03-09T07:41:00Z"
+last_activity: 2026-03-09 -- Phase 361 complete (3 plans, 67 new tests, e2e-smoke.yml + ci-reporter + badges)
 progress:
   total_phases: 8
-  completed_phases: 4
-  total_plans: 11
-  completed_plans: 11
-  percent: 50
+  completed_phases: 5
+  total_plans: 14
+  completed_plans: 14
+  percent: 62
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-09)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Phase 361 - CI/CD 워크플로우 통합
+**Current focus:** Phase 362 - 온체인 사전 조건 체커
 
 ## Current Position
 
-Phase: 5 of 8 (Phase 361: CI/CD 워크플로우 통합)
+Phase: 6 of 8 (Phase 362: 온체인 사전 조건 체커)
 Plan: 0 of ? in current phase
 Status: Ready to plan
-Last activity: 2026-03-09 -- Phase 359+360 complete (parallel, 6 plans, 38 tests, 12 files)
+Last activity: 2026-03-09 -- Phase 361 complete (3 plans, 67 new tests, e2e-smoke.yml + ci-reporter + badges)
 
-Progress: [#####░░░░░] 50%
+Progress: [######░░░░] 62%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11
-- Average duration: 4.2min
-- Total execution time: 0.8 hours
+- Total plans completed: 14
+- Average duration: 3.9min
+- Total execution time: 0.9 hours
 
 **By Phase:**
 
@@ -47,9 +47,10 @@ Progress: [#####░░░░░] 50%
 | 358: 오프체인 Smoke -- 코어 | 2/2 | 5min | 2.5min |
 | 359: 오프체인 Smoke -- 인터페이스 | 3/3 | 9min | 3.0min |
 | 360: 오프체인 Smoke -- 고급 | 3/3 | 12min | 4.0min |
+| 361: CI/CD 워크플로우 | 3/3 | 10min | 3.3min |
 
 **Recent Trend:**
-- Last 5 plans: 3min, 3min, 5min, 4min, 3min
+- Last 5 plans: 5min, 4min, 3min, 5min, 2min
 - Trend: steady
 
 *Updated after each plan completion*
@@ -81,6 +82,9 @@ Recent decisions affecting current work:
 - ERC-8128 sign requires network parameter for testnet wallets, needs EVM wallet session
 - DeFi settings use actions.* prefix; GET response groups by category with stripped field names
 - PushRelayManager uses RELAY_CONFIG env var (not PUSH_RELAY_CONFIG)
+- E2E failure auto-creates GitHub Issue with e2e-failure label; duplicate prevention via open issue check
+- README badge uses shields.io endpoint URL with Gist; requires GIST_SECRET + TEST_BADGE_GIST_ID setup
+- CI reporter uses vitest Reporter interface (onFinished hook) for markdown report generation
 
 ### Pending Todos
 
@@ -93,5 +97,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-09
-Stopped at: Completed Phase 359 + 360 (parallel execution)
+Stopped at: Completed Phase 361 (CI/CD workflow)
 Resume file: None

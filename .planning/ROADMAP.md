@@ -12,7 +12,7 @@
 - [x] **Phase 358: 오프체인 Smoke -- 코어 기능** - 인증/지갑/세션/정책 CRUD E2E 시나리오 (completed 2026-03-09)
 - [x] **Phase 359: 오프체인 Smoke -- 인터페이스 및 운영** - Admin/MCP/SDK/알림/토큰/connect-info/감사/백업 E2E (completed 2026-03-09)
 - [x] **Phase 360: 오프체인 Smoke -- 고급 프로토콜** - Smart Account/UserOp/Owner Auth/x402/ERC-8004/8128/DeFi/Push Relay E2E (completed 2026-03-09)
-- [ ] **Phase 361: CI/CD 워크플로우 통합** - e2e-smoke.yml, RC 트리거, 리포트, 알림, #282/#283 이슈 해결
+- [x] **Phase 361: CI/CD 워크플로우 통합** - e2e-smoke.yml, RC 트리거, 리포트, 알림, #282/#283 이슈 해결 (completed 2026-03-09)
 - [ ] **Phase 362: 온체인 사전 조건 체커** - 데몬/지갑/잔액 확인, 인터랙티브 프롬프트, 네트워크 필터
 - [ ] **Phase 363: 온체인 E2E 시나리오** - testnet 전송/토큰/수신감지/스테이킹/Hyperliquid/NFT + skip 처리
 - [ ] **Phase 364: E2E 시나리오 등록 강제** - Provider/API 매핑 검증, CI fail, 빈 파일 방지
@@ -92,12 +92,12 @@ Plans:
   2. RC 버전을 npx로 명시적 설치하여 테스트를 실행하고, 결과가 GitHub Actions Summary에 표시된다
   3. 테스트 실패 시 ntfy 알림 또는 GitHub Issue가 자동 생성된다
   4. #282 네트워크 설정 키 완전성 검증 스크립트가 CI에서 실행되고, #283 README 배지가 동적 업데이트된다
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 
 Plans:
-- [ ] 361-01-PLAN.md — e2e-smoke.yml 워크플로우 + RC 트리거 + Summary 리포트
-- [ ] 361-02-PLAN.md — #282 설정 키 완전성 테스트 + #283 README 배지 동적 업데이트
-- [ ] 361-03-PLAN.md — E2E 실패 알림 + CI 통합 + 이슈 상태 업데이트
+- [x] 361-01-PLAN.md — e2e-smoke.yml 워크플로우 + RC 트리거 + Summary 리포트
+- [x] 361-02-PLAN.md — #282 설정 키 완전성 테스트 + #283 README 배지 동적 업데이트
+- [x] 361-03-PLAN.md — E2E 실패 알림 + CI 통합 + 이슈 상태 업데이트
 
 ### Phase 362: 온체인 사전 조건 체커
 **Goal**: 온체인 E2E 실행 전 필요한 사전 조건(데몬, 지갑, 잔액)을 자동으로 확인하고, 부족 시 명확한 리포트를 제공한다
@@ -144,7 +144,7 @@ Note: Phase 359 and 360 can execute in parallel (both depend on 358 only). Phase
 | 358. 오프체인 Smoke -- 코어 | 2/2 | Complete    | 2026-03-09 |
 | 359. 오프체인 Smoke -- 인터페이스 | 3/3 | Complete    | 2026-03-09 |
 | 360. 오프체인 Smoke -- 고급 | 3/3 | Complete    | 2026-03-09 |
-| 361. CI/CD 워크플로우 | 0/3 | Not started | - |
+| 361. CI/CD 워크플로우 | 3/3 | Complete | 2026-03-09 |
 | 362. 온체인 사전 조건 체커 | 0/? | Not started | - |
 | 363. 온체인 E2E 시나리오 | 0/? | Not started | - |
 | 364. E2E 시나리오 등록 강제 | 0/? | Not started | - |

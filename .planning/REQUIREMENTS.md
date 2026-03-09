@@ -48,13 +48,13 @@ Requirements for E2E automated verification system. Each maps to roadmap phases.
 
 ### CI/CD (CICD)
 
-- [ ] **CICD-01**: GitHub Actions workflow (e2e-smoke.yml) 생성
-- [ ] **CICD-02**: RC publish 트리거 (release: published) + workflow_dispatch 수동 트리거
-- [ ] **CICD-03**: RC 버전 명시적 설치 (npx @waiaas/daemon@${RELEASE_TAG})
-- [ ] **CICD-04**: 테스트 결과 리포트 (GitHub Actions summary)
-- [ ] **CICD-05**: 실패 시 알림 (ntfy 또는 GitHub Issue 자동 생성)
-- [ ] **CICD-06**: #282 네트워크 설정 키 완전성 검증 스크립트 + CI 스텝
-- [ ] **CICD-07**: #283 README 테스트 배지 동적 업데이트 (Gist 기반 shields.io endpoint)
+- [x] **CICD-01**: GitHub Actions workflow (e2e-smoke.yml) 생성
+- [x] **CICD-02**: RC publish 트리거 (release: published) + workflow_dispatch 수동 트리거
+- [x] **CICD-03**: RC 버전 명시적 설치 (npx @waiaas/daemon@${RELEASE_TAG})
+- [x] **CICD-04**: 테스트 결과 리포트 (GitHub Actions summary)
+- [x] **CICD-05**: 실패 시 알림 (ntfy 또는 GitHub Issue 자동 생성)
+- [x] **CICD-06**: #282 네트워크 설정 키 완전성 검증 스크립트 + CI 스텝
+- [x] **CICD-07**: #283 README 테스트 배지 동적 업데이트 (Gist 기반 shields.io endpoint)
 
 ### 온체인 (ONCH)
 
@@ -125,13 +125,13 @@ Requirements for E2E automated verification system. Each maps to roadmap phases.
 | ADV-06 | Phase 360 | Complete |
 | ADV-07 | Phase 360 | Complete |
 | ADV-08 | Phase 360 | Complete |
-| CICD-01 | Phase 361 | Pending |
-| CICD-02 | Phase 361 | Pending |
-| CICD-03 | Phase 361 | Pending |
-| CICD-04 | Phase 361 | Pending |
-| CICD-05 | Phase 361 | Pending |
-| CICD-06 | Phase 361 | Pending |
-| CICD-07 | Phase 361 | Pending |
+| CICD-01 | Phase 361 | Complete |
+| CICD-02 | Phase 361 | Complete |
+| CICD-03 | Phase 361 | Complete |
+| CICD-04 | Phase 361 | Complete |
+| CICD-05 | Phase 361 | Complete |
+| CICD-06 | Phase 361 | Complete |
+| CICD-07 | Phase 361 | Complete |
 | ONCH-01 | Phase 362 | Pending |
 | ONCH-02 | Phase 362 | Pending |
 | ONCH-03 | Phase 362 | Pending |
