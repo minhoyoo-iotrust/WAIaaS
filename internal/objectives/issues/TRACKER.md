@@ -295,6 +295,7 @@
 | 278 | BUG | MEDIUM | D'CENT Swap 멀티체인/크로스체인 스왑 기능이 Admin UI와 에이전트 인터페이스에 미노출 | — | FIXED | 2026-03-07 |
 | 279 | BUG | CRITICAL | UserOp Sign 라우트 network 이중 replace 버그로 RPC URL 해석 실패 — Sign 100% 불가 | — | FIXED | 2026-03-08 |
 | 280 | BUG | HIGH | HyperEVM RPC 설정 키 미등록 — IncomingTxMonitor 구독 실패 | v31.6 | FIXED | 2026-03-09 |
+| 281 | BUG | HIGH | HyperEVM incoming.wss_url 설정 키 미등록 — IncomingTxMonitor 구독 실패 | — | FIXED | 2026-03-09 |
 
 ## Type Legend
 
@@ -307,8 +308,8 @@
 ## Summary
 
 - **OPEN:** 1
-- **FIXED:** 277
+- **FIXED:** 278
 - **RESOLVED:** 2
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 281
+- **Total:** 282

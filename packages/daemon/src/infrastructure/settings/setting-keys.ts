@@ -177,6 +177,8 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'incoming.wss_url.base-sepolia', category: 'incoming', configPath: 'incoming.wss_url.base-sepolia', defaultValue: '', isCredential: false },
   { key: 'incoming.wss_url.polygon-mainnet', category: 'incoming', configPath: 'incoming.wss_url.polygon-mainnet', defaultValue: '', isCredential: false },
   { key: 'incoming.wss_url.polygon-amoy', category: 'incoming', configPath: 'incoming.wss_url.polygon-amoy', defaultValue: '', isCredential: false },
+  { key: 'incoming.wss_url.hyperevm-mainnet', category: 'incoming', configPath: 'incoming.wss_url.hyperevm-mainnet', defaultValue: '', isCredential: false },
+  { key: 'incoming.wss_url.hyperevm-testnet', category: 'incoming', configPath: 'incoming.wss_url.hyperevm-testnet', defaultValue: '', isCredential: false },
 
   // --- actions category (DeFi action providers) ---
   { key: 'actions.jupiter_swap_enabled', category: 'actions', configPath: 'actions.jupiter_swap_enabled', defaultValue: 'true', isCredential: false },

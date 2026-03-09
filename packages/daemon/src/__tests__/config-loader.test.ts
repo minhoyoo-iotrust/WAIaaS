@@ -585,9 +585,9 @@ poll_interval = 60
   });
 
   // CFG-02 verification: incoming keys registered in setting-keys.ts
-  it('CFG-02 verify: SETTING_DEFINITIONS has exactly 20 incoming.* keys', () => {
+  it('CFG-02 verify: SETTING_DEFINITIONS has exactly 22 incoming.* keys', () => {
     const incomingDefs = SETTING_DEFINITIONS.filter((d) => d.key.startsWith('incoming.'));
-    expect(incomingDefs).toHaveLength(20);
+    expect(incomingDefs).toHaveLength(22);
     const keys = incomingDefs.map((d) => d.key).sort();
     expect(keys).toEqual([
       'incoming.cooldown_minutes',
@@ -603,6 +603,8 @@ poll_interval = 60
       'incoming.wss_url.base-sepolia',
       'incoming.wss_url.ethereum-mainnet',
       'incoming.wss_url.ethereum-sepolia',
+      'incoming.wss_url.hyperevm-mainnet',
+      'incoming.wss_url.hyperevm-testnet',
       'incoming.wss_url.optimism-mainnet',
       'incoming.wss_url.optimism-sepolia',
       'incoming.wss_url.polygon-amoy',
