@@ -71,7 +71,12 @@ Plans:
   2. UserOp Build/Sign + TTL 만료, Owner Auth 챌린지 발급/서명 검증이 테스트로 확인된다
   3. x402 설정 CRUD + dry-run, ERC-8004 등록/해제/권한 조회, ERC-8128 서명 생성/검증이 각각 테스트로 확인된다
   4. DeFi 프로토콜별 Admin Settings CRUD와 Push Relay 디바이스 등록/해제가 테스트로 확인된다
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 360-01-PLAN.md — Smart Account/UserOp/Owner Auth E2E
+- [ ] 360-02-PLAN.md — x402/ERC-8004/ERC-8128 E2E
+- [ ] 360-03-PLAN.md — DeFi Settings/Push Relay E2E
 
 ### Phase 361: CI/CD 워크플로우 통합
 **Goal**: 오프체인 E2E 테스트가 RC publish 시 자동 실행되고, 실패 시 알림이 전달되며, 기존 이슈(#282, #283)가 해결된다
@@ -128,7 +133,7 @@ Note: Phase 359 and 360 can execute in parallel (both depend on 358 only). Phase
 | 357. E2E 테스트 인프라 | 3/3 | Complete    | 2026-03-09 |
 | 358. 오프체인 Smoke -- 코어 | 2/2 | Complete    | 2026-03-09 |
 | 359. 오프체인 Smoke -- 인터페이스 | 0/? | Not started | - |
-| 360. 오프체인 Smoke -- 고급 | 0/? | Not started | - |
+| 360. 오프체인 Smoke -- 고급 | 0/3 | Not started | - |
 | 361. CI/CD 워크플로우 | 0/? | Not started | - |
 | 362. 온체인 사전 조건 체커 | 0/? | Not started | - |
 | 363. 온체인 E2E 시나리오 | 0/? | Not started | - |
