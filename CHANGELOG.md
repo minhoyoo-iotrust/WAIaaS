@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.10.0-rc.17](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.16...v2.10.0-rc.17) (2026-03-09)
+
+
+### Bug Fixes
+
+* **daemon:** add HyperEVM incoming.wss_url setting keys ([#281](https://github.com/minhoyoo-iotrust/WAIaaS/issues/281)) ([d126318](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d1263188c3459755bc71bacde1761380d42dcc58))
+* **daemon:** add HyperEVM incoming.wss_url setting keys ([#281](https://github.com/minhoyoo-iotrust/WAIaaS/issues/281)) ([f0b8923](https://github.com/minhoyoo-iotrust/WAIaaS/commit/f0b8923818fc72153b62ea7e966f3ff5bd6f05e5))
+
 ## [2.10.0-rc.16](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.15...v2.10.0-rc.16) (2026-03-09)
 
 
