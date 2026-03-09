@@ -19,3 +19,8 @@ export {
   parseCliFilters,
   type PreconditionAction,
 } from './precondition-prompt.js';
+export {
+  shouldSkipNetwork,
+  getSkipReason,
+  SELF_ADDRESS_PLACEHOLDER,
+} from './onchain-skip.js';
