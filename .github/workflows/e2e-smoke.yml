@@ -1,0 +1,102 @@
+name: E2E Smoke Tests
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Package version to test (e.g. 3.0.0-rc.1). Leave empty to use release tag.'
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  e2e-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.version }}" ]; then
+            VERSION="${{ inputs.version }}"
+          elif [ "${{ github.event_name }}" = "release" ]; then
+            VERSION="${{ github.event.release.tag_name }}"
+            # Strip 'v' prefix if present
+            VERSION="${VERSION#v}"
+          else
+            VERSION="latest"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Testing version: $VERSION"
+
+      - name: Build e2e-tests package
+        run: pnpm turbo run build --filter=@waiaas/e2e-tests
+
+      - name: Install daemon globally
+        run: npm install -g @waiaas/daemon@${{ steps.version.outputs.version }}
+
+      - name: Run offchain E2E tests
+        run: pnpm --filter @waiaas/e2e-tests test:offchain
+        env:
+          E2E_DAEMON_INSTALL_MODE: global
+          CI: 'true'
+
+      - name: Generate summary
+        if: always()
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          echo "## E2E Smoke Test Report" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Version:** ${VERSION}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f packages/e2e-tests/e2e-report.md ]; then
+            cat packages/e2e-tests/e2e-report.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No report file generated. Check test output above." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Ensure e2e-failure label exists
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create "e2e-failure" --color "d73a49" --description "E2E smoke test failure" 2>/dev/null || true
+
+      - name: Create issue on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          BODY="## E2E Smoke Test Failure
+
+          **Version:** ${VERSION}
+          **Run:** ${RUN_URL}
+          **Triggered by:** ${{ github.event_name }}
+
+          E2E smoke tests failed for version ${VERSION}. Check the workflow run for details."
+
+          # Check for existing open issue to avoid duplicates
+          EXISTING=$(gh issue list --label "e2e-failure" --state open --limit 1 --json number -q '.[0].number' 2>/dev/null || echo "")
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --body "E2E failure recurrence for version ${VERSION}. Run: ${RUN_URL}"
+          else
+            gh issue create \
+              --title "E2E Smoke Test Failure: ${VERSION}" \
+              --body "$BODY" \
+              --label "e2e-failure,bug"
+          fi

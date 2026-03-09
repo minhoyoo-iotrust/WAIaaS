@@ -1,7 +1,7 @@
-# 마일스톤 m31-08: Polymarket 예측 시장 통합
+# 마일스톤 m31-09: Polymarket 예측 시장 통합
 
 - **Status:** PLANNED
-- **Milestone:** v31.8
+- **Milestone:** v31.9
 
 ## 목표
 

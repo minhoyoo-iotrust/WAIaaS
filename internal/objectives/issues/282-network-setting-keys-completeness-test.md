@@ -2,8 +2,8 @@
 
 - **유형:** ENHANCEMENT
 - **심각도:** HIGH
-- **마일스톤:** —
-- **상태:** OPEN
+- **마일스톤:** v31.7
+- **상태:** RESOLVED
 
 ## 배경
 
@@ -43,9 +43,9 @@
 
 ## 테스트 항목
 
-- [ ] `NETWORK_TYPES`의 모든 15개 네트워크에 대해 `rpc.*` 키 존재 확인
-- [ ] `NETWORK_TYPES`의 모든 15개 네트워크에 대해 `rpc_pool.*` 키 존재 확인
-- [ ] `NETWORK_TYPES`의 모든 15개 네트워크에 대해 `incoming.wss_url.*` 키 존재 확인
-- [ ] `BUILT_IN_RPC_DEFAULTS`에 모든 네트워크 등록 확인
-- [ ] 카테고리별 키 총 수 = `NETWORK_TYPES.length` cross-check
-- [ ] 기존 CFG-02 테스트와 중복/대체 관계 정리
+- [x] `NETWORK_TYPES`의 모든 15개 네트워크에 대해 `rpc.*` 키 존재 확인
+- [x] `NETWORK_TYPES`의 모든 15개 네트워크에 대해 `rpc_pool.*` 키 존재 확인
+- [x] `NETWORK_TYPES`의 모든 15개 네트워크에 대해 `incoming.wss_url.*` 키 존재 확인
+- [x] `BUILT_IN_RPC_DEFAULTS`에 모든 네트워크 등록 확인
+- [x] 카테고리별 키 총 수 = `NETWORK_TYPES.length` cross-check
+- [x] 기존 CFG-02 테스트와 중복/대체 관계 정리

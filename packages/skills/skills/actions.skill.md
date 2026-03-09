@@ -2,8 +2,8 @@
 name: "WAIaaS Actions"
 description: "Action Provider framework: list providers, execute DeFi actions through the 6-stage transaction pipeline"
 category: "api"
-tags: [wallet, blockchain, defi, actions, waiass, jupiter, 0x, swap, lifi, bridge, cross-chain, lido, jito, staking, liquid-staking, pendle, yield, pt, yt, drift, perp, perpetual, leverage, futures]
-version: "2.9.1-rc"
+tags: [wallet, blockchain, defi, actions, waiass, jupiter, 0x, swap, lifi, bridge, cross-chain, lido, jito, staking, liquid-staking, pendle, yield, pt, yt, drift, perp, perpetual, leverage, futures, dcent-swap, dcent, aggregator, across, across-bridge]
+version: "2.10.0-rc.16"
 dispatch:
   kind: "tool"
   allowedCommands: ["curl"]
@@ -31,7 +31,7 @@ All action endpoints require **sessionAuth** via `Authorization: Bearer <token>`
 
 ### Admin (masterAuth -- prerequisite)
 - Register API keys for action providers via Admin UI Settings
-- Enable/configure built-in providers via Admin UI > Settings > Actions
+- Enable/configure built-in providers via Admin UI > DeFi (`#/defi`) or Agent Identity (`#/agent-identity`)
 - Configure CONTRACT_WHITELIST/ALLOWED_TOKENS policies for provider contracts (or use provider-trust bypass)
 
 ```
@@ -187,7 +187,7 @@ The transaction follows the standard lifecycle (PENDING -> QUEUED -> CONFIRMED/F
 
 **Prerequisites:**
 
-1. The provider must be enabled via Admin UI > Settings > Actions.
+1. The provider must be enabled (all 10 providers are enabled by default since v30.11).
 2. If the provider requires an API key (`requiresApiKey: true`), the key must be configured in Admin Settings.
 3. Either a **CONTRACT_WHITELIST** policy must include the resolved contract, or **provider-trust bypass** applies (see Section 6).
 
@@ -195,7 +195,7 @@ The transaction follows the standard lifecycle (PENDING -> QUEUED -> CONFIRMED/F
 
 ### Configuration
 
-Enable Jupiter Swap via **Admin UI > Settings > Actions > Jupiter Swap**, or environment variables:
+Enable Jupiter Swap via **Admin UI > DeFi (`#/defi`) > Jupiter Swap**, or environment variables:
 
 | Setting | Env Variable | Default | Description |
 | ------- | ------------ | ------- | ----------- |
@@ -298,7 +298,7 @@ The 0x Swap provider uses the [0x Swap API v2](https://0x.org/docs/api#tag/Swap)
 
 ### Configuration
 
-Enable 0x Swap via **Admin UI > Settings > Actions > 0x Swap**. A 0x API key is **required** (`requiresApiKey: true`). Get a free key at [0x Dashboard](https://dashboard.0x.org/).
+Enable 0x Swap via **Admin UI > DeFi (`#/defi`) > 0x Swap**. A 0x API key is **required** (`requiresApiKey: true`). Get a free key at [0x Dashboard](https://dashboard.0x.org/).
 
 | Setting | Env Variable | Default | Description |
 | ------- | ------------ | ------- | ----------- |
@@ -449,7 +449,7 @@ The LI.FI provider uses the [LI.FI API](https://docs.li.fi/) to aggregate 100+ b
 
 ### Configuration
 
-Enable LI.FI via **Admin UI > Settings > Actions > LI.FI**, or environment variables. No API key is required -- LI.FI works without a key but with rate limits. An optional API key relaxes rate limits.
+Enable LI.FI via **Admin UI > DeFi (`#/defi`) > LI.FI**, or environment variables. No API key is required -- LI.FI works without a key but with rate limits. An optional API key relaxes rate limits.
 
 | Setting | Env Variable | Default | Description |
 | ------- | ------------ | ------- | ----------- |
@@ -664,7 +664,7 @@ The Lido Staking provider uses the [Lido Protocol](https://lido.fi/) to stake ET
 
 ### Configuration
 
-Enable Lido Staking via **Admin UI > Settings > Actions > Lido Staking**, or environment variables. No API key is required.
+Enable Lido Staking via **Admin UI > DeFi (`#/defi`) > Lido Staking**, or environment variables. No API key is required.
 
 | Setting | Env Variable | Default | Description |
 | ------- | ------------ | ------- | ----------- |
@@ -803,7 +803,7 @@ The Jito Staking provider uses the [Jito Stake Pool](https://www.jito.network/) 
 
 ### Configuration
 
-Enable Jito Staking via **Admin UI > Settings > Actions > Jito Staking**, or environment variables. No API key is required.
+Enable Jito Staking via **Admin UI > DeFi (`#/defi`) > Jito Staking**, or environment variables. No API key is required.
 
 | Setting | Env Variable | Default | Description |
 | ------- | ------------ | ------- | ----------- |
@@ -936,7 +936,7 @@ The Aave V3 Lending provider uses the [Aave Protocol V3](https://aave.com/) to s
 
 ### Configuration
 
-Enable Aave V3 Lending via **Admin UI > Settings > Actions > Aave V3 Lending**, or environment variables. No API key is required -- Aave V3 operates via on-chain contracts with RPC calls.
+Enable Aave V3 Lending via **Admin UI > DeFi (`#/defi`) > Aave V3 Lending**, or environment variables. No API key is required -- Aave V3 operates via on-chain contracts with RPC calls.
 
 | Setting | Env Variable | Default | Description |
 | ------- | ------------ | ------- | ----------- |
@@ -1104,7 +1104,7 @@ The Kamino Lending provider uses the [Kamino K-Lend](https://kamino.finance/) pr
 
 ### Configuration
 
-Enable Kamino Lending via **Admin UI > Settings > Actions > Kamino Lending**, or environment variables. No API key is required -- Kamino operates via on-chain Solana programs.
+Enable Kamino Lending via **Admin UI > DeFi (`#/defi`) > Kamino Lending**, or environment variables. No API key is required -- Kamino operates via on-chain Solana programs.
 
 | Setting | Environment Variable | Default | Description |
 |---------|---------------------|---------|-------------|
@@ -1215,7 +1215,7 @@ The Pendle Yield Trading provider uses the [Pendle Finance](https://pendle.finan
 
 ### Configuration
 
-Enable Pendle Yield Trading via **Admin UI > Settings > Actions > Pendle Yield**, or environment variables. API key is optional but recommended for higher rate limits.
+Enable Pendle Yield Trading via **Admin UI > DeFi (`#/defi`) > Pendle Yield**, or environment variables. API key is optional but recommended for higher rate limits.
 
 | Setting | Env Variable | Default | Description |
 | ------- | ------------ | ------- | ----------- |
@@ -1398,7 +1398,7 @@ curl -s -X POST http://localhost:3100/v1/actions/pendle_yield/redeem_pt \
 Pendle yield positions are automatically tracked via PositionTracker and stored in the defi_positions table (category=YIELD). Use the position query endpoints:
 
 - **Positions**: `GET /v1/wallet/positions` or MCP tool `waiaas_get_defi_positions`
-- **Maturity alerts**: Configured via Admin UI > Settings > Actions > Pendle Yield > Maturity Warning Days
+- **Maturity alerts**: Configured via Admin UI > DeFi (`#/defi`) > Pendle Yield > Maturity Warning Days
 
 ## 11. Drift Perp Trading -- Built-in Provider (Solana)
 
@@ -1408,7 +1408,7 @@ The Drift Perp Trading provider uses the [Drift Protocol V2](https://drift.trade
 
 ### Configuration
 
-Enable Drift Perp Trading via **Admin UI > Settings > Actions > Drift Perp**, or environment variables. No API key is required.
+Enable Drift Perp Trading via **Admin UI > DeFi (`#/defi`) > Drift Perp**, or environment variables. No API key is required.
 
 | Setting | Env Variable | Default | Description |
 | ------- | ------------ | ------- | ----------- |
@@ -1575,7 +1575,176 @@ Drift perp positions are automatically tracked via PositionTracker and stored in
 - **Margin alerts**: Automatic at thresholds 0.30 (warning), 0.15 (danger), 0.10 (critical)
 - **Liquidation alerts**: LIQUIDATION_IMMINENT notification when approaching liquidation price
 
-## 12. Policy Integration
+## 12. ERC-8004 Trustless Agents -- Built-in Provider (EVM)
+
+The ERC-8004 provider enables on-chain agent identity registration, reputation management, and third-party validation via three Ethereum mainnet registries. Unlike DeFi providers, ERC-8004 actions manage agent metadata and trust relationships rather than financial transactions.
+
+- **Provider name:** `erc8004_agent`
+- **Chains:** ethereum (EVM)
+- **Requires API key:** No
+- **Feature gate:** `actions.erc8004_agent_enabled` (default: true since v30.11)
+- **Provider-trust bypass:** Yes (CONTRACT_WHITELIST bypassed when enabled)
+
+**8 actions:** register_agent, set_agent_wallet, unset_agent_wallet, set_agent_uri, set_metadata, give_feedback, revoke_feedback, request_validation.
+
+For full action documentation, input schemas, SDK methods, and MCP tools, see **erc8004.skill.md**.
+
+## 13. D'CENT Swap Aggregator -- Built-in Provider (Multi-Chain)
+
+D'CENT Swap Aggregator aggregates multiple DEX providers to offer optimal swap routes across EVM chains and Solana. Supports same-chain DEX swaps (approve+txdata BATCH), cross-chain swaps (`cross_swap` providerType), and 2-hop auto-routing fallback when direct routes are unavailable.
+
+- **Provider name:** `dcent_swap`
+- **Chains:** ethereum, solana (multi-chain via provider network)
+- **Requires API key:** No
+- **Feature gate:** `actions.dcent_swap_enabled` (default: true)
+- **Aggregated providers:** 1inch, SushiSwap, Uniswap Labs, SwapScanner, Rubic, ButterSwap, LI.FI
+- **Provider types:** `swap` (same-chain DEX), `cross_swap` (cross-chain DEX)
+
+### Actions (2)
+
+| Action | Description | Tier | Risk |
+|--------|-------------|------|------|
+| `get_quotes` | Get swap quotes with provider comparison — supports same-chain and cross-chain swaps (informational) | INSTANT | low |
+| `dex_swap` | Execute DEX swap — supports same-chain and cross-chain swaps (approve+txdata BATCH for ERC-20, single CONTRACT_CALL for native) | DELAY | high |
+
+### Admin Settings Keys (5)
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `actions.dcent_swap_enabled` | `true` | Enable/disable D'CENT Swap Aggregator |
+| `actions.dcent_swap_api_url` | `https://agent-swap.dcentwallet.com` | D'CENT Swap API base URL |
+| `actions.dcent_swap_default_slippage_bps` | `100` | Default slippage (1%) |
+| `actions.dcent_swap_max_slippage_bps` | `500` | Maximum slippage (5%) |
+| `actions.dcent_swap_currency_cache_ttl_ms` | `86400000` | Currency list cache TTL (24h) |
+
+### Example: Get Quotes
+
+```bash
+curl -s -X POST http://localhost:3100/v1/actions/dcent_swap/get_quotes \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -d '{
+    "params": {
+      "fromAsset": "eip155:1/slip44:60",
+      "toAsset": "eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "amount": "1000000000000000000",
+      "fromDecimals": 18,
+      "toDecimals": 6
+    },
+    "network": "ethereum-mainnet"
+  }'
+```
+
+### Example: DEX Swap
+
+```bash
+curl -s -X POST http://localhost:3100/v1/actions/dcent_swap/dex_swap \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -d '{
+    "params": {
+      "fromAsset": "eip155:1/slip44:60",
+      "toAsset": "eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "amount": "1000000000000000000",
+      "fromDecimals": 18,
+      "toDecimals": 6,
+      "slippageBps": 100
+    },
+    "network": "ethereum-mainnet"
+  }'
+```
+
+### Policy Interaction
+
+- **DEX Swap (dex_swap):** Resolves to CONTRACT_CALL targeting DEX router address. Subject to CONTRACT_WHITELIST (provider-trust bypass applies when enabled), ALLOWED_TOKENS, APPROVED_SPENDERS, and SPENDING_LIMIT policies.
+- **2-hop auto-routing:** When direct route unavailable (`fail_no_available_provider`), attempts intermediate token (ETH/USDC/USDT) routing. Multi-step BATCH with cumulative fee/slippage calculation.
+
+### SDK Methods
+
+```typescript
+const quotes = await client.getDcentQuotes({ fromAsset, toAsset, amount, fromDecimals, toDecimals, network });
+const swap = await client.dcentDexSwap({ fromAsset, toAsset, amount, fromDecimals, toDecimals, network });
+```
+
+### MCP Tools
+
+- `action_dcent_swap_get_quotes` -- Get swap quotes from D'CENT Swap Aggregator
+- `action_dcent_swap_dex_swap` -- Execute DEX swap via D'CENT Swap Aggregator
+
+## 14. Across Bridge -- Built-in Provider (EVM)
+
+Intent-based cross-chain bridge with fast relayer fills (2-10 seconds). Supports Ethereum, Arbitrum, Optimism, Base, Polygon, Linea.
+
+### Prerequisites (Admin)
+- Enable via Admin Settings: `actions.across_bridge_enabled = true`
+- Add SpokePool addresses to CONTRACT_WHITELIST for each chain (or rely on provider-trust bypass)
+
+### Admin Settings
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `actions.across_bridge_enabled` | `false` | Enable Across Bridge |
+| `actions.across_bridge_api_base_url` | `https://app.across.to/api` | API base URL |
+| `actions.across_bridge_integrator_id` | (empty) | Integrator ID |
+| `actions.across_bridge_fill_deadline_buffer_sec` | `21600` | Fill deadline buffer (6h) |
+| `actions.across_bridge_default_slippage_pct` | `0.01` | Default slippage (1%) |
+| `actions.across_bridge_max_slippage_pct` | `0.03` | Max slippage (3%) |
+| `actions.across_bridge_request_timeout_ms` | `10000` | Request timeout (ms) |
+
+### Available Actions
+
+#### across_bridge / quote -- Get Bridge Quote
+
+```bash
+curl -s -X POST http://localhost:3100/v1/actions/across_bridge/quote \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -H 'Content-Type: application/json' \
+  -d '{"params":{"fromChain":"ethereum","toChain":"arbitrum","inputToken":"0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48","outputToken":"0xaf88d065e77c8cC2239327C5EDb3A432268e5831","amount":"1000000000"}}'
+```
+
+Returns: inputAmount, outputAmount, totalFee, feeBreakdown (lpFee, relayerCapitalFee, relayerGasFee), estimatedFillTimeSec, limits.
+
+#### across_bridge / execute -- Execute Cross-chain Bridge
+
+```bash
+curl -s -X POST http://localhost:3100/v1/actions/across_bridge/execute \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -H 'Content-Type: application/json' \
+  -d '{"params":{"fromChain":"ethereum","toChain":"arbitrum","inputToken":"0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48","outputToken":"0xaf88d065e77c8cC2239327C5EDb3A432268e5831","amount":"1000000000"}}'
+```
+
+Executes approve+depositV3 BATCH (ERC-20) or single depositV3 with msg.value (native ETH). Bridge status tracked automatically via 2-phase polling.
+
+#### across_bridge / status -- Check Bridge Status
+
+```bash
+curl -s -X POST http://localhost:3100/v1/actions/across_bridge/status \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -H 'Content-Type: application/json' \
+  -d '{"params":{"depositTxHash":"0xabc..."}}'
+```
+
+Returns: status (filled/pending/expired/refunded), fillTxHash, depositId.
+
+#### across_bridge / routes -- List Available Routes
+
+```bash
+curl -s -X POST http://localhost:3100/v1/actions/across_bridge/routes \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -H 'Content-Type: application/json' \
+  -d '{"params":{}}'
+```
+
+Returns supported chain/token route combinations.
+
+### MCP Tools (auto-registered)
+
+- `action_across_bridge_quote` -- Get Across bridge quote
+- `action_across_bridge_execute` -- Execute cross-chain bridge
+- `action_across_bridge_status` -- Check bridge deposit status
+- `action_across_bridge_routes` -- List available routes
+
+## 15. Policy Integration
 
 ### CONTRACT_WHITELIST
 
@@ -1602,9 +1771,9 @@ The swap/bridge input amount is converted to USD via IPriceOracle and evaluated 
 
 **LI.FI bridge reservation lifecycle:** Bridge amounts are reserved against the spending limit when the transaction is submitted. The reservation is released on terminal states (COMPLETED, FAILED, REFUNDED) but **held** on TIMEOUT to prevent double-spend during manual resolution. This means the spending budget is not freed until the bridge completes or fails definitively.
 
-## 13. Configuration via Admin Settings
+## 16. Configuration via Admin Settings
 
-Since v28.2, all action provider settings are managed via **Admin UI > Settings > Actions** (not config.toml). The Admin Settings UI provides:
+Since v28.2, all action provider settings are managed via **Admin UI > DeFi (`#/defi`)** for DeFi providers and **Admin UI > Agent Identity (`#/agent-identity`)** for ERC-8004 (not config.toml). The Admin Settings UI provides:
 
 - **Enable/disable toggle** per provider (takes effect immediately, no daemon restart)
 - **API key management** (required for 0x Swap, optional for Jupiter Swap and LI.FI)
@@ -1615,7 +1784,11 @@ Settings are stored in the database and take precedence over config.toml default
 
 **Settings read priority:** Database (Admin UI) > Environment Variable > config.toml default > Code default.
 
-Admin UI path: **Settings > Actions > [Provider Name]**
+Admin UI paths:
+- **DeFi (`#/defi`)** -- DeFi provider configuration (Jupiter, 0x, LI.FI, Lido, Jito, Aave, Kamino, Pendle, Drift)
+- **Agent Identity (`#/agent-identity`)** -- ERC-8004 provider configuration
+
+Since v30.11, all 10 built-in providers are enabled by default on fresh install. No manual enablement is needed.
 
 ### Provider Status in Admin UI
 
@@ -1624,12 +1797,26 @@ The Admin UI shows a three-state status for each provider:
 - **Requires API Key** -- Provider is enabled but missing required API key (yellow, fires `ACTION_API_KEY_REQUIRED` notification)
 - **Inactive** -- Provider is disabled (gray)
 
-## 14. Error Reference
+### Action Tier Override (v30.11)
+
+Operators can override the default security tier for individual actions. This allows fine-grained control independent of policy tier assignment.
+
+**Setting key pattern:** `actions.{provider}_{action}_tier` (e.g., `actions.jupiter_swap_swap_tier`, `actions.aave_v3_aave_supply_tier`)
+
+**Values:** `INSTANT` / `NOTIFY` / `DELAY` / `APPROVAL` -- empty string or unset uses the provider's hardcoded default tier.
+
+**Pipeline:** `effectiveTier = max(policyTier, actionTier)` -- the action tier is a floor that can only escalate the security level, never downgrade it. For example, if a SPENDING_LIMIT policy assigns INSTANT but the action tier override is DELAY, the effective tier is DELAY.
+
+**Admin UI:** The tier dropdown appears in the Registered Actions table on both DeFi and Agent Identity pages. Overridden tiers show a "customized" badge. A "Reset to default" button restores the provider's hardcoded default.
+
+**Cross-reference:** Policy tier escalation rules apply on top of action tier. See **policies.skill.md** Section 3.
+
+## 17. Error Reference
 
 | Code | HTTP | Description | Recovery |
 |------|------|-------------|----------|
 | `ACTION_NOT_FOUND` | 404 | Provider or action not registered. | Check available providers with GET /v1/actions/providers. |
-| `API_KEY_REQUIRED` | 403 | Provider requires API key not configured. | Set API key via Admin UI > Settings > Actions. |
+| `API_KEY_REQUIRED` | 403 | Provider requires API key not configured. | Set API key via Admin UI > DeFi (`#/defi`). |
 | `ACTION_VALIDATION_FAILED` | 400 | Input parameters failed validation. | Check params format in provider docs. |
 | `ACTION_RESOLVE_FAILED` | 502 | Provider's resolve() call failed. | Check provider logs, verify params. |
 | `ACTION_RETURN_INVALID` | 500 | Provider returned invalid ContractCallRequest. | Report to provider maintainer. |
@@ -1640,7 +1827,7 @@ The Admin UI shows a three-state status for each provider:
 | `INVALID_INSTRUCTION` | 400 | Chain not supported by LI.FI integration. | Use one of the supported chains: solana, ethereum, polygon, arbitrum, optimism, base. |
 | `ACTION_API_ERROR` | 502 | LI.FI API returned an error. | Check LI.FI API status, verify parameters, retry. |
 
-## 15. MCP Auto-Registration
+## 18. MCP Auto-Registration
 
 When a provider has `mcpExpose: true` in its metadata, the MCP server automatically registers each action as an MCP tool using the naming convention:
 
@@ -1675,6 +1862,14 @@ action_{provider_name}_{action_name}
 - `action_drift_perp_drift_modify_position` -- Drift modify perpetual position (Solana)
 - `action_drift_perp_drift_add_margin` -- Drift deposit margin collateral (Solana)
 - `action_drift_perp_drift_withdraw_margin` -- Drift withdraw margin collateral (Solana)
+- `action_erc8004_agent_register_agent` -- Register agent on ERC-8004 Identity Registry (EVM)
+- `action_erc8004_agent_set_agent_wallet` -- Link wallet via EIP-712 signature (EVM)
+- `action_erc8004_agent_unset_agent_wallet` -- Unlink wallet from agent identity (EVM)
+- `action_erc8004_agent_set_agent_uri` -- Set registration file URI (EVM)
+- `action_erc8004_agent_set_metadata` -- Set agent metadata key-value (EVM)
+- `action_erc8004_agent_give_feedback` -- Submit reputation feedback (EVM)
+- `action_erc8004_agent_revoke_feedback` -- Revoke reputation feedback (EVM)
+- `action_erc8004_agent_request_validation` -- Request third-party validation (EVM)
 
 Auto-registration happens after MCP server connection via `registerActionProviderTools()`. The tool list is refreshed on each session. If the REST API is unavailable, MCP enters degraded mode (14 built-in tools remain, action provider tools are skipped).
 
@@ -1683,9 +1878,10 @@ MCP tool parameters:
 - `network` (optional string): Target network
 - `wallet_id` (optional string): Target wallet ID
 
-## 16. Related Skill Files
+## 19. Related Skill Files
 
 - **admin.skill.md** -- API key management, Admin Settings, daemon admin
 - **transactions.skill.md** -- 5-type transaction reference (actions execute as CONTRACT_CALL)
-- **policies.skill.md** -- Policy management (CONTRACT_WHITELIST, SPENDING_LIMIT)
+- **policies.skill.md** -- Policy management (CONTRACT_WHITELIST, SPENDING_LIMIT, REPUTATION_THRESHOLD)
 - **wallet.skill.md** -- Wallet CRUD, sessions, assets
+- **erc8004.skill.md** -- ERC-8004 trustless agent identity and reputation
