@@ -62,6 +62,9 @@ jobs:
       - name: E2E Coverage Check
         run: pnpm verify:e2e-coverage
 
+      - name: Agent UAT Coverage Check
+        run: pnpm verify:agent-uat
+
   # Stage 2: PR only - full suite + coverage gate + coverage reports
   stage2:
     if: github.event_name != 'push'
