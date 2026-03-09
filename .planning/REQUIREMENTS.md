@@ -26,14 +26,14 @@ Requirements for E2E automated verification system. Each maps to roadmap phases.
 
 ### 오프체인 인터페이스 (IFACE)
 
-- [ ] **IFACE-01**: Admin UI 접근 E2E (HTTP 200, Settings CRUD)
-- [ ] **IFACE-02**: MCP 서버 E2E (@modelcontextprotocol/sdk stdio 연결→tool listing→기본 도구 호출)
-- [ ] **IFACE-03**: SDK 연결성 E2E (createSession→listWallets→기본 조회 API)
-- [ ] **IFACE-04**: 알림 채널 설정 + 이벤트 발행 확인 E2E
-- [ ] **IFACE-05**: 토큰 레지스트리 CRUD E2E
-- [ ] **IFACE-06**: connect-info 자기 발견 엔드포인트 E2E (userop capability 포함)
-- [ ] **IFACE-07**: 감사 로그 생성 확인 E2E (작업 후 로그 존재 검증)
-- [ ] **IFACE-08**: 백업 → 복원 → 데이터 일치 확인 E2E
+- [x] **IFACE-01**: Admin UI 접근 E2E (HTTP 200, Settings CRUD)
+- [x] **IFACE-02**: MCP 서버 E2E (@modelcontextprotocol/sdk stdio 연결→tool listing→기본 도구 호출)
+- [x] **IFACE-03**: SDK 연결성 E2E (createSession→listWallets→기본 조회 API)
+- [x] **IFACE-04**: 알림 채널 설정 + 이벤트 발행 확인 E2E
+- [x] **IFACE-05**: 토큰 레지스트리 CRUD E2E
+- [x] **IFACE-06**: connect-info 자기 발견 엔드포인트 E2E (userop capability 포함)
+- [x] **IFACE-07**: 감사 로그 생성 확인 E2E (작업 후 로그 존재 검증)
+- [x] **IFACE-08**: 백업 → 복원 → 데이터 일치 확인 E2E
 
 ### 오프체인 고급 (ADV)
 
@@ -109,14 +109,14 @@ Requirements for E2E automated verification system. Each maps to roadmap phases.
 | CORE-02 | Phase 358 | Complete |
 | CORE-03 | Phase 358 | Complete |
 | CORE-04 | Phase 358 | Complete |
-| IFACE-01 | Phase 359 | Pending |
-| IFACE-02 | Phase 359 | Pending |
-| IFACE-03 | Phase 359 | Pending |
-| IFACE-04 | Phase 359 | Pending |
-| IFACE-05 | Phase 359 | Pending |
-| IFACE-06 | Phase 359 | Pending |
-| IFACE-07 | Phase 359 | Pending |
-| IFACE-08 | Phase 359 | Pending |
+| IFACE-01 | Phase 359 | Complete |
+| IFACE-02 | Phase 359 | Complete |
+| IFACE-03 | Phase 359 | Complete |
+| IFACE-04 | Phase 359 | Complete |
+| IFACE-05 | Phase 359 | Complete |
+| IFACE-06 | Phase 359 | Complete |
+| IFACE-07 | Phase 359 | Complete |
+| IFACE-08 | Phase 359 | Complete |
 | ADV-01 | Phase 360 | Pending |
 | ADV-02 | Phase 360 | Pending |
 | ADV-03 | Phase 360 | Pending |
@@ -154,4 +154,4 @@ Requirements for E2E automated verification system. Each maps to roadmap phases.
 
 ---
 *Requirements defined: 2026-03-09*
-*Last updated: 2026-03-09 after initial definition*
+*Last updated: 2026-03-09 after Phase 359 completion*

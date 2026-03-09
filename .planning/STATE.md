@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: milestone
 status: completed
-stopped_at: "Completed Phase 358 (2 plans: 358-01, 358-02)"
-last_updated: "2026-03-09T06:49:16.048Z"
-last_activity: 2026-03-09 -- Phase 358 complete (2 plans, 15 tests, 4 files)
+stopped_at: "Completed Phase 359 (3 plans: 359-01, 359-02, 359-03)"
+last_updated: "2026-03-09T07:07:00Z"
+last_activity: 2026-03-09 -- Phase 359 complete (3 plans, 8 scenarios, 6 files)
 progress:
   total_phases: 8
-  completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
-  percent: 25
+  completed_phases: 3
+  total_plans: 8
+  completed_plans: 8
+  percent: 38
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-09)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Phase 358 complete, ready for Phase 359/360
+**Current focus:** Phase 359 complete, ready for Phase 360 (parallel) or Phase 361
 
 ## Current Position
 
-Phase: 3 of 8 (Phase 358 complete, ready for 359/360)
-Plan: 2 of 2 in current phase (complete)
-Status: Phase 358 complete, ready for Phase 359/360 (parallel)
-Last activity: 2026-03-09 -- Phase 358 complete (2 plans, 15 tests, 4 files)
+Phase: 4 of 8 (Phase 359 complete, Phase 360 can run in parallel)
+Plan: 3 of 3 in current phase (complete)
+Status: Phase 359 complete, ready for Phase 360 or 361
+Last activity: 2026-03-09 -- Phase 359 complete (3 plans, 8 scenarios, 6 files)
 
-Progress: [##░░░░░░░░] 25%
+Progress: [####░░░░░░] 38%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
-- Average duration: 5.0min
-- Total execution time: 0.4 hours
+- Total plans completed: 8
+- Average duration: 4.3min
+- Total execution time: 0.6 hours
 
 **By Phase:**
 
@@ -45,10 +45,11 @@ Progress: [##░░░░░░░░] 25%
 |-------|-------|-------|----------|
 | 357: E2E 테스트 인프라 | 3/3 | 14min | 4.7min |
 | 358: 오프체인 Smoke -- 코어 | 2/2 | 5min | 2.5min |
+| 359: 오프체인 Smoke -- 인터페이스 | 3/3 | 9min | 3.0min |
 
 **Recent Trend:**
-- Last 3 plans: 8min, 3min, 2min
-- Trend: accelerating
+- Last 3 plans: 3min, 3min, 3min
+- Trend: steady
 
 *Updated after each plan completion*
 
@@ -69,6 +70,10 @@ Recent decisions affecting current work:
 - GET /v1/wallets returns { items: [...] }, GET /v1/sessions/:id/wallets returns { wallets: [...] }
 - SPENDING_LIMIT is the actual policy type (not DAILY_LIMIT/TRANSACTION_LIMIT)
 - Simulate uses TransactionRequest { type: 'TRANSFER', to, amount } body
+- MCP E2E uses dynamic import + StdioClientTransport spawn pattern
+- SDK E2E uses WAIaaSClient({ baseUrl, sessionToken }) constructor
+- DELETE /v1/tokens requires JSON body (E2EHttpClient.delete doesn't support body, use raw fetch)
+- Notification test accepts 200/400/422 (no channel configured is valid smoke result)
 
 ### Pending Todos
 
@@ -81,5 +86,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-09
-Stopped at: Completed Phase 358 (2 plans: 358-01, 358-02)
+Stopped at: Completed Phase 359 (3 plans: 359-01, 359-02, 359-03)
 Resume file: None
