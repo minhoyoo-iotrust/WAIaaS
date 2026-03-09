@@ -50,8 +50,8 @@ function adminHeaders(): { headers: Record<string, string> } {
 // ---------------------------------------------------------------------------
 
 describe('admin-ui-settings', () => {
-  it('serves Admin UI at root path', async () => {
-    const res = await fetch(daemon.baseUrl);
+  it('serves Admin UI at /admin/ path', async () => {
+    const res = await fetch(`${daemon.baseUrl}/admin/`);
     expect(res.status).toBe(200);
     const contentType = res.headers.get('content-type') ?? '';
     expect(contentType).toContain('text/html');
@@ -71,10 +71,10 @@ describe('admin-ui-settings', () => {
   it('updates a setting via PUT and reads back', async () => {
     const adminClient = new E2EHttpClient(daemon.baseUrl);
 
-    // Update display_currency to KRW
+    // Update display.currency to KRW
     const putRes = await adminClient.put(
       '/v1/admin/settings',
-      { settings: [{ key: 'display_currency', value: 'KRW' }] },
+      { settings: [{ key: 'display.currency', value: 'KRW' }] },
       adminHeaders(),
     );
     expect(putRes.status).toBe(200);
@@ -85,12 +85,12 @@ describe('admin-ui-settings', () => {
       adminHeaders(),
     );
     expect(getRes.status).toBe(200);
-    expect(getRes.body['display_currency']).toBe('KRW');
+    expect(getRes.body['display.currency']).toBe('KRW');
 
     // Reset to USD
     await adminClient.put(
       '/v1/admin/settings',
-      { settings: [{ key: 'display_currency', value: 'USD' }] },
+      { settings: [{ key: 'display.currency', value: 'USD' }] },
       adminHeaders(),
     );
   });
@@ -167,8 +167,8 @@ describe('sdk-connectivity', () => {
 
     const walletId = connectInfo.wallets[0].id;
 
-    // getWalletInfo -- returns wallet address info
-    const walletInfo = await sdkClient.getWalletInfo(walletId);
+    // getWalletInfo -- returns wallet address info (no arguments; uses session wallet)
+    const walletInfo = await sdkClient.getWalletInfo();
     expect(walletInfo).toBeDefined();
     expect(walletInfo.walletId).toBeTruthy();
 
