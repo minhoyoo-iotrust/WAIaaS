@@ -13,5 +13,6 @@ export default defineConfig({
     testTimeout: 60_000,
     hookTimeout: 30_000,
     forceExit: true,
+    reporters: ['default', './src/helpers/ci-reporter.ts'],
   },
 });
