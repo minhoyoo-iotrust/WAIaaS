@@ -107,7 +107,11 @@ Plans:
   1. 데몬 접속, 지갑 존재, 네트워크별 잔액을 확인하고 부족한 항목을 리포트한다
   2. 인터랙티브 프롬프트로 "가능한 것만 실행" 또는 "중단 후 준비" 중 선택할 수 있다
   3. --network, --only 옵션으로 특정 네트워크/프로토콜만 필터링하여 실행할 수 있다
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 362-01-PLAN.md — PreconditionChecker 코어 (데몬/지갑/잔액 체크 + 네트워크 필터)
+- [ ] 362-02-PLAN.md — 인터랙티브 프롬프트 + 온체인 러너 진입점
 
 ### Phase 363: 온체인 E2E 시나리오
 **Goal**: testnet에서 실제 트랜잭션(전송, 토큰, 스테이킹, DEX, NFT)이 자동으로 실행되고 검증된다
@@ -145,6 +149,6 @@ Note: Phase 359 and 360 can execute in parallel (both depend on 358 only). Phase
 | 359. 오프체인 Smoke -- 인터페이스 | 3/3 | Complete    | 2026-03-09 |
 | 360. 오프체인 Smoke -- 고급 | 3/3 | Complete    | 2026-03-09 |
 | 361. CI/CD 워크플로우 | 3/3 | Complete    | 2026-03-09 |
-| 362. 온체인 사전 조건 체커 | 0/? | Not started | - |
+| 362. 온체인 사전 조건 체커 | 0/2 | Not started | - |
 | 363. 온체인 E2E 시나리오 | 0/? | Not started | - |
 | 364. E2E 시나리오 등록 강제 | 0/? | Not started | - |
