@@ -1,5 +1,34 @@
 # Changelog
 
+## [2.10.0-rc.18](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.17...v2.10.0-rc.18) (2026-03-09)
+
+
+### Features
+
+* **357-01:** add E2E test package with scenario type system and reporter ([891dac1](https://github.com/minhoyoo-iotrust/WAIaaS/commit/891dac194748ed0877d737a92c2bd0b29958c246))
+* **357-02:** add daemon and push relay lifecycle management utilities ([d56680b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d56680b9559ce9d288195147cc2af4c3da654bf9))
+* **357-03:** add session management and HTTP client helpers ([1adca3e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1adca3e2f198f774cffe8ebc1991ebc659f10aa3))
+* **358-01:** add auth/wallet/session E2E scenarios ([c9f926b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c9f926ba09bbbcb4845bba54980a01153395f0c8))
+* **358-02:** add policy CRUD + dry-run simulate E2E scenarios ([cec1add](https://github.com/minhoyoo-iotrust/WAIaaS/commit/cec1add3212e3832cff3d53e3f334322c8044cbd))
+* **359-01:** add Admin UI, MCP stdio, and SDK interface E2E tests ([696ce40](https://github.com/minhoyoo-iotrust/WAIaaS/commit/696ce40885ea4074618accacc1e7e0ad3b86a8cb))
+* **359-02:** add notification, token registry, and connect-info E2E tests ([9098d0a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/9098d0a9028b16de9cffd33db570939daba403a0))
+* **359-03:** add audit log and backup/restore E2E tests ([e7f4d43](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e7f4d43b04c03900cc1ec2d42bdf3aea9a5c4f5d))
+* **360-01:** add Smart Account, UserOp, Owner Auth E2E scenarios ([945d6b2](https://github.com/minhoyoo-iotrust/WAIaaS/commit/945d6b255847f5462c853f14197c49b46f87c6f3))
+* **360-02:** add x402, ERC-8004, ERC-8128 E2E scenarios ([102e107](https://github.com/minhoyoo-iotrust/WAIaaS/commit/102e10737882554dc2f223098f0b71a82fcb729a))
+* **360-03:** add DeFi settings and Push Relay E2E scenarios ([288e7e8](https://github.com/minhoyoo-iotrust/WAIaaS/commit/288e7e8954c2f4d5c6b79ef8dd42102ffc600055))
+* **361-01:** add E2E smoke test CI workflow + CI reporter ([78b5d95](https://github.com/minhoyoo-iotrust/WAIaaS/commit/78b5d95a6c536bfbc26b983012bb186f0cc60e43))
+* **361-02:** add network setting keys completeness test ([#282](https://github.com/minhoyoo-iotrust/WAIaaS/issues/282)) + dynamic badge ([#283](https://github.com/minhoyoo-iotrust/WAIaaS/issues/283)) ([9f83f56](https://github.com/minhoyoo-iotrust/WAIaaS/commit/9f83f5620da0d67b37085d80b42f7194bc476e89))
+* **361-03:** add [#282](https://github.com/minhoyoo-iotrust/WAIaaS/issues/282) CI step + resolve issues [#282](https://github.com/minhoyoo-iotrust/WAIaaS/issues/282)/[#283](https://github.com/minhoyoo-iotrust/WAIaaS/issues/283) ([1399693](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1399693aa25b54465f47b4571914b279f54f03b1))
+* **362-01:** implement PreconditionChecker with daemon/wallet/balance checks ([de1ab24](https://github.com/minhoyoo-iotrust/WAIaaS/commit/de1ab246268218e6bc1815fcc033c0013442e609))
+* **362-02:** add interactive precondition prompt and onchain runner entry point ([34d778f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/34d778f5e1a54f42a64a22b4f5492ca2aa1d4fd1))
+* **363-01:** add ETH/SOL/ERC-20/SPL onchain transfer E2E tests ([3474f62](https://github.com/minhoyoo-iotrust/WAIaaS/commit/3474f6251440c97036125a5dc3131bf8a6f9c9aa))
+* **363-01:** add onchain skip utilities and vitest onchain project config ([a6e9102](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a6e9102456953ebbdd93842a4746c9499a00c509))
+* **363-02:** add incoming TX detection E2E test ([a920a1b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a920a1bfde082d7fc9028d7456eb87e2b0489fb7))
+* **363-02:** add Lido staking and Hyperliquid spot/perp E2E tests ([7006d9e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7006d9eefaf2c8a7224a7fbe4a2b4ab127531c6c))
+* **363-03:** add NFT ERC-721 and ERC-1155 transfer E2E tests ([4a9ce2f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4a9ce2f428621239af436fc1cff75a5fdf944e53))
+* **364-01:** add E2E coverage mapping registry ([6f2dc73](https://github.com/minhoyoo-iotrust/WAIaaS/commit/6f2dc736b0c253a57e3af4cb4e0697741755293b))
+* **364-01:** add verify-e2e-coverage.ts script ([2c245ea](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2c245eaf12a249643f362f4f60b16d535291196e))
+
 ## [2.10.0-rc.17](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.16...v2.10.0-rc.17) (2026-03-09)
 
 
