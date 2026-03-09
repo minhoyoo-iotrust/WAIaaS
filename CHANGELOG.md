@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.10.0-rc.21](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.20...v2.10.0-rc.21) (2026-03-09)
+
+
+### Bug Fixes
+
+* resolve E2E test failures ([#286](https://github.com/minhoyoo-iotrust/WAIaaS/issues/286), [#287](https://github.com/minhoyoo-iotrust/WAIaaS/issues/287), [#288](https://github.com/minhoyoo-iotrust/WAIaaS/issues/288)) ([afd9cd7](https://github.com/minhoyoo-iotrust/WAIaaS/commit/afd9cd7ec83b15e5473abba13957b8c04fe9f3bc))
+* resolve E2E test failures for admin UI build, API format, and audit-log fields ([#286](https://github.com/minhoyoo-iotrust/WAIaaS/issues/286), [#287](https://github.com/minhoyoo-iotrust/WAIaaS/issues/287), [#288](https://github.com/minhoyoo-iotrust/WAIaaS/issues/288)) ([a9167fc](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a9167fcde64c91a5879c87b1d4f60699c545dd2c))
+
 ## [2.10.0-rc.20](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.19...v2.10.0-rc.20) (2026-03-09)
 
 
