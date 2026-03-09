@@ -160,4 +160,4 @@ Note: Phase 359 and 360 can execute in parallel (both depend on 358 only). Phase
 | 361. CI/CD 워크플로우 | 3/3 | Complete    | 2026-03-09 |
 | 362. 온체인 사전 조건 체커 | 2/2 | Complete    | 2026-03-09 |
 | 363. 온체인 E2E 시나리오 | 3/3 | Complete    | 2026-03-09 |
-| 364. E2E 시나리오 등록 강제 | 2/2 | Complete   | 2026-03-09 |
+| 364. E2E 시나리오 등록 강제 | 2/2 | Complete    | 2026-03-09 |
