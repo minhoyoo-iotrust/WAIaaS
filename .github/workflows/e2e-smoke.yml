@@ -54,6 +54,7 @@ jobs:
         run: pnpm turbo run build --filter=@waiaas/e2e-tests --filter=@waiaas/push-relay
 
       - name: Install daemon globally
+        id: install
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
@@ -69,6 +70,10 @@ jobs:
             echo "Attempt $ATTEMPT/$MAX_ATTEMPTS: npm install -g @waiaas/daemon@$VERSION"
             if npm install -g "@waiaas/daemon@$VERSION" 2>&1; then
               echo "Successfully installed @waiaas/daemon@$VERSION"
+              # Capture actual CLI path for explicit passing (avoids PATH propagation issues in pnpm/vitest)
+              CLI_PATH="$NPM_GLOBAL_BIN/waiaas"
+              echo "cli_path=$CLI_PATH" >> "$GITHUB_OUTPUT"
+              echo "CLI path: $CLI_PATH"
               exit 0
             fi
             if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
@@ -85,6 +90,7 @@ jobs:
         run: pnpm --filter @waiaas/e2e-tests test:offchain
         env:
           E2E_DAEMON_INSTALL_MODE: global
+          WAIAAS_CLI_PATH: ${{ steps.install.outputs.cli_path }}
           CI: 'true'
 
       - name: Generate summary

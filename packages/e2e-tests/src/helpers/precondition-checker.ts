@@ -51,11 +51,16 @@ interface OnchainRequirement {
 const DEFAULT_REQUIREMENTS: OnchainRequirement[] = [
   { network: 'ethereum-sepolia', chain: 'ethereum', minBalance: '10000000000000000', symbol: 'ETH', decimals: 18 },
   { network: 'solana-devnet', chain: 'solana', minBalance: '500000000', symbol: 'SOL', decimals: 9 },
+  { network: 'polygon-amoy', chain: 'ethereum', minBalance: '10000000000000000', symbol: 'POL', decimals: 18 },
+  { network: 'arbitrum-sepolia', chain: 'ethereum', minBalance: '10000000000000000', symbol: 'ETH', decimals: 18 },
+  { network: 'optimism-sepolia', chain: 'ethereum', minBalance: '10000000000000000', symbol: 'ETH', decimals: 18 },
+  { network: 'base-sepolia', chain: 'ethereum', minBalance: '10000000000000000', symbol: 'ETH', decimals: 18 },
+  { network: 'hyperevm-testnet', chain: 'ethereum', minBalance: '10000000000000000', symbol: 'HYPE', decimals: 18 },
 ];
 
 /** Protocol -> required networks mapping. */
 const PROTOCOL_NETWORK_MAP: Record<string, string[]> = {
-  transfer: ['ethereum-sepolia', 'solana-devnet'],
+  transfer: ['ethereum-sepolia', 'solana-devnet', 'polygon-amoy', 'arbitrum-sepolia', 'optimism-sepolia', 'base-sepolia', 'hyperevm-testnet'],
   swap: ['ethereum-sepolia'],
   bridge: ['ethereum-sepolia'],
   staking: ['ethereum-sepolia'],

@@ -215,14 +215,26 @@ path = "data/waiaas.db"
 
   /** Resolve globally installed waiaas CLI binary. */
   private resolveGlobalCli(): string {
+    // 1. Try `which waiaas`
     try {
       return execSync('which waiaas', { encoding: 'utf-8' }).trim();
     } catch {
-      throw new Error(
-        'DaemonManager: E2E_DAEMON_INSTALL_MODE=global but `waiaas` not found in PATH. ' +
-        'Install with `npm install -g @waiaas/daemon`.',
-      );
+      // Fall through
     }
+
+    // 2. Fallback: npm global prefix
+    try {
+      const prefix = execSync('npm prefix -g', { encoding: 'utf-8' }).trim();
+      const candidate = join(prefix, 'bin', 'waiaas');
+      if (existsSync(candidate)) return candidate;
+    } catch {
+      // Fall through
+    }
+
+    throw new Error(
+      'DaemonManager: E2E_DAEMON_INSTALL_MODE=global but `waiaas` not found. ' +
+      'Install with `npm install -g @waiaas/daemon` or set WAIAAS_CLI_PATH.',
+    );
   }
 
   /** Resolve CLI bin path within monorepo. */

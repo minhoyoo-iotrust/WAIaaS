@@ -661,6 +661,42 @@
 
 ---
 
+## Milestone: v31.8 — Agent UAT (메인넷 인터랙티브 검증)
+
+**Shipped:** 2026-03-10
+**Phases:** 5 | **Plans:** 12 | **Sessions:** 1
+
+### What Was Built
+- Agent UAT 마크다운 시나리오 포맷 — 6-section 표준(Metadata/Prerequisites/Steps/Verification/Cost/Troubleshooting), YAML 프론트매터
+- `/agent-uat` skill 파일 — help/run/run testnet/mainnet/defi/admin 서브커맨드, 인터랙티브 실행 프로토콜
+- 45개 시나리오: Testnet 8 + Mainnet 전송 6 + DeFi 12 + Advanced 6 + Admin 13
+- CI 시나리오 등록 강제 — Provider 매핑/포맷/인덱스/Admin 라우트 4개 검증 스크립트 + ci.yml Stage 1
+
+### What Worked
+- 5 phases 1일 완료 (89 files, +10,962 lines) — 문서 전용 마일스톤이라 빌드/테스트 오버헤드 없음
+- 기존 E2E(v31.7)와 Agent UAT의 명확한 역할 분리: 오프체인 자동 vs 온체인 인터랙티브
+- 시나리오 포맷 정의(Phase 365)가 후속 3개 phase의 작성 패턴을 완전히 결정하여 병렬 작성 가능
+- CI 검증 스크립트가 즉시 45개 시나리오 전체를 PASS하여 별도 수정 불필요
+
+### What Was Inefficient
+- ROADMAP.md Phase 369 plan 체크박스 미갱신 (수동 마크 누락 반복 이슈)
+- SUMMARY.md에 one_liner 필드가 누락되어 milestone complete 시 자동 추출 실패
+
+### Patterns Established
+- Agent UAT 시나리오 포맷: YAML frontmatter + 6 mandatory sections, `^##` regex 파싱 가능
+- Self-transfer 패턴: 메인넷 UAT 안전성 확보, to=own address로 자금 손실 위험 제거
+- CI 시나리오 등록 강제: Provider/시나리오 매핑 → 기능 추가 시 자동 차단
+
+### Key Lessons
+- 문서 전용 마일스톤도 CI 검증이 중요 — 시나리오 포맷 일관성을 수동 검토 대신 스크립트로 보장
+- SUMMARY.md one_liner 필드를 표준화하면 milestone complete 자동화 정확도 향상
+
+### Cost Observations
+- Sessions: 1
+- Notable: 12 plans, 89 files, ~0.5시간 실행 시간
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -684,6 +720,7 @@
 | v31.4 | 1 | 5 | Hyperliquid 생태계(Perp/Spot/Sub-account), 112 파일 ~3시간 완료 |
 | v31.6 | 1 | 5 | Across Protocol 브릿지, 66 파일 2일 완료 |
 | v31.7 | 1 | 8 | E2E 자동 검증 체계, 122 파일 1일 완료 |
+| v31.8 | 1 | 5 | Agent UAT 시나리오 체계, 89 파일 1일 완료 |
 
 ### Cumulative Quality
 
@@ -706,6 +743,7 @@
 | v31.4 | ~7,109 (unchanged) | maintained | +27 decisions |
 | v31.6 | ~7,219 (+110) | maintained | +12 decisions |
 | v31.7 | ~7,219 (unchanged) | maintained | +30 decisions |
+| v31.8 | ~7,219 (unchanged) | maintained | +14 decisions |
 
 ### Top Lessons (Verified Across Milestones)
 

@@ -153,6 +153,42 @@ describe('sol-transfer', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Scenario 2a-2e: L2 testnet native transfers
+// ---------------------------------------------------------------------------
+
+const L2_NETWORKS = [
+  { network: 'polygon-amoy', name: 'Polygon Amoy', symbol: 'POL' },
+  { network: 'arbitrum-sepolia', name: 'Arbitrum Sepolia', symbol: 'ETH' },
+  { network: 'optimism-sepolia', name: 'Optimism Sepolia', symbol: 'ETH' },
+  { network: 'base-sepolia', name: 'Base Sepolia', symbol: 'ETH' },
+  { network: 'hyperevm-testnet', name: 'HyperEVM Testnet', symbol: 'HYPE' },
+] as const;
+
+for (const l2 of L2_NETWORKS) {
+  describe(`${l2.network}-transfer`, () => {
+    it.skipIf(shouldSkipNetwork(l2.network))(`sends 1 wei ${l2.symbol} to self on ${l2.name}`, async () => {
+      expect(evmWallet).toBeTruthy();
+      expect(evmSession).toBeTruthy();
+
+      const res = await evmSession!.http.post<{ id: string; status: string }>('/v1/transactions/send', {
+        type: 'TRANSFER',
+        to: evmWallet!.publicKey,
+        amount: '1',
+        network: l2.network,
+      });
+
+      expect(res.status).toBe(201);
+      expect(res.body.id).toBeTruthy();
+
+      const result = await pollTxStatus(evmSession!.http, res.body.id, 90_000);
+      expect(['CONFIRMED', 'COMPLETED']).toContain(result.status);
+      expect(result.txHash).toBeTruthy();
+      expect(result.txHash!.startsWith('0x')).toBe(true);
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Scenario 3: erc20-transfer (ONCH-05)
 // ---------------------------------------------------------------------------
 
