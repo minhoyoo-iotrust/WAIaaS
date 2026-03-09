@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.10.0-rc.15](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.14...v2.10.0-rc.15) (2026-03-09)
+
+
+### Features
+
+* **353-01:** add AcrossApiClient with Zod schemas and chain config ([03e4b78](https://github.com/minhoyoo-iotrust/WAIaaS/commit/03e4b78e881c71a35b270045927d13eda082edc2))
+* **353-02:** add AcrossBridgeActionProvider with 5 actions and registry ([64262af](https://github.com/minhoyoo-iotrust/WAIaaS/commit/64262afd3c51306ff8196dffca426078833870bd))
+* **354-01:** add AcrossBridgeStatusTracker + AcrossBridgeMonitoringTracker ([bc23ebf](https://github.com/minhoyoo-iotrust/WAIaaS/commit/bc23ebf1290d0d261a35920a3355255773efbaed))
+* **354-01:** daemon tracker registration + bridge enrollment ([6aaacb7](https://github.com/minhoyoo-iotrust/WAIaaS/commit/6aaacb71431ec7bb9ec3aaa8d4d7d633ccf04863))
+* **355-01:** add Across Bridge admin settings, connect-info, and SDK methods ([ff5affe](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ff5affe2388dc6271730373fe07b6b366b96876b))
+* **355-02:** add Across Bridge to Admin UI, settings labels, and skill docs ([c087811](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c0878113cdb734d61c8a06cfcb5d150acbe87318))
+
+
+### Bug Fixes
+
+* **admin:** update action provider count in tests for Across Bridge ([7a7543c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7a7543cb4f8523ff6520ce176f3eefe2a7d333de))
+* **daemon:** update settings count in tests for Across Bridge settings ([57ca73d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/57ca73dc51ded8bdebe559873084439efc108d8b))
+
 ## [2.10.0-rc.14](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.13...v2.10.0-rc.14) (2026-03-08)
 
 
