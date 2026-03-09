@@ -10,7 +10,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { createServer } from 'node:net';
-import { fork, type ChildProcess } from 'node:child_process';
+import { fork, spawn, execSync, type ChildProcess } from 'node:child_process';
 
 export interface DaemonInstance {
   dataDir: string;
@@ -64,30 +64,38 @@ path = "data/waiaas.db"
 `;
     writeFileSync(join(dataDir, 'config.toml'), config, { mode: 0o644 });
 
-    // 3. Resolve CLI path
+    // 3. Resolve CLI path and spawn mode
+    const useGlobal = process.env['E2E_DAEMON_INSTALL_MODE'] === 'global';
     const cliPath = opts?.cliPath
       ?? process.env['WAIAAS_CLI_PATH']
-      ?? this.resolveMonorepoCli();
+      ?? (useGlobal ? this.resolveGlobalCli() : this.resolveMonorepoCli());
 
-    if (!existsSync(cliPath)) {
+    if (!useGlobal && !existsSync(cliPath)) {
       throw new Error(
         `DaemonManager: CLI entrypoint not found at ${cliPath}. ` +
         `Build with 'pnpm turbo run build --filter=@waiaas/cli' or set WAIAAS_CLI_PATH.`,
       );
     }
 
-    // 4. Fork the CLI process
+    // 4. Spawn the CLI process
     this.stdout = [];
     this.stderr = [];
 
-    const child = fork(cliPath, ['start', '--data-dir', dataDir], {
-      env: {
-        ...process.env,
-        WAIAAS_MASTER_PASSWORD: masterPassword,
-      },
-      stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
-      silent: true,
-    });
+    const childEnv = {
+      ...process.env,
+      WAIAAS_MASTER_PASSWORD: masterPassword,
+    };
+
+    const child: ChildProcess = useGlobal
+      ? spawn(cliPath, ['start', '--data-dir', dataDir], {
+          env: childEnv,
+          stdio: ['pipe', 'pipe', 'pipe'],
+        })
+      : fork(cliPath, ['start', '--data-dir', dataDir], {
+          env: childEnv,
+          stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
+          silent: true,
+        });
 
     // Collect output for debugging
     child.stdout?.on('data', (chunk: Buffer) => {
@@ -203,6 +211,18 @@ path = "data/waiaas.db"
         }
       });
     });
+  }
+
+  /** Resolve globally installed waiaas CLI binary. */
+  private resolveGlobalCli(): string {
+    try {
+      return execSync('which waiaas', { encoding: 'utf-8' }).trim();
+    } catch {
+      throw new Error(
+        'DaemonManager: E2E_DAEMON_INSTALL_MODE=global but `waiaas` not found in PATH. ' +
+        'Install with `npm install -g @waiaas/daemon`.',
+      );
+    }
   }
 
   /** Resolve CLI bin path within monorepo. */
