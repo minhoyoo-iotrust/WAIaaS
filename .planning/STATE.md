@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: milestone
 status: planning
-stopped_at: Completed Phase 362 (onchain precondition checker)
-last_updated: "2026-03-09T07:58:29.034Z"
-last_activity: 2026-03-09 -- Phase 362 complete (2 plans, 21 new tests, PreconditionChecker + interactive prompt + run-onchain)
+stopped_at: Completed Phase 363 (onchain E2E scenarios)
+last_updated: "2026-03-09T08:11:03Z"
+last_activity: 2026-03-09 -- Phase 363 complete (3 plans, 11 onchain scenarios, skip utility + transfer/incoming/staking/hyperliquid/NFT E2E)
 progress:
   total_phases: 8
-  completed_phases: 6
-  total_plans: 16
-  completed_plans: 16
-  percent: 75
+  completed_phases: 7
+  total_plans: 19
+  completed_plans: 19
+  percent: 87
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-09)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Phase 363 - 온체인 E2E 시나리오
+**Current focus:** Phase 364 - E2E 시나리오 등록 강제
 
 ## Current Position
 
-Phase: 7 of 8 (Phase 363: 온체인 E2E 시나리오)
-Plan: 0 of ? in current phase
-Status: Ready to plan
-Last activity: 2026-03-09 -- Phase 362 complete (2 plans, 21 new tests, PreconditionChecker + interactive prompt + run-onchain)
+Phase: 7 of 8 (Phase 363: 온체인 E2E 시나리오) -- COMPLETE
+Plan: 3 of 3 in current phase
+Status: Phase 363 complete, ready for Phase 364
+Last activity: 2026-03-09 -- Phase 363 complete (3 plans, 11 onchain scenarios, skip utility + transfer/incoming/staking/hyperliquid/NFT E2E)
 
-Progress: [########░░] 75%
+Progress: [########░░] 87%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 16
-- Average duration: 3.9min
-- Total execution time: 1.0 hours
+- Total plans completed: 19
+- Average duration: 3.7min
+- Total execution time: 1.1 hours
 
 **By Phase:**
 
@@ -49,9 +49,10 @@ Progress: [########░░] 75%
 | 360: 오프체인 Smoke -- 고급 | 3/3 | 12min | 4.0min |
 | 361: CI/CD 워크플로우 | 3/3 | 10min | 3.3min |
 | 362: 온체인 사전 조건 체커 | 2/2 | 8min | 4.0min |
+| 363: 온체인 E2E 시나리오 | 3/3 | 8min | 2.7min |
 
 **Recent Trend:**
-- Last 5 plans: 3min, 5min, 2min, 5min, 3min
+- Last 5 plans: 5min, 3min, 3min, 3min, 2min
 - Trend: steady
 
 *Updated after each plan completion*
@@ -89,6 +90,10 @@ Recent decisions affecting current work:
 - Balance API requires session auth (not master password); PreconditionChecker creates temp session per wallet
 - Health endpoint is /health (not /v1/health) per daemon route structure
 - CI auto-selects run-available; failed preconditions become test-level skips via ONCHAIN_SKIP_NETWORKS env
+- vitest workspace config with offchain/onchain projects for --project filtering
+- Onchain tests use 120s timeout, single fork (sequential execution)
+- Token/NFT transfer tests use graceful return (not test.skip) on 4xx
+- Hyperliquid tests gated by WAIAAS_E2E_HYPERLIQUID_ENABLED env
 
 ### Pending Todos
 
@@ -101,5 +106,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-09
-Stopped at: Completed Phase 362 (onchain precondition checker)
+Stopped at: Completed Phase 363 (onchain E2E scenarios)
 Resume file: None

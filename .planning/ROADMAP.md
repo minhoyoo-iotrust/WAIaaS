@@ -14,7 +14,7 @@
 - [x] **Phase 360: 오프체인 Smoke -- 고급 프로토콜** - Smart Account/UserOp/Owner Auth/x402/ERC-8004/8128/DeFi/Push Relay E2E (completed 2026-03-09)
 - [x] **Phase 361: CI/CD 워크플로우 통합** - e2e-smoke.yml, RC 트리거, 리포트, 알림, #282/#283 이슈 해결 (completed 2026-03-09)
 - [x] **Phase 362: 온체인 사전 조건 체커** - 데몬/지갑/잔액 확인, 인터랙티브 프롬프트, 네트워크 필터 (completed 2026-03-09)
-- [ ] **Phase 363: 온체인 E2E 시나리오** - testnet 전송/토큰/수신감지/스테이킹/Hyperliquid/NFT + skip 처리
+- [x] **Phase 363: 온체인 E2E 시나리오** - testnet 전송/토큰/수신감지/스테이킹/Hyperliquid/NFT + skip 처리 (completed 2026-03-09)
 - [ ] **Phase 364: E2E 시나리오 등록 강제** - Provider/API 매핑 검증, CI fail, 빈 파일 방지
 
 ## Phase Details
@@ -122,12 +122,12 @@ Plans:
   2. IncomingTxMonitor가 수신 트랜잭션을 감지하고 Lido Holesky stake/unstake가 실행된다
   3. Hyperliquid testnet Spot/Perp 주문과 NFT ERC-721/ERC-1155 전송이 성공한다
   4. testnet 미지원 프로토콜과 잔액 부족 시나리오는 fail이 아닌 skip으로 처리된다
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 
 Plans:
-- [ ] 363-01-PLAN.md — Skip 유틸리티 + vitest 설정 + ETH/SOL/ERC-20/SPL 전송 E2E
-- [ ] 363-02-PLAN.md — 수신 TX 감지 + Lido Staking + Hyperliquid Spot/Perp E2E
-- [ ] 363-03-PLAN.md — NFT ERC-721/ERC-1155 전송 E2E
+- [x] 363-01-PLAN.md — Skip 유틸리티 + vitest 설정 + ETH/SOL/ERC-20/SPL 전송 E2E
+- [x] 363-02-PLAN.md — 수신 TX 감지 + Lido Staking + Hyperliquid Spot/Perp E2E
+- [x] 363-03-PLAN.md — NFT ERC-721/ERC-1155 전송 E2E
 
 ### Phase 364: E2E 시나리오 등록 강제
 **Goal**: 신규 기능(Action Provider, REST API) 추가 시 대응하는 E2E 시나리오가 없으면 CI가 실패하여, 테스트 누락을 구조적으로 방지한다
@@ -155,5 +155,5 @@ Note: Phase 359 and 360 can execute in parallel (both depend on 358 only). Phase
 | 360. 오프체인 Smoke -- 고급 | 3/3 | Complete    | 2026-03-09 |
 | 361. CI/CD 워크플로우 | 3/3 | Complete    | 2026-03-09 |
 | 362. 온체인 사전 조건 체커 | 2/2 | Complete    | 2026-03-09 |
-| 363. 온체인 E2E 시나리오 | 0/3 | Not started | - |
+| 363. 온체인 E2E 시나리오 | 3/3 | Complete    | 2026-03-09 |
 | 364. E2E 시나리오 등록 강제 | 0/? | Not started | - |

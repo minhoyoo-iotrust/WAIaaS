@@ -61,13 +61,13 @@ Requirements for E2E automated verification system. Each maps to roadmap phases.
 - [x] **ONCH-01**: 사전 조건 체커 (데몬 접속 확인, 지갑 존재, 네트워크별 잔액, 부족 리포트)
 - [x] **ONCH-02**: 인터랙티브 프롬프트 (가능한 것만 실행 / 중단 후 준비 선택)
 - [x] **ONCH-03**: 네트워크/프로토콜 필터 옵션 (--network sepolia, --only swap,bridge)
-- [ ] **ONCH-04**: ETH(Sepolia) / SOL(Devnet) 기본 전송 E2E
-- [ ] **ONCH-05**: ERC-20(Sepolia) / SPL(Devnet) 토큰 전송 E2E
-- [ ] **ONCH-06**: IncomingTxMonitor 수신 트랜잭션 감지 E2E
-- [ ] **ONCH-07**: Lido Staking (Holesky testnet) stake/unstake E2E
-- [ ] **ONCH-08**: Hyperliquid testnet Spot/Perp 주문 + Sub Account E2E
-- [ ] **ONCH-09**: NFT 전송 ERC-721/ERC-1155 (Sepolia) E2E
-- [ ] **ONCH-10**: testnet 미지원 프로토콜 skip 처리 + 잔액 부족 시 skip (fail이 아닌 skip)
+- [x] **ONCH-04**: ETH(Sepolia) / SOL(Devnet) 기본 전송 E2E
+- [x] **ONCH-05**: ERC-20(Sepolia) / SPL(Devnet) 토큰 전송 E2E
+- [x] **ONCH-06**: IncomingTxMonitor 수신 트랜잭션 감지 E2E
+- [x] **ONCH-07**: Lido Staking (Holesky testnet) stake/unstake E2E
+- [x] **ONCH-08**: Hyperliquid testnet Spot/Perp 주문 + Sub Account E2E
+- [x] **ONCH-09**: NFT 전송 ERC-721/ERC-1155 (Sepolia) E2E
+- [x] **ONCH-10**: testnet 미지원 프로토콜 skip 처리 + 잔액 부족 시 skip (fail이 아닌 skip)
 
 ### 시나리오 강제 (ENFORCE)
 
@@ -135,13 +135,13 @@ Requirements for E2E automated verification system. Each maps to roadmap phases.
 | ONCH-01 | Phase 362 | Complete |
 | ONCH-02 | Phase 362 | Complete |
 | ONCH-03 | Phase 362 | Complete |
-| ONCH-04 | Phase 363 | Pending |
-| ONCH-05 | Phase 363 | Pending |
-| ONCH-06 | Phase 363 | Pending |
-| ONCH-07 | Phase 363 | Pending |
-| ONCH-08 | Phase 363 | Pending |
-| ONCH-09 | Phase 363 | Pending |
-| ONCH-10 | Phase 363 | Pending |
+| ONCH-04 | Phase 363 | Complete |
+| ONCH-05 | Phase 363 | Complete |
+| ONCH-06 | Phase 363 | Complete |
+| ONCH-07 | Phase 363 | Complete |
+| ONCH-08 | Phase 363 | Complete |
+| ONCH-09 | Phase 363 | Complete |
+| ONCH-10 | Phase 363 | Complete |
 | ENFORCE-01 | Phase 364 | Pending |
 | ENFORCE-02 | Phase 364 | Pending |
 | ENFORCE-03 | Phase 364 | Pending |
