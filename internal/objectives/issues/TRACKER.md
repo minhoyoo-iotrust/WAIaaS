@@ -294,7 +294,7 @@
 | 277 | BUG | HIGH | Admin UI NFT Indexer 설정 섹션 미표시 — API 키 직접 입력 불가 | — | FIXED | 2026-03-07 |
 | 278 | BUG | MEDIUM | D'CENT Swap 멀티체인/크로스체인 스왑 기능이 Admin UI와 에이전트 인터페이스에 미노출 | — | FIXED | 2026-03-07 |
 | 279 | BUG | CRITICAL | UserOp Sign 라우트 network 이중 replace 버그로 RPC URL 해석 실패 — Sign 100% 불가 | — | FIXED | 2026-03-08 |
-| 280 | BUG | HIGH | HyperEVM RPC 설정 키 미등록 — IncomingTxMonitor 구독 실패 | v31.6 | OPEN | — |
+| 280 | BUG | HIGH | HyperEVM RPC 설정 키 미등록 — IncomingTxMonitor 구독 실패 | v31.6 | FIXED | 2026-03-09 |
 
 ## Type Legend
 
