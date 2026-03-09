@@ -34,7 +34,7 @@ const adminHeaders = { headers: { 'X-Master-Password': MASTER_PASSWORD } };
 let evmWallet: WalletInfo | undefined;
 let session: SessionManager | undefined;
 
-const skipAll = !HYPERLIQUID_ENABLED || shouldSkipNetwork('sepolia');
+const skipAll = !HYPERLIQUID_ENABLED || shouldSkipNetwork('ethereum-sepolia');
 
 beforeAll(async () => {
   if (skipAll) return;

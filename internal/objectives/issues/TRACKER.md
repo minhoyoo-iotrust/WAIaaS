@@ -310,7 +310,8 @@
 | 293 | BUG | MEDIUM | E2E Settings PUT 테스트가 잘못된 설정 키(display_currency) 사용 — 실제 키는 display.currency | v31.8 | FIXED | 2026-03-09 |
 | 294 | BUG | HIGH | E2E SDK getWalletInfo 실패 — /v1/wallets/:id/networks GET에 masterAuth 불필요 적용 (미들웨어 모순) | v31.8 | FIXED | 2026-03-09 |
 | 295 | BUG | MEDIUM | E2E 온체인 테스트 기본 포트 3000 — 데몬 기본 포트 3100과 불일치 | v31.8 | FIXED | 2026-03-09 |
-| 296 | BUG | HIGH | E2E 온체인 테스트가 구버전 네트워크 ID 사용 — v29.5 통일 형식(ethereum-sepolia 등) 미반영 | v31.8 | OPEN | |
+| 296 | BUG | HIGH | E2E 온체인 테스트가 구버전 네트워크 ID 사용 — v29.5 통일 형식(ethereum-sepolia 등) 미반영 | v31.8 | FIXED | 2026-03-09 |
+| 297 | BUG | MEDIUM | E2E Settings GET 응답 구조 불일치 — 플랫 키 접근 vs 카테고리별 중첩 객체 응답 | v31.8 | FIXED | 2026-03-09 |
 
 ## Type Legend
 
@@ -322,10 +323,10 @@
 
 ## Summary
 
-- **OPEN:** 1
-- **FIXED:** 295
+- **OPEN:** 0
+- **FIXED:** 297
 - **RESOLVED:** 4
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 301
+- **Total:** 302
 

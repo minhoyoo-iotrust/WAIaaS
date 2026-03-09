@@ -103,7 +103,7 @@ afterAll(async () => {
 // ---------------------------------------------------------------------------
 
 describe('eth-transfer', () => {
-  it.skipIf(shouldSkipNetwork('sepolia'))('sends 1 wei ETH to self on Sepolia', async () => {
+  it.skipIf(shouldSkipNetwork('ethereum-sepolia'))('sends 1 wei ETH to self on Sepolia', async () => {
     expect(evmWallet).toBeTruthy();
     expect(evmSession).toBeTruthy();
 
@@ -111,7 +111,7 @@ describe('eth-transfer', () => {
       type: 'TRANSFER',
       to: evmWallet!.publicKey,
       amount: '1',
-      network: 'sepolia',
+      network: 'ethereum-sepolia',
     });
 
     expect(res.status).toBe(201);
@@ -130,7 +130,7 @@ describe('eth-transfer', () => {
 // ---------------------------------------------------------------------------
 
 describe('sol-transfer', () => {
-  it.skipIf(shouldSkipNetwork('devnet'))('sends 1 lamport SOL to self on Devnet', async () => {
+  it.skipIf(shouldSkipNetwork('solana-devnet'))('sends 1 lamport SOL to self on Devnet', async () => {
     expect(solWallet).toBeTruthy();
     expect(solSession).toBeTruthy();
 
@@ -157,7 +157,7 @@ describe('sol-transfer', () => {
 // ---------------------------------------------------------------------------
 
 describe('erc20-transfer', () => {
-  it.skipIf(shouldSkipNetwork('sepolia'))('sends ERC-20 token to self on Sepolia (or skips)', async () => {
+  it.skipIf(shouldSkipNetwork('ethereum-sepolia'))('sends ERC-20 token to self on Sepolia (or skips)', async () => {
     expect(evmWallet).toBeTruthy();
     expect(evmSession).toBeTruthy();
 
@@ -174,7 +174,7 @@ describe('erc20-transfer', () => {
       to: evmWallet!.publicKey,
       amount: '1',
       token: testToken,
-      network: 'sepolia',
+      network: 'ethereum-sepolia',
     });
 
     // 4xx means no token balance or token not configured -> skip gracefully
@@ -200,7 +200,7 @@ describe('erc20-transfer', () => {
 // ---------------------------------------------------------------------------
 
 describe('spl-transfer', () => {
-  it.skipIf(shouldSkipNetwork('devnet'))('sends SPL token to self on Devnet (or skips)', async () => {
+  it.skipIf(shouldSkipNetwork('solana-devnet'))('sends SPL token to self on Devnet (or skips)', async () => {
     expect(solWallet).toBeTruthy();
     expect(solSession).toBeTruthy();
 

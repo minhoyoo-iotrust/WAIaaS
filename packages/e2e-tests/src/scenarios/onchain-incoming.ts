@@ -14,7 +14,7 @@ registry.register({
   name: 'Incoming TX Detection',
   track: 'onchain',
   category: 'incoming',
-  networks: ['sepolia'],
+  networks: ['ethereum-sepolia'],
   description:
     'Self-transfer ETH on Sepolia, wait for confirmation, then verify IncomingTxMonitor detects the incoming transaction',
 });

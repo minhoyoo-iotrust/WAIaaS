@@ -71,7 +71,7 @@ async function pollTxStatus(
 }
 
 describe('lido-stake', () => {
-  it.skipIf(shouldSkipNetwork('holesky'))(
+  it.skipIf(shouldSkipNetwork('ethereum-holesky'))(
     'stakes 0.001 ETH via Lido on Holesky',
     async () => {
       expect(evmWallet).toBeTruthy();
@@ -81,7 +81,7 @@ describe('lido-stake', () => {
         '/v1/actions/lido_staking/stake',
         {
           amount: '1000000000000000', // 0.001 ETH in wei
-          network: 'holesky',
+          network: 'ethereum-holesky',
         },
       );
 
@@ -108,7 +108,7 @@ describe('lido-stake', () => {
 });
 
 describe('lido-unstake', () => {
-  it.skipIf(shouldSkipNetwork('holesky'))(
+  it.skipIf(shouldSkipNetwork('ethereum-holesky'))(
     'unstakes 0.001 ETH via Lido on Holesky (withdrawal queue)',
     async () => {
       if (!stakeSucceeded) {
@@ -122,7 +122,7 @@ describe('lido-unstake', () => {
         '/v1/actions/lido_staking/unstake',
         {
           amount: '1000000000000000', // 0.001 ETH in wei
-          network: 'holesky',
+          network: 'ethereum-holesky',
         },
       );
 

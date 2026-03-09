@@ -5,7 +5,7 @@
  * onchain E2E tests via vitest.
  *
  * Usage:
- *   tsx src/run-onchain.ts [--network sepolia,devnet] [--only swap,staking]
+ *   tsx src/run-onchain.ts [--network ethereum-sepolia,solana-devnet] [--only swap,staking]
  *
  * Environment:
  *   WAIAAS_E2E_DAEMON_URL   - Daemon base URL (default: http://127.0.0.1:3100)

@@ -54,7 +54,7 @@ afterAll(async () => {
 }, 10_000);
 
 describe('incoming-tx-detection', () => {
-  it.skipIf(shouldSkipNetwork('sepolia'))(
+  it.skipIf(shouldSkipNetwork('ethereum-sepolia'))(
     'detects incoming ETH after self-transfer on Sepolia',
     async () => {
       expect(evmWallet).toBeTruthy();
@@ -67,7 +67,7 @@ describe('incoming-tx-detection', () => {
           type: 'TRANSFER',
           to: evmWallet!.publicKey,
           amount: '1',
-          network: 'sepolia',
+          network: 'ethereum-sepolia',
         },
       );
       expect(sendRes.status).toBe(201);

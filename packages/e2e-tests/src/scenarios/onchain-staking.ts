@@ -13,7 +13,7 @@ registry.register({
   name: 'Lido Stake',
   track: 'onchain',
   category: 'staking',
-  networks: ['holesky'],
+  networks: ['ethereum-holesky'],
   protocols: ['staking'],
   description: 'Stake 0.001 ETH via Lido on Holesky testnet, verify txId and CONFIRMED status',
 });
@@ -23,7 +23,7 @@ registry.register({
   name: 'Lido Unstake',
   track: 'onchain',
   category: 'staking',
-  networks: ['holesky'],
+  networks: ['ethereum-holesky'],
   protocols: ['staking'],
   description:
     'Unstake 0.001 ETH via Lido on Holesky testnet (withdrawal queue), verify submission',

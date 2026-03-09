@@ -90,7 +90,7 @@ async function pollTxStatus(
 // ---------------------------------------------------------------------------
 
 describe('nft-erc721-transfer', () => {
-  it.skipIf(shouldSkipNetwork('sepolia'))(
+  it.skipIf(shouldSkipNetwork('ethereum-sepolia'))(
     'self-transfers an ERC-721 NFT on Sepolia',
     async () => {
       expect(evmWallet).toBeTruthy();
@@ -112,7 +112,7 @@ describe('nft-erc721-transfer', () => {
             tokenId: erc721.tokenId,
             standard: 'ERC-721',
           },
-          network: 'sepolia',
+          network: 'ethereum-sepolia',
         },
       );
 
@@ -142,7 +142,7 @@ describe('nft-erc721-transfer', () => {
 // ---------------------------------------------------------------------------
 
 describe('nft-erc1155-transfer', () => {
-  it.skipIf(shouldSkipNetwork('sepolia'))(
+  it.skipIf(shouldSkipNetwork('ethereum-sepolia'))(
     'self-transfers an ERC-1155 NFT on Sepolia',
     async () => {
       expect(evmWallet).toBeTruthy();
@@ -165,7 +165,7 @@ describe('nft-erc1155-transfer', () => {
             standard: 'ERC-1155',
           },
           amount: '1',
-          network: 'sepolia',
+          network: 'ethereum-sepolia',
         },
       );
 

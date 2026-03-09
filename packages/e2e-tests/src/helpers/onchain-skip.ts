@@ -5,7 +5,7 @@
  * environment variable (set by run-onchain.ts / PreconditionChecker).
  *
  * Usage:
- *   it.skipIf(shouldSkipNetwork('sepolia'))('sends ETH', async () => { ... });
+ *   it.skipIf(shouldSkipNetwork('ethereum-sepolia'))('sends ETH', async () => { ... });
  */
 
 /**

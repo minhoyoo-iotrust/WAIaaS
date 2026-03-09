@@ -85,7 +85,7 @@ describe('admin-ui-settings', () => {
       adminHeaders(),
     );
     expect(getRes.status).toBe(200);
-    expect(getRes.body['display.currency']).toBe('KRW');
+    expect((getRes.body as Record<string, Record<string, unknown>>).display?.currency).toBe('KRW');
 
     // Reset to USD
     await adminClient.put(

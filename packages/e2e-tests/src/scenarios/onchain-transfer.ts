@@ -17,7 +17,7 @@ registry.register({
   name: 'ETH Native Transfer',
   track: 'onchain',
   category: 'transfer',
-  networks: ['sepolia'],
+  networks: ['ethereum-sepolia'],
   description: 'Self-transfer 1 wei ETH on Sepolia testnet, verify txId and CONFIRMED status',
 });
 
@@ -26,7 +26,7 @@ registry.register({
   name: 'SOL Native Transfer',
   track: 'onchain',
   category: 'transfer',
-  networks: ['devnet'],
+  networks: ['solana-devnet'],
   description: 'Self-transfer 1 lamport SOL on Devnet, verify txId and CONFIRMED status',
 });
 
@@ -35,7 +35,7 @@ registry.register({
   name: 'ERC-20 Token Transfer',
   track: 'onchain',
   category: 'transfer',
-  networks: ['sepolia'],
+  networks: ['ethereum-sepolia'],
   protocols: ['transfer'],
   description: 'ERC-20 token self-transfer on Sepolia, graceful skip if no token balance',
 });
@@ -45,7 +45,7 @@ registry.register({
   name: 'SPL Token Transfer',
   track: 'onchain',
   category: 'transfer',
-  networks: ['devnet'],
+  networks: ['solana-devnet'],
   protocols: ['transfer'],
   description: 'SPL token self-transfer on Devnet, graceful skip if no token balance',
 });
