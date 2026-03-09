@@ -91,11 +91,11 @@ Plans:
   2. 시나리오 파일이 필수 섹션(메타데이터, 사전 조건, 시나리오, 검증 항목)을 갖추지 않으면 CI가 실패한다
   3. `_index.md`에 등록되지 않은 고아 시나리오가 있으면 CI가 실패한다
   4. Admin UI 메뉴 항목과 라우트 정의가 불일치하면 CI가 실패한다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 369-01: 검증 스크립트 4개 (Provider 매핑, 파일 유효성, 인덱스 등록, Admin 라우트)
-- [ ] 369-02: CI workflow 통합 + 전체 검증
+- [ ] 369-01-PLAN.md -- 검증 스크립트 4개 (Provider 매핑, 파일 유효성, 인덱스 등록, Admin 라우트)
+- [ ] 369-02-PLAN.md -- CI workflow 통합 + 전체 검증
 
 ## Progress
 
