@@ -306,6 +306,9 @@
 | 289 | BUG | HIGH | E2E 스모크 워크플로우가 RC 대신 stable 릴리스를 설치 — /releases/latest가 prerelease 제외 | v31.8 | FIXED | 2026-03-09 |
 | 290 | BUG | CRITICAL | E2E 스모크 CI에서 npm global bin 경로가 PATH에 없어 waiaas 실행 실패 | v31.8 | FIXED | 2026-03-09 |
 | 291 | BUG | HIGH | E2E 스모크 CI에서 push-relay 빌드 누락으로 bin.js 미존재 실패 | v31.8 | FIXED | 2026-03-09 |
+| 292 | BUG | MEDIUM | E2E Admin UI root path 테스트가 잘못된 경로(/) 사용 — 실제 서빙 경로는 /admin/ | v31.8 | OPEN | |
+| 293 | BUG | MEDIUM | E2E Settings PUT 테스트가 잘못된 설정 키(display_currency) 사용 — 실제 키는 display.currency | v31.8 | OPEN | |
+| 294 | BUG | HIGH | E2E SDK getWalletInfo 실패 — /v1/wallets/:id/networks GET에 masterAuth 불필요 적용 (미들웨어 모순) | v31.8 | OPEN | |
 
 ## Type Legend
 
@@ -317,10 +320,10 @@
 
 ## Summary
 
-- **OPEN:** 0
-- **FIXED:** 289
+- **OPEN:** 3
+- **FIXED:** 291
 - **RESOLVED:** 4
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 294
+- **Total:** 297
 
