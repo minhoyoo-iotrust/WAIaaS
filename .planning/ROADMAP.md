@@ -60,7 +60,12 @@ Plans:
   2. MCP 서버에 stdio로 연결하여 tool listing과 기본 도구 호출이 성공한다
   3. SDK로 세션 생성 -> 지갑 목록 조회 -> connect-info 확인이 동작한다
   4. 알림 채널 설정 후 이벤트 발행, 토큰 레지스트리 CRUD, 감사 로그 존재, 백업->복원->데이터 일치가 각각 검증된다
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 359-01-PLAN.md — Admin UI + MCP stdio + SDK 인터페이스 E2E
+- [ ] 359-02-PLAN.md — 알림 채널 + 토큰 레지스트리 + connect-info E2E
+- [ ] 359-03-PLAN.md — 감사 로그 + 백업/복원 E2E
 
 ### Phase 360: 오프체인 Smoke -- 고급 프로토콜
 **Goal**: Smart Account, Owner Auth, x402, ERC-8004/8128, DeFi 설정 등 고급 기능이 E2E로 검증된다
@@ -132,7 +137,7 @@ Note: Phase 359 and 360 can execute in parallel (both depend on 358 only). Phase
 |-------|----------------|--------|-----------|
 | 357. E2E 테스트 인프라 | 3/3 | Complete    | 2026-03-09 |
 | 358. 오프체인 Smoke -- 코어 | 2/2 | Complete    | 2026-03-09 |
-| 359. 오프체인 Smoke -- 인터페이스 | 0/? | Not started | - |
+| 359. 오프체인 Smoke -- 인터페이스 | 0/3 | Not started | - |
 | 360. 오프체인 Smoke -- 고급 | 0/3 | Not started | - |
 | 361. CI/CD 워크플로우 | 0/? | Not started | - |
 | 362. 온체인 사전 조건 체커 | 0/? | Not started | - |
