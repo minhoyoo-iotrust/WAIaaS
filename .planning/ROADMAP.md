@@ -62,9 +62,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 367-01-PLAN.md -- Solana DeFi 시나리오 4개 (Jupiter, Jito, Kamino, Drift)
-- [ ] 367-02-PLAN.md -- EVM DeFi 시나리오 5개 (0x, Lido, Aave, Pendle, DCent)
-- [ ] 367-03-PLAN.md -- 크로스체인 + Hyperliquid 시나리오 3개 (LI.FI, Across, Hyperliquid) + _index.md 업데이트
+- [x] 367-01-PLAN.md -- Solana DeFi 시나리오 4개 (Jupiter, Jito, Kamino, Drift)
+- [x] 367-02-PLAN.md -- EVM DeFi 시나리오 5개 (0x, Lido, Aave, Pendle, DCent)
+- [x] 367-03-PLAN.md -- 크로스체인 + Hyperliquid 시나리오 3개 (LI.FI, Across, Hyperliquid) + _index.md 업데이트
 
 ### Phase 368: 고급 기능 + 관리자 기능 시나리오
 **Goal**: Smart Account/WalletConnect/x402 등 고급 기능과 Admin UI 전체 검증 시나리오가 완비되어 에이전트가 전 기능을 인터랙티브하게 검증할 수 있다
@@ -75,12 +75,12 @@ Plans:
   2. Admin UI 전체 페이지 접근(HTTP 200), 마스터 패스워드 인증, Dashboard 정확성, Settings 반영, 정책 관리 플로우가 시나리오로 검증 가능하다
   3. Admin UI 지갑 잔액/NFT/DeFi 포지션 표시가 온체인 실제 데이터와 일치하는지 확인하는 시나리오가 있다
   4. 알림 설정+수신, 감사 로그 정확성, 백업/복원, 토큰 레지스트리, 통계/모니터링 검증 시나리오가 있다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 368-01: 고급 기능 시나리오 6개 (Smart Account, WalletConnect, x402, 수신TX, 잔액 모니터링, 가스 조건부)
-- [ ] 368-02: Admin UI 검증 시나리오 전반부 (페이지 접근, 인증, Dashboard, Settings, 정책, 지갑)
-- [ ] 368-03: Admin UI 검증 시나리오 후반부 (NFT, DeFi, 알림, 감사로그, 백업, 토큰, 통계)
+- [ ] 368-01-PLAN.md -- 고급 기능 시나리오 6개 (Smart Account, WalletConnect, x402, 수신TX, 잔액 모니터링, 가스 조건부)
+- [ ] 368-02-PLAN.md -- Admin UI 검증 시나리오 전반부 (페이지 접근, 인증, Dashboard, Settings, 정책, 지갑)
+- [ ] 368-03-PLAN.md -- Admin UI 검증 시나리오 후반부 (NFT, DeFi, 알림, 감사로그, 백업, 토큰, 통계) + _index.md 업데이트
 
 ### Phase 369: CI 시나리오 등록 강제
 **Goal**: CI에서 시나리오 누락/무효/미등록/Admin 라우트 불일치를 자동 감지하여 PR 시 차단한다
