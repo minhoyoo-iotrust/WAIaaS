@@ -1,12 +1,13 @@
 name: E2E Smoke Tests
 
 on:
-  release:
-    types: [published]
+  workflow_run:
+    workflows: ["Release"]
+    types: [completed]
   workflow_dispatch:
     inputs:
       version:
-        description: 'Package version to test (e.g. 3.0.0-rc.1). Leave empty to use release tag.'
+        description: 'Package version to test (e.g. 3.0.0-rc.1). Leave empty to auto-detect latest release.'
         required: false
         default: ''
         type: string
@@ -19,6 +20,10 @@ jobs:
   e2e-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # Only run after successful Release workflow (skip failures/cancellations)
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,15 +33,20 @@ jobs:
 
       - name: Determine version
         id: version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.version }}" ]; then
             VERSION="${{ inputs.version }}"
-          elif [ "${{ github.event_name }}" = "release" ]; then
-            VERSION="${{ github.event.release.tag_name }}"
-            # Strip 'v' prefix if present
-            VERSION="${VERSION#v}"
           else
-            VERSION="latest"
+            # Get latest release tag from GitHub API
+            TAG=$(gh api repos/${{ github.repository }}/releases/latest --jq '.tag_name' 2>/dev/null || echo "")
+            if [ -z "$TAG" ]; then
+              echo "::error::Could not determine release version"
+              exit 1
+            fi
+            # Strip 'v' prefix if present
+            VERSION="${TAG#v}"
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Testing version: $VERSION"
@@ -45,7 +55,27 @@ jobs:
         run: pnpm turbo run build --filter=@waiaas/e2e-tests
 
       - name: Install daemon globally
-        run: npm install -g @waiaas/daemon@${{ steps.version.outputs.version }}
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          # Retry with backoff — npm registry propagation may take a few minutes
+          MAX_ATTEMPTS=5
+          ATTEMPT=1
+          while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+            echo "Attempt $ATTEMPT/$MAX_ATTEMPTS: npm install -g @waiaas/daemon@$VERSION"
+            if npm install -g "@waiaas/daemon@$VERSION" 2>&1; then
+              echo "Successfully installed @waiaas/daemon@$VERSION"
+              exit 0
+            fi
+            if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+              WAIT=$((ATTEMPT * 30))
+              echo "Install failed, retrying in ${WAIT}s..."
+              sleep $WAIT
+            fi
+            ATTEMPT=$((ATTEMPT + 1))
+          done
+          echo "::error::Failed to install @waiaas/daemon@$VERSION after $MAX_ATTEMPTS attempts"
+          exit 1
 
       - name: Run offchain E2E tests
         run: pnpm --filter @waiaas/e2e-tests test:offchain
