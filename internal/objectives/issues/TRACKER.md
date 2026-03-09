@@ -313,6 +313,7 @@
 | 297 | BUG | MEDIUM | E2E Settings GET 응답 구조 불일치 — 플랫 키 접근 vs 카테고리별 중첩 객체 응답 | v31.8 | FIXED | 2026-03-09 |
 | 298 | BUG | HIGH | E2E 온체인 사전 조건 잔액 체크에 network 파라미터 누락 — EVM 네트워크 전부 FAIL | v31.8 | FIXED | 2026-03-09 |
 | 299 | BUG | HIGH | Holesky 테스트넷 종료 — Holesky 참조 제거 + E2E 스테이킹 테스트 제거 | v31.8 | FIXED | 2026-03-09 |
+| 300 | BUG | HIGH | E2E 온체인 전송 테스트 txId 필드명 불일치 — 실제 API는 txHash 반환 | v31.8 | FIXED | 2026-03-09 |
 
 ## Type Legend
 
@@ -325,7 +326,7 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 298
+- **FIXED:** 299
 - **WONTFIX:** 1
-- **Total:** 299
+- **Total:** 300
 

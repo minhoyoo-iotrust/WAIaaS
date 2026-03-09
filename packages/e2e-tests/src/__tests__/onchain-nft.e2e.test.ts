@@ -71,10 +71,10 @@ async function pollTxStatus(
   http: E2EHttpClient,
   txId: string,
   timeoutMs = 90_000,
-): Promise<{ status: string; txId?: string }> {
+): Promise<{ status: string; txHash?: string }> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
-    const { status, body } = await http.get<{ id: string; status: string; txId?: string }>(
+    const { status, body } = await http.get<{ id: string; status: string; txHash?: string }>(
       `/v1/transactions/${txId}`,
     );
     if (status === 200 && ['CONFIRMED', 'COMPLETED', 'FAILED'].includes(body.status)) {
@@ -132,7 +132,7 @@ describe('nft-erc721-transfer', () => {
       }
 
       expect(['CONFIRMED', 'COMPLETED']).toContain(result.status);
-      expect(result.txId).toBeTruthy();
+      expect(result.txHash).toBeTruthy();
     },
   );
 });
@@ -184,7 +184,7 @@ describe('nft-erc1155-transfer', () => {
       }
 
       expect(['CONFIRMED', 'COMPLETED']).toContain(result.status);
-      expect(result.txId).toBeTruthy();
+      expect(result.txHash).toBeTruthy();
     },
   );
 });

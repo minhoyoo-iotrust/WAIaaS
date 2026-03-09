@@ -80,10 +80,10 @@ describe('incoming-tx-detection', () => {
         const { status, body } = await session!.http.get<{
           id: string;
           status: string;
-          txId?: string;
+          txHash?: string;
         }>(`/v1/transactions/${sendRes.body.id}`);
         if (status === 200 && (body.status === 'CONFIRMED' || body.status === 'COMPLETED')) {
-          txHash = body.txId;
+          txHash = body.txHash;
           break;
         }
         if (status === 200 && body.status === 'FAILED') {

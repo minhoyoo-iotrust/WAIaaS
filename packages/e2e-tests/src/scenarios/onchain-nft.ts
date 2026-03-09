@@ -17,7 +17,7 @@ registry.register({
   networks: ['ethereum-sepolia'],
   protocols: ['nft'],
   description:
-    'Self-transfer an ERC-721 NFT on Sepolia, verify txId and CONFIRMED status. Skips if no NFT owned.',
+    'Self-transfer an ERC-721 NFT on Sepolia, verify txHash and CONFIRMED status. Skips if no NFT owned.',
 });
 
 registry.register({
@@ -28,5 +28,5 @@ registry.register({
   networks: ['ethereum-sepolia'],
   protocols: ['nft'],
   description:
-    'Self-transfer an ERC-1155 NFT on Sepolia, verify txId and CONFIRMED status. Skips if no NFT owned.',
+    'Self-transfer an ERC-1155 NFT on Sepolia, verify txHash and CONFIRMED status. Skips if no NFT owned.',
 });

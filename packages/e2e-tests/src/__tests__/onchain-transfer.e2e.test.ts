@@ -48,10 +48,10 @@ async function pollTxStatus(
   http: E2EHttpClient,
   txId: string,
   timeoutMs = 60_000,
-): Promise<{ status: string; txId?: string }> {
+): Promise<{ status: string; txHash?: string }> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
-    const { status, body } = await http.get<{ id: string; status: string; txId?: string }>(
+    const { status, body } = await http.get<{ id: string; status: string; txHash?: string }>(
       `/v1/transactions/${txId}`,
     );
     if (status === 200 && (body.status === 'CONFIRMED' || body.status === 'COMPLETED')) {
@@ -120,8 +120,8 @@ describe('eth-transfer', () => {
     // Poll until confirmed
     const result = await pollTxStatus(evmSession!.http, res.body.id, 90_000);
     expect(['CONFIRMED', 'COMPLETED']).toContain(result.status);
-    expect(result.txId).toBeTruthy();
-    expect(result.txId!.startsWith('0x')).toBe(true);
+    expect(result.txHash).toBeTruthy();
+    expect(result.txHash!.startsWith('0x')).toBe(true);
   });
 });
 
@@ -146,9 +146,9 @@ describe('sol-transfer', () => {
     // Poll until confirmed
     const result = await pollTxStatus(solSession!.http, res.body.id, 60_000);
     expect(['CONFIRMED', 'COMPLETED']).toContain(result.status);
-    expect(result.txId).toBeTruthy();
-    // Solana txId is base58 (alphanumeric, no 0x prefix)
-    expect(result.txId!.length).toBeGreaterThan(30);
+    expect(result.txHash).toBeTruthy();
+    // Solana txHash is base58 (alphanumeric, no 0x prefix)
+    expect(result.txHash!.length).toBeGreaterThan(30);
   });
 });
 

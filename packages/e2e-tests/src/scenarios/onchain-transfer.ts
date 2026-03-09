@@ -18,7 +18,7 @@ registry.register({
   track: 'onchain',
   category: 'transfer',
   networks: ['ethereum-sepolia'],
-  description: 'Self-transfer 1 wei ETH on Sepolia testnet, verify txId and CONFIRMED status',
+  description: 'Self-transfer 1 wei ETH on Sepolia testnet, verify txHash and CONFIRMED status',
 });
 
 registry.register({
@@ -27,7 +27,7 @@ registry.register({
   track: 'onchain',
   category: 'transfer',
   networks: ['solana-devnet'],
-  description: 'Self-transfer 1 lamport SOL on Devnet, verify txId and CONFIRMED status',
+  description: 'Self-transfer 1 lamport SOL on Devnet, verify txHash and CONFIRMED status',
 });
 
 registry.register({
