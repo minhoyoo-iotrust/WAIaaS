@@ -29,7 +29,12 @@
   3. Push Relay를 기동하고 health check 후 종료하는 유틸리티가 동작한다
   4. 마스터 패스워드 설정 + 세션 생성 + REST API 호출이 헬퍼 함수 한 줄로 가능하다
   5. E2EScenario 타입으로 offchain/onchain 트랙을 구분하여 시나리오를 등록할 수 있고, 테스트 리포트가 통과/실패/스킵을 요약 출력한다
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 357-01-PLAN.md — 패키지 셋업 + E2EScenario 타입 시스템 + 리포터
+- [ ] 357-02-PLAN.md — 데몬/Push Relay 라이프사이클 관리 유틸리티
+- [ ] 357-03-PLAN.md — 세션 관리 + HTTP 클라이언트 헬퍼
 
 ### Phase 358: 오프체인 Smoke -- 코어 기능
 **Goal**: WAIaaS의 핵심 기능(인증, 지갑, 세션, 정책)이 E2E 시나리오로 자동 검증된다
@@ -116,7 +121,7 @@ Note: Phase 359 and 360 can execute in parallel (both depend on 358 only). Phase
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 357. E2E 테스트 인프라 | 0/? | Not started | - |
+| 357. E2E 테스트 인프라 | 0/3 | Planning complete | - |
 | 358. 오프체인 Smoke -- 코어 | 0/? | Not started | - |
 | 359. 오프체인 Smoke -- 인터페이스 | 0/? | Not started | - |
 | 360. 오프체인 Smoke -- 고급 | 0/? | Not started | - |
