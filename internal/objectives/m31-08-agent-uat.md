@@ -1,7 +1,8 @@
 # 마일스톤 m31-08: Agent UAT (메인넷 인터랙티브 검증)
 
-- **Status:** PLANNED
+- **Status:** SHIPPED
 - **Milestone:** v31.8
+- **Completed:** 2026-03-10
 
 ## 목표
 

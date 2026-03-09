@@ -1,5 +1,22 @@
 # Project Milestones: WAIaaS
 
+## v31.8 Agent UAT (메인넷 인터랙티브 검증) (Shipped: 2026-03-09)
+
+**Phases completed:** 5 phases, 12 plans
+
+**Key accomplishments:**
+- Agent UAT 마크다운 시나리오 포맷 정의 — 6-section 표준(Metadata/Prerequisites/Steps/Verification/Cost/Troubleshooting), YAML 프론트매터, `/agent-uat` skill 파일
+- Testnet 7개 + Mainnet 기본 전송 6개 시나리오 — ETH/SOL/ERC-20/SPL/L2/NFT/Hyperliquid/수신TX 자기 전송 패턴
+- DeFi 프로토콜 12개 시나리오 — Jupiter/0x/LI.FI/Across/Lido/Jito/Aave/Kamino/Pendle/Drift/Hyperliquid/DCent
+- 고급 기능 6개 + Admin UI 검증 13개 시나리오 — Smart Account/WalletConnect/x402/수신TX/가스조건부 + Admin 전체 페이지
+- CI 시나리오 등록 강제 — Provider 매핑/포맷/인덱스/Admin 라우트 4개 검증 스크립트 + ci.yml Stage 1 통합
+
+**Stats:**
+- 5 phases (365-369), 12 plans, 41 commits
+- 89 files changed, +10,962 / -203 lines, 45 scenario files
+
+---
+
 ## v31.7 E2E 자동 검증 체계 (Shipped: 2026-03-09)
 
 **Phases completed:** 8 phases, 21 plans, 16 tasks
