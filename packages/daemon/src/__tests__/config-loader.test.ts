@@ -585,6 +585,7 @@ poll_interval = 60
   });
 
   // CFG-02 verification: incoming keys registered in setting-keys.ts
+  // Superseded by network-setting-keys-completeness.test.ts (#282) for dynamic SSoT verification
   it('CFG-02 verify: SETTING_DEFINITIONS has exactly 22 incoming.* keys', () => {
     const incomingDefs = SETTING_DEFINITIONS.filter((d) => d.key.startsWith('incoming.'));
     expect(incomingDefs).toHaveLength(22);

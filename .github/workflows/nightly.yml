@@ -45,6 +45,30 @@ jobs:
         env:
           COVERAGE_GATE_MODE: hard
 
+      - name: Collect test counts
+        if: success()
+        id: test-count
+        run: |
+          # Extract test count from turbo cached output (already ran in Unit Tests step)
+          TOTAL=$(pnpm turbo run test:unit 2>&1 | grep -oP 'Tests\s+\K[0-9]+(?=\s+passed)' | awk '{s+=$1} END {print s}')
+          if [ -z "$TOTAL" ] || [ "$TOTAL" = "0" ]; then
+            echo "Warning: Could not parse test count, using fallback"
+            TOTAL="unknown"
+          fi
+          echo "total=$TOTAL" >> "$GITHUB_OUTPUT"
+          echo "Test count: $TOTAL"
+
+      - name: Update test badge
+        if: success() && steps.test-count.outputs.total != 'unknown'
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_SECRET }}
+          gistID: ${{ vars.TEST_BADGE_GIST_ID }}
+          filename: waiaas-test-badge.json
+          label: Tests
+          message: "${{ steps.test-count.outputs.total }} passing"
+          color: brightgreen
+
   # Local blockchain validator tests: Solana test-validator + Anvil
   local-validator:
     runs-on: ubuntu-latest
