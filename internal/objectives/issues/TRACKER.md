@@ -309,9 +309,9 @@
 
 ## Summary
 
-- **OPEN:** 1
-- **FIXED:** 278
+- **OPEN:** 0
+- **FIXED:** 281
 - **RESOLVED:** 4
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 284
+- **Total:** 286

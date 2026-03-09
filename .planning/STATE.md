@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: milestone
-status: completed
-stopped_at: Completed Phase 364 (E2E scenario enforce)
-last_updated: "2026-03-09T08:22:06.369Z"
-last_activity: 2026-03-09 -- Phase 364 complete (2 plans, coverage map + verify script + CI step)
+status: milestone_complete
+stopped_at: Milestone v31.7 archived
+last_updated: "2026-03-09T09:30:00.000Z"
+last_activity: 2026-03-09 -- Milestone v31.7 E2E 자동 검증 체계 archived
 progress:
   total_phases: 8
   completed_phases: 8
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-09)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Milestone v31.7 complete - all 8 phases done
+**Current focus:** Planning next milestone
 
 ## Current Position
 

@@ -620,6 +620,47 @@
 
 ---
 
+## Milestone: v31.7 — E2E 자동 검증 체계
+
+**Shipped:** 2026-03-09
+**Phases:** 8 | **Plans:** 21 | **Sessions:** 1
+
+### What Was Built
+- @waiaas/e2e-tests 독립 패키지 — E2EScenario 타입, DaemonManager/PushRelayManager 라이프사이클, SessionManager/E2EHttpClient 헬퍼
+- 오프체인 E2E 스모크 15개 시나리오 — 코어(인증/지갑/세션/정책), 인터페이스(Admin/MCP/SDK/알림/토큰/백업), 고급(Smart Account/UserOp/x402/ERC-8004/8128/DeFi/Push Relay)
+- CI/CD 통합 — e2e-smoke.yml RC publish 트리거, 실패 시 GitHub Issue 자동 생성, vitest CI 리포터
+- 온체인 E2E — PreconditionChecker(데몬/지갑/잔액 확인), 5 testnet 시나리오(전송/스테이킹/Hyperliquid/NFT), skip 유틸리티
+- E2E 시나리오 등록 강제 — Provider↔시나리오/API↔시나리오 매핑 검증, CI fail on gap, 빈 파일 방지
+- 이슈 해결 — #282 네트워크 설정 키 완전성 테스트, #283 README 동적 테스트 배지
+
+### What Worked
+- 8 phases 전체 1일 완료 — 마일스톤 감사 사전 통과 상태에서 시작하여 47/47 요구사항 100% 충족
+- 데몬 라이프사이클 관리자 패턴(fork+healthCheck+cleanup)이 모든 후속 시나리오에서 재사용됨
+- 오프체인/온체인 트랙 분리 설계로 CI(offchain만)와 로컬(onchain 포함) 실행 경로를 깔끔하게 분리
+- Phase 359/360 병렬 실행으로 시간 절약
+
+### What Was Inefficient
+- ROADMAP.md의 Phase 364 plan 체크박스가 수동 업데이트 누락 (반복 이슈 — 364-01/02가 [ ]로 남음)
+- VERIFICATION.md 파일이 전 phase에서 생성 안됨 (verification 단계 스킵)
+- 23/47 요구사항 ID가 SUMMARY frontmatter에서 비표준 포맷 사용
+
+### Patterns Established
+- E2E 시나리오 레지스트리 패턴: 시나리오를 타입으로 등록하고 리포터가 자동 집계
+- PreconditionChecker 패턴: 온체인 테스트 전 환경 검증, CI auto-select, 대화형 프롬프트
+- CI 커버리지 강제 패턴: 기능 추가 시 E2E 시나리오 누락을 CI에서 자동 감지
+
+### Key Lessons
+- E2E 테스트 인프라를 먼저 구축하면 시나리오 작성 속도가 급격히 빨라진다 (Phase 357 인프라 → 358-364 시나리오)
+- 오프체인/온체인 분리가 CI 통합의 핵심 — 온체인은 외부 의존성(잔액, 네트워크)으로 skip이 필수
+- 커버리지 강제는 "테스트를 더 작성해야 한다"보다 "테스트 없으면 CI fail"이 훨씬 효과적
+
+### Cost Observations
+- Model mix: 100% opus
+- Sessions: 1
+- Notable: 8 phases, 21 plans, 122 files, 1일 완료 (~1.2시간 실행 시간)
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -642,6 +683,7 @@
 | v31.3 | 1 | 5 | DCent Swap Aggregator 통합, 110 파일 1일 완료 |
 | v31.4 | 1 | 5 | Hyperliquid 생태계(Perp/Spot/Sub-account), 112 파일 ~3시간 완료 |
 | v31.6 | 1 | 5 | Across Protocol 브릿지, 66 파일 2일 완료 |
+| v31.7 | 1 | 8 | E2E 자동 검증 체계, 122 파일 1일 완료 |
 
 ### Cumulative Quality
 
@@ -663,6 +705,7 @@
 | v31.3 | ~7,109 (+116) | maintained | +17 decisions |
 | v31.4 | ~7,109 (unchanged) | maintained | +27 decisions |
 | v31.6 | ~7,219 (+110) | maintained | +12 decisions |
+| v31.7 | ~7,219 (unchanged) | maintained | +30 decisions |
 
 ### Top Lessons (Verified Across Milestones)
 

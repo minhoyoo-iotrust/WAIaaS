@@ -1,5 +1,23 @@
 # Project Milestones: WAIaaS
 
+## v31.7 E2E 자동 검증 체계 (Shipped: 2026-03-09)
+
+**Phases completed:** 8 phases, 21 plans, 16 tasks
+
+**Key accomplishments:**
+- @waiaas/e2e-tests 독립 패키지 — E2EScenario 타입, 데몬/Push Relay 라이프사이클 관리, 세션/HTTP 클라이언트 헬퍼
+- 오프체인 E2E 스모크 테스트 — 코어(인증/지갑/세션/정책), 인터페이스(Admin/MCP/SDK/알림/토큰/백업), 고급(Smart Account/UserOp/x402/ERC-8004/8128/DeFi/Push Relay)
+- CI/CD 통합 — e2e-smoke.yml RC publish 트리거, 실패 시 GitHub Issue 자동 생성, CI 리포터
+- 온체인 E2E — PreconditionChecker(데몬/지갑/잔액 확인), testnet 전송(ETH/SOL/ERC-20/SPL), Lido 스테이킹, Hyperliquid Spot/Perp, NFT ERC-721/1155, skip 유틸리티
+- E2E 시나리오 등록 강제 — Provider↔시나리오/API↔시나리오 매핑 검증, CI fail on gap, 빈 파일 방지
+- 이슈 해결 — #282 네트워크 설정 키 완전성 테스트, #283 README 동적 테스트 배지
+
+**Stats:**
+- 8 phases (357-364), 21 plans, 55 commits
+- 122 files changed, +12,359 / -99 lines, ~527,949 LOC TS
+
+---
+
 ## v31.6 Across Protocol 크로스체인 브릿지 (Shipped: 2026-03-09)
 
 **Delivered:** Across Protocol Intent 기반 고속 크로스체인 브릿지를 WAIaaS에 통합. SpokePool depositV3를 기존 CONTRACT_CALL 파이프라인으로 실행하며, 신규 npm 의존성과 DB 마이그레이션 없이 완료.
