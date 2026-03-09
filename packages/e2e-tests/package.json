@@ -9,6 +9,8 @@
     "test:onchain": "vitest run --project onchain"
   },
   "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "@waiaas/sdk": "workspace:*",
     "vitest": "^3.0.0",
     "typescript": "^5.7.0"
   }
