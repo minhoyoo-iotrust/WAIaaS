@@ -1,0 +1,165 @@
+# Requirements: WAIaaS v31.8 Agent UAT
+
+**Defined:** 2026-03-09
+**Core Value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인이 자금 통제권을 유지하면서.
+
+## v1 Requirements
+
+### Scenario Infrastructure (INFRA)
+
+- [ ] **INFRA-01**: Agent UAT 마크다운 시나리오 포맷이 정의되어 있다 (메타데이터, 사전 조건, 시나리오 단계, 검증 항목, 예상 비용, 실패 시 조치 섹션)
+- [ ] **INFRA-02**: `_index.md`가 전체 시나리오 목록을 카테고리별로 그룹핑하고 네트워크별 필터링을 지원한다
+- [ ] **INFRA-03**: `.claude/skills/agent-uat/SKILL.md` skill 파일이 `/agent-uat` 커맨드로 트리거되며, help/run/run testnet/run mainnet/run defi/run admin/run transfer/run --network 서브커맨드를 지원한다
+- [ ] **INFRA-04**: 에이전트가 세션에 연결된 지갑 목록을 조회하고 네트워크별로 자동 선택하여 사용자에게 확인한다
+- [ ] **INFRA-05**: 모든 시나리오에서 dry-run을 먼저 실행하여 예상 가스비를 사용자에게 표시한다
+- [ ] **INFRA-06**: 전체 실행 후 리포트를 출력한다 (실행/스킵/실패 요약, 총 소비 가스비)
+- [ ] **INFRA-07**: 기존 지갑 재사용 원칙을 따르며, 지갑 CRUD 검증 시 생성→테스트→삭제를 원자적으로 묶는다
+
+### Testnet Scenarios (TEST)
+
+- [ ] **TEST-01**: ETH 전송 시나리오 (Sepolia) — 자기 전송 → 잔액 확인
+- [ ] **TEST-02**: SOL 전송 시나리오 (Devnet) — 자기 전송 → 잔액 확인
+- [ ] **TEST-03**: ERC-20 토큰 전송 시나리오 (Sepolia) — 테스트 토큰 → 잔액 확인
+- [ ] **TEST-04**: SPL 토큰 전송 시나리오 (Devnet) — 테스트 토큰 → 잔액 확인
+- [ ] **TEST-05**: Hyperliquid 시나리오 (testnet) — Spot/Perp 주문 생성/취소, Sub Account
+- [ ] **TEST-06**: NFT 전송 시나리오 (Sepolia) — ERC-721/ERC-1155 전송
+- [ ] **TEST-07**: 수신 트랜잭션 감지 시나리오 (Sepolia/Devnet) — 외부 전송 → IncomingTxMonitor 감지
+
+### Mainnet Transfer Scenarios (XFER)
+
+- [ ] **XFER-01**: ETH 전송 시나리오 (ethereum-mainnet) — 자기 전송 → 잔액 확인
+- [ ] **XFER-02**: SOL 전송 시나리오 (solana-mainnet) — 자기 전송 → 잔액 확인
+- [ ] **XFER-03**: ERC-20 토큰 전송 시나리오 (ethereum-mainnet) — USDC/USDT → 잔액 확인
+- [ ] **XFER-04**: SPL 토큰 전송 시나리오 (solana-mainnet) — USDC → 잔액 확인
+- [ ] **XFER-05**: L2 네이티브 전송 시나리오 (Polygon/Arbitrum/Base) — 자기 전송
+- [ ] **XFER-06**: NFT 전송 시나리오 (보유 NFT 있는 경우) — ERC-721/ERC-1155
+
+### DeFi Protocol Scenarios (DEFI)
+
+- [ ] **DEFI-01**: Jupiter Swap 시나리오 (solana-mainnet) — SOL → USDC 스왑 → 잔액 확인
+- [ ] **DEFI-02**: 0x EVM DEX Swap 시나리오 (ethereum-mainnet/polygon) — ETH → USDC 스왑
+- [ ] **DEFI-03**: LI.FI Bridge 시나리오 (크로스체인) — L1 → L2 브릿지 전송
+- [ ] **DEFI-04**: Across Bridge 시나리오 (크로스체인) — L2 → L2 브릿지 전송
+- [ ] **DEFI-05**: Lido Staking 시나리오 (ethereum-mainnet) — ETH → stETH stake
+- [ ] **DEFI-06**: Jito Staking 시나리오 (solana-mainnet) — SOL → JitoSOL stake
+- [ ] **DEFI-07**: Aave V3 Lending 시나리오 (ethereum-mainnet/polygon) — USDC supply → 포지션 확인
+- [ ] **DEFI-08**: Kamino Lending 시나리오 (solana-mainnet) — USDC supply → 포지션 확인
+- [ ] **DEFI-09**: Pendle Yield 시나리오 (ethereum-mainnet) — PT/YT 토큰 매매
+- [ ] **DEFI-10**: Drift Perp 시나리오 (solana-mainnet) — USDC deposit → 포지션 개설/종료
+- [ ] **DEFI-11**: Hyperliquid Perp/Spot 시나리오 — 주문 생성/취소 → 포지션 확인
+- [ ] **DEFI-12**: DCent Swap 시나리오 (ethereum-mainnet) — 스왑 실행 → 잔액 확인
+
+### Advanced Feature Scenarios (ADV)
+
+- [ ] **ADV-01**: Smart Account 트랜잭션 시나리오 — UserOp Build → Sign → 실행 확인
+- [ ] **ADV-02**: WalletConnect Owner 승인 시나리오 — 트랜잭션 승인 요청 → Owner 서명
+- [ ] **ADV-03**: x402 결제 시나리오 — x402 지원 서비스에 결제 요청 (가능한 경우)
+- [ ] **ADV-04**: 수신 트랜잭션 감지 시나리오 (mainnet) — 외부 전송 → IncomingTxMonitor 감지
+- [ ] **ADV-05**: 잔액 모니터링 시나리오 — 잔액 변동 알림 발생 확인
+- [ ] **ADV-06**: 가스비 조건부 실행 시나리오 — 가스 상한 설정 → 조건 미충족 시 대기 확인
+
+### Admin Feature Scenarios (ADMIN)
+
+- [ ] **ADMIN-01**: Admin UI 전체 페이지 접근 검증 — 모든 메뉴 URL → HTTP 200 확인
+- [ ] **ADMIN-02**: Admin 인증 시나리오 — 마스터 패스워드로 Admin UI 접근
+- [ ] **ADMIN-03**: Dashboard 정확성 — 실제 지갑 수, 총 잔액, 최근 트랜잭션과 일치 확인
+- [ ] **ADMIN-04**: Admin Settings 반영 — 설정 변경 → 실제 트랜잭션에서 적용 확인
+- [ ] **ADMIN-05**: 정책 관리 플로우 — Admin에서 정책 생성 → dry-run으로 적용 확인
+- [ ] **ADMIN-06**: 지갑 관리 탭 — 실제 온체인 잔액과 Admin UI 표시 잔액 일치
+- [ ] **ADMIN-07**: NFT 탭 — 실제 보유 NFT와 Admin UI 표시 일치 (보유 시)
+- [ ] **ADMIN-08**: DeFi 포지션 탭 — 실제 온체인 포지션과 일치 (포지션 보유 시)
+- [ ] **ADMIN-09**: 알림 설정 + 수신 — 알림 채널 설정 → 트랜잭션 → 실제 알림 수신
+- [ ] **ADMIN-10**: 감사 로그 정확성 — 실행한 작업들의 감사 로그가 정확히 기록
+- [ ] **ADMIN-11**: 백업/복원 무결성 — 백업 생성 → 복원 → 데이터 정확히 복원
+- [ ] **ADMIN-12**: 토큰 레지스트리 — 커스텀 토큰 등록 → 잔액 조회에 반영
+- [ ] **ADMIN-13**: 통계/모니터링 — Stats API 정확성 확인
+
+### CI Enforcement (CI)
+
+- [ ] **CI-01**: Action Provider ↔ Agent UAT 시나리오 매핑 검증 스크립트 — Provider 디렉토리 존재 시 대응 시나리오 `.md` 파일 확인
+- [ ] **CI-02**: 시나리오 파일 유효성 검증 — 필수 섹션(메타데이터, 사전 조건, 시나리오, 검증 항목) 파싱 확인, 빈 시나리오 방지
+- [ ] **CI-03**: `_index.md`에 시나리오 등록 여부 검증 — 고아 시나리오 방지
+- [ ] **CI-04**: Admin UI 라우트/메뉴 일관성 검증 스크립트 — 메뉴 항목 ↔ 라우트 정의 정적 분석
+- [ ] **CI-05**: CI workflow에 검증 스텝 추가 — PR 시 실행, 미등록 시 CI fail
+
+## v2 Requirements
+
+None — 전체 범위가 이번 마일스톤에 포함.
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| 코드 기반 테스트 러너 | 마크다운 + AI 에이전트가 실행 엔진, 별도 러너 불필요 |
+| 기존 vitest E2E 수정 | m31-07 오프체인/온체인 E2E는 그대로 유지, Agent UAT는 보완 관계 |
+| 모바일 앱 UAT | 웹/CLI 기반만 지원 |
+
+## Traceability
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| INFRA-01 | — | Pending |
+| INFRA-02 | — | Pending |
+| INFRA-03 | — | Pending |
+| INFRA-04 | — | Pending |
+| INFRA-05 | — | Pending |
+| INFRA-06 | — | Pending |
+| INFRA-07 | — | Pending |
+| TEST-01 | — | Pending |
+| TEST-02 | — | Pending |
+| TEST-03 | — | Pending |
+| TEST-04 | — | Pending |
+| TEST-05 | — | Pending |
+| TEST-06 | — | Pending |
+| TEST-07 | — | Pending |
+| XFER-01 | — | Pending |
+| XFER-02 | — | Pending |
+| XFER-03 | — | Pending |
+| XFER-04 | — | Pending |
+| XFER-05 | — | Pending |
+| XFER-06 | — | Pending |
+| DEFI-01 | — | Pending |
+| DEFI-02 | — | Pending |
+| DEFI-03 | — | Pending |
+| DEFI-04 | — | Pending |
+| DEFI-05 | — | Pending |
+| DEFI-06 | — | Pending |
+| DEFI-07 | — | Pending |
+| DEFI-08 | — | Pending |
+| DEFI-09 | — | Pending |
+| DEFI-10 | — | Pending |
+| DEFI-11 | — | Pending |
+| DEFI-12 | — | Pending |
+| ADV-01 | — | Pending |
+| ADV-02 | — | Pending |
+| ADV-03 | — | Pending |
+| ADV-04 | — | Pending |
+| ADV-05 | — | Pending |
+| ADV-06 | — | Pending |
+| ADMIN-01 | — | Pending |
+| ADMIN-02 | — | Pending |
+| ADMIN-03 | — | Pending |
+| ADMIN-04 | — | Pending |
+| ADMIN-05 | — | Pending |
+| ADMIN-06 | — | Pending |
+| ADMIN-07 | — | Pending |
+| ADMIN-08 | — | Pending |
+| ADMIN-09 | — | Pending |
+| ADMIN-10 | — | Pending |
+| ADMIN-11 | — | Pending |
+| ADMIN-12 | — | Pending |
+| ADMIN-13 | — | Pending |
+| CI-01 | — | Pending |
+| CI-02 | — | Pending |
+| CI-03 | — | Pending |
+| CI-04 | — | Pending |
+| CI-05 | — | Pending |
+
+**Coverage:**
+- v1 requirements: 52 total
+- Mapped to phases: 0
+- Unmapped: 52
+
+---
+*Requirements defined: 2026-03-09*
+*Last updated: 2026-03-09 after initial definition*
