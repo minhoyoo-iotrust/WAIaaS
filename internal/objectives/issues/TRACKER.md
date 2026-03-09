@@ -299,6 +299,7 @@
 | 282 | ENHANCEMENT | HIGH | 네트워크 설정 키 완전성 자동 검증 테스트 — NETWORK_TYPES SSoT 기반 동적 검증 | v31.7 | RESOLVED | 2026-03-09 |
 | 283 | ENHANCEMENT | LOW | README 테스트 배지 자동 업데이트 — 하드코딩 제거, Gist + shields.io endpoint 동적 배지 | v31.7 | RESOLVED | 2026-03-09 |
 | 284 | BUG | HIGH | E2E Smoke 워크플로우가 npm publish 전에 실행되어 실패 — workflow_run 전환 필요 | v31.7 | FIXED | 2026-03-09 |
+| 285 | BUG | HIGH | E2E DaemonManager가 E2E_DAEMON_INSTALL_MODE=global 미지원 — CI에서 전 테스트 skip | v31.8 | FIXED | 2026-03-09 |
 
 ## Type Legend
 
@@ -310,9 +311,9 @@
 
 ## Summary
 
-- **OPEN:** 1
-- **FIXED:** 281
+- **OPEN:** 0
+- **FIXED:** 283
 - **RESOLVED:** 4
 - **VERIFIED:** 0
 - **WONTFIX:** 1
-- **Total:** 287
+- **Total:** 288

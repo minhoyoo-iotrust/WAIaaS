@@ -10,7 +10,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { createServer } from 'node:net';
-import { fork, type ChildProcess } from 'node:child_process';
+import { fork, spawn, execSync, type ChildProcess } from 'node:child_process';
 
 export interface PushRelayInstance {
   dataDir: string;
@@ -65,30 +65,38 @@ api_key = "e2e-test-api-key"
 `;
     writeFileSync(join(dataDir, 'config.toml'), config, { mode: 0o644 });
 
-    // 3. Resolve bin path
+    // 3. Resolve bin path and spawn mode
+    const useGlobal = process.env['E2E_PUSH_RELAY_INSTALL_MODE'] === 'global';
     const binPath = opts?.binPath
       ?? process.env['PUSH_RELAY_BIN_PATH']
-      ?? this.resolveMonorepoBin();
+      ?? (useGlobal ? this.resolveGlobalBin() : this.resolveMonorepoBin());
 
-    if (!existsSync(binPath)) {
+    if (!useGlobal && !existsSync(binPath)) {
       throw new Error(
         `PushRelayManager: bin not found at ${binPath}. ` +
         `Build with 'pnpm turbo run build --filter=@waiaas/push-relay' or set PUSH_RELAY_BIN_PATH.`,
       );
     }
 
-    // 4. Fork the process
+    // 4. Spawn the process
     this.stdout = [];
     this.stderr = [];
 
-    const child = fork(binPath, [], {
-      env: {
-        ...process.env,
-        RELAY_CONFIG: join(dataDir, 'config.toml'),
-      },
-      stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
-      silent: true,
-    });
+    const childEnv = {
+      ...process.env,
+      RELAY_CONFIG: join(dataDir, 'config.toml'),
+    };
+
+    const child: ChildProcess = useGlobal
+      ? spawn(binPath, [], {
+          env: childEnv,
+          stdio: ['pipe', 'pipe', 'pipe'],
+        })
+      : fork(binPath, [], {
+          env: childEnv,
+          stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
+          silent: true,
+        });
 
     child.stdout?.on('data', (chunk: Buffer) => {
       this.stdout.push(chunk.toString());
@@ -187,6 +195,18 @@ api_key = "e2e-test-api-key"
         }
       });
     });
+  }
+
+  /** Resolve globally installed push-relay binary. */
+  private resolveGlobalBin(): string {
+    try {
+      return execSync('which waiaas-push-relay', { encoding: 'utf-8' }).trim();
+    } catch {
+      throw new Error(
+        'PushRelayManager: E2E_PUSH_RELAY_INSTALL_MODE=global but `waiaas-push-relay` not found in PATH. ' +
+        'Install with `npm install -g @waiaas/push-relay`.',
+      );
+    }
   }
 
   /** Resolve push-relay bin path within monorepo. */
