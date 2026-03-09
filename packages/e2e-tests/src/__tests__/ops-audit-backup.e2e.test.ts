@@ -45,22 +45,22 @@ function adminHeaders(): { headers: Record<string, string> } {
 describe('audit-log-existence', () => {
   it('has audit log entries after wallet creation', async () => {
     const { status, body } = await session.admin.get<{
-      items: Array<{ id: string; event_type: string }>;
+      data: Array<{ id: string; event_type: string }>;
       total?: number;
     }>('/v1/audit-logs', adminHeaders());
     expect(status).toBe(200);
-    expect(body.items).toBeDefined();
-    expect(Array.isArray(body.items)).toBe(true);
-    expect(body.items.length).toBeGreaterThan(0);
+    expect(body.data).toBeDefined();
+    expect(Array.isArray(body.data)).toBe(true);
+    expect(body.data.length).toBeGreaterThan(0);
   });
 
   it('can filter audit logs by limit', async () => {
     const { status, body } = await session.admin.get<{
-      items: Array<{ id: string }>;
+      data: Array<{ id: string }>;
     }>('/v1/audit-logs?limit=5', adminHeaders());
     expect(status).toBe(200);
-    expect(body.items).toBeDefined();
-    expect(body.items.length).toBeLessThanOrEqual(5);
+    expect(body.data).toBeDefined();
+    expect(body.data.length).toBeLessThanOrEqual(5);
   });
 });
 

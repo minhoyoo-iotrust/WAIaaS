@@ -74,7 +74,7 @@ describe('admin-ui-settings', () => {
     // Update display_currency to KRW
     const putRes = await adminClient.put(
       '/v1/admin/settings',
-      { display_currency: 'KRW' },
+      { settings: [{ key: 'display_currency', value: 'KRW' }] },
       adminHeaders(),
     );
     expect(putRes.status).toBe(200);
@@ -90,7 +90,7 @@ describe('admin-ui-settings', () => {
     // Reset to USD
     await adminClient.put(
       '/v1/admin/settings',
-      { display_currency: 'USD' },
+      { settings: [{ key: 'display_currency', value: 'USD' }] },
       adminHeaders(),
     );
   });
@@ -158,17 +158,21 @@ describe('sdk-connectivity', () => {
       sessionToken: token,
     });
 
-    // getWalletInfo -- returns wallet address info
-    const walletInfo = await sdkClient.getWalletInfo();
-    expect(walletInfo).toBeDefined();
-    expect(walletInfo.walletId).toBeTruthy();
-
-    // getConnectInfo -- returns session + wallets + capabilities
+    // getConnectInfo first to get a walletId
     const connectInfo = await sdkClient.getConnectInfo();
     expect(connectInfo).toBeDefined();
-    expect(connectInfo.session).toBeDefined();
     expect(connectInfo.wallets).toBeDefined();
     expect(Array.isArray(connectInfo.wallets)).toBe(true);
     expect(connectInfo.wallets.length).toBeGreaterThanOrEqual(1);
+
+    const walletId = connectInfo.wallets[0].id;
+
+    // getWalletInfo -- returns wallet address info
+    const walletInfo = await sdkClient.getWalletInfo(walletId);
+    expect(walletInfo).toBeDefined();
+    expect(walletInfo.walletId).toBeTruthy();
+
+    // connectInfo already verified above
+    expect(connectInfo.session).toBeDefined();
   });
 });
