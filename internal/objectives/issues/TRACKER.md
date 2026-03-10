@@ -347,7 +347,8 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 320
+- **FIXED:** 321
 - **WONTFIX:** 1
-- **Total:** 321
+- **Total:** 322
+- **Archived:** 321 (001–321)
 
