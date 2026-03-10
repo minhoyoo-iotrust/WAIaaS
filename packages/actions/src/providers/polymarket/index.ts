@@ -70,3 +70,20 @@ export {
   type ApiCredentials,
   type ClobOrder,
 } from './clob-client.js';
+
+// API Key Service
+export {
+  PolymarketApiKeyService,
+  type ApiKeyDb,
+  type PolymarketApiKeyRow,
+  type EncryptFn,
+  type DecryptFn,
+} from './api-key-service.js';
+
+// Order Provider
+export {
+  PolymarketOrderProvider,
+  type NegRiskResolver,
+  type OrderDb,
+  type UuidFn,
+} from './order-provider.js';
