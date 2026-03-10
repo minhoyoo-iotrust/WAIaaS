@@ -42,13 +42,13 @@ Plans:
   3. 사용자가 활성 주문을 취소하고 주문 상태/이력을 조회할 수 있다
   4. 사용자가 오더북(bid/ask, spread, depth)을 조회할 수 있다
   5. USDC approve가 CTF Exchange + Neg Risk CTF Exchange 컨트랙트 대상으로 실행된다
-**Plans**: TBD
+**Plans:** 4 plans
 
 Plans:
-- [ ] 371-01: PolymarketSigner + ClobClient + RateLimiter 인프라
-- [ ] 371-02: DB 마이그레이션 v53-v54 (polymarket_orders, polymarket_positions, polymarket_api_keys)
-- [ ] 371-03: PolymarketOrderProvider (pm_buy/pm_sell/pm_cancel/pm_batch) + OrderBuilder
-- [ ] 371-04: USDC approve + Neg Risk 라우팅 + 오더북 조회
+- [ ] 371-01-PLAN.md — PolymarketSigner + ClobClient + RateLimiter + OrderBuilder 인프라
+- [ ] 371-02-PLAN.md — DB 마이그레이션 v53-v54 (polymarket_orders, polymarket_positions, polymarket_api_keys)
+- [ ] 371-03-PLAN.md — PolymarketOrderProvider (pm_buy/pm_sell/pm_cancel/pm_update) + ApiKeyService
+- [ ] 371-04-PLAN.md — USDC approve + Neg Risk 라우팅 + 오더북 조회 + 인프라 팩토리
 
 ### Phase 372: 마켓 조회 + 포지션/정산
 **Goal**: 사용자가 Polymarket 마켓을 탐색/검색하고, 보유 포지션과 PnL을 확인하며, 해결된 마켓에서 CTF 토큰을 리딤할 수 있다
