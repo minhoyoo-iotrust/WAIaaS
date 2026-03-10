@@ -27,10 +27,10 @@ Polymarket 예측 시장을 WAIaaS에 통합한다. Off-chain CLOB 주문과 On-
   2. EIP-712 3개 도메인(ClobAuth, CTF Exchange, Neg Risk CTF Exchange)의 서명 구조가 명세되어 있다
   3. Hyperliquid EIP-712 패턴과의 공통/차이점이 분석되어 공유 추상화 범위가 결정되어 있다
   4. 설계 문서 doc 80이 작성되어 후속 페이즈의 구현 가이드로 사용 가능하다
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 370-01: Polymarket 심층 리서치 + 설계 문서 doc 80 작성
+- [ ] 370-01-PLAN.md — Polymarket 심층 리서치 + 설계 문서 doc 80 작성
 
 ### Phase 371: CLOB 주문 구현
 **Goal**: 사용자가 Polymarket CLOB에서 API Key를 생성하고, 다양한 주문 유형으로 예측 시장 포지션을 매매할 수 있다
