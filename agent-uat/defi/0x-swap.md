@@ -48,7 +48,7 @@ curl -s -X POST http://localhost:3100/v1/transactions/simulate \
     "type": "CONTRACT_CALL",
     "action": "0x-swap",
     "params": {
-      "sellToken": "ETH",
+      "sellToken": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
       "buyToken": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
       "sellAmount": "0.001"
     },
@@ -77,7 +77,7 @@ curl -s -X POST http://localhost:3100/v1/transactions/send \
     "type": "CONTRACT_CALL",
     "action": "0x-swap",
     "params": {
-      "sellToken": "ETH",
+      "sellToken": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
       "buyToken": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
       "sellAmount": "0.001"
     },

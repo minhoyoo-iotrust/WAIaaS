@@ -50,7 +50,7 @@ curl -s -X POST http://localhost:3100/v1/transactions/simulate \
     "params": {
       "inputMint": "So11111111111111111111111111111111111111112",
       "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-      "amount": "0.005",
+      "amount": "5000000",
       "slippageBps": 50
     },
     "network": "solana-mainnet"
@@ -81,7 +81,7 @@ curl -s -X POST http://localhost:3100/v1/transactions/send \
     "params": {
       "inputMint": "So11111111111111111111111111111111111111112",
       "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-      "amount": "0.005",
+      "amount": "5000000",
       "slippageBps": 50
     },
     "network": "solana-mainnet"

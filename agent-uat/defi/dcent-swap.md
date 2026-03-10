@@ -48,8 +48,8 @@ curl -s -X POST http://localhost:3100/v1/transactions/simulate \
     "type": "CONTRACT_CALL",
     "action": "dcent-swap",
     "params": {
-      "fromToken": "ETH",
-      "toToken": "USDC",
+      "fromAsset": "eip155:1/slip44:60",
+      "toAsset": "eip155:1/erc20:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
       "amount": "0.001",
       "slippageBps": 50
     },
@@ -79,8 +79,8 @@ curl -s -X POST http://localhost:3100/v1/transactions/send \
     "type": "CONTRACT_CALL",
     "action": "dcent-swap",
     "params": {
-      "fromToken": "ETH",
-      "toToken": "USDC",
+      "fromAsset": "eip155:1/slip44:60",
+      "toAsset": "eip155:1/erc20:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
       "amount": "0.001",
       "slippageBps": 50
     },

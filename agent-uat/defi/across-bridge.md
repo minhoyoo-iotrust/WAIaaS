@@ -49,10 +49,11 @@ curl -s -X POST http://localhost:3100/v1/transactions/simulate \
     "type": "CONTRACT_CALL",
     "action": "across-bridge",
     "params": {
-      "fromChain": "arbitrum-mainnet",
-      "toChain": "base-mainnet",
-      "token": "USDC",
-      "amount": "1.0",
+      "fromChain": "arbitrum",
+      "toChain": "base",
+      "inputToken": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+      "outputToken": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "amount": "1000000",
       "toAddress": "<MY_BASE_ADDRESS>"
     },
     "network": "arbitrum-mainnet"
@@ -99,10 +100,11 @@ curl -s -X POST http://localhost:3100/v1/transactions/send \
     "type": "CONTRACT_CALL",
     "action": "across-bridge",
     "params": {
-      "fromChain": "arbitrum-mainnet",
-      "toChain": "base-mainnet",
-      "token": "USDC",
-      "amount": "1.0",
+      "fromChain": "arbitrum",
+      "toChain": "base",
+      "inputToken": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+      "outputToken": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "amount": "1000000",
       "toAddress": "<MY_BASE_ADDRESS>"
     },
     "network": "arbitrum-mainnet"
