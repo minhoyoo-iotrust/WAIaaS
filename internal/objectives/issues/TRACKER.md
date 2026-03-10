@@ -336,6 +336,7 @@
 | 320 | BUG | MEDIUM | DeFi UAT 시나리오 문서 API 파라미터 불일치 8건 — amount/chain/token 형식 + 필드명 | — | FIXED | 2026-03-10 |
 | 321 | BUG | MEDIUM | Jito Staking 최소 금액 검증 누락 — 소액 deposit 시 InstructionError Custom(1) 온체인 실패 | — | FIXED | 2026-03-10 |
 | 322 | ENHANCEMENT | LOW | Agent UAT 지갑 CRUD 시나리오 제거 — 반복 실행 시 terminated 지갑 누적으로 DB 오염 | — | OPEN | — |
+| 323 | ENHANCEMENT | MEDIUM | Terminated 지갑 하드 삭제(Purge) 기능 — API + Admin UI에서 완전 삭제 지원 | — | OPEN | — |
 
 ## Type Legend
 
@@ -347,9 +348,9 @@
 
 ## Summary
 
-- **OPEN:** 1
+- **OPEN:** 2
 - **FIXED:** 321
 - **WONTFIX:** 1
-- **Total:** 323
+- **Total:** 324
 - **Archived:** 321 (001–321)
 
