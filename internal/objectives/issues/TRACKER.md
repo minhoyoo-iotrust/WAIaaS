@@ -335,6 +335,7 @@
 | 319 | BUG | HIGH | Hyperliquid Admin UI 활성화 불가 — MarketData null + Hot-Reload BUILTIN_NAMES 누락 (3중 결함) | — | FIXED | 2026-03-10 |
 | 320 | BUG | MEDIUM | DeFi UAT 시나리오 문서 API 파라미터 불일치 8건 — amount/chain/token 형식 + 필드명 | — | FIXED | 2026-03-10 |
 | 321 | BUG | MEDIUM | Jito Staking 최소 금액 검증 누락 — 소액 deposit 시 InstructionError Custom(1) 온체인 실패 | — | FIXED | 2026-03-10 |
+| 322 | ENHANCEMENT | LOW | Agent UAT 지갑 CRUD 시나리오 제거 — 반복 실행 시 terminated 지갑 누적으로 DB 오염 | — | OPEN | — |
 
 ## Type Legend
 
@@ -346,9 +347,9 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 1
 - **FIXED:** 321
 - **WONTFIX:** 1
-- **Total:** 322
+- **Total:** 323
 - **Archived:** 321 (001–321)
 
