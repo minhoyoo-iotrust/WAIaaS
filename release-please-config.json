@@ -51,6 +51,7 @@
       "prerelease": true,
       "prerelease-type": "rc",
       "extra-files": [
+        "packages/shared/package.json",
         "packages/core/package.json",
         "packages/daemon/package.json",
         "packages/cli/package.json",

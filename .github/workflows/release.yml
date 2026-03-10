@@ -119,7 +119,7 @@ jobs:
           curl -f http://localhost:3100/health
           docker stop waiaas-release-test
 
-  # pnpm publish dry-run for all 11 publishable packages
+  # pnpm publish dry-run for all 12 publishable packages
   publish-check:
     runs-on: ubuntu-latest
     needs: test
@@ -136,6 +136,7 @@ jobs:
       - name: Copy root README to packages
         run: |
           PACKAGES=(
+            packages/shared
             packages/core
             packages/daemon
             packages/cli
@@ -163,6 +164,7 @@ jobs:
       - name: pnpm publish dry-run
         run: |
           PACKAGES=(
+            packages/shared
             packages/core
             packages/daemon
             packages/cli
@@ -185,6 +187,7 @@ jobs:
       - name: Verify no workspace:* in packed tarballs
         run: |
           PACKAGES=(
+            packages/shared
             packages/core
             packages/daemon
             packages/cli
@@ -350,6 +353,7 @@ jobs:
       - name: Copy root README to packages
         run: |
           PACKAGES=(
+            packages/shared
             packages/core
             packages/daemon
             packages/cli
@@ -383,6 +387,7 @@ jobs:
       - name: Publish packages
         run: |
           PACKAGES=(
+            packages/shared
             packages/core
             packages/daemon
             packages/cli
@@ -426,7 +431,7 @@ jobs:
           echo "## Deploy Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Version:** ${{ github.event.release.tag_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **npm:** 11 packages published with OIDC provenance" >> $GITHUB_STEP_SUMMARY
+          echo "- **npm:** 12 packages published with OIDC provenance" >> $GITHUB_STEP_SUMMARY
           echo "- **Docker (GHCR):** ghcr.io/${{ github.repository }}, ghcr.io/${{ github.repository }}-push-relay" >> $GITHUB_STEP_SUMMARY
           echo "- **Docker (Hub):** waiaas/daemon, waiaas/push-relay" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY

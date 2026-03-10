@@ -324,6 +324,7 @@
 | 308 | ENHANCEMENT | MEDIUM | Agent UAT 인증 카테고리 분류 + 필터링 — masterAuth/sessionAuth 시나리오 분리 | — | FIXED | 2026-03-10 |
 | 309 | BUG | MEDIUM | Agent UAT 시나리오 문서 API 경로 불일치 2건 — wallets/:id/balance→wallet/balance, transactions→transactions/send | — | FIXED | 2026-03-10 |
 | 310 | BUG | MEDIUM | Sepolia ERC-20 토큰이 assets API에 미표시 — incoming TX에는 수신 기록 존재 | — | WONTFIX | 2026-03-10 |
+| 311 | MISSING | HIGH | @waiaas/shared 패키지 릴리스 설정 누락 — release-please + smoke test + release.yml 미등록 | — | FIXED | 2026-03-10 |
 
 ## Type Legend
 
@@ -336,7 +337,7 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 308
+- **FIXED:** 309
 - **WONTFIX:** 2
-- **Total:** 310
+- **Total:** 311
 

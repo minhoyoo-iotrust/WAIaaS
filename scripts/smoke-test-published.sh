@@ -29,6 +29,7 @@ pnpm turbo run build --filter='./packages/*'
 # Step 2: Pack all publishable packages
 declare -A TARBALLS
 PACKAGES=(
+  "packages/shared"
   "packages/core"
   "packages/sdk"
   "packages/cli"
@@ -68,6 +69,7 @@ require('fs').writeFileSync('./package.json', JSON.stringify(pkg, null, 2));
 # Install all tarballs in a single call so npm resolves interdependencies
 echo "  Installing all packages..."
 npm install \
+  "${TARBALLS[@waiaas/shared]}" \
   "${TARBALLS[@waiaas/core]}" \
   "${TARBALLS[@waiaas/sdk]}" \
   "${TARBALLS[@waiaas/cli]}" \
