@@ -316,7 +316,7 @@
 | 300 | BUG | HIGH | E2E 온체인 전송 테스트 txId 필드명 불일치 — 실제 API는 txHash 반환 | v31.8 | FIXED | 2026-03-09 |
 | 301 | ENHANCEMENT | MEDIUM | E2E 온체인 테스트에 L2 테스트넷 네트워크 추가 — Polygon/Arbitrum/Optimism/Base/HyperEVM | v31.8 | FIXED | 2026-03-10 |
 | 302 | BUG | HIGH | E2E 스모크 CI global waiaas CLI PATH 해결 실패 재발 — which fallback + WAIAAS_CLI_PATH 명시 전달 필요 | v31.8 | FIXED | 2026-03-10 |
-| 303 | ENHANCEMENT | LOW | agent-uat 스킬을 .claude/skills/로 이동 — 런타임 스킬과 개발 스킬 분리 | — | OPEN | — |
+| 303 | ENHANCEMENT | LOW | agent-uat 스킬을 .claude/skills/로 이동 — 런타임 스킬과 개발 스킬 분리 | — | FIXED | 2026-03-10 |
 
 ## Type Legend
 
@@ -328,8 +328,8 @@
 
 ## Summary
 
-- **OPEN:** 1
-- **FIXED:** 301
+- **OPEN:** 0
+- **FIXED:** 302
 - **WONTFIX:** 1
 - **Total:** 303
 
