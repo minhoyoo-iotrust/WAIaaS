@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.10.0-rc.24](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.23...v2.10.0-rc.24) (2026-03-10)
+
+
+### Bug Fixes
+
+* **ci:** install @waiaas/cli instead of @waiaas/daemon in e2e-smoke ([2353959](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2353959f6f50ea7618cf92d942a3a7bbed3056d4))
+* **ci:** install @waiaas/cli instead of @waiaas/daemon in e2e-smoke ([fe6824a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/fe6824a50781bb23b3f3e7ca7d9c7e9607f5da81))
+* move agent-uat skill to .claude/skills/ ([#303](https://github.com/minhoyoo-iotrust/WAIaaS/issues/303)) ([e9ce720](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e9ce720ccf95b2cd2b6143deef2a0de7eea680d2))
+* move agent-uat skill to .claude/skills/ for dev/runtime separation ([#303](https://github.com/minhoyoo-iotrust/WAIaaS/issues/303)) ([412e996](https://github.com/minhoyoo-iotrust/WAIaaS/commit/412e996ed0bdf78300052f79d4921ac71d92bf67))
+
 ## [2.10.0-rc.23](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.22...v2.10.0-rc.23) (2026-03-09)
 
 
