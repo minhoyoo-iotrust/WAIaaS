@@ -1,14 +1,3 @@
----
-name: "WAIaaS Agent UAT"
-description: "Interactive Agent UAT: run scenarios from markdown files to verify WAIaaS features on testnet/mainnet"
-category: "testing"
-tags: [uat, testing, scenarios, mainnet, testnet, defi, admin, waiass]
-version: "2.9.0-rc"
-dispatch:
-  kind: "prompt"
-  triggerPatterns: ["/agent-uat"]
----
-
 # WAIaaS Agent UAT
 
 AI 에이전트가 마크다운 시나리오를 읽고 사용자와 인터랙티브하게 실행하여 WAIaaS 기능을 메인넷/테스트넷에서 검증하는 시스템이다.
