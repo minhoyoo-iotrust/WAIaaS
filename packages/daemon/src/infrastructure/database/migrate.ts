@@ -71,7 +71,7 @@ const LEGACY_NETWORK_NORMALIZE: Record<string, string> = {
 };
 
 // ---------------------------------------------------------------------------
-// DDL statements for all 25 tables (latest schema: wallets + wallet_id + session_wallets + token_registry + settings + telegram_users + wc_sessions + wc_store + incoming_transactions + incoming_tx_cursors + defi_positions + wallet_apps + webhooks + webhook_logs + agent_identities + reputation_cache + nft_metadata_cache + userop_builds)
+// DDL statements for all 30 tables (latest schema: wallets + wallet_id + session_wallets + token_registry + settings + telegram_users + wc_sessions + wc_store + incoming_transactions + incoming_tx_cursors + defi_positions + wallet_apps + webhooks + webhook_logs + agent_identities + reputation_cache + nft_metadata_cache + userop_builds + hyperliquid_orders + hyperliquid_sub_accounts + polymarket_orders + polymarket_positions + polymarket_api_keys)
 // ---------------------------------------------------------------------------
 
 /**
@@ -79,7 +79,7 @@ const LEGACY_NETWORK_NORMALIZE: Record<string, string> = {
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 52;
+export const LATEST_SCHEMA_VERSION = 54;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -466,6 +466,68 @@ function getCreateTableStatements(): string[] {
   created_at INTEGER NOT NULL DEFAULT (unixepoch()),
   UNIQUE(wallet_id, sub_account_address)
 )`,
+
+    // Table 28: polymarket_orders (Polymarket CLOB order history, v53)
+    `CREATE TABLE IF NOT EXISTS polymarket_orders (
+  id TEXT PRIMARY KEY,
+  wallet_id TEXT NOT NULL REFERENCES wallets(id),
+  transaction_id TEXT REFERENCES transactions(id),
+  condition_id TEXT NOT NULL,
+  token_id TEXT NOT NULL,
+  market_slug TEXT,
+  outcome TEXT NOT NULL,
+  order_id TEXT,
+  side TEXT NOT NULL CHECK (side IN ('BUY', 'SELL')),
+  order_type TEXT NOT NULL CHECK (order_type IN ('GTC', 'GTD', 'FOK', 'IOC')),
+  price TEXT NOT NULL,
+  size TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('PENDING', 'LIVE', 'MATCHED', 'PARTIALLY_FILLED', 'CANCELLED', 'EXPIRED')),
+  filled_size TEXT,
+  avg_fill_price TEXT,
+  salt TEXT,
+  maker_amount TEXT,
+  taker_amount TEXT,
+  signature_type INTEGER NOT NULL DEFAULT 0,
+  fee_rate_bps INTEGER,
+  expiration INTEGER,
+  nonce TEXT,
+  is_neg_risk INTEGER NOT NULL DEFAULT 0,
+  response_data TEXT,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+)`,
+
+    // Table 29: polymarket_positions (Polymarket position tracking, v54)
+    `CREATE TABLE IF NOT EXISTS polymarket_positions (
+  id TEXT PRIMARY KEY,
+  wallet_id TEXT NOT NULL REFERENCES wallets(id),
+  condition_id TEXT NOT NULL,
+  token_id TEXT NOT NULL,
+  market_slug TEXT,
+  outcome TEXT NOT NULL CHECK (outcome IN ('YES', 'NO')),
+  size TEXT NOT NULL DEFAULT '0',
+  avg_price TEXT,
+  realized_pnl TEXT DEFAULT '0',
+  market_resolved INTEGER NOT NULL DEFAULT 0,
+  winning_outcome TEXT,
+  is_neg_risk INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  UNIQUE(wallet_id, token_id)
+)`,
+
+    // Table 30: polymarket_api_keys (Polymarket CLOB API credentials, v54)
+    `CREATE TABLE IF NOT EXISTS polymarket_api_keys (
+  id TEXT PRIMARY KEY,
+  wallet_id TEXT NOT NULL REFERENCES wallets(id),
+  api_key TEXT NOT NULL,
+  api_secret_encrypted TEXT NOT NULL,
+  api_passphrase_encrypted TEXT NOT NULL,
+  signature_type INTEGER NOT NULL DEFAULT 0,
+  proxy_address TEXT,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  UNIQUE(wallet_id)
+)`,
   ];
 }
 
@@ -582,6 +644,20 @@ function getCreateIndexStatements(): string[] {
 
     // v52: hyperliquid_sub_accounts index
     'CREATE INDEX IF NOT EXISTS idx_hl_sub_wallet ON hyperliquid_sub_accounts(wallet_id)',
+
+    // v53: polymarket_orders indexes
+    'CREATE INDEX IF NOT EXISTS idx_pm_orders_wallet ON polymarket_orders(wallet_id)',
+    'CREATE INDEX IF NOT EXISTS idx_pm_orders_order_id ON polymarket_orders(order_id)',
+    'CREATE INDEX IF NOT EXISTS idx_pm_orders_condition ON polymarket_orders(condition_id)',
+    'CREATE INDEX IF NOT EXISTS idx_pm_orders_status ON polymarket_orders(status)',
+    'CREATE INDEX IF NOT EXISTS idx_pm_orders_created ON polymarket_orders(created_at)',
+
+    // v54: polymarket_positions indexes
+    'CREATE INDEX IF NOT EXISTS idx_pm_positions_wallet ON polymarket_positions(wallet_id)',
+    'CREATE INDEX IF NOT EXISTS idx_pm_positions_condition ON polymarket_positions(condition_id)',
+    'CREATE INDEX IF NOT EXISTS idx_pm_positions_resolved ON polymarket_positions(market_resolved)',
+
+    // v54: polymarket_api_keys indexes (UNIQUE on wallet_id is inline)
   ];
 }
 
@@ -2898,6 +2974,117 @@ MIGRATIONS.push({
       );
       CREATE INDEX idx_hl_sub_wallet ON hyperliquid_sub_accounts(wallet_id);
     `);
+  },
+});
+
+// ---------------------------------------------------------------------------
+// v53: polymarket_orders table
+// ---------------------------------------------------------------------------
+
+MIGRATIONS.push({
+  version: 53,
+  description: 'Create polymarket_orders table for Polymarket CLOB order tracking',
+  up: (sqlite) => {
+    // Idempotent check
+    const tables = sqlite
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='polymarket_orders'")
+      .all() as Array<{ name: string }>;
+    if (tables.length > 0) return;
+
+    sqlite.exec(`
+      CREATE TABLE polymarket_orders (
+        id TEXT PRIMARY KEY,
+        wallet_id TEXT NOT NULL REFERENCES wallets(id),
+        transaction_id TEXT REFERENCES transactions(id),
+        condition_id TEXT NOT NULL,
+        token_id TEXT NOT NULL,
+        market_slug TEXT,
+        outcome TEXT NOT NULL,
+        order_id TEXT,
+        side TEXT NOT NULL CHECK (side IN ('BUY', 'SELL')),
+        order_type TEXT NOT NULL CHECK (order_type IN ('GTC', 'GTD', 'FOK', 'IOC')),
+        price TEXT NOT NULL,
+        size TEXT NOT NULL,
+        status TEXT NOT NULL CHECK (status IN ('PENDING', 'LIVE', 'MATCHED', 'PARTIALLY_FILLED', 'CANCELLED', 'EXPIRED')),
+        filled_size TEXT,
+        avg_fill_price TEXT,
+        salt TEXT,
+        maker_amount TEXT,
+        taker_amount TEXT,
+        signature_type INTEGER NOT NULL DEFAULT 0,
+        fee_rate_bps INTEGER,
+        expiration INTEGER,
+        nonce TEXT,
+        is_neg_risk INTEGER NOT NULL DEFAULT 0,
+        response_data TEXT,
+        created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+        updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+      );
+      CREATE INDEX idx_pm_orders_wallet ON polymarket_orders(wallet_id);
+      CREATE INDEX idx_pm_orders_order_id ON polymarket_orders(order_id);
+      CREATE INDEX idx_pm_orders_condition ON polymarket_orders(condition_id);
+      CREATE INDEX idx_pm_orders_status ON polymarket_orders(status);
+      CREATE INDEX idx_pm_orders_created ON polymarket_orders(created_at);
+    `);
+  },
+});
+
+// ---------------------------------------------------------------------------
+// v54: polymarket_positions + polymarket_api_keys tables
+// ---------------------------------------------------------------------------
+
+MIGRATIONS.push({
+  version: 54,
+  description: 'Create polymarket_positions and polymarket_api_keys tables',
+  up: (sqlite) => {
+    // polymarket_positions
+    const posTables = sqlite
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='polymarket_positions'")
+      .all() as Array<{ name: string }>;
+    if (posTables.length === 0) {
+      sqlite.exec(`
+        CREATE TABLE polymarket_positions (
+          id TEXT PRIMARY KEY,
+          wallet_id TEXT NOT NULL REFERENCES wallets(id),
+          condition_id TEXT NOT NULL,
+          token_id TEXT NOT NULL,
+          market_slug TEXT,
+          outcome TEXT NOT NULL CHECK (outcome IN ('YES', 'NO')),
+          size TEXT NOT NULL DEFAULT '0',
+          avg_price TEXT,
+          realized_pnl TEXT DEFAULT '0',
+          market_resolved INTEGER NOT NULL DEFAULT 0,
+          winning_outcome TEXT,
+          is_neg_risk INTEGER NOT NULL DEFAULT 0,
+          created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+          updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+          UNIQUE(wallet_id, token_id)
+        );
+        CREATE INDEX idx_pm_positions_wallet ON polymarket_positions(wallet_id);
+        CREATE INDEX idx_pm_positions_condition ON polymarket_positions(condition_id);
+        CREATE INDEX idx_pm_positions_resolved ON polymarket_positions(market_resolved);
+      `);
+    }
+
+    // polymarket_api_keys
+    const keyTables = sqlite
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='polymarket_api_keys'")
+      .all() as Array<{ name: string }>;
+    if (keyTables.length === 0) {
+      sqlite.exec(`
+        CREATE TABLE polymarket_api_keys (
+          id TEXT PRIMARY KEY,
+          wallet_id TEXT NOT NULL REFERENCES wallets(id),
+          api_key TEXT NOT NULL,
+          api_secret_encrypted TEXT NOT NULL,
+          api_passphrase_encrypted TEXT NOT NULL,
+          signature_type INTEGER NOT NULL DEFAULT 0,
+          proxy_address TEXT,
+          created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+          UNIQUE(wallet_id)
+        );
+      `);
+    }
   },
 });
 

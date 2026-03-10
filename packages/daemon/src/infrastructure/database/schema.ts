@@ -1,7 +1,7 @@
 /**
  * Drizzle ORM schema definitions for WAIaaS daemon SQLite database.
  *
- * 26 tables: wallets, sessions, session_wallets, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs, token_registry, settings, telegram_users, wc_sessions, wc_store, incoming_transactions, incoming_tx_cursors, defi_positions, wallet_apps, webhooks, webhook_logs, agent_identities, reputation_cache, nft_metadata_cache, userop_builds, hyperliquid_orders, hyperliquid_sub_accounts
+ * 29 tables: wallets, sessions, session_wallets, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs, token_registry, settings, telegram_users, wc_sessions, wc_store, incoming_transactions, incoming_tx_cursors, defi_positions, wallet_apps, webhooks, webhook_logs, agent_identities, reputation_cache, nft_metadata_cache, userop_builds, hyperliquid_orders, hyperliquid_sub_accounts, polymarket_orders, polymarket_positions, polymarket_api_keys
  *
  * CHECK constraints are derived from @waiaas/core enum SSoT arrays (not hardcoded strings).
  * All timestamps are Unix epoch seconds via { mode: 'timestamp' }.
@@ -779,5 +779,117 @@ export const useropBuilds = sqliteTable(
     index('idx_userop_builds_wallet_id').on(table.walletId),
     index('idx_userop_builds_expires').on(table.expiresAt),
     check('check_userop_builds_used', sql`used IN (0, 1)`),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Polymarket orders (v53)
+// ---------------------------------------------------------------------------
+
+export const polymarketOrders = sqliteTable(
+  'polymarket_orders',
+  {
+    id: text('id').primaryKey(),
+    walletId: text('wallet_id')
+      .notNull()
+      .references(() => wallets.id),
+    transactionId: text('transaction_id').references(
+      (): AnySQLiteColumn => transactions.id,
+    ),
+    conditionId: text('condition_id').notNull(),
+    tokenId: text('token_id').notNull(),
+    marketSlug: text('market_slug'),
+    outcome: text('outcome').notNull(),
+    orderId: text('order_id'),
+    side: text('side').notNull(), // BUY | SELL
+    orderType: text('order_type').notNull(), // GTC | GTD | FOK | IOC
+    price: text('price').notNull(),
+    size: text('size').notNull(),
+    status: text('status').notNull(), // PENDING | LIVE | MATCHED | PARTIALLY_FILLED | CANCELLED | EXPIRED
+    filledSize: text('filled_size'),
+    avgFillPrice: text('avg_fill_price'),
+    salt: text('salt'),
+    makerAmount: text('maker_amount'),
+    takerAmount: text('taker_amount'),
+    signatureType: integer('signature_type').notNull().default(0),
+    feeRateBps: integer('fee_rate_bps'),
+    expiration: integer('expiration'),
+    nonce: text('nonce'),
+    isNegRisk: integer('is_neg_risk').notNull().default(0),
+    responseData: text('response_data'),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (table) => [
+    index('idx_pm_orders_wallet').on(table.walletId),
+    index('idx_pm_orders_order_id').on(table.orderId),
+    index('idx_pm_orders_condition').on(table.conditionId),
+    index('idx_pm_orders_status').on(table.status),
+    index('idx_pm_orders_created').on(table.createdAt),
+    check('check_pm_orders_side', sql`side IN ('BUY', 'SELL')`),
+    check(
+      'check_pm_orders_order_type',
+      sql`order_type IN ('GTC', 'GTD', 'FOK', 'IOC')`,
+    ),
+    check(
+      'check_pm_orders_status',
+      sql`status IN ('PENDING', 'LIVE', 'MATCHED', 'PARTIALLY_FILLED', 'CANCELLED', 'EXPIRED')`,
+    ),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Polymarket positions (v54)
+// ---------------------------------------------------------------------------
+
+export const polymarketPositions = sqliteTable(
+  'polymarket_positions',
+  {
+    id: text('id').primaryKey(),
+    walletId: text('wallet_id')
+      .notNull()
+      .references(() => wallets.id),
+    conditionId: text('condition_id').notNull(),
+    tokenId: text('token_id').notNull(),
+    marketSlug: text('market_slug'),
+    outcome: text('outcome').notNull(), // YES | NO
+    size: text('size').notNull().default('0'),
+    avgPrice: text('avg_price'),
+    realizedPnl: text('realized_pnl').default('0'),
+    marketResolved: integer('market_resolved').notNull().default(0),
+    winningOutcome: text('winning_outcome'),
+    isNegRisk: integer('is_neg_risk').notNull().default(0),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (table) => [
+    index('idx_pm_positions_wallet').on(table.walletId),
+    index('idx_pm_positions_condition').on(table.conditionId),
+    index('idx_pm_positions_resolved').on(table.marketResolved),
+    uniqueIndex('idx_pm_positions_unique').on(table.walletId, table.tokenId),
+    check('check_pm_positions_outcome', sql`outcome IN ('YES', 'NO')`),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Polymarket API keys (v54)
+// ---------------------------------------------------------------------------
+
+export const polymarketApiKeys = sqliteTable(
+  'polymarket_api_keys',
+  {
+    id: text('id').primaryKey(),
+    walletId: text('wallet_id')
+      .notNull()
+      .references(() => wallets.id),
+    apiKey: text('api_key').notNull(),
+    apiSecretEncrypted: text('api_secret_encrypted').notNull(),
+    apiPassphraseEncrypted: text('api_passphrase_encrypted').notNull(),
+    signatureType: integer('signature_type').notNull().default(0),
+    proxyAddress: text('proxy_address'),
+    createdAt: integer('created_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('idx_pm_api_keys_wallet').on(table.walletId),
   ],
 );

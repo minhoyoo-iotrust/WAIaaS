@@ -67,8 +67,8 @@ describe('DB v52 Migration: hyperliquid_sub_accounts', () => {
     }
   });
 
-  it('T1: LATEST_SCHEMA_VERSION is 52', () => {
-    expect(LATEST_SCHEMA_VERSION).toBe(52);
+  it('T1: LATEST_SCHEMA_VERSION is at least 52', () => {
+    expect(LATEST_SCHEMA_VERSION).toBeGreaterThanOrEqual(52);
   });
 
   it('T2: hyperliquid_sub_accounts has all 5 columns', () => {
@@ -154,7 +154,7 @@ describe('DB v52 Migration: hyperliquid_sub_accounts', () => {
     runMigrations(sqlite);
 
     expect(tableExists(sqlite, 'hyperliquid_sub_accounts')).toBe(true);
-    expect(getMaxVersion(sqlite)).toBe(52);
+    expect(getMaxVersion(sqlite)).toBeGreaterThanOrEqual(52);
 
     const cols = getTableColumns(sqlite, 'hyperliquid_sub_accounts');
     expect(cols).toContain('id');
