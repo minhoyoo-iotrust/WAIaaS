@@ -329,6 +329,12 @@
 | 313 | BUG | LOW | CoinGecko API Key 붙여넣기 시 입력값 미표시 — icc() 패턴이 dirty 값 무시 | — | OPEN | — |
 | 314 | MISSING | MEDIUM | NFT Indexer 설정이 Admin UI에서 접근 불가 — 레거시 settings.tsx에만 존재 + 재발 방지 completeness 테스트 | — | OPEN | — |
 | 315 | BUG | MEDIUM | 병렬 UAT 실행 시 세션 한도 초과로 테스트 진행 불가 — max_sessions_per_wallet 5 고갈 + 세션 미정리 | — | OPEN | — |
+| 316 | BUG | HIGH | 0x Swap ACTION_RESOLVE_FAILED: gas/gasPrice 파싱 버그 — 0x API v2 응답 형식 변경 대응 필요 | — | OPEN | — |
+| 317 | BUG | HIGH | Across Bridge timestamp 타입 불일치 — API 응답 string vs Zod 스키마 number | — | OPEN | — |
+| 318 | BUG | HIGH | Jupiter API 401 Unauthorized — 인증 필수 전환 대응 (requiresApiKey 변경 필요) | — | OPEN | — |
+| 319 | BUG | HIGH | Hyperliquid Admin UI 활성화 불가 — MarketData null + Hot-Reload BUILTIN_NAMES 누락 (3중 결함) | — | OPEN | — |
+| 320 | BUG | MEDIUM | DeFi UAT 시나리오 문서 API 파라미터 불일치 8건 — amount/chain/token 형식 + 필드명 | — | OPEN | — |
+| 321 | BUG | MEDIUM | Jito Staking 최소 금액 검증 누락 — 소액 deposit 시 InstructionError Custom(1) 온체인 실패 | — | OPEN | — |
 
 ## Type Legend
 
@@ -340,8 +346,8 @@
 
 ## Summary
 
-- **OPEN:** 5
+- **OPEN:** 11
 - **FIXED:** 309
 - **WONTFIX:** 1
-- **Total:** 315
+- **Total:** 321
 
