@@ -301,6 +301,59 @@ describe('ZeroExSwapActionProvider', () => {
     });
   });
 
+  describe('#316: gas/gasPrice optional in 0x v2 response', () => {
+    it('resolves successfully when gas and gasPrice are missing from API response', async () => {
+      server.use(
+        http.get('https://api.0x.org/swap/allowance-holder/quote', () => {
+          // Simulate 0x API v2 response without gas/gasPrice fields
+          return HttpResponse.json({
+            blockNumber: '21359842',
+            buyAmount: '1000000',
+            buyToken: USDC_ADDRESS,
+            fees: {
+              integratorFee: null,
+              zeroExFee: { amount: '0', token: NATIVE_ETH, type: 'volume' },
+              gasFee: null,
+            },
+            // gas and gasPrice intentionally omitted
+            liquidityAvailable: true,
+            minBuyAmount: '990000',
+            route: {
+              fills: [{ from: '0xETH', to: '0xUSDC', source: 'Uniswap_V3', proportionBps: '10000' }],
+              tokens: [
+                { address: NATIVE_ETH, symbol: 'ETH' },
+                { address: USDC_ADDRESS, symbol: 'USDC' },
+              ],
+            },
+            sellAmount: '1000000000000000000',
+            sellToken: WETH_ADDRESS,
+            totalNetworkFee: '6000000000000000',
+            transaction: {
+              to: ALLOWANCE_HOLDER,
+              data: '0xswapdata_no_gas',
+              // gas and gasPrice intentionally omitted
+              value: '0',
+            },
+            permit2: null,
+          });
+        }),
+      );
+
+      const provider = new ZeroExSwapActionProvider({ enabled: true, apiKey: 'test-key' });
+      const result = await provider.resolve('swap', {
+        sellToken: WETH_ADDRESS,
+        buyToken: USDC_ADDRESS,
+        sellAmount: '1000000000000000000',
+      }, CONTEXT);
+
+      expect(result).toHaveLength(2);
+      const swap = (result as Array<{ type: string; to: string; calldata?: string }>)[1]!;
+      expect(swap.type).toBe('CONTRACT_CALL');
+      expect(swap.to).toBe(ALLOWANCE_HOLDER);
+      expect(swap.calldata).toBe('0xswapdata_no_gas');
+    });
+  });
+
   describe('ZXSW-06: Slippage clamping', () => {
     it('uses default 100bps (1%) when no slippage specified', async () => {
       let capturedUrl = '';

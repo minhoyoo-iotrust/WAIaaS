@@ -25,8 +25,8 @@ export const PriceResponseSchema = z.object({
     }).nullable(),
     gasFee: z.unknown().nullable(),
   }),
-  gas: z.string(),
-  gasPrice: z.string(),
+  gas: z.string().optional(),
+  gasPrice: z.string().optional(),
   liquidityAvailable: z.boolean(),  // ZXSW-07: must validate this
   minBuyAmount: z.string(),
   route: z.object({
@@ -56,8 +56,8 @@ export const QuoteResponseSchema = PriceResponseSchema.extend({
   transaction: z.object({
     to: z.string(),      // AllowanceHolder contract
     data: z.string(),    // calldata (hex)
-    gas: z.string(),
-    gasPrice: z.string(),
+    gas: z.string().optional(),
+    gasPrice: z.string().optional(),
     value: z.string(),   // native token value (wei)
   }),
   permit2: z.unknown().nullable().optional(),  // null for AllowanceHolder flow

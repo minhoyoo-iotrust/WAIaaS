@@ -73,6 +73,10 @@ export const DaemonConfigSchema = z.object({
       evm_optimism_sepolia: z.string().default('https://optimism-sepolia.drpc.org'),
       evm_base_mainnet: z.string().default('https://base.drpc.org'),
       evm_base_sepolia: z.string().default('https://base-sepolia.drpc.org'),
+
+      // HyperEVM
+      evm_hyperevm_mainnet: z.string().default('https://rpc.hyperliquid.xyz/evm'),
+      evm_hyperevm_testnet: z.string().default('https://rpc.hyperliquid-testnet.xyz/evm'),
     })
     .default({}),
   notifications: z

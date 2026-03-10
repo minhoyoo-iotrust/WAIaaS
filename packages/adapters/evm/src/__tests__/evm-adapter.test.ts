@@ -28,6 +28,7 @@ const mockClient = {
   waitForTransactionReceipt: vi.fn(),
   getTransactionReceipt: vi.fn(),
   multicall: vi.fn(),
+  readContract: vi.fn(),
   chain: { id: 1 },
 };
 

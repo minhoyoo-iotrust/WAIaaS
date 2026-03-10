@@ -42,6 +42,16 @@ export const SPL_TOKEN_PROGRAM = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
 export const SYSTEM_PROGRAM = '11111111111111111111111111111111';
 
 // ---------------------------------------------------------------------------
+// Minimum deposit amount
+// ---------------------------------------------------------------------------
+
+/** Minimum Jito stake deposit in lamports (0.05 SOL = 50,000,000 lamports). */
+export const JITO_MIN_DEPOSIT_LAMPORTS = 50_000_000n;
+
+/** Minimum Jito stake deposit in SOL (human-readable). */
+export const JITO_MIN_DEPOSIT_SOL = '0.05';
+
+// ---------------------------------------------------------------------------
 // Defaults (disabled, mainnet addresses)
 // ---------------------------------------------------------------------------
 

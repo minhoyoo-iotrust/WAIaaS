@@ -196,7 +196,7 @@ export class EvmAdapter implements IChainAdapter {
 
         const results = await client.multicall({ contracts: balanceContracts });
 
-        // 3. Process results, skip failed calls and zero balances
+        // 3. Process results, fall back to individual eth_call for failed multicall entries
         for (let i = 0; i < results.length; i++) {
           const result = results[i]!;
           const tokenDef = this._allowedTokens[i]!;
@@ -213,8 +213,38 @@ export class EvmAdapter implements IChainAdapter {
                 isNative: false,
               });
             }
+          } else {
+            // Multicall failed for this token -- log and fall back to individual balanceOf
+            console.warn('[EvmAdapter] ERC-20 multicall failed, falling back to individual call', {
+              token: tokenDef.address,
+              symbol: tokenDef.symbol,
+              error: result.error?.message,
+            });
+            try {
+              const fallbackBalance = await client.readContract({
+                address: tokenDef.address as `0x${string}`,
+                abi: ERC20_ABI,
+                functionName: 'balanceOf',
+                args: [addr as `0x${string}`],
+              }) as bigint;
+              if (fallbackBalance > 0n) {
+                assets.push({
+                  mint: tokenDef.address,
+                  symbol: tokenDef.symbol ?? '',
+                  name: tokenDef.name ?? '',
+                  balance: fallbackBalance,
+                  decimals: tokenDef.decimals ?? 18,
+                  isNative: false,
+                });
+              }
+            } catch (fallbackErr) {
+              console.warn('[EvmAdapter] ERC-20 individual balanceOf also failed, skipping token', {
+                token: tokenDef.address,
+                symbol: tokenDef.symbol,
+                error: fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr),
+              });
+            }
           }
-          // Skip failed multicall results silently (token may not exist or revert)
         }
 
         // 4. Sort: native first (already first), then by balance descending
