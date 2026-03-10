@@ -392,12 +392,12 @@ describe('EVM RPC config', () => {
     expect('ethereum_sepolia' in config.rpc).toBe(false);
   });
 
-  it('DaemonConfigSchema rpc section has 15 keys', () => {
+  it('DaemonConfigSchema rpc section has 17 keys', () => {
     const dir = saveTempDir(createTempDir());
     const config = loadConfig(dir);
     const rpcKeys = Object.keys(config.rpc);
-    // 5 Solana + 10 EVM = 15
-    expect(rpcKeys).toHaveLength(15);
+    // 5 Solana + 12 EVM (incl. hyperevm_mainnet, hyperevm_testnet) = 17
+    expect(rpcKeys).toHaveLength(17);
   });
 });
 
