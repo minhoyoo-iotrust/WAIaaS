@@ -23,6 +23,7 @@ WORKDIR /app
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml turbo.json ./
 
 # 2) Copy each package's package.json only
+COPY packages/shared/package.json packages/shared/package.json
 COPY packages/core/package.json packages/core/package.json
 COPY packages/daemon/package.json packages/daemon/package.json
 COPY packages/admin/package.json packages/admin/package.json
@@ -54,7 +55,7 @@ FROM builder AS prod-deps
 WORKDIR /prod
 
 RUN cp /app/package.json /app/pnpm-workspace.yaml /app/pnpm-lock.yaml /app/turbo.json ./ && \
-    for dir in core daemon admin adapters/solana adapters/evm cli sdk mcp push-relay actions; do \
+    for dir in shared core daemon admin adapters/solana adapters/evm cli sdk mcp push-relay actions; do \
       mkdir -p "packages/$dir" && \
       cp "/app/packages/$dir/package.json" "packages/$dir/"; \
     done
@@ -94,6 +95,7 @@ WORKDIR /app
 COPY --from=prod-deps /prod/ ./
 
 # 2) Copy build artifacts (dist directories)
+COPY --from=builder /app/packages/shared/dist packages/shared/dist
 COPY --from=builder /app/packages/core/dist packages/core/dist
 COPY --from=builder /app/packages/daemon/dist packages/daemon/dist
 COPY --from=builder /app/packages/daemon/public packages/daemon/public
