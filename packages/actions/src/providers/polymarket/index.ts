@@ -87,3 +87,24 @@ export {
   type OrderDb,
   type UuidFn,
 } from './order-provider.js';
+
+// Neg Risk Router
+export { NegRiskRouter, type ExchangeInfo } from './neg-risk-router.js';
+
+// Approve Helper
+export { PolymarketApproveHelper, type ApproveRequest } from './approve-helper.js';
+
+// Orderbook Service
+export {
+  PolymarketOrderbookService,
+  type OrderbookResult,
+  type OrderbookEntry,
+} from './orderbook-service.js';
+
+// Infrastructure Factory
+export {
+  createPolymarketInfrastructure,
+  type PolymarketConfig,
+  type PolymarketDb,
+  type PolymarketInfrastructure,
+} from './infrastructure.js';
