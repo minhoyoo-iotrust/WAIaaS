@@ -2,6 +2,7 @@
 id: "defi-04"
 title: "Across Cross-Chain Bridge (L2 -> L2)"
 category: "defi"
+auth: "session"
 network: ["arbitrum-mainnet", "base-mainnet"]
 requires_funds: true
 estimated_cost_usd: "0.50"
@@ -31,16 +32,16 @@ tags: ["defi", "bridge", "across", "crosschain", "l2-to-l2"]
 ### Step 1: 출발 체인 잔액 조회
 **Action**: Arbitrum Mainnet에서 잔액을 조회한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=arbitrum-mainnet \
+curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=arbitrum-mainnet \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 200 OK, USDC/ETH 잔액이 반환된다
 **Check**: USDC >= 1.0 또는 ETH >= 0.001 확인
 
-### Step 2: Across 브릿지 Dry-Run
-**Action**: Arbitrum -> Base USDC 브릿지를 dry-run으로 실행한다. Across는 SpokePool depositV3를 사용한다.
+### Step 2: Across 브릿지 Simulate
+**Action**: Arbitrum -> Base USDC 브릿지를 simulate으로 실행한다. Across는 SpokePool depositV3를 사용한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
+curl -s -X POST http://localhost:3100/v1/transactions/simulate \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
@@ -72,17 +73,15 @@ curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
 ### Step 4: USDC Approve (필요한 경우)
 **Action**: SpokePool 컨트랙트에 USDC approve를 실행한다 (첫 브릿지 시 필요).
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
+curl -s -X POST http://localhost:3100/v1/transactions/simulate \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
     "type": "APPROVE",
-    "params": {
-      "token": "USDC",
-      "spender": "<SPOKE_POOL_ADDRESS>",
-      "amount": "1.0"
-    },
+    "token": { "address": "<USDC_CONTRACT_ADDRESS>", "decimals": 6, "symbol": "USDC" },
+    "spender": "<SPOKE_POOL_ADDRESS>",
+    "amount": "1000000",
     "network": "arbitrum-mainnet"
   }'
 ```
@@ -92,7 +91,7 @@ curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
 ### Step 5: 실제 브릿지 실행
 **Action**: 사용자 승인 후 실제 Across 브릿지를 실행한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions \
+curl -s -X POST http://localhost:3100/v1/transactions/send \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
@@ -133,7 +132,7 @@ curl -s http://localhost:3100/v1/transactions/<TX_ID> \
 ### Step 8: 도착 체인 잔액 확인
 **Action**: 브릿지 완료 후 Base Mainnet에서 USDC 잔액을 확인한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=base-mainnet \
+curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=base-mainnet \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: Base USDC 잔액이 ~1.0 USDC (수수료 차감) 증가
@@ -141,7 +140,7 @@ curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=base-mainne
 
 ## Verification
 - [ ] 출발 체인 잔액 조회 성공 (200 응답)
-- [ ] Across 브릿지 dry-run 성공 (수수료, 예상 수령량, 소요 시간 반환)
+- [ ] Across 브릿지 simulate 성공 (수수료, 예상 수령량, 소요 시간 반환)
 - [ ] 사용자 승인 완료
 - [ ] USDC approve 완료 (필요한 경우)
 - [ ] 실제 브릿지 트랜잭션 생성 성공 (txId, txHash 반환)

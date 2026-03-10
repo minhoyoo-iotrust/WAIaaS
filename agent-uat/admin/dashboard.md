@@ -2,6 +2,7 @@
 id: "admin-03"
 title: "Admin Dashboard 데이터 정확성 검증"
 category: "admin"
+auth: "master"
 network: ["all"]
 requires_funds: false
 estimated_cost_usd: "0"
@@ -55,7 +56,7 @@ curl -s http://localhost:3100/v1/wallets \
 ### Step 4: 총 잔액 확인
 **Action**: 각 지갑의 잔액을 개별 조회하여 합산한 후 Dashboard 표시값과 비교한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=<NETWORK> \
+curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=<NETWORK> \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 각 지갑의 잔액이 반환된다

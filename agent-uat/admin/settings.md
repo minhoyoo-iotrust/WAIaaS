@@ -2,6 +2,7 @@
 id: "admin-04"
 title: "Admin Settings 변경 및 반영 검증"
 category: "admin"
+auth: "master"
 network: ["all"]
 requires_funds: true
 estimated_cost_usd: "0.01"
@@ -17,7 +18,7 @@ tags: ["admin", "settings", "configuration", "hot-reload"]
 - **Network**: all
 - **Requires Funds**: Yes
 - **Estimated Cost**: ~$0.01
-- **Risk Level**: low -- 설정 변경 후 원복, dry-run으로 반영 확인
+- **Risk Level**: low -- 설정 변경 후 원복, simulate으로 반영 확인
 
 ## Prerequisites
 - [ ] WAIaaS 데몬 실행 중 (`http://localhost:3100`)
@@ -63,22 +64,22 @@ curl -s http://localhost:3100/v1/admin/settings \
 **Expected**: 200 OK, gas_safety_margin이 150으로 반영되어 있다
 **Check**: `gas_safety_margin: 150` 확인. hot-reload이므로 데몬 재시작 없이 즉시 반영
 
-### Step 5: Dry-Run으로 반영 확인
-**Action**: 변경된 설정이 실제 트랜잭션 추정에 반영되는지 dry-run으로 확인한다.
+### Step 5: Simulate으로 반영 확인
+**Action**: 변경된 설정이 실제 트랜잭션 추정에 반영되는지 simulate으로 확인한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
+curl -s -X POST http://localhost:3100/v1/transactions/simulate \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
     "type": "TRANSFER",
     "to": "<OWN_ADDRESS>",
-    "value": "0.001",
+    "amount": "1000000000000000",
     "network": "ethereum-sepolia"
   }'
 ```
 **Expected**: 200 OK, 가스 추정에 새 margin(150%)이 적용되어 있다
-**Check**: `estimatedGas` 값이 이전 dry-run 대비 증가했는지 비교 (120% -> 150%)
+**Check**: `estimatedGas` 값이 이전 simulate 대비 증가했는지 비교 (120% -> 150%)
 
 ### Step 6: 설정 원복
 **Action**: gas_safety_margin을 원래 값으로 복원한다.
@@ -95,16 +96,16 @@ curl -s -X PUT http://localhost:3100/v1/admin/settings \
 - [ ] 현재 설정 조회 성공
 - [ ] 설정 변경 성공 (gas_safety_margin: 150)
 - [ ] 변경 후 재조회 시 반영 확인
-- [ ] Dry-run에서 변경된 설정 반영 확인
+- [ ] Simulate에서 변경된 설정 반영 확인
 - [ ] 설정 원복 성공
 
 ## Estimated Cost
 | Item | Network | Estimated Gas | USD |
 |------|---------|---------------|-----|
-| Dry-run only | ethereum-sepolia | 0 | ~$0.01 (testnet) |
+| Simulate only | ethereum-sepolia | 0 | ~$0.01 (testnet) |
 | **Total** | | | **~$0.01** |
 
-> **Note**: Sepolia 테스트넷에서 dry-run만 수행하므로 실제 비용은 $0이다.
+> **Note**: Sepolia 테스트넷에서 simulate만 수행하므로 실제 비용은 $0이다.
 
 ## Troubleshooting
 | Symptom | Cause | Resolution |

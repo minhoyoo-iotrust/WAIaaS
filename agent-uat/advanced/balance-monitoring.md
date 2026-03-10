@@ -2,6 +2,7 @@
 id: "advanced-05"
 title: "잔액 모니터링"
 category: "advanced"
+auth: "session"
 network: ["ethereum-mainnet", "solana-mainnet"]
 requires_funds: true
 estimated_cost_usd: "0.50"
@@ -40,7 +41,7 @@ curl -s http://localhost:3100/v1/admin/settings \
 ### Step 2: 현재 잔액 기록
 **Action**: 대상 지갑의 현재 잔액을 기록한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=ethereum-mainnet \
+curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=ethereum-mainnet \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 200 OK, 현재 잔액이 반환된다
@@ -57,14 +58,14 @@ curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=ethereum-ma
 ### Step 4: 자기 전송으로 잔액 변동 발생
 **Action**: 소액 자기 전송으로 잔액 변동을 발생시킨다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions \
+curl -s -X POST http://localhost:3100/v1/transactions/send \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
     "type": "TRANSFER",
     "to": "<OWN_ADDRESS>",
-    "value": "0.001",
+    "amount": "1000000000000000",
     "network": "ethereum-mainnet"
   }'
 ```

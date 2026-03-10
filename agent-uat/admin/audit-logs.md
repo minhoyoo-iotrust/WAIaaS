@@ -2,6 +2,7 @@
 id: "admin-10"
 title: "Admin 감사 로그 정확성 검증"
 category: "admin"
+auth: "master"
 network: ["all"]
 requires_funds: false
 estimated_cost_usd: "0"

@@ -2,6 +2,7 @@
 id: "defi-05"
 title: "Lido ETH Staking"
 category: "defi"
+auth: "session"
 network: ["ethereum-mainnet"]
 requires_funds: true
 estimated_cost_usd: "3.00"
@@ -30,16 +31,16 @@ tags: ["defi", "staking", "lido", "ethereum", "liquid-staking"]
 ### Step 1: ETH 잔액 조회
 **Action**: Ethereum Mainnet에서 ETH 잔액을 조회한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=ethereum-mainnet \
+curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=ethereum-mainnet \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 200 OK, ETH 잔액이 반환된다
 **Check**: ETH 잔액이 0.01 이상인지 확인
 
-### Step 2: Lido 스테이킹 Dry-Run
-**Action**: ETH -> stETH 스테이킹을 dry-run으로 실행하여 예상 stETH 수령량을 확인한다.
+### Step 2: Lido 스테이킹 Simulate
+**Action**: ETH -> stETH 스테이킹을 simulate으로 실행하여 예상 stETH 수령량을 확인한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
+curl -s -X POST http://localhost:3100/v1/transactions/simulate \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
@@ -62,7 +63,7 @@ curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
 - 예상 가스: ~100,000 gas (~$3.00)
 
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions \
+curl -s -X POST http://localhost:3100/v1/transactions/send \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
@@ -90,7 +91,7 @@ curl -s http://localhost:3100/v1/transactions/<TX_ID> \
 ### Step 5: 잔액 재확인
 **Action**: 스테이킹 후 잔액을 재조회하여 ETH 감소, stETH 증가를 확인한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=ethereum-mainnet \
+curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=ethereum-mainnet \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: ETH 잔액이 ~0.005 ETH + 가스비만큼 감소, stETH 토큰 잔액이 증가
@@ -106,7 +107,7 @@ curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=ethereum-ma
 
 ## Verification
 - [ ] ETH 잔액 조회 성공 (200 응답)
-- [ ] Lido 스테이킹 dry-run 성공 (예상 stETH 수령량 반환)
+- [ ] Lido 스테이킹 simulate 성공 (예상 stETH 수령량 반환)
 - [ ] 사용자 승인 완료
 - [ ] 실제 스테이킹 트랜잭션 생성 성공 (txId, txHash 반환)
 - [ ] 트랜잭션 컨펌 완료 (status: confirmed/success)

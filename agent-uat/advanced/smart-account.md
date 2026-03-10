@@ -2,6 +2,7 @@
 id: "advanced-01"
 title: "Smart Account UserOp Build/Sign"
 category: "advanced"
+auth: "session"
 network: ["ethereum-sepolia"]
 requires_funds: true
 estimated_cost_usd: "0.02"
@@ -56,7 +57,7 @@ curl -s -X POST http://localhost:3100/v1/userop/build \
     "walletId": "<SMART_WALLET_ID>",
     "type": "TRANSFER",
     "to": "<OWN_ADDRESS>",
-    "value": "0.001",
+    "amount": "1000000000000000",
     "network": "ethereum-sepolia"
   }'
 ```
@@ -88,7 +89,7 @@ curl -s http://localhost:3100/v1/userop/builds/<BUILD_ID> \
 ### Step 6: 트랜잭션 결과 확인
 **Action**: 잔액을 재조회하여 트랜잭션 처리 여부를 확인한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<SMART_WALLET_ID>/balance?network=ethereum-sepolia \
+curl -s http://localhost:3100/v1/wallet/balance?walletId=<SMART_WALLET_ID>&network=ethereum-sepolia \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: ETH 잔액이 가스비만큼 감소 (self-transfer이므로 전송액은 동일)

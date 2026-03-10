@@ -1,0 +1,39 @@
+{
+  "name": "@waiaas/shared",
+  "version": "2.10.0-rc.24",
+  "description": "WAIaaS shared constants — pure TypeScript, no native dependencies",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/minhoyoo-iotrust/WAIaaS.git",
+    "directory": "packages/shared"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "echo 'no tests yet'",
+    "test:unit": "echo 'no tests yet'",
+    "test:integration": "echo 'no tests yet'",
+    "test:security": "echo 'no tests yet'",
+    "test:chain": "echo 'no tests yet'",
+    "test:platform": "echo 'no tests yet'",
+    "lint": "echo 'no lint yet'",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}

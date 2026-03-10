@@ -1,5 +1,6 @@
 import { useSignal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
+import { EVM_RPC_SETTING_KEYS, EVM_NETWORK_OPTIONS } from '@waiaas/shared';
 import { apiGet, apiPost, apiPut, apiDelete, ApiError } from '../api/client';
 import { API } from '../api/endpoints';
 import { FormField, Button, Badge } from '../components/form';
@@ -480,26 +481,9 @@ export default function SettingsPage() {
   }
 
   const solanaRpcKeys = ['solana_mainnet', 'solana_devnet', 'solana_testnet'];
-  const evmRpcKeys = [
-    'evm_ethereum_mainnet', 'evm_ethereum_sepolia',
-    'evm_polygon_mainnet', 'evm_polygon_amoy',
-    'evm_arbitrum_mainnet', 'evm_arbitrum_sepolia',
-    'evm_optimism_mainnet', 'evm_optimism_sepolia',
-    'evm_base_mainnet', 'evm_base_sepolia',
-  ];
+  const evmRpcKeys = EVM_RPC_SETTING_KEYS;
 
-  const evmNetworkOptions = [
-    { label: 'Ethereum Mainnet', value: 'ethereum-mainnet' },
-    { label: 'Ethereum Sepolia', value: 'ethereum-sepolia' },
-    { label: 'Polygon Mainnet', value: 'polygon-mainnet' },
-    { label: 'Polygon Amoy', value: 'polygon-amoy' },
-    { label: 'Arbitrum Mainnet', value: 'arbitrum-mainnet' },
-    { label: 'Arbitrum Sepolia', value: 'arbitrum-sepolia' },
-    { label: 'Optimism Mainnet', value: 'optimism-mainnet' },
-    { label: 'Optimism Sepolia', value: 'optimism-sepolia' },
-    { label: 'Base Mainnet', value: 'base-mainnet' },
-    { label: 'Base Sepolia', value: 'base-sepolia' },
-  ];
+  const evmNetworkOptions = EVM_NETWORK_OPTIONS;
 
   function RpcSettings() {
     return (

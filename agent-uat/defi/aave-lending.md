@@ -2,6 +2,7 @@
 id: "defi-07"
 title: "Aave V3 Lending (USDC Supply)"
 category: "defi"
+auth: "session"
 network: ["ethereum-mainnet", "polygon-mainnet"]
 requires_funds: true
 estimated_cost_usd: "5.00"
@@ -31,7 +32,7 @@ tags: ["defi", "lending", "aave", "evm", "supply"]
 ### Step 1: USDC 토큰 잔액 조회
 **Action**: 대상 네트워크에서 USDC 토큰 잔액을 조회한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=ethereum-mainnet \
+curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=ethereum-mainnet \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 200 OK, 토큰 목록에 USDC 잔액이 포함된다
@@ -40,23 +41,23 @@ curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=ethereum-ma
 ### Step 2: Aave V3 마켓 정보 확인
 **Action**: Aave V3 USDC reserve의 현재 supply APY를 확인한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/defi/positions?protocol=aave&network=ethereum-mainnet \
+curl -s http://localhost:3100/v1/wallet/positions?walletId=<WALLET_ID>&protocol=aave&network=ethereum-mainnet \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 200 OK, Aave 마켓 정보 또는 기존 포지션이 반환된다
 **Check**: USDC supply APY, 기존 포지션 유무 확인
 
-### Step 3: USDC Approve Dry-Run
-**Action**: Aave Pool에 USDC approve를 dry-run으로 실행한다 (첫 supply 시 필요).
+### Step 3: USDC Approve Simulate
+**Action**: Aave Pool에 USDC approve를 simulate으로 실행한다 (첫 supply 시 필요).
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
+curl -s -X POST http://localhost:3100/v1/transactions/simulate \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
     "type": "APPROVE",
     "params": {
-      "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "token": { "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "decimals": 6, "symbol": "USDC" },
       "spender": "<AAVE_POOL_ADDRESS>",
       "amount": "1.0"
     },
@@ -69,14 +70,14 @@ curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
 ### Step 4: USDC Approve 실행
 **Action**: 사용자 승인 후 USDC approve를 실행한다 (필요한 경우).
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions \
+curl -s -X POST http://localhost:3100/v1/transactions/send \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
     "type": "APPROVE",
     "params": {
-      "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "token": { "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "decimals": 6, "symbol": "USDC" },
       "spender": "<AAVE_POOL_ADDRESS>",
       "amount": "1.0"
     },
@@ -86,10 +87,10 @@ curl -s -X POST http://localhost:3100/v1/transactions \
 **Expected**: 200 OK, approve 트랜잭션 성공
 **Check**: tx confirmed 확인
 
-### Step 5: Aave USDC Supply Dry-Run
-**Action**: USDC 1.0을 Aave V3에 supply하는 dry-run을 실행한다.
+### Step 5: Aave USDC Supply Simulate
+**Action**: USDC 1.0을 Aave V3에 supply하는 simulate을 실행한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
+curl -s -X POST http://localhost:3100/v1/transactions/simulate \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
@@ -113,7 +114,7 @@ curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
 - 예상 가스비: ~${gasCostUsd}
 
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions \
+curl -s -X POST http://localhost:3100/v1/transactions/send \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
@@ -142,16 +143,16 @@ curl -s http://localhost:3100/v1/transactions/<TX_ID> \
 ### Step 8: Aave 포지션 확인
 **Action**: Supply 후 Aave 포지션이 생성되었는지 확인한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/defi/positions?protocol=aave&network=ethereum-mainnet \
+curl -s http://localhost:3100/v1/wallet/positions?walletId=<WALLET_ID>&protocol=aave&network=ethereum-mainnet \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 200 OK, USDC supply 포지션이 표시된다
 **Check**: supply 금액이 ~1.0 USDC로 표시되는지 확인, aUSDC 잔액 확인
 
-### Step 9: (선택) Withdraw Dry-Run
-**Action**: Aave에서 USDC를 인출하는 dry-run을 확인한다. 실제 실행은 사용자 선택.
+### Step 9: (선택) Withdraw Simulate
+**Action**: Aave에서 USDC를 인출하는 simulate을 확인한다. 실제 실행은 사용자 선택.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
+curl -s -X POST http://localhost:3100/v1/transactions/simulate \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
@@ -172,7 +173,7 @@ curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
 - [ ] USDC 잔액 조회 성공 (200 응답)
 - [ ] Aave V3 마켓 정보 확인 (supply APY)
 - [ ] USDC approve 성공 (필요한 경우)
-- [ ] Supply dry-run 성공 (예상 aToken 수령량 반환)
+- [ ] Supply simulate 성공 (예상 aToken 수령량 반환)
 - [ ] 사용자 승인 완료
 - [ ] 실제 supply 트랜잭션 생성 성공 (txId, txHash 반환)
 - [ ] 트랜잭션 컨펌 완료 (status: confirmed/success)

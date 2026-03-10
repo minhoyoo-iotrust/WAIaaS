@@ -3,6 +3,8 @@
 // Extracted from settings.tsx for reuse across multiple pages.
 // ---------------------------------------------------------------------------
 
+import { RPC_KEY_LABELS } from '@waiaas/shared';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -76,19 +78,8 @@ export function keyToLabel(key: string): string {
     ntfy_topic: 'Ntfy Topic',
     locale: 'Locale',
     rate_limit_rpm: 'Rate Limit (RPM)',
-    solana_mainnet: 'Solana Mainnet',
-    solana_devnet: 'Solana Devnet',
-    solana_testnet: 'Solana Testnet',
-    evm_ethereum_mainnet: 'Ethereum Mainnet',
-    evm_ethereum_sepolia: 'Ethereum Sepolia',
-    evm_polygon_mainnet: 'Polygon Mainnet',
-    evm_polygon_amoy: 'Polygon Amoy',
-    evm_arbitrum_mainnet: 'Arbitrum Mainnet',
-    evm_arbitrum_sepolia: 'Arbitrum Sepolia',
-    evm_optimism_mainnet: 'Optimism Mainnet',
-    evm_optimism_sepolia: 'Optimism Sepolia',
-    evm_base_mainnet: 'Base Mainnet',
-    evm_base_sepolia: 'Base Sepolia',
+    // RPC network labels from shared constants
+    ...RPC_KEY_LABELS,
     max_sessions_per_wallet: 'Max Sessions per Wallet',
     max_pending_tx: 'Max Pending Transactions',
     rate_limit_global_ip_rpm: 'Global IP Rate Limit (RPM)',

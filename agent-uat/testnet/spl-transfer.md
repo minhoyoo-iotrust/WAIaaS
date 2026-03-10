@@ -1,7 +1,8 @@
 ---
-id: "testnet-05"
+id: "testnet-04"
 title: "Devnet SPL 전송"
 category: "testnet"
+auth: "session"
 network: ["solana-devnet"]
 requires_funds: true
 estimated_cost_usd: "0"
@@ -12,7 +13,7 @@ tags: ["transfer", "spl", "token", "devnet"]
 # Devnet SPL 전송
 
 ## Metadata
-- **ID**: testnet-05
+- **ID**: testnet-04
 - **Category**: testnet
 - **Network**: solana-devnet
 - **Requires Funds**: Yes
@@ -39,24 +40,24 @@ tags: ["transfer", "spl", "token", "devnet"]
 ### Step 1: 토큰 잔액 조회
 **Action**: Devnet에서 Solana 지갑의 토큰 잔액을 조회한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=solana-devnet \
+curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=solana-devnet \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 200 OK, 네이티브 SOL 잔액과 SPL 토큰 목록이 반환된다
 **Check**: 토큰 목록에서 전송할 SPL 토큰이 있는지 확인. `MINT_ADDRESS` 기록
 
-### Step 2: Dry-Run SPL 자기 전송
-**Action**: 자기 주소로 SPL 토큰을 전송하는 dry-run을 실행한다.
+### Step 2: Simulate SPL 자기 전송
+**Action**: 자기 주소로 SPL 토큰을 전송하는 simulate을 실행한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
+curl -s -X POST http://localhost:3100/v1/transactions/simulate \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
     "type": "TOKEN_TRANSFER",
     "to": "<MY_ADDRESS>",
-    "token": "<MINT_ADDRESS>",
-    "amount": "1",
+    "token": { "address": "<MINT_ADDRESS>", "decimals": "<TOKEN_DECIMALS>", "symbol": "<TOKEN_SYMBOL>" },
+    "amount": "<AMOUNT_IN_MINIMUM_UNITS>",
     "network": "solana-devnet"
   }'
 ```
@@ -64,17 +65,17 @@ curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
 **Check**: `estimatedFee` 필드 확인 (~0.000005 SOL)
 
 ### Step 3: 실제 SPL 자기 전송
-**Action**: dry-run 확인 후 실제 SPL 토큰 자기 전송을 실행한다.
+**Action**: simulate 확인 후 실제 SPL 토큰 자기 전송을 실행한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions \
+curl -s -X POST http://localhost:3100/v1/transactions/send \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
     "type": "TOKEN_TRANSFER",
     "to": "<MY_ADDRESS>",
-    "token": "<MINT_ADDRESS>",
-    "amount": "1",
+    "token": { "address": "<MINT_ADDRESS>", "decimals": "<TOKEN_DECIMALS>", "symbol": "<TOKEN_SYMBOL>" },
+    "amount": "<AMOUNT_IN_MINIMUM_UNITS>",
     "network": "solana-devnet"
   }'
 ```
@@ -93,7 +94,7 @@ curl -s http://localhost:3100/v1/transactions/<TX_ID> \
 ### Step 5: 토큰 잔액 재확인
 **Action**: 전송 후 토큰 잔액과 SOL 잔액을 재조회한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=solana-devnet \
+curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=solana-devnet \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: SPL 토큰 잔액 불변 (자기 전송), SOL만 tx fee만큼 감소
@@ -101,7 +102,7 @@ curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=solana-devn
 
 ## Verification
 - [ ] Devnet SPL 토큰 잔액 조회 성공
-- [ ] Dry-run 성공 (예상 수수료 반환)
+- [ ] Simulate 성공 (예상 수수료 반환)
 - [ ] TOKEN_TRANSFER 트랜잭션 생성 성공 (txId, txHash 반환)
 - [ ] 트랜잭션 컨펌 완료 (status: confirmed/success)
 - [ ] SPL 토큰 잔액 불변 (자기 전송), SOL만 tx fee 감소

@@ -1,7 +1,8 @@
 ---
-id: "testnet-07"
+id: "testnet-06"
 title: "Sepolia NFT 전송"
 category: "testnet"
+auth: "session"
 network: ["ethereum-sepolia"]
 requires_funds: true
 estimated_cost_usd: "0.02"
@@ -12,7 +13,7 @@ tags: ["nft", "erc721", "erc1155", "transfer", "sepolia"]
 # Sepolia NFT 전송
 
 ## Metadata
-- **ID**: testnet-07
+- **ID**: testnet-06
 - **Category**: testnet
 - **Network**: ethereum-sepolia
 - **Requires Funds**: Yes
@@ -34,7 +35,7 @@ tags: ["nft", "erc721", "erc1155", "transfer", "sepolia"]
 ### Step 1: NFT 목록 조회
 **Action**: Sepolia 네트워크에서 지갑의 NFT 목록을 조회한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/nfts?network=ethereum-sepolia \
+curl -s http://localhost:3100/v1/wallet/nfts?walletId=<WALLET_ID>&network=ethereum-sepolia \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 200 OK, 보유 NFT 목록이 반환된다
@@ -43,16 +44,16 @@ curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/nfts?network=ethereum-sepol
 ### Step 2: NFT 상세 조회
 **Action**: 특정 NFT의 상세 정보를 조회한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/nfts/<CONTRACT_ADDRESS>/<TOKEN_ID>?network=ethereum-sepolia \
+curl -s http://localhost:3100/v1/wallet/nfts/<CONTRACT_ADDRESS>/<TOKEN_ID>?walletId=<WALLET_ID>&network=ethereum-sepolia \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 200 OK, NFT 상세 정보 (name, description, image, attributes 등)가 반환된다
 **Check**: `contractAddress`, `tokenId`, `tokenType` (ERC-721 또는 ERC-1155) 필드 확인
 
-### Step 3: Dry-Run NFT 자기 전송
-**Action**: NFT를 자기 주소로 전송하는 dry-run을 실행한다.
+### Step 3: Simulate NFT 자기 전송
+**Action**: NFT를 자기 주소로 전송하는 simulate을 실행한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
+curl -s -X POST http://localhost:3100/v1/transactions/simulate \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
@@ -68,9 +69,9 @@ curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
 **Check**: `estimatedGas` 필드 확인 (~50,000-80,000 gas)
 
 ### Step 4: 실제 NFT 자기 전송
-**Action**: dry-run 확인 후 실제 NFT 자기 전송을 실행한다.
+**Action**: simulate 확인 후 실제 NFT 자기 전송을 실행한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions \
+curl -s -X POST http://localhost:3100/v1/transactions/send \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
@@ -97,7 +98,7 @@ curl -s http://localhost:3100/v1/transactions/<TX_ID> \
 ### Step 6: NFT 소유권 재확인
 **Action**: NFT 목록을 재조회하여 여전히 소유하고 있는지 확인한다 (자기 전송이므로).
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/nfts?network=ethereum-sepolia \
+curl -s http://localhost:3100/v1/wallet/nfts?walletId=<WALLET_ID>&network=ethereum-sepolia \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 동일한 NFT가 여전히 목록에 존재한다
@@ -106,7 +107,7 @@ curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/nfts?network=ethereum-sepol
 ### Step 7: (선택) ERC-1155 NFT 전송
 **Action**: ERC-1155 NFT를 보유한 경우, amount 파라미터를 포함하여 자기 전송을 테스트한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions \
+curl -s -X POST http://localhost:3100/v1/transactions/send \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
@@ -125,7 +126,7 @@ curl -s -X POST http://localhost:3100/v1/transactions \
 ## Verification
 - [ ] NFT 목록 조회 성공 (최소 1개 NFT 확인)
 - [ ] NFT 상세 조회 성공 (contractAddress, tokenId, tokenType 확인)
-- [ ] Dry-run 성공 (예상 가스비 반환)
+- [ ] Simulate 성공 (예상 가스비 반환)
 - [ ] NFT_TRANSFER 트랜잭션 생성 성공 (txId, txHash 반환)
 - [ ] 트랜잭션 컨펌 완료 (status: confirmed/success)
 - [ ] 자기 전송 후 NFT 소유권 유지 확인

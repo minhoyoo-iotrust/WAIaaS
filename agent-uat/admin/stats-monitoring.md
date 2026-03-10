@@ -2,6 +2,7 @@
 id: "admin-13"
 title: "Admin 통계/모니터링 API 검증"
 category: "admin"
+auth: "master"
 network: ["all"]
 requires_funds: false
 estimated_cost_usd: "0"

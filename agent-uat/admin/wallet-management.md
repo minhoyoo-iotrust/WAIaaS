@@ -2,6 +2,7 @@
 id: "admin-06"
 title: "Admin 지갑 관리 및 잔액 검증"
 category: "admin"
+auth: "master"
 network: ["ethereum-mainnet", "solana-mainnet"]
 requires_funds: false
 estimated_cost_usd: "0"
@@ -46,7 +47,7 @@ curl -s http://localhost:3100/v1/wallets \
 ### Step 3: 온체인 잔액 직접 조회
 **Action**: 각 지갑의 온체인 잔액을 직접 API로 조회한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=ethereum-mainnet \
+curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=ethereum-mainnet \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 200 OK, 온체인 잔액이 반환된다

@@ -1,7 +1,8 @@
 ---
-id: "testnet-02"
+id: "testnet-01"
 title: "Sepolia ETH 전송"
 category: "testnet"
+auth: "session"
 network: ["ethereum-sepolia"]
 requires_funds: true
 estimated_cost_usd: "0.01"
@@ -12,7 +13,7 @@ tags: ["transfer", "eth", "native", "sepolia"]
 # Sepolia ETH 전송
 
 ## Metadata
-- **ID**: testnet-02
+- **ID**: testnet-01
 - **Category**: testnet
 - **Network**: ethereum-sepolia
 - **Requires Funds**: Yes
@@ -30,23 +31,23 @@ tags: ["transfer", "eth", "native", "sepolia"]
 ### Step 1: 지갑 잔액 조회
 **Action**: Sepolia 네트워크에서 지갑 잔액을 조회한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=ethereum-sepolia \
+curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=ethereum-sepolia \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 200 OK, Sepolia ETH 잔액이 반환된다
 **Check**: `balance` 필드가 0.002 ETH 이상인지 확인. 잔액이 부족하면 faucet에서 충전 안내
 
-### Step 2: Dry-Run 자기 전송
-**Action**: 자기 주소로 0.001 ETH를 전송하는 dry-run을 실행하여 예상 가스비를 확인한다.
+### Step 2: Simulate 자기 전송
+**Action**: 자기 주소로 0.001 ETH를 전송하는 simulate을 실행하여 예상 가스비를 확인한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
+curl -s -X POST http://localhost:3100/v1/transactions/simulate \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
     "type": "TRANSFER",
     "to": "<MY_ADDRESS>",
-    "value": "0.001",
+    "amount": "1000000000000000",
     "network": "ethereum-sepolia"
   }'
 ```
@@ -54,16 +55,16 @@ curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
 **Check**: `estimatedGas`, `gasPrice`, `totalCost` 필드 확인. 예상 비용이 `estimated_cost_usd`의 2배를 초과하면 사용자에게 경고
 
 ### Step 3: 실제 자기 전송 실행
-**Action**: dry-run 확인 후 실제 자기 전송을 실행한다.
+**Action**: simulate 확인 후 실제 자기 전송을 실행한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions \
+curl -s -X POST http://localhost:3100/v1/transactions/send \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
     "type": "TRANSFER",
     "to": "<MY_ADDRESS>",
-    "value": "0.001",
+    "amount": "1000000000000000",
     "network": "ethereum-sepolia"
   }'
 ```
@@ -82,7 +83,7 @@ curl -s http://localhost:3100/v1/transactions/<TX_ID> \
 ### Step 5: 전송 후 잔액 재확인
 **Action**: 전송 후 잔액을 재조회하여 가스비만큼만 감소했는지 확인한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=ethereum-sepolia \
+curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=ethereum-sepolia \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 잔액이 가스비만큼만 감소했다 (자기 전송이므로 0.001 ETH는 그대로)
@@ -90,7 +91,7 @@ curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=ethereum-se
 
 ## Verification
 - [ ] Sepolia ETH 잔액 조회 성공 (200 응답)
-- [ ] Dry-run 성공 (예상 가스비 반환)
+- [ ] Simulate 성공 (예상 가스비 반환)
 - [ ] 자기 전송 트랜잭션 생성 성공 (txId, txHash 반환)
 - [ ] 트랜잭션 컨펌 완료 (status: confirmed/success)
 - [ ] 전송 후 잔액 감소분이 가스비 이내 (자기 전송이므로 전송액 불변)
@@ -106,6 +107,6 @@ curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=ethereum-se
 |---------|-------|------------|
 | Insufficient funds | Sepolia ETH 부족 | Faucet에서 Sepolia ETH 충전: https://sepoliafaucet.com |
 | Nonce too low | 이전 트랜잭션 pending 중 | pending 트랜잭션 완료 대기 후 재시도 |
-| Transaction underpriced | 가스 가격이 네트워크 최소치 미만 | dry-run으로 적정 가스비 재확인 |
+| Transaction underpriced | 가스 가격이 네트워크 최소치 미만 | simulate으로 적정 가스비 재확인 |
 | 404 Wallet not found | 잘못된 WALLET_ID | `GET /v1/wallets`로 정확한 지갑 ID 확인 |
 | Network mismatch | 지갑이 Sepolia 미지원 | EVM 지갑인지 확인, 네트워크 설정 확인 |

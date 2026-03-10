@@ -213,8 +213,8 @@ describe('SettingsPage', () => {
 
     // Test buttons exist for RPC fields
     const testButtons = screen.getAllByText('Test');
-    // 13 RPC URL fields (3 solana + 10 evm) = 13 Test buttons
-    expect(testButtons.length).toBe(13);
+    // 15 RPC URL fields (3 solana + 12 evm including HyperEVM mainnet/testnet) = 15 Test buttons
+    expect(testButtons.length).toBe(15);
   });
 
   // ---- Test 4: Renders security parameter fields ----

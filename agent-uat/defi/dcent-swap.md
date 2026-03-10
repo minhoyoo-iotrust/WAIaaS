@@ -2,6 +2,7 @@
 id: "defi-12"
 title: "DCent Swap Aggregator"
 category: "defi"
+auth: "session"
 network: ["ethereum-mainnet"]
 requires_funds: true
 estimated_cost_usd: "5.00"
@@ -30,16 +31,16 @@ tags: ["defi", "swap", "dcent", "aggregator", "evm"]
 ### Step 1: 잔액 조회
 **Action**: Ethereum Mainnet에서 ETH/토큰 잔액을 조회한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=ethereum-mainnet \
+curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=ethereum-mainnet \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 200 OK, ETH 잔액이 반환된다
 **Check**: ETH 잔액이 0.005 이상인지 확인
 
-### Step 2: DCent 스왑 Dry-Run
-**Action**: DCent aggregator를 통해 ETH -> USDC 스왑을 dry-run으로 실행하여 최적 경로와 예상 수령량을 확인한다.
+### Step 2: DCent 스왑 Simulate
+**Action**: DCent aggregator를 통해 ETH -> USDC 스왑을 simulate으로 실행하여 최적 경로와 예상 수령량을 확인한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
+curl -s -X POST http://localhost:3100/v1/transactions/simulate \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
@@ -70,7 +71,7 @@ curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
 ### Step 4: 실제 스왑 실행
 **Action**: 사용자 승인 후 실제 DCent 스왑을 실행한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions \
+curl -s -X POST http://localhost:3100/v1/transactions/send \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
@@ -101,15 +102,15 @@ curl -s http://localhost:3100/v1/transactions/<TX_ID> \
 ### Step 6: 잔액 재확인
 **Action**: 스왑 후 잔액을 재조회하여 ETH 감소, USDC 증가를 확인한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=ethereum-mainnet \
+curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=ethereum-mainnet \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: ETH 잔액이 0.001 ETH + 가스비만큼 감소, USDC 토큰 잔액이 증가
-**Check**: ETH 감소분 확인, USDC 잔액이 dry-run 예상치와 유사한지 확인
+**Check**: ETH 감소분 확인, USDC 잔액이 simulate 예상치와 유사한지 확인
 
 ## Verification
 - [ ] ETH 잔액 조회 성공 (200 응답)
-- [ ] DCent 스왑 dry-run 성공 (최적 경로, 예상 수령량 반환)
+- [ ] DCent 스왑 simulate 성공 (최적 경로, 예상 수령량 반환)
 - [ ] 사용자 승인 완료
 - [ ] 실제 스왑 트랜잭션 생성 성공 (txId, txHash 반환)
 - [ ] 트랜잭션 컨펌 완료 (status: confirmed/success)

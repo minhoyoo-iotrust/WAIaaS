@@ -2005,43 +2005,15 @@ function WalletDetailView({ id }: { id: string }) {
 // RPC Endpoints Tab
 // ---------------------------------------------------------------------------
 
-const evmNetworkOptions = [
-  { label: 'Ethereum Mainnet', value: 'ethereum-mainnet' },
-  { label: 'Ethereum Sepolia', value: 'ethereum-sepolia' },
-  { label: 'Polygon Mainnet', value: 'polygon-mainnet' },
-  { label: 'Polygon Amoy', value: 'polygon-amoy' },
-  { label: 'Arbitrum Mainnet', value: 'arbitrum-mainnet' },
-  { label: 'Arbitrum Sepolia', value: 'arbitrum-sepolia' },
-  { label: 'Optimism Mainnet', value: 'optimism-mainnet' },
-  { label: 'Optimism Sepolia', value: 'optimism-sepolia' },
-  { label: 'Base Mainnet', value: 'base-mainnet' },
-  { label: 'Base Sepolia', value: 'base-sepolia' },
-];
+import {
+  EVM_NETWORK_OPTIONS as evmNetworkOptions,
+  NETWORK_DISPLAY_NAMES,
+  SOLANA_NETWORK_TYPES,
+  EVM_NETWORK_TYPES,
+} from '@waiaas/shared';
 
-const NETWORK_DISPLAY_NAMES: Record<string, string> = {
-  'solana-mainnet': 'Solana Mainnet',
-  'solana-devnet': 'Solana Devnet',
-  'solana-testnet': 'Solana Testnet',
-  'ethereum-mainnet': 'Ethereum Mainnet',
-  'ethereum-sepolia': 'Ethereum Sepolia',
-  'polygon-mainnet': 'Polygon Mainnet',
-  'polygon-amoy': 'Polygon Amoy',
-  'arbitrum-mainnet': 'Arbitrum Mainnet',
-  'arbitrum-sepolia': 'Arbitrum Sepolia',
-  'optimism-mainnet': 'Optimism Mainnet',
-  'optimism-sepolia': 'Optimism Sepolia',
-  'base-mainnet': 'Base Mainnet',
-  'base-sepolia': 'Base Sepolia',
-};
-
-const SOLANA_NETWORKS = ['solana-mainnet', 'solana-devnet', 'solana-testnet'];
-const EVM_NETWORKS = [
-  'ethereum-mainnet', 'ethereum-sepolia',
-  'polygon-mainnet', 'polygon-amoy',
-  'arbitrum-mainnet', 'arbitrum-sepolia',
-  'optimism-mainnet', 'optimism-sepolia',
-  'base-mainnet', 'base-sepolia',
-];
+const SOLANA_NETWORKS: readonly string[] = SOLANA_NETWORK_TYPES;
+const EVM_NETWORKS: readonly string[] = EVM_NETWORK_TYPES;
 
 interface UrlEntry {
   url: string;

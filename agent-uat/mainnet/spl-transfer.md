@@ -2,6 +2,7 @@
 id: "mainnet-04"
 title: "SPL USDC 전송"
 category: "mainnet"
+auth: "session"
 network: ["solana-mainnet"]
 requires_funds: true
 estimated_cost_usd: "0.001"
@@ -31,24 +32,24 @@ tags: ["transfer", "spl", "usdc", "token", "mainnet"]
 ### Step 1: 토큰 잔액 조회
 **Action**: Solana Mainnet에서 지갑의 토큰 잔액을 조회한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=solana-mainnet \
+curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=solana-mainnet \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 200 OK, SOL 잔액과 SPL 토큰 목록이 반환된다
 **Check**: 토큰 목록에서 USDC(EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v)가 있는지 확인
 
-### Step 2: Dry-Run SPL 자기 전송
-**Action**: USDC SPL 토큰을 자기 주소로 전송하는 dry-run을 실행한다.
+### Step 2: Simulate SPL 자기 전송
+**Action**: USDC SPL 토큰을 자기 주소로 전송하는 simulate을 실행한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
+curl -s -X POST http://localhost:3100/v1/transactions/simulate \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
     "type": "TOKEN_TRANSFER",
     "to": "<MY_ADDRESS>",
-    "token": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-    "amount": "0.01",
+    "token": { "address": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "decimals": 6, "symbol": "USDC" },
+    "amount": "10000",
     "network": "solana-mainnet"
   }'
 ```
@@ -56,17 +57,17 @@ curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
 **Check**: `estimatedFee` 확인 (~0.000005 SOL)
 
 ### Step 3: 실제 SPL 자기 전송
-**Action**: dry-run 확인 후 실제 USDC SPL 자기 전송을 실행한다.
+**Action**: simulate 확인 후 실제 USDC SPL 자기 전송을 실행한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions \
+curl -s -X POST http://localhost:3100/v1/transactions/send \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
     "type": "TOKEN_TRANSFER",
     "to": "<MY_ADDRESS>",
-    "token": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-    "amount": "0.01",
+    "token": { "address": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "decimals": 6, "symbol": "USDC" },
+    "amount": "10000",
     "network": "solana-mainnet"
   }'
 ```
@@ -85,7 +86,7 @@ curl -s http://localhost:3100/v1/transactions/<TX_ID> \
 ### Step 5: 토큰 잔액 재확인
 **Action**: 전송 후 토큰 잔액과 SOL 잔액을 재조회한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=solana-mainnet \
+curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=solana-mainnet \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: USDC 잔액 불변 (자기 전송), SOL만 tx fee 감소
@@ -93,7 +94,7 @@ curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=solana-main
 
 ## Verification
 - [ ] SPL 토큰 잔액 조회 성공 (USDC 확인)
-- [ ] Dry-run 성공 (예상 수수료 반환)
+- [ ] Simulate 성공 (예상 수수료 반환)
 - [ ] TOKEN_TRANSFER 트랜잭션 생성 성공 (txId, txHash 반환)
 - [ ] 트랜잭션 컨펌 완료 (status: confirmed/success)
 - [ ] USDC 잔액 불변 (자기 전송), SOL만 tx fee 감소

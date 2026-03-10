@@ -2,6 +2,7 @@
 id: "defi-08"
 title: "Kamino Lending (USDC Supply)"
 category: "defi"
+auth: "session"
 network: ["solana-mainnet"]
 requires_funds: true
 estimated_cost_usd: "0.01"
@@ -31,7 +32,7 @@ tags: ["defi", "lending", "kamino", "solana", "supply"]
 ### Step 1: USDC 토큰 잔액 조회
 **Action**: Solana Mainnet에서 USDC 토큰 잔액을 조회한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=solana-mainnet \
+curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=solana-mainnet \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 200 OK, 토큰 목록에 USDC 잔액이 포함된다
@@ -40,16 +41,16 @@ curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=solana-main
 ### Step 2: Kamino 마켓 정보 확인
 **Action**: Kamino USDC reserve의 현재 supply APY를 확인한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/defi/positions?protocol=kamino&network=solana-mainnet \
+curl -s http://localhost:3100/v1/wallet/positions?walletId=<WALLET_ID>&protocol=kamino&network=solana-mainnet \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 200 OK, Kamino 마켓 정보 또는 기존 포지션이 반환된다
 **Check**: supply APY, 기존 포지션 유무 확인
 
-### Step 3: Kamino USDC Supply Dry-Run
-**Action**: USDC 1.0을 Kamino에 공급하는 dry-run을 실행한다.
+### Step 3: Kamino USDC Supply Simulate
+**Action**: USDC 1.0을 Kamino에 공급하는 simulate을 실행한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
+curl -s -X POST http://localhost:3100/v1/transactions/simulate \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
@@ -73,7 +74,7 @@ curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
 - tx fee: ~0.000005 SOL
 
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions \
+curl -s -X POST http://localhost:3100/v1/transactions/send \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
@@ -102,16 +103,16 @@ curl -s http://localhost:3100/v1/transactions/<TX_ID> \
 ### Step 6: Kamino 포지션 확인
 **Action**: Supply 후 Kamino 포지션이 생성되었는지 확인한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/defi/positions?protocol=kamino&network=solana-mainnet \
+curl -s http://localhost:3100/v1/wallet/positions?walletId=<WALLET_ID>&protocol=kamino&network=solana-mainnet \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 200 OK, USDC supply 포지션이 표시된다
 **Check**: supply 금액이 ~1.0 USDC로 표시되는지 확인
 
-### Step 7: (선택) Withdraw Dry-Run
-**Action**: Kamino에서 USDC를 인출하는 dry-run을 확인한다. 실제 실행은 사용자 선택.
+### Step 7: (선택) Withdraw Simulate
+**Action**: Kamino에서 USDC를 인출하는 simulate을 확인한다. 실제 실행은 사용자 선택.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
+curl -s -X POST http://localhost:3100/v1/transactions/simulate \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
@@ -131,7 +132,7 @@ curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
 ## Verification
 - [ ] USDC 잔액 조회 성공 (200 응답)
 - [ ] Kamino 마켓 정보 확인 (supply APY)
-- [ ] Supply dry-run 성공 (예상 kToken 수령량 반환)
+- [ ] Supply simulate 성공 (예상 kToken 수령량 반환)
 - [ ] 사용자 승인 완료
 - [ ] 실제 supply 트랜잭션 생성 성공 (txId, txHash 반환)
 - [ ] 트랜잭션 컨펌 완료 (status: confirmed/success)

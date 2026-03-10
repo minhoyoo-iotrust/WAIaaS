@@ -2,6 +2,7 @@
 id: "admin-09"
 title: "Admin 알림 설정 및 수신 검증"
 category: "admin"
+auth: "master"
 network: ["all"]
 requires_funds: true
 estimated_cost_usd: "0.01"
@@ -59,14 +60,14 @@ curl -s http://localhost:3100/v1/wallets/<WALLET_ID> \
 ### Step 4: 알림 트리거 (Testnet 자기 전송)
 **Action**: Testnet에서 자기 전송을 실행하여 알림을 트리거한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions \
+curl -s -X POST http://localhost:3100/v1/transactions/send \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
     "type": "TRANSFER",
     "to": "<OWN_ADDRESS>",
-    "value": "0.001",
+    "amount": "1000000000000000",
     "network": "ethereum-sepolia"
   }'
 ```

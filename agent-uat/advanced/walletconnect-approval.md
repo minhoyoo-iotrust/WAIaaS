@@ -2,6 +2,7 @@
 id: "advanced-02"
 title: "WalletConnect Owner 승인"
 category: "advanced"
+auth: "session"
 network: ["ethereum-mainnet"]
 requires_funds: false
 estimated_cost_usd: "0"
@@ -46,21 +47,21 @@ curl -s http://localhost:3100/v1/policies \
 **Expected**: 200 OK, 정책 목록이 반환된다
 **Check**: `owner_approval` 조건이 포함된 정책이 있는지 확인. 없으면 시나리오 SKIP 안내
 
-### Step 3: 승인 대기 트랜잭션 Dry-Run
-**Action**: owner_approval이 필요한 트랜잭션을 dry-run으로 실행하여 승인 요구를 트리거한다.
+### Step 3: 승인 대기 트랜잭션 Simulate
+**Action**: owner_approval이 필요한 트랜잭션을 simulate으로 실행하여 승인 요구를 트리거한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
+curl -s -X POST http://localhost:3100/v1/transactions/simulate \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
     "type": "TRANSFER",
     "to": "<OWN_ADDRESS>",
-    "value": "0.001",
+    "amount": "1000000000000000",
     "network": "ethereum-mainnet"
   }'
 ```
-**Expected**: 200 OK, dry-run 결과에 승인 필요 상태가 표시된다
+**Expected**: 200 OK, simulate 결과에 승인 필요 상태가 표시된다
 **Check**: `requiresApproval: true` 또는 승인 관련 응답 필드 확인
 
 ### Step 4: WalletConnect 승인 요청 확인
@@ -91,7 +92,7 @@ curl -s http://localhost:3100/v1/transactions/<TX_ID> \
 ## Verification
 - [ ] Owner 상태 조회 성공 (state=LOCKED, approval_method=walletconnect)
 - [ ] owner_approval 정책 존재 확인
-- [ ] Dry-run에서 승인 필요 응답 확인
+- [ ] Simulate에서 승인 필요 응답 확인
 - [ ] WalletConnect 지갑 앱에서 승인 요청 수신
 - [ ] Owner 서명 완료
 - [ ] 트랜잭션 상태 전환 확인

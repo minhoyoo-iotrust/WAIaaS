@@ -1,7 +1,8 @@
 ---
-id: "testnet-03"
+id: "testnet-02"
 title: "Devnet SOL 전송"
 category: "testnet"
+auth: "session"
 network: ["solana-devnet"]
 requires_funds: true
 estimated_cost_usd: "0"
@@ -12,7 +13,7 @@ tags: ["transfer", "sol", "native", "devnet"]
 # Devnet SOL 전송
 
 ## Metadata
-- **ID**: testnet-03
+- **ID**: testnet-02
 - **Category**: testnet
 - **Network**: solana-devnet
 - **Requires Funds**: Yes
@@ -30,23 +31,23 @@ tags: ["transfer", "sol", "native", "devnet"]
 ### Step 1: 지갑 잔액 조회
 **Action**: Devnet에서 Solana 지갑 잔액을 조회한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=solana-devnet \
+curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=solana-devnet \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 200 OK, Devnet SOL 잔액이 반환된다
 **Check**: `balance` 필드가 0.1 SOL 이상인지 확인. 부족하면 airdrop 안내
 
-### Step 2: Dry-Run 자기 전송
-**Action**: 자기 주소로 0.01 SOL을 전송하는 dry-run을 실행한다.
+### Step 2: Simulate 자기 전송
+**Action**: 자기 주소로 0.01 SOL을 전송하는 simulate을 실행한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
+curl -s -X POST http://localhost:3100/v1/transactions/simulate \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
     "type": "TRANSFER",
     "to": "<MY_ADDRESS>",
-    "value": "0.01",
+    "amount": "10000000",
     "network": "solana-devnet"
   }'
 ```
@@ -54,16 +55,16 @@ curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
 **Check**: `estimatedFee` 필드 확인 (~0.000005 SOL)
 
 ### Step 3: 실제 자기 전송 실행
-**Action**: dry-run 확인 후 실제 자기 전송을 실행한다.
+**Action**: simulate 확인 후 실제 자기 전송을 실행한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions \
+curl -s -X POST http://localhost:3100/v1/transactions/send \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
     "type": "TRANSFER",
     "to": "<MY_ADDRESS>",
-    "value": "0.01",
+    "amount": "10000000",
     "network": "solana-devnet"
   }'
 ```
@@ -82,7 +83,7 @@ curl -s http://localhost:3100/v1/transactions/<TX_ID> \
 ### Step 5: 전송 후 잔액 재확인
 **Action**: 전송 후 잔액을 재조회하여 수수료만큼만 감소했는지 확인한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=solana-devnet \
+curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=solana-devnet \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 잔액이 tx fee(~0.000005 SOL)만큼만 감소했다
@@ -90,7 +91,7 @@ curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=solana-devn
 
 ## Verification
 - [ ] Devnet SOL 잔액 조회 성공 (200 응답)
-- [ ] Dry-run 성공 (예상 수수료 반환)
+- [ ] Simulate 성공 (예상 수수료 반환)
 - [ ] 자기 전송 트랜잭션 생성 성공 (txId, txHash 반환)
 - [ ] 트랜잭션 컨펌 완료 (status: confirmed/success)
 - [ ] 전송 후 잔액 감소분이 tx fee(~0.000005 SOL) 이내

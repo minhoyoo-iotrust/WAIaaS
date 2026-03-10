@@ -2,6 +2,7 @@
 id: "defi-11"
 title: "Hyperliquid Mainnet Perp/Spot"
 category: "defi"
+auth: "session"
 network: ["hyperliquid-mainnet"]
 requires_funds: true
 estimated_cost_usd: "0"
@@ -31,7 +32,7 @@ tags: ["defi", "perp", "spot", "hyperliquid", "order"]
 ### Step 1: Hyperliquid 잔액 확인
 **Action**: Hyperliquid mainnet 잔액을 확인한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=hyperliquid-mainnet \
+curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=hyperliquid-mainnet \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 200 OK, Hyperliquid mainnet 잔액이 반환된다
@@ -40,7 +41,7 @@ curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=hyperliquid
 ### Step 2: Spot 리밋 매수 주문 생성
 **Action**: ETH Spot 리밋 매수 주문을 생성한다. **체결 방지를 위해 시장가 대비 30% 이하 가격($1000)으로 설정한다.**
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions \
+curl -s -X POST http://localhost:3100/v1/transactions/send \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
@@ -72,7 +73,7 @@ curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/hyperliquid/orders?type=spo
 ### Step 4: Spot 주문 취소
 **Action**: 생성한 Spot 주문을 취소한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions \
+curl -s -X POST http://localhost:3100/v1/transactions/send \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
@@ -92,7 +93,7 @@ curl -s -X POST http://localhost:3100/v1/transactions \
 ### Step 5: Perp 리밋 매수 주문 생성
 **Action**: ETH-PERP 리밋 매수 주문을 레버리지 2x로 생성한다. **체결 방지를 위해 $1000으로 설정.**
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions \
+curl -s -X POST http://localhost:3100/v1/transactions/send \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
@@ -121,7 +122,7 @@ curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/hyperliquid/orders?type=per
   -H 'Authorization: Bearer <session-token>'
 
 # 주문 취소
-curl -s -X POST http://localhost:3100/v1/transactions \
+curl -s -X POST http://localhost:3100/v1/transactions/send \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
@@ -141,7 +142,7 @@ curl -s -X POST http://localhost:3100/v1/transactions \
 ### Step 7: 최종 잔액 확인
 **Action**: 모든 주문 취소 후 잔액이 원래와 동일한지 확인한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=hyperliquid-mainnet \
+curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=hyperliquid-mainnet \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 잔액이 Step 1과 동일 (주문 취소했으므로 변동 없음)

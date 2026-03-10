@@ -2,6 +2,7 @@
 id: "advanced-03"
 title: "x402 HTTP 결제"
 category: "advanced"
+auth: "session"
 network: ["ethereum-mainnet", "base-mainnet"]
 requires_funds: true
 estimated_cost_usd: "1.00"
@@ -22,7 +23,7 @@ tags: ["x402", "payment", "http-payment"]
 ## Prerequisites
 - [ ] WAIaaS 데몬 실행 중 (`http://localhost:3100`)
 - [ ] 세션 토큰 보유 (sessionAuth)
-- [ ] x402 지원 서비스 URL 준비 (없으면 dry-run까지만 진행)
+- [ ] x402 지원 서비스 URL 준비 (없으면 simulate까지만 진행)
 - [ ] USDC 보유 (Base 또는 Ethereum, 최소 $1.00)
 - [ ] x402 결제 기능 활성화 (Admin Settings)
 
@@ -55,10 +56,10 @@ curl -s -o /dev/null -w "%{http_code}" <X402_SERVICE_URL>
 **Expected**: 결제 조건이 명확히 파싱된다
 **Check**: 결제 금액이 예상 범위 내인지 확인. 과도한 금액이면 사용자에게 경고
 
-### Step 4: Dry-Run으로 결제 트랜잭션 확인
-**Action**: x402 결제 트랜잭션을 dry-run으로 확인한다.
+### Step 4: Simulate으로 결제 트랜잭션 확인
+**Action**: x402 결제 트랜잭션을 simulate으로 확인한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
+curl -s -X POST http://localhost:3100/v1/transactions/simulate \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
@@ -78,7 +79,7 @@ curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
 ### Step 5: 사용자 승인 후 결제 실행
 **Action**: 사용자 승인을 받은 후 실제 결제 트랜잭션을 실행한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions \
+curl -s -X POST http://localhost:3100/v1/transactions/send \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
@@ -107,7 +108,7 @@ curl -s -o /dev/null -w "%{http_code}" <X402_SERVICE_URL> \
 ## Verification
 - [ ] x402 capability 확인 (connect-info)
 - [ ] 402 응답 수신 및 결제 조건 파싱 (서비스 있는 경우)
-- [ ] Dry-run 성공 (예상 비용 확인)
+- [ ] Simulate 성공 (예상 비용 확인)
 - [ ] 결제 트랜잭션 생성 성공 (서비스 있는 경우)
 - [ ] 결제 후 서비스 접근 성공 (서비스 있는 경우)
 
@@ -119,12 +120,12 @@ curl -s -o /dev/null -w "%{http_code}" <X402_SERVICE_URL> \
 | Service payment amount | - | - | ~$1.00 |
 | **Total** | | | **~$1.00** |
 
-> **Note**: x402 서비스가 없는 경우 dry-run까지만 진행하며 비용은 $0이다. Base 네트워크 사용 시 가스비가 매우 저렴하다.
+> **Note**: x402 서비스가 없는 경우 simulate까지만 진행하며 비용은 $0이다. Base 네트워크 사용 시 가스비가 매우 저렴하다.
 
 ## Troubleshooting
 | Symptom | Cause | Resolution |
 |---------|-------|------------|
-| x402 서비스 없음 | 테스트 가능한 x402 서비스가 없음 | dry-run까지만 진행하고 SKIP 기록 |
+| x402 서비스 없음 | 테스트 가능한 x402 서비스가 없음 | simulate까지만 진행하고 SKIP 기록 |
 | USDC 잔액 부족 | 결제 금액보다 USDC 잔액이 적음 | USDC 충전 후 재시도 |
 | Approve 실패 | USDC approve 트랜잭션 실패 | APPROVED_SPENDERS 정책 확인 |
 | 결제 후 여전히 402 | 결제 증명 전달 실패 | X-Payment-Proof 헤더 확인, 서비스 측 확인 |

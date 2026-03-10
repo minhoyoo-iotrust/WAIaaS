@@ -2,6 +2,7 @@
 id: "defi-06"
 title: "Jito SOL Staking"
 category: "defi"
+auth: "session"
 network: ["solana-mainnet"]
 requires_funds: true
 estimated_cost_usd: "0.01"
@@ -30,16 +31,16 @@ tags: ["defi", "staking", "jito", "solana", "liquid-staking"]
 ### Step 1: SOL 잔액 조회
 **Action**: Solana Mainnet에서 SOL 잔액을 조회한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=solana-mainnet \
+curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=solana-mainnet \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 200 OK, SOL 잔액이 반환된다
 **Check**: SOL 잔액이 0.01 이상인지 확인
 
-### Step 2: Jito 스테이킹 Dry-Run
-**Action**: SOL -> JitoSOL 스테이킹을 dry-run으로 실행하여 예상 JitoSOL 수령량을 확인한다.
+### Step 2: Jito 스테이킹 Simulate
+**Action**: SOL -> JitoSOL 스테이킹을 simulate으로 실행하여 예상 JitoSOL 수령량을 확인한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
+curl -s -X POST http://localhost:3100/v1/transactions/simulate \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
@@ -62,7 +63,7 @@ curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
 - JitoSOL mint: `J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn`
 
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions \
+curl -s -X POST http://localhost:3100/v1/transactions/send \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
@@ -90,16 +91,16 @@ curl -s http://localhost:3100/v1/transactions/<TX_ID> \
 ### Step 5: 잔액 재확인
 **Action**: 스테이킹 후 잔액을 재조회하여 SOL 감소, JitoSOL 증가를 확인한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=solana-mainnet \
+curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=solana-mainnet \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: SOL 잔액이 ~0.005 SOL + tx fee만큼 감소, JitoSOL 토큰이 잔액에 표시
 **Check**: SOL 감소 확인, JitoSOL (mint: `J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn`) 잔액 증가 확인
 
-### Step 6: (선택) 언스테이킹 Dry-Run
-**Action**: JitoSOL -> SOL 언스테이킹을 dry-run으로 확인한다. 실제 실행은 사용자 선택.
+### Step 6: (선택) 언스테이킹 Simulate
+**Action**: JitoSOL -> SOL 언스테이킹을 simulate으로 확인한다. 실제 실행은 사용자 선택.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
+curl -s -X POST http://localhost:3100/v1/transactions/simulate \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
@@ -117,7 +118,7 @@ curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
 
 ## Verification
 - [ ] SOL 잔액 조회 성공 (200 응답)
-- [ ] Jito 스테이킹 dry-run 성공 (예상 JitoSOL 수령량 반환)
+- [ ] Jito 스테이킹 simulate 성공 (예상 JitoSOL 수령량 반환)
 - [ ] 사용자 승인 완료
 - [ ] 실제 스테이킹 트랜잭션 생성 성공 (txId, txHash 반환)
 - [ ] 트랜잭션 컨펌 완료 (status: confirmed/success)
