@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.10.0-rc.25](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.24...v2.10.0-rc.25) (2026-03-10)
+
+
+### Features
+
+* add @waiaas/shared constants package ([2d276a2](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2d276a244fb07e375a27718cac493640a7e6c4ab))
+
+
+### Bug Fixes
+
+* **admin:** update RPC endpoint count in settings test for HyperEVM networks ([9643374](https://github.com/minhoyoo-iotrust/WAIaaS/commit/9643374520655a36a8bd1c1925560090e1fe79fa))
+* **ci:** add @waiaas/mcp to e2e-smoke build filter ([086b082](https://github.com/minhoyoo-iotrust/WAIaaS/commit/086b08215c3af4bc909c52df821e79570877effa))
+* resolve issues [#304](https://github.com/minhoyoo-iotrust/WAIaaS/issues/304)-310 — UAT API mismatches, HyperEVM network lists, shared constants, Hyperliquid keys ([8bdd5ce](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8bdd5cef9101649327fdb6ec3f6ca8d5580744c4))
+* resolve issues [#304](https://github.com/minhoyoo-iotrust/WAIaaS/issues/304)-310 — UAT API mismatches, shared constants, HyperEVM networks ([d8ee3d3](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d8ee3d3e100e585bb2396bba7e2c332ac98b7102))
+
 ## [2.10.0-rc.24](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.23...v2.10.0-rc.24) (2026-03-10)
 
 
