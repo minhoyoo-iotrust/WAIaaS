@@ -1,402 +1,512 @@
-# Domain Pitfalls: Advanced DeFi Protocol Integration (Lending/Yield/Perp + PositionTracker + Intent)
+# Domain Pitfalls: Polymarket 예측 시장 통합
 
-**Domain:** Advanced DeFi position management for AI agent wallet system
-**Researched:** 2026-02-26
-**Overall confidence:** MEDIUM-HIGH (system-specific pitfalls HIGH from codebase analysis; DeFi protocol-specific pitfalls MEDIUM from web research + training data)
+**Domain:** Polymarket prediction market integration into WAIaaS
+**Researched:** 2026-03-10
 
 ---
 
 ## Critical Pitfalls
 
-Mistakes that cause data loss, security breaches, fund loss, or require architecture-level rewrites.
+치명적 실수 -- 재작업 또는 주요 장애를 유발한다.
 
 ---
 
-### Pitfall C1: Stale Position Data Leading to Phantom Health Factor Safety
+### Pitfall C1: EIP-712 Domain Separator가 Hyperliquid와 완전히 다름
 
-**What goes wrong:** The system reports a health factor of 1.5 (safe) while the actual on-chain health factor is 1.02 (near liquidation). The AI agent, trusting the cached value, does not act. Liquidation occurs, and the user loses collateral + penalty.
+**What goes wrong:** Hyperliquid EIP-712 패턴을 그대로 복사하면 서명이 100% 실패한다. 두 프로토콜의 EIP-712 도메인이 근본적으로 다르다.
 
-**Why it happens:** Health factor depends on (collateral_value * liquidation_threshold) / debt_value. Both collateral and debt values change continuously with oracle price feeds. A position cached 60 seconds ago can be dangerously stale during high volatility. The existing system's BalanceMonitorService polls every 5 minutes -- this interval is acceptable for balance alerts but catastrophic for health factor monitoring.
+**Hyperliquid vs Polymarket 도메인 비교:**
 
-**Consequences:**
-- Liquidation with 5-15% penalty (protocol-dependent)
-- Loss of user trust in autonomous agent
-- No recovery possible once liquidated
+| Field | Hyperliquid L1 (HL_L1_DOMAIN) | Polymarket Order |
+|-------|-------------------------------|------------------|
+| name | `"Exchange"` | `"Polymarket CTF Exchange"` |
+| version | `"1"` | `"1"` |
+| chainId | `1337` (고정, phantom agent) | `137` (Polygon mainnet) / `80002` (Amoy testnet) |
+| verifyingContract | `0x000...000` (zero address) | **실제 Exchange 컨트랙트 주소** |
+
+**핵심 차이:**
+1. **verifyingContract가 실제 주소**: Hyperliquid는 zero address를 사용하지만, Polymarket은 실제 CTF Exchange 주소(`0x4bFb41d5B3570DeFd03C39a9A4D8dE6Bd8B8982E`)를 사용한다. **Neg Risk 마켓은 다른 주소(`0xC5d563A36AE78145C45a50134d48A1215220f80a`)를 사용한다.**
+2. **chainId가 실제 체인 ID**: Hyperliquid는 phantom agent 패턴으로 chainId 1337을 고정 사용하지만, Polymarket은 Polygon 실제 chainId 137을 사용한다.
+3. **Neg Risk 시장은 다른 도메인**: 동일한 Order struct이지만 verifyingContract가 Neg Risk CTF Exchange로 바뀐다. 시장 타입에 따라 도메인을 동적으로 선택해야 한다.
+
+**API Key 생성은 또 다른 도메인 사용:**
+```
+Domain: { name: "ClobAuthDomain", version: "1", chainId: 137 }
+// verifyingContract 없음!
+```
+주문 서명 도메인과 API Key 서명 도메인이 다르다.
+
+**Why it happens:** Hyperliquid의 `HyperliquidSigner`를 참조하여 공통 추상화를 만들려 할 때, 도메인 구성 방식의 근본적 차이를 간과한다.
+
+**Consequences:** 모든 주문 서명 실패, CLOB API가 `INVALID_SIGNATURE` 반환. 디버깅이 어려움 -- 서명 자체는 유효한 ECDSA이지만 도메인이 틀려 ecrecover 결과가 다른 주소를 반환한다.
 
 **Prevention:**
-1. Never cache health factor as a single value. Cache the *components* (collateral amounts, debt amounts, oracle prices) and recompute on every query.
-2. Implement a tiered polling frequency: safe (HF > 2.0) = 5 min, warning (1.5-2.0) = 1 min, danger (1.0-1.5) = 15 sec, critical (< 1.2) = 5 sec.
-3. Use on-chain `getUserAccountData()` (Aave) or equivalent for authoritative values -- never rely solely on off-chain computation.
-4. Add `positionLastSyncedAt` timestamp to every API response so the AI agent knows data age.
+- Polymarket 전용 도메인 빌더 함수를 만들어 `verifyingContract`를 마켓 타입(binary vs negRisk)에 따라 동적 선택
+- Hyperliquid `HyperliquidSigner`와 코드 공유하지 말 것 -- 패턴만 참고하고 별도 `PolymarketSigner` 구현
+- 단위 테스트에서 도메인 해시가 Polymarket Python/Rust 클라이언트의 알려진 값과 일치하는지 검증
+- 도메인 3개를 명확히 분리: (1) 주문 서명(CTF Exchange), (2) 주문 서명(Neg Risk CTF Exchange), (3) API Key 생성(ClobAuthDomain)
 
-**Detection:** Monitor the delta between cached HF and on-chain HF during position sync. If delta > 0.1 at any sync point, the polling interval is too long.
+**Detection:** CLOB API `/order` 호출 시 401/403 또는 "invalid signature" 에러.
 
-**Phase to address:** Monitoring design phase (ILendingMonitor interface + PositionSyncService)
+**Confidence:** HIGH (공식 소스코드: ctf-exchange/Hashing.sol, Clojure gist, py-clob-client)
 
 ---
 
-### Pitfall C2: SQLite Write Contention Under Position Tracking Load
+### Pitfall C2: Order Struct 필드와 Hyperliquid OrderWire의 근본적 차이
 
-**What goes wrong:** Adding a `positions` table with frequent UPDATE operations (health factor, margin ratio, yield APY) creates write contention with the existing transaction pipeline. SQLite uses database-level locking, not row-level locks. During high-activity periods, the 6-stage pipeline's Stage 1 INSERT and Stage 5/6 UPDATE compete with position tracker UPDATEs, causing `SQLITE_BUSY` errors or noticeable latency spikes.
+**What goes wrong:** Hyperliquid의 OrderWire(`a`, `b`, `p`, `s`, `r`, `t` -- msgpack 인코딩)와 Polymarket의 Order struct(12필드, EIP-712 직접 서명)가 완전히 다른 구조인데 유사한 것으로 착각하여 매핑 오류 발생.
 
-**Why it happens:** The existing system already has 17 tables with multiple background workers (WAL checkpoint, session cleanup, version check, async-polling, balance-monitor, incoming-tx-monitor). Adding position tracking creates a new high-frequency write pattern. SQLite WAL mode allows concurrent reads but still serializes writes. Each position update (especially across multiple wallets) holds the write lock.
+**Polymarket Order struct (12 필드, EIP-712 서명 대상):**
+```
+ORDER_TYPEHASH = keccak256("Order(uint256 salt,address maker,address signer,
+  address taker,uint256 tokenId,uint256 makerAmount,uint256 takerAmount,
+  uint256 expiration,uint256 nonce,uint256 feeRateBps,uint8 side,
+  uint8 signatureType)")
+```
 
-**Consequences:**
-- Pipeline Stage 1 INSERT delayed or fails with SQLITE_BUSY
-- AsyncPollingService `pollAll()` conflicts with PositionTracker updates
-- Under load, cascade of timeouts across background workers
+| Field | Type | 설명 |
+|-------|------|------|
+| salt | uint256 | 랜덤 엔트로피: `Math.round(Math.random() * Date.now())` |
+| maker | address | 자금 보유자 (EOA 모드: wallet address) |
+| signer | address | 서명자 (EOA 모드: wallet address와 동일) |
+| taker | address | `0x000...000` (open order) |
+| tokenId | uint256 | CTF ERC-1155 token ID (conditionId에서 파생) |
+| makerAmount | uint256 | 제공 토큰 양 (6 decimals) |
+| takerAmount | uint256 | 수령 토큰 양 (6 decimals) |
+| expiration | uint256 | Unix timestamp (0 = 만료 없음) |
+| nonce | uint256 | **온체인 취소 전용** (API nonce와 다름!) |
+| feeRateBps | uint256 | 수수료 basis points (**CLOB API에서 조회 필수**) |
+| side | uint8 | 0=BUY, 1=SELL |
+| signatureType | uint8 | 0=EOA, 1=POLY_PROXY, 2=POLY_GNOSIS_SAFE |
+
+**Hyperliquid와의 핵심 차이:**
+1. **salt vs nonce**: Polymarket `salt`는 랜덤 엔트로피(주문 고유성), `nonce`는 온체인 취소 전용. Hyperliquid는 시간 기반 nonce 하나만 사용하고 salt 개념 없음.
+2. **maker/signer 분리**: Proxy Wallet 시 다름. Hyperliquid는 단일 서명자.
+3. **makerAmount/takerAmount (가격 표현)**: 가격이 직접 들어가지 않음 -- 비율로 표현. Hyperliquid는 `p`(가격)와 `s`(수량) 명시적 분리.
+4. **feeRateBps**: CLOB API에서 조회해야 함 -- 클라이언트가 임의 설정 불가. Hyperliquid는 builder fee만 설정.
+5. **서명 대상**: Polymarket은 Order struct을 직접 EIP-712 서명. Hyperliquid는 msgpack → keccak256 → phantom agent 서명 (간접).
+
+**Why it happens:** "EIP-712 주문 서명"이라는 공통점에 집중하여 내부 구조의 차이를 무시.
+
+**Consequences:** 잘못된 makerAmount/takerAmount 비율로 의도치 않은 가격에 주문 체결, salt 대신 nonce를 랜덤으로 생성하면 온체인 취소 불가.
 
 **Prevention:**
-1. **Never update position data inline with the pipeline.** Position tracking must be a separate background worker with its own write cadence, not triggered by individual transactions.
-2. **Batch position updates.** Instead of N individual UPDATEs (one per position), use a single prepared statement in a transaction: `BEGIN; UPDATE positions SET ... WHERE id = ?; ... COMMIT;` This holds the write lock once, not N times.
-3. **Use `busy_timeout` pragma.** The existing system should already have this set, but position tracking adds load that may require increasing it to 5000ms.
-4. **Keep position data granularity low.** Store last-known health factor + last synced timestamp. Do NOT store every historical price point in SQLite -- use in-memory ring buffers for trend data.
-5. **Consider a separate SQLite database file** for position-tracking if write contention becomes measurable. Drizzle supports multiple database connections.
+- `PolymarketOrderBuilder` 전용 클래스로 price+size를 makerAmount/takerAmount로 변환하는 로직 캡슐화
+- 가격 변환 공식 명확화:
+  ```
+  BUY:  makerAmount = round(price * size * 1e6)   // USDC 지불
+        takerAmount = round(size * 1e6)             // CT 수령
+  SELL: makerAmount = round(size * 1e6)             // CT 지불
+        takerAmount = round(price * size * 1e6)     // USDC 수령
+  ```
+- salt 생성: `Math.round(Math.random() * Date.now())`
+- nonce는 0부터 시작, 온체인 취소 시에만 증가
+- feeRateBps는 반드시 CLOB API에서 조회
 
-**Detection:** Log write duration for position updates. If p99 > 50ms, contention is becoming a problem. Monitor `SQLITE_BUSY` retry counts.
+**Detection:** 주문 가격이 의도와 다르게 체결, CLOB API "invalid fee rate" 반환.
 
-**Phase to address:** PositionTracker DB schema design phase + implementation phase (DB migration v25+)
+**Confidence:** HIGH (ctf-exchange/OrderStructs.sol, Clojure gist, py-clob-client issue #121)
 
 ---
 
-### Pitfall C3: Intent Signature Replay / Cross-Chain Replay
+### Pitfall C3: Proxy Wallet vs EOA 서명 모드 혼동
 
-**What goes wrong:** An EIP-712 signed intent is replayed on a different chain or at a different time, executing an unwanted trade. OR a signed intent is captured and submitted by a different party (front-running).
+**What goes wrong:** WAIaaS 지갑은 항상 EOA(자체 관리 키)인데, Polymarket의 3가지 signatureType(EOA=0, POLY_PROXY=1, POLY_GNOSIS_SAFE=2)과 maker/signer/funder 관계를 혼동하여 서명 검증 실패.
 
-**Why it happens:** EIP-712 domain separators require `chainId` + `verifyingContract` to prevent cross-chain replay. But over 40 wallet vendors were found to have EIP-712 implementation issues where they don't alert users when signing for a different chainId. If the WAIaaS system generates intents without strict domain binding, or if nonce management has gaps, replays become possible.
+**WAIaaS에서의 올바른 매핑:**
 
-**Consequences:**
-- Funds drained through replayed intents
-- Unauthorized trades executed on different networks
-- Silent exploitation (user may not notice immediately)
+| Scenario | signatureType | maker | signer | funder |
+|----------|---------------|-------|--------|--------|
+| WAIaaS EOA 직접 사용 | `0` (EOA) | EOA 주소 | EOA 주소 (동일) | EOA 주소 |
+| Polymarket UI 계정 연동 | `1` (POLY_PROXY) | Proxy Wallet 주소 | EOA 주소 | Proxy Wallet 주소 |
+
+**핵심 문제:**
+1. **Proxy Wallet이 없으면 signatureType=0**: WAIaaS 지갑이 Polymarket에 처음 접근할 때 Proxy Wallet이 자동 생성되지 않는다. Polymarket.com 웹사이트를 통해서만 생성된다.
+2. **signatureType=0(EOA)에서는 maker = signer**: 분리하면 서명 검증 실패.
+3. **funder 주소 오류**: API Key 생성 시 funder가 틀리면 "unauthorized" 에러. EOA 모드에서 funder = EOA 주소.
+4. **Smart Account(ERC-4337) 지갑의 경우**: signatureType=2(GNOSIS_SAFE)를 사용해야 할 수 있으나, Polymarket이 ERC-4337을 지원하는지 미확인 -- 별도 리서치 필요.
+
+**Why it happens:** Polymarket 문서가 POLY_PROXY/웹 사용자 중심으로 작성되어 있어 순수 EOA API 트레이더의 세부사항이 묻힘.
+
+**Consequences:** API Key 생성 실패, 주문 서명 검증 실패, "unauthorized funder" 에러.
 
 **Prevention:**
-1. **Mandatory fields in every intent signature:** `chainId` (from wallet's resolved network), `verifyingContract` (protocol router address), `nonce` (monotonically increasing per-wallet), `deadline` (Unix timestamp, max 5 minutes from creation for AI agents).
-2. **Short deadlines for AI agents.** Human traders might want 30-minute deadlines. AI agents should use 2-5 minute deadlines since they can regenerate intents quickly.
-3. **Server-side nonce tracking.** Maintain `intent_nonces` table (wallet_id, chain, nonce INTEGER). Increment atomically on intent creation. Validate that submitted nonce matches expected next nonce.
-4. **Never sign intents for a chainId that doesn't match the wallet's current resolved network.** Enforce this in the signing pipeline before the private key is accessed.
-5. **Intent content display.** Before signing, log the full decoded intent (token, amount, recipient, deadline) in the audit log. AI agents should include intent details in their transaction request.
+- WAIaaS는 signatureType=0(EOA) 전용으로 시작 -- POLY_PROXY/GNOSIS_SAFE는 지원하지 않음 (불필요한 복잡성 제거)
+- Order 구성 시 `maker = signer = wallet.address` 고정
+- API Key 생성 시 funder도 동일 EOA 주소 사용
+- Smart Account 호환은 별도 후속 마일스톤에서 검토
 
-**Detection:** Monitor for intent submissions with nonce gaps (indicates potential replay attempt or lost intents). Alert on any intent submission after deadline expiry.
+**Detection:** CLOB API "invalid signer", "unauthorized", 또는 "unknown signing type" 에러.
 
-**Phase to address:** Intent pattern design phase (IntentBuilder + IntentSigner)
+**Confidence:** HIGH (공식 문서 + py-clob-client 소스)
 
 ---
 
-### Pitfall C4: Liquidation Alert Timing -- Notification Arrives After Liquidation
+### Pitfall C4: Neg Risk 시장 라우팅 누락 -- 도메인+Approve+정산 전부 다름
 
-**What goes wrong:** The system detects a health factor drop to 1.05, sends a LIQUIDATION_WARNING notification via Telegram/ntfy/Slack. By the time the owner reads the notification and acts (or the AI agent processes it), the health factor has already dropped below 1.0 and liquidation has occurred.
+**What goes wrong:** 바이너리(Yes/No) 시장과 Neg Risk(다중 아웃컴) 시장의 라우팅을 구분하지 않아 주문 서명 실패, approve 누락, 정산 실패가 연쇄적으로 발생.
 
-**Why it happens:** The existing notification pipeline has inherent latency: EventBus emit -> NotificationService -> channel delivery -> user reads. For Telegram, this can be 2-10 seconds. For email/Slack, 5-30 seconds. During a flash crash, ETH can drop 5% in 30 seconds, making a 1.05 health factor meaningless by the time the alert arrives.
+**바이너리 vs Neg Risk 완전 비교:**
 
-**Consequences:**
-- False sense of security ("I have alerts, I'm safe")
-- Owner frustration and trust loss
-- System appears defective even when it's working as designed
+| 항목 | 바이너리 시장 | Neg Risk 시장 |
+|------|--------------|---------------|
+| Exchange 컨트랙트 | CTF Exchange `0x4bFb...982E` | Neg Risk CTF Exchange `0xC5d5...20f80a` |
+| Adapter | 없음 | Neg Risk Adapter `0xd91E...5296` |
+| EIP-712 verifyingContract | CTF Exchange 주소 | **Neg Risk CTF Exchange 주소** |
+| 담보 | USDC 직접 | WrappedCollateral (USDC 래핑) |
+| 해결 규칙 | Yes/No 중 하나 | **정확히 하나만 Yes** (나머지 모두 No) |
+| USDC approve 대상 | CTF Exchange (1곳) | CTF Exchange + Neg Risk CTF Exchange + Neg Risk Adapter (3곳) |
+| CT approve 대상 | CTF Exchange (1곳) | CTF Exchange + Neg Risk CTF Exchange (2곳) |
 
-**Prevention:**
-1. **Alert thresholds must be aggressive.** Default warning at HF < 1.5 (not 1.1). Default critical at HF < 1.3 (not 1.05). Users should have time to act.
-2. **Automated protective actions for AI agents.** When HF < configurable threshold (e.g., 1.2), the agent can auto-repay partial debt or add collateral WITHOUT waiting for owner approval. This is the key differentiator for AI agents vs human users.
-3. **Never promise "liquidation protection."** Documentation and skill files must clearly state that monitoring is informational/best-effort. On-chain liquidation bots operate at block-level speed; no polling-based system can compete.
-4. **Pre-compute "liquidation price" and show it.** Instead of only monitoring HF, compute and display the exact price at which liquidation would occur. This is more actionable than a dynamic ratio.
-5. **Use the existing ApprovalChannelRouter priority for urgency.** Liquidation warnings should bypass DELAY tier and go directly to NOTIFY or APPROVAL depending on severity.
+**NegRiskAdapter 특수 엣지 케이스:**
+- NO 토큰 → YES 토큰 + USDC 변환 가능 (수학적 동치 활용)
+- Oracle가 `[1,1]`(두 개 이상 Yes) 반환하면 컨트랙트 **revert**
+- 모든 아웃컴이 No로 해결되면 시장 해결 불가
 
-**Detection:** Track time-to-liquidation from last warning. If any liquidation occurs within 60s of warning, the threshold is too tight.
+**Why it happens:** Gamma API의 마켓 데이터에서 `neg_risk` 필드를 확인하지 않고 모든 시장을 바이너리로 처리.
 
-**Phase to address:** DeFi monitoring design phase (new notification event types + threshold configuration)
-
----
-
-### Pitfall C5: Over-Engineering Position Management for AI Agent Use Case
-
-**What goes wrong:** The system builds a full-featured DeFi position management dashboard with real-time P&L, historical charts, impermanent loss calculators, yield comparison matrices, funding rate history -- features designed for human DeFi power users. The AI agent uses none of these. Instead, it needs a simple API: "What is my health factor?" "Is this position safe?" "Should I rebalance?"
-
-**Why it happens:** DeFi position management is inherently complex, and developers (or design documents) import the complexity of existing DeFi dashboards (Zapper, DeBank, DeFi Llama) into the system. The WAIaaS system serves AI agents that need structured, actionable data -- not visual dashboards.
-
-**Consequences:**
-- 3-5x development time for features the primary user (AI agent) never uses
-- Increased SQLite write load for data only humans would consume
-- Maintenance burden for rarely-used visualization features in Admin UI
-- Delayed delivery of the features AI agents actually need
+**Consequences:** Neg Risk 시장 주문 서명이 CLOB API에서 거부됨 (EIP-712 도메인 불일치), approve가 잘못된 컨트랙트에만 설정되어 정산 실패.
 
 **Prevention:**
-1. **Design API responses for AI consumption first.** Each endpoint should return a structured assessment: `{ healthFactor: 1.45, risk: 'moderate', suggestedAction: 'none', liquidationPrice: 2850.00 }`. NOT raw position data that requires the AI to compute risk.
-2. **Admin UI position views are Phase 2.** Phase 1 is API + MCP tools only. Add Admin UI position panels later as a separate milestone.
-3. **Three questions per protocol maximum.** For Lending: "health factor?", "can I borrow more?", "repay how much to reach HF X?". For Yield: "current APY?", "pending rewards?", "time to maturity?". For Perp: "margin ratio?", "unrealized P&L?", "liquidation price?".
-4. **No historical data storage in Phase 1.** Position snapshots are ephemeral (current state only). Add position history tracking in a future milestone if there's demand.
-5. **Resist the urge to build portfolio aggregation.** "Total DeFi value across all protocols" is a nice-to-have, not a requirement for AI agent operation.
+- 마켓 조회 시 `neg_risk` 플래그를 항상 캐시, 주문/approve/redeem 시 참조
+- Exchange 주소와 approve 대상을 `neg_risk`로 분기하는 라우터 패턴 구현
+- 안전 전략: USDC/CT approve를 모든 컨트랙트(5곳)에 한번에 설정 -- 바이너리든 Neg Risk든 안전
+- 단위 테스트: `negRisk=true/false`에 따른 도메인/Exchange 분기 검증
 
-**Detection:** During design review, count the number of API fields. If any endpoint returns > 15 fields, it's likely over-engineered for AI consumption.
+**Detection:** CLOB API 주문 제출 시 "invalid signature" (도메인 불일치), CTF redeem 트랜잭션 on-chain revert.
 
-**Phase to address:** Provider interface design phase (ILendingProvider/IYieldProvider/IPerpProvider method signatures)
+**Confidence:** HIGH (neg-risk-ctf-adapter 공식 문서 + py-clob-client issue #138)
 
 ---
 
 ## Moderate Pitfalls
 
-Issues that cause significant rework, poor UX, or operational problems but don't risk fund loss.
+---
+
+### Pitfall M1: USDC.e 6-decimal + Tick Size 정밀도 오류
+
+**What goes wrong:** Polymarket은 Polygon USDC.e(`0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174`, 6 decimals)를 사용한다. makerAmount/takerAmount는 6-decimal 단위인데, 가격(0.0~1.0)과 수량(shares) 사이의 변환에서 tick size 규칙을 무시하면 정밀도 오류 발생.
+
+**Tick size별 소수점 제한 (CLOB 강제):**
+
+| Tick Size | Price Decimals | Size Decimals |
+|-----------|---------------|---------------|
+| 0.1 | 1 | 3 |
+| 0.01 | 2 | 4 |
+| 0.001 | 3 | 5 |
+| 0.0001 | 4 | 6 |
+
+**Why it happens:** WAIaaS의 기존 USDC 처리는 `parseUnits(amount, 6)`을 사용하지만, Polymarket의 마켓별 tick size를 무시하면 반올림 불일치 발생.
+
+**Prevention:**
+- price와 size를 먼저 마켓 tick size에 맞게 반올림한 후 makerAmount/takerAmount 계산
+- bigint 연산 사용 (부동소수점 금지) -- 기존 가스 안전 마진 패턴 `(estimatedGas * 120n) / 100n`과 일관
+- CLOB API에서 마켓별 tick size 조회하여 적용
+- 변환 후 역변환(makerAmount/takerAmount -> price)으로 원래 가격과 허용 오차 내인지 검증
+
+**Detection:** CLOB API "invalid tick size" 또는 "price out of range" 에러, FOK 주문 시 partial fill 불가로 전량 취소.
+
+**Confidence:** HIGH (py-clob-client issue #121 + 공식 문서)
 
 ---
 
-### Pitfall M1: Monitoring Polling Frequency vs Resource Exhaustion
+### Pitfall M2: API Key 생성의 nonce/timestamp 관리 실패
 
-**What goes wrong:** The PositionMonitor polls every protocol every 15 seconds for every wallet with an open position. With 10 wallets, 3 protocols each, that's 30 RPC calls per cycle = 120 RPC calls/minute. The existing RPC Pool rotates endpoints, but each call costs latency and potentially rate limits.
+**What goes wrong:** Polymarket CLOB API Key 생성은 EIP-712 서명 기반이며, nonce로 API Key를 결정적으로 파생한다. 동일 nonce로 재생성하면 동일 키가 나오지만, nonce를 잃으면 기존 키를 복구할 수 없다.
 
-**Why it happens:** The temptation to poll frequently ("more frequent = safer") ignores the resource cost curve. The existing system already has: AsyncPollingService (30s), BalanceMonitorService (5min), IncomingTxMonitorService (WebSocket subscription). Adding position monitoring creates a fourth concurrent poller competing for the same RPC endpoints.
+**API Key 생성 EIP-712 구조:**
+```
+Domain: { name: "ClobAuthDomain", version: "1", chainId: 137 }
+// verifyingContract 없음! (주문 서명 도메인과 다름)
+Type: ClobAuth {
+  address: wallet address,
+  timestamp: server timestamp (CLOB API /time에서 조회),
+  nonce: 0 (기본, 이미 사용된 경우 1, 2, ...),
+  message: "This message attests that I control the given wallet"
+}
+```
+
+**핵심 문제:**
+1. `timestamp`는 **CLOB 서버 시간**을 사용해야 함 -- 로컬 시간 사용 시 "invalid timestamp" 에러
+2. nonce=0으로 생성한 API Key가 이미 존재하면 "nonce already used" 에러
+3. API Key는 `apiKey` + `secret`(base64) + `passphrase` 3개 값 -- 모두 저장해야 L2 인증 가능
+4. API Key 분실 시 같은 nonce로 `derive` 가능하나, nonce 자체를 모르면 복구 불가
+
+**Why it happens:** Admin Settings에 API Key만 저장하고 secret/passphrase를 누락하거나, nonce를 저장하지 않는다.
 
 **Prevention:**
-1. **Adaptive polling based on position state.** No open positions = no polling. Safe positions (HF > 2.0) = 5 min. At-risk positions = 30s. This is critical for resource efficiency.
-2. **Aggregate calls where possible.** Aave's `getUserAccountData()` returns all positions in a single call. Don't call per-asset. For Solana DeFi (e.g., Marginfi), batch account fetches via `getMultipleAccounts()`.
-3. **Share the RPC pool budget.** Implement a global RPC call counter. If position monitoring is consuming > 50% of available RPC budget, automatically reduce its polling frequency.
-4. **Register with existing BackgroundWorkers.** Don't create a separate setInterval. Use the BackgroundWorkers framework which already handles overlap prevention and graceful shutdown.
+- Admin Settings에 `polymarket_api_key`, `polymarket_api_secret`, `polymarket_api_passphrase`, `polymarket_api_nonce` 4개 필드 저장
+- API Key 자동 생성 플로우: (1) CLOB `/time` 서버 시간 조회 (2) nonce=0으로 시도 (3) "already used" 시 nonce 증가 후 재시도
+- 생성 성공 시 3개 값 + nonce를 즉시 Admin Settings에 저장 (secret은 민감 데이터 -- 암호화 저장 권장)
+- Encrypted Backup(v30.2)에 Polymarket API 자격증명 포함 필수
 
-**Phase to address:** PositionMonitor implementation phase
+**Detection:** CLOB API "unauthorized" 또는 "invalid api key" 에러 (L2 인증 헤더 누락/불일치).
+
+**Confidence:** HIGH (공식 문서 + py-clob-client issue #187)
 
 ---
 
-### Pitfall M2: AsyncPollingService Overload From Position Trackers
+### Pitfall M3: Testnet 부재로 인한 테스트 전략 공백
 
-**What goes wrong:** The existing AsyncPollingService queries transactions with `bridge_status IN ('PENDING', 'BRIDGE_MONITORING') OR status = 'GAS_WAITING'`. Adding position tracking reuses this service, and suddenly `pollAll()` is processing 50+ items per cycle (original bridge/gas items + new position items). Sequential processing (by design, to avoid rate limits) means a single cycle takes 50+ seconds, exceeding the 30-second interval.
+**What goes wrong:** Polymarket은 **CLOB API 전용 테스트넷이 없다**. Polygon Amoy에 CTF Exchange 컨트랙트(`0xdFE02Eb6733538f8Ea35D585af8DE5958AD99E40`)는 배포되어 있지만, CLOB 매칭 엔진 테스트넷은 존재하지 않는다.
 
-**Why it happens:** The AsyncPollingService was designed for low-volume async operations (bridge completions, gas conditions). It processes items sequentially. Position tracking is fundamentally different -- it's periodic monitoring, not event-driven status tracking.
+**테스트 가능 범위:**
+
+| 계층 | Testable | 방법 |
+|------|----------|------|
+| EIP-712 서명 생성/검증 | YES | 순수 단위 테스트 (알려진 test vector 기반) |
+| Order struct 구성/변환 | YES | 순수 단위 테스트 |
+| CLOB API 호출/응답 파싱 | MOCK ONLY | HTTP mock (Zod 스키마로 응답 구조 검증) |
+| CTF calldata 인코딩 | YES | ABI 인코딩 검증 (Amoy에서 가능) |
+| 실제 주문 매칭/체결 | MAINNET ONLY | 소액 실거래 ($1-5 규모) |
+| Approve 트랜잭션 | Amoy 가능 | Amoy CTF Exchange에 approve |
+| Redeem | MAINNET ONLY | 해결된 시장에서 실제 redeem |
+
+**Why it happens:** Polymarket이 중앙화된 CLOB 매칭 엔진을 운영하며, 테스트 환경을 공개하지 않는다.
 
 **Prevention:**
-1. **Do NOT reuse AsyncPollingService for position monitoring.** AsyncPollingService tracks *transaction completion* (finite lifecycle). Position monitoring tracks *ongoing state* (indefinite lifecycle). These are different patterns.
-2. **Create a dedicated PositionMonitorService** as a separate BackgroundWorker. It polls positions independently from transaction status tracking.
-3. **If position-related async tracking is needed** (e.g., waiting for a lending deposit to confirm), THAT goes into AsyncPollingService. But ongoing health factor monitoring does NOT.
-4. **Rename clearly.** The IAsyncStatusTracker interface is for lifecycle tracking (start -> poll -> terminal state). Position monitoring is for continuous observation (start -> observe forever -> stop).
+- 3-tier 테스트 전략:
+  1. **Unit** (Phase 2): 서명/변환/validation -- Polymarket Python/Rust 클라이언트의 알려진 test vector 활용
+  2. **Integration** (Phase 4): CLOB API mock + Zod 스키마 검증 + Amoy CTF 컨트랙트
+  3. **Agent UAT** (Phase 4): 메인넷 소액 실거래 ($1-5 규모) -- v31.8 6-section 포맷 준수
+- E2E 스모크(@waiaas/e2e-tests)는 오프체인 전용 (CLOB API mock)
+- test vector 확보 우선: py-clob-client 테스트에서 서명 입출력 쌍 추출하여 fixture 생성
+- Mock 응답은 실제 API 호출로 캡처한 fixture 사용 (인위 구성 금지)
 
-**Phase to address:** Architecture/interface design phase (clear separation of concerns)
+**Detection:** Agent UAT에서만 발견되는 버그 (mock과 실제 API 응답 구조 차이).
+
+**Confidence:** HIGH (공식 문서에 "no testnet" 명시 + 커뮤니티 확인)
 
 ---
 
-### Pitfall M3: Policy Engine Expansion Explosion
+### Pitfall M4: USDC/CT Approve 대상 누락 (5곳 approve 필요)
 
-**What goes wrong:** Adding 3 new provider types (lending/yield/perp) seems to require 3+ new PolicyType values: `LENDING_LIMIT`, `YIELD_STRATEGY_WHITELIST`, `PERP_LEVERAGE_LIMIT`, `POSITION_SIZE_LIMIT`, `PROTOCOL_WHITELIST`, etc. The existing 12 PolicyTypes already have complex Admin UI forms, and each new type requires a Zod schema, DatabasePolicyEngine evaluation branch, Admin UI form component, MCP tool parameter, and SDK type.
+**What goes wrong:** Polymarket 거래를 위해 USDC.e와 CT를 여러 컨트랙트에 approve해야 하는데, 일부 누락 시 특정 마켓 타입이나 정산에서 실패.
 
-**Why it happens:** Each DeFi protocol has unique risk parameters. Lending has collateral ratios and borrow limits. Yield has strategy risk tiers. Perps have leverage limits and position size caps. The natural instinct is to model each as a separate policy type.
+**필요한 Approve 완전 목록 (Polygon Mainnet):**
+
+| # | Token | Spender | 주소 | 용도 |
+|---|-------|---------|------|------|
+| 1 | USDC.e | CTF Exchange | `0x4bFb41d5B3570DeFd03C39a9A4D8dE6Bd8B8982E` | 바이너리 시장 거래 |
+| 2 | USDC.e | Neg Risk CTF Exchange | `0xC5d563A36AE78145C45a50134d48A1215220f80a` | Neg Risk 시장 거래 |
+| 3 | USDC.e | Neg Risk Adapter | `0xd91E80cF2E7be2e162c6513ceD06f1dD0dA35296` | Neg Risk 담보 변환 |
+| 4 | CT (ERC-1155) | CTF Exchange | `0x4bFb41d5B3570DeFd03C39a9A4D8dE6Bd8B8982E` | 바이너리 CT 거래 |
+| 5 | CT (ERC-1155) | Neg Risk CTF Exchange | `0xC5d563A36AE78145C45a50134d48A1215220f80a` | Neg Risk CT 거래 |
+
+**주의: ERC-1155 approve는 `setApprovalForAll`** -- ERC-20 `approve`와 인터페이스가 다름. 기존 WAIaaS APPROVE 파이프라인은 ERC-20만 처리하므로, ERC-1155 approve를 CONTRACT_CALL로 처리해야 함.
+
+**Why it happens:** 바이너리 시장만 테스트하고 Neg Risk 3곳 approve 누락, 또는 CT(ERC-1155) approve를 빠뜨림.
 
 **Prevention:**
-1. **Reuse existing policy types where possible.** `SPENDING_LIMIT` already works for lending deposits. `CONTRACT_WHITELIST` already gates which protocols can be called. `METHOD_WHITELIST` can restrict to specific methods (supply, borrow, repay).
-2. **Add at most 2 new PolicyTypes** for the entire DeFi expansion: `POSITION_SIZE_LIMIT` (max value in any single position) and `PROTOCOL_WHITELIST` (which DeFi protocols are allowed). Other controls come from provider configuration, not policy.
-3. **Provider-level safety parameters belong in Admin Settings, not in PolicyEngine.** Max leverage, min health factor thresholds, allowed yield strategies -- these are provider configuration, not per-wallet policy.
-4. **The discriminatedUnion stays at 5 types.** Lending/Yield/Perp actions all resolve to `ContractCallRequest` via IActionProvider. No new transaction types needed.
+- "polymarket_setup" 액션으로 5개 approve를 BATCH 트랜잭션 한번에 실행
+- 주문 전 allowance 사전 체크: USDC는 `allowance()`, CT는 `isApprovedForAll()`
+- approve는 지갑당 1회만 필요 -- DB에 approve 완료 상태 캐시 (polymarket_orders 테이블의 플래그 또는 별도 컬럼)
+- 한번에 모든 컨트랙트에 approve하면 바이너리/Neg Risk 구분 없이 안전
 
-**Phase to address:** Policy integration design phase
+**Detection:** 주문 체결 후 온체인 정산 시 "insufficient allowance" revert -- 특히 Neg Risk 시장에서만 실패하면 이 함정.
+
+**Confidence:** HIGH (poly-rodr/allowance gist + py-clob-client 문서)
 
 ---
 
-### Pitfall M4: Yield Maturity/Lock-up Period Mismanagement
+### Pitfall M5: CLOB API Rate Limit -- Hyperliquid와 다른 Throttling 모델
 
-**What goes wrong:** An AI agent deposits into a yield vault with a 30-day lock-up period. The agent doesn't track this and attempts early withdrawal, which either fails (reverting transaction, wasting gas) or incurs a penalty (e.g., 0.1% early withdrawal fee on Yearn). The system has no concept of "this position cannot be modified until date X."
+**What goes wrong:** Polymarket CLOB API는 Cloudflare 기반 **throttling**(지연/큐잉)을 사용하며, 429 즉시 거부가 아닌 응답 지연이 발생한다. Hyperliquid의 weight-based 즉시 거부 모델과 다른 전략이 필요.
 
-**Why it happens:** Yield protocols have varied lock-up mechanics: Lido has 1-5 day withdrawal queues (already partially handled by LidoWithdrawalTracker), but other protocols have fixed-term vaults, epoch-based lock-ups (like Jito's Solana epochs), or no lock-ups at all. The system has no generic abstraction for "this position has a time constraint."
+**Rate Limit 구조 (이중 제한):**
+
+| 엔드포인트 | Burst (10s) | Sustained (10min) |
+|-----------|-------------|-------------------|
+| POST /order | 3,500 | 36,000 |
+| DELETE /order | 3,000 | 30,000 |
+| POST /orders (batch) | 1,000 | 15,000 |
+| DELETE /cancel-all | 250 | 6,000 |
+| Gamma /markets | 300/10s | -- |
+| Data /positions | 150/10s | -- |
+
+**Hyperliquid와의 핵심 차이:**
+1. **Burst + Sustained 이중 제한**: burst 내에 있어도 sustained 초과 시 제한
+2. **Throttling (not rejection)**: 429 대신 응답 지연 -- 타임아웃 설정이 핵심
+3. **엔드포인트별 독립 제한**: `/markets`와 `/order`가 별도 카운터
+4. **`/positions` 조회가 가장 제한적 (150/10s)**: 포지션 폴링 주기 주의
+
+**Why it happens:** Hyperliquid의 단일 weight-based rate limiter(600 weight/min) 패턴을 그대로 적용.
 
 **Prevention:**
-1. **Add `earliestWithdrawAt` to position metadata.** When a deposit is made into a locked vault, record the unlock timestamp. The IYieldProvider must return this from its `deposit()` result.
-2. **Enforce lock-up in provider's `withdraw()` resolve method.** Before building the withdrawal transaction, check if the lock-up period has elapsed. Return a descriptive error: `POSITION_LOCKED: Withdrawal available after 2026-03-15T12:00:00Z (5 days remaining)`.
-3. **Include lock-up info in position query responses.** `{ locked: true, unlocksAt: "2026-03-15T12:00:00Z", earlyWithdrawalPenalty: "0.1%" }`.
-4. **Reuse the existing AsyncPollingService for maturity tracking.** Register a `YieldMaturityTracker` that transitions from PENDING to COMPLETED when the lock-up period expires, emitting a `YIELD_MATURED` notification.
+- 엔드포인트 그룹별 독립 rate limiter: trading / market-data / positions
+- 응답 타임아웃 넉넉히 설정 (30s+) -- throttling 지연 대비
+- 마켓 데이터는 로컬 캐시 + TTL(1분+)
+- batch 주문 활용 (최대 15개 한번에 제출 가능)
+- cancel-all은 최대한 자제 -- 개별 취소 권장
 
-**Phase to address:** IYieldProvider interface design + PositionTracker schema
+**Detection:** API 응답 시간 비정상 증가, 간헐적 타임아웃, 캐시 miss 급증.
+
+**Confidence:** HIGH (공식 Rate Limit 문서)
 
 ---
 
-### Pitfall M5: Margin Call / Funding Rate Compounding in Perp Positions
+### Pitfall M6: 마켓 해결(Resolution) 엣지 케이스
 
-**What goes wrong:** A perpetual futures position accrues negative funding rates over time. The AI agent opened a long position paying 0.01% per 8 hours, which seems small. After 30 days, the cumulative funding cost is ~0.9% of position value. Combined with maintenance margin requirements, the effective margin ratio has silently degraded, and the position gets liquidated without the agent understanding why.
+**What goes wrong:** UMA Optimistic Oracle 기반 해결에서 여러 엣지 케이스가 예측 시장 자동화를 방해한다.
 
-**Why it happens:** Funding rates are continuous micro-payments between longs and shorts. They don't trigger discrete events -- they compound silently. The system's event-driven architecture (EventBus + notifications) has no natural trigger for "your margin has been slowly eroded."
+**해결 타임라인:**
+```
+마켓 종료 → 결과 제안(proposer) → 48h 분쟁 기간 →
+  [분쟁 없음] → 확정 → redeem 가능
+  [1차 분쟁] → 새 Request 생성 → 48h 추가 대기
+  [2차 분쟁] → UMA DVM 투표 에스컬레이션 (수일 소요)
+  [Emergency] → 관리자 강제 해결/리셋 가능
+```
 
-**Prevention:**
-1. **Track cumulative funding costs per position.** Store `cumulativeFundingCost` in position metadata. Update on each monitoring cycle by fetching the position's funding history from the protocol.
-2. **Alert on cumulative funding exceeding threshold.** If cumulative funding cost exceeds X% of initial margin (e.g., 5%), emit a `PERP_FUNDING_WARNING` notification.
-3. **Include effective margin (margin - cumulative_funding) in position queries.** Not just the nominal margin. This shows the real liquidation buffer.
-4. **For AI agents: include funding rate in position risk assessment.** `{ marginRatio: 0.15, effectiveMarginRatio: 0.12, cumulativeFundingCostPct: 2.1, dailyFundingRatePct: 0.03 }`.
+**자동화에 영향을 주는 엣지 케이스:**
+1. **분쟁 중 포지션**: 마켓이 해결 대기 중이면 거래 불가할 수 있음 -- 자동 redeem 시도 시 revert
+2. **Neg Risk "모두 No"**: 다중 아웃컴에서 정확히 하나만 Yes여야 함 -- 모두 No면 해결 불가
+3. **Emergency resolution**: Polymarket 관리자가 강제 해결/리셋 -- 예상 밖 결과
+4. **Governance attack**: 2025년 3월 UMA 투표권 집중으로 $7M 분쟁 조작 사건 (실제 발생)
+5. **분쟁 기간 변동**: 최소 48시간이지만 에스컬레이션 시 수주일 걸릴 수 있음
 
-**Phase to address:** IPerpProvider interface design + monitoring implementation
-
----
-
-### Pitfall M6: Notification Event Type Explosion
-
-**What goes wrong:** Adding lending, yield, and perp monitoring generates many new notification event types: `HEALTH_FACTOR_WARNING`, `HEALTH_FACTOR_CRITICAL`, `HEALTH_FACTOR_RECOVERED`, `LENDING_LIQUIDATED`, `YIELD_MATURED`, `YIELD_APY_DROPPED`, `PERP_MARGIN_WARNING`, `PERP_MARGIN_CRITICAL`, `PERP_FUNDING_HIGH`, `PERP_LIQUIDATED`, `POSITION_OPENED`, `POSITION_CLOSED`, `POSITION_VALUE_CHANGED`... The existing NOTIFICATION_EVENT_TYPES enum has 40 values. Adding 10-15 more creates maintenance burden, notification channel formatting work, and i18n entries.
-
-**Why it happens:** Each DeFi concept has its own lifecycle events. The natural modeling is one event type per state transition.
-
-**Prevention:**
-1. **Use a hierarchical event pattern.** Instead of 15 specific types, add 4-5 generic types with `details` discriminator: `POSITION_WARNING` (with `details.type: 'health_factor' | 'margin' | 'funding'`), `POSITION_CRITICAL`, `POSITION_RESOLVED`, `POSITION_LIFECYCLE` (opened/closed/matured).
-2. **Leverage the existing notification priority system.** The WalletNotificationChannel already has priority levels. Map warning severity to priority, not to different event types.
-3. **Maximum 6 new event types** for the entire DeFi expansion. Not 15.
-
-**Phase to address:** Notification integration design phase
-
----
-
-### Pitfall M7: IActionProvider Interface Strain -- Resolve Returns ContractCallRequest but DeFi Needs Richer Context
-
-**What goes wrong:** The existing IActionProvider.resolve() returns `ContractCallRequest | ContractCallRequest[]`. For simple swaps, this works. But lending operations need to return position metadata (new health factor after operation, required collateral ratio). Yield operations need to return expected APY and lock-up period. Perps need to return margin requirements and liquidation price. The resolved ContractCallRequest has no field for this provider-specific context.
-
-**Why it happens:** IActionProvider was designed for one-shot operations (swap, bridge, stake). Position-modifying operations need both the transaction AND information about the resulting position state.
+**Why it happens:** 해결 완료(resolved) 시장만 고려하고 해결 중(resolving/disputed) 상태를 무시.
 
 **Prevention:**
-1. **Extend resolve() return type.** Instead of just `ContractCallRequest`, return `{ request: ContractCallRequest | ContractCallRequest[], positionImpact?: PositionImpact }`. The `positionImpact` is optional (backward compatible) and contains protocol-specific metadata about how the position will change.
-2. **Alternatively, use the existing `metadata` field on ContractCallRequest.** Store provider context as `{ metadata: { estimatedHealthFactor: 1.8, lockUpDays: 5 } }`. This flows through the pipeline and is stored in the transaction record.
-3. **DO NOT create ILendingProvider/IYieldProvider/IPerpProvider as replacements for IActionProvider.** They should be *extensions* that add position-query methods while reusing IActionProvider for transaction resolution.
+- 마켓 상태 머신: `ACTIVE -> RESOLVING -> DISPUTED -> RESOLVED -> REDEEMED` 추적
+- redeem 호출 전 온체인 `payoutNumerators` 확인 -- 0이면 아직 미해결
+- 48시간 분쟁 기간 동안 포지션을 "pending resolution"으로 표시
+- 알림 통합: 마켓 해결 시 Owner에게 자동 알림
+- **자동 redeem은 해결 확정 후에만** -- 분쟁 중 redeem 시도 금지
 
-**Phase to address:** Provider interface design phase (ILendingProvider extends IActionProvider pattern)
+**Detection:** redeem 트랜잭션 revert ("market not resolved"), 포지션 가치 갑작스런 변동.
+
+**Confidence:** MEDIUM (UMA 문서 + 뉴스 기반)
 
 ---
 
 ## Minor Pitfalls
 
-Issues that cause inconvenience or suboptimal behavior but are easily fixable.
+---
+
+### Pitfall N1: CTF 토큰이 "Fungible ERC-1155" -- NFT 인프라 혼동
+
+**What goes wrong:** WAIaaS v31.0 NFT 인프라(INftIndexer, NftMetadataCacheService)가 non-fungible 토큰을 가정한다. CTF 조건부 토큰은 ERC-1155이지만 fungible하게 동작 -- NFT 메타데이터 조회/컬렉션 그룹핑이 무의미.
+
+**Prevention:**
+- CTF 토큰을 NFT 인덱서에 등록하지 말 것
+- 포지션 조회는 CLOB API `/positions`를 사용, 온체인 `balanceOf(address, tokenId)`는 보조 수단
+- Admin UI "NFT" 탭이 아닌 "Prediction Market" 전용 탭에서 표시
+- CAIP-19 네임스페이스: `erc1155:polygon-mainnet/0x4D97DCd97eC945f40cF65F87097ACe5EA0476045/{tokenId}` -- NFT와 네임스페이스는 같지만 처리 파이프라인은 분리
+
+**Confidence:** MEDIUM
 
 ---
 
-### Pitfall N1: DB Migration Complexity -- positions Table Interactions
+### Pitfall N2: Polygon 네트워크 강제 검증 누락
 
-**What goes wrong:** The positions table needs foreign keys to wallets and potentially to transactions (the transaction that opened the position). Adding a new table with FK relationships to existing tables in a migration that also modifies existing table behavior creates a complex migration step. The existing migration chain (v1-v24) is already long.
+**What goes wrong:** Polymarket 액션이 polygon-mainnet/polygon-amoy 외 네트워크에서 실행되면 무의미한 트랜잭션 발생 또는 잘못된 주소에 approve.
 
 **Prevention:**
-1. **Single-purpose migration.** Migration v25: add `positions` table (and `position_snapshots` if needed). Do NOT combine with other schema changes.
-2. **Test the full migration chain** from v1 to v25. The existing chain test pattern covers this.
-3. **positions.tx_id FK is optional** (nullable). Some positions are discovered by scanning, not created by our pipeline.
+- `PolymarketActionProvider.validate()`에서 네트워크 하드체크: `polygon-mainnet` 또는 `polygon-amoy`만 허용
+- ALLOWED_NETWORKS 정책과 독립적으로 하드코딩 검증 (정책 없어도 거부)
+- connect-info polymarket capability 노출 시 polygon 네트워크 지갑만 표시
+- Amoy 테스트넷 사용 시 Exchange 주소가 메인넷과 다름 주의: Amoy CTF Exchange = `0xdFE02Eb6733538f8Ea35D585af8DE5958AD99E40`
 
-**Phase to address:** DB schema design phase
+**Confidence:** HIGH
 
 ---
 
-### Pitfall N2: Admin Settings Bloat From Provider Configuration
+### Pitfall N3: ApiDirectResult + 온체인 TX 이중 플로우 혼동
 
-**What goes wrong:** Each new provider (lending/yield/perp) adds 5-10 settings to Admin Settings. With 3 providers per protocol and 3 protocol types, that's potentially 45-90 new settings. The Admin UI Settings page becomes unwieldy.
+**What goes wrong:** CLOB 주문은 ApiDirectResult(오프체인 CONFIRMED)이지만, approve/redeem은 온체인 TX이다. 하나의 Action Provider에서 두 경로를 관리할 때 DB 상태 추적이 혼동됨.
 
 **Prevention:**
-1. **Group settings by provider** in the Admin UI, collapsible sections.
-2. **Use sensible defaults aggressively.** Most settings should never need changing. Only expose `enabled` and critical thresholds in the primary view.
-3. **Defer provider-specific tuning to Phase 2.** Phase 1: enabled/disabled + critical safety thresholds only.
+- CLOB 주문과 CTF approve/redeem을 별도 action으로 분리 (같은 Provider 내)
+- CLOB 주문: ApiDirectResult -> `polymarket_orders` 테이블에 orderId/status 기록
+- approve/redeem: 기존 CONTRACT_CALL 파이프라인 -> `transactions` 테이블
+- 주문 상태 동기화: CLOB API `/order/{orderId}` 조회 (WebSocket은 Phase 1 리서치에서 판단)
 
-**Phase to address:** Admin Settings integration phase
+**Confidence:** MEDIUM
 
 ---
 
-### Pitfall N3: Intent Pattern Scope Creep
+### Pitfall N4: 정책 엔진 매핑 -- 예측 시장 특수성
 
-**What goes wrong:** "Intent-based trading" is a broad concept. The team starts implementing a general-purpose intent system that handles arbitrary user intents (swap, lend, bridge, anything). This becomes an intent DSL, an intent solver network, and suddenly the system is rebuilding 1inch Fusion / CoW Protocol.
+**What goes wrong:** 기존 정책(ALLOWED_TOKENS, CONTRACT_WHITELIST, SPENDING_LIMIT)을 예측 시장에 매핑할 때 의미론적 불일치.
+
+**예시:**
+- "USDC 지출 한도 100 USDC/day"가 BUY makerAmount에만? SELL takerAmount(USDC 수령)는 수입?
+- CONTRACT_WHITELIST에 CTF Exchange 등록 필요?
+- 마켓 카테고리 제한(정치/스포츠/암호화폐)이 기존 정책 프레임워크에 없음
 
 **Prevention:**
-1. **Scope intents narrowly.** Intents in WAIaaS are EIP-712 signed messages for specific supported operations (swap via specific DEX, supply to specific lending pool). NOT arbitrary intent resolution.
-2. **No solver network.** WAIaaS doesn't run solvers. It signs intents that are submitted to existing solver networks (1inch Fusion, CoW Protocol, UniswapX).
-3. **Intent = "signed off-chain message that a protocol's smart contract verifies on-chain."** Nothing more. Keep this definition strict.
+- SPENDING_LIMIT: BUY makerAmount만 지출로 카운트 (Hyperliquid Perp margin 패턴과 일관)
+- CONTRACT_WHITELIST: provider 활성화 시 CTF Exchange/Neg Risk 주소 자동 등록
+- 마켓 카테고리 제한은 Admin Settings로 처리 (PolicyType 추가 최소화)
+- 예측 시장 전용 정책은 후속 마일스톤에서 검토 (최대 1개 PolicyType 추가)
 
-**Phase to address:** Intent pattern design phase
+**Confidence:** MEDIUM
 
 ---
 
-### Pitfall N4: Solana DeFi Program Incompatibility with ContractCallRequest Model
+### Pitfall N5: viem signTypedData에서 EIP712Domain 제거
 
-**What goes wrong:** Solana DeFi programs (Marginfi, Kamino, Drift) use a different interaction model than EVM. They require specific account layouts, program-derived addresses (PDAs), and instruction-level composability that doesn't map cleanly to the ContractCallRequest model designed for EVM calldata.
-
-**Prevention:**
-1. **Already partially solved.** The existing system handles Solana programs via `instructionData` + `accounts` fields in ContractCallRequest (see Jupiter implementation). Ensure this pattern extends to DeFi programs.
-2. **PDA derivation is provider responsibility.** The provider resolves PDAs during `resolve()`. The pipeline doesn't need to know about PDAs.
-3. **Multi-instruction Solana DeFi operations** (e.g., create account + deposit) use the existing BATCH type or resolve() returning `ContractCallRequest[]`.
-
-**Phase to address:** Solana DeFi provider implementation
-
----
-
-### Pitfall N5: Testing DeFi Monitoring Without Mainnet Positions
-
-**What goes wrong:** Unit tests mock position data, but integration tests need real positions on testnets. Aave has testnet deployments (Sepolia), but not all DeFi protocols have testnets (e.g., many Solana DeFi protocols are mainnet-only). This creates a testing gap for monitoring logic.
+**What goes wrong:** viem의 `signTypedData`는 `EIP712Domain`을 types에 포함하면 에러가 발생한다. Polymarket Python 클라이언트의 코드를 그대로 포팅할 때 `EIP712Domain`을 types 객체에 넣는 실수.
 
 **Prevention:**
-1. **Use the existing 3-tier test strategy:** Unit tests with mocked positions (health factor scenarios), integration tests with testnet protocols where available, fixtures for mainnet-only protocols.
-2. **Create a `MockPositionProvider`** that simulates position state changes for monitoring tests. Include scenarios: gradual HF degradation, sudden price crash, funding rate accumulation.
-3. **Position monitoring logic should be protocol-agnostic.** Test the monitoring loop independently of specific protocol data fetching.
+- viem은 `domain` 파라미터에서 자동으로 EIP712Domain을 구성 -- types에 넣지 않음
+- 기존 Hyperliquid `HyperliquidSigner`가 이미 올바르게 사용 중 -- 같은 패턴 적용
+- types에는 `Order` 타입 정의만 포함
 
-**Phase to address:** Test strategy design phase
+**Confidence:** HIGH (viem 공식 문서)
 
 ---
 
 ## Phase-Specific Warnings
 
-| Phase Topic | Likely Pitfall | Mitigation |
-|-------------|---------------|------------|
-| ILendingProvider interface design | C5 over-engineering + M7 resolve return type | Extend IActionProvider, add only query methods. Max 3 query methods. |
-| IYieldProvider interface design | M4 lock-up mismanagement | `earliestWithdrawAt` mandatory in deposit result. |
-| IPerpProvider interface design | M5 funding rate blindness + C5 over-engineering | Include cumulative funding in position query. Max 3 query methods. |
-| PositionTracker DB schema | C2 SQLite contention + N1 migration | Batch writes, separate worker, single-purpose migration v25. |
-| Position monitoring service | C1 stale data + M1 resource exhaustion + M2 AsyncPolling overload | Adaptive polling, dedicated worker (not AsyncPollingService), tiered intervals. |
-| Liquidation alerting | C4 timing problem | Aggressive thresholds, auto-protective actions for agents, never promise protection. |
-| Intent pattern implementation | C3 replay attack + N3 scope creep | Strict domain binding, short deadlines, narrow scope. |
-| Policy integration | M3 policy explosion | Reuse existing types, max 2 new PolicyTypes. |
-| Notification integration | M6 event type explosion | Hierarchical events, max 6 new types. |
-| Admin UI integration | N2 settings bloat + C5 over-engineering | Phase 2 for Admin UI views. Phase 1 = API/MCP only. |
-| Solana DeFi providers | N4 program incompatibility | Reuse existing instructionData + accounts pattern. |
-| Testing | N5 mainnet-only protocols | MockPositionProvider, protocol-agnostic monitoring tests. |
-
----
-
-## Integration Pitfalls (Specific to Existing WAIaaS System)
-
-These pitfalls arise specifically from the interaction between new DeFi features and the existing codebase.
-
----
-
-### Integration I1: BackgroundWorker Accumulation
-
-**Current state:** 6+ registered workers (wal-checkpoint, session-cleanup, version-check, async-polling, balance-monitor, incoming-tx-monitor). Adding position-monitor + any protocol-specific workers = 8+ workers all sharing setInterval timers.
-
-**Risk:** Timer drift, CPU spike when multiple workers fire simultaneously, and the 5-second `stopAll()` timeout may not be enough for position monitoring to complete its polling cycle.
-
-**Prevention:** Stagger worker intervals (don't use round numbers for all: use 47s instead of 45s, 307s instead of 300s). Increase `stopAll()` timeout proportionally. Audit total worker count before adding new ones.
-
----
-
-### Integration I2: EventBus Listener Leak
-
-**Current state:** EventBus (Node.js EventEmitter) has listeners for notifications, kill switch, auto-stop, approval workflow. Adding position monitoring events + DeFi-specific events may exceed the default maxListeners (10).
-
-**Risk:** Node.js warnings about potential memory leak, or worse, silent event dropping.
-
-**Prevention:** Audit listener count after adding position monitoring. Set maxListeners explicitly if needed. Consider using a single DeFi position listener that delegates internally.
-
----
-
-### Integration I3: RPC Pool Budget Contention
-
-**Current state:** RPC Pool with multi-endpoint rotation (v28.6). Used by: pipeline Stage 5, balance monitor, incoming TX subscribers, async polling service. Position monitoring adds another consumer.
-
-**Risk:** Hitting rate limits on RPC endpoints, causing pipeline failures (higher priority than monitoring).
-
-**Prevention:** Implement RPC call budgeting with priority: pipeline > incoming TX > position monitoring > balance monitoring. Position monitoring should back off when RPC errors increase.
-
----
-
-### Integration I4: Transaction `metadata` JSON Field Overload
-
-**Current state:** The `transactions.metadata` column (TEXT, JSON) stores provider-specific data. The `bridgeMetadata` column stores async tracking data. Adding position-related metadata (health factor impact, lock-up info, intent signature) to these JSON blobs makes them harder to query and index.
-
-**Risk:** No efficient way to query "all transactions that affected lending positions" without parsing JSON.
-
-**Prevention:** Use the separate `positions` table for position state. Transaction metadata stores only the transaction's provider context. Link via FK: `positions.last_tx_id -> transactions.id`.
+| Phase | Likely Pitfall | Mitigation |
+|-------|---------------|------------|
+| Phase 1 (리서치/설계) | C1: EIP-712 도메인 차이를 간과하고 Hyperliquid 공통화 설계 | 별도 `PolymarketSigner`, 공통 추상화는 인터페이스 수준만 |
+| Phase 1 (리서치/설계) | C3: Proxy Wallet 지원 범위 과잉 설계 | signatureType=0(EOA) 전용으로 시작 |
+| Phase 1 (리서치/설계) | C4: Neg Risk 시장 라우팅 미설계 | 설계 단계에서 binary/negRisk 분기 명시적 포함 |
+| Phase 2 (CLOB 주문) | C2: salt/nonce 혼동 | Python 클라이언트 test vector 기반 단위 테스트 선행 |
+| Phase 2 (CLOB 주문) | M1: makerAmount/takerAmount 변환 오류 | `PolymarketOrderBuilder` 전용 클래스 + tick size 검증 |
+| Phase 2 (CLOB 주문) | M2: API Key 생성 실패 | CLOB 서버 시간 사용, nonce 자동 증가, 3개 값 모두 저장 |
+| Phase 2 (CLOB 주문) | N5: viem EIP712Domain 중복 | types에 EIP712Domain 넣지 않음 (viem 자동 처리) |
+| Phase 3 (마켓/포지션) | M4: approve 대상 누락 (5곳) | 초기 setup 액션으로 일괄 approve |
+| Phase 3 (마켓/포지션) | M6: 해결 중 마켓의 redeem 시도 | 온체인 payoutNumerators 확인 후 redeem |
+| Phase 3 (마켓/포지션) | N1: CTF 토큰 NFT 인프라 혼동 | 전용 탭, NFT 인덱서 미등록 |
+| Phase 4 (테스트) | M3: 테스트넷 부재 E2E 커버리지 부족 | 3-tier 전략 (unit + mock + mainnet UAT) |
+| Phase 4 (테스트) | M5: Rate limit 전략 미스매치 | 엔드포인트 그룹별 독립 limiter + 타임아웃 30s+ |
+| 전 Phase | N2: Polygon 네트워크 검증 누락 | Provider.validate()에서 하드체크 |
+| 전 Phase | N4: 정책 엔진 매핑 | SPENDING_LIMIT에 BUY makerAmount만 카운트 |
 
 ---
 
 ## Sources
 
-- Aave Health Factor & Liquidations documentation: https://aave.com/help/borrowing/liquidations
-- Aave V3 Pool documentation: https://aave.com/docs/aave-v3/smart-contracts/pool
-- Aave V3 Oracle Sentinel: https://aave.com/docs/aave-v3/smart-contracts/view-contracts
-- EIP-712 implementation issues affecting 40+ wallets: https://www.coinspect.com/blog/chainid-eip-712-implementation-issue/
-- EIP-712 risks (Auditor's Digest): https://medium.com/@chinmayf/auditors-digest-the-risks-of-eip712-5a0fc57e3837
-- EIP-712 normalization phishing: https://coinpaper.com/3546/wallet-drainers-can-bypass-security-by-exploiting-eip-712-normalization
-- SQLite concurrency limitations: https://dev.to/lovestaco/sqlite-limitations-and-internal-architecture-4o62
-- SQLite high-performance optimizations: https://www.powersync.com/blog/sqlite-optimizations-for-ultra-high-performance
-- AI agent DeFi trading mistakes ($450K incident): https://www.cryptotimes.io/2026/02/23/ai-agent-accidentally-sends-450k-sparks-autonomous-trading-debate/
-- AI agent pilot failure patterns: https://composio.dev/blog/why-ai-agent-pilots-fail-2026-integration-roadmap
-- DeFi auto-deleveraging pitfalls: https://fastercapital.com/content/Auto-Deleveraging--ADL---Avoiding-the-Pitfalls--The-Importance-of-Auto-Deleveraging-in-Perpetual-Futures.html
-- Polling vs event-driven architecture: https://www.designgurus.io/course-play/grokking-system-design-fundamentals/doc/eventdriven-vs-polling-architecture
-- ERC-2612 Permit nonce management: https://eips.ethereum.org/EIPS/eip-2612
-- WAIaaS codebase: `packages/daemon/src/services/async-polling-service.ts`, `packages/core/src/enums/policy.ts`, `packages/actions/src/common/async-status-tracker.ts`, `packages/daemon/src/lifecycle/workers.ts`, `packages/daemon/src/infrastructure/database/schema.ts`
+### 공식 문서 (HIGH confidence)
+- [Polymarket CLOB Authentication](https://docs.polymarket.com/developers/CLOB/authentication)
+- [Polymarket API Rate Limits](https://docs.polymarket.com/quickstart/introduction/rate-limits)
+- [Polymarket CTF Overview](https://docs.polymarket.com/developers/CTF/overview)
+- [Polymarket Contract Addresses](https://docs.polymarket.com/resources/contract-addresses)
+- [Polymarket Create Order](https://docs.polymarket.com/developers/CLOB/orders/create-order)
+- [Polymarket Resolution (UMA)](https://docs.polymarket.com/developers/resolution/UMA)
+
+### 공식 소스코드 (HIGH confidence)
+- [CTF Exchange OrderStructs.sol](https://github.com/Polymarket/ctf-exchange/blob/main/src/exchange/libraries/OrderStructs.sol)
+- [CTF Exchange Hashing.sol](https://github.com/Polymarket/ctf-exchange/blob/main/src/exchange/mixins/Hashing.sol)
+- [CTF Exchange Overview](https://github.com/Polymarket/ctf-exchange/blob/main/docs/Overview.md)
+- [NegRiskAdapter](https://github.com/Polymarket/neg-risk-ctf-adapter)
+- [py-clob-client](https://github.com/Polymarket/py-clob-client)
+- [py-clob-client EIP-712 signing](https://github.com/Polymarket/py-clob-client/blob/main/py_clob_client/signing/eip712.py)
+- [clob-client (TypeScript)](https://github.com/Polymarket/clob-client)
+- [rs-clob-client (Rust)](https://github.com/Polymarket/rs-clob-client)
+
+### 참조 구현/Gist (HIGH confidence)
+- [Polymarket order signing in Clojure](https://gist.github.com/shaunlebron/7463f0003aa906ffe6f31dc18c408f73) -- EIP-712 도메인/struct 완전 명세
+- [CLOB Allowance Setting Python + Neg Risk](https://gist.github.com/poly-rodr/44313920481de58d5a3f6d1f8226bd5e) -- approve 대상 완전 목록
+
+### 커뮤니티/이슈 (MEDIUM confidence)
+- [py-clob-client Issue #121 (FOK decimal error)](https://github.com/Polymarket/py-clob-client/issues/121)
+- [py-clob-client Issue #187 (401 Unauthorized)](https://github.com/Polymarket/py-clob-client/issues/187)
+- [py-clob-client Issue #138 (Neg Risk resolution)](https://github.com/Polymarket/py-clob-client/issues/138)
+- [py-clob-client Issue #147 (Rate limit burst vs throttle)](https://github.com/Polymarket/py-clob-client/issues/147)
+- [UMA Oracle manipulation 2025](https://orochi.network/blog/oracle-manipulation-in-polymarket-2025)
+- [Understanding UMA dispute resolution](https://ariverwhale.substack.com/p/understanding-uma-and-dispute-resolution)
