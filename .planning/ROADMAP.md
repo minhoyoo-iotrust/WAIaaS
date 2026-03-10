@@ -12,7 +12,7 @@ Polymarket 예측 시장을 WAIaaS에 통합한다. Off-chain CLOB 주문과 On-
 
 - [x] **Phase 370: 설계 및 리서치** - Polymarket 심층 리서치 + EIP-712 서명 구조 설계 + 설계 문서 doc 80 작성
 - [x] **Phase 371: CLOB 주문 구현** - API Key 생성, 주문 배치/취소, DB 마이그레이션, Neg Risk 라우팅 (completed 2026-03-10)
-- [ ] **Phase 372: 마켓 조회 + 포지션/정산** - Gamma API 마켓 탐색, 포지션 추적, CTF 온체인 리딤, PnL
+- [x] **Phase 372: 마켓 조회 + 포지션/정산** - Gamma API 마켓 탐색, 포지션 추적, CTF 온체인 리딤, PnL (completed 2026-03-11)
 - [ ] **Phase 373: 인터페이스 통합** - Admin Settings/UI, MCP 도구, SDK, 정책 엔진, Skill 파일
 - [ ] **Phase 374: 테스트 + 검증** - E2E 스모크 시나리오, Agent UAT 시나리오
 
@@ -60,12 +60,12 @@ Plans:
   3. 사용자가 보유 포지션(토큰, 평균 진입가, 현재 가치, PnL)을 조회할 수 있다
   4. 사용자가 해결된 마켓에서 승리 토큰을 온체인 CTF redeemPositions으로 리딤할 수 있다
   5. 마켓 해결 시 사용자에게 알림이 전송되고 자동 리딤 제안이 포함된다
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 
 Plans:
-- [ ] 372-01-PLAN.md — PolymarketGammaClient + MarketData (Gamma API 마켓/이벤트 조회, 30s TTL 캐시, neg_risk 플래그)
-- [ ] 372-02-PLAN.md — PolymarketCtfProvider (pm_redeem_positions, pm_split/merge, pm_approve_collateral/ctf)
-- [ ] 372-03-PLAN.md — PositionTracker + PnlCalculator + ResolutionMonitor + 인프라 팩토리 최종 결합
+- [x] 372-01-PLAN.md — PolymarketGammaClient + MarketData (Gamma API 마켓/이벤트 조회, 30s TTL 캐시, neg_risk 플래그)
+- [x] 372-02-PLAN.md — PolymarketCtfProvider (pm_redeem_positions, pm_split/merge, pm_approve_collateral/ctf)
+- [x] 372-03-PLAN.md — PositionTracker + PnlCalculator + ResolutionMonitor + 인프라 팩토리 최종 결합
 
 ### Phase 373: 인터페이스 통합
 **Goal**: Polymarket 기능이 Admin UI, MCP, SDK, 정책 엔진, connect-info를 통해 완전히 접근 가능하다
@@ -107,6 +107,6 @@ Phases execute in numeric order: 370 → 371 → 372 → 373 → 374
 |-------|----------------|--------|-----------|
 | 370. 설계 및 리서치 | 1/1 | Complete    | 2026-03-10 |
 | 371. CLOB 주문 구현 | 4/4 | Complete    | 2026-03-10 |
-| 372. 마켓 조회 + 포지션/정산 | 0/3 | Not started | - |
+| 372. 마켓 조회 + 포지션/정산 | 3/3 | Complete    | 2026-03-11 |
 | 373. 인터페이스 통합 | 0/4 | Not started | - |
 | 374. 테스트 + 검증 | 0/2 | Not started | - |

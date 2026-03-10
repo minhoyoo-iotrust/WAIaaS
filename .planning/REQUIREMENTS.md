@@ -30,17 +30,17 @@ Requirements for v31.9 milestone. Each maps to roadmap phases.
 
 ### Market Discovery
 
-- [ ] **MRKT-01**: User can browse active markets (카테고리/상태/유동성 필터)
-- [ ] **MRKT-02**: User can view market details (설명, 아웃컴, 가격, 거래량, 해결 기한)
-- [ ] **MRKT-03**: User can search markets by keyword
+- [x] **MRKT-01**: User can browse active markets (카테고리/상태/유동성 필터)
+- [x] **MRKT-02**: User can view market details (설명, 아웃컴, 가격, 거래량, 해결 기한)
+- [x] **MRKT-03**: User can search markets by keyword
 
 ### Position & Settlement
 
-- [ ] **SETL-01**: User can view positions (보유 토큰, 평균 진입가, 현재 가치, PnL)
-- [ ] **SETL-02**: User can redeem winning tokens after market resolution (CTF 온체인 리딤)
-- [ ] **SETL-03**: User can track market resolution status
-- [ ] **SETL-04**: User receives notification when market resolves (자동 리딤 제안 포함)
-- [ ] **SETL-05**: PnL calculation for open and closed positions
+- [x] **SETL-01**: User can view positions (보유 토큰, 평균 진입가, 현재 가치, PnL)
+- [x] **SETL-02**: User can redeem winning tokens after market resolution (CTF 온체인 리딤)
+- [x] **SETL-03**: User can track market resolution status
+- [x] **SETL-04**: User receives notification when market resolves (자동 리딤 제안 포함)
+- [x] **SETL-05**: PnL calculation for open and closed positions
 
 ### Integration
 
@@ -96,14 +96,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CLOB-09 | Phase 371 | Pending |
 | CLOB-10 | Phase 371 | Complete |
 | CLOB-11 | Phase 371 | Complete |
-| MRKT-01 | Phase 372 | Pending |
-| MRKT-02 | Phase 372 | Pending |
-| MRKT-03 | Phase 372 | Pending |
-| SETL-01 | Phase 372 | Pending |
-| SETL-02 | Phase 372 | Pending |
-| SETL-03 | Phase 372 | Pending |
-| SETL-04 | Phase 372 | Pending |
-| SETL-05 | Phase 372 | Pending |
+| MRKT-01 | Phase 372 | Complete |
+| MRKT-02 | Phase 372 | Complete |
+| MRKT-03 | Phase 372 | Complete |
+| SETL-01 | Phase 372 | Complete |
+| SETL-02 | Phase 372 | Complete |
+| SETL-03 | Phase 372 | Complete |
+| SETL-04 | Phase 372 | Complete |
+| SETL-05 | Phase 372 | Complete |
 | INTG-01 | Phase 373 | Pending |
 | INTG-02 | Phase 373 | Pending |
 | INTG-03 | Phase 373 | Pending |
