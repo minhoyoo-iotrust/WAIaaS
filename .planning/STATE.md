@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v31.9
 milestone_name: milestone
 status: completed
-stopped_at: Completed 373-04-PLAN.md (Phase 373 complete)
-last_updated: "2026-03-10T17:13:39.782Z"
-last_activity: 2026-03-11 — Phase 373 plans 01-04 completed
+stopped_at: Completed 374-02-PLAN.md (Phase 374 complete — milestone v31.9 done)
+last_updated: "2026-03-10T17:24:00.000Z"
+last_activity: 2026-03-11 — Phase 374 plans 01-02 completed (milestone complete)
 progress:
   total_phases: 5
-  completed_phases: 4
-  total_plans: 12
-  completed_plans: 12
-  percent: 99
+  completed_phases: 5
+  total_plans: 14
+  completed_plans: 14
+  percent: 100
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-11)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Phase 373 인터페이스 통합 (complete)
+**Current focus:** Phase 374 테스트 + 검증 (complete — milestone v31.9 done)
 
 ## Current Position
 
-Phase: 373 of 374 (인터페이스 통합)
-Plan: 4 of 4 in current phase (COMPLETE)
-Status: Phase 373 complete
-Last activity: 2026-03-11 — Phase 373 plans 01-04 completed
+Phase: 374 of 374 (테스트 + 검증)
+Plan: 2 of 2 in current phase (COMPLETE)
+Status: Milestone v31.9 complete
+Last activity: 2026-03-11 — Phase 374 plans 01-02 completed
 
-Progress: [██████████] 99%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7
-- Average duration: ~13min
-- Total execution time: ~1.7 hours
+- Total plans completed: 9
+- Average duration: ~11min
+- Total execution time: ~1.8 hours
 
 **By Phase:**
 
@@ -46,9 +46,10 @@ Progress: [██████████] 99%
 | 371 | 4 | ~70min | ~18min |
 | 372 | 3 | ~13min | ~4min |
 | 373 | 4 | ~12min | ~3min |
+| 374 | 2 | ~5min | ~2.5min |
 
 **Recent Trend:**
-- Last 5 plans: 372-01(5m), 372-02(5m), 372-03(5m), 373-03(3m), 373-04(3m)
+- Last 5 plans: 372-03(5m), 373-03(3m), 373-04(3m), 374-01(3m), 374-02(2m)
 - Trend: Accelerating
 
 *Updated after each plan completion*
@@ -76,6 +77,8 @@ Recent decisions affecting current work:
 - [Phase 373]: Polygon wallet filter for Admin UI (chain=ethereum AND network contains polygon)
 - [Phase 373]: connect-info polymarket capability follows Hyperliquid pattern
 - [Phase 373]: 17 policy tests verify defaultTier and connect-info behavior at daemon level
+- [Phase 374]: E2E Polymarket coverage: 4 scenarios, env-gated WAIAAS_E2E_POLYMARKET_ENABLED
+- [Phase 374]: UAT defi-13 with 0.01 price for fill prevention during mainnet testing
 
 ### Pending Todos
 
@@ -89,5 +92,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-11
-Stopped at: Completed 373-04-PLAN.md (Phase 373 complete)
+Stopped at: Completed 374-02-PLAN.md (Milestone v31.9 complete)
 Resume file: None

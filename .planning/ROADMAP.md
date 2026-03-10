@@ -14,7 +14,7 @@ Polymarket 예측 시장을 WAIaaS에 통합한다. Off-chain CLOB 주문과 On-
 - [x] **Phase 371: CLOB 주문 구현** - API Key 생성, 주문 배치/취소, DB 마이그레이션, Neg Risk 라우팅 (completed 2026-03-10)
 - [x] **Phase 372: 마켓 조회 + 포지션/정산** - Gamma API 마켓 탐색, 포지션 추적, CTF 온체인 리딤, PnL (completed 2026-03-11)
 - [x] **Phase 373: 인터페이스 통합** - Admin Settings/UI, MCP 도구, SDK, 정책 엔진, Skill 파일 (completed 2026-03-11)
-- [ ] **Phase 374: 테스트 + 검증** - E2E 스모크 시나리오, Agent UAT 시나리오
+- [x] **Phase 374: 테스트 + 검증** - E2E 스모크 시나리오, Agent UAT 시나리오 (completed 2026-03-11)
 
 ## Phase Details
 
@@ -92,11 +92,11 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. 오프체인 CLOB 플로우 E2E 스모크 시나리오가 CI에 등록되어 통과한다
   2. Agent UAT 시나리오(6-section 포맷, DeFi 카테고리)가 작성되어 메인넷 검증 가능하다
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
-- [ ] 374-01-PLAN.md — E2E 스모크 시나리오 (오프체인 CLOB mock 기반, 4 scenarios, coverage map)
-- [ ] 374-02-PLAN.md — Agent UAT 시나리오 작성 (6-section 포맷, defi-13, 8 steps)
+- [x] 374-01-PLAN.md — E2E 스모크 시나리오 (오프체인 CLOB mock 기반, 4 scenarios, coverage map)
+- [x] 374-02-PLAN.md — Agent UAT 시나리오 작성 (6-section 포맷, defi-13, 8 steps)
 
 ## Progress
 
@@ -109,4 +109,4 @@ Phases execute in numeric order: 370 → 371 → 372 → 373 → 374
 | 371. CLOB 주문 구현 | 4/4 | Complete    | 2026-03-10 |
 | 372. 마켓 조회 + 포지션/정산 | 3/3 | Complete    | 2026-03-10 |
 | 373. 인터페이스 통합 | 4/4 | Complete    | 2026-03-10 |
-| 374. 테스트 + 검증 | 0/2 | Not started | - |
+| 374. 테스트 + 검증 | 2/2 | Complete    | 2026-03-11 |

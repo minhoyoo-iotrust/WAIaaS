@@ -51,8 +51,8 @@ Requirements for v31.9 milestone. Each maps to roadmap phases.
 - [x] **INTG-05**: 정책 엔진 연동 (지출 한도, 마켓 거래 허용, Polygon 네트워크 검증)
 - [x] **INTG-06**: DB 마이그레이션 (polymarket_orders, polymarket_api_keys 테이블)
 - [x] **INTG-07**: connect-info polymarket capability 확장
-- [ ] **INTG-08**: E2E 스모크 시나리오 등록 (오프체인 CLOB 플로우)
-- [ ] **INTG-09**: Agent UAT 시나리오 작성 (6-section 포맷, DeFi 카테고리)
+- [x] **INTG-08**: E2E 스모크 시나리오 등록 (오프체인 CLOB 플로우)
+- [x] **INTG-09**: Agent UAT 시나리오 작성 (6-section 포맷, DeFi 카테고리)
 - [x] **INTG-10**: Skill 파일 업데이트/생성
 
 ## v2 Requirements
@@ -111,8 +111,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INTG-05 | Phase 373 | Complete |
 | INTG-06 | Phase 371 | Complete |
 | INTG-07 | Phase 373 | Complete |
-| INTG-08 | Phase 374 | Pending |
-| INTG-09 | Phase 374 | Pending |
+| INTG-08 | Phase 374 | Complete |
+| INTG-09 | Phase 374 | Complete |
 | INTG-10 | Phase 373 | Complete |
 
 **Coverage:**
