@@ -2,7 +2,7 @@
 name: "WAIaaS Actions"
 description: "Action Provider framework: list providers, execute DeFi actions through the 6-stage transaction pipeline"
 category: "api"
-tags: [wallet, blockchain, defi, actions, waiass, jupiter, 0x, swap, lifi, bridge, cross-chain, lido, jito, staking, liquid-staking, pendle, yield, pt, yt, drift, perp, perpetual, leverage, futures, dcent-swap, dcent, aggregator, across, across-bridge]
+tags: [wallet, blockchain, defi, actions, waiass, jupiter, 0x, swap, lifi, bridge, cross-chain, lido, jito, staking, liquid-staking, pendle, yield, pt, yt, drift, perp, perpetual, leverage, futures, dcent-swap, dcent, aggregator, across, across-bridge, polymarket, prediction-market, clob, ctf]
 version: "2.9.0-rc"
 dispatch:
   kind: "tool"
@@ -1744,7 +1744,61 @@ Returns supported chain/token route combinations.
 - `action_across_bridge_status` -- Check bridge deposit status
 - `action_across_bridge_routes` -- List available routes
 
-## 15. Policy Integration
+## 15. Polymarket Prediction Market
+
+Polymarket trades on Polygon using CLOB off-chain orders and CTF on-chain settlement. Two providers: `polymarket_order` (CLOB) and `polymarket_ctf` (on-chain). Requires Polygon wallet.
+
+### Setup
+
+```bash
+curl -s -X POST http://localhost:3100/v1/wallets/${WALLET_ID}/polymarket/setup \
+  -H 'Authorization: Bearer wai_sess_eyJ...'
+```
+
+### CLOB Trading Actions (polymarket_order)
+
+| Action | Tier | Description |
+|--------|------|-------------|
+| `pm_buy` | APPROVAL | Buy outcome tokens |
+| `pm_sell` | DELAY | Sell outcome tokens |
+| `pm_cancel_order` | INSTANT | Cancel order by ID |
+| `pm_cancel_all` | INSTANT | Cancel all orders |
+| `pm_update_order` | DELAY | Update order (cancel+replace) |
+
+### CTF On-chain Actions (polymarket_ctf)
+
+| Action | Tier | Description |
+|--------|------|-------------|
+| `pm_split_position` | DELAY | Split USDC to outcome tokens |
+| `pm_merge_positions` | DELAY | Merge outcome tokens to USDC |
+| `pm_redeem_positions` | INSTANT | Redeem winning tokens |
+| `pm_approve_collateral` | INSTANT | Approve USDC.e for CTF |
+| `pm_approve_ctf` | INSTANT | Approve CTF ERC-1155 tokens |
+
+### Admin Settings
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `actions.polymarket_enabled` | `false` | Enable Polymarket |
+| `actions.polymarket_default_fee_bps` | `0` | Default fee (bps) |
+| `actions.polymarket_order_expiry_seconds` | `86400` | Order expiry |
+| `actions.polymarket_max_position_usdc` | `1000` | Max position USDC |
+| `actions.polymarket_proxy_wallet` | `false` | Proxy wallet mode |
+| `actions.polymarket_neg_risk_enabled` | `true` | Neg risk routing |
+| `actions.polymarket_auto_approve_ctf` | `true` | Auto approve CTF |
+
+### Example: Buy on Prediction Market
+
+```bash
+curl -s -X POST http://localhost:3100/v1/actions/polymarket_order/pm_buy \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -H 'Content-Type: application/json' \
+  -d '{"walletId":"WALLET_ID","params":{"tokenId":"TOKEN_ID","price":"0.65","size":"100"}}'
+```
+
+See **polymarket.skill.md** for full reference.
+
+## 16. Policy Integration
 
 ### CONTRACT_WHITELIST
 
@@ -1771,7 +1825,7 @@ The swap/bridge input amount is converted to USD via IPriceOracle and evaluated 
 
 **LI.FI bridge reservation lifecycle:** Bridge amounts are reserved against the spending limit when the transaction is submitted. The reservation is released on terminal states (COMPLETED, FAILED, REFUNDED) but **held** on TIMEOUT to prevent double-spend during manual resolution. This means the spending budget is not freed until the bridge completes or fails definitively.
 
-## 16. Configuration via Admin Settings
+## 17. Configuration via Admin Settings
 
 Since v28.2, all action provider settings are managed via **Admin UI > DeFi (`#/defi`)** for DeFi providers and **Admin UI > Agent Identity (`#/agent-identity`)** for ERC-8004 (not config.toml). The Admin Settings UI provides:
 
@@ -1811,7 +1865,7 @@ Operators can override the default security tier for individual actions. This al
 
 **Cross-reference:** Policy tier escalation rules apply on top of action tier. See **policies.skill.md** Section 3.
 
-## 17. Error Reference
+## 18. Error Reference
 
 | Code | HTTP | Description | Recovery |
 |------|------|-------------|----------|
@@ -1827,7 +1881,7 @@ Operators can override the default security tier for individual actions. This al
 | `INVALID_INSTRUCTION` | 400 | Chain not supported by LI.FI integration. | Use one of the supported chains: solana, ethereum, polygon, arbitrum, optimism, base. |
 | `ACTION_API_ERROR` | 502 | LI.FI API returned an error. | Check LI.FI API status, verify parameters, retry. |
 
-## 18. MCP Auto-Registration
+## 19. MCP Auto-Registration
 
 When a provider has `mcpExpose: true` in its metadata, the MCP server automatically registers each action as an MCP tool using the naming convention:
 
@@ -1878,10 +1932,11 @@ MCP tool parameters:
 - `network` (optional string): Target network
 - `wallet_id` (optional string): Target wallet ID
 
-## 19. Related Skill Files
+## 20. Related Skill Files
 
 - **admin.skill.md** -- API key management, Admin Settings, daemon admin
 - **transactions.skill.md** -- 5-type transaction reference (actions execute as CONTRACT_CALL)
 - **policies.skill.md** -- Policy management (CONTRACT_WHITELIST, SPENDING_LIMIT, REPUTATION_THRESHOLD)
 - **wallet.skill.md** -- Wallet CRUD, sessions, assets
 - **erc8004.skill.md** -- ERC-8004 trustless agent identity and reputation
+- **polymarket.skill.md** -- Polymarket prediction market trading (CLOB + CTF)
