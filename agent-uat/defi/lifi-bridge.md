@@ -2,6 +2,7 @@
 id: "defi-03"
 title: "LI.FI Cross-Chain Bridge (L1 -> L2)"
 category: "defi"
+auth: "session"
 network: ["ethereum-mainnet", "arbitrum-mainnet"]
 requires_funds: true
 estimated_cost_usd: "5.00"
@@ -31,16 +32,16 @@ tags: ["defi", "bridge", "lifi", "crosschain", "l1-to-l2"]
 ### Step 1: 출발 체인 잔액 조회
 **Action**: Ethereum Mainnet에서 ETH 잔액을 조회한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=ethereum-mainnet \
+curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=ethereum-mainnet \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 200 OK, ETH 잔액이 반환된다
 **Check**: ETH 잔액이 0.01 이상인지 확인
 
-### Step 2: LI.FI 브릿지 Dry-Run
-**Action**: Ethereum -> Arbitrum ETH 브릿지를 dry-run으로 실행하여 예상 수령량, 브릿지 경로, 가스비를 확인한다.
+### Step 2: LI.FI 브릿지 Simulate
+**Action**: Ethereum -> Arbitrum ETH 브릿지를 simulate으로 실행하여 예상 수령량, 브릿지 경로, 가스비를 확인한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
+curl -s -X POST http://localhost:3100/v1/transactions/simulate \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
@@ -74,7 +75,7 @@ curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
 ### Step 4: 실제 브릿지 실행
 **Action**: 사용자 승인 후 실제 브릿지를 실행한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions \
+curl -s -X POST http://localhost:3100/v1/transactions/send \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
@@ -116,7 +117,7 @@ curl -s http://localhost:3100/v1/transactions/<TX_ID> \
 ### Step 7: 도착 체인 잔액 확인
 **Action**: 브릿지 완료 후 Arbitrum Mainnet에서 ETH 잔액을 확인한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=arbitrum-mainnet \
+curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=arbitrum-mainnet \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: Arbitrum ETH 잔액이 ~0.005 ETH (수수료 차감) 증가
@@ -124,7 +125,7 @@ curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=arbitrum-ma
 
 ## Verification
 - [ ] 출발 체인 ETH 잔액 조회 성공 (200 응답)
-- [ ] LI.FI 브릿지 dry-run 성공 (경로, 예상 수령량, 소요 시간 반환)
+- [ ] LI.FI 브릿지 simulate 성공 (경로, 예상 수령량, 소요 시간 반환)
 - [ ] 사용자 승인 완료
 - [ ] 실제 브릿지 트랜잭션 생성 성공 (txId, txHash 반환)
 - [ ] 출발 체인 tx 컨펌 완료
@@ -146,5 +147,5 @@ curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=arbitrum-ma
 | Bridge route not available | 해당 경로 미지원 | 다른 토큰 쌍 또는 다른 도착 체인 시도 |
 | Gas price spike on L1 | Ethereum 네트워크 혼잡 | 혼잡 완화 후 재시도 |
 | Bridge timeout | 10분 이상 대기 | 브릿지 상태 계속 확인, LI.FI explorer에서 tx 조회 |
-| Destination token different | 도착 토큰이 예상과 다름 | dry-run에서 toToken 확인, 경로 재설정 |
+| Destination token different | 도착 토큰이 예상과 다름 | simulate에서 toToken 확인, 경로 재설정 |
 | Insufficient ETH | ETH 잔액 부족 | 최소 0.01 ETH 확보 (브릿지 + 가스) |

@@ -2,6 +2,7 @@
 id: "mainnet-05"
 title: "L2 네이티브 전송"
 category: "mainnet"
+auth: "session"
 network: ["polygon-mainnet", "arbitrum-mainnet", "base-mainnet"]
 requires_funds: true
 estimated_cost_usd: "0.05"
@@ -42,27 +43,27 @@ curl -s http://localhost:3100/v1/wallets \
 ### Step 2: Polygon 자기 전송 (사용 가능한 경우)
 **Action**: Polygon Mainnet에서 자기 주소로 0.001 POL을 전송한다.
 ```bash
-# Dry-run
-curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
+# Simulate
+curl -s -X POST http://localhost:3100/v1/transactions/simulate \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<POLYGON_WALLET_ID>",
     "type": "TRANSFER",
     "to": "<MY_POLYGON_ADDRESS>",
-    "value": "0.001",
+    "amount": "1000000000000000",
     "network": "polygon-mainnet"
   }'
 
-# 실제 전송 (dry-run 확인 후)
-curl -s -X POST http://localhost:3100/v1/transactions \
+# 실제 전송 (simulate 확인 후)
+curl -s -X POST http://localhost:3100/v1/transactions/send \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<POLYGON_WALLET_ID>",
     "type": "TRANSFER",
     "to": "<MY_POLYGON_ADDRESS>",
-    "value": "0.001",
+    "amount": "1000000000000000",
     "network": "polygon-mainnet"
   }'
 ```
@@ -72,27 +73,27 @@ curl -s -X POST http://localhost:3100/v1/transactions \
 ### Step 3: Arbitrum 자기 전송 (선택적)
 **Action**: Arbitrum Mainnet에서 자기 주소로 0.0001 ETH를 전송한다.
 ```bash
-# Dry-run
-curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
+# Simulate
+curl -s -X POST http://localhost:3100/v1/transactions/simulate \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<ARBITRUM_WALLET_ID>",
     "type": "TRANSFER",
     "to": "<MY_ARBITRUM_ADDRESS>",
-    "value": "0.0001",
+    "amount": "100000000000000",
     "network": "arbitrum-mainnet"
   }'
 
-# 실제 전송 (dry-run 확인 후)
-curl -s -X POST http://localhost:3100/v1/transactions \
+# 실제 전송 (simulate 확인 후)
+curl -s -X POST http://localhost:3100/v1/transactions/send \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<ARBITRUM_WALLET_ID>",
     "type": "TRANSFER",
     "to": "<MY_ARBITRUM_ADDRESS>",
-    "value": "0.0001",
+    "amount": "100000000000000",
     "network": "arbitrum-mainnet"
   }'
 ```
@@ -102,27 +103,27 @@ curl -s -X POST http://localhost:3100/v1/transactions \
 ### Step 4: Base 자기 전송 (선택적)
 **Action**: Base Mainnet에서 자기 주소로 0.0001 ETH를 전송한다.
 ```bash
-# Dry-run
-curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
+# Simulate
+curl -s -X POST http://localhost:3100/v1/transactions/simulate \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<BASE_WALLET_ID>",
     "type": "TRANSFER",
     "to": "<MY_BASE_ADDRESS>",
-    "value": "0.0001",
+    "amount": "100000000000000",
     "network": "base-mainnet"
   }'
 
-# 실제 전송 (dry-run 확인 후)
-curl -s -X POST http://localhost:3100/v1/transactions \
+# 실제 전송 (simulate 확인 후)
+curl -s -X POST http://localhost:3100/v1/transactions/send \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<BASE_WALLET_ID>",
     "type": "TRANSFER",
     "to": "<MY_BASE_ADDRESS>",
-    "value": "0.0001",
+    "amount": "100000000000000",
     "network": "base-mainnet"
   }'
 ```
@@ -133,7 +134,7 @@ curl -s -X POST http://localhost:3100/v1/transactions \
 **Action**: 사용한 각 L2 네트워크의 잔액을 재확인한다.
 ```bash
 # 사용한 L2별로 반복
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=<L2_NETWORK> \
+curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=<L2_NETWORK> \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 각 L2에서 가스비만큼만 감소 (자기 전송)
@@ -141,7 +142,7 @@ curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=<L2_NETWORK
 
 ## Verification
 - [ ] 최소 1개 L2 네트워크에서 지갑 확인
-- [ ] Dry-run 성공 (L2 가스비 확인)
+- [ ] Simulate 성공 (L2 가스비 확인)
 - [ ] 자기 전송 트랜잭션 생성 성공 (각 L2)
 - [ ] 트랜잭션 컨펌 완료 (L2는 빠른 컨펌)
 - [ ] 잔액 감소분이 가스비 이내 (L2 가스비는 매우 저렴)

@@ -2,7 +2,7 @@
 
 - **Type:** BUG
 - **Priority:** MEDIUM
-- **Status:** OPEN
+- **Status:** FIXED
 - **Created:** 2026-03-10
 
 ## 설명

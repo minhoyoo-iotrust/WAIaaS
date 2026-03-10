@@ -2,6 +2,7 @@
 id: "admin-01"
 title: "Admin UI 전체 페이지 접근 검증"
 category: "admin"
+auth: "master"
 network: ["all"]
 requires_funds: false
 estimated_cost_usd: "0"

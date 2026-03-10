@@ -2,6 +2,7 @@
 id: "admin-07"
 title: "Admin NFT 탭 검증"
 category: "admin"
+auth: "master"
 network: ["ethereum-mainnet", "solana-mainnet"]
 requires_funds: false
 estimated_cost_usd: "0"
@@ -39,7 +40,7 @@ curl -s http://localhost:3100/v1/admin/settings \
 ### Step 2: 지갑별 NFT 조회
 **Action**: NFT 보유 지갑에서 NFT 목록을 조회한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/nfts?network=ethereum-mainnet \
+curl -s http://localhost:3100/v1/wallet/nfts?walletId=<WALLET_ID>&network=ethereum-mainnet \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 200 OK, NFT 목록이 반환된다 (보유 시) 또는 빈 배열 (미보유 시)
@@ -66,7 +67,7 @@ curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/nfts?network=ethereum-mainn
 ### Step 5: 페이지네이션 확인
 **Action**: NFT가 다수인 경우 페이지네이션 동작을 확인한다.
 ```bash
-curl -s "http://localhost:3100/v1/wallets/<WALLET_ID>/nfts?network=ethereum-mainnet&limit=5&offset=0" \
+curl -s "http://localhost:3100/v1/wallet/nfts?walletId=<WALLET_ID>&network=ethereum-mainnet&limit=5&offset=0" \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 200 OK, limit/offset에 따른 페이지네이션이 동작한다

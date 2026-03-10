@@ -1,7 +1,8 @@
 ---
-id: "testnet-04"
+id: "testnet-03"
 title: "Sepolia ERC-20 전송"
 category: "testnet"
+auth: "session"
 network: ["ethereum-sepolia"]
 requires_funds: true
 estimated_cost_usd: "0.02"
@@ -12,7 +13,7 @@ tags: ["transfer", "erc20", "token", "sepolia"]
 # Sepolia ERC-20 전송
 
 ## Metadata
-- **ID**: testnet-04
+- **ID**: testnet-03
 - **Category**: testnet
 - **Network**: ethereum-sepolia
 - **Requires Funds**: Yes
@@ -31,24 +32,24 @@ tags: ["transfer", "erc20", "token", "sepolia"]
 ### Step 1: 토큰 잔액 조회
 **Action**: Sepolia 네트워크에서 지갑의 토큰 잔액 목록을 조회한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=ethereum-sepolia \
+curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=ethereum-sepolia \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 200 OK, 네이티브 ETH 잔액과 토큰 잔액 목록이 반환된다
 **Check**: 토큰 목록에서 전송할 ERC-20 토큰이 있는지 확인. `TOKEN_ADDRESS` 기록
 
-### Step 2: Dry-Run ERC-20 자기 전송
-**Action**: 자기 주소로 ERC-20 토큰을 전송하는 dry-run을 실행한다.
+### Step 2: Simulate ERC-20 자기 전송
+**Action**: 자기 주소로 ERC-20 토큰을 전송하는 simulate을 실행한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
+curl -s -X POST http://localhost:3100/v1/transactions/simulate \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
     "type": "TOKEN_TRANSFER",
     "to": "<MY_ADDRESS>",
-    "token": "<TOKEN_ADDRESS>",
-    "amount": "1",
+    "token": { "address": "<TOKEN_ADDRESS>", "decimals": "<TOKEN_DECIMALS>", "symbol": "<TOKEN_SYMBOL>" },
+    "amount": "<AMOUNT_IN_MINIMUM_UNITS>",
     "network": "ethereum-sepolia"
   }'
 ```
@@ -56,17 +57,17 @@ curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
 **Check**: `estimatedGas` 필드 확인. 자기 전송이므로 approve 불필요
 
 ### Step 3: 실제 ERC-20 자기 전송
-**Action**: dry-run 확인 후 실제 토큰 자기 전송을 실행한다.
+**Action**: simulate 확인 후 실제 토큰 자기 전송을 실행한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions \
+curl -s -X POST http://localhost:3100/v1/transactions/send \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
     "type": "TOKEN_TRANSFER",
     "to": "<MY_ADDRESS>",
-    "token": "<TOKEN_ADDRESS>",
-    "amount": "1",
+    "token": { "address": "<TOKEN_ADDRESS>", "decimals": "<TOKEN_DECIMALS>", "symbol": "<TOKEN_SYMBOL>" },
+    "amount": "<AMOUNT_IN_MINIMUM_UNITS>",
     "network": "ethereum-sepolia"
   }'
 ```
@@ -85,7 +86,7 @@ curl -s http://localhost:3100/v1/transactions/<TX_ID> \
 ### Step 5: 토큰 잔액 재확인
 **Action**: 전송 후 토큰 잔액과 ETH 잔액을 재조회한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=ethereum-sepolia \
+curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=ethereum-sepolia \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 토큰 잔액 불변 (자기 전송), ETH 잔액만 가스비만큼 감소
@@ -93,7 +94,7 @@ curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=ethereum-se
 
 ## Verification
 - [ ] 토큰 잔액 조회 성공 (ERC-20 토큰 목록 확인)
-- [ ] Dry-run 성공 (예상 가스비 ~65,000 gas)
+- [ ] Simulate 성공 (예상 가스비 ~65,000 gas)
 - [ ] TOKEN_TRANSFER 트랜잭션 생성 성공 (txId, txHash 반환)
 - [ ] 트랜잭션 컨펌 완료 (status: confirmed/success)
 - [ ] 토큰 잔액 불변 (자기 전송), ETH만 가스비 감소

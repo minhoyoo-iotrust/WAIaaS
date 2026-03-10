@@ -1,91 +1,54 @@
 import { z } from 'zod';
 
-export const CHAIN_TYPES = ['solana', 'ethereum'] as const;
-export type ChainType = (typeof CHAIN_TYPES)[number];
+// ─── Import shared constants (SSoT from @waiaas/shared) ─────────────────────
+import {
+  CHAIN_TYPES,
+  type ChainType,
+  NETWORK_TYPES,
+  type NetworkType,
+  SOLANA_NETWORK_TYPES,
+  type SolanaNetworkType,
+  EVM_NETWORK_TYPES,
+  type EvmNetworkType,
+  ENVIRONMENT_TYPES,
+  type EnvironmentType,
+  ENVIRONMENT_NETWORK_MAP,
+  validateChainNetwork,
+  NETWORK_DISPLAY_NAMES,
+  NETWORK_NATIVE_SYMBOL,
+  EVM_NETWORK_OPTIONS,
+  EVM_RPC_SETTING_KEYS,
+  SOLANA_RPC_SETTING_KEYS,
+  RPC_KEY_LABELS,
+} from '@waiaas/shared';
+
+// Re-export shared constants so downstream packages (SDK, daemon) continue to work
+export {
+  CHAIN_TYPES,
+  type ChainType,
+  NETWORK_TYPES,
+  type NetworkType,
+  SOLANA_NETWORK_TYPES,
+  type SolanaNetworkType,
+  EVM_NETWORK_TYPES,
+  type EvmNetworkType,
+  ENVIRONMENT_TYPES,
+  type EnvironmentType,
+  ENVIRONMENT_NETWORK_MAP,
+  validateChainNetwork,
+  NETWORK_DISPLAY_NAMES,
+  NETWORK_NATIVE_SYMBOL,
+  EVM_NETWORK_OPTIONS,
+  EVM_RPC_SETTING_KEYS,
+  SOLANA_RPC_SETTING_KEYS,
+  RPC_KEY_LABELS,
+};
+
+// ─── Zod schemas derived from shared constants ──────────────────────────────
 export const ChainTypeEnum = z.enum(CHAIN_TYPES);
-
-export const NETWORK_TYPES = [
-  // Solana
-  'solana-mainnet', 'solana-devnet', 'solana-testnet',
-  // EVM Tier 1
-  'ethereum-mainnet', 'ethereum-sepolia',
-  'polygon-mainnet', 'polygon-amoy',
-  'arbitrum-mainnet', 'arbitrum-sepolia',
-  'optimism-mainnet', 'optimism-sepolia',
-  'base-mainnet', 'base-sepolia',
-  // HyperEVM (Hyperliquid)
-  'hyperevm-mainnet', 'hyperevm-testnet',
-] as const;
-export type NetworkType = (typeof NETWORK_TYPES)[number];
 export const NetworkTypeEnum = z.enum(NETWORK_TYPES);
-
-export const SOLANA_NETWORK_TYPES = ['solana-mainnet', 'solana-devnet', 'solana-testnet'] as const;
-export type SolanaNetworkType = (typeof SOLANA_NETWORK_TYPES)[number];
-
-export const EVM_NETWORK_TYPES = [
-  'ethereum-mainnet', 'ethereum-sepolia',
-  'polygon-mainnet', 'polygon-amoy',
-  'arbitrum-mainnet', 'arbitrum-sepolia',
-  'optimism-mainnet', 'optimism-sepolia',
-  'base-mainnet', 'base-sepolia',
-  'hyperevm-mainnet', 'hyperevm-testnet',
-] as const;
-export type EvmNetworkType = (typeof EVM_NETWORK_TYPES)[number];
 export const EvmNetworkTypeEnum = z.enum(EVM_NETWORK_TYPES);
-
-/**
- * Cross-validate chain + network combination.
- * Solana agents must use Solana networks (solana-mainnet/solana-devnet/solana-testnet).
- * Ethereum agents must use EVM networks (ethereum-mainnet etc).
- * Throws Error on mismatch. Caller (daemon route) converts to WAIaaSError('VALIDATION_ERROR').
- */
-export function validateChainNetwork(chain: ChainType, network: NetworkType): void {
-  if (chain === 'solana') {
-    if (!(SOLANA_NETWORK_TYPES as readonly string[]).includes(network)) {
-      throw new Error(`Invalid network '${network}' for chain 'solana'. Valid: ${SOLANA_NETWORK_TYPES.join(', ')}`);
-    }
-  } else if (chain === 'ethereum') {
-    if (!(EVM_NETWORK_TYPES as readonly string[]).includes(network)) {
-      throw new Error(`Invalid network '${network}' for chain 'ethereum'. Valid EVM networks: ${EVM_NETWORK_TYPES.join(', ')}`);
-    }
-  }
-}
-
-// ─── EnvironmentType SSoT (Zod 파생 체인 Step 1~3) ─────────────
-
-export const ENVIRONMENT_TYPES = ['testnet', 'mainnet'] as const;
-export type EnvironmentType = (typeof ENVIRONMENT_TYPES)[number];
 export const EnvironmentTypeEnum = z.enum(ENVIRONMENT_TYPES);
-
-// ─── Environment-Network Mapping Constants ──────────────────────
-
-/**
- * Environment-network mapping: which networks are allowed in each environment.
- * Key format: `${chain}:${environment}`
- */
-export const ENVIRONMENT_NETWORK_MAP: Record<
-  `${ChainType}:${EnvironmentType}`,
-  readonly NetworkType[]
-> = {
-  'solana:mainnet': ['solana-mainnet'],
-  'solana:testnet': ['solana-devnet', 'solana-testnet'],
-  'ethereum:mainnet': [
-    'ethereum-mainnet',
-    'polygon-mainnet',
-    'arbitrum-mainnet',
-    'optimism-mainnet',
-    'base-mainnet',
-    'hyperevm-mainnet',
-  ],
-  'ethereum:testnet': [
-    'ethereum-sepolia',
-    'polygon-amoy',
-    'arbitrum-sepolia',
-    'optimism-sepolia',
-    'base-sepolia',
-    'hyperevm-testnet',
-  ],
-} as const;
 
 /**
  * Single network for each chain+environment combination.

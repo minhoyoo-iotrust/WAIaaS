@@ -1,7 +1,8 @@
 ---
-id: "testnet-08"
+id: "testnet-07"
 title: "수신 트랜잭션 감지"
 category: "testnet"
+auth: "session"
 network: ["ethereum-sepolia", "solana-devnet"]
 requires_funds: true
 estimated_cost_usd: "0.01"
@@ -12,7 +13,7 @@ tags: ["incoming", "monitor", "detection", "sepolia", "devnet"]
 # 수신 트랜잭션 감지
 
 ## Metadata
-- **ID**: testnet-08
+- **ID**: testnet-07
 - **Category**: testnet
 - **Network**: ethereum-sepolia, solana-devnet
 - **Requires Funds**: Yes
@@ -50,14 +51,14 @@ curl -s http://localhost:3100/v1/wallets \
 ### Step 3: Sepolia 자기 전송 실행
 **Action**: Sepolia에서 자기 주소로 ETH를 전송하여 수신 트랜잭션을 발생시킨다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions \
+curl -s -X POST http://localhost:3100/v1/transactions/send \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<EVM_WALLET_ID>",
     "type": "TRANSFER",
     "to": "<MY_EVM_ADDRESS>",
-    "value": "0.001",
+    "amount": "1000000000000000",
     "network": "ethereum-sepolia"
   }'
 ```
@@ -68,7 +69,7 @@ curl -s -X POST http://localhost:3100/v1/transactions \
 **Action**: 블록 확인 시간(~15초) 대기 후 수신 트랜잭션을 조회한다.
 ```bash
 # 15-30초 대기 후 실행
-curl -s http://localhost:3100/v1/wallets/<EVM_WALLET_ID>/transactions?direction=incoming&network=ethereum-sepolia \
+curl -s http://localhost:3100/v1/wallet/incoming?walletId=<EVM_WALLET_ID>&network=ethereum-sepolia \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 수신 트랜잭션 목록에 Step 3의 전송이 포함된다
@@ -89,14 +90,14 @@ curl -s http://localhost:3100/v1/admin/stats \
 ### Step 6: Devnet SOL 자기 전송
 **Action**: Devnet에서 자기 주소로 SOL을 전송하여 Solana 수신 트랜잭션을 발생시킨다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions \
+curl -s -X POST http://localhost:3100/v1/transactions/send \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<SOL_WALLET_ID>",
     "type": "TRANSFER",
     "to": "<MY_SOL_ADDRESS>",
-    "value": "0.01",
+    "amount": "10000000",
     "network": "solana-devnet"
   }'
 ```
@@ -106,7 +107,7 @@ curl -s -X POST http://localhost:3100/v1/transactions \
 ### Step 7: Devnet 수신 트랜잭션 감지 확인
 **Action**: Solana는 빠르게 컨펌되므로 5초 대기 후 수신 트랜잭션을 확인한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<SOL_WALLET_ID>/transactions?direction=incoming&network=solana-devnet \
+curl -s http://localhost:3100/v1/wallet/incoming?walletId=<SOL_WALLET_ID>&network=solana-devnet \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 수신 트랜잭션 목록에 Step 6의 전송이 포함된다

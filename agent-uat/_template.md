@@ -2,6 +2,7 @@
 id: "{category}-{nn}"
 title: "{시나리오 제목}"
 category: "testnet|mainnet|defi|admin|advanced"
+auth: "master|session"
 network: ["{network-id}"]
 requires_funds: true|false
 estimated_cost_usd: "{0.00}"

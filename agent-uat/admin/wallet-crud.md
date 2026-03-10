@@ -1,19 +1,20 @@
 ---
-id: "testnet-01"
+id: "admin-14"
 title: "지갑 CRUD 검증"
-category: "testnet"
+category: "admin"
+auth: "master"
 network: ["all"]
 requires_funds: false
 estimated_cost_usd: "0"
 risk_level: "none"
-tags: ["wallet", "crud", "basic"]
+tags: ["admin", "wallet", "crud", "basic"]
 ---
 
 # 지갑 CRUD 검증
 
 ## Metadata
-- **ID**: testnet-01
-- **Category**: testnet
+- **ID**: admin-14
+- **Category**: admin
 - **Network**: all (네트워크 무관)
 - **Requires Funds**: No
 - **Estimated Cost**: ~$0

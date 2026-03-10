@@ -2,6 +2,7 @@
 id: "admin-11"
 title: "Admin 백업/복원 무결성 검증"
 category: "admin"
+auth: "master"
 network: ["all"]
 requires_funds: false
 estimated_cost_usd: "0"

@@ -6,7 +6,7 @@ AI 에이전트가 마크다운 시나리오를 읽고 인터랙티브하게 실
 
 - AI 에이전트가 시나리오 마크다운 파일을 파싱하여 API 호출을 순서대로 실행
 - 사용자와 인터랙티브하게 진행 (각 단계마다 확인/승인)
-- 실제 온체인 트랜잭션으로 기능을 검증 (dry-run 선행)
+- 실제 온체인 트랜잭션으로 기능을 검증 (simulate 선행)
 - 실행 결과를 요약 리포트로 출력
 
 ## 디렉토리 구조
@@ -17,7 +17,6 @@ agent-uat/
   _template.md        # 시나리오 작성 표준 템플릿
   _index.md           # 전체 시나리오 인덱스 (카테고리별/네트워크별)
   testnet/            # Testnet 기능 검증 시나리오
-    wallet-crud.md    # 지갑 CRUD 검증
     ...
   mainnet/            # Mainnet 전송 검증 시나리오
   defi/               # DeFi 프로토콜 검증 시나리오
@@ -55,6 +54,7 @@ agent-uat/
 id: "{category}-{nn}"
 title: "{시나리오 제목}"
 category: "testnet|mainnet|defi|admin|advanced"
+auth: "master|session"
 network: ["{network-id}"]
 requires_funds: true|false
 estimated_cost_usd: "{0.00}"
@@ -62,6 +62,8 @@ risk_level: "none|low|medium|high"
 tags: ["{tag1}", "{tag2}"]
 ---
 ```
+
+- `auth`: 인증 요구사항. `master`는 마스터 패스워드 필요 (admin 카테고리), `session`은 세션 토큰만으로 실행 가능
 
 ### 섹션 파싱 규칙
 
@@ -91,7 +93,7 @@ tags: ["{tag1}", "{tag2}"]
 ## 에이전트 실행 원칙
 
 1. **기존 지갑 재사용 우선**: 새 지갑을 생성하지 않고 세션에 연결된 기존 지갑을 사용한다
-2. **Dry-Run 먼저**: `requires_funds: true` 시나리오는 반드시 dry-run으로 예상 가스비를 확인한 후 실행한다
+2. **Simulate 먼저**: `requires_funds: true` 시나리오는 반드시 simulate으로 예상 가스비를 확인한 후 실행한다
 3. **자기 전송 패턴**: 전송 시나리오는 자신의 지갑 주소로 보내 자금 손실을 최소화한다
 4. **CRUD 원자성**: 지갑/리소스 CRUD 시나리오는 생성 -> 테스트 -> 삭제를 하나의 흐름으로 묶어 기존 데이터를 오염시키지 않는다
 5. **인터랙티브 진행**: 각 단계마다 사용자에게 결과를 보고하고 다음 단계 진행 확인을 받는다

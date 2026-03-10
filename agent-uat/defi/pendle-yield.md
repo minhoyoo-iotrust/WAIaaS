@@ -2,6 +2,7 @@
 id: "defi-09"
 title: "Pendle Yield Trading (PT)"
 category: "defi"
+auth: "session"
 network: ["ethereum-mainnet"]
 requires_funds: true
 estimated_cost_usd: "5.00"
@@ -31,7 +32,7 @@ tags: ["defi", "yield", "pendle", "evm", "pt", "yt"]
 ### Step 1: 토큰 잔액 조회
 **Action**: Ethereum Mainnet에서 stETH 또는 USDC 잔액을 조회한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=ethereum-mainnet \
+curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=ethereum-mainnet \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 200 OK, 토큰 목록에 stETH/USDC 잔액이 포함된다
@@ -40,16 +41,16 @@ curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=ethereum-ma
 ### Step 2: Pendle 마켓 목록 조회
 **Action**: 활성 Pendle 마켓과 만기일을 확인한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/defi/positions?protocol=pendle&network=ethereum-mainnet \
+curl -s http://localhost:3100/v1/wallet/positions?walletId=<WALLET_ID>&protocol=pendle&network=ethereum-mainnet \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 200 OK, 활성 Pendle 마켓 목록이 반환된다
 **Check**: 만기일이 미래인 활성 마켓 선택. 만기된 마켓은 사용 불가
 
-### Step 3: PT 매수 Dry-Run
-**Action**: PT(Principal Token) 매수를 dry-run으로 실행한다.
+### Step 3: PT 매수 Simulate
+**Action**: PT(Principal Token) 매수를 simulate으로 실행한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
+curl -s -X POST http://localhost:3100/v1/transactions/simulate \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
@@ -80,7 +81,7 @@ curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
 ### Step 5: 실제 PT 매수 실행
 **Action**: 사용자 승인 후 실제 PT 매수를 실행한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions \
+curl -s -X POST http://localhost:3100/v1/transactions/send \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
@@ -111,16 +112,16 @@ curl -s http://localhost:3100/v1/transactions/<TX_ID> \
 ### Step 7: PT 토큰 잔액 확인
 **Action**: PT 매수 후 PT 토큰 잔액을 확인한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=ethereum-mainnet \
+curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=ethereum-mainnet \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: PT 토큰 잔액이 증가, stETH 잔액이 감소
-**Check**: PT 토큰 보유량이 dry-run 예상치와 유사한지 확인
+**Check**: PT 토큰 보유량이 simulate 예상치와 유사한지 확인
 
-### Step 8: (선택) PT 매도 Dry-Run
-**Action**: PT를 다시 기초 자산으로 매도하는 dry-run을 확인한다. 실제 실행은 사용자 선택.
+### Step 8: (선택) PT 매도 Simulate
+**Action**: PT를 다시 기초 자산으로 매도하는 simulate을 확인한다. 실제 실행은 사용자 선택.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
+curl -s -X POST http://localhost:3100/v1/transactions/simulate \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
@@ -142,7 +143,7 @@ curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
 ## Verification
 - [ ] 토큰 잔액 조회 성공 (200 응답)
 - [ ] Pendle 마켓 목록 확인 (활성 마켓 존재)
-- [ ] PT 매수 dry-run 성공 (예상 PT 수령량, 내재 APY 반환)
+- [ ] PT 매수 simulate 성공 (예상 PT 수령량, 내재 APY 반환)
 - [ ] 사용자 승인 완료
 - [ ] 실제 PT 매수 트랜잭션 생성 성공 (txId, txHash 반환)
 - [ ] 트랜잭션 컨펌 완료 (status: confirmed/success)

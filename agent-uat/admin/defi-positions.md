@@ -2,6 +2,7 @@
 id: "admin-08"
 title: "Admin DeFi 포지션 탭 검증"
 category: "admin"
+auth: "master"
 network: ["ethereum-mainnet", "solana-mainnet"]
 requires_funds: false
 estimated_cost_usd: "0"
@@ -29,7 +30,7 @@ tags: ["admin", "defi", "positions", "lending", "staking"]
 ### Step 1: DeFi 포지션 조회
 **Action**: 지갑의 DeFi 포지션을 조회한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/defi-positions \
+curl -s http://localhost:3100/v1/wallet/positions?walletId=<WALLET_ID> \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 200 OK, DeFi 포지션 목록이 반환된다 (보유 시) 또는 빈 배열 (미보유 시)
@@ -62,7 +63,7 @@ curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/defi-positions \
 ### Step 5: 빈 포지션 상태 확인
 **Action**: DeFi 포지션이 없는 지갑에서 빈 상태 표시를 확인한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<EMPTY_WALLET_ID>/defi-positions \
+curl -s http://localhost:3100/v1/wallet/positions?walletId=<EMPTY_WALLET_ID> \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 200 OK, 빈 배열 또는 "포지션 없음" 메시지

@@ -10,7 +10,7 @@
       "outputs": ["dist/**", "skills/**"]
     },
     "@waiaas/admin#build": {
-      "dependsOn": [],
+      "dependsOn": ["@waiaas/shared#build"],
       "outputs": ["dist/**"]
     },
     "@waiaas/daemon#build": {

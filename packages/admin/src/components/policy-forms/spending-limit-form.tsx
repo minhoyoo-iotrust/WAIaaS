@@ -1,22 +1,14 @@
 import { useSignal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
+import { NETWORK_NATIVE_SYMBOL, EVM_NETWORK_TYPES } from '@waiaas/shared';
 import { FormField } from '../form';
 import type { PolicyFormProps } from './index';
 import { apiGet } from '../../api/client';
 import { API } from '../../api/endpoints';
 
-const NETWORK_NATIVE_SYMBOL: Record<string, string> = {
-  'solana-mainnet': 'SOL', 'solana-devnet': 'SOL', 'solana-testnet': 'SOL',
-  'ethereum-mainnet': 'ETH', 'ethereum-sepolia': 'ETH',
-  'polygon-mainnet': 'POL', 'polygon-amoy': 'POL',
-  'arbitrum-mainnet': 'ETH', 'arbitrum-sepolia': 'ETH',
-  'optimism-mainnet': 'ETH', 'optimism-sepolia': 'ETH',
-  'base-mainnet': 'ETH', 'base-sepolia': 'ETH',
-};
-
 function getNativeSymbol(network?: string): string {
   if (!network) return 'Native';
-  return NETWORK_NATIVE_SYMBOL[network] || 'Native';
+  return NETWORK_NATIVE_SYMBOL[network as keyof typeof NETWORK_NATIVE_SYMBOL] || 'Native';
 }
 
 interface TokenLimitEntry {
@@ -42,11 +34,7 @@ interface TokenLimitRow {
   delay_max: string;
 }
 
-const EVM_NETWORKS = [
-  'ethereum-mainnet', 'ethereum-sepolia', 'polygon-mainnet', 'polygon-amoy',
-  'arbitrum-mainnet', 'arbitrum-sepolia', 'optimism-mainnet', 'optimism-sepolia',
-  'base-mainnet', 'base-sepolia',
-];
+const EVM_NETWORKS: readonly string[] = EVM_NETWORK_TYPES;
 
 export function SpendingLimitForm({ rules, onChange, errors, network }: PolicyFormProps) {
   const registryTokens = useSignal<TokenRegistryEntry[]>([]);

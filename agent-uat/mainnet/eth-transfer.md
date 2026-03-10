@@ -2,6 +2,7 @@
 id: "mainnet-01"
 title: "ETH 전송"
 category: "mainnet"
+auth: "session"
 network: ["ethereum-mainnet"]
 requires_funds: true
 estimated_cost_usd: "0.50"
@@ -30,23 +31,23 @@ tags: ["transfer", "eth", "native", "mainnet"]
 ### Step 1: 잔액 조회
 **Action**: Ethereum Mainnet에서 지갑 잔액을 조회한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=ethereum-mainnet \
+curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=ethereum-mainnet \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 200 OK, ETH 잔액이 반환된다
 **Check**: `balance` 필드가 0.002 ETH 이상인지 확인
 
-### Step 2: Dry-Run 자기 전송
-**Action**: 자기 주소로 0.001 ETH를 전송하는 dry-run을 실행한다. **반드시 가스비를 확인하고 사용자 승인을 받는다.**
+### Step 2: Simulate 자기 전송
+**Action**: 자기 주소로 0.001 ETH를 전송하는 simulate을 실행한다. **반드시 가스비를 확인하고 사용자 승인을 받는다.**
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
+curl -s -X POST http://localhost:3100/v1/transactions/simulate \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
     "type": "TRANSFER",
     "to": "<MY_ADDRESS>",
-    "value": "0.001",
+    "amount": "1000000000000000",
     "network": "ethereum-mainnet"
   }'
 ```
@@ -56,14 +57,14 @@ curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
 ### Step 3: 실제 자기 전송 실행
 **Action**: 사용자 승인 후 실제 자기 전송을 실행한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions \
+curl -s -X POST http://localhost:3100/v1/transactions/send \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
     "type": "TRANSFER",
     "to": "<MY_ADDRESS>",
-    "value": "0.001",
+    "amount": "1000000000000000",
     "network": "ethereum-mainnet"
   }'
 ```
@@ -82,7 +83,7 @@ curl -s http://localhost:3100/v1/transactions/<TX_ID> \
 ### Step 5: 잔액 재확인
 **Action**: 전송 후 잔액을 재조회하여 가스비만큼만 감소했는지 확인한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=ethereum-mainnet \
+curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=ethereum-mainnet \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 잔액이 가스비만큼만 감소 (자기 전송이므로 0.001 ETH는 돌아옴)
@@ -90,7 +91,7 @@ curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=ethereum-ma
 
 ## Verification
 - [ ] ETH 잔액 조회 성공 (200 응답)
-- [ ] Dry-run 성공 (예상 가스비 반환, 사용자 승인 완료)
+- [ ] Simulate 성공 (예상 가스비 반환, 사용자 승인 완료)
 - [ ] 자기 전송 트랜잭션 생성 성공 (txId, txHash 반환)
 - [ ] 트랜잭션 컨펌 완료 (status: confirmed/success)
 - [ ] 전송 후 잔액 감소분이 가스비 이내
@@ -101,7 +102,7 @@ curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=ethereum-ma
 | ETH self-transfer | ethereum-mainnet | ~21,000 | ~$0.50 |
 | **Total** | | | **~$0.50** |
 
-> **Note**: Mainnet 가스 가격은 네트워크 혼잡도에 따라 크게 변동할 수 있다. Dry-run으로 반드시 사전 확인할 것.
+> **Note**: Mainnet 가스 가격은 네트워크 혼잡도에 따라 크게 변동할 수 있다. Simulate으로 반드시 사전 확인할 것.
 
 ## Troubleshooting
 | Symptom | Cause | Resolution |

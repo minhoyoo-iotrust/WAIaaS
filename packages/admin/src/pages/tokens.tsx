@@ -1,5 +1,6 @@
 import { useSignal } from '@preact/signals';
 import { useEffect, useRef } from 'preact/hooks';
+import { EVM_NETWORK_TYPES, NETWORK_DISPLAY_NAMES } from '@waiaas/shared';
 import { apiGet, apiPost, apiDelete, ApiError } from '../api/client';
 import { API } from '../api/endpoints';
 import { Badge, Button } from '../components/form';
@@ -28,18 +29,7 @@ interface TokensResponse {
 // Constants
 // ---------------------------------------------------------------------------
 
-const EVM_NETWORKS = [
-  'ethereum-mainnet',
-  'ethereum-sepolia',
-  'polygon-mainnet',
-  'polygon-amoy',
-  'arbitrum-mainnet',
-  'arbitrum-sepolia',
-  'optimism-mainnet',
-  'optimism-sepolia',
-  'base-mainnet',
-  'base-sepolia',
-];
+const EVM_NETWORKS: readonly string[] = EVM_NETWORK_TYPES;
 
 const COLUMNS = ['Symbol', 'Name', 'Address', 'Decimals', 'Source', 'Actions'];
 
@@ -216,7 +206,7 @@ export default function TokensPage() {
           <select value={network.value} onChange={handleNetworkChange}>
             {EVM_NETWORKS.map((n) => (
               <option key={n} value={n}>
-                {n}
+                {NETWORK_DISPLAY_NAMES[n as keyof typeof NETWORK_DISPLAY_NAMES] ?? n}
               </option>
             ))}
           </select>

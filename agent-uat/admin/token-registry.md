@@ -2,6 +2,7 @@
 id: "admin-12"
 title: "Admin 토큰 레지스트리 검증"
 category: "admin"
+auth: "master"
 network: ["ethereum-mainnet"]
 requires_funds: false
 estimated_cost_usd: "0"

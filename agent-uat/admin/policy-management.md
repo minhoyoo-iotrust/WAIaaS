@@ -2,11 +2,12 @@
 id: "admin-05"
 title: "정책 관리 CRUD 검증"
 category: "admin"
+auth: "master"
 network: ["all"]
 requires_funds: false
 estimated_cost_usd: "0"
 risk_level: "none"
-tags: ["admin", "policy", "management", "crud", "dry-run"]
+tags: ["admin", "policy", "management", "crud", "simulate"]
 ---
 
 # 정책 관리 CRUD 검증
@@ -17,7 +18,7 @@ tags: ["admin", "policy", "management", "crud", "dry-run"]
 - **Network**: all
 - **Requires Funds**: No
 - **Estimated Cost**: ~$0
-- **Risk Level**: none -- 테스트 정책 생성/삭제, dry-run만 사용
+- **Risk Level**: none -- 테스트 정책 생성/삭제, simulate만 사용
 
 ## Prerequisites
 - [ ] WAIaaS 데몬 실행 중 (`http://localhost:3100`)
@@ -71,17 +72,17 @@ curl -s -X PUT http://localhost:3100/v1/wallets/<WALLET_ID>/policy \
 **Expected**: 200 OK, 정책 적용 성공
 **Check**: 지갑에 정책이 연결되었는지 확인
 
-### Step 5: Dry-Run으로 정책 적용 확인
-**Action**: 한도 초과 트랜잭션을 dry-run으로 실행하여 정책 거부를 확인한다.
+### Step 5: Simulate으로 정책 적용 확인
+**Action**: 한도 초과 트랜잭션을 simulate으로 실행하여 정책 거부를 확인한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
+curl -s -X POST http://localhost:3100/v1/transactions/simulate \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
     "type": "TRANSFER",
     "to": "<OWN_ADDRESS>",
-    "value": "1.0",
+    "amount": "1000000000000000000",
     "network": "ethereum-mainnet"
   }'
 ```
@@ -104,21 +105,21 @@ curl -s -X PUT http://localhost:3100/v1/policies/<POLICY_ID> \
 **Expected**: 200 OK, 정책 수정 성공
 **Check**: 수정된 한도값(5.0) 확인
 
-### Step 7: 수정된 정책 Dry-Run 확인
+### Step 7: 수정된 정책 Simulate 확인
 **Action**: 이전에 거부된 1.0 ETH 트랜잭션이 이제 통과하는지 확인한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
+curl -s -X POST http://localhost:3100/v1/transactions/simulate \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
     "type": "TRANSFER",
     "to": "<OWN_ADDRESS>",
-    "value": "1.0",
+    "amount": "1000000000000000000",
     "network": "ethereum-mainnet"
   }'
 ```
-**Expected**: 200 OK, 정상 dry-run 결과 (정책 통과)
+**Expected**: 200 OK, 정상 simulate 결과 (정책 통과)
 **Check**: 정책 위반 없이 정상 결과가 반환되는지 확인
 
 ### Step 8: 테스트 정책 삭제
@@ -135,15 +136,15 @@ curl -s -X DELETE http://localhost:3100/v1/policies/<POLICY_ID> \
 - [ ] 테스트 정책 생성 성공 (ID 반환)
 - [ ] 정책 상세 조회 성공
 - [ ] 정책 지갑 적용 성공
-- [ ] Dry-run에서 정책 위반 확인 (한도 초과 시 거부)
+- [ ] Simulate에서 정책 위반 확인 (한도 초과 시 거부)
 - [ ] 정책 수정 성공
-- [ ] 수정된 정책 Dry-run 통과 확인
+- [ ] 수정된 정책 Simulate 통과 확인
 - [ ] 테스트 정책 삭제 성공
 
 ## Estimated Cost
 | Item | Network | Estimated Gas | USD |
 |------|---------|---------------|-----|
-| Dry-run only (no execution) | all | 0 | $0 |
+| Simulate only (no execution) | all | 0 | $0 |
 | **Total** | | | **$0** |
 
 ## Troubleshooting

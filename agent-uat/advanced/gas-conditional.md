@@ -2,6 +2,7 @@
 id: "advanced-06"
 title: "가스 조건부 실행"
 category: "advanced"
+auth: "session"
 network: ["ethereum-mainnet"]
 requires_funds: false
 estimated_cost_usd: "0"
@@ -17,7 +18,7 @@ tags: ["gas", "conditional", "execution", "gas-price"]
 - **Network**: ethereum-mainnet
 - **Requires Funds**: No
 - **Estimated Cost**: ~$0
-- **Risk Level**: none -- dry-run만 사용하며 실제 트랜잭션을 실행하지 않음
+- **Risk Level**: none -- simulate만 사용하며 실제 트랜잭션을 실행하지 않음
 
 ## Prerequisites
 - [ ] WAIaaS 데몬 실행 중 (`http://localhost:3100`)
@@ -30,14 +31,14 @@ tags: ["gas", "conditional", "execution", "gas-price"]
 ### Step 1: 현재 가스 가격 조회
 **Action**: Ethereum Mainnet의 현재 가스 가격을 조회한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
+curl -s -X POST http://localhost:3100/v1/transactions/simulate \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
     "type": "TRANSFER",
     "to": "<OWN_ADDRESS>",
-    "value": "0.001",
+    "amount": "1000000000000000",
     "network": "ethereum-mainnet"
   }'
 ```
@@ -47,14 +48,14 @@ curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
 ### Step 2: 낮은 가스 상한 설정 (조건 미충족 테스트)
 **Action**: 현재 가스의 50% 수준으로 maxGasPrice를 설정하여 조건 미충족 상태를 테스트한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
+curl -s -X POST http://localhost:3100/v1/transactions/simulate \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
     "type": "TRANSFER",
     "to": "<OWN_ADDRESS>",
-    "value": "0.001",
+    "amount": "1000000000000000",
     "network": "ethereum-mainnet",
     "gasCondition": {
       "maxGasPrice": "<CURRENT_GAS_50_PERCENT>"
@@ -75,21 +76,21 @@ curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
 ### Step 4: 높은 가스 상한 설정 (조건 충족 테스트)
 **Action**: 현재 가스의 200% 수준으로 maxGasPrice를 설정하여 조건 충족 상태를 테스트한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
+curl -s -X POST http://localhost:3100/v1/transactions/simulate \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<WALLET_ID>",
     "type": "TRANSFER",
     "to": "<OWN_ADDRESS>",
-    "value": "0.001",
+    "amount": "1000000000000000",
     "network": "ethereum-mainnet",
     "gasCondition": {
       "maxGasPrice": "<CURRENT_GAS_200_PERCENT>"
     }
   }'
 ```
-**Expected**: 200 OK, 정상 dry-run 결과가 반환된다 (가스 조건 충족)
+**Expected**: 200 OK, 정상 simulate 결과가 반환된다 (가스 조건 충족)
 **Check**: 정상 실행 가능 상태로 응답되는지 확인. `estimatedFee` 포함
 
 ### Step 5: 가스 조건 충족 결과 확인
@@ -97,7 +98,7 @@ curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
 - 예상 가스비, 실행 가능 여부
 - 가스 조건을 제거한 경우와 동일한 결과인지 비교
 
-**Expected**: 가스 조건 충족 상태에서 정상 dry-run 결과와 동일
+**Expected**: 가스 조건 충족 상태에서 정상 simulate 결과와 동일
 **Check**: `estimatedFee`가 정상 범위인지 확인
 
 ### Step 6: 결과 요약
@@ -119,10 +120,10 @@ curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
 ## Estimated Cost
 | Item | Network | Estimated Gas | USD |
 |------|---------|---------------|-----|
-| Dry-run only (no execution) | ethereum-mainnet | 0 | $0 |
+| Simulate only (no execution) | ethereum-mainnet | 0 | $0 |
 | **Total** | | | **$0** |
 
-> **Note**: 이 시나리오는 dry-run만 사용하므로 실제 비용은 $0이다. 가스 조건부 동작의 로직만 검증한다.
+> **Note**: 이 시나리오는 simulate만 사용하므로 실제 비용은 $0이다. 가스 조건부 동작의 로직만 검증한다.
 
 ## Troubleshooting
 | Symptom | Cause | Resolution |
@@ -131,4 +132,4 @@ curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
 | 가스 추정 실패 | RPC 연결 오류 | RPC Pool 상태 확인, 엔드포인트 건강 상태 확인 |
 | 조건 항상 충족 | 설정한 상한이 너무 높음 | 현재 가스 가격의 50% 이하로 상한 설정 |
 | 조건 항상 미충족 | 네트워크 혼잡으로 가스 급등 | 현재 가스 가격의 200% 이상으로 상한 설정 |
-| dry-run 타임아웃 | RPC 응답 지연 | 다른 RPC 엔드포인트로 전환 또는 재시도 |
+| simulate 타임아웃 | RPC 응답 지연 | 다른 RPC 엔드포인트로 전환 또는 재시도 |

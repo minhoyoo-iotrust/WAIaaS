@@ -2,6 +2,7 @@
 id: "advanced-04"
 title: "Mainnet 수신 트랜잭션 감지"
 category: "advanced"
+auth: "session"
 network: ["ethereum-mainnet", "solana-mainnet"]
 requires_funds: true
 estimated_cost_usd: "0.50"
@@ -50,14 +51,14 @@ curl -s http://localhost:3100/v1/wallets \
 ### Step 3: Ethereum Mainnet 자기 전송
 **Action**: ETH 자기 전송으로 수신 트랜잭션을 발생시킨다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions \
+curl -s -X POST http://localhost:3100/v1/transactions/send \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<ETH_WALLET_ID>",
     "type": "TRANSFER",
     "to": "<OWN_ETH_ADDRESS>",
-    "value": "0.001",
+    "amount": "1000000000000000",
     "network": "ethereum-mainnet"
   }'
 ```
@@ -67,7 +68,7 @@ curl -s -X POST http://localhost:3100/v1/transactions \
 ### Step 4: Ethereum 수신 트랜잭션 감지 확인
 **Action**: ~15초 대기 후 수신 트랜잭션 감지 여부를 확인한다.
 ```bash
-curl -s "http://localhost:3100/v1/wallets/<ETH_WALLET_ID>/transactions?direction=incoming" \
+curl -s "http://localhost:3100/v1/wallet/incoming?walletId=<ETH_WALLET_ID>" \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 200 OK, 방금 전송한 트랜잭션이 incoming 목록에 포함된다
@@ -76,14 +77,14 @@ curl -s "http://localhost:3100/v1/wallets/<ETH_WALLET_ID>/transactions?direction
 ### Step 5: Solana Mainnet 자기 전송
 **Action**: SOL 자기 전송으로 수신 트랜잭션을 발생시킨다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions \
+curl -s -X POST http://localhost:3100/v1/transactions/send \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
     "walletId": "<SOL_WALLET_ID>",
     "type": "TRANSFER",
     "to": "<OWN_SOL_ADDRESS>",
-    "value": "0.001",
+    "amount": "1000000",
     "network": "solana-mainnet"
   }'
 ```
@@ -93,7 +94,7 @@ curl -s -X POST http://localhost:3100/v1/transactions \
 ### Step 6: Solana 수신 트랜잭션 감지 확인
 **Action**: ~5초 대기 후 수신 트랜잭션 감지 여부를 확인한다.
 ```bash
-curl -s "http://localhost:3100/v1/wallets/<SOL_WALLET_ID>/transactions?direction=incoming" \
+curl -s "http://localhost:3100/v1/wallet/incoming?walletId=<SOL_WALLET_ID>" \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 200 OK, Solana 자기 전송 트랜잭션이 incoming 목록에 포함된다

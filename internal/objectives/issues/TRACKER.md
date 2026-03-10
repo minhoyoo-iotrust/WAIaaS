@@ -317,9 +317,13 @@
 | 301 | ENHANCEMENT | MEDIUM | E2E 온체인 테스트에 L2 테스트넷 네트워크 추가 — Polygon/Arbitrum/Optimism/Base/HyperEVM | v31.8 | FIXED | 2026-03-10 |
 | 302 | BUG | HIGH | E2E 스모크 CI global waiaas CLI PATH 해결 실패 재발 — which fallback + WAIAAS_CLI_PATH 명시 전달 필요 | v31.8 | FIXED | 2026-03-10 |
 | 303 | ENHANCEMENT | LOW | agent-uat 스킬을 .claude/skills/로 이동 — 런타임 스킬과 개발 스킬 분리 | — | FIXED | 2026-03-10 |
-| 304 | BUG | MEDIUM | Agent UAT 시나리오 문서 API 불일치 3건 — dry-run→simulate, value→amount, token 문자열→객체 | — | OPEN | — |
-| 305 | MISSING | MEDIUM | Admin UI 네트워크 목록에 HyperEVM Mainnet/Testnet 누락 — 6개 파일 하드코딩 배열 미동기화 | — | OPEN | — |
-| 306 | ENHANCEMENT | MEDIUM | 공유 상수 패키지(@waiaas/shared) 분리 — Admin UI 하드코딩 제거 + 네트워크 동기화 자동화 | — | OPEN | — |
+| 304 | BUG | MEDIUM | Agent UAT 시나리오 문서 API 불일치 3건 — dry-run→simulate, value→amount, token 문자열→객체 | — | FIXED | 2026-03-10 |
+| 305 | MISSING | MEDIUM | Admin UI 네트워크 목록에 HyperEVM Mainnet/Testnet 누락 — 6개 파일 하드코딩 배열 미동기화 | — | FIXED | 2026-03-10 |
+| 306 | ENHANCEMENT | MEDIUM | 공유 상수 패키지(@waiaas/shared) 분리 — Admin UI 하드코딩 제거 + 네트워크 동기화 자동화 | — | FIXED | 2026-03-10 |
+| 307 | BUG | HIGH | Hyperliquid 액션 프로바이더 설정 키 불일치 + 기본값 비활성 — 토글 무동작 + Inactive 고정 | — | FIXED | 2026-03-10 |
+| 308 | ENHANCEMENT | MEDIUM | Agent UAT 인증 카테고리 분류 + 필터링 — masterAuth/sessionAuth 시나리오 분리 | — | FIXED | 2026-03-10 |
+| 309 | BUG | MEDIUM | Agent UAT 시나리오 문서 API 경로 불일치 2건 — wallets/:id/balance→wallet/balance, transactions→transactions/send | — | FIXED | 2026-03-10 |
+| 310 | BUG | MEDIUM | Sepolia ERC-20 토큰이 assets API에 미표시 — incoming TX에는 수신 기록 존재 | — | WONTFIX | 2026-03-10 |
 
 ## Type Legend
 
@@ -331,8 +335,8 @@
 
 ## Summary
 
-- **OPEN:** 3
-- **FIXED:** 302
-- **WONTFIX:** 1
-- **Total:** 306
+- **OPEN:** 0
+- **FIXED:** 308
+- **WONTFIX:** 2
+- **Total:** 310
 

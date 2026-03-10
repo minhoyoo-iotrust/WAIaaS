@@ -2,6 +2,7 @@
 id: "defi-10"
 title: "Drift Perpetual Trading"
 category: "defi"
+auth: "session"
 network: ["solana-mainnet"]
 requires_funds: true
 estimated_cost_usd: "0.01"
@@ -31,7 +32,7 @@ tags: ["defi", "perp", "drift", "solana", "perpetual"]
 ### Step 1: USDC 잔액 조회
 **Action**: Solana Mainnet에서 USDC 잔액을 조회한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=solana-mainnet \
+curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=solana-mainnet \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 200 OK, 토큰 목록에 USDC 잔액이 포함된다
@@ -40,16 +41,16 @@ curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/balance?network=solana-main
 ### Step 2: Drift 계정 확인
 **Action**: Drift sub-account가 존재하는지 확인한다. 없으면 초기화가 필요할 수 있다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/defi/positions?protocol=drift&network=solana-mainnet \
+curl -s http://localhost:3100/v1/wallet/positions?walletId=<WALLET_ID>&protocol=drift&network=solana-mainnet \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 200 OK, Drift 계정 정보 또는 빈 포지션 목록이 반환된다
 **Check**: Drift sub-account 존재 여부 확인. 미존재 시 첫 deposit에서 자동 생성
 
-### Step 3: USDC Deposit Dry-Run
-**Action**: Drift에 5.0 USDC를 deposit하는 dry-run을 실행한다.
+### Step 3: USDC Deposit Simulate
+**Action**: Drift에 5.0 USDC를 deposit하는 simulate을 실행한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
+curl -s -X POST http://localhost:3100/v1/transactions/simulate \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
@@ -69,7 +70,7 @@ curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
 ### Step 4: 사용자 승인 후 실제 Deposit
 **Action**: 사용자 승인 후 USDC를 Drift에 deposit한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions \
+curl -s -X POST http://localhost:3100/v1/transactions/send \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
@@ -98,7 +99,7 @@ curl -s http://localhost:3100/v1/transactions/<TX_ID> \
 ### Step 6: SOL-PERP 리밋 주문 생성
 **Action**: SOL-PERP 리밋 매수 주문을 생성한다. **체결 방지를 위해 시장가 대비 충분히 낮은 가격($10)으로 설정한다.**
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions \
+curl -s -X POST http://localhost:3100/v1/transactions/send \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
@@ -121,7 +122,7 @@ curl -s -X POST http://localhost:3100/v1/transactions \
 ### Step 7: 주문 확인
 **Action**: 생성된 주문이 open orders에 있는지 확인한다.
 ```bash
-curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/defi/positions?protocol=drift&network=solana-mainnet \
+curl -s http://localhost:3100/v1/wallet/positions?walletId=<WALLET_ID>&protocol=drift&network=solana-mainnet \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 200 OK, open orders 목록에 SOL-PERP buy limit order가 포함된다
@@ -130,7 +131,7 @@ curl -s http://localhost:3100/v1/wallets/<WALLET_ID>/defi/positions?protocol=dri
 ### Step 8: 주문 취소
 **Action**: 생성한 Perp 주문을 취소한다.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions \
+curl -s -X POST http://localhost:3100/v1/transactions/send \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
@@ -147,10 +148,10 @@ curl -s -X POST http://localhost:3100/v1/transactions \
 **Expected**: 200 OK, 주문 취소 성공
 **Check**: 취소 확인 응답
 
-### Step 9: (선택) Withdraw Dry-Run
-**Action**: Drift에서 USDC를 인출하는 dry-run을 확인한다. 실제 실행은 사용자 선택.
+### Step 9: (선택) Withdraw Simulate
+**Action**: Drift에서 USDC를 인출하는 simulate을 확인한다. 실제 실행은 사용자 선택.
 ```bash
-curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
+curl -s -X POST http://localhost:3100/v1/transactions/simulate \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <session-token>' \
   -d '{
@@ -170,7 +171,7 @@ curl -s -X POST http://localhost:3100/v1/transactions/dry-run \
 ## Verification
 - [ ] USDC 잔액 조회 성공 (200 응답)
 - [ ] Drift 계정 확인 완료
-- [ ] USDC deposit dry-run 성공
+- [ ] USDC deposit simulate 성공
 - [ ] 사용자 승인 완료
 - [ ] 실제 deposit 트랜잭션 성공 (txId, txHash 반환)
 - [ ] SOL-PERP 리밋 주문 생성 성공 (체결 방지 가격)
