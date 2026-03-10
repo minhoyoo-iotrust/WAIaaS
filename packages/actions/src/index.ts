@@ -113,6 +113,15 @@ export { HyperliquidSigner } from './providers/hyperliquid/index.js';
 export { HL_MAINNET_API_URL, HL_TESTNET_API_URL, HL_DEFAULTS as HL_DEFAULTS_CONFIG, HL_SETTINGS, HL_ERRORS } from './providers/hyperliquid/index.js';
 export type { MarketInfo as HlMarketInfo, ExchangeRequest as HlExchangeRequest } from './providers/hyperliquid/index.js';
 
+// Polymarket Prediction Market (Phase 373)
+export { createPolymarketInfrastructure } from './providers/polymarket/index.js';
+export type { PolymarketInfrastructure, PolymarketConfig, PolymarketDb } from './providers/polymarket/index.js';
+export { PolymarketOrderProvider } from './providers/polymarket/index.js';
+export { PolymarketCtfProvider } from './providers/polymarket/index.js';
+export { PolymarketMarketData } from './providers/polymarket/index.js';
+export { PolymarketPositionTracker } from './providers/polymarket/index.js';
+export { PolymarketPnlCalculator } from './providers/polymarket/index.js';
+
 // Re-export common utilities
 export { ActionApiClient } from './common/action-api-client.js';
 export { asBps, asPct, clampSlippageBps, bpsToPct, pctToBps } from './common/slippage.js';

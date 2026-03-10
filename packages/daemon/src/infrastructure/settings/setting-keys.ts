@@ -308,6 +308,15 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'actions.hyperliquid_builder_fee', category: 'actions', configPath: 'actions.hyperliquid_builder_fee', defaultValue: '0', isCredential: false },
   { key: 'actions.hyperliquid_order_status_poll_interval_ms', category: 'actions', configPath: 'actions.hyperliquid_order_status_poll_interval_ms', defaultValue: '2000', isCredential: false },
 
+  // --- Polymarket Prediction Market ---
+  { key: 'actions.polymarket_enabled', category: 'actions', configPath: 'actions.polymarket_enabled', defaultValue: 'false', isCredential: false },
+  { key: 'actions.polymarket_default_fee_bps', category: 'actions', configPath: 'actions.polymarket_default_fee_bps', defaultValue: '0', isCredential: false },
+  { key: 'actions.polymarket_order_expiry_seconds', category: 'actions', configPath: 'actions.polymarket_order_expiry_seconds', defaultValue: '86400', isCredential: false },
+  { key: 'actions.polymarket_max_position_usdc', category: 'actions', configPath: 'actions.polymarket_max_position_usdc', defaultValue: '1000', isCredential: false },
+  { key: 'actions.polymarket_proxy_wallet', category: 'actions', configPath: 'actions.polymarket_proxy_wallet', defaultValue: 'false', isCredential: false },
+  { key: 'actions.polymarket_neg_risk_enabled', category: 'actions', configPath: 'actions.polymarket_neg_risk_enabled', defaultValue: 'true', isCredential: false },
+  { key: 'actions.polymarket_auto_approve_ctf', category: 'actions', configPath: 'actions.polymarket_auto_approve_ctf', defaultValue: 'true', isCredential: false },
+
   // --- Across Bridge ---
   { key: 'actions.across_bridge_enabled', category: 'actions', configPath: 'actions.across_bridge_enabled', defaultValue: 'false', isCredential: false },
   { key: 'actions.across_bridge_api_base_url', category: 'actions', configPath: 'actions.across_bridge_api_base_url', defaultValue: 'https://app.across.to/api', isCredential: false },

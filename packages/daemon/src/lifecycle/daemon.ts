@@ -168,6 +168,7 @@ export class DaemonLifecycle {
   private metricsCounter: InMemoryCounter | null = null;
   private adminStatsService: AdminStatsService | null = null;
   private hyperliquidMarketData: import('@waiaas/actions').HyperliquidMarketData | null = null;
+  private polymarketInfra: import('../api/routes/polymarket.js').PolymarketInfraDeps | null = null;
   private daemonStartTime: number = Math.floor(Date.now() / 1000);
 
   /** Whether shutdown has been initiated. */
@@ -1201,6 +1202,80 @@ export class DaemonLifecycle {
         this.hyperliquidMarketData = builtIn.hyperliquidMarketData;
       }
 
+      // Register Polymarket providers when enabled (Phase 373)
+      if (this._settingsService!.get('actions.polymarket_enabled') === 'true') {
+        try {
+          const { createPolymarketInfrastructure } = await import('@waiaas/actions');
+          const { encryptSettingValue, decryptSettingValue } = await import('../infrastructure/settings/settings-crypto.js');
+          const {
+            polymarketOrders: pmOrdersTable,
+            polymarketPositions: pmPositionsTable,
+            polymarketApiKeys: pmApiKeysTable,
+          } = await import('../infrastructure/database/schema.js');
+          const { eq: drizzleEq } = await import('drizzle-orm');
+          const { uuidv7 } = await import('uuidv7');
+
+          const mpHash = this.masterPassword || '';
+          const db = this.db!;
+          const now = () => Math.floor(Date.now() / 1000);
+
+          // Thin DB adapters wrapping Drizzle ORM for Polymarket interfaces (snake_case mapping)
+          const apiKeyDbAdapter = {
+            getApiKeyByWalletId: (walletId: string) => {
+              const row = db.select().from(pmApiKeysTable).where(drizzleEq(pmApiKeysTable.walletId, walletId)).get();
+              if (!row) return null;
+              return { id: row.id, wallet_id: row.walletId, api_key: row.apiKey, api_secret_encrypted: row.apiSecretEncrypted, api_passphrase_encrypted: row.apiPassphraseEncrypted, signature_type: row.signatureType, proxy_address: row.proxyAddress, created_at: row.createdAt };
+            },
+            insertApiKey: (row: Record<string, unknown>) =>
+              db.insert(pmApiKeysTable).values({ id: uuidv7(), walletId: row.wallet_id as string, apiKey: row.api_key as string, apiSecretEncrypted: row.api_secret_encrypted as string, apiPassphraseEncrypted: row.api_passphrase_encrypted as string, signatureType: (row.signature_type as number) ?? 0, proxyAddress: (row.proxy_address as string) ?? null, createdAt: now() }).run(),
+            deleteApiKeyByWalletId: (walletId: string) =>
+              db.delete(pmApiKeysTable).where(drizzleEq(pmApiKeysTable.walletId, walletId)).run(),
+          };
+          const orderDbAdapter = {
+            insertOrder: (row: Record<string, unknown>) =>
+              db.insert(pmOrdersTable).values(row as never).run(),
+            updateOrderStatus: (id: string, status: string, updatedAt: number) =>
+              db.update(pmOrdersTable).set({ status, updatedAt } as never).where(drizzleEq(pmOrdersTable.id, id)).run(),
+            updateOrderStatusByOrderId: (orderId: string, status: string, updatedAt: number) =>
+              db.update(pmOrdersTable).set({ status, updatedAt } as never).where(drizzleEq(pmOrdersTable.orderId, orderId)).run(),
+          };
+
+          // PositionDb adapter matching the PositionDb interface
+          const positionDbAdapter = {
+            getPositions: (walletId: string) => {
+              const rows = db.select().from(pmPositionsTable).where(drizzleEq(pmPositionsTable.walletId, walletId)).all();
+              return rows.map(r => ({ id: r.id, wallet_id: r.walletId, condition_id: r.conditionId, token_id: r.tokenId, market_slug: r.marketSlug, outcome: r.outcome, size: r.size, avg_price: r.avgPrice, realized_pnl: r.realizedPnl, market_resolved: r.marketResolved, winning_outcome: r.winningOutcome, is_neg_risk: r.isNegRisk, created_at: r.createdAt, updated_at: r.updatedAt }));
+            },
+            getPosition: (walletId: string, tokenId: string) => {
+              const rows = db.select().from(pmPositionsTable).where(drizzleEq(pmPositionsTable.walletId, walletId)).all();
+              const row = rows.find(r => r.tokenId === tokenId);
+              if (!row) return null;
+              return { id: row.id, wallet_id: row.walletId, condition_id: row.conditionId, token_id: row.tokenId, market_slug: row.marketSlug, outcome: row.outcome, size: row.size, avg_price: row.avgPrice, realized_pnl: row.realizedPnl, market_resolved: row.marketResolved, winning_outcome: row.winningOutcome, is_neg_risk: row.isNegRisk, created_at: row.createdAt, updated_at: row.updatedAt };
+            },
+            upsert: (row: Record<string, unknown>) =>
+              db.insert(pmPositionsTable).values(row as never)
+                .onConflictDoUpdate({ target: [pmPositionsTable.walletId, pmPositionsTable.tokenId], set: row as never }).run(),
+            updateResolution: (conditionId: string, winningOutcome: string) =>
+              db.update(pmPositionsTable).set({ marketResolved: 1, winningOutcome, updatedAt: now() } as never).where(drizzleEq(pmPositionsTable.conditionId, conditionId)).run(),
+          };
+
+          const encryptFn = (plaintext: string) => encryptSettingValue(plaintext, mpHash);
+          const decryptFn = (ciphertext: string) => decryptSettingValue(ciphertext, mpHash);
+          const pmInfra = createPolymarketInfrastructure(
+            {},
+            { apiKeys: apiKeyDbAdapter as never, orders: orderDbAdapter, positions: positionDbAdapter as never },
+            encryptFn,
+            decryptFn,
+          );
+          this.actionProviderRegistry.register(pmInfra.orderProvider);
+          this.actionProviderRegistry.register(pmInfra.ctfProvider);
+          this.polymarketInfra = pmInfra as unknown as import('../api/routes/polymarket.js').PolymarketInfraDeps;
+          console.debug('Step 4f-pm: Polymarket providers registered (order + ctf)');
+        } catch (err) {
+          console.warn('Step 4f-pm (fail-soft): Polymarket registration failed:', err);
+        }
+      }
+
       // Load plugins from ~/.waiaas/actions/ (if exists)
       const actionsDir = join(dataDir, 'actions');
       if (existsSync(actionsDir)) {
@@ -1438,6 +1513,7 @@ export class DaemonLifecycle {
           autoStopService: this.autoStopService ?? undefined,
           metricsCounter: this.metricsCounter ?? undefined,
           hyperliquidMarketData: this.hyperliquidMarketData ?? undefined,
+          polymarketInfra: this.polymarketInfra ?? undefined,
         });
 
         const hostname = this._config!.daemon.hostname;
