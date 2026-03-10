@@ -51,7 +51,7 @@ jobs:
           echo "Testing version: $VERSION"
 
       - name: Build e2e-tests package
-        run: pnpm turbo run build --filter=@waiaas/e2e-tests --filter=@waiaas/push-relay
+        run: pnpm turbo run build --filter=@waiaas/e2e-tests --filter=@waiaas/push-relay --filter=@waiaas/mcp
 
       - name: Install daemon globally
         id: install
