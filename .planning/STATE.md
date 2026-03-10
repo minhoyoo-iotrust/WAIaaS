@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
 milestone: v31.9
-milestone_name: Polymarket 예측 시장 통합
-status: active
-stopped_at: "Completed 370-01-PLAN.md"
-last_updated: "2026-03-10T15:44:00.574Z"
+milestone_name: milestone
+status: completed
+stopped_at: Completed 370-01-PLAN.md
+last_updated: "2026-03-10T15:45:21.339Z"
 last_activity: 2026-03-11 — Phase 370 plan 01 completed
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 14
+  total_plans: 1
   completed_plans: 1
   percent: 7
 ---
