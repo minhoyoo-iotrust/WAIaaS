@@ -1188,6 +1188,111 @@ export class WAIaaSClient {
     return this.executeAction('across_bridge', 'routes', { params: rest, walletId, network });
   }
 
+  // --- Polymarket convenience methods ---
+
+  /** Buy prediction market outcome tokens on Polymarket CLOB. */
+  async pmBuy(walletId: string, params: Record<string, unknown>): Promise<ExecuteActionResponse> {
+    return this.executeAction('polymarket_order', 'pm_buy', { params, walletId });
+  }
+
+  /** Sell prediction market outcome tokens on Polymarket CLOB. */
+  async pmSell(walletId: string, params: Record<string, unknown>): Promise<ExecuteActionResponse> {
+    return this.executeAction('polymarket_order', 'pm_sell', { params, walletId });
+  }
+
+  /** Cancel a specific Polymarket CLOB order. */
+  async pmCancelOrder(walletId: string, orderId: string): Promise<ExecuteActionResponse> {
+    return this.executeAction('polymarket_order', 'pm_cancel_order', { params: { orderId }, walletId });
+  }
+
+  /** Cancel all Polymarket CLOB orders (optionally for a specific market). */
+  async pmCancelAll(walletId: string, conditionId?: string): Promise<ExecuteActionResponse> {
+    const params: Record<string, unknown> = {};
+    if (conditionId) params.conditionId = conditionId;
+    return this.executeAction('polymarket_order', 'pm_cancel_all', { params, walletId });
+  }
+
+  /** Update an existing Polymarket CLOB order (price/size). */
+  async pmUpdateOrder(walletId: string, params: Record<string, unknown>): Promise<ExecuteActionResponse> {
+    return this.executeAction('polymarket_order', 'pm_update_order', { params, walletId });
+  }
+
+  /** Split USDC.e into YES+NO CTF token pair. */
+  async pmSplitPosition(walletId: string, params: Record<string, unknown>): Promise<ExecuteActionResponse> {
+    return this.executeAction('polymarket_ctf', 'pm_split_position', { params, walletId });
+  }
+
+  /** Merge YES+NO CTF token pair back into USDC.e. */
+  async pmMergePositions(walletId: string, params: Record<string, unknown>): Promise<ExecuteActionResponse> {
+    return this.executeAction('polymarket_ctf', 'pm_merge_positions', { params, walletId });
+  }
+
+  /** Redeem winning CTF tokens for USDC.e after market resolution. */
+  async pmRedeemPositions(walletId: string, params: Record<string, unknown>): Promise<ExecuteActionResponse> {
+    return this.executeAction('polymarket_ctf', 'pm_redeem_positions', { params, walletId });
+  }
+
+  /** Get Polymarket positions for a wallet. */
+  async pmGetPositions(walletId: string): Promise<unknown> {
+    return withRetry(
+      () => this.http.get<unknown>(`/v1/wallets/${walletId}/polymarket/positions`, this.authHeaders()),
+      this.retryOptions,
+    );
+  }
+
+  /** Get Polymarket CLOB orders for a wallet. */
+  async pmGetOrders(walletId: string): Promise<unknown> {
+    return withRetry(
+      () => this.http.get<unknown>(`/v1/wallets/${walletId}/polymarket/orders`, this.authHeaders()),
+      this.retryOptions,
+    );
+  }
+
+  /** Browse Polymarket prediction markets. */
+  async pmGetMarkets(params?: { keyword?: string; category?: string; limit?: number }): Promise<unknown> {
+    const qs = new URLSearchParams();
+    if (params?.keyword) qs.set('keyword', params.keyword);
+    if (params?.category) qs.set('category', params.category);
+    if (params?.limit) qs.set('limit', String(params.limit));
+    const qsStr = qs.toString();
+    return withRetry(
+      () => this.http.get<unknown>(`/v1/polymarket/markets${qsStr ? '?' + qsStr : ''}`, this.authHeaders()),
+      this.retryOptions,
+    );
+  }
+
+  /** Get detailed info about a specific Polymarket market. */
+  async pmGetMarketDetail(conditionId: string): Promise<unknown> {
+    return withRetry(
+      () => this.http.get<unknown>(`/v1/polymarket/markets/${conditionId}`, this.authHeaders()),
+      this.retryOptions,
+    );
+  }
+
+  /** Get Polymarket balance (USDC.e + CTF tokens) for a wallet. */
+  async pmGetBalance(walletId: string): Promise<unknown> {
+    return withRetry(
+      () => this.http.get<unknown>(`/v1/wallets/${walletId}/polymarket/balance`, this.authHeaders()),
+      this.retryOptions,
+    );
+  }
+
+  /** Get Polymarket PnL summary for a wallet. */
+  async pmGetPnl(walletId: string): Promise<unknown> {
+    return withRetry(
+      () => this.http.get<unknown>(`/v1/wallets/${walletId}/polymarket/pnl`, this.authHeaders()),
+      this.retryOptions,
+    );
+  }
+
+  /** Set up Polymarket API keys and optional CTF approval. */
+  async pmSetup(walletId: string): Promise<unknown> {
+    return withRetry(
+      () => this.http.post<unknown>(`/v1/wallets/${walletId}/polymarket/setup`, {}, this.authHeaders()),
+      this.retryOptions,
+    );
+  }
+
   // --- Wallet creation (masterAuth) ---
   async createWallet(params: CreateWalletParams): Promise<CreateWalletResponse> {
     if (!this.masterPassword) {

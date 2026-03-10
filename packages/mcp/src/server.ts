@@ -50,6 +50,7 @@ import { registerTransferNft } from './tools/transfer-nft.js';
 import { registerBuildUserop } from './tools/build-userop.js';
 import { registerSignUserop } from './tools/sign-userop.js';
 import { registerHyperliquidTools } from './tools/hyperliquid.js';
+import { registerPolymarketTools } from './tools/polymarket.js';
 
 // Resource registrations (Task 2)
 import { registerWalletBalance } from './resources/wallet-balance.js';
@@ -117,6 +118,7 @@ export function createMcpServer(apiClient: ApiClient, walletContext?: WalletCont
   registerBuildUserop(server, apiClient, walletContext);
   registerSignUserop(server, apiClient, walletContext);
   registerHyperliquidTools(server, apiClient, walletContext);
+  registerPolymarketTools(server, apiClient, walletContext);
 
   // Register 4 resource groups (3 static + 1 template)
   registerWalletBalance(server, apiClient, walletContext);
