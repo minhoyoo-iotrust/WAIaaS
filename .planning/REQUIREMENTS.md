@@ -9,10 +9,10 @@ Requirements for v31.9 milestone. Each maps to roadmap phases.
 
 ### Design & Research
 
-- [ ] **DSGN-01**: Polymarket CLOB API, CTF 컨트랙트, Proxy Wallet, Neg Risk 심층 리서치 완료
-- [ ] **DSGN-02**: EIP-712 3개 도메인(ClobAuth, CTF Exchange, Neg Risk Exchange) 서명 구조 설계
-- [ ] **DSGN-03**: Hyperliquid EIP-712 패턴과 공통 추상화 범위 분석 및 결정
-- [ ] **DSGN-04**: 설계 문서 doc 80 (Polymarket 예측 시장 통합) 작성
+- [x] **DSGN-01**: Polymarket CLOB API, CTF 컨트랙트, Proxy Wallet, Neg Risk 심층 리서치 완료
+- [x] **DSGN-02**: EIP-712 3개 도메인(ClobAuth, CTF Exchange, Neg Risk Exchange) 서명 구조 설계
+- [x] **DSGN-03**: Hyperliquid EIP-712 패턴과 공통 추상화 범위 분석 및 결정
+- [x] **DSGN-04**: 설계 문서 doc 80 (Polymarket 예측 시장 통합) 작성
 
 ### CLOB Trading
 
@@ -81,10 +81,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DSGN-01 | Phase 370 | Pending |
-| DSGN-02 | Phase 370 | Pending |
-| DSGN-03 | Phase 370 | Pending |
-| DSGN-04 | Phase 370 | Pending |
+| DSGN-01 | Phase 370 | Complete |
+| DSGN-02 | Phase 370 | Complete |
+| DSGN-03 | Phase 370 | Complete |
+| DSGN-04 | Phase 370 | Complete |
 | CLOB-01 | Phase 371 | Pending |
 | CLOB-02 | Phase 371 | Pending |
 | CLOB-03 | Phase 371 | Pending |

@@ -10,7 +10,7 @@ Polymarket 예측 시장을 WAIaaS에 통합한다. Off-chain CLOB 주문과 On-
 - Integer phases (370, 371, ...): Planned milestone work
 - Decimal phases (371.1, 371.2): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 370: 설계 및 리서치** - Polymarket 심층 리서치 + EIP-712 서명 구조 설계 + 설계 문서 doc 80 작성
+- [x] **Phase 370: 설계 및 리서치** - Polymarket 심층 리서치 + EIP-712 서명 구조 설계 + 설계 문서 doc 80 작성
 - [ ] **Phase 371: CLOB 주문 구현** - API Key 생성, 주문 배치/취소, DB 마이그레이션, Neg Risk 라우팅
 - [ ] **Phase 372: 마켓 조회 + 포지션/정산** - Gamma API 마켓 탐색, 포지션 추적, CTF 온체인 리딤, PnL
 - [ ] **Phase 373: 인터페이스 통합** - Admin Settings/UI, MCP 도구, SDK, 정책 엔진, Skill 파일
@@ -30,7 +30,7 @@ Polymarket 예측 시장을 WAIaaS에 통합한다. Off-chain CLOB 주문과 On-
 **Plans:** 1 plan
 
 Plans:
-- [ ] 370-01-PLAN.md — Polymarket 심층 리서치 + 설계 문서 doc 80 작성
+- [x] 370-01-PLAN.md — Polymarket 심층 리서치 + 설계 문서 doc 80 작성
 
 ### Phase 371: CLOB 주문 구현
 **Goal**: 사용자가 Polymarket CLOB에서 API Key를 생성하고, 다양한 주문 유형으로 예측 시장 포지션을 매매할 수 있다
@@ -105,7 +105,7 @@ Phases execute in numeric order: 370 → 371 → 372 → 373 → 374
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 370. 설계 및 리서치 | 0/1 | Not started | - |
+| 370. 설계 및 리서치 | 1/1 | Complete | 2026-03-11 |
 | 371. CLOB 주문 구현 | 0/4 | Not started | - |
 | 372. 마켓 조회 + 포지션/정산 | 0/3 | Not started | - |
 | 373. 인터페이스 통합 | 0/4 | Not started | - |

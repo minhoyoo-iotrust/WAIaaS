@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v31.9
 milestone_name: Polymarket 예측 시장 통합
 status: active
-stopped_at: null
-last_updated: "2026-03-11T00:00:00.000Z"
-last_activity: 2026-03-11 — Roadmap created (5 phases, 29 requirements)
+stopped_at: "Completed 370-01-PLAN.md"
+last_updated: "2026-03-10T15:44:00.574Z"
+last_activity: 2026-03-11 — Phase 370 plan 01 completed
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 14
-  completed_plans: 0
-  percent: 0
+  completed_plans: 1
+  percent: 7
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-11)
 ## Current Position
 
 Phase: 370 of 374 (설계 및 리서치)
-Plan: 0 of 1 in current phase
-Status: Ready to plan
-Last activity: 2026-03-11 — Roadmap created
+Plan: 1 of 1 in current phase (COMPLETE)
+Status: Phase 370 complete
+Last activity: 2026-03-11 — Phase 370 plan 01 completed
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█░░░░░░░░░] 7%
 
 ## Performance Metrics
 
@@ -58,7 +58,12 @@ Progress: [░░░░░░░░░░] 0%
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
-- None yet.
+- DS-01: Direct struct EIP-712 signing (no phantom agent like Hyperliquid)
+- DS-02: signatureType=0 (EOA) as default, proxy wallet only if CLOB rejects
+- DS-03: No code-level shared abstraction with Hyperliquid, pattern reuse only
+- DS-04: Auto USDC approve on first order (configurable)
+- DS-05: Dual provider (Order + CTF) for requiresSigningKey separation
+- DS-06: DB schema based on hyperliquid_orders pattern
 
 ### Pending Todos
 
@@ -72,5 +77,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-11
-Stopped at: Roadmap created, ready to plan Phase 370
+Stopped at: Completed 370-01-PLAN.md
 Resume file: None
