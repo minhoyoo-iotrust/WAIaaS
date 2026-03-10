@@ -77,13 +77,13 @@ Plans:
   3. TypeScript/Python SDK에서 Polymarket 메서드를 호출할 수 있다
   4. 정책 엔진이 Polymarket 거래에 지출 한도와 Polygon 네트워크 검증을 적용한다
   5. connect-info에 polymarket capability가 포함되어 에이전트 자기 발견이 가능하다
-**Plans**: TBD
+**Plans:** 4 plans
 
 Plans:
-- [ ] 373-01: Admin Settings + REST API 쿼리 라우트
-- [ ] 373-02: MCP 도구 등록 + SDK PolymarketClient 메서드
-- [ ] 373-03: Admin UI 예측 시장 탭 (포지션/마켓/주문/설정)
-- [ ] 373-04: 정책 엔진 연동 + connect-info + Skill 파일 업데이트
+- [ ] 373-01-PLAN.md — Admin Settings 7개 키 + REST API 9개 쿼리 라우트 + daemon 인프라 부팅
+- [ ] 373-02-PLAN.md — MCP 쿼리 도구 8개 등록 + SDK Polymarket 메서드 15개
+- [ ] 373-03-PLAN.md — Admin UI 예측 시장 5탭 페이지 (Overview/Markets/Orders/Positions/Settings)
+- [ ] 373-04-PLAN.md — connect-info polymarket capability + 정책 통합 테스트 + Skill 파일
 
 ### Phase 374: 테스트 + 검증
 **Goal**: Polymarket 통합이 E2E 스모크 테스트와 Agent UAT 시나리오로 검증된다
