@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.10.0-rc.27](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.26...v2.10.0-rc.27) (2026-03-10)
+
+
+### Bug Fixes
+
+* resolve issues [#310](https://github.com/minhoyoo-iotrust/WAIaaS/issues/310)-[#321](https://github.com/minhoyoo-iotrust/WAIaaS/issues/321) — DeFi provider bugs, Admin UI gaps, and config fixes ([724dbaa](https://github.com/minhoyoo-iotrust/WAIaaS/commit/724dbaaf54027e5148c22dbf38fb244a53b9ec82))
+* resolve issues [#310](https://github.com/minhoyoo-iotrust/WAIaaS/issues/310)-[#321](https://github.com/minhoyoo-iotrust/WAIaaS/issues/321) and archive milestones m28.6-m31.8 ([58ee21d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/58ee21dd349199f2ea2f98877763608dac3acb2c))
+* update RPC key count test to reflect HyperEVM additions ([3ab088e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/3ab088ee54ce9ed17644a51694d65c251b340d65))
+
 ## [2.10.0-rc.26](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.25...v2.10.0-rc.26) (2026-03-10)
 
 
