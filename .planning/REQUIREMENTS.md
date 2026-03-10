@@ -16,17 +16,17 @@ Requirements for v31.9 milestone. Each maps to roadmap phases.
 
 ### CLOB Trading
 
-- [ ] **CLOB-01**: User can create Polymarket API Key (EIP-712 L1 서명 기반, 지갑별 자격증명 저장)
-- [ ] **CLOB-02**: User can place GTC limit order (EIP-712 Order 서명 → CLOB API 제출)
-- [ ] **CLOB-03**: User can place FOK market order (즉시 체결, 미체결 시 취소)
-- [ ] **CLOB-04**: User can cancel active order
-- [ ] **CLOB-05**: User can query order status and history
-- [ ] **CLOB-06**: User can view orderbook (bid/ask, spread, depth)
-- [ ] **CLOB-07**: User can place GTD timed limit order (만료 시간 지정)
+- [x] **CLOB-01**: User can create Polymarket API Key (EIP-712 L1 서명 기반, 지갑별 자격증명 저장)
+- [x] **CLOB-02**: User can place GTC limit order (EIP-712 Order 서명 → CLOB API 제출)
+- [x] **CLOB-03**: User can place FOK market order (즉시 체결, 미체결 시 취소)
+- [x] **CLOB-04**: User can cancel active order
+- [x] **CLOB-05**: User can query order status and history
+- [x] **CLOB-06**: User can view orderbook (bid/ask, spread, depth)
+- [x] **CLOB-07**: User can place GTD timed limit order (만료 시간 지정)
 - [ ] **CLOB-08**: User can place FAK partial fill order
 - [ ] **CLOB-09**: User can submit batch orders (다중 주문 일괄 제출)
-- [ ] **CLOB-10**: USDC approve to CTF Exchange / Neg Risk CTF Exchange 컨트랙트
-- [ ] **CLOB-11**: Neg Risk 시장 vs 바이너리 시장 자동 라우팅
+- [x] **CLOB-10**: USDC approve to CTF Exchange / Neg Risk CTF Exchange 컨트랙트
+- [x] **CLOB-11**: Neg Risk 시장 vs 바이너리 시장 자동 라우팅
 
 ### Market Discovery
 
@@ -49,7 +49,7 @@ Requirements for v31.9 milestone. Each maps to roadmap phases.
 - [ ] **INTG-03**: TypeScript/Python SDK 메서드 추가
 - [ ] **INTG-04**: Admin UI 예측 시장 탭 (포지션, 마켓, 주문 내역)
 - [ ] **INTG-05**: 정책 엔진 연동 (지출 한도, 마켓 거래 허용, Polygon 네트워크 검증)
-- [ ] **INTG-06**: DB 마이그레이션 (polymarket_orders, polymarket_api_keys 테이블)
+- [x] **INTG-06**: DB 마이그레이션 (polymarket_orders, polymarket_api_keys 테이블)
 - [ ] **INTG-07**: connect-info polymarket capability 확장
 - [ ] **INTG-08**: E2E 스모크 시나리오 등록 (오프체인 CLOB 플로우)
 - [ ] **INTG-09**: Agent UAT 시나리오 작성 (6-section 포맷, DeFi 카테고리)
@@ -85,17 +85,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DSGN-02 | Phase 370 | Complete |
 | DSGN-03 | Phase 370 | Complete |
 | DSGN-04 | Phase 370 | Complete |
-| CLOB-01 | Phase 371 | Pending |
-| CLOB-02 | Phase 371 | Pending |
-| CLOB-03 | Phase 371 | Pending |
-| CLOB-04 | Phase 371 | Pending |
-| CLOB-05 | Phase 371 | Pending |
-| CLOB-06 | Phase 371 | Pending |
-| CLOB-07 | Phase 371 | Pending |
+| CLOB-01 | Phase 371 | Complete |
+| CLOB-02 | Phase 371 | Complete |
+| CLOB-03 | Phase 371 | Complete |
+| CLOB-04 | Phase 371 | Complete |
+| CLOB-05 | Phase 371 | Complete |
+| CLOB-06 | Phase 371 | Complete |
+| CLOB-07 | Phase 371 | Complete |
 | CLOB-08 | Phase 371 | Pending |
 | CLOB-09 | Phase 371 | Pending |
-| CLOB-10 | Phase 371 | Pending |
-| CLOB-11 | Phase 371 | Pending |
+| CLOB-10 | Phase 371 | Complete |
+| CLOB-11 | Phase 371 | Complete |
 | MRKT-01 | Phase 372 | Pending |
 | MRKT-02 | Phase 372 | Pending |
 | MRKT-03 | Phase 372 | Pending |
@@ -109,7 +109,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INTG-03 | Phase 373 | Pending |
 | INTG-04 | Phase 373 | Pending |
 | INTG-05 | Phase 373 | Pending |
-| INTG-06 | Phase 371 | Pending |
+| INTG-06 | Phase 371 | Complete |
 | INTG-07 | Phase 373 | Pending |
 | INTG-08 | Phase 374 | Pending |
 | INTG-09 | Phase 374 | Pending |
