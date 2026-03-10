@@ -106,7 +106,7 @@ Phases execute in numeric order: 370 → 371 → 372 → 373 → 374
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 370. 설계 및 리서치 | 1/1 | Complete    | 2026-03-10 |
-| 371. CLOB 주문 구현 | 4/4 | Complete   | 2026-03-10 |
+| 371. CLOB 주문 구현 | 4/4 | Complete    | 2026-03-10 |
 | 372. 마켓 조회 + 포지션/정산 | 0/3 | Not started | - |
 | 373. 인터페이스 통합 | 0/4 | Not started | - |
 | 374. 테스트 + 검증 | 0/2 | Not started | - |
