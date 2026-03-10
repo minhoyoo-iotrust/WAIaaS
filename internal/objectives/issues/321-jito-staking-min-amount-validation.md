@@ -2,7 +2,7 @@
 
 - **Type:** BUG
 - **Severity:** MEDIUM
-- **Status:** OPEN
+- **Status:** FIXED
 - **Component:** `packages/actions/src/providers/jito-staking/`
 
 ## 증상

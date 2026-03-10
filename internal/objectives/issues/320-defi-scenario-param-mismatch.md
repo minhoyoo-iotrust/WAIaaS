@@ -2,7 +2,7 @@
 
 - **Type:** BUG
 - **Severity:** MEDIUM
-- **Status:** OPEN
+- **Status:** FIXED
 - **Component:** `agent-uat/defi/`
 
 ## 증상

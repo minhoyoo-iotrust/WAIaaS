@@ -2,7 +2,7 @@
 
 - **Type:** BUG
 - **Severity:** HIGH
-- **Status:** OPEN
+- **Status:** FIXED
 - **Component:** `packages/actions/src/providers/jupiter-swap/`
 
 ## 증상

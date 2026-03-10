@@ -2,7 +2,7 @@
 
 - **Type:** BUG
 - **Severity:** HIGH
-- **Status:** OPEN
+- **Status:** FIXED
 - **Component:** `packages/daemon/src/lifecycle/`, `packages/daemon/src/infrastructure/settings/`
 
 ## 증상
