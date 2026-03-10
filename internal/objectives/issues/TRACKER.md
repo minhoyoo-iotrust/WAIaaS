@@ -317,6 +317,7 @@
 | 301 | ENHANCEMENT | MEDIUM | E2E 온체인 테스트에 L2 테스트넷 네트워크 추가 — Polygon/Arbitrum/Optimism/Base/HyperEVM | v31.8 | FIXED | 2026-03-10 |
 | 302 | BUG | HIGH | E2E 스모크 CI global waiaas CLI PATH 해결 실패 재발 — which fallback + WAIAAS_CLI_PATH 명시 전달 필요 | v31.8 | FIXED | 2026-03-10 |
 | 303 | ENHANCEMENT | LOW | agent-uat 스킬을 .claude/skills/로 이동 — 런타임 스킬과 개발 스킬 분리 | — | FIXED | 2026-03-10 |
+| 304 | BUG | MEDIUM | Agent UAT 시나리오 문서 API 불일치 3건 — dry-run→simulate, value→amount, token 문자열→객체 | — | OPEN | — |
 
 ## Type Legend
 
@@ -328,8 +329,8 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 1
 - **FIXED:** 302
 - **WONTFIX:** 1
-- **Total:** 303
+- **Total:** 304
 
