@@ -101,6 +101,24 @@ export {
   type OrderbookEntry,
 } from './orderbook-service.js';
 
+// Market Schemas
+export {
+  GammaTokenSchema,
+  GammaMarketSchema,
+  GammaEventSchema,
+  MarketFilterSchema,
+  type GammaToken,
+  type GammaMarket,
+  type GammaEvent,
+  type MarketFilter,
+} from './market-schemas.js';
+
+// Gamma Client
+export { PolymarketGammaClient } from './gamma-client.js';
+
+// Market Data
+export { PolymarketMarketData, type ResolutionStatus } from './market-data.js';
+
 // Infrastructure Factory
 export {
   createPolymarketInfrastructure,
