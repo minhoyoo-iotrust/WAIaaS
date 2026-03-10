@@ -45,10 +45,10 @@ Plans:
 **Plans:** 4/4 plans complete
 
 Plans:
-- [ ] 371-01-PLAN.md — PolymarketSigner + ClobClient + RateLimiter + OrderBuilder 인프라
-- [ ] 371-02-PLAN.md — DB 마이그레이션 v53-v54 (polymarket_orders, polymarket_positions, polymarket_api_keys)
-- [ ] 371-03-PLAN.md — PolymarketOrderProvider (pm_buy/pm_sell/pm_cancel/pm_update) + ApiKeyService
-- [ ] 371-04-PLAN.md — USDC approve + Neg Risk 라우팅 + 오더북 조회 + 인프라 팩토리
+- [x] 371-01-PLAN.md — PolymarketSigner + ClobClient + RateLimiter + OrderBuilder 인프라
+- [x] 371-02-PLAN.md — DB 마이그레이션 v53-v54 (polymarket_orders, polymarket_positions, polymarket_api_keys)
+- [x] 371-03-PLAN.md — PolymarketOrderProvider (pm_buy/pm_sell/pm_cancel/pm_update) + ApiKeyService
+- [x] 371-04-PLAN.md — USDC approve + Neg Risk 라우팅 + 오더북 조회 + 인프라 팩토리
 
 ### Phase 372: 마켓 조회 + 포지션/정산
 **Goal**: 사용자가 Polymarket 마켓을 탐색/검색하고, 보유 포지션과 PnL을 확인하며, 해결된 마켓에서 CTF 토큰을 리딤할 수 있다
@@ -60,12 +60,12 @@ Plans:
   3. 사용자가 보유 포지션(토큰, 평균 진입가, 현재 가치, PnL)을 조회할 수 있다
   4. 사용자가 해결된 마켓에서 승리 토큰을 온체인 CTF redeemPositions으로 리딤할 수 있다
   5. 마켓 해결 시 사용자에게 알림이 전송되고 자동 리딤 제안이 포함된다
-**Plans**: TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 372-01: PolymarketMarketData (Gamma API 마켓/이벤트 조회, 캐시, neg_risk 플래그)
-- [ ] 372-02: PolymarketCtfProvider (pm_redeem_positions, pm_approve_collateral/ctf)
-- [ ] 372-03: 포지션 추적 + PnL 계산 + 마켓 해결 상태 모니터링 + 알림
+- [ ] 372-01-PLAN.md — PolymarketGammaClient + MarketData (Gamma API 마켓/이벤트 조회, 30s TTL 캐시, neg_risk 플래그)
+- [ ] 372-02-PLAN.md — PolymarketCtfProvider (pm_redeem_positions, pm_split/merge, pm_approve_collateral/ctf)
+- [ ] 372-03-PLAN.md — PositionTracker + PnlCalculator + ResolutionMonitor + 인프라 팩토리 최종 결합
 
 ### Phase 373: 인터페이스 통합
 **Goal**: Polymarket 기능이 Admin UI, MCP, SDK, 정책 엔진, connect-info를 통해 완전히 접근 가능하다
