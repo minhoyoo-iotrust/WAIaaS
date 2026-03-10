@@ -101,6 +101,23 @@ export {
   type OrderbookEntry,
 } from './orderbook-service.js';
 
+// CTF Schemas
+export {
+  PmRedeemSchema,
+  PmSplitSchema,
+  PmMergeSchema,
+  PmApproveCollateralSchema,
+  PmApproveCtfSchema,
+  type PmRedeemInput,
+  type PmSplitInput,
+  type PmMergeInput,
+  type PmApproveCollateralInput,
+  type PmApproveCtfInput,
+} from './ctf-schemas.js';
+
+// CTF Provider
+export { PolymarketCtfProvider } from './ctf-provider.js';
+
 // Market Schemas
 export {
   GammaTokenSchema,

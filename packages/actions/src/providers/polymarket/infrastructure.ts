@@ -13,6 +13,7 @@ import { PolymarketApiKeyService, type ApiKeyDb, type EncryptFn, type DecryptFn 
 import { PolymarketOrderProvider, type OrderDb } from './order-provider.js';
 import { PolymarketOrderbookService } from './orderbook-service.js';
 import { PolymarketApproveHelper } from './approve-helper.js';
+import { PolymarketCtfProvider } from './ctf-provider.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -39,6 +40,7 @@ export interface PolymarketInfrastructure {
   orderProvider: PolymarketOrderProvider;
   orderbookService: PolymarketOrderbookService;
   approveHelper: PolymarketApproveHelper;
+  ctfProvider: PolymarketCtfProvider;
 }
 
 // ---------------------------------------------------------------------------
@@ -83,12 +85,15 @@ export function createPolymarketInfrastructure(
   // 5. Approve helper (stateless)
   const approveHelper = new PolymarketApproveHelper();
 
-  // 6. Order provider (depends on CLOB client, API key service, DB)
-  // Note: negRiskResolver is null for now; full MarketData impl in Phase 372
+  // 6. CTF provider (stateless, on-chain operations)
+  const ctfProvider = new PolymarketCtfProvider();
+
+  // 7. Order provider (depends on CLOB client, API key service, DB)
+  // Note: negRiskResolver is null for now; full MarketData impl in Phase 372-03
   const orderProvider = new PolymarketOrderProvider(
     clobClient,
     apiKeyService,
-    null, // negRiskResolver - Phase 372
+    null, // negRiskResolver - Phase 372-03
     db.orders,
   );
 
@@ -99,5 +104,6 @@ export function createPolymarketInfrastructure(
     orderProvider,
     orderbookService,
     approveHelper,
+    ctfProvider,
   };
 }
