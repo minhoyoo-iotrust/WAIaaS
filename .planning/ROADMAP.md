@@ -13,7 +13,7 @@ Polymarket 예측 시장을 WAIaaS에 통합한다. Off-chain CLOB 주문과 On-
 - [x] **Phase 370: 설계 및 리서치** - Polymarket 심층 리서치 + EIP-712 서명 구조 설계 + 설계 문서 doc 80 작성
 - [x] **Phase 371: CLOB 주문 구현** - API Key 생성, 주문 배치/취소, DB 마이그레이션, Neg Risk 라우팅 (completed 2026-03-10)
 - [x] **Phase 372: 마켓 조회 + 포지션/정산** - Gamma API 마켓 탐색, 포지션 추적, CTF 온체인 리딤, PnL (completed 2026-03-11)
-- [ ] **Phase 373: 인터페이스 통합** - Admin Settings/UI, MCP 도구, SDK, 정책 엔진, Skill 파일
+- [x] **Phase 373: 인터페이스 통합** - Admin Settings/UI, MCP 도구, SDK, 정책 엔진, Skill 파일 (completed 2026-03-11)
 - [ ] **Phase 374: 테스트 + 검증** - E2E 스모크 시나리오, Agent UAT 시나리오
 
 ## Phase Details
@@ -77,13 +77,13 @@ Plans:
   3. TypeScript/Python SDK에서 Polymarket 메서드를 호출할 수 있다
   4. 정책 엔진이 Polymarket 거래에 지출 한도와 Polygon 네트워크 검증을 적용한다
   5. connect-info에 polymarket capability가 포함되어 에이전트 자기 발견이 가능하다
-**Plans:** 4 plans
+**Plans:** 4/4 plans complete
 
 Plans:
-- [ ] 373-01-PLAN.md — Admin Settings 7개 키 + REST API 9개 쿼리 라우트 + daemon 인프라 부팅
-- [ ] 373-02-PLAN.md — MCP 쿼리 도구 8개 등록 + SDK Polymarket 메서드 15개
-- [ ] 373-03-PLAN.md — Admin UI 예측 시장 5탭 페이지 (Overview/Markets/Orders/Positions/Settings)
-- [ ] 373-04-PLAN.md — connect-info polymarket capability + 정책 통합 테스트 + Skill 파일
+- [x] 373-01-PLAN.md — Admin Settings 7개 키 + REST API 9개 쿼리 라우트 + daemon 인프라 부팅
+- [x] 373-02-PLAN.md — MCP 쿼리 도구 8개 등록 + SDK Polymarket 메서드 15개
+- [x] 373-03-PLAN.md — Admin UI 예측 시장 5탭 페이지 (Overview/Markets/Orders/Positions/Settings)
+- [x] 373-04-PLAN.md — connect-info polymarket capability + 정책 통합 테스트 + Skill 파일
 
 ### Phase 374: 테스트 + 검증
 **Goal**: Polymarket 통합이 E2E 스모크 테스트와 Agent UAT 시나리오로 검증된다
@@ -108,5 +108,5 @@ Phases execute in numeric order: 370 → 371 → 372 → 373 → 374
 | 370. 설계 및 리서치 | 1/1 | Complete    | 2026-03-10 |
 | 371. CLOB 주문 구현 | 4/4 | Complete    | 2026-03-10 |
 | 372. 마켓 조회 + 포지션/정산 | 3/3 | Complete    | 2026-03-10 |
-| 373. 인터페이스 통합 | 0/4 | Not started | - |
+| 373. 인터페이스 통합 | 4/4 | Complete    | 2026-03-11 |
 | 374. 테스트 + 검증 | 0/2 | Not started | - |

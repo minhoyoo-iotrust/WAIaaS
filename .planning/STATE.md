@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v31.9
 milestone_name: milestone
-status: completed
-stopped_at: Completed 372-03-PLAN.md (Phase 372 complete)
-last_updated: "2026-03-10T16:37:15.160Z"
-last_activity: 2026-03-11 — Phase 372 plans 01-03 completed
+status: in-progress
+stopped_at: Completed 373-04-PLAN.md (Phase 373 complete)
+last_updated: "2026-03-11T17:15:00.000Z"
+last_activity: 2026-03-11 — Phase 373 plans 01-04 completed
 progress:
   total_phases: 5
-  completed_phases: 3
-  total_plans: 8
-  completed_plans: 8
-  percent: 98
+  completed_phases: 4
+  total_plans: 12
+  completed_plans: 12
+  percent: 99
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-11)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Phase 372 마켓 조회 + 포지션/정산 (complete)
+**Current focus:** Phase 373 인터페이스 통합 (complete)
 
 ## Current Position
 
-Phase: 372 of 374 (마켓 조회 + 포지션/정산)
-Plan: 3 of 3 in current phase (COMPLETE)
-Status: Phase 372 complete
-Last activity: 2026-03-11 — Phase 372 plans 01-03 completed
+Phase: 373 of 374 (인터페이스 통합)
+Plan: 4 of 4 in current phase (COMPLETE)
+Status: Phase 373 complete
+Last activity: 2026-03-11 — Phase 373 plans 01-04 completed
 
-Progress: [██████████] 98%
+Progress: [██████████] 99%
 
 ## Performance Metrics
 
@@ -45,9 +45,10 @@ Progress: [██████████] 98%
 |-------|-------|-------|----------|
 | 371 | 4 | ~70min | ~18min |
 | 372 | 3 | ~13min | ~4min |
+| 373 | 4 | ~12min | ~3min |
 
 **Recent Trend:**
-- Last 5 plans: 371-03(15m), 371-04(15m), 372-01(5m), 372-02(5m), 372-03(5m)
+- Last 5 plans: 372-01(5m), 372-02(5m), 372-03(5m), 373-03(3m), 373-04(3m)
 - Trend: Accelerating
 
 *Updated after each plan completion*
@@ -72,6 +73,9 @@ Recent decisions affecting current work:
 - [Phase 372]: Resolution detection via closed + winner token flag
 - [Phase 372]: PnlCalculator is stateless static class (pure functions)
 - [Phase 372]: ResolutionMonitor is polling-based (not daemon background)
+- [Phase 373]: Polygon wallet filter for Admin UI (chain=ethereum AND network contains polygon)
+- [Phase 373]: connect-info polymarket capability follows Hyperliquid pattern
+- [Phase 373]: 17 policy tests verify defaultTier and connect-info behavior at daemon level
 
 ### Pending Todos
 
@@ -85,5 +89,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-11
-Stopped at: Completed 372-03-PLAN.md (Phase 372 complete)
+Stopped at: Completed 373-04-PLAN.md (Phase 373 complete)
 Resume file: None

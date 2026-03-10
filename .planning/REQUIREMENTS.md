@@ -44,16 +44,16 @@ Requirements for v31.9 milestone. Each maps to roadmap phases.
 
 ### Integration
 
-- [ ] **INTG-01**: Admin Settings에 Polymarket API Key/Secret 설정 항목 추가
-- [ ] **INTG-02**: MCP 도구 (주문/마켓/포지션/리딤 등)
-- [ ] **INTG-03**: TypeScript/Python SDK 메서드 추가
-- [ ] **INTG-04**: Admin UI 예측 시장 탭 (포지션, 마켓, 주문 내역)
-- [ ] **INTG-05**: 정책 엔진 연동 (지출 한도, 마켓 거래 허용, Polygon 네트워크 검증)
+- [x] **INTG-01**: Admin Settings에 Polymarket API Key/Secret 설정 항목 추가
+- [x] **INTG-02**: MCP 도구 (주문/마켓/포지션/리딤 등)
+- [x] **INTG-03**: TypeScript/Python SDK 메서드 추가
+- [x] **INTG-04**: Admin UI 예측 시장 탭 (포지션, 마켓, 주문 내역)
+- [x] **INTG-05**: 정책 엔진 연동 (지출 한도, 마켓 거래 허용, Polygon 네트워크 검증)
 - [x] **INTG-06**: DB 마이그레이션 (polymarket_orders, polymarket_api_keys 테이블)
-- [ ] **INTG-07**: connect-info polymarket capability 확장
+- [x] **INTG-07**: connect-info polymarket capability 확장
 - [ ] **INTG-08**: E2E 스모크 시나리오 등록 (오프체인 CLOB 플로우)
 - [ ] **INTG-09**: Agent UAT 시나리오 작성 (6-section 포맷, DeFi 카테고리)
-- [ ] **INTG-10**: Skill 파일 업데이트/생성
+- [x] **INTG-10**: Skill 파일 업데이트/생성
 
 ## v2 Requirements
 
@@ -104,16 +104,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SETL-03 | Phase 372 | Complete |
 | SETL-04 | Phase 372 | Complete |
 | SETL-05 | Phase 372 | Complete |
-| INTG-01 | Phase 373 | Pending |
-| INTG-02 | Phase 373 | Pending |
-| INTG-03 | Phase 373 | Pending |
-| INTG-04 | Phase 373 | Pending |
-| INTG-05 | Phase 373 | Pending |
+| INTG-01 | Phase 373 | Complete |
+| INTG-02 | Phase 373 | Complete |
+| INTG-03 | Phase 373 | Complete |
+| INTG-04 | Phase 373 | Complete |
+| INTG-05 | Phase 373 | Complete |
 | INTG-06 | Phase 371 | Complete |
-| INTG-07 | Phase 373 | Pending |
+| INTG-07 | Phase 373 | Complete |
 | INTG-08 | Phase 374 | Pending |
 | INTG-09 | Phase 374 | Pending |
-| INTG-10 | Phase 373 | Pending |
+| INTG-10 | Phase 373 | Complete |
 
 **Coverage:**
 - v1 requirements: 29 total
