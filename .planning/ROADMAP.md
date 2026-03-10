@@ -92,11 +92,11 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. 오프체인 CLOB 플로우 E2E 스모크 시나리오가 CI에 등록되어 통과한다
   2. Agent UAT 시나리오(6-section 포맷, DeFi 카테고리)가 작성되어 메인넷 검증 가능하다
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 374-01: E2E 스모크 시나리오 (오프체인 CLOB mock 기반)
-- [ ] 374-02: Agent UAT 시나리오 작성 (6-section 포맷)
+- [ ] 374-01-PLAN.md — E2E 스모크 시나리오 (오프체인 CLOB mock 기반, 4 scenarios, coverage map)
+- [ ] 374-02-PLAN.md — Agent UAT 시나리오 작성 (6-section 포맷, defi-13, 8 steps)
 
 ## Progress
 
