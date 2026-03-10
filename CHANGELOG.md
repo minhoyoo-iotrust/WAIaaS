@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.10.0-rc.26](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.25...v2.10.0-rc.26) (2026-03-10)
+
+
+### Bug Fixes
+
+* **ci:** add @waiaas/shared to release pipeline ([#311](https://github.com/minhoyoo-iotrust/WAIaaS/issues/311)) ([61ea5f3](https://github.com/minhoyoo-iotrust/WAIaaS/commit/61ea5f3fceab25fbfe5eb97ae03bdda856b0e6f2))
+* **docker:** add @waiaas/shared to Dockerfile build stages ([#311](https://github.com/minhoyoo-iotrust/WAIaaS/issues/311)) ([1130fbf](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1130fbf297ad393e3dbb40d37a61985553090e69))
+
 ## [2.10.0-rc.25](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.24...v2.10.0-rc.25) (2026-03-10)
 
 
