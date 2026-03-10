@@ -144,6 +144,12 @@ async function wireEvmTokens(
   const seenAddresses = new Set<string>();
 
   // Source 1: Token registry (builtin + custom for this network)
+  if (!deps.tokenRegistryService) {
+    console.warn('[wireEvmTokens] tokenRegistryService not available, ERC-20 registry tokens will not be queried', {
+      walletId: wallet.id,
+      network,
+    });
+  }
   if (deps.tokenRegistryService) {
     const registryTokens = await deps.tokenRegistryService.getAdapterTokenList(network);
     for (const t of registryTokens) {
@@ -174,6 +180,13 @@ async function wireEvmTokens(
       }
     }
   }
+
+  console.debug('[wireEvmTokens] wired ERC-20 tokens', {
+    walletId: wallet.id,
+    network,
+    tokenRegistryAvailable: !!deps.tokenRegistryService,
+    tokenCount: tokenList.length,
+  });
 
   // Set merged token list on adapter
   (adapter as unknown as { setAllowedTokens: (t: TokenListEntry[]) => void }).setAllowedTokens(tokenList);
@@ -441,6 +454,13 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
     await wireEvmTokens(adapter, wallet, targetNetwork, deps);
 
     const assets = await adapter.getAssets(wallet.publicKey);
+
+    console.debug('[wallet/assets] getAssets result', {
+      walletId: wallet.id,
+      network: targetNetwork,
+      assetCount: assets.length,
+      hasErc20: assets.some(a => !a.isNative),
+    });
 
     return c.json(
       {

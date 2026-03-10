@@ -504,6 +504,8 @@ export class HotReloadOrchestrator {
       'lido_staking', 'jito_staking',
       'aave_v3', 'kamino',
       'pendle_yield', 'drift_perp',
+      'erc8004_agent',
+      'hyperliquid_perp', 'hyperliquid_spot', 'hyperliquid_sub',
       'dcent_swap',
       'across_bridge',
     ];

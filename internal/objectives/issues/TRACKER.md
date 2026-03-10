@@ -323,8 +323,18 @@
 | 307 | BUG | HIGH | Hyperliquid 액션 프로바이더 설정 키 불일치 + 기본값 비활성 — 토글 무동작 + Inactive 고정 | — | FIXED | 2026-03-10 |
 | 308 | ENHANCEMENT | MEDIUM | Agent UAT 인증 카테고리 분류 + 필터링 — masterAuth/sessionAuth 시나리오 분리 | — | FIXED | 2026-03-10 |
 | 309 | BUG | MEDIUM | Agent UAT 시나리오 문서 API 경로 불일치 2건 — wallets/:id/balance→wallet/balance, transactions→transactions/send | — | FIXED | 2026-03-10 |
-| 310 | BUG | MEDIUM | Sepolia ERC-20 토큰이 assets API에 미표시 — incoming TX에는 수신 기록 존재 | — | WONTFIX | 2026-03-10 |
+| 310 | BUG | HIGH | EVM getAssets() ERC-20 multicall silent failure — Sepolia USDC 40개 미표시 | — | FIXED | 2026-03-10 |
 | 311 | MISSING | HIGH | @waiaas/shared 패키지 릴리스 설정 누락 — release-please + smoke test + release.yml 미등록 | — | FIXED | 2026-03-10 |
+| 312 | MISSING | MEDIUM | HyperEVM RPC 기본값이 Config Zod 스키마에 누락 — 지갑 상세 잔액 조회 불가 | — | FIXED | 2026-03-10 |
+| 313 | BUG | LOW | CoinGecko API Key 붙여넣기 시 입력값 미표시 — icc() 패턴이 dirty 값 무시 | — | FIXED | 2026-03-10 |
+| 314 | MISSING | MEDIUM | NFT Indexer 설정이 Admin UI에서 접근 불가 — 레거시 settings.tsx에만 존재 + 재발 방지 completeness 테스트 | — | FIXED | 2026-03-10 |
+| 315 | BUG | MEDIUM | 병렬 UAT 실행 시 세션 한도 초과로 테스트 진행 불가 — max_sessions_per_wallet 5 고갈 + 세션 미정리 | — | FIXED | 2026-03-10 |
+| 316 | BUG | HIGH | 0x Swap ACTION_RESOLVE_FAILED: gas/gasPrice 파싱 버그 — 0x API v2 응답 형식 변경 대응 필요 | — | FIXED | 2026-03-10 |
+| 317 | BUG | HIGH | Across Bridge timestamp 타입 불일치 — API 응답 string vs Zod 스키마 number | — | FIXED | 2026-03-10 |
+| 318 | BUG | HIGH | Jupiter API 401 Unauthorized — 인증 필수 전환 대응 (requiresApiKey 변경 필요) | — | FIXED | 2026-03-10 |
+| 319 | BUG | HIGH | Hyperliquid Admin UI 활성화 불가 — MarketData null + Hot-Reload BUILTIN_NAMES 누락 (3중 결함) | — | FIXED | 2026-03-10 |
+| 320 | BUG | MEDIUM | DeFi UAT 시나리오 문서 API 파라미터 불일치 8건 — amount/chain/token 형식 + 필드명 | — | FIXED | 2026-03-10 |
+| 321 | BUG | MEDIUM | Jito Staking 최소 금액 검증 누락 — 소액 deposit 시 InstructionError Custom(1) 온체인 실패 | — | FIXED | 2026-03-10 |
 
 ## Type Legend
 
@@ -337,7 +347,8 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 309
-- **WONTFIX:** 2
-- **Total:** 311
+- **FIXED:** 321
+- **WONTFIX:** 1
+- **Total:** 322
+- **Archived:** 321 (001–321)
 

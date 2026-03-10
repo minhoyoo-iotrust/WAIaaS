@@ -49,7 +49,7 @@ export class JupiterSwapActionProvider implements IActionProvider {
       version: '1.0.0',
       chains: ['solana'],
       mcpExpose: true,
-      requiresApiKey: false,
+      requiresApiKey: true,
       requiredApis: ['jupiter'],
       requiresSigningKey: false,
     };

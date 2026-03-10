@@ -49,11 +49,11 @@ curl -s -X POST http://localhost:3100/v1/transactions/simulate \
     "type": "CONTRACT_CALL",
     "action": "lifi-bridge",
     "params": {
-      "fromChain": "ethereum-mainnet",
-      "toChain": "arbitrum-mainnet",
+      "fromChain": "ethereum",
+      "toChain": "arbitrum",
       "fromToken": "ETH",
       "toToken": "ETH",
-      "amount": "0.005",
+      "fromAmount": "5000000000000000",
       "toAddress": "<MY_ARBITRUM_ADDRESS>"
     },
     "network": "ethereum-mainnet"
@@ -83,11 +83,11 @@ curl -s -X POST http://localhost:3100/v1/transactions/send \
     "type": "CONTRACT_CALL",
     "action": "lifi-bridge",
     "params": {
-      "fromChain": "ethereum-mainnet",
-      "toChain": "arbitrum-mainnet",
+      "fromChain": "ethereum",
+      "toChain": "arbitrum",
       "fromToken": "ETH",
       "toToken": "ETH",
-      "amount": "0.005",
+      "fromAmount": "5000000000000000",
       "toAddress": "<MY_ARBITRUM_ADDRESS>"
     },
     "network": "ethereum-mainnet"

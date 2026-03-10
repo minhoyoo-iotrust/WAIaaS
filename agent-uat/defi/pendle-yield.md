@@ -56,12 +56,11 @@ curl -s -X POST http://localhost:3100/v1/transactions/simulate \
   -d '{
     "walletId": "<WALLET_ID>",
     "type": "CONTRACT_CALL",
-    "action": "pendle-swap",
+    "action": "pendle-buy-pt",
     "params": {
       "market": "<MARKET_ADDRESS>",
-      "tokenIn": "stETH",
-      "tokenOut": "PT",
-      "amount": "0.005"
+      "tokenIn": "<stETH_CONTRACT_ADDRESS>",
+      "amountIn": "5000000000000000"
     },
     "network": "ethereum-mainnet"
   }'
@@ -87,12 +86,11 @@ curl -s -X POST http://localhost:3100/v1/transactions/send \
   -d '{
     "walletId": "<WALLET_ID>",
     "type": "CONTRACT_CALL",
-    "action": "pendle-swap",
+    "action": "pendle-buy-pt",
     "params": {
       "market": "<MARKET_ADDRESS>",
-      "tokenIn": "stETH",
-      "tokenOut": "PT",
-      "amount": "0.005"
+      "tokenIn": "<stETH_CONTRACT_ADDRESS>",
+      "amountIn": "5000000000000000"
     },
     "network": "ethereum-mainnet"
   }'
@@ -127,12 +125,10 @@ curl -s -X POST http://localhost:3100/v1/transactions/simulate \
   -d '{
     "walletId": "<WALLET_ID>",
     "type": "CONTRACT_CALL",
-    "action": "pendle-swap",
+    "action": "pendle-redeem-pt",
     "params": {
       "market": "<MARKET_ADDRESS>",
-      "tokenIn": "PT",
-      "tokenOut": "stETH",
-      "amount": "<PT_AMOUNT>"
+      "amount": "<PT_AMOUNT_IN_SMALLEST_UNITS>"
     },
     "network": "ethereum-mainnet"
   }'

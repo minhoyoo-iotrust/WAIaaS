@@ -24,6 +24,7 @@ const mockClient = {
   sendRawTransaction: vi.fn(),
   waitForTransactionReceipt: vi.fn(),
   multicall: vi.fn(),
+  readContract: vi.fn(),
   chain: { id: 1 },
 };
 
@@ -364,21 +365,54 @@ describe('EvmAdapter getAssets ERC-20 multicall', () => {
     expect(assets[1]!.symbol).toBe('USDC');
   });
 
-  it('skips failed multicall results gracefully', async () => {
+  it('falls back to individual balanceOf when multicall fails for a token', async () => {
     mockClient.getBalance.mockResolvedValue(1000000000000000000n);
     mockClient.multicall.mockResolvedValue([
       { status: 'success', result: 5000000n }, // 5 USDC
-      { status: 'failure', error: new Error('execution reverted') }, // USDT call failed
+      { status: 'failure', error: new Error('execution reverted') }, // USDT multicall failed
     ]);
+    // Fallback individual call returns USDT balance
+    mockClient.readContract.mockResolvedValue(10000000n); // 10 USDT
 
     adapter.setAllowedTokens([
       { address: TEST_TOKEN_ADDRESS, symbol: 'USDC', name: 'USD Coin', decimals: 6 },
       { address: TEST_TOKEN_B, symbol: 'USDT', name: 'Tether', decimals: 6 },
     ]);
 
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const assets = await adapter.getAssets(TEST_ADDRESS_FROM);
+    warnSpy.mockRestore();
 
-    expect(assets).toHaveLength(2); // native + USDC only (USDT failed)
+    expect(assets).toHaveLength(3); // native + USDC + USDT (via fallback)
+    expect(assets[0]!.mint).toBe('native');
+    // readContract was called as fallback for USDT
+    expect(mockClient.readContract).toHaveBeenCalledWith({
+      address: TEST_TOKEN_B,
+      abi: ERC20_ABI,
+      functionName: 'balanceOf',
+      args: [TEST_ADDRESS_FROM],
+    });
+  });
+
+  it('skips token when both multicall and individual balanceOf fail', async () => {
+    mockClient.getBalance.mockResolvedValue(1000000000000000000n);
+    mockClient.multicall.mockResolvedValue([
+      { status: 'success', result: 5000000n }, // 5 USDC
+      { status: 'failure', error: new Error('execution reverted') }, // USDT multicall failed
+    ]);
+    // Fallback individual call also fails
+    mockClient.readContract.mockRejectedValue(new Error('contract not found'));
+
+    adapter.setAllowedTokens([
+      { address: TEST_TOKEN_ADDRESS, symbol: 'USDC', name: 'USD Coin', decimals: 6 },
+      { address: TEST_TOKEN_B, symbol: 'USDT', name: 'Tether', decimals: 6 },
+    ]);
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const assets = await adapter.getAssets(TEST_ADDRESS_FROM);
+    warnSpy.mockRestore();
+
+    expect(assets).toHaveLength(2); // native + USDC only (USDT failed both paths)
     expect(assets[0]!.mint).toBe('native');
     expect(assets[1]!.symbol).toBe('USDC');
   });

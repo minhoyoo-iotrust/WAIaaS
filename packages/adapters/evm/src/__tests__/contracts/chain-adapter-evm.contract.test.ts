@@ -44,6 +44,7 @@ const mockClient = {
     { status: 'success', result: 'USDC' }, // symbol
     { status: 'success', result: 'USD Coin' }, // name
   ]),
+  readContract: vi.fn().mockResolvedValue(0n),
   chain: { id: 11155111 }, // Sepolia chainId
 };
 

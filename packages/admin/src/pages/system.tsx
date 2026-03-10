@@ -22,7 +22,7 @@ import { registerDirty, unregisterDirty } from '../utils/dirty-guard';
 // System-relevant setting categories (used for save filtering)
 // ---------------------------------------------------------------------------
 
-const SYSTEM_PREFIXES = ['display.', 'daemon.', 'oracle.', 'gas_condition.', 'smart_account.', 'erc8128.'];
+const SYSTEM_PREFIXES = ['display.', 'daemon.', 'oracle.', 'gas_condition.', 'smart_account.', 'erc8128.', 'actions.nft_indexer_'];
 const SYSTEM_EXACT_KEYS = new Set(['security.rate_limit_global_ip_rpm']);
 
 function isSystemSetting(key: string): boolean {
@@ -285,6 +285,109 @@ export default function SystemPage() {
   }
 
   // ---------------------------------------------------------------------------
+  // Section: NFT Indexer
+  // ---------------------------------------------------------------------------
+
+  const NFT_INDEXER_PROVIDERS: Record<string, { label: string; description: string }> = {
+    alchemy_nft: { label: 'Alchemy NFT', description: 'EVM NFT indexing (ERC-721, ERC-1155)' },
+    helius: { label: 'Helius', description: 'Solana NFT indexing (Metaplex)' },
+  };
+
+  function NftIndexerSection() {
+    const indexerKeys = apiKeys.value.filter((k) => k.providerName in NFT_INDEXER_PROVIDERS);
+    // Build a merged list: registered entries from API + unregistered entries with direct input
+    const providerNames = Object.keys(NFT_INDEXER_PROVIDERS);
+    const entries = providerNames.map((name) => {
+      const existing = indexerKeys.find((k) => k.providerName === name);
+      return existing ?? { providerName: name, hasKey: false, maskedKey: '' };
+    });
+
+    return (
+      <div class="settings-category">
+        <div class="settings-category-header">
+          <h3>NFT Indexer</h3>
+          <p class="settings-description">Configure API keys for NFT indexing (required for NFT query operations)</p>
+        </div>
+        <div class="settings-category-body">
+          {entries.map((entry) => {
+            const info = NFT_INDEXER_PROVIDERS[entry.providerName]!;
+            return (
+              <div class="settings-field-row" key={entry.providerName}>
+                <div class="settings-field-label">
+                  <span>{info.label}</span>
+                  <span style={{ fontSize: '0.8em', color: 'var(--color-text-secondary)' }}>{info.description}</span>
+                  {entry.hasKey ? (
+                    <Badge variant="success">Configured</Badge>
+                  ) : (
+                    <Badge variant="neutral">Not configured</Badge>
+                  )}
+                </div>
+                <div class="settings-field-value">
+                  {apiKeyEditing.value === entry.providerName ? (
+                    <div class="api-key-edit-row">
+                      <FormField
+                        label="API Key"
+                        type="password"
+                        name={`nft-apikey-${entry.providerName}`}
+                        value={apiKeyInput.value}
+                        onChange={(v) => { apiKeyInput.value = String(v); }}
+                        placeholder="Enter API key"
+                      />
+                      <Button
+                        onClick={() => handleSaveApiKey(entry.providerName)}
+                        loading={apiKeySaving.value}
+                        size="sm"
+                      >Save</Button>
+                      <Button
+                        variant="ghost"
+                        onClick={() => { apiKeyEditing.value = null; apiKeyInput.value = ''; }}
+                        size="sm"
+                      >Cancel</Button>
+                    </div>
+                  ) : (
+                    <div class="api-key-display-row">
+                      <span class="api-key-masked">{entry.hasKey ? entry.maskedKey : 'Not set'}</span>
+                      <Button
+                        variant="ghost"
+                        onClick={() => { apiKeyEditing.value = entry.providerName; apiKeyInput.value = ''; }}
+                        size="sm"
+                      >{entry.hasKey ? 'Change' : 'Set'}</Button>
+                      {entry.hasKey && (
+                        <Button
+                          variant="danger"
+                          onClick={() => handleDeleteApiKey(entry.providerName)}
+                          size="sm"
+                        >Delete</Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--space-3)', marginTop: 'var(--space-3)' }}>
+            <FormField
+              label="Cache TTL (seconds)"
+              name="actions.nft_indexer_cache_ttl_sec"
+              type="number"
+              value={Number(ev('actions', 'nft_indexer_cache_ttl_sec')) || 300}
+              onChange={(v) => handleFieldChange('actions.nft_indexer_cache_ttl_sec', v)}
+              min={0}
+              max={86400}
+              description="How long to cache NFT metadata and listings (seconds). Default: 300 (5 min)."
+            />
+          </div>
+          <div class="settings-info-box">
+            NFT indexer API keys enable NFT query operations. Alchemy is used for EVM chains (ERC-721, ERC-1155)
+            and Helius for Solana (Metaplex). Without a configured key, NFT listing and metadata queries will fail
+            for the respective chain family.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
   // Section: Oracle
   // ---------------------------------------------------------------------------
 
@@ -313,9 +416,9 @@ export default function SystemPage() {
               label="CoinGecko API Key"
               name="oracle.coingecko_api_key"
               type="password"
-              value={icc('oracle', 'coingecko_api_key') ? '••••••••' : ''}
+              value={ev('oracle', 'coingecko_api_key')}
               onChange={(v) => handleFieldChange('oracle.coingecko_api_key', v)}
-              placeholder="Enter CoinGecko Pro API key (optional)"
+              placeholder={icc('oracle', 'coingecko_api_key') ? '(configured)' : 'Enter CoinGecko Pro API key (optional)'}
               description="Pro API key for higher rate limits. Free tier: ~30 req/min."
             />
           </div>
@@ -679,7 +782,10 @@ export default function SystemPage() {
         </div>
       ) : (
         <>
-          {/* 1. Oracle */}
+          {/* 1. NFT Indexer */}
+          <NftIndexerSection />
+
+          {/* 2. Oracle */}
           <OracleSection />
 
           {/* 3. Display Currency */}

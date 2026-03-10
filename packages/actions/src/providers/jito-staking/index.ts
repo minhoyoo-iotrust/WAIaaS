@@ -17,7 +17,7 @@ import type {
   ActionContext,
   ContractCallRequest,
 } from '@waiaas/core';
-import { type JitoStakingConfig, JITO_STAKING_DEFAULTS } from './config.js';
+import { type JitoStakingConfig, JITO_STAKING_DEFAULTS, JITO_MIN_DEPOSIT_LAMPORTS, JITO_MIN_DEPOSIT_SOL } from './config.js';
 import {
   buildDepositSolRequest,
   buildWithdrawSolRequest,
@@ -108,6 +108,12 @@ export class JitoStakingActionProvider implements IActionProvider {
   ): Promise<ContractCallRequest> {
     const input = JitoStakeInputSchema.parse(params);
     const amountLamports = await parseSolAmount(input.amount);
+
+    if (amountLamports < JITO_MIN_DEPOSIT_LAMPORTS) {
+      throw new ChainError('INVALID_INSTRUCTION', 'solana', {
+        message: `Minimum Jito stake deposit is ${JITO_MIN_DEPOSIT_SOL} SOL`,
+      });
+    }
 
     return buildDepositSolRequest(this.config, amountLamports, context.walletAddress);
   }

@@ -152,9 +152,10 @@ export function registerBuiltInProviders(
   registry: ProviderRegistry,
   settingsReader: SettingsReader,
   options?: { rpcCaller?: IRpcCaller },
-): { loaded: string[]; skipped: string[] } {
+): { loaded: string[]; skipped: string[]; hyperliquidMarketData?: HyperliquidMarketData } {
   const loaded: string[] = [];
   const skipped: string[] = [];
+  let hyperliquidMarketData: HyperliquidMarketData | undefined;
 
   const providers: Array<{
     key: string;
@@ -323,20 +324,22 @@ export function registerBuiltInProviders(
 
         const rateLimiter = new HyperliquidRateLimiter(rateLimit);
         const client = new HyperliquidExchangeClient(apiUrl, rateLimiter, timeoutMs);
-        const marketData = new HyperliquidMarketData(client);
+        const md = new HyperliquidMarketData(client);
+        // Expose MarketData to caller so HTTP routes can use it
+        hyperliquidMarketData = md;
 
         // Register spot and sub-account providers alongside perp (shared client/marketData)
         try {
-          registry.register(new HyperliquidSpotProvider(client, marketData, isMainnet));
+          registry.register(new HyperliquidSpotProvider(client, md, isMainnet));
           loaded.push('hyperliquid_spot');
         } catch { /* spot registration failed, continue */ }
         try {
-          const subService = new HyperliquidSubAccountService(client, marketData, isMainnet);
+          const subService = new HyperliquidSubAccountService(client, md, isMainnet);
           registry.register(new HyperliquidSubAccountProvider(subService));
           loaded.push('hyperliquid_sub');
         } catch { /* sub registration failed, continue */ }
 
-        return new HyperliquidPerpProvider(client, marketData, isMainnet);
+        return new HyperliquidPerpProvider(client, md, isMainnet);
       },
     },
     {
@@ -390,5 +393,5 @@ export function registerBuiltInProviders(
     }
   }
 
-  return { loaded, skipped };
+  return { loaded, skipped, hyperliquidMarketData };
 }

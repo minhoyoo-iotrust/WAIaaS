@@ -167,6 +167,7 @@ export class DaemonLifecycle {
   private webhookService: import('../services/webhook-service.js').WebhookService | null = null;
   private metricsCounter: InMemoryCounter | null = null;
   private adminStatsService: AdminStatsService | null = null;
+  private hyperliquidMarketData: import('@waiaas/actions').HyperliquidMarketData | null = null;
   private daemonStartTime: number = Math.floor(Date.now() / 1000);
 
   /** Whether shutdown has been initiated. */
@@ -1195,6 +1196,10 @@ export class DaemonLifecycle {
       // Register built-in action providers from @waiaas/actions (reads from SettingsService)
       const { registerBuiltInProviders } = await import('@waiaas/actions');
       const builtIn = registerBuiltInProviders(this.actionProviderRegistry, this._settingsService!, { rpcCaller });
+      // Capture HyperliquidMarketData for HTTP routes (Phase 349)
+      if (builtIn.hyperliquidMarketData) {
+        this.hyperliquidMarketData = builtIn.hyperliquidMarketData;
+      }
 
       // Load plugins from ~/.waiaas/actions/ (if exists)
       const actionsDir = join(dataDir, 'actions');
@@ -1432,6 +1437,7 @@ export class DaemonLifecycle {
           adminStatsService: this.adminStatsService ?? undefined,
           autoStopService: this.autoStopService ?? undefined,
           metricsCounter: this.metricsCounter ?? undefined,
+          hyperliquidMarketData: this.hyperliquidMarketData ?? undefined,
         });
 
         const hostname = this._config!.daemon.hostname;

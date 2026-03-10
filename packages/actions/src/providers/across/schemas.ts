@@ -31,12 +31,12 @@ export const AcrossSuggestedFeesResponseSchema = z.object({
   relayerCapitalFee: AcrossFeeComponentSchema,
   relayerGasFee: AcrossFeeComponentSchema,
   lpFee: AcrossFeeComponentSchema,
-  timestamp: z.number(),                  // quoteTimestamp (uint32 seconds)
+  timestamp: z.coerce.number(),            // quoteTimestamp (uint32 seconds) — API may return string
   isAmountTooLow: z.boolean(),
   quoteBlock: z.string().optional(),
   exclusiveRelayer: z.string(),           // address, 0x0 if open
-  exclusivityDeadline: z.number(),        // uint32 seconds, 0 if no exclusivity
-  expectedFillTimeSec: z.number().optional(),
+  exclusivityDeadline: z.coerce.number(), // uint32 seconds, 0 if no exclusivity — API may return string
+  expectedFillTimeSec: z.coerce.number().optional(),
   limits: z.object({
     minDeposit: z.string(),
     maxDeposit: z.string(),
