@@ -136,6 +136,25 @@ export { PolymarketGammaClient } from './gamma-client.js';
 // Market Data
 export { PolymarketMarketData, type ResolutionStatus } from './market-data.js';
 
+// Position Tracker
+export {
+  PolymarketPositionTracker,
+  type PositionDb,
+  type PositionRow,
+  type PositionFill,
+  type PolymarketPosition,
+} from './position-tracker.js';
+
+// PnL Calculator
+export { PolymarketPnlCalculator, type PnlSummary } from './pnl-calculator.js';
+
+// Resolution Monitor
+export {
+  PolymarketResolutionMonitor,
+  type ResolvedMarket,
+  type PolymarketNotificationEvent,
+} from './resolution-monitor.js';
+
 // Infrastructure Factory
 export {
   createPolymarketInfrastructure,
