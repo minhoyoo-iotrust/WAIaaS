@@ -8,6 +8,16 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
+## Current Milestone: v31.9 Polymarket 예측 시장 통합
+
+**Goal:** Polymarket 예측 시장을 WAIaaS에 통합하여 AI 에이전트가 예측 시장에서 포지션을 취하고 관리할 수 있도록 한다.
+
+**Target features:**
+- Polymarket CLOB API + CTF 컨트랙트 리서치 및 설계 (doc 80)
+- EIP-712 서명 기반 CLOB 주문 (Limit/Market) + Proxy Wallet 관리
+- 마켓 조회/필터링 + 포지션 관리 + CTF 온체인 리딤
+- 정책 엔진 통합 + E2E/Agent UAT 시나리오 + Admin UI 예측 시장 탭
+
 ## Previous Milestone: v31.8 Agent UAT (메인넷 인터랙티브 검증) — SHIPPED 2026-03-10
 
 Agent UAT 마크다운 시나리오 체계 구축. 6-section 표준 포맷(Metadata/Prerequisites/Steps/Verification/Cost/Troubleshooting) + YAML 프론트매터, `/agent-uat` skill 파일, 45개 시나리오(Testnet 8 + Mainnet 6 + DeFi 12 + Advanced 6 + Admin 13), CI 시나리오 등록 강제(Provider 매핑/포맷/인덱스/Admin 라우트 4개 검증 스크립트 + ci.yml 통합). 5 phases, 12 plans, 56 requirements, 41 commits, 89 files, +10,962 lines.
