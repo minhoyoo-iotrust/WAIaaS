@@ -318,6 +318,8 @@
 | 302 | BUG | HIGH | E2E 스모크 CI global waiaas CLI PATH 해결 실패 재발 — which fallback + WAIAAS_CLI_PATH 명시 전달 필요 | v31.8 | FIXED | 2026-03-10 |
 | 303 | ENHANCEMENT | LOW | agent-uat 스킬을 .claude/skills/로 이동 — 런타임 스킬과 개발 스킬 분리 | — | FIXED | 2026-03-10 |
 | 304 | BUG | MEDIUM | Agent UAT 시나리오 문서 API 불일치 3건 — dry-run→simulate, value→amount, token 문자열→객체 | — | OPEN | — |
+| 305 | MISSING | MEDIUM | Admin UI 네트워크 목록에 HyperEVM Mainnet/Testnet 누락 — 6개 파일 하드코딩 배열 미동기화 | — | OPEN | — |
+| 306 | ENHANCEMENT | MEDIUM | 공유 상수 패키지(@waiaas/shared) 분리 — Admin UI 하드코딩 제거 + 네트워크 동기화 자동화 | — | OPEN | — |
 
 ## Type Legend
 
@@ -329,8 +331,8 @@
 
 ## Summary
 
-- **OPEN:** 1
+- **OPEN:** 3
 - **FIXED:** 302
 - **WONTFIX:** 1
-- **Total:** 304
+- **Total:** 306
 
