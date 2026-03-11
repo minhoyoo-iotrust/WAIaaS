@@ -263,6 +263,7 @@ const POLICY_DEFAULTS_KEYS = [
   'policy.default_deny_spenders',
   'policy.default_deny_x402_domains',
   'policy.default_deny_erc8128_domains',
+  'policy.venue_whitelist_enabled',
 ];
 
 function PolicyDefaultsTab() {
@@ -424,6 +425,14 @@ function PolicyDefaultsTab() {
                 value={getEffectiveBoolValue(settings.value, dirty.value, 'policy', 'default_deny_erc8128_domains')}
                 onChange={(v) => handleFieldChange('policy.default_deny_erc8128_domains', v)}
                 description="Deny ERC-8128 signing unless a matching domain whitelist policy exists"
+              />
+              <FormField
+                label={keyToLabel('venue_whitelist_enabled')}
+                name="policy.venue_whitelist_enabled"
+                type="checkbox"
+                value={getEffectiveBoolValue(settings.value, dirty.value, 'policy', 'venue_whitelist_enabled')}
+                onChange={(v) => handleFieldChange('policy.venue_whitelist_enabled', v)}
+                description="Enable venue whitelist: deny external actions from non-whitelisted venues"
               />
             </div>
           </div>
