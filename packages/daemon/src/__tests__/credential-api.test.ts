@@ -68,14 +68,6 @@ function masterHeaders(): Record<string, string> {
   };
 }
 
-function sessionHeaders(token: string): Record<string, string> {
-  return {
-    'Host': HOST,
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json',
-  };
-}
-
 // ---------------------------------------------------------------------------
 // Setup
 // ---------------------------------------------------------------------------

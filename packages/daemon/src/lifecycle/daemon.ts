@@ -1739,6 +1739,23 @@ export class DaemonLifecycle {
         },
       });
 
+      // Register credential-cleanup worker (5 min = 300s)
+      // Deletes expired credentials from wallet_credentials table
+      this.workers.register('credential-cleanup', {
+        interval: 300_000,
+        handler: () => {
+          if (this.sqlite && !this._isShuttingDown) {
+            const now = Math.floor(Date.now() / 1000);
+            const result = this.sqlite.prepare(
+              'DELETE FROM wallet_credentials WHERE expires_at IS NOT NULL AND expires_at < ?',
+            ).run(now);
+            if (result.changes > 0) {
+              console.log(`[credential-cleanup] Deleted ${result.changes} expired credential(s)`);
+            }
+          }
+        },
+      });
+
       // Register async-status polling worker (30s)
       if (this._asyncPollingService) {
         const pollingService = this._asyncPollingService;
