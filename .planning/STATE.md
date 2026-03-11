@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
 milestone: v31.10
-milestone_name: milestone
-status: executing
-stopped_at: Completed 379-01-PLAN.md
-last_updated: "2026-03-11T09:55:53.252Z"
-last_activity: 2026-03-11 — Phase 376 complete
+milestone_name: 코드베이스 품질 개선
+status: completed
+last_updated: "2026-03-11T12:00:00.000Z"
+last_activity: 2026-03-11 — Milestone v31.10 completed
 progress:
   total_phases: 5
   completed_phases: 5
   total_plans: 8
   completed_plans: 8
-  percent: 50
+  percent: 100
 ---
 
 # Project State
@@ -21,54 +20,26 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-11)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Phase 377 - 대형 파일 분할
+**Current focus:** Milestone v31.10 completed — ready for next milestone
 
 ## Current Position
 
-Phase: 3 of 5 (Phase 377: 대형 파일 분할)
-Plan: 0 of 2 in current phase
-Status: Ready to execute
-Last activity: 2026-03-11 — Phase 376 complete
+Phase: 5 of 5 (all complete)
+Plan: 8 of 8 (all complete)
+Status: Milestone completed
+Last activity: 2026-03-11 — Milestone v31.10 shipped
 
-Progress: [█████░░░░░] 50%
-
-## Performance Metrics
-
-**Velocity:**
-- Total plans completed: 4
-- Average duration: 8.75 min
-- Total execution time: 0.58 hours
-
-**By Phase:**
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 375 | 2 | 15min | 7.5min |
-| 376 | 2 | 20min | 10min |
-| Phase 377 P01+02 | 15 | 4 tasks | 6 files |
-| Phase 378 P01 | 19 | 2 tasks | 11 files |
-| Phase 379 P01 | 13 | 2 tasks | 25 files |
+Progress: [██████████] 100%
 
 ## Accumulated Context
 
 ### Decisions
 
-Decisions are logged in PROJECT.md Key Decisions table.
-
 - 순수 리팩토링 마일스톤: 행위 변경 없음, API 변경 없음, DB 마이그레이션 없음
 - 모든 Phase 독립적 (D3): 순서 무관 실행 가능
-- 안전 검증: 매 Phase 완료 시 `pnpm turbo run lint && typecheck && test` 전체 통과 필수
-- parseTokenAmount는 explicit decimals 필수 (기본값 없음) -- 호출부 명확성 확보
-- contract-encoding encodeApproveCalldata는 bigint amount 시그니처 표준화
-- provider-specific contract 파일은 re-export 패턴으로 하위 호환 유지
-- AccountType cast for Drizzle text->union narrowing (as any 대체)
-- INftApprovalQuery 인터페이스 + hasNftApprovalQuery 타입 가드로 optional adapter capability 패턴 확립
-- resolveChainId는 daemon/helpers/에 배치 (daemon-specific, core가 아님)
-- [Phase 377]: openapi-schemas.ts (1,606줄) 분할 불필요: 32개 파일이 import하는 순수 선언 파일, 분할 시 import 경로 복잡도만 증가
-- [Phase 377]: admin.ts thin aggregator 패턴: 타입 export + register 함수 호출 위임 (3,107줄 → 98줄)
-- [Phase 378]: INVALID_TOKEN_IDENTIFIER in NFT domain, STATS_NOT_CONFIGURED in ADMIN domain
-- [Phase 378]: erc8004.ts as any removal safe because z.any() schema accepts Record<string, unknown>
-- [Phase 379]: Package-level constants.ts pattern: extract 2+ usage magic numbers per package
+- parseTokenAmount는 explicit decimals 필수 (기본값 없음)
+- admin.ts thin aggregator 패턴: 타입 export + register 함수 호출 위임
+- Package-level constants.ts pattern: extract 2+ usage magic numbers per package
 
 ### Pending Todos
 
@@ -80,6 +51,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-11T09:55:25.528Z
-Stopped at: Completed 379-01-PLAN.md
+Last session: 2026-03-11
+Stopped at: Milestone v31.10 completed
 Resume file: None
