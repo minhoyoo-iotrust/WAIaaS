@@ -1501,12 +1501,88 @@ curl -X PUT http://localhost:3100/v1/admin/settings \
 
 Admin UI: DeFi > Hyperliquid > Settings tab provides a form editor for all runtime keys.
 
-## 18. Related Skill Files
+## 18. Credential Management
+
+Manage encrypted credentials for off-chain action providers (API keys, HMAC secrets, RSA keys). Credential values are stored with AES-256-GCM encryption and are **never** included in API responses.
+
+### Per-wallet Credentials
+
+```bash
+# List credentials (metadata only)
+curl -s http://localhost:3100/v1/wallets/<wallet-id>/credentials \
+  -H 'X-Master-Password: <password>'
+
+# Create credential
+curl -s -X POST http://localhost:3100/v1/wallets/<wallet-id>/credentials \
+  -H 'Content-Type: application/json' \
+  -H 'X-Master-Password: <password>' \
+  -d '{"name": "polymarket-api-key", "type": "api_key", "value": "secret-value", "expiresAt": 1735689600}'
+
+# Delete credential
+curl -s -X DELETE http://localhost:3100/v1/wallets/<wallet-id>/credentials/polymarket-api-key \
+  -H 'X-Master-Password: <password>'
+
+# Rotate credential value
+curl -s -X PUT http://localhost:3100/v1/wallets/<wallet-id>/credentials/polymarket-api-key/rotate \
+  -H 'Content-Type: application/json' \
+  -H 'X-Master-Password: <password>' \
+  -d '{"value": "new-secret-value"}'
+```
+
+### Global Credentials
+
+Global credentials are accessible by all wallets. Per-wallet credentials take priority when names collide.
+
+```bash
+# Same CRUD pattern under /v1/admin/credentials
+curl -s http://localhost:3100/v1/admin/credentials \
+  -H 'X-Master-Password: <password>'
+
+curl -s -X POST http://localhost:3100/v1/admin/credentials \
+  -H 'Content-Type: application/json' \
+  -H 'X-Master-Password: <password>' \
+  -d '{"name": "shared-hmac", "type": "hmac", "value": "shared-secret"}'
+```
+
+**Important:** Credential values are encrypted at rest with AES-256-GCM. When the master password is changed, all credentials are re-encrypted automatically.
+
+For full credential and signing documentation, see **external-actions.skill.md**.
+
+## 19. External Actions Monitoring
+
+Monitor off-chain action execution history from the Admin UI or API.
+
+### List Off-chain Actions
+
+```bash
+curl -s "http://localhost:3100/v1/wallets/<wallet-id>/actions?venue=polymarket&status=FILLED&limit=20" \
+  -H 'Authorization: Bearer <token>'
+```
+
+Returns action history with venue, operation, status, and timestamps. Supports venue/status filter and pagination.
+
+### Get Action Detail
+
+```bash
+curl -s http://localhost:3100/v1/wallets/<wallet-id>/actions/<action-id> \
+  -H 'Authorization: Bearer <token>'
+```
+
+Returns full action detail including metadata, error messages, and transaction hash.
+
+### Admin UI
+
+- **Wallet Detail > External Actions tab**: View off-chain action history per wallet (venue, operation, status, timestamps)
+- **Wallet Detail > Credentials tab**: Manage per-wallet credentials (create, delete, rotate)
+- **Settings > Policies**: Configure VENUE_WHITELIST and ACTION_CATEGORY_LIMIT policies
+
+## 20. Related Skill Files
 
 - **actions.skill.md** -- Action Provider REST API (DeFi actions)
-- **policies.skill.md** -- Policy management (14 policy types for transaction controls)
+- **external-actions.skill.md** -- Off-chain action framework, signing schemes, credential vault
+- **policies.skill.md** -- Policy management (16 policy types for transaction controls)
 - **wallet.skill.md** -- Wallet CRUD, sessions, assets, tokens, MCP
-- **transactions.skill.md** -- 5-type transaction reference
+- **transactions.skill.md** -- 6-type transaction reference
 - **erc8128.skill.md** -- ERC-8128 HTTP message signing (RFC 9421 + EIP-191)
 - **quickstart.skill.md** -- End-to-end quickstart workflow
 - **erc8004.skill.md** -- ERC-8004 trustless agent identity and reputation

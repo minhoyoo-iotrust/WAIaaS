@@ -1,6 +1,6 @@
 ---
 name: "WAIaaS Policies"
-description: "Policy engine CRUD: 14 policy types for spending limits, whitelists, time restrictions, rate limits, token/contract/approve controls, network restrictions, x402 domain controls, ERC-8128 domain controls, reputation threshold"
+description: "Policy engine CRUD: 16 policy types for spending limits, whitelists, time restrictions, rate limits, token/contract/approve controls, network restrictions, x402 domain controls, ERC-8128 domain controls, reputation threshold, venue whitelist, action category limits"
 category: "api"
 tags: [wallet, blockchain, policies, security, waiass]
 version: "2.6.0-rc"
@@ -145,7 +145,7 @@ curl -s -X DELETE http://localhost:3100/v1/policies/<policy-uuid> \
 
 ---
 
-## 2. Policy Types (13 Types)
+## 2. Policy Types (16 Types)
 
 Each policy type has a specific `rules` schema. The `type` field determines which rules structure is required.
 
@@ -561,6 +561,68 @@ curl -s -X POST http://localhost:3100/v1/policies \
 
 For full ERC-8004 documentation, see **erc8004.skill.md**.
 
+### o. VENUE_WHITELIST (v31.12)
+
+Controls which external venues (exchanges, off-chain protocols) are allowed for off-chain actions. Uses **default-deny** when enabled: only whitelisted venues can execute signedData/signedHttp actions.
+
+**Prerequisites:**
+- Enable via Admin Settings: set `venue_whitelist_enabled` to `true` (default: `false` -- disabled means all venues are allowed)
+- Create VENUE_WHITELIST policy with allowed venues
+
+**Rules schema:**
+```json
+{
+  "venues": ["polymarket", "hyperliquid", "0x"]
+}
+```
+
+| Field    | Type     | Required | Description                                |
+| -------- | -------- | -------- | ------------------------------------------ |
+| `venues` | string[] | Yes      | List of allowed venue names.               |
+
+```bash
+curl -s -X POST http://localhost:3100/v1/policies \
+  -H 'Content-Type: application/json' \
+  -H 'X-Master-Password: <password>' \
+  -d '{"walletId":"<uuid>","type":"VENUE_WHITELIST","rules":{"venues":["polymarket","hyperliquid"]}}'
+```
+
+When `venue_whitelist_enabled=true` and a venue is not in any matching VENUE_WHITELIST policy, the action is blocked with error code `VENUE_NOT_ALLOWED`.
+
+### p. ACTION_CATEGORY_LIMIT (v31.12)
+
+Per-category USD spending limits for off-chain actions. Limits are evaluated using the `notionalUsd` value from action metadata. Supports per-action, daily, and monthly rolling windows.
+
+**Rules schema:**
+```json
+{
+  "category": "defi_trading",
+  "per_action": 1000,
+  "daily": 5000,
+  "monthly": 50000,
+  "tier_on_exceed": "auto"
+}
+```
+
+| Field            | Type   | Required | Description                                                    |
+| ---------------- | ------ | -------- | -------------------------------------------------------------- |
+| `category`       | string | Yes      | Action category (e.g. "defi_trading", "prediction_market").    |
+| `per_action`     | number | No       | Max USD per single action.                                     |
+| `daily`          | number | No       | Max cumulative USD per 24h rolling window.                     |
+| `monthly`        | number | No       | Max cumulative USD per 30d rolling window.                     |
+| `tier_on_exceed` | string | No       | Behavior when limit exceeded: "auto" (block), "tier1" (NOTIFY), "tier2" (APPROVAL). Default: "auto". |
+
+```bash
+curl -s -X POST http://localhost:3100/v1/policies \
+  -H 'Content-Type: application/json' \
+  -H 'X-Master-Password: <password>' \
+  -d '{"walletId":"<uuid>","type":"ACTION_CATEGORY_LIMIT","rules":{"category":"defi_trading","per_action":1000,"daily":5000,"monthly":50000,"tier_on_exceed":"auto"}}'
+```
+
+Cumulative spending is calculated from transaction metadata using `json_extract` on the `metadata` column, summing `notionalUsd` for matching venue+category within the rolling window.
+
+For full off-chain action documentation, see **external-actions.skill.md**.
+
 ---
 
 ## 3. Policy Evaluation Flow
@@ -713,7 +775,8 @@ Native SOL transfers of <= 1 SOL are INSTANT. USDC transfers of <= 100 USDC are 
 
 ## 6. Related Skill Files
 
-- **transactions.skill.md** -- 5-type transaction reference (policies affect transaction execution)
+- **transactions.skill.md** -- 6-type transaction reference (policies affect transaction execution)
+- **external-actions.skill.md** -- Off-chain action framework (VENUE_WHITELIST and ACTION_CATEGORY_LIMIT apply here)
 - **wallet.skill.md** -- Wallet CRUD and session management
-- **admin.skill.md** -- Admin API for daemon operations
+- **admin.skill.md** -- Admin API for daemon operations and credential management
 - **erc8004.skill.md** -- ERC-8004 trustless agent identity and reputation
