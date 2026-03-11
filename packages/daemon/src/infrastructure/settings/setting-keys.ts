@@ -223,7 +223,7 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
 
   // --- Pendle Yield ---
   { key: 'actions.pendle_yield_enabled', category: 'actions', configPath: 'actions.pendle_yield_enabled', defaultValue: 'true', isCredential: false },
-  { key: 'actions.pendle_yield_api_base_url', category: 'actions', configPath: 'actions.pendle_yield_api_base_url', defaultValue: 'https://api-v2.pendle.finance', isCredential: false },
+  { key: 'actions.pendle_yield_api_base_url', category: 'actions', configPath: 'actions.pendle_yield_api_base_url', defaultValue: 'https://api-v2.pendle.finance/core', isCredential: false },
   { key: 'actions.pendle_yield_api_key', category: 'actions', configPath: 'actions.pendle_yield_api_key', defaultValue: '', isCredential: true },
   { key: 'actions.pendle_yield_default_slippage_bps', category: 'actions', configPath: 'actions.pendle_yield_default_slippage_bps', defaultValue: '100', isCredential: false },
   { key: 'actions.pendle_yield_max_slippage_bps', category: 'actions', configPath: 'actions.pendle_yield_max_slippage_bps', defaultValue: '500', isCredential: false },

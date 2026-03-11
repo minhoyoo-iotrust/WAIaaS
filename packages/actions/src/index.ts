@@ -284,7 +284,7 @@ export function registerBuiltInProviders(
       factory: () => {
         const config: PendleConfig = {
           enabled: true,
-          apiBaseUrl: settingsReader.get('actions.pendle_yield_api_base_url') || 'https://api-v2.pendle.finance',
+          apiBaseUrl: settingsReader.get('actions.pendle_yield_api_base_url') || 'https://api-v2.pendle.finance/core',
           apiKey: settingsReader.get('actions.pendle_yield_api_key') || '',
           defaultSlippageBps: Number(settingsReader.get('actions.pendle_yield_default_slippage_bps')) || 100,
           maxSlippageBps: Number(settingsReader.get('actions.pendle_yield_max_slippage_bps')) || 500,

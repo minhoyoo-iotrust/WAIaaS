@@ -41,6 +41,7 @@ import {
 } from '../../pipeline/stages.js';
 import type { PipelineContext } from '../../pipeline/stages.js';
 import { resolveNetwork } from '../../pipeline/network-resolver.js';
+import { executeDryRun } from '../../pipeline/dry-run.js';
 import type { ApprovalWorkflow } from '../../workflow/approval-workflow.js';
 import type { DelayQueue } from '../../workflow/delay-queue.js';
 import type { OwnerLifecycleService } from '../../workflow/owner-state.js';
@@ -49,6 +50,7 @@ import type { IPriceOracle } from '@waiaas/core';
 import type { SettingsService } from '../../infrastructure/settings/settings-service.js';
 import {
   TxSendResponseSchema,
+  DryRunSimulationResultOpenAPI,
   buildErrorResponses,
   openApiValidationHook,
 } from './openapi-schemas.js';
@@ -148,11 +150,14 @@ const executeActionRoute = createRoute({
   tags: ['Actions'],
   summary: 'Execute an action via provider',
   description:
-    'Resolve action parameters into a ContractCallRequest and execute through the 6-stage pipeline.',
+    'Resolve action parameters into a ContractCallRequest and execute through the 6-stage pipeline. Use ?dryRun=true to simulate without executing.',
   request: {
     params: z.object({
       provider: z.string(),
       action: z.string(),
+    }),
+    query: z.object({
+      dryRun: z.enum(['true', 'false']).optional(),
     }),
     body: {
       content: {
@@ -161,6 +166,10 @@ const executeActionRoute = createRoute({
     },
   },
   responses: {
+    200: {
+      description: 'Dry-run simulation result (dryRun=true)',
+      content: { 'application/json': { schema: DryRunSimulationResultOpenAPI } },
+    },
     201: {
       description: 'Action submitted to pipeline',
       content: { 'application/json': { schema: TxSendResponseSchema } },
@@ -225,6 +234,8 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
 
   router.openapi(executeActionRoute, async (c) => {
     const { provider, action } = c.req.valid('param');
+    const query = c.req.valid('query');
+    const isDryRun = query.dryRun === 'true';
     const body = c.req.valid('json');
     const actionKey = `${provider}/${action}`;
 
@@ -328,6 +339,31 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
       resolvedNetwork as NetworkType,
       rpcUrl,
     );
+
+    // 8b. #325: dryRun mode — simulate without executing
+    if (isDryRun) {
+      // Use the first ContractCallRequest for dry-run simulation
+      const firstCall = contractCalls[0];
+      if (!firstCall || isApiDirectResult(firstCall)) {
+        return c.json({
+          success: true,
+          policy: { tier: 'INSTANT', allowed: true },
+          fee: null,
+          balanceChanges: [],
+          warnings: [{ code: 'API_DIRECT', message: 'Action uses off-chain API — no on-chain simulation available', severity: 'info' as const }],
+          simulation: { success: true, logs: [], unitsConsumed: null, error: null },
+          meta: { chain: wallet.chain, network: resolvedNetwork, transactionType: 'CONTRACT_CALL', durationMs: 0 },
+        }, 200);
+      }
+      const dryRunResult = await executeDryRun(
+        { db: deps.db, adapter, policyEngine: deps.policyEngine, priceOracle: deps.priceOracle, settingsService: deps.settingsService },
+        walletId,
+        firstCall,
+        resolvedNetwork,
+        { publicKey: wallet.publicKey, chain: wallet.chain, environment: wallet.environment },
+      );
+      return c.json(dryRunResult, 200);
+    }
 
     // 9. Sequential pipeline execution for each ContractCallRequest
     const walletData = {

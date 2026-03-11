@@ -16,7 +16,7 @@ export interface PendleConfig {
 
 export const PENDLE_DEFAULTS: PendleConfig = {
   enabled: false,
-  apiBaseUrl: 'https://api-v2.pendle.finance',
+  apiBaseUrl: 'https://api-v2.pendle.finance/core',
   apiKey: '',
   defaultSlippageBps: 100,   // 1%
   maxSlippageBps: 500,       // 5%

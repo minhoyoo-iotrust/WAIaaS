@@ -1600,6 +1600,8 @@ export class DaemonLifecycle {
       });
 
       // Register delay-expired worker (every 5s: check for expired DELAY transactions)
+      // #327: Process expired items sequentially with concurrency limit to prevent
+      // resource exhaustion from concurrent RPC calls when many items expire at once.
       if (this.delayQueue) {
         this.workers.register('delay-expired', {
           interval: 5_000,
@@ -1607,9 +1609,18 @@ export class DaemonLifecycle {
             if (this._isShuttingDown) return;
             const now = Math.floor(Date.now() / 1000);
             const expired = this.delayQueue!.processExpired(now);
-            for (const tx of expired) {
-              void this.executeFromStage5(tx.txId, tx.walletId);
-            }
+            if (expired.length === 0) return;
+            // Process sequentially (one at a time) to avoid concurrent RPC/memory pressure
+            void (async () => {
+              for (const tx of expired) {
+                if (this._isShuttingDown) break;
+                try {
+                  await this.executeFromStage5(tx.txId, tx.walletId);
+                } catch (err) {
+                  console.error(`[delay-expired] executeFromStage5(${tx.txId}) error:`, err);
+                }
+              }
+            })();
           },
         });
       }
@@ -1625,6 +1636,96 @@ export class DaemonLifecycle {
           },
         });
       }
+
+      // #329: Register submitted-tx-confirm worker (every 60s)
+      // Retries confirmation for transactions stuck in SUBMITTED state after Stage 6 timeout.
+      // Prevents STO-03 regression where on-chain success is not reflected in DB status.
+      this.workers.register('submitted-tx-confirm', {
+        interval: 60_000,
+        handler: async () => {
+          if (this._isShuttingDown || !this._db || !this.adapterPool || !this.sqlite) return;
+          try {
+            const { transactions } = await import('../infrastructure/database/schema.js');
+            const { eq, and, isNotNull } = await import('drizzle-orm');
+            const { insertAuditLog } = await import('../infrastructure/database/audit-helper.js');
+
+            // Find SUBMITTED transactions with txHash that are older than 60s
+            const cutoff = Math.floor(Date.now() / 1000) - 60;
+            const stuckTxs = this._db
+              .select({
+                id: transactions.id,
+                txHash: transactions.txHash,
+                walletId: transactions.walletId,
+                chain: transactions.chain,
+                network: transactions.network,
+              })
+              .from(transactions)
+              .where(
+                and(
+                  eq(transactions.status, 'SUBMITTED'),
+                  isNotNull(transactions.txHash),
+                ),
+              )
+              .all()
+              .filter((tx) => {
+                // Only retry if created before cutoff (avoid racing with Stage 6)
+                const meta = this.sqlite!.prepare('SELECT created_at FROM transactions WHERE id = ?').get(tx.id) as { created_at?: number } | undefined;
+                return !meta?.created_at || meta.created_at < cutoff;
+              });
+
+            for (const tx of stuckTxs) {
+              if (this._isShuttingDown || !tx.txHash || !tx.network) continue;
+              try {
+                const rpcUrl = resolveRpcUrl(
+                  this._config!.rpc as unknown as Record<string, string>,
+                  tx.chain,
+                  tx.network,
+                );
+                const adapter = await this.adapterPool!.resolve(
+                  tx.chain as ChainType,
+                  tx.network as NetworkType,
+                  rpcUrl,
+                );
+                const result = await adapter.waitForConfirmation(tx.txHash, 10_000);
+                if (result.status === 'confirmed' || result.status === 'finalized') {
+                  const executedAt = new Date(Math.floor(Date.now() / 1000) * 1000);
+                  this._db!
+                    .update(transactions)
+                    .set({ status: 'CONFIRMED', executedAt })
+                    .where(eq(transactions.id, tx.id))
+                    .run();
+                  insertAuditLog(this.sqlite!, {
+                    eventType: 'TX_CONFIRMED',
+                    actor: 'system',
+                    walletId: tx.walletId,
+                    txId: tx.id,
+                    details: { txHash: tx.txHash, source: 'submitted-tx-confirm-worker', network: tx.network },
+                    severity: 'info',
+                  });
+                  void this.notificationService?.notify('TX_CONFIRMED', tx.walletId, {
+                    txId: tx.id,
+                    txHash: tx.txHash,
+                    network: tx.network,
+                  }, { txId: tx.id });
+                  console.info(`[submitted-tx-confirm] ${tx.id} confirmed via background retry`);
+                } else if (result.status === 'failed') {
+                  this._db!
+                    .update(transactions)
+                    .set({ status: 'FAILED', error: 'Transaction reverted on-chain (background check)' })
+                    .where(eq(transactions.id, tx.id))
+                    .run();
+                  console.warn(`[submitted-tx-confirm] ${tx.id} failed on-chain`);
+                }
+                // status === 'submitted': still pending, retry on next interval
+              } catch (err) {
+                // Swallow individual tx errors (RPC timeout, rate limit) — will retry next interval
+              }
+            }
+          } catch (err) {
+            console.error('[submitted-tx-confirm] worker error:', err);
+          }
+        },
+      });
 
       // Register userop-build-cleanup worker (5 min = 300s)
       // Deletes expired build records from userop_builds table (10-min TTL)
