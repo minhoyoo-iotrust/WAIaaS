@@ -115,7 +115,10 @@ Plans:
   2. 지갑 상세의 External Actions 탭에서 off-chain action 이력(venue, operation, status, createdAt)을 확인할 수 있다
   3. Venue Whitelist 설정 UI에서 허용 venue를 추가/제거/토글할 수 있다
   4. ACTION_CATEGORY_LIMIT 설정 UI에서 카테고리별 USD 한도를 등록/수정/삭제할 수 있다
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 391-01-PLAN.md — Credentials 페이지 + Wallet Detail Credentials/External Actions 탭
+- [ ] 391-02-PLAN.md — VENUE_WHITELIST + ACTION_CATEGORY_LIMIT 정책 폼
 
 ### Phase 392: MCP + SDK + 스킬 파일
 **Goal**: MCP 도구와 SDK 메서드로 off-chain action을 실행/조회할 수 있고, 스킬 파일이 AI 에이전트에게 사용법을 안내한다
@@ -141,5 +144,5 @@ Phases execute in numeric order: 386 -> 387 -> 388 -> 389 -> 390 -> 391 -> 392
 | 388. Credential Vault | 2/2 | Complete    | 2026-03-11 |
 | 389. 추적 + 정책 확장 | 2/2 | Complete    | 2026-03-11 |
 | 390. 파이프라인 라우팅 + 조회 API | 2/2 | Complete    | 2026-03-11 |
-| 391. Admin UI | 0/TBD | Not started | - |
+| 391. Admin UI | 0/2 | Not started | - |
 | 392. MCP + SDK + 스킬 파일 | 0/TBD | Not started | - |
