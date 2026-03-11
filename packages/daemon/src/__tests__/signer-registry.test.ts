@@ -17,12 +17,8 @@ import type { ISignerCapabilityRegistry } from '../signing/registry.js';
 import { bootstrapSignerCapabilities } from '../signing/bootstrap.js';
 import {
   Eip712SignerCapability,
-  PersonalSignCapability,
   Erc8128SignerCapability,
   HmacSignerCapability,
-  RsaPssSignerCapability,
-  EcdsaSignBytesCapability,
-  Ed25519SignBytesCapability,
 } from '../signing/capabilities/index.js';
 
 // -----------------------------------------------------------------------

@@ -14,14 +14,11 @@
  *
  * @since v31.12
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import * as crypto from 'node:crypto';
-import { privateKeyToAccount } from 'viem/accounts';
 import type { SigningScheme } from '@waiaas/core';
 import type {
   ISignerCapability,
-  SigningParams,
-  SigningResult,
   Eip712SigningParams,
   PersonalSigningParams,
   HmacSigningParams,
@@ -31,7 +28,6 @@ import type {
   Erc8128SigningParams,
 } from '../signing/types.js';
 import { SigningError } from '../signing/signing-error.js';
-import type { SigningErrorCode } from '../signing/signing-error.js';
 import {
   Eip712SignerCapability,
   PersonalSignCapability,
@@ -55,7 +51,7 @@ const ed25519PrivateRaw = ed25519Keypair.privateKey.export({ type: 'pkcs8', form
 // DER PKCS8 ed25519 private key: last 32 bytes are the raw seed
 const ed25519PrivateKey = new Uint8Array(ed25519PrivateRaw.subarray(ed25519PrivateRaw.length - 32));
 const ed25519PublicRaw = ed25519Keypair.publicKey.export({ type: 'spki', format: 'der' });
-const ed25519PublicKey = new Uint8Array(ed25519PublicRaw.subarray(ed25519PublicRaw.length - 32));
+const _ed25519PublicKey = new Uint8Array(ed25519PublicRaw.subarray(ed25519PublicRaw.length - 32));
 
 // RSA-PSS keypair
 const rsaKeypair = crypto.generateKeyPairSync('rsa', {
