@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.10.1-rc](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0...v2.10.1-rc) (2026-03-11)
+
+
+### Bug Fixes
+
+* **#332:** clean up planning directory — remove orphans, relocate misplaced files ([70bb0d3](https://github.com/minhoyoo-iotrust/WAIaaS/commit/70bb0d376ea42f9b1a2aeb770b643a8d75707ddc))
+* **#333:** add CAIP-2 chain identifier and signer address to SignRequest ([caea262](https://github.com/minhoyoo-iotrust/WAIaaS/commit/caea2622d62e2e143b38118081195b976f800a9f))
+* **#334:** read max_sessions_per_wallet from SettingsService at runtime ([5587d6d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/5587d6dc64606fc94b015db70fe5e79b416733e9))
+* **#335:** remove legacy Settings page, move AA keys to System, add API key dashboard links ([5c7dc6b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/5c7dc6b888f3c4936d2d4f11b7d460ccfd72823f))
+* **#336:** use z.coerce.number() for Across depositId to handle string responses ([4e130b5](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4e130b5a8b27a5e02877df2aec787ed81766654e))
+* add split admin route files to E2E coverage map ([4bd6f39](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4bd6f39584799ab48c394131228c0e2d66c70203))
+
 ## [2.10.0](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.28...v2.10.0) (2026-03-11)
 
 
