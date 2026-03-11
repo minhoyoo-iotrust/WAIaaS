@@ -80,6 +80,9 @@ import { createDefiPositionRoutes } from './routes/defi-positions.js';
 import { mcpTokenRoutes } from './routes/mcp.js';
 import { createHyperliquidRoutes } from './routes/hyperliquid.js';
 import { createPolymarketRoutes } from './routes/polymarket.js';
+import { credentialRoutes } from './routes/credentials.js';
+import { adminCredentialRoutes } from './routes/admin-credentials.js';
+import { LocalCredentialVault } from '../infrastructure/credential/index.js';
 import type { PolymarketInfraDeps } from './routes/polymarket.js';
 import type { HyperliquidMarketData } from '@waiaas/actions';
 import type { MasterPasswordRef } from './middleware/master-auth.js';
@@ -404,6 +407,12 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     app.use('/v1/admin/backups', masterAuthForAdmin);
     // masterAuth for POST /v1/admin/actions/* (Admin UI action execution -- #273)
     app.use('/v1/admin/actions/*', masterAuthForAdmin);
+    // masterAuth for credential vault API (CRED-05, CRED-06)
+    app.use('/v1/admin/credentials', masterAuthForAdmin);
+    app.use('/v1/admin/credentials/*', masterAuthForAdmin);
+    // masterAuth for per-wallet credential CRUD (write operations)
+    app.use('/v1/wallets/:id/credentials', masterAuthForAdmin);
+    app.use('/v1/wallets/:id/credentials/*', masterAuthForAdmin);
     // masterAuth for GET /v1/actions/providers (Admin UI reads provider list)
     app.use('/v1/actions/providers', async (c, next) => {
       if (c.req.method === 'GET') {
@@ -797,6 +806,13 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         autoStopService: deps.autoStopService,
       }),
     );
+
+    // Register credential vault routes (v31.12 -- CRED-05, CRED-06)
+    if (effectiveMasterPassword !== undefined) {
+      const vault = new LocalCredentialVault(deps.db, () => deps.passwordRef?.password ?? effectiveMasterPassword!);
+      app.route('/v1', credentialRoutes({ credentialVault: vault }));
+      app.route('/v1', adminCredentialRoutes({ credentialVault: vault }));
+    }
 
     // Register wallet apps routes (masterAuth via admin middleware)
     if (deps.sqlite) {

@@ -23,3 +23,5 @@ export { nftApprovalRoutes, type NftApprovalRouteDeps } from './nft-approvals.js
 export { userOpRoutes, type UserOpRouteDeps } from './userop.js';
 export { createHyperliquidRoutes, type HyperliquidRouteDeps } from './hyperliquid.js';
 export { createPolymarketRoutes, type PolymarketRouteDeps, type PolymarketInfraDeps } from './polymarket.js';
+export { credentialRoutes, type CredentialRouteDeps } from './credentials.js';
+export { adminCredentialRoutes, type AdminCredentialRouteDeps } from './admin-credentials.js';
