@@ -38,8 +38,9 @@ const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
 const mockSignRequest: SignRequest = {
   version: '1',
   requestId,
-  chain: 'ethereum',
-  network: 'ethereum-mainnet',
+  caip2ChainId: 'eip155:1',
+  networkName: 'ethereum-mainnet',
+  signerAddress: '0xOwnerAddress1234567890abcdef12345678901234',
   message: 'WAIaaS Transaction Approval\n\nTransaction: ...',
   displayMessage: 'TRANSFER 1.5 ETH from 0x123456... to 0xabcdef...',
   metadata: {
@@ -231,7 +232,7 @@ describe('NtfySigningChannel', () => {
     const decodedRequest = JSON.parse(decodedJson);
     expect(decodedRequest.requestId).toBe(requestId);
     expect(decodedRequest.displayMessage).toBe(mockSignRequest.displayMessage);
-    expect(decodedRequest.chain).toBe('ethereum');
+    expect(decodedRequest.caip2ChainId).toBe('eip155:1');
 
     // Verify result
     expect(result.requestId).toBe(requestId);

@@ -11,7 +11,6 @@
  */
 
 import { z } from 'zod';
-import { ChainTypeEnum } from '../enums/chain.js';
 import type { NotificationEventType } from '../enums/notification.js';
 
 // ---------------------------------------------------------------------------
@@ -76,8 +75,9 @@ export type SignRequestMetadata = z.infer<typeof SignRequestMetadataSchema>;
 export const SignRequestSchema = z.object({
   version: z.literal('1'),
   requestId: z.string().uuid(),
-  chain: ChainTypeEnum,
-  network: z.string(),
+  caip2ChainId: z.string(),
+  networkName: z.string(),
+  signerAddress: z.string(),
   message: z.string(),
   displayMessage: z.string(),
   metadata: SignRequestMetadataSchema,

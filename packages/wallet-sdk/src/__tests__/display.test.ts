@@ -6,8 +6,9 @@ function makeRequest(overrides?: Partial<SignRequest>): SignRequest {
   return {
     version: '1',
     requestId: '550e8400-e29b-41d4-a716-446655440000',
-    chain: 'solana',
-    network: 'devnet',
+    caip2ChainId: 'solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1',
+    networkName: 'solana-devnet',
+    signerAddress: 'OwnerSolanaAddress1234567890abcdef',
     message: 'SGVsbG8=',
     displayMessage: 'Transfer 1 SOL',
     metadata: {
@@ -38,7 +39,7 @@ describe('formatDisplayMessage', () => {
     expect(message).toContain('From: So1addr1');
     expect(message).toContain('To: So1addr2');
     expect(message).toContain('Amount: 1.0 SOL');
-    expect(message).toContain('Network: devnet');
+    expect(message).toContain('Network: solana-devnet');
     expect(message).toContain('Policy: APPROVAL');
     expect(message).toContain('Expires: 2026-12-31T23:59:59.000Z');
   });
@@ -63,7 +64,7 @@ describe('formatDisplayMessage', () => {
 
   it('should format all fields accurately', () => {
     const request = makeRequest({
-      network: 'mainnet-beta',
+      networkName: 'mainnet-beta',
       metadata: {
         txId: '550e8400-e29b-41d4-a716-446655440001',
         type: 'TOKEN_TRANSFER',

@@ -54,8 +54,9 @@ const validMetadata = {
 const validSignRequest: SignRequest = {
   version: '1',
   requestId: '01935a3b-7c8d-7e00-b123-456789abcdef',
-  chain: 'solana',
-  network: 'devnet',
+  caip2ChainId: 'solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1',
+  networkName: 'solana-devnet',
+  signerAddress: '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
   message: 'V0FJYWFTIFNpZ25pbmcgUmVxdWVzdA==',
   displayMessage: 'Transfer 1.5 SOL to GsbwXf...',
   metadata: validMetadata,
@@ -100,8 +101,8 @@ describe('SignRequestSchema', () => {
     const result = SignRequestSchema.parse(validSignRequest);
     expect(result.version).toBe('1');
     expect(result.requestId).toBe('01935a3b-7c8d-7e00-b123-456789abcdef');
-    expect(result.chain).toBe('solana');
-    expect(result.network).toBe('devnet');
+    expect(result.caip2ChainId).toBe('solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1');
+    expect(result.networkName).toBe('solana-devnet');
     expect(result.responseChannel.type).toBe('ntfy');
     expect(result.metadata.policyTier).toBe('APPROVAL');
   });
@@ -121,31 +122,21 @@ describe('SignRequestSchema', () => {
     }
   });
 
-  it('parses a SignRequest with ethereum chain', () => {
+  it('parses a SignRequest with EVM CAIP-2 chain ID', () => {
     const evmRequest = {
       ...validSignRequest,
-      chain: 'ethereum' as const,
-      network: 'ethereum-mainnet',
+      caip2ChainId: 'eip155:1',
+      networkName: 'ethereum-mainnet',
+      signerAddress: '0x1234567890abcdef1234567890abcdef12345678',
     };
     const result = SignRequestSchema.parse(evmRequest);
-    expect(result.chain).toBe('ethereum');
-  });
-
-  it('rejects legacy evm chain value', () => {
-    expect(() =>
-      SignRequestSchema.parse({ ...validSignRequest, chain: 'evm' }),
-    ).toThrow();
+    expect(result.caip2ChainId).toBe('eip155:1');
+    expect(result.networkName).toBe('ethereum-mainnet');
   });
 
   it('rejects invalid version', () => {
     expect(() =>
       SignRequestSchema.parse({ ...validSignRequest, version: '2' }),
-    ).toThrow();
-  });
-
-  it('rejects invalid chain', () => {
-    expect(() =>
-      SignRequestSchema.parse({ ...validSignRequest, chain: 'bitcoin' }),
     ).toThrow();
   });
 

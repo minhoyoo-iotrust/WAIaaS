@@ -64,8 +64,9 @@ function createMockSignRequestBuilder(): SignRequestBuilder {
       request: {
         version: '1',
         requestId: '01234567-abcd-7000-8000-000000000001',
-        chain: 'solana',
-        network: 'devnet',
+        caip2ChainId: 'solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1',
+        networkName: 'solana-devnet',
+        signerAddress: 'OwnerSolanaAddress1234567890abcdef',
         message: 'WAIaaS Transaction Approval\n\nTx: test-tx-id',
         displayMessage: 'TRANSFER 1.0 SOL from abcd1234... to efgh5678...',
         metadata: {

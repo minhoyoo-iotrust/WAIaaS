@@ -419,8 +419,8 @@ describe('signing-sdk E2E integration', () => {
     // Verify round-trip: decoded request matches original
     expect(parsed.version).toBe(request.version);
     expect(parsed.requestId).toBe(request.requestId);
-    expect(parsed.chain).toBe(request.chain);
-    expect(parsed.network).toBe(request.network);
+    expect(parsed.caip2ChainId).toBe(request.caip2ChainId);
+    expect(parsed.networkName).toBe(request.networkName);
     expect(parsed.message).toBe(request.message);
     expect(parsed.displayMessage).toBe(request.displayMessage);
     expect(parsed.metadata.txId).toBe(request.metadata.txId);

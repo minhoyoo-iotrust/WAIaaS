@@ -94,7 +94,7 @@ export class TelegramSigningChannel {
     const header = '*WAIaaS Sign Request*';
     const body = escapeMarkdownV2(request.displayMessage);
     const txInfo = `TX: \`${escapeMarkdownV2(request.metadata.txId.slice(0, 8))}\\.\\.\\.\``;
-    const chain = `Chain: ${escapeMarkdownV2(request.chain)}/${escapeMarkdownV2(request.network)}`;
+    const chain = `Chain: ${escapeMarkdownV2(request.caip2ChainId)} \\(${escapeMarkdownV2(request.networkName)}\\)`;
     const text = `${header}\n\n${body}\n${txInfo}\n${chain}`;
 
     // 5. Send Telegram message with inline keyboard (universal link button)

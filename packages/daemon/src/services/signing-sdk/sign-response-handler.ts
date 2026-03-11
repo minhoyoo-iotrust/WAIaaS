@@ -283,13 +283,13 @@ export class SignResponseHandler {
     // Verify cryptographic signature
     let isValid = false;
     try {
-      if (request.chain === 'ethereum') {
+      if (request.caip2ChainId.startsWith('eip155:')) {
         isValid = await this.evmVerify({
           address: signerAddress,
           message: request.message,
           signature,
         });
-      } else if (request.chain === 'solana') {
+      } else if (request.caip2ChainId.startsWith('solana:')) {
         isValid = await this.solanaVerify({
           publicKeyAddress: signerAddress,
           message: request.message,
@@ -348,13 +348,13 @@ export class SignResponseHandler {
     if (signature) {
       try {
         let isValid = false;
-        if (request.chain === 'ethereum') {
+        if (request.caip2ChainId.startsWith('eip155:')) {
           isValid = await this.evmVerify({
             address: signerAddress,
             message: request.message,
             signature,
           });
-        } else if (request.chain === 'solana') {
+        } else if (request.caip2ChainId.startsWith('solana:')) {
           isValid = await this.solanaVerify({
             publicKeyAddress: signerAddress,
             message: request.message,
