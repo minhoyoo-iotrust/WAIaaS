@@ -15,7 +15,8 @@ describe('Error code matrix', () => {
     // v31.3: +DEPRECATED_SMART_ACCOUNT (+1)
     // v31.9: +WALLET_NOT_TERMINATED (+1)
     // v31.10: +INVALID_TOKEN_IDENTIFIER, +STATS_NOT_CONFIGURED (+2)
-    expect(Object.keys(ERROR_CODES)).toHaveLength(137);
+    // v31.12: +CREDENTIAL_NOT_FOUND, +CREDENTIAL_EXPIRED, +SIGNING_SCHEME_UNSUPPORTED, +CAPABILITY_NOT_FOUND, +VENUE_NOT_ALLOWED, +EXTERNAL_ACTION_FAILED (+6)
+    expect(Object.keys(ERROR_CODES)).toHaveLength(143);
   });
 
   it('every error code entry has required fields', () => {
@@ -47,7 +48,8 @@ describe('Error code matrix', () => {
     expect(domains).toContain('ERC8128');  // v30.10
     expect(domains).toContain('NFT');     // v31.0
     expect(domains).toContain('USEROP'); // v31.2
-    expect(domains.size).toBe(16);
+    expect(domains).toContain('CREDENTIAL'); // v31.12
+    expect(domains.size).toBe(17);
   });
 
   it('AUTH domain has 8 codes', () => {
@@ -63,9 +65,10 @@ describe('Error code matrix', () => {
     expect(txCodes).toHaveLength(33);
   });
 
-  it('ACTION domain has 8 codes', () => {
+  it('ACTION domain has 11 codes', () => {
+    // v31.12: +SIGNING_SCHEME_UNSUPPORTED, +CAPABILITY_NOT_FOUND, +EXTERNAL_ACTION_FAILED (+3)
     const actionCodes = Object.values(ERROR_CODES).filter((e) => e.domain === 'ACTION');
-    expect(actionCodes).toHaveLength(8);
+    expect(actionCodes).toHaveLength(11);
   });
 
   it('X402 domain has 8 codes', () => {
