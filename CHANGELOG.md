@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.11.0-rc](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.1-rc...v2.11.0-rc) (2026-03-11)
+
+
+### Features
+
+* **380-01:** design ResolvedAction 3-kind Zod discriminatedUnion type system ([94e5dba](https://github.com/minhoyoo-iotrust/WAIaaS/commit/94e5dba96d3a125bf757701148b9aac4b3aaf6a5))
+* **380-02:** design ISignerCapability interface and SigningSchemeEnum (7 schemes) ([b230912](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b23091237130ea1ee0a97d7b5019e64244448b1f))
+* **381-01:** design ICredentialVault interface, DB schema, encryption, scope model ([1e02134](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1e02134c6ea07787052546f68fca3316ae5f6f29))
+* **381-02:** design Admin UI Credentials tab, MCP tools, SDK methods ([31a1c71](https://github.com/minhoyoo-iotrust/WAIaaS/commit/31a1c7112894dfbf023b604584b0534c4a768db4))
+* **382-01:** design existing 4 signer adapters + signBytes 2 capabilities ([43be800](https://github.com/minhoyoo-iotrust/WAIaaS/commit/43be8009bda9d9c447e295c3d8e81b18374f1d80))
+* **382-02:** design HMAC/RSA-PSS capabilities + SignerCapabilityRegistry ([926b98f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/926b98ffb696b4cc79dbd8ff3b90f3a42e9b11dd))
+* **385-01:** integrate 10 design docs into unified doc-81 ([765ddc1](https://github.com/minhoyoo-iotrust/WAIaaS/commit/765ddc1c391b49a87ba1a548f47407ce434ca28e))
+
 ## [2.10.1-rc](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0...v2.10.1-rc) (2026-03-11)
 
 
