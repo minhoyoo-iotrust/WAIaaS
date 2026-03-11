@@ -1,5 +1,42 @@
 # Changelog
 
+## [2.10.0-rc.28](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.27...v2.10.0-rc.28) (2026-03-11)
+
+
+### Features
+
+* **371-01:** Polymarket CLOB infrastructure (Signer, ClobClient, RateLimiter, OrderBuilder) ([8cbabb8](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8cbabb8f31c7bf83ffcc17d5e55f1341261ad0aa))
+* **371-02:** DB migration v53-v54 (polymarket_orders, positions, api_keys) ([7578979](https://github.com/minhoyoo-iotrust/WAIaaS/commit/757897971458e745fa4edb2d997cf6df489fda9e))
+* **371-03:** PolymarketOrderProvider + ApiKeyService ([7d66f7b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7d66f7b2d4ac79c00954887472bfd44cc7eba16e))
+* **371-04:** NegRiskRouter, ApproveHelper, OrderbookService, Infrastructure factory ([4c99654](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4c99654d4a1341bfd0baf89e5afbe69812c9d86a))
+* **372-01:** add PolymarketGammaClient + market Zod schemas ([3c93886](https://github.com/minhoyoo-iotrust/WAIaaS/commit/3c93886106008dc371ddb92baa10a72c45f33392))
+* **372-01:** add PolymarketMarketData caching service + index exports ([ee417cc](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ee417cc9c7a577f6db378527962258beaedc5282))
+* **372-02:** add PolymarketCtfProvider with 5 on-chain CTF actions ([1c620e3](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1c620e3a9128a1cab3cdd00409c655ed511c92e1))
+* **372-02:** wire CtfProvider into index exports and infrastructure factory ([eca8b38](https://github.com/minhoyoo-iotrust/WAIaaS/commit/eca8b382ab014a394407d80ad8e9132d3d520b41))
+* **372-03:** add PositionTracker + PnlCalculator with bigint precision ([093d971](https://github.com/minhoyoo-iotrust/WAIaaS/commit/093d971f9f1b678200f3e6d58aad5aa392935e23))
+* **372-03:** add ResolutionMonitor + wire full factory with NegRiskResolver ([895d3af](https://github.com/minhoyoo-iotrust/WAIaaS/commit/895d3af160dae87edd06d6efdd13cb32c32ec17c))
+* **373-01:** add Polymarket Admin Settings, REST query routes, and daemon boot ([eea3887](https://github.com/minhoyoo-iotrust/WAIaaS/commit/eea38871d4872d6271b35eddd1faf0b83fbb2615))
+* **373-02:** add Polymarket MCP query tools and SDK client methods ([32289bd](https://github.com/minhoyoo-iotrust/WAIaaS/commit/32289bd4f617031c239e43e4abc63c14b323bf91))
+* **373-03:** add Polymarket Admin UI 5-tab page with components ([bb8020f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/bb8020f0adb9c6b461265a7619e0dd7dfb0584af))
+* **373-03:** add Polymarket to Admin UI navigation with 10 tests ([9f8b56a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/9f8b56af7b7ed301cda1e2e732bdc6c3f9bd5614))
+* **373-04:** add Polymarket connect-info capability and policy integration tests ([3e3f15f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/3e3f15fd4f34dc1e2d55aaaf7244b5073a266cbf))
+* **373-04:** create polymarket.skill.md and update actions.skill.md ([7b52081](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7b52081fa5cfdde77c75a2a3c71094c71a4786bd))
+
+
+### Bug Fixes
+
+* add Admin UI audit logs page ([#331](https://github.com/minhoyoo-iotrust/WAIaaS/issues/331)) ([3c7992c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/3c7992c6997f6133b05882b17ea4a938c45b9ee7))
+* add polymarket to PROVIDER_SCENARIO_MAP for Agent UAT check ([f47479a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/f47479af9a09b525af475aef67eda23a4e0c9ef1))
+* **jito-staking:** create JitoSOL ATA before DepositSol instruction ([#328](https://github.com/minhoyoo-iotrust/WAIaaS/issues/328)) ([da36d6b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/da36d6b4b48c425c062b677ff8a1f1b7ee7f526c))
+* resolve 2 lint errors (prefer-const, no-unused-vars) ([d5d0524](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d5d0524e349475397fff900c00057be3e065e12f))
+* resolve 2 open issues ([#322](https://github.com/minhoyoo-iotrust/WAIaaS/issues/322), [#323](https://github.com/minhoyoo-iotrust/WAIaaS/issues/323)) ([f22bd57](https://github.com/minhoyoo-iotrust/WAIaaS/commit/f22bd57123de5665c84055b574ea087aca7ce766))
+* resolve 6 open issues ([#324](https://github.com/minhoyoo-iotrust/WAIaaS/issues/324), [#325](https://github.com/minhoyoo-iotrust/WAIaaS/issues/325), [#326](https://github.com/minhoyoo-iotrust/WAIaaS/issues/326), [#327](https://github.com/minhoyoo-iotrust/WAIaaS/issues/327), [#329](https://github.com/minhoyoo-iotrust/WAIaaS/issues/329), [#330](https://github.com/minhoyoo-iotrust/WAIaaS/issues/330)) ([bf4461b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/bf4461bbbcb0eb6b70f322cd80fe7d99d9ab8523))
+* update all test assertions for DB schema v54 and Polymarket integration ([a916321](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a916321039d9e96aa7c65c91a2bfbb85b761d0a7))
+* update AuditAction expectedCount to 26 for Polymarket audit action ([2585ab4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2585ab450e86a2118e2c69771234e4f76d87a28a))
+* update MCP server test for 55 tools (add 8 Polymarket tools) ([2dd258d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2dd258d08c0c79255dcccb8580c9df8492fbee98))
+* update test badge Gist ID in README ([fc56c8f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/fc56c8f6b5e20fd75261abcbe642f67619a20718))
+* update zerox-swap and pendle tests for issue fix changes ([ee18b1f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ee18b1f275d268f25d98eddacc643714967424f0))
+
 ## [2.10.0-rc.27](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.0-rc.26...v2.10.0-rc.27) (2026-03-10)
 
 
