@@ -28,7 +28,7 @@
 - [x] **Phase 389: 추적 + 정책 확장** - AsyncTracker 9-state + Venue Whitelist + Category Limit 정책 (completed 2026-03-11)
 - [x] **Phase 390: 파이프라인 라우팅 + 조회 API** - signedData/signedHttp 파이프라인 + action 이력 조회 (completed 2026-03-12)
 - [x] **Phase 391: Admin UI** - Credential/External Action/Venue/Policy 관리 화면 4종 (completed 2026-03-12)
-- [ ] **Phase 392: MCP + SDK + 스킬 파일** - 통합 인터페이스 3종 + 스킬 문서 4종
+- [x] **Phase 392: MCP + SDK + 스킬 파일** - 통합 인터페이스 3종 + 스킬 문서 4종 (completed 2026-03-12)
 
 ## Phase Details
 
@@ -129,10 +129,10 @@ Plans:
   2. SDK executeAction()으로 off-chain action 실행, listOffchainActions()/getActionResult()로 이력 조회가 가능하다
   3. SDK AdminClient로 credential CRUD(create/delete/rotate)가 가능하다
   4. external-actions.skill.md가 off-chain action 개념, signing scheme, credential 설정, 사용 예시를 포함한다
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 Plans:
-- [ ] 392-01-PLAN.md — MCP 도구 2종 + SDK 메서드 6종 + 테스트
-- [ ] 392-02-PLAN.md — external-actions.skill.md 신규 + 기존 스킬 파일 3종 업데이트
+- [x] 392-01-PLAN.md — MCP 도구 2종 + SDK 메서드 6종 + 테스트
+- [x] 392-02-PLAN.md — external-actions.skill.md 신규 + 기존 스킬 파일 3종 업데이트
 
 ## Progress
 
@@ -148,4 +148,4 @@ Phases execute in numeric order: 386 -> 387 -> 388 -> 389 -> 390 -> 391 -> 392
 | 389. 추적 + 정책 확장 | 2/2 | Complete    | 2026-03-11 |
 | 390. 파이프라인 라우팅 + 조회 API | 2/2 | Complete    | 2026-03-12 |
 | 391. Admin UI | 2/2 | Complete    | 2026-03-12 |
-| 392. MCP + SDK + 스킬 파일 | 0/2 | Not started | - |
+| 392. MCP + SDK + 스킬 파일 | 2/2 | Complete    | 2026-03-12 |

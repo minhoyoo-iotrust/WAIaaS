@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: milestone
-status: planning
-stopped_at: Completed Phase 391 Plan 02 (2 plans, 4 tasks, 808 admin tests passing)
-last_updated: "2026-03-11T21:07:25.930Z"
-last_activity: 2026-03-12 — Phase 391 complete (2 plans, 4 tasks, Admin UI credentials + external actions + policy forms)
+status: complete
+stopped_at: Completed Phase 392 Plan 02 (2 plans, 4 tasks, MCP 2 tools + SDK 6 methods + skill files 4)
+last_updated: "2026-03-12T21:25:00.000Z"
+last_activity: 2026-03-12 — Phase 392 complete (final phase, 2 plans, 4 tasks, MCP + SDK + skill files)
 progress:
   total_phases: 7
-  completed_phases: 6
-  total_plans: 13
-  completed_plans: 13
-  percent: 86
+  completed_phases: 7
+  total_plans: 15
+  completed_plans: 15
+  percent: 100
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-12)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Phase 392 — MCP + SDK + Skill Files
+**Current focus:** Milestone v31.12 complete -- External Action 프레임워크 구현 (all 7 phases done)
 
 ## Current Position
 
 Phase: 392 of 392 (MCP + SDK + Skill Files)
-Plan: 1 of TBD
-Status: Ready to plan Phase 392
-Last activity: 2026-03-12 — Phase 391 complete (2 plans, 4 tasks, Admin UI credentials + external actions + policy forms)
+Plan: 2 of 2 (complete)
+Status: All phases complete
+Last activity: 2026-03-12 — Phase 392 complete (final phase, MCP + SDK + skill files)
 
-Progress: [████████░░] 86% (6/7 phases)
+Progress: [██████████] 100% (7/7 phases)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 13
-- Average duration: ~8min/plan
-- Total execution time: ~100min
+- Total plans completed: 15
+- Average duration: ~7min/plan
+- Total execution time: ~110min
 
 ## Accumulated Context
 
@@ -65,6 +65,9 @@ Progress: [████████░░] 86% (6/7 phases)
 - [Phase 391]: ExternalActionsTab inline in wallets.tsx (same pattern as StakingTab/NftTab)
 - [Phase 391]: venue_whitelist_enabled added to PolicyDefaultsTab (fixes settings-completeness test)
 - [Phase 391]: PolicyFormRouter now supports 16 types (added VENUE_WHITELIST + ACTION_CATEGORY_LIMIT)
+- [Phase 392]: MCP tools use /v1/wallets/${walletId}/actions path pattern (wallet_id || 'default') matching hyperliquid/polymarket pattern
+- [Phase 392]: SDK credential CRUD methods require masterPassword (throw MASTER_PASSWORD_REQUIRED if not set)
+- [Phase 392]: external-actions.skill.md (315 lines) follows same structural format as actions.skill.md
 
 ### Pending Todos
 
@@ -76,6 +79,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-12T06:04:00.000Z
-Stopped at: Completed Phase 391 Plan 02 (2 plans, 4 tasks, 808 admin tests passing)
+Last session: 2026-03-12T21:25:00.000Z
+Stopped at: Completed Phase 392 Plan 02 (milestone v31.12 complete)
 Resume file: None

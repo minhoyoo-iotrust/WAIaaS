@@ -98,19 +98,19 @@ Requirements for v31.12 milestone. Each maps to roadmap phases.
 
 ### MCP + SDK
 
-- [ ] **INTEG-01**: MCP 기존 action 도구가 off-chain action 자동 지원 (resolve 결과 분기)
-- [ ] **INTEG-02**: MCP action-list-offchain 도구 — off-chain action 이력 조회
-- [ ] **INTEG-03**: MCP credential-list 도구 — sessionAuth 기반 credential 목록 확인
-- [ ] **INTEG-04**: SDK listOffchainActions(), getActionResult() 메서드 추가
-- [ ] **INTEG-05**: SDK listCredentials() (sessionAuth) + AdminClient createCredential()/deleteCredential()/rotateCredential() (masterAuth)
-- [ ] **INTEG-06**: SDK 기존 executeAction() off-chain action 자동 지원
+- [x] **INTEG-01**: MCP 기존 action 도구가 off-chain action 자동 지원 (resolve 결과 분기)
+- [x] **INTEG-02**: MCP action-list-offchain 도구 — off-chain action 이력 조회
+- [x] **INTEG-03**: MCP credential-list 도구 — sessionAuth 기반 credential 목록 확인
+- [x] **INTEG-04**: SDK listOffchainActions(), getActionResult() 메서드 추가
+- [x] **INTEG-05**: SDK listCredentials() (sessionAuth) + AdminClient createCredential()/deleteCredential()/rotateCredential() (masterAuth)
+- [x] **INTEG-06**: SDK 기존 executeAction() off-chain action 자동 지원
 
 ### 스킬 파일
 
-- [ ] **SKILL-01**: external-actions.skill.md 신규 — off-chain action 개념, signing scheme, credential 설정, 사용 예시
-- [ ] **SKILL-02**: transactions.skill.md — off-chain action 파이프라인 참조 추가
-- [ ] **SKILL-03**: policies.skill.md — Venue Whitelist, notionalUsd 한도 정책 추가
-- [ ] **SKILL-04**: admin.skill.md — credential 관리, External Actions 모니터링 추가
+- [x] **SKILL-01**: external-actions.skill.md 신규 — off-chain action 개념, signing scheme, credential 설정, 사용 예시
+- [x] **SKILL-02**: transactions.skill.md — off-chain action 파이프라인 참조 추가
+- [x] **SKILL-03**: policies.skill.md — Venue Whitelist, notionalUsd 한도 정책 추가
+- [x] **SKILL-04**: admin.skill.md — credential 관리, External Actions 모니터링 추가
 
 ## Future Requirements
 
@@ -198,16 +198,16 @@ Requirements for v31.12 milestone. Each maps to roadmap phases.
 | ADMIN-02 | Phase 391 | Complete |
 | ADMIN-03 | Phase 391 | Complete |
 | ADMIN-04 | Phase 391 | Complete |
-| INTEG-01 | Phase 392 | Pending |
-| INTEG-02 | Phase 392 | Pending |
-| INTEG-03 | Phase 392 | Pending |
-| INTEG-04 | Phase 392 | Pending |
-| INTEG-05 | Phase 392 | Pending |
-| INTEG-06 | Phase 392 | Pending |
-| SKILL-01 | Phase 392 | Pending |
-| SKILL-02 | Phase 392 | Pending |
-| SKILL-03 | Phase 392 | Pending |
-| SKILL-04 | Phase 392 | Pending |
+| INTEG-01 | Phase 392 | Complete |
+| INTEG-02 | Phase 392 | Complete |
+| INTEG-03 | Phase 392 | Complete |
+| INTEG-04 | Phase 392 | Complete |
+| INTEG-05 | Phase 392 | Complete |
+| INTEG-06 | Phase 392 | Complete |
+| SKILL-01 | Phase 392 | Complete |
+| SKILL-02 | Phase 392 | Complete |
+| SKILL-03 | Phase 392 | Complete |
+| SKILL-04 | Phase 392 | Complete |
 
 **Coverage:**
 - v1 requirements: 60 total
