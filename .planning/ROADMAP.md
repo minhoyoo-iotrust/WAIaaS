@@ -145,7 +145,10 @@ Plans:
   2. HmacSignerCapability + RsaPssSignerCapability의 node:crypto 기반 설계가 존재한다
   3. signBytes() capability(Ed25519/ECDSA arbitrary bytes)의 설계가 존재한다
   4. SignerCapabilityRegistry(signingScheme -> ISignerCapability 자동 매핑)의 설계가 존재한다
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 382-01-PLAN.md — 기존 4종 어댑터 + signBytes 2종 상세 설계
+- [ ] 382-02-PLAN.md — HMAC/RSA-PSS capability + SignerCapabilityRegistry 설계
 
 ### Phase 383: 파이프라인 라우팅
 **Goal**: ResolvedAction kind에 따라 contractCall/signedData/signedHttp 파이프라인으로 분기하고 off-chain 액션을 DB에 기록하는 설계가 완성된다
@@ -188,10 +191,10 @@ Phases execute in numeric order: 380 -> 381 -> 382 -> 383 -> 384 -> 385
 |-------|----------------|--------|-----------|
 | 380. ResolvedAction 타입 시스템 | 2/2 | Complete    | 2026-03-11 |
 | 381. CredentialVault 인프라 | 2/2 | Complete    | 2026-03-11 |
-| 382. Signer Capabilities | 0/TBD | Not started | - |
+| 382. Signer Capabilities | 0/2 | Not started | - |
 | 383. 파이프라인 라우팅 | 0/TBD | Not started | - |
 | 384. 정책 + 추적 확장 | 0/TBD | Not started | - |
 | 385. 설계 문서 통합 | 0/TBD | Not started | - |
 
 ---
-*Last updated: 2026-03-11 after Phase 381 planning*
+*Last updated: 2026-03-11 after Phase 382 planning*
