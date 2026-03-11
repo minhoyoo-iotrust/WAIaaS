@@ -72,10 +72,10 @@ Plans:
   3. per-wallet credential이 글로벌 credential보다 우선하여 조회된다
   4. Master Password 변경 시 wallet_credentials 전 레코드가 re-encrypt된다
   5. 만료된 credential이 WorkerScheduler에 의해 자동 정리된다
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 Plans:
-- [ ] 388-01-PLAN.md — ICredentialVault 타입 + 암호화 + LocalCredentialVault + re-encrypt (TDD)
-- [ ] 388-02-PLAN.md — Credential REST API 8 endpoints + cleanup worker
+- [x] 388-01-PLAN.md — ICredentialVault 타입 + 암호화 + LocalCredentialVault + re-encrypt (TDD)
+- [x] 388-02-PLAN.md — Credential REST API 8 endpoints + cleanup worker
 
 ### Phase 389: 추적 + 정책 확장
 **Goal**: off-chain action의 상태가 9-state로 추적되고, Venue Whitelist/Category Limit 정책이 적용된다
@@ -132,7 +132,7 @@ Phases execute in numeric order: 386 -> 387 -> 388 -> 389 -> 390 -> 391 -> 392
 |-------|----------------|--------|-----------|
 | 386. 타입 시스템 + 에러 코드 + DB 마이그레이션 | 3/3 | Complete    | 2026-03-11 |
 | 387. Signer Capability 레지스트리 | 2/2 | Complete    | 2026-03-11 |
-| 388. Credential Vault | 0/2 | Not started | - |
+| 388. Credential Vault | 2/2 | Complete    | 2026-03-12 |
 | 389. 추적 + 정책 확장 | 0/TBD | Not started | - |
 | 390. 파이프라인 라우팅 + 조회 API | 0/TBD | Not started | - |
 | 391. Admin UI | 0/TBD | Not started | - |

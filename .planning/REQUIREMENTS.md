@@ -31,17 +31,17 @@ Requirements for v31.12 milestone. Each maps to roadmap phases.
 
 ### CredentialVault
 
-- [ ] **CRED-01**: ICredentialVault 인터페이스 구현 — create(), get(), list(), delete(), rotate(), walletId null=글로벌/string=per-wallet
-- [ ] **CRED-02**: LocalCredentialVault 구현 — settings-crypto.ts의 encryptSettingValue()/decryptSettingValue() 재사용
-- [ ] **CRED-03**: DB 마이그레이션 v55 — wallet_credentials 테이블 생성 (AES-256-GCM, HKDF, auth_tag 별도 컬럼)
-- [ ] **CRED-04**: CredentialTypeEnum 구현 — api-key, hmac-secret, rsa-private-key, session-token, custom
-- [ ] **CRED-05**: Per-wallet credential CRUD REST API — GET/POST/DELETE/PUT rotate (sessionAuth 읽기, masterAuth 쓰기)
-- [ ] **CRED-06**: 글로벌 credential CRUD REST API — GET/POST/DELETE/PUT rotate (masterAuth 전용)
-- [ ] **CRED-07**: credential 조회 우선순위 — per-wallet CredentialVault → 글로벌 SettingsService → CREDENTIAL_NOT_FOUND
-- [ ] **CRED-08**: credentialRef 참조 모델 — ActionProvider에서 문자열 참조, 파이프라인 내부에서만 복호화, 응답에 미포함
-- [ ] **CRED-09**: credential 만료 자동 정리 — WorkerScheduler credential-cleanup 워커
-- [ ] **CRED-10**: Master Password 변경 시 wallet_credentials 전 레코드 re-encrypt — SettingsService re-encrypt와 동일 트랜잭션
-- [ ] **CRED-11**: 기존 SettingsService 무변경 — 글로벌 API key 관리 기존 경로 유지
+- [x] **CRED-01**: ICredentialVault 인터페이스 구현 — create(), get(), list(), delete(), rotate(), walletId null=글로벌/string=per-wallet
+- [x] **CRED-02**: LocalCredentialVault 구현 — settings-crypto.ts의 encryptSettingValue()/decryptSettingValue() 재사용
+- [x] **CRED-03**: DB 마이그레이션 v55 — wallet_credentials 테이블 생성 (AES-256-GCM, HKDF, auth_tag 별도 컬럼)
+- [x] **CRED-04**: CredentialTypeEnum 구현 — api-key, hmac-secret, rsa-private-key, session-token, custom
+- [x] **CRED-05**: Per-wallet credential CRUD REST API — GET/POST/DELETE/PUT rotate (sessionAuth 읽기, masterAuth 쓰기)
+- [x] **CRED-06**: 글로벌 credential CRUD REST API — GET/POST/DELETE/PUT rotate (masterAuth 전용)
+- [x] **CRED-07**: credential 조회 우선순위 — per-wallet CredentialVault → 글로벌 SettingsService → CREDENTIAL_NOT_FOUND
+- [x] **CRED-08**: credentialRef 참조 모델 — ActionProvider에서 문자열 참조, 파이프라인 내부에서만 복호화, 응답에 미포함
+- [x] **CRED-09**: credential 만료 자동 정리 — WorkerScheduler credential-cleanup 워커
+- [x] **CRED-10**: Master Password 변경 시 wallet_credentials 전 레코드 re-encrypt — SettingsService re-encrypt와 동일 트랜잭션
+- [x] **CRED-11**: 기존 SettingsService 무변경 — 글로벌 API key 관리 기존 경로 유지
 
 ### IAsyncStatusTracker 확장
 
@@ -161,17 +161,17 @@ Requirements for v31.12 milestone. Each maps to roadmap phases.
 | SIGN-06 | Phase 387 | Complete |
 | SIGN-07 | Phase 387 | Complete |
 | SIGN-08 | Phase 387 | Complete |
-| CRED-01 | Phase 388 | Pending |
-| CRED-02 | Phase 388 | Pending |
-| CRED-03 | Phase 388 | Pending |
-| CRED-04 | Phase 388 | Pending |
-| CRED-05 | Phase 388 | Pending |
-| CRED-06 | Phase 388 | Pending |
-| CRED-07 | Phase 388 | Pending |
-| CRED-08 | Phase 388 | Pending |
-| CRED-09 | Phase 388 | Pending |
-| CRED-10 | Phase 388 | Pending |
-| CRED-11 | Phase 388 | Pending |
+| CRED-01 | Phase 388 | Complete |
+| CRED-02 | Phase 388 | Complete |
+| CRED-03 | Phase 388 | Complete |
+| CRED-04 | Phase 388 | Complete |
+| CRED-05 | Phase 388 | Complete |
+| CRED-06 | Phase 388 | Complete |
+| CRED-07 | Phase 388 | Complete |
+| CRED-08 | Phase 388 | Complete |
+| CRED-09 | Phase 388 | Complete |
+| CRED-10 | Phase 388 | Complete |
+| CRED-11 | Phase 388 | Complete |
 | TRACK-01 | Phase 389 | Pending |
 | TRACK-02 | Phase 389 | Pending |
 | TRACK-03 | Phase 389 | Pending |
