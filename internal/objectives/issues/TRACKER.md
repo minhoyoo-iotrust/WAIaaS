@@ -346,6 +346,7 @@
 | 330 | BUG | HIGH | Admin UI Jupiter Swap requiresApiKey 동기화 누락 — API 키 입력 필드 미표시 (#318 불완전) | v31.9 | FIXED | 2026-03-11 |
 | 331 | MISSING | MEDIUM | Admin UI 감사 로그 페이지 미구현 — API 존재하나 UI 없음 | v31.9 | FIXED | 2026-03-11 |
 | 332 | ENHANCEMENT | LOW | .planning 디렉토리 구조 정리 — 플랫 phases, 고아 파일, 네이밍 불일치 | — | OPEN | — |
+| 333 | ENHANCEMENT | HIGH | SignRequest에 CAIP-2 체인 식별자 및 서명 주소 추가 — chain/network 비표준 + signerAddress 누락 | — | OPEN | — |
 
 ## Type Legend
 
@@ -357,9 +358,9 @@
 
 ## Summary
 
-- **OPEN:** 1
+- **OPEN:** 2
 - **FIXED:** 331
 - **WONTFIX:** 1
-- **Total:** 333
+- **Total:** 334
 - **Archived:** 321 (001–321)
 
