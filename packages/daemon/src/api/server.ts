@@ -163,6 +163,8 @@ export interface CreateAppDeps {
   hyperliquidMarketData?: HyperliquidMarketData | null;
   /** PolymarketInfrastructure for read-only query endpoints (Phase 373) */
   polymarketInfra?: PolymarketInfraDeps | null;
+  /** ISignerCapabilityRegistry for external_actions capability discovery (Phase 390) */
+  signerRegistry?: import('../signing/registry.js').ISignerCapabilityRegistry;
 }
 
 /**
@@ -913,6 +915,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
       settingsService: deps.settingsService,
       actionProviderRegistry: deps.actionProviderRegistry,
       nftIndexerClient,
+      signerRegistry: deps.signerRegistry,
       version: DAEMON_VERSION,
     }));
   }

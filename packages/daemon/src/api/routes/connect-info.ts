@@ -23,6 +23,7 @@ import type { DaemonConfig } from '../../infrastructure/config/loader.js';
 import type { SettingsService } from '../../infrastructure/settings/index.js';
 import type { ActionProviderRegistry } from '../../infrastructure/action/action-provider-registry.js';
 import type { NftIndexerClient } from '../../infrastructure/nft/nft-indexer-client.js';
+import type { ISignerCapabilityRegistry } from '../../signing/registry.js';
 import type * as schema from '../../infrastructure/database/schema.js';
 import { sessions, sessionWallets, wallets, policies, agentIdentities } from '../../infrastructure/database/schema.js';
 import {
@@ -43,6 +44,7 @@ export interface ConnectInfoRouteDeps {
   settingsService?: SettingsService;
   actionProviderRegistry?: ActionProviderRegistry;
   nftIndexerClient?: NftIndexerClient;
+  signerRegistry?: ISignerCapabilityRegistry;
   version: string;
 }
 
@@ -169,6 +171,9 @@ export function buildConnectInfoPrompt(params: BuildConnectInfoPromptParams): st
   }
   if (capabilities.includes('across_bridge')) {
     lines.push('Across Bridge: Use action_across_bridge_* tools for intent-based cross-chain EVM bridge with fast relayer fills (2-10 seconds). Supports Ethereum, Arbitrum, Optimism, Base, Polygon, Linea.');
+  }
+  if (capabilities.includes('external_actions')) {
+    lines.push('External Actions: Use POST /v1/actions/{provider}/{action} for off-chain signed actions. Query results: GET /v1/wallets/{id}/actions.');
   }
   lines.push('Specify walletId parameter (UUID from the ID field above) to target a specific wallet.');
   lines.push('Append ?network=<network> to query a specific network (required for EVM wallets, auto-resolved for Solana).');
@@ -410,6 +415,11 @@ export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
       } catch {
         // Setting not found -- across_bridge not available
       }
+    }
+
+    // external_actions: check if signerRegistry has any schemes registered
+    if (deps.signerRegistry && deps.signerRegistry.listSchemes().length > 0) {
+      capabilities.push('external_actions');
     }
 
     // f. Fetch NFT summary per wallet (graceful degradation)
