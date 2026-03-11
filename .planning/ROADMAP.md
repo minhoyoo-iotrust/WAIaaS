@@ -202,7 +202,7 @@ Phases execute in numeric order: 380 -> 381 -> 382 -> 383 -> 384 -> 385
 | 382. Signer Capabilities | 2/2 | Complete    | 2026-03-11 |
 | 383. 파이프라인 라우팅 | 2/2 | Complete    | 2026-03-11 |
 | 384. 정책 + 추적 확장 | 2/2 | Complete    | 2026-03-11 |
-| 385. 설계 문서 통합 | 1/1 | Complete   | 2026-03-12 |
+| 385. 설계 문서 통합 | 1/1 | Complete    | 2026-03-11 |
 
 ---
 *Last updated: 2026-03-12 after Phase 385 complete*
