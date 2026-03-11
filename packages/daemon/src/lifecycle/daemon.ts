@@ -1717,7 +1717,7 @@ export class DaemonLifecycle {
                   console.warn(`[submitted-tx-confirm] ${tx.id} failed on-chain`);
                 }
                 // status === 'submitted': still pending, retry on next interval
-              } catch (err) {
+              } catch (_err) {
                 // Swallow individual tx errors (RPC timeout, rate limit) — will retry next interval
               }
             }

@@ -96,7 +96,7 @@ export function createPolymarketRoutes(deps: PolymarketRouteDeps) {
     const walletId = c.req.param('walletId');
     await resolveWallet(deps.db, walletId);
     const statusFilter = c.req.query('status');
-    let query = deps.db
+    const query = deps.db
       .select()
       .from(polymarketOrders)
       .where(eq(polymarketOrders.walletId, walletId))
