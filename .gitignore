@@ -50,5 +50,8 @@ how-to-spread/
 # Claude Code project settings (local overrides)
 .claude/settings.json
 
+# bkit plugin runtime state (local)
+.bkit/
+
 # Docker secrets (never commit)
 secrets/
