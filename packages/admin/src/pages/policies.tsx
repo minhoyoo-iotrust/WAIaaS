@@ -53,6 +53,8 @@ const POLICY_TYPES = [
   { label: 'x402 Allowed Domains', value: 'X402_ALLOWED_DOMAINS' },
   { label: 'ERC-8128 Allowed Domains', value: 'ERC8128_ALLOWED_DOMAINS' },
   { label: 'Reputation Threshold', value: 'REPUTATION_THRESHOLD' },
+  { label: 'Venue Whitelist', value: 'VENUE_WHITELIST' },
+  { label: 'Action Category Limit', value: 'ACTION_CATEGORY_LIMIT' },
 ];
 
 /** One-line description for each policy type (#183). */
@@ -71,6 +73,8 @@ const POLICY_DESCRIPTIONS: Record<string, string> = {
   X402_ALLOWED_DOMAINS: 'Allow x402 payments only to pre-approved domains.',
   ERC8128_ALLOWED_DOMAINS: 'Allow ERC-8128 HTTP message signing only for pre-approved API domains.',
   REPUTATION_THRESHOLD: 'Adjust security tier based on counterparty agent on-chain reputation score (ERC-8004).',
+  VENUE_WHITELIST: 'Allow external actions only from pre-approved venues (default-deny when enabled).',
+  ACTION_CATEGORY_LIMIT: 'Set per-action, daily, and monthly USD limits per action category with tier escalation.',
 };
 
 const DEFAULT_RULES: Record<string, Record<string, unknown>> = {
@@ -97,6 +101,8 @@ const DEFAULT_RULES: Record<string, Record<string, unknown>> = {
   X402_ALLOWED_DOMAINS: { domains: [] },
   ERC8128_ALLOWED_DOMAINS: { domains: [] },
   REPUTATION_THRESHOLD: { min_score: 50, below_threshold_tier: 'APPROVAL', unrated_tier: 'APPROVAL', check_counterparty: false },
+  VENUE_WHITELIST: { venues: [{ id: '', name: '' }] },
+  ACTION_CATEGORY_LIMIT: { category: 'trade', per_action_limit_usd: 1000, daily_limit_usd: 10000, monthly_limit_usd: 100000, tier_on_exceed: 'DELAY' },
 };
 
 // Validation for structured form rules per policy type

@@ -13,6 +13,8 @@ import { AllowedNetworksForm } from './allowed-networks-form';
 import { X402AllowedDomainsForm } from './x402-allowed-domains-form';
 import { Erc8128AllowedDomainsForm } from './erc8128-allowed-domains-form';
 import { ReputationThresholdForm } from './reputation-threshold-form';
+import { VenueWhitelistForm } from './venue-whitelist-form';
+import { ActionCategoryLimitForm } from './action-category-limit-form';
 
 export interface PolicyFormProps {
   rules: Record<string, unknown>;
@@ -24,11 +26,11 @@ export interface PolicyFormProps {
 /**
  * PolicyFormRouter - routes to type-specific policy form components.
  *
- * Supports all 14 core types with dedicated forms:
+ * Supports all 16 core types with dedicated forms:
  * SPENDING_LIMIT, WHITELIST, RATE_LIMIT, APPROVE_AMOUNT_LIMIT, APPROVE_TIER_OVERRIDE,
  * ALLOWED_TOKENS, CONTRACT_WHITELIST, METHOD_WHITELIST, APPROVED_SPENDERS,
  * TIME_RESTRICTION, ALLOWED_NETWORKS, X402_ALLOWED_DOMAINS, ERC8128_ALLOWED_DOMAINS,
- * REPUTATION_THRESHOLD.
+ * REPUTATION_THRESHOLD, VENUE_WHITELIST, ACTION_CATEGORY_LIMIT.
  */
 export function PolicyFormRouter({
   type,
@@ -66,6 +68,10 @@ export function PolicyFormRouter({
       return <Erc8128AllowedDomainsForm rules={rules} onChange={onChange} errors={errors} />;
     case 'REPUTATION_THRESHOLD':
       return <ReputationThresholdForm rules={rules} onChange={onChange} errors={errors} />;
+    case 'VENUE_WHITELIST':
+      return <VenueWhitelistForm rules={rules} onChange={onChange} errors={errors} />;
+    case 'ACTION_CATEGORY_LIMIT':
+      return <ActionCategoryLimitForm rules={rules} onChange={onChange} errors={errors} />;
     default:
       return (
         <p class="policy-form-placeholder">
