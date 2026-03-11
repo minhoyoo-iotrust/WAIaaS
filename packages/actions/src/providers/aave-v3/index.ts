@@ -13,6 +13,7 @@
  * Risk levels: borrow/withdraw = high (APPROVAL), supply/repay = medium (DELAY).
  */
 import { ChainError } from '@waiaas/core';
+import { parseTokenAmount } from '../../common/amount-parser.js';
 import type {
   ILendingProvider,
   ActionProviderMetadata,
@@ -49,33 +50,6 @@ import {
   AaveRepayInputSchema,
   AaveWithdrawInputSchema,
 } from './schemas.js';
-
-// ---------------------------------------------------------------------------
-// Amount parsing helper
-// ---------------------------------------------------------------------------
-
-/**
- * Parse a human-readable token amount string to smallest unit (bigint).
- * Handles decimal amounts like "100.5" with configurable decimals.
- *
- * @param amount - Human-readable amount string (e.g., "100.5")
- * @param decimals - Token decimals (default 18 for most ERC-20 tokens)
- * @throws ChainError if amount is zero or negative
- */
-function parseTokenAmount(amount: string, decimals: number = 18): bigint {
-  const parts = amount.split('.');
-  const whole = BigInt(parts[0] || '0');
-  const fractional = (parts[1] || '').padEnd(decimals, '0').slice(0, decimals);
-  const result = whole * 10n ** BigInt(decimals) + BigInt(fractional);
-
-  if (result <= 0n) {
-    throw new ChainError('INVALID_INSTRUCTION', 'ethereum', {
-      message: 'Amount must be greater than 0',
-    });
-  }
-
-  return result;
-}
 
 // ---------------------------------------------------------------------------
 // Provider implementation
@@ -173,7 +147,7 @@ export class AaveV3LendingProvider implements ILendingProvider, IPositionProvide
     const input = AaveSupplyInputSchema.parse(params);
     const network = (input.network || 'ethereum-mainnet') as NetworkType;
     const addresses = getAaveAddresses(network);
-    const amount = parseTokenAmount(input.amount);
+    const amount = parseTokenAmount(input.amount, 18);
 
     const approveReq: ContractCallRequest = {
       type: 'CONTRACT_CALL',
@@ -205,7 +179,7 @@ export class AaveV3LendingProvider implements ILendingProvider, IPositionProvide
     const input = AaveBorrowInputSchema.parse(params);
     const network = (input.network || 'ethereum-mainnet') as NetworkType;
     const addresses = getAaveAddresses(network);
-    const amount = parseTokenAmount(input.amount);
+    const amount = parseTokenAmount(input.amount, 18);
 
     // AAVE-09: HF simulation check if rpcCaller available
     if (this.rpcCaller) {
@@ -232,7 +206,7 @@ export class AaveV3LendingProvider implements ILendingProvider, IPositionProvide
     const input = AaveRepayInputSchema.parse(params);
     const network = (input.network || 'ethereum-mainnet') as NetworkType;
     const addresses = getAaveAddresses(network);
-    const amount = input.amount === 'max' ? MAX_UINT256 : parseTokenAmount(input.amount);
+    const amount = input.amount === 'max' ? MAX_UINT256 : parseTokenAmount(input.amount, 18);
 
     const approveReq: ContractCallRequest = {
       type: 'CONTRACT_CALL',
@@ -264,7 +238,7 @@ export class AaveV3LendingProvider implements ILendingProvider, IPositionProvide
     const input = AaveWithdrawInputSchema.parse(params);
     const network = (input.network || 'ethereum-mainnet') as NetworkType;
     const addresses = getAaveAddresses(network);
-    const amount = input.amount === 'max' ? MAX_UINT256 : parseTokenAmount(input.amount);
+    const amount = input.amount === 'max' ? MAX_UINT256 : parseTokenAmount(input.amount, 18);
 
     // AAVE-09: HF simulation for non-max withdrawals
     if (this.rpcCaller && amount !== MAX_UINT256) {

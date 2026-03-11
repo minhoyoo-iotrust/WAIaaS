@@ -19,28 +19,12 @@ import type {
   ApiDirectResult,
 } from '@waiaas/core';
 import type { Hex } from 'viem';
+import { parseTokenAmount } from '../../common/amount-parser.js';
 import type { HyperliquidSubAccountService } from './sub-account-service.js';
 import {
   HlCreateSubAccountInputSchema,
   HlSubTransferInputSchema,
 } from './schemas.js';
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const USDC_DECIMALS = 6;
-
-/**
- * Parse a decimal string to bigint with USDC precision (6 decimals).
- */
-function parseUsdcAmount(amount: string): bigint {
-  const parts = amount.split('.');
-  const integerPart = parts[0] ?? '0';
-  let fractionalPart = parts[1] ?? '';
-  fractionalPart = fractionalPart.padEnd(USDC_DECIMALS, '0').slice(0, USDC_DECIMALS);
-  return BigInt(integerPart + fractionalPart);
-}
 
 // ---------------------------------------------------------------------------
 // HyperliquidSubAccountProvider
@@ -91,11 +75,13 @@ export class HyperliquidSubAccountProvider implements IActionProvider {
     switch (actionName) {
       case 'hl_create_sub_account':
         return { amount: 0n, asset: 'USDC' };
-      case 'hl_sub_transfer':
+      case 'hl_sub_transfer': {
+        const raw = String(params.amount ?? '0');
         return {
-          amount: parseUsdcAmount(String(params.amount ?? '0')),
+          amount: raw === '0' || !params.amount ? 0n : parseTokenAmount(raw, 6),
           asset: 'USDC',
         };
+      }
       default:
         return { amount: 0n, asset: 'USDC' };
     }

@@ -10,6 +10,7 @@
  */
 import { z } from 'zod';
 import { ChainError } from '@waiaas/core';
+import { parseTokenAmount } from '../../common/amount-parser.js';
 import type {
   IActionProvider,
   ActionProviderMetadata,
@@ -35,31 +36,6 @@ const LidoStakeInputSchema = z.object({
 const LidoUnstakeInputSchema = z.object({
   amount: z.string().min(1, 'amount is required (stETH, e.g. "1.0")'),
 });
-
-// ---------------------------------------------------------------------------
-// Amount parsing helper
-// ---------------------------------------------------------------------------
-
-/**
- * Parse a human-readable ETH/stETH amount string to wei (bigint).
- * Handles decimal amounts like "1.5" -> 1500000000000000000n.
- *
- * @throws ChainError if amount is zero or negative
- */
-function parseEthAmount(amount: string): bigint {
-  const parts = amount.split('.');
-  const whole = BigInt(parts[0] || '0');
-  const decimals = (parts[1] || '').padEnd(18, '0').slice(0, 18);
-  const result = whole * 10n ** 18n + BigInt(decimals);
-
-  if (result <= 0n) {
-    throw new ChainError('INVALID_INSTRUCTION', 'ethereum', {
-      message: 'Amount must be greater than 0',
-    });
-  }
-
-  return result;
-}
 
 // ---------------------------------------------------------------------------
 // Provider implementation
@@ -129,7 +105,7 @@ export class LidoStakingActionProvider implements IActionProvider {
 
   private resolveStake(params: Record<string, unknown>): ContractCallRequest {
     const input = LidoStakeInputSchema.parse(params);
-    const amountWei = parseEthAmount(input.amount);
+    const amountWei = parseTokenAmount(input.amount, 18);
 
     return {
       type: 'CONTRACT_CALL',
@@ -148,7 +124,7 @@ export class LidoStakingActionProvider implements IActionProvider {
     context: ActionContext,
   ): ContractCallRequest[] {
     const input = LidoUnstakeInputSchema.parse(params);
-    const amountWei = parseEthAmount(input.amount);
+    const amountWei = parseTokenAmount(input.amount, 18);
 
     // Step 1: Approve stETH to WithdrawalQueue
     const approveRequest: ContractCallRequest = {

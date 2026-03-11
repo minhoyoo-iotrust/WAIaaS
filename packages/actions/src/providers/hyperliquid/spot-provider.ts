@@ -10,6 +10,7 @@
  * @see HDESIGN-07: Policy evaluation table
  */
 import { ChainError } from '@waiaas/core';
+import { parseTokenAmount } from '../../common/amount-parser.js';
 import type {
   IActionProvider,
   ActionProviderMetadata,
@@ -31,21 +32,6 @@ import type { OrderTypeWire } from './schemas.js';
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-/** USDC decimals (6). */
-const USDC_DECIMALS = 6;
-
-/**
- * Parse a decimal string to bigint with USDC precision (6 decimals).
- * "100.5" -> 100_500000n
- */
-function parseUsdcAmount(amount: string): bigint {
-  const parts = amount.split('.');
-  const integerPart = parts[0] ?? '0';
-  let fractionalPart = parts[1] ?? '';
-  fractionalPart = fractionalPart.padEnd(USDC_DECIMALS, '0').slice(0, USDC_DECIMALS);
-  return BigInt(integerPart + fractionalPart);
-}
 
 // ---------------------------------------------------------------------------
 // HyperliquidSpotProvider
@@ -347,7 +333,7 @@ export class HyperliquidSpotProvider implements IActionProvider {
         }
 
         const total = size * price;
-        return { amount: parseUsdcAmount(total.toFixed(6)), asset: 'USDC' };
+        return { amount: parseTokenAmount(total.toFixed(6), 6), asset: 'USDC' };
       }
 
       case 'hl_spot_sell':
