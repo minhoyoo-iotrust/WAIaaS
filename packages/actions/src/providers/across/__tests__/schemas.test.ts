@@ -85,6 +85,16 @@ describe('AcrossDepositStatusResponseSchema', () => {
     expect(result.fillTxHash).toBe('0xhash');
     expect(result.depositId).toBe(42);
   });
+
+  it('coerces string depositId to number (#336)', () => {
+    const result = AcrossDepositStatusResponseSchema.parse({
+      status: 'filled',
+      fillTxHash: '0xhash',
+      depositId: '12345',
+      destinationChainId: 42161,
+    });
+    expect(result.depositId).toBe(12345);
+  });
 });
 
 describe('AcrossAvailableRoutesResponseSchema', () => {

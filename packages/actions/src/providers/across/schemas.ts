@@ -88,7 +88,7 @@ export const AcrossDepositStatusResponseSchema = z.object({
   fillTx: z.string().optional(),
   fillTxHash: z.string().optional(),
   depositTxHash: z.string().optional(),
-  depositId: z.number().optional(),
+  depositId: z.coerce.number().optional(),
   destinationChainId: z.number().optional(),
   updatedAt: z.string().optional(),
 }).passthrough();
