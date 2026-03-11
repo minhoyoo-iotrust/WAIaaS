@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
 milestone: v31.10
-milestone_name: 코드베이스 품질 개선
-status: active
-stopped_at: "Completed Phase 375 (2/2 plans)"
-last_updated: "2026-03-11T08:13:00.000Z"
-last_activity: 2026-03-11 — Phase 375 complete (utility consolidation, 2 plans, ~260 lines removed)
+milestone_name: milestone
+status: executing
+stopped_at: Completed Phase 375 (375-01-PLAN.md, 375-02-PLAN.md)
+last_updated: "2026-03-11T08:16:49.762Z"
+last_activity: 2026-03-11 — Phase 375 complete
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 8
+  total_plans: 2
   completed_plans: 2
   percent: 25
 ---
