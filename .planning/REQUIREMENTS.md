@@ -29,9 +29,9 @@
 
 ### Error (API 에러 응답 일관성)
 
-- [ ] **ERR-01**: `nft-approvals.ts`의 `c.json({ error: "..." }, 400)` → `WAIaaSError` 패턴으로 통일
-- [ ] **ERR-02**: `sessions.ts`의 `new Response(null, { status: 204 }) as any` → 표준 204 응답 패턴으로 교체
-- [ ] **ERR-03**: 기타 `as any` 타입 escape가 있는 응답 패턴 정리
+- [x] **ERR-01**: `nft-approvals.ts`의 `c.json({ error: "..." }, 400)` → `WAIaaSError` 패턴으로 통일
+- [x] **ERR-02**: `sessions.ts`의 `new Response(null, { status: 204 }) as any` → 표준 204 응답 패턴으로 교체
+- [x] **ERR-03**: 기타 `as any` 타입 escape가 있는 응답 패턴 정리
 
 ### Constants (상수 중앙화)
 
@@ -69,9 +69,9 @@ None — 순수 리팩토링 마일스톤이므로 추가 기능 없음.
 | SPLIT-01 | Phase 377 | Complete |
 | SPLIT-02 | Phase 377 | Complete |
 | SPLIT-03 | Phase 377 | Complete |
-| ERR-01 | Phase 378 | Pending |
-| ERR-02 | Phase 378 | Pending |
-| ERR-03 | Phase 378 | Pending |
+| ERR-01 | Phase 378 | Complete |
+| ERR-02 | Phase 378 | Complete |
+| ERR-03 | Phase 378 | Complete |
 | CONST-01 | Phase 379 | Pending |
 | CONST-02 | Phase 379 | Pending |
 
