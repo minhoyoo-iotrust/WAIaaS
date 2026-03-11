@@ -337,6 +337,13 @@
 | 321 | BUG | MEDIUM | Jito Staking 최소 금액 검증 누락 — 소액 deposit 시 InstructionError Custom(1) 온체인 실패 | — | FIXED | 2026-03-10 |
 | 322 | ENHANCEMENT | LOW | Agent UAT 지갑 CRUD 시나리오 제거 — 반복 실행 시 terminated 지갑 누적으로 DB 오염 | — | OPEN | — |
 | 323 | ENHANCEMENT | MEDIUM | Terminated 지갑 하드 삭제(Purge) 기능 — API + Admin UI에서 완전 삭제 지원 | — | OPEN | — |
+| 324 | BUG | CRITICAL | DELAY 티어 + DEX quote 만료로 스왑 트랜잭션 revert — 가스비 낭비 | v31.9 | OPEN | — |
+| 325 | MISSING | MEDIUM | Actions 엔드포인트 ?dryRun=true 쿼리 파라미터 미지원 — simulate 시 실비 발생 | v31.9 | OPEN | — |
+| 326 | BUG | MEDIUM | Pendle API v2 엔드포인트 변경으로 Yield Trading 전면 실패 (404) | v31.9 | OPEN | — |
+| 327 | BUG | HIGH | 다수 DELAY 큐 항목 처리 중 데몬 크래시 — 원인 불명 | v31.9 | OPEN | — |
+| 328 | BUG | HIGH | Jito Staking DepositSol 시 JitoSOL ATA 미생성으로 실패 — preInstructions 수정 적용 | v31.9 | FIXED | 2026-03-11 |
+| 329 | BUG | HIGH | Confirmation Worker STO-03 회귀 — Lido 온체인 성공 후 SUBMITTED 상태 고착 (#143 재발) | v31.9 | OPEN | — |
+| 330 | BUG | HIGH | Admin UI Jupiter Swap requiresApiKey 동기화 누락 — API 키 입력 필드 미표시 (#318 불완전) | v31.9 | OPEN | — |
 
 ## Type Legend
 
@@ -348,9 +355,9 @@
 
 ## Summary
 
-- **OPEN:** 2
-- **FIXED:** 321
+- **OPEN:** 8
+- **FIXED:** 322
 - **WONTFIX:** 1
-- **Total:** 324
+- **Total:** 331
 - **Archived:** 321 (001–321)
 
