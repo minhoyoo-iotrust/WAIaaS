@@ -56,9 +56,7 @@ const context: ActionContext = {
 
 const contractCallResult: ContractCallRequest = {
   type: 'CONTRACT_CALL',
-  chain: 'solana',
   to: 'target-address',
-  data: '0x',
   value: '0',
 };
 

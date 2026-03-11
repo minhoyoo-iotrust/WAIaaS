@@ -11,6 +11,11 @@
 import { z } from 'zod';
 import { ChainTypeEnum } from '../enums/chain.js';
 import type { ContractCallRequest } from '../schemas/transaction.schema.js';
+import type {
+  SignedDataAction,
+  SignedHttpAction,
+  ResolvedAction,
+} from '../schemas/resolved-action.schema.js';
 
 // ---------------------------------------------------------------------------
 // Zod SSoT: ActionProviderMetadata
@@ -60,7 +65,7 @@ export const ActionDefinitionSchema = z.object({
   /** Zod schema for input validation (duck-typed at registration). */
   inputSchema: z.any(),
   /** Risk level classification. */
-  riskLevel: z.enum(['low', 'medium', 'high']),
+  riskLevel: z.enum(['low', 'medium', 'high', 'critical']),
   /** Default policy tier for this action. */
   defaultTier: z.enum(['INSTANT', 'NOTIFY', 'DELAY', 'APPROVAL']),
 });
@@ -149,12 +154,16 @@ export function isApiDirectResult(result: unknown): result is ApiDirectResult {
 /**
  * Action Provider contract.
  *
- * Implementations resolve action parameters into ContractCallRequest objects
- * that are then fed into the existing 6-stage pipeline for policy evaluation,
- * signing, and submission.
+ * Implementations resolve action parameters into:
+ * - ContractCallRequest (on-chain transaction)
+ * - ContractCallRequest[] (multi-step on-chain, e.g., approve + swap)
+ * - ApiDirectResult (API-based execution, e.g., Hyperliquid DEX)
+ * - SignedDataAction (off-chain signed data, e.g., EIP-712, HMAC)
+ * - SignedHttpAction (signed HTTP request, e.g., ERC-8128)
+ * - ResolvedAction[] (mixed array of any kind)
  *
- * Providers with requiresSigningKey=true may return ApiDirectResult instead,
- * which causes Stage 5 to skip on-chain execution entirely.
+ * Existing providers returning ContractCallRequest are fully backward
+ * compatible -- the return type is a union superset.
  */
 export interface IActionProvider {
   /** Provider metadata (name, version, chains, flags). */
@@ -162,17 +171,25 @@ export interface IActionProvider {
   /** Available actions exposed by this provider. */
   readonly actions: readonly ActionDefinition[];
   /**
-   * Resolve action parameters into a ContractCallRequest, an array of
-   * ContractCallRequest[] for multi-step operations (e.g., approve + swap),
-   * or an ApiDirectResult for API-based execution (e.g., Hyperliquid DEX).
+   * Resolve action parameters into one of 6 return types.
    *
    * For ContractCallRequest returns, values are re-validated via
    * ContractCallRequestSchema.parse() by ActionProviderRegistry.
    * For ApiDirectResult returns, Stage 5 skips on-chain execution.
+   * For SignedDataAction/SignedHttpAction, the new off-chain pipeline handles
+   * credential resolution, signing, and async tracking.
+   * For ResolvedAction[], each element is routed to the appropriate pipeline.
    */
   resolve(
     actionName: string,
     params: Record<string, unknown>,
     context: ActionContext,
-  ): Promise<ContractCallRequest | ContractCallRequest[] | ApiDirectResult>;
+  ): Promise<
+    | ContractCallRequest
+    | ContractCallRequest[]
+    | ApiDirectResult
+    | SignedDataAction
+    | SignedHttpAction
+    | ResolvedAction[]
+  >;
 }
