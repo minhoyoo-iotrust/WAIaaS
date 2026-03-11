@@ -133,7 +133,7 @@ describe('ZeroExSwapActionProvider', () => {
       expect(swap.name).toBe('swap');
       expect(swap.chain).toBe('ethereum');
       expect(swap.riskLevel).toBe('medium');
-      expect(swap.defaultTier).toBe('DELAY');
+      expect(swap.defaultTier).toBe('INSTANT');
     });
   });
 

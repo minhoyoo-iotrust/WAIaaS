@@ -7,7 +7,7 @@
 
 export interface PendleConfig {
   enabled: boolean;
-  apiBaseUrl: string;          // 'https://api-v2.pendle.finance'
+  apiBaseUrl: string;          // 'https://api-v2.pendle.finance/core'
   apiKey: string;              // Authorization Bearer token (optional)
   defaultSlippageBps: number;  // 100 (1%)
   maxSlippageBps: number;      // 500 (5%)
