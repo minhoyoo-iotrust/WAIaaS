@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v31.10
 milestone_name: milestone
 status: executing
-stopped_at: Completed 378-01-PLAN.md
-last_updated: "2026-03-11T09:35:39.605Z"
+stopped_at: Completed 379-01-PLAN.md
+last_updated: "2026-03-11T09:55:25.531Z"
 last_activity: 2026-03-11 — Phase 376 complete
 progress:
   total_phases: 5
-  completed_phases: 4
-  total_plans: 7
-  completed_plans: 7
+  completed_phases: 5
+  total_plans: 8
+  completed_plans: 8
   percent: 50
 ---
 
@@ -47,6 +47,7 @@ Progress: [█████░░░░░] 50%
 | 376 | 2 | 20min | 10min |
 | Phase 377 P01+02 | 15 | 4 tasks | 6 files |
 | Phase 378 P01 | 19 | 2 tasks | 11 files |
+| Phase 379 P01 | 13 | 2 tasks | 25 files |
 
 ## Accumulated Context
 
@@ -67,6 +68,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 377]: admin.ts thin aggregator 패턴: 타입 export + register 함수 호출 위임 (3,107줄 → 98줄)
 - [Phase 378]: INVALID_TOKEN_IDENTIFIER in NFT domain, STATS_NOT_CONFIGURED in ADMIN domain
 - [Phase 378]: erc8004.ts as any removal safe because z.any() schema accepts Record<string, unknown>
+- [Phase 379]: Package-level constants.ts pattern: extract 2+ usage magic numbers per package
 
 ### Pending Todos
 
@@ -78,6 +80,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-11T09:35:05.920Z
-Stopped at: Completed 378-01-PLAN.md
+Last session: 2026-03-11T09:55:25.528Z
+Stopped at: Completed 379-01-PLAN.md
 Resume file: None

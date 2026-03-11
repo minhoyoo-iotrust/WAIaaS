@@ -35,8 +35,8 @@
 
 ### Constants (상수 중앙화)
 
-- [ ] **CONST-01**: 산재된 매직 넘버 식별 (`MAX_RETRIES`, `TIMEOUT_MS`, `CACHE_TTL_SECONDS`, `POLLING_INTERVAL_MS`)
-- [ ] **CONST-02**: 적절한 위치에 상수 정의 (패키지별 constants 파일 또는 Admin Settings 전환)
+- [x] **CONST-01**: 산재된 매직 넘버 식별 (`MAX_RETRIES`, `TIMEOUT_MS`, `CACHE_TTL_SECONDS`, `POLLING_INTERVAL_MS`)
+- [x] **CONST-02**: 적절한 위치에 상수 정의 (패키지별 constants 파일 또는 Admin Settings 전환)
 
 ## v2 Requirements
 
@@ -72,8 +72,8 @@ None — 순수 리팩토링 마일스톤이므로 추가 기능 없음.
 | ERR-01 | Phase 378 | Complete |
 | ERR-02 | Phase 378 | Complete |
 | ERR-03 | Phase 378 | Complete |
-| CONST-01 | Phase 379 | Pending |
-| CONST-02 | Phase 379 | Pending |
+| CONST-01 | Phase 379 | Complete |
+| CONST-02 | Phase 379 | Complete |
 
 **Coverage:**
 - v1 requirements: 16 total
