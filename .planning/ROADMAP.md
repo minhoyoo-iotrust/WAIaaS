@@ -128,7 +128,7 @@ Phases execute in numeric order: 386 -> 387 -> 388 -> 389 -> 390 -> 391 -> 392
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 386. 타입 시스템 + 에러 코드 + DB 마이그레이션 | 3/3 | Complete    | 2026-03-11 |
-| 387. Signer Capability 레지스트리 | 2/2 | Complete   | 2026-03-11 |
+| 387. Signer Capability 레지스트리 | 2/2 | Complete    | 2026-03-11 |
 | 388. Credential Vault | 0/TBD | Not started | - |
 | 389. 추적 + 정책 확장 | 0/TBD | Not started | - |
 | 390. 파이프라인 라우팅 + 조회 API | 0/TBD | Not started | - |
