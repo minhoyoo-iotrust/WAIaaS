@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v31.12
-milestone_name: External Action 프레임워크 구현
-status: executing
+milestone: v0.1
+milestone_name: milestone
+status: planning
 stopped_at: Completed Phase 386 (3 plans, 5 tasks)
-last_updated: "2026-03-12"
-last_activity: 2026-03-12 — Phase 386 complete (3 plans, 5 tasks, 13 requirements)
+last_updated: "2026-03-11T18:10:35.507Z"
+last_activity: 2026-03-12 — Phase 386 complete
 progress:
   total_phases: 7
   completed_phases: 1
   total_plans: 3
   completed_plans: 3
-  percent: 0
+  percent: 14
 ---
 
 # Project State
