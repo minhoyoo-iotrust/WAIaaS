@@ -52,7 +52,8 @@ describe('i18n message system', () => {
     // v31.2: +EXPIRED_BUILD, +BUILD_NOT_FOUND, +BUILD_ALREADY_USED, +CALLDATA_MISMATCH, +SENDER_MISMATCH (+5)
     const en = getMessages('en');
     // v31.3: +DEPRECATED_SMART_ACCOUNT (+1)
-    expect(Object.keys(en.errors).length).toBe(134);
+    // v31.9: +WALLET_NOT_TERMINATED (+1)
+    expect(Object.keys(en.errors).length).toBe(135);
   });
 
   it('error code keys match ERROR_CODES keys', () => {

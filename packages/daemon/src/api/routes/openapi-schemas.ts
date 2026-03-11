@@ -639,6 +639,13 @@ export const WalletDeleteResponseSchema = z
   })
   .openapi('WalletDeleteResponse');
 
+export const WalletPurgeResponseSchema = z
+  .object({
+    id: z.string().uuid(),
+    status: z.literal('PURGED'),
+  })
+  .openapi('WalletPurgeResponse');
+
 export const WalletSuspendRequestSchema = z
   .object({
     reason: z.string().max(200).optional(),

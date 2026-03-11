@@ -286,8 +286,9 @@ describe('ActionsPage', () => {
         expect(screen.getByText('0x Swap')).toBeTruthy();
       });
 
-      // 0x Swap requires API key, should show Set button
-      expect(screen.getByText('Set')).toBeTruthy();
+      // Both Jupiter Swap and 0x Swap require API keys, should show Set buttons
+      const setButtons = screen.getAllByText('Set');
+      expect(setButtons.length).toBe(2);
     });
 
     it('entering key and clicking Save calls apiPut with correct endpoint', async () => {
@@ -295,11 +296,12 @@ describe('ActionsPage', () => {
       render(<ActionsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('Set')).toBeTruthy();
+        expect(screen.getAllByText('Set').length).toBe(2);
       });
 
-      // Click Set to open edit mode
-      fireEvent.click(screen.getByText('Set'));
+      // Click the second Set button (0x Swap) to open edit mode
+      const setButtons = screen.getAllByText('Set');
+      fireEvent.click(setButtons[1]);
 
       await waitFor(() => {
         expect(
@@ -371,7 +373,12 @@ describe('ActionsPage', () => {
 
   describe('status indicators', () => {
     it('shows Active when enabled and registered', async () => {
-      mockApiCalls(mockSettingsJupiterEnabled, mockEmptyApiKeys, mockProvidersJupiter);
+      const mockApiKeysWithJupiter = {
+        keys: [
+          { providerName: 'jupiter_swap', hasKey: true, maskedKey: 'jup-****xyz', requiresApiKey: true, updatedAt: '2026-01-01' },
+        ],
+      };
+      mockApiCalls(mockSettingsJupiterEnabled, mockApiKeysWithJupiter, mockProvidersJupiter);
       render(<ActionsPage />);
 
       await waitFor(() => {

@@ -341,6 +341,55 @@ interface AccountMeta {
   isWritable: boolean;
 }
 
+/** Pre-instruction for Solana transaction (e.g., ATA creation). */
+interface PreInstruction {
+  programId: string;
+  data: string; // base64-encoded
+  accounts: AccountMeta[];
+}
+
+// ---------------------------------------------------------------------------
+// CreateAssociatedTokenAccountIdempotent instruction builder
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a CreateAssociatedTokenAccountIdempotent instruction.
+ * This instruction creates an ATA if it doesn't exist, or is a no-op if it does.
+ *
+ * Accounts (in order):
+ * 0. funding account (signer, writable) = wallet (pays rent)
+ * 1. associated token account (writable) = the ATA to create
+ * 2. wallet address (read-only) = owner of the ATA
+ * 3. token mint (read-only)
+ * 4. system program (read-only)
+ * 5. token program (read-only)
+ *
+ * Instruction index: 1 (CreateIdempotent)
+ */
+function buildCreateAtaIdempotentInstruction(
+  payer: string,
+  ataAddress: string,
+  owner: string,
+  mint: string,
+  tokenProgram: string,
+): PreInstruction {
+  // CreateAssociatedTokenAccountIdempotent has instruction discriminator = 1
+  const data = Buffer.from([1]).toString('base64');
+
+  return {
+    programId: ATA_PROGRAM_ID,
+    data,
+    accounts: [
+      { pubkey: payer, isSigner: true, isWritable: true },
+      { pubkey: ataAddress, isSigner: false, isWritable: true },
+      { pubkey: owner, isSigner: false, isWritable: false },
+      { pubkey: mint, isSigner: false, isWritable: false },
+      { pubkey: SYSTEM_PROGRAM, isSigner: false, isWritable: false },
+      { pubkey: tokenProgram, isSigner: false, isWritable: false },
+    ],
+  };
+}
+
 /**
  * Build a ContractCallRequest for SPL Stake Pool DepositSol.
  *
@@ -367,8 +416,19 @@ export async function buildDepositSolRequest(
   instructionData: string;
   accounts: AccountMeta[];
   value: string;
+  preInstructions: PreInstruction[];
 }> {
   const destTokenAccount = await getAssociatedTokenAddress(
+    walletAddress,
+    config.jitosolMint,
+    SPL_TOKEN_PROGRAM,
+  );
+
+  // Pre-instruction: Create JitoSOL ATA if it doesn't exist (idempotent).
+  // Without this, DepositSol fails with Custom(1) when the ATA is missing.
+  const createAtaIx = buildCreateAtaIdempotentInstruction(
+    walletAddress,
+    destTokenAccount,
     walletAddress,
     config.jitosolMint,
     SPL_TOKEN_PROGRAM,
@@ -394,6 +454,7 @@ export async function buildDepositSolRequest(
     instructionData: encodeDepositSolData(amountLamports),
     accounts,
     value: amountLamports.toString(),
+    preInstructions: [createAtaIx],
   };
 }
 

@@ -74,6 +74,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   WALLET_NOT_FOUND: 'Wallet not found.',
   WALLET_SUSPENDED: 'This wallet is currently suspended.',
   WALLET_TERMINATED: 'This wallet has been terminated.',
+  WALLET_NOT_TERMINATED: 'Wallet must be terminated before purging.',
   WC_NOT_CONFIGURED: 'WalletConnect is not configured. Set the Project ID in Settings first.',
   WC_SESSION_NOT_FOUND: 'No active WalletConnect session.',
   WC_SESSION_EXISTS: 'A WalletConnect session already exists. Disconnect first.',

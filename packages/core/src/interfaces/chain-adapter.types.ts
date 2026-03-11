@@ -176,6 +176,16 @@ export interface ContractCallParams {
   programId?: string;
   instructionData?: Uint8Array;
   accounts?: Array<{ pubkey: string; isSigner: boolean; isWritable: boolean }>;
+  /**
+   * Solana-only: Additional instructions to prepend before the main instruction.
+   * Used for setup operations like ATA creation (CreateAssociatedTokenAccountIdempotent).
+   * Each entry has the same shape as a Solana instruction: programId, data, accounts.
+   */
+  preInstructions?: Array<{
+    programId: string;
+    data: Uint8Array;
+    accounts: Array<{ pubkey: string; isSigner: boolean; isWritable: boolean }>;
+  }>;
 }
 
 /** Approve request for buildApprove(). */

@@ -53,7 +53,7 @@ const SWAPPING_PRICES_RESPONSE = {
 // MSW server setup
 // ---------------------------------------------------------------------------
 
-const BASE_URL = 'https://api-v2.pendle.finance';
+const BASE_URL = 'https://api-v2.pendle.finance/core';
 
 const server = setupServer(
   http.get(`${BASE_URL}/v1/markets/all`, () => {

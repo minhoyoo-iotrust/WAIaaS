@@ -20,7 +20,7 @@ import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { createHash } from 'node:crypto';
 import { WAIaaSError, getSingleNetwork, getNetworksForEnvironment, BUILTIN_PRESETS, AA_PROVIDER_CHAIN_MAP, type WalletPreset } from '@waiaas/core';
 import type { ChainType, EnvironmentType, NetworkType, EventBus, AaProviderName } from '@waiaas/core';
-import { wallets, sessions, sessionWallets, transactions } from '../../infrastructure/database/schema.js';
+import { wallets, sessions, sessionWallets, transactions, policies, auditLog, notificationLogs, wcSessions, incomingTransactions, incomingTxCursors, defiPositions, agentIdentities, hyperliquidOrders, hyperliquidSubAccounts, useropBuilds, polymarketOrders, polymarketPositions, polymarketApiKeys } from '../../infrastructure/database/schema.js';
 import { generateId } from '../../infrastructure/database/id.js';
 import { insertAuditLog } from '../../infrastructure/database/audit-helper.js';
 import type { MasterPasswordRef } from '../middleware/master-auth.js';
@@ -53,6 +53,7 @@ import {
   WalletListResponseSchema,
   WalletDetailResponseSchema,
   WalletDeleteResponseSchema,
+  WalletPurgeResponseSchema,
   WalletSuspendRequestSchema,
   WalletSuspendResponseSchema,
   WalletResumeResponseSchema,
@@ -241,6 +242,23 @@ const deleteWalletRoute = createRoute({
       content: { 'application/json': { schema: WalletDeleteResponseSchema } },
     },
     ...buildErrorResponses(['WALLET_NOT_FOUND', 'WALLET_TERMINATED']),
+  },
+});
+
+const purgeWalletRoute = createRoute({
+  method: 'delete',
+  path: '/wallets/{id}/purge',
+  tags: ['Wallets'],
+  summary: 'Permanently delete a terminated wallet and all associated data',
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+  },
+  responses: {
+    200: {
+      description: 'Wallet permanently deleted',
+      content: { 'application/json': { schema: WalletPurgeResponseSchema } },
+    },
+    ...buildErrorResponses(['WALLET_NOT_FOUND', 'WALLET_NOT_TERMINATED']),
   },
 });
 
@@ -870,6 +888,74 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
       {
         id: walletId,
         status: 'TERMINATED' as const,
+      },
+      200,
+    );
+  });
+
+  // ---------------------------------------------------------------------------
+  // DELETE /wallets/:id/purge (permanent hard delete)
+  // ---------------------------------------------------------------------------
+
+  router.openapi(purgeWalletRoute, async (c) => {
+    const { id: walletId } = c.req.valid('param');
+
+    const wallet = await deps.db
+      .select()
+      .from(wallets)
+      .where(eq(wallets.id, walletId))
+      .get();
+
+    if (!wallet) {
+      throw new WAIaaSError('WALLET_NOT_FOUND', {
+        message: `Wallet '${walletId}' not found`,
+      });
+    }
+
+    if (wallet.status !== 'TERMINATED') {
+      throw new WAIaaSError('WALLET_NOT_TERMINATED', {
+        message: `Wallet '${walletId}' must be terminated before purging (current: ${wallet.status})`,
+      });
+    }
+
+    // Delete keystore file
+    await deps.keyStore.deleteKey(walletId);
+
+    // Cascade delete all related data (order matters for FK constraints)
+    // Tables with wallet_id reference (explicit delete for safety, even if FK cascade is set)
+    deps.db.delete(polymarketApiKeys).where(eq(polymarketApiKeys.walletId, walletId)).run();
+    deps.db.delete(polymarketPositions).where(eq(polymarketPositions.walletId, walletId)).run();
+    deps.db.delete(polymarketOrders).where(eq(polymarketOrders.walletId, walletId)).run();
+    deps.db.delete(useropBuilds).where(eq(useropBuilds.walletId, walletId)).run();
+    deps.db.delete(hyperliquidSubAccounts).where(eq(hyperliquidSubAccounts.walletId, walletId)).run();
+    deps.db.delete(hyperliquidOrders).where(eq(hyperliquidOrders.walletId, walletId)).run();
+    deps.db.delete(agentIdentities).where(eq(agentIdentities.walletId, walletId)).run();
+    deps.db.delete(defiPositions).where(eq(defiPositions.walletId, walletId)).run();
+    deps.db.delete(incomingTransactions).where(eq(incomingTransactions.walletId, walletId)).run();
+    deps.db.delete(incomingTxCursors).where(eq(incomingTxCursors.walletId, walletId)).run();
+    deps.db.delete(wcSessions).where(eq(wcSessions.walletId, walletId)).run();
+    deps.db.delete(notificationLogs).where(eq(notificationLogs.walletId, walletId)).run();
+    deps.db.delete(auditLog).where(eq(auditLog.walletId, walletId)).run();
+    deps.db.delete(policies).where(eq(policies.walletId, walletId)).run();
+    deps.db.delete(transactions).where(eq(transactions.walletId, walletId)).run();
+    deps.db.delete(sessionWallets).where(eq(sessionWallets.walletId, walletId)).run();
+
+    // Finally delete the wallet itself
+    deps.db.delete(wallets).where(eq(wallets.id, walletId)).run();
+
+    // Audit log (wallet row is already deleted, so use raw SQL helper)
+    insertAuditLog(deps.sqlite, {
+      eventType: 'WALLET_PURGED',
+      actor: 'admin',
+      walletId,
+      severity: 'critical',
+      details: { name: wallet.name },
+    });
+
+    return c.json(
+      {
+        id: walletId,
+        status: 'PURGED' as const,
       },
       200,
     );

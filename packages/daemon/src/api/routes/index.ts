@@ -22,3 +22,4 @@ export { nftRoutes, type NftRouteDeps } from './nfts.js';
 export { nftApprovalRoutes, type NftApprovalRouteDeps } from './nft-approvals.js';
 export { userOpRoutes, type UserOpRouteDeps } from './userop.js';
 export { createHyperliquidRoutes, type HyperliquidRouteDeps } from './hyperliquid.js';
+export { createPolymarketRoutes, type PolymarketRouteDeps, type PolymarketInfraDeps } from './polymarket.js';

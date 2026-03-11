@@ -89,7 +89,7 @@ export class ZeroExSwapActionProvider implements IActionProvider {
         chain: 'ethereum',
         inputSchema: SwapInputSchema,
         riskLevel: 'medium',
-        defaultTier: 'DELAY',
+        defaultTier: 'INSTANT',
       },
     ] as const;
   }

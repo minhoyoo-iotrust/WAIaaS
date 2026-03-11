@@ -1,5 +1,30 @@
 # Project Milestones: WAIaaS
 
+## v31.9 Polymarket 예측 시장 통합 (Shipped: 2026-03-11)
+
+**Phases completed:** 370-374 (5 phases, 14 plans, 29 requirements)
+
+**Key accomplishments:**
+- Polymarket 심층 리서치 + 설계 문서 doc 80 (1,345 lines, 12 sections, EIP-712 3-domain 서명 구조 설계)
+- EIP-712 CLOB 주문 인프라 — PolymarketSigner(3 domains), ClobClient(HMAC L2), OrderBuilder(USDC.e 6d precision), RateLimiter(10 req/s)
+- Gamma API 마켓 조회(30s TTL 캐시) + PositionTracker(가중평균가) + PnlCalculator(bigint) + CTF 온체인 리딤(5 actions)
+- 전 인터페이스 통합 — Admin UI 5탭 + MCP 8 query 도구 + SDK 15 메서드 + Admin Settings 7키 + connect-info polymarket capability + 정책 엔진 17 테스트
+- E2E 스모크 4시나리오 + Agent UAT defi-13 시나리오 (6-section 포맷, 메인넷 검증 가능)
+
+### Known Gaps
+- **CLOB-08**: FAK partial fill order — not implemented
+- **CLOB-09**: Batch orders — not implemented
+- **FIND-01**: ResolutionMonitor notification callback not wired in daemon.ts (SETL-04 partial)
+- **FIND-02**: Python SDK missing Polymarket methods (TypeScript SDK fully covered)
+
+**Stats:**
+- 5 phases (370-374), 14 plans, 48 commits
+- 93 files changed, +10,363 lines
+- ~235 new tests across 22 test files
+- Timeline: 2 days (2026-03-10 → 2026-03-11)
+
+---
+
 ## v31.8 Agent UAT (메인넷 인터랙티브 검증) (Shipped: 2026-03-09)
 
 **Phases completed:** 5 phases, 12 plans

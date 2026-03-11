@@ -86,6 +86,7 @@ export const messages: Messages = {
     WALLET_NOT_FOUND: '지갑을 찾을 수 없습니다',
     WALLET_SUSPENDED: '지갑이 정지 상태입니다',
     WALLET_TERMINATED: '지갑이 종료되었습니다',
+    WALLET_NOT_TERMINATED: '지갑이 종료 상태여야 완전 삭제할 수 있습니다',
     WC_SESSION_EXISTS: '이 지갑에 이미 활성 WC 세션이 있습니다',
     WC_SESSION_NOT_FOUND: '이 지갑에 활성 WC 세션이 없습니다',
     // SYSTEM domain (WC)

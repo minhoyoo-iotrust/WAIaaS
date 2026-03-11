@@ -95,7 +95,7 @@ export class DcentSwapActionProvider implements IActionProvider {
         chain: 'ethereum',
         inputSchema: DexSwapInputSchema,
         riskLevel: 'high',
-        defaultTier: 'DELAY',
+        defaultTier: 'INSTANT',
       },
     ] as const;
   }

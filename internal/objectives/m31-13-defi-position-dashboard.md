@@ -1,7 +1,7 @@
-# 마일스톤 m31-12: DeFi 포지션 대시보드 완성
+# 마일스톤 m31-13: DeFi 포지션 대시보드 완성
 
 - **Status:** PLANNED
-- **Milestone:** v31.12
+- **Milestone:** v31.13
 
 ## 목표
 

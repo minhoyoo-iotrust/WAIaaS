@@ -526,6 +526,422 @@ describe('SolanaIncomingSubscriber', () => {
   });
 });
 
+// ─── SolanaIncomingSubscriber (extended coverage) ────────────────
+
+describe('SolanaIncomingSubscriber extended coverage', () => {
+  let receivedTxs: IncomingTransaction[];
+  let onTx: (tx: IncomingTransaction) => void;
+
+  beforeEach(() => {
+    idCounter = 0;
+    receivedTxs = [];
+    onTx = (tx) => receivedTxs.push(tx);
+    vi.clearAllMocks();
+  });
+
+  it('constructor uses default mode and generateId when not provided', async () => {
+    // Covers lines 104-105 (default branches)
+    const sub = new SolanaIncomingSubscriber({
+      rpcUrl: 'https://api.devnet.solana.com',
+      wsUrl: 'wss://api.devnet.solana.com',
+    });
+    // chain should be solana regardless
+    expect(sub.chain).toBe('solana');
+    await sub.destroy();
+  });
+
+  it('checkFinalized() returns true when transaction exists', async () => {
+    const sub = new SolanaIncomingSubscriber({
+      rpcUrl: 'https://api.devnet.solana.com',
+      wsUrl: 'wss://api.devnet.solana.com',
+      mode: 'polling',
+      generateId: stubGenerateId,
+    });
+
+    mockRpc.getTransaction = mockSend({ slot: 100 });
+    const result = await sub.checkFinalized('txhash123');
+    expect(result).toBe(true);
+    await sub.destroy();
+  });
+
+  it('checkFinalized() returns false when transaction is null', async () => {
+    const sub = new SolanaIncomingSubscriber({
+      rpcUrl: 'https://api.devnet.solana.com',
+      wsUrl: 'wss://api.devnet.solana.com',
+      mode: 'polling',
+      generateId: stubGenerateId,
+    });
+
+    mockRpc.getTransaction = mockSend(null);
+    const result = await sub.checkFinalized('txhash123');
+    expect(result).toBe(false);
+    await sub.destroy();
+  });
+
+  it('checkFinalized() returns false on RPC error', async () => {
+    const sub = new SolanaIncomingSubscriber({
+      rpcUrl: 'https://api.devnet.solana.com',
+      wsUrl: 'wss://api.devnet.solana.com',
+      mode: 'polling',
+      generateId: stubGenerateId,
+    });
+
+    mockRpc.getTransaction = vi.fn().mockReturnValue({
+      send: vi.fn().mockRejectedValue(new Error('RPC error')),
+    });
+    const result = await sub.checkFinalized('txhash123');
+    expect(result).toBe(false);
+    await sub.destroy();
+  });
+
+  it('waitForDisconnect() resolves when destroy() is called', async () => {
+    const sub = new SolanaIncomingSubscriber({
+      rpcUrl: 'https://api.devnet.solana.com',
+      wsUrl: 'wss://api.devnet.solana.com',
+      mode: 'polling',
+      generateId: stubGenerateId,
+    });
+
+    let resolved = false;
+    const waitPromise = sub.waitForDisconnect().then(() => {
+      resolved = true;
+    });
+
+    // Should not be resolved yet
+    await Promise.resolve(); // flush microtask
+    expect(resolved).toBe(false);
+
+    await sub.destroy();
+    await waitPromise;
+    expect(resolved).toBe(true);
+  });
+
+  it('pollAll() skips failed transactions (sigInfo.err !== null)', async () => {
+    const sub = new SolanaIncomingSubscriber({
+      rpcUrl: 'https://api.devnet.solana.com',
+      wsUrl: 'wss://api.devnet.solana.com',
+      mode: 'polling',
+      generateId: stubGenerateId,
+    });
+
+    await sub.subscribe(WALLET_ID, WALLET_ADDRESS, NETWORK, onTx);
+
+    // Return one failed signature and one successful
+    mockRpc.getSignaturesForAddress = mockSend([
+      { signature: 'sigFail', err: { InstructionError: [0, 'InsufficientFunds'] }, slot: 100 },
+      { signature: 'sigOk', err: null, slot: 101 },
+    ]);
+
+    const txResult = createBasicSOLTx({
+      preBalances: [2000000000, 500000000, 100000000],
+      postBalances: [1000000000, 1495000000, 100000000],
+    });
+    mockRpc.getTransaction = mockSend(txResult);
+
+    await sub.pollAll();
+
+    // Only the successful signature should be processed
+    expect(receivedTxs).toHaveLength(1);
+    await sub.destroy();
+  });
+
+  it('pollAll() skips when getTransaction returns null', async () => {
+    const sub = new SolanaIncomingSubscriber({
+      rpcUrl: 'https://api.devnet.solana.com',
+      wsUrl: 'wss://api.devnet.solana.com',
+      mode: 'polling',
+      generateId: stubGenerateId,
+    });
+
+    await sub.subscribe(WALLET_ID, WALLET_ADDRESS, NETWORK, onTx);
+
+    mockRpc.getSignaturesForAddress = mockSend([
+      { signature: 'sig1', err: null, slot: 100 },
+    ]);
+    mockRpc.getTransaction = mockSend(null);
+
+    await sub.pollAll();
+
+    expect(receivedTxs).toHaveLength(0);
+    await sub.destroy();
+  });
+
+  it('pollAll() catches individual getTransaction errors', async () => {
+    const sub = new SolanaIncomingSubscriber({
+      rpcUrl: 'https://api.devnet.solana.com',
+      wsUrl: 'wss://api.devnet.solana.com',
+      mode: 'polling',
+      generateId: stubGenerateId,
+    });
+
+    await sub.subscribe(WALLET_ID, WALLET_ADDRESS, NETWORK, onTx);
+
+    mockRpc.getSignaturesForAddress = mockSend([
+      { signature: 'sig1', err: null, slot: 100 },
+      { signature: 'sig2', err: null, slot: 101 },
+    ]);
+
+    let txCallCount = 0;
+    mockRpc.getTransaction = vi.fn().mockImplementation(() => {
+      txCallCount++;
+      if (txCallCount === 1) {
+        return { send: vi.fn().mockRejectedValue(new Error('tx error')) };
+      }
+      const txResult = createBasicSOLTx({
+        preBalances: [2000000000, 500000000, 100000000],
+        postBalances: [1000000000, 1495000000, 100000000],
+      });
+      return { send: vi.fn().mockResolvedValue(txResult) };
+    });
+
+    await sub.pollAll();
+
+    // First tx errored but second should still succeed
+    expect(receivedTxs).toHaveLength(1);
+    await sub.destroy();
+  });
+
+  it('pollAll() calls onTransaction for SPL transfers', async () => {
+    const sub = new SolanaIncomingSubscriber({
+      rpcUrl: 'https://api.devnet.solana.com',
+      wsUrl: 'wss://api.devnet.solana.com',
+      mode: 'polling',
+      generateId: stubGenerateId,
+    });
+
+    await sub.subscribe(WALLET_ID, WALLET_ADDRESS, NETWORK, onTx);
+
+    mockRpc.getSignaturesForAddress = mockSend([
+      { signature: 'sig1', err: null, slot: 100 },
+    ]);
+
+    // Create a tx with SPL transfer (no SOL delta)
+    const txResult = createSPLTx({
+      preTokenBalances: [
+        {
+          accountIndex: 0,
+          mint: MINT_A,
+          owner: SENDER_ADDRESS,
+          uiTokenAmount: { amount: '1000000', decimals: 6, uiAmount: 1.0, uiAmountString: '1' },
+        },
+      ],
+      postTokenBalances: [
+        {
+          accountIndex: 0,
+          mint: MINT_A,
+          owner: SENDER_ADDRESS,
+          uiTokenAmount: { amount: '500000', decimals: 6, uiAmount: 0.5, uiAmountString: '0.5' },
+        },
+        {
+          accountIndex: 1,
+          mint: MINT_A,
+          owner: WALLET_ADDRESS,
+          uiTokenAmount: { amount: '500000', decimals: 6, uiAmount: 0.5, uiAmountString: '0.5' },
+        },
+      ],
+    });
+    mockRpc.getTransaction = mockSend(txResult);
+
+    await sub.pollAll();
+
+    // Should receive SPL transfer
+    expect(receivedTxs.length).toBeGreaterThanOrEqual(1);
+    const splTx = receivedTxs.find((tx) => tx.tokenAddress === MINT_A);
+    expect(splTx).toBeDefined();
+    expect(splTx!.amount).toBe('500000');
+    await sub.destroy();
+  });
+
+  it('websocket mode: subscribe() starts WS subscription when connected', async () => {
+    const sub = new SolanaIncomingSubscriber({
+      rpcUrl: 'https://api.devnet.solana.com',
+      wsUrl: 'wss://api.devnet.solana.com',
+      mode: 'websocket',
+      generateId: stubGenerateId,
+    });
+
+    // Mock logsNotifications to return an async iterable that yields one notification
+    const txResult = createBasicSOLTx({
+      preBalances: [2000000000, 500000000, 100000000],
+      postBalances: [1000000000, 1495000000, 100000000],
+    });
+    mockRpc.getTransaction = mockSend(txResult);
+    mockRpc.getSlot = mockSend(12345);
+
+    // Create async iterable that yields one notification then ends
+    const notifications = (async function* () {
+      yield { value: { signature: 'wsSig1', err: null } };
+    })();
+
+    mockRpcSubscriptions.logsNotifications = vi.fn().mockReturnValue({
+      subscribe: vi.fn().mockResolvedValue(notifications),
+    });
+
+    // Connect first, then subscribe (connected = true)
+    await sub.connect();
+    await sub.subscribe(WALLET_ID, WALLET_ADDRESS, NETWORK, onTx);
+
+    // Wait for async processing
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(receivedTxs.length).toBeGreaterThanOrEqual(1);
+    await sub.destroy();
+  });
+
+  it('websocket mode: connect() starts WS subscriptions for existing wallets', async () => {
+    const sub = new SolanaIncomingSubscriber({
+      rpcUrl: 'https://api.devnet.solana.com',
+      wsUrl: 'wss://api.devnet.solana.com',
+      mode: 'websocket',
+      generateId: stubGenerateId,
+    });
+
+    const txResult = createBasicSOLTx({
+      preBalances: [2000000000, 500000000, 100000000],
+      postBalances: [1000000000, 1495000000, 100000000],
+    });
+    mockRpc.getTransaction = mockSend(txResult);
+    mockRpc.getSlot = mockSend(12345);
+
+    const notifications = (async function* () {
+      yield { value: { signature: 'wsSig2', err: null } };
+    })();
+
+    mockRpcSubscriptions.logsNotifications = vi.fn().mockReturnValue({
+      subscribe: vi.fn().mockResolvedValue(notifications),
+    });
+
+    // Subscribe first (not connected yet), then connect
+    await sub.subscribe(WALLET_ID, WALLET_ADDRESS, NETWORK, onTx);
+    await sub.connect();
+
+    // Wait for async processing
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(receivedTxs.length).toBeGreaterThanOrEqual(1);
+    await sub.destroy();
+  });
+
+  it('websocket mode: skips notifications with err !== null', async () => {
+    const sub = new SolanaIncomingSubscriber({
+      rpcUrl: 'https://api.devnet.solana.com',
+      wsUrl: 'wss://api.devnet.solana.com',
+      mode: 'websocket',
+      generateId: stubGenerateId,
+    });
+
+    mockRpc.getSlot = mockSend(12345);
+
+    // Yield a notification with an error
+    const notifications = (async function* () {
+      yield { value: { signature: 'wsSigErr', err: { InstructionError: [0, 'Fail'] } } };
+    })();
+
+    mockRpcSubscriptions.logsNotifications = vi.fn().mockReturnValue({
+      subscribe: vi.fn().mockResolvedValue(notifications),
+    });
+
+    await sub.subscribe(WALLET_ID, WALLET_ADDRESS, NETWORK, onTx);
+    await sub.connect();
+
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(receivedTxs).toHaveLength(0);
+    await sub.destroy();
+  });
+
+  it('websocket mode: skips when getTransaction returns null', async () => {
+    const sub = new SolanaIncomingSubscriber({
+      rpcUrl: 'https://api.devnet.solana.com',
+      wsUrl: 'wss://api.devnet.solana.com',
+      mode: 'websocket',
+      generateId: stubGenerateId,
+    });
+
+    mockRpc.getSlot = mockSend(12345);
+    mockRpc.getTransaction = mockSend(null);
+
+    const notifications = (async function* () {
+      yield { value: { signature: 'wsSigNull', err: null } };
+    })();
+
+    mockRpcSubscriptions.logsNotifications = vi.fn().mockReturnValue({
+      subscribe: vi.fn().mockResolvedValue(notifications),
+    });
+
+    await sub.subscribe(WALLET_ID, WALLET_ADDRESS, NETWORK, onTx);
+    await sub.connect();
+
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(receivedTxs).toHaveLength(0);
+    await sub.destroy();
+  });
+
+  it('websocket mode: catches individual tx processing errors', async () => {
+    const sub = new SolanaIncomingSubscriber({
+      rpcUrl: 'https://api.devnet.solana.com',
+      wsUrl: 'wss://api.devnet.solana.com',
+      mode: 'websocket',
+      generateId: stubGenerateId,
+    });
+
+    mockRpc.getSlot = mockSend(12345);
+    mockRpc.getTransaction = vi.fn().mockReturnValue({
+      send: vi.fn().mockRejectedValue(new Error('tx fetch error')),
+    });
+
+    const notifications = (async function* () {
+      yield { value: { signature: 'wsSigFetchErr', err: null } };
+    })();
+
+    mockRpcSubscriptions.logsNotifications = vi.fn().mockReturnValue({
+      subscribe: vi.fn().mockResolvedValue(notifications),
+    });
+
+    await sub.subscribe(WALLET_ID, WALLET_ADDRESS, NETWORK, onTx);
+    await sub.connect();
+
+    await new Promise((r) => setTimeout(r, 50));
+
+    // Should not crash, just skip
+    expect(receivedTxs).toHaveLength(0);
+    await sub.destroy();
+  });
+
+  it('websocket mode: signals disconnect on non-abort error', async () => {
+    const sub = new SolanaIncomingSubscriber({
+      rpcUrl: 'https://api.devnet.solana.com',
+      wsUrl: 'wss://api.devnet.solana.com',
+      mode: 'websocket',
+      generateId: stubGenerateId,
+    });
+
+    mockRpc.getSlot = mockSend(12345);
+
+    // logsNotifications.subscribe throws a non-abort error
+    mockRpcSubscriptions.logsNotifications = vi.fn().mockReturnValue({
+      subscribe: vi.fn().mockRejectedValue(new Error('WS connection failed')),
+    });
+
+    let disconnected = false;
+    const waitPromise = sub.waitForDisconnect().then(() => {
+      disconnected = true;
+    });
+
+    await sub.subscribe(WALLET_ID, WALLET_ADDRESS, NETWORK, onTx);
+    await sub.connect();
+
+    // Wait for the async WS subscription to fail and trigger disconnect
+    await new Promise((r) => setTimeout(r, 50));
+    // Force resolution check
+    await Promise.race([waitPromise, new Promise((r) => setTimeout(r, 100))]);
+
+    expect(disconnected).toBe(true);
+    await sub.destroy();
+  });
+});
+
 // ─── SolanaHeartbeat ────────────────────────────────────────────
 
 describe('SolanaHeartbeat', () => {
@@ -569,6 +985,19 @@ describe('SolanaHeartbeat', () => {
     // After stop, no more calls
     await vi.advanceTimersByTimeAsync(120_000);
     expect(mockGetSlot).toHaveBeenCalledTimes(1);
+  });
+
+  it('start() silently catches getSlot errors (non-fatal)', async () => {
+    const mockGetSlot = vi.fn().mockRejectedValue(new Error('RPC timeout'));
+    heartbeat.start(mockGetSlot);
+
+    // Advance 60s -- should not throw
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(mockGetSlot).toHaveBeenCalledTimes(1);
+
+    // Should continue working after error
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(mockGetSlot).toHaveBeenCalledTimes(2);
   });
 
   it('start() replaces existing timer (no double intervals)', async () => {

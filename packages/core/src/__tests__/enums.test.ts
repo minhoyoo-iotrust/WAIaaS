@@ -152,8 +152,8 @@ describe('Enum SSoT', () => {
     expect(NOTIFICATION_LOG_STATUSES).toContain('failed');
   });
 
-  it('AuditAction has 25 values', () => {
-    expect(AUDIT_ACTIONS).toHaveLength(25);
+  it('AuditAction has 26 values', () => {
+    expect(AUDIT_ACTIONS).toHaveLength(26);
   });
 
   it('KillSwitchState has 3 values', () => {

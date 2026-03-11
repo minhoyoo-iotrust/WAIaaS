@@ -25,7 +25,7 @@ interface BuiltinProvider {
 }
 
 const BUILTIN_PROVIDERS: BuiltinProvider[] = [
-  { key: 'jupiter_swap', name: 'Jupiter Swap', description: 'Solana DEX aggregator', chain: 'solana', category: 'Swap', requiresApiKey: false, docsUrl: 'https://station.jup.ag/docs' },
+  { key: 'jupiter_swap', name: 'Jupiter Swap', description: 'Solana DEX aggregator', chain: 'solana', category: 'Swap', requiresApiKey: true, docsUrl: 'https://station.jup.ag/docs' },
   { key: 'zerox_swap', name: '0x Swap', description: 'EVM DEX aggregator (AllowanceHolder)', chain: 'evm', category: 'Swap', requiresApiKey: true, docsUrl: 'https://dashboard.0x.org' },
   { key: 'dcent_swap', name: "D'CENT Swap Aggregator", description: 'Multi-chain DEX swap aggregator with cross-chain support (6 EVM + Solana)', chain: 'multi', category: 'Swap', requiresApiKey: false, docsUrl: 'https://dcentwallet.com' },
   { key: 'lifi', name: 'LI.FI', description: 'Multi-chain DEX/bridge aggregator', chain: 'multi', category: 'Bridge', requiresApiKey: false, docsUrl: 'https://docs.li.fi' },

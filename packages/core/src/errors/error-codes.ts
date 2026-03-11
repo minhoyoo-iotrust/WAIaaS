@@ -570,6 +570,13 @@ export const ERROR_CODES = {
     retryable: false,
     message: 'Wallet has been terminated',
   },
+  WALLET_NOT_TERMINATED: {
+    code: 'WALLET_NOT_TERMINATED',
+    domain: 'WALLET',
+    httpStatus: 409,
+    retryable: false,
+    message: 'Wallet must be terminated before purging',
+  },
   WC_SESSION_EXISTS: {
     code: 'WC_SESSION_EXISTS',
     domain: 'WALLET',

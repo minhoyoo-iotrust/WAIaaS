@@ -140,6 +140,7 @@ export const messages: Messages = {
     WALLET_NOT_FOUND: 'Wallet not found',
     WALLET_SUSPENDED: 'Wallet is suspended',
     WALLET_TERMINATED: 'Wallet has been terminated',
+    WALLET_NOT_TERMINATED: 'Wallet must be terminated before purging',
     WC_SESSION_EXISTS: 'Wallet already has an active WC session',
     WC_SESSION_NOT_FOUND: 'No active WC session for this wallet',
     // SYSTEM domain (WC)

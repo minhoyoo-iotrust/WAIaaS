@@ -79,6 +79,8 @@ import { createStakingRoutes } from './routes/staking.js';
 import { createDefiPositionRoutes } from './routes/defi-positions.js';
 import { mcpTokenRoutes } from './routes/mcp.js';
 import { createHyperliquidRoutes } from './routes/hyperliquid.js';
+import { createPolymarketRoutes } from './routes/polymarket.js';
+import type { PolymarketInfraDeps } from './routes/polymarket.js';
 import type { HyperliquidMarketData } from '@waiaas/actions';
 import type { MasterPasswordRef } from './middleware/master-auth.js';
 import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
@@ -155,6 +157,8 @@ export interface CreateAppDeps {
   reputationCache?: import('../services/erc8004/reputation-cache-service.js').ReputationCacheService;
   /** HyperliquidMarketData for read-only query endpoints (Phase 349) */
   hyperliquidMarketData?: HyperliquidMarketData | null;
+  /** PolymarketInfrastructure for read-only query endpoints (Phase 373) */
+  polymarketInfra?: PolymarketInfraDeps | null;
 }
 
 /**
@@ -567,6 +571,17 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
       createHyperliquidRoutes({
         db: deps.db,
         marketData: deps.hyperliquidMarketData ?? null,
+      }),
+    );
+  }
+
+  // Register Polymarket query routes (GET endpoints, no pipeline)
+  if (deps.db) {
+    app.route(
+      '',
+      createPolymarketRoutes({
+        db: deps.db,
+        polymarketInfra: deps.polymarketInfra ?? null,
       }),
     );
   }

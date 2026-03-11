@@ -335,6 +335,19 @@
 | 319 | BUG | HIGH | Hyperliquid Admin UI 활성화 불가 — MarketData null + Hot-Reload BUILTIN_NAMES 누락 (3중 결함) | — | FIXED | 2026-03-10 |
 | 320 | BUG | MEDIUM | DeFi UAT 시나리오 문서 API 파라미터 불일치 8건 — amount/chain/token 형식 + 필드명 | — | FIXED | 2026-03-10 |
 | 321 | BUG | MEDIUM | Jito Staking 최소 금액 검증 누락 — 소액 deposit 시 InstructionError Custom(1) 온체인 실패 | — | FIXED | 2026-03-10 |
+| 322 | ENHANCEMENT | LOW | Agent UAT 지갑 CRUD 시나리오 제거 — 반복 실행 시 terminated 지갑 누적으로 DB 오염 | v31.9 | FIXED | 2026-03-11 |
+| 323 | ENHANCEMENT | MEDIUM | Terminated 지갑 하드 삭제(Purge) 기능 — API + Admin UI에서 완전 삭제 지원 | v31.9 | FIXED | 2026-03-11 |
+| 324 | BUG | CRITICAL | DELAY 티어 + DEX quote 만료로 스왑 트랜잭션 revert — 가스비 낭비 | v31.9 | FIXED | 2026-03-11 |
+| 325 | MISSING | MEDIUM | Actions 엔드포인트 ?dryRun=true 쿼리 파라미터 미지원 — simulate 시 실비 발생 | v31.9 | FIXED | 2026-03-11 |
+| 326 | BUG | MEDIUM | Pendle API v2 엔드포인트 변경으로 Yield Trading 전면 실패 (404) | v31.9 | FIXED | 2026-03-11 |
+| 327 | BUG | HIGH | 다수 DELAY 큐 항목 처리 중 데몬 크래시 — 원인 불명 | v31.9 | FIXED | 2026-03-11 |
+| 328 | BUG | HIGH | Jito Staking DepositSol 시 JitoSOL ATA 미생성으로 실패 — preInstructions 수정 적용 | v31.9 | FIXED | 2026-03-11 |
+| 329 | BUG | HIGH | Confirmation Worker STO-03 회귀 — Lido 온체인 성공 후 SUBMITTED 상태 고착 (#143 재발) | v31.9 | FIXED | 2026-03-11 |
+| 330 | BUG | HIGH | Admin UI Jupiter Swap requiresApiKey 동기화 누락 — API 키 입력 필드 미표시 (#318 불완전) | v31.9 | FIXED | 2026-03-11 |
+| 331 | MISSING | MEDIUM | Admin UI 감사 로그 페이지 미구현 — API 존재하나 UI 없음 | v31.9 | FIXED | 2026-03-11 |
+| 332 | ENHANCEMENT | LOW | .planning 디렉토리 구조 정리 — 플랫 phases, 고아 파일, 네이밍 불일치 | — | OPEN | — |
+| 333 | ENHANCEMENT | HIGH | SignRequest에 CAIP-2 체인 식별자 및 서명 주소 추가 — chain/network 비표준 + signerAddress 누락 | — | OPEN | — |
+| 334 | BUG | HIGH | Admin Settings max_sessions_per_wallet 변경이 런타임에 반영되지 않음 — deps.config 정적 참조 | — | OPEN | — |
 
 ## Type Legend
 
@@ -346,9 +359,9 @@
 
 ## Summary
 
-- **OPEN:** 0
-- **FIXED:** 321
+- **OPEN:** 3
+- **FIXED:** 331
 - **WONTFIX:** 1
-- **Total:** 322
+- **Total:** 335
 - **Archived:** 321 (001–321)
 

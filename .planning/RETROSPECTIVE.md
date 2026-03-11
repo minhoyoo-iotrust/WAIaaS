@@ -697,6 +697,42 @@
 
 ---
 
+## Milestone: v31.9 — Polymarket 예측 시장 통합
+
+**Shipped:** 2026-03-11
+**Phases:** 5 | **Plans:** 14
+
+### What Was Built
+- Polymarket CLOB 주문 인프라 (EIP-712 3-domain 서명, OrderBuilder, RateLimiter)
+- Gamma API 마켓 조회 + CTF 온체인 리딤 5 actions
+- PositionTracker + PnlCalculator + ResolutionMonitor
+- 전 인터페이스 통합 (Admin UI 5탭, MCP 8도구, SDK 15메서드, 정책 17 tests)
+- E2E 4시나리오 + Agent UAT defi-13
+
+### What Worked
+- Hyperliquid v31.4 패턴 재활용 — ApiDirectResult, dual provider, infrastructure factory, Admin UI 5-tab 구조가 그대로 적용되어 구현 속도 극대화
+- 설계 문서 doc 80 (1,345 lines)을 먼저 완성한 후 구현에 착수하여 API 조사 시간 최소화
+- DB split v53/v54 전략으로 orders/positions/api_keys 독립 마이그레이션 가능
+
+### What Was Inefficient
+- ResolutionMonitor notification callback을 daemon.ts에서 와이어링 누락 (FIND-01) — 테스트가 mock으로 통과하여 실제 런타임 연결 미검증
+- Python SDK Polymarket 미구현 — TS SDK와 병행 구현 프로세스 부재
+
+### Patterns Established
+- 예측 시장 프로바이더 패턴: OrderProvider(off-chain CLOB) + CtfProvider(on-chain settlement) dual provider
+- Zod .passthrough() for 외부 API schemas — undocumented fields 허용으로 Gamma API 호환성 확보
+- ResolutionMonitor polling 패턴 — 데몬 백그라운드가 아닌 on-demand 폴링 기반 해결 감지
+
+### Key Lessons
+- Factory 함수의 optional callback 매개변수는 daemon 와이어링에서 누락되기 쉽다 — 필수 매개변수로 설계하거나 통합 테스트에서 daemon-level 검증 필요
+- 외부 API Zod 스키마는 .strict() 대신 .passthrough()가 안전 — API 응답에 문서화되지 않은 필드가 자주 추가됨
+
+### Cost Observations
+- Sessions: 1
+- Notable: 14 plans, 93 files, ~1.8시간 실행 시간, 2일 완료
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -721,6 +757,7 @@
 | v31.6 | 1 | 5 | Across Protocol 브릿지, 66 파일 2일 완료 |
 | v31.7 | 1 | 8 | E2E 자동 검증 체계, 122 파일 1일 완료 |
 | v31.8 | 1 | 5 | Agent UAT 시나리오 체계, 89 파일 1일 완료 |
+| v31.9 | 1 | 5 | Polymarket 예측 시장 통합, 93 파일 2일 완료 |
 
 ### Cumulative Quality
 
@@ -744,6 +781,7 @@
 | v31.6 | ~7,219 (+110) | maintained | +12 decisions |
 | v31.7 | ~7,219 (unchanged) | maintained | +30 decisions |
 | v31.8 | ~7,219 (unchanged) | maintained | +14 decisions |
+| v31.9 | ~7,454 (+235) | maintained | +12 decisions |
 
 ### Top Lessons (Verified Across Milestones)
 

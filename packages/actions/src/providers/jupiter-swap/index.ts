@@ -61,7 +61,7 @@ export class JupiterSwapActionProvider implements IActionProvider {
         chain: 'solana',
         inputSchema: SwapInputSchema,
         riskLevel: 'medium',
-        defaultTier: 'DELAY',
+        defaultTier: 'INSTANT',
       },
     ] as const;
   }

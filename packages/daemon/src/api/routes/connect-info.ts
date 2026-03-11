@@ -164,6 +164,9 @@ export function buildConnectInfoPrompt(params: BuildConnectInfoPromptParams): st
     lines.push('Hyperliquid Spot Trading: Use hl_spot_buy/hl_spot_sell/hl_spot_cancel action tools for spot trading. Query: GET /v1/wallets/{id}/hyperliquid/spot/balances, GET /v1/hyperliquid/spot/markets.');
     lines.push('Hyperliquid Sub-accounts: Use hl_create_sub_account/hl_sub_transfer action tools for sub-account management. Query: GET /v1/wallets/{id}/hyperliquid/sub-accounts, GET /v1/wallets/{id}/hyperliquid/sub-accounts/{addr}/positions.');
   }
+  if (capabilities.includes('polymarket')) {
+    lines.push('Polymarket Prediction Market: Use pm_buy/pm_sell/pm_cancel_order/pm_cancel_all/pm_update_order for CLOB trading. CTF operations: pm_split_position/pm_merge_positions/pm_redeem_positions. Query: GET /v1/wallets/{id}/polymarket/positions, /orders, /pnl, /balance. Markets: GET /v1/polymarket/markets, /events. Setup: POST /v1/wallets/{id}/polymarket/setup.');
+  }
   if (capabilities.includes('across_bridge')) {
     lines.push('Across Bridge: Use action_across_bridge_* tools for intent-based cross-chain EVM bridge with fast relayer fills (2-10 seconds). Supports Ethereum, Arbitrum, Optimism, Base, Polygon, Linea.');
   }
@@ -384,6 +387,17 @@ export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
         }
       } catch {
         // Setting not found -- hyperliquid not available
+      }
+    }
+
+    // polymarket: check if enabled via settings
+    if (deps.settingsService) {
+      try {
+        if (deps.settingsService.get('actions.polymarket_enabled') === 'true') {
+          capabilities.push('polymarket');
+        }
+      } catch {
+        // Setting not found -- polymarket not available
       }
     }
 

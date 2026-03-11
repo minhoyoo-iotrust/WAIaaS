@@ -245,6 +245,23 @@ Response (200):
 }
 ```
 
+### DELETE /v1/wallets/{id}/purge -- Permanently Delete Wallet (masterAuth)
+
+Permanently removes a terminated wallet and all associated data (transactions, sessions, policies, keys). Only works on wallets in TERMINATED status.
+
+```bash
+curl -s -X DELETE http://localhost:3100/v1/wallets/01958f3a-1234-7000-8000-abcdef123456/purge \
+  -H 'X-Master-Password: your-master-password'
+```
+
+Response (200):
+```json
+{
+  "id": "01958f3a-1234-7000-8000-abcdef123456",
+  "status": "PURGED"
+}
+```
+
 ### PUT /v1/wallets/{id}/owner -- Set Owner Address (masterAuth)
 
 Register a human owner address for this wallet. Enables owner-based approval workflows.
@@ -902,6 +919,7 @@ async with WAIaaSClient("http://localhost:3100", "wai_sess_...") as client:
 |------|------|-------------|
 | `WALLET_NOT_FOUND` | 404 | Wallet ID does not exist |
 | `WALLET_TERMINATED` | 410 | Wallet has been terminated |
+| `WALLET_NOT_TERMINATED` | 409 | Wallet must be terminated before purging |
 | `SESSION_NOT_FOUND` | 404 | Session ID does not exist |
 | `SESSION_EXPIRED` | 401 | Session JWT has expired |
 | `SESSION_REVOKED` | 401 | Session has been revoked |

@@ -22,6 +22,7 @@ export const providerCoverage: Record<string, string[]> = {
   'kamino': ['advanced-defi-settings-push-relay.ts'],
   'lifi': ['advanced-defi-settings-push-relay.ts'],
   'pendle': ['advanced-defi-settings-push-relay.ts'],
+  'polymarket': ['onchain-polymarket.ts'],
   'zerox-swap': ['advanced-defi-settings-push-relay.ts'],
 
   // Providers with dedicated onchain tests
@@ -71,6 +72,7 @@ export const routeCoverage: Record<string, string[]> = {
   'staking': ['advanced-defi-settings-push-relay.ts'],
   'hyperliquid': ['onchain-hyperliquid.ts'],
   'incoming': ['onchain-incoming.ts'],
+  'polymarket': ['onchain-polymarket.ts'],
   'nfts': ['onchain-nft.ts'],
   'nft-approvals': ['onchain-nft.ts'],
   'defi-positions': ['advanced-defi-settings-push-relay.ts'],
