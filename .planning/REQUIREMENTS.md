@@ -18,8 +18,8 @@ Requirements for milestone v31.11. Each maps to roadmap phases.
 
 ### Signer Capability
 
-- [ ] **SIGN-01**: ISignerCapability 통합 인터페이스 설계 (기존 4종 signer 통합)
-- [ ] **SIGN-02**: SigningSchemeEnum 설계 (eip712, personal, hmac-sha256, rsa-pss, ecdsa-secp256k1, ed25519, erc8128)
+- [x] **SIGN-01**: ISignerCapability 통합 인터페이스 설계 (기존 4종 signer 통합)
+- [x] **SIGN-02**: SigningSchemeEnum 설계 (eip712, personal, hmac-sha256, rsa-pss, ecdsa-secp256k1, ed25519, erc8128)
 - [ ] **SIGN-03**: 기존 4종 signer ISignerCapability 어댑터 래핑 설계 (Eip712SignerCapability, PersonalSignCapability, Erc8128SignerCapability, TransactionSignerCapability)
 - [ ] **SIGN-04**: 신규 HmacSignerCapability + RsaPssSignerCapability 설계 (node:crypto 기반)
 - [ ] **SIGN-05**: signBytes() capability 설계 (Ed25519/ECDSA arbitrary bytes signing)
@@ -102,8 +102,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TYPE-04 | Phase 380 | Complete |
 | TYPE-05 | Phase 380 | Complete |
 | TYPE-06 | Phase 380 | Complete |
-| SIGN-01 | Phase 380 | Pending |
-| SIGN-02 | Phase 380 | Pending |
+| SIGN-01 | Phase 380 | Complete |
+| SIGN-02 | Phase 380 | Complete |
 | SIGN-03 | Phase 382 | Pending |
 | SIGN-04 | Phase 382 | Pending |
 | SIGN-05 | Phase 382 | Pending |
