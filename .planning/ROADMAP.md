@@ -159,7 +159,7 @@ Plans:
   2. off-chain action DB 기록 설계(transactions 테이블 action_kind 컬럼 + nullable txHash)가 존재한다
   3. 정책 평가 시점(resolve 후 서명 전)이 signedData/signedHttp 경로에서도 보장되는 설계가 존재한다
   4. REST API/MCP 도구/SDK 메서드의 off-chain action 처리 + credential 관리 인터페이스 설계가 존재한다
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 Plans:
 - [x] 383-01-PLAN.md — 3-way 파이프라인 라우팅 + DB 스키마 + 정책 평가 시점 설계
 - [x] 383-02-PLAN.md — REST API + MCP 도구 + SDK 메서드 off-chain action 인터페이스 설계
@@ -195,7 +195,7 @@ Phases execute in numeric order: 380 -> 381 -> 382 -> 383 -> 384 -> 385
 | 380. ResolvedAction 타입 시스템 | 2/2 | Complete    | 2026-03-11 |
 | 381. CredentialVault 인프라 | 2/2 | Complete    | 2026-03-11 |
 | 382. Signer Capabilities | 2/2 | Complete    | 2026-03-11 |
-| 383. 파이프라인 라우팅 | 2/2 | Complete | 2026-03-12 |
+| 383. 파이프라인 라우팅 | 2/2 | Complete    | 2026-03-11 |
 | 384. 정책 + 추적 확장 | 0/TBD | Not started | - |
 | 385. 설계 문서 통합 | 0/TBD | Not started | - |
 

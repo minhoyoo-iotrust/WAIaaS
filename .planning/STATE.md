@@ -4,7 +4,7 @@ milestone: v31.11
 milestone_name: — External Action 프레임워크 설계
 status: completed
 stopped_at: Completed 383-02-PLAN.md
-last_updated: "2026-03-12T15:25:00.000Z"
+last_updated: "2026-03-11T15:25:11.276Z"
 last_activity: 2026-03-12 — Phase 383 complete (2 plans)
 progress:
   total_phases: 6
