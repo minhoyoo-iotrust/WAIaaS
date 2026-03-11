@@ -140,6 +140,6 @@ Phases execute in numeric order: 386 -> 387 -> 388 -> 389 -> 390 -> 391 -> 392
 | 387. Signer Capability 레지스트리 | 2/2 | Complete    | 2026-03-11 |
 | 388. Credential Vault | 2/2 | Complete    | 2026-03-11 |
 | 389. 추적 + 정책 확장 | 2/2 | Complete    | 2026-03-11 |
-| 390. 파이프라인 라우팅 + 조회 API | 2/2 | Complete    | 2026-03-12 |
+| 390. 파이프라인 라우팅 + 조회 API | 2/2 | Complete    | 2026-03-11 |
 | 391. Admin UI | 0/TBD | Not started | - |
 | 392. MCP + SDK + 스킬 파일 | 0/TBD | Not started | - |
