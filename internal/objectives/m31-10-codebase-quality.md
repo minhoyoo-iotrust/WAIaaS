@@ -1,7 +1,8 @@
 # 마일스톤 m31-10: 코드베이스 품질 개선
 
-- **Status:** PLANNED
+- **Status:** SHIPPED
 - **Milestone:** v31.10
+- **Completed:** 2026-03-11
 
 ## 목표
 
