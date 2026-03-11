@@ -13,15 +13,13 @@ import type { ChainType, PriceInfo, CacheStats, IPriceOracle, TokenRef } from '@
 import { getCoinGeckoPlatform } from './coingecko-platform-ids.js';
 import { PriceNotAvailableError, CoinGeckoNotConfiguredError } from './oracle-errors.js';
 import { buildCacheKey, resolveNetwork } from './price-cache.js';
+import { ORACLE_TIMEOUT_MS } from '../../constants.js';
 
 // Re-export error classes for consumer convenience
 export { PriceNotAvailableError, CoinGeckoNotConfiguredError } from './oracle-errors.js';
 
 /** CoinGecko Demo API base URL. */
 const BASE_URL = 'https://api.coingecko.com/api/v3';
-
-/** Request timeout in milliseconds. */
-const TIMEOUT_MS = 5000;
 
 /** Price TTL in milliseconds (5 minutes). */
 const PRICE_TTL_MS = 5 * 60 * 1000;
@@ -220,7 +218,7 @@ export class CoinGeckoOracle implements IPriceOracle {
   private async fetchJson<T>(url: string): Promise<T> {
     const res = await fetch(url, {
       headers: { 'x-cg-demo-api-key': this.apiKey },
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: AbortSignal.timeout(ORACLE_TIMEOUT_MS),
     });
 
     if (!res.ok) {

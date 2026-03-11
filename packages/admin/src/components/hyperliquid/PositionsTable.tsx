@@ -1,6 +1,7 @@
 import { useSignal } from '@preact/signals';
 import { useEffect, useRef } from 'preact/hooks';
 import { apiGet } from '../../api/client';
+import { HYPERLIQUID_POLL_INTERVAL_MS } from '../../constants';
 
 interface Position {
   coin: string;
@@ -58,7 +59,7 @@ export function PositionsTable({ walletId }: Props) {
     loading.value = true;
     fetchPositions();
 
-    intervalRef.current = setInterval(fetchPositions, 10000);
+    intervalRef.current = setInterval(fetchPositions, HYPERLIQUID_POLL_INTERVAL_MS);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };

@@ -10,6 +10,7 @@ import type { Column } from '../components/table';
 import { getErrorMessage } from '../utils/error-messages';
 import { showToast } from '../components/toast';
 import { ExplorerLink } from '../components/explorer-link';
+import { DASHBOARD_POLL_INTERVAL_MS } from '../constants';
 
 interface RecentTransaction {
   id: string;
@@ -335,7 +336,7 @@ export default function DashboardPage() {
     apiGet<{ total: number }>(API.ADMIN_TRANSACTIONS + '?status=APPROVED&limit=1')
       .then((res) => { approvalCount.value = res.total; })
       .catch(() => { /* fallback */ });
-    const interval = setInterval(() => { fetchStatus(); fetchDefi(); fetchStats(); }, 30_000);
+    const interval = setInterval(() => { fetchStatus(); fetchDefi(); fetchStats(); }, DASHBOARD_POLL_INTERVAL_MS);
     return () => clearInterval(interval);
   }, []);
 

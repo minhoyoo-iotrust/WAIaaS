@@ -14,6 +14,7 @@
 
 import { resolvePassword, promptPassword } from '../utils/password.js';
 import { promptText } from '../utils/prompt.js';
+import { CLI_FETCH_TIMEOUT_MS } from '../constants.js';
 
 export interface NotificationSetupOptions {
   baseUrl?: string;
@@ -32,7 +33,7 @@ export async function notificationSetupCommand(opts: NotificationSetupOptions): 
   // Step 1: Health check
   try {
     const healthRes = await fetch(`${baseUrl}/health`, {
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(CLI_FETCH_TIMEOUT_MS),
     });
     if (!healthRes.ok) {
       console.error(`Warning: daemon returned ${healthRes.status} on health check`);

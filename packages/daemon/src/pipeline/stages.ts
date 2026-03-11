@@ -43,6 +43,7 @@ import type { DelayQueue } from '../workflow/delay-queue.js';
 import type { ApprovalWorkflow } from '../workflow/approval-workflow.js';
 import type { NotificationService } from '../notifications/notification-service.js';
 import type { SettingsService } from '../infrastructure/settings/settings-service.js';
+import { GAS_SAFETY_NUMERATOR, GAS_SAFETY_DENOMINATOR } from '../constants.js';
 import type { IPriceOracle, IForexRateService, CurrencyCode, IMetricsCounter } from '@waiaas/core';
 import { formatDisplayCurrency, formatAmount, type EventBus, type ChainType } from '@waiaas/core';
 import type { WcSigningBridge } from '../services/wc-signing-bridge.js';
@@ -1420,9 +1421,9 @@ async function stage5ExecuteSmartAccount(ctx: PipelineContext): Promise<void> {
     const prepared = await (bundlerClient as any).prepareUserOperation({ calls });
 
     // Step 5: Apply 120% gas safety margin per CLAUDE.md rule
-    const safeCallGasLimit = (BigInt(prepared.callGasLimit) * 120n) / 100n;
-    const safeVerificationGasLimit = (BigInt(prepared.verificationGasLimit) * 120n) / 100n;
-    const safePreVerificationGas = (BigInt(prepared.preVerificationGas) * 120n) / 100n;
+    const safeCallGasLimit = (BigInt(prepared.callGasLimit) * GAS_SAFETY_NUMERATOR) / GAS_SAFETY_DENOMINATOR;
+    const safeVerificationGasLimit = (BigInt(prepared.verificationGasLimit) * GAS_SAFETY_NUMERATOR) / GAS_SAFETY_DENOMINATOR;
+    const safePreVerificationGas = (BigInt(prepared.preVerificationGas) * GAS_SAFETY_NUMERATOR) / GAS_SAFETY_DENOMINATOR;
 
     // Step 6: Submit UserOperation with overridden gas limits
     ctx.metricsCounter?.increment('rpc.calls', { network: ctx.resolvedNetwork });

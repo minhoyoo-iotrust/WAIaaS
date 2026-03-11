@@ -15,6 +15,7 @@ import type { ChainType, PriceInfo, CacheStats, IPriceOracle, TokenRef } from '@
 import { buildCacheKey, resolveNetwork } from './price-cache.js';
 import { getFeedId } from './pyth-feed-ids.js';
 import { PriceNotAvailableError } from './oracle-errors.js';
+import { ORACLE_TIMEOUT_MS } from '../../constants.js';
 
 // Re-export for backwards compatibility
 export { PriceNotAvailableError } from './oracle-errors.js';
@@ -56,7 +57,6 @@ interface PythApiResponse {
  */
 export class PythOracle implements IPriceOracle {
   private static readonly HERMES_BASE_URL = 'https://hermes.pyth.network';
-  private static readonly TIMEOUT_MS = 5000;
   private static readonly PRICE_TTL_MS = 300_000; // 5 minutes
 
   /**
@@ -82,7 +82,7 @@ export class PythOracle implements IPriceOracle {
       `&parsed=true`;
 
     const res = await fetch(url, {
-      signal: AbortSignal.timeout(PythOracle.TIMEOUT_MS),
+      signal: AbortSignal.timeout(ORACLE_TIMEOUT_MS),
     });
 
     if (!res.ok) {
@@ -135,7 +135,7 @@ export class PythOracle implements IPriceOracle {
       `${PythOracle.HERMES_BASE_URL}/v2/updates/price/latest?${params}&parsed=true`;
 
     const res = await fetch(url, {
-      signal: AbortSignal.timeout(PythOracle.TIMEOUT_MS),
+      signal: AbortSignal.timeout(ORACLE_TIMEOUT_MS),
     });
 
     if (!res.ok) {

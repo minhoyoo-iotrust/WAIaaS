@@ -17,6 +17,7 @@ import { writeFile, rename, mkdir } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { resolvePassword } from '../utils/password.js';
 import { toSlug, resolveSlugCollisions } from '../utils/slug.js';
+import { CLI_FETCH_TIMEOUT_MS } from '../constants.js';
 
 export interface McpSetupOptions {
   dataDir: string;
@@ -142,7 +143,7 @@ export async function mcpSetupCommand(opts: McpSetupOptions): Promise<void> {
   // Step 1: Check daemon is running
   try {
     const healthRes = await fetch(`${baseUrl}/health`, {
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(CLI_FETCH_TIMEOUT_MS),
     });
     if (!healthRes.ok) {
       // Daemon is responding but unhealthy -- continue anyway

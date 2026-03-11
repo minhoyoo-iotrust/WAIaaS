@@ -35,6 +35,7 @@ import type { SettingsService } from '../infrastructure/settings/settings-servic
 import { buildByType, buildTransactionParam, getRequestAmount } from './stages.js';
 import { resolveEffectiveAmountUsd, type PriceResult } from './resolve-effective-amount-usd.js';
 import { downgradeIfNoOwner } from '../workflow/owner-state.js';
+import { GAS_SAFETY_NUMERATOR, GAS_SAFETY_DENOMINATOR } from '../constants.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -360,7 +361,7 @@ export async function executeDryRun(
   // -----------------------------------------------------------------------
 
   const estimatedFee = collector.unsignedTx.estimatedFee;
-  const safetyFee = (estimatedFee * 120n) / 100n;
+  const safetyFee = (estimatedFee * GAS_SAFETY_NUMERATOR) / GAS_SAFETY_DENOMINATOR;
 
   // Check balance sufficiency
   const nativeBalance = collector.currentBalances.find((b) => b.asset === 'native');
@@ -450,7 +451,7 @@ function buildResult(
   // Build fee estimate
   let fee: DryRunSimulationResult['fee'] = null;
   if (unsignedTx) {
-    const safetyFee = (unsignedTx.estimatedFee * 120n) / 100n;
+    const safetyFee = (unsignedTx.estimatedFee * GAS_SAFETY_NUMERATOR) / GAS_SAFETY_DENOMINATOR;
     fee = {
       estimatedFee: safetyFee.toString(),
       feeSymbol: nativeSymbol,
@@ -466,7 +467,7 @@ function buildResult(
   for (const bal of collector.currentBalances) {
     let changeAmount: bigint;
     if (bal.asset === 'native') {
-      const feeAmount = unsignedTx ? (unsignedTx.estimatedFee * 120n) / 100n : 0n;
+      const feeAmount = unsignedTx ? (unsignedTx.estimatedFee * GAS_SAFETY_NUMERATOR) / GAS_SAFETY_DENOMINATOR : 0n;
       if (txType === 'TRANSFER' || txType === 'CONTRACT_CALL') {
         // Native transfer: deduct amount + fee
         changeAmount = -(requestAmount + feeAmount);

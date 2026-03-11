@@ -11,6 +11,8 @@
  * - version-check: npm registry latest version check every 24 hours (runImmediately)
  */
 
+import { WORKER_SHUTDOWN_DEADLINE_MS } from '../constants.js';
+
 interface WorkerRegistration {
   name: string;
   interval: number; // ms
@@ -98,7 +100,7 @@ export class BackgroundWorkers {
     this.timers.clear();
 
     // Wait for in-progress handlers (max 5s)
-    const deadline = Date.now() + 5000;
+    const deadline = Date.now() + WORKER_SHUTDOWN_DEADLINE_MS;
     while ([...this.running.values()].some(Boolean) && Date.now() < deadline) {
       await new Promise((r) => setTimeout(r, 100));
     }
