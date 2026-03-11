@@ -140,13 +140,80 @@ Requirements for v31.12 milestone. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (populated during roadmap creation) | | |
+| RTYPE-01 | Phase 386 | Pending |
+| RTYPE-02 | Phase 386 | Pending |
+| RTYPE-03 | Phase 386 | Pending |
+| RTYPE-04 | Phase 386 | Pending |
+| RTYPE-05 | Phase 386 | Pending |
+| RTYPE-06 | Phase 386 | Pending |
+| RTYPE-07 | Phase 386 | Pending |
+| ERR-01 | Phase 386 | Pending |
+| ERR-02 | Phase 386 | Pending |
+| ERR-03 | Phase 386 | Pending |
+| DBMIG-01 | Phase 386 | Pending |
+| DBMIG-02 | Phase 386 | Pending |
+| DBMIG-03 | Phase 386 | Pending |
+| SIGN-01 | Phase 387 | Pending |
+| SIGN-02 | Phase 387 | Pending |
+| SIGN-03 | Phase 387 | Pending |
+| SIGN-04 | Phase 387 | Pending |
+| SIGN-05 | Phase 387 | Pending |
+| SIGN-06 | Phase 387 | Pending |
+| SIGN-07 | Phase 387 | Pending |
+| SIGN-08 | Phase 387 | Pending |
+| CRED-01 | Phase 388 | Pending |
+| CRED-02 | Phase 388 | Pending |
+| CRED-03 | Phase 388 | Pending |
+| CRED-04 | Phase 388 | Pending |
+| CRED-05 | Phase 388 | Pending |
+| CRED-06 | Phase 388 | Pending |
+| CRED-07 | Phase 388 | Pending |
+| CRED-08 | Phase 388 | Pending |
+| CRED-09 | Phase 388 | Pending |
+| CRED-10 | Phase 388 | Pending |
+| CRED-11 | Phase 388 | Pending |
+| TRACK-01 | Phase 389 | Pending |
+| TRACK-02 | Phase 389 | Pending |
+| TRACK-03 | Phase 389 | Pending |
+| TRACK-04 | Phase 389 | Pending |
+| TRACK-05 | Phase 389 | Pending |
+| TRACK-06 | Phase 389 | Pending |
+| POLICY-01 | Phase 389 | Pending |
+| POLICY-02 | Phase 389 | Pending |
+| POLICY-03 | Phase 389 | Pending |
+| POLICY-04 | Phase 389 | Pending |
+| POLICY-05 | Phase 389 | Pending |
+| POLICY-06 | Phase 389 | Pending |
+| PIPE-01 | Phase 390 | Pending |
+| PIPE-02 | Phase 390 | Pending |
+| PIPE-03 | Phase 390 | Pending |
+| PIPE-04 | Phase 390 | Pending |
+| PIPE-05 | Phase 390 | Pending |
+| PIPE-06 | Phase 390 | Pending |
+| PIPE-07 | Phase 390 | Pending |
+| QUERY-01 | Phase 390 | Pending |
+| QUERY-02 | Phase 390 | Pending |
+| QUERY-03 | Phase 390 | Pending |
+| ADMIN-01 | Phase 391 | Pending |
+| ADMIN-02 | Phase 391 | Pending |
+| ADMIN-03 | Phase 391 | Pending |
+| ADMIN-04 | Phase 391 | Pending |
+| INTEG-01 | Phase 392 | Pending |
+| INTEG-02 | Phase 392 | Pending |
+| INTEG-03 | Phase 392 | Pending |
+| INTEG-04 | Phase 392 | Pending |
+| INTEG-05 | Phase 392 | Pending |
+| INTEG-06 | Phase 392 | Pending |
+| SKILL-01 | Phase 392 | Pending |
+| SKILL-02 | Phase 392 | Pending |
+| SKILL-03 | Phase 392 | Pending |
+| SKILL-04 | Phase 392 | Pending |
 
 **Coverage:**
 - v1 requirements: 60 total
-- Mapped to phases: 0
-- Unmapped: 60 ⚠️
+- Mapped to phases: 60/60
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-12*
-*Last updated: 2026-03-12 after initial definition*
+*Last updated: 2026-03-12 after roadmap creation*
