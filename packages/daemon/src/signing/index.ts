@@ -28,3 +28,8 @@ export {
   EcdsaSignBytesCapability,
   Ed25519SignBytesCapability,
 } from './capabilities/index.js';
+
+export { SignerCapabilityRegistry } from './registry.js';
+export type { ISignerCapabilityRegistry } from './registry.js';
+
+export { bootstrapSignerCapabilities } from './bootstrap.js';
