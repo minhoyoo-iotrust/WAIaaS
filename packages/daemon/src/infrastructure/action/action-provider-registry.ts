@@ -207,8 +207,21 @@ export class ActionProviderRegistry {
     const results = Array.isArray(rawResult) ? rawResult : [rawResult];
 
     // 6. Re-validate each element + auto-tag with actionProvider
-    const validated: ContractCallRequest[] = [];
+    //    v31.12: signedData/signedHttp results pass through without ContractCallRequestSchema validation
+    const validated: (ContractCallRequest | ApiDirectResult)[] = [];
     for (const item of results) {
+      // v31.12: Preserve signedData/signedHttp kind results (skip ContractCallRequest parsing)
+      if (item && typeof item === 'object' && 'kind' in item) {
+        const kind = (item as { kind: string }).kind;
+        if (kind === 'signedData' || kind === 'signedHttp') {
+          // Auto-tag with provider/action metadata for pipeline tracking
+          (item as any).actionProvider = entry.provider.metadata.name;
+          (item as any).actionName = entry.action.name;
+          validated.push(item as any);
+          continue;
+        }
+      }
+
       try {
         const parsed = ContractCallRequestSchema.parse(item);
         // Auto-tag with provider name for provider-trust policy bypass

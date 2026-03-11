@@ -17,7 +17,7 @@
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { eq } from 'drizzle-orm';
 import { WAIaaSError, isApiDirectResult } from '@waiaas/core';
-import type { ChainType, NetworkType, EnvironmentType, IPolicyEngine } from '@waiaas/core';
+import type { ChainType, NetworkType, EnvironmentType, IPolicyEngine, SignedDataAction, SignedHttpAction } from '@waiaas/core';
 import { resolveChainId } from '../helpers/resolve-chain-id.js';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
@@ -56,6 +56,9 @@ import {
   openApiValidationHook,
 } from './openapi-schemas.js';
 import { resolveWalletId } from '../helpers/resolve-wallet-id.js';
+import { executeSignedDataAction, executeSignedHttpAction } from '../../pipeline/external-action-pipeline.js';
+import type { ICredentialVault } from '../../infrastructure/credential/credential-vault.js';
+import type { ISignerCapabilityRegistry } from '../../signing/registry.js';
 
 // ---------------------------------------------------------------------------
 // Action Route Dependencies
@@ -84,6 +87,9 @@ export interface ActionRouteDeps {
   eventBus?: import('@waiaas/core').EventBus;
   // v30.8: Reputation cache for post-execution invalidation after feedback actions (INT-02)
   reputationCache?: import('../../services/erc8004/reputation-cache-service.js').ReputationCacheService;
+  // v31.12: External Action pipeline dependencies (Phase 390)
+  credentialVault?: ICredentialVault;
+  signerRegistry?: ISignerCapabilityRegistry;
 }
 
 // ---------------------------------------------------------------------------
@@ -308,6 +314,97 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
         details: { actionKey },
         cause: err instanceof Error ? err : undefined,
       });
+    }
+
+    // 6b. v31.12: Check for signedData/signedHttp actions (kind-based routing)
+    //     These don't need network resolution or adapter -- route to external pipeline
+    const hasKindedActions = contractCalls.some(
+      (item: any) => item && typeof item === 'object' && 'kind' in item &&
+        ((item as any).kind === 'signedData' || (item as any).kind === 'signedHttp'),
+    );
+
+    if (hasKindedActions) {
+      // Ensure external action pipeline deps are available
+      if (!deps.credentialVault || !deps.signerRegistry) {
+        throw new WAIaaSError('EXTERNAL_ACTION_FAILED', {
+          message: 'External action pipeline not configured (credentialVault/signerRegistry missing)',
+        });
+      }
+
+      const pipelineResults: Array<{ id: string; status: string }> = [];
+      const contractCallsForLegacy: any[] = [];
+
+      for (const item of contractCalls) {
+        // ApiDirectResult bypass
+        if (isApiDirectResult(item)) {
+          pipelineResults.push({ id: (item as any).externalId, status: (item as any).status });
+          continue;
+        }
+
+        // Kind-based routing
+        if (item && typeof item === 'object' && 'kind' in item) {
+          const kind = (item as any).kind;
+          if (kind === 'signedData') {
+            const externalDeps = {
+              db: deps.db,
+              sqlite: deps.sqlite,
+              keyStore: deps.keyStore,
+              credentialVault: deps.credentialVault!,
+              signerRegistry: deps.signerRegistry!,
+              policyEngine: deps.policyEngine,
+              masterPassword: deps.passwordRef?.password ?? deps.masterPassword,
+              walletId,
+              wallet: { publicKey: wallet.publicKey, chain: wallet.chain, environment: wallet.environment },
+              sessionId,
+              settingsService: deps.settingsService,
+              eventBus: deps.eventBus,
+              notificationService: deps.notificationService,
+              actionProviderKey: provider,
+              actionName: action,
+            };
+            const result = await executeSignedDataAction(externalDeps, item as unknown as SignedDataAction);
+            pipelineResults.push(result);
+            continue;
+          }
+          if (kind === 'signedHttp') {
+            const externalDeps = {
+              db: deps.db,
+              sqlite: deps.sqlite,
+              keyStore: deps.keyStore,
+              credentialVault: deps.credentialVault!,
+              signerRegistry: deps.signerRegistry!,
+              policyEngine: deps.policyEngine,
+              masterPassword: deps.passwordRef?.password ?? deps.masterPassword,
+              walletId,
+              wallet: { publicKey: wallet.publicKey, chain: wallet.chain, environment: wallet.environment },
+              sessionId,
+              settingsService: deps.settingsService,
+              eventBus: deps.eventBus,
+              notificationService: deps.notificationService,
+              actionProviderKey: provider,
+              actionName: action,
+            };
+            const result = await executeSignedHttpAction(externalDeps, item as unknown as SignedHttpAction, entry.provider);
+            pipelineResults.push(result);
+            continue;
+          }
+        }
+
+        // contractCall: collect for legacy pipeline
+        contractCallsForLegacy.push(item);
+      }
+
+      // If all items handled by external pipeline, return immediately
+      if (contractCallsForLegacy.length === 0) {
+        const lastResult = pipelineResults[pipelineResults.length - 1]!;
+        if (pipelineResults.length === 1) {
+          return c.json({ id: lastResult.id, status: lastResult.status }, 201);
+        }
+        return c.json({ id: lastResult.id, status: lastResult.status, pipeline: pipelineResults }, 201);
+      }
+
+      // Otherwise, overwrite contractCalls with only the contractCall items for legacy pipeline
+      contractCalls = contractCallsForLegacy;
     }
 
     // 7. Resolve network: body.network > getSingleNetwork auto-resolve

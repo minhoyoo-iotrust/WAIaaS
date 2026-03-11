@@ -15,7 +15,7 @@
 import { eq } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
-import type { SignedDataAction, SignedHttpAction, IPolicyEngine, EventBus } from '@waiaas/core';
+import type { SignedDataAction, SignedHttpAction, IPolicyEngine, EventBus, IActionProvider } from '@waiaas/core';
 import { WAIaaSError } from '@waiaas/core';
 import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
 import type { ICredentialVault } from '../infrastructure/credential/credential-vault.js';
@@ -23,7 +23,6 @@ import type { ISignerCapabilityRegistry } from '../signing/registry.js';
 import type { SigningParams } from '../signing/types.js';
 import type { SettingsService } from '../infrastructure/settings/settings-service.js';
 import type { NotificationService } from '../notifications/notification-service.js';
-import type { IActionProvider } from '@waiaas/core';
 import type * as schema from '../infrastructure/database/schema.js';
 import { transactions } from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
@@ -104,6 +103,7 @@ export async function executeSignedDataAction(
         id: txId,
         walletId: deps.walletId,
         sessionId: deps.sessionId ?? null,
+        chain: deps.wallet.chain,
         type: 'CONTRACT_CALL',
         toAddress: `external:${action.venue}`,
         amount: '0',
@@ -123,8 +123,8 @@ export async function executeSignedDataAction(
       .run();
 
     // 4. Get private key
-    privateKeyRef = await deps.keyStore.getPrivateKey(deps.walletId, deps.masterPassword);
-    const privateKeyHex = `0x${Buffer.from(privateKeyRef).toString('hex')}` as `0x${string}`;
+    privateKeyRef = await deps.keyStore.decryptPrivateKey(deps.walletId, deps.masterPassword);
+    const privateKeyHex = `0x${Buffer.from(privateKeyRef as unknown as ArrayBuffer).toString('hex')}` as `0x${string}`;
 
     // 5. Build signing params
     const signingParams = buildSignedDataParams(action, privateKeyHex, credentialValue);
@@ -259,6 +259,7 @@ export async function executeSignedHttpAction(
         id: txId,
         walletId: deps.walletId,
         sessionId: deps.sessionId ?? null,
+        chain: deps.wallet.chain,
         type: 'CONTRACT_CALL',
         toAddress: `external:${action.venue}`,
         amount: '0',
@@ -279,8 +280,8 @@ export async function executeSignedHttpAction(
       .run();
 
     // 4. Get private key
-    privateKeyRef = await deps.keyStore.getPrivateKey(deps.walletId, deps.masterPassword);
-    const privateKeyHex = `0x${Buffer.from(privateKeyRef).toString('hex')}` as `0x${string}`;
+    privateKeyRef = await deps.keyStore.decryptPrivateKey(deps.walletId, deps.masterPassword);
+    const privateKeyHex = `0x${Buffer.from(privateKeyRef as unknown as ArrayBuffer).toString('hex')}` as `0x${string}`;
 
     // 5. Build signing params
     const signingParams = buildSignedHttpParams(action, privateKeyHex, credentialValue);

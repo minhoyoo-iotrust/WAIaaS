@@ -23,7 +23,7 @@ function createMockDeps(overrides: Partial<ExternalActionPipelineDeps> = {}): Ex
       prepare: vi.fn().mockReturnValue({ run: vi.fn() }),
     } as any,
     keyStore: {
-      getPrivateKey: vi.fn().mockResolvedValue(Buffer.from('a'.repeat(64), 'hex')),
+      decryptPrivateKey: vi.fn().mockResolvedValue(Buffer.from('a'.repeat(64), 'hex')),
       releaseKey: vi.fn(),
     } as any,
     credentialVault: {
@@ -99,7 +99,7 @@ describe('executeSignedDataAction', () => {
     expect(deps.signerRegistry.resolve).toHaveBeenCalledWith(action);
 
     // Should have gotten private key and released it
-    expect(deps.keyStore.getPrivateKey).toHaveBeenCalledWith('wallet-001', 'test-password');
+    expect(deps.keyStore.decryptPrivateKey).toHaveBeenCalledWith('wallet-001', 'test-password');
     expect(deps.keyStore.releaseKey).toHaveBeenCalled();
 
     // Should have inserted into transactions
