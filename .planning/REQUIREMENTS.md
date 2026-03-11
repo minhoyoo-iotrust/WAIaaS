@@ -58,28 +58,28 @@ None — 순수 리팩토링 마일스톤이므로 추가 기능 없음.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| UTIL-01 | — | Pending |
-| UTIL-02 | — | Pending |
-| UTIL-03 | — | Pending |
-| UTIL-04 | — | Pending |
-| TYPE-01 | — | Pending |
-| TYPE-02 | — | Pending |
-| TYPE-03 | — | Pending |
-| TYPE-04 | — | Pending |
-| SPLIT-01 | — | Pending |
-| SPLIT-02 | — | Pending |
-| SPLIT-03 | — | Pending |
-| ERR-01 | — | Pending |
-| ERR-02 | — | Pending |
-| ERR-03 | — | Pending |
-| CONST-01 | — | Pending |
-| CONST-02 | — | Pending |
+| UTIL-01 | Phase 375 | Pending |
+| UTIL-02 | Phase 375 | Pending |
+| UTIL-03 | Phase 375 | Pending |
+| UTIL-04 | Phase 375 | Pending |
+| TYPE-01 | Phase 376 | Pending |
+| TYPE-02 | Phase 376 | Pending |
+| TYPE-03 | Phase 376 | Pending |
+| TYPE-04 | Phase 376 | Pending |
+| SPLIT-01 | Phase 377 | Pending |
+| SPLIT-02 | Phase 377 | Pending |
+| SPLIT-03 | Phase 377 | Pending |
+| ERR-01 | Phase 378 | Pending |
+| ERR-02 | Phase 378 | Pending |
+| ERR-03 | Phase 378 | Pending |
+| CONST-01 | Phase 379 | Pending |
+| CONST-02 | Phase 379 | Pending |
 
 **Coverage:**
 - v1 requirements: 16 total
-- Mapped to phases: 0
-- Unmapped: 16 ⚠️
+- Mapped to phases: 16
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-11*
-*Last updated: 2026-03-11 after initial definition*
+*Last updated: 2026-03-11 after roadmap creation*
