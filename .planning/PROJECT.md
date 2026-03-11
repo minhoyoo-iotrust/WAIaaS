@@ -8,6 +8,20 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
+## Current Milestone: v31.11 External Action 프레임워크 설계
+
+**Goal:** WAIaaS를 on-chain tx-centric 모델에서 action-centric 모델로 확장하기 위한 설계. ActionProvider.resolve() 반환 타입을 ResolvedAction union으로 확장하고, 분산된 4종 서명 역량을 ISignerCapability 통합 인터페이스로 묶고, per-wallet CredentialVault를 도입하며, IAsyncStatusTracker/정책/파이프라인을 off-chain action까지 확장하는 설계를 수행한다.
+
+**Target features:**
+- ResolvedAction 타입 시스템 (ContractCallRequest | SignedDataAction | SignedHttpAction)
+- ISignerCapability 통합 인터페이스 (기존 4종 signer 래핑 + HMAC/RSA 신규)
+- CredentialVault (per-wallet credential 관리, SettingsService 암호화 재사용)
+- IAsyncStatusTracker 일반화 (off-chain action 상태 확장)
+- 정책 컨텍스트 확장 (venue 화이트리스트, 카테고리별 한도)
+- 파이프라인 라우팅 (kind별 분기 + DB 기록 + REST/MCP/SDK 확장)
+
+**산출물:** 설계 문서 doc-77 (External Action 프레임워크 전체 설계)
+
 ## Previous Milestone: v31.10 코드베이스 품질 개선 — SHIPPED 2026-03-11
 
 순수 리팩토링 마일스톤. parseTokenAmount/contract-encoding 유틸리티 통합(7개 프로바이더 중복 제거), WalletRow SmartAccount 타입 확장(`as any` 24곳 제거), admin.ts 5개 도메인 모듈 분할(3,107줄→98줄 thin aggregator), WAIaaSError 패턴 통일(에러 코드 135→137), 10개 명명 상수 추출(daemon/cli/admin 3개 constants.ts). 5 phases, 8 plans, 16 requirements, 32 commits, 89 files, +6,742/-3,472 lines. 행위 변경 없음, API 변경 없음, DB 마이그레이션 없음.
