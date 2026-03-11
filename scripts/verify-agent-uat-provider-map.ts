@@ -29,6 +29,7 @@ const PROVIDER_SCENARIO_MAP: Record<string, string> = {
   'lido-staking': 'defi/lido-staking.md',
   'lifi': 'defi/lifi-bridge.md',
   'pendle': 'defi/pendle-yield.md',
+  'polymarket': 'defi/polymarket-prediction.md',
   'zerox-swap': 'defi/0x-swap.md',
 };
 
