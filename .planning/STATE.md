@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: milestone
 status: planning
-stopped_at: Completed Phase 389 (2 plans, 4 tasks, 29 new tests)
-last_updated: "2026-03-11T20:03:04.729Z"
-last_activity: 2026-03-12 — Phase 389 complete (2 plans, 4 tasks, 29 new tests)
+stopped_at: Completed Phase 390 Plan 02 (2 plans, 4 tasks, 48 tests passing)
+last_updated: "2026-03-12T05:39:00.000Z"
+last_activity: 2026-03-12 — Phase 390 complete (2 plans, 4 tasks, query API + connect-info capability)
 progress:
   total_phases: 7
-  completed_phases: 4
-  total_plans: 9
-  completed_plans: 9
-  percent: 57
+  completed_phases: 5
+  total_plans: 13
+  completed_plans: 11
+  percent: 71
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-12)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Phase 390 — 파이프라인 라우팅 + 조회
+**Current focus:** Phase 391 — Admin UI External Actions
 
 ## Current Position
 
-Phase: 390 of 392 (파이프라인 라우팅 + 조회)
+Phase: 391 of 392 (Admin UI External Actions)
 Plan: 1 of TBD
-Status: Ready to plan Phase 390
-Last activity: 2026-03-12 — Phase 389 complete (2 plans, 4 tasks, 29 new tests)
+Status: Ready to plan Phase 391
+Last activity: 2026-03-12 — Phase 390 complete (2 plans, 4 tasks, query API + connect-info)
 
-Progress: [██████░░░░] 57% (4/7 phases)
+Progress: [███████░░░] 71% (5/7 phases)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7
+- Total plans completed: 11
 - Average duration: ~8min/plan
-- Total execution time: ~55min
+- Total execution time: ~88min
 
 ## Accumulated Context
 
@@ -57,6 +57,10 @@ Progress: [██████░░░░] 57% (4/7 phases)
 - [Phase 389]: AsyncPollingService extended with PARTIALLY_FILLED polling + 4 terminal state processing + 6 notification events
 - [Phase 389]: VENUE_WHITELIST default-deny with venue_whitelist_enabled Admin Setting toggle (default false)
 - [Phase 389]: ACTION_CATEGORY_LIMIT per-action/daily/monthly USD limits via json_extract cumulative queries on transaction metadata
+- [Phase 390]: signedData/signedHttp pipeline functions with credential->policy->DB->sign->track->audit flow
+- [Phase 390]: Kind-based routing in actions.ts: signedData/signedHttp to new pipeline, contractCall to existing 6-stage
+- [Phase 390]: GET /v1/wallets/:id/actions query API with venue/status filter + pagination
+- [Phase 390]: external_actions capability in connect-info gated on signerRegistry scheme count
 
 ### Pending Todos
 
@@ -68,6 +72,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-12T05:01:00.000Z
-Stopped at: Completed Phase 389 (2 plans, 4 tasks, 29 new tests)
+Last session: 2026-03-12T05:39:00.000Z
+Stopped at: Completed Phase 390 Plan 02 (2 plans, 4 tasks, 48 tests passing)
 Resume file: None

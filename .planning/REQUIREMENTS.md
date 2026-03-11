@@ -63,19 +63,19 @@ Requirements for v31.12 milestone. Each maps to roadmap phases.
 
 ### 파이프라인 라우팅
 
-- [ ] **PIPE-01**: ActionProviderRegistry kind 판별 라우팅 — kind 없음/contractCall→기존, signedData→새 파이프라인, signedHttp→새 파이프라인
-- [ ] **PIPE-02**: executeSignedDataAction() 파이프라인 — 파싱→credential→정책→DB→signer→서명→추적→응답
-- [ ] **PIPE-03**: executeSignedHttpAction() 파이프라인 — 서명만 수행, HTTP 발송은 ActionProvider.execute() 콜백에 위임
-- [ ] **PIPE-04**: REST API 기존 경로 유지 — POST /v1/actions/:provider/:action에서 자동 분기
-- [ ] **PIPE-05**: 감사 로그 — ACTION_SIGNED, ACTION_HTTP_SIGNED
-- [ ] **PIPE-06**: 서명 후 keyStore.releaseKey() 즉시 해제
-- [ ] **PIPE-07**: connect-info 확장 — capabilities.externalActions, capabilities.signing, capabilities.supportedVenues
+- [x] **PIPE-01**: ActionProviderRegistry kind 판별 라우팅 — kind 없음/contractCall→기존, signedData→새 파이프라인, signedHttp→새 파이프라인
+- [x] **PIPE-02**: executeSignedDataAction() 파이프라인 — 파싱→credential→정책→DB→signer→서명→추적→응답
+- [x] **PIPE-03**: executeSignedHttpAction() 파이프라인 — 서명만 수행, HTTP 발송은 ActionProvider.execute() 콜백에 위임
+- [x] **PIPE-04**: REST API 기존 경로 유지 — POST /v1/actions/:provider/:action에서 자동 분기
+- [x] **PIPE-05**: 감사 로그 — ACTION_SIGNED, ACTION_HTTP_SIGNED
+- [x] **PIPE-06**: 서명 후 keyStore.releaseKey() 즉시 해제
+- [x] **PIPE-07**: connect-info 확장 — capabilities.externalActions, capabilities.signing, capabilities.supportedVenues
 
 ### External Action 조회 API
 
-- [ ] **QUERY-01**: GET /v1/wallets/:id/actions — off-chain action 목록 조회 (페이지네이션, 필터: venue, status)
-- [ ] **QUERY-02**: GET /v1/wallets/:id/actions/:actionId — 상세 조회 (요청/응답 payload, 상태 이력)
-- [ ] **QUERY-03**: DB 저장 — transactions 테이블 컬럼 확장 (action_kind, venue, operation, external_id)
+- [x] **QUERY-01**: GET /v1/wallets/:id/actions — off-chain action 목록 조회 (페이지네이션, 필터: venue, status)
+- [x] **QUERY-02**: GET /v1/wallets/:id/actions/:actionId — 상세 조회 (요청/응답 payload, 상태 이력)
+- [x] **QUERY-03**: DB 저장 — transactions 테이블 컬럼 확장 (action_kind, venue, operation, external_id)
 
 ### 에러 코드
 
@@ -184,16 +184,16 @@ Requirements for v31.12 milestone. Each maps to roadmap phases.
 | POLICY-04 | Phase 389 | Complete |
 | POLICY-05 | Phase 389 | Complete |
 | POLICY-06 | Phase 389 | Complete |
-| PIPE-01 | Phase 390 | Pending |
-| PIPE-02 | Phase 390 | Pending |
-| PIPE-03 | Phase 390 | Pending |
-| PIPE-04 | Phase 390 | Pending |
-| PIPE-05 | Phase 390 | Pending |
-| PIPE-06 | Phase 390 | Pending |
-| PIPE-07 | Phase 390 | Pending |
-| QUERY-01 | Phase 390 | Pending |
-| QUERY-02 | Phase 390 | Pending |
-| QUERY-03 | Phase 390 | Pending |
+| PIPE-01 | Phase 390 | Complete |
+| PIPE-02 | Phase 390 | Complete |
+| PIPE-03 | Phase 390 | Complete |
+| PIPE-04 | Phase 390 | Complete |
+| PIPE-05 | Phase 390 | Complete |
+| PIPE-06 | Phase 390 | Complete |
+| PIPE-07 | Phase 390 | Complete |
+| QUERY-01 | Phase 390 | Complete |
+| QUERY-02 | Phase 390 | Complete |
+| QUERY-03 | Phase 390 | Complete |
 | ADMIN-01 | Phase 391 | Pending |
 | ADMIN-02 | Phase 391 | Pending |
 | ADMIN-03 | Phase 391 | Pending |
