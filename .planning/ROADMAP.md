@@ -10,7 +10,7 @@
 - Integer phases (375-379): Planned milestone work
 - All phases are independent — no inter-phase dependencies
 
-- [ ] **Phase 375: 유틸리티 함수 통합** - 중복된 parseTokenAmount/contract-encoding 헬퍼를 공통 모듈로 추출하고 ~650줄 중복 제거
+- [x] **Phase 375: 유틸리티 함수 통합** - 중복된 parseTokenAmount/contract-encoding 헬퍼를 공통 모듈로 추출하고 ~260줄 중복 제거
 - [ ] **Phase 376: 타입 안전성 개선** - WalletRow SmartAccount 필드 타입 추가, `as any` 40+곳 제거, 중복 함수/regex 통합
 - [ ] **Phase 377: 대형 파일 분할** - admin.ts (3,107줄) 도메인별 분할, openapi-schemas.ts (1,606줄) 그룹핑 검토
 - [ ] **Phase 378: API 에러 응답 일관성** - 비표준 에러/응답 패턴을 WAIaaSError 및 표준 패턴으로 통일
@@ -30,8 +30,8 @@
 **Plans**: 2 plans
 
 Plans:
-- [ ] 375-01-PLAN.md — parseTokenAmount 공통 모듈 추출 및 7개 프로바이더 교체
-- [ ] 375-02-PLAN.md — contract-encoding 공통 모듈 추출 및 4개 프로바이더 교체
+- [x] 375-01-PLAN.md — parseTokenAmount 공통 모듈 추출 및 7개 프로바이더 교체
+- [x] 375-02-PLAN.md — contract-encoding 공통 모듈 추출 및 4개 프로바이더 교체
 
 ### Phase 376: 타입 안전성 개선
 **Goal**: `(wallet as any)` 및 `(adapter as any)` 타입 escape가 제거되고 중복된 타입 관련 코드가 통합된다
@@ -98,7 +98,7 @@ All phases are independent and can execute in any order: 375 → 376 → 377 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 375. 유틸리티 함수 통합 | 0/2 | Planned | - |
+| 375. 유틸리티 함수 통합 | 2/2 | Complete | 2026-03-11 |
 | 376. 타입 안전성 개선 | 0/2 | Not started | - |
 | 377. 대형 파일 분할 | 0/2 | Not started | - |
 | 378. API 에러 응답 일관성 | 0/1 | Not started | - |

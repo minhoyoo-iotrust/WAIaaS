@@ -9,10 +9,10 @@
 
 ### Utility (유틸리티 함수 통합)
 
-- [ ] **UTIL-01**: `packages/actions/src/common/amount-parser.ts`에 `parseTokenAmount(amount: string, decimals: number): bigint` 통합 (8곳 중복 제거)
-- [ ] **UTIL-02**: `packages/actions/src/common/contract-encoding.ts`에 `padHex()`, `addressToHex()`, `uint256ToHex()`, `encodeApproveCalldata()` 통합 (5+곳)
-- [ ] **UTIL-03**: 기존 프로바이더에서 로컬 구현 제거 및 공통 모듈 import으로 교체
-- [ ] **UTIL-04**: ~650줄 중복 코드 제거 검증
+- [x] **UTIL-01**: `packages/actions/src/common/amount-parser.ts`에 `parseTokenAmount(amount: string, decimals: number): bigint` 통합 (7곳 중복 제거)
+- [x] **UTIL-02**: `packages/actions/src/common/contract-encoding.ts`에 `padHex()`, `addressToHex()`, `uint256ToHex()`, `encodeApproveCalldata()` 통합 (4곳)
+- [x] **UTIL-03**: 기존 프로바이더에서 로컬 구현 제거 및 공통 모듈 import으로 교체
+- [x] **UTIL-04**: ~260줄 중복 코드 제거 검증
 
 ### Type Safety (타입 안전성)
 
@@ -58,10 +58,10 @@ None — 순수 리팩토링 마일스톤이므로 추가 기능 없음.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| UTIL-01 | Phase 375 | Pending |
-| UTIL-02 | Phase 375 | Pending |
-| UTIL-03 | Phase 375 | Pending |
-| UTIL-04 | Phase 375 | Pending |
+| UTIL-01 | Phase 375 | Complete |
+| UTIL-02 | Phase 375 | Complete |
+| UTIL-03 | Phase 375 | Complete |
+| UTIL-04 | Phase 375 | Complete |
 | TYPE-01 | Phase 376 | Pending |
 | TYPE-02 | Phase 376 | Pending |
 | TYPE-03 | Phase 376 | Pending |
@@ -82,4 +82,4 @@ None — 순수 리팩토링 마일스톤이므로 추가 기능 없음.
 
 ---
 *Requirements defined: 2026-03-11*
-*Last updated: 2026-03-11 after roadmap creation*
+*Last updated: 2026-03-11 after Phase 375 completion*
