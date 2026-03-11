@@ -9,12 +9,12 @@ Requirements for milestone v31.11. Each maps to roadmap phases.
 
 ### Type System
 
-- [ ] **TYPE-01**: ResolvedAction union 타입을 ContractCallRequest | SignedDataAction | SignedHttpAction으로 설계
-- [ ] **TYPE-02**: SignedDataAction 스키마 설계 (kind: 'signedData', signingScheme, payload, venue, operation, credentialRef?, tracking?, policyContext?)
-- [ ] **TYPE-03**: SignedHttpAction 스키마 설계 (kind: 'signedHttp', 기존 SignHttpMessageParams 통합, venue, operation, credentialRef?)
-- [ ] **TYPE-04**: ContractCallRequest에 optional kind?: 'contractCall' 필드 추가 + ActionProviderRegistry 정규화 설계
-- [ ] **TYPE-05**: Zod discriminatedUnion 설계 (kind 필드로 contractCall | signedData | signedHttp 분기)
-- [ ] **TYPE-06**: 기존 13개 ActionProvider 무변경 하위 호환 검증 설계 (kind 없이 반환해도 registry가 정규화)
+- [x] **TYPE-01**: ResolvedAction union 타입을 ContractCallRequest | SignedDataAction | SignedHttpAction으로 설계
+- [x] **TYPE-02**: SignedDataAction 스키마 설계 (kind: 'signedData', signingScheme, payload, venue, operation, credentialRef?, tracking?, policyContext?)
+- [x] **TYPE-03**: SignedHttpAction 스키마 설계 (kind: 'signedHttp', 기존 SignHttpMessageParams 통합, venue, operation, credentialRef?)
+- [x] **TYPE-04**: ContractCallRequest에 optional kind?: 'contractCall' 필드 추가 + ActionProviderRegistry 정규화 설계
+- [x] **TYPE-05**: Zod discriminatedUnion 설계 (kind 필드로 contractCall | signedData | signedHttp 분기)
+- [x] **TYPE-06**: 기존 13개 ActionProvider 무변경 하위 호환 검증 설계 (kind 없이 반환해도 registry가 정규화)
 
 ### Signer Capability
 
@@ -96,12 +96,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TYPE-01 | Phase 380 | Pending |
-| TYPE-02 | Phase 380 | Pending |
-| TYPE-03 | Phase 380 | Pending |
-| TYPE-04 | Phase 380 | Pending |
-| TYPE-05 | Phase 380 | Pending |
-| TYPE-06 | Phase 380 | Pending |
+| TYPE-01 | Phase 380 | Complete |
+| TYPE-02 | Phase 380 | Complete |
+| TYPE-03 | Phase 380 | Complete |
+| TYPE-04 | Phase 380 | Complete |
+| TYPE-05 | Phase 380 | Complete |
+| TYPE-06 | Phase 380 | Complete |
 | SIGN-01 | Phase 380 | Pending |
 | SIGN-02 | Phase 380 | Pending |
 | SIGN-03 | Phase 382 | Pending |
