@@ -82,6 +82,7 @@ import { createHyperliquidRoutes } from './routes/hyperliquid.js';
 import { createPolymarketRoutes } from './routes/polymarket.js';
 import { credentialRoutes } from './routes/credentials.js';
 import { adminCredentialRoutes } from './routes/admin-credentials.js';
+import { externalActionRoutes } from './routes/external-actions.js';
 import { LocalCredentialVault } from '../infrastructure/credential/index.js';
 import type { PolymarketInfraDeps } from './routes/polymarket.js';
 import type { HyperliquidMarketData } from '@waiaas/actions';
@@ -224,7 +225,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     const masterAuthForWalletDetail = createMasterAuth({ masterPasswordHash: deps.masterPasswordHash, passwordRef: deps.passwordRef, sqlite: deps.sqlite });
     app.use('/v1/wallets/:id', async (c, next) => {
       // Skip sub-paths that have their own auth registered below
-      if (c.req.path.includes('/owner') || c.req.path.includes('/networks') || c.req.path.includes('/wc/') || c.req.path.includes('/provider') || c.req.path.includes('/nfts')) {
+      if (c.req.path.includes('/owner') || c.req.path.includes('/networks') || c.req.path.includes('/wc/') || c.req.path.includes('/provider') || c.req.path.includes('/nfts') || c.req.path.includes('/actions')) {
         await next();
         return;
       }
@@ -293,6 +294,9 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     // sessionAuth for GET /v1/transactions (exact path -- wildcard won't match base)
     app.use('/v1/transactions', sessionAuth);
     app.use('/v1/transactions/*', sessionAuth);
+    // sessionAuth for external actions query (GET /v1/wallets/:id/actions)
+    app.use('/v1/wallets/:id/actions', sessionAuth);
+    app.use('/v1/wallets/:id/actions/*', sessionAuth);
     app.use('/v1/utils/*', sessionAuth);
     // dual-auth for GET /v1/actions/providers: masterAuth (Admin UI) or sessionAuth (agent)
     app.use('/v1/actions/providers', async (c, next) => {
@@ -813,6 +817,9 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
       app.route('/v1', credentialRoutes({ credentialVault: vault }));
       app.route('/v1', adminCredentialRoutes({ credentialVault: vault }));
     }
+
+    // Register external actions query routes (sessionAuth via /v1/wallets/:id/actions)
+    app.route('/v1', externalActionRoutes({ db: deps.db }));
 
     // Register wallet apps routes (masterAuth via admin middleware)
     if (deps.sqlite) {

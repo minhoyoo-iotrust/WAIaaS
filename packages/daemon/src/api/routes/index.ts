@@ -25,3 +25,4 @@ export { createHyperliquidRoutes, type HyperliquidRouteDeps } from './hyperliqui
 export { createPolymarketRoutes, type PolymarketRouteDeps, type PolymarketInfraDeps } from './polymarket.js';
 export { credentialRoutes, type CredentialRouteDeps } from './credentials.js';
 export { adminCredentialRoutes, type AdminCredentialRouteDeps } from './admin-credentials.js';
+export { externalActionRoutes, type ExternalActionQueryDeps } from './external-actions.js';
