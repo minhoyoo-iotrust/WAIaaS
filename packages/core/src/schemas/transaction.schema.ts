@@ -138,6 +138,25 @@ export const ContractCallRequestSchema = z.object({
       }),
     )
     .optional(),
+  /**
+   * Solana-only: Additional instructions to prepend before the main instruction.
+   * Used for setup operations like ATA creation (CreateAssociatedTokenAccountIdempotent).
+   */
+  preInstructions: z
+    .array(
+      z.object({
+        programId: z.string(),
+        data: z.string(), // base64-encoded
+        accounts: z.array(
+          z.object({
+            pubkey: z.string(),
+            isSigner: z.boolean(),
+            isWritable: z.boolean(),
+          }),
+        ),
+      }),
+    )
+    .optional(),
   network: NetworkTypeEnumWithLegacy.optional(),
   /** Provider name tag for provider-trust policy bypass. Set by ActionProviderRegistry. */
   actionProvider: z.string().optional(),

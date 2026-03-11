@@ -1018,6 +1018,12 @@ export async function buildByType(
           ? Buffer.from(req.instructionData, 'base64')
           : undefined,
         accounts: req.accounts,
+        // Pass through preInstructions for Solana (e.g., ATA creation for Jito staking)
+        preInstructions: req.preInstructions?.map((pre) => ({
+          programId: pre.programId,
+          data: Buffer.from(pre.data, 'base64'),
+          accounts: pre.accounts,
+        })),
       });
     }
 

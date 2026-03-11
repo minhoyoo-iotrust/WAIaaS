@@ -755,12 +755,47 @@ export class SolanaAdapter implements IChainAdapter {
         dataBytes = new Uint8Array(Buffer.from(request.instructionData as unknown as string, 'base64'));
       }
 
-      // Build the instruction
+      // Build the main instruction
       const instruction = {
         programAddress: address(request.programId),
         accounts: mappedAccounts,
         data: dataBytes,
       };
+
+      // Build pre-instructions (e.g., ATA creation for Jito staking)
+      const preInstructions: Array<{
+        programAddress: ReturnType<typeof address>;
+        accounts: typeof mappedAccounts;
+        data: Uint8Array;
+      }> = [];
+      if (request.preInstructions && request.preInstructions.length > 0) {
+        for (const pre of request.preInstructions) {
+          const preAccounts = pre.accounts.map((acc) => {
+            let role: AccountRole;
+            if (acc.isSigner && acc.isWritable) {
+              role = AccountRole.WRITABLE_SIGNER;
+            } else if (acc.isSigner && !acc.isWritable) {
+              role = AccountRole.READONLY_SIGNER;
+            } else if (!acc.isSigner && acc.isWritable) {
+              role = AccountRole.WRITABLE;
+            } else {
+              role = AccountRole.READONLY;
+            }
+            return { address: address(acc.pubkey), role };
+          });
+          let preData: Uint8Array;
+          if (pre.data instanceof Uint8Array) {
+            preData = pre.data;
+          } else {
+            preData = new Uint8Array(Buffer.from(pre.data as unknown as string, 'base64'));
+          }
+          preInstructions.push({
+            programAddress: address(pre.programId),
+            accounts: preAccounts,
+            data: preData,
+          });
+        }
+      }
 
       // Get latest blockhash
       const { value: blockhashInfo } = await rpc.getLatestBlockhash().send();
@@ -779,6 +814,13 @@ export class SolanaAdapter implements IChainAdapter {
           ),
       );
 
+      // Append pre-instructions first (e.g., ATA creation)
+      for (const preIx of preInstructions) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        txMessage = appendTransactionMessageInstruction(preIx as any, txMessage) as unknown as typeof txMessage;
+      }
+
+      // Append main instruction
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       txMessage = appendTransactionMessageInstruction(instruction as any, txMessage) as unknown as typeof txMessage;
 
