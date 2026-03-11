@@ -71,7 +71,7 @@ const LEGACY_NETWORK_NORMALIZE: Record<string, string> = {
 };
 
 // ---------------------------------------------------------------------------
-// DDL statements for all 30 tables (latest schema: wallets + wallet_id + session_wallets + token_registry + settings + telegram_users + wc_sessions + wc_store + incoming_transactions + incoming_tx_cursors + defi_positions + wallet_apps + webhooks + webhook_logs + agent_identities + reputation_cache + nft_metadata_cache + userop_builds + hyperliquid_orders + hyperliquid_sub_accounts + polymarket_orders + polymarket_positions + polymarket_api_keys)
+// DDL statements for all 31 tables (latest schema: wallets + wallet_id + session_wallets + token_registry + settings + telegram_users + wc_sessions + wc_store + incoming_transactions + incoming_tx_cursors + defi_positions + wallet_apps + webhooks + webhook_logs + agent_identities + reputation_cache + nft_metadata_cache + userop_builds + hyperliquid_orders + hyperliquid_sub_accounts + polymarket_orders + polymarket_positions + polymarket_api_keys + wallet_credentials)
 // ---------------------------------------------------------------------------
 
 /**
@@ -79,7 +79,7 @@ const LEGACY_NETWORK_NORMALIZE: Record<string, string> = {
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 54;
+export const LATEST_SCHEMA_VERSION = 56;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -166,7 +166,11 @@ function getCreateTableStatements(): string[] {
   metadata TEXT,
   network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES)})),
   bridge_status TEXT CHECK (bridge_status IS NULL OR bridge_status IN ('PENDING', 'COMPLETED', 'FAILED', 'BRIDGE_MONITORING', 'TIMEOUT', 'REFUNDED')),
-  bridge_metadata TEXT
+  bridge_metadata TEXT,
+  action_kind TEXT NOT NULL DEFAULT 'contractCall',
+  venue TEXT,
+  operation TEXT,
+  external_id TEXT
 )`,
 
     // Table 4: policies (network column added in v8)
@@ -528,6 +532,22 @@ function getCreateTableStatements(): string[] {
   created_at INTEGER NOT NULL DEFAULT (unixepoch()),
   UNIQUE(wallet_id)
 )`,
+
+    // Table 31: wallet_credentials (External Action credential vault, v55)
+    `CREATE TABLE IF NOT EXISTS wallet_credentials (
+  id TEXT NOT NULL PRIMARY KEY,
+  wallet_id TEXT,
+  type TEXT NOT NULL CHECK (type IN ('api-key','hmac-secret','rsa-private-key','session-token','custom')),
+  name TEXT NOT NULL,
+  encrypted_value BLOB NOT NULL,
+  iv BLOB NOT NULL,
+  auth_tag BLOB NOT NULL,
+  metadata TEXT NOT NULL DEFAULT '{}',
+  expires_at INTEGER,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  FOREIGN KEY (wallet_id) REFERENCES wallets(id) ON DELETE CASCADE
+)`,
   ];
 }
 
@@ -658,6 +678,17 @@ function getCreateIndexStatements(): string[] {
     'CREATE INDEX IF NOT EXISTS idx_pm_positions_resolved ON polymarket_positions(market_resolved)',
 
     // v54: polymarket_api_keys indexes (UNIQUE on wallet_id is inline)
+
+    // v55: wallet_credentials indexes
+    'CREATE UNIQUE INDEX IF NOT EXISTS idx_wallet_credentials_wallet_name ON wallet_credentials(wallet_id, name)',
+    'CREATE INDEX IF NOT EXISTS idx_wallet_credentials_global_name ON wallet_credentials(name) WHERE wallet_id IS NULL',
+    'CREATE INDEX IF NOT EXISTS idx_wallet_credentials_wallet_id ON wallet_credentials(wallet_id)',
+    'CREATE INDEX IF NOT EXISTS idx_wallet_credentials_expires_at ON wallet_credentials(expires_at) WHERE expires_at IS NOT NULL',
+
+    // v56: transactions action tracking indexes
+    'CREATE INDEX IF NOT EXISTS idx_transactions_action_kind ON transactions(action_kind)',
+    'CREATE INDEX IF NOT EXISTS idx_transactions_venue ON transactions(venue) WHERE venue IS NOT NULL',
+    'CREATE INDEX IF NOT EXISTS idx_transactions_external_id ON transactions(external_id) WHERE external_id IS NOT NULL',
   ];
 }
 
@@ -3085,6 +3116,75 @@ MIGRATIONS.push({
         );
       `);
     }
+  },
+});
+
+// ---------------------------------------------------------------------------
+// v55: wallet_credentials table for External Action credential vault
+// ---------------------------------------------------------------------------
+
+MIGRATIONS.push({
+  version: 55,
+  description: 'Create wallet_credentials table for External Action credential vault',
+  up: (sqlite) => {
+    // Idempotent check
+    const tables = sqlite
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='wallet_credentials'")
+      .all() as Array<{ name: string }>;
+    if (tables.length > 0) return;
+
+    sqlite.exec(`
+      CREATE TABLE wallet_credentials (
+        id TEXT NOT NULL PRIMARY KEY,
+        wallet_id TEXT,
+        type TEXT NOT NULL CHECK (type IN ('api-key','hmac-secret','rsa-private-key','session-token','custom')),
+        name TEXT NOT NULL,
+        encrypted_value BLOB NOT NULL,
+        iv BLOB NOT NULL,
+        auth_tag BLOB NOT NULL,
+        metadata TEXT NOT NULL DEFAULT '{}',
+        expires_at INTEGER,
+        created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+        updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+        FOREIGN KEY (wallet_id) REFERENCES wallets(id) ON DELETE CASCADE
+      );
+      CREATE UNIQUE INDEX idx_wallet_credentials_wallet_name ON wallet_credentials(wallet_id, name);
+      CREATE INDEX idx_wallet_credentials_global_name ON wallet_credentials(name) WHERE wallet_id IS NULL;
+      CREATE INDEX idx_wallet_credentials_wallet_id ON wallet_credentials(wallet_id);
+      CREATE INDEX idx_wallet_credentials_expires_at ON wallet_credentials(expires_at) WHERE expires_at IS NOT NULL;
+    `);
+  },
+});
+
+// ---------------------------------------------------------------------------
+// v56: transactions table action tracking columns
+// ---------------------------------------------------------------------------
+
+MIGRATIONS.push({
+  version: 56,
+  description: 'Add action_kind, venue, operation, external_id columns to transactions',
+  up: (sqlite) => {
+    // Check if columns already exist (pushSchema may have already added them)
+    const cols = (sqlite.prepare('PRAGMA table_info(transactions)').all() as Array<{ name: string }>)
+      .map(c => c.name);
+
+    if (!cols.includes('action_kind')) {
+      sqlite.exec("ALTER TABLE transactions ADD COLUMN action_kind TEXT NOT NULL DEFAULT 'contractCall'");
+    }
+    if (!cols.includes('venue')) {
+      sqlite.exec('ALTER TABLE transactions ADD COLUMN venue TEXT');
+    }
+    if (!cols.includes('operation')) {
+      sqlite.exec('ALTER TABLE transactions ADD COLUMN operation TEXT');
+    }
+    if (!cols.includes('external_id')) {
+      sqlite.exec('ALTER TABLE transactions ADD COLUMN external_id TEXT');
+    }
+
+    // Create indexes (idempotent with IF NOT EXISTS)
+    sqlite.exec('CREATE INDEX IF NOT EXISTS idx_transactions_action_kind ON transactions(action_kind)');
+    sqlite.exec('CREATE INDEX IF NOT EXISTS idx_transactions_venue ON transactions(venue) WHERE venue IS NOT NULL');
+    sqlite.exec('CREATE INDEX IF NOT EXISTS idx_transactions_external_id ON transactions(external_id) WHERE external_id IS NOT NULL');
   },
 });
 

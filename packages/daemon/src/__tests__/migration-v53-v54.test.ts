@@ -84,7 +84,7 @@ describe('DB v53-v54 Migration: Polymarket tables', () => {
   // -----------------------------------------------------------------------
 
   it('T1: LATEST_SCHEMA_VERSION is 54', () => {
-    expect(LATEST_SCHEMA_VERSION).toBe(54);
+    expect(LATEST_SCHEMA_VERSION).toBe(56);
   });
 
   // -----------------------------------------------------------------------
@@ -362,7 +362,7 @@ describe('DB v53-v54 Migration: Polymarket tables', () => {
     expect(tableExists(sqlite, 'polymarket_orders')).toBe(true);
     expect(tableExists(sqlite, 'polymarket_positions')).toBe(true);
     expect(tableExists(sqlite, 'polymarket_api_keys')).toBe(true);
-    expect(getMaxVersion(sqlite)).toBe(54);
+    expect(getMaxVersion(sqlite)).toBe(56);
   });
 
   it('T13: schema_version records v53 and v54', () => {
@@ -387,7 +387,7 @@ describe('DB v53-v54 Migration: Polymarket tables', () => {
 
     // Running again should not throw
     expect(() => runMigrations(sqlite)).not.toThrow();
-    expect(getMaxVersion(sqlite)).toBe(54);
+    expect(getMaxVersion(sqlite)).toBe(56);
   });
 
   // -----------------------------------------------------------------------
