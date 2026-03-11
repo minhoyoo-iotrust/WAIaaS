@@ -38,17 +38,17 @@ Requirements for milestone v31.11. Each maps to roadmap phases.
 
 ### Async Tracking
 
-- [ ] **TRCK-01**: AsyncTrackingResult.state 확장 설계 (기존 4종 + PARTIALLY_FILLED/FILLED/CANCELED/SETTLED/EXPIRED)
-- [ ] **TRCK-02**: AsyncPollingService 쿼리 확장 설계 (external action 상태 조회 경로)
-- [ ] **TRCK-03**: tracker 메타데이터 확장 설계 (venue, operation 등 external action 컨텍스트 전달)
-- [ ] **TRCK-04**: 상태 저장 위치 설계 (transactions 테이블 external_action_status 컬럼 vs 별도 테이블)
+- [x] **TRCK-01**: AsyncTrackingResult.state 확장 설계 (기존 4종 + PARTIALLY_FILLED/FILLED/CANCELED/SETTLED/EXPIRED)
+- [x] **TRCK-02**: AsyncPollingService 쿼리 확장 설계 (external action 상태 조회 경로)
+- [x] **TRCK-03**: tracker 메타데이터 확장 설계 (venue, operation 등 external action 컨텍스트 전달)
+- [x] **TRCK-04**: 상태 저장 위치 설계 (transactions 테이블 external_action_status 컬럼 vs 별도 테이블)
 
 ### Policy
 
-- [ ] **PLCY-01**: TransactionParam/ActionPolicyParam 확장 설계 (venue, actionCategory, notionalUsd, leverage, expiry, hasWithdrawCapability)
-- [ ] **PLCY-02**: venue 화이트리스트 정책 설계 (VENUE_WHITELIST, 기존 CONTRACT_WHITELIST 패턴 활용)
-- [ ] **PLCY-03**: action 카테고리별 한도 설계 (ACTION_CATEGORY_LIMIT, SPENDING_LIMIT 패턴 확장)
-- [ ] **PLCY-04**: ActionDefinition 확장 설계 (off-chain action riskLevel/defaultTier 정의 경로)
+- [x] **PLCY-01**: TransactionParam/ActionPolicyParam 확장 설계 (venue, actionCategory, notionalUsd, leverage, expiry, hasWithdrawCapability)
+- [x] **PLCY-02**: venue 화이트리스트 정책 설계 (VENUE_WHITELIST, 기존 CONTRACT_WHITELIST 패턴 활용)
+- [x] **PLCY-03**: action 카테고리별 한도 설계 (ACTION_CATEGORY_LIMIT, SPENDING_LIMIT 패턴 확장)
+- [x] **PLCY-04**: ActionDefinition 확장 설계 (off-chain action riskLevel/defaultTier 정의 경로)
 
 ### Pipeline Routing
 
@@ -116,14 +116,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CRED-06 | Phase 381 | Complete |
 | CRED-07 | Phase 381 | Complete |
 | CRED-08 | Phase 381 | Complete |
-| TRCK-01 | Phase 384 | Pending |
-| TRCK-02 | Phase 384 | Pending |
-| TRCK-03 | Phase 384 | Pending |
-| TRCK-04 | Phase 384 | Pending |
-| PLCY-01 | Phase 384 | Pending |
-| PLCY-02 | Phase 384 | Pending |
-| PLCY-03 | Phase 384 | Pending |
-| PLCY-04 | Phase 384 | Pending |
+| TRCK-01 | Phase 384 | Complete |
+| TRCK-02 | Phase 384 | Complete |
+| TRCK-03 | Phase 384 | Complete |
+| TRCK-04 | Phase 384 | Complete |
+| PLCY-01 | Phase 384 | Complete |
+| PLCY-02 | Phase 384 | Complete |
+| PLCY-03 | Phase 384 | Complete |
+| PLCY-04 | Phase 384 | Complete |
 | PIPE-01 | Phase 383 | Complete |
 | PIPE-02 | Phase 383 | Complete |
 | PIPE-03 | Phase 383 | Complete |

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v31.11
 milestone_name: — External Action 프레임워크 설계
 status: completed
-stopped_at: Completed 383-02-PLAN.md
-last_updated: "2026-03-11T15:25:11.276Z"
-last_activity: 2026-03-12 — Phase 383 complete (2 plans)
+stopped_at: Completed 384-02-PLAN.md
+last_updated: "2026-03-12T15:42:00.000Z"
+last_activity: 2026-03-12 — Phase 384 complete (2 plans)
 progress:
   total_phases: 6
-  completed_phases: 4
-  total_plans: 8
-  completed_plans: 8
-  percent: 67
+  completed_phases: 5
+  total_plans: 10
+  completed_plans: 10
+  percent: 83
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-11)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Phase 384 — 정책 + 추적 확장
+**Current focus:** Phase 385 — 설계 문서 통합
 
 ## Current Position
 
-Phase: 4 of 6 (Phase 383: 파이프라인 라우팅) — COMPLETE
+Phase: 5 of 6 (Phase 384: 정책 + 추적 확장) — COMPLETE
 Plan: 2/2 complete
-Status: Phase 383 complete, ready for Phase 384
-Last activity: 2026-03-12 — Phase 383 complete (2 plans)
+Status: Phase 384 complete, ready for Phase 385
+Last activity: 2026-03-12 — Phase 384 complete (2 plans)
 
-Progress: [######░░░░] 67%
+Progress: [########░░] 83%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8
+- Total plans completed: 10
 - Average duration: 6min
-- Total execution time: 0.8 hours
+- Total execution time: 1.0 hours
 
 **By Phase:**
 
@@ -47,6 +47,7 @@ Progress: [######░░░░] 67%
 | 381 | 2 | 16min | 8min |
 | 382 | 2 | 10min | 5min |
 | 383 | 2 | 10min | 5min |
+| 384 | 2 | 10min | 5min |
 
 ## Accumulated Context
 | Phase 380 P01 | 8min | 1 tasks | 1 files |
@@ -57,6 +58,8 @@ Progress: [######░░░░] 67%
 | Phase 382 P02 | 5min | 1 tasks | 1 files |
 | Phase 383 P01 | 5min | 1 tasks | 1 files |
 | Phase 383 P02 | 5min | 1 tasks | 1 files |
+| Phase 384 P01 | 5min | 1 tasks | 1 files |
+| Phase 384 P02 | 5min | 1 tasks | 1 files |
 
 ### Decisions
 
@@ -89,6 +92,14 @@ Progress: [######░░░░] 67%
 - [Phase 383]: 별도 off-chain 엔드포인트 없이 기존 POST /v1/actions/:provider/:action 확장
 - [Phase 383]: MCP action-list-offchain 신규 도구 + SDK ActionResult kind-union
 - [Phase 383]: connect-info에 externalActions + supportedVenues capability 추가
+- [Phase 384]: VENUE_WHITELIST는 default-deny + Admin Settings venue_whitelist_enabled(기본 false)로 비활성화 가능
+- [Phase 384]: ACTION_CATEGORY_LIMIT와 SPENDING_LIMIT 완전 독립 (on-chain amount vs off-chain notionalUsd)
+- [Phase 384]: notionalUsd를 metadata JSON에 저장 (스키마 변경 최소화)
+- [Phase 384]: riskLevel 4등급 자동 매핑: low->INSTANT, medium->NOTIFY, high->DELAY, critical->APPROVAL
+- [Phase 384]: bridge_status/bridge_metadata 재사용 (별도 테이블 아님) — AsyncPollingService 인프라 100% 재사용
+- [Phase 384]: AsyncTrackingResult.state 9종 (기존 4 + PARTIALLY_FILLED/FILLED/CANCELED/SETTLED/EXPIRED)
+- [Phase 384]: tracking 없는 off-chain action은 bridge_status NULL (비동기 추적 불필요)
+- [Phase 384]: DB 마이그레이션 v57 (복합 인덱스 action_kind + bridge_status)
 
 ### Pending Todos
 
@@ -100,6 +111,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-12T15:25:00.000Z
-Stopped at: Completed 383-02-PLAN.md
+Last session: 2026-03-12T15:42:00.000Z
+Stopped at: Completed 384-02-PLAN.md
 Resume file: None
