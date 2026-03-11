@@ -101,7 +101,10 @@ Plans:
   3. GET /v1/wallets/:id/actions로 off-chain action 목록을 venue/status 필터와 페이지네이션으로 조회할 수 있다
   4. connect-info API에 externalActions/signing/supportedVenues capability가 노출된다
   5. 서명 완료 후 keyStore.releaseKey()가 즉시 호출되고, ACTION_SIGNED/ACTION_HTTP_SIGNED 감사 로그가 기록된다
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 390-01-PLAN.md — signedData/signedHttp 파이프라인 함수 + kind-based 라우팅 분기 + 감사 이벤트
+- [ ] 390-02-PLAN.md — off-chain action 조회 API 2종 + connect-info capability 확장
 
 ### Phase 391: Admin UI
 **Goal**: 운영자가 Admin UI에서 credential 관리, off-chain action 모니터링, venue/category 정책을 설정할 수 있다
@@ -137,6 +140,6 @@ Phases execute in numeric order: 386 -> 387 -> 388 -> 389 -> 390 -> 391 -> 392
 | 387. Signer Capability 레지스트리 | 2/2 | Complete    | 2026-03-11 |
 | 388. Credential Vault | 2/2 | Complete    | 2026-03-11 |
 | 389. 추적 + 정책 확장 | 2/2 | Complete    | 2026-03-11 |
-| 390. 파이프라인 라우팅 + 조회 API | 0/TBD | Not started | - |
+| 390. 파이프라인 라우팅 + 조회 API | 0/2 | Not started | - |
 | 391. Admin UI | 0/TBD | Not started | - |
 | 392. MCP + SDK + 스킬 파일 | 0/TBD | Not started | - |
