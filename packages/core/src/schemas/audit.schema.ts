@@ -1,7 +1,7 @@
 /**
  * Audit log Zod SSoT schemas.
  *
- * Defines 23 audit event types, 3 severity levels, and request/response
+ * Defines 24 audit event types, 3 severity levels, and request/response
  * schemas for the GET /v1/audit-logs API.
  *
  * Derivation order: Zod -> TypeScript types -> OpenAPI (via @hono/zod-openapi)
@@ -13,12 +13,13 @@
 import { z } from 'zod';
 
 // ---------------------------------------------------------------------------
-// AuditEventType (23 events -- OPS-02 section 2.1 + PROVIDER_UPDATED + UserOp)
+// AuditEventType (24 events -- OPS-02 section 2.1 + PROVIDER_UPDATED + UserOp + WALLET_PURGED)
 // ---------------------------------------------------------------------------
 
 export const AUDIT_EVENT_TYPES = [
   'WALLET_CREATED',
   'WALLET_SUSPENDED',
+  'WALLET_PURGED',
   'SESSION_CREATED',
   'SESSION_REVOKED',
   'SESSION_ISSUED_VIA_TELEGRAM',

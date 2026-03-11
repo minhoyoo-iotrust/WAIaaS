@@ -35,6 +35,7 @@ export const API = {
   WALLET_OWNER_VERIFY: (id: string) => `/v1/wallets/${id}/owner/verify`,
   WALLET_SUSPEND: (id: string) => `/v1/wallets/${id}/suspend`,
   WALLET_RESUME: (id: string) => `/v1/wallets/${id}/resume`,
+  WALLET_PURGE: (id: string) => `/v1/wallets/${id}/purge`,
   ADMIN_AGENT_PROMPT: '/v1/admin/agent-prompt',
   ADMIN_SESSION_REISSUE: (id: string) => `/v1/admin/sessions/${id}/reissue`,
   ADMIN_TRANSACTIONS: '/v1/admin/transactions',

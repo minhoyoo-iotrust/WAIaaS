@@ -355,6 +355,8 @@ function WalletDetailView({ id }: { id: string }) {
   const editLoading = useSignal(false);
   const deleteModal = useSignal(false);
   const deleteLoading = useSignal(false);
+  const purgeModal = useSignal(false);
+  const purgeLoading = useSignal(false);
   const mcpLoading = useSignal(false);
   const mcpResult = useSignal<McpTokenResult | null>(null);
   const networks = useSignal<NetworkInfo[]>([]);
@@ -444,6 +446,20 @@ function WalletDetailView({ id }: { id: string }) {
       showToast('error', getErrorMessage(e.code));
     } finally {
       deleteLoading.value = false;
+    }
+  };
+
+  const handlePurge = async () => {
+    purgeLoading.value = true;
+    try {
+      await apiDelete(API.WALLET_PURGE(id));
+      showToast('success', 'Wallet permanently deleted');
+      window.location.hash = '#/wallets';
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      purgeLoading.value = false;
     }
   };
 
@@ -1920,6 +1936,11 @@ function WalletDetailView({ id }: { id: string }) {
                   Terminate Wallet
                 </Button>
               )}
+              {wallet.value.status === 'TERMINATED' && (
+                <Button variant="danger" onClick={() => { purgeModal.value = true; }}>
+                  Permanently Delete
+                </Button>
+              )}
             </div>
           </div>
 
@@ -1943,6 +1964,22 @@ function WalletDetailView({ id }: { id: string }) {
             <p>
               Are you sure you want to terminate wallet <strong>{wallet.value.name}</strong>? This
               action cannot be undone.
+            </p>
+          </Modal>
+
+          <Modal
+            open={purgeModal.value}
+            title="Permanently Delete Wallet"
+            onCancel={() => { purgeModal.value = false; }}
+            onConfirm={handlePurge}
+            confirmText="Delete Forever"
+            confirmVariant="danger"
+            loading={purgeLoading.value}
+          >
+            <p>
+              Are you sure you want to <strong>permanently delete</strong> wallet{' '}
+              <strong>{wallet.value.name}</strong>? All associated data (transactions, sessions,
+              policies, keys, audit logs) will be irreversibly removed. This cannot be undone.
             </p>
           </Modal>
 

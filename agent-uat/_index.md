@@ -11,7 +11,7 @@ updated: "2026-03-10"
 | testnet | 7 | Testnet 기능 검증 |
 | mainnet | 6 | Mainnet 전송 검증 |
 | defi | 13 | DeFi 프로토콜 검증 |
-| admin | 14 | Admin UI 검증 |
+| admin | 13 | Admin UI 검증 |
 | advanced | 6 | 고급 기능 검증 |
 
 ## Categories
@@ -80,12 +80,11 @@ updated: "2026-03-10"
 | admin-11 | Admin 백업/복원 무결성 검증 | all | No | $0 | low |
 | admin-12 | Admin 토큰 레지스트리 검증 | ethereum-mainnet | No | $0 | none |
 | admin-13 | Admin 통계/모니터링 API 검증 | all | No | $0 | none |
-| admin-14 | 지갑 CRUD 검증 | all | No | $0 | none |
 
 ## Network Index
 | Network | Scenarios |
 |---------|-----------|
-| all | admin-01, admin-02, admin-03, admin-04, admin-05, admin-09, admin-10, admin-11, admin-13, admin-14 |
+| all | admin-01, admin-02, admin-03, admin-04, admin-05, admin-09, admin-10, admin-11, admin-13 |
 | ethereum-sepolia | testnet-01, testnet-03, testnet-06, testnet-07, advanced-01, admin-09 |
 | solana-devnet | testnet-02, testnet-04, testnet-07 |
 | hyperliquid-testnet | testnet-05 |
@@ -97,9 +96,9 @@ updated: "2026-03-10"
 | hyperliquid-mainnet | defi-11 |
 
 ## Quick Filters
-- **마스터 패스워드 필요 (masterAuth)**: admin-01 ~ admin-14
+- **마스터 패스워드 필요 (masterAuth)**: admin-01 ~ admin-13
 - **세션 토큰만 (sessionAuth)**: testnet-01 ~ testnet-07, mainnet-01 ~ mainnet-06, defi-01 ~ defi-13, advanced-01 ~ advanced-06
-- **무료 (no funds)**: advanced-02, advanced-06, admin-01, admin-02, admin-03, admin-05, admin-06, admin-07, admin-08, admin-10, admin-11, admin-12, admin-13, admin-14
+- **무료 (no funds)**: advanced-02, advanced-06, admin-01, admin-02, admin-03, admin-05, admin-06, admin-07, admin-08, admin-10, admin-11, admin-12, admin-13
 - **Low risk**: testnet-01, testnet-02, testnet-03, testnet-04, testnet-06, testnet-07, advanced-01, admin-04, admin-09, admin-11
 - **Medium risk**: testnet-05, mainnet-01, mainnet-02, mainnet-03, mainnet-04, mainnet-05, mainnet-06, defi-01, defi-02, defi-03, defi-04, defi-05, defi-06, defi-07, defi-08, defi-09, defi-10, defi-11, defi-12, defi-13, advanced-03, advanced-04, advanced-05
 - **High risk**: (none yet)
