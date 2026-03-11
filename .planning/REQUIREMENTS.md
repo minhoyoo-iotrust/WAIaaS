@@ -96,46 +96,46 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TYPE-01 | — | Pending |
-| TYPE-02 | — | Pending |
-| TYPE-03 | — | Pending |
-| TYPE-04 | — | Pending |
-| TYPE-05 | — | Pending |
-| TYPE-06 | — | Pending |
-| SIGN-01 | — | Pending |
-| SIGN-02 | — | Pending |
-| SIGN-03 | — | Pending |
-| SIGN-04 | — | Pending |
-| SIGN-05 | — | Pending |
-| SIGN-06 | — | Pending |
-| CRED-01 | — | Pending |
-| CRED-02 | — | Pending |
-| CRED-03 | — | Pending |
-| CRED-04 | — | Pending |
-| CRED-05 | — | Pending |
-| CRED-06 | — | Pending |
-| CRED-07 | — | Pending |
-| CRED-08 | — | Pending |
-| TRCK-01 | — | Pending |
-| TRCK-02 | — | Pending |
-| TRCK-03 | — | Pending |
-| TRCK-04 | — | Pending |
-| PLCY-01 | — | Pending |
-| PLCY-02 | — | Pending |
-| PLCY-03 | — | Pending |
-| PLCY-04 | — | Pending |
-| PIPE-01 | — | Pending |
-| PIPE-02 | — | Pending |
-| PIPE-03 | — | Pending |
-| PIPE-04 | — | Pending |
-| PIPE-05 | — | Pending |
-| DOC-01 | — | Pending |
+| TYPE-01 | Phase 380 | Pending |
+| TYPE-02 | Phase 380 | Pending |
+| TYPE-03 | Phase 380 | Pending |
+| TYPE-04 | Phase 380 | Pending |
+| TYPE-05 | Phase 380 | Pending |
+| TYPE-06 | Phase 380 | Pending |
+| SIGN-01 | Phase 380 | Pending |
+| SIGN-02 | Phase 380 | Pending |
+| SIGN-03 | Phase 382 | Pending |
+| SIGN-04 | Phase 382 | Pending |
+| SIGN-05 | Phase 382 | Pending |
+| SIGN-06 | Phase 382 | Pending |
+| CRED-01 | Phase 381 | Pending |
+| CRED-02 | Phase 381 | Pending |
+| CRED-03 | Phase 381 | Pending |
+| CRED-04 | Phase 381 | Pending |
+| CRED-05 | Phase 381 | Pending |
+| CRED-06 | Phase 381 | Pending |
+| CRED-07 | Phase 381 | Pending |
+| CRED-08 | Phase 381 | Pending |
+| TRCK-01 | Phase 384 | Pending |
+| TRCK-02 | Phase 384 | Pending |
+| TRCK-03 | Phase 384 | Pending |
+| TRCK-04 | Phase 384 | Pending |
+| PLCY-01 | Phase 384 | Pending |
+| PLCY-02 | Phase 384 | Pending |
+| PLCY-03 | Phase 384 | Pending |
+| PLCY-04 | Phase 384 | Pending |
+| PIPE-01 | Phase 383 | Pending |
+| PIPE-02 | Phase 383 | Pending |
+| PIPE-03 | Phase 383 | Pending |
+| PIPE-04 | Phase 383 | Pending |
+| PIPE-05 | Phase 383 | Pending |
+| DOC-01 | Phase 385 | Pending |
 
 **Coverage:**
 - v1 requirements: 34 total
-- Mapped to phases: 0
-- Unmapped: 34 ⚠️
+- Mapped to phases: 34
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-11*
-*Last updated: 2026-03-11 after initial definition*
+*Last updated: 2026-03-11 after roadmap creation*
