@@ -57,7 +57,10 @@ Plans:
   2. Eip712/PersonalSign/Erc8128 어댑터가 기존 서명 함수를 래핑하여 동일한 결과를 생성한다
   3. HmacSignerCapability와 RsaPssSignerCapability가 credential 바이트를 받아 올바른 서명을 생성한다
   4. 기존 sign-message/sign-only/ERC-8128 파이프라인 경로가 변경 없이 동작한다
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 387-01-PLAN.md — ISignerCapability 타입 + SigningError + 7종 Capability 구현체 (TDD)
+- [ ] 387-02-PLAN.md — SignerCapabilityRegistry + bootstrap + 하위 호환 검증 (TDD)
 
 ### Phase 388: Credential Vault
 **Goal**: AI 에이전트의 외부 서비스 인증 정보가 per-wallet/글로벌 레벨로 암호화 저장되고 REST API로 관리할 수 있다
@@ -125,7 +128,7 @@ Phases execute in numeric order: 386 -> 387 -> 388 -> 389 -> 390 -> 391 -> 392
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 386. 타입 시스템 + 에러 코드 + DB 마이그레이션 | 3/3 | Complete    | 2026-03-11 |
-| 387. Signer Capability 레지스트리 | 0/TBD | Not started | - |
+| 387. Signer Capability 레지스트리 | 0/2 | Not started | - |
 | 388. Credential Vault | 0/TBD | Not started | - |
 | 389. 추적 + 정책 확장 | 0/TBD | Not started | - |
 | 390. 파이프라인 라우팅 + 조회 API | 0/TBD | Not started | - |
