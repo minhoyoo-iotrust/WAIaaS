@@ -1,13 +1,14 @@
 # 마일스톤 m31-11: External Action 프레임워크 설계
 
-- **Status:** PLANNED
+- **Status:** SHIPPED
 - **Milestone:** v31.11
+- **Completed:** 2026-03-11
 
 ## 목표
 
 WAIaaS를 on-chain tx-centric 모델에서 **action-centric 모델**로 확장하기 위한 설계를 수행한다. 에이전트가 on-chain contract call뿐 아니라, EIP-712 off-chain order, HMAC/RSA signed HTTP request, credential 기반 external venue action을 WAIaaS의 키/정책/추적 인프라 위에서 실행할 수 있도록 **기존 ActionProvider 프레임워크를 확장**한다.
 
-> **참조**: GitHub Issue #158 — external signed action 지원을 위한 `ExternalActionRequest` / signer capability 확장 제안
+> **참조**: GitHub Issue #158 (CLOSED) — external signed action 지원을 위한 `ExternalActionRequest` / signer capability 확장 제안. 이슈의 핵심 제안(ResolvedAction union, signer capability, credential vault, async tracking 일반화, venue-aware policy)이 본 마일스톤의 요구사항 R1~R6으로 반영됨.
 
 ---
 
@@ -74,9 +75,9 @@ WAIaaS의 ActionProvider 프레임워크(v1.5~)는 이미 "외부 의도 → WAI
   ```
 - **R1-2.** `SignedDataAction` 설계: `kind: 'signedData'`, `signingScheme`, `payload`, `venue`, `operation`, `credentialRef?`, `tracking?`, `policyContext?`
 - **R1-3.** `SignedHttpAction` 설계: `kind: 'signedHttp'`, 기존 `SignHttpMessageParams` 통합, `venue`, `operation`, `credentialRef?`
-- **R1-4.** 기존 `ContractCallRequest`는 변경하지 않음 (하위 호환). kind 필드 없음 = on-chain tx (기존 경로)
-- **R1-5.** Zod discriminatedUnion 설계: `kind` 필드로 분기 (`contractCall` | `signedData` | `signedHttp`)
-- **R1-6.** 기존 ActionProvider 구현체(Jupiter, 0x, LI.FI 등)는 변경 없이 동작해야 함 — `ContractCallRequest`를 반환하면 기존 경로 그대로
+- **R1-4.** 기존 `ContractCallRequest`에 `kind?: 'contractCall'` optional 필드를 추가 (하위 호환). 기존 provider가 kind 없이 반환해도 `ActionProviderRegistry`에서 `kind: 'contractCall'`로 정규화
+- **R1-5.** Zod discriminatedUnion 설계: `kind` 필드로 분기 (`contractCall` | `signedData` | `signedHttp`). 정규화 후에는 모든 멤버가 `kind`를 가지므로 정식 `discriminatedUnion` 사용 가능
+- **R1-6.** 기존 ActionProvider 구현체(Jupiter, 0x, LI.FI 등)는 변경 없이 동작해야 함 — `ContractCallRequest`를 kind 없이 반환하면 registry가 정규화 후 기존 경로 그대로
 
 ### R2. ISignerCapability 통합 인터페이스 설계
 
@@ -155,7 +156,7 @@ SettingsService를 per-wallet로 확장하면 글로벌 설정과 지갑별 cred
 ### R6. ActionProvider resolve() 확장 후 파이프라인 라우팅 설계
 
 - **R6-1.** `ActionProviderRegistry`에서 `resolve()` 결과의 `kind`에 따른 파이프라인 라우팅 설계:
-  - `ContractCallRequest` (kind 없음) → 기존 6-stage pipeline (무변경)
+  - `ContractCallRequest` (kind: 'contractCall', 정규화 후) → 기존 6-stage pipeline (무변경)
   - `SignedDataAction` → sign-message pipeline 확장 경로
   - `SignedHttpAction` → ERC-8128 pipeline 통합 경로
 - **R6-2.** 정책 평가 시점 설계: resolve() 후, 서명 전에 정책 평가 (기존 패턴 동일)
@@ -175,7 +176,7 @@ SettingsService를 per-wallet로 확장하면 글로벌 설정과 지갑별 cred
 | D4 | IAsyncStatusTracker 상태 확장 | off-chain 상태 enum, AsyncPollingService 쿼리 확장, 저장 위치 |
 | D5 | 정책 컨텍스트 확장 | TransactionParam 확장, venue 화이트리스트, 카테고리 한도 |
 | D6 | 파이프라인 라우팅 | resolve() 결과 kind별 분기, 정책 평가 시점, DB 기록 |
-| D7 | 설계 문서 doc-77 | External Action 프레임워크 전체 설계 (위 D1~D6 통합) |
+| D7 | 설계 문서 doc-81 | External Action 프레임워크 전체 설계 (위 D1~D6 통합) |
 
 ---
 
@@ -191,7 +192,7 @@ SettingsService를 per-wallet로 확장하면 글로벌 설정과 지갑별 cred
 | `packages/daemon/src/infrastructure/database/schema.ts` | wallet_credentials 테이블 설계 |
 | `packages/daemon/src/pipeline/database-policy-engine.ts` | 정책 컨텍스트 확장 설계 |
 | `packages/daemon/src/api/routes/actions.ts` | 라우팅 확장 설계 |
-| 설계 문서 | doc-77 (External Action 프레임워크 설계) |
+| 설계 문서 | doc-81 (External Action 프레임워크 설계) |
 
 ---
 

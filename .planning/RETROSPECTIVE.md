@@ -769,6 +769,45 @@
 
 ---
 
+## Milestone: v31.11 — External Action 프레임워크 설계
+
+**Shipped:** 2026-03-12
+**Phases:** 6 | **Plans:** 11 | **Sessions:** 1
+
+### What Was Built
+- ResolvedAction 3종 Zod union 타입 시스템 (contractCall/signedData/signedHttp kind 기반 분기)
+- ISignerCapability 통합 인터페이스 (기존 4종 래핑 + HMAC/RSA-PSS/signBytes, 7종 Registry)
+- CredentialVault 인프라 설계 (per-wallet AES-256-GCM, HKDF 도메인 분리, REST 8 endpoints)
+- 3-way 파이프라인 라우팅 (kind별 분기 + off-chain DB 기록, DB v55-v57)
+- 정책 확장 (VENUE_WHITELIST + ACTION_CATEGORY_LIMIT + TransactionParam 확장)
+- AsyncTrackingResult 9-state 확장 + AsyncPollingService 쿼리 확장
+- doc-81 통합 설계 문서 (1,184줄, 19 Zod 스키마, 4-Wave 구현 계획, 40+ pitfall 체크리스트)
+
+### What Worked
+- 6 phases 전체 ~1.1시간 완료 — 설계 전용 마일스톤으로 구현 코드 없이 빠른 진행
+- Phase 분리가 효과적: 타입(380) → 자격증명(381) → 서명(382) → 파이프라인(383) → 정책(384) → 통합(385) 흐름이 자연스러움
+- 기존 패턴 재활용 결정이 설계 복잡도 대폭 감소: CONTRACT_WHITELIST→VENUE_WHITELIST, bridge_status/bridge_metadata→off-chain tracking
+- 13개 기존 ActionProvider 무변경 하위 호환 분석을 Phase 380에서 선행하여 나머지 phases에서 안심하고 확장 가능
+
+### What Was Inefficient
+- doc-77 → doc-81 번호 변경이 뒤늦게 결정되어 일부 SUMMARY 파일에 doc-77 참조 잔존 (cosmetic)
+- 설계 전용이라 SUMMARY frontmatter의 one_liner 필드 미기재 — 자동 추출 실패
+
+### Patterns Established
+- Design-only milestone 패턴: 구현 코드 없이 Zod 스키마 초안 + 설계 문서만 산출, 구현 마일스톤의 입력으로 사용
+- Widening strategy: 기존 파이프라인/타입 무변경, optional kind 필드로 새 분기만 추가
+- 기존 인프라 100% 재활용 원칙: bridge_status/bridge_metadata/AsyncPollingService 그대로 사용
+
+### Key Lessons
+- 설계 마일스톤은 타입 시스템부터 시작하여 점진적으로 확장하는 것이 효과적 (타입 → 인프라 → 파이프라인 → 정책)
+- normalizeResolvedAction() 단일 정규화 지점 설계가 하위 호환을 깔끔하게 보장
+
+### Cost Observations
+- Sessions: 1
+- Notable: 설계 전용, 11 plans, 60 files, +13,039/-1,582 lines, ~1.1시간 완료
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -795,6 +834,7 @@
 | v31.8 | 1 | 5 | Agent UAT 시나리오 체계, 89 파일 1일 완료 |
 | v31.9 | 1 | 5 | Polymarket 예측 시장 통합, 93 파일 2일 완료 |
 | v31.10 | 1 | 5 | 코드베이스 품질 개선(순수 리팩토링), 89 파일 1일 완료 |
+| v31.11 | 1 | 6 | 설계 전용(External Action 프레임워크), 60 파일 1.1시간 완료 |
 
 ### Cumulative Quality
 
@@ -820,6 +860,7 @@
 | v31.8 | ~7,219 (unchanged) | maintained | +14 decisions |
 | v31.9 | ~7,454 (+235) | maintained | +12 decisions |
 | v31.10 | ~7,454 (unchanged) | maintained | +12 decisions |
+| v31.11 | ~7,454 (unchanged) | unchanged | +36 decisions |
 
 ### Top Lessons (Verified Across Milestones)
 

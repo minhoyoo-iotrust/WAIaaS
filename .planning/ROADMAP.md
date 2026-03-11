@@ -85,10 +85,4 @@
 - ✅ **v31.8** — Agent UAT (메인넷 인터랙티브 검증) (shipped 2026-03-10)
 - ✅ **v31.9** — Polymarket 예측 시장 통합 (shipped 2026-03-11)
 - ✅ **v31.10** — 코드베이스 품질 개선 (shipped 2026-03-11) — [archive](milestones/v31.10-ROADMAP.md)
-
-## Progress
-
-Total: 95 milestones shipped, 379 phases, ~859 plans
-
----
-*Last updated: 2026-03-11 after v31.10 milestone*
+- ✅ **v31.11** — External Action 프레임워크 설계 (shipped 2026-03-12) — [archive](milestones/v31.11-ROADMAP.md)

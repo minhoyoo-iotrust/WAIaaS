@@ -1,476 +1,406 @@
-# Architecture Patterns: Hyperliquid Ecosystem Integration
+# Architecture Patterns: External Action Framework
 
-**Domain:** DeFi DEX (Perp/Spot) + Off-chain Order Signing + Sub-accounts
-**Researched:** 2026-03-08
-**Confidence:** MEDIUM (Hyperliquid API docs verified via official gitbook, phantom agent signing details from SDK analysis)
-
-## Key Architectural Challenge
-
-Hyperliquid L1 DEX orders are **NOT on-chain transactions**. They are EIP-712 signed payloads submitted to Hyperliquid's centralized REST API (`api.hyperliquid.xyz/exchange`). This fundamentally differs from all existing WAIaaS pipeline flows:
-
-| Existing Pattern | Hyperliquid L1 |
-|---|---|
-| Build TX -> Sign -> Submit to chain | Build action -> Sign EIP-712 -> POST to API |
-| txHash from chain submission | oid/status from API response |
-| Confirmation via on-chain polling | No on-chain confirmation needed |
-| Gas estimation/payment | No gas fees (L1 API is gasless) |
-| IChainAdapter.buildTransaction() | Custom EIP-712 typed data construction |
-
-HyperEVM (Chain ID 999/998) is a separate concern -- it is a standard EVM chain where the existing `EvmAdapter` works as-is for on-chain HyperEVM operations (token transfers, contract calls). The L1 DEX integration is the novel architectural problem.
+**Domain:** ActionProvider framework extension (on-chain tx-centric -> action-centric model)
+**Researched:** 2026-03-11
+**Confidence:** HIGH (based on direct codebase analysis of existing architecture)
 
 ---
 
 ## Recommended Architecture
 
-### Decision: Extend IActionProvider with API-Direct Resolution
+### Overview
 
-**Do NOT** create a new pipeline type or discriminatedUnion type. Instead, introduce a new return type variant for `IActionProvider.resolve()` that carries an "API-direct result" payload rather than `ContractCallRequest`.
-
-**Rationale:**
-1. Adding a 9th discriminatedUnion type (e.g., `DEX_ORDER`) would touch every pipeline stage, policy form, admin UI, test -- massive blast radius for a single provider.
-2. The existing `SIGN` type (sign-message pipeline) is for raw message signing -- it does not go through policy evaluation, which Hyperliquid orders need.
-3. The cleanest approach: action providers that produce **API-direct results** sign-and-submit within their own `resolve()`, returning a result object instead of `ContractCallRequest`. The pipeline stages 1-3 (validate, auth, policy) still run, but stage 5 (execute) is handled by the provider itself.
-
-### Proposed Pattern: `ApiDirectResult`
-
-```typescript
-/**
- * Result from an API-direct action (no on-chain TX).
- * The provider handles signing + API submission internally.
- * Pipeline stages 1-4 (validate/auth/policy/delay) still apply.
- */
-export interface ApiDirectResult {
-  /** Discriminator: marks this as API-direct, not ContractCallRequest. */
-  __apiDirect: true;
-  /** Provider-specific order/action ID. */
-  externalId: string;
-  /** Human-readable status. */
-  status: string;
-  /** Provider-specific response data (order fills, etc). */
-  data: Record<string, unknown>;
-}
-
-/**
- * Update IActionProvider.resolve() return type to support API-direct results.
- * Alternatively, introduce IApiDirectProvider as a sub-interface.
- */
-export interface IActionProvider {
-  resolve(
-    actionName: string,
-    params: Record<string, unknown>,
-    context: ActionContext & { privateKey?: Hex },  // key access for signing
-  ): Promise<ContractCallRequest | ContractCallRequest[] | ApiDirectResult>;
-}
-```
-
-### Pipeline Integration: Stage 5 Branching
+External Action framework extends WAIaaS from `ContractCallRequest`-only ActionProvider resolution to a `ResolvedAction` union type system. The extension follows a **widening strategy**: existing pipelines remain untouched, new `kind`-based routing branches off after `ActionProviderRegistry.executeResolve()`.
 
 ```
-Stage 1 (Validate) -> Stage 2 (Auth) -> Stage 3 (Policy) -> Stage 4 (Delay/Approval)
-  |
-  v
-Stage 5: Is result ApiDirectResult?
-  YES -> Record in DB as COMPLETED (no txHash, store externalId + response in metadata)
-  NO  -> Existing on-chain execution flow (build -> simulate -> sign -> submit)
+                                  ActionProviderRegistry.executeResolve()
+                                              |
+                                     ResolvedAction union
+                                    /         |            \
+                     kind:'contractCall'  kind:'signedData'  kind:'signedHttp'
+                           |                  |                   |
+                    [existing path]    SignedDataPipeline    SignedHttpPipeline
+                    6-stage pipeline   (sign-message ext)   (ERC-8128 integration)
+                           |                  |                   |
+                    IChainAdapter       ISignerCapability    ISignerCapability
+                    .signTransaction()  .sign()              .sign()
+                           |                  |                   |
+                    transactions DB     transactions DB      transactions DB
+                    (status tracking)   (+ externalActionStatus)
 ```
 
-**Critical:** Policy evaluation (stage 3) still runs. The `ActionProviderRegistry` extracts amount/asset info from the action params for policy evaluation BEFORE calling `resolve()`. This means:
-- `HyperliquidPerpProvider` actions declare `riskLevel` and `defaultTier`
-- Policy engine evaluates spending limits based on declared amount (size * price for position value)
-- Only after policy passes does `resolve()` run, which internally signs EIP-712 and POSTs to Hyperliquid API
+### Component Boundaries
 
-### Key Access for Signing
+| Component | Responsibility | Package | Communicates With |
+|-----------|---------------|---------|-------------------|
+| **ResolvedAction (Zod union)** | Type system: `kind` discriminant for 3 action types | `@waiaas/core` | ActionProviderRegistry, Pipeline Router |
+| **ActionProviderRegistry** (modified) | Normalize `kind`, route to correct pipeline | `@waiaas/daemon` | IActionProvider, Pipeline stages, ISignerCapability |
+| **ISignerCapability** (new interface) | Unified signing abstraction over 7 schemes | `@waiaas/core` | SignerCapabilityRegistry, Pipelines |
+| **SignerCapabilityRegistry** (new) | `signingScheme -> ISignerCapability` mapping | `@waiaas/daemon` | ISignerCapability adapters, Pipeline Router |
+| **Eip712SignerCapability** (new adapter) | Wraps existing `sign-message.ts` typedData path | `@waiaas/daemon` | sign-message.ts (unchanged) |
+| **PersonalSignCapability** (new adapter) | Wraps existing `sign-message.ts` personal path | `@waiaas/daemon` | sign-message.ts (unchanged) |
+| **Erc8128SignerCapability** (new adapter) | Wraps existing `http-message-signer.ts` | `@waiaas/daemon` | http-message-signer.ts (unchanged) |
+| **HmacSignerCapability** (new) | HMAC-SHA256 signing for CEX API auth | `@waiaas/daemon` | node:crypto |
+| **RsaPssSignerCapability** (new) | RSA-PSS signing for external API auth | `@waiaas/daemon` | node:crypto |
+| **CredentialVault** (new) | Per-wallet encrypted credential CRUD | `@waiaas/daemon` | settings-crypto.ts (reuse), wallet_credentials table |
+| **CredentialResolver** (new) | Resolve credentialRef: per-wallet -> global fallback | `@waiaas/daemon` | CredentialVault, SettingsService |
+| **ExternalActionTracker** (new) | IAsyncStatusTracker impl for off-chain action states | `@waiaas/actions` | AsyncPollingService (existing) |
+| **Pipeline Router** (new function) | Route ResolvedAction.kind to correct execution path | `@waiaas/daemon` | stage5Execute (existing), SignedDataPipeline, SignedHttpPipeline |
 
-The provider needs the wallet's private key to sign EIP-712 typed data. Currently, `ActionContext` does not include the key. Options:
+### Data Flow
 
-**Option A (recommended):** Pass decrypted key via extended `ActionContext` only when provider declares `requiresSigningKey: true` in metadata. The `ActionProviderRegistry` decrypts the key after policy passes (stage 4), passes it to `resolve()`, and releases it after.
+#### Path A: Existing ContractCallRequest (unchanged)
 
-**Option B:** Provider receives a `SigningDelegate` callback `(typedData) => Promise<Hex>` that internally handles key decryption. More encapsulated but adds async complexity.
+```
+1. POST /v1/actions/:provider/:action
+2. ActionProviderRegistry.executeResolve() -> ContractCallRequest (kind absent)
+3. Registry normalizes: adds kind:'contractCall'
+4. Pipeline Router -> existing 6-stage pipeline (zero changes)
+5. Stage 5: IChainAdapter.signTransaction() / ApiDirectResult branch
+```
 
-Choose Option A because the existing sign-message pipeline already does `keyStore.decrypt -> use -> keyStore.release` inline, and the pattern is well-understood.
+#### Path B: SignedDataAction (new)
+
+```
+1. POST /v1/actions/:provider/:action
+2. ActionProviderRegistry.executeResolve() -> SignedDataAction (kind:'signedData')
+3. Pipeline Router -> SignedDataPipeline
+4. Policy evaluation (venue whitelist + action category + spending check)
+5. CredentialResolver: resolve credentialRef (per-wallet -> global fallback)
+6. SignerCapabilityRegistry.get(signingScheme) -> ISignerCapability
+7. ISignerCapability.sign(payload, key/credential)
+8. Submit to venue API (if submitUrl provided)
+9. DB record: transactions row + external_action_status metadata
+10. Optional: register ExternalActionTracker for async status polling
+```
+
+#### Path C: SignedHttpAction (new)
+
+```
+1. POST /v1/actions/:provider/:action
+2. ActionProviderRegistry.executeResolve() -> SignedHttpAction (kind:'signedHttp')
+3. Pipeline Router -> SignedHttpPipeline
+4. Policy evaluation (ERC8128_ALLOWED_DOMAINS + venue whitelist)
+5. Erc8128SignerCapability.sign() (wraps existing http-message-signer.ts)
+6. Execute HTTP request with signed headers
+7. DB record: transactions row + response metadata
+```
 
 ---
 
-## Component Boundaries
+## Integration Points (Existing -> Modified -> New)
 
-### New Components
+### 1. IActionProvider.resolve() Return Type -- MODIFIED
 
-| Component | Package | Responsibility | Communicates With |
-|---|---|---|---|
-| `HyperliquidExchangeClient` | `packages/actions` | REST API wrapper for Exchange + Info endpoints, rate limiting | Hyperliquid API |
-| `HyperliquidSigner` | `packages/actions` | EIP-712 typed data construction + phantom agent signing | viem signTypedData |
-| `HyperliquidPerpProvider` | `packages/actions` | IPerpProvider for perp trading (open/close/modify/leverage/margin) | ExchangeClient, Signer, MarketData |
-| `HyperliquidSpotProvider` | `packages/actions` | IActionProvider for spot trading (buy/sell market/limit) | ExchangeClient, Signer |
-| `HyperliquidSubAccountService` | `packages/actions` | Sub-account CRUD + internal transfers | ExchangeClient |
-| `HyperliquidMarketData` | `packages/actions` | Market info, funding rates, oracle prices from Info API | ExchangeClient |
+**Current:**
+```typescript
+resolve(...): Promise<ContractCallRequest | ContractCallRequest[] | ApiDirectResult>;
+```
 
-### Modified Components
+**Extended:**
+```typescript
+resolve(...): Promise<ResolvedAction | ResolvedAction[] | ApiDirectResult>;
 
-| Component | Change | Reason |
-|---|---|---|
-| `packages/core/src/enums/chain.ts` | Add `hyperevm-mainnet`, `hyperevm-testnet` to `NETWORK_TYPES` + `EVM_NETWORK_TYPES` + `ENVIRONMENT_NETWORK_MAP` | HyperEVM chain support |
-| `packages/adapters/evm/src/evm-chain-map.ts` | Add viem chain imports to `EVM_CHAIN_MAP` | HyperEVM chain resolution |
-| `packages/core/src/interfaces/action-provider.types.ts` | Add `ApiDirectResult` type, update resolve() return type | API-direct provider pattern |
-| `ActionProviderRegistry` (daemon) | Handle `ApiDirectResult` return -- skip on-chain execution, record directly | Stage 5 branching |
-| `packages/daemon/src/pipeline/stages.ts` | Stage 5 branch: if `ApiDirectResult`, update DB and skip chain submission | API-direct execution |
-| `packages/daemon/src/infrastructure/database/migrate.ts` | v51: `hyperliquid_orders`, v52: `hyperliquid_sub_accounts` | Order history + sub-account mapping |
+type ResolvedAction =
+  | ContractCallRequest      // kind?: 'contractCall' (optional for backward compat)
+  | SignedDataAction          // kind: 'signedData'
+  | SignedHttpAction          // kind: 'signedHttp'
+```
 
-### Unmodified Components (Reuse As-Is)
+**Backward Compatibility:** `ContractCallRequest` gains optional `kind?: 'contractCall'`. Existing providers return without `kind`; the registry normalizes by adding `kind: 'contractCall'` post-parse. Zero changes to existing 20+ providers.
 
-| Component | Why No Change |
-|---|---|
-| `EvmAdapter` | HyperEVM is standard EVM -- existing adapter works |
-| `LocalKeyStore` | Same key decryption for EIP-712 signing |
-| `PolicyEngine` | Actions declare risk/tier, amounts extracted from params |
-| `NotificationService` | Reuse existing event types (TRANSACTION_COMPLETED) |
-| `SettingsService` | Standard Admin Settings pattern for config |
-| `MCP tools / SDK methods` | Auto-generated from ActionProviderRegistry |
-| `discriminatedUnion 8-type` | No new type -- API-direct actions are handled via ActionProvider, not pipeline types |
+**File:** `packages/core/src/interfaces/action-provider.types.ts`
 
----
+### 2. ActionProviderRegistry.executeResolve() -- MODIFIED
 
-## EIP-712 Signing Flow
+**Current behavior:** Returns `(ContractCallRequest | ApiDirectResult)[]`
+**Extended behavior:** Returns `(ResolvedAction | ApiDirectResult)[]`
 
-Hyperliquid uses **two distinct EIP-712 domains** depending on action category.
+Changes:
+- After `resolve()` returns, check `kind` field
+- If absent (legacy ContractCallRequest), normalize: add `kind: 'contractCall'`, then `ContractCallRequestSchema.parse()` as before
+- If `kind: 'signedData'`, validate with `SignedDataActionSchema.parse()`
+- If `kind: 'signedHttp'`, validate with `SignedHttpActionSchema.parse()`
+- Auto-tag `actionProvider`/`actionName` on all types (not just ContractCallRequest)
 
-### Domain 1: L1 Trading Actions (Orders, Cancel, Leverage)
+**File:** `packages/daemon/src/infrastructure/action/action-provider-registry.ts`
 
-Uses the **Phantom Agent** mechanism -- does NOT sign the order directly:
+### 3. Pipeline Stage 5 -- MODIFIED (branch point)
+
+**Current:** `stage5Execute()` branches on `ctx.actionResult` (ApiDirectResult) and `ctx.wallet.accountType` (smart account).
+
+**Extended:** Add a third branch on `ctx.resolvedActionKind`:
 
 ```typescript
-// Step 1: Normalize action (remove trailing zeros from price/size fields)
-const normalizedAction = removeTrailingZeros(action);
+export async function stage5Execute(ctx: PipelineContext): Promise<void> {
+  // Existing: Smart account path
+  if (ctx.wallet.accountType === 'smart') { ... }
 
-// Step 2: MessagePack encode the normalized action
-const encoded = msgpack.encode(normalizedAction);
+  // Existing: ApiDirectResult path
+  if (ctx.actionResult) { ... }
 
-// Step 3: Append nonce + optional vaultAddress metadata
-const metadata = Buffer.concat([encoded, nonceBytes, vaultAddressBytes]);
+  // NEW: SignedData path
+  if (ctx.resolvedActionKind === 'signedData') {
+    await stage5ExecuteSignedData(ctx);
+    return;
+  }
 
-// Step 4: Keccak256 hash -> connectionId
-const connectionId = keccak256(metadata);
+  // NEW: SignedHttp path
+  if (ctx.resolvedActionKind === 'signedHttp') {
+    await stage5ExecuteSignedHttp(ctx);
+    return;
+  }
 
-// Step 5: Build phantom agent
-const phantomAgent = {
-  source: isMainnet ? 'a' : 'b',
-  connectionId,
-};
+  // Existing: on-chain TX path (unchanged)
+  ...
+}
+```
 
-// EIP-712 domain for ALL trading actions
-const EXCHANGE_DOMAIN = {
-  name: 'Exchange',
-  version: '1',
-  chainId: 1337,
-  verifyingContract: '0x0000000000000000000000000000000000000000',
-};
+**File:** `packages/daemon/src/pipeline/stages.ts`
 
-// Types: sign the phantom agent struct, not the order
-const types = {
-  Agent: [
-    { name: 'source', type: 'string' },
-    { name: 'connectionId', type: 'bytes32' },
-  ],
-};
+### 4. PipelineContext -- MODIFIED
 
-// Sign using viem
-const signature = await account.signTypedData({
-  domain: EXCHANGE_DOMAIN,
-  types,
-  primaryType: 'Agent',
-  message: phantomAgent,
+Add fields to carry ResolvedAction data through the pipeline:
+
+```typescript
+export interface PipelineContext {
+  // ... existing fields ...
+
+  // NEW: External action fields
+  resolvedActionKind?: 'contractCall' | 'signedData' | 'signedHttp';
+  signedDataAction?: SignedDataAction;
+  signedHttpAction?: SignedHttpAction;
+  credentialRef?: string;  // resolved credential reference
+}
+```
+
+**File:** `packages/daemon/src/pipeline/stages.ts`
+
+### 5. TransactionParam -- MODIFIED (policy context)
+
+**Current:** 12 fields for on-chain TX policy evaluation.
+
+**Extended:** Add off-chain action context:
+
+```typescript
+interface TransactionParam {
+  // ... existing fields ...
+
+  // NEW: Off-chain action policy context
+  venue?: string;              // e.g., 'cow_protocol', 'binance', 'erc8128'
+  actionCategory?: 'trade' | 'withdraw' | 'transfer' | 'sign' | 'query';
+  notionalUsd?: number;        // estimated USD value for spending limit
+  leverage?: number;           // for leveraged trading venues
+  hasWithdrawCapability?: boolean;  // venue can withdraw to external address
+}
+```
+
+**File:** `packages/daemon/src/pipeline/database-policy-engine.ts`, `packages/daemon/src/pipeline/stages.ts`
+
+### 6. DatabasePolicyEngine -- MODIFIED (2 new policy types)
+
+Add evaluation steps after existing step 4i-c:
+
+- **4j. VENUE_WHITELIST**: Deny if `venue` not in allowed venues (default-deny, follows CONTRACT_WHITELIST pattern)
+- **4k. ACTION_CATEGORY_LIMIT**: Per-category spending limits (follows SPENDING_LIMIT pattern, keyed by `actionCategory`)
+
+**File:** `packages/daemon/src/pipeline/database-policy-engine.ts`
+
+### 7. ActionDefinition -- MODIFIED
+
+Add optional field for off-chain action metadata:
+
+```typescript
+export const ActionDefinitionSchema = z.object({
+  // ... existing fields ...
+
+  // NEW: signing scheme hint for pipeline routing
+  signingScheme: z.enum([
+    'eip712', 'personal', 'hmac-sha256', 'rsa-pss',
+    'ecdsa-secp256k1', 'ed25519', 'erc8128',
+  ]).optional(),
+
+  // NEW: venue identifier for policy evaluation
+  venue: z.string().optional(),
+
+  // NEW: action category for category-based policies
+  actionCategory: z.enum(['trade', 'withdraw', 'transfer', 'sign', 'query']).optional(),
 });
-
-// Parse into {r, s, v} for Hyperliquid API
-const { r, s, v } = parseSignature(signature);
 ```
 
-### Domain 2: User Actions (Transfers, Withdrawals, ApproveAgent)
+**File:** `packages/core/src/interfaces/action-provider.types.ts`
 
-Standard EIP-712 without phantom agent:
+### 8. AsyncPollingService.pollAll() -- MODIFIED (query expansion)
 
-```typescript
-const USER_ACTION_DOMAIN = {
-  name: 'HyperliquidSignTransaction',
-  version: '1',
-  chainId: isMainnet ? 42161 : 421614,  // Arbitrum chain IDs
-  verifyingContract: '0x0000000000000000000000000000000000000000',
-};
+**Current:** Queries `bridge_status IN ('PENDING', 'BRIDGE_MONITORING') OR status = 'GAS_WAITING'`.
 
-// Types vary per action, e.g., UsdSend:
-const types = {
-  'HyperliquidTransaction:UsdSend': [
-    { name: 'hyperliquidChain', type: 'string' },
-    { name: 'destination', type: 'string' },
-    { name: 'amount', type: 'string' },
-    { name: 'time', type: 'uint64' },
-  ],
-};
-```
+**Extended:** Add `OR external_action_status IN ('PENDING', 'PARTIALLY_FILLED')` to pick up external action tracking targets. The `resolveTrackerName()` method reads `metadata.tracker` to find the correct tracker (existing pattern).
 
-### Key Points for WAIaaS Integration
+**File:** `packages/daemon/src/services/async-polling-service.ts`
 
-1. **New dependency: `@msgpack/msgpack`** -- required for action serialization before hashing
-2. **Keccak256** -- already available via viem
-3. **Trailing zero removal** from price/size strings is CRITICAL for hash correctness
-4. **`viem privateKeyToAccount().signTypedData()`** -- already used in `sign-message.ts`
-5. The wallet's existing EVM private key signs both HyperEVM on-chain TXs and Hyperliquid L1 orders -- **no separate key management needed**
-6. **Nonce = timestamp in milliseconds** (Date.now()) -- simple, no complex nonce tracking needed
-7. **Signature format: `{r, s, v}`** -- Hyperliquid expects the decomposed ECDSA signature
+### 9. transactions Table -- MODIFIED (1 new column)
 
----
-
-## Sub-Account Model
-
-### Hyperliquid Sub-Account Facts (from official docs)
-
-- Sub-accounts **do not have private keys** -- the master account signs on behalf
-- Operations include `vaultAddress` field set to sub-account address
-- Nonces are tracked per signer (not per sub-account) -- parallel ops on multiple sub-accounts with same signer can collide
-- Official recommendation: **separate API wallets (agents) for different sub-accounts** for parallel operations
-- Info API: `type: "subAccounts"` returns all sub-accounts with balances/positions
-
-### WAIaaS Mapping: 1 Wallet = Master Account, Sub-accounts as Metadata
-
-**Do NOT** create separate WAIaaS wallets for sub-accounts. Instead:
-
-```
-WAIaaS Wallet (EVM, hyperevm-mainnet)
-  |-- Master Hyperliquid account (wallet.publicKey)
-  |-- Sub-account A (stored in hyperliquid_sub_accounts table)
-  |-- Sub-account B (stored in hyperliquid_sub_accounts table)
-```
-
-**Rationale:**
-1. Sub-accounts share the master key -- creating separate WAIaaS wallets would duplicate key storage and break the 1-key-1-wallet invariant
-2. Sub-accounts are Hyperliquid-specific -- they don't map to blockchain addresses in the general sense
-3. Action params include an optional `subAccount` field to target a specific sub-account
-4. Policy evaluation applies to the master wallet -- spending limits aggregate across sub-accounts
-
----
-
-## Data Flow
-
-### Order Placement Flow
-
-```
-Agent/MCP -> POST /v1/actions/execute
-  { provider: "hyperliquid_perp", action: "hl_open_position",
-    params: { market: "ETH", direction: "LONG", size: "1.0",
-              leverage: 10, orderType: "market" } }
-
-1. ActionProviderRegistry.resolveAction()
-   -> Validate params via Zod schema
-   -> Extract amount info for policy: size * currentPrice (from HyperliquidMarketData)
-
-2. Pipeline Stage 1-3: Validate, Auth, Policy
-   -> Policy evaluates spending limit (notional value = size * price, in USD)
-   -> Tier determined (defaultTier from action definition, override from Admin Settings)
-
-3. Pipeline Stage 4: Wait/Approval (if tier requires)
-
-4. Pipeline Stage 5: Execute
-   -> Detect provider has requiresSigningKey: true
-   -> keyStore.decrypt(walletId, masterPassword) -> privateKey
-   -> HyperliquidPerpProvider.resolve(actionName, params, { ...context, privateKey })
-     a. Build Hyperliquid order action { type: "order", orders: [...], grouping: "na" }
-     b. HyperliquidSigner.signAction(action, nonce, privateKey, isMainnet)
-        -> Normalize (trailing zero removal)
-        -> MessagePack encode + append nonce
-        -> Keccak256 -> connectionId
-        -> EIP-712 signTypedData (phantom agent)
-     c. HyperliquidExchangeClient.exchange({ action, nonce, signature, vaultAddress? })
-     d. Parse response -> ApiDirectResult { externalId: oid, status: 'filled'|'resting', data }
-   -> keyStore.release(walletId)
-
-5. Pipeline records result:
-   -> INSERT into hyperliquid_orders (oid, market, side, size, price, status, ...)
-   -> UPDATE transactions SET status='COMPLETED', metadata={ externalId, hlResponse }
-
-6. Stage 6: Notification
-   -> TRANSACTION_COMPLETED event with Hyperliquid-specific metadata
-```
-
-### Info Query Flow (No Pipeline -- Read-Only)
-
-```
-Agent/MCP -> MCP tool: hl_get_positions / hl_get_open_orders
-  -> HyperliquidExchangeClient.info({ type: 'clearinghouseState', user: walletAddress })
-  -> Return formatted positions/orders (read-only, no pipeline, no DB write)
-```
-
-### Sub-Account Internal Transfer Flow
-
-```
-Agent/MCP -> POST /v1/actions/execute
-  { provider: "hyperliquid_perp", action: "hl_internal_transfer",
-    params: { subAccount: "0x...", amount: "1000", toPerp: true } }
-
-  -> Policy evaluation (TRANSFER-like, amount is the transfer value)
-  -> HyperliquidSigner.signUserAction("usdClassTransfer", action, privateKey)
-     (uses HyperliquidSignTransaction domain, NOT phantom agent)
-  -> HyperliquidExchangeClient.exchange({ action, signature })
-  -> ApiDirectResult
-```
-
----
-
-## DB Schema Changes
-
-### v51: Hyperliquid Order History
+Add `external_action_status` column to store off-chain action lifecycle state:
 
 ```sql
-CREATE TABLE hyperliquid_orders (
+ALTER TABLE transactions ADD COLUMN external_action_status TEXT
+  CHECK(external_action_status IN (
+    'PENDING', 'PARTIALLY_FILLED', 'FILLED', 'CANCELED',
+    'SETTLED', 'EXPIRED', 'COMPLETED', 'FAILED'
+  ));
+
+CREATE INDEX idx_transactions_external_action_status
+  ON transactions(external_action_status)
+  WHERE external_action_status IS NOT NULL;
+```
+
+This follows the `bridge_status` column pattern. NULL for on-chain TX (no impact on existing queries).
+
+**DB migration:** v55
+
+**File:** `packages/daemon/src/infrastructure/database/schema.ts`, migration script
+
+### 10. wallet_credentials Table -- NEW
+
+```sql
+CREATE TABLE wallet_credentials (
   id TEXT PRIMARY KEY,                    -- UUID v7
-  wallet_id TEXT NOT NULL REFERENCES wallets(id),
-  sub_account_address TEXT,               -- NULL = master account
-  oid INTEGER,                            -- Hyperliquid order ID (from response)
-  cloid TEXT,                             -- Client order ID (128-bit hex, optional)
-  transaction_id TEXT REFERENCES transactions(id),  -- Link to pipeline TX record
-  market TEXT NOT NULL,                   -- e.g., 'ETH', 'BTC', 'PURR'
-  asset_index INTEGER NOT NULL,           -- Hyperliquid asset index (perp: direct, spot: 10000+)
-  side TEXT NOT NULL CHECK(side IN ('BUY', 'SELL')),
-  order_type TEXT NOT NULL CHECK(order_type IN ('MARKET', 'LIMIT', 'STOP_MARKET', 'STOP_LIMIT', 'TAKE_PROFIT', 'TWAP')),
-  size TEXT NOT NULL,                     -- Decimal string (no trailing zeros)
-  price TEXT,                             -- Decimal string (NULL for market orders)
-  trigger_price TEXT,                     -- For stop/TP orders
-  tif TEXT CHECK(tif IN ('GTC', 'IOC', 'ALO')),
-  reduce_only INTEGER NOT NULL DEFAULT 0,
-  status TEXT NOT NULL CHECK(status IN ('PENDING', 'RESTING', 'FILLED', 'PARTIALLY_FILLED', 'CANCELLED', 'REJECTED', 'TRIGGERED')),
-  filled_size TEXT,
-  avg_fill_price TEXT,
-  is_spot INTEGER NOT NULL DEFAULT 0,     -- 0=perp, 1=spot
-  leverage INTEGER,                       -- Perp only
-  margin_mode TEXT CHECK(margin_mode IN ('CROSS', 'ISOLATED')),
-  response_data TEXT,                     -- JSON: full API response
-  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
-  updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+  wallet_id TEXT NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
+  type TEXT NOT NULL CHECK(type IN ('api-key', 'hmac-secret', 'rsa-private-key', 'session-token', 'custom')),
+  name TEXT NOT NULL,                     -- human-readable name (e.g., 'binance_api_key')
+  encrypted_value TEXT NOT NULL,          -- AES-256-GCM via settings-crypto.ts
+  metadata TEXT,                          -- JSON: { exchange, permissions, ... }
+  expires_at INTEGER,                     -- Unix timestamp (seconds), NULL = no expiry
+  created_at INTEGER NOT NULL,            -- Unix timestamp (seconds)
+  updated_at INTEGER NOT NULL,            -- Unix timestamp (seconds)
+  UNIQUE(wallet_id, name)                 -- one credential per name per wallet
 );
 
-CREATE INDEX idx_hl_orders_wallet ON hyperliquid_orders(wallet_id);
-CREATE INDEX idx_hl_orders_oid ON hyperliquid_orders(oid);
-CREATE INDEX idx_hl_orders_market ON hyperliquid_orders(market);
-CREATE INDEX idx_hl_orders_status ON hyperliquid_orders(status);
+CREATE INDEX idx_wallet_credentials_wallet_id ON wallet_credentials(wallet_id);
 ```
 
-### v52: Hyperliquid Sub-accounts
+**DB migration:** v55 (same migration as external_action_status)
 
-```sql
-CREATE TABLE hyperliquid_sub_accounts (
-  id TEXT PRIMARY KEY,
-  wallet_id TEXT NOT NULL REFERENCES wallets(id),
-  sub_account_address TEXT NOT NULL,      -- 42-char hex
-  name TEXT,                              -- User-assigned name
-  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
-  UNIQUE(wallet_id, sub_account_address)
-);
+### 11. REST API Routes -- MODIFIED
+
+**Existing `POST /v1/actions/:provider/:action`** handles all 3 kinds. No new endpoints for action execution. The pipeline router inside the handler dispatches based on `kind`.
+
+**New credential management endpoints:**
+
 ```
+POST   /v1/wallets/:walletId/credentials     -- Create credential (sessionAuth)
+GET    /v1/wallets/:walletId/credentials     -- List credentials (masked values)
+DELETE /v1/wallets/:walletId/credentials/:id -- Delete credential
+PUT    /v1/wallets/:walletId/credentials/:id -- Rotate credential
+```
+
+### 12. SettingsService + CredentialVault Coexistence
+
+```
+Credential Resolution Priority:
+1. CredentialVault.get(walletId, credentialRef)  -- per-wallet credential
+2. SettingsService.getApiKey(providerName)       -- global daemon credential (fallback)
+```
+
+Both use `settings-crypto.ts` (`encryptSettingValue`/`decryptSettingValue`/`deriveSettingsKey`) for AES-256-GCM encryption. CredentialVault stores in `wallet_credentials` table; SettingsService stores in `settings` table. No code duplication -- both import from the same module.
 
 ---
 
 ## Patterns to Follow
 
-### Pattern 1: Drift-like Provider Structure
+### Pattern 1: Kind-Based Normalization (backward compat)
 
-Follow the exact same file structure as `packages/actions/src/providers/drift/`:
+**What:** When `resolve()` returns without `kind` field, registry normalizes by adding `kind: 'contractCall'`. This preserves all existing provider behavior with zero changes.
 
-```
-packages/actions/src/providers/hyperliquid/
-  config.ts              -- API endpoints, rate limits, defaults
-  schemas.ts             -- Zod input schemas for all actions
-  exchange-client.ts     -- HyperliquidExchangeClient (REST API wrapper)
-  signer.ts              -- HyperliquidSigner (EIP-712 + phantom agent)
-  market-data.ts         -- HyperliquidMarketData (Info API queries)
-  perp-provider.ts       -- HyperliquidPerpProvider (IPerpProvider)
-  spot-provider.ts       -- HyperliquidSpotProvider (IActionProvider)
-  sub-account-service.ts -- Sub-account management
-  index.ts               -- Re-exports
-```
+**When:** Any existing provider returns `ContractCallRequest` without `kind`.
 
-### Pattern 2: Action Definition with Risk Levels
-
+**Example:**
 ```typescript
-this.actions = [
-  {
-    name: 'hl_open_position',
-    description: 'Open a leveraged perpetual position on Hyperliquid DEX with market or limit order',
-    chain: 'ethereum',  // HyperEVM is EVM chain type
-    inputSchema: HlOpenPositionInputSchema,
-    riskLevel: 'high',
-    defaultTier: 'APPROVAL',
-  },
-  {
-    name: 'hl_close_position',
-    description: 'Close a perpetual position on Hyperliquid DEX (full or partial)',
-    chain: 'ethereum',
-    inputSchema: HlClosePositionInputSchema,
-    riskLevel: 'medium',
-    defaultTier: 'DELAY',
-  },
-  {
-    name: 'hl_place_order',
-    description: 'Place a limit order on Hyperliquid DEX with optional stop-loss/take-profit',
-    chain: 'ethereum',
-    inputSchema: HlPlaceOrderInputSchema,
-    riskLevel: 'high',
-    defaultTier: 'APPROVAL',
-  },
-  {
-    name: 'hl_cancel_order',
-    description: 'Cancel an open order on Hyperliquid DEX',
-    chain: 'ethereum',
-    inputSchema: HlCancelOrderInputSchema,
-    riskLevel: 'low',
-    defaultTier: 'INSTANT',
-  },
-  {
-    name: 'hl_set_leverage',
-    description: 'Update leverage for a perpetual market on Hyperliquid',
-    chain: 'ethereum',
-    inputSchema: HlSetLeverageInputSchema,
-    riskLevel: 'medium',
-    defaultTier: 'DELAY',
-  },
-];
-```
+// In ActionProviderRegistry.executeResolve():
+function normalizeResolvedAction(raw: unknown): ResolvedAction {
+  if (isApiDirectResult(raw)) return raw; // unchanged
 
-### Pattern 3: Admin Settings Keys
-
-```
-HYPERLIQUID_API_URL           -- default: https://api.hyperliquid.xyz
-HYPERLIQUID_TESTNET_API_URL   -- default: https://api.hyperliquid-testnet.xyz
-HYPERLIQUID_ENABLED           -- feature gate (default: true)
-HYPERLIQUID_RATE_LIMIT_RPM    -- requests per minute (default: 600, conservative vs 1200 API limit)
-HYPERLIQUID_DEFAULT_LEVERAGE  -- default leverage for new positions (default: 1)
-HYPERLIQUID_BUILDER_ADDRESS   -- optional builder fee address
-HYPERLIQUID_BUILDER_FEE       -- optional builder fee rate (tenths of basis points)
-```
-
-### Pattern 4: Rate Limiting (from existing RPC Pool pattern)
-
-```typescript
-class HyperliquidRateLimiter {
-  private requestCount = 0;
-  private windowStart = Date.now();
-  private readonly maxRpm: number;
-
-  constructor(maxRpm = 600) {
-    this.maxRpm = maxRpm;
+  const obj = raw as Record<string, unknown>;
+  if (!obj.kind) {
+    // Legacy ContractCallRequest -- normalize
+    return { ...ContractCallRequestSchema.parse(obj), kind: 'contractCall' };
   }
 
-  async throttle(): Promise<void> {
-    const now = Date.now();
-    if (now - this.windowStart > 60_000) {
-      this.requestCount = 0;
-      this.windowStart = now;
-    }
-    if (this.requestCount >= this.maxRpm) {
-      const waitMs = 60_000 - (now - this.windowStart);
-      await new Promise(resolve => setTimeout(resolve, waitMs));
-      this.requestCount = 0;
-      this.windowStart = Date.now();
-    }
-    this.requestCount++;
+  // New action types have explicit kind
+  return ResolvedActionSchema.parse(obj);
+}
+```
+
+### Pattern 2: ISignerCapability Adapter (wrap, don't refactor)
+
+**What:** Each existing signer is wrapped in an ISignerCapability adapter. The original code paths remain unchanged; adapters delegate to the existing functions.
+
+**When:** Building signer capabilities for existing signing mechanisms.
+
+**Example:**
+```typescript
+interface ISignerCapability {
+  readonly scheme: SigningScheme;
+  sign(params: SigningParams): Promise<SigningResult>;
+  verify?(params: VerifyParams): Promise<boolean>;
+}
+
+class Eip712SignerCapability implements ISignerCapability {
+  readonly scheme = 'eip712';
+
+  async sign(params: SigningParams): Promise<SigningResult> {
+    // Delegate to existing viem signTypedData (same code as sign-message.ts step 5)
+    const account = privateKeyToAccount(params.privateKey);
+    const signature = await account.signTypedData(params.typedData);
+    return { signature, scheme: 'eip712' };
   }
+}
+```
+
+### Pattern 3: CredentialRef Indirect Reference
+
+**What:** Actions never receive raw credentials. They reference credentials by `credentialRef` (UUID or `{walletId}:{name}`), and the pipeline resolves the actual value just before signing.
+
+**When:** Any action that needs external API credentials (CEX API keys, HMAC secrets).
+
+**Example:**
+```typescript
+// In SignedDataAction:
+{
+  kind: 'signedData',
+  signingScheme: 'hmac-sha256',
+  payload: { /* order data */ },
+  credentialRef: 'binance_api_key',  // resolved at pipeline time
+  venue: 'binance',
+  operation: 'create_order',
+}
+
+// Pipeline resolution (CredentialResolver):
+const credential = credentialVault.get(walletId, 'binance_api_key')
+  ?? settingsService.getDecryptedApiKey('binance');
+```
+
+### Pattern 4: ExternalActionTracker Registration (follows BridgeStatusTracker)
+
+**What:** When a SignedDataAction includes `tracking` metadata, register an ExternalActionTracker with AsyncPollingService after execution.
+
+**When:** Off-chain actions with async completion (e.g., CoW Protocol order fill, CEX withdrawal).
+
+**Example:**
+```typescript
+// After successful signing + submission:
+if (signedDataAction.tracking) {
+  const metadata = {
+    tracker: 'external-action',
+    venue: signedDataAction.venue,
+    operation: signedDataAction.operation,
+    checkUrl: signedDataAction.tracking.statusUrl,
+    ...signedDataAction.tracking.metadata,
+  };
+  await db.update(transactions).set({
+    externalActionStatus: 'PENDING',
+    bridgeMetadata: JSON.stringify(metadata),
+  }).where(eq(transactions.id, txId));
 }
 ```
 
@@ -478,126 +408,173 @@ class HyperliquidRateLimiter {
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: New discriminatedUnion Type
+### Anti-Pattern 1: Separate VenueProvider Abstraction
 
-**What:** Adding `DEX_ORDER` or `HYPERLIQUID_ORDER` as 9th type in TransactionRequestSchema.
-**Why bad:** Every pipeline stage, policy type, admin UI form, MCP tool template, SDK type, test fixture -- hundreds of files would need updates. The discriminatedUnion is for on-chain TX types only.
-**Instead:** Use `ApiDirectResult` pattern where the action provider encapsulates the entire API interaction.
+**What:** Creating a new `IVenueProvider` interface parallel to `IActionProvider`.
 
-### Anti-Pattern 2: Separate WAIaaS Wallets for Sub-accounts
+**Why bad:** Duplicates registration, discovery, MCP exposure, policy evaluation, and admin UI integration. Existing `IActionProvider` already has `metadata`, `actions`, `resolve()`, `requiresApiKey`, `mcpExpose` -- everything needed.
 
-**What:** Creating a new WAIaaS wallet for each Hyperliquid sub-account.
-**Why bad:** Sub-accounts share the master key, creating wallets would duplicate encrypted keys and break the 1-key-1-wallet invariant. Policy enforcement would also be fragmented.
-**Instead:** Sub-accounts are metadata within the Hyperliquid provider scope, stored in a dedicated table linked to the master wallet.
+**Instead:** Extend `IActionProvider.resolve()` return type to `ResolvedAction` union. Venue-specific providers are just ActionProviders that return `SignedDataAction` or `SignedHttpAction`.
 
-### Anti-Pattern 3: Real-time WebSocket in Initial Phases
+### Anti-Pattern 2: Refactoring Existing Pipelines
 
-**What:** Implementing WebSocket subscriptions for live order/position updates from day one.
-**Why bad:** Adds significant complexity (connection management, reconnection, event routing) before the basic trading flow works.
-**Instead:** Use REST polling via Info API initially. WebSocket can be added as a follow-up enhancement.
+**What:** Modifying `sign-message.ts`, `sign-only.ts`, or `http-message-signer.ts` to use ISignerCapability internally.
 
-### Anti-Pattern 4: Manual EIP-712 Signing Outside Provider
+**Why bad:** These are stable, well-tested paths with 7,400+ tests depending on them. Changing them risks regression for zero benefit (existing callers don't need ISignerCapability).
 
-**What:** Using the existing `executeSignMessage()` pipeline to sign Hyperliquid orders separately, then submitting via a different API call.
-**Why bad:** Two separate pipeline invocations for one logical operation. Policy evaluation would run on the signing step but not know the trading context (market, leverage, size).
-**Instead:** Sign and submit atomically within provider `resolve()` after policy has already evaluated the action params.
+**Instead:** ISignerCapability adapters wrap existing functions. New action paths use ISignerCapability; old paths remain unchanged. Gradual migration is possible later but not required.
 
-### Anti-Pattern 5: Building Own msgpack/EIP-712 from Scratch
+### Anti-Pattern 3: Per-Wallet SettingsService Extension
 
-**What:** Implementing MessagePack encoding or EIP-712 domain manually.
-**Why bad:** The Hyperliquid signing docs explicitly warn: "It is recommended to use an existing SDK instead of manually generating signatures, as there are many potential ways in which signatures can be wrong." Field ordering in msgpack matters for hash correctness.
-**Instead:** Use `@msgpack/msgpack` library and viem's `signTypedData` -- both battle-tested.
+**What:** Adding `walletId` scope to `SettingsService` to handle per-wallet credentials.
+
+**Why bad:** SettingsService is daemon-global by design (masterAuth only, admin-scoped). Adding per-wallet scope mixes auth models (sessionAuth vs masterAuth), complicates key management, and creates ambiguity about which settings are global vs per-wallet.
+
+**Instead:** Separate `CredentialVault` with per-wallet scope (sessionAuth). Reuse `settings-crypto.ts` encryption primitives only.
+
+### Anti-Pattern 4: Separate external_actions Table
+
+**What:** Creating a new `external_actions` table instead of extending `transactions`.
+
+**Why bad:** Fragments query patterns (admin UI, SDK, MCP all query `transactions`), breaks existing indexes, complicates cross-action-type reporting, and doubles audit log complexity.
+
+**Instead:** Add `external_action_status` column to `transactions` (follows `bridge_status` pattern). NULL for on-chain TX -- zero impact on existing queries.
+
+---
+
+## Component Interaction Diagram
+
+```
+                     REST API / MCP / SDK
+                            |
+                    actions.ts route handler
+                            |
+                 ActionProviderRegistry.executeResolve()
+                            |
+                    +-------+-------+
+                    |               |
+              ApiDirectResult   ResolvedAction[]
+              (existing path)       |
+                    |        normalizeKind()
+                    |               |
+                    |    +----------+----------+
+                    |    |          |          |
+                    | contractCall signedData signedHttp
+                    |    |          |          |
+                    | [existing]   |          |
+                    |    |         |          |
+                    v    v         v          v
+               PipelineContext (carries action data through stages)
+                    |
+              stage1Validate (shared: DB INSERT, txId generation)
+                    |
+              stage2Auth (shared: sessionAuth validation)
+                    |
+              stage3Policy (extended: venue/category policies)
+                    |          |
+                    |   CredentialResolver
+                    |   (per-wallet -> global)
+                    |          |
+              stage4Wait (shared: tier-based wait)
+                    |
+              stage5Execute (branched by resolvedActionKind)
+               /         |          \
+        on-chain    signedData    signedHttp
+        (existing)      |            |
+        IChainAdapter   |     Erc8128SignerCapability
+                        |            |
+                 SignerCapabilityRegistry.get(scheme)
+                        |
+                 ISignerCapability.sign()
+                        |
+                 Submit to venue API (optional)
+                        |
+              stage6Confirm / ExternalActionTracker registration
+                        |
+                   transactions DB update
+```
 
 ---
 
 ## Scalability Considerations
 
-| Concern | Small (< 10 orders/min) | Medium (10-100/min) | Large (100+/min) |
-|---|---|---|---|
-| Rate Limiting | In-memory counter sufficient | Token bucket with Admin Setting | Multiple API wallets per master |
-| Nonce Management | Date.now() (ms timestamp) | Monotonic counter | Per-API-wallet nonce tracking |
-| Order History | SQLite table with indexes | Periodic cleanup/archival | External DB for order history |
-| Sub-account Ops | Sequential per wallet | Separate API wallets per sub-account | Connection pooling |
-| Info API Queries | On-demand REST calls | Cache with 5-10s TTL | WebSocket for streaming |
+| Concern | At 10 wallets | At 100 wallets | At 1000 wallets |
+|---------|---------------|----------------|-----------------|
+| wallet_credentials rows | ~50 | ~500 | ~5,000 |
+| Credential decrypt per action | 1 HKDF + 1 AES-GCM (<1ms) | Same per-request | Same per-request, no scaling issue |
+| AsyncPollingService targets | +5 external trackers | +50 external trackers | Consider polling batching or per-wallet polling limits |
+| ISignerCapability instances | 7 singletons (scheme registry) | Same singletons | Same singletons |
+| Policy evaluation (VENUE_WHITELIST) | O(n) venue scan | Same -- n is small (venues << 100) | Same |
 
 ---
 
-## Suggested Build Order (with Dependencies)
+## Suggested Build Order
 
-### Phase 1: HyperEVM Chain Addition (standalone, no deps)
-- Add `hyperevm-mainnet`, `hyperevm-testnet` to chain enums
-- Add viem chain imports to EVM_CHAIN_MAP
-- Tests: existing EVM wallet creation/transfer works on HyperEVM
-- **Pure config change -- no new components**
+Based on dependency analysis, the recommended implementation order:
 
-### Phase 2: Research + Design Document (depends on Phase 1 for chain verification)
-- Verify viem chain exports (exact import names)
-- Write design document with EIP-712 signing details, API types, DB schema
-- Define `ApiDirectResult` interface and pipeline branching design
-- Prototype phantom agent signing in isolation test
+### Phase 1: Type System Foundation (no runtime changes)
+1. **ResolvedAction Zod union** in `@waiaas/core` (R1)
+2. **ISignerCapability interface** in `@waiaas/core` (R2-1, R2-2)
+3. **SigningSchemeEnum** in `@waiaas/core` (R2-2)
+4. **ActionDefinition extension** (optional venue/signingScheme/actionCategory fields)
 
-### Phase 3: Core Infrastructure + Perp (depends on Phase 2)
-- `HyperliquidExchangeClient` (REST wrapper, rate limiter)
-- `HyperliquidSigner` (EIP-712 + phantom agent + user action signing)
-- `HyperliquidMarketData` (Info API: positions, orders, markets, funding)
-- `ApiDirectResult` interface in `@waiaas/core`
-- `ActionProviderRegistry` update for `ApiDirectResult` handling
-- Stage 5 branching in `stages.ts`
-- DB v51: `hyperliquid_orders` table
-- `HyperliquidPerpProvider` (open/close/modify/set_leverage/update_margin + cancel)
-- MCP tools + SDK methods (auto-generated from provider)
-- Admin Settings (7 keys)
-- **Largest phase -- builds all shared infrastructure**
+*Rationale:* All other components depend on these types. No runtime behavior changes -- pure type additions.
 
-### Phase 4: Spot Trading (depends on Phase 3)
-- `HyperliquidSpotProvider` (buy/sell market/limit, cancel)
-- Spot asset index handling (10000 + index)
-- Reuses ExchangeClient, Signer, orders table (is_spot=1)
-- MCP tools + SDK methods
+### Phase 2: Infrastructure (CredentialVault + DB migration)
+5. **DB migration v55**: `wallet_credentials` table + `external_action_status` column
+6. **CredentialVault** implementation (CRUD, settings-crypto.ts reuse)
+7. **CredentialResolver** (per-wallet -> global fallback logic)
+8. **REST API credential endpoints** (4 CRUD routes under `/v1/wallets/:walletId/credentials`)
 
-### Phase 5: Sub-accounts (depends on Phase 3, parallel with Phase 4)
-- DB v52: `hyperliquid_sub_accounts` table
-- `HyperliquidSubAccountService` (create, list, internal transfer via sendAsset)
-- `vaultAddress` propagation through signer
-- Per-sub-account position/balance queries
-- MCP tools + SDK methods
+*Rationale:* CredentialVault is independent of pipeline changes. Can be built and tested in isolation. DB migration must happen before any code references new columns.
 
-### Phase 6: Admin UI + Full Integration (depends on Phases 3-5)
-- Admin UI: Hyperliquid positions/orders dashboard
-- Admin UI: Sub-account management view
-- Skill files update (transactions.skill.md, admin.skill.md)
-- connect-info `hyperliquid` capability
+### Phase 3: Signer Capabilities
+9. **SignerCapabilityRegistry** implementation
+10. **Adapter capabilities**: Eip712SignerCapability, PersonalSignCapability, Erc8128SignerCapability
+11. **New capabilities**: HmacSignerCapability, RsaPssSignerCapability
 
-**Dependency graph:**
-```
-Phase 1 (chain)
-  |
-Phase 2 (design)
-  |
-Phase 3 (core + perp) --------+
-  |                            |
-  +-- Phase 4 (spot)           +-- Phase 5 (sub-accounts)
-  |                            |
-  +----------------------------+
-  |
-Phase 6 (admin UI + integration)
-```
+*Rationale:* Adapters wrap existing code (low risk). New capabilities are independent modules. All can be unit-tested without pipeline integration.
+
+### Phase 4: Pipeline Integration
+12. **ActionProviderRegistry modification**: normalize `kind`, validate new types
+13. **PipelineContext extension**: new fields for action kind and data
+14. **Pipeline Router**: stage5 branching for signedData/signedHttp
+15. **SignedDataPipeline**: credential resolution + signer dispatch + venue submission
+16. **SignedHttpPipeline**: ERC-8128 integration path
+
+*Rationale:* Most complex phase. Depends on Phases 1-3. Changes core execution path -- needs comprehensive testing.
+
+### Phase 5: Policy + Tracking Extension
+17. **TransactionParam extension**: venue, actionCategory, notionalUsd
+18. **VENUE_WHITELIST policy type** in DatabasePolicyEngine
+19. **ACTION_CATEGORY_LIMIT policy type** in DatabasePolicyEngine
+20. **ExternalActionTracker** implementation (IAsyncStatusTracker)
+21. **AsyncPollingService query extension** for external action targets
+
+*Rationale:* Policy changes are additive (new evaluation steps after existing ones). Tracking extension follows established BridgeStatusTracker pattern.
+
+### Phase 6: Interface Extension
+22. **Admin UI**: Credentials tab in wallet detail, policy forms for new types
+23. **MCP tools**: credential management tools, external action query tools
+24. **SDK methods**: credential CRUD, action execution (no changes needed -- same endpoint)
+25. **connect-info extension**: external_actions capability
+26. **Skill files update**: admin.skill.md, wallet.skill.md
+
+*Rationale:* UI/interface changes depend on all infrastructure being in place.
 
 ---
 
 ## Sources
 
-- [Hyperliquid Exchange Endpoint Docs](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/exchange-endpoint) -- HIGH confidence (official docs, all action types verified)
-- [Hyperliquid Info Endpoint Docs](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint) -- HIGH confidence (official docs)
-- [Hyperliquid Signing Docs](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/signing) -- HIGH confidence (official docs, warns against manual signing)
-- [Hyperliquid Nonces and API Wallets](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/nonces-and-api-wallets) -- HIGH confidence (official docs)
-- [Hyperliquid Rate Limits](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/rate-limits-and-user-limits) -- HIGH confidence (official docs, 1200 RPM IP limit, per-address volume-based)
-- [Hyperliquid Order Types](https://hyperliquid.gitbook.io/hyperliquid-docs/trading/order-types) -- HIGH confidence (official docs)
-- [DeepWiki: Hyperliquid SDK Signing](https://deepwiki.com/nomeida/hyperliquid/6.1-authentication-and-signing) -- MEDIUM confidence (SDK reverse-engineering, not official spec; domain params verified against Turnkey blog)
-- [Turnkey x Hyperliquid EIP-712](https://www.turnkey.com/blog/hyperliquid-secure-eip-712-signing) -- MEDIUM confidence (third-party integration, confirms domain params)
-- [Chainstack Hyperliquid SubAccounts](https://docs.chainstack.com/reference/hyperliquid-info-subaccounts) -- MEDIUM confidence (third-party reference docs)
-- Codebase: `packages/actions/src/providers/drift/index.ts` -- HIGH confidence (existing IPerpProvider pattern)
-- Codebase: `packages/core/src/interfaces/action-provider.types.ts` -- HIGH confidence (IActionProvider resolve() contract)
-- Codebase: `packages/daemon/src/pipeline/stages.ts` -- HIGH confidence (6-stage pipeline, PipelineContext)
-- Codebase: `packages/daemon/src/pipeline/sign-message.ts` -- HIGH confidence (existing EIP-712 signTypedData usage)
-- Codebase: `packages/core/src/enums/chain.ts` -- HIGH confidence (current network types, DB v50)
+- Direct codebase analysis (HIGH confidence):
+  - `packages/core/src/interfaces/action-provider.types.ts` -- IActionProvider, ActionDefinition, ApiDirectResult
+  - `packages/daemon/src/infrastructure/action/action-provider-registry.ts` -- executeResolve flow
+  - `packages/daemon/src/pipeline/stages.ts` -- PipelineContext, stage5Execute, ApiDirectResult branch
+  - `packages/daemon/src/pipeline/database-policy-engine.ts` -- TransactionParam, policy evaluation chain
+  - `packages/daemon/src/pipeline/sign-message.ts` -- sign-message pipeline (6-step)
+  - `packages/core/src/erc8128/http-message-signer.ts` -- ERC-8128 signer
+  - `packages/daemon/src/infrastructure/settings/settings-crypto.ts` -- AES-256-GCM encryption
+  - `packages/daemon/src/services/async-polling-service.ts` -- AsyncPollingService polling lifecycle
+  - `packages/actions/src/common/async-status-tracker.ts` -- IAsyncStatusTracker interface
+  - `packages/daemon/src/infrastructure/database/schema.ts` -- transactions table schema
+- Milestone objective: `internal/objectives/m31-11-external-action-design.md` -- R1-R6 requirements

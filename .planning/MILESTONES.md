@@ -1,5 +1,29 @@
 # Project Milestones: WAIaaS
 
+## v31.11 External Action 프레임워크 설계 (Shipped: 2026-03-12)
+
+**Phases completed:** 380-385 (6 phases, 11 plans, 34 requirements)
+
+**Key accomplishments:**
+
+- ResolvedAction 3종 Zod union 타입 시스템 — contractCall/signedData/signedHttp kind 기반 분기, 기존 13개 ActionProvider 무변경 하위 호환
+- ISignerCapability 통합 인터페이스 — 기존 4종 signer 래핑 + HMAC/RSA-PSS/signBytes 신규, SignerCapabilityRegistry 7종 자동 매핑
+- CredentialVault 인프라 설계 — per-wallet AES-256-GCM 암호화 자격증명 저장소, HKDF 도메인 분리, REST 8 endpoints + Admin UI + MCP/SDK
+- 3-way 파이프라인 라우팅 — kind별 contractCall/signedData/signedHttp 분기, off-chain action DB 기록, DB v55-v57 마이그레이션 설계
+- 정책 + 추적 확장 — VENUE_WHITELIST + ACTION_CATEGORY_LIMIT, AsyncTrackingResult 9-state 확장
+- doc-81 통합 설계 문서 — D1~D6 전체 통합 (1,184줄), 19 Zod 스키마, 4-Wave 구현 계획, 40+ pitfall 체크리스트
+
+**Stats:**
+
+- 6 phases (380-385), 11 plans, 34 requirements, 36 design decisions
+- 46 commits, 60 files changed, +13,039 / -1,582 lines
+- ~276,614 LOC TypeScript total
+- Timeline: 1 day (2026-03-11 → 2026-03-12)
+- Type: Design-only (no implementation code)
+- Design document: doc-81 External Action 프레임워크 (1,184 lines)
+
+---
+
 ## v31.10 코드베이스 품질 개선 (Shipped: 2026-03-11)
 
 **Phases completed:** 375-379 (5 phases, 8 plans, 16 requirements)
