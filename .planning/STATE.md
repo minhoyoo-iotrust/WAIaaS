@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v31.10
 milestone_name: milestone
 status: executing
-stopped_at: Completed Phase 375 (375-01-PLAN.md, 375-02-PLAN.md)
-last_updated: "2026-03-11T08:16:49.762Z"
-last_activity: 2026-03-11 — Phase 375 complete
+stopped_at: Completed Phase 376 (376-01-PLAN.md, 376-02-PLAN.md)
+last_updated: "2026-03-11T08:46:20.253Z"
+last_activity: 2026-03-11 — Phase 376 complete
 progress:
   total_phases: 5
-  completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
-  percent: 25
+  completed_phases: 2
+  total_plans: 4
+  completed_plans: 4
+  percent: 50
 ---
 
 # Project State
@@ -21,29 +21,30 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-11)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Phase 376 - 타입 안전성 개선
+**Current focus:** Phase 377 - 대형 파일 분할
 
 ## Current Position
 
-Phase: 2 of 5 (Phase 376: 타입 안전성 개선)
+Phase: 3 of 5 (Phase 377: 대형 파일 분할)
 Plan: 0 of 2 in current phase
 Status: Ready to execute
-Last activity: 2026-03-11 — Phase 375 complete
+Last activity: 2026-03-11 — Phase 376 complete
 
-Progress: [██░░░░░░░░] 25%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
-- Average duration: 7.5 min
-- Total execution time: 0.25 hours
+- Total plans completed: 4
+- Average duration: 8.75 min
+- Total execution time: 0.58 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 375 | 2 | 15min | 7.5min |
+| 376 | 2 | 20min | 10min |
 
 ## Accumulated Context
 
@@ -57,6 +58,9 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - parseTokenAmount는 explicit decimals 필수 (기본값 없음) -- 호출부 명확성 확보
 - contract-encoding encodeApproveCalldata는 bigint amount 시그니처 표준화
 - provider-specific contract 파일은 re-export 패턴으로 하위 호환 유지
+- AccountType cast for Drizzle text->union narrowing (as any 대체)
+- INftApprovalQuery 인터페이스 + hasNftApprovalQuery 타입 가드로 optional adapter capability 패턴 확립
+- resolveChainId는 daemon/helpers/에 배치 (daemon-specific, core가 아님)
 
 ### Pending Todos
 
@@ -69,5 +73,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-11
-Stopped at: Completed Phase 375 (375-01-PLAN.md, 375-02-PLAN.md)
+Stopped at: Completed Phase 376 (376-01-PLAN.md, 376-02-PLAN.md)
 Resume file: None

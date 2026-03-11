@@ -16,10 +16,10 @@
 
 ### Type Safety (타입 안전성)
 
-- [ ] **TYPE-01**: WalletRow 타입에 SmartAccount 필드 포함 (`accountType`, `signerKey`, `deployed`, `aaProvider`)하여 `(wallet as any)` 40+곳 제거
-- [ ] **TYPE-02**: `resolveChainId()` 중복 통합 (`actions.ts`와 `admin-actions.ts` 2곳 → 1곳)
-- [ ] **TYPE-03**: CAIP-19 regex 중복 제거 (`policy.schema.ts` 인라인 → `caip/index.ts` import)
-- [ ] **TYPE-04**: `nft-approvals.ts`의 `(adapter as any).getNftApprovalStatus` → 인터페이스 기반 타입 가드로 교체
+- [x] **TYPE-01**: WalletRow 타입에 SmartAccount 필드 포함 (`accountType`, `signerKey`, `deployed`, `aaProvider`)하여 `(wallet as any)` 40+곳 제거
+- [x] **TYPE-02**: `resolveChainId()` 중복 통합 (`actions.ts`와 `admin-actions.ts` 2곳 → 1곳)
+- [x] **TYPE-03**: CAIP-19 regex 중복 제거 (`policy.schema.ts` 인라인 → `caip/index.ts` import)
+- [x] **TYPE-04**: `nft-approvals.ts`의 `(adapter as any).getNftApprovalStatus` → 인터페이스 기반 타입 가드로 교체
 
 ### File Split (대형 파일 분할)
 
@@ -62,10 +62,10 @@ None — 순수 리팩토링 마일스톤이므로 추가 기능 없음.
 | UTIL-02 | Phase 375 | Complete |
 | UTIL-03 | Phase 375 | Complete |
 | UTIL-04 | Phase 375 | Complete |
-| TYPE-01 | Phase 376 | Pending |
-| TYPE-02 | Phase 376 | Pending |
-| TYPE-03 | Phase 376 | Pending |
-| TYPE-04 | Phase 376 | Pending |
+| TYPE-01 | Phase 376 | Complete |
+| TYPE-02 | Phase 376 | Complete |
+| TYPE-03 | Phase 376 | Complete |
+| TYPE-04 | Phase 376 | Complete |
 | SPLIT-01 | Phase 377 | Pending |
 | SPLIT-02 | Phase 377 | Pending |
 | SPLIT-03 | Phase 377 | Pending |

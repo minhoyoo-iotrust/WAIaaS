@@ -46,8 +46,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 376-01-PLAN.md — WalletRow SmartAccount 필드 타입 확장 및 as any 제거
-- [ ] 376-02-PLAN.md — resolveChainId 통합, CAIP-19 regex 중복 제거, NFT 타입 가드 교체
+- [x] 376-01-PLAN.md — WalletRow SmartAccount 필드 타입 확장 및 as any 제거
+- [x] 376-02-PLAN.md — resolveChainId 통합, CAIP-19 regex 중복 제거, NFT 타입 가드 교체
 
 ### Phase 377: 대형 파일 분할
 **Goal**: admin.ts (3,107줄)가 도메인별 모듈로 분할되어 각 파일이 관리 가능한 크기가 된다
@@ -99,7 +99,7 @@ All phases are independent and can execute in any order: 375 → 376 → 377 →
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 375. 유틸리티 함수 통합 | 2/2 | Complete    | 2026-03-11 |
-| 376. 타입 안전성 개선 | 0/2 | Not started | - |
+| 376. 타입 안전성 개선 | 2/2 | Complete | 2026-03-11 |
 | 377. 대형 파일 분할 | 0/2 | Not started | - |
 | 378. API 에러 응답 일관성 | 0/1 | Not started | - |
 | 379. 상수 중앙화 | 0/1 | Not started | - |
