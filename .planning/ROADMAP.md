@@ -27,11 +27,11 @@
   2. `packages/actions/src/common/contract-encoding.ts`에 `padHex`, `addressToHex`, `uint256ToHex`, `encodeApproveCalldata` 함수가 존재하고 5곳 이상의 프로바이더가 이를 import하여 사용한다
   3. 프로바이더 파일에 로컬로 정의된 parseTokenAmount/padHex/addressToHex/uint256ToHex/encodeApproveCalldata 구현이 0개이다
   4. `pnpm turbo run lint && pnpm turbo run typecheck && pnpm turbo run test` 전체 통과
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 375-01: parseTokenAmount 공통 모듈 추출 및 프로바이더 교체
-- [ ] 375-02: contract-encoding 공통 모듈 추출 및 프로바이더 교체
+- [ ] 375-01-PLAN.md — parseTokenAmount 공통 모듈 추출 및 7개 프로바이더 교체
+- [ ] 375-02-PLAN.md — contract-encoding 공통 모듈 추출 및 4개 프로바이더 교체
 
 ### Phase 376: 타입 안전성 개선
 **Goal**: `(wallet as any)` 및 `(adapter as any)` 타입 escape가 제거되고 중복된 타입 관련 코드가 통합된다
@@ -98,7 +98,7 @@ All phases are independent and can execute in any order: 375 → 376 → 377 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 375. 유틸리티 함수 통합 | 0/2 | Not started | - |
+| 375. 유틸리티 함수 통합 | 0/2 | Planned | - |
 | 376. 타입 안전성 개선 | 0/2 | Not started | - |
 | 377. 대형 파일 분할 | 0/2 | Not started | - |
 | 378. API 에러 응답 일관성 | 0/1 | Not started | - |
