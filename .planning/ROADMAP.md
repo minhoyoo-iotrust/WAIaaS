@@ -89,7 +89,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 379-01-PLAN.md — 매직 넘버 식별 및 패키지별 constants 파일 추출 (~20개 파일 교체)
+- [x] 379-01-PLAN.md — 매직 넘버 식별 및 패키지별 constants 파일 추출 (~20개 파일 교체)
 
 ## Progress
 
