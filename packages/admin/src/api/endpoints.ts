@@ -62,4 +62,12 @@ export const API = {
   WALLET_PROVIDER: (id: string) => `/v1/wallets/${id}/provider`,
   ADMIN_WALLET_NFTS: (id: string) => `/v1/wallets/${id}/nfts`,
   ADMIN_WALLET_NFT_METADATA: (id: string, tokenId: string) => `/v1/wallets/${id}/nfts/${tokenId}`,
+  ADMIN_CREDENTIALS: '/v1/admin/credentials',
+  ADMIN_CREDENTIAL_DELETE: (ref: string) => `/v1/admin/credentials/${ref}`,
+  ADMIN_CREDENTIAL_ROTATE: (ref: string) => `/v1/admin/credentials/${ref}/rotate`,
+  WALLET_CREDENTIALS: (id: string) => `/v1/wallets/${id}/credentials`,
+  WALLET_CREDENTIAL_DELETE: (id: string, ref: string) => `/v1/wallets/${id}/credentials/${ref}`,
+  WALLET_CREDENTIAL_ROTATE: (id: string, ref: string) => `/v1/wallets/${id}/credentials/${ref}/rotate`,
+  WALLET_ACTIONS: (id: string) => `/v1/wallets/${id}/actions`,
+  WALLET_ACTION_DETAIL: (id: string, actionId: string) => `/v1/wallets/${id}/actions/${actionId}`,
 } as const;
