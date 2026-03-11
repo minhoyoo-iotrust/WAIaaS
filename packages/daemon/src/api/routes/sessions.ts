@@ -772,7 +772,7 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
       walletId,
     });
 
-    return new Response(null, { status: 204 }) as any;
+    return c.body(null, 204);
   });
 
   // -------------------------------------------------------------------------

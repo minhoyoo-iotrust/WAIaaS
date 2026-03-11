@@ -53,7 +53,8 @@ describe('i18n message system', () => {
     const en = getMessages('en');
     // v31.3: +DEPRECATED_SMART_ACCOUNT (+1)
     // v31.9: +WALLET_NOT_TERMINATED (+1)
-    expect(Object.keys(en.errors).length).toBe(135);
+    // v31.10: +INVALID_TOKEN_IDENTIFIER, +STATS_NOT_CONFIGURED (+2)
+    expect(Object.keys(en.errors).length).toBe(137);
   });
 
   it('error code keys match ERROR_CODES keys', () => {
