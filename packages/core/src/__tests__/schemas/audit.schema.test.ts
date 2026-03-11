@@ -10,9 +10,9 @@ import {
 } from '../../index.js';
 
 describe('Audit Zod SSoT schemas', () => {
-  // ---------- Test 1: AuditEventTypeSchema parses all 24 event types ----------
-  it('parses all 24 event types', () => {
-    expect(AUDIT_EVENT_TYPES).toHaveLength(24);
+  // ---------- Test 1: AuditEventTypeSchema parses all 26 event types ----------
+  it('parses all 26 event types', () => {
+    expect(AUDIT_EVENT_TYPES).toHaveLength(26);
     for (const eventType of AUDIT_EVENT_TYPES) {
       expect(AuditEventTypeSchema.parse(eventType)).toBe(eventType);
     }
@@ -26,6 +26,16 @@ describe('Audit Zod SSoT schemas', () => {
   // ---------- Test 1c: USEROP_SIGNED parses successfully ----------
   it('parses USEROP_SIGNED event type', () => {
     expect(AuditEventTypeSchema.parse('USEROP_SIGNED')).toBe('USEROP_SIGNED');
+  });
+
+  // ---------- Test 1d: ACTION_SIGNED parses successfully ----------
+  it('parses ACTION_SIGNED event type', () => {
+    expect(AuditEventTypeSchema.parse('ACTION_SIGNED')).toBe('ACTION_SIGNED');
+  });
+
+  // ---------- Test 1e: ACTION_HTTP_SIGNED parses successfully ----------
+  it('parses ACTION_HTTP_SIGNED event type', () => {
+    expect(AuditEventTypeSchema.parse('ACTION_HTTP_SIGNED')).toBe('ACTION_HTTP_SIGNED');
   });
 
   // ---------- Test 2: AuditEventTypeSchema rejects invalid event type ----------
