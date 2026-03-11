@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: milestone
 status: planning
-stopped_at: Completed Phase 388 (2 plans, 4 tasks, 42 new tests)
-last_updated: "2026-03-11T19:28:32.624Z"
-last_activity: 2026-03-12 — Phase 388 complete
+stopped_at: Completed Phase 389 (2 plans, 4 tasks, 29 new tests)
+last_updated: "2026-03-12T05:01:00.000Z"
+last_activity: 2026-03-12 — Phase 389 complete
 progress:
   total_phases: 7
-  completed_phases: 3
-  total_plans: 7
-  completed_plans: 7
-  percent: 43
+  completed_phases: 4
+  total_plans: 9
+  completed_plans: 9
+  percent: 57
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-12)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Phase 389 — 추적 + 정책 확장
+**Current focus:** Phase 390 — 파이프라인 라우팅 + 조회
 
 ## Current Position
 
-Phase: 389 of 392 (추적 + 정책 확장)
+Phase: 390 of 392 (파이프라인 라우팅 + 조회)
 Plan: 1 of TBD
-Status: Ready to plan Phase 389
-Last activity: 2026-03-12 — Phase 388 complete
+Status: Ready to plan Phase 390
+Last activity: 2026-03-12 — Phase 389 complete (2 plans, 4 tasks, 29 new tests)
 
-Progress: [████░░░░░░] 43% (3/7 phases)
+Progress: [██████░░░░] 57% (4/7 phases)
 
 ## Performance Metrics
 
@@ -53,6 +53,10 @@ Progress: [████░░░░░░] 43% (3/7 phases)
 - [Phase 388]: AAD format {id}:{walletId|global}:{type} prevents cross-credential substitution attacks
 - [Phase 388]: Pre-INSERT duplicate check for global credentials (SQLite NULL != NULL in unique indexes)
 - [Phase 388]: masterAuth on all credential CRUD, single LocalCredentialVault instance shared by per-wallet + global routes
+- [Phase 389]: AsyncTrackingResult 9-state (5 new external action states), isTerminalState()/isContinuePolling() utilities, DB v57 composite index
+- [Phase 389]: AsyncPollingService extended with PARTIALLY_FILLED polling + 4 terminal state processing + 6 notification events
+- [Phase 389]: VENUE_WHITELIST default-deny with venue_whitelist_enabled Admin Setting toggle (default false)
+- [Phase 389]: ACTION_CATEGORY_LIMIT per-action/daily/monthly USD limits via json_extract cumulative queries on transaction metadata
 
 ### Pending Todos
 
@@ -64,6 +68,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-12T03:25:00.000Z
-Stopped at: Completed Phase 388 (2 plans, 4 tasks, 42 new tests)
+Last session: 2026-03-12T05:01:00.000Z
+Stopped at: Completed Phase 389 (2 plans, 4 tasks, 29 new tests)
 Resume file: None

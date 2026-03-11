@@ -54,12 +54,12 @@ Requirements for v31.12 milestone. Each maps to roadmap phases.
 
 ### 정책 컨텍스트 확장
 
-- [ ] **POLICY-01**: TransactionParam 확장 — venue?, actionCategory?, notionalUsd?, leverage?, expiry?, hasWithdrawCapability?
-- [ ] **POLICY-02**: DatabasePolicyEngine.evaluateAction() 확장 — venue 화이트리스트 체크, actionCategory 한도 체크
-- [ ] **POLICY-03**: VENUE_WHITELIST Admin Setting — CONTRACT_WHITELIST 패턴, venue_whitelist_enabled 토글, default-deny
-- [ ] **POLICY-04**: ACTION_CATEGORY_LIMIT 정책 — 카테고리별 USD 한도 (daily/monthly/per_action), tier_on_exceed
-- [ ] **POLICY-05**: 기존 SPENDING_LIMIT / provider-trust 정책과 공존
-- [ ] **POLICY-06**: ActionDefinition.riskLevel 4등급 — low/medium/high/critical → defaultTier 자동 매핑
+- [x] **POLICY-01**: TransactionParam 확장 — venue?, actionCategory?, notionalUsd?, leverage?, expiry?, hasWithdrawCapability?
+- [x] **POLICY-02**: DatabasePolicyEngine.evaluateAction() 확장 — venue 화이트리스트 체크, actionCategory 한도 체크
+- [x] **POLICY-03**: VENUE_WHITELIST Admin Setting — CONTRACT_WHITELIST 패턴, venue_whitelist_enabled 토글, default-deny
+- [x] **POLICY-04**: ACTION_CATEGORY_LIMIT 정책 — 카테고리별 USD 한도 (daily/monthly/per_action), tier_on_exceed
+- [x] **POLICY-05**: 기존 SPENDING_LIMIT / provider-trust 정책과 공존
+- [x] **POLICY-06**: ActionDefinition.riskLevel 4등급 — low/medium/high/critical → defaultTier 자동 매핑
 
 ### 파이프라인 라우팅
 
@@ -178,12 +178,12 @@ Requirements for v31.12 milestone. Each maps to roadmap phases.
 | TRACK-04 | Phase 389 | Pending |
 | TRACK-05 | Phase 389 | Pending |
 | TRACK-06 | Phase 389 | Pending |
-| POLICY-01 | Phase 389 | Pending |
-| POLICY-02 | Phase 389 | Pending |
-| POLICY-03 | Phase 389 | Pending |
-| POLICY-04 | Phase 389 | Pending |
-| POLICY-05 | Phase 389 | Pending |
-| POLICY-06 | Phase 389 | Pending |
+| POLICY-01 | Phase 389 | Complete |
+| POLICY-02 | Phase 389 | Complete |
+| POLICY-03 | Phase 389 | Complete |
+| POLICY-04 | Phase 389 | Complete |
+| POLICY-05 | Phase 389 | Complete |
+| POLICY-06 | Phase 389 | Complete |
 | PIPE-01 | Phase 390 | Pending |
 | PIPE-02 | Phase 390 | Pending |
 | PIPE-03 | Phase 390 | Pending |

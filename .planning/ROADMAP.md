@@ -25,7 +25,7 @@
 - [x] **Phase 386: 타입 시스템 + 에러 코드 + DB 마이그레이션** - ResolvedAction 3-kind Zod union, 에러 코드 6종, DB v55-v56 스키마 (completed 2026-03-11)
 - [x] **Phase 387: Signer Capability 레지스트리** - ISignerCapability 7-scheme 구현 + 자동 매핑 레지스트리 (completed 2026-03-11)
 - [x] **Phase 388: Credential Vault** - per-wallet/글로벌 credential 암호화 저장 + CRUD REST API (completed 2026-03-11)
-- [ ] **Phase 389: 추적 + 정책 확장** - AsyncTracker 9-state + Venue Whitelist + Category Limit 정책
+- [x] **Phase 389: 추적 + 정책 확장** - AsyncTracker 9-state + Venue Whitelist + Category Limit 정책 (completed 2026-03-11)
 - [ ] **Phase 390: 파이프라인 라우팅 + 조회 API** - signedData/signedHttp 파이프라인 + action 이력 조회
 - [ ] **Phase 391: Admin UI** - Credential/External Action/Venue/Policy 관리 화면 4종
 - [ ] **Phase 392: MCP + SDK + 스킬 파일** - 통합 인터페이스 3종 + 스킬 문서 4종
@@ -86,7 +86,7 @@ Plans:
   2. VENUE_WHITELIST가 활성화되면 허용 목록에 없는 venue의 action이 VENUE_NOT_ALLOWED로 거부된다
   3. ACTION_CATEGORY_LIMIT 정책이 카테고리별 USD 한도를 daily/monthly/per_action 단위로 적용하고, 초과 시 tier_on_exceed 동작이 실행된다
   4. 기존 SPENDING_LIMIT/provider-trust 정책과 충돌 없이 공존한다
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 389-01-PLAN.md — AsyncTrackingResult 9-state + DB v57 + AsyncPollingService 확장 + 알림 이벤트 6종
 - [ ] 389-02-PLAN.md — TransactionParam 확장 + VENUE_WHITELIST + ACTION_CATEGORY_LIMIT 정책
@@ -136,7 +136,7 @@ Phases execute in numeric order: 386 -> 387 -> 388 -> 389 -> 390 -> 391 -> 392
 | 386. 타입 시스템 + 에러 코드 + DB 마이그레이션 | 3/3 | Complete    | 2026-03-11 |
 | 387. Signer Capability 레지스트리 | 2/2 | Complete    | 2026-03-11 |
 | 388. Credential Vault | 2/2 | Complete    | 2026-03-11 |
-| 389. 추적 + 정책 확장 | 0/2 | Not started | - |
+| 389. 추적 + 정책 확장 | 2/2 | Complete   | 2026-03-11 |
 | 390. 파이프라인 라우팅 + 조회 API | 0/TBD | Not started | - |
 | 391. Admin UI | 0/TBD | Not started | - |
 | 392. MCP + SDK + 스킬 파일 | 0/TBD | Not started | - |
