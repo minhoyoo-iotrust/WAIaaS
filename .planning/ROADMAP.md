@@ -76,7 +76,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 378-01-PLAN.md — 비표준 에러/응답 패턴 식별 및 WAIaaSError/표준 패턴으로 교체
+- [x] 378-01-PLAN.md — 비표준 에러/응답 패턴 식별 및 WAIaaSError/표준 패턴으로 교체
 
 ### Phase 379: 상수 중앙화
 **Goal**: 코드베이스에 산재된 매직 넘버가 명명된 상수로 추출되어 의미가 명확해진다
@@ -86,10 +86,10 @@ Plans:
   1. MAX_RETRIES, TIMEOUT_MS, CACHE_TTL_SECONDS, POLLING_INTERVAL_MS 등 반복 사용되는 매직 넘버가 식별 목록으로 정리된다
   2. 식별된 매직 넘버가 패키지별 constants 파일 또는 Admin Settings로 이동되고, 원래 위치에서 해당 상수를 참조한다
   3. `pnpm turbo run lint && pnpm turbo run typecheck && pnpm turbo run test` 전체 통과
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 379-01: 매직 넘버 식별 및 상수 추출
+- [ ] 379-01-PLAN.md — 매직 넘버 식별 및 패키지별 constants 파일 추출 (~20개 파일 교체)
 
 ## Progress
 
