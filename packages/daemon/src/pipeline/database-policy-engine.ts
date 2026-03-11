@@ -414,7 +414,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     if (venueResult !== null) return venueResult;
 
     // Step 4k: Evaluate ACTION_CATEGORY_LIMIT (Phase 389)
-    const categoryLimitResult = this.evaluateActionCategoryLimit(resolved, transaction);
+    const categoryLimitResult = this.evaluateActionCategoryLimit(resolved, transaction, walletId);
     if (categoryLimitResult !== null) {
       // ACTION_CATEGORY_LIMIT returns allowed:true with escalated tier
       // Combine with reputation floor tier and return
@@ -782,7 +782,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       if (venueResult !== null) return venueResult;
 
       // Step 4k: Evaluate ACTION_CATEGORY_LIMIT (Phase 389)
-      const categoryLimitResult = this.evaluateActionCategoryLimit(resolved, transaction);
+      const categoryLimitResult = this.evaluateActionCategoryLimit(resolved, transaction, walletId);
       if (categoryLimitResult !== null) {
         if (reputationFloorTier) {
           categoryLimitResult.tier = maxTier(categoryLimitResult.tier as PolicyTier, reputationFloorTier);
@@ -2273,6 +2273,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
   private evaluateActionCategoryLimit(
     resolved: PolicyRow[],
     transaction: TransactionParam,
+    walletId?: string,
   ): PolicyEvaluation | null {
     if (!transaction.actionCategory || transaction.notionalUsd === undefined) return null;
 
@@ -2318,7 +2319,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
             AND created_at >= ?
             AND status != 'FAILED'
         `).get(
-          transaction.toAddress ? resolved[0]?.walletId : null,
+          walletId ?? resolved[0]?.walletId ?? null,
           rules.category,
           todayStartSec,
         ) as { total: number } | undefined;
@@ -2355,7 +2356,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
             AND created_at >= ?
             AND status != 'FAILED'
         `).get(
-          transaction.toAddress ? resolved[0]?.walletId : null,
+          walletId ?? resolved[0]?.walletId ?? null,
           rules.category,
           monthStartSec,
         ) as { total: number } | undefined;
