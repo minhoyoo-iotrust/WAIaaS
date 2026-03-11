@@ -20,14 +20,14 @@ Requirements for v31.12 milestone. Each maps to roadmap phases.
 
 ### ISignerCapability
 
-- [ ] **SIGN-01**: ISignerCapability 인터페이스 구현 — scheme, canSign(), sign()
-- [ ] **SIGN-02**: 기존 signer 래핑 어댑터 구현 — Eip712SignerCapability, PersonalSignCapability, Erc8128SignerCapability (기존 코드 무변경, 어댑터가 기존 함수 호출)
-- [ ] **SIGN-03**: HmacSignerCapability 구현 — Node.js crypto.createHmac() 기반
-- [ ] **SIGN-04**: RsaPssSignerCapability 구현 — Node.js crypto.sign() RSA-PSS 기반
-- [ ] **SIGN-05**: EcdsaSignBytesCapability 구현 — viem/@noble secp256k1 arbitrary bytes signing
-- [ ] **SIGN-06**: Ed25519SignBytesCapability 구현 — @solana/kit signBytes 기반
-- [ ] **SIGN-07**: SignerCapabilityRegistry 구현 — signingScheme → ISignerCapability 자동 매핑
-- [ ] **SIGN-08**: 기존 sign-message / sign-only / ERC-8128 파이프라인의 기존 호출 경로 무변경 확인
+- [x] **SIGN-01**: ISignerCapability 인터페이스 구현 — scheme, canSign(), sign()
+- [x] **SIGN-02**: 기존 signer 래핑 어댑터 구현 — Eip712SignerCapability, PersonalSignCapability, Erc8128SignerCapability (기존 코드 무변경, 어댑터가 기존 함수 호출)
+- [x] **SIGN-03**: HmacSignerCapability 구현 — Node.js crypto.createHmac() 기반
+- [x] **SIGN-04**: RsaPssSignerCapability 구현 — Node.js crypto.sign() RSA-PSS 기반
+- [x] **SIGN-05**: EcdsaSignBytesCapability 구현 — viem/@noble secp256k1 arbitrary bytes signing
+- [x] **SIGN-06**: Ed25519SignBytesCapability 구현 — @solana/kit signBytes 기반
+- [x] **SIGN-07**: SignerCapabilityRegistry 구현 — signingScheme → ISignerCapability 자동 매핑
+- [x] **SIGN-08**: 기존 sign-message / sign-only / ERC-8128 파이프라인의 기존 호출 경로 무변경 확인
 
 ### CredentialVault
 
@@ -153,14 +153,14 @@ Requirements for v31.12 milestone. Each maps to roadmap phases.
 | DBMIG-01 | Phase 386 | Complete |
 | DBMIG-02 | Phase 386 | Complete |
 | DBMIG-03 | Phase 386 | Complete |
-| SIGN-01 | Phase 387 | Pending |
-| SIGN-02 | Phase 387 | Pending |
-| SIGN-03 | Phase 387 | Pending |
-| SIGN-04 | Phase 387 | Pending |
-| SIGN-05 | Phase 387 | Pending |
-| SIGN-06 | Phase 387 | Pending |
-| SIGN-07 | Phase 387 | Pending |
-| SIGN-08 | Phase 387 | Pending |
+| SIGN-01 | Phase 387 | Complete |
+| SIGN-02 | Phase 387 | Complete |
+| SIGN-03 | Phase 387 | Complete |
+| SIGN-04 | Phase 387 | Complete |
+| SIGN-05 | Phase 387 | Complete |
+| SIGN-06 | Phase 387 | Complete |
+| SIGN-07 | Phase 387 | Complete |
+| SIGN-08 | Phase 387 | Complete |
 | CRED-01 | Phase 388 | Pending |
 | CRED-02 | Phase 388 | Pending |
 | CRED-03 | Phase 388 | Pending |

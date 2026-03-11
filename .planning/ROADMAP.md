@@ -23,7 +23,7 @@
 - Decimal phases (386.1, 386.2): Urgent insertions (marked with INSERTED)
 
 - [x] **Phase 386: 타입 시스템 + 에러 코드 + DB 마이그레이션** - ResolvedAction 3-kind Zod union, 에러 코드 6종, DB v55-v56 스키마 (completed 2026-03-11)
-- [ ] **Phase 387: Signer Capability 레지스트리** - ISignerCapability 7-scheme 구현 + 자동 매핑 레지스트리
+- [x] **Phase 387: Signer Capability 레지스트리** - ISignerCapability 7-scheme 구현 + 자동 매핑 레지스트리 (completed 2026-03-11)
 - [ ] **Phase 388: Credential Vault** - per-wallet/글로벌 credential 암호화 저장 + CRUD REST API
 - [ ] **Phase 389: 추적 + 정책 확장** - AsyncTracker 9-state + Venue Whitelist + Category Limit 정책
 - [ ] **Phase 390: 파이프라인 라우팅 + 조회 API** - signedData/signedHttp 파이프라인 + action 이력 조회
@@ -57,7 +57,7 @@ Plans:
   2. Eip712/PersonalSign/Erc8128 어댑터가 기존 서명 함수를 래핑하여 동일한 결과를 생성한다
   3. HmacSignerCapability와 RsaPssSignerCapability가 credential 바이트를 받아 올바른 서명을 생성한다
   4. 기존 sign-message/sign-only/ERC-8128 파이프라인 경로가 변경 없이 동작한다
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 387-01-PLAN.md — ISignerCapability 타입 + SigningError + 7종 Capability 구현체 (TDD)
 - [ ] 387-02-PLAN.md — SignerCapabilityRegistry + bootstrap + 하위 호환 검증 (TDD)
@@ -128,7 +128,7 @@ Phases execute in numeric order: 386 -> 387 -> 388 -> 389 -> 390 -> 391 -> 392
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 386. 타입 시스템 + 에러 코드 + DB 마이그레이션 | 3/3 | Complete    | 2026-03-11 |
-| 387. Signer Capability 레지스트리 | 0/2 | Not started | - |
+| 387. Signer Capability 레지스트리 | 2/2 | Complete   | 2026-03-11 |
 | 388. Credential Vault | 0/TBD | Not started | - |
 | 389. 추적 + 정책 확장 | 0/TBD | Not started | - |
 | 390. 파이프라인 라우팅 + 조회 API | 0/TBD | Not started | - |
