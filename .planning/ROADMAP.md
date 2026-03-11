@@ -24,7 +24,7 @@
 
 - [x] **Phase 386: 타입 시스템 + 에러 코드 + DB 마이그레이션** - ResolvedAction 3-kind Zod union, 에러 코드 6종, DB v55-v56 스키마 (completed 2026-03-11)
 - [x] **Phase 387: Signer Capability 레지스트리** - ISignerCapability 7-scheme 구현 + 자동 매핑 레지스트리 (completed 2026-03-11)
-- [ ] **Phase 388: Credential Vault** - per-wallet/글로벌 credential 암호화 저장 + CRUD REST API
+- [x] **Phase 388: Credential Vault** - per-wallet/글로벌 credential 암호화 저장 + CRUD REST API (completed 2026-03-11)
 - [ ] **Phase 389: 추적 + 정책 확장** - AsyncTracker 9-state + Venue Whitelist + Category Limit 정책
 - [ ] **Phase 390: 파이프라인 라우팅 + 조회 API** - signedData/signedHttp 파이프라인 + action 이력 조회
 - [ ] **Phase 391: Admin UI** - Credential/External Action/Venue/Policy 관리 화면 4종
@@ -132,7 +132,7 @@ Phases execute in numeric order: 386 -> 387 -> 388 -> 389 -> 390 -> 391 -> 392
 |-------|----------------|--------|-----------|
 | 386. 타입 시스템 + 에러 코드 + DB 마이그레이션 | 3/3 | Complete    | 2026-03-11 |
 | 387. Signer Capability 레지스트리 | 2/2 | Complete    | 2026-03-11 |
-| 388. Credential Vault | 2/2 | Complete    | 2026-03-12 |
+| 388. Credential Vault | 2/2 | Complete    | 2026-03-11 |
 | 389. 추적 + 정책 확장 | 0/TBD | Not started | - |
 | 390. 파이프라인 라우팅 + 조회 API | 0/TBD | Not started | - |
 | 391. Admin UI | 0/TBD | Not started | - |
