@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v31.11
 milestone_name: — External Action 프레임워크 설계
 status: completed
-stopped_at: Completed 384-02-PLAN.md
-last_updated: "2026-03-11T15:41:20.855Z"
-last_activity: 2026-03-12 — Phase 384 complete (2 plans)
+stopped_at: Completed 385-01-PLAN.md
+last_updated: "2026-03-11T15:57:41.650Z"
+last_activity: 2026-03-12 — Phase 385 complete (1 plan), milestone v31.11 complete
 progress:
   total_phases: 6
-  completed_phases: 5
-  total_plans: 10
-  completed_plans: 10
-  percent: 83
+  completed_phases: 6
+  total_plans: 11
+  completed_plans: 11
+  percent: 100
 ---
 
 # Project State
@@ -25,19 +25,19 @@ See: .planning/PROJECT.md (updated 2026-03-11)
 
 ## Current Position
 
-Phase: 5 of 6 (Phase 384: 정책 + 추적 확장) — COMPLETE
-Plan: 2/2 complete
-Status: Phase 384 complete, ready for Phase 385
-Last activity: 2026-03-12 — Phase 384 complete (2 plans)
+Phase: 6 of 6 (Phase 385: 설계 문서 통합) — COMPLETE
+Plan: 1/1 complete
+Status: Milestone v31.11 complete (6/6 phases, 11/11 plans)
+Last activity: 2026-03-12 — Phase 385 complete (1 plan)
 
-Progress: [########░░] 83%
+Progress: [##########] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10
+- Total plans completed: 11
 - Average duration: 6min
-- Total execution time: 1.0 hours
+- Total execution time: 1.1 hours
 
 **By Phase:**
 
@@ -48,6 +48,7 @@ Progress: [########░░] 83%
 | 382 | 2 | 10min | 5min |
 | 383 | 2 | 10min | 5min |
 | 384 | 2 | 10min | 5min |
+| 385 | 1 | 7min | 7min |
 
 ## Accumulated Context
 | Phase 380 P01 | 8min | 1 tasks | 1 files |
@@ -60,6 +61,7 @@ Progress: [########░░] 83%
 | Phase 383 P02 | 5min | 1 tasks | 1 files |
 | Phase 384 P01 | 5min | 1 tasks | 1 files |
 | Phase 384 P02 | 5min | 1 tasks | 1 files |
+| Phase 385 P01 | 7min | 2 tasks | 3 files |
 
 ### Decisions
 
@@ -100,6 +102,8 @@ Progress: [########░░] 83%
 - [Phase 384]: AsyncTrackingResult.state 9종 (기존 4 + PARTIALLY_FILLED/FILLED/CANCELED/SETTLED/EXPIRED)
 - [Phase 384]: tracking 없는 off-chain action은 bridge_status NULL (비동기 추적 불필요)
 - [Phase 384]: DB 마이그레이션 v57 (복합 인덱스 action_kind + bridge_status)
+- [Phase 385]: doc-81 번호 사용 (doc-77은 DCent Swap, doc-78은 Hyperliquid)
+- [Phase 385]: 구현 우선순위 4 Wave: 타입+서명 -> CredentialVault -> 파이프라인 -> 정책+추적
 
 ### Pending Todos
 
@@ -111,6 +115,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-12T15:42:00.000Z
-Stopped at: Completed 384-02-PLAN.md
+Last session: 2026-03-11T15:57:41.646Z
+Stopped at: Completed 385-01-PLAN.md
 Resume file: None
