@@ -27,14 +27,14 @@ Requirements for milestone v31.11. Each maps to roadmap phases.
 
 ### Credential Vault
 
-- [ ] **CRED-01**: ICredentialVault 인터페이스 설계 (create, get, list, delete, rotate)
-- [ ] **CRED-02**: credential 스코프 모델 설계 (글로벌 SettingsService + per-wallet CredentialVault, 조회 우선순위: per-wallet → 글로벌 fallback)
-- [ ] **CRED-03**: credential 타입 설계 (api-key, hmac-secret, rsa-private-key, session-token, custom)
-- [ ] **CRED-04**: credentialRef 간접 참조 모델 설계 (UUID or {walletId}:{name}, 원문 노출 없음)
-- [ ] **CRED-05**: wallet_credentials DB 스키마 설계 (id, walletId, type, name, encryptedValue, metadata, expiresAt, createdAt, updatedAt)
-- [ ] **CRED-06**: credential lifecycle 설계 (생성, 로테이션 이력 선택적, 만료, 삭제)
-- [ ] **CRED-07**: credential 인증 모델 설계 (sessionAuth 해당 지갑 + masterAuth 모두 허용)
-- [ ] **CRED-08**: Admin UI Credentials 탭 UX 설계 (목록: type/name/createdAt/expiresAt, 원문 비노출, 등록/삭제/로테이션 버튼)
+- [x] **CRED-01**: ICredentialVault 인터페이스 설계 (create, get, list, delete, rotate)
+- [x] **CRED-02**: credential 스코프 모델 설계 (글로벌 SettingsService + per-wallet CredentialVault, 조회 우선순위: per-wallet → 글로벌 fallback)
+- [x] **CRED-03**: credential 타입 설계 (api-key, hmac-secret, rsa-private-key, session-token, custom)
+- [x] **CRED-04**: credentialRef 간접 참조 모델 설계 (UUID or {walletId}:{name}, 원문 노출 없음)
+- [x] **CRED-05**: wallet_credentials DB 스키마 설계 (id, walletId, type, name, encryptedValue, metadata, expiresAt, createdAt, updatedAt)
+- [x] **CRED-06**: credential lifecycle 설계 (생성, 로테이션 이력 선택적, 만료, 삭제)
+- [x] **CRED-07**: credential 인증 모델 설계 (sessionAuth 해당 지갑 + masterAuth 모두 허용)
+- [x] **CRED-08**: Admin UI Credentials 탭 UX 설계 (목록: type/name/createdAt/expiresAt, 원문 비노출, 등록/삭제/로테이션 버튼)
 
 ### Async Tracking
 
@@ -108,14 +108,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SIGN-04 | Phase 382 | Pending |
 | SIGN-05 | Phase 382 | Pending |
 | SIGN-06 | Phase 382 | Pending |
-| CRED-01 | Phase 381 | Pending |
-| CRED-02 | Phase 381 | Pending |
-| CRED-03 | Phase 381 | Pending |
-| CRED-04 | Phase 381 | Pending |
-| CRED-05 | Phase 381 | Pending |
-| CRED-06 | Phase 381 | Pending |
-| CRED-07 | Phase 381 | Pending |
-| CRED-08 | Phase 381 | Pending |
+| CRED-01 | Phase 381 | Complete |
+| CRED-02 | Phase 381 | Complete |
+| CRED-03 | Phase 381 | Complete |
+| CRED-04 | Phase 381 | Complete |
+| CRED-05 | Phase 381 | Complete |
+| CRED-06 | Phase 381 | Complete |
+| CRED-07 | Phase 381 | Complete |
+| CRED-08 | Phase 381 | Complete |
 | TRCK-01 | Phase 384 | Pending |
 | TRCK-02 | Phase 384 | Pending |
 | TRCK-03 | Phase 384 | Pending |
