@@ -8,6 +8,22 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
+## Current Milestone: v31.12 External Action 프레임워크 구현
+
+**Goal:** m31-11 설계(doc-81)를 기반으로 External Action 프레임워크 구현 — ResolvedAction 3-kind Zod union, ISignerCapability 7-scheme registry, CredentialVault(per-wallet AES-256-GCM), 3-way 파이프라인 라우팅, 정책 확장(VENUE_WHITELIST + ACTION_CATEGORY_LIMIT), DB v55-v56 마이그레이션, Admin UI/MCP/SDK 통합
+
+**Target features:**
+- ResolvedAction discriminatedUnion 타입 시스템 (contractCall/signedData/signedHttp)
+- ISignerCapability 통합 인터페이스 + SignerCapabilityRegistry (7 schemes)
+- CredentialVault per-wallet credential 관리 (AES-256-GCM, HKDF, REST 8 endpoints)
+- signedData/signedHttp 파이프라인 + kind별 자동 라우팅
+- 정책 확장 (VENUE_WHITELIST, ACTION_CATEGORY_LIMIT, riskLevel)
+- IAsyncStatusTracker 9-state 확장 + ExternalActionTracker
+- DB v55 wallet_credentials + v56 transactions 컬럼 확장
+- Admin UI (Credentials 설정, External Actions 탭, Venue Whitelist, Category Limit)
+- MCP 도구 + SDK 메서드 + 스킬 파일 확장
+- External Action 조회 API
+
 ## Previous Milestone: v31.11 External Action 프레임워크 설계 — SHIPPED 2026-03-12
 
 설계 전용 마일스톤. ActionProvider 프레임워크를 on-chain 트랜잭션 전용에서 off-chain 액션(CEX API, EIP-712 CLOB, ERC-8128 서명 HTTP)을 포괄하는 통합 액션 모델로 확장하는 설계. ResolvedAction 3종 Zod union(contractCall/signedData/signedHttp), ISignerCapability 통합 인터페이스(기존 4종 래핑 + HMAC/RSA-PSS/signBytes 신규, 7종 Registry), CredentialVault(per-wallet AES-256-GCM, HKDF 도메인 분리, REST 8 endpoints), 3-way 파이프라인 라우팅(kind별 분기 + off-chain DB 기록, DB v55-v57), 정책 확장(VENUE_WHITELIST + ACTION_CATEGORY_LIMIT), AsyncTrackingResult 9-state 확장, doc-81 통합 설계 문서(1,184줄, 19 Zod 스키마, 4-Wave 구현 계획). 6 phases, 11 plans, 34 requirements, 36 design decisions, 46 commits, 60 files, +13,039/-1,582 lines.
