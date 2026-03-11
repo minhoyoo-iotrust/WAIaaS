@@ -43,11 +43,11 @@ Plans:
   3. CAIP-19 regex가 `caip/index.ts`에서만 정의되고 policy.schema.ts에서 import하여 사용한다
   4. `nft-approvals.ts`에서 `(adapter as any)` 캐스팅 없이 인터페이스 기반 타입 가드로 getNftApprovalStatus를 호출한다
   5. `pnpm turbo run lint && pnpm turbo run typecheck && pnpm turbo run test` 전체 통과
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 376-01: WalletRow SmartAccount 필드 타입 확장 및 as any 제거
-- [ ] 376-02: resolveChainId 통합, CAIP-19 regex 중복 제거, NFT 타입 가드 교체
+- [ ] 376-01-PLAN.md — WalletRow SmartAccount 필드 타입 확장 및 as any 제거
+- [ ] 376-02-PLAN.md — resolveChainId 통합, CAIP-19 regex 중복 제거, NFT 타입 가드 교체
 
 ### Phase 377: 대형 파일 분할
 **Goal**: admin.ts (3,107줄)가 도메인별 모듈로 분할되어 각 파일이 관리 가능한 크기가 된다
