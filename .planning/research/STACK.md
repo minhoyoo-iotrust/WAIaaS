@@ -1,344 +1,200 @@
-# Technology Stack: Across Protocol Cross-Chain Bridge
+# Technology Stack: External Action Framework
 
-**Project:** WAIaaS v31.6 Across Protocol Bridge Integration
-**Researched:** 2026-03-08
+**Project:** WAIaaS v31.11 External Action Framework Design
+**Researched:** 2026-03-11
+**Mode:** Subsequent milestone -- stack additions for new capabilities only
 
-## Recommended Stack
+## Core Finding: No New Dependencies Required
 
-### Core Approach: Direct REST API + viem ABI Encoding (No SDK)
+The External Action framework (ResolvedAction union, ISignerCapability, CredentialVault, async tracking generalization, venue-aware policy, pipeline routing) requires **zero new npm packages**. All cryptographic primitives and infrastructure patterns already exist in the codebase.
 
-Across Protocol은 SDK 없이 REST API + SpokePool ABI 직접 호출 방식을 사용한다. LI.FI(v28.3) 패턴과 동일한 접근.
+This is a design-only milestone (no implementation), but the stack analysis confirms the implementation milestone (v31.12) will not introduce dependency bloat.
 
-**결론**: `ActionApiClient` 베이스 클래스를 재사용하고, SpokePool `depositV3` ABI는 viem `encodeFunctionData`로 직접 인코딩한다.
+---
 
-### New Dependencies: NONE
+## Recommended Stack (Additions/Changes)
 
-Across Protocol 통합에 **새로운 npm 의존성이 필요 없다**. 기존 스택만으로 완전 구현 가능:
+### HMAC Signing (HmacSignerCapability)
 
-| Existing Dependency | Version | Role in Across Integration |
-|---------------------|---------|----------------------------|
-| `viem` | ^2.21.0 | `encodeFunctionData` for SpokePool ABI, `parseAbi` for inline ABI definition |
-| `zod` | ^3.24.0 | API response schema validation (suggested-fees, deposit/status, routes, limits) |
-| `@waiaas/core` | workspace:* | `ActionApiClient`, `ChainError`, `IActionProvider`, `IAsyncStatusTracker` |
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| `node:crypto` createHmac | Node.js 22 built-in | HMAC-SHA256/SHA512 signing for CEX API auth | Already used by PolymarketSigner (`packages/actions/src/providers/polymarket/signer.ts`) and WebhookDeliveryQueue (`packages/daemon/src/services/webhook-delivery-queue.ts`). Zero new deps. |
 
-### Why No New Dependencies
+**Existing precedent:** `createHmac('sha256', secret).update(payload).digest('hex')` pattern is proven in two production modules. The new `HmacSignerCapability` adapter will wrap this same `node:crypto` call behind `ISignerCapability.sign()`.
 
-| Rejected Package | Version | Why Not |
-|------------------|---------|---------|
-| `@across-protocol/app-sdk` | 0.4.4 | Frontend/React/wagmi 중심 SDK. 서버사이드 데몬 아키텍처에 부적합. viem을 peer dependency로만 사용하며 브라우저 환경 가정 |
-| `@across-protocol/sdk` | 4.1.32 | Relayer/데이터 워커용 내부 유틸 성격. ethers.js, winston 등 무거운 의존성 포함. WAIaaS는 viem 전용 |
-| `@across-protocol/contracts` | 4.1.3 | ABI 하나를 위해 전체 contracts 패키지 추가 불필요. `depositV3`는 12 파라미터 단일 함수로 인라인 정의 충분 |
+**Supported algorithms:** HMAC-SHA256 (Binance, Coinbase, most CEXs), HMAC-SHA512 (Kraken). Both available via `node:crypto` `createHmac(algorithm, key)`.
 
-## Across REST API
+### RSA-PSS Signing (RsaPssSignerCapability)
 
-### Base URLs
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| `node:crypto` createSign / createVerify | Node.js 22 built-in | RSA-PSS signatures for external API auth | Node.js crypto module provides full RSA-PSS support (`sign.sign({ key, padding: crypto.constants.RSA_PKCS1_PSS_PADDING, saltLength })`). No external library needed. |
+| `node:crypto` generateKeyPairSync | Node.js 22 built-in | RSA key pair generation (for CredentialVault key generation utility) | Verified available on Node.js 22.22.0. |
 
-| Environment | Base URL |
-|-------------|----------|
-| Mainnet | `https://app.across.to/api` |
-| Testnet | `https://testnet.across.to/api` |
+**Why not jose:** jose (v6.1.3, already a dependency) handles JWT/JWS but does not expose raw RSA-PSS signing for arbitrary payloads. `node:crypto` is the correct tool for generic RSA-PSS signing.
 
-### Endpoints Used
+**Why not @noble/curves:** Overkill for RSA. @noble/curves excels at elliptic curve crypto; RSA-PSS is natively supported in `node:crypto` with hardware acceleration.
 
-| Endpoint | Method | Purpose | WAIaaS Action |
-|----------|--------|---------|---------------|
-| `/suggested-fees` | GET | Quote + fee + SpokePool 주소 + fillDeadline | `quote` action |
-| `/limits` | GET | Min/max deposit amounts per route | `limits` action |
-| `/available-routes` | GET | Supported chain+token pairs | `routes` action |
-| `/deposit/status` | GET | Bridge completion tracking | `AcrossBridgeStatusTracker` |
+### Ed25519 / ECDSA Arbitrary Bytes Signing (signBytes capability)
 
-### suggested-fees Request Parameters
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| `sodium-native` | ^4.3.1 | Ed25519 signBytes for Solana-side arbitrary signing | Already a dependency. Used by keystore for Solana key operations. |
+| `viem` signMessage / signTypedData | 2.x (existing) | ECDSA-secp256k1 signing | Already used throughout EVM pipeline. |
+| `@solana/kit` | 6.x (existing) | Solana signing utilities | Already used by SolanaAdapter. |
 
-| Parameter | Required | Description |
-|-----------|----------|-------------|
-| `inputToken` | YES | Origin chain token address |
-| `outputToken` | YES | Destination chain token address |
-| `originChainId` | YES | Origin chain ID (e.g., 1 for Ethereum) |
-| `destinationChainId` | YES | Destination chain ID (e.g., 42161 for Arbitrum) |
-| `amount` | YES | Input amount in smallest units (wei) |
-| `recipient` | NO | Recipient address (defaults to depositor) |
-| `message` | NO | Arbitrary bytes for cross-chain actions (default 0x) |
-| `relayer` | NO | Preferred relayer address |
-| `timestamp` | NO | Quote timestamp (API returns current if omitted) |
+**Decision:** Ed25519 uses sodium-native (already present), ECDSA uses viem (already present). No new deps.
 
-### suggested-fees Response Schema (Zod)
+### CredentialVault Encryption
 
-```typescript
-const AcrossFeeBreakdownSchema = z.object({
-  pct: z.string(),    // fee as decimal fraction string (e.g., "0.001")
-  total: z.string(),  // fee as absolute amount in smallest units
-});
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| `settings-crypto.ts` (existing) | N/A (internal) | AES-256-GCM encrypt/decrypt + HKDF key derivation | CredentialVault will import `encryptSettingValue()` / `decryptSettingValue()` directly from `packages/daemon/src/infrastructure/settings/settings-crypto.ts`. Same encryption, different storage table. |
 
-const AcrossSuggestedFeesSchema = z.object({
-  totalRelayFee: AcrossFeeBreakdownSchema,
-  relayerCapitalFee: AcrossFeeBreakdownSchema,
-  relayerGasFee: AcrossFeeBreakdownSchema,
-  lpFee: AcrossFeeBreakdownSchema,
-  timestamp: z.string(),                    // quoteTimestamp for depositV3
-  isAmountTooLow: z.boolean(),
-  quoteBlock: z.string(),
-  spokePoolAddress: z.string(),              // origin chain SpokePool (dynamic!)
-  exclusiveRelayer: z.string(),
-  exclusivityDeadline: z.string(),           // unix timestamp
-  expectedFillTimeSec: z.string(),           // estimated fill time
-  fillDeadline: z.string(),                  // ISO 8601 or unix timestamp
-  limits: z.object({
-    minDeposit: z.string(),
-    maxDeposit: z.string(),
-    maxDepositInstant: z.string(),
-    maxDepositShortDelay: z.string(),
-    recommendedDepositInstant: z.string(),
-  }),
-});
-```
+**Key design decision:** CredentialVault uses the **same HKDF(SHA-256) derivation** from master password but with a **different HKDF info string** (e.g., `'credential-vault-v1'` vs existing `'settings-encryption'`). This gives domain separation without introducing a new KDF.
 
-### deposit/status Response Schema (Zod)
+**Per-credential salt consideration:** Unlike SettingsService (fixed salt), CredentialVault SHOULD use a per-credential random salt stored alongside the ciphertext. Reason: per-wallet credentials are higher-value targets than daemon settings, and per-salt prevents rainbow table attacks across credentials. `node:crypto.randomBytes(16)` generates the salt -- no new dependency.
 
-```typescript
-const AcrossDepositStatusSchema = z.object({
-  status: z.enum(['filled', 'pending', 'expired', 'refunded']),
-  fillTxnRef: z.string().optional(),
-  destinationChainId: z.number(),
-  originChainId: z.number(),
-  depositId: z.number(),
-  depositTxnRef: z.string().optional(),
-  depositRefundTxnRef: z.string().optional(),
-  actionsSucceeded: z.boolean().optional(),
-});
-```
+### EIP-712 Typed Data (existing, reused)
 
-### available-routes Response Schema (Zod)
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| `viem` signTypedData | 2.x (existing) | EIP-712 signing for Eip712SignerCapability adapter | Already used by Polymarket (3-domain), Hyperliquid (dual signing), ERC-8004 (AgentWalletSet). The new `Eip712SignerCapability` wraps the existing `privateKeyToAccount().signTypedData()` call. |
 
-```typescript
-const AcrossRouteSchema = z.object({
-  originChainId: z.coerce.number(),
-  destinationChainId: z.coerce.number(),
-  originToken: z.string(),
-  destinationToken: z.string(),
-  originTokenSymbol: z.string(),
-  destinationTokenSymbol: z.string(),
-});
+### ERC-8128 HTTP Message Signing (existing, reused)
 
-const AcrossRoutesResponseSchema = z.array(AcrossRouteSchema);
-```
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| `@waiaas/core` erc8128 module | Existing | `Erc8128SignerCapability` wraps `signHttpMessage()` | Already in `packages/core/src/erc8128/`. RFC 9421 signature base + EIP-191 signing. The new capability adapter adds pipeline integration without modifying the module. |
 
-### limits Response Schema (Zod)
+### Zod Schema Extensions (existing, extended)
 
-```typescript
-const AcrossLimitsSchema = z.object({
-  minDeposit: z.string(),
-  maxDeposit: z.string(),
-  maxDepositInstant: z.string(),
-  maxDepositShortDelay: z.string(),
-  recommendedDepositInstant: z.string(),
-});
-```
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| `zod` | Existing (via @waiaas/core) | ResolvedAction discriminatedUnion, SignedDataAction/SignedHttpAction schemas, CredentialType enum, extended AsyncTrackingResult | Zod SSoT pattern (CLAUDE.md mandate). `z.discriminatedUnion('kind', [...])` for ResolvedAction, same pattern as existing 8-type transaction discriminatedUnion. |
 
-## SpokePool depositV3 ABI (Inline Definition)
+### Database (existing, extended)
 
-`depositV3` 함수 시그니처를 viem `parseAbi`로 인라인 정의. @across-protocol/contracts 패키지 불필요.
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| Drizzle ORM + better-sqlite3 | Existing | `wallet_credentials` table (DB v55), possible `external_action_status` column on `transactions` | Standard migration pattern (v1.4+). No new DB engine or ORM. |
 
-```typescript
-import { encodeFunctionData, parseAbi } from 'viem';
+---
 
-const SPOKE_POOL_ABI = parseAbi([
-  'function depositV3(address depositor, address recipient, address inputToken, address outputToken, uint256 inputAmount, uint256 outputAmount, uint256 destinationChainId, address exclusiveRelayer, uint32 quoteTimestamp, uint32 fillDeadline, uint32 exclusivityDeadline, bytes message) external payable',
-]);
-```
+## Alternatives Considered (and Rejected)
 
-### depositV3 Parameter Mapping (API -> Contract)
+| Category | Recommended | Alternative | Why Rejected |
+|----------|-------------|-------------|--------------|
+| HMAC signing | `node:crypto` createHmac | `@noble/hashes` hmac | Extra dep for something Node.js does natively. Project already uses `node:crypto` for HMAC in 2 modules. |
+| RSA-PSS signing | `node:crypto` createSign | `jose` JWS | jose does JWS (JSON Web Signature) not raw RSA-PSS over arbitrary payloads. Wrong abstraction. |
+| RSA-PSS signing | `node:crypto` createSign | `node-forge` | Unnecessary JS-only reimplementation. Node.js native crypto uses OpenSSL bindings (faster, FIPS-capable). |
+| Credential encryption | Reuse `settings-crypto.ts` | `libsodium` secretbox | AES-256-GCM via settings-crypto is proven, and SettingsService already depends on it. Adding a second encryption primitive creates cognitive overhead. sodium-native's `crypto_secretbox` (XSalsa20-Poly1305) would work but diverges from established pattern. |
+| Credential encryption | Reuse `settings-crypto.ts` | Per-credential Argon2id | Argon2id (used by keystore) is 300ms+ per operation. CredentialVault needs fast CRUD. HKDF(SHA-256) from master password is sufficient (same reasoning as SettingsService). |
+| Unified signer registry | In-process registry (Map) | Separate microservice | WAIaaS is a self-hosted daemon. Inter-process communication adds latency and complexity for zero benefit. |
+| Async tracking storage | Extend `transactions` table columns | Separate `external_actions` table | Design decision for the design phase (R4-4), but extending existing table follows the bridge_status precedent and avoids JOIN complexity. |
 
-| depositV3 Parameter | Source | Description |
-|---------------------|--------|-------------|
-| `depositor` | `context.walletAddress` | 입금자 (WAIaaS 월렛 주소) |
-| `recipient` | User input or `depositor` | 수령자 (기본값: 입금자와 동일) |
-| `inputToken` | User input | Origin chain 토큰 주소 |
-| `outputToken` | User input | Destination chain 토큰 주소 |
-| `inputAmount` | User input | 입금 금액 (smallest units) |
-| `outputAmount` | `inputAmount - totalRelayFee.total` | 수령 금액 (수수료 차감) |
-| `destinationChainId` | User input | 목적지 체인 ID |
-| `exclusiveRelayer` | `suggestedFees.exclusiveRelayer` | API 반환값 사용 |
-| `quoteTimestamp` | `suggestedFees.timestamp` | API 반환 timestamp (uint32) |
-| `fillDeadline` | `suggestedFees.fillDeadline` | API 반환값 사용 (uint32 unix) |
-| `exclusivityDeadline` | `suggestedFees.exclusivityDeadline` | API 반환값 사용 (uint32 unix) |
-| `message` | `0x` (empty) | 단순 브릿지 (cross-chain action 미사용) |
+---
 
-### outputAmount Calculation
+## What NOT to Add
 
-```typescript
-// outputAmount = inputAmount - totalRelayFee.total
-const outputAmount = BigInt(inputAmount) - BigInt(suggestedFees.totalRelayFee.total);
-```
+| Package | Why Not |
+|---------|---------|
+| `@noble/hashes` | `node:crypto` already provides HMAC-SHA256/SHA512. Adding @noble/hashes creates two paths for the same operation. |
+| `@noble/curves` | Already have viem (which wraps @noble/curves internally) and sodium-native. No gap to fill. |
+| `node-forge` | Pure JS crypto library. Slower than native `node:crypto`. No reason to use it. |
+| `tweetnacl` | Redundant with sodium-native (which is the C binding of the same NaCl primitives). |
+| `aws-sdk` / `@aws-sdk/*` | CEX credential management is via CredentialVault, not cloud KMS. Self-hosted mandate. |
+| `keytar` / OS keychain | WAIaaS runs headless (daemon/Docker). OS keychain not available. Master password + HKDF is the established pattern. |
+| `passport` / auth libraries | CredentialVault auth uses existing sessionAuth/masterAuth middleware. No new auth framework. |
+| New ORM or DB driver | Drizzle + better-sqlite3 is the established stack. wallet_credentials is a standard table addition. |
+
+---
 
 ## Integration Points with Existing Stack
 
-### 1. AcrossApiClient extends ActionApiClient
+### 1. ActionProviderRegistry (packages/daemon/src/infrastructure/action/action-provider-registry.ts)
+- **Change:** `resolve()` return type widens from `ContractCallRequest` to `ResolvedAction`
+- **Normalization:** Registry adds `kind: 'contractCall'` to existing provider results (backward compat)
+- **Impact:** Interface change only, no new deps
 
-LI.FI `LiFiApiClient` 패턴과 동일. `get()` 메서드로 4개 엔드포인트 호출.
+### 2. sign-message.ts Pipeline (packages/daemon/src/pipeline/sign-message.ts)
+- **Change:** Extended to handle `SignedDataAction` (kind: 'signedData') routing
+- **Integration:** `ISignerCapability` adapter wraps existing `privateKeyToAccount().signTypedData()` call
+- **Impact:** New code path alongside existing personal/typedData branches
 
-```typescript
-export class AcrossApiClient extends ActionApiClient {
-  constructor(config: AcrossConfig) {
-    super(config.apiBaseUrl, config.requestTimeoutMs);
-  }
-  async getSuggestedFees(params: {...}): Promise<AcrossSuggestedFees> { ... }
-  async getDepositStatus(params: {...}): Promise<AcrossDepositStatus> { ... }
-  async getAvailableRoutes(params?: {...}): Promise<AcrossRoute[]> { ... }
-  async getLimits(params: {...}): Promise<AcrossLimits> { ... }
-}
-```
+### 3. ERC-8128 Module (packages/core/src/erc8128/)
+- **Change:** `Erc8128SignerCapability` adapter wraps `signHttpMessage()`
+- **Integration:** Existing module untouched; adapter consumes its public API
+- **Impact:** New adapter file, no module changes
 
-### 2. AcrossBridgeActionProvider implements IActionProvider
+### 4. SettingsService (packages/daemon/src/infrastructure/settings/)
+- **Change:** CredentialVault imports `settings-crypto.ts` encrypt/decrypt functions
+- **Coexistence:** Global credentials stay in SettingsService (`actions.{provider}_api_key`). Per-wallet credentials go to CredentialVault. Lookup: per-wallet -> global fallback.
+- **Impact:** New service alongside, shared crypto functions
 
-LI.FI `LiFiActionProvider` 패턴 그대로:
+### 5. AsyncPollingService + IAsyncStatusTracker (packages/actions/src/common/)
+- **Change:** `AsyncTrackingResult.state` enum extended with off-chain states
+- **Integration:** AsyncPollingService already handles arbitrary tracker implementations via `IAsyncStatusTracker` interface
+- **Impact:** Enum widening (additive, backward-compatible)
 
-| Action | Description | Returns |
-|--------|-------------|---------|
-| `bridge` | 크로스체인 브릿지 실행 | `ContractCallRequest[]` (approve + depositV3) |
-| `quote` | 견적 조회 (수수료, 예상 시간) | Quote 정보 (ActionResult) |
-| `routes` | 지원 라우트 조회 | Route 목록 |
-| `limits` | 최소/최대 금액 조회 | Limits 정보 |
-| `status` | 브릿지 상태 확인 | Status 정보 |
+### 6. DatabasePolicyEngine (packages/daemon/src/pipeline/database-policy-engine.ts)
+- **Change:** `TransactionParam` extended with `venue`, `actionCategory`, `notionalUsd` fields
+- **Integration:** Existing `actionProvider`/`actionName` fields preserved; new fields are additive
+- **Impact:** Interface extension, new policy type implementations
 
-### 3. Pipeline Integration (변경 없음)
+---
 
-SpokePool `depositV3`는 일반 EVM 컨트랙트 호출:
+## Crypto Primitive Summary
 
-| Token Type | Pipeline Type | Flow |
-|------------|--------------|------|
-| ERC-20 | `BATCH` | `APPROVE(SpokePool, amount)` + `CONTRACT_CALL(depositV3)` |
-| Native (ETH) | `CONTRACT_CALL` | `depositV3` with `value: inputAmount` |
+All signing primitives needed for the External Action framework are available without new dependencies:
 
-기존 6-stage 파이프라인 변경 없음. `ContractCallRequest` 반환 형태로 기존 파이프라인 그대로 동작.
+| Signing Scheme | Primitive | Source | Status |
+|----------------|-----------|--------|--------|
+| EIP-712 typedData | `signTypedData()` | viem 2.x | Already used (Polymarket, Hyperliquid, ERC-8004) |
+| personal_sign | `signMessage()` | viem 2.x | Already used (sign-message pipeline) |
+| HMAC-SHA256 | `createHmac('sha256', key)` | node:crypto | Already used (Polymarket, Webhooks) |
+| HMAC-SHA512 | `createHmac('sha512', key)` | node:crypto | Available (same API, different algorithm string) |
+| RSA-PSS | `createSign('RSA-SHA256')` | node:crypto | Available natively (Node.js 22, OpenSSL bindings) |
+| ECDSA-secp256k1 | `privateKeyToAccount().sign()` | viem 2.x | Already used (transaction signing) |
+| Ed25519 | `sodium.crypto_sign_detached()` | sodium-native 4.x | Already used (Solana keystore) |
+| ERC-8128 HTTP | `signHttpMessage()` | @waiaas/core erc8128 | Already implemented (v30.10) |
+| AES-256-GCM | `encryptSettingValue()` | settings-crypto.ts | Already used (SettingsService) |
 
-### 4. AcrossBridgeStatusTracker implements IAsyncStatusTracker
-
-LI.FI `BridgeStatusTracker` 2-phase 패턴 재사용. Across는 Intent 기반으로 수초 내 fill이 일반적이므로 Phase 1 타임아웃이 더 짧아도 됨.
-
-| Phase | Interval | Max Attempts | Total Duration |
-|-------|----------|-------------|----------------|
-| Phase 1 (active) | 15s | 480 | 2시간 |
-| Phase 2 (monitoring) | 5min | 264 | 22시간 |
-
-Status 매핑:
-
-| Across Status | AsyncTrackingResult State |
-|---------------|---------------------------|
-| `filled` | `COMPLETED` |
-| `pending` | `PENDING` |
-| `expired` | `FAILED` |
-| `refunded` | `COMPLETED` (details.refunded=true) |
-
-### 5. SpokePool Address: Dynamic from API
-
-SpokePool 주소를 **하드코딩하지 않는다**. `suggested-fees` API 응답의 `spokePoolAddress` 필드에서 동적으로 가져온다. 이유:
-- 2025-01-23 V2->V3 컨트랙트 마이그레이션 선례 (주소 변경)
-- API가 항상 현재 유효한 SpokePool 주소 반환
-- 코드 변경 없이 마이그레이션 대응
-
-### 6. Chain Map (Across Supported Chains -> WAIaaS Network Names)
-
-```typescript
-const ACROSS_CHAIN_MAP: ReadonlyMap<string, number> = new Map([
-  ['ethereum', 1],      ['ethereum-mainnet', 1],
-  ['optimism', 10],     ['optimism-mainnet', 10],
-  ['polygon', 137],     ['polygon-mainnet', 137],
-  ['arbitrum', 42161],  ['arbitrum-mainnet', 42161],
-  ['base', 8453],       ['base-mainnet', 8453],
-  ['linea', 59144],     ['linea-mainnet', 59144],
-  ['zksync', 324],      ['zksync-mainnet', 324],
-]);
-```
-
-Note: Across는 Solana를 지원하지 않음 (EVM-only). LI.FI와 차별점.
-
-## File Structure (Expected)
-
-```
-packages/actions/src/providers/across/
-  index.ts                  # AcrossBridgeActionProvider (IActionProvider)
-  across-api-client.ts      # AcrossApiClient extends ActionApiClient
-  schemas.ts                # Zod schemas for all API responses
-  config.ts                 # AcrossConfig type + defaults + chain map
-  bridge-status-tracker.ts  # 2-phase IAsyncStatusTracker
-```
-
-## Admin Settings Keys (Expected)
-
-| Key | Default | Description |
-|-----|---------|-------------|
-| `across_enabled` | `false` | Provider 활성화 |
-| `across_api_base_url` | `https://app.across.to/api` | API base URL |
-| `across_request_timeout_ms` | `15000` | API 요청 타임아웃 |
-| `across_fill_deadline_buffer_sec` | `0` | fillDeadline에 추가할 버퍼 초 (API 반환값 사용 기본) |
-| `across_exclusivity_deadline_buffer_sec` | `0` | exclusivityDeadline 버퍼 |
-
-## Alternatives Considered
-
-| Category | Recommended | Alternative | Why Not |
-|----------|-------------|-------------|---------|
-| API Client | Direct REST (`ActionApiClient`) | `@across-protocol/app-sdk` | Frontend SDK, 서버 부적합 |
-| API Client | Direct REST | `@across-protocol/sdk` | ethers.js 의존성, 과도한 번들 크기 |
-| ABI Source | viem `parseAbi` inline | `@across-protocol/contracts` | 1개 함수 위해 전체 패키지 불필요 |
-| SpokePool Address | API 동적 조회 (`spokePoolAddress`) | 하드코딩 | 컨트랙트 마이그레이션 시 코드 변경 필요 |
-| Status Tracking | REST `/deposit/status` 폴링 | 온체인 이벤트 구독 | REST API가 단순하고 충분 |
-| Fee Calculation | API `totalRelayFee.total` | SDK fee utils | API가 이미 계산해서 반환 |
+---
 
 ## Installation
 
 ```bash
-# No new packages needed.
-# Existing dependencies in @waiaas/actions suffice:
-#   viem ^2.21.0
-#   zod ^3.24.0
-#   @waiaas/core workspace:*
+# No new packages to install.
+# All capabilities are covered by existing dependencies:
+#   - node:crypto (built-in) -- HMAC, RSA-PSS, AES-256-GCM, HKDF
+#   - viem 2.x -- EIP-712, personal_sign, ECDSA
+#   - sodium-native ^4.3.1 -- Ed25519
+#   - jose ^6.1.3 -- JWT (session auth, unchanged)
+#   - zod (via @waiaas/core) -- schema extensions
+#   - drizzle-orm + better-sqlite3 -- DB schema extensions
 ```
 
-## Key Technical Notes
-
-### quoteTimestamp Validity Window
-
-- `suggested-fees` API가 반환하는 `timestamp`를 `depositV3`의 `quoteTimestamp`로 전달
-- 현재 블록 타임스탬프 기준 **10분 이내**여야 유효
-- Quote 조회 후 즉시 실행하는 WAIaaS 패턴에서는 문제 없음
-- 주의: **API 응답을 캐시하면 안 됨** (Across 공식 가이드: "do not cache API responses")
-
-### Native Token Bridge (msg.value)
-
-- ETH 등 네이티브 토큰 브릿지 시 `inputToken`은 Wrapped Native Token 주소 (WETH)
-- `msg.value`로 ETH를 전달하면 SpokePool이 자동으로 WETH wrap 처리
-- `ContractCallRequest.value`에 `inputAmount` 설정
-
-### message Parameter
-
-- 단순 브릿지에서는 `0x` (empty bytes)
-- Cross-chain action (목적지 체인에서 추가 실행)이 필요한 경우에만 사용
-- WAIaaS 초기 통합에서는 `0x` 고정. Multicaller Handler 통합은 범위 외
-
-### API 캐싱 금지
-
-Across 공식 문서: "Consumers of Across APIs are requested not to cache API responses, especially the /swap/approval and /suggested-fees endpoints." 온체인 상태가 블록마다 변하므로 캐시된 데이터는 빠르게 무효화됨.
+---
 
 ## Confidence Assessment
 
-| Area | Confidence | Notes |
-|------|------------|-------|
-| No new dependencies needed | HIGH | LI.FI 동일 패턴 검증 완료, viem ABI encoding 공식 문서 확인 |
-| depositV3 ABI signature | HIGH | 공식 SpokePool.sol 소스 + Across docs 교차 검증 |
-| suggested-fees response schema | MEDIUM | 공식 문서에서 필드 확인. 일부 타입(string vs number) 런타임 검증 필요 |
-| deposit/status response schema | MEDIUM | status enum 값(filled/pending/expired/refunded) 문서 확인. 세부 필드 검증 필요 |
-| SpokePool 동적 주소 조회 | HIGH | suggested-fees.spokePoolAddress 공식 문서 확인 |
-| Chain support (EVM-only) | HIGH | 공식 available-routes API로 확인 가능 |
+| Area | Confidence | Reason |
+|------|------------|--------|
+| HMAC-SHA256 via node:crypto | HIGH | Already used in 2 production modules (Polymarket, Webhooks). Verified on Node.js 22.22.0. |
+| RSA-PSS via node:crypto | HIGH | Verified `createSign` availability on Node.js 22.22.0. Standard OpenSSL binding, documented in Node.js docs. |
+| Ed25519 via sodium-native | HIGH | Already a dependency (^4.3.1). Used by keystore for Solana signing. |
+| CredentialVault encryption reuse | HIGH | `settings-crypto.ts` is a clean, tested module with `encryptSettingValue()`/`decryptSettingValue()`. Import-ready. |
+| Zod discriminatedUnion for ResolvedAction | HIGH | Same pattern as existing 8-type transaction union. Proven at scale. |
+| No new dependencies needed | HIGH | Verified all crypto primitives against existing codebase and Node.js 22 capabilities. |
 
 ## Sources
 
-- [Across API Reference](https://docs.across.to/reference/api-reference) -- suggested-fees, deposit/status, limits, routes endpoints
-- [Selected Contract Functions](https://docs.across.to/reference/selected-contract-functions) -- depositV3, speedUpDepositV3 signatures
-- [Bridge Integration Guide](https://docs.across.to/developer-quickstart/bridge-integration-guide) -- integration flow
-- [SpokePool.sol (GitHub)](https://github.com/across-protocol/contracts/blob/master/contracts/SpokePool.sol) -- contract source
-- [Fees in the System](https://docs.across.to/reference/fees-in-the-system) -- fee structure (LP + relayer + gas)
-- [Tracking Events](https://docs.across.to/reference/tracking-events) -- V3FundsDeposited event
-- [Migration V2 to V3](https://docs.across.to/introduction/migration-guides/migration-from-v2-to-v3) -- 2025-01-23 contract migration
-- [@across-protocol/app-sdk (npm)](https://www.npmjs.com/package/@across-protocol/app-sdk) -- v0.4.4, frontend SDK (rejected)
-- [@across-protocol/sdk (npm)](https://www.npmjs.com/package/@across-protocol/sdk) -- v4.1.32, internal utils (rejected)
-- [@across-protocol/contracts (npm)](https://www.npmjs.com/package/@across-protocol/contracts) -- v4.1.3, ABI source (rejected)
+- `packages/actions/src/providers/polymarket/signer.ts` -- HMAC-SHA256 + EIP-712 precedent
+- `packages/daemon/src/services/webhook-delivery-queue.ts` -- HMAC-SHA256 precedent
+- `packages/daemon/src/infrastructure/settings/settings-crypto.ts` -- AES-256-GCM encryption
+- `packages/core/src/erc8128/index.ts` -- ERC-8128 HTTP message signing module
+- `packages/daemon/src/pipeline/sign-message.ts` -- sign-message pipeline
+- `packages/actions/src/common/async-status-tracker.ts` -- IAsyncStatusTracker interface
+- Node.js 22.22.0 `node:crypto` -- verified createHmac, createSign, generateKeyPairSync availability
+- `internal/objectives/m31-11-external-action-design.md` -- milestone requirements

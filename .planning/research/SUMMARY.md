@@ -1,190 +1,176 @@
 # Project Research Summary
 
-**Project:** WAIaaS v31.9 — Polymarket Prediction Market Integration
-**Domain:** DeFi prediction market (CLOB + CTF on-chain settlement, Polygon)
-**Researched:** 2026-03-10
+**Project:** WAIaaS v31.11 External Action Framework Design
+**Domain:** ActionProvider framework extension (on-chain tx-centric -> action-centric model)
+**Researched:** 2026-03-11
 **Confidence:** HIGH
 
 ## Executive Summary
 
-Polymarket is a prediction market platform running on Polygon mainnet with a hybrid architecture: an off-chain Central Limit Order Book (CLOB) for order matching and on-chain Gnosis Conditional Token Framework (CTF) for settlement. AI agents interact with Polymarket by (1) discovering markets via the public Gamma API, (2) placing signed orders via the authenticated CLOB REST API using EIP-712 + HMAC-SHA256 two-layer auth, and (3) redeeming winning positions via on-chain `redeemPositions()` CTF contract calls. The critical insight is that order execution is off-chain (ApiDirectResult pattern, no gas) while settlement and approval are on-chain (standard CONTRACT_CALL pipeline, Polygon gas required).
+WAIaaS v31.11 is a design-only milestone that extends the ActionProvider framework from on-chain transaction-only resolution to a unified action model supporting off-chain operations (CEX API calls, EIP-712 CLOB orders, ERC-8128 signed HTTP requests). The core insight from research is that the existing codebase already contains every cryptographic primitive and infrastructure pattern needed. The recommended approach is a **widening strategy**: existing 13 providers and 4 pipeline paths remain untouched, while a new `ResolvedAction` union type (`contractCall | signedData | signedHttp`) and kind-based routing branch off after `ActionProviderRegistry.executeResolve()`. Zero new npm dependencies are required.
 
-The recommended implementation approach requires zero new npm dependencies. WAIaaS already has all the primitives: viem 2.x for EIP-712 signing, native `fetch` for REST clients, Node.js `crypto` for HMAC-SHA256, and the existing ERC-1155 infrastructure for conditional token balance queries. The Hyperliquid integration (v31.4) established the exact same hybrid pattern (off-chain orders + on-chain deposits) and provides a proven implementation template. The primary deviation from Hyperliquid is that Polymarket requires a dual-provider architecture: `PolymarketOrderProvider` (CLOB, ApiDirectResult) and `PolymarketCtfProvider` (on-chain CTF, CONTRACT_CALL), because mixing both return types in a single provider creates unresolvable `requiresSigningKey` semantics.
+The framework introduces three new subsystems alongside the type system: (1) `ISignerCapability` -- a unified signing abstraction that wraps existing signers as adapters while adding HMAC-SHA256/512 and RSA-PSS capabilities via `node:crypto`, (2) `CredentialVault` -- per-wallet encrypted credential storage using the proven `settings-crypto.ts` AES-256-GCM encryption with HKDF domain separation, and (3) venue-aware policy evaluation extending `DatabasePolicyEngine` with `VENUE_WHITELIST` and `ACTION_CATEGORY_LIMIT` policy types. These build on established patterns (discriminatedUnion, adapter pattern, CONTRACT_WHITELIST precedent) rather than inventing new abstractions.
 
-The dominant risks are all signing-related. Polymarket uses three distinct EIP-712 domains — ClobAuth (API key creation), CTF Exchange (binary market orders), and Neg Risk CTF Exchange (multi-outcome market orders) — that are fundamentally different from Hyperliquid's phantom agent pattern. Conflating these three domains produces valid-but-wrong ECDSA signatures that the CLOB API rejects with opaque "invalid signature" errors, which are extremely hard to debug. Additionally, Polymarket has no public testnet CLOB, so order matching cannot be integration-tested without real mainnet trades ($1-5 scale), requiring a mock-first strategy with mainnet UAT as the final validation gate.
+The primary risks are backward compatibility breakage in the resolve() return type (13 providers + ESM plugins), policy bypass for off-chain actions that skip Stage 3, and CredentialVault encryption key derivation conflicting with SettingsService re-encrypt/backup flows. All three are preventable through strict design constraints documented in PITFALLS.md: kind normalization in the registry only, mandatory policy evaluation on all new paths, and HKDF context separation with re-encrypt integration.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The entire Polymarket integration uses zero new npm packages. viem 2.x handles all three EIP-712 signing domains natively via `signTypedData`. A custom `PolymarketClobClient` (~200 LOC) using native `fetch` replaces the official `@polymarket/clob-client`, which imports ethers v5 (~1.5MB) and conflicts with WAIaaS's viem-only signing pipeline. The Hyperliquid `ExchangeClient` pattern provides the exact implementation template. DB schema grows by 3 tables across migrations v53-v54: `polymarket_orders`, `polymarket_positions`, `polymarket_api_keys`.
+No new npm packages are required. All cryptographic primitives exist in the codebase via `node:crypto` (HMAC, RSA-PSS, AES-256-GCM, HKDF), `viem` 2.x (EIP-712, ECDSA), `sodium-native` (Ed25519), and `settings-crypto.ts` (credential encryption). See STACK.md for full analysis.
 
 **Core technologies (all existing):**
-- **viem 2.x**: EIP-712 signing for ClobAuth + CTF Exchange (binary) + Neg Risk CTF Exchange domains — `signTypedData` handles all three natively without ethers
-- **Node.js fetch**: `PolymarketClobClient` REST calls to `clob.polymarket.com`; `PolymarketGammaClient` to `gamma-api.polymarket.com` (no auth required)
-- **Node.js crypto**: HMAC-SHA256 for L2 per-request authentication headers on all trading endpoints
-- **Drizzle + SQLite**: Three new tables (polymarket_orders, polymarket_positions, polymarket_api_keys), DB migration v53-v54
-- **OpenAPIHono 4.x**: 9 new REST query routes under `/v1/wallets/:walletId/polymarket/*` and `/v1/polymarket/*`
-
-**Explicitly rejected packages:** `@polymarket/clob-client` (ethers v5), `@polymarket/order-utils` (ethers v5), `axios`, Gnosis Safe SDK.
+- `node:crypto` createHmac/createSign: HMAC-SHA256/512 and RSA-PSS signing for CEX API auth -- already used in Polymarket signer and WebhookDeliveryQueue
+- `settings-crypto.ts` encryptSettingValue/decryptSettingValue: AES-256-GCM for CredentialVault -- same encryption, different HKDF info string for domain separation
+- Zod `z.discriminatedUnion('kind', [...])`: ResolvedAction union type -- same pattern as existing 8-type transaction discriminatedUnion on `type` field
+- Drizzle ORM: DB migration v55 for `wallet_credentials` table + `external_action_status` column
 
 ### Expected Features
 
 **Must have (table stakes):**
-- API Key Management (L1 EIP-712 ClobAuth derivation + L2 HMAC storage + encrypted DB per wallet) — prerequisite for all trading operations
-- USDC.e Allowance Setup (one-time `pm_setup` action approves all 5 contract targets in batch)
-- Market Discovery (Gamma API search/browse, no auth required, returns condition_id and token_id needed for orders)
-- Limit Order GTC — basic buy/sell order placement
-- Market Order FOK — immediate fill-or-kill execution
-- Order Cancellation — single / batch / cancel-all
-- Position Query — Data API `/positions` by wallet address
-- Open Orders Query — `getOpenOrders()` with market/asset filter
-- Neg Risk flag support — multi-outcome markets (>73% of Polymarket volume) route through different exchange contract
+- ResolvedAction union type (R1) -- foundation for off-chain action expression through ActionProvider path
+- ISignerCapability unified interface (R2) -- consolidates 7 scattered signing methods behind one abstraction
+- Pipeline routing by kind (R6-1) -- enables off-chain action execution via same `POST /v1/actions/:provider/:action` endpoint
+- Per-wallet CredentialVault (R3) -- agents need per-wallet CEX API keys; SettingsService is daemon-global only
+- Credential indirect reference (R3-4) -- raw secrets never appear in action params or API responses
+- Off-chain action status tracking (R4) -- async lifecycle states (PARTIALLY_FILLED, SETTLED, etc.)
+- Venue-aware policy evaluation (R5) -- off-chain venues carry different risk profiles than on-chain contracts
+- DB record for off-chain actions (R6-3) -- audit trail using extended `transactions` table
 
 **Should have (differentiators):**
-- CTF Redemption (on-chain `redeemPositions()` for Binary + Neg Risk)
-- Trade History (paginated `getTrades`)
-- Portfolio Value (Data API `/value`)
-- PnL Tracking (realized/unrealized from avgPrice + curPrice)
-- GTD Orders (expiration timestamp parameter)
-- FAK Orders (partial fill market order)
-- Batch Orders (up to 15 orders per single API call)
-- Post-Only Orders (maker rebate fee optimization)
-- Order Book Depth (`getOrderBook` for liquidity analysis)
+- Credential rotation with zero downtime (R3-6) -- atomic swap without session interruption
+- HMAC/RSA signer capabilities (R2-3/R2-4) -- enables CEX integration through standard provider path
+- Action category spending limits (R5-3) -- per-category (trade/withdraw/transfer/sign) USD notional limits
+- Admin UI Credentials tab (R3-8) -- operator visibility into per-wallet credentials
 
 **Defer (v2+):**
-- WebSocket Price Stream — REST polling is sufficient for agent use cases; WebSocket adds stateful connection management complexity
-- Multi-Outcome Token Convert (NegRiskAdapter on-chain NO→YES conversion) — high complexity, very low usage frequency
-- Merge/Split Positions (CTF advanced collateral operations)
-- Smart Account (ERC-4337) wallet compatibility for signatureType=2
+- Leverage-aware policy (R5-1) -- Hyperliquid already works; future-proofing only
+- Real-time WebSocket status streaming -- polling at 30s already sufficient
+- Multi-step off-chain action orchestration -- agents compose steps themselves
 
 ### Architecture Approach
 
-The architecture mirrors the Hyperliquid hybrid pattern with one key difference: two separate IActionProvider implementations. `PolymarketOrderProvider` handles all CLOB operations (buy, sell, cancel, update) returning `ApiDirectResult` to bypass on-chain execution. `PolymarketCtfProvider` handles on-chain operations (split, merge, redeem, approve) returning `ContractCallRequest` through the standard 6-stage pipeline on Polygon. Shared infrastructure (ClobClient, RateLimiter, MarketData) is wired via a factory function identical to `createHyperliquidInfrastructure()`. The neg_risk flag from Gamma API is the critical routing signal that must be cached alongside market data and propagated to every signing, approval, and settlement operation.
+The architecture follows a widening strategy where existing pipelines are preserved and new kind-based routing branches off after ActionProviderRegistry resolution. The key design principle is "wrap, don't refactor" -- ISignerCapability adapters delegate to existing signing modules (sign-message.ts, http-message-signer.ts, viem signTypedData) without modifying them. CredentialVault lives alongside SettingsService, sharing only encryption primitives. See ARCHITECTURE.md for component diagrams and data flows.
 
 **Major components:**
-1. **PolymarketSigner** — EIP-712 signing for 3 distinct domains (ClobAuth, binary CTF Exchange, neg risk CTF Exchange); HMAC-SHA256 L2 request signing; static method pattern matching HyperliquidSigner
-2. **PolymarketClobClient** — REST client with lazy API key creation (encrypted per wallet in DB), per-endpoint-group rate limiting (3 groups: trading / market-data / positions), 30s+ timeouts for Cloudflare throttling
-3. **PolymarketMarketData** — Gamma API market/event queries with 30s TTL cache; extracts and caches `neg_risk` flag for downstream routing
-4. **PolymarketOrderProvider** — IActionProvider (`requiresSigningKey: true`); actions: pm_buy / pm_sell / pm_cancel_order / pm_cancel_all / pm_update_order; returns ApiDirectResult; contains PolymarketOrderBuilder for price↔makerAmount/takerAmount conversion
-5. **PolymarketCtfProvider** — IActionProvider (`requiresSigningKey: false`); actions: pm_split_position / pm_merge_positions / pm_redeem_positions / pm_approve_collateral / pm_approve_ctf; returns ContractCallRequest for Polygon on-chain execution
-6. **DB tables v53-v54** — polymarket_orders (order lifecycle with CLOB status sync), polymarket_positions (outcome token holdings + PnL), polymarket_api_keys (encrypted CLOB credentials per wallet address)
-7. **Admin UI** — New Polymarket page with 5 tabs (Overview / Markets / Orders / Positions / Settings), 7 Admin Settings keys
-8. **MCP + SDK** — 10 auto-registered action tools + 8 manual query tools; SDK PolymarketClient methods
+1. **ResolvedAction (Zod union)** -- 3-member discriminated union on `kind` field in `@waiaas/core`
+2. **ISignerCapability + SignerCapabilityRegistry** -- signing scheme to capability mapping, 7 adapter/new implementations
+3. **CredentialVault + CredentialResolver** -- per-wallet encrypted CRUD with per-wallet -> global fallback lookup
+4. **Pipeline Router** -- stage5 branching: contractCall (existing), signedData (new), signedHttp (new)
+5. **ExternalActionTracker** -- IAsyncStatusTracker implementation for off-chain action state machines
+6. **Venue-aware DatabasePolicyEngine** -- VENUE_WHITELIST + ACTION_CATEGORY_LIMIT policy types
 
 ### Critical Pitfalls
 
-1. **EIP-712 domain mismatch (C1 — Critical)** — Polymarket uses 3 distinct EIP-712 domains. ClobAuth has no `verifyingContract`. Binary orders use CTF Exchange (`0x4bFb...`). Neg risk orders use Neg Risk CTF Exchange (`0xC5d5...`). All use real Polygon chainId 137, not a phantom 1337. Never share signing code with HyperliquidSigner. Implement dedicated `PolymarketSigner` with domain selected dynamically from the `isNegRisk` flag. Validate domain hash against py-clob-client test vectors before any CLOB call.
-
-2. **Order struct field semantics (C2 — Critical)** — `salt` is random entropy per order (not a sequence), `nonce` is for on-chain cancellation only (start at 0), `feeRateBps` must be queried from CLOB API and cannot be client-set, and price is expressed as a `makerAmount`/`takerAmount` ratio (not explicit price + size fields). BUY: `makerAmount = price * size * 1e6`, `takerAmount = size * 1e6`. SELL: inverse. Encapsulate all in `PolymarketOrderBuilder`. Use bigint arithmetic throughout.
-
-3. **Neg risk routing completeness (C4 — Critical)** — Neg risk markets require: different EIP-712 `verifyingContract`, different USDC approve targets (3 contracts instead of 1), and different CTF redemption path through NegRiskAdapter. Missing any one causes silent failure for multi-outcome market orders. Prevention: `pm_setup` action approves all 5 contract targets in one batch upfront; exchange contract is derived from `neg_risk` flag on every operation.
-
-4. **API Key generation fragility (M2 — Moderate)** — CLOB API key creation requires server-side timestamp from `/time` endpoint (not local clock). nonce starts at 0 and increments on "already used" conflict. All three values (apiKey + secret + passphrase) plus the nonce must be stored encrypted in DB. Loss of secret or passphrase requires regeneration.
-
-5. **No testnet CLOB (M3 — Moderate)** — Polymarket has no public testnet order matching service. Unit tests must use test vectors from py-clob-client fixtures for EIP-712 signature validation. Integration tests use HTTP mocks. End-to-end validation requires mainnet UAT at $1-5 scale following v31.8's 6-section scenario format.
+1. **resolve() backward compatibility breakage** -- Kind normalization must happen in ActionProviderRegistry only. Existing 13 providers return without `kind`; registry adds `kind: 'contractCall'`. Zero changes to existing provider files. Test gate: all existing provider tests pass without modification.
+2. **CredentialVault encryption key derivation conflict** -- Must use different HKDF info string (`'waiaas-credentials'` vs `'waiaas-settings'`). Must integrate with `re-encrypt.ts` for master password changes and `BackupService` for backup/restore. Failure = credential data loss on password change.
+3. **Off-chain actions bypassing policy evaluation** -- New signedData/signedHttp paths must include Stage 3 policy evaluation. TransactionParam extended with `venue`, `actionCategory`, `notionalUsd`. Integration test: no signing path without `policyEngine.evaluate()` call.
+4. **ISignerCapability replacing existing signing paths** -- Strict R2-6 principle: adapters delegate only, existing sign-message.ts / stages.ts signing calls unchanged. Grep-based audit of existing call sites.
+5. **DB storage strategy indecision** -- Must decide early: extend `transactions` table with `action_kind` column + nullable `txHash`. Audit all `txHash IS NOT NULL` assumptions in existing queries. SPENDING_LIMIT must aggregate across on-chain and off-chain.
 
 ## Implications for Roadmap
 
-Based on research, the architecture mandates a 5-phase build order driven by strict dependency chains: signing infrastructure must precede orders, orders must precede position tracking, and all logic phases must precede API/UI surface.
+Based on research, suggested phase structure:
 
-### Phase 1: Core Infrastructure
-**Rationale:** PolymarketSigner and PolymarketClobClient have no upstream dependencies within this feature. All subsequent phases depend on them. The EIP-712 domain separation bug (C1) must be solved and unit-tested here before any order logic is written — a mistake at this layer poisons all downstream work.
-**Delivers:** PolymarketSigner (3 domain types + HMAC-SHA256), PolymarketClobClient (REST + lazy API key creation), PolymarketRateLimiter (3 endpoint groups), contract ABI constants, DB migration v53-v54 (polymarket_orders + polymarket_positions + polymarket_api_keys), `pm_setup` batch-approve action (5 contract targets)
-**Addresses:** API Key Management (table stakes), USDC.e Allowance Setup (table stakes)
-**Avoids:** C1 (EIP-712 domain mismatch — 3 domains hardcoded and tested before any order placement), C3 (proxy wallet confusion — signatureType=0 EOA hard-pinned from day one)
+### Phase 1: ResolvedAction Type System
+**Rationale:** Every other component depends on the type definitions. Pure type additions with no runtime behavior changes -- lowest risk starting point.
+**Delivers:** ResolvedAction Zod union (contractCall/signedData/signedHttp), ISignerCapability interface, SigningSchemeEnum, ActionDefinition extension with optional venue/signingScheme/actionCategory fields.
+**Addresses:** R1 (ResolvedAction union type), R2-1/R2-2 (ISignerCapability interface + enum)
+**Avoids:** Pitfall 1 (backward compat) via kind normalization strategy, Pitfall 8 (kind-type dual discriminant) via level separation
 
-### Phase 2: CLOB Order Provider
-**Rationale:** Depends on Phase 1 infrastructure. Order struct conversion (C2) and neg risk routing (C4) must be solved before CTF on-chain work begins. PolymarketOrderBuilder is the critical deliverable that prevents makerAmount/takerAmount arithmetic errors.
-**Delivers:** PolymarketOrderProvider (5 actions: pm_buy / pm_sell / pm_cancel_order / pm_cancel_all / pm_update_order), PolymarketOrderBuilder with tick-size-aware price conversion, Zod input schemas (PmBuySchema, PmSellSchema, etc.), CLOB order status sync, unit tests with py-clob-client test vectors
-**Addresses:** Limit Order GTC, Market Order FOK, Order Cancellation, Open Orders Query (all table stakes)
-**Avoids:** C2 (order struct semantics — PolymarketOrderBuilder encapsulates all conversions), M1 (USDC 6-decimal tick size precision), M2 (API key nonce management in ClobClient)
+### Phase 2: CredentialVault Infrastructure
+**Rationale:** Independent of pipeline changes, can be built and tested in isolation. DB migration must happen before any code references new columns. Needed before any real venue provider can be implemented.
+**Delivers:** DB migration v55 (wallet_credentials table + external_action_status column), CredentialVault CRUD with AES-256-GCM encryption, CredentialResolver (per-wallet -> global fallback), 4 REST API credential endpoints.
+**Addresses:** R3 (CredentialVault), R3-4 (credential indirect reference)
+**Avoids:** Pitfall 2 (encryption key derivation) via HKDF context separation + re-encrypt integration, Pitfall 6 (auth model) via createdBy field + permission matrix
 
-### Phase 3: Market Discovery + CTF On-Chain Provider
-**Rationale:** PolymarketMarketData (Gamma API) and PolymarketCtfProvider can be developed after Phase 1 is stable, partially in parallel with Phase 2. Market data provides the `neg_risk` flag that both providers need. CTF provider completes the position lifecycle with on-chain settlement.
-**Delivers:** PolymarketMarketData (Gamma + CLOB market endpoints, 30s TTL cache, neg_risk flag extraction), PolymarketCtfProvider (5 actions: pm_split_position / pm_merge_positions / pm_redeem_positions / pm_approve_collateral / pm_approve_ctf), integration tests
-**Addresses:** Market Discovery, CTF Redemption, Neg Risk flag support (all table stakes)
-**Avoids:** C4 (neg risk routing — exchange contract derived from MarketData `neg_risk` flag on every call), M4 (approve target completeness — pm_setup from Phase 1 covers all 5 contracts), N1 (CTF tokens not routed through NFT indexer), N2 (Polygon network hard-check in Provider.validate())
+### Phase 3: Signer Capabilities
+**Rationale:** Adapters wrap existing code (low risk), new capabilities are independent modules. All unit-testable without pipeline integration.
+**Delivers:** SignerCapabilityRegistry, 5 adapter capabilities (Eip712, PersonalSign, Erc8128, Hmac, RsaPss).
+**Addresses:** R2 (ISignerCapability complete), R2-3 (HMAC), R2-4 (RSA-PSS)
+**Avoids:** Pitfall 4 (replacing existing paths) via strict delegation-only adapters, Pitfall 9 (requiresSigningKey scope) via separate requiresCredential flag
 
-### Phase 4: REST API + MCP + Admin UI + SDK
-**Rationale:** All query and action surfaces depend on Phases 1-3 providers being registered. This phase is pure surface area with no novel architecture risk. Standard Hyperliquid v31.4 patterns apply directly.
-**Delivers:** 9 REST query routes, 10 MCP action tools (auto-registered via mcpExpose) + 8 manual query tools, Admin UI Polymarket page (5 tabs), 7 Admin Settings keys, SDK PolymarketClient methods
-**Addresses:** Trade History, Portfolio Value, Order Book Depth, Category/Tag Browse (all differentiators)
-**Avoids:** N3 (ApiDirectResult vs on-chain routing confusion — dual provider architecture enforces separation structurally)
+### Phase 4: Pipeline Integration
+**Rationale:** Most complex phase -- depends on Phases 1-3. Changes core execution path. This is where the new routing actually enables off-chain action execution.
+**Delivers:** ActionProviderRegistry modification (kind normalization + validation), PipelineContext extension, Pipeline Router (stage5 branching), SignedDataPipeline, SignedHttpPipeline.
+**Addresses:** R6-1 (pipeline routing), R6-3 (DB record for off-chain actions)
+**Avoids:** Pitfall 3 (policy bypass) by ensuring policy evaluation on all new paths, Pitfall 5 (DB strategy) by confirming transactions table extension with action_kind column
 
-### Phase 5: Position Tracking + PnL + Settlement Monitoring
-**Rationale:** Depends on Phase 2 (real order fills needed to validate sync logic), Phase 3 (redemption events), and notification infrastructure from Phase 4. Market resolution lifecycle is the highest-risk operational concern and requires careful state machine implementation against real resolved markets.
-**Delivers:** Position sync from CLOB order fills (EventBus listener), PnL calculation (realized + unrealized from avgPrice + curPrice), market resolution state machine (ACTIVE → RESOLVING → DISPUTED → RESOLVED → REDEEMED), owner notifications on resolution, mainnet UAT scenarios (v31.8 6-section format)
-**Addresses:** PnL Tracking, Portfolio Value (complete), Resolution Monitoring (differentiators)
-**Avoids:** M6 (resolution edge cases — verify on-chain `payoutNumerators` before redeem; never auto-redeem during 48h dispute period)
+### Phase 5: Policy + Tracking Extension
+**Rationale:** Additive changes to existing policy engine and polling service. Depends on pipeline integration being in place.
+**Delivers:** TransactionParam extension (venue/actionCategory/notionalUsd), VENUE_WHITELIST policy type, ACTION_CATEGORY_LIMIT policy type, ExternalActionTracker (IAsyncStatusTracker), AsyncPollingService query extension.
+**Addresses:** R5 (venue-aware policy), R4 (off-chain status tracking)
+**Avoids:** Pitfall 7 (polling interference) via tracker-specific queries, Pitfall 3 (policy bypass) via mandatory evaluation steps
+
+### Phase 6: Interface Extension
+**Rationale:** UI/interface changes depend on all infrastructure being in place. This phase makes the framework visible to operators and agents.
+**Delivers:** Admin UI Credentials tab + off-chain action display, MCP credential management tools, SDK credential CRUD methods, connect-info externalActions capability, skill file updates.
+**Addresses:** R3-8 (Admin UI), connect-info, interface sync (CLAUDE.md mandate)
+**Avoids:** Pitfall 10 (connect-info omission), Pitfall 12/13 (Admin/MCP/SDK extension gaps)
 
 ### Phase Ordering Rationale
 
-- Phases 1 → 2 → 3 are sequentially dependent: signing infrastructure is required before orders, market data is required before CTF operations that reference `neg_risk` flag
-- Phase 3 Market Data component can start after Phase 1 is complete, allowing partial parallelism with Phase 2
-- Phase 4 (surface area) depends on all providers being registered in ActionProviderRegistry; no novel technical risk, straightforward pattern application
-- Phase 5 (position lifecycle) is deferred because it requires real order fills to validate sync correctness, and the dispute monitoring logic needs verified on-chain state machine behavior
-- The Hyperliquid v31.4 build order (infra → exchange provider → on-chain provider → API/UI → monitoring) maps almost directly
+- Types first (Phase 1) because every component depends on ResolvedAction and ISignerCapability definitions
+- CredentialVault (Phase 2) before pipeline (Phase 4) because credential resolution is needed during action execution
+- Signer capabilities (Phase 3) before pipeline (Phase 4) because the pipeline router dispatches to signers
+- Pipeline integration (Phase 4) is the critical path -- most complex, highest risk, most testing needed
+- Policy + tracking (Phase 5) after pipeline because policies evaluate within the pipeline context
+- Interfaces last (Phase 6) because they expose functionality that must already work
 
 ### Research Flags
 
-Phases needing deeper research during planning:
-- **Phase 2:** CLOB order matching behavior for FOK/FAK at various liquidity conditions needs empirical verification; partial fill semantics for FAK on thin books are not fully documented
-- **Phase 5:** UMA Oracle resolution timeline variability and on-chain `payoutNumerators` query pattern are MEDIUM confidence; needs verification against at least one live resolved market before implementing auto-redeem logic
+Phases likely needing deeper research during planning:
+- **Phase 2 (CredentialVault):** Re-encrypt integration and BackupService inclusion need careful design -- must trace all master password change paths and backup/restore flows
+- **Phase 4 (Pipeline Integration):** Stage 5 branching is the highest-risk modification -- needs comprehensive analysis of all existing stage5Execute call paths and ApiDirectResult handling
+- **Phase 5 (Policy Extension):** VENUE_WHITELIST default-deny semantics need careful design to avoid blocking legitimate on-chain actions that have no venue
 
-Phases with standard patterns (skip research):
-- **Phase 1:** EIP-712 signing pattern is structurally identical to HyperliquidSigner; contract ABIs are minimal and verified from contract source; DB migration pattern is established (v52 → v53 → v54)
-- **Phase 4:** REST routes, MCP registration, Admin UI tab structure, and SDK client all follow Hyperliquid v31.4 exactly; no architectural novelty
+Phases with standard patterns (skip research-phase):
+- **Phase 1 (Type System):** Well-documented Zod discriminatedUnion pattern, proven in existing 8-type transaction union
+- **Phase 3 (Signer Capabilities):** Adapter pattern over existing modules, straightforward delegation
+- **Phase 6 (Interface Extension):** Standard Admin UI tab addition, MCP tool registration, SDK method addition -- all follow established patterns from v31.0+
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Zero new dependencies confirmed; all capabilities verified in current WAIaaS stack; Hyperliquid precedent proven in production |
-| Features | HIGH | Official Polymarket docs verified; order types, endpoints, and auth flow confirmed via py-clob-client source; Data API endpoints MEDIUM (schema detail unverified) |
-| Architecture | HIGH | Hyperliquid v31.4 provides working precedent for hybrid off-chain/on-chain pattern; dual-provider split is unambiguous from return-type incompatibility |
-| Pitfalls | HIGH | C1-C4 all verified from contract source code (OrderStructs.sol, Hashing.sol) + official docs + open-source client issues; M3 no-testnet confirmed in official docs |
+| Stack | HIGH | All dependencies verified as existing in codebase. Zero new packages. node:crypto primitives verified on Node.js 22.22.0. |
+| Features | HIGH | Requirements R1-R6 clearly defined in objective doc. Feature landscape maps directly to requirements with existing pattern precedents for each. |
+| Architecture | HIGH | Based on direct codebase analysis of action-provider-registry.ts, stages.ts, database-policy-engine.ts, settings-crypto.ts. All integration points identified with line-level precision. |
+| Pitfalls | HIGH | All 15 pitfalls derived from codebase analysis. Critical pitfalls (1-5) have concrete prevention strategies with testable detection criteria. |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **EOA signatureType=0 CLOB acceptance**: Polymarket documentation confirms EOA is a valid signatureType, but their web flow is proxy-wallet-centric. If the CLOB API rejects pure EOA-signed orders without a deployed proxy wallet, CREATE2 proxy derivation must be added to Phase 1. Budget 1-2 days contingency. Validate on first mainnet smoke test.
-- **CLOB rate limit real-world values**: Documented limits (3,500 orders/10s burst) may be lower for new API keys without established track records. `PolymarketRateLimiter` should default to 10% of documented limits and allow Admin Settings override.
-- **Data API response schema**: positions/value/activity endpoints confirmed to exist but full field names and types were not verified from contract source. Build Zod schemas with `.passthrough()` initially, tighten after first mainnet call.
-- **Smart Account (ERC-4337) wallet compatibility**: signatureType=2 (GNOSIS_SAFE) may or may not map to ERC-4337. Out of scope for v31.9; flag for research if Smart Account wallet users request Polymarket access.
+- **txHash NOT NULL assumptions:** Need a comprehensive grep of all `txHash` references in queries, Admin UI, SDK responses, and MCP tools before confirming transactions table extension. Some code paths may assume txHash is always present.
+- **ESM plugin backward compatibility:** External plugins loaded via `loadPlugins()` are not tested in CI. Plugin compatibility relies on kind normalization working correctly for unknown return types.
+- **AsyncPollingService at scale:** At 1000+ wallets with many off-chain trackers, polling batching or per-wallet limits may be needed. Not a design-phase concern but flagged for implementation milestone.
+- **Credential scope during multi-wallet sessions:** Session 1:N wallet model means a session can access multiple wallets' credentials. Need to verify that CredentialResolver correctly scopes credential lookup to the active wallet in the action request, not any wallet in the session.
 
 ## Sources
 
-### Primary (HIGH confidence)
-- [Polymarket CLOB Introduction](https://docs.polymarket.com/developers/CLOB/introduction)
-- [Polymarket Authentication Docs](https://docs.polymarket.com/developers/CLOB/authentication)
-- [Polymarket Contract Addresses](https://docs.polymarket.com/resources/contract-addresses)
-- [Polymarket CTF Overview](https://docs.polymarket.com/trading/ctf/overview)
-- [Polymarket Orders Overview](https://docs.polymarket.com/developers/CLOB/orders/orders)
-- [Polymarket L2 Client Methods](https://docs.polymarket.com/developers/CLOB/clients/methods-l2)
-- [Polymarket Neg Risk Docs](https://docs.polymarket.com/advanced/neg-risk)
-- [Polymarket Gamma API](https://docs.polymarket.com/developers/gamma-markets-api/overview)
-- [Polymarket API Rate Limits](https://docs.polymarket.com/quickstart/introduction/rate-limits)
-- [Polymarket CTF Redemption](https://docs.polymarket.com/developers/CTF/redeem)
-- [CTF Exchange OrderStructs.sol](https://github.com/Polymarket/ctf-exchange/blob/main/src/exchange/libraries/OrderStructs.sol)
-- [CTF Exchange Hashing.sol](https://github.com/Polymarket/ctf-exchange/blob/main/src/exchange/mixins/Hashing.sol)
-- [NegRiskAdapter source](https://github.com/Polymarket/neg-risk-ctf-adapter)
-- [py-clob-client source](https://github.com/Polymarket/py-clob-client)
-- [clob-client TypeScript reference](https://github.com/Polymarket/clob-client)
-- [NegRiskAdapter ChainSecurity Audit](https://www.chainsecurity.com/security-audit/polymarket-negriskadapter)
-- [CLOB Allowance Setting Gist](https://gist.github.com/poly-rodr/44313920481de58d5a3f6d1f8226bd5e)
+### Primary (HIGH confidence -- direct codebase analysis)
+- `packages/core/src/interfaces/action-provider.types.ts` -- IActionProvider, ActionDefinition, ApiDirectResult
+- `packages/daemon/src/infrastructure/action/action-provider-registry.ts` -- executeResolve() flow, kind normalization point
+- `packages/daemon/src/pipeline/stages.ts` -- PipelineContext, stage5Execute branching
+- `packages/daemon/src/pipeline/database-policy-engine.ts` -- TransactionParam, policy evaluation chain
+- `packages/daemon/src/pipeline/sign-message.ts` -- sign-message pipeline (6-step)
+- `packages/core/src/erc8128/http-message-signer.ts` -- ERC-8128 HTTP signing
+- `packages/daemon/src/infrastructure/settings/settings-crypto.ts` -- AES-256-GCM encryption, HKDF derivation
+- `packages/daemon/src/services/async-polling-service.ts` -- AsyncPollingService tracker registration
+- `packages/actions/src/common/async-status-tracker.ts` -- IAsyncStatusTracker interface
+- `packages/actions/src/providers/polymarket/signer.ts` -- HMAC-SHA256 + EIP-712 precedent
+- `packages/daemon/src/services/webhook-delivery-queue.ts` -- HMAC-SHA256 precedent
 
-### Secondary (MEDIUM confidence)
-- [Polymarket Order Signing Clojure Gist](https://gist.github.com/shaunlebron/7463f0003aa906ffe6f31dc18c408f73) — complete EIP-712 domain/struct spec, cross-verified with contract source
-- [Polymarket Data API Positions](https://docs.polymarket.com/developers/misc-endpoints/data-api-get-positions) — endpoint confirmed, full response schema details unverified
-- [Polymarket Data API Value](https://docs.polymarket.com/developers/misc-endpoints/data-api-value) — endpoint confirmed
-- [Polymarket Proxy Wallet Docs](https://docs.polymarket.com/developers/proxy-wallet) — EOA direct API behavior sparse, proxy-wallet-centric documentation
-- [py-clob-client Issue #121](https://github.com/Polymarket/py-clob-client/issues/121) — FOK decimal precision bug and fix
-- [py-clob-client Issue #187](https://github.com/Polymarket/py-clob-client/issues/187) — 401 Unauthorized patterns and API key nonce management
-- [py-clob-client Issue #138](https://github.com/Polymarket/py-clob-client/issues/138) — Neg Risk market resolution behavior
-- [UMA Oracle manipulation 2025](https://orochi.network/blog/oracle-manipulation-in-polymarket-2025) — resolution edge case context
+### Secondary (MEDIUM confidence -- external documentation)
+- CoW Protocol signing schemes: https://docs.cow.fi/cow-protocol/reference/core/signing-schemes
+- CoW Protocol order lifecycle: https://docs.cow.fi/cow-protocol/reference/contracts/core/settlement
+- Coinbase Agentic Wallets: https://www.coinbase.com/developer-platform/discover/launches/agentic-wallets
+
+### Tertiary (LOW confidence -- inference)
+- ESM plugin ecosystem compatibility -- inferred from loadPlugins() analysis, no external plugins tested
+- Scaling behavior at 1000+ wallets with off-chain trackers -- extrapolated from current AsyncPollingService patterns
 
 ---
-*Research completed: 2026-03-10*
+*Research completed: 2026-03-11*
 *Ready for roadmap: yes*
