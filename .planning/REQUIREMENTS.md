@@ -10,13 +10,13 @@ Requirements for v31.12 milestone. Each maps to roadmap phases.
 
 ### ResolvedAction 타입 시스템
 
-- [ ] **RTYPE-01**: ResolvedAction Zod discriminatedUnion 구현 — kind 필드 분기 (contractCall/signedData/signedHttp)
-- [ ] **RTYPE-02**: ContractCallAction 구현 — 기존 ContractCallRequest + kind:'contractCall' 래핑, kind 필드 없는 반환값은 ContractCallRequest로 취급 (하위 호환)
-- [ ] **RTYPE-03**: SignedDataAction 구현 — kind, signingScheme, payload, venue, operation, credentialRef?, tracking?, policyContext?
-- [ ] **RTYPE-04**: SignedHttpAction 구현 — kind, method, url, headers, body?, venue, operation, credentialRef?, signingPreset?
-- [ ] **RTYPE-05**: IActionProvider.resolve() 반환 타입을 ContractCallRequest | ContractCallRequest[] | ResolvedAction | ResolvedAction[]로 확장
-- [ ] **RTYPE-06**: ActionProviderRegistry에서 resolve 결과 검증 — kind별 Zod 스키마 파싱
-- [ ] **RTYPE-07**: 기존 13개 ActionProvider 구현체 무변경 동작 확인 — kind 없이 ContractCallRequest 반환 시 contractCall로 정규화, ApiDirectResult는 정규화 전 isApiDirectResult()로 분기
+- [x] **RTYPE-01**: ResolvedAction Zod discriminatedUnion 구현 — kind 필드 분기 (contractCall/signedData/signedHttp)
+- [x] **RTYPE-02**: ContractCallAction 구현 — 기존 ContractCallRequest + kind:'contractCall' 래핑, kind 필드 없는 반환값은 ContractCallRequest로 취급 (하위 호환)
+- [x] **RTYPE-03**: SignedDataAction 구현 — kind, signingScheme, payload, venue, operation, credentialRef?, tracking?, policyContext?
+- [x] **RTYPE-04**: SignedHttpAction 구현 — kind, method, url, headers, body?, venue, operation, credentialRef?, signingPreset?
+- [x] **RTYPE-05**: IActionProvider.resolve() 반환 타입을 ContractCallRequest | ContractCallRequest[] | ResolvedAction | ResolvedAction[]로 확장
+- [x] **RTYPE-06**: ActionProviderRegistry에서 resolve 결과 검증 — kind별 Zod 스키마 파싱
+- [x] **RTYPE-07**: 기존 13개 ActionProvider 구현체 무변경 동작 확인 — kind 없이 ContractCallRequest 반환 시 contractCall로 정규화, ApiDirectResult는 정규화 전 isApiDirectResult()로 분기
 
 ### ISignerCapability
 
@@ -79,15 +79,15 @@ Requirements for v31.12 milestone. Each maps to roadmap phases.
 
 ### 에러 코드
 
-- [ ] **ERR-01**: CREDENTIAL_NOT_FOUND (404), CREDENTIAL_EXPIRED (400) 에러 코드 추가
-- [ ] **ERR-02**: SIGNING_SCHEME_UNSUPPORTED (400), CAPABILITY_NOT_FOUND (400) 에러 코드 추가
-- [ ] **ERR-03**: VENUE_NOT_ALLOWED (403), EXTERNAL_ACTION_FAILED (500) 에러 코드 추가
+- [x] **ERR-01**: CREDENTIAL_NOT_FOUND (404), CREDENTIAL_EXPIRED (400) 에러 코드 추가
+- [x] **ERR-02**: SIGNING_SCHEME_UNSUPPORTED (400), CAPABILITY_NOT_FOUND (400) 에러 코드 추가
+- [x] **ERR-03**: VENUE_NOT_ALLOWED (403), EXTERNAL_ACTION_FAILED (500) 에러 코드 추가
 
 ### DB 마이그레이션
 
-- [ ] **DBMIG-01**: v55 마이그레이션 — wallet_credentials 테이블 (유니크 인덱스, expires_at 부분 인덱스)
-- [ ] **DBMIG-02**: v56 마이그레이션 — transactions 테이블 변경 (리네임 + 컬럼 추가 + 인덱스)
-- [ ] **DBMIG-03**: 마이그레이션 테스트 — 스키마 스냅샷 + 데이터 변환 테스트
+- [x] **DBMIG-01**: v55 마이그레이션 — wallet_credentials 테이블 (유니크 인덱스, expires_at 부분 인덱스)
+- [x] **DBMIG-02**: v56 마이그레이션 — transactions 테이블 변경 (리네임 + 컬럼 추가 + 인덱스)
+- [x] **DBMIG-03**: 마이그레이션 테스트 — 스키마 스냅샷 + 데이터 변환 테스트
 
 ### Admin UI
 
@@ -140,19 +140,19 @@ Requirements for v31.12 milestone. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| RTYPE-01 | Phase 386 | Pending |
-| RTYPE-02 | Phase 386 | Pending |
-| RTYPE-03 | Phase 386 | Pending |
-| RTYPE-04 | Phase 386 | Pending |
-| RTYPE-05 | Phase 386 | Pending |
-| RTYPE-06 | Phase 386 | Pending |
-| RTYPE-07 | Phase 386 | Pending |
-| ERR-01 | Phase 386 | Pending |
-| ERR-02 | Phase 386 | Pending |
-| ERR-03 | Phase 386 | Pending |
-| DBMIG-01 | Phase 386 | Pending |
-| DBMIG-02 | Phase 386 | Pending |
-| DBMIG-03 | Phase 386 | Pending |
+| RTYPE-01 | Phase 386 | Complete |
+| RTYPE-02 | Phase 386 | Complete |
+| RTYPE-03 | Phase 386 | Complete |
+| RTYPE-04 | Phase 386 | Complete |
+| RTYPE-05 | Phase 386 | Complete |
+| RTYPE-06 | Phase 386 | Complete |
+| RTYPE-07 | Phase 386 | Complete |
+| ERR-01 | Phase 386 | Complete |
+| ERR-02 | Phase 386 | Complete |
+| ERR-03 | Phase 386 | Complete |
+| DBMIG-01 | Phase 386 | Complete |
+| DBMIG-02 | Phase 386 | Complete |
+| DBMIG-03 | Phase 386 | Complete |
 | SIGN-01 | Phase 387 | Pending |
 | SIGN-02 | Phase 387 | Pending |
 | SIGN-03 | Phase 387 | Pending |

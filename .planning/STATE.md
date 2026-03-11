@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v31.12
 milestone_name: External Action 프레임워크 구현
-status: ready_to_plan
-stopped_at: null
+status: executing
+stopped_at: Completed Phase 386 (3 plans, 5 tasks)
 last_updated: "2026-03-12"
-last_activity: 2026-03-12 — Roadmap created (7 phases, 60 requirements)
+last_activity: 2026-03-12 — Phase 386 complete (3 plans, 5 tasks, 13 requirements)
 progress:
   total_phases: 7
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  completed_phases: 1
+  total_plans: 3
+  completed_plans: 3
   percent: 0
 ---
 
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-12)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Phase 386 — 타입 시스템 + 에러 코드 + DB 마이그레이션
+**Current focus:** Phase 387 — Signer Capability 레지스트리
 
 ## Current Position
 
-Phase: 386 of 392 (타입 시스템 + 에러 코드 + DB 마이그레이션)
-Plan: — (ready to plan)
-Status: Ready to plan Phase 386
-Last activity: 2026-03-12 — Roadmap created
+Phase: 387 of 392 (Signer Capability 레지스트리)
+Plan: 1 of TBD
+Status: Ready to plan Phase 387
+Last activity: 2026-03-12 — Phase 386 complete
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█░░░░░░░░░] 14% (1/7 phases)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: —
-- Total execution time: 0 hours
+- Total plans completed: 3
+- Average duration: ~8min/plan
+- Total execution time: ~25min
 
 ## Accumulated Context
 
@@ -45,6 +45,9 @@ Progress: [░░░░░░░░░░] 0%
 
 - doc-81 설계를 4-Wave 순서로 구현: Wave 1(타입+서명+DB) -> Wave 2(Vault+추적+정책) -> Wave 3(파이프라인+조회) -> Wave 4(Admin+MCP+SDK+스킬)
 - Phase 388/389는 386 완료 후 독립 병렬 가능, Phase 391/392는 390 완료 후 독립 병렬 가능
+- [Phase 386]: ResolvedAction 3-kind discriminatedUnion (contractCall/signedData/signedHttp) with normalize utility for backward compat
+- [Phase 386]: DB v55 wallet_credentials (blob mode AES-256-GCM) + v56 transactions action_kind/venue/operation columns with idempotent migration
+- [Phase 386]: IActionProvider.resolve() 6-type return union + riskLevel 4-grade (critical added) -- zero-change backward compat
 
 ### Pending Todos
 
@@ -56,6 +59,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-12
-Stopped at: Roadmap created, ready to plan Phase 386
+Last session: 2026-03-11T18:09:46.642Z
+Stopped at: Completed Phase 386 (3 plans, 5 tasks)
 Resume file: None
