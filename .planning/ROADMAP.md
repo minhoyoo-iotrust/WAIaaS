@@ -12,7 +12,7 @@
 
 - [x] **Phase 375: 유틸리티 함수 통합** - 중복된 parseTokenAmount/contract-encoding 헬퍼를 공통 모듈로 추출하고 ~260줄 중복 제거
 - [x] **Phase 376: 타입 안전성 개선** - WalletRow SmartAccount 필드 타입 추가, `as any` 40+곳 제거, 중복 함수/regex 통합 (completed 2026-03-11)
-- [ ] **Phase 377: 대형 파일 분할** - admin.ts (3,107줄) 도메인별 분할, openapi-schemas.ts (1,606줄) 그룹핑 검토
+- [x] **Phase 377: 대형 파일 분할** - admin.ts (3,107줄) 도메인별 분할, openapi-schemas.ts (1,606줄) 그룹핑 검토 (completed 2026-03-11)
 - [ ] **Phase 378: API 에러 응답 일관성** - 비표준 에러/응답 패턴을 WAIaaSError 및 표준 패턴으로 통일
 - [ ] **Phase 379: 상수 중앙화** - 매직 넘버 식별 및 명명된 상수로 추출
 
@@ -100,6 +100,6 @@ All phases are independent and can execute in any order: 375 → 376 → 377 →
 |-------|----------------|--------|-----------|
 | 375. 유틸리티 함수 통합 | 2/2 | Complete    | 2026-03-11 |
 | 376. 타입 안전성 개선 | 2/2 | Complete    | 2026-03-11 |
-| 377. 대형 파일 분할 | 0/2 | Not started | - |
+| 377. 대형 파일 분할 | 2/2 | Complete   | 2026-03-11 |
 | 378. API 에러 응답 일관성 | 0/1 | Not started | - |
 | 379. 상수 중앙화 | 0/1 | Not started | - |

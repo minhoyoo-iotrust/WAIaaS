@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v31.10
 milestone_name: milestone
 status: executing
-stopped_at: Completed Phase 376 (376-01-PLAN.md, 376-02-PLAN.md)
-last_updated: "2026-03-11T08:47:43.528Z"
+stopped_at: Completed Phase 377 (377-01-PLAN.md, 377-02-PLAN.md)
+last_updated: "2026-03-11T09:09:25.711Z"
 last_activity: 2026-03-11 — Phase 376 complete
 progress:
   total_phases: 5
-  completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
+  completed_phases: 3
+  total_plans: 6
+  completed_plans: 6
   percent: 50
 ---
 
@@ -45,6 +45,7 @@ Progress: [█████░░░░░] 50%
 |-------|-------|-------|----------|
 | 375 | 2 | 15min | 7.5min |
 | 376 | 2 | 20min | 10min |
+| Phase 377 P01+02 | 15 | 4 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -61,6 +62,8 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - AccountType cast for Drizzle text->union narrowing (as any 대체)
 - INftApprovalQuery 인터페이스 + hasNftApprovalQuery 타입 가드로 optional adapter capability 패턴 확립
 - resolveChainId는 daemon/helpers/에 배치 (daemon-specific, core가 아님)
+- [Phase 377]: openapi-schemas.ts (1,606줄) 분할 불필요: 32개 파일이 import하는 순수 선언 파일, 분할 시 import 경로 복잡도만 증가
+- [Phase 377]: admin.ts thin aggregator 패턴: 타입 export + register 함수 호출 위임 (3,107줄 → 98줄)
 
 ### Pending Todos
 
@@ -72,6 +75,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-11
-Stopped at: Completed Phase 376 (376-01-PLAN.md, 376-02-PLAN.md)
+Last session: 2026-03-11T09:09:25.707Z
+Stopped at: Completed Phase 377 (377-01-PLAN.md, 377-02-PLAN.md)
 Resume file: None

@@ -23,9 +23,9 @@
 
 ### File Split (대형 파일 분할)
 
-- [ ] **SPLIT-01**: `admin.ts` (3,107줄) → `admin-auth.ts`, `admin-settings.ts`, `admin-notifications.ts`, `admin-wallets.ts`, `admin-monitoring.ts` 분할
-- [ ] **SPLIT-02**: `admin.ts`를 라우트 등록만 담당하는 thin aggregator로 유지
-- [ ] **SPLIT-03**: `openapi-schemas.ts` (1,606줄) 분할 검토 및 필요 시 도메인별 그룹핑
+- [x] **SPLIT-01**: `admin.ts` (3,107줄) → `admin-auth.ts`, `admin-settings.ts`, `admin-notifications.ts`, `admin-wallets.ts`, `admin-monitoring.ts` 분할
+- [x] **SPLIT-02**: `admin.ts`를 라우트 등록만 담당하는 thin aggregator로 유지
+- [x] **SPLIT-03**: `openapi-schemas.ts` (1,606줄) 분할 검토 및 필요 시 도메인별 그룹핑
 
 ### Error (API 에러 응답 일관성)
 
@@ -66,9 +66,9 @@ None — 순수 리팩토링 마일스톤이므로 추가 기능 없음.
 | TYPE-02 | Phase 376 | Complete |
 | TYPE-03 | Phase 376 | Complete |
 | TYPE-04 | Phase 376 | Complete |
-| SPLIT-01 | Phase 377 | Pending |
-| SPLIT-02 | Phase 377 | Pending |
-| SPLIT-03 | Phase 377 | Pending |
+| SPLIT-01 | Phase 377 | Complete |
+| SPLIT-02 | Phase 377 | Complete |
+| SPLIT-03 | Phase 377 | Complete |
 | ERR-01 | Phase 378 | Pending |
 | ERR-02 | Phase 378 | Pending |
 | ERR-03 | Phase 378 | Pending |
