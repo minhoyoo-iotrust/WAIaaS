@@ -47,8 +47,8 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('NotificationEventType', () => {
-  it('has exactly 60 event types', () => {
-    expect(NOTIFICATION_EVENT_TYPES).toHaveLength(60);
+  it('has exactly 66 event types', () => {
+    expect(NOTIFICATION_EVENT_TYPES).toHaveLength(66);
   });
 
   it('contains the 5 new event types added in v1.3', () => {

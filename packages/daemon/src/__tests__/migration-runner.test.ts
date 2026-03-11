@@ -64,7 +64,7 @@ describe('Migration Runner', () => {
   it('should return { applied: 0, skipped: 0 } for empty migrations array', () => {
     const result = runMigrations(sqlite, []);
     expect(result).toEqual({ applied: 0, skipped: 0 });
-    expect(getMaxVersion()).toBe(56); // v1~v56
+    expect(getMaxVersion()).toBe(57); // v1~v56
   });
 
   it('should execute new migrations sequentially', () => {
@@ -149,7 +149,7 @@ describe('Migration Runner', () => {
     );
 
     // version 57 should NOT be recorded (max stays at 56 from pushSchema)
-    expect(getMaxVersion()).toBe(56);
+    expect(getMaxVersion()).toBe(57);
 
     // version 58 should NOT have been executed
     const columns = sqlite.prepare("PRAGMA table_info('wallets')").all() as Array<{ name: string }>;
@@ -294,7 +294,7 @@ describe('managesOwnTransaction migrations', () => {
     );
 
     // Version 57 should NOT be recorded (max stays at 56 from pushSchema)
-    expect(getMaxVersion()).toBe(56);
+    expect(getMaxVersion()).toBe(57);
 
     // foreign_keys should be restored to ON (1)
     const fkAfter = sqlite.pragma('foreign_keys') as Array<{ foreign_keys: number }>;

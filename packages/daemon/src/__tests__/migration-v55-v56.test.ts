@@ -83,7 +83,7 @@ describe('DB v55-v56 Migration: wallet_credentials + transactions extension', ()
   // -----------------------------------------------------------------------
 
   it('T1: LATEST_SCHEMA_VERSION is 56', () => {
-    expect(LATEST_SCHEMA_VERSION).toBe(56);
+    expect(LATEST_SCHEMA_VERSION).toBe(57);
   });
 
   // -----------------------------------------------------------------------
@@ -251,7 +251,7 @@ describe('DB v55-v56 Migration: wallet_credentials + transactions extension', ()
     runMigrations(sqlite);
 
     expect(tableExists(sqlite, 'wallet_credentials')).toBe(true);
-    expect(getMaxVersion(sqlite)).toBe(56);
+    expect(getMaxVersion(sqlite)).toBe(57);
 
     // Check transaction columns (may already exist from pushSchema DDL)
     const txCols = getTableColumns(sqlite, 'transactions');
@@ -313,7 +313,7 @@ describe('DB v55-v56 Migration: wallet_credentials + transactions extension', ()
 
     // Running again should not throw
     expect(() => runMigrations(sqlite)).not.toThrow();
-    expect(getMaxVersion(sqlite)).toBe(56);
+    expect(getMaxVersion(sqlite)).toBe(57);
   });
 
   // -----------------------------------------------------------------------

@@ -79,7 +79,7 @@ const LEGACY_NETWORK_NORMALIZE: Record<string, string> = {
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 56;
+export const LATEST_SCHEMA_VERSION = 57;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -165,7 +165,7 @@ function getCreateTableStatements(): string[] {
   error TEXT,
   metadata TEXT,
   network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES)})),
-  bridge_status TEXT CHECK (bridge_status IS NULL OR bridge_status IN ('PENDING', 'COMPLETED', 'FAILED', 'BRIDGE_MONITORING', 'TIMEOUT', 'REFUNDED')),
+  bridge_status TEXT CHECK (bridge_status IS NULL OR bridge_status IN ('PENDING', 'COMPLETED', 'FAILED', 'BRIDGE_MONITORING', 'TIMEOUT', 'REFUNDED', 'PARTIALLY_FILLED', 'FILLED', 'CANCELED', 'SETTLED', 'EXPIRED')),
   bridge_metadata TEXT,
   action_kind TEXT NOT NULL DEFAULT 'contractCall',
   venue TEXT,
@@ -689,6 +689,9 @@ function getCreateIndexStatements(): string[] {
     'CREATE INDEX IF NOT EXISTS idx_transactions_action_kind ON transactions(action_kind)',
     'CREATE INDEX IF NOT EXISTS idx_transactions_venue ON transactions(venue) WHERE venue IS NOT NULL',
     'CREATE INDEX IF NOT EXISTS idx_transactions_external_id ON transactions(external_id) WHERE external_id IS NOT NULL',
+
+    // v57: composite index for external action tracking queries
+    'CREATE INDEX IF NOT EXISTS idx_transactions_action_kind_bridge_status ON transactions(action_kind, bridge_status) WHERE bridge_status IS NOT NULL',
   ];
 }
 
@@ -1959,7 +1962,7 @@ MIGRATIONS.push({
   error TEXT,
   metadata TEXT,
   network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES_WITH_LEGACY)})),
-  bridge_status TEXT CHECK (bridge_status IS NULL OR bridge_status IN ('PENDING', 'COMPLETED', 'FAILED', 'BRIDGE_MONITORING', 'TIMEOUT', 'REFUNDED')),
+  bridge_status TEXT CHECK (bridge_status IS NULL OR bridge_status IN ('PENDING', 'COMPLETED', 'FAILED', 'BRIDGE_MONITORING', 'TIMEOUT', 'REFUNDED', 'PARTIALLY_FILLED', 'FILLED', 'CANCELED', 'SETTLED', 'EXPIRED')),
   bridge_metadata TEXT
 )`);
 
@@ -2303,7 +2306,7 @@ MIGRATIONS.push({
   error TEXT,
   metadata TEXT,
   network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES)})),
-  bridge_status TEXT CHECK (bridge_status IS NULL OR bridge_status IN ('PENDING', 'COMPLETED', 'FAILED', 'BRIDGE_MONITORING', 'TIMEOUT', 'REFUNDED')),
+  bridge_status TEXT CHECK (bridge_status IS NULL OR bridge_status IN ('PENDING', 'COMPLETED', 'FAILED', 'BRIDGE_MONITORING', 'TIMEOUT', 'REFUNDED', 'PARTIALLY_FILLED', 'FILLED', 'CANCELED', 'SETTLED', 'EXPIRED')),
   bridge_metadata TEXT
 )`);
 
@@ -3185,6 +3188,20 @@ MIGRATIONS.push({
     sqlite.exec('CREATE INDEX IF NOT EXISTS idx_transactions_action_kind ON transactions(action_kind)');
     sqlite.exec('CREATE INDEX IF NOT EXISTS idx_transactions_venue ON transactions(venue) WHERE venue IS NOT NULL');
     sqlite.exec('CREATE INDEX IF NOT EXISTS idx_transactions_external_id ON transactions(external_id) WHERE external_id IS NOT NULL');
+  },
+});
+
+// ---------------------------------------------------------------------------
+// v57: composite index for external action tracking queries
+// ---------------------------------------------------------------------------
+
+MIGRATIONS.push({
+  version: 57,
+  description: 'Add composite index idx_transactions_action_kind_bridge_status',
+  up: (sqlite) => {
+    sqlite.exec(
+      'CREATE INDEX IF NOT EXISTS idx_transactions_action_kind_bridge_status ON transactions(action_kind, bridge_status) WHERE bridge_status IS NOT NULL',
+    );
   },
 });
 

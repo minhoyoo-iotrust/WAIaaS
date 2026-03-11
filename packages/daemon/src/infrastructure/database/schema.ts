@@ -233,7 +233,7 @@ export const transactions = sqliteTable(
     check(
       'check_bridge_status',
       sql.raw(
-        `bridge_status IS NULL OR bridge_status IN ('PENDING', 'COMPLETED', 'FAILED', 'BRIDGE_MONITORING', 'TIMEOUT', 'REFUNDED')`,
+        `bridge_status IS NULL OR bridge_status IN ('PENDING', 'COMPLETED', 'FAILED', 'BRIDGE_MONITORING', 'TIMEOUT', 'REFUNDED', 'PARTIALLY_FILLED', 'FILLED', 'CANCELED', 'SETTLED', 'EXPIRED')`,
       ),
     ),
     // v31.12: External Action tracking indexes

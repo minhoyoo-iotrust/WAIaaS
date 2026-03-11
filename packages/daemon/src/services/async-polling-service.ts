@@ -72,7 +72,7 @@ export class AsyncPollingService {
       .from(transactions)
       .where(
         or(
-          inArray(transactions.bridgeStatus, ['PENDING', 'BRIDGE_MONITORING']),
+          inArray(transactions.bridgeStatus, ['PENDING', 'BRIDGE_MONITORING', 'PARTIALLY_FILLED']),
           eq(transactions.status, 'GAS_WAITING'),
         ),
       )
@@ -149,7 +149,8 @@ export class AsyncPollingService {
 
     try {
       const metadata = JSON.parse(tx.bridgeMetadata ?? '{}') as Record<string, unknown>;
-      return (metadata.tracker as string) ?? 'bridge';
+      // Prefer trackerName (external action) over tracker (bridge/staking)
+      return (metadata.trackerName as string) ?? (metadata.tracker as string) ?? 'bridge';
     } catch {
       return 'bridge';
     }
@@ -344,6 +345,113 @@ export class AsyncPollingService {
       case 'TIMEOUT':
         await this.handleTimeout(tx, tracker, metadata);
         break;
+
+      // ---------------------------------------------------------------------------
+      // External action states (Phase 389)
+      // ---------------------------------------------------------------------------
+
+      case 'PARTIALLY_FILLED':
+        // Non-terminal: update status + metadata, continue polling
+        this.db
+          .update(transactions)
+          .set({
+            bridgeStatus: 'PARTIALLY_FILLED' as BridgeStatus,
+            bridgeMetadata: JSON.stringify(updatedMetadata),
+          })
+          .where(eq(transactions.id, tx.id))
+          .run();
+
+        if (tx.walletId) {
+          this.callbacks?.emitNotification?.('EXTERNAL_ACTION_PARTIALLY_FILLED', tx.walletId, {
+            txId: tx.id,
+            ...updatedMetadata,
+          });
+        }
+        break;
+
+      case 'FILLED': {
+        this.db
+          .update(transactions)
+          .set({
+            bridgeStatus: 'FILLED' as BridgeStatus,
+            bridgeMetadata: JSON.stringify(updatedMetadata),
+          })
+          .where(eq(transactions.id, tx.id))
+          .run();
+
+        this.callbacks?.releaseReservation?.(tx.id);
+
+        if (tx.walletId) {
+          this.callbacks?.emitNotification?.('EXTERNAL_ACTION_FILLED', tx.walletId, {
+            txId: tx.id,
+            ...updatedMetadata,
+          });
+        }
+        break;
+      }
+
+      case 'SETTLED': {
+        this.db
+          .update(transactions)
+          .set({
+            bridgeStatus: 'SETTLED' as BridgeStatus,
+            bridgeMetadata: JSON.stringify(updatedMetadata),
+          })
+          .where(eq(transactions.id, tx.id))
+          .run();
+
+        this.callbacks?.releaseReservation?.(tx.id);
+
+        if (tx.walletId) {
+          this.callbacks?.emitNotification?.('EXTERNAL_ACTION_SETTLED', tx.walletId, {
+            txId: tx.id,
+            ...updatedMetadata,
+          });
+        }
+        break;
+      }
+
+      case 'CANCELED': {
+        this.db
+          .update(transactions)
+          .set({
+            bridgeStatus: 'CANCELED' as BridgeStatus,
+            bridgeMetadata: JSON.stringify(updatedMetadata),
+          })
+          .where(eq(transactions.id, tx.id))
+          .run();
+
+        this.callbacks?.releaseReservation?.(tx.id);
+
+        if (tx.walletId) {
+          this.callbacks?.emitNotification?.('EXTERNAL_ACTION_CANCELED', tx.walletId, {
+            txId: tx.id,
+            ...updatedMetadata,
+          });
+        }
+        break;
+      }
+
+      case 'EXPIRED': {
+        this.db
+          .update(transactions)
+          .set({
+            bridgeStatus: 'EXPIRED' as BridgeStatus,
+            bridgeMetadata: JSON.stringify(updatedMetadata),
+          })
+          .where(eq(transactions.id, tx.id))
+          .run();
+
+        this.callbacks?.releaseReservation?.(tx.id);
+
+        if (tx.walletId) {
+          this.callbacks?.emitNotification?.('EXTERNAL_ACTION_EXPIRED', tx.walletId, {
+            txId: tx.id,
+            ...updatedMetadata,
+          });
+        }
+        break;
+      }
 
       case 'PENDING':
       default:

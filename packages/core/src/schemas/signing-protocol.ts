@@ -246,6 +246,12 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, NotificationCateg
   EXCHANGE_FAILED: 'transaction',
   EXCHANGE_REFUNDED: 'transaction',
   EXCHANGE_TIMEOUT: 'transaction',
+  EXTERNAL_ACTION_PARTIALLY_FILLED: 'transaction',
+  EXTERNAL_ACTION_FILLED: 'transaction',
+  EXTERNAL_ACTION_SETTLED: 'transaction',
+  EXTERNAL_ACTION_CANCELED: 'transaction',
+  EXTERNAL_ACTION_EXPIRED: 'transaction',
+  EXTERNAL_ACTION_FAILED: 'transaction',
 };
 
 // ---------------------------------------------------------------------------
@@ -313,6 +319,12 @@ export const EVENT_DESCRIPTIONS: Record<NotificationEventType, string> = {
   EXCHANGE_FAILED: 'Cross-chain exchange failed',
   EXCHANGE_REFUNDED: 'Cross-chain exchange refunded',
   EXCHANGE_TIMEOUT: 'Cross-chain exchange monitoring timed out',
+  EXTERNAL_ACTION_PARTIALLY_FILLED: 'External action partially filled',
+  EXTERNAL_ACTION_FILLED: 'External action fully filled',
+  EXTERNAL_ACTION_SETTLED: 'External action settled',
+  EXTERNAL_ACTION_CANCELED: 'External action canceled',
+  EXTERNAL_ACTION_EXPIRED: 'External action expired',
+  EXTERNAL_ACTION_FAILED: 'External action failed',
 };
 
 // ---------------------------------------------------------------------------

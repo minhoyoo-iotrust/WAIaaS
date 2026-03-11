@@ -677,6 +677,42 @@ describe('AsyncPollingService: dynamic notification event type', () => {
     expect(tx.bridge_status).toBe('TIMEOUT');
   });
 
+  it('staking tracker FAILED emits custom notificationEvent from details', async () => {
+    const metadata = JSON.stringify({
+      tracker: 'lido-withdrawal',
+      pollCount: 0,
+      lastPolledAt: 0,
+    });
+    insertBridgeTx('tx-staking-fail', 'PENDING', metadata);
+
+    const emitNotification = vi.fn();
+    const releaseReservation = vi.fn();
+
+    const tracker = createMockTracker({
+      name: 'lido-withdrawal',
+      maxAttempts: 480,
+      timeoutTransition: 'TIMEOUT',
+      checkStatus: vi.fn().mockResolvedValue({
+        state: 'FAILED',
+        details: {
+          notificationEvent: 'STAKING_UNSTAKE_TIMEOUT',
+          error: 'Failed',
+        },
+      } satisfies AsyncTrackingResult),
+    });
+
+    const service = new AsyncPollingService(db, { emitNotification, releaseReservation });
+    service.registerTracker(tracker);
+    await service.pollAll();
+
+    expect(emitNotification).toHaveBeenCalledWith(
+      'STAKING_UNSTAKE_TIMEOUT',
+      'w-poll-test',
+      expect.objectContaining({ txId: 'tx-staking-fail' }),
+    );
+    expect(releaseReservation).toHaveBeenCalledWith('tx-staking-fail');
+  });
+
   it('bridge tracker without notificationEvent falls back to BRIDGE_COMPLETED (regression)', async () => {
     const metadata = JSON.stringify({
       tracker: 'bridge',
@@ -708,5 +744,217 @@ describe('AsyncPollingService: dynamic notification event type', () => {
       expect.objectContaining({ txId: 'tx-bridge-fallback', destTxHash: '0xdest' }),
     );
     expect(releaseReservation).toHaveBeenCalledWith('tx-bridge-fallback');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 389: External Action 5-state + PARTIALLY_FILLED polling
+// ---------------------------------------------------------------------------
+
+describe('AsyncPollingService: PARTIALLY_FILLED polling inclusion', () => {
+  beforeEach(() => resetDb());
+
+  it('picks up PARTIALLY_FILLED transactions for polling', async () => {
+    const metadata = JSON.stringify({ trackerName: 'external', pollCount: 0, lastPolledAt: 0 });
+    insertBridgeTx('tx-partial', 'PARTIALLY_FILLED', metadata);
+
+    const tracker = createMockTracker({
+      name: 'external',
+      checkStatus: vi.fn().mockResolvedValue({ state: 'PARTIALLY_FILLED', details: { filledPct: 75 } }),
+    });
+
+    const service = new AsyncPollingService(db);
+    service.registerTracker(tracker);
+    const result = await service.pollAll();
+
+    expect(result.polled).toBe(1);
+    expect(tracker.checkStatus).toHaveBeenCalledWith('tx-partial', expect.any(Object));
+  });
+
+  it('resolveTrackerName prefers trackerName over tracker in metadata', async () => {
+    const metadata = JSON.stringify({ trackerName: 'ext-tracker', tracker: 'bridge', pollCount: 0, lastPolledAt: 0 });
+    insertBridgeTx('tx-tracker-name', 'PENDING', metadata);
+
+    const extTracker = createMockTracker({ name: 'ext-tracker' });
+    const bridgeTracker = createMockTracker({ name: 'bridge' });
+
+    const service = new AsyncPollingService(db);
+    service.registerTracker(extTracker);
+    service.registerTracker(bridgeTracker);
+    await service.pollAll();
+
+    expect(extTracker.checkStatus).toHaveBeenCalled();
+    expect(bridgeTracker.checkStatus).not.toHaveBeenCalled();
+  });
+});
+
+describe('AsyncPollingService: external action state processing', () => {
+  beforeEach(() => resetDb());
+
+  it('PARTIALLY_FILLED updates bridge_status and metadata, continues polling', async () => {
+    const metadata = JSON.stringify({ tracker: 'external', pollCount: 0, lastPolledAt: 0 });
+    insertBridgeTx('tx-pf-1', 'PENDING', metadata);
+
+    const emitNotification = vi.fn();
+    const releaseReservation = vi.fn();
+
+    const tracker = createMockTracker({
+      name: 'external',
+      checkStatus: vi.fn().mockResolvedValue({
+        state: 'PARTIALLY_FILLED',
+        details: { filledPct: 50 },
+      } satisfies AsyncTrackingResult),
+    });
+
+    const service = new AsyncPollingService(db, { emitNotification, releaseReservation });
+    service.registerTracker(tracker);
+    await service.pollAll();
+
+    const tx = getTx('tx-pf-1');
+    expect(tx.bridge_status).toBe('PARTIALLY_FILLED');
+    expect(emitNotification).toHaveBeenCalledWith(
+      'EXTERNAL_ACTION_PARTIALLY_FILLED',
+      'w-poll-test',
+      expect.objectContaining({ txId: 'tx-pf-1', filledPct: 50 }),
+    );
+    // Reservation NOT released (still active)
+    expect(releaseReservation).not.toHaveBeenCalled();
+  });
+
+  it('FILLED updates bridge_status, releases reservation, emits notification', async () => {
+    const metadata = JSON.stringify({ tracker: 'external', pollCount: 0, lastPolledAt: 0 });
+    insertBridgeTx('tx-filled-1', 'PARTIALLY_FILLED', metadata);
+
+    const emitNotification = vi.fn();
+    const releaseReservation = vi.fn();
+
+    const tracker = createMockTracker({
+      name: 'external',
+      checkStatus: vi.fn().mockResolvedValue({
+        state: 'FILLED',
+        details: { totalFilled: '100%' },
+      } satisfies AsyncTrackingResult),
+    });
+
+    const service = new AsyncPollingService(db, { emitNotification, releaseReservation });
+    service.registerTracker(tracker);
+    await service.pollAll();
+
+    const tx = getTx('tx-filled-1');
+    expect(tx.bridge_status).toBe('FILLED');
+    expect(emitNotification).toHaveBeenCalledWith(
+      'EXTERNAL_ACTION_FILLED',
+      'w-poll-test',
+      expect.objectContaining({ txId: 'tx-filled-1' }),
+    );
+    expect(releaseReservation).toHaveBeenCalledWith('tx-filled-1');
+  });
+
+  it('SETTLED updates bridge_status, releases reservation, emits notification', async () => {
+    const metadata = JSON.stringify({ tracker: 'external', pollCount: 0, lastPolledAt: 0 });
+    insertBridgeTx('tx-settled-1', 'PENDING', metadata);
+
+    const emitNotification = vi.fn();
+    const releaseReservation = vi.fn();
+
+    const tracker = createMockTracker({
+      name: 'external',
+      checkStatus: vi.fn().mockResolvedValue({
+        state: 'SETTLED',
+        details: { settledAt: Date.now() },
+      } satisfies AsyncTrackingResult),
+    });
+
+    const service = new AsyncPollingService(db, { emitNotification, releaseReservation });
+    service.registerTracker(tracker);
+    await service.pollAll();
+
+    const tx = getTx('tx-settled-1');
+    expect(tx.bridge_status).toBe('SETTLED');
+    expect(emitNotification).toHaveBeenCalledWith(
+      'EXTERNAL_ACTION_SETTLED',
+      'w-poll-test',
+      expect.objectContaining({ txId: 'tx-settled-1' }),
+    );
+    expect(releaseReservation).toHaveBeenCalledWith('tx-settled-1');
+  });
+
+  it('CANCELED updates bridge_status, releases reservation, emits notification', async () => {
+    const metadata = JSON.stringify({ tracker: 'external', pollCount: 0, lastPolledAt: 0 });
+    insertBridgeTx('tx-cancel-1', 'PENDING', metadata);
+
+    const emitNotification = vi.fn();
+    const releaseReservation = vi.fn();
+
+    const tracker = createMockTracker({
+      name: 'external',
+      checkStatus: vi.fn().mockResolvedValue({
+        state: 'CANCELED',
+        details: { reason: 'user-cancel' },
+      } satisfies AsyncTrackingResult),
+    });
+
+    const service = new AsyncPollingService(db, { emitNotification, releaseReservation });
+    service.registerTracker(tracker);
+    await service.pollAll();
+
+    const tx = getTx('tx-cancel-1');
+    expect(tx.bridge_status).toBe('CANCELED');
+    expect(emitNotification).toHaveBeenCalledWith(
+      'EXTERNAL_ACTION_CANCELED',
+      'w-poll-test',
+      expect.objectContaining({ txId: 'tx-cancel-1', reason: 'user-cancel' }),
+    );
+    expect(releaseReservation).toHaveBeenCalledWith('tx-cancel-1');
+  });
+
+  it('EXPIRED updates bridge_status, releases reservation, emits notification', async () => {
+    const metadata = JSON.stringify({ tracker: 'external', pollCount: 0, lastPolledAt: 0 });
+    insertBridgeTx('tx-expire-1', 'PENDING', metadata);
+
+    const emitNotification = vi.fn();
+    const releaseReservation = vi.fn();
+
+    const tracker = createMockTracker({
+      name: 'external',
+      checkStatus: vi.fn().mockResolvedValue({
+        state: 'EXPIRED',
+        details: { expiredAt: Date.now() },
+      } satisfies AsyncTrackingResult),
+    });
+
+    const service = new AsyncPollingService(db, { emitNotification, releaseReservation });
+    service.registerTracker(tracker);
+    await service.pollAll();
+
+    const tx = getTx('tx-expire-1');
+    expect(tx.bridge_status).toBe('EXPIRED');
+    expect(emitNotification).toHaveBeenCalledWith(
+      'EXTERNAL_ACTION_EXPIRED',
+      'w-poll-test',
+      expect.objectContaining({ txId: 'tx-expire-1' }),
+    );
+    expect(releaseReservation).toHaveBeenCalledWith('tx-expire-1');
+  });
+
+  it('existing COMPLETED/FAILED/PENDING processing is unchanged', async () => {
+    const metadata = JSON.stringify({ tracker: 'bridge', pollCount: 0, lastPolledAt: 0 });
+    insertBridgeTx('tx-compat-1', 'PENDING', metadata);
+
+    const emitNotification = vi.fn();
+    const releaseReservation = vi.fn();
+
+    const tracker = createMockTracker({
+      checkStatus: vi.fn().mockResolvedValue({ state: 'COMPLETED' } satisfies AsyncTrackingResult),
+    });
+
+    const service = new AsyncPollingService(db, { emitNotification, releaseReservation });
+    service.registerTracker(tracker);
+    await service.pollAll();
+
+    const tx = getTx('tx-compat-1');
+    expect(tx.bridge_status).toBe('COMPLETED');
+    expect(emitNotification).toHaveBeenCalledWith('BRIDGE_COMPLETED', 'w-poll-test', expect.any(Object));
+    expect(releaseReservation).toHaveBeenCalledWith('tx-compat-1');
   });
 });

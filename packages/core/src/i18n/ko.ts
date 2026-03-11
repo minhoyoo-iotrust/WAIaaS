@@ -246,6 +246,12 @@ export const messages: Messages = {
     EXCHANGE_FAILED: { title: '크로스체인 교환 실패', body: '{providerId}를 통한 교환이 실패했습니다. 트랜잭션 {transactionId}. 상태 확인: {transactionStatusUrl}' },
     EXCHANGE_REFUNDED: { title: '크로스체인 교환 환불', body: '교환 {transactionId}이(가) {providerId}에 의해 환불되었습니다. 자금이 원본 지갑으로 반환되었습니다.' },
     EXCHANGE_TIMEOUT: { title: '크로스체인 교환 모니터링 타임아웃', body: '교환 {transactionId} 모니터링이 1시간 후 시간 초과되었습니다. 수동으로 상태를 확인하세요: {transactionStatusUrl}' },
+    EXTERNAL_ACTION_PARTIALLY_FILLED: { title: '외부 액션 부분 체결', body: '{venue}의 외부 액션 {txId}이(가) 부분 체결되었습니다 ({filledPct}%). 모니터링을 계속합니다.' },
+    EXTERNAL_ACTION_FILLED: { title: '외부 액션 완전 체결', body: '{venue}의 외부 액션 {txId}이(가) 완전히 체결되었습니다.' },
+    EXTERNAL_ACTION_SETTLED: { title: '외부 액션 정산 완료', body: '{venue}의 외부 액션 {txId}이(가) 정산되었습니다.' },
+    EXTERNAL_ACTION_CANCELED: { title: '외부 액션 취소', body: '{venue}의 외부 액션 {txId}이(가) 취소되었습니다. 사유: {reason}' },
+    EXTERNAL_ACTION_EXPIRED: { title: '외부 액션 만료', body: '{venue}의 외부 액션 {txId}이(가) 만료되었습니다.' },
+    EXTERNAL_ACTION_FAILED: { title: '외부 액션 실패', body: '{venue}의 외부 액션 {txId}이(가) 실패했습니다. 오류: {error}' },
   },
   // System messages
   system: {
