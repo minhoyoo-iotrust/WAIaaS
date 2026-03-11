@@ -122,6 +122,12 @@ export const SETTINGS_SEARCH_INDEX: SearchIndexEntry[] = [
   { id: 'system..signing_sdk_preferred_channel', label: 'Preferred Channel', description: 'Preferred signing channel for SDK requests', page: '/system', tab: '', fieldName: 'signing_sdk.preferred_channel', keywords: ['signing', 'sdk', 'channel', 'ntfy', 'telegram'] },
   { id: 'wallet-apps..signing_sdk_notifications', label: 'Notifications Enabled', description: 'Push event notifications to wallet apps', page: '/wallet-apps', tab: '', fieldName: 'signing_sdk.notifications_enabled', keywords: ['signing', 'sdk', 'notification', 'wallet', 'push'] },
 
+  // --- Smart Account AA global defaults on System page ---
+  { id: 'system..smart_account_pimlico_api_key', label: 'Pimlico API Key', description: 'Global default Pimlico bundler API key for smart accounts', page: '/system', tab: '', fieldName: 'smart_account.pimlico.api_key', keywords: ['smart', 'account', 'pimlico', 'bundler', 'api', 'key', 'erc4337'] },
+  { id: 'system..smart_account_pimlico_policy_id', label: 'Pimlico Paymaster Policy ID', description: 'Global default Pimlico paymaster sponsorship policy ID', page: '/system', tab: '', fieldName: 'smart_account.pimlico.paymaster_policy_id', keywords: ['smart', 'account', 'pimlico', 'paymaster', 'policy', 'erc4337'] },
+  { id: 'system..smart_account_alchemy_api_key', label: 'Alchemy API Key (AA)', description: 'Global default Alchemy bundler API key for smart accounts', page: '/system', tab: '', fieldName: 'smart_account.alchemy.api_key', keywords: ['smart', 'account', 'alchemy', 'bundler', 'api', 'key', 'erc4337'] },
+  { id: 'system..smart_account_alchemy_policy_id', label: 'Alchemy Paymaster Policy ID', description: 'Global default Alchemy paymaster policy ID', page: '/system', tab: '', fieldName: 'smart_account.alchemy.paymaster_policy_id', keywords: ['smart', 'account', 'alchemy', 'paymaster', 'policy', 'erc4337'] },
+
   // --- ERC-8128 settings on System page ---
   { id: 'system..erc8128_enabled', label: 'ERC-8128 Enabled', description: 'Enable ERC-8128 HTTP message signing', page: '/system', tab: '', fieldName: 'erc8128.enabled', keywords: ['erc8128', 'signing', 'http', 'rfc9421', 'enable'] },
   { id: 'system..erc8128_default_preset', label: 'Default Preset', description: 'Default covered components preset for ERC-8128', page: '/system', tab: '', fieldName: 'erc8128.default_preset', keywords: ['erc8128', 'preset', 'minimal', 'standard', 'strict'] },

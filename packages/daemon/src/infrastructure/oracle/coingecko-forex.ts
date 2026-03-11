@@ -12,11 +12,10 @@
  * via InMemoryPriceCache (30-minute TTL).
  */
 
+import { ORACLE_TIMEOUT_MS } from '../../constants.js';
+
 /** CoinGecko Demo API base URL. */
 const BASE_URL = 'https://api.coingecko.com/api/v3';
-
-/** Request timeout in milliseconds. */
-const TIMEOUT_MS = 5000;
 
 /**
  * CoinGecko forex rate provider.
@@ -53,7 +52,7 @@ export class CoinGeckoForexProvider {
 
     const res = await fetch(url, {
       headers: { 'x-cg-demo-api-key': this.apiKey },
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: AbortSignal.timeout(ORACLE_TIMEOUT_MS),
     });
 
     if (!res.ok) {

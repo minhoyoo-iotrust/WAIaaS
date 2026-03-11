@@ -733,6 +733,42 @@
 
 ---
 
+## Milestone: v31.10 — 코드베이스 품질 개선
+
+**Shipped:** 2026-03-11
+**Phases:** 5 | **Plans:** 8 | **Sessions:** 1
+
+### What Was Built
+- parseTokenAmount/contract-encoding 공통 유틸리티 모듈 추출 — 7개 프로바이더 중복 제거, ~260줄 삭제
+- WalletRow SmartAccount 타입 확장 + `as any` 24곳 제거, resolveChainId/CAIP-19 regex 통합, NFT 인터페이스 타입 가드
+- admin.ts 5개 도메인 모듈 분할(auth/settings/notifications/wallets/monitoring) — 3,107줄→98줄 thin aggregator
+- WAIaaSError 패턴 통일 — nft-approvals/sessions/erc8004/admin-monitoring 비표준 패턴 교체
+- daemon/cli/admin 3개 constants.ts 생성 — 10개 명명 상수 추출, 22개 소스 파일 매직 넘버 교체
+
+### What Worked
+- 5 phases 전부 독립적(D3)으로 설계하여 순서 무관 실행 가능 — 병렬 실행 용이
+- 순수 리팩토링 마일스톤 컨셉: 행위 변경 없음, API 변경 없음, DB 마이그레이션 없음 — 전체 테스트 스위트가 안전망 역할
+- 매 Phase 완료 시 `pnpm turbo run lint && typecheck && test` 전체 통과 필수 규칙으로 회귀 방지
+- admin.ts thin aggregator 패턴이 3,107줄을 98줄로 96.8% 축소하면서 기존 import 경로 유지
+
+### What Was Inefficient
+- openapi-schemas.ts (1,606줄) 분할을 검토했으나 32개 파일 import 분석 후 분할 불필요 판단 — 사전 분석에 시간 소요
+
+### Patterns Established
+- Package-level constants.ts 패턴: 2회 이상 사용되는 매직 넘버를 패키지별 constants 파일로 추출
+- admin route thin aggregator 패턴: 타입 export + register 함수 호출만 담당, 실제 핸들러는 도메인별 분리
+- INftApprovalQuery 인터페이스 + hasNftApprovalQuery 타입 가드로 optional adapter capability 패턴
+
+### Key Lessons
+- 순수 리팩토링은 전체 테스트 스위트가 존재할 때 안전하게 수행 가능 — 테스트 없는 리팩토링은 위험
+- 독립 Phase 설계가 실행 효율을 높임 — 의존성 없으면 병렬화/순서 자유
+
+### Cost Observations
+- Sessions: 1
+- Notable: 8 plans, 89 files, +6,742/-3,472 lines, 1일 완료
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -758,6 +794,7 @@
 | v31.7 | 1 | 8 | E2E 자동 검증 체계, 122 파일 1일 완료 |
 | v31.8 | 1 | 5 | Agent UAT 시나리오 체계, 89 파일 1일 완료 |
 | v31.9 | 1 | 5 | Polymarket 예측 시장 통합, 93 파일 2일 완료 |
+| v31.10 | 1 | 5 | 코드베이스 품질 개선(순수 리팩토링), 89 파일 1일 완료 |
 
 ### Cumulative Quality
 
@@ -782,6 +819,7 @@
 | v31.7 | ~7,219 (unchanged) | maintained | +30 decisions |
 | v31.8 | ~7,219 (unchanged) | maintained | +14 decisions |
 | v31.9 | ~7,454 (+235) | maintained | +12 decisions |
+| v31.10 | ~7,454 (unchanged) | maintained | +12 decisions |
 
 ### Top Lessons (Verified Across Milestones)
 

@@ -1,5 +1,23 @@
 # Project Milestones: WAIaaS
 
+## v31.10 코드베이스 품질 개선 (Shipped: 2026-03-11)
+
+**Phases completed:** 375-379 (5 phases, 8 plans, 16 requirements)
+
+**Key accomplishments:**
+- parseTokenAmount/contract-encoding 유틸리티 통합 — 7개 프로바이더 중복 제거, ~260줄 코드 삭제, 공통 amount-parser + contract-encoding 모듈
+- WalletRow SmartAccount 타입 확장 + `as any` 24곳 제거, resolveChainId 단일화, CAIP-19 regex 통합, NFT 인터페이스 타입 가드
+- admin.ts (3,107줄) → 5개 도메인 모듈(auth/settings/notifications/wallets/monitoring) + thin aggregator (98줄, 96.8% 축소)
+- WAIaaSError 패턴 통일 — nft-approvals/sessions/erc8004/admin-monitoring 비표준 패턴 교체, 에러 코드 135→137
+- 10개 명명 상수 추출 — daemon/cli/admin 3개 constants.ts 생성, 22개 소스 파일 매직 넘버 교체
+
+**Stats:**
+- 5 phases (375-379), 8 plans, 32 commits
+- 89 files changed, +6,742 / -3,472 lines
+- Timeline: 1 day (2026-03-11)
+
+---
+
 ## v31.9 Polymarket 예측 시장 통합 (Shipped: 2026-03-11)
 
 **Phases completed:** 370-374 (5 phases, 14 plans, 29 requirements)

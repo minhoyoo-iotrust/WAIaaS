@@ -14,6 +14,7 @@
  * MockKaminoSdkWrapper enables unit testing without real SDK/RPC.
  */
 import { ChainError } from '@waiaas/core';
+import { parseTokenAmount } from '../../common/amount-parser.js';
 import type {
   ILendingProvider,
   ActionProviderMetadata,
@@ -41,33 +42,6 @@ import {
   hfToStatus,
   KAMINO_LIQUIDATION_THRESHOLD,
 } from './hf-simulation.js';
-
-// ---------------------------------------------------------------------------
-// Amount parsing helper
-// ---------------------------------------------------------------------------
-
-/**
- * Parse a human-readable token amount string to smallest unit (bigint).
- * SPL tokens typically use 6 decimals (USDC), 9 (SOL), or other values.
- *
- * @param amount - Human-readable amount string (e.g., "100.5")
- * @param decimals - Token decimals (default 6 for most SPL stablecoins)
- * @throws ChainError if amount is zero or negative
- */
-function parseTokenAmount(amount: string, decimals: number = 6): bigint {
-  const parts = amount.split('.');
-  const whole = BigInt(parts[0] || '0');
-  const fractional = (parts[1] || '').padEnd(decimals, '0').slice(0, decimals);
-  const result = whole * 10n ** BigInt(decimals) + BigInt(fractional);
-
-  if (result <= 0n) {
-    throw new ChainError('INVALID_INSTRUCTION', 'solana', {
-      message: 'Amount must be greater than 0',
-    });
-  }
-
-  return result;
-}
 
 // ---------------------------------------------------------------------------
 // Instruction-to-request conversion
@@ -188,7 +162,7 @@ export class KaminoLendingProvider implements ILendingProvider, IPositionProvide
   ): Promise<ContractCallRequest[]> {
     const input = KaminoSupplyInputSchema.parse(params);
     const marketAddress = resolveMarketAddress(input.market ?? this.config.market);
-    const amount = parseTokenAmount(input.amount);
+    const amount = parseTokenAmount(input.amount, 6);
 
     const instructions = await this.sdkWrapper.buildSupplyInstruction({
       market: marketAddress,
@@ -210,7 +184,7 @@ export class KaminoLendingProvider implements ILendingProvider, IPositionProvide
   ): Promise<ContractCallRequest[]> {
     const input = KaminoBorrowInputSchema.parse(params);
     const marketAddress = resolveMarketAddress(input.market ?? this.config.market);
-    const amount = parseTokenAmount(input.amount);
+    const amount = parseTokenAmount(input.amount, 6);
 
     // HF simulation: approximate USD value using raw amount
     // (conservative estimate -- proper conversion requires price oracle)
@@ -237,7 +211,7 @@ export class KaminoLendingProvider implements ILendingProvider, IPositionProvide
   ): Promise<ContractCallRequest[]> {
     const input = KaminoRepayInputSchema.parse(params);
     const marketAddress = resolveMarketAddress(input.market ?? this.config.market);
-    const amount: bigint | 'max' = input.amount === 'max' ? 'max' : parseTokenAmount(input.amount);
+    const amount: bigint | 'max' = input.amount === 'max' ? 'max' : parseTokenAmount(input.amount, 6);
 
     const instructions = await this.sdkWrapper.buildRepayInstruction({
       market: marketAddress,
@@ -259,7 +233,7 @@ export class KaminoLendingProvider implements ILendingProvider, IPositionProvide
   ): Promise<ContractCallRequest[]> {
     const input = KaminoWithdrawInputSchema.parse(params);
     const marketAddress = resolveMarketAddress(input.market ?? this.config.market);
-    const amount: bigint | 'max' = input.amount === 'max' ? 'max' : parseTokenAmount(input.amount);
+    const amount: bigint | 'max' = input.amount === 'max' ? 'max' : parseTokenAmount(input.amount, 6);
 
     // Skip HF simulation for 'max' withdrawals (closing position entirely)
     if (amount !== 'max') {

@@ -13,7 +13,7 @@
  * - WithdrawSol = 16
  */
 import { createHash } from 'node:crypto';
-import type { ChainError as ChainErrorType } from '@waiaas/core';
+import { parseTokenAmount } from '../../common/amount-parser.js';
 import {
   type JitoStakingConfig,
   JITO_WITHDRAW_AUTHORITY,
@@ -22,17 +22,6 @@ import {
   SPL_TOKEN_PROGRAM,
   SYSTEM_PROGRAM,
 } from './config.js';
-
-// Re-export ChainError dynamically to avoid circular issues
-let _ChainError: typeof ChainErrorType;
-
-async function getChainError(): Promise<typeof ChainErrorType> {
-  if (!_ChainError) {
-    const mod = await import('@waiaas/core');
-    _ChainError = mod.ChainError;
-  }
-  return _ChainError;
-}
 
 // ---------------------------------------------------------------------------
 // Base58 encoder/decoder (Bitcoin alphabet)
@@ -306,20 +295,8 @@ export function encodeWithdrawSolData(amountLamports: bigint): string {
  *
  * @throws ChainError if amount is zero or negative
  */
-export async function parseSolAmount(amount: string): Promise<bigint> {
-  const parts = amount.split('.');
-  const whole = BigInt(parts[0] || '0');
-  const decimals = (parts[1] || '').padEnd(9, '0').slice(0, 9);
-  const result = whole * 10n ** 9n + BigInt(decimals);
-
-  if (result <= 0n) {
-    const ChainError = await getChainError();
-    throw new ChainError('INVALID_INSTRUCTION', 'solana', {
-      message: 'Amount must be greater than 0',
-    });
-  }
-
-  return result;
+export function parseSolAmount(amount: string): bigint {
+  return parseTokenAmount(amount, 9);
 }
 
 // ---------------------------------------------------------------------------

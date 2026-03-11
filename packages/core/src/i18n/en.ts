@@ -208,6 +208,9 @@ export const messages: Messages = {
     UNSUPPORTED_NFT_STANDARD: 'Unsupported NFT standard',
     INDEXER_API_ERROR: 'NFT indexer API error',
     NFT_METADATA_FETCH_FAILED: 'Failed to fetch NFT metadata',
+    INVALID_TOKEN_IDENTIFIER: 'Invalid NFT token identifier format',
+    // ADMIN domain (stats)
+    STATS_NOT_CONFIGURED: 'Stats service not configured',
     // USEROP domain
     EXPIRED_BUILD: 'Build data has expired',
     BUILD_NOT_FOUND: 'Build data not found',

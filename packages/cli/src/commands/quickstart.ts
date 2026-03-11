@@ -14,6 +14,7 @@
 import { writeFile, rename, mkdir } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { resolvePassword } from '../utils/password.js';
+import { CLI_FETCH_TIMEOUT_MS } from '../constants.js';
 
 export interface QuickstartOptions {
   dataDir: string;
@@ -62,7 +63,7 @@ export async function quickstartCommand(opts: QuickstartOptions): Promise<void> 
   // Step 1: Check daemon is running
   try {
     const healthRes = await fetch(`${baseUrl}/health`, {
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(CLI_FETCH_TIMEOUT_MS),
     });
     if (!healthRes.ok) {
       console.error(`Warning: daemon returned ${healthRes.status} on health check`);

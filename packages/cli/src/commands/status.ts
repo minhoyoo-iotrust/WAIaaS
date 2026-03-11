@@ -9,9 +9,7 @@
 
 import { existsSync, readFileSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
-
-/** Default daemon port if config is unavailable. */
-const DEFAULT_PORT = 3100;
+import { DEFAULT_DAEMON_PORT } from '../constants.js';
 
 export async function statusCommand(dataDir: string): Promise<void> {
   const pidPath = join(dataDir, 'daemon.pid');
@@ -61,14 +59,14 @@ function isProcessAlive(pid: number): boolean {
 }
 
 /**
- * Try to read the port from config.toml. Falls back to DEFAULT_PORT.
+ * Try to read the port from config.toml. Falls back to DEFAULT_DAEMON_PORT.
  * We do a simple TOML parse to avoid importing the full config loader
  * (which pulls in many daemon dependencies).
  */
 function resolvePort(dataDir: string): number {
   try {
     const configPath = join(dataDir, 'config.toml');
-    if (!existsSync(configPath)) return DEFAULT_PORT;
+    if (!existsSync(configPath)) return DEFAULT_DAEMON_PORT;
 
     const content = readFileSync(configPath, 'utf-8');
     const match = /^\s*port\s*=\s*(\d+)/m.exec(content);
@@ -79,5 +77,5 @@ function resolvePort(dataDir: string): number {
   } catch {
     // Ignore config read errors
   }
-  return DEFAULT_PORT;
+  return DEFAULT_DAEMON_PORT;
 }

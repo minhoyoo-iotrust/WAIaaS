@@ -11,6 +11,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { readArchiveMetadata } from '@waiaas/daemon';
 import { resolvePassword } from '../utils/password.js';
+import { CLI_FETCH_TIMEOUT_MS } from '../constants.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -38,7 +39,7 @@ export async function backupCommand(opts: BackupCreateOptions): Promise<void> {
 
   // 1. Health check
   try {
-    const healthRes = await fetch(`${baseUrl}/health`, { signal: AbortSignal.timeout(5000) });
+    const healthRes = await fetch(`${baseUrl}/health`, { signal: AbortSignal.timeout(CLI_FETCH_TIMEOUT_MS) });
     if (!healthRes.ok) throw new Error(`Health check returned ${healthRes.status}`);
   } catch {
     console.error('Error: Cannot reach WAIaaS daemon.');

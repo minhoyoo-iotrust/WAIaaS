@@ -14,6 +14,7 @@ import { DcentSwapApiClient } from './dcent-api-client.js';
 import type { DcentQuoteProvider } from './schemas.js';
 import type { DcentSwapConfig } from './config.js';
 import { clampSlippageBps, asBps } from '../../common/slippage.js';
+import { encodeApproveCalldata } from '../../common/contract-encoding.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -45,22 +46,6 @@ export interface ExecuteDexSwapParams {
   walletAddress: string;
   providerId?: string;
   slippageBps?: number;
-}
-
-// ---------------------------------------------------------------------------
-// ERC-20 approve calldata encoder (DS-02)
-// ---------------------------------------------------------------------------
-
-/**
- * Encode ERC-20 approve(address spender, uint256 amount) calldata.
- * Self-encoded because DCent approve API is partially unimplemented (DS-02).
- * Pattern reused from zerox-swap provider.
- */
-function encodeApproveCalldata(spender: string, amount: string): string {
-  const selector = '0x095ea7b3';
-  const paddedSpender = spender.slice(2).toLowerCase().padStart(64, '0');
-  const paddedAmount = BigInt(amount).toString(16).padStart(64, '0');
-  return `${selector}${paddedSpender}${paddedAmount}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -262,7 +247,7 @@ export async function executeDexSwap(
     const approveRequest: ContractCallRequest = {
       type: 'CONTRACT_CALL',
       to: assetReference, // ERC-20 contract address from CAIP-19
-      calldata: encodeApproveCalldata(spender, params.amount),
+      calldata: encodeApproveCalldata(spender, BigInt(params.amount)),
       value: '0',
     };
     requests.push(approveRequest);

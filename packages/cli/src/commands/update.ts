@@ -21,12 +21,12 @@ import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import semver from 'semver';
 import { BackupService } from '@waiaas/daemon';
+import { CLI_FETCH_TIMEOUT_MS } from '../constants.js';
 
 const require = createRequire(import.meta.url);
 const { version: CURRENT_VERSION } = require('../../package.json') as { version: string };
 
 const NPM_REGISTRY_URL = 'https://registry.npmjs.org/@waiaas/cli';
-const FETCH_TIMEOUT_MS = 5000;
 
 export interface UpdateOptions {
   dataDir: string;
@@ -181,7 +181,7 @@ async function updateMode(opts: UpdateOptions): Promise<void> {
 async function fetchLatestVersion(): Promise<string | null> {
   try {
     const res = await fetch(NPM_REGISTRY_URL, {
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      signal: AbortSignal.timeout(CLI_FETCH_TIMEOUT_MS),
       headers: {
         'User-Agent': `waiaas/${CURRENT_VERSION}`,
         Accept: 'application/json',

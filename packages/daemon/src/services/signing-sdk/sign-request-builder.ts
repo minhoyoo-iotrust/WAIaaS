@@ -15,9 +15,11 @@
 
 import {
   type ChainType,
+  type NetworkType,
   type SignRequest,
   SignRequestSchema,
   WAIaaSError,
+  networkToCaip2,
 } from '@waiaas/core';
 import type { SettingsService } from '../../infrastructure/settings/settings-service.js';
 import type { WalletLinkRegistry } from './wallet-link-registry.js';
@@ -41,6 +43,8 @@ export interface BuildRequestParams {
   walletName?: string;
   /** EIP-712 approval type constraint: restricts channels to WC/REST only. */
   approvalType?: 'SIWE' | 'EIP712';
+  /** Owner wallet address that should sign the approval. Looked up from DB if omitted. */
+  signerAddress?: string;
 }
 
 export interface BuildRequestResult {
@@ -140,12 +144,32 @@ export class SignRequestBuilder {
       };
     }
 
+    // 8.5. Resolve CAIP-2 chain ID from network
+    let caip2ChainId: string;
+    try {
+      caip2ChainId = networkToCaip2(params.network as NetworkType);
+    } catch {
+      // Fallback for unknown networks: use chain type prefix
+      caip2ChainId = params.chain === 'solana' ? `solana:${params.network}` : `eip155:${params.network}`;
+    }
+
+    // 8.6. Resolve signer address (owner wallet address)
+    let signerAddress = params.signerAddress || '';
+    if (!signerAddress && this.sqlite) {
+      // Look up owner_address from wallets table using the 'from' address (publicKey)
+      const walletRow = this.sqlite.prepare(
+        'SELECT owner_address FROM wallets WHERE public_key = ?',
+      ).get(params.from) as { owner_address: string | null } | undefined;
+      signerAddress = walletRow?.owner_address || '';
+    }
+
     // 9. Assemble SignRequest + validate with Zod
     const request = SignRequestSchema.parse({
       version: '1',
       requestId,
-      chain: params.chain,
-      network: params.network,
+      caip2ChainId,
+      networkName: params.network,
+      signerAddress,
       message,
       displayMessage,
       metadata: {

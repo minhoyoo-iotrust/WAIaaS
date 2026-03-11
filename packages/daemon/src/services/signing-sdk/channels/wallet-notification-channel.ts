@@ -19,9 +19,9 @@ import {
 } from '@waiaas/core';
 import type { SettingsService } from '../../../infrastructure/settings/settings-service.js';
 import type Database from 'better-sqlite3';
+import { SIGNING_CHANNEL_FETCH_TIMEOUT_MS } from '../../../constants.js';
 
 const DEFAULT_NTFY_SERVER = 'https://ntfy.sh';
-const FETCH_TIMEOUT_MS = 10_000;
 
 export interface WalletNotificationChannelDeps {
   sqlite: Database.Database;
@@ -138,7 +138,7 @@ export class WalletNotificationChannel {
 
     const url = `${ntfyServer}/${topic}`;
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    const timeoutId = setTimeout(() => controller.abort(), SIGNING_CHANNEL_FETCH_TIMEOUT_MS);
     try {
       // RFC 2047 encode non-ASCII title to avoid undici ByteString rejection
       const safeTitle = /^[\x20-\x7E]*$/.test(message.title)

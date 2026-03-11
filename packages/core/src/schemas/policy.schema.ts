@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { PolicyTypeEnum, PolicyTierEnum } from '../enums/policy.js';
 import { ChainTypeEnum, NetworkTypeEnum } from '../enums/chain.js';
-import { Caip19Schema } from '../caip/index.js';
+import { Caip19Schema, CAIP19_REGEX } from '../caip/index.js';
 
 export const PolicySchema = z.object({
   id: z.string().uuid(),
@@ -80,8 +80,7 @@ export type TokenLimit = z.infer<typeof TokenLimitSchema>;
 // ---------------------------------------------------------------------------
 
 const VALID_CHAIN_TYPES = new Set(['solana', 'ethereum']);
-// Duplicated from caip19.ts to avoid circular dependency risk
-const CAIP19_REGEX = /^[-a-z0-9]{3,8}:[-_a-zA-Z0-9]{1,32}\/[-a-z0-9]{3,8}:[-.%a-zA-Z0-9]{1,128}$/;
+// CAIP19_REGEX imported from caip/index.js (single source of truth)
 
 function isValidTokenLimitKey(key: string): boolean {
   if (key === 'native') return true;

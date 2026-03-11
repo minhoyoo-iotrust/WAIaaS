@@ -25,7 +25,7 @@ export function formatDisplayMessage(request: SignRequest): string {
     lines.push(`Amount: ${request.metadata.amount} ${request.metadata.symbol}`);
   }
 
-  lines.push(`Network: ${request.network}`);
+  lines.push(`Network: ${request.networkName}`);
   lines.push(`Policy: ${request.metadata.policyTier}`);
   lines.push(`Expires: ${request.expiresAt}`);
 

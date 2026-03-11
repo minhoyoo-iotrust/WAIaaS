@@ -19,7 +19,7 @@ import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { createHash } from 'node:crypto';
 import { WAIaaSError, getSingleNetwork, getNetworksForEnvironment, BUILTIN_PRESETS, AA_PROVIDER_CHAIN_MAP, type WalletPreset } from '@waiaas/core';
-import type { ChainType, EnvironmentType, NetworkType, EventBus, AaProviderName } from '@waiaas/core';
+import type { ChainType, EnvironmentType, NetworkType, EventBus, AaProviderName, AccountType } from '@waiaas/core';
 import { wallets, sessions, sessionWallets, transactions, policies, auditLog, notificationLogs, wcSessions, incomingTransactions, incomingTxCursors, defiPositions, agentIdentities, hyperliquidOrders, hyperliquidSubAccounts, useropBuilds, polymarketOrders, polymarketPositions, polymarketApiKeys } from '../../infrastructure/database/schema.js';
 import { generateId } from '../../infrastructure/database/id.js';
 import { insertAuditLog } from '../../infrastructure/database/audit-helper.js';
@@ -379,13 +379,13 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
             ownerVerified: a.ownerVerified,
           }),
           monitorIncoming: a.monitorIncoming ?? false,
-          accountType: (a as any).accountType ?? 'eoa',
-          signerKey: (a as any).signerKey ?? null,
-          deployed: (a as any).deployed ?? true,
-          factoryAddress: (a as any).factoryAddress ?? null,
+          accountType: (a.accountType ?? 'eoa') as AccountType,
+          signerKey: a.signerKey ?? null,
+          deployed: a.deployed ?? true,
+          factoryAddress: a.factoryAddress ?? null,
           provider: buildProviderStatus({
-            aaProvider: (a as any).aaProvider ?? null,
-            aaPaymasterUrl: (a as any).aaPaymasterUrl ?? null,
+            aaProvider: a.aaProvider ?? null,
+            aaPaymasterUrl: a.aaPaymasterUrl ?? null,
           }),
           createdAt: a.createdAt ? Math.floor(a.createdAt.getTime() / 1000) : 0,
         })),
@@ -418,8 +418,8 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
       ownerVerified: wallet.ownerVerified,
     });
 
-    const accountType = (wallet as any).accountType ?? 'eoa';
-    const factoryAddr: string | null = (wallet as any).factoryAddress ?? null;
+    const accountType = (wallet.accountType ?? 'eoa') as AccountType;
+    const factoryAddr: string | null = wallet.factoryAddress ?? null;
     const networkId = getSingleNetwork(wallet.chain as ChainType, wallet.environment as EnvironmentType) ?? wallet.chain;
 
     // Factory supported networks (static list + optional runtime verification)
@@ -463,14 +463,14 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
         approvalMethod: wallet.ownerApprovalMethod ?? null,
         walletType: wallet.walletType ?? null,
         accountType,
-        signerKey: (wallet as any).signerKey ?? null,
-        deployed: (wallet as any).deployed ?? true,
+        signerKey: wallet.signerKey ?? null,
+        deployed: wallet.deployed ?? true,
         factoryAddress: factoryAddr,
         factorySupportedNetworks,
         factoryVerifiedOnNetwork,
         provider: buildProviderStatus({
-          aaProvider: (wallet as any).aaProvider ?? null,
-          aaPaymasterUrl: (wallet as any).aaPaymasterUrl ?? null,
+          aaProvider: wallet.aaProvider ?? null,
+          aaPaymasterUrl: wallet.aaPaymasterUrl ?? null,
         }),
         suspendedAt: wallet.suspendedAt ? Math.floor(wallet.suspendedAt.getTime() / 1000) : null,
         suspensionReason: wallet.suspensionReason ?? null,
@@ -490,14 +490,14 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
     const parsed = c.req.valid('json');
     const chain = parsed.chain as ChainType;
     const environment = parsed.environment as EnvironmentType;
-    const accountType = (parsed as any).accountType ?? 'eoa';
+    const accountType = parsed.accountType ?? 'eoa';
 
     // Smart account validation (ERC-4337)
-    const aaProvider = (parsed as any).aaProvider ?? null;
-    const aaProviderApiKey = (parsed as any).aaProviderApiKey ?? null;
-    const aaBundlerUrl = (parsed as any).aaBundlerUrl ?? null;
-    const aaPaymasterUrl = (parsed as any).aaPaymasterUrl ?? null;
-    const aaPaymasterPolicyId = (parsed as any).aaPaymasterPolicyId ?? null;
+    const aaProvider = parsed.aaProvider ?? null;
+    const aaProviderApiKey = parsed.aaProviderApiKey ?? null;
+    const aaBundlerUrl = parsed.aaBundlerUrl ?? null;
+    const aaPaymasterUrl = parsed.aaPaymasterUrl ?? null;
+    const aaPaymasterPolicyId = parsed.aaPaymasterPolicyId ?? null;
 
     if (accountType === 'smart') {
       // Only EVM chains support smart accounts
@@ -735,12 +735,12 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
           ownerVerified: wallet.ownerVerified,
         }),
         monitorIncoming: wallet.monitorIncoming ?? false,
-        accountType: (wallet as any).accountType ?? 'eoa',
-        signerKey: (wallet as any).signerKey ?? null,
-        deployed: (wallet as any).deployed ?? true,
+        accountType: (wallet.accountType ?? 'eoa') as AccountType,
+        signerKey: wallet.signerKey ?? null,
+        deployed: wallet.deployed ?? true,
         provider: buildProviderStatus({
-          aaProvider: (wallet as any).aaProvider ?? null,
-          aaPaymasterUrl: (wallet as any).aaPaymasterUrl ?? null,
+          aaProvider: wallet.aaProvider ?? null,
+          aaPaymasterUrl: wallet.aaPaymasterUrl ?? null,
         }),
         createdAt: wallet.createdAt ? Math.floor(wallet.createdAt.getTime() / 1000) : 0,
       },
@@ -1429,7 +1429,7 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
     }
 
     // Only smart account wallets can have providers
-    if ((wallet as any).accountType !== 'smart') {
+    if (wallet.accountType !== 'smart') {
       throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
         message: 'Provider configuration is only available for smart account wallets',
       });

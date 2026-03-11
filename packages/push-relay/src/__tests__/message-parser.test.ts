@@ -14,8 +14,9 @@ function makeSignRequest(overrides?: Partial<SignRequest>): SignRequest {
   return {
     version: '1',
     requestId: '550e8400-e29b-41d4-a716-446655440000',
-    chain: 'solana',
-    network: 'devnet',
+    caip2ChainId: 'solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1',
+    networkName: 'solana-devnet',
+    signerAddress: 'OwnerSolanaAddress1234567890abcdef',
     message: 'base64tx',
     displayMessage: 'Send 1 SOL',
     metadata: {
@@ -96,7 +97,7 @@ describe('parseSignRequest', () => {
     const encoded = encodeBase64url(request);
     const result = parseSignRequest(encoded);
     expect(result.requestId).toBe(request.requestId);
-    expect(result.chain).toBe('solana');
+    expect(result.caip2ChainId).toBe('solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1');
     expect(result.displayMessage).toBe('Send 1 SOL');
   });
 

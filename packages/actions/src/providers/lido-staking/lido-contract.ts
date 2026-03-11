@@ -8,23 +8,11 @@
  *
  * Function selectors are hardcoded hex constants derived from keccak256 of function signatures.
  */
-
-// ---------------------------------------------------------------------------
-// Utility: pad a hex value to 32 bytes (64 hex chars)
-// ---------------------------------------------------------------------------
-
-function padHex(value: string, length: number = 64): string {
-  return value.padStart(length, '0');
-}
-
-function addressToHex(address: string): string {
-  return padHex(address.slice(2).toLowerCase());
-}
-
-function uint256ToHex(value: bigint): string {
-  if (value < 0n) throw new Error('uint256 cannot be negative');
-  return padHex(value.toString(16));
-}
+import {
+  addressToHex,
+  uint256ToHex,
+  encodeApproveCalldata,
+} from '../../common/contract-encoding.js';
 
 // ---------------------------------------------------------------------------
 // submit(address _referral) -- function selector 0xa1903eab
@@ -79,20 +67,5 @@ export function encodeRequestWithdrawalsCalldata(
   return `${selector}${offsetHex}${ownerHex}${lengthHex}${elementsHex}`;
 }
 
-// ---------------------------------------------------------------------------
-// approve(address spender, uint256 amount) -- 0x095ea7b3
-// ---------------------------------------------------------------------------
-
-/**
- * Encode ERC-20 approve(address spender, uint256 amount) calldata.
- *
- * @param spender - Spender address to approve
- * @param amount - Amount to approve in wei
- * @returns ABI-encoded calldata with 0x prefix
- */
-export function encodeApproveCalldata(spender: string, amount: bigint): string {
-  const selector = '0x095ea7b3';
-  const paddedSpender = addressToHex(spender);
-  const paddedAmount = uint256ToHex(amount);
-  return `${selector}${paddedSpender}${paddedAmount}`;
-}
+// Re-export encodeApproveCalldata from common module for backward compatibility
+export { encodeApproveCalldata };

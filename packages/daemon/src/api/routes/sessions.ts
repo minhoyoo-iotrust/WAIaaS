@@ -28,6 +28,7 @@ import { wallets, sessions, sessionWallets } from '../../infrastructure/database
 import type * as schema from '../../infrastructure/database/schema.js';
 import { insertAuditLog } from '../../infrastructure/database/audit-helper.js';
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
+import type { SettingsService } from '../../infrastructure/settings/settings-service.js';
 import type { NotificationService } from '../../notifications/notification-service.js';
 import {
   CreateSessionRequestOpenAPI,
@@ -51,6 +52,7 @@ export interface SessionRouteDeps {
   sqlite?: SQLiteDatabase;
   jwtSecretManager: JwtSecretManager;
   config: DaemonConfig;
+  settingsService?: SettingsService;
   notificationService?: NotificationService;
   eventBus?: EventBus;
 }
@@ -257,7 +259,8 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
 
     // Check active session count for each wallet (via session_wallets JOIN)
     const nowSec = Math.floor(Date.now() / 1000);
-    const maxSessions = deps.config.security.max_sessions_per_wallet;
+    const settingsMax = deps.settingsService?.get('security.max_sessions_per_wallet');
+    const maxSessions = settingsMax ? parseInt(settingsMax, 10) : deps.config.security.max_sessions_per_wallet;
 
     for (const wId of walletIds) {
       // Count active sessions: not revoked AND (unlimited OR not expired)
@@ -675,7 +678,8 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
     // 4. Check max_sessions_per_wallet limit
     const nowSec = Math.floor(Date.now() / 1000);
     const nowDate = new Date(nowSec * 1000);
-    const maxSessions = deps.config.security.max_sessions_per_wallet;
+    const settingsMax = deps.settingsService?.get('security.max_sessions_per_wallet');
+    const maxSessions = settingsMax ? parseInt(settingsMax, 10) : deps.config.security.max_sessions_per_wallet;
 
     // Count active sessions: not revoked AND (unlimited OR not expired)
     const activeCountResult = deps.db
@@ -772,7 +776,7 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
       walletId,
     });
 
-    return new Response(null, { status: 204 }) as any;
+    return c.body(null, 204);
   });
 
   // -------------------------------------------------------------------------

@@ -21,6 +21,7 @@ import { generateId } from '../../infrastructure/database/id.js';
 import { wallets, sessions, sessionWallets } from '../../infrastructure/database/schema.js';
 import type * as schema from '../../infrastructure/database/schema.js';
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
+import type { SettingsService } from '../../infrastructure/settings/settings-service.js';
 import type { NotificationService } from '../../notifications/notification-service.js';
 import {
   McpTokenCreateRequestSchema,
@@ -37,6 +38,7 @@ export interface McpTokenRouteDeps {
   db: BetterSQLite3Database<typeof schema>;
   jwtSecretManager: JwtSecretManager;
   config: DaemonConfig;
+  settingsService?: SettingsService;
   dataDir: string;
   notificationService?: NotificationService;
 }
@@ -123,7 +125,8 @@ export function mcpTokenRoutes(deps: McpTokenRouteDeps): OpenAPIHono {
       .get();
 
     const activeCount = activeCountResult?.count ?? 0;
-    const maxSessions = deps.config.security.max_sessions_per_wallet;
+    const settingsMax = deps.settingsService?.get('security.max_sessions_per_wallet');
+    const maxSessions = settingsMax ? parseInt(settingsMax, 10) : deps.config.security.max_sessions_per_wallet;
 
     if (activeCount >= maxSessions) {
       throw new WAIaaSError('SESSION_LIMIT_EXCEEDED', {

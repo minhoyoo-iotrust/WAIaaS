@@ -50,6 +50,11 @@ export const routeCoverage: Record<string, string[]> = {
   // Interface
   'admin': ['interface-admin-mcp-sdk.ts'],
   'admin-actions': ['interface-admin-mcp-sdk.ts'],
+  'admin-auth': ['interface-admin-mcp-sdk.ts'],
+  'admin-monitoring': ['interface-admin-mcp-sdk.ts'],
+  'admin-notifications': ['interface-admin-mcp-sdk.ts'],
+  'admin-settings': ['interface-admin-mcp-sdk.ts'],
+  'admin-wallets': ['interface-admin-mcp-sdk.ts'],
   'mcp': ['interface-admin-mcp-sdk.ts'],
   'skills': ['interface-admin-mcp-sdk.ts'],
 

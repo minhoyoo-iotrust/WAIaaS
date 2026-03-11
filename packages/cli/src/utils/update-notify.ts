@@ -13,9 +13,7 @@
 
 import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-
-/** Default daemon port when config.toml is unavailable. */
-const DEFAULT_PORT = 3100;
+import { DEFAULT_DAEMON_PORT } from '../constants.js';
 
 /** Suppress duplicate notifications within this window (ms). */
 const DEDUP_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -98,7 +96,7 @@ function isWithinDedupWindow(filePath: string): boolean {
 function resolvePort(dataDir: string): number {
   try {
     const configPath = join(dataDir, 'config.toml');
-    if (!existsSync(configPath)) return DEFAULT_PORT;
+    if (!existsSync(configPath)) return DEFAULT_DAEMON_PORT;
 
     const content = readFileSync(configPath, 'utf-8');
     const match = /^\s*port\s*=\s*(\d+)/m.exec(content);
@@ -109,7 +107,7 @@ function resolvePort(dataDir: string): number {
   } catch {
     // Ignore config read errors
   }
-  return DEFAULT_PORT;
+  return DEFAULT_DAEMON_PORT;
 }
 
 /**

@@ -1,6 +1,7 @@
 import { useSignal } from '@preact/signals';
 import { useEffect, useRef } from 'preact/hooks';
 import { apiGet } from '../../api/client';
+import { HYPERLIQUID_POLL_INTERVAL_MS } from '../../constants';
 
 interface SubAccountInfo {
   subAccountUser: string;
@@ -53,7 +54,7 @@ export function SubAccountList({ walletId, onSelect }: Props) {
     loading.value = true;
     fetchSubAccounts();
 
-    intervalRef.current = setInterval(fetchSubAccounts, 10000);
+    intervalRef.current = setInterval(fetchSubAccounts, HYPERLIQUID_POLL_INTERVAL_MS);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };

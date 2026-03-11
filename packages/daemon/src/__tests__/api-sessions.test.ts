@@ -23,6 +23,7 @@ import argon2 from 'argon2';
 import { createDatabase, pushSchema, generateId } from '../infrastructure/database/index.js';
 import { JwtSecretManager } from '../infrastructure/jwt/index.js';
 import { DaemonConfigSchema } from '../infrastructure/config/loader.js';
+import { SettingsService } from '../infrastructure/settings/settings-service.js';
 import { createApp } from '../api/server.js';
 import type { OpenAPIHono } from '@hono/zod-openapi';
 
@@ -178,6 +179,49 @@ describe('Session CRUD API', () => {
 
     const body = await json(res);
     expect(body.code).toBe('SESSION_LIMIT_EXCEEDED');
+  });
+
+  it('POST /v1/sessions respects runtime max_sessions_per_wallet from Admin Settings', async () => {
+    // Create a fresh app with SettingsService injected
+    const config = DaemonConfigSchema.parse({});
+    const settingsService = new SettingsService({ db, config, masterPassword: TEST_PASSWORD });
+
+    const appWithSettings = createApp({
+      db,
+      jwtSecretManager: jwtManager,
+      masterPasswordHash: passwordHash,
+      config,
+      settingsService,
+    });
+
+    // Default max is 5. Create 5 sessions.
+    for (let i = 0; i < 5; i++) {
+      const res = await appWithSettings.request('/v1/sessions', {
+        method: 'POST',
+        headers: masterAuthJsonHeaders(),
+        body: JSON.stringify({ walletId: testWalletId }),
+      });
+      expect(res.status).toBe(201);
+    }
+
+    // 6th should fail with default limit
+    const failRes = await appWithSettings.request('/v1/sessions', {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ walletId: testWalletId }),
+    });
+    expect(failRes.status).toBe(403);
+
+    // Now increase limit at runtime via SettingsService
+    settingsService.set('security.max_sessions_per_wallet', '10');
+
+    // 6th should now succeed after hot-reload
+    const successRes = await appWithSettings.request('/v1/sessions', {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ walletId: testWalletId }),
+    });
+    expect(successRes.status).toBe(201);
   });
 
   it('POST /v1/sessions returns 401 without masterAuth', async () => {

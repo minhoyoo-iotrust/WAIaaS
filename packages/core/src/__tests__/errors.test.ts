@@ -14,7 +14,8 @@ describe('Error code matrix', () => {
     // v31.2: +EXPIRED_BUILD, +BUILD_NOT_FOUND, +BUILD_ALREADY_USED, +CALLDATA_MISMATCH, +SENDER_MISMATCH (+5)
     // v31.3: +DEPRECATED_SMART_ACCOUNT (+1)
     // v31.9: +WALLET_NOT_TERMINATED (+1)
-    expect(Object.keys(ERROR_CODES)).toHaveLength(135);
+    // v31.10: +INVALID_TOKEN_IDENTIFIER, +STATS_NOT_CONFIGURED (+2)
+    expect(Object.keys(ERROR_CODES)).toHaveLength(137);
   });
 
   it('every error code entry has required fields', () => {

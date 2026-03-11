@@ -1,6 +1,7 @@
 import { useSignal } from '@preact/signals';
 import { useEffect, useRef } from 'preact/hooks';
 import { apiGet } from '../../api/client';
+import { HYPERLIQUID_POLL_INTERVAL_MS } from '../../constants';
 
 interface SpotBalance {
   coin: string;
@@ -56,7 +57,7 @@ export function SpotBalancesTable({ walletId }: Props) {
     loading.value = true;
     fetchBalances();
 
-    intervalRef.current = setInterval(fetchBalances, 10000);
+    intervalRef.current = setInterval(fetchBalances, HYPERLIQUID_POLL_INTERVAL_MS);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };

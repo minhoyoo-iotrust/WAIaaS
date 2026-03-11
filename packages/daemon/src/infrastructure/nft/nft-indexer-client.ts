@@ -13,6 +13,7 @@ import type { INftIndexer } from '@waiaas/core';
 import { WAIaaSError } from '@waiaas/core';
 import { AlchemyNftIndexer } from './alchemy-nft-indexer.js';
 import { HeliusNftIndexer } from './helius-nft-indexer.js';
+import { DEFAULT_MAX_RETRIES } from '../../constants.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -35,7 +36,6 @@ interface CacheEntry<T> {
 // Retry constants
 // ---------------------------------------------------------------------------
 
-const MAX_RETRIES = 3;
 const RETRY_BASE_MS = 1000;
 const RETRY_MULTIPLIER = 2;
 
@@ -188,14 +188,14 @@ export class NftIndexerClient {
   private async withRetry<T>(fn: () => Promise<T>): Promise<T> {
     let lastError: unknown;
 
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    for (let attempt = 0; attempt <= DEFAULT_MAX_RETRIES; attempt++) {
       try {
         return await fn();
       } catch (error) {
         lastError = error;
 
         // Only retry on retryable errors
-        if (!this.isRetryable(error) || attempt >= MAX_RETRIES) {
+        if (!this.isRetryable(error) || attempt >= DEFAULT_MAX_RETRIES) {
           throw error;
         }
 

@@ -12,8 +12,9 @@ function makeValidRequest(overrides?: Partial<SignRequest>): SignRequest {
   return {
     version: '1',
     requestId: '550e8400-e29b-41d4-a716-446655440000',
-    chain: 'solana',
-    network: 'devnet',
+    caip2ChainId: 'solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1',
+    networkName: 'solana-devnet',
+    signerAddress: 'OwnerSolanaAddress1234567890abcdef',
     message: 'SGVsbG8gV29ybGQ=',
     displayMessage: 'Transfer 1 SOL',
     metadata: {

@@ -12,6 +12,7 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { eq } from 'drizzle-orm';
 import { WAIaaSError, isApiDirectResult } from '@waiaas/core';
 import type { ChainType, NetworkType, EnvironmentType, IPolicyEngine } from '@waiaas/core';
+import { resolveChainId } from '../helpers/resolve-chain-id.js';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import type { ActionProviderRegistry } from '../../infrastructure/action/action-provider-registry.js';
@@ -119,27 +120,6 @@ const adminExecuteActionRoute = createRoute({
     ]),
   },
 });
-
-// ---------------------------------------------------------------------------
-// Helper: resolve EVM chainId from network identifier
-// ---------------------------------------------------------------------------
-
-function resolveChainId(network: string): number {
-  const CHAIN_IDS: Record<string, number> = {
-    'ethereum-mainnet': 1,
-    'ethereum-sepolia': 11155111,
-    'ethereum-goerli': 5,
-    'polygon-mainnet': 137,
-    'polygon-mumbai': 80001,
-    'arbitrum-mainnet': 42161,
-    'arbitrum-sepolia': 421614,
-    'optimism-mainnet': 10,
-    'optimism-sepolia': 11155420,
-    'base-mainnet': 8453,
-    'base-sepolia': 84532,
-  };
-  return CHAIN_IDS[network] ?? 1;
-}
 
 // ---------------------------------------------------------------------------
 // Route factory

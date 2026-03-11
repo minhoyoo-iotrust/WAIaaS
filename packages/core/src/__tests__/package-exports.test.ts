@@ -45,7 +45,8 @@ describe('@waiaas/core package export verification', () => {
   it('error codes and WAIaaSError are exported', () => {
     expect(core.ERROR_CODES).toBeDefined();
     expect(core.WAIaaSError).toBeDefined();
-    expect(Object.keys(core.ERROR_CODES)).toHaveLength(135);
+    // v31.10: +INVALID_TOKEN_IDENTIFIER, +STATS_NOT_CONFIGURED (+2)
+    expect(Object.keys(core.ERROR_CODES)).toHaveLength(137);
   });
 
   it('getMessages function is exported', () => {

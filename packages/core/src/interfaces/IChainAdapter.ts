@@ -134,3 +134,26 @@ export interface IChainAdapter {
   /** Build NFT approval transaction (single approve or collection-wide approval). */
   approveNft(request: NftApproveParams): Promise<UnsignedTransaction>;
 }
+
+/**
+ * Optional interface for adapters that support NFT approval status queries.
+ * Use hasNftApprovalQuery() type guard to check before calling.
+ */
+export interface INftApprovalQuery {
+  getNftApprovalStatus(params: {
+    owner: string;
+    contractAddress: string;
+    tokenId?: string;
+    operator?: string;
+  }): Promise<{
+    tokenId: string;
+    contractAddress: string;
+    standard: string;
+    approvals: Array<{ operator: string; approved: boolean; type: string }>;
+  }>;
+}
+
+/** Type guard: check if adapter supports NFT approval queries. */
+export function hasNftApprovalQuery(adapter: IChainAdapter): adapter is IChainAdapter & INftApprovalQuery {
+  return 'getNftApprovalStatus' in adapter && typeof (adapter as Record<string, unknown>).getNftApprovalStatus === 'function';
+}

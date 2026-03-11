@@ -341,8 +341,7 @@ export function erc8004Routes(deps: Erc8004RouteDeps): OpenAPIHono {
       } : {}),
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return c.json(file as any, 200);
+    return c.json(file, 200);
   });
 
   // Route 4: GET /erc8004/validation/:requestHash

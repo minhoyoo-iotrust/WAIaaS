@@ -8,6 +8,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Hono } from 'hono';
+import { WAIaaSError } from '@waiaas/core';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
 import type { DatabaseConnection } from '../infrastructure/database/index.js';
 import { wallets } from '../infrastructure/database/schema.js';
@@ -57,6 +58,26 @@ function createMockAdapterPool(overrides: Record<string, any> = {}) {
   };
 }
 
+/** Create a test Hono app with WAIaaSError handler (mirrors daemon error middleware). */
+function createTestApp(wId: string, deps: NftApprovalRouteDeps): Hono {
+  const app = new Hono();
+  app.onError((err, c) => {
+    if (err instanceof WAIaaSError) {
+      return c.json(
+        { code: err.code, message: err.message, retryable: err.retryable },
+        err.httpStatus as any,
+      );
+    }
+    return c.json({ code: 'INTERNAL', message: err.message, retryable: false }, 500);
+  });
+  app.use('*', async (c, next) => {
+    c.set('walletId' as any, wId);
+    await next();
+  });
+  app.route('/', nftApprovalRoutes(deps));
+  return app;
+}
+
 describe('NFT approval status query API', () => {
   beforeEach(async () => {
     conn = createDatabase(':memory:');
@@ -75,13 +96,7 @@ describe('NFT approval status query API', () => {
       adapterPool: pool as any,
     };
 
-    const app = new Hono();
-    // Simulate sessionAuth by setting walletId in context
-    app.use('*', async (c, next) => {
-      c.set('walletId' as any, walletId);
-      await next();
-    });
-    app.route('/', nftApprovalRoutes(deps));
+    const app = createTestApp(walletId, deps);
 
     const res = await app.request('/wallet/nfts/0xNftContract-42/approvals?network=ethereum-mainnet');
 
@@ -100,16 +115,13 @@ describe('NFT approval status query API', () => {
       adapterPool: pool as any,
     };
 
-    const app = new Hono();
-    app.use('*', async (c, next) => {
-      c.set('walletId' as any, walletId);
-      await next();
-    });
-    app.route('/', nftApprovalRoutes(deps));
+    const app = createTestApp(walletId, deps);
 
     const res = await app.request('/wallet/nfts/0xNftContract-42/approvals');
 
     expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.code).toBe('NETWORK_REQUIRED');
   });
 
   it('GET /wallet/nfts/:tokenIdentifier/approvals with invalid identifier returns 400', async () => {
@@ -119,19 +131,15 @@ describe('NFT approval status query API', () => {
       adapterPool: pool as any,
     };
 
-    const app = new Hono();
-    app.use('*', async (c, next) => {
-      c.set('walletId' as any, walletId);
-      await next();
-    });
-    app.route('/', nftApprovalRoutes(deps));
+    const app = createTestApp(walletId, deps);
 
     // Missing tokenId in identifier
     const res = await app.request('/wallet/nfts/invalidformat/approvals?network=ethereum-mainnet');
 
-    // Should still work -- parser handles single-part identifiers
-    // But if it's truly invalid (empty), it returns 400
-    expect([200, 400]).toContain(res.status);
+    // No dash in identifier -> parseTokenIdentifier returns null -> WAIaaSError INVALID_TOKEN_IDENTIFIER
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.code).toBe('INVALID_TOKEN_IDENTIFIER');
   });
 
   it('returns correct ERC-721 approval data', async () => {
@@ -141,12 +149,7 @@ describe('NFT approval status query API', () => {
       adapterPool: pool as any,
     };
 
-    const app = new Hono();
-    app.use('*', async (c, next) => {
-      c.set('walletId' as any, walletId);
-      await next();
-    });
-    app.route('/', nftApprovalRoutes(deps));
+    const app = createTestApp(walletId, deps);
 
     const res = await app.request('/wallet/nfts/0xNftContract-42/approvals?network=ethereum-mainnet&operator=0xOperator');
 

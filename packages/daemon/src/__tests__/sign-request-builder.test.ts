@@ -121,8 +121,9 @@ describe('SignRequestBuilder', () => {
     // SignRequest structure
     expect(result.request.version).toBe('1');
     expect(result.request.requestId).toBeDefined();
-    expect(result.request.chain).toBe('ethereum');
-    expect(result.request.network).toBe('ethereum-mainnet');
+    expect(result.request.caip2ChainId).toBe('eip155:1');
+    expect(result.request.networkName).toBe('ethereum-mainnet');
+    expect(result.request.signerAddress).toBeDefined();
     expect(result.request.metadata.txId).toBe(baseParams.txId);
     expect(result.request.metadata.type).toBe('TRANSFER');
     expect(result.request.metadata.from).toBe(baseParams.from);

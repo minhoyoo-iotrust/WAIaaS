@@ -27,7 +27,8 @@ export type {
 } from './chain-adapter.types.js';
 
 // Interfaces
-export type { IChainAdapter } from './IChainAdapter.js';
+export type { IChainAdapter, INftApprovalQuery } from './IChainAdapter.js';
+export { hasNftApprovalQuery } from './IChainAdapter.js';
 export type { ILocalKeyStore } from './ILocalKeyStore.js';
 export type { IPolicyEngine, PolicyEvaluation } from './IPolicyEngine.js';
 export type { INotificationChannel, NotificationPayload } from './INotificationChannel.js';
@@ -92,6 +93,7 @@ export {
   type Caip2,
   type Caip2Params,
   formatCaip2,
+  CAIP19_REGEX,
   Caip19AssetTypeSchema,
   Caip19Schema,
   type Caip19AssetType,

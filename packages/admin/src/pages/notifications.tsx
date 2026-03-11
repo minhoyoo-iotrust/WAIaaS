@@ -23,6 +23,7 @@ import {
 import { FieldGroup } from '../components/field-group';
 import { pendingNavigation, highlightField } from '../components/settings-search';
 import { registerDirty, unregisterDirty } from '../utils/dirty-guard';
+import { DASHBOARD_POLL_INTERVAL_MS } from '../constants';
 
 interface ChannelStatus {
   name: string;
@@ -841,7 +842,7 @@ export default function NotificationsPage() {
   useEffect(() => {
     fetchStatus();
     fetchLogs(1);
-    const interval = setInterval(() => fetchLogs(currentPage.value), 30_000);
+    const interval = setInterval(() => fetchLogs(currentPage.value), DASHBOARD_POLL_INTERVAL_MS);
     return () => clearInterval(interval);
   }, []);
 

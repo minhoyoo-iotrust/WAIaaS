@@ -154,6 +154,9 @@ export const messages: Messages = {
     UNSUPPORTED_NFT_STANDARD: '지원되지 않는 NFT 표준입니다',
     INDEXER_API_ERROR: 'NFT 인덱서 API 오류가 발생했습니다',
     NFT_METADATA_FETCH_FAILED: 'NFT 메타데이터를 가져오는데 실패했습니다',
+    INVALID_TOKEN_IDENTIFIER: '유효하지 않은 NFT 토큰 식별자 형식입니다',
+    // ADMIN domain (stats)
+    STATS_NOT_CONFIGURED: '통계 서비스가 설정되지 않았습니다',
     // USEROP domain
     EXPIRED_BUILD: '빌드 데이터가 만료되었습니다',
     BUILD_NOT_FOUND: '빌드 데이터를 찾을 수 없습니다',

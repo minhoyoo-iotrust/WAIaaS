@@ -19,6 +19,7 @@ import {
 import type { SignRequestBuilder, BuildRequestParams } from '../sign-request-builder.js';
 import type { SignResponseHandler } from '../sign-response-handler.js';
 import type { SettingsService } from '../../../infrastructure/settings/settings-service.js';
+import { SIGNING_CHANNEL_FETCH_TIMEOUT_MS } from '../../../constants.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -27,7 +28,6 @@ import type { SettingsService } from '../../../infrastructure/settings/settings-
 const MAX_RECONNECT_ATTEMPTS = 3;
 const RECONNECT_DELAY_MS = 5_000;
 const DEFAULT_NTFY_SERVER = 'https://ntfy.sh';
-const FETCH_TIMEOUT_MS = 10_000;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -186,7 +186,7 @@ export class NtfySigningChannel {
     });
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    const timeoutId = setTimeout(() => controller.abort(), SIGNING_CHANNEL_FETCH_TIMEOUT_MS);
     try {
       const res = await fetch(url, {
         method: 'POST',
