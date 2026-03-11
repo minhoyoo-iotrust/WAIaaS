@@ -58,11 +58,11 @@ Plans:
   2. openapi-schemas.ts가 검토되어 필요 시 도메인별 그룹핑이 적용되거나, 현 상태 유지 사유가 문서화된다
   3. 모든 기존 Admin API 엔드포인트가 동일하게 동작한다 (E2E 관점 변경 없음)
   4. `pnpm turbo run lint && pnpm turbo run typecheck && pnpm turbo run test` 전체 통과
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 377-01: admin.ts 도메인별 핸들러 분할
-- [ ] 377-02: admin.ts thin aggregator 재구성 및 openapi-schemas.ts 검토
+- [ ] 377-01-PLAN.md — admin.ts 도메인별 핸들러 분할 (5개 모듈 파일 생성)
+- [ ] 377-02-PLAN.md — admin.ts thin aggregator 재구성 및 openapi-schemas.ts 검토
 
 ### Phase 378: API 에러 응답 일관성
 **Goal**: 비표준 에러/응답 패턴이 WAIaaSError 및 표준 패턴으로 통일되어 API 응답이 일관된다
