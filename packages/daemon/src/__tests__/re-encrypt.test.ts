@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { reEncryptKeystores, reEncryptSettings } from '../infrastructure/keystore/re-encrypt.js';
+import { reEncryptKeystores, reEncryptSettings, reEncryptCredentials } from '../infrastructure/keystore/re-encrypt.js';
 import * as fsPromises from 'node:fs/promises';
 import { encrypt, type EncryptedData, KDF_PARAMS } from '../infrastructure/keystore/crypto.js';
 import { encryptSettingValue, decryptSettingValue } from '../infrastructure/settings/settings-crypto.js';
+import { encryptCredential, decryptCredential } from '../infrastructure/credential/credential-crypto.js';
 
 // ---------------------------------------------------------------------------
 // reEncryptKeystores
@@ -205,5 +206,119 @@ describe('reEncryptSettings', () => {
 
     const count = reEncryptSettings(mockDb as never, undefined, OLD_PW, NEW_PW);
     expect(count).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// reEncryptCredentials (v31.12)
+// ---------------------------------------------------------------------------
+
+describe('reEncryptCredentials', () => {
+  const OLD_PW = 'old-credential-password';
+  const NEW_PW = 'new-credential-password';
+
+  it('should re-encrypt credential rows with new password', () => {
+    // Create encrypted values with old password
+    const aad1 = 'id-1:global:api-key';
+    const aad2 = 'id-2:wallet-1:hmac-secret';
+    const enc1 = encryptCredential('secret-api-key', OLD_PW, aad1);
+    const enc2 = encryptCredential('hmac-secret-value', OLD_PW, aad2);
+
+    const rows = [
+      { id: 'id-1', walletId: null, type: 'api-key', encryptedValue: enc1.encryptedValue, iv: enc1.iv, authTag: enc1.authTag },
+      { id: 'id-2', walletId: 'wallet-1', type: 'hmac-secret', encryptedValue: enc2.encryptedValue, iv: enc2.iv, authTag: enc2.authTag },
+    ];
+
+    // Track updates
+    const updates: Array<{ id: string; encryptedValue: Buffer; iv: Buffer; authTag: Buffer }> = [];
+
+    const mockDb = {
+      select: () => ({
+        from: () => ({
+          all: () => rows,
+        }),
+      }),
+      update: () => ({
+        set: (data: Record<string, unknown>) => ({
+          where: () => ({
+            run: () => {
+              updates.push(data as unknown as typeof updates[number]);
+            },
+          }),
+        }),
+      }),
+    };
+
+    const count = reEncryptCredentials(mockDb as never, undefined, OLD_PW, NEW_PW);
+    expect(count).toBe(2);
+    expect(updates).toHaveLength(2);
+
+    // Verify re-encrypted values can be decrypted with new password
+    const decrypted1 = decryptCredential(
+      { encryptedValue: updates[0]!.encryptedValue, iv: updates[0]!.iv, authTag: updates[0]!.authTag },
+      NEW_PW,
+      aad1,
+    );
+    expect(decrypted1).toBe('secret-api-key');
+
+    const decrypted2 = decryptCredential(
+      { encryptedValue: updates[1]!.encryptedValue, iv: updates[1]!.iv, authTag: updates[1]!.authTag },
+      NEW_PW,
+      aad2,
+    );
+    expect(decrypted2).toBe('hmac-secret-value');
+  });
+
+  it('should not decrypt with old password after re-encrypt', () => {
+    const aad = 'id-3:global:custom';
+    const enc = encryptCredential('my-secret', OLD_PW, aad);
+
+    const rows = [{ id: 'id-3', walletId: null, type: 'custom', encryptedValue: enc.encryptedValue, iv: enc.iv, authTag: enc.authTag }];
+    const updates: Array<{ encryptedValue: Buffer; iv: Buffer; authTag: Buffer }> = [];
+
+    const mockDb = {
+      select: () => ({ from: () => ({ all: () => rows }) }),
+      update: () => ({
+        set: (data: Record<string, unknown>) => ({
+          where: () => ({
+            run: () => { updates.push(data as unknown as typeof updates[number]); },
+          }),
+        }),
+      }),
+    };
+
+    reEncryptCredentials(mockDb as never, undefined, OLD_PW, NEW_PW);
+
+    // Old password should fail
+    expect(() =>
+      decryptCredential(
+        { encryptedValue: updates[0]!.encryptedValue, iv: updates[0]!.iv, authTag: updates[0]!.authTag },
+        OLD_PW,
+        aad,
+      ),
+    ).toThrow();
+  });
+
+  it('should return 0 when no credentials exist', () => {
+    const mockDb = {
+      select: () => ({ from: () => ({ all: () => [] }) }),
+      update: () => ({ set: () => ({ where: () => ({ run: () => {} }) }) }),
+    };
+
+    const count = reEncryptCredentials(mockDb as never, undefined, OLD_PW, NEW_PW);
+    expect(count).toBe(0);
+  });
+
+  it('should use sqlite transaction when sqlite is provided', () => {
+    const transactionFn = vi.fn((fn: () => void) => () => fn());
+    const mockSqlite = { transaction: transactionFn };
+
+    const mockDb = {
+      select: () => ({ from: () => ({ all: () => [] }) }),
+      update: () => ({ set: () => ({ where: () => ({ run: () => {} }) }) }),
+    };
+
+    reEncryptCredentials(mockDb as never, mockSqlite as never, OLD_PW, NEW_PW);
+    expect(transactionFn).toHaveBeenCalledOnce();
   });
 });

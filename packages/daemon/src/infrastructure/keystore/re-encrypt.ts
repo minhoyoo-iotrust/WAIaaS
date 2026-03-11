@@ -13,10 +13,11 @@ import { readFile, writeFile, rename, unlink, readdir } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { encrypt, decrypt, type EncryptedData, KDF_PARAMS } from './crypto.js';
 import { encryptSettingValue, decryptSettingValue } from '../settings/settings-crypto.js';
+import { encryptCredential, decryptCredential } from '../credential/credential-crypto.js';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { eq } from 'drizzle-orm';
-import { settings } from '../database/schema.js';
+import { settings, walletCredentials } from '../database/schema.js';
 import type * as schema from '../database/schema.js';
 
 // ---------------------------------------------------------------------------
@@ -145,6 +146,69 @@ export function reEncryptSettings(
 
     // Note: After v28 migration, API keys are in the settings table with encrypted=true
     // and are already covered by the settings re-encryption loop above.
+  };
+
+  if (sqlite) {
+    sqlite.transaction(run)();
+  } else {
+    run();
+  }
+
+  return count;
+}
+
+// ---------------------------------------------------------------------------
+// Credential vault re-encryption (v31.12 External Action framework)
+// ---------------------------------------------------------------------------
+
+/**
+ * Re-encrypt all wallet_credentials rows in the database.
+ * Uses a SQLite transaction for atomicity.
+ *
+ * AAD format: "{id}:{walletId|global}:{type}" -- reconstructed from each row.
+ *
+ * @returns Number of re-encrypted credential rows
+ */
+export function reEncryptCredentials(
+  db: BetterSQLite3Database<typeof schema>,
+  sqlite: SQLiteDatabase | undefined,
+  oldPassword: string,
+  newPassword: string,
+): number {
+  let count = 0;
+
+  const run = () => {
+    const rows = db.select().from(walletCredentials).all();
+
+    for (const row of rows) {
+      const aad = `${row.id}:${row.walletId ?? 'global'}:${row.type}`;
+
+      // Decrypt with old password
+      const plaintext = decryptCredential(
+        {
+          encryptedValue: row.encryptedValue,
+          iv: row.iv,
+          authTag: row.authTag,
+        },
+        oldPassword,
+        aad,
+      );
+
+      // Re-encrypt with new password (new random IV)
+      const reEncrypted = encryptCredential(plaintext, newPassword, aad);
+
+      db.update(walletCredentials)
+        .set({
+          encryptedValue: reEncrypted.encryptedValue,
+          iv: reEncrypted.iv,
+          authTag: reEncrypted.authTag,
+          updatedAt: new Date(),
+        })
+        .where(eq(walletCredentials.id, row.id))
+        .run();
+
+      count++;
+    }
   };
 
   if (sqlite) {

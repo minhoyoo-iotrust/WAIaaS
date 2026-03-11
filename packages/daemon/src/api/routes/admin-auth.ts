@@ -475,7 +475,7 @@ export function registerAdminAuthRoutes(router: OpenAPIHono, deps: AdminRouteDep
 
     // 1. Re-encrypt keystore files
     const { join } = await import('node:path');
-    const { reEncryptKeystores, reEncryptSettings } = await import(
+    const { reEncryptKeystores, reEncryptSettings, reEncryptCredentials } = await import(
       '../../infrastructure/keystore/re-encrypt.js'
     );
 
@@ -490,6 +490,14 @@ export function registerAdminAuthRoutes(router: OpenAPIHono, deps: AdminRouteDep
 
     // 2. Re-encrypt settings + API keys in DB
     const settingsReEncrypted = reEncryptSettings(
+      deps.db,
+      deps.sqlite,
+      oldPassword,
+      newPassword,
+    );
+
+    // 2b. Re-encrypt credential vault entries (v31.12)
+    const credentialsReEncrypted = reEncryptCredentials(
       deps.db,
       deps.sqlite,
       oldPassword,
@@ -535,6 +543,7 @@ export function registerAdminAuthRoutes(router: OpenAPIHono, deps: AdminRouteDep
         message: 'Master password changed successfully',
         walletsReEncrypted,
         settingsReEncrypted,
+        credentialsReEncrypted,
       },
       200,
     );

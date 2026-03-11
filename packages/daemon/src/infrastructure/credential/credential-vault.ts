@@ -89,7 +89,7 @@ export class LocalCredentialVault implements ICredentialVault {
       : and(isNull(walletCredentials.walletId), eq(walletCredentials.name, params.name));
     const existing = this.db.select().from(walletCredentials).where(existingCondition).get();
     if (existing) {
-      throw new WAIaaSError('CONFLICT', {
+      throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
         message: `Credential with name "${params.name}" already exists for this scope`,
       });
     }
@@ -118,9 +118,9 @@ export class LocalCredentialVault implements ICredentialVault {
         })
         .run();
     } catch (err: unknown) {
-      // SQLite UNIQUE constraint violation
+      // SQLite UNIQUE constraint violation (belt-and-suspenders after pre-check above)
       if (err instanceof Error && err.message.includes('UNIQUE constraint failed')) {
-        throw new WAIaaSError('CONFLICT', {
+        throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
           message: `Credential with name "${params.name}" already exists for this scope`,
         });
       }
