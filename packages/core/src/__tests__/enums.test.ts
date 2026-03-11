@@ -99,7 +99,7 @@ describe('Enum SSoT', () => {
   });
 
   it('PolicyType has 19 values', () => {
-    expect(POLICY_TYPES).toHaveLength(19);
+    expect(POLICY_TYPES).toHaveLength(21);
     expect(POLICY_TYPES).toContain('X402_ALLOWED_DOMAINS');
     expect(POLICY_TYPES).toContain('LENDING_LTV_LIMIT');
     expect(POLICY_TYPES).toContain('LENDING_ASSET_WHITELIST');

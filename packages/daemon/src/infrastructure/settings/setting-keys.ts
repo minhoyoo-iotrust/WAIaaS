@@ -106,6 +106,8 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'policy.default_deny_spenders', category: 'policy', configPath: 'security.default_deny_spenders', defaultValue: 'true', isCredential: false },
   { key: 'policy.default_deny_x402_domains', category: 'policy', configPath: 'security.default_deny_x402_domains', defaultValue: 'true', isCredential: false },
   { key: 'policy.default_deny_erc8128_domains', category: 'policy', configPath: 'security.default_deny_erc8128_domains', defaultValue: 'true', isCredential: false },
+  // --- Phase 389: venue whitelist toggle ---
+  { key: 'venue_whitelist_enabled', category: 'policy', configPath: 'security.venue_whitelist_enabled', defaultValue: 'false', isCredential: false },
 
   // --- daemon category ---
   { key: 'daemon.log_level', category: 'daemon', configPath: 'daemon.log_level', defaultValue: 'info', isCredential: false },

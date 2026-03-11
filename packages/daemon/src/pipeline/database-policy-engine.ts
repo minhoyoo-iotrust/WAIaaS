@@ -137,6 +137,20 @@ interface ReputationThresholdRules {
   check_counterparty: boolean;
 }
 
+/** Venue whitelist rules (Phase 389). */
+interface VenueWhitelistRules {
+  venues: Array<{ id: string; name?: string }>;
+}
+
+/** Action category limit rules (Phase 389). */
+interface ActionCategoryLimitRules {
+  category: string;
+  daily_limit_usd?: number;
+  monthly_limit_usd?: number;
+  per_action_limit_usd?: number;
+  tier_on_exceed?: string; // PolicyTier, default 'DELAY'
+}
+
 /** Threshold for detecting "unlimited" approve amounts. */
 const UNLIMITED_THRESHOLD = (2n ** 256n - 1n) / 2n;
 
@@ -214,6 +228,19 @@ interface TransactionParam {
   perpLeverage?: number;
   /** Position size in USD for perp policy evaluation. Set by ActionProviderRegistry. */
   perpSizeUsd?: number;
+  // Phase 389: External action fields
+  /** Venue identifier for VENUE_WHITELIST evaluation (signedData/signedHttp only). */
+  venue?: string;
+  /** Action category for ACTION_CATEGORY_LIMIT evaluation (e.g., 'trade', 'withdraw'). */
+  actionCategory?: string;
+  /** Notional USD value for ACTION_CATEGORY_LIMIT evaluation. */
+  notionalUsd?: number;
+  /** Leverage for off-chain action (for policy context). */
+  leverage?: number;
+  /** Expiry timestamp (ISO string) for off-chain action. */
+  expiry?: string;
+  /** Whether the off-chain action has withdrawal capability. */
+  hasWithdrawCapability?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -381,6 +408,21 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     // Step 4i-c: Evaluate PERP_MAX_POSITION_USD (deny if position USD exceeds max)
     const positionUsdResult = this.evaluatePerpMaxPositionUsd(resolved, transaction);
     if (positionUsdResult !== null) return positionUsdResult;
+
+    // Step 4j: Evaluate VENUE_WHITELIST (Phase 389)
+    const venueResult = this.evaluateVenueWhitelist(resolved, transaction);
+    if (venueResult !== null) return venueResult;
+
+    // Step 4k: Evaluate ACTION_CATEGORY_LIMIT (Phase 389)
+    const categoryLimitResult = this.evaluateActionCategoryLimit(resolved, transaction);
+    if (categoryLimitResult !== null) {
+      // ACTION_CATEGORY_LIMIT returns allowed:true with escalated tier
+      // Combine with reputation floor tier and return
+      if (reputationFloorTier) {
+        categoryLimitResult.tier = maxTier(categoryLimitResult.tier as PolicyTier, reputationFloorTier);
+      }
+      return categoryLimitResult;
+    }
 
     // Step 5: Non-spending classification for lending actions (LEND-08, research flag M6)
     // supply/repay/withdraw are non-spending — skip SPENDING_LIMIT entirely
@@ -734,6 +776,19 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       // Step 4i-c: Evaluate PERP_MAX_POSITION_USD
       const positionUsdResult = this.evaluatePerpMaxPositionUsd(resolved, transaction);
       if (positionUsdResult !== null) return positionUsdResult;
+
+      // Step 4j: Evaluate VENUE_WHITELIST (Phase 389)
+      const venueResult = this.evaluateVenueWhitelist(resolved, transaction);
+      if (venueResult !== null) return venueResult;
+
+      // Step 4k: Evaluate ACTION_CATEGORY_LIMIT (Phase 389)
+      const categoryLimitResult = this.evaluateActionCategoryLimit(resolved, transaction);
+      if (categoryLimitResult !== null) {
+        if (reputationFloorTier) {
+          categoryLimitResult.tier = maxTier(categoryLimitResult.tier as PolicyTier, reputationFloorTier);
+        }
+        return categoryLimitResult;
+      }
 
       // Step 5: Non-spending classification for lending actions (LEND-08, research flag M6)
       // supply/repay/withdraw are non-spending — skip SPENDING_LIMIT entirely
@@ -2141,5 +2196,181 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     }
 
     return undefined; // Score meets threshold
+  }
+
+  // ---------------------------------------------------------------------------
+  // Phase 389: VENUE_WHITELIST evaluation
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Evaluate VENUE_WHITELIST policy (default-deny when enabled).
+   *
+   * Logic:
+   * - If transaction has no venue (contractCall) -> return null (skip)
+   * - If venue_whitelist_enabled setting is not 'true' -> return null (disabled)
+   * - Find VENUE_WHITELIST policy in resolved list
+   * - If no policy found + venue present -> DENY (default-deny)
+   * - If policy found + venue in whitelist -> return null (allowed)
+   * - If policy found + venue not in whitelist -> DENY
+   */
+  private evaluateVenueWhitelist(
+    resolved: PolicyRow[],
+    transaction: TransactionParam,
+  ): PolicyEvaluation | null {
+    // No venue (contractCall) -> skip
+    if (!transaction.venue) return null;
+
+    // Check if venue whitelist is enabled via Admin Settings
+    let enabled = false;
+    try {
+      enabled = this.settingsService?.get('venue_whitelist_enabled') === 'true';
+    } catch {
+      // Setting key not registered -- disabled by default
+    }
+    if (!enabled) return null;
+
+    const policy = resolved.find((p) => p.type === 'VENUE_WHITELIST');
+    const venueNorm = transaction.venue.toLowerCase();
+
+    if (!policy) {
+      // Default-deny: venue present but no whitelist policy
+      return {
+        allowed: false,
+        tier: 'INSTANT',
+        reason: `VENUE_NOT_ALLOWED: venue '${transaction.venue}' is not whitelisted (no VENUE_WHITELIST policy)`,
+      };
+    }
+
+    const rules: VenueWhitelistRules = JSON.parse(policy.rules);
+    const isAllowed = rules.venues.some((v) => v.id.toLowerCase() === venueNorm);
+
+    if (!isAllowed) {
+      return {
+        allowed: false,
+        tier: 'INSTANT',
+        reason: `VENUE_NOT_ALLOWED: venue '${transaction.venue}' is not in the whitelist`,
+      };
+    }
+
+    return null; // Venue allowed
+  }
+
+  // ---------------------------------------------------------------------------
+  // Phase 389: ACTION_CATEGORY_LIMIT evaluation
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Evaluate ACTION_CATEGORY_LIMIT policy (per-action, daily, monthly USD limits).
+   *
+   * Logic:
+   * - If transaction has no actionCategory or notionalUsd -> return null (skip)
+   * - Find ACTION_CATEGORY_LIMIT policies matching transaction.actionCategory
+   * - Check per_action_limit_usd: deny if notionalUsd exceeds
+   * - Check daily_limit_usd: query cumulative notionalUsd for category today
+   * - Check monthly_limit_usd: query cumulative notionalUsd for category this month
+   * - On exceed: return tier_on_exceed (default 'DELAY')
+   */
+  private evaluateActionCategoryLimit(
+    resolved: PolicyRow[],
+    transaction: TransactionParam,
+  ): PolicyEvaluation | null {
+    if (!transaction.actionCategory || transaction.notionalUsd === undefined) return null;
+
+    // Find matching ACTION_CATEGORY_LIMIT policies
+    const categoryPolicies = resolved.filter(
+      (p) => p.type === 'ACTION_CATEGORY_LIMIT',
+    );
+    if (categoryPolicies.length === 0) return null;
+
+    for (const policy of categoryPolicies) {
+      const rules: ActionCategoryLimitRules = JSON.parse(policy.rules);
+      if (rules.category !== transaction.actionCategory) continue;
+
+      const tierOnExceed = (rules.tier_on_exceed ?? 'DELAY') as PolicyTier;
+
+      // Per-action limit
+      if (rules.per_action_limit_usd !== undefined && transaction.notionalUsd > rules.per_action_limit_usd) {
+        return {
+          allowed: true,
+          tier: tierOnExceed,
+          reason: `ACTION_CATEGORY_LIMIT: per-action $${transaction.notionalUsd} exceeds ${rules.category} limit $${rules.per_action_limit_usd}`,
+        };
+      }
+
+      // Daily limit (cumulative query)
+      if (rules.daily_limit_usd !== undefined && this.sqlite) {
+        const todayStart = new Date();
+        todayStart.setUTCHours(0, 0, 0, 0);
+        const todayStartSec = Math.floor(todayStart.getTime() / 1000);
+
+        const row = this.sqlite.prepare(`
+          SELECT COALESCE(SUM(
+            CASE
+              WHEN json_extract(metadata, '$.notionalUsd') IS NOT NULL
+              THEN CAST(json_extract(metadata, '$.notionalUsd') AS REAL)
+              ELSE 0
+            END
+          ), 0) AS total
+          FROM transactions
+          WHERE wallet_id = ?
+            AND action_kind IN ('signedData', 'signedHttp')
+            AND json_extract(metadata, '$.actionCategory') = ?
+            AND created_at >= ?
+            AND status != 'FAILED'
+        `).get(
+          transaction.toAddress ? resolved[0]?.walletId : null,
+          rules.category,
+          todayStartSec,
+        ) as { total: number } | undefined;
+
+        const cumulative = (row?.total ?? 0) + transaction.notionalUsd;
+        if (cumulative > rules.daily_limit_usd) {
+          return {
+            allowed: true,
+            tier: tierOnExceed,
+            reason: `ACTION_CATEGORY_LIMIT: daily cumulative $${cumulative.toFixed(2)} exceeds ${rules.category} limit $${rules.daily_limit_usd}`,
+          };
+        }
+      }
+
+      // Monthly limit (cumulative query)
+      if (rules.monthly_limit_usd !== undefined && this.sqlite) {
+        const monthStart = new Date();
+        monthStart.setUTCDate(1);
+        monthStart.setUTCHours(0, 0, 0, 0);
+        const monthStartSec = Math.floor(monthStart.getTime() / 1000);
+
+        const row = this.sqlite.prepare(`
+          SELECT COALESCE(SUM(
+            CASE
+              WHEN json_extract(metadata, '$.notionalUsd') IS NOT NULL
+              THEN CAST(json_extract(metadata, '$.notionalUsd') AS REAL)
+              ELSE 0
+            END
+          ), 0) AS total
+          FROM transactions
+          WHERE wallet_id = ?
+            AND action_kind IN ('signedData', 'signedHttp')
+            AND json_extract(metadata, '$.actionCategory') = ?
+            AND created_at >= ?
+            AND status != 'FAILED'
+        `).get(
+          transaction.toAddress ? resolved[0]?.walletId : null,
+          rules.category,
+          monthStartSec,
+        ) as { total: number } | undefined;
+
+        const cumulative = (row?.total ?? 0) + transaction.notionalUsd;
+        if (cumulative > rules.monthly_limit_usd) {
+          return {
+            allowed: true,
+            tier: tierOnExceed,
+            reason: `ACTION_CATEGORY_LIMIT: monthly cumulative $${cumulative.toFixed(2)} exceeds ${rules.category} limit $${rules.monthly_limit_usd}`,
+          };
+        }
+      }
+    }
+
+    return null; // Within limits
   }
 }
