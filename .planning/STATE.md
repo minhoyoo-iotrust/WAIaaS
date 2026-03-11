@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v31.11
 milestone_name: — External Action 프레임워크 설계
 status: completed
-stopped_at: Completed 381-02-PLAN.md
-last_updated: "2026-03-11T14:56:21.997Z"
-last_activity: 2026-03-11 — Phase 381 complete (2 plans)
+stopped_at: Completed 382-02-PLAN.md
+last_updated: "2026-03-11T15:12:00.000Z"
+last_activity: 2026-03-11 — Phase 382 complete (2 plans)
 progress:
   total_phases: 6
-  completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
-  percent: 33
+  completed_phases: 3
+  total_plans: 6
+  completed_plans: 6
+  percent: 50
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-11)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Phase 382 — Signer Capabilities
+**Current focus:** Phase 383 — 파이프라인 라우팅
 
 ## Current Position
 
-Phase: 2 of 6 (Phase 381: CredentialVault 인프라) — COMPLETE
+Phase: 3 of 6 (Phase 382: Signer Capabilities) — COMPLETE
 Plan: 2/2 complete
-Status: Phase 381 complete, ready for Phase 382
-Last activity: 2026-03-11 — Phase 381 complete (2 plans)
+Status: Phase 382 complete, ready for Phase 383
+Last activity: 2026-03-11 — Phase 382 complete (2 plans)
 
-Progress: [###░░░░░░░] 33%
+Progress: [#####░░░░░] 50%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 8min
-- Total execution time: 0.5 hours
+- Total plans completed: 6
+- Average duration: 7min
+- Total execution time: 0.7 hours
 
 **By Phase:**
 
@@ -45,12 +45,15 @@ Progress: [###░░░░░░░] 33%
 |-------|-------|-------|----------|
 | 380 | 2 | 15min | 8min |
 | 381 | 2 | 16min | 8min |
+| 382 | 2 | 10min | 5min |
 
 ## Accumulated Context
 | Phase 380 P01 | 8min | 1 tasks | 1 files |
 | Phase 380 P02 | 7min | 1 tasks | 1 files |
 | Phase 381 P01 | 8min | 1 tasks | 1 files |
 | Phase 381 P02 | 8min | 1 tasks | 1 files |
+| Phase 382 P01 | 5min | 1 tasks | 1 files |
+| Phase 382 P02 | 5min | 1 tasks | 1 files |
 
 ### Decisions
 
@@ -68,6 +71,13 @@ Progress: [###░░░░░░░] 33%
 - [Phase 381]: 만료 체크는 get() 시점에서 lazy evaluation
 - [Phase 381]: Admin UI Credentials 탭은 per-wallet + 글로벌 두 진입점
 - [Phase 381]: MCP/SDK에서도 복호화된 credential 값 비반환 원칙
+- [Phase 382]: Erc8128만 기존 모듈 import 허용 (RFC 9421 복잡도), Eip712/Personal은 viem 직접 호출
+- [Phase 382]: EcdsaSignBytes hashData 옵션 (기본 true=keccak256), Ed25519는 외부 해시 불필요
+- [Phase 382]: TransactionSignerCapability는 설계만, registry 미등록 (기존 pipeline 사용)
+- [Phase 382]: HMAC signing target 조합은 ActionProvider 책임 (거래소마다 prehash 상이)
+- [Phase 382]: resolve()에서 canSign() 미호출 (credential 미주입 시점)
+- [Phase 382]: CAPABILITY_NOT_FOUND 에러 코드 추가 (기존 5종 + 1종 = 6종)
+- [Phase 382]: SignerCapabilityRegistry singleton, daemon 부팅 시 7종 자동 등록
 
 ### Pending Todos
 
@@ -79,6 +89,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-11T14:55:00.000Z
-Stopped at: Completed 381-02-PLAN.md
+Last session: 2026-03-11T15:12:00.000Z
+Stopped at: Completed 382-02-PLAN.md
 Resume file: None
