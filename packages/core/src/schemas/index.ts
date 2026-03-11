@@ -151,3 +151,16 @@ export {
   type SimulationDetail,
   type SimulationMeta,
 } from './simulation.schema.js';
+
+// v31.12 Credential Vault schemas (Zod SSoT)
+export {
+  CredentialTypeEnum,
+  CREDENTIAL_TYPES,
+  CreateCredentialParamsSchema,
+  CredentialMetadataSchema,
+  DecryptedCredentialSchema,
+  type CredentialType,
+  type CreateCredentialParams,
+  type CredentialMetadata,
+  type DecryptedCredential,
+} from './credential.schema.js';

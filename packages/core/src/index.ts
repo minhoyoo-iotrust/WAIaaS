@@ -219,6 +219,16 @@ export {
   type UserOpBuildResponse,
   type UserOpSignRequest,
   type UserOpSignResponse,
+  // v31.12 Credential Vault schemas
+  CredentialTypeEnum,
+  CREDENTIAL_TYPES,
+  CreateCredentialParamsSchema,
+  CredentialMetadataSchema,
+  DecryptedCredentialSchema,
+  type CredentialType,
+  type CreateCredentialParams,
+  type CredentialMetadata,
+  type DecryptedCredential,
 } from './schemas/index.js';
 
 // ResolvedAction 3-kind discriminatedUnion (v31.12 External Action framework)
