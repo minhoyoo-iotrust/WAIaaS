@@ -129,7 +129,10 @@ Plans:
   2. SDK executeAction()으로 off-chain action 실행, listOffchainActions()/getActionResult()로 이력 조회가 가능하다
   3. SDK AdminClient로 credential CRUD(create/delete/rotate)가 가능하다
   4. external-actions.skill.md가 off-chain action 개념, signing scheme, credential 설정, 사용 예시를 포함한다
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 392-01-PLAN.md — MCP 도구 2종 + SDK 메서드 6종 + 테스트
+- [ ] 392-02-PLAN.md — external-actions.skill.md 신규 + 기존 스킬 파일 3종 업데이트
 
 ## Progress
 
@@ -143,6 +146,6 @@ Phases execute in numeric order: 386 -> 387 -> 388 -> 389 -> 390 -> 391 -> 392
 | 387. Signer Capability 레지스트리 | 2/2 | Complete    | 2026-03-11 |
 | 388. Credential Vault | 2/2 | Complete    | 2026-03-11 |
 | 389. 추적 + 정책 확장 | 2/2 | Complete    | 2026-03-11 |
-| 390. 파이프라인 라우팅 + 조회 API | 2/2 | Complete    | 2026-03-11 |
-| 391. Admin UI | 2/2 | Complete    | 2026-03-11 |
-| 392. MCP + SDK + 스킬 파일 | 0/TBD | Not started | - |
+| 390. 파이프라인 라우팅 + 조회 API | 2/2 | Complete    | 2026-03-12 |
+| 391. Admin UI | 2/2 | Complete    | 2026-03-12 |
+| 392. MCP + SDK + 스킬 파일 | 0/2 | Not started | - |
