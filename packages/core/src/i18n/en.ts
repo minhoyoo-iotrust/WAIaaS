@@ -218,6 +218,13 @@ export const messages: Messages = {
     CALLDATA_MISMATCH: 'UserOperation callData does not match build data',
     SENDER_MISMATCH: 'UserOperation sender does not match wallet address',
     DEPRECATED_SMART_ACCOUNT: 'This Smart Account was created with a deprecated factory. Please create a new Smart Account wallet.',
+    // v31.12 External Action framework
+    CREDENTIAL_NOT_FOUND: 'Credential not found',
+    CREDENTIAL_EXPIRED: 'Credential has expired',
+    SIGNING_SCHEME_UNSUPPORTED: 'Signing scheme not supported',
+    CAPABILITY_NOT_FOUND: 'Signer capability not found for the requested signing scheme',
+    VENUE_NOT_ALLOWED: 'Venue not in allowed list',
+    EXTERNAL_ACTION_FAILED: 'External action execution failed',
   },
   // Notification templates (30 event types)
   notifications: {

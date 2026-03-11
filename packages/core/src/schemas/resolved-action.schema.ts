@@ -131,13 +131,6 @@ export type ActionCategory = z.infer<typeof ActionCategoryEnum>;
 // ---------------------------------------------------------------------------
 
 /**
- * Raw input type: either a ResolvedAction with kind, or a legacy ContractCallRequest without kind.
- */
-type RawResolvedAction =
-  | ResolvedAction
-  | (z.infer<typeof ContractCallRequestSchema> & { kind?: undefined });
-
-/**
  * Normalize a raw action result into a typed ResolvedAction.
  *
  * - If `kind` is present: parse directly via ResolvedActionSchema

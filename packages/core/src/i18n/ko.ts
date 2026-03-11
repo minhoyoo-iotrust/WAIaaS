@@ -164,6 +164,13 @@ export const messages: Messages = {
     CALLDATA_MISMATCH: 'UserOperation callData가 빌드 데이터와 일치하지 않습니다',
     SENDER_MISMATCH: 'UserOperation sender가 지갑 주소와 일치하지 않습니다',
     DEPRECATED_SMART_ACCOUNT: '이 Smart Account는 더 이상 사용되지 않는 factory로 생성되었습니다. 새 Smart Account 지갑을 생성해 주세요.',
+    // v31.12 External Action 프레임워크
+    CREDENTIAL_NOT_FOUND: '자격 증명을 찾을 수 없습니다',
+    CREDENTIAL_EXPIRED: '자격 증명이 만료되었습니다',
+    SIGNING_SCHEME_UNSUPPORTED: '지원되지 않는 서명 스킴입니다',
+    CAPABILITY_NOT_FOUND: '요청된 서명 스킴에 대한 서명 기능을 찾을 수 없습니다',
+    VENUE_NOT_ALLOWED: '허용되지 않은 venue입니다',
+    EXTERNAL_ACTION_FAILED: '외부 액션 실행에 실패했습니다',
   },
   // Notification templates (31 event types)
   notifications: {

@@ -14,7 +14,8 @@ export type ErrorDomain =
   | 'CHAIN'
   | 'ERC8128'
   | 'NFT'
-  | 'USEROP';
+  | 'USEROP'
+  | 'CREDENTIAL';
 
 export interface ErrorCodeEntry {
   code: string;
@@ -25,10 +26,11 @@ export interface ErrorCodeEntry {
 }
 
 /**
- * 110 error codes from SS10.12 unified error code matrix + signing protocol + session multi-wallet + ERC-4337.
+ * 116 error codes from SS10.12 unified error code matrix + signing protocol + session multi-wallet + ERC-4337.
  * SSoT: 37-rest-api-complete-spec.md section 10.12 + 73-signing-protocol-v1.md
  * v29.3: +WALLET_ID_REQUIRED, +NETWORK_REQUIRED, -CANNOT_REMOVE_DEFAULT_WALLET (net +1)
  * v31.10: +INVALID_TOKEN_IDENTIFIER, +STATS_NOT_CONFIGURED (net +2)
+ * v31.12: +CREDENTIAL_NOT_FOUND, +CREDENTIAL_EXPIRED, +SIGNING_SCHEME_UNSUPPORTED, +CAPABILITY_NOT_FOUND, +VENUE_NOT_ALLOWED, +EXTERNAL_ACTION_FAILED (net +6)
  */
 export const ERROR_CODES = {
   // --- AUTH domain (8) ---
@@ -1034,6 +1036,52 @@ export const ERROR_CODES = {
     httpStatus: 400,
     retryable: false,
     message: 'UserOperation sender does not match wallet address',
+  },
+
+  // --- CREDENTIAL domain (2) --- v31.12 External Action framework
+  CREDENTIAL_NOT_FOUND: {
+    code: 'CREDENTIAL_NOT_FOUND',
+    domain: 'CREDENTIAL',
+    httpStatus: 404,
+    retryable: false,
+    message: 'Credential not found',
+  },
+  CREDENTIAL_EXPIRED: {
+    code: 'CREDENTIAL_EXPIRED',
+    domain: 'CREDENTIAL',
+    httpStatus: 400,
+    retryable: false,
+    message: 'Credential has expired',
+  },
+
+  // --- ACTION domain (external action extensions) --- v31.12
+  SIGNING_SCHEME_UNSUPPORTED: {
+    code: 'SIGNING_SCHEME_UNSUPPORTED',
+    domain: 'ACTION',
+    httpStatus: 400,
+    retryable: false,
+    message: 'Signing scheme not supported',
+  },
+  CAPABILITY_NOT_FOUND: {
+    code: 'CAPABILITY_NOT_FOUND',
+    domain: 'ACTION',
+    httpStatus: 400,
+    retryable: false,
+    message: 'Signer capability not found for the requested signing scheme',
+  },
+  VENUE_NOT_ALLOWED: {
+    code: 'VENUE_NOT_ALLOWED',
+    domain: 'POLICY',
+    httpStatus: 403,
+    retryable: false,
+    message: 'Venue not in allowed list',
+  },
+  EXTERNAL_ACTION_FAILED: {
+    code: 'EXTERNAL_ACTION_FAILED',
+    domain: 'ACTION',
+    httpStatus: 500,
+    retryable: true,
+    message: 'External action execution failed',
   },
 } as const satisfies Record<string, ErrorCodeEntry>;
 

@@ -256,14 +256,14 @@ describe('normalizeResolvedActions', () => {
       signedHttpFixture,
     ]);
     expect(results).toHaveLength(3);
-    expect(results[0].kind).toBe('contractCall');
-    expect(results[1].kind).toBe('signedData');
-    expect(results[2].kind).toBe('signedHttp');
+    expect(results[0]!.kind).toBe('contractCall');
+    expect(results[1]!.kind).toBe('signedData');
+    expect(results[2]!.kind).toBe('signedHttp');
   });
 
   it('wraps single item in array', () => {
     const results = normalizeResolvedActions(signedDataFixture);
     expect(results).toHaveLength(1);
-    expect(results[0].kind).toBe('signedData');
+    expect(results[0]!.kind).toBe('signedData');
   });
 });
