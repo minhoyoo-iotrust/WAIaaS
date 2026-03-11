@@ -173,7 +173,10 @@ Plans:
   2. VENUE_WHITELIST 정책(CONTRACT_WHITELIST 패턴 활용)과 ACTION_CATEGORY_LIMIT 정책(SPENDING_LIMIT 패턴 확장)이 설계된다
   3. AsyncTrackingResult.state가 PARTIALLY_FILLED/FILLED/CANCELED/SETTLED/EXPIRED로 확장되는 설계가 존재한다
   4. 상태 저장 위치(transactions 테이블 external_action_status vs 별도 테이블)가 결정되고 AsyncPollingService 쿼리 확장이 설계된다
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 384-01-PLAN.md — VENUE_WHITELIST + ACTION_CATEGORY_LIMIT + TransactionParam 확장 + ActionDefinition riskLevel 설계
+- [ ] 384-02-PLAN.md — AsyncTrackingResult state 확장 + AsyncPollingService 쿼리 확장 + 상태 저장 위치 결정
 
 ### Phase 385: 설계 문서 통합
 **Goal**: Phase 380~384의 모든 설계가 doc-77 단일 문서로 통합되어 구현 마일스톤(m31-12)의 입력이 된다
@@ -196,8 +199,8 @@ Phases execute in numeric order: 380 -> 381 -> 382 -> 383 -> 384 -> 385
 | 381. CredentialVault 인프라 | 2/2 | Complete    | 2026-03-11 |
 | 382. Signer Capabilities | 2/2 | Complete    | 2026-03-11 |
 | 383. 파이프라인 라우팅 | 2/2 | Complete    | 2026-03-11 |
-| 384. 정책 + 추적 확장 | 0/TBD | Not started | - |
+| 384. 정책 + 추적 확장 | 0/2 | Not started | - |
 | 385. 설계 문서 통합 | 0/TBD | Not started | - |
 
 ---
-*Last updated: 2026-03-12 after Phase 383 planning*
+*Last updated: 2026-03-12 after Phase 384 planning*
