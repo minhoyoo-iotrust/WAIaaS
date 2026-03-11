@@ -42,7 +42,11 @@
   3. DB v55 마이그레이션 실행 후 wallet_credentials 테이블이 생성되고, v56 실행 후 transactions 테이블에 action_kind/venue/operation 컬럼이 추가된다
   4. 마이그레이션 테스트가 스키마 스냅샷 검증과 데이터 변환 검증을 통과한다
   5. CREDENTIAL_NOT_FOUND, SIGNING_SCHEME_UNSUPPORTED, VENUE_NOT_ALLOWED 등 6종 에러 코드가 등록되어 사용 가능하다
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 386-01-PLAN.md — ResolvedAction Zod 타입 시스템 + 에러 코드 6종
+- [ ] 386-02-PLAN.md — DB v55+v56 마이그레이션 + Drizzle 스키마
+- [ ] 386-03-PLAN.md — IActionProvider 반환 타입 확장 + 하위 호환 검증
 
 ### Phase 387: Signer Capability 레지스트리
 **Goal**: 7종 서명 스킴이 레지스트리에 등록되어 signingScheme 문자열로 적절한 서명기를 자동 선택할 수 있다
@@ -120,7 +124,7 @@ Phases execute in numeric order: 386 -> 387 -> 388 -> 389 -> 390 -> 391 -> 392
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 386. 타입 시스템 + 에러 코드 + DB 마이그레이션 | 0/TBD | Not started | - |
+| 386. 타입 시스템 + 에러 코드 + DB 마이그레이션 | 0/3 | Not started | - |
 | 387. Signer Capability 레지스트리 | 0/TBD | Not started | - |
 | 388. Credential Vault | 0/TBD | Not started | - |
 | 389. 추적 + 정책 확장 | 0/TBD | Not started | - |
