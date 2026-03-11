@@ -61,8 +61,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 377-01-PLAN.md — admin.ts 도메인별 핸들러 분할 (5개 모듈 파일 생성)
-- [ ] 377-02-PLAN.md — admin.ts thin aggregator 재구성 및 openapi-schemas.ts 검토
+- [x] 377-01-PLAN.md — admin.ts 도메인별 핸들러 분할 (5개 모듈 파일 생성)
+- [x] 377-02-PLAN.md — admin.ts thin aggregator 재구성 및 openapi-schemas.ts 검토
 
 ### Phase 378: API 에러 응답 일관성
 **Goal**: 비표준 에러/응답 패턴이 WAIaaSError 및 표준 패턴으로 통일되어 API 응답이 일관된다
@@ -73,10 +73,10 @@ Plans:
   2. `sessions.ts`에서 `new Response(null, { status: 204 }) as any` 패턴이 표준 204 응답 패턴으로 교체된다
   3. `as any` 타입 escape가 포함된 응답 패턴이 식별 및 정리된다
   4. `pnpm turbo run lint && pnpm turbo run typecheck && pnpm turbo run test` 전체 통과
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 378-01: 비표준 에러/응답 패턴 식별 및 WAIaaSError/표준 패턴으로 교체
+- [ ] 378-01-PLAN.md — 비표준 에러/응답 패턴 식별 및 WAIaaSError/표준 패턴으로 교체
 
 ### Phase 379: 상수 중앙화
 **Goal**: 코드베이스에 산재된 매직 넘버가 명명된 상수로 추출되어 의미가 명확해진다
