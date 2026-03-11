@@ -108,8 +108,7 @@ export default function SystemPage() {
   const icc = (cat: string, key: string) =>
     isCredentialConfiguredPure(settings.value, dirty.value, cat, key);
 
-  // Suppress unused variable warnings -- icc kept for consistency
-  void icc;
+  // icc is used in SmartAccountSection for credential placeholders
 
   // ---------------------------------------------------------------------------
   // Field change / Save / Discard
@@ -288,9 +287,9 @@ export default function SystemPage() {
   // Section: NFT Indexer
   // ---------------------------------------------------------------------------
 
-  const NFT_INDEXER_PROVIDERS: Record<string, { label: string; description: string }> = {
-    alchemy_nft: { label: 'Alchemy NFT', description: 'EVM NFT indexing (ERC-721, ERC-1155)' },
-    helius: { label: 'Helius', description: 'Solana NFT indexing (Metaplex)' },
+  const NFT_INDEXER_PROVIDERS: Record<string, { label: string; description: string; dashboardUrl: string }> = {
+    alchemy_nft: { label: 'Alchemy NFT', description: 'EVM NFT indexing (ERC-721, ERC-1155)', dashboardUrl: 'https://dashboard.alchemy.com' },
+    helius: { label: 'Helius', description: 'Solana NFT indexing (Metaplex)', dashboardUrl: 'https://dashboard.helius.dev' },
   };
 
   function NftIndexerSection() {
@@ -314,7 +313,12 @@ export default function SystemPage() {
             return (
               <div class="settings-field-row" key={entry.providerName}>
                 <div class="settings-field-label">
-                  <span>{info.label}</span>
+                  <span>
+                    {info.label}{' '}
+                    <a href={info.dashboardUrl} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 400, fontSize: '0.8em' }}>
+                      (Dashboard)
+                    </a>
+                  </span>
                   <span style={{ fontSize: '0.8em', color: 'var(--color-text-secondary)' }}>{info.description}</span>
                   {entry.hasKey ? (
                     <Badge variant="success">Configured</Badge>
@@ -656,7 +660,78 @@ export default function SystemPage() {
           <div class="settings-info-box">
             Smart accounts enable gas-sponsored transactions via Paymaster, atomic batch execution,
             and lazy contract deployment. Bundler and Paymaster settings are configured individually
-            on each wallet (Wallets → Edit → AA Provider).
+            on each wallet (Wallets &rarr; Edit &rarr; AA Provider).
+          </div>
+
+          {/* Global AA Provider Defaults */}
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--space-3)', marginTop: 'var(--space-3)' }}>
+            <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-2)', color: 'var(--text-secondary)' }}>
+              Global AA Provider Defaults
+            </div>
+            <p class="settings-description" style={{ marginBottom: 'var(--space-3)' }}>
+              Global default API keys for ERC-4337 bundler providers. Per-wallet keys override these defaults.
+            </p>
+
+            <div class="settings-subgroup" style={{ marginBottom: '1rem' }}>
+              <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                Pimlico{' '}
+                <a href="https://dashboard.pimlico.io" target="_blank" rel="noopener noreferrer" style={{ fontWeight: 400, fontSize: '0.8rem' }}>
+                  (Dashboard)
+                </a>
+              </h4>
+              <div class="settings-fields-grid">
+                <FormField
+                  label="API Key"
+                  name="smart_account.pimlico.api_key"
+                  type="password"
+                  value={ev('smart_account', 'pimlico.api_key')}
+                  onChange={(v) => handleFieldChange('smart_account.pimlico.api_key', v)}
+                  placeholder={icc('smart_account', 'pimlico.api_key') ? '(configured)' : 'Enter Pimlico API key'}
+                  data-field="smart_account.pimlico.api_key"
+                />
+                <FormField
+                  label="Paymaster Policy ID"
+                  name="smart_account.pimlico.paymaster_policy_id"
+                  type="text"
+                  value={ev('smart_account', 'pimlico.paymaster_policy_id')}
+                  onChange={(v) => handleFieldChange('smart_account.pimlico.paymaster_policy_id', v)}
+                  placeholder="Optional sponsorship policy ID"
+                  data-field="smart_account.pimlico.paymaster_policy_id"
+                />
+              </div>
+            </div>
+            <div class="settings-subgroup">
+              <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                Alchemy{' '}
+                <a href="https://dashboard.alchemy.com" target="_blank" rel="noopener noreferrer" style={{ fontWeight: 400, fontSize: '0.8rem' }}>
+                  (Dashboard)
+                </a>
+              </h4>
+              <div class="settings-fields-grid">
+                <FormField
+                  label="API Key"
+                  name="smart_account.alchemy.api_key"
+                  type="password"
+                  value={ev('smart_account', 'alchemy.api_key')}
+                  onChange={(v) => handleFieldChange('smart_account.alchemy.api_key', v)}
+                  placeholder={icc('smart_account', 'alchemy.api_key') ? '(configured)' : 'Enter Alchemy API key'}
+                  data-field="smart_account.alchemy.api_key"
+                />
+                <FormField
+                  label="Paymaster Policy ID"
+                  name="smart_account.alchemy.paymaster_policy_id"
+                  type="text"
+                  value={ev('smart_account', 'alchemy.paymaster_policy_id')}
+                  onChange={(v) => handleFieldChange('smart_account.alchemy.paymaster_policy_id', v)}
+                  placeholder="Required for Alchemy paymaster"
+                  data-field="smart_account.alchemy.paymaster_policy_id"
+                />
+              </div>
+            </div>
+            <div class="settings-info-box">
+              Set global provider API keys here so you don't need to enter them for every smart account wallet.
+              Per-wallet API keys always take priority over these global defaults.
+            </div>
           </div>
         </div>
       </div>
