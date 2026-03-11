@@ -88,7 +88,7 @@ const ENUMS: EnumDef[] = [
   { name: 'SessionStatus', array: SESSION_STATUSES, zodOptions: SessionStatusEnum.options, expectedCount: 3 },
   { name: 'NotificationEventType', array: NOTIFICATION_EVENT_TYPES, zodOptions: NotificationEventTypeEnum.options, expectedCount: 60 },
   { name: 'NotificationLogStatus', array: NOTIFICATION_LOG_STATUSES, zodOptions: NotificationLogStatusEnum.options, expectedCount: 2 },
-  { name: 'AuditAction', array: AUDIT_ACTIONS, zodOptions: AuditActionEnum.options, expectedCount: 25 },
+  { name: 'AuditAction', array: AUDIT_ACTIONS, zodOptions: AuditActionEnum.options, expectedCount: 26 },
   { name: 'KillSwitchState', array: KILL_SWITCH_STATES, zodOptions: KillSwitchStateEnum.options, expectedCount: 3 },
   { name: 'OwnerState', array: OWNER_STATES, zodOptions: OwnerStateEnum.options, expectedCount: 3 },
 ];
