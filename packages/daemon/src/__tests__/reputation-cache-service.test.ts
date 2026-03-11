@@ -21,12 +21,16 @@ import { ReputationCacheService } from '../services/erc8004/reputation-cache-ser
 
 const mockReadContract = vi.fn();
 
-vi.mock('viem', () => ({
-  createPublicClient: vi.fn(() => ({
-    readContract: mockReadContract,
-  })),
-  http: vi.fn(() => 'mock-transport'),
-}));
+vi.mock('viem', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('viem')>();
+  return {
+    ...actual,
+    createPublicClient: vi.fn(() => ({
+      readContract: mockReadContract,
+    })),
+    http: vi.fn(() => 'mock-transport'),
+  };
+});
 
 // ---------------------------------------------------------------------------
 // Helpers
