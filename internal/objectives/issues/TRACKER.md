@@ -345,6 +345,7 @@
 | 329 | BUG | HIGH | Confirmation Worker STO-03 회귀 — Lido 온체인 성공 후 SUBMITTED 상태 고착 (#143 재발) | v31.9 | FIXED | 2026-03-11 |
 | 330 | BUG | HIGH | Admin UI Jupiter Swap requiresApiKey 동기화 누락 — API 키 입력 필드 미표시 (#318 불완전) | v31.9 | FIXED | 2026-03-11 |
 | 331 | MISSING | MEDIUM | Admin UI 감사 로그 페이지 미구현 — API 존재하나 UI 없음 | v31.9 | FIXED | 2026-03-11 |
+| 332 | ENHANCEMENT | LOW | .planning 디렉토리 구조 정리 — 플랫 phases, 고아 파일, 네이밍 불일치 | — | OPEN | — |
 
 ## Type Legend
 
@@ -356,9 +357,9 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 1
 - **FIXED:** 331
 - **WONTFIX:** 1
-- **Total:** 332
+- **Total:** 333
 - **Archived:** 321 (001–321)
 
