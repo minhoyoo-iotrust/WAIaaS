@@ -1,7 +1,7 @@
 /**
  * Drizzle ORM schema definitions for WAIaaS daemon SQLite database.
  *
- * 29 tables: wallets, sessions, session_wallets, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs, token_registry, settings, telegram_users, wc_sessions, wc_store, incoming_transactions, incoming_tx_cursors, defi_positions, wallet_apps, webhooks, webhook_logs, agent_identities, reputation_cache, nft_metadata_cache, userop_builds, hyperliquid_orders, hyperliquid_sub_accounts, polymarket_orders, polymarket_positions, polymarket_api_keys
+ * 30 tables: wallets, sessions, session_wallets, transactions, policies, pending_approvals, audit_log, key_value_store, notification_logs, token_registry, settings, telegram_users, wc_sessions, wc_store, incoming_transactions, incoming_tx_cursors, defi_positions, wallet_apps, webhooks, webhook_logs, agent_identities, reputation_cache, nft_metadata_cache, userop_builds, hyperliquid_orders, hyperliquid_sub_accounts, polymarket_orders, polymarket_positions, polymarket_api_keys, wallet_credentials
  *
  * CHECK constraints are derived from @waiaas/core enum SSoT arrays (not hardcoded strings).
  * All timestamps are Unix epoch seconds via { mode: 'timestamp' }.
@@ -26,6 +26,7 @@ import {
   text,
   integer,
   real,
+  blob,
   index,
   uniqueIndex,
   check,
@@ -195,6 +196,11 @@ export const transactions = sqliteTable(
     // v28.3 DeFi async tracking columns
     bridgeStatus: text('bridge_status'),
     bridgeMetadata: text('bridge_metadata'),
+    // v31.12 External Action tracking columns
+    actionKind: text('action_kind').notNull().default('contractCall'),
+    venue: text('venue'),
+    operation: text('operation'),
+    externalId: text('external_id'),
   },
   (table) => [
     index('idx_transactions_wallet_status').on(table.walletId, table.status),
@@ -230,6 +236,10 @@ export const transactions = sqliteTable(
         `bridge_status IS NULL OR bridge_status IN ('PENDING', 'COMPLETED', 'FAILED', 'BRIDGE_MONITORING', 'TIMEOUT', 'REFUNDED')`,
       ),
     ),
+    // v31.12: External Action tracking indexes
+    index('idx_transactions_action_kind').on(table.actionKind),
+    index('idx_transactions_venue').on(table.venue),
+    index('idx_transactions_external_id').on(table.externalId),
   ],
 );
 
@@ -891,5 +901,38 @@ export const polymarketApiKeys = sqliteTable(
   },
   (table) => [
     uniqueIndex('idx_pm_api_keys_wallet').on(table.walletId),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Table 31: wallet_credentials -- External Action credential vault (v55)
+// ---------------------------------------------------------------------------
+
+export const walletCredentials = sqliteTable(
+  'wallet_credentials',
+  {
+    id: text('id').primaryKey(),
+    walletId: text('wallet_id').references(() => wallets.id, { onDelete: 'cascade' }),
+    type: text('type').notNull(),
+    name: text('name').notNull(),
+    encryptedValue: blob('encrypted_value', { mode: 'buffer' }).notNull(),
+    iv: blob('iv', { mode: 'buffer' }).notNull(),
+    authTag: blob('auth_tag', { mode: 'buffer' }).notNull(),
+    metadata: text('metadata').notNull().default('{}'),
+    expiresAt: integer('expires_at'),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  },
+  (table) => [
+    uniqueIndex('idx_wallet_credentials_wallet_name').on(table.walletId, table.name),
+    index('idx_wallet_credentials_global_name').on(table.name),
+    index('idx_wallet_credentials_wallet_id').on(table.walletId),
+    index('idx_wallet_credentials_expires_at').on(table.expiresAt),
+    check(
+      'check_credential_type',
+      sql.raw(
+        `type IN ('api-key', 'hmac-secret', 'rsa-private-key', 'session-token', 'custom')`,
+      ),
+    ),
   ],
 );
