@@ -24,27 +24,13 @@ import {
   CHAIN_ID_MAP,
 } from './config.js';
 import { clampSlippageBps, asBps } from '../../common/slippage.js';
+import { encodeApproveCalldata } from '../../common/contract-encoding.js';
 
 // ---------------------------------------------------------------------------
 // Native ETH placeholder address used by 0x API
 // ---------------------------------------------------------------------------
 
 const NATIVE_ETH_ADDRESS = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
-
-// ---------------------------------------------------------------------------
-// ERC-20 approve calldata encoder
-// ---------------------------------------------------------------------------
-
-/**
- * Encode ERC-20 approve(address spender, uint256 amount) calldata.
- * Function selector: 0x095ea7b3
- */
-function encodeApproveCalldata(spender: string, amount: string): string {
-  const selector = '0x095ea7b3';
-  const paddedSpender = spender.slice(2).toLowerCase().padStart(64, '0');
-  const paddedAmount = BigInt(amount).toString(16).padStart(64, '0');
-  return `${selector}${paddedSpender}${paddedAmount}`;
-}
 
 // ---------------------------------------------------------------------------
 // Input schema for the swap action
@@ -172,7 +158,7 @@ export class ZeroExSwapActionProvider implements IActionProvider {
     const approveRequest: ContractCallRequest = {
       type: 'CONTRACT_CALL',
       to: input.sellToken,
-      calldata: encodeApproveCalldata(expectedAllowanceHolder, input.sellAmount),
+      calldata: encodeApproveCalldata(expectedAllowanceHolder, BigInt(input.sellAmount)),
       value: '0',
     };
 

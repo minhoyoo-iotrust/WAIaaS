@@ -13,23 +13,11 @@
  * Function selectors are hardcoded hex constants derived from keccak256 of function signatures.
  * Follows the Lido pattern (lido-contract.ts).
  */
-
-// ---------------------------------------------------------------------------
-// Utility: pad a hex value to 32 bytes (64 hex chars)
-// ---------------------------------------------------------------------------
-
-function padHex(value: string, length: number = 64): string {
-  return value.padStart(length, '0');
-}
-
-function addressToHex(address: string): string {
-  return padHex(address.slice(2).toLowerCase());
-}
-
-function uint256ToHex(value: bigint): string {
-  if (value < 0n) throw new Error('uint256 cannot be negative');
-  return padHex(value.toString(16));
-}
+import {
+  addressToHex,
+  uint256ToHex,
+  encodeApproveCalldata,
+} from '../../common/contract-encoding.js';
 
 // ---------------------------------------------------------------------------
 // Function selectors (verified via keccak256)
@@ -144,20 +132,8 @@ export function encodeWithdrawCalldata(
   return `${AAVE_SELECTORS.withdraw}${addressToHex(asset)}${uint256ToHex(amount)}${addressToHex(to)}`;
 }
 
-// ---------------------------------------------------------------------------
-// approve(address spender, uint256 amount) -- ERC-20
-// ---------------------------------------------------------------------------
-
-/**
- * Encode ERC-20 approve(address spender, uint256 amount) calldata.
- *
- * @param spender - Spender address to approve
- * @param amount - Amount to approve in token's smallest unit
- * @returns ABI-encoded calldata with 0x prefix
- */
-export function encodeApproveCalldata(spender: string, amount: bigint): string {
-  return `${AAVE_SELECTORS.approve}${addressToHex(spender)}${uint256ToHex(amount)}`;
-}
+// Re-export encodeApproveCalldata from common module for backward compatibility
+export { encodeApproveCalldata };
 
 // ---------------------------------------------------------------------------
 // getUserAccountData(address user) -- read
