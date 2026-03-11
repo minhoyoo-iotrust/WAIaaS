@@ -74,6 +74,9 @@ export {
   AA_PROVIDER_NAMES,
   type AaProviderName,
   AaProviderNameEnum,
+  SigningSchemeEnum,
+  type SigningScheme,
+  SIGNING_SCHEMES,
 } from './enums/index.js';
 
 // Schemas (5 domain Zod SSoT schemas + v1.4 discriminatedUnion 6-type)
@@ -217,6 +220,24 @@ export {
   type UserOpSignRequest,
   type UserOpSignResponse,
 } from './schemas/index.js';
+
+// ResolvedAction 3-kind discriminatedUnion (v31.12 External Action framework)
+export {
+  ResolvedActionSchema,
+  SignedDataActionSchema,
+  SignedHttpActionSchema,
+  NormalizedContractCallSchema,
+  SignedDataActionTrackingSchema,
+  SignedDataActionPolicyContextSchema,
+  ActionCategoryEnum,
+  normalizeResolvedAction,
+  normalizeResolvedActions,
+  type SignedDataAction,
+  type SignedHttpAction,
+  type NormalizedContractCall,
+  type ResolvedAction,
+  type ActionCategory,
+} from './schemas/resolved-action.schema.js';
 
 // Wallet Preset (v28.8 builtin wallet preset registry)
 export {
