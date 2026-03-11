@@ -347,6 +347,7 @@
 | 331 | MISSING | MEDIUM | Admin UI 감사 로그 페이지 미구현 — API 존재하나 UI 없음 | v31.9 | FIXED | 2026-03-11 |
 | 332 | ENHANCEMENT | LOW | .planning 디렉토리 구조 정리 — 플랫 phases, 고아 파일, 네이밍 불일치 | — | OPEN | — |
 | 333 | ENHANCEMENT | HIGH | SignRequest에 CAIP-2 체인 식별자 및 서명 주소 추가 — chain/network 비표준 + signerAddress 누락 | — | OPEN | — |
+| 334 | BUG | HIGH | Admin Settings max_sessions_per_wallet 변경이 런타임에 반영되지 않음 — deps.config 정적 참조 | — | OPEN | — |
 
 ## Type Legend
 
@@ -358,9 +359,9 @@
 
 ## Summary
 
-- **OPEN:** 2
+- **OPEN:** 3
 - **FIXED:** 331
 - **WONTFIX:** 1
-- **Total:** 334
+- **Total:** 335
 - **Archived:** 321 (001–321)
 
