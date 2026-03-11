@@ -131,7 +131,10 @@ Plans:
   3. wallet_credentials DB 스키마(AES-256-GCM 암호화, HKDF 도메인 분리)가 설계되고 re-encrypt/backup 통합 경로가 문서화된다
   4. credential lifecycle(생성/로테이션/만료/삭제)과 인증 모델(sessionAuth+masterAuth)이 설계된다
   5. Admin UI Credentials 탭 UX(목록/등록/삭제/로테이션, 원문 비노출)가 설계된다
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 381-01-PLAN.md — ICredentialVault 인터페이스 + DB 스키마 + 암호화 + 스코프 + 라이프사이클 + 인증 모델 설계
+- [ ] 381-02-PLAN.md — Admin UI Credentials 탭 UX + MCP 도구 + SDK 메서드 설계
 
 ### Phase 382: Signer Capabilities
 **Goal**: 기존 4종 서명 모듈을 ISignerCapability 어댑터로 래핑하고 HMAC/RSA-PSS/signBytes 신규 능력을 추가하는 설계가 완성된다
@@ -184,11 +187,11 @@ Phases execute in numeric order: 380 -> 381 -> 382 -> 383 -> 384 -> 385
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 380. ResolvedAction 타입 시스템 | 2/2 | Complete    | 2026-03-11 |
-| 381. CredentialVault 인프라 | 0/TBD | Not started | - |
+| 381. CredentialVault 인프라 | 0/2 | Not started | - |
 | 382. Signer Capabilities | 0/TBD | Not started | - |
 | 383. 파이프라인 라우팅 | 0/TBD | Not started | - |
 | 384. 정책 + 추적 확장 | 0/TBD | Not started | - |
 | 385. 설계 문서 통합 | 0/TBD | Not started | - |
 
 ---
-*Last updated: 2026-03-11 after Phase 380 planning*
+*Last updated: 2026-03-11 after Phase 381 planning*
