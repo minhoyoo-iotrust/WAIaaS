@@ -86,7 +86,10 @@ Plans:
   2. VENUE_WHITELIST가 활성화되면 허용 목록에 없는 venue의 action이 VENUE_NOT_ALLOWED로 거부된다
   3. ACTION_CATEGORY_LIMIT 정책이 카테고리별 USD 한도를 daily/monthly/per_action 단위로 적용하고, 초과 시 tier_on_exceed 동작이 실행된다
   4. 기존 SPENDING_LIMIT/provider-trust 정책과 충돌 없이 공존한다
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 389-01-PLAN.md — AsyncTrackingResult 9-state + DB v57 + AsyncPollingService 확장 + 알림 이벤트 6종
+- [ ] 389-02-PLAN.md — TransactionParam 확장 + VENUE_WHITELIST + ACTION_CATEGORY_LIMIT 정책
 
 ### Phase 390: 파이프라인 라우팅 + 조회 API
 **Goal**: signedData/signedHttp action이 새 파이프라인으로 라우팅되어 실행되고, 실행 이력을 조회할 수 있다
@@ -133,7 +136,7 @@ Phases execute in numeric order: 386 -> 387 -> 388 -> 389 -> 390 -> 391 -> 392
 | 386. 타입 시스템 + 에러 코드 + DB 마이그레이션 | 3/3 | Complete    | 2026-03-11 |
 | 387. Signer Capability 레지스트리 | 2/2 | Complete    | 2026-03-11 |
 | 388. Credential Vault | 2/2 | Complete    | 2026-03-11 |
-| 389. 추적 + 정책 확장 | 0/TBD | Not started | - |
+| 389. 추적 + 정책 확장 | 0/2 | Not started | - |
 | 390. 파이프라인 라우팅 + 조회 API | 0/TBD | Not started | - |
 | 391. Admin UI | 0/TBD | Not started | - |
 | 392. MCP + SDK + 스킬 파일 | 0/TBD | Not started | - |
