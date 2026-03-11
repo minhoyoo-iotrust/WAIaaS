@@ -183,7 +183,7 @@ Phases execute in numeric order: 380 -> 381 -> 382 -> 383 -> 384 -> 385
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 380. ResolvedAction 타입 시스템 | 2/2 | Complete   | 2026-03-11 |
+| 380. ResolvedAction 타입 시스템 | 2/2 | Complete    | 2026-03-11 |
 | 381. CredentialVault 인프라 | 0/TBD | Not started | - |
 | 382. Signer Capabilities | 0/TBD | Not started | - |
 | 383. 파이프라인 라우팅 | 0/TBD | Not started | - |
