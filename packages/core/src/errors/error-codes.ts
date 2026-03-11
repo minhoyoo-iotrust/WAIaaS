@@ -25,9 +25,10 @@ export interface ErrorCodeEntry {
 }
 
 /**
- * 108 error codes from SS10.12 unified error code matrix + signing protocol + session multi-wallet + ERC-4337.
+ * 110 error codes from SS10.12 unified error code matrix + signing protocol + session multi-wallet + ERC-4337.
  * SSoT: 37-rest-api-complete-spec.md section 10.12 + 73-signing-protocol-v1.md
  * v29.3: +WALLET_ID_REQUIRED, +NETWORK_REQUIRED, -CANNOT_REMOVE_DEFAULT_WALLET (net +1)
+ * v31.10: +INVALID_TOKEN_IDENTIFIER, +STATS_NOT_CONFIGURED (net +2)
  */
 export const ERROR_CODES = {
   // --- AUTH domain (8) ---
@@ -696,13 +697,20 @@ export const ERROR_CODES = {
     message: 'Request chain does not match action provider supported chains',
   },
 
-  // --- ADMIN domain (1) ---
+  // --- ADMIN domain (2) ---
   ROTATION_TOO_RECENT: {
     code: 'ROTATION_TOO_RECENT',
     domain: 'ADMIN',
     httpStatus: 429,
     retryable: false,
     message: 'Key rotation attempted too recently',
+  },
+  STATS_NOT_CONFIGURED: {
+    code: 'STATS_NOT_CONFIGURED',
+    domain: 'ADMIN',
+    httpStatus: 503,
+    retryable: false,
+    message: 'Stats service not configured',
   },
 
   // --- X402 domain (8) ---
@@ -939,7 +947,7 @@ export const ERROR_CODES = {
     retryable: true,
     message: 'ERC-8128 signing rate limit exceeded for this domain',
   },
-  // --- NFT domain (5) ---
+  // --- NFT domain (6) ---
   NFT_NOT_FOUND: {
     code: 'NFT_NOT_FOUND',
     domain: 'NFT',
@@ -974,6 +982,13 @@ export const ERROR_CODES = {
     httpStatus: 502,
     retryable: true,
     message: 'Failed to fetch NFT metadata',
+  },
+  INVALID_TOKEN_IDENTIFIER: {
+    code: 'INVALID_TOKEN_IDENTIFIER',
+    domain: 'NFT',
+    httpStatus: 400,
+    retryable: false,
+    message: 'Invalid NFT token identifier format',
   },
   // --- WALLET domain (deprecated factory) ---
   DEPRECATED_SMART_ACCOUNT: {

@@ -78,12 +78,12 @@ export function nftApprovalRoutes(deps: NftApprovalRouteDeps): Hono {
     const operator = c.req.query('operator');
 
     if (!network) {
-      return c.json({ error: 'network query parameter is required' }, 400);
+      throw new WAIaaSError('NETWORK_REQUIRED', { message: 'network query parameter is required' });
     }
 
     const parsed = parseTokenIdentifier(tokenIdentifier);
     if (!parsed) {
-      return c.json({ error: `Invalid token identifier: ${tokenIdentifier}` }, 400);
+      throw new WAIaaSError('INVALID_TOKEN_IDENTIFIER', { message: `Invalid token identifier: ${tokenIdentifier}` });
     }
 
     const { contractAddress, tokenId } = parsed;

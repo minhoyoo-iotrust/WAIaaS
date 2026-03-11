@@ -794,7 +794,7 @@ export function registerAdminMonitoringRoutes(router: OpenAPIHono, deps: AdminRo
 
   router.openapi(adminStatsRoute, async (c) => {
     if (!deps.adminStatsService) {
-      return c.json({ code: 'NOT_CONFIGURED', message: 'Stats service not configured', retryable: false }, 503 as any);
+      throw new WAIaaSError('STATS_NOT_CONFIGURED');
     }
 
     const stats = deps.adminStatsService.getStats();
