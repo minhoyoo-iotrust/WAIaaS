@@ -8,6 +8,17 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
+## Current Milestone: v31.10 코드베이스 품질 개선
+
+**Goal:** 93개 마일스톤에 걸쳐 누적된 코드 중복, 타입 안전성 문제, 대형 파일을 정리하여 코드 품질을 개선한다. 행위 변경 없이 순수 리팩토링만 수행.
+
+**Target features:**
+- 유틸리티 함수 통합 (parseTokenAmount, padHex, encodeApproveCalldata 등 중복 제거)
+- 타입 안전성 개선 (`as any` 40+곳 제거, SmartAccount 필드 타입 확장)
+- 대형 파일 분할 (admin.ts 3,107줄 → 서브 모듈)
+- API 에러 응답 일관성 (WAIaaSError 패턴 통일)
+- 상수 중앙화 (매직 넘버 → 명명 상수)
+
 ## Previous Milestone: v31.9 Polymarket 예측 시장 통합 — SHIPPED 2026-03-11
 
 Polymarket 예측 시장 통합. EIP-712 3-domain 서명(ClobAuth, CTF Exchange, Neg Risk) 기반 CLOB 주문 인프라(PolymarketSigner, ClobClient, OrderBuilder, RateLimiter), Gamma API 마켓 조회(30s TTL 캐시) + PolymarketCtfProvider(5 on-chain CTF actions: split/merge/redeem/approve), PositionTracker(가중평균가 bigint) + PnlCalculator + ResolutionMonitor(마켓 해결 폴링), DB v53-v54(polymarket_orders/positions/api_keys 3 tables), PolymarketOrderProvider(5 actions: buy/sell/cancel/cancel_all/update) + ApiDirectResult off-chain 패턴, Admin Settings 7키 + REST 9 endpoints + Admin UI 5탭(Overview/Markets/Orders/Positions/Settings) + MCP 8 query 도구 + SDK 15 메서드 + connect-info polymarket capability + 정책 통합(17 tests) + Skill 파일 2개 + E2E 4시나리오 + UAT defi-13. 5 phases, 14 plans, 29 requirements, 48 commits, 93 files, +10,363 lines, ~235 tests.
