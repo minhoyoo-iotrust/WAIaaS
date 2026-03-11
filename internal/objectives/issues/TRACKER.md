@@ -345,9 +345,11 @@
 | 329 | BUG | HIGH | Confirmation Worker STO-03 회귀 — Lido 온체인 성공 후 SUBMITTED 상태 고착 (#143 재발) | v31.9 | FIXED | 2026-03-11 |
 | 330 | BUG | HIGH | Admin UI Jupiter Swap requiresApiKey 동기화 누락 — API 키 입력 필드 미표시 (#318 불완전) | v31.9 | FIXED | 2026-03-11 |
 | 331 | MISSING | MEDIUM | Admin UI 감사 로그 페이지 미구현 — API 존재하나 UI 없음 | v31.9 | FIXED | 2026-03-11 |
-| 332 | ENHANCEMENT | LOW | .planning 디렉토리 구조 정리 — 플랫 phases, 고아 파일, 네이밍 불일치 | — | OPEN | — |
-| 333 | ENHANCEMENT | HIGH | SignRequest에 CAIP-2 체인 식별자 및 서명 주소 추가 — chain/network 비표준 + signerAddress 누락 | — | OPEN | — |
-| 334 | BUG | HIGH | Admin Settings max_sessions_per_wallet 변경이 런타임에 반영되지 않음 — deps.config 정적 참조 | — | OPEN | — |
+| 332 | ENHANCEMENT | LOW | .planning 디렉토리 구조 정리 — 플랫 phases, 고아 파일, 네이밍 불일치 | v31.10 | FIXED | 2026-03-11 |
+| 333 | ENHANCEMENT | HIGH | SignRequest에 CAIP-2 체인 식별자 및 서명 주소 추가 — chain/network 비표준 + signerAddress 누락 | v31.10 | FIXED | 2026-03-11 |
+| 334 | BUG | HIGH | Admin Settings max_sessions_per_wallet 변경이 런타임에 반영되지 않음 — deps.config 정적 참조 | v31.10 | FIXED | 2026-03-11 |
+| 335 | ENHANCEMENT | MEDIUM | Admin UI 레거시 Settings 페이지 제거 + AA 글로벌 키 System 이관 + API 키 발급 링크 추가 | v31.10 | FIXED | 2026-03-11 |
+| 336 | BUG | MEDIUM | Across Bridge status API depositId Zod 타입 불일치 — API 문자열 반환 vs 스키마 number | v31.10 | FIXED | 2026-03-11 |
 
 ## Type Legend
 
@@ -359,9 +361,9 @@
 
 ## Summary
 
-- **OPEN:** 3
-- **FIXED:** 331
+- **OPEN:** 0
+- **FIXED:** 336
 - **WONTFIX:** 1
-- **Total:** 335
+- **Total:** 337
 - **Archived:** 321 (001–321)
 

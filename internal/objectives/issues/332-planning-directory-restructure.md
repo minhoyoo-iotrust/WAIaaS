@@ -2,8 +2,9 @@
 
 - **유형:** ENHANCEMENT
 - **심각도:** LOW
-- **상태:** OPEN
+- **상태:** FIXED
 - **발견일:** 2026-03-11
+- **해결일:** 2026-03-11
 
 ## 현상
 
@@ -22,11 +23,11 @@
 
 ## 정리 방안
 
-- 빈 디렉토리(deliverables/) 삭제
-- 고아 파일(v29.0-MILESTONE-AUDIT.md) milestones/로 이동
-- milestones/ 내 이질적 phase 디렉토리(300-*, 301-*) 적절한 위치로 이동
-- research/ 네이밍 규칙 통일 검토
-- phases/ 마일스톤별 그룹핑 또는 아카이브 전략 수립
+- [x] 빈 디렉토리(deliverables/) 삭제
+- [x] 고아 파일(v29.0-MILESTONE-AUDIT.md) 삭제 (milestones/ 내 동일 파일과 중복 확인 후 제거)
+- [x] milestones/ 내 이질적 phase 디렉토리(300-*, 301-*) → `milestones/v29.9-phases/`로 이동
+- [ ] research/ 네이밍 규칙 통일 검토 — **deferred** (범위가 넓어 별도 계획 필요)
+- [ ] phases/ 마일스톤별 그룹핑 또는 아카이브 전략 수립 — **deferred** (181개 디렉토리, 별도 계획 필요)
 
 ## 테스트 항목
 
