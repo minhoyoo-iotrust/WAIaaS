@@ -347,6 +347,8 @@ export type {
   ActionDefinition,
   ActionContext,
   IActionProvider,
+  // v31.12: async tracking result for IActionProvider.checkStatus()
+  ActionProviderTrackingResult,
   // v31.4: API-direct result type for non-on-chain providers (HDESIGN-01)
   ApiDirectResult,
   // v1.5.1 x402 types

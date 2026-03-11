@@ -131,10 +131,15 @@ export type { SlippageBps, SlippagePct } from './common/slippage.js';
 export {
   BRIDGE_STATUS_VALUES,
   BridgeStatusEnum,
+  ASYNC_TRACKING_STATE_VALUES,
+  AsyncTrackingStateEnum,
+  isTerminalState,
+  isContinuePolling,
 } from './common/async-status-tracker.js';
 export type {
   IAsyncStatusTracker,
   AsyncTrackingResult,
+  AsyncTrackingState,
   BridgeStatus,
 } from './common/async-status-tracker.js';
 

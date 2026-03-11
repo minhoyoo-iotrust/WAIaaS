@@ -18,6 +18,22 @@ import type {
 } from '../schemas/resolved-action.schema.js';
 
 // ---------------------------------------------------------------------------
+// Inline AsyncTrackingResult type (mirrors @waiaas/actions to avoid circular dep)
+// ---------------------------------------------------------------------------
+
+/**
+ * Async tracking result type for IActionProvider.checkStatus().
+ * Defined inline to avoid circular dependency (core -> actions).
+ * Must stay in sync with AsyncTrackingResult in @waiaas/actions.
+ */
+export interface ActionProviderTrackingResult {
+  state: 'PENDING' | 'COMPLETED' | 'FAILED' | 'TIMEOUT'
+    | 'PARTIALLY_FILLED' | 'FILLED' | 'CANCELED' | 'SETTLED' | 'EXPIRED';
+  details?: Record<string, unknown>;
+  nextIntervalOverride?: number;
+}
+
+// ---------------------------------------------------------------------------
 // Zod SSoT: ActionProviderMetadata
 // ---------------------------------------------------------------------------
 
@@ -192,4 +208,34 @@ export interface IActionProvider {
     | SignedHttpAction
     | ResolvedAction[]
   >;
+
+  /**
+   * Check the current status of an off-chain action (optional).
+   * Used by ExternalActionTracker to delegate venue-specific status polling.
+   * Providers that resolve signedData/signedHttp actions should implement this.
+   *
+   * @param actionId - The external action ID (e.g., order ID)
+   * @param metadata - Tracking metadata (venue, operation, etc.)
+   * @returns Tracking result with 9-state
+   */
+  checkStatus?(
+    actionId: string,
+    metadata: Record<string, unknown>,
+  ): Promise<ActionProviderTrackingResult>;
+
+  /**
+   * Execute a signed payload against an external service (optional).
+   * Used by the off-chain pipeline after signing is complete.
+   * The signed payload format depends on the signingScheme.
+   *
+   * @param actionName - The action name being executed
+   * @param signedPayload - The signed payload to submit
+   * @param context - Action execution context
+   * @returns Execution result with provider-specific data
+   */
+  execute?(
+    actionName: string,
+    signedPayload: unknown,
+    context: ActionContext,
+  ): Promise<Record<string, unknown>>;
 }

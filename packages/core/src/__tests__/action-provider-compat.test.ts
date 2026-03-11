@@ -214,6 +214,73 @@ describe('ActionDefinition riskLevel 4-grade', () => {
 // isApiDirectResult type guard with new action types
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Optional checkStatus/execute methods
+// ---------------------------------------------------------------------------
+
+describe('IActionProvider optional checkStatus/execute methods', () => {
+  it('provider without checkStatus/execute compiles and works', () => {
+    const provider: IActionProvider = {
+      metadata,
+      actions: [baseActionDef],
+      async resolve() {
+        return contractCallResult;
+      },
+    };
+    expect(provider.checkStatus).toBeUndefined();
+    expect(provider.execute).toBeUndefined();
+  });
+
+  it('provider with checkStatus returns tracking result', async () => {
+    const provider: IActionProvider = {
+      metadata,
+      actions: [baseActionDef],
+      async resolve() {
+        return signedDataResult;
+      },
+      async checkStatus(_actionId, _metadata) {
+        return { state: 'PARTIALLY_FILLED', details: { filledPct: 50 } };
+      },
+    };
+    const result = await provider.checkStatus!('order-123', {});
+    expect(result.state).toBe('PARTIALLY_FILLED');
+    expect(result.details).toEqual({ filledPct: 50 });
+  });
+
+  it('provider with execute returns result', async () => {
+    const provider: IActionProvider = {
+      metadata,
+      actions: [baseActionDef],
+      async resolve() {
+        return signedDataResult;
+      },
+      async execute(_actionName, _signedPayload, _ctx) {
+        return { orderId: 'ext-456', status: 'submitted' };
+      },
+    };
+    const result = await provider.execute!('place_order', { signature: '0x...' }, context);
+    expect(result.orderId).toBe('ext-456');
+  });
+
+  it('checkStatus supports all 9 states', async () => {
+    const states = [
+      'PENDING', 'COMPLETED', 'FAILED', 'TIMEOUT',
+      'PARTIALLY_FILLED', 'FILLED', 'CANCELED', 'SETTLED', 'EXPIRED',
+    ] as const;
+
+    for (const state of states) {
+      const provider: IActionProvider = {
+        metadata,
+        actions: [baseActionDef],
+        async resolve() { return contractCallResult; },
+        async checkStatus() { return { state }; },
+      };
+      const result = await provider.checkStatus!('test', {});
+      expect(result.state).toBe(state);
+    }
+  });
+});
+
 describe('isApiDirectResult type guard', () => {
   it('returns true for ApiDirectResult', () => {
     expect(isApiDirectResult(apiDirectResult)).toBe(true);
