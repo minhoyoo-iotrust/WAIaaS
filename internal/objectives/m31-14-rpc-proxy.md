@@ -1,7 +1,7 @@
-# 마일스톤 m31-13: EVM RPC 프록시 모드
+# 마일스톤 m31-14: EVM RPC 프록시 모드
 
 - **Status:** PLANNED
-- **Milestone:** v31.13
+- **Milestone:** v31.14
 
 ## 목표
 

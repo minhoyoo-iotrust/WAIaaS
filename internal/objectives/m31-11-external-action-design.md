@@ -1,7 +1,7 @@
-# 마일스톤 m31-10: External Action 프레임워크 설계
+# 마일스톤 m31-11: External Action 프레임워크 설계
 
 - **Status:** PLANNED
-- **Milestone:** v31.10
+- **Milestone:** v31.11
 
 ## 목표
 
@@ -199,7 +199,7 @@ SettingsService를 per-wallet로 확장하면 글로벌 설정과 지갑별 cred
 
 | 항목 | 이유 | 대안 |
 |------|------|------|
-| 구현 | m31-10은 설계만 수행 | m31-11에서 구현 |
+| 구현 | m31-11은 설계만 수행 | m31-12에서 구현 |
 | 특정 venue provider 구현 (CoW, Binance 등) | 프레임워크 설계가 선행 | 이후 마일스톤에서 ActionProvider 구현체 추가 |
 | 기존 6-stage/sign-only/sign-message 파이프라인 리팩토링 | 기존 경로는 안정적 | ISignerCapability는 새 경로에서만 사용 |
 | 별도 VenueProvider 추상화 | ActionProvider와 역할 중복 | ActionProvider.resolve() 반환 타입 확장 |
