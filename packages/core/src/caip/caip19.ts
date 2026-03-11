@@ -5,8 +5,11 @@ import { z } from 'zod';
 // assetNamespace = [-a-z0-9]{3,8}
 // assetReference = [-.%a-zA-Z0-9]{1,128}
 // Source: standards.chainagnostic.org/CAIPs/caip-19
+/** CAIP-19 asset type regex pattern. Single source of truth. */
+export const CAIP19_REGEX = /^[-a-z0-9]{3,8}:[-_a-zA-Z0-9]{1,32}\/[-a-z0-9]{3,8}:[-.%a-zA-Z0-9]{1,128}$/;
+
 export const Caip19AssetTypeSchema = z.string().regex(
-  /^[-a-z0-9]{3,8}:[-_a-zA-Z0-9]{1,32}\/[-a-z0-9]{3,8}:[-.%a-zA-Z0-9]{1,128}$/,
+  CAIP19_REGEX,
   'Invalid CAIP-19 asset type format (expected chainId/namespace:reference)',
 );
 export type Caip19AssetType = z.infer<typeof Caip19AssetTypeSchema>;

@@ -3,6 +3,7 @@ export { Caip2Schema, type Caip2, type Caip2Params, parseCaip2, formatCaip2 } fr
 
 // CAIP-19 (asset type)
 export {
+  CAIP19_REGEX,
   Caip19AssetTypeSchema,
   Caip19Schema,
   type Caip19AssetType,

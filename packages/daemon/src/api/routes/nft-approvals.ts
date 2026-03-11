@@ -14,7 +14,7 @@
 import { Hono } from 'hono';
 import { eq } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import { WAIaaSError } from '@waiaas/core';
+import { WAIaaSError, hasNftApprovalQuery } from '@waiaas/core';
 import type { ChainType } from '@waiaas/core';
 import { wallets } from '../../infrastructure/database/schema.js';
 import type * as schema from '../../infrastructure/database/schema.js';
@@ -108,8 +108,8 @@ export function nftApprovalRoutes(deps: NftApprovalRouteDeps): Hono {
     );
 
     // For adapters with getNftApprovalStatus, use it directly
-    if ('getNftApprovalStatus' in adapter && typeof (adapter as any).getNftApprovalStatus === 'function') {
-      const result = await (adapter as any).getNftApprovalStatus({
+    if (hasNftApprovalQuery(adapter)) {
+      const result = await adapter.getNftApprovalStatus({
         owner: wallet.publicKey,
         contractAddress,
         tokenId,

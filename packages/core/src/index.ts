@@ -296,6 +296,7 @@ export type {
   NftTransferParams,
   NftApproveParams,
   IChainAdapter,
+  INftApprovalQuery,
   ILocalKeyStore,
   IPolicyEngine,
   PolicyEvaluation,
@@ -367,6 +368,9 @@ export type {
   NftListResult,
 } from './interfaces/index.js';
 
+// v31.10 NFT approval query type guard (value export)
+export { hasNftApprovalQuery } from './interfaces/index.js';
+
 // v27.1 connection state machine (value exports)
 export {
   calculateDelay,
@@ -407,6 +411,7 @@ export {
 export {
   Caip2Schema,
   formatCaip2,
+  CAIP19_REGEX,
   Caip19AssetTypeSchema,
   Caip19Schema,
   formatCaip19,
