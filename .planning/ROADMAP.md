@@ -101,5 +101,5 @@ All phases are independent and can execute in any order: 375 → 376 → 377 →
 | 375. 유틸리티 함수 통합 | 2/2 | Complete    | 2026-03-11 |
 | 376. 타입 안전성 개선 | 2/2 | Complete    | 2026-03-11 |
 | 377. 대형 파일 분할 | 2/2 | Complete    | 2026-03-11 |
-| 378. API 에러 응답 일관성 | 1/1 | Complete   | 2026-03-11 |
+| 378. API 에러 응답 일관성 | 1/1 | Complete    | 2026-03-11 |
 | 379. 상수 중앙화 | 0/1 | Not started | - |
