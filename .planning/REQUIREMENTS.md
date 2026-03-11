@@ -60,7 +60,7 @@ Requirements for milestone v31.11. Each maps to roadmap phases.
 
 ### Design Document
 
-- [ ] **DOC-01**: 설계 문서 doc-81 작성 (D1~D6 통합: ResolvedAction 타입, ISignerCapability, CredentialVault, AsyncTracker 확장, 정책 확장, 파이프라인 라우팅)
+- [x] **DOC-01**: 설계 문서 doc-81 작성 (D1~D6 통합: ResolvedAction 타입, ISignerCapability, CredentialVault, AsyncTracker 확장, 정책 확장, 파이프라인 라우팅)
 
 ## v2 Requirements
 
@@ -129,7 +129,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PIPE-03 | Phase 383 | Complete |
 | PIPE-04 | Phase 383 | Complete |
 | PIPE-05 | Phase 383 | Complete |
-| DOC-01 | Phase 385 | Pending |
+| DOC-01 | Phase 385 | Complete |
 
 **Coverage:**
 - v1 requirements: 34 total
