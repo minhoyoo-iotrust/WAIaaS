@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v31.11
 milestone_name: — External Action 프레임워크 설계
 status: completed
-stopped_at: Completed 382-02-PLAN.md
-last_updated: "2026-03-11T15:08:54.340Z"
-last_activity: 2026-03-11 — Phase 382 complete (2 plans)
+stopped_at: Completed 383-02-PLAN.md
+last_updated: "2026-03-12T15:25:00.000Z"
+last_activity: 2026-03-12 — Phase 383 complete (2 plans)
 progress:
   total_phases: 6
-  completed_phases: 3
-  total_plans: 6
-  completed_plans: 6
-  percent: 50
+  completed_phases: 4
+  total_plans: 8
+  completed_plans: 8
+  percent: 67
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-11)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Phase 383 — 파이프라인 라우팅
+**Current focus:** Phase 384 — 정책 + 추적 확장
 
 ## Current Position
 
-Phase: 3 of 6 (Phase 382: Signer Capabilities) — COMPLETE
+Phase: 4 of 6 (Phase 383: 파이프라인 라우팅) — COMPLETE
 Plan: 2/2 complete
-Status: Phase 382 complete, ready for Phase 383
-Last activity: 2026-03-11 — Phase 382 complete (2 plans)
+Status: Phase 383 complete, ready for Phase 384
+Last activity: 2026-03-12 — Phase 383 complete (2 plans)
 
-Progress: [#####░░░░░] 50%
+Progress: [######░░░░] 67%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
-- Average duration: 7min
-- Total execution time: 0.7 hours
+- Total plans completed: 8
+- Average duration: 6min
+- Total execution time: 0.8 hours
 
 **By Phase:**
 
@@ -46,6 +46,7 @@ Progress: [#####░░░░░] 50%
 | 380 | 2 | 15min | 8min |
 | 381 | 2 | 16min | 8min |
 | 382 | 2 | 10min | 5min |
+| 383 | 2 | 10min | 5min |
 
 ## Accumulated Context
 | Phase 380 P01 | 8min | 1 tasks | 1 files |
@@ -54,6 +55,8 @@ Progress: [#####░░░░░] 50%
 | Phase 381 P02 | 8min | 1 tasks | 1 files |
 | Phase 382 P01 | 5min | 1 tasks | 1 files |
 | Phase 382 P02 | 5min | 1 tasks | 1 files |
+| Phase 383 P01 | 5min | 1 tasks | 1 files |
+| Phase 383 P02 | 5min | 1 tasks | 1 files |
 
 ### Decisions
 
@@ -78,6 +81,14 @@ Progress: [#####░░░░░] 50%
 - [Phase 382]: resolve()에서 canSign() 미호출 (credential 미주입 시점)
 - [Phase 382]: CAPABILITY_NOT_FOUND 에러 코드 추가 (기존 5종 + 1종 = 6종)
 - [Phase 382]: SignerCapabilityRegistry singleton, daemon 부팅 시 7종 자동 등록
+- [Phase 383]: signedHttp pipeline은 서명만 반환, fetch는 ActionProvider 책임 (관심사 분리)
+- [Phase 383]: txHash는 이미 nullable (Drizzle 스키마 확인 완료), wallets.ts 1곳만 action_kind 기반 수정 필요
+- [Phase 383]: action_kind DEFAULT 'contractCall'로 기존 레코드 자동 호환
+- [Phase 383]: off-chain action은 즉시 CONFIRMED 상태 기록 (비동기 추적은 Phase 384)
+- [Phase 383]: DB 마이그레이션 v56 (wallet_credentials v55 다음)
+- [Phase 383]: 별도 off-chain 엔드포인트 없이 기존 POST /v1/actions/:provider/:action 확장
+- [Phase 383]: MCP action-list-offchain 신규 도구 + SDK ActionResult kind-union
+- [Phase 383]: connect-info에 externalActions + supportedVenues capability 추가
 
 ### Pending Todos
 
@@ -85,10 +96,10 @@ None.
 
 ### Blockers/Concerns
 
-- transactions 테이블 txHash NOT NULL 가정 전수 조사 필요 (Phase 383)
+- ~~transactions 테이블 txHash NOT NULL 가정 전수 조사 필요 (Phase 383)~~ — RESOLVED: txHash는 이미 nullable, wallets.ts 1곳만 수정 필요
 
 ## Session Continuity
 
-Last session: 2026-03-11T15:12:00.000Z
-Stopped at: Completed 382-02-PLAN.md
+Last session: 2026-03-12T15:25:00.000Z
+Stopped at: Completed 383-02-PLAN.md
 Resume file: None

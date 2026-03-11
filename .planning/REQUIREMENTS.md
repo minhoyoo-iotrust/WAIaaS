@@ -52,11 +52,11 @@ Requirements for milestone v31.11. Each maps to roadmap phases.
 
 ### Pipeline Routing
 
-- [ ] **PIPE-01**: ActionProviderRegistry resolve() 결과 kind별 파이프라인 라우팅 설계 (contractCall→6-stage, signedData→sign pipeline, signedHttp→ERC-8128 pipeline)
-- [ ] **PIPE-02**: 정책 평가 시점 설계 (resolve() 후 서명 전, 기존 패턴 동일)
-- [ ] **PIPE-03**: off-chain action DB 기록 설계 (transactions 테이블 action_kind 컬럼 + nullable txHash)
-- [ ] **PIPE-04**: REST API 엔드포인트 설계 (기존 POST /v1/actions/:provider/:action에서 off-chain action 처리)
-- [ ] **PIPE-05**: MCP 도구 / SDK 메서드 설계 (기존 action 실행 도구 확장, credential 관리 도구)
+- [x] **PIPE-01**: ActionProviderRegistry resolve() 결과 kind별 파이프라인 라우팅 설계 (contractCall→6-stage, signedData→sign pipeline, signedHttp→ERC-8128 pipeline)
+- [x] **PIPE-02**: 정책 평가 시점 설계 (resolve() 후 서명 전, 기존 패턴 동일)
+- [x] **PIPE-03**: off-chain action DB 기록 설계 (transactions 테이블 action_kind 컬럼 + nullable txHash)
+- [x] **PIPE-04**: REST API 엔드포인트 설계 (기존 POST /v1/actions/:provider/:action에서 off-chain action 처리)
+- [x] **PIPE-05**: MCP 도구 / SDK 메서드 설계 (기존 action 실행 도구 확장, credential 관리 도구)
 
 ### Design Document
 
@@ -124,11 +124,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PLCY-02 | Phase 384 | Pending |
 | PLCY-03 | Phase 384 | Pending |
 | PLCY-04 | Phase 384 | Pending |
-| PIPE-01 | Phase 383 | Pending |
-| PIPE-02 | Phase 383 | Pending |
-| PIPE-03 | Phase 383 | Pending |
-| PIPE-04 | Phase 383 | Pending |
-| PIPE-05 | Phase 383 | Pending |
+| PIPE-01 | Phase 383 | Complete |
+| PIPE-02 | Phase 383 | Complete |
+| PIPE-03 | Phase 383 | Complete |
+| PIPE-04 | Phase 383 | Complete |
+| PIPE-05 | Phase 383 | Complete |
 | DOC-01 | Phase 385 | Pending |
 
 **Coverage:**
@@ -138,4 +138,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-11*
-*Last updated: 2026-03-11 after Phase 382 execution*
+*Last updated: 2026-03-12 after Phase 383 execution*
