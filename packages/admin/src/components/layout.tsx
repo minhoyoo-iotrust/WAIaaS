@@ -18,6 +18,7 @@ import HumanWalletAppsPage from '../pages/human-wallet-apps';
 import Erc8004Page from '../pages/erc8004';
 import HyperliquidPage from '../pages/hyperliquid';
 import PolymarketPage from '../pages/polymarket';
+import AuditLogsPage from '../pages/audit-logs';
 
 function extractPath(hash: string): string {
   const raw = hash.slice(1) || '/dashboard';
@@ -46,6 +47,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/notifications': 'Notifications',
   '/security': 'Security',
   '/wallet-apps': 'Human Wallet Apps',
+  '/audit-logs': 'Audit Logs',
   '/system': 'System',
 };
 
@@ -63,6 +65,7 @@ const PAGE_SUBTITLES: Record<string, string> = {
   '/notifications': 'Channel status, delivery logs, and settings',
   '/security': 'Emergency controls and automatic protection rules',
   '/wallet-apps': 'Manage wallet apps for signing and notifications',
+  '/audit-logs': 'View security and operational audit events',
   '/system': 'API keys, display preferences, and daemon configuration',
 };
 
@@ -89,6 +92,7 @@ const NAV_ITEMS = [
   { path: '/notifications', label: 'Notifications' },
   { path: '/wallet-apps', label: 'Human Wallet Apps' },
   { path: '/security', label: 'Security' },
+  { path: '/audit-logs', label: 'Audit Logs' },
   { path: '/system', label: 'System' },
 ];
 
@@ -132,6 +136,7 @@ function PageRouter() {
     window.location.hash = '#/agent-identity';
     return <Erc8004Page />;
   }
+  if (path === '/audit-logs') return <AuditLogsPage />;
   if (path === '/system') return <SystemPage />;
   if (path.startsWith('/wallets')) return <WalletsPage />;
   return <DashboardPage />;

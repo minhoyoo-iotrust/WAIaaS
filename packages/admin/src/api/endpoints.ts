@@ -52,6 +52,7 @@ export const API = {
   ADMIN_WALLET_APPS: '/v1/admin/wallet-apps',
   ADMIN_WALLET_APP: (id: string) => `/v1/admin/wallet-apps/${id}`,
   ADMIN_WALLET_APP_TEST_NOTIFICATION: (id: string) => `/v1/admin/wallet-apps/${id}/test-notification`,
+  ADMIN_AUDIT_LOGS: '/v1/audit-logs',
   ADMIN_STATS: '/v1/admin/stats',
   ADMIN_AUTOSTOP_RULES: '/v1/admin/autostop/rules',
   ERC8004_AGENT: (agentId: string) => `/v1/erc8004/agent/${agentId}`,
