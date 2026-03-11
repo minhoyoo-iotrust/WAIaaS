@@ -1472,6 +1472,12 @@ export class DaemonLifecycle {
         const { SmartAccountService } = await import('../infrastructure/smart-account/smart-account-service.js');
         const smartAccountService = new SmartAccountService();
 
+        // [Phase 390] Bootstrap signer capabilities for external action signing
+        const { SignerCapabilityRegistry } = await import('../signing/registry.js');
+        const { bootstrapSignerCapabilities } = await import('../signing/bootstrap.js');
+        const signerRegistry = new SignerCapabilityRegistry();
+        bootstrapSignerCapabilities(signerRegistry);
+
         const app = createApp({
           db: this._db!,
           sqlite: this.sqlite ?? undefined,
@@ -1514,6 +1520,7 @@ export class DaemonLifecycle {
           metricsCounter: this.metricsCounter ?? undefined,
           hyperliquidMarketData: this.hyperliquidMarketData ?? undefined,
           polymarketInfra: this.polymarketInfra ?? undefined,
+          signerRegistry,
         });
 
         const hostname = this._config!.daemon.hostname;
