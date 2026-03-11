@@ -81,4 +81,10 @@ export type {
   Erc8128VerifyResponse,
   Erc8128FetchParams,
   Erc8128FetchResponse,
+  OffchainActionItem,
+  OffchainActionDetail,
+  OffchainActionsListResponse,
+  ListOffchainActionsParams,
+  CredentialMetadata,
+  CreateCredentialParams,
 } from './types.js';

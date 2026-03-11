@@ -108,6 +108,11 @@ import type {
   AcrossBridgeExecuteParams,
   AcrossBridgeStatusParams,
   AcrossBridgeRoutesParams,
+  OffchainActionsListResponse,
+  OffchainActionDetail,
+  ListOffchainActionsParams,
+  CredentialMetadata,
+  CreateCredentialParams,
 } from './types.js';
 
 export class WAIaaSClient {
@@ -1289,6 +1294,114 @@ export class WAIaaSClient {
   async pmSetup(walletId: string): Promise<unknown> {
     return withRetry(
       () => this.http.post<unknown>(`/v1/wallets/${walletId}/polymarket/setup`, {}, this.authHeaders()),
+      this.retryOptions,
+    );
+  }
+
+  // --- External Actions (off-chain signedData/signedHttp) ---
+
+  /** List off-chain action history with venue/status filter and pagination. */
+  async listOffchainActions(params: ListOffchainActionsParams): Promise<OffchainActionsListResponse> {
+    const qs = new URLSearchParams();
+    if (params.venue) qs.set('venue', params.venue);
+    if (params.status) qs.set('status', params.status);
+    if (params.limit !== undefined) qs.set('limit', String(params.limit));
+    if (params.offset !== undefined) qs.set('offset', String(params.offset));
+    const query = qs.toString();
+    return withRetry(
+      () => this.http.get<OffchainActionsListResponse>(
+        `/v1/wallets/${params.walletId}/actions${query ? `?${query}` : ''}`,
+        this.authHeaders(),
+      ),
+      this.retryOptions,
+    );
+  }
+
+  /** Get off-chain action detail by ID. */
+  async getActionResult(walletId: string, actionId: string): Promise<OffchainActionDetail> {
+    return withRetry(
+      () => this.http.get<OffchainActionDetail>(
+        `/v1/wallets/${walletId}/actions/${actionId}`,
+        this.authHeaders(),
+      ),
+      this.retryOptions,
+    );
+  }
+
+  /** List credential metadata for a wallet (sessionAuth -- never returns values). */
+  async listCredentials(walletId: string): Promise<CredentialMetadata[]> {
+    return withRetry(
+      () => this.http.get<CredentialMetadata[]>(
+        `/v1/wallets/${walletId}/credentials`,
+        this.authHeaders(),
+      ),
+      this.retryOptions,
+    );
+  }
+
+  // --- Admin Credential CRUD (masterAuth) ---
+
+  /** Create a new credential for a wallet (masterAuth required). */
+  async createCredential(walletId: string, params: CreateCredentialParams): Promise<CredentialMetadata> {
+    if (!this.masterPassword) {
+      throw new WAIaaSError({
+        code: 'MASTER_PASSWORD_REQUIRED',
+        message: 'createCredential requires masterPassword in client options',
+        status: 0,
+        retryable: false,
+      });
+    }
+    const body: Record<string, unknown> = {
+      name: params.name,
+      type: params.type,
+      value: params.value,
+    };
+    if (params.expiresAt !== undefined) body.expiresAt = params.expiresAt;
+    return withRetry(
+      () => this.http.post<CredentialMetadata>(
+        `/v1/wallets/${walletId}/credentials`,
+        body,
+        this.masterHeaders(this.masterPassword!),
+      ),
+      this.retryOptions,
+    );
+  }
+
+  /** Delete a credential by name reference (masterAuth required). */
+  async deleteCredential(walletId: string, ref: string): Promise<{ deleted: boolean }> {
+    if (!this.masterPassword) {
+      throw new WAIaaSError({
+        code: 'MASTER_PASSWORD_REQUIRED',
+        message: 'deleteCredential requires masterPassword in client options',
+        status: 0,
+        retryable: false,
+      });
+    }
+    return withRetry(
+      () => this.http.delete<{ deleted: boolean }>(
+        `/v1/wallets/${walletId}/credentials/${ref}`,
+        this.masterHeaders(this.masterPassword!),
+      ),
+      this.retryOptions,
+    );
+  }
+
+  /** Rotate a credential value (masterAuth required). */
+  async rotateCredential(walletId: string, ref: string, newValue: string): Promise<CredentialMetadata> {
+    if (!this.masterPassword) {
+      throw new WAIaaSError({
+        code: 'MASTER_PASSWORD_REQUIRED',
+        message: 'rotateCredential requires masterPassword in client options',
+        status: 0,
+        retryable: false,
+      });
+    }
+    return withRetry(
+      () => this.http.put<CredentialMetadata>(
+        `/v1/wallets/${walletId}/credentials/${ref}/rotate`,
+        { value: newValue },
+        this.masterHeaders(this.masterPassword!),
+      ),
       this.retryOptions,
     );
   }

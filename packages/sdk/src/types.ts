@@ -1187,3 +1187,62 @@ export interface HealthFactorResponse {
   currentLtv: number;
   status: 'safe' | 'warning' | 'danger' | 'critical';
 }
+
+// ---------------------------------------------------------------------------
+// External Action Types (off-chain signedData/signedHttp)
+// ---------------------------------------------------------------------------
+
+export interface OffchainActionItem {
+  id: string;
+  actionKind: string;
+  venue: string | null;
+  operation: string | null;
+  status: string;
+  bridgeStatus: string | null;
+  createdAt: number;
+  provider: string | null;
+  actionName: string | null;
+}
+
+export interface OffchainActionDetail extends OffchainActionItem {
+  metadata: Record<string, unknown> | null;
+  bridgeMetadata: Record<string, unknown> | null;
+  error: string | null;
+  txHash: string | null;
+}
+
+export interface OffchainActionsListResponse {
+  actions: OffchainActionItem[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface ListOffchainActionsParams {
+  walletId: string;
+  venue?: string;
+  status?: string;
+  limit?: number;
+  offset?: number;
+}
+
+// ---------------------------------------------------------------------------
+// Credential Types (AES-256-GCM encrypted at rest)
+// ---------------------------------------------------------------------------
+
+export interface CredentialMetadata {
+  id: string;
+  name: string;
+  type: string;
+  walletId: string | null;
+  expiresAt: number | null;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface CreateCredentialParams {
+  name: string;
+  type: string;
+  value: string;
+  expiresAt?: number;
+}
