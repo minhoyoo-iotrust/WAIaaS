@@ -64,7 +64,7 @@ function getWalletColumns(): string[] {
 
 describe('LATEST_SCHEMA_VERSION', () => {
   it('should be 54', () => {
-    expect(LATEST_SCHEMA_VERSION).toBe(54);
+    expect(LATEST_SCHEMA_VERSION).toBe(56);
   });
 });
 
@@ -75,7 +75,7 @@ describe('Fresh DB (pushSchema)', () => {
   });
 
   it('schema_version max is 54', () => {
-    expect(getMaxVersion()).toBe(54);
+    expect(getMaxVersion()).toBe(56);
   });
 
   it('owner_approval_method defaults to NULL', () => {
@@ -145,7 +145,7 @@ describe('v18 migration on existing DB', () => {
     // Since pushSchema records all versions, we test v18 in isolation
     const v18Migration: Migration[] = [
       {
-        version: 55, // Use 55 to avoid conflict with existing v1-v54
+        version: 57, // Use 57 to avoid conflict with existing v1-v56
         description: 'Test: Add owner_approval_method via ALTER (simulated)',
         up: (db) => {
           // Check column was already added by the real v18 migration
