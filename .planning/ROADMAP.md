@@ -27,7 +27,7 @@
 - [x] **Phase 388: Credential Vault** - per-wallet/글로벌 credential 암호화 저장 + CRUD REST API (completed 2026-03-11)
 - [x] **Phase 389: 추적 + 정책 확장** - AsyncTracker 9-state + Venue Whitelist + Category Limit 정책 (completed 2026-03-11)
 - [x] **Phase 390: 파이프라인 라우팅 + 조회 API** - signedData/signedHttp 파이프라인 + action 이력 조회 (completed 2026-03-12)
-- [ ] **Phase 391: Admin UI** - Credential/External Action/Venue/Policy 관리 화면 4종
+- [x] **Phase 391: Admin UI** - Credential/External Action/Venue/Policy 관리 화면 4종 (completed 2026-03-12)
 - [ ] **Phase 392: MCP + SDK + 스킬 파일** - 통합 인터페이스 3종 + 스킬 문서 4종
 
 ## Phase Details
@@ -115,10 +115,10 @@ Plans:
   2. 지갑 상세의 External Actions 탭에서 off-chain action 이력(venue, operation, status, createdAt)을 확인할 수 있다
   3. Venue Whitelist 설정 UI에서 허용 venue를 추가/제거/토글할 수 있다
   4. ACTION_CATEGORY_LIMIT 설정 UI에서 카테고리별 USD 한도를 등록/수정/삭제할 수 있다
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 Plans:
-- [ ] 391-01-PLAN.md — Credentials 페이지 + Wallet Detail Credentials/External Actions 탭
-- [ ] 391-02-PLAN.md — VENUE_WHITELIST + ACTION_CATEGORY_LIMIT 정책 폼
+- [x] 391-01-PLAN.md — Credentials 페이지 + Wallet Detail Credentials/External Actions 탭
+- [x] 391-02-PLAN.md — VENUE_WHITELIST + ACTION_CATEGORY_LIMIT 정책 폼
 
 ### Phase 392: MCP + SDK + 스킬 파일
 **Goal**: MCP 도구와 SDK 메서드로 off-chain action을 실행/조회할 수 있고, 스킬 파일이 AI 에이전트에게 사용법을 안내한다
@@ -144,5 +144,5 @@ Phases execute in numeric order: 386 -> 387 -> 388 -> 389 -> 390 -> 391 -> 392
 | 388. Credential Vault | 2/2 | Complete    | 2026-03-11 |
 | 389. 추적 + 정책 확장 | 2/2 | Complete    | 2026-03-11 |
 | 390. 파이프라인 라우팅 + 조회 API | 2/2 | Complete    | 2026-03-11 |
-| 391. Admin UI | 0/2 | Not started | - |
+| 391. Admin UI | 2/2 | Complete    | 2026-03-12 |
 | 392. MCP + SDK + 스킬 파일 | 0/TBD | Not started | - |

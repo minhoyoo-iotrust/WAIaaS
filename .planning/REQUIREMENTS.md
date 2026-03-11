@@ -91,10 +91,10 @@ Requirements for v31.12 milestone. Each maps to roadmap phases.
 
 ### Admin UI
 
-- [ ] **ADMIN-01**: Credentials 설정 UI — per-wallet 탭 + 글로벌 페이지, 등록/삭제/로테이션 모달, 원문 비노출
-- [ ] **ADMIN-02**: External Actions 탭 — 지갑 상세에 off-chain action 이력 (venue, operation, status, createdAt)
-- [ ] **ADMIN-03**: Venue Whitelist 설정 UI — CONTRACT_WHITELIST 패턴 재사용
-- [ ] **ADMIN-04**: ACTION_CATEGORY_LIMIT 정책 설정 UI — 카테고리별 USD 한도 등록/수정/삭제
+- [x] **ADMIN-01**: Credentials 설정 UI — per-wallet 탭 + 글로벌 페이지, 등록/삭제/로테이션 모달, 원문 비노출
+- [x] **ADMIN-02**: External Actions 탭 — 지갑 상세에 off-chain action 이력 (venue, operation, status, createdAt)
+- [x] **ADMIN-03**: Venue Whitelist 설정 UI — CONTRACT_WHITELIST 패턴 재사용
+- [x] **ADMIN-04**: ACTION_CATEGORY_LIMIT 정책 설정 UI — 카테고리별 USD 한도 등록/수정/삭제
 
 ### MCP + SDK
 
@@ -194,10 +194,10 @@ Requirements for v31.12 milestone. Each maps to roadmap phases.
 | QUERY-01 | Phase 390 | Complete |
 | QUERY-02 | Phase 390 | Complete |
 | QUERY-03 | Phase 390 | Complete |
-| ADMIN-01 | Phase 391 | Pending |
-| ADMIN-02 | Phase 391 | Pending |
-| ADMIN-03 | Phase 391 | Pending |
-| ADMIN-04 | Phase 391 | Pending |
+| ADMIN-01 | Phase 391 | Complete |
+| ADMIN-02 | Phase 391 | Complete |
+| ADMIN-03 | Phase 391 | Complete |
+| ADMIN-04 | Phase 391 | Complete |
 | INTEG-01 | Phase 392 | Pending |
 | INTEG-02 | Phase 392 | Pending |
 | INTEG-03 | Phase 392 | Pending |

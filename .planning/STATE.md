@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.1
 milestone_name: milestone
 status: planning
-stopped_at: Completed Phase 390 Plan 02 (2 plans, 4 tasks, 48 tests passing)
-last_updated: "2026-03-11T20:44:00.443Z"
-last_activity: 2026-03-12 — Phase 390 complete (2 plans, 4 tasks, query API + connect-info)
+stopped_at: Completed Phase 391 Plan 02 (2 plans, 4 tasks, 808 admin tests passing)
+last_updated: "2026-03-12T06:04:00.000Z"
+last_activity: 2026-03-12 — Phase 391 complete (2 plans, 4 tasks, Admin UI credentials + external actions + policy forms)
 progress:
   total_phases: 7
-  completed_phases: 5
-  total_plans: 11
-  completed_plans: 11
-  percent: 71
+  completed_phases: 6
+  total_plans: 13
+  completed_plans: 13
+  percent: 86
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-12)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Phase 391 — Admin UI External Actions
+**Current focus:** Phase 392 — MCP + SDK + Skill Files
 
 ## Current Position
 
-Phase: 391 of 392 (Admin UI External Actions)
+Phase: 392 of 392 (MCP + SDK + Skill Files)
 Plan: 1 of TBD
-Status: Ready to plan Phase 391
-Last activity: 2026-03-12 — Phase 390 complete (2 plans, 4 tasks, query API + connect-info)
+Status: Ready to plan Phase 392
+Last activity: 2026-03-12 — Phase 391 complete (2 plans, 4 tasks, Admin UI credentials + external actions + policy forms)
 
-Progress: [███████░░░] 71% (5/7 phases)
+Progress: [████████░░] 86% (6/7 phases)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11
+- Total plans completed: 13
 - Average duration: ~8min/plan
-- Total execution time: ~88min
+- Total execution time: ~100min
 
 ## Accumulated Context
 
@@ -61,6 +61,10 @@ Progress: [███████░░░] 71% (5/7 phases)
 - [Phase 390]: Kind-based routing in actions.ts: signedData/signedHttp to new pipeline, contractCall to existing 6-stage
 - [Phase 390]: GET /v1/wallets/:id/actions query API with venue/status filter + pagination
 - [Phase 390]: external_actions capability in connect-info gated on signerRegistry scheme count
+- [Phase 391]: Credential CRUD uses name-based ref for delete/rotate (matching daemon API)
+- [Phase 391]: ExternalActionsTab inline in wallets.tsx (same pattern as StakingTab/NftTab)
+- [Phase 391]: venue_whitelist_enabled added to PolicyDefaultsTab (fixes settings-completeness test)
+- [Phase 391]: PolicyFormRouter now supports 16 types (added VENUE_WHITELIST + ACTION_CATEGORY_LIMIT)
 
 ### Pending Todos
 
@@ -72,6 +76,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-12T05:39:00.000Z
-Stopped at: Completed Phase 390 Plan 02 (2 plans, 4 tasks, 48 tests passing)
+Last session: 2026-03-12T06:04:00.000Z
+Stopped at: Completed Phase 391 Plan 02 (2 plans, 4 tasks, 808 admin tests passing)
 Resume file: None
