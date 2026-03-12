@@ -67,38 +67,38 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| STAK-01 | — | Pending |
-| STAK-02 | — | Pending |
-| STAK-03 | — | Pending |
-| STAK-04 | — | Pending |
-| STAK-05 | — | Pending |
-| LEND-01 | — | Pending |
-| LEND-02 | — | Pending |
-| LEND-03 | — | Pending |
-| LEND-04 | — | Pending |
-| YIELD-01 | — | Pending |
-| YIELD-02 | — | Pending |
-| YIELD-03 | — | Pending |
-| PERP-01 | — | Pending |
-| PERP-02 | — | Pending |
-| PERP-03 | — | Pending |
-| PERP-04 | — | Pending |
-| DASH-01 | — | Pending |
-| DASH-02 | — | Pending |
-| DASH-03 | — | Pending |
-| DASH-04 | — | Pending |
-| DASH-05 | — | Pending |
-| DASH-06 | — | Pending |
-| TEST-01 | — | Pending |
-| TEST-02 | — | Pending |
-| TEST-03 | — | Pending |
-| TEST-04 | — | Pending |
+| STAK-01 | Phase 393 | Pending |
+| STAK-02 | Phase 393 | Pending |
+| STAK-03 | Phase 393 | Pending |
+| STAK-04 | Phase 393 | Pending |
+| STAK-05 | Phase 393 | Pending |
+| LEND-01 | Phase 394 | Pending |
+| LEND-02 | Phase 394 | Pending |
+| LEND-03 | Phase 394 | Pending |
+| LEND-04 | Phase 394 | Pending |
+| YIELD-01 | Phase 395 | Pending |
+| YIELD-02 | Phase 395 | Pending |
+| YIELD-03 | Phase 395 | Pending |
+| PERP-01 | Phase 396 | Pending |
+| PERP-02 | Phase 396 | Pending |
+| PERP-03 | Phase 396 | Pending |
+| PERP-04 | Phase 396 | Pending |
+| DASH-01 | Phase 397 | Pending |
+| DASH-02 | Phase 397 | Pending |
+| DASH-03 | Phase 397 | Pending |
+| DASH-04 | Phase 397 | Pending |
+| DASH-05 | Phase 397 | Pending |
+| DASH-06 | Phase 397 | Pending |
+| TEST-01 | Phase 393-396 | Pending |
+| TEST-02 | Phase 393-396 | Pending |
+| TEST-03 | Phase 397 | Pending |
+| TEST-04 | Phase 397 | Pending |
 
 **Coverage:**
 - v31.13 requirements: 27 total
-- Mapped to phases: 0
-- Unmapped: 27 ⚠️
+- Mapped to phases: 27/27
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-12*
-*Last updated: 2026-03-12 after initial definition*
+*Last updated: 2026-03-12 after roadmap creation*
