@@ -2,8 +2,9 @@
  * JitoStakingActionProvider unit tests.
  *
  * Pure SPL Stake Pool instruction encoding tests -- no MSW needed (no external API calls).
+ * IPositionProvider tests use mocked fetch for Solana RPC.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { JitoStakingActionProvider } from '../providers/jito-staking/index.js';
 import { JITO_MAINNET_ADDRESSES, getJitoAddresses } from '../providers/jito-staking/config.js';
 import type { ActionContext, ContractCallRequest } from '@waiaas/core';
@@ -210,5 +211,182 @@ describe('getJitoAddresses', () => {
   it('returns mainnet addresses for testnet (mainnet-only pool)', () => {
     const addrs = getJitoAddresses('testnet');
     expect(addrs.stakePoolAddress).toBe(JITO_MAINNET_ADDRESSES.stakePoolAddress);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// IPositionProvider
+// ---------------------------------------------------------------------------
+
+describe('JitoStakingActionProvider IPositionProvider', () => {
+  const RPC_URL = 'https://mock-solana-rpc.example.com';
+  const WALLET_ID = 'So11111111111111111111111111111111111111112';
+
+  let fetchMock: ReturnType<typeof vi.fn>;
+  let provider: JitoStakingActionProvider;
+
+  beforeEach(() => {
+    fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    provider = new JitoStakingActionProvider({ enabled: true, rpcUrl: RPC_URL });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  /**
+   * Build a mock Solana RPC response for getTokenAccountsByOwner.
+   */
+  function tokenAccountsResponse(uiAmount: number, rawAmount: string): Response {
+    return new Response(
+      JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        result: {
+          value: [
+            {
+              pubkey: 'TokenAcct111111111111111111111111111111111',
+              account: {
+                data: {
+                  parsed: {
+                    info: {
+                      tokenAmount: {
+                        amount: rawAmount,
+                        decimals: 9,
+                        uiAmount,
+                        uiAmountString: uiAmount.toString(),
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          ],
+        },
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  /**
+   * Build empty token accounts response (no jitoSOL).
+   */
+  function emptyTokenAccountsResponse(): Response {
+    return new Response(
+      JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        result: { value: [] },
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  /**
+   * Build stake pool account response with known total_lamports and pool_token_supply.
+   * SPL Stake Pool layout: total_lamports at byte 258 (u64 LE), pool_token_supply at byte 266 (u64 LE).
+   */
+  function stakePoolAccountResponse(totalLamports: bigint, poolTokenSupply: bigint): Response {
+    // Build a 300-byte buffer with the stake pool data
+    const buffer = new Uint8Array(300);
+    const view = new DataView(buffer.buffer);
+    view.setBigUint64(258, totalLamports, true);
+    view.setBigUint64(266, poolTokenSupply, true);
+
+    const base64Data = Buffer.from(buffer).toString('base64');
+    return new Response(
+      JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        result: {
+          value: {
+            data: [base64Data, 'base64'],
+            lamports: 100000000,
+            owner: JITO_MAINNET_ADDRESSES.stakePoolProgram,
+          },
+        },
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  function setupMocks(opts: {
+    uiAmount?: number;
+    rawAmount?: string;
+    totalLamports?: bigint;
+    poolTokenSupply?: bigint;
+    empty?: boolean;
+  }): void {
+    fetchMock.mockImplementation(async (_url: string, reqOpts: { body: string }) => {
+      const body = JSON.parse(reqOpts.body);
+      if (body.method === 'getTokenAccountsByOwner') {
+        if (opts.empty) return emptyTokenAccountsResponse();
+        return tokenAccountsResponse(
+          opts.uiAmount ?? 2.0,
+          opts.rawAmount ?? '2000000000',
+        );
+      }
+      if (body.method === 'getAccountInfo') {
+        return stakePoolAccountResponse(
+          opts.totalLamports ?? 1150000000n,
+          opts.poolTokenSupply ?? 1000000000n,
+        );
+      }
+      return new Response(JSON.stringify({ jsonrpc: '2.0', id: 1, result: null }));
+    });
+  }
+
+  it('getProviderName returns jito_staking', () => {
+    expect(provider.getProviderName()).toBe('jito_staking');
+  });
+
+  it('getSupportedCategories returns [STAKING]', () => {
+    expect(provider.getSupportedCategories()).toEqual(['STAKING']);
+  });
+
+  it('getPositions with jitoSOL balance 2e9 returns 1 STAKING PositionUpdate', async () => {
+    setupMocks({ uiAmount: 2.0, rawAmount: '2000000000' });
+
+    const positions = await provider.getPositions(WALLET_ID);
+    expect(positions).toHaveLength(1);
+    expect(positions[0]!.category).toBe('STAKING');
+    expect(positions[0]!.provider).toBe('jito_staking');
+    expect(positions[0]!.chain).toBe('solana');
+    expect(positions[0]!.assetId).toContain('solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp');
+    expect(positions[0]!.amount).toBe('2');
+    expect(positions[0]!.status).toBe('ACTIVE');
+  });
+
+  it('getPositions includes metadata.underlyingAmount with SOL equivalent', async () => {
+    // exchange rate = 1150000000 / 1000000000 = 1.15
+    // SOL equivalent = 2.0 * 1.15 = 2.3
+    setupMocks({
+      uiAmount: 2.0,
+      rawAmount: '2000000000',
+      totalLamports: 1150000000n,
+      poolTokenSupply: 1000000000n,
+    });
+
+    const positions = await provider.getPositions(WALLET_ID);
+    expect(positions).toHaveLength(1);
+    expect(positions[0]!.metadata.token).toBe('jitoSOL');
+    expect(positions[0]!.metadata.underlyingToken).toBe('SOL');
+    expect(Number(positions[0]!.metadata.underlyingAmount as string)).toBeCloseTo(2.3, 4);
+    expect(positions[0]!.metadata.exchangeRate).toBeCloseTo(1.15, 4);
+  });
+
+  it('getPositions with zero jitoSOL balance returns empty array', async () => {
+    setupMocks({ empty: true });
+
+    const positions = await provider.getPositions(WALLET_ID);
+    expect(positions).toEqual([]);
+  });
+
+  it('getPositions returns empty array on RPC error (no throw)', async () => {
+    fetchMock.mockRejectedValue(new Error('RPC connection failed'));
+
+    const positions = await provider.getPositions(WALLET_ID);
+    expect(positions).toEqual([]);
   });
 });

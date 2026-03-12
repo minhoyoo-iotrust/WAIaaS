@@ -10,6 +10,7 @@ export interface JitoStakingConfig {
   stakePoolAddress: string;    // Jito SPL Stake Pool
   jitosolMint: string;         // JitoSOL token mint
   stakePoolProgram: string;    // SPL Stake Pool program ID
+  rpcUrl?: string;             // Solana RPC URL for position queries
 }
 
 // ---------------------------------------------------------------------------

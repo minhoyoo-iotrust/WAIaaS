@@ -22,7 +22,11 @@ import {
   buildDepositSolRequest,
   buildWithdrawSolRequest,
   parseSolAmount,
+  getJitoSolBalance,
+  getStakePoolExchangeRate,
 } from './jito-stake-pool.js';
+import { formatCaip19 } from '@waiaas/core';
+import type { PositionUpdate, PositionCategory } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------
 // Input schemas (Zod SSoT)
@@ -45,9 +49,11 @@ export class JitoStakingActionProvider implements IActionProvider {
   readonly actions: readonly ActionDefinition[];
 
   private readonly config: JitoStakingConfig;
+  private readonly rpcUrl?: string;
 
   constructor(config?: Partial<JitoStakingConfig>) {
     this.config = { ...JITO_STAKING_DEFAULTS, ...config };
+    this.rpcUrl = this.config.rpcUrl;
 
     this.metadata = {
       name: 'jito_staking',
@@ -130,5 +136,70 @@ export class JitoStakingActionProvider implements IActionProvider {
     const amountLamports = await parseSolAmount(input.amount);
 
     return buildWithdrawSolRequest(this.config, amountLamports, context.walletAddress);
+  }
+
+  // -------------------------------------------------------------------------
+  // IPositionProvider methods (duck-type, no formal implements)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Query jitoSOL token balance and stake pool exchange rate for the given wallet.
+   * Returns STAKING position with SOL-equivalent underlyingAmount.
+   */
+  async getPositions(walletId: string): Promise<PositionUpdate[]> {
+    if (!this.rpcUrl) return [];
+
+    try {
+      const balance = await getJitoSolBalance(
+        this.rpcUrl,
+        walletId,
+        this.config.jitosolMint,
+      );
+
+      if (!balance || balance.uiAmount === 0) return [];
+
+      const exchangeRate = await getStakePoolExchangeRate(
+        this.rpcUrl,
+        this.config.stakePoolAddress,
+      );
+
+      const solEquivalent = balance.uiAmount * exchangeRate;
+      const now = Math.floor(Date.now() / 1000);
+
+      return [
+        {
+          walletId,
+          category: 'STAKING' as PositionCategory,
+          provider: 'jito_staking',
+          chain: 'solana',
+          network: 'solana-mainnet',
+          assetId: formatCaip19(
+            'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp',
+            'token',
+            this.config.jitosolMint,
+          ),
+          amount: String(balance.uiAmount),
+          amountUsd: null,
+          metadata: {
+            token: 'jitoSOL',
+            underlyingAmount: String(solEquivalent),
+            underlyingToken: 'SOL',
+            exchangeRate,
+          },
+          status: 'ACTIVE',
+          openedAt: now,
+        },
+      ];
+    } catch {
+      return [];
+    }
+  }
+
+  getProviderName(): string {
+    return 'jito_staking';
+  }
+
+  getSupportedCategories(): PositionCategory[] {
+    return ['STAKING'];
   }
 }
