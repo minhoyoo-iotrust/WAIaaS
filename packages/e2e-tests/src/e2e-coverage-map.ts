@@ -55,6 +55,7 @@ export const routeCoverage: Record<string, string[]> = {
   'admin-notifications': ['interface-admin-mcp-sdk.ts'],
   'admin-settings': ['interface-admin-mcp-sdk.ts'],
   'admin-wallets': ['interface-admin-mcp-sdk.ts'],
+  'admin-credentials': ['interface-admin-mcp-sdk.ts'],
   'mcp': ['interface-admin-mcp-sdk.ts'],
   'skills': ['interface-admin-mcp-sdk.ts'],
 
@@ -73,6 +74,8 @@ export const routeCoverage: Record<string, string[]> = {
   'erc8128': ['advanced-x402-erc8004-erc8128.ts'],
 
   // Chain-specific
+  'credentials': ['interface-admin-mcp-sdk.ts'],
+  'external-actions': ['interface-admin-mcp-sdk.ts'],
   'actions': ['advanced-defi-settings-push-relay.ts'],
   'staking': ['advanced-defi-settings-push-relay.ts'],
   'hyperliquid': ['onchain-hyperliquid.ts'],
