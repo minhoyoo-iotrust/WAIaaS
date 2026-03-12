@@ -108,3 +108,9 @@ export {
   type PositionStatus,
   PositionStatusEnum,
 } from './defi.js';
+
+export {
+  SigningSchemeEnum,
+  type SigningScheme,
+  SIGNING_SCHEMES,
+} from './signing-scheme.js';

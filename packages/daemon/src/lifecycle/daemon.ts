@@ -1472,6 +1472,12 @@ export class DaemonLifecycle {
         const { SmartAccountService } = await import('../infrastructure/smart-account/smart-account-service.js');
         const smartAccountService = new SmartAccountService();
 
+        // [Phase 390] Bootstrap signer capabilities for external action signing
+        const { SignerCapabilityRegistry } = await import('../signing/registry.js');
+        const { bootstrapSignerCapabilities } = await import('../signing/bootstrap.js');
+        const signerRegistry = new SignerCapabilityRegistry();
+        bootstrapSignerCapabilities(signerRegistry);
+
         const app = createApp({
           db: this._db!,
           sqlite: this.sqlite ?? undefined,
@@ -1514,6 +1520,7 @@ export class DaemonLifecycle {
           metricsCounter: this.metricsCounter ?? undefined,
           hyperliquidMarketData: this.hyperliquidMarketData ?? undefined,
           polymarketInfra: this.polymarketInfra ?? undefined,
+          signerRegistry,
         });
 
         const hostname = this._config!.daemon.hostname;
@@ -1658,6 +1665,9 @@ export class DaemonLifecycle {
                 walletId: transactions.walletId,
                 chain: transactions.chain,
                 network: transactions.network,
+                amount: transactions.amount,
+                toAddress: transactions.toAddress,
+                type: transactions.type,
               })
               .from(transactions)
               .where(
@@ -1706,6 +1716,9 @@ export class DaemonLifecycle {
                     txId: tx.id,
                     txHash: tx.txHash,
                     network: tx.network,
+                    amount: tx.amount ?? '',
+                    to: tx.toAddress ?? '',
+                    type: tx.type ?? '',
                   }, { txId: tx.id });
                   console.info(`[submitted-tx-confirm] ${tx.id} confirmed via background retry`);
                 } else if (result.status === 'failed') {
@@ -1735,6 +1748,23 @@ export class DaemonLifecycle {
           if (this.sqlite && !this._isShuttingDown) {
             const now = Math.floor(Date.now() / 1000);
             this.sqlite.prepare('DELETE FROM userop_builds WHERE expires_at < ?').run(now);
+          }
+        },
+      });
+
+      // Register credential-cleanup worker (5 min = 300s)
+      // Deletes expired credentials from wallet_credentials table
+      this.workers.register('credential-cleanup', {
+        interval: 300_000,
+        handler: () => {
+          if (this.sqlite && !this._isShuttingDown) {
+            const now = Math.floor(Date.now() / 1000);
+            const result = this.sqlite.prepare(
+              'DELETE FROM wallet_credentials WHERE expires_at IS NOT NULL AND expires_at < ?',
+            ).run(now);
+            if (result.changes > 0) {
+              console.log(`[credential-cleanup] Deleted ${result.changes} expired credential(s)`);
+            }
           }
         },
       });

@@ -1807,12 +1807,20 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
     }
 
     // Fire-and-forget: notify TX_CONFIRMED
+    const apiDirectAmount = formatNotificationAmount(ctx.request, ctx.wallet.chain);
+    const apiDirectTo = getRequestTo(ctx.request);
+    const apiDirectDisplayAmount = await resolveDisplayAmount(
+      ctx.amountUsd ?? null, ctx.settingsService, ctx.forexRateService,
+    );
     void ctx.notificationService?.notify('TX_CONFIRMED', ctx.walletId, {
       txId: ctx.txId,
       provider: result.provider,
       action: result.action,
       externalId: result.externalId,
       network: ctx.resolvedNetwork,
+      amount: apiDirectAmount,
+      to: apiDirectTo,
+      display_amount: apiDirectDisplayAmount,
     }, { txId: ctx.txId });
 
     // Emit transaction:completed event (txHash = externalId for API direct)

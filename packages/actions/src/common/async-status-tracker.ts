@@ -27,6 +27,11 @@ export const BRIDGE_STATUS_VALUES = [
   'BRIDGE_MONITORING',
   'TIMEOUT',
   'REFUNDED',
+  'PARTIALLY_FILLED',
+  'FILLED',
+  'CANCELED',
+  'SETTLED',
+  'EXPIRED',
 ] as const;
 
 /** Bridge status type derived from BRIDGE_STATUS_VALUES SSoT array. */
@@ -46,8 +51,61 @@ export const BridgeStatusEnum = z.enum(BRIDGE_STATUS_VALUES);
  * - details: optional tracker-specific metadata merged into bridge_metadata
  * - nextIntervalOverride: optional override for next poll interval (ms)
  */
+// ---------------------------------------------------------------------------
+// Async tracking state values (9-state for external action tracking)
+// ---------------------------------------------------------------------------
+
+/**
+ * All possible AsyncTrackingResult state values (9-state).
+ * Superset of original 4-state (PENDING/COMPLETED/FAILED/TIMEOUT) with
+ * 5 new states for off-chain action tracking:
+ * - PARTIALLY_FILLED: order partially executed, continue polling
+ * - FILLED: order fully executed
+ * - CANCELED: order canceled
+ * - SETTLED: trade settled (post-fill confirmation)
+ * - EXPIRED: order expired
+ */
+export const ASYNC_TRACKING_STATE_VALUES = [
+  'PENDING',
+  'COMPLETED',
+  'FAILED',
+  'TIMEOUT',
+  'PARTIALLY_FILLED',
+  'FILLED',
+  'CANCELED',
+  'SETTLED',
+  'EXPIRED',
+] as const;
+
+/** Async tracking state type (9-value union). */
+export type AsyncTrackingState = (typeof ASYNC_TRACKING_STATE_VALUES)[number];
+
+/** Zod schema for async tracking state validation. */
+export const AsyncTrackingStateEnum = z.enum(ASYNC_TRACKING_STATE_VALUES);
+
+/**
+ * Check if a state is terminal (no more polling needed).
+ * Terminal: COMPLETED, FILLED, SETTLED, CANCELED, EXPIRED, FAILED, TIMEOUT
+ * Non-terminal: PENDING, PARTIALLY_FILLED (continue polling)
+ */
+export function isTerminalState(state: string): boolean {
+  const terminals = new Set<string>([
+    'COMPLETED', 'FILLED', 'SETTLED', 'CANCELED', 'EXPIRED', 'FAILED', 'TIMEOUT',
+  ]);
+  return terminals.has(state);
+}
+
+/**
+ * Check if a state should continue polling.
+ * Continue: PENDING, PARTIALLY_FILLED
+ * Stop: all terminal states
+ */
+export function isContinuePolling(state: string): boolean {
+  return state === 'PENDING' || state === 'PARTIALLY_FILLED';
+}
+
 export interface AsyncTrackingResult {
-  state: 'PENDING' | 'COMPLETED' | 'FAILED' | 'TIMEOUT';
+  state: AsyncTrackingState;
   details?: Record<string, unknown>;
   nextIntervalOverride?: number;
 }

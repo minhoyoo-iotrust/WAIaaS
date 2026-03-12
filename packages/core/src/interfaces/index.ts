@@ -45,6 +45,8 @@ export type {
   IActionProvider,
   // v31.4: API-direct result type for non-on-chain providers (HDESIGN-01)
   ApiDirectResult,
+  // v31.12: async tracking result for IActionProvider.checkStatus()
+  ActionProviderTrackingResult,
 } from './action-provider.types.js';
 export {
   ActionProviderMetadataSchema,

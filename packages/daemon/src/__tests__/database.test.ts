@@ -2,7 +2,7 @@
  * Comprehensive tests for the WAIaaS daemon SQLite database module.
  *
  * Tests cover:
- * 1. Schema creation -- all 30 tables exist after pushSchema
+ * 1. Schema creation -- all 31 tables exist after pushSchema
  * 2. PRAGMA verification -- all 7 PRAGMAs applied correctly
  * 3. CHECK constraints -- valid/invalid enum values
  * 4. UUID v7 ordering -- chronological sort by string comparison
@@ -50,7 +50,7 @@ const now = () => Math.floor(Date.now() / 1000);
 // ---------------------------------------------------------------------------
 
 describe('Schema creation', () => {
-  it('should create all 30 tables', () => {
+  it('should create all 31 tables', () => {
     const tables = sqlite
       .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
       .all() as Array<{ name: string }>;
@@ -82,6 +82,7 @@ describe('Schema creation', () => {
       'transactions',
       'userop_builds',
       'wallet_apps',
+      'wallet_credentials',
       'wallets',
       'wc_sessions',
       'wc_store',

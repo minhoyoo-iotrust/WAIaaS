@@ -1,5 +1,34 @@
 # Project Milestones: WAIaaS
 
+## v31.12 External Action 프레임워크 구현 (Shipped: 2026-03-12)
+
+**Phases completed:** 386-392 (7 phases, 15 plans, 60 requirements)
+
+**Key accomplishments:**
+
+- ResolvedAction 3-kind Zod discriminatedUnion (contractCall/signedData/signedHttp) — backward-compatible normalization, 기존 13개 ActionProvider 무변경
+- ISignerCapability 7-scheme registry — EIP-712/PersonalSign/ERC-8128 어댑터 + HMAC/RSA-PSS/ECDSA/Ed25519 신규, auto-select by signingScheme
+- CredentialVault — AES-256-GCM 암호화, HKDF 도메인 분리, per-wallet/global scope, REST 8 endpoints, Master Password 변경 시 re-encrypt
+- Venue Whitelist + Action Category Limit 정책 — default-deny venue 관리, 카테고리별 daily/monthly/per_action USD 한도
+- Kind-based 파이프라인 라우팅 — signedData/signedHttp 파이프라인 (credential→policy→DB→sign→track→audit), connect-info capability
+- Full-stack 통합 — Admin UI 4페이지 + MCP 2도구 + SDK 6메서드 + skill files 4종
+
+**Known Gaps:**
+
+- TRACK-02: bridge_status 컬럼 리네임 미수행 (확장으로 대체, 기능적 동등)
+- TRACK-03: ExternalActionTracker 클래스 미구현 (AsyncPollingService 직접 확장)
+- TRACK-05: EventBus action:* 이벤트 미등록 (notification callbacks로 대체)
+
+**Stats:**
+
+- 7 phases (386-392), 15 plans, 57 requirements complete + 3 deferred
+- 57 commits, 144 files changed, +15,780 / -263 lines
+- ~219 new tests, DB v55-v57 (3 migrations)
+- Timeline: ~4.5 hours (2026-03-12)
+- Git range: feat(386-01) → docs(31-12)
+
+---
+
 ## v31.11 External Action 프레임워크 설계 (Shipped: 2026-03-12)
 
 **Phases completed:** 380-385 (6 phases, 11 plans, 34 requirements)

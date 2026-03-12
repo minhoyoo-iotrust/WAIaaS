@@ -808,6 +808,48 @@
 
 ---
 
+## Milestone: v31.12 — External Action 프레임워크 구현
+
+**Shipped:** 2026-03-12
+**Phases:** 7 | **Plans:** 15 | **Sessions:** 1
+
+### What Was Built
+- ResolvedAction 3-kind Zod discriminatedUnion (contractCall/signedData/signedHttp) with backward-compatible normalize utility
+- ISignerCapability 7-scheme registry (EIP-712/PersonalSign/ERC-8128 어댑터 + HMAC/RSA-PSS/ECDSA/Ed25519 신규)
+- CredentialVault (AES-256-GCM, HKDF 도메인 분리, per-wallet/global scope, REST 8 endpoints, re-encrypt on password change)
+- Venue Whitelist + Action Category Limit 정책 (default-deny venue, daily/monthly/per_action USD 한도)
+- Kind-based 파이프라인 라우팅 (signedData/signedHttp → credential→policy→DB→sign→track→audit)
+- Full-stack 통합: Admin UI 4페이지 + MCP 2도구 + SDK 6메서드 + skill files 4종
+
+### What Worked
+- doc-81 설계 문서(1,184줄)가 Zod 스키마/DB 컬럼/API 경로까지 정의 — 구현 시 설계 판단 거의 불필요
+- 4-Wave 순서(타입→서명/Vault/정책→파이프라인→UI/통합)가 자연스러운 의존성 흐름 생성
+- 기존 패턴 재사용 — CredentialVault의 HKDF+AES-GCM은 settings-crypto.ts와 동일 패턴, PolicyFormRouter 기존 인프라 재활용
+- ~4.5시간에 7 phases 15 plans 완료 — 설계 전용 마일스톤(v31.11) 선행의 효과
+
+### What Was Inefficient
+- bootstrapSignerCapabilities() wiring 누락 (FINDING-01) — optional 파라미터가 컴파일 시점 검출 방지, 런타임에서만 발견
+- REQUIREMENTS.md TRACK-* 체크박스 미갱신 — 실제 구현과 문서 상태 불일치 (반복 이슈)
+- TRACK-02/03/05 의도적 편차가 REQUIREMENTS.md에 사전 기록되지 않음 — 편차 결정 시점에 즉시 문서화 필요
+
+### Patterns Established
+- ResolvedAction normalization 패턴: kind 없는 레거시 반환값을 contractCall로 자동 정규화 — 기존 13개 Provider 무변경
+- HKDF domain separation: 동일 master password에서 용도별 독립 키 파생 (credential-vault vs settings)
+- AAD binding: {id}:{scope}:{type} 포맷으로 cross-credential 치환 공격 방지
+- optional dependency에서 runtime wiring 누락 방지: feature가 optional이어도 startup에서 명시적 instantiation 필요
+
+### Key Lessons
+1. optional 파라미터로 선언된 의존성은 TypeScript 컴파일러가 누락을 잡지 못함 — feature gate가 필요하면 required로 선언하고 null/undefined 처리가 나음
+2. 설계 전용 마일스톤 → 구현 마일스톤 2단계 분리가 효율 극대화 — v31.11(설계 1.1h) + v31.12(구현 4.5h) = 총 5.6h
+3. 의도적 편차(deferred requirement)는 결정 시점에 REQUIREMENTS.md에 즉시 마킹해야 아카이브 시 혼선 방지
+
+### Cost Observations
+- Model mix: ~100% opus (quality profile)
+- Sessions: 1
+- Notable: 144 파일, +15,780/-263 lines, ~4.5시간 완료 — 7 phases 전체를 1 세션에 완료, 설계 문서의 정밀도가 핵심 요인
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -835,6 +877,7 @@
 | v31.9 | 1 | 5 | Polymarket 예측 시장 통합, 93 파일 2일 완료 |
 | v31.10 | 1 | 5 | 코드베이스 품질 개선(순수 리팩토링), 89 파일 1일 완료 |
 | v31.11 | 1 | 6 | 설계 전용(External Action 프레임워크), 60 파일 1.1시간 완료 |
+| v31.12 | 1 | 7 | External Action 프레임워크 구현(풀스택), 144 파일 4.5시간 완료 |
 
 ### Cumulative Quality
 
@@ -861,6 +904,7 @@
 | v31.9 | ~7,454 (+235) | maintained | +12 decisions |
 | v31.10 | ~7,454 (unchanged) | maintained | +12 decisions |
 | v31.11 | ~7,454 (unchanged) | unchanged | +36 decisions |
+| v31.12 | ~7,673 (+219) | maintained | +23 decisions |
 
 ### Top Lessons (Verified Across Milestones)
 

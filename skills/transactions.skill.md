@@ -1534,3 +1534,30 @@ await client.hlSubTransfer('wallet-id', { subAccount: '0xSub...', amount: '1000'
 const subAccounts = await client.hlListSubAccounts('wallet-id');
 const positions = await client.hlGetSubPositions('wallet-id', '0xSubAddress');
 ```
+
+---
+
+## Off-chain Actions (External Action Framework)
+
+Beyond the 6-type on-chain transaction system, WAIaaS supports **off-chain actions** via the External Action framework. Off-chain actions use two additional action kinds:
+
+| Kind | Description | Pipeline |
+|------|-------------|----------|
+| `signedData` | Off-chain data signing (CLOB orders, typed data) | credential -> policy -> DB -> sign -> track |
+| `signedHttp` | HTTP request signing (API auth, RFC 9421) | credential -> policy -> sign -> execute -> track |
+
+**Key points:**
+- Off-chain actions use the **same endpoint**: `POST /v1/actions/:provider/:action`. The daemon automatically detects the resolved action kind and routes to the correct pipeline.
+- On-chain transactions use the 6-type `discriminatedUnion` system (TRANSFER, TOKEN_TRANSFER, etc.) and go through the 6-stage pipeline.
+- Off-chain actions bypass the on-chain pipeline entirely -- no gas estimation, no broadcast, no blockchain confirmation.
+- Off-chain action history is queried separately: `GET /v1/wallets/:id/actions` (not `/v1/transactions`).
+
+### Off-chain Action Query
+
+```bash
+# List off-chain actions with venue/status filter
+curl -s "http://localhost:3100/v1/wallets/<wallet-id>/actions?venue=polymarket&status=FILLED" \
+  -H 'Authorization: Bearer <token>'
+```
+
+For full off-chain action documentation, see **external-actions.skill.md**.

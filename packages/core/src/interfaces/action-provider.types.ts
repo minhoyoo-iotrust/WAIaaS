@@ -11,6 +11,27 @@
 import { z } from 'zod';
 import { ChainTypeEnum } from '../enums/chain.js';
 import type { ContractCallRequest } from '../schemas/transaction.schema.js';
+import type {
+  SignedDataAction,
+  SignedHttpAction,
+  ResolvedAction,
+} from '../schemas/resolved-action.schema.js';
+
+// ---------------------------------------------------------------------------
+// Inline AsyncTrackingResult type (mirrors @waiaas/actions to avoid circular dep)
+// ---------------------------------------------------------------------------
+
+/**
+ * Async tracking result type for IActionProvider.checkStatus().
+ * Defined inline to avoid circular dependency (core -> actions).
+ * Must stay in sync with AsyncTrackingResult in @waiaas/actions.
+ */
+export interface ActionProviderTrackingResult {
+  state: 'PENDING' | 'COMPLETED' | 'FAILED' | 'TIMEOUT'
+    | 'PARTIALLY_FILLED' | 'FILLED' | 'CANCELED' | 'SETTLED' | 'EXPIRED';
+  details?: Record<string, unknown>;
+  nextIntervalOverride?: number;
+}
 
 // ---------------------------------------------------------------------------
 // Zod SSoT: ActionProviderMetadata
@@ -60,7 +81,7 @@ export const ActionDefinitionSchema = z.object({
   /** Zod schema for input validation (duck-typed at registration). */
   inputSchema: z.any(),
   /** Risk level classification. */
-  riskLevel: z.enum(['low', 'medium', 'high']),
+  riskLevel: z.enum(['low', 'medium', 'high', 'critical']),
   /** Default policy tier for this action. */
   defaultTier: z.enum(['INSTANT', 'NOTIFY', 'DELAY', 'APPROVAL']),
 });
@@ -149,12 +170,16 @@ export function isApiDirectResult(result: unknown): result is ApiDirectResult {
 /**
  * Action Provider contract.
  *
- * Implementations resolve action parameters into ContractCallRequest objects
- * that are then fed into the existing 6-stage pipeline for policy evaluation,
- * signing, and submission.
+ * Implementations resolve action parameters into:
+ * - ContractCallRequest (on-chain transaction)
+ * - ContractCallRequest[] (multi-step on-chain, e.g., approve + swap)
+ * - ApiDirectResult (API-based execution, e.g., Hyperliquid DEX)
+ * - SignedDataAction (off-chain signed data, e.g., EIP-712, HMAC)
+ * - SignedHttpAction (signed HTTP request, e.g., ERC-8128)
+ * - ResolvedAction[] (mixed array of any kind)
  *
- * Providers with requiresSigningKey=true may return ApiDirectResult instead,
- * which causes Stage 5 to skip on-chain execution entirely.
+ * Existing providers returning ContractCallRequest are fully backward
+ * compatible -- the return type is a union superset.
  */
 export interface IActionProvider {
   /** Provider metadata (name, version, chains, flags). */
@@ -162,17 +187,55 @@ export interface IActionProvider {
   /** Available actions exposed by this provider. */
   readonly actions: readonly ActionDefinition[];
   /**
-   * Resolve action parameters into a ContractCallRequest, an array of
-   * ContractCallRequest[] for multi-step operations (e.g., approve + swap),
-   * or an ApiDirectResult for API-based execution (e.g., Hyperliquid DEX).
+   * Resolve action parameters into one of 6 return types.
    *
    * For ContractCallRequest returns, values are re-validated via
    * ContractCallRequestSchema.parse() by ActionProviderRegistry.
    * For ApiDirectResult returns, Stage 5 skips on-chain execution.
+   * For SignedDataAction/SignedHttpAction, the new off-chain pipeline handles
+   * credential resolution, signing, and async tracking.
+   * For ResolvedAction[], each element is routed to the appropriate pipeline.
    */
   resolve(
     actionName: string,
     params: Record<string, unknown>,
     context: ActionContext,
-  ): Promise<ContractCallRequest | ContractCallRequest[] | ApiDirectResult>;
+  ): Promise<
+    | ContractCallRequest
+    | ContractCallRequest[]
+    | ApiDirectResult
+    | SignedDataAction
+    | SignedHttpAction
+    | ResolvedAction[]
+  >;
+
+  /**
+   * Check the current status of an off-chain action (optional).
+   * Used by ExternalActionTracker to delegate venue-specific status polling.
+   * Providers that resolve signedData/signedHttp actions should implement this.
+   *
+   * @param actionId - The external action ID (e.g., order ID)
+   * @param metadata - Tracking metadata (venue, operation, etc.)
+   * @returns Tracking result with 9-state
+   */
+  checkStatus?(
+    actionId: string,
+    metadata: Record<string, unknown>,
+  ): Promise<ActionProviderTrackingResult>;
+
+  /**
+   * Execute a signed payload against an external service (optional).
+   * Used by the off-chain pipeline after signing is complete.
+   * The signed payload format depends on the signingScheme.
+   *
+   * @param actionName - The action name being executed
+   * @param signedPayload - The signed payload to submit
+   * @param context - Action execution context
+   * @returns Execution result with provider-specific data
+   */
+  execute?(
+    actionName: string,
+    signedPayload: unknown,
+    context: ActionContext,
+  ): Promise<Record<string, unknown>>;
 }

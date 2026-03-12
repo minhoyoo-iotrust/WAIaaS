@@ -13,7 +13,7 @@
 import { z } from 'zod';
 
 // ---------------------------------------------------------------------------
-// AuditEventType (24 events -- OPS-02 section 2.1 + PROVIDER_UPDATED + UserOp + WALLET_PURGED)
+// AuditEventType (26 events -- OPS-02 section 2.1 + PROVIDER_UPDATED + UserOp + WALLET_PURGED + External Action)
 // ---------------------------------------------------------------------------
 
 export const AUDIT_EVENT_TYPES = [
@@ -41,6 +41,8 @@ export const AUDIT_EVENT_TYPES = [
   'NOTIFICATION_TOTAL_FAILURE',
   'USEROP_BUILD',
   'USEROP_SIGNED',
+  'ACTION_SIGNED',
+  'ACTION_HTTP_SIGNED',
 ] as const;
 
 export const AuditEventTypeSchema = z.enum(AUDIT_EVENT_TYPES);

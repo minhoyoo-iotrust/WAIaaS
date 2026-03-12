@@ -312,6 +312,8 @@ const DETAIL_TABS = [
   { key: 'owner', label: 'Owner' },
   { key: 'staking', label: 'Staking' },
   { key: 'nfts', label: 'NFTs' },
+  { key: 'credentials', label: 'Credentials' },
+  { key: 'external-actions', label: 'External Actions' },
   { key: 'mcp', label: 'MCP' },
 ];
 
@@ -1831,6 +1833,340 @@ function WalletDetailView({ id }: { id: string }) {
   // -------------------------------------------------------------------------
   // MCP Tab
   // -------------------------------------------------------------------------
+  // -------------------------------------------------------------------------
+  // Credentials Tab
+  // -------------------------------------------------------------------------
+
+  interface CredentialMetadata {
+    id: string;
+    walletId: string | null;
+    type: string;
+    name: string;
+    metadata: Record<string, unknown>;
+    expiresAt: number | null;
+    createdAt: number;
+    updatedAt: number;
+  }
+
+  const walletCredentials = useSignal<CredentialMetadata[]>([]);
+  const credentialsLoading = useSignal(false);
+  const showCredAddModal = useSignal(false);
+  const credAddType = useSignal('api-key');
+  const credAddName = useSignal('');
+  const credAddValue = useSignal('');
+  const credAddLoading = useSignal(false);
+  const credDeleteModal = useSignal(false);
+  const credDeleteRef = useSignal<string | null>(null);
+  const credDeleteName = useSignal('');
+  const credDeleteLoading = useSignal(false);
+  const credRotateModal = useSignal(false);
+  const credRotateRef = useSignal<string | null>(null);
+  const credRotateName = useSignal('');
+  const credRotateValue = useSignal('');
+  const credRotateLoading = useSignal(false);
+
+  const CRED_TYPES = [
+    { label: 'API Key', value: 'api-key' },
+    { label: 'HMAC Secret', value: 'hmac-secret' },
+    { label: 'RSA Private Key', value: 'rsa-private-key' },
+    { label: 'Session Token', value: 'session-token' },
+    { label: 'Custom', value: 'custom' },
+  ];
+
+  const fetchWalletCredentials = async () => {
+    credentialsLoading.value = true;
+    try {
+      const result = await apiGet<{ credentials: CredentialMetadata[] }>(API.WALLET_CREDENTIALS(id));
+      walletCredentials.value = result.credentials;
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      credentialsLoading.value = false;
+    }
+  };
+
+  function CredentialsTab() {
+    useEffect(() => { fetchWalletCredentials(); }, []);
+
+    const handleCredAdd = async () => {
+      if (!credAddName.value.trim() || !credAddValue.value.trim()) {
+        showToast('error', 'Name and value are required');
+        return;
+      }
+      credAddLoading.value = true;
+      try {
+        await apiPost(API.WALLET_CREDENTIALS(id), {
+          type: credAddType.value,
+          name: credAddName.value.trim(),
+          value: credAddValue.value,
+        });
+        showToast('success', 'Credential created');
+        showCredAddModal.value = false;
+        credAddType.value = 'api-key';
+        credAddName.value = '';
+        credAddValue.value = '';
+        await fetchWalletCredentials();
+      } catch (err) {
+        const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+        showToast('error', getErrorMessage(e.code));
+      } finally {
+        credAddLoading.value = false;
+      }
+    };
+
+    const handleCredDelete = async () => {
+      if (!credDeleteRef.value) return;
+      credDeleteLoading.value = true;
+      try {
+        await apiDelete(API.WALLET_CREDENTIAL_DELETE(id, credDeleteRef.value));
+        showToast('success', 'Credential deleted');
+        credDeleteModal.value = false;
+        await fetchWalletCredentials();
+      } catch (err) {
+        const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+        showToast('error', getErrorMessage(e.code));
+      } finally {
+        credDeleteLoading.value = false;
+      }
+    };
+
+    const handleCredRotate = async () => {
+      if (!credRotateRef.value || !credRotateValue.value.trim()) return;
+      credRotateLoading.value = true;
+      try {
+        await apiPut(API.WALLET_CREDENTIAL_ROTATE(id, credRotateRef.value), { value: credRotateValue.value });
+        showToast('success', 'Credential rotated');
+        credRotateModal.value = false;
+        credRotateValue.value = '';
+        await fetchWalletCredentials();
+      } catch (err) {
+        const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+        showToast('error', getErrorMessage(e.code));
+      } finally {
+        credRotateLoading.value = false;
+      }
+    };
+
+    if (!credentialsLoading.value && walletCredentials.value.length === 0) {
+      return (
+        <div>
+          <EmptyState
+            title="No Credentials"
+            description="Add credentials for external service authentication."
+            actionLabel="Add Credential"
+            onAction={() => { showCredAddModal.value = true; }}
+          />
+          <Modal open={showCredAddModal.value} title="Add Credential" onCancel={() => { showCredAddModal.value = false; }} onConfirm={handleCredAdd} confirmText="Create" loading={credAddLoading.value}>
+            <FormField label="Type" name="wcred-type" type="select" value={credAddType.value} onChange={(v) => { credAddType.value = v as string; }} options={CRED_TYPES} />
+            <FormField label="Name" name="wcred-name" value={credAddName.value} onChange={(v) => { credAddName.value = v as string; }} placeholder="e.g. exchange-api-key" required />
+            <FormField label="Value" name="wcred-value" type="password" value={credAddValue.value} onChange={(v) => { credAddValue.value = v as string; }} placeholder="Secret value" required />
+          </Modal>
+        </div>
+      );
+    }
+
+    return (
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+          <Button onClick={() => { showCredAddModal.value = true; }}>Add Credential</Button>
+        </div>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Expires</th>
+              <th>Created</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {walletCredentials.value.map((c) => (
+              <tr key={c.id}>
+                <td>{c.name}</td>
+                <td><Badge variant="info">{c.type}</Badge></td>
+                <td>{c.expiresAt ? formatDate(c.expiresAt) : 'Never'}</td>
+                <td>{formatDate(c.createdAt)}</td>
+                <td>
+                  <span style={{ display: 'flex', gap: '0.25rem' }}>
+                    <Button size="sm" variant="ghost" onClick={() => { credRotateRef.value = c.name; credRotateName.value = c.name; credRotateValue.value = ''; credRotateModal.value = true; }}>Rotate</Button>
+                    <Button size="sm" variant="danger" onClick={() => { credDeleteRef.value = c.name; credDeleteName.value = c.name; credDeleteModal.value = true; }}>Delete</Button>
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <Modal open={showCredAddModal.value} title="Add Credential" onCancel={() => { showCredAddModal.value = false; }} onConfirm={handleCredAdd} confirmText="Create" loading={credAddLoading.value}>
+          <FormField label="Type" name="wcred-type" type="select" value={credAddType.value} onChange={(v) => { credAddType.value = v as string; }} options={CRED_TYPES} />
+          <FormField label="Name" name="wcred-name" value={credAddName.value} onChange={(v) => { credAddName.value = v as string; }} placeholder="e.g. exchange-api-key" required />
+          <FormField label="Value" name="wcred-value" type="password" value={credAddValue.value} onChange={(v) => { credAddValue.value = v as string; }} placeholder="Secret value" required />
+        </Modal>
+
+        <Modal open={credDeleteModal.value} title="Delete Credential" onCancel={() => { credDeleteModal.value = false; }} onConfirm={handleCredDelete} confirmText="Delete" confirmVariant="danger" loading={credDeleteLoading.value}>
+          <p>Are you sure you want to delete credential <strong>{credDeleteName.value}</strong>?</p>
+        </Modal>
+
+        <Modal open={credRotateModal.value} title="Rotate Credential" onCancel={() => { credRotateModal.value = false; }} onConfirm={handleCredRotate} confirmText="Rotate" loading={credRotateLoading.value}>
+          <p>Enter a new value for credential <strong>{credRotateName.value}</strong>:</p>
+          <FormField label="New Value" name="wcred-rotate-value" type="password" value={credRotateValue.value} onChange={(v) => { credRotateValue.value = v as string; }} placeholder="New secret value" required />
+        </Modal>
+      </div>
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // External Actions Tab
+  // -------------------------------------------------------------------------
+
+  interface ExternalActionItem {
+    id: string;
+    actionKind: string;
+    venue: string | null;
+    operation: string | null;
+    status: string;
+    createdAt: number;
+    actionProvider: string | null;
+    actionName: string | null;
+  }
+
+  const externalActions = useSignal<ExternalActionItem[]>([]);
+  const actionsLoading = useSignal(false);
+  const actionsStatusFilter = useSignal('all');
+  const actionsVenueFilter = useSignal('');
+  const selectedAction = useSignal<ExternalActionItem | null>(null);
+
+  function getStatusVariant(status: string): 'info' | 'success' | 'warning' | 'danger' {
+    switch (status.toLowerCase()) {
+      case 'submitted': return 'info';
+      case 'signed': case 'completed': case 'filled': case 'settled': return 'success';
+      case 'pending': case 'partially_filled': return 'warning';
+      case 'failed': case 'canceled': case 'expired': return 'danger';
+      default: return 'info';
+    }
+  }
+
+  const fetchExternalActions = async () => {
+    actionsLoading.value = true;
+    try {
+      const params = new URLSearchParams();
+      params.set('limit', '50');
+      if (actionsStatusFilter.value !== 'all') params.set('status', actionsStatusFilter.value);
+      if (actionsVenueFilter.value.trim()) params.set('venue', actionsVenueFilter.value.trim());
+      const result = await apiGet<{ actions: ExternalActionItem[] }>(`${API.WALLET_ACTIONS(id)}?${params.toString()}`);
+      externalActions.value = result.actions;
+    } catch (err) {
+      const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
+      showToast('error', getErrorMessage(e.code));
+    } finally {
+      actionsLoading.value = false;
+    }
+  };
+
+  function ExternalActionsTab() {
+    useEffect(() => { fetchExternalActions(); }, []);
+
+    return (
+      <div>
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', alignItems: 'flex-end' }}>
+          <div class="form-field" style={{ flex: '0 0 auto' }}>
+            <label for="action-status-filter">Status</label>
+            <select
+              id="action-status-filter"
+              value={actionsStatusFilter.value}
+              onChange={(e) => { actionsStatusFilter.value = (e.target as HTMLSelectElement).value; fetchExternalActions(); }}
+            >
+              <option value="all">All</option>
+              <option value="submitted">Submitted</option>
+              <option value="signed">Signed</option>
+              <option value="pending">Pending</option>
+              <option value="failed">Failed</option>
+              <option value="completed">Completed</option>
+              <option value="filled">Filled</option>
+              <option value="settled">Settled</option>
+            </select>
+          </div>
+          <div class="form-field" style={{ flex: '0 0 auto' }}>
+            <label for="action-venue-filter">Venue</label>
+            <input
+              id="action-venue-filter"
+              value={actionsVenueFilter.value}
+              onInput={(e) => { actionsVenueFilter.value = (e.target as HTMLInputElement).value; }}
+              onKeyDown={(e) => { if (e.key === 'Enter') fetchExternalActions(); }}
+              placeholder="Filter by venue"
+            />
+          </div>
+          <Button variant="secondary" size="sm" onClick={() => fetchExternalActions()}>
+            Refresh
+          </Button>
+        </div>
+
+        {!actionsLoading.value && externalActions.value.length === 0 ? (
+          <EmptyState
+            title="No External Actions"
+            description="No external actions recorded for this wallet."
+          />
+        ) : (
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Venue</th>
+                <th>Operation</th>
+                <th>Status</th>
+                <th>Provider</th>
+                <th>Action</th>
+                <th>Created</th>
+              </tr>
+            </thead>
+            <tbody>
+              {externalActions.value.map((a) => (
+                <tr
+                  key={a.id}
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => { selectedAction.value = a; }}
+                >
+                  <td>{a.venue ? <Badge variant="info">{a.venue}</Badge> : '-'}</td>
+                  <td>{a.operation ?? '-'}</td>
+                  <td><Badge variant={getStatusVariant(a.status)}>{a.status}</Badge></td>
+                  <td>{a.actionProvider ?? '-'}</td>
+                  <td>{a.actionName ?? '-'}</td>
+                  <td>{formatDate(a.createdAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+
+        {actionsLoading.value && (
+          <div class="empty-state"><p>Loading...</p></div>
+        )}
+
+        <Modal
+          open={!!selectedAction.value}
+          title="External Action Details"
+          onCancel={() => { selectedAction.value = null; }}
+          onConfirm={() => { selectedAction.value = null; }}
+          confirmText="Close"
+        >
+          {selectedAction.value && (
+            <div class="detail-grid">
+              <DetailRow label="ID" value={selectedAction.value.id} />
+              <DetailRow label="Kind" value={selectedAction.value.actionKind} />
+              <DetailRow label="Venue" value={selectedAction.value.venue ?? '-'} />
+              <DetailRow label="Operation" value={selectedAction.value.operation ?? '-'} />
+              <DetailRow label="Status" value={selectedAction.value.status} />
+              <DetailRow label="Provider" value={selectedAction.value.actionProvider ?? '-'} />
+              <DetailRow label="Action" value={selectedAction.value.actionName ?? '-'} />
+              <DetailRow label="Created" value={formatDate(selectedAction.value.createdAt)} />
+            </div>
+          )}
+        </Modal>
+      </div>
+    );
+  }
+
   function McpTab() {
     return (
       <div class="mcp-setup-section">
@@ -1950,6 +2286,8 @@ function WalletDetailView({ id }: { id: string }) {
           {activeDetailTab.value === 'owner' && <OwnerTab />}
           {activeDetailTab.value === 'staking' && <StakingTab />}
           {activeDetailTab.value === 'nfts' && <NftTab />}
+          {activeDetailTab.value === 'credentials' && <CredentialsTab />}
+          {activeDetailTab.value === 'external-actions' && <ExternalActionsTab />}
           {activeDetailTab.value === 'mcp' && <McpTab />}
 
           <Modal

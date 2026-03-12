@@ -99,7 +99,7 @@ describe('Enum SSoT', () => {
   });
 
   it('PolicyType has 19 values', () => {
-    expect(POLICY_TYPES).toHaveLength(19);
+    expect(POLICY_TYPES).toHaveLength(21);
     expect(POLICY_TYPES).toContain('X402_ALLOWED_DOMAINS');
     expect(POLICY_TYPES).toContain('LENDING_LTV_LIMIT');
     expect(POLICY_TYPES).toContain('LENDING_ASSET_WHITELIST');
@@ -120,8 +120,8 @@ describe('Enum SSoT', () => {
     expect(SESSION_STATUSES).toHaveLength(3);
   });
 
-  it('NotificationEventType has 60 values', () => {
-    expect(NOTIFICATION_EVENT_TYPES).toHaveLength(60);
+  it('NotificationEventType has 66 values', () => {
+    expect(NOTIFICATION_EVENT_TYPES).toHaveLength(66);
     // v28.5: gas condition events
     expect(NOTIFICATION_EVENT_TYPES).toContain('TX_GAS_WAITING');
     expect(NOTIFICATION_EVENT_TYPES).toContain('TX_GAS_CONDITION_MET');

@@ -20,6 +20,8 @@ export const POLICY_TYPES = [
   'PERP_ALLOWED_MARKETS',
   'REPUTATION_THRESHOLD',
   'ERC8128_ALLOWED_DOMAINS',
+  'VENUE_WHITELIST',
+  'ACTION_CATEGORY_LIMIT',
 ] as const;
 export type PolicyType = (typeof POLICY_TYPES)[number];
 export const PolicyTypeEnum = z.enum(POLICY_TYPES);

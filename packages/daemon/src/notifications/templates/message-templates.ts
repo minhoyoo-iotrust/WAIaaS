@@ -56,13 +56,11 @@ export function getNotificationMessage(
     }
   }
 
-  // Remove un-substituted {display_amount} placeholder (optional variable)
-  title = title.replaceAll('{display_amount}', '');
-  body = body.replaceAll('{display_amount}', '');
-
-  // Remove un-substituted {type} placeholder (optional variable)
-  title = title.replaceAll('{type}', '');
-  body = body.replaceAll('{type}', '');
+  // Remove un-substituted optional placeholders (fallback safety net)
+  for (const placeholder of ['{display_amount}', '{type}', '{amount}', '{to}']) {
+    title = title.replaceAll(placeholder, '');
+    body = body.replaceAll(placeholder, '');
+  }
 
   return { title: title.trim(), body: body.trim() };
 }
