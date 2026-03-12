@@ -7,7 +7,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { HyperliquidSpotProvider } from '../spot-provider.js';
 import type { HyperliquidExchangeClient } from '../exchange-client.js';
 import type { HyperliquidMarketData } from '../market-data.js';
-import type { ActionContext, PositionUpdate, PositionCategory } from '@waiaas/core';
+import type { ActionContext } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------
 // Mock factories
