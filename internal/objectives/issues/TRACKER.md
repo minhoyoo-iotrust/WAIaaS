@@ -350,6 +350,7 @@
 | 334 | BUG | HIGH | Admin Settings max_sessions_per_wallet 변경이 런타임에 반영되지 않음 — deps.config 정적 참조 | v31.10 | FIXED | 2026-03-11 |
 | 335 | ENHANCEMENT | MEDIUM | Admin UI 레거시 Settings 페이지 제거 + AA 글로벌 키 System 이관 + API 키 발급 링크 추가 | v31.10 | FIXED | 2026-03-11 |
 | 336 | BUG | MEDIUM | Across Bridge status API depositId Zod 타입 불일치 — API 문자열 반환 vs 스키마 number | v31.10 | FIXED | 2026-03-11 |
+| 337 | BUG | HIGH | TX_CONFIRMED 알림 {amount} 미치환 — Background Confirm Worker + API Direct 경로 2곳 | — | FIXED | 2026-03-12 |
 
 ## Type Legend
 
@@ -362,7 +363,7 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 336
+- **FIXED:** 337
 - **WONTFIX:** 1
 - **Total:** 337
 - **Archived:** 321 (001–321)

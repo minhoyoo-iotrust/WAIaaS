@@ -1665,6 +1665,9 @@ export class DaemonLifecycle {
                 walletId: transactions.walletId,
                 chain: transactions.chain,
                 network: transactions.network,
+                amount: transactions.amount,
+                toAddress: transactions.toAddress,
+                type: transactions.type,
               })
               .from(transactions)
               .where(
@@ -1713,6 +1716,9 @@ export class DaemonLifecycle {
                     txId: tx.id,
                     txHash: tx.txHash,
                     network: tx.network,
+                    amount: tx.amount ?? '',
+                    to: tx.toAddress ?? '',
+                    type: tx.type ?? '',
                   }, { txId: tx.id });
                   console.info(`[submitted-tx-confirm] ${tx.id} confirmed via background retry`);
                 } else if (result.status === 'failed') {
