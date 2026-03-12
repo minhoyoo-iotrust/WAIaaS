@@ -289,4 +289,192 @@ describe('PendleYieldProvider', () => {
       expect(provider.getSupportedCategories()).toEqual(['YIELD']);
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // getPositions() tests
+  // ---------------------------------------------------------------------------
+
+  describe('getPositions', () => {
+    const MOCK_RPC_URL = 'http://localhost:9999';
+    const WALLET_ADDRESS = '0x1234567890abcdef1234567890abcdef12345678';
+
+    // Future expiry (2027-12-26) for ACTIVE positions
+    const FUTURE_EXPIRY = '2027-12-26T00:00:00Z';
+    // Past expiry for MATURED positions
+    const PAST_EXPIRY = '2024-01-01T00:00:00Z';
+
+    const ACTIVE_MARKET = {
+      ...MOCK_MARKET,
+      expiry: FUTURE_EXPIRY,
+    };
+
+    const MATURED_MARKET = {
+      ...MOCK_MARKET,
+      address: '0xMaturedMarket',
+      name: 'PT-stETH-01JAN2024',
+      expiry: PAST_EXPIRY,
+      pt: '0xMaturedPT',
+      yt: '0xMaturedYT',
+    };
+
+    // Encode a non-zero uint256 as hex result (1e18 = 1 token)
+    const ONE_TOKEN_HEX = '0x' + (10n ** 18n).toString(16).padStart(64, '0');
+    const ZERO_HEX = '0x' + '0'.repeat(64);
+
+    /**
+     * Create an MSW handler for RPC eth_call that responds based on the
+     * target contract address in the request body.
+     */
+    function createRpcHandler(balanceMap: Record<string, string>) {
+      return http.post(MOCK_RPC_URL, async ({ request }) => {
+        const body = await request.json() as { params: [{ to: string }, string] };
+        const toAddress = body.params[0].to.toLowerCase();
+        const result = balanceMap[toAddress] ?? ZERO_HEX;
+        return HttpResponse.json({ jsonrpc: '2.0', id: 1, result });
+      });
+    }
+
+    it('returns [] when rpcUrl is not configured', async () => {
+      const provider = new PendleYieldProvider({ enabled: true });
+      const positions = await provider.getPositions(WALLET_ADDRESS);
+      expect(positions).toEqual([]);
+    });
+
+    it('returns PT position with correct metadata for non-zero balance', async () => {
+      server.use(
+        http.get(`${BASE_URL}/v1/markets/all`, () => HttpResponse.json([ACTIVE_MARKET])),
+        createRpcHandler({
+          [ACTIVE_MARKET.pt.toLowerCase()]: ONE_TOKEN_HEX,
+          [ACTIVE_MARKET.yt.toLowerCase()]: ZERO_HEX,
+        }),
+      );
+
+      const provider = new PendleYieldProvider({ enabled: true, rpcUrl: MOCK_RPC_URL });
+      const positions = await provider.getPositions(WALLET_ADDRESS);
+
+      expect(positions).toHaveLength(1);
+      const pos = positions[0]!;
+      expect(pos.category).toBe('YIELD');
+      expect(pos.provider).toBe('pendle');
+      expect(pos.chain).toBe('ethereum');
+      expect(pos.network).toBe('ethereum-mainnet');
+      expect(pos.status).toBe('ACTIVE');
+      expect(pos.metadata.tokenType).toBe('PT');
+      expect(pos.metadata.maturity).toBe(Math.floor(new Date(FUTURE_EXPIRY).getTime() / 1000));
+      expect(pos.metadata.underlyingAsset).toBe('stETH');
+      expect(pos.metadata.impliedApy).toBe(0.045);
+      expect(pos.metadata.marketAddress).toBe(ACTIVE_MARKET.address);
+      expect(pos.amount).toBe('1.0');
+    });
+
+    it('returns YT position with correct metadata for non-zero balance', async () => {
+      server.use(
+        http.get(`${BASE_URL}/v1/markets/all`, () => HttpResponse.json([ACTIVE_MARKET])),
+        createRpcHandler({
+          [ACTIVE_MARKET.pt.toLowerCase()]: ZERO_HEX,
+          [ACTIVE_MARKET.yt.toLowerCase()]: ONE_TOKEN_HEX,
+        }),
+      );
+
+      const provider = new PendleYieldProvider({ enabled: true, rpcUrl: MOCK_RPC_URL });
+      const positions = await provider.getPositions(WALLET_ADDRESS);
+
+      expect(positions).toHaveLength(1);
+      const pos = positions[0]!;
+      expect(pos.category).toBe('YIELD');
+      expect(pos.metadata.tokenType).toBe('YT');
+      expect(pos.metadata.maturity).toBe(Math.floor(new Date(FUTURE_EXPIRY).getTime() / 1000));
+      expect(pos.metadata.underlyingAsset).toBe('stETH');
+      expect(pos.metadata.impliedApy).toBe(0.045);
+      expect(pos.status).toBe('ACTIVE');
+    });
+
+    it('returns MATURED status when expiry is in the past', async () => {
+      server.use(
+        http.get(`${BASE_URL}/v1/markets/all`, () => HttpResponse.json([MATURED_MARKET])),
+        createRpcHandler({
+          [MATURED_MARKET.pt.toLowerCase()]: ONE_TOKEN_HEX,
+          [MATURED_MARKET.yt.toLowerCase()]: ZERO_HEX,
+        }),
+      );
+
+      const provider = new PendleYieldProvider({ enabled: true, rpcUrl: MOCK_RPC_URL });
+      const positions = await provider.getPositions(WALLET_ADDRESS);
+
+      expect(positions).toHaveLength(1);
+      expect(positions[0]!.status).toBe('MATURED');
+    });
+
+    it('skips zero-balance PT/YT tokens', async () => {
+      server.use(
+        http.get(`${BASE_URL}/v1/markets/all`, () => HttpResponse.json([ACTIVE_MARKET])),
+        createRpcHandler({
+          [ACTIVE_MARKET.pt.toLowerCase()]: ZERO_HEX,
+          [ACTIVE_MARKET.yt.toLowerCase()]: ZERO_HEX,
+        }),
+      );
+
+      const provider = new PendleYieldProvider({ enabled: true, rpcUrl: MOCK_RPC_URL });
+      const positions = await provider.getPositions(WALLET_ADDRESS);
+      expect(positions).toEqual([]);
+    });
+
+    it('returns multiple positions from multiple markets', async () => {
+      const secondMarket = {
+        ...MOCK_MARKET,
+        address: '0xMarket2',
+        name: 'PT-USDC-27MAR2028',
+        expiry: '2028-03-27T00:00:00Z',
+        pt: '0xPT2',
+        yt: '0xYT2',
+        underlyingAsset: { address: '0xUSDC', symbol: 'USDC', decimals: 18 },
+      };
+
+      server.use(
+        http.get(`${BASE_URL}/v1/markets/all`, () => HttpResponse.json([ACTIVE_MARKET, secondMarket])),
+        createRpcHandler({
+          [ACTIVE_MARKET.pt.toLowerCase()]: ONE_TOKEN_HEX,
+          [ACTIVE_MARKET.yt.toLowerCase()]: ZERO_HEX,
+          [secondMarket.pt.toLowerCase()]: ONE_TOKEN_HEX,
+          [secondMarket.yt.toLowerCase()]: ZERO_HEX,
+        }),
+      );
+
+      const provider = new PendleYieldProvider({ enabled: true, rpcUrl: MOCK_RPC_URL });
+      const positions = await provider.getPositions(WALLET_ADDRESS);
+
+      expect(positions).toHaveLength(2);
+      expect(positions[0]!.metadata.underlyingAsset).toBe('stETH');
+      expect(positions[1]!.metadata.underlyingAsset).toBe('USDC');
+    });
+
+    it('assetId uses CAIP-19 format', async () => {
+      server.use(
+        http.get(`${BASE_URL}/v1/markets/all`, () => HttpResponse.json([ACTIVE_MARKET])),
+        createRpcHandler({
+          [ACTIVE_MARKET.pt.toLowerCase()]: ONE_TOKEN_HEX,
+          [ACTIVE_MARKET.yt.toLowerCase()]: ZERO_HEX,
+        }),
+      );
+
+      const provider = new PendleYieldProvider({ enabled: true, rpcUrl: MOCK_RPC_URL });
+      const positions = await provider.getPositions(WALLET_ADDRESS);
+
+      expect(positions).toHaveLength(1);
+      // CAIP-19 format: eip155:1/erc20:0xPTAddr
+      expect(positions[0]!.assetId).toContain('eip155:1/erc20:');
+      expect(positions[0]!.assetId).toContain(ACTIVE_MARKET.pt);
+    });
+
+    it('returns [] on RPC error (resilient)', async () => {
+      server.use(
+        http.get(`${BASE_URL}/v1/markets/all`, () => HttpResponse.json([ACTIVE_MARKET])),
+        http.post(MOCK_RPC_URL, () => HttpResponse.error()),
+      );
+
+      const provider = new PendleYieldProvider({ enabled: true, rpcUrl: MOCK_RPC_URL });
+      const positions = await provider.getPositions(WALLET_ADDRESS);
+      expect(positions).toEqual([]);
+    });
+  });
 });

@@ -12,6 +12,7 @@ export interface PendleConfig {
   defaultSlippageBps: number;  // 100 (1%)
   maxSlippageBps: number;      // 500 (5%)
   requestTimeoutMs: number;    // 10_000
+  rpcUrl?: string;             // EVM RPC endpoint for balanceOf queries (position tracking)
 }
 
 export const PENDLE_DEFAULTS: PendleConfig = {

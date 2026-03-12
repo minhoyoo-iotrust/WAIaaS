@@ -24,8 +24,10 @@ import type {
   PositionCategory,
 } from '@waiaas/core';
 import { PendleApiClient } from './pendle-api-client.js';
-import { type PendleConfig, PENDLE_DEFAULTS, getPendleChainId } from './config.js';
+import { type PendleConfig, PENDLE_DEFAULTS, getPendleChainId, PENDLE_CHAIN_ID_MAP } from './config.js';
 import type { PendleMarket } from './schemas.js';
+import { formatCaip19 } from '@waiaas/core';
+import { addressToHex } from '../../common/contract-encoding.js';
 import {
   PendleBuyPTInputSchema,
   PendleBuyYTInputSchema,
@@ -282,9 +284,78 @@ export class PendleYieldProvider implements IYieldProvider, IPositionProvider {
   // IPositionProvider methods
   // ---------------------------------------------------------------------------
 
-  async getPositions(_walletId: string): Promise<PositionUpdate[]> {
-    // Position tracking will be implemented in Phase 290
-    return [];
+  async getPositions(walletId: string): Promise<PositionUpdate[]> {
+    if (!this.config.rpcUrl) return [];
+
+    try {
+      const positions: PositionUpdate[] = [];
+      const now = Math.floor(Date.now() / 1000);
+
+      // Only query ethereum-mainnet (Pendle's primary chain)
+      const network = 'ethereum-mainnet';
+      const chainId = getPendleChainId(network);
+      const client = new PendleApiClient(this.config, chainId);
+      const markets = await client.getMarkets();
+
+      for (const market of markets) {
+        const maturity = Math.floor(new Date(market.expiry).getTime() / 1000);
+        const status = maturity < now ? 'MATURED' : 'ACTIVE';
+        const impliedApy = market.details?.impliedApy ?? 0;
+        const underlyingAsset = market.underlyingAsset.symbol;
+
+        // Check PT balance
+        const ptBalance = await this.ethCallUint256(market.pt, this.encodeBalanceOfCalldata(walletId));
+        if (ptBalance > 0n) {
+          positions.push({
+            walletId,
+            category: 'YIELD',
+            provider: 'pendle',
+            chain: 'ethereum',
+            network,
+            assetId: formatCaip19(`eip155:${chainId}`, 'erc20', market.pt),
+            amount: this.formatWei(ptBalance),
+            amountUsd: null,
+            metadata: {
+              tokenType: 'PT',
+              maturity,
+              underlyingAsset,
+              impliedApy,
+              marketAddress: market.address,
+            },
+            status,
+            openedAt: now,
+          });
+        }
+
+        // Check YT balance
+        const ytBalance = await this.ethCallUint256(market.yt, this.encodeBalanceOfCalldata(walletId));
+        if (ytBalance > 0n) {
+          positions.push({
+            walletId,
+            category: 'YIELD',
+            provider: 'pendle',
+            chain: 'ethereum',
+            network,
+            assetId: formatCaip19(`eip155:${chainId}`, 'erc20', market.yt),
+            amount: this.formatWei(ytBalance),
+            amountUsd: null,
+            metadata: {
+              tokenType: 'YT',
+              maturity,
+              underlyingAsset,
+              impliedApy,
+              marketAddress: market.address,
+            },
+            status,
+            openedAt: now,
+          });
+        }
+      }
+
+      return positions;
+    } catch {
+      return [];
+    }
   }
 
   getProviderName(): string {
@@ -346,5 +417,49 @@ export class PendleYieldProvider implements IYieldProvider, IPositionProvider {
       calldata: tx.data,
       value: tx.value ? BigInt(tx.value).toString() : undefined,
     };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Position tracking helpers (raw RPC, no viem dependency)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Encode ERC-20 balanceOf(address) calldata.
+   * Selector: 0x70a08231
+   */
+  private encodeBalanceOfCalldata(address: string): string {
+    const selector = '0x70a08231';
+    const paddedAddress = addressToHex(address);
+    return `${selector}${paddedAddress}`;
+  }
+
+  /**
+   * Execute a single eth_call and decode the result as uint256.
+   */
+  private async ethCallUint256(to: string, data: string): Promise<bigint> {
+    const resp = await fetch(this.config.rpcUrl!, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'eth_call',
+        params: [{ to, data }, 'latest'],
+      }),
+    });
+    const json = (await resp.json()) as { result: string };
+    const stripped = json.result.startsWith('0x') ? json.result.slice(2) : json.result;
+    return BigInt('0x' + stripped);
+  }
+
+  /**
+   * Format a wei-denominated bigint to a human-readable decimal string (18 decimals).
+   */
+  private formatWei(value: bigint): string {
+    const whole = value / (10n ** 18n);
+    const frac = value % (10n ** 18n);
+    if (frac === 0n) return `${whole}.0`;
+    const fracStr = frac.toString().padStart(18, '0').replace(/0+$/, '');
+    return `${whole}.${fracStr}`;
   }
 }
