@@ -82,6 +82,36 @@ describe('VenueWhitelistForm', () => {
     expect(screen.getByText('+ Add Venue')).toBeTruthy();
   });
 
+  it('calls onChange when editing a venue name', () => {
+    const onChange = vi.fn();
+    render(
+      <VenueWhitelistForm
+        rules={{ venues: [{ id: 'poly', name: 'Old Name' }] }}
+        onChange={onChange}
+        errors={{}}
+      />,
+    );
+
+    const input = screen.getByDisplayValue('Old Name');
+    fireEvent.input(input, { target: { value: 'New Name' } });
+    expect(onChange).toHaveBeenCalledWith({
+      venues: [{ id: 'poly', name: 'New Name' }],
+    });
+  });
+
+  it('displays global venues error', () => {
+    const onChange = vi.fn();
+    render(
+      <VenueWhitelistForm
+        rules={{ venues: [] }}
+        onChange={onChange}
+        errors={{ venues: 'At least one venue required' }}
+      />,
+    );
+
+    expect(screen.getByText('At least one venue required')).toBeTruthy();
+  });
+
   it('displays error for venue field', () => {
     const onChange = vi.fn();
     render(

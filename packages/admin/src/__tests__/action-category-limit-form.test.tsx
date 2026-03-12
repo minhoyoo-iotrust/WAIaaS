@@ -79,6 +79,103 @@ describe('ActionCategoryLimitForm', () => {
     expect(screen.getByDisplayValue('Notify')).toBeTruthy();
   });
 
+  it('removes per_action_limit_usd when set to empty (0)', () => {
+    const onChange = vi.fn();
+    render(
+      <ActionCategoryLimitForm
+        rules={{ category: 'trade', per_action_limit_usd: 500, tier_on_exceed: 'DELAY' }}
+        onChange={onChange}
+        errors={{}}
+      />,
+    );
+
+    const input = screen.getByDisplayValue('500');
+    fireEvent.input(input, { target: { value: '' } });
+    expect(onChange).toHaveBeenCalled();
+    const arg = onChange.mock.calls[0][0];
+    expect(arg).not.toHaveProperty('per_action_limit_usd');
+  });
+
+  it('removes daily_limit_usd when cleared', () => {
+    const onChange = vi.fn();
+    render(
+      <ActionCategoryLimitForm
+        rules={{ category: 'trade', daily_limit_usd: 5000, tier_on_exceed: 'DELAY' }}
+        onChange={onChange}
+        errors={{}}
+      />,
+    );
+
+    const input = screen.getByDisplayValue('5000');
+    fireEvent.input(input, { target: { value: '' } });
+    expect(onChange).toHaveBeenCalled();
+    const arg = onChange.mock.calls[0][0];
+    expect(arg).not.toHaveProperty('daily_limit_usd');
+  });
+
+  it('sets daily_limit_usd when given a value', () => {
+    const onChange = vi.fn();
+    render(
+      <ActionCategoryLimitForm
+        rules={{ category: 'trade', tier_on_exceed: 'DELAY' }}
+        onChange={onChange}
+        errors={{}}
+      />,
+    );
+
+    const inputs = document.querySelectorAll('input[type="number"]');
+    // daily_limit_usd is the second number input
+    fireEvent.input(inputs[1]!, { target: { value: '8000' } });
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ daily_limit_usd: 8000 }));
+  });
+
+  it('removes monthly_limit_usd when cleared', () => {
+    const onChange = vi.fn();
+    render(
+      <ActionCategoryLimitForm
+        rules={{ category: 'trade', monthly_limit_usd: 50000, tier_on_exceed: 'DELAY' }}
+        onChange={onChange}
+        errors={{}}
+      />,
+    );
+
+    const input = screen.getByDisplayValue('50000');
+    fireEvent.input(input, { target: { value: '' } });
+    expect(onChange).toHaveBeenCalled();
+    const arg = onChange.mock.calls[0][0];
+    expect(arg).not.toHaveProperty('monthly_limit_usd');
+  });
+
+  it('sets monthly_limit_usd when given a value', () => {
+    const onChange = vi.fn();
+    render(
+      <ActionCategoryLimitForm
+        rules={{ category: 'trade', tier_on_exceed: 'DELAY' }}
+        onChange={onChange}
+        errors={{}}
+      />,
+    );
+
+    const inputs = document.querySelectorAll('input[type="number"]');
+    // monthly_limit_usd is the third number input
+    fireEvent.input(inputs[2]!, { target: { value: '90000' } });
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ monthly_limit_usd: 90000 }));
+  });
+
+  it('uses default category and tier when not provided', () => {
+    const onChange = vi.fn();
+    render(
+      <ActionCategoryLimitForm
+        rules={{}}
+        onChange={onChange}
+        errors={{}}
+      />,
+    );
+
+    expect(screen.getByDisplayValue('Trade')).toBeTruthy();
+    expect(screen.getByDisplayValue('Delay')).toBeTruthy();
+  });
+
   it('displays error messages', () => {
     const onChange = vi.fn();
     render(
