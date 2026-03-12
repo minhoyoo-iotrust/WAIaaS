@@ -94,11 +94,11 @@ Plans:
   2. HyperliquidSpotProvider가 spot 잔액을 포지션으로 반환한다
   3. Hyperliquid 프로바이더들이 duck-type 감지로 PositionTracker에 자동 등록된다
   4. 각 프로바이더의 getPositions() 단위 테스트와 PositionTracker 통합 테스트가 통과한다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 396-01: HyperliquidPerpProvider IPositionProvider 구현 (Info API 오픈 포지션 조회, metadata 매핑)
-- [ ] 396-02: HyperliquidSpotProvider IPositionProvider 구현 + duck-type 자동 등록 + 테스트
+- [ ] 396-01-PLAN.md — HyperliquidPerpProvider IPositionProvider 구현 (Info API 오픈 포지션 조회, metadata 매핑, 단위 테스트)
+- [ ] 396-02-PLAN.md — HyperliquidSpotProvider IPositionProvider 구현 + duck-type 자동 등록 + PositionTracker PERP 통합 테스트
 
 ### Phase 397: Admin Dashboard UX
 **Goal**: Admin Dashboard에서 모든 DeFi 포지션을 카테고리별/프로바이더별로 직관적으로 조회하고, 위험 상태를 즉시 인지할 수 있다
