@@ -37,7 +37,7 @@
 
 - [x] **Phase 393: Staking Positions (Lido + Jito)** - stETH/wstETH, jitoSOL 잔액 기반 STAKING 포지션 추적 구현
 - [x] **Phase 394: Lending Positions (Aave V3)** - Supply/Borrow 포지션 + Health Factor 추출 구현
-- [ ] **Phase 395: Yield Positions (Pendle)** - PT/YT 잔액 기반 YIELD 포지션 + 만기 상태 구현
+- [x] **Phase 395: Yield Positions (Pendle)** - PT/YT 잔액 기반 YIELD 포지션 + 만기 상태 구현
 - [ ] **Phase 396: Perp/Spot Positions (Hyperliquid)** - Perp 오픈 포지션 + Spot 잔액 신규 구현
 - [ ] **Phase 397: Admin Dashboard UX** - 카테고리 필터, 프로바이더 그룹핑, HF 경고, 지갑 필터
 
@@ -83,7 +83,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 395-01-PLAN.md — Pendle getPositions() 완성 (PT/YT 잔액 조회, 만기 상태 전환, implied APY) + 테스트
+- [x] 395-01-PLAN.md — Pendle getPositions() 완성 (PT/YT 잔액 조회, 만기 상태 전환, implied APY) + 테스트
 
 ### Phase 396: Perp/Spot Positions (Hyperliquid)
 **Goal**: Hyperliquid Perp 오픈 포지션과 Spot 잔액이 신규 구현되어 추적된다
@@ -131,6 +131,6 @@ Plans:
 | 392. MCP + SDK + 스킬 파일 | v31.12 | 2/2 | Complete | 2026-03-12 |
 | 393. Staking Positions (Lido + Jito) | v31.13 | 2/2 | Complete | 2026-03-12 |
 | 394. Lending Positions (Aave V3) | v31.13 | 1/1 | Complete | 2026-03-12 |
-| 395. Yield Positions (Pendle) | v31.13 | 0/1 | Not started | - |
+| 395. Yield Positions (Pendle) | v31.13 | 1/1 | Complete | 2026-03-12 |
 | 396. Perp/Spot Positions (Hyperliquid) | v31.13 | 0/2 | Not started | - |
 | 397. Admin Dashboard UX | v31.13 | 0/2 | Not started | - |

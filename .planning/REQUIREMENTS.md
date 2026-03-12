@@ -24,9 +24,9 @@
 
 ### Yield
 
-- [ ] **YIELD-01**: Pendle PT(Principal Token) 잔액 조회 → YIELD 포지션 반환 (`metadata.tokenType: 'PT'`, maturity, underlyingAsset, impliedApy)
-- [ ] **YIELD-02**: Pendle YT(Yield Token) 잔액 조회 → YIELD 포지션 반환 (`metadata.tokenType: 'YT'`, maturity, underlyingAsset, impliedApy)
-- [ ] **YIELD-03**: 만기 정보 포함 — 만기일 경과 시 `status: 'MATURED'` 자동 전환
+- [x] **YIELD-01**: Pendle PT(Principal Token) 잔액 조회 → YIELD 포지션 반환 (`metadata.tokenType: 'PT'`, maturity, underlyingAsset, impliedApy)
+- [x] **YIELD-02**: Pendle YT(Yield Token) 잔액 조회 → YIELD 포지션 반환 (`metadata.tokenType: 'YT'`, maturity, underlyingAsset, impliedApy)
+- [x] **YIELD-03**: 만기 정보 포함 — 만기일 경과 시 `status: 'MATURED'` 자동 전환
 
 ### Perp
 
@@ -76,9 +76,9 @@
 | LEND-02 | Phase 394 | Complete |
 | LEND-03 | Phase 394 | Complete |
 | LEND-04 | Phase 394 | Complete |
-| YIELD-01 | Phase 395 | Pending |
-| YIELD-02 | Phase 395 | Pending |
-| YIELD-03 | Phase 395 | Pending |
+| YIELD-01 | Phase 395 | Complete |
+| YIELD-02 | Phase 395 | Complete |
+| YIELD-03 | Phase 395 | Complete |
 | PERP-01 | Phase 396 | Pending |
 | PERP-02 | Phase 396 | Pending |
 | PERP-03 | Phase 396 | Pending |
