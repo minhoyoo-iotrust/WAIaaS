@@ -52,7 +52,7 @@
   2. Jito 프로바이더가 jitoSOL 잔액을 STAKING 포지션으로 반환하며, SOL 환산 비율이 적용된 수량을 포함한다
   3. Lido/Jito 프로바이더가 daemon 부팅 시 duck-type 감지로 PositionTracker에 자동 등록된다
   4. 각 프로바이더의 getPositions() 단위 테스트와 PositionTracker 통합 테스트가 통과한다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
 - [ ] 393-01: Lido IPositionProvider 구현 (stETH/wstETH 잔액 조회, wstETH 환산, CAIP-19 assetId, USD 환산)
