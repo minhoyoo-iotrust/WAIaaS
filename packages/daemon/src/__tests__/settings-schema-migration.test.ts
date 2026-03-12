@@ -303,7 +303,7 @@ describe('Fresh DB: settings table via pushSchema', () => {
     expect(row.max_version).toBe(57);
   });
 
-  it('LATEST_SCHEMA_VERSION should be 54', () => {
+  it('LATEST_SCHEMA_VERSION should be 57', () => {
     expect(LATEST_SCHEMA_VERSION).toBe(57);
   });
 });

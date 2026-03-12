@@ -141,9 +141,9 @@ describe('DB migration v36', () => {
     expect(indexNames).toContain('idx_audit_log_tx_id');
   });
 
-  // ---------- Test 16: LATEST_SCHEMA_VERSION is 54 ----------
-  it('LATEST_SCHEMA_VERSION is 54', () => {
-    expect(LATEST_SCHEMA_VERSION).toBe(54);
+  // ---------- Test 16: LATEST_SCHEMA_VERSION is 57 ----------
+  it('LATEST_SCHEMA_VERSION is 57', () => {
+    expect(LATEST_SCHEMA_VERSION).toBe(57);
   });
 
   // ---------- Test 16b: Migration is idempotent ----------

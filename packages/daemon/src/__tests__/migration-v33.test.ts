@@ -124,7 +124,7 @@ describe('Migration v33: sign_topic and notify_topic columns', () => {
     migDb.close();
   });
 
-  it('T-DBSC-03: fresh DB has LATEST_SCHEMA_VERSION=54', () => {
+  it('T-DBSC-03: fresh DB has LATEST_SCHEMA_VERSION=57', () => {
     expect(LATEST_SCHEMA_VERSION).toBe(57);
 
     const row = sqlite

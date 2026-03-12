@@ -71,7 +71,7 @@ describe('DB v51 Migration: hyperliquid_orders', () => {
     }
   });
 
-  it('T1: LATEST_SCHEMA_VERSION is 54', () => {
+  it('T1: LATEST_SCHEMA_VERSION is 57', () => {
     expect(LATEST_SCHEMA_VERSION).toBe(57);
   });
 

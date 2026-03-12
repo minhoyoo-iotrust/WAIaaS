@@ -242,7 +242,7 @@ describe('v14 migration: kill_switch_state value conversion', () => {
     }
   });
 
-  it('LATEST_SCHEMA_VERSION is 54', () => {
+  it('LATEST_SCHEMA_VERSION is 57', () => {
     expect(LATEST_SCHEMA_VERSION).toBe(57);
   });
 

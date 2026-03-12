@@ -146,7 +146,7 @@ describe('Migration v35: subscription_token column', () => {
 });
 
 describe('Schema version', () => {
-  it('LATEST_SCHEMA_VERSION is 54', () => {
+  it('LATEST_SCHEMA_VERSION is 57', () => {
     expect(LATEST_SCHEMA_VERSION).toBe(57);
   });
 

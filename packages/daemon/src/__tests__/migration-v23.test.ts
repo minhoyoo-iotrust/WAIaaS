@@ -209,8 +209,8 @@ describe('Migration v23: TRANSACTION_STATUSES with GAS_WAITING', () => {
 });
 
 describe('Migration v23: BRIDGE_STATUS_VALUES', () => {
-  it('BRIDGE_STATUS_VALUES has 6 entries', () => {
-    expect(BRIDGE_STATUS_VALUES).toHaveLength(6);
+  it('BRIDGE_STATUS_VALUES has 11 entries', () => {
+    expect(BRIDGE_STATUS_VALUES).toHaveLength(11);
   });
 
   it('BRIDGE_STATUS_VALUES contains expected values', () => {

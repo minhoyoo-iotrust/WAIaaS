@@ -71,7 +71,7 @@ describe('DB v45 Migration: userop_builds', () => {
   });
 
   // Test 1: LATEST_SCHEMA_VERSION === 45
-  it('T1: LATEST_SCHEMA_VERSION is 54', () => {
+  it('T1: LATEST_SCHEMA_VERSION is 57', () => {
     expect(LATEST_SCHEMA_VERSION).toBe(57);
   });
 
