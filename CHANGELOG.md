@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.11.0-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc...v2.11.0-rc.1) (2026-03-12)
+
+
+### Bug Fixes
+
+* resolve {amount} placeholder in TX_CONFIRMED notifications ([#337](https://github.com/minhoyoo-iotrust/WAIaaS/issues/337)) ([2303c16](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2303c16f7e13afd718594211b308f0685af9d402))
+* update migration-runner test versions for DB v57 ([8710d0a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8710d0a7bcbe43e9e40c8d7abf83239bf9e90c99))
+
 ## [2.11.0-rc](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.10.1-rc...v2.11.0-rc) (2026-03-11)
 
 
