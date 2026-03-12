@@ -32,8 +32,14 @@ export const AAVE_SELECTORS = {
   // Pool read functions
   getUserAccountData: '0xbf92857c', // getUserAccountData(address)
   getReserveData: '0x35ea6a75',     // getReserveData(address)
+  getReservesList: '0xd1946dbc',    // getReservesList() -> address[]
+  // PoolDataProvider read functions
+  getReserveTokensAddresses: '0xd2493b6c', // getReserveTokensAddresses(address) -> (aToken, stableDebt, variableDebt)
+  // Oracle read functions
+  getAssetsPrices: '0x9d23d9f2',    // getAssetsPrices(address[]) -> uint256[]
   // ERC-20
   approve: '0x095ea7b3',            // approve(address,uint256)
+  balanceOf: '0x70a08231',          // balanceOf(address) -> uint256
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -161,4 +167,65 @@ export function encodeGetUserAccountDataCalldata(user: string): string {
  */
 export function encodeGetReserveDataCalldata(asset: string): string {
   return `${AAVE_SELECTORS.getReserveData}${addressToHex(asset)}`;
+}
+
+// ---------------------------------------------------------------------------
+// getReservesList() -- read (no args)
+// ---------------------------------------------------------------------------
+
+/**
+ * Encode Pool.getReservesList() calldata.
+ * No arguments -- just the 4-byte selector.
+ *
+ * @returns ABI-encoded calldata with 0x prefix
+ */
+export function encodeGetReservesListCalldata(): string {
+  return AAVE_SELECTORS.getReservesList;
+}
+
+// ---------------------------------------------------------------------------
+// balanceOf(address) -- ERC-20 read
+// ---------------------------------------------------------------------------
+
+/**
+ * Encode ERC-20 balanceOf(address) calldata.
+ *
+ * @param account - Address to query balance for
+ * @returns ABI-encoded calldata with 0x prefix
+ */
+export function encodeBalanceOfCalldata(account: string): string {
+  return `${AAVE_SELECTORS.balanceOf}${addressToHex(account)}`;
+}
+
+// ---------------------------------------------------------------------------
+// getAssetsPrices(address[]) -- Oracle read
+// ---------------------------------------------------------------------------
+
+/**
+ * Encode AaveOracle.getAssetsPrices(address[]) calldata.
+ *
+ * ABI layout: selector + offset(0x20) + length + addresses...
+ *
+ * @param assets - Array of asset addresses to query prices for
+ * @returns ABI-encoded calldata with 0x prefix
+ */
+export function encodeGetAssetsPricesCalldata(assets: string[]): string {
+  const offset = uint256ToHex(32n); // dynamic array offset = 0x20
+  const length = uint256ToHex(BigInt(assets.length));
+  const items = assets.map((a) => addressToHex(a)).join('');
+  return `${AAVE_SELECTORS.getAssetsPrices}${offset}${length}${items}`;
+}
+
+// ---------------------------------------------------------------------------
+// getReserveTokensAddresses(address) -- PoolDataProvider read
+// ---------------------------------------------------------------------------
+
+/**
+ * Encode PoolDataProvider.getReserveTokensAddresses(address) calldata.
+ *
+ * @param asset - Underlying asset address
+ * @returns ABI-encoded calldata with 0x prefix
+ */
+export function encodeGetReserveTokensAddressesCalldata(asset: string): string {
+  return `${AAVE_SELECTORS.getReserveTokensAddresses}${addressToHex(asset)}`;
 }

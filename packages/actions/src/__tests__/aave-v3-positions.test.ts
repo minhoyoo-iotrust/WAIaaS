@@ -10,20 +10,16 @@
 import { describe, it, expect, vi } from 'vitest';
 import { AaveV3LendingProvider } from '../providers/aave-v3/index.js';
 import {
-  AAVE_SELECTORS,
   encodeGetReservesListCalldata,
   encodeBalanceOfCalldata,
   encodeGetAssetsPricesCalldata,
-  encodeGetReserveTokensAddressesCalldata,
 } from '../providers/aave-v3/aave-contracts.js';
 import {
   decodeAddressArray,
   decodeUint256Array,
-  decodeReserveTokensAddresses,
   type IRpcCaller,
 } from '../providers/aave-v3/aave-rpc.js';
 import { AAVE_V3_ADDRESSES } from '../providers/aave-v3/config.js';
-import { addressToHex } from '../common/contract-encoding.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
