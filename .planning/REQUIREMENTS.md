@@ -9,11 +9,11 @@
 
 ### Staking
 
-- [ ] **STAK-01**: Lido `LidoStakingActionProvider`에 `IPositionProvider` 구현, stETH/wstETH 잔액 → STAKING 포지션 반환 (CAIP-19 assetId, USD 환산)
-- [ ] **STAK-02**: wstETH → stETH 환산 비율 반영 (래핑 토큰이므로 실제 스테이킹 수량 계산)
-- [ ] **STAK-03**: Jito `JitoStakingActionProvider`에 `IPositionProvider` 구현, jitoSOL 잔액 → STAKING 포지션 반환 (CAIP-19 assetId, USD 환산)
-- [ ] **STAK-04**: jitoSOL → SOL 환산 비율 반영 (실제 스테이킹 SOL 수량 계산)
-- [ ] **STAK-05**: Lido/Jito PositionTracker 자동 등록 (duck-type 감지: `getPositions` + `getSupportedCategories` + `getProviderName`)
+- [x] **STAK-01**: Lido `LidoStakingActionProvider`에 `IPositionProvider` 구현, stETH/wstETH 잔액 → STAKING 포지션 반환 (CAIP-19 assetId, USD 환산)
+- [x] **STAK-02**: wstETH → stETH 환산 비율 반영 (래핑 토큰이므로 실제 스테이킹 수량 계산)
+- [x] **STAK-03**: Jito `JitoStakingActionProvider`에 `IPositionProvider` 구현, jitoSOL 잔액 → STAKING 포지션 반환 (CAIP-19 assetId, USD 환산)
+- [x] **STAK-04**: jitoSOL → SOL 환산 비율 반영 (실제 스테이킹 SOL 수량 계산)
+- [x] **STAK-05**: Lido/Jito PositionTracker 자동 등록 (duck-type 감지: `getPositions` + `getSupportedCategories` + `getProviderName`)
 
 ### Lending
 
@@ -67,11 +67,11 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| STAK-01 | Phase 393 | Pending |
-| STAK-02 | Phase 393 | Pending |
-| STAK-03 | Phase 393 | Pending |
-| STAK-04 | Phase 393 | Pending |
-| STAK-05 | Phase 393 | Pending |
+| STAK-01 | Phase 393 | Complete |
+| STAK-02 | Phase 393 | Complete |
+| STAK-03 | Phase 393 | Complete |
+| STAK-04 | Phase 393 | Complete |
+| STAK-05 | Phase 393 | Complete |
 | LEND-01 | Phase 394 | Pending |
 | LEND-02 | Phase 394 | Pending |
 | LEND-03 | Phase 394 | Pending |

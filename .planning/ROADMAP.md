@@ -35,7 +35,7 @@
 
 **Milestone Goal:** 미구현 5개 DeFi 프로바이더의 getPositions() 구현 + Admin Dashboard UX 개선
 
-- [ ] **Phase 393: Staking Positions (Lido + Jito)** - stETH/wstETH, jitoSOL 잔액 기반 STAKING 포지션 추적 구현
+- [x] **Phase 393: Staking Positions (Lido + Jito)** - stETH/wstETH, jitoSOL 잔액 기반 STAKING 포지션 추적 구현
 - [ ] **Phase 394: Lending Positions (Aave V3)** - Supply/Borrow 포지션 + Health Factor 추출 구현
 - [ ] **Phase 395: Yield Positions (Pendle)** - PT/YT 잔액 기반 YIELD 포지션 + 만기 상태 구현
 - [ ] **Phase 396: Perp/Spot Positions (Hyperliquid)** - Perp 오픈 포지션 + Spot 잔액 신규 구현
@@ -55,8 +55,8 @@
 **Plans**: 2 plans
 
 Plans:
-- [ ] 393-01: Lido IPositionProvider 구현 (stETH/wstETH 잔액 조회, wstETH 환산, CAIP-19 assetId, USD 환산)
-- [ ] 393-02: Jito IPositionProvider 구현 (jitoSOL 잔액 조회, SOL 환산) + duck-type 자동 등록 + 테스트
+- [x] 393-01: Lido IPositionProvider 구현 (stETH/wstETH 잔액 조회, wstETH 환산, CAIP-19 assetId, USD 환산)
+- [x] 393-02: Jito IPositionProvider 구현 (jitoSOL 잔액 조회, SOL 환산) + duck-type 자동 등록 + 테스트
 
 ### Phase 394: Lending Positions (Aave V3)
 **Goal**: Aave V3의 Supply/Borrow 포지션과 Health Factor가 정확하게 추적된다
@@ -129,7 +129,7 @@ Plans:
 | 390. 파이프라인 라우팅 + 조회 API | v31.12 | 2/2 | Complete | 2026-03-12 |
 | 391. Admin UI | v31.12 | 2/2 | Complete | 2026-03-12 |
 | 392. MCP + SDK + 스킬 파일 | v31.12 | 2/2 | Complete | 2026-03-12 |
-| 393. Staking Positions (Lido + Jito) | v31.13 | 0/2 | Not started | - |
+| 393. Staking Positions (Lido + Jito) | v31.13 | 2/2 | Complete | 2026-03-12 |
 | 394. Lending Positions (Aave V3) | v31.13 | 0/1 | Not started | - |
 | 395. Yield Positions (Pendle) | v31.13 | 0/1 | Not started | - |
 | 396. Perp/Spot Positions (Hyperliquid) | v31.13 | 0/2 | Not started | - |
