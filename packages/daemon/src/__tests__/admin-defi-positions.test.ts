@@ -226,4 +226,72 @@ describe('GET /admin/defi/positions', () => {
     const res = await app.request('/v1/admin/defi/positions', { headers: { Host: HOST } });
     expect(res.status).toBe(401);
   });
+
+  it('should filter by category query parameter', async () => {
+    const wid = '00000000-0000-0000-0000-000000000010';
+    insertPosition({ id: 'pos-cat-1', walletId: wid, category: 'STAKING', provider: 'lido', amountUsd: 100 });
+    insertPosition({ id: 'pos-cat-2', walletId: wid, category: 'LENDING', provider: 'aave-v3', amountUsd: 200 });
+    insertPosition({ id: 'pos-cat-3', walletId: wid, category: 'YIELD', provider: 'pendle', amountUsd: 50 });
+    insertPosition({ id: 'pos-cat-4', walletId: wid, category: 'PERP', provider: 'hyperliquid-perp', amountUsd: 300 });
+
+    const config = fullConfig();
+    const settingsService = new SettingsService({ db, config, masterPassword: TEST_PASSWORD });
+    const app = createApp({ db, sqlite, masterPasswordHash: passwordHash, config, settingsService });
+
+    // Filter LENDING only
+    const res1 = await app.request('/v1/admin/defi/positions?category=LENDING', { headers: masterHeaders() });
+    expect(res1.status).toBe(200);
+    const body1 = await res1.json() as { positions: Array<{ category: string }>; activeCount: number };
+    expect(body1.positions).toHaveLength(1);
+    expect(body1.positions[0]!.category).toBe('LENDING');
+    expect(body1.activeCount).toBe(1);
+
+    // Filter STAKING only
+    const res2 = await app.request('/v1/admin/defi/positions?category=STAKING', { headers: masterHeaders() });
+    expect(res2.status).toBe(200);
+    const body2 = await res2.json() as { positions: Array<{ category: string }>; activeCount: number };
+    expect(body2.positions).toHaveLength(1);
+    expect(body2.positions[0]!.category).toBe('STAKING');
+  });
+
+  it('should return metadata in position response', async () => {
+    const meta = { healthFactor: 1.5, positionType: 'SUPPLY' };
+    insertPosition({
+      id: 'pos-meta-1', walletId: 'w-meta', category: 'LENDING',
+      metadata: JSON.stringify(meta), amountUsd: 500,
+    });
+
+    const config = fullConfig();
+    const settingsService = new SettingsService({ db, config, masterPassword: TEST_PASSWORD });
+    const app = createApp({ db, sqlite, masterPasswordHash: passwordHash, config, settingsService });
+
+    const res = await app.request('/v1/admin/defi/positions', { headers: masterHeaders() });
+    expect(res.status).toBe(200);
+    const body = await res.json() as { positions: Array<{ metadata: Record<string, unknown> }> };
+    expect(body.positions).toHaveLength(1);
+    expect(body.positions[0]!.metadata).toBeDefined();
+    expect(body.positions[0]!.metadata).not.toBeNull();
+    expect((body.positions[0]!.metadata as Record<string, unknown>).healthFactor).toBe(1.5);
+    expect((body.positions[0]!.metadata as Record<string, unknown>).positionType).toBe('SUPPLY');
+  });
+
+  it('should combine wallet_id and category filters', async () => {
+    const wid1 = '00000000-0000-0000-0000-000000000011';
+    const wid2 = '00000000-0000-0000-0000-000000000012';
+    insertPosition({ id: 'pos-comb-1', walletId: wid1, category: 'LENDING', amountUsd: 100 });
+    insertPosition({ id: 'pos-comb-2', walletId: wid1, category: 'STAKING', amountUsd: 200 });
+    insertPosition({ id: 'pos-comb-3', walletId: wid2, category: 'LENDING', amountUsd: 300 });
+
+    const config = fullConfig();
+    const settingsService = new SettingsService({ db, config, masterPassword: TEST_PASSWORD });
+    const app = createApp({ db, sqlite, masterPasswordHash: passwordHash, config, settingsService });
+
+    const res = await app.request(`/v1/admin/defi/positions?wallet_id=${wid1}&category=LENDING`, { headers: masterHeaders() });
+    expect(res.status).toBe(200);
+    const body = await res.json() as { positions: Array<{ walletId: string; category: string }>; activeCount: number };
+    expect(body.positions).toHaveLength(1);
+    expect(body.positions[0]!.walletId).toBe(wid1);
+    expect(body.positions[0]!.category).toBe('LENDING');
+    expect(body.activeCount).toBe(1);
+  });
 });
