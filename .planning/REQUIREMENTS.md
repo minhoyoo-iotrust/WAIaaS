@@ -37,19 +37,19 @@
 
 ### Dashboard
 
-- [ ] **DASH-01**: 카테고리별 필터 탭 — STAKING / LENDING / YIELD / PERP / ALL
-- [ ] **DASH-02**: 프로바이더별 그룹핑 — 같은 프로바이더 포지션을 묶어서 표시
-- [ ] **DASH-03**: 카테고리별 맞춤 포지션 상세 UI (STAKING: 프로토콜+APR, LENDING: Supply/Borrow+HF, YIELD: PT/YT+만기+APY, PERP: Long/Short+PnL+청산가)
-- [ ] **DASH-04**: Health Factor 글로벌 경고 배너 — worst health factor가 임계값 미만일 때 대시보드 상단 경고
-- [ ] **DASH-05**: 지갑별 필터 — 특정 지갑의 DeFi 포지션만 조회
-- [ ] **DASH-06**: 30초 자동 새로고침 (기존 대시보드 패턴 유지)
+- [x] **DASH-01**: 카테고리별 필터 탭 — STAKING / LENDING / YIELD / PERP / ALL
+- [x] **DASH-02**: 프로바이더별 그룹핑 — 같은 프로바이더 포지션을 묶어서 표시
+- [x] **DASH-03**: 카테고리별 맞춤 포지션 상세 UI (STAKING: 프로토콜+APR, LENDING: Supply/Borrow+HF, YIELD: PT/YT+만기+APY, PERP: Long/Short+PnL+청산가)
+- [x] **DASH-04**: Health Factor 글로벌 경고 배너 — worst health factor가 임계값 미만일 때 대시보드 상단 경고
+- [x] **DASH-05**: 지갑별 필터 — 특정 지갑의 DeFi 포지션만 조회
+- [x] **DASH-06**: 30초 자동 새로고침 (기존 대시보드 패턴 유지)
 
 ### Test
 
 - [x] **TEST-01**: 각 프로바이더 `getPositions()` 단위 테스트 (모킹된 RPC/API 응답 기반)
 - [x] **TEST-02**: PositionTracker 통합 테스트 — 신규 프로바이더 등록 후 동기화 확인
-- [ ] **TEST-03**: Admin API 테스트 — 카테고리별 필터링, 집계 정확성
-- [ ] **TEST-04**: Admin UI 컴포넌트 테스트 — 필터 탭, 그룹핑, 경고 배너
+- [x] **TEST-03**: Admin API 테스트 — 카테고리별 필터링, 집계 정확성
+- [x] **TEST-04**: Admin UI 컴포넌트 테스트 — 필터 탭, 그룹핑, 경고 배너
 
 ## Out of Scope
 
@@ -83,16 +83,16 @@
 | PERP-02 | Phase 396 | Complete |
 | PERP-03 | Phase 396 | Complete |
 | PERP-04 | Phase 396 | Complete |
-| DASH-01 | Phase 397 | Pending |
-| DASH-02 | Phase 397 | Pending |
-| DASH-03 | Phase 397 | Pending |
-| DASH-04 | Phase 397 | Pending |
-| DASH-05 | Phase 397 | Pending |
-| DASH-06 | Phase 397 | Pending |
+| DASH-01 | Phase 397 | Complete |
+| DASH-02 | Phase 397 | Complete |
+| DASH-03 | Phase 397 | Complete |
+| DASH-04 | Phase 397 | Complete |
+| DASH-05 | Phase 397 | Complete |
+| DASH-06 | Phase 397 | Complete |
 | TEST-01 | Phase 393-396 | Complete |
 | TEST-02 | Phase 393-396 | Complete |
-| TEST-03 | Phase 397 | Pending |
-| TEST-04 | Phase 397 | Pending |
+| TEST-03 | Phase 397 | Complete |
+| TEST-04 | Phase 397 | Complete |
 
 **Coverage:**
 - v31.13 requirements: 27 total

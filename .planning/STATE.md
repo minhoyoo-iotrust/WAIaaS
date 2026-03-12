@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v31.13
 milestone_name: DeFi 포지션 대시보드 완성
-status: active
-stopped_at: Completed Phase 396 (Perp/Spot Positions)
-last_updated: "2026-03-12T13:16:05.585Z"
-last_activity: 2026-03-12 — Phase 396 complete (Perp/Spot Positions)
+status: complete
+stopped_at: Completed Phase 397 (Admin Dashboard UX) - milestone v31.13 complete
+last_updated: "2026-03-12T13:31:57.835Z"
+last_activity: 2026-03-12 — Phase 397 complete (Admin Dashboard UX) - milestone v31.13 DONE
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 8
-  completed_plans: 6
-  percent: 75
+  completed_plans: 8
+  percent: 100
 ---
 
 # Project State
@@ -26,18 +26,18 @@ See: .planning/PROJECT.md (updated 2026-03-12)
 ## Current Position
 
 Phase: 397 of 397 (Admin Dashboard UX)
-Plan: 0 of 2 in current phase
-Status: Ready to execute
-Last activity: 2026-03-12 — Phase 396 complete (Perp/Spot Positions)
+Plan: 2 of 2 in current phase
+Status: Complete - milestone v31.13 finished
+Last activity: 2026-03-12 — Phase 397 complete (Admin Dashboard UX)
 
-Progress: [████████░░] 75%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
+- Total plans completed: 8
 - Average duration: ~4 min
-- Total execution time: ~23 min
+- Total execution time: ~31 min
 
 ## Accumulated Context
 
@@ -62,6 +62,8 @@ Progress: [████████░░] 75%
 - [Phase 396]: D17: null amountUsd when mid price unavailable
 - [Phase 396]: D18: Hyperliquid spot balances classified as PERP category
 - [Phase 396]: D19: USDC 1:1 pricing, others via mid-price lookup
+- [Phase 397]: D20: Dynamic SQL WHERE for combined category+wallet_id filtering
+- [Phase 397]: D21: Provider grouping via Map with buildCategoryColumns switch pattern
 
 ### Pending Todos
 
@@ -73,6 +75,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-12T13:16:05.582Z
-Stopped at: Completed Phase 396 (Perp/Spot Positions)
+Last session: 2026-03-12T13:31:57.831Z
+Stopped at: Completed Phase 397 (Admin Dashboard UX) - milestone v31.13 complete
 Resume file: None
