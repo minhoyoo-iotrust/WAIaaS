@@ -97,8 +97,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 396-01-PLAN.md — HyperliquidPerpProvider IPositionProvider 구현 (Info API 오픈 포지션 조회, metadata 매핑, 단위 테스트)
-- [ ] 396-02-PLAN.md — HyperliquidSpotProvider IPositionProvider 구현 + duck-type 자동 등록 + PositionTracker PERP 통합 테스트
+- [x] 396-01-PLAN.md — HyperliquidPerpProvider IPositionProvider 구현 (Info API 오픈 포지션 조회, metadata 매핑, 단위 테스트)
+- [x] 396-02-PLAN.md — HyperliquidSpotProvider IPositionProvider 구현 + duck-type 자동 등록 + PositionTracker PERP 통합 테스트
 
 ### Phase 397: Admin Dashboard UX
 **Goal**: Admin Dashboard에서 모든 DeFi 포지션을 카테고리별/프로바이더별로 직관적으로 조회하고, 위험 상태를 즉시 인지할 수 있다
@@ -110,11 +110,11 @@ Plans:
   3. worst Health Factor가 임계값 미만일 때 대시보드 상단에 경고 배너가 표시된다
   4. 특정 지갑의 포지션만 필터링하여 조회할 수 있다
   5. 30초 주기 자동 새로고침이 동작한다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 397-01: 카테고리 필터 탭 + 지갑 필터 + 자동 새로고침 구현
-- [ ] 397-02: 프로바이더 그룹핑 + 카테고리별 맞춤 상세 UI + HF 경고 배너 + Admin API/UI 테스트
+- [ ] 397-01-PLAN.md — Admin API 확장 (metadata + category 필터) + Dashboard 카테고리 탭 + 지갑 필터 + HF 경고 배너
+- [ ] 397-02-PLAN.md — 프로바이더 그룹핑 + 카테고리별 맞춤 상세 UI + Admin API/UI 테스트
 
 ## Progress
 
@@ -132,5 +132,5 @@ Plans:
 | 393. Staking Positions (Lido + Jito) | v31.13 | 2/2 | Complete | 2026-03-12 |
 | 394. Lending Positions (Aave V3) | v31.13 | 1/1 | Complete | 2026-03-12 |
 | 395. Yield Positions (Pendle) | v31.13 | 1/1 | Complete | 2026-03-12 |
-| 396. Perp/Spot Positions (Hyperliquid) | 2/2 | Complete   | 2026-03-12 | - |
+| 396. Perp/Spot Positions (Hyperliquid) | v31.13 | 2/2 | Complete | 2026-03-12 |
 | 397. Admin Dashboard UX | v31.13 | 0/2 | Not started | - |
