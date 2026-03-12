@@ -30,10 +30,10 @@
 
 ### Perp
 
-- [ ] **PERP-01**: `HyperliquidPerpProvider`에 `IPositionProvider` 인터페이스 신규 구현
-- [ ] **PERP-02**: `getPositions()` 신규 작성 — Hyperliquid Info API로 오픈 포지션 조회 (`metadata`: market, side, entryPrice, markPrice, leverage, unrealizedPnl, liquidationPrice, marginUsed)
-- [ ] **PERP-03**: `HyperliquidSpotProvider`에 `IPositionProvider` 인터페이스 신규 구현 (spot 잔액 포지션)
-- [ ] **PERP-04**: Hyperliquid PositionTracker 자동 등록 (duck-type 감지)
+- [x] **PERP-01**: `HyperliquidPerpProvider`에 `IPositionProvider` 인터페이스 신규 구현
+- [x] **PERP-02**: `getPositions()` 신규 작성 — Hyperliquid Info API로 오픈 포지션 조회 (`metadata`: market, side, entryPrice, markPrice, leverage, unrealizedPnl, liquidationPrice, marginUsed)
+- [x] **PERP-03**: `HyperliquidSpotProvider`에 `IPositionProvider` 인터페이스 신규 구현 (spot 잔액 포지션)
+- [x] **PERP-04**: Hyperliquid PositionTracker 자동 등록 (duck-type 감지)
 
 ### Dashboard
 
@@ -46,8 +46,8 @@
 
 ### Test
 
-- [ ] **TEST-01**: 각 프로바이더 `getPositions()` 단위 테스트 (모킹된 RPC/API 응답 기반)
-- [ ] **TEST-02**: PositionTracker 통합 테스트 — 신규 프로바이더 등록 후 동기화 확인
+- [x] **TEST-01**: 각 프로바이더 `getPositions()` 단위 테스트 (모킹된 RPC/API 응답 기반)
+- [x] **TEST-02**: PositionTracker 통합 테스트 — 신규 프로바이더 등록 후 동기화 확인
 - [ ] **TEST-03**: Admin API 테스트 — 카테고리별 필터링, 집계 정확성
 - [ ] **TEST-04**: Admin UI 컴포넌트 테스트 — 필터 탭, 그룹핑, 경고 배너
 
@@ -79,18 +79,18 @@
 | YIELD-01 | Phase 395 | Complete |
 | YIELD-02 | Phase 395 | Complete |
 | YIELD-03 | Phase 395 | Complete |
-| PERP-01 | Phase 396 | Pending |
-| PERP-02 | Phase 396 | Pending |
-| PERP-03 | Phase 396 | Pending |
-| PERP-04 | Phase 396 | Pending |
+| PERP-01 | Phase 396 | Complete |
+| PERP-02 | Phase 396 | Complete |
+| PERP-03 | Phase 396 | Complete |
+| PERP-04 | Phase 396 | Complete |
 | DASH-01 | Phase 397 | Pending |
 | DASH-02 | Phase 397 | Pending |
 | DASH-03 | Phase 397 | Pending |
 | DASH-04 | Phase 397 | Pending |
 | DASH-05 | Phase 397 | Pending |
 | DASH-06 | Phase 397 | Pending |
-| TEST-01 | Phase 393-396 | Pending |
-| TEST-02 | Phase 393-396 | Pending |
+| TEST-01 | Phase 393-396 | Complete |
+| TEST-02 | Phase 393-396 | Complete |
 | TEST-03 | Phase 397 | Pending |
 | TEST-04 | Phase 397 | Pending |
 

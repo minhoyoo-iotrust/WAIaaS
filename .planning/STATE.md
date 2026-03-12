@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v31.13
 milestone_name: DeFi 포지션 대시보드 완성
 status: active
-stopped_at: null
-last_updated: "2026-03-12T13:01:00.000Z"
-last_activity: 2026-03-12 — Phase 395 complete (Yield Positions)
+stopped_at: Completed Phase 396 (Perp/Spot Positions)
+last_updated: "2026-03-12T13:16:05.585Z"
+last_activity: 2026-03-12 — Phase 396 complete (Perp/Spot Positions)
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 8
-  completed_plans: 4
-  percent: 50
+  completed_plans: 6
+  percent: 75
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-12)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Phase 396 — Perp/Spot Positions (Hyperliquid)
+**Current focus:** Phase 397 — Admin Dashboard UX
 
 ## Current Position
 
-Phase: 396 of 397 (Perp/Spot Positions)
+Phase: 397 of 397 (Admin Dashboard UX)
 Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-03-12 — Phase 395 complete (Yield Positions)
+Status: Ready to execute
+Last activity: 2026-03-12 — Phase 396 complete (Perp/Spot Positions)
 
-Progress: [█████░░░░░] 50%
+Progress: [████████░░] 75%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: ~4.5 min
-- Total execution time: ~18 min
+- Total plans completed: 6
+- Average duration: ~4 min
+- Total execution time: ~23 min
 
 ## Accumulated Context
 
@@ -58,6 +58,10 @@ Progress: [█████░░░░░] 50%
 - D13: amountUsd set to null for Pendle PT/YT (no simple on-chain oracle for PT/YT pricing)
 - D14: Only ethereum-mainnet queried for Pendle positions (primary chain, single rpcUrl)
 - D15: Local encodeBalanceOfCalldata/ethCallUint256/formatWei helpers (same pattern as Lido)
+- [Phase 396]: D16: markPrice from getAllMidPrices() for amountUsd calculation
+- [Phase 396]: D17: null amountUsd when mid price unavailable
+- [Phase 396]: D18: Hyperliquid spot balances classified as PERP category
+- [Phase 396]: D19: USDC 1:1 pricing, others via mid-price lookup
 
 ### Pending Todos
 
@@ -69,6 +73,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-12
-Stopped at: Completed 395-01-PLAN.md (Phase 395 complete)
+Last session: 2026-03-12T13:16:05.582Z
+Stopped at: Completed Phase 396 (Perp/Spot Positions)
 Resume file: None
