@@ -69,3 +69,58 @@ export function encodeRequestWithdrawalsCalldata(
 
 // Re-export encodeApproveCalldata from common module for backward compatibility
 export { encodeApproveCalldata };
+
+// ---------------------------------------------------------------------------
+// wstETH contract addresses
+// ---------------------------------------------------------------------------
+
+/** wstETH mainnet contract address. */
+export const WSTETH_MAINNET = '0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0';
+
+/** wstETH Holesky testnet contract address. */
+export const WSTETH_HOLESKY = '0x8d09a4502Cc8Cf1547aD300E066060D043f6982D';
+
+// ---------------------------------------------------------------------------
+// balanceOf(address) -- function selector 0x70a08231
+// ---------------------------------------------------------------------------
+
+/**
+ * Encode ERC-20 balanceOf(address) calldata.
+ *
+ * @param address - 0x-prefixed Ethereum address
+ * @returns ABI-encoded calldata with 0x prefix
+ */
+export function encodeBalanceOfCalldata(address: string): string {
+  const selector = '0x70a08231';
+  const paddedAddress = addressToHex(address);
+  return `${selector}${paddedAddress}`;
+}
+
+// ---------------------------------------------------------------------------
+// stEthPerToken() -- function selector 0x035faf82
+// ---------------------------------------------------------------------------
+
+/**
+ * Encode wstETH stEthPerToken() view function calldata.
+ * No arguments, returns the current stETH:wstETH exchange rate.
+ *
+ * @returns 4-byte selector with 0x prefix
+ */
+export function encodeStEthPerTokenCalldata(): string {
+  return '0x035faf82';
+}
+
+// ---------------------------------------------------------------------------
+// Decode uint256 result from eth_call
+// ---------------------------------------------------------------------------
+
+/**
+ * Parse a raw eth_call result (0x-prefixed hex) into a bigint.
+ *
+ * @param hex - 0x-prefixed hex string from eth_call result
+ * @returns Decoded bigint value
+ */
+export function decodeUint256Result(hex: string): bigint {
+  const stripped = hex.startsWith('0x') ? hex.slice(2) : hex;
+  return BigInt('0x' + stripped);
+}
