@@ -8,6 +8,17 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
+## Current Milestone: v31.13 DeFi 포지션 대시보드 완성
+
+**Goal:** 미구현 5개 DeFi 프로바이더의 `getPositions()` 로직을 구현하고, Admin Dashboard에서 모든 DeFi 포지션을 카테고리별·프로바이더별로 조회할 수 있도록 완성한다.
+
+**Target features:**
+- Lido/Jito 스테이킹 포지션 추적 (IPositionProvider 구현)
+- Aave V3 렌딩 포지션 추적 (빈 getPositions() 완성, Health Factor)
+- Pendle Yield 포지션 추적 (PT/YT 잔액, 만기 정보)
+- Hyperliquid Perp/Spot 포지션 추적 (Info API 신규 구현)
+- Admin Dashboard UX 개선 (카테고리 필터, 프로바이더 그룹핑, 경고 배너)
+
 ## Previous Milestone: v31.12 External Action 프레임워크 구현 — SHIPPED 2026-03-12
 
 doc-81 설계 기반 External Action 프레임워크 전체 구현. ResolvedAction 3-kind Zod discriminatedUnion(contractCall/signedData/signedHttp, backward-compatible normalization), ISignerCapability 7-scheme registry(EIP-712/PersonalSign/ERC-8128 어댑터 + HMAC/RSA-PSS/ECDSA/Ed25519 신규), CredentialVault(AES-256-GCM 암호화, HKDF 도메인 분리, per-wallet/global scope, REST 8 endpoints, re-encrypt on password change), Venue Whitelist + Action Category Limit 정책(default-deny venue, 카테고리별 daily/monthly/per_action USD 한도), Kind-based 파이프라인 라우팅(signedData/signedHttp → credential→policy→DB→sign→track→audit), AsyncTrackingResult 9-state, DB v55-v57(wallet_credentials + transactions action columns + composite index), Admin UI 4페이지(Credentials/External Actions/Venue Whitelist/Category Limit) + MCP 2도구 + SDK 6메서드 + skill files 4종. Known gaps: TRACK-02(bridge_status rename deferred), TRACK-03(ExternalActionTracker class deferred), TRACK-05(EventBus events deferred). 7 phases, 15 plans, 57/60 requirements, 57 commits, 144 files, +15,780/-263 lines, ~219 new tests.
