@@ -273,20 +273,121 @@ describe('PositionTracker', () => {
     const mockSettingsService = {
       get: vi.fn().mockReturnValue('not-a-number'),
     } as any;
-    
+
     const trackerWithSettings = new PositionTracker({
       sqlite,
       settingsService: mockSettingsService,
     });
-    
+
     const setIntervalSpy = vi.spyOn(global, 'setInterval');
     trackerWithSettings.start();
-    
+
     // LENDING should use default 300000ms since parsed value is NaN
     const lendingCall = setIntervalSpy.mock.calls.find(call => call[1] === 300_000);
     expect(lendingCall).toBeDefined();
-    
+
     setIntervalSpy.mockRestore();
     trackerWithSettings.stop();
+  });
+
+  // -------------------------------------------------------------------------
+  // STAKING category tests
+  // -------------------------------------------------------------------------
+
+  describe('STAKING category', () => {
+    it('syncCategory(STAKING) fetches from STAKING providers and writes to DB', async () => {
+      const stakingProvider = makeMockProvider({
+        name: 'lido_staking',
+        categories: ['STAKING'],
+        getPositions: vi.fn().mockResolvedValue([{
+          walletId: 'wallet-1',
+          category: 'STAKING' as PositionCategory,
+          provider: 'lido_staking',
+          chain: 'ethereum',
+          network: 'ethereum-mainnet',
+          assetId: 'eip155:1/erc20:0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84',
+          amount: '1.5',
+          amountUsd: 2800,
+          metadata: { token: 'stETH', underlyingAmount: '1.5' },
+          status: 'ACTIVE',
+          openedAt: Math.floor(Date.now() / 1000),
+        }] as PositionUpdate[]),
+      });
+
+      tracker.registerProvider(stakingProvider);
+      await tracker.syncCategory('STAKING');
+
+      expect(stakingProvider.getPositions).toHaveBeenCalled();
+      const rows = sqlite.prepare("SELECT * FROM defi_positions WHERE provider = 'lido_staking'").all();
+      expect(rows.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('multiple STAKING providers synced together', async () => {
+      const lidoProvider = makeMockProvider({
+        name: 'lido_staking',
+        categories: ['STAKING'],
+        getPositions: vi.fn().mockResolvedValue([{
+          walletId: 'wallet-1',
+          category: 'STAKING' as PositionCategory,
+          provider: 'lido_staking',
+          chain: 'ethereum',
+          network: 'ethereum-mainnet',
+          assetId: 'eip155:1/erc20:0xsteth',
+          amount: '1.0',
+          amountUsd: 1800,
+          metadata: { token: 'stETH' },
+          status: 'ACTIVE',
+          openedAt: Math.floor(Date.now() / 1000),
+        }] as PositionUpdate[]),
+      });
+
+      const jitoProvider = makeMockProvider({
+        name: 'jito_staking',
+        categories: ['STAKING'],
+        getPositions: vi.fn().mockResolvedValue([{
+          walletId: 'wallet-1',
+          category: 'STAKING' as PositionCategory,
+          provider: 'jito_staking',
+          chain: 'solana',
+          network: 'solana-mainnet',
+          assetId: 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:jitoSOL',
+          amount: '5.0',
+          amountUsd: 900,
+          metadata: { token: 'jitoSOL' },
+          status: 'ACTIVE',
+          openedAt: Math.floor(Date.now() / 1000),
+        }] as PositionUpdate[]),
+      });
+
+      tracker.registerProvider(lidoProvider);
+      tracker.registerProvider(jitoProvider);
+      await tracker.syncCategory('STAKING');
+
+      expect(lidoProvider.getPositions).toHaveBeenCalled();
+      expect(jitoProvider.getPositions).toHaveBeenCalled();
+    });
+
+    it('STAKING provider not called for LENDING sync', async () => {
+      const stakingProvider = makeMockProvider({
+        name: 'lido_staking',
+        categories: ['STAKING'],
+      });
+
+      tracker.registerProvider(stakingProvider);
+      await tracker.syncCategory('LENDING');
+
+      expect(stakingProvider.getPositions).not.toHaveBeenCalled();
+    });
+
+    it('duck-type detection compatible (plain object accepted by registerProvider)', () => {
+      const duckProvider = {
+        getPositions: vi.fn().mockResolvedValue([]),
+        getProviderName: () => 'duck_staking',
+        getSupportedCategories: () => ['STAKING'] as PositionCategory[],
+      };
+
+      tracker.registerProvider(duckProvider as unknown as IPositionProvider);
+      expect(tracker.providerCount).toBe(1);
+    });
   });
 });
