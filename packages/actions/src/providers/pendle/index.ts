@@ -24,7 +24,7 @@ import type {
   PositionCategory,
 } from '@waiaas/core';
 import { PendleApiClient } from './pendle-api-client.js';
-import { type PendleConfig, PENDLE_DEFAULTS, getPendleChainId, PENDLE_CHAIN_ID_MAP } from './config.js';
+import { type PendleConfig, PENDLE_DEFAULTS, getPendleChainId } from './config.js';
 import type { PendleMarket } from './schemas.js';
 import { formatCaip19 } from '@waiaas/core';
 import { addressToHex } from '../../common/contract-encoding.js';

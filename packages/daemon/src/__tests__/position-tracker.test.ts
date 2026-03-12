@@ -507,4 +507,99 @@ describe('PositionTracker', () => {
       expect(tracker.providerCount).toBe(1);
     });
   });
+
+  // -------------------------------------------------------------------------
+  // YIELD category tests (Phase 395)
+  // -------------------------------------------------------------------------
+
+  describe('YIELD category', () => {
+    it('YIELD provider registration and sync writes positions to DB', async () => {
+      const now = Math.floor(Date.now() / 1000);
+      const yieldProvider = makeMockProvider({
+        name: 'pendle',
+        categories: ['YIELD'],
+        getPositions: vi.fn().mockResolvedValue([{
+          walletId: 'wallet-1',
+          category: 'YIELD' as PositionCategory,
+          provider: 'pendle',
+          chain: 'ethereum',
+          network: 'ethereum-mainnet',
+          assetId: 'eip155:1/erc20:0xPTAddr',
+          amount: '1.0',
+          amountUsd: null,
+          metadata: {
+            tokenType: 'PT',
+            maturity: now + 86400 * 365,
+            underlyingAsset: 'stETH',
+            impliedApy: 0.045,
+            marketAddress: '0xMarketAddr',
+          },
+          status: 'ACTIVE',
+          openedAt: now,
+        }] as PositionUpdate[]),
+      });
+
+      tracker.registerProvider(yieldProvider);
+      expect(tracker.providerCount).toBe(1);
+
+      await tracker.syncCategory('YIELD');
+
+      expect(yieldProvider.getPositions).toHaveBeenCalled();
+      const rows = sqlite.prepare("SELECT * FROM defi_positions WHERE provider = 'pendle'").all() as any[];
+      expect(rows.length).toBeGreaterThanOrEqual(1);
+
+      // Verify metadata is preserved
+      const meta = JSON.parse(rows[0].metadata);
+      expect(meta.tokenType).toBe('PT');
+      expect(meta.impliedApy).toBe(0.045);
+      expect(meta.underlyingAsset).toBe('stETH');
+    });
+
+    it('MATURED status is preserved through sync', async () => {
+      const now = Math.floor(Date.now() / 1000);
+      const pastMaturity = now - 86400 * 30; // 30 days ago
+      const yieldProvider = makeMockProvider({
+        name: 'pendle',
+        categories: ['YIELD'],
+        getPositions: vi.fn().mockResolvedValue([{
+          walletId: 'wallet-1',
+          category: 'YIELD' as PositionCategory,
+          provider: 'pendle',
+          chain: 'ethereum',
+          network: 'ethereum-mainnet',
+          assetId: 'eip155:1/erc20:0xMaturedPT',
+          amount: '2.5',
+          amountUsd: null,
+          metadata: {
+            tokenType: 'PT',
+            maturity: pastMaturity,
+            underlyingAsset: 'stETH',
+            impliedApy: 0,
+            marketAddress: '0xMaturedMarket',
+          },
+          status: 'MATURED',
+          openedAt: now,
+        }] as PositionUpdate[]),
+      });
+
+      tracker.registerProvider(yieldProvider);
+      await tracker.syncCategory('YIELD');
+
+      const rows = sqlite.prepare("SELECT * FROM defi_positions WHERE provider = 'pendle'").all() as any[];
+      expect(rows.length).toBeGreaterThanOrEqual(1);
+      expect(rows[0].status).toBe('MATURED');
+    });
+
+    it('YIELD provider not called for LENDING sync', async () => {
+      const yieldProvider = makeMockProvider({
+        name: 'pendle',
+        categories: ['YIELD'],
+      });
+
+      tracker.registerProvider(yieldProvider);
+      await tracker.syncCategory('LENDING');
+
+      expect(yieldProvider.getPositions).not.toHaveBeenCalled();
+    });
+  });
 });
