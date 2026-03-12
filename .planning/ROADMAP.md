@@ -80,10 +80,10 @@ Plans:
   1. Pendle 프로바이더가 PT 잔액을 YIELD 포지션으로 반환하며 maturity, underlyingAsset, impliedApy를 포함한다
   2. Pendle 프로바이더가 YT 잔액을 YIELD 포지션으로 반환하며 maturity, underlyingAsset, impliedApy를 포함한다
   3. 만기일이 경과한 포지션은 status가 MATURED로 자동 전환된다
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 395-01: Pendle getPositions() 완성 (PT/YT 잔액 조회, 만기 상태 전환, implied APY) + 테스트
+- [ ] 395-01-PLAN.md — Pendle getPositions() 완성 (PT/YT 잔액 조회, 만기 상태 전환, implied APY) + 테스트
 
 ### Phase 396: Perp/Spot Positions (Hyperliquid)
 **Goal**: Hyperliquid Perp 오픈 포지션과 Spot 잔액이 신규 구현되어 추적된다
