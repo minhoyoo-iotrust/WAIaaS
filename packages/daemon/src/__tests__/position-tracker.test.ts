@@ -602,4 +602,163 @@ describe('PositionTracker', () => {
       expect(yieldProvider.getPositions).not.toHaveBeenCalled();
     });
   });
+
+  // -------------------------------------------------------------------------
+  // PERP category tests (Phase 396 - Hyperliquid)
+  // -------------------------------------------------------------------------
+
+  describe('PERP category sync (Hyperliquid)', () => {
+    it('syncs PERP positions from hyperliquid_perp provider', async () => {
+      const now = Math.floor(Date.now() / 1000);
+      const perpProvider = makeMockProvider({
+        name: 'hyperliquid_perp',
+        categories: ['PERP'],
+        getPositions: vi.fn().mockResolvedValue([
+          {
+            walletId: 'wallet-1',
+            category: 'PERP' as PositionCategory,
+            provider: 'hyperliquid_perp',
+            chain: 'ethereum',
+            network: 'ethereum-mainnet',
+            assetId: null,
+            amount: '1.5',
+            amountUsd: 3150,
+            metadata: { market: 'ETH', side: 'LONG', entryPrice: 2000, markPrice: 2100, leverage: 10, unrealizedPnl: 150, liquidationPrice: 1800, marginUsed: 300 },
+            status: 'ACTIVE',
+            openedAt: now,
+          },
+          {
+            walletId: 'wallet-1',
+            category: 'PERP' as PositionCategory,
+            provider: 'hyperliquid_perp',
+            chain: 'ethereum',
+            network: 'ethereum-mainnet',
+            assetId: null,
+            amount: '0.5',
+            amountUsd: 20500,
+            metadata: { market: 'BTC', side: 'SHORT', entryPrice: 42000, markPrice: 41000, leverage: 5, unrealizedPnl: 500, liquidationPrice: 45000, marginUsed: 4100 },
+            status: 'ACTIVE',
+            openedAt: now,
+          },
+        ] as PositionUpdate[]),
+      });
+
+      tracker.registerProvider(perpProvider);
+      await tracker.syncCategory('PERP');
+
+      expect(perpProvider.getPositions).toHaveBeenCalled();
+      const rows = sqlite.prepare("SELECT * FROM defi_positions WHERE category = 'PERP' AND provider = 'hyperliquid_perp'").all() as any[];
+      expect(rows.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('syncs PERP positions from both hyperliquid_perp and hyperliquid_spot providers', async () => {
+      const now = Math.floor(Date.now() / 1000);
+
+      const perpProvider = makeMockProvider({
+        name: 'hyperliquid_perp',
+        categories: ['PERP'],
+        getPositions: vi.fn().mockResolvedValue([{
+          walletId: 'wallet-1',
+          category: 'PERP' as PositionCategory,
+          provider: 'hyperliquid_perp',
+          chain: 'ethereum',
+          network: 'ethereum-mainnet',
+          assetId: null,
+          amount: '1.0',
+          amountUsd: 2000,
+          metadata: { market: 'ETH', side: 'LONG' },
+          status: 'ACTIVE',
+          openedAt: now,
+        }] as PositionUpdate[]),
+      });
+
+      const spotProvider = makeMockProvider({
+        name: 'hyperliquid_spot',
+        categories: ['PERP'],
+        getPositions: vi.fn().mockResolvedValue([
+          {
+            walletId: 'wallet-1',
+            category: 'PERP' as PositionCategory,
+            provider: 'hyperliquid_spot',
+            chain: 'ethereum',
+            network: 'ethereum-mainnet',
+            assetId: null,
+            amount: '100.5',
+            amountUsd: 2512.5,
+            metadata: { coin: 'HYPE', total: '100.5', hold: '0', tokenIndex: 1 },
+            status: 'ACTIVE',
+            openedAt: now,
+          },
+          {
+            walletId: 'wallet-1',
+            category: 'PERP' as PositionCategory,
+            provider: 'hyperliquid_spot',
+            chain: 'ethereum',
+            network: 'ethereum-mainnet',
+            assetId: null,
+            amount: '500.0',
+            amountUsd: 500,
+            metadata: { coin: 'USDC', total: '500.0', hold: '50', tokenIndex: 0 },
+            status: 'ACTIVE',
+            openedAt: now,
+          },
+        ] as PositionUpdate[]),
+      });
+
+      tracker.registerProvider(perpProvider);
+      tracker.registerProvider(spotProvider);
+      await tracker.syncCategory('PERP');
+
+      expect(perpProvider.getPositions).toHaveBeenCalled();
+      expect(spotProvider.getPositions).toHaveBeenCalled();
+      const rows = sqlite.prepare("SELECT * FROM defi_positions WHERE category = 'PERP'").all() as any[];
+      expect(rows.length).toBeGreaterThanOrEqual(2); // At least 2 providers' positions
+    });
+
+    it('duck-type detection: plain object with 3 methods is accepted', async () => {
+      const duckPerpProvider = {
+        getPositions: vi.fn().mockResolvedValue([{
+          walletId: 'wallet-1',
+          category: 'PERP' as PositionCategory,
+          provider: 'duck_perp',
+          chain: 'ethereum',
+          network: 'ethereum-mainnet',
+          assetId: null,
+          amount: '1.0',
+          amountUsd: 2000,
+          metadata: { market: 'ETH', side: 'LONG' },
+          status: 'ACTIVE',
+          openedAt: Math.floor(Date.now() / 1000),
+        }] as PositionUpdate[]),
+        getProviderName: () => 'duck_perp',
+        getSupportedCategories: () => ['PERP'] as PositionCategory[],
+      };
+
+      tracker.registerProvider(duckPerpProvider as unknown as IPositionProvider);
+      expect(tracker.providerCount).toBe(1);
+
+      await tracker.syncCategory('PERP');
+      expect(duckPerpProvider.getPositions).toHaveBeenCalled();
+    });
+
+    it('PERP sync does not affect LENDING providers', async () => {
+      const lendingProvider = makeMockProvider({
+        name: 'aave_v3',
+        categories: ['LENDING'],
+      });
+
+      const perpProvider = makeMockProvider({
+        name: 'hyperliquid_perp',
+        categories: ['PERP'],
+        getPositions: vi.fn().mockResolvedValue([]),
+      });
+
+      tracker.registerProvider(lendingProvider);
+      tracker.registerProvider(perpProvider);
+      await tracker.syncCategory('PERP');
+
+      expect(perpProvider.getPositions).toHaveBeenCalled();
+      expect(lendingProvider.getPositions).not.toHaveBeenCalled();
+    });
+  });
 });
