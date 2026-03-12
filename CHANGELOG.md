@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.11.0-rc.2](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.1...v2.11.0-rc.2) (2026-03-12)
+
+
+### Features
+
+* **393-01:** implement IPositionProvider on LidoStakingActionProvider ([29d42b2](https://github.com/minhoyoo-iotrust/WAIaaS/commit/29d42b2eb17421f63439394575d6a9c73b55fcc2))
+* **393-02:** implement IPositionProvider on JitoStakingActionProvider ([ac76c5a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ac76c5a7e1ea66616afd70c05df1af5480b216a7))
+* **394-01:** implement Aave V3 getPositions with Supply/Borrow/HF/Oracle ([2a98097](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2a98097578131a12b5e1c8dbcf7509e667a655a2))
+* **395-01:** implement Pendle getPositions() with PT/YT balance tracking ([0fcfea5](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0fcfea5b1c5d163f25b917432d74cb5d64367ab7))
+* **396-01:** add IPositionProvider to HyperliquidPerpProvider ([5622308](https://github.com/minhoyoo-iotrust/WAIaaS/commit/562230833b5a852d655129fa31af29d597442f73))
+* **396-02:** add IPositionProvider to HyperliquidSpotProvider ([585cd41](https://github.com/minhoyoo-iotrust/WAIaaS/commit/585cd41fd8a44d1c8c89b91cbb65c5d7159de301))
+* **397-01:** add category tabs, wallet filter, HF warning banner to dashboard ([39f7847](https://github.com/minhoyoo-iotrust/WAIaaS/commit/39f7847d46e42fad89cf71cca0e3b1fc51a24f8a))
+* **397-01:** add metadata field and category filter to admin defi positions API ([30f608b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/30f608b7b48afc98a84706e69a669db0018fcc9f))
+* **397-02:** add provider grouping and category-specific detail columns ([1af4bfe](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1af4bfee488dbf63466c161e98d9c68783846de1))
+
+
+### Bug Fixes
+
+* remove unused type imports in Hyperliquid test files ([b4ab742](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b4ab742aaf486bdb80f404174501ec9f9fee1f4e))
+
 ## [2.11.0-rc.1](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc...v2.11.0-rc.1) (2026-03-12)
 
 
