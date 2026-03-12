@@ -850,6 +850,46 @@
 
 ---
 
+## Milestone: v31.13 — DeFi 포지션 대시보드 완성
+
+**Shipped:** 2026-03-12
+**Phases:** 5 | **Plans:** 8 | **Sessions:** 1
+
+### What Was Built
+- Lido stETH/wstETH + Jito jitoSOL 스테이킹 포지션 추적 (wstETH→stETH/jitoSOL→SOL 환산 비율, duck-type 자동 등록)
+- Aave V3 Supply/Borrow 포지션 추적 (aToken/debtToken, Health Factor, Aave Oracle USD 환산)
+- Pendle PT/YT Yield 포지션 추적 (balanceOf 조회, MATURED 자동 전환, implied APY)
+- Hyperliquid Perp 오픈 포지션 + Spot 잔액 신규 구현 (Info API 기반, 8 metadata 필드, mid-price USD)
+- Admin Dashboard UX: 카테고리 필터(5탭), 프로바이더 그룹핑, 카테고리별 맞춤 상세 컬럼, HF 경고 배너, 지갑 필터, 30초 새로고침
+
+### What Worked
+- IPositionProvider duck-type 패턴 재사용 — 5개 프로바이더 모두 동일 패턴으로 빠르게 구현
+- raw fetch + manual ABI 인코딩 패턴(Lido에서 확립)이 Aave/Pendle에서 그대로 재사용 — viem/SDK 의존 없이 경량 구현
+- 기존 PositionTracker 인프라가 프로바이더 추가만으로 자동 작동 — daemon.ts duck-type 감지가 등록 자동화
+- Admin Dashboard 기존 signal 패턴 재활용으로 필터/새로고침 빠르게 구현
+
+### What Was Inefficient
+- summary-extract CLI가 null 반환 — SUMMARY.md frontmatter 포맷이 도구와 불일치, 수동 추출 필요
+- ROADMAP.md Phase 397 plan 체크박스 미갱신 상태로 남음 — 수동 수정 필요 (반복 이슈)
+
+### Patterns Established
+- raw fetch eth_call 패턴: viem 없이 EVM RPC 직접 호출 + manual ABI encode/decode — 경량 의존성
+- SPL Stake Pool u64 LE 파싱: byte offset 258/266에서 exchange rate 직접 추출
+- 프로바이더별 Oracle 가격 패턴: 각 프로바이더 내부 가격 소스 사용 (Aave Oracle, mid-price 등)
+- Admin Dashboard 카테고리별 컬럼 빌더: buildCategoryColumns switch 패턴
+
+### Key Lessons
+1. duck-type 자동 등록은 Provider 추가 시 boilerplate를 제거 — 새 프로바이더가 인터페이스만 맞추면 자동 통합
+2. 프로바이더별 내장 오라클 활용이 통합 가격 서비스보다 실용적 — 프로토콜별 가격 소스가 더 정확하고 추가 의존성 없음
+3. 포지션 추적은 DB/API 변경 없이 프로바이더 로직만으로 완성 가능 — 기존 인프라 설계의 확장성 입증
+
+### Cost Observations
+- Model mix: ~100% opus (quality profile)
+- Sessions: 1
+- Notable: 44 파일, +5,985/-139 lines, ~5시간 완료 — 5 phases 전체 1세션 완료, 기존 IPositionProvider 인프라 재활용이 핵심
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -878,6 +918,7 @@
 | v31.10 | 1 | 5 | 코드베이스 품질 개선(순수 리팩토링), 89 파일 1일 완료 |
 | v31.11 | 1 | 6 | 설계 전용(External Action 프레임워크), 60 파일 1.1시간 완료 |
 | v31.12 | 1 | 7 | External Action 프레임워크 구현(풀스택), 144 파일 4.5시간 완료 |
+| v31.13 | 1 | 5 | DeFi 포지션 대시보드 완성(5개 프로바이더 getPositions), 44 파일 5시간 완료 |
 
 ### Cumulative Quality
 
@@ -905,6 +946,7 @@
 | v31.10 | ~7,454 (unchanged) | maintained | +12 decisions |
 | v31.11 | ~7,454 (unchanged) | unchanged | +36 decisions |
 | v31.12 | ~7,673 (+219) | maintained | +23 decisions |
+| v31.13 | ~7,861 (+188) | maintained | +21 decisions |
 
 ### Top Lessons (Verified Across Milestones)
 

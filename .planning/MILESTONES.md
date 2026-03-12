@@ -1,5 +1,27 @@
 # Project Milestones: WAIaaS
 
+## v31.13 DeFi 포지션 대시보드 완성 (Shipped: 2026-03-12)
+
+**Phases completed:** 393-397 (5 phases, 8 plans, 27 requirements)
+
+**Key accomplishments:**
+
+- Lido stETH/wstETH + Jito jitoSOL 스테이킹 포지션 추적 — wstETH→stETH/jitoSOL→SOL 환산 비율 포함, duck-type 자동 등록
+- Aave V3 Supply/Borrow 포지션 추적 — aToken/debtToken 잔액, Health Factor, Aave Oracle 가격 기반 USD 환산
+- Pendle PT/YT Yield 포지션 추적 — balanceOf 조회, MATURED 자동 전환, implied APY 포함
+- Hyperliquid Perp 오픈 포지션 + Spot 잔액 신규 구현 — Info API 기반 8 metadata 필드, mid-price USD 환산
+- Admin Dashboard UX — 카테고리 필터(5탭), 프로바이더 그룹핑, 카테고리별 맞춤 상세 컬럼, HF 경고 배너, 지갑 필터, 30초 자동 새로고침
+
+**Stats:**
+
+- 5 phases (393-397), 8 plans, 27 requirements complete
+- 28 commits, 44 files changed, +5,985 / -139 lines
+- ~188 tests (27 integration + 8 API + 11 UI + 142 provider unit)
+- Timeline: ~5 hours (2026-03-12)
+- Git range: feat(393-01) → docs(v31.13)
+
+---
+
 ## v31.12 External Action 프레임워크 구현 (Shipped: 2026-03-12)
 
 **Phases completed:** 386-392 (7 phases, 15 plans, 60 requirements)
