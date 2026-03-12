@@ -7,7 +7,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { HyperliquidSpotProvider } from '../spot-provider.js';
 import type { HyperliquidExchangeClient } from '../exchange-client.js';
 import type { HyperliquidMarketData } from '../market-data.js';
-import type { ActionContext } from '@waiaas/core';
+import type { ActionContext, PositionUpdate, PositionCategory } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------
 // Mock factories
@@ -300,6 +300,84 @@ describe('HyperliquidSpotProvider', () => {
         market: 'HYPE/USDC',
       });
       expect(result.amount).toBe(0n);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // IPositionProvider duck-type methods
+  // -------------------------------------------------------------------------
+
+  describe('IPositionProvider', () => {
+    it('getProviderName returns hyperliquid_spot', () => {
+      expect(provider.getProviderName()).toBe('hyperliquid_spot');
+    });
+
+    it('getSupportedCategories returns [PERP]', () => {
+      expect(provider.getSupportedCategories()).toEqual(['PERP']);
+    });
+
+    it('getPositions with non-zero balances returns PositionUpdates', async () => {
+      (marketData.getSpotBalances as ReturnType<typeof vi.fn>).mockResolvedValue([
+        { coin: 'HYPE', hold: '0', token: 1, total: '100.5' },
+        { coin: 'USDC', hold: '50', token: 0, total: '500.0' },
+        { coin: 'ETH', hold: '0', token: 2, total: '0' },
+      ]);
+      (marketData.getAllMidPrices as ReturnType<typeof vi.fn>).mockResolvedValue({
+        'HYPE/USDC': '25.0',
+        'ETH': '2000',
+      });
+
+      const positions = await provider.getPositions('wallet-001');
+
+      expect(positions).toHaveLength(2); // ETH filtered out (zero total)
+
+      const hype = positions.find((p) => p.metadata.coin === 'HYPE')!;
+      expect(hype.walletId).toBe('wallet-001');
+      expect(hype.category).toBe('PERP');
+      expect(hype.provider).toBe('hyperliquid_spot');
+      expect(hype.chain).toBe('ethereum');
+      expect(hype.network).toBe('ethereum-mainnet');
+      expect(hype.assetId).toBeNull();
+      expect(hype.amount).toBe('100.5');
+      expect(hype.amountUsd).toBe(2512.5); // 100.5 * 25.0
+      expect(hype.status).toBe('ACTIVE');
+      expect(hype.metadata.coin).toBe('HYPE');
+      expect(hype.metadata.total).toBe('100.5');
+      expect(hype.metadata.hold).toBe('0');
+      expect(hype.metadata.tokenIndex).toBe(1);
+
+      const usdc = positions.find((p) => p.metadata.coin === 'USDC')!;
+      expect(usdc.amount).toBe('500.0');
+      expect(usdc.amountUsd).toBe(500); // USDC = 1:1
+    });
+
+    it('getPositions filters out zero-total balances', async () => {
+      (marketData.getSpotBalances as ReturnType<typeof vi.fn>).mockResolvedValue([
+        { coin: 'HYPE', hold: '0', token: 1, total: '0' },
+        { coin: 'ETH', hold: '0', token: 2, total: '0.0' },
+      ]);
+      (marketData.getAllMidPrices as ReturnType<typeof vi.fn>).mockResolvedValue({});
+
+      const positions = await provider.getPositions('wallet-001');
+      expect(positions).toEqual([]);
+    });
+
+    it('getPositions returns [] on API error', async () => {
+      (marketData.getSpotBalances as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('API down'));
+
+      const positions = await provider.getPositions('wallet-001');
+      expect(positions).toEqual([]);
+    });
+
+    it('getPositions returns amountUsd null when no mid price available', async () => {
+      (marketData.getSpotBalances as ReturnType<typeof vi.fn>).mockResolvedValue([
+        { coin: 'RARE', hold: '0', token: 5, total: '10.0' },
+      ]);
+      (marketData.getAllMidPrices as ReturnType<typeof vi.fn>).mockResolvedValue({});
+
+      const positions = await provider.getPositions('wallet-001');
+      expect(positions).toHaveLength(1);
+      expect(positions[0]!.amountUsd).toBeNull();
     });
   });
 });

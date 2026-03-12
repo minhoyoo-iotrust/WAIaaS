@@ -17,6 +17,8 @@ import type {
   ActionDefinition,
   ActionContext,
   ApiDirectResult,
+  PositionUpdate,
+  PositionCategory,
 } from '@waiaas/core';
 import type { Hex } from 'viem';
 import type { HyperliquidExchangeClient } from './exchange-client.js';
@@ -342,6 +344,67 @@ export class HyperliquidSpotProvider implements IActionProvider {
 
       default:
         return { amount: 0n, asset: 'USDC' };
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // IPositionProvider duck-type methods (for PositionTracker auto-registration)
+  // -------------------------------------------------------------------------
+
+  getProviderName(): string {
+    return 'hyperliquid_spot';
+  }
+
+  getSupportedCategories(): PositionCategory[] {
+    return ['PERP'];
+  }
+
+  async getPositions(walletId: string): Promise<PositionUpdate[]> {
+    try {
+      const [balances, mids] = await Promise.all([
+        this.marketData.getSpotBalances(walletId as Hex),
+        this.marketData.getAllMidPrices(),
+      ]);
+
+      const now = Math.floor(Date.now() / 1000);
+
+      return balances
+        .filter((b) => parseFloat(b.total) !== 0)
+        .map((b) => {
+          // USD conversion: USDC is 1:1, others look up mid price
+          let amountUsd: number | null = null;
+          const total = parseFloat(b.total);
+          if (b.coin === 'USDC') {
+            amountUsd = total;
+          } else {
+            const midStr = mids[`${b.coin}/USDC`] ?? mids[b.coin];
+            if (midStr) {
+              amountUsd = total * parseFloat(midStr);
+            }
+          }
+
+          return {
+            walletId,
+            category: 'PERP' as PositionCategory,
+            provider: 'hyperliquid_spot',
+            chain: 'ethereum',
+            network: 'ethereum-mainnet',
+            assetId: null,
+            amount: b.total,
+            amountUsd,
+            metadata: {
+              coin: b.coin,
+              total: b.total,
+              hold: b.hold,
+              tokenIndex: b.token,
+            },
+            status: 'ACTIVE' as const,
+            openedAt: now,
+            closedAt: null,
+          };
+        });
+    } catch {
+      return [];
     }
   }
 }
