@@ -468,4 +468,124 @@ describe('HyperliquidPerpProvider', () => {
       expect(positions).toHaveLength(0);
     });
   });
+
+  // -------------------------------------------------------------------------
+  // IPositionProvider duck-type methods
+  // -------------------------------------------------------------------------
+
+  describe('IPositionProvider', () => {
+    it('getProviderName returns hyperliquid_perp', () => {
+      expect(provider.getProviderName()).toBe('hyperliquid_perp');
+    });
+
+    it('getSupportedCategories returns [PERP]', () => {
+      expect(provider.getSupportedCategories()).toEqual(['PERP']);
+    });
+
+    it('getPositions with long ETH position returns correct PositionUpdate', async () => {
+      (marketData.getPositions as ReturnType<typeof vi.fn>).mockResolvedValue([
+        {
+          coin: 'ETH',
+          szi: '1.5',
+          entryPx: '2000',
+          leverage: { type: 'cross', value: 10 },
+          unrealizedPnl: '50',
+          marginUsed: '300',
+          liquidationPx: '1800',
+        },
+      ]);
+      (marketData.getAllMidPrices as ReturnType<typeof vi.fn>).mockResolvedValue({ ETH: '2100', BTC: '40000' });
+
+      const positions = await provider.getPositions('wallet-001');
+
+      expect(positions).toHaveLength(1);
+      const pos = positions[0]!;
+      expect(pos.walletId).toBe('wallet-001');
+      expect(pos.category).toBe('PERP');
+      expect(pos.provider).toBe('hyperliquid_perp');
+      expect(pos.chain).toBe('ethereum');
+      expect(pos.network).toBe('ethereum-mainnet');
+      expect(pos.assetId).toBeNull();
+      expect(pos.amount).toBe('1.5');
+      expect(pos.status).toBe('ACTIVE');
+      expect(pos.metadata.market).toBe('ETH');
+      expect(pos.metadata.side).toBe('LONG');
+      expect(pos.metadata.entryPrice).toBe(2000);
+      expect(pos.metadata.markPrice).toBe(2100);
+      expect(pos.metadata.leverage).toBe(10);
+      expect(pos.metadata.unrealizedPnl).toBe(50);
+      expect(pos.metadata.liquidationPrice).toBe(1800);
+      expect(pos.metadata.marginUsed).toBe(300);
+    });
+
+    it('getPositions with short BTC position returns side SHORT', async () => {
+      (marketData.getPositions as ReturnType<typeof vi.fn>).mockResolvedValue([
+        {
+          coin: 'BTC',
+          szi: '-0.5',
+          entryPx: '42000',
+          leverage: { type: 'isolated', value: 5 },
+          unrealizedPnl: '-200',
+          marginUsed: '4200',
+          liquidationPx: '45000',
+        },
+      ]);
+      (marketData.getAllMidPrices as ReturnType<typeof vi.fn>).mockResolvedValue({ BTC: '41000' });
+
+      const positions = await provider.getPositions('wallet-001');
+
+      expect(positions).toHaveLength(1);
+      const pos = positions[0]!;
+      expect(pos.metadata.side).toBe('SHORT');
+      expect(pos.amount).toBe('0.5');
+      expect(pos.metadata.markPrice).toBe(41000);
+    });
+
+    it('getPositions with empty positions returns []', async () => {
+      (marketData.getPositions as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+
+      const positions = await provider.getPositions('wallet-001');
+      expect(positions).toEqual([]);
+    });
+
+    it('getPositions on API error returns []', async () => {
+      (marketData.getPositions as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('API down'));
+
+      const positions = await provider.getPositions('wallet-001');
+      expect(positions).toEqual([]);
+    });
+
+    it('getPositions calculates amountUsd from markPrice', async () => {
+      (marketData.getPositions as ReturnType<typeof vi.fn>).mockResolvedValue([
+        {
+          coin: 'ETH',
+          szi: '2.0',
+          entryPx: '2000',
+          leverage: { type: 'cross', value: 10 },
+          unrealizedPnl: '100',
+          marginUsed: '400',
+          liquidationPx: '1800',
+        },
+      ]);
+      (marketData.getAllMidPrices as ReturnType<typeof vi.fn>).mockResolvedValue({ ETH: '2500' });
+
+      const positions = await provider.getPositions('wallet-001');
+      expect(positions[0]!.amountUsd).toBe(5000); // abs(2.0) * 2500
+    });
+
+    it('getPositions returns amountUsd null when no mid price', async () => {
+      (marketData.getPositions as ReturnType<typeof vi.fn>).mockResolvedValue([
+        {
+          coin: 'DOGE',
+          szi: '1000',
+          entryPx: '0.08',
+          leverage: { type: 'cross', value: 5 },
+        },
+      ]);
+      (marketData.getAllMidPrices as ReturnType<typeof vi.fn>).mockResolvedValue({});
+
+      const positions = await provider.getPositions('wallet-001');
+      expect(positions[0]!.amountUsd).toBeNull();
+    });
+  });
 });

@@ -106,6 +106,7 @@ interface DefiPositionSummary {
     assetId: string | null;
     amount: string;
     amountUsd: number | null;
+    metadata: unknown;
     status: string;
     openedAt: number;
     lastSyncedAt: number;
@@ -114,6 +115,8 @@ interface DefiPositionSummary {
   worstHealthFactor: number | null;
   activeCount: number;
 }
+
+const DEFI_CATEGORIES = ['ALL', 'STAKING', 'LENDING', 'YIELD', 'PERP'] as const;
 
 function StatCard({ label, value, loading, badge, href }: {
   label: string; value: string; loading?: boolean; badge?: 'success' | 'danger' | 'warning'; href?: string;
@@ -206,13 +209,42 @@ function buildTxColumns(
   ];
 }
 
-function buildDefiColumns(
+type DefiPosition = DefiPositionSummary['positions'][number];
+
+function meta(p: { metadata: unknown }): Record<string, unknown> {
+  return p.metadata && typeof p.metadata === 'object' ? (p.metadata as Record<string, unknown>) : {};
+}
+
+const PROVIDER_LABELS: Record<string, string> = {
+  'lido': 'Lido', 'jito': 'Jito', 'aave-v3': 'Aave V3', 'aave_v3': 'Aave V3',
+  'pendle': 'Pendle', 'hyperliquid-perp': 'Hyperliquid Perp',
+  'hyperliquid-spot': 'Hyperliquid Spot', 'kamino': 'Kamino', 'drift': 'Drift',
+};
+
+function providerLabel(key: string): string {
+  return PROVIDER_LABELS[key] ?? key;
+}
+
+function groupByProvider(positions: DefiPosition[]): Map<string, DefiPosition[]> {
+  const groups = new Map<string, DefiPosition[]>();
+  for (const p of positions) {
+    const key = p.provider;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(p);
+  }
+  return groups;
+}
+
+function buildDefiBaseColumns(
   displayCurrency: string,
   displayRate: number | null,
-): Column<DefiPositionSummary['positions'][number]>[] {
-  return [
-    { key: 'provider', header: 'Provider' },
-    { key: 'category', header: 'Category', render: (p) => <Badge variant="info">{p.category}</Badge> },
+  showCategory: boolean,
+): Column<DefiPosition>[] {
+  const cols: Column<DefiPosition>[] = [];
+  if (showCategory) {
+    cols.push({ key: 'category', header: 'Category', render: (p) => <Badge variant="info">{p.category}</Badge> });
+  }
+  cols.push(
     { key: 'chain', header: 'Chain', render: (p) => <Badge variant="info">{p.chain}</Badge> },
     { key: 'amount', header: 'Amount' },
     {
@@ -224,7 +256,77 @@ function buildDefiColumns(
         return display ?? `$${p.amountUsd.toFixed(2)}`;
       },
     },
-  ];
+  );
+  return cols;
+}
+
+function buildCategoryColumns(category: string): Column<DefiPosition>[] {
+  switch (category) {
+    case 'STAKING':
+      return [
+        { key: 'provider', header: 'Protocol', render: (p) => String(meta(p).protocol ?? p.provider) },
+        { key: 'metadata', header: 'Exchange Rate', render: (p) => {
+          const rate = meta(p).exchangeRate;
+          return typeof rate === 'number' ? rate.toFixed(4) : '\u2014';
+        }},
+      ];
+    case 'LENDING':
+      return [
+        { key: 'metadata', header: 'Type', render: (p) => {
+          const posType = String(meta(p).positionType ?? '');
+          return posType ? <Badge variant={posType === 'SUPPLY' ? 'success' : 'warning'}>{posType}</Badge> : '\u2014';
+        }},
+        { key: 'provider', header: 'Health Factor', render: (p) => {
+          const hf = meta(p).healthFactor;
+          if (typeof hf !== 'number') return '\u2014';
+          const variant = hf < 1.2 ? 'danger' : hf < 1.5 ? 'warning' : 'success';
+          return <Badge variant={variant}>{hf.toFixed(2)}</Badge>;
+        }},
+        { key: 'status', header: 'APY', render: (p) => {
+          const apy = meta(p).apy;
+          return typeof apy === 'number' ? `${(apy * 100).toFixed(2)}%` : '\u2014';
+        }},
+      ];
+    case 'YIELD':
+      return [
+        { key: 'metadata', header: 'Token', render: (p) => {
+          const tokenType = String(meta(p).tokenType ?? '');
+          return tokenType ? <Badge variant={tokenType === 'PT' ? 'info' : 'warning'}>{tokenType}</Badge> : '\u2014';
+        }},
+        { key: 'provider', header: 'Maturity', render: (p) => {
+          const maturity = meta(p).maturity;
+          if (typeof maturity !== 'number') return '\u2014';
+          const isPast = maturity * 1000 < Date.now();
+          const dateStr = new Date(maturity * 1000).toLocaleDateString();
+          return isPast ? <Badge variant="danger">MATURED ({dateStr})</Badge> : dateStr;
+        }},
+        { key: 'status', header: 'Implied APY', render: (p) => {
+          const apy = meta(p).impliedApy;
+          return typeof apy === 'number' ? `${(apy * 100).toFixed(2)}%` : '\u2014';
+        }},
+      ];
+    case 'PERP':
+      return [
+        { key: 'metadata', header: 'Market', render: (p) => String(meta(p).market ?? '\u2014') },
+        { key: 'provider', header: 'Side', render: (p) => {
+          const side = String(meta(p).side ?? '');
+          return side ? <Badge variant={side === 'LONG' ? 'success' : 'danger'}>{side}</Badge> : '\u2014';
+        }},
+        { key: 'status', header: 'PnL', render: (p) => {
+          const pnl = meta(p).unrealizedPnl;
+          if (pnl == null) return '\u2014';
+          const num = Number(pnl);
+          if (isNaN(num)) return String(pnl);
+          const cls = num >= 0 ? 'pnl-positive' : 'pnl-negative';
+          return <span class={cls}>{num >= 0 ? '+' : ''}{num.toFixed(2)}</span>;
+        }},
+        { key: 'walletId', header: 'Liq. Price', render: (p) => String(meta(p).liquidationPrice ?? '\u2014') },
+      ];
+    default:
+      return [
+        { key: 'provider', header: 'Provider' },
+      ];
+  }
 }
 
 async function copyToClipboard(text: string): Promise<void> {
@@ -253,6 +355,9 @@ export default function DashboardPage() {
   const approvalCount = useSignal<number | null>(null);
   const defiData = useSignal<DefiPositionSummary | null>(null);
   const defiLoading = useSignal(true);
+  const categoryFilter = useSignal<string>('ALL');
+  const walletFilter = useSignal<string>('');
+  const walletList = useSignal<Array<{ id: string; name: string }>>([]);
   const statsData = useSignal<AdminStats | null>(null);
   const statsLoading = useSignal(true);
 
@@ -270,7 +375,12 @@ export default function DashboardPage() {
   const fetchDefi = async () => {
     defiLoading.value = true;
     try {
-      const result = await apiGet<DefiPositionSummary>(API.ADMIN_DEFI_POSITIONS);
+      const params = new URLSearchParams();
+      if (walletFilter.value) params.set('wallet_id', walletFilter.value);
+      if (categoryFilter.value !== 'ALL') params.set('category', categoryFilter.value);
+      const qs = params.toString();
+      const url = qs ? `${API.ADMIN_DEFI_POSITIONS}?${qs}` : API.ADMIN_DEFI_POSITIONS;
+      const result = await apiGet<DefiPositionSummary>(url);
       defiData.value = result;
     } catch {
       // DeFi positions not available or empty -- keep null
@@ -336,9 +446,23 @@ export default function DashboardPage() {
     apiGet<{ total: number }>(API.ADMIN_TRANSACTIONS + '?status=APPROVED&limit=1')
       .then((res) => { approvalCount.value = res.total; })
       .catch(() => { /* fallback */ });
+    apiGet<{ items: Array<{ id: string; name: string }> }>(API.WALLETS)
+      .then((res) => {
+        const items = Array.isArray(res) ? res : res.items;
+        walletList.value = items.map((w: { id: string; name?: string | null }) => ({
+          id: w.id,
+          name: w.name ?? w.id.slice(0, 8),
+        }));
+      })
+      .catch(() => { /* wallet list unavailable */ });
     const interval = setInterval(() => { fetchStatus(); fetchDefi(); fetchStats(); }, DASHBOARD_POLL_INTERVAL_MS);
     return () => clearInterval(interval);
   }, []);
+
+  // Re-fetch defi data when filters change
+  useEffect(() => {
+    fetchDefi();
+  }, [categoryFilter.value, walletFilter.value]);
 
   const isInitialLoad = loading.value && !data.value;
 
@@ -451,10 +575,45 @@ export default function DashboardPage() {
         )}
       </div>
 
+      {/* HF Warning Banner */}
+      {defiData.value && defiData.value.worstHealthFactor !== null && defiData.value.worstHealthFactor < 1.5 && (
+        <div class="hf-warning-banner" role="alert" style={{ marginTop: 'var(--space-4)' }}>
+          <span class="hf-warning-icon">{'\u26A0'}</span>
+          <span>
+            <strong>Health Factor Warning:</strong>{' '}
+            Worst Health Factor is <strong>{defiData.value.worstHealthFactor.toFixed(2)}</strong>
+            {defiData.value.worstHealthFactor < 1.2 ? ' \u2014 Liquidation risk is HIGH!' : ' \u2014 Monitor closely.'}
+          </span>
+        </div>
+      )}
+
       {/* DeFi Positions Section */}
       {defiData.value && defiData.value.activeCount > 0 && (
         <div style={{ marginTop: 'var(--space-4)' }}>
           <h3 style={{ marginBottom: 'var(--space-3)' }}>DeFi Positions</h3>
+          <div class="defi-filter-row">
+            <div class="defi-category-tabs">
+              {DEFI_CATEGORIES.map((cat) => (
+                <button
+                  key={cat}
+                  class={categoryFilter.value === cat ? 'active' : ''}
+                  onClick={() => { categoryFilter.value = cat; }}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+            <select
+              class="defi-wallet-select"
+              value={walletFilter.value}
+              onChange={(e) => { walletFilter.value = (e.target as HTMLSelectElement).value; }}
+            >
+              <option value="">All Wallets</option>
+              {walletList.value.map((w) => (
+                <option key={w.id} value={w.id}>{w.name}</option>
+              ))}
+            </select>
+          </div>
           <div class="stat-grid">
             <StatCard
               label="Total DeFi Value"
@@ -480,12 +639,24 @@ export default function DashboardPage() {
             />
           </div>
           <div style={{ marginTop: 'var(--space-3)' }}>
-            <Table
-              columns={buildDefiColumns(displayCurrency.value, displayRate.value)}
-              data={defiData.value.positions}
-              loading={defiLoading.value}
-              emptyMessage="No active DeFi positions"
-            />
+            {Array.from(groupByProvider(defiData.value.positions)).map(([providerKey, positions]) => (
+              <div class="defi-provider-group" key={providerKey}>
+                <h4 class="defi-provider-header">{providerLabel(providerKey)}</h4>
+                <Table
+                  columns={[
+                    ...buildDefiBaseColumns(displayCurrency.value, displayRate.value, categoryFilter.value === 'ALL'),
+                    ...buildCategoryColumns(categoryFilter.value === 'ALL' ? '' : categoryFilter.value),
+                  ]}
+                  data={positions}
+                  emptyMessage="No positions"
+                />
+              </div>
+            ))}
+            {defiData.value.positions.length === 0 && (
+              <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 'var(--space-4)' }}>
+                No active DeFi positions
+              </p>
+            )}
           </div>
         </div>
       )}

@@ -284,6 +284,107 @@ export function encodeWithdrawSolData(amountLamports: bigint): string {
 }
 
 // ---------------------------------------------------------------------------
+// Position query helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetch jitoSOL token balance for a wallet via getTokenAccountsByOwner RPC.
+ *
+ * @returns Balance info or null if no token account found
+ */
+export async function getJitoSolBalance(
+  rpcUrl: string,
+  walletAddress: string,
+  jitosolMint: string,
+): Promise<{ amount: bigint; uiAmount: number } | null> {
+  const resp = await fetch(rpcUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'getTokenAccountsByOwner',
+      params: [
+        walletAddress,
+        { mint: jitosolMint },
+        { encoding: 'jsonParsed' },
+      ],
+    }),
+  });
+
+  const json = (await resp.json()) as {
+    result: {
+      value: Array<{
+        account: {
+          data: {
+            parsed: {
+              info: {
+                tokenAmount: {
+                  amount: string;
+                  uiAmount: number;
+                };
+              };
+            };
+          };
+        };
+      }>;
+    };
+  };
+
+  const accounts = json.result?.value;
+  if (!accounts || accounts.length === 0) return null;
+
+  const tokenAmount = accounts[0]!.account.data.parsed.info.tokenAmount;
+  return {
+    amount: BigInt(tokenAmount.amount),
+    uiAmount: tokenAmount.uiAmount,
+  };
+}
+
+/**
+ * Fetch the SPL Stake Pool exchange rate (total_lamports / pool_token_supply).
+ *
+ * SPL Stake Pool account layout:
+ * - total_lamports: u64 LE at byte offset 258
+ * - pool_token_supply: u64 LE at byte offset 266
+ *
+ * @returns Exchange rate as floating point (SOL per pool token)
+ */
+export async function getStakePoolExchangeRate(
+  rpcUrl: string,
+  stakePoolAddress: string,
+): Promise<number> {
+  const resp = await fetch(rpcUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'getAccountInfo',
+      params: [stakePoolAddress, { encoding: 'base64' }],
+    }),
+  });
+
+  const json = (await resp.json()) as {
+    result: {
+      value: {
+        data: [string, string]; // [base64_data, encoding]
+      };
+    };
+  };
+
+  const base64Data = json.result.value.data[0];
+  const buffer = Buffer.from(base64Data, 'base64');
+  const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+
+  const totalLamports = view.getBigUint64(258, true);
+  const poolTokenSupply = view.getBigUint64(266, true);
+
+  if (poolTokenSupply === 0n) return 1.0;
+  return Number(totalLamports) / Number(poolTokenSupply);
+}
+
+// ---------------------------------------------------------------------------
 // Amount parsing
 // ---------------------------------------------------------------------------
 

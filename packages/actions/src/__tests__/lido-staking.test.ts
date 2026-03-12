@@ -2,10 +2,17 @@
  * LidoStakingActionProvider unit tests.
  *
  * Pure ABI encoding tests -- no MSW needed (no external API calls).
+ * IPositionProvider tests use mocked fetch for eth_call RPC.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { LidoStakingActionProvider } from '../providers/lido-staking/index.js';
 import { LIDO_MAINNET_ADDRESSES, LIDO_TESTNET_ADDRESSES, getLidoAddresses } from '../providers/lido-staking/config.js';
+import {
+  encodeBalanceOfCalldata,
+  encodeStEthPerTokenCalldata,
+  decodeUint256Result,
+  WSTETH_MAINNET,
+} from '../providers/lido-staking/lido-contract.js';
 import type { ActionContext } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------
@@ -166,5 +173,178 @@ describe('getLidoAddresses', () => {
     const addrs = getLidoAddresses('testnet');
     expect(addrs.stethAddress).toBe(LIDO_TESTNET_ADDRESSES.stethAddress);
     expect(addrs.withdrawalQueueAddress).toBe(LIDO_TESTNET_ADDRESSES.withdrawalQueueAddress);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ABI encoding helpers
+// ---------------------------------------------------------------------------
+
+describe('Lido ABI encoding helpers', () => {
+  it('encodeBalanceOfCalldata returns 0x70a08231 + padded address', () => {
+    const result = encodeBalanceOfCalldata('0x1234567890123456789012345678901234567890');
+    expect(result).toBe(
+      '0x70a08231' +
+      '0000000000000000000000001234567890123456789012345678901234567890',
+    );
+  });
+
+  it('encodeStEthPerTokenCalldata returns 0x035faf82', () => {
+    const result = encodeStEthPerTokenCalldata();
+    expect(result).toBe('0x035faf82');
+  });
+
+  it('decodeUint256Result parses hex to bigint', () => {
+    const hex = '0x' + '0'.repeat(62) + '0a';
+    expect(decodeUint256Result(hex)).toBe(10n);
+  });
+
+  it('decodeUint256Result parses 1e18 correctly', () => {
+    const value = (10n ** 18n).toString(16).padStart(64, '0');
+    expect(decodeUint256Result('0x' + value)).toBe(10n ** 18n);
+  });
+
+  it('WSTETH_MAINNET is correct address', () => {
+    expect(WSTETH_MAINNET).toBe('0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// IPositionProvider
+// ---------------------------------------------------------------------------
+
+describe('LidoStakingActionProvider IPositionProvider', () => {
+  const STETH_ADDRESS = LIDO_MAINNET_ADDRESSES.stethAddress;
+  const RPC_URL = 'https://mock-rpc.example.com';
+  const WALLET_ID = '0xABCDEF1234567890ABCDEF1234567890ABCDEF12';
+
+  let fetchMock: ReturnType<typeof vi.fn>;
+  let provider: LidoStakingActionProvider;
+
+  beforeEach(() => {
+    fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    provider = new LidoStakingActionProvider({ enabled: true, rpcUrl: RPC_URL });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  /**
+   * Helper to build a JSON-RPC success response for eth_call.
+   */
+  function rpcResult(hexValue: string): Response {
+    return new Response(JSON.stringify({ jsonrpc: '2.0', id: 1, result: hexValue }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  it('getProviderName returns lido_staking', () => {
+    expect(provider.getProviderName()).toBe('lido_staking');
+  });
+
+  it('getSupportedCategories returns [STAKING]', () => {
+    expect(provider.getSupportedCategories()).toEqual(['STAKING']);
+  });
+
+  it('getPositions with stETH balance 1e18 returns 1 PositionUpdate', async () => {
+    const balance1e18 = '0x' + (10n ** 18n).toString(16).padStart(64, '0');
+    const zeroBalance = '0x' + '0'.repeat(64);
+
+    fetchMock.mockImplementation(async (_url: string, opts: { body: string }) => {
+      const body = JSON.parse(opts.body);
+      const calldata = body.params?.[0]?.data as string;
+      const to = (body.params?.[0]?.to as string)?.toLowerCase();
+      // stETH balanceOf
+      if (calldata?.startsWith('0x70a08231') && to === STETH_ADDRESS.toLowerCase()) {
+        return rpcResult(balance1e18);
+      }
+      // wstETH balanceOf
+      if (calldata?.startsWith('0x70a08231') && to === WSTETH_MAINNET.toLowerCase()) {
+        return rpcResult(zeroBalance);
+      }
+      // stEthPerToken
+      if (calldata?.startsWith('0x035faf82')) {
+        return rpcResult(balance1e18); // 1:1 ratio
+      }
+      return rpcResult(zeroBalance);
+    });
+
+    const positions = await provider.getPositions(WALLET_ID);
+    expect(positions).toHaveLength(1);
+    expect(positions[0]!.category).toBe('STAKING');
+    expect(positions[0]!.provider).toBe('lido_staking');
+    expect(positions[0]!.chain).toBe('ethereum');
+    expect(positions[0]!.assetId).toContain('eip155:1/erc20:');
+    expect(positions[0]!.amount).toBe('1.0');
+    expect(positions[0]!.status).toBe('ACTIVE');
+  });
+
+  it('getPositions with wstETH balance 1e18 and stEthPerToken 1.15e18 returns correct underlyingAmount', async () => {
+    const balance1e18 = '0x' + (10n ** 18n).toString(16).padStart(64, '0');
+    const ratio115 = '0x' + (115n * 10n ** 16n).toString(16).padStart(64, '0'); // 1.15e18
+    const zeroBalance = '0x' + '0'.repeat(64);
+
+    fetchMock.mockImplementation(async (_url: string, opts: { body: string }) => {
+      const body = JSON.parse(opts.body);
+      const calldata = body.params?.[0]?.data as string;
+      const to = (body.params?.[0]?.to as string)?.toLowerCase();
+      // stETH balanceOf -> 0
+      if (calldata?.startsWith('0x70a08231') && to === STETH_ADDRESS.toLowerCase()) {
+        return rpcResult(zeroBalance);
+      }
+      // wstETH balanceOf -> 1e18
+      if (calldata?.startsWith('0x70a08231') && to === WSTETH_MAINNET.toLowerCase()) {
+        return rpcResult(balance1e18);
+      }
+      // stEthPerToken -> 1.15e18
+      if (calldata?.startsWith('0x035faf82')) {
+        return rpcResult(ratio115);
+      }
+      return rpcResult(zeroBalance);
+    });
+
+    const positions = await provider.getPositions(WALLET_ID);
+    expect(positions).toHaveLength(1);
+    expect(positions[0]!.metadata.token).toBe('wstETH');
+    // underlyingAmount = (1e18 * 1.15e18) / 1e18 = 1.15
+    expect(positions[0]!.metadata.underlyingAmount).toBe('1.15');
+  });
+
+  it('getPositions with both stETH and wstETH balances returns 2 PositionUpdates', async () => {
+    const balance1e18 = '0x' + (10n ** 18n).toString(16).padStart(64, '0');
+    const ratio = '0x' + (10n ** 18n).toString(16).padStart(64, '0'); // 1:1
+
+    fetchMock.mockImplementation(async (_url: string, opts: { body: string }) => {
+      const body = JSON.parse(opts.body);
+      const calldata = body.params?.[0]?.data as string;
+      // Both return 1e18
+      if (calldata?.startsWith('0x70a08231')) return rpcResult(balance1e18);
+      if (calldata?.startsWith('0x035faf82')) return rpcResult(ratio);
+      return rpcResult('0x' + '0'.repeat(64));
+    });
+
+    const positions = await provider.getPositions(WALLET_ID);
+    expect(positions).toHaveLength(2);
+    const tokens = positions.map((p) => p.metadata.token);
+    expect(tokens).toContain('stETH');
+    expect(tokens).toContain('wstETH');
+  });
+
+  it('getPositions with zero balances returns empty array', async () => {
+    const zeroBalance = '0x' + '0'.repeat(64);
+    fetchMock.mockResolvedValue(rpcResult(zeroBalance));
+
+    const positions = await provider.getPositions(WALLET_ID);
+    expect(positions).toEqual([]);
+  });
+
+  it('getPositions returns empty array on RPC error (no throw)', async () => {
+    fetchMock.mockRejectedValue(new Error('RPC connection failed'));
+
+    const positions = await provider.getPositions(WALLET_ID);
+    expect(positions).toEqual([]);
   });
 });

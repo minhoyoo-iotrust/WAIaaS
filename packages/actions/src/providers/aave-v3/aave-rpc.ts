@@ -56,6 +56,100 @@ export interface ReserveData {
 }
 
 // ---------------------------------------------------------------------------
+// ReserveTokensAddresses type (decoded from getReserveTokensAddresses response)
+// ---------------------------------------------------------------------------
+
+export interface ReserveTokensAddresses {
+  aToken: string;
+  stableDebtToken: string;
+  variableDebtToken: string;
+}
+
+// ---------------------------------------------------------------------------
+// decodeAddressArray -- parse ABI-encoded dynamic address[] response
+// ---------------------------------------------------------------------------
+
+/**
+ * Decode ABI-encoded dynamic address[] response.
+ *
+ * Layout: offset(32 bytes) + length(32 bytes) + N * address(32 bytes each)
+ *
+ * @param hexResponse - Raw hex response from eth_call (with or without 0x prefix)
+ * @returns Array of checksummed addresses (0x-prefixed, lowercase)
+ */
+export function decodeAddressArray(hexResponse: string): string[] {
+  const data = hexResponse.startsWith('0x') ? hexResponse.slice(2) : hexResponse;
+  if (data.length < 128) return []; // at least offset + length
+
+  // offset is at chars 0..64 (skip it)
+  const length = Number(BigInt('0x' + data.slice(64, 128)));
+  const addresses: string[] = [];
+
+  for (let i = 0; i < length; i++) {
+    const start = 128 + i * 64;
+    const slot = data.slice(start, start + 64);
+    addresses.push('0x' + slot.slice(24)); // last 20 bytes = 40 hex chars
+  }
+
+  return addresses;
+}
+
+// ---------------------------------------------------------------------------
+// decodeUint256Array -- parse ABI-encoded dynamic uint256[] response
+// ---------------------------------------------------------------------------
+
+/**
+ * Decode ABI-encoded dynamic uint256[] response.
+ *
+ * Same layout as address array but values are full 32-byte uint256.
+ *
+ * @param hexResponse - Raw hex response from eth_call (with or without 0x prefix)
+ * @returns Array of bigint values
+ */
+export function decodeUint256Array(hexResponse: string): bigint[] {
+  const data = hexResponse.startsWith('0x') ? hexResponse.slice(2) : hexResponse;
+  if (data.length < 128) return [];
+
+  const length = Number(BigInt('0x' + data.slice(64, 128)));
+  const values: bigint[] = [];
+
+  for (let i = 0; i < length; i++) {
+    const start = 128 + i * 64;
+    const slot = data.slice(start, start + 64);
+    values.push(BigInt('0x' + slot));
+  }
+
+  return values;
+}
+
+// ---------------------------------------------------------------------------
+// decodeReserveTokensAddresses -- parse 3 consecutive address slots
+// ---------------------------------------------------------------------------
+
+/**
+ * Decode PoolDataProvider.getReserveTokensAddresses() response.
+ *
+ * Returns 3 addresses: (aTokenAddress, stableDebtTokenAddress, variableDebtTokenAddress)
+ *
+ * @param hexResponse - Raw hex response from eth_call
+ */
+export function decodeReserveTokensAddresses(hexResponse: string): ReserveTokensAddresses {
+  const data = hexResponse.startsWith('0x') ? hexResponse.slice(2) : hexResponse;
+
+  if (data.length < 192) {
+    throw new Error(
+      `Invalid getReserveTokensAddresses response: expected at least 192 hex chars (3 x 32 bytes), got ${data.length}`,
+    );
+  }
+
+  return {
+    aToken: '0x' + data.slice(24, 64),
+    stableDebtToken: '0x' + data.slice(88, 128),
+    variableDebtToken: '0x' + data.slice(152, 192),
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Health factor threshold constants (18-decimal bigints)
 // ---------------------------------------------------------------------------
 

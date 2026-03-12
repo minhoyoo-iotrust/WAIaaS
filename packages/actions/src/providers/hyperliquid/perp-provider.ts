@@ -24,6 +24,8 @@ import type {
   PerpPositionSummary,
   MarginInfo,
   PerpMarketInfo,
+  PositionUpdate,
+  PositionCategory,
 } from '@waiaas/core';
 import type { Hex } from 'viem';
 import type { HyperliquidExchangeClient } from './exchange-client.js';
@@ -797,6 +799,62 @@ export class HyperliquidPerpProvider implements IPerpProvider {
         openInterest: null,
         oraclePrice: mids[m.name] ? parseFloat(mids[m.name]!) : null,
       }));
+    } catch {
+      return [];
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // IPositionProvider duck-type methods (for PositionTracker auto-registration)
+  // -------------------------------------------------------------------------
+
+  getProviderName(): string {
+    return 'hyperliquid_perp';
+  }
+
+  getSupportedCategories(): PositionCategory[] {
+    return ['PERP'];
+  }
+
+  async getPositions(walletId: string): Promise<PositionUpdate[]> {
+    try {
+      const [positions, mids] = await Promise.all([
+        this.marketData.getPositions(walletId as Hex),
+        this.marketData.getAllMidPrices(),
+      ]);
+
+      const now = Math.floor(Date.now() / 1000);
+
+      return positions.map((p) => {
+        const szi = parseFloat(p.szi);
+        const midStr = mids[p.coin];
+        const markPrice = midStr ? parseFloat(midStr) : null;
+        const absSize = Math.abs(szi);
+
+        return {
+          walletId,
+          category: 'PERP' as PositionCategory,
+          provider: 'hyperliquid_perp',
+          chain: 'ethereum',
+          network: 'ethereum-mainnet',
+          assetId: null,
+          amount: String(absSize),
+          amountUsd: markPrice != null ? absSize * markPrice : null,
+          metadata: {
+            market: p.coin,
+            side: szi > 0 ? 'LONG' : 'SHORT',
+            entryPrice: p.entryPx ? parseFloat(p.entryPx) : null,
+            markPrice,
+            leverage: p.leverage?.value ?? null,
+            unrealizedPnl: p.unrealizedPnl ? parseFloat(p.unrealizedPnl) : null,
+            liquidationPrice: p.liquidationPx ? parseFloat(p.liquidationPx) : null,
+            marginUsed: p.marginUsed ? parseFloat(p.marginUsed) : null,
+          },
+          status: 'ACTIVE' as const,
+          openedAt: now,
+          closedAt: null,
+        };
+      });
     } catch {
       return [];
     }

@@ -13,7 +13,7 @@
 - ✅ **v0.9** — MCP 세션 관리 자동화 설계 (shipped 2026-02-09)
 - ✅ **v0.10** — 구현 전 설계 완결성 확보 (shipped 2026-02-09)
 - ✅ **v1.0** — 구현 계획 수립 (shipped 2026-02-09)
-- ✅ **v1.1 ~ v31.12** — (97 milestones shipped)
+- ✅ **v1.1 ~ v31.13** — (98 milestones shipped)
 
 ## Phases
 
@@ -30,6 +30,17 @@
 
 </details>
 
+<details>
+<summary>✅ v31.13 DeFi 포지션 대시보드 완성 (Phases 393-397) — SHIPPED 2026-03-12</summary>
+
+- [x] Phase 393: Staking Positions (Lido + Jito) (2/2 plans) — completed 2026-03-12
+- [x] Phase 394: Lending Positions (Aave V3) (1/1 plan) — completed 2026-03-12
+- [x] Phase 395: Yield Positions (Pendle) (1/1 plan) — completed 2026-03-12
+- [x] Phase 396: Perp/Spot Positions (Hyperliquid) (2/2 plans) — completed 2026-03-12
+- [x] Phase 397: Admin Dashboard UX (2/2 plans) — completed 2026-03-12
+
+</details>
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -41,3 +52,8 @@
 | 390. 파이프라인 라우팅 + 조회 API | v31.12 | 2/2 | Complete | 2026-03-12 |
 | 391. Admin UI | v31.12 | 2/2 | Complete | 2026-03-12 |
 | 392. MCP + SDK + 스킬 파일 | v31.12 | 2/2 | Complete | 2026-03-12 |
+| 393. Staking Positions (Lido + Jito) | v31.13 | 2/2 | Complete | 2026-03-12 |
+| 394. Lending Positions (Aave V3) | v31.13 | 1/1 | Complete | 2026-03-12 |
+| 395. Yield Positions (Pendle) | v31.13 | 1/1 | Complete | 2026-03-12 |
+| 396. Perp/Spot Positions (Hyperliquid) | v31.13 | 2/2 | Complete | 2026-03-12 |
+| 397. Admin Dashboard UX | v31.13 | 2/2 | Complete | 2026-03-12 |

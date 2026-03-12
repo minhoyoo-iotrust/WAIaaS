@@ -181,6 +181,7 @@ const adminDefiPositionsRoute = createRoute({
   request: {
     query: z.object({
       wallet_id: z.string().uuid().optional(),
+      category: z.enum(['STAKING', 'LENDING', 'YIELD', 'PERP']).optional(),
     }),
   },
   responses: {
@@ -199,6 +200,7 @@ const adminDefiPositionsRoute = createRoute({
               assetId: z.string().nullable(),
               amount: z.string(),
               amountUsd: z.number().nullable(),
+              metadata: z.unknown().nullable(),
               status: z.string(),
               openedAt: z.number(),
               lastSyncedAt: z.number(),
@@ -618,36 +620,44 @@ export function registerAdminWalletRoutes(router: OpenAPIHono, deps: AdminRouteD
 
   // GET /admin/defi/positions
   router.openapi(adminDefiPositionsRoute, async (c) => {
-    const { wallet_id } = c.req.valid('query');
+    const { wallet_id, category } = c.req.valid('query');
 
     if (!deps.sqlite) {
       return c.json({ positions: [], totalValueUsd: null, worstHealthFactor: null, activeCount: 0 }, 200);
     }
 
     // Cross-wallet DeFi positions query
-    let rows: Array<{
+    type PositionRow = {
       id: string; wallet_id: string; category: string; provider: string;
       chain: string; network: string | null; asset_id: string | null;
       amount: string; amount_usd: number | null; metadata: string | null;
       status: string; opened_at: number; last_synced_at: number;
-    }>;
+    };
+
+    const conditions: string[] = ["status = 'ACTIVE'"];
+    const params: unknown[] = [];
 
     if (wallet_id) {
-      rows = deps.sqlite.prepare(
-        `SELECT id, wallet_id, category, provider, chain, network, asset_id,
-                amount, amount_usd, metadata, status, opened_at, last_synced_at
-         FROM defi_positions
-         WHERE wallet_id = ? AND status = 'ACTIVE'
-         ORDER BY category, provider`,
-      ).all(wallet_id) as typeof rows;
-    } else {
-      rows = deps.sqlite.prepare(
-        `SELECT id, wallet_id, category, provider, chain, network, asset_id,
-                amount, amount_usd, metadata, status, opened_at, last_synced_at
-         FROM defi_positions
-         WHERE status = 'ACTIVE'
-         ORDER BY category, provider`,
-      ).all() as typeof rows;
+      conditions.push('wallet_id = ?');
+      params.push(wallet_id);
+    }
+    if (category) {
+      conditions.push('category = ?');
+      params.push(category);
+    }
+
+    const whereClause = conditions.join(' AND ');
+    const rows = deps.sqlite.prepare(
+      `SELECT id, wallet_id, category, provider, chain, network, asset_id,
+              amount, amount_usd, metadata, status, opened_at, last_synced_at
+       FROM defi_positions
+       WHERE ${whereClause}
+       ORDER BY category, provider`,
+    ).all(...params) as PositionRow[];
+
+    function parseMetadata(raw: string | null): unknown {
+      if (!raw) return null;
+      try { return JSON.parse(raw); } catch { return null; }
     }
 
     const positions = rows.map((row) => ({
@@ -660,6 +670,7 @@ export function registerAdminWalletRoutes(router: OpenAPIHono, deps: AdminRouteD
       assetId: row.asset_id,
       amount: row.amount,
       amountUsd: row.amount_usd,
+      metadata: parseMetadata(row.metadata),
       status: row.status,
       openedAt: row.opened_at,
       lastSyncedAt: row.last_synced_at,
