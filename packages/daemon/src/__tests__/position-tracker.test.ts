@@ -390,4 +390,121 @@ describe('PositionTracker', () => {
       expect(tracker.providerCount).toBe(1);
     });
   });
+
+  // -------------------------------------------------------------------------
+  // LENDING category tests (Phase 394)
+  // -------------------------------------------------------------------------
+
+  describe('LENDING category', () => {
+    it('LENDING provider registration via duck-type and sync writes SUPPLY/BORROW to DB', async () => {
+      const now = Math.floor(Date.now() / 1000);
+      const lendingProvider = makeMockProvider({
+        name: 'aave_v3',
+        categories: ['LENDING'],
+        getPositions: vi.fn().mockResolvedValue([
+          {
+            walletId: 'wallet-1',
+            category: 'LENDING' as PositionCategory,
+            provider: 'aave_v3',
+            chain: 'ethereum',
+            network: 'ethereum-mainnet',
+            assetId: 'eip155:1/erc20:0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2',
+            amount: '1.0',
+            amountUsd: 2000,
+            metadata: { positionType: 'SUPPLY', apy: 0.035, healthFactor: 1.65 },
+            status: 'ACTIVE',
+            openedAt: now,
+          },
+          {
+            walletId: 'wallet-1',
+            category: 'LENDING' as PositionCategory,
+            provider: 'aave_v3',
+            chain: 'ethereum',
+            network: 'ethereum-mainnet',
+            assetId: 'eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+            amount: '500.0',
+            amountUsd: 500,
+            metadata: { positionType: 'BORROW', interestRateMode: 'variable', apy: 0.05, healthFactor: 1.65 },
+            status: 'ACTIVE',
+            openedAt: now,
+          },
+        ] as PositionUpdate[]),
+      });
+
+      tracker.registerProvider(lendingProvider);
+      await tracker.syncCategory('LENDING');
+
+      expect(lendingProvider.getPositions).toHaveBeenCalled();
+      const rows = sqlite.prepare("SELECT * FROM defi_positions WHERE provider = 'aave_v3'").all() as any[];
+      expect(rows.length).toBeGreaterThanOrEqual(1);
+
+      // Verify metadata with healthFactor is preserved
+      const firstRow = rows[0];
+      const meta = JSON.parse(firstRow.metadata);
+      expect(meta.healthFactor).toBeDefined();
+      expect(typeof meta.healthFactor).toBe('number');
+    });
+
+    it('LENDING and STAKING providers coexist with category isolation', async () => {
+      const lendingProvider = makeMockProvider({
+        name: 'aave_v3',
+        categories: ['LENDING'],
+        getPositions: vi.fn().mockResolvedValue([{
+          walletId: 'wallet-1',
+          category: 'LENDING' as PositionCategory,
+          provider: 'aave_v3',
+          chain: 'ethereum',
+          network: 'ethereum-mainnet',
+          assetId: 'eip155:1/erc20:0xweth',
+          amount: '2.0',
+          amountUsd: 4000,
+          metadata: { positionType: 'SUPPLY', healthFactor: 2.1 },
+          status: 'ACTIVE',
+          openedAt: Math.floor(Date.now() / 1000),
+        }] as PositionUpdate[]),
+      });
+
+      const stakingProvider = makeMockProvider({
+        name: 'lido_staking',
+        categories: ['STAKING'],
+        getPositions: vi.fn().mockResolvedValue([{
+          walletId: 'wallet-1',
+          category: 'STAKING' as PositionCategory,
+          provider: 'lido_staking',
+          chain: 'ethereum',
+          network: 'ethereum-mainnet',
+          assetId: 'eip155:1/erc20:0xsteth',
+          amount: '3.0',
+          amountUsd: 5400,
+          metadata: { token: 'stETH' },
+          status: 'ACTIVE',
+          openedAt: Math.floor(Date.now() / 1000),
+        }] as PositionUpdate[]),
+      });
+
+      tracker.registerProvider(lendingProvider);
+      tracker.registerProvider(stakingProvider);
+      expect(tracker.providerCount).toBe(2);
+
+      // Sync LENDING only
+      await tracker.syncCategory('LENDING');
+      expect(lendingProvider.getPositions).toHaveBeenCalled();
+      expect(stakingProvider.getPositions).not.toHaveBeenCalled();
+
+      // Sync STAKING only
+      await tracker.syncCategory('STAKING');
+      expect(stakingProvider.getPositions).toHaveBeenCalled();
+    });
+
+    it('LENDING duck-type auto-registration accepts plain object with 3 methods', () => {
+      const duckLendingProvider = {
+        getPositions: vi.fn().mockResolvedValue([]),
+        getProviderName: () => 'aave_v3_duck',
+        getSupportedCategories: () => ['LENDING'] as PositionCategory[],
+      };
+
+      tracker.registerProvider(duckLendingProvider as unknown as IPositionProvider);
+      expect(tracker.providerCount).toBe(1);
+    });
+  });
 });
