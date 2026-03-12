@@ -23,7 +23,13 @@ import {
   encodeSubmitCalldata,
   encodeRequestWithdrawalsCalldata,
   encodeApproveCalldata,
+  encodeBalanceOfCalldata,
+  encodeStEthPerTokenCalldata,
+  decodeUint256Result,
+  WSTETH_MAINNET,
 } from './lido-contract.js';
+import { formatCaip19 } from '@waiaas/core';
+import type { PositionUpdate, PositionCategory } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------
 // Input schemas (Zod SSoT)
@@ -46,9 +52,11 @@ export class LidoStakingActionProvider implements IActionProvider {
   readonly actions: readonly ActionDefinition[];
 
   private readonly config: LidoStakingConfig;
+  private readonly rpcUrl?: string;
 
   constructor(config?: Partial<LidoStakingConfig>) {
     this.config = { ...LIDO_STAKING_DEFAULTS, ...config };
+    this.rpcUrl = this.config.rpcUrl;
 
     this.metadata = {
       name: 'lido_staking',
@@ -149,5 +157,127 @@ export class LidoStakingActionProvider implements IActionProvider {
     };
 
     return [approveRequest, withdrawRequest];
+  }
+
+  // -------------------------------------------------------------------------
+  // IPositionProvider methods (duck-type, no formal implements)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Query stETH and wstETH balances for the given wallet and return
+   * STAKING position updates. Returns [] on zero balances or RPC error.
+   */
+  async getPositions(walletId: string): Promise<PositionUpdate[]> {
+    if (!this.rpcUrl) return [];
+
+    try {
+      const positions: PositionUpdate[] = [];
+      const now = Math.floor(Date.now() / 1000);
+
+      // 1. Read stETH balance
+      const stethBalance = await this.ethCallUint256(
+        this.config.stethAddress,
+        encodeBalanceOfCalldata(walletId),
+      );
+
+      // 2. Read wstETH balance
+      const wstethBalance = await this.ethCallUint256(
+        WSTETH_MAINNET,
+        encodeBalanceOfCalldata(walletId),
+      );
+
+      // 3. Read stEthPerToken exchange rate (for wstETH -> stETH conversion)
+      let stEthPerToken = 10n ** 18n; // default 1:1
+      if (wstethBalance > 0n) {
+        stEthPerToken = await this.ethCallUint256(
+          WSTETH_MAINNET,
+          encodeStEthPerTokenCalldata(),
+        );
+      }
+
+      // 4. Build stETH position if non-zero
+      if (stethBalance > 0n) {
+        const amount = this.formatWei(stethBalance);
+        positions.push({
+          walletId,
+          category: 'STAKING' as PositionCategory,
+          provider: 'lido_staking',
+          chain: 'ethereum',
+          network: 'ethereum-mainnet',
+          assetId: formatCaip19('eip155:1', 'erc20', this.config.stethAddress),
+          amount,
+          amountUsd: null,
+          metadata: { token: 'stETH', underlyingAmount: amount },
+          status: 'ACTIVE',
+          openedAt: now,
+        });
+      }
+
+      // 5. Build wstETH position if non-zero
+      if (wstethBalance > 0n) {
+        const amount = this.formatWei(wstethBalance);
+        const underlyingRaw = (wstethBalance * stEthPerToken) / (10n ** 18n);
+        const underlyingAmount = this.formatWei(underlyingRaw);
+
+        positions.push({
+          walletId,
+          category: 'STAKING' as PositionCategory,
+          provider: 'lido_staking',
+          chain: 'ethereum',
+          network: 'ethereum-mainnet',
+          assetId: formatCaip19('eip155:1', 'erc20', WSTETH_MAINNET),
+          amount,
+          amountUsd: null,
+          metadata: { token: 'wstETH', underlyingAmount },
+          status: 'ACTIVE',
+          openedAt: now,
+        });
+      }
+
+      return positions;
+    } catch {
+      return [];
+    }
+  }
+
+  getProviderName(): string {
+    return 'lido_staking';
+  }
+
+  getSupportedCategories(): PositionCategory[] {
+    return ['STAKING'];
+  }
+
+  // -------------------------------------------------------------------------
+  // Internal helpers
+  // -------------------------------------------------------------------------
+
+  /**
+   * Execute a single eth_call and decode the result as uint256.
+   */
+  private async ethCallUint256(to: string, data: string): Promise<bigint> {
+    const resp = await fetch(this.rpcUrl!, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'eth_call',
+        params: [{ to, data }, 'latest'],
+      }),
+    });
+    const json = (await resp.json()) as { result: string };
+    return decodeUint256Result(json.result);
+  }
+
+  /**
+   * Format a wei-denominated bigint to a human-readable decimal string (18 decimals).
+   */
+  private formatWei(value: bigint): string {
+    const whole = value / (10n ** 18n);
+    const frac = value % (10n ** 18n);
+    if (frac === 0n) return `${whole}.0`;
+    const fracStr = frac.toString().padStart(18, '0').replace(/0+$/, '');
+    return `${whole}.${fracStr}`;
   }
 }

@@ -9,6 +9,7 @@ export interface LidoStakingConfig {
   enabled: boolean;
   stethAddress: string;           // stETH contract (also used for submit())
   withdrawalQueueAddress: string; // Lido WithdrawalQueue (V1)
+  rpcUrl?: string;                // EVM RPC URL for position queries (eth_call)
 }
 
 // ---------------------------------------------------------------------------
