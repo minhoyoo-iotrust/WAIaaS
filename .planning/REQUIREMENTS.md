@@ -17,10 +17,10 @@
 
 ### Lending
 
-- [ ] **LEND-01**: Aave V3 Supply 포지션 추출 — aToken 잔액 조회, `metadata.positionType: 'SUPPLY'`, APY 포함
-- [ ] **LEND-02**: Aave V3 Borrow 포지션 추출 — debtToken(variableDebt/stableDebt) 잔액 조회, `metadata.positionType: 'BORROW'`, interestRateMode 포함
-- [ ] **LEND-03**: Health Factor 계산 — Aave Pool `getUserAccountData()` 호출 → `metadata.healthFactor` 포함
-- [ ] **LEND-04**: Aave Oracle 가격 활용 — `getAssetPrice()` 호출로 USD 환산 (별도 가격 오라클 호출 최소화)
+- [x] **LEND-01**: Aave V3 Supply 포지션 추출 — aToken 잔액 조회, `metadata.positionType: 'SUPPLY'`, APY 포함
+- [x] **LEND-02**: Aave V3 Borrow 포지션 추출 — debtToken(variableDebt/stableDebt) 잔액 조회, `metadata.positionType: 'BORROW'`, interestRateMode 포함
+- [x] **LEND-03**: Health Factor 계산 — Aave Pool `getUserAccountData()` 호출 → `metadata.healthFactor` 포함
+- [x] **LEND-04**: Aave Oracle 가격 활용 — `getAssetPrice()` 호출로 USD 환산 (별도 가격 오라클 호출 최소화)
 
 ### Yield
 
@@ -72,10 +72,10 @@
 | STAK-03 | Phase 393 | Complete |
 | STAK-04 | Phase 393 | Complete |
 | STAK-05 | Phase 393 | Complete |
-| LEND-01 | Phase 394 | Pending |
-| LEND-02 | Phase 394 | Pending |
-| LEND-03 | Phase 394 | Pending |
-| LEND-04 | Phase 394 | Pending |
+| LEND-01 | Phase 394 | Complete |
+| LEND-02 | Phase 394 | Complete |
+| LEND-03 | Phase 394 | Complete |
+| LEND-04 | Phase 394 | Complete |
 | YIELD-01 | Phase 395 | Pending |
 | YIELD-02 | Phase 395 | Pending |
 | YIELD-03 | Phase 395 | Pending |
