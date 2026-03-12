@@ -67,7 +67,7 @@ Plans:
   2. Aave V3 프로바이더가 debtToken 잔액 기반 Borrow 포지션을 positionType BORROW로 반환하며 interestRateMode를 포함한다
   3. getUserAccountData() 호출로 Health Factor가 계산되어 metadata.healthFactor에 포함된다
   4. Aave Oracle getAssetPrice()를 사용하여 USD 환산이 수행된다
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
 - [ ] 394-01: Aave V3 getPositions() 완성 (Supply/Borrow 추출, Health Factor, Oracle 가격) + 테스트
