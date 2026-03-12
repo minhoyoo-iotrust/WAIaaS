@@ -120,7 +120,8 @@ const mockEmptyDefi = {
 function mockApiCallsWithDefi(defiData: Record<string, unknown> = mockDefiPositions) {
   vi.mocked(apiGet).mockImplementation(async (path: string) => {
     if (path === '/v1/admin/status') return mockStatus;
-    if (path === '/v1/admin/defi/positions') return defiData;
+    if (path.startsWith('/v1/admin/defi/positions')) return defiData;
+    if (path === '/v1/wallets') return { items: [] };
     if (path.includes('/v1/admin/stats')) throw new Error('not found');
     if (path.includes('/v1/admin/transactions')) return { total: 0, transactions: [] };
     return {};
@@ -188,7 +189,9 @@ describe('DashboardPage - DeFi Positions section', () => {
     render(<DashboardPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('1.30')).toBeTruthy();
+      // HF value appears in both warning banner and stat card badge
+      const matches = screen.getAllByText('1.30');
+      expect(matches.length).toBeGreaterThanOrEqual(1);
     });
   });
 
@@ -200,7 +203,9 @@ describe('DashboardPage - DeFi Positions section', () => {
     render(<DashboardPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('1.10')).toBeTruthy();
+      // HF value appears in both warning banner and stat card badge
+      const matches = screen.getAllByText('1.10');
+      expect(matches.length).toBeGreaterThanOrEqual(1);
     });
   });
 

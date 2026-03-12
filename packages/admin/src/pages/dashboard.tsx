@@ -106,6 +106,7 @@ interface DefiPositionSummary {
     assetId: string | null;
     amount: string;
     amountUsd: number | null;
+    metadata: unknown;
     status: string;
     openedAt: number;
     lastSyncedAt: number;
@@ -114,6 +115,8 @@ interface DefiPositionSummary {
   worstHealthFactor: number | null;
   activeCount: number;
 }
+
+const DEFI_CATEGORIES = ['ALL', 'STAKING', 'LENDING', 'YIELD', 'PERP'] as const;
 
 function StatCard({ label, value, loading, badge, href }: {
   label: string; value: string; loading?: boolean; badge?: 'success' | 'danger' | 'warning'; href?: string;
@@ -253,6 +256,9 @@ export default function DashboardPage() {
   const approvalCount = useSignal<number | null>(null);
   const defiData = useSignal<DefiPositionSummary | null>(null);
   const defiLoading = useSignal(true);
+  const categoryFilter = useSignal<string>('ALL');
+  const walletFilter = useSignal<string>('');
+  const walletList = useSignal<Array<{ id: string; name: string }>>([]);
   const statsData = useSignal<AdminStats | null>(null);
   const statsLoading = useSignal(true);
 
@@ -270,7 +276,12 @@ export default function DashboardPage() {
   const fetchDefi = async () => {
     defiLoading.value = true;
     try {
-      const result = await apiGet<DefiPositionSummary>(API.ADMIN_DEFI_POSITIONS);
+      const params = new URLSearchParams();
+      if (walletFilter.value) params.set('wallet_id', walletFilter.value);
+      if (categoryFilter.value !== 'ALL') params.set('category', categoryFilter.value);
+      const qs = params.toString();
+      const url = qs ? `${API.ADMIN_DEFI_POSITIONS}?${qs}` : API.ADMIN_DEFI_POSITIONS;
+      const result = await apiGet<DefiPositionSummary>(url);
       defiData.value = result;
     } catch {
       // DeFi positions not available or empty -- keep null
@@ -336,9 +347,23 @@ export default function DashboardPage() {
     apiGet<{ total: number }>(API.ADMIN_TRANSACTIONS + '?status=APPROVED&limit=1')
       .then((res) => { approvalCount.value = res.total; })
       .catch(() => { /* fallback */ });
+    apiGet<{ items: Array<{ id: string; name: string }> }>(API.WALLETS)
+      .then((res) => {
+        const items = Array.isArray(res) ? res : res.items;
+        walletList.value = items.map((w: { id: string; name?: string | null }) => ({
+          id: w.id,
+          name: w.name ?? w.id.slice(0, 8),
+        }));
+      })
+      .catch(() => { /* wallet list unavailable */ });
     const interval = setInterval(() => { fetchStatus(); fetchDefi(); fetchStats(); }, DASHBOARD_POLL_INTERVAL_MS);
     return () => clearInterval(interval);
   }, []);
+
+  // Re-fetch defi data when filters change
+  useEffect(() => {
+    fetchDefi();
+  }, [categoryFilter.value, walletFilter.value]);
 
   const isInitialLoad = loading.value && !data.value;
 
@@ -451,10 +476,45 @@ export default function DashboardPage() {
         )}
       </div>
 
+      {/* HF Warning Banner */}
+      {defiData.value && defiData.value.worstHealthFactor !== null && defiData.value.worstHealthFactor < 1.5 && (
+        <div class="hf-warning-banner" role="alert" style={{ marginTop: 'var(--space-4)' }}>
+          <span class="hf-warning-icon">{'\u26A0'}</span>
+          <span>
+            <strong>Health Factor Warning:</strong>{' '}
+            Worst Health Factor is <strong>{defiData.value.worstHealthFactor.toFixed(2)}</strong>
+            {defiData.value.worstHealthFactor < 1.2 ? ' \u2014 Liquidation risk is HIGH!' : ' \u2014 Monitor closely.'}
+          </span>
+        </div>
+      )}
+
       {/* DeFi Positions Section */}
       {defiData.value && defiData.value.activeCount > 0 && (
         <div style={{ marginTop: 'var(--space-4)' }}>
           <h3 style={{ marginBottom: 'var(--space-3)' }}>DeFi Positions</h3>
+          <div class="defi-filter-row">
+            <div class="defi-category-tabs">
+              {DEFI_CATEGORIES.map((cat) => (
+                <button
+                  key={cat}
+                  class={categoryFilter.value === cat ? 'active' : ''}
+                  onClick={() => { categoryFilter.value = cat; }}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+            <select
+              class="defi-wallet-select"
+              value={walletFilter.value}
+              onChange={(e) => { walletFilter.value = (e.target as HTMLSelectElement).value; }}
+            >
+              <option value="">All Wallets</option>
+              {walletList.value.map((w) => (
+                <option key={w.id} value={w.id}>{w.name}</option>
+              ))}
+            </select>
+          </div>
           <div class="stat-grid">
             <StatCard
               label="Total DeFi Value"
