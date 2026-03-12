@@ -1,7 +1,8 @@
 # 마일스톤 m31-13: DeFi 포지션 대시보드 완성
 
-- **Status:** IN_PROGRESS
+- **Status:** SHIPPED
 - **Milestone:** v31.13
+- **Completed:** 2026-03-12
 
 ## 목표
 
