@@ -129,8 +129,8 @@ Plans:
 | 390. 파이프라인 라우팅 + 조회 API | v31.12 | 2/2 | Complete | 2026-03-12 |
 | 391. Admin UI | v31.12 | 2/2 | Complete | 2026-03-12 |
 | 392. MCP + SDK + 스킬 파일 | v31.12 | 2/2 | Complete | 2026-03-12 |
-| 393. Staking Positions (Lido + Jito) | v31.13 | 2/2 | Complete | 2026-03-12 |
-| 394. Lending Positions (Aave V3) | v31.13 | 1/1 | Complete | 2026-03-12 |
-| 395. Yield Positions (Pendle) | v31.13 | 1/1 | Complete | 2026-03-12 |
-| 396. Perp/Spot Positions (Hyperliquid) | v31.13 | 2/2 | Complete | 2026-03-12 |
-| 397. Admin Dashboard UX | 2/2 | Complete   | 2026-03-12 | - |
+| 393. Staking Positions (Lido + Jito) | v31.13 | Complete    | 2026-03-12 | 2026-03-12 |
+| 394. Lending Positions (Aave V3) | v31.13 | Complete    | 2026-03-12 | 2026-03-12 |
+| 395. Yield Positions (Pendle) | v31.13 | Complete    | 2026-03-12 | 2026-03-12 |
+| 396. Perp/Spot Positions (Hyperliquid) | v31.13 | Complete    | 2026-03-12 | 2026-03-12 |
+| 397. Admin Dashboard UX | 2/2 | Complete    | 2026-03-12 | - |

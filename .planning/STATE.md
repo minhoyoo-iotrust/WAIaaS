@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v31.13
 milestone_name: DeFi 포지션 대시보드 완성
-status: complete
+status: completed
 stopped_at: Completed Phase 397 (Admin Dashboard UX) - milestone v31.13 complete
-last_updated: "2026-03-12T13:31:57.835Z"
-last_activity: 2026-03-12 — Phase 397 complete (Admin Dashboard UX) - milestone v31.13 DONE
+last_updated: "2026-03-12T13:39:15.293Z"
+last_activity: 2026-03-12 — Phase 397 complete (Admin Dashboard UX)
 progress:
   total_phases: 5
   completed_phases: 5
