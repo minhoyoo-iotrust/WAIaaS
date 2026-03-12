@@ -209,13 +209,42 @@ function buildTxColumns(
   ];
 }
 
-function buildDefiColumns(
+type DefiPosition = DefiPositionSummary['positions'][number];
+
+function meta(p: { metadata: unknown }): Record<string, unknown> {
+  return p.metadata && typeof p.metadata === 'object' ? (p.metadata as Record<string, unknown>) : {};
+}
+
+const PROVIDER_LABELS: Record<string, string> = {
+  'lido': 'Lido', 'jito': 'Jito', 'aave-v3': 'Aave V3', 'aave_v3': 'Aave V3',
+  'pendle': 'Pendle', 'hyperliquid-perp': 'Hyperliquid Perp',
+  'hyperliquid-spot': 'Hyperliquid Spot', 'kamino': 'Kamino', 'drift': 'Drift',
+};
+
+function providerLabel(key: string): string {
+  return PROVIDER_LABELS[key] ?? key;
+}
+
+function groupByProvider(positions: DefiPosition[]): Map<string, DefiPosition[]> {
+  const groups = new Map<string, DefiPosition[]>();
+  for (const p of positions) {
+    const key = p.provider;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(p);
+  }
+  return groups;
+}
+
+function buildDefiBaseColumns(
   displayCurrency: string,
   displayRate: number | null,
-): Column<DefiPositionSummary['positions'][number]>[] {
-  return [
-    { key: 'provider', header: 'Provider' },
-    { key: 'category', header: 'Category', render: (p) => <Badge variant="info">{p.category}</Badge> },
+  showCategory: boolean,
+): Column<DefiPosition>[] {
+  const cols: Column<DefiPosition>[] = [];
+  if (showCategory) {
+    cols.push({ key: 'category', header: 'Category', render: (p) => <Badge variant="info">{p.category}</Badge> });
+  }
+  cols.push(
     { key: 'chain', header: 'Chain', render: (p) => <Badge variant="info">{p.chain}</Badge> },
     { key: 'amount', header: 'Amount' },
     {
@@ -227,7 +256,77 @@ function buildDefiColumns(
         return display ?? `$${p.amountUsd.toFixed(2)}`;
       },
     },
-  ];
+  );
+  return cols;
+}
+
+function buildCategoryColumns(category: string): Column<DefiPosition>[] {
+  switch (category) {
+    case 'STAKING':
+      return [
+        { key: 'provider', header: 'Protocol', render: (p) => String(meta(p).protocol ?? p.provider) },
+        { key: 'metadata', header: 'Exchange Rate', render: (p) => {
+          const rate = meta(p).exchangeRate;
+          return typeof rate === 'number' ? rate.toFixed(4) : '\u2014';
+        }},
+      ];
+    case 'LENDING':
+      return [
+        { key: 'metadata', header: 'Type', render: (p) => {
+          const posType = String(meta(p).positionType ?? '');
+          return posType ? <Badge variant={posType === 'SUPPLY' ? 'success' : 'warning'}>{posType}</Badge> : '\u2014';
+        }},
+        { key: 'provider', header: 'Health Factor', render: (p) => {
+          const hf = meta(p).healthFactor;
+          if (typeof hf !== 'number') return '\u2014';
+          const variant = hf < 1.2 ? 'danger' : hf < 1.5 ? 'warning' : 'success';
+          return <Badge variant={variant}>{hf.toFixed(2)}</Badge>;
+        }},
+        { key: 'status', header: 'APY', render: (p) => {
+          const apy = meta(p).apy;
+          return typeof apy === 'number' ? `${(apy * 100).toFixed(2)}%` : '\u2014';
+        }},
+      ];
+    case 'YIELD':
+      return [
+        { key: 'metadata', header: 'Token', render: (p) => {
+          const tokenType = String(meta(p).tokenType ?? '');
+          return tokenType ? <Badge variant={tokenType === 'PT' ? 'info' : 'warning'}>{tokenType}</Badge> : '\u2014';
+        }},
+        { key: 'provider', header: 'Maturity', render: (p) => {
+          const maturity = meta(p).maturity;
+          if (typeof maturity !== 'number') return '\u2014';
+          const isPast = maturity * 1000 < Date.now();
+          const dateStr = new Date(maturity * 1000).toLocaleDateString();
+          return isPast ? <Badge variant="danger">MATURED ({dateStr})</Badge> : dateStr;
+        }},
+        { key: 'status', header: 'Implied APY', render: (p) => {
+          const apy = meta(p).impliedApy;
+          return typeof apy === 'number' ? `${(apy * 100).toFixed(2)}%` : '\u2014';
+        }},
+      ];
+    case 'PERP':
+      return [
+        { key: 'metadata', header: 'Market', render: (p) => String(meta(p).market ?? '\u2014') },
+        { key: 'provider', header: 'Side', render: (p) => {
+          const side = String(meta(p).side ?? '');
+          return side ? <Badge variant={side === 'LONG' ? 'success' : 'danger'}>{side}</Badge> : '\u2014';
+        }},
+        { key: 'status', header: 'PnL', render: (p) => {
+          const pnl = meta(p).unrealizedPnl;
+          if (pnl == null) return '\u2014';
+          const num = Number(pnl);
+          if (isNaN(num)) return String(pnl);
+          const cls = num >= 0 ? 'pnl-positive' : 'pnl-negative';
+          return <span class={cls}>{num >= 0 ? '+' : ''}{num.toFixed(2)}</span>;
+        }},
+        { key: 'walletId', header: 'Liq. Price', render: (p) => String(meta(p).liquidationPrice ?? '\u2014') },
+      ];
+    default:
+      return [
+        { key: 'provider', header: 'Provider' },
+      ];
+  }
 }
 
 async function copyToClipboard(text: string): Promise<void> {
@@ -540,12 +639,24 @@ export default function DashboardPage() {
             />
           </div>
           <div style={{ marginTop: 'var(--space-3)' }}>
-            <Table
-              columns={buildDefiColumns(displayCurrency.value, displayRate.value)}
-              data={defiData.value.positions}
-              loading={defiLoading.value}
-              emptyMessage="No active DeFi positions"
-            />
+            {Array.from(groupByProvider(defiData.value.positions)).map(([providerKey, positions]) => (
+              <div class="defi-provider-group" key={providerKey}>
+                <h4 class="defi-provider-header">{providerLabel(providerKey)}</h4>
+                <Table
+                  columns={[
+                    ...buildDefiBaseColumns(displayCurrency.value, displayRate.value, categoryFilter.value === 'ALL'),
+                    ...buildCategoryColumns(categoryFilter.value === 'ALL' ? '' : categoryFilter.value),
+                  ]}
+                  data={positions}
+                  emptyMessage="No positions"
+                />
+              </div>
+            ))}
+            {defiData.value.positions.length === 0 && (
+              <p style={{ color: 'var(--color-text-muted)', textAlign: 'center', padding: 'var(--space-4)' }}>
+                No active DeFi positions
+              </p>
+            )}
           </div>
         </div>
       )}
