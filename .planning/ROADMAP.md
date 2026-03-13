@@ -63,7 +63,7 @@
   3. CONTRACT_DEPLOY 트랜잭션이 기본 APPROVAL 티어 정책으로 처리된다
   4. Node.js keepAliveTimeout이 600초 이상으로 설정되어 Long-poll 연결이 유지된다
   5. 존재하지 않는 chainId로 요청 시 JSON-RPC `-32602` 에러가 반환된다
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
 - [ ] 398-01: CONTRACT_DEPLOY Zod SSoT 확장 (enum, discriminatedUnion, switch/case, tx-parser)
@@ -79,7 +79,7 @@ Plans:
   3. `eth_accounts`가 세션 지갑 주소를 반환하고, `eth_chainId`가 URL chainId에서 파생된 hex 값을 반환한다
   4. `personal_sign`, `eth_signTypedData_v4`가 각각 적절한 서명 파이프라인을 통과한다
   5. 읽기 메서드가 RPC Pool을 통해 프록시되고, 미지원 메서드는 `-32601` 에러를 반환한다
-**Plans**: TBD
+**Plans:** TBD
 
 Plans:
 - [ ] 399-01: JSON-RPC 프로토콜 유틸 + RpcTransactionAdapter
@@ -96,7 +96,7 @@ Plans:
   3. DELAY/APPROVAL 티어 트랜잭션은 Long-poll로 대기하다가 완료 시 txHash를, 타임아웃 시 `-32000` 에러를 반환한다
   4. 인증 없는 요청은 거부되고, `from` 필드가 세션 지갑과 불일치하면 거부된다
   5. 배치 JSON-RPC 요청(배열)이 처리되고, 모든 서명 트랜잭션이 `source: 'rpc-proxy'`로 감사 로그에 기록된다
-**Plans**: TBD
+**Plans:** TBD
 
 Plans:
 - [ ] 400-01: RpcDispatcher + Hono 라우트 등록 + sessionAuth 미들웨어
@@ -113,7 +113,7 @@ Plans:
   3. MCP `get_rpc_proxy_url` 도구와 SDK `getRpcProxyUrl()` 메서드가 프록시 URL을 반환한다
   4. `connect-info` 응답에 `rpcProxyBaseUrl`이 포함되어 에이전트가 자동 발견한다
   5. JSON-RPC 프로토콜 준수, 서명 인터셉트, 패스스루, CONTRACT_DEPLOY, 비동기 승인, 배치, 보안 테스트가 모두 통과한다
-**Plans**: TBD
+**Plans:** TBD
 
 Plans:
 - [ ] 401-01: Admin Settings 6키 + Admin UI RPC Proxy 섹션
