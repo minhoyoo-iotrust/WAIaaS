@@ -73,7 +73,7 @@ export class RpcMethodHandlers {
   constructor(
     private syncPipeline: SyncPipelineExecutor,
     private txAdapter: RpcTransactionAdapter,
-    private nonceTracker: NonceTracker,
+    _nonceTracker: NonceTracker, // reserved for future nonce management
   ) {}
 
   /**

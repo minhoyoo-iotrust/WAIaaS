@@ -1535,8 +1535,8 @@ export class DaemonLifecycle {
         // v31.14: Long-poll RPC proxy support -- keep connections alive for 10 minutes
         // Default Node.js keepAliveTimeout is 5s, which is too short for DELAY/APPROVAL tier
         // long-poll responses that can take up to 600s.
-        server.keepAliveTimeout = 600_000; // 600 seconds in milliseconds
-        server.headersTimeout = 605_000;   // Must be > keepAliveTimeout (Node.js docs)
+        (server as any).keepAliveTimeout = 600_000; // 600 seconds in milliseconds
+        (server as any).headersTimeout = 605_000;   // Must be > keepAliveTimeout (Node.js docs)
 
         // Wait for server to actually start listening (catches EADDRINUSE)
         await new Promise<void>((resolve, reject) => {

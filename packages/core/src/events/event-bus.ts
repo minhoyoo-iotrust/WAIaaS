@@ -60,6 +60,17 @@ export class EventBus {
   }
 
   /**
+   * Remove a specific typed event listener.
+   */
+  off<K extends keyof WaiaasEventMap>(
+    event: K,
+    listener: (data: WaiaasEventMap[K]) => void,
+  ): this {
+    this.emitter.off(event, listener as (...args: unknown[]) => void);
+    return this;
+  }
+
+  /**
    * Remove all listeners (or all listeners for a specific event).
    * Used for cleanup in tests and daemon shutdown.
    */
