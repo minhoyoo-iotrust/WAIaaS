@@ -15,7 +15,6 @@ import {
   parseJsonRpcBody,
   isNotification,
   type JsonRpcRequest,
-  type JsonRpcResponse,
   type JsonRpcSuccessResponse,
   type JsonRpcErrorResponse,
   type HandlerContext,

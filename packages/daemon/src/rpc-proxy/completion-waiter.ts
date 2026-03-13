@@ -74,7 +74,7 @@ export class CompletionWaiter {
    * Dispose: reject all pending waits and unregister listeners.
    */
   dispose(): void {
-    for (const [txId, entry] of this.pending) {
+    for (const [, entry] of this.pending) {
       clearTimeout(entry.timer);
       entry.reject(new Error('CompletionWaiter disposed'));
     }

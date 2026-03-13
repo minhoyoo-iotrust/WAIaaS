@@ -120,13 +120,11 @@ describe('bytecode size limit (SEC-05)', () => {
 describe('audit log source (SEC-04)', () => {
   it('SyncPipelineExecutor sets ctx.source = rpc-proxy', async () => {
     // Import SyncPipelineExecutor and verify source is set
-    const { WAIaaSError } = await import('@waiaas/core');
-
     // Mock pipeline stages to capture ctx
-    let capturedCtx: any = null;
+    let _capturedCtx: any = null;
 
     const mockStage1 = vi.fn(async (ctx: any) => {
-      capturedCtx = ctx;
+      _capturedCtx = ctx;
       ctx.txId = 'test-tx-id';
     });
     const mockStage2 = vi.fn(async () => {});
@@ -152,13 +150,12 @@ describe('audit log source (SEC-04)', () => {
     // Re-import to get the mocked version
     const { SyncPipelineExecutor } = await import('../../rpc-proxy/sync-pipeline.js');
 
-    const mockEventBus = { on: vi.fn() } as any;
-    const executor = new SyncPipelineExecutor(
+    const _executor = new SyncPipelineExecutor(
       { waitForCompletion: vi.fn() } as any,
       undefined,
     );
 
-    const ctx = { submitResult: undefined } as any;
+    const _ctx = { submitResult: undefined } as any;
     // The actual source setting happens in execute() before stage1
     // Since we mock the stages, just verify the flow sets source
     // This is a cross-reference test -- the primary test is in sync-pipeline.test.ts
