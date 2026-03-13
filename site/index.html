@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WAIaaS — Self-hosted Wallet-as-a-Service for AI Agents</title>
+  <meta name="description" content="WAIaaS is a self-hosted Wallet-as-a-Service daemon that lets AI agents securely manage crypto wallets across EVM and Solana chains. Multi-chain support, 13+ DeFi protocols, 3-layer security, MCP built-in.">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="WAIaaS — Wallet-as-a-Service for AI Agents">
+  <meta property="og:description" content="Self-hosted daemon for AI agents to securely manage crypto wallets. Multi-chain EVM + Solana, 13+ DeFi protocols, MCP built-in, Admin Web UI.">
+  <meta property="og:url" content="https://waiaas.dev">
+  <meta property="og:site_name" content="WAIaaS">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="WAIaaS — Wallet-as-a-Service for AI Agents">
+  <meta name="twitter:description" content="Self-hosted daemon for AI agents to securely manage crypto wallets. Multi-chain EVM + Solana, 13+ DeFi protocols, MCP built-in.">
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "WAIaaS",
+    "description": "Self-hosted Wallet-as-a-Service daemon for AI agents. Manage crypto wallets across EVM and Solana chains with built-in security, DeFi protocols, and MCP integration.",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Cross-platform (Node.js, Docker)",
+    "url": "https://waiaas.dev",
+    "downloadUrl": "https://www.npmjs.com/package/@waiaas/cli",
+    "softwareVersion": "2.9.0",
+    "author": {
+      "@type": "Organization",
+      "name": "WAIaaS",
+      "url": "https://github.com/minhoyoo-iotrust/WAIaaS"
+    },
+    "license": "https://github.com/minhoyoo-iotrust/WAIaaS/blob/main/LICENSE",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "featureList": [
+      "Multi-chain wallet management (EVM + Solana)",
+      "13+ DeFi protocol integrations",
+      "3-layer security model",
+      "MCP (Model Context Protocol) built-in",
+      "Admin Web UI",
+      "ERC-4337 Smart Account support",
+      "Owner approval channels (WalletConnect, Telegram, Wallet SDK)",
+      "REST API + TypeScript SDK"
+    ]
+  }
+  </script>
+
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --border: #1e1e2e;
+      --text: #e4e4ef;
+      --text-dim: #8888a0;
+      --accent: #6366f1;
+      --accent-light: #818cf8;
+      --green: #34d399;
+      --code-bg: #1a1a28;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: var(--accent-light); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+    /* Nav */
+    nav {
+      border-bottom: 1px solid var(--border);
+      padding: 16px 0;
+    }
+    nav .container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+    .nav-links { display: flex; gap: 24px; align-items: center; }
+    .nav-links a { color: var(--text-dim); font-size: 0.875rem; }
+    .nav-links a:hover { color: var(--text); text-decoration: none; }
+
+    /* Hero */
+    .hero {
+      padding: 96px 0 64px;
+      text-align: center;
+    }
+    .hero h1 {
+      font-size: 3rem;
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+      margin-bottom: 20px;
+    }
+    .hero h1 span { color: var(--accent-light); }
+    .hero p {
+      font-size: 1.2rem;
+      color: var(--text-dim);
+      max-width: 640px;
+      margin: 0 auto 40px;
+    }
+    .install-box {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 24px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .install-box:hover { border-color: var(--accent); }
+    .install-box .prompt { color: var(--green); }
+    .install-box .cmd { color: var(--text); }
+    .install-box .copy {
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      padding: 4px 8px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-family: inherit;
+    }
+
+    /* Features */
+    .features { padding: 64px 0; }
+    .features h2 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 40px;
+      text-align: center;
+      letter-spacing: -0.02em;
+    }
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+    }
+    .feature-card h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .feature-card p {
+      font-size: 0.875rem;
+      color: var(--text-dim);
+      line-height: 1.5;
+    }
+    .feature-tag {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 3px 8px;
+      border-radius: 4px;
+      margin-bottom: 12px;
+    }
+    .tag-chain { background: #1e3a5f; color: #60a5fa; }
+    .tag-defi { background: #1e3b3f; color: #34d399; }
+    .tag-security { background: #3b1e3f; color: #c084fc; }
+    .tag-dx { background: #3b3a1e; color: #fbbf24; }
+    .tag-infra { background: #3b2a1e; color: #fb923c; }
+    .tag-standard { background: #1e3b2e; color: #6ee7b7; }
+
+    /* Architecture */
+    .arch { padding: 64px 0; }
+    .arch h2 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 40px;
+      text-align: center;
+      letter-spacing: -0.02em;
+    }
+    .arch-diagram {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 40px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.8rem;
+      line-height: 1.8;
+      overflow-x: auto;
+      white-space: pre;
+      color: var(--text-dim);
+      text-align: center;
+    }
+    .arch-diagram .highlight { color: var(--accent-light); }
+    .arch-diagram .green { color: var(--green); }
+    .arch-diagram .dim { color: #555566; }
+
+    /* Quick Start */
+    .quickstart { padding: 64px 0; }
+    .quickstart h2 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 40px;
+      text-align: center;
+      letter-spacing: -0.02em;
+    }
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+    .step {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+    }
+    .step-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      background: var(--accent);
+      color: white;
+      border-radius: 50%;
+      font-size: 0.875rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+    .step h3 { font-size: 1rem; margin-bottom: 12px; }
+    .step code {
+      display: block;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 16px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.8rem;
+      color: var(--green);
+      margin-top: 8px;
+      white-space: pre;
+    }
+
+    /* Links */
+    .resources { padding: 64px 0; }
+    .resources h2 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 40px;
+      text-align: center;
+      letter-spacing: -0.02em;
+    }
+    .resource-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+    .resource-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      transition: border-color 0.2s;
+    }
+    .resource-link:hover {
+      border-color: var(--accent);
+      text-decoration: none;
+    }
+    .resource-link .label { font-size: 0.875rem; font-weight: 500; }
+    .resource-link .sub { font-size: 0.75rem; color: var(--text-dim); }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 0;
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 2rem; }
+      .hero p { font-size: 1rem; }
+      .feature-grid, .steps { grid-template-columns: 1fr; }
+      .resource-grid { grid-template-columns: 1fr; }
+      .install-box { font-size: 0.85rem; padding: 12px 16px; }
+      .nav-links { gap: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="container">
+      <div class="logo">WAIaaS</div>
+      <div class="nav-links">
+        <a href="https://github.com/minhoyoo-iotrust/WAIaaS">GitHub</a>
+        <a href="https://www.npmjs.com/package/@waiaas/cli">npm</a>
+        <a href="https://hub.docker.com/u/waiaas">Docker</a>
+        <a href="https://github.com/minhoyoo-iotrust/WAIaaS/blob/main/docs/deployment.md">Docs</a>
+      </div>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="container">
+      <h1>Self-hosted Wallet-as-a-Service<br>for <span>AI Agents</span></h1>
+      <p>A local daemon that gives AI agents secure, policy-controlled access to crypto wallets across EVM and Solana chains. Your keys, your machine, your rules.</p>
+      <div class="install-box" onclick="navigator.clipboard.writeText('npm install -g @waiaas/cli');" title="Click to copy">
+        <span class="prompt">$</span>
+        <span class="cmd">npm install -g @waiaas/cli</span>
+        <span class="copy">copy</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="features">
+    <div class="container">
+      <h2>Core Capabilities</h2>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="feature-tag tag-chain">Multi-Chain</div>
+          <h3>EVM + Solana</h3>
+          <p>8 EVM networks (Ethereum, Polygon, Arbitrum, Optimism, Base, Avalanche, BNB, HyperEVM) plus Solana. Native tokens, ERC-20/SPL, and NFTs.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-tag tag-defi">DeFi</div>
+          <h3>13+ Protocols</h3>
+          <p>Jupiter, 0x, LI.FI, Lido, Jito, Aave V3, Kamino, Pendle, Drift, D'CENT, Hyperliquid, Across Bridge, Polymarket. Swap, bridge, stake, lend, yield, perp, predict.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-tag tag-security">Security</div>
+          <h3>3-Layer Model</h3>
+          <p>Session auth (JWT) + time-delay &amp; owner approval + monitoring &amp; kill switch. Default-deny policies for tokens, contracts, and spenders.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-tag tag-dx">Developer Experience</div>
+          <h3>MCP Built-in</h3>
+          <p>Model Context Protocol server for direct AI agent integration. Also provides REST API and TypeScript SDK. Agent self-discovery via connect-info.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-tag tag-infra">Infrastructure</div>
+          <h3>Admin Web UI</h3>
+          <p>Full-featured dashboard for wallet management, policy configuration, session control, DeFi positions, audit logs, and real-time notifications.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-tag tag-standard">Standards</div>
+          <h3>ERC-4337 Smart Account</h3>
+          <p>Account Abstraction with gas sponsorship. Lite/Full mode, CREATE2 address prediction, UserOp build/sign API. Pimlico and Alchemy providers.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="arch">
+    <div class="container">
+      <h2>Architecture</h2>
+      <div class="arch-diagram"><span class="dim">┌─────────────┐     ┌─────────────┐     ┌──────────────┐</span>
+<span class="highlight">│  AI Agent   │</span><span class="dim">────▸</span><span class="highlight">│  MCP/REST   │</span><span class="dim">────▸</span><span class="green">│   WAIaaS     │</span>
+<span class="dim">│  (Claude,   │     │   API       │     │   Daemon     │</span>
+<span class="dim">│   GPT, ...)  │     │             │     │  (Local)     │</span>
+<span class="dim">└─────────────┘     └─────────────┘     └──────┬───────┘</span>
+                                               <span class="dim">│</span>
+                    <span class="dim">┌──────────────────────┼──────────────────────┐</span>
+                    <span class="dim">│                      │                      │</span>
+           <span class="dim">┌────────▼────────┐  ┌──────▼──────┐  ┌───────▼───────┐</span>
+           <span class="dim">│</span> <span class="green">6-Stage Pipeline</span> <span class="dim">│  │</span> <span class="green">Policy Engine</span> <span class="dim">│  │</span> <span class="green">Owner Approval</span> <span class="dim">│</span>
+           <span class="dim">│</span>  Validate → Sign <span class="dim">│  │</span> Default-Deny  <span class="dim">│  │</span> WC / Telegram <span class="dim">│</span>
+           <span class="dim">│</span>  → Broadcast     <span class="dim">│  │</span> + Spending    <span class="dim">│  │</span> / Wallet SDK  <span class="dim">│</span>
+           <span class="dim">└────────┬────────┘  └─────────────┘  └───────────────┘</span>
+                    <span class="dim">│</span>
+       <span class="dim">┌────────────┼────────────┐</span>
+       <span class="dim">│            │            │</span>
+<span class="dim">┌──────▼──────┐ ┌────▼─────┐ ┌───▼────┐</span>
+<span class="dim">│</span> <span class="highlight">EVM Chains</span>  <span class="dim">│ │</span> <span class="highlight">Solana</span>   <span class="dim">│ │</span> <span class="highlight">DeFi</span>   <span class="dim">│</span>
+<span class="dim">│</span> ETH, Polygon <span class="dim">│ │</span> Mainnet  <span class="dim">│ │</span> 13+    <span class="dim">│</span>
+<span class="dim">│</span> Arb, Base... <span class="dim">│ │</span> Devnet   <span class="dim">│ │</span> Protos <span class="dim">│</span>
+<span class="dim">└─────────────┘ └──────────┘ └────────┘</span></div>
+    </div>
+  </section>
+
+  <section class="quickstart">
+    <div class="container">
+      <h2>Quick Start</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <h3>Install</h3>
+          <p>Install the CLI globally via npm.</p>
+          <code>npm install -g @waiaas/cli</code>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <h3>Start</h3>
+          <p>Launch the daemon with quickset for instant setup.</p>
+          <code>waiaas quickset</code>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <h3>Connect</h3>
+          <p>Copy the agent prompt from Admin UI and paste it into your AI agent.</p>
+          <code>open http://localhost:3100/admin</code>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="resources">
+    <div class="container">
+      <h2>Resources</h2>
+      <div class="resource-grid">
+        <a class="resource-link" href="https://github.com/minhoyoo-iotrust/WAIaaS">
+          <div>
+            <div class="label">GitHub Repository</div>
+            <div class="sub">Source code, issues, contributions</div>
+          </div>
+        </a>
+        <a class="resource-link" href="https://www.npmjs.com/package/@waiaas/cli">
+          <div>
+            <div class="label">npm: @waiaas/cli</div>
+            <div class="sub">CLI + Daemon package</div>
+          </div>
+        </a>
+        <a class="resource-link" href="https://www.npmjs.com/package/@waiaas/sdk">
+          <div>
+            <div class="label">npm: @waiaas/sdk</div>
+            <div class="sub">TypeScript SDK for API integration</div>
+          </div>
+        </a>
+        <a class="resource-link" href="https://www.npmjs.com/package/@waiaas/wallet-sdk">
+          <div>
+            <div class="label">npm: @waiaas/wallet-sdk</div>
+            <div class="sub">Wallet signing SDK for mobile/desktop apps</div>
+          </div>
+        </a>
+        <a class="resource-link" href="https://hub.docker.com/r/waiaas/daemon">
+          <div>
+            <div class="label">Docker: waiaas/daemon</div>
+            <div class="sub">Containerized daemon image</div>
+          </div>
+        </a>
+        <a class="resource-link" href="https://hub.docker.com/r/waiaas/push-relay">
+          <div>
+            <div class="label">Docker: waiaas/push-relay</div>
+            <div class="sub">Push notification relay server</div>
+          </div>
+        </a>
+        <a class="resource-link" href="https://github.com/minhoyoo-iotrust/WAIaaS/blob/main/docs/deployment.md">
+          <div>
+            <div class="label">Deployment Guide</div>
+            <div class="sub">Production setup and configuration</div>
+          </div>
+        </a>
+        <a class="resource-link" href="https://github.com/minhoyoo-iotrust/WAIaaS/tree/main/docs/guides">
+          <div>
+            <div class="label">Agent Integration Guides</div>
+            <div class="sub">Claude Code, OpenClaw, and more</div>
+          </div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <p>WAIaaS is open source software. Built for AI agents that need secure wallet access.</p>
+    </div>
+  </footer>
+
+</body>
+</html>

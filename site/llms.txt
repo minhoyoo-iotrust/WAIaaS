@@ -1,0 +1,63 @@
+# WAIaaS — Wallet-as-a-Service for AI Agents
+
+> Self-hosted local daemon that gives AI agents secure, policy-controlled access to crypto wallets.
+
+## Overview
+
+WAIaaS is an open-source Wallet-as-a-Service daemon designed for AI agents. It runs locally on the user's machine and provides REST API, MCP (Model Context Protocol), and TypeScript SDK interfaces for wallet operations.
+
+## Key Facts
+
+- **Type**: Self-hosted Node.js daemon (not a cloud service)
+- **Install**: `npm install -g @waiaas/cli` or Docker (`waiaas/daemon`)
+- **License**: Open source
+- **Chains**: EVM (Ethereum, Polygon, Arbitrum, Optimism, Base, Avalanche, BNB Chain, HyperEVM) + Solana
+- **Assets**: Native tokens, ERC-20, SPL tokens, NFTs (ERC-721, ERC-1155, Metaplex)
+
+## Interfaces
+
+- **REST API**: OpenAPI-documented HTTP endpoints on localhost (default port 3100)
+- **MCP Server**: Built-in Model Context Protocol server for direct AI agent integration
+- **TypeScript SDK**: `@waiaas/sdk` for programmatic access
+- **Wallet SDK**: `@waiaas/wallet-sdk` for mobile/desktop wallet signing apps
+- **CLI**: `waiaas` command-line interface for setup and management
+- **Admin Web UI**: Browser-based dashboard at `/admin/`
+
+## Security Model
+
+Three-layer security:
+
+1. **Session Authentication**: JWT-based session tokens with configurable TTL
+2. **Time Delay + Owner Approval**: Configurable delay periods and human-in-the-loop approval via WalletConnect, Telegram Bot, or Wallet SDK
+3. **Monitoring + Kill Switch**: Transaction monitoring, spending limits, audit logs, and emergency kill switch
+
+Default-deny policy engine: tokens, contracts, and spenders must be explicitly whitelisted.
+
+## DeFi Protocols (13+)
+
+- **Swap**: Jupiter (Solana), 0x (EVM), D'CENT Swap Aggregator
+- **Bridge**: LI.FI (cross-chain), Across Bridge
+- **Staking**: Lido (ETH), Jito (SOL)
+- **Lending**: Aave V3 (EVM), Kamino (Solana)
+- **Yield**: Pendle (EVM)
+- **Perpetuals**: Drift (Solana), Hyperliquid (HyperEVM)
+- **Prediction**: Polymarket (Polygon)
+
+## Smart Account
+
+ERC-4337 Account Abstraction support with Lite/Full modes, gas sponsorship via paymasters, CREATE2 address prediction, and UserOp build/sign API. Supports Pimlico and Alchemy providers.
+
+## Quick Start
+
+```bash
+npm install -g @waiaas/cli
+waiaas quickset
+# Open http://localhost:3100/admin to manage wallets and copy agent prompts
+```
+
+## Links
+
+- GitHub: https://github.com/minhoyoo-iotrust/WAIaaS
+- npm: https://www.npmjs.com/package/@waiaas/cli
+- Docker: https://hub.docker.com/r/waiaas/daemon
+- Deployment Guide: https://github.com/minhoyoo-iotrust/WAIaaS/blob/main/docs/deployment.md
