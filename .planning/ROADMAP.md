@@ -79,7 +79,7 @@ Plans:
   3. `eth_accounts`가 세션 지갑 주소를 반환하고, `eth_chainId`가 URL chainId에서 파생된 hex 값을 반환한다
   4. `personal_sign`, `eth_signTypedData_v4`가 각각 적절한 서명 파이프라인을 통과한다
   5. 읽기 메서드가 RPC Pool을 통해 프록시되고, 미지원 메서드는 `-32601` 에러를 반환한다
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 399-01-PLAN.md — JSON-RPC 2.0 프로토콜 유틸 + RpcTransactionAdapter
@@ -140,6 +140,6 @@ Phases execute in numeric order: 398 → 399 → 400 → 401
 | 396. Perp/Spot Positions (Hyperliquid) | v31.13 | 2/2 | Complete | 2026-03-12 |
 | 397. Admin Dashboard UX | v31.13 | 2/2 | Complete | 2026-03-12 |
 | 398. Type System + Infrastructure Foundation | v31.14 | Complete    | 2026-03-13 | 2026-03-13 |
-| 399. Core RPC Proxy Engine | v31.14 | 3/3 | Complete | 2026-03-13 |
+| 399. Core RPC Proxy Engine | v31.14 | Complete    | 2026-03-13 | 2026-03-13 |
 | 400. Route Assembly + Async Approval | v31.14 | 0/3 | Not started | - |
 | 401. DX Integration + Testing | v31.14 | 0/3 | Not started | - |
