@@ -30,6 +30,9 @@ interface AuditLogEntry {
   timestamp: number;
 }
 
+// Category constant for settings helpers
+const CAT = 'rpc_proxy';
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -80,16 +83,21 @@ export default function RpcProxyPage() {
   // Settings helpers
   // ---------------------------------------------------------------------------
 
-  const getVal = (key: string, fallback = ''): string =>
-    dirty.value[key] ?? getEffectiveValue(settings.value, key) ?? fallback;
-
-  const getBool = (key: string): boolean => {
-    if (dirty.value[key] !== undefined) return dirty.value[key] === 'true';
-    return getEffectiveBoolValue(settings.value, key);
+  const getVal = (shortKey: string, fallback = ''): string => {
+    const fullKey = `${CAT}.${shortKey}`;
+    if (dirty.value[fullKey] !== undefined) return dirty.value[fullKey];
+    return getEffectiveValue(settings.value, dirty.value, CAT, shortKey) || fallback;
   };
 
-  const setField = (key: string, value: string) => {
-    dirty.value = { ...dirty.value, [key]: value };
+  const getBool = (shortKey: string): boolean => {
+    const fullKey = `${CAT}.${shortKey}`;
+    if (dirty.value[fullKey] !== undefined) return dirty.value[fullKey] === 'true';
+    return getEffectiveBoolValue(settings.value, dirty.value, CAT, shortKey);
+  };
+
+  const setField = (shortKey: string, value: string) => {
+    const fullKey = `${CAT}.${shortKey}`;
+    dirty.value = { ...dirty.value, [fullKey]: value };
   };
 
   const hasDirtyFields = () => Object.keys(dirty.value).length > 0;
@@ -97,7 +105,12 @@ export default function RpcProxyPage() {
   // Register dirty guard
   useEffect(() => {
     const id = 'rpc-proxy-settings';
-    registerDirty(id, () => hasDirtyFields());
+    registerDirty({
+      id,
+      isDirty: () => hasDirtyFields(),
+      save: handleSave,
+      discard: () => { dirty.value = {}; },
+    });
     return () => unregisterDirty(id);
   }, []);
 
@@ -128,7 +141,7 @@ export default function RpcProxyPage() {
   // ---------------------------------------------------------------------------
 
   const handleToggleEnabled = async () => {
-    const current = getBool('rpc_proxy.enabled');
+    const current = getBool('enabled');
     const newVal = current ? 'false' : 'true';
     try {
       await apiPut(API.ADMIN_SETTINGS, { key: 'rpc_proxy.enabled', value: newVal });
@@ -145,12 +158,12 @@ export default function RpcProxyPage() {
   // ---------------------------------------------------------------------------
 
   const auditColumns: Column<AuditLogEntry>[] = [
-    { key: 'timestamp', label: 'Time', render: (row) => formatDate(row.timestamp) },
-    { key: 'action', label: 'Method', render: (row) => String(row.metadata?.method ?? row.action) },
-    { key: 'walletId', label: 'Wallet', render: (row) => row.walletId ? row.walletId.slice(0, 8) + '...' : '-' },
+    { key: 'timestamp', header: 'Time', render: (row) => formatDate(row.timestamp) },
+    { key: 'action', header: 'Method', render: (row) => String(row.metadata?.method ?? row.action) },
+    { key: 'walletId', header: 'Wallet', render: (row) => row.walletId ? row.walletId.slice(0, 8) + '...' : '-' },
     {
       key: 'metadata',
-      label: 'Status',
+      header: 'Status',
       render: (row) => {
         const status = String(row.metadata?.status ?? 'ok');
         const variant = status === 'error' ? 'danger' : status === 'rejected' ? 'warning' : 'success';
@@ -167,7 +180,7 @@ export default function RpcProxyPage() {
     return <div class="loading-spinner">Loading...</div>;
   }
 
-  const isEnabled = getBool('rpc_proxy.enabled');
+  const isEnabled = getBool('enabled');
 
   return (
     <div class="page-content">
@@ -199,36 +212,41 @@ export default function RpcProxyPage() {
         <div class="card-body">
           <FormField
             label="Delay Timeout (seconds)"
-            value={getVal('rpc_proxy.delay_timeout_seconds', '300')}
-            onChange={(v) => setField('rpc_proxy.delay_timeout_seconds', v)}
+            name="rpc_proxy.delay_timeout_seconds"
+            value={getVal('delay_timeout_seconds', '300')}
+            onChange={(v) => setField('delay_timeout_seconds', String(v))}
             type="number"
             help="Timeout for DELAY tier transactions (default: 300s)"
           />
           <FormField
             label="Approval Timeout (seconds)"
-            value={getVal('rpc_proxy.approval_timeout_seconds', '600')}
-            onChange={(v) => setField('rpc_proxy.approval_timeout_seconds', v)}
+            name="rpc_proxy.approval_timeout_seconds"
+            value={getVal('approval_timeout_seconds', '600')}
+            onChange={(v) => setField('approval_timeout_seconds', String(v))}
             type="number"
             help="Timeout for APPROVAL tier transactions (default: 600s)"
           />
           <FormField
             label="Max Gas Limit"
-            value={getVal('rpc_proxy.max_gas_limit', '30000000')}
-            onChange={(v) => setField('rpc_proxy.max_gas_limit', v)}
+            name="rpc_proxy.max_gas_limit"
+            value={getVal('max_gas_limit', '30000000')}
+            onChange={(v) => setField('max_gas_limit', String(v))}
             type="number"
             help="Maximum gas limit per transaction (default: 30,000,000)"
           />
           <FormField
             label="Max Bytecode Size (bytes)"
-            value={getVal('rpc_proxy.max_bytecode_size', '49152')}
-            onChange={(v) => setField('rpc_proxy.max_bytecode_size', v)}
+            name="rpc_proxy.max_bytecode_size"
+            value={getVal('max_bytecode_size', '49152')}
+            onChange={(v) => setField('max_bytecode_size', String(v))}
             type="number"
             help="Maximum contract bytecode size for deploy (default: 48KB)"
           />
           <FormField
             label="Deploy Default Tier"
-            value={getVal('rpc_proxy.deploy_default_tier', 'APPROVAL')}
-            onChange={(v) => setField('rpc_proxy.deploy_default_tier', v)}
+            name="rpc_proxy.deploy_default_tier"
+            value={getVal('deploy_default_tier', 'APPROVAL')}
+            onChange={(v) => setField('deploy_default_tier', String(v))}
             type="select"
             options={[
               { label: 'IMMEDIATE', value: 'IMMEDIATE' },
@@ -239,8 +257,9 @@ export default function RpcProxyPage() {
           />
           <FormField
             label="Allowed Methods (JSON array)"
-            value={getVal('rpc_proxy.allowed_methods', '[]')}
-            onChange={(v) => setField('rpc_proxy.allowed_methods', v)}
+            name="rpc_proxy.allowed_methods"
+            value={getVal('allowed_methods', '[]')}
+            onChange={(v) => setField('allowed_methods', String(v))}
             type="textarea"
             help='JSON array of allowed methods. Empty [] = all supported methods. Example: ["eth_sendTransaction","eth_call"]'
           />
@@ -297,7 +316,6 @@ export default function RpcProxyPage() {
             <Table
               columns={auditColumns}
               data={auditLogs.value}
-              rowKey={(row) => row.id}
             />
           )}
         </div>
