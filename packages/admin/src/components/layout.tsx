@@ -20,6 +20,7 @@ import HyperliquidPage from '../pages/hyperliquid';
 import PolymarketPage from '../pages/polymarket';
 import AuditLogsPage from '../pages/audit-logs';
 import CredentialsPage from '../pages/credentials';
+import RpcProxyPage from '../pages/rpc-proxy';
 
 function extractPath(hash: string): string {
   const raw = hash.slice(1) || '/dashboard';
@@ -45,6 +46,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/polymarket': 'Polymarket',
   '/agent-identity': 'Agent Identity',
   '/credentials': 'Credentials',
+  '/rpc-proxy': 'RPC Proxy',
   '/policies': 'Policies',
   '/notifications': 'Notifications',
   '/security': 'Security',
@@ -64,6 +66,7 @@ const PAGE_SUBTITLES: Record<string, string> = {
   '/polymarket': 'Polymarket prediction market positions, orders, and settings',
   '/agent-identity': 'On-chain agent identity, reputation, and wallet linking',
   '/credentials': 'Manage encryption credentials for external service authentication',
+  '/rpc-proxy': 'EVM JSON-RPC proxy settings and monitoring',
   '/policies': 'Configure transaction policies and rules',
   '/notifications': 'Channel status, delivery logs, and settings',
   '/security': 'Emergency controls and automatic protection rules',
@@ -92,6 +95,7 @@ const NAV_ITEMS = [
   { path: '/polymarket', label: 'Polymarket' },
   { path: '/agent-identity', label: 'Agent Identity' },
   { path: '/credentials', label: 'Credentials' },
+  { path: '/rpc-proxy', label: 'RPC Proxy' },
   { path: '/policies', label: 'Policies' },
   { path: '/notifications', label: 'Notifications' },
   { path: '/wallet-apps', label: 'Human Wallet Apps' },
@@ -118,6 +122,7 @@ function PageRouter() {
   if (path === '/polymarket') return <PolymarketPage />;
   if (path === '/sessions') return <SessionsPage />;
   if (path === '/credentials') return <CredentialsPage />;
+  if (path === '/rpc-proxy') return <RpcProxyPage />;
   if (path === '/policies') return <PoliciesPage />;
   if (path === '/notifications') return <NotificationsPage />;
   if (path === '/telegram-users') {
