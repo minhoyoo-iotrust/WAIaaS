@@ -1,7 +1,8 @@
 # 마일스톤 m31-14: EVM RPC 프록시 모드
 
-- **Status:** PLANNED
+- **Status:** SHIPPED
 - **Milestone:** v31.14
+- **Completed:** 2026-03-13
 
 ## 목표
 
