@@ -47,7 +47,7 @@
 **Milestone Goal:** WAIaaS 데몬이 EVM JSON-RPC 프록시로 동작하여, Forge/Hardhat/ethers.js/viem 등 기존 EVM 개발 도구가 `--rpc-url`만 변경하면 WAIaaS 정책 엔진 + 서명 파이프라인 아래에서 컨트랙트 배포 및 온체인 인터랙션을 수행할 수 있도록 한다.
 
 - [x] **Phase 398: Type System + Infrastructure Foundation** - CONTRACT_DEPLOY 9-type SSoT 확장, DB v58, keepAliveTimeout, EVM_CHAIN_MAP 역방향 조회
-- [ ] **Phase 399: Core RPC Proxy Engine** - 서명 메서드 핸들러, RpcPassthrough, RpcTransactionAdapter, CompletionWaiter, JSON-RPC 프로토콜 유틸
+- [x] **Phase 399: Core RPC Proxy Engine** - 서명 메서드 핸들러, RpcPassthrough, RpcTransactionAdapter, CompletionWaiter, JSON-RPC 프로토콜 유틸
 - [ ] **Phase 400: Route Assembly + Async Approval** - Hono 라우트, RpcDispatcher, 배치 처리, Long-poll 비동기 승인, 보안 검증
 - [ ] **Phase 401: DX Integration + Testing** - Admin Settings/UI, MCP 도구, SDK 메서드, connect-info, 테스트 스위트
 
@@ -82,9 +82,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 399-01-PLAN.md — JSON-RPC 2.0 프로토콜 유틸 + RpcTransactionAdapter
-- [ ] 399-02-PLAN.md — CompletionWaiter + SyncPipelineExecutor + NonceTracker
-- [ ] 399-03-PLAN.md — RpcPassthrough + 서명 메서드 핸들러 (personal_sign, signTypedData, signTransaction)
+- [x] 399-01-PLAN.md — JSON-RPC 2.0 프로토콜 유틸 + RpcTransactionAdapter
+- [x] 399-02-PLAN.md — CompletionWaiter + SyncPipelineExecutor + NonceTracker
+- [x] 399-03-PLAN.md — RpcPassthrough + 서명 메서드 핸들러 (personal_sign, signTypedData, signTransaction)
 
 ### Phase 400: Route Assembly + Async Approval
 **Goal**: `/v1/rpc-evm/:walletId/:chainId` 엔드포인트가 완전히 동작하여 세션 인증된 JSON-RPC 요청을 정책 티어에 따라 동기/비동기로 처리한다
@@ -140,6 +140,6 @@ Phases execute in numeric order: 398 → 399 → 400 → 401
 | 396. Perp/Spot Positions (Hyperliquid) | v31.13 | 2/2 | Complete | 2026-03-12 |
 | 397. Admin Dashboard UX | v31.13 | 2/2 | Complete | 2026-03-12 |
 | 398. Type System + Infrastructure Foundation | v31.14 | Complete    | 2026-03-13 | 2026-03-13 |
-| 399. Core RPC Proxy Engine | v31.14 | 0/3 | Not started | - |
+| 399. Core RPC Proxy Engine | v31.14 | 3/3 | Complete | 2026-03-13 |
 | 400. Route Assembly + Async Approval | v31.14 | 0/3 | Not started | - |
 | 401. DX Integration + Testing | v31.14 | 0/3 | Not started | - |

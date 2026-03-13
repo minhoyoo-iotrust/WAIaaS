@@ -11,26 +11,26 @@ Requirements for EVM RPC Proxy mode. Each maps to roadmap phases.
 
 - [ ] **RPC-01**: User can send JSON-RPC 2.0 requests to `POST /v1/rpc-evm/:walletId/:chainId`
 - [ ] **RPC-02**: User can authenticate RPC requests via existing sessionAuth (Bearer JWT)
-- [ ] **RPC-03**: System routes requests to correct wallet and chain via URL path parameters (chainId → EVM_CHAIN_MAP → NetworkType)
-- [ ] **RPC-04**: `eth_chainId` response is auto-derived from URL chainId parameter
+- [x] **RPC-03**: System routes requests to correct wallet and chain via URL path parameters (chainId → EVM_CHAIN_MAP → NetworkType)
+- [x] **RPC-04**: `eth_chainId` response is auto-derived from URL chainId parameter
 - [ ] **RPC-05**: User can send JSON-RPC batch requests (array of calls)
 - [ ] **RPC-06**: System enforces Content-Type: application/json
 - [x] **RPC-07**: System returns JSON-RPC error `-32602` for unknown chainId
 
 ### Signing Intercept
 
-- [ ] **SIGN-01**: `eth_sendTransaction` routes through 6-stage pipeline with tx-parser type classification
-- [ ] **SIGN-02**: `eth_signTransaction` routes through sign-only pipeline (no broadcast)
-- [ ] **SIGN-03**: `eth_accounts` / `eth_requestAccounts` returns session wallet address
-- [ ] **SIGN-04**: `eth_sign` routes through sign-message pipeline
-- [ ] **SIGN-05**: `personal_sign` routes through sign-message pipeline
-- [ ] **SIGN-06**: `eth_signTypedData_v4` routes through EIP-712 signing pipeline
-- [ ] **SIGN-07**: `eth_sendRawTransaction` is explicitly rejected with descriptive error
+- [x] **SIGN-01**: `eth_sendTransaction` routes through 6-stage pipeline with tx-parser type classification
+- [x] **SIGN-02**: `eth_signTransaction` routes through sign-only pipeline (no broadcast)
+- [x] **SIGN-03**: `eth_accounts` / `eth_requestAccounts` returns session wallet address
+- [x] **SIGN-04**: `eth_sign` routes through sign-message pipeline
+- [x] **SIGN-05**: `personal_sign` routes through sign-message pipeline
+- [x] **SIGN-06**: `eth_signTypedData_v4` routes through EIP-712 signing pipeline
+- [x] **SIGN-07**: `eth_sendRawTransaction` is explicitly rejected with descriptive error
 
 ### Passthrough
 
-- [ ] **PASS-01**: Read methods (eth_call, eth_getBalance, eth_blockNumber, etc.) are proxied to RPC Pool
-- [ ] **PASS-02**: System returns JSON-RPC error `-32601` for unsupported methods
+- [x] **PASS-01**: Read methods (eth_call, eth_getBalance, eth_blockNumber, etc.) are proxied to RPC Pool
+- [x] **PASS-02**: System returns JSON-RPC error `-32601` for unsupported methods
 
 ### Contract Deploy
 
@@ -119,20 +119,20 @@ Deferred to future milestone.
 |-------------|-------|--------|
 | RPC-01 | Phase 400 | Pending |
 | RPC-02 | Phase 400 | Pending |
-| RPC-03 | Phase 399 | Pending |
-| RPC-04 | Phase 399 | Pending |
+| RPC-03 | Phase 399 | Complete |
+| RPC-04 | Phase 399 | Complete |
 | RPC-05 | Phase 400 | Pending |
 | RPC-06 | Phase 400 | Pending |
 | RPC-07 | Phase 398 | Complete |
-| SIGN-01 | Phase 399 | Pending |
-| SIGN-02 | Phase 399 | Pending |
-| SIGN-03 | Phase 399 | Pending |
-| SIGN-04 | Phase 399 | Pending |
-| SIGN-05 | Phase 399 | Pending |
-| SIGN-06 | Phase 399 | Pending |
-| SIGN-07 | Phase 399 | Pending |
-| PASS-01 | Phase 399 | Pending |
-| PASS-02 | Phase 399 | Pending |
+| SIGN-01 | Phase 399 | Complete |
+| SIGN-02 | Phase 399 | Complete |
+| SIGN-03 | Phase 399 | Complete |
+| SIGN-04 | Phase 399 | Complete |
+| SIGN-05 | Phase 399 | Complete |
+| SIGN-06 | Phase 399 | Complete |
+| SIGN-07 | Phase 399 | Complete |
+| PASS-01 | Phase 399 | Complete |
+| PASS-02 | Phase 399 | Complete |
 | DEPL-01 | Phase 398 | Complete |
 | DEPL-02 | Phase 398 | Complete |
 | DEPL-03 | Phase 398 | Complete |

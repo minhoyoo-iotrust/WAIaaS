@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v31.14
 milestone_name: EVM RPC 프록시 모드
 status: executing
-stopped_at: Completed Phase 398 (2/2 plans), ready for Phase 399
-last_updated: "2026-03-13T11:48:23.578Z"
-last_activity: 2026-03-13 — Phase 398 completed (2/2 plans)
+stopped_at: Completed Phase 399 (3/3 plans), ready for Phase 400
+last_updated: "2026-03-13T12:24:00.000Z"
+last_activity: 2026-03-13 — Phase 399 completed (3/3 plans)
 progress:
   total_phases: 4
-  completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
-  percent: 18
+  completed_phases: 2
+  total_plans: 5
+  completed_plans: 5
+  percent: 45
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-13)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Phase 399 — Core RPC Proxy Engine
+**Current focus:** Phase 400 — Route Assembly + Async Approval
 
 ## Current Position
 
-Phase: 399 of 401 (Core RPC Proxy Engine)
+Phase: 400 of 401 (Route Assembly + Async Approval)
 Plan: 0 of 3 in current phase
 Status: Ready to execute
-Last activity: 2026-03-13 — Phase 398 completed (2/2 plans)
+Last activity: 2026-03-13 — Phase 399 completed (3/3 plans)
 
-Progress: [██░░░░░░░░] 18%
+Progress: [█████░░░░░] 45%
 
 ## Performance Metrics
 
@@ -44,6 +44,7 @@ Progress: [██░░░░░░░░] 18%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 398 | 2 | ~65min | ~32min |
+| 399 | 3 | ~37min | ~12min |
 
 ## Accumulated Context
 
@@ -53,6 +54,12 @@ Progress: [██░░░░░░░░] 18%
 - CONTRACT_DEPLOY defaults to APPROVAL tier with Settings override (rpc_proxy.deploy_default_tier)
 - EVM_CHAIN_ID_TO_NETWORK derived from EVM_CHAIN_MAP at module load (SSoT preserved)
 - keepAliveTimeout 600s inline (single use site, Phase 401 may add Settings control)
+
+- PIPELINE_HALTED catch pattern wraps existing pipeline (zero modification, Anti-Pattern 1)
+- Default timeouts: DELAY 300s, APPROVAL 600s (configurable via SettingsService)
+- personal_sign params: [message, address]; eth_sign reversed: [address, message]
+- eth_sendRawTransaction explicitly rejected with -32602 and guidance to use eth_sendTransaction
+- ABI decoding inline for ERC-20 selectors (no viem dependency at RPC proxy layer)
 
 ### Pending Todos
 
@@ -67,5 +74,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-13
-Stopped at: Completed Phase 398 (2/2 plans), ready for Phase 399
+Stopped at: Completed Phase 399 (3/3 plans), ready for Phase 400
 Resume file: None
