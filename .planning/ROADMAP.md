@@ -96,12 +96,12 @@ Plans:
   3. DELAY/APPROVAL 티어 트랜잭션은 Long-poll로 대기하다가 완료 시 txHash를, 타임아웃 시 `-32000` 에러를 반환한다
   4. 인증 없는 요청은 거부되고, `from` 필드가 세션 지갑과 불일치하면 거부된다
   5. 배치 JSON-RPC 요청(배열)이 처리되고, 모든 서명 트랜잭션이 `source: 'rpc-proxy'`로 감사 로그에 기록된다
-**Plans:** TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 400-01: RpcDispatcher + Hono 라우트 등록 + sessionAuth 미들웨어
-- [ ] 400-02: Long-poll 비동기 승인 + 배치 처리 + from 검증
-- [ ] 400-03: 보안 검증 (bytecodeSize, rate limiting, audit log source)
+- [ ] 400-01-PLAN.md — RpcDispatcher + Hono 라우트 등록 + sessionAuth 미들웨어
+- [ ] 400-02-PLAN.md — Long-poll 비동기 승인 + 배치 처리 + from 검증
+- [ ] 400-03-PLAN.md — 보안 검증 (bytecodeSize, rate limiting, audit log source)
 
 ### Phase 401: DX Integration + Testing
 **Goal**: RPC 프록시가 Admin Settings로 런타임 제어되고, MCP/SDK/connect-info를 통해 AI 에이전트가 프록시 URL을 자동 발견하며, 포괄적 테스트가 프로토콜 준수를 검증한다
