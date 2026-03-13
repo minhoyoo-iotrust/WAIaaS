@@ -4,7 +4,7 @@
  * Each setting has a key (DB storage), category, configPath (for config.toml lookup),
  * defaultValue (matching DaemonConfigSchema .default()), and isCredential flag.
  *
- * Categories: notifications, rpc, security, daemon, walletconnect, oracle, display, autostop, monitoring, telegram, signing_sdk, incoming, actions
+ * Categories: notifications, rpc, security, daemon, walletconnect, oracle, display, autostop, monitoring, telegram, signing_sdk, incoming, actions, rpc_proxy
  *
  * @see packages/daemon/src/infrastructure/config/loader.ts for DaemonConfigSchema defaults
  */
@@ -52,6 +52,7 @@ export const SETTING_CATEGORIES = [
   'position_tracker',
   'smart_account',
   'erc8128',
+  'rpc_proxy',
 ] as const;
 
 export type SettingCategory = (typeof SETTING_CATEGORIES)[number];
@@ -335,6 +336,14 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'erc8128.default_nonce', category: 'erc8128', configPath: 'erc8128.default_nonce', defaultValue: 'true', isCredential: false },
   { key: 'erc8128.default_algorithm', category: 'erc8128', configPath: 'erc8128.default_algorithm', defaultValue: 'ethereum-eip191', isCredential: false },
   { key: 'erc8128.default_rate_limit_rpm', category: 'erc8128', configPath: 'erc8128.default_rate_limit_rpm', defaultValue: '60', isCredential: false },
+  // --- rpc_proxy category (EVM RPC proxy mode settings) ---
+  { key: 'rpc_proxy.enabled', category: 'rpc_proxy', configPath: 'rpc_proxy.enabled', defaultValue: 'false', isCredential: false },
+  { key: 'rpc_proxy.allowed_methods', category: 'rpc_proxy', configPath: 'rpc_proxy.allowed_methods', defaultValue: '[]', isCredential: false },
+  { key: 'rpc_proxy.delay_timeout_seconds', category: 'rpc_proxy', configPath: 'rpc_proxy.delay_timeout_seconds', defaultValue: '300', isCredential: false },
+  { key: 'rpc_proxy.approval_timeout_seconds', category: 'rpc_proxy', configPath: 'rpc_proxy.approval_timeout_seconds', defaultValue: '600', isCredential: false },
+  { key: 'rpc_proxy.max_gas_limit', category: 'rpc_proxy', configPath: 'rpc_proxy.max_gas_limit', defaultValue: '30000000', isCredential: false },
+  { key: 'rpc_proxy.max_bytecode_size', category: 'rpc_proxy', configPath: 'rpc_proxy.max_bytecode_size', defaultValue: '49152', isCredential: false },
+  { key: 'rpc_proxy.deploy_default_tier', category: 'rpc_proxy', configPath: 'rpc_proxy.deploy_default_tier', defaultValue: 'APPROVAL', isCredential: false },
 ] as const;
 
 // ---------------------------------------------------------------------------
