@@ -63,7 +63,7 @@
   3. CONTRACT_DEPLOY 트랜잭션이 기본 APPROVAL 티어 정책으로 처리된다
   4. Node.js keepAliveTimeout이 600초 이상으로 설정되어 Long-poll 연결이 유지된다
   5. 존재하지 않는 chainId로 요청 시 JSON-RPC `-32602` 에러가 반환된다
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 398-01: CONTRACT_DEPLOY Zod SSoT 확장 (enum, discriminatedUnion, switch/case, tx-parser)
@@ -139,7 +139,7 @@ Phases execute in numeric order: 398 → 399 → 400 → 401
 | 395. Yield Positions (Pendle) | v31.13 | 1/1 | Complete | 2026-03-12 |
 | 396. Perp/Spot Positions (Hyperliquid) | v31.13 | 2/2 | Complete | 2026-03-12 |
 | 397. Admin Dashboard UX | v31.13 | 2/2 | Complete | 2026-03-12 |
-| 398. Type System + Infrastructure Foundation | v31.14 | 2/2 | Complete | 2026-03-13 |
+| 398. Type System + Infrastructure Foundation | v31.14 | Complete    | 2026-03-13 | 2026-03-13 |
 | 399. Core RPC Proxy Engine | v31.14 | 0/3 | Not started | - |
 | 400. Route Assembly + Async Approval | v31.14 | 0/3 | Not started | - |
 | 401. DX Integration + Testing | v31.14 | 0/3 | Not started | - |

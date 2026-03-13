@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v31.14
 milestone_name: EVM RPC 프록시 모드
-status: active
-stopped_at: null
-last_updated: "2026-03-13T12:00:00.000Z"
+status: executing
+stopped_at: Completed Phase 398 (2/2 plans), ready for Phase 399
+last_updated: "2026-03-13T11:48:23.578Z"
 last_activity: 2026-03-13 — Phase 398 completed (2/2 plans)
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 11
+  total_plans: 2
   completed_plans: 2
   percent: 18
 ---
