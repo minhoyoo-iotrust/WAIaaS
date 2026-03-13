@@ -113,7 +113,7 @@ Plans:
   3. MCP `get_rpc_proxy_url` 도구와 SDK `getRpcProxyUrl()` 메서드가 프록시 URL을 반환한다
   4. `connect-info` 응답에 `rpcProxyBaseUrl`이 포함되어 에이전트가 자동 발견한다
   5. JSON-RPC 프로토콜 준수, 서명 인터셉트, 패스스루, CONTRACT_DEPLOY, 비동기 승인, 배치, 보안 테스트가 모두 통과한다
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 401-01-PLAN.md — Admin Settings 7키 (rpc_proxy.*) + Admin UI RPC Proxy 페이지
@@ -142,4 +142,4 @@ Phases execute in numeric order: 398 → 399 → 400 → 401
 | 398. Type System + Infrastructure Foundation | v31.14 | Complete    | 2026-03-13 | 2026-03-13 |
 | 399. Core RPC Proxy Engine | v31.14 | Complete    | 2026-03-13 | 2026-03-13 |
 | 400. Route Assembly + Async Approval | v31.14 | Complete    | 2026-03-13 | 2026-03-13 |
-| 401. DX Integration + Testing | v31.14 | 3/3 | Complete | 2026-03-13 |
+| 401. DX Integration + Testing | v31.14 | Complete    | 2026-03-13 | 2026-03-13 |
