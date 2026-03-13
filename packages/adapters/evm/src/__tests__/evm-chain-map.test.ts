@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { EVM_CHAIN_MAP } from '../evm-chain-map.js';
+import { EVM_CHAIN_MAP, EVM_CHAIN_ID_TO_NETWORK, getNetworkByChainId } from '../evm-chain-map.js';
 import { EVM_NETWORK_TYPES } from '@waiaas/core';
 
 describe('EVM_CHAIN_MAP', () => {
@@ -128,5 +128,43 @@ describe('EVM_CHAIN_MAP', () => {
         expect(entry.viemChain.id).toBe(entry.chainId);
       });
     }
+  });
+
+  // v31.14: EVM_CHAIN_ID_TO_NETWORK reverse lookup tests (RPC-07)
+  describe('EVM_CHAIN_ID_TO_NETWORK reverse lookup', () => {
+    it('getNetworkByChainId(1) returns ethereum-mainnet', () => {
+      expect(getNetworkByChainId(1)).toBe('ethereum-mainnet');
+    });
+
+    it('getNetworkByChainId(8453) returns base-mainnet', () => {
+      expect(getNetworkByChainId(8453)).toBe('base-mainnet');
+    });
+
+    it('getNetworkByChainId(11155111) returns ethereum-sepolia', () => {
+      expect(getNetworkByChainId(11155111)).toBe('ethereum-sepolia');
+    });
+
+    it('getNetworkByChainId(42161) returns arbitrum-mainnet', () => {
+      expect(getNetworkByChainId(42161)).toBe('arbitrum-mainnet');
+    });
+
+    it('getNetworkByChainId(999) returns hyperevm-mainnet', () => {
+      expect(getNetworkByChainId(999)).toBe('hyperevm-mainnet');
+    });
+
+    it('getNetworkByChainId(99999) returns undefined for unknown chainId', () => {
+      expect(getNetworkByChainId(99999)).toBeUndefined();
+    });
+
+    it('EVM_CHAIN_ID_TO_NETWORK has same size as EVM_CHAIN_MAP (12 entries)', () => {
+      expect(EVM_CHAIN_ID_TO_NETWORK.size).toBe(Object.keys(EVM_CHAIN_MAP).length);
+      expect(EVM_CHAIN_ID_TO_NETWORK.size).toBe(12);
+    });
+
+    it('every EVM_CHAIN_MAP entry has a reverse mapping', () => {
+      for (const [network, entry] of Object.entries(EVM_CHAIN_MAP)) {
+        expect(getNetworkByChainId(entry.chainId)).toBe(network);
+      }
+    });
   });
 });

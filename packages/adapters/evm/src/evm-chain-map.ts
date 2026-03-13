@@ -9,6 +9,8 @@ import {
 } from 'viem/chains';
 import type { EvmNetworkType } from '@waiaas/core';
 
+// Re-export EvmNetworkType for downstream consumers (avoids importing @waiaas/core directly)
+
 export interface EvmChainEntry {
   viemChain: Chain;
   chainId: number;
@@ -30,3 +32,21 @@ export const EVM_CHAIN_MAP: Record<EvmNetworkType, EvmChainEntry> = {
   'hyperevm-mainnet': { viemChain: hyperEvm, chainId: 999, nativeSymbol: 'HYPE', nativeName: 'HYPE' },
   'hyperevm-testnet': { viemChain: hyperliquidEvmTestnet, chainId: 998, nativeSymbol: 'HYPE', nativeName: 'HYPE' },
 };
+
+// ---------------------------------------------------------------------------
+// v31.14: Reverse lookup -- chainId (number) -> EvmNetworkType slug
+// ---------------------------------------------------------------------------
+
+/** Reverse lookup: EVM chainId (number) -> WAIaaS EvmNetworkType slug. */
+export const EVM_CHAIN_ID_TO_NETWORK: ReadonlyMap<number, EvmNetworkType> = new Map(
+  (Object.entries(EVM_CHAIN_MAP) as [EvmNetworkType, EvmChainEntry][])
+    .map(([network, entry]) => [entry.chainId, network]),
+);
+
+/**
+ * Resolve EvmNetworkType from EVM chainId number.
+ * @returns EvmNetworkType slug or undefined if chainId is not registered.
+ */
+export function getNetworkByChainId(chainId: number): EvmNetworkType | undefined {
+  return EVM_CHAIN_ID_TO_NETWORK.get(chainId);
+}
