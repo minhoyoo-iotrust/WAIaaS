@@ -41,3 +41,5 @@ export {
   INTERCEPT_METHODS,
   type HandlerContext,
 } from './method-handlers.js';
+
+export { RpcDispatcher, type RpcDispatcherDeps } from './dispatcher.js';
