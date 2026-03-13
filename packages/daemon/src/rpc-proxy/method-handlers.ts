@@ -164,6 +164,11 @@ export class RpcMethodHandlers {
       return jsonRpcSuccess(id, txHash);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Transaction execution failed';
+      // ASYNC-04: Include txId in timeout error data for client recovery
+      const txIdMatch = message.match(/Transaction ([a-f0-9-]+) timed out/);
+      if (txIdMatch) {
+        return jsonRpcError(id, JSON_RPC_ERRORS.SERVER_ERROR, message, { txId: txIdMatch[1] });
+      }
       return jsonRpcError(id, JSON_RPC_ERRORS.SERVER_ERROR, message);
     }
   }
