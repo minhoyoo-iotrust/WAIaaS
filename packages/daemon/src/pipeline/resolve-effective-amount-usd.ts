@@ -120,7 +120,8 @@ export async function resolveEffectiveAmountUsd(
         }
       }
 
-      case 'CONTRACT_CALL': {
+      case 'CONTRACT_CALL':
+      case 'CONTRACT_DEPLOY': {
         const req = request as { value?: string };
         if (!req.value || req.value === '0') {
           return { type: 'success', usdAmount: 0, isStale: false };

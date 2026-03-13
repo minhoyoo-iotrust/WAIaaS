@@ -31,6 +31,7 @@ import {
   type ContractCallRequest,
   type ApproveRequest,
   type NftTransferRequest,
+  type ContractDeployRequest,
 } from '@waiaas/core';
 import { wallets, transactions } from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
@@ -364,6 +365,16 @@ export function buildTransactionParam(
         chain,
         contractAddress: r.token.address,
         assetId: r.token.assetId,
+      };
+    }
+    case 'CONTRACT_DEPLOY': {
+      const r = req as ContractDeployRequest;
+      return {
+        type: 'CONTRACT_DEPLOY',
+        amount: r.value ?? '0',
+        toAddress: '', // no recipient for contract deployment
+        chain,
+        contractAddress: '', // will be populated after deployment
       };
     }
     case 'TRANSFER':
@@ -1066,6 +1077,20 @@ export async function buildByType(
       });
     }
 
+    case 'CONTRACT_DEPLOY': {
+      const req = request as ContractDeployRequest;
+      // Contract deployment: to=undefined, data=bytecode(+constructorArgs)
+      const deployData = req.constructorArgs
+        ? req.bytecode + req.constructorArgs.replace(/^0x/, '')
+        : req.bytecode;
+      return adapter.buildContractCall({
+        from: walletPublicKey,
+        to: '', // adapter handles to='' as to=undefined for deploy
+        calldata: deployData,
+        value: req.value ? BigInt(req.value) : undefined,
+      });
+    }
+
     case 'BATCH': {
       const req = request as BatchRequest;
       return adapter.buildBatch({
@@ -1331,6 +1356,20 @@ export function buildUserOpCalls(
           functionName: 'safeTransferFrom',
           args: [from, req.to as Hex, BigInt(req.token.tokenId), BigInt(req.amount ?? '1'), '0x' as Hex],
         }),
+      }];
+    }
+
+    case 'CONTRACT_DEPLOY': {
+      const req = request as ContractDeployRequest;
+      const deployData = req.constructorArgs
+        ? req.bytecode + req.constructorArgs.replace(/^0x/, '')
+        : req.bytecode;
+      // Smart account contract deployment via CREATE2-like pattern
+      // to is empty (factory handles deployment), data is full bytecode+args
+      return [{
+        to: '0x' as Hex, // will be interpreted as factory/self call
+        value: BigInt(req.value ?? '0'),
+        data: deployData as Hex,
       }];
     }
 
@@ -1935,17 +1974,24 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
 
       // Audit log: TX_SUBMITTED
       if (ctx.sqlite) {
+        const txType = ('type' in ctx.request && ctx.request.type) ? ctx.request.type : 'TRANSFER';
+        const auditDetails: Record<string, unknown> = {
+          txHash: ctx.submitResult.txHash,
+          chain: ctx.wallet.chain,
+          network: ctx.resolvedNetwork,
+          type: txType,
+        };
+        // v31.14 DEPL-06: log keccak256(bytecode) for CONTRACT_DEPLOY audit trail
+        if (txType === 'CONTRACT_DEPLOY' && 'bytecode' in ctx.request) {
+          const { keccak256, toBytes } = await import('viem');
+          auditDetails.bytecodeHash = keccak256(toBytes((ctx.request as ContractDeployRequest).bytecode as `0x${string}`));
+        }
         insertAuditLog(ctx.sqlite, {
           eventType: 'TX_SUBMITTED',
           actor: ctx.sessionId ?? 'system',
           walletId: ctx.walletId,
           txId: ctx.txId,
-          details: {
-            txHash: ctx.submitResult.txHash,
-            chain: ctx.wallet.chain,
-            network: ctx.resolvedNetwork,
-            type: ('type' in ctx.request && ctx.request.type) ? ctx.request.type : 'TRANSFER',
-          },
+          details: auditDetails,
           severity: 'info',
         });
       }
