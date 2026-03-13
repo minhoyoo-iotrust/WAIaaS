@@ -4,7 +4,7 @@ milestone: v31.14
 milestone_name: EVM RPC 프록시 모드
 status: executing
 stopped_at: Completed Phase 400 (3/3 plans), ready for Phase 401
-last_updated: "2026-03-13T13:44:00.000Z"
+last_updated: "2026-03-13T13:48:31.616Z"
 last_activity: 2026-03-13 — Phase 400 completed (3/3 plans)
 progress:
   total_phases: 4

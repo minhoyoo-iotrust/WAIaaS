@@ -141,5 +141,5 @@ Phases execute in numeric order: 398 → 399 → 400 → 401
 | 397. Admin Dashboard UX | v31.13 | 2/2 | Complete | 2026-03-12 |
 | 398. Type System + Infrastructure Foundation | v31.14 | Complete    | 2026-03-13 | 2026-03-13 |
 | 399. Core RPC Proxy Engine | v31.14 | Complete    | 2026-03-13 | 2026-03-13 |
-| 400. Route Assembly + Async Approval | v31.14 | 3/3 | Complete | 2026-03-13 |
+| 400. Route Assembly + Async Approval | v31.14 | Complete    | 2026-03-13 | 2026-03-13 |
 | 401. DX Integration + Testing | v31.14 | 0/3 | Not started | - |
