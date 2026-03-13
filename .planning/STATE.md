@@ -4,14 +4,14 @@ milestone: v31.14
 milestone_name: EVM RPC 프록시 모드
 status: active
 stopped_at: null
-last_updated: "2026-03-13T00:00:00.000Z"
-last_activity: 2026-03-13 — Roadmap created (4 phases, 11 plans, 49 requirements)
+last_updated: "2026-03-13T12:00:00.000Z"
+last_activity: 2026-03-13 — Phase 398 completed (2/2 plans)
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 11
-  completed_plans: 0
-  percent: 0
+  completed_plans: 2
+  percent: 18
 ---
 
 # Project State
@@ -21,35 +21,38 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-13)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Phase 398 — Type System + Infrastructure Foundation
+**Current focus:** Phase 399 — Core RPC Proxy Engine
 
 ## Current Position
 
-Phase: 398 of 401 (Type System + Infrastructure Foundation)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-03-13 — Roadmap created
+Phase: 399 of 401 (Core RPC Proxy Engine)
+Plan: 0 of 3 in current phase
+Status: Ready to execute
+Last activity: 2026-03-13 — Phase 398 completed (2/2 plans)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██░░░░░░░░] 18%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: —
-- Total execution time: 0 hours
+- Total plans completed: 2
+- Average duration: ~30min
+- Total execution time: ~1 hour
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 398 | 2 | ~65min | ~32min |
 
 ## Accumulated Context
 
 ### Decisions
 
-None yet.
+- CONTRACT_DEPLOY uses adapter.buildContractCall with to='' (Phase 399 handles to=undefined conversion)
+- CONTRACT_DEPLOY defaults to APPROVAL tier with Settings override (rpc_proxy.deploy_default_tier)
+- EVM_CHAIN_ID_TO_NETWORK derived from EVM_CHAIN_MAP at module load (SSoT preserved)
+- keepAliveTimeout 600s inline (single use site, Phase 401 may add Settings control)
 
 ### Pending Todos
 
@@ -64,5 +67,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-13
-Stopped at: Roadmap created, ready to plan Phase 398
+Stopped at: Completed Phase 398 (2/2 plans), ready for Phase 399
 Resume file: None

@@ -46,7 +46,7 @@
 
 **Milestone Goal:** WAIaaS 데몬이 EVM JSON-RPC 프록시로 동작하여, Forge/Hardhat/ethers.js/viem 등 기존 EVM 개발 도구가 `--rpc-url`만 변경하면 WAIaaS 정책 엔진 + 서명 파이프라인 아래에서 컨트랙트 배포 및 온체인 인터랙션을 수행할 수 있도록 한다.
 
-- [ ] **Phase 398: Type System + Infrastructure Foundation** - CONTRACT_DEPLOY 9-type SSoT 확장, DB v58, keepAliveTimeout, EVM_CHAIN_MAP 역방향 조회
+- [x] **Phase 398: Type System + Infrastructure Foundation** - CONTRACT_DEPLOY 9-type SSoT 확장, DB v58, keepAliveTimeout, EVM_CHAIN_MAP 역방향 조회
 - [ ] **Phase 399: Core RPC Proxy Engine** - 서명 메서드 핸들러, RpcPassthrough, RpcTransactionAdapter, CompletionWaiter, JSON-RPC 프로토콜 유틸
 - [ ] **Phase 400: Route Assembly + Async Approval** - Hono 라우트, RpcDispatcher, 배치 처리, Long-poll 비동기 승인, 보안 검증
 - [ ] **Phase 401: DX Integration + Testing** - Admin Settings/UI, MCP 도구, SDK 메서드, connect-info, 테스트 스위트
@@ -66,8 +66,8 @@
 **Plans:** 2 plans
 
 Plans:
-- [ ] 398-01: CONTRACT_DEPLOY Zod SSoT 확장 (enum, discriminatedUnion, switch/case, tx-parser)
-- [ ] 398-02: DB v58 마이그레이션 + 인프라 전제 조건 (toAddress nullable, keepAliveTimeout, EVM_CHAIN_MAP reverse)
+- [x] 398-01: CONTRACT_DEPLOY Zod SSoT 확장 (enum, discriminatedUnion, switch/case, tx-parser)
+- [x] 398-02: DB v58 마이그레이션 + 인프라 전제 조건 (toAddress nullable, keepAliveTimeout, EVM_CHAIN_MAP reverse)
 
 ### Phase 399: Core RPC Proxy Engine
 **Goal**: RPC 프록시의 핵심 컴포넌트(서명 인터셉트, 패스스루, 트랜잭션 변환, 완료 대기)가 독립적으로 동작한다
@@ -139,7 +139,7 @@ Phases execute in numeric order: 398 → 399 → 400 → 401
 | 395. Yield Positions (Pendle) | v31.13 | 1/1 | Complete | 2026-03-12 |
 | 396. Perp/Spot Positions (Hyperliquid) | v31.13 | 2/2 | Complete | 2026-03-12 |
 | 397. Admin Dashboard UX | v31.13 | 2/2 | Complete | 2026-03-12 |
-| 398. Type System + Infrastructure Foundation | v31.14 | 0/2 | Not started | - |
+| 398. Type System + Infrastructure Foundation | v31.14 | 2/2 | Complete | 2026-03-13 |
 | 399. Core RPC Proxy Engine | v31.14 | 0/3 | Not started | - |
 | 400. Route Assembly + Async Approval | v31.14 | 0/3 | Not started | - |
 | 401. DX Integration + Testing | v31.14 | 0/3 | Not started | - |

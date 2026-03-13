@@ -15,7 +15,7 @@ Requirements for EVM RPC Proxy mode. Each maps to roadmap phases.
 - [ ] **RPC-04**: `eth_chainId` response is auto-derived from URL chainId parameter
 - [ ] **RPC-05**: User can send JSON-RPC batch requests (array of calls)
 - [ ] **RPC-06**: System enforces Content-Type: application/json
-- [ ] **RPC-07**: System returns JSON-RPC error `-32602` for unknown chainId
+- [x] **RPC-07**: System returns JSON-RPC error `-32602` for unknown chainId
 
 ### Signing Intercept
 
@@ -34,12 +34,12 @@ Requirements for EVM RPC Proxy mode. Each maps to roadmap phases.
 
 ### Contract Deploy
 
-- [ ] **DEPL-01**: `eth_sendTransaction` with `to=null` is classified as CONTRACT_DEPLOY
-- [ ] **DEPL-02**: TRANSACTION_TYPES enum extended to 9-type with CONTRACT_DEPLOY
-- [ ] **DEPL-03**: DB migration v58 adds CONTRACT_DEPLOY to tx_history type CHECK constraint
-- [ ] **DEPL-04**: CONTRACT_DEPLOY defaults to APPROVAL tier policy
-- [ ] **DEPL-05**: Deployment result stores `deployedAddress` in tx_history metadata
-- [ ] **DEPL-06**: bytecodeHash (keccak256) recorded in audit log
+- [x] **DEPL-01**: `eth_sendTransaction` with `to=null` is classified as CONTRACT_DEPLOY
+- [x] **DEPL-02**: TRANSACTION_TYPES enum extended to 9-type with CONTRACT_DEPLOY
+- [x] **DEPL-03**: DB migration v58 adds CONTRACT_DEPLOY to tx_history type CHECK constraint
+- [x] **DEPL-04**: CONTRACT_DEPLOY defaults to APPROVAL tier policy
+- [x] **DEPL-05**: Deployment result stores `deployedAddress` in tx_history metadata
+- [x] **DEPL-06**: bytecodeHash (keccak256) recorded in audit log
 
 ### Async Approval
 
@@ -47,7 +47,7 @@ Requirements for EVM RPC Proxy mode. Each maps to roadmap phases.
 - [ ] **ASYNC-02**: DELAY tier: long-poll HTTP response, configurable timeout (default 300s)
 - [ ] **ASYNC-03**: APPROVAL tier: long-poll HTTP response, Owner approval wait (default 600s)
 - [ ] **ASYNC-04**: Timeout returns JSON-RPC error `-32000` with cause and transaction ID
-- [ ] **ASYNC-05**: Node.js keepAliveTimeout configured to support long-poll connections
+- [x] **ASYNC-05**: Node.js keepAliveTimeout configured to support long-poll connections
 
 ### Admin & Settings
 
@@ -123,7 +123,7 @@ Deferred to future milestone.
 | RPC-04 | Phase 399 | Pending |
 | RPC-05 | Phase 400 | Pending |
 | RPC-06 | Phase 400 | Pending |
-| RPC-07 | Phase 398 | Pending |
+| RPC-07 | Phase 398 | Complete |
 | SIGN-01 | Phase 399 | Pending |
 | SIGN-02 | Phase 399 | Pending |
 | SIGN-03 | Phase 399 | Pending |
@@ -133,17 +133,17 @@ Deferred to future milestone.
 | SIGN-07 | Phase 399 | Pending |
 | PASS-01 | Phase 399 | Pending |
 | PASS-02 | Phase 399 | Pending |
-| DEPL-01 | Phase 398 | Pending |
-| DEPL-02 | Phase 398 | Pending |
-| DEPL-03 | Phase 398 | Pending |
-| DEPL-04 | Phase 398 | Pending |
-| DEPL-05 | Phase 398 | Pending |
-| DEPL-06 | Phase 398 | Pending |
+| DEPL-01 | Phase 398 | Complete |
+| DEPL-02 | Phase 398 | Complete |
+| DEPL-03 | Phase 398 | Complete |
+| DEPL-04 | Phase 398 | Complete |
+| DEPL-05 | Phase 398 | Complete |
+| DEPL-06 | Phase 398 | Complete |
 | ASYNC-01 | Phase 400 | Pending |
 | ASYNC-02 | Phase 400 | Pending |
 | ASYNC-03 | Phase 400 | Pending |
 | ASYNC-04 | Phase 400 | Pending |
-| ASYNC-05 | Phase 398 | Pending |
+| ASYNC-05 | Phase 398 | Complete |
 | ADMIN-01 | Phase 401 | Pending |
 | ADMIN-02 | Phase 401 | Pending |
 | ADMIN-03 | Phase 401 | Pending |
