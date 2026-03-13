@@ -8,6 +8,20 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
+## Current Milestone: v31.14 EVM RPC 프록시 모드
+
+**Goal:** WAIaaS 데몬이 EVM JSON-RPC 프록시로 동작하여, Forge/Hardhat/ethers.js/viem 등 기존 EVM 개발 도구가 `--rpc-url`만 변경하면 WAIaaS 정책 엔진 + 서명 파이프라인 아래에서 컨트랙트 배포 및 온체인 인터랙션을 수행할 수 있도록 한다.
+
+**Target features:**
+- `POST /v1/rpc-evm/:walletId/:chainId` JSON-RPC 2.0 프록시 엔드포인트 (세션 인증, batch 지원)
+- 서명 메서드 인터셉트: eth_sendTransaction → 6-stage 파이프라인 (tx-parser 분류 포함)
+- 패스스루 읽기 메서드: RPC Pool 직접 프록시
+- CONTRACT_DEPLOY 신규 타입: TRANSACTION_TYPES 9-type 확장 + DB 마이그레이션
+- Long-poll 비동기 승인: DELAY/APPROVAL 티어 대기 + 타임아웃
+- Admin Settings 6개 + Admin UI RPC 프록시 섹션
+- MCP get_rpc_proxy_url 도구 + SDK getRpcProxyUrl() + connect-info 확장
+- 보안: 세션 인증, from 주소 검증, rate limiting, 감사 로그
+
 ## Previous Milestone: v31.13 DeFi 포지션 대시보드 완성 — SHIPPED 2026-03-12
 
 미구현 5개 DeFi 프로바이더의 getPositions() 구현 + Admin Dashboard UX 완성. Lido stETH/wstETH + Jito jitoSOL 스테이킹 포지션(환산 비율, duck-type 자동 등록), Aave V3 Supply/Borrow + Health Factor + Oracle USD, Pendle PT/YT Yield 포지션(MATURED 자동 전환, implied APY), Hyperliquid Perp 오픈 포지션 + Spot 잔액(Info API 신규 구현, 8 metadata 필드), Admin Dashboard 카테고리 필터(5탭) + 프로바이더 그룹핑 + 카테고리별 맞춤 상세 컬럼(STAKING:APR/LENDING:HF/YIELD:만기/PERP:PnL) + HF 경고 배너 + 지갑 필터 + 30초 자동 새로고침. 5 phases, 8 plans, 27 requirements, 28 commits, 44 files, +5,985 lines, ~188 tests.
