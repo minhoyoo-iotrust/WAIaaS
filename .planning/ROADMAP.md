@@ -79,12 +79,12 @@ Plans:
   3. `eth_accounts`가 세션 지갑 주소를 반환하고, `eth_chainId`가 URL chainId에서 파생된 hex 값을 반환한다
   4. `personal_sign`, `eth_signTypedData_v4`가 각각 적절한 서명 파이프라인을 통과한다
   5. 읽기 메서드가 RPC Pool을 통해 프록시되고, 미지원 메서드는 `-32601` 에러를 반환한다
-**Plans:** TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 399-01: JSON-RPC 프로토콜 유틸 + RpcTransactionAdapter
-- [ ] 399-02: CompletionWaiter + SyncPipelineExecutor + 로컬 논스 트래커
-- [ ] 399-03: RpcPassthrough + 서명 메서드 핸들러 (personal_sign, signTypedData, signTransaction)
+- [ ] 399-01-PLAN.md — JSON-RPC 2.0 프로토콜 유틸 + RpcTransactionAdapter
+- [ ] 399-02-PLAN.md — CompletionWaiter + SyncPipelineExecutor + NonceTracker
+- [ ] 399-03-PLAN.md — RpcPassthrough + 서명 메서드 핸들러 (personal_sign, signTypedData, signTransaction)
 
 ### Phase 400: Route Assembly + Async Approval
 **Goal**: `/v1/rpc-evm/:walletId/:chainId` 엔드포인트가 완전히 동작하여 세션 인증된 JSON-RPC 요청을 정책 티어에 따라 동기/비동기로 처리한다
