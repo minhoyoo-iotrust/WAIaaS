@@ -25,6 +25,7 @@ export const TRANSACTION_TYPES = [
   'NFT_TRANSFER',
   'SIGN',
   'X402_PAYMENT',
+  'CONTRACT_DEPLOY',
 ] as const;
 export type TransactionType = (typeof TRANSACTION_TYPES)[number];
 export const TransactionTypeEnum = z.enum(TRANSACTION_TYPES);

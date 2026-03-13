@@ -21,6 +21,9 @@ export {
   type ApproveRequest,
   BatchRequestSchema,
   type BatchRequest,
+  // v31.14 CONTRACT_DEPLOY (7th type) -- EVM contract deployment
+  ContractDeployRequestSchema,
+  type ContractDeployRequest,
   // v31.0 NFT_TRANSFER (6th type) + NFT standard enum
   NftTransferRequestSchema,
   type NftTransferRequest,
