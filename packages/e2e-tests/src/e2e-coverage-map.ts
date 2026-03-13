@@ -85,6 +85,7 @@ export const routeCoverage: Record<string, string[]> = {
   'nft-approvals': ['onchain-nft.ts'],
   'defi-positions': ['advanced-defi-settings-push-relay.ts'],
   'nonce': ['core-auth-wallet-session.ts'],
+  'rpc-proxy': ['advanced-x402-erc8004-erc8128.ts'],
 };
 
 // ── Route Excludes ─────────────────────────────────────────────────────
