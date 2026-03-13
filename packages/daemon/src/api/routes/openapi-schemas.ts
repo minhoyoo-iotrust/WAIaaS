@@ -1342,6 +1342,10 @@ export const ConnectInfoResponseSchema = z.object({
     version: z.string(),
     baseUrl: z.string(),
   }),
+  rpcProxy: z.object({
+    enabled: z.boolean(),
+    baseUrl: z.string(),
+  }).nullable().optional().openapi({ description: 'RPC proxy info (null when disabled)' }),
   prompt: z.string(),
 }).openapi('ConnectInfoResponse');
 

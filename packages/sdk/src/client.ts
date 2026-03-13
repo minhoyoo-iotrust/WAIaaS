@@ -7,7 +7,7 @@
  * - sendToken(), getTransaction(), listTransactions(), listPendingTransactions() (transactions)
  * - listIncomingTransactions(), getIncomingTransactionSummary() (incoming transactions)
  * - createSession(), renewSession() (session management)
- * - getConnectInfo() (discovery)
+ * - getConnectInfo(), getRpcProxyUrl() (discovery)
  * - encodeCalldata(), signTransaction() (utils)
  * - x402Fetch() (x402 auto-payment)
  * - signHttpRequest(), verifyHttpSignature() (ERC-8128 signing)
@@ -654,6 +654,17 @@ export class WAIaaSClient {
       ),
       this.retryOptions,
     );
+  }
+
+  /**
+   * Get the RPC proxy URL for a specific wallet and EVM chain.
+   * Returns the full URL to use as --rpc-url for Forge/Hardhat/ethers.js/viem.
+   * Returns null if RPC proxy is not enabled.
+   */
+  async getRpcProxyUrl(walletId: string, chainId: number): Promise<string | null> {
+    const info = await this.getConnectInfo();
+    if (!info.rpcProxy?.enabled || !info.rpcProxy?.baseUrl) return null;
+    return `${info.rpcProxy.baseUrl}/${walletId}/${chainId}`;
   }
 
   // --- Utils ---

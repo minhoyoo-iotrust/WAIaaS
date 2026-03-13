@@ -175,6 +175,9 @@ export function buildConnectInfoPrompt(params: BuildConnectInfoPromptParams): st
   if (capabilities.includes('external_actions')) {
     lines.push('External Actions: Use POST /v1/actions/{provider}/{action} for off-chain signed actions. Query results: GET /v1/wallets/{id}/actions.');
   }
+  if (capabilities.includes('rpc_proxy')) {
+    lines.push(`EVM RPC Proxy: Available at ${baseUrl}/v1/rpc-evm/{walletId}/{chainId}. Use as --rpc-url for Forge/Hardhat/ethers.js/viem.`);
+  }
   lines.push('Specify walletId parameter (UUID from the ID field above) to target a specific wallet.');
   lines.push('Append ?network=<network> to query a specific network (required for EVM wallets, auto-resolved for Solana).');
   lines.push('When session expires (401 TOKEN_EXPIRED), renew with PUT /v1/sessions/{sessionId}/renew.');
@@ -422,6 +425,17 @@ export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
       capabilities.push('external_actions');
     }
 
+    // rpc_proxy: check if enabled via settings
+    if (deps.settingsService) {
+      try {
+        if (deps.settingsService.get('rpc_proxy.enabled') === 'true') {
+          capabilities.push('rpc_proxy');
+        }
+      } catch {
+        // Setting not found -- rpc_proxy not available
+      }
+    }
+
     // f. Fetch NFT summary per wallet (graceful degradation)
     const nftSummaryMap: Record<string, { count: number; collections: number }> = {};
     if (deps.nftIndexerClient) {
@@ -536,6 +550,14 @@ export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
         version: deps.version,
         baseUrl,
       },
+      rpcProxy: (() => {
+        try {
+          if (deps.settingsService?.get('rpc_proxy.enabled') === 'true') {
+            return { enabled: true, baseUrl: `${baseUrl}/v1/rpc-evm` };
+          }
+        } catch { /* not found */ }
+        return null;
+      })(),
       prompt,
     }, 200);
   });

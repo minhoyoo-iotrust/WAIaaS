@@ -371,6 +371,8 @@ export interface ConnectInfoResponse {
   policies: Record<string, ConnectInfoPolicyEntry[]>;
   capabilities: string[];
   daemon: ConnectInfoDaemon;
+  /** RPC proxy info (null when disabled) */
+  rpcProxy?: { enabled: boolean; baseUrl: string } | null;
   prompt: string;
 }
 
