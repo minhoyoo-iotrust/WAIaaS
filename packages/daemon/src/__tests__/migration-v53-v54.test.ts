@@ -83,8 +83,8 @@ describe('DB v53-v54 Migration: Polymarket tables', () => {
   // Schema version
   // -----------------------------------------------------------------------
 
-  it('T1: LATEST_SCHEMA_VERSION is 57', () => {
-    expect(LATEST_SCHEMA_VERSION).toBe(57);
+  it('T1: LATEST_SCHEMA_VERSION is 58', () => {
+    expect(LATEST_SCHEMA_VERSION).toBe(58);
   });
 
   // -----------------------------------------------------------------------
@@ -362,7 +362,7 @@ describe('DB v53-v54 Migration: Polymarket tables', () => {
     expect(tableExists(sqlite, 'polymarket_orders')).toBe(true);
     expect(tableExists(sqlite, 'polymarket_positions')).toBe(true);
     expect(tableExists(sqlite, 'polymarket_api_keys')).toBe(true);
-    expect(getMaxVersion(sqlite)).toBe(57);
+    expect(getMaxVersion(sqlite)).toBe(58);
   });
 
   it('T13: schema_version records v53 and v54', () => {
@@ -387,7 +387,7 @@ describe('DB v53-v54 Migration: Polymarket tables', () => {
 
     // Running again should not throw
     expect(() => runMigrations(sqlite)).not.toThrow();
-    expect(getMaxVersion(sqlite)).toBe(57);
+    expect(getMaxVersion(sqlite)).toBe(58);
   });
 
   // -----------------------------------------------------------------------
@@ -397,8 +397,15 @@ describe('DB v53-v54 Migration: Polymarket tables', () => {
   it('T15: existing hyperliquid_orders data unaffected after migration', () => {
     sqlite = createV52Db();
 
-    // Insert test data into existing table
+    // Insert a wallet row to satisfy FK constraints during v58 migration
     sqlite.pragma('foreign_keys = OFF');
+    const now = Math.floor(Date.now() / 1000);
+    sqlite.prepare(`
+      INSERT INTO wallets (id, name, chain, environment, public_key, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run('w1', 'test-wallet', 'ethereum', 'mainnet', '0x1234', 'ACTIVE', now, now);
+
+    // Insert test data into existing table
     sqlite.prepare(`
       INSERT INTO hyperliquid_orders (id, wallet_id, oid, market, asset_index, side, order_type, size, price, status, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)

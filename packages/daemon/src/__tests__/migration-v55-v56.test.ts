@@ -82,8 +82,8 @@ describe('DB v55-v56 Migration: wallet_credentials + transactions extension', ()
   // Schema version
   // -----------------------------------------------------------------------
 
-  it('T1: LATEST_SCHEMA_VERSION is 56', () => {
-    expect(LATEST_SCHEMA_VERSION).toBe(57);
+  it('T1: LATEST_SCHEMA_VERSION is 58', () => {
+    expect(LATEST_SCHEMA_VERSION).toBe(58);
   });
 
   // -----------------------------------------------------------------------
@@ -251,7 +251,7 @@ describe('DB v55-v56 Migration: wallet_credentials + transactions extension', ()
     runMigrations(sqlite);
 
     expect(tableExists(sqlite, 'wallet_credentials')).toBe(true);
-    expect(getMaxVersion(sqlite)).toBe(57);
+    expect(getMaxVersion(sqlite)).toBe(58);
 
     // Check transaction columns (may already exist from pushSchema DDL)
     const txCols = getTableColumns(sqlite, 'transactions');
@@ -264,12 +264,19 @@ describe('DB v55-v56 Migration: wallet_credentials + transactions extension', ()
   it('T11: existing transaction rows get action_kind=contractCall default', () => {
     sqlite = createV54Db();
 
-    // Insert a test transaction before migration (v56 adds action_kind with DEFAULT)
+    // Insert a wallet row to satisfy FK constraints during v58 migration
     sqlite.pragma('foreign_keys = OFF');
+    const now = Math.floor(Date.now() / 1000);
+    sqlite.prepare(`
+      INSERT INTO wallets (id, name, chain, environment, public_key, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run('w1', 'test-wallet', 'ethereum', 'mainnet', '0x1234', 'ACTIVE', now, now);
+
+    // Insert a test transaction before migration (v56 adds action_kind with DEFAULT)
     sqlite.prepare(`
       INSERT INTO transactions (id, wallet_id, chain, type, status, created_at)
       VALUES (?, ?, ?, ?, ?, ?)
-    `).run('tx-old-1', 'w1', 'solana', 'TRANSFER', 'CONFIRMED', Math.floor(Date.now() / 1000));
+    `).run('tx-old-1', 'w1', 'solana', 'TRANSFER', 'CONFIRMED', now);
 
     runMigrations(sqlite);
 
@@ -313,7 +320,7 @@ describe('DB v55-v56 Migration: wallet_credentials + transactions extension', ()
 
     // Running again should not throw
     expect(() => runMigrations(sqlite)).not.toThrow();
-    expect(getMaxVersion(sqlite)).toBe(57);
+    expect(getMaxVersion(sqlite)).toBe(58);
   });
 
   // -----------------------------------------------------------------------
@@ -325,6 +332,13 @@ describe('DB v55-v56 Migration: wallet_credentials + transactions extension', ()
 
     sqlite.pragma('foreign_keys = OFF');
     const now = Math.floor(Date.now() / 1000);
+
+    // Insert a wallet row to satisfy FK constraints during v58 migration
+    sqlite.prepare(`
+      INSERT INTO wallets (id, name, chain, environment, public_key, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run('w1', 'test-wallet', 'ethereum', 'mainnet', '0x1234', 'ACTIVE', now, now);
+
     sqlite.prepare(`
       INSERT INTO polymarket_orders
         (id, wallet_id, condition_id, token_id, outcome, side, order_type, price, size, status, is_neg_risk, created_at, updated_at)

@@ -391,7 +391,7 @@ describe('SettingsService', () => {
 
   describe('setting-keys', () => {
     it('all definitions have valid categories', () => {
-      const validCategories = new Set(['notifications', 'rpc', 'security', 'daemon', 'walletconnect', 'oracle', 'display', 'autostop', 'monitoring', 'telegram', 'signing_sdk', 'incoming', 'actions', 'policy', 'gas_condition', 'rpc_pool', 'position_tracker', 'smart_account', 'erc8004', 'erc8128']);
+      const validCategories = new Set(['notifications', 'rpc', 'security', 'daemon', 'walletconnect', 'oracle', 'display', 'autostop', 'monitoring', 'telegram', 'signing_sdk', 'incoming', 'actions', 'policy', 'gas_condition', 'rpc_pool', 'position_tracker', 'smart_account', 'erc8004', 'erc8128', 'rpc_proxy']);
       for (const def of SETTING_DEFINITIONS) {
         expect(validCategories.has(def.category)).toBe(true);
       }
@@ -432,8 +432,8 @@ describe('SettingsService', () => {
     });
 
     it('has expected number of definitions', () => {
-      // 10 notifications + 15 rpc + 14 security + 1 daemon + 2 walletconnect + 2 oracle + 1 display + 6 autostop + 5 monitoring + 2 telegram + 8 signing_sdk + 7 incoming + 2 incoming hyperevm wss + 83 actions + 1 policy + 5 gas_condition + 15 rpc_pool + 1 position_tracker + 3 per-rule autostop + 9 erc8004 + 1 policy.default_deny_erc8128_domains + 6 erc8128 + 4 smart_account (pimlico/alchemy api_key + paymaster_policy_id) + 1 external_actions = 206
-      expect(SETTING_DEFINITIONS.length).toBe(206);
+      // 10 notifications + 15 rpc + 14 security + 1 daemon + 2 walletconnect + 2 oracle + 1 display + 6 autostop + 5 monitoring + 2 telegram + 8 signing_sdk + 7 incoming + 2 incoming hyperevm wss + 83 actions + 1 policy + 5 gas_condition + 15 rpc_pool + 1 position_tracker + 3 per-rule autostop + 9 erc8004 + 1 policy.default_deny_erc8128_domains + 6 erc8128 + 4 smart_account (pimlico/alchemy api_key + paymaster_policy_id) + 1 external_actions + 7 rpc_proxy = 213
+      expect(SETTING_DEFINITIONS.length).toBe(213);
     });
   });
 

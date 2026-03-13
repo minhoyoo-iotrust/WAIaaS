@@ -63,7 +63,7 @@ describe('DB v57 Migration: composite index idx_transactions_action_kind_bridge_
 
     runMigrations(sqlite);
 
-    expect(getMaxVersion(sqlite)).toBe(57);
+    expect(getMaxVersion(sqlite)).toBe(58);
     expect(indexExists(sqlite, 'idx_transactions_action_kind_bridge_status')).toBe(true);
   });
 
