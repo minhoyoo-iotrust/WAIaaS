@@ -32,7 +32,7 @@ export const TransactionSchema = z.object({
   chain: ChainTypeEnum,
   network: NetworkTypeEnum.nullable(),
   fromAddress: z.string(),
-  toAddress: z.string(),
+  toAddress: z.string().nullable(),
   amount: z.string(), // bigint as string for JSON/SQLite
   txHash: z.string().nullable(),
   errorMessage: z.string().nullable(),
@@ -225,8 +225,19 @@ export const NftTransferRequestSchema = z.object({
 });
 export type NftTransferRequest = z.infer<typeof NftTransferRequestSchema>;
 
+/** Type 7: CONTRACT_DEPLOY -- EVM contract deployment (to=null). */
+export const ContractDeployRequestSchema = z.object({
+  type: z.literal('CONTRACT_DEPLOY'),
+  bytecode: z.string().min(1), // hex-encoded contract creation bytecode (0x-prefixed)
+  constructorArgs: z.string().optional(), // ABI-encoded constructor args (hex)
+  value: z.string().regex(numericStringPattern).optional(), // payable constructor ETH value
+  network: NetworkTypeEnumWithLegacy.optional(),
+  ...gasConditionField,
+});
+export type ContractDeployRequest = z.infer<typeof ContractDeployRequestSchema>;
+
 /**
- * discriminatedUnion 6-type transaction request schema.
+ * discriminatedUnion 7-type transaction request schema.
  * Identifies the correct schema variant via the `type` field.
  */
 export const TransactionRequestSchema = z.discriminatedUnion('type', [
@@ -236,6 +247,7 @@ export const TransactionRequestSchema = z.discriminatedUnion('type', [
   ApproveRequestSchema,
   BatchRequestSchema,
   NftTransferRequestSchema,
+  ContractDeployRequestSchema,
 ]);
 export type TransactionRequest = z.infer<typeof TransactionRequestSchema>;
 

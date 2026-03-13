@@ -1,5 +1,5 @@
 /**
- * createMcpServer: factory that creates an MCP server with 39 tools + 4 resource groups (3 static + 1 template).
+ * createMcpServer: factory that creates an MCP server with 40 tools + 4 resource groups (3 static + 1 template).
  *
  * Each tool/resource is registered via a dedicated register function
  * from its own module, following Dependency Injection pattern.
@@ -53,6 +53,7 @@ import { registerHyperliquidTools } from './tools/hyperliquid.js';
 import { registerPolymarketTools } from './tools/polymarket.js';
 import { registerListOffchainActions } from './tools/list-offchain-actions.js';
 import { registerListCredentials } from './tools/list-credentials.js';
+import { registerGetRpcProxyUrl } from './tools/get-rpc-proxy-url.js';
 
 // Resource registrations (Task 2)
 import { registerWalletBalance } from './resources/wallet-balance.js';
@@ -81,7 +82,7 @@ export function createMcpServer(apiClient: ApiClient, walletContext?: WalletCont
     version: '0.0.0',
   });
 
-  // Register 39 tools
+  // Register 40 tools
   registerConnectInfo(server, apiClient);
   registerGetPolicies(server, apiClient, walletContext);
   registerGetTokens(server, apiClient, walletContext);
@@ -123,6 +124,7 @@ export function createMcpServer(apiClient: ApiClient, walletContext?: WalletCont
   registerPolymarketTools(server, apiClient, walletContext);
   registerListOffchainActions(server, apiClient, walletContext);
   registerListCredentials(server, apiClient, walletContext);
+  registerGetRpcProxyUrl(server, apiClient, walletContext);
 
   // Register 4 resource groups (3 static + 1 template)
   registerWalletBalance(server, apiClient, walletContext);

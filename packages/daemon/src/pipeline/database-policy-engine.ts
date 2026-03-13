@@ -385,6 +385,20 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       return { allowed: true, tier: finalTier };
     }
 
+    // v31.14: CONTRACT_DEPLOY default tier APPROVAL (DEPL-04)
+    // Contract deployments default to APPROVAL tier (owner approval required) unless overridden.
+    if (transaction.type === 'CONTRACT_DEPLOY') {
+      let deployTierOverride: string | null = null;
+      try {
+        deployTierOverride = this.settingsService?.get('rpc_proxy.deploy_default_tier') ?? null;
+      } catch {
+        // Setting key not registered yet -- use default
+      }
+      const deployTier = (deployTierOverride ?? 'APPROVAL') as PolicyTier;
+      const finalTier = reputationFloorTier ? maxTier(deployTier, reputationFloorTier) : deployTier;
+      return { allowed: true, tier: finalTier };
+    }
+
     // Step 4h: Evaluate LENDING_ASSET_WHITELIST (default-deny for lending assets)
     const lendingAssetResult = this.evaluateLendingAssetWhitelist(resolved, transaction);
     if (lendingAssetResult !== null) {

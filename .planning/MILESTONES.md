@@ -1,5 +1,29 @@
 # Project Milestones: WAIaaS
 
+## v31.14 EVM RPC 프록시 모드 (Shipped: 2026-03-13)
+
+**Phases completed:** 398-401 (4 phases, 11 plans, 49 requirements)
+
+**Key accomplishments:**
+
+- CONTRACT_DEPLOY as 9th transaction type — full Zod SSoT chain propagation (enum, schema, pipeline, policy, DB v58)
+- EVM JSON-RPC proxy engine — 10 intercepted signing methods + 19 passthrough read methods via RpcDispatcher
+- Async approval via Long-poll — DELAY/APPROVAL tier CompletionWaiter with configurable timeout (300s/600s)
+- Admin Settings 7키 (rpc_proxy.*) + Admin UI RPC Proxy 페이지 (상태, 요청 로그)
+- MCP/SDK/connect-info 에이전트 자동 발견 — get_rpc_proxy_url 도구, getRpcProxyUrl() 메서드, rpcProxyBaseUrl 필드
+- ~189 new tests across 16 test files covering protocol compliance, security, and integration
+
+**Stats:**
+
+- 4 phases (398-401), 11 plans, 49 requirements complete
+- 31 commits, 82 files changed, +9,485 / -190 lines
+- ~189 tests (22 protocol + 18 adapter + 26 pipeline + 27 handler + 19 route + 25 integration + ...)
+- Timeline: ~4 hours (2026-03-13)
+- Git range: feat(398-01) → docs(phase-401)
+- LOC: ~292,079 TypeScript
+
+---
+
 ## v31.13 DeFi 포지션 대시보드 완성 (Shipped: 2026-03-12)
 
 **Phases completed:** 393-397 (5 phases, 8 plans, 27 requirements)

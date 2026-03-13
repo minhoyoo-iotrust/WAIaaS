@@ -1,200 +1,296 @@
-# Technology Stack: External Action Framework
+# Technology Stack: EVM RPC Proxy Mode
 
-**Project:** WAIaaS v31.11 External Action Framework Design
-**Researched:** 2026-03-11
-**Mode:** Subsequent milestone -- stack additions for new capabilities only
+**Project:** WAIaaS v31.14 -- EVM JSON-RPC Proxy
+**Researched:** 2026-03-13
+**Overall confidence:** HIGH
 
-## Core Finding: No New Dependencies Required
+## Executive Summary
 
-The External Action framework (ResolvedAction union, ISignerCapability, CredentialVault, async tracking generalization, venue-aware policy, pipeline routing) requires **zero new npm packages**. All cryptographic primitives and infrastructure patterns already exist in the codebase.
+EVM RPC Proxy mode requires **zero new npm dependencies**. The existing stack (Hono 4.x, viem 2.x, Zod 3.x) already provides everything needed for JSON-RPC 2.0 protocol handling, contract deployment transaction building, and long-poll async patterns. This is a routing/integration feature, not a technology adoption challenge.
 
-This is a design-only milestone (no implementation), but the stack analysis confirms the implementation milestone (v31.12) will not introduce dependency bloat.
+## Recommended Stack Additions
 
----
+### No New Dependencies Required
 
-## Recommended Stack (Additions/Changes)
+| Capability | Existing Technology | Why Sufficient |
+|-----------|-------------------|---------------|
+| JSON-RPC 2.0 parsing | Zod 3.x (already installed) | JSON-RPC 2.0 is trivial schema: `{jsonrpc, method, params, id}`. Zod schema validation is 10 lines. No library needed |
+| HTTP long-poll | Hono 4.x + native Promise | Long-poll = hold HTTP response until Promise resolves. `await Promise.race([completionPromise, timeoutPromise])`. No SSE/WS library needed |
+| Contract deploy TX | viem 2.x `serializeTransaction` | `to: undefined` in viem's serializeTransaction creates CREATE opcode TX. Already used in `buildTransaction()` and `buildContractCall()` |
+| Bytecode keccak256 | viem 2.x `keccak256` | `import { keccak256 } from 'viem'` -- already available, used elsewhere in codebase |
+| RPC passthrough | Existing RPC Pool (v28.6) | Multi-endpoint rotation + health check already built. Passthrough = `fetch(rpcUrl, { body: JSON.stringify(rpcRequest) })` |
+| Chain ID mapping | `EVM_CHAIN_MAP` (evm-chain-map.ts) | 12 networks already mapped with `chainId` field. Reverse lookup (chainId number -> NetworkType slug) is a simple Object.entries filter |
+| EventBus completion | EventBus `transaction:completed`/`transaction:failed` | Already emitted in Stage 5/6. RPC handler subscribes, wraps in Promise |
+| AbortController | Node.js 22 built-in | `c.req.raw.signal` from Hono context for client disconnect detection |
 
-### HMAC Signing (HmacSignerCapability)
+### Why NOT to Add Dependencies
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| `node:crypto` createHmac | Node.js 22 built-in | HMAC-SHA256/SHA512 signing for CEX API auth | Already used by PolymarketSigner (`packages/actions/src/providers/polymarket/signer.ts`) and WebhookDeliveryQueue (`packages/daemon/src/services/webhook-delivery-queue.ts`). Zero new deps. |
-
-**Existing precedent:** `createHmac('sha256', secret).update(payload).digest('hex')` pattern is proven in two production modules. The new `HmacSignerCapability` adapter will wrap this same `node:crypto` call behind `ISignerCapability.sign()`.
-
-**Supported algorithms:** HMAC-SHA256 (Binance, Coinbase, most CEXs), HMAC-SHA512 (Kraken). Both available via `node:crypto` `createHmac(algorithm, key)`.
-
-### RSA-PSS Signing (RsaPssSignerCapability)
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| `node:crypto` createSign / createVerify | Node.js 22 built-in | RSA-PSS signatures for external API auth | Node.js crypto module provides full RSA-PSS support (`sign.sign({ key, padding: crypto.constants.RSA_PKCS1_PSS_PADDING, saltLength })`). No external library needed. |
-| `node:crypto` generateKeyPairSync | Node.js 22 built-in | RSA key pair generation (for CredentialVault key generation utility) | Verified available on Node.js 22.22.0. |
-
-**Why not jose:** jose (v6.1.3, already a dependency) handles JWT/JWS but does not expose raw RSA-PSS signing for arbitrary payloads. `node:crypto` is the correct tool for generic RSA-PSS signing.
-
-**Why not @noble/curves:** Overkill for RSA. @noble/curves excels at elliptic curve crypto; RSA-PSS is natively supported in `node:crypto` with hardware acceleration.
-
-### Ed25519 / ECDSA Arbitrary Bytes Signing (signBytes capability)
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| `sodium-native` | ^4.3.1 | Ed25519 signBytes for Solana-side arbitrary signing | Already a dependency. Used by keystore for Solana key operations. |
-| `viem` signMessage / signTypedData | 2.x (existing) | ECDSA-secp256k1 signing | Already used throughout EVM pipeline. |
-| `@solana/kit` | 6.x (existing) | Solana signing utilities | Already used by SolanaAdapter. |
-
-**Decision:** Ed25519 uses sodium-native (already present), ECDSA uses viem (already present). No new deps.
-
-### CredentialVault Encryption
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| `settings-crypto.ts` (existing) | N/A (internal) | AES-256-GCM encrypt/decrypt + HKDF key derivation | CredentialVault will import `encryptSettingValue()` / `decryptSettingValue()` directly from `packages/daemon/src/infrastructure/settings/settings-crypto.ts`. Same encryption, different storage table. |
-
-**Key design decision:** CredentialVault uses the **same HKDF(SHA-256) derivation** from master password but with a **different HKDF info string** (e.g., `'credential-vault-v1'` vs existing `'settings-encryption'`). This gives domain separation without introducing a new KDF.
-
-**Per-credential salt consideration:** Unlike SettingsService (fixed salt), CredentialVault SHOULD use a per-credential random salt stored alongside the ciphertext. Reason: per-wallet credentials are higher-value targets than daemon settings, and per-salt prevents rainbow table attacks across credentials. `node:crypto.randomBytes(16)` generates the salt -- no new dependency.
-
-### EIP-712 Typed Data (existing, reused)
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| `viem` signTypedData | 2.x (existing) | EIP-712 signing for Eip712SignerCapability adapter | Already used by Polymarket (3-domain), Hyperliquid (dual signing), ERC-8004 (AgentWalletSet). The new `Eip712SignerCapability` wraps the existing `privateKeyToAccount().signTypedData()` call. |
-
-### ERC-8128 HTTP Message Signing (existing, reused)
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| `@waiaas/core` erc8128 module | Existing | `Erc8128SignerCapability` wraps `signHttpMessage()` | Already in `packages/core/src/erc8128/`. RFC 9421 signature base + EIP-191 signing. The new capability adapter adds pipeline integration without modifying the module. |
-
-### Zod Schema Extensions (existing, extended)
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| `zod` | Existing (via @waiaas/core) | ResolvedAction discriminatedUnion, SignedDataAction/SignedHttpAction schemas, CredentialType enum, extended AsyncTrackingResult | Zod SSoT pattern (CLAUDE.md mandate). `z.discriminatedUnion('kind', [...])` for ResolvedAction, same pattern as existing 8-type transaction discriminatedUnion. |
-
-### Database (existing, extended)
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| Drizzle ORM + better-sqlite3 | Existing | `wallet_credentials` table (DB v55), possible `external_action_status` column on `transactions` | Standard migration pattern (v1.4+). No new DB engine or ORM. |
-
----
-
-## Alternatives Considered (and Rejected)
-
-| Category | Recommended | Alternative | Why Rejected |
-|----------|-------------|-------------|--------------|
-| HMAC signing | `node:crypto` createHmac | `@noble/hashes` hmac | Extra dep for something Node.js does natively. Project already uses `node:crypto` for HMAC in 2 modules. |
-| RSA-PSS signing | `node:crypto` createSign | `jose` JWS | jose does JWS (JSON Web Signature) not raw RSA-PSS over arbitrary payloads. Wrong abstraction. |
-| RSA-PSS signing | `node:crypto` createSign | `node-forge` | Unnecessary JS-only reimplementation. Node.js native crypto uses OpenSSL bindings (faster, FIPS-capable). |
-| Credential encryption | Reuse `settings-crypto.ts` | `libsodium` secretbox | AES-256-GCM via settings-crypto is proven, and SettingsService already depends on it. Adding a second encryption primitive creates cognitive overhead. sodium-native's `crypto_secretbox` (XSalsa20-Poly1305) would work but diverges from established pattern. |
-| Credential encryption | Reuse `settings-crypto.ts` | Per-credential Argon2id | Argon2id (used by keystore) is 300ms+ per operation. CredentialVault needs fast CRUD. HKDF(SHA-256) from master password is sufficient (same reasoning as SettingsService). |
-| Unified signer registry | In-process registry (Map) | Separate microservice | WAIaaS is a self-hosted daemon. Inter-process communication adds latency and complexity for zero benefit. |
-| Async tracking storage | Extend `transactions` table columns | Separate `external_actions` table | Design decision for the design phase (R4-4), but extending existing table follows the bridge_status precedent and avoids JOIN complexity. |
-
----
-
-## What NOT to Add
-
-| Package | Why Not |
-|---------|---------|
-| `@noble/hashes` | `node:crypto` already provides HMAC-SHA256/SHA512. Adding @noble/hashes creates two paths for the same operation. |
-| `@noble/curves` | Already have viem (which wraps @noble/curves internally) and sodium-native. No gap to fill. |
-| `node-forge` | Pure JS crypto library. Slower than native `node:crypto`. No reason to use it. |
-| `tweetnacl` | Redundant with sodium-native (which is the C binding of the same NaCl primitives). |
-| `aws-sdk` / `@aws-sdk/*` | CEX credential management is via CredentialVault, not cloud KMS. Self-hosted mandate. |
-| `keytar` / OS keychain | WAIaaS runs headless (daemon/Docker). OS keychain not available. Master password + HKDF is the established pattern. |
-| `passport` / auth libraries | CredentialVault auth uses existing sessionAuth/masterAuth middleware. No new auth framework. |
-| New ORM or DB driver | Drizzle + better-sqlite3 is the established stack. wallet_credentials is a standard table addition. |
-
----
+| Considered Library | Why Rejected |
+|-------------------|-------------|
+| `jayson` / `json-rpc-2.0` | JSON-RPC 2.0 protocol is 50 lines of Zod schema + dispatcher. Adding a library for this creates dependency risk for trivial functionality. The spec is: `{jsonrpc: "2.0", method: string, params: array|object, id: number|string|null}` |
+| `http-proxy` / `http-proxy-middleware` | Passthrough is a single `fetch()` call forwarding the JSON body to RPC Pool. No header rewriting, no WebSocket upgrade, no streaming needed |
+| `long-polling` libraries | Long-poll = `await new Promise(resolve => eventBus.on('transaction:completed', resolve))` with `setTimeout` for timeout. No library |
+| `@open-rpc/server` | Over-engineered for our use case. We intercept 6 methods and proxy the rest. OpenRPC schema generation is unnecessary |
 
 ## Integration Points with Existing Stack
 
-### 1. ActionProviderRegistry (packages/daemon/src/infrastructure/action/action-provider-registry.ts)
-- **Change:** `resolve()` return type widens from `ContractCallRequest` to `ResolvedAction`
-- **Normalization:** Registry adds `kind: 'contractCall'` to existing provider results (backward compat)
-- **Impact:** Interface change only, no new deps
+### 1. Hono Route Registration
 
-### 2. sign-message.ts Pipeline (packages/daemon/src/pipeline/sign-message.ts)
-- **Change:** Extended to handle `SignedDataAction` (kind: 'signedData') routing
-- **Integration:** `ISignerCapability` adapter wraps existing `privateKeyToAccount().signTypedData()` call
-- **Impact:** New code path alongside existing personal/typedData branches
+RPC proxy route is a standard Hono POST handler, NOT an OpenAPIHono `createRoute()`. Reason: JSON-RPC 2.0 has its own error envelope (`{jsonrpc: "2.0", error: {code, message}}`), incompatible with OpenAPI error schemas. Use plain `app.post('/v1/rpc-evm/:walletId/:chainId', handler)`.
 
-### 3. ERC-8128 Module (packages/core/src/erc8128/)
-- **Change:** `Erc8128SignerCapability` adapter wraps `signHttpMessage()`
-- **Integration:** Existing module untouched; adapter consumes its public API
-- **Impact:** New adapter file, no module changes
+```typescript
+// In server.ts -- register as plain Hono router (not OpenAPIHono)
+import { Hono } from 'hono';
+const rpcProxyRouter = new Hono();
+rpcProxyRouter.post('/rpc-evm/:walletId/:chainId', rpcProxyHandler);
+app.route('/v1', rpcProxyRouter);
+```
 
-### 4. SettingsService (packages/daemon/src/infrastructure/settings/)
-- **Change:** CredentialVault imports `settings-crypto.ts` encrypt/decrypt functions
-- **Coexistence:** Global credentials stay in SettingsService (`actions.{provider}_api_key`). Per-wallet credentials go to CredentialVault. Lookup: per-wallet -> global fallback.
-- **Impact:** New service alongside, shared crypto functions
+**Confidence:** HIGH -- verified by examining `server.ts` line 176 (`new OpenAPIHono()`) and how other routes mix `OpenAPIHono` sub-routers with plain Hono. `wcRoutes` uses similar pattern.
 
-### 5. AsyncPollingService + IAsyncStatusTracker (packages/actions/src/common/)
-- **Change:** `AsyncTrackingResult.state` enum extended with off-chain states
-- **Integration:** AsyncPollingService already handles arbitrary tracker implementations via `IAsyncStatusTracker` interface
-- **Impact:** Enum widening (additive, backward-compatible)
+### 2. Session Auth Middleware
 
-### 6. DatabasePolicyEngine (packages/daemon/src/pipeline/database-policy-engine.ts)
-- **Change:** `TransactionParam` extended with `venue`, `actionCategory`, `notionalUsd` fields
-- **Integration:** Existing `actionProvider`/`actionName` fields preserved; new fields are additive
-- **Impact:** Interface extension, new policy type implementations
+```typescript
+// In server.ts auth registration block (~line 273)
+if (deps.jwtSecretManager && deps.db) {
+  const sessionAuth = createSessionAuth({ ... });
+  app.use('/v1/rpc-evm/*', sessionAuth);
+}
+```
 
----
+Authentication uses existing `Authorization: Bearer wai_sess_<token>` header. Forge/Hardhat pass custom headers via environment:
+- Forge: `ETH_RPC_HEADERS='Authorization: Bearer wai_sess_xxx'`
+- Hardhat: `httpHeaders: { 'Authorization': 'Bearer wai_sess_xxx' }` in network config
 
-## Crypto Primitive Summary
+**Confidence:** HIGH -- sessionAuth middleware already supports wildcard paths.
 
-All signing primitives needed for the External Action framework are available without new dependencies:
+### 3. Pipeline Integration (Sync Mode)
 
-| Signing Scheme | Primitive | Source | Status |
-|----------------|-----------|--------|--------|
-| EIP-712 typedData | `signTypedData()` | viem 2.x | Already used (Polymarket, Hyperliquid, ERC-8004) |
-| personal_sign | `signMessage()` | viem 2.x | Already used (sign-message pipeline) |
-| HMAC-SHA256 | `createHmac('sha256', key)` | node:crypto | Already used (Polymarket, Webhooks) |
-| HMAC-SHA512 | `createHmac('sha512', key)` | node:crypto | Available (same API, different algorithm string) |
-| RSA-PSS | `createSign('RSA-SHA256')` | node:crypto | Available natively (Node.js 22, OpenSSL bindings) |
-| ECDSA-secp256k1 | `privateKeyToAccount().sign()` | viem 2.x | Already used (transaction signing) |
-| Ed25519 | `sodium.crypto_sign_detached()` | sodium-native 4.x | Already used (Solana keystore) |
-| ERC-8128 HTTP | `signHttpMessage()` | @waiaas/core erc8128 | Already implemented (v30.10) |
-| AES-256-GCM | `encryptSettingValue()` | settings-crypto.ts | Already used (SettingsService) |
+Current REST API flow (`transactions.ts` line 1-17 comment): Stage 1 runs sync, returns 201, Stages 2-6 fire-and-forget.
 
----
+RPC Proxy needs: Stage 1-6 ALL synchronous, return txHash in JSON-RPC response.
+
+**Implementation approach:** Use `TransactionPipeline.executeSend()` directly (already runs all 6 stages synchronously and returns txId). Then query the transaction record for txHash. The pipeline class at `pipeline.ts` line 105-111 already `await`s all stages sequentially. The fire-and-forget behavior is in the **route handler** (`transactions.ts`), not in the pipeline itself.
+
+```typescript
+// RPC proxy handler (simplified)
+const txId = await pipeline.executeSend(walletId, request);
+const tx = await pipeline.getTransaction(txId);
+return jsonRpcResponse(id, tx.txHash);
+```
+
+For DELAY/APPROVAL tiers: `executeSend()` already blocks through Stage 4 (wait/approval). The long-poll just needs to hold the HTTP connection. Add `AbortController` timeout via `Promise.race()`.
+
+**Confidence:** HIGH -- verified `TransactionPipeline.executeSend()` at pipeline.ts lines 68-113 is fully synchronous (all stages awaited).
+
+### 4. EventBus for Completion Tracking (APPROVAL tier)
+
+When approval is pending, `executeSend()` blocks at Stage 4. The existing `onApproved` callback in ApprovalWorkflow resolves when owner approves. If the pipeline is already blocking at Stage 4, no additional EventBus wiring is needed for the basic case.
+
+For timeout handling:
+```typescript
+const controller = new AbortController();
+const timeout = setTimeout(() => controller.abort(), approvalTimeoutMs);
+try {
+  const txId = await pipeline.executeSend(walletId, request);
+  // Success -- pipeline completed all 6 stages
+} catch (err) {
+  if (controller.signal.aborted) {
+    return jsonRpcError(id, -32000, 'Transaction approval timeout');
+  }
+  throw err;
+} finally {
+  clearTimeout(timeout);
+}
+```
+
+**Confidence:** HIGH -- EventBus events at stages.ts lines 1535-1536 (completed) and 1567 (failed) confirmed.
+
+### 5. EVM Chain Map Reverse Lookup
+
+Current `EVM_CHAIN_MAP` maps `NetworkType -> EvmChainEntry`. RPC proxy needs reverse: `chainId number -> NetworkType`.
+
+Add helper function (not a new module):
+```typescript
+export function evmChainIdToNetwork(chainId: number): EvmNetworkType | null {
+  for (const [network, entry] of Object.entries(EVM_CHAIN_MAP)) {
+    if (entry.chainId === chainId) return network as EvmNetworkType;
+  }
+  return null;
+}
+```
+
+**Confidence:** HIGH -- `EVM_CHAIN_MAP` at evm-chain-map.ts has `chainId` field on every entry.
+
+### 6. Contract Deploy Transaction (buildDeployTransaction)
+
+Existing `buildContractCall()` (adapter.ts line 639) requires `to` address and validates calldata has 4-byte selector. For CREATE transactions, `to` is undefined and data is full bytecode (no selector validation).
+
+New method needed: `buildDeployTransaction(request: DeployParams)` -- similar to `buildContractCall()` but:
+- `to: undefined` (CREATE opcode)
+- No calldata selector validation (bytecode, not function call)
+- Gas estimation with `to: undefined`
+
+viem's `serializeTransaction()` already handles `to: undefined` -- it omits the `to` field in RLP encoding, which produces a CREATE transaction. Verified: viem's `TransactionRequestEIP1559` type has `to?: Address | null`.
+
+```typescript
+interface DeployParams {
+  from: string;
+  data: Hex;    // Full deployment bytecode
+  value?: bigint; // ETH to send to constructor (payable)
+}
+```
+
+**Confidence:** HIGH -- viem serializeTransaction with `to: undefined` confirmed to produce CREATE TX.
+
+### 7. tx-parser.ts Extension for NFT Selectors
+
+Current selectors detected (tx-parser.ts lines 16-18):
+- `0xa9059cbb` -- ERC-20 transfer
+- `0x095ea7b3` -- ERC-20 approve
+
+New selectors needed for RPC proxy (per m31-14 R2-1):
+- `0x42842e0e` -- ERC-721 safeTransferFrom(address,address,uint256)
+- `0xb88d4fde` -- ERC-721 safeTransferFrom(address,address,uint256,bytes)
+- `0x23b872dd` -- transferFrom (ERC-721/ERC-20 ambiguous -- fallback to CONTRACT_CALL)
+- `0xf242432a` -- ERC-1155 safeTransferFrom
+- `0x2eb2c2d6` -- ERC-1155 safeBatchTransferFrom
+
+This is a small code change to existing tx-parser.ts, not a stack decision.
+
+## JSON-RPC 2.0 Protocol Implementation
+
+### Request Schema (Zod)
+
+```typescript
+const JsonRpcRequestSchema = z.object({
+  jsonrpc: z.literal('2.0'),
+  method: z.string(),
+  params: z.union([z.array(z.unknown()), z.record(z.unknown())]).optional(),
+  id: z.union([z.string(), z.number(), z.null()]).optional(),
+});
+
+// Batch: z.array(JsonRpcRequestSchema) -- or single object
+const JsonRpcInputSchema = z.union([
+  JsonRpcRequestSchema,
+  z.array(JsonRpcRequestSchema).min(1),
+]);
+```
+
+### Response Format
+
+```typescript
+interface JsonRpcResponse {
+  jsonrpc: '2.0';
+  id: string | number | null;
+  result?: unknown;
+  error?: { code: number; message: string; data?: unknown };
+}
+```
+
+### Standard Error Codes
+
+| Code | Meaning | When Used |
+|------|---------|-----------|
+| -32700 | Parse error | Invalid JSON body |
+| -32600 | Invalid Request | Missing jsonrpc/method fields |
+| -32601 | Method not found | Unsupported RPC method |
+| -32602 | Invalid params | Bad params (e.g., unknown chainId) |
+| -32603 | Internal error | Pipeline/adapter failures |
+| -32000 | Server error (custom) | Transaction rejected/timeout |
+
+**Confidence:** HIGH -- JSON-RPC 2.0 spec is stable and well-defined.
+
+## Forge/Hardhat Compatibility Notes
+
+### Forge (Foundry)
+
+| Aspect | Detail | Source |
+|--------|--------|--------|
+| HTTP method | POST with `Content-Type: application/json` | Forge docs |
+| TX method | `eth_sendTransaction` (when `--unlocked`) | [Foundry #4831](https://github.com/foundry-rs/foundry/issues/4831) |
+| Default timeout | ~45 seconds (constant, not configurable for eth_sendTransaction) | [Foundry #9303](https://github.com/foundry-rs/foundry/issues/9303) |
+| Custom headers | `ETH_RPC_HEADERS` env var | Forge docs |
+| Batch requests | Yes, sends batched calls for gas estimation + send | Observed behavior |
+| Receipt polling | `eth_getTransactionReceipt` polling after send | Standard behavior |
+| Chain ID check | Calls `eth_chainId` before sending transactions | Standard behavior |
+
+**Critical:** Forge's 45s timeout for `eth_sendTransaction` is hardcoded. DELAY tier (default 300s) and APPROVAL tier (default 600s) will ALWAYS timeout on Forge side. Mitigation options:
+1. Document: users must set `--timeout 600` for Forge scripts (only works for receipt polling, NOT eth_sendTransaction)
+2. IMMEDIATE tier policy for dev/test scenarios (recommended default for RPC proxy)
+3. `ETH_RPC_TIMEOUT` env var for `cast send` (but NOT for `forge script`)
+4. Consider lowering default DELAY timeout specifically for RPC proxy context
+
+**Confidence:** MEDIUM -- Foundry #9303 and #8667 confirm the timeout limitation, but exact behavior may have changed in recent Foundry releases.
+
+### Hardhat
+
+| Aspect | Detail | Source |
+|--------|--------|--------|
+| Default timeout | 40,000ms (localhost), 20,000ms (remote) | [Hardhat config docs](https://v2.hardhat.org/hardhat-runner/docs/config) |
+| Configurable | Yes: `networks.myNet.timeout: 600000` | Hardhat config |
+| Custom headers | `httpHeaders: { 'Authorization': '...' }` | Hardhat config |
+| Batch requests | No batching by default | Standard behavior |
+
+### ethers.js / viem (client libraries)
+
+Both support custom RPC URLs and configurable timeouts. No compatibility issues expected.
+
+## Alternatives Considered
+
+| Category | Recommended | Alternative | Why Not |
+|----------|------------|-------------|---------|
+| JSON-RPC parsing | Zod manual schema | `jayson` npm package | Unnecessary dependency for 50 lines of code |
+| RPC passthrough | Direct `fetch()` to RPC Pool | `http-proxy-middleware` | WAIaaS doesn't need header rewriting or streaming; it's JSON POST forwarding |
+| Long-poll | Native Promise + EventBus | WebSocket upgrade | Forge/Hardhat don't support WS for `eth_sendTransaction`; HTTP POST only |
+| Route framework | Plain Hono handler | OpenAPIHono createRoute | JSON-RPC error envelope differs from REST; OpenAPI schema mismatch |
+| Deploy TX | New `buildDeployTransaction()` | Modify `buildContractCall()` | Different validation rules (`to` optional, no selector check); cleaner separation |
+
+## Version Confirmation
+
+| Technology | Current Version | Verified |
+|-----------|----------------|----------|
+| hono | ^4.11.9 | package.json |
+| viem | ^2.21.0 | package.json |
+| zod | ^3.24.0 | package.json |
+| Node.js | 22.x | Project requirement |
+
+All versions already installed. No version bumps needed for this feature.
 
 ## Installation
 
 ```bash
 # No new packages to install.
 # All capabilities are covered by existing dependencies:
-#   - node:crypto (built-in) -- HMAC, RSA-PSS, AES-256-GCM, HKDF
-#   - viem 2.x -- EIP-712, personal_sign, ECDSA
-#   - sodium-native ^4.3.1 -- Ed25519
-#   - jose ^6.1.3 -- JWT (session auth, unchanged)
-#   - zod (via @waiaas/core) -- schema extensions
-#   - drizzle-orm + better-sqlite3 -- DB schema extensions
+#   - hono 4.x -- HTTP routing, plain POST handler for JSON-RPC
+#   - viem 2.x -- serializeTransaction (to:undefined for CREATE), keccak256
+#   - zod 3.x -- JSON-RPC request/response schema validation
+#   - Node.js 22 built-in -- AbortController, Promise.race for long-poll
+#   - Existing RPC Pool (v28.6) -- passthrough forwarding
+#   - Existing EventBus -- transaction:completed/failed events
+#   - Existing TransactionPipeline -- synchronous 6-stage execution
 ```
-
----
 
 ## Confidence Assessment
 
 | Area | Confidence | Reason |
 |------|------------|--------|
-| HMAC-SHA256 via node:crypto | HIGH | Already used in 2 production modules (Polymarket, Webhooks). Verified on Node.js 22.22.0. |
-| RSA-PSS via node:crypto | HIGH | Verified `createSign` availability on Node.js 22.22.0. Standard OpenSSL binding, documented in Node.js docs. |
-| Ed25519 via sodium-native | HIGH | Already a dependency (^4.3.1). Used by keystore for Solana signing. |
-| CredentialVault encryption reuse | HIGH | `settings-crypto.ts` is a clean, tested module with `encryptSettingValue()`/`decryptSettingValue()`. Import-ready. |
-| Zod discriminatedUnion for ResolvedAction | HIGH | Same pattern as existing 8-type transaction union. Proven at scale. |
-| No new dependencies needed | HIGH | Verified all crypto primitives against existing codebase and Node.js 22 capabilities. |
+| No new deps needed | HIGH | Verified all capabilities against existing codebase |
+| Pipeline sync mode | HIGH | `TransactionPipeline.executeSend()` confirmed synchronous |
+| viem CREATE TX | HIGH | `serializeTransaction()` with `to: undefined` is standard viem usage |
+| JSON-RPC 2.0 Zod | HIGH | Protocol spec is trivial; Zod is already the project's SSoT tool |
+| Forge timeout issue | MEDIUM | Confirmed via GitHub issues, but exact behavior may vary by Foundry version |
+| Hono plain route | HIGH | Verified mixing OpenAPIHono + plain Hono routes in server.ts |
+| EVM_CHAIN_MAP reverse | HIGH | Verified chainId field exists on all 12 entries |
+| Long-poll pattern | HIGH | Standard Node.js Promise + AbortController pattern |
 
 ## Sources
 
-- `packages/actions/src/providers/polymarket/signer.ts` -- HMAC-SHA256 + EIP-712 precedent
-- `packages/daemon/src/services/webhook-delivery-queue.ts` -- HMAC-SHA256 precedent
-- `packages/daemon/src/infrastructure/settings/settings-crypto.ts` -- AES-256-GCM encryption
-- `packages/core/src/erc8128/index.ts` -- ERC-8128 HTTP message signing module
-- `packages/daemon/src/pipeline/sign-message.ts` -- sign-message pipeline
-- `packages/actions/src/common/async-status-tracker.ts` -- IAsyncStatusTracker interface
-- Node.js 22.22.0 `node:crypto` -- verified createHmac, createSign, generateKeyPairSync availability
-- `internal/objectives/m31-11-external-action-design.md` -- milestone requirements
+- [JSON-RPC 2.0 Specification](https://www.jsonrpc.org/specification) -- protocol spec
+- [Foundry #9303 - RPC timeout configuration](https://github.com/foundry-rs/foundry/issues/9303) -- Forge timeout limitation
+- [Foundry #8667 - Forge script timeout](https://github.com/foundry-rs/foundry/issues/8667) -- Forge timeout feature request
+- [Foundry #4831 - eth_sendTransaction vs eth_sendRawTransaction](https://github.com/foundry-rs/foundry/issues/4831) -- Forge `--unlocked` behavior
+- [Hardhat Configuration](https://v2.hardhat.org/hardhat-runner/docs/config) -- timeout and httpHeaders config
+- [viem deployContract docs](https://viem.sh/docs/contract/deployContract) -- CREATE transaction handling
+- [viem sendTransaction docs](https://viem.sh/docs/actions/wallet/sendTransaction.html) -- `to` field optional for deploy
+- Codebase verification: `server.ts`, `pipeline.ts`, `stages.ts`, `tx-parser.ts`, `evm-chain-map.ts`, `event-types.ts`, `adapter.ts`

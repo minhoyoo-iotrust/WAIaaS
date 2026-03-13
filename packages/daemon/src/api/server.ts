@@ -84,6 +84,7 @@ import { credentialRoutes } from './routes/credentials.js';
 import { adminCredentialRoutes } from './routes/admin-credentials.js';
 import { externalActionRoutes } from './routes/external-actions.js';
 import { LocalCredentialVault } from '../infrastructure/credential/index.js';
+import { rpcProxyRoutes } from './routes/rpc-proxy.js';
 import type { PolymarketInfraDeps } from './routes/polymarket.js';
 import type { HyperliquidMarketData } from '@waiaas/actions';
 import type { MasterPasswordRef } from './middleware/master-auth.js';
@@ -322,6 +323,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
       return sessionAuth(c, next);
     });
     app.use('/v1/x402/*', sessionAuth);
+    app.use('/v1/rpc-evm/*', sessionAuth);
     app.use('/v1/connect-info', sessionAuth);
     app.use('/v1/erc8004/*', sessionAuth);
     app.use('/v1/erc8128/*', sessionAuth);
@@ -939,6 +941,38 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
       settingsService: deps.settingsService,
       eventBus: deps.eventBus,
     }));
+  }
+
+  // Register RPC proxy routes when pipeline deps are available
+  if (
+    deps.db &&
+    deps.keyStore &&
+    effectiveMasterPassword !== undefined &&
+    deps.adapterPool &&
+    deps.policyEngine &&
+    deps.config
+  ) {
+    app.route(
+      '/v1',
+      rpcProxyRoutes({
+        db: deps.db,
+        keyStore: deps.keyStore,
+        masterPassword: effectiveMasterPassword,
+        passwordRef: deps.passwordRef,
+        adapterPool: deps.adapterPool,
+        policyEngine: deps.policyEngine,
+        config: deps.config,
+        settingsService: deps.settingsService,
+        eventBus: deps.eventBus,
+        approvalWorkflow: deps.approvalWorkflow,
+        delayQueue: deps.delayQueue,
+        notificationService: deps.notificationService,
+        priceOracle: deps.priceOracle,
+        wcSigningBridgeRef: deps.wcSigningBridgeRef,
+        approvalChannelRouter: deps.approvalChannelRouter,
+        sqlite: deps.sqlite,
+      }),
+    );
   }
 
   // Register OpenAPI spec endpoint (GET /doc)

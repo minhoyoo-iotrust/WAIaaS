@@ -79,7 +79,7 @@ const LEGACY_NETWORK_NORMALIZE: Record<string, string> = {
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 57;
+export const LATEST_SCHEMA_VERSION = 58;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -3202,6 +3202,96 @@ MIGRATIONS.push({
     sqlite.exec(
       'CREATE INDEX IF NOT EXISTS idx_transactions_action_kind_bridge_status ON transactions(action_kind, bridge_status) WHERE bridge_status IS NOT NULL',
     );
+  },
+});
+
+// ---------------------------------------------------------------------------
+// v58: Update transactions type CHECK constraint to include CONTRACT_DEPLOY
+// ---------------------------------------------------------------------------
+
+MIGRATIONS.push({
+  version: 58,
+  description: 'Add CONTRACT_DEPLOY to transactions type CHECK constraint (12-step table recreation)',
+  managesOwnTransaction: true,
+  up: (sqlite) => {
+    sqlite.exec('BEGIN');
+
+    try {
+      // Step 1: Create transactions_new with updated CHECK constraints (CONTRACT_DEPLOY in TRANSACTION_TYPES)
+      sqlite.exec(`CREATE TABLE transactions_new (
+  id TEXT PRIMARY KEY,
+  wallet_id TEXT NOT NULL REFERENCES wallets(id) ON DELETE RESTRICT,
+  session_id TEXT REFERENCES sessions(id) ON DELETE SET NULL,
+  chain TEXT NOT NULL,
+  tx_hash TEXT,
+  type TEXT NOT NULL CHECK (type IN (${inList(TRANSACTION_TYPES)})),
+  amount TEXT,
+  to_address TEXT,
+  token_mint TEXT,
+  contract_address TEXT,
+  method_signature TEXT,
+  spender_address TEXT,
+  approved_amount TEXT,
+  parent_id TEXT REFERENCES transactions_new(id) ON DELETE CASCADE,
+  batch_index INTEGER,
+  status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN (${inList(TRANSACTION_STATUSES)})),
+  tier TEXT CHECK (tier IS NULL OR tier IN (${inList(POLICY_TIERS)})),
+  queued_at INTEGER,
+  executed_at INTEGER,
+  created_at INTEGER NOT NULL,
+  reserved_amount TEXT,
+  amount_usd REAL,
+  reserved_amount_usd REAL,
+  error TEXT,
+  metadata TEXT,
+  network TEXT CHECK (network IS NULL OR network IN (${inList(NETWORK_TYPES)})),
+  bridge_status TEXT CHECK (bridge_status IS NULL OR bridge_status IN ('PENDING', 'COMPLETED', 'FAILED', 'BRIDGE_MONITORING', 'TIMEOUT', 'REFUNDED', 'PARTIALLY_FILLED', 'FILLED', 'CANCELED', 'SETTLED', 'EXPIRED')),
+  bridge_metadata TEXT,
+  action_kind TEXT NOT NULL DEFAULT 'contractCall',
+  venue TEXT,
+  operation TEXT,
+  external_id TEXT
+)`);
+
+      // Step 2: Copy existing data
+      sqlite.exec(`INSERT INTO transactions_new (id, wallet_id, session_id, chain, tx_hash, type, amount, to_address, token_mint, contract_address, method_signature, spender_address, approved_amount, parent_id, batch_index, status, tier, queued_at, executed_at, created_at, reserved_amount, amount_usd, reserved_amount_usd, error, metadata, network, bridge_status, bridge_metadata, action_kind, venue, operation, external_id)
+  SELECT id, wallet_id, session_id, chain, tx_hash, type, amount, to_address, token_mint, contract_address, method_signature, spender_address, approved_amount, parent_id, batch_index, status, tier, queued_at, executed_at, created_at, reserved_amount, amount_usd, reserved_amount_usd, error, metadata, network, bridge_status, bridge_metadata, action_kind, venue, operation, external_id FROM transactions`);
+
+      // Step 3: Drop old table
+      sqlite.exec('DROP TABLE transactions');
+
+      // Step 4: Rename new table
+      sqlite.exec('ALTER TABLE transactions_new RENAME TO transactions');
+
+      // Step 5: Recreate all 14 indexes
+      sqlite.exec('CREATE INDEX idx_transactions_wallet_status ON transactions(wallet_id, status)');
+      sqlite.exec('CREATE INDEX idx_transactions_session_id ON transactions(session_id)');
+      sqlite.exec('CREATE UNIQUE INDEX idx_transactions_tx_hash ON transactions(tx_hash)');
+      sqlite.exec('CREATE INDEX idx_transactions_queued_at ON transactions(queued_at)');
+      sqlite.exec('CREATE INDEX idx_transactions_created_at ON transactions(created_at)');
+      sqlite.exec('CREATE INDEX idx_transactions_type ON transactions(type)');
+      sqlite.exec('CREATE INDEX idx_transactions_contract_address ON transactions(contract_address)');
+      sqlite.exec('CREATE INDEX idx_transactions_parent_id ON transactions(parent_id)');
+      sqlite.exec("CREATE INDEX idx_transactions_bridge_status ON transactions(bridge_status) WHERE bridge_status IS NOT NULL");
+      sqlite.exec("CREATE INDEX idx_transactions_gas_waiting ON transactions(status) WHERE status = 'GAS_WAITING'");
+      sqlite.exec('CREATE INDEX idx_transactions_action_kind ON transactions(action_kind)');
+      sqlite.exec("CREATE INDEX idx_transactions_venue ON transactions(venue) WHERE venue IS NOT NULL");
+      sqlite.exec("CREATE INDEX idx_transactions_external_id ON transactions(external_id) WHERE external_id IS NOT NULL");
+      sqlite.exec('CREATE INDEX idx_transactions_action_kind_bridge_status ON transactions(action_kind, bridge_status) WHERE bridge_status IS NOT NULL');
+
+      // Step 6: Commit
+      sqlite.exec('COMMIT');
+    } catch (err) {
+      sqlite.exec('ROLLBACK');
+      throw err;
+    }
+
+    // Step 7: Re-enable foreign keys and verify integrity
+    sqlite.pragma('foreign_keys = ON');
+    const fkErrors = sqlite.pragma('foreign_key_check') as unknown[];
+    if (fkErrors.length > 0) {
+      throw new Error(`FK integrity violation after v58: ${JSON.stringify(fkErrors)}`);
+    }
   },
 });
 

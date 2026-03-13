@@ -1,0 +1,17 @@
+{
+  "schema_version": "v1",
+  "name_for_human": "WAIaaS",
+  "name_for_model": "waiaas",
+  "description_for_human": "Self-hosted Wallet-as-a-Service for AI agents. Manage crypto wallets across EVM and Solana chains with built-in security and DeFi integrations.",
+  "description_for_model": "WAIaaS is a self-hosted Wallet-as-a-Service daemon for AI agents. It provides secure, policy-controlled access to crypto wallets on EVM chains (Ethereum, Polygon, Arbitrum, Optimism, Base, Avalanche, BNB Chain, HyperEVM) and Solana. Features include: multi-chain wallet management, 13+ DeFi protocol integrations (swap, bridge, stake, lend, yield, perpetuals, prediction markets), 3-layer security model (session auth, owner approval, monitoring), ERC-4337 smart accounts, and default-deny policy engine. Interfaces: REST API, MCP server, TypeScript SDK. The daemon runs locally on the user's machine — it is not a cloud service.",
+  "auth": {
+    "type": "none"
+  },
+  "api": {
+    "type": "openapi",
+    "url": "https://github.com/minhoyoo-iotrust/WAIaaS/blob/main/docs/api-reference.md"
+  },
+  "logo_url": "https://waiaas.dev/logo.png",
+  "contact_email": "",
+  "legal_info_url": "https://github.com/minhoyoo-iotrust/WAIaaS/blob/main/LICENSE"
+}

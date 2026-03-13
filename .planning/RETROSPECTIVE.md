@@ -890,6 +890,47 @@
 
 ---
 
+## Milestone: v31.14 — EVM RPC 프록시 모드
+
+**Shipped:** 2026-03-13
+**Phases:** 4 | **Plans:** 11 | **Sessions:** 1
+
+### What Was Built
+- CONTRACT_DEPLOY 9번째 트랜잭션 타입 — Zod SSoT 전체 전파 (enum, schema, pipeline, policy, DB v58)
+- EVM JSON-RPC proxy engine — 10 signing intercept + 19 passthrough + batch 지원
+- CompletionWaiter + SyncPipelineExecutor — DELAY/APPROVAL Long-poll 비동기 승인 (기존 파이프라인 zero modification)
+- RpcTransactionAdapter — eth_sendTransaction 파라미터를 5종 WAIaaS TransactionRequest로 자동 분류
+- Admin Settings 7키 (rpc_proxy.*) + Admin UI RPC Proxy 페이지 (상태, 설정, 감사 로그)
+- MCP get_rpc_proxy_url + SDK getRpcProxyUrl() + connect-info rpcProxyBaseUrl 에이전트 자동 발견
+
+### What Worked
+- PIPELINE_HALTED catch 패턴이 기존 6-stage 파이프라인 코드 변경 없이 동기 JSON-RPC 응답 변환을 해결 — 핵심 아키텍처 결정
+- EVM_CHAIN_ID_TO_NETWORK 모듈 로드 시 자동 파생 — SSoT(EVM_CHAIN_MAP)만 관리, 역방향 조회 비용 0
+- validateAndFillFrom 별도 export — SEC-02/SEC-03 테스트 용이성 확보, 19개 단위 테스트로 보안 검증
+- 4 phases 모두 1세션(~4시간)에 완료 — 리서치 문서가 Pitfall/Anti-Pattern을 사전 식별하여 구현 시 rework 없음
+
+### What Was Inefficient
+- summary-extract CLI가 null 반환 (v31.13과 동일 이슈) — SUMMARY.md frontmatter 포맷이 도구와 불일치
+- ADMIN-02 (allowed_methods), ADMIN-05 (max_gas_limit) settings 정의만 하고 route handler에서 미사용 — feature stub 상태
+
+### Patterns Established
+- PIPELINE_HALTED catch + CompletionWaiter 패턴: 기존 파이프라인 수정 없이 동기 HTTP 응답으로 브릿지
+- RPC method 3-way classification: intercept(signing) / passthrough(read) / unsupported — dispatcher 패턴
+- eth_sendRawTransaction 명시적 거부: 서명 우회 방지, 정책 엔진 보안 유지
+- Route factory deps lazy-init: EventBus nullable 패턴으로 테스트 환경 호환
+
+### Key Lessons
+1. 기존 파이프라인 래핑(zero modification)이 새 파이프라인 구현보다 안전하고 빠름 — PIPELINE_HALTED 패턴 성공
+2. JSON-RPC 프록시는 프로토콜 유틸(파싱, 응답 빌드, 에러 코드)을 먼저 구현하면 나머지가 쉬움
+3. 보안 검증(from validation, bytecode limit)을 route handler 레벨에서 inline 처리가 미들웨어보다 명확
+
+### Cost Observations
+- Model mix: ~100% opus (quality profile)
+- Sessions: 1
+- Notable: 82 파일, +9,485/-190 lines, ~4시간 완료 — 4 phases 전체 1세션, 리서치 문서의 Pitfall 사전 식별이 핵심
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -919,6 +960,7 @@
 | v31.11 | 1 | 6 | 설계 전용(External Action 프레임워크), 60 파일 1.1시간 완료 |
 | v31.12 | 1 | 7 | External Action 프레임워크 구현(풀스택), 144 파일 4.5시간 완료 |
 | v31.13 | 1 | 5 | DeFi 포지션 대시보드 완성(5개 프로바이더 getPositions), 44 파일 5시간 완료 |
+| v31.14 | 1 | 4 | EVM RPC 프록시 모드(JSON-RPC proxy + CONTRACT_DEPLOY 9-type), 82 파일 4시간 완료 |
 
 ### Cumulative Quality
 
@@ -947,6 +989,7 @@
 | v31.11 | ~7,454 (unchanged) | unchanged | +36 decisions |
 | v31.12 | ~7,673 (+219) | maintained | +23 decisions |
 | v31.13 | ~7,861 (+188) | maintained | +21 decisions |
+| v31.14 | ~8,050 (+189) | maintained | +10 decisions |
 
 ### Top Lessons (Verified Across Milestones)
 
