@@ -48,7 +48,7 @@
 
 - [x] **Phase 398: Type System + Infrastructure Foundation** - CONTRACT_DEPLOY 9-type SSoT 확장, DB v58, keepAliveTimeout, EVM_CHAIN_MAP 역방향 조회
 - [x] **Phase 399: Core RPC Proxy Engine** - 서명 메서드 핸들러, RpcPassthrough, RpcTransactionAdapter, CompletionWaiter, JSON-RPC 프로토콜 유틸
-- [ ] **Phase 400: Route Assembly + Async Approval** - Hono 라우트, RpcDispatcher, 배치 처리, Long-poll 비동기 승인, 보안 검증
+- [x] **Phase 400: Route Assembly + Async Approval** - Hono 라우트, RpcDispatcher, 배치 처리, Long-poll 비동기 승인, 보안 검증
 - [ ] **Phase 401: DX Integration + Testing** - Admin Settings/UI, MCP 도구, SDK 메서드, connect-info, 테스트 스위트
 
 ## Phase Details
@@ -96,12 +96,12 @@ Plans:
   3. DELAY/APPROVAL 티어 트랜잭션은 Long-poll로 대기하다가 완료 시 txHash를, 타임아웃 시 `-32000` 에러를 반환한다
   4. 인증 없는 요청은 거부되고, `from` 필드가 세션 지갑과 불일치하면 거부된다
   5. 배치 JSON-RPC 요청(배열)이 처리되고, 모든 서명 트랜잭션이 `source: 'rpc-proxy'`로 감사 로그에 기록된다
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 
 Plans:
-- [ ] 400-01-PLAN.md — RpcDispatcher + Hono 라우트 등록 + sessionAuth 미들웨어
-- [ ] 400-02-PLAN.md — Long-poll 비동기 승인 + 배치 처리 + from 검증
-- [ ] 400-03-PLAN.md — 보안 검증 (bytecodeSize, rate limiting, audit log source)
+- [x] 400-01-PLAN.md — RpcDispatcher + Hono 라우트 등록 + sessionAuth 미들웨어
+- [x] 400-02-PLAN.md — Long-poll 비동기 승인 + 배치 처리 + from 검증
+- [x] 400-03-PLAN.md — 보안 검증 (bytecodeSize, rate limiting, audit log source)
 
 ### Phase 401: DX Integration + Testing
 **Goal**: RPC 프록시가 Admin Settings로 런타임 제어되고, MCP/SDK/connect-info를 통해 AI 에이전트가 프록시 URL을 자동 발견하며, 포괄적 테스트가 프로토콜 준수를 검증한다
@@ -141,5 +141,5 @@ Phases execute in numeric order: 398 → 399 → 400 → 401
 | 397. Admin Dashboard UX | v31.13 | 2/2 | Complete | 2026-03-12 |
 | 398. Type System + Infrastructure Foundation | v31.14 | Complete    | 2026-03-13 | 2026-03-13 |
 | 399. Core RPC Proxy Engine | v31.14 | Complete    | 2026-03-13 | 2026-03-13 |
-| 400. Route Assembly + Async Approval | v31.14 | 0/3 | Not started | - |
+| 400. Route Assembly + Async Approval | v31.14 | 3/3 | Complete | 2026-03-13 |
 | 401. DX Integration + Testing | v31.14 | 0/3 | Not started | - |

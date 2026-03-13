@@ -9,12 +9,12 @@ Requirements for EVM RPC Proxy mode. Each maps to roadmap phases.
 
 ### RPC Endpoint
 
-- [ ] **RPC-01**: User can send JSON-RPC 2.0 requests to `POST /v1/rpc-evm/:walletId/:chainId`
-- [ ] **RPC-02**: User can authenticate RPC requests via existing sessionAuth (Bearer JWT)
+- [x] **RPC-01**: User can send JSON-RPC 2.0 requests to `POST /v1/rpc-evm/:walletId/:chainId`
+- [x] **RPC-02**: User can authenticate RPC requests via existing sessionAuth (Bearer JWT)
 - [x] **RPC-03**: System routes requests to correct wallet and chain via URL path parameters (chainId → EVM_CHAIN_MAP → NetworkType)
 - [x] **RPC-04**: `eth_chainId` response is auto-derived from URL chainId parameter
-- [ ] **RPC-05**: User can send JSON-RPC batch requests (array of calls)
-- [ ] **RPC-06**: System enforces Content-Type: application/json
+- [x] **RPC-05**: User can send JSON-RPC batch requests (array of calls)
+- [x] **RPC-06**: System enforces Content-Type: application/json
 - [x] **RPC-07**: System returns JSON-RPC error `-32602` for unknown chainId
 
 ### Signing Intercept
@@ -43,10 +43,10 @@ Requirements for EVM RPC Proxy mode. Each maps to roadmap phases.
 
 ### Async Approval
 
-- [ ] **ASYNC-01**: IMMEDIATE tier: instant sign + JSON-RPC response
-- [ ] **ASYNC-02**: DELAY tier: long-poll HTTP response, configurable timeout (default 300s)
-- [ ] **ASYNC-03**: APPROVAL tier: long-poll HTTP response, Owner approval wait (default 600s)
-- [ ] **ASYNC-04**: Timeout returns JSON-RPC error `-32000` with cause and transaction ID
+- [x] **ASYNC-01**: IMMEDIATE tier: instant sign + JSON-RPC response
+- [x] **ASYNC-02**: DELAY tier: long-poll HTTP response, configurable timeout (default 300s)
+- [x] **ASYNC-03**: APPROVAL tier: long-poll HTTP response, Owner approval wait (default 600s)
+- [x] **ASYNC-04**: Timeout returns JSON-RPC error `-32000` with cause and transaction ID
 - [x] **ASYNC-05**: Node.js keepAliveTimeout configured to support long-poll connections
 
 ### Admin & Settings
@@ -66,12 +66,12 @@ Requirements for EVM RPC Proxy mode. Each maps to roadmap phases.
 
 ### Security
 
-- [ ] **SEC-01**: Unauthenticated RPC requests rejected
-- [ ] **SEC-02**: `from` field validated against session wallet address
-- [ ] **SEC-03**: `from` auto-filled from URL walletId when omitted
-- [ ] **SEC-04**: All signing transactions logged to audit log with `source: 'rpc-proxy'`
-- [ ] **SEC-05**: Bytecode size limit enforced (default 48KB)
-- [ ] **SEC-06**: Rate limiting applied via existing API rate limit policy
+- [x] **SEC-01**: Unauthenticated RPC requests rejected
+- [x] **SEC-02**: `from` field validated against session wallet address
+- [x] **SEC-03**: `from` auto-filled from URL walletId when omitted
+- [x] **SEC-04**: All signing transactions logged to audit log with `source: 'rpc-proxy'`
+- [x] **SEC-05**: Bytecode size limit enforced (default 48KB)
+- [x] **SEC-06**: Rate limiting applied via existing API rate limit policy
 
 ### Testing
 
@@ -117,12 +117,12 @@ Deferred to future milestone.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| RPC-01 | Phase 400 | Pending |
-| RPC-02 | Phase 400 | Pending |
+| RPC-01 | Phase 400 | Complete |
+| RPC-02 | Phase 400 | Complete |
 | RPC-03 | Phase 399 | Complete |
 | RPC-04 | Phase 399 | Complete |
-| RPC-05 | Phase 400 | Pending |
-| RPC-06 | Phase 400 | Pending |
+| RPC-05 | Phase 400 | Complete |
+| RPC-06 | Phase 400 | Complete |
 | RPC-07 | Phase 398 | Complete |
 | SIGN-01 | Phase 399 | Complete |
 | SIGN-02 | Phase 399 | Complete |
@@ -139,10 +139,10 @@ Deferred to future milestone.
 | DEPL-04 | Phase 398 | Complete |
 | DEPL-05 | Phase 398 | Complete |
 | DEPL-06 | Phase 398 | Complete |
-| ASYNC-01 | Phase 400 | Pending |
-| ASYNC-02 | Phase 400 | Pending |
-| ASYNC-03 | Phase 400 | Pending |
-| ASYNC-04 | Phase 400 | Pending |
+| ASYNC-01 | Phase 400 | Complete |
+| ASYNC-02 | Phase 400 | Complete |
+| ASYNC-03 | Phase 400 | Complete |
+| ASYNC-04 | Phase 400 | Complete |
 | ASYNC-05 | Phase 398 | Complete |
 | ADMIN-01 | Phase 401 | Pending |
 | ADMIN-02 | Phase 401 | Pending |
@@ -153,12 +153,12 @@ Deferred to future milestone.
 | INTG-01 | Phase 401 | Pending |
 | INTG-02 | Phase 401 | Pending |
 | INTG-03 | Phase 401 | Pending |
-| SEC-01 | Phase 400 | Pending |
-| SEC-02 | Phase 400 | Pending |
-| SEC-03 | Phase 400 | Pending |
-| SEC-04 | Phase 400 | Pending |
-| SEC-05 | Phase 400 | Pending |
-| SEC-06 | Phase 400 | Pending |
+| SEC-01 | Phase 400 | Complete |
+| SEC-02 | Phase 400 | Complete |
+| SEC-03 | Phase 400 | Complete |
+| SEC-04 | Phase 400 | Complete |
+| SEC-05 | Phase 400 | Complete |
+| SEC-06 | Phase 400 | Complete |
 | TEST-01 | Phase 401 | Pending |
 | TEST-02 | Phase 401 | Pending |
 | TEST-03 | Phase 401 | Pending |
