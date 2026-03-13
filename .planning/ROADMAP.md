@@ -113,12 +113,12 @@ Plans:
   3. MCP `get_rpc_proxy_url` 도구와 SDK `getRpcProxyUrl()` 메서드가 프록시 URL을 반환한다
   4. `connect-info` 응답에 `rpcProxyBaseUrl`이 포함되어 에이전트가 자동 발견한다
   5. JSON-RPC 프로토콜 준수, 서명 인터셉트, 패스스루, CONTRACT_DEPLOY, 비동기 승인, 배치, 보안 테스트가 모두 통과한다
-**Plans:** TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 401-01: Admin Settings 6키 + Admin UI RPC Proxy 섹션
-- [ ] 401-02: MCP 도구 + SDK 메서드 + connect-info 확장
-- [ ] 401-03: 포괄적 테스트 스위트 (7개 TEST 요구사항)
+- [ ] 401-01-PLAN.md — Admin Settings 7키 (rpc_proxy.*) + Admin UI RPC Proxy 페이지
+- [ ] 401-02-PLAN.md — MCP get_rpc_proxy_url 도구 + SDK getRpcProxyUrl() + connect-info rpcProxy 필드
+- [ ] 401-03-PLAN.md — 포괄적 테스트 스위트 (TEST-01~07 + INTG 통합 테스트)
 
 ## Progress
 
