@@ -49,7 +49,7 @@
 - [x] **Phase 398: Type System + Infrastructure Foundation** - CONTRACT_DEPLOY 9-type SSoT 확장, DB v58, keepAliveTimeout, EVM_CHAIN_MAP 역방향 조회
 - [x] **Phase 399: Core RPC Proxy Engine** - 서명 메서드 핸들러, RpcPassthrough, RpcTransactionAdapter, CompletionWaiter, JSON-RPC 프로토콜 유틸
 - [x] **Phase 400: Route Assembly + Async Approval** - Hono 라우트, RpcDispatcher, 배치 처리, Long-poll 비동기 승인, 보안 검증
-- [ ] **Phase 401: DX Integration + Testing** - Admin Settings/UI, MCP 도구, SDK 메서드, connect-info, 테스트 스위트
+- [x] **Phase 401: DX Integration + Testing** - Admin Settings/UI, MCP 도구, SDK 메서드, connect-info, 테스트 스위트
 
 ## Phase Details
 
@@ -116,9 +116,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 401-01-PLAN.md — Admin Settings 7키 (rpc_proxy.*) + Admin UI RPC Proxy 페이지
-- [ ] 401-02-PLAN.md — MCP get_rpc_proxy_url 도구 + SDK getRpcProxyUrl() + connect-info rpcProxy 필드
-- [ ] 401-03-PLAN.md — 포괄적 테스트 스위트 (TEST-01~07 + INTG 통합 테스트)
+- [x] 401-01-PLAN.md — Admin Settings 7키 (rpc_proxy.*) + Admin UI RPC Proxy 페이지
+- [x] 401-02-PLAN.md — MCP get_rpc_proxy_url 도구 + SDK getRpcProxyUrl() + connect-info rpcProxy 필드
+- [x] 401-03-PLAN.md — 포괄적 테스트 스위트 (TEST-01~07 + INTG 통합 테스트)
 
 ## Progress
 
@@ -142,4 +142,4 @@ Phases execute in numeric order: 398 → 399 → 400 → 401
 | 398. Type System + Infrastructure Foundation | v31.14 | Complete    | 2026-03-13 | 2026-03-13 |
 | 399. Core RPC Proxy Engine | v31.14 | Complete    | 2026-03-13 | 2026-03-13 |
 | 400. Route Assembly + Async Approval | v31.14 | Complete    | 2026-03-13 | 2026-03-13 |
-| 401. DX Integration + Testing | v31.14 | 0/3 | Not started | - |
+| 401. DX Integration + Testing | v31.14 | 3/3 | Complete | 2026-03-13 |

@@ -51,18 +51,18 @@ Requirements for EVM RPC Proxy mode. Each maps to roadmap phases.
 
 ### Admin & Settings
 
-- [ ] **ADMIN-01**: `rpc_proxy.enabled` toggle (default false)
-- [ ] **ADMIN-02**: `rpc_proxy.allowed_methods` whitelist
-- [ ] **ADMIN-03**: `rpc_proxy.delay_timeout_seconds` setting (default 300)
-- [ ] **ADMIN-04**: `rpc_proxy.approval_timeout_seconds` setting (default 600)
-- [ ] **ADMIN-05**: `rpc_proxy.max_gas_limit` setting (default 30,000,000)
-- [ ] **ADMIN-06**: Admin UI RPC Proxy section with status and request log
+- [x] **ADMIN-01**: `rpc_proxy.enabled` toggle (default false)
+- [x] **ADMIN-02**: `rpc_proxy.allowed_methods` whitelist
+- [x] **ADMIN-03**: `rpc_proxy.delay_timeout_seconds` setting (default 300)
+- [x] **ADMIN-04**: `rpc_proxy.approval_timeout_seconds` setting (default 600)
+- [x] **ADMIN-05**: `rpc_proxy.max_gas_limit` setting (default 30,000,000)
+- [x] **ADMIN-06**: Admin UI RPC Proxy section with status and request log
 
 ### MCP & SDK
 
-- [ ] **INTG-01**: MCP `get_rpc_proxy_url` tool returns RPC proxy URL for wallet+chain
-- [ ] **INTG-02**: SDK `getRpcProxyUrl(walletId, chainId)` method
-- [ ] **INTG-03**: `connect-info` response includes `rpcProxyBaseUrl` when proxy enabled
+- [x] **INTG-01**: MCP `get_rpc_proxy_url` tool returns RPC proxy URL for wallet+chain
+- [x] **INTG-02**: SDK `getRpcProxyUrl(walletId, chainId)` method
+- [x] **INTG-03**: `connect-info` response includes `rpcProxyBaseUrl` when proxy enabled
 
 ### Security
 
@@ -75,13 +75,13 @@ Requirements for EVM RPC Proxy mode. Each maps to roadmap phases.
 
 ### Testing
 
-- [ ] **TEST-01**: JSON-RPC 2.0 protocol compliance tests
-- [ ] **TEST-02**: Signing method intercept tests (eth_sendTransaction → pipeline)
-- [ ] **TEST-03**: Passthrough method proxy tests
-- [ ] **TEST-04**: CONTRACT_DEPLOY classification and policy tests
-- [ ] **TEST-05**: Async approval long-poll tests (DELAY/APPROVAL tiers)
-- [ ] **TEST-06**: Batch request handling tests
-- [ ] **TEST-07**: Auth/security tests (unauthenticated, from mismatch)
+- [x] **TEST-01**: JSON-RPC 2.0 protocol compliance tests
+- [x] **TEST-02**: Signing method intercept tests (eth_sendTransaction → pipeline)
+- [x] **TEST-03**: Passthrough method proxy tests
+- [x] **TEST-04**: CONTRACT_DEPLOY classification and policy tests
+- [x] **TEST-05**: Async approval long-poll tests (DELAY/APPROVAL tiers)
+- [x] **TEST-06**: Batch request handling tests
+- [x] **TEST-07**: Auth/security tests (unauthenticated, from mismatch)
 
 ## Future Requirements
 
@@ -144,28 +144,28 @@ Deferred to future milestone.
 | ASYNC-03 | Phase 400 | Complete |
 | ASYNC-04 | Phase 400 | Complete |
 | ASYNC-05 | Phase 398 | Complete |
-| ADMIN-01 | Phase 401 | Pending |
-| ADMIN-02 | Phase 401 | Pending |
-| ADMIN-03 | Phase 401 | Pending |
-| ADMIN-04 | Phase 401 | Pending |
-| ADMIN-05 | Phase 401 | Pending |
-| ADMIN-06 | Phase 401 | Pending |
-| INTG-01 | Phase 401 | Pending |
-| INTG-02 | Phase 401 | Pending |
-| INTG-03 | Phase 401 | Pending |
+| ADMIN-01 | Phase 401 | Complete |
+| ADMIN-02 | Phase 401 | Complete |
+| ADMIN-03 | Phase 401 | Complete |
+| ADMIN-04 | Phase 401 | Complete |
+| ADMIN-05 | Phase 401 | Complete |
+| ADMIN-06 | Phase 401 | Complete |
+| INTG-01 | Phase 401 | Complete |
+| INTG-02 | Phase 401 | Complete |
+| INTG-03 | Phase 401 | Complete |
 | SEC-01 | Phase 400 | Complete |
 | SEC-02 | Phase 400 | Complete |
 | SEC-03 | Phase 400 | Complete |
 | SEC-04 | Phase 400 | Complete |
 | SEC-05 | Phase 400 | Complete |
 | SEC-06 | Phase 400 | Complete |
-| TEST-01 | Phase 401 | Pending |
-| TEST-02 | Phase 401 | Pending |
-| TEST-03 | Phase 401 | Pending |
-| TEST-04 | Phase 401 | Pending |
-| TEST-05 | Phase 401 | Pending |
-| TEST-06 | Phase 401 | Pending |
-| TEST-07 | Phase 401 | Pending |
+| TEST-01 | Phase 401 | Complete |
+| TEST-02 | Phase 401 | Complete |
+| TEST-03 | Phase 401 | Complete |
+| TEST-04 | Phase 401 | Complete |
+| TEST-05 | Phase 401 | Complete |
+| TEST-06 | Phase 401 | Complete |
+| TEST-07 | Phase 401 | Complete |
 
 **Coverage:**
 - v31.14 requirements: 49 total
