@@ -351,6 +351,7 @@
 | 335 | ENHANCEMENT | MEDIUM | Admin UI 레거시 Settings 페이지 제거 + AA 글로벌 키 System 이관 + API 키 발급 링크 추가 | v31.10 | FIXED | 2026-03-11 |
 | 336 | BUG | MEDIUM | Across Bridge status API depositId Zod 타입 불일치 — API 문자열 반환 vs 스키마 number | v31.10 | FIXED | 2026-03-11 |
 | 337 | BUG | HIGH | TX_CONFIRMED 알림 {amount} 미치환 — Background Confirm Worker + API Direct 경로 2곳 | — | FIXED | 2026-03-12 |
+| 338 | ENHANCEMENT | LOW | GitHub Pages 랜딩 사이트 + AEO 구축 — SEO 메타데이터, llms.txt, ai-plugin.json | — | OPEN | — |
 
 ## Type Legend
 
@@ -362,9 +363,9 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 1
 - **FIXED:** 337
 - **WONTFIX:** 1
-- **Total:** 337
+- **Total:** 338
 - **Archived:** 321 (001–321)
 
