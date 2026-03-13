@@ -117,61 +117,61 @@ Deferred to future milestone.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| RPC-01 | — | Pending |
-| RPC-02 | — | Pending |
-| RPC-03 | — | Pending |
-| RPC-04 | — | Pending |
-| RPC-05 | — | Pending |
-| RPC-06 | — | Pending |
-| RPC-07 | — | Pending |
-| SIGN-01 | — | Pending |
-| SIGN-02 | — | Pending |
-| SIGN-03 | — | Pending |
-| SIGN-04 | — | Pending |
-| SIGN-05 | — | Pending |
-| SIGN-06 | — | Pending |
-| SIGN-07 | — | Pending |
-| PASS-01 | — | Pending |
-| PASS-02 | — | Pending |
-| DEPL-01 | — | Pending |
-| DEPL-02 | — | Pending |
-| DEPL-03 | — | Pending |
-| DEPL-04 | — | Pending |
-| DEPL-05 | — | Pending |
-| DEPL-06 | — | Pending |
-| ASYNC-01 | — | Pending |
-| ASYNC-02 | — | Pending |
-| ASYNC-03 | — | Pending |
-| ASYNC-04 | — | Pending |
-| ASYNC-05 | — | Pending |
-| ADMIN-01 | — | Pending |
-| ADMIN-02 | — | Pending |
-| ADMIN-03 | — | Pending |
-| ADMIN-04 | — | Pending |
-| ADMIN-05 | — | Pending |
-| ADMIN-06 | — | Pending |
-| INTG-01 | — | Pending |
-| INTG-02 | — | Pending |
-| INTG-03 | — | Pending |
-| SEC-01 | — | Pending |
-| SEC-02 | — | Pending |
-| SEC-03 | — | Pending |
-| SEC-04 | — | Pending |
-| SEC-05 | — | Pending |
-| SEC-06 | — | Pending |
-| TEST-01 | — | Pending |
-| TEST-02 | — | Pending |
-| TEST-03 | — | Pending |
-| TEST-04 | — | Pending |
-| TEST-05 | — | Pending |
-| TEST-06 | — | Pending |
-| TEST-07 | — | Pending |
+| RPC-01 | Phase 400 | Pending |
+| RPC-02 | Phase 400 | Pending |
+| RPC-03 | Phase 399 | Pending |
+| RPC-04 | Phase 399 | Pending |
+| RPC-05 | Phase 400 | Pending |
+| RPC-06 | Phase 400 | Pending |
+| RPC-07 | Phase 398 | Pending |
+| SIGN-01 | Phase 399 | Pending |
+| SIGN-02 | Phase 399 | Pending |
+| SIGN-03 | Phase 399 | Pending |
+| SIGN-04 | Phase 399 | Pending |
+| SIGN-05 | Phase 399 | Pending |
+| SIGN-06 | Phase 399 | Pending |
+| SIGN-07 | Phase 399 | Pending |
+| PASS-01 | Phase 399 | Pending |
+| PASS-02 | Phase 399 | Pending |
+| DEPL-01 | Phase 398 | Pending |
+| DEPL-02 | Phase 398 | Pending |
+| DEPL-03 | Phase 398 | Pending |
+| DEPL-04 | Phase 398 | Pending |
+| DEPL-05 | Phase 398 | Pending |
+| DEPL-06 | Phase 398 | Pending |
+| ASYNC-01 | Phase 400 | Pending |
+| ASYNC-02 | Phase 400 | Pending |
+| ASYNC-03 | Phase 400 | Pending |
+| ASYNC-04 | Phase 400 | Pending |
+| ASYNC-05 | Phase 398 | Pending |
+| ADMIN-01 | Phase 401 | Pending |
+| ADMIN-02 | Phase 401 | Pending |
+| ADMIN-03 | Phase 401 | Pending |
+| ADMIN-04 | Phase 401 | Pending |
+| ADMIN-05 | Phase 401 | Pending |
+| ADMIN-06 | Phase 401 | Pending |
+| INTG-01 | Phase 401 | Pending |
+| INTG-02 | Phase 401 | Pending |
+| INTG-03 | Phase 401 | Pending |
+| SEC-01 | Phase 400 | Pending |
+| SEC-02 | Phase 400 | Pending |
+| SEC-03 | Phase 400 | Pending |
+| SEC-04 | Phase 400 | Pending |
+| SEC-05 | Phase 400 | Pending |
+| SEC-06 | Phase 400 | Pending |
+| TEST-01 | Phase 401 | Pending |
+| TEST-02 | Phase 401 | Pending |
+| TEST-03 | Phase 401 | Pending |
+| TEST-04 | Phase 401 | Pending |
+| TEST-05 | Phase 401 | Pending |
+| TEST-06 | Phase 401 | Pending |
+| TEST-07 | Phase 401 | Pending |
 
 **Coverage:**
-- v31.14 requirements: 46 total
-- Mapped to phases: 0
-- Unmapped: 46 ⚠️
+- v31.14 requirements: 49 total
+- Mapped to phases: 49
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-13*
-*Last updated: 2026-03-13 after initial definition*
+*Last updated: 2026-03-13 after roadmap creation*
