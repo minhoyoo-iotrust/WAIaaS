@@ -698,6 +698,114 @@ describe('POST /v1/actions/:provider/:action', () => {
 // GET /v1/actions/providers without auth (1 test)
 // ---------------------------------------------------------------------------
 
+describe('GET /v1/actions/providers inputSchema', () => {
+  it('should include inputSchema JSON Schema for each action', async () => {
+    const walletId = await createTestWallet();
+    const authHeader = await createSessionToken(walletId);
+
+    const res = await app.request('/v1/actions/providers', {
+      method: 'GET',
+      headers: { Host: HOST, Authorization: authHeader },
+    });
+
+    expect(res.status).toBe(200);
+    const body = await json(res);
+    const providers = body.providers as Array<Record<string, unknown>>;
+    const testProvider = providers.find((p) => p.name === 'test_provider');
+    expect(testProvider).toBeDefined();
+
+    const actions = testProvider!.actions as Array<Record<string, unknown>>;
+    const testAction = actions[0]!;
+    expect(testAction.inputSchema).toBeDefined();
+
+    const schema = testAction.inputSchema as Record<string, unknown>;
+    expect(schema.type).toBe('object');
+    expect(schema.properties).toBeDefined();
+    const props = schema.properties as Record<string, unknown>;
+    expect(props.amount).toBeDefined();
+  });
+
+  it('should include standard JSON Schema fields (properties, type, required)', async () => {
+    const walletId = await createTestWallet();
+    const authHeader = await createSessionToken(walletId);
+
+    const res = await app.request('/v1/actions/providers', {
+      method: 'GET',
+      headers: { Host: HOST, Authorization: authHeader },
+    });
+
+    const body = await json(res);
+    const providers = body.providers as Array<Record<string, unknown>>;
+    const testProvider = providers.find((p) => p.name === 'test_provider');
+    const actions = testProvider!.actions as Array<Record<string, unknown>>;
+    const schema = actions[0]!.inputSchema as Record<string, unknown>;
+
+    expect(schema.type).toBe('object');
+    expect(schema.required).toEqual(['amount']);
+    expect((schema.properties as Record<string, { type: string }>).amount.type).toBe('string');
+  });
+
+  it('should fallback to { type: "object" } when Zod schema conversion fails', async () => {
+    // Create a provider with a Zod schema that has parse/safeParse but will
+    // cause zodToJsonSchema to throw (e.g., a Zod schema with circular refs)
+    const trickSchema = z.object({ amount: z.string() });
+    // Monkey-patch to simulate zodToJsonSchema failure
+    Object.defineProperty(trickSchema, '_def', {
+      get() { throw new Error('Simulated conversion failure'); },
+      configurable: true,
+    });
+    // But keep parse/safeParse working for registration validation
+    const fakeSchema = {
+      parse: trickSchema.parse.bind(trickSchema),
+      safeParse: trickSchema.safeParse.bind(trickSchema),
+      _def: undefined, // zodToJsonSchema will fail on this
+    };
+
+    const brokenProvider: IActionProvider = {
+      metadata: {
+        name: 'broken_schema_provider',
+        description: 'Provider with schema that causes zodToJsonSchema failure for fallback test',
+        version: '1.0.0',
+        chains: ['solana'],
+        mcpExpose: false,
+        requiresApiKey: false,
+        requiredApis: [],
+        requiresSigningKey: false,
+      },
+      actions: [
+        {
+          name: 'broken_action',
+          description: 'Action with problematic inputSchema that triggers fallback',
+          chain: 'solana',
+          inputSchema: fakeSchema,
+          riskLevel: 'low',
+          defaultTier: 'INSTANT',
+        },
+      ] as readonly ActionDefinition[],
+      resolve: vi.fn().mockResolvedValue(TEST_CONTRACT_CALL),
+    };
+    registry.register(brokenProvider);
+
+    const walletId = await createTestWallet();
+    const authHeader = await createSessionToken(walletId);
+
+    const res = await app.request('/v1/actions/providers', {
+      method: 'GET',
+      headers: { Host: HOST, Authorization: authHeader },
+    });
+
+    expect(res.status).toBe(200);
+    const body = await json(res);
+    const providers = body.providers as Array<Record<string, unknown>>;
+    const broken = providers.find((p) => p.name === 'broken_schema_provider');
+    expect(broken).toBeDefined();
+
+    const actions = broken!.actions as Array<Record<string, unknown>>;
+    const schema = actions[0]!.inputSchema as Record<string, unknown>;
+    expect(schema).toEqual({ type: 'object' });
+  });
+});
+
 describe('GET /v1/actions/providers (no auth)', () => {
   it('should return 401 without Authorization header', async () => {
     const res = await app.request('/v1/actions/providers', {
