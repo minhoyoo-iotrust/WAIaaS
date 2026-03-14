@@ -68,10 +68,10 @@
   2. `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp` 등 15개 네트워크 CAIP-2 매핑이 전수 검증된다
   3. 기존 plain string(`ethereum-mainnet`)과 legacy(`mainnet`) 입력은 변경 없이 동작한다
   4. 미등록 CAIP-2 문자열(`eip155:99999`)은 validation error를 반환한다
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 407-01: normalizeNetworkInput CAIP-2 확장 + z.preprocess 통합 + 테스트
+- [ ] 407-01-PLAN.md — normalizeNetworkInput CAIP-2 확장 + z.preprocess 통합 + 테스트
 
 ### Phase 408: CAIP-19 Asset Input + Resolve
 **Goal**: assetId 하나만으로 토큰을 특정하고 address/decimals/symbol을 자동 resolve
