@@ -11,12 +11,13 @@
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, waitFor, cleanup } from '@testing-library/preact';
+import type { components, paths } from '../api/types.generated';
 
-vi.mock('../api/client', () => ({
-  apiGet: vi.fn(),
-  apiPost: vi.fn(),
-  apiPut: vi.fn(),
-  apiDelete: vi.fn(),
+const mockApiGet = vi.fn();
+const mockApiPost = vi.fn();
+
+vi.mock('../api/typed-client', () => ({
+  api: { GET: (...args: unknown[]) => mockApiGet(...args), POST: (...args: unknown[]) => mockApiPost(...args) },
   ApiError: class ApiError extends Error {
     status: number;
     code: string;
@@ -29,7 +30,6 @@ vi.mock('../api/client', () => ({
       this.serverMessage = msg;
     }
   },
-  apiCall: vi.fn(),
 }));
 
 vi.mock('../components/toast', () => ({
@@ -59,13 +59,14 @@ vi.mock('../utils/display-currency', async () => {
   };
 });
 
-import { apiGet } from '../api/client';
 import { fetchDisplayCurrency } from '../utils/display-currency';
 import DashboardPage from '../pages/dashboard';
 
 // ---------------------------------------------------------------------------
-// Mock data
+// Mock data with satisfies for structural verification
 // ---------------------------------------------------------------------------
+
+type DefiPositionResponse = paths['/v1/admin/defi/positions']['get']['responses']['200']['content']['application/json'];
 
 const mockStatus = {
   status: 'running',
@@ -81,8 +82,9 @@ const mockStatus = {
   policyCount: 2,
   recentTxCount: 10,
   failedTxCount: 0,
+  autoProvisioned: false,
   recentTransactions: [],
-};
+} satisfies components['schemas']['AdminStatusResponse'];
 
 const mockDefiPositions = {
   positions: [
@@ -93,7 +95,7 @@ const mockDefiPositions = {
       provider: 'aave_v3',
       chain: 'ethereum',
       network: 'ethereum-mainnet',
-      assetId: null,
+      assetId: null as string | null,
       amount: '1000',
       amountUsd: 2500.0,
       status: 'ACTIVE',
@@ -104,27 +106,27 @@ const mockDefiPositions = {
   totalValueUsd: 2500.0,
   worstHealthFactor: 1.8,
   activeCount: 1,
-};
+} satisfies DefiPositionResponse;
 
 const mockEmptyDefi = {
   positions: [],
-  totalValueUsd: null,
-  worstHealthFactor: null,
+  totalValueUsd: null as number | null,
+  worstHealthFactor: null as number | null,
   activeCount: 0,
-};
+} satisfies DefiPositionResponse;
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function mockApiCallsWithDefi(defiData: Record<string, unknown> = mockDefiPositions) {
-  vi.mocked(apiGet).mockImplementation(async (path: string) => {
-    if (path === '/v1/admin/status') return mockStatus;
-    if (path.startsWith('/v1/admin/defi/positions')) return defiData;
-    if (path === '/v1/wallets') return { items: [] };
+function mockApiCallsWithDefi(defiData: DefiPositionResponse = mockDefiPositions) {
+  mockApiGet.mockImplementation(async (path: string) => {
+    if (path === '/v1/admin/status') return { data: mockStatus };
+    if (path === '/v1/admin/defi/positions') return { data: defiData };
+    if (path === '/v1/wallets') return { data: { items: [] } };
     if (path.includes('/v1/admin/stats')) throw new Error('not found');
-    if (path.includes('/v1/admin/transactions')) return { total: 0, transactions: [] };
-    return {};
+    if (path === '/v1/admin/transactions') return { data: { items: [], total: 0, offset: 0, limit: 1 } };
+    return { data: {} };
   });
   vi.mocked(fetchDisplayCurrency).mockResolvedValue({ currency: 'USD', rate: 1 });
 }
@@ -276,13 +278,13 @@ describe('DashboardPage - DeFi Positions section', () => {
       positions: [
         {
           id: 'pos-1', walletId: 'w-1', category: 'LENDING', provider: 'aave-v3',
-          chain: 'ethereum', network: 'ethereum-mainnet', assetId: null,
+          chain: 'ethereum', network: 'ethereum-mainnet' as string | null, assetId: null as string | null,
           amount: '1000', amountUsd: 2500.0, metadata: { positionType: 'SUPPLY', healthFactor: 1.8 },
           status: 'ACTIVE', openedAt: 1700000000, lastSyncedAt: 1700001000,
         },
         {
           id: 'pos-2', walletId: 'w-1', category: 'STAKING', provider: 'lido',
-          chain: 'ethereum', network: 'ethereum-mainnet', assetId: null,
+          chain: 'ethereum', network: 'ethereum-mainnet' as string | null, assetId: null as string | null,
           amount: '5.0', amountUsd: 10000.0, metadata: { protocol: 'Lido', exchangeRate: 1.15 },
           status: 'ACTIVE', openedAt: 1700000000, lastSyncedAt: 1700001000,
         },
@@ -290,7 +292,7 @@ describe('DashboardPage - DeFi Positions section', () => {
       totalValueUsd: 12500.0,
       worstHealthFactor: 1.8,
       activeCount: 2,
-    };
+    } satisfies DefiPositionResponse;
     mockApiCallsWithDefi(multiProviderDefi);
     render(<DashboardPage />);
 
@@ -305,13 +307,13 @@ describe('DashboardPage - DeFi Positions section', () => {
       { id: 'w-1', name: 'Wallet 1' },
       { id: 'w-2', name: 'Wallet 2' },
     ];
-    vi.mocked(apiGet).mockImplementation(async (path: string) => {
-      if (path === '/v1/admin/status') return mockStatus;
-      if (path.startsWith('/v1/admin/defi/positions')) return mockDefiPositions;
-      if (path === '/v1/wallets') return { items: mockWallets };
+    mockApiGet.mockImplementation(async (path: string) => {
+      if (path === '/v1/admin/status') return { data: mockStatus };
+      if (path === '/v1/admin/defi/positions') return { data: mockDefiPositions };
+      if (path === '/v1/wallets') return { data: { items: mockWallets } };
       if (path.includes('/v1/admin/stats')) throw new Error('not found');
-      if (path.includes('/v1/admin/transactions')) return { total: 0, transactions: [] };
-      return {};
+      if (path === '/v1/admin/transactions') return { data: { items: [], total: 0, offset: 0, limit: 1 } };
+      return { data: {} };
     });
     vi.mocked(fetchDisplayCurrency).mockResolvedValue({ currency: 'USD', rate: 1 });
 
