@@ -360,6 +360,21 @@ describe('Enum SSoT', () => {
     });
   });
 
+  // normalizeNetworkInput CAIP-2 support (TDD RED - Task 1)
+  describe('normalizeNetworkInput CAIP-2 (Task 1)', () => {
+    it('converts CAIP-2 eip155:1 to ethereum-mainnet', () => {
+      expect(normalizeNetworkInput('eip155:1')).toBe('ethereum-mainnet');
+    });
+
+    it('converts CAIP-2 solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp to solana-mainnet', () => {
+      expect(normalizeNetworkInput('solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp')).toBe('solana-mainnet');
+    });
+
+    it('passes through unregistered CAIP-2 unchanged', () => {
+      expect(normalizeNetworkInput('eip155:99999')).toBe('eip155:99999');
+    });
+  });
+
   // All enum arrays contain only string values (no duplicates) -- all 18
   it('enum arrays have no duplicate values', () => {
     const allArrays = [

@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { CAIP2_TO_NETWORK } from '../caip/network-map.js';
+
 // ─── Import shared constants (SSoT from @waiaas/shared) ─────────────────────
 import {
   CHAIN_TYPES,
@@ -153,6 +155,13 @@ let _legacyWarned = false;
  * Emits a deprecation warning to stderr on first legacy conversion.
  */
 export function normalizeNetworkInput(network: string): string {
+  // 1. CAIP-2 mapping (standard format, no deprecation warning)
+  const caip2Entry = CAIP2_TO_NETWORK[network];
+  if (caip2Entry) {
+    return caip2Entry.network;
+  }
+
+  // 2. Legacy Solana name mapping (deprecated)
   const mapped = LEGACY_SOLANA_NETWORK_MAP[network];
   if (mapped) {
     if (!_legacyWarned) {
@@ -164,6 +173,8 @@ export function normalizeNetworkInput(network: string): string {
     }
     return mapped;
   }
+
+  // 3. Passthrough (canonical names or unknown strings)
   return network;
 }
 
