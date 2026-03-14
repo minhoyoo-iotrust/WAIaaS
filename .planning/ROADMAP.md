@@ -140,10 +140,10 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. CI에서 OpenAPI spec 응답 스키마 키와 Admin UI 사용 키를 비교하는 contract test가 실행된다
   2. 백엔드에서 응답 필드를 제거하면 contract test가 실패한다
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 416-01: TBD
+- [ ] 416-01-PLAN.md — Contract test 스크립트 + CI 통합
 
 ## Progress
 
