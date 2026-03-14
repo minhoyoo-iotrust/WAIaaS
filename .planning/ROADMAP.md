@@ -13,7 +13,7 @@
 - ✅ **v0.9** — MCP 세션 관리 자동화 설계 (shipped 2026-02-09)
 - ✅ **v0.10** — 구현 전 설계 완결성 확보 (shipped 2026-02-09)
 - ✅ **v1.0** — 구현 계획 수립 (shipped 2026-02-09)
-- ✅ **v1.1 ~ v31.15** — (101 milestones shipped)
+- ✅ **v1.1 ~ v31.16** — (102 milestones shipped)
 
 ## Phases
 
@@ -49,6 +49,17 @@
 
 </details>
 
+<details>
+<summary>✅ v31.16 CAIP 표준 식별자 승격 (Phases 407-411) — SHIPPED 2026-03-15</summary>
+
+- [x] Phase 407: CAIP-2 Network Input (1/1 plan) — completed 2026-03-14
+- [x] Phase 408: CAIP-19 Asset Input + Resolve (2/2 plans) — completed 2026-03-14
+- [x] Phase 409: Response CAIP Enrichment + OpenAPI (2/2 plans) — completed 2026-03-14
+- [x] Phase 410: SDK + MCP CAIP Extension (2/2 plans) — completed 2026-03-14
+- [x] Phase 411: Skill Files Sync (1/1 plan) — completed 2026-03-14
+
+</details>
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -67,3 +78,8 @@
 | 404. Typed MCP Schemas + Response Enrichment | v31.15 | 2/2 | Complete | 2026-03-14 |
 | 405. humanAmount Parameter | v31.15 | 2/2 | Complete | 2026-03-14 |
 | 406. SDK + Skill File Sync + E2E | v31.15 | 2/2 | Complete | 2026-03-14 |
+| 407. CAIP-2 Network Input | v31.16 | 1/1 | Complete | 2026-03-14 |
+| 408. CAIP-19 Asset Input + Resolve | v31.16 | 2/2 | Complete | 2026-03-14 |
+| 409. Response CAIP Enrichment + OpenAPI | v31.16 | 2/2 | Complete | 2026-03-14 |
+| 410. SDK + MCP CAIP Extension | v31.16 | 2/2 | Complete | 2026-03-14 |
+| 411. Skill Files Sync | v31.16 | 1/1 | Complete | 2026-03-14 |

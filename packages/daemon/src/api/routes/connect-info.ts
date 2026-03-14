@@ -16,7 +16,7 @@
 import { OpenAPIHono, createRoute } from '@hono/zod-openapi';
 import { eq, and, or, isNull } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import { WAIaaSError } from '@waiaas/core';
+import { WAIaaSError, NETWORK_TO_CAIP2 } from '@waiaas/core';
 import { getNetworksForEnvironment } from '@waiaas/core';
 import type { ChainType, EnvironmentType } from '@waiaas/core';
 import type { DaemonConfig } from '../../infrastructure/config/loader.js';
@@ -550,6 +550,7 @@ export function connectInfoRoutes(deps: ConnectInfoRouteDeps): OpenAPIHono {
         version: deps.version,
         baseUrl,
       },
+      supportedChainIds: [...new Set(Object.values(NETWORK_TO_CAIP2))],
       rpcProxy: (() => {
         try {
           if (deps.settingsService?.get('rpc_proxy.enabled') === 'true') {

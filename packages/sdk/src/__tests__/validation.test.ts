@@ -317,6 +317,68 @@ describe('validateSendToken', () => {
       }),
     ).not.toThrow();
   });
+  // =========================================================================
+  // assetId-only TokenInfo (CAIP-19)
+  // =========================================================================
+
+  it('should pass TOKEN_TRANSFER with assetId-only token (daemon resolves)', () => {
+    expect(() =>
+      validateSendToken({
+        to: 'addr',
+        amount: '1000',
+        type: 'TOKEN_TRANSFER',
+        token: { assetId: 'eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48' },
+      }),
+    ).not.toThrow();
+  });
+
+  it('should pass APPROVE with assetId-only token (daemon resolves)', () => {
+    expect(() =>
+      validateSendToken({
+        type: 'APPROVE',
+        spender: '0xSpender',
+        amount: '1000',
+        token: { assetId: 'eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48' },
+      }),
+    ).not.toThrow();
+  });
+
+  it('should still pass TOKEN_TRANSFER with full token info (backward compat)', () => {
+    expect(() =>
+      validateSendToken({
+        to: 'addr',
+        amount: '1000',
+        type: 'TOKEN_TRANSFER',
+        token: { address: 'mint1', decimals: 6, symbol: 'USDC' },
+      }),
+    ).not.toThrow();
+  });
+
+  it('should throw VALIDATION_ERROR when token is empty object (no assetId, no address)', () => {
+    const err = getValidationError({
+      to: 'addr',
+      amount: '1000',
+      type: 'TOKEN_TRANSFER',
+      token: {},
+    });
+    expect(err.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('should throw VALIDATION_ERROR when token is not provided for TOKEN_TRANSFER', () => {
+    const err = getValidationError({
+      to: 'addr',
+      amount: '1000',
+      type: 'TOKEN_TRANSFER',
+    });
+    expect(err.code).toBe('VALIDATION_ERROR');
+    expect(err.message).toContain('token');
+  });
+
+  it('should pass when network is a CAIP-2 string (no validation -- server handles)', () => {
+    expect(() =>
+      validateSendToken({ to: 'addr', amount: '100', network: 'eip155:1' }),
+    ).not.toThrow();
+  });
 });
 
 // ---------------------------------------------------------------------------

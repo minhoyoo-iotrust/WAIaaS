@@ -27,7 +27,7 @@ export function registerGetNftMetadata(
     ),
     {
       token_identifier: z.string().describe('NFT identifier. EVM: {contractAddress}:{tokenId}. Solana: {mintAddress}.'),
-      network: z.string().describe('Network identifier (e.g., "ethereum-mainnet", "solana-mainnet").'),
+      network: z.string().describe('Network identifier (e.g., "ethereum-mainnet", "solana-mainnet" or CAIP-2 "eip155:1").'),
       wallet_id: z.string().optional().describe('Target wallet ID. Required for multi-wallet sessions.'),
     },
     async (args) => {

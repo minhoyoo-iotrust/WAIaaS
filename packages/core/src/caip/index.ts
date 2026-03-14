@@ -18,3 +18,9 @@ export { CAIP2_TO_NETWORK, NETWORK_TO_CAIP2, networkToCaip2, caip2ToNetwork } fr
 
 // Asset helpers (native + token + NFT CAIP-19 generation)
 export { nativeAssetId, tokenAssetId, isNativeAsset, nftAssetId, isNftAsset } from './asset-helpers.js';
+
+// Asset resolve (CAIP-19 parsing + network extraction)
+export { parseAssetId, extractNetworkFromAssetId, type ParsedAssetId } from './asset-resolve.js';
+
+// Response enrichment (runtime CAIP-2/19 injection)
+export { enrichBalance, enrichAsset, enrichNft, enrichTransaction, enrichIncomingTx } from './response-enrichment.js';

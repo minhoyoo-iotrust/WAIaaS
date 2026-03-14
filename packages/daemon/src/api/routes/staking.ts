@@ -21,6 +21,7 @@ import { wallets } from '../../infrastructure/database/schema.js';
 import type * as schema from '../../infrastructure/database/schema.js';
 import { resolveWalletId } from '../helpers/resolve-wallet-id.js';
 import type { IPriceOracle } from '@waiaas/core';
+import { networkToCaip2 } from '@waiaas/core';
 import {
   StakingPositionsResponseSchema,
   buildErrorResponses,
@@ -212,6 +213,8 @@ export function createStakingRoutes(deps: StakingRouteDeps): OpenAPIHono {
       balanceUsd: string | null;
       apy: string | null;
       pendingUnstake: { amount: string; status: 'PENDING' | 'COMPLETED' | 'TIMEOUT'; requestedAt: number | null } | null;
+      network?: string;
+      chainId?: string;
     }> = [];
 
     // Ethereum wallet -> check Lido staking
@@ -236,6 +239,8 @@ export function createStakingRoutes(deps: StakingRouteDeps): OpenAPIHono {
           }
         }
 
+        let lidoChainId: string | undefined;
+        try { lidoChainId = networkToCaip2('ethereum-mainnet' as any); } catch { /* graceful */ }
         positions.push({
           protocol: 'lido',
           chain: 'ethereum',
@@ -244,6 +249,8 @@ export function createStakingRoutes(deps: StakingRouteDeps): OpenAPIHono {
           balanceUsd,
           apy: LIDO_APY,
           pendingUnstake,
+          network: 'ethereum-mainnet',
+          ...(lidoChainId ? { chainId: lidoChainId } : {}),
         });
       }
     }
@@ -270,6 +277,8 @@ export function createStakingRoutes(deps: StakingRouteDeps): OpenAPIHono {
           }
         }
 
+        let jitoChainId: string | undefined;
+        try { jitoChainId = networkToCaip2('solana-mainnet' as any); } catch { /* graceful */ }
         positions.push({
           protocol: 'jito',
           chain: 'solana',
@@ -278,6 +287,8 @@ export function createStakingRoutes(deps: StakingRouteDeps): OpenAPIHono {
           balanceUsd,
           apy: JITO_APY,
           pendingUnstake,
+          network: 'solana-mainnet',
+          ...(jitoChainId ? { chainId: jitoChainId } : {}),
         });
       }
     }

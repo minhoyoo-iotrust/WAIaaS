@@ -14,7 +14,7 @@
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { eq } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import { WAIaaSError, validateNetworkEnvironment } from '@waiaas/core';
+import { WAIaaSError, validateNetworkEnvironment, networkToCaip2 } from '@waiaas/core';
 import type { ChainType, NftItem, NftCollection } from '@waiaas/core';
 import type { NftIndexerClient } from '../../infrastructure/nft/nft-indexer-client.js';
 import type { NftMetadataCacheService } from '../../services/nft-metadata-cache.js';
@@ -272,15 +272,29 @@ async function handleNftList(
     pageKey,
   });
 
+  // Resolve chainId for this network (graceful)
+  let chainId: string | undefined;
+  try { chainId = networkToCaip2(network as any); } catch { /* graceful */ }
+
+  // Helper to inject chainId into NFT items
+  const addChainId = (items: NftItem[]) =>
+    chainId ? items.map((item) => ({ ...item, chainId })) : items;
+
   // Group by collection if requested
   if (groupBy === 'collection') {
     const grouped = groupByCollection(result.items);
-    return c.json({ ...grouped, pageKey: result.pageKey }, 200);
+    const enrichedGrouped = {
+      collections: grouped.collections.map((col) => ({
+        ...col,
+        nfts: addChainId(col.nfts as NftItem[]),
+      })),
+    };
+    return c.json({ ...enrichedGrouped, pageKey: result.pageKey }, 200);
   }
 
   return c.json(
     {
-      items: result.items,
+      items: addChainId(result.items),
       pageKey: result.pageKey,
       totalCount: result.totalCount,
     },
@@ -345,5 +359,9 @@ async function handleNftMetadata(
     metadata = await deps.nftIndexerClient.getNftMetadata(chain, network, contractAddress, tokenId);
   }
 
-  return c.json(metadata, 200);
+  // Inject chainId (graceful)
+  let metaChainId: string | undefined;
+  try { metaChainId = networkToCaip2(network as any); } catch { /* graceful */ }
+
+  return c.json(metaChainId ? { ...metadata, chainId: metaChainId } : metadata, 200);
 }

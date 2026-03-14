@@ -165,16 +165,23 @@ function validateTokenInfo(p: Record<string, unknown>): void {
   if (!token || typeof token !== 'object') {
     throw new WAIaaSError({
       code: 'VALIDATION_ERROR',
-      message: 'sendToken: "token" must be an object with address, decimals, and symbol',
+      message: 'sendToken: "token" must be an object with address/decimals/symbol or assetId',
       status: 0,
       retryable: false,
     });
   }
   const t = token as Record<string, unknown>;
+
+  // assetId-only mode: daemon resolves address/decimals/symbol from registry
+  if (typeof t['assetId'] === 'string' && (t['assetId'] as string).length > 0) {
+    return; // Valid -- daemon will resolve from registry
+  }
+
+  // Full mode: require address + decimals + symbol
   if (typeof t['address'] !== 'string' || (t['address'] as string).length === 0) {
     throw new WAIaaSError({
       code: 'VALIDATION_ERROR',
-      message: 'sendToken: "token.address" must be a non-empty string',
+      message: 'sendToken: "token.address" must be a non-empty string (or provide token.assetId)',
       status: 0,
       retryable: false,
     });

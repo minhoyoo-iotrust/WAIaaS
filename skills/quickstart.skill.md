@@ -178,7 +178,7 @@ curl -s http://localhost:3100/v1/wallet/balance \
   -H 'Authorization: Bearer wai_sess_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
 ```
 
-Optional: Append `?network=<network>` to query a specific network. Required for EVM wallets; auto-resolved for Solana.
+Optional: Append `?network=<network>` to query a specific network. Accepts both plain string (e.g., `ethereum-mainnet`) and CAIP-2 format (e.g., `eip155:1`). Required for EVM wallets; auto-resolved for Solana.
 
 Response:
 ```json
@@ -186,6 +186,7 @@ Response:
   "walletId": "01958f3a-1234-7000-8000-abcdef123456",
   "chain": "solana",
   "network": "solana-mainnet",
+  "chainId": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
   "address": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
   "balance": "1000000000",
   "decimals": 9,
@@ -204,7 +205,7 @@ curl -s http://localhost:3100/v1/wallet/assets \
   -H 'Authorization: Bearer wai_sess_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
 ```
 
-Optional: Append `?network=<network>` to query a specific network. Required for EVM wallets; auto-resolved for Solana.
+Optional: Append `?network=<network>` to query a specific network. Accepts both plain string (e.g., `ethereum-mainnet`) and CAIP-2 format (e.g., `eip155:1`). Required for EVM wallets; auto-resolved for Solana.
 
 Response:
 ```json
@@ -212,6 +213,7 @@ Response:
   "walletId": "01958f3a-1234-7000-8000-abcdef123456",
   "chain": "solana",
   "network": "solana-mainnet",
+  "chainId": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
   "assets": [
     {
       "mint": "So11111111111111111111111111111111111111112",
@@ -282,7 +284,7 @@ Parameters:
 - `to` (required): recipient wallet address
 - `amount` or `humanAmount` (required): smallest-unit digit string or human-readable decimal string (mutually exclusive)
 - `memo` (optional): max 256 characters
-- `network`: target network for this transaction. Required for EVM wallets; auto-resolved for Solana.
+- `network`: target network (e.g., `"ethereum-mainnet"` or CAIP-2 `"eip155:1"`). Required for EVM wallets; auto-resolved for Solana.
 
 Response (201):
 ```json
@@ -380,9 +382,25 @@ Common error codes:
 - **policies.skill.md** -- Policy management (spending limits, whitelists, rate limits, approval tiers)
 - **admin.skill.md** -- Admin operations (kill switch, status, settings, notifications)
 
-## Asset Identification (CAIP-19)
+## CAIP Standard Identifiers (CAIP-2 / CAIP-19)
 
-WAIaaS supports CAIP-19 standard asset identifiers for unambiguous cross-chain token identification. When sending token transfers, you can include an optional `assetId` field in the token object:
+### CAIP-2: Network Identification
+
+All `network` parameters accept CAIP-2 chain identifiers alongside plain strings:
+
+| Plain String | CAIP-2 | Chain |
+|---|---|---|
+| `ethereum-mainnet` | `eip155:1` | Ethereum |
+| `polygon-mainnet` | `eip155:137` | Polygon |
+| `arbitrum-mainnet` | `eip155:42161` | Arbitrum |
+| `base-mainnet` | `eip155:8453` | Base |
+| `solana-mainnet` | `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp` | Solana |
+
+Example: `?network=eip155:1` is equivalent to `?network=ethereum-mainnet`.
+
+### CAIP-19: Asset Identification
+
+WAIaaS supports CAIP-19 standard asset identifiers for unambiguous cross-chain token identification. When sending token transfers, you can include an `assetId` field in the token object:
 
 ```bash
 curl -s -X POST http://localhost:3100/v1/transactions/send \
@@ -406,4 +424,26 @@ CAIP-19 format: `{chain_id}/{asset_namespace}:{asset_reference}`
 - Solana tokens: `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:{base58_address}`
 - Native assets: `{chain_id}/slip44:{coin_type}` (ETH=60, SOL=501, POL=966)
 
-The `assetId` field is optional and backward compatible. See **transactions.skill.md** section 13 for full CAIP-19 reference.
+### assetId-Only Token Transfer (Recommended)
+
+When using a registered token, you can send with just `assetId` -- the daemon auto-resolves address, decimals, and symbol from the token registry:
+
+```bash
+curl -s -X POST http://localhost:3100/v1/transactions/send \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -d '{
+    "type": "TOKEN_TRANSFER",
+    "to": "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD16",
+    "humanAmount": "100",
+    "token": {
+      "assetId": "eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+    }
+  }'
+```
+
+The `network` is also auto-inferred from the CAIP-2 prefix in `assetId` (here `eip155:1` -> `ethereum-mainnet`).
+
+If using MCP, call the `resolve_asset` tool to look up token metadata from a CAIP-19 assetId before sending.
+
+See **transactions.skill.md** section 13 for the complete CAIP reference.

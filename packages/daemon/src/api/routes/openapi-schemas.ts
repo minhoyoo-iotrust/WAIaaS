@@ -157,6 +157,8 @@ export const WalletBalanceResponseSchema = z
     balanceFormatted: z.string().nullable().optional(),
     displayBalance: z.string().nullable().optional(),
     displayCurrency: z.string().nullable().optional(),
+    chainId: z.string().optional().openapi({ description: 'CAIP-2 chain identifier', example: 'eip155:1' }),
+    assetId: z.string().optional().openapi({ description: 'CAIP-19 native asset identifier', example: 'eip155:1/slip44:60' }),
   })
   .openapi('WalletBalanceResponse');
 
@@ -264,6 +266,7 @@ export const TxDetailResponseSchema = z
     amountFormatted: z.string().nullable().optional(),
     amountDecimals: z.number().int().nullable().optional(),
     amountSymbol: z.string().nullable().optional(),
+    chainId: z.string().optional().openapi({ description: 'CAIP-2 chain identifier' }),
   })
   .openapi('TxDetailResponse');
 
@@ -523,9 +526,11 @@ export const WalletAssetsResponseSchema = z
         usdValue: z.number().optional(),
         displayValue: z.string().nullable().optional(),
         balanceFormatted: z.string().nullable().optional(),
+        assetId: z.string().optional().openapi({ description: 'CAIP-19 asset identifier' }),
       }),
     ),
     displayCurrency: z.string().nullable().optional(),
+    chainId: z.string().optional().openapi({ description: 'CAIP-2 chain identifier' }),
   })
   .openapi('WalletAssetsResponse');
 
@@ -932,6 +937,7 @@ export const TokenRegistryItemSchema = z
     decimals: z.number().int(),
     source: z.enum(['builtin', 'custom']),
     assetId: z.string().nullable(),
+    chainId: z.string().optional().openapi({ description: 'CAIP-2 chain identifier' }),
   })
   .openapi('TokenRegistryItem');
 
@@ -1351,6 +1357,7 @@ export const ConnectInfoResponseSchema = z.object({
     enabled: z.boolean(),
     baseUrl: z.string(),
   }).nullable().optional().openapi({ description: 'RPC proxy info (null when disabled)' }),
+  supportedChainIds: z.array(z.string()).optional().openapi({ description: 'CAIP-2 chain identifiers for all supported networks', example: ['eip155:1', 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp'] }),
   prompt: z.string(),
 }).openapi('ConnectInfoResponse');
 
@@ -1373,6 +1380,8 @@ export const IncomingTxItemSchema = z
     detectedAt: z.number().int(),
     confirmedAt: z.number().int().nullable(),
     suspicious: z.boolean(),
+    chainId: z.string().optional().openapi({ description: 'CAIP-2 chain identifier' }),
+    assetId: z.string().nullable().optional().openapi({ description: 'CAIP-19 asset identifier' }),
   })
   .openapi('IncomingTxItem');
 
@@ -1434,6 +1443,8 @@ export const StakingPositionSchema = z.object({
     status: z.enum(['PENDING', 'COMPLETED', 'TIMEOUT']),
     requestedAt: z.number().nullable(),
   }).nullable(),
+  network: z.string().optional().openapi({ description: 'Network identifier' }),
+  chainId: z.string().optional().openapi({ description: 'CAIP-2 chain identifier' }),
 }).openapi('StakingPosition');
 
 export const StakingPositionsResponseSchema = z.object({
@@ -1458,6 +1469,7 @@ export const DeFiPositionSchema = z.object({
   status: z.string(),           // ACTIVE / CLOSED / LIQUIDATED
   openedAt: z.number(),         // Unix seconds
   lastSyncedAt: z.number(),     // Unix seconds
+  chainId: z.string().optional().openapi({ description: 'CAIP-2 chain identifier' }),
 }).openapi('DeFiPosition');
 
 export const DeFiPositionsResponseSchema = z.object({
@@ -1561,6 +1573,7 @@ export const NftListResponseSchema = z
       amount: z.string(),
       collection: z.object({ name: z.string(), slug: z.string().optional() }).optional(),
       assetId: z.string().optional(),
+      chainId: z.string().optional().openapi({ description: 'CAIP-2 chain identifier' }),
     })),
     pageKey: z.string().optional(),
     totalCount: z.number().optional(),
@@ -1587,6 +1600,7 @@ export const NftListGroupedResponseSchema = z
           amount: z.string(),
           collection: z.object({ name: z.string(), slug: z.string().optional() }).optional(),
           assetId: z.string().optional(),
+          chainId: z.string().optional().openapi({ description: 'CAIP-2 chain identifier' }),
         })),
       }),
     ),
@@ -1605,6 +1619,7 @@ export const NftMetadataResponseSchema = z
     amount: z.string(),
     collection: z.object({ name: z.string(), slug: z.string().optional() }).optional(),
     assetId: z.string().optional(),
+    chainId: z.string().optional().openapi({ description: 'CAIP-2 chain identifier' }),
     attributes: z.array(z.object({
       trait_type: z.string(),
       value: z.union([z.string(), z.number()]),

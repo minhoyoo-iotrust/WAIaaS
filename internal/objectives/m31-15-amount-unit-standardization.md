@@ -1,7 +1,8 @@
 # 마일스톤 m31-15: Amount 단위 표준화 및 AI 에이전트 DX 개선
 
-- **Status:** PLANNED
+- **Status:** SHIPPED
 - **Milestone:** v31.15
+- **Completed:** 2026-03-14
 
 ## 목표
 

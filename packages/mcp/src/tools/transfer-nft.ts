@@ -26,7 +26,7 @@ export function registerTransferNft(
       token_address: z.string().describe('NFT contract address (EVM) or mint address (Solana).'),
       token_id: z.string().describe('Token ID within the contract (EVM). Use "0" for Solana Metaplex.'),
       standard: z.enum(['erc721', 'erc1155', 'metaplex']).describe('NFT standard.'),
-      network: z.string().describe('Network identifier (e.g., "ethereum-mainnet", "solana-mainnet").'),
+      network: z.string().describe('Network identifier (e.g., "ethereum-mainnet", "solana-mainnet" or CAIP-2 "eip155:1").'),
       amount: z.string().optional().describe('Number of tokens to transfer (default: "1"). Only relevant for ERC-1155 multi-copy NFTs. This is a count, not a smallest-unit value.'),
       wallet_id: z.string().optional().describe('Target wallet ID. Required for multi-wallet sessions.'),
     },

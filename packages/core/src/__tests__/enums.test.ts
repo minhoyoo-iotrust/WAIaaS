@@ -360,6 +360,109 @@ describe('Enum SSoT', () => {
     });
   });
 
+  // normalizeNetworkInput CAIP-2 support (TDD RED - Task 1)
+  describe('normalizeNetworkInput CAIP-2 (Task 1)', () => {
+    it('converts CAIP-2 eip155:1 to ethereum-mainnet', () => {
+      expect(normalizeNetworkInput('eip155:1')).toBe('ethereum-mainnet');
+    });
+
+    it('converts CAIP-2 solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp to solana-mainnet', () => {
+      expect(normalizeNetworkInput('solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp')).toBe('solana-mainnet');
+    });
+
+    it('passes through unregistered CAIP-2 unchanged', () => {
+      expect(normalizeNetworkInput('eip155:99999')).toBe('eip155:99999');
+    });
+  });
+
+  // CAIP-2 exhaustive mapping test (15 networks) -- TST-01
+  describe('normalizeNetworkInput CAIP-2 exhaustive', () => {
+    it.each([
+      ['eip155:1', 'ethereum-mainnet'],
+      ['eip155:11155111', 'ethereum-sepolia'],
+      ['eip155:137', 'polygon-mainnet'],
+      ['eip155:80002', 'polygon-amoy'],
+      ['eip155:42161', 'arbitrum-mainnet'],
+      ['eip155:421614', 'arbitrum-sepolia'],
+      ['eip155:10', 'optimism-mainnet'],
+      ['eip155:11155420', 'optimism-sepolia'],
+      ['eip155:8453', 'base-mainnet'],
+      ['eip155:84532', 'base-sepolia'],
+      ['eip155:999', 'hyperevm-mainnet'],
+      ['eip155:998', 'hyperevm-testnet'],
+      ['solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp', 'solana-mainnet'],
+      ['solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1', 'solana-devnet'],
+      ['solana:4uhcVJyU9pJkvQyS88uRDiswHXSCkY3z', 'solana-testnet'],
+    ] as const)('converts %s to %s', (caip2, expected) => {
+      expect(normalizeNetworkInput(caip2)).toBe(expected);
+    });
+
+    it('passes through unregistered CAIP-2 eip155:99999 unchanged', () => {
+      expect(normalizeNetworkInput('eip155:99999')).toBe('eip155:99999');
+    });
+
+    it('passes through unregistered CAIP-2 solana:UNKNOWN unchanged', () => {
+      expect(normalizeNetworkInput('solana:UNKNOWN')).toBe('solana:UNKNOWN');
+    });
+  });
+
+  // Priority order verification -- TST-02
+  describe('normalizeNetworkInput priority order', () => {
+    beforeEach(() => _resetLegacyWarning());
+
+    it('CAIP-2 is resolved before legacy mapping', () => {
+      // CAIP-2 eip155:1 -> ethereum-mainnet (first priority)
+      expect(normalizeNetworkInput('eip155:1')).toBe('ethereum-mainnet');
+      // Legacy mainnet -> solana-mainnet (second priority)
+      expect(normalizeNetworkInput('mainnet')).toBe('solana-mainnet');
+    });
+
+    it('plain string passes through without conversion', () => {
+      expect(normalizeNetworkInput('ethereum-mainnet')).toBe('ethereum-mainnet');
+      expect(normalizeNetworkInput('base-sepolia')).toBe('base-sepolia');
+    });
+
+    it('all three paths coexist: CAIP-2 + legacy + passthrough', () => {
+      expect(normalizeNetworkInput('eip155:137')).toBe('polygon-mainnet');    // CAIP-2
+      expect(normalizeNetworkInput('devnet')).toBe('solana-devnet');           // legacy
+      expect(normalizeNetworkInput('arbitrum-mainnet')).toBe('arbitrum-mainnet'); // passthrough
+    });
+  });
+
+  // NetworkTypeEnumWithLegacy CAIP-2 integration
+  describe('NetworkTypeEnumWithLegacy CAIP-2', () => {
+    it('accepts CAIP-2 eip155:1 and normalizes to ethereum-mainnet', () => {
+      expect(NetworkTypeEnumWithLegacy.parse('eip155:1')).toBe('ethereum-mainnet');
+    });
+
+    it('accepts CAIP-2 solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp and normalizes to solana-mainnet', () => {
+      expect(NetworkTypeEnumWithLegacy.parse('solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp')).toBe('solana-mainnet');
+    });
+
+    it('accepts all 15 CAIP-2 identifiers via z.preprocess', () => {
+      const caip2Inputs = [
+        'eip155:1', 'eip155:11155111', 'eip155:137', 'eip155:80002',
+        'eip155:42161', 'eip155:421614', 'eip155:10', 'eip155:11155420',
+        'eip155:8453', 'eip155:84532', 'eip155:999', 'eip155:998',
+        'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp',
+        'solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1',
+        'solana:4uhcVJyU9pJkvQyS88uRDiswHXSCkY3z',
+      ];
+      for (const input of caip2Inputs) {
+        expect(() => NetworkTypeEnumWithLegacy.parse(input)).not.toThrow();
+      }
+    });
+
+    it('rejects unregistered CAIP-2 eip155:99999 with ZodError', () => {
+      expect(() => NetworkTypeEnumWithLegacy.parse('eip155:99999')).toThrow();
+    });
+
+    it('still accepts canonical and legacy inputs', () => {
+      expect(NetworkTypeEnumWithLegacy.parse('ethereum-mainnet')).toBe('ethereum-mainnet');
+      expect(NetworkTypeEnumWithLegacy.parse('mainnet')).toBe('solana-mainnet');
+    });
+  });
+
   // All enum arrays contain only string values (no duplicates) -- all 18
   it('enum arrays have no duplicate values', () => {
     const allArrays = [

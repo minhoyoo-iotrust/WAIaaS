@@ -22,7 +22,7 @@ export function registerListIncomingTransactions(
       limit: z.number().optional().describe('Maximum number of transactions to return (1-100, default 20)'),
       cursor: z.string().optional().describe('Pagination cursor from previous response'),
       chain: z.string().optional().describe('Filter by chain (solana or ethereum)'),
-      network: z.string().optional().describe('Filter by network'),
+      network: z.string().optional().describe('Filter by network (e.g., "polygon-mainnet" or CAIP-2 "eip155:137").'),
       status: z.string().optional().describe('Filter by status: DETECTED or CONFIRMED (default: CONFIRMED)'),
       token: z.string().optional().describe('Filter by token address (null for native transfers)'),
       from_address: z.string().optional().describe('Filter by sender address'),

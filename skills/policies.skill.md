@@ -71,7 +71,7 @@ curl -s -X POST http://localhost:3100/v1/policies \
 | `rules`    | object  | Yes      | Type-specific rules object (see type sections).          |
 | `priority` | integer | No       | Higher = more important. Default: 0.                     |
 | `enabled`  | boolean | No       | Whether policy is active. Default: true.                 |
-| `network`  | string  | No       | Network scope. When set, policy applies only to transactions on this network. Omit for all networks. |
+| `network`  | string  | No       | Network scope (e.g., `"ethereum-mainnet"` or CAIP-2 `"eip155:1"`). When set, policy applies only to transactions on this network. Omit for all networks. |
 
 **Response (201):**
 ```json
@@ -207,6 +207,8 @@ When `token_limits` is set, the policy engine evaluates transaction amounts agai
 **Scope:** `token_limits` applies to TRANSFER, TOKEN_TRANSFER, and APPROVE transactions. CONTRACT_CALL and BATCH use raw/USD evaluation only.
 
 **Interaction with USD and cumulative limits:** Per-transaction tier = `max(USD tier, token/native tier)`. Cumulative limits (`daily_limit_usd`, `monthly_limit_usd`) are evaluated independently after per-transaction tier assignment and are unaffected by `token_limits`.
+
+Token-specific limit keys use CAIP-19 format. See **transactions.skill.md** Section 13 for the complete CAIP reference.
 
 ```bash
 curl -s -X POST http://localhost:3100/v1/policies \
@@ -465,7 +467,7 @@ Restrict which networks a wallet can use for transactions. Permissive by default
 | Field      | Type   | Required | Description                            |
 | ---------- | ------ | -------- | -------------------------------------- |
 | `networks` | array  | Yes      | At least 1 network entry.              |
-| `network`  | string | Yes      | Network identifier (e.g., "ethereum-sepolia"). |
+| `network`  | string | Yes      | Network identifier (e.g., `"ethereum-sepolia"` or CAIP-2 `"eip155:11155111"`). |
 | `name`     | string | No       | Display name for the network.          |
 
 ```bash
@@ -473,6 +475,14 @@ curl -s -X POST http://localhost:3100/v1/policies \
   -H 'Content-Type: application/json' \
   -H 'X-Master-Password: <password>' \
   -d '{"walletId":"<uuid>","type":"ALLOWED_NETWORKS","rules":{"networks":[{"network":"ethereum-sepolia"},{"network":"polygon-amoy"}]}}'
+```
+
+Using CAIP-2 format:
+```bash
+curl -s -X POST http://localhost:3100/v1/policies \
+  -H 'Content-Type: application/json' \
+  -H 'X-Master-Password: <password>' \
+  -d '{"walletId":"<uuid>","type":"ALLOWED_NETWORKS","rules":{"networks":[{"network":"eip155:11155111"},{"network":"eip155:137"}]}}'
 ```
 
 Note: ALLOWED_NETWORKS is permissive by default (all networks allowed until the first ALLOWED_NETWORKS policy is created for a wallet).
@@ -712,6 +722,8 @@ curl -s -X POST http://localhost:3100/v1/policies \
 ```
 
 ### Restrict wallet to specific networks
+
+Networks can be specified as plain strings or CAIP-2 identifiers.
 
 ```bash
 curl -s -X POST http://localhost:3100/v1/policies \
