@@ -101,7 +101,7 @@ Plans:
   3. 트랜잭션 상세 응답에 amountFormatted, decimals, symbol 필드가 포함된다 (토큰 메타데이터 미확인 시 null)
   4. 잔액 조회 API 응답에 balanceFormatted 필드가 포함된다
   5. amountFormatted 값은 token registry/chain config에서 런타임 계산된다 (DB 저장 없음)
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 404-01: Typed MCP 스키마 등록 + provider 메타데이터 inputSchema API
@@ -161,6 +161,6 @@ Phases execute in numeric order: 402 -> 403 -> 404 -> 405 -> 406
 | 401. DX Integration + Testing | v31.14 | 3/3 | Complete | 2026-03-13 |
 | 402. Schema Hardening | v31.15 | Complete    | 2026-03-14 | 2026-03-14 |
 | 403. Provider Unit Migration | 2/2 | Complete    | 2026-03-14 | - |
-| 404. Typed MCP Schemas + Response Enrichment | v31.15 | 2/2 | Complete | 2026-03-14 |
+| 404. Typed MCP Schemas + Response Enrichment | v31.15 | Complete    | 2026-03-14 | 2026-03-14 |
 | 405. humanAmount Parameter | v31.15 | 0/2 | Not started | - |
 | 406. SDK + Skill File Sync + E2E | v31.15 | 0/2 | Not started | - |
