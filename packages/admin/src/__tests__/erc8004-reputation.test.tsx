@@ -240,8 +240,8 @@ describe('REPUTATION_THRESHOLD in POLICY_TYPES', () => {
   });
 });
 
-describe('erc8004_agent in BUILTIN_PROVIDERS', () => {
-  it('is present in the actions page provider list', async () => {
+describe('erc8004_agent in API-driven provider list', () => {
+  it('actions page component is defined (provider list is now API-driven)', async () => {
     const actionsModule = await import('../pages/actions');
     expect(actionsModule.default).toBeDefined();
   });

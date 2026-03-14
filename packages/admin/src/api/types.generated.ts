@@ -3998,6 +3998,47 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/settings/schema": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get settings schema with metadata
+         * @description Returns all registered setting definitions with label, description, and defaults. Use ?grouped=true for category-grouped response.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    grouped?: "true" | "false";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Setting definitions with metadata */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SettingsSchemaResponse"] | components["schemas"]["SettingsSchemaGroupedResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/settings/test-rpc": {
         parameters: {
             query?: never;
@@ -8407,6 +8448,9 @@ export type components = {
                 mcpExpose: boolean;
                 requiresApiKey: boolean;
                 hasApiKey: boolean;
+                enabledKey: string;
+                category: string;
+                isEnabled: boolean;
                 actions: {
                     name: string;
                     description: string;
@@ -8594,6 +8638,30 @@ export type components = {
             gas_condition: {
                 [key: string]: string | boolean;
             };
+        };
+        SettingsSchemaResponse: {
+            settings: {
+                key: string;
+                category: string;
+                label: string;
+                description: string;
+                defaultValue: string;
+                isCredential: boolean;
+            }[];
+        };
+        SettingsSchemaGroupedResponse: {
+            categories: {
+                name: string;
+                label: string;
+                settings: {
+                    key: string;
+                    category: string;
+                    label: string;
+                    description: string;
+                    defaultValue: string;
+                    isCredential: boolean;
+                }[];
+            }[];
         };
         SettingsUpdateResponse: {
             updated: number;
