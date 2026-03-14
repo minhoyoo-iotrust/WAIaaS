@@ -160,7 +160,7 @@ Phases execute in numeric order: 402 -> 403 -> 404 -> 405 -> 406
 | 400. Route Assembly + Async Approval | v31.14 | 3/3 | Complete | 2026-03-13 |
 | 401. DX Integration + Testing | v31.14 | 3/3 | Complete | 2026-03-13 |
 | 402. Schema Hardening | v31.15 | Complete    | 2026-03-14 | 2026-03-14 |
-| 403. Provider Unit Migration | 2/2 | Complete   | 2026-03-14 | - |
+| 403. Provider Unit Migration | 2/2 | Complete    | 2026-03-14 | - |
 | 404. Typed MCP Schemas + Response Enrichment | v31.15 | 0/2 | Not started | - |
 | 405. humanAmount Parameter | v31.15 | 0/2 | Not started | - |
 | 406. SDK + Skill File Sync + E2E | v31.15 | 0/2 | Not started | - |
