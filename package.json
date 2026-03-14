@@ -37,6 +37,7 @@
     "verify:admin-routes": "tsx scripts/verify-admin-route-consistency.ts",
     "validate:openapi": "tsx scripts/validate-openapi.ts",
     "generate:api-types": "tsx scripts/generate-api-types.ts",
+    "check:api-types-freshness": "tsx scripts/check-api-types-freshness.ts",
     "test:smoke": "bash scripts/smoke-test-published.sh"
   },
   "devDependencies": {
