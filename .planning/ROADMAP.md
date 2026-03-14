@@ -156,7 +156,7 @@ Phases execute in numeric order: 407 → 408 → 409 → 410 → 411
 | 405. humanAmount Parameter | v31.15 | 2/2 | Complete | 2026-03-14 |
 | 406. SDK + Skill File Sync + E2E | v31.15 | 2/2 | Complete | 2026-03-14 |
 | 407. CAIP-2 Network Input | 1/1 | Complete    | 2026-03-14 | - |
-| 408. CAIP-19 Asset Input + Resolve | v31.16 | 2/2 | Complete | 2026-03-14 |
+| 408. CAIP-19 Asset Input + Resolve | v31.16 | Complete    | 2026-03-14 | 2026-03-14 |
 | 409. Response CAIP Enrichment + OpenAPI | v31.16 | 0/2 | Not started | - |
 | 410. SDK + MCP CAIP Extension | v31.16 | 0/2 | Not started | - |
 | 411. Skill Files Sync | v31.16 | 0/1 | Not started | - |
