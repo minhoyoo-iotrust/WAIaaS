@@ -4,14 +4,14 @@ milestone: v31.15
 milestone_name: Amount 단위 표준화 및 AI 에이전트 DX 개선
 status: completed
 stopped_at: Completed 406-02-PLAN.md
-last_updated: "2026-03-14T10:33:37.418Z"
-last_activity: 2026-03-14 — Phase 404 completed (2/2 plans)
+last_updated: "2026-03-14T10:34:20.130Z"
+last_activity: 2026-03-14 — Phase 406 completed (2/2 plans)
 progress:
   total_phases: 5
   completed_phases: 5
   total_plans: 9
   completed_plans: 9
-  percent: 33
+  percent: 100
 ---
 
 # Project State
