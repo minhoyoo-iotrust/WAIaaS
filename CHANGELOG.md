@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.11.0-rc.7](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.6...v2.11.0-rc.7) (2026-03-14)
+
+
+### Features
+
+* **admin:** apply WAIaaS terminal dark theme to Admin UI ([14d9379](https://github.com/minhoyoo-iotrust/WAIaaS/commit/14d93794eae64c8fcad49bc77e21098d6fac84f8)), closes [#345](https://github.com/minhoyoo-iotrust/WAIaaS/issues/345)
+* **admin:** WAIaaS terminal dark theme + UI bug fixes ([b76c81c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b76c81c9cc09c17df3fa0d53113356f6cc402ad1))
+
+
+### Bug Fixes
+
+* **admin:** resolve login button readability, danger button style, and stale DOM on route change ([f897e9d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/f897e9df11c21afcce30191675aff6f2c2a893d4))
+
 ## [2.11.0-rc.6](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.5...v2.11.0-rc.6) (2026-03-14)
 
 
