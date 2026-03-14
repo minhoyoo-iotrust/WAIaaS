@@ -103,6 +103,9 @@ jobs:
       - name: Check API Types Freshness
         run: pnpm run check:api-types-freshness
 
+      - name: Check API Contract
+        run: pnpm run check:api-contract
+
       - name: Coverage Gate
         run: bash scripts/coverage-gate.sh
         env:
