@@ -12,7 +12,7 @@
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { eq, and } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import { WAIaaSError, validateNetworkEnvironment, getNetworksForEnvironment, getSingleNetwork } from '@waiaas/core';
+import { WAIaaSError, validateNetworkEnvironment, getNetworksForEnvironment, getSingleNetwork, formatAmount } from '@waiaas/core';
 import type { ChainType, NetworkType, EnvironmentType, IForexRateService } from '@waiaas/core';
 import type { AdapterPool } from '../../infrastructure/adapter-pool.js';
 import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
@@ -264,6 +264,7 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
             balance: balanceInfo.balance.toString(),
             decimals: balanceInfo.decimals,
             symbol: balanceInfo.symbol,
+            balanceFormatted: formatAmount(balanceInfo.balance, balanceInfo.decimals),
           };
         }),
       );
@@ -324,6 +325,9 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
     // Currently null -- balance USD conversion is not available without price data in this context
     const displayBalance: string | null = null;
 
+    // Phase 404: Runtime-computed human-readable balance
+    const balanceFormatted = formatAmount(balanceInfo.balance, balanceInfo.decimals);
+
     return c.json(
       {
         walletId: wallet.id,
@@ -333,6 +337,7 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
         balance: balanceInfo.balance.toString(),
         decimals: balanceInfo.decimals,
         symbol: balanceInfo.symbol,
+        balanceFormatted,
         displayBalance,
         displayCurrency: currencyCode ?? null,
       },
@@ -395,6 +400,7 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
               decimals: a.decimals,
               isNative: a.isNative,
               usdValue: a.usdValue,
+              balanceFormatted: formatAmount(a.balance, a.decimals),
             })),
           };
         }),
@@ -476,6 +482,7 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
           isNative: a.isNative,
           usdValue: a.usdValue,
           displayValue: toDisplayAmount(a.usdValue ?? null, currencyCode, displayRate),
+          balanceFormatted: formatAmount(a.balance, a.decimals),
         })),
         displayCurrency: currencyCode ?? null,
       },

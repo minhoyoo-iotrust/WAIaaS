@@ -154,6 +154,7 @@ export const WalletBalanceResponseSchema = z
     balance: z.string(),
     decimals: z.number().int(),
     symbol: z.string(),
+    balanceFormatted: z.string().nullable().optional(),
     displayBalance: z.string().nullable().optional(),
     displayCurrency: z.string().nullable().optional(),
   })
@@ -521,6 +522,7 @@ export const WalletAssetsResponseSchema = z
         isNative: z.boolean(),
         usdValue: z.number().optional(),
         displayValue: z.string().nullable().optional(),
+        balanceFormatted: z.string().nullable().optional(),
       }),
     ),
     displayCurrency: z.string().nullable().optional(),
