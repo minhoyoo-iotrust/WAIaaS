@@ -8,6 +8,18 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
+## Current Milestone: v31.15 Amount 단위 표준화 및 AI 에이전트 DX 개선
+
+**Goal:** WAIaaS 전체 인터페이스(REST API, Action Provider, MCP, SDK)에서 amount 단위 규칙을 smallest unit 기준으로 통일하고, AI 에이전트가 금액 파라미터의 단위를 호출 전에 명확히 파악할 수 있도록 스키마 기술을 강화한다.
+
+**Target features:**
+- Action Provider 단위 통일 (aave-v3, kamino, lido-staking, jito-staking → smallest unit)
+- MCP 도구 Typed Schema 전환 (z.record(z.unknown()) → per-action typed schema)
+- 응답에 amountFormatted/decimals/symbol 추가
+- humanAmount 대안 파라미터 지원 (REST API + Action Provider + MCP + SDK)
+- SDK 및 Skill 파일 동기화
+- 테스트 (단위 통일, 하위 호환, MCP schema, amountFormatted, humanAmount)
+
 ## Previous Milestone: v31.14 EVM RPC 프록시 모드 — SHIPPED 2026-03-13
 
 WAIaaS 데몬이 EVM JSON-RPC 프록시로 동작. CONTRACT_DEPLOY 9번째 트랜잭션 타입(Zod SSoT 전체 전파, DB v58), `POST /v1/rpc-evm/:walletId/:chainId` 엔드포인트(10 signing intercept + 19 passthrough + batch), DELAY/APPROVAL Long-poll 비동기 승인(CompletionWaiter + SyncPipelineExecutor), Admin Settings 7키 + Admin UI RPC Proxy 페이지, MCP get_rpc_proxy_url + SDK getRpcProxyUrl() + connect-info rpcProxyBaseUrl 자동 발견, 보안(sessionAuth + from 검증 + bytecodeSize 제한 + audit log source). 4 phases, 11 plans, 49 requirements, 31 commits, 82 files, +9,485 lines, ~189 tests.
