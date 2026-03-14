@@ -110,12 +110,12 @@ Plans:
   2. apiGet<수동타입>() 등 수동 타입 단언이 0개이다 (타입 안전 래퍼로 교체 완료)
   3. 백엔드 Zod 스키마에 필드를 추가/제거하면 Admin UI 빌드가 실패한다
   4. pnpm typecheck이 전체 코드베이스에서 에러 없이 통과한다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 414-01: TBD
-- [ ] 414-02: TBD
-- [ ] 414-03: TBD
+- [ ] 414-01-PLAN.md — 중앙 타입 별칭 모듈 + 8개 소규모 페이지 마이그레이션
+- [ ] 414-02-PLAN.md — 9개 중규모 페이지 마이그레이션 (actions ~ transactions)
+- [ ] 414-03-PLAN.md — wallets.tsx 전체 마이그레이션 + 전체 검증
 
 ### Phase 415: 백엔드 API 확장 및 상수 통합
 **Goal**: Admin UI가 하드코딩된 프로바이더/정책/에러코드/설정 상수 없이 API 및 @waiaas/shared에서 데이터를 가져온다
