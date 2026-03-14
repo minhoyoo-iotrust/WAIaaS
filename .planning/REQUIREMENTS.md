@@ -17,13 +17,13 @@ Requirements for CAIP-2/CAIP-19 standard identifier promotion across all interfa
 
 ### Asset Input (CAIP-19 Primary)
 
-- [ ] **AST-01**: `assetId`가 제공되면 `address`, `decimals`, `symbol`을 optional로 전환 (`.superRefine()` cross-field validation)
-- [ ] **AST-02**: `assetId`만 제공 시, 파이프라인 진입 전에 토큰 레지스트리에서 `address`, `decimals`, `symbol` 자동 resolve
-- [ ] **AST-03**: 레지스트리에 없는 `assetId`는 CAIP-19에서 `chainId` + `address`를 파싱하여 네트워크와 주소 자동 추출, `decimals`/`symbol`만 필수 요구
-- [ ] **AST-04**: `assetId`와 `address`가 모두 제공된 경우 기존 cross-validation 유지 (대소문자 무시 비교)
-- [ ] **AST-05**: `assetId`에서 추출한 네트워크와 요청의 `network` 파라미터가 다르면 validation error
-- [ ] **AST-06**: `assetId`가 제공되고 `network`가 미제공이면 `assetId`의 CAIP-2 chainId에서 네트워크 자동 추론 (preprocessing 단계)
-- [ ] **AST-07**: `assetId`에서 네트워크 자동 추론이 가능한 엔드포인트에서 `network`를 conditional optional로 전환 (`.superRefine()`)
+- [x] **AST-01**: `assetId`가 제공되면 `address`, `decimals`, `symbol`을 optional로 전환 (`.superRefine()` cross-field validation)
+- [x] **AST-02**: `assetId`만 제공 시, 파이프라인 진입 전에 토큰 레지스트리에서 `address`, `decimals`, `symbol` 자동 resolve
+- [x] **AST-03**: 레지스트리에 없는 `assetId`는 CAIP-19에서 `chainId` + `address`를 파싱하여 네트워크와 주소 자동 추출, `decimals`/`symbol`만 필수 요구
+- [x] **AST-04**: `assetId`와 `address`가 모두 제공된 경우 기존 cross-validation 유지 (대소문자 무시 비교)
+- [x] **AST-05**: `assetId`에서 추출한 네트워크와 요청의 `network` 파라미터가 다르면 validation error
+- [x] **AST-06**: `assetId`가 제공되고 `network`가 미제공이면 `assetId`의 CAIP-2 chainId에서 네트워크 자동 추론 (preprocessing 단계)
+- [x] **AST-07**: `assetId`에서 네트워크 자동 추론이 가능한 엔드포인트에서 `network`를 conditional optional로 전환 (`.superRefine()`)
 
 ### Response (CAIP Fields)
 
@@ -65,10 +65,10 @@ Requirements for CAIP-2/CAIP-19 standard identifier promotion across all interfa
 
 - [x] **TST-01**: `normalizeNetworkInput` CAIP-2 변환 테스트 — 15개 네트워크 매핑 전수 검증
 - [x] **TST-02**: CAIP-2 + plain string + legacy 혼용 입력 테스트 (우선순위 검증)
-- [ ] **TST-03**: `TokenInfo` assetId-only 입력 → 레지스트리 resolve 테스트
-- [ ] **TST-04**: `assetId`에서 네트워크 자동 추론 테스트
-- [ ] **TST-05**: `assetId` vs `network` 불일치 validation error 테스트
-- [ ] **TST-06**: 미등록 assetId + address/decimals/symbol 폴백 테스트
+- [x] **TST-03**: `TokenInfo` assetId-only 입력 → 레지스트리 resolve 테스트
+- [x] **TST-04**: `assetId`에서 네트워크 자동 추론 테스트
+- [x] **TST-05**: `assetId` vs `network` 불일치 validation error 테스트
+- [x] **TST-06**: 미등록 assetId + address/decimals/symbol 폴백 테스트
 - [ ] **TST-07**: 모든 응답 스키마에 `chainId`/`assetId` 포함 검증 테스트
 - [ ] **TST-08**: SDK CAIP-2 네트워크 입력 테스트
 - [ ] **TST-09**: MCP 도구 CAIP-2 네트워크 입력 + assetId 단독 전달 테스트
@@ -104,13 +104,13 @@ Requirements for CAIP-2/CAIP-19 standard identifier promotion across all interfa
 | NET-03 | Phase 407 | Complete |
 | NET-04 | Phase 407 | Complete |
 | NET-05 | Phase 407 | Complete |
-| AST-01 | Phase 408 | Pending |
-| AST-02 | Phase 408 | Pending |
-| AST-03 | Phase 408 | Pending |
-| AST-04 | Phase 408 | Pending |
-| AST-05 | Phase 408 | Pending |
-| AST-06 | Phase 408 | Pending |
-| AST-07 | Phase 408 | Pending |
+| AST-01 | Phase 408 | Complete |
+| AST-02 | Phase 408 | Complete |
+| AST-03 | Phase 408 | Complete |
+| AST-04 | Phase 408 | Complete |
+| AST-05 | Phase 408 | Complete |
+| AST-06 | Phase 408 | Complete |
+| AST-07 | Phase 408 | Complete |
 | RSP-01 | Phase 409 | Pending |
 | RSP-02 | Phase 409 | Pending |
 | RSP-03 | Phase 409 | Pending |
@@ -137,10 +137,10 @@ Requirements for CAIP-2/CAIP-19 standard identifier promotion across all interfa
 | DOC-07 | Phase 411 | Pending |
 | TST-01 | Phase 407 | Complete |
 | TST-02 | Phase 407 | Complete |
-| TST-03 | Phase 408 | Pending |
-| TST-04 | Phase 408 | Pending |
-| TST-05 | Phase 408 | Pending |
-| TST-06 | Phase 408 | Pending |
+| TST-03 | Phase 408 | Complete |
+| TST-04 | Phase 408 | Complete |
+| TST-05 | Phase 408 | Complete |
+| TST-06 | Phase 408 | Complete |
 | TST-07 | Phase 409 | Pending |
 | TST-08 | Phase 410 | Pending |
 | TST-09 | Phase 410 | Pending |
