@@ -81,11 +81,11 @@
   2. 생성된 openapi.json의 엔드포인트 수가 실제 등록된 라우트 수와 일치한다
   3. 백엔드 스키마를 변경한 후 CI에서 types.generated.ts freshness 검증이 실패한다
   4. Turbo 파이프라인에서 admin 빌드 전에 타입 생성 태스크가 실행된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 412-01: TBD
-- [ ] 412-02: TBD
+- [ ] 412-01-PLAN.md — OpenAPI spec 추출 + openapi-typescript 타입 생성 파이프라인
+- [ ] 412-02-PLAN.md — Turbo 파이프라인 통합 + CI freshness 검증 게이트
 
 ### Phase 413: 타입 안전 클라이언트 및 첫 페이지 마이그레이션
 **Goal**: openapi-fetch 기반 타입 안전 API 클라이언트가 동작하고, 고트래픽 페이지 1개가 수동 타입 없이 작동한다
