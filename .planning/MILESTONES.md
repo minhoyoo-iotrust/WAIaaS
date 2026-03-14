@@ -1,5 +1,28 @@
 # Project Milestones: WAIaaS
 
+## v31.15 Amount 단위 표준화 및 AI 에이전트 DX 개선 (Shipped: 2026-03-14)
+
+**Phases completed:** 402-406 (5 phases, 9 plans, 33 requirements)
+
+**Key accomplishments:**
+
+- 14개 non-CLOB provider 스키마에 명시적 단위 description(.describe()) 추가, CLOB 3개 exchange-native 단위 문서화
+- 4개 레거시 provider(Aave V3, Kamino, Lido, Jito) smallest-unit 전환 + migrateAmount() 하위 호환성 자동 변환
+- MCP typed schema 등록(jsonSchemaToZodParams) + GET /v1/actions/providers inputSchema JSON Schema 노출
+- 트랜잭션/잔액 응답에 amountFormatted/amountDecimals/amountSymbol + balanceFormatted 런타임 보강
+- humanAmount XOR 파라미터 — REST API(TRANSFER/TOKEN_TRANSFER/APPROVE) + 10 action providers + MCP 자동 노출
+- SDK humanAmount 타입 + 스킬 파일 4종 단위 가이드 + E2E humanAmount 시나리오 검증
+
+**Stats:**
+
+- 5 phases (402-406), 9 plans, 33 requirements complete
+- 40 commits, 89 files changed, +7,834 / -737 lines
+- Timeline: 1 day (2026-03-14)
+- Git range: feat(402-01) → docs(405-requirements)
+- LOC: ~294,834 TypeScript
+
+---
+
 ## v31.14 EVM RPC 프록시 모드 (Shipped: 2026-03-13)
 
 **Phases completed:** 398-401 (4 phases, 11 plans, 49 requirements)
