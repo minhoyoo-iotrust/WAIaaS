@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v31.17
 milestone_name: OpenAPI 기반 프론트엔드 타입 자동 생성
-status: active
-stopped_at: null
-last_updated: "2026-03-15"
-last_activity: 2026-03-15 — Phase 412 complete (2/2 plans)
+status: planning
+stopped_at: Completed Phase 412 — ready for Phase 413
+last_updated: "2026-03-14T17:54:38.366Z"
+last_activity: 2026-03-15 — Phase 412 complete
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 11
+  total_plans: 2
   completed_plans: 2
   percent: 18
 ---
