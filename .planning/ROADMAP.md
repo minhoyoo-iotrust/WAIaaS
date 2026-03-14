@@ -176,4 +176,4 @@ Note: Phase 415 depends only on Phase 412, so can parallel with 413/414.
 | 413. 타입 안전 클라이언트 및 첫 페이지 마이그레이션 | v31.17 | Complete    | 2026-03-14 | 2026-03-15 |
 | 414. 인터페이스 점진적 마이그레이션 | 3/3 | Complete    | 2026-03-14 | - |
 | 415. 백엔드 API 확장 및 상수 통합 | 3/3 | Complete    | 2026-03-14 | - |
-| 416. Contract Test 및 검증 | v31.17 | 1/1 | Complete | 2026-03-15 |
+| 416. Contract Test 및 검증 | v31.17 | Complete    | 2026-03-14 | 2026-03-15 |
