@@ -59,7 +59,7 @@
 - [x] **Phase 403: Provider Unit Migration** - 4개 provider smallest-unit 전환 + migrateAmount 하위 호환성 (completed 2026-03-14)
 - [x] **Phase 404: Typed MCP Schemas + Response Enrichment** - MCP typed 스키마 + amountFormatted/decimals/symbol 응답 보강 (completed 2026-03-14)
 - [x] **Phase 405: humanAmount Parameter** - REST API/Action Provider/MCP에 humanAmount XOR 파라미터 추가 (completed 2026-03-14)
-- [ ] **Phase 406: SDK + Skill File Sync + E2E** - SDK humanAmount 옵션 + 스킬 파일 단위 가이드 + E2E 검증
+- [x] **Phase 406: SDK + Skill File Sync + E2E** - SDK humanAmount 옵션 + 스킬 파일 단위 가이드 + E2E 검증 (completed 2026-03-14)
 
 ## Phase Details
 
@@ -130,7 +130,7 @@ Plans:
   1. SDK 메서드가 discriminated union 타입 시그니처로 humanAmount 옵션을 수용한다 ({ amount: string } | { humanAmount: string })
   2. 스킬 파일(transactions, actions, wallet, quickstart)에 단위 규칙 가이드 섹션이 포함되며 humanAmount 사용 예시가 우선 안내된다
   3. E2E 시나리오가 통과한다: AI 에이전트가 humanAmount로 swap/transfer/supply를 실행한다
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 406-01: SDK humanAmount 옵션 + 스킬 파일 단위 가이드 섹션
@@ -163,4 +163,4 @@ Phases execute in numeric order: 402 -> 403 -> 404 -> 405 -> 406
 | 403. Provider Unit Migration | 2/2 | Complete    | 2026-03-14 | - |
 | 404. Typed MCP Schemas + Response Enrichment | v31.15 | Complete    | 2026-03-14 | 2026-03-14 |
 | 405. humanAmount Parameter | 2/2 | Complete    | 2026-03-14 | - |
-| 406. SDK + Skill File Sync + E2E | v31.15 | 0/2 | Not started | - |
+| 406. SDK + Skill File Sync + E2E | 2/2 | Complete   | 2026-03-14 | - |

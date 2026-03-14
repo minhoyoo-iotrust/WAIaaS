@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v31.15
 milestone_name: Amount 단위 표준화 및 AI 에이전트 DX 개선
 status: completed
-stopped_at: Completed 405-02-PLAN.md
-last_updated: "2026-03-14T10:23:45.641Z"
+stopped_at: Completed 406-02-PLAN.md
+last_updated: "2026-03-14T10:33:37.418Z"
 last_activity: 2026-03-14 — Phase 404 completed (2/2 plans)
 progress:
   total_phases: 5
-  completed_phases: 4
-  total_plans: 7
-  completed_plans: 7
+  completed_phases: 5
+  total_plans: 9
+  completed_plans: 9
   percent: 33
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-14)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Phase 405 — humanAmount Parameter
+**Current focus:** Phase 406 complete — all v31.15 phases done
 
 ## Current Position
 
-Phase: 405 of 406 (humanAmount Parameter)
+Phase: 406 of 406 (SDK + Skill File Sync + E2E)
 Plan: 2 of 2 in current phase
-Status: Phase 405 complete
-Last activity: 2026-03-14 — Phase 404 completed (2/2 plans)
+Status: Phase 406 complete — milestone v31.15 ready
+Last activity: 2026-03-14 — Phase 406 completed (2/2 plans)
 
-Progress: [###░░░░░░░] 33%
+Progress: [##########] 100%
 
 ## Performance Metrics
 
@@ -47,6 +47,7 @@ Progress: [###░░░░░░░] 33%
 | Phase 403 P01+02 | 7min | 4 tasks | 12 files |
 | Phase 404 P01+02 | 9min | 4 tasks | 8 files |
 | Phase 405 P02 | 8min | 2 tasks | 16 files |
+| Phase 406 P01+02 | 6min | 4 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -62,6 +63,8 @@ Progress: [###░░░░░░░] 33%
 - [Phase 405]: Provider humanAmount requires decimals field (no TokenRegistryService access)
 - [Phase 405]: Per-provider naming: humanAmount/humanSellAmount/humanAmountIn/humanFromAmount following original field names
 - [Phase 405]: CLOB providers (Hyperliquid/Drift/Polymarket) excluded from humanAmount (exchange-native units)
+- [Phase 406]: SDK humanAmount validates non-empty string only; server handles decimal conversion
+- [Phase 406]: E2E humanAmount tests use graceful skip pattern for action provider availability
 
 ### Pending Todos
 
@@ -73,6 +76,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-14T10:23:16.871Z
-Stopped at: Completed 405-02-PLAN.md
+Last session: 2026-03-14T10:33:37.415Z
+Stopped at: Completed 406-02-PLAN.md
 Resume file: None

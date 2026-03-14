@@ -42,10 +42,10 @@ Requirements for v31.15. Each maps to roadmap phases.
 
 ### SDK & Skills
 
-- [ ] **SDK-01**: SDK 메서드의 amount 파라미터에 humanAmount 옵션 추가
-- [ ] **SDK-02**: skill 파일(transactions, actions, wallet 등)에 단위 규칙 설명 섹션 추가
-- [ ] **SDK-03**: skill 파일에 humanAmount 사용 예시 우선 안내 (에이전트 친화적)
-- [ ] **SDK-04**: quickstart.skill.md에 amount 단위 가이드 추가
+- [x] **SDK-01**: SDK 메서드의 amount 파라미터에 humanAmount 옵션 추가
+- [x] **SDK-02**: skill 파일(transactions, actions, wallet 등)에 단위 규칙 설명 섹션 추가
+- [x] **SDK-03**: skill 파일에 humanAmount 사용 예시 우선 안내 (에이전트 친화적)
+- [x] **SDK-04**: quickstart.skill.md에 amount 단위 가이드 추가
 
 ### Tests
 
@@ -56,7 +56,7 @@ Requirements for v31.15. Each maps to roadmap phases.
 - [x] **TEST-05**: humanAmount XOR 검증 + decimals 조회 + 변환 정확성 테스트
 - [x] **TEST-06**: humanAmount + 미등록 토큰 에러 테스트
 - [x] **TEST-07**: max 키워드 호환성 테스트 (aave/kamino repay/withdraw)
-- [ ] **TEST-08**: E2E 시나리오 — AI 에이전트가 humanAmount로 swap/transfer/supply 실행
+- [x] **TEST-08**: E2E 시나리오 — AI 에이전트가 humanAmount로 swap/transfer/supply 실행
 
 ## v2 Requirements
 
@@ -102,10 +102,10 @@ Deferred to future release. Tracked but not in current roadmap.
 | HAMNT-03 | Phase 405 | Pending |
 | HAMNT-04 | Phase 405 | Complete |
 | HAMNT-05 | Phase 405 | Complete |
-| SDK-01 | Phase 406 | Pending |
-| SDK-02 | Phase 406 | Pending |
-| SDK-03 | Phase 406 | Pending |
-| SDK-04 | Phase 406 | Pending |
+| SDK-01 | Phase 406 | Complete |
+| SDK-02 | Phase 406 | Complete |
+| SDK-03 | Phase 406 | Complete |
+| SDK-04 | Phase 406 | Complete |
 | TEST-01 | Phase 403 | Complete |
 | TEST-02 | Phase 403 | Complete |
 | TEST-03 | Phase 404 | Complete |
@@ -113,7 +113,7 @@ Deferred to future release. Tracked but not in current roadmap.
 | TEST-05 | Phase 405 | Complete |
 | TEST-06 | Phase 405 | Complete |
 | TEST-07 | Phase 403 | Complete |
-| TEST-08 | Phase 406 | Pending |
+| TEST-08 | Phase 406 | Complete |
 
 **Coverage:**
 - v1 requirements: 33 total
