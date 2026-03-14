@@ -71,10 +71,10 @@
   1. 14개 non-CLOB provider의 모든 amount 필드에 단위 타입과 예시값이 포함된 .describe()가 존재한다
   2. 3개 CLOB provider(Hyperliquid, Drift, Polymarket) 스키마에 exchange-native 단위 사용이 명시되어 있다
   3. 빌트인 MCP 도구(send-token, transfer-nft 등)의 amount 파라미터에 단위 정보가 포함되어 있다
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 402-01: Provider schema description hardening + CLOB 예외 문서화 + MCP 빌트인 도구 description 업데이트
+- [ ] 402-01-PLAN.md — Provider schema description hardening + CLOB 예외 문서화 + MCP 빌트인 도구 description 업데이트
 
 ### Phase 403: Provider Unit Migration
 **Goal**: 모든 14개 non-CLOB provider가 smallest-unit 입력을 일관되게 수용하며, 4개 레거시 provider는 하위 호환성을 유지한다
@@ -85,7 +85,7 @@ Plans:
   2. 소수점 포함 레거시 입력이 migrateAmount()를 통해 자동 변환되고 deprecation 경고가 로그에 출력된다
   3. aave/kamino repay/withdraw에서 max 키워드가 단위 변환과 독립적으로 정상 동작한다
   4. 4개 마이그레이션 provider에 대해 smallest-unit 입력, 하위호환 소수점 입력, max 키워드 테스트가 통과한다
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
 - [ ] 403-01: migrateAmount() 공유 헬퍼 + Aave V3 마이그레이션
@@ -101,7 +101,7 @@ Plans:
   3. 트랜잭션 상세 응답에 amountFormatted, decimals, symbol 필드가 포함된다 (토큰 메타데이터 미확인 시 null)
   4. 잔액 조회 API 응답에 balanceFormatted 필드가 포함된다
   5. amountFormatted 값은 token registry/chain config에서 런타임 계산된다 (DB 저장 없음)
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
 - [ ] 404-01: Typed MCP 스키마 등록 + provider 메타데이터 inputSchema API
@@ -116,7 +116,7 @@ Plans:
   2. humanAmount는 토큰 decimals 조회(native: chain config, ERC-20/SPL: registry)를 통해 smallest-unit으로 변환되며, 미등록 토큰에 대해 명확한 에러를 반환한다
   3. 10개 smallest-unit provider(CLOB 제외)에서 per-provider humanAmount 변형(humanAmount, humanSellAmount 등)이 동작한다
   4. MCP 도구가 provider 스키마에 맞는 humanAmount 파라미터를 노출한다
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
 - [ ] 405-01: Core XOR Zod refinement + REST API humanAmount (TRANSFER/TOKEN_TRANSFER/APPROVE)
@@ -130,7 +130,7 @@ Plans:
   1. SDK 메서드가 discriminated union 타입 시그니처로 humanAmount 옵션을 수용한다 ({ amount: string } | { humanAmount: string })
   2. 스킬 파일(transactions, actions, wallet, quickstart)에 단위 규칙 가이드 섹션이 포함되며 humanAmount 사용 예시가 우선 안내된다
   3. E2E 시나리오가 통과한다: AI 에이전트가 humanAmount로 swap/transfer/supply를 실행한다
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
 - [ ] 406-01: SDK humanAmount 옵션 + 스킬 파일 단위 가이드 섹션
