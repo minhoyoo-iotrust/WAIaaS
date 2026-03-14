@@ -59,33 +59,33 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PIPE-01 | — | Pending |
-| PIPE-02 | — | Pending |
-| PIPE-03 | — | Pending |
-| PIPE-04 | — | Pending |
-| PIPE-05 | — | Pending |
-| PIPE-06 | — | Pending |
-| PIPE-07 | — | Pending |
-| PIPE-08 | — | Pending |
-| MIG-01 | — | Pending |
-| MIG-02 | — | Pending |
-| MIG-03 | — | Pending |
-| MIG-04 | — | Pending |
-| MIG-05 | — | Pending |
-| MIG-06 | — | Pending |
-| MIG-07 | — | Pending |
-| MIG-08 | — | Pending |
-| API-01 | — | Pending |
-| API-02 | — | Pending |
-| API-03 | — | Pending |
-| API-04 | — | Pending |
-| API-05 | — | Pending |
+| PIPE-01 | Phase 412 | Pending |
+| PIPE-02 | Phase 412 | Pending |
+| PIPE-03 | Phase 412 | Pending |
+| PIPE-04 | Phase 412 | Pending |
+| PIPE-05 | Phase 412 | Pending |
+| PIPE-06 | Phase 412 | Pending |
+| PIPE-07 | Phase 413 | Pending |
+| PIPE-08 | Phase 413 | Pending |
+| MIG-01 | Phase 414 | Pending |
+| MIG-02 | Phase 414 | Pending |
+| MIG-03 | Phase 415 | Pending |
+| MIG-04 | Phase 415 | Pending |
+| MIG-05 | Phase 415 | Pending |
+| MIG-06 | Phase 415 | Pending |
+| MIG-07 | Phase 413 | Pending |
+| MIG-08 | Phase 414 | Pending |
+| API-01 | Phase 415 | Pending |
+| API-02 | Phase 415 | Pending |
+| API-03 | Phase 415 | Pending |
+| API-04 | Phase 415 | Pending |
+| API-05 | Phase 416 | Pending |
 
 **Coverage:**
 - v1 requirements: 21 total
-- Mapped to phases: 0
-- Unmapped: 21 ⚠️
+- Mapped to phases: 21
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-15*
-*Last updated: 2026-03-15 after initial definition*
+*Last updated: 2026-03-15 after roadmap creation*
