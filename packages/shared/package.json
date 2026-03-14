@@ -22,17 +22,18 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "test": "echo 'no tests yet'",
-    "test:unit": "echo 'no tests yet'",
-    "test:integration": "echo 'no tests yet'",
-    "test:security": "echo 'no tests yet'",
-    "test:chain": "echo 'no tests yet'",
-    "test:platform": "echo 'no tests yet'",
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "test:integration": "echo 'no integration tests'",
+    "test:security": "echo 'no security tests'",
+    "test:chain": "echo 'no chain tests'",
+    "test:platform": "echo 'no platform tests'",
     "lint": "echo 'no lint yet'",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist"
   },
   "devDependencies": {
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
   }
 }
