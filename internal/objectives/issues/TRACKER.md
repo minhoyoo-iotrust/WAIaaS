@@ -352,6 +352,8 @@
 | 336 | BUG | MEDIUM | Across Bridge status API depositId Zod 타입 불일치 — API 문자열 반환 vs 스키마 number | v31.10 | FIXED | 2026-03-11 |
 | 337 | BUG | HIGH | TX_CONFIRMED 알림 {amount} 미치환 — Background Confirm Worker + API Direct 경로 2곳 | — | FIXED | 2026-03-12 |
 | 338 | ENHANCEMENT | LOW | GitHub Pages 랜딩 사이트 + AEO 구축 — SEO 메타데이터, llms.txt, ai-plugin.json | v31.14 | FIXED | 2026-03-13 |
+| 339 | ENHANCEMENT | LOW | GitHub Actions Pages 배포 워크플로우 — site/ 폴더 workflow_dispatch 배포 | — | OPEN | — |
+| 340 | ENHANCEMENT | LOW | 터미널 콘솔 테마 리디자인 — 콘텐츠 유지, terminalcss.xyz/dark 스타일 적용 | — | OPEN | — |
 
 ## Type Legend
 
@@ -363,9 +365,9 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 2
 - **FIXED:** 338
 - **WONTFIX:** 1
-- **Total:** 339
+- **Total:** 341
 - **Archived:** 321 (001–321)
 
