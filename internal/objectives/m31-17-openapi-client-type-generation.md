@@ -1,7 +1,8 @@
 # 마일스톤 m31-17: OpenAPI 기반 프론트엔드 타입 자동 생성
 
-- **Status:** PLANNED
+- **Status:** SHIPPED
 - **Milestone:** v31.17
+- **Completed:** 2026-03-15
 
 ## 목표
 

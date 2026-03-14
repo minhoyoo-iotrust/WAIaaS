@@ -13,7 +13,7 @@
 - ✅ **v0.9** — MCP 세션 관리 자동화 설계 (shipped 2026-02-09)
 - ✅ **v0.10** — 구현 전 설계 완결성 확보 (shipped 2026-02-09)
 - ✅ **v1.0** — 구현 계획 수립 (shipped 2026-02-09)
-- ✅ **v1.1 ~ v31.16** — (102 milestones shipped)
+- ✅ **v1.1 ~ v31.17** — (103 milestones shipped)
 
 ## Phases
 
@@ -60,96 +60,18 @@
 
 </details>
 
-### v31.17 OpenAPI 기반 프론트엔드 타입 자동 생성
+<details>
+<summary>✅ v31.17 OpenAPI 기반 프론트엔드 타입 자동 생성 (Phases 412-416) — SHIPPED 2026-03-15</summary>
 
-**Milestone Goal:** Admin UI의 수동 TypeScript 인터페이스와 unsafe 타입 캐스트를 OpenAPI 자동 생성 타입으로 전환하고, 하드코딩된 상수를 API 디스커버리 및 @waiaas/shared로 교체한다.
+- [x] Phase 412: Spec 추출 파이프라인 및 CI 게이트 (2/2 plans) — completed 2026-03-15
+- [x] Phase 413: 타입 안전 클라이언트 및 첫 페이지 마이그레이션 (2/2 plans) — completed 2026-03-15
+- [x] Phase 414: 인터페이스 점진적 마이그레이션 (3/3 plans) — completed 2026-03-14
+- [x] Phase 415: 백엔드 API 확장 및 상수 통합 (3/3 plans) — completed 2026-03-14
+- [x] Phase 416: Contract Test 및 검증 (1/1 plan) — completed 2026-03-15
 
-- [x] **Phase 412: Spec 추출 파이프라인 및 CI 게이트** - OpenAPI spec 빌드 타임 추출, 타입 생성, CI freshness 검증 (completed 2026-03-15)
-- [x] **Phase 413: 타입 안전 클라이언트 및 첫 페이지 마이그레이션** - openapi-fetch 클라이언트 래퍼, 고트래픽 페이지 1개 전환 (completed 2026-03-15)
-- [x] **Phase 414: 인터페이스 점진적 마이그레이션** - 나머지 수동 인터페이스/타입 캐스트 페이지별 전환 (completed 2026-03-14)
-- [x] **Phase 415: 백엔드 API 확장 및 상수 통합** - 프로바이더 디스커버리 API, 설정 스키마 엔드포인트, @waiaas/shared 상수 이관 (completed 2026-03-14)
-- [x] **Phase 416: Contract Test 및 검증** - OpenAPI spec 대비 Admin UI 필드 사용 검증, CI 통합 (completed 2026-03-15)
-
-## Phase Details
-
-### Phase 412: Spec 추출 파이프라인 및 CI 게이트
-**Goal**: 빌드 타임에 완전한 OpenAPI spec이 추출되고, 타입이 자동 생성되며, CI에서 drift가 차단된다
-**Depends on**: Nothing (first phase)
-**Requirements**: PIPE-01, PIPE-02, PIPE-03, PIPE-04, PIPE-05, PIPE-06
-**Success Criteria** (what must be TRUE):
-  1. `pnpm run generate:api-types` 실행 시 openapi.json과 types.generated.ts가 생성된다
-  2. 생성된 openapi.json의 엔드포인트 수가 실제 등록된 라우트 수와 일치한다
-  3. 백엔드 스키마를 변경한 후 CI에서 types.generated.ts freshness 검증이 실패한다
-  4. Turbo 파이프라인에서 admin 빌드 전에 타입 생성 태스크가 실행된다
-**Plans**: 2 plans
-
-Plans:
-- [x] 412-01-PLAN.md — OpenAPI spec 추출 + openapi-typescript 타입 생성 파이프라인
-- [x] 412-02-PLAN.md — Turbo 파이프라인 통합 + CI freshness 검증 게이트
-
-### Phase 413: 타입 안전 클라이언트 및 첫 페이지 마이그레이션
-**Goal**: openapi-fetch 기반 타입 안전 API 클라이언트가 동작하고, 고트래픽 페이지 1개가 수동 타입 없이 작동한다
-**Depends on**: Phase 412
-**Requirements**: PIPE-07, PIPE-08, MIG-07
-**Success Criteria** (what must be TRUE):
-  1. typed-client.ts가 경로 문자열에서 요청/응답 타입을 자동 추론한다
-  2. X-Master-Password 헤더가 미들웨어로 자동 주입되고 401 응답 시 로그아웃 처리된다
-  3. 마이그레이션된 페이지의 테스트 mock 객체가 satisfies GeneratedType으로 구조 검증된다
-**Plans**: 2 plans
-
-Plans:
-- [x] 413-01-PLAN.md — openapi-fetch 타입 안전 클라이언트 + 인증 미들웨어
-- [x] 413-02-PLAN.md — Dashboard 페이지 마이그레이션 + 테스트 mock satisfies 검증
-
-### Phase 414: 인터페이스 점진적 마이그레이션
-**Goal**: Admin UI의 모든 수동 인터페이스와 타입 캐스트가 생성 타입으로 전환되어, 백엔드 변경 시 빌드 실패로 불일치가 감지된다
-**Depends on**: Phase 413
-**Requirements**: MIG-01, MIG-02, MIG-08
-**Success Criteria** (what must be TRUE):
-  1. Admin UI에 수동 interface 선언이 0개이다 (생성 타입 alias로 전환 완료)
-  2. apiGet<수동타입>() 등 수동 타입 단언이 0개이다 (타입 안전 래퍼로 교체 완료)
-  3. 백엔드 Zod 스키마에 필드를 추가/제거하면 Admin UI 빌드가 실패한다
-  4. pnpm typecheck이 전체 코드베이스에서 에러 없이 통과한다
-**Plans**: 3 plans
-
-Plans:
-- [x] 414-01-PLAN.md — 중앙 타입 별칭 모듈 + 8개 소규모 페이지 마이그레이션
-- [x] 414-02-PLAN.md — 9개 중규모 페이지 마이그레이션 (actions ~ transactions)
-- [ ] 414-03-PLAN.md — wallets.tsx 전체 마이그레이션 + 전체 검증 (deferred)
-
-### Phase 415: 백엔드 API 확장 및 상수 통합
-**Goal**: Admin UI가 하드코딩된 프로바이더/정책/에러코드/설정 상수 없이 API 및 @waiaas/shared에서 데이터를 가져온다
-**Depends on**: Phase 412
-**Requirements**: API-01, API-02, API-03, API-04, MIG-03, MIG-04, MIG-05, MIG-06
-**Success Criteria** (what must be TRUE):
-  1. GET /v1/actions/providers 응답에 enabledKey, category, isEnabled가 포함되고, Admin UI가 이를 사용해 프로바이더 목록을 렌더링한다
-  2. GET /v1/admin/settings/schema가 등록된 설정 키 목록과 메타데이터(category, label, description)를 반환한다
-  3. Admin UI에 BUILTIN_PROVIDERS, CRED_TYPES, 정책 타입, 에러 코드 하드코딩이 0개이다
-  4. @waiaas/shared에서 re-export된 상수가 daemon과 Admin UI 양쪽에서 동일하게 사용된다
-**Plans**: 3 plans
-
-Plans:
-- [ ] 415-01-PLAN.md — 프로바이더 디스커버리 API 확장 + 설정 스키마 엔드포인트
-- [ ] 415-02-PLAN.md — @waiaas/shared 상수 모듈 (정책/크레덴셜/에러 상수)
-- [ ] 415-03-PLAN.md — Admin UI 하드코딩 제거 (API + shared import 전환)
-
-### Phase 416: Contract Test 및 검증
-**Goal**: OpenAPI spec과 Admin UI 간 필드 사용 일관성이 CI에서 자동 검증된다
-**Depends on**: Phase 414, Phase 415
-**Requirements**: API-05
-**Success Criteria** (what must be TRUE):
-  1. CI에서 OpenAPI spec 응답 스키마 키와 Admin UI 사용 키를 비교하는 contract test가 실행된다
-  2. 백엔드에서 응답 필드를 제거하면 contract test가 실패한다
-**Plans**: 1 plan
-
-Plans:
-- [x] 416-01-PLAN.md — Contract test 스크립트 + CI 통합
+</details>
 
 ## Progress
-
-**Execution Order:**
-Phases execute in numeric order: 412 → 413 → 414 → 415 → 416
-Note: Phase 415 depends only on Phase 412, so can parallel with 413/414.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -172,8 +94,8 @@ Note: Phase 415 depends only on Phase 412, so can parallel with 413/414.
 | 409. Response CAIP Enrichment + OpenAPI | v31.16 | 2/2 | Complete | 2026-03-14 |
 | 410. SDK + MCP CAIP Extension | v31.16 | 2/2 | Complete | 2026-03-14 |
 | 411. Skill Files Sync | v31.16 | 1/1 | Complete | 2026-03-14 |
-| 412. Spec 추출 파이프라인 및 CI 게이트 | v31.17 | Complete    | 2026-03-14 | 2026-03-15 |
-| 413. 타입 안전 클라이언트 및 첫 페이지 마이그레이션 | v31.17 | Complete    | 2026-03-14 | 2026-03-15 |
-| 414. 인터페이스 점진적 마이그레이션 | 3/3 | Complete    | 2026-03-14 | - |
-| 415. 백엔드 API 확장 및 상수 통합 | 3/3 | Complete    | 2026-03-14 | - |
-| 416. Contract Test 및 검증 | v31.17 | Complete    | 2026-03-14 | 2026-03-15 |
+| 412. Spec 추출 파이프라인 및 CI 게이트 | v31.17 | 2/2 | Complete | 2026-03-15 |
+| 413. 타입 안전 클라이언트 및 첫 페이지 마이그레이션 | v31.17 | 2/2 | Complete | 2026-03-15 |
+| 414. 인터페이스 점진적 마이그레이션 | v31.17 | 3/3 | Complete | 2026-03-14 |
+| 415. 백엔드 API 확장 및 상수 통합 | v31.17 | 3/3 | Complete | 2026-03-14 |
+| 416. Contract Test 및 검증 | v31.17 | 1/1 | Complete | 2026-03-15 |
