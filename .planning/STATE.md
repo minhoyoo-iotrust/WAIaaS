@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v31.17
 milestone_name: OpenAPI 기반 프론트엔드 타입 자동 생성
 status: completed
-stopped_at: Completed 415-03-PLAN.md
-last_updated: "2026-03-14T20:58:39.248Z"
-last_activity: 2026-03-15 — Phase 415 plans 01+02+03 executed
+stopped_at: Completed 416-01-PLAN.md
+last_updated: "2026-03-14T21:05:21.000Z"
+last_activity: 2026-03-15 — Phase 416 plan 01 executed (final phase)
 progress:
   total_phases: 5
-  completed_phases: 4
-  total_plans: 10
-  completed_plans: 10
-  percent: 98
+  completed_phases: 5
+  total_plans: 11
+  completed_plans: 11
+  percent: 100
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-15)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Phase 415 — 백엔드 API 확장 및 상수 통합
+**Current focus:** Phase 416 — Contract Test 및 검증 (COMPLETE)
 
 ## Current Position
 
-Phase: 4 of 5 (Phase 415: 백엔드 API 확장 및 상수 통합)
-Plan: 3 of 3 in current phase (all complete)
+Phase: 5 of 5 (Phase 416: Contract Test 및 검증)
+Plan: 1 of 1 in current phase (all complete)
 Status: Complete
-Last activity: 2026-03-15 — Phase 415 plans 01+02+03 executed
+Last activity: 2026-03-15 — Phase 416 plan 01 executed (milestone complete)
 
-Progress: [██████████] 98%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -48,6 +48,7 @@ Progress: [██████████] 98%
 | 414 | 2 | 39min | 19.5min |
 | Phase 414 P03 | 72 | 2 tasks | 10 files |
 | Phase 415 P01+02+03 | 25min | 5 tasks | 15 files |
+| 416 | 1 | 2min | 2min |
 
 ## Accumulated Context
 
@@ -70,6 +71,7 @@ Progress: [██████████] 98%
 - [Phase 414]: NFT field names corrected: items/pageKey/totalCount (not nfts/cursor/hasMore)
 - [Phase 414]: ExternalActionItem.provider field (not actionProvider) per generated schema
 - [Phase 415]: enabledKey defaults to provider name, category to 'Other'; deriveLabel() auto-generates labels; pure TS constants in @waiaas/shared (no Zod); PROVIDER_ADVANCED_SETTINGS map replaces per-provider conditionals
+- [Phase 416]: Contract test schema-reference check is hard gate; field-access check is INFO-only (destructured vars cause false positives); negative tests use in-memory simulation
 
 ### Pending Todos
 
@@ -84,6 +86,6 @@ Progress: [██████████] 98%
 
 ## Session Continuity
 
-Last session: 2026-03-14T20:57:40.943Z
-Stopped at: Completed 415-03-PLAN.md
+Last session: 2026-03-14T21:05:21.000Z
+Stopped at: Completed 416-01-PLAN.md (milestone v31.17 complete)
 Resume file: None

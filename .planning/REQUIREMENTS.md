@@ -35,7 +35,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 - [x] **API-02**: Admin UI가 BUILTIN_PROVIDERS 없이 API 응답만으로 프로바이더 목록을 렌더링한다
 - [x] **API-03**: GET /v1/admin/settings/schema 엔드포인트가 등록된 설정 키 목록과 메타데이터를 반환한다
 - [x] **API-04**: Admin UI가 설정 키 검색/표시에 하드코딩 대신 schema API를 사용한다
-- [ ] **API-05**: OpenAPI spec 응답 스키마 키와 프론트엔드 사용 키를 비교하는 contract test가 CI에서 실행된다
+- [x] **API-05**: OpenAPI spec 응답 스키마 키와 프론트엔드 사용 키를 비교하는 contract test가 CI에서 실행된다
 
 ## v2 Requirements
 
@@ -79,7 +79,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | API-02 | Phase 415 | Complete |
 | API-03 | Phase 415 | Complete |
 | API-04 | Phase 415 | Complete |
-| API-05 | Phase 416 | Pending |
+| API-05 | Phase 416 | Complete |
 
 **Coverage:**
 - v1 requirements: 21 total
