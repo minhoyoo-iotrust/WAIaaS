@@ -66,7 +66,7 @@
 
 - [x] **Phase 412: Spec 추출 파이프라인 및 CI 게이트** - OpenAPI spec 빌드 타임 추출, 타입 생성, CI freshness 검증 (completed 2026-03-15)
 - [x] **Phase 413: 타입 안전 클라이언트 및 첫 페이지 마이그레이션** - openapi-fetch 클라이언트 래퍼, 고트래픽 페이지 1개 전환 (completed 2026-03-15)
-- [ ] **Phase 414: 인터페이스 점진적 마이그레이션** - 나머지 수동 인터페이스/타입 캐스트 페이지별 전환
+- [x] **Phase 414: 인터페이스 점진적 마이그레이션** - 나머지 수동 인터페이스/타입 캐스트 페이지별 전환 (completed 2026-03-14)
 - [ ] **Phase 415: 백엔드 API 확장 및 상수 통합** - 프로바이더 디스커버리 API, 설정 스키마 엔드포인트, @waiaas/shared 상수 이관
 - [ ] **Phase 416: Contract Test 및 검증** - OpenAPI spec 대비 Admin UI 필드 사용 검증, CI 통합
 
@@ -174,6 +174,6 @@ Note: Phase 415 depends only on Phase 412, so can parallel with 413/414.
 | 411. Skill Files Sync | v31.16 | 1/1 | Complete | 2026-03-14 |
 | 412. Spec 추출 파이프라인 및 CI 게이트 | v31.17 | Complete    | 2026-03-14 | 2026-03-15 |
 | 413. 타입 안전 클라이언트 및 첫 페이지 마이그레이션 | v31.17 | Complete    | 2026-03-14 | 2026-03-15 |
-| 414. 인터페이스 점진적 마이그레이션 | v31.17 | 2/3 | In progress | - |
+| 414. 인터페이스 점진적 마이그레이션 | 3/3 | Complete   | 2026-03-14 | - |
 | 415. 백엔드 API 확장 및 상수 통합 | v31.17 | 0/3 | Not started | - |
 | 416. Contract Test 및 검증 | v31.17 | 0/1 | Not started | - |

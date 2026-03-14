@@ -20,14 +20,14 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Migration (Admin UI 타입 전환)
 
-- [ ] **MIG-01**: Admin UI 수동 interface 62개가 생성 타입 alias로 전환된다
-- [ ] **MIG-02**: apiGet<수동타입>() 등 28개 수동 타입 단언이 타입 안전 래퍼 호출로 교체된다
+- [x] **MIG-01**: Admin UI 수동 interface 62개가 생성 타입 alias로 전환된다
+- [x] **MIG-02**: apiGet<수동타입>() 등 28개 수동 타입 단언이 타입 안전 래퍼 호출로 교체된다
 - [ ] **MIG-03**: BUILTIN_PROVIDERS 하드코딩 배열이 @waiaas/shared import 또는 API 디스커버리로 교체된다
 - [ ] **MIG-04**: CRED_TYPES 하드코딩이 @waiaas/shared re-export로 교체된다
 - [ ] **MIG-05**: 정책 타입 하드코딩이 @waiaas/shared re-export 또는 생성 타입으로 교체된다
 - [ ] **MIG-06**: 에러 코드 매핑 하드코딩이 @waiaas/shared re-export로 교체된다
 - [x] **MIG-07**: Admin UI 테스트의 mock 객체가 satisfies GeneratedType으로 구조 검증된다
-- [ ] **MIG-08**: 백엔드 응답 스키마 변경 시 Admin UI 빌드가 실패하여 불일치를 사전 감지한다
+- [x] **MIG-08**: 백엔드 응답 스키마 변경 시 Admin UI 빌드가 실패하여 불일치를 사전 감지한다
 
 ### API (백엔드 API 확장)
 
@@ -67,14 +67,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PIPE-06 | Phase 412 | Complete |
 | PIPE-07 | Phase 413 | Complete |
 | PIPE-08 | Phase 413 | Complete |
-| MIG-01 | Phase 414 | Pending |
-| MIG-02 | Phase 414 | Pending |
+| MIG-01 | Phase 414 | Complete |
+| MIG-02 | Phase 414 | Complete |
 | MIG-03 | Phase 415 | Pending |
 | MIG-04 | Phase 415 | Pending |
 | MIG-05 | Phase 415 | Pending |
 | MIG-06 | Phase 415 | Pending |
 | MIG-07 | Phase 413 | Complete |
-| MIG-08 | Phase 414 | Pending |
+| MIG-08 | Phase 414 | Complete |
 | API-01 | Phase 415 | Pending |
 | API-02 | Phase 415 | Pending |
 | API-03 | Phase 415 | Pending |

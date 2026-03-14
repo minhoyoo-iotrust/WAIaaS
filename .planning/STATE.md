@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v31.17
 milestone_name: OpenAPI 기반 프론트엔드 타입 자동 생성
 status: executing
-stopped_at: Phase 414 in progress — plans 01+02 complete, plan 03 deferred
-last_updated: "2026-03-15T18:05:00.000Z"
+stopped_at: Completed 414-03-PLAN.md
+last_updated: "2026-03-14T20:22:26.417Z"
 last_activity: 2026-03-15 — Phase 414 plans 01+02 executed
 progress:
   total_phases: 5
-  completed_phases: 2
-  total_plans: 11
-  completed_plans: 6
+  completed_phases: 3
+  total_plans: 7
+  completed_plans: 7
   percent: 55
 ---
 
@@ -46,6 +46,7 @@ Progress: [██████░░░░] 55%
 | 412 | 2 | 13min | 6.5min |
 | 413 | 2 | 15min | 7.5min |
 | 414 | 2 | 39min | 19.5min |
+| Phase 414 P03 | 72 | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -65,6 +66,8 @@ Progress: [██████░░░░] 55%
 - [414-01] Path-level extraction for CredentialMetadata, AuditLogItem, TelegramUser
 - [414-02] UI-only types preserved with comment annotations (WcTableRow, UnifiedTxRow, etc.)
 - [414-02] SettingsResponse cast to SettingsData via `as unknown as` (explicit vs dynamic keys)
+- [Phase 414]: NFT field names corrected: items/pageKey/totalCount (not nfts/cursor/hasMore)
+- [Phase 414]: ExternalActionItem.provider field (not actionProvider) per generated schema
 
 ### Pending Todos
 
@@ -79,6 +82,6 @@ Progress: [██████░░░░] 55%
 
 ## Session Continuity
 
-Last session: 2026-03-15
-Stopped at: Phase 414 plans 01+02 complete, plan 03 deferred (wallets.tsx + test completion)
+Last session: 2026-03-14T20:22:26.414Z
+Stopped at: Completed 414-03-PLAN.md
 Resume file: None
