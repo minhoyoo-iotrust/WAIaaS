@@ -10,7 +10,7 @@
   <meta property="og:type" content="website">
   <meta property="og:title" content="WAIaaS — Wallet-as-a-Service for AI Agents">
   <meta property="og:description" content="Self-hosted daemon for AI agents to securely manage crypto wallets. Multi-chain EVM + Solana, 13+ DeFi protocols, MCP built-in, Admin Web UI.">
-  <meta property="og:url" content="https://waiaas.dev">
+  <meta property="og:url" content="https://waiaas.ai">
   <meta property="og:site_name" content="WAIaaS">
 
   <!-- Twitter Card -->
@@ -27,7 +27,7 @@
     "description": "Self-hosted Wallet-as-a-Service daemon for AI agents. Manage crypto wallets across EVM and Solana chains with built-in security, DeFi protocols, and MCP integration.",
     "applicationCategory": "DeveloperApplication",
     "operatingSystem": "Cross-platform (Node.js, Docker)",
-    "url": "https://waiaas.dev",
+    "url": "https://waiaas.ai",
     "downloadUrl": "https://www.npmjs.com/package/@waiaas/cli",
     "softwareVersion": "2.9.0",
     "author": {
@@ -54,38 +54,47 @@
   }
   </script>
 
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #0a0a0f;
-      --surface: #12121a;
-      --border: #1e1e2e;
-      --text: #e4e4ef;
-      --text-dim: #8888a0;
-      --accent: #6366f1;
-      --accent-light: #818cf8;
-      --green: #34d399;
-      --code-bg: #1a1a28;
+      --bg: #0c0c0c;
+      --surface: #111111;
+      --border: #2a2a2a;
+      --text: #b0b0b0;
+      --text-bright: #d4d4d4;
+      --text-dim: #666666;
+      --green: #00ff41;
+      --green-dim: #00cc33;
+      --cyan: #00d4ff;
+      --yellow: #ffcc00;
+      --magenta: #ff44cc;
+      --red: #ff4444;
+      --amber: #ff9500;
+      --blue: #4488ff;
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
       background: var(--bg);
       color: var(--text);
-      line-height: 1.6;
+      line-height: 1.7;
       -webkit-font-smoothing: antialiased;
+      font-size: 15px;
     }
 
-    a { color: var(--accent-light); text-decoration: none; }
-    a:hover { text-decoration: underline; }
+    a { color: var(--cyan); text-decoration: none; }
+    a:hover { color: var(--green); text-decoration: underline; }
 
-    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+    .container { max-width: 960px; margin: 0 auto; padding: 0 24px; }
 
     /* Nav */
     nav {
       border-bottom: 1px solid var(--border);
-      padding: 16px 0;
+      padding: 12px 0;
     }
     nav .container {
       display: flex;
@@ -93,192 +102,222 @@
       justify-content: space-between;
     }
     .logo {
-      font-size: 1.25rem;
+      font-size: 1.1rem;
       font-weight: 700;
-      color: var(--text);
-      letter-spacing: -0.02em;
+      color: var(--green);
+      letter-spacing: 0.05em;
     }
-    .nav-links { display: flex; gap: 24px; align-items: center; }
-    .nav-links a { color: var(--text-dim); font-size: 0.875rem; }
-    .nav-links a:hover { color: var(--text); text-decoration: none; }
+    .logo::before { content: "> "; color: var(--text-dim); }
+    .nav-links { display: flex; gap: 20px; align-items: center; }
+    .nav-links a {
+      color: var(--text-dim);
+      font-size: 0.85rem;
+      letter-spacing: 0.02em;
+    }
+    .nav-links a:hover { color: var(--green); text-decoration: none; }
+    .nav-links a::before { content: "["; color: var(--text-dim); }
+    .nav-links a::after { content: "]"; color: var(--text-dim); }
 
     /* Hero */
     .hero {
-      padding: 96px 0 64px;
+      padding: 80px 0 60px;
       text-align: center;
     }
     .hero h1 {
-      font-size: 3rem;
-      font-weight: 800;
-      line-height: 1.15;
-      letter-spacing: -0.03em;
+      font-size: 2.2rem;
+      font-weight: 700;
+      line-height: 1.3;
+      letter-spacing: -0.01em;
       margin-bottom: 20px;
+      color: var(--text-bright);
     }
-    .hero h1 span { color: var(--accent-light); }
+    .hero h1 span { color: var(--green); }
     .hero p {
-      font-size: 1.2rem;
+      font-size: 0.95rem;
       color: var(--text-dim);
-      max-width: 640px;
-      margin: 0 auto 40px;
+      max-width: 600px;
+      margin: 0 auto 36px;
     }
     .install-box {
       display: inline-flex;
       align-items: center;
       gap: 12px;
-      background: var(--code-bg);
+      background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 14px 24px;
-      font-family: 'SF Mono', 'Fira Code', monospace;
-      font-size: 1rem;
+      padding: 12px 20px;
+      font-family: inherit;
+      font-size: 0.95rem;
       cursor: pointer;
       transition: border-color 0.2s;
     }
-    .install-box:hover { border-color: var(--accent); }
+    .install-box:hover { border-color: var(--green); }
     .install-box .prompt { color: var(--green); }
-    .install-box .cmd { color: var(--text); }
+    .install-box .cmd { color: var(--text-bright); }
     .install-box .copy {
       color: var(--text-dim);
-      font-size: 0.75rem;
-      padding: 4px 8px;
+      font-size: 0.7rem;
+      padding: 2px 6px;
       border: 1px solid var(--border);
-      border-radius: 4px;
       font-family: inherit;
     }
 
-    /* Features */
-    .features { padding: 64px 0; }
-    .features h2 {
-      font-size: 1.75rem;
+    /* Section headers */
+    .section-title {
+      font-size: 1rem;
       font-weight: 700;
-      margin-bottom: 40px;
+      margin-bottom: 32px;
       text-align: center;
-      letter-spacing: -0.02em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
     }
+    .section-title::before { content: "# "; color: var(--green); }
+
+    /* Features */
+    .features { padding: 48px 0; }
+    .features h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 32px;
+      text-align: center;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .features h2::before { content: "## "; color: var(--green); }
     .feature-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 20px;
+      gap: 16px;
     }
     .feature-card {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 28px;
+      padding: 20px;
     }
+    .feature-card:hover { border-color: var(--green-dim); }
     .feature-card h3 {
-      font-size: 1rem;
-      font-weight: 600;
+      font-size: 0.95rem;
+      font-weight: 700;
       margin-bottom: 8px;
+      color: var(--text-bright);
     }
     .feature-card p {
-      font-size: 0.875rem;
+      font-size: 0.85rem;
       color: var(--text-dim);
-      line-height: 1.5;
+      line-height: 1.6;
     }
     .feature-tag {
       display: inline-block;
       font-size: 0.7rem;
-      font-weight: 600;
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
-      padding: 3px 8px;
-      border-radius: 4px;
-      margin-bottom: 12px;
+      letter-spacing: 0.08em;
+      padding: 2px 6px;
+      margin-bottom: 10px;
+      border: 1px solid;
     }
-    .tag-chain { background: #1e3a5f; color: #60a5fa; }
-    .tag-defi { background: #1e3b3f; color: #34d399; }
-    .tag-security { background: #3b1e3f; color: #c084fc; }
-    .tag-dx { background: #3b3a1e; color: #fbbf24; }
-    .tag-infra { background: #3b2a1e; color: #fb923c; }
-    .tag-standard { background: #1e3b2e; color: #6ee7b7; }
+    .tag-chain { border-color: var(--blue); color: var(--blue); }
+    .tag-defi { border-color: var(--green); color: var(--green); }
+    .tag-security { border-color: var(--magenta); color: var(--magenta); }
+    .tag-dx { border-color: var(--yellow); color: var(--yellow); }
+    .tag-infra { border-color: var(--amber); color: var(--amber); }
+    .tag-standard { border-color: var(--cyan); color: var(--cyan); }
 
     /* Architecture */
-    .arch { padding: 64px 0; }
+    .arch { padding: 48px 0; }
     .arch h2 {
-      font-size: 1.75rem;
+      font-size: 1rem;
       font-weight: 700;
-      margin-bottom: 40px;
+      margin-bottom: 32px;
       text-align: center;
-      letter-spacing: -0.02em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
     }
+    .arch h2::before { content: "## "; color: var(--green); }
     .arch-diagram {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 40px;
-      font-family: 'SF Mono', 'Fira Code', monospace;
+      padding: 32px;
+      font-family: inherit;
       font-size: 0.8rem;
       line-height: 1.8;
       overflow-x: auto;
       white-space: pre;
       color: var(--text-dim);
-      text-align: center;
+      text-align: left;
     }
-    .arch-diagram .highlight { color: var(--accent-light); }
+    .arch-diagram .highlight { color: var(--cyan); }
     .arch-diagram .green { color: var(--green); }
-    .arch-diagram .dim { color: #555566; }
+    .arch-diagram .dim { color: #444444; }
 
     /* Quick Start */
-    .quickstart { padding: 64px 0; }
+    .quickstart { padding: 48px 0; }
     .quickstart h2 {
-      font-size: 1.75rem;
+      font-size: 1rem;
       font-weight: 700;
-      margin-bottom: 40px;
+      margin-bottom: 32px;
       text-align: center;
-      letter-spacing: -0.02em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
     }
+    .quickstart h2::before { content: "## "; color: var(--green); }
     .steps {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 20px;
+      gap: 16px;
     }
     .step {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 28px;
+      padding: 20px;
     }
     .step-num {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 32px;
-      height: 32px;
-      background: var(--accent);
-      color: white;
-      border-radius: 50%;
-      font-size: 0.875rem;
+      display: inline-block;
+      font-size: 0.9rem;
       font-weight: 700;
-      margin-bottom: 16px;
+      color: var(--yellow);
+      margin-bottom: 12px;
     }
-    .step h3 { font-size: 1rem; margin-bottom: 12px; }
+    .step-num::before { content: "["; color: var(--text-dim); }
+    .step-num::after { content: "]"; color: var(--text-dim); }
+    .step h3 {
+      font-size: 0.95rem;
+      margin-bottom: 8px;
+      color: var(--text-bright);
+    }
+    .step p { font-size: 0.85rem; color: var(--text-dim); }
     .step code {
       display: block;
-      background: var(--code-bg);
+      background: var(--bg);
       border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 12px 16px;
-      font-family: 'SF Mono', 'Fira Code', monospace;
-      font-size: 0.8rem;
+      padding: 10px 14px;
+      font-family: inherit;
+      font-size: 0.85rem;
       color: var(--green);
       margin-top: 8px;
       white-space: pre;
     }
+    .step code::before { content: "$ "; color: var(--text-dim); }
 
     /* Links */
-    .resources { padding: 64px 0; }
+    .resources { padding: 48px 0; }
     .resources h2 {
-      font-size: 1.75rem;
+      font-size: 1rem;
       font-weight: 700;
-      margin-bottom: 40px;
+      margin-bottom: 32px;
       text-align: center;
-      letter-spacing: -0.02em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
     }
+    .resources h2::before { content: "## "; color: var(--green); }
     .resource-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 16px;
+      gap: 12px;
       max-width: 700px;
       margin: 0 auto;
     }
@@ -286,37 +325,67 @@
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 16px 20px;
+      padding: 14px 16px;
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 8px;
       color: var(--text);
       transition: border-color 0.2s;
     }
     .resource-link:hover {
-      border-color: var(--accent);
+      border-color: var(--green-dim);
       text-decoration: none;
     }
-    .resource-link .label { font-size: 0.875rem; font-weight: 500; }
-    .resource-link .sub { font-size: 0.75rem; color: var(--text-dim); }
+    .resource-link .label {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--cyan);
+    }
+    .resource-link .sub { font-size: 0.8rem; color: var(--text-dim); }
+    .resource-link::before {
+      content: "~>";
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      flex-shrink: 0;
+    }
 
     /* Footer */
     footer {
       border-top: 1px solid var(--border);
-      padding: 32px 0;
+      padding: 24px 0;
       text-align: center;
       font-size: 0.8rem;
       color: var(--text-dim);
     }
+    footer p::before { content: "// "; color: #444444; }
+
+    /* Scanline effect */
+    body::after {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.03) 2px,
+        rgba(0,0,0,0.03) 4px
+      );
+      z-index: 9999;
+    }
 
     /* Responsive */
     @media (max-width: 768px) {
-      .hero h1 { font-size: 2rem; }
-      .hero p { font-size: 1rem; }
+      .hero h1 { font-size: 1.5rem; }
+      .hero p { font-size: 0.9rem; }
       .feature-grid, .steps { grid-template-columns: 1fr; }
       .resource-grid { grid-template-columns: 1fr; }
-      .install-box { font-size: 0.85rem; padding: 12px 16px; }
-      .nav-links { gap: 16px; }
+      .install-box { font-size: 0.85rem; padding: 10px 14px; }
+      .nav-links { gap: 12px; }
+      .nav-links a { font-size: 0.75rem; }
     }
   </style>
 </head>
@@ -387,27 +456,29 @@
   <section class="arch">
     <div class="container">
       <h2>Architecture</h2>
-      <div class="arch-diagram"><span class="dim">┌─────────────┐     ┌─────────────┐     ┌──────────────┐</span>
-<span class="highlight">│  AI Agent   │</span><span class="dim">────▸</span><span class="highlight">│  MCP/REST   │</span><span class="dim">────▸</span><span class="green">│   WAIaaS     │</span>
-<span class="dim">│  (Claude,   │     │   API       │     │   Daemon     │</span>
-<span class="dim">│   GPT, ...)  │     │             │     │  (Local)     │</span>
-<span class="dim">└─────────────┘     └─────────────┘     └──────┬───────┘</span>
-                                               <span class="dim">│</span>
-                    <span class="dim">┌──────────────────────┼──────────────────────┐</span>
-                    <span class="dim">│                      │                      │</span>
-           <span class="dim">┌────────▼────────┐  ┌──────▼──────┐  ┌───────▼───────┐</span>
-           <span class="dim">│</span> <span class="green">6-Stage Pipeline</span> <span class="dim">│  │</span> <span class="green">Policy Engine</span> <span class="dim">│  │</span> <span class="green">Owner Approval</span> <span class="dim">│</span>
-           <span class="dim">│</span>  Validate → Sign <span class="dim">│  │</span> Default-Deny  <span class="dim">│  │</span> WC / Telegram <span class="dim">│</span>
-           <span class="dim">│</span>  → Broadcast     <span class="dim">│  │</span> + Spending    <span class="dim">│  │</span> / Wallet SDK  <span class="dim">│</span>
-           <span class="dim">└────────┬────────┘  └─────────────┘  └───────────────┘</span>
-                    <span class="dim">│</span>
-       <span class="dim">┌────────────┼────────────┐</span>
-       <span class="dim">│            │            │</span>
-<span class="dim">┌──────▼──────┐ ┌────▼─────┐ ┌───▼────┐</span>
-<span class="dim">│</span> <span class="highlight">EVM Chains</span>  <span class="dim">│ │</span> <span class="highlight">Solana</span>   <span class="dim">│ │</span> <span class="highlight">DeFi</span>   <span class="dim">│</span>
-<span class="dim">│</span> ETH, Polygon <span class="dim">│ │</span> Mainnet  <span class="dim">│ │</span> 13+    <span class="dim">│</span>
-<span class="dim">│</span> Arb, Base... <span class="dim">│ │</span> Devnet   <span class="dim">│ │</span> Protos <span class="dim">│</span>
-<span class="dim">└─────────────┘ └──────────┘ └────────┘</span></div>
+      <div class="arch-diagram">
+  <span class="dim">┌──────────────┐      ┌──────────────┐      ┌──────────────┐</span>
+  <span class="dim">│</span> <span class="highlight">AI Agent</span>     <span class="dim">│─────▸│</span> <span class="highlight">MCP/REST</span>     <span class="dim">│─────▸│</span> <span class="green">WAIaaS</span>       <span class="dim">│</span>
+  <span class="dim">│  (Claude,    │      │  API         │      │  Daemon      │</span>
+  <span class="dim">│   GPT, ...)  │      │              │      │  (Local)     │</span>
+  <span class="dim">└──────────────┘      └──────────────┘      └──────┬───────┘</span>
+                                                    <span class="dim">│</span>
+               <span class="dim">┌────────────────────────┼────────────────────────┐</span>
+               <span class="dim">│                        │                        │</span>
+     <span class="dim">┌─────────▼─────────┐  ┌──────▼───────┐  ┌─────────▼─────────┐</span>
+     <span class="dim">│</span> <span class="green">6-Stage Pipeline</span>  <span class="dim">│  │</span> <span class="green">Policy Engine</span> <span class="dim">│  │</span> <span class="green">Owner Approval</span>    <span class="dim">│</span>
+     <span class="dim">│</span>  Validate → Sign  <span class="dim">│  │</span> Default-Deny  <span class="dim">│  │</span>  WC / Telegram    <span class="dim">│</span>
+     <span class="dim">│</span>  → Broadcast      <span class="dim">│  │</span> + Spending    <span class="dim">│  │</span>  / Wallet SDK     <span class="dim">│</span>
+     <span class="dim">└─────────┬─────────┘  └──────────────┘  └───────────────────┘</span>
+               <span class="dim">│</span>
+     <span class="dim">┌─────────┼──────────┐</span>
+     <span class="dim">│         │          │</span>
+  <span class="dim">┌──▼───────────┐  ┌───▼────┐  ┌───▼────┐</span>
+  <span class="dim">│</span> <span class="highlight">EVM Chains</span>   <span class="dim">│  │</span> <span class="highlight">Solana</span> <span class="dim">│  │</span> <span class="highlight">DeFi</span>   <span class="dim">│</span>
+  <span class="dim">│ ETH, Polygon │  │ Main   │  │ 13+    │</span>
+  <span class="dim">│ Arb, Base... │  │ Devnet │  │ Protos │</span>
+  <span class="dim">└──────────────┘  └────────┘  └────────┘</span>
+</div>
     </div>
   </section>
 

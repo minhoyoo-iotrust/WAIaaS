@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://waiaas.dev/sitemap.xml
+Sitemap: https://waiaas.ai/sitemap.xml
