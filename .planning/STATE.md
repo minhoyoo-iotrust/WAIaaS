@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v31.17
 milestone_name: OpenAPI 기반 프론트엔드 타입 자동 생성
-status: planning
-stopped_at: Completed Phase 413 — ready for Phase 414
-last_updated: "2026-03-14T18:18:28.568Z"
-last_activity: 2026-03-15 — Phase 413 complete
+status: executing
+stopped_at: Phase 414 in progress — plans 01+02 complete, plan 03 deferred
+last_updated: "2026-03-15T18:05:00.000Z"
+last_activity: 2026-03-15 — Phase 414 plans 01+02 executed
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
-  percent: 36
+  total_plans: 11
+  completed_plans: 6
+  percent: 55
 ---
 
 # Project State
@@ -26,18 +26,18 @@ See: .planning/PROJECT.md (updated 2026-03-15)
 ## Current Position
 
 Phase: 3 of 5 (Phase 414: 인터페이스 점진적 마이그레이션)
-Plan: 0 of 3 in current phase
-Status: Ready to plan
-Last activity: 2026-03-15 — Phase 413 complete
+Plan: 2 of 3 in current phase (Plan 03 deferred)
+Status: In progress
+Last activity: 2026-03-15 — Phase 414 plans 01+02 executed
 
-Progress: [████░░░░░░] 36%
+Progress: [██████░░░░] 55%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 7.0min
-- Total execution time: 0.5 hours
+- Total plans completed: 6
+- Average duration: 10.0min
+- Total execution time: 1.1 hours
 
 **By Phase:**
 
@@ -45,6 +45,7 @@ Progress: [████░░░░░░] 36%
 |-------|-------|-------|----------|
 | 412 | 2 | 13min | 6.5min |
 | 413 | 2 | 15min | 7.5min |
+| 414 | 2 | 39min | 19.5min |
 
 ## Accumulated Context
 
@@ -59,10 +60,17 @@ Progress: [████░░░░░░] 36%
 - [413-01] onError returns ApiError (extends Error) per openapi-fetch middleware contract
 - [413-02] AdminStats kept as manual interface (generated type is `unknown` for /v1/admin/stats)
 - [413-02] DefiPositionSummary extracted from path-level type (no named schema)
+- [414-01] types.aliases.ts central module for generated type re-exports
+- [414-01] SettingsData and ApiKeyEntry kept manual (no named Zod schema) -- TODO Phase 415
+- [414-01] Path-level extraction for CredentialMetadata, AuditLogItem, TelegramUser
+- [414-02] UI-only types preserved with comment annotations (WcTableRow, UnifiedTxRow, etc.)
+- [414-02] SettingsResponse cast to SettingsData via `as unknown as` (explicit vs dynamic keys)
 
 ### Pending Todos
 
-None.
+- [414-03] wallets.tsx migration (3417 lines, 16 interfaces, 37 API calls) -- deferred
+- [414-02] Test mock return values need { data: ... } wrapping for 17 test files
+- [414-03] Component-level migration (SettingsPanel.tsx, PolymarketSettings.tsx)
 
 ### Blockers/Concerns
 
@@ -72,5 +80,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-15
-Stopped at: Completed Phase 413 — ready for Phase 414
+Stopped at: Phase 414 plans 01+02 complete, plan 03 deferred (wallets.tsx + test completion)
 Resume file: None
