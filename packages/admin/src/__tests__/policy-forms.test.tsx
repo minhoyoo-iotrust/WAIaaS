@@ -1,24 +1,27 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/preact';
 
-vi.mock('../api/client', () => ({
-  apiGet: vi.fn(),
-  apiPost: vi.fn(),
-  apiPut: vi.fn(),
-  apiDelete: vi.fn(),
-  ApiError: class ApiError extends Error {
-    status: number;
-    code: string;
-    serverMessage: string;
-    constructor(status: number, code: string, msg: string) {
-      super(`[${status}] ${code}: ${msg}`);
-      this.name = 'ApiError';
-      this.status = status;
-      this.code = code;
-      this.serverMessage = msg;
-    }
+
+const mockApiGet = vi.fn();
+const mockApiPost = vi.fn();
+const mockApiPut = vi.fn();
+const mockApiDelete = vi.fn();
+const mockApiPatch = vi.fn();
+
+// Mock declarations moved to top-level const
+
+vi.mock('../api/typed-client', () => ({
+  api: {
+    GET: (...args: unknown[]) => mockApiGet(...args),
+    POST: (...args: unknown[]) => mockApiPost(...args),
+    PUT: (...args: unknown[]) => mockApiPut(...args),
+    DELETE: (...args: unknown[]) => mockApiDelete(...args),
+    PATCH: (...args: unknown[]) => mockApiPatch(...args),
   },
-  apiCall: vi.fn(),
+  ApiError: class ApiError extends Error {
+    status: number; code: string; serverMessage: string;
+    constructor(s: number, c: string, m: string) { super(`[${s}] ${c}: ${m}`); this.name = 'ApiError'; this.status = s; this.code = c; this.serverMessage = m; }
+  },
 }));
 
 vi.mock('../components/toast', () => ({
@@ -49,7 +52,6 @@ vi.mock('../utils/error-messages', () => ({
   getErrorMessage: (code: string) => `Error: ${code}`,
 }));
 
-import { apiGet, apiPost, apiPut } from '../api/client';
 import PoliciesPage from '../pages/policies';
 
 const mockWallets = {
@@ -121,7 +123,7 @@ const mockPoliciesWithVis = [
 
 /** Helper: render PoliciesPage with standard mocks and open Create form */
 async function renderAndOpenForm() {
-  vi.mocked(apiGet)
+  mockApiGet
     .mockResolvedValueOnce(mockWallets) // wallets
     .mockResolvedValueOnce(mockPolicies); // policies
 
@@ -253,12 +255,12 @@ describe('PolicyFormRouter - type-specific forms', () => {
   });
 
   it('creates SPENDING_LIMIT policy with correct rules via API', async () => {
-    vi.mocked(apiGet)
+    mockApiGet
       .mockResolvedValueOnce(mockWallets) // wallets
       .mockResolvedValueOnce(mockPolicies) // initial policies
       .mockResolvedValueOnce(mockPolicies); // refresh after create
 
-    vi.mocked(apiPost).mockResolvedValueOnce({ id: 'policy-new' });
+    mockApiPost.mockResolvedValueOnce({ id: 'policy-new' });
 
     render(<PoliciesPage />);
 
@@ -289,7 +291,7 @@ describe('PolicyFormRouter - type-specific forms', () => {
     fireEvent.click(screen.getByText('Create'));
 
     await waitFor(() => {
-      expect(vi.mocked(apiPost)).toHaveBeenCalledWith(
+      expect(mockApiPost).toHaveBeenCalledWith(
         '/v1/policies',
         expect.objectContaining({
           type: 'SPENDING_LIMIT',
@@ -305,11 +307,11 @@ describe('PolicyFormRouter - type-specific forms', () => {
   });
 
   it('validates SPENDING_LIMIT: raw fields are optional when USD defaults present', async () => {
-    vi.mocked(apiGet)
+    mockApiGet
       .mockResolvedValueOnce(mockWallets)
       .mockResolvedValueOnce(mockPolicies)
       .mockResolvedValueOnce(mockPolicies);
-    vi.mocked(apiPost).mockResolvedValueOnce({ id: 'ok' });
+    mockApiPost.mockResolvedValueOnce({ id: 'ok' });
 
     await renderAndOpenForm();
 
@@ -321,7 +323,7 @@ describe('PolicyFormRouter - type-specific forms', () => {
     fireEvent.click(screen.getByText('Create'));
 
     await waitFor(() => {
-      expect(vi.mocked(apiPost)).toHaveBeenCalled();
+      expect(mockApiPost).toHaveBeenCalled();
     });
   });
 
@@ -343,7 +345,7 @@ describe('PolicyFormRouter - type-specific forms', () => {
       expect(screen.getByText('At least one address required')).toBeTruthy();
     });
 
-    expect(vi.mocked(apiPost)).not.toHaveBeenCalled();
+    expect(mockApiPost).not.toHaveBeenCalled();
   });
 
   it('validates RATE_LIMIT: shows error for invalid max_requests', async () => {
@@ -368,16 +370,16 @@ describe('PolicyFormRouter - type-specific forms', () => {
       expect(screen.getByText('Positive integer required')).toBeTruthy();
     });
 
-    expect(vi.mocked(apiPost)).not.toHaveBeenCalled();
+    expect(mockApiPost).not.toHaveBeenCalled();
   });
 
   it('creates APPROVE_TIER_OVERRIDE with correct tier value', async () => {
-    vi.mocked(apiGet)
+    mockApiGet
       .mockResolvedValueOnce(mockWallets)
       .mockResolvedValueOnce(mockPolicies)
       .mockResolvedValueOnce(mockPolicies); // refresh after create
 
-    vi.mocked(apiPost).mockResolvedValueOnce({ id: 'policy-tier' });
+    mockApiPost.mockResolvedValueOnce({ id: 'policy-tier' });
 
     render(<PoliciesPage />);
 
@@ -407,7 +409,7 @@ describe('PolicyFormRouter - type-specific forms', () => {
     fireEvent.click(screen.getByText('Create'));
 
     await waitFor(() => {
-      expect(vi.mocked(apiPost)).toHaveBeenCalledWith(
+      expect(mockApiPost).toHaveBeenCalledWith(
         '/v1/policies',
         expect.objectContaining({
           type: 'APPROVE_TIER_OVERRIDE',
@@ -546,7 +548,7 @@ describe('7-type validation', () => {
       expect(screen.getByText('At least one token required')).toBeTruthy();
     });
 
-    expect(vi.mocked(apiPost)).not.toHaveBeenCalled();
+    expect(mockApiPost).not.toHaveBeenCalled();
   });
 
   it('TIME_RESTRICTION: shows error when no days selected', async () => {
@@ -579,7 +581,7 @@ describe('7-type validation', () => {
       expect(screen.getByText('At least one day required')).toBeTruthy();
     });
 
-    expect(vi.mocked(apiPost)).not.toHaveBeenCalled();
+    expect(mockApiPost).not.toHaveBeenCalled();
   });
 });
 
@@ -590,7 +592,7 @@ describe('PolicyRulesSummary visualization', () => {
   });
 
   it('ALLOWED_TOKENS: displays symbol badges in policy list', async () => {
-    vi.mocked(apiGet)
+    mockApiGet
       .mockResolvedValueOnce(mockWallets)
       .mockResolvedValueOnce(mockPoliciesWithVis);
 
@@ -604,7 +606,7 @@ describe('PolicyRulesSummary visualization', () => {
   });
 
   it('RATE_LIMIT: displays "100 req / 1h" format in policy list', async () => {
-    vi.mocked(apiGet)
+    mockApiGet
       .mockResolvedValueOnce(mockWallets)
       .mockResolvedValueOnce(mockPoliciesWithVis);
 
@@ -623,7 +625,7 @@ describe('Edit modal - form prefill', () => {
   });
 
   it('prefills SPENDING_LIMIT form with existing values on edit (EDIT-01)', async () => {
-    vi.mocked(apiGet)
+    mockApiGet
       .mockResolvedValueOnce(mockWallets)
       .mockResolvedValueOnce(mockPolicies);
 
@@ -656,12 +658,12 @@ describe('Edit modal - form prefill', () => {
   });
 
   it('saves edited policy via PUT API (EDIT-02)', async () => {
-    vi.mocked(apiGet)
+    mockApiGet
       .mockResolvedValueOnce(mockWallets)
       .mockResolvedValueOnce(mockPolicies)
       .mockResolvedValueOnce(mockPolicies); // refresh after edit
 
-    vi.mocked(apiPut).mockResolvedValueOnce({ ok: true });
+    mockApiPut.mockResolvedValueOnce({ ok: true });
 
     render(<PoliciesPage />);
 
@@ -689,7 +691,7 @@ describe('Edit modal - form prefill', () => {
     fireEvent.click(screen.getByText('Save'));
 
     await waitFor(() => {
-      expect(vi.mocked(apiPut)).toHaveBeenCalledWith(
+      expect(mockApiPut).toHaveBeenCalledWith(
         '/v1/policies/policy-1',
         expect.objectContaining({
           rules: expect.objectContaining({

@@ -1,24 +1,27 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/preact';
 
-vi.mock('../api/client', () => ({
-  apiGet: vi.fn(),
-  apiPost: vi.fn(),
-  apiPut: vi.fn(),
-  apiDelete: vi.fn(),
-  ApiError: class ApiError extends Error {
-    status: number;
-    code: string;
-    serverMessage: string;
-    constructor(status: number, code: string, msg: string) {
-      super(`[${status}] ${code}: ${msg}`);
-      this.name = 'ApiError';
-      this.status = status;
-      this.code = code;
-      this.serverMessage = msg;
-    }
+
+const mockApiGet = vi.fn();
+const mockApiPost = vi.fn();
+const mockApiPut = vi.fn();
+const mockApiDelete = vi.fn();
+const mockApiPatch = vi.fn();
+
+// Mock declarations moved to top-level const
+
+vi.mock('../api/typed-client', () => ({
+  api: {
+    GET: (...args: unknown[]) => mockApiGet(...args),
+    POST: (...args: unknown[]) => mockApiPost(...args),
+    PUT: (...args: unknown[]) => mockApiPut(...args),
+    DELETE: (...args: unknown[]) => mockApiDelete(...args),
+    PATCH: (...args: unknown[]) => mockApiPatch(...args),
   },
-  apiCall: vi.fn(),
+  ApiError: class ApiError extends Error {
+    status: number; code: string; serverMessage: string;
+    constructor(s: number, c: string, m: string) { super(`[${s}] ${c}: ${m}`); this.name = 'ApiError'; this.status = s; this.code = c; this.serverMessage = m; }
+  },
 }));
 
 vi.mock('../components/toast', () => ({
@@ -40,7 +43,6 @@ vi.mock('../utils/error-messages', () => ({
   getErrorMessage: (code: string) => `Error: ${code}`,
 }));
 
-import { apiGet, apiPost } from '../api/client';
 import { showToast } from '../components/toast';
 import NotificationsPage from '../pages/notifications';
 
@@ -96,7 +98,7 @@ const emptyLogs = {
 };
 
 function setupMocks(statusData = mockStatus, logData = mockLogs) {
-  vi.mocked(apiGet).mockImplementation((url: string) => {
+  mockApiGet.mockImplementation((url: string) => {
     if (url.includes('/notifications/status')) return Promise.resolve(statusData);
     if (url.includes('/notifications/log')) return Promise.resolve(logData);
     return Promise.reject(new Error(`Unexpected URL: ${url}`));
@@ -150,7 +152,7 @@ describe('NotificationsPage', () => {
   it('should trigger POST on Test All Channels click and show results', async () => {
     setupMocks();
 
-    vi.mocked(apiPost).mockResolvedValueOnce({
+    mockApiPost.mockResolvedValueOnce({
       results: [
         { channel: 'telegram', success: true },
         { channel: 'ntfy', success: true },
@@ -166,7 +168,7 @@ describe('NotificationsPage', () => {
     fireEvent.click(screen.getByText('Test All Channels'));
 
     await waitFor(() => {
-      expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/admin/notifications/test', {});
+      expect(mockApiPost).toHaveBeenCalledWith('/v1/admin/notifications/test', {});
     });
 
     await waitFor(() => {
@@ -212,7 +214,7 @@ describe('NotificationsPage', () => {
     });
 
     // Mock the page 2 fetch
-    vi.mocked(apiGet).mockImplementation((url: string) => {
+    mockApiGet.mockImplementation((url: string) => {
       if (url.includes('/notifications/status')) return Promise.resolve(mockStatus);
       if (url.includes('page=2')) {
         return Promise.resolve({
@@ -229,7 +231,7 @@ describe('NotificationsPage', () => {
     fireEvent.click(screen.getByText('Next'));
 
     await waitFor(() => {
-      expect(vi.mocked(apiGet)).toHaveBeenCalledWith(
+      expect(mockApiGet).toHaveBeenCalledWith(
         '/v1/admin/notifications/log?page=2&pageSize=20',
       );
     });
@@ -261,7 +263,7 @@ describe('NotificationsPage', () => {
   it('should show error message for failed test channels', async () => {
     setupMocks();
 
-    vi.mocked(apiPost).mockResolvedValueOnce({
+    mockApiPost.mockResolvedValueOnce({
       results: [
         { channel: 'telegram', success: true },
         { channel: 'ntfy', success: false, error: 'Connection timeout' },
@@ -342,7 +344,7 @@ describe('NotificationsPage', () => {
   it('T-3: should send correct body when channel Test button is clicked', async () => {
     setupMocks();
 
-    vi.mocked(apiPost).mockResolvedValueOnce({
+    mockApiPost.mockResolvedValueOnce({
       results: [{ channel: 'telegram', success: true }],
     });
 
@@ -368,7 +370,7 @@ describe('NotificationsPage', () => {
     fireEvent.click(telegramTestBtn!);
 
     await waitFor(() => {
-      expect(vi.mocked(apiPost)).toHaveBeenCalledWith(
+      expect(mockApiPost).toHaveBeenCalledWith(
         '/v1/admin/notifications/test',
         { channel: 'telegram' },
       );
@@ -391,7 +393,7 @@ describe('NotificationsPage', () => {
   it('T-5: should send {} body when Test All Channels is clicked', async () => {
     setupMocks();
 
-    vi.mocked(apiPost).mockResolvedValueOnce({
+    mockApiPost.mockResolvedValueOnce({
       results: [
         { channel: 'telegram', success: true },
         { channel: 'ntfy', success: true },
@@ -407,7 +409,7 @@ describe('NotificationsPage', () => {
     fireEvent.click(screen.getByText('Test All Channels'));
 
     await waitFor(() => {
-      expect(vi.mocked(apiPost)).toHaveBeenCalledWith(
+      expect(mockApiPost).toHaveBeenCalledWith(
         '/v1/admin/notifications/test',
         {},
       );

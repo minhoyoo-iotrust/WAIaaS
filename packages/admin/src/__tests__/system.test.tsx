@@ -12,24 +12,27 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/preact';
 
-vi.mock('../api/client', () => ({
-  apiGet: vi.fn(),
-  apiPost: vi.fn(),
-  apiPut: vi.fn(),
-  apiDelete: vi.fn(),
-  ApiError: class ApiError extends Error {
-    status: number;
-    code: string;
-    serverMessage: string;
-    constructor(status: number, code: string, msg: string) {
-      super(`[${status}] ${code}: ${msg}`);
-      this.name = 'ApiError';
-      this.status = status;
-      this.code = code;
-      this.serverMessage = msg;
-    }
+
+const mockApiGet = vi.fn();
+const mockApiPost = vi.fn();
+const mockApiPut = vi.fn();
+const mockApiDelete = vi.fn();
+const mockApiPatch = vi.fn();
+
+// Mock declarations moved to top-level const
+
+vi.mock('../api/typed-client', () => ({
+  api: {
+    GET: (...args: unknown[]) => mockApiGet(...args),
+    POST: (...args: unknown[]) => mockApiPost(...args),
+    PUT: (...args: unknown[]) => mockApiPut(...args),
+    DELETE: (...args: unknown[]) => mockApiDelete(...args),
+    PATCH: (...args: unknown[]) => mockApiPatch(...args),
   },
-  apiCall: vi.fn(),
+  ApiError: class ApiError extends Error {
+    status: number; code: string; serverMessage: string;
+    constructor(s: number, c: string, m: string) { super(`[${s}] ${c}: ${m}`); this.name = 'ApiError'; this.status = s; this.code = c; this.serverMessage = m; }
+  },
 }));
 
 vi.mock('../components/toast', () => ({
@@ -75,7 +78,6 @@ vi.mock('../components/currency-select', () => ({
   ),
 }));
 
-import { apiGet, apiPost, apiPut } from '../api/client';
 import { showToast } from '../components/toast';
 import { registerDirty, unregisterDirty } from '../utils/dirty-guard';
 import SystemPage from '../pages/system';
@@ -132,7 +134,7 @@ function mockApiCalls(
   settingsData = mockSettingsResponse,
   apiKeysData: { keys: any[] } = mockApiKeys,
 ) {
-  vi.mocked(apiGet).mockImplementation(async (path: string) => {
+  mockApiGet.mockImplementation(async (path: string) => {
     if (path === '/v1/admin/settings') return settingsData;
     if (path === '/v1/admin/api-keys') return apiKeysData;
     return {};
@@ -151,7 +153,7 @@ describe('SystemPage', () => {
     });
 
     it('shows loading state initially', () => {
-      vi.mocked(apiGet).mockImplementation(() => new Promise(() => {}));
+      mockApiGet.mockImplementation(() => new Promise(() => {}));
       render(<SystemPage />);
 
       expect(screen.getByText('Loading settings...')).toBeTruthy();
@@ -317,7 +319,7 @@ describe('SystemPage', () => {
       vi.clearAllMocks();
     });
 
-    it('save calls apiPut with filtered system entries', async () => {
+    it('save calls mockApiPut with filtered system entries', async () => {
       mockApiCalls();
       render(<SystemPage />);
 
@@ -336,12 +338,12 @@ describe('SystemPage', () => {
         expect(screen.getByText(/unsaved change/)).toBeTruthy();
       });
 
-      vi.mocked(apiPut).mockResolvedValueOnce({ updated: 1, settings: mockSettingsResponse });
+      mockApiPut.mockResolvedValueOnce({ updated: 1, settings: mockSettingsResponse });
 
       fireEvent.click(screen.getByText('Save'));
 
       await waitFor(() => {
-        expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/admin/settings', {
+        expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', {
           settings: expect.arrayContaining([
             { key: 'daemon.log_level', value: 'debug' },
           ]),
@@ -368,7 +370,7 @@ describe('SystemPage', () => {
         expect(screen.getByText(/unsaved change/)).toBeTruthy();
       });
 
-      vi.mocked(apiPut).mockResolvedValueOnce({ updated: 1, settings: mockSettingsResponse });
+      mockApiPut.mockResolvedValueOnce({ updated: 1, settings: mockSettingsResponse });
 
       fireEvent.click(screen.getByText('Save'));
 
@@ -404,7 +406,7 @@ describe('SystemPage', () => {
       });
 
       const MockApiError = (await import('../api/client')).ApiError;
-      vi.mocked(apiPut).mockRejectedValueOnce(
+      mockApiPut.mockRejectedValueOnce(
         new MockApiError(400, 'SAVE_ERROR', 'Bad'),
       );
 
@@ -457,7 +459,7 @@ describe('SystemPage', () => {
 
     it('shows error toast on settings fetch failure', async () => {
       const MockApiError = (await import('../api/client')).ApiError;
-      vi.mocked(apiGet).mockImplementation(async (path: string) => {
+      mockApiGet.mockImplementation(async (path: string) => {
         if (path === '/v1/admin/settings')
           throw new MockApiError(500, 'SETTINGS_FETCH_FAIL', 'Fail');
         if (path === '/v1/admin/api-keys') return { keys: [] };
@@ -578,12 +580,12 @@ describe('SystemPage', () => {
         expect(screen.getByText(/unsaved change/)).toBeTruthy();
       });
 
-      vi.mocked(apiPut).mockResolvedValueOnce({ updated: 1, settings: mockSettingsResponse });
+      mockApiPut.mockResolvedValueOnce({ updated: 1, settings: mockSettingsResponse });
 
       fireEvent.click(screen.getByText('Save'));
 
       await waitFor(() => {
-        expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/admin/settings', {
+        expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', {
           settings: expect.arrayContaining([
             { key: 'gas_condition.enabled', value: 'false' },
           ]),
@@ -612,12 +614,12 @@ describe('SystemPage', () => {
         expect(screen.getByText(/unsaved change/)).toBeTruthy();
       });
 
-      vi.mocked(apiPut).mockResolvedValueOnce({ updated: 1, settings: mockSettingsResponse });
+      mockApiPut.mockResolvedValueOnce({ updated: 1, settings: mockSettingsResponse });
 
       fireEvent.click(screen.getByText('Save'));
 
       await waitFor(() => {
-        expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/admin/settings', {
+        expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', {
           settings: expect.arrayContaining([
             { key: 'gas_condition.poll_interval_sec', value: '60' },
           ]),
@@ -688,7 +690,7 @@ describe('SystemPage', () => {
       });
     });
 
-    it('shutdown calls apiPost and shows overlay', async () => {
+    it('shutdown calls mockApiPost and shows overlay', async () => {
       mockApiCalls();
       render(<SystemPage />);
 
@@ -705,7 +707,7 @@ describe('SystemPage', () => {
       ) as HTMLInputElement;
       fireEvent.input(input, { target: { value: 'SHUTDOWN' } });
 
-      vi.mocked(apiPost).mockResolvedValueOnce({ message: 'ok' });
+      mockApiPost.mockResolvedValueOnce({ message: 'ok' });
 
       // Find and click the confirm button in modal footer
       const confirmBtn = document.querySelector(
@@ -714,7 +716,7 @@ describe('SystemPage', () => {
       fireEvent.click(confirmBtn);
 
       await waitFor(() => {
-        expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/admin/shutdown');
+        expect(mockApiPost).toHaveBeenCalledWith('/v1/admin/shutdown');
       });
 
       await waitFor(() => {
@@ -740,7 +742,7 @@ describe('SystemPage', () => {
       fireEvent.input(input, { target: { value: 'SHUTDOWN' } });
 
       const MockApiError = (await import('../api/client')).ApiError;
-      vi.mocked(apiPost).mockRejectedValueOnce(
+      mockApiPost.mockRejectedValueOnce(
         new MockApiError(500, 'SHUTDOWN_ERROR', 'Failed'),
       );
 
@@ -814,12 +816,12 @@ describe('SystemPage', () => {
         expect(screen.getByText('Save')).toBeTruthy();
       });
 
-      vi.mocked(apiPut).mockResolvedValueOnce({ updated: 1, settings: mockSettingsResponse });
+      mockApiPut.mockResolvedValueOnce({ updated: 1, settings: mockSettingsResponse });
 
       fireEvent.click(screen.getByText('Save'));
 
       await waitFor(() => {
-        expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/admin/settings', {
+        expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', {
           settings: expect.arrayContaining([
             expect.objectContaining({ key: 'smart_account.entry_point' }),
           ]),

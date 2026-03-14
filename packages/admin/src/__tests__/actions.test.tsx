@@ -3,33 +3,36 @@
  *
  * Tests for the Actions page (actions.tsx):
  * - Renders provider list with Jupiter Swap and 0x Swap cards
- * - Toggle enable/disable calls apiPut with correct settings key
- * - API key save calls apiPut with correct endpoint
- * - API key delete calls apiDelete with correct endpoint
+ * - Toggle enable/disable calls mockApiPut with correct settings key
+ * - API key save calls mockApiPut with correct endpoint
+ * - API key delete calls mockApiDelete with correct endpoint
  * - Active status when enabled and registered
  * - Requires API Key status when enabled but missing key
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/preact';
 
-vi.mock('../api/client', () => ({
-  apiGet: vi.fn(),
-  apiPost: vi.fn(),
-  apiPut: vi.fn(),
-  apiDelete: vi.fn(),
-  ApiError: class ApiError extends Error {
-    status: number;
-    code: string;
-    serverMessage: string;
-    constructor(status: number, code: string, msg: string) {
-      super(`[${status}] ${code}: ${msg}`);
-      this.name = 'ApiError';
-      this.status = status;
-      this.code = code;
-      this.serverMessage = msg;
-    }
+
+const mockApiGet = vi.fn();
+const mockApiPost = vi.fn();
+const mockApiPut = vi.fn();
+const mockApiDelete = vi.fn();
+const mockApiPatch = vi.fn();
+
+// Mock declarations moved to top-level const
+
+vi.mock('../api/typed-client', () => ({
+  api: {
+    GET: (...args: unknown[]) => mockApiGet(...args),
+    POST: (...args: unknown[]) => mockApiPost(...args),
+    PUT: (...args: unknown[]) => mockApiPut(...args),
+    DELETE: (...args: unknown[]) => mockApiDelete(...args),
+    PATCH: (...args: unknown[]) => mockApiPatch(...args),
   },
-  apiCall: vi.fn(),
+  ApiError: class ApiError extends Error {
+    status: number; code: string; serverMessage: string;
+    constructor(s: number, c: string, m: string) { super(`[${s}] ${c}: ${m}`); this.name = 'ApiError'; this.status = s; this.code = c; this.serverMessage = m; }
+  },
 }));
 
 vi.mock('../components/toast', () => ({
@@ -62,7 +65,6 @@ vi.mock('../utils/dirty-guard', () => ({
   hasDirty: { value: false },
 }));
 
-import { apiGet, apiPut, apiDelete } from '../api/client';
 import { showToast } from '../components/toast';
 import ActionsPage from '../pages/actions';
 
@@ -140,7 +142,7 @@ function mockApiCalls(
   apiKeysData: { keys: any[] } = mockEmptyApiKeys,
   providersData: { providers: any[] } = mockEmptyProviders,
 ) {
-  vi.mocked(apiGet).mockImplementation(async (path: string) => {
+  mockApiGet.mockImplementation(async (path: string) => {
     if (path === '/v1/admin/settings') return settingsData;
     if (path === '/v1/admin/api-keys') return apiKeysData;
     if (path === '/v1/actions/providers') return providersData;
@@ -160,7 +162,7 @@ describe('ActionsPage', () => {
 
   describe('rendering', () => {
     it('shows loading state initially', () => {
-      vi.mocked(apiGet).mockImplementation(() => new Promise(() => {}));
+      mockApiGet.mockImplementation(() => new Promise(() => {}));
       render(<ActionsPage />);
 
       expect(screen.getByText('Loading action providers...')).toBeTruthy();
@@ -220,7 +222,7 @@ describe('ActionsPage', () => {
   });
 
   describe('toggle provider enabled', () => {
-    it('clicking enable toggle calls apiPut with correct setting key', async () => {
+    it('clicking enable toggle calls mockApiPut with correct setting key', async () => {
       mockApiCalls(mockSettingsDisabled);
       render(<ActionsPage />);
 
@@ -235,7 +237,7 @@ describe('ActionsPage', () => {
       expect(checkbox).toBeTruthy();
       expect(checkbox.checked).toBe(false);
 
-      vi.mocked(apiPut).mockResolvedValueOnce({
+      mockApiPut.mockResolvedValueOnce({
         updated: 1,
         settings: { ...mockSettingsDisabled, actions: { ...mockSettingsDisabled.actions, jupiter_swap_enabled: 'true' } },
       });
@@ -243,7 +245,7 @@ describe('ActionsPage', () => {
       fireEvent.change(checkbox, { target: { checked: true } });
 
       await waitFor(() => {
-        expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/admin/settings', {
+        expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', {
           settings: [{ key: 'actions.jupiter_swap_enabled', value: 'true' }],
         });
       });
@@ -261,7 +263,7 @@ describe('ActionsPage', () => {
         'input[name="actions.jupiter_swap_enabled"]',
       ) as HTMLInputElement;
 
-      vi.mocked(apiPut).mockResolvedValueOnce({
+      mockApiPut.mockResolvedValueOnce({
         updated: 1,
         settings: { actions: { jupiter_swap_enabled: 'true', zerox_swap_enabled: 'false' } },
       });
@@ -291,7 +293,7 @@ describe('ActionsPage', () => {
       expect(setButtons.length).toBe(2);
     });
 
-    it('entering key and clicking Save calls apiPut with correct endpoint', async () => {
+    it('entering key and clicking Save calls mockApiPut with correct endpoint', async () => {
       mockApiCalls(mockSettingsDisabled, mockEmptyApiKeys);
       render(<ActionsPage />);
 
@@ -314,12 +316,12 @@ describe('ActionsPage', () => {
       ) as HTMLInputElement;
       fireEvent.input(input, { target: { value: 'test-api-key' } });
 
-      vi.mocked(apiPut).mockResolvedValueOnce({});
+      mockApiPut.mockResolvedValueOnce({});
 
       fireEvent.click(screen.getByText('Save'));
 
       await waitFor(() => {
-        expect(vi.mocked(apiPut)).toHaveBeenCalledWith(
+        expect(mockApiPut).toHaveBeenCalledWith(
           '/v1/admin/api-keys/zerox_swap',
           { apiKey: 'test-api-key' },
         );
@@ -335,7 +337,7 @@ describe('ActionsPage', () => {
   });
 
   describe('API key delete', () => {
-    it('clicking Delete calls apiDelete with correct endpoint', async () => {
+    it('clicking Delete calls mockApiDelete with correct endpoint', async () => {
       mockApiCalls(mockSettingsDisabled, mockApiKeysWithZerox);
       render(<ActionsPage />);
 
@@ -343,12 +345,12 @@ describe('ActionsPage', () => {
         expect(screen.getByText('0x-****abc')).toBeTruthy();
       });
 
-      vi.mocked(apiDelete).mockResolvedValueOnce(undefined);
+      mockApiDelete.mockResolvedValueOnce(undefined);
 
       fireEvent.click(screen.getByText('Delete'));
 
       await waitFor(() => {
-        expect(vi.mocked(apiDelete)).toHaveBeenCalledWith(
+        expect(mockApiDelete).toHaveBeenCalledWith(
           '/v1/admin/api-keys/zerox_swap',
         );
       });
@@ -458,7 +460,7 @@ describe('ActionsPage', () => {
       });
 
       const select = document.querySelector('select') as HTMLSelectElement;
-      vi.mocked(apiPut).mockResolvedValueOnce({
+      mockApiPut.mockResolvedValueOnce({
         updated: 1,
         settings: { actions: { jupiter_swap_enabled: 'true', jupiter_swap_swap_tier: 'APPROVAL' } },
       });
@@ -466,7 +468,7 @@ describe('ActionsPage', () => {
       fireEvent.change(select, { target: { value: 'APPROVAL' } });
 
       await waitFor(() => {
-        expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/admin/settings', {
+        expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', {
           settings: [{ key: 'actions.jupiter_swap_swap_tier', value: 'APPROVAL' }],
         });
       });
@@ -490,7 +492,7 @@ describe('ActionsPage', () => {
         expect(screen.getByText('reset')).toBeTruthy();
       });
 
-      vi.mocked(apiPut).mockResolvedValueOnce({
+      mockApiPut.mockResolvedValueOnce({
         updated: 1,
         settings: { actions: { jupiter_swap_enabled: 'true' } },
       });
@@ -498,7 +500,7 @@ describe('ActionsPage', () => {
       fireEvent.click(screen.getByText('reset'));
 
       await waitFor(() => {
-        expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/admin/settings', {
+        expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', {
           settings: [{ key: 'actions.jupiter_swap_swap_tier', value: '' }],
         });
       });
@@ -605,7 +607,7 @@ describe('ActionsPage', () => {
       // Change the value
       fireEvent.input(input, { target: { value: 'https://custom-api.test' } });
 
-      vi.mocked(apiPut).mockResolvedValueOnce({
+      mockApiPut.mockResolvedValueOnce({
         updated: 1,
         settings: { actions: { dcent_swap_api_url: 'https://custom-api.test' } },
       });
@@ -617,7 +619,7 @@ describe('ActionsPage', () => {
       }
 
       await waitFor(() => {
-        expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/admin/settings', {
+        expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', {
           settings: [{ key: 'actions.dcent_swap_api_url', value: 'https://custom-api.test' }],
         });
       });

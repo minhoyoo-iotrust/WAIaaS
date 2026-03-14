@@ -1,24 +1,27 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/preact';
 
-vi.mock('../api/client', () => ({
-  apiGet: vi.fn(),
-  apiPost: vi.fn(),
-  apiPut: vi.fn(),
-  apiDelete: vi.fn(),
-  ApiError: class ApiError extends Error {
-    status: number;
-    code: string;
-    serverMessage: string;
-    constructor(status: number, code: string, msg: string) {
-      super(`[${status}] ${code}: ${msg}`);
-      this.name = 'ApiError';
-      this.status = status;
-      this.code = code;
-      this.serverMessage = msg;
-    }
+
+const mockApiGet = vi.fn();
+const mockApiPost = vi.fn();
+const mockApiPut = vi.fn();
+const mockApiDelete = vi.fn();
+const mockApiPatch = vi.fn();
+
+// Mock declarations moved to top-level const
+
+vi.mock('../api/typed-client', () => ({
+  api: {
+    GET: (...args: unknown[]) => mockApiGet(...args),
+    POST: (...args: unknown[]) => mockApiPost(...args),
+    PUT: (...args: unknown[]) => mockApiPut(...args),
+    DELETE: (...args: unknown[]) => mockApiDelete(...args),
+    PATCH: (...args: unknown[]) => mockApiPatch(...args),
   },
-  apiCall: vi.fn(),
+  ApiError: class ApiError extends Error {
+    status: number; code: string; serverMessage: string;
+    constructor(s: number, c: string, m: string) { super(`[${s}] ${c}: ${m}`); this.name = 'ApiError'; this.status = s; this.code = c; this.serverMessage = m; }
+  },
 }));
 
 vi.mock('../components/toast', () => ({
@@ -40,7 +43,6 @@ vi.mock('../utils/error-messages', () => ({
   getErrorMessage: (code: string) => `Error: ${code}`,
 }));
 
-import { apiGet } from '../api/client';
 import NotificationsPage from '../pages/notifications';
 
 const mockStatus = {
@@ -80,7 +82,7 @@ const mockLogs = {
 };
 
 function setupMocks(statusData = mockStatus, logData = mockLogs) {
-  vi.mocked(apiGet).mockImplementation((url: string) => {
+  mockApiGet.mockImplementation((url: string) => {
     if (url.includes('/notifications/status')) return Promise.resolve(statusData);
     if (url.includes('/notifications/log')) return Promise.resolve(logData);
     return Promise.reject(new Error(`Unexpected URL: ${url}`));
@@ -129,13 +131,13 @@ describe('Notification Log Filters and Wallet Link', () => {
     // First select is Event Type
     const eventTypeSelect = selects[0];
 
-    vi.mocked(apiGet).mockClear();
+    mockApiGet.mockClear();
     setupMocks();
 
     fireEvent.change(eventTypeSelect, { target: { value: 'tx.submitted' } });
 
     await waitFor(() => {
-      const calls = vi.mocked(apiGet).mock.calls;
+      const calls = mockApiGet.mock.calls;
       const logCall = calls.find(
         (c) => typeof c[0] === 'string' && c[0].includes('/notifications/log'),
       );
@@ -157,13 +159,13 @@ describe('Notification Log Filters and Wallet Link', () => {
     // Second select is Channel
     const channelSelect = selects[1];
 
-    vi.mocked(apiGet).mockClear();
+    mockApiGet.mockClear();
     setupMocks();
 
     fireEvent.change(channelSelect, { target: { value: 'telegram' } });
 
     await waitFor(() => {
-      const calls = vi.mocked(apiGet).mock.calls;
+      const calls = mockApiGet.mock.calls;
       const logCall = calls.find(
         (c) => typeof c[0] === 'string' && c[0].includes('/notifications/log'),
       );
@@ -185,13 +187,13 @@ describe('Notification Log Filters and Wallet Link', () => {
     // Third select is Status
     const statusSelect = selects[2];
 
-    vi.mocked(apiGet).mockClear();
+    mockApiGet.mockClear();
     setupMocks();
 
     fireEvent.change(statusSelect, { target: { value: 'sent' } });
 
     await waitFor(() => {
-      const calls = vi.mocked(apiGet).mock.calls;
+      const calls = mockApiGet.mock.calls;
       const logCall = calls.find(
         (c) => typeof c[0] === 'string' && c[0].includes('/notifications/log'),
       );
@@ -213,13 +215,13 @@ describe('Notification Log Filters and Wallet Link', () => {
     // First date input is Since
     const sinceInput = dateInputs[0];
 
-    vi.mocked(apiGet).mockClear();
+    mockApiGet.mockClear();
     setupMocks();
 
     fireEvent.change(sinceInput, { target: { value: '2026-01-15' } });
 
     await waitFor(() => {
-      const calls = vi.mocked(apiGet).mock.calls;
+      const calls = mockApiGet.mock.calls;
       const logCall = calls.find(
         (c) => typeof c[0] === 'string' && c[0].includes('/notifications/log'),
       );
@@ -282,7 +284,7 @@ describe('Notification Log Filters and Wallet Link', () => {
     fireEvent.change(selects[0], { target: { value: 'tx.submitted' } });
 
     await waitFor(() => {
-      const calls = vi.mocked(apiGet).mock.calls;
+      const calls = mockApiGet.mock.calls;
       const logCall = calls.find(
         (c) => typeof c[0] === 'string' && c[0].includes('eventType=tx.submitted'),
       );
@@ -290,7 +292,7 @@ describe('Notification Log Filters and Wallet Link', () => {
     });
 
     // Clear mocks then click Clear
-    vi.mocked(apiGet).mockClear();
+    mockApiGet.mockClear();
     setupMocks();
 
     const clearBtn = filterBar!.querySelector('.filter-clear') as HTMLButtonElement;
@@ -298,7 +300,7 @@ describe('Notification Log Filters and Wallet Link', () => {
     fireEvent.click(clearBtn);
 
     await waitFor(() => {
-      const calls = vi.mocked(apiGet).mock.calls;
+      const calls = mockApiGet.mock.calls;
       const logCall = calls.find(
         (c) => typeof c[0] === 'string' && c[0].includes('/notifications/log'),
       );

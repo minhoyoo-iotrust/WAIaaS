@@ -1,24 +1,27 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/preact';
 
-vi.mock('../api/client', () => ({
-  apiGet: vi.fn(),
-  apiPost: vi.fn(),
-  apiPut: vi.fn(),
-  apiDelete: vi.fn(),
-  ApiError: class ApiError extends Error {
-    status: number;
-    code: string;
-    serverMessage: string;
-    constructor(status: number, code: string, msg: string) {
-      super(`[${status}] ${code}: ${msg}`);
-      this.name = 'ApiError';
-      this.status = status;
-      this.code = code;
-      this.serverMessage = msg;
-    }
+
+const mockApiGet = vi.fn();
+const mockApiPost = vi.fn();
+const mockApiPut = vi.fn();
+const mockApiDelete = vi.fn();
+const mockApiPatch = vi.fn();
+
+// Mock declarations moved to top-level const
+
+vi.mock('../api/typed-client', () => ({
+  api: {
+    GET: (...args: unknown[]) => mockApiGet(...args),
+    POST: (...args: unknown[]) => mockApiPost(...args),
+    PUT: (...args: unknown[]) => mockApiPut(...args),
+    DELETE: (...args: unknown[]) => mockApiDelete(...args),
+    PATCH: (...args: unknown[]) => mockApiPatch(...args),
   },
-  apiCall: vi.fn(),
+  ApiError: class ApiError extends Error {
+    status: number; code: string; serverMessage: string;
+    constructor(s: number, c: string, m: string) { super(`[${s}] ${c}: ${m}`); this.name = 'ApiError'; this.status = s; this.code = c; this.serverMessage = m; }
+  },
 }));
 
 vi.mock('../components/toast', () => ({
@@ -49,7 +52,6 @@ vi.mock('../utils/error-messages', () => ({
   getErrorMessage: (code: string) => `Error: ${code}`,
 }));
 
-import { apiGet, apiPost, apiDelete } from '../api/client';
 import PoliciesPage from '../pages/policies';
 
 const mockWallets = {
@@ -105,7 +107,7 @@ describe('PoliciesPage', () => {
   });
 
   it('should render policy list with tier visualization for SPENDING_LIMIT', async () => {
-    vi.mocked(apiGet)
+    mockApiGet
       .mockResolvedValueOnce(mockWallets) // wallets load
       .mockResolvedValueOnce(mockPolicies); // policies load (triggered by filterWalletId effect)
 
@@ -133,12 +135,12 @@ describe('PoliciesPage', () => {
   });
 
   it('should create policy via form', async () => {
-    vi.mocked(apiGet)
+    mockApiGet
       .mockResolvedValueOnce(mockWallets) // wallets load
       .mockResolvedValueOnce(mockPolicies) // initial policies load
       .mockResolvedValueOnce(mockPolicies); // refresh after create
 
-    vi.mocked(apiPost).mockResolvedValueOnce({ id: 'policy-3' });
+    mockApiPost.mockResolvedValueOnce({ id: 'policy-3' });
 
     render(<PoliciesPage />);
 
@@ -160,19 +162,19 @@ describe('PoliciesPage', () => {
     fireEvent.click(screen.getByText('Create'));
 
     await waitFor(() => {
-      expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/policies', expect.objectContaining({
+      expect(mockApiPost).toHaveBeenCalledWith('/v1/policies', expect.objectContaining({
         type: 'SPENDING_LIMIT',
       }));
     });
   });
 
   it('should delete policy with confirmation modal', async () => {
-    vi.mocked(apiGet)
+    mockApiGet
       .mockResolvedValueOnce(mockWallets) // wallets load
       .mockResolvedValueOnce(mockPolicies) // policies load
       .mockResolvedValueOnce([]); // refresh after delete
 
-    vi.mocked(apiDelete).mockResolvedValueOnce(undefined);
+    mockApiDelete.mockResolvedValueOnce(undefined);
 
     render(<PoliciesPage />);
 
@@ -200,14 +202,14 @@ describe('PoliciesPage', () => {
     fireEvent.click(allDeleteButtons[allDeleteButtons.length - 1]);
 
     await waitFor(() => {
-      expect(vi.mocked(apiDelete)).toHaveBeenCalledWith(
+      expect(mockApiDelete).toHaveBeenCalledWith(
         expect.stringMatching(/^\/v1\/policies\/policy-/),
       );
     });
   });
 
   it('shows ALLOWED_NETWORKS in policy type options', async () => {
-    vi.mocked(apiGet)
+    mockApiGet
       .mockResolvedValueOnce(mockWallets)
       .mockResolvedValueOnce(mockPolicies);
 
@@ -232,7 +234,7 @@ describe('PoliciesPage', () => {
   });
 
   it('shows Network column in policy table', async () => {
-    vi.mocked(apiGet)
+    mockApiGet
       .mockResolvedValueOnce(mockWallets)
       .mockResolvedValueOnce(mockPolicies);
 

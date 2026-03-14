@@ -7,24 +7,27 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/preact';
 
-vi.mock('../api/client', () => ({
-  apiGet: vi.fn(),
-  apiPost: vi.fn(),
-  apiPut: vi.fn(),
-  apiDelete: vi.fn(),
-  ApiError: class ApiError extends Error {
-    status: number;
-    code: string;
-    serverMessage: string;
-    constructor(status: number, code: string, msg: string) {
-      super(`[${status}] ${code}: ${msg}`);
-      this.name = 'ApiError';
-      this.status = status;
-      this.code = code;
-      this.serverMessage = msg;
-    }
+
+const mockApiGet = vi.fn();
+const mockApiPost = vi.fn();
+const mockApiPut = vi.fn();
+const mockApiDelete = vi.fn();
+const mockApiPatch = vi.fn();
+
+// Mock declarations moved to top-level const
+
+vi.mock('../api/typed-client', () => ({
+  api: {
+    GET: (...args: unknown[]) => mockApiGet(...args),
+    POST: (...args: unknown[]) => mockApiPost(...args),
+    PUT: (...args: unknown[]) => mockApiPut(...args),
+    DELETE: (...args: unknown[]) => mockApiDelete(...args),
+    PATCH: (...args: unknown[]) => mockApiPatch(...args),
   },
-  apiCall: vi.fn(),
+  ApiError: class ApiError extends Error {
+    status: number; code: string; serverMessage: string;
+    constructor(s: number, c: string, m: string) { super(`[${s}] ${c}: ${m}`); this.name = 'ApiError'; this.status = s; this.code = c; this.serverMessage = m; }
+  },
 }));
 
 vi.mock('../components/toast', () => ({
@@ -66,7 +69,6 @@ vi.mock('../components/settings-search', () => {
   };
 });
 
-import { apiGet, apiPost, apiPut } from '../api/client';
 import { showToast } from '../components/toast';
 import NotificationsPage from '../pages/notifications';
 
@@ -141,7 +143,7 @@ const mockLogsPage2 = {
 };
 
 function setupMocks(statusData = mockStatus, logData = mockLogs) {
-  vi.mocked(apiGet).mockImplementation((url: string) => {
+  mockApiGet.mockImplementation((url: string) => {
     if (url.includes('/notifications/status')) return Promise.resolve(statusData);
     if (url.includes('/notifications/log')) return Promise.resolve(logData);
     return Promise.reject(new Error(`Unexpected URL: ${url}`));
@@ -168,7 +170,7 @@ describe('NotificationsPage - Additional Coverage', () => {
       vi.useRealTimers();
       setupMocks();
 
-      vi.mocked(apiPost).mockResolvedValueOnce({
+      mockApiPost.mockResolvedValueOnce({
         results: [{ channel: 'telegram', success: true }],
       });
 
@@ -194,7 +196,7 @@ describe('NotificationsPage - Additional Coverage', () => {
       fireEvent.click(telegramTestBtn!);
 
       await waitFor(() => {
-        expect(vi.mocked(apiPost)).toHaveBeenCalledWith(
+        expect(mockApiPost).toHaveBeenCalledWith(
           '/v1/admin/notifications/test',
           { channel: 'telegram' },
         );
@@ -209,7 +211,7 @@ describe('NotificationsPage - Additional Coverage', () => {
       vi.useRealTimers();
       setupMocks();
 
-      vi.mocked(apiPost).mockResolvedValueOnce({
+      mockApiPost.mockResolvedValueOnce({
         results: [{ channel: 'ntfy', success: false, error: 'Connection refused' }],
       });
 
@@ -243,7 +245,7 @@ describe('NotificationsPage - Additional Coverage', () => {
       vi.useRealTimers();
       setupMocks();
 
-      vi.mocked(apiPost).mockRejectedValueOnce(new Error('Network failure'));
+      mockApiPost.mockRejectedValueOnce(new Error('Network failure'));
 
       const { container } = render(<NotificationsPage />);
 
@@ -279,7 +281,7 @@ describe('NotificationsPage - Additional Coverage', () => {
       vi.useRealTimers();
 
       // Start with page 1 of multi-page results
-      vi.mocked(apiGet).mockImplementation((url: string) => {
+      mockApiGet.mockImplementation((url: string) => {
         if (url.includes('/notifications/status')) return Promise.resolve(mockStatus);
         if (url.includes('page=2')) return Promise.resolve(mockLogsPage2);
         if (url.includes('page=1') || url.includes('/notifications/log')) return Promise.resolve(mockLogsPage1);
@@ -301,7 +303,7 @@ describe('NotificationsPage - Additional Coverage', () => {
       fireEvent.click(screen.getByText('Next'));
 
       await waitFor(() => {
-        expect(vi.mocked(apiGet)).toHaveBeenCalledWith(
+        expect(mockApiGet).toHaveBeenCalledWith(
           '/v1/admin/notifications/log?page=2&pageSize=20',
         );
       });
@@ -311,7 +313,7 @@ describe('NotificationsPage - Additional Coverage', () => {
       fireEvent.click(screen.getByText('Previous'));
 
       await waitFor(() => {
-        expect(vi.mocked(apiGet)).toHaveBeenCalledWith(
+        expect(mockApiGet).toHaveBeenCalledWith(
           '/v1/admin/notifications/log?page=1&pageSize=20',
         );
       });
@@ -528,7 +530,7 @@ describe('NotificationsPage - Additional Coverage', () => {
       vi.useRealTimers();
       setupMocks();
 
-      vi.mocked(apiPost).mockResolvedValueOnce({
+      mockApiPost.mockResolvedValueOnce({
         results: [
           { channel: 'telegram', success: true },
           { channel: 'ntfy', success: true },
@@ -544,7 +546,7 @@ describe('NotificationsPage - Additional Coverage', () => {
       fireEvent.click(screen.getByText('Test All Channels'));
 
       await waitFor(() => {
-        expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/admin/notifications/test', {});
+        expect(mockApiPost).toHaveBeenCalledWith('/v1/admin/notifications/test', {});
       });
 
       await waitFor(() => {
@@ -556,7 +558,7 @@ describe('NotificationsPage - Additional Coverage', () => {
       vi.useRealTimers();
       setupMocks();
 
-      vi.mocked(apiPost).mockResolvedValueOnce({
+      mockApiPost.mockResolvedValueOnce({
         results: [
           { channel: 'telegram', success: true },
           { channel: 'discord', success: false, error: 'Webhook error' },
@@ -580,7 +582,7 @@ describe('NotificationsPage - Additional Coverage', () => {
       vi.useRealTimers();
       setupMocks();
 
-      vi.mocked(apiPost).mockRejectedValueOnce(new Error('Network failure'));
+      mockApiPost.mockRejectedValueOnce(new Error('Network failure'));
 
       render(<NotificationsPage />);
 
@@ -649,7 +651,7 @@ describe('NotificationsPage - Additional Coverage', () => {
       fireEvent.click(link);
 
       // Should switch to Settings tab and show Notification Configuration
-      vi.mocked(apiGet).mockImplementation((url: string) => {
+      mockApiGet.mockImplementation((url: string) => {
         if (url.includes('/notifications/status')) return Promise.resolve(disabledStatus);
         if (url.includes('/notifications/log')) return Promise.resolve(mockLogs);
         if (url === '/v1/admin/settings') return Promise.resolve({
@@ -673,7 +675,7 @@ describe('NotificationsPage - Additional Coverage', () => {
     it('shows error when fetchStatus fails', async () => {
       vi.useRealTimers();
 
-      vi.mocked(apiGet).mockImplementation((url: string) => {
+      mockApiGet.mockImplementation((url: string) => {
         if (url.includes('/notifications/status'))
           return Promise.reject(new Error('Network error'));
         if (url.includes('/notifications/log')) return Promise.resolve(mockLogs);
@@ -690,7 +692,7 @@ describe('NotificationsPage - Additional Coverage', () => {
     it('shows error when fetchLogs fails', async () => {
       vi.useRealTimers();
 
-      vi.mocked(apiGet).mockImplementation((url: string) => {
+      mockApiGet.mockImplementation((url: string) => {
         if (url.includes('/notifications/status')) return Promise.resolve(mockStatus);
         if (url.includes('/notifications/log'))
           return Promise.reject(new Error('Network error'));
@@ -713,7 +715,7 @@ describe('NotificationsPage - Additional Coverage', () => {
     it('renders Enabled toggle outside of Telegram FieldGroup', async () => {
       vi.useRealTimers();
 
-      vi.mocked(apiGet).mockImplementation((url: string) => {
+      mockApiGet.mockImplementation((url: string) => {
         if (url.includes('/notifications/status')) return Promise.resolve(mockStatus);
         if (url.includes('/notifications/log')) return Promise.resolve(mockLogs);
         if (url === '/v1/admin/settings') return Promise.resolve({
@@ -755,7 +757,7 @@ describe('NotificationsPage - Additional Coverage', () => {
     it('shows Settings tab with notification configuration', async () => {
       vi.useRealTimers();
 
-      vi.mocked(apiGet).mockImplementation((url: string) => {
+      mockApiGet.mockImplementation((url: string) => {
         if (url.includes('/notifications/status')) return Promise.resolve(mockStatus);
         if (url.includes('/notifications/log')) return Promise.resolve(mockLogs);
         if (url === '/v1/admin/settings') return Promise.resolve({
@@ -800,7 +802,7 @@ describe('NotificationsPage - Additional Coverage', () => {
     it('saves notification settings', async () => {
       vi.useRealTimers();
 
-      vi.mocked(apiGet).mockImplementation((url: string) => {
+      mockApiGet.mockImplementation((url: string) => {
         if (url.includes('/notifications/status')) return Promise.resolve(mockStatus);
         if (url.includes('/notifications/log')) return Promise.resolve(mockLogs);
         if (url === '/v1/admin/settings') return Promise.resolve({
@@ -829,7 +831,7 @@ describe('NotificationsPage - Additional Coverage', () => {
           locale: 'en',
         },
       };
-      vi.mocked(apiPut).mockResolvedValueOnce({ updated: 1, settings: settingsForPut });
+      mockApiPut.mockResolvedValueOnce({ updated: 1, settings: settingsForPut });
 
       render(<NotificationsPage />);
 
@@ -853,7 +855,7 @@ describe('NotificationsPage - Additional Coverage', () => {
       fireEvent.click(screen.getByText('Save'));
 
       await waitFor(() => {
-        expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/admin/settings', {
+        expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', {
           settings: expect.arrayContaining([
             expect.objectContaining({ key: 'notifications.telegram_chat_id', value: '99999' }),
           ]),
@@ -864,7 +866,7 @@ describe('NotificationsPage - Additional Coverage', () => {
     it('runs test notification from settings tab', async () => {
       vi.useRealTimers();
 
-      vi.mocked(apiGet).mockImplementation((url: string) => {
+      mockApiGet.mockImplementation((url: string) => {
         if (url.includes('/notifications/status')) return Promise.resolve(mockStatus);
         if (url.includes('/notifications/log')) return Promise.resolve(mockLogs);
         if (url === '/v1/admin/settings') return Promise.resolve({
@@ -874,7 +876,7 @@ describe('NotificationsPage - Additional Coverage', () => {
         return Promise.resolve({});
       });
 
-      vi.mocked(apiPost).mockResolvedValueOnce({
+      mockApiPost.mockResolvedValueOnce({
         results: [{ channel: 'telegram', success: true }],
       });
 
@@ -890,14 +892,14 @@ describe('NotificationsPage - Additional Coverage', () => {
       fireEvent.click(screen.getByText('Test Notification'));
 
       await waitFor(() => {
-        expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/admin/notifications/test', {});
+        expect(mockApiPost).toHaveBeenCalledWith('/v1/admin/notifications/test', {});
       });
     });
 
     it('shows error when settings fetch fails', async () => {
       vi.useRealTimers();
 
-      vi.mocked(apiGet).mockImplementation((url: string) => {
+      mockApiGet.mockImplementation((url: string) => {
         if (url.includes('/notifications/status')) return Promise.resolve(mockStatus);
         if (url.includes('/notifications/log')) return Promise.resolve(mockLogs);
         if (url === '/v1/admin/settings')
@@ -918,7 +920,7 @@ describe('NotificationsPage - Additional Coverage', () => {
     it('discards notification settings changes', async () => {
       vi.useRealTimers();
 
-      vi.mocked(apiGet).mockImplementation((url: string) => {
+      mockApiGet.mockImplementation((url: string) => {
         if (url.includes('/notifications/status')) return Promise.resolve(mockStatus);
         if (url.includes('/notifications/log')) return Promise.resolve(mockLogs);
         if (url === '/v1/admin/settings') return Promise.resolve({
@@ -971,13 +973,13 @@ describe('NotificationsPage - Additional Coverage', () => {
         },
       };
 
-      vi.mocked(apiGet).mockImplementation((url: string) => {
+      mockApiGet.mockImplementation((url: string) => {
         if (url.includes('/notifications/status')) return Promise.resolve(mockStatus);
         if (url.includes('/notifications/log')) return Promise.resolve(mockLogs);
         if (url === '/v1/admin/settings') return Promise.resolve(mockSettingsData);
         return Promise.resolve({});
       });
-      vi.mocked(apiPut).mockResolvedValueOnce({ updated: 1, settings: mockSettingsData });
+      mockApiPut.mockResolvedValueOnce({ updated: 1, settings: mockSettingsData });
 
       render(<NotificationsPage />);
 
@@ -1005,7 +1007,7 @@ describe('NotificationsPage - Additional Coverage', () => {
       fireEvent.click(screen.getByText('Save'));
 
       await waitFor(() => {
-        expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/admin/settings', {
+        expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', {
           settings: expect.arrayContaining([
             expect.objectContaining({ key: 'monitoring.cooldown_hours', value: '12' }),
           ]),
@@ -1034,7 +1036,7 @@ describe('NotificationsPage - Additional Coverage', () => {
     };
 
     function setupSettingsMocks() {
-      vi.mocked(apiGet).mockImplementation((url: string) => {
+      mockApiGet.mockImplementation((url: string) => {
         if (url.includes('/notifications/status')) return Promise.resolve(mockStatus);
         if (url.includes('/notifications/log')) return Promise.resolve(mockLogs);
         if (url === '/v1/admin/settings') return Promise.resolve(mockSettingsForNtfy);
@@ -1135,7 +1137,7 @@ describe('NotificationsPage - Additional Coverage', () => {
       vi.useRealTimers();
 
       // Never resolve so we stay in loading state
-      vi.mocked(apiGet).mockImplementation(() => new Promise(() => {}));
+      mockApiGet.mockImplementation(() => new Promise(() => {}));
 
       const { container } = render(<NotificationsPage />);
 

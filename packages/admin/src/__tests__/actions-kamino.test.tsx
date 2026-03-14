@@ -5,7 +5,7 @@
  * - Kamino card renders with correct info
  * - Toggle enable/disable works
  * - Advanced settings section shows when enabled
- * - Advanced settings save calls apiPut with correct key
+ * - Advanced settings save calls mockApiPut with correct key
  * - Card shows Inactive when disabled
  *
  * @see KINT-08, KINT-09
@@ -13,24 +13,27 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/preact';
 
-vi.mock('../api/client', () => ({
-  apiGet: vi.fn(),
-  apiPost: vi.fn(),
-  apiPut: vi.fn(),
-  apiDelete: vi.fn(),
-  ApiError: class ApiError extends Error {
-    status: number;
-    code: string;
-    serverMessage: string;
-    constructor(status: number, code: string, msg: string) {
-      super(`[${status}] ${code}: ${msg}`);
-      this.name = 'ApiError';
-      this.status = status;
-      this.code = code;
-      this.serverMessage = msg;
-    }
+
+const mockApiGet = vi.fn();
+const mockApiPost = vi.fn();
+const mockApiPut = vi.fn();
+const mockApiDelete = vi.fn();
+const mockApiPatch = vi.fn();
+
+// Mock declarations moved to top-level const
+
+vi.mock('../api/typed-client', () => ({
+  api: {
+    GET: (...args: unknown[]) => mockApiGet(...args),
+    POST: (...args: unknown[]) => mockApiPost(...args),
+    PUT: (...args: unknown[]) => mockApiPut(...args),
+    DELETE: (...args: unknown[]) => mockApiDelete(...args),
+    PATCH: (...args: unknown[]) => mockApiPatch(...args),
   },
-  apiCall: vi.fn(),
+  ApiError: class ApiError extends Error {
+    status: number; code: string; serverMessage: string;
+    constructor(s: number, c: string, m: string) { super(`[${s}] ${c}: ${m}`); this.name = 'ApiError'; this.status = s; this.code = c; this.serverMessage = m; }
+  },
 }));
 
 vi.mock('../components/toast', () => ({
@@ -63,7 +66,6 @@ vi.mock('../utils/dirty-guard', () => ({
   hasDirty: { value: false },
 }));
 
-import { apiGet, apiPut } from '../api/client';
 import ActionsPage from '../pages/actions';
 
 // ---------------------------------------------------------------------------
@@ -104,7 +106,7 @@ function mockApiCalls(
   apiKeysData: { keys: unknown[] } = mockEmptyApiKeys,
   providersData: { providers: unknown[] } = mockEmptyProviders,
 ) {
-  vi.mocked(apiGet).mockImplementation(async (path: string) => {
+  mockApiGet.mockImplementation(async (path: string) => {
     if (path === '/v1/admin/settings') return settingsData;
     if (path === '/v1/admin/api-keys') return apiKeysData;
     if (path === '/v1/actions/providers') return providersData;
@@ -132,7 +134,7 @@ describe('ActionsPage - Kamino Lending Card', () => {
     expect(screen.getByText(/Solana lending protocol/)).toBeTruthy();
   });
 
-  it('toggle Kamino calls apiPut with actions.kamino_enabled', async () => {
+  it('toggle Kamino calls mockApiPut with actions.kamino_enabled', async () => {
     mockApiCalls(mockSettingsAllDisabled);
     render(<ActionsPage />);
 
@@ -146,7 +148,7 @@ describe('ActionsPage - Kamino Lending Card', () => {
     expect(checkbox).toBeTruthy();
     expect(checkbox.checked).toBe(false);
 
-    vi.mocked(apiPut).mockResolvedValueOnce({
+    mockApiPut.mockResolvedValueOnce({
       updated: 1,
       settings: mockSettingsKaminoEnabled,
     });
@@ -154,7 +156,7 @@ describe('ActionsPage - Kamino Lending Card', () => {
     fireEvent.change(checkbox, { target: { checked: true } });
 
     await waitFor(() => {
-      expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/admin/settings', {
+      expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', {
         settings: [{ key: 'actions.kamino_enabled', value: 'true' }],
       });
     });
@@ -177,7 +179,7 @@ describe('ActionsPage - Kamino Lending Card', () => {
     expect(screen.getByText('HF Warning Threshold')).toBeTruthy();
   });
 
-  it('saving Kamino advanced setting calls apiPut with correct key', async () => {
+  it('saving Kamino advanced setting calls mockApiPut with correct key', async () => {
     mockApiCalls(mockSettingsKaminoEnabled);
     render(<ActionsPage />);
 
@@ -191,7 +193,7 @@ describe('ActionsPage - Kamino Lending Card', () => {
     ) as HTMLInputElement;
     expect(marketInput).toBeTruthy();
 
-    vi.mocked(apiPut).mockResolvedValueOnce({
+    mockApiPut.mockResolvedValueOnce({
       updated: 1,
       settings: mockSettingsKaminoEnabled,
     });
@@ -204,7 +206,7 @@ describe('ActionsPage - Kamino Lending Card', () => {
     fireEvent.blur(wrapper);
 
     await waitFor(() => {
-      expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/admin/settings', {
+      expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', {
         settings: [{ key: 'actions.kamino_market', value: '7u3HeHxYDLhn' }],
       });
     });

@@ -14,24 +14,27 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/preact';
 
-vi.mock('../api/client', () => ({
-  apiGet: vi.fn(),
-  apiPost: vi.fn(),
-  apiPut: vi.fn(),
-  apiDelete: vi.fn(),
-  ApiError: class ApiError extends Error {
-    status: number;
-    code: string;
-    serverMessage: string;
-    constructor(status: number, code: string, msg: string) {
-      super(`[${status}] ${code}: ${msg}`);
-      this.name = 'ApiError';
-      this.status = status;
-      this.code = code;
-      this.serverMessage = msg;
-    }
+
+const mockApiGet = vi.fn();
+const mockApiPost = vi.fn();
+const mockApiPut = vi.fn();
+const mockApiDelete = vi.fn();
+const mockApiPatch = vi.fn();
+
+// Mock declarations moved to top-level const
+
+vi.mock('../api/typed-client', () => ({
+  api: {
+    GET: (...args: unknown[]) => mockApiGet(...args),
+    POST: (...args: unknown[]) => mockApiPost(...args),
+    PUT: (...args: unknown[]) => mockApiPut(...args),
+    DELETE: (...args: unknown[]) => mockApiDelete(...args),
+    PATCH: (...args: unknown[]) => mockApiPatch(...args),
   },
-  apiCall: vi.fn(),
+  ApiError: class ApiError extends Error {
+    status: number; code: string; serverMessage: string;
+    constructor(s: number, c: string, m: string) { super(`[${s}] ${c}: ${m}`); this.name = 'ApiError'; this.status = s; this.code = c; this.serverMessage = m; }
+  },
 }));
 
 vi.mock('../components/toast', () => ({
@@ -59,7 +62,6 @@ vi.mock('../utils/dirty-guard', () => ({
   hasDirty: { value: false },
 }));
 
-import { apiGet, apiPost, apiPut } from '../api/client';
 import Erc8004Page from '../pages/erc8004';
 
 // ---------------------------------------------------------------------------
@@ -125,8 +127,7 @@ describe('Erc8004Page', () => {
   });
 
   it('shows toggle and disabled message when feature gate is disabled', async () => {
-    const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
-    mockApiGet
+        mockApiGet
       .mockResolvedValueOnce(mockSettingsDisabled)  // settings
       .mockResolvedValueOnce({ providers: [] })  // providers
       .mockResolvedValueOnce({ items: [] })  // wallets (always loaded now)
@@ -143,8 +144,7 @@ describe('Erc8004Page', () => {
   });
 
   it('shows toggle in enabled state with table headers', async () => {
-    const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
-    mockApiGet
+        mockApiGet
       .mockResolvedValueOnce(mockSettingsEnabled) // settings
       .mockResolvedValueOnce({ providers: [] }) // providers
       .mockResolvedValueOnce({ items: mockWallets }) // wallets
@@ -163,8 +163,7 @@ describe('Erc8004Page', () => {
   });
 
   it('hides management tabs when disabled', async () => {
-    const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
-    mockApiGet
+        mockApiGet
       .mockResolvedValueOnce(mockSettingsDisabled) // settings
       .mockResolvedValueOnce({ providers: [] }) // providers
       .mockResolvedValueOnce({ items: mockWallets }) // wallets
@@ -183,8 +182,7 @@ describe('Erc8004Page', () => {
   });
 
   it('shows all tabs when enabled', async () => {
-    const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
-    mockApiGet
+        mockApiGet
       .mockResolvedValueOnce(mockSettingsEnabled) // settings
       .mockResolvedValueOnce({ providers: [] }) // providers
       .mockResolvedValueOnce({ items: mockWallets }) // wallets
@@ -200,8 +198,7 @@ describe('Erc8004Page', () => {
   });
 
   it('opens and closes Register Agent modal', async () => {
-    const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
-    mockApiGet
+        mockApiGet
       .mockResolvedValueOnce(mockSettingsEnabled)
       .mockResolvedValueOnce({ providers: [] }) // providers
       .mockResolvedValueOnce({ items: mockWallets })
@@ -228,8 +225,7 @@ describe('Erc8004Page', () => {
   });
 
   it('renders Registration File tab with JSON viewer', async () => {
-    const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
-    mockApiGet
+        mockApiGet
       .mockResolvedValueOnce(mockSettingsEnabled)
       .mockResolvedValueOnce({ providers: [] }) // providers
       .mockResolvedValueOnce({ items: mockWallets })
@@ -252,9 +248,7 @@ describe('Erc8004Page', () => {
   });
 
   it('calls WC pair API when Link Wallet is clicked', async () => {
-    const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
-    const mockApiPost = apiPost as ReturnType<typeof vi.fn>;
-
+        
     mockApiGet
       .mockResolvedValueOnce(mockSettingsEnabled)
       .mockResolvedValueOnce({ providers: [] }) // providers
@@ -277,8 +271,7 @@ describe('Erc8004Page', () => {
   });
 
   it('shows loading state initially', () => {
-    const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
-    mockApiGet.mockReturnValueOnce(new Promise(() => {})); // Never resolves
+        mockApiGet.mockReturnValueOnce(new Promise(() => {})); // Never resolves
 
     render(<Erc8004Page />);
 
@@ -286,9 +279,7 @@ describe('Erc8004Page', () => {
   });
 
   it('calls PUT settings API when toggle is clicked', async () => {
-    const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
-    const mockApiPut = apiPut as ReturnType<typeof vi.fn>;
-
+        
     mockApiGet
       .mockResolvedValueOnce(mockSettingsDisabled) // initial settings
       .mockResolvedValueOnce({ providers: [] }) // providers
@@ -318,8 +309,7 @@ describe('Erc8004Page', () => {
 
   describe('Registered Actions table (Phase 331)', () => {
     it('renders Registered Actions when erc8004_agent provider has actions', async () => {
-      const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
-      mockApiGet
+            mockApiGet
         .mockResolvedValueOnce(mockSettingsEnabled) // settings
         .mockResolvedValueOnce(mockProvidersWithErc8004) // providers
         .mockResolvedValueOnce({ items: mockWallets }) // wallets
@@ -335,8 +325,7 @@ describe('Erc8004Page', () => {
     });
 
     it('shows Description column with action descriptions', async () => {
-      const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
-      mockApiGet
+            mockApiGet
         .mockResolvedValueOnce(mockSettingsEnabled)
         .mockResolvedValueOnce(mockProvidersWithErc8004)
         .mockResolvedValueOnce({ items: mockWallets })
@@ -351,8 +340,7 @@ describe('Erc8004Page', () => {
     });
 
     it('tier dropdown is disabled when feature is disabled', async () => {
-      const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
-      mockApiGet
+            mockApiGet
         .mockResolvedValueOnce(mockSettingsDisabled)
         .mockResolvedValueOnce(mockProvidersWithErc8004)
         .mockResolvedValueOnce({ items: mockWallets })
@@ -372,8 +360,7 @@ describe('Erc8004Page', () => {
     });
 
     it('tier dropdown is enabled when feature is enabled', async () => {
-      const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
-      mockApiGet
+            mockApiGet
         .mockResolvedValueOnce(mockSettingsEnabled)
         .mockResolvedValueOnce(mockProvidersWithErc8004)
         .mockResolvedValueOnce({ items: mockWallets })
@@ -393,9 +380,7 @@ describe('Erc8004Page', () => {
     });
 
     it('dropdown change fires PUT with correct tier key', async () => {
-      const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
-      const mockApiPut = apiPut as ReturnType<typeof vi.fn>;
-
+            
       mockApiGet
         .mockResolvedValueOnce(mockSettingsEnabled)
         .mockResolvedValueOnce(mockProvidersWithErc8004)

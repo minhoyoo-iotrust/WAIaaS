@@ -11,24 +11,27 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/preact';
 
-vi.mock('../api/client', () => ({
-  apiGet: vi.fn(),
-  apiPost: vi.fn(),
-  apiPut: vi.fn(),
-  apiDelete: vi.fn(),
-  ApiError: class ApiError extends Error {
-    status: number;
-    code: string;
-    serverMessage: string;
-    constructor(status: number, code: string, msg: string) {
-      super(`[${status}] ${code}: ${msg}`);
-      this.name = 'ApiError';
-      this.status = status;
-      this.code = code;
-      this.serverMessage = msg;
-    }
+
+const mockApiGet = vi.fn();
+const mockApiPost = vi.fn();
+const mockApiPut = vi.fn();
+const mockApiDelete = vi.fn();
+const mockApiPatch = vi.fn();
+
+// Mock declarations moved to top-level const
+
+vi.mock('../api/typed-client', () => ({
+  api: {
+    GET: (...args: unknown[]) => mockApiGet(...args),
+    POST: (...args: unknown[]) => mockApiPost(...args),
+    PUT: (...args: unknown[]) => mockApiPut(...args),
+    DELETE: (...args: unknown[]) => mockApiDelete(...args),
+    PATCH: (...args: unknown[]) => mockApiPatch(...args),
   },
-  apiCall: vi.fn(),
+  ApiError: class ApiError extends Error {
+    status: number; code: string; serverMessage: string;
+    constructor(s: number, c: string, m: string) { super(`[${s}] ${c}: ${m}`); this.name = 'ApiError'; this.status = s; this.code = c; this.serverMessage = m; }
+  },
 }));
 
 vi.mock('../components/toast', () => ({
@@ -56,7 +59,6 @@ vi.mock('../utils/dirty-guard', () => ({
   hasDirty: { value: false },
 }));
 
-import { apiGet } from '../api/client';
 import Erc8004Page from '../pages/erc8004';
 
 // ---------------------------------------------------------------------------
@@ -114,8 +116,7 @@ describe('Erc8004Page Reputation tab', () => {
   });
 
   it('renders reputation score on Reputation tab', async () => {
-    const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
-    mockApiGet
+        mockApiGet
       .mockResolvedValueOnce(mockSettingsEnabled)
       .mockResolvedValueOnce(mockProvidersResponse)
       .mockResolvedValueOnce({ items: mockWallets })
@@ -138,8 +139,7 @@ describe('Erc8004Page Reputation tab', () => {
   });
 
   it('external agent lookup calls reputation API', async () => {
-    const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
-    mockApiGet
+        mockApiGet
       .mockResolvedValueOnce(mockSettingsEnabled)
       .mockResolvedValueOnce(mockProvidersResponse)
       .mockResolvedValueOnce({ items: mockWallets })
@@ -174,8 +174,7 @@ describe('Erc8004Page Reputation tab', () => {
   });
 
   it('shows tag filter fields', async () => {
-    const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
-    mockApiGet
+        mockApiGet
       .mockResolvedValueOnce(mockSettingsEnabled)
       .mockResolvedValueOnce(mockProvidersResponse)
       .mockResolvedValueOnce({ items: mockWallets })
@@ -197,8 +196,7 @@ describe('Erc8004Page Reputation tab', () => {
   });
 
   it('renders lookup result when Query returns data', async () => {
-    const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
-    mockApiGet
+        mockApiGet
       .mockResolvedValueOnce(mockSettingsEnabled)
       .mockResolvedValueOnce(mockProvidersResponse)
       .mockResolvedValueOnce({ items: mockWallets })

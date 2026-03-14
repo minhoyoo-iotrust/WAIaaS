@@ -1,25 +1,27 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/preact';
 
-vi.mock('../api/client', () => ({
-  apiGet: vi.fn(),
-  apiPost: vi.fn(),
-  apiPut: vi.fn(),
-  apiPatch: vi.fn(),
-  apiDelete: vi.fn(),
-  ApiError: class ApiError extends Error {
-    status: number;
-    code: string;
-    serverMessage: string;
-    constructor(status: number, code: string, msg: string) {
-      super(`[${status}] ${code}: ${msg}`);
-      this.name = 'ApiError';
-      this.status = status;
-      this.code = code;
-      this.serverMessage = msg;
-    }
+
+const mockApiGet = vi.fn();
+const mockApiPost = vi.fn();
+const mockApiPut = vi.fn();
+const mockApiDelete = vi.fn();
+const mockApiPatch = vi.fn();
+
+// Mock declarations moved to top-level const
+
+vi.mock('../api/typed-client', () => ({
+  api: {
+    GET: (...args: unknown[]) => mockApiGet(...args),
+    POST: (...args: unknown[]) => mockApiPost(...args),
+    PUT: (...args: unknown[]) => mockApiPut(...args),
+    DELETE: (...args: unknown[]) => mockApiDelete(...args),
+    PATCH: (...args: unknown[]) => mockApiPatch(...args),
   },
-  apiCall: vi.fn(),
+  ApiError: class ApiError extends Error {
+    status: number; code: string; serverMessage: string;
+    constructor(s: number, c: string, m: string) { super(`[${s}] ${c}: ${m}`); this.name = 'ApiError'; this.status = s; this.code = c; this.serverMessage = m; }
+  },
 }));
 
 vi.mock('../components/toast', () => ({
@@ -50,7 +52,6 @@ vi.mock('../utils/dirty-guard', () => ({
   hasDirty: { value: false },
 }));
 
-import { apiGet, apiPatch, ApiError } from '../api/client';
 import TransactionsPage from '../pages/transactions';
 
 // ---------------------------------------------------------------------------
@@ -137,7 +138,7 @@ const mockSettings = {
 // ---------------------------------------------------------------------------
 
 function setupMocks(txResponse = mockTxResponse, incomingResponse = mockIncomingResponse) {
-  vi.mocked(apiGet).mockImplementation((url: string) => {
+  mockApiGet.mockImplementation((url: string) => {
     if (url.includes('/v1/admin/transactions')) return Promise.resolve(txResponse);
     if (url.includes('/v1/admin/incoming')) return Promise.resolve(incomingResponse);
     if (url.includes('/v1/wallets')) return Promise.resolve(mockWallets);
@@ -240,7 +241,7 @@ describe('TransactionsPage', () => {
     render(<TransactionsPage />);
     await waitForTableData();
 
-    vi.mocked(apiGet).mockClear();
+    mockApiGet.mockClear();
     setupMocks();
 
     // Find the Direction select (first select)
@@ -250,7 +251,7 @@ describe('TransactionsPage', () => {
     fireEvent.change(directionSelect, { target: { value: 'outgoing' } });
 
     await waitFor(() => {
-      const calls = vi.mocked(apiGet).mock.calls;
+      const calls = mockApiGet.mock.calls;
       const txCalls = calls.filter((c) => (c[0] as string).includes('/v1/admin/transactions'));
       const inCalls = calls.filter((c) => (c[0] as string).includes('/v1/admin/incoming'));
       expect(txCalls.length).toBeGreaterThanOrEqual(1);
@@ -262,7 +263,7 @@ describe('TransactionsPage', () => {
     render(<TransactionsPage />);
     await waitForTableData();
 
-    vi.mocked(apiGet).mockClear();
+    mockApiGet.mockClear();
     setupMocks();
 
     const selects = screen.getAllByRole('combobox');
@@ -271,7 +272,7 @@ describe('TransactionsPage', () => {
     fireEvent.change(directionSelect, { target: { value: 'incoming' } });
 
     await waitFor(() => {
-      const calls = vi.mocked(apiGet).mock.calls;
+      const calls = mockApiGet.mock.calls;
       const txCalls = calls.filter((c) => (c[0] as string).includes('/v1/admin/transactions'));
       const inCalls = calls.filter((c) => (c[0] as string).includes('/v1/admin/incoming'));
       expect(txCalls.length).toBe(0);
@@ -283,7 +284,7 @@ describe('TransactionsPage', () => {
     render(<TransactionsPage />);
 
     await waitFor(() => {
-      const calls = vi.mocked(apiGet).mock.calls;
+      const calls = mockApiGet.mock.calls;
       const txCalls = calls.filter((c) => (c[0] as string).includes('/v1/admin/transactions'));
       const inCalls = calls.filter((c) => (c[0] as string).includes('/v1/admin/incoming'));
       expect(txCalls.length).toBeGreaterThanOrEqual(1);
@@ -346,7 +347,7 @@ describe('TransactionsPage', () => {
   // --- Loading / Empty / Error ---
 
   it('shows loading state', async () => {
-    vi.mocked(apiGet).mockImplementation((url: string) => {
+    mockApiGet.mockImplementation((url: string) => {
       if (url.includes('/v1/admin/transactions') || url.includes('/v1/admin/incoming')) {
         return new Promise((resolve) =>
           setTimeout(() => resolve(mockTxResponse), 500),
@@ -375,7 +376,7 @@ describe('TransactionsPage', () => {
   });
 
   it('shows error state with retry', async () => {
-    vi.mocked(apiGet).mockImplementation((url: string) => {
+    mockApiGet.mockImplementation((url: string) => {
       if (url.includes('/v1/admin/transactions') || url.includes('/v1/admin/incoming')) {
         return Promise.reject(new ApiError(0, 'NETWORK_ERROR', 'Cannot connect'));
       }
@@ -419,7 +420,7 @@ describe('TransactionsPage', () => {
     fireEvent.click(nextBtn);
 
     await waitFor(() => {
-      const calls = vi.mocked(apiGet).mock.calls;
+      const calls = mockApiGet.mock.calls;
       const txCalls = calls.filter((c) => (c[0] as string).includes('/v1/admin/transactions'));
       const lastCall = txCalls[txCalls.length - 1]?.[0] as string;
       expect(lastCall).toContain('offset=20');
@@ -450,7 +451,7 @@ describe('TransactionsPage', () => {
     fireEvent.change(typeSelect!, { target: { value: 'APPROVE' } });
 
     await waitFor(() => {
-      const calls = vi.mocked(apiGet).mock.calls;
+      const calls = mockApiGet.mock.calls;
       const txCalls = calls.filter((c) => (c[0] as string).includes('/v1/admin/transactions'));
       const lastCall = txCalls[txCalls.length - 1]?.[0] as string;
       expect(lastCall).toContain('type=APPROVE');
@@ -495,7 +496,7 @@ describe('TransactionsPage', () => {
   });
 
   it('toggles wallet monitoring on click', async () => {
-    vi.mocked(apiPatch).mockResolvedValue({ id: 'wallet-uuid-2', monitorIncoming: true });
+    mockApiPatch.mockResolvedValue({ id: 'wallet-uuid-2', monitorIncoming: true });
 
     render(<TransactionsPage />);
     await waitForTableData();
@@ -510,7 +511,7 @@ describe('TransactionsPage', () => {
     fireEvent.click(offButtons[0]!);
 
     await waitFor(() => {
-      expect(vi.mocked(apiPatch)).toHaveBeenCalledWith(
+      expect(mockApiPatch).toHaveBeenCalledWith(
         '/v1/wallets/wallet-uuid-2',
         { monitorIncoming: true },
       );
