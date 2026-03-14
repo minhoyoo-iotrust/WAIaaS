@@ -13,7 +13,7 @@
  * Risk levels: borrow/withdraw = high (APPROVAL), supply/repay = medium (DELAY).
  */
 import { ChainError } from '@waiaas/core';
-import { parseTokenAmount } from '../../common/amount-parser.js';
+import { migrateAmount } from '../../common/migrate-amount.js';
 import type {
   ILendingProvider,
   ActionProviderMetadata,
@@ -158,7 +158,7 @@ export class AaveV3LendingProvider implements ILendingProvider, IPositionProvide
     const input = AaveSupplyInputSchema.parse(params);
     const network = (input.network || 'ethereum-mainnet') as NetworkType;
     const addresses = getAaveAddresses(network);
-    const amount = parseTokenAmount(input.amount, 18);
+    const amount = migrateAmount(input.amount, 18);
 
     const approveReq: ContractCallRequest = {
       type: 'CONTRACT_CALL',
@@ -190,7 +190,7 @@ export class AaveV3LendingProvider implements ILendingProvider, IPositionProvide
     const input = AaveBorrowInputSchema.parse(params);
     const network = (input.network || 'ethereum-mainnet') as NetworkType;
     const addresses = getAaveAddresses(network);
-    const amount = parseTokenAmount(input.amount, 18);
+    const amount = migrateAmount(input.amount, 18);
 
     // AAVE-09: HF simulation check if rpcCaller available
     if (this.rpcCaller) {
@@ -217,7 +217,7 @@ export class AaveV3LendingProvider implements ILendingProvider, IPositionProvide
     const input = AaveRepayInputSchema.parse(params);
     const network = (input.network || 'ethereum-mainnet') as NetworkType;
     const addresses = getAaveAddresses(network);
-    const amount = input.amount === 'max' ? MAX_UINT256 : parseTokenAmount(input.amount, 18);
+    const amount = input.amount === 'max' ? MAX_UINT256 : migrateAmount(input.amount, 18);
 
     const approveReq: ContractCallRequest = {
       type: 'CONTRACT_CALL',
@@ -249,7 +249,7 @@ export class AaveV3LendingProvider implements ILendingProvider, IPositionProvide
     const input = AaveWithdrawInputSchema.parse(params);
     const network = (input.network || 'ethereum-mainnet') as NetworkType;
     const addresses = getAaveAddresses(network);
-    const amount = input.amount === 'max' ? MAX_UINT256 : parseTokenAmount(input.amount, 18);
+    const amount = input.amount === 'max' ? MAX_UINT256 : migrateAmount(input.amount, 18);
 
     // AAVE-09: HF simulation for non-max withdrawals
     if (this.rpcCaller && amount !== MAX_UINT256) {
