@@ -11,11 +11,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/preact';
 
-vi.mock('../api/client', () => ({
-  apiGet: vi.fn(),
-  apiPost: vi.fn(),
-  apiPut: vi.fn(),
-  apiDelete: vi.fn(),
+vi.mock('../api/typed-client', () => ({
+  api: {
+    GET: vi.fn().mockResolvedValue({ data: {} }),
+    POST: vi.fn().mockResolvedValue({ data: {} }),
+    PUT: vi.fn().mockResolvedValue({ data: {} }),
+    DELETE: vi.fn().mockResolvedValue({ data: {} }),
+  },
   ApiError: class ApiError extends Error {
     status: number;
     code: string;
@@ -28,7 +30,6 @@ vi.mock('../api/client', () => ({
       this.serverMessage = msg;
     }
   },
-  apiCall: vi.fn(),
 }));
 
 vi.mock('../components/toast', () => ({
@@ -83,7 +84,7 @@ vi.mock('../components/settings-search', () => {
   };
 });
 
-import { apiGet, apiPost, apiPut, apiDelete, ApiError } from '../api/client';
+import { api, ApiError } from '../api/typed-client';
 import { showToast } from '../components/toast';
 import { currentPath } from '../components/layout';
 import WalletsPage from '../pages/wallets';
@@ -199,13 +200,15 @@ const mockMcpResult = {
 // ---------------------------------------------------------------------------
 
 function mockDetailApiCalls(wallet = mockWalletDetail) {
-  vi.mocked(apiGet).mockImplementation(async (path: string) => {
-    if (path === `/v1/wallets/${wallet.id}`) return wallet;
-    if (path === `/v1/wallets/${wallet.id}/networks`) return mockNetworks;
-    if (path === `/v1/admin/wallets/${wallet.id}/balance`) return mockBalance;
-    if (path.startsWith(`/v1/admin/wallets/${wallet.id}/transactions`)) return mockTransactions;
-    if (path === `/v1/wallets/${wallet.id}/wc/session`) throw new Error('No session');
-    return {};
+  vi.mocked(api.GET).mockImplementation(async (path: string) => {
+    if (path === '/v1/wallets/{id}') return { data: wallet };
+    if (path.includes('/networks')) return { data: mockNetworks };
+    if (path.includes('/balance')) return { data: mockBalance };
+    if (path.includes('/transactions')) return { data: mockTransactions };
+    if (path.includes('/wc/session')) throw new Error('No session');
+    if (path.includes('/staking')) return { data: { positions: [] } };
+    if (path.includes('/settings')) return { data: {} };
+    return { data: {} };
   });
 }
 
@@ -263,9 +266,9 @@ describe('WalletDetailView rendering', () => {
     await renderAndWaitForDetail();
 
     await waitFor(() => {
-      expect(screen.getByText('Devnet')).toBeTruthy();
+      expect(screen.getAllByText('solana-devnet').length).toBeGreaterThanOrEqual(1);
     });
-    expect(screen.getByText('Testnet')).toBeTruthy();
+    expect(screen.getAllByText('solana-testnet').length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders transactions with status badges', async () => {
@@ -299,7 +302,7 @@ describe('WalletDetailView: handleSaveName', () => {
     mockDetailApiCalls();
     await renderAndWaitForDetail();
 
-    vi.mocked(apiPut).mockResolvedValueOnce({ ...mockWalletDetail, name: 'renamed-bot' });
+    vi.mocked(api.PUT).mockResolvedValueOnce({ data: { ...mockWalletDetail, name: 'renamed-bot' } });
 
     // Click edit (pencil) button
     const editBtn = screen.getByTitle('Edit name');
@@ -313,9 +316,9 @@ describe('WalletDetailView: handleSaveName', () => {
     fireEvent.click(screen.getByText('Save'));
 
     await waitFor(() => {
-      expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/wallets/test-wallet-1', {
-        name: 'renamed-bot',
-      });
+      expect(vi.mocked(api.PUT)).toHaveBeenCalledWith('/v1/wallets/{id}', expect.objectContaining({
+        body: { name: 'renamed-bot' },
+      }));
     });
 
     await waitFor(() => {
@@ -327,7 +330,7 @@ describe('WalletDetailView: handleSaveName', () => {
     mockDetailApiCalls();
     await renderAndWaitForDetail();
 
-    vi.mocked(apiPut).mockRejectedValueOnce(new ApiError(400, 'INVALID_NAME', 'Bad name'));
+    vi.mocked(api.PUT).mockRejectedValueOnce(new ApiError(400, 'INVALID_NAME', 'Bad name'));
 
     const editBtn = screen.getByTitle('Edit name');
     fireEvent.click(editBtn);
@@ -366,7 +369,7 @@ describe('WalletDetailView: handleDelete', () => {
     mockDetailApiCalls();
     await renderAndWaitForDetail();
 
-    vi.mocked(apiDelete).mockResolvedValueOnce(undefined);
+    vi.mocked(api.DELETE).mockResolvedValueOnce({ data: undefined });
 
     fireEvent.click(screen.getByText('Terminate Wallet'));
 
@@ -377,7 +380,7 @@ describe('WalletDetailView: handleDelete', () => {
     fireEvent.click(screen.getByText('Terminate'));
 
     await waitFor(() => {
-      expect(vi.mocked(apiDelete)).toHaveBeenCalledWith('/v1/wallets/test-wallet-1');
+      expect(vi.mocked(api.DELETE)).toHaveBeenCalledWith('/v1/wallets/{id}', expect.objectContaining({}));
     });
 
     await waitFor(() => {
@@ -389,7 +392,7 @@ describe('WalletDetailView: handleDelete', () => {
     mockDetailApiCalls();
     await renderAndWaitForDetail();
 
-    vi.mocked(apiDelete).mockRejectedValueOnce(new ApiError(500, 'DELETE_FAIL', 'Failed'));
+    vi.mocked(api.DELETE).mockRejectedValueOnce(new ApiError(500, 'DELETE_FAIL', 'Failed'));
 
     fireEvent.click(screen.getByText('Terminate Wallet'));
     await waitFor(() => {
@@ -413,14 +416,14 @@ describe('WalletDetailView: handleMcpSetup', () => {
 
     await switchTab('MCP');
 
-    vi.mocked(apiPost).mockResolvedValueOnce(mockMcpResult);
+    vi.mocked(api.POST).mockResolvedValueOnce({ data: mockMcpResult });
 
     fireEvent.click(screen.getByText('Setup MCP'));
 
     await waitFor(() => {
-      expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/mcp/tokens', {
-        walletId: 'test-wallet-1',
-      });
+      expect(vi.mocked(api.POST)).toHaveBeenCalledWith('/v1/mcp/tokens', expect.objectContaining({
+        body: { walletId: 'test-wallet-1' },
+      }));
     });
 
     await waitFor(() => {
@@ -440,7 +443,7 @@ describe('WalletDetailView: handleMcpSetup', () => {
 
     await switchTab('MCP');
 
-    vi.mocked(apiPost).mockRejectedValueOnce(new ApiError(500, 'MCP_ERROR', 'Failed'));
+    vi.mocked(api.POST).mockRejectedValueOnce(new ApiError(500, 'MCP_ERROR', 'Failed'));
 
     fireEvent.click(screen.getByText('Setup MCP'));
 
@@ -455,7 +458,7 @@ describe('WalletDetailView: handleMcpSetup', () => {
 
     await switchTab('MCP');
 
-    vi.mocked(apiPost).mockResolvedValueOnce(mockMcpResult);
+    vi.mocked(api.POST).mockResolvedValueOnce({ data: mockMcpResult });
     fireEvent.click(screen.getByText('Setup MCP'));
 
     await waitFor(() => {
@@ -484,10 +487,10 @@ describe('WalletDetailView: owner address', () => {
 
     await switchTab('Owner');
 
-    vi.mocked(apiPut).mockResolvedValueOnce({
+    vi.mocked(api.PUT).mockResolvedValueOnce({ data: {
       ownerAddress: '0xNEW_OWNER_ADDRESS',
       ownerState: 'GRACE',
-    });
+    } });
 
     // Click Set Owner Address
     fireEvent.click(screen.getByText('Set Owner Address'));
@@ -501,9 +504,11 @@ describe('WalletDetailView: owner address', () => {
     fireEvent.click(saveButtons[saveButtons.length - 1]!);
 
     await waitFor(() => {
-      expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/wallets/test-wallet-1/owner', {
-        owner_address: '0xNEW_OWNER_ADDRESS',
-      });
+      expect(vi.mocked(api.PUT)).toHaveBeenCalledWith('/v1/wallets/{id}/owner', expect.objectContaining({
+        body: expect.objectContaining({
+          owner_address: '0xNEW_OWNER_ADDRESS',
+        }),
+      }));
     });
 
     await waitFor(() => {
@@ -536,7 +541,7 @@ describe('WalletDetailView: owner address', () => {
 
     await switchTab('Owner');
 
-    vi.mocked(apiPut).mockRejectedValueOnce(new ApiError(400, 'INVALID_ADDRESS', 'Bad'));
+    vi.mocked(api.PUT).mockRejectedValueOnce(new ApiError(400, 'INVALID_ADDRESS', 'Bad'));
 
     fireEvent.click(screen.getByText('Set Owner Address'));
 
@@ -615,11 +620,11 @@ describe('WalletDetailView: WalletConnect', () => {
   it('handleWcConnect: initiates pairing', async () => {
     mockDetailApiCalls(mockWalletWithOwnerWc);
 
-    vi.mocked(apiPost).mockResolvedValueOnce({
+    vi.mocked(api.POST).mockResolvedValueOnce({ data: {
       uri: 'wc:abc123',
       qrCode: 'data:image/png;base64,ABC',
       expiresAt: 1708214400,
-    });
+    } });
 
     render(<WalletsPage />);
 
@@ -636,7 +641,7 @@ describe('WalletDetailView: WalletConnect', () => {
     fireEvent.click(screen.getByText('Connect Wallet'));
 
     await waitFor(() => {
-      expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/wallets/test-wallet-1/wc/pair');
+      expect(vi.mocked(api.POST)).toHaveBeenCalledWith('/v1/wallets/{id}/wc/pair', expect.objectContaining({}));
     });
 
     // QR modal should open
@@ -648,7 +653,7 @@ describe('WalletDetailView: WalletConnect', () => {
   it('handleWcConnect error', async () => {
     mockDetailApiCalls(mockWalletWithOwnerWc);
 
-    vi.mocked(apiPost).mockRejectedValueOnce(new ApiError(500, 'WC_ERROR', 'Failed'));
+    vi.mocked(api.POST).mockRejectedValueOnce(new ApiError(500, 'WC_ERROR', 'Failed'));
 
     render(<WalletsPage />);
 
@@ -671,15 +676,15 @@ describe('WalletDetailView: WalletConnect', () => {
 
   it('handleWcDisconnect: disconnects session', async () => {
     // Mock with WC session present
-    vi.mocked(apiGet).mockImplementation(async (path: string) => {
-      if (path === '/v1/wallets/test-wallet-1') return mockWalletWithOwnerWc;
-      if (path === '/v1/wallets/test-wallet-1/networks') return mockNetworks;
-      if (path === '/v1/admin/wallets/test-wallet-1/balance') return mockBalance;
-      if (path === '/v1/admin/wallets/test-wallet-1/transactions') return mockTransactions;
-      if (path === '/v1/wallets/test-wallet-1/wc/session') return mockWcSession;
-      return {};
+    vi.mocked(api.GET).mockImplementation(async (path: string) => {
+      if (path === '/v1/wallets/{id}') return { data: mockWalletWithOwnerWc };
+      if (path.includes('/networks')) return { data: mockNetworks };
+      if (path.includes('/balance')) return { data: mockBalance };
+      if (path.includes('/transactions')) return { data: mockTransactions };
+      if (path.includes('/wc/session')) return { data: mockWcSession };
+      return { data: {} };
     });
-    vi.mocked(apiDelete).mockResolvedValueOnce(undefined);
+    vi.mocked(api.DELETE).mockResolvedValueOnce({ data: undefined });
 
     render(<WalletsPage />);
 
@@ -698,7 +703,7 @@ describe('WalletDetailView: WalletConnect', () => {
     fireEvent.click(screen.getByText('Disconnect'));
 
     await waitFor(() => {
-      expect(vi.mocked(apiDelete)).toHaveBeenCalledWith('/v1/wallets/test-wallet-1/wc/session');
+      expect(vi.mocked(api.DELETE)).toHaveBeenCalledWith('/v1/wallets/{id}/wc/session', expect.objectContaining({}));
     });
 
     await waitFor(() => {
@@ -707,15 +712,15 @@ describe('WalletDetailView: WalletConnect', () => {
   });
 
   it('handleWcDisconnect error', async () => {
-    vi.mocked(apiGet).mockImplementation(async (path: string) => {
-      if (path === '/v1/wallets/test-wallet-1') return mockWalletWithOwnerWc;
-      if (path === '/v1/wallets/test-wallet-1/networks') return mockNetworks;
-      if (path === '/v1/admin/wallets/test-wallet-1/balance') return mockBalance;
-      if (path === '/v1/admin/wallets/test-wallet-1/transactions') return mockTransactions;
-      if (path === '/v1/wallets/test-wallet-1/wc/session') return mockWcSession;
-      return {};
+    vi.mocked(api.GET).mockImplementation(async (path: string) => {
+      if (path === '/v1/wallets/{id}') return { data: mockWalletWithOwnerWc };
+      if (path.includes('/networks')) return { data: mockNetworks };
+      if (path.includes('/balance')) return { data: mockBalance };
+      if (path.includes('/transactions')) return { data: mockTransactions };
+      if (path.includes('/wc/session')) return { data: mockWcSession };
+      return { data: {} };
     });
-    vi.mocked(apiDelete).mockRejectedValueOnce(new ApiError(500, 'WC_DC_ERROR', 'Failed'));
+    vi.mocked(api.DELETE).mockRejectedValueOnce(new ApiError(500, 'WC_DC_ERROR', 'Failed'));
 
     render(<WalletsPage />);
 
@@ -742,13 +747,13 @@ describe('WalletDetailView: fetch errors', () => {
   afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
   it('shows error when wallet fetch fails', async () => {
-    vi.mocked(apiGet).mockImplementation(async (path: string) => {
-      if (path === '/v1/wallets/test-wallet-1') throw new ApiError(404, 'NOT_FOUND', 'Wallet not found');
-      if (path.includes('/networks')) return mockNetworks;
-      if (path.includes('/balance')) return mockBalance;
-      if (path.includes('/transactions')) return mockTransactions;
+    vi.mocked(api.GET).mockImplementation(async (path: string) => {
+      if (path === '/v1/wallets/{id}') throw new ApiError(404, 'NOT_FOUND', 'Wallet not found');
+      if (path.includes('/networks')) return { data: mockNetworks };
+      if (path.includes('/balance')) return { data: mockBalance };
+      if (path.includes('/transactions')) return { data: mockTransactions };
       if (path.includes('/wc/session')) throw new Error('No session');
-      return {};
+      return { data: {} };
     });
 
     render(<WalletsPage />);
@@ -764,13 +769,13 @@ describe('WalletDetailView: fetch errors', () => {
   });
 
   it('handles networks fetch error', async () => {
-    vi.mocked(apiGet).mockImplementation(async (path: string) => {
-      if (path === '/v1/wallets/test-wallet-1') return mockWalletDetail;
+    vi.mocked(api.GET).mockImplementation(async (path: string) => {
+      if (path === '/v1/wallets/{id}') return { data: mockWalletDetail };
       if (path.includes('/networks')) throw new ApiError(500, 'NET_FAIL', 'Failed');
-      if (path.includes('/balance')) return mockBalance;
-      if (path.includes('/transactions')) return mockTransactions;
+      if (path.includes('/balance')) return { data: mockBalance };
+      if (path.includes('/transactions')) return { data: mockTransactions };
       if (path.includes('/wc/session')) throw new Error('No session');
-      return {};
+      return { data: {} };
     });
 
     render(<WalletsPage />);
@@ -781,13 +786,13 @@ describe('WalletDetailView: fetch errors', () => {
   });
 
   it('handles balance fetch returning null', async () => {
-    vi.mocked(apiGet).mockImplementation(async (path: string) => {
-      if (path === '/v1/wallets/test-wallet-1') return mockWalletDetail;
-      if (path.includes('/networks')) return mockNetworks;
+    vi.mocked(api.GET).mockImplementation(async (path: string) => {
+      if (path === '/v1/wallets/{id}') return { data: mockWalletDetail };
+      if (path.includes('/networks')) return { data: mockNetworks };
       if (path.includes('/balance')) throw new Error('No balance');
-      if (path.includes('/transactions')) return mockTransactions;
+      if (path.includes('/transactions')) return { data: mockTransactions };
       if (path.includes('/wc/session')) throw new Error('No session');
-      return {};
+      return { data: {} };
     });
 
     render(<WalletsPage />);
@@ -798,13 +803,13 @@ describe('WalletDetailView: fetch errors', () => {
   });
 
   it('handles transactions fetch returning empty', async () => {
-    vi.mocked(apiGet).mockImplementation(async (path: string) => {
-      if (path === '/v1/wallets/test-wallet-1') return mockWalletDetail;
-      if (path.includes('/networks')) return mockNetworks;
-      if (path.includes('/balance')) return mockBalance;
+    vi.mocked(api.GET).mockImplementation(async (path: string) => {
+      if (path === '/v1/wallets/{id}') return { data: mockWalletDetail };
+      if (path.includes('/networks')) return { data: mockNetworks };
+      if (path.includes('/balance')) return { data: mockBalance };
       if (path.includes('/transactions')) throw new Error('No transactions');
       if (path.includes('/wc/session')) throw new Error('No session');
-      return {};
+      return { data: {} };
     });
 
     render(<WalletsPage />);
@@ -826,13 +831,13 @@ describe('WalletDetailView: balance with no tokens', () => {
   afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
   it('shows native balance when no tokens exist', async () => {
-    vi.mocked(apiGet).mockImplementation(async (path: string) => {
-      if (path === '/v1/wallets/test-wallet-1') return mockWalletDetail;
-      if (path.includes('/networks')) return mockNetworks;
-      if (path.includes('/balance')) return { balances: [{ network: 'solana-devnet', native: { balance: '1.0', symbol: 'SOL' }, tokens: [] }] };
-      if (path.includes('/transactions')) return mockTransactions;
+    vi.mocked(api.GET).mockImplementation(async (path: string) => {
+      if (path === '/v1/wallets/{id}') return { data: mockWalletDetail };
+      if (path.includes('/networks')) return { data: mockNetworks };
+      if (path.includes('/balance')) return { data: { balances: [{ network: 'solana-devnet', native: { balance: '1.0', symbol: 'SOL' }, tokens: [] }] } };
+      if (path.includes('/transactions')) return { data: mockTransactions };
       if (path.includes('/wc/session')) throw new Error('No session');
-      return {};
+      return { data: {} };
     });
 
     render(<WalletsPage />);
@@ -848,13 +853,13 @@ describe('WalletDetailView: wallet with balance error', () => {
   afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
   it('shows balance error message when balance API returns error', async () => {
-    vi.mocked(apiGet).mockImplementation(async (path: string) => {
-      if (path === '/v1/wallets/test-wallet-1') return mockWalletDetail;
-      if (path.includes('/networks')) return mockNetworks;
-      if (path.includes('/balance')) return { balances: [{ network: 'solana-devnet', native: null, tokens: [], error: 'RPC unavailable' }] };
-      if (path.includes('/transactions')) return mockTransactions;
+    vi.mocked(api.GET).mockImplementation(async (path: string) => {
+      if (path === '/v1/wallets/{id}') return { data: mockWalletDetail };
+      if (path.includes('/networks')) return { data: mockNetworks };
+      if (path.includes('/balance')) return { data: { balances: [{ network: 'solana-devnet', native: null, tokens: [], error: 'RPC unavailable' }] } };
+      if (path.includes('/transactions')) return { data: mockTransactions };
       if (path.includes('/wc/session')) throw new Error('No session');
-      return {};
+      return { data: {} };
     });
 
     render(<WalletsPage />);
@@ -924,9 +929,9 @@ describe('WalletListContent', () => {
   afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
   it('renders wallet list with all columns', async () => {
-    vi.mocked(apiGet).mockImplementation(async (path: string) => {
-      if (path === '/v1/wallets') return mockWalletList;
-      return {};
+    vi.mocked(api.GET).mockImplementation(async (path: string) => {
+      if (path === '/v1/wallets') return { data: mockWalletList };
+      return { data: {} };
     });
 
     render(<WalletsPage />);
@@ -941,12 +946,12 @@ describe('WalletListContent', () => {
   });
 
   it('shows create wallet form and creates wallet', async () => {
-    vi.mocked(apiGet).mockImplementation(async (path: string) => {
-      if (path === '/v1/wallets') return mockWalletList;
-      return {};
+    vi.mocked(api.GET).mockImplementation(async (path: string) => {
+      if (path === '/v1/wallets') return { data: mockWalletList };
+      return { data: {} };
     });
 
-    vi.mocked(apiPost).mockResolvedValueOnce({
+    vi.mocked(api.POST).mockResolvedValueOnce({ data: {
       id: 'w-3',
       name: 'new-bot',
       chain: 'solana',
@@ -955,7 +960,7 @@ describe('WalletListContent', () => {
       publicKey: 'XYZ',
       status: 'ACTIVE',
       session: { id: 's-1', token: 'test-token-xyz', expiresAt: 1708000000 },
-    });
+    } });
 
     const { container } = render(<WalletsPage />);
 
@@ -980,11 +985,13 @@ describe('WalletListContent', () => {
     fireEvent.click(createBtn);
 
     await waitFor(() => {
-      expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/wallets', {
-        name: 'new-bot',
-        chain: 'solana',
-        environment: 'testnet',
-      });
+      expect(vi.mocked(api.POST)).toHaveBeenCalledWith('/v1/wallets', expect.objectContaining({
+        body: expect.objectContaining({
+          name: 'new-bot',
+          chain: 'solana',
+          environment: 'testnet',
+        }),
+      }));
     });
 
     await waitFor(() => {
@@ -993,12 +1000,12 @@ describe('WalletListContent', () => {
   });
 
   it('shows error when create wallet fails', async () => {
-    vi.mocked(apiGet).mockImplementation(async (path: string) => {
-      if (path === '/v1/wallets') return mockWalletList;
-      return {};
+    vi.mocked(api.GET).mockImplementation(async (path: string) => {
+      if (path === '/v1/wallets') return { data: mockWalletList };
+      return { data: {} };
     });
 
-    vi.mocked(apiPost).mockRejectedValueOnce(new ApiError(400, 'NAME_TAKEN', 'Name taken'));
+    vi.mocked(api.POST).mockRejectedValueOnce(new ApiError(400, 'NAME_TAKEN', 'Name taken'));
 
     const { container } = render(<WalletsPage />);
 
@@ -1024,9 +1031,9 @@ describe('WalletListContent', () => {
   });
 
   it('validates name required', async () => {
-    vi.mocked(apiGet).mockImplementation(async (path: string) => {
-      if (path === '/v1/wallets') return mockWalletList;
-      return {};
+    vi.mocked(api.GET).mockImplementation(async (path: string) => {
+      if (path === '/v1/wallets') return { data: mockWalletList };
+      return { data: {} };
     });
 
     const { container } = render(<WalletsPage />);
@@ -1051,9 +1058,9 @@ describe('WalletListContent', () => {
   });
 
   it('cancels create wallet form', async () => {
-    vi.mocked(apiGet).mockImplementation(async (path: string) => {
-      if (path === '/v1/wallets') return mockWalletList;
-      return {};
+    vi.mocked(api.GET).mockImplementation(async (path: string) => {
+      if (path === '/v1/wallets') return { data: mockWalletList };
+      return { data: {} };
     });
 
     const { container } = render(<WalletsPage />);
@@ -1077,9 +1084,9 @@ describe('WalletListContent', () => {
   });
 
   it('shows Account Type selector when chain is ethereum', async () => {
-    vi.mocked(apiGet).mockImplementation(async (path: string) => {
-      if (path === '/v1/wallets') return mockWalletList;
-      return {};
+    vi.mocked(api.GET).mockImplementation(async (path: string) => {
+      if (path === '/v1/wallets') return { data: mockWalletList };
+      return { data: {} };
     });
 
     const { container } = render(<WalletsPage />);
@@ -1106,11 +1113,11 @@ describe('WalletListContent', () => {
   });
 
   it('creates smart account wallet with accountType in POST body', async () => {
-    vi.mocked(apiGet).mockImplementation(async (path: string) => {
-      if (path === '/v1/wallets') return mockWalletList;
-      return {};
+    vi.mocked(api.GET).mockImplementation(async (path: string) => {
+      if (path === '/v1/wallets') return { data: mockWalletList };
+      return { data: {} };
     });
-    vi.mocked(apiPost).mockResolvedValue({
+    vi.mocked(api.POST).mockResolvedValue({ data: {
       id: 'w-smart',
       name: 'smart-test',
       chain: 'ethereum',
@@ -1120,7 +1127,7 @@ describe('WalletListContent', () => {
       status: 'ACTIVE',
       accountType: 'smart',
       session: { id: 's1', token: 'wai_sess_abc', expiresAt: 999 },
-    });
+    } });
 
     const { container } = render(<WalletsPage />);
 
@@ -1153,19 +1160,21 @@ describe('WalletListContent', () => {
     fireEvent.click(screen.getByText('Create'));
 
     await waitFor(() => {
-      expect(vi.mocked(apiPost)).toHaveBeenCalledWith(
+      expect(vi.mocked(api.POST)).toHaveBeenCalledWith(
         '/v1/wallets',
         expect.objectContaining({
-          name: 'smart-test',
-          chain: 'ethereum',
-          accountType: 'smart',
+          body: expect.objectContaining({
+            name: 'smart-test',
+            chain: 'ethereum',
+            accountType: 'smart',
+          }),
         }),
       );
     });
   });
 
   it('shows error toast when wallet list fetch fails', async () => {
-    vi.mocked(apiGet).mockRejectedValue(new ApiError(500, 'FETCH_FAIL', 'Failed'));
+    vi.mocked(api.GET).mockRejectedValue(new ApiError(500, 'FETCH_FAIL', 'Failed'));
 
     render(<WalletsPage />);
 
@@ -1184,10 +1193,10 @@ describe('WalletListWithTabs - Tab switching', () => {
   afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
   function setupTabMocks() {
-    vi.mocked(apiGet).mockImplementation(async (path: string) => {
-      if (path === '/v1/wallets') return mockWalletList;
-      if (path === '/v1/admin/settings') return mockSettingsData;
-      return {};
+    vi.mocked(api.GET).mockImplementation(async (path: string) => {
+      if (path === '/v1/wallets') return { data: mockWalletList };
+      if (path === '/v1/admin/settings') return { data: mockSettingsData };
+      return { data: {} };
     });
   }
 
@@ -1228,18 +1237,18 @@ describe('RpcEndpointsTab', () => {
   afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
   it('renders network sections and expands to show URLs', async () => {
-    vi.mocked(apiGet).mockImplementation(async (path: string) => {
-      if (path === '/v1/wallets') return mockWalletList;
-      if (path === '/v1/admin/settings') return mockSettingsData;
-      if (path === '/v1/admin/rpc-status') return {
+    vi.mocked(api.GET).mockImplementation(async (path: string) => {
+      if (path === '/v1/wallets') return { data: mockWalletList };
+      if (path === '/v1/admin/settings') return { data: mockSettingsData };
+      if (path === '/v1/admin/rpc-status') return { data: {
         networks: {},
         builtinUrls: {
 'solana-mainnet': ['https://api.mainnet-beta.solana.com'],
 'solana-devnet': ['https://api.devnet.solana.com'],
 'solana-testnet': ['https://api.testnet.solana.com'],
         },
-      };
-      return {};
+      } };
+      return { data: {} };
     });
 
     render(<WalletsPage />);
@@ -1260,20 +1269,20 @@ describe('RpcEndpointsTab', () => {
   });
 
   it('shows test button inside expanded network section', async () => {
-    vi.mocked(apiGet).mockImplementation(async (path: string) => {
-      if (path === '/v1/wallets') return mockWalletList;
-      if (path === '/v1/admin/settings') return mockSettingsData;
-      if (path === '/v1/admin/rpc-status') return {
+    vi.mocked(api.GET).mockImplementation(async (path: string) => {
+      if (path === '/v1/wallets') return { data: mockWalletList };
+      if (path === '/v1/admin/settings') return { data: mockSettingsData };
+      if (path === '/v1/admin/rpc-status') return { data: {
         networks: {},
         builtinUrls: {
 'solana-mainnet': ['https://api.mainnet-beta.solana.com'],
 'solana-devnet': ['https://api.devnet.solana.com'],
 'solana-testnet': ['https://api.testnet.solana.com'],
         },
-      };
-      return {};
+      } };
+      return { data: {} };
     });
-    vi.mocked(apiPost).mockResolvedValueOnce({ success: true, latencyMs: 150, blockNumber: 12345 });
+    vi.mocked(api.POST).mockResolvedValueOnce({ data: { success: true, latencyMs: 150, blockNumber: 12345 } });
 
     render(<WalletsPage />);
 
@@ -1293,8 +1302,8 @@ describe('RpcEndpointsTab', () => {
     fireEvent.click(screen.getAllByText('Test')[0]);
 
     await waitFor(() => {
-      expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/admin/settings/test-rpc', expect.objectContaining({
-        chain: 'solana',
+      expect(vi.mocked(api.POST)).toHaveBeenCalledWith('/v1/admin/settings/test-rpc', expect.objectContaining({
+        body: expect.objectContaining({ chain: 'solana' }),
       }));
     });
   });
@@ -1305,12 +1314,12 @@ describe('WalletConnectTab', () => {
   afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
   it('saves WalletConnect settings', async () => {
-    vi.mocked(apiGet).mockImplementation(async (path: string) => {
-      if (path === '/v1/wallets') return mockWalletList;
-      if (path === '/v1/admin/settings') return mockSettingsData;
-      return {};
+    vi.mocked(api.GET).mockImplementation(async (path: string) => {
+      if (path === '/v1/wallets') return { data: mockWalletList };
+      if (path === '/v1/admin/settings') return { data: mockSettingsData };
+      return { data: {} };
     });
-    vi.mocked(apiPut).mockResolvedValueOnce({ updated: 1, settings: mockSettingsData });
+    vi.mocked(api.PUT).mockResolvedValueOnce({ data: { updated: 1, settings: mockSettingsData } });
 
     render(<WalletsPage />);
 
@@ -1331,11 +1340,11 @@ describe('WalletConnectTab', () => {
     fireEvent.click(screen.getByText('Save'));
 
     await waitFor(() => {
-      expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/admin/settings', {
-        settings: expect.arrayContaining([
+      expect(vi.mocked(api.PUT)).toHaveBeenCalledWith('/v1/admin/settings', expect.objectContaining({
+        body: { settings: expect.arrayContaining([
           expect.objectContaining({ key: 'walletconnect.project_id', value: 'new-project-id' }),
-        ]),
-      });
+        ]) },
+      }));
     });
   });
 });
@@ -1371,13 +1380,13 @@ describe('Smart Account deprecated warning and factory networks', () => {
   };
 
   it('renders deprecated warning banner for Smart Account with Solady factory', async () => {
-    vi.mocked(apiGet).mockImplementation(async (path: string) => {
-      if (path === `/v1/wallets/test-wallet-1`) return mockSmartWalletDeprecated;
-      if (path.includes('/networks')) return mockNetworks;
-      if (path.includes('/balance')) return mockBalance;
-      if (path.includes('/transactions')) return mockTransactions;
+    vi.mocked(api.GET).mockImplementation(async (path: string) => {
+      if (path === '/v1/wallets/{id}') return { data: mockSmartWalletDeprecated };
+      if (path.includes('/networks')) return { data: mockNetworks };
+      if (path.includes('/balance')) return { data: mockBalance };
+      if (path.includes('/transactions')) return { data: mockTransactions };
       if (path.includes('/wc/session')) throw new Error('No session');
-      return {};
+      return { data: {} };
     });
 
     render(<WalletsPage />);
@@ -1390,13 +1399,13 @@ describe('Smart Account deprecated warning and factory networks', () => {
   });
 
   it('does not render deprecated warning for Smart Account with different factory', async () => {
-    vi.mocked(apiGet).mockImplementation(async (path: string) => {
-      if (path === `/v1/wallets/test-wallet-1`) return mockSmartWalletWithNetworks;
-      if (path.includes('/networks')) return mockNetworks;
-      if (path.includes('/balance')) return mockBalance;
-      if (path.includes('/transactions')) return mockTransactions;
+    vi.mocked(api.GET).mockImplementation(async (path: string) => {
+      if (path === '/v1/wallets/{id}') return { data: mockSmartWalletWithNetworks };
+      if (path.includes('/networks')) return { data: mockNetworks };
+      if (path.includes('/balance')) return { data: mockBalance };
+      if (path.includes('/transactions')) return { data: mockTransactions };
       if (path.includes('/wc/session')) throw new Error('No session');
-      return {};
+      return { data: {} };
     });
 
     render(<WalletsPage />);
@@ -1409,13 +1418,13 @@ describe('Smart Account deprecated warning and factory networks', () => {
   });
 
   it('renders factory supported networks badges', async () => {
-    vi.mocked(apiGet).mockImplementation(async (path: string) => {
-      if (path === `/v1/wallets/test-wallet-1`) return mockSmartWalletWithNetworks;
-      if (path.includes('/networks')) return mockNetworks;
-      if (path.includes('/balance')) return mockBalance;
-      if (path.includes('/transactions')) return mockTransactions;
+    vi.mocked(api.GET).mockImplementation(async (path: string) => {
+      if (path === '/v1/wallets/{id}') return { data: mockSmartWalletWithNetworks };
+      if (path.includes('/networks')) return { data: mockNetworks };
+      if (path.includes('/balance')) return { data: mockBalance };
+      if (path.includes('/transactions')) return { data: mockTransactions };
       if (path.includes('/wc/session')) throw new Error('No session');
-      return {};
+      return { data: {} };
     });
 
     render(<WalletsPage />);
@@ -1432,13 +1441,13 @@ describe('Smart Account deprecated warning and factory networks', () => {
   });
 
   it('renders Smart Account badge in detail view', async () => {
-    vi.mocked(apiGet).mockImplementation(async (path: string) => {
-      if (path === `/v1/wallets/test-wallet-1`) return mockSmartWalletWithNetworks;
-      if (path.includes('/networks')) return mockNetworks;
-      if (path.includes('/balance')) return mockBalance;
-      if (path.includes('/transactions')) return mockTransactions;
+    vi.mocked(api.GET).mockImplementation(async (path: string) => {
+      if (path === '/v1/wallets/{id}') return { data: mockSmartWalletWithNetworks };
+      if (path.includes('/networks')) return { data: mockNetworks };
+      if (path.includes('/balance')) return { data: mockBalance };
+      if (path.includes('/transactions')) return { data: mockTransactions };
       if (path.includes('/wc/session')) throw new Error('No session');
-      return {};
+      return { data: {} };
     });
 
     render(<WalletsPage />);

@@ -12,11 +12,13 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/preact';
 
-vi.mock('../api/client', () => ({
-  apiGet: vi.fn(),
-  apiPost: vi.fn(),
-  apiPut: vi.fn(),
-  apiDelete: vi.fn(),
+vi.mock('../api/typed-client', () => ({
+  api: {
+    GET: vi.fn().mockResolvedValue({ data: {} }),
+    POST: vi.fn().mockResolvedValue({ data: {} }),
+    PUT: vi.fn().mockResolvedValue({ data: {} }),
+    DELETE: vi.fn().mockResolvedValue({ data: {} }),
+  },
   ApiError: class ApiError extends Error {
     status: number;
     code: string;
@@ -29,7 +31,6 @@ vi.mock('../api/client', () => ({
       this.serverMessage = msg;
     }
   },
-  apiCall: vi.fn(),
 }));
 
 vi.mock('../components/toast', () => ({
@@ -71,9 +72,9 @@ vi.mock('../components/settings-search', () => ({
   highlightField: vi.fn(),
 }));
 
-import { apiGet, ApiError } from '../api/client';
+import { api, ApiError } from '../api/typed-client';
 
-const mockApiGet = vi.mocked(apiGet);
+const mockApiGet = vi.mocked(api.GET);
 
 describe('Wallets NFT Tab', () => {
   afterEach(() => {
@@ -95,35 +96,22 @@ describe('Wallets NFT Tab', () => {
     };
 
     mockApiGet.mockImplementation(async (url: string) => {
-      if (url.includes('/v1/wallets/w1/nfts')) {
+      if (url.includes('/nfts/{tokenIdentifier}')) {
         if (nftError) throw nftError;
-        return nftResponse ?? { nfts: [], hasMore: false };
+        return { data: nftResponse ?? {} };
       }
-      if (url.includes('/v1/wallets/w1/networks')) {
-        return { availableNetworks: [{ network: 'ethereum-mainnet', chain: 'ethereum', environment: 'mainnet' }] };
+      if (url.includes('/nfts')) {
+        if (nftError) throw nftError;
+        return { data: nftResponse ?? { items: [], pageKey: undefined, totalCount: 0 } };
       }
-      if (url.includes('/v1/wallets/w1/transactions')) {
-        return { items: [], cursor: null, hasMore: false };
-      }
-      if (url.includes('/v1/admin/wallets/w1/staking')) {
-        return { walletId: 'w1', positions: [] };
-      }
-      if (url.includes('/v1/admin/wallets/w1/balance')) {
-        return { walletId: 'w1', balance: '0', decimals: 18, symbol: 'ETH', chain: 'ethereum', network: 'ethereum-mainnet', address: '0xabc' };
-      }
-      if (url.includes('/v1/wallets/w1')) {
-        return walletDetail;
-      }
-      if (url.includes('/v1/admin/forex/rates')) {
-        return { rates: {} };
-      }
-      if (url.includes('/v1/policies')) {
-        return [];
-      }
-      if (url.includes('/v1/sessions')) {
-        return [];
-      }
-      return {};
+      if (url.includes('/networks')) return { data: { availableNetworks: [{ network: 'ethereum-mainnet' }] } };
+      if (url.includes('/transactions')) return { data: { items: [], total: 0 } };
+      if (url.includes('/staking')) return { data: { walletId: 'w1', positions: [] } };
+      if (url.includes('/balance')) return { data: { balances: [] } };
+      if (url === '/v1/wallets/{id}') return { data: walletDetail };
+      if (url.includes('/wc/session')) throw new Error('no session');
+      if (url.includes('/settings')) return { data: {} };
+      return { data: {} };
     });
   }
 
@@ -155,7 +143,7 @@ describe('Wallets NFT Tab', () => {
   });
 
   it('shows empty state when no NFTs found', async () => {
-    setupMocks({ nfts: [], hasMore: false });
+    setupMocks({ items: [], pageKey: undefined, totalCount: 0 });
     const WalletsPage = (await import('../pages/wallets')).default;
     render(<WalletsPage />);
 
@@ -213,25 +201,26 @@ describe('Wallets NFT Tab', () => {
 
   it('renders NFT grid with cards, no-image placeholder, and card click', async () => {
     setupMocks({
-      nfts: [
+      items: [
         {
           tokenId: '42',
           contractAddress: '0xabc',
           standard: 'erc721',
           name: 'Cool NFT',
           image: 'https://ipfs.io/ipfs/Qm...',
-          collection: { name: 'Cool Collection', address: '0xabc' },
+          amount: '1',
+          collection: { name: 'Cool Collection' },
         },
         {
           tokenId: '99',
           contractAddress: '0xdef',
           standard: 'erc1155',
           name: 'No Image NFT',
-          balance: 5,
-          collection: { name: 'Multi Collection', address: '0xdef' },
+          amount: '5',
+          collection: { name: 'Multi Collection' },
         },
       ],
-      hasMore: false,
+      pageKey: undefined,
     });
     const WalletsPage = (await import('../pages/wallets')).default;
     render(<WalletsPage />);

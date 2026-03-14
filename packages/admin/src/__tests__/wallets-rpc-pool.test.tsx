@@ -22,11 +22,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/preact';
 
-vi.mock('../api/client', () => ({
-  apiGet: vi.fn(),
-  apiPost: vi.fn(),
-  apiPut: vi.fn(),
-  apiDelete: vi.fn(),
+vi.mock('../api/typed-client', () => ({
+  api: {
+    GET: vi.fn().mockResolvedValue({ data: {} }),
+    POST: vi.fn().mockResolvedValue({ data: {} }),
+    PUT: vi.fn().mockResolvedValue({ data: {} }),
+    DELETE: vi.fn().mockResolvedValue({ data: {} }),
+  },
   ApiError: class ApiError extends Error {
     status: number;
     code: string;
@@ -39,7 +41,6 @@ vi.mock('../api/client', () => ({
       this.serverMessage = msg;
     }
   },
-  apiCall: vi.fn(),
 }));
 
 vi.mock('../components/toast', () => ({
@@ -79,7 +80,7 @@ vi.mock('../utils/error-messages', () => ({
   getErrorMessage: (code: string) => `Error: ${code}`,
 }));
 
-import { apiGet, apiPost, apiPut, apiDelete } from '../api/client';
+import { api } from '../api/typed-client';
 import { currentPath } from '../components/layout';
 import WalletsPage from '../pages/wallets';
 import { showToast } from '../components/toast';
@@ -160,12 +161,12 @@ async function renderAndNavigateToRpcTab(rpcStatusOverride?: Record<string, unkn
     ? { builtinUrls: defaultBuiltinUrls, ...rpcStatusOverride }
     : defaultRpcStatusResponse;
 
-  vi.mocked(apiGet).mockImplementation((path: string) => {
-    if (path === '/v1/wallets') return Promise.resolve(mockWallets);
-    if (path === '/v1/admin/settings') return Promise.resolve(settingsData);
-    if (path === '/v1/admin/rpc-status') return Promise.resolve(rpcStatusData);
-    if (path.includes('/balance')) return Promise.resolve({ balances: [] });
-    return Promise.resolve({});
+  vi.mocked(api.GET).mockImplementation((path: string) => {
+    if (path === '/v1/wallets') return Promise.resolve({ data: mockWallets });
+    if (path === '/v1/admin/settings') return Promise.resolve({ data: settingsData });
+    if (path === '/v1/admin/rpc-status') return Promise.resolve({ data: rpcStatusData });
+    if (path.includes('/balance')) return Promise.resolve({ data: { balances: [] } });
+    return Promise.resolve({ data: {} });
   });
 
   render(<WalletsPage />);
@@ -294,11 +295,11 @@ describe('RPC Pool multi-URL tab', () => {
       'solana-mainnet': '["https://custom1.rpc.com","https://custom2.rpc.com"]',
     });
 
-    vi.mocked(apiGet).mockImplementation((path: string) => {
-      if (path === '/v1/wallets') return Promise.resolve(mockWallets);
-      if (path === '/v1/admin/settings') return Promise.resolve(settingsData);
-      if (path === '/v1/admin/rpc-status') return Promise.resolve(defaultRpcStatusResponse);
-      return Promise.resolve({});
+    vi.mocked(api.GET).mockImplementation((path: string) => {
+      if (path === '/v1/wallets') return Promise.resolve({ data: mockWallets });
+      if (path === '/v1/admin/settings') return Promise.resolve({ data: settingsData });
+      if (path === '/v1/admin/rpc-status') return Promise.resolve({ data: defaultRpcStatusResponse });
+      return Promise.resolve({ data: {} });
     });
 
     currentPath.value = '/wallets';
@@ -342,17 +343,17 @@ describe('RPC Pool multi-URL tab', () => {
   it('should save rpc_pool.* JSON arrays via PUT /admin/settings', async () => {
     const settingsData = mockSettingsWithRpcPool();
 
-    vi.mocked(apiGet).mockImplementation((path: string) => {
-      if (path === '/v1/wallets') return Promise.resolve(mockWallets);
-      if (path === '/v1/admin/settings') return Promise.resolve(settingsData);
-      if (path === '/v1/admin/rpc-status') return Promise.resolve(defaultRpcStatusResponse);
-      return Promise.resolve({});
+    vi.mocked(api.GET).mockImplementation((path: string) => {
+      if (path === '/v1/wallets') return Promise.resolve({ data: mockWallets });
+      if (path === '/v1/admin/settings') return Promise.resolve({ data: settingsData });
+      if (path === '/v1/admin/rpc-status') return Promise.resolve({ data: defaultRpcStatusResponse });
+      return Promise.resolve({ data: {} });
     });
 
-    vi.mocked(apiPut).mockResolvedValue({
+    vi.mocked(api.PUT).mockResolvedValue({ data: {
       updated: 13,
       settings: settingsData,
-    });
+    } });
 
     currentPath.value = '/wallets';
     render(<WalletsPage />);
@@ -388,13 +389,13 @@ describe('RPC Pool multi-URL tab', () => {
     fireEvent.click(screen.getByText('Save'));
 
     await waitFor(() => {
-      expect(vi.mocked(apiPut)).toHaveBeenCalled();
+      expect(vi.mocked(api.PUT)).toHaveBeenCalled();
     });
 
     // Verify the PUT call includes rpc_pool entries
-    const putCall = vi.mocked(apiPut).mock.calls[0];
+    const putCall = vi.mocked(api.PUT).mock.calls[0];
     expect(putCall[0]).toBe('/v1/admin/settings');
-    const putBody = putCall[1] as { settings: { key: string; value: string }[] };
+    const putBody = (putCall[1] as any).body as { settings: { key: string; value: string }[] };
     const rpcPoolEntries = putBody.settings.filter((e: { key: string }) => e.key.startsWith('rpc_pool.'));
     expect(rpcPoolEntries.length).toBeGreaterThan(0);
 
@@ -493,11 +494,11 @@ describe('RPC Pool multi-URL tab', () => {
   });
 
   it('should call POST /admin/settings/test-rpc with correct chain for Solana', async () => {
-    vi.mocked(apiPost).mockResolvedValue({
+    vi.mocked(api.POST).mockResolvedValue({ data: {
       success: true,
       latencyMs: 42,
       blockNumber: 123456,
-    });
+    } });
 
     await renderAndNavigateToRpcTab();
 
@@ -513,19 +514,21 @@ describe('RPC Pool multi-URL tab', () => {
     fireEvent.click(testButtons[0]);
 
     await waitFor(() => {
-      expect(vi.mocked(apiPost)).toHaveBeenCalledWith(
+      expect(vi.mocked(api.POST)).toHaveBeenCalledWith(
         '/v1/admin/settings/test-rpc',
-        { url: 'https://custom-solana.rpc.com', chain: 'solana' },
+        expect.objectContaining({
+          body: { url: 'https://custom-solana.rpc.com', chain: 'solana' },
+        }),
       );
     });
   });
 
   it('should display latency and block number on test success', async () => {
-    vi.mocked(apiPost).mockResolvedValue({
+    vi.mocked(api.POST).mockResolvedValue({ data: {
       success: true,
       latencyMs: 42,
       blockNumber: 123456,
-    });
+    } });
 
     await renderAndNavigateToRpcTab();
 
@@ -551,11 +554,11 @@ describe('RPC Pool multi-URL tab', () => {
   });
 
   it('should display error message on test failure', async () => {
-    vi.mocked(apiPost).mockResolvedValue({
+    vi.mocked(api.POST).mockResolvedValue({ data: {
       success: false,
       latencyMs: 0,
       error: 'Connection refused',
-    });
+    } });
 
     await renderAndNavigateToRpcTab();
 

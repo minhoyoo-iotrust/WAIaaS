@@ -4,8 +4,8 @@ import type { ComponentChildren } from 'preact';
 import { currentPath } from '../components/layout';
 import { pendingNavigation, highlightField } from '../components/settings-search';
 import { registerDirty, unregisterDirty } from '../utils/dirty-guard';
-import { apiGet, apiPost, apiPut, apiDelete, ApiError } from '../api/client';
-import { API } from '../api/endpoints';
+import { api, ApiError } from '../api/typed-client';
+import type { components, paths } from '../api/types.generated';
 import { Table } from '../components/table';
 import type { Column } from '../components/table';
 import { FormField, Button, Badge } from '../components/form';
@@ -33,133 +33,25 @@ import {
 } from '../utils/settings-helpers';
 
 
-interface Wallet {
-  id: string;
-  name: string;
-  chain: string;
-  network: string;
-  environment: string;
-  publicKey: string;
-  status: string;
-  ownerAddress: string | null;
-  ownerState: 'NONE' | 'GRACE' | 'LOCKED';
-  createdAt: number;
-  accountType?: string;
-  signerKey?: string | null;
-  deployed?: boolean;
-  provider?: { name: string; supportedChains: string[]; paymasterEnabled: boolean } | null;
-}
-
-interface WalletDetail extends Wallet {
-  ownerAddress: string | null;
-  ownerVerified: boolean | null;
-  ownerState: 'NONE' | 'GRACE' | 'LOCKED';
-  approvalMethod: string | null;
-  walletType?: string | null;
-  suspendedAt: number | null;
-  suspensionReason: string | null;
-  updatedAt: number | null;
-  accountType?: string;
-  signerKey?: string | null;
-  deployed?: boolean;
-  factoryAddress?: string | null;
-  factorySupportedNetworks?: string[] | null;
-  factoryVerifiedOnNetwork?: boolean | null;
-}
+type Wallet = components['schemas']['WalletCrudResponse'];
+type WalletDetail = components['schemas']['WalletDetailResponse'];
 
 /** Solady factory address — Smart Accounts using this factory are deprecated (v31.3+). */
 const SOLADY_FACTORY_ADDRESS = '0x5d82735936c6Cd5DE57cC3c1A799f6B2E6F933Df';
 
-interface NetworkInfo {
-  network: string;
-  name?: string;
-}
-
-interface McpTokenResult {
-  walletId: string;
-  walletName: string | null;
-  tokenPath: string;
-  expiresAt: number;
-  claudeDesktopConfig: Record<string, unknown>;
-}
-
-interface NetworkBalance {
-  network: string;
-  native: { balance: string; symbol: string; usd?: number | null } | null;
-  tokens: Array<{ symbol: string; balance: string; address: string }>;
-  error?: string;
-}
-
-interface WalletBalance {
-  balances: NetworkBalance[];
-}
-
-interface WalletTransaction {
-  id: string;
-  type: string;
-  status: string;
-  toAddress: string | null;
-  amount: string | null;
-  formattedAmount: string | null;
-  amountUsd: string | null;
-  network: string | null;
-  txHash: string | null;
-  createdAt: number | null;
-}
-
-interface WcSession {
-  walletId: string;
-  topic: string;
-  peerName: string | null;
-  peerUrl: string | null;
-  chainId: string;
-  ownerAddress: string;
-  expiry: number;
-  createdAt: number;
-}
-
-interface WcPairingResult {
-  uri: string;
-  qrCode: string;
-  expiresAt: number;
-}
-
-interface WcPairingStatus {
-  status: 'pending' | 'connected' | 'expired' | 'none';
-  session?: WcSession | null;
-}
-
-interface NftItem {
-  tokenId: string;
-  contractAddress: string;
-  standard: string;
-  name?: string;
-  image?: string;
-  description?: string;
-  amount?: string;
-  collection?: { name?: string; address: string };
-  assetId?: string;
-}
-
-interface NftMetadata extends NftItem {
-  attributes?: Array<{ traitType: string; value: string }>;
-  metadata?: Record<string, unknown>;
-}
-
-interface StakingPosition {
-  protocol: 'lido' | 'jito';
-  chain: 'ethereum' | 'solana';
-  asset: string;
-  balance: string;
-  balanceUsd: string | null;
-  apy: string | null;
-  pendingUnstake: { amount: string; status: 'PENDING' | 'COMPLETED' | 'TIMEOUT'; requestedAt: number | null } | null;
-}
-
-interface StakingPositionsResponse {
-  walletId: string;
-  positions: StakingPosition[];
-}
+// Path-level type aliases from generated OpenAPI types
+type NetworkInfo = components['schemas']['WalletNetworksResponse']['availableNetworks'][number];
+type McpTokenResult = components['schemas']['McpTokenCreateResponse'];
+type WalletBalance = paths['/v1/admin/wallets/{id}/balance']['get']['responses']['200']['content']['application/json'];
+type NetworkBalance = WalletBalance['balances'][number];
+type WalletTransaction = paths['/v1/admin/wallets/{id}/transactions']['get']['responses']['200']['content']['application/json']['items'][number];
+type WcSession = components['schemas']['WcSessionResponse'];
+type WcPairingResult = components['schemas']['WcPairingResponse'];
+type WcPairingStatus = components['schemas']['WcPairingStatusResponse'];
+type NftItem = components['schemas']['NftListResponse']['items'][number];
+type NftMetadata = components['schemas']['NftMetadataResponse'];
+type StakingPosition = components['schemas']['StakingPosition'];
+type StakingPositionsResponse = components['schemas']['StakingPositionsResponse'];
 
 /** Builtin wallet presets — mirrored from @waiaas/core BUILTIN_PRESETS.
  *  When core adds a new preset, this list must be updated manually. */
@@ -253,6 +145,7 @@ function DetailRow({
   );
 }
 
+// UI-only: derived from settings, not a direct API response
 interface ApprovalSettingsInfo {
   signingEnabled: boolean;
   telegramBotConfigured: boolean;
@@ -397,7 +290,7 @@ function WalletDetailView({ id }: { id: string }) {
   const nftsLoading = useSignal(false);
   const nftsError = useSignal<string | null>(null);
   const nftViewMode = useSignal<'grid' | 'list'>('grid');
-  const selectedNft = useSignal<NftMetadata | null>(null);
+  const selectedNft = useSignal<(NftItem & Partial<Pick<NftMetadata, 'attributes' | 'rawMetadata' | 'tokenUri'>>) | null>(null);
   const nftDetailLoading = useSignal(false);
   const nftNetwork = useSignal('');
   const nftCursor = useSignal<string | null>(null);
@@ -412,8 +305,8 @@ function WalletDetailView({ id }: { id: string }) {
 
   const fetchWallet = async () => {
     try {
-      const result = await apiGet<WalletDetail>(API.WALLET(id));
-      wallet.value = result;
+      const { data: result } = await api.GET('/v1/wallets/{id}', { params: { path: { id } } });
+      wallet.value = result ?? null;
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
@@ -425,8 +318,8 @@ function WalletDetailView({ id }: { id: string }) {
   const handleSaveName = async () => {
     editLoading.value = true;
     try {
-      const result = await apiPut<WalletDetail>(API.WALLET(id), { name: editName.value });
-      wallet.value = result;
+      await api.PUT('/v1/wallets/{id}', { params: { path: { id } }, body: { name: editName.value } });
+      await fetchWallet();
       editing.value = false;
       showToast('success', 'Wallet name updated');
     } catch (err) {
@@ -440,7 +333,7 @@ function WalletDetailView({ id }: { id: string }) {
   const handleDelete = async () => {
     deleteLoading.value = true;
     try {
-      await apiDelete(API.WALLET(id));
+      await api.DELETE('/v1/wallets/{id}', { params: { path: { id } } });
       showToast('success', 'Wallet terminated');
       window.location.hash = '#/wallets';
     } catch (err) {
@@ -454,7 +347,7 @@ function WalletDetailView({ id }: { id: string }) {
   const handlePurge = async () => {
     purgeLoading.value = true;
     try {
-      await apiDelete(API.WALLET_PURGE(id));
+      await api.DELETE('/v1/wallets/{id}/purge', { params: { path: { id } } });
       showToast('success', 'Wallet permanently deleted');
       window.location.hash = '#/wallets';
     } catch (err) {
@@ -468,8 +361,9 @@ function WalletDetailView({ id }: { id: string }) {
   const handleSuspend = async () => {
     suspendLoading.value = true;
     try {
-      await apiPost(API.WALLET_SUSPEND(id), {
-        reason: suspendReason.value.trim() || undefined,
+      await api.POST('/v1/wallets/{id}/suspend', {
+        params: { path: { id } },
+        body: { reason: suspendReason.value.trim() || undefined },
       });
       showToast('success', 'Wallet suspended');
       suspendModal.value = false;
@@ -486,7 +380,7 @@ function WalletDetailView({ id }: { id: string }) {
   const handleResume = async () => {
     resumeLoading.value = true;
     try {
-      await apiPost(API.WALLET_RESUME(id));
+      await api.POST('/v1/wallets/{id}/resume', { params: { path: { id } } });
       showToast('success', 'Wallet resumed');
       await fetchWallet();
     } catch (err) {
@@ -501,9 +395,9 @@ function WalletDetailView({ id }: { id: string }) {
     providerEditLoading.value = true;
     try {
       const body = editProvider.value === 'custom'
-        ? { provider: 'custom', bundlerUrl: editBundlerUrl.value, paymasterUrl: editPaymasterUrl.value || undefined }
-        : { provider: editProvider.value, apiKey: editApiKey.value || undefined, policyId: editPolicyId.value || undefined };
-      await apiPut(API.WALLET_PROVIDER(id), body);
+        ? { provider: 'custom' as const, bundlerUrl: editBundlerUrl.value, paymasterUrl: editPaymasterUrl.value || undefined }
+        : { provider: editProvider.value as 'pimlico' | 'alchemy', apiKey: editApiKey.value || undefined, policyId: editPolicyId.value || undefined };
+      await api.PUT('/v1/wallets/{id}/provider', { params: { path: { id } }, body });
       showToast('success', 'Provider updated');
       providerEditing.value = false;
       editApiKey.value = '';
@@ -538,8 +432,8 @@ function WalletDetailView({ id }: { id: string }) {
   const handleMcpSetup = async () => {
     mcpLoading.value = true;
     try {
-      const result = await apiPost<McpTokenResult>(API.MCP_TOKENS, { walletId: id });
-      mcpResult.value = result;
+      const { data: result } = await api.POST('/v1/mcp/tokens', { body: { walletId: id } });
+      mcpResult.value = result ?? null;
       showToast('success', 'MCP token provisioned successfully');
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
@@ -552,8 +446,8 @@ function WalletDetailView({ id }: { id: string }) {
   const fetchNetworks = async () => {
     networksLoading.value = true;
     try {
-      const result = await apiGet<{ availableNetworks: NetworkInfo[] }>(API.WALLET_NETWORKS(id));
-      networks.value = result.availableNetworks ?? [];
+      const { data: result } = await api.GET('/v1/wallets/{id}/networks', { params: { path: { id } } });
+      networks.value = result?.availableNetworks ?? [];
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
@@ -566,7 +460,8 @@ function WalletDetailView({ id }: { id: string }) {
   const fetchBalance = async () => {
     balanceLoading.value = true;
     try {
-      balance.value = await apiGet<WalletBalance>(API.ADMIN_WALLET_BALANCE(id));
+      const { data: balData } = await api.GET('/v1/admin/wallets/{id}/balance', { params: { path: { id } } });
+      balance.value = balData ?? null;
     } catch {
       balance.value = null;
     } finally {
@@ -579,11 +474,11 @@ function WalletDetailView({ id }: { id: string }) {
     try {
       const p = pageNum ?? txPage.value;
       const offset = p * TX_PAGE_SIZE;
-      const r = await apiGet<{ items: WalletTransaction[]; total: number }>(
-        `${API.ADMIN_WALLET_TRANSACTIONS(id)}?offset=${offset}&limit=${TX_PAGE_SIZE}`,
-      );
-      txs.value = r.items;
-      txTotal.value = r.total;
+      const { data: r } = await api.GET('/v1/admin/wallets/{id}/transactions', {
+        params: { path: { id }, query: { offset, limit: TX_PAGE_SIZE } },
+      });
+      txs.value = r?.items ?? [];
+      txTotal.value = r?.total ?? 0;
     } catch {
       txs.value = [];
       txTotal.value = 0;
@@ -604,8 +499,8 @@ function WalletDetailView({ id }: { id: string }) {
   const fetchStaking = async () => {
     stakingLoading.value = true;
     try {
-      const result = await apiGet<StakingPositionsResponse>(API.ADMIN_WALLET_STAKING(id));
-      stakingPositions.value = result.positions ?? [];
+      const { data: result } = await api.GET('/v1/admin/wallets/{id}/staking', { params: { path: { id } } });
+      stakingPositions.value = result?.positions ?? [];
     } catch {
       stakingPositions.value = [];
     } finally {
@@ -619,19 +514,18 @@ function WalletDetailView({ id }: { id: string }) {
     nftsLoading.value = true;
     nftsError.value = null;
     try {
-      const params = new URLSearchParams({ network: net });
-      if (cursor) params.set('cursor', cursor);
-      params.set('limit', '20');
-      const result = await apiGet<{ nfts: NftItem[]; cursor?: string; hasMore: boolean }>(
-        `${API.ADMIN_WALLET_NFTS(id)}?${params.toString()}`,
-      );
+      const { data: result } = await api.GET('/v1/wallets/{id}/nfts', {
+        params: { path: { id }, query: { network: net, pageSize: 20, ...(cursor ? { pageKey: cursor } : {}) } },
+      });
+      const items = (result as components['schemas']['NftListResponse'] | undefined)?.items ?? [];
+      const pageKey = (result as components['schemas']['NftListResponse'] | undefined)?.pageKey;
       if (cursor) {
-        nfts.value = [...nfts.value, ...result.nfts];
+        nfts.value = [...nfts.value, ...items];
       } else {
-        nfts.value = result.nfts;
+        nfts.value = items;
       }
-      nftCursor.value = result.cursor ?? null;
-      nftHasMore.value = result.hasMore;
+      nftCursor.value = pageKey ?? null;
+      nftHasMore.value = !!pageKey;
     } catch (e) {
       if (e instanceof ApiError && e.code === 'INDEXER_NOT_CONFIGURED') {
         nftsError.value = 'INDEXER_NOT_CONFIGURED';
@@ -648,11 +542,10 @@ function WalletDetailView({ id }: { id: string }) {
     if (!nftNetwork.value) return;
     nftDetailLoading.value = true;
     try {
-      const params = new URLSearchParams({ network: nftNetwork.value });
-      const result = await apiGet<NftMetadata>(
-        `${API.ADMIN_WALLET_NFT_METADATA(id, encodeURIComponent(tokenIdentifier))}?${params.toString()}`,
-      );
-      selectedNft.value = result;
+      const { data: result } = await api.GET('/v1/wallets/{id}/nfts/{tokenIdentifier}', {
+        params: { path: { id, tokenIdentifier }, query: { network: nftNetwork.value } },
+      });
+      selectedNft.value = result ?? null;
     } catch {
       // Silently fail -- modal will show what we have
     } finally {
@@ -663,7 +556,8 @@ function WalletDetailView({ id }: { id: string }) {
   const fetchWcSession = async () => {
     wcSessionLoading.value = true;
     try {
-      wcSession.value = await apiGet<WcSession>(API.WALLET_WC_SESSION(id));
+      const { data: wcData } = await api.GET('/v1/wallets/{id}/wc/session', { params: { path: { id } } });
+      wcSession.value = wcData ?? null;
     } catch {
       wcSession.value = null;
     } finally {
@@ -675,7 +569,8 @@ function WalletDetailView({ id }: { id: string }) {
     if (pollRef.value) clearInterval(pollRef.value);
     pollRef.value = setInterval(async () => {
       try {
-        const status = await apiGet<WcPairingStatus>(API.WALLET_WC_PAIR_STATUS(id));
+        const { data: status } = await api.GET('/v1/wallets/{id}/wc/pair/status', { params: { path: { id } } });
+        if (!status) return;
         if (status.status === 'connected') {
           if (pollRef.value) clearInterval(pollRef.value);
           pollRef.value = null;
@@ -699,8 +594,8 @@ function WalletDetailView({ id }: { id: string }) {
   const handleWcConnect = async () => {
     wcPairingLoading.value = true;
     try {
-      const result = await apiPost<WcPairingResult>(API.WALLET_WC_PAIR(id));
-      wcQrData.value = result;
+      const { data: result } = await api.POST('/v1/wallets/{id}/wc/pair', { params: { path: { id } } });
+      wcQrData.value = result ?? null;
       wcQrModal.value = true;
       startPairingPoll();
     } catch (err) {
@@ -720,7 +615,7 @@ function WalletDetailView({ id }: { id: string }) {
   const handleWcDisconnect = async () => {
     wcDisconnectLoading.value = true;
     try {
-      await apiDelete(API.WALLET_WC_SESSION(id));
+      await api.DELETE('/v1/wallets/{id}/wc/session', { params: { path: { id } } });
       wcSession.value = null;
       showToast('success', 'WalletConnect session disconnected');
     } catch (err) {
@@ -748,13 +643,13 @@ function WalletDetailView({ id }: { id: string }) {
     }
     ownerEditLoading.value = true;
     try {
-      const body: Record<string, unknown> = {
-        owner_address: editOwnerAddress.value.trim(),
-      };
-      if (walletTypeSelect.value) {
-        body.wallet_type = walletTypeSelect.value;
-      }
-      await apiPut(API.WALLET_OWNER(id), body);
+      await api.PUT('/v1/wallets/{id}/owner', {
+        params: { path: { id } },
+        body: {
+          owner_address: editOwnerAddress.value.trim(),
+          ...(walletTypeSelect.value ? { wallet_type: walletTypeSelect.value as 'dcent' } : {}),
+        },
+      });
       await fetchWallet();
       ownerEditing.value = false;
       const presetInfo = WALLET_PRESETS.find(p => p.value === walletTypeSelect.value);
@@ -775,13 +670,13 @@ function WalletDetailView({ id }: { id: string }) {
     if (!wallet.value?.ownerAddress) return;
     ownerEditLoading.value = true;
     try {
-      const body: Record<string, unknown> = {
-        owner_address: wallet.value.ownerAddress,
-      };
-      if (newType) {
-        body.wallet_type = newType;
-      }
-      await apiPut(API.WALLET_OWNER(id), body);
+      await api.PUT('/v1/wallets/{id}/owner', {
+        params: { path: { id } },
+        body: {
+          owner_address: wallet.value.ownerAddress!,
+          ...(newType ? { wallet_type: newType as 'dcent' } : {}),
+        },
+      });
       await fetchWallet();
       walletTypeChanging.value = false;
       const presetInfo = WALLET_PRESETS.find(p => p.value === newType);
@@ -800,12 +695,13 @@ function WalletDetailView({ id }: { id: string }) {
 
   const fetchApprovalSettings = async () => {
     try {
-      const result = await apiGet<SettingsData>(API.ADMIN_SETTINGS);
-      const signingEnabled = result['signing_sdk']?.['enabled'] === 'true';
+      const { data: result } = await api.GET('/v1/admin/settings');
+      const s = result as unknown as SettingsData;
+      const signingEnabled = s['signing_sdk']?.['enabled'] === 'true';
       const telegramBotConfigured =
-        result['telegram']?.['bot_token'] === true ||
-        result['notifications']?.['telegram_bot_token'] === true;
-      const wcConfigured = !!result['walletconnect']?.['project_id'] && result['walletconnect']['project_id'] !== '';
+        s['telegram']?.['bot_token'] === true ||
+        s['notifications']?.['telegram_bot_token'] === true;
+      const wcConfigured = !!s['walletconnect']?.['project_id'] && s['walletconnect']['project_id'] !== '';
       approvalSettings.value = { signingEnabled, telegramBotConfigured, wcConfigured };
     } catch {
       // Settings fetch failure is non-critical; warnings won't show
@@ -828,9 +724,12 @@ function WalletDetailView({ id }: { id: string }) {
       }
     }
     try {
-      await apiPut(API.WALLET_OWNER(id), {
-        owner_address: wallet.value!.ownerAddress!,
-        approval_method: method ?? null,
+      await api.PUT('/v1/wallets/{id}/owner', {
+        params: { path: { id } },
+        body: {
+          owner_address: wallet.value!.ownerAddress!,
+          approval_method: (method ?? null) as 'sdk_ntfy' | 'sdk_telegram' | 'walletconnect' | 'telegram_bot' | 'rest' | null,
+        },
       });
       await fetchWallet();
       showToast('success', 'Approval method updated');
@@ -1117,7 +1016,7 @@ function WalletDetailView({ id }: { id: string }) {
                   background: 'var(--color-bg-secondary)', borderRadius: 'var(--radius-md)',
                 }}>
                   <span>
-                    {n.name ?? n.network}
+                    {n.network}
                   </span>
                 </div>
               ))}
@@ -1802,12 +1701,12 @@ function WalletDetailView({ id }: { id: string }) {
                   <strong>Attributes</strong>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)', marginTop: 'var(--space-2)' }}>
                     {selectedNft.value.attributes.map((attr, i) => (
-                      <Badge key={i} variant="info">{attr.traitType}: {attr.value}</Badge>
+                      <Badge key={i} variant="info">{attr.trait_type}: {attr.value}</Badge>
                     ))}
                   </div>
                 </div>
               )}
-              {selectedNft.value.metadata && (
+              {selectedNft.value.rawMetadata && (
                 <details style={{ marginTop: 'var(--space-2)' }}>
                   <summary style={{ cursor: 'pointer', fontWeight: 600 }}>Raw Metadata</summary>
                   <pre style={{
@@ -1819,7 +1718,7 @@ function WalletDetailView({ id }: { id: string }) {
                     fontSize: '0.8em',
                     marginTop: 'var(--space-2)',
                   }}>
-                    {JSON.stringify(selectedNft.value.metadata, null, 2)}
+                    {JSON.stringify(selectedNft.value.rawMetadata, null, 2)}
                   </pre>
                 </details>
               )}
@@ -1837,16 +1736,7 @@ function WalletDetailView({ id }: { id: string }) {
   // Credentials Tab
   // -------------------------------------------------------------------------
 
-  interface CredentialMetadata {
-    id: string;
-    walletId: string | null;
-    type: string;
-    name: string;
-    metadata: Record<string, unknown>;
-    expiresAt: number | null;
-    createdAt: number;
-    updatedAt: number;
-  }
+  type CredentialMetadata = paths['/v1/wallets/{walletId}/credentials']['get']['responses']['200']['content']['application/json']['credentials'][number];
 
   const walletCredentials = useSignal<CredentialMetadata[]>([]);
   const credentialsLoading = useSignal(false);
@@ -1876,8 +1766,8 @@ function WalletDetailView({ id }: { id: string }) {
   const fetchWalletCredentials = async () => {
     credentialsLoading.value = true;
     try {
-      const result = await apiGet<{ credentials: CredentialMetadata[] }>(API.WALLET_CREDENTIALS(id));
-      walletCredentials.value = result.credentials;
+      const { data: result } = await api.GET('/v1/wallets/{walletId}/credentials', { params: { path: { walletId: id } } });
+      walletCredentials.value = result?.credentials ?? [];
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
@@ -1896,10 +1786,13 @@ function WalletDetailView({ id }: { id: string }) {
       }
       credAddLoading.value = true;
       try {
-        await apiPost(API.WALLET_CREDENTIALS(id), {
-          type: credAddType.value,
-          name: credAddName.value.trim(),
-          value: credAddValue.value,
+        await api.POST('/v1/wallets/{walletId}/credentials', {
+          params: { path: { walletId: id } },
+          body: {
+            type: credAddType.value as 'api-key' | 'hmac-secret' | 'rsa-private-key' | 'session-token' | 'custom',
+            name: credAddName.value.trim(),
+            value: credAddValue.value,
+          },
         });
         showToast('success', 'Credential created');
         showCredAddModal.value = false;
@@ -1919,7 +1812,7 @@ function WalletDetailView({ id }: { id: string }) {
       if (!credDeleteRef.value) return;
       credDeleteLoading.value = true;
       try {
-        await apiDelete(API.WALLET_CREDENTIAL_DELETE(id, credDeleteRef.value));
+        await api.DELETE('/v1/wallets/{walletId}/credentials/{ref}', { params: { path: { walletId: id, ref: credDeleteRef.value } } });
         showToast('success', 'Credential deleted');
         credDeleteModal.value = false;
         await fetchWalletCredentials();
@@ -1935,7 +1828,10 @@ function WalletDetailView({ id }: { id: string }) {
       if (!credRotateRef.value || !credRotateValue.value.trim()) return;
       credRotateLoading.value = true;
       try {
-        await apiPut(API.WALLET_CREDENTIAL_ROTATE(id, credRotateRef.value), { value: credRotateValue.value });
+        await api.PUT('/v1/wallets/{walletId}/credentials/{ref}/rotate', {
+          params: { path: { walletId: id, ref: credRotateRef.value } },
+          body: { value: credRotateValue.value },
+        });
         showToast('success', 'Credential rotated');
         credRotateModal.value = false;
         credRotateValue.value = '';
@@ -2021,16 +1917,7 @@ function WalletDetailView({ id }: { id: string }) {
   // External Actions Tab
   // -------------------------------------------------------------------------
 
-  interface ExternalActionItem {
-    id: string;
-    actionKind: string;
-    venue: string | null;
-    operation: string | null;
-    status: string;
-    createdAt: number;
-    actionProvider: string | null;
-    actionName: string | null;
-  }
+  type ExternalActionItem = paths['/v1/wallets/{walletId}/actions']['get']['responses']['200']['content']['application/json']['actions'][number];
 
   const externalActions = useSignal<ExternalActionItem[]>([]);
   const actionsLoading = useSignal(false);
@@ -2051,12 +1938,13 @@ function WalletDetailView({ id }: { id: string }) {
   const fetchExternalActions = async () => {
     actionsLoading.value = true;
     try {
-      const params = new URLSearchParams();
-      params.set('limit', '50');
-      if (actionsStatusFilter.value !== 'all') params.set('status', actionsStatusFilter.value);
-      if (actionsVenueFilter.value.trim()) params.set('venue', actionsVenueFilter.value.trim());
-      const result = await apiGet<{ actions: ExternalActionItem[] }>(`${API.WALLET_ACTIONS(id)}?${params.toString()}`);
-      externalActions.value = result.actions;
+      const query: Record<string, unknown> = { limit: 50 };
+      if (actionsStatusFilter.value !== 'all') query.status = actionsStatusFilter.value;
+      if (actionsVenueFilter.value.trim()) query.venue = actionsVenueFilter.value.trim();
+      const { data: result } = await api.GET('/v1/wallets/{walletId}/actions', {
+        params: { path: { walletId: id }, query: query as { limit?: number; status?: string; venue?: string } },
+      });
+      externalActions.value = result?.actions ?? [];
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
@@ -2130,7 +2018,7 @@ function WalletDetailView({ id }: { id: string }) {
                   <td>{a.venue ? <Badge variant="info">{a.venue}</Badge> : '-'}</td>
                   <td>{a.operation ?? '-'}</td>
                   <td><Badge variant={getStatusVariant(a.status)}>{a.status}</Badge></td>
-                  <td>{a.actionProvider ?? '-'}</td>
+                  <td>{a.provider ?? '-'}</td>
                   <td>{a.actionName ?? '-'}</td>
                   <td>{formatDate(a.createdAt)}</td>
                 </tr>
@@ -2157,7 +2045,7 @@ function WalletDetailView({ id }: { id: string }) {
               <DetailRow label="Venue" value={selectedAction.value.venue ?? '-'} />
               <DetailRow label="Operation" value={selectedAction.value.operation ?? '-'} />
               <DetailRow label="Status" value={selectedAction.value.status} />
-              <DetailRow label="Provider" value={selectedAction.value.actionProvider ?? '-'} />
+              <DetailRow label="Provider" value={selectedAction.value.provider ?? '-'} />
               <DetailRow label="Action" value={selectedAction.value.actionName ?? '-'} />
               <DetailRow label="Created" value={formatDate(selectedAction.value.createdAt)} />
             </div>
@@ -2390,6 +2278,7 @@ import {
 const SOLANA_NETWORKS: readonly string[] = SOLANA_NETWORK_TYPES;
 const EVM_NETWORKS: readonly string[] = EVM_NETWORK_TYPES;
 
+// UI-only: not a direct API response shape
 interface UrlEntry {
   url: string;
   isBuiltin: boolean;
@@ -2407,8 +2296,8 @@ function formatCooldown(ms: number): string {
 }
 
 /** Determine chain from network key for test-rpc API */
-function networkToChain(network: string): 'solana' | 'evm' {
-  return SOLANA_NETWORKS.includes(network) ? 'solana' : 'evm';
+function networkToChain(network: string): 'solana' | 'ethereum' {
+  return SOLANA_NETWORKS.includes(network) ? 'solana' : 'ethereum';
 }
 
 function RpcEndpointsTab() {
@@ -2429,7 +2318,7 @@ function RpcEndpointsTab() {
   const rpcTestResults = useSignal<Record<string, RpcTestResult>>({});
 
   // Build URL entries from settings data + API-provided built-in defaults (#197)
-  const buildUrlEntries = (settingsData: SettingsData, builtinDefaults: Record<string, string[]>): Record<string, UrlEntry[]> => {
+  const buildUrlEntries = (settingsData: SettingsData, builtinDefaults: Record<string, string[]> = {}): Record<string, UrlEntry[]> => {
     const result: Record<string, UrlEntry[]> = {};
     const allNetworks = [...SOLANA_NETWORKS, ...EVM_NETWORKS];
 
@@ -2472,14 +2361,17 @@ function RpcEndpointsTab() {
     try {
       // Fetch built-in URL defaults from API before building entries (#197)
       try {
-        const rpcResult = await apiGet<{ networks: RpcPoolStatus; builtinUrls: Record<string, string[]> }>(API.ADMIN_RPC_STATUS);
-        if (rpcResult.builtinUrls) {
-          builtinRpcUrls.value = rpcResult.builtinUrls;
+        const { data: rpcResult } = await api.GET('/v1/admin/rpc-status');
+        if (rpcResult) {
+          if ((rpcResult as Record<string, unknown>).builtinUrls) {
+            builtinRpcUrls.value = (rpcResult as Record<string, unknown>).builtinUrls as Record<string, string[]>;
+          }
+          rpcPoolStatus.value = ((rpcResult as Record<string, unknown>).networks ?? {}) as RpcPoolStatus;
         }
-        rpcPoolStatus.value = rpcResult.networks ?? {};
       } catch { /* non-fatal: buildUrlEntries will use empty defaults */ }
 
-      const result = await apiGet<SettingsData>(API.ADMIN_SETTINGS);
+      const { data: settingsResult } = await api.GET('/v1/admin/settings');
+      const result = settingsResult as unknown as SettingsData;
       settings.value = result;
       const entries = buildUrlEntries(result, builtinRpcUrls.value);
       originalUrls.value = entries;
@@ -2500,10 +2392,12 @@ function RpcEndpointsTab() {
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        const result = await apiGet<{ networks: RpcPoolStatus; builtinUrls?: Record<string, string[]> }>(API.ADMIN_RPC_STATUS);
-        rpcPoolStatus.value = result.networks ?? {};
-        if (result.builtinUrls) {
-          builtinRpcUrls.value = result.builtinUrls;
+        const { data: result } = await api.GET('/v1/admin/rpc-status');
+        if (result) {
+          rpcPoolStatus.value = ((result as Record<string, unknown>).networks ?? {}) as RpcPoolStatus;
+          if ((result as Record<string, unknown>).builtinUrls) {
+            builtinRpcUrls.value = (result as Record<string, unknown>).builtinUrls as Record<string, string[]>;
+          }
         }
       } catch {
         // Silent failure on polling errors -- don't show toast
@@ -2519,11 +2413,10 @@ function RpcEndpointsTab() {
     const key = `${network}:${url}`;
     rpcTesting.value = { ...rpcTesting.value, [key]: true };
     try {
-      const result = await apiPost<RpcTestResult>(API.ADMIN_SETTINGS_TEST_RPC, {
-        url,
-        chain: networkToChain(network),
+      const { data: result } = await api.POST('/v1/admin/settings/test-rpc', {
+        body: { url, chain: networkToChain(network) },
       });
-      rpcTestResults.value = { ...rpcTestResults.value, [key]: result };
+      rpcTestResults.value = { ...rpcTestResults.value, [key]: result as unknown as RpcTestResult };
     } catch {
       rpcTestResults.value = {
         ...rpcTestResults.value,
@@ -2575,9 +2468,10 @@ function RpcEndpointsTab() {
         entries.push({ key: `rpc_pool.${network}`, value: JSON.stringify(userOnlyUrls) });
       }
 
-      const result = await apiPut<{ updated: number; settings: SettingsData }>(API.ADMIN_SETTINGS, { settings: entries });
-      settings.value = result.settings;
-      const newEntries = buildUrlEntries(result.settings);
+      const { data: putResult } = await api.PUT('/v1/admin/settings', { body: { settings: entries } });
+      const resultSettings = (putResult as unknown as { settings: SettingsData })?.settings ?? {};
+      settings.value = resultSettings;
+      const newEntries = buildUrlEntries(resultSettings);
       originalUrls.value = newEntries;
       dirtyUrls.value = JSON.parse(JSON.stringify(newEntries));
       showToast('success', 'RPC settings saved and applied');
@@ -2868,8 +2762,8 @@ function WalletConnectTab() {
 
   const fetchSettings = async () => {
     try {
-      const result = await apiGet<SettingsData>(API.ADMIN_SETTINGS);
-      settings.value = result;
+      const { data: result } = await api.GET('/v1/admin/settings');
+      settings.value = result as unknown as SettingsData;
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
@@ -2893,8 +2787,8 @@ function WalletConnectTab() {
       const entries = Object.entries(dirty.value)
         .filter(([key]) => key.startsWith('walletconnect.'))
         .map(([key, value]) => ({ key, value }));
-      const result = await apiPut<{ updated: number; settings: SettingsData }>(API.ADMIN_SETTINGS, { settings: entries });
-      settings.value = result.settings;
+      const { data: putResult } = await api.PUT('/v1/admin/settings', { body: { settings: entries } });
+      settings.value = (putResult as unknown as { settings: SettingsData })?.settings ?? {};
       dirty.value = {};
       showToast('success', 'Settings saved and applied');
     } catch (err) {
@@ -3049,8 +2943,8 @@ function WalletListContent() {
 
   const fetchWallets = async () => {
     try {
-      const result = await apiGet<{ items: Wallet[] }>(API.WALLETS);
-      wallets.value = result.items;
+      const { data: result } = await api.GET('/v1/wallets');
+      wallets.value = result?.items ?? [];
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
@@ -3159,8 +3053,8 @@ function WalletListContent() {
         }
         // 'none' -> aaProvider not set = Lite mode
       }
-      const result = await apiPost<Wallet & { session?: { id: string; token: string; expiresAt: number } | null }>(API.WALLETS, createBody);
-      if (result.session?.token) {
+      const { data: result } = await api.POST('/v1/wallets', { body: createBody as components['schemas']['CreateWalletRequest'] });
+      if (result?.session?.token) {
         createdSessionToken.value = result.session.token;
         showToast('success', 'Wallet created with session');
       } else {
