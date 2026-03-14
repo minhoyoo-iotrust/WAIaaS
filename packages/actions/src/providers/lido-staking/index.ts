@@ -10,7 +10,8 @@
  */
 import { z } from 'zod';
 import { ChainError } from '@waiaas/core';
-import { parseTokenAmount } from '../../common/amount-parser.js';
+import { migrateAmount } from '../../common/migrate-amount.js';
+import { resolveProviderHumanAmount } from '../../common/resolve-human-amount.js';
 import type {
   IActionProvider,
   ActionProviderMetadata,
@@ -36,11 +37,19 @@ import type { PositionUpdate, PositionCategory } from '@waiaas/core';
 // ---------------------------------------------------------------------------
 
 const LidoStakeInputSchema = z.object({
-  amount: z.string().min(1, 'amount is required (ETH, e.g. "1.0")'),
+  amount: z.string().min(1, 'amount is required').describe('Amount in smallest units (wei). Example: "1000000000000000000" = 1.0 ETH. Legacy decimal input (e.g., "1.0") is auto-converted with deprecation warning.').optional(),
+  humanAmount: z.string().min(1).optional()
+    .describe('Human-readable amount (e.g., "1.5" for 1.5 ETH). Requires decimals field. Mutually exclusive with amount.'),
+  decimals: z.number().int().min(0).max(24).optional()
+    .describe('Token decimals for humanAmount conversion. Required when using humanAmount.'),
 });
 
 const LidoUnstakeInputSchema = z.object({
-  amount: z.string().min(1, 'amount is required (stETH, e.g. "1.0")'),
+  amount: z.string().min(1, 'amount is required').describe('Amount in smallest units (wei). Example: "1000000000000000000" = 1.0 stETH. Legacy decimal input (e.g., "1.0") is auto-converted with deprecation warning.').optional(),
+  humanAmount: z.string().min(1).optional()
+    .describe('Human-readable amount (e.g., "1.0" for 1.0 stETH). Requires decimals field. Mutually exclusive with amount.'),
+  decimals: z.number().int().min(0).max(24).optional()
+    .describe('Token decimals for humanAmount conversion. Required when using humanAmount.'),
 });
 
 // ---------------------------------------------------------------------------
@@ -112,8 +121,12 @@ export class LidoStakingActionProvider implements IActionProvider {
   // -------------------------------------------------------------------------
 
   private resolveStake(params: Record<string, unknown>): ContractCallRequest {
-    const input = LidoStakeInputSchema.parse(params);
-    const amountWei = parseTokenAmount(input.amount, 18);
+    const rp = { ...params };
+    resolveProviderHumanAmount(rp, 'amount', 'humanAmount');
+    const input = LidoStakeInputSchema.parse(rp);
+    if (!input.amount) throw new ChainError('INVALID_INSTRUCTION', 'ethereum', { message: 'Either amount or humanAmount (with decimals) is required' });
+    const amountWei = migrateAmount(input.amount, 18);
+    if (amountWei === 0n) throw new ChainError('INVALID_INSTRUCTION', 'ethereum', { message: 'Amount must be greater than 0' });
 
     return {
       type: 'CONTRACT_CALL',
@@ -131,8 +144,12 @@ export class LidoStakingActionProvider implements IActionProvider {
     params: Record<string, unknown>,
     context: ActionContext,
   ): ContractCallRequest[] {
-    const input = LidoUnstakeInputSchema.parse(params);
-    const amountWei = parseTokenAmount(input.amount, 18);
+    const rp = { ...params };
+    resolveProviderHumanAmount(rp, 'amount', 'humanAmount');
+    const input = LidoUnstakeInputSchema.parse(rp);
+    if (!input.amount) throw new ChainError('INVALID_INSTRUCTION', 'ethereum', { message: 'Either amount or humanAmount (with decimals) is required' });
+    const amountWei = migrateAmount(input.amount, 18);
+    if (amountWei === 0n) throw new ChainError('INVALID_INSTRUCTION', 'ethereum', { message: 'Amount must be greater than 0' });
 
     // Step 1: Approve stETH to WithdrawalQueue
     const approveRequest: ContractCallRequest = {

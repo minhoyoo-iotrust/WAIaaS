@@ -38,6 +38,43 @@ All action endpoints require **sessionAuth** via `Authorization: Bearer <token>`
 Authorization: Bearer wai_sess_eyJ...
 ```
 
+## Amount Units for Actions
+
+Action provider params accept `humanAmount` as an alternative to `amount` for human-readable values. The server converts using the `decimals` field.
+
+### humanAmount with Actions
+
+```bash
+curl -s -X POST http://localhost:3100/v1/actions/jupiter_swap/swap \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -d '{
+    "params": {
+      "humanAmount": "1.5",
+      "decimals": 9,
+      "inputMint": "So11111111111111111111111111111111111111112",
+      "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "slippageBps": 50
+    }
+  }'
+```
+
+### Per-provider humanAmount field names
+
+| Provider | Field | Example |
+|----------|-------|---------|
+| Jupiter, Aave, Kamino, Lido, Jito | `humanAmount` | `"1.5"` |
+| 0x Swap | `humanSellAmount` | `"1.5"` |
+| Pendle | `humanAmountIn` | `"1.5"` |
+| LI.FI | `humanFromAmount` | `"1.5"` |
+| Across Bridge | `humanAmount` | `"1.5"` |
+
+All require a `decimals` field alongside `humanAmount` so the provider can convert to smallest units.
+
+### CLOB Exception
+
+Hyperliquid, Drift, and Polymarket use exchange-native units. `humanAmount` is not supported -- use `amount` directly with the value in exchange-native format.
+
 ## 1. List Action Providers
 
 ### GET /v1/actions/providers -- List Registered Providers

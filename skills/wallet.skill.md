@@ -33,6 +33,10 @@ Complete reference for wallet CRUD operations, asset queries, session management
 
 > AI agents must NEVER request the master password. Use only your session token.
 
+## Amount Units
+
+For `amount` and `humanAmount` usage in transactions, see **transactions.skill.md** section "Amount Units". Use `humanAmount` for human-readable values (e.g., `"1.5"` for 1.5 ETH); use `amount` for smallest-unit values (e.g., `"1500000000000000000"` wei). These are mutually exclusive (XOR).
+
 ## 1. Wallet CRUD
 
 All wallet CRUD endpoints require **masterAuth** (`X-Master-Password` header), except `PUT /v1/wallets/{id}` and `DELETE /v1/wallets/{id}` which require **sessionAuth** (`Authorization: Bearer <token>`).

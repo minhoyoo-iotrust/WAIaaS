@@ -24,7 +24,7 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { eq, and, inArray, lt, desc } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
-import { WAIaaSError } from '@waiaas/core';
+import { WAIaaSError, formatAmount, parseAmount } from '@waiaas/core';
 import type { ChainType, NetworkType, EnvironmentType, IPolicyEngine } from '@waiaas/core';
 import type { AdapterPool } from '../../infrastructure/adapter-pool.js';
 import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
@@ -106,6 +106,108 @@ export interface TransactionRouteDeps {
   metricsCounter?: IMetricsCounter;
   // v30.8: reputation cache for REPUTATION_THRESHOLD policy evaluation (Phase 320)
   reputationCache?: import('../../services/erc8004/reputation-cache-service.js').ReputationCacheService;
+}
+
+// ---------------------------------------------------------------------------
+// Amount formatting helpers (Phase 404 - RESP-01 ~ RESP-05)
+// ---------------------------------------------------------------------------
+
+/**
+ * Get native token info (decimals, symbol) for a given chain/network.
+ * Returns null for unsupported chains.
+ */
+export function getNativeTokenInfo(
+  chain: string,
+  network?: string | null,
+): { decimals: number; symbol: string } | null {
+  if (chain === 'solana') return { decimals: 9, symbol: 'SOL' };
+  if (chain === 'evm' || chain === 'ethereum') {
+    const symbolMap: Record<string, string> = {
+      'ethereum-mainnet': 'ETH', 'ethereum-sepolia': 'ETH', 'ethereum-holesky': 'ETH',
+      'polygon-mainnet': 'POL', 'polygon-amoy': 'POL',
+      'arbitrum-mainnet': 'ETH', 'arbitrum-sepolia': 'ETH',
+      'optimism-mainnet': 'ETH', 'optimism-sepolia': 'ETH',
+      'base-mainnet': 'ETH', 'base-sepolia': 'ETH',
+      'avalanche-mainnet': 'AVAX', 'avalanche-fuji': 'AVAX',
+      'bsc-mainnet': 'BNB', 'bsc-testnet': 'BNB',
+    };
+    return { decimals: 18, symbol: symbolMap[network ?? ''] ?? 'ETH' };
+  }
+  return null;
+}
+
+/**
+ * Resolve amountFormatted/decimals/symbol for a transaction.
+ * Returns null fields when amount is null, metadata unavailable, or conversion fails.
+ */
+export function resolveAmountMetadata(
+  chain: string,
+  network: string | null | undefined,
+  type: string,
+  amount: string | null | undefined,
+): { amountFormatted: string | null; decimals: number | null; symbol: string | null } {
+  if (!amount) {
+    return { amountFormatted: null, decimals: null, symbol: null };
+  }
+
+  try {
+    // Only TRANSFER has well-defined native token semantics
+    if (type === 'TRANSFER') {
+      const tokenInfo = getNativeTokenInfo(chain, network);
+      if (!tokenInfo) {
+        return { amountFormatted: null, decimals: null, symbol: null };
+      }
+      const formatted = formatAmount(BigInt(amount), tokenInfo.decimals);
+      return {
+        amountFormatted: formatted,
+        decimals: tokenInfo.decimals,
+        symbol: tokenInfo.symbol,
+      };
+    }
+
+    // TOKEN_TRANSFER would need token registry lookup (deferred to route handler with deps)
+    // CONTRACT_CALL, APPROVE, BATCH, etc. - amount semantics vary by type
+    return { amountFormatted: null, decimals: null, symbol: null };
+  } catch {
+    return { amountFormatted: null, decimals: null, symbol: null };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// humanAmount XOR validation + conversion (Phase 405 - HAMNT-01 ~ HAMNT-03)
+// ---------------------------------------------------------------------------
+
+/**
+ * Validate that exactly one of amount/humanAmount is provided.
+ * Throws WAIaaSError('VALIDATION_FAILED') if both or neither are present.
+ */
+export function validateAmountXOR(
+  request: { amount?: string; humanAmount?: string },
+): void {
+  if (request.amount && request.humanAmount) {
+    throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
+      message: 'amount and humanAmount are mutually exclusive. Provide exactly one.',
+    });
+  }
+  if (!request.amount && !request.humanAmount) {
+    throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
+      message: 'Either amount or humanAmount must be provided.',
+    });
+  }
+}
+
+/**
+ * If humanAmount is provided, convert to smallest-unit string using decimals.
+ * Returns the original amount if humanAmount is not present.
+ */
+export function resolveHumanAmount(
+  request: { amount?: string; humanAmount?: string },
+  decimals: number,
+): string {
+  if (request.humanAmount) {
+    return parseAmount(request.humanAmount, decimals).toString();
+  }
+  return request.amount!;
 }
 
 // ---------------------------------------------------------------------------
@@ -397,6 +499,38 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
       });
     }
 
+    // Phase 405: humanAmount -> amount conversion (before pipeline)
+    if ('humanAmount' in request && request.humanAmount) {
+      const txType = request.type as string | undefined;
+
+      if (txType === 'TRANSFER') {
+        validateAmountXOR(request);
+        const nativeToken = getNativeTokenInfo(wallet.chain, resolvedNetwork);
+        if (!nativeToken) {
+          throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
+            message: `Cannot resolve native token decimals for chain '${wallet.chain}'`,
+          });
+        }
+        request.amount = resolveHumanAmount(request, nativeToken.decimals);
+        delete request.humanAmount;
+      } else if (txType === 'TOKEN_TRANSFER' || txType === 'APPROVE') {
+        validateAmountXOR(request);
+        const decimals = request.token?.decimals;
+        if (typeof decimals !== 'number') {
+          throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
+            message: 'token.decimals is required when using humanAmount for TOKEN_TRANSFER/APPROVE',
+          });
+        }
+        request.amount = resolveHumanAmount(request, decimals);
+        delete request.humanAmount;
+      }
+    } else if ('type' in request && (request.type === 'TRANSFER' || request.type === 'TOKEN_TRANSFER' || request.type === 'APPROVE')) {
+      // Validate that amount is present when humanAmount is not (XOR check for missing both)
+      if (!request.amount) {
+        validateAmountXOR(request);
+      }
+    }
+
     // Resolve adapter from pool for this wallet's chain:resolvedNetwork
     const rpcUrl = resolveRpcUrl(
       deps.config.rpc as unknown as Record<string, string>,
@@ -541,6 +675,32 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
       throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
         message: err instanceof Error ? err.message : 'Network validation failed',
       });
+    }
+
+    // Phase 405: humanAmount -> amount conversion (simulate route)
+    if ('humanAmount' in request && request.humanAmount) {
+      const txType = request.type as string | undefined;
+      if (txType === 'TRANSFER') {
+        validateAmountXOR(request);
+        const nativeToken = getNativeTokenInfo(wallet.chain, resolvedNetwork);
+        if (!nativeToken) {
+          throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
+            message: `Cannot resolve native token decimals for chain '${wallet.chain}'`,
+          });
+        }
+        request.amount = resolveHumanAmount(request, nativeToken.decimals);
+        delete request.humanAmount;
+      } else if (txType === 'TOKEN_TRANSFER' || txType === 'APPROVE') {
+        validateAmountXOR(request);
+        const decimals = request.token?.decimals;
+        if (typeof decimals !== 'number') {
+          throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
+            message: 'token.decimals is required when using humanAmount for TOKEN_TRANSFER/APPROVE',
+          });
+        }
+        request.amount = resolveHumanAmount(request, decimals);
+        delete request.humanAmount;
+      }
     }
 
     // Resolve adapter from pool
@@ -703,22 +863,28 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
 
     return c.json(
       {
-        items: items.map((tx) => ({
-          id: tx.id,
-          walletId: tx.walletId,
-          type: tx.type,
-          status: tx.status,
-          tier: tx.tier,
-          chain: tx.chain,
-          network: tx.network ?? null,
-          toAddress: tx.toAddress,
-          amount: tx.amount,
-          txHash: tx.txHash,
-          error: tx.error,
-          createdAt: tx.createdAt ? Math.floor(tx.createdAt.getTime() / 1000) : null,
-          displayAmount: toDisplayAmount(tx.amountUsd, currencyCode, displayRate),
-          displayCurrency: currencyCode ?? null,
-        })),
+        items: items.map((tx) => {
+          const meta = resolveAmountMetadata(tx.chain, tx.network, tx.type, tx.amount);
+          return {
+            id: tx.id,
+            walletId: tx.walletId,
+            type: tx.type,
+            status: tx.status,
+            tier: tx.tier,
+            chain: tx.chain,
+            network: tx.network ?? null,
+            toAddress: tx.toAddress,
+            amount: tx.amount,
+            txHash: tx.txHash,
+            error: tx.error,
+            createdAt: tx.createdAt ? Math.floor(tx.createdAt.getTime() / 1000) : null,
+            displayAmount: toDisplayAmount(tx.amountUsd, currencyCode, displayRate),
+            displayCurrency: currencyCode ?? null,
+            amountFormatted: meta.amountFormatted,
+            amountDecimals: meta.decimals,
+            amountSymbol: meta.symbol,
+          };
+        }),
         cursor: hasMore ? nextCursor : null,
         hasMore,
       },
@@ -799,6 +965,9 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
     const txWallet = await deps.db.select().from(wallets).where(eq(wallets.id, tx.walletId)).get();
     const isAtomicBatch = tx.type === 'BATCH' && txWallet?.accountType === 'smart';
 
+    // Phase 404: Resolve human-readable amount metadata
+    const amountMeta = resolveAmountMetadata(tx.chain, tx.network, tx.type, tx.amount);
+
     return c.json(
       {
         id: tx.id,
@@ -816,6 +985,9 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
         displayAmount: toDisplayAmount(tx.amountUsd, currencyCode, displayRate),
         displayCurrency: currencyCode ?? null,
         ...(tx.type === 'BATCH' ? { atomic: isAtomicBatch } : {}),
+        amountFormatted: amountMeta.amountFormatted,
+        amountDecimals: amountMeta.decimals,
+        amountSymbol: amountMeta.symbol,
       },
       200,
     );

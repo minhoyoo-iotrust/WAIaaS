@@ -21,10 +21,11 @@ import { type JitoStakingConfig, JITO_STAKING_DEFAULTS, JITO_MIN_DEPOSIT_LAMPORT
 import {
   buildDepositSolRequest,
   buildWithdrawSolRequest,
-  parseSolAmount,
   getJitoSolBalance,
   getStakePoolExchangeRate,
 } from './jito-stake-pool.js';
+import { migrateAmount } from '../../common/migrate-amount.js';
+import { resolveProviderHumanAmount } from '../../common/resolve-human-amount.js';
 import { formatCaip19 } from '@waiaas/core';
 import type { PositionUpdate, PositionCategory } from '@waiaas/core';
 
@@ -33,11 +34,19 @@ import type { PositionUpdate, PositionCategory } from '@waiaas/core';
 // ---------------------------------------------------------------------------
 
 const JitoStakeInputSchema = z.object({
-  amount: z.string().min(1, 'amount is required (SOL, e.g. "1.0")'),
+  amount: z.string().min(1, 'amount is required').describe('Amount in smallest units (lamports). Example: "1000000000" = 1.0 SOL. Legacy decimal input (e.g., "1.0") is auto-converted with deprecation warning.').optional(),
+  humanAmount: z.string().min(1).optional()
+    .describe('Human-readable amount (e.g., "1.5" for 1.5 SOL). Requires decimals field. Mutually exclusive with amount.'),
+  decimals: z.number().int().min(0).max(24).optional()
+    .describe('Token decimals for humanAmount conversion. Required when using humanAmount.'),
 });
 
 const JitoUnstakeInputSchema = z.object({
-  amount: z.string().min(1, 'amount is required (JitoSOL, e.g. "1.0")'),
+  amount: z.string().min(1, 'amount is required').describe('Amount in smallest units (lamports). Example: "1000000000" = 1.0 JitoSOL. Legacy decimal input (e.g., "1.0") is auto-converted with deprecation warning.').optional(),
+  humanAmount: z.string().min(1).optional()
+    .describe('Human-readable amount (e.g., "1.0" for 1.0 JitoSOL). Requires decimals field. Mutually exclusive with amount.'),
+  decimals: z.number().int().min(0).max(24).optional()
+    .describe('Token decimals for humanAmount conversion. Required when using humanAmount.'),
 });
 
 // ---------------------------------------------------------------------------
@@ -112,8 +121,12 @@ export class JitoStakingActionProvider implements IActionProvider {
     params: Record<string, unknown>,
     context: ActionContext,
   ): Promise<ContractCallRequest> {
-    const input = JitoStakeInputSchema.parse(params);
-    const amountLamports = await parseSolAmount(input.amount);
+    const rp = { ...params };
+    resolveProviderHumanAmount(rp, 'amount', 'humanAmount');
+    const input = JitoStakeInputSchema.parse(rp);
+    if (!input.amount) throw new ChainError('INVALID_INSTRUCTION', 'solana', { message: 'Either amount or humanAmount (with decimals) is required' });
+    const amountLamports = migrateAmount(input.amount, 9);
+    if (amountLamports === 0n) throw new ChainError('INVALID_INSTRUCTION', 'solana', { message: 'Amount must be greater than 0' });
 
     if (amountLamports < JITO_MIN_DEPOSIT_LAMPORTS) {
       throw new ChainError('INVALID_INSTRUCTION', 'solana', {
@@ -132,8 +145,12 @@ export class JitoStakingActionProvider implements IActionProvider {
     params: Record<string, unknown>,
     context: ActionContext,
   ): Promise<ContractCallRequest> {
-    const input = JitoUnstakeInputSchema.parse(params);
-    const amountLamports = await parseSolAmount(input.amount);
+    const rp = { ...params };
+    resolveProviderHumanAmount(rp, 'amount', 'humanAmount');
+    const input = JitoUnstakeInputSchema.parse(rp);
+    if (!input.amount) throw new ChainError('INVALID_INSTRUCTION', 'solana', { message: 'Either amount or humanAmount (with decimals) is required' });
+    const amountLamports = migrateAmount(input.amount, 9);
+    if (amountLamports === 0n) throw new ChainError('INVALID_INSTRUCTION', 'solana', { message: 'Amount must be greater than 0' });
 
     return buildWithdrawSolRequest(this.config, amountLamports, context.walletAddress);
   }

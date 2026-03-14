@@ -16,6 +16,7 @@
 
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { eq } from 'drizzle-orm';
+import { zodToJsonSchema } from 'zod-to-json-schema';
 import { WAIaaSError, isApiDirectResult } from '@waiaas/core';
 import type { ChainType, NetworkType, EnvironmentType, IPolicyEngine, SignedDataAction, SignedHttpAction } from '@waiaas/core';
 import { resolveChainId } from '../helpers/resolve-chain-id.js';
@@ -102,6 +103,7 @@ const ActionDefinitionResponseSchema = z.object({
   chain: z.string(),
   riskLevel: z.string(),
   defaultTier: z.string(),
+  inputSchema: z.record(z.unknown()).optional(),
 });
 
 const ProviderResponseSchema = z.object({
@@ -133,6 +135,29 @@ const ActionExecuteRequestSchema = z
     }).optional(),
   })
   .openapi('ActionExecuteRequest');
+
+// ---------------------------------------------------------------------------
+// Zod -> JSON Schema safe converter
+// ---------------------------------------------------------------------------
+
+/**
+ * Convert a Zod schema to JSON Schema. Falls back to `{ type: "object" }`
+ * if conversion fails (e.g., non-standard or broken schema).
+ */
+function safeZodToJsonSchema(inputSchema: unknown): Record<string, unknown> {
+  try {
+    if (
+      inputSchema &&
+      typeof inputSchema === 'object' &&
+      typeof (inputSchema as Record<string, unknown>).safeParse === 'function'
+    ) {
+      return zodToJsonSchema(inputSchema as z.ZodTypeAny, { target: 'openApi3' }) as Record<string, unknown>;
+    }
+    return { type: 'object' };
+  } catch {
+    return { type: 'object' };
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Route definitions
@@ -228,6 +253,7 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
           chain: a.action.chain,
           riskLevel: a.action.riskLevel,
           defaultTier: a.action.defaultTier,
+          inputSchema: safeZodToJsonSchema(a.action.inputSchema),
         })),
       };
     });

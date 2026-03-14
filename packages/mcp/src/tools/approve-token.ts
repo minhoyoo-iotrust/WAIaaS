@@ -24,7 +24,7 @@ export function registerApproveToken(server: McpServer, apiClient: ApiClient, wa
           'CAIP-19 asset identifier (e.g., "eip155:1/erc20:0xa0b8..." or "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5..."). When provided, the daemon cross-validates address against assetId. EVM addresses must be lowercase in CAIP-19.',
         ),
       }).describe('Token info. Includes optional CAIP-19 assetId for standard asset identification.'),
-      amount: z.string().describe('Approval amount in smallest unit'),
+      amount: z.string().describe('Approval amount in smallest units (wei for EVM, lamports for Solana). Example: "1000000" = 1 USDC (6 decimals). Use max uint256 for unlimited: "115792089237316195423570985008687907853269984665640564039457584007913129639935"'),
       network: z.string().optional().describe('Target network (e.g., polygon-mainnet). Required for EVM wallets; auto-resolved for Solana.'),
       wallet_id: z.string().optional().describe('Target wallet ID. Required for multi-wallet sessions; auto-resolved when session has a single wallet.'),
       gas_condition: z.object({

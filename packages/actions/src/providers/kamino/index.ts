@@ -14,7 +14,8 @@
  * MockKaminoSdkWrapper enables unit testing without real SDK/RPC.
  */
 import { ChainError } from '@waiaas/core';
-import { parseTokenAmount } from '../../common/amount-parser.js';
+import { migrateAmount } from '../../common/migrate-amount.js';
+import { resolveProviderHumanAmount } from '../../common/resolve-human-amount.js';
 import type {
   ILendingProvider,
   ActionProviderMetadata,
@@ -160,9 +161,13 @@ export class KaminoLendingProvider implements ILendingProvider, IPositionProvide
     params: Record<string, unknown>,
     context: ActionContext,
   ): Promise<ContractCallRequest[]> {
-    const input = KaminoSupplyInputSchema.parse(params);
+    const rp = { ...params };
+    resolveProviderHumanAmount(rp, 'amount', 'humanAmount');
+    const input = KaminoSupplyInputSchema.parse(rp);
+    if (!input.amount) throw new ChainError('INVALID_INSTRUCTION', 'solana', { message: 'Either amount or humanAmount (with decimals) is required' });
     const marketAddress = resolveMarketAddress(input.market ?? this.config.market);
-    const amount = parseTokenAmount(input.amount, 6);
+    const amount = migrateAmount(input.amount, 6);
+    if (amount === 0n) throw new ChainError('INVALID_INSTRUCTION', 'solana', { message: 'Amount must be greater than 0' });
 
     const instructions = await this.sdkWrapper.buildSupplyInstruction({
       market: marketAddress,
@@ -182,9 +187,13 @@ export class KaminoLendingProvider implements ILendingProvider, IPositionProvide
     params: Record<string, unknown>,
     context: ActionContext,
   ): Promise<ContractCallRequest[]> {
-    const input = KaminoBorrowInputSchema.parse(params);
+    const rp = { ...params };
+    resolveProviderHumanAmount(rp, 'amount', 'humanAmount');
+    const input = KaminoBorrowInputSchema.parse(rp);
+    if (!input.amount) throw new ChainError('INVALID_INSTRUCTION', 'solana', { message: 'Either amount or humanAmount (with decimals) is required' });
     const marketAddress = resolveMarketAddress(input.market ?? this.config.market);
-    const amount = parseTokenAmount(input.amount, 6);
+    const amount = migrateAmount(input.amount, 6);
+    if (amount === 0n) throw new ChainError('INVALID_INSTRUCTION', 'solana', { message: 'Amount must be greater than 0' });
 
     // HF simulation: approximate USD value using raw amount
     // (conservative estimate -- proper conversion requires price oracle)
@@ -209,9 +218,12 @@ export class KaminoLendingProvider implements ILendingProvider, IPositionProvide
     params: Record<string, unknown>,
     context: ActionContext,
   ): Promise<ContractCallRequest[]> {
-    const input = KaminoRepayInputSchema.parse(params);
+    const rp = { ...params };
+    resolveProviderHumanAmount(rp, 'amount', 'humanAmount');
+    const input = KaminoRepayInputSchema.parse(rp);
+    if (!input.amount) throw new ChainError('INVALID_INSTRUCTION', 'solana', { message: 'Either amount or humanAmount (with decimals) is required' });
     const marketAddress = resolveMarketAddress(input.market ?? this.config.market);
-    const amount: bigint | 'max' = input.amount === 'max' ? 'max' : parseTokenAmount(input.amount, 6);
+    const amount: bigint | 'max' = input.amount === 'max' ? 'max' : migrateAmount(input.amount, 6);
 
     const instructions = await this.sdkWrapper.buildRepayInstruction({
       market: marketAddress,
@@ -231,9 +243,12 @@ export class KaminoLendingProvider implements ILendingProvider, IPositionProvide
     params: Record<string, unknown>,
     context: ActionContext,
   ): Promise<ContractCallRequest[]> {
-    const input = KaminoWithdrawInputSchema.parse(params);
+    const rp = { ...params };
+    resolveProviderHumanAmount(rp, 'amount', 'humanAmount');
+    const input = KaminoWithdrawInputSchema.parse(rp);
+    if (!input.amount) throw new ChainError('INVALID_INSTRUCTION', 'solana', { message: 'Either amount or humanAmount (with decimals) is required' });
     const marketAddress = resolveMarketAddress(input.market ?? this.config.market);
-    const amount: bigint | 'max' = input.amount === 'max' ? 'max' : parseTokenAmount(input.amount, 6);
+    const amount: bigint | 'max' = input.amount === 'max' ? 'max' : migrateAmount(input.amount, 6);
 
     // Skip HF simulation for 'max' withdrawals (closing position entirely)
     if (amount !== 'max') {

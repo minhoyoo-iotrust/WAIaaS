@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WAIaaS — Self-hosted Wallet-as-a-Service for AI Agents</title>
   <meta name="description" content="WAIaaS is a self-hosted Wallet-as-a-Service daemon that lets AI agents securely manage crypto wallets across EVM and Solana chains. Multi-chain support, 13+ DeFi protocols, 3-layer security, MCP built-in.">
+  <meta name="keywords" content="wallet as a service, AI agent wallet, crypto wallet API, MCP wallet, self-hosted wallet, EVM wallet, Solana wallet, DeFi API, ERC-4337, smart account, wallet daemon">
+  <link rel="canonical" href="https://waiaas.ai/">
 
   <!-- Open Graph -->
   <meta property="og:type" content="website">
@@ -58,6 +60,102 @@
       "ERC-4337 Smart Account support",
       "Owner approval channels (WalletConnect, Telegram, Wallet SDK)",
       "REST API + TypeScript SDK"
+    ]
+  }
+  </script>
+
+  <!-- JSON-LD FAQ -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is WAIaaS?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "WAIaaS (Wallet AI as a Service) is a self-hosted daemon that gives AI agents secure, policy-controlled access to crypto wallets across EVM and Solana chains. It runs locally on your machine — your keys, your rules."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I install WAIaaS?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Install via npm with 'npm install -g @waiaas/cli', then run 'waiaas quickset' for instant setup. Alternatively, use Docker: 'docker run -d -p 127.0.0.1:3100:3100 -v waiaas-data:/data -e WAIAAS_AUTO_PROVISION=true waiaas/daemon'."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Which blockchains does WAIaaS support?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "WAIaaS supports 8 EVM networks (Ethereum, Polygon, Arbitrum, Optimism, Base, Avalanche, BNB Chain, HyperEVM) and Solana. It handles native tokens, ERC-20/SPL tokens, and NFTs (ERC-721, ERC-1155, Metaplex)."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do AI agents connect to WAIaaS?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "AI agents can connect via three interfaces: MCP (Model Context Protocol) for direct tool integration, REST API for HTTP-based access, or the TypeScript SDK (@waiaas/sdk) for programmatic control. Skill files are also available for Claude Code and OpenClaw."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is WAIaaS secure for managing real funds?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "WAIaaS uses a 3-layer security model: session authentication (JWT), time-delay and owner approval (via WalletConnect, Telegram, or Wallet SDK), and monitoring with kill switch. It enforces default-deny policies for tokens, contracts, and spenders. Private keys are encrypted at rest with Argon2id key derivation."
+        }
+      }
+    ]
+  }
+  </script>
+
+  <!-- JSON-LD HowTo -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    "name": "How to set up WAIaaS for AI agents",
+    "description": "Get WAIaaS running in 3 steps: install the CLI, start the daemon, and connect your AI agent.",
+    "totalTime": "PT5M",
+    "step": [
+      {
+        "@type": "HowToStep",
+        "position": 1,
+        "name": "Install",
+        "text": "Install the WAIaaS CLI globally via npm.",
+        "url": "https://waiaas.ai/#quickstart",
+        "itemListElement": {
+          "@type": "HowToDirection",
+          "text": "npm install -g @waiaas/cli"
+        }
+      },
+      {
+        "@type": "HowToStep",
+        "position": 2,
+        "name": "Start",
+        "text": "Launch the daemon with quickset for instant setup including wallet creation and session token.",
+        "url": "https://waiaas.ai/#quickstart",
+        "itemListElement": {
+          "@type": "HowToDirection",
+          "text": "waiaas quickset"
+        }
+      },
+      {
+        "@type": "HowToStep",
+        "position": 3,
+        "name": "Connect",
+        "text": "Open the Admin UI, copy the agent prompt, and paste it into your AI agent (Claude Code, OpenClaw, or any MCP client).",
+        "url": "https://waiaas.ai/#quickstart",
+        "itemListElement": {
+          "@type": "HowToDirection",
+          "text": "open http://localhost:3100/admin"
+        }
+      }
     ]
   }
   </script>
@@ -652,6 +750,19 @@
       .arch-pipeline { gap: 4px; }
       .pipe-stage { font-size: 0.65rem; padding: 3px 6px; }
       .pipe-arrow { font-size: 0.6rem; }
+      /* 코드 블록 줄바꿈 */
+      .step code { white-space: pre-wrap; word-break: break-all; }
+      .tab-content .cmd-block,
+      .tab-content .json-block { white-space: pre-wrap; word-break: break-all; }
+      /* 테이블 가로 스크롤 */
+      .tab-content .info-table,
+      .tab-content .client-table,
+      .tab-content .compare-table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      /* 탭 콘텐츠 패딩 축소 */
+      .tab-content { padding: 16px; }
+      /* 탭 버튼 스크롤 */
+      .tab-buttons { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      .tab-btn { padding: 8px 16px; font-size: 0.8rem; white-space: nowrap; }
     }
   </style>
 </head>
@@ -958,22 +1069,10 @@
             <div class="sub">TypeScript SDK for API integration</div>
           </div>
         </a>
-        <a class="resource-link" href="https://www.npmjs.com/package/@waiaas/wallet-sdk">
-          <div>
-            <div class="label">npm: @waiaas/wallet-sdk</div>
-            <div class="sub">Wallet signing SDK for mobile/desktop apps</div>
-          </div>
-        </a>
         <a class="resource-link" href="https://hub.docker.com/r/waiaas/daemon">
           <div>
             <div class="label">Docker: waiaas/daemon</div>
             <div class="sub">Containerized daemon image</div>
-          </div>
-        </a>
-        <a class="resource-link" href="https://hub.docker.com/r/waiaas/push-relay">
-          <div>
-            <div class="label">Docker: waiaas/push-relay</div>
-            <div class="sub">Push notification relay server</div>
           </div>
         </a>
         <a class="resource-link" href="https://github.com/minhoyoo-iotrust/WAIaaS/blob/main/docs/deployment.md">

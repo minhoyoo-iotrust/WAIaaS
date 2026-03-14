@@ -66,7 +66,9 @@ const gasConditionField = { gasCondition: GasConditionSchema.optional() } as con
 export const TransferRequestSchema = z.object({
   type: z.literal('TRANSFER'),
   to: z.string().min(1),
-  amount: z.string().regex(numericStringPattern, 'amount must be a numeric string (lamports/wei)'),
+  amount: z.string().regex(numericStringPattern, 'amount must be a numeric string (lamports/wei)').optional(),
+  humanAmount: z.string().min(1).optional()
+    .describe('Human-readable amount (e.g., "1.5" for 1.5 ETH). Mutually exclusive with amount.'),
   memo: z.string().max(256).optional(),
   network: NetworkTypeEnumWithLegacy.optional(),
   ...gasConditionField,
@@ -110,7 +112,9 @@ const TokenInfoSchema = TokenInfoBaseSchema.superRefine((data, ctx) => {
 export const TokenTransferRequestSchema = z.object({
   type: z.literal('TOKEN_TRANSFER'),
   to: z.string().min(1),
-  amount: z.string().regex(numericStringPattern, 'amount must be a numeric string'),
+  amount: z.string().regex(numericStringPattern, 'amount must be a numeric string').optional(),
+  humanAmount: z.string().min(1).optional()
+    .describe('Human-readable amount (e.g., "100" for 100 USDC). Mutually exclusive with amount. Uses token.decimals for conversion.'),
   token: TokenInfoSchema,
   memo: z.string().max(256).optional(),
   network: NetworkTypeEnumWithLegacy.optional(),
@@ -184,7 +188,9 @@ export const ApproveRequestSchema = z.object({
   type: z.literal('APPROVE'),
   spender: z.string().min(1),
   token: TokenInfoSchema,
-  amount: z.string().regex(numericStringPattern, 'amount must be a numeric string'),
+  amount: z.string().regex(numericStringPattern, 'amount must be a numeric string').optional(),
+  humanAmount: z.string().min(1).optional()
+    .describe('Human-readable amount (e.g., "1000" for 1000 USDC). Mutually exclusive with amount. Uses token.decimals for conversion.'),
   network: NetworkTypeEnumWithLegacy.optional(),
   /** Optional NFT approval info. When present, this is an NFT approval (not ERC-20). */
   nft: z.object({

@@ -25,6 +25,7 @@ import {
 } from './config.js';
 import { clampSlippageBps, asBps } from '../../common/slippage.js';
 import { encodeApproveCalldata } from '../../common/contract-encoding.js';
+import { resolveProviderHumanAmount } from '../../common/resolve-human-amount.js';
 
 // ---------------------------------------------------------------------------
 // Native ETH placeholder address used by 0x API
@@ -39,7 +40,11 @@ const NATIVE_ETH_ADDRESS = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
 const SwapInputSchema = z.object({
   sellToken: z.string().min(1, 'sellToken is required'),
   buyToken: z.string().min(1, 'buyToken is required'),
-  sellAmount: z.string().min(1, 'sellAmount is required (in smallest units)'),
+  sellAmount: z.string().min(1, 'sellAmount is required (in smallest units)').describe('Sell amount in smallest units (wei). Example: "1000000000000000000" = 1 ETH').optional(),
+  humanSellAmount: z.string().min(1).optional()
+    .describe('Human-readable sell amount (e.g., "1.5" for 1.5 ETH). Requires decimals field. Mutually exclusive with sellAmount.'),
+  decimals: z.number().int().min(0).max(24).optional()
+    .describe('Token decimals for humanSellAmount conversion. Required when using humanSellAmount.'),
   slippageBps: z.number().int().optional(),
   chainId: z.number().int().optional(),
 });
@@ -90,8 +95,15 @@ export class ZeroExSwapActionProvider implements IActionProvider {
       throw new ChainError('INVALID_INSTRUCTION', 'ethereum', { message: `Unknown action: ${actionName}` });
     }
 
+    // Phase 405: humanSellAmount -> sellAmount conversion
+    const resolvedParams = { ...params };
+    resolveProviderHumanAmount(resolvedParams, 'sellAmount', 'humanSellAmount');
+
     // Parse and validate input
-    const input = SwapInputSchema.parse(params);
+    const input = SwapInputSchema.parse(resolvedParams);
+    if (!input.sellAmount) {
+      throw new ChainError('INVALID_INSTRUCTION', 'ethereum', { message: 'Either sellAmount or humanSellAmount (with decimals) is required' });
+    }
 
     // SAFE-05: Block same-token swap
     if (input.sellToken.toLowerCase() === input.buyToken.toLowerCase()) {

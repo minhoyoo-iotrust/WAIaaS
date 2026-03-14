@@ -2,6 +2,49 @@
 
 *A living document updated after each milestone. Lessons feed forward into future planning.*
 
+## Milestone: v31.15 — Amount 단위 표준화 및 AI 에이전트 DX 개선
+
+**Shipped:** 2026-03-14
+**Phases:** 5 | **Plans:** 9 | **Sessions:** 1
+
+### What Was Built
+- 14개 non-CLOB provider 스키마에 명시적 단위 description(.describe()) 추가 + CLOB 3개 exchange-native 단위 문서화
+- 4개 레거시 provider(Aave V3/Kamino/Lido/Jito) smallest-unit 전환 + migrateAmount() 하위 호환 자동 변환
+- MCP typed schema 등록(jsonSchemaToZodParams) + GET /v1/actions/providers inputSchema JSON Schema 노출
+- amountFormatted/amountDecimals/amountSymbol + balanceFormatted 런타임 응답 보강
+- humanAmount XOR 파라미터 — REST API + 10 action providers + MCP 자동 노출
+- SDK humanAmount 타입 + 스킬 파일 4종 단위 가이드 + E2E humanAmount 시나리오 검증
+
+### What Worked
+- 5 phases 1일 완료 — 연구 단계에서 scope가 명확히 정의되어 빠른 구현
+- migrateAmount() 공유 헬퍼 패턴이 4개 provider 마이그레이션을 단순화하고 하위 호환성 유지
+- per-provider humanAmount naming(humanAmount/humanSellAmount/humanAmountIn) 결정이 기존 필드명과 자연스럽게 대응
+- safeZodToJsonSchema + jsonSchemaToZodParams 양방향 변환으로 MCP typed schema와 REST API 독립 유지
+
+### What Was Inefficient
+- HAMNT-01/02/03 REQUIREMENTS.md 체크박스 수동 업데이트 누락 — 감사에서 발견, 별도 커밋 필요
+- 405-01-SUMMARY.md 프론트매터 requirements-completed 누락 — 자동 체크 미비
+- VERIFICATION.md 전 5 phases 미생성 — verifier agent 실행 생략됨
+- zero-amount regression(migrateAmount 행동 변화) 감사에서 뒤늦게 발견 — 단위 테스트 기대값 업데이트 누락
+
+### Patterns Established
+- migrateAmount() 패턴: 소수점 감지로 human-readable → smallest-unit 자동 변환 + deprecation 경고
+- Provider humanAmount: per-provider 필드 명명 규칙(원본 amount 필드명에 human 접두어)
+- MCP typed schema: Zod → JSON Schema → Zod 라운드트립, z.record(z.unknown()) fallback
+- 응답 보강: 런타임 계산(DB 저장 없음), null fallback(decimals 불명)
+
+### Key Lessons
+1. 단위 변경은 행동 변화 — parseTokenAmount → migrateAmount 전환 시 zero-amount 검증 이동 확인 필수
+2. REQUIREMENTS.md 체크박스는 코드 완료와 동시에 업데이트해야 함 — 감사 단계에서 발견은 비효율
+3. humanAmount XOR 검증은 Zod superRefine보다 route handler에서 하는 것이 discriminatedUnion 호환성 유지에 적합
+
+### Cost Observations
+- Model mix: ~100% opus (quality profile)
+- Sessions: 1
+- Notable: 89 files, +7,834/-737 lines, 1일 완료 — 단위 표준화가 전체 인터페이스에 영향하지만 패턴이 반복적
+
+---
+
 ## Milestone: v29.7 — D'CENT 직접 서명 + Human Wallet Apps 통합
 
 **Shipped:** 2026-03-01

@@ -14,9 +14,9 @@ export const PmBuySchema = z.object({
   /** CTF ERC-1155 token ID for the target outcome */
   tokenId: z.string().min(1).describe('CTF ERC-1155 token ID'),
   /** Limit price in 0-1 range (e.g., "0.65" means 65 cents per token) */
-  price: z.string().min(1).describe('Limit price (0-1 range, e.g., "0.65")'),
+  price: z.string().min(1).describe('Limit price in 0-1 range (e.g., "0.65" = 65 cents per token). Exchange-native decimal.'),
   /** Number of outcome tokens to buy */
-  size: z.string().min(1).describe('Number of outcome tokens to buy'),
+  size: z.string().min(1).describe('Number of outcome tokens to buy (exchange-native, e.g., "100"). NOT smallest units.'),
   /** Order type (default: GTC) */
   orderType: z.enum(['GTC', 'GTD', 'FOK', 'IOC']).default('GTC'),
   /** Unix timestamp for GTD order expiration */
@@ -28,8 +28,8 @@ export type PmBuyInput = z.infer<typeof PmBuySchema>;
 /** Sell outcome tokens on Polymarket CLOB */
 export const PmSellSchema = z.object({
   tokenId: z.string().min(1).describe('CTF ERC-1155 token ID'),
-  price: z.string().min(1).describe('Limit price (0-1 range)'),
-  size: z.string().min(1).describe('Number of outcome tokens to sell'),
+  price: z.string().min(1).describe('Limit price in 0-1 range. Exchange-native decimal.'),
+  size: z.string().min(1).describe('Number of outcome tokens to sell (exchange-native). NOT smallest units.'),
   orderType: z.enum(['GTC', 'GTD', 'FOK', 'IOC']).default('GTC'),
   expiration: z.number().int().optional().describe('Unix timestamp for GTD orders'),
 });

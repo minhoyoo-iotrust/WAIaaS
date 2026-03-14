@@ -1011,7 +1011,7 @@ export async function buildByType(
       return adapter.buildTokenTransfer({
         from: walletPublicKey,
         to: req.to,
-        amount: BigInt(req.amount),
+        amount: BigInt(req.amount!),
         token: req.token,
         memo: req.memo,
       });
@@ -1059,7 +1059,7 @@ export async function buildByType(
         from: walletPublicKey,
         spender: req.spender,
         token: req.token,
-        amount: BigInt(req.amount),
+        amount: BigInt(req.amount!),
       });
     }
 
@@ -1222,7 +1222,7 @@ export function buildUserOpCalls(
         data: encodeFunctionData({
           abi: ERC20_USEROP_ABI,
           functionName: 'transfer',
-          args: [req.to as Hex, BigInt(req.amount)],
+          args: [req.to as Hex, BigInt(req.amount!)],
         }),
       }];
     }
@@ -1275,7 +1275,7 @@ export function buildUserOpCalls(
         data: encodeFunctionData({
           abi: ERC20_USEROP_ABI,
           functionName: 'approve',
-          args: [req.spender as Hex, BigInt(req.amount)],
+          args: [req.spender as Hex, BigInt(req.amount!)],
         }),
       }];
     }

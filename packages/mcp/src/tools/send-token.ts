@@ -17,7 +17,7 @@ export function registerSendToken(server: McpServer, apiClient: ApiClient, walle
     withWalletPrefix('Send SOL/ETH or tokens from the wallet. For token transfers, specify type and token info.', walletContext?.walletName),
     {
       to: z.string().describe('Destination wallet address'),
-      amount: z.string().describe('Amount in smallest unit (lamports/wei)'),
+      amount: z.string().describe('Amount in smallest units (wei for EVM, lamports for Solana). Example: "1000000000000000000" = 1 ETH, "1000000000" = 1 SOL'),
       memo: z.string().optional().describe('Optional transaction memo'),
       type: z.enum(['TRANSFER', 'TOKEN_TRANSFER']).optional()
         .describe('Transaction type. Default: TRANSFER (native). TOKEN_TRANSFER for SPL/ERC-20'),

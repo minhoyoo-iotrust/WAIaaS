@@ -1,306 +1,320 @@
-# Domain Pitfalls
+# Domain Pitfalls: Amount Unit Standardization & AI Agent DX
 
-**Domain:** External Action Framework -- WAIaaS ActionProvider 확장 (on-chain tx-centric -> action-centric)
-**Researched:** 2026-03-11
-**Overall confidence:** HIGH (코드베이스 직접 분석 기반)
+**Domain:** Blockchain wallet API amount unit migration + humanAmount parameter addition
+**Researched:** 2026-03-14
+**Overall confidence:** HIGH (codebase direct analysis + objective document cross-reference)
 
 ---
 
 ## Critical Pitfalls
 
-리팩토링/재작성을 유발하는 심각한 실수들.
+Mistakes that cause fund loss, data corruption, or require rewrites.
 
 ---
 
-### Pitfall 1: resolve() 반환 타입 확장 시 기존 13개 Provider 하위 호환성 파괴
+### Pitfall 1: Hardcoded Decimals in migrateAmount Backward Compatibility Path
 
-**What goes wrong:** `IActionProvider.resolve()`의 반환 타입을 `ContractCallRequest | ContractCallRequest[] | ApiDirectResult`에서 `ResolvedAction`으로 변경할 때, 기존 13개 프로바이더의 resolve() 구현이 컴파일 에러를 내거나, `ActionProviderRegistry.executeResolve()`의 re-validation 로직(`ContractCallRequestSchema.parse()`)이 새 타입을 거부한다.
+**What goes wrong:** The 4 migrating providers use hardcoded decimals in `parseTokenAmount()` calls: Aave V3 hardcodes `18`, Kamino hardcodes `6`, Lido hardcodes `18`, Jito hardcodes `9`. After migration to smallest-unit input, the forward path (caller sends smallest unit) no longer calls `parseTokenAmount` -- the input bigint is used directly. However, the `migrateAmount()` backward-compatibility path (decimal point detected -> auto-convert) MUST know the token's actual decimals. If `migrateAmount()` inherits the hardcoded decimals from the current code, it will produce catastrophically wrong values for tokens with different decimals.
 
-**Why it happens:**
-- 현재 `executeResolve()`는 `isApiDirectResult()` 체크 후 나머지를 모두 `ContractCallRequestSchema.parse()`로 검증한다 (line 202-228, action-provider-registry.ts). 새 `SignedDataAction`이나 `SignedHttpAction`이 이 경로에 들어가면 Zod parse 에러.
-- `ContractCallRequest`에 `kind?: 'contractCall'` optional 필드를 추가하면, 기존 Zod 스키마가 unknown key를 strip하는 `.strict()` 모드가 아닌지에 따라 동작이 달라진다.
-- 기존 프로바이더 13개 + ESM 플러그인 로더(`loadPlugins()`)를 통해 로드되는 외부 플러그인도 있을 수 있다.
+**Concrete example:** Aave V3 supports multi-asset lending. A caller supplies USDC (6 decimals) with the deprecated format `"1.5"`. If `migrateAmount("1.5")` uses the hardcoded `18` from the current `parseTokenAmount(input.amount, 18)` call, it computes `1.5 * 10^18 = 1,500,000,000,000,000,000` instead of the correct `1.5 * 10^6 = 1,500,000`. This is a 10^12x overcharge.
 
-**Consequences:**
-- 13개 프로바이더 전체 컴파일 실패 또는 런타임 Zod validation 에러
-- 7,400+ 테스트 중 ActionProvider 관련 수백 건이 일제히 실패
-- ESM 플러그인 호환성 파괴 (사용자 플러그인까지 영향)
+**Current code evidence:**
+```
+// aave-v3/index.ts line 161 -- ALL actions use 18, regardless of asset
+const amount = parseTokenAmount(input.amount, 18);
+
+// kamino/index.ts line 165 -- ALL actions use 6, regardless of asset
+const amount = parseTokenAmount(input.amount, 6);
+```
+
+**Consequences:** Fund loss. If the wallet has sufficient balance, the overstated amount will be submitted to the smart contract. Even if the contract reverts (insufficient allowance), the pipeline has already approved the inflated amount.
 
 **Prevention:**
-1. `resolve()` 반환 타입을 `ContractCallRequest | ContractCallRequest[] | ApiDirectResult | SignedDataAction | SignedHttpAction`로 union 확장 (기존 타입 그대로 유지)
-2. `executeResolve()`에서 `kind` 기반 분기를 `isApiDirectResult()` 체크 앞에 배치하지 말고, **기존 분기 순서를 유지**하면서 새 kind 체크를 추가: `isApiDirectResult()` -> `isSignedDataAction()` -> `isSignedHttpAction()` -> 기존 ContractCallRequest 경로
-3. `kind` 필드 정규화는 registry 내부에서만 수행, 기존 프로바이더는 kind 없이 반환해도 `contractCall`로 자동 태깅
-4. 기존 13개 프로바이더 파일을 **한 줄도 수정하지 않고** 전체 테스트가 통과하는 것을 첫 번째 검증 게이트로 설정
+1. `migrateAmount()` signature MUST include a `decimals` parameter: `migrateAmount(value: string, decimals: number): { amount: bigint; migrated: boolean }`
+2. Each provider action MUST resolve the actual token decimals before calling `migrateAmount()`: native token -> chain config, registered ERC-20/SPL -> token registry lookup, unknown token -> reject migration with error guiding to `humanAmount` parameter
+3. Remove ALL hardcoded decimals from `parseTokenAmount` call sites during migration
+4. Post-migration, `parseTokenAmount` calls must be fully eliminated from the forward path (input is already smallest unit)
 
-**Detection:** CI에서 기존 프로바이더 테스트가 한 건이라도 실패하면 타입 확장이 잘못된 것.
+**Detection:** Unit test: Aave supply USDC (6 decimals) with deprecated decimal input `"1.5"` through `migrateAmount()`. Assert result equals `1_500_000n`, NOT `1_500_000_000_000_000_000n`.
 
-**Phase recommendation:** 타입 시스템 설계 (R1) 단계에서 반드시 하위 호환 전략을 먼저 확정.
+**Phase:** Phase 1 (Provider unit migration) -- this is the core correctness gate.
 
 ---
 
-### Pitfall 2: CredentialVault와 SettingsService의 암호화 키 파생 충돌
+### Pitfall 2: Silent Near-Zero Transactions from Integer Input After Migration
 
-**What goes wrong:** CredentialVault가 기존 `settings-crypto.ts`의 `deriveSettingsKey()` (HKDF SHA-256)를 "재사용"한다고 하면서, 동일한 마스터 패스워드에서 동일한 키를 파생하면 **SettingsService와 CredentialVault의 암호화된 값이 같은 키로 보호**되어, 한쪽 키가 유출되면 다른 쪽도 자동 노출된다. 반대로, 다른 context/salt를 사용하면 "재사용"이 아니라 "새 파생"이므로 re-encrypt 경로(`re-encrypt.ts`)와의 정합성이 깨진다.
+**What goes wrong:** The design correctly specifies that integer strings (no decimal point) are always treated as smallest units after migration -- no heuristics. But this creates a silent failure mode: callers who previously sent `"100"` meaning "100 USDC" will now send 100 micro-USDC (0.0001 USDC). The transaction succeeds, no error, no deprecation warning (no decimal detected), but the amount is negligible.
 
-**Why it happens:**
-- 현재 `deriveSettingsKey()`는 HKDF에 고정 info 문자열을 사용한다. CredentialVault가 같은 함수를 호출하면 동일 키.
-- `re-encrypt.ts`는 마스터 패스워드 변경 시 모든 암호화된 설정을 재암호화한다. CredentialVault 테이블이 여기에 포함되지 않으면 패스워드 변경 후 credential 복호화 불가.
-- `BackupService`도 encrypted backup/restore 시 settings 테이블만 고려할 수 있다.
+**Why it happens:** The `migrateAmount()` decimal detection only triggers on the `.` character. Integer values like `"100"`, `"1000"`, `"50"` pass through as smallest units without any warning. This is the designed behavior (safe, no guessing), but the transition period will have callers who haven't updated.
 
-**Consequences:**
-- 마스터 패스워드 변경 후 CredentialVault의 모든 credential 복호화 불가 (데이터 손실)
-- 또는 보안 분리 실패 (같은 키로 두 저장소 보호)
-- backup/restore 시 credential 누락
+**Consequences:** Transactions succeed with negligible amounts. A user sends `"100"` expecting 100 USDC supply on Aave, gets 0.0001 USDC supplied. No error, no warning, silent value destruction. The user may not notice until checking their DeFi position.
 
 **Prevention:**
-1. `deriveSettingsKey()`에 **context 파라미터**를 추가하여 HKDF info를 `'waiaas-settings'` / `'waiaas-credentials'`로 분리 (같은 마스터 패스워드, 다른 파생 키)
-2. `re-encrypt.ts`에 CredentialVault 테이블 재암호화 로직을 **반드시** 추가
-3. `BackupService`에 `wallet_credentials` 테이블 포함 확인
-4. 마스터 패스워드 변경 -> CredentialVault 재암호화 통합 테스트 작성
+1. `amountFormatted` in the response (R3) serves as the primary safeguard -- the response will show `"0.0000000000000001"` which alerts the caller
+2. Deprecation warning log MUST include the computed human-readable equivalent when the amount is suspiciously small: `"amount '100' processed as 100 wei (= 0.0000000000000001 ETH). If you meant 100 ETH, use humanAmount parameter."`
+3. Consider a configurable `SUSPICIOUS_AMOUNT_THRESHOLD` (e.g., < $0.01 equivalent) that triggers a non-blocking warning in the response metadata
+4. Skill files and MCP tool descriptions must prominently document the unit change with before/after examples
+5. SDK CHANGELOG must include a migration guide with clear examples
 
-**Detection:** 마스터 패스워드 변경 후 credential 조회 테스트가 실패하면 즉시 발견 가능.
+**Detection:** Integration test: send `"100"` to Aave supply after migration. Verify amount is 100 wei (correct behavior), verify NO deprecation warning logged (correct -- no decimal), verify response `amountFormatted` shows the microscopic value.
 
-**Phase recommendation:** CredentialVault 설계 (R3) 단계에서 키 파생 전략을 명확히 정의, 구현 시 re-encrypt 통합을 첫 번째 작업으로.
+**Phase:** Phase 1 (Provider unit migration) for the warning logic. Phase 3 (amountFormatted) for the response safeguard. Phase 5 (SDK/Skill) for documentation.
 
 ---
 
-### Pitfall 3: 파이프라인 라우팅에서 정책 평가 누락 (off-chain action이 정책 우회)
+### Pitfall 3: `max` Keyword Handling in migrateAmount and humanAmount Paths
 
-**What goes wrong:** `SignedDataAction`과 `SignedHttpAction`이 기존 6-stage pipeline을 우회하는 새 경로로 라우팅되면서, Stage 3 정책 평가(DatabasePolicyEngine)를 거치지 않는다. 에이전트가 off-chain order (CEX 출금 등)를 정책 검증 없이 실행하게 된다.
+**What goes wrong:** Aave V3 and Kamino support `amount="max"` for repay/withdraw, triggering `MAX_UINT256` or full-balance operations. The current code explicitly checks `input.amount === 'max'` before calling `parseTokenAmount()`. After migration, three paths must handle "max":
 
-**Why it happens:**
-- 기존 pipeline은 `stage3EvaluatePolicy()`에서 `TransactionParam`을 구성하여 `DatabasePolicyEngine.evaluate()`를 호출한다. `TransactionParam`은 `type`, `amount`, `toAddress`, `chain` 등 **on-chain tx 전용 필드**로 구성되어 있다.
-- `SignedDataAction`은 `toAddress`가 없을 수 있고 (EIP-712 order는 컨트랙트가 아닌 API에 제출), `amount`도 token amount가 아닌 notional USD일 수 있다.
-- 새 라우팅 경로를 만들면서 "정책은 나중에 연결하자"라고 생각하면 그 "나중"이 오지 않는다.
+1. **Forward path** (smallest unit input): `"max"` must still work -- not a numeric string
+2. **migrateAmount path**: `migrateAmount("max")` must NOT try decimal detection or numeric conversion
+3. **humanAmount path**: `humanAmount="max"` should also be supported (same semantic: full balance)
 
-**Consequences:**
-- off-chain action이 SPENDING_LIMIT, RATE_LIMIT, APPROVAL 정책을 모두 우회
-- 에이전트가 정책 없이 CEX 출금, 대량 주문 실행 가능
-- 보안 모델의 근본적 무효화
+If any path fails to handle "max", repay/withdraw full-balance operations break.
+
+**Current code evidence:**
+```typescript
+// aave-v3/index.ts line 220
+const amount = input.amount === 'max' ? MAX_UINT256 : parseTokenAmount(input.amount, 18);
+
+// kamino/index.ts line 214
+const amount: bigint | 'max' = input.amount === 'max' ? 'max' : parseTokenAmount(input.amount, 6);
+```
+
+**Consequences:** Breaking change for full-balance operations. Agents that rely on `amount="max"` for debt repayment get Zod validation errors or runtime crashes.
 
 **Prevention:**
-1. 새 파이프라인 경로에도 **반드시 정책 평가 단계를 포함** (기존 stage3와 별도 함수라도 같은 DatabasePolicyEngine 호출)
-2. `TransactionParam`을 확장하되, off-chain 전용 필드를 optional로 추가 (`venue?`, `actionCategory?`, `notionalUsd?`)
-3. **정책 평가 없이 서명에 도달하는 경로가 있으면 테스트가 실패하도록** 통합 테스트 설계
-4. 기존 `provider-trust` 정책 우회 패턴도 off-chain action에 동일하게 적용
+1. `migrateAmount()` must check for `"max"` FIRST, before any decimal/numeric processing: `if (value === 'max') return { amount: 'max', migrated: false }`
+2. Zod schema: keep `.or(z.literal('max'))` alongside numeric string validation for both `amount` and `humanAmount`
+3. `humanAmount="max"` maps directly to full-balance, no decimals lookup needed
+4. The XOR validation (amount vs humanAmount) must account for "max" in both fields
 
-**Detection:** off-chain action 실행 경로에서 `policyEngine.evaluate()` 호출이 없으면 코드 리뷰에서 즉시 차단.
+**Detection:** Test all 4 actions that accept "max" (aave repay, aave withdraw, kamino repay, kamino withdraw) through ALL three paths: forward, migrateAmount, humanAmount.
 
-**Phase recommendation:** R5 (정책 컨텍스트 확장) 설계 완료 전에 R6 (파이프라인 라우팅) 설계를 시작하지 말 것.
+**Phase:** Phase 1 (Provider unit migration) -- must be in the same change as the core migration.
 
 ---
 
-### Pitfall 4: ISignerCapability가 기존 서명 경로를 "대체"하려다 이중 경로 발생
+### Pitfall 4: humanAmount XOR amount Validation Gap Across Layers
 
-**What goes wrong:** ISignerCapability 통합 인터페이스를 만들면서, 기존 `IChainAdapter.signTransaction()`, `sign-message.ts`, `http-message-signer.ts` 경로를 ISignerCapability 호출로 전환하려고 시도한다. 기존 경로가 20+ 곳에서 직접 참조되고 있어 전면 교체는 불가능하고, 결국 두 가지 서명 경로가 공존하면서 어느 쪽으로 호출해야 하는지 혼란이 발생한다.
+**What goes wrong:** The XOR validation (only one of `amount` or `humanAmount` allowed) must be enforced at EVERY entry point: REST API request parsing, Action Provider input schema, MCP tool schema, SDK type system. If any single layer allows both, the behavior is undefined. Which takes precedence? If they disagree (`amount: "1000000"` and `humanAmount: "0.5"`), silent data corruption occurs.
 
-**Why it happens:**
-- 현재 서명 호출이 분산되어 있다: `stage5Execute()`에서 `adapter.signTransaction()`, sign-message API에서 직접 서명, ERC-8128 모듈에서 독립 서명
-- 이들을 ISignerCapability로 래핑하면 어댑터 패턴이 되지만, 기존 호출 사이트가 ISignerCapability를 알지 못한다
-- objective 문서 R2-6이 명확히 "기존 경로는 변경하지 않음"이라고 했지만, 구현 시 DRY 유혹에 빠져 기존 경로를 교체하려는 시도가 발생
+**Why it happens:** WAIaaS has 4 entry points to the same execution logic:
+- REST API routes -> pipeline -> provider
+- MCP tools -> API client -> REST API
+- SDK -> HTTP client -> REST API
+- Admin UI -> REST API
 
-**Consequences:**
-- 기존 6-stage pipeline, sign-only, sign-message API가 깨짐
-- 서명 실패 시 어느 경로에서 실패했는지 디버깅 불가
-- WalletConnect, Telegram Bot 등 approval workflow와의 연동 장애
+Each has its own schema validation layer. The XOR constraint must be enforced before values reach the pipeline.
+
+**Consequences:** Ambiguous behavior. Two amount values disagree, one silently wins, transaction executes with the wrong amount.
 
 **Prevention:**
-1. **R2-6 원칙을 엄격히 준수**: ISignerCapability는 **새 ActionProvider 경로에서만** 사용
-2. 기존 4종 signer를 ISignerCapability로 래핑하되, 래핑은 **delegation** (기존 모듈을 내부적으로 호출), 기존 모듈의 코드는 변경하지 않음
-3. 기존 서명 호출 사이트를 grep으로 모두 찾아서 "이 파일은 수정 금지" 목록에 등록
-4. 코드 리뷰 체크리스트에 "기존 sign-message.ts / stages.ts의 서명 호출이 변경되지 않았는가?" 항목 추가
+1. Define XOR validation in a single shared Zod refinement (`.superRefine()`) in `@waiaas/core`, exported as a reusable schema fragment
+2. REST API: apply XOR at request schema level (Zod parse before pipeline entry)
+3. Action Provider: each provider's inputSchema inherits the shared XOR refinement for its amount/humanAmount pair
+4. MCP: if using direct Zod reference (same process), XOR is automatically inherited. If using JSON Schema roundtrip, add post-parse validation in the MCP handler
+5. SDK: TypeScript discriminated union at type level: `{ amount: string; humanAmount?: never } | { amount?: never; humanAmount: string }`
+6. Test: POST with both `amount` AND `humanAmount` at every entry point -> expect 400
 
-**Detection:** 기존 sign-message, sign-only, ERC-8128 테스트가 한 건이라도 실패하면 경로 침범.
+**Detection:** Integration test at each layer boundary. Fuzz test with all 4 combinations: amount-only, humanAmount-only, both, neither.
 
-**Phase recommendation:** R2 (ISignerCapability) 설계 시 "기존 경로와의 경계"를 아키텍처 다이어그램으로 명시.
+**Phase:** Phase 1 (REST + Provider) and Phase 2 (MCP schema). The shared Zod refinement must be created in Phase 1 and reused in Phase 2.
 
 ---
 
-### Pitfall 5: transactions 테이블 확장 vs 별도 테이블 결정 지연
+### Pitfall 5: MCP Zod -> JSON Schema -> Zod Roundtrip Loses Validation Logic
 
-**What goes wrong:** off-chain action의 DB 기록을 어디에 저장할지 (기존 `transactions` 테이블 확장 vs 별도 `external_actions` 테이블) 결정을 미루다가, 파이프라인 라우팅과 정책 평가가 `transactions` 테이블을 전제로 구현되어 나중에 변경이 불가능해진다.
+**What goes wrong:** The design specifies provider Zod schema -> `zodToJsonSchema()` -> JSON Schema in metadata API -> `jsonSchemaToZod()` -> MCP tool Zod schema. This roundtrip is inherently lossy. Zod features that DO NOT survive JSON Schema conversion:
+- `.superRefine()` (the XOR amount/humanAmount validation)
+- `.refine()` (custom validators)
+- `.transform()` (value transformations)
+- `.pipe()` (schema composition)
+- Custom error messages
+- `.or(z.literal('max'))` may serialize oddly depending on library version
 
-**Why it happens:**
-- 기존 시스템에서 `transactions` 테이블은 모든 곳에서 참조된다: 정책의 SPENDING_LIMIT (rolling window query), Audit Log, Admin UI, SDK/MCP 응답, AsyncPollingService의 `bridge_status` 컬럼
-- 새 off-chain action을 `transactions`에 넣으면 `txHash`가 null인 행이 생기고, 기존 쿼리(`WHERE txHash IS NOT NULL` 등)가 오동작
-- 별도 테이블로 만들면 SPENDING_LIMIT 누적 계산에 두 테이블을 JOIN해야 하고, Admin UI 트랜잭션 목록에 off-chain action이 안 보인다
+**Current code evidence:**
+```typescript
+// packages/mcp/src/tools/action-provider.ts line 84
+params: z.record(z.unknown()).optional()
+```
+Currently uses `z.record(z.unknown())` -- migration to typed schema is the goal of R2.
 
-**Consequences:**
-- 결정 지연 시 양쪽 모두에 대한 코드가 혼재되어 마이그레이션 불가
-- `txHash NOT NULL` 가정이 있는 기존 코드에서 null reference 에러
-- SPENDING_LIMIT 정책이 off-chain 지출을 누락하여 한도 우회
+**Consequences:** MCP tools accept invalid input that the REST API rejects. Agent sends both `amount` and `humanAmount` through MCP, MCP validation passes (no XOR check), hits REST API, gets 400 error. Confusing DX -- the agent correctly followed the MCP tool schema but got rejected.
 
 **Prevention:**
-1. **설계 단계에서 확정**: `transactions` 테이블에 `kind` 컬럼 추가 (default `'on-chain'`), off-chain action도 같은 테이블에 저장하되 `txHash` nullable 허용
-2. `txHash IS NOT NULL` 가정이 있는 기존 쿼리를 모두 찾아서 (`grep txHash`) 영향 범위 산정
-3. SPENDING_LIMIT rolling window가 `kind` 무관하게 합산되도록 설계
-4. Admin UI 트랜잭션 목록에 `kind` 필터 추가
-5. DB migration v55에서 `kind` 컬럼 + CHECK constraint 추가
+1. **Strongly prefer direct Zod reference**: The milestone document notes MCP runs in the same process as daemon (line 82: "MCP가 daemon과 같은 프로세스에서 실행될 경우 ActionDefinition.inputSchema의 Zod 객체를 직접 참조"). This eliminates the lossy conversion entirely. Use this approach.
+2. If JSON Schema roundtrip is unavoidable (future remote MCP server scenario), add post-parse validation in the MCP tool handler: after Zod validation, check XOR constraint programmatically before API call
+3. `zodToJsonSchema` does NOT exist in the project's dependencies yet -- needs to be added. Pin version and test edge cases.
+4. Add snapshot tests: serialize provider Zod schema to JSON Schema, verify critical constraints are preserved (or documented as lost)
 
-**Detection:** `txHash` null인 행이 삽입될 때 기존 코드의 NOT NULL 가정이 깨지는지 테스트.
+**Detection:** Validation parity test: for 20 edge-case inputs, compare validation results between direct Zod parse and roundtripped Zod parse. Flag any discrepancies.
 
-**Phase recommendation:** R6 (파이프라인 라우팅) 설계에서 DB 기록 전략을 첫 번째 설계 결정으로 확정.
+**Phase:** Phase 2 (MCP schema conversion). The direct-reference approach makes this phase significantly simpler and safer.
 
 ---
 
 ## Moderate Pitfalls
 
-실수하면 상당한 수정 작업이 필요하지만 재작성까지는 아닌 것들.
+---
+
+### Pitfall 6: HF Simulation Arithmetic Breaks After Unit Change
+
+**What goes wrong:** Kamino's Health Factor simulation uses `Number(amount) / 1e6` to approximate USD value from the parsed amount. Currently, `parseTokenAmount("100", 6)` returns `100_000_000n` (100 USDC in smallest unit), and `Number(100_000_000) / 1e6 = 100.0` -- correct USD approximation for USDC.
+
+After migration, the input IS already smallest units. If `amount = 100_000_000n` (100 USDC) and the code still does `Number(amount) / 1e6`, the result is still `100.0` -- correct by coincidence because Kamino hardcodes 6 decimals.
+
+BUT: if Kamino is extended to support tokens with different decimals (e.g., WBTC = 8 decimals on a hypothetical Kamino deployment), `Number(100_000_000) / 1e6 = 100.0` is WRONG (should be `1.0 BTC`).
+
+Similarly, Aave's `checkBorrowSafety` passes `amount` (currently human-readable-derived) to base currency simulation. After migration, this value changes scale.
+
+**Current code evidence:**
+```typescript
+// kamino/index.ts line 191
+const approximateUsdValue = Number(amount) / 1e6;
+```
+
+**Prevention:**
+1. After migration, replace all hardcoded divisors (`/1e6`, `/1e18`) with dynamic computation based on actual token decimals
+2. Grep for `Number(amount)` patterns in the 4 migrating providers and verify each one
+3. For Kamino: use token registry decimals lookup to compute `Number(amount) / 10^decimals * priceUsd`
+4. For Aave: ensure `checkBorrowSafety` and `checkWithdrawSafety` receive amount in the correct scale
+
+**Detection:** Unit test: Kamino supply with 8-decimal token, verify HF simulation uses correct USD approximation.
+
+**Phase:** Phase 1 (Provider unit migration). Must be fixed alongside the core migration.
 
 ---
 
-### Pitfall 6: CredentialVault의 인증 모델 혼란 (sessionAuth vs masterAuth 스코프)
+### Pitfall 7: Provider-Specific humanAmount Field Name Proliferation
 
-**What goes wrong:** CredentialVault는 per-wallet credential이므로 sessionAuth로 CRUD가 가능해야 하지만, 같은 wallet에 대해 Admin(masterAuth)도 credential을 관리할 수 있어야 한다. 두 인증 경로가 같은 데이터를 수정할 때 race condition이 발생하거나, sessionAuth 사용자가 Admin이 설정한 credential을 삭제할 수 있다.
+**What goes wrong:** The design specifies per-provider naming: `humanAmount`, `humanSellAmount`, `humanFromAmount`, `humanAmountIn`. This creates 6+ distinct field names across 10 providers. AI agents must discover the correct `human*` field per provider per action -- partially defeating the DX improvement goal.
 
-**What goes wrong (detail):**
-- 현재 SettingsService는 masterAuth 전용이므로 인증 충돌이 없다
-- CredentialVault는 sessionAuth + masterAuth 모두 허용 (R3-7)
-- "에이전트가 자신의 CEX API key를 등록"하면서 "Admin이 같은 wallet의 credential을 override"하는 시나리오
+**The provider-to-field mapping:**
+| Provider | Amount field | humanAmount field |
+|----------|-------------|-------------------|
+| aave-v3 | `amount` | `humanAmount` |
+| kamino | `amount` | `humanAmount` |
+| lido-staking | `amount` | `humanAmount` |
+| jito-staking | `amount` | `humanAmount` |
+| jupiter-swap | `amount` | `humanAmount` |
+| zerox-swap | `sellAmount` | `humanSellAmount` |
+| across | `amount` | `humanAmount` |
+| lifi | `fromAmount` | `humanFromAmount` |
+| pendle | `amountIn` | `humanAmountIn` |
+| dcent-swap | `fromAmount` | `humanFromAmount` |
 
 **Prevention:**
-1. credential에 `createdBy` 필드 추가 (`session:{sessionId}` / `admin`)
-2. sessionAuth는 자신이 생성한 credential만 삭제/수정 가능, Admin은 전체 가능
-3. 동시 수정 방지를 위해 `updatedAt` 기반 optimistic locking 또는 `BEGIN IMMEDIATE` 사용
+- **Option A (recommended):** Use universal `humanAmount` field name across ALL providers. Internally, the provider maps `humanAmount` to its specific amount field. Simpler for agents: "always use `humanAmount` for human-readable input."
+- **Option B (per-provider naming):** If kept, ensure MCP tool descriptions list both field names. Skill files must include a provider->field lookup table. Add `amountFieldName` metadata to ActionDefinition so agents can programmatically determine the naming.
+- Whichever option is chosen, decide BEFORE implementation to avoid mid-milestone refactoring.
 
-**Phase recommendation:** R3 설계 시 인증 매트릭스를 명시적으로 정의.
+**Phase:** Phase 4 (humanAmount support). Naming decision must be finalized in Phase 1 planning.
 
 ---
 
-### Pitfall 7: AsyncPollingService의 off-chain 상태 확장이 기존 bridge_status 폴링을 방해
+### Pitfall 8: amountFormatted null Safety for Unknown Token Decimals
 
-**What goes wrong:** `AsyncPollingService`가 30초 주기로 `bridge_status = 'PENDING'`인 트랜잭션을 조회하여 폴링한다. off-chain action 상태(PARTIALLY_FILLED, FILLED 등)를 같은 메커니즘에 추가하면 폴링 쿼리가 복잡해지고, 상태 전이 로직이 꼬인다.
-
-**Why it happens:**
-- 현재 `AsyncPollingService`는 `trackers` Map에서 tracker 이름으로 분기한다
-- off-chain action의 상태 전이 (`PARTIALLY_FILLED -> FILLED -> SETTLED`)는 bridge와 다른 state machine
-- 같은 `bridge_status` 컬럼에 off-chain 상태를 넣으면 의미가 혼재
+**What goes wrong:** `amountFormatted` is `string | null` -- null when decimals are unknown (unregistered tokens, arbitrary CONTRACT_CALL). Every consumer must handle null. AI agents pattern-matching on `amountFormatted` for result display may show "null" or silently omit the amount.
 
 **Prevention:**
-1. `transactions` 테이블에 `async_status` 컬럼을 `bridge_status`와 **별도로** 추가하거나, 기존 `bridge_status`를 `async_status`로 rename하고 마이그레이션
-2. `AsyncPollingService`의 쿼리를 tracker별로 분리 (각 tracker가 자신의 pending 목록을 쿼리)
-3. state machine을 tracker 구현체 내부에 캡슐화, `AsyncPollingService`는 `checkStatus()` 결과만 소비
+1. Response schema description: `'Human-readable formatted amount (e.g., "1.5 ETH"). null if token decimals unknown -- register the token for formatted amounts.'`
+2. SDK: provide `formatAmountSafe(amount: string, decimals?: number)` helper that returns raw amount string when decimals unknown
+3. Never use non-null assertion on `amountFormatted` in consuming code
+4. Native token (ETH/SOL) and registered tokens should ALWAYS have amountFormatted -- add assertion test
+5. Token lookup: native -> chain config (always available), registered -> token registry, unknown -> `null`
 
-**Phase recommendation:** R4 설계에서 상태 저장 전략을 bridge_status 재사용 vs 새 컬럼으로 확정.
+**Phase:** Phase 3 (amountFormatted response). Define the null handling contract clearly.
 
 ---
 
-### Pitfall 8: Zod discriminatedUnion 스키마 확장 시 기존 8-type union과 충돌
+### Pitfall 9: CLOB Exchange Exception Creates Agent Confusion
 
-**What goes wrong:** 기존 `TransactionRequestSchema`는 `type` 필드로 8종 discriminatedUnion을 구성한다 (TRANSFER, TOKEN_TRANSFER, CONTRACT_CALL, APPROVE, BATCH, SIGN, X402_PAYMENT, NFT_TRANSFER). 새로운 `ResolvedAction` union은 `kind` 필드로 분기한다. 두 union이 파이프라인에서 교차할 때 타입 추론이 실패한다.
-
-**Why it happens:**
-- `type` (transaction 종류)과 `kind` (action resolution 종류)가 다른 차원의 분류인데, 같은 객체에 공존
-- ContractCallRequest가 `type: 'CONTRACT_CALL'`이면서 `kind: 'contractCall'`을 가지면 이중 분류
-- TypeScript의 discriminatedUnion은 하나의 discriminant만 잘 처리한다
+**What goes wrong:** 3 providers (Hyperliquid, Drift, Polymarket) are explicitly excluded from smallest-unit standardization. They use human-readable / exchange-native units. When MCP lists 14 providers, 11 use smallest units and 3 don't. Without clear programmatic signals, AI agents may apply the wrong unit convention.
 
 **Prevention:**
-1. **`kind`는 ResolvedAction 레벨에서만 사용**, ContractCallRequest 내부에서는 기존 `type` 유지
-2. `kind` 정규화는 ActionProviderRegistry 내부에서만 수행, 파이프라인에 전달할 때는 이미 분기 완료
-3. `PipelineContext`에 `resolvedActionKind` 필드를 추가하여 kind 정보를 전달하되, request 객체 자체는 변경하지 않음
-4. Zod 스키마 테스트에서 기존 8-type 모두가 여전히 parse 성공하는지 검증
+1. Add `unitConvention: 'smallest' | 'human-readable' | 'exchange-native'` to `ActionDefinition` metadata, exposed in `GET /v1/actions/providers` response
+2. MCP tool description for CLOB exceptions must include prominent prefix: `"[HUMAN-READABLE UNITS]"`
+3. Skill files must have a dedicated "Unit Convention Exceptions" section listing CLOB providers
+4. Schema description on amount fields: `'Amount in human-readable units (e.g., "1.5" = 1.5 tokens). This provider uses exchange-native units, NOT blockchain smallest units.'`
 
-**Phase recommendation:** R1 설계의 핵심 결정 -- `kind`와 `type`의 관계를 명확히 분리.
+**Detection:** E2E test: AI agent queries tool metadata, programmatically identifies unit convention for each provider.
+
+**Phase:** Phase 2 (MCP schema) for metadata field. Phase 5 (Skill files) for documentation.
 
 ---
 
-### Pitfall 9: requiresSigningKey 패턴 확장 시 private key 노출 범위 증가
+### Pitfall 10: Token Registry Dependency Creates Hidden humanAmount Failure
 
-**What goes wrong:** 현재 `requiresSigningKey: true`인 프로바이더 (Hyperliquid)에만 `ActionContext.privateKey`가 전달된다. 새 off-chain signing (HMAC, RSA 등)을 위해 더 많은 프로바이더에 `requiresSigningKey: true`를 설정하면, private key 노출 범위가 넓어진다.
-
-**Why it happens:**
-- HMAC signing에는 wallet의 private key가 아니라 **credential의 HMAC secret**이 필요하다
-- 하지만 `requiresSigningKey`라는 이름이 "private key 필요"를 암시하여, HMAC provider도 같은 플래그를 사용하려는 유혹
-- credential-based signing과 wallet key signing의 구분이 모호해진다
+**What goes wrong:** `humanAmount` for TOKEN_TRANSFER requires decimals from token registry. Unregistered token + `humanAmount` = error. The error may not guide the user to the solution (register the token first or use `amount` with known decimals).
 
 **Prevention:**
-1. **ISignerCapability가 필요한 키를 결정**: `Eip712SignerCapability`는 wallet private key, `HmacSignerCapability`는 CredentialVault에서 HMAC secret을 조회
-2. `requiresSigningKey`는 wallet private key 전용으로 유지, credential 기반 서명은 `credentialRef` 경로로 분리
-3. 새 `requiresCredential: true` 메타데이터 플래그를 별도 추가 (CredentialVault 조회 트리거)
-4. private key는 기존처럼 resolve() 직후 즉시 clear
+1. Error response must include actionable guidance: `"Token 0xABC... not in registry. Options: (1) Register it first: POST /v1/tokens, (2) Use 'amount' in smallest units with known decimals."`
+2. Consider auto-fetching decimals on-chain (ERC-20 `decimals()` / SPL Mint `decimals`) as fallback -- adds latency but improves DX
+3. SDK `humanAmount` docs must note the registry prerequisite
+4. For native tokens (ETH, SOL), decimals are always known from chain config -- no registry dependency
 
-**Phase recommendation:** R2 + R3 설계를 함께 진행하여 키/credential 조회 경로를 한 번에 정리.
+**Phase:** Phase 4 (humanAmount support). Error message design is critical for DX.
 
 ---
 
-### Pitfall 10: connect-info 자기 발견 엔드포인트의 capability 확장 누락
+### Pitfall 11: Existing Tests Assume Human-Readable Input Format
 
-**What goes wrong:** 새 SignedDataAction, SignedHttpAction capability가 `GET /v1/connect-info` 응답에 반영되지 않아, 에이전트가 off-chain action 가능 여부를 사전에 파악할 수 없다.
-
-**Why it happens:**
-- connect-info는 각 기능 추가 시 수동으로 capability를 추가해야 한다
-- off-chain action이 "기존 action 경로의 확장"이라서 별도 capability가 필요 없다고 착각
+**What goes wrong:** All existing unit/integration tests for the 4 migrating providers use human-readable amount strings: `"1.5"`, `"100"`, `"100.5"`. After migration, these tests will still PASS (via `migrateAmount()` backward compatibility) but won't test the new smallest-unit behavior. This creates false confidence -- tests pass but don't verify the primary code path.
 
 **Prevention:**
-1. connect-info에 `externalActions: { signingSchemes: [...], credentialTypes: [...] }` capability 추가
-2. CredentialVault에 credential이 있는 venue 목록도 포함
-3. skill file 업데이트 (CLAUDE.md 규칙: "REST API 변경 시 skills/ 파일 업데이트 필수")
+1. **First:** Update ALL existing tests to use smallest-unit input. Tests should NOT trigger `migrateAmount()`.
+2. **Then:** Add dedicated backward-compatibility tests that explicitly verify `migrateAmount()` behavior with decimal inputs.
+3. Grep test files for amount string literals: `grep -rn '"[0-9]*\.[0-9]*"' packages/actions/src/providers/{aave-v3,kamino,lido-staking,jito-staking}/__tests__/`
+4. Add assertion that no deprecation warning is logged during the main test suite (only backward-compat tests should trigger it).
 
-**Phase recommendation:** R6 설계 시 connect-info 확장을 명시적 요구사항으로 포함.
+**Detection:** After migration, temporarily disable `migrateAmount()` backward compatibility. ALL main tests should still pass. Only backward-compat tests should fail.
 
----
-
-### Pitfall 11: ESM 플러그인 로더가 새 ResolvedAction 타입을 모르는 외부 플러그인과 충돌
-
-**What goes wrong:** `ActionProviderRegistry.loadPlugins()`는 `~/.waiaas/actions/`에서 ESM 플러그인을 로드한다. 외부 플러그인이 기존 `ContractCallRequest`만 반환하도록 작성되어 있는데, `executeResolve()`의 분기 로직이 변경되면 예기치 않은 동작이 발생한다.
-
-**Prevention:**
-1. `executeResolve()`의 기존 분기 순서를 유지: `isApiDirectResult()` -> 새 kind 체크 -> 기존 ContractCallRequest 경로
-2. kind가 없는 반환값은 항상 ContractCallRequest로 취급 (현재 동작 유지)
-3. 플러그인 개발 가이드에 새 ResolvedAction 타입 사용법 문서화
-
-**Phase recommendation:** R1 구현 완료 후 ESM 플러그인 호환성 테스트 추가.
+**Phase:** Phase 1 (Provider unit migration) + Phase 6 (Testing). Tests MUST be updated WITH the migration, not after.
 
 ---
 
 ## Minor Pitfalls
 
-주의하면 쉽게 피할 수 있지만 빠뜨리기 쉬운 것들.
+---
+
+### Pitfall 12: zodToJsonSchema Version and Draft Compatibility
+
+**What goes wrong:** The `zod-to-json-schema` npm package has version-specific behavior differences. JSON Schema draft-07 vs 2020-12 output, `.optional()` vs `.nullable()` handling, `.default()` serialization, and Zod v3 vs v4 compatibility can produce unexpected schemas that MCP SDK rejects or misinterprets.
+
+**Prevention:** Pin `zod-to-json-schema` version. Add snapshot tests for generated JSON Schema output. Verify the MCP SDK's expected JSON Schema draft matches the output.
+
+**Phase:** Phase 2 (MCP schema conversion).
 
 ---
 
-### Pitfall 12: Admin UI에 off-chain action 표시 누락
+### Pitfall 13: SDK TypeScript Overload Complexity from amount/humanAmount Union
 
-**What goes wrong:** Admin UI의 Transactions 페이지가 on-chain tx만 표시하도록 설계되어 있어, off-chain action이 관리자에게 보이지 않는다. Credentials 탭도 추가해야 하는데 잊어버린다.
+**What goes wrong:** Adding `humanAmount` as an alternative to `amount` in SDK method signatures creates complex TypeScript overloads or union types that degrade IDE autocomplete DX.
 
-**Prevention:**
-1. Transactions 목록에 `kind` 필터 + off-chain action 전용 표시 (txHash 대신 externalId)
-2. Wallet 상세에 Credentials 탭 추가 (R3-8)
-3. Admin UI 변경 체크리스트에 포함
+**Prevention:** Use discriminated union with JSDoc: `{ amount: string; humanAmount?: never } | { amount?: never; humanAmount: string }`. Include code examples in JSDoc for both patterns.
 
----
-
-### Pitfall 13: MCP 도구 / SDK 메서드 확장 누락
-
-**What goes wrong:** off-chain action이 REST API로만 접근 가능하고 MCP/SDK에서 사용할 수 없다.
-
-**Prevention:**
-1. 기존 action 실행 도구(`execute_action`)가 off-chain action도 처리하도록 확장
-2. credential 관리 MCP 도구 추가 (create/list/delete)
-3. SDK에 credential CRUD 메서드 추가
-4. skill file 업데이트
+**Phase:** Phase 5 (SDK sync).
 
 ---
 
-### Pitfall 14: HMAC/RSA signer에서 타이밍 공격 취약
+### Pitfall 14: Deprecation Warning Log Flood During Transition
 
-**What goes wrong:** HMAC-SHA256 서명 검증 시 일반 문자열 비교를 사용하면 타이밍 공격에 취약하다. RSA-PSS 서명 생성 시 잘못된 padding 모드를 사용하면 보안이 약화된다.
+**What goes wrong:** If many existing callers still use decimal amounts during transition, deprecation logs flood output. WAIaaS is a local daemon where log readability matters.
 
-**Prevention:**
-1. HMAC 비교는 `crypto.timingSafeEqual()` 사용
-2. RSA는 PSS padding만 허용 (PKCS#1 v1.5 금지)
-3. 기존 `sodium-native` 라이브러리의 constant-time 비교 함수 활용
+**Prevention:** Rate-limit warnings: max 1 per provider per minute, or log summary per session: `"[DEPRECATION] Provider aave_v3/supply: 47 calls used deprecated format this session."`
+
+**Phase:** Phase 1 (Provider unit migration).
 
 ---
 
-### Pitfall 15: credential 만료 시 진행 중인 action이 실패
+### Pitfall 15: balanceFormatted Consistency with amountFormatted
 
-**What goes wrong:** CredentialVault의 credential에 `expiresAt`이 있는데, action resolve() 시점에는 유효하지만 실제 서명/제출 시점에는 만료되어 실패한다.
+**What goes wrong:** R3-5 adds `balanceFormatted` to balance API, but existing balance response already returns `balance` (smallest unit) + `decimals`. If `balanceFormatted` uses a different formatting convention than `amountFormatted` (e.g., different trailing zero behavior, different null rules), consumers get inconsistent results.
 
-**Prevention:**
-1. credential 조회 시 TTL 여유분 체크 (만료 5분 전이면 경고)
-2. action 실행 전 credential 유효성 사전 검증
-3. 만료 임박 credential에 대한 알림 (NotificationService 연동)
+**Prevention:** Both `balanceFormatted` and `amountFormatted` must use the same `formatAmount()` utility. Add a unit test that formats the same value through both paths and asserts identical output.
+
+**Phase:** Phase 3 (amountFormatted response).
 
 ---
 
@@ -308,46 +322,50 @@
 
 | Phase Topic | Likely Pitfall | Mitigation |
 |-------------|---------------|------------|
-| R1 (ResolvedAction 타입) | 기존 13개 프로바이더 하위 호환 파괴 (Pitfall 1) | kind 정규화를 registry 내부에서만 수행, 기존 프로바이더 코드 무변경 |
-| R1 (Zod 스키마) | kind-type 이중 discriminant 충돌 (Pitfall 8) | kind는 ResolvedAction 레벨, type은 TransactionRequest 레벨로 분리 |
-| R2 (ISignerCapability) | 기존 서명 경로 침범 (Pitfall 4) | R2-6 원칙 엄수 -- 새 경로에서만 사용, 기존 모듈은 delegation만 |
-| R2 + R3 | requiresSigningKey와 credential 혼동 (Pitfall 9) | requiresSigningKey는 wallet key 전용, credential은 별도 플래그 |
-| R3 (CredentialVault) | 암호화 키 파생 충돌 + re-encrypt 누락 (Pitfall 2) | HKDF context 분리 + re-encrypt 통합 + backup 포함 |
-| R3 (인증 모델) | sessionAuth/masterAuth 스코프 충돌 (Pitfall 6) | createdBy 필드 + 권한 매트릭스 |
-| R4 (AsyncStatusTracker) | bridge_status 폴링 방해 (Pitfall 7) | tracker별 쿼리 분리, state machine 캡슐화 |
-| R5 (정책 확장) | off-chain action이 정책 우회 (Pitfall 3) | 새 경로에도 정책 평가 단계 필수, TransactionParam 확장 |
-| R6 (파이프라인 라우팅) | DB 기록 전략 미확정 (Pitfall 5) | 설계 첫 번째 결정으로 확정, txHash nullable 허용 |
-| R6 (connect-info) | capability 확장 누락 (Pitfall 10) | externalActions capability 추가 + skill file 업데이트 |
-| R6 (Admin/MCP/SDK) | 인터페이스 확장 누락 (Pitfall 12, 13) | 체크리스트 기반 확인 |
+| Provider unit migration (4 providers) | Hardcoded decimals in migrateAmount (Pitfall 1) | Token-specific decimals lookup for backward compat path |
+| Provider unit migration | Silent near-zero transactions (Pitfall 2) | amountFormatted safeguard + suspicious amount warning |
+| Provider unit migration | `max` keyword handling (Pitfall 3) | Early return in migrateAmount for "max" before numeric processing |
+| Provider unit migration | HF simulation arithmetic (Pitfall 6) | Replace hardcoded divisors with dynamic decimals |
+| Provider unit migration | Test updates (Pitfall 11) | Update tests BEFORE or WITH code changes, not after |
+| Provider unit migration | Deprecation log flood (Pitfall 14) | Rate-limit per provider per minute |
+| MCP typed schema | Zod roundtrip lossy conversion (Pitfall 5) | Prefer direct Zod reference (same-process) |
+| MCP typed schema | zodToJsonSchema compatibility (Pitfall 12) | Pin version, snapshot tests |
+| MCP typed schema | CLOB exception confusion (Pitfall 9) | unitConvention metadata field |
+| amountFormatted response | Null safety (Pitfall 8) | Explicit null contract, SDK helper |
+| amountFormatted response | balanceFormatted consistency (Pitfall 15) | Shared formatAmount() utility |
+| humanAmount support | XOR validation across layers (Pitfall 4) | Shared superRefine in @waiaas/core |
+| humanAmount support | Field name proliferation (Pitfall 7) | Decide universal vs per-provider before implementation |
+| humanAmount support | Token registry dependency (Pitfall 10) | Actionable error messages |
+| SDK/Skill sync | SDK type complexity (Pitfall 13) | Discriminated union with JSDoc |
 
 ---
 
 ## Integration Risk Matrix
 
-기존 시스템과의 통합 시 특히 주의해야 할 교차점.
-
-| 기존 시스템 | 영향받는 새 기능 | 위험도 | 핵심 주의사항 |
-|------------|----------------|--------|-------------|
-| 6-stage pipeline (stages.ts) | ResolvedAction 라우팅 | **HIGH** | Stage 3 정책, Stage 5 서명 분기 -- 기존 경로 무변경 |
-| DatabasePolicyEngine | venue-aware 정책 | **HIGH** | TransactionParam 확장 시 기존 필드 optional 유지 |
-| ActionProviderRegistry | resolve() 반환 타입 | **HIGH** | executeResolve() 분기 순서 유지 |
-| SettingsService + settings-crypto | CredentialVault 암호화 | **HIGH** | HKDF context 분리, re-encrypt/backup 통합 |
-| AsyncPollingService | off-chain 상태 추적 | **MEDIUM** | tracker 분리, bridge_status 호환 |
-| sign-message.ts | ISignerCapability | **MEDIUM** | delegation만, 기존 코드 수정 금지 |
-| http-message-signer.ts (ERC-8128) | SignedHttpAction | **MEDIUM** | 기존 ERC-8128 경로 유지, 새 경로만 통합 |
-| connect-info | capability 확장 | **LOW** | 수동 추가 필요 |
-| Admin UI | off-chain 표시 + Credentials | **LOW** | 신규 탭/필터 추가 |
-| ESM Plugin Loader | ResolvedAction 호환 | **LOW** | kind 없는 반환 = contractCall |
+| Existing System | Affected New Feature | Risk | Key Concern |
+|----------------|---------------------|------|-------------|
+| `parseTokenAmount()` (amount-parser.ts) | migrateAmount backward compat | **CRITICAL** | Hardcoded decimals must NOT propagate to migrateAmount |
+| Aave HF simulation (aave-rpc.ts) | Unit migration | **HIGH** | `checkBorrowSafety` / `checkWithdrawSafety` amount scale changes |
+| Kamino HF simulation (hf-simulation.ts) | Unit migration | **HIGH** | `Number(amount) / 1e6` hardcoded divisor |
+| Zod schema validation (core schemas) | XOR amount/humanAmount | **HIGH** | Must enforce at every entry point consistently |
+| MCP action-provider.ts | Typed schema | **HIGH** | Lossy roundtrip vs direct reference decision |
+| Transaction response schemas | amountFormatted | **MEDIUM** | Null safety contract, token registry lookup |
+| Token registry | humanAmount conversion | **MEDIUM** | Unregistered token -> clear error guidance |
+| Existing tests (4 providers) | Unit migration | **MEDIUM** | False confidence from backward-compat pass-through |
+| Skill files (7 files) | Documentation | **LOW** | Must document unit change prominently |
+| SDK methods | humanAmount option | **LOW** | TypeScript type ergonomics |
 
 ---
 
 ## Sources
 
-- 코드베이스 직접 분석 (HIGH confidence):
-  - `packages/core/src/interfaces/action-provider.types.ts` -- IActionProvider, ApiDirectResult, ActionContext
-  - `packages/daemon/src/infrastructure/action/action-provider-registry.ts` -- executeResolve() 분기 로직
-  - `packages/daemon/src/pipeline/stages.ts` -- PipelineContext, stage5Execute ApiDirectResult 분기
-  - `packages/daemon/src/pipeline/database-policy-engine.ts` -- TransactionParam, evaluate()
-  - `packages/daemon/src/services/async-polling-service.ts` -- tracker 등록/폴링
-  - `packages/daemon/src/infrastructure/settings/settings-crypto.ts` -- 암호화 키 파생
-- Objective 문서: `internal/objectives/m31-11-external-action-design.md` -- R1~R6 요구사항
+- Codebase inspection: `packages/actions/src/providers/aave-v3/index.ts` lines 161, 193, 220, 252 -- hardcoded decimals=18 for ALL assets -- HIGH confidence
+- Codebase inspection: `packages/actions/src/providers/kamino/index.ts` lines 165, 187, 214, 236 -- hardcoded decimals=6 for ALL assets -- HIGH confidence
+- Codebase inspection: `packages/actions/src/providers/lido-staking/index.ts` lines 116, 135 -- hardcoded decimals=18 -- HIGH confidence
+- Codebase inspection: `packages/actions/src/providers/jito-staking/jito-stake-pool.ts` line 400 -- hardcoded decimals=9 -- HIGH confidence
+- Codebase inspection: `packages/actions/src/common/amount-parser.ts` -- parseTokenAmount utility, human-readable only -- HIGH confidence
+- Codebase inspection: `packages/core/src/utils/format-amount.ts` -- formatAmount/parseAmount utilities -- HIGH confidence
+- Codebase inspection: `packages/mcp/src/tools/action-provider.ts` line 84 -- `z.record(z.unknown())` current state -- HIGH confidence
+- Codebase inspection: `packages/actions/src/providers/kamino/index.ts` line 191 -- `Number(amount) / 1e6` HF approximation -- HIGH confidence
+- Milestone objective: `internal/objectives/m31-15-amount-unit-standardization.md` -- design decisions D1-D7, R1-R6 requirements -- HIGH confidence
+- Zod-to-JSON-Schema lossy conversion: known limitation documented in zod-to-json-schema README -- MEDIUM confidence
