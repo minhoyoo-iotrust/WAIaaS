@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v31.17
 milestone_name: OpenAPI 기반 프론트엔드 타입 자동 생성
 status: executing
-stopped_at: Completed 414-03-PLAN.md
-last_updated: "2026-03-14T20:22:49.437Z"
+stopped_at: Completed 415-03-PLAN.md
+last_updated: "2026-03-14T20:57:40.947Z"
 last_activity: 2026-03-15 — Phase 414 plans 01+02 executed
 progress:
   total_phases: 5
-  completed_phases: 3
-  total_plans: 7
-  completed_plans: 7
+  completed_phases: 4
+  total_plans: 10
+  completed_plans: 10
   percent: 55
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-15)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Phase 414 — 인터페이스 점진적 마이그레이션
+**Current focus:** Phase 415 — 백엔드 API 확장 및 상수 통합
 
 ## Current Position
 
-Phase: 3 of 5 (Phase 414: 인터페이스 점진적 마이그레이션)
-Plan: 2 of 3 in current phase (Plan 03 deferred)
-Status: In progress
-Last activity: 2026-03-15 — Phase 414 plans 01+02 executed
+Phase: 4 of 5 (Phase 415: 백엔드 API 확장 및 상수 통합)
+Plan: 3 of 3 in current phase (all complete)
+Status: Complete
+Last activity: 2026-03-15 — Phase 415 plans 01+02+03 executed
 
-Progress: [██████░░░░] 55%
+Progress: [██████████] 98%
 
 ## Performance Metrics
 
@@ -47,6 +47,7 @@ Progress: [██████░░░░] 55%
 | 413 | 2 | 15min | 7.5min |
 | 414 | 2 | 39min | 19.5min |
 | Phase 414 P03 | 72 | 2 tasks | 10 files |
+| Phase 415 P01+02+03 | 25min | 5 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -68,6 +69,7 @@ Progress: [██████░░░░] 55%
 - [414-02] SettingsResponse cast to SettingsData via `as unknown as` (explicit vs dynamic keys)
 - [Phase 414]: NFT field names corrected: items/pageKey/totalCount (not nfts/cursor/hasMore)
 - [Phase 414]: ExternalActionItem.provider field (not actionProvider) per generated schema
+- [Phase 415]: enabledKey defaults to provider name, category to 'Other'; deriveLabel() auto-generates labels; pure TS constants in @waiaas/shared (no Zod); PROVIDER_ADVANCED_SETTINGS map replaces per-provider conditionals
 
 ### Pending Todos
 
@@ -82,6 +84,6 @@ Progress: [██████░░░░] 55%
 
 ## Session Continuity
 
-Last session: 2026-03-14T20:22:26.414Z
-Stopped at: Completed 414-03-PLAN.md
+Last session: 2026-03-14T20:57:40.943Z
+Stopped at: Completed 415-03-PLAN.md
 Resume file: None

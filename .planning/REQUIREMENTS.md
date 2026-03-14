@@ -22,19 +22,19 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 - [x] **MIG-01**: Admin UI 수동 interface 62개가 생성 타입 alias로 전환된다
 - [x] **MIG-02**: apiGet<수동타입>() 등 28개 수동 타입 단언이 타입 안전 래퍼 호출로 교체된다
-- [ ] **MIG-03**: BUILTIN_PROVIDERS 하드코딩 배열이 @waiaas/shared import 또는 API 디스커버리로 교체된다
-- [ ] **MIG-04**: CRED_TYPES 하드코딩이 @waiaas/shared re-export로 교체된다
-- [ ] **MIG-05**: 정책 타입 하드코딩이 @waiaas/shared re-export 또는 생성 타입으로 교체된다
-- [ ] **MIG-06**: 에러 코드 매핑 하드코딩이 @waiaas/shared re-export로 교체된다
+- [x] **MIG-03**: BUILTIN_PROVIDERS 하드코딩 배열이 @waiaas/shared import 또는 API 디스커버리로 교체된다
+- [x] **MIG-04**: CRED_TYPES 하드코딩이 @waiaas/shared re-export로 교체된다
+- [x] **MIG-05**: 정책 타입 하드코딩이 @waiaas/shared re-export 또는 생성 타입으로 교체된다
+- [x] **MIG-06**: 에러 코드 매핑 하드코딩이 @waiaas/shared re-export로 교체된다
 - [x] **MIG-07**: Admin UI 테스트의 mock 객체가 satisfies GeneratedType으로 구조 검증된다
 - [x] **MIG-08**: 백엔드 응답 스키마 변경 시 Admin UI 빌드가 실패하여 불일치를 사전 감지한다
 
 ### API (백엔드 API 확장)
 
-- [ ] **API-01**: GET /v1/actions/providers 응답에 enabledKey, category, isEnabled 필드가 추가된다
-- [ ] **API-02**: Admin UI가 BUILTIN_PROVIDERS 없이 API 응답만으로 프로바이더 목록을 렌더링한다
-- [ ] **API-03**: GET /v1/admin/settings/schema 엔드포인트가 등록된 설정 키 목록과 메타데이터를 반환한다
-- [ ] **API-04**: Admin UI가 설정 키 검색/표시에 하드코딩 대신 schema API를 사용한다
+- [x] **API-01**: GET /v1/actions/providers 응답에 enabledKey, category, isEnabled 필드가 추가된다
+- [x] **API-02**: Admin UI가 BUILTIN_PROVIDERS 없이 API 응답만으로 프로바이더 목록을 렌더링한다
+- [x] **API-03**: GET /v1/admin/settings/schema 엔드포인트가 등록된 설정 키 목록과 메타데이터를 반환한다
+- [x] **API-04**: Admin UI가 설정 키 검색/표시에 하드코딩 대신 schema API를 사용한다
 - [ ] **API-05**: OpenAPI spec 응답 스키마 키와 프론트엔드 사용 키를 비교하는 contract test가 CI에서 실행된다
 
 ## v2 Requirements
@@ -69,16 +69,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PIPE-08 | Phase 413 | Complete |
 | MIG-01 | Phase 414 | Complete |
 | MIG-02 | Phase 414 | Complete |
-| MIG-03 | Phase 415 | Pending |
-| MIG-04 | Phase 415 | Pending |
-| MIG-05 | Phase 415 | Pending |
-| MIG-06 | Phase 415 | Pending |
+| MIG-03 | Phase 415 | Complete |
+| MIG-04 | Phase 415 | Complete |
+| MIG-05 | Phase 415 | Complete |
+| MIG-06 | Phase 415 | Complete |
 | MIG-07 | Phase 413 | Complete |
 | MIG-08 | Phase 414 | Complete |
-| API-01 | Phase 415 | Pending |
-| API-02 | Phase 415 | Pending |
-| API-03 | Phase 415 | Pending |
-| API-04 | Phase 415 | Pending |
+| API-01 | Phase 415 | Complete |
+| API-02 | Phase 415 | Complete |
+| API-03 | Phase 415 | Complete |
+| API-04 | Phase 415 | Complete |
 | API-05 | Phase 416 | Pending |
 
 **Coverage:**
