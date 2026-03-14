@@ -9,12 +9,12 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Pipeline (타입 생성 파이프라인)
 
-- [ ] **PIPE-01**: OpenAPI spec을 createApp() stub deps 주입으로 빌드 타임에 JSON 파일로 추출할 수 있다
-- [ ] **PIPE-02**: 추출된 spec의 엔드포인트 수가 실제 등록된 라우트 수와 일치하는지 자동 검증된다
-- [ ] **PIPE-03**: openapi-typescript로 openapi.json에서 types.generated.ts를 자동 생성할 수 있다
-- [ ] **PIPE-04**: pnpm run generate:api-types 명령으로 추출+생성이 한 번에 실행된다
-- [ ] **PIPE-05**: Turbo build pipeline에서 admin 빌드 전에 타입 생성이 실행된다
-- [ ] **PIPE-06**: CI에서 types.generated.ts freshness를 검증하여 stale 타입을 차단한다
+- [x] **PIPE-01**: OpenAPI spec을 createApp() stub deps 주입으로 빌드 타임에 JSON 파일로 추출할 수 있다
+- [x] **PIPE-02**: 추출된 spec의 엔드포인트 수가 실제 등록된 라우트 수와 일치하는지 자동 검증된다
+- [x] **PIPE-03**: openapi-typescript로 openapi.json에서 types.generated.ts를 자동 생성할 수 있다
+- [x] **PIPE-04**: pnpm run generate:api-types 명령으로 추출+생성이 한 번에 실행된다
+- [x] **PIPE-05**: Turbo build pipeline에서 admin 빌드 전에 타입 생성이 실행된다
+- [x] **PIPE-06**: CI에서 types.generated.ts freshness를 검증하여 stale 타입을 차단한다
 - [ ] **PIPE-07**: openapi-fetch 기반 타입 안전 API 클라이언트가 경로와 응답 타입을 자동 연결한다
 - [ ] **PIPE-08**: 타입 안전 클라이언트가 X-Master-Password 헤더 주입과 401 로그아웃을 미들웨어로 처리한다
 
@@ -59,12 +59,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PIPE-01 | Phase 412 | Pending |
-| PIPE-02 | Phase 412 | Pending |
-| PIPE-03 | Phase 412 | Pending |
-| PIPE-04 | Phase 412 | Pending |
-| PIPE-05 | Phase 412 | Pending |
-| PIPE-06 | Phase 412 | Pending |
+| PIPE-01 | Phase 412 | Complete |
+| PIPE-02 | Phase 412 | Complete |
+| PIPE-03 | Phase 412 | Complete |
+| PIPE-04 | Phase 412 | Complete |
+| PIPE-05 | Phase 412 | Complete |
+| PIPE-06 | Phase 412 | Complete |
 | PIPE-07 | Phase 413 | Pending |
 | PIPE-08 | Phase 413 | Pending |
 | MIG-01 | Phase 414 | Pending |
