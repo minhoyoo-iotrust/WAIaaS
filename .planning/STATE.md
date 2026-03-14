@@ -4,7 +4,7 @@ milestone: v31.16
 milestone_name: CAIP 표준 식별자 승격
 status: executing
 stopped_at: Completed 409-02-PLAN.md
-last_updated: "2026-03-14T15:07:39.327Z"
+last_updated: "2026-03-14T15:08:12.941Z"
 last_activity: 2026-03-14 — Phase 408 completed (2 plans)
 progress:
   total_phases: 5
