@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.11.0-rc.5](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.4...v2.11.0-rc.5) (2026-03-14)
+
+
+### Features
+
+* add favicon with green terminal prompt icon ([a29327a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a29327ac46faad575a2f04db4ddbb38e1550a173))
+* restore CNAME for waiaas.ai custom domain ([907e3b2](https://github.com/minhoyoo-iotrust/WAIaaS/commit/907e3b25fd9c44fc24780314e917b5b629246a28))
+
+
+### Bug Fixes
+
+* add og:image:type and alt meta tags for Twitter/X card preview ([96f746d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/96f746d40932b25d94989b0d6ff7783377ceb731))
+* add og:image:type and alt meta tags for Twitter/X card preview ([1256475](https://github.com/minhoyoo-iotrust/WAIaaS/commit/12564757f28473795c115366a1cb96bf8a5c9678))
+* GitHub Pages improvements — agent guide, card alignment, OG image, favicon ([f0a2278](https://github.com/minhoyoo-iotrust/WAIaaS/commit/f0a2278c150857a4110bfdb063fcc6dac63f2490))
+* resolve GitHub Pages issues [#341](https://github.com/minhoyoo-iotrust/WAIaaS/issues/341)-[#343](https://github.com/minhoyoo-iotrust/WAIaaS/issues/343) — agent guide tabs, card alignment, OG image ([36da66f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/36da66fe8645327da959e9e611fafe69ad2dbcae))
+* restore site/CNAME for GitHub Pages custom domain ([6233cc5](https://github.com/minhoyoo-iotrust/WAIaaS/commit/6233cc5f06098c2f636766a66b32d34e94bc8a69))
+
 ## [2.11.0-rc.4](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.3...v2.11.0-rc.4) (2026-03-14)
 
 
