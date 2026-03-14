@@ -196,9 +196,9 @@ Parameters:
   - `address` (required): mint address (SPL) or contract address (ERC-20)
   - `decimals` (required): integer, 0-18
   - `symbol` (required): string, 1-10 characters
-  - `assetId` (optional): CAIP-19 asset identifier (e.g., `"eip155:1/erc20:0xa0b8..."`). Cross-validated against `address` when provided.
+  - `assetId` (recommended): CAIP-19 asset identifier (e.g., `"eip155:1/erc20:0xa0b8..."`). When provided alone (without address/decimals/symbol), the daemon auto-resolves from the token registry.
 - `memo` (optional): string, max 256 characters
-- `network`: target network for this transaction. Required for EVM wallets; auto-resolved for Solana. Must be valid for the wallet's environment.
+- `network`: target network (e.g., `"ethereum-mainnet"` or CAIP-2 `"eip155:1"`). Required for EVM wallets; auto-resolved for Solana. Auto-inferred from `assetId` when omitted. Must be valid for the wallet's environment.
 
 ## 4. Type 3: CONTRACT_CALL (Arbitrary Contract)
 
@@ -323,9 +323,9 @@ Parameters:
   - `address` (required): token contract/mint address
   - `decimals` (required): integer, 0-18
   - `symbol` (required): string, 1-10 characters
-  - `assetId` (optional): CAIP-19 asset identifier. Cross-validated against `address` when provided.
+  - `assetId` (recommended): CAIP-19 asset identifier. When provided alone (without address/decimals/symbol), the daemon auto-resolves from the token registry.
 - `amount` (required): string of digits, max approval amount in token's smallest unit
-- `network`: target network for this transaction. Required for EVM wallets; auto-resolved for Solana. Must be valid for the wallet's environment.
+- `network`: target network (e.g., `"ethereum-mainnet"` or CAIP-2 `"eip155:1"`). Required for EVM wallets; auto-resolved for Solana. Auto-inferred from `assetId` when omitted. Must be valid for the wallet's environment.
 
 ## 6. Type 5: BATCH (Multiple Instructions)
 
@@ -935,9 +935,28 @@ curl -s -X POST http://localhost:3100/v1/utils/encode-calldata \
 
 **MCP Tool:** `encode_calldata` with parameters `abi`, `functionName`, `args`
 
-## 13. CAIP-19 Asset Identification
+## 13. CAIP Standard Identifiers (CAIP-2 / CAIP-19)
 
-WAIaaS supports [CAIP-19](https://github.com/ChainAgnostic/CAIPs/blob/main/CAIPs/caip-19.md) standard asset identifiers for cross-chain token identification. The `assetId` field is an optional addition to token objects in TOKEN_TRANSFER and APPROVE requests.
+### CAIP-2: Network Input
+
+All `network` parameters accept CAIP-2 chain identifiers alongside plain strings:
+
+| Plain String | CAIP-2 | Chain |
+|---|---|---|
+| `ethereum-mainnet` | `eip155:1` | Ethereum |
+| `polygon-mainnet` | `eip155:137` | Polygon |
+| `arbitrum-mainnet` | `eip155:42161` | Arbitrum |
+| `base-mainnet` | `eip155:8453` | Base |
+| `optimism-mainnet` | `eip155:10` | Optimism |
+| `solana-mainnet` | `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp` | Solana |
+| `ethereum-sepolia` | `eip155:11155111` | Sepolia |
+| `solana-devnet` | `solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1` | Solana Devnet |
+
+Example: `?network=eip155:1` is equivalent to `?network=ethereum-mainnet`.
+
+### CAIP-19: Asset Identification
+
+WAIaaS supports [CAIP-19](https://github.com/ChainAgnostic/CAIPs/blob/main/CAIPs/caip-19.md) standard asset identifiers for cross-chain token identification. The `assetId` field can be used in token objects in TOKEN_TRANSFER and APPROVE requests.
 
 ### Format
 
@@ -1003,6 +1022,37 @@ When both `address` and `assetId` are provided, the daemon extracts the address 
 ### Backward Compatibility
 
 `assetId` is fully optional. Existing requests without `assetId` continue to work unchanged. You can gradually adopt CAIP-19 identifiers without breaking existing integrations.
+
+### assetId-Only Pattern (Recommended for Registered Tokens)
+
+When a token is registered in the daemon's token registry, you can omit `address`, `decimals`, and `symbol` entirely:
+
+```bash
+curl -s -X POST http://localhost:3100/v1/transactions/send \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -d '{
+    "type": "TOKEN_TRANSFER",
+    "to": "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD16",
+    "humanAmount": "100",
+    "token": {
+      "assetId": "eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+    },
+    "network": "eip155:1"
+  }'
+```
+
+- `token.address`, `token.decimals`, `token.symbol` are auto-resolved from the token registry
+- `network` can be omitted -- it is auto-inferred from the CAIP-2 prefix in `assetId`
+- For unregistered tokens: provide `assetId` + `decimals` + `symbol` (address is extracted from assetId)
+
+### Response CAIP Fields
+
+All responses now include CAIP identifiers:
+- `chainId`: CAIP-2 chain identifier (e.g., `"eip155:1"`)
+- `assetId`: CAIP-19 asset identifier (e.g., `"eip155:1/erc20:0xa0b..."`)
+
+These fields are additive -- existing `network`, `chain`, `address` fields are preserved.
 
 ## 14. Gas Conditional Execution
 
