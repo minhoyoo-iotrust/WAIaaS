@@ -239,18 +239,103 @@
     .arch-diagram {
       background: var(--surface);
       border: 1px solid var(--border);
-      padding: 32px;
-      font-family: inherit;
-      font-size: 0.8rem;
-      line-height: 1.8;
+      padding: 32px 24px;
       overflow-x: auto;
-      white-space: pre;
-      color: var(--text-dim);
-      text-align: left;
     }
-    .arch-diagram .highlight { color: var(--cyan); }
-    .arch-diagram .green { color: var(--green); }
-    .arch-diagram .dim { color: #444444; }
+    .arch-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      min-width: 520px;
+    }
+    .arch-row {
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+      gap: 16px;
+      width: 100%;
+    }
+    .arch-box {
+      border: 1px solid var(--border);
+      padding: 12px 16px;
+      text-align: center;
+      flex: 1;
+      max-width: 200px;
+    }
+    .arch-box.wide { max-width: 420px; flex: 2; }
+    .arch-box .box-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+    .arch-box .box-sub {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      line-height: 1.4;
+    }
+    .arch-box.primary .box-title { color: var(--green); }
+    .arch-box.secondary .box-title { color: var(--cyan); }
+    .arch-box.accent .box-title { color: var(--yellow); }
+    .arch-down {
+      display: flex;
+      justify-content: center;
+      padding: 4px 0;
+    }
+    .arch-down svg { display: block; }
+    .arch-label {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      text-align: center;
+      padding: 2px 0;
+      letter-spacing: 0.05em;
+    }
+    .arch-daemon-box {
+      border: 1px dashed var(--border);
+      padding: 20px 16px 16px;
+      position: relative;
+      width: 100%;
+      max-width: 660px;
+    }
+    .arch-daemon-box .daemon-label {
+      position: absolute;
+      top: -10px;
+      left: 16px;
+      background: var(--surface);
+      padding: 0 8px;
+      font-size: 0.7rem;
+      color: var(--green);
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+    .arch-daemon-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+    }
+    .arch-pipeline {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      padding: 8px 0;
+    }
+    .pipe-stage {
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .pipe-stage.active { border-color: var(--green-dim); color: var(--green); }
+    .pipe-arrow { color: var(--text-dim); font-size: 0.7rem; }
+    .arch-row-bottom {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      width: 100%;
+    }
 
     /* Quick Start */
     .quickstart { padding: 48px 0; }
@@ -386,6 +471,16 @@
       .install-box { font-size: 0.85rem; padding: 10px 14px; }
       .nav-links { gap: 12px; }
       .nav-links a { font-size: 0.75rem; }
+      .arch-diagram { padding: 16px 12px; }
+      .arch-inner { min-width: 0; }
+      .arch-daemon-box { padding: 16px 10px 12px; }
+      .arch-row { flex-wrap: wrap; gap: 8px; }
+      .arch-box { min-width: 0; max-width: none !important; flex: 1 1 120px; padding: 10px 12px; }
+      .arch-box .box-title { font-size: 0.8rem; }
+      .arch-box .box-sub { font-size: 0.7rem; }
+      .arch-pipeline { gap: 4px; }
+      .pipe-stage { font-size: 0.65rem; padding: 3px 6px; }
+      .pipe-arrow { font-size: 0.6rem; }
     }
   </style>
 </head>
@@ -457,28 +552,80 @@
     <div class="container">
       <h2>Architecture</h2>
       <div class="arch-diagram">
-  <span class="dim">┌──────────────┐      ┌──────────────┐      ┌──────────────┐</span>
-  <span class="dim">│</span> <span class="highlight">AI Agent</span>     <span class="dim">│─────▸│</span> <span class="highlight">MCP/REST</span>     <span class="dim">│─────▸│</span> <span class="green">WAIaaS</span>       <span class="dim">│</span>
-  <span class="dim">│  (Claude,    │      │  API         │      │  Daemon      │</span>
-  <span class="dim">│   GPT, ...)  │      │              │      │  (Local)     │</span>
-  <span class="dim">└──────────────┘      └──────────────┘      └──────┬───────┘</span>
-                                                    <span class="dim">│</span>
-               <span class="dim">┌────────────────────────┼────────────────────────┐</span>
-               <span class="dim">│                        │                        │</span>
-     <span class="dim">┌─────────▼─────────┐  ┌──────▼───────┐  ┌─────────▼─────────┐</span>
-     <span class="dim">│</span> <span class="green">6-Stage Pipeline</span>  <span class="dim">│  │</span> <span class="green">Policy Engine</span> <span class="dim">│  │</span> <span class="green">Owner Approval</span>    <span class="dim">│</span>
-     <span class="dim">│</span>  Validate → Sign  <span class="dim">│  │</span> Default-Deny  <span class="dim">│  │</span>  WC / Telegram    <span class="dim">│</span>
-     <span class="dim">│</span>  → Broadcast      <span class="dim">│  │</span> + Spending    <span class="dim">│  │</span>  / Wallet SDK     <span class="dim">│</span>
-     <span class="dim">└─────────┬─────────┘  └──────────────┘  └───────────────────┘</span>
-               <span class="dim">│</span>
-     <span class="dim">┌─────────┼──────────┐</span>
-     <span class="dim">│         │          │</span>
-  <span class="dim">┌──▼───────────┐  ┌───▼────┐  ┌───▼────┐</span>
-  <span class="dim">│</span> <span class="highlight">EVM Chains</span>   <span class="dim">│  │</span> <span class="highlight">Solana</span> <span class="dim">│  │</span> <span class="highlight">DeFi</span>   <span class="dim">│</span>
-  <span class="dim">│ ETH, Polygon │  │ Main   │  │ 13+    │</span>
-  <span class="dim">│ Arb, Base... │  │ Devnet │  │ Protos │</span>
-  <span class="dim">└──────────────┘  └────────┘  └────────┘</span>
-</div>
+        <div class="arch-inner">
+          <!-- AI Agent -->
+          <div class="arch-row">
+            <div class="arch-box secondary" style="max-width:280px">
+              <div class="box-title">AI Agent</div>
+              <div class="box-sub">Claude, GPT, custom agents...</div>
+            </div>
+          </div>
+
+          <div class="arch-down"><svg width="2" height="20"><line x1="1" y1="0" x2="1" y2="20" stroke="#2a2a2a"/></svg></div>
+          <div class="arch-label">MCP / REST API / SDK</div>
+          <div class="arch-down"><svg width="8" height="16"><line x1="4" y1="0" x2="4" y2="12" stroke="#2a2a2a"/><polygon points="1,10 4,16 7,10" fill="#2a2a2a"/></svg></div>
+
+          <!-- WAIaaS Daemon container -->
+          <div class="arch-daemon-box">
+            <div class="daemon-label">WAIaaS Daemon (Local)</div>
+            <div class="arch-daemon-inner">
+
+              <!-- 6-Stage Pipeline -->
+              <div class="arch-box primary wide" style="max-width:100%;margin-bottom:0">
+                <div class="box-title">6-Stage Transaction Pipeline</div>
+              </div>
+              <div class="arch-pipeline">
+                <span class="pipe-stage">Validate</span>
+                <span class="pipe-arrow">→</span>
+                <span class="pipe-stage active">Policy</span>
+                <span class="pipe-arrow">→</span>
+                <span class="pipe-stage active">Delay/Approval</span>
+                <span class="pipe-arrow">→</span>
+                <span class="pipe-stage">Sign</span>
+                <span class="pipe-arrow">→</span>
+                <span class="pipe-stage">Broadcast</span>
+                <span class="pipe-arrow">→</span>
+                <span class="pipe-stage">Confirm</span>
+              </div>
+
+              <!-- Security layer -->
+              <div class="arch-row" style="margin-bottom:12px">
+                <div class="arch-box accent">
+                  <div class="box-title">Policy Engine</div>
+                  <div class="box-sub">Default-Deny, Spending Limits</div>
+                </div>
+                <div class="arch-box accent">
+                  <div class="box-title">Owner Approval</div>
+                  <div class="box-sub">WC / Telegram / Wallet SDK</div>
+                </div>
+                <div class="arch-box accent">
+                  <div class="box-title">Admin UI</div>
+                  <div class="box-sub">Dashboard, Audit Logs</div>
+                </div>
+              </div>
+
+              <div class="arch-down"><svg width="8" height="16"><line x1="4" y1="0" x2="4" y2="12" stroke="#2a2a2a"/><polygon points="1,10 4,16 7,10" fill="#2a2a2a"/></svg></div>
+
+              <!-- Chain Adapters + DeFi -->
+              <div class="arch-row">
+                <div class="arch-box secondary">
+                  <div class="box-title">EVM Chains</div>
+                  <div class="box-sub">ETH, Polygon, Arb, Base...</div>
+                </div>
+                <div class="arch-box secondary">
+                  <div class="box-title">Solana</div>
+                  <div class="box-sub">Mainnet, Devnet</div>
+                </div>
+                <div class="arch-box secondary">
+                  <div class="box-title">DeFi Protocols</div>
+                  <div class="box-sub">13+ (Swap, Bridge, Stake...)</div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
