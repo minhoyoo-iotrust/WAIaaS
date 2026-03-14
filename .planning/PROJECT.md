@@ -8,6 +8,19 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
+## Current Milestone: v31.16 CAIP 표준 식별자 승격
+
+**Goal:** REST API, SDK, MCP 전체 인터페이스에서 CAIP-2(네트워크)와 CAIP-19(자산)를 표준 식별자로 승격 — 기존 plain string 100% 유지하면서 CAIP 경로를 병렬로 추가
+
+**Target features:**
+- 네트워크 입력 CAIP-2 Dual-Accept (normalizeNetworkInput 확장)
+- 자산 입력 CAIP-19 Primary (assetId-only 토큰 특정 + 레지스트리 자동 resolve)
+- 응답에 chainId(CAIP-2)/assetId(CAIP-19) 항상 포함
+- SDK CAIP-2/19 타입 확장
+- MCP 도구 CAIP 확장 + resolve_asset 신규 도구
+- OpenAPI 스펙 + Skill 파일 동기화
+- 테스트 10개 시나리오
+
 ## Previous Milestone: v31.15 Amount 단위 표준화 및 AI 에이전트 DX 개선 — SHIPPED 2026-03-14
 
 14개 non-CLOB provider 스키마에 명시적 단위 description 추가, 4개 레거시 provider(Aave V3/Kamino/Lido/Jito) smallest-unit 전환 + migrateAmount() 하위 호환성 자동 변환. MCP typed schema 등록(jsonSchemaToZodParams) + GET /v1/actions/providers inputSchema JSON Schema 노출. 트랜잭션/잔액 응답에 amountFormatted/amountDecimals/amountSymbol + balanceFormatted 런타임 보강. humanAmount XOR 파라미터 — REST API(TRANSFER/TOKEN_TRANSFER/APPROVE) + 10 action providers + MCP 자동 노출. SDK humanAmount 타입 + 스킬 파일 4종 단위 가이드 + E2E humanAmount 시나리오 검증. 5 phases, 9 plans, 33 requirements, 40 commits, 89 files, +7,834 lines, ~294,834 LOC TS.
