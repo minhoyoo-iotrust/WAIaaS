@@ -238,6 +238,23 @@ Response:
 
 Send native tokens (SOL/ETH) to a recipient address. Requires **sessionAuth**.
 
+#### Preferred: Use humanAmount (human-readable)
+
+```bash
+curl -s -X POST http://localhost:3100/v1/transactions/send \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' \
+  -d '{
+    "type": "TRANSFER",
+    "to": "9aE476sH92Vz7DMPyq5WLPkrKWivxeuTKEFKd2sZZcde",
+    "humanAmount": "0.1"
+  }'
+```
+
+This sends **0.1 SOL**. The server converts to `100000000` lamports automatically.
+
+#### Alternative: Use amount (smallest unit)
+
 ```bash
 curl -s -X POST http://localhost:3100/v1/transactions/send \
   -H 'Content-Type: application/json' \
@@ -249,10 +266,21 @@ curl -s -X POST http://localhost:3100/v1/transactions/send \
   }'
 ```
 
+#### Amount Unit Rules
+
+| Field | Format | Example (0.1 SOL) |
+|-------|--------|-------------------|
+| `humanAmount` | Human-readable decimal | `"0.1"` |
+| `amount` | Smallest unit (lamports/wei) | `"100000000"` |
+
+- `amount` and `humanAmount` are **mutually exclusive** (XOR) -- providing both returns 400 error
+- For TOKEN_TRANSFER, the server uses `token.decimals` to convert `humanAmount`
+- CLOB providers (Hyperliquid, Drift, Polymarket) use exchange-native units only
+
 Parameters:
 - `type` (required): `"TRANSFER"` for native token transfers
 - `to` (required): recipient wallet address
-- `amount` (required): string of digits in smallest unit (lamports for SOL, wei for ETH)
+- `amount` or `humanAmount` (required): smallest-unit digit string or human-readable decimal string (mutually exclusive)
 - `memo` (optional): max 256 characters
 - `network`: target network for this transaction. Required for EVM wallets; auto-resolved for Solana.
 

@@ -47,6 +47,61 @@ All transaction types use `POST /v1/transactions/send` with the appropriate `typ
 
 All transaction types accept a `network` parameter to specify the target network for the transaction. Required for EVM wallets; auto-resolved for Solana wallets. Must be valid for the wallet's environment.
 
+## Amount Units
+
+All `amount` fields in transaction requests use **smallest-unit** values (wei for ETH, lamports for SOL). Alternatively, use `humanAmount` for **human-readable** values -- the server converts using token decimals.
+
+### Preferred: humanAmount (human-readable)
+
+```bash
+curl -s -X POST http://localhost:3100/v1/transactions/send \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer wai_sess_eyJ...' \
+  -d '{
+    "type": "TRANSFER",
+    "to": "0xRecipient...",
+    "humanAmount": "1.5"
+  }'
+```
+
+This sends **1.5 ETH**. The server converts to `1500000000000000000` wei automatically.
+
+For TOKEN_TRANSFER, the server uses the token's `decimals` to convert:
+
+```json
+{
+  "type": "TOKEN_TRANSFER",
+  "to": "0xRecipient...",
+  "humanAmount": "100",
+  "token": { "address": "0xUSDC...", "decimals": 6, "symbol": "USDC" }
+}
+```
+
+### Alternative: amount (smallest unit)
+
+```json
+{
+  "type": "TRANSFER",
+  "to": "0xRecipient...",
+  "amount": "1500000000000000000"
+}
+```
+
+This is the same 1.5 ETH, specified in wei.
+
+### XOR Rule
+
+`amount` and `humanAmount` are **mutually exclusive**. Providing both returns a 400 error.
+
+| Field | Format | Example (1.5 ETH) |
+|-------|--------|-------------------|
+| `amount` | Smallest unit digit string | `"1500000000000000000"` |
+| `humanAmount` | Human-readable decimal string | `"1.5"` |
+
+### CLOB Exception
+
+Hyperliquid, Drift, and Polymarket use exchange-native units (not smallest units). `humanAmount` is not supported for these providers -- use `amount` with the exchange-native value.
+
 ## 2. Type 1: TRANSFER (Native SOL/ETH)
 
 Transfer native tokens to a recipient address. No policy prerequisite -- subject to SPENDING_LIMIT if configured. DCent Exchange uses TRANSFER to send funds to the exchange service's payInAddress for cross-chain swaps.
