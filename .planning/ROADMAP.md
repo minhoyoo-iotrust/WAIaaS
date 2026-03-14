@@ -102,8 +102,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 409-01: 응답 스키마 chainId/assetId 동적 생성 유틸리티 + connect-info 확장
-- [ ] 409-02: 전체 응답 포인트 적용 + OpenAPI 스펙 업데이트 + 응답 검증 테스트
+- [ ] 409-01-PLAN.md — 응답 스키마 chainId/assetId 동적 생성 유틸리티 + connect-info 확장
+- [ ] 409-02-PLAN.md — 전체 응답 포인트 적용 + OpenAPI 스펙 업데이트 + 응답 검증 테스트
 
 ### Phase 410: SDK + MCP CAIP Extension
 **Goal**: SDK와 MCP 클라이언트에서 CAIP-2/19를 네이티브로 사용 가능
