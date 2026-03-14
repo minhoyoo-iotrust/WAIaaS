@@ -118,8 +118,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 410-01: SDK CAIP 타입 확장 + 메서드 union 타입 + 테스트
-- [ ] 410-02: MCP 도구 CAIP 확장 + resolve_asset 신규 도구 + 테스트
+- [ ] 410-01-PLAN.md — SDK CAIP 타입 확장 + TokenInfo union + validation 완화 + 테스트
+- [ ] 410-02-PLAN.md — MCP resolve_asset 신규 도구 + send_token/approve_token assetId-only + 테스트
 
 ### Phase 411: Skill Files Sync
 **Goal**: 스킬 파일에 CAIP-2/19 사용법과 예시를 반영하여 AI 에이전트가 CAIP 경로를 인지
