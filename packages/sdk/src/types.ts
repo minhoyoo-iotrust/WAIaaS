@@ -6,6 +6,16 @@
  */
 
 // ---------------------------------------------------------------------------
+// CAIP Standard Identifiers
+// ---------------------------------------------------------------------------
+
+/** CAIP-2 chain identifier (e.g., "eip155:1", "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp") */
+export type Caip2ChainId = string;
+
+/** CAIP-19 asset identifier (e.g., "eip155:1/erc20:0xa0b8...", "eip155:1/slip44:60") */
+export type Caip19AssetId = string;
+
+// ---------------------------------------------------------------------------
 // Client Options
 // ---------------------------------------------------------------------------
 
@@ -119,6 +129,8 @@ export interface BalanceResponse {
   balance: string;
   decimals: number;
   symbol: string;
+  /** CAIP-2 chain identifier (e.g., "eip155:1"). Present in daemon responses. */
+  chainId?: Caip2ChainId;
 }
 
 export interface AddressResponse {
@@ -138,7 +150,9 @@ export interface AssetInfo {
   isNative: boolean;
   usdValue?: number;
   /** CAIP-19 asset identifier. Present in daemon responses for registered tokens. */
-  assetId?: string;
+  assetId?: Caip19AssetId;
+  /** CAIP-2 chain identifier (e.g., "eip155:1"). Present in daemon responses. */
+  chainId?: Caip2ChainId;
 }
 
 export interface AssetsResponse {
@@ -146,18 +160,32 @@ export interface AssetsResponse {
   chain: string;
   network: string;
   assets: AssetInfo[];
+  /** CAIP-2 chain identifier (e.g., "eip155:1"). Present in daemon responses. */
+  chainId?: Caip2ChainId;
 }
 
 // ---------------------------------------------------------------------------
 // Transaction Types
 // ---------------------------------------------------------------------------
 
-export interface TokenInfo {
+/** Token identification: provide either full metadata OR assetId alone (daemon resolves). */
+export type TokenInfo = TokenInfoFull | TokenInfoByAssetId;
+
+/** Full token metadata (existing pattern). */
+export interface TokenInfoFull {
   address: string;
   decimals: number;
   symbol: string;
   /** CAIP-19 asset identifier (e.g., "eip155:1/erc20:0xa0b8..."). Optional -- daemon cross-validates against address when provided. */
-  assetId?: string;
+  assetId?: Caip19AssetId;
+}
+
+/** CAIP-19 only -- daemon resolves address/decimals/symbol from registry. */
+export interface TokenInfoByAssetId {
+  assetId: Caip19AssetId;
+  address?: string;
+  decimals?: number;
+  symbol?: string;
 }
 
 /** Gas price condition for deferred execution. */
@@ -189,19 +217,19 @@ export interface SendTokenParams {
   spender?: string;
   // BATCH fields
   instructions?: Array<Record<string, unknown>>;
-  // Network selection (multichain)
+  /** Target network (e.g., 'polygon-mainnet' or CAIP-2 'eip155:137'). Required for EVM wallets. */
   network?: string;
   // Gas conditional execution
   gasCondition?: GasCondition;
 }
 
 export interface BalanceOptions {
-  /** Query balance for a specific network (e.g., 'polygon-mainnet') */
+  /** Query balance for a specific network (e.g., 'polygon-mainnet' or CAIP-2 'eip155:137'). */
   network?: string;
 }
 
 export interface AssetsOptions {
-  /** Query assets for a specific network (e.g., 'polygon-mainnet') */
+  /** Query assets for a specific network (e.g., 'polygon-mainnet' or CAIP-2 'eip155:137'). */
   network?: string;
 }
 
@@ -269,6 +297,8 @@ export interface TransactionResponse {
   txHash: string | null;
   error: string | null;
   createdAt: number | null;
+  /** CAIP-2 chain identifier (e.g., "eip155:1"). Present in daemon responses. */
+  chainId?: Caip2ChainId;
 }
 
 export interface TransactionListResponse {
@@ -376,6 +406,8 @@ export interface ConnectInfoResponse {
   /** RPC proxy info (null when disabled) */
   rpcProxy?: { enabled: boolean; baseUrl: string } | null;
   prompt: string;
+  /** Supported CAIP-2 chain identifiers (e.g., ["eip155:1", "eip155:137"]). Present in daemon responses. */
+  supportedChainIds?: Caip2ChainId[];
 }
 
 // ---------------------------------------------------------------------------
@@ -463,7 +495,7 @@ export interface EncodeCalldataResponse {
 export interface SignTransactionParams {
   /** Raw unsigned transaction (base64 for Solana, hex for EVM) */
   transaction: string;
-  /** Target network (e.g., 'polygon-mainnet') */
+  /** Target network (e.g., 'polygon-mainnet' or CAIP-2 'eip155:137'). */
   network?: string;
 }
 
@@ -556,6 +588,8 @@ export interface MultiNetworkBalanceEntry {
   decimals?: number;
   symbol?: string;
   error?: string;
+  /** CAIP-2 chain identifier (e.g., "eip155:1"). Present in daemon responses. */
+  chainId?: Caip2ChainId;
 }
 
 export interface MultiNetworkBalanceResponse {
@@ -569,6 +603,8 @@ export interface MultiNetworkAssetsEntry {
   network: string;
   assets?: AssetInfo[];
   error?: string;
+  /** CAIP-2 chain identifier (e.g., "eip155:1"). Present in daemon responses. */
+  chainId?: Caip2ChainId;
 }
 
 export interface MultiNetworkAssetsResponse {
@@ -815,6 +851,10 @@ export interface IncomingTransactionItem {
   detectedAt: number;
   confirmedAt: number | null;
   suspicious: boolean;
+  /** CAIP-2 chain identifier (e.g., "eip155:1"). Present in daemon responses. */
+  chainId?: Caip2ChainId;
+  /** CAIP-19 asset identifier. Present in daemon responses. */
+  assetId?: Caip19AssetId;
 }
 
 export interface IncomingTransactionListResponse {
@@ -1041,7 +1081,9 @@ export interface NftItemResponse {
   description?: string;
   amount?: string;
   collection?: { name?: string; address: string };
-  assetId?: string;
+  assetId?: Caip19AssetId;
+  /** CAIP-2 chain identifier (e.g., "eip155:1"). Present in daemon responses. */
+  chainId?: Caip2ChainId;
 }
 
 export interface NftListResponse {
@@ -1066,7 +1108,9 @@ export interface NftMetadataResponse {
   description?: string;
   attributes?: Array<{ traitType: string; value: string }>;
   metadata?: Record<string, unknown>;
-  assetId?: string;
+  assetId?: Caip19AssetId;
+  /** CAIP-2 chain identifier (e.g., "eip155:1"). Present in daemon responses. */
+  chainId?: Caip2ChainId;
 }
 
 export interface TransferNftParams {
@@ -1175,6 +1219,8 @@ export interface DeFiPosition {
   status: string;
   openedAt: number;
   lastSyncedAt: number;
+  /** CAIP-2 chain identifier (e.g., "eip155:1"). Present in daemon responses. */
+  chainId?: Caip2ChainId;
 }
 
 export interface DeFiPositionsResponse {

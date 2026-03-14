@@ -23,6 +23,10 @@ export { WAIaaSError } from './error.js';
 export { withRetry } from './retry.js';
 export { validateSendToken } from './validation.js';
 export type {
+  Caip2ChainId,
+  Caip19AssetId,
+  TokenInfoFull,
+  TokenInfoByAssetId,
   ConnectOptions,
   WAIaaSClientOptions,
   WAIaaSOwnerClientOptions,
