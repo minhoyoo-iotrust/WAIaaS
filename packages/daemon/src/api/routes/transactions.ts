@@ -24,7 +24,7 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { eq, and, inArray, lt, desc } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
-import { WAIaaSError } from '@waiaas/core';
+import { WAIaaSError, formatAmount } from '@waiaas/core';
 import type { ChainType, NetworkType, EnvironmentType, IPolicyEngine } from '@waiaas/core';
 import type { AdapterPool } from '../../infrastructure/adapter-pool.js';
 import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
@@ -106,6 +106,71 @@ export interface TransactionRouteDeps {
   metricsCounter?: IMetricsCounter;
   // v30.8: reputation cache for REPUTATION_THRESHOLD policy evaluation (Phase 320)
   reputationCache?: import('../../services/erc8004/reputation-cache-service.js').ReputationCacheService;
+}
+
+// ---------------------------------------------------------------------------
+// Amount formatting helpers (Phase 404 - RESP-01 ~ RESP-05)
+// ---------------------------------------------------------------------------
+
+/**
+ * Get native token info (decimals, symbol) for a given chain/network.
+ * Returns null for unsupported chains.
+ */
+export function getNativeTokenInfo(
+  chain: string,
+  network?: string | null,
+): { decimals: number; symbol: string } | null {
+  if (chain === 'solana') return { decimals: 9, symbol: 'SOL' };
+  if (chain === 'evm' || chain === 'ethereum') {
+    const symbolMap: Record<string, string> = {
+      'ethereum-mainnet': 'ETH', 'ethereum-sepolia': 'ETH', 'ethereum-holesky': 'ETH',
+      'polygon-mainnet': 'POL', 'polygon-amoy': 'POL',
+      'arbitrum-mainnet': 'ETH', 'arbitrum-sepolia': 'ETH',
+      'optimism-mainnet': 'ETH', 'optimism-sepolia': 'ETH',
+      'base-mainnet': 'ETH', 'base-sepolia': 'ETH',
+      'avalanche-mainnet': 'AVAX', 'avalanche-fuji': 'AVAX',
+      'bsc-mainnet': 'BNB', 'bsc-testnet': 'BNB',
+    };
+    return { decimals: 18, symbol: symbolMap[network ?? ''] ?? 'ETH' };
+  }
+  return null;
+}
+
+/**
+ * Resolve amountFormatted/decimals/symbol for a transaction.
+ * Returns null fields when amount is null, metadata unavailable, or conversion fails.
+ */
+export function resolveAmountMetadata(
+  chain: string,
+  network: string | null | undefined,
+  type: string,
+  amount: string | null | undefined,
+): { amountFormatted: string | null; decimals: number | null; symbol: string | null } {
+  if (!amount) {
+    return { amountFormatted: null, decimals: null, symbol: null };
+  }
+
+  try {
+    // Only TRANSFER has well-defined native token semantics
+    if (type === 'TRANSFER') {
+      const tokenInfo = getNativeTokenInfo(chain, network);
+      if (!tokenInfo) {
+        return { amountFormatted: null, decimals: null, symbol: null };
+      }
+      const formatted = formatAmount(BigInt(amount), tokenInfo.decimals);
+      return {
+        amountFormatted: formatted,
+        decimals: tokenInfo.decimals,
+        symbol: tokenInfo.symbol,
+      };
+    }
+
+    // TOKEN_TRANSFER would need token registry lookup (deferred to route handler with deps)
+    // CONTRACT_CALL, APPROVE, BATCH, etc. - amount semantics vary by type
+    return { amountFormatted: null, decimals: null, symbol: null };
+  } catch {
+    return { amountFormatted: null, decimals: null, symbol: null };
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -703,22 +768,28 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
 
     return c.json(
       {
-        items: items.map((tx) => ({
-          id: tx.id,
-          walletId: tx.walletId,
-          type: tx.type,
-          status: tx.status,
-          tier: tx.tier,
-          chain: tx.chain,
-          network: tx.network ?? null,
-          toAddress: tx.toAddress,
-          amount: tx.amount,
-          txHash: tx.txHash,
-          error: tx.error,
-          createdAt: tx.createdAt ? Math.floor(tx.createdAt.getTime() / 1000) : null,
-          displayAmount: toDisplayAmount(tx.amountUsd, currencyCode, displayRate),
-          displayCurrency: currencyCode ?? null,
-        })),
+        items: items.map((tx) => {
+          const meta = resolveAmountMetadata(tx.chain, tx.network, tx.type, tx.amount);
+          return {
+            id: tx.id,
+            walletId: tx.walletId,
+            type: tx.type,
+            status: tx.status,
+            tier: tx.tier,
+            chain: tx.chain,
+            network: tx.network ?? null,
+            toAddress: tx.toAddress,
+            amount: tx.amount,
+            txHash: tx.txHash,
+            error: tx.error,
+            createdAt: tx.createdAt ? Math.floor(tx.createdAt.getTime() / 1000) : null,
+            displayAmount: toDisplayAmount(tx.amountUsd, currencyCode, displayRate),
+            displayCurrency: currencyCode ?? null,
+            amountFormatted: meta.amountFormatted,
+            amountDecimals: meta.decimals,
+            amountSymbol: meta.symbol,
+          };
+        }),
         cursor: hasMore ? nextCursor : null,
         hasMore,
       },
@@ -799,6 +870,9 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
     const txWallet = await deps.db.select().from(wallets).where(eq(wallets.id, tx.walletId)).get();
     const isAtomicBatch = tx.type === 'BATCH' && txWallet?.accountType === 'smart';
 
+    // Phase 404: Resolve human-readable amount metadata
+    const amountMeta = resolveAmountMetadata(tx.chain, tx.network, tx.type, tx.amount);
+
     return c.json(
       {
         id: tx.id,
@@ -816,6 +890,9 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
         displayAmount: toDisplayAmount(tx.amountUsd, currencyCode, displayRate),
         displayCurrency: currencyCode ?? null,
         ...(tx.type === 'BATCH' ? { atomic: isAtomicBatch } : {}),
+        amountFormatted: amountMeta.amountFormatted,
+        amountDecimals: amountMeta.decimals,
+        amountSymbol: amountMeta.symbol,
       },
       200,
     );

@@ -260,6 +260,9 @@ export const TxDetailResponseSchema = z
     displayAmount: z.string().nullable().optional(),
     displayCurrency: z.string().nullable().optional(),
     atomic: z.boolean().optional(),
+    amountFormatted: z.string().nullable().optional(),
+    amountDecimals: z.number().int().nullable().optional(),
+    amountSymbol: z.string().nullable().optional(),
   })
   .openapi('TxDetailResponse');
 
