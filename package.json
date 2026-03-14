@@ -38,6 +38,7 @@
     "validate:openapi": "tsx scripts/validate-openapi.ts",
     "generate:api-types": "tsx scripts/generate-api-types.ts",
     "check:api-types-freshness": "tsx scripts/check-api-types-freshness.ts",
+    "check:api-contract": "tsx scripts/check-api-contract.ts",
     "test:smoke": "bash scripts/smoke-test-published.sh"
   },
   "devDependencies": {
