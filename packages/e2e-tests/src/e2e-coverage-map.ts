@@ -45,7 +45,7 @@ export const routeCoverage: Record<string, string[]> = {
   'wallets': ['core-auth-wallet-session.ts'],
   'wallet': ['core-auth-wallet-session.ts'],
   'policies': ['core-policy.ts'],
-  'transactions': ['core-auth-wallet-session.ts'],
+  'transactions': ['core-auth-wallet-session.ts', 'onchain-human-amount.ts'],
 
   // Interface
   'admin': ['interface-admin-mcp-sdk.ts'],
