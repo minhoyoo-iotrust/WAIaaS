@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v31.16
 milestone_name: CAIP 표준 식별자 승격
-status: active
-stopped_at: null
-last_updated: "2026-03-14T21:00:00.000Z"
-last_activity: 2026-03-14 — Roadmap created (5 phases, 8 plans, 46 reqs)
+status: planning
+stopped_at: Completed 407-01-PLAN.md
+last_updated: "2026-03-14T14:03:56.526Z"
+last_activity: 2026-03-14 — Roadmap created
 progress:
   total_phases: 5
-  completed_phases: 0
-  total_plans: 8
-  completed_plans: 0
+  completed_phases: 1
+  total_plans: 1
+  completed_plans: 1
   percent: 0
 ---
 
@@ -46,6 +46,7 @@ Progress: [░░░░░░░░░░] 0%
 | - | - | - | - |
 
 ## Accumulated Context
+| Phase 407 P01 | 2min | 2 tasks | 2 files |
 
 ### Decisions
 
@@ -55,6 +56,7 @@ Progress: [░░░░░░░░░░] 0%
 - D4: additive only (기존 필드 유지, CAIP 필드 병렬 추가)
 - D5: SDK union 타입 확장 (기존 시그니처 유지)
 - D6: MCP resolve_asset 신규 도구 (CAIP-19 메타데이터 조회)
+- [Phase 407]: CAIP-2 lookup first priority in normalizeNetworkInput (before legacy)
 
 ### Pending Todos
 
@@ -66,6 +68,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-14
-Stopped at: Roadmap created — ready to plan Phase 407
+Last session: 2026-03-14T14:03:56.522Z
+Stopped at: Completed 407-01-PLAN.md
 Resume file: None

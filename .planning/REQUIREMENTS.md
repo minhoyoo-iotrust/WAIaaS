@@ -9,11 +9,11 @@ Requirements for CAIP-2/CAIP-19 standard identifier promotion across all interfa
 
 ### Network Input (CAIP-2 Dual-Accept)
 
-- [ ] **NET-01**: `normalizeNetworkInput()` 확장 — CAIP-2 문자열(`eip155:1`, `solana:5eykt...`)을 NetworkType(`ethereum-mainnet`, `solana-mainnet`)으로 자동 변환
-- [ ] **NET-02**: 기존 plain string(`ethereum-mainnet`) 및 legacy(`mainnet`, `devnet`) 입력은 그대로 동작
-- [ ] **NET-03**: 변환 순서 보장 — (1) CAIP-2 매핑 → (2) legacy 매핑 → (3) 그대로 통과
-- [ ] **NET-04**: 미등록 CAIP-2 문자열은 Zod validation에서 reject
-- [ ] **NET-05**: 모든 `network` 파라미터(query, body)에 자동 적용 — `NetworkTypeEnumWithLegacy`의 `z.preprocess`에서 일괄 처리
+- [x] **NET-01**: `normalizeNetworkInput()` 확장 — CAIP-2 문자열(`eip155:1`, `solana:5eykt...`)을 NetworkType(`ethereum-mainnet`, `solana-mainnet`)으로 자동 변환
+- [x] **NET-02**: 기존 plain string(`ethereum-mainnet`) 및 legacy(`mainnet`, `devnet`) 입력은 그대로 동작
+- [x] **NET-03**: 변환 순서 보장 — (1) CAIP-2 매핑 → (2) legacy 매핑 → (3) 그대로 통과
+- [x] **NET-04**: 미등록 CAIP-2 문자열은 Zod validation에서 reject
+- [x] **NET-05**: 모든 `network` 파라미터(query, body)에 자동 적용 — `NetworkTypeEnumWithLegacy`의 `z.preprocess`에서 일괄 처리
 
 ### Asset Input (CAIP-19 Primary)
 
@@ -63,8 +63,8 @@ Requirements for CAIP-2/CAIP-19 standard identifier promotion across all interfa
 
 ### Test
 
-- [ ] **TST-01**: `normalizeNetworkInput` CAIP-2 변환 테스트 — 15개 네트워크 매핑 전수 검증
-- [ ] **TST-02**: CAIP-2 + plain string + legacy 혼용 입력 테스트 (우선순위 검증)
+- [x] **TST-01**: `normalizeNetworkInput` CAIP-2 변환 테스트 — 15개 네트워크 매핑 전수 검증
+- [x] **TST-02**: CAIP-2 + plain string + legacy 혼용 입력 테스트 (우선순위 검증)
 - [ ] **TST-03**: `TokenInfo` assetId-only 입력 → 레지스트리 resolve 테스트
 - [ ] **TST-04**: `assetId`에서 네트워크 자동 추론 테스트
 - [ ] **TST-05**: `assetId` vs `network` 불일치 validation error 테스트
@@ -99,11 +99,11 @@ Requirements for CAIP-2/CAIP-19 standard identifier promotion across all interfa
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| NET-01 | Phase 407 | Pending |
-| NET-02 | Phase 407 | Pending |
-| NET-03 | Phase 407 | Pending |
-| NET-04 | Phase 407 | Pending |
-| NET-05 | Phase 407 | Pending |
+| NET-01 | Phase 407 | Complete |
+| NET-02 | Phase 407 | Complete |
+| NET-03 | Phase 407 | Complete |
+| NET-04 | Phase 407 | Complete |
+| NET-05 | Phase 407 | Complete |
 | AST-01 | Phase 408 | Pending |
 | AST-02 | Phase 408 | Pending |
 | AST-03 | Phase 408 | Pending |
@@ -135,8 +135,8 @@ Requirements for CAIP-2/CAIP-19 standard identifier promotion across all interfa
 | DOC-05 | Phase 411 | Pending |
 | DOC-06 | Phase 411 | Pending |
 | DOC-07 | Phase 411 | Pending |
-| TST-01 | Phase 407 | Pending |
-| TST-02 | Phase 407 | Pending |
+| TST-01 | Phase 407 | Complete |
+| TST-02 | Phase 407 | Complete |
 | TST-03 | Phase 408 | Pending |
 | TST-04 | Phase 408 | Pending |
 | TST-05 | Phase 408 | Pending |
