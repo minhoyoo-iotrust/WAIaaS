@@ -53,6 +53,10 @@ export const ActionProviderMetadataSchema = z.object({
   requiresApiKey: z.boolean().default(false),
   /** List of required external API identifiers. Defaults to []. */
   requiredApis: z.array(z.string()).optional().default([]),
+  /** Provider category for grouping (e.g. 'Swap', 'Bridge', 'Staking', 'Lending', 'Yield', 'Perp'). */
+  category: z.string().min(1).max(50).optional(),
+  /** Settings key override for enable/disable toggle (e.g. 'hyperliquid' for all 3 hyperliquid providers). */
+  enabledKey: z.string().regex(/^[a-z][a-z0-9_]*$/).optional(),
   /**
    * Whether this provider requires the wallet's decrypted private key
    * to be injected into ActionContext before resolve().

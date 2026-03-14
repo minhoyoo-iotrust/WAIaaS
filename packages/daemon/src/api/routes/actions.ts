@@ -114,6 +114,9 @@ const ProviderResponseSchema = z.object({
   mcpExpose: z.boolean(),
   requiresApiKey: z.boolean(),
   hasApiKey: z.boolean(),
+  enabledKey: z.string(),
+  category: z.string(),
+  isEnabled: z.boolean(),
   actions: z.array(ActionDefinitionResponseSchema),
 });
 
@@ -239,6 +242,9 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
 
     const providers = providerMetadataList.map((meta) => {
       const providerActions = deps.registry.listActions(meta.name);
+      const enabledKey = meta.enabledKey ?? meta.name;
+      const category = meta.category ?? 'Other';
+      const isEnabled = deps.settingsService.get(`actions.${enabledKey}_enabled`) === 'true';
       return {
         name: meta.name,
         description: meta.description,
@@ -247,6 +253,9 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
         mcpExpose: meta.mcpExpose,
         requiresApiKey: meta.requiresApiKey,
         hasApiKey: deps.settingsService.hasApiKey(meta.name),
+        enabledKey,
+        category,
+        isEnabled,
         actions: providerActions.map((a) => ({
           name: a.action.name,
           description: a.action.description,
