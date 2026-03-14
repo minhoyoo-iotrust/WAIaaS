@@ -19,7 +19,7 @@ export function registerSimulateTransaction(server: McpServer, apiClient: ApiCli
     withWalletPrefix('Simulate a transaction without executing it. Returns policy tier, estimated fees, balance changes, and warnings. No side effects.', walletContext?.walletName),
     {
       to: z.string().describe('Destination address'),
-      amount: z.string().describe('Amount in smallest unit (lamports/wei)'),
+      amount: z.string().describe('Amount in smallest units (wei for EVM, lamports for Solana). Example: "1000000000000000000" = 1 ETH'),
       type: z.enum(['TRANSFER', 'TOKEN_TRANSFER', 'CONTRACT_CALL', 'APPROVE', 'BATCH']).optional()
         .describe('Transaction type. Default: TRANSFER'),
       token: z.object({
@@ -31,7 +31,7 @@ export function registerSimulateTransaction(server: McpServer, apiClient: ApiCli
       // CONTRACT_CALL fields
       calldata: z.string().optional().describe('Hex-encoded calldata (EVM)'),
       abi: z.array(z.record(z.unknown())).optional().describe('ABI fragment (EVM)'),
-      value: z.string().optional().describe('Native value for CONTRACT_CALL (wei)'),
+      value: z.string().optional().describe('Native token value in smallest units (wei for EVM). Example: "1000000000000000000" = 1 ETH'),
       programId: z.string().optional().describe('Solana program ID'),
       instructionData: z.string().optional().describe('Base64-encoded instruction data (Solana)'),
       accounts: z.array(z.object({
