@@ -1,7 +1,7 @@
 import { useSignal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
-import { apiGet, apiPost, apiPut, apiPatch, ApiError } from '../api/client';
-import { API } from '../api/endpoints';
+import { api, ApiError } from '../api/typed-client';
+import type { components } from '../api/types.generated';
 import { formatDate, formatAddress } from '../utils/format';
 import { fetchDisplayCurrency, formatWithDisplay } from '../utils/display-currency';
 import { Badge, Button, FormField } from '../components/form';
@@ -22,64 +22,13 @@ import { registerDirty, unregisterDirty } from '../utils/dirty-guard';
 // Types
 // ---------------------------------------------------------------------------
 
-interface TransactionItem {
-  id: string;
-  walletId: string;
-  walletName: string | null;
-  type: string;
-  status: string;
-  tier: string | null;
-  toAddress: string | null;
-  amount: string | null;
-  formattedAmount: string | null;
-  amountUsd: number | null;
-  network: string | null;
-  txHash: string | null;
-  chain: string;
-  createdAt: number | null;
-}
+type TransactionItem = components['schemas']['TxDetailResponse'] & { chain: string };
+type TransactionsResponse = components['schemas']['TxListResponse'] & { total: number; offset: number; limit: number };
+type IncomingTxItem = components['schemas']['IncomingTxItem'];
+type IncomingTxResponse = components['schemas']['IncomingTxListResponse'] & { total: number; offset: number; limit: number };
+type WalletListItem = components['schemas']['WalletCrudResponse'];
 
-interface TransactionsResponse {
-  items: TransactionItem[];
-  total: number;
-  offset: number;
-  limit: number;
-}
-
-interface IncomingTxItem {
-  id: string;
-  txHash: string;
-  walletId: string;
-  walletName: string | null;
-  fromAddress: string;
-  amount: string;
-  formattedAmount: string | null;
-  tokenAddress: string | null;
-  chain: string;
-  network: string;
-  status: string;
-  blockNumber: number | null;
-  detectedAt: number | null;
-  confirmedAt: number | null;
-  suspicious: boolean;
-}
-
-interface IncomingTxResponse {
-  items: IncomingTxItem[];
-  total: number;
-  offset: number;
-  limit: number;
-}
-
-interface WalletListItem {
-  id: string;
-  name: string;
-  chain: string;
-  network?: string;
-  status?: string;
-  monitorIncoming?: boolean;
-}
-
+// UI-only type (not from API schema)
 interface UnifiedTxRow {
   id: string;
   direction: 'outgoing' | 'incoming';
@@ -282,8 +231,8 @@ export default function TransactionsPage() {
         saving.value = false;
         return;
       }
-      const result = await apiPut<{ updated: number; settings: SettingsData }>(API.ADMIN_SETTINGS, { settings: entries });
-      settings.value = result.settings;
+      const { data: result } = await api.PUT('/v1/admin/settings', { body: { settings: entries } });
+      settings.value = result!.settings as unknown as SettingsData;
       dirty.value = {};
       showToast('success', 'Settings saved and applied');
     } catch (err) {
@@ -375,7 +324,10 @@ export default function TransactionsPage() {
     params.set('offset', String(page.value * PAGE_SIZE));
     params.set('limit', String(PAGE_SIZE));
 
-    return apiGet<TransactionsResponse>(`${API.ADMIN_TRANSACTIONS}?${params.toString()}`);
+    const query: Record<string, string> = {};
+    params.forEach((v, k) => { query[k] = v; });
+    const { data } = await api.GET('/v1/admin/transactions', { params: { query: query as Record<string, unknown> } });
+    return data as unknown as TransactionsResponse;
   };
 
   const fetchIncoming = async (): Promise<IncomingTxResponse> => {
@@ -388,7 +340,10 @@ export default function TransactionsPage() {
     params.set('offset', String(page.value * PAGE_SIZE));
     params.set('limit', String(PAGE_SIZE));
 
-    return apiGet<IncomingTxResponse>(`${API.ADMIN_INCOMING}?${params.toString()}`);
+    const inQuery: Record<string, string> = {};
+    params.forEach((v, k) => { inQuery[k] = v; });
+    const { data } = await api.GET('/v1/admin/incoming', { params: { query: inQuery as Record<string, unknown> } });
+    return data as unknown as IncomingTxResponse;
   };
 
   const fetchTransactions = async () => {
@@ -430,8 +385,8 @@ export default function TransactionsPage() {
 
   const fetchWallets = async () => {
     try {
-      const result = await apiGet<WalletListItem[] | { items: WalletListItem[] }>(API.WALLETS);
-      const list = Array.isArray(result) ? result : (result.items ?? []);
+      const { data: result } = await api.GET('/v1/wallets');
+      const list = result!.items;
       walletOptions.value = list.map((w) => ({
         value: w.id,
         label: w.name || w.id.slice(0, 8),
@@ -451,8 +406,8 @@ export default function TransactionsPage() {
 
   const fetchSettings = async () => {
     try {
-      const result = await apiGet<SettingsData>(API.ADMIN_SETTINGS);
-      settings.value = result;
+      const { data: result } = await api.GET('/v1/admin/settings');
+      settings.value = result as unknown as SettingsData;
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
@@ -538,7 +493,7 @@ export default function TransactionsPage() {
   async function handleCancelTx(txId: string) {
     if (!window.confirm('Are you sure you want to cancel this transaction?')) return;
     try {
-      await apiPost(API.ADMIN_TX_CANCEL(txId));
+      await api.POST('/v1/admin/transactions/{id}/cancel', { params: { path: { id: txId } } });
       showToast('success', 'Transaction cancelled');
       await fetchTransactions();
     } catch (err) {
@@ -550,7 +505,7 @@ export default function TransactionsPage() {
   async function handleRejectTx(txId: string) {
     if (!window.confirm('Are you sure you want to reject this transaction?')) return;
     try {
-      await apiPost(API.ADMIN_TX_REJECT(txId));
+      await api.POST('/v1/admin/transactions/{id}/reject', { params: { path: { id: txId } } });
       showToast('success', 'Transaction rejected');
       await fetchTransactions();
     } catch (err) {
@@ -563,13 +518,13 @@ export default function TransactionsPage() {
     const currentVal = walletMonitorState.value[walletId] ?? false;
     togglingWallet.value = walletId;
     try {
-      const result = await apiPatch<{ id: string; monitorIncoming: boolean }>(
-        API.WALLET_PATCH(walletId),
-        { monitorIncoming: !currentVal },
-      );
+      const { data: result } = await api.PATCH('/v1/wallets/{id}', {
+        params: { path: { id: walletId } },
+        body: { monitorIncoming: !currentVal },
+      });
       walletMonitorState.value = {
         ...walletMonitorState.value,
-        [walletId]: result.monitorIncoming,
+        [walletId]: result!.monitorIncoming,
       };
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');

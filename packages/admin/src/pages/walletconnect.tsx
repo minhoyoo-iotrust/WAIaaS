@@ -1,7 +1,7 @@
 import { useSignal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
-import { apiGet, apiPost, apiDelete, ApiError } from '../api/client';
-import { API } from '../api/endpoints';
+import { api, ApiError } from '../api/typed-client';
+import type { components } from '../api/types.generated';
 import { Table } from '../components/table';
 import type { Column } from '../components/table';
 import { Button, Badge } from '../components/form';
@@ -14,13 +14,9 @@ import { formatDate, formatAddress } from '../utils/format';
 // Types (same shapes as wallets.tsx WC interfaces)
 // ---------------------------------------------------------------------------
 
-interface WalletSummary {
-  id: string;
-  name: string;
-  chain: string;
-  environment: string;
-}
+type WalletSummary = components['schemas']['WalletCrudResponse'];
 
+// WcSession: path-level type (no named schema)
 interface WcSession {
   walletId: string;
   topic: string;
@@ -32,21 +28,21 @@ interface WcSession {
   createdAt: number;
 }
 
+// WcPairingResult, WcPairingStatus, WcTableRow: UI-only types (not from API schema)
+// UI-only type (not from API schema)
 interface WcPairingResult {
   uri: string;
   qrCode: string;
   expiresAt: number;
 }
 
+// UI-only type (not from API schema)
 interface WcPairingStatus {
   status: 'pending' | 'connected' | 'expired' | 'none';
   session?: WcSession | null;
 }
 
-// ---------------------------------------------------------------------------
-// Merged row for table display
-// ---------------------------------------------------------------------------
-
+// UI-only type (not from API schema)
 interface WcTableRow {
   wallet: WalletSummary;
   session: WcSession | null;
@@ -72,15 +68,16 @@ export default function WalletConnectPage() {
   const fetchAll = async () => {
     loading.value = true;
     try {
-      const result = await apiGet<{ items: WalletSummary[] }>(API.WALLETS);
-      wallets.value = result.items;
+      const { data: result } = await api.GET('/v1/wallets');
+      wallets.value = result!.items;
 
       // Fetch WC session for each wallet (404 = null)
       const sessionMap: Record<string, WcSession | null> = {};
       await Promise.all(
-        result.items.map(async (w) => {
+        result!.items.map(async (w) => {
           try {
-            sessionMap[w.id] = await apiGet<WcSession>(API.WALLET_WC_SESSION(w.id));
+            const { data } = await api.GET('/v1/wallets/{id}/wc/session', { params: { path: { id: w.id } } });
+            sessionMap[w.id] = data as unknown as WcSession;
           } catch {
             sessionMap[w.id] = null;
           }
@@ -103,7 +100,7 @@ export default function WalletConnectPage() {
     if (pairingPollRef.value) clearInterval(pairingPollRef.value);
     pairingPollRef.value = setInterval(async () => {
       try {
-        const status = await apiGet<WcPairingStatus>(API.WALLET_WC_PAIR_STATUS(walletId));
+        const { data: status } = await api.GET('/v1/wallets/{id}/wc/pair/status', { params: { path: { id: walletId } } }) as { data: WcPairingStatus };
         if (status.status === 'connected') {
           if (pairingPollRef.value) clearInterval(pairingPollRef.value);
           pairingPollRef.value = null;
@@ -131,8 +128,8 @@ export default function WalletConnectPage() {
   const handleConnect = async (walletId: string) => {
     pairingWalletId.value = walletId;
     try {
-      const result = await apiPost<WcPairingResult>(API.WALLET_WC_PAIR(walletId));
-      pairingResult.value = result;
+      const { data: result } = await api.POST('/v1/wallets/{id}/wc/pair', { params: { path: { id: walletId } } });
+      pairingResult.value = result as unknown as WcPairingResult;
       startPairingPoll(walletId);
     } catch (err) {
       pairingWalletId.value = null;
@@ -144,7 +141,7 @@ export default function WalletConnectPage() {
   const handleDisconnect = async (walletId: string) => {
     disconnectLoading.value = walletId;
     try {
-      await apiDelete(API.WALLET_WC_SESSION(walletId));
+      await api.DELETE('/v1/wallets/{id}/wc/session', { params: { path: { id: walletId } } });
       wcSessions.value = { ...wcSessions.value, [walletId]: null };
       showToast('success', 'WalletConnect session disconnected');
     } catch (err) {

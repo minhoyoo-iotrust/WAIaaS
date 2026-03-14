@@ -12,8 +12,8 @@
 
 import { useSignal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
-import { apiGet, apiPost, apiPut, ApiError } from '../api/client';
-import { API } from '../api/endpoints';
+import { api, ApiError } from '../api/typed-client';
+import type { components } from '../api/types.generated';
 import { Button, Badge, FormField } from '../components/form';
 import { Modal } from '../components/modal';
 import { CopyButton } from '../components/copy-button';
@@ -27,15 +27,10 @@ import type { SettingsData } from '../utils/settings-helpers';
 // Types
 // ---------------------------------------------------------------------------
 
-interface Wallet {
-  id: string;
-  name: string;
-  chain: string;
-  network: string;
-  publicKey: string;
-  status: string;
-}
+type Wallet = components['schemas']['WalletCrudResponse'];
 
+// AgentEntry and ReputationData: path-level types (no named schema)
+// UI-only type (not from API schema)
 interface AgentEntry {
   walletId: string;
   walletName: string;
@@ -44,6 +39,7 @@ interface AgentEntry {
   registryAddress: string;
 }
 
+// UI-only type (not from API schema)
 interface ReputationData {
   agentId: string;
   count: number;
@@ -179,21 +175,21 @@ export default function Erc8004Page() {
     loading.value = true;
     try {
       // Check feature gate (unified nested SettingsData format)
-      const settingsData = await apiGet<SettingsData>(API.ADMIN_SETTINGS);
-      settings.value = settingsData;
-      const actionsCategory = settingsData['actions'] as Record<string, string> | undefined;
+      const { data: settingsData } = await api.GET('/v1/admin/settings');
+      settings.value = settingsData as unknown as SettingsData;
+      const actionsCategory = (settingsData as unknown as SettingsData)['actions'] as Record<string, string> | undefined;
       featureEnabled.value = actionsCategory?.['erc8004_agent_enabled'] === 'true';
 
       // Fetch erc8004_agent actions from providers list
       try {
-        const result = await apiGet<{ providers: Array<{ name: string; actions: ProviderAction[] }> }>(API.ACTIONS_PROVIDERS);
-        const erc8004 = result.providers?.find(p => p.name === 'erc8004_agent');
+        const { data: result } = await api.GET('/v1/actions/providers');
+        const erc8004 = (result as unknown as { providers: Array<{ name: string; actions: ProviderAction[] }> }).providers?.find(p => p.name === 'erc8004_agent');
         erc8004Actions.value = erc8004?.actions ?? [];
       } catch { /* keep empty */ }
 
       // Always load wallets and agent entries (for read-only table when disabled)
-      const result = await apiGet<{ items: Wallet[] }>(API.WALLETS);
-      const walletList = result.items ?? [];
+      const { data: result } = await api.GET('/v1/wallets');
+      const walletList = result!.items ?? [];
       wallets.value = walletList;
 
       // Build agent entries for EVM wallets
@@ -202,7 +198,7 @@ export default function Erc8004Page() {
 
       for (const w of evmWallets) {
         try {
-          const regFile = await apiGet<Record<string, unknown>>(API.ERC8004_REGISTRATION_FILE(w.id));
+          const { data: regFile } = await api.GET('/v1/erc8004/registration-file/{walletId}', { params: { path: { walletId: w.id } } }) as { data: Record<string, unknown> };
           const agentId = regFile['agentId'] as string | undefined;
           entries.push({
             walletId: w.id,
@@ -239,8 +235,8 @@ export default function Erc8004Page() {
   async function handleToggleEnabled(newEnabled: boolean) {
     toggleSaving.value = true;
     try {
-      await apiPut(API.ADMIN_SETTINGS, {
-        settings: [{ key: 'actions.erc8004_agent_enabled', value: String(newEnabled) }],
+      await api.PUT('/v1/admin/settings', {
+        body: { settings: [{ key: 'actions.erc8004_agent_enabled', value: String(newEnabled) }] },
       });
       featureEnabled.value = newEnabled;
       showToast(`Agent Identity ${newEnabled ? 'enabled' : 'disabled'}`, 'success');
@@ -261,12 +257,15 @@ export default function Erc8004Page() {
     if (!registerWalletId.value || !registerName.value) return;
     registerSaving.value = true;
     try {
-      await apiPost(`${API.ADMIN_ACTIONS}/erc8004_agent/register_agent`, {
-        params: {
-          name: registerName.value,
-          ...(registerDescription.value ? { description: registerDescription.value } : {}),
+      await api.POST('/v1/admin/actions/{provider}/{action}', {
+        params: { path: { provider: 'erc8004_agent', action: 'register_agent' } },
+        body: {
+          params: {
+            name: registerName.value,
+            ...(registerDescription.value ? { description: registerDescription.value } : {}),
+          },
+          walletId: registerWalletId.value,
         },
-        walletId: registerWalletId.value,
       });
       showToast('Agent registration initiated', 'success');
       showRegisterModal.value = false;
@@ -291,21 +290,21 @@ export default function Erc8004Page() {
     linkingUri.value = '';
 
     try {
-      const pairResult = await apiPost<{ uri: string }>(API.WALLET_WC_PAIR(walletId), {});
-      linkingUri.value = pairResult.uri;
+      const { data: pairResult } = await api.POST('/v1/wallets/{id}/wc/pair', { params: { path: { id: walletId } } });
+      linkingUri.value = (pairResult as unknown as { uri: string }).uri;
 
       // Poll for connection
       const poll = setInterval(async () => {
         try {
-          const status = await apiGet<{ connected: boolean }>(API.WALLET_WC_PAIR_STATUS(walletId));
+          const { data: status } = await api.GET('/v1/wallets/{id}/wc/pair/status', { params: { path: { id: walletId } } }) as unknown as { data: { connected: boolean } };
           if (status.connected) {
             clearInterval(poll);
             linkingConnected.value = true;
 
             // Trigger set_agent_wallet
-            await apiPost(`${API.ADMIN_ACTIONS}/erc8004_agent/set_agent_wallet`, {
-              params: { agentId },
-              walletId,
+            await api.POST('/v1/admin/actions/{provider}/{action}', {
+              params: { path: { provider: 'erc8004_agent', action: 'set_agent_wallet' } },
+              body: { params: { agentId }, walletId },
             });
             showToast('Wallet linking initiated via EIP-712', 'success');
             linkingWalletId.value = null;
@@ -332,9 +331,9 @@ export default function Erc8004Page() {
 
   async function handleUnlinkWallet(walletId: string, agentId: string) {
     try {
-      await apiPost(`${API.ADMIN_ACTIONS}/erc8004_agent/unset_agent_wallet`, {
-        params: { agentId },
-        walletId,
+      await api.POST('/v1/admin/actions/{provider}/{action}', {
+        params: { path: { provider: 'erc8004_agent', action: 'unset_agent_wallet' } },
+        body: { params: { agentId }, walletId },
       });
       showToast('Wallet unlinking initiated', 'success');
       await loadData();
@@ -351,7 +350,7 @@ export default function Erc8004Page() {
     if (!walletId) return;
     regFileLoading.value = true;
     try {
-      const data = await apiGet<unknown>(API.ERC8004_REGISTRATION_FILE(walletId));
+      const { data } = await api.GET('/v1/erc8004/registration-file/{walletId}', { params: { path: { walletId } } });
       regFileData.value = data;
     } catch (err) {
       if (err instanceof ApiError) showToast(getErrorMessage(err.code), 'error');
@@ -371,7 +370,10 @@ export default function Erc8004Page() {
       if (tag1) params.set('tag1', tag1);
       if (tag2) params.set('tag2', tag2);
       const qs = params.toString();
-      const data = await apiGet<ReputationData>(`${API.ERC8004_REPUTATION(agentId)}${qs ? `?${qs}` : ''}`);
+      const query: Record<string, string> = {};
+      if (tag1) query.tag1 = tag1;
+      if (tag2) query.tag2 = tag2;
+      const { data } = await api.GET('/v1/erc8004/agent/{agentId}/reputation', { params: { path: { agentId }, query } }) as { data: ReputationData };
       reputationData.value = data;
     } catch {
       reputationData.value = null;
@@ -386,7 +388,10 @@ export default function Erc8004Page() {
       if (repTag1.value) params.set('tag1', repTag1.value);
       if (repTag2.value) params.set('tag2', repTag2.value);
       const qs = params.toString();
-      const data = await apiGet<ReputationData>(`${API.ERC8004_REPUTATION(lookupAgentId.value)}${qs ? `?${qs}` : ''}`);
+      const lookupQuery: Record<string, string> = {};
+      if (repTag1.value) lookupQuery.tag1 = repTag1.value;
+      if (repTag2.value) lookupQuery.tag2 = repTag2.value;
+      const { data } = await api.GET('/v1/erc8004/agent/{agentId}/reputation', { params: { path: { agentId: lookupAgentId.value }, query: lookupQuery } }) as { data: ReputationData };
       lookupResult.value = data;
     } catch (err) {
       if (err instanceof ApiError) showToast(getErrorMessage(err.code), 'error');
@@ -419,10 +424,8 @@ export default function Erc8004Page() {
   async function handleTierChange(providerKey: string, actionName: string, newTier: string) {
     const settingKey = `actions.${providerKey}_${actionName}_tier`;
     try {
-      const result = await apiPut<{ updated: number; settings: SettingsData }>(API.ADMIN_SETTINGS, {
-        settings: [{ key: settingKey, value: newTier }],
-      });
-      settings.value = result.settings;
+      const { data: result } = await api.PUT('/v1/admin/settings', { body: { settings: [{ key: settingKey, value: newTier }] } });
+      settings.value = result!.settings as unknown as SettingsData;
       showToast(`Tier updated for ${providerKey}/${actionName}`, 'success');
     } catch (err) {
       if (err instanceof ApiError) showToast(getErrorMessage(err.code), 'error');
@@ -432,10 +435,8 @@ export default function Erc8004Page() {
   async function handleTierReset(providerKey: string, actionName: string) {
     const settingKey = `actions.${providerKey}_${actionName}_tier`;
     try {
-      const result = await apiPut<{ updated: number; settings: SettingsData }>(API.ADMIN_SETTINGS, {
-        settings: [{ key: settingKey, value: '' }],
-      });
-      settings.value = result.settings;
+      const { data: result } = await api.PUT('/v1/admin/settings', { body: { settings: [{ key: settingKey, value: '' }] } });
+      settings.value = result!.settings as unknown as SettingsData;
       showToast(`Tier reset to default for ${providerKey}/${actionName}`, 'success');
     } catch (err) {
       if (err instanceof ApiError) showToast(getErrorMessage(err.code), 'error');

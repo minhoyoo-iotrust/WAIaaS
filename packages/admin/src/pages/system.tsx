@@ -1,7 +1,6 @@
 import { useSignal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
-import { apiGet, apiPost, apiPut, apiDelete, ApiError } from '../api/client';
-import { API } from '../api/endpoints';
+import { api, ApiError } from '../api/typed-client';
 import { FormField, Button, Badge } from '../components/form';
 import { CurrencySelect } from '../components/currency-select';
 import { Modal } from '../components/modal';
@@ -59,8 +58,8 @@ export default function SystemPage() {
 
   const fetchSettings = async () => {
     try {
-      const result = await apiGet<SettingsData>(API.ADMIN_SETTINGS);
-      settings.value = result;
+      const { data: result } = await api.GET('/v1/admin/settings');
+      settings.value = result as unknown as SettingsData;
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
@@ -71,8 +70,8 @@ export default function SystemPage() {
 
   const fetchApiKeys = async () => {
     try {
-      const result = await apiGet<{ keys: ApiKeyEntry[] }>(API.ADMIN_API_KEYS);
-      apiKeys.value = result.keys;
+      const { data: result } = await api.GET('/v1/admin/api-keys');
+      apiKeys.value = (result as unknown as { keys: ApiKeyEntry[] }).keys;
     } catch {
       // Feature not available or no providers registered -- keep empty
     } finally {
@@ -126,8 +125,8 @@ export default function SystemPage() {
       const entries = Object.entries(dirty.value)
         .filter(([key]) => isSystemSetting(key))
         .map(([key, value]) => ({ key, value }));
-      const result = await apiPut<{ updated: number; settings: SettingsData }>(API.ADMIN_SETTINGS, { settings: entries });
-      settings.value = result.settings;
+      const { data: result } = await api.PUT('/v1/admin/settings', { body: { settings: entries } });
+      settings.value = result!.settings as unknown as SettingsData;
       dirty.value = {};
       showToast('success', 'Settings saved and applied');
     } catch (err) {
@@ -159,7 +158,7 @@ export default function SystemPage() {
   const handleSaveApiKey = async (providerName: string) => {
     apiKeySaving.value = true;
     try {
-      await apiPut(API.ADMIN_API_KEY(providerName), { apiKey: apiKeyInput.value });
+      await api.PUT('/v1/admin/api-keys/{provider}', { params: { path: { provider: providerName } }, body: { apiKey: apiKeyInput.value } });
       showToast('success', `API key saved for ${providerName}`);
       apiKeyEditing.value = null;
       apiKeyInput.value = '';
@@ -174,7 +173,7 @@ export default function SystemPage() {
 
   const handleDeleteApiKey = async (providerName: string) => {
     try {
-      await apiDelete(API.ADMIN_API_KEY(providerName));
+      await api.DELETE('/v1/admin/api-keys/{provider}', { params: { path: { provider: providerName } } });
       showToast('success', `API key deleted for ${providerName}`);
       await fetchApiKeys();
     } catch (err) {
@@ -190,7 +189,7 @@ export default function SystemPage() {
   const handleShutdown = async () => {
     shutdownLoading.value = true;
     try {
-      await apiPost<{ message: string }>(API.ADMIN_SHUTDOWN);
+      await api.POST('/v1/admin/shutdown');
       shutdownModal.value = false;
       shutdownConfirmText.value = '';
       showToast('info', 'Shutdown initiated');

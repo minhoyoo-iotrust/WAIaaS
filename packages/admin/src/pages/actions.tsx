@@ -1,7 +1,7 @@
 import { useSignal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
-import { apiGet, apiPut, apiDelete, ApiError } from '../api/client';
-import { API } from '../api/endpoints';
+import { api, ApiError } from '../api/typed-client';
+import type { components } from '../api/types.generated';
 import { FormField, Button, Badge } from '../components/form';
 import { showToast } from '../components/toast';
 import { getErrorMessage } from '../utils/error-messages';
@@ -16,6 +16,7 @@ type ProviderCategory = 'Swap' | 'Bridge' | 'Staking' | 'Lending' | 'Yield' | 'P
 
 interface BuiltinProvider {
   key: string;
+  enabledKey?: string;
   name: string;
   description: string;
   chain: 'solana' | 'evm' | 'multi';
@@ -36,9 +37,9 @@ const BUILTIN_PROVIDERS: BuiltinProvider[] = [
   { key: 'kamino', name: 'Kamino Lending', description: 'Solana lending protocol (supply, borrow, repay, withdraw)', chain: 'solana', category: 'Lending', requiresApiKey: false, docsUrl: 'https://docs.kamino.finance' },
   { key: 'pendle_yield', name: 'Pendle Yield', description: 'EVM yield trading: buy/sell PT/YT, redeem at maturity, add/remove LP', chain: 'evm', category: 'Yield', requiresApiKey: false, docsUrl: 'https://docs.pendle.finance' },
   { key: 'drift', name: 'Drift Perp', description: 'Solana perpetual futures trading (open, close, modify positions with leverage)', chain: 'solana', category: 'Perp', requiresApiKey: false, docsUrl: 'https://docs.drift.trade' },
-  { key: 'hyperliquid_perp', name: 'Hyperliquid Perp', description: 'Hyperliquid perpetual futures trading with EIP-712 signing', chain: 'evm', category: 'Perp', requiresApiKey: false, docsUrl: 'https://hyperliquid.gitbook.io/hyperliquid-docs' },
-  { key: 'hyperliquid_spot', name: 'Hyperliquid Spot', description: 'Hyperliquid spot market trading (buy, sell, cancel)', chain: 'evm', category: 'Swap', requiresApiKey: false, docsUrl: 'https://hyperliquid.gitbook.io/hyperliquid-docs' },
-  { key: 'hyperliquid_sub', name: 'Hyperliquid Sub', description: 'Hyperliquid sub-account management (create, transfer USDC)', chain: 'evm', category: 'DeFi', requiresApiKey: false, docsUrl: 'https://hyperliquid.gitbook.io/hyperliquid-docs' },
+  { key: 'hyperliquid_perp', enabledKey: 'hyperliquid', name: 'Hyperliquid Perp', description: 'Hyperliquid perpetual futures trading with EIP-712 signing', chain: 'evm', category: 'Perp', requiresApiKey: false, docsUrl: 'https://hyperliquid.gitbook.io/hyperliquid-docs' },
+  { key: 'hyperliquid_spot', enabledKey: 'hyperliquid', name: 'Hyperliquid Spot', description: 'Hyperliquid spot market trading (buy, sell, cancel)', chain: 'evm', category: 'Swap', requiresApiKey: false, docsUrl: 'https://hyperliquid.gitbook.io/hyperliquid-docs' },
+  { key: 'hyperliquid_sub', enabledKey: 'hyperliquid', name: 'Hyperliquid Sub', description: 'Hyperliquid sub-account management (create, transfer USDC)', chain: 'evm', category: 'Perp', requiresApiKey: false, docsUrl: 'https://hyperliquid.gitbook.io/hyperliquid-docs' },
   { key: 'across_bridge', name: 'Across Bridge', description: 'Intent-based cross-chain EVM bridge with fast relayer fills (2-10 sec)', chain: 'evm', category: 'Bridge', requiresApiKey: false, docsUrl: 'https://docs.across.to' },
 ];
 
@@ -48,23 +49,8 @@ const CATEGORY_ORDER: ProviderCategory[] = ['Swap', 'Bridge', 'Staking', 'Lendin
 // Types for provider API response
 // ---------------------------------------------------------------------------
 
-interface ProviderAction {
-  name: string;
-  description: string;
-  chain: string;
-  riskLevel: string;
-  defaultTier: string;
-}
-
-interface ProviderInfo {
-  name: string;
-  description: string;
-  version: string;
-  chains: string[];
-  requiresApiKey: boolean;
-  hasApiKey: boolean;
-  actions: ProviderAction[];
-}
+type ProviderInfo = components['schemas']['ProvidersListResponse']['providers'][number];
+type ProviderAction = ProviderInfo['actions'][number];
 
 // ---------------------------------------------------------------------------
 // Component
@@ -93,8 +79,8 @@ export default function ActionsPage() {
 
   const fetchSettings = async () => {
     try {
-      const result = await apiGet<SettingsData>(API.ADMIN_SETTINGS);
-      settings.value = result;
+      const { data: result } = await api.GET('/v1/admin/settings');
+      settings.value = result as unknown as SettingsData;
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
@@ -103,8 +89,8 @@ export default function ActionsPage() {
 
   const fetchApiKeys = async () => {
     try {
-      const result = await apiGet<{ keys: ApiKeyEntry[] }>(API.ADMIN_API_KEYS);
-      apiKeys.value = result.keys;
+      const { data: result } = await api.GET('/v1/admin/api-keys');
+      apiKeys.value = (result as unknown as { keys: ApiKeyEntry[] }).keys;
     } catch {
       // Feature not available -- keep empty
     }
@@ -112,8 +98,8 @@ export default function ActionsPage() {
 
   const fetchProviders = async () => {
     try {
-      const result = await apiGet<{ providers: ProviderInfo[] }>(API.ACTIONS_PROVIDERS);
-      providers.value = result.providers ?? [];
+      const { data: result } = await api.GET('/v1/actions/providers');
+      providers.value = (result as unknown as { providers: ProviderInfo[] }).providers ?? [];
     } catch {
       // Providers endpoint not available -- keep empty
     }
@@ -134,13 +120,15 @@ export default function ActionsPage() {
   // ---------------------------------------------------------------------------
 
   const handleToggle = async (providerKey: string, newEnabled: boolean) => {
-    const settingKey = `actions.${providerKey}_enabled`;
+    const provider = BUILTIN_PROVIDERS.find(p => p.key === providerKey);
+    const baseKey = provider?.enabledKey ?? providerKey;
+    const settingKey = `actions.${baseKey}_enabled`;
     toggleSaving.value = providerKey;
     try {
-      const result = await apiPut<{ updated: number; settings: SettingsData }>(API.ADMIN_SETTINGS, {
+      const { data: result } = await api.PUT('/v1/admin/settings', { body: {
         settings: [{ key: settingKey, value: String(newEnabled) }],
-      });
-      settings.value = result.settings;
+      } });
+      settings.value = result!.settings as unknown as SettingsData;
       showToast('success', `${newEnabled ? 'Enabled' : 'Disabled'} ${providerKey.replace(/_/g, ' ')}`);
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
@@ -157,7 +145,7 @@ export default function ActionsPage() {
   const handleSaveApiKey = async (providerKey: string) => {
     apiKeySaving.value = true;
     try {
-      await apiPut(API.ADMIN_API_KEY(providerKey), { apiKey: apiKeyInput.value });
+      await api.PUT('/v1/admin/api-keys/{provider}', { params: { path: { provider: providerKey } }, body: { apiKey: apiKeyInput.value } });
       showToast('success', `API key saved for ${providerKey}`);
       apiKeyEditing.value = null;
       apiKeyInput.value = '';
@@ -172,7 +160,7 @@ export default function ActionsPage() {
 
   const handleDeleteApiKey = async (providerKey: string) => {
     try {
-      await apiDelete(API.ADMIN_API_KEY(providerKey));
+      await api.DELETE('/v1/admin/api-keys/{provider}', { params: { path: { provider: providerKey } } });
       showToast('success', `API key deleted for ${providerKey}`);
       await fetchApiKeys();
     } catch (err) {
@@ -189,10 +177,10 @@ export default function ActionsPage() {
     const fullKey = `actions.${settingKey}`;
     const saveValue = isSlippageBpsKey(settingKey) ? percentToBps(value) : value;
     try {
-      const result = await apiPut<{ updated: number; settings: SettingsData }>(API.ADMIN_SETTINGS, {
+      const { data: result } = await api.PUT('/v1/admin/settings', { body: {
         settings: [{ key: fullKey, value: saveValue }],
-      });
-      settings.value = result.settings;
+      } });
+      settings.value = result!.settings as unknown as SettingsData;
       // Clear dirty for this key
       const newDirty = { ...advancedDirty.value };
       delete newDirty[settingKey];
@@ -211,7 +199,9 @@ export default function ActionsPage() {
   function isEnabled(providerKey: string): boolean {
     const cat = settings.value['actions'] as Record<string, string> | undefined;
     if (!cat) return false;
-    return cat[`${providerKey}_enabled`] === 'true';
+    const provider = BUILTIN_PROVIDERS.find(p => p.key === providerKey);
+    const baseKey = provider?.enabledKey ?? providerKey;
+    return cat[`${baseKey}_enabled`] === 'true';
   }
 
   function isRegistered(providerKey: string): boolean {
@@ -249,10 +239,10 @@ export default function ActionsPage() {
   async function handleTierChange(providerKey: string, actionName: string, newTier: string) {
     const settingKey = `actions.${providerKey}_${actionName}_tier`;
     try {
-      const result = await apiPut<{ updated: number; settings: SettingsData }>(API.ADMIN_SETTINGS, {
+      const { data: result } = await api.PUT('/v1/admin/settings', { body: {
         settings: [{ key: settingKey, value: newTier }],
-      });
-      settings.value = result.settings;
+      } });
+      settings.value = result!.settings as unknown as SettingsData;
       showToast('success', `Tier updated for ${providerKey}/${actionName}`);
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
@@ -263,10 +253,10 @@ export default function ActionsPage() {
   async function handleTierReset(providerKey: string, actionName: string) {
     const settingKey = `actions.${providerKey}_${actionName}_tier`;
     try {
-      const result = await apiPut<{ updated: number; settings: SettingsData }>(API.ADMIN_SETTINGS, {
+      const { data: result } = await api.PUT('/v1/admin/settings', { body: {
         settings: [{ key: settingKey, value: '' }],
-      });
-      settings.value = result.settings;
+      } });
+      settings.value = result!.settings as unknown as SettingsData;
       showToast('success', `Tier reset to default for ${providerKey}/${actionName}`);
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');

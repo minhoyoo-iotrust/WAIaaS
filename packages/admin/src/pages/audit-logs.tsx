@@ -114,7 +114,7 @@ export default function AuditLogsPage() {
       if (f.to) query.to = Math.floor(new Date(f.to).getTime() / 1000) + 86399;
 
       const { data: result } = await api.GET('/v1/audit-logs', {
-        params: { query: query as Parameters<typeof api.GET<'/v1/audit-logs'>>[1]['params']['query'] },
+        params: { query: query as Record<string, unknown> },
       });
       rows.value = result!.data;
       nextCursor.value = result!.nextCursor;

@@ -1,7 +1,7 @@
 import { useSignal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
-import { apiGet, apiPost, apiPut, apiDelete, ApiError } from '../api/client';
-import { API } from '../api/endpoints';
+import { api, ApiError } from '../api/typed-client';
+import type { components } from '../api/types.generated';
 import { Table } from '../components/table';
 import type { Column } from '../components/table';
 import { FormField, Button, Badge } from '../components/form';
@@ -16,27 +16,8 @@ import { type SettingsData, keyToLabel, getEffectiveValue, getEffectiveBoolValue
 import { pendingNavigation, highlightField } from '../components/settings-search';
 import { registerDirty, unregisterDirty } from '../utils/dirty-guard';
 
-interface Wallet {
-  id: string;
-  name: string;
-  chain: string;
-  network: string;
-  publicKey: string;
-  status: string;
-  createdAt: number;
-}
-
-interface Policy {
-  id: string;
-  walletId: string | null;
-  type: string;
-  network: string | null;
-  rules: Record<string, unknown>;
-  priority: number;
-  enabled: boolean;
-  createdAt: number;
-  updatedAt: number;
-}
+type Wallet = components['schemas']['WalletCrudResponse'];
+type Policy = components['schemas']['PolicyResponse'];
 
 const POLICY_TYPES = [
   { label: 'Spending Limit', value: 'SPENDING_LIMIT' },
@@ -280,8 +261,8 @@ function PolicyDefaultsTab() {
 
   const fetchSettings = async () => {
     try {
-      const result = await apiGet<SettingsData>(API.ADMIN_SETTINGS);
-      settings.value = result;
+      const { data: result } = await api.GET('/v1/admin/settings');
+      settings.value = result as unknown as SettingsData;
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
@@ -305,8 +286,8 @@ function PolicyDefaultsTab() {
       const entries = Object.entries(dirty.value)
         .filter(([key]) => POLICY_DEFAULTS_KEYS.includes(key))
         .map(([key, value]) => ({ key, value }));
-      const result = await apiPut<{ updated: number; settings: SettingsData }>(API.ADMIN_SETTINGS, { settings: entries });
-      settings.value = result.settings;
+      const { data: result } = await api.PUT('/v1/admin/settings', { body: { settings: entries } });
+      settings.value = result!.settings as unknown as SettingsData;
       dirty.value = {};
       showToast('success', 'Policy defaults saved and applied');
     } catch (err) {
@@ -506,8 +487,8 @@ export default function PoliciesPage() {
 
   const fetchWallets = async () => {
     try {
-      const result = await apiGet<{ items: Wallet[] }>(API.WALLETS);
-      wallets.value = result.items;
+      const { data: result } = await api.GET('/v1/wallets');
+      wallets.value = result!.items;
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
@@ -519,15 +500,14 @@ export default function PoliciesPage() {
   const fetchPolicies = async () => {
     loading.value = true;
     try {
-      let url = API.POLICIES;
-      if (filterWalletId.value !== '__all__' && filterWalletId.value !== '__global__') {
-        url = `${API.POLICIES}?walletId=${filterWalletId.value}`;
-      }
-      const result = await apiGet<Policy[]>(url);
+      const query = (filterWalletId.value !== '__all__' && filterWalletId.value !== '__global__')
+        ? { walletId: filterWalletId.value }
+        : undefined;
+      const { data: result } = await api.GET('/v1/policies', { params: { query: query as Record<string, string> } });
       if (filterWalletId.value === '__global__') {
-        policies.value = result.filter((p) => p.walletId === null);
+        policies.value = (result as unknown as Policy[]).filter((p) => p.walletId === null);
       } else {
-        policies.value = result;
+        policies.value = result as unknown as Policy[];
       }
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
@@ -559,13 +539,15 @@ export default function PoliciesPage() {
 
     formLoading.value = true;
     try {
-      await apiPost(API.POLICIES, {
-        walletId: formWalletId.value || undefined,
-        type: formType.value,
-        rules: parsedRules,
-        priority: formPriority.value,
-        enabled: formEnabled.value,
-        network: formNetwork.value || undefined,
+      await api.POST('/v1/policies', {
+        body: {
+          walletId: formWalletId.value || undefined,
+          type: formType.value,
+          rules: parsedRules,
+          priority: formPriority.value,
+          enabled: formEnabled.value,
+          network: formNetwork.value || undefined,
+        } as never,
       });
       showToast('success', 'Policy created');
       showForm.value = false;
@@ -622,10 +604,9 @@ export default function PoliciesPage() {
 
     editLoading.value = true;
     try {
-      await apiPut(API.POLICY(editPolicy.value!.id), {
-        rules: parsedRules,
-        priority: editPriority.value,
-        enabled: editEnabled.value,
+      await api.PUT('/v1/policies/{id}', {
+        params: { path: { id: editPolicy.value!.id } },
+        body: { rules: parsedRules, priority: editPriority.value, enabled: editEnabled.value },
       });
       showToast('success', 'Policy updated');
       editModal.value = false;
@@ -663,7 +644,7 @@ export default function PoliciesPage() {
   const handleDelete = async () => {
     deleteLoading.value = true;
     try {
-      await apiDelete(API.POLICY(deletePolicy.value!.id));
+      await api.DELETE('/v1/policies/{id}', { params: { path: { id: deletePolicy.value!.id } } });
       showToast('success', 'Policy deleted');
       deleteModal.value = false;
       await fetchPolicies();
