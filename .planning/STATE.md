@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v31.15
 milestone_name: Amount 단위 표준화 및 AI 에이전트 DX 개선
-status: active
-stopped_at: null
-last_updated: "2026-03-14T00:00:00.000Z"
-last_activity: 2026-03-14 — Roadmap created (5 phases, 33 requirements)
+status: planning
+stopped_at: Completed 402-01-PLAN.md
+last_updated: "2026-03-14T07:00:01.178Z"
+last_activity: 2026-03-14 — Phase 402 completed (1/1 plans)
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 9
+  total_plans: 1
   completed_plans: 1
   percent: 11
 ---

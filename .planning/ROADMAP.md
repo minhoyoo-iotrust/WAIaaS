@@ -71,7 +71,7 @@
   1. 14개 non-CLOB provider의 모든 amount 필드에 단위 타입과 예시값이 포함된 .describe()가 존재한다
   2. 3개 CLOB provider(Hyperliquid, Drift, Polymarket) 스키마에 exchange-native 단위 사용이 명시되어 있다
   3. 빌트인 MCP 도구(send-token, transfer-nft 등)의 amount 파라미터에 단위 정보가 포함되어 있다
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
 - [ ] 402-01-PLAN.md — Provider schema description hardening + CLOB 예외 문서화 + MCP 빌트인 도구 description 업데이트
@@ -159,7 +159,7 @@ Phases execute in numeric order: 402 -> 403 -> 404 -> 405 -> 406
 | 399. Core RPC Proxy Engine | v31.14 | 3/3 | Complete | 2026-03-13 |
 | 400. Route Assembly + Async Approval | v31.14 | 3/3 | Complete | 2026-03-13 |
 | 401. DX Integration + Testing | v31.14 | 3/3 | Complete | 2026-03-13 |
-| 402. Schema Hardening | v31.15 | 1/1 | Complete | 2026-03-14 |
+| 402. Schema Hardening | v31.15 | Complete    | 2026-03-14 | 2026-03-14 |
 | 403. Provider Unit Migration | v31.15 | 0/2 | Not started | - |
 | 404. Typed MCP Schemas + Response Enrichment | v31.15 | 0/2 | Not started | - |
 | 405. humanAmount Parameter | v31.15 | 0/2 | Not started | - |
