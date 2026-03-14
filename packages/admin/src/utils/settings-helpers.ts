@@ -4,19 +4,22 @@
 // ---------------------------------------------------------------------------
 
 import { RPC_KEY_LABELS } from '@waiaas/shared';
+import type { components } from '../api/types.generated';
 
 // ---------------------------------------------------------------------------
-// Types
+// Types — generated type aliases where possible
 // ---------------------------------------------------------------------------
 
+// SettingsResponse has explicit category keys; SettingsData is a wider Record type
+// used across settings helpers. Keep as manual alias until GET /v1/admin/settings
+// returns a dynamic shape. TODO(Phase 415): Add named Zod schema for this endpoint
 export type SettingsData = Record<string, Record<string, string | boolean>>;
 
-export interface KillSwitchState {
-  state: string;
-  activatedAt: number | null;
-  activatedBy: string | null;
-}
+// Generated type alias (replaces manual interface)
+export type KillSwitchState = components['schemas']['KillSwitchResponse'];
 
+// ApiKeyEntry: no named schema in generated types (inline response in /v1/admin/api-keys)
+// TODO(Phase 415): Add named Zod schema for this endpoint
 export interface ApiKeyEntry {
   providerName: string;
   hasKey: boolean;
@@ -25,27 +28,16 @@ export interface ApiKeyEntry {
   updatedAt: string | null;
 }
 
-export interface RpcTestResult {
-  success: boolean;
-  latencyMs: number;
-  blockNumber?: number;
-  error?: string;
-}
+// Generated type alias (replaces manual interface)
+export type RpcTestResult = components['schemas']['TestRpcResponse'];
 
-export interface NotifTestResult {
-  channel: string;
-  success: boolean;
-  error?: string;
-}
+// NotifTestResult: generated NotificationTestResponse.results[number] matches
+export type NotifTestResult = components['schemas']['NotificationTestResponse']['results'][number];
 
-export interface RpcEndpointStatusEntry {
-  url: string;
-  status: 'available' | 'cooldown';
-  failureCount: number;
-  cooldownRemainingMs: number;
-}
+// Generated type alias (replaces manual interface)
+export type RpcEndpointStatusEntry = components['schemas']['RpcEndpointStatus'];
 
-export type RpcPoolStatus = Record<string, RpcEndpointStatusEntry[]>;
+export type RpcPoolStatus = components['schemas']['RpcStatusResponse']['networks'];
 
 // ---------------------------------------------------------------------------
 // Constants
