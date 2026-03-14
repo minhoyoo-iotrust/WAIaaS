@@ -126,12 +126,12 @@ Plans:
   2. GET /v1/admin/settings/schema가 등록된 설정 키 목록과 메타데이터(category, label, description)를 반환한다
   3. Admin UI에 BUILTIN_PROVIDERS, CRED_TYPES, 정책 타입, 에러 코드 하드코딩이 0개이다
   4. @waiaas/shared에서 re-export된 상수가 daemon과 Admin UI 양쪽에서 동일하게 사용된다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 415-01: TBD
-- [ ] 415-02: TBD
-- [ ] 415-03: TBD
+- [ ] 415-01-PLAN.md — 프로바이더 디스커버리 API 확장 + 설정 스키마 엔드포인트
+- [ ] 415-02-PLAN.md — @waiaas/shared 상수 모듈 (정책/크레덴셜/에러 상수)
+- [ ] 415-03-PLAN.md — Admin UI 하드코딩 제거 (API + shared import 전환)
 
 ### Phase 416: Contract Test 및 검증
 **Goal**: OpenAPI spec과 Admin UI 간 필드 사용 일관성이 CI에서 자동 검증된다
