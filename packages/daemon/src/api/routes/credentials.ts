@@ -45,7 +45,7 @@ const listRoute = createRoute({
   responses: {
     200: {
       description: 'Credential metadata list (value never included)',
-      content: { 'application/json': { schema: z.array(CredentialMetadataSchema) } },
+      content: { 'application/json': { schema: z.object({ credentials: z.array(CredentialMetadataSchema) }) } },
     },
   },
 });
@@ -118,7 +118,7 @@ export function credentialRoutes(deps: CredentialRouteDeps): OpenAPIHono {
   router.openapi(listRoute, async (c) => {
     const { walletId } = c.req.valid('param');
     const list = await deps.credentialVault.list(walletId);
-    return c.json(list, 200);
+    return c.json({ credentials: list }, 200);
   });
 
   router.openapi(createRouteSpec, async (c) => {
