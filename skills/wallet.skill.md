@@ -422,7 +422,7 @@ curl -s http://localhost:3100/v1/wallet/balance \
   -H 'Authorization: Bearer wai_sess_eyJ...'
 ```
 
-Query a specific network by appending `?network=devnet`. Required for EVM wallets; auto-resolved for Solana.
+Query a specific network by appending `?network=devnet`. Accepts plain string (e.g., `"ethereum-mainnet"`) or CAIP-2 (e.g., `"eip155:1"`). Required for EVM wallets; auto-resolved for Solana.
 
 Response (200):
 ```json
@@ -430,6 +430,7 @@ Response (200):
   "walletId": "01958f3a-1234-7000-8000-abcdef123456",
   "chain": "solana",
   "network": "solana-devnet",
+  "chainId": "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1",
   "address": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
   "balance": "2500000000",
   "decimals": 9,
@@ -475,7 +476,7 @@ curl -s http://localhost:3100/v1/wallet/assets \
   -H 'Authorization: Bearer wai_sess_eyJ...'
 ```
 
-Query a specific network by appending `?network=devnet`. Required for EVM wallets; auto-resolved for Solana.
+Query a specific network by appending `?network=devnet`. Accepts plain string (e.g., `"ethereum-mainnet"`) or CAIP-2 (e.g., `"eip155:1"`). Required for EVM wallets; auto-resolved for Solana.
 
 Response (200):
 ```json
@@ -483,6 +484,7 @@ Response (200):
   "walletId": "01958f3a-1234-7000-8000-abcdef123456",
   "chain": "solana",
   "network": "solana-devnet",
+  "chainId": "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1",
   "assets": [
     {
       "mint": "So11111111111111111111111111111111111111112",
@@ -491,7 +493,8 @@ Response (200):
       "balance": "2500000000",
       "decimals": 9,
       "isNative": true,
-      "usdValue": 375.50
+      "usdValue": 375.50,
+      "assetId": "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1/slip44:501"
     },
     {
       "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
@@ -499,7 +502,8 @@ Response (200):
       "name": "USD Coin",
       "balance": "10000000",
       "decimals": 6,
-      "isNative": false
+      "isNative": false,
+      "assetId": "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
     }
   ]
 }
@@ -713,7 +717,7 @@ Response (200):
 }
 ```
 
-Token sources: `builtin` (pre-configured, 24 tokens across 5 EVM mainnets) or `custom` (user-added).
+Token sources: `builtin` (pre-configured, 24 tokens across 5 EVM mainnets) or `custom` (user-added). Each token response also includes an auto-generated `assetId` (CAIP-19 identifier).
 
 ### POST /v1/tokens -- Add Custom Token (masterAuth)
 
@@ -856,6 +860,7 @@ The MCP server exposes 24 tools for AI agents. Key wallet management tools:
 
 Get native token balance. Supports `network` parameter:
 - Required for EVM wallets; auto-resolved for Solana
+- Accepts plain string (e.g., `"ethereum-mainnet"`) or CAIP-2 (e.g., `"eip155:1"`)
 - Specific network name: queries that network
 - `"all"`: returns balances for all networks in the wallet's environment
 
@@ -863,6 +868,7 @@ Get native token balance. Supports `network` parameter:
 
 Get all assets (native + tokens). Same `network` parameter support as `get_balance`:
 - Required for EVM wallets; auto-resolved for Solana
+- Accepts plain string (e.g., `"ethereum-mainnet"`) or CAIP-2 (e.g., `"eip155:1"`)
 - Specific network name: queries that network
 - `"all"`: returns assets for all networks in the wallet's environment
 
@@ -1461,3 +1467,18 @@ Key capabilities:
 - **Configure**: Set leverage, margin mode (cross/isolated), USDC transfers (spot to perp)
 
 See **transactions.skill.md** for full Hyperliquid REST/MCP/SDK reference and **admin.skill.md** for Hyperliquid Admin Settings.
+
+## CAIP-2 Network Identifiers
+
+All `network` parameters accept CAIP-2 format alongside plain strings:
+
+| Plain String | CAIP-2 | Chain |
+|---|---|---|
+| `ethereum-mainnet` | `eip155:1` | Ethereum |
+| `polygon-mainnet` | `eip155:137` | Polygon |
+| `arbitrum-mainnet` | `eip155:42161` | Arbitrum |
+| `base-mainnet` | `eip155:8453` | Base |
+| `optimism-mainnet` | `eip155:10` | Optimism |
+| `solana-mainnet` | `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp` | Solana |
+| `ethereum-sepolia` | `eip155:11155111` | Sepolia |
+| `solana-devnet` | `solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1` | Solana Devnet |
