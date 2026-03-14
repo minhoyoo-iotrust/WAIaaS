@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v31.16
 milestone_name: CAIP 표준 식별자 승격
 status: executing
-stopped_at: Completed 410-02-PLAN.md
-last_updated: "2026-03-14T15:27:47.824Z"
+stopped_at: Completed 411-01-PLAN.md
+last_updated: "2026-03-14T15:37:11.355Z"
 last_activity: 2026-03-14 — Phase 408 completed (2 plans)
 progress:
   total_phases: 5
-  completed_phases: 4
-  total_plans: 7
-  completed_plans: 7
+  completed_phases: 5
+  total_plans: 8
+  completed_plans: 8
   percent: 37
 ---
 
@@ -51,6 +51,7 @@ Progress: [████░░░░░░] 37%
 | Phase 408 P02 | 5min | 2 tasks | 5 files |
 | Phase 409 P01-02 | 2450s | 4 tasks | 15 files |
 | Phase 410 P01-02 | 668 | 4 tasks | 19 files |
+| Phase 411 P01 | 180 | 2 tasks | 4 files |
 
 ### Decisions
 
@@ -70,6 +71,7 @@ Progress: [████░░░░░░] 37%
 - [Phase 410]: D6: resolve_asset as non-wallet-scoped global MCP tool
 - [Phase 410]: D7: string-based CAIP type aliases (zero runtime overhead)
 - [Phase 410]: D8: Local CAIP-19 parser in MCP (no core dependency)
+- [Phase 411]: CAIP-2 mapping table 8 networks, assetId optional->recommended
 
 ### Pending Todos
 
@@ -81,6 +83,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-14T15:27:08.566Z
-Stopped at: Completed 410-02-PLAN.md
+Last session: 2026-03-14T15:37:11.350Z
+Stopped at: Completed 411-01-PLAN.md
 Resume file: None

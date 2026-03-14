@@ -57,9 +57,9 @@ Requirements for CAIP-2/CAIP-19 standard identifier promotion across all interfa
 - [x] **DOC-02**: TokenInfo 스키마에 `assetId`-only 사용 패턴 문서화 (OpenAPI)
 - [x] **DOC-03**: 응답 스키마에 `chainId`, `assetId` 필드 추가 (OpenAPI)
 - [x] **DOC-04**: CAIP-2/CAIP-19 형식 설명 및 예시를 API 문서 상단에 기재
-- [ ] **DOC-05**: `skills/*.skill.md` 파일에 CAIP-2/19 사용법 추가
-- [ ] **DOC-06**: 네트워크 지정 예시에 CAIP-2 형식 병기
-- [ ] **DOC-07**: 토큰 전송 예시에 `assetId` 단독 사용 패턴 추가
+- [x] **DOC-05**: `skills/*.skill.md` 파일에 CAIP-2/19 사용법 추가
+- [x] **DOC-06**: 네트워크 지정 예시에 CAIP-2 형식 병기
+- [x] **DOC-07**: 토큰 전송 예시에 `assetId` 단독 사용 패턴 추가
 
 ### Test
 
@@ -132,9 +132,9 @@ Requirements for CAIP-2/CAIP-19 standard identifier promotion across all interfa
 | DOC-02 | Phase 409 | Complete |
 | DOC-03 | Phase 409 | Complete |
 | DOC-04 | Phase 409 | Complete |
-| DOC-05 | Phase 411 | Pending |
-| DOC-06 | Phase 411 | Pending |
-| DOC-07 | Phase 411 | Pending |
+| DOC-05 | Phase 411 | Complete |
+| DOC-06 | Phase 411 | Complete |
+| DOC-07 | Phase 411 | Complete |
 | TST-01 | Phase 407 | Complete |
 | TST-02 | Phase 407 | Complete |
 | TST-03 | Phase 408 | Complete |
