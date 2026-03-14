@@ -110,6 +110,9 @@ export {
   isNativeAsset,
   nftAssetId,
   isNftAsset,
+  parseAssetId,
+  extractNetworkFromAssetId,
+  type ParsedAssetId,
 } from '../caip/index.js';
 
 // v29.2 Lending Provider types (Zod SSoT)

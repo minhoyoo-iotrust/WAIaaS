@@ -459,6 +459,9 @@ export {
   isNativeAsset,
   nftAssetId,
   isNftAsset,
+  parseAssetId,
+  extractNetworkFromAssetId,
+  type ParsedAssetId,
 } from './interfaces/index.js';
 
 // v29.2 Lending Provider Zod schemas (value exports)
