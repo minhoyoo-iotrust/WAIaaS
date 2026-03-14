@@ -81,45 +81,45 @@ Deferred to future release. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| UNIT-01 | — | Pending |
-| UNIT-02 | — | Pending |
-| UNIT-03 | — | Pending |
-| UNIT-04 | — | Pending |
-| UNIT-05 | — | Pending |
-| UNIT-06 | — | Pending |
-| MCP-01 | — | Pending |
-| MCP-02 | — | Pending |
-| MCP-03 | — | Pending |
-| MCP-04 | — | Pending |
-| MCP-05 | — | Pending |
-| RESP-01 | — | Pending |
-| RESP-02 | — | Pending |
-| RESP-03 | — | Pending |
-| RESP-04 | — | Pending |
-| RESP-05 | — | Pending |
-| HAMNT-01 | — | Pending |
-| HAMNT-02 | — | Pending |
-| HAMNT-03 | — | Pending |
-| HAMNT-04 | — | Pending |
-| HAMNT-05 | — | Pending |
-| SDK-01 | — | Pending |
-| SDK-02 | — | Pending |
-| SDK-03 | — | Pending |
-| SDK-04 | — | Pending |
-| TEST-01 | — | Pending |
-| TEST-02 | — | Pending |
-| TEST-03 | — | Pending |
-| TEST-04 | — | Pending |
-| TEST-05 | — | Pending |
-| TEST-06 | — | Pending |
-| TEST-07 | — | Pending |
-| TEST-08 | — | Pending |
+| UNIT-01 | Phase 403 | Pending |
+| UNIT-02 | Phase 403 | Pending |
+| UNIT-03 | Phase 403 | Pending |
+| UNIT-04 | Phase 402 | Pending |
+| UNIT-05 | Phase 403 | Pending |
+| UNIT-06 | Phase 402 | Pending |
+| MCP-01 | Phase 404 | Pending |
+| MCP-02 | Phase 404 | Pending |
+| MCP-03 | Phase 404 | Pending |
+| MCP-04 | Phase 402 | Pending |
+| MCP-05 | Phase 402 | Pending |
+| RESP-01 | Phase 404 | Pending |
+| RESP-02 | Phase 404 | Pending |
+| RESP-03 | Phase 404 | Pending |
+| RESP-04 | Phase 404 | Pending |
+| RESP-05 | Phase 404 | Pending |
+| HAMNT-01 | Phase 405 | Pending |
+| HAMNT-02 | Phase 405 | Pending |
+| HAMNT-03 | Phase 405 | Pending |
+| HAMNT-04 | Phase 405 | Pending |
+| HAMNT-05 | Phase 405 | Pending |
+| SDK-01 | Phase 406 | Pending |
+| SDK-02 | Phase 406 | Pending |
+| SDK-03 | Phase 406 | Pending |
+| SDK-04 | Phase 406 | Pending |
+| TEST-01 | Phase 403 | Pending |
+| TEST-02 | Phase 403 | Pending |
+| TEST-03 | Phase 404 | Pending |
+| TEST-04 | Phase 404 | Pending |
+| TEST-05 | Phase 405 | Pending |
+| TEST-06 | Phase 405 | Pending |
+| TEST-07 | Phase 403 | Pending |
+| TEST-08 | Phase 406 | Pending |
 
 **Coverage:**
 - v1 requirements: 33 total
-- Mapped to phases: 0
-- Unmapped: 33 ⚠️
+- Mapped to phases: 33
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-14*
-*Last updated: 2026-03-14 after initial definition*
+*Last updated: 2026-03-14 after roadmap creation*
