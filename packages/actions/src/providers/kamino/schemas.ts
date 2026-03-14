@@ -2,7 +2,8 @@
  * Zod SSoT input schemas for Kamino K-Lend lending actions.
  *
  * Four schemas for the 4 lending actions: supply, borrow, repay, withdraw.
- * Amount is always a human-readable string (e.g., "100.5").
+ * Amount is in smallest units (e.g., lamports for SOL tokens).
+ * Legacy decimal input is auto-converted with deprecation warning via migrateAmount().
  * Repay and withdraw accept 'max' for full repayment/withdrawal.
  */
 import { z } from 'zod';
@@ -14,8 +15,8 @@ import { z } from 'zod';
 export const KaminoSupplyInputSchema = z.object({
   /** SPL token mint address to supply as collateral. */
   asset: z.string().min(1, 'token mint address is required'),
-  /** Amount to supply (human-readable, e.g., "100.5"). */
-  amount: z.string().min(1, 'amount is required (e.g. "100.5")').describe('Amount in human-readable format (e.g., "100.5"). Note: will migrate to smallest units in future.'),
+  /** Amount in smallest units (e.g., lamports for SOL tokens). Example: "1000000" = 1.0 USDC. Legacy decimal input (e.g., "100.5") is auto-converted with deprecation warning. */
+  amount: z.string().min(1, 'amount is required').describe('Amount in smallest units (e.g., lamports for SOL tokens). Example: "1000000" = 1.0 USDC. Legacy decimal input (e.g., "100.5") is auto-converted with deprecation warning.'),
   /** Market pubkey (defaults to config market). */
   market: z.string().optional(),
 });
@@ -27,8 +28,8 @@ export const KaminoSupplyInputSchema = z.object({
 export const KaminoBorrowInputSchema = z.object({
   /** SPL token mint address to borrow. */
   asset: z.string().min(1, 'token mint address is required'),
-  /** Amount to borrow (human-readable, e.g., "100.5"). */
-  amount: z.string().min(1, 'amount is required (e.g. "100.5")').describe('Amount in human-readable format (e.g., "100.5"). Note: will migrate to smallest units in future.'),
+  /** Amount in smallest units (e.g., lamports for SOL tokens). Example: "1000000" = 1.0 USDC. Legacy decimal input (e.g., "100.5") is auto-converted with deprecation warning. */
+  amount: z.string().min(1, 'amount is required').describe('Amount in smallest units (e.g., lamports for SOL tokens). Example: "1000000" = 1.0 USDC. Legacy decimal input (e.g., "100.5") is auto-converted with deprecation warning.'),
   /** Market pubkey (defaults to config market). */
   market: z.string().optional(),
 });
@@ -40,8 +41,8 @@ export const KaminoBorrowInputSchema = z.object({
 export const KaminoRepayInputSchema = z.object({
   /** SPL token mint address to repay. */
   asset: z.string().min(1, 'token mint address is required'),
-  /** Amount to repay (human-readable, e.g., "100.5") or 'max' for full repayment. */
-  amount: z.string().min(1, 'amount is required').describe('Amount in human-readable format (e.g., "100.5"). Note: will migrate to smallest units in future. Use "max" for full repay.').or(z.literal('max')),
+  /** Amount in smallest units or 'max' for full repayment. Example: "1000000" = 1.0 USDC. Legacy decimal input (e.g., "100.5") is auto-converted with deprecation warning. */
+  amount: z.string().min(1, 'amount is required').describe('Amount in smallest units (e.g., lamports for SOL tokens). Example: "1000000" = 1.0 USDC. Legacy decimal input (e.g., "100.5") is auto-converted with deprecation warning. Use "max" for full repay.').or(z.literal('max')),
   /** Market pubkey (defaults to config market). */
   market: z.string().optional(),
 });
@@ -53,8 +54,8 @@ export const KaminoRepayInputSchema = z.object({
 export const KaminoWithdrawInputSchema = z.object({
   /** SPL token mint address to withdraw. */
   asset: z.string().min(1, 'token mint address is required'),
-  /** Amount to withdraw (human-readable, e.g., "100.5") or 'max' for full withdrawal. */
-  amount: z.string().min(1, 'amount is required').describe('Amount in human-readable format (e.g., "100.5"). Note: will migrate to smallest units in future. Use "max" for full withdraw.').or(z.literal('max')),
+  /** Amount in smallest units or 'max' for full withdrawal. Example: "1000000" = 1.0 USDC. Legacy decimal input (e.g., "100.5") is auto-converted with deprecation warning. */
+  amount: z.string().min(1, 'amount is required').describe('Amount in smallest units (e.g., lamports for SOL tokens). Example: "1000000" = 1.0 USDC. Legacy decimal input (e.g., "100.5") is auto-converted with deprecation warning. Use "max" for full withdraw.').or(z.literal('max')),
   /** Market pubkey (defaults to config market). */
   market: z.string().optional(),
 });

@@ -14,7 +14,7 @@
  * MockKaminoSdkWrapper enables unit testing without real SDK/RPC.
  */
 import { ChainError } from '@waiaas/core';
-import { parseTokenAmount } from '../../common/amount-parser.js';
+import { migrateAmount } from '../../common/migrate-amount.js';
 import type {
   ILendingProvider,
   ActionProviderMetadata,
@@ -162,7 +162,7 @@ export class KaminoLendingProvider implements ILendingProvider, IPositionProvide
   ): Promise<ContractCallRequest[]> {
     const input = KaminoSupplyInputSchema.parse(params);
     const marketAddress = resolveMarketAddress(input.market ?? this.config.market);
-    const amount = parseTokenAmount(input.amount, 6);
+    const amount = migrateAmount(input.amount, 6);
 
     const instructions = await this.sdkWrapper.buildSupplyInstruction({
       market: marketAddress,
@@ -184,7 +184,7 @@ export class KaminoLendingProvider implements ILendingProvider, IPositionProvide
   ): Promise<ContractCallRequest[]> {
     const input = KaminoBorrowInputSchema.parse(params);
     const marketAddress = resolveMarketAddress(input.market ?? this.config.market);
-    const amount = parseTokenAmount(input.amount, 6);
+    const amount = migrateAmount(input.amount, 6);
 
     // HF simulation: approximate USD value using raw amount
     // (conservative estimate -- proper conversion requires price oracle)
@@ -211,7 +211,7 @@ export class KaminoLendingProvider implements ILendingProvider, IPositionProvide
   ): Promise<ContractCallRequest[]> {
     const input = KaminoRepayInputSchema.parse(params);
     const marketAddress = resolveMarketAddress(input.market ?? this.config.market);
-    const amount: bigint | 'max' = input.amount === 'max' ? 'max' : parseTokenAmount(input.amount, 6);
+    const amount: bigint | 'max' = input.amount === 'max' ? 'max' : migrateAmount(input.amount, 6);
 
     const instructions = await this.sdkWrapper.buildRepayInstruction({
       market: marketAddress,
@@ -233,7 +233,7 @@ export class KaminoLendingProvider implements ILendingProvider, IPositionProvide
   ): Promise<ContractCallRequest[]> {
     const input = KaminoWithdrawInputSchema.parse(params);
     const marketAddress = resolveMarketAddress(input.market ?? this.config.market);
-    const amount: bigint | 'max' = input.amount === 'max' ? 'max' : parseTokenAmount(input.amount, 6);
+    const amount: bigint | 'max' = input.amount === 'max' ? 'max' : migrateAmount(input.amount, 6);
 
     // Skip HF simulation for 'max' withdrawals (closing position entirely)
     if (amount !== 'max') {
