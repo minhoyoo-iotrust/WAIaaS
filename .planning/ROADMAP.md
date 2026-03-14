@@ -158,5 +158,5 @@ Phases execute in numeric order: 407 → 408 → 409 → 410 → 411
 | 407. CAIP-2 Network Input | 1/1 | Complete    | 2026-03-14 | - |
 | 408. CAIP-19 Asset Input + Resolve | v31.16 | Complete    | 2026-03-14 | 2026-03-14 |
 | 409. Response CAIP Enrichment + OpenAPI | 2/2 | Complete    | 2026-03-14 | - |
-| 410. SDK + MCP CAIP Extension | 2/2 | Complete   | 2026-03-14 | - |
+| 410. SDK + MCP CAIP Extension | 2/2 | Complete    | 2026-03-14 | - |
 | 411. Skill Files Sync | v31.16 | 0/1 | Not started | - |
