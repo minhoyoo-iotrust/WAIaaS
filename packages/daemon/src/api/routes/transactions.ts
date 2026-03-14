@@ -24,7 +24,7 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { eq, and, inArray, lt, desc } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
-import { WAIaaSError, formatAmount } from '@waiaas/core';
+import { WAIaaSError, formatAmount, parseAmount } from '@waiaas/core';
 import type { ChainType, NetworkType, EnvironmentType, IPolicyEngine } from '@waiaas/core';
 import type { AdapterPool } from '../../infrastructure/adapter-pool.js';
 import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
@@ -171,6 +171,43 @@ export function resolveAmountMetadata(
   } catch {
     return { amountFormatted: null, decimals: null, symbol: null };
   }
+}
+
+// ---------------------------------------------------------------------------
+// humanAmount XOR validation + conversion (Phase 405 - HAMNT-01 ~ HAMNT-03)
+// ---------------------------------------------------------------------------
+
+/**
+ * Validate that exactly one of amount/humanAmount is provided.
+ * Throws WAIaaSError('VALIDATION_FAILED') if both or neither are present.
+ */
+export function validateAmountXOR(
+  request: { amount?: string; humanAmount?: string },
+): void {
+  if (request.amount && request.humanAmount) {
+    throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
+      message: 'amount and humanAmount are mutually exclusive. Provide exactly one.',
+    });
+  }
+  if (!request.amount && !request.humanAmount) {
+    throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
+      message: 'Either amount or humanAmount must be provided.',
+    });
+  }
+}
+
+/**
+ * If humanAmount is provided, convert to smallest-unit string using decimals.
+ * Returns the original amount if humanAmount is not present.
+ */
+export function resolveHumanAmount(
+  request: { amount?: string; humanAmount?: string },
+  decimals: number,
+): string {
+  if (request.humanAmount) {
+    return parseAmount(request.humanAmount, decimals).toString();
+  }
+  return request.amount!;
 }
 
 // ---------------------------------------------------------------------------
@@ -462,6 +499,38 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
       });
     }
 
+    // Phase 405: humanAmount -> amount conversion (before pipeline)
+    if ('humanAmount' in request && request.humanAmount) {
+      const txType = request.type as string | undefined;
+
+      if (txType === 'TRANSFER') {
+        validateAmountXOR(request);
+        const nativeToken = getNativeTokenInfo(wallet.chain, resolvedNetwork);
+        if (!nativeToken) {
+          throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
+            message: `Cannot resolve native token decimals for chain '${wallet.chain}'`,
+          });
+        }
+        request.amount = resolveHumanAmount(request, nativeToken.decimals);
+        delete request.humanAmount;
+      } else if (txType === 'TOKEN_TRANSFER' || txType === 'APPROVE') {
+        validateAmountXOR(request);
+        const decimals = request.token?.decimals;
+        if (typeof decimals !== 'number') {
+          throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
+            message: 'token.decimals is required when using humanAmount for TOKEN_TRANSFER/APPROVE',
+          });
+        }
+        request.amount = resolveHumanAmount(request, decimals);
+        delete request.humanAmount;
+      }
+    } else if ('type' in request && (request.type === 'TRANSFER' || request.type === 'TOKEN_TRANSFER' || request.type === 'APPROVE')) {
+      // Validate that amount is present when humanAmount is not (XOR check for missing both)
+      if (!request.amount) {
+        validateAmountXOR(request);
+      }
+    }
+
     // Resolve adapter from pool for this wallet's chain:resolvedNetwork
     const rpcUrl = resolveRpcUrl(
       deps.config.rpc as unknown as Record<string, string>,
@@ -606,6 +675,32 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
       throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
         message: err instanceof Error ? err.message : 'Network validation failed',
       });
+    }
+
+    // Phase 405: humanAmount -> amount conversion (simulate route)
+    if ('humanAmount' in request && request.humanAmount) {
+      const txType = request.type as string | undefined;
+      if (txType === 'TRANSFER') {
+        validateAmountXOR(request);
+        const nativeToken = getNativeTokenInfo(wallet.chain, resolvedNetwork);
+        if (!nativeToken) {
+          throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
+            message: `Cannot resolve native token decimals for chain '${wallet.chain}'`,
+          });
+        }
+        request.amount = resolveHumanAmount(request, nativeToken.decimals);
+        delete request.humanAmount;
+      } else if (txType === 'TOKEN_TRANSFER' || txType === 'APPROVE') {
+        validateAmountXOR(request);
+        const decimals = request.token?.decimals;
+        if (typeof decimals !== 'number') {
+          throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
+            message: 'token.decimals is required when using humanAmount for TOKEN_TRANSFER/APPROVE',
+          });
+        }
+        request.amount = resolveHumanAmount(request, decimals);
+        delete request.humanAmount;
+      }
     }
 
     // Resolve adapter from pool
