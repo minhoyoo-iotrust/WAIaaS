@@ -8,10 +8,10 @@ last_updated: "2026-03-14T00:00:00.000Z"
 last_activity: 2026-03-14 — Roadmap created (5 phases, 33 requirements)
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 9
-  completed_plans: 0
-  percent: 0
+  completed_plans: 1
+  percent: 11
 ---
 
 # Project State
@@ -21,35 +21,35 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-14)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Phase 402 — Schema Hardening
+**Current focus:** Phase 403 — Provider Unit Migration
 
 ## Current Position
 
-Phase: 402 of 406 (Schema Hardening)
-Plan: 0 of 1 in current phase
+Phase: 403 of 406 (Provider Unit Migration)
+Plan: 0 of 2 in current phase
 Status: Ready to plan
-Last activity: 2026-03-14 — Roadmap created
+Last activity: 2026-03-14 — Phase 402 completed (1/1 plans)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [#░░░░░░░░░] 11%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: —
-- Total execution time: 0 hours
+- Total plans completed: 1
+- Average duration: 6min
+- Total execution time: 0.1 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 402 | 1 | 6min | 6min |
 
 ## Accumulated Context
 
 ### Decisions
 
-Cleared — see PROJECT.md Key Decisions for full history.
+- [402] Zod .describe() pattern: smallest-unit providers include unit+example, CLOB providers use exchange-native+NOT smallest units, legacy providers include migration notice
 
 ### Pending Todos
 
@@ -63,5 +63,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-14
-Stopped at: Roadmap created, ready to plan Phase 402
+Stopped at: Completed 402-01-PLAN.md
 Resume file: None

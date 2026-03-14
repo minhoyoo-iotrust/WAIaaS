@@ -12,17 +12,17 @@ Requirements for v31.15. Each maps to roadmap phases.
 - [ ] **UNIT-01**: 4개 provider(aave-v3, kamino, lido-staking, jito-staking) 입력 스키마를 smallest unit(wei/lamports)으로 전환
 - [ ] **UNIT-02**: 전환 대상 provider에서 parseTokenAmount() 호출 제거, 입력값을 bigint로 직접 사용
 - [ ] **UNIT-03**: migrateAmount(value, decimals) 공유 헬퍼 — 소수점 포함 입력 시 human-readable로 간주하여 자동 변환 + deprecation 경고 로그 출력
-- [ ] **UNIT-04**: 모든 provider Zod schema description에 단위 명시 (예: 'Amount in smallest units (wei/lamports). Example: "1000000000000000" = 0.001 ETH')
+- [x] **UNIT-04**: 모든 provider Zod schema description에 단위 명시 (예: 'Amount in smallest units (wei/lamports). Example: "1000000000000000" = 0.001 ETH')
 - [ ] **UNIT-05**: max 키워드 호환성 유지 (aave/kamino repay/withdraw에서 max는 단위 변환과 독립적으로 동작)
-- [ ] **UNIT-06**: CLOB 예외 provider(Hyperliquid, Drift, Polymarket) schema description에 human-readable 단위 사용 명시
+- [x] **UNIT-06**: CLOB 예외 provider(Hyperliquid, Drift, Polymarket) schema description에 human-readable 단위 사용 명시
 
 ### MCP Typed Schema
 
 - [ ] **MCP-01**: GET /v1/actions/providers 메타데이터 API에 각 action의 inputSchema JSON 필드 추가 (zodToJsonSchema 변환)
 - [ ] **MCP-02**: MCP tool 등록 시 provider 메타데이터의 typed Zod schema 적용 (z.record(z.unknown()) 대체)
 - [ ] **MCP-03**: schema 변환 불가 시 기존 z.record(z.unknown()) fallback 유지
-- [ ] **MCP-04**: MCP tool description에 amount 파라미터 단위 예시 포함
-- [ ] **MCP-05**: 빌트인 MCP 도구(send-token, transfer-nft 등) amount description에 단위 명시
+- [x] **MCP-04**: MCP tool description에 amount 파라미터 단위 예시 포함
+- [x] **MCP-05**: 빌트인 MCP 도구(send-token, transfer-nft 등) amount description에 단위 명시
 
 ### Response Enrichment
 
@@ -84,14 +84,14 @@ Deferred to future release. Tracked but not in current roadmap.
 | UNIT-01 | Phase 403 | Pending |
 | UNIT-02 | Phase 403 | Pending |
 | UNIT-03 | Phase 403 | Pending |
-| UNIT-04 | Phase 402 | Pending |
+| UNIT-04 | Phase 402 | Complete |
 | UNIT-05 | Phase 403 | Pending |
-| UNIT-06 | Phase 402 | Pending |
+| UNIT-06 | Phase 402 | Complete |
 | MCP-01 | Phase 404 | Pending |
 | MCP-02 | Phase 404 | Pending |
 | MCP-03 | Phase 404 | Pending |
-| MCP-04 | Phase 402 | Pending |
-| MCP-05 | Phase 402 | Pending |
+| MCP-04 | Phase 402 | Complete |
+| MCP-05 | Phase 402 | Complete |
 | RESP-01 | Phase 404 | Pending |
 | RESP-02 | Phase 404 | Pending |
 | RESP-03 | Phase 404 | Pending |

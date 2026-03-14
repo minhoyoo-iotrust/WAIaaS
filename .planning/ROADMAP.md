@@ -55,7 +55,7 @@
 
 **Milestone Goal:** AI 에이전트가 일관된 단위 규칙으로 안전하게 온체인 거래를 수행하고, typed MCP 스키마와 humanAmount 파라미터로 DX 향상
 
-- [ ] **Phase 402: Schema Hardening** - 모든 provider 스키마에 단위 설명 추가 및 CLOB 예외 문서화
+- [x] **Phase 402: Schema Hardening** - 모든 provider 스키마에 단위 설명 추가 및 CLOB 예외 문서화
 - [ ] **Phase 403: Provider Unit Migration** - 4개 provider smallest-unit 전환 + migrateAmount 하위 호환성
 - [ ] **Phase 404: Typed MCP Schemas + Response Enrichment** - MCP typed 스키마 + amountFormatted/decimals/symbol 응답 보강
 - [ ] **Phase 405: humanAmount Parameter** - REST API/Action Provider/MCP에 humanAmount XOR 파라미터 추가
@@ -159,7 +159,7 @@ Phases execute in numeric order: 402 -> 403 -> 404 -> 405 -> 406
 | 399. Core RPC Proxy Engine | v31.14 | 3/3 | Complete | 2026-03-13 |
 | 400. Route Assembly + Async Approval | v31.14 | 3/3 | Complete | 2026-03-13 |
 | 401. DX Integration + Testing | v31.14 | 3/3 | Complete | 2026-03-13 |
-| 402. Schema Hardening | v31.15 | 0/1 | Not started | - |
+| 402. Schema Hardening | v31.15 | 1/1 | Complete | 2026-03-14 |
 | 403. Provider Unit Migration | v31.15 | 0/2 | Not started | - |
 | 404. Typed MCP Schemas + Response Enrichment | v31.15 | 0/2 | Not started | - |
 | 405. humanAmount Parameter | v31.15 | 0/2 | Not started | - |
