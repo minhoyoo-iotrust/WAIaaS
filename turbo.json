@@ -9,8 +9,13 @@
       "dependsOn": [],
       "outputs": ["dist/**", "skills/**"]
     },
+    "//#generate:api-types": {
+      "dependsOn": [],
+      "outputs": ["packages/admin/src/api/types.generated.ts", "packages/admin/openapi.json"],
+      "cache": false
+    },
     "@waiaas/admin#build": {
-      "dependsOn": ["@waiaas/shared#build"],
+      "dependsOn": ["@waiaas/shared#build", "//#generate:api-types"],
       "outputs": ["dist/**"]
     },
     "@waiaas/daemon#build": {
