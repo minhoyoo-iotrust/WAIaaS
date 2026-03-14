@@ -34,9 +34,9 @@ Requirements for v31.15. Each maps to roadmap phases.
 
 ### humanAmount Parameter
 
-- [ ] **HAMNT-01**: REST API 트랜잭션 요청(TRANSFER, TOKEN_TRANSFER, APPROVE)에 humanAmount: string 옵션 파라미터 추가
-- [ ] **HAMNT-02**: amount와 humanAmount 동시 지정 시 에러 반환 (Zod superRefine XOR 검증)
-- [ ] **HAMNT-03**: humanAmount 지정 시 토큰 decimals 조회 → parseAmount()로 smallest unit 변환 후 파이프라인 주입 (TRANSFER: native decimals, TOKEN_TRANSFER: registry 조회, 미등록 시 에러)
+- [x] **HAMNT-01**: REST API 트랜잭션 요청(TRANSFER, TOKEN_TRANSFER, APPROVE)에 humanAmount: string 옵션 파라미터 추가
+- [x] **HAMNT-02**: amount와 humanAmount 동시 지정 시 에러 반환 (Zod superRefine XOR 검증)
+- [x] **HAMNT-03**: humanAmount 지정 시 토큰 decimals 조회 → parseAmount()로 smallest unit 변환 후 파이프라인 주입 (TRANSFER: native decimals, TOKEN_TRANSFER: registry 조회, 미등록 시 에러)
 - [x] **HAMNT-04**: Action Provider에 per-provider humanAmount 파라미터 추가 (amount→humanAmount, sellAmount→humanSellAmount 등, CLOB 예외 제외)
 - [x] **HAMNT-05**: MCP 도구 schema에 humanAmount 파라미터 반영
 
@@ -97,9 +97,9 @@ Deferred to future release. Tracked but not in current roadmap.
 | RESP-03 | Phase 404 | Complete |
 | RESP-04 | Phase 404 | Complete |
 | RESP-05 | Phase 404 | Complete |
-| HAMNT-01 | Phase 405 | Pending |
-| HAMNT-02 | Phase 405 | Pending |
-| HAMNT-03 | Phase 405 | Pending |
+| HAMNT-01 | Phase 405 | Complete |
+| HAMNT-02 | Phase 405 | Complete |
+| HAMNT-03 | Phase 405 | Complete |
 | HAMNT-04 | Phase 405 | Complete |
 | HAMNT-05 | Phase 405 | Complete |
 | SDK-01 | Phase 406 | Complete |
