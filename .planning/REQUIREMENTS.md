@@ -36,20 +36,20 @@ Requirements for CAIP-2/CAIP-19 standard identifier promotion across all interfa
 
 ### SDK
 
-- [ ] **SDK-01**: 모든 `network` 파라미터에 CAIP-2 문자열도 수용 (`'eip155:1'` | `'ethereum-mainnet'`)
-- [ ] **SDK-02**: `sendToken()` 등 토큰 관련 메서드에서 `{ assetId }` 단독 전달 지원 (union 타입 확장)
-- [ ] **SDK-03**: 응답 타입에 `chainId` (CAIP-2), `assetId` (CAIP-19) 필드 추가
-- [ ] **SDK-04**: 기존 메서드 시그니처 유지 — 추가 union 타입으로 확장
-- [ ] **SDK-05**: SDK 타입 export에 `Caip2ChainId`, `Caip19AssetId` 타입 alias 추가
+- [x] **SDK-01**: 모든 `network` 파라미터에 CAIP-2 문자열도 수용 (`'eip155:1'` | `'ethereum-mainnet'`)
+- [x] **SDK-02**: `sendToken()` 등 토큰 관련 메서드에서 `{ assetId }` 단독 전달 지원 (union 타입 확장)
+- [x] **SDK-03**: 응답 타입에 `chainId` (CAIP-2), `assetId` (CAIP-19) 필드 추가
+- [x] **SDK-04**: 기존 메서드 시그니처 유지 — 추가 union 타입으로 확장
+- [x] **SDK-05**: SDK 타입 export에 `Caip2ChainId`, `Caip19AssetId` 타입 alias 추가
 
 ### MCP
 
-- [ ] **MCP-01**: 모든 `network` 파라미터 설명에 CAIP-2 형식 수용 명시
-- [ ] **MCP-02**: `send_token`, `approve_token` 등 토큰 도구에서 `assetId` 단독 전달 지원
-- [ ] **MCP-03**: 도구 응답에 `chainId`, `assetId` 항상 포함
-- [ ] **MCP-04**: 새 MCP 도구 `resolve_asset` — CAIP-19 → 토큰 메타데이터 조회
-- [ ] **MCP-05**: `resolve_asset` 입력: `assetId` (CAIP-19). 출력: `{ address, decimals, symbol, name, network, chainId, isNative, isRegistered }`
-- [ ] **MCP-06**: 미등록 자산은 `isRegistered: false`로 반환, decimals/symbol은 `null`
+- [x] **MCP-01**: 모든 `network` 파라미터 설명에 CAIP-2 형식 수용 명시
+- [x] **MCP-02**: `send_token`, `approve_token` 등 토큰 도구에서 `assetId` 단독 전달 지원
+- [x] **MCP-03**: 도구 응답에 `chainId`, `assetId` 항상 포함
+- [x] **MCP-04**: 새 MCP 도구 `resolve_asset` — CAIP-19 → 토큰 메타데이터 조회
+- [x] **MCP-05**: `resolve_asset` 입력: `assetId` (CAIP-19). 출력: `{ address, decimals, symbol, name, network, chainId, isNative, isRegistered }`
+- [x] **MCP-06**: 미등록 자산은 `isRegistered: false`로 반환, decimals/symbol은 `null`
 
 ### Spec & Docs
 
@@ -70,9 +70,9 @@ Requirements for CAIP-2/CAIP-19 standard identifier promotion across all interfa
 - [x] **TST-05**: `assetId` vs `network` 불일치 validation error 테스트
 - [x] **TST-06**: 미등록 assetId + address/decimals/symbol 폴백 테스트
 - [x] **TST-07**: 모든 응답 스키마에 `chainId`/`assetId` 포함 검증 테스트
-- [ ] **TST-08**: SDK CAIP-2 네트워크 입력 테스트
-- [ ] **TST-09**: MCP 도구 CAIP-2 네트워크 입력 + assetId 단독 전달 테스트
-- [ ] **TST-10**: `resolve_asset` MCP 도구 테스트
+- [x] **TST-08**: SDK CAIP-2 네트워크 입력 테스트
+- [x] **TST-09**: MCP 도구 CAIP-2 네트워크 입력 + assetId 단독 전달 테스트
+- [x] **TST-10**: `resolve_asset` MCP 도구 테스트
 
 ## Future Requirements
 
@@ -117,17 +117,17 @@ Requirements for CAIP-2/CAIP-19 standard identifier promotion across all interfa
 | RSP-04 | Phase 409 | Complete |
 | RSP-05 | Phase 409 | Complete |
 | RSP-06 | Phase 409 | Complete |
-| SDK-01 | Phase 410 | Pending |
-| SDK-02 | Phase 410 | Pending |
-| SDK-03 | Phase 410 | Pending |
-| SDK-04 | Phase 410 | Pending |
-| SDK-05 | Phase 410 | Pending |
-| MCP-01 | Phase 410 | Pending |
-| MCP-02 | Phase 410 | Pending |
-| MCP-03 | Phase 410 | Pending |
-| MCP-04 | Phase 410 | Pending |
-| MCP-05 | Phase 410 | Pending |
-| MCP-06 | Phase 410 | Pending |
+| SDK-01 | Phase 410 | Complete |
+| SDK-02 | Phase 410 | Complete |
+| SDK-03 | Phase 410 | Complete |
+| SDK-04 | Phase 410 | Complete |
+| SDK-05 | Phase 410 | Complete |
+| MCP-01 | Phase 410 | Complete |
+| MCP-02 | Phase 410 | Complete |
+| MCP-03 | Phase 410 | Complete |
+| MCP-04 | Phase 410 | Complete |
+| MCP-05 | Phase 410 | Complete |
+| MCP-06 | Phase 410 | Complete |
 | DOC-01 | Phase 409 | Complete |
 | DOC-02 | Phase 409 | Complete |
 | DOC-03 | Phase 409 | Complete |
@@ -142,9 +142,9 @@ Requirements for CAIP-2/CAIP-19 standard identifier promotion across all interfa
 | TST-05 | Phase 408 | Complete |
 | TST-06 | Phase 408 | Complete |
 | TST-07 | Phase 409 | Complete |
-| TST-08 | Phase 410 | Pending |
-| TST-09 | Phase 410 | Pending |
-| TST-10 | Phase 410 | Pending |
+| TST-08 | Phase 410 | Complete |
+| TST-09 | Phase 410 | Complete |
+| TST-10 | Phase 410 | Complete |
 
 **Coverage:**
 - v31.16 requirements: 46 total

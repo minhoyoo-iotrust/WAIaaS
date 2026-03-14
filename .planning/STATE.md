@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v31.16
 milestone_name: CAIP 표준 식별자 승격
 status: executing
-stopped_at: Completed 409-02-PLAN.md
-last_updated: "2026-03-14T15:08:12.941Z"
+stopped_at: Completed 410-02-PLAN.md
+last_updated: "2026-03-14T15:27:08.579Z"
 last_activity: 2026-03-14 — Phase 408 completed (2 plans)
 progress:
   total_phases: 5
-  completed_phases: 3
-  total_plans: 5
-  completed_plans: 5
+  completed_phases: 4
+  total_plans: 7
+  completed_plans: 7
   percent: 37
 ---
 
@@ -50,6 +50,7 @@ Progress: [████░░░░░░] 37%
 | Phase 408 P01 | 3min | 2 tasks | 5 files |
 | Phase 408 P02 | 5min | 2 tasks | 5 files |
 | Phase 409 P01-02 | 2450s | 4 tasks | 15 files |
+| Phase 410 P01-02 | 668 | 4 tasks | 19 files |
 
 ### Decisions
 
@@ -66,6 +67,9 @@ Progress: [████░░░░░░] 37%
 - [Phase 408]: User-provided values take precedence over registry (no override)
 - [Phase 409]: enrichment applied at c.json() boundary for explicit control
 - [Phase 409]: staking positions infer network from chain type
+- [Phase 410]: D6: resolve_asset as non-wallet-scoped global MCP tool
+- [Phase 410]: D7: string-based CAIP type aliases (zero runtime overhead)
+- [Phase 410]: D8: Local CAIP-19 parser in MCP (no core dependency)
 
 ### Pending Todos
 
@@ -77,6 +81,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-14T15:07:39.324Z
-Stopped at: Completed 409-02-PLAN.md
+Last session: 2026-03-14T15:27:08.566Z
+Stopped at: Completed 410-02-PLAN.md
 Resume file: None
