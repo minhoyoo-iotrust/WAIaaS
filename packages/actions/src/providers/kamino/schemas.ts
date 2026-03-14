@@ -15,7 +15,7 @@ export const KaminoSupplyInputSchema = z.object({
   /** SPL token mint address to supply as collateral. */
   asset: z.string().min(1, 'token mint address is required'),
   /** Amount to supply (human-readable, e.g., "100.5"). */
-  amount: z.string().min(1, 'amount is required (e.g. "100.5")'),
+  amount: z.string().min(1, 'amount is required (e.g. "100.5")').describe('Amount in human-readable format (e.g., "100.5"). Note: will migrate to smallest units in future.'),
   /** Market pubkey (defaults to config market). */
   market: z.string().optional(),
 });
@@ -28,7 +28,7 @@ export const KaminoBorrowInputSchema = z.object({
   /** SPL token mint address to borrow. */
   asset: z.string().min(1, 'token mint address is required'),
   /** Amount to borrow (human-readable, e.g., "100.5"). */
-  amount: z.string().min(1, 'amount is required (e.g. "100.5")'),
+  amount: z.string().min(1, 'amount is required (e.g. "100.5")').describe('Amount in human-readable format (e.g., "100.5"). Note: will migrate to smallest units in future.'),
   /** Market pubkey (defaults to config market). */
   market: z.string().optional(),
 });
@@ -41,7 +41,7 @@ export const KaminoRepayInputSchema = z.object({
   /** SPL token mint address to repay. */
   asset: z.string().min(1, 'token mint address is required'),
   /** Amount to repay (human-readable, e.g., "100.5") or 'max' for full repayment. */
-  amount: z.string().min(1, 'amount is required').or(z.literal('max')),
+  amount: z.string().min(1, 'amount is required').describe('Amount in human-readable format (e.g., "100.5"). Note: will migrate to smallest units in future. Use "max" for full repay.').or(z.literal('max')),
   /** Market pubkey (defaults to config market). */
   market: z.string().optional(),
 });
@@ -54,7 +54,7 @@ export const KaminoWithdrawInputSchema = z.object({
   /** SPL token mint address to withdraw. */
   asset: z.string().min(1, 'token mint address is required'),
   /** Amount to withdraw (human-readable, e.g., "100.5") or 'max' for full withdrawal. */
-  amount: z.string().min(1, 'amount is required').or(z.literal('max')),
+  amount: z.string().min(1, 'amount is required').describe('Amount in human-readable format (e.g., "100.5"). Note: will migrate to smallest units in future. Use "max" for full withdraw.').or(z.literal('max')),
   /** Market pubkey (defaults to config market). */
   market: z.string().optional(),
 });

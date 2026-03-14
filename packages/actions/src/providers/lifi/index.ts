@@ -30,7 +30,7 @@ const LiFiCrossSwapInputSchema = z.object({
   toChain: z.string().min(1, 'toChain is required'),
   fromToken: z.string().min(1, 'fromToken address or symbol is required'),
   toToken: z.string().min(1, 'toToken address or symbol is required'),
-  fromAmount: z.string().min(1, 'fromAmount is required (in smallest units)'),
+  fromAmount: z.string().min(1, 'fromAmount is required (in smallest units)').describe('Amount in smallest units of source token (wei/lamports). Example: "1000000" = 1 USDC'),
   slippage: z.number().min(0).max(1).optional(),  // decimal, e.g. 0.03 = 3%
   toAddress: z.string().optional(),                // defaults to fromAddress (context.walletAddress)
 });

@@ -39,7 +39,7 @@ const NATIVE_ETH_ADDRESS = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
 const SwapInputSchema = z.object({
   sellToken: z.string().min(1, 'sellToken is required'),
   buyToken: z.string().min(1, 'buyToken is required'),
-  sellAmount: z.string().min(1, 'sellAmount is required (in smallest units)'),
+  sellAmount: z.string().min(1, 'sellAmount is required (in smallest units)').describe('Sell amount in smallest units (wei). Example: "1000000000000000000" = 1 ETH'),
   slippageBps: z.number().int().optional(),
   chainId: z.number().int().optional(),
 });

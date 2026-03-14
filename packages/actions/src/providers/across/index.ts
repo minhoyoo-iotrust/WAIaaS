@@ -41,7 +41,7 @@ const AcrossQuoteInputSchema = z.object({
   toChain: z.string().min(1, 'toChain is required'),
   inputToken: z.string().min(1, 'inputToken address is required'),
   outputToken: z.string().min(1, 'outputToken address is required'),
-  amount: z.string().min(1, 'amount is required (in smallest units, e.g., wei)'),
+  amount: z.string().min(1, 'amount is required (in smallest units, e.g., wei)').describe('Amount in smallest units (wei). Example: "1000000" = 1 USDC'),
   recipient: z.string().optional(),
 });
 
@@ -50,7 +50,7 @@ const AcrossExecuteInputSchema = z.object({
   toChain: z.string().min(1),
   inputToken: z.string().min(1),
   outputToken: z.string().min(1),
-  amount: z.string().min(1),
+  amount: z.string().min(1).describe('Amount in smallest units (wei). Example: "1000000" = 1 USDC'),
   recipient: z.string().optional(),
   slippage: z.number().min(0).max(1).optional(),  // decimal, 0.01 = 1%
 });

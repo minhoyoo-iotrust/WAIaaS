@@ -36,11 +36,11 @@ import type { PositionUpdate, PositionCategory } from '@waiaas/core';
 // ---------------------------------------------------------------------------
 
 const LidoStakeInputSchema = z.object({
-  amount: z.string().min(1, 'amount is required (ETH, e.g. "1.0")'),
+  amount: z.string().min(1, 'amount is required (ETH, e.g. "1.0")').describe('Amount in human-readable ETH (e.g., "1.0"). Note: will migrate to smallest units (wei) in future.'),
 });
 
 const LidoUnstakeInputSchema = z.object({
-  amount: z.string().min(1, 'amount is required (stETH, e.g. "1.0")'),
+  amount: z.string().min(1, 'amount is required (stETH, e.g. "1.0")').describe('Amount in human-readable stETH (e.g., "1.0"). Note: will migrate to smallest units (wei) in future.'),
 });
 
 // ---------------------------------------------------------------------------

@@ -33,11 +33,11 @@ import type { PositionUpdate, PositionCategory } from '@waiaas/core';
 // ---------------------------------------------------------------------------
 
 const JitoStakeInputSchema = z.object({
-  amount: z.string().min(1, 'amount is required (SOL, e.g. "1.0")'),
+  amount: z.string().min(1, 'amount is required (SOL, e.g. "1.0")').describe('Amount in human-readable SOL (e.g., "1.0"). Note: will migrate to smallest units (lamports) in future.'),
 });
 
 const JitoUnstakeInputSchema = z.object({
-  amount: z.string().min(1, 'amount is required (JitoSOL, e.g. "1.0")'),
+  amount: z.string().min(1, 'amount is required (JitoSOL, e.g. "1.0")').describe('Amount in human-readable JitoSOL (e.g., "1.0"). Note: will migrate to smallest units (lamports) in future.'),
 });
 
 // ---------------------------------------------------------------------------

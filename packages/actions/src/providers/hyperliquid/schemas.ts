@@ -18,9 +18,9 @@ export const HlOpenPositionInputSchema = z
     /** Order side. */
     side: z.enum(['BUY', 'SELL']),
     /** Position size as decimal string (e.g., "1.0"). */
-    size: z.string().min(1),
+    size: z.string().min(1).describe('Position size in exchange-native decimal units (e.g., "1.0" = 1 contract). NOT smallest units -- Hyperliquid uses human-readable decimals.'),
     /** Limit price as decimal string. Required for LIMIT orders. */
-    price: z.string().optional(),
+    price: z.string().optional().describe('Limit price in exchange-native decimal units. Required for LIMIT orders.'),
     /** Order type. */
     orderType: z.enum(['MARKET', 'LIMIT']),
     /** Leverage multiplier (1-100). Uses default if omitted. */
@@ -44,11 +44,11 @@ export const HlPlaceOrderInputSchema = z
   .object({
     market: z.string().min(1),
     side: z.enum(['BUY', 'SELL']),
-    size: z.string().min(1),
+    size: z.string().min(1).describe('Order size in exchange-native decimal units (e.g., "1.0"). NOT smallest units.'),
     /** Trigger price for stop/TP orders. */
-    triggerPrice: z.string(),
+    triggerPrice: z.string().describe('Trigger price in exchange-native decimal units (e.g., "2500.00").'),
     /** Limit price after trigger (optional for market execution). */
-    price: z.string().optional(),
+    price: z.string().optional().describe('Limit price in exchange-native decimal units after trigger.'),
     orderType: z.enum(['STOP_MARKET', 'STOP_LIMIT', 'TAKE_PROFIT']),
     reduceOnly: z.boolean().optional().default(true),
     tif: z.enum(['GTC', 'IOC', 'ALO']).optional(),
@@ -61,7 +61,7 @@ export const HlClosePositionInputSchema = z.object({
   /** Market to close. */
   market: z.string().min(1),
   /** Partial close size. Omit for full close. */
-  size: z.string().optional(),
+  size: z.string().optional().describe('Partial close size in exchange-native decimal units. Omit for full close.'),
   /** Sub-account address. */
   subAccount: z.string().optional(),
 });
@@ -95,7 +95,7 @@ export const HlSetMarginModeInputSchema = z.object({
 /** Transfer USDC between Spot and Perp accounts. */
 export const HlTransferUsdcInputSchema = z.object({
   /** Amount to transfer as decimal string. */
-  amount: z.string().min(1),
+  amount: z.string().min(1).describe('USDC amount in exchange-native decimal units (e.g., "1000.50"). NOT smallest units.'),
   /** True = Spot -> Perp, False = Perp -> Spot. */
   toPerp: z.boolean(),
 });
@@ -233,9 +233,9 @@ export const HlSpotBuyInputSchema = z
     /** Spot market pair (e.g., "HYPE/USDC"). */
     market: z.string().min(1),
     /** Order size as decimal string. */
-    size: z.string().min(1),
+    size: z.string().min(1).describe('Order size in exchange-native decimal units (e.g., "10.0"). NOT smallest units.'),
     /** Limit price as decimal string. Required for LIMIT orders. */
-    price: z.string().optional(),
+    price: z.string().optional().describe('Limit price in exchange-native decimal units. Required for LIMIT orders.'),
     /** Order type. */
     orderType: z.enum(['MARKET', 'LIMIT']),
     /** Time-in-force. */
@@ -254,8 +254,8 @@ export const HlSpotBuyInputSchema = z
 export const HlSpotSellInputSchema = z
   .object({
     market: z.string().min(1),
-    size: z.string().min(1),
-    price: z.string().optional(),
+    size: z.string().min(1).describe('Order size in exchange-native decimal units (e.g., "10.0"). NOT smallest units.'),
+    price: z.string().optional().describe('Limit price in exchange-native decimal units. Required for LIMIT orders.'),
     orderType: z.enum(['MARKET', 'LIMIT']),
     tif: z.enum(['GTC', 'IOC', 'ALO']).optional(),
     cloid: z.string().optional(),
@@ -347,7 +347,7 @@ export const HlSubTransferInputSchema = z.object({
   /** Sub-account address (hex, 42 chars). */
   subAccount: z.string().min(1),
   /** Amount as decimal string (e.g., "1000.50"). */
-  amount: z.string().min(1),
+  amount: z.string().min(1).describe('USDC amount in exchange-native decimal units (e.g., "1000.50"). NOT smallest units.'),
   /** True = master -> sub, False = sub -> master. */
   isDeposit: z.boolean(),
 });

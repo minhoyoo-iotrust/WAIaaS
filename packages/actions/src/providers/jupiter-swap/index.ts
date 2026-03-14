@@ -24,7 +24,7 @@ import { clampSlippageBps, asBps } from '../../common/slippage.js';
 const SwapInputSchema = z.object({
   inputMint: z.string().min(1, 'inputMint is required'),
   outputMint: z.string().min(1, 'outputMint is required'),
-  amount: z.string().min(1, 'amount is required (in smallest units)'),
+  amount: z.string().min(1, 'amount is required (in smallest units)').describe('Amount in smallest units (lamports). Example: "1000000000" = 1 SOL'),
   slippageBps: z.number().int().optional(),
 });
 

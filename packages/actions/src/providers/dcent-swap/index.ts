@@ -30,7 +30,7 @@ import { findTwoHopRoutes, executeTwoHopSwap, type TwoHopQuoteResult } from './a
 const GetQuotesInputSchema = z.object({
   fromAsset: z.string().min(1),
   toAsset: z.string().min(1),
-  amount: z.string().min(1),
+  amount: z.string().min(1).describe('Amount in smallest units. Example: "1000000000000000000" = 1 token with 18 decimals'),
   fromDecimals: z.number().int().min(0).max(18),
   toDecimals: z.number().int().min(0).max(18),
 });
@@ -38,7 +38,7 @@ const GetQuotesInputSchema = z.object({
 const DexSwapInputSchema = z.object({
   fromAsset: z.string().min(1),
   toAsset: z.string().min(1),
-  amount: z.string().min(1),
+  amount: z.string().min(1).describe('Amount in smallest units. Example: "1000000000000000000" = 1 token with 18 decimals'),
   fromDecimals: z.number().int().min(0).max(18),
   toDecimals: z.number().int().min(0).max(18),
   providerId: z.string().optional(),

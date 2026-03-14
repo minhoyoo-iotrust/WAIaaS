@@ -20,13 +20,13 @@ export const OpenPositionInputSchema = z
     /** Position direction. */
     direction: z.enum(['LONG', 'SHORT']),
     /** Base asset amount as string (e.g., "100"). */
-    size: z.string().min(1, 'base asset amount as string (e.g., "100")'),
+    size: z.string().min(1, 'base asset amount as string (e.g., "100")').describe('Base asset size in exchange-native decimal units (e.g., "1.0" SOL-PERP). NOT smallest units -- Drift uses human-readable decimals.'),
     /** Desired leverage multiplier (1-100). Optional -- derived from margin if omitted. */
     leverage: z.number().min(1).max(100).optional(),
     /** Order type. */
     orderType: z.enum(['MARKET', 'LIMIT']),
     /** Limit price as string. Required when orderType is 'LIMIT'. */
-    limitPrice: z.string().optional(),
+    limitPrice: z.string().optional().describe('Limit price in exchange-native decimal units. Required for LIMIT orders.'),
   })
   .refine((d) => d.orderType !== 'LIMIT' || d.limitPrice !== undefined, {
     message: 'limitPrice is required for LIMIT orders',
@@ -42,7 +42,7 @@ export const ClosePositionInputSchema = z.object({
   /** Market symbol (e.g., "SOL-PERP"). */
   market: z.string().min(1, 'market symbol required'),
   /** Partial close amount. Omit for full close. */
-  size: z.string().optional(),
+  size: z.string().optional().describe('Partial close size in exchange-native units. Omit for full close.'),
 });
 
 // ---------------------------------------------------------------------------
@@ -55,7 +55,7 @@ export const ModifyPositionInputSchema = z
     /** Market symbol (e.g., "SOL-PERP"). */
     market: z.string().min(1, 'market symbol required'),
     /** New position size. */
-    newSize: z.string().optional(),
+    newSize: z.string().optional().describe('New position size in exchange-native units.'),
     /** New limit price for pending order. */
     newLimitPrice: z.string().optional(),
   })
@@ -70,7 +70,7 @@ export const ModifyPositionInputSchema = z
 /** Deposit collateral to increase available margin on Drift V2. */
 export const AddMarginInputSchema = z.object({
   /** Collateral amount as string (e.g., "100"). */
-  amount: z.string().min(1, 'collateral amount required (e.g., "100")'),
+  amount: z.string().min(1, 'collateral amount required (e.g., "100")').describe('Collateral amount in exchange-native decimal units (e.g., "100" USDC). NOT smallest units.'),
   /** CAIP-19 asset identifier for collateral token. */
   asset: z.string().min(1, 'CAIP-19 asset identifier required'),
 });
@@ -82,7 +82,7 @@ export const AddMarginInputSchema = z.object({
 /** Withdraw excess collateral from Drift V2 margin account. */
 export const WithdrawMarginInputSchema = z.object({
   /** Withdrawal amount as string. */
-  amount: z.string().min(1, 'withdrawal amount required'),
+  amount: z.string().min(1, 'withdrawal amount required').describe('Withdrawal amount in exchange-native decimal units. NOT smallest units.'),
   /** CAIP-19 asset identifier for collateral token. */
   asset: z.string().min(1, 'CAIP-19 asset identifier required'),
 });
