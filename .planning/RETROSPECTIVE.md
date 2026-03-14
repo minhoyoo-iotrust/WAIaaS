@@ -2,6 +2,49 @@
 
 *A living document updated after each milestone. Lessons feed forward into future planning.*
 
+## Milestone: v31.16 — CAIP 표준 식별자 승격
+
+**Shipped:** 2026-03-15
+**Phases:** 5 | **Plans:** 8 | **Sessions:** 1
+
+### What Was Built
+- normalizeNetworkInput CAIP-2 dual-accept — 15개 네트워크 CAIP-2 매핑 + z.preprocess 전 인터페이스 자동 적용
+- CAIP-19 assetId-only 토큰 특정 + 토큰 레지스트리 자동 resolve + 네트워크 자동 추론
+- 모든 응답에 chainId(CAIP-2)/assetId(CAIP-19) 런타임 동적 생성 + connect-info supportedChainIds
+- SDK Caip2ChainId/Caip19AssetId 타입 + TokenInfo union 확장
+- MCP resolve_asset 신규 도구 + send_token/approve_token assetId-only 지원
+- 스킬 파일 4종 CAIP-2/19 사용법 문서화
+
+### What Worked
+- 5 phases 1일 완료 — CAIP-2/19 인터페이스가 v27.2 CAIP-19 기반 위에 자연스럽게 확장
+- z.preprocess 패턴이 단일 변경 지점으로 전 인터페이스 CAIP-2 자동 적용(REST/MCP/SDK 개별 수정 불필요)
+- 응답 런타임 동적 생성 결정(D3)이 DB 마이그레이션 없이 모든 응답 CAIP 필드 추가를 가능하게 함
+- 감사에서 0 gaps — 사전 요구사항 정의가 정확하여 누락 없이 완료
+- enrichment-at-json-boundary 패턴이 7개 route 파일에 일관된 방식으로 적용
+
+### What Was Inefficient
+- ROADMAP.md Progress 테이블 형식 불일치(Milestone 컬럼 누락, 컬럼 순서 불일치) — 자동 생성 안 됨
+- STATE.md percent 37%로 고정(중간 업데이트 누락) — 실제 100% 완료
+- SUMMARY.md one_liner 필드 미기입 — summary-extract 도구 결과 null
+
+### Patterns Established
+- CAIP-2 z.preprocess: normalizeNetworkInput에 CAIP-2 → canonical 매핑 추가, z.preprocess로 전 스키마 자동 적용
+- 응답 enrichment: enrichBalance/enrichAsset/enrichTransaction 등 유틸 함수, c.json() 경계에서 호출
+- assetId-only: TokenInfoBaseSchema superRefine에서 assetId 존재 시 address/decimals/symbol optional 전환
+- resolve middleware: resolveTokenFromAssetId 미들웨어로 레지스트리 lookup + 네트워크 추론
+
+### Key Lessons
+1. DB 마이그레이션 없는 런타임 동적 생성은 additive-only 필드 추가에 최적 — 저장 불필요한 파생 필드는 항상 런타임 선호
+2. z.preprocess 단일 지점 변환은 cross-cutting concern에 매우 효과적 — 네트워크 정규화를 스키마 레벨에서 처리
+3. MCP 도구는 core 의존성 최소화(local parser) 후 API 클라이언트로 풍부한 데이터 조회 — 의존성 분리 원칙 유지
+
+### Cost Observations
+- Model mix: ~100% opus (quality profile)
+- Sessions: 1
+- Notable: 71 files, +4,783/-119 lines, 1일 완료 — additive-only 변경이라 기존 코드 수정 최소화
+
+---
+
 ## Milestone: v31.15 — Amount 단위 표준화 및 AI 에이전트 DX 개선
 
 **Shipped:** 2026-03-14

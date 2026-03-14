@@ -1,5 +1,29 @@
 # Project Milestones: WAIaaS
 
+## v31.16 CAIP 표준 식별자 승격 (Shipped: 2026-03-15)
+
+**Phases completed:** 407-411 (5 phases, 8 plans, 46 requirements)
+
+**Key accomplishments:**
+
+- normalizeNetworkInput CAIP-2 dual-accept 확장 — 15개 네트워크 CAIP-2 매핑 + z.preprocess 전 인터페이스 자동 적용
+- CAIP-19 assetId-only 토큰 특정 + 토큰 레지스트리 자동 resolve + 네트워크 자동 추론
+- 모든 응답에 chainId(CAIP-2)/assetId(CAIP-19) 런타임 동적 생성 + connect-info supportedChainIds
+- SDK Caip2ChainId/Caip19AssetId 타입 확장 + TokenInfo union (기존 시그니처 유지)
+- MCP resolve_asset 신규 도구 + send_token/approve_token assetId-only 지원
+- 스킬 파일 4종 CAIP-2/19 사용법 + assetId-only 패턴 문서화
+
+**Stats:**
+
+- 5 phases (407-411), 8 plans, 46 requirements complete
+- 34 commits, 71 files changed, +4,783 / -119 lines
+- Timeline: 1 day (2026-03-14 → 2026-03-15)
+- Git range: docs(v31.16-start) → docs(phase-411)
+- 239 CAIP-related tests pass
+- Audit: PASS (all 46 requirements wired, 0 gaps)
+
+---
+
 ## v31.15 Amount 단위 표준화 및 AI 에이전트 DX 개선 (Shipped: 2026-03-14)
 
 **Phases completed:** 402-406 (5 phases, 9 plans, 33 requirements)

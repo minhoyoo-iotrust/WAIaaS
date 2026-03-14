@@ -1,7 +1,8 @@
 # 마일스톤 m31-16: CAIP 표준 식별자 승격
 
-- **Status:** PLANNED
+- **Status:** SHIPPED
 - **Milestone:** v31.16
+- **Completed:** 2026-03-15
 
 ## 목표
 

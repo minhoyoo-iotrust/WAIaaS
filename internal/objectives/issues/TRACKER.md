@@ -362,6 +362,7 @@
 | 346 | BUG | MEDIUM | Admin UI 로그인 버튼 글자 가독성 불량 — 녹색 배경에 흰색 텍스트 하드코딩 | — | FIXED | 2026-03-14 |
 | 347 | ENHANCEMENT | LOW | Admin UI Danger 버튼 다크 테마 부조화 — 솔리드 빨간 배경이 과도하게 눈에 띔 | — | FIXED | 2026-03-14 |
 | 348 | BUG | HIGH | Admin UI 라우트 전환 시 이전 페이지 DOM 잔류 — 지갑 상세 뷰 중복 렌더링 | — | FIXED | 2026-03-14 |
+| 349 | BUG | HIGH | Credential List API 응답 형식 불일치로 Admin UI에서 추가한 자격증명 미표시 | v31.16 | OPEN | — |
 
 ## Type Legend
 
@@ -373,9 +374,9 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 1
 - **FIXED:** 348
 - **WONTFIX:** 1
-- **Total:** 349
+- **Total:** 350
 - **Archived:** 321 (001–321)
 

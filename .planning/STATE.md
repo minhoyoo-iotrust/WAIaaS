@@ -2,56 +2,55 @@
 gsd_state_version: 1.0
 milestone: v31.16
 milestone_name: CAIP 표준 식별자 승격
-status: executing
-stopped_at: Completed 411-01-PLAN.md
-last_updated: "2026-03-14T15:37:36.409Z"
-last_activity: 2026-03-14 — Phase 408 completed (2 plans)
+status: complete
+stopped_at: Milestone complete
+last_updated: "2026-03-15"
+last_activity: 2026-03-15 — Milestone v31.16 archived
 progress:
   total_phases: 5
   completed_phases: 5
   total_plans: 8
   completed_plans: 8
-  percent: 37
+  percent: 100
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-14)
+See: .planning/PROJECT.md (updated 2026-03-15)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Phase 409 — Response CAIP Enrichment + OpenAPI
+**Current focus:** Milestone v31.16 complete — ready for next milestone
 
 ## Current Position
 
-Phase: 409 of 411 (Response CAIP Enrichment + OpenAPI)
-Plan: 0 of 2 in current phase
-Status: Ready to execute
-Last activity: 2026-03-14 — Phase 408 completed (2 plans)
+Phase: 411 of 411 (Skill Files Sync)
+Plan: 1 of 1 in current phase
+Status: Milestone complete
+Last activity: 2026-03-15 — Milestone v31.16 archived
 
-Progress: [████░░░░░░] 37%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: —
-- Total execution time: 0 hours
+- Total plans completed: 8
+- Total execution time: ~1 day
+- Commits: 34
 
 **By Phase:**
 
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| - | - | - | - |
+| Phase | Plans | Duration | Tasks | Files |
+|-------|-------|----------|-------|-------|
+| Phase 407 P01 | 1 | 2min | 2 | 2 |
+| Phase 408 P01 | 1 | 3min | 2 | 5 |
+| Phase 408 P02 | 1 | 5min | 2 | 5 |
+| Phase 409 P01-02 | 2 | ~41min | 4 | 15 |
+| Phase 410 P01-02 | 2 | ~11min | 4 | 19 |
+| Phase 411 P01 | 1 | 3min | 2 | 4 |
 
 ## Accumulated Context
-| Phase 407 P01 | 2min | 2 tasks | 2 files |
-| Phase 408 P01 | 3min | 2 tasks | 5 files |
-| Phase 408 P02 | 5min | 2 tasks | 5 files |
-| Phase 409 P01-02 | 2450s | 4 tasks | 15 files |
-| Phase 410 P01-02 | 668 | 4 tasks | 19 files |
-| Phase 411 P01 | 180 | 2 tasks | 4 files |
 
 ### Decisions
 
@@ -61,17 +60,8 @@ Progress: [████░░░░░░] 37%
 - D4: additive only (기존 필드 유지, CAIP 필드 병렬 추가)
 - D5: SDK union 타입 확장 (기존 시그니처 유지)
 - D6: MCP resolve_asset 신규 도구 (CAIP-19 메타데이터 조회)
-- [Phase 407]: CAIP-2 lookup first priority in normalizeNetworkInput (before legacy)
-- [Phase 408]: slip44 -> isNative=true, address=null for native asset detection
-- [Phase 408]: TokenInfoBaseSchema all optional, superRefine enforces based on assetId presence
-- [Phase 408]: resolveTokenFromAssetId before humanAmount conversion (decimals dependency)
-- [Phase 408]: User-provided values take precedence over registry (no override)
-- [Phase 409]: enrichment applied at c.json() boundary for explicit control
-- [Phase 409]: staking positions infer network from chain type
-- [Phase 410]: D6: resolve_asset as non-wallet-scoped global MCP tool
-- [Phase 410]: D7: string-based CAIP type aliases (zero runtime overhead)
-- [Phase 410]: D8: Local CAIP-19 parser in MCP (no core dependency)
-- [Phase 411]: CAIP-2 mapping table 8 networks, assetId optional->recommended
+- D7: string-based CAIP type aliases (zero runtime overhead)
+- D8: Local CAIP-19 parser in MCP (no core dependency)
 
 ### Pending Todos
 
@@ -83,6 +73,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-14T15:37:11.350Z
-Stopped at: Completed 411-01-PLAN.md
+Last session: 2026-03-15
+Stopped at: Milestone v31.16 complete
 Resume file: None
