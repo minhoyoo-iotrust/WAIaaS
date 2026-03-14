@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1200">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      width: 1200px;
+      height: 630px;
+      font-family: 'JetBrains Mono', monospace;
+      background: #0c0c0c;
+      color: #b0b0b0;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Scanline overlay */
+    body::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.05) 2px,
+        rgba(0,0,0,0.05) 4px
+      );
+      z-index: 10;
+    }
+
+    .container {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      padding: 40px 60px;
+    }
+
+    /* Terminal window bar */
+    .window-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 40px;
+    }
+    .dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+    }
+    .dot-red { background: #ff5f56; }
+    .dot-yellow { background: #ffbd2e; }
+    .dot-green { background: #27c93f; }
+    .window-title {
+      margin-left: 12px;
+      font-size: 14px;
+      color: #666666;
+      letter-spacing: 0.05em;
+    }
+
+    /* Main content */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .logo {
+      font-size: 72px;
+      font-weight: 800;
+      color: #00ff41;
+      letter-spacing: 0.05em;
+      line-height: 1;
+    }
+
+    .tagline {
+      font-size: 22px;
+      color: #d4d4d4;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+
+    .features {
+      display: flex;
+      gap: 16px;
+      margin-top: 8px;
+    }
+    .feature-tag {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 6px 14px;
+      border: 1px solid;
+    }
+    .ft-chain { border-color: #4488ff; color: #4488ff; }
+    .ft-defi { border-color: #00ff41; color: #00ff41; }
+    .ft-security { border-color: #ff44cc; color: #ff44cc; }
+    .ft-mcp { border-color: #00d4ff; color: #00d4ff; }
+
+    /* Install command */
+    .install-cmd {
+      background: #111111;
+      border: 1px solid #2a2a2a;
+      padding: 14px 28px;
+      font-family: inherit;
+      font-size: 18px;
+      margin-top: 16px;
+    }
+    .install-cmd .prompt { color: #00ff41; }
+    .install-cmd .cmd { color: #d4d4d4; }
+
+    /* Footer */
+    .footer {
+      display: flex;
+      justify-content: flex-end;
+      align-items: flex-end;
+    }
+    .url {
+      font-size: 16px;
+      color: #00d4ff;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="window-bar">
+      <div class="dot dot-red"></div>
+      <div class="dot dot-yellow"></div>
+      <div class="dot dot-green"></div>
+      <span class="window-title">waiaas &mdash; daemon</span>
+    </div>
+
+    <div class="main">
+      <div class="logo">WAIaaS</div>
+      <div class="tagline">Self-hosted Wallet-as-a-Service for AI Agents</div>
+      <div class="features">
+        <span class="feature-tag ft-chain">Multi-Chain</span>
+        <span class="feature-tag ft-defi">13+ DeFi</span>
+        <span class="feature-tag ft-security">3-Layer Security</span>
+        <span class="feature-tag ft-mcp">MCP Built-in</span>
+      </div>
+      <div class="install-cmd">
+        <span class="prompt">$ </span><span class="cmd">npm install -g @waiaas/cli</span>
+      </div>
+    </div>
+
+    <div class="footer">
+      <span class="url">waiaas.ai</span>
+    </div>
+  </div>
+</body>
+</html>

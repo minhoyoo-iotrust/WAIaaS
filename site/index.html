@@ -13,10 +13,15 @@
   <meta property="og:url" content="https://waiaas.ai">
   <meta property="og:site_name" content="WAIaaS">
 
+  <meta property="og:image" content="https://waiaas.ai/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="WAIaaS — Wallet-as-a-Service for AI Agents">
   <meta name="twitter:description" content="Self-hosted daemon for AI agents to securely manage crypto wallets. Multi-chain EVM + Solana, 13+ DeFi protocols, MCP built-in.">
+  <meta name="twitter:image" content="https://waiaas.ai/og-image.png">
 
   <!-- JSON-LD Structured Data -->
   <script type="application/ld+json">
@@ -358,6 +363,8 @@
       background: var(--surface);
       border: 1px solid var(--border);
       padding: 20px;
+      display: flex;
+      flex-direction: column;
     }
     .step-num {
       display: inline-block;
@@ -382,10 +389,165 @@
       font-family: inherit;
       font-size: 0.85rem;
       color: var(--green);
-      margin-top: 8px;
+      margin-top: auto;
+      padding-top: 10px;
       white-space: pre;
     }
     .step code::before { content: "$ "; color: var(--text-dim); }
+
+    /* Connect Agent */
+    .connect-agent { padding: 48px 0; }
+    .connect-agent h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 32px;
+      text-align: center;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .connect-agent h2::before { content: "## "; color: var(--green); }
+    .tab-buttons {
+      display: flex;
+      gap: 0;
+      margin-bottom: 0;
+    }
+    .tab-btn {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-bottom: none;
+      padding: 10px 24px;
+      font-family: inherit;
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active {
+      background: var(--surface);
+      color: var(--green);
+      border-color: var(--border);
+      position: relative;
+    }
+    .tab-btn.active::after {
+      content: "";
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: var(--surface);
+    }
+    .tab-content {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 24px;
+      display: none;
+    }
+    .tab-content.active { display: block; }
+    .tab-content h3 {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--yellow);
+      margin: 20px 0 8px;
+    }
+    .tab-content h3:first-child { margin-top: 0; }
+    .tab-content h3::before { content: "» "; color: var(--text-dim); }
+    .tab-content p {
+      font-size: 0.85rem;
+      color: var(--text);
+      margin-bottom: 10px;
+      line-height: 1.6;
+    }
+    .tab-content .cmd-block {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      font-family: inherit;
+      font-size: 0.85rem;
+      color: var(--green);
+      margin: 8px 0 16px;
+      white-space: pre;
+      overflow-x: auto;
+    }
+    .tab-content .cmd-block::before { content: "$ "; color: var(--text-dim); }
+    .tab-content .json-block {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      font-family: inherit;
+      font-size: 0.8rem;
+      color: var(--text);
+      margin: 8px 0 16px;
+      white-space: pre;
+      overflow-x: auto;
+      line-height: 1.5;
+    }
+    .tab-content .info-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0 16px;
+      font-size: 0.8rem;
+    }
+    .tab-content .info-table th {
+      text-align: left;
+      padding: 6px 10px;
+      border-bottom: 1px solid var(--border);
+      color: var(--cyan);
+      font-weight: 500;
+    }
+    .tab-content .info-table td {
+      padding: 5px 10px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+    .tab-content .info-table td:first-child {
+      color: var(--text-bright);
+      white-space: nowrap;
+    }
+    .compare-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 0.8rem;
+    }
+    .compare-table th {
+      text-align: left;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      color: var(--cyan);
+      font-weight: 500;
+    }
+    .compare-table td {
+      padding: 6px 10px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+    .compare-table td:first-child { color: var(--text-bright); }
+    .client-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8px 0 16px;
+      font-size: 0.8rem;
+    }
+    .client-table th {
+      text-align: left;
+      padding: 6px 10px;
+      border-bottom: 1px solid var(--border);
+      color: var(--cyan);
+      font-weight: 500;
+    }
+    .client-table td {
+      padding: 5px 10px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+    .client-table td:first-child {
+      color: var(--text-bright);
+      white-space: nowrap;
+    }
 
     /* Links */
     .resources { padding: 48px 0; }
@@ -655,6 +817,116 @@
     </div>
   </section>
 
+  <section class="connect-agent">
+    <div class="container">
+      <h2>Connect Your Agent</h2>
+      <div class="tab-buttons">
+        <button class="tab-btn active" onclick="switchTab('openclaw')">OpenClaw</button>
+        <button class="tab-btn" onclick="switchTab('claude-code')">Claude Code</button>
+        <button class="tab-btn" onclick="switchTab('mcp')">MCP</button>
+      </div>
+
+      <!-- OpenClaw Tab -->
+      <div id="tab-openclaw" class="tab-content active">
+        <h3>Step 1: Install Skills</h3>
+        <div class="cmd-block">npx @waiaas/skills openclaw</div>
+
+        <h3>Step 2: Configure</h3>
+        <p>Add WAIaaS credentials to <code style="color:var(--cyan)">~/.openclaw/openclaw.json</code>:</p>
+        <div class="json-block">{
+  "skills": {
+    "entries": {
+      "waiaas-quickstart": {
+        "env": {
+          "WAIAAS_BASE_URL": "http://localhost:3100",
+          "WAIAAS_SESSION_TOKEN": "&lt;your-session-token&gt;"
+        }
+      }
+    }
+  }
+}</div>
+
+        <h3>Step 3: Verify</h3>
+        <p>Ask OpenClaw:</p>
+        <div class="cmd-block" style="color:var(--text-bright)">"Check my WAIaaS wallet balance"</div>
+
+        <h3>Available Skills</h3>
+        <table class="info-table">
+          <tr><th>Skill</th><th>Description</th></tr>
+          <tr><td>waiaas-setup</td><td>Zero-state daemon setup: install, initialize, start</td></tr>
+          <tr><td>waiaas-quickstart</td><td>End-to-end quickset: wallet, session, balance, transfer</td></tr>
+          <tr><td>waiaas-wallet</td><td>Wallet CRUD, assets, sessions, token registry</td></tr>
+          <tr><td>waiaas-transactions</td><td>All 9 transaction types</td></tr>
+          <tr><td>waiaas-policies</td><td>Policy engine: 12 policy types</td></tr>
+          <tr><td>waiaas-admin</td><td>Admin API: status, kill switch, notifications</td></tr>
+          <tr><td>waiaas-actions</td><td>DeFi actions through the pipeline</td></tr>
+          <tr><td>waiaas-x402</td><td>x402 auto-payment protocol</td></tr>
+        </table>
+      </div>
+
+      <!-- Claude Code Tab -->
+      <div id="tab-claude-code" class="tab-content">
+        <h3>Step 1: Install Skills</h3>
+        <div class="cmd-block">npx @waiaas/skills claude-code</div>
+        <p>Installs 8 skill files to <code style="color:var(--cyan)">.claude/skills/</code> in your project directory.</p>
+
+        <h3>Step 2: Configure</h3>
+        <p>Add WAIaaS credentials to <code style="color:var(--cyan)">.claude/settings.json</code>:</p>
+        <div class="json-block">{
+  "env": {
+    "WAIAAS_BASE_URL": "http://localhost:3100",
+    "WAIAAS_SESSION_TOKEN": "&lt;your-session-token&gt;"
+  }
+}</div>
+
+        <h3>Step 3: Verify</h3>
+        <p>Ask Claude Code:</p>
+        <div class="cmd-block" style="color:var(--text-bright)">"Check my WAIaaS wallet balance"</div>
+        <p>You can also use slash commands like <code style="color:var(--cyan)">/waiaas-quickstart</code>, <code style="color:var(--cyan)">/waiaas-wallet</code>, or just ask naturally.</p>
+      </div>
+
+      <!-- MCP Tab -->
+      <div id="tab-mcp" class="tab-content">
+        <h3>Step 1: Setup MCP Server</h3>
+        <div class="cmd-block">waiaas mcp setup</div>
+
+        <h3>Step 2: Add to Your Client</h3>
+        <p>Copy the generated <code style="color:var(--cyan)">mcpServers</code> config to your client's settings file:</p>
+        <div class="json-block">{
+  "mcpServers": {
+    "waiaas-my-wallet": {
+      "command": "npx",
+      "args": ["@waiaas/mcp"],
+      "env": {
+        "WAIAAS_DATA_DIR": "~/.waiaas",
+        "WAIAAS_BASE_URL": "http://localhost:3100",
+        "WAIAAS_WALLET_ID": "&lt;wallet-id&gt;"
+      }
+    }
+  }
+}</div>
+        <table class="client-table">
+          <tr><th>Client</th><th>Settings File</th></tr>
+          <tr><td>Claude Code</td><td><code style="color:var(--text)">.claude/settings.json</code> (project) or <code style="color:var(--text)">~/.claude/settings.json</code> (global)</td></tr>
+          <tr><td>Cursor</td><td><code style="color:var(--text)">.cursor/mcp.json</code></td></tr>
+          <tr><td>Claude Desktop</td><td><code style="color:var(--text)">~/Library/Application Support/Claude/claude_desktop_config.json</code></td></tr>
+        </table>
+
+        <h3>Step 3: Auto-Discovery</h3>
+        <p>The MCP server includes a <code style="color:var(--cyan)">connect_info</code> tool. Call it first to discover wallets, policies, and all 18 MCP tools.</p>
+
+        <h3>Skills vs MCP</h3>
+        <table class="compare-table">
+          <tr><th></th><th>Skills</th><th>MCP</th></tr>
+          <tr><td>Setup</td><td><code style="color:var(--text)">npx @waiaas/skills &lt;client&gt;</code></td><td><code style="color:var(--text)">waiaas mcp setup</code></td></tr>
+          <tr><td>How it works</td><td>Agent reads docs, uses curl</td><td>Agent calls MCP tools directly</td></tr>
+          <tr><td>Auth</td><td>Manual headers per request</td><td>Automatic (token file)</td></tr>
+          <tr><td>Best for</td><td>Learning the API, custom flows</td><td>Production, automated agents</td></tr>
+        </table>
+      </div>
+    </div>
+  </section>
+
   <section class="resources">
     <div class="container">
       <h2>Resources</h2>
@@ -717,5 +989,13 @@
     </div>
   </footer>
 
+  <script>
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(function(btn) { btn.classList.remove('active'); });
+      document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+      document.getElementById('tab-' + tab).classList.add('active');
+      document.querySelector('[onclick="switchTab(\'' + tab + '\')"]').classList.add('active');
+    }
+  </script>
 </body>
 </html>
