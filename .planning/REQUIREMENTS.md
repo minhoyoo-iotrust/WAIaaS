@@ -99,13 +99,58 @@ Requirements for CAIP-2/CAIP-19 standard identifier promotion across all interfa
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (populated during roadmap creation) | | |
+| NET-01 | Phase 407 | Pending |
+| NET-02 | Phase 407 | Pending |
+| NET-03 | Phase 407 | Pending |
+| NET-04 | Phase 407 | Pending |
+| NET-05 | Phase 407 | Pending |
+| AST-01 | Phase 408 | Pending |
+| AST-02 | Phase 408 | Pending |
+| AST-03 | Phase 408 | Pending |
+| AST-04 | Phase 408 | Pending |
+| AST-05 | Phase 408 | Pending |
+| AST-06 | Phase 408 | Pending |
+| AST-07 | Phase 408 | Pending |
+| RSP-01 | Phase 409 | Pending |
+| RSP-02 | Phase 409 | Pending |
+| RSP-03 | Phase 409 | Pending |
+| RSP-04 | Phase 409 | Pending |
+| RSP-05 | Phase 409 | Pending |
+| RSP-06 | Phase 409 | Pending |
+| SDK-01 | Phase 410 | Pending |
+| SDK-02 | Phase 410 | Pending |
+| SDK-03 | Phase 410 | Pending |
+| SDK-04 | Phase 410 | Pending |
+| SDK-05 | Phase 410 | Pending |
+| MCP-01 | Phase 410 | Pending |
+| MCP-02 | Phase 410 | Pending |
+| MCP-03 | Phase 410 | Pending |
+| MCP-04 | Phase 410 | Pending |
+| MCP-05 | Phase 410 | Pending |
+| MCP-06 | Phase 410 | Pending |
+| DOC-01 | Phase 409 | Pending |
+| DOC-02 | Phase 409 | Pending |
+| DOC-03 | Phase 409 | Pending |
+| DOC-04 | Phase 409 | Pending |
+| DOC-05 | Phase 411 | Pending |
+| DOC-06 | Phase 411 | Pending |
+| DOC-07 | Phase 411 | Pending |
+| TST-01 | Phase 407 | Pending |
+| TST-02 | Phase 407 | Pending |
+| TST-03 | Phase 408 | Pending |
+| TST-04 | Phase 408 | Pending |
+| TST-05 | Phase 408 | Pending |
+| TST-06 | Phase 408 | Pending |
+| TST-07 | Phase 409 | Pending |
+| TST-08 | Phase 410 | Pending |
+| TST-09 | Phase 410 | Pending |
+| TST-10 | Phase 410 | Pending |
 
 **Coverage:**
-- v31.16 requirements: 43 total
-- Mapped to phases: 0
-- Unmapped: 43
+- v31.16 requirements: 46 total
+- Mapped to phases: 46
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-14*
-*Last updated: 2026-03-14 after initial definition*
+*Last updated: 2026-03-14 after roadmap creation*
