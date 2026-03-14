@@ -18,19 +18,19 @@ Requirements for v31.15. Each maps to roadmap phases.
 
 ### MCP Typed Schema
 
-- [ ] **MCP-01**: GET /v1/actions/providers 메타데이터 API에 각 action의 inputSchema JSON 필드 추가 (zodToJsonSchema 변환)
-- [ ] **MCP-02**: MCP tool 등록 시 provider 메타데이터의 typed Zod schema 적용 (z.record(z.unknown()) 대체)
-- [ ] **MCP-03**: schema 변환 불가 시 기존 z.record(z.unknown()) fallback 유지
+- [x] **MCP-01**: GET /v1/actions/providers 메타데이터 API에 각 action의 inputSchema JSON 필드 추가 (zodToJsonSchema 변환)
+- [x] **MCP-02**: MCP tool 등록 시 provider 메타데이터의 typed Zod schema 적용 (z.record(z.unknown()) 대체)
+- [x] **MCP-03**: schema 변환 불가 시 기존 z.record(z.unknown()) fallback 유지
 - [x] **MCP-04**: MCP tool description에 amount 파라미터 단위 예시 포함
 - [x] **MCP-05**: 빌트인 MCP 도구(send-token, transfer-nft 등) amount description에 단위 명시
 
 ### Response Enrichment
 
-- [ ] **RESP-01**: TxDetailResponseSchema에 amountFormatted: string | null, decimals: number | null, symbol: string | null 필드 추가
-- [ ] **RESP-02**: Action Provider 실행 결과 data에 amountFormatted/decimals/symbol 추가 (smallest unit 사용 10개 provider, CLOB 예외 제외)
-- [ ] **RESP-03**: 잔액 조회 API(GET /v1/wallets/:id/balance)에 balanceFormatted 추가
-- [ ] **RESP-04**: native token은 chain config에서, ERC-20/SPL은 token registry에서 decimals/symbol 조회
-- [ ] **RESP-05**: amountFormatted/decimals/symbol은 런타임 계산 필드 (DB 저장 없음, decimals 불명 시 null)
+- [x] **RESP-01**: TxDetailResponseSchema에 amountFormatted: string | null, decimals: number | null, symbol: string | null 필드 추가
+- [x] **RESP-02**: Action Provider 실행 결과 data에 amountFormatted/decimals/symbol 추가 (smallest unit 사용 10개 provider, CLOB 예외 제외)
+- [x] **RESP-03**: 잔액 조회 API(GET /v1/wallets/:id/balance)에 balanceFormatted 추가
+- [x] **RESP-04**: native token은 chain config에서, ERC-20/SPL은 token registry에서 decimals/symbol 조회
+- [x] **RESP-05**: amountFormatted/decimals/symbol은 런타임 계산 필드 (DB 저장 없음, decimals 불명 시 null)
 
 ### humanAmount Parameter
 
@@ -51,8 +51,8 @@ Requirements for v31.15. Each maps to roadmap phases.
 
 - [x] **TEST-01**: 각 Action Provider의 단위 통일 테스트 — smallest unit 입력 → 정상 실행 확인
 - [x] **TEST-02**: 하위 호환성 테스트 — human-readable 입력(소수점) 시 자동 변환 + deprecation 경고 확인
-- [ ] **TEST-03**: MCP typed schema 테스트 — 동적 도구 등록 시 올바른 schema 생성 확인
-- [ ] **TEST-04**: amountFormatted 테스트 — 다양한 decimals(6, 8, 9, 18)에 대해 올바른 포맷 확인
+- [x] **TEST-03**: MCP typed schema 테스트 — 동적 도구 등록 시 올바른 schema 생성 확인
+- [x] **TEST-04**: amountFormatted 테스트 — 다양한 decimals(6, 8, 9, 18)에 대해 올바른 포맷 확인
 - [ ] **TEST-05**: humanAmount XOR 검증 + decimals 조회 + 변환 정확성 테스트
 - [ ] **TEST-06**: humanAmount + 미등록 토큰 에러 테스트
 - [x] **TEST-07**: max 키워드 호환성 테스트 (aave/kamino repay/withdraw)
@@ -87,16 +87,16 @@ Deferred to future release. Tracked but not in current roadmap.
 | UNIT-04 | Phase 402 | Complete |
 | UNIT-05 | Phase 403 | Complete |
 | UNIT-06 | Phase 402 | Complete |
-| MCP-01 | Phase 404 | Pending |
-| MCP-02 | Phase 404 | Pending |
-| MCP-03 | Phase 404 | Pending |
+| MCP-01 | Phase 404 | Complete |
+| MCP-02 | Phase 404 | Complete |
+| MCP-03 | Phase 404 | Complete |
 | MCP-04 | Phase 402 | Complete |
 | MCP-05 | Phase 402 | Complete |
-| RESP-01 | Phase 404 | Pending |
-| RESP-02 | Phase 404 | Pending |
-| RESP-03 | Phase 404 | Pending |
-| RESP-04 | Phase 404 | Pending |
-| RESP-05 | Phase 404 | Pending |
+| RESP-01 | Phase 404 | Complete |
+| RESP-02 | Phase 404 | Complete |
+| RESP-03 | Phase 404 | Complete |
+| RESP-04 | Phase 404 | Complete |
+| RESP-05 | Phase 404 | Complete |
 | HAMNT-01 | Phase 405 | Pending |
 | HAMNT-02 | Phase 405 | Pending |
 | HAMNT-03 | Phase 405 | Pending |
@@ -108,8 +108,8 @@ Deferred to future release. Tracked but not in current roadmap.
 | SDK-04 | Phase 406 | Pending |
 | TEST-01 | Phase 403 | Complete |
 | TEST-02 | Phase 403 | Complete |
-| TEST-03 | Phase 404 | Pending |
-| TEST-04 | Phase 404 | Pending |
+| TEST-03 | Phase 404 | Complete |
+| TEST-04 | Phase 404 | Complete |
 | TEST-05 | Phase 405 | Pending |
 | TEST-06 | Phase 405 | Pending |
 | TEST-07 | Phase 403 | Complete |

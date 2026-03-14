@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v31.15
 milestone_name: Amount 단위 표준화 및 AI 에이전트 DX 개선
-status: planning
-stopped_at: Completed 403-02-PLAN.md
-last_updated: "2026-03-14T07:13:03.479Z"
-last_activity: 2026-03-14 — Phase 403 completed (2/2 plans)
+status: executing
+stopped_at: Completed 404-02-PLAN.md
+last_updated: "2026-03-14T07:28:00.000Z"
+last_activity: 2026-03-14 — Phase 404 completed (2/2 plans)
 progress:
   total_phases: 5
-  completed_phases: 2
-  total_plans: 3
-  completed_plans: 3
-  percent: 11
+  completed_phases: 3
+  total_plans: 5
+  completed_plans: 5
+  percent: 33
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-14)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Phase 404 — Typed MCP Schemas + Response Enrichment
+**Current focus:** Phase 405 — humanAmount Parameter
 
 ## Current Position
 
-Phase: 404 of 406 (Typed MCP Schemas + Response Enrichment)
+Phase: 405 of 406 (humanAmount Parameter)
 Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-03-14 — Phase 403 completed (2/2 plans)
+Status: Ready to execute
+Last activity: 2026-03-14 — Phase 404 completed (2/2 plans)
 
-Progress: [#░░░░░░░░░] 11%
+Progress: [###░░░░░░░] 33%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
+- Total plans completed: 5
 - Average duration: 6min
-- Total execution time: 0.1 hours
+- Total execution time: 0.4 hours
 
 **By Phase:**
 
@@ -45,6 +45,7 @@ Progress: [#░░░░░░░░░] 11%
 |-------|-------|-------|----------|
 | 402 | 1 | 6min | 6min |
 | Phase 403 P01+02 | 7min | 4 tasks | 12 files |
+| Phase 404 P01+02 | 9min | 4 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -53,6 +54,10 @@ Progress: [#░░░░░░░░░] 11%
 - [402] Zod .describe() pattern: smallest-unit providers include unit+example, CLOB providers use exchange-native+NOT smallest units, legacy providers include migration notice
 - [Phase 403]: migrateAmount uses string.includes(.) for decimal detection -- covers all legacy patterns including .5
 - [Phase 403]: Jito uses migrateAmount(amount, 9) replacing parseSolAmount; Kamino uses 6 decimals for USDC-centric market
+- [Phase 404]: zod-to-json-schema with target openApi3 for provider inputSchema conversion
+- [Phase 404]: MCP typed params flattened into individual fields, handler re-wraps for REST API backward compat
+- [Phase 404]: amountDecimals/amountSymbol field names to avoid collision with existing balance decimals/symbol
+- [Phase 404]: Only TRANSFER type gets formatted amounts; CONTRACT_CALL/APPROVE/BATCH return null
 
 ### Pending Todos
 
@@ -64,6 +69,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-14T07:12:13.204Z
-Stopped at: Completed 403-02-PLAN.md
+Last session: 2026-03-14T07:28:00.000Z
+Stopped at: Completed 404-02-PLAN.md
 Resume file: None
