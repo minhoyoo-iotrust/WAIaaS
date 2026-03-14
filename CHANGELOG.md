@@ -1,5 +1,32 @@
 # Changelog
 
+## [2.11.0-rc.6](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.5...v2.11.0-rc.6) (2026-03-14)
+
+
+### Features
+
+* **402-01:** add unit description to all provider schema amount fields ([b1869b7](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b1869b78c81c8fbbea6e19657fd81a03681b01e4))
+* **402-01:** harden MCP builtin tool amount descriptions with unit info ([e0eb5db](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e0eb5db939933e784f6cf38f0e773823dc66f0fc))
+* **403-01:** add migrateAmount() shared helper for backward-compatible unit migration ([fee9a52](https://github.com/minhoyoo-iotrust/WAIaaS/commit/fee9a5207929065c083f43493c80b064b9361b70))
+* **403-01:** migrate Aave V3 provider to smallest-unit input with migrateAmount() ([1af3761](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1af37611a7c28b39d56d4b45b80854dc7823d171))
+* **403-02:** migrate Kamino provider to smallest-unit input with migrateAmount() ([0d522d2](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0d522d2e9e6c0bf369001a1cc5524b9adbf97237))
+* **403-02:** migrate Lido + Jito providers to smallest-unit input with migrateAmount() ([dd26791](https://github.com/minhoyoo-iotrust/WAIaaS/commit/dd26791a9e6ad3cb2e4d023143cd731ba814e0dc))
+* **404-01:** add inputSchema JSON Schema to GET /v1/actions/providers ([b18af24](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b18af2427c0e9d0ee7e8f7857dd58f49ec978019))
+* **404-01:** add typed MCP schema registration with jsonSchemaToZodParams ([08fde1e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/08fde1eb5206f05be1513a5e026755c059cfcc38))
+* **404-02:** add amountFormatted/decimals/symbol to transaction responses ([cad87cc](https://github.com/minhoyoo-iotrust/WAIaaS/commit/cad87cc1044219ca909af7f09c4c620a38660858))
+* **404-02:** add balanceFormatted to balance and assets responses ([1b7631e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1b7631ee59c78e09cbd43a0e3f3e1d851333bbdd))
+* **405-01:** add humanAmount XOR parameter for TRANSFER/TOKEN_TRANSFER/APPROVE ([b0a264e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b0a264ee08cf164b26cb0c5a5a825f5a585aeca1))
+* **405-02:** add humanAmount to 10 action provider schemas ([89f6c64](https://github.com/minhoyoo-iotrust/WAIaaS/commit/89f6c64d76e9f5043782e327a4cfa99c2230ce52))
+* **406-01:** add SDK humanAmount type and XOR pre-validation ([4353113](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4353113edddafe0ce00d31336bf21b2dd757c3b9))
+* **site:** add canonical, keywords, FAQ and HowTo JSON-LD for SEO/AEO ([58a0acf](https://github.com/minhoyoo-iotrust/WAIaaS/commit/58a0acfca6599472ed3ff631708b81c4049eb544))
+
+
+### Bug Fixes
+
+* **403-providers:** add zero-amount validation after migrateAmount() ([5d0d810](https://github.com/minhoyoo-iotrust/WAIaaS/commit/5d0d81040c62476049fa07a14a4b8b052d14545a))
+* **404-mcp:** resolve 10 typecheck errors in MCP package ([d8bf6f1](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d8bf6f15eccf49596f6ac34bfa313b439f55b043))
+* **actions:** pass required constructor args in CLOB humanAmount tests ([dafbe06](https://github.com/minhoyoo-iotrust/WAIaaS/commit/dafbe063384406107dede4b36c3032f988bc388b))
+
 ## [2.11.0-rc.5](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.4...v2.11.0-rc.5) (2026-03-14)
 
 
