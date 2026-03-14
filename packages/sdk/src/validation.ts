@@ -53,7 +53,7 @@ export function validateSendToken(params: unknown): void {
     case 'APPROVE':
       validateNonEmptyString(p, 'spender');
       validateTokenInfo(p);
-      validateAmount(p);
+      validateAmountOrHumanAmount(p);
       break;
 
     case 'BATCH':
@@ -66,16 +66,16 @@ export function validateSendToken(params: unknown): void {
 
     case 'TOKEN_TRANSFER':
       validateNonEmptyString(p, 'to');
-      validateAmount(p);
+      validateAmountOrHumanAmount(p);
       validateTokenInfo(p);
       validateMemo(p);
       break;
 
     case 'TRANSFER':
     default:
-      // Legacy / TRANSFER: to + amount required
+      // Legacy / TRANSFER: to + amount or humanAmount required
       validateNonEmptyString(p, 'to');
-      validateAmount(p);
+      validateAmountOrHumanAmount(p);
       validateMemo(p);
       break;
   }
@@ -96,15 +96,57 @@ function validateNonEmptyString(p: Record<string, unknown>, field: string): void
   }
 }
 
-function validateAmount(p: Record<string, unknown>): void {
-  if (typeof p['amount'] !== 'string' || !/^\d+$/.test(p['amount'])) {
+/**
+ * Validate amount XOR humanAmount.
+ * - Both present: error (XOR violation)
+ * - amount present: must be numeric digit string
+ * - humanAmount present: must be non-empty string (server validates decimals conversion)
+ * - Neither present: error
+ */
+function validateAmountOrHumanAmount(p: Record<string, unknown>): void {
+  const hasAmount = p['amount'] !== undefined;
+  const hasHumanAmount = p['humanAmount'] !== undefined;
+
+  if (hasAmount && hasHumanAmount) {
     throw new WAIaaSError({
       code: 'VALIDATION_ERROR',
-      message: 'sendToken: "amount" must be a numeric string (lamports/wei)',
+      message: 'sendToken: "amount" and "humanAmount" are mutually exclusive -- provide one, not both',
       status: 0,
       retryable: false,
     });
   }
+
+  if (hasAmount) {
+    if (typeof p['amount'] !== 'string' || !/^\d+$/.test(p['amount'])) {
+      throw new WAIaaSError({
+        code: 'VALIDATION_ERROR',
+        message: 'sendToken: "amount" must be a numeric string (lamports/wei)',
+        status: 0,
+        retryable: false,
+      });
+    }
+    return;
+  }
+
+  if (hasHumanAmount) {
+    if (typeof p['humanAmount'] !== 'string' || (p['humanAmount'] as string).length === 0) {
+      throw new WAIaaSError({
+        code: 'VALIDATION_ERROR',
+        message: 'sendToken: "humanAmount" must be a non-empty string',
+        status: 0,
+        retryable: false,
+      });
+    }
+    return;
+  }
+
+  // Neither present
+  throw new WAIaaSError({
+    code: 'VALIDATION_ERROR',
+    message: 'sendToken: "amount" or "humanAmount" is required',
+    status: 0,
+    retryable: false,
+  });
 }
 
 function validateMemo(p: Record<string, unknown>): void {

@@ -241,6 +241,82 @@ describe('validateSendToken', () => {
     expect(err.status).toBe(0);
     expect(err.retryable).toBe(false);
   });
+
+  // =========================================================================
+  // humanAmount XOR amount validation
+  // =========================================================================
+
+  it('should pass TRANSFER with humanAmount instead of amount', () => {
+    expect(() =>
+      validateSendToken({ to: 'RecipientAddr', humanAmount: '1.5' }),
+    ).not.toThrow();
+  });
+
+  it('should pass TOKEN_TRANSFER with humanAmount', () => {
+    expect(() =>
+      validateSendToken({
+        to: 'addr',
+        humanAmount: '1.5',
+        type: 'TOKEN_TRANSFER',
+        token: { address: 'mint1', decimals: 6, symbol: 'USDC' },
+      }),
+    ).not.toThrow();
+  });
+
+  it('should pass APPROVE with humanAmount', () => {
+    expect(() =>
+      validateSendToken({
+        type: 'APPROVE',
+        spender: '0xSpender',
+        humanAmount: '1.5',
+        token: { address: 'mint1', decimals: 6, symbol: 'USDC' },
+      }),
+    ).not.toThrow();
+  });
+
+  it('should throw VALIDATION_ERROR when both amount and humanAmount are present', () => {
+    const err = getValidationError({
+      to: 'addr',
+      amount: '1000',
+      humanAmount: '1.5',
+    });
+    expect(err.code).toBe('VALIDATION_ERROR');
+    expect(err.message).toContain('amount');
+    expect(err.message).toContain('humanAmount');
+  });
+
+  it('should throw VALIDATION_ERROR when neither amount nor humanAmount for TRANSFER', () => {
+    const err = getValidationError({ to: 'addr' });
+    expect(err.code).toBe('VALIDATION_ERROR');
+    expect(err.message).toContain('amount');
+  });
+
+  it('should throw VALIDATION_ERROR when humanAmount is empty string', () => {
+    const err = getValidationError({ to: 'addr', humanAmount: '' });
+    expect(err.code).toBe('VALIDATION_ERROR');
+    expect(err.message).toContain('humanAmount');
+  });
+
+  it('should pass validation when humanAmount is non-numeric (server validates decimals)', () => {
+    expect(() =>
+      validateSendToken({ to: 'addr', humanAmount: 'abc' }),
+    ).not.toThrow();
+  });
+
+  it('should pass CONTRACT_CALL without amount or humanAmount', () => {
+    expect(() =>
+      validateSendToken({ type: 'CONTRACT_CALL', to: '0xContractAddress' }),
+    ).not.toThrow();
+  });
+
+  it('should pass BATCH without amount or humanAmount', () => {
+    expect(() =>
+      validateSendToken({
+        type: 'BATCH',
+        instructions: [{ op: 'a' }, { op: 'b' }],
+      }),
+    ).not.toThrow();
+  });
 });
 
 // ---------------------------------------------------------------------------

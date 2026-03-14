@@ -173,6 +173,8 @@ export interface GasCondition {
 export interface SendTokenParams {
   to?: string;
   amount?: string;
+  /** Human-readable amount (e.g., '1.5' for 1.5 ETH). Mutually exclusive with amount -- server converts using token decimals. */
+  humanAmount?: string;
   memo?: string;
   type?: 'TRANSFER' | 'TOKEN_TRANSFER' | 'CONTRACT_CALL' | 'APPROVE' | 'BATCH';
   token?: TokenInfo;
