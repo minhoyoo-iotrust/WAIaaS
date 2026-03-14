@@ -1,5 +1,37 @@
 # Changelog
 
+## [2.11.0-rc.3](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.2...v2.11.0-rc.3) (2026-03-13)
+
+
+### Features
+
+* **398-01:** add CONTRACT_DEPLOY as 9th transaction type with Zod SSoT ([6097302](https://github.com/minhoyoo-iotrust/WAIaaS/commit/6097302529ccaac99a1ad06fda8c364fd069bf02))
+* **398-01:** integrate CONTRACT_DEPLOY into pipeline and policy engine ([e084c73](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e084c7316e478f6bca980c5e794f4350b0743940))
+* **398-02:** add DB v58 migration and EVM chainId reverse lookup ([badf858](https://github.com/minhoyoo-iotrust/WAIaaS/commit/badf858ea3b550d6239cc6a690661a22ab84895a))
+* **398-02:** set keepAliveTimeout 600s for RPC proxy long-poll support ([d3b9547](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d3b9547ffd3421ce9f689b3ae1182ce8194707ec))
+* **399-01:** add JSON-RPC 2.0 protocol utilities ([bfdc761](https://github.com/minhoyoo-iotrust/WAIaaS/commit/bfdc761c53415bcd51582c0b45c6091351a50285))
+* **399-01:** add RpcTransactionAdapter and hex utilities ([7ed36d0](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7ed36d0662494cd4f6579f7ba67f974a480175b0))
+* **399-02:** add CompletionWaiter and NonceTracker ([3642315](https://github.com/minhoyoo-iotrust/WAIaaS/commit/3642315d656d4a358293513003bc371a004112df))
+* **399-02:** add SyncPipelineExecutor for RPC proxy ([e60a677](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e60a6772a64473576dbd670428b1ef176ed2f5d5))
+* **399-03:** add RpcMethodHandlers and barrel export ([0dc82c6](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0dc82c639af8a94abefae2e9d8ec875538a09275))
+* **399-03:** add RpcPassthrough for read method proxying ([04f2885](https://github.com/minhoyoo-iotrust/WAIaaS/commit/04f28852c5c1250bf530e133508c9a529ccdb228))
+* **400-01:** add RpcDispatcher, Hono route, and sessionAuth for EVM RPC proxy ([c15e82e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c15e82ec12a7911aeb7dc5705df2e76e5dc3984e))
+* **400-02:** add long-poll async timeout formatting, from validation, and batch tests ([557aa81](https://github.com/minhoyoo-iotrust/WAIaaS/commit/557aa817eb47d5e96223d104adddd1a3994c108f))
+* **401-01:** add Admin UI RPC Proxy page with settings and audit log ([ad7f58f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ad7f58fc0dbdd276039e2e0c29d10acd8aaf5997))
+* **401-01:** register 7 rpc_proxy.* settings in SettingsService SSoT ([66beea2](https://github.com/minhoyoo-iotrust/WAIaaS/commit/66beea2706223ffbc786fe5e29a1eead8f2bef3c))
+* **401-02:** add MCP get_rpc_proxy_url tool, SDK getRpcProxyUrl(), connect-info rpcProxy field ([02bd5fb](https://github.com/minhoyoo-iotrust/WAIaaS/commit/02bd5fb70ba2fd7cc10e98075f86f713360289bb))
+* add GitHub Pages landing site with AEO support ([29e51a0](https://github.com/minhoyoo-iotrust/WAIaaS/commit/29e51a0493e8ec8d0bc4d5a1b71e5004e4176cae))
+
+
+### Bug Fixes
+
+* add rpc-proxy route to E2E coverage map ([9485b6d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/9485b6d643f97f772ed42f9264089635e5295a08))
+* fix rpc-proxy admin page type errors and add comprehensive tests ([bf94051](https://github.com/minhoyoo-iotrust/WAIaaS/commit/bf94051055134eca5a1fc0fcc3669c47cdba91d7))
+* resolve typecheck errors in rpc-proxy and daemon modules ([82decc1](https://github.com/minhoyoo-iotrust/WAIaaS/commit/82decc1693fbc409554278c77bdcab1e9ae36469))
+* resolve unused variable lint errors in rpc-proxy files ([0a2f55a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0a2f55a72480d044b27cf5f4506834ef610b5559))
+* update MCP tool count to 58 after adding get_rpc_proxy_url ([2f1f6de](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2f1f6de60a74b4edd9e95c41d105ffbbd9eecbe4))
+* update test expectations for DB v58 and rpc_proxy settings ([df734da](https://github.com/minhoyoo-iotrust/WAIaaS/commit/df734da441f1ce1a78b473f1ede0a3249db5f24a))
+
 ## [2.11.0-rc.2](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.1...v2.11.0-rc.2) (2026-03-12)
 
 
