@@ -15,8 +15,8 @@ Requirements for this milestone. Each maps to roadmap phases.
 - [x] **PIPE-04**: pnpm run generate:api-types 명령으로 추출+생성이 한 번에 실행된다
 - [x] **PIPE-05**: Turbo build pipeline에서 admin 빌드 전에 타입 생성이 실행된다
 - [x] **PIPE-06**: CI에서 types.generated.ts freshness를 검증하여 stale 타입을 차단한다
-- [ ] **PIPE-07**: openapi-fetch 기반 타입 안전 API 클라이언트가 경로와 응답 타입을 자동 연결한다
-- [ ] **PIPE-08**: 타입 안전 클라이언트가 X-Master-Password 헤더 주입과 401 로그아웃을 미들웨어로 처리한다
+- [x] **PIPE-07**: openapi-fetch 기반 타입 안전 API 클라이언트가 경로와 응답 타입을 자동 연결한다
+- [x] **PIPE-08**: 타입 안전 클라이언트가 X-Master-Password 헤더 주입과 401 로그아웃을 미들웨어로 처리한다
 
 ### Migration (Admin UI 타입 전환)
 
@@ -26,7 +26,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 - [ ] **MIG-04**: CRED_TYPES 하드코딩이 @waiaas/shared re-export로 교체된다
 - [ ] **MIG-05**: 정책 타입 하드코딩이 @waiaas/shared re-export 또는 생성 타입으로 교체된다
 - [ ] **MIG-06**: 에러 코드 매핑 하드코딩이 @waiaas/shared re-export로 교체된다
-- [ ] **MIG-07**: Admin UI 테스트의 mock 객체가 satisfies GeneratedType으로 구조 검증된다
+- [x] **MIG-07**: Admin UI 테스트의 mock 객체가 satisfies GeneratedType으로 구조 검증된다
 - [ ] **MIG-08**: 백엔드 응답 스키마 변경 시 Admin UI 빌드가 실패하여 불일치를 사전 감지한다
 
 ### API (백엔드 API 확장)
@@ -65,15 +65,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PIPE-04 | Phase 412 | Complete |
 | PIPE-05 | Phase 412 | Complete |
 | PIPE-06 | Phase 412 | Complete |
-| PIPE-07 | Phase 413 | Pending |
-| PIPE-08 | Phase 413 | Pending |
+| PIPE-07 | Phase 413 | Complete |
+| PIPE-08 | Phase 413 | Complete |
 | MIG-01 | Phase 414 | Pending |
 | MIG-02 | Phase 414 | Pending |
 | MIG-03 | Phase 415 | Pending |
 | MIG-04 | Phase 415 | Pending |
 | MIG-05 | Phase 415 | Pending |
 | MIG-06 | Phase 415 | Pending |
-| MIG-07 | Phase 413 | Pending |
+| MIG-07 | Phase 413 | Complete |
 | MIG-08 | Phase 414 | Pending |
 | API-01 | Phase 415 | Pending |
 | API-02 | Phase 415 | Pending |
