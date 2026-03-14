@@ -53,7 +53,7 @@
 
 - [x] **Phase 407: CAIP-2 Network Input** - normalizeNetworkInput CAIP-2 dual-accept 확장 + 전 인터페이스 자동 적용 (completed 2026-03-14)
 - [x] **Phase 408: CAIP-19 Asset Input + Resolve** - assetId-only 토큰 특정 + 레지스트리 자동 resolve + 네트워크 추론 (completed 2026-03-14)
-- [ ] **Phase 409: Response CAIP Enrichment + OpenAPI** - 모든 응답에 chainId/assetId 동적 생성 + OpenAPI 스펙 반영
+- [x] **Phase 409: Response CAIP Enrichment + OpenAPI** - 모든 응답에 chainId/assetId 동적 생성 + OpenAPI 스펙 반영 (completed 2026-03-14)
 - [ ] **Phase 410: SDK + MCP CAIP Extension** - SDK CAIP 타입 확장 + MCP 도구 CAIP 지원 + resolve_asset 신규 도구
 - [ ] **Phase 411: Skill Files Sync** - 스킬 파일 CAIP-2/19 사용법 추가 + 예시 병기
 
@@ -157,6 +157,6 @@ Phases execute in numeric order: 407 → 408 → 409 → 410 → 411
 | 406. SDK + Skill File Sync + E2E | v31.15 | 2/2 | Complete | 2026-03-14 |
 | 407. CAIP-2 Network Input | 1/1 | Complete    | 2026-03-14 | - |
 | 408. CAIP-19 Asset Input + Resolve | v31.16 | Complete    | 2026-03-14 | 2026-03-14 |
-| 409. Response CAIP Enrichment + OpenAPI | v31.16 | 0/2 | Not started | - |
+| 409. Response CAIP Enrichment + OpenAPI | 2/2 | Complete   | 2026-03-14 | - |
 | 410. SDK + MCP CAIP Extension | v31.16 | 0/2 | Not started | - |
 | 411. Skill Files Sync | v31.16 | 0/1 | Not started | - |

@@ -27,12 +27,12 @@ Requirements for CAIP-2/CAIP-19 standard identifier promotion across all interfa
 
 ### Response (CAIP Fields)
 
-- [ ] **RSP-01**: 네트워크를 포함하는 모든 응답에 `chainId` (CAIP-2) 필드 추가 (잔액, 자산, 트랜잭션, NFT, DeFi 포지션, 수신 TX, Action 결과)
-- [ ] **RSP-02**: 토큰/자산을 포함하는 모든 응답에 `assetId` (CAIP-19) 항상 포함 — 런타임 동적 생성 (DB 마이그레이션 불필요)
-- [ ] **RSP-03**: 네이티브 토큰 잔액 응답에도 `assetId` 포함 (예: `eip155:1/slip44:60`)
-- [ ] **RSP-04**: 기존 `network`, `chain`, `address`, `mint` 필드는 그대로 유지 — additive only
-- [ ] **RSP-05**: NFT 응답의 `assetId` 항상 포함 보장
-- [ ] **RSP-06**: `connect-info` 응답에 `supportedChainIds: string[]` (CAIP-2 배열) 추가
+- [x] **RSP-01**: 네트워크를 포함하는 모든 응답에 `chainId` (CAIP-2) 필드 추가 (잔액, 자산, 트랜잭션, NFT, DeFi 포지션, 수신 TX, Action 결과)
+- [x] **RSP-02**: 토큰/자산을 포함하는 모든 응답에 `assetId` (CAIP-19) 항상 포함 — 런타임 동적 생성 (DB 마이그레이션 불필요)
+- [x] **RSP-03**: 네이티브 토큰 잔액 응답에도 `assetId` 포함 (예: `eip155:1/slip44:60`)
+- [x] **RSP-04**: 기존 `network`, `chain`, `address`, `mint` 필드는 그대로 유지 — additive only
+- [x] **RSP-05**: NFT 응답의 `assetId` 항상 포함 보장
+- [x] **RSP-06**: `connect-info` 응답에 `supportedChainIds: string[]` (CAIP-2 배열) 추가
 
 ### SDK
 
@@ -53,10 +53,10 @@ Requirements for CAIP-2/CAIP-19 standard identifier promotion across all interfa
 
 ### Spec & Docs
 
-- [ ] **DOC-01**: 네트워크 파라미터 스키마에 CAIP-2 예시 추가 (OpenAPI)
-- [ ] **DOC-02**: TokenInfo 스키마에 `assetId`-only 사용 패턴 문서화 (OpenAPI)
-- [ ] **DOC-03**: 응답 스키마에 `chainId`, `assetId` 필드 추가 (OpenAPI)
-- [ ] **DOC-04**: CAIP-2/CAIP-19 형식 설명 및 예시를 API 문서 상단에 기재
+- [x] **DOC-01**: 네트워크 파라미터 스키마에 CAIP-2 예시 추가 (OpenAPI)
+- [x] **DOC-02**: TokenInfo 스키마에 `assetId`-only 사용 패턴 문서화 (OpenAPI)
+- [x] **DOC-03**: 응답 스키마에 `chainId`, `assetId` 필드 추가 (OpenAPI)
+- [x] **DOC-04**: CAIP-2/CAIP-19 형식 설명 및 예시를 API 문서 상단에 기재
 - [ ] **DOC-05**: `skills/*.skill.md` 파일에 CAIP-2/19 사용법 추가
 - [ ] **DOC-06**: 네트워크 지정 예시에 CAIP-2 형식 병기
 - [ ] **DOC-07**: 토큰 전송 예시에 `assetId` 단독 사용 패턴 추가
@@ -69,7 +69,7 @@ Requirements for CAIP-2/CAIP-19 standard identifier promotion across all interfa
 - [x] **TST-04**: `assetId`에서 네트워크 자동 추론 테스트
 - [x] **TST-05**: `assetId` vs `network` 불일치 validation error 테스트
 - [x] **TST-06**: 미등록 assetId + address/decimals/symbol 폴백 테스트
-- [ ] **TST-07**: 모든 응답 스키마에 `chainId`/`assetId` 포함 검증 테스트
+- [x] **TST-07**: 모든 응답 스키마에 `chainId`/`assetId` 포함 검증 테스트
 - [ ] **TST-08**: SDK CAIP-2 네트워크 입력 테스트
 - [ ] **TST-09**: MCP 도구 CAIP-2 네트워크 입력 + assetId 단독 전달 테스트
 - [ ] **TST-10**: `resolve_asset` MCP 도구 테스트
@@ -111,12 +111,12 @@ Requirements for CAIP-2/CAIP-19 standard identifier promotion across all interfa
 | AST-05 | Phase 408 | Complete |
 | AST-06 | Phase 408 | Complete |
 | AST-07 | Phase 408 | Complete |
-| RSP-01 | Phase 409 | Pending |
-| RSP-02 | Phase 409 | Pending |
-| RSP-03 | Phase 409 | Pending |
-| RSP-04 | Phase 409 | Pending |
-| RSP-05 | Phase 409 | Pending |
-| RSP-06 | Phase 409 | Pending |
+| RSP-01 | Phase 409 | Complete |
+| RSP-02 | Phase 409 | Complete |
+| RSP-03 | Phase 409 | Complete |
+| RSP-04 | Phase 409 | Complete |
+| RSP-05 | Phase 409 | Complete |
+| RSP-06 | Phase 409 | Complete |
 | SDK-01 | Phase 410 | Pending |
 | SDK-02 | Phase 410 | Pending |
 | SDK-03 | Phase 410 | Pending |
@@ -128,10 +128,10 @@ Requirements for CAIP-2/CAIP-19 standard identifier promotion across all interfa
 | MCP-04 | Phase 410 | Pending |
 | MCP-05 | Phase 410 | Pending |
 | MCP-06 | Phase 410 | Pending |
-| DOC-01 | Phase 409 | Pending |
-| DOC-02 | Phase 409 | Pending |
-| DOC-03 | Phase 409 | Pending |
-| DOC-04 | Phase 409 | Pending |
+| DOC-01 | Phase 409 | Complete |
+| DOC-02 | Phase 409 | Complete |
+| DOC-03 | Phase 409 | Complete |
+| DOC-04 | Phase 409 | Complete |
 | DOC-05 | Phase 411 | Pending |
 | DOC-06 | Phase 411 | Pending |
 | DOC-07 | Phase 411 | Pending |
@@ -141,7 +141,7 @@ Requirements for CAIP-2/CAIP-19 standard identifier promotion across all interfa
 | TST-04 | Phase 408 | Complete |
 | TST-05 | Phase 408 | Complete |
 | TST-06 | Phase 408 | Complete |
-| TST-07 | Phase 409 | Pending |
+| TST-07 | Phase 409 | Complete |
 | TST-08 | Phase 410 | Pending |
 | TST-09 | Phase 410 | Pending |
 | TST-10 | Phase 410 | Pending |

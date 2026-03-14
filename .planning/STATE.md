@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v31.16
 milestone_name: CAIP 표준 식별자 승격
 status: executing
-stopped_at: Completed 408-02-PLAN.md
-last_updated: "2026-03-14T14:21:45.072Z"
+stopped_at: Completed 409-02-PLAN.md
+last_updated: "2026-03-14T15:07:39.327Z"
 last_activity: 2026-03-14 — Phase 408 completed (2 plans)
 progress:
   total_phases: 5
-  completed_phases: 2
-  total_plans: 3
-  completed_plans: 3
+  completed_phases: 3
+  total_plans: 5
+  completed_plans: 5
   percent: 37
 ---
 
@@ -49,6 +49,7 @@ Progress: [████░░░░░░] 37%
 | Phase 407 P01 | 2min | 2 tasks | 2 files |
 | Phase 408 P01 | 3min | 2 tasks | 5 files |
 | Phase 408 P02 | 5min | 2 tasks | 5 files |
+| Phase 409 P01-02 | 2450s | 4 tasks | 15 files |
 
 ### Decisions
 
@@ -63,6 +64,8 @@ Progress: [████░░░░░░] 37%
 - [Phase 408]: TokenInfoBaseSchema all optional, superRefine enforces based on assetId presence
 - [Phase 408]: resolveTokenFromAssetId before humanAmount conversion (decimals dependency)
 - [Phase 408]: User-provided values take precedence over registry (no override)
+- [Phase 409]: enrichment applied at c.json() boundary for explicit control
+- [Phase 409]: staking positions infer network from chain type
 
 ### Pending Todos
 
@@ -74,6 +77,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-14T14:19:38Z
-Stopped at: Completed 408-02-PLAN.md
+Last session: 2026-03-14T15:07:39.324Z
+Stopped at: Completed 409-02-PLAN.md
 Resume file: None
