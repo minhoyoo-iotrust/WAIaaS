@@ -1,7 +1,7 @@
 import { useSignal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
-import { apiGet, ApiError } from '../api/client';
-import { API } from '../api/endpoints';
+import { api, ApiError } from '../api/typed-client';
+import type { AuditLogItem, AuditLogResponse } from '../api/types.aliases';
 import { Table } from '../components/table';
 import type { Column } from '../components/table';
 import { Badge, Button } from '../components/form';
@@ -16,25 +16,7 @@ import { formatDate } from '../utils/format';
 // Types
 // ---------------------------------------------------------------------------
 
-interface AuditLogItem {
-  id: number;
-  timestamp: number;
-  eventType: string;
-  actor: string;
-  walletId: string | null;
-  sessionId: string | null;
-  txId: string | null;
-  details: Record<string, unknown>;
-  severity: string;
-  ipAddress: string | null;
-}
-
-interface AuditLogResponse {
-  data: AuditLogItem[];
-  nextCursor: number | null;
-  hasMore: boolean;
-  total?: number;
-}
+// Types imported from types.aliases (generated from OpenAPI)
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -120,34 +102,25 @@ export default function AuditLogsPage() {
   const fetchLogs = async () => {
     loading.value = true;
     try {
-      const params = new URLSearchParams();
-      params.set('limit', String(PAGE_SIZE));
-      params.set('include_total', 'true');
-
-      if (currentCursor.value !== undefined) {
-        params.set('cursor', String(currentCursor.value));
-      }
-
       const f = filters.value;
-      if (f.event_type) params.set('event_type', f.event_type);
-      if (f.severity) params.set('severity', f.severity);
-      if (f.from) {
-        const d = new Date(f.from);
-        params.set('from', String(Math.floor(d.getTime() / 1000)));
-      }
-      if (f.to) {
-        const d = new Date(f.to);
-        // End of day
-        params.set('to', String(Math.floor(d.getTime() / 1000) + 86399));
-      }
+      const query: Record<string, unknown> = {
+        limit: PAGE_SIZE,
+        include_total: true,
+      };
+      if (currentCursor.value !== undefined) query.cursor = currentCursor.value;
+      if (f.event_type) query.event_type = f.event_type;
+      if (f.severity) query.severity = f.severity;
+      if (f.from) query.from = Math.floor(new Date(f.from).getTime() / 1000);
+      if (f.to) query.to = Math.floor(new Date(f.to).getTime() / 1000) + 86399;
 
-      const url = `${API.ADMIN_AUDIT_LOGS}?${params.toString()}`;
-      const result = await apiGet<AuditLogResponse>(url);
-      rows.value = result.data;
-      nextCursor.value = result.nextCursor;
-      hasMore.value = result.hasMore;
-      if (result.total !== undefined) {
-        total.value = result.total;
+      const { data: result } = await api.GET('/v1/audit-logs', {
+        params: { query: query as Parameters<typeof api.GET<'/v1/audit-logs'>>[1]['params']['query'] },
+      });
+      rows.value = result!.data;
+      nextCursor.value = result!.nextCursor;
+      hasMore.value = result!.hasMore;
+      if (result!.total !== undefined) {
+        total.value = result!.total;
       }
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');

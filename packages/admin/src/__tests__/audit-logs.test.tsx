@@ -1,11 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/preact';
 
-vi.mock('../api/client', () => ({
-  apiGet: vi.fn(),
-  apiPost: vi.fn(),
-  apiPut: vi.fn(),
-  apiDelete: vi.fn(),
+const mockApiGet = vi.fn();
+
+vi.mock('../api/typed-client', () => ({
+  api: {
+    GET: (...args: unknown[]) => mockApiGet(...args),
+    POST: vi.fn(),
+    PUT: vi.fn(),
+    DELETE: vi.fn(),
+  },
   ApiError: class ApiError extends Error {
     status: number;
     code: string;
@@ -39,7 +43,7 @@ vi.mock('../utils/error-messages', () => ({
   getErrorMessage: (code: string) => `Error: ${code}`,
 }));
 
-import { apiGet, ApiError } from '../api/client';
+import { ApiError } from '../api/typed-client';
 import { showToast } from '../components/toast';
 import AuditLogsPage from '../pages/audit-logs';
 
@@ -53,37 +57,37 @@ const mockLogItems = [
   {
     id: 100,
     timestamp: now - 3600,
-    eventType: 'WALLET_CREATED',
+    eventType: 'WALLET_CREATED' as const,
     actor: 'admin',
     walletId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
     sessionId: null,
     txId: null,
     details: { name: 'My Wallet', chain: 'evm' },
-    severity: 'info',
+    severity: 'info' as const,
     ipAddress: '127.0.0.1',
   },
   {
     id: 99,
     timestamp: now - 7200,
-    eventType: 'KILL_SWITCH_ACTIVATED',
+    eventType: 'KILL_SWITCH_ACTIVATED' as const,
     actor: 'system',
     walletId: null,
     sessionId: null,
     txId: null,
     details: { reason: 'manual' },
-    severity: 'critical',
+    severity: 'critical' as const,
     ipAddress: null,
   },
   {
     id: 98,
     timestamp: now - 10800,
-    eventType: 'TX_SUBMITTED',
+    eventType: 'TX_SUBMITTED' as const,
     actor: 'session:abc123',
     walletId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
     sessionId: 'sess-1',
     txId: 'tx-uuid-1234',
     details: { amount: '1.0', to: '0x1234' },
-    severity: 'warning',
+    severity: 'warning' as const,
     ipAddress: '192.168.1.1',
   },
 ];
@@ -107,13 +111,13 @@ const mockPage2Response = {
     {
       id: 97,
       timestamp: now - 14400,
-      eventType: 'SESSION_CREATED',
+      eventType: 'SESSION_CREATED' as const,
       actor: 'admin',
       walletId: null,
       sessionId: 'sess-2',
       txId: null,
       details: {},
-      severity: 'info',
+      severity: 'info' as const,
       ipAddress: '10.0.0.1',
     },
   ],
@@ -127,7 +131,7 @@ const mockPage2Response = {
 // ---------------------------------------------------------------------------
 
 function setupMock(response: Record<string, unknown> = mockResponse) {
-  vi.mocked(apiGet).mockResolvedValue(response);
+  mockApiGet.mockResolvedValue({ data: response });
 }
 
 async function waitForData() {
@@ -217,7 +221,7 @@ describe('AuditLogsPage', () => {
     setupMock();
     render(<AuditLogsPage />);
     await waitForData();
-    vi.mocked(apiGet).mockClear();
+    mockApiGet.mockClear();
     setupMock();
 
     // Change event type filter
@@ -226,8 +230,10 @@ describe('AuditLogsPage', () => {
     fireEvent.change(eventTypeSelect, { target: { value: 'KILL_SWITCH_ACTIVATED' } });
 
     await waitFor(() => {
-      const lastCall = vi.mocked(apiGet).mock.calls[0]?.[0] as string;
-      expect(lastCall).toContain('event_type=KILL_SWITCH_ACTIVATED');
+      const lastCall = mockApiGet.mock.calls[0];
+      expect(lastCall).toBeTruthy();
+      const opts = lastCall?.[1] as { params?: { query?: Record<string, unknown> } };
+      expect(opts?.params?.query?.event_type).toBe('KILL_SWITCH_ACTIVATED');
     });
   });
 
@@ -235,7 +241,7 @@ describe('AuditLogsPage', () => {
     setupMock();
     render(<AuditLogsPage />);
     await waitForData();
-    vi.mocked(apiGet).mockClear();
+    mockApiGet.mockClear();
     setupMock();
 
     const selects = screen.getAllByRole('combobox');
@@ -243,8 +249,10 @@ describe('AuditLogsPage', () => {
     fireEvent.change(severitySelect, { target: { value: 'critical' } });
 
     await waitFor(() => {
-      const lastCall = vi.mocked(apiGet).mock.calls[0]?.[0] as string;
-      expect(lastCall).toContain('severity=critical');
+      const lastCall = mockApiGet.mock.calls[0];
+      expect(lastCall).toBeTruthy();
+      const opts = lastCall?.[1] as { params?: { query?: Record<string, unknown> } };
+      expect(opts?.params?.query?.severity).toBe('critical');
     });
   });
 
@@ -252,7 +260,7 @@ describe('AuditLogsPage', () => {
     setupMock();
     render(<AuditLogsPage />);
     await waitForData();
-    vi.mocked(apiGet).mockClear();
+    mockApiGet.mockClear();
     setupMock();
 
     const dateInputs = screen.getAllByDisplayValue('');
@@ -261,8 +269,10 @@ describe('AuditLogsPage', () => {
     fireEvent.change(fromInput, { target: { value: '2026-03-01' } });
 
     await waitFor(() => {
-      const lastCall = vi.mocked(apiGet).mock.calls[0]?.[0] as string;
-      expect(lastCall).toContain('from=');
+      const lastCall = mockApiGet.mock.calls[0];
+      expect(lastCall).toBeTruthy();
+      const opts = lastCall?.[1] as { params?: { query?: Record<string, unknown> } };
+      expect(opts?.params?.query?.from).toBeTruthy();
     });
   });
 
@@ -272,16 +282,16 @@ describe('AuditLogsPage', () => {
     await waitForData();
 
     // Go to page 2
-    vi.mocked(apiGet).mockClear();
-    vi.mocked(apiGet).mockResolvedValue(mockPage2Response);
+    mockApiGet.mockClear();
+    mockApiGet.mockResolvedValue({ data: mockPage2Response });
     fireEvent.click(screen.getByText('Next'));
 
     await waitFor(() => {
       expect(screen.getByText('Page 2')).toBeTruthy();
     });
 
-    // Change filter — should reset to page 1
-    vi.mocked(apiGet).mockClear();
+    // Change filter -- should reset to page 1
+    mockApiGet.mockClear();
     setupMock();
     const selects = screen.getAllByRole('combobox');
     fireEvent.change(selects[1]!, { target: { value: 'info' } });
@@ -302,8 +312,8 @@ describe('AuditLogsPage', () => {
     const prevBtn = screen.getByText('Previous');
     expect(prevBtn.closest('button')?.disabled).toBe(true);
 
-    vi.mocked(apiGet).mockClear();
-    vi.mocked(apiGet).mockResolvedValue(mockPage2Response);
+    mockApiGet.mockClear();
+    mockApiGet.mockResolvedValue({ data: mockPage2Response });
 
     fireEvent.click(screen.getByText('Next'));
 
@@ -317,8 +327,8 @@ describe('AuditLogsPage', () => {
     expect(nextBtn.closest('button')?.disabled).toBe(true);
 
     // Verify cursor was passed
-    const callUrl = vi.mocked(apiGet).mock.calls[0]?.[0] as string;
-    expect(callUrl).toContain('cursor=97');
+    const callOpts = mockApiGet.mock.calls[0]?.[1] as { params?: { query?: Record<string, unknown> } };
+    expect(callOpts?.params?.query?.cursor).toBe(97);
   });
 
   it('navigates back to previous page', async () => {
@@ -327,8 +337,8 @@ describe('AuditLogsPage', () => {
     await waitForData();
 
     // Go to page 2
-    vi.mocked(apiGet).mockClear();
-    vi.mocked(apiGet).mockResolvedValue(mockPage2Response);
+    mockApiGet.mockClear();
+    mockApiGet.mockResolvedValue({ data: mockPage2Response });
     fireEvent.click(screen.getByText('Next'));
 
     await waitFor(() => {
@@ -336,7 +346,7 @@ describe('AuditLogsPage', () => {
     });
 
     // Go back to page 1
-    vi.mocked(apiGet).mockClear();
+    mockApiGet.mockClear();
     setupMock();
     fireEvent.click(screen.getByText('Previous'));
 
@@ -391,7 +401,7 @@ describe('AuditLogsPage', () => {
   // --- Error handling ---
 
   it('shows toast on API error', async () => {
-    vi.mocked(apiGet).mockRejectedValue(new (ApiError as unknown as new (s: number, c: string, m: string) => Error)(500, 'INTERNAL_ERROR', 'Server error'));
+    mockApiGet.mockRejectedValue(new ApiError(500, 'INTERNAL_ERROR', 'Server error'));
     render(<AuditLogsPage />);
 
     await waitFor(() => {

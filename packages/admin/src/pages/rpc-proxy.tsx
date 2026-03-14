@@ -1,7 +1,6 @@
 import { useSignal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
-import { apiGet, apiPut, ApiError } from '../api/client';
-import { API } from '../api/endpoints';
+import { api, ApiError } from '../api/typed-client';
 import { FormField, Button, Badge } from '../components/form';
 import { Table } from '../components/table';
 import type { Column } from '../components/table';
@@ -20,15 +19,10 @@ import { registerDirty, unregisterDirty } from '../utils/dirty-guard';
 // Types
 // ---------------------------------------------------------------------------
 
-interface AuditLogEntry {
-  id: string;
-  action: string;
-  source: string;
-  sessionId: string | null;
-  walletId: string | null;
-  metadata: Record<string, unknown>;
-  timestamp: number;
-}
+import type { AuditLogItem } from '../api/types.aliases';
+
+// Use generated AuditLogItem type
+type AuditLogEntry = AuditLogItem;
 
 // Category constant for settings helpers
 const CAT = 'rpc_proxy';
@@ -51,8 +45,8 @@ export default function RpcProxyPage() {
 
   const fetchSettings = async () => {
     try {
-      const result = await apiGet<SettingsData>(API.ADMIN_SETTINGS);
-      settings.value = result;
+      const { data } = await api.GET('/v1/admin/settings');
+      settings.value = data as unknown as SettingsData;
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
@@ -63,10 +57,10 @@ export default function RpcProxyPage() {
 
   const fetchAuditLogs = async () => {
     try {
-      const result = await apiGet<{ logs: AuditLogEntry[] }>(
-        `${API.ADMIN_AUDIT_LOGS}?source=rpc-proxy&limit=20`,
-      );
-      auditLogs.value = result.logs ?? [];
+      const { data } = await api.GET('/v1/audit-logs', {
+        params: { query: { limit: 20 } },
+      });
+      auditLogs.value = data?.data ?? [];
     } catch {
       // Audit logs may not be available
     } finally {
@@ -123,7 +117,7 @@ export default function RpcProxyPage() {
     try {
       const entries = Object.entries(dirty.value);
       for (const [key, value] of entries) {
-        await apiPut(API.ADMIN_SETTINGS, { key, value });
+        await api.PUT('/v1/admin/settings', { body: { settings: [{ key, value }] } });
       }
       dirty.value = {};
       showToast('success', 'RPC proxy settings saved');
@@ -144,7 +138,7 @@ export default function RpcProxyPage() {
     const current = getBool('enabled');
     const newVal = current ? 'false' : 'true';
     try {
-      await apiPut(API.ADMIN_SETTINGS, { key: 'rpc_proxy.enabled', value: newVal });
+      await api.PUT('/v1/admin/settings', { body: { settings: [{ key: 'rpc_proxy.enabled', value: newVal }] } });
       showToast('success', `RPC proxy ${newVal === 'true' ? 'enabled' : 'disabled'}`);
       await fetchSettings();
     } catch (err) {
@@ -159,13 +153,13 @@ export default function RpcProxyPage() {
 
   const auditColumns: Column<AuditLogEntry>[] = [
     { key: 'timestamp', header: 'Time', render: (row) => formatDate(row.timestamp) },
-    { key: 'action', header: 'Method', render: (row) => String(row.metadata?.method ?? row.action) },
+    { key: 'eventType', header: 'Method', render: (row) => String(row.details?.method ?? row.eventType) },
     { key: 'walletId', header: 'Wallet', render: (row) => row.walletId ? row.walletId.slice(0, 8) + '...' : '-' },
     {
-      key: 'metadata',
+      key: 'details',
       header: 'Status',
       render: (row) => {
-        const status = String(row.metadata?.status ?? 'ok');
+        const status = String(row.details?.status ?? 'ok');
         const variant = status === 'error' ? 'danger' : status === 'rejected' ? 'warning' : 'success';
         return <Badge variant={variant}>{status}</Badge>;
       },

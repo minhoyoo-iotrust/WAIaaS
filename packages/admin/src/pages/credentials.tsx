@@ -1,7 +1,7 @@
 import { useSignal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
-import { apiGet, apiPost, apiDelete, apiPut, ApiError } from '../api/client';
-import { API } from '../api/endpoints';
+import { api, ApiError } from '../api/typed-client';
+import type { CredentialMetadata } from '../api/types.aliases';
 import { Table } from '../components/table';
 import type { Column } from '../components/table';
 import { FormField, Button, Badge } from '../components/form';
@@ -10,21 +10,6 @@ import { EmptyState } from '../components/empty-state';
 import { showToast } from '../components/toast';
 import { getErrorMessage } from '../utils/error-messages';
 import { formatDate } from '../utils/format';
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface CredentialMetadata {
-  id: string;
-  walletId: string | null;
-  type: string;
-  name: string;
-  metadata: Record<string, unknown>;
-  expiresAt: number | null;
-  createdAt: number;
-  updatedAt: number;
-}
 
 const CREDENTIAL_TYPES = [
   { label: 'API Key', value: 'api-key' },
@@ -77,8 +62,8 @@ export default function CredentialsPage() {
   const fetchCredentials = async () => {
     loading.value = true;
     try {
-      const result = await apiGet<{ credentials: CredentialMetadata[] }>(API.ADMIN_CREDENTIALS);
-      credentials.value = result.credentials;
+      const { data } = await api.GET('/v1/admin/credentials');
+      credentials.value = data!.credentials;
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
@@ -103,18 +88,15 @@ export default function CredentialsPage() {
 
     addLoading.value = true;
     try {
-      const body: Record<string, unknown> = {
-        type: addType.value,
-        name: addName.value.trim(),
-        value: addValue.value,
-      };
-      if (addMetadata.value.trim()) {
-        body.metadata = JSON.parse(addMetadata.value);
-      }
-      if (addExpiresAt.value) {
-        body.expiresAt = Math.floor(new Date(addExpiresAt.value).getTime() / 1000);
-      }
-      await apiPost(API.ADMIN_CREDENTIALS, body);
+      await api.POST('/v1/admin/credentials', {
+        body: {
+          type: addType.value as 'api-key' | 'hmac-secret' | 'rsa-private-key' | 'session-token' | 'custom',
+          name: addName.value.trim(),
+          value: addValue.value,
+          ...(addMetadata.value.trim() ? { metadata: JSON.parse(addMetadata.value) } : {}),
+          ...(addExpiresAt.value ? { expiresAt: Math.floor(new Date(addExpiresAt.value).getTime() / 1000) } : {}),
+        },
+      });
       showToast('success', 'Credential created');
       showAddModal.value = false;
       addType.value = 'api-key';
@@ -135,7 +117,7 @@ export default function CredentialsPage() {
     if (!deleteRef.value) return;
     deleteLoading.value = true;
     try {
-      await apiDelete(API.ADMIN_CREDENTIAL_DELETE(deleteRef.value));
+      await api.DELETE('/v1/admin/credentials/{ref}', { params: { path: { ref: deleteRef.value } } });
       showToast('success', 'Credential deleted');
       deleteModal.value = false;
       deleteRef.value = null;
@@ -152,7 +134,10 @@ export default function CredentialsPage() {
     if (!rotateRef.value || !rotateValue.value.trim()) return;
     rotateLoading.value = true;
     try {
-      await apiPut(API.ADMIN_CREDENTIAL_ROTATE(rotateRef.value), { value: rotateValue.value });
+      await api.PUT('/v1/admin/credentials/{ref}/rotate', {
+        params: { path: { ref: rotateRef.value } },
+        body: { value: rotateValue.value },
+      });
       showToast('success', 'Credential rotated');
       rotateModal.value = false;
       rotateRef.value = null;

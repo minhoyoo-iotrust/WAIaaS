@@ -1,18 +1,12 @@
 import { useSignal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
-import { apiGet } from '../api/client';
+import { api } from '../api/typed-client';
+import type { Wallet } from '../api/types.aliases';
 import { PolymarketOverview } from '../components/polymarket/PolymarketOverview';
 import { PolymarketMarkets } from '../components/polymarket/PolymarketMarkets';
 import { PolymarketOrders } from '../components/polymarket/PolymarketOrders';
 import { PolymarketPositions } from '../components/polymarket/PolymarketPositions';
 import { PolymarketSettings } from '../components/polymarket/PolymarketSettings';
-
-interface Wallet {
-  id: string;
-  name: string;
-  chain: string;
-  network: string;
-}
 
 type Tab = 'overview' | 'markets' | 'orders' | 'positions' | 'settings';
 
@@ -42,9 +36,9 @@ export default function PolymarketPage() {
   const loading = useSignal(true);
 
   useEffect(() => {
-    apiGet('/v1/wallets')
-      .then((res) => {
-        const list = (res as { wallets: Wallet[] }).wallets ?? [];
+    api.GET('/v1/wallets')
+      .then(({ data }) => {
+        const list = data?.items ?? [];
         // Filter to Polygon EVM wallets (Polymarket runs on Polygon)
         const polygonWallets = list.filter((w) => w.chain === 'ethereum' && w.network.includes('polygon'));
         wallets.value = polygonWallets;

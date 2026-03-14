@@ -1,7 +1,7 @@
 import { useSignal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
-import { apiGet, apiPost, apiPut, apiDelete, ApiError } from '../api/client';
-import { API } from '../api/endpoints';
+import { api, ApiError } from '../api/typed-client';
+import type { WalletApp } from '../api/types.aliases';
 import { FormField, Button, Badge } from '../components/form';
 import { Modal } from '../components/modal';
 import { showToast } from '../components/toast';
@@ -10,20 +10,7 @@ import { showToast } from '../components/toast';
 // Types
 // ---------------------------------------------------------------------------
 
-interface WalletAppApi {
-  id: string;
-  name: string;
-  display_name: string;
-  wallet_type: string;
-  signing_enabled: boolean;
-  alerts_enabled: boolean;
-  sign_topic: string | null;
-  notify_topic: string | null;
-  subscription_token: string | null;
-  used_by: Array<{ id: string; label: string }>;
-  created_at: number;
-  updated_at: number;
-}
+type WalletAppApi = WalletApp;
 
 // ---------------------------------------------------------------------------
 // Component
@@ -65,8 +52,8 @@ export default function HumanWalletAppsPage() {
 
   const fetchApps = async () => {
     try {
-      const data = await apiGet<{ apps: WalletAppApi[] }>(API.ADMIN_WALLET_APPS);
-      apps.value = data.apps;
+      const { data } = await api.GET('/v1/admin/wallet-apps');
+      apps.value = data!.apps;
     } catch {
       showToast('Failed to load wallet apps', 'error');
     }
@@ -74,8 +61,8 @@ export default function HumanWalletAppsPage() {
 
   const fetchSettings = async () => {
     try {
-      const data = await apiGet<Record<string, Record<string, unknown>>>(API.ADMIN_SETTINGS);
-      const sdk = data['signing_sdk'];
+      const { data } = await api.GET('/v1/admin/settings');
+      const sdk = data?.['signing_sdk'];
       if (sdk) {
         sdkEnabled.value = String(sdk['enabled']) === 'true';
         notificationsEnabled.value = String(sdk['notifications_enabled']) === 'true';
@@ -99,8 +86,8 @@ export default function HumanWalletAppsPage() {
     notifToggleSaving.value = true;
     const newValue = !notificationsEnabled.value;
     try {
-      await apiPut(API.ADMIN_SETTINGS, {
-        settings: [{ key: 'signing_sdk.notifications_enabled', value: String(newValue) }],
+      await api.PUT('/v1/admin/settings', {
+        body: { settings: [{ key: 'signing_sdk.notifications_enabled', value: String(newValue) }] },
       });
       notificationsEnabled.value = newValue;
       showToast(`Wallet app notifications ${newValue ? 'enabled' : 'disabled'}`, 'success');
@@ -114,8 +101,9 @@ export default function HumanWalletAppsPage() {
   const handleToggle = async (app: WalletAppApi, field: 'signing_enabled' | 'alerts_enabled') => {
     toggleSaving.value = `${app.id}-${field}`;
     try {
-      await apiPut(API.ADMIN_WALLET_APP(app.id), {
-        [field]: !app[field],
+      await api.PUT('/v1/admin/wallet-apps/{id}', {
+        params: { path: { id: app.id } },
+        body: { [field]: !app[field] },
       });
       await fetchApps();
       showToast(`${field === 'signing_enabled' ? 'Signing' : 'Alerts'} ${app[field] ? 'disabled' : 'enabled'} for ${app.display_name}`, 'success');
@@ -129,13 +117,13 @@ export default function HumanWalletAppsPage() {
   const handleTestNotification = async (app: WalletAppApi) => {
     testNotifSending.value = app.id;
     try {
-      const result = await apiPost<{ success: boolean; topic?: string; error?: string }>(
-        API.ADMIN_WALLET_APP_TEST_NOTIFICATION(app.id),
-      );
-      if (result.success) {
-        showToast(`Test notification sent to ${result.topic}`, 'success');
+      const { data: result } = await api.POST('/v1/admin/wallet-apps/{id}/test-notification', {
+        params: { path: { id: app.id } },
+      });
+      if (result!.success) {
+        showToast(`Test notification sent to ${result!.topic}`, 'success');
       } else {
-        showToast(result.error || 'Test notification failed', 'error');
+        showToast(result!.error || 'Test notification failed', 'error');
       }
     } catch {
       showToast('Failed to send test notification', 'error');
@@ -158,7 +146,7 @@ export default function HumanWalletAppsPage() {
       if (registerWalletType.value.trim()) {
         body.wallet_type = registerWalletType.value.trim();
       }
-      await apiPost(API.ADMIN_WALLET_APPS, body);
+      await api.POST('/v1/admin/wallet-apps', { body: body as { name: string; display_name: string; wallet_type?: string } });
       registerModal.value = false;
       registerName.value = '';
       registerDisplayName.value = '';
@@ -179,7 +167,10 @@ export default function HumanWalletAppsPage() {
   const handleSetSubToken = async (app: WalletAppApi, token: string) => {
     subTokenSaving.value = app.id;
     try {
-      await apiPut(API.ADMIN_WALLET_APP(app.id), { subscription_token: token || '' });
+      await api.PUT('/v1/admin/wallet-apps/{id}', {
+        params: { path: { id: app.id } },
+        body: { subscription_token: token || '' },
+      });
       const next = { ...subTokenEditing.value };
       delete next[app.id];
       subTokenEditing.value = next;
@@ -197,7 +188,9 @@ export default function HumanWalletAppsPage() {
       return;
     }
     try {
-      await apiDelete(API.ADMIN_WALLET_APP(app.id));
+      await api.DELETE('/v1/admin/wallet-apps/{id}', {
+        params: { path: { id: app.id } },
+      });
       await fetchApps();
       showToast(`${app.display_name} removed`, 'success');
     } catch {
@@ -226,9 +219,12 @@ export default function HumanWalletAppsPage() {
     if (!edit) return;
     topicSaving.value = app.id;
     try {
-      await apiPut(API.ADMIN_WALLET_APP(app.id), {
-        sign_topic: edit.signTopic || null,
-        notify_topic: edit.notifyTopic || null,
+      await api.PUT('/v1/admin/wallet-apps/{id}', {
+        params: { path: { id: app.id } },
+        body: {
+          sign_topic: edit.signTopic || undefined,
+          notify_topic: edit.notifyTopic || undefined,
+        },
       });
       cancelTopicEdit(app.id);
       await fetchApps();

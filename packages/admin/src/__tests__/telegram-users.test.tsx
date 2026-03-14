@@ -1,11 +1,17 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/preact';
 
-vi.mock('../api/client', () => ({
-  apiGet: vi.fn(),
-  apiPost: vi.fn(),
-  apiPut: vi.fn(),
-  apiDelete: vi.fn(),
+const mockApiGet = vi.fn();
+const mockApiPut = vi.fn();
+const mockApiDelete = vi.fn();
+
+vi.mock('../api/typed-client', () => ({
+  api: {
+    GET: (...args: unknown[]) => mockApiGet(...args),
+    POST: vi.fn(),
+    PUT: (...args: unknown[]) => mockApiPut(...args),
+    DELETE: (...args: unknown[]) => mockApiDelete(...args),
+  },
   ApiError: class ApiError extends Error {
     status: number;
     code: string;
@@ -18,7 +24,6 @@ vi.mock('../api/client', () => ({
       this.serverMessage = msg;
     }
   },
-  apiCall: vi.fn(),
 }));
 
 vi.mock('../components/toast', () => ({
@@ -40,8 +45,8 @@ vi.mock('../utils/error-messages', () => ({
   getErrorMessage: (code: string) => `Error: ${code}`,
 }));
 
-import { apiGet, apiPut, apiDelete, ApiError } from '../api/client';
 import { showToast } from '../components/toast';
+import { ApiError } from '../api/typed-client';
 import TelegramUsersPage from '../pages/telegram-users';
 
 // ---------------------------------------------------------------------------
@@ -77,9 +82,9 @@ const mockUsers = [
 // ---------------------------------------------------------------------------
 
 function mockApiCalls(users = mockUsers) {
-  vi.mocked(apiGet).mockImplementation(async (path: string) => {
-    if (path === '/v1/admin/telegram-users') return { users, total: users.length };
-    return {};
+  mockApiGet.mockImplementation(async (path: string) => {
+    if (path === '/v1/admin/telegram-users') return { data: { users, total: users.length } };
+    return { data: {} };
   });
 }
 
@@ -137,7 +142,7 @@ describe('TelegramUsersPage', () => {
   // ---- Test 3: Approve action ----
   it('approves a PENDING user with ADMIN role', async () => {
     mockApiCalls();
-    vi.mocked(apiPut).mockResolvedValueOnce({ success: true, chat_id: 111, role: 'ADMIN' });
+    mockApiPut.mockResolvedValueOnce({ data: { success: true, chat_id: 111, role: 'ADMIN' } });
     await renderAndWaitForLoad();
 
     await waitFor(() => {
@@ -160,7 +165,13 @@ describe('TelegramUsersPage', () => {
     fireEvent.click(confirmButton);
 
     await waitFor(() => {
-      expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/admin/telegram-users/111', { role: 'ADMIN' });
+      expect(mockApiPut).toHaveBeenCalledWith(
+        '/v1/admin/telegram-users/{chatId}',
+        expect.objectContaining({
+          params: { path: { chatId: 111 } },
+          body: { role: 'ADMIN' },
+        }),
+      );
     });
 
     await waitFor(() => {
@@ -171,7 +182,7 @@ describe('TelegramUsersPage', () => {
   // ---- Test 4: Delete action ----
   it('deletes a user with confirmation', async () => {
     mockApiCalls();
-    vi.mocked(apiDelete).mockResolvedValueOnce({ success: true });
+    mockApiDelete.mockResolvedValueOnce({ data: { success: true } });
     await renderAndWaitForLoad();
 
     await waitFor(() => {
@@ -194,7 +205,12 @@ describe('TelegramUsersPage', () => {
     fireEvent.click(confirmButton);
 
     await waitFor(() => {
-      expect(vi.mocked(apiDelete)).toHaveBeenCalledWith('/v1/admin/telegram-users/111');
+      expect(mockApiDelete).toHaveBeenCalledWith(
+        '/v1/admin/telegram-users/{chatId}',
+        expect.objectContaining({
+          params: { path: { chatId: 111 } },
+        }),
+      );
     });
 
     await waitFor(() => {
@@ -205,8 +221,7 @@ describe('TelegramUsersPage', () => {
   // ---- Test 5: Error handling on approve failure ----
   it('shows error toast on approve failure', async () => {
     mockApiCalls();
-    const MockApiError = (await import('../api/client')).ApiError;
-    vi.mocked(apiPut).mockRejectedValueOnce(new MockApiError(404, 'WALLET_NOT_FOUND', 'User not found'));
+    mockApiPut.mockRejectedValueOnce(new ApiError(404, 'WALLET_NOT_FOUND', 'User not found'));
     await renderAndWaitForLoad();
 
     await waitFor(() => {
@@ -233,8 +248,8 @@ describe('TelegramUsersPage', () => {
   // ---- Test 6: Loading state ----
   it('shows loading state initially', async () => {
     // Delay the API response
-    vi.mocked(apiGet).mockImplementation(
-      () => new Promise((resolve) => setTimeout(() => resolve({ users: [], total: 0 }), 100)),
+    mockApiGet.mockImplementation(
+      () => new Promise((resolve) => setTimeout(() => resolve({ data: { users: [], total: 0 } }), 100)),
     );
 
     render(<TelegramUsersPage />);
