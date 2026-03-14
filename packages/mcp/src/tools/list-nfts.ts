@@ -22,7 +22,7 @@ export function registerListNfts(
       walletContext?.walletName,
     ),
     {
-      network: z.string().describe('Network identifier (e.g., "ethereum-mainnet", "solana-mainnet").'),
+      network: z.string().describe('Network identifier (e.g., "ethereum-mainnet", "solana-mainnet" or CAIP-2 "eip155:1").'),
       cursor: z.string().optional().describe('Pagination cursor from previous response.'),
       limit: z.number().optional().describe('Max NFTs per page (default: 20).'),
       group_by: z.enum(['collection']).optional().describe('Group NFTs by collection.'),

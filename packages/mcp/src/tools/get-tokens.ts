@@ -12,7 +12,7 @@ export function registerGetTokens(server: McpServer, apiClient: ApiClient, walle
     'get_tokens',
     withWalletPrefix('Get registered tokens (builtin + custom) for a specific network.', walletContext?.walletName),
     {
-      network: z.string().describe('Network identifier (e.g., "ethereum-sepolia", "polygon-amoy").'),
+      network: z.string().describe('Network identifier (e.g., "ethereum-sepolia", "polygon-amoy" or CAIP-2 "eip155:1").'),
     },
     async (args) => {
       const params = new URLSearchParams();

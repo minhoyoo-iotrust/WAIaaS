@@ -21,15 +21,15 @@ export function registerSendToken(server: McpServer, apiClient: ApiClient, walle
       memo: z.string().optional().describe('Optional transaction memo'),
       type: z.enum(['TRANSFER', 'TOKEN_TRANSFER']).optional()
         .describe('Transaction type. Default: TRANSFER (native). TOKEN_TRANSFER for SPL/ERC-20'),
-      network: z.string().optional().describe('Target network (e.g., polygon-mainnet). Required for EVM wallets; auto-resolved for Solana.'),
+      network: z.string().optional().describe('Target network (e.g., "polygon-mainnet" or CAIP-2 "eip155:137"). Required for EVM wallets; auto-resolved for Solana.'),
       token: z.object({
-        address: z.string().describe('Token mint (SPL) or contract address (ERC-20)'),
-        decimals: z.number().describe('Token decimals (e.g., 6 for USDC)'),
-        symbol: z.string().describe('Token symbol (e.g., USDC)'),
+        address: z.string().optional().describe('Token mint (SPL) or contract address (ERC-20). Optional when assetId is provided.'),
+        decimals: z.number().optional().describe('Token decimals (e.g., 6 for USDC). Optional when assetId is provided.'),
+        symbol: z.string().optional().describe('Token symbol (e.g., USDC). Optional when assetId is provided.'),
         assetId: z.string().optional().describe(
-          'CAIP-19 asset identifier (e.g., "eip155:1/erc20:0xa0b8..." or "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5..."). When provided, the daemon cross-validates address against assetId. EVM addresses must be lowercase in CAIP-19.',
+          'CAIP-19 asset identifier. When provided alone (without address/decimals/symbol), the daemon auto-resolves from the token registry.',
         ),
-      }).optional().describe('Required for TOKEN_TRANSFER. Token metadata with optional CAIP-19 assetId.'),
+      }).optional().describe('Required for TOKEN_TRANSFER. Provide full metadata (address/decimals/symbol) OR assetId alone for auto-resolve.'),
       wallet_id: z.string().optional().describe('Target wallet ID. Required for multi-wallet sessions; auto-resolved when session has a single wallet.'),
       gas_condition: z.object({
         max_gas_price: z.string().optional().describe('Max gas price in wei (EVM baseFee+priorityFee)'),

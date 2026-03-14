@@ -27,7 +27,7 @@ export function registerCallContract(server: McpServer, apiClient: ApiClient, wa
         isSigner: z.boolean(),
         isWritable: z.boolean(),
       })).optional().describe('Account metas (Solana)'),
-      network: z.string().optional().describe('Target network (e.g., polygon-mainnet). Required for EVM wallets; auto-resolved for Solana.'),
+      network: z.string().optional().describe('Target network (e.g., "polygon-mainnet" or CAIP-2 "eip155:137"). Required for EVM wallets; auto-resolved for Solana.'),
       wallet_id: z.string().optional().describe('Target wallet ID. Required for multi-wallet sessions; auto-resolved when session has a single wallet.'),
       gas_condition: z.object({
         max_gas_price: z.string().optional().describe('Max gas price in wei (EVM baseFee+priorityFee)'),

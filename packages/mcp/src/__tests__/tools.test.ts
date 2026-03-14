@@ -281,6 +281,45 @@ describe('send_token tool', () => {
     const calledBody = (apiClient.post as ReturnType<typeof vi.fn>).mock.calls[0]![1] as Record<string, unknown>;
     expect(calledBody).not.toHaveProperty('gasCondition');
   });
+
+  it('sends assetId-only token without address/decimals/symbol (CAIP-19 daemon resolve)', async () => {
+    const apiClient = createMockApiClient(new Map());
+    const handler = getToolHandler(registerSendToken, apiClient);
+
+    await handler({
+      to: 'addr',
+      amount: '5000000',
+      type: 'TOKEN_TRANSFER',
+      token: { assetId: 'eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48' },
+    });
+
+    expect(apiClient.post).toHaveBeenCalledWith('/v1/transactions/send', {
+      to: 'addr',
+      amount: '5000000',
+      type: 'TOKEN_TRANSFER',
+      token: { assetId: 'eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48' },
+    });
+  });
+});
+
+describe('approve_token tool -- assetId-only', () => {
+  it('sends assetId-only token for approval (CAIP-19 daemon resolve)', async () => {
+    const apiClient = createMockApiClient(new Map());
+    const handler = getToolHandler(registerApproveToken, apiClient);
+
+    await handler({
+      spender: '0xSpender',
+      amount: '1000000',
+      token: { assetId: 'eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48' },
+    });
+
+    expect(apiClient.post).toHaveBeenCalledWith('/v1/transactions/send', {
+      type: 'APPROVE',
+      spender: '0xSpender',
+      amount: '1000000',
+      token: { assetId: 'eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48' },
+    });
+  });
 });
 
 describe('get_balance tool', () => {

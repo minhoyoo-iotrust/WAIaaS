@@ -44,7 +44,7 @@ export function registerSimulateTransaction(server: McpServer, apiClient: ApiCli
       // BATCH fields
       instructions: z.array(z.record(z.unknown())).optional().describe('Batch instructions array'),
       // Common fields
-      network: z.string().optional().describe('Target network'),
+      network: z.string().optional().describe('Target network (e.g., "polygon-mainnet" or CAIP-2 "eip155:137").'),
       wallet_id: z.string().optional().describe('Wallet ID for multi-wallet sessions'),
       gas_condition: z.object({
         max_gas_price: z.string().optional(),
