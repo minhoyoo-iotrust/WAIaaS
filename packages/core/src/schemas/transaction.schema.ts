@@ -75,36 +75,70 @@ export const TransferRequestSchema = z.object({
 });
 export type TransferRequestInput = z.infer<typeof TransferRequestSchema>;
 
-/** Token metadata for TOKEN_TRANSFER and APPROVE requests. */
+/** Token metadata for TOKEN_TRANSFER and APPROVE requests.
+ *  When assetId is provided, address/decimals/symbol become optional (resolved from registry).
+ *  When assetId is absent, address/decimals/symbol are required (legacy mode).
+ */
 const TokenInfoBaseSchema = z.object({
-  address: z.string().min(1), // mint address (SPL) or contract address (ERC-20)
-  decimals: z.number().int().min(0).max(18),
-  symbol: z.string().min(1).max(10),
+  address: z.string().min(1).optional(), // mint address (SPL) or contract address (ERC-20)
+  decimals: z.number().int().min(0).max(18).optional(),
+  symbol: z.string().min(1).max(10).optional(),
   assetId: Caip19Schema.optional(),
 });
 
-/** TokenInfoSchema with cross-validation: when assetId is provided, its address must match the address field. */
+/** TokenInfoSchema with cross-field validation:
+ *  - No assetId: address, decimals, symbol all required (backward compat)
+ *  - assetId only: all optional (resolved later from registry)
+ *  - assetId + address: cross-validate address match (case-insensitive)
+ */
 const TokenInfoSchema = TokenInfoBaseSchema.superRefine((data, ctx) => {
-  if (!data.assetId) return; // No assetId -> skip cross-validation (TXSC-03)
-
-  try {
-    const parsed = parseCaip19(data.assetId);
-    const extractedAddress = parsed.assetReference;
-
-    // Cross-validate: case-insensitive for EVM (Pitfall 1: checksummed vs lowercased)
-    if (extractedAddress.toLowerCase() !== data.address.toLowerCase()) {
+  // Legacy mode (no assetId): require address, decimals, symbol
+  if (!data.assetId) {
+    if (!data.address) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: `assetId address '${extractedAddress}' does not match provided address '${data.address}'`,
+        message: 'address is required when assetId is not provided',
+        path: ['address'],
+      });
+    }
+    if (data.decimals === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'decimals is required when assetId is not provided',
+        path: ['decimals'],
+      });
+    }
+    if (!data.symbol) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'symbol is required when assetId is not provided',
+        path: ['symbol'],
+      });
+    }
+    return;
+  }
+
+  // assetId provided + address also provided: cross-validate (TXSC-03)
+  if (data.address) {
+    try {
+      const parsed = parseCaip19(data.assetId);
+      const extractedAddress = parsed.assetReference;
+
+      // Cross-validate: case-insensitive for EVM (Pitfall 1: checksummed vs lowercased)
+      if (extractedAddress.toLowerCase() !== data.address.toLowerCase()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `assetId address '${extractedAddress}' does not match provided address '${data.address}'`,
+          path: ['assetId'],
+        });
+      }
+    } catch {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Invalid CAIP-19 assetId: ${data.assetId}`,
         path: ['assetId'],
       });
     }
-  } catch {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: `Invalid CAIP-19 assetId: ${data.assetId}`,
-      path: ['assetId'],
-    });
   }
 });
 
