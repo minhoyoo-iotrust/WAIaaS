@@ -352,8 +352,11 @@
 | 336 | BUG | MEDIUM | Across Bridge status API depositId Zod 타입 불일치 — API 문자열 반환 vs 스키마 number | v31.10 | FIXED | 2026-03-11 |
 | 337 | BUG | HIGH | TX_CONFIRMED 알림 {amount} 미치환 — Background Confirm Worker + API Direct 경로 2곳 | — | FIXED | 2026-03-12 |
 | 338 | ENHANCEMENT | LOW | GitHub Pages 랜딩 사이트 + AEO 구축 — SEO 메타데이터, llms.txt, ai-plugin.json | v31.14 | FIXED | 2026-03-13 |
-| 339 | ENHANCEMENT | LOW | GitHub Actions Pages 배포 워크플로우 — site/ 폴더 workflow_dispatch 배포 | — | OPEN | — |
-| 340 | ENHANCEMENT | LOW | 터미널 콘솔 테마 리디자인 — 콘텐츠 유지, terminalcss.xyz/dark 스타일 적용 | — | OPEN | — |
+| 339 | ENHANCEMENT | LOW | GitHub Actions Pages 배포 워크플로우 — site/ 폴더 workflow_dispatch 배포 | — | FIXED | 2026-03-14 |
+| 340 | ENHANCEMENT | LOW | 터미널 콘솔 테마 리디자인 — 콘텐츠 유지, terminalcss.xyz/dark 스타일 적용 | — | FIXED | 2026-03-14 |
+| 341 | ENHANCEMENT | MEDIUM | GitHub Pages 사이트에 에이전트 연동 가이드 추가 — OpenClaw 탭 + MCP 탭 (Claude Code/Cursor/Desktop) | — | FIXED | 2026-03-14 |
+| 342 | ENHANCEMENT | LOW | Quick Start 카드 코드 블록 수직 정렬 불일치 — flex + margin-top:auto로 하단 고정 | — | FIXED | 2026-03-14 |
+| 343 | ENHANCEMENT | MEDIUM | OG 미리보기 이미지 생성 + 메타 태그 추가 — HTML→Puppeteer 스크린샷 방식 | — | FIXED | 2026-03-14 |
 
 ## Type Legend
 
@@ -365,9 +368,9 @@
 
 ## Summary
 
-- **OPEN:** 2
-- **FIXED:** 338
+- **OPEN:** 0
+- **FIXED:** 343
 - **WONTFIX:** 1
-- **Total:** 341
+- **Total:** 344
 - **Archived:** 321 (001–321)
 
