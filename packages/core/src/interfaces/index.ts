@@ -113,6 +113,11 @@ export {
   parseAssetId,
   extractNetworkFromAssetId,
   type ParsedAssetId,
+  enrichBalance,
+  enrichAsset,
+  enrichNft,
+  enrichTransaction,
+  enrichIncomingTx,
 } from '../caip/index.js';
 
 // v29.2 Lending Provider types (Zod SSoT)

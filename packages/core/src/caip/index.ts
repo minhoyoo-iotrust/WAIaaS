@@ -21,3 +21,6 @@ export { nativeAssetId, tokenAssetId, isNativeAsset, nftAssetId, isNftAsset } fr
 
 // Asset resolve (CAIP-19 parsing + network extraction)
 export { parseAssetId, extractNetworkFromAssetId, type ParsedAssetId } from './asset-resolve.js';
+
+// Response enrichment (runtime CAIP-2/19 injection)
+export { enrichBalance, enrichAsset, enrichNft, enrichTransaction, enrichIncomingTx } from './response-enrichment.js';

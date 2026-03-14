@@ -462,6 +462,11 @@ export {
   parseAssetId,
   extractNetworkFromAssetId,
   type ParsedAssetId,
+  enrichBalance,
+  enrichAsset,
+  enrichNft,
+  enrichTransaction,
+  enrichIncomingTx,
 } from './interfaces/index.js';
 
 // v29.2 Lending Provider Zod schemas (value exports)
