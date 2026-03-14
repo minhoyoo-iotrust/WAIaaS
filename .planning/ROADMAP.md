@@ -95,11 +95,11 @@ Plans:
   1. typed-client.ts가 경로 문자열에서 요청/응답 타입을 자동 추론한다
   2. X-Master-Password 헤더가 미들웨어로 자동 주입되고 401 응답 시 로그아웃 처리된다
   3. 마이그레이션된 페이지의 테스트 mock 객체가 satisfies GeneratedType으로 구조 검증된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 413-01: TBD
-- [ ] 413-02: TBD
+- [ ] 413-01-PLAN.md — openapi-fetch 타입 안전 클라이언트 + 인증 미들웨어
+- [ ] 413-02-PLAN.md — Dashboard 페이지 마이그레이션 + 테스트 mock satisfies 검증
 
 ### Phase 414: 인터페이스 점진적 마이그레이션
 **Goal**: Admin UI의 모든 수동 인터페이스와 타입 캐스트가 생성 타입으로 전환되어, 백엔드 변경 시 빌드 실패로 불일치가 감지된다
