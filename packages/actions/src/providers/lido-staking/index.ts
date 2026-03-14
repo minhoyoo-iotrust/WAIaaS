@@ -10,7 +10,7 @@
  */
 import { z } from 'zod';
 import { ChainError } from '@waiaas/core';
-import { parseTokenAmount } from '../../common/amount-parser.js';
+import { migrateAmount } from '../../common/migrate-amount.js';
 import type {
   IActionProvider,
   ActionProviderMetadata,
@@ -36,11 +36,11 @@ import type { PositionUpdate, PositionCategory } from '@waiaas/core';
 // ---------------------------------------------------------------------------
 
 const LidoStakeInputSchema = z.object({
-  amount: z.string().min(1, 'amount is required (ETH, e.g. "1.0")').describe('Amount in human-readable ETH (e.g., "1.0"). Note: will migrate to smallest units (wei) in future.'),
+  amount: z.string().min(1, 'amount is required').describe('Amount in smallest units (wei). Example: "1000000000000000000" = 1.0 ETH. Legacy decimal input (e.g., "1.0") is auto-converted with deprecation warning.'),
 });
 
 const LidoUnstakeInputSchema = z.object({
-  amount: z.string().min(1, 'amount is required (stETH, e.g. "1.0")').describe('Amount in human-readable stETH (e.g., "1.0"). Note: will migrate to smallest units (wei) in future.'),
+  amount: z.string().min(1, 'amount is required').describe('Amount in smallest units (wei). Example: "1000000000000000000" = 1.0 stETH. Legacy decimal input (e.g., "1.0") is auto-converted with deprecation warning.'),
 });
 
 // ---------------------------------------------------------------------------
@@ -113,7 +113,7 @@ export class LidoStakingActionProvider implements IActionProvider {
 
   private resolveStake(params: Record<string, unknown>): ContractCallRequest {
     const input = LidoStakeInputSchema.parse(params);
-    const amountWei = parseTokenAmount(input.amount, 18);
+    const amountWei = migrateAmount(input.amount, 18);
 
     return {
       type: 'CONTRACT_CALL',
@@ -132,7 +132,7 @@ export class LidoStakingActionProvider implements IActionProvider {
     context: ActionContext,
   ): ContractCallRequest[] {
     const input = LidoUnstakeInputSchema.parse(params);
-    const amountWei = parseTokenAmount(input.amount, 18);
+    const amountWei = migrateAmount(input.amount, 18);
 
     // Step 1: Approve stETH to WithdrawalQueue
     const approveRequest: ContractCallRequest = {

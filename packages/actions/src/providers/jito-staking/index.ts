@@ -21,10 +21,10 @@ import { type JitoStakingConfig, JITO_STAKING_DEFAULTS, JITO_MIN_DEPOSIT_LAMPORT
 import {
   buildDepositSolRequest,
   buildWithdrawSolRequest,
-  parseSolAmount,
   getJitoSolBalance,
   getStakePoolExchangeRate,
 } from './jito-stake-pool.js';
+import { migrateAmount } from '../../common/migrate-amount.js';
 import { formatCaip19 } from '@waiaas/core';
 import type { PositionUpdate, PositionCategory } from '@waiaas/core';
 
@@ -33,11 +33,11 @@ import type { PositionUpdate, PositionCategory } from '@waiaas/core';
 // ---------------------------------------------------------------------------
 
 const JitoStakeInputSchema = z.object({
-  amount: z.string().min(1, 'amount is required (SOL, e.g. "1.0")').describe('Amount in human-readable SOL (e.g., "1.0"). Note: will migrate to smallest units (lamports) in future.'),
+  amount: z.string().min(1, 'amount is required').describe('Amount in smallest units (lamports). Example: "1000000000" = 1.0 SOL. Legacy decimal input (e.g., "1.0") is auto-converted with deprecation warning.'),
 });
 
 const JitoUnstakeInputSchema = z.object({
-  amount: z.string().min(1, 'amount is required (JitoSOL, e.g. "1.0")').describe('Amount in human-readable JitoSOL (e.g., "1.0"). Note: will migrate to smallest units (lamports) in future.'),
+  amount: z.string().min(1, 'amount is required').describe('Amount in smallest units (lamports). Example: "1000000000" = 1.0 JitoSOL. Legacy decimal input (e.g., "1.0") is auto-converted with deprecation warning.'),
 });
 
 // ---------------------------------------------------------------------------
@@ -113,7 +113,7 @@ export class JitoStakingActionProvider implements IActionProvider {
     context: ActionContext,
   ): Promise<ContractCallRequest> {
     const input = JitoStakeInputSchema.parse(params);
-    const amountLamports = await parseSolAmount(input.amount);
+    const amountLamports = migrateAmount(input.amount, 9);
 
     if (amountLamports < JITO_MIN_DEPOSIT_LAMPORTS) {
       throw new ChainError('INVALID_INSTRUCTION', 'solana', {
@@ -133,7 +133,7 @@ export class JitoStakingActionProvider implements IActionProvider {
     context: ActionContext,
   ): Promise<ContractCallRequest> {
     const input = JitoUnstakeInputSchema.parse(params);
-    const amountLamports = await parseSolAmount(input.amount);
+    const amountLamports = migrateAmount(input.amount, 9);
 
     return buildWithdrawSolRequest(this.config, amountLamports, context.walletAddress);
   }
