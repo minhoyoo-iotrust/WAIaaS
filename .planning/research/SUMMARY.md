@@ -1,172 +1,177 @@
 # Project Research Summary
 
-**Project:** WAIaaS v31.14 -- EVM JSON-RPC Proxy
-**Domain:** EVM JSON-RPC proxy mode for Forge/Hardhat/ethers.js/viem compatibility
-**Researched:** 2026-03-13
+**Project:** WAIaaS — Amount Unit Standardization & AI Agent DX
+**Domain:** Blockchain wallet API DX improvement — unit consistency, typed MCP schemas, humanAmount parameter
+**Researched:** 2026-03-14
 **Confidence:** HIGH
 
 ## Executive Summary
 
-EVM RPC Proxy is a **routing/integration feature**, not a technology adoption challenge. The entire implementation requires zero new npm dependencies -- existing Hono 4.x, viem 2.x, and Zod 3.x provide all capabilities needed for JSON-RPC 2.0 protocol handling, contract deployment, and long-poll async patterns. The architecture integrates as a new route layer on the existing daemon, reusing the 6-stage pipeline, policy engine, RPC Pool, EventBus, and tx-parser without modification to their core logic. The key innovation is a `CompletionWaiter` that wraps the existing fire-and-forget pipeline into synchronous responses via EventBus event subscription.
+This milestone improves AI agent developer experience by standardizing amount units across 14 DeFi action providers and enhancing MCP tool schema expressiveness. The core problem is that 4 providers (Aave V3, Kamino, Lido, Jito) currently accept human-readable inputs ("1.5 ETH") while 10 providers already require smallest-unit inputs (wei/lamports), forcing agents to memorize per-provider conventions. The solution is smallest-unit as canonical across all providers, with a safe backward-compatibility migration path and a new optional `humanAmount` parameter for human-readable convenience. CLOB exchange providers (Hyperliquid, Drift, Polymarket) are explicitly exempt as they use exchange-native units which are already human-readable.
 
-The primary risks center on **protocol-level correctness** and **timing mismatches**. Node.js's 5-second `keepAliveTimeout` will kill long-poll connections unless explicitly overridden. Forge's hardcoded 45-second timeout is shorter than WAIaaS DELAY (300s) and APPROVAL (600s) tiers, creating an unavoidable client-side timeout for non-IMMEDIATE policies. The CONTRACT_DEPLOY type addition requires exhaustive propagation through the Zod SSoT chain (12+ touchpoints including switch/case branches, DB CHECK constraints, Admin UI, and policy engine). Forge script multi-TX scenarios demand a local nonce tracker to prevent nonce collisions when transactions are queued in the pipeline.
+The recommended implementation sequence is: schema description hardening first (zero behavior change, immediate DX gain), then provider unit migration with `migrateAmount()` backward compatibility, then typed MCP schemas using direct Zod reference (same-process, avoids lossy JSON Schema roundtrip), then `humanAmount` parameter across 10 smallest-unit providers, then `amountFormatted`/`decimals`/`symbol` in responses, and finally SDK/skill file sync. No new npm dependencies are required — the existing Zod 3.x, viem 2.x, and existing utilities (`parseTokenAmount`, `formatAmount`) handle all needs.
 
-The recommended approach is a 4-phase build: (1) Foundation -- JSON-RPC protocol utils, CONTRACT_DEPLOY type system expansion, and infrastructure prep; (2) Core RPC proxy -- transaction adapter, completion waiter, passthrough, and sync pipeline executor; (3) Route assembly -- dispatcher, method handlers, Hono route registration; (4) DX integration -- Admin Settings/UI, MCP tool, SDK method, and E2E testing with Forge/Hardhat.
+The highest risk in this milestone is the backward-compatibility migration for the 4 providers. Each provider currently hardcodes token decimals in `parseTokenAmount()` calls (Aave=18, Kamino=6, Lido=18, Jito=9). The `migrateAmount()` helper that detects human-readable inputs MUST receive the actual token decimals per-call — if it inherits hardcoded values, a USDC supply using deprecated format `"1.5"` would compute 10^12x too large. All 5 critical pitfalls and 10 moderate pitfalls are well-identified with specific prevention strategies, giving this milestone high implementability confidence.
 
 ## Key Findings
 
 ### Recommended Stack
 
-No new dependencies. All capabilities map to existing stack components already installed and proven in the codebase. See `.planning/research/STACK.md` for full analysis.
+No new npm dependencies are required for this milestone. All needed capabilities exist in the current stack. The existing `packages/actions/src/common/amount-parser.ts` provides `parseTokenAmount()` and a `parseAmount()` utility. The existing `packages/core/src/utils/format-amount.ts` provides `formatAmount()`. The `zod-to-json-schema` package would only be needed for JSON Schema roundtrip — this approach is rejected in favor of direct Zod reference since MCP runs in the same process as the daemon. See `.planning/research/STACK.md` for the full no-new-dependency analysis.
 
 **Core technologies (all existing):**
-- **Hono 4.x**: Plain `app.post()` route (NOT OpenAPIHono) -- JSON-RPC error envelope differs from REST OpenAPI
-- **Zod 3.x**: JSON-RPC 2.0 request/response schema (trivial: 10 lines) -- no `jayson` library needed
-- **viem 2.x**: `serializeTransaction({ to: undefined })` for CREATE TX, `keccak256` for bytecode hashing
-- **RPC Pool (v28.6)**: Passthrough forwarding via single `fetch()` call -- no `http-proxy-middleware` needed
-- **EventBus**: `transaction:completed`/`transaction:failed` events for completion tracking
-- **Node.js 22 built-in**: `AbortController` + `Promise.race()` for long-poll timeout
+- **Zod 3.x**: Schema validation and XOR `amount`/`humanAmount` constraint via `.superRefine()` — already installed, project SSoT
+- **viem `parseUnits`/`formatUnits`**: Canonical BigInt unit conversion for EVM tokens — already used throughout
+- **Existing `formatAmount()` utility**: Must be the single function used by both `amountFormatted` and `balanceFormatted` to ensure output consistency
+- **Existing `parseTokenAmount()`**: Must be eliminated from the 4 migrating provider forward paths after migration; replaced by direct bigint passthrough
 
 ### Expected Features
 
-See `.planning/research/FEATURES.md` for complete table with complexity ratings and dependencies.
+See `.planning/research/FEATURES.md` for the complete feature table with complexity ratings and dependency graph.
 
 **Must have (table stakes):**
-- `eth_sendTransaction` intercept with 6-stage pipeline sync execution
-- `eth_accounts` / `eth_chainId` / `net_version` intercept
-- ~20 passthrough read methods (`eth_call`, `eth_getBalance`, etc.) via RPC Pool
-- JSON-RPC 2.0 protocol compliance (id type preservation, batch support, standard error codes)
-- Session auth via `Authorization: Bearer` header
-- `from` address validation/auto-fill
-- `personal_sign` and `eth_signTypedData_v4` signing support
+- Consistent smallest-unit inputs across all 14 non-CLOB providers — agents currently memorize per-provider conventions
+- `amountFormatted` + `decimals` + `symbol` in transaction responses — agents currently must do their own decimals lookup + BigInt division after every call
+- Typed MCP parameter schemas — current `z.record(z.unknown())` gives AI models zero type/unit information; MCP spec defines `inputSchema` as JSON Schema by design
+- Schema descriptions with explicit unit examples on all amount fields — cheapest change with highest agent DX impact
 
 **Should have (differentiators):**
-- CONTRACT_DEPLOY as separate policy type (9th transaction type) with bytecodeHash audit trail
-- Long-poll async approval for DELAY/APPROVAL tiers (transparent to Forge/Hardhat)
-- Admin Settings runtime toggle (`rpc_proxy.*`) with hot-reload
-- MCP `get_rpc_proxy_url` tool for AI agent self-discovery
-- SDK `getRpcProxyUrl()` + connect-info extension
-- Audit log integration with `source: 'rpc-proxy'`
+- `humanAmount` alternative parameter across 10 smallest-unit providers — agents naturally express "0.5 ETH" not 500000000000000000n
+- `balanceFormatted` in balance responses — follows the `amountFormatted` pattern, trivial to add after amountFormatted is in place
+- `unitConvention` metadata field in ActionDefinition (`'smallest' | 'human-readable' | 'exchange-native'`) — allows agents to programmatically discover CLOB exceptions
+- Skill file amount unit guide — AI-native product should have dedicated unit convention documentation
 
 **Defer (v2+):**
-- WebSocket RPC (`eth_subscribe`, `eth_newFilter`) -- HTTP POST covers Forge/Hardhat 100%
-- Response caching -- unnecessary without performance issues
-- Solana RPC proxy -- entirely different protocol, separate milestone
-- `eth_sendRawTransaction` support -- bypasses policy engine, explicitly rejected
-- EIP-4337 UserOp RPC -- existing UserOp API (v31.2) covers this
+- `migrateAmount()` removal after deprecation window — separate breaking-change milestone, not this milestone
+- MCP `outputSchema` adoption — MCP spec supports it but not critical for agent input DX
+- CLI interactive unit selector — CLI is not in scope; agent-facing API is the priority
 
 ### Architecture Approach
 
-See `.planning/research/m31-14-rpc-proxy-ARCHITECTURE.md` for component diagrams, data flows, and build order.
+See `.planning/research/ARCHITECTURE.md` for the full component boundary and data flow analysis (based on the External Action Framework research, which shares the same provider/pipeline architecture as this milestone).
 
-The architecture adds 8 new components (`rpc-proxy.ts` route, `RpcDispatcher`, `RpcMethodHandlers`, `RpcPassthrough`, `SyncPipelineExecutor`, `CompletionWaiter`, `RpcTransactionAdapter`, JSON-RPC utils) and modifies 7 existing ones (EVM_CHAIN_MAP, tx-parser, TRANSACTION_TYPES, TransactionRequestSchema, PipelineContext, SettingsSchema, connect-info). The critical design decision is using **external PIPELINE_HALTED catch** in SyncPipelineExecutor rather than adding `syncMode` branching inside stage4Wait -- this keeps the existing fire-and-forget pipeline untouched.
+This milestone is a DX/interface enhancement layered on top of the existing pipeline, not a structural change. The 6-stage pipeline, ActionProviderRegistry, and transaction data model remain unchanged. Changes are confined to: (1) provider input schema definitions and amount parsing logic, (2) `migrateAmount()` helper shared across 4 providers, (3) `amountFormatted` computed on transaction responses using the token registry, (4) MCP tool registration in `action-provider.ts` using direct Zod object references, and (5) XOR validation refinement shared from `@waiaas/core`. No DB migration is required.
 
-**Major components:**
-1. **RpcDispatcher** -- classifies methods as INTERCEPT / PASSTHROUGH / UNSUPPORTED
-2. **SyncPipelineExecutor** -- runs stage1-6 synchronously, catches PIPELINE_HALTED and delegates to CompletionWaiter
-3. **CompletionWaiter** -- `txId -> Promise<txHash>` map with EventBus subscription (2 global listeners only)
-4. **RpcTransactionAdapter** -- converts `eth_sendTransaction` params to WAIaaS TransactionRequest with tx-parser type classification
-5. **RpcPassthrough** -- forwards read methods to upstream RPC via RPC Pool
+**Major components affected:**
+1. **`@waiaas/actions` provider schemas (14 providers)** — Amount field descriptions with explicit unit examples; 4 providers migrate input semantics with `migrateAmount()` backward compat
+2. **`@waiaas/core` shared validation** — New `amountXorRefinement` exported Zod refinement for `amount`/`humanAmount` XOR; enforced at every entry point
+3. **`@waiaas/daemon` transaction response** — `amountFormatted`, `decimals`, `symbol` computed from token registry at response time; no DB migration needed
+4. **`@waiaas/mcp` tool registration** — `action-provider.ts` changes from `z.record(z.unknown())` to per-action Zod schema via direct `ActionDefinition.inputSchema` reference
+5. **`@waiaas/sdk` + skill files** — `humanAmount` option added to relevant method signatures (discriminated union); unit guide section added to 4 skill files
 
 ### Critical Pitfalls
 
-See `.planning/research/m31-14-rpc-proxy-PITFALLS.md` for all 14 pitfalls with prevention strategies.
+See `.planning/research/PITFALLS.md` for all 15 pitfalls with code evidence, prevention strategies, and detection tests.
 
-1. **Node.js keepAliveTimeout 5s kills long-poll** -- Set `server.keepAliveTimeout = 700_000` and `server.headersTimeout = 705_000` at daemon startup before any RPC proxy route is registered
-2. **CONTRACT_DEPLOY SSoT chain incomplete propagation** -- 12+ touchpoints must update simultaneously (enum, Zod discriminatedUnion, switch/case in stages.ts, DB CHECK, Admin UI, policy engine, audit, OpenAPI). TypeScript compilation does NOT catch missing switch cases due to `default: throw` pattern
-3. **`toAddress` non-nullable blocks CREATE TX storage** -- Change `TransactionSchema.toAddress` to `z.string().nullable()`, store `null` for deploys, add `metadata.deployedAddress` for contract address
-4. **Forge script multi-TX nonce collision** -- Implement local nonce tracker `Map<address, pendingNonce>` with `max(onchainNonce, localTracker + 1)` strategy. Serialize `eth_sendTransaction` per wallet+chain
-5. **Forge 45s hardcoded timeout vs DELAY/APPROVAL** -- Document `--timeout 600` requirement, recommend IMMEDIATE tier for dev/test, add `X-WAIaaS-Timeout-Hint` response header
+1. **Hardcoded decimals in migrateAmount backward-compat path** — `migrateAmount()` MUST accept `decimals` as a parameter, resolved per-call (native from chain config, registered from token registry). The 4 providers currently hardcode 18/6/18/9 in `parseTokenAmount()` calls. These MUST NOT carry over. Failure = 10^12x amount overcharge for multi-decimal assets (e.g., USDC on Aave).
+
+2. **Silent near-zero transactions from integer inputs post-migration** — Callers who previously sent `"100"` meaning "100 USDC" will silently send 100 micro-USDC. `amountFormatted` in responses is the primary safeguard. Add suspicious-amount warnings when computed human-readable value is below a configurable threshold.
+
+3. **`max` keyword must survive all three code paths** — Aave repay/withdraw and Kamino repay/withdraw support `amount="max"`. The `migrateAmount()` helper must check `=== 'max'` before any numeric/decimal processing. `humanAmount="max"` must also be supported. XOR validation must account for "max" in both fields.
+
+4. **XOR amount/humanAmount validation must be enforced at every entry point** — REST API, MCP, SDK, Admin UI all reach the pipeline. A shared `.superRefine()` in `@waiaas/core` is the correct pattern. MCP benefits from direct Zod reference (same process) to automatically inherit this refinement without a lossy JSON Schema roundtrip.
+
+5. **MCP Zod -> JSON Schema roundtrip is lossy** — `.superRefine()`, `.refine()`, `.transform()` do not survive `zodToJsonSchema()`. Since MCP runs in the same process as the daemon, direct Zod object reference is the correct approach. This eliminates the lossy conversion entirely and removes the need for `zod-to-json-schema` package.
 
 ## Implications for Roadmap
 
-Based on research, suggested phase structure:
+Based on combined research, 5 phases are recommended in strict dependency order:
 
-### Phase 1: Type System + Infrastructure Foundation
+### Phase 1: Schema Hardening (descriptions + CLOB documentation)
 
-**Rationale:** CONTRACT_DEPLOY type must propagate through entire Zod SSoT chain before any RPC proxy code can reference it. Node.js keepAliveTimeout must be fixed before long-poll is testable. These are prerequisites with no dependencies on RPC proxy code.
-**Delivers:** 9-type transaction system, DB migration v58, toAddress nullable, keepAliveTimeout fix, EVM_CHAIN_MAP reverse lookup, tx-parser NFT+deploy selector expansion
-**Addresses:** CONTRACT_DEPLOY policy type (differentiator), JSON-RPC protocol foundation
-**Avoids:** Pitfall 2 (SSoT chain), Pitfall 3 (toAddress nullable), Pitfall 1 (keepAliveTimeout)
+**Rationale:** Zero behavior change, zero test updates needed, immediately improves agent DX across all 14 providers. Cheapest highest-value change. Must come first so subsequent phases build on correctly described schemas. Sets the naming and description conventions that Phases 2-4 will follow.
+**Delivers:** All 14 provider amount fields with explicit unit descriptions and examples; CLOB exception documentation in schema descriptions with `[EXCHANGE-NATIVE UNITS]` prefix; MCP built-in tool description updates (send-token, transfer-nft, etc.); `unitConvention` metadata field in ActionDefinition
+**Addresses:** Table stakes "schema descriptions with unit examples" feature; Differentiator "unitConvention metadata"
+**Avoids:** Pitfall 9 (CLOB exception agent confusion — metadata field introduced here)
 
-### Phase 2: Core RPC Proxy Engine
+### Phase 2: Provider Unit Migration (4 providers + migrateAmount helper)
 
-**Rationale:** With type system complete, build the core components bottom-up: protocol utils -> transaction adapter -> completion waiter -> passthrough -> sync pipeline executor. These are independent, unit-testable modules.
-**Delivers:** JSON-RPC protocol utils, RpcTransactionAdapter, CompletionWaiter, RpcPassthrough, SyncPipelineExecutor, local nonce tracker
-**Uses:** Zod (JSON-RPC schema), EventBus (completion tracking), RPC Pool (passthrough), pipeline stages (sync execution)
-**Implements:** All 5 major architecture components
-**Avoids:** Pitfall 4 (nonce collision), Pitfall 9 (JSON-RPC spec compliance), Pitfall 10 (fire-and-forget interference)
+**Rationale:** Most critical correctness work. Must happen before humanAmount (which depends on stable smallest-unit semantics) and before amountFormatted (which interprets amount as smallest unit to format). The `migrateAmount(value, decimals)` helper created here is the shared backward-compatibility foundation for all 4 providers.
+**Delivers:** Aave V3, Kamino, Lido, Jito migrated to smallest-unit input with `migrateAmount()` backward compat and deprecation warnings; existing tests updated to use smallest-unit format; dedicated backward-compat tests; HF simulation arithmetic corrected for actual token decimals
+**Uses:** Token registry for decimal lookup, chain config for native token decimals
+**Avoids:** Pitfall 1 (hardcoded decimals), Pitfall 2 (silent near-zero), Pitfall 3 (max keyword), Pitfall 6 (HF simulation arithmetic), Pitfall 11 (test false confidence), Pitfall 14 (deprecation log flood)
 
-### Phase 3: Route Assembly + Signing Methods
+### Phase 3: Typed MCP Schemas + amountFormatted Responses
 
-**Rationale:** With core engine ready, assemble the dispatcher, method handlers, and Hono route. Add signing methods (personal_sign, eth_signTypedData_v4, eth_signTransaction). Wire sessionAuth middleware. This is the integration phase.
-**Delivers:** Working RPC proxy endpoint `/v1/rpc-evm/:walletId/:chainId`, all intercept/passthrough/reject method routing, long-poll for DELAY/APPROVAL, batch request handling, `from` address validation
-**Avoids:** Pitfall 5 (client timeout messaging), Pitfall 6 (batch signing -- reject in batch initially), Pitfall 8 (from field handling), Pitfall 13 (eth_chainId hex format)
+**Rationale:** Both depend on Phase 2 completion. MCP schemas need correct amount field types (smallest-unit semantics). `amountFormatted` needs amount to be in smallest units to format correctly. Grouped because both rely on the same token registry lookup infrastructure.
+**Delivers:** MCP tool schemas using direct Zod object reference from `ActionDefinition.inputSchema`; `amountFormatted`, `decimals`, `symbol` in transaction and action responses; `balanceFormatted` in balance responses; null handling contract with actionable schema descriptions
+**Uses:** Existing `formatAmount()` utility as the single formatter for both amountFormatted and balanceFormatted
+**Avoids:** Pitfall 5 (lossy roundtrip — direct reference), Pitfall 8 (amountFormatted null safety), Pitfall 12 (zodToJsonSchema version issues — avoided entirely), Pitfall 15 (balanceFormatted consistency)
 
-### Phase 4: DX Integration + Testing
+### Phase 4: humanAmount Parameter
 
-**Rationale:** Final phase adds developer experience: Admin Settings runtime toggle, Admin UI dashboard, MCP tool, SDK method, connect-info extension. E2E tests with actual Forge/Hardhat commands verify compatibility.
-**Delivers:** Admin Settings (`rpc_proxy.*`), Admin UI RPC proxy section, MCP `get_rpc_proxy_url`, SDK `getRpcProxyUrl()`, connect-info `rpcProxyUrl` field, audit log integration, E2E Forge/Hardhat compatibility tests
-**Avoids:** Pitfall 12 (Forge auth header configuration -- documented in E2E test setup)
+**Rationale:** Depends on Phase 2 (smallest-unit semantics must be stable) and Phase 3 (token registry lookup pattern established). The naming decision — universal `humanAmount` vs per-provider naming like `humanSellAmount`, `humanFromAmount` — MUST be made as an explicit kick-off decision before any code is written to avoid mid-phase refactoring.
+**Delivers:** `humanAmount` optional parameter across 10 smallest-unit providers; shared `@waiaas/core` XOR Zod refinement (`amount` XOR `humanAmount`); enforcement at REST API, MCP, and SDK entry points; actionable error messages when token registry missing for humanAmount conversion
+**Implements:** Shared Zod XOR refinement in `@waiaas/core`; per-provider `humanAmount` Zod schema addition
+**Avoids:** Pitfall 4 (XOR validation gaps), Pitfall 7 (field name proliferation — naming convention decided upfront), Pitfall 10 (token registry dependency — actionable errors)
+
+### Phase 5: SDK + Skill File Sync
+
+**Rationale:** Depends on all prior phases. Interface documentation must reflect the final stable API surface. Cheapest to do last when all behaviors are locked. Skill file and SDK changes are text/type work with no functional dependencies on each other.
+**Delivers:** SDK `humanAmount` option in TypeScript method signatures (discriminated union `{ amount: string; humanAmount?: never } | { amount?: never; humanAmount: string }`); unit guide sections in transactions.skill.md, actions.skill.md, wallet.skill.md, quickstart.skill.md; CHANGELOG migration guide with before/after examples; JSDoc code examples for both amount patterns
+**Avoids:** Pitfall 13 (SDK type complexity — discriminated union with JSDoc)
 
 ### Phase Ordering Rationale
 
-- Type system (Phase 1) must precede all pipeline code because CONTRACT_DEPLOY flows through every stage
-- Core engine (Phase 2) must precede route assembly (Phase 3) because dispatcher depends on all handlers
-- DX (Phase 4) is independent of core functionality and can be deferred without blocking Forge/Hardhat usage
-- Local nonce tracker (Phase 2) must be in place before multi-TX Forge script testing (Phase 3)
-- keepAliveTimeout fix (Phase 1) must precede any long-poll testing (Phase 2+)
+- Phase 1 before all others: zero-risk, immediate value, establishes schema conventions all later phases follow
+- Phase 2 before Phase 4: `humanAmount` depends on stable smallest-unit semantics; backward compat must be correct first
+- Phase 2 before Phase 3: `amountFormatted` interprets amount as smallest unit — if providers still accept human-readable, formatting would be wrong scale
+- Phases 3 and 4 can partially overlap in implementation but Phase 3's token registry pattern should be established first
+- Phase 5 always last: interface documentation reflects the complete, stable final behavior
 
 ### Research Flags
 
-Phases likely needing deeper research during planning:
-- **Phase 1 (CONTRACT_DEPLOY propagation):** Requires exhaustive audit of all switch/case branches, Zod schemas, and DB constraints. Low risk of unknown unknowns but high volume of touchpoints (12+)
-- **Phase 2 (Nonce tracker):** Local nonce management under concurrent requests is tricky. Review thirdweb and QuickNode patterns for edge cases (rollback on failure, mempool eviction)
+Phases with standard patterns (no additional research needed):
+- **Phase 1:** Pure schema text changes, zero risk, well-understood Zod `.describe()` pattern; CLOB providers already identified
+- **Phase 5:** SDK discriminated union and skill file updates follow established project patterns (see v31.12 External Action skill file updates)
 
-Phases with standard patterns (skip research-phase):
-- **Phase 2 (JSON-RPC protocol utils):** Spec is trivial and stable, Zod schema is 10 lines
-- **Phase 2 (CompletionWaiter):** Standard EventBus + Promise pattern, directly verified against codebase
-- **Phase 3 (Route assembly):** Standard Hono route registration, sessionAuth middleware already proven
-- **Phase 4 (Admin Settings/MCP/SDK):** Established patterns from prior milestones (v31.0+)
+Phases needing careful validation during implementation:
+- **Phase 2:** `migrateAmount()` decimal lookup for multi-asset providers. Aave V3 supports ~20 assets per network. Token registry coverage for all Aave-supported assets on each chain must be verified during implementation. If coverage is incomplete, an on-chain fallback (`decimals()` ERC-20 call) may be needed.
+- **Phase 3:** Token registry coverage determines `amountFormatted` null rate. If many tokens lack registry entries, `amountFormatted` will return null frequently, limiting DX improvement. Assess coverage before implementation.
+- **Phase 4:** `humanAmount` naming decision (Pitfall 7) — "universal `humanAmount`" vs "per-provider naming like `humanSellAmount`" — must be an explicit written decision before coding begins.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Zero new dependencies. All capabilities verified against existing codebase (package.json, source files) |
-| Features | HIGH | Table stakes derived from Forge/Hardhat/viem official docs. Differentiators align with existing WAIaaS patterns. Competitive analysis vs Fireblocks/Frame confirms positioning |
-| Architecture | HIGH | Every component boundary verified by reading existing source (pipeline, EventBus, stages, tx-parser, daemon.ts). PIPELINE_HALTED catch pattern confirmed at stages.ts line-level |
-| Pitfalls | HIGH | Critical pitfalls (keepAliveTimeout, nonce, SSoT chain) confirmed via GitHub issues and codebase analysis. Forge timeout confidence is MEDIUM due to possible Foundry version changes |
+| Stack | HIGH | All capabilities in existing dependencies; verified by direct codebase inspection of utility functions and provider files |
+| Features | HIGH | Feature dependency graph is clear; CLOB exception scope is well-defined (3 providers); MCP spec inputSchema behavior is stable |
+| Architecture | HIGH | Based on direct codebase analysis; integration points identified with specific file paths (aave-v3/index.ts lines 161/193/220/252, kamino/index.ts line 191, mcp/action-provider.ts line 84) |
+| Pitfalls | HIGH | All 5 critical pitfalls identified with concrete code evidence and specific line references; prevention strategies are testable |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Forge timeout exact behavior:** Foundry #9303 confirms 45s hardcoded timeout, but exact behavior may vary in latest Foundry releases. Validate during E2E testing in Phase 4
-- **Batch request with signing methods:** Initial approach is to reject signing methods in batch. If Forge actually sends batched `eth_sendTransaction` + `eth_estimateGas`, this rejection will break compatibility. Monitor during E2E testing
-- **`transferFrom` selector ambiguity (0x23b872dd):** ERC-20 vs ERC-721 cannot be distinguished by selector alone. Fallback to CONTRACT_CALL is safe but imprecise. ERC-165 check deferred to future milestone
-- **Forge `--header` support:** Verify latest Foundry version supports `--header` flag for custom auth headers. Fallback: URL query parameter with log masking
+- **Token registry coverage for Aave V3 assets**: Aave V3 supports ~20 assets per network. If the WAIaaS token registry only covers common tokens (ETH, USDC, WBTC), `migrateAmount()` will fail to determine decimals for less common assets. Resolution during Phase 2: enumerate all Aave-supported assets, verify registry coverage, add missing entries or implement on-chain fallback (`decimals()` ERC-20 call).
+
+- **humanAmount field name convention**: Pitfall 7 identifies 6+ distinct field names across providers (`humanAmount`, `humanSellAmount`, `humanFromAmount`, `humanAmountIn`). The recommendation is universal `humanAmount` for simplicity, but this is a design decision that must be locked before Phase 4 starts.
+
+- **Suspicious amount threshold and price oracle availability**: Pitfall 2 recommends a configurable `SUSPICIOUS_AMOUNT_THRESHOLD` for near-zero transaction warnings. This requires price oracle integration (available via v1.5 DeFi Price Oracle). Confirm the price oracle can compute USD value for all 14 provider tokens at request time, including tokens not in the DeFi Price Oracle's supported list.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- [JSON-RPC 2.0 Specification](https://www.jsonrpc.org/specification) -- protocol compliance requirements
-- WAIaaS codebase direct analysis: `pipeline/stages.ts`, `event-bus.ts`, `event-types.ts`, `daemon.ts`, `tx-parser.ts`, `evm-chain-map.ts`, `rpc-pool.ts`, `approval-workflow.ts`, `delay-queue.ts`
-- [viem docs](https://viem.sh/) -- serializeTransaction, estimateGas, deployContract
-- [Hardhat Configuration](https://v2.hardhat.org/hardhat-runner/docs/config) -- timeout, httpHeaders, accounts: "remote"
+- Codebase: `packages/actions/src/providers/aave-v3/index.ts` — hardcoded decimals=18 at lines 161, 193, 220, 252
+- Codebase: `packages/actions/src/providers/kamino/index.ts` — hardcoded decimals=6 at lines 165, 187, 214, 236; HF simulation `Number(amount) / 1e6` at line 191
+- Codebase: `packages/actions/src/providers/lido-staking/index.ts` — hardcoded decimals=18 at lines 116, 135
+- Codebase: `packages/actions/src/providers/jito-staking/jito-stake-pool.ts` — hardcoded decimals=9 at line 400
+- Codebase: `packages/actions/src/common/amount-parser.ts` — parseTokenAmount utility
+- Codebase: `packages/core/src/utils/format-amount.ts` — formatAmount/parseAmount utilities
+- Codebase: `packages/mcp/src/tools/action-provider.ts` line 84 — `z.record(z.unknown())` current state
+- Milestone objective: `internal/objectives/m31-15-amount-unit-standardization.md` — D1-D7 decisions, R1-R6 requirements
+- [MCP Spec 2025-11-25 Tools](https://modelcontextprotocol.io/specification/2025-11-25/server/tools) — inputSchema is JSON Schema, outputSchema supported
+- [viem parseUnits/formatUnits](https://viem.sh/docs/ethers-migration.html) — standard BigInt unit conversion pattern
 
 ### Secondary (MEDIUM confidence)
-- [Foundry #9303](https://github.com/foundry-rs/foundry/issues/9303) -- Forge 45s timeout limitation
-- [Foundry #4831](https://github.com/foundry-rs/foundry/issues/4831) -- eth_sendTransaction vs eth_sendRawTransaction
-- [Node.js #13391](https://github.com/nodejs/node/issues/13391) -- keepAliveTimeout 5s default
-- [Fireblocks EVM JSON-RPC](https://developers.fireblocks.com/reference/evm-local-json-rpc) -- competitive analysis
-- [Frame Desktop Wallet](https://frame.sh/) -- competitive analysis
+- [Coinbase AgentKit wallet schemas](https://github.com/coinbase/agentkit/blob/main/typescript/agentkit/src/action-providers/wallet/schemas.ts) — uses human-readable "1 ETH" convention (industry comparison for humanAmount pattern)
+- [Alchemy Transfers API](https://www.alchemy.com/docs/reference/transfers-api-quickstart) — returns `value` (decimal-converted), `asset` (symbol), `decimal` fields (industry comparison for amountFormatted/decimals/symbol pattern)
+- [ethers.js Display Logic](https://docs.ethers.org/v5/api/utils/display-logic/) — parseUnits/formatUnits as canonical amount handling
+- Internal: Issue #168 (Admin raw amount display), Issue #165 (notification raw amount) — real user pain point confirmation
 
 ### Tertiary (LOW confidence)
-- [Foundry #8667](https://github.com/foundry-rs/foundry/issues/8667) -- Forge script timeout feature request (may have been resolved)
-- [thirdweb nonce management](https://blog.thirdweb.com/sending-more-than-one-transaction-at-a-time/) -- nonce strategy patterns
-- [ethereum/execution-apis #494](https://github.com/ethereum/execution-apis/issues/494) -- eth_getTransactionCount pending edge cases
+- Zod-to-JSON-Schema lossy conversion: documented limitation in zod-to-json-schema README — supports the direct-reference recommendation but specific edge cases may vary by library version
 
 ---
-*Research completed: 2026-03-13*
+*Research completed: 2026-03-14*
 *Ready for roadmap: yes*
