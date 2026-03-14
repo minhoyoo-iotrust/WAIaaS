@@ -83,11 +83,11 @@ Plans:
   3. assetId의 네트워크와 요청의 network 파라미터가 불일치하면 validation error를 반환한다
   4. assetId가 제공되고 network가 미제공이면 assetId에서 네트워크를 자동 추론한다
   5. 기존 address+decimals+symbol 직접 전달 방식은 변경 없이 동작한다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 408-01: TokenInfo superRefine cross-field validation + CAIP-19 파서
-- [ ] 408-02: 레지스트리 resolve 로직 + 네트워크 추론 + 테스트
+- [ ] 408-01-PLAN.md — CAIP-19 asset resolve 유틸리티 + TokenInfo superRefine cross-field validation
+- [ ] 408-02-PLAN.md — 레지스트리 resolve 미들웨어 + 네트워크 추론 + transactions 통합
 
 ### Phase 409: Response CAIP Enrichment + OpenAPI
 **Goal**: 모든 응답에 chainId(CAIP-2)와 assetId(CAIP-19)를 런타임 동적 생성하여 항상 포함
@@ -99,7 +99,7 @@ Plans:
   3. NFT 응답에도 `assetId`가 포함된다
   4. `connect-info` 응답에 `supportedChainIds` (CAIP-2 배열)가 포함된다
   5. 기존 `network`, `chain`, `address`, `mint` 필드는 그대로 유지된다 (additive only)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
 - [ ] 409-01: 응답 스키마 chainId/assetId 동적 생성 유틸리티 + connect-info 확장
@@ -115,7 +115,7 @@ Plans:
   3. MCP `resolve_asset` 도구에 CAIP-19 assetId를 전달하면 address/decimals/symbol/name/network/chainId/isNative/isRegistered를 반환한다
   4. MCP 토큰 도구(`send_token`, `approve_token` 등)에서 `assetId` 단독 전달이 가능하다
   5. SDK 타입 export에 `Caip2ChainId`, `Caip19AssetId` 타입 alias가 포함된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
 - [ ] 410-01: SDK CAIP 타입 확장 + 메서드 union 타입 + 테스트
@@ -129,7 +129,7 @@ Plans:
   1. `skills/*.skill.md` 파일에 CAIP-2 네트워크 지정 형식과 예시가 포함된다
   2. 토큰 전송 예시에 `assetId` 단독 사용 패턴이 문서화된다
   3. 네트워크 지정 예시에 CAIP-2 형식이 기존 plain string과 병기된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
 - [ ] 411-01: 스킬 파일 4종 CAIP-2/19 사용법 추가
