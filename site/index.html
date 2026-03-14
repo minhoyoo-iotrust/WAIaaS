@@ -652,6 +652,19 @@
       .arch-pipeline { gap: 4px; }
       .pipe-stage { font-size: 0.65rem; padding: 3px 6px; }
       .pipe-arrow { font-size: 0.6rem; }
+      /* 코드 블록 줄바꿈 */
+      .step code { white-space: pre-wrap; word-break: break-all; }
+      .tab-content .cmd-block,
+      .tab-content .json-block { white-space: pre-wrap; word-break: break-all; }
+      /* 테이블 가로 스크롤 */
+      .tab-content .info-table,
+      .tab-content .client-table,
+      .tab-content .compare-table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      /* 탭 콘텐츠 패딩 축소 */
+      .tab-content { padding: 16px; }
+      /* 탭 버튼 스크롤 */
+      .tab-buttons { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      .tab-btn { padding: 8px 16px; font-size: 0.8rem; white-space: nowrap; }
     }
   </style>
 </head>
@@ -958,22 +971,10 @@
             <div class="sub">TypeScript SDK for API integration</div>
           </div>
         </a>
-        <a class="resource-link" href="https://www.npmjs.com/package/@waiaas/wallet-sdk">
-          <div>
-            <div class="label">npm: @waiaas/wallet-sdk</div>
-            <div class="sub">Wallet signing SDK for mobile/desktop apps</div>
-          </div>
-        </a>
         <a class="resource-link" href="https://hub.docker.com/r/waiaas/daemon">
           <div>
             <div class="label">Docker: waiaas/daemon</div>
             <div class="sub">Containerized daemon image</div>
-          </div>
-        </a>
-        <a class="resource-link" href="https://hub.docker.com/r/waiaas/push-relay">
-          <div>
-            <div class="label">Docker: waiaas/push-relay</div>
-            <div class="sub">Push notification relay server</div>
           </div>
         </a>
         <a class="resource-link" href="https://github.com/minhoyoo-iotrust/WAIaaS/blob/main/docs/deployment.md">
