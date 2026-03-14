@@ -13,6 +13,7 @@ import { Modal } from '../components/modal';
 import { CopyButton } from '../components/copy-button';
 import { EmptyState } from '../components/empty-state';
 import { showToast } from '../components/toast';
+import { CREDENTIAL_TYPE_LABELS } from '@waiaas/shared';
 import { getErrorMessage } from '../utils/error-messages';
 import { formatDate, formatAddress } from '../utils/format';
 import { TabNav } from '../components/tab-nav';
@@ -1755,13 +1756,7 @@ function WalletDetailView({ id }: { id: string }) {
   const credRotateValue = useSignal('');
   const credRotateLoading = useSignal(false);
 
-  const CRED_TYPES = [
-    { label: 'API Key', value: 'api-key' },
-    { label: 'HMAC Secret', value: 'hmac-secret' },
-    { label: 'RSA Private Key', value: 'rsa-private-key' },
-    { label: 'Session Token', value: 'session-token' },
-    { label: 'Custom', value: 'custom' },
-  ];
+  const CRED_TYPES = Object.entries(CREDENTIAL_TYPE_LABELS).map(([value, label]) => ({ label, value }));
 
   const fetchWalletCredentials = async () => {
     credentialsLoading.value = true;

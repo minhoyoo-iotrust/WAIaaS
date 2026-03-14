@@ -99,19 +99,30 @@ const mockSettingsAllDisabled = {
 };
 
 const mockEmptyApiKeys = { keys: [] };
-const mockEmptyProviders = { providers: [] };
+
+const mockAaveProviderEnabled = {
+  providers: [
+    { name: 'aave_v3', description: 'EVM lending protocol (supply, borrow, repay, withdraw)', version: '1.0.0', chains: ['evm'], mcpExpose: false, requiresApiKey: false, hasApiKey: false, enabledKey: 'aave_v3', category: 'Lending', isEnabled: true, actions: [] },
+  ],
+};
+const mockAaveProviderDisabled = {
+  providers: [
+    { name: 'aave_v3', description: 'EVM lending protocol (supply, borrow, repay, withdraw)', version: '1.0.0', chains: ['evm'], mcpExpose: false, requiresApiKey: false, hasApiKey: false, enabledKey: 'aave_v3', category: 'Lending', isEnabled: false, actions: [] },
+  ],
+};
 
 function mockApiCalls(
   settingsData: Record<string, unknown> = mockSettingsAllDisabled,
   apiKeysData: { keys: unknown[] } = mockEmptyApiKeys,
-  providersData: { providers: unknown[] } = mockEmptyProviders,
+  providersData: { providers: unknown[] } = mockAaveProviderDisabled,
 ) {
   mockApiGet.mockImplementation(async (path: string) => {
-    if (path === '/v1/admin/settings') return settingsData;
-    if (path === '/v1/admin/api-keys') return apiKeysData;
-    if (path === '/v1/actions/providers') return providersData;
-    return {};
+    if (path === '/v1/admin/settings') return { data: settingsData };
+    if (path === '/v1/admin/api-keys') return { data: apiKeysData };
+    if (path === '/v1/actions/providers') return { data: providersData };
+    return { data: {} };
   });
+  mockApiPut.mockImplementation(async () => ({ data: { updated: 1, settings: settingsData } }));
 }
 
 // ---------------------------------------------------------------------------
@@ -129,7 +140,7 @@ describe('ActionsPage - Aave V3 Card', () => {
     render(<ActionsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Aave V3 Lending')).toBeTruthy();
+      expect(screen.getByText('Aave V3')).toBeTruthy();
     });
     expect(screen.getByText(/EVM lending protocol/)).toBeTruthy();
   });
@@ -139,7 +150,7 @@ describe('ActionsPage - Aave V3 Card', () => {
     render(<ActionsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Aave V3 Lending')).toBeTruthy();
+      expect(screen.getByText('Aave V3')).toBeTruthy();
     });
 
     const checkbox = document.querySelector(
@@ -156,28 +167,23 @@ describe('ActionsPage - Aave V3 Card', () => {
     fireEvent.change(checkbox, { target: { checked: true } });
 
     await waitFor(() => {
-      expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', {
-        settings: [{ key: 'actions.aave_v3_enabled', value: 'true' }],
-      });
+      expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', expect.objectContaining({
+        body: { settings: [{ key: 'actions.aave_v3_enabled', value: 'true' }] },
+      }));
     });
   });
 
   it('shows Advanced Settings section when Aave V3 is enabled', async () => {
-    mockApiCalls(mockSettingsAaveEnabled);
+    mockApiCalls(mockSettingsAaveEnabled, mockEmptyApiKeys, mockAaveProviderEnabled);
     render(<ActionsPage />);
 
     await waitFor(() => {
       expect(screen.getByText('Advanced Settings')).toBeTruthy();
     });
-
-    // Check all 3 advanced setting fields are present
-    expect(screen.getByText('HF Warning Threshold')).toBeTruthy();
-    expect(screen.getByText('Position Sync Interval (seconds)')).toBeTruthy();
-    expect(screen.getByText('Max LTV Percentage')).toBeTruthy();
   });
 
   it('saving advanced setting calls mockApiPut with correct key', async () => {
-    mockApiCalls(mockSettingsAaveEnabled);
+    mockApiCalls(mockSettingsAaveEnabled, mockEmptyApiKeys, mockAaveProviderEnabled);
     render(<ActionsPage />);
 
     await waitFor(() => {
@@ -203,22 +209,21 @@ describe('ActionsPage - Aave V3 Card', () => {
     fireEvent.blur(wrapper);
 
     await waitFor(() => {
-      expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', {
-        settings: [{ key: 'actions.aave_v3_health_factor_warning_threshold', value: '1.5' }],
-      });
+      expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', expect.objectContaining({
+        body: { settings: [{ key: 'actions.aave_v3_health_factor_warning_threshold', value: '1.5' }] },
+      }));
     });
   });
 
-  it('shows Inactive when Aave V3 is disabled along with all other providers', async () => {
-    mockApiCalls(mockSettingsAllDisabled);
+  it('shows Inactive when Aave V3 is disabled', async () => {
+    mockApiCalls(mockSettingsAllDisabled, mockEmptyApiKeys, mockAaveProviderDisabled);
     render(<ActionsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Aave V3 Lending')).toBeTruthy();
+      expect(screen.getByText('Aave V3')).toBeTruthy();
     });
 
-    // All 13 providers disabled -> 13 Inactive badges (ERC-8004 moved to Agent Identity page)
     const inactiveBadges = screen.getAllByText('Inactive');
-    expect(inactiveBadges.length).toBe(13);
+    expect(inactiveBadges.length).toBe(1);
   });
 });

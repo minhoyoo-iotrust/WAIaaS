@@ -99,19 +99,30 @@ const mockSettingsAllDisabled = {
 };
 
 const mockEmptyApiKeys = { keys: [] };
-const mockEmptyProviders = { providers: [] };
+
+const mockKaminoProviderEnabled = {
+  providers: [
+    { name: 'kamino', description: 'Solana lending protocol (supply, borrow, repay, withdraw)', version: '1.0.0', chains: ['solana'], mcpExpose: false, requiresApiKey: false, hasApiKey: false, enabledKey: 'kamino', category: 'Lending', isEnabled: true, actions: [] },
+  ],
+};
+const mockKaminoProviderDisabled = {
+  providers: [
+    { name: 'kamino', description: 'Solana lending protocol (supply, borrow, repay, withdraw)', version: '1.0.0', chains: ['solana'], mcpExpose: false, requiresApiKey: false, hasApiKey: false, enabledKey: 'kamino', category: 'Lending', isEnabled: false, actions: [] },
+  ],
+};
 
 function mockApiCalls(
   settingsData: Record<string, unknown> = mockSettingsAllDisabled,
   apiKeysData: { keys: unknown[] } = mockEmptyApiKeys,
-  providersData: { providers: unknown[] } = mockEmptyProviders,
+  providersData: { providers: unknown[] } = mockKaminoProviderDisabled,
 ) {
   mockApiGet.mockImplementation(async (path: string) => {
-    if (path === '/v1/admin/settings') return settingsData;
-    if (path === '/v1/admin/api-keys') return apiKeysData;
-    if (path === '/v1/actions/providers') return providersData;
-    return {};
+    if (path === '/v1/admin/settings') return { data: settingsData };
+    if (path === '/v1/admin/api-keys') return { data: apiKeysData };
+    if (path === '/v1/actions/providers') return { data: providersData };
+    return { data: {} };
   });
+  mockApiPut.mockImplementation(async () => ({ data: { updated: 1, settings: settingsData } }));
 }
 
 // ---------------------------------------------------------------------------
@@ -129,7 +140,7 @@ describe('ActionsPage - Kamino Lending Card', () => {
     render(<ActionsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Kamino Lending')).toBeTruthy();
+      expect(screen.getByText('Kamino')).toBeTruthy();
     });
     expect(screen.getByText(/Solana lending protocol/)).toBeTruthy();
   });
@@ -139,7 +150,7 @@ describe('ActionsPage - Kamino Lending Card', () => {
     render(<ActionsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Kamino Lending')).toBeTruthy();
+      expect(screen.getByText('Kamino')).toBeTruthy();
     });
 
     const checkbox = document.querySelector(
@@ -156,18 +167,18 @@ describe('ActionsPage - Kamino Lending Card', () => {
     fireEvent.change(checkbox, { target: { checked: true } });
 
     await waitFor(() => {
-      expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', {
-        settings: [{ key: 'actions.kamino_enabled', value: 'true' }],
-      });
+      expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', expect.objectContaining({
+        body: { settings: [{ key: 'actions.kamino_enabled', value: 'true' }] },
+      }));
     });
   });
 
   it('shows Advanced Settings section when Kamino is enabled', async () => {
-    mockApiCalls(mockSettingsKaminoEnabled);
+    mockApiCalls(mockSettingsKaminoEnabled, mockEmptyApiKeys, mockKaminoProviderEnabled);
     render(<ActionsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Kamino Lending')).toBeTruthy();
+      expect(screen.getByText('Kamino')).toBeTruthy();
     });
 
     // Check Advanced Settings header and Kamino-specific fields
@@ -180,11 +191,11 @@ describe('ActionsPage - Kamino Lending Card', () => {
   });
 
   it('saving Kamino advanced setting calls mockApiPut with correct key', async () => {
-    mockApiCalls(mockSettingsKaminoEnabled);
+    mockApiCalls(mockSettingsKaminoEnabled, mockEmptyApiKeys, mockKaminoProviderEnabled);
     render(<ActionsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Kamino Lending')).toBeTruthy();
+      expect(screen.getByText('Kamino')).toBeTruthy();
     });
 
     // Find the Kamino market input
@@ -206,22 +217,21 @@ describe('ActionsPage - Kamino Lending Card', () => {
     fireEvent.blur(wrapper);
 
     await waitFor(() => {
-      expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', {
-        settings: [{ key: 'actions.kamino_market', value: '7u3HeHxYDLhn' }],
-      });
+      expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', expect.objectContaining({
+        body: { settings: [{ key: 'actions.kamino_market', value: '7u3HeHxYDLhn' }] },
+      }));
     });
   });
 
-  it('shows Inactive when Kamino is disabled along with all other providers', async () => {
-    mockApiCalls(mockSettingsAllDisabled);
+  it('shows Inactive when Kamino is disabled', async () => {
+    mockApiCalls(mockSettingsAllDisabled, mockEmptyApiKeys, mockKaminoProviderDisabled);
     render(<ActionsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Kamino Lending')).toBeTruthy();
+      expect(screen.getByText('Kamino')).toBeTruthy();
     });
 
-    // All 13 providers disabled -> 13 Inactive badges (ERC-8004 moved to Agent Identity page)
     const inactiveBadges = screen.getAllByText('Inactive');
-    expect(inactiveBadges.length).toBe(13);
+    expect(inactiveBadges.length).toBe(1);
   });
 });

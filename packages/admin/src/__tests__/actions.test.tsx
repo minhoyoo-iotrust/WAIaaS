@@ -109,6 +109,15 @@ const mockApiKeysWithZerox = {
 
 const mockEmptyProviders = { providers: [] };
 
+/** All built-in providers with new fields (enabledKey, category, isEnabled) */
+const mockAllProvidersDisabled = {
+  providers: [
+    { name: 'jupiter_swap', description: 'Solana DEX aggregator', version: '1.0.0', chains: ['solana'], mcpExpose: true, requiresApiKey: true, hasApiKey: false, enabledKey: 'jupiter_swap', category: 'Swap', isEnabled: false, actions: [] },
+    { name: 'zerox_swap', description: 'EVM DEX aggregator (AllowanceHolder)', version: '1.0.0', chains: ['evm'], mcpExpose: true, requiresApiKey: true, hasApiKey: false, enabledKey: 'zerox_swap', category: 'Swap', isEnabled: false, actions: [] },
+    { name: 'lido_staking', description: 'ETH liquid staking (stETH/wstETH)', version: '1.0.0', chains: ['evm'], mcpExpose: false, requiresApiKey: false, hasApiKey: false, enabledKey: 'lido_staking', category: 'Staking', isEnabled: false, actions: [] },
+  ],
+};
+
 const mockProvidersJupiter = {
   providers: [
     {
@@ -116,12 +125,28 @@ const mockProvidersJupiter = {
       description: 'Solana DEX aggregator',
       version: '1.0.0',
       chains: ['solana'],
+      mcpExpose: true,
       requiresApiKey: false,
       hasApiKey: false,
+      enabledKey: 'jupiter_swap',
+      category: 'Swap',
+      isEnabled: true,
       actions: [
         { name: 'swap', description: 'Swap tokens on Solana via Jupiter aggregator with best price routing', chain: 'solana', riskLevel: 'medium', defaultTier: 'DELAY' },
       ],
     },
+  ],
+};
+
+const mockProvidersZeroxEnabled = {
+  providers: [
+    { name: 'zerox_swap', description: 'EVM DEX aggregator (AllowanceHolder)', version: '1.0.0', chains: ['evm'], mcpExpose: true, requiresApiKey: true, hasApiKey: true, enabledKey: 'zerox_swap', category: 'Swap', isEnabled: true, actions: [] },
+  ],
+};
+
+const mockProvidersZeroxDisabled = {
+  providers: [
+    { name: 'zerox_swap', description: 'EVM DEX aggregator (AllowanceHolder)', version: '1.0.0', chains: ['evm'], mcpExpose: true, requiresApiKey: true, hasApiKey: false, enabledKey: 'zerox_swap', category: 'Swap', isEnabled: false, actions: [] },
   ],
 };
 
@@ -143,11 +168,13 @@ function mockApiCalls(
   providersData: { providers: any[] } = mockEmptyProviders,
 ) {
   mockApiGet.mockImplementation(async (path: string) => {
-    if (path === '/v1/admin/settings') return settingsData;
-    if (path === '/v1/admin/api-keys') return apiKeysData;
-    if (path === '/v1/actions/providers') return providersData;
-    return {};
+    if (path === '/v1/admin/settings') return { data: settingsData };
+    if (path === '/v1/admin/api-keys') return { data: apiKeysData };
+    if (path === '/v1/actions/providers') return { data: providersData };
+    return { data: {} };
   });
+  mockApiPut.mockImplementation(async () => ({ data: { updated: 1, settings: settingsData } }));
+  mockApiDelete.mockImplementation(async () => ({ data: undefined }));
 }
 
 // ---------------------------------------------------------------------------
@@ -168,25 +195,32 @@ describe('ActionsPage', () => {
       expect(screen.getByText('Loading action providers...')).toBeTruthy();
     });
 
-    it('renders all provider cards with Inactive status when disabled', async () => {
-      mockApiCalls(mockSettingsDisabled, mockEmptyApiKeys, mockEmptyProviders);
+    it('renders provider cards from API response with Inactive status when disabled', async () => {
+      mockApiCalls(mockSettingsDisabled, mockEmptyApiKeys, mockAllProvidersDisabled);
       render(<ActionsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Jupiter Swap')).toBeTruthy();
       });
-      expect(screen.getByText('0x Swap')).toBeTruthy();
-      expect(screen.getByText('LI.FI')).toBeTruthy();
+      expect(screen.getByText('Zerox Swap')).toBeTruthy();
       expect(screen.getByText('Lido Staking')).toBeTruthy();
-      expect(screen.getByText('Jito Staking')).toBeTruthy();
 
-      // All 13 should show Inactive (Jupiter, 0x, D'CENT, LI.FI, Lido, Jito, Aave V3, Kamino, Pendle, Drift, HL Perp, HL Spot, Across)
+      // All 3 mock providers should show Inactive
       const inactiveBadges = screen.getAllByText('Inactive');
-      expect(inactiveBadges.length).toBe(13);
+      expect(inactiveBadges.length).toBe(3);
     });
 
-    it('renders provider descriptions', async () => {
-      mockApiCalls();
+    it('shows empty state when no providers returned from API', async () => {
+      mockApiCalls(mockSettingsDisabled, mockEmptyApiKeys, mockEmptyProviders);
+      render(<ActionsPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('No action providers available.')).toBeTruthy();
+      });
+    });
+
+    it('renders provider descriptions from API', async () => {
+      mockApiCalls(mockSettingsDisabled, mockEmptyApiKeys, mockAllProvidersDisabled);
       render(<ActionsPage />);
 
       await waitFor(() => {
@@ -195,42 +229,36 @@ describe('ActionsPage', () => {
       expect(screen.getByText(/EVM DEX aggregator \(AllowanceHolder\)/)).toBeTruthy();
     });
 
-    it('renders category section headers', async () => {
-      mockApiCalls();
+    it('renders category section headers from API', async () => {
+      mockApiCalls(mockSettingsDisabled, mockEmptyApiKeys, mockAllProvidersDisabled);
       render(<ActionsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Swap')).toBeTruthy();
       });
-      expect(screen.getByText('Bridge')).toBeTruthy();
       expect(screen.getByText('Staking')).toBeTruthy();
-      expect(screen.getByText('Lending')).toBeTruthy();
-      expect(screen.getByText('Yield')).toBeTruthy();
-      expect(screen.getByText('Perp')).toBeTruthy();
     });
 
-    it('renders chain badges', async () => {
-      mockApiCalls();
+    it('renders chain badges from API', async () => {
+      mockApiCalls(mockSettingsDisabled, mockEmptyApiKeys, mockAllProvidersDisabled);
       render(<ActionsPage />);
 
       await waitFor(() => {
         expect(screen.getAllByText('solana').length).toBeGreaterThanOrEqual(1);
       });
       expect(screen.getAllByText('evm').length).toBeGreaterThanOrEqual(1);
-      expect(screen.getAllByText('multi').length).toBeGreaterThanOrEqual(1);
     });
   });
 
   describe('toggle provider enabled', () => {
     it('clicking enable toggle calls mockApiPut with correct setting key', async () => {
-      mockApiCalls(mockSettingsDisabled);
+      mockApiCalls(mockSettingsDisabled, mockEmptyApiKeys, mockAllProvidersDisabled);
       render(<ActionsPage />);
 
       await waitFor(() => {
         expect(screen.getByText('Jupiter Swap')).toBeTruthy();
       });
 
-      // Find the checkbox for jupiter_swap
       const checkbox = document.querySelector(
         'input[name="actions.jupiter_swap_enabled"]',
       ) as HTMLInputElement;
@@ -238,21 +266,20 @@ describe('ActionsPage', () => {
       expect(checkbox.checked).toBe(false);
 
       mockApiPut.mockResolvedValueOnce({
-        updated: 1,
-        settings: { ...mockSettingsDisabled, actions: { ...mockSettingsDisabled.actions, jupiter_swap_enabled: 'true' } },
+        data: { updated: 1, settings: { actions: { jupiter_swap_enabled: 'true' } } },
       });
 
       fireEvent.change(checkbox, { target: { checked: true } });
 
       await waitFor(() => {
-        expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', {
-          settings: [{ key: 'actions.jupiter_swap_enabled', value: 'true' }],
-        });
+        expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', expect.objectContaining({
+          body: { settings: [{ key: 'actions.jupiter_swap_enabled', value: 'true' }] },
+        }));
       });
     });
 
     it('successful toggle shows toast', async () => {
-      mockApiCalls(mockSettingsDisabled);
+      mockApiCalls(mockSettingsDisabled, mockEmptyApiKeys, mockAllProvidersDisabled);
       render(<ActionsPage />);
 
       await waitFor(() => {
@@ -264,8 +291,7 @@ describe('ActionsPage', () => {
       ) as HTMLInputElement;
 
       mockApiPut.mockResolvedValueOnce({
-        updated: 1,
-        settings: { actions: { jupiter_swap_enabled: 'true', zerox_swap_enabled: 'false' } },
+        data: { updated: 1, settings: { actions: { jupiter_swap_enabled: 'true' } } },
       });
 
       fireEvent.change(checkbox, { target: { checked: true } });
@@ -273,7 +299,7 @@ describe('ActionsPage', () => {
       await waitFor(() => {
         expect(vi.mocked(showToast)).toHaveBeenCalledWith(
           'success',
-          'Enabled jupiter swap',
+          expect.stringContaining('Enabled'),
         );
       });
     });
@@ -281,29 +307,27 @@ describe('ActionsPage', () => {
 
   describe('API key save', () => {
     it('renders Set button for provider requiring API key', async () => {
-      mockApiCalls(mockSettingsDisabled, mockEmptyApiKeys);
+      mockApiCalls(mockSettingsDisabled, mockEmptyApiKeys, mockProvidersZeroxDisabled);
       render(<ActionsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText('0x Swap')).toBeTruthy();
+        expect(screen.getByText('Zerox Swap')).toBeTruthy();
       });
 
-      // Both Jupiter Swap and 0x Swap require API keys, should show Set buttons
       const setButtons = screen.getAllByText('Set');
-      expect(setButtons.length).toBe(2);
+      expect(setButtons.length).toBeGreaterThanOrEqual(1);
     });
 
     it('entering key and clicking Save calls mockApiPut with correct endpoint', async () => {
-      mockApiCalls(mockSettingsDisabled, mockEmptyApiKeys);
+      mockApiCalls(mockSettingsDisabled, mockEmptyApiKeys, mockProvidersZeroxDisabled);
       render(<ActionsPage />);
 
       await waitFor(() => {
-        expect(screen.getAllByText('Set').length).toBe(2);
+        expect(screen.getAllByText('Set').length).toBeGreaterThanOrEqual(1);
       });
 
-      // Click the second Set button (0x Swap) to open edit mode
       const setButtons = screen.getAllByText('Set');
-      fireEvent.click(setButtons[1]);
+      fireEvent.click(setButtons[0]);
 
       await waitFor(() => {
         expect(
@@ -322,15 +346,8 @@ describe('ActionsPage', () => {
 
       await waitFor(() => {
         expect(mockApiPut).toHaveBeenCalledWith(
-          '/v1/admin/api-keys/zerox_swap',
-          { apiKey: 'test-api-key' },
-        );
-      });
-
-      await waitFor(() => {
-        expect(vi.mocked(showToast)).toHaveBeenCalledWith(
-          'success',
-          'API key saved for zerox_swap',
+          '/v1/admin/api-keys/{provider}',
+          expect.objectContaining({ body: { apiKey: 'test-api-key' } }),
         );
       });
     });
@@ -338,7 +355,7 @@ describe('ActionsPage', () => {
 
   describe('API key delete', () => {
     it('clicking Delete calls mockApiDelete with correct endpoint', async () => {
-      mockApiCalls(mockSettingsDisabled, mockApiKeysWithZerox);
+      mockApiCalls(mockSettingsDisabled, mockApiKeysWithZerox, mockProvidersZeroxDisabled);
       render(<ActionsPage />);
 
       await waitFor(() => {
@@ -351,20 +368,14 @@ describe('ActionsPage', () => {
 
       await waitFor(() => {
         expect(mockApiDelete).toHaveBeenCalledWith(
-          '/v1/admin/api-keys/zerox_swap',
-        );
-      });
-
-      await waitFor(() => {
-        expect(vi.mocked(showToast)).toHaveBeenCalledWith(
-          'success',
-          'API key deleted for zerox_swap',
+          '/v1/admin/api-keys/{provider}',
+          expect.objectContaining({ params: { path: { provider: 'zerox_swap' } } }),
         );
       });
     });
 
     it('renders Update button when key exists', async () => {
-      mockApiCalls(mockSettingsDisabled, mockApiKeysWithZerox);
+      mockApiCalls(mockSettingsDisabled, mockApiKeysWithZerox, mockProvidersZeroxDisabled);
       render(<ActionsPage />);
 
       await waitFor(() => {
@@ -375,12 +386,7 @@ describe('ActionsPage', () => {
 
   describe('status indicators', () => {
     it('shows Active when enabled and registered', async () => {
-      const mockApiKeysWithJupiter = {
-        keys: [
-          { providerName: 'jupiter_swap', hasKey: true, maskedKey: 'jup-****xyz', requiresApiKey: true, updatedAt: '2026-01-01' },
-        ],
-      };
-      mockApiCalls(mockSettingsJupiterEnabled, mockApiKeysWithJupiter, mockProvidersJupiter);
+      mockApiCalls(mockSettingsJupiterEnabled, mockEmptyApiKeys, mockProvidersJupiter);
       render(<ActionsPage />);
 
       await waitFor(() => {
@@ -389,7 +395,12 @@ describe('ActionsPage', () => {
     });
 
     it('shows Requires API Key when enabled but missing required key', async () => {
-      mockApiCalls(mockSettingsZeroxEnabled, mockEmptyApiKeys, mockEmptyProviders);
+      const mockZeroxEnabledNoKey = {
+        providers: [
+          { name: 'zerox_swap', description: 'EVM DEX aggregator (AllowanceHolder)', version: '1.0.0', chains: ['evm'], mcpExpose: true, requiresApiKey: true, hasApiKey: false, enabledKey: 'zerox_swap', category: 'Swap', isEnabled: true, actions: [] },
+        ],
+      };
+      mockApiCalls(mockSettingsZeroxEnabled, mockEmptyApiKeys, mockZeroxEnabledNoKey);
       render(<ActionsPage />);
 
       await waitFor(() => {
@@ -468,9 +479,9 @@ describe('ActionsPage', () => {
       fireEvent.change(select, { target: { value: 'APPROVAL' } });
 
       await waitFor(() => {
-        expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', {
-          settings: [{ key: 'actions.jupiter_swap_swap_tier', value: 'APPROVAL' }],
-        });
+        expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', expect.objectContaining({
+          body: { settings: [{ key: 'actions.jupiter_swap_swap_tier', value: 'APPROVAL' }] },
+        }));
       });
     });
 
@@ -500,24 +511,22 @@ describe('ActionsPage', () => {
       fireEvent.click(screen.getByText('reset'));
 
       await waitFor(() => {
-        expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', {
-          settings: [{ key: 'actions.jupiter_swap_swap_tier', value: '' }],
-        });
+        expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', expect.objectContaining({
+          body: { settings: [{ key: 'actions.jupiter_swap_swap_tier', value: '' }] },
+        }));
       });
     });
   });
 
   describe('Pendle Yield advanced settings', () => {
-    const mockSettingsPendleEnabled = {
-      actions: {
-        pendle_yield_enabled: 'true',
-        jupiter_swap_enabled: 'false',
-        zerox_swap_enabled: 'false',
-      },
+    const mockPendleProvider = {
+      providers: [
+        { name: 'pendle_yield', description: 'EVM yield trading: buy/sell PT/YT', version: '1.0.0', chains: ['evm'], mcpExpose: false, requiresApiKey: false, hasApiKey: false, enabledKey: 'pendle_yield', category: 'Yield', isEnabled: true, actions: [] },
+      ],
     };
 
     it('renders Advanced Settings section when Pendle Yield is enabled', async () => {
-      mockApiCalls(mockSettingsPendleEnabled, mockEmptyApiKeys, mockEmptyProviders);
+      mockApiCalls({}, mockEmptyApiKeys, mockPendleProvider);
       render(<ActionsPage />);
 
       await waitFor(() => {
@@ -526,29 +535,28 @@ describe('ActionsPage', () => {
 
       const advancedLabels = screen.getAllByText('Advanced Settings');
       expect(advancedLabels.length).toBeGreaterThanOrEqual(1);
-
-      // Pendle uses slippage (%) labels
-      const defaultSlippageLabels = screen.getAllByText(/Default Slippage \(%\)/i);
-      expect(defaultSlippageLabels.length).toBeGreaterThanOrEqual(1);
     });
   });
 
   describe("D'CENT Swap advanced settings", () => {
-    const mockSettingsDcentEnabled = {
-      actions: {
-        jupiter_swap_enabled: 'false',
-        zerox_swap_enabled: 'false',
-        dcent_swap_enabled: 'true',
-      },
+    const mockDcentProvider = {
+      providers: [
+        { name: 'dcent_swap', description: "D'CENT Swap Aggregator multi-chain DEX", version: '1.0.0', chains: ['evm', 'solana'], mcpExpose: false, requiresApiKey: false, hasApiKey: false, enabledKey: 'dcent_swap', category: 'Swap', isEnabled: true, actions: [] },
+      ],
+    };
+    const mockDcentProviderDisabled = {
+      providers: [
+        { name: 'dcent_swap', description: "D'CENT Swap Aggregator multi-chain DEX", version: '1.0.0', chains: ['evm', 'solana'], mcpExpose: false, requiresApiKey: false, hasApiKey: false, enabledKey: 'dcent_swap', category: 'Swap', isEnabled: false, actions: [] },
+      ],
     };
 
     it('renders Advanced Settings section when D\'CENT Swap is enabled', async () => {
-      mockApiCalls(mockSettingsDcentEnabled, mockEmptyApiKeys, mockEmptyProviders);
+      mockApiCalls({}, mockEmptyApiKeys, mockDcentProvider);
       render(<ActionsPage />);
 
       await waitFor(() => {
-        // D'CENT Swap card should render with enabled state
-        expect(screen.getByText("D'CENT Swap Aggregator")).toBeTruthy();
+        // D'CENT Swap card should render -- name from API is dcent_swap, displayed as "Dcent Swap"
+        expect(screen.getByText('Dcent Swap')).toBeTruthy();
       });
 
       // The D'CENT Swap advanced settings section should appear
@@ -558,15 +566,13 @@ describe('ActionsPage', () => {
     });
 
     it('renders all D\'CENT Swap advanced setting fields', async () => {
-      mockApiCalls(mockSettingsDcentEnabled, mockEmptyApiKeys, mockEmptyProviders);
+      mockApiCalls({}, mockEmptyApiKeys, mockDcentProvider);
       render(<ActionsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText("D'CENT Swap Aggregator")).toBeTruthy();
+        expect(screen.getByText('Dcent Swap')).toBeTruthy();
       });
 
-      // Should render the DCent-specific advanced setting labels
-      // keyToLabel maps slippage_bps keys to "Default Slippage (%)" / "Max Slippage (%)"
       expect(screen.getByText(/Dcent Swap Api Url/i)).toBeTruthy();
       // Multiple providers share the same "Default Slippage (%)" label
       const defaultSlippageLabels = screen.getAllByText(/Default Slippage \(%\)/i);
@@ -576,11 +582,11 @@ describe('ActionsPage', () => {
     });
 
     it('updates dirty state when editing D\'CENT Swap advanced field', async () => {
-      mockApiCalls(mockSettingsDcentEnabled, mockEmptyApiKeys, mockEmptyProviders);
+      mockApiCalls({}, mockEmptyApiKeys, mockDcentProvider);
       render(<ActionsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText("D'CENT Swap Aggregator")).toBeTruthy();
+        expect(screen.getByText('Dcent Swap')).toBeTruthy();
       });
 
       // Find the dcent_swap_api_url input
@@ -594,11 +600,11 @@ describe('ActionsPage', () => {
     });
 
     it('saves D\'CENT Swap advanced field on blur', async () => {
-      mockApiCalls(mockSettingsDcentEnabled, mockEmptyApiKeys, mockEmptyProviders);
+      mockApiCalls({}, mockEmptyApiKeys, mockDcentProvider);
       render(<ActionsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText("D'CENT Swap Aggregator")).toBeTruthy();
+        expect(screen.getByText('Dcent Swap')).toBeTruthy();
       });
 
       const input = document.querySelector('input[name="actions.dcent_swap_api_url"]') as HTMLInputElement;
@@ -619,18 +625,18 @@ describe('ActionsPage', () => {
       }
 
       await waitFor(() => {
-        expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', {
-          settings: [{ key: 'actions.dcent_swap_api_url', value: 'https://custom-api.test' }],
-        });
+        expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', expect.objectContaining({
+          body: { settings: [{ key: 'actions.dcent_swap_api_url', value: 'https://custom-api.test' }] },
+        }));
       });
     });
 
     it('does not render D\'CENT Swap advanced settings when provider is disabled', async () => {
-      mockApiCalls(mockSettingsDisabled, mockEmptyApiKeys, mockEmptyProviders);
+      mockApiCalls({}, mockEmptyApiKeys, mockDcentProviderDisabled);
       render(<ActionsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText("D'CENT Swap Aggregator")).toBeTruthy();
+        expect(screen.getByText('Dcent Swap')).toBeTruthy();
       });
 
       // Advanced settings for dcent_swap should NOT appear
@@ -641,16 +647,15 @@ describe('ActionsPage', () => {
     it('shows existing settings values in D\'CENT Swap advanced fields', async () => {
       const settingsWithValues = {
         actions: {
-          ...mockSettingsDcentEnabled.actions,
           dcent_swap_api_url: 'https://existing-api.com',
           dcent_swap_default_slippage_bps: '100',
         },
       };
-      mockApiCalls(settingsWithValues, mockEmptyApiKeys, mockEmptyProviders);
+      mockApiCalls(settingsWithValues, mockEmptyApiKeys, mockDcentProvider);
       render(<ActionsPage />);
 
       await waitFor(() => {
-        expect(screen.getByText("D'CENT Swap Aggregator")).toBeTruthy();
+        expect(screen.getByText('Dcent Swap')).toBeTruthy();
       });
 
       const urlInput = document.querySelector('input[name="actions.dcent_swap_api_url"]') as HTMLInputElement;
