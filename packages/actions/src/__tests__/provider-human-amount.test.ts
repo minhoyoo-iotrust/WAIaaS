@@ -254,7 +254,7 @@ describe('lifi humanFromAmount schema', () => {
 describe('CLOB providers exclude humanAmount', () => {
   it('hyperliquid perp schema has no humanAmount field', async () => {
     const { HyperliquidPerpProvider } = await import('../providers/hyperliquid/index.js');
-    const provider = new HyperliquidPerpProvider();
+    const provider = new HyperliquidPerpProvider(null as any, null as any, true);
     const placeOrderAction = provider.actions.find((a) => a.name === 'hl_place_order');
     expect(placeOrderAction).toBeDefined();
     const schemaShape = (placeOrderAction!.inputSchema as any).shape ?? {};
@@ -274,7 +274,7 @@ describe('CLOB providers exclude humanAmount', () => {
 
   it('polymarket schema has no humanAmount field', async () => {
     const { PolymarketOrderProvider } = await import('../providers/polymarket/order-provider.js');
-    const provider = new PolymarketOrderProvider();
+    const provider = new PolymarketOrderProvider(null as any, null as any, null, null);
     const placeOrderAction = provider.actions.find((a) => a.name === 'pm_buy');
     expect(placeOrderAction).toBeDefined();
     const schemaShape = (placeOrderAction!.inputSchema as any).shape ?? {};
