@@ -47,7 +47,7 @@ const styles = {
     width: '100%',
     padding: 'var(--space-2) var(--space-4)',
     background: 'var(--color-primary)',
-    color: 'white',
+    color: '#0c0c0c',
     border: 'none',
     borderRadius: 'var(--radius-md)',
     fontSize: 'var(--font-size-base)',

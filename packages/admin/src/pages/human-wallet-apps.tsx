@@ -281,14 +281,14 @@ export default function HumanWalletAppsPage() {
 
           {/* Warning: SDK disabled */}
           {!sdkEnabled.value && (
-            <div class="settings-warning-box" style={{ marginTop: '0.75rem', padding: '0.75rem', background: 'var(--warning-bg, #fff3cd)', border: '1px solid var(--warning-border, #ffc107)', borderRadius: '4px', fontSize: '0.85rem' }}>
+            <div class="settings-warning-box" style={{ marginTop: '0.75rem', padding: '0.75rem', background: 'var(--color-warning-bg)', border: '1px solid var(--color-warning)', borderRadius: '4px', fontSize: '0.85rem' }}>
               Signing SDK is disabled. Enable it in System &gt; Signing SDK to use wallet app notifications.
             </div>
           )}
 
           {/* Warning: toggle off but apps have alerts enabled */}
           {!notificationsEnabled.value && hasAlertsEnabledApp && (
-            <div class="settings-warning-box" style={{ marginTop: '0.75rem', padding: '0.75rem', background: 'var(--warning-bg, #fff3cd)', border: '1px solid var(--warning-border, #ffc107)', borderRadius: '4px', fontSize: '0.85rem' }}>
+            <div class="settings-warning-box" style={{ marginTop: '0.75rem', padding: '0.75rem', background: 'var(--color-warning-bg)', border: '1px solid var(--color-warning)', borderRadius: '4px', fontSize: '0.85rem' }}>
               Notifications are disabled but some apps have alerts enabled. Enable notifications above for alerts to be delivered.
             </div>
           )}

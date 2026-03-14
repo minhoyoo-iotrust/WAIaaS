@@ -358,6 +358,10 @@
 | 342 | ENHANCEMENT | LOW | Quick Start 카드 코드 블록 수직 정렬 불일치 — flex + margin-top:auto로 하단 고정 | — | FIXED | 2026-03-14 |
 | 343 | ENHANCEMENT | MEDIUM | OG 미리보기 이미지 생성 + 메타 태그 추가 — HTML→Puppeteer 스크린샷 방식 | — | FIXED | 2026-03-14 |
 | 344 | BUG | MEDIUM | GitHub Pages 모바일 반응형 콘텐츠 오버플로우 — 테이블/코드 블록 잘림 | v31.15 | FIXED | 2026-03-14 |
+| 345 | ENHANCEMENT | LOW | Admin UI WAIaaS 브랜드 테마 적용 — 랜딩 사이트 터미널 다크 테마 통일 | — | FIXED | 2026-03-14 |
+| 346 | BUG | MEDIUM | Admin UI 로그인 버튼 글자 가독성 불량 — 녹색 배경에 흰색 텍스트 하드코딩 | — | FIXED | 2026-03-14 |
+| 347 | ENHANCEMENT | LOW | Admin UI Danger 버튼 다크 테마 부조화 — 솔리드 빨간 배경이 과도하게 눈에 띔 | — | FIXED | 2026-03-14 |
+| 348 | BUG | HIGH | Admin UI 라우트 전환 시 이전 페이지 DOM 잔류 — 지갑 상세 뷰 중복 렌더링 | — | FIXED | 2026-03-14 |
 
 ## Type Legend
 
@@ -370,8 +374,8 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 344
+- **FIXED:** 348
 - **WONTFIX:** 1
-- **Total:** 345
+- **Total:** 349
 - **Archived:** 321 (001–321)
 
