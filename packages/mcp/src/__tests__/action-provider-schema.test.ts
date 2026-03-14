@@ -312,3 +312,177 @@ describe('registerActionProviderTools typed schema', () => {
     );
   });
 });
+
+// --- Phase 405: humanAmount auto-exposure tests ---
+
+describe('MCP humanAmount auto-exposure via inputSchema', () => {
+  it('should expose humanAmount + decimals optional fields from provider inputSchema', () => {
+    const jsonSchema = {
+      type: 'object',
+      properties: {
+        inputMint: { type: 'string', description: 'Input token mint' },
+        outputMint: { type: 'string', description: 'Output token mint' },
+        amount: { type: 'string', description: 'Amount in smallest units' },
+        humanAmount: { type: 'string', description: 'Human-readable amount. Mutually exclusive with amount.' },
+        decimals: { type: 'integer', description: 'Token decimals for humanAmount conversion' },
+      },
+      required: ['inputMint', 'outputMint'],
+    };
+    const result = jsonSchemaToZodParams(jsonSchema);
+    expect(result).toBeDefined();
+
+    // humanAmount should be an optional string field
+    expect(result!.humanAmount).toBeDefined();
+    expect(result!.humanAmount!.safeParse('1.5').success).toBe(true);
+    expect(result!.humanAmount!.safeParse(undefined).success).toBe(true);
+
+    // decimals should be an optional number field
+    expect(result!.decimals).toBeDefined();
+    expect(result!.decimals!.safeParse(18).success).toBe(true);
+    expect(result!.decimals!.safeParse(undefined).success).toBe(true);
+
+    // amount should also be optional (not in required)
+    expect(result!.amount!.safeParse(undefined).success).toBe(true);
+  });
+
+  it('should expose provider-specific humanAmount variants (humanSellAmount, humanAmountIn, humanFromAmount)', () => {
+    const jsonSchema = {
+      type: 'object',
+      properties: {
+        sellToken: { type: 'string' },
+        buyToken: { type: 'string' },
+        sellAmount: { type: 'string', description: 'Sell amount in smallest units' },
+        humanSellAmount: { type: 'string', description: 'Human-readable sell amount' },
+        decimals: { type: 'integer', description: 'Token decimals' },
+      },
+      required: ['sellToken', 'buyToken'],
+    };
+    const result = jsonSchemaToZodParams(jsonSchema);
+    expect(result).toBeDefined();
+
+    // humanSellAmount should be exposed as optional string
+    expect(result!.humanSellAmount).toBeDefined();
+    expect(result!.humanSellAmount!.safeParse('2.5').success).toBe(true);
+    expect(result!.humanSellAmount!.safeParse(undefined).success).toBe(true);
+  });
+
+  it('should register MCP tool with humanAmount fields from provider schema', async () => {
+    const responses = new Map<string, ApiResult<unknown>>();
+    responses.set('GET:/v1/actions/providers', {
+      ok: true,
+      data: {
+        providers: [{
+          name: 'jupiter_swap',
+          description: 'Jupiter DEX swap',
+          version: '1.0.0',
+          chains: ['solana'],
+          mcpExpose: true,
+          requiresApiKey: false,
+          hasApiKey: false,
+          actions: [{
+            name: 'swap',
+            description: 'Swap tokens via Jupiter',
+            chain: 'solana',
+            riskLevel: 'medium',
+            defaultTier: 'NOTIFY',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                inputMint: { type: 'string', description: 'Input mint' },
+                outputMint: { type: 'string', description: 'Output mint' },
+                amount: { type: 'string', description: 'Amount in lamports' },
+                humanAmount: { type: 'string', description: 'Human-readable amount' },
+                decimals: { type: 'integer', description: 'Token decimals for humanAmount' },
+                slippageBps: { type: 'number', description: 'Slippage bps' },
+              },
+              required: ['inputMint', 'outputMint'],
+            },
+          }],
+        }],
+      },
+    });
+
+    const apiClient = createMockApiClient(responses);
+    const { server, toolCalls } = createMockServer();
+
+    await registerActionProviderTools(server, apiClient);
+
+    expect(toolCalls).toHaveLength(1);
+    const schema = toolCalls[0]!.schema;
+
+    // humanAmount and decimals should be in the tool schema
+    expect(schema.humanAmount).toBeDefined();
+    expect(schema.decimals).toBeDefined();
+
+    // Original amount should also be present
+    expect(schema.amount).toBeDefined();
+
+    // Standard MCP fields
+    expect(schema.network).toBeDefined();
+    expect(schema.wallet_id).toBeDefined();
+  });
+
+  it('should pass humanAmount+decimals as params to REST API when invoked', async () => {
+    const responses = new Map<string, ApiResult<unknown>>();
+    responses.set('GET:/v1/actions/providers', {
+      ok: true,
+      data: {
+        providers: [{
+          name: 'jupiter_swap',
+          description: 'Jupiter swap',
+          version: '1.0.0',
+          chains: ['solana'],
+          mcpExpose: true,
+          requiresApiKey: false,
+          hasApiKey: false,
+          actions: [{
+            name: 'swap',
+            description: 'Swap tokens',
+            chain: 'solana',
+            riskLevel: 'medium',
+            defaultTier: 'NOTIFY',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                inputMint: { type: 'string' },
+                outputMint: { type: 'string' },
+                amount: { type: 'string' },
+                humanAmount: { type: 'string' },
+                decimals: { type: 'integer' },
+              },
+              required: ['inputMint', 'outputMint'],
+            },
+          }],
+        }],
+      },
+    });
+
+    const apiClient = createMockApiClient(responses);
+    const { server, toolCalls } = createMockServer();
+
+    await registerActionProviderTools(server, apiClient);
+
+    const handler = toolCalls[0]!.handler;
+    await handler({
+      inputMint: 'So11111111111111111111111111111111111111112',
+      outputMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+      humanAmount: '1.5',
+      decimals: 9,
+      network: 'solana-mainnet',
+    });
+
+    // humanAmount and decimals should be passed through as params
+    expect(apiClient.post).toHaveBeenCalledWith(
+      '/v1/actions/jupiter_swap/swap',
+      expect.objectContaining({
+        params: {
+          inputMint: 'So11111111111111111111111111111111111111112',
+          outputMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+          humanAmount: '1.5',
+          decimals: 9,
+        },
+        network: 'solana-mainnet',
+      }),
+    );
+  });
+});
