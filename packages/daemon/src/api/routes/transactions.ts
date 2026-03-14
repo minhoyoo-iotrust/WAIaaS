@@ -24,7 +24,7 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { eq, and, inArray, lt, desc } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
-import { WAIaaSError, formatAmount, parseAmount } from '@waiaas/core';
+import { WAIaaSError, formatAmount, parseAmount, enrichTransaction } from '@waiaas/core';
 import type { ChainType, NetworkType, EnvironmentType, IPolicyEngine } from '@waiaas/core';
 import type { TokenRegistryService } from '../../infrastructure/token-registry/token-registry-service.js';
 import { resolveTokenFromAssetId } from '../middleware/resolve-asset.js';
@@ -925,7 +925,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
       {
         items: items.map((tx) => {
           const meta = resolveAmountMetadata(tx.chain, tx.network, tx.type, tx.amount);
-          return {
+          return enrichTransaction({
             id: tx.id,
             walletId: tx.walletId,
             type: tx.type,
@@ -943,7 +943,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
             amountFormatted: meta.amountFormatted,
             amountDecimals: meta.decimals,
             amountSymbol: meta.symbol,
-          };
+          });
         }),
         cursor: hasMore ? nextCursor : null,
         hasMore,
@@ -972,7 +972,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
 
     return c.json(
       {
-        items: rows.map((tx) => ({
+        items: rows.map((tx) => enrichTransaction({
           id: tx.id,
           walletId: tx.walletId,
           type: tx.type,
@@ -1029,7 +1029,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
     const amountMeta = resolveAmountMetadata(tx.chain, tx.network, tx.type, tx.amount);
 
     return c.json(
-      {
+      enrichTransaction({
         id: tx.id,
         walletId: tx.walletId,
         type: tx.type,
@@ -1048,7 +1048,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
         amountFormatted: amountMeta.amountFormatted,
         amountDecimals: amountMeta.decimals,
         amountSymbol: amountMeta.symbol,
-      },
+      }),
       200,
     );
   });

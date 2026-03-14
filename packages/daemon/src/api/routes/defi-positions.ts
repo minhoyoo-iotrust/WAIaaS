@@ -22,6 +22,7 @@ import type * as schema from '../../infrastructure/database/schema.js';
 import { resolveWalletId } from '../helpers/resolve-wallet-id.js';
 import type { ActionProviderRegistry } from '../../infrastructure/action/action-provider-registry.js';
 import type { ILendingProvider } from '@waiaas/core';
+import { networkToCaip2 } from '@waiaas/core';
 import {
   DeFiPositionsResponseSchema,
   HealthFactorResponseSchema,
@@ -167,6 +168,12 @@ export function createDefiPositionRoutes(deps: DefiPositionRouteDeps): OpenAPIHo
         }
       }
 
+      // CAIP-2 chainId (graceful)
+      let chainId: string | undefined;
+      if (row.network) {
+        try { chainId = networkToCaip2(row.network as any); } catch { /* graceful */ }
+      }
+
       return {
         id: row.id,
         category: row.category,
@@ -180,6 +187,7 @@ export function createDefiPositionRoutes(deps: DefiPositionRouteDeps): OpenAPIHo
         status: row.status,
         openedAt: row.opened_at,
         lastSyncedAt: row.last_synced_at,
+        ...(chainId ? { chainId } : {}),
       };
     });
 

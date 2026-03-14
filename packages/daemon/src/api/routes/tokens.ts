@@ -14,7 +14,7 @@
 
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { createPublicClient, http, type Address } from 'viem';
-import { EVM_NETWORK_TYPES, WAIaaSError } from '@waiaas/core';
+import { EVM_NETWORK_TYPES, WAIaaSError, networkToCaip2 } from '@waiaas/core';
 import type { TokenRegistryService } from '../../infrastructure/token-registry/index.js';
 import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
 
@@ -172,6 +172,10 @@ export function tokenRegistryRoutes(deps: TokenRegistryRouteDeps): OpenAPIHono {
 
     const tokens = await deps.tokenRegistryService.getTokensForNetwork(network);
 
+    // CAIP-2 chainId for tokens response (graceful)
+    let tokensChainId: string | undefined;
+    try { tokensChainId = networkToCaip2(network as any); } catch { /* graceful */ }
+
     return c.json(
       {
         network,
@@ -182,6 +186,7 @@ export function tokenRegistryRoutes(deps: TokenRegistryRouteDeps): OpenAPIHono {
           decimals: t.decimals,
           source: t.source,
           assetId: t.assetId ?? null,
+          ...(tokensChainId ? { chainId: tokensChainId } : {}),
         })),
       },
       200,

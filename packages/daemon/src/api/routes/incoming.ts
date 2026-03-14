@@ -18,6 +18,7 @@ import { eq, and, lt, desc, gte, lte, or } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import type { IPriceOracle, IForexRateService, ChainType } from '@waiaas/core';
+import { enrichIncomingTx } from '@waiaas/core';
 import { incomingTransactions } from '../../infrastructure/database/schema.js';
 import type * as schema from '../../infrastructure/database/schema.js';
 import { resolveWalletId } from '../helpers/resolve-wallet-id.js';
@@ -200,7 +201,7 @@ export function incomingRoutes(deps: IncomingRouteDeps): OpenAPIHono {
     // Map DB rows to API response format
     // - Date objects -> epoch seconds
     // - isSuspicious -> suspicious (DB column vs API field name)
-    const mapped = items.map((row) => ({
+    const mapped = items.map((row) => enrichIncomingTx({
       id: row.id,
       txHash: row.txHash,
       walletId: row.walletId,
