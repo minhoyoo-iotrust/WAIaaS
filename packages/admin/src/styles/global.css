@@ -24,7 +24,7 @@
   --color-warning: #ff9500;
   --color-warning-bg: rgba(255, 149, 0, 0.1);
   --color-danger: #ff4444;
-  --color-danger-bg: rgba(255, 68, 68, 0.1);
+  --color-danger-bg: rgba(255, 68, 68, 0.15);
   --color-info: #00d4ff;
   --color-info-bg: rgba(0, 212, 255, 0.1);
   --color-tier-instant: #00ff41;
@@ -396,12 +396,13 @@ table .table-loading {
 }
 
 .btn-danger {
-  background: var(--color-danger);
-  color: #0c0c0c;
+  background: transparent;
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger);
 }
 
 .btn-danger:hover:not(:disabled) {
-  background: #cc3333;
+  background: var(--color-danger-bg);
 }
 
 .btn-ghost {

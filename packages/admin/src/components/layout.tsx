@@ -106,50 +106,55 @@ const NAV_ITEMS = [
 
 function PageRouter() {
   const path = currentPath.value;
-  if (path === '/transactions') return <TransactionsPage />;
-  if (path === '/incoming') {
+  const routeKey = path.startsWith('/wallets/') ? '/wallets/detail' : path;
+
+  let page;
+  if (path === '/transactions') page = <TransactionsPage />;
+  else if (path === '/incoming') {
     window.location.hash = '#/transactions';
-    return <TransactionsPage />;
+    page = <TransactionsPage />;
   }
-  if (path === '/tokens') return <TokensPage />;
-  if (path === '/defi') return <ActionsPage />;
-  if (path === '/actions') {
+  else if (path === '/tokens') page = <TokensPage />;
+  else if (path === '/defi') page = <ActionsPage />;
+  else if (path === '/actions') {
     // Redirect legacy route to DeFi
     window.location.hash = '#/defi';
-    return <ActionsPage />;
+    page = <ActionsPage />;
   }
-  if (path === '/hyperliquid') return <HyperliquidPage />;
-  if (path === '/polymarket') return <PolymarketPage />;
-  if (path === '/sessions') return <SessionsPage />;
-  if (path === '/credentials') return <CredentialsPage />;
-  if (path === '/rpc-proxy') return <RpcProxyPage />;
-  if (path === '/policies') return <PoliciesPage />;
-  if (path === '/notifications') return <NotificationsPage />;
-  if (path === '/telegram-users') {
+  else if (path === '/hyperliquid') page = <HyperliquidPage />;
+  else if (path === '/polymarket') page = <PolymarketPage />;
+  else if (path === '/sessions') page = <SessionsPage />;
+  else if (path === '/credentials') page = <CredentialsPage />;
+  else if (path === '/rpc-proxy') page = <RpcProxyPage />;
+  else if (path === '/policies') page = <PoliciesPage />;
+  else if (path === '/notifications') page = <NotificationsPage />;
+  else if (path === '/telegram-users') {
     // Redirect legacy route to Notifications > Telegram Users tab
     window.location.hash = '#/notifications';
-    return <NotificationsPage />;
+    page = <NotificationsPage />;
   }
-  if (path === '/settings') {
+  else if (path === '/settings') {
     window.location.hash = '#/dashboard';
-    return <DashboardPage />;
+    page = <DashboardPage />;
   }
-  if (path === '/walletconnect') {
+  else if (path === '/walletconnect') {
     window.location.hash = '#/wallets';
-    return <WalletsPage />;
+    page = <WalletsPage />;
   }
-  if (path === '/security') return <SecurityPage />;
-  if (path === '/wallet-apps') return <HumanWalletAppsPage />;
-  if (path === '/agent-identity') return <Erc8004Page />;
-  if (path === '/erc8004') {
+  else if (path === '/security') page = <SecurityPage />;
+  else if (path === '/wallet-apps') page = <HumanWalletAppsPage />;
+  else if (path === '/agent-identity') page = <Erc8004Page />;
+  else if (path === '/erc8004') {
     // Redirect legacy route to Agent Identity
     window.location.hash = '#/agent-identity';
-    return <Erc8004Page />;
+    page = <Erc8004Page />;
   }
-  if (path === '/audit-logs') return <AuditLogsPage />;
-  if (path === '/system') return <SystemPage />;
-  if (path.startsWith('/wallets')) return <WalletsPage />;
-  return <DashboardPage />;
+  else if (path === '/audit-logs') page = <AuditLogsPage />;
+  else if (path === '/system') page = <SystemPage />;
+  else if (path.startsWith('/wallets')) page = <WalletsPage />;
+  else page = <DashboardPage />;
+
+  return <div key={routeKey}>{page}</div>;
 }
 
 export { highlightField, pendingNavigation } from './settings-search';
