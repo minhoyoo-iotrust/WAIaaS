@@ -1,5 +1,28 @@
 # Changelog
 
+## [2.11.0-rc.8](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.7...v2.11.0-rc.8) (2026-03-14)
+
+
+### Features
+
+* **407-01:** extend normalizeNetworkInput with CAIP-2 dual-accept ([8787199](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8787199bc9dd8da00f714ae595699cca1205adad))
+* **408-01:** add CAIP-19 asset resolve utility with parseAssetId + extractNetworkFromAssetId ([7b60798](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7b607988ecfbc98df078750df43b5bcdd8474a74))
+* **408-01:** extend TokenInfo schema with assetId-only mode (superRefine cross-field) ([b670341](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b6703410bbc35d2ef95ca0edea77ac617689e424))
+* **408-02:** add resolveTokenFromAssetId middleware for registry resolve + network inference ([37194f8](https://github.com/minhoyoo-iotrust/WAIaaS/commit/37194f82aea4309b1c765efee7ed3c25c9831d7d))
+* **408-02:** integrate resolveTokenFromAssetId into transaction routes ([777a7fe](https://github.com/minhoyoo-iotrust/WAIaaS/commit/777a7fefe32d91ac5838a784138ede5203cb20f7))
+* **409-01:** add CAIP response enrichment utilities ([a33c83f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a33c83f08e103986c529b0bfd0245a13e559089d))
+* **409-01:** add supportedChainIds to connect-info + OpenAPI schema CAIP fields ([4e73419](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4e734192b61dadf4fbc8e23200474a4e36973dc7))
+* **409-02:** apply CAIP enrichment to all response endpoints ([194ba72](https://github.com/minhoyoo-iotrust/WAIaaS/commit/194ba72fa72b0a08fb5d08fd2cf4c0f3ce7f4c3f))
+* **410-01:** add CAIP type aliases and extend SDK response types ([fa0108e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/fa0108e0b9fafe1abf42f20e8668544528af3594))
+* **410-01:** allow assetId-only TokenInfo in SDK validation ([59f84c8](https://github.com/minhoyoo-iotrust/WAIaaS/commit/59f84c8ff356f741d6f21911e3c9a7800ef4ba8c))
+* **410-02:** add resolve_asset MCP tool for CAIP-19 metadata lookup ([0d5f4aa](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0d5f4aa6afc569bff3c1c85b0a004f8fa138dfa4))
+* **410-02:** enable assetId-only token in MCP tools and add CAIP-2 to network descriptions ([f8a992a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/f8a992a894de196e071b13a7a48d5d7d823f3121))
+
+
+### Bug Fixes
+
+* remove unused beforeEach import in resolve-asset test ([cf27b16](https://github.com/minhoyoo-iotrust/WAIaaS/commit/cf27b167994a18685ce628184176df1e206848a0))
+
 ## [2.11.0-rc.7](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.6...v2.11.0-rc.7) (2026-03-14)
 
 
