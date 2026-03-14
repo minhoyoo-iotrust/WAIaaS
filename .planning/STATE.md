@@ -4,7 +4,7 @@ milestone: v31.17
 milestone_name: OpenAPI 기반 프론트엔드 타입 자동 생성
 status: executing
 stopped_at: Completed 414-03-PLAN.md
-last_updated: "2026-03-14T20:22:26.417Z"
+last_updated: "2026-03-14T20:22:49.437Z"
 last_activity: 2026-03-15 — Phase 414 plans 01+02 executed
 progress:
   total_phases: 5
