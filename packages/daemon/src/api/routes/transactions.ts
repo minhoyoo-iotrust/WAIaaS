@@ -26,6 +26,8 @@ import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { WAIaaSError, formatAmount, parseAmount } from '@waiaas/core';
 import type { ChainType, NetworkType, EnvironmentType, IPolicyEngine } from '@waiaas/core';
+import type { TokenRegistryService } from '../../infrastructure/token-registry/token-registry-service.js';
+import { resolveTokenFromAssetId } from '../middleware/resolve-asset.js';
 import type { AdapterPool } from '../../infrastructure/adapter-pool.js';
 import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
 import type { MasterPasswordRef } from '../middleware/master-auth.js';
@@ -106,6 +108,8 @@ export interface TransactionRouteDeps {
   metricsCounter?: IMetricsCounter;
   // v30.8: reputation cache for REPUTATION_THRESHOLD policy evaluation (Phase 320)
   reputationCache?: import('../../services/erc8004/reputation-cache-service.js').ReputationCacheService;
+  // v31.16: token registry for assetId -> token metadata resolution (Phase 408)
+  tokenRegistryService?: TokenRegistryService | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -499,10 +503,38 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
       });
     }
 
+    // Phase 408: Resolve assetId -> token metadata (before humanAmount conversion needs decimals)
+    const txType = request.type as string | undefined;
+    if ((txType === 'TOKEN_TRANSFER' || txType === 'APPROVE') && request.token?.assetId && deps.tokenRegistryService) {
+      const resolved = await resolveTokenFromAssetId(
+        request.token,
+        resolvedNetwork,
+        deps.tokenRegistryService,
+      );
+      request.token = { ...request.token, ...resolved.token };
+      if (resolved.network && !request.network) {
+        resolvedNetwork = resolved.network;
+      }
+      // After resolve, validate required fields
+      if (!request.token.address) {
+        throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
+          message: 'Could not resolve token address from assetId',
+        });
+      }
+      if (request.token.decimals === undefined) {
+        throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
+          message: 'decimals is required for unregistered token (not found in registry)',
+        });
+      }
+      if (!request.token.symbol) {
+        throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
+          message: 'symbol is required for unregistered token (not found in registry)',
+        });
+      }
+    }
+
     // Phase 405: humanAmount -> amount conversion (before pipeline)
     if ('humanAmount' in request && request.humanAmount) {
-      const txType = request.type as string | undefined;
-
       if (txType === 'TRANSFER') {
         validateAmountXOR(request);
         const nativeToken = getNativeTokenInfo(wallet.chain, resolvedNetwork);
@@ -677,10 +709,38 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
       });
     }
 
+    // Phase 408: Resolve assetId -> token metadata (simulate route)
+    const simTxType = request.type as string | undefined;
+    if ((simTxType === 'TOKEN_TRANSFER' || simTxType === 'APPROVE') && request.token?.assetId && deps.tokenRegistryService) {
+      const resolved = await resolveTokenFromAssetId(
+        request.token,
+        resolvedNetwork,
+        deps.tokenRegistryService,
+      );
+      request.token = { ...request.token, ...resolved.token };
+      if (resolved.network && !request.network) {
+        resolvedNetwork = resolved.network;
+      }
+      if (!request.token.address) {
+        throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
+          message: 'Could not resolve token address from assetId',
+        });
+      }
+      if (request.token.decimals === undefined) {
+        throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
+          message: 'decimals is required for unregistered token (not found in registry)',
+        });
+      }
+      if (!request.token.symbol) {
+        throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
+          message: 'symbol is required for unregistered token (not found in registry)',
+        });
+      }
+    }
+
     // Phase 405: humanAmount -> amount conversion (simulate route)
     if ('humanAmount' in request && request.humanAmount) {
-      const txType = request.type as string | undefined;
-      if (txType === 'TRANSFER') {
+      if (simTxType === 'TRANSFER') {
         validateAmountXOR(request);
         const nativeToken = getNativeTokenInfo(wallet.chain, resolvedNetwork);
         if (!nativeToken) {
@@ -690,7 +750,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
         }
         request.amount = resolveHumanAmount(request, nativeToken.decimals);
         delete request.humanAmount;
-      } else if (txType === 'TOKEN_TRANSFER' || txType === 'APPROVE') {
+      } else if (simTxType === 'TOKEN_TRANSFER' || simTxType === 'APPROVE') {
         validateAmountXOR(request);
         const decimals = request.token?.decimals;
         if (typeof decimals !== 'number') {

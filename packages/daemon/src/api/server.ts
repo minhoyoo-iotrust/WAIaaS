@@ -660,6 +660,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         approvalChannelRouter: deps.approvalChannelRouter,
         metricsCounter: deps.metricsCounter,
         reputationCache: deps.reputationCache,
+        tokenRegistryService,
       }),
     );
   }

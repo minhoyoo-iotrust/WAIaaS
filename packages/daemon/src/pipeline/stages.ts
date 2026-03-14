@@ -221,15 +221,15 @@ function formatNotificationAmount(
   try {
     if ('type' in req && req.type === 'TOKEN_TRANSFER') {
       const r = req as TokenTransferRequest;
-      const decimals = r.token.decimals;
-      const symbol = r.token.symbol ?? r.token.address.slice(0, 8);
+      const decimals = r.token.decimals ?? 18;
+      const symbol = r.token.symbol ?? r.token.address?.slice(0, 8) ?? 'TKN';
       return `${formatAmount(BigInt(raw), decimals)} ${symbol}`;
     }
 
     if ('type' in req && req.type === 'APPROVE') {
       const r = req as ApproveRequest;
-      const decimals = r.token.decimals;
-      const symbol = r.token.symbol ?? r.token.address.slice(0, 8);
+      const decimals = r.token.decimals ?? 18;
+      const symbol = r.token.symbol ?? r.token.address?.slice(0, 8) ?? 'TKN';
       return `${formatAmount(BigInt(raw), decimals)} ${symbol}`;
     }
 
@@ -1012,7 +1012,7 @@ export async function buildByType(
         from: walletPublicKey,
         to: req.to,
         amount: BigInt(req.amount!),
-        token: req.token,
+        token: req.token as { address: string; decimals: number; symbol: string },
         memo: req.memo,
       });
     }
@@ -1048,7 +1048,7 @@ export async function buildByType(
           from: walletPublicKey,
           spender: req.spender,
           token: {
-            address: req.token.address,
+            address: req.token.address!,
             tokenId: req.nft.tokenId,
             standard: req.nft.standard,
           },
@@ -1058,7 +1058,7 @@ export async function buildByType(
       return adapter.buildApprove({
         from: walletPublicKey,
         spender: req.spender,
-        token: req.token,
+        token: req.token as { address: string; decimals: number; symbol: string },
         amount: BigInt(req.amount!),
       });
     }
