@@ -586,6 +586,46 @@ describe('WAIaaSClient', () => {
       expect(err.status).toBe(400);
       expect(err.hint).toBe('Balance too low for this transfer');
     });
+    it('should send assetId-only token in body (CAIP-19 daemon resolve)', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+      });
+
+      fetchSpy.mockResolvedValue(
+        mockResponse({ id: 'tx-caip-1', status: 'PENDING' }, 201),
+      );
+
+      await client.sendToken({
+        to: 'addr',
+        amount: '5000000',
+        type: 'TOKEN_TRANSFER',
+        token: { assetId: 'eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48' },
+      });
+
+      const opts = fetchSpy.mock.calls[0]![1] as RequestInit;
+      const body = JSON.parse(opts.body as string) as Record<string, unknown>;
+      expect(body['token']).toEqual({
+        assetId: 'eip155:1/erc20:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+      });
+    });
+
+    it('should send CAIP-2 network string through to daemon', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+      });
+
+      fetchSpy.mockResolvedValue(
+        mockResponse({ id: 'tx-caip-2', status: 'PENDING' }, 201),
+      );
+
+      await client.sendToken({ to: 'addr', amount: '100', network: 'eip155:1' });
+
+      const opts = fetchSpy.mock.calls[0]![1] as RequestInit;
+      const body = JSON.parse(opts.body as string) as Record<string, unknown>;
+      expect(body['network']).toBe('eip155:1');
+    });
   });
 
   // =========================================================================
