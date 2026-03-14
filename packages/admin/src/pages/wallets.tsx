@@ -901,8 +901,8 @@ function WalletDetailView({ id }: { id: string }) {
             </Badge>
           </DetailRow>
           {wallet.value.accountType === 'smart' && wallet.value.factoryAddress?.toLowerCase() === SOLADY_FACTORY_ADDRESS.toLowerCase() && (
-            <div style={{ background: 'var(--color-danger-bg, #fef2f2)', border: '1px solid var(--color-danger, #ef4444)', borderRadius: 'var(--radius)', padding: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
-              <strong style={{ color: 'var(--color-danger, #ef4444)' }}>Deprecated Smart Account</strong>
+            <div style={{ background: 'var(--color-danger-bg)', border: '1px solid var(--color-danger)', borderRadius: 'var(--radius)', padding: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
+              <strong style={{ color: 'var(--color-danger)' }}>Deprecated Smart Account</strong>
               <p style={{ margin: '0.25rem 0 0', fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)' }}>
                 This Smart Account uses a deprecated factory (Solady). Transactions and UserOp operations will be rejected. Please create a new Smart Account wallet to continue.
               </p>
@@ -928,7 +928,7 @@ function WalletDetailView({ id }: { id: string }) {
                     {wallet.value.factoryVerifiedOnNetwork ? 'Verified' : 'Not Verified'}
                   </Badge>
                   {!wallet.value.factoryVerifiedOnNetwork && (
-                    <span style={{ marginLeft: '0.5rem', fontSize: '0.85rem', color: 'var(--color-danger, #ef4444)' }}>
+                    <span style={{ marginLeft: '0.5rem', fontSize: '0.85rem', color: 'var(--color-danger)' }}>
                       Factory may not be deployed on this network
                     </span>
                   )}
