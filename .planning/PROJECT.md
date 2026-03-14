@@ -8,6 +8,21 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
+## Current Milestone: v31.17 OpenAPI 기반 프론트엔드 타입 자동 생성
+
+**Goal:** Admin UI와 백엔드 간 인터페이스 불일치를 구조적으로 제거한다. OpenAPI spec에서 TypeScript 클라이언트 타입을 자동 생성하고, Admin UI의 수동 interface 정의를 생성 타입으로 전환하며, 프로바이더/설정 키 등 동적 메타데이터의 하드코딩을 API 기반 디스커버리로 교체한다.
+
+**Target features:**
+- OpenAPI spec 빌드 타임 추출 + openapi-typescript 타입 생성 파이프라인
+- 타입 안전 API 클라이언트 래퍼 (apiGet<T> 수동 캐스팅 제거)
+- CI freshness 검증 (openapi.json → types.generated.ts 동기화 강제)
+- Admin UI 수동 interface 62개 → 생성 타입 전환 (페이지 단위 점진)
+- 하드코딩 배열 5개 → @waiaas/shared import 또는 OpenAPI 생성 타입
+- API 호출 28곳 수동 타입 단언 → 타입 안전 래퍼
+- GET /v1/actions/providers 응답 확장 (enabledKey, category 등)
+- GET /v1/admin/settings/schema 신규 엔드포인트 (설정 키 메타데이터)
+- Contract Test (OpenAPI spec ↔ 프론트엔드 사용 키 자동 검증)
+
 ## Previous Milestone: v31.16 CAIP 표준 식별자 승격 — SHIPPED 2026-03-15
 
 REST API, SDK, MCP 전체 인터페이스에서 CAIP-2(네트워크)와 CAIP-19(자산)를 표준 식별자로 승격. normalizeNetworkInput CAIP-2 dual-accept(15개 네트워크 매핑 + z.preprocess 자동 적용), assetId-only 토큰 특정(레지스트리 자동 resolve + 네트워크 추론), 모든 응답에 chainId/assetId 런타임 동적 생성(connect-info supportedChainIds), SDK Caip2ChainId/Caip19AssetId 타입 + TokenInfo union 확장, MCP resolve_asset 신규 도구 + assetId-only 토큰 도구, 스킬 파일 4종 CAIP 문서화. 5 phases, 8 plans, 46 requirements, 34 commits, 71 files, +4,783 lines, 239 CAIP tests.
