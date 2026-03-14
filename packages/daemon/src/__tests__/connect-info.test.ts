@@ -466,6 +466,25 @@ describe('GET /v1/connect-info', () => {
     expect(wA.availableNetworks).toContain('solana-testnet');
   });
 
+  it('returns supportedChainIds as non-empty CAIP-2 array', async () => {
+    const res = await app.request('/v1/connect-info', {
+      headers: bearerHeader(sessionToken),
+    });
+    expect(res.status).toBe(200);
+
+    const body = await json(res);
+    const chainIds = body.supportedChainIds as string[];
+    expect(Array.isArray(chainIds)).toBe(true);
+    expect(chainIds.length).toBeGreaterThan(0);
+    // Every item must match CAIP-2 pattern: namespace:reference
+    for (const id of chainIds) {
+      expect(id).toMatch(/^[-a-z0-9]{3,8}:[-_a-zA-Z0-9]{1,32}$/);
+    }
+    // Must include at least eip155 and solana
+    expect(chainIds.some((id) => id.startsWith('eip155:'))).toBe(true);
+    expect(chainIds.some((id) => id.startsWith('solana:'))).toBe(true);
+  });
+
   it('rejects without session token (401)', async () => {
     const res = await app.request('/v1/connect-info', {
       headers: { Host: HOST },
