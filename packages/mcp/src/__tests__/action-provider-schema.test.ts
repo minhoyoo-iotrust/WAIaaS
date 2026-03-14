@@ -7,7 +7,7 @@
  * - Fallback to z.record(z.unknown()) when inputSchema is absent or empty
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -68,11 +68,11 @@ describe('jsonSchemaToZodParams', () => {
     expect(result!.amount).toBeDefined();
 
     // Verify it's a Zod schema that accepts strings
-    const parsed = result!.amount.safeParse('1000');
+    const parsed = result!.amount!.safeParse('1000');
     expect(parsed.success).toBe(true);
 
     // Should reject non-strings
-    const rejected = result!.amount.safeParse(1000);
+    const rejected = result!.amount!.safeParse(1000);
     expect(rejected.success).toBe(false);
   });
 
@@ -88,8 +88,8 @@ describe('jsonSchemaToZodParams', () => {
     const result = jsonSchemaToZodParams(jsonSchema);
     expect(result).toBeDefined();
 
-    expect(result!.slippage.safeParse(0.5).success).toBe(true);
-    expect(result!.count.safeParse(10).success).toBe(true);
+    expect(result!.slippage!.safeParse(0.5).success).toBe(true);
+    expect(result!.count!.safeParse(10).success).toBe(true);
   });
 
   it('should convert boolean properties to z.boolean()', () => {
@@ -102,7 +102,7 @@ describe('jsonSchemaToZodParams', () => {
     };
     const result = jsonSchemaToZodParams(jsonSchema);
     expect(result).toBeDefined();
-    expect(result!.autoCompound.safeParse(true).success).toBe(true);
+    expect(result!.autoCompound!.safeParse(true).success).toBe(true);
   });
 
   it('should make non-required fields optional', () => {
@@ -118,11 +118,11 @@ describe('jsonSchemaToZodParams', () => {
     expect(result).toBeDefined();
 
     // slippage is optional -- should accept undefined
-    const parsed = result!.slippage.safeParse(undefined);
+    const parsed = result!.slippage!.safeParse(undefined);
     expect(parsed.success).toBe(true);
 
     // amount is required -- should reject undefined
-    const rejected = result!.amount.safeParse(undefined);
+    const rejected = result!.amount!.safeParse(undefined);
     expect(rejected.success).toBe(false);
   });
 
@@ -136,7 +136,7 @@ describe('jsonSchemaToZodParams', () => {
     };
     const result = jsonSchemaToZodParams(jsonSchema);
     expect(result).toBeDefined();
-    expect(result!.accounts.safeParse([1, 'a', true]).success).toBe(true);
+    expect(result!.accounts!.safeParse([1, 'a', true]).success).toBe(true);
   });
 
   it('should return null for empty or missing properties', () => {

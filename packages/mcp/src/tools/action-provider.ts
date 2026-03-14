@@ -116,9 +116,6 @@ const COMMON_MCP_FIELDS = {
   }).optional().describe('Gas price condition for deferred execution. At least one of max_gas_price or max_priority_fee required.'),
 };
 
-// -- Reserved field names that should not be treated as action params --
-const RESERVED_FIELDS = new Set(['network', 'wallet_id', 'gas_condition']);
-
 /**
  * Fetch mcpExpose=true action providers from daemon and register each action
  * as an MCP tool. Returns Map<toolName, RegisteredTool> for future removal.
