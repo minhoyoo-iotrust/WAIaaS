@@ -16,6 +16,7 @@ import type {
 import { JupiterApiClient } from './jupiter-api-client.js';
 import { type JupiterSwapConfig, JUPITER_SWAP_DEFAULTS, JUPITER_PROGRAM_ID } from './config.js';
 import { clampSlippageBps, asBps } from '../../common/slippage.js';
+import { resolveProviderHumanAmount } from '../../common/resolve-human-amount.js';
 
 // ---------------------------------------------------------------------------
 // Input schema for the swap action
@@ -24,7 +25,11 @@ import { clampSlippageBps, asBps } from '../../common/slippage.js';
 const SwapInputSchema = z.object({
   inputMint: z.string().min(1, 'inputMint is required'),
   outputMint: z.string().min(1, 'outputMint is required'),
-  amount: z.string().min(1, 'amount is required (in smallest units)').describe('Amount in smallest units (lamports). Example: "1000000000" = 1 SOL'),
+  amount: z.string().min(1, 'amount is required (in smallest units)').describe('Amount in smallest units (lamports). Example: "1000000000" = 1 SOL').optional(),
+  humanAmount: z.string().min(1).optional()
+    .describe('Human-readable amount (e.g., "1.5" for 1.5 SOL). Requires decimals field. Mutually exclusive with amount.'),
+  decimals: z.number().int().min(0).max(24).optional()
+    .describe('Token decimals for humanAmount conversion. Required when using humanAmount.'),
   slippageBps: z.number().int().optional(),
 });
 
@@ -75,7 +80,13 @@ export class JupiterSwapActionProvider implements IActionProvider {
       throw new ChainError('INVALID_INSTRUCTION', 'solana', { message: `Unknown action: ${actionName}` });
     }
 
-    const input = SwapInputSchema.parse(params);
+    // Phase 405: humanAmount -> amount conversion
+    const resolvedParams = { ...params };
+    resolveProviderHumanAmount(resolvedParams, 'amount', 'humanAmount');
+    const input = SwapInputSchema.parse(resolvedParams);
+    if (!input.amount) {
+      throw new ChainError('INVALID_INSTRUCTION', 'solana', { message: 'Either amount or humanAmount (with decimals) is required' });
+    }
 
     // SAFE-05: Block same-token swap
     if (input.inputMint === input.outputMint) {

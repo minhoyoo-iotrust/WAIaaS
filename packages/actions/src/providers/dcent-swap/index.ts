@@ -22,6 +22,7 @@ import { DcentSwapApiClient } from './dcent-api-client.js';
 import { type DcentSwapConfig, DCENT_SWAP_DEFAULTS } from './config.js';
 import { getDcentQuotes, executeDexSwap, type DcentQuoteResult, type GetQuotesParams } from './dex-swap.js';
 import { findTwoHopRoutes, executeTwoHopSwap, type TwoHopQuoteResult } from './auto-router.js';
+import { resolveProviderHumanAmount } from '../../common/resolve-human-amount.js';
 
 // ---------------------------------------------------------------------------
 // Input schemas (Zod SSoT)
@@ -30,7 +31,11 @@ import { findTwoHopRoutes, executeTwoHopSwap, type TwoHopQuoteResult } from './a
 const GetQuotesInputSchema = z.object({
   fromAsset: z.string().min(1),
   toAsset: z.string().min(1),
-  amount: z.string().min(1).describe('Amount in smallest units. Example: "1000000000000000000" = 1 token with 18 decimals'),
+  amount: z.string().min(1).describe('Amount in smallest units. Example: "1000000000000000000" = 1 token with 18 decimals').optional(),
+  humanAmount: z.string().min(1).optional()
+    .describe('Human-readable amount (e.g., "1.5" for 1.5 tokens). Requires decimals field. Mutually exclusive with amount.'),
+  decimals: z.number().int().min(0).max(24).optional()
+    .describe('Token decimals for humanAmount conversion. Required when using humanAmount.'),
   fromDecimals: z.number().int().min(0).max(18),
   toDecimals: z.number().int().min(0).max(18),
 });
@@ -38,7 +43,11 @@ const GetQuotesInputSchema = z.object({
 const DexSwapInputSchema = z.object({
   fromAsset: z.string().min(1),
   toAsset: z.string().min(1),
-  amount: z.string().min(1).describe('Amount in smallest units. Example: "1000000000000000000" = 1 token with 18 decimals'),
+  amount: z.string().min(1).describe('Amount in smallest units. Example: "1000000000000000000" = 1 token with 18 decimals').optional(),
+  humanAmount: z.string().min(1).optional()
+    .describe('Human-readable amount (e.g., "1.5" for 1.5 tokens). Requires decimals field. Mutually exclusive with amount.'),
+  decimals: z.number().int().min(0).max(24).optional()
+    .describe('Token decimals for humanAmount conversion. Required when using humanAmount. Note: this is separate from fromDecimals/toDecimals.'),
   fromDecimals: z.number().int().min(0).max(18),
   toDecimals: z.number().int().min(0).max(18),
   providerId: z.string().optional(),
@@ -109,11 +118,16 @@ export class DcentSwapActionProvider implements IActionProvider {
     params: Record<string, unknown>,
     context: ActionContext,
   ): Promise<ContractCallRequest | ContractCallRequest[]> {
+    // Phase 405: humanAmount -> amount conversion
+    const rp = { ...params };
+    resolveProviderHumanAmount(rp, 'amount', 'humanAmount');
+
     switch (actionName) {
       case 'get_quotes': {
         // DS-07: get_quotes is informational. Use queryQuotes() for direct access.
-        const input = GetQuotesInputSchema.parse(params);
-        const result = await getDcentQuotes(this.getClient(), input);
+        const input = GetQuotesInputSchema.parse(rp);
+        if (!input.amount) throw new ChainError('INVALID_INSTRUCTION', context.chain, { message: 'Either amount or humanAmount (with decimals) is required' });
+        const result = await getDcentQuotes(this.getClient(), input as GetQuotesParams);
         throw new ChainError('INVALID_INSTRUCTION', context.chain, {
           message: `get_quotes is informational. Use queryQuotes() query method. Result: ${JSON.stringify({
             dexProviders: result.dexProviders.length,
@@ -123,14 +137,13 @@ export class DcentSwapActionProvider implements IActionProvider {
       }
 
       case 'dex_swap': {
-        const input = DexSwapInputSchema.parse(params);
+        const input = DexSwapInputSchema.parse(rp);
+        if (!input.amount) throw new ChainError('INVALID_INSTRUCTION', context.chain, { message: 'Either amount or humanAmount (with decimals) is required' });
+        const swapParams = { fromAsset: input.fromAsset, toAsset: input.toAsset, amount: input.amount, fromDecimals: input.fromDecimals, toDecimals: input.toDecimals, walletAddress: context.walletAddress, providerId: input.providerId, slippageBps: input.slippageBps };
         try {
           return await executeDexSwap(
             this.getClient(),
-            {
-              ...input,
-              walletAddress: context.walletAddress,
-            },
+            swapParams,
             this.config,
           );
         } catch (err) {
@@ -138,10 +151,7 @@ export class DcentSwapActionProvider implements IActionProvider {
           if (err instanceof ChainError && isNoRouteError(err)) {
             const twoHopResult = await executeTwoHopSwap(
               this.getClient(),
-              {
-                ...input,
-                walletAddress: context.walletAddress,
-              },
+              swapParams,
               this.config,
             );
             // Return flat BATCH requests (pipeline handles execution)

@@ -14,6 +14,7 @@
  */
 import { ChainError } from '@waiaas/core';
 import { migrateAmount } from '../../common/migrate-amount.js';
+import { resolveProviderHumanAmount } from '../../common/resolve-human-amount.js';
 import type {
   ILendingProvider,
   ActionProviderMetadata,
@@ -155,7 +156,10 @@ export class AaveV3LendingProvider implements ILendingProvider, IPositionProvide
     params: Record<string, unknown>,
     context: ActionContext,
   ): ContractCallRequest[] {
-    const input = AaveSupplyInputSchema.parse(params);
+    const rp = { ...params };
+    resolveProviderHumanAmount(rp, 'amount', 'humanAmount');
+    const input = AaveSupplyInputSchema.parse(rp);
+    if (!input.amount) throw new ChainError('INVALID_INSTRUCTION', 'ethereum', { message: 'Either amount or humanAmount (with decimals) is required' });
     const network = (input.network || 'ethereum-mainnet') as NetworkType;
     const addresses = getAaveAddresses(network);
     const amount = migrateAmount(input.amount, 18);
@@ -187,7 +191,10 @@ export class AaveV3LendingProvider implements ILendingProvider, IPositionProvide
     params: Record<string, unknown>,
     context: ActionContext,
   ): Promise<ContractCallRequest> {
-    const input = AaveBorrowInputSchema.parse(params);
+    const rp = { ...params };
+    resolveProviderHumanAmount(rp, 'amount', 'humanAmount');
+    const input = AaveBorrowInputSchema.parse(rp);
+    if (!input.amount) throw new ChainError('INVALID_INSTRUCTION', 'ethereum', { message: 'Either amount or humanAmount (with decimals) is required' });
     const network = (input.network || 'ethereum-mainnet') as NetworkType;
     const addresses = getAaveAddresses(network);
     const amount = migrateAmount(input.amount, 18);
@@ -214,7 +221,10 @@ export class AaveV3LendingProvider implements ILendingProvider, IPositionProvide
     params: Record<string, unknown>,
     context: ActionContext,
   ): ContractCallRequest[] {
-    const input = AaveRepayInputSchema.parse(params);
+    const rp = { ...params };
+    resolveProviderHumanAmount(rp, 'amount', 'humanAmount');
+    const input = AaveRepayInputSchema.parse(rp);
+    if (!input.amount) throw new ChainError('INVALID_INSTRUCTION', 'ethereum', { message: 'Either amount or humanAmount (with decimals) is required' });
     const network = (input.network || 'ethereum-mainnet') as NetworkType;
     const addresses = getAaveAddresses(network);
     const amount = input.amount === 'max' ? MAX_UINT256 : migrateAmount(input.amount, 18);
@@ -246,7 +256,10 @@ export class AaveV3LendingProvider implements ILendingProvider, IPositionProvide
     params: Record<string, unknown>,
     context: ActionContext,
   ): Promise<ContractCallRequest> {
-    const input = AaveWithdrawInputSchema.parse(params);
+    const rp = { ...params };
+    resolveProviderHumanAmount(rp, 'amount', 'humanAmount');
+    const input = AaveWithdrawInputSchema.parse(rp);
+    if (!input.amount) throw new ChainError('INVALID_INSTRUCTION', 'ethereum', { message: 'Either amount or humanAmount (with decimals) is required' });
     const network = (input.network || 'ethereum-mainnet') as NetworkType;
     const addresses = getAaveAddresses(network);
     const amount = input.amount === 'max' ? MAX_UINT256 : migrateAmount(input.amount, 18);

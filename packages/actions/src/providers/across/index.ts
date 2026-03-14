@@ -23,6 +23,7 @@ import type {
 } from '@waiaas/core';
 import { encodeFunctionData } from 'viem';
 import { AcrossApiClient } from './across-api-client.js';
+import { resolveProviderHumanAmount } from '../../common/resolve-human-amount.js';
 import type { AcrossSuggestedFeesResponse } from './schemas.js';
 import {
   type AcrossConfig,
@@ -41,7 +42,11 @@ const AcrossQuoteInputSchema = z.object({
   toChain: z.string().min(1, 'toChain is required'),
   inputToken: z.string().min(1, 'inputToken address is required'),
   outputToken: z.string().min(1, 'outputToken address is required'),
-  amount: z.string().min(1, 'amount is required (in smallest units, e.g., wei)').describe('Amount in smallest units (wei). Example: "1000000" = 1 USDC'),
+  amount: z.string().min(1, 'amount is required (in smallest units, e.g., wei)').describe('Amount in smallest units (wei). Example: "1000000" = 1 USDC').optional(),
+  humanAmount: z.string().min(1).optional()
+    .describe('Human-readable amount (e.g., "100" for 100 USDC). Requires decimals field. Mutually exclusive with amount.'),
+  decimals: z.number().int().min(0).max(24).optional()
+    .describe('Token decimals for humanAmount conversion. Required when using humanAmount.'),
   recipient: z.string().optional(),
 });
 
@@ -50,7 +55,11 @@ const AcrossExecuteInputSchema = z.object({
   toChain: z.string().min(1),
   inputToken: z.string().min(1),
   outputToken: z.string().min(1),
-  amount: z.string().min(1).describe('Amount in smallest units (wei). Example: "1000000" = 1 USDC'),
+  amount: z.string().min(1).describe('Amount in smallest units (wei). Example: "1000000" = 1 USDC').optional(),
+  humanAmount: z.string().min(1).optional()
+    .describe('Human-readable amount (e.g., "100" for 100 USDC). Requires decimals field. Mutually exclusive with amount.'),
+  decimals: z.number().int().min(0).max(24).optional()
+    .describe('Token decimals for humanAmount conversion. Required when using humanAmount.'),
   recipient: z.string().optional(),
   slippage: z.number().min(0).max(1).optional(),  // decimal, 0.01 = 1%
 });
@@ -298,7 +307,10 @@ export class AcrossBridgeActionProvider implements IActionProvider {
     params: Record<string, unknown>,
     context: ActionContext,
   ): Promise<ApiDirectResult> {
-    const input = AcrossQuoteInputSchema.parse(params);
+    const rp = { ...params };
+    resolveProviderHumanAmount(rp, 'amount', 'humanAmount');
+    const input = AcrossQuoteInputSchema.parse(rp);
+    if (!input.amount) throw new ChainError('INVALID_INSTRUCTION', 'ethereum', { message: 'Either amount or humanAmount (with decimals) is required' });
     const originChainId = getAcrossChainId(input.fromChain);
     const destChainId = getAcrossChainId(input.toChain);
 
@@ -355,7 +367,10 @@ export class AcrossBridgeActionProvider implements IActionProvider {
     params: Record<string, unknown>,
     context: ActionContext,
   ): Promise<ContractCallRequest[]> {
-    const input = AcrossExecuteInputSchema.parse(params);
+    const rp = { ...params };
+    resolveProviderHumanAmount(rp, 'amount', 'humanAmount');
+    const input = AcrossExecuteInputSchema.parse(rp);
+    if (!input.amount) throw new ChainError('INVALID_INSTRUCTION', 'ethereum', { message: 'Either amount or humanAmount (with decimals) is required' });
     const originChainId = getAcrossChainId(input.fromChain);
     const destChainId = getAcrossChainId(input.toChain);
 

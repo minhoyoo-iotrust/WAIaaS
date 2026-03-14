@@ -19,6 +19,7 @@ import type {
   ContractCallRequest,
 } from '@waiaas/core';
 import { LiFiApiClient } from './lifi-api-client.js';
+import { resolveProviderHumanAmount } from '../../common/resolve-human-amount.js';
 import { type LiFiConfig, LIFI_DEFAULTS, getLiFiChainId } from './config.js';
 
 // ---------------------------------------------------------------------------
@@ -30,7 +31,11 @@ const LiFiCrossSwapInputSchema = z.object({
   toChain: z.string().min(1, 'toChain is required'),
   fromToken: z.string().min(1, 'fromToken address or symbol is required'),
   toToken: z.string().min(1, 'toToken address or symbol is required'),
-  fromAmount: z.string().min(1, 'fromAmount is required (in smallest units)').describe('Amount in smallest units of source token (wei/lamports). Example: "1000000" = 1 USDC'),
+  fromAmount: z.string().min(1, 'fromAmount is required (in smallest units)').describe('Amount in smallest units of source token (wei/lamports). Example: "1000000" = 1 USDC').optional(),
+  humanFromAmount: z.string().min(1).optional()
+    .describe('Human-readable from amount (e.g., "100" for 100 USDC). Requires decimals field. Mutually exclusive with fromAmount.'),
+  decimals: z.number().int().min(0).max(24).optional()
+    .describe('Token decimals for humanFromAmount conversion. Required when using humanFromAmount.'),
   slippage: z.number().min(0).max(1).optional(),  // decimal, e.g. 0.03 = 3%
   toAddress: z.string().optional(),                // defaults to fromAddress (context.walletAddress)
 });
@@ -90,8 +95,15 @@ export class LiFiActionProvider implements IActionProvider {
       });
     }
 
+    // Phase 405: humanFromAmount -> fromAmount conversion
+    const rp = { ...params };
+    resolveProviderHumanAmount(rp, 'fromAmount', 'humanFromAmount');
+
     // Parse and validate input
-    const input = LiFiCrossSwapInputSchema.parse(params);
+    const input = LiFiCrossSwapInputSchema.parse(rp);
+    if (!input.fromAmount) {
+      throw new ChainError('INVALID_INSTRUCTION', 'ethereum', { message: 'Either fromAmount or humanFromAmount (with decimals) is required' });
+    }
 
     // Resolve LI.FI chain IDs (throws descriptive error for unsupported chains)
     let fromChainId: number;

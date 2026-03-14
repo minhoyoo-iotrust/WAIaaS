@@ -28,6 +28,7 @@ import { type PendleConfig, PENDLE_DEFAULTS, getPendleChainId } from './config.j
 import type { PendleMarket } from './schemas.js';
 import { formatCaip19 } from '@waiaas/core';
 import { addressToHex } from '../../common/contract-encoding.js';
+import { resolveProviderHumanAmount } from '../../common/resolve-human-amount.js';
 import {
   PendleBuyPTInputSchema,
   PendleBuyYTInputSchema,
@@ -132,7 +133,10 @@ export class PendleYieldProvider implements IYieldProvider, IPositionProvider {
     params: Record<string, unknown>,
     context: ActionContext,
   ): Promise<ContractCallRequest[]> {
-    const input = PendleBuyPTInputSchema.parse(params);
+    const rp = { ...params };
+    resolveProviderHumanAmount(rp, 'amountIn', 'humanAmountIn');
+    const input = PendleBuyPTInputSchema.parse(rp);
+    if (!input.amountIn) throw new ChainError('INVALID_INSTRUCTION', context.chain, { message: 'Either amountIn or humanAmountIn (with decimals) is required' });
     const { client, market } = await this.prepareAction(input.market, context);
     const slippage = this.resolveSlippage(input.slippageBps);
 
@@ -151,7 +155,10 @@ export class PendleYieldProvider implements IYieldProvider, IPositionProvider {
     params: Record<string, unknown>,
     context: ActionContext,
   ): Promise<ContractCallRequest[]> {
-    const input = PendleBuyYTInputSchema.parse(params);
+    const rp = { ...params };
+    resolveProviderHumanAmount(rp, 'amountIn', 'humanAmountIn');
+    const input = PendleBuyYTInputSchema.parse(rp);
+    if (!input.amountIn) throw new ChainError('INVALID_INSTRUCTION', context.chain, { message: 'Either amountIn or humanAmountIn (with decimals) is required' });
     const { client, market } = await this.prepareAction(input.market, context);
     const slippage = this.resolveSlippage(input.slippageBps);
 
@@ -176,7 +183,10 @@ export class PendleYieldProvider implements IYieldProvider, IPositionProvider {
     params: Record<string, unknown>,
     context: ActionContext,
   ): Promise<ContractCallRequest[]> {
-    const input = PendleRedeemPTInputSchema.parse(params);
+    const rp = { ...params };
+    resolveProviderHumanAmount(rp, 'amount', 'humanAmount');
+    const input = PendleRedeemPTInputSchema.parse(rp);
+    if (!input.amount) throw new ChainError('INVALID_INSTRUCTION', context.chain, { message: 'Either amount or humanAmount (with decimals) is required' });
     const { client, market } = await this.prepareAction(input.market, context);
     const slippage = this.resolveSlippage(input.slippageBps);
 
@@ -195,7 +205,10 @@ export class PendleYieldProvider implements IYieldProvider, IPositionProvider {
     params: Record<string, unknown>,
     context: ActionContext,
   ): Promise<ContractCallRequest[]> {
-    const input = PendleAddLiquidityInputSchema.parse(params);
+    const rp = { ...params };
+    resolveProviderHumanAmount(rp, 'amountIn', 'humanAmountIn');
+    const input = PendleAddLiquidityInputSchema.parse(rp);
+    if (!input.amountIn) throw new ChainError('INVALID_INSTRUCTION', context.chain, { message: 'Either amountIn or humanAmountIn (with decimals) is required' });
     const { client, market } = await this.prepareAction(input.market, context);
     const slippage = this.resolveSlippage(input.slippageBps);
 
@@ -214,7 +227,10 @@ export class PendleYieldProvider implements IYieldProvider, IPositionProvider {
     params: Record<string, unknown>,
     context: ActionContext,
   ): Promise<ContractCallRequest[]> {
-    const input = PendleRemoveLiquidityInputSchema.parse(params);
+    const rp = { ...params };
+    resolveProviderHumanAmount(rp, 'amount', 'humanAmount');
+    const input = PendleRemoveLiquidityInputSchema.parse(rp);
+    if (!input.amount) throw new ChainError('INVALID_INSTRUCTION', context.chain, { message: 'Either amount or humanAmount (with decimals) is required' });
     const { client, market } = await this.prepareAction(input.market, context);
     const slippage = this.resolveSlippage(input.slippageBps);
 
