@@ -163,6 +163,7 @@ export class AaveV3LendingProvider implements ILendingProvider, IPositionProvide
     const network = (input.network || 'ethereum-mainnet') as NetworkType;
     const addresses = getAaveAddresses(network);
     const amount = migrateAmount(input.amount, 18);
+    if (amount === 0n) throw new ChainError('INVALID_INSTRUCTION', 'ethereum', { message: 'Amount must be greater than 0' });
 
     const approveReq: ContractCallRequest = {
       type: 'CONTRACT_CALL',
@@ -198,6 +199,7 @@ export class AaveV3LendingProvider implements ILendingProvider, IPositionProvide
     const network = (input.network || 'ethereum-mainnet') as NetworkType;
     const addresses = getAaveAddresses(network);
     const amount = migrateAmount(input.amount, 18);
+    if (amount === 0n) throw new ChainError('INVALID_INSTRUCTION', 'ethereum', { message: 'Amount must be greater than 0' });
 
     // AAVE-09: HF simulation check if rpcCaller available
     if (this.rpcCaller) {

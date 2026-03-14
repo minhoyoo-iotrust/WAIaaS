@@ -126,6 +126,7 @@ export class LidoStakingActionProvider implements IActionProvider {
     const input = LidoStakeInputSchema.parse(rp);
     if (!input.amount) throw new ChainError('INVALID_INSTRUCTION', 'ethereum', { message: 'Either amount or humanAmount (with decimals) is required' });
     const amountWei = migrateAmount(input.amount, 18);
+    if (amountWei === 0n) throw new ChainError('INVALID_INSTRUCTION', 'ethereum', { message: 'Amount must be greater than 0' });
 
     return {
       type: 'CONTRACT_CALL',
@@ -148,6 +149,7 @@ export class LidoStakingActionProvider implements IActionProvider {
     const input = LidoUnstakeInputSchema.parse(rp);
     if (!input.amount) throw new ChainError('INVALID_INSTRUCTION', 'ethereum', { message: 'Either amount or humanAmount (with decimals) is required' });
     const amountWei = migrateAmount(input.amount, 18);
+    if (amountWei === 0n) throw new ChainError('INVALID_INSTRUCTION', 'ethereum', { message: 'Amount must be greater than 0' });
 
     // Step 1: Approve stETH to WithdrawalQueue
     const approveRequest: ContractCallRequest = {

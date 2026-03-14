@@ -167,6 +167,7 @@ export class KaminoLendingProvider implements ILendingProvider, IPositionProvide
     if (!input.amount) throw new ChainError('INVALID_INSTRUCTION', 'solana', { message: 'Either amount or humanAmount (with decimals) is required' });
     const marketAddress = resolveMarketAddress(input.market ?? this.config.market);
     const amount = migrateAmount(input.amount, 6);
+    if (amount === 0n) throw new ChainError('INVALID_INSTRUCTION', 'solana', { message: 'Amount must be greater than 0' });
 
     const instructions = await this.sdkWrapper.buildSupplyInstruction({
       market: marketAddress,
@@ -192,6 +193,7 @@ export class KaminoLendingProvider implements ILendingProvider, IPositionProvide
     if (!input.amount) throw new ChainError('INVALID_INSTRUCTION', 'solana', { message: 'Either amount or humanAmount (with decimals) is required' });
     const marketAddress = resolveMarketAddress(input.market ?? this.config.market);
     const amount = migrateAmount(input.amount, 6);
+    if (amount === 0n) throw new ChainError('INVALID_INSTRUCTION', 'solana', { message: 'Amount must be greater than 0' });
 
     // HF simulation: approximate USD value using raw amount
     // (conservative estimate -- proper conversion requires price oracle)

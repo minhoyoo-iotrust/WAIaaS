@@ -126,6 +126,7 @@ export class JitoStakingActionProvider implements IActionProvider {
     const input = JitoStakeInputSchema.parse(rp);
     if (!input.amount) throw new ChainError('INVALID_INSTRUCTION', 'solana', { message: 'Either amount or humanAmount (with decimals) is required' });
     const amountLamports = migrateAmount(input.amount, 9);
+    if (amountLamports === 0n) throw new ChainError('INVALID_INSTRUCTION', 'solana', { message: 'Amount must be greater than 0' });
 
     if (amountLamports < JITO_MIN_DEPOSIT_LAMPORTS) {
       throw new ChainError('INVALID_INSTRUCTION', 'solana', {
@@ -149,6 +150,7 @@ export class JitoStakingActionProvider implements IActionProvider {
     const input = JitoUnstakeInputSchema.parse(rp);
     if (!input.amount) throw new ChainError('INVALID_INSTRUCTION', 'solana', { message: 'Either amount or humanAmount (with decimals) is required' });
     const amountLamports = migrateAmount(input.amount, 9);
+    if (amountLamports === 0n) throw new ChainError('INVALID_INSTRUCTION', 'solana', { message: 'Amount must be greater than 0' });
 
     return buildWithdrawSolRequest(this.config, amountLamports, context.walletAddress);
   }
