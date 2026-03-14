@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.11.0-rc.4](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.3...v2.11.0-rc.4) (2026-03-14)
+
+
+### Features
+
+* GitHub Pages terminal theme + architecture redesign ([#339](https://github.com/minhoyoo-iotrust/WAIaaS/issues/339), [#340](https://github.com/minhoyoo-iotrust/WAIaaS/issues/340)) ([b4692d4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b4692d47c700193289f7038df61f5cef2da24484))
+* redesign architecture diagram with accurate structure + remove CNAME ([4798aee](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4798aee8ac29299de5f2f939fba65e4f4f19db9e))
+* terminal theme redesign + domain unification ([#339](https://github.com/minhoyoo-iotrust/WAIaaS/issues/339), [#340](https://github.com/minhoyoo-iotrust/WAIaaS/issues/340)) ([b248f10](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b248f1016dd9c8d439d51f0d4fa3e1518cabe4fd))
+
 ## [2.11.0-rc.3](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.2...v2.11.0-rc.3) (2026-03-13)
 
 
