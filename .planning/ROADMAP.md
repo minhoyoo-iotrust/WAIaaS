@@ -162,5 +162,5 @@ Phases execute in numeric order: 402 -> 403 -> 404 -> 405 -> 406
 | 402. Schema Hardening | v31.15 | Complete    | 2026-03-14 | 2026-03-14 |
 | 403. Provider Unit Migration | 2/2 | Complete    | 2026-03-14 | - |
 | 404. Typed MCP Schemas + Response Enrichment | v31.15 | Complete    | 2026-03-14 | 2026-03-14 |
-| 405. humanAmount Parameter | 2/2 | Complete   | 2026-03-14 | - |
+| 405. humanAmount Parameter | 2/2 | Complete    | 2026-03-14 | - |
 | 406. SDK + Skill File Sync + E2E | v31.15 | 0/2 | Not started | - |
