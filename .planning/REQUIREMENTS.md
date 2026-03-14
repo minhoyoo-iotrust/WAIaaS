@@ -37,8 +37,8 @@ Requirements for v31.15. Each maps to roadmap phases.
 - [ ] **HAMNT-01**: REST API 트랜잭션 요청(TRANSFER, TOKEN_TRANSFER, APPROVE)에 humanAmount: string 옵션 파라미터 추가
 - [ ] **HAMNT-02**: amount와 humanAmount 동시 지정 시 에러 반환 (Zod superRefine XOR 검증)
 - [ ] **HAMNT-03**: humanAmount 지정 시 토큰 decimals 조회 → parseAmount()로 smallest unit 변환 후 파이프라인 주입 (TRANSFER: native decimals, TOKEN_TRANSFER: registry 조회, 미등록 시 에러)
-- [ ] **HAMNT-04**: Action Provider에 per-provider humanAmount 파라미터 추가 (amount→humanAmount, sellAmount→humanSellAmount 등, CLOB 예외 제외)
-- [ ] **HAMNT-05**: MCP 도구 schema에 humanAmount 파라미터 반영
+- [x] **HAMNT-04**: Action Provider에 per-provider humanAmount 파라미터 추가 (amount→humanAmount, sellAmount→humanSellAmount 등, CLOB 예외 제외)
+- [x] **HAMNT-05**: MCP 도구 schema에 humanAmount 파라미터 반영
 
 ### SDK & Skills
 
@@ -53,8 +53,8 @@ Requirements for v31.15. Each maps to roadmap phases.
 - [x] **TEST-02**: 하위 호환성 테스트 — human-readable 입력(소수점) 시 자동 변환 + deprecation 경고 확인
 - [x] **TEST-03**: MCP typed schema 테스트 — 동적 도구 등록 시 올바른 schema 생성 확인
 - [x] **TEST-04**: amountFormatted 테스트 — 다양한 decimals(6, 8, 9, 18)에 대해 올바른 포맷 확인
-- [ ] **TEST-05**: humanAmount XOR 검증 + decimals 조회 + 변환 정확성 테스트
-- [ ] **TEST-06**: humanAmount + 미등록 토큰 에러 테스트
+- [x] **TEST-05**: humanAmount XOR 검증 + decimals 조회 + 변환 정확성 테스트
+- [x] **TEST-06**: humanAmount + 미등록 토큰 에러 테스트
 - [x] **TEST-07**: max 키워드 호환성 테스트 (aave/kamino repay/withdraw)
 - [ ] **TEST-08**: E2E 시나리오 — AI 에이전트가 humanAmount로 swap/transfer/supply 실행
 
@@ -100,8 +100,8 @@ Deferred to future release. Tracked but not in current roadmap.
 | HAMNT-01 | Phase 405 | Pending |
 | HAMNT-02 | Phase 405 | Pending |
 | HAMNT-03 | Phase 405 | Pending |
-| HAMNT-04 | Phase 405 | Pending |
-| HAMNT-05 | Phase 405 | Pending |
+| HAMNT-04 | Phase 405 | Complete |
+| HAMNT-05 | Phase 405 | Complete |
 | SDK-01 | Phase 406 | Pending |
 | SDK-02 | Phase 406 | Pending |
 | SDK-03 | Phase 406 | Pending |
@@ -110,8 +110,8 @@ Deferred to future release. Tracked but not in current roadmap.
 | TEST-02 | Phase 403 | Complete |
 | TEST-03 | Phase 404 | Complete |
 | TEST-04 | Phase 404 | Complete |
-| TEST-05 | Phase 405 | Pending |
-| TEST-06 | Phase 405 | Pending |
+| TEST-05 | Phase 405 | Complete |
+| TEST-06 | Phase 405 | Complete |
 | TEST-07 | Phase 403 | Complete |
 | TEST-08 | Phase 406 | Pending |
 

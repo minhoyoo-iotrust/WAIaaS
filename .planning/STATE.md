@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v31.15
 milestone_name: Amount 단위 표준화 및 AI 에이전트 DX 개선
-status: executing
-stopped_at: Completed 404-02-PLAN.md
-last_updated: "2026-03-14T07:29:17.356Z"
+status: completed
+stopped_at: Completed 405-02-PLAN.md
+last_updated: "2026-03-14T10:23:16.874Z"
 last_activity: 2026-03-14 — Phase 404 completed (2/2 plans)
 progress:
   total_phases: 5
-  completed_phases: 3
-  total_plans: 5
-  completed_plans: 5
+  completed_phases: 4
+  total_plans: 7
+  completed_plans: 7
   percent: 33
 ---
 
@@ -26,8 +26,8 @@ See: .planning/PROJECT.md (updated 2026-03-14)
 ## Current Position
 
 Phase: 405 of 406 (humanAmount Parameter)
-Plan: 0 of 2 in current phase
-Status: Ready to execute
+Plan: 2 of 2 in current phase
+Status: Phase 405 complete
 Last activity: 2026-03-14 — Phase 404 completed (2/2 plans)
 
 Progress: [###░░░░░░░] 33%
@@ -46,6 +46,7 @@ Progress: [###░░░░░░░] 33%
 | 402 | 1 | 6min | 6min |
 | Phase 403 P01+02 | 7min | 4 tasks | 12 files |
 | Phase 404 P01+02 | 9min | 4 tasks | 8 files |
+| Phase 405 P02 | 8min | 2 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -58,6 +59,9 @@ Progress: [###░░░░░░░] 33%
 - [Phase 404]: MCP typed params flattened into individual fields, handler re-wraps for REST API backward compat
 - [Phase 404]: amountDecimals/amountSymbol field names to avoid collision with existing balance decimals/symbol
 - [Phase 404]: Only TRANSFER type gets formatted amounts; CONTRACT_CALL/APPROVE/BATCH return null
+- [Phase 405]: Provider humanAmount requires decimals field (no TokenRegistryService access)
+- [Phase 405]: Per-provider naming: humanAmount/humanSellAmount/humanAmountIn/humanFromAmount following original field names
+- [Phase 405]: CLOB providers (Hyperliquid/Drift/Polymarket) excluded from humanAmount (exchange-native units)
 
 ### Pending Todos
 
@@ -69,6 +73,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-14T07:28:00.000Z
-Stopped at: Completed 404-02-PLAN.md
+Last session: 2026-03-14T10:23:16.871Z
+Stopped at: Completed 405-02-PLAN.md
 Resume file: None

@@ -58,7 +58,7 @@
 - [x] **Phase 402: Schema Hardening** - 모든 provider 스키마에 단위 설명 추가 및 CLOB 예외 문서화
 - [x] **Phase 403: Provider Unit Migration** - 4개 provider smallest-unit 전환 + migrateAmount 하위 호환성 (completed 2026-03-14)
 - [x] **Phase 404: Typed MCP Schemas + Response Enrichment** - MCP typed 스키마 + amountFormatted/decimals/symbol 응답 보강 (completed 2026-03-14)
-- [ ] **Phase 405: humanAmount Parameter** - REST API/Action Provider/MCP에 humanAmount XOR 파라미터 추가
+- [x] **Phase 405: humanAmount Parameter** - REST API/Action Provider/MCP에 humanAmount XOR 파라미터 추가 (completed 2026-03-14)
 - [ ] **Phase 406: SDK + Skill File Sync + E2E** - SDK humanAmount 옵션 + 스킬 파일 단위 가이드 + E2E 검증
 
 ## Phase Details
@@ -116,7 +116,7 @@ Plans:
   2. humanAmount는 토큰 decimals 조회(native: chain config, ERC-20/SPL: registry)를 통해 smallest-unit으로 변환되며, 미등록 토큰에 대해 명확한 에러를 반환한다
   3. 10개 smallest-unit provider(CLOB 제외)에서 per-provider humanAmount 변형(humanAmount, humanSellAmount 등)이 동작한다
   4. MCP 도구가 provider 스키마에 맞는 humanAmount 파라미터를 노출한다
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 405-01: Core XOR Zod refinement + REST API humanAmount (TRANSFER/TOKEN_TRANSFER/APPROVE)
@@ -162,5 +162,5 @@ Phases execute in numeric order: 402 -> 403 -> 404 -> 405 -> 406
 | 402. Schema Hardening | v31.15 | Complete    | 2026-03-14 | 2026-03-14 |
 | 403. Provider Unit Migration | 2/2 | Complete    | 2026-03-14 | - |
 | 404. Typed MCP Schemas + Response Enrichment | v31.15 | Complete    | 2026-03-14 | 2026-03-14 |
-| 405. humanAmount Parameter | v31.15 | 0/2 | Not started | - |
+| 405. humanAmount Parameter | 2/2 | Complete   | 2026-03-14 | - |
 | 406. SDK + Skill File Sync + E2E | v31.15 | 0/2 | Not started | - |
