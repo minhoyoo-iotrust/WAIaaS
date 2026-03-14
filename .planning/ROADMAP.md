@@ -56,7 +56,7 @@
 **Milestone Goal:** AI 에이전트가 일관된 단위 규칙으로 안전하게 온체인 거래를 수행하고, typed MCP 스키마와 humanAmount 파라미터로 DX 향상
 
 - [x] **Phase 402: Schema Hardening** - 모든 provider 스키마에 단위 설명 추가 및 CLOB 예외 문서화
-- [ ] **Phase 403: Provider Unit Migration** - 4개 provider smallest-unit 전환 + migrateAmount 하위 호환성
+- [x] **Phase 403: Provider Unit Migration** - 4개 provider smallest-unit 전환 + migrateAmount 하위 호환성 (completed 2026-03-14)
 - [ ] **Phase 404: Typed MCP Schemas + Response Enrichment** - MCP typed 스키마 + amountFormatted/decimals/symbol 응답 보강
 - [ ] **Phase 405: humanAmount Parameter** - REST API/Action Provider/MCP에 humanAmount XOR 파라미터 추가
 - [ ] **Phase 406: SDK + Skill File Sync + E2E** - SDK humanAmount 옵션 + 스킬 파일 단위 가이드 + E2E 검증
@@ -85,7 +85,7 @@ Plans:
   2. 소수점 포함 레거시 입력이 migrateAmount()를 통해 자동 변환되고 deprecation 경고가 로그에 출력된다
   3. aave/kamino repay/withdraw에서 max 키워드가 단위 변환과 독립적으로 정상 동작한다
   4. 4개 마이그레이션 provider에 대해 smallest-unit 입력, 하위호환 소수점 입력, max 키워드 테스트가 통과한다
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 403-01: migrateAmount() 공유 헬퍼 + Aave V3 마이그레이션
@@ -160,7 +160,7 @@ Phases execute in numeric order: 402 -> 403 -> 404 -> 405 -> 406
 | 400. Route Assembly + Async Approval | v31.14 | 3/3 | Complete | 2026-03-13 |
 | 401. DX Integration + Testing | v31.14 | 3/3 | Complete | 2026-03-13 |
 | 402. Schema Hardening | v31.15 | Complete    | 2026-03-14 | 2026-03-14 |
-| 403. Provider Unit Migration | v31.15 | 0/2 | Not started | - |
+| 403. Provider Unit Migration | 2/2 | Complete   | 2026-03-14 | - |
 | 404. Typed MCP Schemas + Response Enrichment | v31.15 | 0/2 | Not started | - |
 | 405. humanAmount Parameter | v31.15 | 0/2 | Not started | - |
 | 406. SDK + Skill File Sync + E2E | v31.15 | 0/2 | Not started | - |

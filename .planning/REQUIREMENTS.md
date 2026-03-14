@@ -9,11 +9,11 @@ Requirements for v31.15. Each maps to roadmap phases.
 
 ### Unit Standardization
 
-- [ ] **UNIT-01**: 4개 provider(aave-v3, kamino, lido-staking, jito-staking) 입력 스키마를 smallest unit(wei/lamports)으로 전환
-- [ ] **UNIT-02**: 전환 대상 provider에서 parseTokenAmount() 호출 제거, 입력값을 bigint로 직접 사용
-- [ ] **UNIT-03**: migrateAmount(value, decimals) 공유 헬퍼 — 소수점 포함 입력 시 human-readable로 간주하여 자동 변환 + deprecation 경고 로그 출력
+- [x] **UNIT-01**: 4개 provider(aave-v3, kamino, lido-staking, jito-staking) 입력 스키마를 smallest unit(wei/lamports)으로 전환
+- [x] **UNIT-02**: 전환 대상 provider에서 parseTokenAmount() 호출 제거, 입력값을 bigint로 직접 사용
+- [x] **UNIT-03**: migrateAmount(value, decimals) 공유 헬퍼 — 소수점 포함 입력 시 human-readable로 간주하여 자동 변환 + deprecation 경고 로그 출력
 - [x] **UNIT-04**: 모든 provider Zod schema description에 단위 명시 (예: 'Amount in smallest units (wei/lamports). Example: "1000000000000000" = 0.001 ETH')
-- [ ] **UNIT-05**: max 키워드 호환성 유지 (aave/kamino repay/withdraw에서 max는 단위 변환과 독립적으로 동작)
+- [x] **UNIT-05**: max 키워드 호환성 유지 (aave/kamino repay/withdraw에서 max는 단위 변환과 독립적으로 동작)
 - [x] **UNIT-06**: CLOB 예외 provider(Hyperliquid, Drift, Polymarket) schema description에 human-readable 단위 사용 명시
 
 ### MCP Typed Schema
@@ -49,13 +49,13 @@ Requirements for v31.15. Each maps to roadmap phases.
 
 ### Tests
 
-- [ ] **TEST-01**: 각 Action Provider의 단위 통일 테스트 — smallest unit 입력 → 정상 실행 확인
-- [ ] **TEST-02**: 하위 호환성 테스트 — human-readable 입력(소수점) 시 자동 변환 + deprecation 경고 확인
+- [x] **TEST-01**: 각 Action Provider의 단위 통일 테스트 — smallest unit 입력 → 정상 실행 확인
+- [x] **TEST-02**: 하위 호환성 테스트 — human-readable 입력(소수점) 시 자동 변환 + deprecation 경고 확인
 - [ ] **TEST-03**: MCP typed schema 테스트 — 동적 도구 등록 시 올바른 schema 생성 확인
 - [ ] **TEST-04**: amountFormatted 테스트 — 다양한 decimals(6, 8, 9, 18)에 대해 올바른 포맷 확인
 - [ ] **TEST-05**: humanAmount XOR 검증 + decimals 조회 + 변환 정확성 테스트
 - [ ] **TEST-06**: humanAmount + 미등록 토큰 에러 테스트
-- [ ] **TEST-07**: max 키워드 호환성 테스트 (aave/kamino repay/withdraw)
+- [x] **TEST-07**: max 키워드 호환성 테스트 (aave/kamino repay/withdraw)
 - [ ] **TEST-08**: E2E 시나리오 — AI 에이전트가 humanAmount로 swap/transfer/supply 실행
 
 ## v2 Requirements
@@ -81,11 +81,11 @@ Deferred to future release. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| UNIT-01 | Phase 403 | Pending |
-| UNIT-02 | Phase 403 | Pending |
-| UNIT-03 | Phase 403 | Pending |
+| UNIT-01 | Phase 403 | Complete |
+| UNIT-02 | Phase 403 | Complete |
+| UNIT-03 | Phase 403 | Complete |
 | UNIT-04 | Phase 402 | Complete |
-| UNIT-05 | Phase 403 | Pending |
+| UNIT-05 | Phase 403 | Complete |
 | UNIT-06 | Phase 402 | Complete |
 | MCP-01 | Phase 404 | Pending |
 | MCP-02 | Phase 404 | Pending |
@@ -106,13 +106,13 @@ Deferred to future release. Tracked but not in current roadmap.
 | SDK-02 | Phase 406 | Pending |
 | SDK-03 | Phase 406 | Pending |
 | SDK-04 | Phase 406 | Pending |
-| TEST-01 | Phase 403 | Pending |
-| TEST-02 | Phase 403 | Pending |
+| TEST-01 | Phase 403 | Complete |
+| TEST-02 | Phase 403 | Complete |
 | TEST-03 | Phase 404 | Pending |
 | TEST-04 | Phase 404 | Pending |
 | TEST-05 | Phase 405 | Pending |
 | TEST-06 | Phase 405 | Pending |
-| TEST-07 | Phase 403 | Pending |
+| TEST-07 | Phase 403 | Complete |
 | TEST-08 | Phase 406 | Pending |
 
 **Coverage:**
