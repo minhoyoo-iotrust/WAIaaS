@@ -47,7 +47,7 @@ vi.mock('../utils/error-messages', () => ({
 
 import { ApiError } from '../api/typed-client';
 import { showToast } from '../components/toast';
-import TokensPage from '../pages/tokens';
+import { TokensContent as TokensPage } from '../pages/tokens';
 
 const mockTokensResponse = {
   network: 'ethereum-mainnet',

@@ -1,14 +1,13 @@
 import { signal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
 import { logout } from '../auth/store';
-import { SettingsSearch } from './settings-search';
+import { SettingsSearch, pendingNavigation } from './settings-search';
 import { hasDirty } from '../utils/dirty-guard';
 import { showUnsavedDialog, UnsavedDialog } from './unsaved-dialog';
 import { loadSettingsSchema } from '../utils/settings-helpers';
 import DashboardPage from '../pages/dashboard';
 import WalletsPage from '../pages/wallets';
 import TransactionsPage from '../pages/transactions';
-import TokensPage from '../pages/tokens';
 import SessionsPage from '../pages/sessions';
 import PoliciesPage from '../pages/policies';
 import NotificationsPage from '../pages/notifications';
@@ -41,7 +40,6 @@ const PAGE_TITLES: Record<string, string> = {
   '/wallets': 'Wallets',
   '/transactions': 'Transactions',
   '/sessions': 'Sessions',
-  '/tokens': 'Token Registry',
   '/providers': 'Providers',
   '/hyperliquid': 'Hyperliquid',
   '/polymarket': 'Polymarket',
@@ -61,7 +59,6 @@ const PAGE_SUBTITLES: Record<string, string> = {
   '/wallets': 'Manage wallets, balances, and connections',
   '/transactions': 'View all transactions and configure incoming monitoring',
   '/sessions': 'View and manage active sessions',
-  '/tokens': 'Manage EVM token registry per network',
   '/providers': 'Manage DeFi action providers and API keys',
   '/hyperliquid': 'Hyperliquid perpetual trading positions, orders, and settings',
   '/polymarket': 'Polymarket prediction market positions, orders, and settings',
@@ -143,7 +140,11 @@ function PageRouter() {
     window.location.hash = '#/transactions';
     page = <TransactionsPage />;
   }
-  else if (path === '/tokens') page = <TokensPage />;
+  else if (path === '/tokens') {
+    pendingNavigation.value = { tab: 'tokens', fieldName: '' };
+    window.location.hash = '#/wallets';
+    page = <WalletsPage />;
+  }
   else if (path === '/providers') page = <ActionsPage />;
   else if (path === '/defi' || path === '/actions') {
     // Redirect legacy routes to Providers
@@ -192,7 +193,8 @@ function PageRouter() {
   return <div key={routeKey}>{page}</div>;
 }
 
-export { highlightField, pendingNavigation } from './settings-search';
+export { highlightField } from './settings-search';
+export { pendingNavigation };
 
 function renderNavLink(item: NavItem) {
   const isActive = item.path === '/wallets'
