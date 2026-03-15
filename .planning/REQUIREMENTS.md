@@ -32,12 +32,12 @@ Requirements for v32.0. Each maps to roadmap phases.
 
 ### Notification
 
-- [ ] **NTF-01**: CONTRACT_CALL의 TX_REQUESTED 알림에 해석된 컨트랙트 이름을 표시한다
-- [ ] **NTF-02**: CONTRACT_CALL의 TX_APPROVAL_REQUIRED 알림에 해석된 컨트랙트 이름을 표시한다
-- [ ] **NTF-03**: CONTRACT_CALL의 TX_SUBMITTED 알림에 해석된 컨트랙트 이름을 표시한다
-- [ ] **NTF-04**: CONTRACT_CALL의 TX_CONFIRMED 알림에 해석된 컨트랙트 이름을 표시한다
-- [ ] **NTF-05**: 이름 표시 포맷은 "Protocol Name (0xabcd...1234)" 형태이다
-- [ ] **NTF-06**: TRANSFER/TOKEN_TRANSFER 등 비 CONTRACT_CALL 타입은 기존 {to} 동작을 유지한다
+- [x] **NTF-01**: CONTRACT_CALL의 TX_REQUESTED 알림에 해석된 컨트랙트 이름을 표시한다
+- [x] **NTF-02**: CONTRACT_CALL의 TX_APPROVAL_REQUIRED 알림에 해석된 컨트랙트 이름을 표시한다
+- [x] **NTF-03**: CONTRACT_CALL의 TX_SUBMITTED 알림에 해석된 컨트랙트 이름을 표시한다
+- [x] **NTF-04**: CONTRACT_CALL의 TX_CONFIRMED 알림에 해석된 컨트랙트 이름을 표시한다
+- [x] **NTF-05**: 이름 표시 포맷은 "Protocol Name (0xabcd...1234)" 형태이다
+- [x] **NTF-06**: TRANSFER/TOKEN_TRANSFER 등 비 CONTRACT_CALL 타입은 기존 {to} 동작을 유지한다
 
 ### Admin UI / API
 
@@ -85,12 +85,12 @@ Deferred to future release. Tracked but not in current roadmap.
 | APR-01 | Phase 421 | Complete |
 | APR-02 | Phase 421 | Complete |
 | APR-03 | Phase 421 | Complete |
-| NTF-01 | Phase 422 | Pending |
-| NTF-02 | Phase 422 | Pending |
-| NTF-03 | Phase 422 | Pending |
-| NTF-04 | Phase 422 | Pending |
-| NTF-05 | Phase 422 | Pending |
-| NTF-06 | Phase 422 | Pending |
+| NTF-01 | Phase 422 | Complete |
+| NTF-02 | Phase 422 | Complete |
+| NTF-03 | Phase 422 | Complete |
+| NTF-04 | Phase 422 | Complete |
+| NTF-05 | Phase 422 | Complete |
+| NTF-06 | Phase 422 | Complete |
 | ADM-01 | Phase 423 | Pending |
 | ADM-02 | Phase 423 | Pending |
 | ADM-03 | Phase 423 | Pending |
@@ -103,4 +103,4 @@ Deferred to future release. Tracked but not in current roadmap.
 
 ---
 *Requirements defined: 2026-03-15*
-*Last updated: 2026-03-15 after roadmap creation*
+*Last updated: 2026-03-15 after Phase 422 completion*
