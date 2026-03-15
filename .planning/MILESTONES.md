@@ -1,5 +1,27 @@
 # Project Milestones: WAIaaS
 
+## v32.0 Contract Name Resolution (Shipped: 2026-03-15)
+
+**Phases completed:** 3 phases, 4 plans, 24 requirements
+
+**Key accomplishments:**
+- ContractNameRegistry 4단계 우선순위 동기 해석 서비스 (Action Provider > Well-known > Whitelist > Fallback)
+- Well-known 컨트랙트 305+ 정적 엔트리 (5 EVM 체인 + Solana mainnet)
+- 17개 Action Provider에 displayName 메타데이터 추가 + snakeCaseToDisplayName 자동 변환
+- CONTRACT_CALL 알림 7개 호출 지점에서 "Protocol Name (0xabcd...1234)" 포맷으로 이름 표시
+- TxDetailResponse에 contractName/contractNameSource 필드 추가 (5개 트랜잭션 엔드포인트)
+- Admin UI 트랜잭션 목록 + 지갑 상세 Activity 탭에서 컨트랙트 이름 표시
+
+**Stats:**
+- 3 phases (421-423), 4 plans, 24 requirements complete
+- 22 commits, 64 files changed, +4,839 / -975 lines
+- Timeline: 1 day (2026-03-15)
+- Git range: feat(421-01) → feat(423-01)
+- Audit: PASS (24/24 requirements, cross-phase integration verified)
+- ~397,990 LOC TS
+
+---
+
 ## v31.18 Admin UI IA 재구조화 (Shipped: 2026-03-15)
 
 **Phases completed:** 4 phases, 7 plans, 38 requirements

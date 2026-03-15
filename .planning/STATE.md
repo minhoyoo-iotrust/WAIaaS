@@ -4,7 +4,7 @@ milestone: v32.0
 milestone_name: Contract Name Resolution
 status: completed
 stopped_at: Completed 423-01 (Phase 423 complete — milestone v32.0 done)
-last_updated: "2026-03-15T13:47:53.868Z"
+last_updated: "2026-03-15T13:53:49.032Z"
 last_activity: 2026-03-15 — Phase 423 complete (1 plan, API + Admin UI contract names)
 progress:
   total_phases: 3
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-15)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Milestone v32.0 complete
+**Current focus:** v32.0 shipped, planning next milestone
 
 ## Current Position
 

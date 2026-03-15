@@ -8,16 +8,9 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: v32.0 컨트랙트 이름 해석 (Contract Name Resolution)
+## Previous Milestone: v32.0 Contract Name Resolution — SHIPPED 2026-03-15
 
-**Goal:** CONTRACT_CALL 알림에서 raw 주소 대신 사람이 이해할 수 있는 컨트랙트 이름을 표시한다. Action Provider 메타데이터(비용 0)를 1순위로, 내장 Well-known 컨트랙트 레지스트리를 2순위로 활용하여 RPC 호출 없이 알림 가독성을 높인다.
-
-**Target features:**
-- ContractNameResolver — 4단계 우선순위 이름 해석 (Action Provider → Well-known → Whitelist → Fallback)
-- Well-known 컨트랙트 레지스트리 — 300+ 엔트리 (5 EVM 체인 + Solana, 정적 TS 데이터)
-- 알림 파이프라인 연동 — `to_display` 변수로 프로토콜명 표시 (TX_REQUESTED/APPROVAL_REQUIRED/SUBMITTED/CONFIRMED)
-- Action Provider 표시명 매핑 — `IActionProvider.metadata.displayName` 추가
-- Admin UI 트랜잭션 목록에도 컨트랙트 이름 표시
+ContractNameRegistry 4단계 우선순위 동기 해석(Action Provider > Well-known > CONTRACT_WHITELIST > Fallback), well-known 305+ 정적 엔트리(5 EVM 체인 + Solana), 17개 Action Provider displayName 메타데이터, CONTRACT_CALL 알림 7개 호출지점에서 "Protocol Name (0xabcd...1234)" 포맷 표시, TxDetailResponse contractName/contractNameSource 필드 추가(5개 엔드포인트), Admin UI 트랜잭션 목록 + 지갑 Activity 탭 컨트랙트 이름 표시. 3 phases, 4 plans, 24 requirements, 22 commits, 64 files, +4,839/-975 lines, ~397,990 LOC TS.
 
 ## Previous Milestone: v31.18 Admin UI IA 재구조화 — SHIPPED 2026-03-15
 
