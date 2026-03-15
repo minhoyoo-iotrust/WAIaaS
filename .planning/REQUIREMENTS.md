@@ -23,11 +23,11 @@
 
 ### CORS + Resource Management
 
-- [ ] **CORS-01**: `hono/cors` 미들웨어를 `cors_origins` 설정값 기반 origin 배열로 `createApp()`에 등록한다 (hot-reload 지원)
-- [ ] **CORS-02**: CORS preflight `OPTIONS` 요청에 200 + `Access-Control-Allow-Origin/Methods/Headers` 헤더로 응답한다
-- [ ] **RSRC-01**: Ntfy, Discord, Slack 알림 채널의 `send()` 메서드 `fetch()`에 `AbortSignal.timeout(10_000)` 10초 타임아웃을 적용한다
-- [ ] **RSRC-02**: AutoStopService `stop()`에서 `eventBus.off()` 호출로 3건 리스너를 제거한다 (재시작 시 중복 방지)
-- [ ] **RSRC-03**: CORS preflight/허용/차단 origin 테스트, 알림 채널 timeout 테스트, AutoStop start/stop 사이클 리스너 중복 방지 테스트를 추가한다
+- [x] **CORS-01**: `hono/cors` 미들웨어를 `cors_origins` 설정값 기반 origin 배열로 `createApp()`에 등록한다 (hot-reload 지원)
+- [x] **CORS-02**: CORS preflight `OPTIONS` 요청에 200 + `Access-Control-Allow-Origin/Methods/Headers` 헤더로 응답한다
+- [x] **RSRC-01**: Ntfy, Discord, Slack 알림 채널의 `send()` 메서드 `fetch()`에 `AbortSignal.timeout(10_000)` 10초 타임아웃을 적용한다
+- [x] **RSRC-02**: AutoStopService `stop()`에서 `eventBus.off()` 호출로 3건 리스너를 제거한다 (재시작 시 중복 방지)
+- [x] **RSRC-03**: CORS preflight/허용/차단 origin 테스트, 알림 채널 timeout 테스트, AutoStop start/stop 사이클 리스너 중복 방지 테스트를 추가한다
 
 ## Out of Scope
 
@@ -50,11 +50,11 @@
 | RATE-03 | Phase 425 | Pending |
 | RATE-04 | Phase 425 | Pending |
 | RATE-05 | Phase 425 | Pending |
-| CORS-01 | Phase 426 | Pending |
-| CORS-02 | Phase 426 | Pending |
-| RSRC-01 | Phase 426 | Pending |
-| RSRC-02 | Phase 426 | Pending |
-| RSRC-03 | Phase 426 | Pending |
+| CORS-01 | Phase 426 | Complete |
+| CORS-02 | Phase 426 | Complete |
+| RSRC-01 | Phase 426 | Complete |
+| RSRC-02 | Phase 426 | Complete |
+| RSRC-03 | Phase 426 | Complete |
 
 **Coverage:**
 - v1 requirements: 14 total
