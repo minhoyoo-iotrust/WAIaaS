@@ -93,11 +93,11 @@
   3. 이전 경로(#/defi, #/security, #/system, #/tokens, #/rpc-proxy)로 접근하면 새 경로로 리다이렉트되고, 기존 리다이렉트(erc8004 등)도 유지된다
   4. Ctrl+K 검색에서 변경된 페이지명과 경로가 반영되어 검색 결과가 정확하다
   5. Hyperliquid/Polymarket 페이지가 TabNav 공통 컴포넌트를 사용하고, Transactions/Policies 탭 라벨이 History/Rules로 변경되어 있다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 417-01: NAV_ITEMS 섹션 그룹 구조 전환 + 사이드바 렌더링 + 리네이밍
-- [ ] 417-02: 라우트 리다이렉트 + Ctrl+K 검색 반영 + TabNav 통일
+- [ ] 417-01-PLAN.md — NAV_SECTIONS 섹션 그룹 구조 전환 + 사이드바 렌더링 + 리네이밍 + 리다이렉트 + Ctrl+K 검색 반영
+- [ ] 417-02-PLAN.md — Hyperliquid/Polymarket TabNav 전환 + Transactions/Policies 탭 라벨 변경
 
 ### Phase 418: 페이지 병합 + 레거시 정리
 **Goal**: 관련 기능이 하나의 페이지 내 탭으로 통합되고, 불필요한 레거시 파일이 제거된다
