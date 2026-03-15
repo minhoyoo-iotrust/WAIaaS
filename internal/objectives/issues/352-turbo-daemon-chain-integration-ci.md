@@ -2,7 +2,7 @@
 
 - **유형:** BUG
 - **심각도:** HIGH
-- **상태:** FIXED
+- **상태:** OPEN
 - **발견일:** 2026-03-15
 - **발견 위치:** GitHub Actions release.yml — v2.11.0-rc.9 Release
 
@@ -37,25 +37,39 @@ v31.17 마일스톤에서 `turbo.json`에 다음 변경이 적용됨:
 - `test` job은 백그라운드 프로세스 없이 동일 빌드 성공
 - 에러가 빌드 시작 직후 (태스크 그래프 구성 단계) 발생
 
+## 1차 수정 (불완전)
+
+`env:` 블록으로 `TURBO_DAEMON: 'false'` 설정 → **실패 지속**. Turborepo가 YAML `env:` 블록의 문자열 `'false'`를 올바르게 인식하지 못함.
+
+```yaml
+# 이 방식은 동작하지 않음
+- name: Build
+  run: pnpm turbo run build
+  env:
+    TURBO_DAEMON: 'false'
+```
+
+v2.11.0-rc.10 릴리스에서도 동일 에러 재현 확인.
+
 ## 해결 방안
 
-`chain-integration` job의 Build 및 Chain Tests 단계에서 Turborepo 데몬을 비활성화:
+`--daemon=false` CLI 플래그를 직접 전달:
 
 ```yaml
 - name: Build
-  run: TURBO_DAEMON=false pnpm turbo run build
+  run: pnpm turbo run build --daemon=false
 
 - name: Chain Tests
-  run: TURBO_DAEMON=false pnpm turbo run test:chain
+  run: pnpm turbo run test:chain --daemon=false
 ```
 
 ## 영향 범위
 
 - `release.yml` — chain-integration job (릴리스 품질 게이트 차단)
-- `ci.yml`에도 동일 chain-integration job 존재 시 동일 영향 가능
+- `ci.yml`에는 chain-integration job 없음 (영향 없음)
 
 ## 테스트 항목
 
-- [ ] `TURBO_DAEMON=false` 적용 후 chain-integration Build 성공 확인
+- [ ] `--daemon=false` CLI 플래그 적용 후 chain-integration Build 성공 확인
 - [ ] chain-integration Chain Tests 정상 실행 확인
 - [ ] test job 기존 동작 영향 없음 확인
