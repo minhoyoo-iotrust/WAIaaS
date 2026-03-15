@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.11.0-rc.15](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.14...v2.11.0-rc.15) (2026-03-15)
+
+
+### Features
+
+* **424-01:** generalize SSRF guard + fix hostGuard exact matching ([b3f6747](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b3f674763f2ab4f5a544e7d0380a8c835006b232))
+* **425-01:** add RATE_LIMITED error code + SlidingWindowRateLimiter + 3-tier middleware ([7d82144](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7d8214489d646f7c1f8f8f43597a05920f3ea7b3))
+* **425-01:** register 3-tier rate limit middleware in createApp() ([073cbc1](https://github.com/minhoyoo-iotrust/WAIaaS/commit/073cbc13827caa2dd2a0e1c4893d5e0cd4d9f9ee))
+* **426-01:** add CORS middleware, notification timeouts, AutoStop listener cleanup ([77de07f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/77de07f78a5fb567c41cb8c8d9e255c9f49aac0d))
+
+
+### Bug Fixes
+
+* **425-01:** update error code count in core tests for RATE_LIMITED ([589e610](https://github.com/minhoyoo-iotrust/WAIaaS/commit/589e6103568c9d0483e95cb32d9d4a9d79605e8b))
+* add missing hyperliquid_request_timeout_ms setting key ([99bba30](https://github.com/minhoyoo-iotrust/WAIaaS/commit/99bba301585a123d4f08043af7bd999d8d543f97))
+* resolve open issues [#353](https://github.com/minhoyoo-iotrust/WAIaaS/issues/353)-[#358](https://github.com/minhoyoo-iotrust/WAIaaS/issues/358) ([62d27c2](https://github.com/minhoyoo-iotrust/WAIaaS/commit/62d27c218d7422b83f784c1b1fa1d7e2df01b2b5))
+* resolve open issues [#353](https://github.com/minhoyoo-iotrust/WAIaaS/issues/353)-[#358](https://github.com/minhoyoo-iotrust/WAIaaS/issues/358) — CI badge, Admin UI improvements ([b2dc8b2](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b2dc8b24a7714d0d957696275f7cb25da67f2cf6))
+* stub settingsService methods in extract-openapi to prevent 500 ([d183e17](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d183e17eeae1e95c1e08c89b4e7e07d5f0bee4b8))
+
 ## [2.11.0-rc.14](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.13...v2.11.0-rc.14) (2026-03-15)
 
 
