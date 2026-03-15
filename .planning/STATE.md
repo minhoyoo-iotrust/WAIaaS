@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v31.18
 milestone_name: Admin UI IA 재구조화
-status: ready_to_plan
-stopped_at: roadmap_created
-last_updated: "2026-03-15T08:00:00.000Z"
-last_activity: 2026-03-15 — Roadmap created (4 phases, 7 plans, 38 requirements)
+status: executing
+stopped_at: phase_417_complete
+last_updated: "2026-03-15T03:28:00.000Z"
+last_activity: 2026-03-15 — Phase 417 complete (2 plans, 4 tasks, 5 commits)
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 7
-  completed_plans: 0
-  percent: 0
+  completed_plans: 2
+  percent: 28
 ---
 
 # Project State
@@ -26,30 +26,32 @@ See: .planning/PROJECT.md (updated 2026-03-15)
 ## Current Position
 
 Phase: 417 of 420 (사이드바 섹션 + 리네이밍 + 라우트 정리)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-03-15 — Roadmap created
+Plan: 2 of 2 in current phase
+Status: Phase 417 complete
+Last activity: 2026-03-15 — Phase 417 executed (2 plans, 4 tasks)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [███░░░░░░░] 28%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: —
-- Total execution time: 0 hours
+- Total plans completed: 2
+- Average duration: 7.5 min
+- Total execution time: 0.25 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 417 | 2 | 15min | 7.5min |
 
 ## Accumulated Context
 
 ### Decisions
 
-(none yet)
+- Sidebar section headers use inline styles (existing admin UI pattern)
+- Dashboard kept outside all sections as independent top-level item
+- Tab keys unchanged when renaming labels (preserve internal references)
 
 ### Pending Todos
 
@@ -62,5 +64,5 @@ Progress: [░░░░░░░░░░] 0%
 ## Session Continuity
 
 Last session: 2026-03-15
-Stopped at: Roadmap created — ready to plan Phase 417
+Stopped at: Completed 417-01-PLAN.md and 417-02-PLAN.md
 Resume file: None

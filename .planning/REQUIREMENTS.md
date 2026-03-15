@@ -9,14 +9,14 @@ Requirements for milestone v31.18. Each maps to roadmap phases.
 
 ### Sidebar
 
-- [ ] **SIDE-01**: 사이드바가 5개 섹션 헤더(Wallets/Trading/Security/Channels/System)로 시각적 그룹핑된다
-- [ ] **SIDE-02**: Dashboard는 섹션 밖 독립 항목으로 최상단에 위치한다
-- [ ] **SIDE-03**: NAV_ITEMS가 섹션 그룹 구조(`{ section, items }[]`)로 변환된다
-- [ ] **SIDE-04**: DeFi 메뉴가 "Providers"로 리네이밍되고 `/providers` 경로를 사용한다
-- [ ] **SIDE-05**: Security 메뉴가 "Protection"으로 리네이밍되고 `/protection` 경로를 사용한다
-- [ ] **SIDE-06**: System 메뉴가 "Settings"로 리네이밍되고 `/settings` 경로를 사용한다
-- [ ] **SIDE-07**: Human Wallet Apps 메뉴가 "Wallet Apps"로 리네이밍된다
-- [ ] **SIDE-08**: PAGE_TITLES, PAGE_SUBTITLES가 변경된 이름에 맞게 업데이트된다
+- [x] **SIDE-01**: 사이드바가 5개 섹션 헤더(Wallets/Trading/Security/Channels/System)로 시각적 그룹핑된다
+- [x] **SIDE-02**: Dashboard는 섹션 밖 독립 항목으로 최상단에 위치한다
+- [x] **SIDE-03**: NAV_ITEMS가 섹션 그룹 구조(`{ section, items }[]`)로 변환된다
+- [x] **SIDE-04**: DeFi 메뉴가 "Providers"로 리네이밍되고 `/providers` 경로를 사용한다
+- [x] **SIDE-05**: Security 메뉴가 "Protection"으로 리네이밍되고 `/protection` 경로를 사용한다
+- [x] **SIDE-06**: System 메뉴가 "Settings"로 리네이밍되고 `/settings` 경로를 사용한다
+- [x] **SIDE-07**: Human Wallet Apps 메뉴가 "Wallet Apps"로 리네이밍된다
+- [x] **SIDE-08**: PAGE_TITLES, PAGE_SUBTITLES가 변경된 이름에 맞게 업데이트된다
 
 ### Merge
 
@@ -39,18 +39,18 @@ Requirements for milestone v31.18. Each maps to roadmap phases.
 
 - [ ] **ROUT-01**: `#/tokens` 접근 시 `#/wallets` (Tokens 탭 활성)로 리다이렉트된다
 - [ ] **ROUT-02**: `#/rpc-proxy` 접근 시 `#/settings` (RPC Proxy 탭 활성)로 리다이렉트된다
-- [ ] **ROUT-03**: `#/defi`, `#/actions` 접근 시 `#/providers`로 리다이렉트된다
-- [ ] **ROUT-04**: `#/security` 접근 시 `#/protection`으로 리다이렉트된다
-- [ ] **ROUT-05**: `#/system` 접근 시 `#/settings`로 리다이렉트된다
-- [ ] **ROUT-06**: 기존 리다이렉트(erc8004→agent-identity 등)가 유지된다
-- [ ] **ROUT-07**: Ctrl+K 설정 검색에 변경된 페이지명/경로가 반영된다
+- [x] **ROUT-03**: `#/defi`, `#/actions` 접근 시 `#/providers`로 리다이렉트된다
+- [x] **ROUT-04**: `#/security` 접근 시 `#/protection`으로 리다이렉트된다
+- [x] **ROUT-05**: `#/system` 접근 시 `#/settings`로 리다이렉트된다
+- [x] **ROUT-06**: 기존 리다이렉트(erc8004→agent-identity 등)가 유지된다
+- [x] **ROUT-07**: Ctrl+K 설정 검색에 변경된 페이지명/경로가 반영된다
 
 ### TabNav
 
-- [ ] **TNAV-01**: Hyperliquid 커스텀 탭이 TabNav 컴포넌트로 전환된다
-- [ ] **TNAV-02**: Polymarket 커스텀 탭이 TabNav 컴포넌트로 전환된다
-- [ ] **TNAV-03**: Transactions "All Transactions" 탭 라벨이 "History"로 변경된다
-- [ ] **TNAV-04**: Policies "Policies" 탭 라벨이 "Rules"로 변경된다
+- [x] **TNAV-01**: Hyperliquid 커스텀 탭이 TabNav 컴포넌트로 전환된다
+- [x] **TNAV-02**: Polymarket 커스텀 탭이 TabNav 컴포넌트로 전환된다
+- [x] **TNAV-03**: Transactions "All Transactions" 탭 라벨이 "History"로 변경된다
+- [x] **TNAV-04**: Policies "Policies" 탭 라벨이 "Rules"로 변경된다
 
 ### Detail
 
@@ -94,25 +94,25 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SIDE-01 | Phase 417 | Pending |
-| SIDE-02 | Phase 417 | Pending |
-| SIDE-03 | Phase 417 | Pending |
-| SIDE-04 | Phase 417 | Pending |
-| SIDE-05 | Phase 417 | Pending |
-| SIDE-06 | Phase 417 | Pending |
-| SIDE-07 | Phase 417 | Pending |
-| SIDE-08 | Phase 417 | Pending |
-| ROUT-01 | Phase 417 | Pending |
-| ROUT-02 | Phase 417 | Pending |
-| ROUT-03 | Phase 417 | Pending |
-| ROUT-04 | Phase 417 | Pending |
-| ROUT-05 | Phase 417 | Pending |
-| ROUT-06 | Phase 417 | Pending |
-| ROUT-07 | Phase 417 | Pending |
-| TNAV-01 | Phase 417 | Pending |
-| TNAV-02 | Phase 417 | Pending |
-| TNAV-03 | Phase 417 | Pending |
-| TNAV-04 | Phase 417 | Pending |
+| SIDE-01 | Phase 417 | Complete |
+| SIDE-02 | Phase 417 | Complete |
+| SIDE-03 | Phase 417 | Complete |
+| SIDE-04 | Phase 417 | Complete |
+| SIDE-05 | Phase 417 | Complete |
+| SIDE-06 | Phase 417 | Complete |
+| SIDE-07 | Phase 417 | Complete |
+| SIDE-08 | Phase 417 | Complete |
+| ROUT-01 | Phase 418 | Pending |
+| ROUT-02 | Phase 418 | Pending |
+| ROUT-03 | Phase 417 | Complete |
+| ROUT-04 | Phase 417 | Complete |
+| ROUT-05 | Phase 417 | Complete |
+| ROUT-06 | Phase 417 | Complete |
+| ROUT-07 | Phase 417 | Complete |
+| TNAV-01 | Phase 417 | Complete |
+| TNAV-02 | Phase 417 | Complete |
+| TNAV-03 | Phase 417 | Complete |
+| TNAV-04 | Phase 417 | Complete |
 | MERG-01 | Phase 418 | Pending |
 | MERG-02 | Phase 418 | Pending |
 | MERG-03 | Phase 418 | Pending |
