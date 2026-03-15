@@ -99,11 +99,11 @@
   3. The same address on different networks resolves to the correct per-network name (no cross-chain misidentification)
   4. Unregistered addresses return a truncated fallback format (0xabcd...1234)
   5. All 20+ Action Providers have a displayName (explicit or auto-converted from snake_case) that the registry can consume
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 421-01: TBD
-- [ ] 421-02: TBD
+- [ ] 421-01-PLAN.md — Well-known contract data (300+ entries) + ActionProviderMetadata displayName + provider updates
+- [ ] 421-02-PLAN.md — ContractNameRegistry 4-tier resolution service (TDD)
 
 ### Phase 422: Notification Pipeline Integration
 **Goal**: Owner receives human-readable contract names instead of raw hex addresses in all CONTRACT_CALL notification events
