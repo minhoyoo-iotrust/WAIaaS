@@ -3,6 +3,7 @@ import { useEffect } from 'preact/hooks';
 import { api, ApiError } from '../api/typed-client';
 import type { components } from '../api/types.generated';
 import { FormField, Button, Badge } from '../components/form';
+import { TabNav } from '../components/tab-nav';
 import { showToast } from '../components/toast';
 import { getErrorMessage } from '../utils/error-messages';
 import { keyToLabel, isSlippageBpsKey, bpsToPercent, percentToBps } from '../utils/settings-helpers';
@@ -61,6 +62,7 @@ export default function ActionsPage() {
   const settings = useSignal<SettingsData>({});
   const apiKeys = useSignal<ApiKeyEntry[]>([]);
   const loading = useSignal(true);
+  const activeCategory = useSignal('');
 
   // API key editing state
   const apiKeyEditing = useSignal<string | null>(null);
@@ -281,18 +283,25 @@ export default function ActionsPage() {
     (CATEGORY_ORDER.indexOf(a) !== -1 ? CATEGORY_ORDER.indexOf(a) : 99) -
     (CATEGORY_ORDER.indexOf(b) !== -1 ? CATEGORY_ORDER.indexOf(b) : 99)
   );
-  const groupedProviders = sortedCategories
-    .map((cat) => ({ category: cat, items: providers.value.filter((p) => p.category === cat) }))
-    .filter((g) => g.items.length > 0);
+  const categoryTabs = sortedCategories.map((cat) => ({ key: cat, label: cat }));
+
+  // Auto-select first tab if not set or no longer valid
+  const currentCategory = activeCategory.value && sortedCategories.includes(activeCategory.value)
+    ? activeCategory.value
+    : sortedCategories[0] ?? '';
+  const filteredProviders = providers.value.filter((p) => p.category === currentCategory);
 
   return (
     <div class="page">
-      {groupedProviders.map((group) => (
-        <div key={group.category}>
-          <h2 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 600, margin: 'var(--space-4) 0 var(--space-2)', borderBottom: '1px solid var(--border)', paddingBottom: 'var(--space-2)' }}>
-            {group.category}
-          </h2>
-          {group.items.map((p) => {
+      {categoryTabs.length > 1 && (
+        <TabNav
+          tabs={categoryTabs}
+          activeTab={currentCategory}
+          onTabChange={(key) => { activeCategory.value = key; }}
+        />
+      )}
+
+      {filteredProviders.map((p) => {
         const status = getStatus(p);
         const keyEntry = getApiKeyEntry(p.name);
         const isSavingToggle = toggleSaving.value === p.name;
@@ -476,9 +485,7 @@ export default function ActionsPage() {
             </div>
           </div>
         );
-          })}
-        </div>
-      ))}
+      })}
 
       {providers.value.length === 0 && (
         <div class="empty-state">

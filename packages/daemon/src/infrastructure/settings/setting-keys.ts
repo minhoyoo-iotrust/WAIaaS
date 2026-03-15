@@ -338,7 +338,7 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'actions.dcent_swap_currency_cache_ttl_ms', category: 'actions', configPath: 'actions.dcent_swap_currency_cache_ttl_ms', defaultValue: '86400000', isCredential: false, label: 'Dcent Swap Currency Cache TTL ms', description: 'Cache or data time-to-live duration' },
 
   // --- Hyperliquid Perp Trading (Phase 349) ---
-  { key: 'actions.hyperliquid_enabled', category: 'actions', configPath: 'actions.hyperliquid_enabled', defaultValue: 'false', isCredential: false, label: 'Hyperliquid Enabled', description: 'Enable or disable this feature' },
+  { key: 'actions.hyperliquid_enabled', category: 'actions', configPath: 'actions.hyperliquid_enabled', defaultValue: 'true', isCredential: false, label: 'Hyperliquid Enabled', description: 'Enable or disable this feature' },
   { key: 'actions.hyperliquid_network', category: 'actions', configPath: 'actions.hyperliquid_network', defaultValue: 'mainnet', isCredential: false, label: 'Hyperliquid Network', description: 'Hyperliquid trading platform setting' },
   { key: 'actions.hyperliquid_api_url', category: 'actions', configPath: 'actions.hyperliquid_api_url', defaultValue: '', isCredential: false, label: 'Hyperliquid API URL', description: 'Base URL for external API requests' },
   { key: 'actions.hyperliquid_rate_limit_weight_per_min', category: 'actions', configPath: 'actions.hyperliquid_rate_limit_weight_per_min', defaultValue: '600', isCredential: false, label: 'Hyperliquid Rate Limit Weight Per Min', description: 'Hyperliquid trading platform setting' },
@@ -349,7 +349,7 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'actions.hyperliquid_order_status_poll_interval_ms', category: 'actions', configPath: 'actions.hyperliquid_order_status_poll_interval_ms', defaultValue: '2000', isCredential: false, label: 'Hyperliquid Order Status Poll Interval ms', description: 'Polling or check interval duration' },
 
   // --- Polymarket Prediction Market ---
-  { key: 'actions.polymarket_enabled', category: 'actions', configPath: 'actions.polymarket_enabled', defaultValue: 'false', isCredential: false, label: 'Polymarket Enabled', description: 'Enable or disable this feature' },
+  { key: 'actions.polymarket_enabled', category: 'actions', configPath: 'actions.polymarket_enabled', defaultValue: 'true', isCredential: false, label: 'Polymarket Enabled', description: 'Enable or disable this feature' },
   { key: 'actions.polymarket_default_fee_bps', category: 'actions', configPath: 'actions.polymarket_default_fee_bps', defaultValue: '0', isCredential: false, label: 'Polymarket Default Fee BPS', description: 'Polymarket prediction market setting' },
   { key: 'actions.polymarket_order_expiry_seconds', category: 'actions', configPath: 'actions.polymarket_order_expiry_seconds', defaultValue: '86400', isCredential: false, label: 'Polymarket Order Expiry Seconds', description: 'Polymarket prediction market setting' },
   { key: 'actions.polymarket_max_position_usdc', category: 'actions', configPath: 'actions.polymarket_max_position_usdc', defaultValue: '1000', isCredential: false, label: 'Polymarket Max Position Usdc', description: 'Maximum amount in USD' },
@@ -358,7 +358,7 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'actions.polymarket_auto_approve_ctf', category: 'actions', configPath: 'actions.polymarket_auto_approve_ctf', defaultValue: 'true', isCredential: false, label: 'Polymarket Auto Approve Ctf', description: 'Polymarket prediction market setting' },
 
   // --- Across Bridge ---
-  { key: 'actions.across_bridge_enabled', category: 'actions', configPath: 'actions.across_bridge_enabled', defaultValue: 'false', isCredential: false, label: 'Across Bridge Enabled', description: 'Enable or disable this feature' },
+  { key: 'actions.across_bridge_enabled', category: 'actions', configPath: 'actions.across_bridge_enabled', defaultValue: 'true', isCredential: false, label: 'Across Bridge Enabled', description: 'Enable or disable this feature' },
   { key: 'actions.across_bridge_api_base_url', category: 'actions', configPath: 'actions.across_bridge_api_base_url', defaultValue: 'https://app.across.to/api', isCredential: false, label: 'Across Bridge API Base URL', description: 'Base URL for external API requests' },
   { key: 'actions.across_bridge_integrator_id', category: 'actions', configPath: 'actions.across_bridge_integrator_id', defaultValue: '', isCredential: false, label: 'Across Bridge Integrator Id', description: 'Across Protocol cross-chain bridge setting' },
   { key: 'actions.across_bridge_fill_deadline_buffer_sec', category: 'actions', configPath: 'actions.across_bridge_fill_deadline_buffer_sec', defaultValue: '21600', isCredential: false, label: 'Across Bridge Fill Deadline Buffer Sec', description: 'Across Protocol cross-chain bridge setting' },

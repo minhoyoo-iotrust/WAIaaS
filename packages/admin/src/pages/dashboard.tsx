@@ -533,7 +533,7 @@ export default function DashboardPage() {
       )}
 
       {/* DeFi Positions Section */}
-      {defiData.value && defiData.value.activeCount > 0 && (
+      {defiData.value && (
         <div style={{ marginTop: 'var(--space-4)' }}>
           <h3 style={{ marginBottom: 'var(--space-3)' }}>DeFi Positions</h3>
           <div class="defi-filter-row">

@@ -50,7 +50,7 @@ jobs:
         id: test-count
         run: |
           # Extract test count from turbo cached output (already ran in Unit Tests step)
-          TOTAL=$(pnpm turbo run test:unit 2>&1 | grep -oP 'Tests\s+\K[0-9]+(?=\s+passed)' | awk '{s+=$1} END {print s}')
+          TOTAL=$(pnpm turbo run test:unit 2>&1 | sed 's/\x1b\[[0-9;]*m//g' | grep -oP 'Tests\s+\K[0-9]+(?=\s+passed)' | awk '{s+=$1} END {print s}')
           if [ -z "$TOTAL" ] || [ "$TOTAL" = "0" ]; then
             echo "Warning: Could not parse test count, using fallback"
             TOTAL="unknown"

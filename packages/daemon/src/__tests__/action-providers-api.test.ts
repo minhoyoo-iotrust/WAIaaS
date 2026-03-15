@@ -71,8 +71,10 @@ describe('GET /v1/actions/providers', () => {
     expect(res.status).toBe(200);
     const body = await res.json() as any;
 
-    expect(body.providers).toHaveLength(1);
-    const provider = body.providers[0];
+    // #354: providers list includes registered + unregistered builtin providers
+    expect(body.providers.length).toBeGreaterThanOrEqual(1);
+    const provider = body.providers.find((p: any) => p.name === 'jupiter_swap');
+    expect(provider).toBeDefined();
     expect(provider).toHaveProperty('enabledKey');
     expect(provider).toHaveProperty('category');
     expect(provider).toHaveProperty('isEnabled');
