@@ -76,14 +76,10 @@ jobs:
           sleep 3
 
       - name: Build
-        run: pnpm turbo run build
-        env:
-          TURBO_DAEMON: 'false'
+        run: pnpm turbo run build --daemon=false
 
       - name: Chain Tests
-        run: pnpm turbo run test:chain
-        env:
-          TURBO_DAEMON: 'false'
+        run: pnpm turbo run test:chain --daemon=false
 
   # Platform tests + Docker build + health check
   platform:
