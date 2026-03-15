@@ -347,6 +347,7 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'actions.hyperliquid_builder_address', category: 'actions', configPath: 'actions.hyperliquid_builder_address', defaultValue: '', isCredential: false, label: 'Hyperliquid Builder Address', description: 'On-chain contract or account address' },
   { key: 'actions.hyperliquid_builder_fee', category: 'actions', configPath: 'actions.hyperliquid_builder_fee', defaultValue: '0', isCredential: false, label: 'Hyperliquid Builder Fee', description: 'Hyperliquid trading platform setting' },
   { key: 'actions.hyperliquid_order_status_poll_interval_ms', category: 'actions', configPath: 'actions.hyperliquid_order_status_poll_interval_ms', defaultValue: '2000', isCredential: false, label: 'Hyperliquid Order Status Poll Interval ms', description: 'Polling or check interval duration' },
+  { key: 'actions.hyperliquid_request_timeout_ms', category: 'actions', configPath: 'actions.hyperliquid_request_timeout_ms', defaultValue: '10000', isCredential: false, label: 'Hyperliquid Request Timeout ms', description: 'Request timeout in milliseconds' },
 
   // --- Polymarket Prediction Market ---
   { key: 'actions.polymarket_enabled', category: 'actions', configPath: 'actions.polymarket_enabled', defaultValue: 'true', isCredential: false, label: 'Polymarket Enabled', description: 'Enable or disable this feature' },
