@@ -2,6 +2,7 @@ import { useSignal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
 import { api } from '../api/typed-client';
 import type { Wallet } from '../api/types.aliases';
+import { TabNav, type TabItem } from '../components/tab-nav';
 import { PolymarketOverview } from '../components/polymarket/PolymarketOverview';
 import { PolymarketMarkets } from '../components/polymarket/PolymarketMarkets';
 import { PolymarketOrders } from '../components/polymarket/PolymarketOrders';
@@ -10,24 +11,13 @@ import { PolymarketSettings } from '../components/polymarket/PolymarketSettings'
 
 type Tab = 'overview' | 'markets' | 'orders' | 'positions' | 'settings';
 
-const tabStyle = {
-  display: 'flex',
-  gap: 'var(--space-1)',
-  marginBottom: 'var(--space-4)',
-  borderBottom: '1px solid var(--color-border)',
-  paddingBottom: 'var(--space-1)',
-};
-
-const tabButton = (active: boolean) => ({
-  padding: 'var(--space-2) var(--space-3)',
-  border: 'none',
-  background: 'none',
-  cursor: 'pointer',
-  fontWeight: active ? ('var(--font-weight-semibold)' as const) : ('var(--font-weight-normal)' as const),
-  color: active ? 'var(--color-primary)' : 'var(--color-text-muted)',
-  borderBottom: active ? '2px solid var(--color-primary)' : '2px solid transparent',
-  marginBottom: '-1px',
-});
+const POLYMARKET_TABS: TabItem[] = [
+  { key: 'overview', label: 'Overview' },
+  { key: 'markets', label: 'Markets' },
+  { key: 'orders', label: 'Orders' },
+  { key: 'positions', label: 'Positions' },
+  { key: 'settings', label: 'Settings' },
+];
 
 export default function PolymarketPage() {
   const wallets = useSignal<Wallet[]>([]);
@@ -85,38 +75,11 @@ export default function PolymarketPage() {
       </div>
 
       {/* Tab bar */}
-      <div style={tabStyle}>
-        <button
-          style={tabButton(activeTab.value === 'overview')}
-          onClick={() => { activeTab.value = 'overview'; }}
-        >
-          Overview
-        </button>
-        <button
-          style={tabButton(activeTab.value === 'markets')}
-          onClick={() => { activeTab.value = 'markets'; }}
-        >
-          Markets
-        </button>
-        <button
-          style={tabButton(activeTab.value === 'orders')}
-          onClick={() => { activeTab.value = 'orders'; }}
-        >
-          Orders
-        </button>
-        <button
-          style={tabButton(activeTab.value === 'positions')}
-          onClick={() => { activeTab.value = 'positions'; }}
-        >
-          Positions
-        </button>
-        <button
-          style={tabButton(activeTab.value === 'settings')}
-          onClick={() => { activeTab.value = 'settings'; }}
-        >
-          Settings
-        </button>
-      </div>
+      <TabNav
+        tabs={POLYMARKET_TABS}
+        activeTab={activeTab.value}
+        onTabChange={(k) => { activeTab.value = k as Tab; }}
+      />
 
       {/* Tab content */}
       {activeTab.value === 'overview' && (

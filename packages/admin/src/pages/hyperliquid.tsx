@@ -2,6 +2,7 @@ import { useSignal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
 import { api } from '../api/typed-client';
 import type { Wallet } from '../api/types.aliases';
+import { TabNav, type TabItem } from '../components/tab-nav';
 import { AccountSummary } from '../components/hyperliquid/AccountSummary';
 import { PositionsTable } from '../components/hyperliquid/PositionsTable';
 import { OpenOrdersTable } from '../components/hyperliquid/OpenOrdersTable';
@@ -13,24 +14,13 @@ import { SettingsPanel } from '../components/hyperliquid/SettingsPanel';
 
 type Tab = 'overview' | 'orders' | 'spot' | 'subaccounts' | 'settings';
 
-const tabStyle = {
-  display: 'flex',
-  gap: 'var(--space-1)',
-  marginBottom: 'var(--space-4)',
-  borderBottom: '1px solid var(--color-border)',
-  paddingBottom: 'var(--space-1)',
-};
-
-const tabButton = (active: boolean) => ({
-  padding: 'var(--space-2) var(--space-3)',
-  border: 'none',
-  background: 'none',
-  cursor: 'pointer',
-  fontWeight: active ? ('var(--font-weight-semibold)' as const) : ('var(--font-weight-normal)' as const),
-  color: active ? 'var(--color-primary)' : 'var(--color-text-muted)',
-  borderBottom: active ? '2px solid var(--color-primary)' : '2px solid transparent',
-  marginBottom: '-1px',
-});
+const HYPERLIQUID_TABS: TabItem[] = [
+  { key: 'overview', label: 'Overview' },
+  { key: 'orders', label: 'Orders' },
+  { key: 'spot', label: 'Spot' },
+  { key: 'subaccounts', label: 'Sub-accounts' },
+  { key: 'settings', label: 'Settings' },
+];
 
 export default function HyperliquidPage() {
   const wallets = useSignal<Wallet[]>([]);
@@ -89,38 +79,14 @@ export default function HyperliquidPage() {
       </div>
 
       {/* Tab bar */}
-      <div style={tabStyle}>
-        <button
-          style={tabButton(activeTab.value === 'overview')}
-          onClick={() => { activeTab.value = 'overview'; }}
-        >
-          Overview
-        </button>
-        <button
-          style={tabButton(activeTab.value === 'orders')}
-          onClick={() => { activeTab.value = 'orders'; }}
-        >
-          Orders
-        </button>
-        <button
-          style={tabButton(activeTab.value === 'spot')}
-          onClick={() => { activeTab.value = 'spot'; }}
-        >
-          Spot
-        </button>
-        <button
-          style={tabButton(activeTab.value === 'subaccounts')}
-          onClick={() => { activeTab.value = 'subaccounts'; selectedSubAccount.value = null; }}
-        >
-          Sub-accounts
-        </button>
-        <button
-          style={tabButton(activeTab.value === 'settings')}
-          onClick={() => { activeTab.value = 'settings'; }}
-        >
-          Settings
-        </button>
-      </div>
+      <TabNav
+        tabs={HYPERLIQUID_TABS}
+        activeTab={activeTab.value}
+        onTabChange={(k) => {
+          activeTab.value = k as Tab;
+          if (k === 'subaccounts') selectedSubAccount.value = null;
+        }}
+      />
 
       {/* Tab content */}
       {activeTab.value === 'overview' && (
