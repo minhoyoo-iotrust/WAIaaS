@@ -77,7 +77,7 @@
 **Milestone Goal:** Admin UI 사이드바의 17개 플랫 메뉴를 5개 섹션 헤더로 그룹화하고, 페이지 병합/분리, 지갑 상세 8탭→4탭 재구성, 레거시 파일 정리를 통해 일관된 정보 구조(IA) 확보.
 
 - [x] **Phase 417: 사이드바 섹션 + 리네이밍 + 라우트 정리** - 섹션 그룹 사이드바, 메뉴 리네이밍, 경로 리다이렉트, TabNav 통일 -- completed 2026-03-15
-- [ ] **Phase 418: 페이지 병합 + 레거시 정리** - Tokens/RPC Proxy 탭 병합, 레거시 파일 제거
+- [x] **Phase 418: 페이지 병합 + 레거시 정리** - Tokens/RPC Proxy 탭 병합, 레거시 파일 제거 -- completed 2026-03-15
 - [ ] **Phase 419: Trading Settings 탭 제거** - Hyperliquid/Polymarket Settings 탭 제거 및 Providers 이관
 - [ ] **Phase 420: 지갑 상세 탭 재구성** - 8탭을 4탭(Overview/Activity/Assets/Setup)으로 통합
 
@@ -111,8 +111,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 418-01-PLAN.md — Tokens 탭 Wallets 병합 + WalletConnect default export 제거 + /tokens 리다이렉트
-- [ ] 418-02-PLAN.md — RPC Proxy Settings 탭 병합 + 레거시 정리 + 스킬 파일 업데이트
+- [x] 418-01-PLAN.md — Tokens 탭 Wallets 병합 + WalletConnect default export 제거 + /tokens 리다이렉트
+- [x] 418-02-PLAN.md — RPC Proxy Settings 탭 병합 + 레거시 정리 + 스킬 파일 업데이트
 
 ### Phase 419: Trading Settings 탭 제거
 **Goal**: Hyperliquid/Polymarket의 중복 Settings 탭이 제거되고 모든 설정이 Providers 페이지에서 관리된다
@@ -176,6 +176,6 @@ Phases execute in numeric order: 417 -> 418 -> 419 -> 420
 | 415. 백엔드 API 확장 및 상수 통합 | v31.17 | 3/3 | Complete | 2026-03-14 |
 | 416. Contract Test 및 검증 | v31.17 | 1/1 | Complete | 2026-03-15 |
 | 417. 사이드바 섹션 + 리네이밍 + 라우트 정리 | v31.18 | Complete    | 2026-03-15 | 2026-03-15 |
-| 418. 페이지 병합 + 레거시 정리 | v31.18 | 0/2 | Not started | - |
+| 418. 페이지 병합 + 레거시 정리 | v31.18 | 2/2 | Complete | 2026-03-15 |
 | 419. Trading Settings 탭 제거 | v31.18 | 0/1 | Not started | - |
 | 420. 지갑 상세 탭 재구성 | v31.18 | 0/2 | Not started | - |

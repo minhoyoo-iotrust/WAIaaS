@@ -20,12 +20,12 @@ Requirements for milestone v31.18. Each maps to roadmap phases.
 
 ### Merge
 
-- [ ] **MERG-01**: Tokens 독립 페이지가 Wallets 페이지의 "Tokens" 탭으로 병합된다
-- [ ] **MERG-02**: Wallets 페이지가 Wallets/Tokens/RPC Endpoints/WalletConnect 4개 탭을 갖는다
-- [ ] **MERG-03**: RPC Proxy 독립 페이지가 Settings 페이지의 "RPC Proxy" 탭으로 병합된다
-- [ ] **MERG-04**: Settings 페이지가 General/API Keys/RPC Proxy 3개 탭을 갖는다
-- [ ] **MERG-05**: 병합된 tokens.tsx 파일이 삭제되고 콘텐츠가 Wallets 탭 컴포넌트로 이동된다
-- [ ] **MERG-06**: 병합된 rpc-proxy.tsx 파일이 삭제되고 콘텐츠가 Settings 탭 컴포넌트로 이동된다
+- [x] **MERG-01**: Tokens 독립 페이지가 Wallets 페이지의 "Tokens" 탭으로 병합된다
+- [x] **MERG-02**: Wallets 페이지가 Wallets/Tokens/RPC Endpoints/WalletConnect 4개 탭을 갖는다
+- [x] **MERG-03**: RPC Proxy 독립 페이지가 Settings 페이지의 "RPC Proxy" 탭으로 병합된다
+- [x] **MERG-04**: Settings 페이지가 General/API Keys/RPC Proxy 3개 탭을 갖는다
+- [x] **MERG-05**: 병합된 tokens.tsx 파일이 삭제되고 콘텐츠가 Wallets 탭 컴포넌트로 이동된다
+- [x] **MERG-06**: 병합된 rpc-proxy.tsx 파일이 삭제되고 콘텐츠가 Settings 탭 컴포넌트로 이동된다
 
 ### Trading
 
@@ -37,8 +37,8 @@ Requirements for milestone v31.18. Each maps to roadmap phases.
 
 ### Route
 
-- [ ] **ROUT-01**: `#/tokens` 접근 시 `#/wallets` (Tokens 탭 활성)로 리다이렉트된다
-- [ ] **ROUT-02**: `#/rpc-proxy` 접근 시 `#/settings` (RPC Proxy 탭 활성)로 리다이렉트된다
+- [x] **ROUT-01**: `#/tokens` 접근 시 `#/wallets` (Tokens 탭 활성)로 리다이렉트된다
+- [x] **ROUT-02**: `#/rpc-proxy` 접근 시 `#/settings` (RPC Proxy 탭 활성)로 리다이렉트된다
 - [x] **ROUT-03**: `#/defi`, `#/actions` 접근 시 `#/providers`로 리다이렉트된다
 - [x] **ROUT-04**: `#/security` 접근 시 `#/protection`으로 리다이렉트된다
 - [x] **ROUT-05**: `#/system` 접근 시 `#/settings`로 리다이렉트된다
@@ -66,10 +66,10 @@ Requirements for milestone v31.18. Each maps to roadmap phases.
 
 ### Legacy
 
-- [ ] **LGCY-01**: telegram-users.tsx default export가 제거되고 TelegramUsersContent가 적절한 위치로 이동된다
-- [ ] **LGCY-02**: walletconnect.tsx default export가 제거되고 WalletConnect 컴포넌트가 적절한 위치로 이동된다
-- [ ] **LGCY-03**: 삭제된 페이지의 import가 layout.tsx에서 제거된다
-- [ ] **LGCY-04**: skills/admin.skill.md가 새 메뉴 구조에 맞게 업데이트된다
+- [x] **LGCY-01**: telegram-users.tsx default export가 제거되고 TelegramUsersContent가 적절한 위치로 이동된다
+- [x] **LGCY-02**: walletconnect.tsx default export가 제거되고 WalletConnect 컴포넌트가 적절한 위치로 이동된다
+- [x] **LGCY-03**: 삭제된 페이지의 import가 layout.tsx에서 제거된다
+- [x] **LGCY-04**: skills/admin.skill.md가 새 메뉴 구조에 맞게 업데이트된다
 
 ## v2 Requirements
 
@@ -102,8 +102,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SIDE-06 | Phase 417 | Complete |
 | SIDE-07 | Phase 417 | Complete |
 | SIDE-08 | Phase 417 | Complete |
-| ROUT-01 | Phase 418 | Pending |
-| ROUT-02 | Phase 418 | Pending |
+| ROUT-01 | Phase 418 | Complete |
+| ROUT-02 | Phase 418 | Complete |
 | ROUT-03 | Phase 417 | Complete |
 | ROUT-04 | Phase 417 | Complete |
 | ROUT-05 | Phase 417 | Complete |
@@ -113,16 +113,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TNAV-02 | Phase 417 | Complete |
 | TNAV-03 | Phase 417 | Complete |
 | TNAV-04 | Phase 417 | Complete |
-| MERG-01 | Phase 418 | Pending |
-| MERG-02 | Phase 418 | Pending |
-| MERG-03 | Phase 418 | Pending |
-| MERG-04 | Phase 418 | Pending |
-| MERG-05 | Phase 418 | Pending |
-| MERG-06 | Phase 418 | Pending |
-| LGCY-01 | Phase 418 | Pending |
-| LGCY-02 | Phase 418 | Pending |
-| LGCY-03 | Phase 418 | Pending |
-| LGCY-04 | Phase 418 | Pending |
+| MERG-01 | Phase 418 | Complete |
+| MERG-02 | Phase 418 | Complete |
+| MERG-03 | Phase 418 | Complete |
+| MERG-04 | Phase 418 | Complete |
+| MERG-05 | Phase 418 | Complete |
+| MERG-06 | Phase 418 | Complete |
+| LGCY-01 | Phase 418 | Complete |
+| LGCY-02 | Phase 418 | Complete |
+| LGCY-03 | Phase 418 | Complete |
+| LGCY-04 | Phase 418 | Complete |
 | TRAD-01 | Phase 419 | Pending |
 | TRAD-02 | Phase 419 | Pending |
 | TRAD-03 | Phase 419 | Pending |
