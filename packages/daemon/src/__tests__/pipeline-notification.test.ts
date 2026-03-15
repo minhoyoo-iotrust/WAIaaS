@@ -38,6 +38,7 @@ import type {
 import { ContractNameRegistry } from '@waiaas/core';
 import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
 import type { NotificationService } from '../notifications/notification-service.js';
+import { getNotificationMessage } from '../notifications/templates/message-templates.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -592,5 +593,88 @@ describe('contract name resolution in notifications', () => {
         expect.any(Object),
       );
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// v32.0: End-to-end notification message rendering with contract names
+// ---------------------------------------------------------------------------
+
+describe('notification message rendering with contract names', () => {
+  const RESOLVED_TO = 'Uniswap V3 (0xe592...1564)';
+  const RAW_ADDRESS = '0xe592427a0aece92de3edee1f18e0157c05861564';
+
+  it('TX_REQUESTED body contains resolved contract name (en)', () => {
+    const msg = getNotificationMessage('TX_REQUESTED', 'en', {
+      walletName: 'test-wallet',
+      type: 'CONTRACT_CALL',
+      amount: '0.5 ETH',
+      to: RESOLVED_TO,
+      display_amount: '',
+    });
+    expect(msg.body).toContain('Uniswap V3 (0xe592...1564)');
+    expect(msg.body).toContain('contract call');
+  });
+
+  it('TX_APPROVAL_REQUIRED body contains resolved contract name (en)', () => {
+    const msg = getNotificationMessage('TX_APPROVAL_REQUIRED', 'en', {
+      txId: 'tx-123',
+      amount: '0.5 ETH',
+      to: RESOLVED_TO,
+      display_amount: '',
+    });
+    expect(msg.body).toContain('Uniswap V3 (0xe592...1564)');
+  });
+
+  it('TX_SUBMITTED body contains resolved contract name (en)', () => {
+    const msg = getNotificationMessage('TX_SUBMITTED', 'en', {
+      txId: 'tx-123',
+      to: RESOLVED_TO,
+      display_amount: '',
+    });
+    expect(msg.body).toContain('Uniswap V3 (0xe592...1564)');
+    expect(msg.body).toContain('To:');
+  });
+
+  it('TX_CONFIRMED body contains resolved contract name (en)', () => {
+    const msg = getNotificationMessage('TX_CONFIRMED', 'en', {
+      txId: 'tx-123',
+      amount: '0.5 ETH',
+      to: RESOLVED_TO,
+      display_amount: '',
+    });
+    expect(msg.body).toContain('Uniswap V3 (0xe592...1564)');
+    expect(msg.body).toContain('To:');
+  });
+
+  it('TX_REQUESTED with TRANSFER type does NOT contain "Name (" pattern (en)', () => {
+    const msg = getNotificationMessage('TX_REQUESTED', 'en', {
+      walletName: 'test-wallet',
+      type: 'TRANSFER',
+      amount: '1 SOL',
+      to: RAW_ADDRESS,
+      display_amount: '',
+    });
+    expect(msg.body).not.toContain('Uniswap');
+    expect(msg.body).toContain(RAW_ADDRESS);
+  });
+
+  it('TX_SUBMITTED body contains resolved contract name (ko)', () => {
+    const msg = getNotificationMessage('TX_SUBMITTED', 'ko', {
+      txId: 'tx-123',
+      to: RESOLVED_TO,
+      display_amount: '',
+    });
+    expect(msg.body).toContain('Uniswap V3 (0xe592...1564)');
+  });
+
+  it('TX_CONFIRMED body contains resolved contract name (ko)', () => {
+    const msg = getNotificationMessage('TX_CONFIRMED', 'ko', {
+      txId: 'tx-123',
+      amount: '0.5 ETH',
+      to: RESOLVED_TO,
+      display_amount: '',
+    });
+    expect(msg.body).toContain('Uniswap V3 (0xe592...1564)');
   });
 });
