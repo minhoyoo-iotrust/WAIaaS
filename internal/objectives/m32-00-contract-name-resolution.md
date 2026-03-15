@@ -1,7 +1,7 @@
 # 마일스톤 m32-00: 컨트랙트 이름 해석 (Contract Name Resolution)
 
 - **Status:** PLANNED
-- **Milestone:** TBD
+- **Milestone:** v32.0
 
 ## 목표
 
