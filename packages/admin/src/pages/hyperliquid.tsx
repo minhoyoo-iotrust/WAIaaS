@@ -10,16 +10,13 @@ import { SpotBalancesTable } from '../components/hyperliquid/SpotBalancesTable';
 import { SpotOrdersTable } from '../components/hyperliquid/SpotOrdersTable';
 import { SubAccountList } from '../components/hyperliquid/SubAccountList';
 import { SubAccountDetail } from '../components/hyperliquid/SubAccountDetail';
-import { SettingsPanel } from '../components/hyperliquid/SettingsPanel';
-
-type Tab = 'overview' | 'orders' | 'spot' | 'subaccounts' | 'settings';
+type Tab = 'overview' | 'orders' | 'spot' | 'subaccounts';
 
 const HYPERLIQUID_TABS: TabItem[] = [
   { key: 'overview', label: 'Overview' },
   { key: 'orders', label: 'Orders' },
   { key: 'spot', label: 'Spot' },
   { key: 'subaccounts', label: 'Sub-accounts' },
-  { key: 'settings', label: 'Settings' },
 ];
 
 export default function HyperliquidPage() {
@@ -54,6 +51,10 @@ export default function HyperliquidPage() {
 
   return (
     <div>
+      <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-3)' }}>
+        <a href="#/providers" style={{ color: 'var(--color-primary)' }}>Configure in Trading &gt; Providers</a>
+      </p>
+
       {/* Wallet selector */}
       <div style={{ marginBottom: 'var(--space-4)' }}>
         <label style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', marginRight: 'var(--space-2)' }}>
@@ -126,12 +127,6 @@ export default function HyperliquidPage() {
               />
             </div>
           )}
-        </div>
-      )}
-      {activeTab.value === 'settings' && (
-        <div>
-          <h3 style={{ marginBottom: 'var(--space-3)' }}>Hyperliquid Settings</h3>
-          <SettingsPanel />
         </div>
       )}
     </div>

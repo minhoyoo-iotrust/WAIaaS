@@ -7,16 +7,13 @@ import { PolymarketOverview } from '../components/polymarket/PolymarketOverview'
 import { PolymarketMarkets } from '../components/polymarket/PolymarketMarkets';
 import { PolymarketOrders } from '../components/polymarket/PolymarketOrders';
 import { PolymarketPositions } from '../components/polymarket/PolymarketPositions';
-import { PolymarketSettings } from '../components/polymarket/PolymarketSettings';
-
-type Tab = 'overview' | 'markets' | 'orders' | 'positions' | 'settings';
+type Tab = 'overview' | 'markets' | 'orders' | 'positions';
 
 const POLYMARKET_TABS: TabItem[] = [
   { key: 'overview', label: 'Overview' },
   { key: 'markets', label: 'Markets' },
   { key: 'orders', label: 'Orders' },
   { key: 'positions', label: 'Positions' },
-  { key: 'settings', label: 'Settings' },
 ];
 
 export default function PolymarketPage() {
@@ -50,6 +47,10 @@ export default function PolymarketPage() {
 
   return (
     <div>
+      <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-3)' }}>
+        <a href="#/providers" style={{ color: 'var(--color-primary)' }}>Configure in Trading &gt; Providers</a>
+      </p>
+
       {/* Wallet selector */}
       <div style={{ marginBottom: 'var(--space-4)' }}>
         <label style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', marginRight: 'var(--space-2)' }}>
@@ -104,12 +105,6 @@ export default function PolymarketPage() {
         <div>
           <h3 style={{ marginBottom: 'var(--space-3)' }}>Positions</h3>
           <PolymarketPositions walletId={selectedWalletId.value} />
-        </div>
-      )}
-      {activeTab.value === 'settings' && (
-        <div>
-          <h3 style={{ marginBottom: 'var(--space-3)' }}>Polymarket Settings</h3>
-          <PolymarketSettings />
         </div>
       )}
     </div>
