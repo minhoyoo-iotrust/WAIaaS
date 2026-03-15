@@ -22,6 +22,7 @@ import { SearchInput } from '../components/search-input';
 import { FilterBar } from '../components/filter-bar';
 import type { FilterField } from '../components/filter-bar';
 import { ExplorerLink } from '../components/explorer-link';
+import { TokensContent } from './tokens';
 import { fetchDisplayCurrency, formatWithDisplay } from '../utils/display-currency';
 import {
   type SettingsData,
@@ -3262,6 +3263,7 @@ function WalletListContent() {
 
 const WALLETS_TABS = [
   { key: 'wallets', label: 'Wallets' },
+  { key: 'tokens', label: 'Tokens' },
   { key: 'rpc', label: 'RPC Endpoints' },
   { key: 'walletconnect', label: 'WalletConnect' },
 ];
@@ -3289,6 +3291,7 @@ function WalletListWithTabs() {
       />
       <TabNav tabs={WALLETS_TABS} activeTab={activeTab.value} onTabChange={(k) => { activeTab.value = k; }} />
       {activeTab.value === 'wallets' && <WalletListContent />}
+      {activeTab.value === 'tokens' && <TokensContent />}
       {activeTab.value === 'rpc' && <RpcEndpointsTab />}
       {activeTab.value === 'walletconnect' && <WalletConnectTab />}
     </div>

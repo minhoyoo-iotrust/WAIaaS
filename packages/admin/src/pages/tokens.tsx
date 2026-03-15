@@ -34,7 +34,7 @@ function truncateAddress(addr: string): string {
 // Component
 // ---------------------------------------------------------------------------
 
-export default function TokensPage() {
+export function TokensContent() {
   const network = useSignal('ethereum-mainnet');
   const tokens = useSignal<TokenItem[]>([]);
   const loading = useSignal(true);
@@ -182,7 +182,7 @@ export default function TokensPage() {
   // -------------------------------------------------------------------------
 
   return (
-    <div class="page">
+    <>
       {error.value && (
         <div class="dashboard-error">
           <span>{error.value}</span>
@@ -332,6 +332,6 @@ export default function TokensPage() {
           </tbody>
         </table>
       </div>
-    </div>
+    </>
   );
 }
