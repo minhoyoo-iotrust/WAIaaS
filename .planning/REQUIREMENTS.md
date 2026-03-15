@@ -8,18 +8,18 @@
 
 ### SSRF + Host Guard
 
-- [ ] **SSRF-01**: Admin RPC Test 엔드포인트(`POST /v1/admin/settings/test-rpc`)가 로컬 IP(169.254.x.x) 및 내부 네트워크 IP(10.x.x.x, 172.16-31.x.x, 192.168.x.x)를 차단한다
-- [ ] **SSRF-02**: `ssrf-guard.ts`를 `services/x402/` → `infrastructure/security/`로 이동하여 범용 SSRF 가드로 사용한다
-- [ ] **SSRF-03**: hostGuard가 `startsWith` 대신 정확 매칭(`===`)만 사용하여 `localhost.evil.com` 같은 prefix 우회를 차단한다
-- [ ] **SSRF-04**: SSRF 차단(로컬 IP, 메타데이터 URL) + hostGuard 우회 방지 테스트를 추가한다
+- [x] **SSRF-01**: Admin RPC Test 엔드포인트(`POST /v1/admin/settings/test-rpc`)가 로컬 IP(169.254.x.x) 및 내부 네트워크 IP(10.x.x.x, 172.16-31.x.x, 192.168.x.x)를 차단한다
+- [x] **SSRF-02**: `ssrf-guard.ts`를 `services/x402/` → `infrastructure/security/`로 이동하여 범용 SSRF 가드로 사용한다
+- [x] **SSRF-03**: hostGuard가 `startsWith` 대신 정확 매칭(`===`)만 사용하여 `localhost.evil.com` 같은 prefix 우회를 차단한다
+- [x] **SSRF-04**: SSRF 차단(로컬 IP, 메타데이터 URL) + hostGuard 우회 방지 테스트를 추가한다
 
 ### Rate Limit
 
-- [ ] **RATE-01**: 인메모리 sliding-window rate limiter를 구현한다 (만료 윈도우 TTL 자동 정리로 메모리 누수 방지)
-- [ ] **RATE-02**: IP별(`rate_limit_global_ip_rpm`), 세션별(`rate_limit_session_rpm`), 트랜잭션별(`rate_limit_tx_rpm`) 3계층 미들웨어를 `createApp()`에 등록한다
-- [ ] **RATE-03**: SettingsService `rate_limit_*` 3개 설정값 hot-reload를 지원한다 (Admin Settings 변경 즉시 반영)
-- [ ] **RATE-04**: 한도 초과 시 HTTP 429 + `Retry-After` 헤더를 반환하고 `RATE_LIMITED` 에러 코드를 WAIaaSError에 추가한다
-- [ ] **RATE-05**: Rate limit 한도 초과 429 반환, 한도 내 정상 통과, 설정 변경 반영 테스트를 추가한다
+- [x] **RATE-01**: 인메모리 sliding-window rate limiter를 구현한다 (만료 윈도우 TTL 자동 정리로 메모리 누수 방지)
+- [x] **RATE-02**: IP별(`rate_limit_global_ip_rpm`), 세션별(`rate_limit_session_rpm`), 트랜잭션별(`rate_limit_tx_rpm`) 3계층 미들웨어를 `createApp()`에 등록한다
+- [x] **RATE-03**: SettingsService `rate_limit_*` 3개 설정값 hot-reload를 지원한다 (Admin Settings 변경 즉시 반영)
+- [x] **RATE-04**: 한도 초과 시 HTTP 429 + `Retry-After` 헤더를 반환하고 `RATE_LIMITED` 에러 코드를 WAIaaSError에 추가한다
+- [x] **RATE-05**: Rate limit 한도 초과 429 반환, 한도 내 정상 통과, 설정 변경 반영 테스트를 추가한다
 
 ### CORS + Resource Management
 
@@ -41,15 +41,15 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SSRF-01 | Phase 424 | Pending |
-| SSRF-02 | Phase 424 | Pending |
-| SSRF-03 | Phase 424 | Pending |
-| SSRF-04 | Phase 424 | Pending |
-| RATE-01 | Phase 425 | Pending |
-| RATE-02 | Phase 425 | Pending |
-| RATE-03 | Phase 425 | Pending |
-| RATE-04 | Phase 425 | Pending |
-| RATE-05 | Phase 425 | Pending |
+| SSRF-01 | Phase 424 | Complete |
+| SSRF-02 | Phase 424 | Complete |
+| SSRF-03 | Phase 424 | Complete |
+| SSRF-04 | Phase 424 | Complete |
+| RATE-01 | Phase 425 | Complete |
+| RATE-02 | Phase 425 | Complete |
+| RATE-03 | Phase 425 | Complete |
+| RATE-04 | Phase 425 | Complete |
+| RATE-05 | Phase 425 | Complete |
 | CORS-01 | Phase 426 | Complete |
 | CORS-02 | Phase 426 | Complete |
 | RSRC-01 | Phase 426 | Complete |
