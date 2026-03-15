@@ -79,7 +79,7 @@
 - [x] **Phase 417: 사이드바 섹션 + 리네이밍 + 라우트 정리** - 섹션 그룹 사이드바, 메뉴 리네이밍, 경로 리다이렉트, TabNav 통일 -- completed 2026-03-15
 - [x] **Phase 418: 페이지 병합 + 레거시 정리** - Tokens/RPC Proxy 탭 병합, 레거시 파일 제거 -- completed 2026-03-15
 - [x] **Phase 419: Trading Settings 탭 제거** - Hyperliquid/Polymarket Settings 탭 제거 및 Providers 이관 (completed 2026-03-15)
-- [ ] **Phase 420: 지갑 상세 탭 재구성** - 8탭을 4탭(Overview/Activity/Assets/Setup)으로 통합
+- [x] **Phase 420: 지갑 상세 탭 재구성** - 8탭을 4탭(Overview/Activity/Assets/Setup)으로 통합 (completed 2026-03-15)
 
 ## Phase Details
 
@@ -141,8 +141,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 420-01-PLAN.md — DETAIL_TABS 재정의 + Overview 탭 Owner Protection 카드 통합
-- [ ] 420-02-PLAN.md — Activity/Assets/Setup 탭 콘텐츠 통합
+- [x] 420-01-PLAN.md — DETAIL_TABS 재정의 + Overview 탭 Owner Protection 카드 통합
+- [x] 420-02-PLAN.md — Activity/Assets/Setup 탭 콘텐츠 통합
 
 ## Progress
 
@@ -178,4 +178,4 @@ Phases execute in numeric order: 417 -> 418 -> 419 -> 420
 | 417. 사이드바 섹션 + 리네이밍 + 라우트 정리 | v31.18 | Complete    | 2026-03-15 | 2026-03-15 |
 | 418. 페이지 병합 + 레거시 정리 | v31.18 | Complete    | 2026-03-15 | 2026-03-15 |
 | 419. Trading Settings 탭 제거 | 1/1 | Complete    | 2026-03-15 | - |
-| 420. 지갑 상세 탭 재구성 | v31.18 | 0/2 | Not started | - |
+| 420. 지갑 상세 탭 재구성 | v31.18 | 2/2 | Complete | 2026-03-15 |

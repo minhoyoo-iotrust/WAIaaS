@@ -54,15 +54,15 @@ Requirements for milestone v31.18. Each maps to roadmap phases.
 
 ### Detail
 
-- [ ] **DETL-01**: 지갑 상세 탭이 4개(Overview/Activity/Assets/Setup)로 재구성된다
-- [ ] **DETL-02**: Overview 탭에 Owner Protection 카드가 Wallet Info 아래에 항상 노출된다
-- [ ] **DETL-03**: Owner 미등록 시 경고 배너 + "Register Owner" CTA 버튼이 표시된다
-- [ ] **DETL-04**: Owner 등록 완료 시 상태 요약(상태/승인방식/주소) + "Manage" 버튼이 표시된다
-- [ ] **DETL-05**: "Register Owner"/"Manage" 클릭 시 기존 Owner 탭의 등록/관리 플로우가 인라인 또는 모달로 표시된다
-- [ ] **DETL-06**: Activity 탭이 Transactions + External Actions를 통합하고 필터로 구분한다
-- [ ] **DETL-07**: Assets 탭이 Staking Positions + NFT Gallery를 섹션별로 통합한다
-- [ ] **DETL-08**: Setup 탭이 Credentials + MCP Setup을 섹션별로 통합한다
-- [ ] **DETL-09**: DETAIL_TABS 배열이 4개(`overview`, `activity`, `assets`, `setup`)로 업데이트된다
+- [x] **DETL-01**: 지갑 상세 탭이 4개(Overview/Activity/Assets/Setup)로 재구성된다
+- [x] **DETL-02**: Overview 탭에 Owner Protection 카드가 Wallet Info 아래에 항상 노출된다
+- [x] **DETL-03**: Owner 미등록 시 경고 배너 + "Register Owner" CTA 버튼이 표시된다
+- [x] **DETL-04**: Owner 등록 완료 시 상태 요약(상태/승인방식/주소) + "Manage" 버튼이 표시된다
+- [x] **DETL-05**: "Register Owner"/"Manage" 클릭 시 기존 Owner 탭의 등록/관리 플로우가 인라인 또는 모달로 표시된다
+- [x] **DETL-06**: Activity 탭이 Transactions + External Actions를 통합하고 필터로 구분한다
+- [x] **DETL-07**: Assets 탭이 Staking Positions + NFT Gallery를 섹션별로 통합한다
+- [x] **DETL-08**: Setup 탭이 Credentials + MCP Setup을 섹션별로 통합한다
+- [x] **DETL-09**: DETAIL_TABS 배열이 4개(`overview`, `activity`, `assets`, `setup`)로 업데이트된다
 
 ### Legacy
 
@@ -128,15 +128,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TRAD-03 | Phase 419 | Complete |
 | TRAD-04 | Phase 419 | Complete |
 | TRAD-05 | Phase 419 | Complete |
-| DETL-01 | Phase 420 | Pending |
-| DETL-02 | Phase 420 | Pending |
-| DETL-03 | Phase 420 | Pending |
-| DETL-04 | Phase 420 | Pending |
-| DETL-05 | Phase 420 | Pending |
-| DETL-06 | Phase 420 | Pending |
-| DETL-07 | Phase 420 | Pending |
-| DETL-08 | Phase 420 | Pending |
-| DETL-09 | Phase 420 | Pending |
+| DETL-01 | Phase 420 | Complete |
+| DETL-02 | Phase 420 | Complete |
+| DETL-03 | Phase 420 | Complete |
+| DETL-04 | Phase 420 | Complete |
+| DETL-05 | Phase 420 | Complete |
+| DETL-06 | Phase 420 | Complete |
+| DETL-07 | Phase 420 | Complete |
+| DETL-08 | Phase 420 | Complete |
+| DETL-09 | Phase 420 | Complete |
 
 **Coverage:**
 - v1 requirements: 38 total

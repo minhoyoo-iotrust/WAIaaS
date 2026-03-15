@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v31.18
 milestone_name: Admin UI IA 재구조화
 status: completed
-stopped_at: Completed 419-01-PLAN.md
-last_updated: "2026-03-15T03:56:33.626Z"
-last_activity: 2026-03-15 — Phase 419 executed (1 plan, 2 tasks)
+stopped_at: Completed 420-02-PLAN.md
+last_updated: "2026-03-15T04:28:00.000Z"
+last_activity: 2026-03-15 — Phase 420 executed (2 plans, 4 tasks)
 progress:
   total_phases: 4
-  completed_phases: 3
-  total_plans: 5
-  completed_plans: 5
-  percent: 75
+  completed_phases: 4
+  total_plans: 7
+  completed_plans: 7
+  percent: 100
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-15)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Phase 419 — Trading Settings 탭 제거
+**Current focus:** Phase 420 — 지갑 상세 탭 재구성
 
 ## Current Position
 
-Phase: 419 of 420 (Trading Settings 탭 제거)
-Plan: 1 of 1 in current phase
-Status: Phase 419 complete
-Last activity: 2026-03-15 — Phase 419 executed (1 plan, 2 tasks)
+Phase: 420 of 420 (지갑 상세 탭 재구성)
+Plan: 2 of 2 in current phase
+Status: Phase 420 complete
+Last activity: 2026-03-15 — Phase 420 executed (2 plans, 4 tasks)
 
-Progress: [████████░░] 75%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -61,6 +61,10 @@ Progress: [████████░░] 75%
 - Shutdown modal kept outside tabs (always accessible)
 - [Phase 419]: Settings managed centrally in Providers page via PROVIDER_ADVANCED_SETTINGS map
 - [Phase 419]: Prediction category added to CATEGORY_ORDER for Polymarket sorting
+- [Phase 420]: DETAIL_TABS consolidated from 8 to 4 tabs (Overview/Activity/Assets/Setup)
+- [Phase 420]: Owner Protection card inline in OverviewTab with state-aware display
+- [Phase 420]: ActivityTab uses filter toggle (Transactions/External Actions) not sub-tabs
+- [Phase 420]: Existing tab functions reused as-is in new wrapper tabs
 
 ### Pending Todos
 
@@ -72,6 +76,6 @@ Progress: [████████░░] 75%
 
 ## Session Continuity
 
-Last session: 2026-03-15T03:55:47.631Z
-Stopped at: Completed 419-01-PLAN.md
+Last session: 2026-03-15T04:28:00.000Z
+Stopped at: Completed 420-02-PLAN.md
 Resume file: None
