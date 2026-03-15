@@ -2,7 +2,7 @@
  * Tests for GET /v1/admin/settings/schema endpoint.
  * Verifies setting definitions are exposed with metadata.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { SETTING_DEFINITIONS } from '../infrastructure/settings/setting-keys.js';
 
 // We test the helper functions directly since they're pure functions
