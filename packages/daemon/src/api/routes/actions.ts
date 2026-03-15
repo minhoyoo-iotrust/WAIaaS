@@ -244,7 +244,12 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
       const providerActions = deps.registry.listActions(meta.name);
       const enabledKey = meta.enabledKey ?? meta.name;
       const category = meta.category ?? 'Other';
-      const isEnabled = deps.settingsService.get(`actions.${enabledKey}_enabled`) === 'true';
+      let isEnabled = false;
+      try {
+        isEnabled = deps.settingsService.get(`actions.${enabledKey}_enabled`) === 'true';
+      } catch {
+        // Setting key not registered (e.g. dynamically added provider) — default to disabled
+      }
       return {
         name: meta.name,
         description: meta.description,
