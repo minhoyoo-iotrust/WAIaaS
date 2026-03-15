@@ -177,5 +177,5 @@ Phases execute in numeric order: 417 -> 418 -> 419 -> 420
 | 416. Contract Test 및 검증 | v31.17 | 1/1 | Complete | 2026-03-15 |
 | 417. 사이드바 섹션 + 리네이밍 + 라우트 정리 | v31.18 | Complete    | 2026-03-15 | 2026-03-15 |
 | 418. 페이지 병합 + 레거시 정리 | v31.18 | Complete    | 2026-03-15 | 2026-03-15 |
-| 419. Trading Settings 탭 제거 | 1/1 | Complete   | 2026-03-15 | - |
+| 419. Trading Settings 탭 제거 | 1/1 | Complete    | 2026-03-15 | - |
 | 420. 지갑 상세 탭 재구성 | v31.18 | 0/2 | Not started | - |
