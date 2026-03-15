@@ -23,8 +23,10 @@ const PAGE_LABELS: Record<string, string> = {
   '/transactions': 'Transactions',
   '/policies': 'Policies',
   '/notifications': 'Notifications',
-  '/security': 'Security',
-  '/system': 'System',
+  '/protection': 'Protection',
+  '/settings': 'Settings',
+  '/providers': 'Providers',
+  '/wallet-apps': 'Wallet Apps',
 };
 
 function filterEntries(query: string): SearchIndexEntry[] {
