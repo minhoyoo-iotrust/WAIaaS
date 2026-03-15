@@ -115,13 +115,13 @@ describe('Wallets NFT Tab', () => {
     });
   }
 
-  it('shows NFT tab in detail tabs', async () => {
+  it('shows Assets tab in detail tabs (replaces NFTs tab)', async () => {
     setupMocks();
     const WalletsPage = (await import('../pages/wallets')).default;
     render(<WalletsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('NFTs')).toBeTruthy();
+      expect(screen.getByText('Assets')).toBeTruthy();
     });
   });
 
@@ -131,11 +131,11 @@ describe('Wallets NFT Tab', () => {
     render(<WalletsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('NFTs')).toBeTruthy();
+      expect(screen.getByText('Assets')).toBeTruthy();
     });
 
-    // Click NFTs tab
-    fireEvent.click(screen.getByText('NFTs'));
+    // Click Assets tab - now integrates Staking + NFT content
+    fireEvent.click(screen.getByText('Assets'));
 
     await waitFor(() => {
       expect(screen.getByText('Select a network')).toBeTruthy();
@@ -148,11 +148,11 @@ describe('Wallets NFT Tab', () => {
     render(<WalletsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('NFTs')).toBeTruthy();
+      expect(screen.getByText('Assets')).toBeTruthy();
     });
 
     // Click NFTs tab
-    fireEvent.click(screen.getByText('NFTs'));
+    fireEvent.click(screen.getByText('Assets'));
 
     // Select network from dropdown
     await waitFor(() => {
@@ -178,10 +178,10 @@ describe('Wallets NFT Tab', () => {
     render(<WalletsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('NFTs')).toBeTruthy();
+      expect(screen.getByText('Assets')).toBeTruthy();
     });
 
-    fireEvent.click(screen.getByText('NFTs'));
+    fireEvent.click(screen.getByText('Assets'));
 
     await waitFor(() => {
       const selects = document.querySelectorAll('select');
@@ -226,10 +226,10 @@ describe('Wallets NFT Tab', () => {
     render(<WalletsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('NFTs')).toBeTruthy();
+      expect(screen.getByText('Assets')).toBeTruthy();
     });
 
-    fireEvent.click(screen.getByText('NFTs'));
+    fireEvent.click(screen.getByText('Assets'));
 
     await waitFor(() => {
       const selects = document.querySelectorAll('select');

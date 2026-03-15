@@ -13,7 +13,7 @@
 - ✅ **v0.9** — MCP 세션 관리 자동화 설계 (shipped 2026-02-09)
 - ✅ **v0.10** — 구현 전 설계 완결성 확보 (shipped 2026-02-09)
 - ✅ **v1.0** — 구현 계획 수립 (shipped 2026-02-09)
-- ✅ **v1.1 ~ v31.17** — (103 milestones shipped)
+- ✅ **v1.1 ~ v31.18** — (104 milestones shipped)
 
 ## Phases
 
@@ -71,6 +71,16 @@
 
 </details>
 
+<details>
+<summary>✅ v31.18 Admin UI IA 재구조화 (Phases 417-420) — SHIPPED 2026-03-15</summary>
+
+- [x] Phase 417: 사이드바 섹션 + 리네이밍 + 라우트 정리 (2/2 plans) — completed 2026-03-15
+- [x] Phase 418: 페이지 병합 + 레거시 정리 (2/2 plans) — completed 2026-03-15
+- [x] Phase 419: Trading Settings 탭 제거 (1/1 plan) — completed 2026-03-15
+- [x] Phase 420: 지갑 상세 탭 재구성 (2/2 plans) — completed 2026-03-15
+
+</details>
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -99,3 +109,7 @@
 | 414. 인터페이스 점진적 마이그레이션 | v31.17 | 3/3 | Complete | 2026-03-14 |
 | 415. 백엔드 API 확장 및 상수 통합 | v31.17 | 3/3 | Complete | 2026-03-14 |
 | 416. Contract Test 및 검증 | v31.17 | 1/1 | Complete | 2026-03-15 |
+| 417. 사이드바 섹션 + 리네이밍 + 라우트 정리 | v31.18 | 2/2 | Complete | 2026-03-15 |
+| 418. 페이지 병합 + 레거시 정리 | v31.18 | 2/2 | Complete | 2026-03-15 |
+| 419. Trading Settings 탭 제거 | v31.18 | 1/1 | Complete | 2026-03-15 |
+| 420. 지갑 상세 탭 재구성 | v31.18 | 2/2 | Complete | 2026-03-15 |

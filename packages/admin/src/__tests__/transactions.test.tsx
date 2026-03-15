@@ -179,19 +179,19 @@ describe('TransactionsPage', () => {
     render(<TransactionsPage />);
     await waitForTableData();
 
-    // "All Transactions" appears in tab + breadcrumb
-    const allTxTexts = screen.getAllByText('All Transactions');
-    expect(allTxTexts.length).toBeGreaterThanOrEqual(1);
+    // "History" appears in tab + breadcrumb
+    const historyTexts = screen.getAllByText('History');
+    expect(historyTexts.length).toBeGreaterThanOrEqual(1);
     const monitorTexts = screen.getAllByText('Monitor Settings');
     expect(monitorTexts.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('defaults to All Transactions tab', async () => {
+  it('defaults to History tab', async () => {
     render(<TransactionsPage />);
     await waitForTableData();
 
     // Tab button should have active class
-    const tabBtns = screen.getAllByText('All Transactions');
+    const tabBtns = screen.getAllByText('History');
     const activeTab = tabBtns.find((el) => el.classList.contains('tab-btn'));
     expect(activeTab).toBeTruthy();
     expect(activeTab!.classList.contains('active')).toBe(true);

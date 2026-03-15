@@ -65,7 +65,7 @@ vi.mock('../utils/dirty-guard', () => ({
 }));
 
 import { showToast } from '../components/toast';
-import RpcProxyPage from '../pages/rpc-proxy';
+import { RpcProxyContent as RpcProxyPage } from '../pages/rpc-proxy';
 
 const mockShowToast = showToast as ReturnType<typeof vi.fn>;
 

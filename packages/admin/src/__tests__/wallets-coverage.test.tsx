@@ -243,11 +243,13 @@ describe('WalletDetailView rendering', () => {
     expect(screen.getAllByText('solana-devnet').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Balances')).toBeTruthy();
     expect(screen.getByText('Available Networks')).toBeTruthy();
-    // Tab labels visible in TabNav
+    // Tab labels visible in TabNav (4-tab structure)
     expect(screen.getByText('Overview')).toBeTruthy();
-    expect(screen.getByText('Transactions')).toBeTruthy();
-    expect(screen.getByText('Owner')).toBeTruthy();
-    expect(screen.getByText('MCP')).toBeTruthy();
+    expect(screen.getByText('Activity')).toBeTruthy();
+    expect(screen.getByText('Assets')).toBeTruthy();
+    expect(screen.getByText('Setup')).toBeTruthy();
+    // Owner Protection card in Overview tab
+    expect(screen.getByText('Owner Protection')).toBeTruthy();
   });
 
   it('renders balance with native and tokens', async () => {
@@ -271,18 +273,17 @@ describe('WalletDetailView rendering', () => {
     expect(screen.getAllByText('solana-testnet').length).toBeGreaterThanOrEqual(1);
   });
 
-  it('renders transactions with status badges', async () => {
+  it('switches to Activity tab', async () => {
     mockDetailApiCalls();
     await renderAndWaitForDetail();
 
-    await switchTab('Transactions');
+    await switchTab('Activity');
 
-    // Status text appears in both filter options and badges, use getAllByText
+    // Activity tab shows Transactions and External Actions filter buttons
     await waitFor(() => {
-      expect(screen.getAllByText('CONFIRMED').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText('Transactions')).toBeTruthy();
+      expect(screen.getByText('External Actions')).toBeTruthy();
     });
-    expect(screen.getAllByText('FAILED').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('PENDING').length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders back link', async () => {
@@ -406,7 +407,7 @@ describe('WalletDetailView: handleDelete', () => {
   });
 });
 
-describe('WalletDetailView: handleMcpSetup', () => {
+describe('WalletDetailView: Setup tab (MCP)', () => {
   beforeEach(() => { currentPath.value = '/wallets/test-wallet-1'; });
   afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
@@ -414,7 +415,7 @@ describe('WalletDetailView: handleMcpSetup', () => {
     mockDetailApiCalls();
     await renderAndWaitForDetail();
 
-    await switchTab('MCP');
+    await switchTab('Setup');
 
     vi.mocked(api.POST).mockResolvedValueOnce({ data: mockMcpResult });
 
@@ -441,7 +442,7 @@ describe('WalletDetailView: handleMcpSetup', () => {
     mockDetailApiCalls();
     await renderAndWaitForDetail();
 
-    await switchTab('MCP');
+    await switchTab('Setup');
 
     vi.mocked(api.POST).mockRejectedValueOnce(new ApiError(500, 'MCP_ERROR', 'Failed'));
 
@@ -456,7 +457,7 @@ describe('WalletDetailView: handleMcpSetup', () => {
     mockDetailApiCalls();
     await renderAndWaitForDetail();
 
-    await switchTab('MCP');
+    await switchTab('Setup');
 
     vi.mocked(api.POST).mockResolvedValueOnce({ data: mockMcpResult });
     fireEvent.click(screen.getByText('Setup MCP'));
@@ -475,17 +476,23 @@ describe('WalletDetailView: owner address', () => {
     mockDetailApiCalls();
     await renderAndWaitForDetail();
 
-    await switchTab('Owner');
-
-    expect(screen.getByText('Set Owner Address')).toBeTruthy();
-    expect(screen.getByText('NONE')).toBeTruthy();
+    // Owner Protection card is visible in Overview tab (default)
+    expect(screen.getByText('Owner Protection')).toBeTruthy();
+    // Click Register Owner to reveal OwnerTab inline
+    fireEvent.click(screen.getByText('Register Owner'));
+    await waitFor(() => {
+      expect(screen.getByText('Set Owner Address')).toBeTruthy();
+    });
+    expect(screen.getAllByText('NONE').length).toBeGreaterThanOrEqual(1);
   });
 
   it('handleSaveOwner: saves owner address', async () => {
     mockDetailApiCalls();
     await renderAndWaitForDetail();
 
-    await switchTab('Owner');
+    // Reveal OwnerTab via Owner Protection card
+    fireEvent.click(screen.getByText('Register Owner'));
+    await waitFor(() => { expect(screen.getByText('Set Owner Address')).toBeTruthy(); });
 
     vi.mocked(api.PUT).mockResolvedValueOnce({ data: {
       ownerAddress: '0xNEW_OWNER_ADDRESS',
@@ -520,7 +527,8 @@ describe('WalletDetailView: owner address', () => {
     mockDetailApiCalls();
     await renderAndWaitForDetail();
 
-    await switchTab('Owner');
+    fireEvent.click(screen.getByText('Register Owner'));
+    await waitFor(() => { expect(screen.getByText('Set Owner Address')).toBeTruthy(); });
 
     fireEvent.click(screen.getByText('Set Owner Address'));
 
@@ -539,7 +547,8 @@ describe('WalletDetailView: owner address', () => {
     mockDetailApiCalls();
     await renderAndWaitForDetail();
 
-    await switchTab('Owner');
+    fireEvent.click(screen.getByText('Register Owner'));
+    await waitFor(() => { expect(screen.getByText('Set Owner Address')).toBeTruthy(); });
 
     vi.mocked(api.PUT).mockRejectedValueOnce(new ApiError(400, 'INVALID_ADDRESS', 'Bad'));
 
@@ -560,7 +569,8 @@ describe('WalletDetailView: owner address', () => {
     mockDetailApiCalls();
     await renderAndWaitForDetail();
 
-    await switchTab('Owner');
+    fireEvent.click(screen.getByText('Register Owner'));
+    await waitFor(() => { expect(screen.getByText('Set Owner Address')).toBeTruthy(); });
 
     fireEvent.click(screen.getByText('Set Owner Address'));
 
@@ -582,10 +592,14 @@ describe('WalletDetailView: owner address', () => {
       expect(screen.getByText('trading-bot')).toBeTruthy();
     });
 
-    await switchTab('Owner');
-
+    // Owner Protection card shows GRACE in Overview tab
+    expect(screen.getByText('Owner Protection')).toBeTruthy();
     expect(screen.getByText('GRACE')).toBeTruthy();
-    expect(screen.getByText('Verify Owner')).toBeTruthy();
+    // Click Manage to reveal OwnerTab inline
+    fireEvent.click(screen.getByText('Manage'));
+    await waitFor(() => {
+      expect(screen.getByText('Verify Owner')).toBeTruthy();
+    });
   });
 });
 
@@ -601,7 +615,8 @@ describe('WalletDetailView: WalletConnect', () => {
       expect(screen.getByText('trading-bot')).toBeTruthy();
     });
 
-    await switchTab('Owner');
+    // Reveal OwnerTab via Manage button (GRACE state)
+    fireEvent.click(screen.getByText('Manage'));
 
     await waitFor(() => {
       expect(screen.getByText('Connect Wallet')).toBeTruthy();
@@ -612,9 +627,11 @@ describe('WalletDetailView: WalletConnect', () => {
     mockDetailApiCalls({ ...mockWalletDetail, approvalMethod: 'walletconnect' });
     await renderAndWaitForDetail();
 
-    await switchTab('Owner');
-
-    expect(screen.getByText('Set an Owner address first to enable WalletConnect.')).toBeTruthy();
+    // NONE state with walletconnect approval - click Register Owner
+    fireEvent.click(screen.getByText('Register Owner'));
+    await waitFor(() => {
+      expect(screen.getByText('Set an Owner address first to enable WalletConnect.')).toBeTruthy();
+    });
   });
 
   it('handleWcConnect: initiates pairing', async () => {
@@ -632,7 +649,7 @@ describe('WalletDetailView: WalletConnect', () => {
       expect(screen.getByText('trading-bot')).toBeTruthy();
     });
 
-    await switchTab('Owner');
+    fireEvent.click(screen.getByText('Manage'));
 
     await waitFor(() => {
       expect(screen.getByText('Connect Wallet')).toBeTruthy();
@@ -661,7 +678,7 @@ describe('WalletDetailView: WalletConnect', () => {
       expect(screen.getByText('trading-bot')).toBeTruthy();
     });
 
-    await switchTab('Owner');
+    fireEvent.click(screen.getByText('Manage'));
 
     await waitFor(() => {
       expect(screen.getByText('Connect Wallet')).toBeTruthy();
@@ -692,7 +709,7 @@ describe('WalletDetailView: WalletConnect', () => {
       expect(screen.getByText('trading-bot')).toBeTruthy();
     });
 
-    await switchTab('Owner');
+    fireEvent.click(screen.getByText('Manage'));
 
     await waitFor(() => {
       expect(screen.getByText('Connected')).toBeTruthy();
@@ -728,7 +745,7 @@ describe('WalletDetailView: WalletConnect', () => {
       expect(screen.getByText('trading-bot')).toBeTruthy();
     });
 
-    await switchTab('Owner');
+    fireEvent.click(screen.getByText('Manage'));
 
     await waitFor(() => {
       expect(screen.getByText('Disconnect')).toBeTruthy();
@@ -818,8 +835,9 @@ describe('WalletDetailView: fetch errors', () => {
       expect(screen.getByText('trading-bot')).toBeTruthy();
     });
 
-    await switchTab('Transactions');
+    await switchTab('Activity');
 
+    // Activity tab shows Transactions view by default, but fetch throws error
     await waitFor(() => {
       expect(screen.getByText('No transactions yet')).toBeTruthy();
     });

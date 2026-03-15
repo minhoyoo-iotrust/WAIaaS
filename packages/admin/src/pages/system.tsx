@@ -16,6 +16,9 @@ import {
 } from '../utils/settings-helpers';
 import { pendingNavigation, highlightField } from '../components/settings-search';
 import { registerDirty, unregisterDirty } from '../utils/dirty-guard';
+import { TabNav } from '../components/tab-nav';
+import { Breadcrumb } from '../components/breadcrumb';
+import { RpcProxyContent } from './rpc-proxy';
 
 // ---------------------------------------------------------------------------
 // System-relevant setting categories (used for save filtering)
@@ -29,10 +32,21 @@ function isSystemSetting(key: string): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Tab configuration
+// ---------------------------------------------------------------------------
+
+const SETTINGS_TABS = [
+  { key: 'general', label: 'General' },
+  { key: 'api-keys', label: 'API Keys' },
+  { key: 'rpc-proxy', label: 'RPC Proxy' },
+];
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
 export default function SystemPage() {
+  const activeTab = useSignal('general');
   // --- Settings state ---
   const settings = useSignal<SettingsData>({});
   const dirty = useSignal<Record<string, string>>({});
@@ -87,6 +101,9 @@ export default function SystemPage() {
   useEffect(() => {
     const nav = pendingNavigation.value;
     if (nav) {
+      if (nav.tab) {
+        activeTab.value = nav.tab;
+      }
       setTimeout(() => {
         highlightField.value = nav.fieldName;
       }, 100);
@@ -822,6 +839,62 @@ export default function SystemPage() {
   }
 
   // ---------------------------------------------------------------------------
+  // Tab: General (all settings sections + danger zone)
+  // ---------------------------------------------------------------------------
+
+  function GeneralTab() {
+    return (
+      <>
+        {/* Save bar -- sticky when dirty */}
+        {systemDirtyCount > 0 && (
+          <div class="settings-save-bar">
+            <span>{systemDirtyCount} unsaved change{systemDirtyCount > 1 ? 's' : ''}</span>
+            <div class="settings-save-bar-actions">
+              <Button variant="ghost" size="sm" onClick={handleDiscard}>
+                Discard
+              </Button>
+              <Button variant="primary" size="sm" onClick={handleSave} loading={saving.value}>
+                Save
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Loading state */}
+        {loading.value ? (
+          <div class="empty-state">
+            <p>Loading settings...</p>
+          </div>
+        ) : (
+          <>
+            <NftIndexerSection />
+            <OracleSection />
+            <DisplaySettings />
+            <GlobalRateLimitSection />
+            <LogLevelSection />
+            <GasConditionSection />
+            <SmartAccountSection />
+            <Erc8128Section />
+          </>
+        )}
+
+        {/* Danger Zone */}
+        <div class="settings-section settings-section--danger">
+          <div class="settings-section-header">
+            <h3>Danger Zone</h3>
+            <p class="settings-description">Irreversible actions. Proceed with caution.</p>
+          </div>
+          <div class="settings-section-body">
+            <Button variant="danger" onClick={() => { shutdownModal.value = true; }}>
+              Shutdown Daemon
+            </Button>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
   // Main render
   // ---------------------------------------------------------------------------
 
@@ -834,68 +907,16 @@ export default function SystemPage() {
         </div>
       )}
 
-      {/* Save bar -- sticky when dirty */}
-      {systemDirtyCount > 0 && (
-        <div class="settings-save-bar">
-          <span>{systemDirtyCount} unsaved change{systemDirtyCount > 1 ? 's' : ''}</span>
-          <div class="settings-save-bar-actions">
-            <Button variant="ghost" size="sm" onClick={handleDiscard}>
-              Discard
-            </Button>
-            <Button variant="primary" size="sm" onClick={handleSave} loading={saving.value}>
-              Save
-            </Button>
-          </div>
-        </div>
-      )}
+      <Breadcrumb
+        pageName="Settings"
+        tabName={SETTINGS_TABS.find(t => t.key === activeTab.value)?.label ?? ''}
+        onPageClick={() => { activeTab.value = 'general'; }}
+      />
+      <TabNav tabs={SETTINGS_TABS} activeTab={activeTab.value} onTabChange={(k) => { activeTab.value = k; }} />
 
-      {/* Loading state */}
-      {loading.value ? (
-        <div class="empty-state">
-          <p>Loading settings...</p>
-        </div>
-      ) : (
-        <>
-          {/* 1. NFT Indexer */}
-          <NftIndexerSection />
-
-          {/* 2. Oracle */}
-          <OracleSection />
-
-          {/* 3. Display Currency */}
-          <DisplaySettings />
-
-          {/* 4. Global IP Rate Limit */}
-          <GlobalRateLimitSection />
-
-          {/* 5. Log Level */}
-          <LogLevelSection />
-
-          {/* 6. Signing SDK -- moved to Human Wallet Apps page (v29.7) */}
-
-          {/* 7. Gas Condition */}
-          <GasConditionSection />
-
-          {/* 8. Smart Account (ERC-4337) */}
-          <SmartAccountSection />
-
-          {/* 9. ERC-8128 Signed HTTP Requests */}
-          <Erc8128Section />
-        </>
-      )}
-
-      {/* 6. Danger Zone */}
-      <div class="settings-section settings-section--danger">
-        <div class="settings-section-header">
-          <h3>Danger Zone</h3>
-          <p class="settings-description">Irreversible actions. Proceed with caution.</p>
-        </div>
-        <div class="settings-section-body">
-          <Button variant="danger" onClick={() => { shutdownModal.value = true; }}>
-            Shutdown Daemon
-          </Button>
-        </div>
-      </div>
+      {activeTab.value === 'general' && <GeneralTab />}
+      {activeTab.value === 'api-keys' && <ApiKeysSection />}
+      {activeTab.value === 'rpc-proxy' && <RpcProxyContent />}
 
       {/* Shutdown Double-Confirmation Modal */}
       <Modal

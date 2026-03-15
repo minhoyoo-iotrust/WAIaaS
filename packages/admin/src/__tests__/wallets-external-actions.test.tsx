@@ -123,33 +123,41 @@ function setupMocks(actions: typeof MOCK_ACTIONS = MOCK_ACTIONS) {
   });
 }
 
-describe('Wallet Detail - External Actions Tab', () => {
-  it('renders External Actions tab in tab nav', async () => {
+describe('Wallet Detail - Activity Tab (External Actions)', () => {
+  it('renders Activity tab in tab nav', async () => {
     setupMocks();
     render(<WalletsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('External Actions')).toBeTruthy();
+      expect(screen.getByText('Activity')).toBeTruthy();
     });
   });
 
-  it('renders Credentials tab in tab nav', async () => {
+  it('renders Setup tab in tab nav', async () => {
     setupMocks();
     render(<WalletsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Credentials')).toBeTruthy();
+      expect(screen.getByText('Setup')).toBeTruthy();
     });
   });
 
-  it('shows external actions list when tab is selected', async () => {
+  it('shows external actions list via Activity tab filter', async () => {
     setupMocks();
     render(<WalletsPage />);
 
     await waitFor(() => {
+      expect(screen.getByText('Activity')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('Activity'));
+
+    await waitFor(() => {
+      // Activity tab shows filter buttons
       expect(screen.getByText('External Actions')).toBeTruthy();
     });
 
+    // Click External Actions filter
     fireEvent.click(screen.getByText('External Actions'));
 
     await waitFor(() => {
@@ -164,13 +172,18 @@ describe('Wallet Detail - External Actions Tab', () => {
     render(<WalletsPage />);
 
     await waitFor(() => {
+      expect(screen.getByText('Activity')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('Activity'));
+
+    await waitFor(() => {
       expect(screen.getByText('External Actions')).toBeTruthy();
     });
 
     fireEvent.click(screen.getByText('External Actions'));
 
     await waitFor(() => {
-      // 'signed' should have success variant, 'failed' should have danger variant
       const signedBadge = screen.getByText('signed');
       const failedBadge = screen.getByText('failed');
       expect(signedBadge.className).toContain('success');
@@ -181,6 +194,12 @@ describe('Wallet Detail - External Actions Tab', () => {
   it('shows empty state when no actions', async () => {
     setupMocks([]);
     render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Activity')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('Activity'));
 
     await waitFor(() => {
       expect(screen.getByText('External Actions')).toBeTruthy();
@@ -198,6 +217,12 @@ describe('Wallet Detail - External Actions Tab', () => {
     render(<WalletsPage />);
 
     await waitFor(() => {
+      expect(screen.getByText('Activity')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('Activity'));
+
+    await waitFor(() => {
       expect(screen.getByText('External Actions')).toBeTruthy();
     });
 
@@ -207,7 +232,6 @@ describe('Wallet Detail - External Actions Tab', () => {
       expect(screen.getByText('polymarket')).toBeTruthy();
     });
 
-    // Click on the row (via the venue badge text parent row)
     const venueCell = screen.getByText('polymarket');
     const row = venueCell.closest('tr');
     if (row) fireEvent.click(row);

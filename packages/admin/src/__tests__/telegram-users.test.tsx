@@ -47,7 +47,7 @@ vi.mock('../utils/error-messages', () => ({
 
 import { showToast } from '../components/toast';
 import { ApiError } from '../api/typed-client';
-import TelegramUsersPage from '../pages/telegram-users';
+import { TelegramUsersContent as TelegramUsersPage } from '../pages/telegram-users';
 
 // ---------------------------------------------------------------------------
 // Mock data

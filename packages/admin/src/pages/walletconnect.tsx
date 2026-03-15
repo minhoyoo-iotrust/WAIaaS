@@ -52,7 +52,7 @@ interface WcTableRow {
 // Page component
 // ---------------------------------------------------------------------------
 
-export default function WalletConnectPage() {
+export function WalletConnectPage() {
   const wallets = useSignal<WalletSummary[]>([]);
   const wcSessions = useSignal<Record<string, WcSession | null>>({});
   const loading = useSignal(true);

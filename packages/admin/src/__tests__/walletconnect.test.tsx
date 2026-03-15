@@ -56,7 +56,7 @@ vi.mock('../utils/error-messages', () => ({
 
 import { showToast } from '../components/toast';
 import { ApiError } from '../api/client';
-import WalletConnectPage from '../pages/walletconnect';
+import { WalletConnectPage } from '../pages/walletconnect';
 
 // ---------------------------------------------------------------------------
 // Types (mirrors walletconnect.tsx interfaces)

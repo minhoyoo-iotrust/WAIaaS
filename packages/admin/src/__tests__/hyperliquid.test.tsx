@@ -4,7 +4,8 @@
  * Covers:
  * - Loading state
  * - Wallet selector renders EVM wallets
- * - Tab navigation (overview, orders, spot, subaccounts, settings)
+ * - Tab navigation (overview, orders, spot, subaccounts)
+ * - Configure in Providers link
  * - Empty wallet state
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
@@ -79,10 +80,6 @@ vi.mock('../components/hyperliquid/SubAccountDetail', () => ({
   SubAccountDetail: ({ walletId, subAccountAddress }: { walletId: string | null; subAccountAddress: string }) => (
     <div data-testid="sub-detail">SubDetail:{walletId}:{subAccountAddress}</div>
   ),
-}));
-
-vi.mock('../components/hyperliquid/SettingsPanel', () => ({
-  SettingsPanel: () => <div data-testid="settings-panel">SettingsPanel</div>,
 }));
 
 import HyperliquidPage from '../pages/hyperliquid';
@@ -200,7 +197,7 @@ describe('HyperliquidPage', () => {
     expect(screen.getByTestId('sub-detail')).toBeTruthy();
   });
 
-  it('switches to settings tab', async () => {
+  it('shows configure link to Providers page', async () => {
     mockWallets([
       { id: 'w1', name: 'Main', chain: 'ethereum', network: 'ethereum-mainnet' },
     ]);
@@ -210,8 +207,9 @@ describe('HyperliquidPage', () => {
       expect(screen.queryByText('Loading...')).toBeNull();
     });
 
-    fireEvent.click(screen.getByText('Settings'));
-    expect(screen.getByTestId('settings-panel')).toBeTruthy();
+    expect(screen.getByText(/Configure in/)).toBeTruthy();
+    const link = screen.getByText(/Configure in/).closest('a');
+    expect(link?.getAttribute('href')).toBe('#/providers');
   });
 
   it('handles API error gracefully', async () => {

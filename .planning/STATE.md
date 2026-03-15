@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: null
-milestone_name: null
-status: idle
-stopped_at: Milestone v31.17 archived
-last_updated: "2026-03-15T06:30:00.000Z"
-last_activity: 2026-03-15 — Milestone v31.17 archived
+milestone: v31.18
+milestone_name: Admin UI IA 재구조화
+status: archived
+stopped_at: Milestone complete
+last_updated: "2026-03-15T05:00:00.000Z"
+last_activity: 2026-03-15 — Milestone v31.18 archived
 progress:
-  total_phases: 0
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_phases: 4
+  completed_phases: 4
+  total_plans: 7
+  completed_plans: 7
+  percent: 100
 ---
 
 # Project State
@@ -25,14 +25,13 @@ See: .planning/PROJECT.md (updated 2026-03-15)
 
 ## Current Position
 
-Milestone v31.17 archived. Ready for next milestone.
-Last activity: 2026-03-15 — Milestone v31.17 completed and archived
+Milestone v31.18 archived. Ready for next milestone.
 
 ## Accumulated Context
 
 ### Decisions
 
-(cleared — see .planning/milestones/v31.17-ROADMAP.md for archived decisions)
+(Cleared — decisions archived in milestones/v31.18-ROADMAP.md)
 
 ### Pending Todos
 
@@ -45,5 +44,5 @@ Last activity: 2026-03-15 — Milestone v31.17 completed and archived
 ## Session Continuity
 
 Last session: 2026-03-15
-Stopped at: Milestone v31.17 archived
+Stopped at: Milestone v31.18 archived
 Resume file: None

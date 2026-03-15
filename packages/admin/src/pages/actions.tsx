@@ -12,7 +12,7 @@ import type { SettingsData, ApiKeyEntry } from '../utils/settings-helpers';
 // Category display order (dynamic categories from API sorted by this)
 // ---------------------------------------------------------------------------
 
-const CATEGORY_ORDER = ['Swap', 'Bridge', 'Staking', 'Lending', 'Yield', 'Perp', 'Other'];
+const CATEGORY_ORDER = ['Swap', 'Bridge', 'Staking', 'Lending', 'Yield', 'Perp', 'Prediction', 'Other'];
 
 // ---------------------------------------------------------------------------
 // Advanced settings map: provider key -> list of short setting keys to display
@@ -26,6 +26,24 @@ const PROVIDER_ADVANCED_SETTINGS: Record<string, readonly string[]> = {
   drift: ['drift_max_leverage', 'drift_max_position_usd', 'drift_margin_warning_threshold_pct', 'drift_position_sync_interval_sec'],
   pendle_yield: ['pendle_yield_default_slippage_bps', 'pendle_yield_max_slippage_bps'],
   dcent_swap: ['dcent_swap_api_url', 'dcent_swap_default_slippage_bps', 'dcent_swap_max_slippage_bps'],
+  hyperliquid: [
+    'hyperliquid_network',
+    'hyperliquid_api_url',
+    'hyperliquid_rate_limit_weight_per_min',
+    'hyperliquid_default_leverage',
+    'hyperliquid_default_margin_mode',
+    'hyperliquid_builder_address',
+    'hyperliquid_builder_fee',
+    'hyperliquid_order_status_poll_interval_ms',
+  ],
+  polymarket: [
+    'polymarket_default_fee_bps',
+    'polymarket_order_expiry_seconds',
+    'polymarket_max_position_usdc',
+    'polymarket_proxy_wallet',
+    'polymarket_neg_risk_enabled',
+    'polymarket_auto_approve_ctf',
+  ],
 };
 
 // ---------------------------------------------------------------------------

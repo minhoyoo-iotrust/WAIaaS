@@ -193,7 +193,15 @@ async function renderAndWaitForDetail() {
 }
 
 async function switchToOwnerTab() {
-  fireEvent.click(screen.getByText('Owner'));
+  // Owner is now inside Owner Protection card in Overview tab
+  // Click "Register Owner" (NONE state) or "Manage" (GRACE/LOCKED state) to reveal OwnerTab
+  const registerBtn = screen.queryByText('Register Owner');
+  const manageBtn = screen.queryByText('Manage');
+  if (registerBtn) {
+    fireEvent.click(registerBtn);
+  } else if (manageBtn) {
+    fireEvent.click(manageBtn);
+  }
   await waitFor(() => {
     expect(screen.getByText('Owner Wallet')).toBeTruthy();
   });
@@ -341,8 +349,8 @@ describe('Admin UI wallet preset dropdown', () => {
     // Switch to Owner tab where the state badge + walletType badge are shown
     await switchToOwnerTab();
 
-    // GRACE badge should be present
-    expect(screen.getByText('GRACE')).toBeTruthy();
+    // GRACE badge should be present (appears in both Owner Protection card and OwnerTab)
+    expect(screen.getAllByText('GRACE').length).toBeGreaterThanOrEqual(1);
 
     // D'CENT Wallet should be displayed (badge + Wallet Type section)
     const dcentElements = screen.getAllByText("D'CENT Wallet");
@@ -506,7 +514,8 @@ describe('Admin UI Owner tab — Phase 292', () => {
 
     // WalletConnect section header should NOT be present
     await waitFor(() => {
-      expect(screen.getByText('Approval Method')).toBeTruthy();
+      // Approval Method appears in both Owner Protection card and OwnerTab
+      expect(screen.getAllByText('Approval Method').length).toBeGreaterThanOrEqual(1);
     });
 
     // The h4 "WalletConnect" section should be absent

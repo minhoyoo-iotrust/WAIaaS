@@ -49,7 +49,7 @@ Dashboard / Wallets / Transactions / Sessions / Tokens / DeFi / Hyperliquid
 Dashboard
 
 ── WALLETS ──────────────────────────────────────────────
-  Wallets                  탭: List / Tokens / RPC / WalletConnect
+  Wallets                  탭: Wallets / Tokens / RPC Endpoints / WalletConnect
     └ Detail               탭: Overview / Activity / Assets / Setup
   Transactions             탭: History / Incoming Monitor
   Sessions                 탭: Active / Settings
@@ -135,7 +135,7 @@ Overview 탭의 Wallet Info 바로 아래에 Owner Protection 카드를 배치�
 | AS-IS | TO-BE | 변경 내용 |
 |-------|-------|-----------|
 | Dashboard | Dashboard | 변경 없음 |
-| Wallets (탭: List/RPC/WalletConnect) | Wallets (탭: List/**Tokens**/RPC/WalletConnect) | **Tokens 페이지 탭으로 병합** |
+| Wallets (탭: Wallets/RPC Endpoints/WalletConnect) | Wallets (탭: Wallets/**Tokens**/RPC Endpoints/WalletConnect) | **Tokens 페이지 탭으로 병합** |
 | Transactions (탭: All Transactions/Monitor) | Transactions (탭: History/Incoming Monitor) | 탭 라벨 정리 |
 | Sessions | Sessions | Wallets 섹션으로 이동 |
 | Tokens | ~~삭제~~ → Wallets 탭으로 병합 | 독립 페이지 제거 |
@@ -207,7 +207,7 @@ Overview 탭의 Wallet Info 바로 아래에 Owner Protection 카드를 배치�
 ### Phase 2: 페이지 병합 + 레거시 파일 정리
 
 1. **Tokens → Wallets 탭 병합**
-   - Wallets 페이지에 "Tokens" 탭 추가 (List / **Tokens** / RPC / WalletConnect)
+   - Wallets 페이지에 "Tokens" 탭 추가 (Wallets / **Tokens** / RPC Endpoints / WalletConnect)
    - `tokens.tsx` 콘텐츠를 Wallets 탭 컴포넌트로 이동
    - `#/tokens` → `#/wallets` 리다이렉트 (Tokens 탭 활성)
    - `pages/tokens.tsx` 삭제

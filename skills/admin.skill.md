@@ -35,6 +35,23 @@ The master password is set in `config.toml` under `[security]` or via environmen
 
 ---
 
+## Admin UI Navigation Structure
+
+The Admin UI sidebar is organized into 5 section groups:
+
+- **Dashboard** (top-level, outside sections)
+- **Wallets**: Wallets (4 tabs: Wallets/Tokens/RPC Endpoints/WalletConnect), Transactions, Sessions
+- **Trading**: Providers, Hyperliquid, Polymarket
+- **Security**: Policies, Protection, Agent Identity, Credentials
+- **Channels**: Notifications, Wallet Apps
+- **System**: Settings (3 tabs: General/API Keys/RPC Proxy), Audit Logs
+
+**Menu renames (v31.18):** DeFi -> Providers, Security -> Protection, System -> Settings, Human Wallet Apps -> Wallet Apps, Token Registry -> Wallets > Tokens tab, RPC Proxy -> Settings > RPC Proxy tab.
+
+**Legacy routes redirect automatically:** `#/defi` -> `#/providers`, `#/security` -> `#/protection`, `#/system` -> `#/settings`, `#/tokens` -> `#/wallets` (Tokens tab), `#/rpc-proxy` -> `#/settings` (RPC Proxy tab), `#/walletconnect` -> `#/wallets` (WalletConnect tab).
+
+---
+
 ## Session Creation (Multi-Wallet)
 
 ### POST /v1/sessions -- Create Session (masterAuth)
@@ -921,7 +938,7 @@ Manage Human Wallet Apps -- the wallet applications used by the human operator f
 
 When a wallet preset (e.g., D'CENT) is applied to a wallet via `PUT /v1/wallets/{id}/owner`, the corresponding app is automatically registered in the wallet_apps registry.
 
-**Admin UI:** Human Wallet Apps has a top-level menu item in the sidebar (between Security and System).
+**Admin UI:** Wallet Apps has a menu item in the Channels section of the sidebar.
 
 ### GET /v1/admin/wallet-apps -- List Wallet Apps
 
@@ -1445,7 +1462,7 @@ Operators can override the default security tier for individual actions via Admi
 **Pipeline behavior:** `effectiveTier = max(policyTier, actionTier)` -- the action tier is a floor that can only escalate the security level, never downgrade it. For example, if a SPENDING_LIMIT policy assigns NOTIFY but the action tier override is DELAY, the effective tier is DELAY. If the policy assigns APPROVAL, it remains APPROVAL regardless of action tier.
 
 **Configuration:**
-- Admin UI > DeFi (route: `#/defi`) -- tier dropdown in Registered Actions table for DeFi providers
+- Admin UI > Providers (route: `#/providers`) -- tier dropdown in Registered Actions table for DeFi providers
 - Admin UI > Agent Identity (route: `#/agent-identity`) -- tier dropdown for ERC-8004 actions
 - Settings API: `PUT /v1/admin/settings` with the tier key pattern above
 - Visual indicators: "customized" badge on overridden tiers, "Reset to default" button to restore provider defaults
@@ -1499,7 +1516,7 @@ curl -X PUT http://localhost:3100/v1/admin/settings \
   -d '{"settings":{"actions.hyperliquid_network":"testnet"}}'
 ```
 
-Admin UI: DeFi > Hyperliquid > Settings tab provides a form editor for all runtime keys.
+Admin UI: Trading > Hyperliquid > Settings tab provides a form editor for all runtime keys.
 
 ## 18. Credential Management
 

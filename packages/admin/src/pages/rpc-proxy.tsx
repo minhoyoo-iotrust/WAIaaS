@@ -31,7 +31,7 @@ const CAT = 'rpc_proxy';
 // Component
 // ---------------------------------------------------------------------------
 
-export default function RpcProxyPage() {
+export function RpcProxyContent() {
   const settings = useSignal<SettingsData>({});
   const dirty = useSignal<Record<string, string>>({});
   const loading = useSignal(true);
