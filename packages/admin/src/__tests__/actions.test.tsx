@@ -199,15 +199,22 @@ describe('ActionsPage', () => {
       mockApiCalls(mockSettingsDisabled, mockEmptyApiKeys, mockAllProvidersDisabled);
       render(<ActionsPage />);
 
+      // #355: TabNav auto-selects first category (Swap) — Lido Staking is in Staking tab
       await waitFor(() => {
         expect(screen.getByText('Jupiter Swap')).toBeTruthy();
       });
       expect(screen.getByText('Zerox Swap')).toBeTruthy();
-      expect(screen.getByText('Lido Staking')).toBeTruthy();
 
-      // All 3 mock providers should show Inactive
+      // Swap tab providers should show Inactive
       const inactiveBadges = screen.getAllByText('Inactive');
-      expect(inactiveBadges.length).toBe(3);
+      expect(inactiveBadges.length).toBe(2);
+
+      // Switch to Staking tab to verify Lido Staking
+      const stakingTab = screen.getByText('Staking');
+      stakingTab.click();
+      await waitFor(() => {
+        expect(screen.getByText('Lido Staking')).toBeTruthy();
+      });
     });
 
     it('shows empty state when no providers returned from API', async () => {
