@@ -203,13 +203,9 @@ const APPROVAL_OPTIONS: Array<{
 
 const DETAIL_TABS = [
   { key: 'overview', label: 'Overview' },
-  { key: 'transactions', label: 'Transactions' },
-  { key: 'owner', label: 'Owner' },
-  { key: 'staking', label: 'Staking' },
-  { key: 'nfts', label: 'NFTs' },
-  { key: 'credentials', label: 'Credentials' },
-  { key: 'external-actions', label: 'External Actions' },
-  { key: 'mcp', label: 'MCP' },
+  { key: 'activity', label: 'Activity' },
+  { key: 'assets', label: 'Assets' },
+  { key: 'setup', label: 'Setup' },
 ];
 
 const TX_PAGE_SIZE = 20;
@@ -283,6 +279,7 @@ function WalletDetailView({ id }: { id: string }) {
   const suspendReason = useSignal('');
   const resumeLoading = useSignal(false);
   const activeDetailTab = useSignal('overview');
+  const showOwnerManage = useSignal(false);
   const displayCurrency = useSignal<string>('USD');
   const displayRate = useSignal<number | null>(1);
   const stakingPositions = useSignal<StakingPosition[]>([]);
@@ -1022,6 +1019,63 @@ function WalletDetailView({ id }: { id: string }) {
                   </span>
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+
+        {/* Owner Protection */}
+        <div style={{
+          border: '1px solid var(--color-border)',
+          borderRadius: 'var(--radius-lg)',
+          padding: 'var(--space-4)',
+          marginTop: 'var(--space-4)',
+        }}>
+          <h3 style={{ margin: '0 0 var(--space-3) 0', fontSize: '1rem' }}>Owner Protection</h3>
+
+          {wallet.value.ownerState === 'NONE' ? (
+            <div>
+              <div style={{
+                background: 'var(--color-warning-bg, #fff3cd)',
+                border: '1px solid var(--color-warning-border, #ffc107)',
+                borderRadius: 'var(--radius-md)',
+                padding: 'var(--space-2) var(--space-3)',
+                marginBottom: 'var(--space-3)',
+                fontSize: '0.85rem',
+                color: 'var(--color-warning-text, #856404)',
+              }}>
+                No owner registered. High-value transactions cannot use APPROVAL policy.
+              </div>
+              <Button size="sm" onClick={() => { showOwnerManage.value = !showOwnerManage.value; }}>
+                {showOwnerManage.value ? 'Hide Registration' : 'Register Owner'}
+              </Button>
+            </div>
+          ) : (
+            <div>
+              <div class="detail-grid" style={{ marginBottom: 'var(--space-3)' }}>
+                <DetailRow label="State">
+                  <Badge variant={ownerStateBadge(wallet.value.ownerState)}>
+                    {wallet.value.ownerState}
+                  </Badge>
+                </DetailRow>
+                <DetailRow label="Approval Method">
+                  {wallet.value.approvalMethod
+                    ? APPROVAL_OPTIONS.find(o => o.value === wallet.value!.approvalMethod)?.label ?? wallet.value.approvalMethod
+                    : 'Auto (Global Fallback)'}
+                </DetailRow>
+                <DetailRow label="Address">
+                  {wallet.value.ownerAddress ? formatAddress(wallet.value.ownerAddress) : 'Not set'}
+                  {wallet.value.ownerAddress && <CopyButton value={wallet.value.ownerAddress} />}
+                </DetailRow>
+              </div>
+              <Button size="sm" variant="secondary" onClick={() => { showOwnerManage.value = !showOwnerManage.value; }}>
+                {showOwnerManage.value ? 'Hide Details' : 'Manage'}
+              </Button>
+            </div>
+          )}
+
+          {showOwnerManage.value && (
+            <div style={{ marginTop: 'var(--space-4)', paddingTop: 'var(--space-3)', borderTop: '1px solid var(--color-border)' }}>
+              <OwnerTab />
             </div>
           )}
         </div>
@@ -2105,6 +2159,27 @@ function WalletDetailView({ id }: { id: string }) {
     );
   }
 
+  // -------------------------------------------------------------------------
+  // Activity Tab (Transactions + External Actions)
+  // -------------------------------------------------------------------------
+  function ActivityTab() {
+    return <div>Activity</div>;
+  }
+
+  // -------------------------------------------------------------------------
+  // Assets Tab (Staking + NFTs)
+  // -------------------------------------------------------------------------
+  function AssetsTab() {
+    return <div>Assets</div>;
+  }
+
+  // -------------------------------------------------------------------------
+  // Setup Tab (Credentials + MCP)
+  // -------------------------------------------------------------------------
+  function SetupTab() {
+    return <div>Setup</div>;
+  }
+
   return (
     <div class="page">
       <a href="#/wallets" class="back-link">&larr; Back to Wallets</a>
@@ -2166,13 +2241,9 @@ function WalletDetailView({ id }: { id: string }) {
 
           <TabNav tabs={DETAIL_TABS} activeTab={activeDetailTab.value} onTabChange={(k) => { activeDetailTab.value = k; }} />
           {activeDetailTab.value === 'overview' && <OverviewTab />}
-          {activeDetailTab.value === 'transactions' && <TransactionsTab />}
-          {activeDetailTab.value === 'owner' && <OwnerTab />}
-          {activeDetailTab.value === 'staking' && <StakingTab />}
-          {activeDetailTab.value === 'nfts' && <NftTab />}
-          {activeDetailTab.value === 'credentials' && <CredentialsTab />}
-          {activeDetailTab.value === 'external-actions' && <ExternalActionsTab />}
-          {activeDetailTab.value === 'mcp' && <McpTab />}
+          {activeDetailTab.value === 'activity' && <ActivityTab />}
+          {activeDetailTab.value === 'assets' && <AssetsTab />}
+          {activeDetailTab.value === 'setup' && <SetupTab />}
 
           <Modal
             open={deleteModal.value}

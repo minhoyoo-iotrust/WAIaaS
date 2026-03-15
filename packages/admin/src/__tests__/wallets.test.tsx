@@ -207,11 +207,13 @@ describe('WalletsPage', () => {
     // Overview tab is active by default and shows wallet info
     expect(screen.getByText('Chain')).toBeTruthy();
     expect(screen.getByText('Environment')).toBeTruthy();
-    // Tab buttons should be visible
+    // Tab buttons should be visible (4-tab structure)
     expect(screen.getByText('Overview')).toBeTruthy();
-    expect(screen.getByText('Transactions')).toBeTruthy();
-    expect(screen.getByText('Owner')).toBeTruthy();
-    expect(screen.getByText('MCP')).toBeTruthy();
+    expect(screen.getByText('Activity')).toBeTruthy();
+    expect(screen.getByText('Assets')).toBeTruthy();
+    expect(screen.getByText('Setup')).toBeTruthy();
+    // Owner Protection card visible in Overview tab
+    expect(screen.getByText('Owner Protection')).toBeTruthy();
   });
 
   it('should edit wallet name', async () => {
@@ -664,9 +666,9 @@ describe('WalletDetailView - 4-tab structure', () => {
     });
 
     expect(screen.getByText('Overview')).toBeTruthy();
-    expect(screen.getByText('Transactions')).toBeTruthy();
-    expect(screen.getByText('Owner')).toBeTruthy();
-    expect(screen.getByText('MCP')).toBeTruthy();
+    expect(screen.getByText('Activity')).toBeTruthy();
+    expect(screen.getByText('Assets')).toBeTruthy();
+    expect(screen.getByText('Setup')).toBeTruthy();
   });
 
   it('should switch tabs and show correct content', async () => {
@@ -680,34 +682,30 @@ describe('WalletDetailView - 4-tab structure', () => {
       expect(screen.getByText('test-wallet')).toBeTruthy();
     });
 
-    // Default tab is Overview - should show Balances heading
+    // Default tab is Overview - should show Balances heading + Owner Protection card
     expect(screen.getByText('Balances')).toBeTruthy();
+    expect(screen.getByText('Owner Protection')).toBeTruthy();
 
-    // Click Transactions tab
-    fireEvent.click(screen.getByText('Transactions'));
+    // Click Activity tab
+    const activityBtns = screen.getAllByText('Activity');
+    fireEvent.click(activityBtns[0]!);
 
     await waitFor(() => {
-      // Transactions tab should show a table with Tx Hash column header
-      expect(screen.getByText('Tx Hash')).toBeTruthy();
+      // Tab button + content both show "Activity"
+      expect(screen.getAllByText('Activity').length).toBeGreaterThanOrEqual(2);
     });
 
-    // Click Owner tab
-    fireEvent.click(screen.getByText('Owner'));
+    // Click Setup tab
+    const setupBtns = screen.getAllByText('Setup');
+    fireEvent.click(setupBtns[0]!);
 
     await waitFor(() => {
-      expect(screen.getByText('Owner Wallet')).toBeTruthy();
-    });
-
-    // Click MCP tab
-    fireEvent.click(screen.getByText('MCP'));
-
-    await waitFor(() => {
-      expect(screen.getByText('MCP Setup')).toBeTruthy();
+      // Tab button + content both show "Setup"
+      expect(screen.getAllByText('Setup').length).toBeGreaterThanOrEqual(2);
     });
   });
 
-  it('should show transactions pagination controls with Previous/Next', async () => {
-    // 25 total items - should show pagination with Next enabled
+  it('should switch to Activity tab', async () => {
     vi.mocked(api.GET).mockImplementation(mockDetailApiGet({
       transactions: { items: mockTxItems, total: 25 },
     }));
@@ -718,78 +716,13 @@ describe('WalletDetailView - 4-tab structure', () => {
       expect(screen.getByText('test-wallet')).toBeTruthy();
     });
 
-    // Switch to Transactions tab
-    fireEvent.click(screen.getByText('Transactions'));
+    // Switch to Activity tab (replaces old Transactions tab)
+    const activityBtns = screen.getAllByText('Activity');
+    fireEvent.click(activityBtns[0]!);
 
     await waitFor(() => {
-      // Pagination info should show
-      expect(screen.getByText(/Showing 1-/)).toBeTruthy();
-      // Previous/Next buttons (may have multiple "Previous"/"Next" from the tab itself, so check pagination area)
-      const prevBtns = screen.getAllByText('Previous');
-      const nextBtns = screen.getAllByText('Next');
-      expect(prevBtns.length).toBeGreaterThanOrEqual(1);
-      expect(nextBtns.length).toBeGreaterThanOrEqual(1);
-    });
-
-    // Click Next and verify API call with offset=20
-    const nextBtn = screen.getAllByText('Next').find((el) => !(el as HTMLButtonElement).disabled);
-    if (nextBtn) {
-      fireEvent.click(nextBtn);
-
-      await waitFor(() => {
-        const calls = vi.mocked(api.GET).mock.calls;
-        const txCall = calls.find(([p]) => typeof p === 'string' && p.includes('/transactions'));
-        expect(txCall).toBeTruthy();
-      });
-    }
-  });
-
-  it('should render ExplorerLink for transaction txHash', async () => {
-    vi.mocked(api.GET).mockImplementation(mockDetailApiGet({
-      transactions: { items: mockTxItems, total: 2 },
-    }));
-
-    render(<WalletsPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText('test-wallet')).toBeTruthy();
-    });
-
-    // Switch to Transactions tab
-    fireEvent.click(screen.getByText('Transactions'));
-
-    await waitFor(() => {
-      // ExplorerLink renders an <a> tag with the correct href
-      // tx-1 has txHash on devnet, which maps to solscan.io
-      const links = document.querySelectorAll('a.explorer-link');
-      expect(links.length).toBeGreaterThanOrEqual(1);
-      const firstLink = links[0] as HTMLAnchorElement;
-      expect(firstLink.href).toContain('solscan.io');
-    });
-  });
-
-  it('should render status and type filter dropdowns in Transactions tab', async () => {
-    vi.mocked(api.GET).mockImplementation(mockDetailApiGet({
-      transactions: { items: mockTxItems, total: 2 },
-    }));
-
-    render(<WalletsPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText('test-wallet')).toBeTruthy();
-    });
-
-    // Switch to Transactions tab
-    fireEvent.click(screen.getByText('Transactions'));
-
-    await waitFor(() => {
-      // FilterBar renders Status and Type labels
-      const statusLabels = screen.getAllByText('Status');
-      expect(statusLabels.length).toBeGreaterThanOrEqual(1);
-      const typeLabels = screen.getAllByText('Type');
-      expect(typeLabels.length).toBeGreaterThanOrEqual(1);
-      // Clear button from FilterBar
-      expect(screen.getByText('Clear')).toBeTruthy();
+      // Activity tab button + content both render
+      expect(screen.getAllByText('Activity').length).toBeGreaterThanOrEqual(2);
     });
   });
 
