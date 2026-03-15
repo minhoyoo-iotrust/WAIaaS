@@ -6,8 +6,19 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
   ContractNameRegistry,
+  type ContractNameSource,
 } from '../services/contract-name-registry.js';
 import type { ActionProviderMetadata } from '../interfaces/action-provider.types.js';
+
+const baseProviderMeta = {
+  description: 'test',
+  version: '1.0.0',
+  chains: ['ethereum'] as const,
+  mcpExpose: true,
+  requiresApiKey: false,
+  requiredApis: [] as string[],
+  requiresSigningKey: false,
+} satisfies Omit<ActionProviderMetadata, 'name'>;
 
 describe('ContractNameRegistry', () => {
   let registry: ContractNameRegistry;
@@ -72,11 +83,9 @@ describe('ContractNameRegistry', () => {
         testNetwork,
       );
       const metadata: ActionProviderMetadata = {
+        ...baseProviderMeta,
         name: 'test_prov',
         displayName: 'Test Provider',
-        description: 'A test provider for unit testing purposes',
-        version: '1.0.0',
-        chains: ['ethereum'],
       };
       registry.registerProvider(metadata, [
         { address: testAddress, network: testNetwork },
@@ -226,11 +235,9 @@ describe('ContractNameRegistry', () => {
   describe('registerProvider()', () => {
     it('uses displayName from metadata', () => {
       const metadata: ActionProviderMetadata = {
+        ...baseProviderMeta,
         name: 'my_proto',
         displayName: 'My Protocol',
-        description: 'Testing displayName resolution path',
-        version: '1.0.0',
-        chains: ['ethereum'],
       };
       const addr = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
       registry.registerProvider(metadata, [
@@ -244,10 +251,8 @@ describe('ContractNameRegistry', () => {
 
     it('falls back to snakeCaseToDisplayName when displayName not set', () => {
       const metadata: ActionProviderMetadata = {
+        ...baseProviderMeta,
         name: 'some_cool_protocol',
-        description: 'Testing snake_case to display name fallback',
-        version: '1.0.0',
-        chains: ['ethereum'],
       };
       const addr = '0xffffffffffffffffffffffffffffffffffffffff';
       registry.registerProvider(metadata, [
@@ -261,11 +266,9 @@ describe('ContractNameRegistry', () => {
 
     it('registers multiple addresses for one provider', () => {
       const metadata: ActionProviderMetadata = {
+        ...baseProviderMeta,
         name: 'multi_addr',
         displayName: 'Multi',
-        description: 'Testing multi-address provider registration',
-        version: '1.0.0',
-        chains: ['ethereum'],
       };
       registry.registerProvider(metadata, [
         { address: '0x1111111111111111111111111111111111111111', network: 'ethereum' },
