@@ -76,10 +76,10 @@ jobs:
           sleep 3
 
       - name: Build
-        run: pnpm turbo run build --daemon=false
+        run: pnpm turbo run build --no-daemon
 
       - name: Chain Tests
-        run: pnpm turbo run test:chain --daemon=false
+        run: pnpm turbo run test:chain --no-daemon
 
   # Platform tests + Docker build + health check
   platform:
