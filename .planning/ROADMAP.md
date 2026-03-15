@@ -113,10 +113,10 @@ Plans:
   1. TX_REQUESTED, TX_APPROVAL_REQUIRED, TX_SUBMITTED, and TX_CONFIRMED notifications for CONTRACT_CALL display "Protocol Name (0xabcd...1234)" format
   2. TRANSFER and TOKEN_TRANSFER notifications continue to show the raw `{to}` address without modification
   3. Notifications for unregistered contracts show the abbreviated address fallback (same as before this milestone)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 422-01: TBD
+- [ ] 422-01-PLAN.md — Pipeline ContractNameRegistry wiring + notification {to} resolution + i18n template updates
 
 ### Phase 423: API + Admin UI Contract Names
 **Goal**: Admin UI transaction views display resolved contract names sourced from the API response enrichment
@@ -166,6 +166,6 @@ Phases execute in numeric order: 421 → 422 → 423
 | 418. 페이지 병합 + 레거시 정리 | v31.18 | 2/2 | Complete | 2026-03-15 |
 | 419. Trading Settings 탭 제거 | v31.18 | 1/1 | Complete | 2026-03-15 |
 | 420. 지갑 상세 탭 재구성 | v31.18 | 2/2 | Complete | 2026-03-15 |
-| 421. Registry Core + Well-Known Data | 2/2 | Complete    | 2026-03-15 | - |
+| 421. Registry Core + Well-Known Data | v32.0 | 2/2 | Complete | 2026-03-15 |
 | 422. Notification Pipeline Integration | v32.0 | 0/1 | Not started | - |
 | 423. API + Admin UI Contract Names | v32.0 | 0/1 | Not started | - |
