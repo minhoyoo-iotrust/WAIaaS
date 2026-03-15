@@ -82,6 +82,7 @@ export const messages: Messages = {
     ADAPTER_NOT_AVAILABLE: '체인 어댑터를 사용할 수 없습니다',
     SKILL_NOT_FOUND: '스킬을 찾을 수 없습니다',
     SCHEMA_INCOMPATIBLE: 'DB 스키마 버전이 현재 코드 버전과 호환되지 않습니다',
+    RATE_LIMITED: '요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.',
     // WALLET domain (6)
     WALLET_NOT_FOUND: '지갑을 찾을 수 없습니다',
     WALLET_SUSPENDED: '지갑이 정지 상태입니다',

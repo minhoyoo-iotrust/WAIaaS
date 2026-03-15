@@ -11,3 +11,4 @@ export { createSessionAuth, type SessionAuthDeps } from './session-auth.js';
 export { createMasterAuth, type MasterAuthDeps } from './master-auth.js';
 export { createOwnerAuth, type OwnerAuthDeps } from './owner-auth.js';
 export { cspMiddleware } from './csp.js';
+export { createIpRateLimiter, createSessionRateLimiter, createTxRateLimiter, SlidingWindowRateLimiter } from './rate-limiter.js';
