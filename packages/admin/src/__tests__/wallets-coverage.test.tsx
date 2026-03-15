@@ -220,9 +220,7 @@ async function renderAndWaitForDetail() {
 }
 
 async function switchTab(tabLabel: string) {
-  // Tab labels may appear in both tab button and content, use getAllByText and click the first (tab button)
-  const elements = screen.getAllByText(tabLabel);
-  fireEvent.click(elements[0]!);
+  fireEvent.click(screen.getByText(tabLabel));
   await waitFor(() => {});
 }
 
@@ -281,9 +279,10 @@ describe('WalletDetailView rendering', () => {
 
     await switchTab('Activity');
 
-    // Activity tab is accessible (content integration in Plan 02)
+    // Activity tab shows Transactions and External Actions filter buttons
     await waitFor(() => {
-      expect(screen.getAllByText('Activity').length).toBeGreaterThanOrEqual(2);
+      expect(screen.getByText('Transactions')).toBeTruthy();
+      expect(screen.getByText('External Actions')).toBeTruthy();
     });
   });
 
@@ -412,14 +411,59 @@ describe('WalletDetailView: Setup tab (MCP)', () => {
   beforeEach(() => { currentPath.value = '/wallets/test-wallet-1'; });
   afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
-  it('switches to Setup tab', async () => {
+  it('provisions MCP token on click', async () => {
     mockDetailApiCalls();
     await renderAndWaitForDetail();
 
     await switchTab('Setup');
 
+    vi.mocked(api.POST).mockResolvedValueOnce({ data: mockMcpResult });
+
+    fireEvent.click(screen.getByText('Setup MCP'));
+
     await waitFor(() => {
-      expect(screen.getAllByText('Setup').length).toBeGreaterThanOrEqual(2);
+      expect(vi.mocked(api.POST)).toHaveBeenCalledWith('/v1/mcp/tokens', expect.objectContaining({
+        body: { walletId: 'test-wallet-1' },
+      }));
+    });
+
+    await waitFor(() => {
+      expect(vi.mocked(showToast)).toHaveBeenCalledWith('success', 'MCP token provisioned successfully');
+    });
+
+    // MCP result should be displayed
+    await waitFor(() => {
+      expect(screen.getByText('Token Path')).toBeTruthy();
+      expect(screen.getByText('Claude Desktop Config')).toBeTruthy();
+    });
+  });
+
+  it('handles MCP setup error', async () => {
+    mockDetailApiCalls();
+    await renderAndWaitForDetail();
+
+    await switchTab('Setup');
+
+    vi.mocked(api.POST).mockRejectedValueOnce(new ApiError(500, 'MCP_ERROR', 'Failed'));
+
+    fireEvent.click(screen.getByText('Setup MCP'));
+
+    await waitFor(() => {
+      expect(vi.mocked(showToast)).toHaveBeenCalledWith('error', 'Error: MCP_ERROR');
+    });
+  });
+
+  it('shows Re-provision button after initial setup', async () => {
+    mockDetailApiCalls();
+    await renderAndWaitForDetail();
+
+    await switchTab('Setup');
+
+    vi.mocked(api.POST).mockResolvedValueOnce({ data: mockMcpResult });
+    fireEvent.click(screen.getByText('Setup MCP'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Re-provision')).toBeTruthy();
     });
   });
 });
@@ -793,9 +837,9 @@ describe('WalletDetailView: fetch errors', () => {
 
     await switchTab('Activity');
 
-    // Activity tab is now a stub; transactions content will be integrated in Plan 02
+    // Activity tab shows Transactions view by default, but fetch throws error
     await waitFor(() => {
-      expect(screen.getAllByText('Activity').length).toBeGreaterThanOrEqual(2);
+      expect(screen.getByText('No transactions yet')).toBeTruthy();
     });
   });
 });

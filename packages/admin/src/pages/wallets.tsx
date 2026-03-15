@@ -280,6 +280,7 @@ function WalletDetailView({ id }: { id: string }) {
   const resumeLoading = useSignal(false);
   const activeDetailTab = useSignal('overview');
   const showOwnerManage = useSignal(false);
+  const activityView = useSignal<'transactions' | 'external-actions'>('transactions');
   const displayCurrency = useSignal<string>('USD');
   const displayRate = useSignal<number | null>(1);
   const stakingPositions = useSignal<StakingPosition[]>([]);
@@ -2163,21 +2164,59 @@ function WalletDetailView({ id }: { id: string }) {
   // Activity Tab (Transactions + External Actions)
   // -------------------------------------------------------------------------
   function ActivityTab() {
-    return <div>Activity</div>;
+    return (
+      <div>
+        <div style={{ display: 'flex', gap: 'var(--space-2)', marginBottom: 'var(--space-3)' }}>
+          <Button
+            variant={activityView.value === 'transactions' ? 'primary' : 'secondary'}
+            size="sm"
+            onClick={() => { activityView.value = 'transactions'; }}
+          >
+            Transactions
+          </Button>
+          <Button
+            variant={activityView.value === 'external-actions' ? 'primary' : 'secondary'}
+            size="sm"
+            onClick={() => { activityView.value = 'external-actions'; }}
+          >
+            External Actions
+          </Button>
+        </div>
+
+        {activityView.value === 'transactions' && <TransactionsTab />}
+        {activityView.value === 'external-actions' && <ExternalActionsTab />}
+      </div>
+    );
   }
 
   // -------------------------------------------------------------------------
   // Assets Tab (Staking + NFTs)
   // -------------------------------------------------------------------------
   function AssetsTab() {
-    return <div>Assets</div>;
+    return (
+      <div>
+        <StakingTab />
+
+        <div style={{ marginTop: 'var(--space-6)', paddingTop: 'var(--space-4)', borderTop: '1px solid var(--color-border)' }}>
+          <NftTab />
+        </div>
+      </div>
+    );
   }
 
   // -------------------------------------------------------------------------
   // Setup Tab (Credentials + MCP)
   // -------------------------------------------------------------------------
   function SetupTab() {
-    return <div>Setup</div>;
+    return (
+      <div>
+        <CredentialsTab />
+
+        <div style={{ marginTop: 'var(--space-6)', paddingTop: 'var(--space-4)', borderTop: '1px solid var(--color-border)' }}>
+          <McpTab />
+        </div>
+      </div>
+    );
   }
 
   return (

@@ -134,18 +134,15 @@ describe('Wallets NFT Tab', () => {
       expect(screen.getByText('Assets')).toBeTruthy();
     });
 
-    // Click Assets tab (NFTs content will be integrated in Plan 02)
-    const assetsBtns = screen.getAllByText('Assets');
-    fireEvent.click(assetsBtns[0]!);
+    // Click Assets tab - now integrates Staking + NFT content
+    fireEvent.click(screen.getByText('Assets'));
 
     await waitFor(() => {
-      // Assets tab button + content both render
-      expect(screen.getAllByText('Assets').length).toBeGreaterThanOrEqual(2);
+      expect(screen.getByText('Select a network')).toBeTruthy();
     });
   });
 
-  // NFT content tests temporarily skipped - will be restored in Plan 02 when AssetsTab integrates NftContent
-  it.skip('shows empty state when no NFTs found', async () => {
+  it('shows empty state when no NFTs found', async () => {
     setupMocks({ items: [], pageKey: undefined, totalCount: 0 });
     const WalletsPage = (await import('../pages/wallets')).default;
     render(<WalletsPage />);
@@ -174,7 +171,7 @@ describe('Wallets NFT Tab', () => {
     });
   });
 
-  it.skip('shows indexer not configured message', async () => {
+  it('shows indexer not configured message', async () => {
     const err = new ApiError(400, 'INDEXER_NOT_CONFIGURED', 'NFT indexer not configured');
     setupMocks(undefined, err);
     const WalletsPage = (await import('../pages/wallets')).default;
@@ -202,7 +199,7 @@ describe('Wallets NFT Tab', () => {
     });
   });
 
-  it.skip('renders NFT grid with cards, no-image placeholder, and card click', async () => {
+  it('renders NFT grid with cards, no-image placeholder, and card click', async () => {
     setupMocks({
       items: [
         {

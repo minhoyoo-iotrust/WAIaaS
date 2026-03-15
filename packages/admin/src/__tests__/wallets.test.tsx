@@ -687,21 +687,20 @@ describe('WalletDetailView - 4-tab structure', () => {
     expect(screen.getByText('Owner Protection')).toBeTruthy();
 
     // Click Activity tab
-    const activityBtns = screen.getAllByText('Activity');
-    fireEvent.click(activityBtns[0]!);
+    fireEvent.click(screen.getByText('Activity'));
 
     await waitFor(() => {
-      // Tab button + content both show "Activity"
-      expect(screen.getAllByText('Activity').length).toBeGreaterThanOrEqual(2);
+      // Activity tab shows Transactions and External Actions filter buttons
+      expect(screen.getByText('Transactions')).toBeTruthy();
+      expect(screen.getByText('External Actions')).toBeTruthy();
     });
 
     // Click Setup tab
-    const setupBtns = screen.getAllByText('Setup');
-    fireEvent.click(setupBtns[0]!);
+    fireEvent.click(screen.getByText('Setup'));
 
     await waitFor(() => {
-      // Tab button + content both show "Setup"
-      expect(screen.getAllByText('Setup').length).toBeGreaterThanOrEqual(2);
+      // Setup tab shows MCP Setup section
+      expect(screen.getByText('MCP Setup')).toBeTruthy();
     });
   });
 
@@ -717,12 +716,11 @@ describe('WalletDetailView - 4-tab structure', () => {
     });
 
     // Switch to Activity tab (replaces old Transactions tab)
-    const activityBtns = screen.getAllByText('Activity');
-    fireEvent.click(activityBtns[0]!);
+    fireEvent.click(screen.getByText('Activity'));
 
     await waitFor(() => {
-      // Activity tab button + content both render
-      expect(screen.getAllByText('Activity').length).toBeGreaterThanOrEqual(2);
+      // Activity tab shows Transactions filter button (default view)
+      expect(screen.getByText('Transactions')).toBeTruthy();
     });
   });
 

@@ -124,7 +124,7 @@ function setupMocks(actions: typeof MOCK_ACTIONS = MOCK_ACTIONS) {
 }
 
 describe('Wallet Detail - Activity Tab (External Actions)', () => {
-  it('renders Activity tab in tab nav (replaces External Actions tab)', async () => {
+  it('renders Activity tab in tab nav', async () => {
     setupMocks();
     render(<WalletsPage />);
 
@@ -133,7 +133,7 @@ describe('Wallet Detail - Activity Tab (External Actions)', () => {
     });
   });
 
-  it('renders Setup tab in tab nav (replaces Credentials tab)', async () => {
+  it('renders Setup tab in tab nav', async () => {
     setupMocks();
     render(<WalletsPage />);
 
@@ -142,7 +142,7 @@ describe('Wallet Detail - Activity Tab (External Actions)', () => {
     });
   });
 
-  it('switches to Activity tab', async () => {
+  it('shows external actions list via Activity tab filter', async () => {
     setupMocks();
     render(<WalletsPage />);
 
@@ -150,12 +150,94 @@ describe('Wallet Detail - Activity Tab (External Actions)', () => {
       expect(screen.getByText('Activity')).toBeTruthy();
     });
 
-    const activityBtns = screen.getAllByText('Activity');
-    fireEvent.click(activityBtns[0]!);
+    fireEvent.click(screen.getByText('Activity'));
 
     await waitFor(() => {
-      // Activity tab button + content both render
-      expect(screen.getAllByText('Activity').length).toBeGreaterThanOrEqual(2);
+      // Activity tab shows filter buttons
+      expect(screen.getByText('External Actions')).toBeTruthy();
+    });
+
+    // Click External Actions filter
+    fireEvent.click(screen.getByText('External Actions'));
+
+    await waitFor(() => {
+      expect(screen.getByText('polymarket')).toBeTruthy();
+      expect(screen.getByText('place_order')).toBeTruthy();
+      expect(screen.getByText('signed')).toBeTruthy();
+    });
+  });
+
+  it('shows correct status badge colors', async () => {
+    setupMocks();
+    render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Activity')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('Activity'));
+
+    await waitFor(() => {
+      expect(screen.getByText('External Actions')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('External Actions'));
+
+    await waitFor(() => {
+      const signedBadge = screen.getByText('signed');
+      const failedBadge = screen.getByText('failed');
+      expect(signedBadge.className).toContain('success');
+      expect(failedBadge.className).toContain('danger');
+    });
+  });
+
+  it('shows empty state when no actions', async () => {
+    setupMocks([]);
+    render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Activity')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('Activity'));
+
+    await waitFor(() => {
+      expect(screen.getByText('External Actions')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('External Actions'));
+
+    await waitFor(() => {
+      expect(screen.getByText('No External Actions')).toBeTruthy();
+    });
+  });
+
+  it('opens action detail modal on row click', async () => {
+    setupMocks();
+    render(<WalletsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Activity')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('Activity'));
+
+    await waitFor(() => {
+      expect(screen.getByText('External Actions')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('External Actions'));
+
+    await waitFor(() => {
+      expect(screen.getByText('polymarket')).toBeTruthy();
+    });
+
+    const venueCell = screen.getByText('polymarket');
+    const row = venueCell.closest('tr');
+    if (row) fireEvent.click(row);
+
+    await waitFor(() => {
+      expect(screen.getByText('External Action Details')).toBeTruthy();
     });
   });
 });
