@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v32.2
 milestone_name: 보안 패치
-status: in_progress
-stopped_at: null
-last_updated: "2026-03-15T15:10:29.000Z"
-last_activity: 2026-03-15 — Phase 424 completed (SSRF Guard + hostGuard Fix)
+status: planning
+stopped_at: Completed 424-01-PLAN.md
+last_updated: "2026-03-15T15:12:53.523Z"
+last_activity: 2026-03-15 -- Phase 424 completed
 progress:
-  total_phases: 3
-  completed_phases: 1
-  total_plans: 3
-  completed_plans: 1
+  total_phases: 182
+  completed_phases: 176
+  total_plans: 389
+  completed_plans: 383
   percent: 33
 ---
 

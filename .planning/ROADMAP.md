@@ -108,6 +108,6 @@ Plans:
 | 421. Registry Core + Well-Known Data | v32.0 | 2/2 | Complete | 2026-03-15 |
 | 422. Notification Pipeline Integration | v32.0 | 1/1 | Complete | 2026-03-15 |
 | 423. API + Admin UI Contract Names | v32.0 | 1/1 | Complete | 2026-03-15 |
-| 424. SSRF Guard + hostGuard Fix | v32.2 | 1/1 | Complete | 2026-03-15 |
+| 424. SSRF Guard + hostGuard Fix | v32.2 | Complete    | 2026-03-15 | 2026-03-15 |
 | 425. Rate Limit Middleware | v32.2 | 0/1 | Not started | - |
 | 426. CORS + Resource Management | v32.2 | 0/1 | Not started | - |
