@@ -2,6 +2,43 @@
 
 *A living document updated after each milestone. Lessons feed forward into future planning.*
 
+## Milestone: v32.0 — Contract Name Resolution
+
+**Shipped:** 2026-03-15
+**Phases:** 3 | **Plans:** 4 | **Sessions:** 1
+
+### What Was Built
+- ContractNameRegistry: 4-tier priority resolution (Action Provider > Well-known > Whitelist > Fallback)
+- 305+ well-known contract entries across 6 networks (5 EVM + Solana)
+- 17 Action Provider displayName metadata + snakeCaseToDisplayName auto-conversion
+- CONTRACT_CALL notification enrichment at 7 call sites ("Protocol Name (0xabcd...1234)")
+- TxDetailResponse contractName/contractNameSource API enrichment (5 endpoints)
+- Admin UI contract name display in transaction list + wallet Activity tab
+
+### What Worked
+- 3 phases, 1일 완료 — 깔끔한 3-phase 분리 (데이터/노티/UI)가 의존성 체인을 명확하게 만듦
+- Well-known 데이터를 정적 TypeScript const로 구현 — DB 마이그레이션 불필요, 빌드 타임 검증
+- resolveNotificationTo/resolveContractFields 헬퍼 패턴이 여러 호출지점에서 재사용 가능
+
+### What Was Inefficient
+- Summary 파일에 one_liner 필드가 없어 milestone 완료 시 수동 추출 필요
+
+### Patterns Established
+- 정적 well-known 데이터 패턴: TypeScript const + 테스트 무결성 검증
+- Notification enrichment 패턴: resolveNotificationTo helper로 타입별 분기 처리
+- API response enrichment: resolveContractFields helper로 transaction enrichment 일관 적용
+
+### Key Lessons
+- 4-tier 우선순위 설계가 향후 확장(ENS/Etherscan) 시 계층만 추가하면 되는 확장점이 됨
+- fallback source에서 null 반환하여 이미 toAddress가 raw address를 제공하는 중복을 방지
+
+### Cost Observations
+- Model mix: 100% opus
+- Sessions: 1
+- Notable: 전체 마일스톤이 단일 autopilot 세션으로 완료 (planning + execution + audit + completion)
+
+---
+
 ## Milestone: v31.18 — Admin UI IA 재구조화
 
 **Shipped:** 2026-03-15

@@ -10,6 +10,7 @@ import { createRoute, z } from '@hono/zod-openapi';
 import { sql, desc, eq, and, isNull, gt, count as drizzleCount } from 'drizzle-orm';
 import { createHash } from 'node:crypto';
 import { WAIaaSError, getNetworksForEnvironment } from '@waiaas/core';
+import type { ContractNameRegistry } from '@waiaas/core';
 import type { JwtPayload } from '../../infrastructure/jwt/jwt-secret-manager.js';
 import { wallets, sessions, sessionWallets, policies, transactions, incomingTransactions } from '../../infrastructure/database/schema.js';
 import { generateId } from '../../infrastructure/database/id.js';
@@ -26,6 +27,32 @@ import {
 } from './openapi-schemas.js';
 import type { AdminRouteDeps } from './admin.js';
 import { formatTxAmount } from './admin-wallets.js';
+
+// ---------------------------------------------------------------------------
+// Contract name resolution helper (v32.0 Phase 423)
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolve contract name fields for a transaction row.
+ * Returns non-null contractName/contractNameSource only for CONTRACT_CALL
+ * with a real (non-fallback) registry match.
+ */
+export function resolveContractFields(
+  type: string,
+  toAddress: string | null,
+  network: string | null,
+  registry?: ContractNameRegistry,
+): { contractName: string | null; contractNameSource: string | null } {
+  if (type !== 'CONTRACT_CALL' || !toAddress || !network || !registry) {
+    return { contractName: null, contractNameSource: null };
+  }
+  const result = registry.resolve(toAddress, network);
+  // fallback source means no real name was found -- return null to keep response clean
+  if (result.source === 'fallback') {
+    return { contractName: null, contractNameSource: null };
+  }
+  return { contractName: result.name, contractNameSource: result.source };
+}
 
 // ---------------------------------------------------------------------------
 // Route definitions (top-level)
@@ -72,6 +99,8 @@ const adminTransactionsRoute = createRoute({
                 txHash: z.string().nullable(),
                 chain: z.string(),
                 createdAt: z.number().nullable(),
+                contractName: z.string().nullable().optional(),
+                contractNameSource: z.string().nullable().optional(),
               }),
             ),
             total: z.number().int(),
@@ -227,6 +256,7 @@ export function registerAdminMonitoringRoutes(router: OpenAPIHono, deps: AdminRo
         createdAt: row.createdAt instanceof Date
           ? Math.floor(row.createdAt.getTime() / 1000)
           : (typeof row.createdAt === 'number' ? row.createdAt : null),
+        ...resolveContractFields(row.type, row.toAddress ?? null, row.network ?? null, deps.contractNameRegistry),
       };
     });
 

@@ -69,6 +69,8 @@ export interface AdminActionRouteDeps {
   approvalChannelRouter?: import('../../services/signing-sdk/approval-channel-router.js').ApprovalChannelRouter;
   eventBus?: import('@waiaas/core').EventBus;
   reputationCache?: import('../../services/erc8004/reputation-cache-service.js').ReputationCacheService;
+  // v32.0: contract name registry for notification enrichment
+  contractNameRegistry?: import('@waiaas/core').ContractNameRegistry;
 }
 
 // ---------------------------------------------------------------------------

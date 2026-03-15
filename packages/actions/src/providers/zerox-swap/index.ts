@@ -64,6 +64,7 @@ export class ZeroExSwapActionProvider implements IActionProvider {
 
     this.metadata = {
       name: 'zerox_swap',
+      displayName: '0x Swap',
       description: '0x DEX aggregator for EVM token swaps via AllowanceHolder flow',
       version: '1.0.0',
       chains: ['ethereum'],

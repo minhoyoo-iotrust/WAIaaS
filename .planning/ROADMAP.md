@@ -14,6 +14,7 @@
 - ✅ **v0.10** — 구현 전 설계 완결성 확보 (shipped 2026-02-09)
 - ✅ **v1.0** — 구현 계획 수립 (shipped 2026-02-09)
 - ✅ **v1.1 ~ v31.18** — (104 milestones shipped)
+- ✅ **v32.0** — Contract Name Resolution (shipped 2026-03-15)
 
 ## Phases
 
@@ -81,35 +82,19 @@
 
 </details>
 
+<details>
+<summary>✅ v32.0 Contract Name Resolution (Phases 421-423) — SHIPPED 2026-03-15</summary>
+
+- [x] Phase 421: Registry Core + Well-Known Data (2/2 plans) — completed 2026-03-15
+- [x] Phase 422: Notification Pipeline Integration (1/1 plan) — completed 2026-03-15
+- [x] Phase 423: API + Admin UI Contract Names (1/1 plan) — completed 2026-03-15
+
+</details>
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 393. Staking Positions (Lido + Jito) | v31.13 | 2/2 | Complete | 2026-03-12 |
-| 394. Lending Positions (Aave V3) | v31.13 | 1/1 | Complete | 2026-03-12 |
-| 395. Yield Positions (Pendle) | v31.13 | 1/1 | Complete | 2026-03-12 |
-| 396. Perp/Spot Positions (Hyperliquid) | v31.13 | 2/2 | Complete | 2026-03-12 |
-| 397. Admin Dashboard UX | v31.13 | 2/2 | Complete | 2026-03-12 |
-| 398. Type System + Infrastructure Foundation | v31.14 | 2/2 | Complete | 2026-03-13 |
-| 399. Core RPC Proxy Engine | v31.14 | 3/3 | Complete | 2026-03-13 |
-| 400. Route Assembly + Async Approval | v31.14 | 3/3 | Complete | 2026-03-13 |
-| 401. DX Integration + Testing | v31.14 | 3/3 | Complete | 2026-03-13 |
-| 402. Schema Hardening | v31.15 | 1/1 | Complete | 2026-03-14 |
-| 403. Provider Unit Migration | v31.15 | 2/2 | Complete | 2026-03-14 |
-| 404. Typed MCP Schemas + Response Enrichment | v31.15 | 2/2 | Complete | 2026-03-14 |
-| 405. humanAmount Parameter | v31.15 | 2/2 | Complete | 2026-03-14 |
-| 406. SDK + Skill File Sync + E2E | v31.15 | 2/2 | Complete | 2026-03-14 |
-| 407. CAIP-2 Network Input | v31.16 | 1/1 | Complete | 2026-03-14 |
-| 408. CAIP-19 Asset Input + Resolve | v31.16 | 2/2 | Complete | 2026-03-14 |
-| 409. Response CAIP Enrichment + OpenAPI | v31.16 | 2/2 | Complete | 2026-03-14 |
-| 410. SDK + MCP CAIP Extension | v31.16 | 2/2 | Complete | 2026-03-14 |
-| 411. Skill Files Sync | v31.16 | 1/1 | Complete | 2026-03-14 |
-| 412. Spec 추출 파이프라인 및 CI 게이트 | v31.17 | 2/2 | Complete | 2026-03-15 |
-| 413. 타입 안전 클라이언트 및 첫 페이지 마이그레이션 | v31.17 | 2/2 | Complete | 2026-03-15 |
-| 414. 인터페이스 점진적 마이그레이션 | v31.17 | 3/3 | Complete | 2026-03-14 |
-| 415. 백엔드 API 확장 및 상수 통합 | v31.17 | 3/3 | Complete | 2026-03-14 |
-| 416. Contract Test 및 검증 | v31.17 | 1/1 | Complete | 2026-03-15 |
-| 417. 사이드바 섹션 + 리네이밍 + 라우트 정리 | v31.18 | 2/2 | Complete | 2026-03-15 |
-| 418. 페이지 병합 + 레거시 정리 | v31.18 | 2/2 | Complete | 2026-03-15 |
-| 419. Trading Settings 탭 제거 | v31.18 | 1/1 | Complete | 2026-03-15 |
-| 420. 지갑 상세 탭 재구성 | v31.18 | 2/2 | Complete | 2026-03-15 |
+| 421. Registry Core + Well-Known Data | v32.0 | 2/2 | Complete | 2026-03-15 |
+| 422. Notification Pipeline Integration | v32.0 | 1/1 | Complete | 2026-03-15 |
+| 423. API + Admin UI Contract Names | v32.0 | 1/1 | Complete | 2026-03-15 |

@@ -8,6 +8,10 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
+## Previous Milestone: v32.0 Contract Name Resolution — SHIPPED 2026-03-15
+
+ContractNameRegistry 4단계 우선순위 동기 해석(Action Provider > Well-known > CONTRACT_WHITELIST > Fallback), well-known 305+ 정적 엔트리(5 EVM 체인 + Solana), 17개 Action Provider displayName 메타데이터, CONTRACT_CALL 알림 7개 호출지점에서 "Protocol Name (0xabcd...1234)" 포맷 표시, TxDetailResponse contractName/contractNameSource 필드 추가(5개 엔드포인트), Admin UI 트랜잭션 목록 + 지갑 Activity 탭 컨트랙트 이름 표시. 3 phases, 4 plans, 24 requirements, 22 commits, 64 files, +4,839/-975 lines, ~397,990 LOC TS.
+
 ## Previous Milestone: v31.18 Admin UI IA 재구조화 — SHIPPED 2026-03-15
 
 Admin UI 사이드바 17개 플랫 메뉴를 5개 섹션 헤더(Wallets/Trading/Security/Channels/System)로 그룹화, 페이지 리네이밍(DeFi→Providers, Security→Protection, System→Settings), Tokens/RPC Proxy 독립 페이지를 Wallets/Settings 탭으로 병합, Hyperliquid/Polymarket Settings 탭 제거→Providers 중앙화, 지갑 상세 8탭→4탭(Overview/Activity/Assets/Setup) 통합 + Owner Protection 카드 인라인, 레거시 경로 리다이렉트 + Ctrl+K 검색 동기화 + TabNav 통일. 4 phases, 7 plans, 38 requirements, 30 commits, 52 files, +3,311/-515 lines.

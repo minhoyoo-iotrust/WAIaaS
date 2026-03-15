@@ -54,6 +54,8 @@ export {
   ActionContextSchema,
   // v31.4: type guard for API-direct results
   isApiDirectResult,
+  // v32.0: snake_case to display name conversion
+  snakeCaseToDisplayName,
 } from './action-provider.types.js';
 
 // v1.5.3 Forex Rate types (Zod SSoT)

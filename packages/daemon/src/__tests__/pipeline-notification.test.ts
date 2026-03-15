@@ -21,6 +21,7 @@ import {
   stage3Policy,
   stage5Execute,
   stage6Confirm,
+  resolveNotificationTo,
 } from '../pipeline/stages.js';
 import type { PipelineContext } from '../pipeline/stages.js';
 import type {
@@ -32,9 +33,12 @@ import type {
   BalanceInfo,
   HealthInfo,
   SendTransactionRequest,
+  TransactionRequest,
 } from '@waiaas/core';
+import { ContractNameRegistry } from '@waiaas/core';
 import type { LocalKeyStore } from '../infrastructure/keystore/keystore.js';
 import type { NotificationService } from '../notifications/notification-service.js';
+import { getNotificationMessage } from '../notifications/templates/message-templates.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -418,5 +422,259 @@ describe('Fire-and-forget safety', () => {
       .where(eq(transactions.id, ctx.txId))
       .get();
     expect(tx!.status).toBe('PENDING');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// v32.0: Contract name resolution in notifications
+// ---------------------------------------------------------------------------
+
+describe('contract name resolution in notifications', () => {
+  const KNOWN_CONTRACT = '0xe592427a0aece92de3edee1f18e0157c05861564';
+  const UNKNOWN_CONTRACT = '0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef';
+
+  function createMockRegistry(): ContractNameRegistry {
+    const registry = new ContractNameRegistry();
+    // Register a known contract for testing
+    registry.registerProvider(
+      { name: 'uniswap_v3_router', displayName: 'Uniswap V3' } as any,
+      [{ address: KNOWN_CONTRACT, network: 'ethereum-mainnet' }],
+    );
+    return registry;
+  }
+
+  describe('resolveNotificationTo helper', () => {
+    it('should resolve CONTRACT_CALL with known address to "Name (truncated)" format', () => {
+      const registry = createMockRegistry();
+      const req: TransactionRequest = {
+        type: 'CONTRACT_CALL',
+        to: KNOWN_CONTRACT,
+        data: '0x1234',
+      };
+      const result = resolveNotificationTo(req, 'ethereum-mainnet', registry);
+      expect(result).toBe('Uniswap V3 (0xe592...1564)');
+    });
+
+    it('should return raw address for CONTRACT_CALL with unregistered address', () => {
+      const registry = createMockRegistry();
+      const req: TransactionRequest = {
+        type: 'CONTRACT_CALL',
+        to: UNKNOWN_CONTRACT,
+        data: '0x1234',
+      };
+      const result = resolveNotificationTo(req, 'ethereum-mainnet', registry);
+      // Unregistered: should return raw address without name prefix
+      expect(result).toBe(UNKNOWN_CONTRACT);
+      expect(result).not.toContain('(');
+    });
+
+    it('should return raw address for TRANSFER type unchanged', () => {
+      const registry = createMockRegistry();
+      const req: SendTransactionRequest = {
+        to: KNOWN_CONTRACT,
+        amount: '1000000000000000000',
+      };
+      const result = resolveNotificationTo(req, 'ethereum-mainnet', registry);
+      expect(result).toBe(KNOWN_CONTRACT);
+    });
+
+    it('should return raw address for TOKEN_TRANSFER type unchanged', () => {
+      const registry = createMockRegistry();
+      const req: TransactionRequest = {
+        type: 'TOKEN_TRANSFER',
+        to: KNOWN_CONTRACT,
+        tokenAddress: '0xtoken',
+        amount: '1000000',
+      };
+      const result = resolveNotificationTo(req, 'ethereum-mainnet', registry);
+      expect(result).toBe(KNOWN_CONTRACT);
+    });
+
+    it('should return raw address when registry is undefined', () => {
+      const req: TransactionRequest = {
+        type: 'CONTRACT_CALL',
+        to: KNOWN_CONTRACT,
+        data: '0x1234',
+      };
+      const result = resolveNotificationTo(req, 'ethereum-mainnet', undefined);
+      expect(result).toBe(KNOWN_CONTRACT);
+    });
+
+    it('should return empty string when request has no to field', () => {
+      const req: TransactionRequest = {
+        type: 'CONTRACT_DEPLOY',
+        bytecode: '0x1234',
+      } as any;
+      const result = resolveNotificationTo(req, 'ethereum-mainnet', createMockRegistry());
+      expect(result).toBe('');
+    });
+  });
+
+  describe('stage1Validate with contract name resolution', () => {
+    it('CONTRACT_CALL TX_REQUESTED should pass resolved name in to field', async () => {
+      const walletId = await insertTestAgent(conn);
+      const notificationService = createMockNotificationService();
+      const registry = createMockRegistry();
+      const ctx = createPipelineContext(conn, walletId, {
+        notificationService,
+        contractNameRegistry: registry,
+        wallet: { publicKey: MOCK_PUBLIC_KEY, chain: 'ethereum', environment: 'mainnet' },
+        resolvedNetwork: 'ethereum-mainnet',
+        request: {
+          type: 'CONTRACT_CALL',
+          to: KNOWN_CONTRACT,
+          data: '0x1234',
+          value: '0',
+        } as TransactionRequest,
+      });
+
+      await stage1Validate(ctx);
+
+      expect(notificationService.notify).toHaveBeenCalledWith(
+        'TX_REQUESTED',
+        walletId,
+        expect.objectContaining({
+          to: 'Uniswap V3 (0xe592...1564)',
+        }),
+        expect.any(Object),
+      );
+    });
+
+    it('TRANSFER TX_REQUESTED should pass raw address in to field', async () => {
+      const walletId = await insertTestAgent(conn);
+      const notificationService = createMockNotificationService();
+      const registry = createMockRegistry();
+      const ctx = createPipelineContext(conn, walletId, {
+        notificationService,
+        contractNameRegistry: registry,
+        request: {
+          to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
+          amount: '1000000000',
+        } as SendTransactionRequest,
+      });
+
+      await stage1Validate(ctx);
+
+      expect(notificationService.notify).toHaveBeenCalledWith(
+        'TX_REQUESTED',
+        walletId,
+        expect.objectContaining({
+          to: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr',
+        }),
+        expect.any(Object),
+      );
+    });
+
+    it('CONTRACT_CALL with unregistered address should pass raw address', async () => {
+      const walletId = await insertTestAgent(conn);
+      const notificationService = createMockNotificationService();
+      const registry = createMockRegistry();
+      const ctx = createPipelineContext(conn, walletId, {
+        notificationService,
+        contractNameRegistry: registry,
+        wallet: { publicKey: MOCK_PUBLIC_KEY, chain: 'ethereum', environment: 'mainnet' },
+        resolvedNetwork: 'ethereum-mainnet',
+        request: {
+          type: 'CONTRACT_CALL',
+          to: UNKNOWN_CONTRACT,
+          data: '0x1234',
+          value: '0',
+        } as TransactionRequest,
+      });
+
+      await stage1Validate(ctx);
+
+      expect(notificationService.notify).toHaveBeenCalledWith(
+        'TX_REQUESTED',
+        walletId,
+        expect.objectContaining({
+          to: UNKNOWN_CONTRACT,
+        }),
+        expect.any(Object),
+      );
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// v32.0: End-to-end notification message rendering with contract names
+// ---------------------------------------------------------------------------
+
+describe('notification message rendering with contract names', () => {
+  const RESOLVED_TO = 'Uniswap V3 (0xe592...1564)';
+  const RAW_ADDRESS = '0xe592427a0aece92de3edee1f18e0157c05861564';
+
+  it('TX_REQUESTED body contains resolved contract name (en)', () => {
+    const msg = getNotificationMessage('TX_REQUESTED', 'en', {
+      walletName: 'test-wallet',
+      type: 'CONTRACT_CALL',
+      amount: '0.5 ETH',
+      to: RESOLVED_TO,
+      display_amount: '',
+    });
+    expect(msg.body).toContain('Uniswap V3 (0xe592...1564)');
+    expect(msg.body).toContain('contract call');
+  });
+
+  it('TX_APPROVAL_REQUIRED body contains resolved contract name (en)', () => {
+    const msg = getNotificationMessage('TX_APPROVAL_REQUIRED', 'en', {
+      txId: 'tx-123',
+      amount: '0.5 ETH',
+      to: RESOLVED_TO,
+      display_amount: '',
+    });
+    expect(msg.body).toContain('Uniswap V3 (0xe592...1564)');
+  });
+
+  it('TX_SUBMITTED body contains resolved contract name (en)', () => {
+    const msg = getNotificationMessage('TX_SUBMITTED', 'en', {
+      txId: 'tx-123',
+      to: RESOLVED_TO,
+      display_amount: '',
+    });
+    expect(msg.body).toContain('Uniswap V3 (0xe592...1564)');
+    expect(msg.body).toContain('To:');
+  });
+
+  it('TX_CONFIRMED body contains resolved contract name (en)', () => {
+    const msg = getNotificationMessage('TX_CONFIRMED', 'en', {
+      txId: 'tx-123',
+      amount: '0.5 ETH',
+      to: RESOLVED_TO,
+      display_amount: '',
+    });
+    expect(msg.body).toContain('Uniswap V3 (0xe592...1564)');
+    expect(msg.body).toContain('To:');
+  });
+
+  it('TX_REQUESTED with TRANSFER type does NOT contain "Name (" pattern (en)', () => {
+    const msg = getNotificationMessage('TX_REQUESTED', 'en', {
+      walletName: 'test-wallet',
+      type: 'TRANSFER',
+      amount: '1 SOL',
+      to: RAW_ADDRESS,
+      display_amount: '',
+    });
+    expect(msg.body).not.toContain('Uniswap');
+    expect(msg.body).toContain(RAW_ADDRESS);
+  });
+
+  it('TX_SUBMITTED body contains resolved contract name (ko)', () => {
+    const msg = getNotificationMessage('TX_SUBMITTED', 'ko', {
+      txId: 'tx-123',
+      to: RESOLVED_TO,
+      display_amount: '',
+    });
+    expect(msg.body).toContain('Uniswap V3 (0xe592...1564)');
+  });
+
+  it('TX_CONFIRMED body contains resolved contract name (ko)', () => {
+    const msg = getNotificationMessage('TX_CONFIRMED', 'ko', {
+      txId: 'tx-123',
+      amount: '0.5 ETH',
+      to: RESOLVED_TO,
+      display_amount: '',
+    });
+    expect(msg.body).toContain('Uniswap V3 (0xe592...1564)');
   });
 });

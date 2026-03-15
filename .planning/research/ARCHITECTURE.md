@@ -1,365 +1,329 @@
-# Architecture Research
+# Architecture Patterns: Contract Name Resolution
 
-**Domain:** OpenAPI type generation integration — monorepo frontend type safety
+**Domain:** Contract name resolution for WAIaaS daemon
 **Researched:** 2026-03-15
-**Confidence:** HIGH
 
-## Standard Architecture
+## Recommended Architecture
 
-### System Overview
+Contract name resolution is a **read-only enrichment layer** that maps raw contract addresses to human-readable names. It integrates at four touch points: pipeline notifications, API responses, Admin UI display, and policy management. No new services or DB tables are needed -- it layers onto existing structures.
 
-```
-┌──────────────────────────────────────────────────────────────────────┐
-│                    Build Pipeline (new)                               │
-│                                                                       │
-│  @waiaas/daemon (createApp stub)                                      │
-│      │  app.request('/doc') → JSON                                    │
-│      ▼                                                                │
-│  scripts/extract-openapi.ts ──────► openapi.json (committed)         │
-│                                          │                            │
-│                               openapi-typescript CLI                  │
-│                                          │                            │
-│                                          ▼                            │
-│                        packages/admin/src/api/types.generated.ts      │
-└──────────────────────────────────────────────────────────────────────┘
+### Component Boundaries
 
-┌──────────────────────────────────────────────────────────────────────┐
-│                    packages/daemon (unchanged runtime)                │
-│                                                                       │
-│  createApp(deps: CreateAppDeps) → OpenAPIHono                         │
-│      routes registered with createRoute() + .openapi()               │
-│      GET /doc → spec served at runtime                                │
-│      openapi-schemas.ts → Zod SSoT response schemas                  │
-└──────────────────────────────────────────────────────────────────────┘
+| Component | Responsibility | Communicates With |
+|-----------|---------------|-------------------|
+| `ContractNameRegistry` | Static lookup: address+network -> name | Pipeline (stages.ts), API routes, Admin UI |
+| `well-known-contracts.ts` | Bundled JSON data: ~200 well-known contracts per chain | ContractNameRegistry (imported at startup) |
+| CONTRACT_WHITELIST `name` field | User-defined names for whitelisted contracts | DatabasePolicyEngine, ContractNameRegistry (fallback) |
+| Notification templates | Display `{contractName}` variable in TX messages | message-templates.ts, i18n/en.ts + ko.ts |
+| API response enrichment | Add `contractName` field to TxDetailResponse | openapi-schemas.ts, transactions.ts route |
+| Admin UI | Display contract names inline with addresses | transactions.tsx, policies.tsx |
 
-┌──────────────────────────────────────────────────────────────────────┐
-│                    packages/admin (modified)                          │
-│                                                                       │
-│  api/types.generated.ts  ◄── openapi-typescript output (committed)   │
-│  api/client.ts           ──── thin typed wrapper over existing fetch  │
-│  api/typed-client.ts     ──── NEW: typed wrappers using generated T   │
-│  utils/settings-helpers.ts ── MODIFIED: remove manual interfaces      │
-│  pages/*.tsx             ──── MODIFIED: use generated types           │
-└──────────────────────────────────────────────────────────────────────┘
-
-┌──────────────────────────────────────────────────────────────────────┐
-│                    packages/shared (extended)                         │
-│                                                                       │
-│  src/networks.ts         ── existing: NETWORK_TYPES, EVM_NETWORK_TYPES│
-│  src/index.ts            ── existing re-exports                       │
-│  src/providers.ts        ── NEW: BUILTIN_PROVIDERS array (moved from  │
-│                               admin/pages/actions.tsx)                │
-│  src/policy-types.ts     ── NEW: POLICY_TYPES, APPROVAL_METHODS etc  │
-│                               (moved from admin inline consts)        │
-└──────────────────────────────────────────────────────────────────────┘
-
-┌──────────────────────────────────────────────────────────────────────┐
-│                    CI freshness gate (new)                            │
-│                                                                       │
-│  scripts/check-openapi-freshness.ts                                   │
-│      re-extracts spec at CI time                                      │
-│      diffs against committed openapi.json                             │
-│      fails if stale → blocks PR merge                                 │
-└──────────────────────────────────────────────────────────────────────┘
-```
-
-### Component Responsibilities
-
-| Component | Responsibility | Typical Implementation |
-|-----------|----------------|------------------------|
-| `scripts/extract-openapi.ts` | Build-time spec extraction via `createApp({})` stub | tsx script, calls `app.request('/doc')`, writes `openapi.json` |
-| `openapi.json` (root or packages/daemon) | Committed snapshot, source for type gen | JSON, regenerated via `pnpm run generate:types` |
-| `openapi-typescript` CLI | Converts OpenAPI JSON to TypeScript path/component types | `npx openapi-typescript openapi.json -o types.generated.ts` |
-| `packages/admin/src/api/types.generated.ts` | Generated TypeScript types, never hand-edited | OpenAPI paths/components as TS interfaces |
-| `packages/admin/src/api/typed-client.ts` | Thin typed wrappers over existing `apiGet/apiPost` | Uses generated `components['schemas']` to constrain return types |
-| `packages/shared/src/providers.ts` | Source-of-truth provider list (moved from Admin UI inline array) | Pure TS array, no native deps |
-| `scripts/check-openapi-freshness.ts` | CI gate: fails if `openapi.json` is stale | Re-extracts, diffs, exits 1 on mismatch |
-
-## Recommended Project Structure
+### Data Flow
 
 ```
-packages/
-├── daemon/
-│   └── src/api/
-│       ├── server.ts          # createApp() — unchanged, stub-capable
-│       └── routes/
-│           └── openapi-schemas.ts  # Zod SSoT — unchanged
-├── shared/
-│   └── src/
-│       ├── index.ts           # re-exports (add providers.ts, policy-types.ts)
-│       ├── networks.ts        # existing — unchanged
-│       ├── providers.ts       # NEW: BUILTIN_PROVIDERS array
-│       └── policy-types.ts    # NEW: POLICY_TYPES, APPROVAL_METHODS, TX_TYPES
-├── admin/
-│   └── src/
-│       ├── api/
-│       │   ├── client.ts      # existing apiGet/apiPost/apiPut — unchanged
-│       │   ├── endpoints.ts   # existing API const map — unchanged
-│       │   ├── typed-client.ts    # NEW: typed wrappers using generated paths
-│       │   └── types.generated.ts # GENERATED: openapi-typescript output
-│       └── pages/
-│           └── *.tsx          # MODIFIED: swap manual interfaces for generated types
-scripts/
-├── extract-openapi.ts         # NEW: stub createApp, GET /doc, write JSON
-├── check-openapi-freshness.ts # NEW: CI gate script
-└── validate-openapi.ts        # existing
-openapi.json                   # COMMITTED: extracted spec snapshot
+Contract address arrives in pipeline request
+       |
+       v
+ContractNameRegistry.resolve(address, network)
+       |
+       +-- 1. Check CONTRACT_WHITELIST policy (user-defined names, DB)
+       +-- 2. Check well-known-contracts static map (bundled data)
+       +-- 3. Check action provider metadata (if actionProvider set on request)
+       |
+       v
+Returns: string | null  (null = unknown contract)
 ```
 
-### Structure Rationale
+**Resolution priority:**
+1. **CONTRACT_WHITELIST name** -- User explicitly named this contract. Highest trust.
+2. **Well-known registry** -- Bundled static data (Uniswap, Aave, WETH, etc.)
+3. **Action provider label** -- If `actionProvider` is set, derive name from provider metadata.
+4. **null** -- Unknown contract. Display truncated address as fallback.
 
-- **`openapi.json` committed at repo root:** Checked-in so CI can diff without rebuilding daemon. Placement at root keeps it alongside other scripts-level artifacts.
-- **`types.generated.ts` inside `packages/admin/src/api/`:** Generated file lives alongside existing `client.ts` and `endpoints.ts` — discoverable by consumers (pages) without cross-package import.
-- **`typed-client.ts` as a new file (not modifying `client.ts`):** Preserves the working `apiGet<T>` pattern while layering generated types on top. Migration is incremental — each page can be migrated independently.
-- **`providers.ts` and `policy-types.ts` in `packages/shared/`:** These are the hardcoded arrays currently duplicated in Admin UI. Moving them to `@waiaas/shared` makes them importable from daemon for validation and from Admin UI for display — zero duplication, zero native deps.
+## Integration Points (New vs Modified)
 
-## Architectural Patterns
+### NEW Components
 
-### Pattern 1: Stub-deps Spec Extraction
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| `ContractNameRegistry` class | `packages/core/src/registries/contract-name-registry.ts` | Central lookup service, synchronous, no I/O |
+| `well-known-contracts.ts` | `packages/core/src/registries/well-known-contracts.ts` | Static data: `Map<string, Map<string, string>>` keyed by network then lowercase address |
 
-**What:** Call `createApp({})` (no deps passed) in a build-time script to obtain a fully-registered OpenAPIHono app, then call `app.request('/doc')` to extract the JSON spec. Routes that guard on `if (deps.db)` are simply absent from the spec — acceptable because core response schemas are registered as named OpenAPI components in `openapi-schemas.ts` regardless.
+### MODIFIED Components
 
-**When to use:** Any time the OpenAPI spec needs to be materialized as a file (build-time type gen, CI freshness check).
+| Component | Location | Change |
+|-----------|----------|--------|
+| `PipelineContext` | `packages/daemon/src/pipeline/stages.ts` | Add `contractNameRegistry?: ContractNameRegistry` |
+| `stage1Validate` | `stages.ts` | Resolve contract name, pass as `{contractName}` to notification vars |
+| `stage5Execute` notify calls | `stages.ts` | Add `contractName` var to TX_CONFIRMED notifications |
+| `stage3Policy` notify calls | `stages.ts` | Add `contractName` var to POLICY_VIOLATION notifications |
+| `message-templates.ts` | `packages/daemon/src/notifications/templates/` | Add `{contractName}` to un-substituted placeholder fallback list |
+| `i18n/en.ts` + `ko.ts` | `packages/core/src/i18n/` | Add `{contractName}` in TX_REQUESTED, TX_CONFIRMED, POLICY_VIOLATION bodies |
+| `TxDetailResponseSchema` | `openapi-schemas.ts` | Add `contractName: z.string().nullable()` field |
+| `transactions.ts` route | API routes | Resolve contract name when building response |
+| `transactions.tsx` | Admin UI | Display `contractName` next to address in list/detail |
+| `policies.tsx` | Admin UI | Show contract name in CONTRACT_WHITELIST display |
+| `DatabasePolicyEngine` | `database-policy-engine.ts` | Expose helper to get name from CONTRACT_WHITELIST rules (already has `name?` field) |
 
-**Trade-offs:** Routes requiring deps (most routes) are absent from the stub spec paths. The component schemas (Zod SSoT response shapes) are still emitted because `openapi-schemas.ts` registers them at module load time. For Admin UI usage this is acceptable — path-level URL parameter types are not needed; only response body shapes are.
+## Patterns to Follow
+
+### Pattern 1: Synchronous Registry Lookup (matches existing patterns)
+
+**What:** ContractNameRegistry is a pure in-memory lookup with no async I/O, matching the synchronous style used by SettingsService.get() and the pipeline's existing helper functions.
+
+**When:** Every contract address display -- notifications, API responses, Admin UI.
+
+**Why:** The pipeline is latency-sensitive. Contract name resolution must never block or add network calls. Static data + DB cache is sufficient.
 
 **Example:**
 ```typescript
-// scripts/extract-openapi.ts
-import { createApp } from '../packages/daemon/src/api/server.js';
-import { writeFile } from 'node:fs/promises';
+// packages/core/src/registries/contract-name-registry.ts
+export class ContractNameRegistry {
+  // network -> lowercase(address) -> name
+  private readonly wellKnown: Map<string, Map<string, string>>;
 
-const app = createApp({}); // stub: no db, keyStore, etc.
-const res = await app.request('/doc', { headers: { Host: '127.0.0.1:3100' } });
-const spec = await res.json();
-await writeFile('openapi.json', JSON.stringify(spec, null, 2));
-console.log('openapi.json written');
-```
+  constructor() {
+    this.wellKnown = loadWellKnownContracts();
+  }
 
-This pattern is already proven: `scripts/validate-openapi.ts` uses the identical `createApp({})` approach to extract and validate the spec.
+  /**
+   * Resolve contract address to human-readable name.
+   * Priority: whitelist name > well-known > action provider > null.
+   */
+  resolve(
+    address: string,
+    network: string,
+    opts?: {
+      whitelistName?: string;      // from CONTRACT_WHITELIST policy
+      actionProviderName?: string;  // from action provider metadata
+    },
+  ): string | null {
+    // 1. User-defined name from CONTRACT_WHITELIST
+    if (opts?.whitelistName) return opts.whitelistName;
 
-### Pattern 2: Generated-type Constraint on Existing Client
+    // 2. Well-known registry
+    const networkMap = this.wellKnown.get(network);
+    if (networkMap) {
+      const name = networkMap.get(address.toLowerCase());
+      if (name) return name;
+    }
 
-**What:** Keep the existing `apiGet<T>` / `apiPost<T>` functions unchanged. Add a thin `typed-client.ts` that hard-codes the `T` type parameter using types from `types.generated.ts`. Callers import from `typed-client.ts` instead of casting manually.
+    // 3. Action provider label
+    if (opts?.actionProviderName) return opts.actionProviderName;
 
-**When to use:** When migrating Admin UI pages from manual interface definitions to generated types. Use per-page — each page migration is independent and reversible.
-
-**Trade-offs:** Does not enforce URL correctness (URL is still a plain string from `endpoints.ts`). Provides return-type safety without requiring full `openapi-fetch` adoption. Low migration risk. If `openapi-fetch` adoption is desired later, `typed-client.ts` is the single replacement point.
-
-**Example:**
-```typescript
-// packages/admin/src/api/typed-client.ts
-import { apiGet, apiPost } from './client';
-import type { components } from './types.generated';
-
-export type WalletRow = components['schemas']['WalletResponse'];
-export type WalletList = components['schemas']['WalletListResponse'];
-export type SessionRow = components['schemas']['SessionResponse'];
-
-export const getWallets = () => apiGet<WalletList>('/v1/wallets');
-export const getWallet = (id: string) => apiGet<WalletRow>(`/v1/wallets/${id}`);
-```
-
-### Pattern 3: @waiaas/shared Re-export for Hardcoded Arrays
-
-**What:** Move arrays currently hardcoded in Admin UI (e.g., `BUILTIN_PROVIDERS` in `actions.tsx`, transaction type arrays in policy forms) to `packages/shared/src/`. Export from `@waiaas/shared`. Both daemon and Admin UI import from `@waiaas/shared`.
-
-**When to use:** Any constant array that is currently duplicated between daemon source (for API validation) and Admin UI (for display). Prevents drift between client and server representations.
-
-**Trade-offs:** Requires `packages/shared` build step before `packages/admin` build — already enforced by existing `turbo.json`. Adding a new file to `packages/shared` triggers a rebuild of `@waiaas/admin` via the existing Turbo dependency.
-
-**Example:**
-```typescript
-// packages/shared/src/providers.ts
-export const BUILTIN_PROVIDER_KEYS = [
-  'jupiter_swap', 'zerox_swap', 'dcent_swap', 'lifi',
-  'lido_staking', 'jito_staking', 'aave_v3', 'kamino',
-  'pendle_yield', 'drift', 'hyperliquid_perp',
-  'hyperliquid_spot', 'hyperliquid_sub', 'across_bridge',
-] as const;
-export type BuiltinProviderKey = (typeof BUILTIN_PROVIDER_KEYS)[number];
-```
-
-## Data Flow
-
-### Type Generation Flow (build-time)
-
-```
-pnpm run generate:types
-    │
-    ├─► scripts/extract-openapi.ts
-    │       createApp({}) → app.request('/doc') → openapi.json
-    │
-    └─► openapi-typescript openapi.json
-            -o packages/admin/src/api/types.generated.ts
-```
-
-### CI Freshness Gate Flow
-
-```
-CI: pnpm run check:openapi-freshness
-    │
-    ├─► re-run scripts/extract-openapi.ts → spec_live.json (tmp)
-    │
-    └─► diff openapi.json spec_live.json
-            equal → pass
-            different → exit 1 (PR blocked until developer runs generate:types)
-```
-
-### Admin UI Typed Fetch Flow (runtime, new)
-
-```
-Admin Page Component
-    │
-    ├─► typed-client.ts (NEW): getWallets() → apiGet<WalletList>(...)
-    │       │                  return type: WalletList (from generated types)
-    │       ▼
-    │   api/client.ts (existing): apiCall<T>(path, options)
-    │       │  fetch() + auth header + error handling
-    │       ▼
-    │   Daemon /v1/wallets (runtime response)
-    │       ▼
-    └─► WalletList — TypeScript type verified at compile-time
-```
-
-### Key Data Flows
-
-1. **Spec extraction:** `createApp({})` emits routes registered unconditionally (health, /doc, public routes) plus all OpenAPI component schemas. The `GET /doc` endpoint is always registered regardless of deps (confirmed in `server.ts` line 980).
-2. **Type propagation:** Generated `types.generated.ts` exports `paths` and `components` namespaces. `typed-client.ts` reads `components['schemas']['X']` for response types.
-3. **Hardcoded constant migration:** `BUILTIN_PROVIDERS` in `actions.tsx` → `@waiaas/shared` → imported in both daemon (for settings key validation) and Admin UI (for display). Merge at render time with runtime state from `GET /v1/actions/providers`.
-
-## Scaling Considerations
-
-| Scale | Architecture Adjustments |
-|-------|--------------------------|
-| Current (62 manual interfaces, 28 manual casts) | Pattern 2 (typed-client.ts) handles this — no library changes needed |
-| Full OpenAPI URL safety | Adopt `openapi-fetch` `createClient<paths>()` — URLs type-checked against spec paths |
-| Monorepo-wide type sharing | Promote `types.generated.ts` to `@waiaas/shared` if SDK also needs generated types |
-
-### Scaling Priorities
-
-1. **First bottleneck:** Stub spec coverage — `createApp({})` only emits routes registered without deps. Resolution: accept coverage gap for path types; rely on integration tests for runtime correctness. Core schema types are always emitted via named components.
-2. **Second bottleneck:** CI freshness gate speed — re-extracting spec on every CI run adds ~2-5 seconds. Cache with `turbo` outputs if needed.
-
-## Anti-Patterns
-
-### Anti-Pattern 1: Importing @waiaas/core or @waiaas/daemon from Admin UI
-
-**What people do:** Try to share Zod schemas directly from `@waiaas/core` or route handler types from `@waiaas/daemon` into the Admin UI bundle.
-
-**Why it's wrong:** `@waiaas/core` imports `sodium-native` and other native Node.js binaries. `@waiaas/daemon` imports `better-sqlite3`. Both break at Vite build time for the browser target. This is the exact reason `@waiaas/shared` exists as a pure-TS, no-native-deps package.
-
-**Do this instead:** Use the generated `types.generated.ts` file (derived from the daemon OpenAPI spec at build time, pure JSON schema output) or move pure constants to `@waiaas/shared`.
-
-### Anti-Pattern 2: Generating Types at Vite Build Time
-
-**What people do:** Add a Vite plugin or `vite.config.ts` hook that runs `openapi-typescript` during `vite build`.
-
-**Why it's wrong:** Makes frontend build depend on daemon being importable into Vite context (native dep problem above). Slows down Vite dev server startup. Creates circular build dependency.
-
-**Do this instead:** Run type generation as a separate pre-build script (`pnpm run generate:types`) and commit the output file. Vite consumes the committed `.ts` file like any other source file.
-
-### Anti-Pattern 3: Dynamically Resolving Provider Lists via Runtime API Only
-
-**What people do:** Remove `BUILTIN_PROVIDERS` from Admin UI and replace with a `GET /v1/actions/providers` call that also returns category/description metadata.
-
-**Why it's wrong:** The Admin UI needs provider metadata (description, docs URL, chain type) even before providers are registered in the daemon (e.g., for settings forms). Pure runtime discovery cannot provide static metadata. Expanding the API response to include all display metadata couples daemon to Admin UI display concerns.
-
-**Do this instead:** Move static display metadata (`BUILTIN_PROVIDERS`) to `@waiaas/shared` (compile-time). Use `GET /v1/actions/providers` for runtime state (enabled, hasApiKey, actions list). Merge both at render time. Static config in `@waiaas/shared`, dynamic state from API.
-
-### Anti-Pattern 4: Manually Maintaining types.generated.ts
-
-**What people do:** Hand-edit the generated file to add or fix types.
-
-**Why it's wrong:** The file will be overwritten on the next `pnpm run generate:types`. Manual edits are lost and create divergence between spec and types.
-
-**Do this instead:** Fix the Zod schema in `openapi-schemas.ts` in the daemon, then re-run `generate:types`. All fixes flow from the Zod SSoT.
-
-## Integration Points
-
-### New Components
-
-| Component | Location | Integrates With |
-|-----------|----------|-----------------|
-| `scripts/extract-openapi.ts` | `scripts/` (root) | `packages/daemon/src/api/server.ts` — calls `createApp({})` |
-| `scripts/check-openapi-freshness.ts` | `scripts/` (root) | CI pipeline (`ci.yml`) + committed `openapi.json` |
-| `packages/admin/src/api/types.generated.ts` | `packages/admin/src/api/` | `typed-client.ts`, migrated pages |
-| `packages/admin/src/api/typed-client.ts` | `packages/admin/src/api/` | `client.ts` (calls through), `types.generated.ts` (type constraints) |
-| `packages/shared/src/providers.ts` | `packages/shared/src/` | Admin UI `actions.tsx` (import), daemon settings validation |
-| `packages/shared/src/policy-types.ts` | `packages/shared/src/` | Admin UI policy forms, daemon Zod schemas (reference) |
-
-### Modified Components
-
-| Component | Change | Why |
-|-----------|--------|-----|
-| `packages/admin/src/pages/actions.tsx` | Remove `BUILTIN_PROVIDERS` array, import from `@waiaas/shared` | Eliminate hardcoded duplicate |
-| `packages/admin/src/pages/*.tsx` (per page) | Replace manual `interface Wallet {...}` etc. with types from `typed-client.ts` | Type safety from generated source |
-| `packages/admin/src/utils/settings-helpers.ts` | Replace manual `SettingsData`, `ApiKeyEntry`, `RpcTestResult` interfaces with generated equivalents where available | Eliminate drift |
-| `packages/shared/src/index.ts` | Add exports for new `providers.ts` and `policy-types.ts` | Make new constants discoverable |
-| `turbo.json` | Add `generate:types` task between `@waiaas/shared#build` and `@waiaas/admin#build` | Ensure generated file is fresh before Vite build |
-| `package.json` (root) | Add `generate:types` and `check:openapi-freshness` scripts | Developer workflow + CI hook |
-
-### Internal Boundaries
-
-| Boundary | Communication | Notes |
-|----------|---------------|-------|
-| daemon → openapi.json | Build-time: `extract-openapi.ts` calls `createApp({})` | No runtime dependency; daemon source evaluated via tsx, not compiled dist |
-| openapi.json → types.generated.ts | Build-time: `openapi-typescript` CLI transform | Pure file transformation; no daemon code involved |
-| types.generated.ts → typed-client.ts | Compile-time: TypeScript import | Generated file is committed; Vite/tsc reads it like any source file |
-| @waiaas/shared → @waiaas/admin | Compile-time + bundle-time: workspace import | Already established; adding new exports follows same pattern |
-| daemon → @waiaas/shared | Compile-time: workspace import | Adding provider key constants to shared for settings validation |
-
-## Build Order Changes
-
-### Current Turbo Order
-```
-@waiaas/shared#build
-    → @waiaas/admin#build (Vite)
-    → @waiaas/daemon#build (prebuild copies admin/dist, then tsc)
-
-@waiaas/core#build → @waiaas/daemon#build
-```
-
-### New Turbo Order (with type generation)
-```
-@waiaas/shared#build
-    → generate:types (extract-openapi.ts + openapi-typescript CLI)
-    → @waiaas/admin#build (Vite — consumes types.generated.ts)
-    → @waiaas/daemon#build (prebuild copies admin/dist, then tsc)
-
-@waiaas/core#build → @waiaas/daemon#build
-```
-
-The `generate:types` task:
-1. Depends on `@waiaas/shared#build` (shared types needed for daemon source compilation via tsx).
-2. Does NOT depend on `@waiaas/daemon#build` — runs `extract-openapi.ts` directly against TS source via `tsx`, avoiding circular dependency.
-3. Is declared as a dependency of `@waiaas/admin#build` in `turbo.json`.
-
-**Concrete turbo.json addition:**
-```json
-"generate:types": {
-  "dependsOn": ["@waiaas/shared#build"],
-  "outputs": ["openapi.json", "packages/admin/src/api/types.generated.ts"],
-  "cache": true
-},
-"@waiaas/admin#build": {
-  "dependsOn": ["generate:types", "@waiaas/shared#build"],
-  "outputs": ["dist/**"]
+    return null;
+  }
 }
 ```
 
-The existing `validate-openapi.ts` script already proves the `tsx`-direct approach works: it runs `createApp({})` using tsx without a prior daemon build step.
+### Pattern 2: Notification Variable Enrichment (matches existing `{type}` pattern)
+
+**What:** Add `{contractName}` as a template variable, following the exact pattern of `{type}` label resolution in `message-templates.ts`.
+
+**When:** CONTRACT_CALL, NFT_TRANSFER, APPROVE notifications.
+
+**Example:**
+```typescript
+// In stages.ts, notification calls:
+const contractName = ctx.contractNameRegistry?.resolve(
+  contractAddress,
+  ctx.resolvedNetwork,
+  { actionProviderName: ctx.actionProviderKey },
+) ?? '';
+
+void ctx.notificationService?.notify('TX_CONFIRMED', ctx.walletId, {
+  txId: ctx.txId,
+  txHash,
+  amount: reqAmount,
+  to: reqTo,
+  contractName,  // NEW: human-readable contract name
+  display_amount: displayAmount,
+  network: ctx.resolvedNetwork,
+}, { txId: ctx.txId });
+```
+
+```typescript
+// In message-templates.ts, add to fallback cleanup:
+for (const placeholder of ['{display_amount}', '{type}', '{amount}', '{to}', '{contractName}']) {
+  // ...existing cleanup
+}
+```
+
+### Pattern 3: API Response Enrichment (matches `amountFormatted` pattern from v31.15)
+
+**What:** Add `contractName` to TxDetailResponse, resolved at query time from the transaction's `toAddress` + `network`.
+
+**Why:** Same pattern as `amountFormatted` and `balanceFormatted` -- computed display field added to responses without DB schema change.
+
+**Example:**
+```typescript
+// In openapi-schemas.ts:
+export const TxDetailResponseSchema = z.object({
+  // ... existing fields
+  contractName: z.string().nullable().openapi({
+    description: 'Human-readable contract name (resolved from registry)',
+  }),
+});
+
+// In transactions.ts route handler:
+const contractName = (tx.type === 'CONTRACT_CALL' || tx.type === 'NFT_TRANSFER' || tx.type === 'APPROVE')
+  ? contractNameRegistry.resolve(tx.toAddress, tx.network ?? tx.chain) ?? null
+  : null;
+```
+
+### Pattern 4: Well-Known Data Structure (matches token_registry builtin pattern)
+
+**What:** Static JSON data embedded in `@waiaas/core`, structured by network. Covers major DeFi protocols, DEX routers, bridge contracts, staking contracts.
+
+**Why:** Follows the `source: 'builtin'` pattern from token_registry. No external API dependency. Ships with the daemon.
+
+**Example:**
+```typescript
+// packages/core/src/registries/well-known-contracts.ts
+export interface WellKnownContract {
+  address: string;
+  name: string;
+  category: 'defi' | 'token' | 'bridge' | 'nft' | 'infrastructure';
+  protocol?: string;  // e.g. 'uniswap', 'aave', 'lido'
+}
+
+// Structure: Record<network, WellKnownContract[]>
+const WELL_KNOWN: Record<string, WellKnownContract[]> = {
+  'ethereum-mainnet': [
+    { address: '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D', name: 'Uniswap V2 Router', category: 'defi', protocol: 'uniswap' },
+    { address: '0xE592427A0AEce92De3Edee1F18E0157C05861564', name: 'Uniswap V3 Router', category: 'defi', protocol: 'uniswap' },
+    { address: '0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2', name: 'Aave V3 Pool', category: 'defi', protocol: 'aave' },
+    { address: '0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84', name: 'Lido stETH', category: 'defi', protocol: 'lido' },
+    { address: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', name: 'WETH', category: 'token' },
+    // ... ~50-100 entries per major network
+  ],
+  'polygon-mainnet': [ /* ... */ ],
+  'arbitrum-mainnet': [ /* ... */ ],
+  'base-mainnet': [ /* ... */ ],
+  'solana-mainnet': [
+    { address: 'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4', name: 'Jupiter V6', category: 'defi', protocol: 'jupiter' },
+    { address: 'CLMM9tUoggJu2wagPkkqs9eFG4BWhVBZWkP1qv3Sp7tR', name: 'Orca Whirlpools', category: 'defi', protocol: 'orca' },
+    // ...
+  ],
+};
+```
+
+## Anti-Patterns to Avoid
+
+### Anti-Pattern 1: External API for Name Resolution
+**What:** Calling Etherscan/Solscan APIs to resolve contract names at pipeline time.
+**Why bad:** Adds latency to the transaction pipeline, introduces external dependency, rate limits, and privacy leakage (contract addresses sent to third party).
+**Instead:** Use static well-known registry + user-defined CONTRACT_WHITELIST names. The pipeline must remain fast and self-contained.
+
+### Anti-Pattern 2: New Database Table for Contract Names
+**What:** Creating a `contract_names` table with migration.
+**Why bad:** Unnecessary complexity. CONTRACT_WHITELIST already has an optional `name` field. Well-known data is static and belongs in code. No user-editable contract name feature is needed beyond what CONTRACT_WHITELIST provides.
+**Instead:** Use the existing `name?` field on CONTRACT_WHITELIST rules + static well-known data in `@waiaas/core`.
+
+### Anti-Pattern 3: Resolving Names in DatabasePolicyEngine
+**What:** Making the policy engine responsible for looking up contract names.
+**Why bad:** Violates single responsibility. The policy engine evaluates allow/deny decisions. Name resolution is a display concern.
+**Instead:** ContractNameRegistry is a separate service. The policy engine can expose the whitelist name (it already parses the rules), but name resolution logic belongs in the registry.
+
+### Anti-Pattern 4: Async Name Resolution in Notification Path
+**What:** Making `ContractNameRegistry.resolve()` async.
+**Why bad:** Notification calls are fire-and-forget (`void ctx.notificationService?.notify(...)`). Adding async name resolution before the notification call adds complexity for no benefit. The data is all in-memory.
+**Instead:** Keep resolution synchronous. All data sources (well-known map, CONTRACT_WHITELIST name passed via context) are available synchronously.
+
+## Detailed Integration: Pipeline Stages
+
+### Stage 1 (Validate) -- Resolve and Store
+
+```
+request arrives
+  -> extract contractAddress (from req.to for CONTRACT_CALL/NFT_TRANSFER/APPROVE)
+  -> resolve name via ContractNameRegistry
+  -> pass contractName in notification vars for TX_REQUESTED
+```
+
+No pipeline context change needed at Stage 1 beyond passing the `contractName` var.
+
+### Stage 3 (Policy) -- Use Whitelist Name
+
+```
+policy evaluation runs
+  -> if CONTRACT_WHITELIST check passes, extract matched contract's name
+  -> if POLICY_VIOLATION, include contractName in notification vars
+```
+
+The `evaluateContractWhitelist` method already parses `rules.contracts[].name`. Surface the matched name via a return value enhancement or a separate helper method.
+
+### Stage 5/6 (Execute/Confirm) -- Include in TX_CONFIRMED
+
+```
+transaction confirmed
+  -> include contractName in notification vars
+  -> contractName already resolved at Stage 1, carried through context or re-resolved
+```
+
+**Decision:** Re-resolve at notification time rather than carrying through context. The registry is synchronous and cheap. This avoids adding another field to PipelineContext.
+
+### API Response -- Resolve at Query Time
+
+```
+GET /v1/wallets/:id/transactions
+  -> for each tx with type CONTRACT_CALL/NFT_TRANSFER/APPROVE
+  -> resolve contractName from toAddress + network
+  -> include in response
+```
+
+## Suggested Build Order
+
+Based on dependency analysis:
+
+1. **Well-known contracts data + ContractNameRegistry** (packages/core)
+   - No dependencies on other changes
+   - Foundation for everything else
+   - Testable in isolation
+
+2. **i18n template updates** (packages/core)
+   - Add `{contractName}` to relevant notification templates
+   - Depends on: registry design (to know the variable name)
+
+3. **Pipeline integration** (packages/daemon)
+   - Add registry to PipelineContext
+   - Update Stage 1/3/5/6 notification calls
+   - Update message-templates.ts placeholder fallback
+   - Depends on: registry + i18n
+
+4. **API response enrichment** (packages/daemon)
+   - Add `contractName` to TxDetailResponse schema
+   - Resolve in transaction query routes
+   - Depends on: registry
+
+5. **Admin UI display** (packages/admin)
+   - Show contract names in transaction list/detail
+   - Show contract names in policy display
+   - Depends on: API response changes (regenerated types)
+
+6. **SDK/MCP exposure** (packages/sdk, packages/mcp)
+   - SDK types updated via OpenAPI regeneration
+   - MCP tools may surface contract name in responses
+   - Depends on: API response changes
+
+## Scalability Considerations
+
+| Concern | Current (~100 contracts) | At 1K contracts | At 10K contracts |
+|---------|--------------------------|-----------------|-------------------|
+| Memory | ~10 KB static map | ~100 KB | ~1 MB (still fine) |
+| Lookup | O(1) Map.get | O(1) | O(1) |
+| Startup | Instant | Instant | Instant |
+| Maintenance | Manual updates | Version with releases | Consider external data source |
+
+The well-known registry is static data shipped with the daemon. At current scale (~200-500 entries across all networks), memory and performance are not concerns. If the registry grows beyond ~5K entries, consider loading from a JSON file rather than inline TypeScript, but this is unlikely to be needed.
 
 ## Sources
 
-- [openapi-typescript documentation](https://openapi-ts.dev/openapi-fetch/) — HIGH confidence, official docs
-- [openapi-fetch createClient API](https://openapi-ts.dev/openapi-fetch/api) — HIGH confidence, official docs
-- [@hono/zod-openapi GET /doc pattern](https://hono.dev/examples/zod-openapi) — HIGH confidence, official Hono docs
-- Existing `scripts/validate-openapi.ts` — confirmed `createApp({})` stub pattern works (code in repo, verified directly)
-- Existing `packages/daemon/src/api/server.ts` — confirmed `app.doc('/doc', {...})` is always registered regardless of deps (line 980)
-- Existing `packages/admin/src/api/client.ts` — confirmed `apiGet<T>` / `apiPost<T>` wrapper pattern (code in repo)
-- Existing `packages/admin/src/pages/actions.tsx` — confirmed `BUILTIN_PROVIDERS` hardcoded array (code in repo)
-
----
-*Architecture research for: OpenAPI type generation integration in WAIaaS monorepo*
-*Researched: 2026-03-15*
+- `packages/daemon/src/pipeline/stages.ts` -- PipelineContext, stage functions, notification calls
+- `packages/daemon/src/pipeline/database-policy-engine.ts` -- ContractWhitelistRules with `name?` field
+- `packages/daemon/src/notifications/templates/message-templates.ts` -- Template variable interpolation
+- `packages/daemon/src/notifications/notification-service.ts` -- NotificationService.notify() signature
+- `packages/core/src/i18n/en.ts` -- Messages type structure
+- `packages/daemon/src/api/routes/openapi-schemas.ts` -- TxDetailResponseSchema
+- `packages/admin/src/pages/transactions.tsx` -- Admin UI transaction display
+- `packages/daemon/src/infrastructure/database/schema.ts` -- token_registry pattern reference

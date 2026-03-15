@@ -55,6 +55,7 @@ export type UuidFn = () => string;
 export class PolymarketOrderProvider implements IActionProvider {
   readonly metadata: ActionProviderMetadata = {
     name: 'polymarket_order',
+      displayName: 'Polymarket Order',
     description: 'Polymarket prediction market CLOB trading (buy/sell/cancel/update orders)',
     version: '1.0.0',
     chains: ['ethereum'],

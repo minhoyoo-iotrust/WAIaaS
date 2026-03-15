@@ -169,6 +169,7 @@ export class DaemonLifecycle {
   private adminStatsService: AdminStatsService | null = null;
   private hyperliquidMarketData: import('@waiaas/actions').HyperliquidMarketData | null = null;
   private polymarketInfra: import('../api/routes/polymarket.js').PolymarketInfraDeps | null = null;
+  private contractNameRegistry: import('@waiaas/core').ContractNameRegistry | null = null;
   private daemonStartTime: number = Math.floor(Date.now() / 1000);
 
   /** Whether shutdown has been initiated. */
@@ -1478,6 +1479,10 @@ export class DaemonLifecycle {
         const signerRegistry = new SignerCapabilityRegistry();
         bootstrapSignerCapabilities(signerRegistry);
 
+        // [Phase 422] v32.0: ContractNameRegistry for notification enrichment
+        const { ContractNameRegistry } = await import('@waiaas/core');
+        this.contractNameRegistry = new ContractNameRegistry();
+
         const app = createApp({
           db: this._db!,
           sqlite: this.sqlite ?? undefined,
@@ -1521,6 +1526,7 @@ export class DaemonLifecycle {
           hyperliquidMarketData: this.hyperliquidMarketData ?? undefined,
           polymarketInfra: this.polymarketInfra ?? undefined,
           signerRegistry,
+          contractNameRegistry: this.contractNameRegistry ?? undefined,
         });
 
         const hostname = this._config!.daemon.hostname;

@@ -1,177 +1,159 @@
 # Project Research Summary
 
-**Project:** WAIaaS Admin UI — OpenAPI Client Type Generation (v31.17)
-**Domain:** Build-time OpenAPI type generation pipeline for a Preact Admin UI in a TypeScript monorepo
+**Project:** WAIaaS v32.0 — Contract Name Resolution
+**Domain:** Wallet notification enrichment / DeFi contract address display
 **Researched:** 2026-03-15
 **Confidence:** HIGH
 
 ## Executive Summary
 
-This milestone eliminates the structural drift between the WAIaaS daemon's OpenAPI spec and the Admin UI's manual TypeScript types. The current Admin UI has 122 manual interface declarations and 116 call sites with unsafe type casts (`as T`, `as any`, `as unknown as X`), all of which silently diverge whenever a backend Zod schema changes. The industry-standard solution is `openapi-typescript` v7 (zero-runtime, pure `.d.ts` output) combined with `openapi-fetch` (6 KB runtime wrapper) — both are maintained by the same team, compatible with TypeScript 5.x, and designed for exactly this pattern. The WAIaaS codebase already has all prerequisites: `createApp({}) + app.request('/doc')` spec extraction is proven in `scripts/validate-openapi.ts`, `tsx` is available for scripts, and `@waiaas/shared` provides the correct package boundary for shared constants.
+Contract name resolution for WAIaaS is a read-only enrichment feature that maps raw contract addresses to human-readable protocol names in notifications and Admin UI. All four research tracks converge on one clear approach: a zero-dependency, synchronous, in-memory lookup using a 4-tier priority cascade (Action Provider metadata > well-known static registry > CONTRACT_WHITELIST user labels > abbreviated address fallback). No new npm packages, no new database tables, and no RPC calls are required. The feature layers cleanly onto existing infrastructure — the `actionProvider` pipeline field, the `CONTRACT_WHITELIST` `name?` field, the `{type}` template variable pattern, and the `amountFormatted` API enrichment pattern from v31.15 all serve as direct precedents.
 
-The recommended approach is a 5-phase pipeline: (1) spec extraction pipeline with CI freshness gate, (2) type-safe client wrapper validated on one high-traffic page, (3) incremental interface migration page-by-page, (4) backend API expansion with provider `enabledKey`/`category` fields and a new settings schema endpoint, and (5) contract tests. Two backend API additions are bundled with this milestone: `GET /v1/actions/providers` expanded with `enabledKey` and `category` (replacing the 14-entry static `BUILTIN_PROVIDERS` array in Admin UI), and a new `GET /v1/admin/settings/schema` endpoint (replacing the 85-entry hardcoded `settings-search-index.ts`). Both are independent of the type generation pipeline and can ship in any order relative to the migration phases.
+The recommended approach is to implement a `ContractNameRegistry` service in `@waiaas/core` backed by a static `well-known-contracts.ts` data module (~200-300 curated entries across EVM chains + Solana), surface contract names via an upgraded `{to}` notification variable value (format: "Protocol Name (0xabcd...1234)"), and enrich the transaction API response with a `contractName` field consumed by the Admin UI. The Action Provider `metadata.name` field is the highest-value source because it already flows through the pipeline for every DeFi ACTION_PROVIDER path — wiring it to the notification output covers ~80% of CONTRACT_CALL notifications with zero new data required.
 
-The primary risk is the `createApp({})` stub producing an incomplete OpenAPI spec because most routes guard against missing deps. This must be resolved in Phase 1 before any migration work begins — a CI assertion comparing the `paths` count in `openapi.json` against the known 73 endpoints from `endpoints.ts` is a mandatory guard. The secondary risk is discriminated union narrowing: the 9-type transaction `oneOf` union should NOT be migrated to generated types because openapi-typescript v7 does not reliably narrow discriminated unions, and the Zod types from `@waiaas/core` are already the authoritative SSoT.
+The primary risk is data correctness: EVM address case-sensitivity bugs and cross-chain address misidentification are the most likely failure modes. Both are preventable with a normalized lowercase-keyed, per-network compound-key registry structure. A secondary risk is notification template backward compatibility — fully mitigated by modifying the value produced for the existing `{to}` variable rather than introducing a new `{to_display}` variable, which eliminates the risk of unreplaced placeholder text appearing in sent notifications.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The stack decision is clear and low-risk. `openapi-typescript@^7.13.0` is added as a root devDependency (codegen, never shipped to browser); `openapi-fetch@^0.17.0` is added as a runtime dependency of `@waiaas/admin` (6 KB, CSP-safe, wraps native fetch). No alternatives are worth considering: `@hey-api/openapi-ts` generates runtime code and Zod schemas that conflict with the Zod SSoT rule; swagger-codegen requires a Java runtime; the existing custom `apiGet<T>` wrapper cannot eliminate manual cast sites at the type system level without the companion library.
+Zero new dependencies. The well-known contract registry follows the exact pattern of `builtin-tokens.ts` — a static TypeScript `Record` keyed by network-then-lowercase-address, bundled in `@waiaas/core`. Every required integration point is covered by existing project tools: viem `getAddress()` for EVM checksum normalization, the existing i18n template variable substitution system for notification injection, and openapi-typescript auto-generation for Admin UI type propagation.
 
 **Core technologies:**
-- `openapi-typescript@^7.13.0`: Build-time type generation from OpenAPI spec — zero runtime, TypeScript 5.x peer dep matches project, `--check` flag for CI drift detection (merged Jul 2024)
-- `openapi-fetch@^0.17.0`: Type-safe fetch wrapper using generated `paths` type — eliminates `as T` casts, CSP-safe (no CDN, no eval), `onRequest`/`onResponse` middleware for auth header and 401-logout injection
-- `scripts/generate-api-types.ts` (new): Extract spec via `createApp({})`, call `openapiTS(specObject)`, write `packages/admin/src/api/types.generated.ts`
-- No new libraries beyond these two — existing `tsx`, `@apidevtools/swagger-parser`, and the `createApp()` extraction pattern cover all other needs
+- TypeScript `Record<string, WellKnownContract[]>` in `@waiaas/core`: static well-known data — zero runtime cost, zero deps, follows `BUILTIN_TOKENS` pattern; ~120 addresses already exist across provider configs
+- `ActionProviderMetadataSchema` extension with optional `displayName`: provider-declared human name — self-documenting, covers all 14+ Action Provider paths, requires updating 20+ existing providers
+- Existing `CONTRACT_WHITELIST` `name?` field: user-labeled contracts — already stored in DB, just needs lookup path wired to resolver
+- Existing `message-templates.ts` placeholder system: notification variable injection — upgrade `{to}` value format rather than adding new variables, maintains backward compatibility
 
 ### Expected Features
 
-All features in this milestone are P1 or P2 based on direct codebase analysis. No speculative features.
+**Must have (table stakes):**
+- Action Provider name in notifications — owner sees "Aave V3" not raw hex; `actionProvider` field already flows through pipeline, not surfaced in notification vars yet
+- Well-known contract registry (static) — every block explorer resolves known contracts; 200-300 curated entries across 5 EVM chains + Solana
+- CONTRACT_WHITELIST name fallback — users already enter `name` field in whitelist policies; not surfacing it in notifications wastes their effort
+- Abbreviated address fallback — unknown contracts must still show something; `0x8787...4E2` is the standard pattern
+- Notification template `{to}` enrichment — all 4 notification event types (TX_REQUESTED, TX_APPROVAL_REQUIRED, TX_SUBMITTED, TX_CONFIRMED) should show resolved name
+- Admin UI transaction list contract names — transaction history should show protocol names matching block explorer UX
 
-**Must have (P1 — this milestone):**
-- `scripts/extract-openapi.ts` — write `openapi.json` from `createApp({})` to disk; prerequisite for type generation
-- `packages/admin/src/api/types.generated.ts` — generated by openapi-typescript v7, committed to repo
-- CI freshness gate — `openapi-typescript --check` or `git diff --exit-code` after extraction; blocks PR merge on drift
-- `openapi-fetch` typed client wrapper on at least one high-traffic Admin page — validates the pattern end-to-end
-- `GET /v1/actions/providers` expanded with `enabledKey` and `category` fields — unblocks BUILTIN_PROVIDERS removal
-- Replace `BUILTIN_PROVIDERS` static array (14 entries) with live API call — validates provider discovery pattern
-- `GET /v1/admin/settings/schema` endpoint — expose `SETTING_DEFINITIONS` as structured JSON (key, category, label, description, isCredential, defaultValue)
-- Contract test script — CI guard that every response field key used in Admin UI exists in OpenAPI spec
-
-**Should have (P2 — follow-on milestones):**
-- Page-by-page manual interface migration for all remaining 62 interfaces across Admin pages
-- Replace `settings-search-index.ts` hardcoded entries (85+) with API-driven generation from schema endpoint
-- Replace all 28 `apiGet<T>` manual casts once pages are migrated
+**Should have (differentiators):**
+- 4-tier priority resolution cascade with `source` attribution field in API responses — unique combination; enables consumer confidence decisions and debugging
+- Cross-chain same-address disambiguation via per-network compound keys — prevents misidentification on L2s where deployer addresses sometimes collide
+- Wallet detail Activity tab enrichment — extends the 4-tab wallet detail display (Overview/Activity/Assets/Setup)
 
 **Defer (v2+):**
-- Python SDK OpenAPI type generation — separate concern, different pipeline
-- OpenAPI spec diff in PR comments — nice DX, but contract test already catches mismatches; adds CI complexity
+- ENS/SNS reverse resolution — DeFi contracts rarely set reverse records; <5% success rate; adds `@ensdomains/ensjs` dependency
+- Etherscan/Solscan API lookup — adds external dependency, rate limits, API key management, privacy exposure
+- User-editable address book — CONTRACT_WHITELIST `name` field already serves this purpose
+- Transaction calldata decoding ("what will this do") — full Rabby-style simulation; separate milestone scope
 
 ### Architecture Approach
 
-The architecture uses a clean build-time pipeline: `extract-openapi.ts` runs before the Vite build and after `@waiaas/shared#build`, producing a committed `openapi.json` and a committed `types.generated.ts`. The Admin UI consumes the generated file as any other TypeScript source — no runtime spec loading, no Vite plugin, no native-dep pollution. A new `typed-client.ts` wraps the existing `apiGet`/`apiPost` functions with type constraints from the generated file, enabling incremental page migration without a big-bang rewrite. Hardcoded constant arrays (`BUILTIN_PROVIDERS`, policy type arrays) move to `@waiaas/shared` so both daemon (settings validation) and Admin UI (display) import from the same source.
+The `ContractNameRegistry` is a pure in-memory, synchronous, read-only service instantiated once at daemon startup. It has no I/O, no async methods, and no database writes. It is injected into the pipeline context and called at notification-emission points in `stages.ts` and at the transaction API route layer. Resolution order: CONTRACT_WHITELIST name (highest trust, user-defined) > well-known registry (static, verified) > Action Provider display name (provider self-declared) > null (fallback to truncated address). All data sources are in-memory; the resolve function returns `string | null` synchronously.
 
 **Major components:**
-1. `scripts/extract-openapi.ts` — calls `createApp({})` (stub deps), hits `GET /doc`, writes `openapi.json`
-2. `scripts/check-openapi-freshness.ts` — CI gate; re-extracts live spec and diffs against committed `openapi.json`; exits 1 on mismatch
-3. `packages/admin/src/api/types.generated.ts` — generated output; never hand-edited; committed to repo
-4. `packages/admin/src/api/typed-client.ts` — thin typed wrappers using `components['schemas']` from generated types; coexists with existing `apiGet<T>` during migration
-5. `packages/shared/src/providers.ts` + `policy-types.ts` — moved constants (no native deps, importable by both daemon and Admin UI)
-6. New/expanded daemon routes: `GET /v1/actions/providers` (add `enabledKey`, `category`), `GET /v1/admin/settings/schema` (new)
-
-**Key architectural constraint:** `packages/daemon` must NEVER import from `packages/admin`. Contract tests read `openapi.json` directly as a file path — not a workspace import. Turbo dependency direction: `@waiaas/shared#build` → `generate:types` → `@waiaas/admin#build` → `@waiaas/daemon#build`.
+1. `ContractNameRegistry` (`packages/core/src/registries/contract-name-registry.ts`) — synchronous in-memory lookup, O(1) `Map.get`, `resolve(address, network, opts)` signature
+2. `well-known-contracts.ts` (`packages/core/src/registries/`) — static data module, ~200-300 entries, keyed by `{network}:{lowercaseAddress}`
+3. `ActionProviderMetadataSchema.displayName` extension — optional field with snake_case auto-conversion fallback (`jupiter_swap` → `Jupiter Swap`), applied to all 20+ existing providers
+4. Pipeline `stages.ts` modifications — upgrade `{to}` variable value at Stage 1/3/5/6 notification calls; no new pipeline context fields needed
+5. `TxDetailResponseSchema.contractName: z.string().nullable()` — resolved at query time, matches `amountFormatted` enrichment pattern from v31.15
+6. Admin UI `transactions.tsx` + `policies.tsx` updates — consume `contractName` from auto-generated OpenAPI types
 
 ### Critical Pitfalls
 
-See `.planning/research/PITFALLS.md` for all 9 pitfalls with code evidence, prevention strategies, and a phase-to-pitfall mapping table.
+1. **EVM address case-sensitivity in registry lookup** — Store all registry keys as lowercase; apply `.toLowerCase()` for EVM address lookups; use exact Base58 for Solana (case-sensitive). Test with checksum/lowercase/uppercase variants. Intermittent failure, easy to miss if tests always use one form.
 
-1. **Incomplete spec from stub deps (CRITICAL)** — `createApp({})` silently omits routes guarded by `if (deps.db)` etc. Prevention: pass typed stub objects satisfying structural requirements (not bare `{}`); add CI assertion that `paths` count in `openapi.json` is ≥ 73. Address in Phase 1 before any migration starts.
+2. **Notification template backward compatibility** — Do NOT add a new `{to_display}` variable. Upgrade the value produced for the existing `{to}` variable to "Protocol Name (0xabcd...1234)" format. This eliminates the risk of unreplaced `{to_display}` placeholder text appearing in sent notifications. Any new variables added must be included in the `message-templates.ts` fallback cleanup list and updated in both `en.ts` and `ko.ts`.
 
-2. **Turbo cache returns stale openapi.json (CRITICAL)** — if the extraction task is cached, a stale spec can be restored from Turbo cache and CI reports success. Prevention: set `"cache": false` on the `generate-openapi` Turbo task, or use all `packages/daemon/src/**/*.ts` files as cache inputs. CI `git diff --exit-code openapi.json` is the backstop.
+3. **Action Provider `displayName` gaps for all 20+ providers** — Add `displayName` as optional with snake_case auto-conversion fallback. Update all 20+ providers in the same phase, not deferred — separated phases risk partial coverage that is hard to detect. Without `displayName`, Action Provider path silently falls back to Well-known registry.
 
-3. **discriminatedUnion oneOf not narrowed (HIGH)** — openapi-typescript v7 generates a wide union for `oneOf`; `switch (tx.type) { case 'TRANSFER': }` loses narrowing. Prevention: explicitly exclude the 9-type transaction discriminated union from migration. Use Zod-inferred types from `@waiaas/core` for transaction payloads; use generated types for flat response wrappers only.
+4. **Synchronous-only constraint** — `ContractNameRegistry.resolve()` must be a pure synchronous `string | null` function. Pipeline Stage 1 constructs notification vars synchronously; any async resolution would block the transaction pipeline. RPC calls are strictly forbidden in the resolver. If on-chain resolution is ever needed, implement as a background cache pre-loader.
 
-4. **Nullable/optional type shape divergence + v7 defaultNonNullable change (MEDIUM)** — generated types use `T | null`; manual interfaces often used `T | undefined`. Additionally, openapi-typescript v7 changed `defaultNonNullable` to `true` by default, making optional fields appear required. Prevention: run `pnpm typecheck` before and after each page migration; treat new errors as spec discoveries; never widen with `as unknown as T`; inspect 5 known-optional fields after first generation run to determine if `defaultNonNullable: false` is needed.
-
-5. **Test mock objects silently invalid after interface migration (MEDIUM)** — `vi.fn().mockResolvedValue({...})` defaults to `any`; missing required fields in mocks cause no TypeScript error. Prevention: add `satisfies GeneratedType` to every mock object in the same PR as the interface migration; never separate mock updates from interface changes.
+5. **Cross-chain address key design** — Use compound key `{network}:{lowercaseAddress}` (e.g., `ethereum-mainnet:0xe592...`). Simple address-only keys allow SushiSwap on Polygon to match a different protocol on Ethereum when the deployer addresses happen to be identical. Wrong names are worse than no names.
 
 ## Implications for Roadmap
 
-Based on combined research, 5 phases are recommended in strict dependency order.
+Based on combined research, 3 phases are recommended in strict dependency order.
 
-### Phase 1: Spec Extraction Pipeline and CI Freshness Gate
+### Phase 1: Well-Known Data Collection + ContractNameRegistry Core
 
-**Rationale:** Everything else depends on a complete, fresh `openapi.json` being available. Pitfalls 1, 2, 6, and 8 all manifest here and must be resolved before any migration begins. This phase is purely additive with zero migration risk.
-**Delivers:** `scripts/extract-openapi.ts`, committed `openapi.json`, `scripts/check-openapi-freshness.ts`, `turbo.json` updated with `generate:types` task (`"cache": false`), CI workflow updated, `openapi-typescript` and `openapi-fetch` installed, `types.generated.ts` generated and committed, CI path-count assertion.
-**Addresses:** Spec extraction (P1), type generation check-in (P1), CI freshness gate (P1).
-**Avoids:** Pitfall 1 (stub deps incomplete spec), Pitfall 2 (Turbo cache stale types), Pitfall 6 (CSP: openapi.json must not appear in `dist/`), Pitfall 8 (v7 `defaultNonNullable` — configure after first generation run).
+**Rationale:** All downstream integration depends on the registry class and data existing. Pure data + core service work with no dependencies on other phases. Independently testable in isolation. The data collection (verified addresses from official protocol docs) is the only research-intensive subtask and must come before registry implementation.
+**Delivers:** `ContractNameRegistry` class with synchronous `resolve(address, network, opts)` API, `normalizeForLookup(address, chain)` utility (EVM lowercase / Solana exact), `well-known-contracts.ts` with 200-300 verified entries across 5 EVM chains + Solana, `ActionProviderMetadataSchema.displayName` optional field with auto-conversion fallback on all 20+ providers, unit tests including address variant testing (checksum/lowercase/uppercase), CI address-format and deduplication validation.
+**Addresses:** Table stakes features 1-4 (provider names, well-known registry, whitelist fallback, truncation fallback).
+**Avoids:** Pitfalls 1 (case sensitivity), 3 (displayName gaps), 5 (cross-chain address collision).
 
-### Phase 2: Type-Safe Client Wrapper (First Page Migration)
+### Phase 2: Notification Pipeline Integration
 
-**Rationale:** Validates the end-to-end pattern on one high-traffic page (e.g., wallets page with 12 manual interfaces) before committing to full migration. Establishes the `typed-client.ts` pattern and confirms `openapi-fetch` auth middleware integration. Pitfall 3 (nullable shape divergence) surfaces here and the resolution process is documented for Phase 3.
-**Delivers:** `packages/admin/src/api/typed-client.ts`, `openapi-fetch` client with `X-Master-Password` `onRequest` middleware and 401-logout `onResponse` middleware, at least one high-traffic page migrated off manual interfaces, test mocks updated with `satisfies GeneratedType`.
-**Uses:** `openapi-fetch@^0.17.0`, `types.generated.ts` from Phase 1.
-**Implements:** Pattern 2 (Generated-type Constraint on Existing Client) from ARCHITECTURE.md.
-**Avoids:** Pitfall 3 (nullable divergence — pnpm typecheck gate), Pitfall 5 (test mocks — satisfies enforcement).
+**Rationale:** Notification enrichment is the highest-value user-facing change — it directly affects the Owner approval UX, which is the core WAIaaS security interaction. Depends on Phase 1 registry being stable. Ships before Admin UI because notification quality is more critical than display-layer enrichment.
+**Delivers:** Upgraded `{to}` variable value format ("Protocol Name (0xabcd...1234)") injected at TX_REQUESTED / TX_APPROVAL_REQUIRED / TX_SUBMITTED / TX_CONFIRMED notification points in `stages.ts`, updated `en.ts` + `ko.ts` i18n templates, `message-templates.ts` fallback placeholder list updated, integration tests verifying all 4 event types receive resolved names.
+**Uses:** `ContractNameRegistry` from Phase 1.
+**Avoids:** Pitfalls 2 (template backward compat — value-upgrade approach), 4 (async resolver blocked by synchronous constraint), 9 (`to`/`to_display` variable confusion).
 
-### Phase 3: Incremental Interface Migration (Remaining Pages)
+### Phase 3: API Response Enrichment + Admin UI Display
 
-**Rationale:** Page-by-page replacement after the pattern is validated. Cannot be big-bang — 8,050+ tests cannot catch all Admin UI regressions in a single diff. Each page is an independent PR. The 9-type discriminated union is explicitly excluded from migration scope.
-**Delivers:** All 62 manual interfaces across Admin pages replaced with generated types; all 28 `apiGet<T>` manual casts replaced; test mock objects use `satisfies` for migrated pages; `pnpm typecheck` remains clean throughout.
-**Avoids:** Pitfall 4 (discriminated union — explicitly excluded with documentation), Pitfall 5 (test mocks — enforced per-page PR), Pitfall 3 (nullable divergence — pnpm typecheck gate per PR).
-
-### Phase 4: Backend API Expansion (Provider Discovery and Settings Schema)
-
-**Rationale:** These two backend changes are independent of the type generation pipeline and can ship in any order relative to Phases 2 and 3. They are grouped here because they are both server-side Zod schema expansions with Admin UI frontend changes that benefit from generated types established in Phases 1 and 2. The provider API expansion requires adding `enabledKey` and `category` to `IActionProvider` and `ProviderResponseSchema`; the settings schema endpoint requires adding `label` and `description` fields to `SettingDefinition`.
-**Delivers:** `GET /v1/actions/providers` with `enabledKey`/`category`, `BUILTIN_PROVIDERS` removed from Admin UI (imported from `@waiaas/shared` instead), `GET /v1/admin/settings/schema` endpoint, hardcoded constant arrays moved to `@waiaas/shared/src/providers.ts` and `policy-types.ts`.
-**Addresses:** Provider API expanded (P1), BUILTIN_PROVIDERS removal (P1), settings schema endpoint (P1), Pattern 3 (@waiaas/shared re-export for hardcoded arrays) from ARCHITECTURE.md.
-**Avoids:** Pitfall 7 (settings `as Record<string,string>` casts — tracked separately with TODO comments, not conflated with generated-type migration), Anti-Pattern 3 (static metadata in `@waiaas/shared`, dynamic runtime state from API — merged at render time).
-
-### Phase 5: Contract Tests and Verification
-
-**Rationale:** Terminal validation phase. Contract tests require a stable `openapi.json` (Phase 1) and a meaningful set of migrated Admin UI pages (Phase 3) to test against. Architecture is defined before writing any code to avoid the circular import trap.
-**Delivers:** `scripts/verify-openapi-contract.ts` — parses `openapi.json` component schema property names, asserts all Admin UI field access paths exist; integrated into CI alongside `verify-enum-ssot.ts` and `verify-admin-route-consistency.ts`; verification checklist from PITFALLS.md "Looks Done But Isn't" section confirmed clean.
-**Avoids:** Pitfall 9 (circular imports — contract tests read `openapi.json` as a file path; `packages/daemon/package.json` gains no `@waiaas/admin` dependency).
+**Rationale:** Admin UI consumes the API enrichment, so API schema and UI changes ship together. OpenAPI type regeneration automatically propagates `contractName` to frontend. Comes last because it depends on the registry (Phase 1) and benefits from validated patterns from Phase 2; it also follows the v31.17 OpenAPI type generation pipeline established in the previous milestone.
+**Delivers:** `contractName: z.string().nullable()` field in `TxDetailResponseSchema`, server-side resolution in transaction query routes (GET /v1/wallets/:id/transactions), Admin UI `transactions.tsx` showing protocol names in transaction list/detail, Admin UI `policies.tsx` showing contract names in CONTRACT_WHITELIST display, Wallet Activity tab enrichment, auto-regenerated OpenAPI types for SDK/MCP propagation.
+**Uses:** `ContractNameRegistry` from Phase 1, OpenAPI type pipeline from v31.17.
+**Avoids:** Pitfall 8 (Admin UI performance — server-side resolution eliminates per-row client computation).
 
 ### Phase Ordering Rationale
 
-- Phase 1 is a strict prerequisite: `types.generated.ts` must exist before any typed client code can be written.
-- Phase 2 must precede Phase 3 to validate the migration pattern on one page before scaling to all pages.
-- Phase 4 is independent of Phases 2 and 3 but benefits from generated types being available (Phase 1); can be developed in parallel with Phase 2/3 by a separate track.
-- Phase 5 requires stable spec (Phase 1) and representative Admin UI usage (Phases 2-3) for meaningful coverage.
-- This ordering avoids the most dangerous failure mode: starting migration (Phase 3) before confirming spec completeness (Phase 1) causes the most rework and the hardest-to-diagnose runtime bugs.
+- Phase 1 is strictly foundational: `ContractNameRegistry` and its data must exist before any integration can be written. The data collection subtask (verifying 80-180 additional well-known addresses from protocol docs) is the only work that cannot be parallelized.
+- Phase 2 before Phase 3 because the Owner notification path is the core security UX of WAIaaS. An Owner seeing "Aave V3" instead of a raw hex address in an approval request is the primary user value of this milestone.
+- Phase 3 last because it depends on the API schema change (contract adds `contractName` to `TxDetailResponse`) and the v31.17 OpenAPI type generation pipeline handles propagation to Admin UI automatically.
+- No separate SDK/MCP phase is needed: SDK types auto-regenerate from OpenAPI in Phase 3. MCP tool responses may include `contractName` implicitly through the enriched API.
 
 ### Research Flags
 
-Phases with well-documented patterns (skip additional research):
-- **Phase 1:** `createApp({})` extraction pattern is already proven in `scripts/validate-openapi.ts`. `openapi-typescript` v7 API is fully documented at `openapi-ts.dev`. No new research needed.
-- **Phase 2:** `openapi-fetch` middleware pattern is fully documented with working examples. The `typed-client.ts` wrapper pattern is standard.
-- **Phase 5:** Contract test pattern is already established in `scripts/verify-enum-ssot.ts`. No new research needed.
+Phases likely needing targeted investigation during planning:
 
-Phases that need targeted investigation during implementation:
-- **Phase 1 (stub deps audit):** Before writing the extraction script, audit `server.ts` for every `if (deps.x)` conditional route registration block. Pass typed stub objects (not bare `{}`) to maximize route registration coverage. Confirm the resulting `openapi.json` path count versus the 73 endpoints in `endpoints.ts`.
-- **Phase 3 (discriminated union inspection):** Inspect the generated `openapi.json` for the 9-type `oneOf` schema to confirm whether each variant has a `const` discriminant literal. Document the exclusion decision explicitly so future phases do not attempt to migrate transaction union types.
-- **Phase 4 (SettingDefinition fields):** Confirm whether adding `label` and `description` to `SettingDefinition` requires a DB migration or is purely in-memory. A quick inspection of `setting-keys.ts` resolves this before coding.
+- **Phase 1 (well-known data collection):** 120 addresses already exist in provider configs (verified in STACK.md). The remaining ~80-180 entries for non-integrated protocols (Uniswap V2/V3, Compound V3, Curve, 1inch, Raydium, Marinade, Orca, Metaplex, Chainlink, OpenSea Seaport, ERC-4337 EntryPoint, Morpho) need sourcing from official protocol deployment docs. Data accuracy is critical — incorrect addresses are worse than no data.
+- **Phase 2 (Solana `to` field semantics):** PITFALLS.md (Pitfall 7) flags that Solana CONTRACT_CALL `req.to` may contain a recipient address rather than a Program ID. If so, well-known Solana Program IDs in the registry will not match. Validate against `extractTransactionParam()` for Solana CONTRACT_CALL before implementing Stage 1 notification wiring. Action Provider 1st-priority resolution likely covers all Solana DeFi paths regardless.
+
+Phases with standard patterns (skip additional research):
+
+- **Phase 3 (API enrichment):** Follows the exact `amountFormatted` enrichment pattern from v31.15 — well-documented, zero ambiguity, established precedent in this codebase.
+- **Phase 1 (registry design):** Follows `builtin-tokens.ts` static data module pattern — established precedent, no design uncertainty.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Both libraries verified at exact versions via npm; official docs consulted; TypeScript 5.x peer dep and Node 22 compatibility confirmed |
-| Features | HIGH | Codebase inspected directly: 73 endpoints in `endpoints.ts`, 122 manual interfaces, 116 cast sites, `BUILTIN_PROVIDERS` 14-entry array, `SETTING_DEFINITIONS` struct confirmed |
-| Architecture | HIGH | Extract pattern proven in existing `validate-openapi.ts`; Turbo pipeline ordering confirmed via `turbo.json` inspection; CSP constraints confirmed via `cspMiddleware`; `app.doc('/doc')` unconditional registration confirmed at `server.ts:980` |
-| Pitfalls | HIGH (codebase) / MEDIUM (ecosystem) | Codebase-specific pitfalls from direct code inspection are HIGH confidence; discriminated union narrowing limitation confirmed via openapi-typescript GitHub issues but marked MEDIUM as ecosystem tooling behavior |
+| Stack | HIGH | Zero new dependencies confirmed by direct codebase inspection of 13 provider configs. All integration pattern precedents exist and are verified. |
+| Features | HIGH | Based on direct codebase inspection + block explorer industry standards. Anti-features clearly scoped out with concrete rationale. MVP vs. defer boundaries are unambiguous. |
+| Architecture | HIGH | `ContractNameRegistry` design is straightforward. Every integration pattern has a direct codebase precedent: builtin-tokens, amountFormatted, {type} template var, CONTRACT_WHITELIST name field. |
+| Pitfalls | HIGH | All 12 pitfalls identified from direct code analysis of `stages.ts`, `message-templates.ts`, `database-policy-engine.ts`, `action-provider.types.ts`. Not speculative — each pitfall cites exact file and line context. |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Stub deps completeness:** The exact count of conditionally-registered routes in `server.ts` needs to be audited before Phase 1 to establish the correct baseline for the CI path-count assertion. If stub objects produce fewer than 73 paths, the assertion threshold must be documented with a rationale.
-- **`label` and `description` fields in `SettingDefinition`:** Required for the settings schema endpoint. Whether adding them is purely in-memory or requires a DB migration needs one inspection of `setting-keys.ts` at Phase 4 start.
-- **openapi-typescript `exportType` option:** The default `exportType: 'interface'` can cause issues with mapped types and intersection types. Needs to be verified after the first generation run; switching to `exportType: 'type'` may be required.
-- **openapi-typescript `defaultNonNullable` option:** v7 changed this default to `true`. After the first generation run, inspect 5 known-optional response fields (e.g., `ownerAddress`, `expiresAt`) in the generated types. If they appear non-optional, add `defaultNonNullable: false` to the generation config.
+- **Solana `to` field semantics for CONTRACT_CALL:** Needs runtime verification against `extractTransactionParam()` to confirm whether `req.to` is a Program ID or recipient address in Solana CONTRACT_CALL transactions. Mitigation: Action Provider 1st-priority resolution covers all Solana DeFi paths via the `actionProvider` pipeline field regardless. Well-known Solana registry entries may have limited impact.
+- **BATCH transaction `{to}` representation:** PITFALLS.md (Pitfall 11) flags that BATCH has multiple `to` addresses. Confirm current BATCH notification template usage during Phase 2 planning. Likely handled as "N contracts" summary or first-contract display. Low risk.
+- **Well-known data completeness (~80-180 addresses):** 120 addresses exist in provider configs; the remaining entries for non-integrated protocols need manual sourcing from official docs. CI address-format validation will catch format errors but cannot catch semantic errors (wrong address for a protocol). Recommend cross-referencing against at least two authoritative sources per protocol.
+- **`displayName` auto-conversion quality:** The `jupiter_swap` → `Jupiter Swap` snake_case conversion covers simple cases but protocols with abbreviations (`aave_v3`) need manual overrides. Verify the auto-conversion output for all 20+ providers before shipping Phase 1.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- https://openapi-ts.dev/node — Node.js API: `openapiTS(object)` accepts in-memory JSON, `astToString()` helper
-- https://openapi-ts.dev/openapi-fetch/ — 6 KB bundle, type inference eliminates generics, Node.js 18+ requirement
-- https://openapi-ts.dev/openapi-fetch/middleware-auth — `onRequest`/`onResponse` middleware, auth header injection example
-- https://openapi-ts.dev/migration-guide — v7 breaking changes: AST output, `defaultNonNullable` now default `true`
-- https://github.com/openapi-ts/openapi-typescript/issues/1615 — `--check` flag (PR #1768, merged 2024-07-17)
-- `npm view openapi-typescript version` → `7.13.0` (verified 2026-03-15)
-- `npm view openapi-fetch version` → `0.17.0` (verified 2026-03-15)
-- WAIaaS codebase direct inspection: `scripts/validate-openapi.ts`, `packages/admin/src/api/client.ts`, `packages/admin/src/api/endpoints.ts`, `packages/daemon/src/api/server.ts:980`, `packages/admin/src/pages/actions.tsx`, `packages/admin/vitest.config.ts`, `turbo.json`
+- Internal codebase: `packages/daemon/src/pipeline/stages.ts` — PipelineContext, notification variable construction patterns, stage functions
+- Internal codebase: `packages/daemon/src/notifications/templates/message-templates.ts` — placeholder fallback mechanism, existing variable list
+- Internal codebase: `packages/core/src/i18n/en.ts` + `ko.ts` — Messages type structure, existing template variables
+- Internal codebase: `packages/daemon/src/pipeline/database-policy-engine.ts` — CONTRACT_WHITELIST `name` field, address comparison pattern (`toLowerCase()`)
+- Internal codebase: `packages/core/src/interfaces/action-provider.types.ts` — `ActionProviderMetadataSchema`, 20+ provider metadata, `displayName` absence confirmed
+- Internal codebase: `packages/daemon/src/api/routes/openapi-schemas.ts` — `TxDetailResponseSchema`, `amountFormatted` enrichment precedent
+- Internal codebase: `packages/core/src/token-registry/builtin-tokens.ts` — static data module pattern, `source: 'builtin'` pattern
+- Internal codebase: provider configs (aave-v3, lido-staking, jito-staking, jupiter-swap, drift, zerox-swap, across, polymarket, dcent-swap) — 120 existing hardcoded addresses
+- [Uniswap V3 Deployment Addresses](https://docs.uniswap.org/contracts/v3/reference/deployments/) — official multi-chain deployment docs
 
 ### Secondary (MEDIUM confidence)
-- https://github.com/openapi-ts/openapi-typescript/issues/1368 — `defaultNonNullable` and discriminated union behavior in v7
-- https://github.com/hey-api/openapi-ts/issues/3270 — discriminated unions not narrowed in generated types (confirmed open as of 2025)
-- https://github.com/openapi-ts/openapi-typescript/issues/1821 — `nullable: true + object` generates wrong union in v7.3.0
-- https://www.speakeasy.com/openapi/frameworks/hono — `createApp + getOpenAPIDocument` extraction pattern
+- [Etherscan Label Word Cloud](https://etherscan.io/labelcloud) — label categories and well-known address reference
+- [Rabby Wallet pre-sign security checks](https://support.rabby.io/hc/en-us/articles/11495471837071) — industry UX precedent for contract name display in wallet approval flows
+- Internal objective: `internal/objectives/m32-00-contract-name-resolution.md` — feature scope definition
 
 ### Tertiary (LOW confidence)
-- None — all findings validated against official docs or direct codebase inspection
+- `@bgd-labs/aave-address-book` npm — evaluated and rejected (too heavy for 15 addresses already hardcoded)
+- `eth-labels` npm (dawsbot) — evaluated and rejected (170k noisy entries, not curated for DeFi contracts)
+- `brianleect/etherscan-labels` GitHub — evaluated and rejected (stale 2023 scrape, no npm package)
 
 ---
 *Research completed: 2026-03-15*

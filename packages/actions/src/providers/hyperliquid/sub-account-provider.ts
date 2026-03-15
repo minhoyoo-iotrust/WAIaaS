@@ -39,6 +39,7 @@ export class HyperliquidSubAccountProvider implements IActionProvider {
   ) {
     this.metadata = {
       name: 'hyperliquid_sub',
+      displayName: 'Hyperliquid Sub-Account',
       description: 'Hyperliquid sub-account management: create sub-accounts and transfer USDC',
       version: '1.0.0',
       chains: ['ethereum'],

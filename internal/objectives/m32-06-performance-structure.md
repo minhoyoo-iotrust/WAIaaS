@@ -1,7 +1,7 @@
 # 마일스톤 m32-06: 성능 + 구조 개선
 
 - **Status:** PLANNED
-- **Milestone:** TBD
+- **Milestone:** v32.6
 
 ## 목표
 

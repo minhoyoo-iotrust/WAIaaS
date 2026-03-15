@@ -50,6 +50,7 @@ export class HyperliquidSpotProvider implements IActionProvider {
   ) {
     this.metadata = {
       name: 'hyperliquid_spot',
+      displayName: 'Hyperliquid Spot',
       description:
         'Hyperliquid DEX spot trading: buy, sell, and cancel spot market and limit orders',
       version: '1.0.0',

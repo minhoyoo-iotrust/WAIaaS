@@ -41,6 +41,8 @@ export interface ActionProviderTrackingResult {
 export const ActionProviderMetadataSchema = z.object({
   /** Provider name: lowercase alphanumeric + underscore, 3-50 chars. */
   name: z.string().regex(/^[a-z][a-z0-9_]*$/).min(3).max(50),
+  /** Human-readable display name for UI/notifications (e.g., "Jupiter Swap", "LI.FI"). */
+  displayName: z.string().min(1).max(100).optional(),
   /** Human-readable description, 10-500 chars. */
   description: z.string().min(10).max(500),
   /** SemVer version string. */
@@ -69,6 +71,17 @@ export const ActionProviderMetadataSchema = z.object({
 
 /** Action Provider metadata. Derived from ActionProviderMetadataSchema via z.infer. */
 export type ActionProviderMetadata = z.infer<typeof ActionProviderMetadataSchema>;
+
+/**
+ * Convert snake_case provider name to human-readable Title Case.
+ * e.g., 'jupiter_swap' -> 'Jupiter Swap', 'aave_v3' -> 'Aave V3'
+ */
+export function snakeCaseToDisplayName(name: string): string {
+  return name
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
 
 // ---------------------------------------------------------------------------
 // Zod SSoT: ActionDefinition

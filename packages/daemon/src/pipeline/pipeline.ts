@@ -49,6 +49,8 @@ export interface PipelineDeps {
   metricsCounter?: IMetricsCounter;
   // #251: resolved RPC URL for Smart Account publicClient creation
   resolvedRpcUrl?: string;
+  // v32.0: contract name registry for notification enrichment
+  contractNameRegistry?: import('@waiaas/core').ContractNameRegistry;
 }
 
 // ---------------------------------------------------------------------------

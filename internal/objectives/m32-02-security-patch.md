@@ -1,7 +1,7 @@
 # 마일스톤 m32-02: 보안 패치
 
 - **Status:** PLANNED
-- **Milestone:** TBD
+- **Milestone:** v32.2
 
 ## 목표
 

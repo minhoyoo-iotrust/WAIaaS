@@ -83,6 +83,7 @@ import { TransactionPipeline } from '../../pipeline/pipeline.js';
 import { resolveDisplayCurrencyCode, fetchDisplayRate, toDisplayAmount } from './display-currency-helper.js';
 import { resolveWalletId, verifyWalletAccess } from '../helpers/resolve-wallet-id.js';
 import { isLiteModeSmartAccount, getLiteModeError } from './wallets.js';
+import { resolveContractFields } from './admin-monitoring.js';
 
 export interface TransactionRouteDeps {
   db: BetterSQLite3Database<typeof schema>;
@@ -110,6 +111,8 @@ export interface TransactionRouteDeps {
   reputationCache?: import('../../services/erc8004/reputation-cache-service.js').ReputationCacheService;
   // v31.16: token registry for assetId -> token metadata resolution (Phase 408)
   tokenRegistryService?: TokenRegistryService | null;
+  // v32.0: contract name registry for notification enrichment
+  contractNameRegistry?: import('@waiaas/core').ContractNameRegistry;
 }
 
 // ---------------------------------------------------------------------------
@@ -615,6 +618,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
       approvalChannelRouter: deps.approvalChannelRouter,
       metricsCounter: deps.metricsCounter,
       reputationCache: deps.reputationCache,
+      contractNameRegistry: deps.contractNameRegistry,
     };
 
     // Stage 1: Validate + DB INSERT (synchronous -- assigns ctx.txId)
@@ -943,6 +947,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
             amountFormatted: meta.amountFormatted,
             amountDecimals: meta.decimals,
             amountSymbol: meta.symbol,
+            ...resolveContractFields(tx.type, tx.toAddress, tx.network, deps.contractNameRegistry),
           });
         }),
         cursor: hasMore ? nextCursor : null,
@@ -985,6 +990,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
           txHash: tx.txHash,
           error: tx.error,
           createdAt: tx.createdAt ? Math.floor(tx.createdAt.getTime() / 1000) : null,
+          ...resolveContractFields(tx.type, tx.toAddress, tx.network, deps.contractNameRegistry),
         })),
       },
       200,
@@ -1048,6 +1054,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
         amountFormatted: amountMeta.amountFormatted,
         amountDecimals: amountMeta.decimals,
         amountSymbol: amountMeta.symbol,
+        ...resolveContractFields(tx.type, tx.toAddress, tx.network, deps.contractNameRegistry),
       }),
       200,
     );

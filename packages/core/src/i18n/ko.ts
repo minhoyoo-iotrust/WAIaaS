@@ -176,8 +176,8 @@ export const messages: Messages = {
   notifications: {
     TX_REQUESTED: { title: '거래 요청', body: '{walletName}이(가) {to}로 {amount} {type}을(를) 요청했습니다 {display_amount}' },
     TX_QUEUED: { title: '거래 대기열 등록', body: '거래 {txId}가 처리 대기열에 등록되었습니다' },
-    TX_SUBMITTED: { title: '거래 제출', body: '거래 {txId}가 블록체인에 제출되었습니다 {display_amount}' },
-    TX_CONFIRMED: { title: '거래 확인', body: '거래 {txId}가 확인되었습니다. 금액: {amount} {display_amount}' },
+    TX_SUBMITTED: { title: '거래 제출', body: '거래 {txId}가 블록체인에 제출되었습니다. 수신: {to} {display_amount}' },
+    TX_CONFIRMED: { title: '거래 확인', body: '거래 {txId}가 확인되었습니다. 금액: {amount}, 수신: {to} {display_amount}' },
     TX_FAILED: { title: '거래 실패', body: '거래 {txId} 실패: {error} {display_amount}' },
     TX_CANCELLED: { title: '거래 취소', body: '거래 {txId}가 취소되었습니다' },
     TX_DOWNGRADED_DELAY: { title: '거래 지연', body: '거래 {txId}가 지연 대기열로 이동되었습니다 ({seconds}초 대기)' },

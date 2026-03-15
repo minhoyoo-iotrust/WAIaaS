@@ -104,9 +104,10 @@ describe('getNotificationMessage', () => {
     const msg = getNotificationMessage('TX_CONFIRMED', 'en', {
       txId: 'tx-999',
       amount: '2.0 SOL',
+      to: '0xabcd...1234',
     });
     expect(msg.title).toBe('Transaction Confirmed');
-    expect(msg.body).toBe('Transaction tx-999 confirmed. Amount: 2.0 SOL');
+    expect(msg.body).toBe('Transaction tx-999 confirmed. Amount: 2.0 SOL, To: 0xabcd...1234');
   });
 
   it('returns template with unresolved vars when vars not provided', () => {

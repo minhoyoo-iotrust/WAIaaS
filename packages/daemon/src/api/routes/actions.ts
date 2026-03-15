@@ -91,6 +91,8 @@ export interface ActionRouteDeps {
   // v31.12: External Action pipeline dependencies (Phase 390)
   credentialVault?: ICredentialVault;
   signerRegistry?: ISignerCapabilityRegistry;
+  // v32.0: contract name registry for notification enrichment
+  contractNameRegistry?: import('@waiaas/core').ContractNameRegistry;
 }
 
 // ---------------------------------------------------------------------------
@@ -591,6 +593,7 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
         actionProviderKey: provider,
         actionName: action,
         actionDefaultTier: entry.action.defaultTier as import('@waiaas/core').PolicyTier,
+        contractNameRegistry: deps.contractNameRegistry,
       };
 
       // Stage 1: Validate + DB INSERT (synchronous -- assigns ctx.txId)

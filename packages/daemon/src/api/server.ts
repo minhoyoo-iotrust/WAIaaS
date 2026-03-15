@@ -166,6 +166,8 @@ export interface CreateAppDeps {
   polymarketInfra?: PolymarketInfraDeps | null;
   /** ISignerCapabilityRegistry for external_actions capability discovery (Phase 390) */
   signerRegistry?: import('../signing/registry.js').ISignerCapabilityRegistry;
+  /** v32.0: ContractNameRegistry for notification enrichment */
+  contractNameRegistry?: import('@waiaas/core').ContractNameRegistry;
 }
 
 /**
@@ -661,6 +663,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         metricsCounter: deps.metricsCounter,
         reputationCache: deps.reputationCache,
         tokenRegistryService,
+        contractNameRegistry: deps.contractNameRegistry,
       }),
     );
   }
@@ -699,6 +702,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         approvalChannelRouter: deps.approvalChannelRouter,
         eventBus: deps.eventBus,
         reputationCache: deps.reputationCache,
+        contractNameRegistry: deps.contractNameRegistry,
       }),
     );
 
@@ -724,6 +728,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         approvalChannelRouter: deps.approvalChannelRouter,
         eventBus: deps.eventBus,
         reputationCache: deps.reputationCache,
+        contractNameRegistry: deps.contractNameRegistry,
       }),
     );
   }
@@ -813,6 +818,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         encryptedBackupService: deps.encryptedBackupService as AdminRouteDeps['encryptedBackupService'],
         adminStatsService: deps.adminStatsService,
         autoStopService: deps.autoStopService,
+        contractNameRegistry: deps.contractNameRegistry,
       }),
     );
 

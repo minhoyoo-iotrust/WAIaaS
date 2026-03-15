@@ -1,7 +1,8 @@
 # 마일스톤 m31-18: Admin UI IA 재구조화
 
-- **Status:** PLANNED
+- **Status:** SHIPPED
 - **Milestone:** v31.18
+- **Completed:** 2026-03-15
 
 ## 목표
 

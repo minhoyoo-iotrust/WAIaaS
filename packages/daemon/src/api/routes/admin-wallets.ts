@@ -18,6 +18,7 @@ import {
   buildErrorResponses,
 } from './openapi-schemas.js';
 import type { AdminRouteDeps } from './admin.js';
+import { resolveContractFields } from './admin-monitoring.js';
 
 // ---------------------------------------------------------------------------
 // Amount formatting helpers (#168)
@@ -98,6 +99,8 @@ const adminWalletTransactionsRoute = createRoute({
                 network: z.string().nullable(),
                 txHash: z.string().nullable(),
                 createdAt: z.number().nullable(),
+                contractName: z.string().nullable().optional(),
+                contractNameSource: z.string().nullable().optional(),
               }),
             ),
             total: z.number().int(),
@@ -351,6 +354,7 @@ export function registerAdminWalletRoutes(router: OpenAPIHono, deps: AdminRouteD
         createdAt: tx.createdAt instanceof Date
           ? Math.floor(tx.createdAt.getTime() / 1000)
           : (typeof tx.createdAt === 'number' ? tx.createdAt : null),
+        ...resolveContractFields(tx.type, tx.toAddress ?? null, tx.network ?? null, deps.contractNameRegistry),
       };
     });
 

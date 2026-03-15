@@ -54,6 +54,7 @@ export class LiFiActionProvider implements IActionProvider {
 
     this.metadata = {
       name: 'lifi',
+      displayName: 'LI.FI',
       description: 'LI.FI cross-chain bridge and swap aggregator (100+ bridges, 40+ chains)',
       version: '1.0.0',
       chains: ['ethereum', 'solana'],   // multi-chain provider

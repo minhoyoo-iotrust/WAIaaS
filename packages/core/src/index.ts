@@ -427,6 +427,8 @@ export {
   ActionContextSchema,
   // v31.4: type guard for API-direct results
   isApiDirectResult,
+  // v32.0: snake_case to display name conversion
+  snakeCaseToDisplayName,
 } from './interfaces/index.js';
 
 // v1.5.1 x402 Zod schemas + CAIP-2 mapping (value exports)
@@ -532,6 +534,19 @@ export {
   buildProviderBundlerUrl,
   AA_PROVIDER_DASHBOARD_URLS,
 } from './constants/index.js';
+
+// v32.0 Well-known contract data
+export {
+  WELL_KNOWN_CONTRACTS,
+  type WellKnownContractEntry,
+} from './constants/index.js';
+
+// v32.0 Contract Name Registry
+export {
+  ContractNameRegistry,
+  type ContractNameResult,
+  type ContractNameSource,
+} from './services/index.js';
 
 // v30.10 ERC-8128 Signed HTTP Requests (RFC 9421 + EIP-191)
 export * as erc8128 from './erc8128/index.js';
