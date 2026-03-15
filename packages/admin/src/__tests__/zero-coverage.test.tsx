@@ -472,6 +472,12 @@ vi.mock('../pages/policies', () => ({
 vi.mock('../pages/notifications', () => ({
   default: () => <div data-testid="page-notifications">Notifications</div>,
 }));
+vi.mock('../pages/system', () => ({
+  default: () => <div data-testid="page-system">System</div>,
+}));
+vi.mock('../pages/security', () => ({
+  default: () => <div data-testid="page-security">Security</div>,
+}));
 vi.mock('../pages/telegram-users', () => ({
   default: () => <div data-testid="page-telegram-users">TelegramUsers</div>,
   TelegramUsersContent: () => <div>TelegramUsersContent</div>,
@@ -530,10 +536,10 @@ describe('Section 4: layout.tsx', () => {
     expect(screen.getByTestId('page-wallets')).toBeTruthy();
   });
 
-  it('PageRouter redirects /settings to /dashboard', () => {
+  it('PageRouter renders /settings as Settings (was System) page', () => {
     currentPath.value = '/settings';
     render(<Layout />);
-    expect(screen.getByTestId('page-dashboard')).toBeTruthy();
+    expect(screen.getByTestId('page-system')).toBeTruthy();
   });
 
   it('PageRouter renders wallets for /wallets/abc', () => {
@@ -554,12 +560,14 @@ describe('Section 4: layout.tsx', () => {
     expect(screen.getByText('Wallet Detail')).toBeTruthy();
   });
 
-  it('getPageTitle: shows "Security" for security path', () => {
-    currentPath.value = '/security';
+  it('getPageTitle: shows "Protection" for protection path', () => {
+    currentPath.value = '/protection';
     render(<Layout />);
+    // Page renders (security mock component)
+    expect(screen.getByTestId('page-security')).toBeTruthy();
     // Title in header
     const header = document.querySelector('.header-title');
-    expect(header?.textContent).toBe('Security');
+    expect(header?.textContent).toBe('Protection');
   });
 
   it('active link highlighting: wallets link active for /wallets/abc', () => {

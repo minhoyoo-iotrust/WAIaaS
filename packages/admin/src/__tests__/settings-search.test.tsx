@@ -19,10 +19,10 @@ vi.mock('../utils/settings-search-index', () => ({
       keywords: ['session', 'ttl', 'timeout'],
     },
     {
-      id: 'system..oracle_provider',
+      id: 'settings..oracle_provider',
       label: 'Oracle Provider',
       description: 'Price oracle data source',
-      page: '/system',
+      page: '/settings',
       tab: '',
       fieldName: 'oracle.provider',
       keywords: ['oracle', 'price'],
@@ -191,7 +191,7 @@ describe('SettingsSearch', () => {
     const popover = container.querySelector('.search-popover')!;
     fireEvent.keyDown(popover, { key: 'Enter' });
 
-    expect(window.location.hash).toBe('#/system');
+    expect(window.location.hash).toBe('#/settings');
     expect(pendingNavigation.value).toBeNull();
 
     // Advance past the 100ms setTimeout
@@ -248,6 +248,6 @@ describe('SettingsSearch', () => {
 
     const path = container.querySelector('.search-result-path');
     expect(path).toBeDefined();
-    expect(path!.textContent).toBe('System');
+    expect(path!.textContent).toBe('Settings');
   });
 });
