@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v31.18
 milestone_name: Admin UI IA 재구조화
-status: executing
-stopped_at: phase_417_complete
-last_updated: "2026-03-15T03:28:00.000Z"
-last_activity: 2026-03-15 — Phase 417 complete (2 plans, 4 tasks, 5 commits)
+status: completed
+stopped_at: Completed 417-01-PLAN.md and 417-02-PLAN.md
+last_updated: "2026-03-15T03:31:48.952Z"
+last_activity: 2026-03-15 — Phase 417 executed (2 plans, 4 tasks)
 progress:
   total_phases: 4
-  completed_phases: 0
-  total_plans: 7
+  completed_phases: 1
+  total_plans: 2
   completed_plans: 2
   percent: 28
 ---
