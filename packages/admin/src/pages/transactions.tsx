@@ -36,6 +36,7 @@ interface UnifiedTxRow {
   walletId: string;
   walletName: string | null;
   counterparty: string | null;
+  contractName: string | null;
   amount: string | null;
   formattedAmount: string | null;
   amountUsd: number | null;
@@ -136,6 +137,7 @@ function normalizeOutgoing(tx: TransactionItem): UnifiedTxRow {
     walletId: tx.walletId,
     walletName: tx.walletName,
     counterparty: tx.toAddress,
+    contractName: tx.contractName ?? null,
     amount: tx.amount,
     formattedAmount: tx.formattedAmount,
     amountUsd: tx.amountUsd,
@@ -155,6 +157,7 @@ function normalizeIncoming(tx: IncomingTxItem): UnifiedTxRow {
     walletId: tx.walletId,
     walletName: tx.walletName,
     counterparty: tx.fromAddress,
+    contractName: null,
     amount: tx.amount,
     formattedAmount: tx.formattedAmount,
     amountUsd: null,
@@ -624,7 +627,14 @@ export default function TransactionsPage() {
                         </Badge>
                       </td>
                       <td>{row.walletName ?? row.walletId.slice(0, 8)}</td>
-                      <td>{row.counterparty ? formatAddress(row.counterparty) : '\u2014'}</td>
+                      <td>
+                        {row.contractName ? (
+                          <span>
+                            <strong>{row.contractName}</strong>
+                            {row.counterparty ? <span style={{ marginLeft: '4px', fontSize: '0.8em', color: 'var(--color-text-secondary)' }}>({formatAddress(row.counterparty)})</span> : null}
+                          </span>
+                        ) : row.counterparty ? formatAddress(row.counterparty) : '\u2014'}
+                      </td>
                       <td>
                         {row.amount
                           ? (() => {
@@ -691,6 +701,9 @@ export default function TransactionsPage() {
         <div class="detail-item"><span class="detail-label">Status</span><span class="detail-value">{tx.status}</span></div>
         <div class="detail-item"><span class="detail-label">Tier</span><span class="detail-value">{tx.tier ?? '\u2014'}</span></div>
         <div class="detail-item"><span class="detail-label">To Address</span><span class="detail-value">{tx.toAddress ?? '\u2014'}</span></div>
+        {tx.contractName && (
+          <div class="detail-item"><span class="detail-label">Contract Name</span><span class="detail-value">{tx.contractName}</span></div>
+        )}
         <div class="detail-item"><span class="detail-label">Amount</span><span class="detail-value">{tx.amount ?? '\u2014'}</span></div>
         <div class="detail-item"><span class="detail-label">Amount USD</span><span class="detail-value">{tx.amountUsd != null ? `$${tx.amountUsd.toFixed(2)}` : '\u2014'}</span></div>
         <div class="detail-item"><span class="detail-label">Network</span><span class="detail-value">{tx.network ?? '\u2014'}</span></div>

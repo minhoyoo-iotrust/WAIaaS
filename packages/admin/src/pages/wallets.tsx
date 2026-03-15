@@ -1124,7 +1124,14 @@ function WalletDetailView({ id }: { id: string }) {
                   <tr key={tx.id}>
                     <td>{tx.createdAt ? formatDate(tx.createdAt) : '\u2014'}</td>
                     <td><Badge variant="info">{tx.type}</Badge></td>
-                    <td>{tx.toAddress ? formatAddress(tx.toAddress) : '\u2014'}</td>
+                    <td>
+                      {tx.contractName ? (
+                        <span>
+                          <strong>{tx.contractName}</strong>
+                          {tx.toAddress ? <span style={{ marginLeft: '4px', fontSize: '0.8em', color: 'var(--color-text-secondary)' }}>({formatAddress(tx.toAddress)})</span> : null}
+                        </span>
+                      ) : tx.toAddress ? formatAddress(tx.toAddress) : '\u2014'}
+                    </td>
                     <td>{tx.amount ? (tx.formattedAmount ?? tx.amount) : '\u2014'}</td>
                     <td>{tx.network ?? '\u2014'}</td>
                     <td><Badge variant={txStatusVariant(tx.status)}>{tx.status}</Badge></td>
