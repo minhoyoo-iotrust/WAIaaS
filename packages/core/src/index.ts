@@ -541,6 +541,13 @@ export {
   type WellKnownContractEntry,
 } from './constants/index.js';
 
+// v32.0 Contract Name Registry
+export {
+  ContractNameRegistry,
+  type ContractNameResult,
+  type ContractNameSource,
+} from './services/index.js';
+
 // v30.10 ERC-8128 Signed HTTP Requests (RFC 9421 + EIP-191)
 export * as erc8128 from './erc8128/index.js';
 
