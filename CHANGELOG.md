@@ -1,5 +1,28 @@
 # Changelog
 
+## [2.11.0-rc.10](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.9...v2.11.0-rc.10) (2026-03-15)
+
+
+### Features
+
+* **417-01:** convert sidebar to sectioned NAV_SECTIONS with renaming and route redirects ([175bc66](https://github.com/minhoyoo-iotrust/WAIaaS/commit/175bc66d80cb681850781afb67dd4207d3b24535))
+* **417-01:** update Ctrl+K search index and PAGE_LABELS for renamed routes ([817aca1](https://github.com/minhoyoo-iotrust/WAIaaS/commit/817aca11140d8557b4f8d53855faa143e9f08b5f))
+* **417-02:** rename tab labels -- Transactions to History, Policies to Rules ([cc2139f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/cc2139f1c1b92f0d712fb5855d9a66ce1bc04adb))
+* **417-02:** replace custom tab bars with TabNav in Hyperliquid and Polymarket pages ([ed2c14e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ed2c14ef5944f92c4d90b4ed6cb01d8e0b07f564))
+* **418-01:** merge Tokens into Wallets page as tab ([3cd2b24](https://github.com/minhoyoo-iotrust/WAIaaS/commit/3cd2b24b30b12bc5e3a8d85a0f7a8d527d832fc0))
+* **418-01:** redirect /tokens to Wallets page Tokens tab ([b1152ea](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b1152ea948fcca79aad093541f1d69fb5255b0ba))
+* **418-02:** add Settings 3-tab layout with RPC Proxy tab ([3aed26d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/3aed26d8e35a92a905ea8de23f887309b576887d))
+* **418-02:** legacy cleanup + /rpc-proxy redirect + skill file update ([7456f97](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7456f9707c61180fb55401dbda298c61360908ca))
+* **419-01:** remove Settings tab from Hyperliquid/Polymarket + migrate to Providers ([e762b88](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e762b881b1e82ec2583132367345fa613b4ea6f3))
+* **420-01:** redefine DETAIL_TABS to 4-tab structure + Owner Protection card ([e33d461](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e33d461aec9969d9eb4e4a74bfbe2ab6dfe80fad))
+* **420-02:** implement ActivityTab/AssetsTab/SetupTab with content integration ([d8aefe1](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d8aefe1328e8043a6d1e4fcba4726cd5ca5fc045))
+
+
+### Bug Fixes
+
+* **417-01:** update tests for renamed routes and page titles ([ffbd403](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ffbd403a66af3e6f614669b3d9d5434b67b9b6e4))
+* **ci:** disable Turborepo daemon in chain-integration job ([#352](https://github.com/minhoyoo-iotrust/WAIaaS/issues/352)) ([5e5205a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/5e5205a88815d6f08087a82531e1b2f11aaf54af))
+
 ## [2.11.0-rc.9](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.8...v2.11.0-rc.9) (2026-03-15)
 
 
