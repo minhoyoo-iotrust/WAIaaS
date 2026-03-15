@@ -9,26 +9,26 @@ Requirements for v32.0. Each maps to roadmap phases.
 
 ### Registry
 
-- [ ] **REG-01**: ContractNameRegistry는 주소+네트워크로 사람이 읽을 수 있는 이름을 동기적으로 반환한다
-- [ ] **REG-02**: 4단계 우선순위로 해석한다 (Action Provider > Well-known > CONTRACT_WHITELIST name > Fallback)
-- [ ] **REG-03**: 해석 결과에 source 필드를 포함한다 (action_provider / well_known / whitelist / fallback)
-- [ ] **REG-04**: EVM 주소는 대소문자 무관하게 매칭한다 (lowercase 정규화)
-- [ ] **REG-05**: 동일 주소가 다른 네트워크에서 다른 컨트랙트일 수 있으므로 per-network compound key로 구분한다
-- [ ] **REG-06**: 미등록 주소는 축약 포맷(0xabcd...1234)으로 fallback한다
+- [x] **REG-01**: ContractNameRegistry는 주소+네트워크로 사람이 읽을 수 있는 이름을 동기적으로 반환한다
+- [x] **REG-02**: 4단계 우선순위로 해석한다 (Action Provider > Well-known > CONTRACT_WHITELIST name > Fallback)
+- [x] **REG-03**: 해석 결과에 source 필드를 포함한다 (action_provider / well_known / whitelist / fallback)
+- [x] **REG-04**: EVM 주소는 대소문자 무관하게 매칭한다 (lowercase 정규화)
+- [x] **REG-05**: 동일 주소가 다른 네트워크에서 다른 컨트랙트일 수 있으므로 per-network compound key로 구분한다
+- [x] **REG-06**: 미등록 주소는 축약 포맷(0xabcd...1234)으로 fallback한다
 
 ### Well-known Data
 
-- [ ] **WKD-01**: Well-known 컨트랙트 레지스트리에 5개 EVM 체인(Ethereum/Base/Arbitrum/Optimism/Polygon) 데이터를 수록한다
-- [ ] **WKD-02**: Solana mainnet-beta 프로그램 주소 데이터를 수록한다
-- [ ] **WKD-03**: 최소 300개 이상의 well-known 엔트리를 확보한다
-- [ ] **WKD-04**: 데이터는 정적 TypeScript const 오브젝트로 @waiaas/core에 위치한다
-- [ ] **WKD-05**: 각 엔트리는 address, name, protocol, network 필드를 포함한다
+- [x] **WKD-01**: Well-known 컨트랙트 레지스트리에 5개 EVM 체인(Ethereum/Base/Arbitrum/Optimism/Polygon) 데이터를 수록한다
+- [x] **WKD-02**: Solana mainnet-beta 프로그램 주소 데이터를 수록한다
+- [x] **WKD-03**: 최소 300개 이상의 well-known 엔트리를 확보한다
+- [x] **WKD-04**: 데이터는 정적 TypeScript const 오브젝트로 @waiaas/core에 위치한다
+- [x] **WKD-05**: 각 엔트리는 address, name, protocol, network 필드를 포함한다
 
 ### Action Provider
 
-- [ ] **APR-01**: IActionProvider metadata에 optional displayName 필드를 추가한다
-- [ ] **APR-02**: 기존 20+ 프로바이더에 displayName을 설정한다
-- [ ] **APR-03**: displayName 미설정 시 metadata.name에서 snake_case를 자동 변환한다 (jupiter_swap → Jupiter Swap)
+- [x] **APR-01**: IActionProvider metadata에 optional displayName 필드를 추가한다
+- [x] **APR-02**: 기존 20+ 프로바이더에 displayName을 설정한다
+- [x] **APR-03**: displayName 미설정 시 metadata.name에서 snake_case를 자동 변환한다 (jupiter_swap → Jupiter Swap)
 
 ### Notification
 
@@ -71,20 +71,20 @@ Deferred to future release. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| REG-01 | Phase 421 | Pending |
-| REG-02 | Phase 421 | Pending |
-| REG-03 | Phase 421 | Pending |
-| REG-04 | Phase 421 | Pending |
-| REG-05 | Phase 421 | Pending |
-| REG-06 | Phase 421 | Pending |
-| WKD-01 | Phase 421 | Pending |
-| WKD-02 | Phase 421 | Pending |
-| WKD-03 | Phase 421 | Pending |
-| WKD-04 | Phase 421 | Pending |
-| WKD-05 | Phase 421 | Pending |
-| APR-01 | Phase 421 | Pending |
-| APR-02 | Phase 421 | Pending |
-| APR-03 | Phase 421 | Pending |
+| REG-01 | Phase 421 | Complete |
+| REG-02 | Phase 421 | Complete |
+| REG-03 | Phase 421 | Complete |
+| REG-04 | Phase 421 | Complete |
+| REG-05 | Phase 421 | Complete |
+| REG-06 | Phase 421 | Complete |
+| WKD-01 | Phase 421 | Complete |
+| WKD-02 | Phase 421 | Complete |
+| WKD-03 | Phase 421 | Complete |
+| WKD-04 | Phase 421 | Complete |
+| WKD-05 | Phase 421 | Complete |
+| APR-01 | Phase 421 | Complete |
+| APR-02 | Phase 421 | Complete |
+| APR-03 | Phase 421 | Complete |
 | NTF-01 | Phase 422 | Pending |
 | NTF-02 | Phase 422 | Pending |
 | NTF-03 | Phase 422 | Pending |

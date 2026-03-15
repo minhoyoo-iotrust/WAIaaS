@@ -83,7 +83,7 @@
 
 ### v32.0 Contract Name Resolution (In Progress)
 
-- [ ] **Phase 421: Registry Core + Well-Known Data** - ContractNameRegistry service with 4-tier resolution, well-known static data, and Action Provider displayName
+- [x] **Phase 421: Registry Core + Well-Known Data** - ContractNameRegistry service with 4-tier resolution, well-known static data, and Action Provider displayName (completed 2026-03-15)
 - [ ] **Phase 422: Notification Pipeline Integration** - CONTRACT_CALL notifications display resolved contract names at all 4 lifecycle events
 - [ ] **Phase 423: API + Admin UI Contract Names** - TxDetailResponse enrichment and Admin UI display of contract names
 
@@ -166,6 +166,6 @@ Phases execute in numeric order: 421 → 422 → 423
 | 418. 페이지 병합 + 레거시 정리 | v31.18 | 2/2 | Complete | 2026-03-15 |
 | 419. Trading Settings 탭 제거 | v31.18 | 1/1 | Complete | 2026-03-15 |
 | 420. 지갑 상세 탭 재구성 | v31.18 | 2/2 | Complete | 2026-03-15 |
-| 421. Registry Core + Well-Known Data | v32.0 | 0/2 | Not started | - |
+| 421. Registry Core + Well-Known Data | 2/2 | Complete   | 2026-03-15 | - |
 | 422. Notification Pipeline Integration | v32.0 | 0/1 | Not started | - |
 | 423. API + Admin UI Contract Names | v32.0 | 0/1 | Not started | - |
