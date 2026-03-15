@@ -71,36 +71,36 @@ Deferred to future release. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| REG-01 | — | Pending |
-| REG-02 | — | Pending |
-| REG-03 | — | Pending |
-| REG-04 | — | Pending |
-| REG-05 | — | Pending |
-| REG-06 | — | Pending |
-| WKD-01 | — | Pending |
-| WKD-02 | — | Pending |
-| WKD-03 | — | Pending |
-| WKD-04 | — | Pending |
-| WKD-05 | — | Pending |
-| APR-01 | — | Pending |
-| APR-02 | — | Pending |
-| APR-03 | — | Pending |
-| NTF-01 | — | Pending |
-| NTF-02 | — | Pending |
-| NTF-03 | — | Pending |
-| NTF-04 | — | Pending |
-| NTF-05 | — | Pending |
-| NTF-06 | — | Pending |
-| ADM-01 | — | Pending |
-| ADM-02 | — | Pending |
-| ADM-03 | — | Pending |
-| ADM-04 | — | Pending |
+| REG-01 | Phase 421 | Pending |
+| REG-02 | Phase 421 | Pending |
+| REG-03 | Phase 421 | Pending |
+| REG-04 | Phase 421 | Pending |
+| REG-05 | Phase 421 | Pending |
+| REG-06 | Phase 421 | Pending |
+| WKD-01 | Phase 421 | Pending |
+| WKD-02 | Phase 421 | Pending |
+| WKD-03 | Phase 421 | Pending |
+| WKD-04 | Phase 421 | Pending |
+| WKD-05 | Phase 421 | Pending |
+| APR-01 | Phase 421 | Pending |
+| APR-02 | Phase 421 | Pending |
+| APR-03 | Phase 421 | Pending |
+| NTF-01 | Phase 422 | Pending |
+| NTF-02 | Phase 422 | Pending |
+| NTF-03 | Phase 422 | Pending |
+| NTF-04 | Phase 422 | Pending |
+| NTF-05 | Phase 422 | Pending |
+| NTF-06 | Phase 422 | Pending |
+| ADM-01 | Phase 423 | Pending |
+| ADM-02 | Phase 423 | Pending |
+| ADM-03 | Phase 423 | Pending |
+| ADM-04 | Phase 423 | Pending |
 
 **Coverage:**
 - v1 requirements: 24 total
-- Mapped to phases: 0
-- Unmapped: 24 ⚠️
+- Mapped to phases: 24
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-15*
-*Last updated: 2026-03-15 after initial definition*
+*Last updated: 2026-03-15 after roadmap creation*

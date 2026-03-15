@@ -81,7 +81,60 @@
 
 </details>
 
+### v32.0 Contract Name Resolution (In Progress)
+
+- [ ] **Phase 421: Registry Core + Well-Known Data** - ContractNameRegistry service with 4-tier resolution, well-known static data, and Action Provider displayName
+- [ ] **Phase 422: Notification Pipeline Integration** - CONTRACT_CALL notifications display resolved contract names at all 4 lifecycle events
+- [ ] **Phase 423: API + Admin UI Contract Names** - TxDetailResponse enrichment and Admin UI display of contract names
+
+## Phase Details
+
+### Phase 421: Registry Core + Well-Known Data
+**Goal**: A synchronous in-memory ContractNameRegistry resolves contract addresses to human-readable names using a 4-tier priority cascade, backed by 300+ well-known entries and Action Provider displayName metadata
+**Depends on**: Nothing (first phase)
+**Requirements**: REG-01, REG-02, REG-03, REG-04, REG-05, REG-06, WKD-01, WKD-02, WKD-03, WKD-04, WKD-05, APR-01, APR-02, APR-03
+**Success Criteria** (what must be TRUE):
+  1. Calling `ContractNameRegistry.resolve(address, network)` returns a human-readable name with source attribution for any registered contract address
+  2. EVM addresses resolve identically regardless of checksum/lowercase/uppercase input
+  3. The same address on different networks resolves to the correct per-network name (no cross-chain misidentification)
+  4. Unregistered addresses return a truncated fallback format (0xabcd...1234)
+  5. All 20+ Action Providers have a displayName (explicit or auto-converted from snake_case) that the registry can consume
+**Plans**: TBD
+
+Plans:
+- [ ] 421-01: TBD
+- [ ] 421-02: TBD
+
+### Phase 422: Notification Pipeline Integration
+**Goal**: Owner receives human-readable contract names instead of raw hex addresses in all CONTRACT_CALL notification events
+**Depends on**: Phase 421
+**Requirements**: NTF-01, NTF-02, NTF-03, NTF-04, NTF-05, NTF-06
+**Success Criteria** (what must be TRUE):
+  1. TX_REQUESTED, TX_APPROVAL_REQUIRED, TX_SUBMITTED, and TX_CONFIRMED notifications for CONTRACT_CALL display "Protocol Name (0xabcd...1234)" format
+  2. TRANSFER and TOKEN_TRANSFER notifications continue to show the raw `{to}` address without modification
+  3. Notifications for unregistered contracts show the abbreviated address fallback (same as before this milestone)
+**Plans**: TBD
+
+Plans:
+- [ ] 422-01: TBD
+
+### Phase 423: API + Admin UI Contract Names
+**Goal**: Admin UI transaction views display resolved contract names sourced from the API response enrichment
+**Depends on**: Phase 421, Phase 422
+**Requirements**: ADM-01, ADM-02, ADM-03, ADM-04
+**Success Criteria** (what must be TRUE):
+  1. GET transaction detail API returns `contractName` and `contractNameSource` fields for CONTRACT_CALL transactions
+  2. Admin UI transaction list shows the resolved contract name on CONTRACT_CALL rows
+  3. Admin UI wallet detail Activity tab shows the resolved contract name on CONTRACT_CALL rows
+**Plans**: TBD
+
+Plans:
+- [ ] 423-01: TBD
+
 ## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 421 → 422 → 423
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -113,3 +166,6 @@
 | 418. 페이지 병합 + 레거시 정리 | v31.18 | 2/2 | Complete | 2026-03-15 |
 | 419. Trading Settings 탭 제거 | v31.18 | 1/1 | Complete | 2026-03-15 |
 | 420. 지갑 상세 탭 재구성 | v31.18 | 2/2 | Complete | 2026-03-15 |
+| 421. Registry Core + Well-Known Data | v32.0 | 0/2 | Not started | - |
+| 422. Notification Pipeline Integration | v32.0 | 0/1 | Not started | - |
+| 423. API + Admin UI Contract Names | v32.0 | 0/1 | Not started | - |
