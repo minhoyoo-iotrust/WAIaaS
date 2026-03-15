@@ -1452,7 +1452,6 @@ async function stage5ExecuteSmartAccount(ctx: PipelineContext): Promise<void> {
   }
 
   const reqAmount = formatNotificationAmount(ctx.request, ctx.wallet.chain);
-  const reqTo = getRequestTo(ctx.request);
 
   const displayAmount = await resolveDisplayAmount(
     ctx.amountUsd ?? null, ctx.settingsService, ctx.forexRateService,
@@ -1894,7 +1893,6 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
 
     // Fire-and-forget: notify TX_CONFIRMED
     const apiDirectAmount = formatNotificationAmount(ctx.request, ctx.wallet.chain);
-    const apiDirectTo = getRequestTo(ctx.request);
     const apiDirectDisplayAmount = await resolveDisplayAmount(
       ctx.amountUsd ?? null, ctx.settingsService, ctx.forexRateService,
     );
@@ -1927,7 +1925,6 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
 
   // --- EOA execution path (unchanged) ---
   const reqAmount = formatNotificationAmount(ctx.request, ctx.wallet.chain);
-  const reqTo = getRequestTo(ctx.request);
 
   // [Phase 139] Resolve display amount once for all Stage 5 notifications
   const displayAmount = await resolveDisplayAmount(
@@ -2221,7 +2218,6 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
 
 export async function stage6Confirm(ctx: PipelineContext): Promise<void> {
   const reqAmount = formatNotificationAmount(ctx.request, ctx.wallet.chain);
-  const reqTo = getRequestTo(ctx.request);
 
   // [Phase 139] Resolve display amount for Stage 6 notifications
   const displayAmount = await resolveDisplayAmount(
