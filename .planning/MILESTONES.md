@@ -1,5 +1,25 @@
 # Project Milestones: WAIaaS
 
+## v31.18 Admin UI IA 재구조화 (Shipped: 2026-03-15)
+
+**Phases completed:** 4 phases, 7 plans, 38 requirements
+
+**Key accomplishments:**
+- 사이드바 5개 섹션 헤더(Wallets/Trading/Security/Channels/System) 그룹화로 정보 구조(IA) 확립
+- Tokens/RPC Proxy 독립 페이지를 Wallets/Settings 페이지 탭으로 병합
+- Hyperliquid/Polymarket Settings 탭 제거 → Providers 페이지 중앙화(SSoT)
+- 지갑 상세 8탭을 4탭(Overview/Activity/Assets/Setup)으로 통합, Owner Protection 카드 인라인 배치
+- 레거시 경로 리다이렉트(5개) + Ctrl+K 검색 인덱스 동기화 + TabNav 통일
+
+**Stats:**
+- 4 phases (417-420), 7 plans, 38 requirements complete
+- 30 commits, 52 files changed, +3,311 / -515 lines
+- Timeline: 1 day (2026-03-15)
+- Git range: feat(417-01) → feat(420-02)
+- Audit: PASS (38/38 requirements, 8 E2E flows, 905/905 tests)
+
+---
+
 ## v31.17 OpenAPI 기반 프론트엔드 타입 자동 생성 (Shipped: 2026-03-14)
 
 **Phases completed:** 5 phases, 11 plans, 7 tasks
