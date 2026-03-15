@@ -93,7 +93,11 @@
 
 ### v32.2 보안 패치 (Phases 424-426)
 
-- [ ] Phase 424: SSRF Guard + hostGuard Fix (0/1 plan) — SSRF 가드 범용화 + hostGuard 정확 매칭
+- [ ] Phase 424: SSRF Guard + hostGuard Fix (1 plan) — SSRF 가드 범용화 + hostGuard 정확 매칭
+
+Plans:
+- [ ] 424-01-PLAN.md — SSRF 가드 infrastructure/security 이동 + Admin RPC Test SSRF 방어 + hostGuard 정확 매칭 + 테스트
+
 - [ ] Phase 425: Rate Limit Middleware (0/1 plan) — IP/세션/트랜잭션 3계층 Rate Limiter
 - [ ] Phase 426: CORS + Resource Management (0/1 plan) — CORS 미들웨어 + 알림 타임아웃 + EventBus 정리
 
