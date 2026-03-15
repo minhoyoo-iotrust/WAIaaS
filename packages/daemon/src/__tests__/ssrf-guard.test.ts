@@ -39,7 +39,7 @@ vi.stubGlobal('fetch', mockFetch);
 import {
   validateUrlSafety,
   safeFetchWithRedirects,
-} from '../services/x402/ssrf-guard.js';
+} from '../infrastructure/security/ssrf-guard.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
