@@ -2,7 +2,7 @@
 
 - **유형:** BUG
 - **심각도:** HIGH
-- **상태:** OPEN
+- **상태:** FIXED
 - **발견일:** 2026-03-15
 - **발견 위치:** GitHub Actions release.yml — v2.11.0-rc.9 Release
 
