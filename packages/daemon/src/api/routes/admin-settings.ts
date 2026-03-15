@@ -10,6 +10,7 @@ import { WAIaaSError, BUILT_IN_RPC_DEFAULTS } from '@waiaas/core';
 import { CurrencyCodeSchema, formatRatePreview } from '@waiaas/core';
 import type { CurrencyCode } from '@waiaas/core';
 import { getSettingDefinition, ActionTierOverrideSchema, SETTING_DEFINITIONS, groupSettingsByCategory } from '../../infrastructure/settings/index.js';
+import { validateUrlSafety } from '../../infrastructure/security/ssrf-guard.js';
 import {
   SettingsResponseSchema,
   SettingsUpdateRequestSchema,
@@ -389,6 +390,9 @@ export function registerAdminSettingsRoutes(router: OpenAPIHono, deps: AdminRout
     const startMs = performance.now();
 
     try {
+      // SSRF protection: validate URL targets a public IP before fetching
+      await validateUrlSafety(url, { allowHttp: true });
+
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

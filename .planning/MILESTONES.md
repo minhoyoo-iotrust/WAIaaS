@@ -1,5 +1,26 @@
 # Project Milestones: WAIaaS
 
+## v32.2 보안 패치 (Shipped: 2026-03-16)
+
+**Phases completed:** 3 phases, 3 plans, 14 requirements
+
+**Key accomplishments:**
+- SSRF 가드 범용화(infrastructure/security/) + Admin RPC Test 엔드포인트 SSRF 방어(validateUrlSafety 적용)
+- hostGuard startsWith 우회 취약점 수정 — 정확 매칭(===)만 허용
+- SlidingWindowRateLimiter 인메모리 3계층(IP/세션/트랜잭션) Rate Limit 미들웨어 + RATE_LIMITED 에러 코드
+- hono/cors 미들웨어 등록(cors_origins 설정 기반 동적 origin, hot-reload)
+- 알림 채널(Ntfy/Discord/Slack) fetch 10초 timeout + AutoStop EventBus 리스너 정리
+
+**Stats:**
+- 3 phases (424-426), 3 plans, 14 requirements complete
+- 16 commits, 20 files changed, +1,228/-273 lines
+- 32 new tests (12 SSRF/hostGuard + 11 rate limit + 9 CORS/resource)
+- Timeline: 1 day (2026-03-16)
+- Git range: feat(424-01) → docs(phase-426)
+- Audit: PASS (14/14 requirements, cross-phase integration verified)
+
+---
+
 ## v32.0 Contract Name Resolution (Shipped: 2026-03-15)
 
 **Phases completed:** 3 phases, 4 plans, 24 requirements

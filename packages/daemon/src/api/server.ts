@@ -2,10 +2,12 @@
  * Hono API server factory: createApp(deps) returns a configured Hono instance.
  *
  * Middleware registration order:
- *   1. requestId
- *   2. hostGuard
- *   3. killSwitchGuard
- *   4. requestLogger
+ *   1. cors (dynamic origin from settingsService/config)
+ *   2. requestId
+ *   3. hostGuard
+ *   4. killSwitchGuard
+ *   5. requestLogger
+ *   6. ipRateLimiter (when settingsService available)
  *
  * Auth middleware (route-level, registered on app before sub-routers):
  *   - masterAuth: /v1/wallets, /v1/policies, /v1/sessions, /v1/sessions/:id (admin operations, skips /renew)
@@ -24,6 +26,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { OpenAPIHono } from '@hono/zod-openapi';
+import { cors } from 'hono/cors';
 import { serveStatic } from '@hono/node-server/serve-static';
 
 const require = createRequire(import.meta.url);
@@ -47,6 +50,9 @@ import {
   createMasterAuth,
   createOwnerAuth,
   cspMiddleware,
+  createIpRateLimiter,
+  createSessionRateLimiter,
+  createTxRateLimiter,
 } from './middleware/index.js';
 import type { GetKillSwitchState } from './middleware/index.js';
 import { createHealthRoute } from './routes/health.js';
@@ -180,6 +186,17 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
   const app = new OpenAPIHono();
 
   // Register global middleware in order
+  // 1. CORS: dynamic origin from settingsService (hot-reload) or config fallback (CORS-01, CORS-02)
+  app.use('*', cors({
+    origin: (origin) => {
+      const origins = deps.settingsService?.get('cors_origins') as string[] | undefined
+        ?? deps.config?.security?.cors_origins
+        ?? ['http://localhost:3100', 'http://127.0.0.1:3100'];
+      return origins.includes(origin) ? origin : null;
+    },
+    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowHeaders: ['Content-Type', 'Authorization', 'X-Master-Password', 'X-Request-Id'],
+  }));
   app.use('*', requestId);
   app.use('*', hostGuard);
   // killSwitchGuard: prefer KillSwitchService if available, else use callback
@@ -188,6 +205,11 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     : (deps.getKillSwitchState ?? (() => 'ACTIVE'));
   app.use('*', createKillSwitchGuard(killSwitchStateGetter));
   app.use('*', requestLogger);
+
+  // Rate limit: IP-based global limiter (RATE-02)
+  if (deps.settingsService) {
+    app.use('*', createIpRateLimiter({ settingsService: deps.settingsService }));
+  }
 
   // Register error handler
   app.onError(errorHandler);
@@ -442,6 +464,22 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
   if (deps.db) {
     const ownerAuthForKillSwitch = createOwnerAuth({ db: deps.db });
     app.use('/v1/owner/kill-switch', ownerAuthForKillSwitch);
+  }
+
+  // Rate limit: session-based limiter (RATE-02) -- after auth middleware sets sessionId
+  if (deps.settingsService) {
+    app.use('/v1/wallet/*', createSessionRateLimiter({ settingsService: deps.settingsService }));
+    app.use('/v1/transactions/*', createSessionRateLimiter({ settingsService: deps.settingsService }));
+    app.use('/v1/actions/*', createSessionRateLimiter({ settingsService: deps.settingsService }));
+    app.use('/v1/x402/*', createSessionRateLimiter({ settingsService: deps.settingsService }));
+    app.use('/v1/rpc-evm/*', createSessionRateLimiter({ settingsService: deps.settingsService }));
+    app.use('/v1/erc8004/*', createSessionRateLimiter({ settingsService: deps.settingsService }));
+    app.use('/v1/erc8128/*', createSessionRateLimiter({ settingsService: deps.settingsService }));
+
+    // Rate limit: TX-specific tighter limiter (RATE-02) -- transaction submission endpoints only
+    app.use('/v1/transactions', createTxRateLimiter({ settingsService: deps.settingsService }));
+    app.use('/v1/actions/execute', createTxRateLimiter({ settingsService: deps.settingsService }));
+    app.use('/v1/admin/actions/execute', createTxRateLimiter({ settingsService: deps.settingsService }));
   }
 
   // Register routes

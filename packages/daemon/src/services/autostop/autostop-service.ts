@@ -14,7 +14,7 @@
  */
 
 import type { Database } from 'better-sqlite3';
-import type { EventBus, IMetricsCounter } from '@waiaas/core';
+import type { EventBus, IMetricsCounter, WaiaasEventMap } from '@waiaas/core';
 import type { KillSwitchService } from '../kill-switch-service.js';
 import type { NotificationService } from '../../notifications/notification-service.js';
 import { insertAuditLog } from '../../infrastructure/database/audit-helper.js';
@@ -69,6 +69,11 @@ export class AutoStopService {
   // Idle check timer
   private idleCheckTimer: ReturnType<typeof setInterval> | null = null;
 
+  // Stored listener references for EventBus cleanup (RSRC-02)
+  private onTransactionFailed: ((data: WaiaasEventMap['transaction:failed']) => void) | null = null;
+  private onTransactionCompleted: ((data: WaiaasEventMap['transaction:completed']) => void) | null = null;
+  private onWalletActivity: ((data: WaiaasEventMap['wallet:activity']) => void) | null = null;
+
   constructor(opts: {
     sqlite: Database;
     eventBus: EventBus;
@@ -118,7 +123,7 @@ export class AutoStopService {
     if (!this.config.enabled) return;
 
     // AUTO-01: CONSECUTIVE_FAILURES
-    this.eventBus.on('transaction:failed', (data) => {
+    this.onTransactionFailed = (data) => {
       if (!this.consecutiveFailuresRule.enabled) return;
       const result = this.consecutiveFailuresRule.evaluate({
         type: 'transaction:failed',
@@ -128,20 +133,22 @@ export class AutoStopService {
       if (result.triggered) {
         this.suspendWallet(result.walletId, 'CONSECUTIVE_FAILURES');
       }
-    });
+    };
+    this.eventBus.on('transaction:failed', this.onTransactionFailed);
 
     // Reset failure counter on successful transaction
-    this.eventBus.on('transaction:completed', (data) => {
+    this.onTransactionCompleted = (data) => {
       if (!this.consecutiveFailuresRule.enabled) return;
       this.consecutiveFailuresRule.evaluate({
         type: 'transaction:completed',
         walletId: data.walletId,
         timestamp: data.timestamp,
       });
-    });
+    };
+    this.eventBus.on('transaction:completed', this.onTransactionCompleted);
 
     // AUTO-02: UNUSUAL_ACTIVITY + AUTO-03: IdleTimeout session tracking
-    this.eventBus.on('wallet:activity', (data) => {
+    this.onWalletActivity = (data) => {
       // UnusualActivityRule
       if (this.unusualActivityRule.enabled) {
         const result = this.unusualActivityRule.evaluate({
@@ -172,7 +179,8 @@ export class AutoStopService {
           this.idleTimeoutRule.onWalletActivity(data.walletId, data.timestamp);
         }
       }
-    });
+    };
+    this.eventBus.on('wallet:activity', this.onWalletActivity);
 
     // AUTO-03: Periodic idle session check
     this.idleCheckTimer = setInterval(() => {
@@ -180,11 +188,25 @@ export class AutoStopService {
     }, this.config.idleCheckIntervalSec * 1000);
   }
 
-  /** Stop idle check timer. Does NOT remove EventBus listeners (shared resource). */
+  /** Stop idle check timer and remove EventBus listeners (RSRC-02). */
   stop(): void {
     if (this.idleCheckTimer) {
       clearInterval(this.idleCheckTimer);
       this.idleCheckTimer = null;
+    }
+
+    // Remove EventBus listeners to prevent accumulation on restart
+    if (this.onTransactionFailed) {
+      this.eventBus.off('transaction:failed', this.onTransactionFailed);
+      this.onTransactionFailed = null;
+    }
+    if (this.onTransactionCompleted) {
+      this.eventBus.off('transaction:completed', this.onTransactionCompleted);
+      this.onTransactionCompleted = null;
+    }
+    if (this.onWalletActivity) {
+      this.eventBus.off('wallet:activity', this.onWalletActivity);
+      this.onWalletActivity = null;
     }
   }
 

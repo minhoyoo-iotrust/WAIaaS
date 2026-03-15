@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v32.0
-milestone_name: Contract Name Resolution
+milestone: v32.2
+milestone_name: 보안 패치
 status: completed
-stopped_at: Completed 423-01 (Phase 423 complete — milestone v32.0 done)
-last_updated: "2026-03-15T13:53:49.032Z"
-last_activity: 2026-03-15 — Phase 423 complete (1 plan, API + Admin UI contract names)
+stopped_at: Completed 426-01-PLAN.md (milestone v32.2 complete)
+last_updated: "2026-03-15T15:40:56.237Z"
+last_activity: 2026-03-15 -- Phase 426 completed (milestone v32.2 complete)
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 4
-  completed_plans: 4
+  total_phases: 184
+  completed_phases: 178
+  total_plans: 391
+  completed_plans: 385
   percent: 100
 ---
 
@@ -20,57 +20,56 @@ progress:
 
 See: .planning/PROJECT.md (updated 2026-03-15)
 
-**Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** v32.0 shipped, planning next milestone
+**Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인이 자금 통제권을 유지하면서.
+**Current focus:** v32.2 보안 패치 -- All phases complete
 
 ## Current Position
 
-Phase: 3 of 3 (423. API + Admin UI Contract Names)
-Plan: 1 of 1 in current phase (COMPLETE)
-Status: Milestone v32.0 complete — all 3 phases, 4 plans done
-Last activity: 2026-03-15 — Phase 423 complete (1 plan, API + Admin UI contract names)
+Phase: 3 of 3 (Phase 426: CORS + Resource Management)
+Plan: 1 of 1 in current phase
+Status: Complete
+Last activity: 2026-03-15 -- Phase 426 completed (milestone v32.2 complete)
 
 Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 10 min
-- Total execution time: 0.67 hours
+- Total plans completed: 3
+- Average duration: 4.7min
+- Total execution time: 0.23 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| Phase 421 P01 | 2 tasks | 16m | 8m |
-| Phase 421 P02 | 1 task | 5m | 5m |
-| Phase 422 P01 | 2 tasks | 12m | 6m |
-| Phase 423 P01 | 2 tasks | 7m | 3.5m |
+| 424 | 1/1 | 4min | 4min |
+| 425 | 1/1 | 5min | 5min |
+| 426 | 1/1 | 5min | 5min |
+
+*Updated after each plan completion*
+
+## Accumulated Context
 
 ### Decisions
 
-- [Phase 421]: 305+ well-known entries across 6 networks (Ethereum, Base, Arbitrum, Optimism, Polygon, Solana)
-- [Phase 421]: ContractNameRegistry 4-tier priority: action_provider > well_known > whitelist > fallback
-- [Phase 421]: EVM addresses normalized to lowercase; Solana addresses case-sensitive; compound key address:network
-- [Phase 422]: resolveNotificationTo only enriches CONTRACT_CALL; TRANSFER/TOKEN_TRANSFER pass raw address unchanged
-- [Phase 422]: TX_SUBMITTED/TX_CONFIRMED i18n templates updated to include {to} field
-- [Phase 422]: Unregistered contracts return raw address (no truncation) for backward compatibility
-- [Phase 423]: Fallback source returns null for both contractName/contractNameSource -- toAddress already provides raw address
-- [Phase 423]: resolveContractFields() exported from admin-monitoring.ts as shared helper across 3 route files
-- [Phase 423]: Admin inline OpenAPI schemas updated alongside TxDetailResponseSchema for consistent API surface
+- [v32.2]: 3개 보안 패치 페이즈 -- SSRF(424), Rate Limit(425), CORS+리소스(426) 순서로 실행
+- [424-01]: X402_SSRF_BLOCKED 에러 코드를 범용 SSRF 차단에도 재사용 (core 패키지 변경 불필요)
+- [424-01]: services/x402/ssrf-guard.ts를 re-export 심으로 유지하여 기존 import 경로 호환
+- [425-01]: 429 응답을 WAIaaSError throw 대신 직접 c.json() 반환 (Retry-After 헤더 보존)
+- [426-01]: CORS origin callback returns matched origin or null (hono/cors convention)
+- [426-01]: cors_origins는 config.security 섹션에 위치 (config.daemon 아님)
 
 ### Pending Todos
 
-(none)
+None.
 
 ### Blockers/Concerns
 
-- (Resolved) Solana CONTRACT_CALL `req.to` may be recipient not Program ID — resolveNotificationTo falls back to raw address when no match found (acceptable behavior)
-- (Resolved) BATCH transaction `{to}` — getRequestTo returns first `to` or empty; resolveNotificationTo works on whatever it returns
+None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-15T13:44:50Z
-Stopped at: Completed 423-01 (Phase 423 complete — milestone v32.0 done)
+Last session: 2026-03-15
+Stopped at: Completed 426-01-PLAN.md (milestone v32.2 complete)
 Resume file: None

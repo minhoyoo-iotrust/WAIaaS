@@ -948,6 +948,63 @@ function WalletDetailView({ id }: { id: string }) {
           />
         </div>
 
+        {/* Owner Protection */}
+        <div style={{
+          border: '1px solid var(--color-border)',
+          borderRadius: 'var(--radius-lg)',
+          padding: 'var(--space-4)',
+          marginTop: 'var(--space-4)',
+        }}>
+          <h3 style={{ margin: '0 0 var(--space-3) 0', fontSize: '1rem' }}>Owner Protection</h3>
+
+          {wallet.value.ownerState === 'NONE' ? (
+            <div>
+              <div style={{
+                background: 'var(--color-warning-bg, #fff3cd)',
+                border: '1px solid var(--color-warning-border, #ffc107)',
+                borderRadius: 'var(--radius-md)',
+                padding: 'var(--space-2) var(--space-3)',
+                marginBottom: 'var(--space-3)',
+                fontSize: '0.85rem',
+                color: 'var(--color-warning-text, #856404)',
+              }}>
+                No owner registered. High-value transactions cannot use APPROVAL policy.
+              </div>
+              <Button size="sm" onClick={() => { showOwnerManage.value = !showOwnerManage.value; }}>
+                {showOwnerManage.value ? 'Hide Registration' : 'Register Owner'}
+              </Button>
+            </div>
+          ) : (
+            <div>
+              <div class="detail-grid" style={{ marginBottom: 'var(--space-3)' }}>
+                <DetailRow label="State">
+                  <Badge variant={ownerStateBadge(wallet.value.ownerState)}>
+                    {wallet.value.ownerState}
+                  </Badge>
+                </DetailRow>
+                <DetailRow label="Approval Method">
+                  {wallet.value.approvalMethod
+                    ? APPROVAL_OPTIONS.find(o => o.value === wallet.value!.approvalMethod)?.label ?? wallet.value.approvalMethod
+                    : 'Auto (Global Fallback)'}
+                </DetailRow>
+                <DetailRow label="Address">
+                  {wallet.value.ownerAddress ? formatAddress(wallet.value.ownerAddress) : 'Not set'}
+                  {wallet.value.ownerAddress && <CopyButton value={wallet.value.ownerAddress} />}
+                </DetailRow>
+              </div>
+              <Button size="sm" variant="secondary" onClick={() => { showOwnerManage.value = !showOwnerManage.value; }}>
+                {showOwnerManage.value ? 'Hide Details' : 'Manage'}
+              </Button>
+            </div>
+          )}
+
+          {showOwnerManage.value && (
+            <div style={{ marginTop: 'var(--space-4)', paddingTop: 'var(--space-3)', borderTop: '1px solid var(--color-border)' }}>
+              <OwnerTab />
+            </div>
+          )}
+        </div>
+
         <div class="balance-section" style={{ marginTop: 'var(--space-6)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
             <h3 style={{ margin: 0 }}>Balances</h3>
@@ -1024,62 +1081,6 @@ function WalletDetailView({ id }: { id: string }) {
           )}
         </div>
 
-        {/* Owner Protection */}
-        <div style={{
-          border: '1px solid var(--color-border)',
-          borderRadius: 'var(--radius-lg)',
-          padding: 'var(--space-4)',
-          marginTop: 'var(--space-4)',
-        }}>
-          <h3 style={{ margin: '0 0 var(--space-3) 0', fontSize: '1rem' }}>Owner Protection</h3>
-
-          {wallet.value.ownerState === 'NONE' ? (
-            <div>
-              <div style={{
-                background: 'var(--color-warning-bg, #fff3cd)',
-                border: '1px solid var(--color-warning-border, #ffc107)',
-                borderRadius: 'var(--radius-md)',
-                padding: 'var(--space-2) var(--space-3)',
-                marginBottom: 'var(--space-3)',
-                fontSize: '0.85rem',
-                color: 'var(--color-warning-text, #856404)',
-              }}>
-                No owner registered. High-value transactions cannot use APPROVAL policy.
-              </div>
-              <Button size="sm" onClick={() => { showOwnerManage.value = !showOwnerManage.value; }}>
-                {showOwnerManage.value ? 'Hide Registration' : 'Register Owner'}
-              </Button>
-            </div>
-          ) : (
-            <div>
-              <div class="detail-grid" style={{ marginBottom: 'var(--space-3)' }}>
-                <DetailRow label="State">
-                  <Badge variant={ownerStateBadge(wallet.value.ownerState)}>
-                    {wallet.value.ownerState}
-                  </Badge>
-                </DetailRow>
-                <DetailRow label="Approval Method">
-                  {wallet.value.approvalMethod
-                    ? APPROVAL_OPTIONS.find(o => o.value === wallet.value!.approvalMethod)?.label ?? wallet.value.approvalMethod
-                    : 'Auto (Global Fallback)'}
-                </DetailRow>
-                <DetailRow label="Address">
-                  {wallet.value.ownerAddress ? formatAddress(wallet.value.ownerAddress) : 'Not set'}
-                  {wallet.value.ownerAddress && <CopyButton value={wallet.value.ownerAddress} />}
-                </DetailRow>
-              </div>
-              <Button size="sm" variant="secondary" onClick={() => { showOwnerManage.value = !showOwnerManage.value; }}>
-                {showOwnerManage.value ? 'Hide Details' : 'Manage'}
-              </Button>
-            </div>
-          )}
-
-          {showOwnerManage.value && (
-            <div style={{ marginTop: 'var(--space-4)', paddingTop: 'var(--space-3)', borderTop: '1px solid var(--color-border)' }}>
-              <OwnerTab />
-            </div>
-          )}
-        </div>
       </>
     );
   }

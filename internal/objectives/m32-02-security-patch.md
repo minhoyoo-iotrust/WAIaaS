@@ -1,7 +1,8 @@
 # 마일스톤 m32-02: 보안 패치
 
-- **Status:** PLANNED
+- **Status:** SHIPPED
 - **Milestone:** v32.2
+- **Completed:** 2026-03-16
 
 ## 목표
 

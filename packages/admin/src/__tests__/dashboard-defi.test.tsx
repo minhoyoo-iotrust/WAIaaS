@@ -154,7 +154,7 @@ describe('DashboardPage - DeFi Positions section', () => {
     expect(screen.getByText('Active Positions')).toBeTruthy();
   });
 
-  it('hides DeFi section when activeCount is 0', async () => {
+  it('shows DeFi section with empty state when activeCount is 0', async () => {
     mockApiCallsWithDefi(mockEmptyDefi);
     render(<DashboardPage />);
 
@@ -163,8 +163,9 @@ describe('DashboardPage - DeFi Positions section', () => {
       expect(screen.getByText('2.8.0')).toBeTruthy();
     });
 
-    // DeFi Positions heading should not exist
-    expect(screen.queryByText('DeFi Positions')).toBeNull();
+    // #357: DeFi Positions section always visible — shows empty state message
+    expect(screen.getByText('DeFi Positions')).toBeTruthy();
+    expect(screen.getByText('No active DeFi positions')).toBeTruthy();
   });
 
   it('shows success badge for HF >= 1.5', async () => {

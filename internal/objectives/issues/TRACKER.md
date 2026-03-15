@@ -366,6 +366,12 @@
 | 350 | BUG | HIGH | Admin UI Hyperliquid 토글 설정 키 불일치 — `hyperliquid_perp_enabled` vs `hyperliquid_enabled` | v31.17 | FIXED | 2026-03-15 |
 | 351 | ENHANCEMENT | MEDIUM | UAT 실행 리포트 영구 보관 시스템 — `internal/uat-reports/` + 프라이버시 마스킹 | v31.17 | FIXED | 2026-03-15 |
 | 352 | BUG | HIGH | chain-integration CI Build 실패 — Turborepo I/O 에러, pnpm -r로 turbo 완전 우회 | — | FIXED | 2026-03-15 |
+| 353 | BUG | MEDIUM | Nightly 테스트 배지 ANSI 파싱 실패 — vitest ANSI 코드 미제거로 Gist 미갱신 | — | FIXED | 2026-03-16 |
+| 354 | BUG | HIGH | 기본 비활성 빌트인 프로바이더(Hyperliquid, Polymarket)가 Admin UI Actions 페이지에 미표시 — 활성화 불가 | — | FIXED | 2026-03-16 |
+| 355 | ENHANCEMENT | MEDIUM | Admin UI Actions 페이지 카테고리별 탭 분리 — 프로바이더 증가에 따른 UX 개선 | — | FIXED | 2026-03-16 |
+| 356 | ENHANCEMENT | LOW | 지갑 상세 Overview 탭 Owner Protection 섹션을 Balances 위로 이동 | — | FIXED | 2026-03-16 |
+| 357 | ENHANCEMENT | LOW | 대시보드 DeFi Positions 섹션이 포지션 없으면 숨겨짐 — 항상 표시로 변경 | — | FIXED | 2026-03-16 |
+| 358 | ENHANCEMENT | LOW | Hyperliquid, Polymarket, Across Bridge 기본 활성화로 변경 | — | FIXED | 2026-03-16 |
 
 ## Type Legend
 
@@ -378,8 +384,8 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 352
+- **FIXED:** 358
 - **WONTFIX:** 1
-- **Total:** 353
+- **Total:** 359
 - **Archived:** 321 (001–321)
 

@@ -18,6 +18,7 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { eq } from 'drizzle-orm';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { WAIaaSError, isApiDirectResult } from '@waiaas/core';
+import { BUILTIN_PROVIDER_METADATA } from '../../infrastructure/action/builtin-metadata.js';
 import type { ChainType, NetworkType, EnvironmentType, IPolicyEngine, SignedDataAction, SignedHttpAction } from '@waiaas/core';
 import { resolveChainId } from '../helpers/resolve-chain-id.js';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
@@ -241,11 +242,18 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
 
   router.openapi(listProvidersRoute, async (c) => {
     const providerMetadataList = deps.registry.listProviders();
+    const registeredNames = new Set(providerMetadataList.map((m) => m.name));
+
+    // Build a lookup from BUILTIN_PROVIDER_METADATA for category/enabledKey enrichment
+    const builtinLookup = new Map(
+      BUILTIN_PROVIDER_METADATA.map((b) => [b.name, b]),
+    );
 
     const providers = providerMetadataList.map((meta) => {
       const providerActions = deps.registry.listActions(meta.name);
-      const enabledKey = meta.enabledKey ?? meta.name;
-      const category = meta.category ?? 'Other';
+      const builtin = builtinLookup.get(meta.name);
+      const enabledKey = meta.enabledKey ?? builtin?.enabledKey ?? meta.name;
+      const category = meta.category ?? builtin?.category ?? 'Other';
       let isEnabled = false;
       try {
         isEnabled = deps.settingsService.get(`actions.${enabledKey}_enabled`) === 'true';
@@ -273,6 +281,28 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
         })),
       };
     });
+
+    // #354: Merge unregistered built-in providers as disabled entries
+    for (const builtin of BUILTIN_PROVIDER_METADATA) {
+      if (registeredNames.has(builtin.name)) continue;
+      let isEnabled = false;
+      try {
+        isEnabled = deps.settingsService.get(`actions.${builtin.enabledKey}_enabled`) === 'true';
+      } catch { /* not registered */ }
+      providers.push({
+        name: builtin.name,
+        description: builtin.description,
+        version: builtin.version,
+        chains: [...builtin.chains] as ('solana' | 'ethereum')[],
+        mcpExpose: builtin.mcpExpose,
+        requiresApiKey: builtin.requiresApiKey,
+        hasApiKey: deps.settingsService.hasApiKey(builtin.name),
+        enabledKey: builtin.enabledKey,
+        category: builtin.category,
+        isEnabled,
+        actions: [],
+      });
+    }
 
     return c.json({ providers }, 200);
   });

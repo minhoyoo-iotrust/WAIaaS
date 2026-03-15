@@ -26,7 +26,7 @@ export interface ErrorCodeEntry {
 }
 
 /**
- * 116 error codes from SS10.12 unified error code matrix + signing protocol + session multi-wallet + ERC-4337.
+ * 117 error codes from SS10.12 unified error code matrix + signing protocol + session multi-wallet + ERC-4337.
  * SSoT: 37-rest-api-complete-spec.md section 10.12 + 73-signing-protocol-v1.md
  * v29.3: +WALLET_ID_REQUIRED, +NETWORK_REQUIRED, -CANNOT_REMOVE_DEFAULT_WALLET (net +1)
  * v31.10: +INVALID_TOKEN_IDENTIFIER, +STATS_NOT_CONFIGURED (net +2)
@@ -549,6 +549,13 @@ export const ERROR_CODES = {
     httpStatus: 503,
     retryable: false,
     message: 'Database schema version is incompatible with this code version',
+  },
+  RATE_LIMITED: {
+    code: 'RATE_LIMITED',
+    domain: 'SYSTEM',
+    httpStatus: 429,
+    retryable: true,
+    message: 'Rate limit exceeded',
   },
 
   // --- WALLET domain (6) ---

@@ -55,7 +55,8 @@ describe('i18n message system', () => {
     // v31.9: +WALLET_NOT_TERMINATED (+1)
     // v31.10: +INVALID_TOKEN_IDENTIFIER, +STATS_NOT_CONFIGURED (+2)
     // v31.12: +CREDENTIAL_NOT_FOUND, +CREDENTIAL_EXPIRED, +SIGNING_SCHEME_UNSUPPORTED, +CAPABILITY_NOT_FOUND, +VENUE_NOT_ALLOWED, +EXTERNAL_ACTION_FAILED (+6)
-    expect(Object.keys(en.errors).length).toBe(143);
+    // v32.2: +RATE_LIMITED (+1)
+    expect(Object.keys(en.errors).length).toBe(144);
   });
 
   it('error code keys match ERROR_CODES keys', () => {
