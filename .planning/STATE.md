@@ -4,7 +4,7 @@ milestone: v31.18
 milestone_name: Admin UI IA 재구조화
 status: completed
 stopped_at: Completed 420-02-PLAN.md
-last_updated: "2026-03-15T04:28:00.000Z"
+last_updated: "2026-03-15T04:24:35.888Z"
 last_activity: 2026-03-15 — Phase 420 executed (2 plans, 4 tasks)
 progress:
   total_phases: 4
