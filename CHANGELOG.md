@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.11.0-rc.14](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.13...v2.11.0-rc.14) (2026-03-15)
+
+
+### Features
+
+* **421-01:** add displayName to all 17 Action Providers ([ea5d1de](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ea5d1de18920c3c97c2e4f36d42f41e18d89bdb9))
+* **421-01:** add well-known contracts data and ActionProvider displayName ([c79f596](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c79f596499ec7584c88a95ba8db841416280695e))
+* **421-02:** implement ContractNameRegistry 4-tier resolution service ([56cdda9](https://github.com/minhoyoo-iotrust/WAIaaS/commit/56cdda9285fa9b63e23a574f1d79712acfeb85b5))
+* **422-01:** wire ContractNameRegistry into pipeline notifications ([8065399](https://github.com/minhoyoo-iotrust/WAIaaS/commit/806539919ed6d00aa2e0c8d2502077e7c559ede7))
+* **423-01:** add contractName/contractNameSource to transaction API responses ([04ab0fa](https://github.com/minhoyoo-iotrust/WAIaaS/commit/04ab0faea30beda38b78b5d357cd539d817fb97b))
+* **423-01:** display contract names in Admin UI transaction views ([e753280](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e75328059fcac37806f73f561557d41cf064b319))
+
+
+### Bug Fixes
+
+* **422-01:** resolve typecheck errors from unused variables and missing interface ([7369329](https://github.com/minhoyoo-iotrust/WAIaaS/commit/73693290663c0d164453172191bd344a4c975220))
+* add missing required fields to ActionProviderMetadata test mocks ([96ac78d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/96ac78d8c2e7110bbafe2ea3c3163ce95e05454a))
+* remove unused type imports in contract name test files ([396b112](https://github.com/minhoyoo-iotrust/WAIaaS/commit/396b11240b2e47f89f1ecc7d367f9920db4172f5))
+* update notification test to include {to} variable in TX_CONFIRMED template ([581c417](https://github.com/minhoyoo-iotrust/WAIaaS/commit/581c417ed16e6da4dbf8229420feb9b0a42eaddb))
+
 ## [2.11.0-rc.13](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.12...v2.11.0-rc.13) (2026-03-15)
 
 
