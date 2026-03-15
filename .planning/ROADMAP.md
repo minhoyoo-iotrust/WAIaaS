@@ -72,7 +72,7 @@
 
 </details>
 
-### 🚧 v31.18 Admin UI IA 재구조화 (In Progress)
+### v31.18 Admin UI IA 재구조화 (In Progress)
 
 **Milestone Goal:** Admin UI 사이드바의 17개 플랫 메뉴를 5개 섹션 헤더로 그룹화하고, 페이지 병합/분리, 지갑 상세 8탭→4탭 재구성, 레거시 파일 정리를 통해 일관된 정보 구조(IA) 확보.
 
@@ -102,17 +102,17 @@ Plans:
 ### Phase 418: 페이지 병합 + 레거시 정리
 **Goal**: 관련 기능이 하나의 페이지 내 탭으로 통합되고, 불필요한 레거시 파일이 제거된다
 **Depends on**: Phase 417
-**Requirements**: MERG-01, MERG-02, MERG-03, MERG-04, MERG-05, MERG-06, LGCY-01, LGCY-02, LGCY-03, LGCY-04
+**Requirements**: MERG-01, MERG-02, MERG-03, MERG-04, MERG-05, MERG-06, LGCY-01, LGCY-02, LGCY-03, LGCY-04, ROUT-01, ROUT-02
 **Success Criteria** (what must be TRUE):
   1. Wallets 페이지에서 Wallets/Tokens/RPC Endpoints/WalletConnect 4개 탭을 전환할 수 있다
   2. Settings 페이지에서 General/API Keys/RPC Proxy 3개 탭을 전환할 수 있다
   3. tokens.tsx, rpc-proxy.tsx, walletconnect.tsx, telegram-users.tsx의 독립 페이지 default export가 제거되고 콘텐츠가 적절한 탭 컴포넌트로 이동되었다
   4. layout.tsx에서 삭제된 페이지의 import가 제거되고, skills/admin.skill.md가 새 메뉴 구조를 반영한다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 418-01: Tokens + WalletConnect를 Wallets 탭으로 병합
-- [ ] 418-02: RPC Proxy를 Settings 탭으로 병합 + 레거시 파일 정리 + 스킬 파일 업데이트
+- [ ] 418-01-PLAN.md — Tokens 탭 Wallets 병합 + WalletConnect default export 제거 + /tokens 리다이렉트
+- [ ] 418-02-PLAN.md — RPC Proxy Settings 탭 병합 + 레거시 정리 + 스킬 파일 업데이트
 
 ### Phase 419: Trading Settings 탭 제거
 **Goal**: Hyperliquid/Polymarket의 중복 Settings 탭이 제거되고 모든 설정이 Providers 페이지에서 관리된다
