@@ -126,10 +126,10 @@ Plans:
   1. GET transaction detail API returns `contractName` and `contractNameSource` fields for CONTRACT_CALL transactions
   2. Admin UI transaction list shows the resolved contract name on CONTRACT_CALL rows
   3. Admin UI wallet detail Activity tab shows the resolved contract name on CONTRACT_CALL rows
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 423-01: TBD
+- [ ] 423-01-PLAN.md — TxDetailResponse enrichment + Admin UI contract name display
 
 ## Progress
 
