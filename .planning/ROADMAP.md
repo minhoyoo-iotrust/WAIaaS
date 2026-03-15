@@ -91,6 +91,12 @@
 
 </details>
 
+### v32.2 보안 패치 (Phases 424-426)
+
+- [ ] Phase 424: SSRF Guard + hostGuard Fix (0/1 plan) — SSRF 가드 범용화 + hostGuard 정확 매칭
+- [ ] Phase 425: Rate Limit Middleware (0/1 plan) — IP/세션/트랜잭션 3계층 Rate Limiter
+- [ ] Phase 426: CORS + Resource Management (0/1 plan) — CORS 미들웨어 + 알림 타임아웃 + EventBus 정리
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -98,3 +104,6 @@
 | 421. Registry Core + Well-Known Data | v32.0 | 2/2 | Complete | 2026-03-15 |
 | 422. Notification Pipeline Integration | v32.0 | 1/1 | Complete | 2026-03-15 |
 | 423. API + Admin UI Contract Names | v32.0 | 1/1 | Complete | 2026-03-15 |
+| 424. SSRF Guard + hostGuard Fix | v32.2 | 0/1 | Not started | - |
+| 425. Rate Limit Middleware | v32.2 | 0/1 | Not started | - |
+| 426. CORS + Resource Management | v32.2 | 0/1 | Not started | - |
