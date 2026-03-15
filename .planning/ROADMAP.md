@@ -98,7 +98,11 @@
 Plans:
 - [x] 424-01-PLAN.md — SSRF 가드 infrastructure/security 이동 + Admin RPC Test SSRF 방어 + hostGuard 정확 매칭 + 테스트
 
-- [ ] Phase 425: Rate Limit Middleware (0/1 plan) — IP/세션/트랜잭션 3계층 Rate Limiter
+- [ ] Phase 425: Rate Limit Middleware (1 plan) — IP/세션/트랜잭션 3계층 Rate Limiter
+
+Plans:
+- [ ] 425-01-PLAN.md — 인메모리 sliding-window Rate Limiter + 3계층 미들웨어 + createApp 등록 + 테스트
+
 - [ ] Phase 426: CORS + Resource Management (0/1 plan) — CORS 미들웨어 + 알림 타임아웃 + EventBus 정리
 
 ## Progress
