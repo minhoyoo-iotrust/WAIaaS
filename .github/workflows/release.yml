@@ -76,7 +76,7 @@ jobs:
           sleep 3
 
       - name: Build
-        run: pnpm turbo run build --filter='!@waiaas/admin'
+        run: pnpm --filter='!@waiaas/admin' -r run build
 
       - name: Chain Tests
         run: pnpm turbo run test:chain
