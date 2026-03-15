@@ -32,6 +32,7 @@ import {
   type ApproveRequest,
   type NftTransferRequest,
   type ContractDeployRequest,
+  type ContractNameRegistry,
 } from '@waiaas/core';
 import { wallets, transactions } from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
@@ -147,6 +148,8 @@ export interface PipelineContext {
   resolvedRpcUrl?: string;
   // v31.4: ApiDirectResult from action provider resolve() (HDESIGN-01)
   actionResult?: import('@waiaas/core').ApiDirectResult;
+  // v32.0: contract name registry for notification enrichment
+  contractNameRegistry?: ContractNameRegistry;
 }
 
 // ---------------------------------------------------------------------------
@@ -192,6 +195,50 @@ export function getRequestAmount(req: SendTransactionRequest | TransactionReques
 export function getRequestTo(req: SendTransactionRequest | TransactionRequest): string {
   if ('to' in req && typeof req.to === 'string') return req.to;
   return '';
+}
+
+// ---------------------------------------------------------------------------
+// v32.0: Contract name resolution for notification {to} field
+// ---------------------------------------------------------------------------
+
+/**
+ * Truncate an address for display in notifications.
+ * EVM: '0xabcd...1234', Solana: 'ABCD...5678'
+ */
+function truncateAddress(address: string): string {
+  if (address.length <= 10) return address;
+  if (address.startsWith('0x') || address.startsWith('0X')) {
+    const hex = address.slice(2).toLowerCase();
+    return `0x${hex.slice(0, 4)}...${hex.slice(-4)}`;
+  }
+  return `${address.slice(0, 4)}...${address.slice(-4)}`;
+}
+
+/**
+ * Resolve {to} for notifications: CONTRACT_CALL gets human-readable name,
+ * other types get raw address. Format: "Name (0xabcd...1234)" or raw address.
+ *
+ * - CONTRACT_CALL with known contract: "Uniswap V3 (0xe592...1564)"
+ * - CONTRACT_CALL with unknown contract: raw address (no name prefix)
+ * - TRANSFER / TOKEN_TRANSFER / other: raw address unchanged
+ */
+export function resolveNotificationTo(
+  req: SendTransactionRequest | TransactionRequest,
+  network: string,
+  registry?: ContractNameRegistry,
+): string {
+  const rawTo = getRequestTo(req);
+  if (!rawTo) return '';
+
+  // Only resolve for CONTRACT_CALL type
+  const txType = ('type' in req && req.type) ? req.type : 'TRANSFER';
+  if (txType !== 'CONTRACT_CALL' || !registry) return rawTo;
+
+  const result = registry.resolve(rawTo, network);
+  // fallback source means no name found -- return raw address as-is
+  if (result.source === 'fallback') return rawTo;
+  // Named: "Protocol Name (0xabcd...1234)"
+  return `${result.name} (${truncateAddress(rawTo)})`;
 }
 
 /** Safely extract `memo` from SendTransactionRequest | TransactionRequest. */
@@ -444,7 +491,7 @@ export async function stage1Validate(ctx: PipelineContext): Promise<void> {
   // display_amount is empty at Stage 1 -- amountUsd not yet computed
   void ctx.notificationService?.notify('TX_REQUESTED', ctx.walletId, {
     amount: formatNotificationAmount(ctx.request, ctx.wallet.chain),
-    to: toAddress ?? '',
+    to: resolveNotificationTo(ctx.request, ctx.resolvedNetwork, ctx.contractNameRegistry),
     type: txType,
     display_amount: '',
   }, { txId: ctx.txId });
@@ -714,7 +761,7 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
     void ctx.notificationService?.notify('TX_APPROVAL_REQUIRED', ctx.walletId, {
       txId: ctx.txId,
       amount: formatNotificationAmount(ctx.request, ctx.wallet.chain),
-      to: getRequestTo(ctx.request),
+      to: resolveNotificationTo(ctx.request, ctx.resolvedNetwork, ctx.contractNameRegistry),
       reason,
       display_amount: displayAmount,
     }, { txId: ctx.txId });
@@ -1506,7 +1553,7 @@ async function stage5ExecuteSmartAccount(ctx: PipelineContext): Promise<void> {
       txId: ctx.txId,
       txHash: userOpHash,
       amount: reqAmount,
-      to: reqTo,
+      to: resolveNotificationTo(ctx.request, ctx.resolvedNetwork, ctx.contractNameRegistry),
       display_amount: displayAmount,
       network: ctx.resolvedNetwork,
     }, { txId: ctx.txId });
@@ -1566,7 +1613,7 @@ async function stage5ExecuteSmartAccount(ctx: PipelineContext): Promise<void> {
       txId: ctx.txId,
       txHash,
       amount: reqAmount,
-      to: reqTo,
+      to: resolveNotificationTo(ctx.request, ctx.resolvedNetwork, ctx.contractNameRegistry),
       display_amount: displayAmount,
       network: ctx.resolvedNetwork,
     }, { txId: ctx.txId });
@@ -1858,7 +1905,7 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
       externalId: result.externalId,
       network: ctx.resolvedNetwork,
       amount: apiDirectAmount,
-      to: apiDirectTo,
+      to: resolveNotificationTo(ctx.request, ctx.resolvedNetwork, ctx.contractNameRegistry),
       display_amount: apiDirectDisplayAmount,
     }, { txId: ctx.txId });
 
@@ -2001,7 +2048,7 @@ export async function stage5Execute(ctx: PipelineContext): Promise<void> {
         txId: ctx.txId,
         txHash: ctx.submitResult.txHash,
         amount: reqAmount,
-        to: reqTo,
+        to: resolveNotificationTo(ctx.request, ctx.resolvedNetwork, ctx.contractNameRegistry),
         display_amount: displayAmount,
         network: ctx.resolvedNetwork,
       }, { txId: ctx.txId });
@@ -2213,7 +2260,7 @@ export async function stage6Confirm(ctx: PipelineContext): Promise<void> {
       txId: ctx.txId,
       txHash: ctx.submitResult!.txHash,
       amount: reqAmount,
-      to: reqTo,
+      to: resolveNotificationTo(ctx.request, ctx.resolvedNetwork, ctx.contractNameRegistry),
       display_amount: displayAmount,
       network: ctx.resolvedNetwork,
     }, { txId: ctx.txId });

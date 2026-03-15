@@ -110,6 +110,8 @@ export interface TransactionRouteDeps {
   reputationCache?: import('../../services/erc8004/reputation-cache-service.js').ReputationCacheService;
   // v31.16: token registry for assetId -> token metadata resolution (Phase 408)
   tokenRegistryService?: TokenRegistryService | null;
+  // v32.0: contract name registry for notification enrichment
+  contractNameRegistry?: import('@waiaas/core').ContractNameRegistry;
 }
 
 // ---------------------------------------------------------------------------
@@ -615,6 +617,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
       approvalChannelRouter: deps.approvalChannelRouter,
       metricsCounter: deps.metricsCounter,
       reputationCache: deps.reputationCache,
+      contractNameRegistry: deps.contractNameRegistry,
     };
 
     // Stage 1: Validate + DB INSERT (synchronous -- assigns ctx.txId)
