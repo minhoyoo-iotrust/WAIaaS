@@ -364,7 +364,7 @@
 | 348 | BUG | HIGH | Admin UI 라우트 전환 시 이전 페이지 DOM 잔류 — 지갑 상세 뷰 중복 렌더링 | — | FIXED | 2026-03-14 |
 | 349 | BUG | HIGH | Credential List API 응답 형식 불일치로 Admin UI에서 추가한 자격증명 미표시 | v31.17 | FIXED | 2026-03-15 |
 | 350 | BUG | HIGH | Admin UI Hyperliquid 토글 설정 키 불일치 — `hyperliquid_perp_enabled` vs `hyperliquid_enabled` | v31.17 | FIXED | 2026-03-15 |
-| 351 | ENHANCEMENT | MEDIUM | UAT 실행 리포트 영구 보관 시스템 — `internal/uat-reports/` + 프라이버시 마스킹 | — | OPEN | — |
+| 351 | ENHANCEMENT | MEDIUM | UAT 실행 리포트 영구 보관 시스템 — `internal/uat-reports/` + 프라이버시 마스킹 | v31.17 | FIXED | 2026-03-15 |
 
 ## Type Legend
 
@@ -376,8 +376,8 @@
 
 ## Summary
 
-- **OPEN:** 1
-- **FIXED:** 350
+- **OPEN:** 0
+- **FIXED:** 351
 - **WONTFIX:** 1
 - **Total:** 352
 - **Archived:** 321 (001–321)
