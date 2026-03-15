@@ -83,6 +83,7 @@ export class KaminoLendingProvider implements ILendingProvider, IPositionProvide
 
     this.metadata = {
       name: 'kamino',
+      displayName: 'Kamino',
       description: 'Kamino K-Lend DeFi lending protocol for Solana: supply, borrow, repay, withdraw',
       version: '1.0.0',
       chains: ['solana'],

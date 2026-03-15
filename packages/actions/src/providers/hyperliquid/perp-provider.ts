@@ -69,6 +69,7 @@ export class HyperliquidPerpProvider implements IPerpProvider {
   ) {
     this.metadata = {
       name: 'hyperliquid_perp',
+      displayName: 'Hyperliquid Perp',
       description:
         'Hyperliquid DEX perpetual futures: open, close, and manage leveraged positions with market, limit, stop-loss, and take-profit orders',
       version: '1.0.0',

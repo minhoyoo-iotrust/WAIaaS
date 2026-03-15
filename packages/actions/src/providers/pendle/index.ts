@@ -49,6 +49,7 @@ export class PendleYieldProvider implements IYieldProvider, IPositionProvider {
 
     this.metadata = {
       name: 'pendle_yield',
+      displayName: 'Pendle Yield',
       description: 'Pendle Protocol yield trading: buy/sell PT/YT, redeem at maturity, add/remove LP',
       version: '1.0.0',
       chains: ['ethereum'],

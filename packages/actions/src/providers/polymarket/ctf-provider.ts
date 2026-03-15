@@ -54,6 +54,7 @@ const PARENT_COLLECTION_ID = '0x000000000000000000000000000000000000000000000000
 export class PolymarketCtfProvider implements IActionProvider {
   readonly metadata: ActionProviderMetadata = {
     name: 'polymarket_ctf',
+      displayName: 'Polymarket CTF',
     description: 'Polymarket CTF on-chain operations (split, merge, redeem, approve)',
     version: '1.0.0',
     chains: ['ethereum'],

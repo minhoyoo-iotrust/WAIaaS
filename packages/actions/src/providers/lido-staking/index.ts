@@ -69,6 +69,7 @@ export class LidoStakingActionProvider implements IActionProvider {
 
     this.metadata = {
       name: 'lido_staking',
+      displayName: 'Lido Staking',
       description: 'Lido liquid staking protocol for ETH to stETH conversion with withdrawal support',
       version: '1.0.0',
       chains: ['ethereum'],

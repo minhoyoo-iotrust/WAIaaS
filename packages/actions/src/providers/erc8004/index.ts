@@ -66,6 +66,7 @@ export class Erc8004ActionProvider implements IActionProvider {
 
     this.metadata = {
       name: 'erc8004_agent',
+      displayName: 'ERC-8004 Agent',
       description: 'ERC-8004 Trustless Agents — identity registration, reputation management, and on-chain validation',
       version: '1.0.0',
       chains: ['ethereum'],

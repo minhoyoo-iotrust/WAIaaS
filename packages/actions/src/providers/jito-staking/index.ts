@@ -66,6 +66,7 @@ export class JitoStakingActionProvider implements IActionProvider {
 
     this.metadata = {
       name: 'jito_staking',
+      displayName: 'Jito Staking',
       description: 'Jito liquid staking protocol for SOL to JitoSOL conversion via SPL Stake Pool',
       version: '1.0.0',
       chains: ['solana'],

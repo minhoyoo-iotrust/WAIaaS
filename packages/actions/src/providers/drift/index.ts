@@ -98,6 +98,7 @@ export class DriftPerpProvider implements IPerpProvider, IPositionProvider {
 
     this.metadata = {
       name: 'drift_perp',
+      displayName: 'Drift Perp',
       description:
         'Drift Protocol V2 perpetual futures on Solana: open, close, modify positions with leverage and margin management',
       version: '1.0.0',

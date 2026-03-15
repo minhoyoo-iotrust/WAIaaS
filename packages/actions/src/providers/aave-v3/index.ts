@@ -78,6 +78,7 @@ export class AaveV3LendingProvider implements ILendingProvider, IPositionProvide
 
     this.metadata = {
       name: 'aave_v3',
+      displayName: 'Aave V3',
       description: 'Aave V3 DeFi lending protocol for EVM chains: supply, borrow, repay, withdraw',
       version: '1.0.0',
       chains: ['ethereum'],

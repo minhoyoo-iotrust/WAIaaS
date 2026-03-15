@@ -224,6 +224,7 @@ export class AcrossBridgeActionProvider implements IActionProvider {
 
     this.metadata = {
       name: 'across_bridge',
+      displayName: 'Across Bridge',
       description: 'Across Protocol intent-based cross-chain bridge with fast relayer fills (2-10 seconds)',
       version: '1.0.0',
       chains: ['ethereum'],  // multi-chain via fromChain/toChain params

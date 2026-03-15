@@ -50,6 +50,7 @@ export class JupiterSwapActionProvider implements IActionProvider {
 
     this.metadata = {
       name: 'jupiter_swap',
+      displayName: 'Jupiter Swap',
       description: 'Jupiter DEX aggregator for Solana token swaps with MEV protection',
       version: '1.0.0',
       chains: ['solana'],
