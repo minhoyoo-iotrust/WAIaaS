@@ -123,10 +123,10 @@ Plans:
   2. Polymarket 페이지에 Overview/Markets/Orders/Positions 4개 탭만 있고 Settings 탭이 없다
   3. 두 페이지 상단에 "Configure in Trading > Providers" 링크가 있고 클릭 시 Providers 페이지로 이동한다
   4. Providers 페이지에 Hyperliquid/Polymarket 설정 항목이 모두 존재한다
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 419-01: Hyperliquid/Polymarket Settings 탭 제거 + Providers 설정 이관 + 검증
+- [ ] 419-01-PLAN.md — Settings 탭 제거 + Providers 설정 이관 + 테스트 업데이트
 
 ### Phase 420: 지갑 상세 탭 재구성
 **Goal**: 지갑 상세 페이지가 4개 탭(Overview/Activity/Assets/Setup)으로 재구성되어 관련 기능이 논리적으로 그룹화된다
