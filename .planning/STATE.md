@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v32.0
 milestone_name: Contract Name Resolution
-status: active
+status: completed
 stopped_at: Completed 421-01 and 421-02 (Phase 421 complete)
-last_updated: "2026-03-15T13:08:33.150Z"
+last_updated: "2026-03-15T13:09:51.860Z"
 last_activity: 2026-03-15 — Phase 421 complete (2 plans, ContractNameRegistry + well-known data)
 progress:
   total_phases: 3
   completed_phases: 1
-  total_plans: 4
+  total_plans: 2
   completed_plans: 2
   percent: 50
 ---
