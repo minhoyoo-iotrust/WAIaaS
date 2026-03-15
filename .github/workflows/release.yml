@@ -79,7 +79,7 @@ jobs:
         run: pnpm --filter='!@waiaas/admin' -r run build
 
       - name: Chain Tests
-        run: pnpm turbo run test:chain
+        run: pnpm -r run test:chain --if-present
 
   # Platform tests + Docker build + health check
   platform:
