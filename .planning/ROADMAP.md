@@ -126,7 +126,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 419-01-PLAN.md — Settings 탭 제거 + Providers 설정 이관 + 테스트 업데이트
+- [x] 419-01-PLAN.md — Settings 탭 제거 + Providers 설정 이관 + 테스트 업데이트
 
 ### Phase 420: 지갑 상세 탭 재구성
 **Goal**: 지갑 상세 페이지가 4개 탭(Overview/Activity/Assets/Setup)으로 재구성되어 관련 기능이 논리적으로 그룹화된다
@@ -138,11 +138,11 @@ Plans:
   3. Activity 탭에서 Transactions와 External Actions를 필터로 구분하여 볼 수 있다
   4. Assets 탭에서 Staking Positions와 NFT Gallery가 섹션별로 통합 표시된다
   5. Setup 탭에서 Credentials와 MCP Setup이 섹션별로 통합 표시된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 420-01: DETAIL_TABS 재정의 + Overview 탭 Owner Protection 카드 통합
-- [ ] 420-02: Activity/Assets/Setup 탭 콘텐츠 통합
+- [ ] 420-01-PLAN.md — DETAIL_TABS 재정의 + Overview 탭 Owner Protection 카드 통합
+- [ ] 420-02-PLAN.md — Activity/Assets/Setup 탭 콘텐츠 통합
 
 ## Progress
 
