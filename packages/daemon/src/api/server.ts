@@ -818,6 +818,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         encryptedBackupService: deps.encryptedBackupService as AdminRouteDeps['encryptedBackupService'],
         adminStatsService: deps.adminStatsService,
         autoStopService: deps.autoStopService,
+        contractNameRegistry: deps.contractNameRegistry,
       }),
     );
 

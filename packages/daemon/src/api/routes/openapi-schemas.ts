@@ -267,6 +267,8 @@ export const TxDetailResponseSchema = z
     amountDecimals: z.number().int().nullable().optional(),
     amountSymbol: z.string().nullable().optional(),
     chainId: z.string().optional().openapi({ description: 'CAIP-2 chain identifier' }),
+    contractName: z.string().nullable().optional().openapi({ description: 'Resolved human-readable contract name (CONTRACT_CALL only)' }),
+    contractNameSource: z.string().nullable().optional().openapi({ description: 'Resolution source: action_provider | well_known | whitelist | fallback' }),
   })
   .openapi('TxDetailResponse');
 

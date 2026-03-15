@@ -79,6 +79,7 @@ export interface AdminRouteDeps {
   encryptedBackupService?: EncryptedBackupService;
   adminStatsService?: import('../../services/admin-stats-service.js').AdminStatsService;
   autoStopService?: import('../../services/autostop/autostop-service.js').AutoStopService;
+  contractNameRegistry?: import('@waiaas/core').ContractNameRegistry;
 }
 
 // ---------------------------------------------------------------------------

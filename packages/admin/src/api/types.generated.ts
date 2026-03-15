@@ -4360,6 +4360,8 @@ export type paths = {
                                 network: string | null;
                                 txHash: string | null;
                                 createdAt: number | null;
+                                contractName?: string | null;
+                                contractNameSource?: string | null;
                             }[];
                             total: number;
                         };
@@ -4743,6 +4745,8 @@ export type paths = {
                                 txHash: string | null;
                                 chain: string;
                                 createdAt: number | null;
+                                contractName?: string | null;
+                                contractNameSource?: string | null;
                             }[];
                             total: number;
                             offset: number;
@@ -8413,6 +8417,10 @@ export type components = {
             amountSymbol?: string | null;
             /** @description CAIP-2 chain identifier */
             chainId?: string;
+            /** @description Resolved human-readable contract name (CONTRACT_CALL only) */
+            contractName?: string | null;
+            /** @description Resolution source: action_provider | well_known | whitelist | fallback */
+            contractNameSource?: string | null;
         };
         TxListResponse: {
             items: components["schemas"]["TxDetailResponse"][];
