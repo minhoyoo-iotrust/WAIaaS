@@ -6,6 +6,7 @@
  *   2. hostGuard
  *   3. killSwitchGuard
  *   4. requestLogger
+ *   5. ipRateLimiter (when settingsService available)
  *
  * Auth middleware (route-level, registered on app before sub-routers):
  *   - masterAuth: /v1/wallets, /v1/policies, /v1/sessions, /v1/sessions/:id (admin operations, skips /renew)
@@ -47,6 +48,9 @@ import {
   createMasterAuth,
   createOwnerAuth,
   cspMiddleware,
+  createIpRateLimiter,
+  createSessionRateLimiter,
+  createTxRateLimiter,
 } from './middleware/index.js';
 import type { GetKillSwitchState } from './middleware/index.js';
 import { createHealthRoute } from './routes/health.js';
@@ -188,6 +192,11 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
     : (deps.getKillSwitchState ?? (() => 'ACTIVE'));
   app.use('*', createKillSwitchGuard(killSwitchStateGetter));
   app.use('*', requestLogger);
+
+  // Rate limit: IP-based global limiter (RATE-02)
+  if (deps.settingsService) {
+    app.use('*', createIpRateLimiter({ settingsService: deps.settingsService }));
+  }
 
   // Register error handler
   app.onError(errorHandler);
@@ -442,6 +451,22 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
   if (deps.db) {
     const ownerAuthForKillSwitch = createOwnerAuth({ db: deps.db });
     app.use('/v1/owner/kill-switch', ownerAuthForKillSwitch);
+  }
+
+  // Rate limit: session-based limiter (RATE-02) -- after auth middleware sets sessionId
+  if (deps.settingsService) {
+    app.use('/v1/wallet/*', createSessionRateLimiter({ settingsService: deps.settingsService }));
+    app.use('/v1/transactions/*', createSessionRateLimiter({ settingsService: deps.settingsService }));
+    app.use('/v1/actions/*', createSessionRateLimiter({ settingsService: deps.settingsService }));
+    app.use('/v1/x402/*', createSessionRateLimiter({ settingsService: deps.settingsService }));
+    app.use('/v1/rpc-evm/*', createSessionRateLimiter({ settingsService: deps.settingsService }));
+    app.use('/v1/erc8004/*', createSessionRateLimiter({ settingsService: deps.settingsService }));
+    app.use('/v1/erc8128/*', createSessionRateLimiter({ settingsService: deps.settingsService }));
+
+    // Rate limit: TX-specific tighter limiter (RATE-02) -- transaction submission endpoints only
+    app.use('/v1/transactions', createTxRateLimiter({ settingsService: deps.settingsService }));
+    app.use('/v1/actions/execute', createTxRateLimiter({ settingsService: deps.settingsService }));
+    app.use('/v1/admin/actions/execute', createTxRateLimiter({ settingsService: deps.settingsService }));
   }
 
   // Register routes
