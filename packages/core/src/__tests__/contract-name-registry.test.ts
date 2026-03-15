@@ -6,8 +6,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
   ContractNameRegistry,
-  type ContractNameResult,
-  type ContractNameSource,
 } from '../services/contract-name-registry.js';
 import type { ActionProviderMetadata } from '../interfaces/action-provider.types.js';
 

@@ -4,7 +4,6 @@
 import { describe, it, expect } from 'vitest';
 import {
   WELL_KNOWN_CONTRACTS,
-  type WellKnownContractEntry,
 } from '../constants/well-known-contracts.js';
 import {
   ActionProviderMetadataSchema,
