@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.11.0-rc.13](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.12...v2.11.0-rc.13) (2026-03-15)
+
+
+### Bug Fixes
+
+* **ci:** bypass Turborepo entirely in chain-integration job ([#352](https://github.com/minhoyoo-iotrust/WAIaaS/issues/352)) ([41b563f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/41b563f537cdf76cec80654e725abcee99275ab1))
+* **ci:** exclude admin package from chain-integration build ([#352](https://github.com/minhoyoo-iotrust/WAIaaS/issues/352)) ([303b056](https://github.com/minhoyoo-iotrust/WAIaaS/commit/303b056b18a76f37130e34e3f6716dc296494f4d))
+* **ci:** isolate background process fd to prevent Turborepo I/O error ([#352](https://github.com/minhoyoo-iotrust/WAIaaS/issues/352)) ([c1b2489](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c1b24899599c0beebb82d45a16309237474a9111))
+* **ci:** use pnpm -r instead of turbo for chain-integration build ([#352](https://github.com/minhoyoo-iotrust/WAIaaS/issues/352)) ([238dced](https://github.com/minhoyoo-iotrust/WAIaaS/commit/238dcedb8b2d6bfc6f2ba7244e7fca70eeed68de))
+
 ## [2.11.0-rc.12](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.11...v2.11.0-rc.12) (2026-03-15)
 
 
