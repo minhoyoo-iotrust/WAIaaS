@@ -4,7 +4,8 @@
  * Covers:
  * - Loading state
  * - Wallet selector renders Polygon wallets
- * - Tab navigation (overview, markets, orders, positions, settings)
+ * - Tab navigation (overview, markets, orders, positions)
+ * - Configure in Providers link
  * - Empty wallet state
  * - API error handling
  */
@@ -58,12 +59,6 @@ vi.mock('../components/polymarket/PolymarketOrders', () => ({
 vi.mock('../components/polymarket/PolymarketPositions', () => ({
   PolymarketPositions: ({ walletId }: { walletId: string | null }) => (
     <div data-testid="pm-positions">Positions:{walletId}</div>
-  ),
-}));
-
-vi.mock('../components/polymarket/PolymarketSettings', () => ({
-  PolymarketSettings: () => (
-    <div data-testid="pm-settings">Settings</div>
   ),
 }));
 
@@ -175,7 +170,7 @@ describe('PolymarketPage', () => {
     expect(screen.getByTestId('pm-positions')).toBeTruthy();
   });
 
-  it('switches to settings tab', async () => {
+  it('shows configure link to Providers page', async () => {
     mockWallets([
       { id: 'w1', name: 'Poly', chain: 'ethereum', network: 'polygon-mainnet' },
     ]);
@@ -185,8 +180,9 @@ describe('PolymarketPage', () => {
       expect(screen.queryByText('Loading...')).toBeNull();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
-    expect(screen.getByTestId('pm-settings')).toBeTruthy();
+    expect(screen.getByText(/Configure in/)).toBeTruthy();
+    const link = screen.getByText(/Configure in/).closest('a');
+    expect(link?.getAttribute('href')).toBe('#/providers');
   });
 
   it('handles API error gracefully', async () => {
