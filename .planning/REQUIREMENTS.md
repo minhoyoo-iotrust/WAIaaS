@@ -29,11 +29,11 @@ Requirements for milestone v31.18. Each maps to roadmap phases.
 
 ### Trading
 
-- [ ] **TRAD-01**: Hyperliquid Settings 탭이 제거되고 4개 탭만 유지된다 (Overview/Orders/Spot/Sub-accounts)
-- [ ] **TRAD-02**: Polymarket Settings 탭이 제거되고 4개 탭만 유지된다 (Overview/Markets/Orders/Positions)
-- [ ] **TRAD-03**: Hyperliquid 페이지 상단에 "Configure in Trading > Providers" 링크가 배치된다
-- [ ] **TRAD-04**: Polymarket 페이지 상단에 "Configure in Trading > Providers" 링크가 배치된다
-- [ ] **TRAD-05**: Providers 페이지에 Hyperliquid/Polymarket Settings 탭에 있던 모든 설정이 존재한다
+- [x] **TRAD-01**: Hyperliquid Settings 탭이 제거되고 4개 탭만 유지된다 (Overview/Orders/Spot/Sub-accounts)
+- [x] **TRAD-02**: Polymarket Settings 탭이 제거되고 4개 탭만 유지된다 (Overview/Markets/Orders/Positions)
+- [x] **TRAD-03**: Hyperliquid 페이지 상단에 "Configure in Trading > Providers" 링크가 배치된다
+- [x] **TRAD-04**: Polymarket 페이지 상단에 "Configure in Trading > Providers" 링크가 배치된다
+- [x] **TRAD-05**: Providers 페이지에 Hyperliquid/Polymarket Settings 탭에 있던 모든 설정이 존재한다
 
 ### Route
 
@@ -123,11 +123,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LGCY-02 | Phase 418 | Complete |
 | LGCY-03 | Phase 418 | Complete |
 | LGCY-04 | Phase 418 | Complete |
-| TRAD-01 | Phase 419 | Pending |
-| TRAD-02 | Phase 419 | Pending |
-| TRAD-03 | Phase 419 | Pending |
-| TRAD-04 | Phase 419 | Pending |
-| TRAD-05 | Phase 419 | Pending |
+| TRAD-01 | Phase 419 | Complete |
+| TRAD-02 | Phase 419 | Complete |
+| TRAD-03 | Phase 419 | Complete |
+| TRAD-04 | Phase 419 | Complete |
+| TRAD-05 | Phase 419 | Complete |
 | DETL-01 | Phase 420 | Pending |
 | DETL-02 | Phase 420 | Pending |
 | DETL-03 | Phase 420 | Pending |
