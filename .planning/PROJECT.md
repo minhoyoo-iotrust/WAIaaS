@@ -8,6 +8,19 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
+## Current Milestone: v31.18 Admin UI IA 재구조화
+
+**Goal:** Admin UI 사이드바의 17개 플랫 메뉴를 5개 섹션 헤더로 그룹화하고, 페이지 병합/분리, 지갑 상세 8탭→4탭 재구성, 레거시 파일 정리를 통해 일관된 정보 구조(IA) 확보.
+
+**Target features:**
+- 섹션 사이드바 (5 groups: Wallets/Trading/Security/Channels/System)
+- 페이지 리네이밍 (DeFi→Providers, Security→Protection, System→Settings)
+- 페이지 병합 (Tokens→Wallets 탭, RPC Proxy→Settings 탭)
+- Hyperliquid/Polymarket Settings 탭 제거 → Providers SSoT
+- 지갑 상세 탭 재구성 (8→4: Overview/Activity/Assets/Setup)
+- Owner Protection 카드 Overview 통합
+- 레거시 파일 정리 + 라우트 리다이렉트 + TabNav 통일
+
 ## Previous Milestone: v31.17 OpenAPI 기반 프론트엔드 타입 자동 생성 — SHIPPED 2026-03-15
 
 Build-time OpenAPI spec 추출 + openapi-typescript 자동 타입 생성 파이프라인, openapi-fetch 기반 타입 안전 API 클라이언트(인증 미들웨어), Admin UI 18+ 페이지 수동 interface → 생성 타입 점진적 마이그레이션(satisfies 검증), Provider discovery API(enabledKey/category/isEnabled) + settings schema 엔드포인트 → 하드코딩 제거, @waiaas/shared 상수 모듈(정책/크레덴셜/에러 코드), OpenAPI spec ↔ Admin UI 필드 사용 contract test CI 게이트. 5 phases, 11 plans, 21 requirements, 46 commits, 136 files, +19,066/-4,788 lines, ~347,156 LOC TS.

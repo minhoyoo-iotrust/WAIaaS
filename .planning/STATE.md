@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
-milestone: null
-milestone_name: null
-status: idle
-stopped_at: Milestone v31.17 archived
-last_updated: "2026-03-15T06:30:00.000Z"
-last_activity: 2026-03-15 — Milestone v31.17 archived
+milestone: v31.18
+milestone_name: Admin UI IA 재구조화
+status: defining_requirements
+stopped_at: null
+last_updated: "2026-03-15T07:00:00.000Z"
+last_activity: 2026-03-15 — Milestone v31.18 started
 progress:
   total_phases: 0
   completed_phases: 0
@@ -21,18 +21,20 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-15)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Planning next milestone
+**Current focus:** Milestone v31.18 — Admin UI IA 재구조화
 
 ## Current Position
 
-Milestone v31.17 archived. Ready for next milestone.
-Last activity: 2026-03-15 — Milestone v31.17 completed and archived
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-15 — Milestone v31.18 started
 
 ## Accumulated Context
 
 ### Decisions
 
-(cleared — see .planning/milestones/v31.17-ROADMAP.md for archived decisions)
+(none yet)
 
 ### Pending Todos
 
@@ -45,5 +47,5 @@ Last activity: 2026-03-15 — Milestone v31.17 completed and archived
 ## Session Continuity
 
 Last session: 2026-03-15
-Stopped at: Milestone v31.17 archived
+Stopped at: Milestone v31.18 initialization
 Resume file: None
