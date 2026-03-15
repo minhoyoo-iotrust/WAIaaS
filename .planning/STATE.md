@@ -4,12 +4,12 @@ milestone: v32.2
 milestone_name: 보안 패치
 status: planning
 stopped_at: Completed 425-01-PLAN.md
-last_updated: "2026-03-15T15:23:30Z"
+last_updated: "2026-03-15T15:25:29.294Z"
 last_activity: 2026-03-15 -- Phase 425 completed
 progress:
-  total_phases: 182
+  total_phases: 183
   completed_phases: 177
-  total_plans: 389
+  total_plans: 390
   completed_plans: 384
   percent: 66
 ---
