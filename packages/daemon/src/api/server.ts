@@ -2,11 +2,12 @@
  * Hono API server factory: createApp(deps) returns a configured Hono instance.
  *
  * Middleware registration order:
- *   1. requestId
- *   2. hostGuard
- *   3. killSwitchGuard
- *   4. requestLogger
- *   5. ipRateLimiter (when settingsService available)
+ *   1. cors (dynamic origin from settingsService/config)
+ *   2. requestId
+ *   3. hostGuard
+ *   4. killSwitchGuard
+ *   5. requestLogger
+ *   6. ipRateLimiter (when settingsService available)
  *
  * Auth middleware (route-level, registered on app before sub-routers):
  *   - masterAuth: /v1/wallets, /v1/policies, /v1/sessions, /v1/sessions/:id (admin operations, skips /renew)
@@ -25,6 +26,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { OpenAPIHono } from '@hono/zod-openapi';
+import { cors } from 'hono/cors';
 import { serveStatic } from '@hono/node-server/serve-static';
 
 const require = createRequire(import.meta.url);
@@ -184,6 +186,17 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
   const app = new OpenAPIHono();
 
   // Register global middleware in order
+  // 1. CORS: dynamic origin from settingsService (hot-reload) or config fallback (CORS-01, CORS-02)
+  app.use('*', cors({
+    origin: (origin) => {
+      const origins = deps.settingsService?.get('cors_origins') as string[] | undefined
+        ?? deps.config?.security?.cors_origins
+        ?? ['http://localhost:3100', 'http://127.0.0.1:3100'];
+      return origins.includes(origin) ? origin : null;
+    },
+    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowHeaders: ['Content-Type', 'Authorization', 'X-Master-Password', 'X-Request-Id'],
+  }));
   app.use('*', requestId);
   app.use('*', hostGuard);
   // killSwitchGuard: prefer KillSwitchService if available, else use callback

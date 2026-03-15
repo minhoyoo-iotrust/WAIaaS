@@ -44,6 +44,7 @@ export class NtfyChannel implements INotificationChannel {
         'Tags': tags,
       },
       body: bodyParts.join(''),
+      signal: AbortSignal.timeout(10_000),
     });
 
     if (!response.ok) {

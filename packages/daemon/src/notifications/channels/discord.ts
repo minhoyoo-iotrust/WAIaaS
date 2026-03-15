@@ -53,6 +53,7 @@ export class DiscordChannel implements INotificationChannel {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ embeds: [embed] }),
+      signal: AbortSignal.timeout(10_000),
     });
 
     if (!response.ok) {
