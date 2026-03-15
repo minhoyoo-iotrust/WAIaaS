@@ -1,7 +1,6 @@
 import { useSignal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
-import { apiGet, apiPut, apiDelete, ApiError } from '../api/client';
-import { API } from '../api/endpoints';
+import { api, ApiError } from '../api/typed-client';
 import { Badge, Button } from '../components/form';
 import { Table } from '../components/table';
 import type { Column } from '../components/table';
@@ -14,13 +13,7 @@ import { formatDate } from '../utils/format';
 // Types
 // ---------------------------------------------------------------------------
 
-interface TelegramUser {
-  chat_id: number;
-  username: string | null;
-  role: 'PENDING' | 'ADMIN' | 'READONLY';
-  registered_at: number;
-  approved_at: number | null;
-}
+import type { TelegramUser } from '../api/types.aliases';
 
 // ---------------------------------------------------------------------------
 // Component
@@ -57,8 +50,8 @@ function TelegramUsersInner() {
   const fetchUsers = async () => {
     loading.value = true;
     try {
-      const result = await apiGet<{ users: TelegramUser[]; total: number }>(API.ADMIN_TELEGRAM_USERS);
-      users.value = result.users;
+      const { data } = await api.GET('/v1/admin/telegram-users');
+      users.value = data!.users;
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
@@ -85,8 +78,9 @@ function TelegramUsersInner() {
     if (!approveUser.value) return;
     approveLoading.value = true;
     try {
-      await apiPut(API.ADMIN_TELEGRAM_USER(approveUser.value.chat_id), {
-        role: approveRole.value,
+      await api.PUT('/v1/admin/telegram-users/{chatId}', {
+        params: { path: { chatId: approveUser.value.chat_id } },
+        body: { role: approveRole.value },
       });
       showToast('success', `User approved as ${approveRole.value}`);
       approveModal.value = false;
@@ -113,7 +107,9 @@ function TelegramUsersInner() {
     if (!deleteUser.value) return;
     deleteLoading.value = true;
     try {
-      await apiDelete(API.ADMIN_TELEGRAM_USER(deleteUser.value.chat_id));
+      await api.DELETE('/v1/admin/telegram-users/{chatId}', {
+        params: { path: { chatId: deleteUser.value.chat_id } },
+      });
       showToast('success', 'User deleted');
       deleteModal.value = false;
       deleteUser.value = null;

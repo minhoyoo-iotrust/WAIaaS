@@ -11,12 +11,14 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/preact';
 
-vi.mock('../api/client', () => ({
-  apiGet: vi.fn(),
-  apiPost: vi.fn(),
-  apiPut: vi.fn(),
-  apiDelete: vi.fn(),
-  apiCall: vi.fn(),
+const mockApiGet = vi.fn();
+
+vi.mock('../api/typed-client', () => ({
+  api: { GET: (...args: unknown[]) => mockApiGet(...args), POST: vi.fn(), PUT: vi.fn(), DELETE: vi.fn() },
+  ApiError: class ApiError extends Error {
+    status: number; code: string; serverMessage: string;
+    constructor(s: number, c: string, m: string) { super(`[${s}] ${c}: ${m}`); this.name = 'ApiError'; this.status = s; this.code = c; this.serverMessage = m; }
+  },
 }));
 
 vi.mock('../auth/store', () => ({
@@ -66,9 +68,6 @@ vi.mock('../components/polymarket/PolymarketSettings', () => ({
 }));
 
 import PolymarketPage from '../pages/polymarket';
-import { apiGet } from '../api/client';
-
-const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
 
 afterEach(() => {
   cleanup();
@@ -76,17 +75,18 @@ afterEach(() => {
 });
 
 function mockWallets(wallets: Array<{ id: string; name: string; chain: string; network: string }>) {
-  mockApiGet.mockImplementation((url: string) => {
-    if (url === '/v1/wallets') {
-      return Promise.resolve({ wallets });
+  mockApiGet.mockImplementation((...args: unknown[]) => {
+    const path = args[0] as string;
+    if (path === '/v1/wallets') {
+      return Promise.resolve({ data: { items: wallets } });
     }
-    return Promise.resolve({});
+    return Promise.resolve({ data: {} });
   });
 }
 
 describe('PolymarketPage', () => {
   it('shows loading state initially', () => {
-    mockApiGet.mockReturnValue(new Promise(() => {})); // Never resolves
+    mockApiGet.mockReturnValue(new Promise(() => { /* Never resolves */ }));
     render(<PolymarketPage />);
     expect(screen.getByText('Loading...')).toBeTruthy();
   });

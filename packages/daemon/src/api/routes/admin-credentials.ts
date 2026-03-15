@@ -43,7 +43,7 @@ const listRoute = createRoute({
   responses: {
     200: {
       description: 'Global credential metadata list (value never included)',
-      content: { 'application/json': { schema: z.array(CredentialMetadataSchema) } },
+      content: { 'application/json': { schema: z.object({ credentials: z.array(CredentialMetadataSchema) }) } },
     },
   },
 });
@@ -114,7 +114,7 @@ export function adminCredentialRoutes(deps: AdminCredentialRouteDeps): OpenAPIHo
 
   router.openapi(listRoute, async (c) => {
     const list = await deps.credentialVault.list();
-    return c.json(list, 200);
+    return c.json({ credentials: list }, 200);
   });
 
   router.openapi(createRouteSpec, async (c) => {

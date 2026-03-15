@@ -2,6 +2,51 @@
 
 *A living document updated after each milestone. Lessons feed forward into future planning.*
 
+## Milestone: v31.17 — OpenAPI 기반 프론트엔드 타입 자동 생성
+
+**Shipped:** 2026-03-15
+**Phases:** 5 | **Plans:** 11 | **Sessions:** ~3
+
+### What Was Built
+- Build-time OpenAPI spec 추출(createApp stub deps) + openapi-typescript v7 타입 자동 생성 파이프라인
+- openapi-fetch 기반 타입 안전 API 클라이언트 + X-Master-Password 인증 미들웨어
+- Admin UI 18+ 페이지 수동 interface → 생성 타입 alias 점진적 마이그레이션 (satisfies 검증)
+- Provider discovery API(enabledKey/category/isEnabled) + settings schema 엔드포인트
+- @waiaas/shared 상수 모듈 (정책/크레덴셜/에러 코드 브라우저 안전 re-export)
+- OpenAPI spec ↔ Admin UI 필드 사용 contract test CI 게이트
+
+### What Worked
+- 5 phases 1일 완료 — Zod SSoT + OpenAPIHono 기반 인프라가 완비되어 spec 추출이 자연스럽게 동작
+- createApp stub deps 패턴(412-01)이 빌드 타임 spec 추출의 핵심 — 전체 서비스 의존성 없이 라우트만 등록
+- types.aliases.ts 중앙 모듈이 생성 타입 alias를 한 곳에서 관리하여 페이지별 import 최소화
+- satisfies GeneratedType 패턴이 테스트 mock 객체의 구조 검증을 컴파일 타임에 보장
+- @waiaas/shared 상수 모듈(pure TS, no Zod)이 브라우저+Node 양쪽에서 안전하게 사용 가능
+- CI freshness gate + contract test 이중 게이트로 backend-frontend 불일치 사전 차단
+
+### What Was Inefficient
+- Phase 415 plan markers가 ROADMAP.md에서 `[ ]`로 표시되어 있었으나 실제로는 complete (표기 불일치)
+- SUMMARY.md one_liner 필드 여전히 미기입 — summary-extract 도구 결과 null (이전 마일스톤과 동일 반복)
+- settings/schema API 엔드포인트가 생성되었으나 Admin UI에서 소비하지 않음 (설계-구현 간 gap)
+- wallets.tsx(3,417줄) 마이그레이션이 deferred — 전체 마이그레이션 목표 대비 가장 큰 페이지 미완
+
+### Patterns Established
+- **OpenAPI spec 추출 패턴**: createApp({...stubDeps}) → openapi-typescript → types.generated.ts → CI freshness
+- **타입 안전 클라이언트 패턴**: openapi-fetch + middleware(auth + error) → path 기반 타입 자동 추론
+- **생성 타입 alias 패턴**: types.aliases.ts 중앙 모듈에서 path-level extraction → 페이지에서 import
+- **브라우저 안전 상수**: @waiaas/shared에 pure TS 상수(no Zod) → Admin UI + daemon 양쪽 사용
+- **Contract test 패턴**: OpenAPI spec 응답 키 vs Admin UI 사용 키 자동 비교 CI 게이트
+
+### Key Lessons
+- Stub deps로 createApp 인스턴스를 만들면 전체 서비스 부트스트랩 없이 OpenAPI spec을 추출할 수 있다
+- openapi-fetch의 미들웨어 패턴이 헤더 주입/에러 처리를 한 곳에서 관리하게 해줌
+- 대규모 페이지(wallets.tsx 3,417줄)는 별도 마일스톤으로 분리하는 것이 현실적
+- SUMMARY.md one_liner 필드 미기입이 반복 — 실행 시 자동 채우는 메커니즘 필요
+
+### Cost Observations
+- Model mix: 100% opus
+- Sessions: ~3
+- Notable: 136 files, +19,066/-4,788 lines in 1 day — 대부분 기계적 타입 전환이어서 높은 생산성
+
 ## Milestone: v31.16 — CAIP 표준 식별자 승격
 
 **Shipped:** 2026-03-15

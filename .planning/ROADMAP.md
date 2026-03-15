@@ -13,7 +13,7 @@
 - ✅ **v0.9** — MCP 세션 관리 자동화 설계 (shipped 2026-02-09)
 - ✅ **v0.10** — 구현 전 설계 완결성 확보 (shipped 2026-02-09)
 - ✅ **v1.0** — 구현 계획 수립 (shipped 2026-02-09)
-- ✅ **v1.1 ~ v31.16** — (102 milestones shipped)
+- ✅ **v1.1 ~ v31.17** — (103 milestones shipped)
 
 ## Phases
 
@@ -60,6 +60,17 @@
 
 </details>
 
+<details>
+<summary>✅ v31.17 OpenAPI 기반 프론트엔드 타입 자동 생성 (Phases 412-416) — SHIPPED 2026-03-15</summary>
+
+- [x] Phase 412: Spec 추출 파이프라인 및 CI 게이트 (2/2 plans) — completed 2026-03-15
+- [x] Phase 413: 타입 안전 클라이언트 및 첫 페이지 마이그레이션 (2/2 plans) — completed 2026-03-15
+- [x] Phase 414: 인터페이스 점진적 마이그레이션 (3/3 plans) — completed 2026-03-14
+- [x] Phase 415: 백엔드 API 확장 및 상수 통합 (3/3 plans) — completed 2026-03-14
+- [x] Phase 416: Contract Test 및 검증 (1/1 plan) — completed 2026-03-15
+
+</details>
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -83,3 +94,8 @@
 | 409. Response CAIP Enrichment + OpenAPI | v31.16 | 2/2 | Complete | 2026-03-14 |
 | 410. SDK + MCP CAIP Extension | v31.16 | 2/2 | Complete | 2026-03-14 |
 | 411. Skill Files Sync | v31.16 | 1/1 | Complete | 2026-03-14 |
+| 412. Spec 추출 파이프라인 및 CI 게이트 | v31.17 | 2/2 | Complete | 2026-03-15 |
+| 413. 타입 안전 클라이언트 및 첫 페이지 마이그레이션 | v31.17 | 2/2 | Complete | 2026-03-15 |
+| 414. 인터페이스 점진적 마이그레이션 | v31.17 | 3/3 | Complete | 2026-03-14 |
+| 415. 백엔드 API 확장 및 상수 통합 | v31.17 | 3/3 | Complete | 2026-03-14 |
+| 416. Contract Test 및 검증 | v31.17 | 1/1 | Complete | 2026-03-15 |

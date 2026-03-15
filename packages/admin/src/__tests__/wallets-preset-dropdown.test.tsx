@@ -23,11 +23,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/preact';
 
-vi.mock('../api/client', () => ({
-  apiGet: vi.fn(),
-  apiPost: vi.fn(),
-  apiPut: vi.fn(),
-  apiDelete: vi.fn(),
+vi.mock('../api/typed-client', () => ({
+  api: {
+    GET: vi.fn().mockResolvedValue({ data: {} }),
+    POST: vi.fn().mockResolvedValue({ data: {} }),
+    PUT: vi.fn().mockResolvedValue({ data: {} }),
+    DELETE: vi.fn().mockResolvedValue({ data: {} }),
+  },
   ApiError: class ApiError extends Error {
     status: number;
     code: string;
@@ -40,7 +42,6 @@ vi.mock('../api/client', () => ({
       this.serverMessage = msg;
     }
   },
-  apiCall: vi.fn(),
 }));
 
 vi.mock('../components/toast', () => ({
@@ -100,7 +101,7 @@ vi.mock('../utils/error-messages', () => ({
   getErrorMessage: (code: string) => `Error: ${code}`,
 }));
 
-import { apiGet, apiPut } from '../api/client';
+import { api } from '../api/typed-client';
 import { currentPath } from '../components/layout';
 import WalletsPage from '../pages/wallets';
 
@@ -168,15 +169,15 @@ const mockNetworks = {
 };
 
 function setupApiMocks(walletData: Record<string, unknown>) {
-  vi.mocked(apiGet).mockImplementation(async (path: string) => {
-    if (path === '/v1/wallets/test-id') return walletData;
-    if (path === '/v1/wallets/test-id/networks') return mockNetworks;
-    if (path === '/v1/admin/wallets/test-id/balance') return { balances: [] };
-    if (path.startsWith('/v1/admin/wallets/test-id/transactions')) return { items: [], total: 0 };
-    if (path === '/v1/wallets/test-id/wc/session') throw new Error('No session');
-    if (path === '/v1/admin/settings') return {};
-    if (path === '/v1/admin/wallets/test-id/staking') return { walletId: 'test-id', positions: [] };
-    return {};
+  vi.mocked(api.GET).mockImplementation(async (path: string) => {
+    if (path === '/v1/wallets/{id}') return { data: walletData };
+    if (path.includes('/networks')) return { data: mockNetworks };
+    if (path.includes('/balance')) return { data: { balances: [] } };
+    if (path.includes('/transactions')) return { data: { items: [], total: 0 } };
+    if (path.includes('/wc/session')) throw new Error('No session');
+    if (path.includes('/settings')) return { data: {} };
+    if (path.includes('/staking')) return { data: { walletId: 'test-id', positions: [] } };
+    return { data: {} };
   });
 }
 
@@ -241,7 +242,7 @@ describe('Admin UI wallet preset dropdown', () => {
 
   it('T-ADUI-02: preset selection sends wallet_type in API body', async () => {
     setupApiMocks(noneWallet);
-    vi.mocked(apiPut).mockResolvedValue({ ...noneWallet, walletType: 'dcent', approvalMethod: 'sdk_ntfy' });
+    vi.mocked(api.PUT).mockResolvedValue({ data: { ...noneWallet, walletType: 'dcent', approvalMethod: 'sdk_ntfy' } });
     await renderAndWaitForDetail();
 
     await switchToOwnerTab();
@@ -264,11 +265,13 @@ describe('Admin UI wallet preset dropdown', () => {
     fireEvent.click(screen.getByText('Save'));
 
     await waitFor(() => {
-      expect(apiPut).toHaveBeenCalledWith(
-        '/v1/wallets/test-id/owner',
+      expect(api.PUT).toHaveBeenCalledWith(
+        '/v1/wallets/{id}/owner',
         expect.objectContaining({
-          owner_address: '11111111111111111111111111111112',
-          wallet_type: 'dcent',
+          body: expect.objectContaining({
+            owner_address: '11111111111111111111111111111112',
+            wallet_type: 'dcent',
+          }),
         }),
       );
     });
@@ -276,7 +279,7 @@ describe('Admin UI wallet preset dropdown', () => {
 
   it('T-ADUI-03: Custom selection omits wallet_type from API body', async () => {
     setupApiMocks(noneWallet);
-    vi.mocked(apiPut).mockResolvedValue({ ...noneWallet, ownerAddress: '11111111111111111111111111111112', ownerState: 'GRACE' });
+    vi.mocked(api.PUT).mockResolvedValue({ data: { ...noneWallet, ownerAddress: '11111111111111111111111111111112', ownerState: 'GRACE' } });
     await renderAndWaitForDetail();
 
     await switchToOwnerTab();
@@ -297,14 +300,14 @@ describe('Admin UI wallet preset dropdown', () => {
     fireEvent.click(screen.getByText('Save'));
 
     await waitFor(() => {
-      expect(apiPut).toHaveBeenCalled();
+      expect(api.PUT).toHaveBeenCalled();
     });
 
     // Verify wallet_type is NOT in the body
-    const callArgs = vi.mocked(apiPut).mock.calls[0]!;
-    const body = callArgs[1] as Record<string, unknown>;
-    expect(body.owner_address).toBe('11111111111111111111111111111112');
-    expect(body).not.toHaveProperty('wallet_type');
+    const callArgs = vi.mocked(api.PUT).mock.calls[0]!;
+    const opts = callArgs[1] as { body: Record<string, unknown> };
+    expect(opts.body.owner_address).toBe('11111111111111111111111111111112');
+    expect(opts.body).not.toHaveProperty('wallet_type');
   });
 
   it('T-ADUI-04: NONE-state Wallet Type dropdown not shown when editing in GRACE state', async () => {
@@ -456,7 +459,7 @@ describe('Admin UI Owner tab — Phase 292', () => {
     // Start with a GRACE wallet that has D'CENT preset
     // We'll change from dcent to Custom (clearing wallet_type), then assert the API call
     setupApiMocks(graceWalletSdkNtfy);
-    vi.mocked(apiPut).mockResolvedValue({ ...graceWalletSdkNtfy });
+    vi.mocked(api.PUT).mockResolvedValue({ data: { ...graceWalletSdkNtfy } });
     await renderAndWaitForDetail();
     await switchToOwnerTab();
 
@@ -484,11 +487,13 @@ describe('Admin UI Owner tab — Phase 292', () => {
 
     // Assert API call includes wallet_type: 'dcent' and owner_address
     await waitFor(() => {
-      expect(apiPut).toHaveBeenCalledWith(
-        '/v1/wallets/test-id/owner',
+      expect(api.PUT).toHaveBeenCalledWith(
+        '/v1/wallets/{id}/owner',
         expect.objectContaining({
-          owner_address: graceWalletSdkNtfy.ownerAddress,
-          wallet_type: 'dcent',
+          body: expect.objectContaining({
+            owner_address: graceWalletSdkNtfy.ownerAddress,
+            wallet_type: 'dcent',
+          }),
         }),
       );
     });

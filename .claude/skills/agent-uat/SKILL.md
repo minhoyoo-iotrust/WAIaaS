@@ -253,9 +253,13 @@ curl -s http://localhost:3100/v1/sessions \
 ```
 - UAT에서 생성한 세션이 남아있으면 경고를 표시한다
 
-### Phase 8: 리포트 출력
+### Phase 8: 리포트 출력 및 저장
 
-시나리오 실행이 모두 완료되면 요약 리포트를 출력한다:
+시나리오 실행이 모두 완료되면 요약 리포트를 출력하고 `internal/uat-reports/`에 파일로 저장한다.
+
+#### Step 8-1: 리포트 생성
+
+리포트 포맷 규격은 `internal/uat-reports/README.md`를 따른다. 아래는 출력 예시:
 
 ```
 ## Agent UAT Report
@@ -291,6 +295,34 @@ None
 - **Troubleshooting**: 정책 설정에서 TOKEN_TRANSFER 타입 허용 필요
 - **Reference**: Troubleshooting 테이블 Row 2
 ```
+
+#### Step 8-2: 프라이버시 마스킹
+
+리포트 파일 저장 전에 민감 정보를 마스킹한다:
+
+| 항목 | 마스킹 규칙 | 예시 |
+|------|------------|------|
+| EVM 주소 | 앞 6자 + `...` + 뒤 4자 | `0x1a2B...9c0D` |
+| Solana 주소 | 앞 4자 + `...` + 뒤 4자 | `7xKX...m9Fp` |
+| TX 해시 | 앞 10자 + `...` + 뒤 6자 | `0x3f8a1b2c4d...a1b2c3` |
+| 세션/마스터 토큰 | **절대 포함 금지** | — |
+| API 키 | **절대 포함 금지** | — |
+
+- 콘솔에 출력하는 리포트에는 마스킹을 적용하지 않는다 (사용자가 실시간으로 확인하는 용도)
+- 파일로 저장하는 리포트에만 마스킹을 적용한다
+
+#### Step 8-3: 파일 저장
+
+1. 파일명 포맷: `{YYYY-MM-DD}-{category|scenario-id}-v{version}.md`
+   - 카테고리 실행: `2026-03-15-mainnet-v31.17.md`
+   - 단일 시나리오: `2026-03-15-defi-01-v31.17.md`
+2. 버전은 `package.json`의 `version` 필드에서 추출한다
+3. 동일 파일명이 이미 존재하면 `-{n}` 접미사를 붙인다: `2026-03-15-mainnet-v31.17-2.md`
+4. `internal/uat-reports/` 디렉토리에 파일을 저장한다
+5. 저장 완료 후 파일 경로를 사용자에게 안내한다:
+   ```
+   리포트가 저장되었습니다: internal/uat-reports/2026-03-15-mainnet-v31.17.md
+   ```
 
 ## 지갑 선택 규칙 요약
 
@@ -341,3 +373,5 @@ None
 | `agent-uat/defi/` | DeFi 시나리오 디렉토리 |
 | `agent-uat/admin/` | Admin 시나리오 디렉토리 |
 | `agent-uat/advanced/` | Advanced 시나리오 디렉토리 |
+| `internal/uat-reports/` | UAT 실행 리포트 보관 디렉토리 |
+| `internal/uat-reports/README.md` | 리포트 파일명 규칙, 프라이버시 마스킹 규칙, 포맷 규격 |

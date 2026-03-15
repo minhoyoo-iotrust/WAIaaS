@@ -1,8 +1,8 @@
 import { useSignal } from '@preact/signals';
 import { useEffect, useRef } from 'preact/hooks';
 import { EVM_NETWORK_TYPES, NETWORK_DISPLAY_NAMES } from '@waiaas/shared';
-import { apiGet, apiPost, apiDelete, ApiError } from '../api/client';
-import { API } from '../api/endpoints';
+import { api, ApiError } from '../api/typed-client';
+import type { TokenRegistryItem } from '../api/types.aliases';
 import { Badge, Button } from '../components/form';
 import { showToast } from '../components/toast';
 import { getErrorMessage } from '../utils/error-messages';
@@ -11,19 +11,7 @@ import { getErrorMessage } from '../utils/error-messages';
 // Types
 // ---------------------------------------------------------------------------
 
-interface TokenItem {
-  address: string;
-  symbol: string;
-  name: string;
-  decimals: number;
-  source: 'builtin' | 'custom';
-  assetId: string | null;
-}
-
-interface TokensResponse {
-  network: string;
-  tokens: TokenItem[];
-}
+type TokenItem = TokenRegistryItem;
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -70,10 +58,10 @@ export default function TokensPage() {
     loading.value = true;
     error.value = null;
     try {
-      const result = await apiGet<TokensResponse>(
-        `${API.TOKENS}?network=${encodeURIComponent(network.value)}`,
-      );
-      tokens.value = result.tokens;
+      const { data } = await api.GET('/v1/tokens', {
+        params: { query: { network: network.value } },
+      });
+      tokens.value = data!.tokens;
     } catch (err: unknown) {
       if (err instanceof ApiError) {
         error.value = getErrorMessage(err.code);
@@ -112,13 +100,13 @@ export default function TokensPage() {
   async function resolveTokenMetadata(contractAddress: string) {
     resolving.value = true;
     try {
-      const result = await apiGet<{ symbol: string; name: string; decimals: number }>(
-        `${API.TOKENS_RESOLVE}?network=${encodeURIComponent(network.value)}&address=${encodeURIComponent(contractAddress)}`,
-      );
-      symbol.value = result.symbol;
-      name.value = result.name;
-      decimals.value = String(result.decimals);
-      showToast('success', `Resolved: ${result.symbol} (${result.name})`);
+      const { data: result } = await api.GET('/v1/tokens/resolve', {
+        params: { query: { network: network.value, address: contractAddress } },
+      });
+      symbol.value = result!.symbol;
+      name.value = result!.name;
+      decimals.value = String(result!.decimals);
+      showToast('success', `Resolved: ${result!.symbol} (${result!.name})`);
     } catch {
       // Auto-resolve failed — user can still enter manually
     } finally {
@@ -144,12 +132,14 @@ export default function TokensPage() {
 
     adding.value = true;
     try {
-      await apiPost(API.TOKENS, {
-        network: network.value,
-        address: address.value,
-        symbol: symbol.value,
-        name: name.value,
-        decimals: Number(decimals.value),
+      await api.POST('/v1/tokens', {
+        body: {
+          network: network.value,
+          address: address.value,
+          symbol: symbol.value,
+          name: name.value,
+          decimals: Number(decimals.value),
+        },
       });
       showToast('success', `Token ${symbol.value} added successfully.`);
       resetForm();
@@ -168,9 +158,11 @@ export default function TokensPage() {
   async function handleDeleteToken(tokenAddress: string) {
     deleting.value = tokenAddress;
     try {
-      await apiDelete(API.TOKENS, {
-        network: network.value,
-        address: tokenAddress,
+      await api.DELETE('/v1/tokens', {
+        body: {
+          network: network.value,
+          address: tokenAddress,
+        },
       });
       showToast('success', 'Token removed successfully.');
       await fetchTokens();

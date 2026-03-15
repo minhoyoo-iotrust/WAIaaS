@@ -8,16 +8,23 @@ import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/preact';
 
 // Must mock before importing components
-vi.mock('../api/client', () => ({
-  apiGet: vi.fn(),
-  apiPost: vi.fn(),
-  apiPut: vi.fn(),
-  apiDelete: vi.fn(),
+vi.mock('../api/typed-client', () => ({
+  api: {
+    GET: vi.fn().mockResolvedValue({ data: {} }),
+    POST: vi.fn().mockResolvedValue({ data: {} }),
+    PUT: vi.fn().mockResolvedValue({ data: {} }),
+    DELETE: vi.fn().mockResolvedValue({ data: {} }),
+  },
   ApiError: class ApiError extends Error {
+    status: number;
     code: string;
-    constructor(status: number, code: string, message: string) {
-      super(message);
+    serverMessage: string;
+    constructor(status: number, code: string, msg: string) {
+      super(`[${status}] ${code}: ${msg}`);
+      this.name = 'ApiError';
+      this.status = status;
       this.code = code;
+      this.serverMessage = msg;
     }
   },
 }));
@@ -48,9 +55,9 @@ vi.mock('../components/layout', async () => {
 });
 
 import WalletsPage from '../pages/wallets';
-import { apiGet } from '../api/client';
+import { api } from '../api/typed-client';
 
-const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
+const mockApiGet = api.GET as ReturnType<typeof vi.fn>;
 
 const MOCK_WALLET = {
   id: 'test-wallet-1',
@@ -79,8 +86,9 @@ const MOCK_ACTIONS = [
     operation: 'place_order',
     status: 'signed',
     createdAt: 1700001000,
-    actionProvider: 'polymarket-order',
+    provider: 'polymarket-order',
     actionName: 'placeOrder',
+    bridgeStatus: null,
   },
   {
     id: 'act-2',
@@ -89,8 +97,9 @@ const MOCK_ACTIONS = [
     operation: 'open_position',
     status: 'failed',
     createdAt: 1700002000,
-    actionProvider: 'hyperliquid-perp',
+    provider: 'hyperliquid-perp',
     actionName: 'openPosition',
+    bridgeStatus: null,
   },
 ];
 
@@ -101,28 +110,16 @@ afterEach(() => {
 
 function setupMocks(actions: typeof MOCK_ACTIONS = MOCK_ACTIONS) {
   mockApiGet.mockImplementation((url: string) => {
-    if (url.includes('/wallets/test-wallet-1') && !url.includes('/actions') && !url.includes('/networks') && !url.includes('/balance') && !url.includes('/transactions') && !url.includes('/credentials') && !url.includes('/nfts') && !url.includes('/staking')) {
-      return Promise.resolve(MOCK_WALLET);
-    }
-    if (url.includes('/actions')) {
-      return Promise.resolve({ actions });
-    }
-    if (url.includes('/credentials')) {
-      return Promise.resolve({ credentials: [] });
-    }
-    if (url.includes('/networks')) {
-      return Promise.resolve({ networks: [] });
-    }
-    if (url.includes('/balance')) {
-      return Promise.resolve({ balances: [] });
-    }
-    if (url.includes('/transactions')) {
-      return Promise.resolve({ transactions: [], total: 0 });
-    }
-    if (url.includes('/staking')) {
-      return Promise.resolve({ positions: [] });
-    }
-    return Promise.resolve({});
+    if (url === '/v1/wallets/{id}') return Promise.resolve({ data: MOCK_WALLET });
+    if (url.includes('/actions')) return Promise.resolve({ data: { actions, total: actions.length, limit: 50, offset: 0 } });
+    if (url.includes('/credentials')) return Promise.resolve({ data: { credentials: [] } });
+    if (url.includes('/networks')) return Promise.resolve({ data: { availableNetworks: [] } });
+    if (url.includes('/balance')) return Promise.resolve({ data: { balances: [] } });
+    if (url.includes('/transactions')) return Promise.resolve({ data: { items: [], total: 0 } });
+    if (url.includes('/staking')) return Promise.resolve({ data: { positions: [] } });
+    if (url.includes('/settings')) return Promise.resolve({ data: {} });
+    if (url.includes('/wc/session')) return Promise.reject(new Error('no session'));
+    return Promise.resolve({ data: {} });
   });
 }
 

@@ -98,7 +98,7 @@ describe('list_credentials tool', () => {
       { id: 'cred-1', name: 'polymarket-api', type: 'api_key', walletId: 'w1', expiresAt: null, createdAt: 1000 },
     ];
     const responses = new Map<string, ApiResult<unknown>>([
-      ['GET:/v1/wallets/default/credentials', { ok: true, data: credList }],
+      ['GET:/v1/wallets/default/credentials', { ok: true, data: { credentials: credList } }],
     ]);
     const apiClient = createMockApiClient(responses);
     const handler = getToolHandler(registerListCredentials, apiClient);
@@ -106,10 +106,10 @@ describe('list_credentials tool', () => {
     const result = await handler({}) as { content: Array<{ text: string }> };
 
     expect(apiClient.get).toHaveBeenCalledWith('/v1/wallets/default/credentials');
-    const parsed = JSON.parse(result.content[0]!.text) as Array<Record<string, unknown>>;
-    expect(parsed[0]!['name']).toBe('polymarket-api');
+    const parsed = JSON.parse(result.content[0]!.text) as { credentials: Array<Record<string, unknown>> };
+    expect(parsed.credentials[0]!['name']).toBe('polymarket-api');
     // Credential values should never be in the response
-    expect(parsed[0]!['value']).toBeUndefined();
+    expect(parsed.credentials[0]!['value']).toBeUndefined();
   });
 
   it('uses wallet_id in URL path when provided', async () => {

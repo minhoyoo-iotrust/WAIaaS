@@ -12,11 +12,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/preact';
 
-vi.mock('../api/client', () => ({
-  apiGet: vi.fn(),
-  apiPost: vi.fn(),
-  apiPut: vi.fn(),
-  apiDelete: vi.fn(),
+vi.mock('../api/typed-client', () => ({
+  api: {
+    GET: vi.fn().mockResolvedValue({ data: {} }),
+    POST: vi.fn().mockResolvedValue({ data: {} }),
+    PUT: vi.fn().mockResolvedValue({ data: {} }),
+    DELETE: vi.fn().mockResolvedValue({ data: {} }),
+  },
   ApiError: class ApiError extends Error {
     status: number;
     code: string;
@@ -29,7 +31,6 @@ vi.mock('../api/client', () => ({
       this.serverMessage = msg;
     }
   },
-  apiCall: vi.fn(),
 }));
 
 vi.mock('../components/toast', () => ({
@@ -69,7 +70,7 @@ vi.mock('../utils/error-messages', () => ({
   getErrorMessage: (code: string) => `Error: ${code}`,
 }));
 
-import { apiGet, apiPost, apiPut } from '../api/client';
+import { api } from '../api/typed-client';
 import { currentPath } from '../components/layout';
 import WalletsPage from '../pages/wallets';
 
@@ -132,7 +133,7 @@ const mockSmartWalletDetail = {
 
 describe('Wallet Provider UI', () => {
   beforeEach(() => {
-    vi.mocked(apiGet).mockResolvedValue(mockWallets as never);
+    vi.mocked(api.GET).mockResolvedValue({ data: mockWallets } as never);
   });
 
   afterEach(() => {
@@ -279,13 +280,13 @@ describe('Wallet Provider UI', () => {
   it('shows provider info in detail page for smart account', async () => {
     (currentPath as unknown as { value: string }).value = '/wallets/w2';
 
-    vi.mocked(apiGet).mockImplementation(async (url: string) => {
-      if (url.includes('/networks')) return { networks: [] } as never;
-      if (url.includes('/balance')) return { balances: [] } as never;
-      if (url.includes('/transactions')) return { items: [], total: 0 } as never;
+    vi.mocked(api.GET).mockImplementation(async (url: string) => {
+      if (url.includes('/networks')) return { data: { availableNetworks: [] } } as never;
+      if (url.includes('/balance')) return { data: { balances: [] } } as never;
+      if (url.includes('/transactions')) return { data: { items: [], total: 0 } } as never;
       if (url.includes('/wc/session')) throw new Error('not found');
-      if (url.includes('/staking')) return { positions: [] } as never;
-      return mockSmartWalletDetail as never;
+      if (url.includes('/staking')) return { data: { positions: [] } } as never;
+      return { data: mockSmartWalletDetail } as never;
     });
 
     render(<WalletsPage />);
@@ -305,18 +306,18 @@ describe('Wallet Provider UI', () => {
   it('calls PUT /v1/wallets/:id/provider when editing provider', async () => {
     (currentPath as unknown as { value: string }).value = '/wallets/w2';
 
-    vi.mocked(apiGet).mockImplementation(async (url: string) => {
-      if (url.includes('/networks')) return { networks: [] } as never;
-      if (url.includes('/balance')) return { balances: [] } as never;
-      if (url.includes('/transactions')) return { items: [], total: 0 } as never;
+    vi.mocked(api.GET).mockImplementation(async (url: string) => {
+      if (url.includes('/networks')) return { data: { availableNetworks: [] } } as never;
+      if (url.includes('/balance')) return { data: { balances: [] } } as never;
+      if (url.includes('/transactions')) return { data: { items: [], total: 0 } } as never;
       if (url.includes('/wc/session')) throw new Error('not found');
-      if (url.includes('/staking')) return { positions: [] } as never;
-      return mockSmartWalletDetail as never;
+      if (url.includes('/staking')) return { data: { positions: [] } } as never;
+      return { data: mockSmartWalletDetail } as never;
     });
 
-    vi.mocked(apiPut).mockResolvedValue({
+    vi.mocked(api.PUT).mockResolvedValue({ data: {
       provider: { name: 'alchemy', supportedChains: ['ethereum-mainnet'], paymasterEnabled: true },
-    } as never);
+    } } as never);
 
     render(<WalletsPage />);
 
@@ -342,17 +343,19 @@ describe('Wallet Provider UI', () => {
     fireEvent.click(screen.getByText('Save'));
 
     await waitFor(() => {
-      expect(apiPut).toHaveBeenCalledWith('/v1/wallets/w2/provider', {
-        provider: 'alchemy',
-        apiKey: 'test-alchemy-key',
-      });
+      expect(api.PUT).toHaveBeenCalledWith('/v1/wallets/{id}/provider', expect.objectContaining({
+        body: expect.objectContaining({
+          provider: 'alchemy',
+          apiKey: 'test-alchemy-key',
+        }),
+      }));
     });
   });
 
   it('sends aaProvider/aaProviderApiKey fields when creating smart account with pimlico', async () => {
     (currentPath as unknown as { value: string }).value = '/wallets';
 
-    vi.mocked(apiPost).mockResolvedValue({
+    vi.mocked(api.POST).mockResolvedValue({ data: {
       id: 'w3',
       name: 'test-smart-new',
       chain: 'ethereum',
@@ -361,7 +364,7 @@ describe('Wallet Provider UI', () => {
       publicKey: '0xnew',
       status: 'ACTIVE',
       accountType: 'smart',
-    } as never);
+    } } as never);
 
     render(<WalletsPage />);
 
@@ -407,9 +410,9 @@ describe('Wallet Provider UI', () => {
     fireEvent.click(screen.getByText('Create'));
 
     await waitFor(() => {
-      expect(apiPost).toHaveBeenCalled();
-      const callArgs = vi.mocked(apiPost).mock.calls[0];
-      const body = callArgs[1] as Record<string, unknown>;
+      expect(api.POST).toHaveBeenCalled();
+      const callArgs = vi.mocked(api.POST).mock.calls[0];
+      const body = (callArgs[1] as any).body as Record<string, unknown>;
       // Must use aaProvider/aaProviderApiKey (not provider/apiKey)
       expect(body.aaProvider).toBe('pimlico');
       expect(body.aaProviderApiKey).toBe('pimlico-key-123');
@@ -487,7 +490,7 @@ describe('Wallet Provider UI', () => {
   it('sends only accountType=smart (no aaProvider) when creating with None provider', async () => {
     (currentPath as unknown as { value: string }).value = '/wallets';
 
-    vi.mocked(apiPost).mockResolvedValue({
+    vi.mocked(api.POST).mockResolvedValue({ data: {
       id: 'w-lite',
       name: 'lite-wallet',
       chain: 'ethereum',
@@ -496,7 +499,7 @@ describe('Wallet Provider UI', () => {
       publicKey: '0xlite',
       status: 'ACTIVE',
       accountType: 'smart',
-    } as never);
+    } } as never);
 
     render(<WalletsPage />);
 
@@ -527,9 +530,9 @@ describe('Wallet Provider UI', () => {
     fireEvent.click(screen.getByText('Create'));
 
     await waitFor(() => {
-      expect(apiPost).toHaveBeenCalled();
-      const callArgs = vi.mocked(apiPost).mock.calls[0];
-      const body = callArgs[1] as Record<string, unknown>;
+      expect(api.POST).toHaveBeenCalled();
+      const callArgs = vi.mocked(api.POST).mock.calls[0];
+      const body = (callArgs[1] as any).body as Record<string, unknown>;
       expect(body.accountType).toBe('smart');
       // No aaProvider fields
       expect(body).not.toHaveProperty('aaProvider');
@@ -560,7 +563,7 @@ describe('Wallet Provider UI', () => {
         },
       ],
     };
-    vi.mocked(apiGet).mockResolvedValue(walletsWithLite as never);
+    vi.mocked(api.GET).mockResolvedValue({ data: walletsWithLite } as never);
     (currentPath as unknown as { value: string }).value = '/wallets';
     render(<WalletsPage />);
 
@@ -586,13 +589,14 @@ describe('Wallet Provider UI', () => {
     };
     (currentPath as unknown as { value: string }).value = '/wallets/w-lite';
 
-    vi.mocked(apiGet).mockImplementation(async (url: string) => {
-      if (url.includes('/networks')) return { networks: [] } as never;
-      if (url.includes('/balance')) return { balances: [] } as never;
-      if (url.includes('/transactions')) return { items: [], total: 0 } as never;
+    vi.mocked(api.GET).mockImplementation(async (url: string) => {
+      if (url.includes('/networks')) return { data: { availableNetworks: [] } } as never;
+      if (url.includes('/balance')) return { data: { balances: [] } } as never;
+      if (url.includes('/transactions')) return { data: { items: [], total: 0 } } as never;
       if (url.includes('/wc/session')) throw new Error('not found');
-      if (url.includes('/staking')) return { positions: [] } as never;
-      return liteWalletDetail as never;
+      if (url.includes('/staking')) return { data: { positions: [] } } as never;
+      if (url.includes('/settings')) return { data: {} } as never;
+      return { data: liteWalletDetail } as never;
     });
 
     render(<WalletsPage />);
@@ -608,13 +612,13 @@ describe('Wallet Provider UI', () => {
   it('shows Full mode badge in detail page for smart account with provider', async () => {
     (currentPath as unknown as { value: string }).value = '/wallets/w2';
 
-    vi.mocked(apiGet).mockImplementation(async (url: string) => {
-      if (url.includes('/networks')) return { networks: [] } as never;
-      if (url.includes('/balance')) return { balances: [] } as never;
-      if (url.includes('/transactions')) return { items: [], total: 0 } as never;
+    vi.mocked(api.GET).mockImplementation(async (url: string) => {
+      if (url.includes('/networks')) return { data: { availableNetworks: [] } } as never;
+      if (url.includes('/balance')) return { data: { balances: [] } } as never;
+      if (url.includes('/transactions')) return { data: { items: [], total: 0 } } as never;
       if (url.includes('/wc/session')) throw new Error('not found');
-      if (url.includes('/staking')) return { positions: [] } as never;
-      return mockSmartWalletDetail as never;
+      if (url.includes('/staking')) return { data: { positions: [] } } as never;
+      return { data: mockSmartWalletDetail } as never;
     });
 
     render(<WalletsPage />);
@@ -630,7 +634,7 @@ describe('Wallet Provider UI', () => {
   it('sends aaProvider/aaBundlerUrl/aaPaymasterUrl fields when creating smart account with custom provider', async () => {
     (currentPath as unknown as { value: string }).value = '/wallets';
 
-    vi.mocked(apiPost).mockResolvedValue({
+    vi.mocked(api.POST).mockResolvedValue({ data: {
       id: 'w4',
       name: 'test-smart-custom',
       chain: 'ethereum',
@@ -639,7 +643,7 @@ describe('Wallet Provider UI', () => {
       publicKey: '0xcustom',
       status: 'ACTIVE',
       accountType: 'smart',
-    } as never);
+    } } as never);
 
     render(<WalletsPage />);
 
@@ -688,9 +692,9 @@ describe('Wallet Provider UI', () => {
     fireEvent.click(screen.getByText('Create'));
 
     await waitFor(() => {
-      expect(apiPost).toHaveBeenCalled();
-      const callArgs = vi.mocked(apiPost).mock.calls[0];
-      const body = callArgs[1] as Record<string, unknown>;
+      expect(api.POST).toHaveBeenCalled();
+      const callArgs = vi.mocked(api.POST).mock.calls[0];
+      const body = (callArgs[1] as any).body as Record<string, unknown>;
       // Must use aa-prefixed fields (not provider/bundlerUrl/paymasterUrl)
       expect(body.aaProvider).toBe('custom');
       expect(body.aaBundlerUrl).toBe('https://bundler.example.com');

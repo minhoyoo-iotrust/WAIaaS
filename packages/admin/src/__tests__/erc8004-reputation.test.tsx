@@ -11,25 +11,28 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/preact';
 
-vi.mock('../api/client', () => ({
-  apiGet: vi.fn(),
-  apiPost: vi.fn(),
-  apiPut: vi.fn(),
-  apiDelete: vi.fn(),
-  ApiError: class ApiError extends Error {
-    status: number;
-    code: string;
-    serverMessage: string;
-    constructor(status: number, code: string, msg: string) {
-      super(`[${status}] ${code}: ${msg}`);
-      this.name = 'ApiError';
-      this.status = status;
-      this.code = code;
-      this.serverMessage = msg;
-    }
-  },
-  apiCall: vi.fn(),
-}));
+
+const mockApiGet = vi.fn();
+const mockApiPost = vi.fn();
+const mockApiPut = vi.fn();
+const mockApiDelete = vi.fn();
+const mockApiPatch = vi.fn();
+
+// Mock declarations moved to top-level const
+
+vi.mock('../api/typed-client', async () => {
+  const { ApiError } = await import('../api/client');
+  return {
+    api: {
+      GET: (...args: unknown[]) => mockApiGet(...args),
+      POST: (...args: unknown[]) => mockApiPost(...args),
+      PUT: (...args: unknown[]) => mockApiPut(...args),
+      DELETE: (...args: unknown[]) => mockApiDelete(...args),
+      PATCH: (...args: unknown[]) => mockApiPatch(...args),
+    },
+    ApiError,
+  };
+});
 
 vi.mock('../components/toast', () => ({
   showToast: vi.fn(),
@@ -56,7 +59,6 @@ vi.mock('../utils/dirty-guard', () => ({
   hasDirty: { value: false },
 }));
 
-import { apiGet } from '../api/client';
 import Erc8004Page from '../pages/erc8004';
 
 // ---------------------------------------------------------------------------
@@ -114,13 +116,12 @@ describe('Erc8004Page Reputation tab', () => {
   });
 
   it('renders reputation score on Reputation tab', async () => {
-    const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
-    mockApiGet
-      .mockResolvedValueOnce(mockSettingsEnabled)
-      .mockResolvedValueOnce(mockProvidersResponse)
-      .mockResolvedValueOnce({ items: mockWallets })
-      .mockResolvedValueOnce(mockRegFileWithAgent)
-      .mockResolvedValueOnce(mockReputation);
+        mockApiGet
+      .mockResolvedValueOnce({ data: mockSettingsEnabled })
+      .mockResolvedValueOnce({ data: mockProvidersResponse })
+      .mockResolvedValueOnce({ data: { items: mockWallets } })
+      .mockResolvedValueOnce({ data: mockRegFileWithAgent })
+      .mockResolvedValueOnce({ data: mockReputation });
 
     render(<Erc8004Page />);
 
@@ -138,14 +139,13 @@ describe('Erc8004Page Reputation tab', () => {
   });
 
   it('external agent lookup calls reputation API', async () => {
-    const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
-    mockApiGet
-      .mockResolvedValueOnce(mockSettingsEnabled)
-      .mockResolvedValueOnce(mockProvidersResponse)
-      .mockResolvedValueOnce({ items: mockWallets })
-      .mockResolvedValueOnce(mockRegFileWithAgent)
-      .mockResolvedValueOnce(mockReputation) // My agent score
-      .mockResolvedValueOnce(mockReputationLow); // Lookup result
+        mockApiGet
+      .mockResolvedValueOnce({ data: mockSettingsEnabled })
+      .mockResolvedValueOnce({ data: mockProvidersResponse })
+      .mockResolvedValueOnce({ data: { items: mockWallets } })
+      .mockResolvedValueOnce({ data: mockRegFileWithAgent })
+      .mockResolvedValueOnce({ data: mockReputation }) // My agent score
+      .mockResolvedValueOnce({ data: mockReputationLow }); // Lookup result
 
     render(<Erc8004Page />);
 
@@ -168,19 +168,19 @@ describe('Erc8004Page Reputation tab', () => {
 
     await waitFor(() => {
       expect(mockApiGet).toHaveBeenCalledWith(
-        expect.stringContaining('/v1/erc8004/agent/99/reputation'),
+        '/v1/erc8004/agent/{agentId}/reputation',
+        expect.objectContaining({ params: expect.objectContaining({ path: { agentId: '99' } }) }),
       );
     });
   });
 
   it('shows tag filter fields', async () => {
-    const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
-    mockApiGet
-      .mockResolvedValueOnce(mockSettingsEnabled)
-      .mockResolvedValueOnce(mockProvidersResponse)
-      .mockResolvedValueOnce({ items: mockWallets })
-      .mockResolvedValueOnce(mockRegFileWithAgent)
-      .mockResolvedValueOnce(mockReputation);
+        mockApiGet
+      .mockResolvedValueOnce({ data: mockSettingsEnabled })
+      .mockResolvedValueOnce({ data: mockProvidersResponse })
+      .mockResolvedValueOnce({ data: { items: mockWallets } })
+      .mockResolvedValueOnce({ data: mockRegFileWithAgent })
+      .mockResolvedValueOnce({ data: mockReputation });
 
     render(<Erc8004Page />);
 
@@ -197,14 +197,13 @@ describe('Erc8004Page Reputation tab', () => {
   });
 
   it('renders lookup result when Query returns data', async () => {
-    const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
-    mockApiGet
-      .mockResolvedValueOnce(mockSettingsEnabled)
-      .mockResolvedValueOnce(mockProvidersResponse)
-      .mockResolvedValueOnce({ items: mockWallets })
-      .mockResolvedValueOnce(mockRegFileWithAgent)
-      .mockResolvedValueOnce(mockReputation)   // My agent score
-      .mockResolvedValueOnce(mockReputationLow); // Lookup result
+        mockApiGet
+      .mockResolvedValueOnce({ data: mockSettingsEnabled })
+      .mockResolvedValueOnce({ data: mockProvidersResponse })
+      .mockResolvedValueOnce({ data: { items: mockWallets } })
+      .mockResolvedValueOnce({ data: mockRegFileWithAgent })
+      .mockResolvedValueOnce({ data: mockReputation })   // My agent score
+      .mockResolvedValueOnce({ data: mockReputationLow }); // Lookup result
 
     render(<Erc8004Page />);
 
@@ -242,8 +241,8 @@ describe('REPUTATION_THRESHOLD in POLICY_TYPES', () => {
   });
 });
 
-describe('erc8004_agent in BUILTIN_PROVIDERS', () => {
-  it('is present in the actions page provider list', async () => {
+describe('erc8004_agent in API-driven provider list', () => {
+  it('actions page component is defined (provider list is now API-driven)', async () => {
     const actionsModule = await import('../pages/actions');
     expect(actionsModule.default).toBeDefined();
   });

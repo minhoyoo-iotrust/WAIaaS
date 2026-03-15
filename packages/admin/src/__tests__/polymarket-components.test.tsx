@@ -17,7 +17,28 @@ vi.mock('../api/client', () => ({
   apiPut: vi.fn(),
   apiDelete: vi.fn(),
   apiCall: vi.fn(),
+  ApiError: class ApiError extends Error {
+    status: number; code: string; serverMessage: string;
+    constructor(s: number, c: string, m: string) { super(`[${s}] ${c}: ${m}`); this.name = 'ApiError'; this.status = s; this.code = c; this.serverMessage = m; }
+  },
 }));
+
+const mockTypedApiGet = vi.fn();
+const mockTypedApiPut = vi.fn();
+
+vi.mock('../api/typed-client', async () => {
+  const { ApiError } = await import('../api/client');
+  return {
+    api: {
+      GET: (...args: unknown[]) => mockTypedApiGet(...args),
+      POST: vi.fn().mockResolvedValue({ data: {} }),
+      PUT: (...args: unknown[]) => mockTypedApiPut(...args),
+      DELETE: vi.fn().mockResolvedValue({ data: {} }),
+      PATCH: vi.fn().mockResolvedValue({ data: {} }),
+    },
+    ApiError,
+  };
+});
 
 vi.mock('../auth/store', () => ({
   masterPassword: { value: 'test-pw' },
@@ -376,14 +397,14 @@ describe('PolymarketPositions', () => {
 // ---------------------------------------------------------------------------
 describe('PolymarketSettings', () => {
   it('shows loading state', () => {
-    mockApiGet.mockReturnValue(new Promise(() => {}));
+    mockTypedApiGet.mockReturnValue(new Promise(() => {}));
     render(<PolymarketSettings />);
     expect(screen.getByText('Loading settings...')).toBeTruthy();
   });
 
   it('renders settings form with loaded values', async () => {
-    mockApiGet.mockResolvedValue({
-      settings: {
+    mockTypedApiGet.mockResolvedValue({
+      data: {
         'actions.polymarket_enabled': 'true',
         'actions.polymarket_default_fee_bps': '50',
         'actions.polymarket_order_expiry_seconds': '600',
@@ -401,13 +422,13 @@ describe('PolymarketSettings', () => {
   });
 
   it('saves settings successfully', async () => {
-    mockApiGet.mockResolvedValue({
-      settings: {
+    mockTypedApiGet.mockResolvedValue({
+      data: {
         'actions.polymarket_enabled': 'true',
         'actions.polymarket_default_fee_bps': '50',
       },
     });
-    mockApiPut.mockResolvedValue({});
+    mockTypedApiPut.mockResolvedValue({ data: {} });
 
     render(<PolymarketSettings />);
     await waitFor(() => {
@@ -416,11 +437,11 @@ describe('PolymarketSettings', () => {
 
     fireEvent.click(screen.getByText('Save Settings'));
     await waitFor(() => {
-      expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', {
-        settings: expect.objectContaining({
-          'actions.polymarket_enabled': 'true',
-          'actions.polymarket_default_fee_bps': '50',
-        }),
+      expect(mockTypedApiPut).toHaveBeenCalledWith('/v1/admin/settings', {
+        body: { settings: expect.arrayContaining([
+          expect.objectContaining({ key: 'actions.polymarket_enabled', value: 'true' }),
+          expect.objectContaining({ key: 'actions.polymarket_default_fee_bps', value: '50' }),
+        ]) },
       });
     });
 
@@ -428,8 +449,8 @@ describe('PolymarketSettings', () => {
   });
 
   it('shows error toast on save failure', async () => {
-    mockApiGet.mockResolvedValue({ settings: { 'actions.polymarket_enabled': 'false' } });
-    mockApiPut.mockRejectedValue(new Error('fail'));
+    mockTypedApiGet.mockResolvedValue({ data: { 'actions.polymarket_enabled': 'false' } });
+    mockTypedApiPut.mockRejectedValue(new Error('fail'));
 
     render(<PolymarketSettings />);
     await waitFor(() => {
@@ -443,7 +464,7 @@ describe('PolymarketSettings', () => {
   });
 
   it('shows error toast on load failure', async () => {
-    mockApiGet.mockRejectedValue(new Error('fail'));
+    mockTypedApiGet.mockRejectedValue(new Error('fail'));
 
     render(<PolymarketSettings />);
     await waitFor(() => {
@@ -452,9 +473,7 @@ describe('PolymarketSettings', () => {
   });
 
   it('renders all setting fields', async () => {
-    mockApiGet.mockResolvedValue({
-      settings: {},
-    });
+    mockTypedApiGet.mockResolvedValue({ data: {} });
 
     render(<PolymarketSettings />);
     await waitFor(() => {

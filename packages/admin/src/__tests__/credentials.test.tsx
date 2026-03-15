@@ -7,16 +7,26 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/preact';
 
-vi.mock('../api/client', () => ({
-  apiGet: vi.fn(),
-  apiPost: vi.fn(),
-  apiPut: vi.fn(),
-  apiDelete: vi.fn(),
+const mockApiGet = vi.fn();
+const mockApiPost = vi.fn();
+const mockApiDelete = vi.fn();
+const mockApiPut = vi.fn();
+
+vi.mock('../api/typed-client', () => ({
+  api: {
+    GET: (...args: unknown[]) => mockApiGet(...args),
+    POST: (...args: unknown[]) => mockApiPost(...args),
+    PUT: (...args: unknown[]) => mockApiPut(...args),
+    DELETE: (...args: unknown[]) => mockApiDelete(...args),
+  },
   ApiError: class ApiError extends Error {
-    code: string;
+    status: number; code: string; serverMessage: string;
     constructor(status: number, code: string, message: string) {
       super(message);
+      this.name = 'ApiError';
+      this.status = status;
       this.code = code;
+      this.serverMessage = message;
     }
   },
 }));
@@ -37,12 +47,6 @@ vi.mock('../components/toast', () => ({
 }));
 
 import CredentialsPage from '../pages/credentials';
-import { apiGet, apiPost, apiDelete, apiPut } from '../api/client';
-
-const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
-const mockApiPost = apiPost as ReturnType<typeof vi.fn>;
-const mockApiDelete = apiDelete as ReturnType<typeof vi.fn>;
-const mockApiPut = apiPut as ReturnType<typeof vi.fn>;
 
 afterEach(() => {
   cleanup();
@@ -53,7 +57,7 @@ const MOCK_CREDENTIALS = [
   {
     id: 'cred-1',
     walletId: null,
-    type: 'api-key',
+    type: 'api-key' as const,
     name: 'polymarket-key',
     metadata: {},
     expiresAt: null,
@@ -63,7 +67,7 @@ const MOCK_CREDENTIALS = [
   {
     id: 'cred-2',
     walletId: null,
-    type: 'hmac-secret',
+    type: 'hmac-secret' as const,
     name: 'exchange-hmac',
     metadata: { provider: 'test' },
     expiresAt: 1800000000,
@@ -74,7 +78,7 @@ const MOCK_CREDENTIALS = [
 
 describe('CredentialsPage', () => {
   it('renders credential list', async () => {
-    mockApiGet.mockResolvedValue({ credentials: MOCK_CREDENTIALS });
+    mockApiGet.mockResolvedValue({ data: { credentials: MOCK_CREDENTIALS } });
     render(<CredentialsPage />);
 
     await waitFor(() => {
@@ -84,7 +88,7 @@ describe('CredentialsPage', () => {
   });
 
   it('shows empty state when no credentials', async () => {
-    mockApiGet.mockResolvedValue({ credentials: [] });
+    mockApiGet.mockResolvedValue({ data: { credentials: [] } });
     render(<CredentialsPage />);
 
     await waitFor(() => {
@@ -94,7 +98,7 @@ describe('CredentialsPage', () => {
   });
 
   it('renders type badges', async () => {
-    mockApiGet.mockResolvedValue({ credentials: MOCK_CREDENTIALS });
+    mockApiGet.mockResolvedValue({ data: { credentials: MOCK_CREDENTIALS } });
     render(<CredentialsPage />);
 
     await waitFor(() => {
@@ -104,7 +108,7 @@ describe('CredentialsPage', () => {
   });
 
   it('opens add modal when clicking Add Credential', async () => {
-    mockApiGet.mockResolvedValue({ credentials: MOCK_CREDENTIALS });
+    mockApiGet.mockResolvedValue({ data: { credentials: MOCK_CREDENTIALS } });
     render(<CredentialsPage />);
 
     await waitFor(() => {
@@ -118,7 +122,7 @@ describe('CredentialsPage', () => {
   });
 
   it('opens delete confirmation modal', async () => {
-    mockApiGet.mockResolvedValue({ credentials: MOCK_CREDENTIALS });
+    mockApiGet.mockResolvedValue({ data: { credentials: MOCK_CREDENTIALS } });
     render(<CredentialsPage />);
 
     await waitFor(() => {
@@ -133,7 +137,7 @@ describe('CredentialsPage', () => {
   });
 
   it('opens rotate modal', async () => {
-    mockApiGet.mockResolvedValue({ credentials: MOCK_CREDENTIALS });
+    mockApiGet.mockResolvedValue({ data: { credentials: MOCK_CREDENTIALS } });
     render(<CredentialsPage />);
 
     await waitFor(() => {
@@ -148,14 +152,14 @@ describe('CredentialsPage', () => {
   });
 
   it('does not expose credential value in table', async () => {
-    mockApiGet.mockResolvedValue({ credentials: MOCK_CREDENTIALS });
+    mockApiGet.mockResolvedValue({ data: { credentials: MOCK_CREDENTIALS } });
     render(<CredentialsPage />);
 
     await waitFor(() => {
       expect(screen.getByText('polymarket-key')).toBeTruthy();
     });
 
-    // CredentialMetadata does not include 'value' field — verify no column header for it
+    // CredentialMetadata does not include 'value' field -- verify no column header for it
     expect(screen.queryByText('Value')).toBeNull();
     // Verify table has Name, Type, Expires, Created, Actions columns
     expect(screen.getByText('Name')).toBeTruthy();
@@ -165,9 +169,9 @@ describe('CredentialsPage', () => {
     expect(screen.getByText('Actions')).toBeTruthy();
   });
 
-  it('calls apiPost when creating credential', async () => {
-    mockApiGet.mockResolvedValue({ credentials: [] });
-    mockApiPost.mockResolvedValue({ id: 'new-cred' });
+  it('calls api.POST when creating credential', async () => {
+    mockApiGet.mockResolvedValue({ data: { credentials: [] } });
+    mockApiPost.mockResolvedValue({ data: { id: 'new-cred' } });
     render(<CredentialsPage />);
 
     await waitFor(() => {
@@ -187,7 +191,7 @@ describe('CredentialsPage', () => {
     fireEvent.input(valueInput, { target: { value: 'secret123' } });
 
     // Click Create
-    mockApiGet.mockResolvedValue({ credentials: [{ id: 'new', walletId: null, type: 'api-key', name: 'test-key', metadata: {}, expiresAt: null, createdAt: 1700000000, updatedAt: 1700000000 }] });
+    mockApiGet.mockResolvedValue({ data: { credentials: [{ id: 'new', walletId: null, type: 'api-key' as const, name: 'test-key', metadata: {}, expiresAt: null, createdAt: 1700000000, updatedAt: 1700000000 }] } });
     fireEvent.click(screen.getByText('Create'));
 
     await waitFor(() => {

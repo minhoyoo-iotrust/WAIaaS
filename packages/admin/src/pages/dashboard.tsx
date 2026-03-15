@@ -1,7 +1,7 @@
 import { useSignal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
-import { apiGet, apiPost, ApiError } from '../api/client';
-import { API } from '../api/endpoints';
+import { api, ApiError } from '../api/typed-client';
+import type { paths, components } from '../api/types.generated';
 import { formatUptime, formatDate } from '../utils/format';
 import { fetchDisplayCurrency, formatWithDisplay } from '../utils/display-currency';
 import { Badge, Button } from '../components/form';
@@ -12,46 +12,13 @@ import { showToast } from '../components/toast';
 import { ExplorerLink } from '../components/explorer-link';
 import { DASHBOARD_POLL_INTERVAL_MS } from '../constants';
 
-interface RecentTransaction {
-  id: string;
-  walletId: string;
-  walletName: string | null;
-  type: string;
-  status: string;
-  toAddress: string | null;
-  amount: string | null;
-  formattedAmount: string | null;
-  amountUsd: number | null;
-  network: string | null;
-  txHash: string | null;
-  createdAt: number | null;
-}
+// Generated type aliases (replacing manual interfaces)
+type AdminStatus = components['schemas']['AdminStatusResponse'];
+type RecentTransaction = AdminStatus['recentTransactions'][number];
+type AgentPromptResult = components['schemas']['AgentPromptResponse'];
+type DefiPositionSummary = paths['/v1/admin/defi/positions']['get']['responses']['200']['content']['application/json'];
 
-interface AdminStatus {
-  status: string;
-  version: string;
-  latestVersion: string | null;
-  updateAvailable: boolean;
-  uptime: number;
-  walletCount: number;
-  activeSessionCount: number;
-  killSwitchState: string;
-  adminTimeout: number;
-  timestamp: number;
-  policyCount: number;
-  recentTxCount: number;
-  failedTxCount: number;
-  recentTransactions: RecentTransaction[];
-  autoProvisioned?: boolean;
-}
-
-interface AgentPromptResult {
-  prompt: string;
-  walletCount: number;
-  sessionsCreated: number;
-  expiresAt: number;
-}
-
+// AdminStats: generated type is `unknown` (no named schema), keep manual interface
 interface AdminStats {
   transactions: {
     total: number;
@@ -93,27 +60,6 @@ function formatBytes(bytes: number): string {
   const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), units.length - 1);
   const value = bytes / Math.pow(k, i);
   return `${value.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
-}
-
-interface DefiPositionSummary {
-  positions: Array<{
-    id: string;
-    walletId: string;
-    category: string;
-    provider: string;
-    chain: string;
-    network: string | null;
-    assetId: string | null;
-    amount: string;
-    amountUsd: number | null;
-    metadata: unknown;
-    status: string;
-    openedAt: number;
-    lastSyncedAt: number;
-  }>;
-  totalValueUsd: number | null;
-  worstHealthFactor: number | null;
-  activeCount: number;
 }
 
 const DEFI_CATEGORIES = ['ALL', 'STAKING', 'LENDING', 'YIELD', 'PERP'] as const;
@@ -211,7 +157,7 @@ function buildTxColumns(
 
 type DefiPosition = DefiPositionSummary['positions'][number];
 
-function meta(p: { metadata: unknown }): Record<string, unknown> {
+function meta(p: { metadata?: unknown }): Record<string, unknown> {
   return p.metadata && typeof p.metadata === 'object' ? (p.metadata as Record<string, unknown>) : {};
 }
 
@@ -363,8 +309,9 @@ export default function DashboardPage() {
 
   const fetchStats = async () => {
     try {
-      const result = await apiGet<AdminStats>(API.ADMIN_STATS);
-      statsData.value = result;
+      // AdminStats response type is `unknown` in generated types, cast to local interface
+      const { data: result } = await api.GET('/v1/admin/stats');
+      statsData.value = result as AdminStats;
     } catch {
       // Stats not available -- keep null
     } finally {
@@ -375,13 +322,11 @@ export default function DashboardPage() {
   const fetchDefi = async () => {
     defiLoading.value = true;
     try {
-      const params = new URLSearchParams();
-      if (walletFilter.value) params.set('wallet_id', walletFilter.value);
-      if (categoryFilter.value !== 'ALL') params.set('category', categoryFilter.value);
-      const qs = params.toString();
-      const url = qs ? `${API.ADMIN_DEFI_POSITIONS}?${qs}` : API.ADMIN_DEFI_POSITIONS;
-      const result = await apiGet<DefiPositionSummary>(url);
-      defiData.value = result;
+      const query: { wallet_id?: string; category?: 'STAKING' | 'LENDING' | 'YIELD' | 'PERP' } = {};
+      if (walletFilter.value) query.wallet_id = walletFilter.value;
+      if (categoryFilter.value !== 'ALL') query.category = categoryFilter.value as 'STAKING' | 'LENDING' | 'YIELD' | 'PERP';
+      const { data: result } = await api.GET('/v1/admin/defi/positions', { params: { query } });
+      defiData.value = result!;
     } catch {
       // DeFi positions not available or empty -- keep null
     } finally {
@@ -393,8 +338,8 @@ export default function DashboardPage() {
     loading.value = true;
     error.value = null;
     try {
-      const result = await apiGet<AdminStatus>(API.ADMIN_STATUS);
-      data.value = result;
+      const { data: result } = await api.GET('/v1/admin/status');
+      data.value = result!;
     } catch (err: unknown) {
       if (err instanceof ApiError) {
         error.value = getErrorMessage(err.code);
@@ -409,13 +354,13 @@ export default function DashboardPage() {
   const handleGeneratePrompt = async () => {
     promptLoading.value = true;
     try {
-      const result = await apiPost<AgentPromptResult>(API.ADMIN_AGENT_PROMPT, {});
-      if (result.walletCount === 0) {
+      const { data: result } = await api.POST('/v1/admin/agent-prompt', { body: {} });
+      if (result!.walletCount === 0) {
         showToast('warning', 'No active wallets found');
         return;
       }
-      promptText.value = result.prompt;
-      showToast('success', `Prompt generated for ${result.walletCount} wallet(s)`);
+      promptText.value = result!.prompt;
+      showToast('success', `Prompt generated for ${result!.walletCount} wallet(s)`);
     } catch (err: unknown) {
       if (err instanceof ApiError) {
         showToast('error', getErrorMessage(err.code));
@@ -443,13 +388,13 @@ export default function DashboardPage() {
         displayRate.value = rate;
       })
       .catch(() => { /* fallback to USD */ });
-    apiGet<{ total: number }>(API.ADMIN_TRANSACTIONS + '?status=APPROVED&limit=1')
-      .then((res) => { approvalCount.value = res.total; })
+    api.GET('/v1/admin/transactions', { params: { query: { status: 'APPROVED', limit: 1 } } })
+      .then(({ data: res }) => { approvalCount.value = res!.total; })
       .catch(() => { /* fallback */ });
-    apiGet<{ items: Array<{ id: string; name: string }> }>(API.WALLETS)
-      .then((res) => {
-        const items = Array.isArray(res) ? res : res.items;
-        walletList.value = items.map((w: { id: string; name?: string | null }) => ({
+    api.GET('/v1/wallets')
+      .then(({ data: res }) => {
+        const items = res!.items;
+        walletList.value = items.map((w) => ({
           id: w.id,
           name: w.name ?? w.id.slice(0, 8),
         }));

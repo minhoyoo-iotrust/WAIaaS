@@ -1,5 +1,34 @@
 # Project Milestones: WAIaaS
 
+## v31.17 OpenAPI 기반 프론트엔드 타입 자동 생성 (Shipped: 2026-03-14)
+
+**Phases completed:** 5 phases, 11 plans, 7 tasks
+
+**Key accomplishments:**
+
+- Build-time OpenAPI spec 추출 + openapi-typescript 자동 타입 생성 파이프라인 (CI freshness gate 포함)
+- openapi-fetch 기반 타입 안전 API 클라이언트 + X-Master-Password 인증 미들웨어
+- Admin UI 18+ 페이지 수동 interface → 생성 타입 alias 점진적 마이그레이션 (satisfies 검증)
+- Provider discovery API (enabledKey/category/isEnabled) + settings schema 엔드포인트 → 하드코딩 제거
+- @waiaas/shared 상수 모듈 — 정책 타입, 크레덴셜 타입, 에러 코드 브라우저 안전 re-export
+- OpenAPI spec ↔ Admin UI 필드 사용 contract test CI 게이트 (schema-reference hard gate)
+
+**Stats:**
+
+- 5 phases (412-416), 11 plans, 21 requirements complete
+- 46 commits, 136 files changed, +19,066 / -4,788 lines
+- Timeline: 1 day (2026-03-15)
+- Git range: docs(v31.17-start) → docs(v31.17-audit)
+- ~347,156 LOC TypeScript
+- Audit: PASS with noted gaps (settings/schema API unused by UI, ~17 component files on old client)
+
+### Known Gaps
+
+- `GET /v1/admin/settings/schema` endpoint created but not consumed by Admin UI (wired in v31.17 late addition)
+- ~17 component-level files remain on old untyped API client (wallets.tsx sub-components deferred)
+
+---
+
 ## v31.16 CAIP 표준 식별자 승격 (Shipped: 2026-03-15)
 
 **Phases completed:** 407-411 (5 phases, 8 plans, 46 requirements)

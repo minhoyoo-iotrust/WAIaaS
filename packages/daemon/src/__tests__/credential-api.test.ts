@@ -146,7 +146,9 @@ describe('Per-wallet credential endpoints', () => {
     );
 
     expect(res.status).toBe(200);
-    const body = await res.json() as Array<Record<string, unknown>>;
+    const wrapper = await res.json() as { credentials: Array<Record<string, unknown>> };
+    expect(wrapper).toHaveProperty('credentials');
+    const body = wrapper.credentials;
     expect(Array.isArray(body)).toBe(true);
     expect(body.length).toBeGreaterThan(0);
     // Verify no value field in any item
@@ -217,7 +219,9 @@ describe('Global credential endpoints', () => {
     );
 
     expect(res.status).toBe(200);
-    const body = await res.json() as Array<Record<string, unknown>>;
+    const wrapper = await res.json() as { credentials: Array<Record<string, unknown>> };
+    expect(wrapper).toHaveProperty('credentials');
+    const body = wrapper.credentials;
     expect(Array.isArray(body)).toBe(true);
     const found = body.find((c) => c.id === createdId);
     expect(found).toBeDefined();

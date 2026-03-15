@@ -101,7 +101,7 @@ describe('SDK External Actions', () => {
     it('calls GET /v1/wallets/:id/credentials with sessionAuth', async () => {
       const client = new WAIaaSClient({ baseUrl: 'http://localhost:3100', sessionToken: mockToken });
       const creds = [{ id: 'c1', name: 'api-key', type: 'api_key', walletId: 'w1', expiresAt: null, createdAt: 1000, updatedAt: 1000 }];
-      fetchSpy.mockResolvedValue(mockResponse(creds));
+      fetchSpy.mockResolvedValue(mockResponse({ credentials: creds }));
 
       const result = await client.listCredentials('w1');
 

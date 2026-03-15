@@ -1,25 +1,28 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/preact';
 
-vi.mock('../api/client', () => ({
-  apiGet: vi.fn(),
-  apiPost: vi.fn(),
-  apiPut: vi.fn(),
-  apiDelete: vi.fn(),
-  ApiError: class ApiError extends Error {
-    status: number;
-    code: string;
-    serverMessage: string;
-    constructor(status: number, code: string, msg: string) {
-      super(`[${status}] ${code}: ${msg}`);
-      this.name = 'ApiError';
-      this.status = status;
-      this.code = code;
-      this.serverMessage = msg;
-    }
-  },
-  apiCall: vi.fn(),
-}));
+
+const mockApiGet = vi.fn();
+const mockApiPost = vi.fn();
+const mockApiPut = vi.fn();
+const mockApiDelete = vi.fn();
+const mockApiPatch = vi.fn();
+
+// Mock declarations moved to top-level const
+
+vi.mock('../api/typed-client', async () => {
+  const { ApiError } = await import('../api/client');
+  return {
+    api: {
+      GET: (...args: unknown[]) => mockApiGet(...args),
+      POST: (...args: unknown[]) => mockApiPost(...args),
+      PUT: (...args: unknown[]) => mockApiPut(...args),
+      DELETE: (...args: unknown[]) => mockApiDelete(...args),
+      PATCH: (...args: unknown[]) => mockApiPatch(...args),
+    },
+    ApiError,
+  };
+});
 
 vi.mock('../components/toast', () => ({
   showToast: vi.fn(),
@@ -70,8 +73,8 @@ vi.mock('../components/settings-search', () => {
   };
 });
 
-import { apiGet, apiPost, apiPut, apiDelete, ApiError } from '../api/client';
 import { showToast } from '../components/toast';
+import { ApiError } from '../api/client';
 import SessionsPage from '../pages/sessions';
 
 const mockWallets = {
@@ -116,10 +119,10 @@ describe('SessionsPage', () => {
   });
 
   it('should load and display sessions for selected agent', async () => {
-    vi.mocked(apiGet)
-      .mockResolvedValueOnce(mockWallets) // wallets load
+    mockApiGet
+      .mockResolvedValueOnce({ data: mockWallets }) // wallets load
       .mockResolvedValueOnce([]) // initial sessions (all wallets)
-      .mockResolvedValueOnce(mockSessions); // sessions for selected wallet
+      .mockResolvedValueOnce({ data: mockSessions }); // sessions for selected wallet
 
     render(<SessionsPage />);
 
@@ -142,12 +145,12 @@ describe('SessionsPage', () => {
   });
 
   it('should create session and show token modal', async () => {
-    vi.mocked(apiGet)
-      .mockResolvedValueOnce(mockWallets) // initial wallets load
+    mockApiGet
+      .mockResolvedValueOnce({ data: mockWallets }) // initial wallets load
       .mockResolvedValueOnce([]) // initial sessions (all wallets)
-      .mockResolvedValueOnce(mockSessions); // refresh after create
+      .mockResolvedValueOnce({ data: mockSessions }); // refresh after create
 
-    vi.mocked(apiPost).mockResolvedValueOnce(mockCreatedSession);
+    mockApiPost.mockResolvedValueOnce({ data: mockCreatedSession });
 
     const { container } = render(<SessionsPage />);
 
@@ -178,19 +181,19 @@ describe('SessionsPage', () => {
     });
 
     expect(screen.getByText('jwt-token-abc123')).toBeTruthy();
-    expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/sessions', {
-      walletId: 'wallet-1',
-    });
+    expect(mockApiPost).toHaveBeenCalledWith('/v1/sessions', expect.objectContaining({
+      body: expect.objectContaining({ walletId: 'wallet-1' }),
+    }));
   });
 
   it('should revoke session with confirmation modal', async () => {
-    vi.mocked(apiGet)
-      .mockResolvedValueOnce(mockWallets) // wallets load
+    mockApiGet
+      .mockResolvedValueOnce({ data: mockWallets }) // wallets load
       .mockResolvedValueOnce([]) // initial sessions (all wallets)
-      .mockResolvedValueOnce(mockSessions) // sessions for selected wallet
+      .mockResolvedValueOnce({ data: mockSessions }) // sessions for selected wallet
       .mockResolvedValueOnce([]); // refresh after revoke
 
-    vi.mocked(apiDelete).mockResolvedValueOnce(undefined);
+    mockApiDelete.mockResolvedValueOnce(undefined);
 
     render(<SessionsPage />);
 
@@ -225,7 +228,9 @@ describe('SessionsPage', () => {
     fireEvent.click(modalButtons[modalButtons.length - 1]);
 
     await waitFor(() => {
-      expect(vi.mocked(apiDelete)).toHaveBeenCalledWith('/v1/sessions/sess-1');
+      expect(mockApiDelete).toHaveBeenCalledWith('/v1/sessions/{id}', expect.objectContaining({
+        params: { path: { id: 'sess-1' } },
+      }));
     });
   });
 });
@@ -300,18 +305,18 @@ const mockSessionsFull = [
 ];
 
 function setupSessionsMocks() {
-  vi.mocked(apiGet).mockImplementation((url: string) => {
-    if (url === '/v1/wallets') return Promise.resolve(mockWallets2);
-    if (url === '/v1/sessions' || url.includes('/v1/sessions?')) return Promise.resolve(mockSessionsFull);
-    if (url === '/v1/admin/settings') return Promise.resolve({
+  mockApiGet.mockImplementation((url: string) => {
+    if (url === '/v1/wallets') return Promise.resolve({ data: mockWallets2 });
+    if (url === '/v1/sessions' || url.includes('/v1/sessions?')) return Promise.resolve({ data: mockSessionsFull });
+    if (url === '/v1/admin/settings') return Promise.resolve({ data: {
       security: {
         max_sessions_per_wallet: '5',
         max_pending_tx: '10',
         rate_limit_session_rpm: '60',
         rate_limit_tx_rpm: '10',
       },
-    });
-    return Promise.resolve({});
+    } });
+    return Promise.resolve({ data: {} });
   });
 }
 
@@ -322,9 +327,9 @@ describe('SessionsPage - Error handling', () => {
   });
 
   it('shows error toast when fetchWallets fails', async () => {
-    vi.mocked(apiGet).mockImplementation((url: string) => {
+    mockApiGet.mockImplementation((url: string) => {
       if (url === '/v1/wallets') return Promise.reject(new ApiError(500, 'INTERNAL', 'Server error'));
-      return Promise.resolve([]);
+      return Promise.resolve({ data: [] });
     });
 
     render(<SessionsPage />);
@@ -335,8 +340,8 @@ describe('SessionsPage - Error handling', () => {
   });
 
   it('shows error toast when fetchSessions fails', async () => {
-    vi.mocked(apiGet).mockImplementation((url: string) => {
-      if (url === '/v1/wallets') return Promise.resolve(mockWallets);
+    mockApiGet.mockImplementation((url: string) => {
+      if (url === '/v1/wallets') return Promise.resolve({ data: mockWallets });
       return Promise.reject(new ApiError(500, 'SESSION_ERROR', 'Failed'));
     });
 
@@ -348,11 +353,11 @@ describe('SessionsPage - Error handling', () => {
   });
 
   it('shows error toast when handleCreate fails', async () => {
-    vi.mocked(apiGet)
-      .mockResolvedValueOnce(mockWallets) // wallets
+    mockApiGet
+      .mockResolvedValueOnce({ data: mockWallets }) // wallets
       .mockResolvedValueOnce([]); // initial sessions
 
-    vi.mocked(apiPost).mockRejectedValueOnce(new ApiError(400, 'CREATE_FAIL', 'Creation failed'));
+    mockApiPost.mockRejectedValueOnce(new ApiError(400, 'CREATE_FAIL', 'Creation failed'));
 
     const { container } = render(<SessionsPage />);
 
@@ -382,12 +387,12 @@ describe('SessionsPage - Error handling', () => {
   });
 
   it('shows error toast when handleRevoke fails', async () => {
-    vi.mocked(apiGet)
-      .mockResolvedValueOnce(mockWallets)
+    mockApiGet
+      .mockResolvedValueOnce({ data: mockWallets })
       .mockResolvedValueOnce([])
-      .mockResolvedValueOnce(mockSessions);
+      .mockResolvedValueOnce({ data: mockSessions });
 
-    vi.mocked(apiDelete).mockRejectedValueOnce(new ApiError(500, 'REVOKE_FAIL', 'Failed'));
+    mockApiDelete.mockRejectedValueOnce(new ApiError(500, 'REVOKE_FAIL', 'Failed'));
 
     render(<SessionsPage />);
 
@@ -503,7 +508,7 @@ describe('SessionsPage - Settings tab', () => {
         rate_limit_tx_rpm: '10',
       },
     };
-    vi.mocked(apiPut).mockResolvedValueOnce({ updated: 1, settings: mockSessionSettings });
+    mockApiPut.mockResolvedValueOnce({ data: { updated: 1, settings: mockSessionSettings } });
 
     render(<SessionsPage />);
 
@@ -518,7 +523,7 @@ describe('SessionsPage - Settings tab', () => {
     });
 
     // Change a field value
-    const maxSessionsInput = screen.getByLabelText('Max Sessions per Wallet') as HTMLInputElement;
+    const maxSessionsInput = screen.getByLabelText('Max Sessions Per Wallet') as HTMLInputElement;
     fireEvent.input(maxSessionsInput, { target: { value: '10' } });
 
     // Save bar should appear
@@ -529,10 +534,10 @@ describe('SessionsPage - Settings tab', () => {
     fireEvent.click(screen.getByText('Save'));
 
     await waitFor(() => {
-      expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/admin/settings', {
-        settings: expect.arrayContaining([
+      expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', {
+        body: { settings: expect.arrayContaining([
           expect.objectContaining({ key: 'security.max_sessions_per_wallet', value: '10' }),
-        ]),
+        ]) },
       });
     });
   });
@@ -553,7 +558,7 @@ describe('SessionsPage - Settings tab', () => {
     });
 
     // Change a field value
-    const maxSessionsInput = screen.getByLabelText('Max Sessions per Wallet') as HTMLInputElement;
+    const maxSessionsInput = screen.getByLabelText('Max Sessions Per Wallet') as HTMLInputElement;
     fireEvent.input(maxSessionsInput, { target: { value: '10' } });
 
     // Click Discard
@@ -572,7 +577,7 @@ describe('SessionsPage - Settings tab', () => {
   it('shows error toast when settings save fails', async () => {
     setupSessionsMocks();
 
-    vi.mocked(apiPut).mockRejectedValueOnce(new ApiError(500, 'SAVE_FAIL', 'Failed'));
+    mockApiPut.mockRejectedValueOnce(new ApiError(500, 'SAVE_FAIL', 'Failed'));
 
     render(<SessionsPage />);
 
@@ -582,7 +587,7 @@ describe('SessionsPage - Settings tab', () => {
       expect(screen.getByText('Session Configuration')).toBeTruthy();
     });
 
-    const maxSessionsInput = screen.getByLabelText('Max Sessions per Wallet') as HTMLInputElement;
+    const maxSessionsInput = screen.getByLabelText('Max Sessions Per Wallet') as HTMLInputElement;
     fireEvent.input(maxSessionsInput, { target: { value: '10' } });
 
     await waitFor(() => {
@@ -597,11 +602,11 @@ describe('SessionsPage - Settings tab', () => {
   });
 
   it('shows error toast when settings fetch fails', async () => {
-    vi.mocked(apiGet).mockImplementation((url: string) => {
-      if (url === '/v1/wallets') return Promise.resolve(mockWallets2);
-      if (url === '/v1/sessions') return Promise.resolve([]);
+    mockApiGet.mockImplementation((url: string) => {
+      if (url === '/v1/wallets') return Promise.resolve({ data: mockWallets2 });
+      if (url === '/v1/sessions') return Promise.resolve({ data: [] });
       if (url === '/v1/admin/settings') return Promise.reject(new ApiError(500, 'SETTINGS_FAIL', 'Failed'));
-      return Promise.resolve({});
+      return Promise.resolve({ data: {} });
     });
 
     render(<SessionsPage />);
@@ -670,10 +675,10 @@ describe('SessionsPage - Expired session rendering', () => {
       },
     ];
 
-    vi.mocked(apiGet).mockImplementation((url: string) => {
-      if (url === '/v1/wallets') return Promise.resolve(mockWallets2);
-      if (url.includes('/v1/sessions')) return Promise.resolve(expiredSessions);
-      return Promise.resolve({});
+    mockApiGet.mockImplementation((url: string) => {
+      if (url === '/v1/wallets') return Promise.resolve({ data: mockWallets2 });
+      if (url.includes('/v1/sessions')) return Promise.resolve({ data: expiredSessions });
+      return Promise.resolve({ data: {} });
     });
 
     render(<SessionsPage />);

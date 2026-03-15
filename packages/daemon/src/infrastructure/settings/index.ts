@@ -6,8 +6,8 @@
 
 export { SettingsService } from './settings-service.js';
 export type { SettingsServiceOptions } from './settings-service.js';
-export { SETTING_DEFINITIONS, SETTING_CATEGORIES, getSettingDefinition, ActionTierOverrideSchema } from './setting-keys.js';
-export type { SettingDefinition, SettingCategory } from './setting-keys.js';
+export { SETTING_DEFINITIONS, SETTING_CATEGORIES, getSettingDefinition, ActionTierOverrideSchema, groupSettingsByCategory } from './setting-keys.js';
+export type { SettingDefinition, SettingCategory, SettingCategoryGroup } from './setting-keys.js';
 export { encryptSettingValue, decryptSettingValue, CREDENTIAL_KEYS } from './settings-crypto.js';
 export { HotReloadOrchestrator } from './hot-reload.js';
 export type { HotReloadDeps } from './hot-reload.js';

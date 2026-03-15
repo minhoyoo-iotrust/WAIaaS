@@ -1,7 +1,7 @@
 import { useSignal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
-import { apiGet, apiPost, apiPut, apiDelete, ApiError } from '../api/client';
-import { API } from '../api/endpoints';
+import { api, ApiError } from '../api/typed-client';
+import type { components } from '../api/types.generated';
 import { Table } from '../components/table';
 import type { Column } from '../components/table';
 import { FormField, Button, Badge } from '../components/form';
@@ -17,44 +17,10 @@ import { FieldGroup } from '../components/field-group';
 import { pendingNavigation, highlightField } from '../components/settings-search';
 import { registerDirty, unregisterDirty } from '../utils/dirty-guard';
 
-interface Wallet {
-  id: string;
-  name: string;
-  chain: string;
-  network: string;
-  publicKey: string;
-  status: string;
-  createdAt: number;
-}
-
-interface SessionWallet {
-  id: string;
-  name: string;
-}
-
-interface Session {
-  id: string;
-  walletId: string;
-  walletName: string | null;
-  wallets?: SessionWallet[];
-  status: string;
-  renewalCount: number;
-  maxRenewals: number;
-  expiresAt: number;
-  absoluteExpiresAt: number;
-  createdAt: number;
-  lastRenewedAt: number | null;
-  source: 'api' | 'mcp';
-  tokenIssuedCount?: number;
-}
-
-interface CreatedSession {
-  id: string;
-  token: string;
-  expiresAt: number;
-  walletId: string;
-  wallets?: SessionWallet[];
-}
+type Wallet = components['schemas']['WalletCrudResponse'];
+type SessionWallet = components['schemas']['SessionWallet'];
+type Session = components['schemas']['SessionListItem'] & { tokenIssuedCount?: number };
+type CreatedSession = components['schemas']['SessionCreateResponse'];
 
 function openRevoke(
   id: string,
@@ -89,8 +55,8 @@ function SessionSettingsTab() {
 
   const fetchSettings = async () => {
     try {
-      const result = await apiGet<SettingsData>(API.ADMIN_SETTINGS);
-      settings.value = result;
+      const { data: result } = await api.GET('/v1/admin/settings');
+      settings.value = result as unknown as SettingsData;
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
@@ -114,8 +80,8 @@ function SessionSettingsTab() {
       const entries = Object.entries(dirty.value)
         .filter(([key]) => SESSION_KEYS.includes(key))
         .map(([key, value]) => ({ key, value }));
-      const result = await apiPut<{ updated: number; settings: SettingsData }>(API.ADMIN_SETTINGS, { settings: entries });
-      settings.value = result.settings;
+      const { data: result } = await api.PUT('/v1/admin/settings', { body: { settings: entries } });
+      settings.value = result!.settings as unknown as SettingsData;
       dirty.value = {};
       showToast('success', 'Session settings saved and applied');
     } catch (err) {
@@ -267,8 +233,8 @@ export default function SessionsPage() {
 
   const fetchWallets = async () => {
     try {
-      const result = await apiGet<{ items: Wallet[] }>(API.WALLETS);
-      wallets.value = result.items.filter((a) => a.status === 'ACTIVE');
+      const { data: result } = await api.GET('/v1/wallets');
+      wallets.value = result!.items.filter((a) => a.status === 'ACTIVE');
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
@@ -280,11 +246,9 @@ export default function SessionsPage() {
   const fetchSessions = async () => {
     loading.value = true;
     try {
-      const url = selectedWalletId.value
-        ? `${API.SESSIONS}?walletId=${selectedWalletId.value}`
-        : API.SESSIONS;
-      const result = await apiGet<Session[]>(url);
-      sessions.value = result;
+      const query = selectedWalletId.value ? { walletId: selectedWalletId.value } : undefined;
+      const { data: result } = await api.GET('/v1/sessions', { params: { query: query as Record<string, string> } });
+      sessions.value = (result as unknown as Session[]);
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
@@ -317,8 +281,8 @@ export default function SessionsPage() {
       if (createMaxRenewals.value !== '' && maxR >= 0) body['maxRenewals'] = maxR;
       const lifeDays = Number(createLifetimeDays.value);
       if (lifeDays > 0) body['absoluteLifetime'] = lifeDays * 86400;
-      const result = await apiPost<CreatedSession>(API.SESSIONS, body);
-      createdToken.value = result.token;
+      const { data: result } = await api.POST('/v1/sessions', { body: body as Record<string, unknown> });
+      createdToken.value = (result as unknown as CreatedSession).token;
       tokenModal.value = true;
       createModal.value = false;
       createAdvancedOpen.value = false;
@@ -337,7 +301,7 @@ export default function SessionsPage() {
   const handleRevoke = async () => {
     revokeLoading.value = true;
     try {
-      await apiDelete(API.SESSION(revokeSessionId.value));
+      await api.DELETE('/v1/sessions/{id}', { params: { path: { id: revokeSessionId.value } } });
       showToast('success', 'Session revoked');
       revokeModal.value = false;
       await fetchSessions();
@@ -352,11 +316,10 @@ export default function SessionsPage() {
   const handleReissue = async (sessionId: string) => {
     reissueLoading.value = sessionId;
     try {
-      const result = await apiPost<{ token: string; tokenIssuedCount: number }>(
-        API.ADMIN_SESSION_REISSUE(sessionId),
-        {},
-      );
-      createdToken.value = result.token;
+      const { data: result } = await api.POST('/v1/admin/sessions/{id}/reissue', {
+        params: { path: { id: sessionId } },
+      });
+      createdToken.value = (result as unknown as { token: string }).token;
       tokenModal.value = true;
       await fetchSessions();
     } catch (err) {

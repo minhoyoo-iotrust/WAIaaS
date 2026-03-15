@@ -4,6 +4,7 @@ import { logout } from '../auth/store';
 import { SettingsSearch } from './settings-search';
 import { hasDirty } from '../utils/dirty-guard';
 import { showUnsavedDialog, UnsavedDialog } from './unsaved-dialog';
+import { loadSettingsSchema } from '../utils/settings-helpers';
 import DashboardPage from '../pages/dashboard';
 import WalletsPage from '../pages/wallets';
 import TransactionsPage from '../pages/transactions';
@@ -160,6 +161,12 @@ function PageRouter() {
 export { highlightField, pendingNavigation } from './settings-search';
 
 export function Layout() {
+  // Eagerly load settings schema labels from API (singleton, fire-and-forget).
+  // This populates the keyToLabel() cache so settings pages show API-driven labels.
+  useEffect(() => {
+    loadSettingsSchema();
+  }, []);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {

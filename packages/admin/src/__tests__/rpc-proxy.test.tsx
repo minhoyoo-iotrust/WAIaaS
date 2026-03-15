@@ -10,11 +10,16 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/preact';
 
-vi.mock('../api/client', () => ({
-  apiGet: vi.fn(),
-  apiPost: vi.fn(),
-  apiPut: vi.fn(),
-  apiDelete: vi.fn(),
+const mockApiGet = vi.fn();
+const mockApiPut = vi.fn();
+
+vi.mock('../api/typed-client', () => ({
+  api: {
+    GET: (...args: unknown[]) => mockApiGet(...args),
+    POST: vi.fn(),
+    PUT: (...args: unknown[]) => mockApiPut(...args),
+    DELETE: vi.fn(),
+  },
   ApiError: class ApiError extends Error {
     status: number;
     code: string;
@@ -27,7 +32,6 @@ vi.mock('../api/client', () => ({
       this.serverMessage = msg;
     }
   },
-  apiCall: vi.fn(),
 }));
 
 vi.mock('../components/toast', () => ({
@@ -60,12 +64,9 @@ vi.mock('../utils/dirty-guard', () => ({
   hasDirty: { value: false },
 }));
 
-import { apiGet, apiPut } from '../api/client';
 import { showToast } from '../components/toast';
 import RpcProxyPage from '../pages/rpc-proxy';
 
-const mockApiGet = apiGet as ReturnType<typeof vi.fn>;
-const mockApiPut = apiPut as ReturnType<typeof vi.fn>;
 const mockShowToast = showToast as ReturnType<typeof vi.fn>;
 
 // Settings response uses grouped structure: { category: { shortKey: value } }
@@ -94,9 +95,9 @@ describe('RpcProxyPage', () => {
   });
 
   it('renders all sections after loading', async () => {
-    mockApiGet.mockImplementation((url: string) => {
-      if (url.includes('audit')) return Promise.resolve({ logs: [] });
-      return Promise.resolve(defaultSettings);
+    mockApiGet.mockImplementation((path: string) => {
+      if (path.includes('audit')) return Promise.resolve({ data: { data: [], nextCursor: null, hasMore: false } });
+      return Promise.resolve({ data: defaultSettings });
     });
 
     render(<RpcProxyPage />);
@@ -110,9 +111,9 @@ describe('RpcProxyPage', () => {
   });
 
   it('shows ENABLED badge when rpc_proxy.enabled is true', async () => {
-    mockApiGet.mockImplementation((url: string) => {
-      if (url.includes('audit')) return Promise.resolve({ logs: [] });
-      return Promise.resolve(defaultSettings);
+    mockApiGet.mockImplementation((path: string) => {
+      if (path.includes('audit')) return Promise.resolve({ data: { data: [], nextCursor: null, hasMore: false } });
+      return Promise.resolve({ data: defaultSettings });
     });
 
     render(<RpcProxyPage />);
@@ -127,9 +128,9 @@ describe('RpcProxyPage', () => {
       ...defaultSettings,
       rpc_proxy: { ...defaultSettings.rpc_proxy, enabled: 'false' },
     };
-    mockApiGet.mockImplementation((url: string) => {
-      if (url.includes('audit')) return Promise.resolve({ logs: [] });
-      return Promise.resolve(disabledSettings);
+    mockApiGet.mockImplementation((path: string) => {
+      if (path.includes('audit')) return Promise.resolve({ data: { data: [], nextCursor: null, hasMore: false } });
+      return Promise.resolve({ data: disabledSettings });
     });
 
     render(<RpcProxyPage />);
@@ -140,11 +141,11 @@ describe('RpcProxyPage', () => {
   });
 
   it('toggles proxy enabled and calls apiPut', async () => {
-    mockApiGet.mockImplementation((url: string) => {
-      if (url.includes('audit')) return Promise.resolve({ logs: [] });
-      return Promise.resolve(defaultSettings);
+    mockApiGet.mockImplementation((path: string) => {
+      if (path.includes('audit')) return Promise.resolve({ data: { data: [], nextCursor: null, hasMore: false } });
+      return Promise.resolve({ data: defaultSettings });
     });
-    mockApiPut.mockResolvedValue({});
+    mockApiPut.mockResolvedValue({ data: {} });
 
     render(<RpcProxyPage />);
     await waitFor(() => {
@@ -155,17 +156,17 @@ describe('RpcProxyPage', () => {
 
     await waitFor(() => {
       expect(mockApiPut).toHaveBeenCalledWith(
-        expect.any(String),
-        { key: 'rpc_proxy.enabled', value: 'false' },
+        '/v1/admin/settings',
+        expect.objectContaining({ body: { settings: [{ key: 'rpc_proxy.enabled', value: 'false' }] } }),
       );
     });
     expect(mockShowToast).toHaveBeenCalledWith('success', expect.stringContaining('disabled'));
   });
 
   it('shows save/cancel buttons when fields are dirty', async () => {
-    mockApiGet.mockImplementation((url: string) => {
-      if (url.includes('audit')) return Promise.resolve({ logs: [] });
-      return Promise.resolve(defaultSettings);
+    mockApiGet.mockImplementation((path: string) => {
+      if (path.includes('audit')) return Promise.resolve({ data: { data: [], nextCursor: null, hasMore: false } });
+      return Promise.resolve({ data: defaultSettings });
     });
 
     render(<RpcProxyPage />);
@@ -185,11 +186,11 @@ describe('RpcProxyPage', () => {
   });
 
   it('saves dirty fields via apiPut', async () => {
-    mockApiGet.mockImplementation((url: string) => {
-      if (url.includes('audit')) return Promise.resolve({ logs: [] });
-      return Promise.resolve(defaultSettings);
+    mockApiGet.mockImplementation((path: string) => {
+      if (path.includes('audit')) return Promise.resolve({ data: { data: [], nextCursor: null, hasMore: false } });
+      return Promise.resolve({ data: defaultSettings });
     });
-    mockApiPut.mockResolvedValue({});
+    mockApiPut.mockResolvedValue({ data: {} });
 
     render(<RpcProxyPage />);
     await waitFor(() => {
@@ -213,9 +214,9 @@ describe('RpcProxyPage', () => {
   });
 
   it('cancels dirty changes', async () => {
-    mockApiGet.mockImplementation((url: string) => {
-      if (url.includes('audit')) return Promise.resolve({ logs: [] });
-      return Promise.resolve(defaultSettings);
+    mockApiGet.mockImplementation((path: string) => {
+      if (path.includes('audit')) return Promise.resolve({ data: { data: [], nextCursor: null, hasMore: false } });
+      return Promise.resolve({ data: defaultSettings });
     });
 
     render(<RpcProxyPage />);
@@ -238,9 +239,9 @@ describe('RpcProxyPage', () => {
   });
 
   it('shows empty state for audit logs when no logs', async () => {
-    mockApiGet.mockImplementation((url: string) => {
-      if (url.includes('audit')) return Promise.resolve({ logs: [] });
-      return Promise.resolve(defaultSettings);
+    mockApiGet.mockImplementation((path: string) => {
+      if (path.includes('audit')) return Promise.resolve({ data: { data: [], nextCursor: null, hasMore: false } });
+      return Promise.resolve({ data: defaultSettings });
     });
 
     render(<RpcProxyPage />);
@@ -252,27 +253,33 @@ describe('RpcProxyPage', () => {
   it('renders audit log table when logs exist', async () => {
     const logs = [
       {
-        id: 'log-1',
-        action: 'rpc_proxy',
-        source: 'rpc-proxy',
+        id: 1,
+        eventType: 'ACTION_SIGNED',
+        actor: 'system',
         sessionId: 'sess-1',
         walletId: 'wallet-abc12345-6789',
-        metadata: { method: 'eth_sendTransaction', status: 'ok' },
+        txId: null,
+        details: { method: 'eth_sendTransaction', status: 'ok' },
+        severity: 'info',
+        ipAddress: null,
         timestamp: 1710000000,
       },
       {
-        id: 'log-2',
-        action: 'rpc_proxy',
-        source: 'rpc-proxy',
+        id: 2,
+        eventType: 'ACTION_SIGNED',
+        actor: 'system',
         sessionId: null,
         walletId: null,
-        metadata: { method: 'eth_call', status: 'error' },
+        txId: null,
+        details: { method: 'eth_call', status: 'error' },
+        severity: 'info',
+        ipAddress: null,
         timestamp: 1710000060,
       },
     ];
-    mockApiGet.mockImplementation((url: string) => {
-      if (url.includes('audit')) return Promise.resolve({ logs });
-      return Promise.resolve(defaultSettings);
+    mockApiGet.mockImplementation((path: string) => {
+      if (path.includes('audit')) return Promise.resolve({ data: { data: logs, nextCursor: null, hasMore: false } });
+      return Promise.resolve({ data: defaultSettings });
     });
 
     render(<RpcProxyPage />);
@@ -284,11 +291,11 @@ describe('RpcProxyPage', () => {
   });
 
   it('shows error toast on toggle failure', async () => {
-    mockApiGet.mockImplementation((url: string) => {
-      if (url.includes('audit')) return Promise.resolve({ logs: [] });
-      return Promise.resolve(defaultSettings);
+    mockApiGet.mockImplementation((path: string) => {
+      if (path.includes('audit')) return Promise.resolve({ data: { data: [], nextCursor: null, hasMore: false } });
+      return Promise.resolve({ data: defaultSettings });
     });
-    const { ApiError } = await import('../api/client');
+    const { ApiError } = await import('../api/typed-client');
     mockApiPut.mockRejectedValue(new ApiError(500, 'INTERNAL', 'fail'));
 
     render(<RpcProxyPage />);
@@ -304,9 +311,9 @@ describe('RpcProxyPage', () => {
   });
 
   it('shows error toast on settings fetch failure', async () => {
-    const { ApiError } = await import('../api/client');
-    mockApiGet.mockImplementation((url: string) => {
-      if (url.includes('audit')) return Promise.resolve({ logs: [] });
+    const { ApiError } = await import('../api/typed-client');
+    mockApiGet.mockImplementation((path: string) => {
+      if (path.includes('audit')) return Promise.resolve({ data: { data: [], nextCursor: null, hasMore: false } });
       return Promise.reject(new ApiError(500, 'INTERNAL', 'fail'));
     });
 
@@ -317,9 +324,9 @@ describe('RpcProxyPage', () => {
   });
 
   it('renders usage section with URL pattern and examples', async () => {
-    mockApiGet.mockImplementation((url: string) => {
-      if (url.includes('audit')) return Promise.resolve({ logs: [] });
-      return Promise.resolve(defaultSettings);
+    mockApiGet.mockImplementation((path: string) => {
+      if (path.includes('audit')) return Promise.resolve({ data: { data: [], nextCursor: null, hasMore: false } });
+      return Promise.resolve({ data: defaultSettings });
     });
 
     render(<RpcProxyPage />);

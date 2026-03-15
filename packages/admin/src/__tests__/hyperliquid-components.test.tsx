@@ -20,7 +20,28 @@ vi.mock('../api/client', () => ({
   apiPut: vi.fn(),
   apiDelete: vi.fn(),
   apiCall: vi.fn(),
+  ApiError: class ApiError extends Error {
+    status: number; code: string; serverMessage: string;
+    constructor(s: number, c: string, m: string) { super(`[${s}] ${c}: ${m}`); this.name = 'ApiError'; this.status = s; this.code = c; this.serverMessage = m; }
+  },
 }));
+
+const mockTypedApiGet = vi.fn();
+const mockTypedApiPut = vi.fn();
+
+vi.mock('../api/typed-client', async () => {
+  const { ApiError } = await import('../api/client');
+  return {
+    api: {
+      GET: (...args: unknown[]) => mockTypedApiGet(...args),
+      POST: vi.fn().mockResolvedValue({ data: {} }),
+      PUT: (...args: unknown[]) => mockTypedApiPut(...args),
+      DELETE: vi.fn().mockResolvedValue({ data: {} }),
+      PATCH: vi.fn().mockResolvedValue({ data: {} }),
+    },
+    ApiError,
+  };
+});
 
 vi.mock('../auth/store', () => ({
   masterPassword: { value: 'test-pw' },
@@ -659,14 +680,14 @@ describe('SubAccountDetail', () => {
 // ---------------------------------------------------------------------------
 describe('SettingsPanel', () => {
   it('shows loading state', () => {
-    mockApiGet.mockReturnValue(new Promise(() => {}));
+    mockTypedApiGet.mockReturnValue(new Promise(() => {}));
     render(<SettingsPanel />);
     expect(screen.getByText('Loading settings...')).toBeTruthy();
   });
 
   it('renders settings form with all fields', async () => {
-    mockApiGet.mockResolvedValue({
-      settings: {
+    mockTypedApiGet.mockResolvedValue({
+      data: {
         'actions.hyperliquid_enabled': 'true',
         'actions.hyperliquid_network': 'mainnet',
         'actions.hyperliquid_default_leverage': '10',
@@ -692,8 +713,8 @@ describe('SettingsPanel', () => {
   });
 
   it('renders all 9 setting fields after loading', async () => {
-    mockApiGet.mockResolvedValue({
-      settings: {
+    mockTypedApiGet.mockResolvedValue({
+      data: {
         'actions.hyperliquid_enabled': 'true',
       },
     });
@@ -710,13 +731,13 @@ describe('SettingsPanel', () => {
   });
 
   it('saves settings on button click', async () => {
-    mockApiGet.mockResolvedValue({
-      settings: {
+    mockTypedApiGet.mockResolvedValue({
+      data: {
         'actions.hyperliquid_enabled': 'true',
         'actions.hyperliquid_network': 'mainnet',
       },
     });
-    mockApiPut.mockResolvedValue({});
+    mockTypedApiPut.mockResolvedValue({ data: {} });
 
     render(<SettingsPanel />);
 
@@ -727,11 +748,11 @@ describe('SettingsPanel', () => {
     fireEvent.click(screen.getByText('Save Settings'));
 
     await waitFor(() => {
-      expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', {
-        settings: expect.objectContaining({
-          'actions.hyperliquid_enabled': 'true',
-          'actions.hyperliquid_network': 'mainnet',
-        }),
+      expect(mockTypedApiPut).toHaveBeenCalledWith('/v1/admin/settings', {
+        body: { settings: expect.arrayContaining([
+          expect.objectContaining({ key: 'actions.hyperliquid_enabled', value: 'true' }),
+          expect.objectContaining({ key: 'actions.hyperliquid_network', value: 'mainnet' }),
+        ]) },
       });
     });
 
@@ -739,8 +760,8 @@ describe('SettingsPanel', () => {
   });
 
   it('shows error toast on save failure', async () => {
-    mockApiGet.mockResolvedValue({ settings: {} });
-    mockApiPut.mockRejectedValue(new Error('Save failed'));
+    mockTypedApiGet.mockResolvedValue({ data: {} });
+    mockTypedApiPut.mockRejectedValue(new Error('Save failed'));
 
     render(<SettingsPanel />);
 
@@ -756,7 +777,7 @@ describe('SettingsPanel', () => {
   });
 
   it('shows error toast on load failure', async () => {
-    mockApiGet.mockRejectedValue(new Error('Load failed'));
+    mockTypedApiGet.mockRejectedValue(new Error('Load failed'));
 
     render(<SettingsPanel />);
 

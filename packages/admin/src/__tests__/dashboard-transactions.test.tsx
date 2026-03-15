@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, cleanup } from '@testing-library/preact';
+import type { components } from '../api/types.generated';
 
-vi.mock('../api/client', () => ({
-  apiGet: vi.fn(),
-  apiPost: vi.fn(),
-  apiPut: vi.fn(),
-  apiDelete: vi.fn(),
+const mockApiGet = vi.fn();
+const mockApiPost = vi.fn();
+
+vi.mock('../api/typed-client', () => ({
+  api: { GET: (...args: unknown[]) => mockApiGet(...args), POST: (...args: unknown[]) => mockApiPost(...args) },
   ApiError: class ApiError extends Error {
     status: number;
     code: string;
@@ -18,7 +19,6 @@ vi.mock('../api/client', () => ({
       this.serverMessage = msg;
     }
   },
-  apiCall: vi.fn(),
 }));
 
 vi.mock('../components/toast', () => ({
@@ -48,7 +48,6 @@ vi.mock('../utils/display-currency', async () => {
   };
 });
 
-import { apiGet } from '../api/client';
 import { fetchDisplayCurrency } from '../utils/display-currency';
 import DashboardPage from '../pages/dashboard';
 
@@ -66,6 +65,7 @@ const mockStatus = {
   policyCount: 5,
   recentTxCount: 10,
   failedTxCount: 8,
+  autoProvisioned: false,
   recentTransactions: [
     {
       id: 'tx-1',
@@ -75,6 +75,7 @@ const mockStatus = {
       status: 'CONFIRMED',
       toAddress: '0x1234',
       amount: '1.0',
+      formattedAmount: null as string | null,
       amountUsd: 2000,
       network: 'ethereum-mainnet',
       txHash: '0xabc123def456789000000000000000000000000000000000',
@@ -83,30 +84,30 @@ const mockStatus = {
     {
       id: 'tx-2',
       walletId: 'w-2',
-      walletName: null,
+      walletName: null as string | null,
       type: 'TOKEN_TRANSFER',
       status: 'APPROVED',
-      toAddress: null,
-      amount: null,
-      amountUsd: null,
+      toAddress: null as string | null,
+      amount: null as string | null,
+      formattedAmount: null as string | null,
+      amountUsd: null as number | null,
       network: 'devnet',
-      txHash: null,
-      createdAt: null,
+      txHash: null as string | null,
+      createdAt: null as number | null,
     },
   ],
-};
+} satisfies components['schemas']['AdminStatusResponse'];
 
 const mockApprovalResponse = { items: [], total: 13, offset: 0, limit: 1 };
-const mockSettingsResponse = { display: { 'display.currency': 'USD' } };
 
 function setupMocks(approvalResponse = mockApprovalResponse) {
-  vi.mocked(apiGet).mockImplementation((url: string) => {
-    if (url === '/v1/admin/status') return Promise.resolve(mockStatus);
-    if (url.startsWith('/v1/admin/transactions?status=APPROVED')) return Promise.resolve(approvalResponse);
+  mockApiGet.mockImplementation((url: string) => {
+    if (url === '/v1/admin/status') return Promise.resolve({ data: mockStatus });
+    if (url === '/v1/admin/transactions') return Promise.resolve({ data: approvalResponse });
     if (url.includes('/v1/admin/stats')) return Promise.reject(new Error('not found'));
     if (url.includes('/v1/admin/defi/positions')) return Promise.reject(new Error('not found'));
-    if (url === '/v1/admin/settings') return Promise.resolve(mockSettingsResponse);
-    return Promise.resolve({});
+    if (url === '/v1/wallets') return Promise.resolve({ data: { items: [] } });
+    return Promise.resolve({ data: {} });
   });
   vi.mocked(fetchDisplayCurrency).mockResolvedValue({ currency: 'USD', rate: 1 });
 }
@@ -130,9 +131,9 @@ describe('Dashboard Transactions Features', () => {
 
     // The approval count should be 13 (from mockApprovalResponse.total)
     await waitFor(() => {
-      expect(vi.mocked(apiGet)).toHaveBeenCalledWith(
-        '/v1/admin/transactions?status=APPROVED&limit=1',
-      );
+      expect(mockApiGet).toHaveBeenCalledWith('/v1/admin/transactions', {
+        params: { query: { status: 'APPROVED', limit: 1 } },
+      });
     });
 
     // Badge with "13" should appear in the Approval Pending card (warning badge since > 0)
@@ -223,7 +224,6 @@ describe('Dashboard Transactions Features', () => {
     });
 
     // tx-2 has null txHash — ExplorerLink returns null for null txHash
-    // There should be no link for devnet tx hash
     const links = screen.getAllByRole('link');
     const devnetTxLink = links.find((a) => {
       const href = a.getAttribute('href');

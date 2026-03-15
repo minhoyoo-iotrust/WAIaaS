@@ -1,7 +1,7 @@
 import { useSignal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
-import { apiGet, apiPost, apiPut, ApiError } from '../api/client';
-import { API } from '../api/endpoints';
+import { api, ApiError } from '../api/typed-client';
+import type { components } from '../api/types.generated';
 import { Table } from '../components/table';
 import type { Column } from '../components/table';
 import { FilterBar, type FilterField } from '../components/filter-bar';
@@ -25,40 +25,11 @@ import { pendingNavigation, highlightField } from '../components/settings-search
 import { registerDirty, unregisterDirty } from '../utils/dirty-guard';
 import { DASHBOARD_POLL_INTERVAL_MS } from '../constants';
 
-interface ChannelStatus {
-  name: string;
-  enabled: boolean;
-  configuredWallets?: number;
-}
-
-interface NotificationStatus {
-  enabled: boolean;
-  channels: ChannelStatus[];
-}
-
-interface TestResult {
-  channel: string;
-  success: boolean;
-  error?: string;
-}
-
-interface NotificationLogEntry {
-  id: string;
-  eventType: string;
-  walletId: string | null;
-  channel: string;
-  status: string;
-  error: string | null;
-  message: string | null;
-  createdAt: number;
-}
-
-interface NotificationLogResponse {
-  logs: NotificationLogEntry[];
-  total: number;
-  page: number;
-  pageSize: number;
-}
+type ChannelStatus = components['schemas']['NotificationChannelStatus'];
+type NotificationStatus = components['schemas']['NotificationStatusResponse'];
+type TestResult = NotifTestResult;
+type NotificationLogEntry = components['schemas']['NotificationLogEntry'];
+type NotificationLogResponse = components['schemas']['NotificationLogResponse'];
 
 const PAGE_SIZE = 20;
 
@@ -131,8 +102,8 @@ function NotificationSettingsTab() {
 
   const fetchSettings = async () => {
     try {
-      const result = await apiGet<SettingsData>(API.ADMIN_SETTINGS);
-      settings.value = result;
+      const { data: result } = await api.GET('/v1/admin/settings');
+      settings.value = result as unknown as SettingsData;
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
@@ -156,8 +127,8 @@ function NotificationSettingsTab() {
       const entries = Object.entries(dirty.value)
         .filter(([key]) => key.startsWith('notifications.') || key.startsWith('telegram.'))
         .map(([key, value]) => ({ key, value }));
-      const result = await apiPut<{ updated: number; settings: SettingsData }>(API.ADMIN_SETTINGS, { settings: entries });
-      settings.value = result.settings;
+      const { data: result } = await api.PUT('/v1/admin/settings', { body: { settings: entries } });
+      settings.value = result!.settings as unknown as SettingsData;
       dirty.value = {};
       showToast('success', 'Notification settings saved and applied');
     } catch (err) {
@@ -186,12 +157,12 @@ function NotificationSettingsTab() {
     notifTesting.value = true;
     notifTestResults.value = [];
     try {
-      const result = await apiPost<{ results: NotifTestResult[] }>(API.ADMIN_NOTIFICATIONS_TEST, {});
-      notifTestResults.value = result.results;
-      if (result.results.length === 0) {
+      const { data: result } = await api.POST('/v1/admin/notifications/test', {});
+      notifTestResults.value = result!.results;
+      if (result!.results.length === 0) {
         showToast('info', 'No notification channels configured');
       } else {
-        const allOk = result.results.every((r) => r.success);
+        const allOk = result!.results.every((r) => r.success);
         showToast(allOk ? 'success' : 'warning', allOk ? 'All test notifications sent' : 'Some channels failed');
       }
     } catch (err) {
@@ -563,8 +534,8 @@ function BalanceMonitorTab() {
 
   const fetchSettings = async () => {
     try {
-      const result = await apiGet<SettingsData>(API.ADMIN_SETTINGS);
-      settings.value = result;
+      const { data: result } = await api.GET('/v1/admin/settings');
+      settings.value = result as unknown as SettingsData;
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
@@ -588,8 +559,8 @@ function BalanceMonitorTab() {
       const entries = Object.entries(dirty.value)
         .filter(([key]) => key.startsWith('monitoring.'))
         .map(([key, value]) => ({ key, value }));
-      const result = await apiPut<{ updated: number; settings: SettingsData }>(API.ADMIN_SETTINGS, { settings: entries });
-      settings.value = result.settings;
+      const { data: result } = await api.PUT('/v1/admin/settings', { body: { settings: entries } });
+      settings.value = result!.settings as unknown as SettingsData;
       dirty.value = {};
       showToast('success', 'Settings saved and applied');
     } catch (err) {
@@ -729,8 +700,8 @@ export default function NotificationsPage() {
 
   const fetchStatus = async () => {
     try {
-      const result = await apiGet<NotificationStatus>(API.ADMIN_NOTIFICATIONS_STATUS);
-      status.value = result;
+      const { data: result } = await api.GET('/v1/admin/notifications/status');
+      status.value = result!;
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
@@ -760,10 +731,10 @@ export default function NotificationsPage() {
           params.set('until', String(Math.floor(d.getTime() / 1000)));
         }
       }
-      const result = await apiGet<NotificationLogResponse>(
-        `${API.ADMIN_NOTIFICATIONS_LOG}?${params.toString()}`,
-      );
-      logs.value = result;
+      const query: Record<string, string> = {};
+      params.forEach((v, k) => { query[k] = v; });
+      const { data: result } = await api.GET('/v1/admin/notifications/log', { params: { query: query as Record<string, unknown> } });
+      logs.value = result as unknown as NotificationLogResponse;
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
@@ -776,8 +747,8 @@ export default function NotificationsPage() {
     testLoading.value = true;
     testResults.value = null;
     try {
-      const body = await apiPost<{ results: TestResult[] }>(API.ADMIN_NOTIFICATIONS_TEST, {});
-      const results = body.results;
+      const { data: body } = await api.POST('/v1/admin/notifications/test', {});
+      const results = body!.results;
       testResults.value = results;
       const allSuccess = results.every((r) => r.success);
       if (allSuccess) {
@@ -797,8 +768,8 @@ export default function NotificationsPage() {
     testChannelLoading.value = channelName;
     testResults.value = null;
     try {
-      const body = await apiPost<{ results: TestResult[] }>(API.ADMIN_NOTIFICATIONS_TEST, { channel: channelName });
-      const results = body.results;
+      const { data: body } = await api.POST('/v1/admin/notifications/test', { body: { channel: channelName } });
+      const results = body!.results;
       testResults.value = results;
       const allSuccess = results.every((r) => r.success);
       if (allSuccess) {

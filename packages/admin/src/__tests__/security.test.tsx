@@ -10,24 +10,28 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/preact';
 
-vi.mock('../api/client', () => ({
-  apiGet: vi.fn(),
-  apiPost: vi.fn(),
-  apiPut: vi.fn(),
-  ApiError: class ApiError extends Error {
-    status: number;
-    code: string;
-    serverMessage: string;
-    constructor(status: number, code: string, msg: string) {
-      super(`[${status}] ${code}: ${msg}`);
-      this.name = 'ApiError';
-      this.status = status;
-      this.code = code;
-      this.serverMessage = msg;
-    }
-  },
-  apiCall: vi.fn(),
-}));
+
+const mockApiGet = vi.fn();
+const mockApiPost = vi.fn();
+const mockApiPut = vi.fn();
+const mockApiDelete = vi.fn();
+const mockApiPatch = vi.fn();
+
+// Mock declarations moved to top-level const
+
+vi.mock('../api/typed-client', async () => {
+  const { ApiError } = await import('../api/client');
+  return {
+    api: {
+      GET: (...args: unknown[]) => mockApiGet(...args),
+      POST: (...args: unknown[]) => mockApiPost(...args),
+      PUT: (...args: unknown[]) => mockApiPut(...args),
+      DELETE: (...args: unknown[]) => mockApiDelete(...args),
+      PATCH: (...args: unknown[]) => mockApiPatch(...args),
+    },
+    ApiError,
+  };
+});
 
 vi.mock('../components/toast', () => ({
   showToast: vi.fn(),
@@ -65,7 +69,6 @@ vi.mock('../components/unsaved-dialog', () => ({
   UnsavedDialog: () => null,
 }));
 
-import { apiGet, apiPost, apiPut } from '../api/client';
 import { showToast } from '../components/toast';
 import { registerDirty, unregisterDirty } from '../utils/dirty-guard';
 import SecurityPage from '../pages/security';
@@ -94,10 +97,10 @@ const mockSettingsResponse = {
 // ---------------------------------------------------------------------------
 
 function mockApiCalls(ksState = mockKsActive, settingsData = mockSettingsResponse) {
-  vi.mocked(apiGet).mockImplementation(async (path: string) => {
-    if (path === '/v1/admin/kill-switch') return ksState;
-    if (path === '/v1/admin/settings') return settingsData;
-    return {};
+  mockApiGet.mockImplementation(async (path: string) => {
+    if (path === '/v1/admin/kill-switch') return { data: ksState };
+    if (path === '/v1/admin/settings') return { data: settingsData };
+    return { data: {} };
   });
 }
 
@@ -197,7 +200,7 @@ describe('Security page: Kill Switch tab', () => {
     expect(screen.getByText('Activate Kill Switch')).toBeTruthy();
   });
 
-  it('ACTIVE state: activate calls apiPost and shows success toast', async () => {
+  it('ACTIVE state: activate calls mockApiPost and shows success toast', async () => {
     mockApiCalls(mockKsActive);
     render(<SecurityPage />);
 
@@ -205,12 +208,12 @@ describe('Security page: Kill Switch tab', () => {
       expect(screen.getByText('Activate Kill Switch')).toBeTruthy();
     });
 
-    vi.mocked(apiPost).mockResolvedValueOnce(undefined);
+    mockApiPost.mockResolvedValueOnce(undefined);
 
     fireEvent.click(screen.getByText('Activate Kill Switch'));
 
     await waitFor(() => {
-      expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/admin/kill-switch');
+      expect(mockApiPost).toHaveBeenCalledWith('/v1/admin/kill-switch');
     });
 
     await waitFor(() => {
@@ -232,7 +235,7 @@ describe('Security page: Kill Switch tab', () => {
     expect(screen.getByText(/All wallet operations are suspended/)).toBeTruthy();
   });
 
-  it('SUSPENDED state: recover calls apiPost to /v1/admin/recover', async () => {
+  it('SUSPENDED state: recover calls mockApiPost to /v1/admin/recover', async () => {
     mockApiCalls(mockKsSuspended);
     render(<SecurityPage />);
 
@@ -240,12 +243,12 @@ describe('Security page: Kill Switch tab', () => {
       expect(screen.getByText('Recover')).toBeTruthy();
     });
 
-    vi.mocked(apiPost).mockResolvedValueOnce(undefined);
+    mockApiPost.mockResolvedValueOnce(undefined);
 
     fireEvent.click(screen.getByText('Recover'));
 
     await waitFor(() => {
-      expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/admin/recover');
+      expect(mockApiPost).toHaveBeenCalledWith('/v1/admin/recover');
     });
 
     await waitFor(() => {
@@ -253,7 +256,7 @@ describe('Security page: Kill Switch tab', () => {
     });
   });
 
-  it('SUSPENDED state: escalate calls apiPost to /v1/admin/kill-switch/escalate', async () => {
+  it('SUSPENDED state: escalate calls mockApiPost to /v1/admin/kill-switch/escalate', async () => {
     mockApiCalls(mockKsSuspended);
     render(<SecurityPage />);
 
@@ -261,12 +264,12 @@ describe('Security page: Kill Switch tab', () => {
       expect(screen.getByText('Escalate to LOCKED')).toBeTruthy();
     });
 
-    vi.mocked(apiPost).mockResolvedValueOnce(undefined);
+    mockApiPost.mockResolvedValueOnce(undefined);
 
     fireEvent.click(screen.getByText('Escalate to LOCKED'));
 
     await waitFor(() => {
-      expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/admin/kill-switch/escalate');
+      expect(mockApiPost).toHaveBeenCalledWith('/v1/admin/kill-switch/escalate');
     });
 
     await waitFor(() => {
@@ -287,7 +290,7 @@ describe('Security page: Kill Switch tab', () => {
     expect(screen.getByText(/permanently locked/)).toBeTruthy();
   });
 
-  it('LOCKED state: recover calls apiPost to /v1/admin/recover', async () => {
+  it('LOCKED state: recover calls mockApiPost to /v1/admin/recover', async () => {
     mockApiCalls(mockKsLocked);
     render(<SecurityPage />);
 
@@ -295,18 +298,18 @@ describe('Security page: Kill Switch tab', () => {
       expect(screen.getByText('Recover from LOCKED (5s wait)')).toBeTruthy();
     });
 
-    vi.mocked(apiPost).mockResolvedValueOnce(undefined);
+    mockApiPost.mockResolvedValueOnce(undefined);
 
     fireEvent.click(screen.getByText('Recover from LOCKED (5s wait)'));
 
     await waitFor(() => {
-      expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/admin/recover');
+      expect(mockApiPost).toHaveBeenCalledWith('/v1/admin/recover');
     });
   });
 
   it('shows loading state initially', async () => {
-    // Mock apiGet to never resolve (pending promise)
-    vi.mocked(apiGet).mockImplementation(() => new Promise(() => {}));
+    // Mock mockApiGet to never resolve (pending promise)
+    mockApiGet.mockImplementation(() => new Promise(() => {}));
     render(<SecurityPage />);
 
     expect(screen.getByText('Loading...')).toBeTruthy();
@@ -314,9 +317,9 @@ describe('Security page: Kill Switch tab', () => {
 
   it('handles fetch error with toast', async () => {
     const MockApiError = (await import('../api/client')).ApiError;
-    vi.mocked(apiGet).mockImplementation(async (path: string) => {
+    mockApiGet.mockImplementation(async (path: string) => {
       if (path === '/v1/admin/kill-switch') throw new MockApiError(500, 'KS_FETCH_FAIL', 'Fail');
-      return {};
+      return { data: {} };
     });
 
     render(<SecurityPage />);
@@ -335,7 +338,7 @@ describe('Security page: Kill Switch tab', () => {
     });
 
     const MockApiError = (await import('../api/client')).ApiError;
-    vi.mocked(apiPost).mockRejectedValueOnce(new MockApiError(500, 'ACTIVATE_ERROR', 'Failed'));
+    mockApiPost.mockRejectedValueOnce(new MockApiError(500, 'ACTIVATE_ERROR', 'Failed'));
 
     fireEvent.click(screen.getByText('Activate Kill Switch'));
 
@@ -398,7 +401,7 @@ describe('Security page: AutoStop Rules tab', () => {
     expect(screen.getByText('Discard')).toBeTruthy();
   });
 
-  it('save calls apiPut with changed autostop entries', async () => {
+  it('save calls mockApiPut with changed autostop entries', async () => {
     mockApiCalls();
     render(<SecurityPage />);
 
@@ -419,13 +422,13 @@ describe('Security page: AutoStop Rules tab', () => {
       expect(screen.getByText(/unsaved change/)).toBeTruthy();
     });
 
-    vi.mocked(apiPut).mockResolvedValueOnce({ updated: 1, settings: mockSettingsResponse });
+    mockApiPut.mockResolvedValueOnce({ data: { updated: 1, settings: mockSettingsResponse } });
 
     fireEvent.click(screen.getByText('Save'));
 
     await waitFor(() => {
-      expect(vi.mocked(apiPut)).toHaveBeenCalledWith('/v1/admin/settings', {
-        settings: [{ key: 'autostop.consecutive_failures_threshold', value: '10' }],
+      expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', {
+        body: { settings: [{ key: 'autostop.consecutive_failures_threshold', value: '10' }] },
       });
     });
 
@@ -484,7 +487,7 @@ describe('Security page: AutoStop Rules tab', () => {
     });
 
     const MockApiError = (await import('../api/client')).ApiError;
-    vi.mocked(apiPut).mockRejectedValueOnce(new MockApiError(400, 'SAVE_ERROR', 'Bad'));
+    mockApiPut.mockRejectedValueOnce(new MockApiError(400, 'SAVE_ERROR', 'Bad'));
 
     fireEvent.click(screen.getByText('Save'));
 
@@ -519,10 +522,10 @@ describe('Security page: AutoStop Rules tab', () => {
 
   it('shows loading state before settings load', async () => {
     // Kill switch resolves immediately, settings never resolves
-    vi.mocked(apiGet).mockImplementation(async (path: string) => {
-      if (path === '/v1/admin/kill-switch') return mockKsActive;
+    mockApiGet.mockImplementation(async (path: string) => {
+      if (path === '/v1/admin/kill-switch') return { data: mockKsActive };
       if (path === '/v1/admin/settings') return new Promise(() => {});
-      return {};
+      return { data: {} };
     });
 
     render(<SecurityPage />);
@@ -607,7 +610,7 @@ describe('Security page: Invalidate Sessions (JWT Rotation) tab', () => {
     });
   });
 
-  it('confirming modal calls apiPost to rotate-secret', async () => {
+  it('confirming modal calls mockApiPost to rotate-secret', async () => {
     mockApiCalls();
     render(<SecurityPage />);
 
@@ -627,13 +630,13 @@ describe('Security page: Invalidate Sessions (JWT Rotation) tab', () => {
       expect(screen.getByText(/rotate the signing key/)).toBeTruthy();
     });
 
-    vi.mocked(apiPost).mockResolvedValueOnce({ rotatedAt: 1707609600, message: 'ok' });
+    mockApiPost.mockResolvedValueOnce({ data: { rotatedAt: 1707609600, message: 'ok' } });
 
     // Click the "Invalidate" confirm button in the modal
     fireEvent.click(screen.getByText('Invalidate'));
 
     await waitFor(() => {
-      expect(vi.mocked(apiPost)).toHaveBeenCalledWith('/v1/admin/rotate-secret');
+      expect(mockApiPost).toHaveBeenCalledWith('/v1/admin/rotate-secret');
     });
 
     await waitFor(() => {
@@ -693,7 +696,7 @@ describe('Security page: Invalidate Sessions (JWT Rotation) tab', () => {
     });
 
     const MockApiError = (await import('../api/client')).ApiError;
-    vi.mocked(apiPost).mockRejectedValueOnce(new MockApiError(500, 'ROTATE_ERROR', 'Failed'));
+    mockApiPost.mockRejectedValueOnce(new MockApiError(500, 'ROTATE_ERROR', 'Failed'));
 
     fireEvent.click(screen.getByText('Invalidate'));
 

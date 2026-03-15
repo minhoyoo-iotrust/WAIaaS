@@ -1,6 +1,7 @@
 import { useSignal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
-import { apiGet } from '../api/client';
+import { api } from '../api/typed-client';
+import type { Wallet } from '../api/types.aliases';
 import { AccountSummary } from '../components/hyperliquid/AccountSummary';
 import { PositionsTable } from '../components/hyperliquid/PositionsTable';
 import { OpenOrdersTable } from '../components/hyperliquid/OpenOrdersTable';
@@ -9,13 +10,6 @@ import { SpotOrdersTable } from '../components/hyperliquid/SpotOrdersTable';
 import { SubAccountList } from '../components/hyperliquid/SubAccountList';
 import { SubAccountDetail } from '../components/hyperliquid/SubAccountDetail';
 import { SettingsPanel } from '../components/hyperliquid/SettingsPanel';
-
-interface Wallet {
-  id: string;
-  name: string;
-  chain: string;
-  network: string;
-}
 
 type Tab = 'overview' | 'orders' | 'spot' | 'subaccounts' | 'settings';
 
@@ -46,9 +40,9 @@ export default function HyperliquidPage() {
   const loading = useSignal(true);
 
   useEffect(() => {
-    apiGet('/v1/wallets')
-      .then((res) => {
-        const list = (res as { wallets: Wallet[] }).wallets ?? [];
+    api.GET('/v1/wallets')
+      .then(({ data }) => {
+        const list = data?.items ?? [];
         // Filter to EVM wallets only (Hyperliquid is EVM-based)
         const evmWallets = list.filter((w) => w.chain === 'ethereum');
         wallets.value = evmWallets;

@@ -1,7 +1,7 @@
 import { useSignal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
-import { apiGet, apiPost, apiPut, apiDelete, ApiError } from '../api/client';
-import { API } from '../api/endpoints';
+import { api, ApiError } from '../api/typed-client';
+import type { components } from '../api/types.generated';
 import { Table } from '../components/table';
 import type { Column } from '../components/table';
 import { FormField, Button, Badge } from '../components/form';
@@ -15,67 +15,16 @@ import { Breadcrumb } from '../components/breadcrumb';
 import { type SettingsData, keyToLabel, getEffectiveValue, getEffectiveBoolValue } from '../utils/settings-helpers';
 import { pendingNavigation, highlightField } from '../components/settings-search';
 import { registerDirty, unregisterDirty } from '../utils/dirty-guard';
+import { POLICY_TYPE_LABELS, POLICY_DESCRIPTIONS as SHARED_DESCRIPTIONS } from '@waiaas/shared';
 
-interface Wallet {
-  id: string;
-  name: string;
-  chain: string;
-  network: string;
-  publicKey: string;
-  status: string;
-  createdAt: number;
-}
+type Wallet = components['schemas']['WalletCrudResponse'];
+type Policy = components['schemas']['PolicyResponse'];
 
-interface Policy {
-  id: string;
-  walletId: string | null;
-  type: string;
-  network: string | null;
-  rules: Record<string, unknown>;
-  priority: number;
-  enabled: boolean;
-  createdAt: number;
-  updatedAt: number;
-}
+/** Policy type options for select dropdowns, derived from @waiaas/shared */
+const POLICY_TYPES = Object.entries(POLICY_TYPE_LABELS).map(([value, label]) => ({ label, value }));
 
-const POLICY_TYPES = [
-  { label: 'Spending Limit', value: 'SPENDING_LIMIT' },
-  { label: 'Whitelist', value: 'WHITELIST' },
-  { label: 'Time Restriction', value: 'TIME_RESTRICTION' },
-  { label: 'Rate Limit', value: 'RATE_LIMIT' },
-  { label: 'Allowed Tokens', value: 'ALLOWED_TOKENS' },
-  { label: 'Contract Whitelist', value: 'CONTRACT_WHITELIST' },
-  { label: 'Method Whitelist', value: 'METHOD_WHITELIST' },
-  { label: 'Approved Spenders', value: 'APPROVED_SPENDERS' },
-  { label: 'Approve Amount Limit', value: 'APPROVE_AMOUNT_LIMIT' },
-  { label: 'Approve Tier Override', value: 'APPROVE_TIER_OVERRIDE' },
-  { label: 'Allowed Networks', value: 'ALLOWED_NETWORKS' },
-  { label: 'x402 Allowed Domains', value: 'X402_ALLOWED_DOMAINS' },
-  { label: 'ERC-8128 Allowed Domains', value: 'ERC8128_ALLOWED_DOMAINS' },
-  { label: 'Reputation Threshold', value: 'REPUTATION_THRESHOLD' },
-  { label: 'Venue Whitelist', value: 'VENUE_WHITELIST' },
-  { label: 'Action Category Limit', value: 'ACTION_CATEGORY_LIMIT' },
-];
-
-/** One-line description for each policy type (#183). */
-const POLICY_DESCRIPTIONS: Record<string, string> = {
-  SPENDING_LIMIT: 'Set per-transaction and cumulative spending limits by security tier (instant, notify, delay, approval).',
-  WHITELIST: 'Allow transfers only to pre-approved recipient addresses.',
-  TIME_RESTRICTION: 'Restrict transactions to specific time windows or days of the week.',
-  RATE_LIMIT: 'Limit the maximum number of transactions within a time window.',
-  ALLOWED_TOKENS: 'Allow only specified tokens for transfers; all others are denied.',
-  CONTRACT_WHITELIST: 'Allow contract calls only to pre-approved contract addresses.',
-  METHOD_WHITELIST: 'Allow only specific contract methods (function selectors) to be called.',
-  APPROVED_SPENDERS: 'Allow token approvals only for pre-approved spender addresses.',
-  APPROVE_AMOUNT_LIMIT: 'Set maximum token approval amounts and optionally block unlimited approvals.',
-  APPROVE_TIER_OVERRIDE: 'Force a specific security tier for all token approval transactions.',
-  ALLOWED_NETWORKS: 'Restrict transactions to specific blockchain networks only.',
-  X402_ALLOWED_DOMAINS: 'Allow x402 payments only to pre-approved domains.',
-  ERC8128_ALLOWED_DOMAINS: 'Allow ERC-8128 HTTP message signing only for pre-approved API domains.',
-  REPUTATION_THRESHOLD: 'Adjust security tier based on counterparty agent on-chain reputation score (ERC-8004).',
-  VENUE_WHITELIST: 'Allow external actions only from pre-approved venues (default-deny when enabled).',
-  ACTION_CATEGORY_LIMIT: 'Set per-action, daily, and monthly USD limits per action category with tier escalation.',
-};
+/** One-line description for each policy type, from @waiaas/shared */
+const POLICY_DESCRIPTIONS: Record<string, string> = SHARED_DESCRIPTIONS;
 
 const DEFAULT_RULES: Record<string, Record<string, unknown>> = {
   SPENDING_LIMIT: {
@@ -280,8 +229,8 @@ function PolicyDefaultsTab() {
 
   const fetchSettings = async () => {
     try {
-      const result = await apiGet<SettingsData>(API.ADMIN_SETTINGS);
-      settings.value = result;
+      const { data: result } = await api.GET('/v1/admin/settings');
+      settings.value = result as unknown as SettingsData;
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
@@ -305,8 +254,8 @@ function PolicyDefaultsTab() {
       const entries = Object.entries(dirty.value)
         .filter(([key]) => POLICY_DEFAULTS_KEYS.includes(key))
         .map(([key, value]) => ({ key, value }));
-      const result = await apiPut<{ updated: number; settings: SettingsData }>(API.ADMIN_SETTINGS, { settings: entries });
-      settings.value = result.settings;
+      const { data: result } = await api.PUT('/v1/admin/settings', { body: { settings: entries } });
+      settings.value = result!.settings as unknown as SettingsData;
       dirty.value = {};
       showToast('success', 'Policy defaults saved and applied');
     } catch (err) {
@@ -506,8 +455,8 @@ export default function PoliciesPage() {
 
   const fetchWallets = async () => {
     try {
-      const result = await apiGet<{ items: Wallet[] }>(API.WALLETS);
-      wallets.value = result.items;
+      const { data: result } = await api.GET('/v1/wallets');
+      wallets.value = result!.items;
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
@@ -519,15 +468,14 @@ export default function PoliciesPage() {
   const fetchPolicies = async () => {
     loading.value = true;
     try {
-      let url = API.POLICIES;
-      if (filterWalletId.value !== '__all__' && filterWalletId.value !== '__global__') {
-        url = `${API.POLICIES}?walletId=${filterWalletId.value}`;
-      }
-      const result = await apiGet<Policy[]>(url);
+      const query = (filterWalletId.value !== '__all__' && filterWalletId.value !== '__global__')
+        ? { walletId: filterWalletId.value }
+        : undefined;
+      const { data: result } = await api.GET('/v1/policies', { params: { query: query as Record<string, string> } });
       if (filterWalletId.value === '__global__') {
-        policies.value = result.filter((p) => p.walletId === null);
+        policies.value = (result as unknown as Policy[]).filter((p) => p.walletId === null);
       } else {
-        policies.value = result;
+        policies.value = result as unknown as Policy[];
       }
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
@@ -559,13 +507,15 @@ export default function PoliciesPage() {
 
     formLoading.value = true;
     try {
-      await apiPost(API.POLICIES, {
-        walletId: formWalletId.value || undefined,
-        type: formType.value,
-        rules: parsedRules,
-        priority: formPriority.value,
-        enabled: formEnabled.value,
-        network: formNetwork.value || undefined,
+      await api.POST('/v1/policies', {
+        body: {
+          walletId: formWalletId.value || undefined,
+          type: formType.value,
+          rules: parsedRules,
+          priority: formPriority.value,
+          enabled: formEnabled.value,
+          network: formNetwork.value || undefined,
+        } as never,
       });
       showToast('success', 'Policy created');
       showForm.value = false;
@@ -622,10 +572,9 @@ export default function PoliciesPage() {
 
     editLoading.value = true;
     try {
-      await apiPut(API.POLICY(editPolicy.value!.id), {
-        rules: parsedRules,
-        priority: editPriority.value,
-        enabled: editEnabled.value,
+      await api.PUT('/v1/policies/{id}', {
+        params: { path: { id: editPolicy.value!.id } },
+        body: { rules: parsedRules, priority: editPriority.value, enabled: editEnabled.value },
       });
       showToast('success', 'Policy updated');
       editModal.value = false;
@@ -663,7 +612,7 @@ export default function PoliciesPage() {
   const handleDelete = async () => {
     deleteLoading.value = true;
     try {
-      await apiDelete(API.POLICY(deletePolicy.value!.id));
+      await api.DELETE('/v1/policies/{id}', { params: { path: { id: deletePolicy.value!.id } } });
       showToast('success', 'Policy deleted');
       deleteModal.value = false;
       await fetchPolicies();

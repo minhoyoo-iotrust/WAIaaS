@@ -36,6 +36,9 @@
     "verify:agent-uat:index": "tsx scripts/verify-agent-uat-index.ts",
     "verify:admin-routes": "tsx scripts/verify-admin-route-consistency.ts",
     "validate:openapi": "tsx scripts/validate-openapi.ts",
+    "generate:api-types": "tsx scripts/generate-api-types.ts",
+    "check:api-types-freshness": "tsx scripts/check-api-types-freshness.ts",
+    "check:api-contract": "tsx scripts/check-api-contract.ts",
     "test:smoke": "bash scripts/smoke-test-published.sh"
   },
   "devDependencies": {
@@ -45,6 +48,7 @@
     "@vitest/coverage-v8": "^3.0.0",
     "eslint": "^9.19.0",
     "eslint-config-prettier": "^10.0.0",
+    "openapi-typescript": "^7.13.0",
     "prettier": "^3.4.0",
     "tsx": "^4.21.0",
     "turbo": "^2.4.0",

@@ -1,12 +1,9 @@
 import { useSignal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
-import { apiGet, apiPut } from '../../api/client';
+import { api } from '../../api/typed-client';
+import { type SettingsData } from '../../utils/settings-helpers';
 import { FormField, Button } from '../form';
 import { showToast } from '../toast';
-
-interface SettingsData {
-  [key: string]: string;
-}
 
 const PM_KEYS = [
   { key: 'actions.polymarket_enabled', label: 'Enabled', type: 'toggle' },
@@ -24,10 +21,9 @@ export function PolymarketSettings() {
   const saving = useSignal(false);
 
   useEffect(() => {
-    apiGet('/v1/admin/settings')
-      .then((res) => {
-        const data = res as { settings: SettingsData };
-        settings.value = data.settings ?? {};
+    api.GET('/v1/admin/settings')
+      .then(({ data: res }) => {
+        settings.value = (res as unknown as SettingsData) ?? {};
       })
       .catch(() => {
         showToast('Failed to load settings', 'error');
@@ -50,7 +46,7 @@ export function PolymarketSettings() {
           patch[def.key] = settings.value[def.key];
         }
       }
-      await apiPut('/v1/admin/settings', { settings: patch });
+      await api.PUT('/v1/admin/settings', { body: { settings: Object.entries(patch).map(([key, value]) => ({ key, value: String(value) })) } });
       showToast('Polymarket settings saved', 'success');
     } catch {
       showToast('Failed to save settings', 'error');

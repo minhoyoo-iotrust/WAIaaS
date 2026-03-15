@@ -1341,13 +1341,14 @@ export class WAIaaSClient {
 
   /** List credential metadata for a wallet (sessionAuth -- never returns values). */
   async listCredentials(walletId: string): Promise<CredentialMetadata[]> {
-    return withRetry(
-      () => this.http.get<CredentialMetadata[]>(
+    const wrapper = await withRetry(
+      () => this.http.get<{ credentials: CredentialMetadata[] }>(
         `/v1/wallets/${walletId}/credentials`,
         this.authHeaders(),
       ),
       this.retryOptions,
     );
+    return wrapper.credentials;
   }
 
   // --- Admin Credential CRUD (masterAuth) ---

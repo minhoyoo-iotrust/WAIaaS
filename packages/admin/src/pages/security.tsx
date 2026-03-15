@@ -1,7 +1,6 @@
 import { useSignal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
-import { apiGet, apiPost, apiPut, ApiError } from '../api/client';
-import { API } from '../api/endpoints';
+import { api, ApiError } from '../api/typed-client';
 import { logout } from '../auth/store';
 import { FormField, Button, Badge } from '../components/form';
 import { Modal } from '../components/modal';
@@ -43,8 +42,8 @@ function KillSwitchTab() {
 
   const fetchKillSwitchState = async () => {
     try {
-      const result = await apiGet<KillSwitchState>(API.ADMIN_KILL_SWITCH);
-      killSwitchState.value = result;
+      const { data } = await api.GET('/v1/admin/kill-switch');
+      killSwitchState.value = data!;
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
@@ -60,7 +59,7 @@ function KillSwitchTab() {
   const handleKillSwitchActivate = async () => {
     ksActionLoading.value = true;
     try {
-      await apiPost(API.ADMIN_KILL_SWITCH);
+      await api.POST('/v1/admin/kill-switch');
       showToast('success', 'Kill switch activated - all operations suspended');
       await fetchKillSwitchState();
     } catch (err) {
@@ -74,7 +73,7 @@ function KillSwitchTab() {
   const handleKillSwitchEscalate = async () => {
     ksActionLoading.value = true;
     try {
-      await apiPost(API.ADMIN_KILL_SWITCH_ESCALATE);
+      await api.POST('/v1/admin/kill-switch/escalate');
       showToast('success', 'Kill switch escalated to LOCKED');
       await fetchKillSwitchState();
     } catch (err) {
@@ -88,7 +87,7 @@ function KillSwitchTab() {
   const handleKillSwitchRecover = async () => {
     ksActionLoading.value = true;
     try {
-      await apiPost(API.ADMIN_RECOVER);
+      await api.POST('/v1/admin/recover');
       showToast('success', 'Kill switch recovered - operations resumed');
       await fetchKillSwitchState();
     } catch (err) {
@@ -205,8 +204,8 @@ function AutoStopTab() {
 
   const fetchSettings = async () => {
     try {
-      const result = await apiGet<SettingsData>(API.ADMIN_SETTINGS);
-      settings.value = result;
+      const { data } = await api.GET('/v1/admin/settings');
+      settings.value = data as unknown as SettingsData;
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
@@ -231,8 +230,8 @@ function AutoStopTab() {
       const entries = Object.entries(dirty.value)
         .filter(([key]) => key.startsWith('autostop.'))
         .map(([key, value]) => ({ key, value }));
-      const result = await apiPut<{ updated: number; settings: SettingsData }>(API.ADMIN_SETTINGS, { settings: entries });
-      settings.value = result.settings;
+      const { data: result } = await api.PUT('/v1/admin/settings', { body: { settings: entries } });
+      settings.value = result!.settings as unknown as SettingsData;
       dirty.value = {};
       showToast('success', 'AutoStop settings saved and applied');
     } catch (err) {
@@ -387,7 +386,7 @@ function JwtRotationTab() {
   const handleRotate = async () => {
     rotateLoading.value = true;
     try {
-      await apiPost<{ rotatedAt: number; message: string }>(API.ADMIN_ROTATE_SECRET);
+      await api.POST('/v1/admin/rotate-secret');
       rotateModal.value = false;
       showToast('success', 'All session tokens invalidated. Old tokens remain valid for 5 minutes.');
     } catch (err) {
@@ -460,7 +459,7 @@ function MasterPasswordTab() {
     if (!validate()) return;
     saving.value = true;
     try {
-      await apiPut(API.ADMIN_MASTER_PASSWORD, { newPassword: newPw.value });
+      await api.PUT('/v1/admin/master-password', { body: { newPassword: newPw.value } });
       showToast('success', 'Master password changed. Please log in again.');
       // Clear form before logout
       currentPw.value = '';

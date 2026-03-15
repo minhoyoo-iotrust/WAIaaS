@@ -1,25 +1,28 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/preact';
 
-vi.mock('../api/client', () => ({
-  apiGet: vi.fn(),
-  apiPost: vi.fn(),
-  apiPut: vi.fn(),
-  apiDelete: vi.fn(),
-  ApiError: class ApiError extends Error {
-    status: number;
-    code: string;
-    serverMessage: string;
-    constructor(status: number, code: string, msg: string) {
-      super(`[${status}] ${code}: ${msg}`);
-      this.name = 'ApiError';
-      this.status = status;
-      this.code = code;
-      this.serverMessage = msg;
-    }
-  },
-  apiCall: vi.fn(),
-}));
+
+const mockApiGet = vi.fn();
+const mockApiPost = vi.fn();
+const mockApiPut = vi.fn();
+const mockApiDelete = vi.fn();
+const mockApiPatch = vi.fn();
+
+// Mock declarations moved to top-level const
+
+vi.mock('../api/typed-client', async () => {
+  const { ApiError } = await import('../api/client');
+  return {
+    api: {
+      GET: (...args: unknown[]) => mockApiGet(...args),
+      POST: (...args: unknown[]) => mockApiPost(...args),
+      PUT: (...args: unknown[]) => mockApiPut(...args),
+      DELETE: (...args: unknown[]) => mockApiDelete(...args),
+      PATCH: (...args: unknown[]) => mockApiPatch(...args),
+    },
+    ApiError,
+  };
+});
 
 vi.mock('../components/toast', () => ({
   showToast: vi.fn(),
@@ -40,7 +43,6 @@ vi.mock('../utils/error-messages', () => ({
   getErrorMessage: (code: string) => `Error: ${code}`,
 }));
 
-import { apiGet } from '../api/client';
 import NotificationsPage from '../pages/notifications';
 
 const mockStatus = {
@@ -80,9 +82,9 @@ const mockLogs = {
 };
 
 function setupMocks(statusData = mockStatus, logData = mockLogs) {
-  vi.mocked(apiGet).mockImplementation((url: string) => {
-    if (url.includes('/notifications/status')) return Promise.resolve(statusData);
-    if (url.includes('/notifications/log')) return Promise.resolve(logData);
+  mockApiGet.mockImplementation((url: string) => {
+    if (url.includes('/notifications/status')) return Promise.resolve({ data: statusData });
+    if (url.includes('/notifications/log')) return Promise.resolve({ data: logData });
     return Promise.reject(new Error(`Unexpected URL: ${url}`));
   });
 }
@@ -129,18 +131,18 @@ describe('Notification Log Filters and Wallet Link', () => {
     // First select is Event Type
     const eventTypeSelect = selects[0];
 
-    vi.mocked(apiGet).mockClear();
+    mockApiGet.mockClear();
     setupMocks();
 
     fireEvent.change(eventTypeSelect, { target: { value: 'tx.submitted' } });
 
     await waitFor(() => {
-      const calls = vi.mocked(apiGet).mock.calls;
+      const calls = mockApiGet.mock.calls;
       const logCall = calls.find(
         (c) => typeof c[0] === 'string' && c[0].includes('/notifications/log'),
       );
       expect(logCall).toBeTruthy();
-      expect(logCall![0]).toContain('eventType=tx.submitted');
+      expect((logCall![1] as any)?.params?.query?.eventType).toBe('tx.submitted');
     });
   });
 
@@ -157,18 +159,18 @@ describe('Notification Log Filters and Wallet Link', () => {
     // Second select is Channel
     const channelSelect = selects[1];
 
-    vi.mocked(apiGet).mockClear();
+    mockApiGet.mockClear();
     setupMocks();
 
     fireEvent.change(channelSelect, { target: { value: 'telegram' } });
 
     await waitFor(() => {
-      const calls = vi.mocked(apiGet).mock.calls;
+      const calls = mockApiGet.mock.calls;
       const logCall = calls.find(
         (c) => typeof c[0] === 'string' && c[0].includes('/notifications/log'),
       );
       expect(logCall).toBeTruthy();
-      expect(logCall![0]).toContain('channel=telegram');
+      expect((logCall![1] as any)?.params?.query?.channel).toBe('telegram');
     });
   });
 
@@ -185,18 +187,18 @@ describe('Notification Log Filters and Wallet Link', () => {
     // Third select is Status
     const statusSelect = selects[2];
 
-    vi.mocked(apiGet).mockClear();
+    mockApiGet.mockClear();
     setupMocks();
 
     fireEvent.change(statusSelect, { target: { value: 'sent' } });
 
     await waitFor(() => {
-      const calls = vi.mocked(apiGet).mock.calls;
+      const calls = mockApiGet.mock.calls;
       const logCall = calls.find(
         (c) => typeof c[0] === 'string' && c[0].includes('/notifications/log'),
       );
       expect(logCall).toBeTruthy();
-      expect(logCall![0]).toContain('status=sent');
+      expect((logCall![1] as any)?.params?.query?.status).toBe('sent');
     });
   });
 
@@ -213,19 +215,19 @@ describe('Notification Log Filters and Wallet Link', () => {
     // First date input is Since
     const sinceInput = dateInputs[0];
 
-    vi.mocked(apiGet).mockClear();
+    mockApiGet.mockClear();
     setupMocks();
 
     fireEvent.change(sinceInput, { target: { value: '2026-01-15' } });
 
     await waitFor(() => {
-      const calls = vi.mocked(apiGet).mock.calls;
+      const calls = mockApiGet.mock.calls;
       const logCall = calls.find(
         (c) => typeof c[0] === 'string' && c[0].includes('/notifications/log'),
       );
       expect(logCall).toBeTruthy();
-      // Should contain since= followed by a number (Unix seconds)
-      expect(logCall![0]).toMatch(/since=\d+/);
+      // Should contain since param with a number (Unix seconds)
+      expect((logCall![1] as any)?.params?.query?.since).toMatch(/^\d+$/);
     });
   });
 
@@ -282,15 +284,15 @@ describe('Notification Log Filters and Wallet Link', () => {
     fireEvent.change(selects[0], { target: { value: 'tx.submitted' } });
 
     await waitFor(() => {
-      const calls = vi.mocked(apiGet).mock.calls;
+      const calls = mockApiGet.mock.calls;
       const logCall = calls.find(
-        (c) => typeof c[0] === 'string' && c[0].includes('eventType=tx.submitted'),
+        (c) => typeof c[0] === 'string' && c[0].includes('/notifications/log') && (c[1] as any)?.params?.query?.eventType === 'tx.submitted',
       );
       expect(logCall).toBeTruthy();
     });
 
     // Clear mocks then click Clear
-    vi.mocked(apiGet).mockClear();
+    mockApiGet.mockClear();
     setupMocks();
 
     const clearBtn = filterBar!.querySelector('.filter-clear') as HTMLButtonElement;
@@ -298,13 +300,13 @@ describe('Notification Log Filters and Wallet Link', () => {
     fireEvent.click(clearBtn);
 
     await waitFor(() => {
-      const calls = vi.mocked(apiGet).mock.calls;
+      const calls = mockApiGet.mock.calls;
       const logCall = calls.find(
         (c) => typeof c[0] === 'string' && c[0].includes('/notifications/log'),
       );
       expect(logCall).toBeTruthy();
       // After clear, should NOT contain eventType param
-      expect(logCall![0]).not.toContain('eventType=');
+      expect((logCall![1] as any)?.params?.query?.eventType).toBeUndefined();
     });
   });
 });

@@ -3,20 +3,23 @@
 // Extracted from settings.tsx for reuse across multiple pages.
 // ---------------------------------------------------------------------------
 
-import { RPC_KEY_LABELS } from '@waiaas/shared';
+import type { components } from '../api/types.generated';
+import { api } from '../api/typed-client';
 
 // ---------------------------------------------------------------------------
-// Types
+// Types — generated type aliases where possible
 // ---------------------------------------------------------------------------
 
+// SettingsResponse has explicit category keys; SettingsData is a wider Record type
+// used across settings helpers. Keep as manual alias until GET /v1/admin/settings
+// returns a dynamic shape. TODO(Phase 415): Add named Zod schema for this endpoint
 export type SettingsData = Record<string, Record<string, string | boolean>>;
 
-export interface KillSwitchState {
-  state: string;
-  activatedAt: number | null;
-  activatedBy: string | null;
-}
+// Generated type alias (replaces manual interface)
+export type KillSwitchState = components['schemas']['KillSwitchResponse'];
 
+// ApiKeyEntry: no named schema in generated types (inline response in /v1/admin/api-keys)
+// TODO(Phase 415): Add named Zod schema for this endpoint
 export interface ApiKeyEntry {
   providerName: string;
   hasKey: boolean;
@@ -25,27 +28,16 @@ export interface ApiKeyEntry {
   updatedAt: string | null;
 }
 
-export interface RpcTestResult {
-  success: boolean;
-  latencyMs: number;
-  blockNumber?: number;
-  error?: string;
-}
+// Generated type alias (replaces manual interface)
+export type RpcTestResult = components['schemas']['TestRpcResponse'];
 
-export interface NotifTestResult {
-  channel: string;
-  success: boolean;
-  error?: string;
-}
+// NotifTestResult: generated NotificationTestResponse.results[number] matches
+export type NotifTestResult = components['schemas']['NotificationTestResponse']['results'][number];
 
-export interface RpcEndpointStatusEntry {
-  url: string;
-  status: 'available' | 'cooldown';
-  failureCount: number;
-  cooldownRemainingMs: number;
-}
+// Generated type alias (replaces manual interface)
+export type RpcEndpointStatusEntry = components['schemas']['RpcEndpointStatus'];
 
-export type RpcPoolStatus = Record<string, RpcEndpointStatusEntry[]>;
+export type RpcPoolStatus = components['schemas']['RpcStatusResponse']['networks'];
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -67,101 +59,83 @@ export function isCredentialField(fullKey: string): boolean {
   return CREDENTIAL_KEYS.has(fullKey);
 }
 
-/** Human-readable label from a setting key */
+// ---------------------------------------------------------------------------
+// Settings schema cache (populated from GET /v1/admin/settings/schema)
+// ---------------------------------------------------------------------------
+
+/** Map of short key (e.g. 'enabled') -> label from API schema */
+const schemaLabelByShortKey = new Map<string, string>();
+/** Map of full key (e.g. 'notifications.enabled') -> label from API schema */
+const schemaLabelByFullKey = new Map<string, string>();
+
+/** Promise deduplication: only one in-flight fetch at a time */
+let schemaLoadPromise: Promise<void> | null = null;
+
+/** Whether the schema has been successfully loaded */
+let schemaLoaded = false;
+
+/**
+ * Fetch settings schema from the API and populate the label cache.
+ * Safe to call multiple times -- deduplicates concurrent requests and
+ * skips if already loaded. Errors are silently caught (keyToLabel falls
+ * back to title-case transform).
+ */
+export function loadSettingsSchema(): Promise<void> {
+  if (schemaLoaded) return Promise.resolve();
+  if (schemaLoadPromise) return schemaLoadPromise;
+
+  schemaLoadPromise = (async () => {
+    try {
+      const { data } = await api.GET('/v1/admin/settings/schema');
+      if (data && 'settings' in data && Array.isArray(data.settings)) {
+        for (const entry of data.settings) {
+          // Full key lookup (e.g. 'notifications.enabled' -> 'Enabled')
+          schemaLabelByFullKey.set(entry.key, entry.label);
+          // Short key lookup (part after last dot)
+          const dotIdx = entry.key.lastIndexOf('.');
+          const shortKey = dotIdx >= 0 ? entry.key.slice(dotIdx + 1) : entry.key;
+          // First occurrence wins for short key (same short key across
+          // categories typically shares the same label)
+          if (!schemaLabelByShortKey.has(shortKey)) {
+            schemaLabelByShortKey.set(shortKey, entry.label);
+          }
+        }
+        schemaLoaded = true;
+      }
+    } catch {
+      // Schema fetch failed -- keyToLabel will use fallback transform.
+      // This is non-critical: labels degrade gracefully to title-case.
+    } finally {
+      schemaLoadPromise = null;
+    }
+  })();
+
+  return schemaLoadPromise;
+}
+
+/** Reset the schema cache (for testing) */
+export function resetSettingsSchemaCache(): void {
+  schemaLabelByShortKey.clear();
+  schemaLabelByFullKey.clear();
+  schemaLoadPromise = null;
+  schemaLoaded = false;
+}
+
+/**
+ * Human-readable label from a setting key.
+ *
+ * Checks the API-populated schema cache first (by full key, then short key),
+ * falling back to a title-case transform if the schema has not loaded yet.
+ */
 export function keyToLabel(key: string): string {
-  const map: Record<string, string> = {
-    enabled: 'Enabled',
-    telegram_bot_token: 'Telegram Bot Token',
-    telegram_chat_id: 'Telegram Chat ID',
-    discord_webhook_url: 'Discord Webhook URL',
-    ntfy_server: 'Ntfy Server',
-    ntfy_topic: 'Ntfy Topic',
-    locale: 'Locale',
-    rate_limit_rpm: 'Rate Limit (RPM)',
-    // RPC network labels from shared constants
-    ...RPC_KEY_LABELS,
-    max_sessions_per_wallet: 'Max Sessions per Wallet',
-    max_pending_tx: 'Max Pending Transactions',
-    rate_limit_global_ip_rpm: 'Global IP Rate Limit (RPM)',
-    rate_limit_session_rpm: 'Session Rate Limit (RPM)',
-    rate_limit_tx_rpm: 'Transaction Rate Limit (RPM)',
-    policy_defaults_delay_seconds: 'Policy Delay (seconds)',
-    policy_defaults_approval_timeout: 'Approval Timeout (seconds)',
-    default_deny_tokens: 'Default Deny: Token Transfers',
-    default_deny_contracts: 'Default Deny: Contract Calls',
-    default_deny_spenders: 'Default Deny: Token Approvals',
-    default_deny_x402_domains: 'Default Deny: x402 Domains',
-    default_deny_erc8128_domains: 'Default Deny: ERC-8128 Domains',
-    default_preset: 'Default Preset',
-    default_ttl: 'Default TTL (seconds)',
-    include_nonce: 'Include Nonce',
-    algorithm: 'Algorithm',
-    rate_limit_per_minute: 'Rate Limit (per minute)',
-    project_id: 'Project ID',
-    log_level: 'Log Level',
-    currency: 'Display Currency',
-    // autostop keys
-    consecutive_failures_threshold: 'Consecutive Failures Threshold',
-    unusual_activity_threshold: 'Unusual Activity Threshold',
-    unusual_activity_window_sec: 'Unusual Activity Window (seconds)',
-    idle_timeout_sec: 'Idle Timeout (seconds)',
-    idle_check_interval_sec: 'Idle Check Interval (seconds)',
-    // monitoring keys
-    check_interval_sec: 'Check Interval (seconds)',
-    low_balance_threshold_sol: 'Low Balance Threshold (SOL)',
-    low_balance_threshold_eth: 'Low Balance Threshold (ETH)',
-    cooldown_hours: 'Alert Cooldown (hours)',
-    // walletconnect keys
-    relay_url: 'Relay URL',
-    // session keys
-    // telegram bot keys
-    bot_token: 'Bot Token',
-    // signing_sdk keys
-    request_expiry_min: 'Request Expiry (minutes)',
-    preferred_channel: 'Preferred Channel',
-    preferred_wallet: 'Preferred Wallet',
-    ntfy_request_topic_prefix: 'Ntfy Request Topic Prefix',
-    ntfy_response_topic_prefix: 'Ntfy Response Topic Prefix',
-    wallets: 'Registered Wallets (JSON)',
-    // aave_v3 keys
-    aave_v3_enabled: 'Aave V3 Enabled',
-    aave_v3_health_factor_warning_threshold: 'HF Warning Threshold',
-    aave_v3_position_sync_interval_sec: 'Position Sync Interval (seconds)',
-    aave_v3_max_ltv_pct: 'Max LTV Percentage',
-    // kamino keys
-    kamino_enabled: 'Kamino Enabled',
-    kamino_market: 'Market',
-    kamino_hf_threshold: 'HF Warning Threshold',
-    // drift perp keys
-    drift_enabled: 'Drift Perp Enabled',
-    drift_max_leverage: 'Max Leverage',
-    drift_max_position_usd: 'Max Position Size (USD)',
-    drift_margin_warning_threshold_pct: 'Margin Warning Threshold (%)',
-    drift_position_sync_interval_sec: 'Position Sync Interval (seconds)',
-    // gas_condition keys
-    poll_interval_sec: 'Poll Interval (seconds)',
-    default_timeout_sec: 'Default Timeout (seconds)',
-    max_timeout_sec: 'Max Timeout (seconds)',
-    max_pending_count: 'Max Pending Count',
-    // slippage keys (bps → % display)
-    jupiter_swap_default_slippage_bps: 'Default Slippage (%)',
-    jupiter_swap_max_slippage_bps: 'Max Slippage (%)',
-    zerox_swap_default_slippage_bps: 'Default Slippage (%)',
-    zerox_swap_max_slippage_bps: 'Max Slippage (%)',
-    pendle_yield_default_slippage_bps: 'Default Slippage (%)',
-    pendle_yield_max_slippage_bps: 'Max Slippage (%)',
-    dcent_swap_default_slippage_bps: 'Default Slippage (%)',
-    dcent_swap_max_slippage_bps: 'Max Slippage (%)',
-    // across_bridge keys
-    across_bridge_enabled: 'Across Bridge Enabled',
-    across_bridge_api_base_url: 'API Base URL',
-    across_bridge_integrator_id: 'Integrator ID',
-    across_bridge_fill_deadline_buffer_sec: 'Fill Deadline Buffer (seconds)',
-    across_bridge_default_slippage_pct: 'Default Slippage (%)',
-    across_bridge_max_slippage_pct: 'Max Slippage (%)',
-    across_bridge_request_timeout_ms: 'Request Timeout (ms)',
-  };
-  return map[key] ?? key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  // Try full key first (e.g. 'notifications.enabled')
+  const fullLabel = schemaLabelByFullKey.get(key);
+  if (fullLabel) return fullLabel;
+  // Try short key (e.g. 'enabled')
+  const shortLabel = schemaLabelByShortKey.get(key);
+  if (shortLabel) return shortLabel;
+  // Fallback: title-case transform
+  return key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 // ---------------------------------------------------------------------------

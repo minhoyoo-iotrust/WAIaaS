@@ -1,7 +1,7 @@
 import { useSignal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
-import { apiGet, apiPut, apiDelete, ApiError } from '../api/client';
-import { API } from '../api/endpoints';
+import { api, ApiError } from '../api/typed-client';
+import type { components } from '../api/types.generated';
 import { FormField, Button, Badge } from '../components/form';
 import { showToast } from '../components/toast';
 import { getErrorMessage } from '../utils/error-messages';
@@ -9,62 +9,30 @@ import { keyToLabel, isSlippageBpsKey, bpsToPercent, percentToBps } from '../uti
 import type { SettingsData, ApiKeyEntry } from '../utils/settings-helpers';
 
 // ---------------------------------------------------------------------------
-// Built-in provider definitions (client-side static list)
+// Category display order (dynamic categories from API sorted by this)
 // ---------------------------------------------------------------------------
 
-type ProviderCategory = 'Swap' | 'Bridge' | 'Staking' | 'Lending' | 'Yield' | 'Perp';
+const CATEGORY_ORDER = ['Swap', 'Bridge', 'Staking', 'Lending', 'Yield', 'Perp', 'Other'];
 
-interface BuiltinProvider {
-  key: string;
-  name: string;
-  description: string;
-  chain: 'solana' | 'evm' | 'multi';
-  category: ProviderCategory;
-  requiresApiKey: boolean;
-  docsUrl?: string;
-  keyPortalUrl?: string;
-}
+// ---------------------------------------------------------------------------
+// Advanced settings map: provider key -> list of short setting keys to display
+// ---------------------------------------------------------------------------
 
-const BUILTIN_PROVIDERS: BuiltinProvider[] = [
-  { key: 'jupiter_swap', name: 'Jupiter Swap', description: 'Solana DEX aggregator', chain: 'solana', category: 'Swap', requiresApiKey: true, docsUrl: 'https://station.jup.ag/docs', keyPortalUrl: 'https://portal.jup.ag' },
-  { key: 'zerox_swap', name: '0x Swap', description: 'EVM DEX aggregator (AllowanceHolder)', chain: 'evm', category: 'Swap', requiresApiKey: true, docsUrl: 'https://dashboard.0x.org', keyPortalUrl: 'https://dashboard.0x.org' },
-  { key: 'dcent_swap', name: "D'CENT Swap Aggregator", description: 'Multi-chain DEX swap aggregator with cross-chain support (6 EVM + Solana)', chain: 'multi', category: 'Swap', requiresApiKey: false, docsUrl: 'https://dcentwallet.com' },
-  { key: 'lifi', name: 'LI.FI', description: 'Multi-chain DEX/bridge aggregator', chain: 'multi', category: 'Bridge', requiresApiKey: false, docsUrl: 'https://docs.li.fi' },
-  { key: 'lido_staking', name: 'Lido Staking', description: 'ETH liquid staking (stETH/wstETH)', chain: 'evm', category: 'Staking', requiresApiKey: false, docsUrl: 'https://docs.lido.fi' },
-  { key: 'jito_staking', name: 'Jito Staking', description: 'SOL liquid staking (JitoSOL)', chain: 'solana', category: 'Staking', requiresApiKey: false, docsUrl: 'https://www.jito.network/docs' },
-  { key: 'aave_v3', name: 'Aave V3 Lending', description: 'EVM lending protocol (supply, borrow, repay, withdraw)', chain: 'evm', category: 'Lending', requiresApiKey: false, docsUrl: 'https://docs.aave.com/developers' },
-  { key: 'kamino', name: 'Kamino Lending', description: 'Solana lending protocol (supply, borrow, repay, withdraw)', chain: 'solana', category: 'Lending', requiresApiKey: false, docsUrl: 'https://docs.kamino.finance' },
-  { key: 'pendle_yield', name: 'Pendle Yield', description: 'EVM yield trading: buy/sell PT/YT, redeem at maturity, add/remove LP', chain: 'evm', category: 'Yield', requiresApiKey: false, docsUrl: 'https://docs.pendle.finance' },
-  { key: 'drift', name: 'Drift Perp', description: 'Solana perpetual futures trading (open, close, modify positions with leverage)', chain: 'solana', category: 'Perp', requiresApiKey: false, docsUrl: 'https://docs.drift.trade' },
-  { key: 'hyperliquid_perp', name: 'Hyperliquid Perp', description: 'Hyperliquid perpetual futures trading with EIP-712 signing', chain: 'evm', category: 'Perp', requiresApiKey: false, docsUrl: 'https://hyperliquid.gitbook.io/hyperliquid-docs' },
-  { key: 'hyperliquid_spot', name: 'Hyperliquid Spot', description: 'Hyperliquid spot market trading (buy, sell, cancel)', chain: 'evm', category: 'Swap', requiresApiKey: false, docsUrl: 'https://hyperliquid.gitbook.io/hyperliquid-docs' },
-  { key: 'hyperliquid_sub', name: 'Hyperliquid Sub', description: 'Hyperliquid sub-account management (create, transfer USDC)', chain: 'evm', category: 'DeFi', requiresApiKey: false, docsUrl: 'https://hyperliquid.gitbook.io/hyperliquid-docs' },
-  { key: 'across_bridge', name: 'Across Bridge', description: 'Intent-based cross-chain EVM bridge with fast relayer fills (2-10 sec)', chain: 'evm', category: 'Bridge', requiresApiKey: false, docsUrl: 'https://docs.across.to' },
-];
-
-const CATEGORY_ORDER: ProviderCategory[] = ['Swap', 'Bridge', 'Staking', 'Lending', 'Yield', 'Perp'];
+const PROVIDER_ADVANCED_SETTINGS: Record<string, readonly string[]> = {
+  jupiter_swap: ['jupiter_swap_default_slippage_bps', 'jupiter_swap_max_slippage_bps'],
+  zerox_swap: ['zerox_swap_default_slippage_bps', 'zerox_swap_max_slippage_bps'],
+  aave_v3: ['aave_v3_health_factor_warning_threshold', 'aave_v3_position_sync_interval_sec', 'aave_v3_max_ltv_pct'],
+  kamino: ['kamino_market', 'kamino_hf_threshold'],
+  drift: ['drift_max_leverage', 'drift_max_position_usd', 'drift_margin_warning_threshold_pct', 'drift_position_sync_interval_sec'],
+  pendle_yield: ['pendle_yield_default_slippage_bps', 'pendle_yield_max_slippage_bps'],
+  dcent_swap: ['dcent_swap_api_url', 'dcent_swap_default_slippage_bps', 'dcent_swap_max_slippage_bps'],
+};
 
 // ---------------------------------------------------------------------------
 // Types for provider API response
 // ---------------------------------------------------------------------------
 
-interface ProviderAction {
-  name: string;
-  description: string;
-  chain: string;
-  riskLevel: string;
-  defaultTier: string;
-}
-
-interface ProviderInfo {
-  name: string;
-  description: string;
-  version: string;
-  chains: string[];
-  requiresApiKey: boolean;
-  hasApiKey: boolean;
-  actions: ProviderAction[];
-}
+type ProviderInfo = components['schemas']['ProvidersListResponse']['providers'][number];
 
 // ---------------------------------------------------------------------------
 // Component
@@ -84,7 +52,7 @@ export default function ActionsPage() {
   // Toggle saving state
   const toggleSaving = useSignal<string | null>(null);
 
-  // Aave V3 advanced settings dirty state
+  // Advanced settings dirty state
   const advancedDirty = useSignal<Record<string, string>>({});
 
   // ---------------------------------------------------------------------------
@@ -93,8 +61,8 @@ export default function ActionsPage() {
 
   const fetchSettings = async () => {
     try {
-      const result = await apiGet<SettingsData>(API.ADMIN_SETTINGS);
-      settings.value = result;
+      const { data: result } = await api.GET('/v1/admin/settings');
+      settings.value = result as unknown as SettingsData;
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
@@ -103,8 +71,8 @@ export default function ActionsPage() {
 
   const fetchApiKeys = async () => {
     try {
-      const result = await apiGet<{ keys: ApiKeyEntry[] }>(API.ADMIN_API_KEYS);
-      apiKeys.value = result.keys;
+      const { data: result } = await api.GET('/v1/admin/api-keys');
+      apiKeys.value = (result as unknown as { keys: ApiKeyEntry[] }).keys;
     } catch {
       // Feature not available -- keep empty
     }
@@ -112,8 +80,8 @@ export default function ActionsPage() {
 
   const fetchProviders = async () => {
     try {
-      const result = await apiGet<{ providers: ProviderInfo[] }>(API.ACTIONS_PROVIDERS);
-      providers.value = result.providers ?? [];
+      const { data: result } = await api.GET('/v1/actions/providers');
+      providers.value = (result as unknown as { providers: ProviderInfo[] }).providers ?? [];
     } catch {
       // Providers endpoint not available -- keep empty
     }
@@ -130,18 +98,20 @@ export default function ActionsPage() {
   }, []);
 
   // ---------------------------------------------------------------------------
-  // Toggle handler
+  // Toggle handler (uses enabledKey from API response)
   // ---------------------------------------------------------------------------
 
-  const handleToggle = async (providerKey: string, newEnabled: boolean) => {
-    const settingKey = `actions.${providerKey}_enabled`;
-    toggleSaving.value = providerKey;
+  const handleToggle = async (provider: ProviderInfo, newEnabled: boolean) => {
+    const settingKey = `actions.${provider.enabledKey}_enabled`;
+    toggleSaving.value = provider.name;
     try {
-      const result = await apiPut<{ updated: number; settings: SettingsData }>(API.ADMIN_SETTINGS, {
+      const { data: result } = await api.PUT('/v1/admin/settings', { body: {
         settings: [{ key: settingKey, value: String(newEnabled) }],
-      });
-      settings.value = result.settings;
-      showToast('success', `${newEnabled ? 'Enabled' : 'Disabled'} ${providerKey.replace(/_/g, ' ')}`);
+      } });
+      settings.value = result!.settings as unknown as SettingsData;
+      // Re-fetch providers to get updated isEnabled
+      await fetchProviders();
+      showToast('success', `${newEnabled ? 'Enabled' : 'Disabled'} ${provider.name.replace(/_/g, ' ')}`);
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));
@@ -157,7 +127,7 @@ export default function ActionsPage() {
   const handleSaveApiKey = async (providerKey: string) => {
     apiKeySaving.value = true;
     try {
-      await apiPut(API.ADMIN_API_KEY(providerKey), { apiKey: apiKeyInput.value });
+      await api.PUT('/v1/admin/api-keys/{provider}', { params: { path: { provider: providerKey } }, body: { apiKey: apiKeyInput.value } });
       showToast('success', `API key saved for ${providerKey}`);
       apiKeyEditing.value = null;
       apiKeyInput.value = '';
@@ -172,7 +142,7 @@ export default function ActionsPage() {
 
   const handleDeleteApiKey = async (providerKey: string) => {
     try {
-      await apiDelete(API.ADMIN_API_KEY(providerKey));
+      await api.DELETE('/v1/admin/api-keys/{provider}', { params: { path: { provider: providerKey } } });
       showToast('success', `API key deleted for ${providerKey}`);
       await fetchApiKeys();
     } catch (err) {
@@ -182,18 +152,17 @@ export default function ActionsPage() {
   };
 
   // ---------------------------------------------------------------------------
-  // Advanced settings save handler (Aave V3)
+  // Advanced settings save handler
   // ---------------------------------------------------------------------------
 
   const handleAdvancedSave = async (settingKey: string, value: string) => {
     const fullKey = `actions.${settingKey}`;
     const saveValue = isSlippageBpsKey(settingKey) ? percentToBps(value) : value;
     try {
-      const result = await apiPut<{ updated: number; settings: SettingsData }>(API.ADMIN_SETTINGS, {
+      const { data: result } = await api.PUT('/v1/admin/settings', { body: {
         settings: [{ key: fullKey, value: saveValue }],
-      });
-      settings.value = result.settings;
-      // Clear dirty for this key
+      } });
+      settings.value = result!.settings as unknown as SettingsData;
       const newDirty = { ...advancedDirty.value };
       delete newDirty[settingKey];
       advancedDirty.value = newDirty;
@@ -208,27 +177,9 @@ export default function ActionsPage() {
   // Helpers
   // ---------------------------------------------------------------------------
 
-  function isEnabled(providerKey: string): boolean {
-    const cat = settings.value['actions'] as Record<string, string> | undefined;
-    if (!cat) return false;
-    return cat[`${providerKey}_enabled`] === 'true';
-  }
-
-  function isRegistered(providerKey: string): boolean {
-    return providers.value.some(
-      (p) => p.name.toLowerCase().replace(/[\s-]/g, '_') === providerKey || p.name.toLowerCase().includes(providerKey.replace(/_/g, ' ')),
-    );
-  }
-
   function getApiKeyEntry(providerKey: string): ApiKeyEntry | undefined {
     return apiKeys.value.find(
       (k) => k.providerName === providerKey || k.providerName.toLowerCase().replace(/[\s-]/g, '_') === providerKey,
-    );
-  }
-
-  function getRegisteredProvider(providerKey: string): ProviderInfo | undefined {
-    return providers.value.find(
-      (p) => p.name.toLowerCase().replace(/[\s-]/g, '_') === providerKey || p.name.toLowerCase().includes(providerKey.replace(/_/g, ' ')),
     );
   }
 
@@ -249,10 +200,10 @@ export default function ActionsPage() {
   async function handleTierChange(providerKey: string, actionName: string, newTier: string) {
     const settingKey = `actions.${providerKey}_${actionName}_tier`;
     try {
-      const result = await apiPut<{ updated: number; settings: SettingsData }>(API.ADMIN_SETTINGS, {
+      const { data: result } = await api.PUT('/v1/admin/settings', { body: {
         settings: [{ key: settingKey, value: newTier }],
-      });
-      settings.value = result.settings;
+      } });
+      settings.value = result!.settings as unknown as SettingsData;
       showToast('success', `Tier updated for ${providerKey}/${actionName}`);
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
@@ -263,10 +214,10 @@ export default function ActionsPage() {
   async function handleTierReset(providerKey: string, actionName: string) {
     const settingKey = `actions.${providerKey}_${actionName}_tier`;
     try {
-      const result = await apiPut<{ updated: number; settings: SettingsData }>(API.ADMIN_SETTINGS, {
+      const { data: result } = await api.PUT('/v1/admin/settings', { body: {
         settings: [{ key: settingKey, value: '' }],
-      });
-      settings.value = result.settings;
+      } });
+      settings.value = result!.settings as unknown as SettingsData;
       showToast('success', `Tier reset to default for ${providerKey}/${actionName}`);
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
@@ -274,23 +225,19 @@ export default function ActionsPage() {
     }
   }
 
-  /** Get display value for an advanced setting, applying bps→% conversion for slippage keys */
+  /** Get display value for an advanced setting, applying bps->% conversion for slippage keys */
   function getAdvancedDisplayValue(shortKey: string): string {
     const cat = settings.value['actions'] as Record<string, string> | undefined;
     const raw = advancedDirty.value[shortKey] ?? cat?.[shortKey] ?? '';
-    // dirty values are already in display format (%), raw DB values need conversion
     if (advancedDirty.value[shortKey] !== undefined) return advancedDirty.value[shortKey];
     return isSlippageBpsKey(shortKey) ? bpsToPercent(raw) : raw;
   }
 
-  function getStatus(bp: BuiltinProvider): { label: string; variant: 'success' | 'warning' | 'neutral' } {
-    const enabled = isEnabled(bp.key);
-    const registered = isRegistered(bp.key);
-
-    if (enabled && bp.requiresApiKey && !getApiKeyEntry(bp.key)?.hasKey) {
+  function getStatus(p: ProviderInfo): { label: string; variant: 'success' | 'warning' | 'neutral' } {
+    if (p.isEnabled && p.requiresApiKey && !getApiKeyEntry(p.name)?.hasKey) {
       return { label: 'Requires API Key', variant: 'warning' };
     }
-    if (enabled && registered) {
+    if (p.isEnabled) {
       return { label: 'Active', variant: 'success' };
     }
     return { label: 'Inactive', variant: 'neutral' };
@@ -310,8 +257,14 @@ export default function ActionsPage() {
     );
   }
 
-  const groupedProviders = CATEGORY_ORDER
-    .map((cat) => ({ category: cat, items: BUILTIN_PROVIDERS.filter((bp) => bp.category === cat) }))
+  // Group providers by category from API response, sorted by CATEGORY_ORDER
+  const categories = [...new Set(providers.value.map(p => p.category))];
+  const sortedCategories = categories.sort((a, b) =>
+    (CATEGORY_ORDER.indexOf(a) !== -1 ? CATEGORY_ORDER.indexOf(a) : 99) -
+    (CATEGORY_ORDER.indexOf(b) !== -1 ? CATEGORY_ORDER.indexOf(b) : 99)
+  );
+  const groupedProviders = sortedCategories
+    .map((cat) => ({ category: cat, items: providers.value.filter((p) => p.category === cat) }))
     .filter((g) => g.items.length > 0);
 
   return (
@@ -321,35 +274,26 @@ export default function ActionsPage() {
           <h2 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 600, margin: 'var(--space-4) 0 var(--space-2)', borderBottom: '1px solid var(--border)', paddingBottom: 'var(--space-2)' }}>
             {group.category}
           </h2>
-          {group.items.map((bp) => {
-        const status = getStatus(bp);
-        const enabled = isEnabled(bp.key);
-        const registered = getRegisteredProvider(bp.key);
-        const keyEntry = getApiKeyEntry(bp.key);
-        const isSavingToggle = toggleSaving.value === bp.key;
+          {group.items.map((p) => {
+        const status = getStatus(p);
+        const keyEntry = getApiKeyEntry(p.name);
+        const isSavingToggle = toggleSaving.value === p.name;
+        const advancedKeys = PROVIDER_ADVANCED_SETTINGS[p.name];
 
         return (
-          <div key={bp.key} class="settings-category" style={{ marginBottom: 'var(--space-4)' }}>
+          <div key={p.name} class="settings-category" style={{ marginBottom: 'var(--space-4)' }}>
             {/* Header */}
             <div class="settings-category-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
                 <h3 style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', margin: 0 }}>
-                  {bp.name}
-                  {registered && (
-                    <Badge variant="info">{registered.version}</Badge>
-                  )}
-                  <Badge variant={bp.chain === 'solana' ? 'info' : 'info'}>
-                    {bp.chain}
+                  {p.name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                  <Badge variant="info">{p.version}</Badge>
+                  <Badge variant="info">
+                    {p.chains.length > 1 ? 'multi' : p.chains[0]}
                   </Badge>
                 </h3>
                 <p class="settings-description" style={{ marginTop: 'var(--space-1)' }}>
-                  {bp.description}
-                  {bp.docsUrl && (
-                    <>
-                      {' '}&mdash;{' '}
-                      <a href={bp.docsUrl} target="_blank" rel="noopener noreferrer">Docs</a>
-                    </>
-                  )}
+                  {p.description}
                 </p>
               </div>
               <Badge variant={status.variant}>{status.label}</Badge>
@@ -360,41 +304,33 @@ export default function ActionsPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
                 <FormField
                   label="Enabled"
-                  name={`actions.${bp.key}_enabled`}
+                  name={`actions.${p.enabledKey}_enabled`}
                   type="checkbox"
-                  value={enabled}
-                  onChange={(v) => handleToggle(bp.key, !!v)}
+                  value={p.isEnabled}
+                  onChange={(v) => handleToggle(p, !!v)}
                   disabled={isSavingToggle}
                 />
                 {isSavingToggle && <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)' }}>Saving...</span>}
               </div>
 
               {/* API Key section -- only for providers that require keys */}
-              {bp.requiresApiKey && (
+              {p.requiresApiKey && (
                 <div style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
                   <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-2)', color: 'var(--text-secondary)' }}>
                     API Key
-                    {bp.keyPortalUrl && (
-                      <>
-                        {' '}&mdash;{' '}
-                        <a href={bp.keyPortalUrl} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 400 }}>
-                          Get API Key
-                        </a>
-                      </>
-                    )}
                   </div>
-                  {apiKeyEditing.value === bp.key ? (
+                  {apiKeyEditing.value === p.name ? (
                     <div style={{ display: 'flex', alignItems: 'flex-end', gap: 'var(--space-2)' }}>
                       <FormField
                         label="API Key"
                         type="password"
-                        name={`apikey-${bp.key}`}
+                        name={`apikey-${p.name}`}
                         value={apiKeyInput.value}
                         onChange={(v) => { apiKeyInput.value = String(v); }}
                         placeholder="Enter API key"
                       />
                       <Button
-                        onClick={() => handleSaveApiKey(bp.key)}
+                        onClick={() => handleSaveApiKey(p.name)}
                         loading={apiKeySaving.value}
                         size="sm"
                       >Save</Button>
@@ -411,13 +347,13 @@ export default function ActionsPage() {
                       </span>
                       <Button
                         variant="ghost"
-                        onClick={() => { apiKeyEditing.value = bp.key; apiKeyInput.value = ''; }}
+                        onClick={() => { apiKeyEditing.value = p.name; apiKeyInput.value = ''; }}
                         size="sm"
                       >{keyEntry?.hasKey ? 'Update' : 'Set'}</Button>
                       {keyEntry?.hasKey && (
                         <Button
                           variant="danger"
-                          onClick={() => handleDeleteApiKey(bp.key)}
+                          onClick={() => handleDeleteApiKey(p.name)}
                           size="sm"
                         >Delete</Button>
                       )}
@@ -426,13 +362,13 @@ export default function ActionsPage() {
                 </div>
               )}
 
-              {/* Jupiter Swap Advanced Settings -- slippage only */}
-              {bp.key === 'jupiter_swap' && enabled && (
+              {/* Advanced Settings -- dynamically from PROVIDER_ADVANCED_SETTINGS */}
+              {advancedKeys && p.isEnabled && (
                 <div style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
                   <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-2)', color: 'var(--text-secondary)' }}>
                     Advanced Settings
                   </div>
-                  {(['jupiter_swap_default_slippage_bps', 'jupiter_swap_max_slippage_bps'] as const).map((shortKey) => {
+                  {advancedKeys.map((shortKey) => {
                     const currentValue = getAdvancedDisplayValue(shortKey);
                     return (
                       <div
@@ -460,212 +396,8 @@ export default function ActionsPage() {
                 </div>
               )}
 
-              {/* 0x Swap Advanced Settings -- slippage only */}
-              {bp.key === 'zerox_swap' && enabled && (
-                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
-                  <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-2)', color: 'var(--text-secondary)' }}>
-                    Advanced Settings
-                  </div>
-                  {(['zerox_swap_default_slippage_bps', 'zerox_swap_max_slippage_bps'] as const).map((shortKey) => {
-                    const currentValue = getAdvancedDisplayValue(shortKey);
-                    return (
-                      <div
-                        key={shortKey}
-                        style={{ marginBottom: 'var(--space-2)' }}
-                        onBlur={() => {
-                          const val = advancedDirty.value[shortKey];
-                          if (val !== undefined) {
-                            void handleAdvancedSave(shortKey, val);
-                          }
-                        }}
-                      >
-                        <FormField
-                          label={keyToLabel(shortKey)}
-                          name={`actions.${shortKey}`}
-                          type="text"
-                          value={currentValue}
-                          onChange={(v) => {
-                            advancedDirty.value = { ...advancedDirty.value, [shortKey]: String(v) };
-                          }}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Aave V3 Advanced Settings -- only when Aave V3 is enabled */}
-              {bp.key === 'aave_v3' && enabled && (
-                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
-                  <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-2)', color: 'var(--text-secondary)' }}>
-                    Advanced Settings
-                  </div>
-                  {(['aave_v3_health_factor_warning_threshold', 'aave_v3_position_sync_interval_sec', 'aave_v3_max_ltv_pct'] as const).map((shortKey) => {
-                    const currentValue = getAdvancedDisplayValue(shortKey);
-                    return (
-                      <div
-                        key={shortKey}
-                        style={{ marginBottom: 'var(--space-2)' }}
-                        onBlur={() => {
-                          const val = advancedDirty.value[shortKey];
-                          if (val !== undefined) {
-                            void handleAdvancedSave(shortKey, val);
-                          }
-                        }}
-                      >
-                        <FormField
-                          label={keyToLabel(shortKey)}
-                          name={`actions.${shortKey}`}
-                          type="text"
-                          value={currentValue}
-                          onChange={(v) => {
-                            advancedDirty.value = { ...advancedDirty.value, [shortKey]: String(v) };
-                          }}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Kamino Advanced Settings -- only when Kamino is enabled */}
-              {bp.key === 'kamino' && enabled && (
-                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
-                  <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-2)', color: 'var(--text-secondary)' }}>
-                    Advanced Settings
-                  </div>
-                  {(['kamino_market', 'kamino_hf_threshold'] as const).map((shortKey) => {
-                    const currentValue = getAdvancedDisplayValue(shortKey);
-                    return (
-                      <div
-                        key={shortKey}
-                        style={{ marginBottom: 'var(--space-2)' }}
-                        onBlur={() => {
-                          const val = advancedDirty.value[shortKey];
-                          if (val !== undefined) {
-                            void handleAdvancedSave(shortKey, val);
-                          }
-                        }}
-                      >
-                        <FormField
-                          label={keyToLabel(shortKey)}
-                          name={`actions.${shortKey}`}
-                          type="text"
-                          value={currentValue}
-                          onChange={(v) => {
-                            advancedDirty.value = { ...advancedDirty.value, [shortKey]: String(v) };
-                          }}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Drift Perp Advanced Settings -- only when Drift is enabled */}
-              {bp.key === 'drift' && enabled && (
-                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
-                  <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-2)', color: 'var(--text-secondary)' }}>
-                    Advanced Settings
-                  </div>
-                  {(['drift_max_leverage', 'drift_max_position_usd', 'drift_margin_warning_threshold_pct', 'drift_position_sync_interval_sec'] as const).map((shortKey) => {
-                    const currentValue = getAdvancedDisplayValue(shortKey);
-                    return (
-                      <div
-                        key={shortKey}
-                        style={{ marginBottom: 'var(--space-2)' }}
-                        onBlur={() => {
-                          const val = advancedDirty.value[shortKey];
-                          if (val !== undefined) {
-                            void handleAdvancedSave(shortKey, val);
-                          }
-                        }}
-                      >
-                        <FormField
-                          label={keyToLabel(shortKey)}
-                          name={`actions.${shortKey}`}
-                          type="text"
-                          value={currentValue}
-                          onChange={(v) => {
-                            advancedDirty.value = { ...advancedDirty.value, [shortKey]: String(v) };
-                          }}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Pendle Yield Advanced Settings -- slippage only */}
-              {bp.key === 'pendle_yield' && enabled && (
-                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
-                  <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-2)', color: 'var(--text-secondary)' }}>
-                    Advanced Settings
-                  </div>
-                  {(['pendle_yield_default_slippage_bps', 'pendle_yield_max_slippage_bps'] as const).map((shortKey) => {
-                    const currentValue = getAdvancedDisplayValue(shortKey);
-                    return (
-                      <div
-                        key={shortKey}
-                        style={{ marginBottom: 'var(--space-2)' }}
-                        onBlur={() => {
-                          const val = advancedDirty.value[shortKey];
-                          if (val !== undefined) {
-                            void handleAdvancedSave(shortKey, val);
-                          }
-                        }}
-                      >
-                        <FormField
-                          label={keyToLabel(shortKey)}
-                          name={`actions.${shortKey}`}
-                          type="text"
-                          value={currentValue}
-                          onChange={(v) => {
-                            advancedDirty.value = { ...advancedDirty.value, [shortKey]: String(v) };
-                          }}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* D'CENT Swap Advanced Settings -- only when D'CENT Swap is enabled */}
-              {bp.key === 'dcent_swap' && enabled && (
-                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
-                  <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-2)', color: 'var(--text-secondary)' }}>
-                    Advanced Settings
-                  </div>
-                  {(['dcent_swap_api_url', 'dcent_swap_default_slippage_bps', 'dcent_swap_max_slippage_bps'] as const).map((shortKey) => {
-                    const currentValue = getAdvancedDisplayValue(shortKey);
-                    return (
-                      <div
-                        key={shortKey}
-                        style={{ marginBottom: 'var(--space-2)' }}
-                        onBlur={() => {
-                          const val = advancedDirty.value[shortKey];
-                          if (val !== undefined) {
-                            void handleAdvancedSave(shortKey, val);
-                          }
-                        }}
-                      >
-                        <FormField
-                          label={keyToLabel(shortKey)}
-                          name={`actions.${shortKey}`}
-                          type="text"
-                          value={currentValue}
-                          onChange={(v) => {
-                            advancedDirty.value = { ...advancedDirty.value, [shortKey]: String(v) };
-                          }}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Actions list -- only when provider is enabled and registered */}
-              {enabled && registered && registered.actions.length > 0 && (
+              {/* Actions list -- only when provider is enabled and has actions */}
+              {p.isEnabled && p.actions.length > 0 && (
                 <div style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--space-3)' }}>
                   <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-2)', color: 'var(--text-secondary)' }}>
                     Registered Actions
@@ -681,13 +413,13 @@ export default function ActionsPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {registered.actions.map((action) => (
+                      {p.actions.map((action) => (
                         <tr key={action.name}>
                           <td>{action.name}</td>
                           <td style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)', maxWidth: '300px' }}>{action.description}</td>
                           <td>
-                            {registered.chains.length > 1
-                              ? registered.chains.map((c) => <Badge key={c} variant="info">{c}</Badge>)
+                            {p.chains.length > 1
+                              ? p.chains.map((c) => <Badge key={c} variant="info">{c}</Badge>)
                               : <Badge variant="info">{action.chain}</Badge>
                             }
                           </td>
@@ -695,19 +427,19 @@ export default function ActionsPage() {
                           <td>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                               <select
-                                value={getTierOverride(bp.key, action.name) || action.defaultTier}
-                                onChange={(e) => handleTierChange(bp.key, action.name, (e.target as HTMLSelectElement).value)}
+                                value={getTierOverride(p.name, action.name) || action.defaultTier}
+                                onChange={(e) => handleTierChange(p.name, action.name, (e.target as HTMLSelectElement).value)}
                                 style={{ padding: '2px 4px', fontSize: 'var(--font-size-sm)', borderRadius: 'var(--radius-sm)' }}
                               >
                                 {['INSTANT', 'NOTIFY', 'DELAY', 'APPROVAL'].map(t => (
                                   <option key={t} value={t}>{t}</option>
                                 ))}
                               </select>
-                              {isOverridden(bp.key, action.name) && (
+                              {isOverridden(p.name, action.name) && (
                                 <>
                                   <Badge variant="warning">customized</Badge>
                                   <button
-                                    onClick={() => handleTierReset(bp.key, action.name)}
+                                    onClick={() => handleTierReset(p.name, action.name)}
                                     style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 'var(--font-size-xs)', color: 'var(--text-secondary)', textDecoration: 'underline' }}
                                     title="Reset to provider default"
                                   >
@@ -730,7 +462,7 @@ export default function ActionsPage() {
         </div>
       ))}
 
-      {BUILTIN_PROVIDERS.length === 0 && (
+      {providers.value.length === 0 && (
         <div class="empty-state">
           <p>No action providers available.</p>
         </div>

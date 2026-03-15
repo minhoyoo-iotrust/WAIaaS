@@ -9,7 +9,7 @@ import { createRoute, z } from '@hono/zod-openapi';
 import { WAIaaSError, BUILT_IN_RPC_DEFAULTS } from '@waiaas/core';
 import { CurrencyCodeSchema, formatRatePreview } from '@waiaas/core';
 import type { CurrencyCode } from '@waiaas/core';
-import { getSettingDefinition, ActionTierOverrideSchema } from '../../infrastructure/settings/index.js';
+import { getSettingDefinition, ActionTierOverrideSchema, SETTING_DEFINITIONS, groupSettingsByCategory } from '../../infrastructure/settings/index.js';
 import {
   SettingsResponseSchema,
   SettingsUpdateRequestSchema,
@@ -217,6 +217,51 @@ const forexRatesRoute = createRoute({
   },
 });
 
+// Settings Schema route definitions
+const settingsSchemaItemSchema = z.object({
+  key: z.string(),
+  category: z.string(),
+  label: z.string(),
+  description: z.string(),
+  defaultValue: z.string(),
+  isCredential: z.boolean(),
+});
+
+const settingsSchemaResponseSchema = z.object({
+  settings: z.array(settingsSchemaItemSchema),
+}).openapi('SettingsSchemaResponse');
+
+const settingsSchemaGroupedResponseSchema = z.object({
+  categories: z.array(z.object({
+    name: z.string(),
+    label: z.string(),
+    settings: z.array(settingsSchemaItemSchema),
+  })),
+}).openapi('SettingsSchemaGroupedResponse');
+
+const settingsSchemaRoute = createRoute({
+  method: 'get',
+  path: '/admin/settings/schema',
+  tags: ['Admin'],
+  summary: 'Get settings schema with metadata',
+  description: 'Returns all registered setting definitions with label, description, and defaults. Use ?grouped=true for category-grouped response.',
+  request: {
+    query: z.object({
+      grouped: z.enum(['true', 'false']).optional(),
+    }),
+  },
+  responses: {
+    200: {
+      description: 'Setting definitions with metadata',
+      content: {
+        'application/json': {
+          schema: z.union([settingsSchemaResponseSchema, settingsSchemaGroupedResponseSchema]),
+        },
+      },
+    },
+  },
+});
+
 // ---------------------------------------------------------------------------
 // Register handlers
 // ---------------------------------------------------------------------------
@@ -247,6 +292,37 @@ export function registerAdminSettingsRoutes(router: OpenAPIHono, deps: AdminRout
 
     const masked = deps.settingsService.getAllMasked() as z.infer<typeof SettingsResponseSchema>;
     return c.json(masked, 200);
+  });
+
+  // GET /admin/settings/schema
+  router.openapi(settingsSchemaRoute, async (c) => {
+    const { grouped } = c.req.valid('query');
+
+    if (grouped === 'true') {
+      const categories = groupSettingsByCategory().map((g) => ({
+        name: g.name,
+        label: g.label,
+        settings: g.settings.map((s) => ({
+          key: s.key,
+          category: s.category,
+          label: s.label,
+          description: s.description,
+          defaultValue: s.defaultValue,
+          isCredential: s.isCredential,
+        })),
+      }));
+      return c.json({ categories }, 200);
+    }
+
+    const settings = SETTING_DEFINITIONS.map((s) => ({
+      key: s.key,
+      category: s.category,
+      label: s.label,
+      description: s.description,
+      defaultValue: s.defaultValue,
+      isCredential: s.isCredential,
+    }));
+    return c.json({ settings }, 200);
   });
 
   // PUT /admin/settings

@@ -1,177 +1,178 @@
 # Project Research Summary
 
-**Project:** WAIaaS — Amount Unit Standardization & AI Agent DX
-**Domain:** Blockchain wallet API DX improvement — unit consistency, typed MCP schemas, humanAmount parameter
-**Researched:** 2026-03-14
+**Project:** WAIaaS Admin UI — OpenAPI Client Type Generation (v31.17)
+**Domain:** Build-time OpenAPI type generation pipeline for a Preact Admin UI in a TypeScript monorepo
+**Researched:** 2026-03-15
 **Confidence:** HIGH
 
 ## Executive Summary
 
-This milestone improves AI agent developer experience by standardizing amount units across 14 DeFi action providers and enhancing MCP tool schema expressiveness. The core problem is that 4 providers (Aave V3, Kamino, Lido, Jito) currently accept human-readable inputs ("1.5 ETH") while 10 providers already require smallest-unit inputs (wei/lamports), forcing agents to memorize per-provider conventions. The solution is smallest-unit as canonical across all providers, with a safe backward-compatibility migration path and a new optional `humanAmount` parameter for human-readable convenience. CLOB exchange providers (Hyperliquid, Drift, Polymarket) are explicitly exempt as they use exchange-native units which are already human-readable.
+This milestone eliminates the structural drift between the WAIaaS daemon's OpenAPI spec and the Admin UI's manual TypeScript types. The current Admin UI has 122 manual interface declarations and 116 call sites with unsafe type casts (`as T`, `as any`, `as unknown as X`), all of which silently diverge whenever a backend Zod schema changes. The industry-standard solution is `openapi-typescript` v7 (zero-runtime, pure `.d.ts` output) combined with `openapi-fetch` (6 KB runtime wrapper) — both are maintained by the same team, compatible with TypeScript 5.x, and designed for exactly this pattern. The WAIaaS codebase already has all prerequisites: `createApp({}) + app.request('/doc')` spec extraction is proven in `scripts/validate-openapi.ts`, `tsx` is available for scripts, and `@waiaas/shared` provides the correct package boundary for shared constants.
 
-The recommended implementation sequence is: schema description hardening first (zero behavior change, immediate DX gain), then provider unit migration with `migrateAmount()` backward compatibility, then typed MCP schemas using direct Zod reference (same-process, avoids lossy JSON Schema roundtrip), then `humanAmount` parameter across 10 smallest-unit providers, then `amountFormatted`/`decimals`/`symbol` in responses, and finally SDK/skill file sync. No new npm dependencies are required — the existing Zod 3.x, viem 2.x, and existing utilities (`parseTokenAmount`, `formatAmount`) handle all needs.
+The recommended approach is a 5-phase pipeline: (1) spec extraction pipeline with CI freshness gate, (2) type-safe client wrapper validated on one high-traffic page, (3) incremental interface migration page-by-page, (4) backend API expansion with provider `enabledKey`/`category` fields and a new settings schema endpoint, and (5) contract tests. Two backend API additions are bundled with this milestone: `GET /v1/actions/providers` expanded with `enabledKey` and `category` (replacing the 14-entry static `BUILTIN_PROVIDERS` array in Admin UI), and a new `GET /v1/admin/settings/schema` endpoint (replacing the 85-entry hardcoded `settings-search-index.ts`). Both are independent of the type generation pipeline and can ship in any order relative to the migration phases.
 
-The highest risk in this milestone is the backward-compatibility migration for the 4 providers. Each provider currently hardcodes token decimals in `parseTokenAmount()` calls (Aave=18, Kamino=6, Lido=18, Jito=9). The `migrateAmount()` helper that detects human-readable inputs MUST receive the actual token decimals per-call — if it inherits hardcoded values, a USDC supply using deprecated format `"1.5"` would compute 10^12x too large. All 5 critical pitfalls and 10 moderate pitfalls are well-identified with specific prevention strategies, giving this milestone high implementability confidence.
+The primary risk is the `createApp({})` stub producing an incomplete OpenAPI spec because most routes guard against missing deps. This must be resolved in Phase 1 before any migration work begins — a CI assertion comparing the `paths` count in `openapi.json` against the known 73 endpoints from `endpoints.ts` is a mandatory guard. The secondary risk is discriminated union narrowing: the 9-type transaction `oneOf` union should NOT be migrated to generated types because openapi-typescript v7 does not reliably narrow discriminated unions, and the Zod types from `@waiaas/core` are already the authoritative SSoT.
 
 ## Key Findings
 
 ### Recommended Stack
 
-No new npm dependencies are required for this milestone. All needed capabilities exist in the current stack. The existing `packages/actions/src/common/amount-parser.ts` provides `parseTokenAmount()` and a `parseAmount()` utility. The existing `packages/core/src/utils/format-amount.ts` provides `formatAmount()`. The `zod-to-json-schema` package would only be needed for JSON Schema roundtrip — this approach is rejected in favor of direct Zod reference since MCP runs in the same process as the daemon. See `.planning/research/STACK.md` for the full no-new-dependency analysis.
+The stack decision is clear and low-risk. `openapi-typescript@^7.13.0` is added as a root devDependency (codegen, never shipped to browser); `openapi-fetch@^0.17.0` is added as a runtime dependency of `@waiaas/admin` (6 KB, CSP-safe, wraps native fetch). No alternatives are worth considering: `@hey-api/openapi-ts` generates runtime code and Zod schemas that conflict with the Zod SSoT rule; swagger-codegen requires a Java runtime; the existing custom `apiGet<T>` wrapper cannot eliminate manual cast sites at the type system level without the companion library.
 
-**Core technologies (all existing):**
-- **Zod 3.x**: Schema validation and XOR `amount`/`humanAmount` constraint via `.superRefine()` — already installed, project SSoT
-- **viem `parseUnits`/`formatUnits`**: Canonical BigInt unit conversion for EVM tokens — already used throughout
-- **Existing `formatAmount()` utility**: Must be the single function used by both `amountFormatted` and `balanceFormatted` to ensure output consistency
-- **Existing `parseTokenAmount()`**: Must be eliminated from the 4 migrating provider forward paths after migration; replaced by direct bigint passthrough
+**Core technologies:**
+- `openapi-typescript@^7.13.0`: Build-time type generation from OpenAPI spec — zero runtime, TypeScript 5.x peer dep matches project, `--check` flag for CI drift detection (merged Jul 2024)
+- `openapi-fetch@^0.17.0`: Type-safe fetch wrapper using generated `paths` type — eliminates `as T` casts, CSP-safe (no CDN, no eval), `onRequest`/`onResponse` middleware for auth header and 401-logout injection
+- `scripts/generate-api-types.ts` (new): Extract spec via `createApp({})`, call `openapiTS(specObject)`, write `packages/admin/src/api/types.generated.ts`
+- No new libraries beyond these two — existing `tsx`, `@apidevtools/swagger-parser`, and the `createApp()` extraction pattern cover all other needs
 
 ### Expected Features
 
-See `.planning/research/FEATURES.md` for the complete feature table with complexity ratings and dependency graph.
+All features in this milestone are P1 or P2 based on direct codebase analysis. No speculative features.
 
-**Must have (table stakes):**
-- Consistent smallest-unit inputs across all 14 non-CLOB providers — agents currently memorize per-provider conventions
-- `amountFormatted` + `decimals` + `symbol` in transaction responses — agents currently must do their own decimals lookup + BigInt division after every call
-- Typed MCP parameter schemas — current `z.record(z.unknown())` gives AI models zero type/unit information; MCP spec defines `inputSchema` as JSON Schema by design
-- Schema descriptions with explicit unit examples on all amount fields — cheapest change with highest agent DX impact
+**Must have (P1 — this milestone):**
+- `scripts/extract-openapi.ts` — write `openapi.json` from `createApp({})` to disk; prerequisite for type generation
+- `packages/admin/src/api/types.generated.ts` — generated by openapi-typescript v7, committed to repo
+- CI freshness gate — `openapi-typescript --check` or `git diff --exit-code` after extraction; blocks PR merge on drift
+- `openapi-fetch` typed client wrapper on at least one high-traffic Admin page — validates the pattern end-to-end
+- `GET /v1/actions/providers` expanded with `enabledKey` and `category` fields — unblocks BUILTIN_PROVIDERS removal
+- Replace `BUILTIN_PROVIDERS` static array (14 entries) with live API call — validates provider discovery pattern
+- `GET /v1/admin/settings/schema` endpoint — expose `SETTING_DEFINITIONS` as structured JSON (key, category, label, description, isCredential, defaultValue)
+- Contract test script — CI guard that every response field key used in Admin UI exists in OpenAPI spec
 
-**Should have (differentiators):**
-- `humanAmount` alternative parameter across 10 smallest-unit providers — agents naturally express "0.5 ETH" not 500000000000000000n
-- `balanceFormatted` in balance responses — follows the `amountFormatted` pattern, trivial to add after amountFormatted is in place
-- `unitConvention` metadata field in ActionDefinition (`'smallest' | 'human-readable' | 'exchange-native'`) — allows agents to programmatically discover CLOB exceptions
-- Skill file amount unit guide — AI-native product should have dedicated unit convention documentation
+**Should have (P2 — follow-on milestones):**
+- Page-by-page manual interface migration for all remaining 62 interfaces across Admin pages
+- Replace `settings-search-index.ts` hardcoded entries (85+) with API-driven generation from schema endpoint
+- Replace all 28 `apiGet<T>` manual casts once pages are migrated
 
 **Defer (v2+):**
-- `migrateAmount()` removal after deprecation window — separate breaking-change milestone, not this milestone
-- MCP `outputSchema` adoption — MCP spec supports it but not critical for agent input DX
-- CLI interactive unit selector — CLI is not in scope; agent-facing API is the priority
+- Python SDK OpenAPI type generation — separate concern, different pipeline
+- OpenAPI spec diff in PR comments — nice DX, but contract test already catches mismatches; adds CI complexity
 
 ### Architecture Approach
 
-See `.planning/research/ARCHITECTURE.md` for the full component boundary and data flow analysis (based on the External Action Framework research, which shares the same provider/pipeline architecture as this milestone).
+The architecture uses a clean build-time pipeline: `extract-openapi.ts` runs before the Vite build and after `@waiaas/shared#build`, producing a committed `openapi.json` and a committed `types.generated.ts`. The Admin UI consumes the generated file as any other TypeScript source — no runtime spec loading, no Vite plugin, no native-dep pollution. A new `typed-client.ts` wraps the existing `apiGet`/`apiPost` functions with type constraints from the generated file, enabling incremental page migration without a big-bang rewrite. Hardcoded constant arrays (`BUILTIN_PROVIDERS`, policy type arrays) move to `@waiaas/shared` so both daemon (settings validation) and Admin UI (display) import from the same source.
 
-This milestone is a DX/interface enhancement layered on top of the existing pipeline, not a structural change. The 6-stage pipeline, ActionProviderRegistry, and transaction data model remain unchanged. Changes are confined to: (1) provider input schema definitions and amount parsing logic, (2) `migrateAmount()` helper shared across 4 providers, (3) `amountFormatted` computed on transaction responses using the token registry, (4) MCP tool registration in `action-provider.ts` using direct Zod object references, and (5) XOR validation refinement shared from `@waiaas/core`. No DB migration is required.
+**Major components:**
+1. `scripts/extract-openapi.ts` — calls `createApp({})` (stub deps), hits `GET /doc`, writes `openapi.json`
+2. `scripts/check-openapi-freshness.ts` — CI gate; re-extracts live spec and diffs against committed `openapi.json`; exits 1 on mismatch
+3. `packages/admin/src/api/types.generated.ts` — generated output; never hand-edited; committed to repo
+4. `packages/admin/src/api/typed-client.ts` — thin typed wrappers using `components['schemas']` from generated types; coexists with existing `apiGet<T>` during migration
+5. `packages/shared/src/providers.ts` + `policy-types.ts` — moved constants (no native deps, importable by both daemon and Admin UI)
+6. New/expanded daemon routes: `GET /v1/actions/providers` (add `enabledKey`, `category`), `GET /v1/admin/settings/schema` (new)
 
-**Major components affected:**
-1. **`@waiaas/actions` provider schemas (14 providers)** — Amount field descriptions with explicit unit examples; 4 providers migrate input semantics with `migrateAmount()` backward compat
-2. **`@waiaas/core` shared validation** — New `amountXorRefinement` exported Zod refinement for `amount`/`humanAmount` XOR; enforced at every entry point
-3. **`@waiaas/daemon` transaction response** — `amountFormatted`, `decimals`, `symbol` computed from token registry at response time; no DB migration needed
-4. **`@waiaas/mcp` tool registration** — `action-provider.ts` changes from `z.record(z.unknown())` to per-action Zod schema via direct `ActionDefinition.inputSchema` reference
-5. **`@waiaas/sdk` + skill files** — `humanAmount` option added to relevant method signatures (discriminated union); unit guide section added to 4 skill files
+**Key architectural constraint:** `packages/daemon` must NEVER import from `packages/admin`. Contract tests read `openapi.json` directly as a file path — not a workspace import. Turbo dependency direction: `@waiaas/shared#build` → `generate:types` → `@waiaas/admin#build` → `@waiaas/daemon#build`.
 
 ### Critical Pitfalls
 
-See `.planning/research/PITFALLS.md` for all 15 pitfalls with code evidence, prevention strategies, and detection tests.
+See `.planning/research/PITFALLS.md` for all 9 pitfalls with code evidence, prevention strategies, and a phase-to-pitfall mapping table.
 
-1. **Hardcoded decimals in migrateAmount backward-compat path** — `migrateAmount()` MUST accept `decimals` as a parameter, resolved per-call (native from chain config, registered from token registry). The 4 providers currently hardcode 18/6/18/9 in `parseTokenAmount()` calls. These MUST NOT carry over. Failure = 10^12x amount overcharge for multi-decimal assets (e.g., USDC on Aave).
+1. **Incomplete spec from stub deps (CRITICAL)** — `createApp({})` silently omits routes guarded by `if (deps.db)` etc. Prevention: pass typed stub objects satisfying structural requirements (not bare `{}`); add CI assertion that `paths` count in `openapi.json` is ≥ 73. Address in Phase 1 before any migration starts.
 
-2. **Silent near-zero transactions from integer inputs post-migration** — Callers who previously sent `"100"` meaning "100 USDC" will silently send 100 micro-USDC. `amountFormatted` in responses is the primary safeguard. Add suspicious-amount warnings when computed human-readable value is below a configurable threshold.
+2. **Turbo cache returns stale openapi.json (CRITICAL)** — if the extraction task is cached, a stale spec can be restored from Turbo cache and CI reports success. Prevention: set `"cache": false` on the `generate-openapi` Turbo task, or use all `packages/daemon/src/**/*.ts` files as cache inputs. CI `git diff --exit-code openapi.json` is the backstop.
 
-3. **`max` keyword must survive all three code paths** — Aave repay/withdraw and Kamino repay/withdraw support `amount="max"`. The `migrateAmount()` helper must check `=== 'max'` before any numeric/decimal processing. `humanAmount="max"` must also be supported. XOR validation must account for "max" in both fields.
+3. **discriminatedUnion oneOf not narrowed (HIGH)** — openapi-typescript v7 generates a wide union for `oneOf`; `switch (tx.type) { case 'TRANSFER': }` loses narrowing. Prevention: explicitly exclude the 9-type transaction discriminated union from migration. Use Zod-inferred types from `@waiaas/core` for transaction payloads; use generated types for flat response wrappers only.
 
-4. **XOR amount/humanAmount validation must be enforced at every entry point** — REST API, MCP, SDK, Admin UI all reach the pipeline. A shared `.superRefine()` in `@waiaas/core` is the correct pattern. MCP benefits from direct Zod reference (same process) to automatically inherit this refinement without a lossy JSON Schema roundtrip.
+4. **Nullable/optional type shape divergence + v7 defaultNonNullable change (MEDIUM)** — generated types use `T | null`; manual interfaces often used `T | undefined`. Additionally, openapi-typescript v7 changed `defaultNonNullable` to `true` by default, making optional fields appear required. Prevention: run `pnpm typecheck` before and after each page migration; treat new errors as spec discoveries; never widen with `as unknown as T`; inspect 5 known-optional fields after first generation run to determine if `defaultNonNullable: false` is needed.
 
-5. **MCP Zod -> JSON Schema roundtrip is lossy** — `.superRefine()`, `.refine()`, `.transform()` do not survive `zodToJsonSchema()`. Since MCP runs in the same process as the daemon, direct Zod object reference is the correct approach. This eliminates the lossy conversion entirely and removes the need for `zod-to-json-schema` package.
+5. **Test mock objects silently invalid after interface migration (MEDIUM)** — `vi.fn().mockResolvedValue({...})` defaults to `any`; missing required fields in mocks cause no TypeScript error. Prevention: add `satisfies GeneratedType` to every mock object in the same PR as the interface migration; never separate mock updates from interface changes.
 
 ## Implications for Roadmap
 
-Based on combined research, 5 phases are recommended in strict dependency order:
+Based on combined research, 5 phases are recommended in strict dependency order.
 
-### Phase 1: Schema Hardening (descriptions + CLOB documentation)
+### Phase 1: Spec Extraction Pipeline and CI Freshness Gate
 
-**Rationale:** Zero behavior change, zero test updates needed, immediately improves agent DX across all 14 providers. Cheapest highest-value change. Must come first so subsequent phases build on correctly described schemas. Sets the naming and description conventions that Phases 2-4 will follow.
-**Delivers:** All 14 provider amount fields with explicit unit descriptions and examples; CLOB exception documentation in schema descriptions with `[EXCHANGE-NATIVE UNITS]` prefix; MCP built-in tool description updates (send-token, transfer-nft, etc.); `unitConvention` metadata field in ActionDefinition
-**Addresses:** Table stakes "schema descriptions with unit examples" feature; Differentiator "unitConvention metadata"
-**Avoids:** Pitfall 9 (CLOB exception agent confusion — metadata field introduced here)
+**Rationale:** Everything else depends on a complete, fresh `openapi.json` being available. Pitfalls 1, 2, 6, and 8 all manifest here and must be resolved before any migration begins. This phase is purely additive with zero migration risk.
+**Delivers:** `scripts/extract-openapi.ts`, committed `openapi.json`, `scripts/check-openapi-freshness.ts`, `turbo.json` updated with `generate:types` task (`"cache": false`), CI workflow updated, `openapi-typescript` and `openapi-fetch` installed, `types.generated.ts` generated and committed, CI path-count assertion.
+**Addresses:** Spec extraction (P1), type generation check-in (P1), CI freshness gate (P1).
+**Avoids:** Pitfall 1 (stub deps incomplete spec), Pitfall 2 (Turbo cache stale types), Pitfall 6 (CSP: openapi.json must not appear in `dist/`), Pitfall 8 (v7 `defaultNonNullable` — configure after first generation run).
 
-### Phase 2: Provider Unit Migration (4 providers + migrateAmount helper)
+### Phase 2: Type-Safe Client Wrapper (First Page Migration)
 
-**Rationale:** Most critical correctness work. Must happen before humanAmount (which depends on stable smallest-unit semantics) and before amountFormatted (which interprets amount as smallest unit to format). The `migrateAmount(value, decimals)` helper created here is the shared backward-compatibility foundation for all 4 providers.
-**Delivers:** Aave V3, Kamino, Lido, Jito migrated to smallest-unit input with `migrateAmount()` backward compat and deprecation warnings; existing tests updated to use smallest-unit format; dedicated backward-compat tests; HF simulation arithmetic corrected for actual token decimals
-**Uses:** Token registry for decimal lookup, chain config for native token decimals
-**Avoids:** Pitfall 1 (hardcoded decimals), Pitfall 2 (silent near-zero), Pitfall 3 (max keyword), Pitfall 6 (HF simulation arithmetic), Pitfall 11 (test false confidence), Pitfall 14 (deprecation log flood)
+**Rationale:** Validates the end-to-end pattern on one high-traffic page (e.g., wallets page with 12 manual interfaces) before committing to full migration. Establishes the `typed-client.ts` pattern and confirms `openapi-fetch` auth middleware integration. Pitfall 3 (nullable shape divergence) surfaces here and the resolution process is documented for Phase 3.
+**Delivers:** `packages/admin/src/api/typed-client.ts`, `openapi-fetch` client with `X-Master-Password` `onRequest` middleware and 401-logout `onResponse` middleware, at least one high-traffic page migrated off manual interfaces, test mocks updated with `satisfies GeneratedType`.
+**Uses:** `openapi-fetch@^0.17.0`, `types.generated.ts` from Phase 1.
+**Implements:** Pattern 2 (Generated-type Constraint on Existing Client) from ARCHITECTURE.md.
+**Avoids:** Pitfall 3 (nullable divergence — pnpm typecheck gate), Pitfall 5 (test mocks — satisfies enforcement).
 
-### Phase 3: Typed MCP Schemas + amountFormatted Responses
+### Phase 3: Incremental Interface Migration (Remaining Pages)
 
-**Rationale:** Both depend on Phase 2 completion. MCP schemas need correct amount field types (smallest-unit semantics). `amountFormatted` needs amount to be in smallest units to format correctly. Grouped because both rely on the same token registry lookup infrastructure.
-**Delivers:** MCP tool schemas using direct Zod object reference from `ActionDefinition.inputSchema`; `amountFormatted`, `decimals`, `symbol` in transaction and action responses; `balanceFormatted` in balance responses; null handling contract with actionable schema descriptions
-**Uses:** Existing `formatAmount()` utility as the single formatter for both amountFormatted and balanceFormatted
-**Avoids:** Pitfall 5 (lossy roundtrip — direct reference), Pitfall 8 (amountFormatted null safety), Pitfall 12 (zodToJsonSchema version issues — avoided entirely), Pitfall 15 (balanceFormatted consistency)
+**Rationale:** Page-by-page replacement after the pattern is validated. Cannot be big-bang — 8,050+ tests cannot catch all Admin UI regressions in a single diff. Each page is an independent PR. The 9-type discriminated union is explicitly excluded from migration scope.
+**Delivers:** All 62 manual interfaces across Admin pages replaced with generated types; all 28 `apiGet<T>` manual casts replaced; test mock objects use `satisfies` for migrated pages; `pnpm typecheck` remains clean throughout.
+**Avoids:** Pitfall 4 (discriminated union — explicitly excluded with documentation), Pitfall 5 (test mocks — enforced per-page PR), Pitfall 3 (nullable divergence — pnpm typecheck gate per PR).
 
-### Phase 4: humanAmount Parameter
+### Phase 4: Backend API Expansion (Provider Discovery and Settings Schema)
 
-**Rationale:** Depends on Phase 2 (smallest-unit semantics must be stable) and Phase 3 (token registry lookup pattern established). The naming decision — universal `humanAmount` vs per-provider naming like `humanSellAmount`, `humanFromAmount` — MUST be made as an explicit kick-off decision before any code is written to avoid mid-phase refactoring.
-**Delivers:** `humanAmount` optional parameter across 10 smallest-unit providers; shared `@waiaas/core` XOR Zod refinement (`amount` XOR `humanAmount`); enforcement at REST API, MCP, and SDK entry points; actionable error messages when token registry missing for humanAmount conversion
-**Implements:** Shared Zod XOR refinement in `@waiaas/core`; per-provider `humanAmount` Zod schema addition
-**Avoids:** Pitfall 4 (XOR validation gaps), Pitfall 7 (field name proliferation — naming convention decided upfront), Pitfall 10 (token registry dependency — actionable errors)
+**Rationale:** These two backend changes are independent of the type generation pipeline and can ship in any order relative to Phases 2 and 3. They are grouped here because they are both server-side Zod schema expansions with Admin UI frontend changes that benefit from generated types established in Phases 1 and 2. The provider API expansion requires adding `enabledKey` and `category` to `IActionProvider` and `ProviderResponseSchema`; the settings schema endpoint requires adding `label` and `description` fields to `SettingDefinition`.
+**Delivers:** `GET /v1/actions/providers` with `enabledKey`/`category`, `BUILTIN_PROVIDERS` removed from Admin UI (imported from `@waiaas/shared` instead), `GET /v1/admin/settings/schema` endpoint, hardcoded constant arrays moved to `@waiaas/shared/src/providers.ts` and `policy-types.ts`.
+**Addresses:** Provider API expanded (P1), BUILTIN_PROVIDERS removal (P1), settings schema endpoint (P1), Pattern 3 (@waiaas/shared re-export for hardcoded arrays) from ARCHITECTURE.md.
+**Avoids:** Pitfall 7 (settings `as Record<string,string>` casts — tracked separately with TODO comments, not conflated with generated-type migration), Anti-Pattern 3 (static metadata in `@waiaas/shared`, dynamic runtime state from API — merged at render time).
 
-### Phase 5: SDK + Skill File Sync
+### Phase 5: Contract Tests and Verification
 
-**Rationale:** Depends on all prior phases. Interface documentation must reflect the final stable API surface. Cheapest to do last when all behaviors are locked. Skill file and SDK changes are text/type work with no functional dependencies on each other.
-**Delivers:** SDK `humanAmount` option in TypeScript method signatures (discriminated union `{ amount: string; humanAmount?: never } | { amount?: never; humanAmount: string }`); unit guide sections in transactions.skill.md, actions.skill.md, wallet.skill.md, quickstart.skill.md; CHANGELOG migration guide with before/after examples; JSDoc code examples for both amount patterns
-**Avoids:** Pitfall 13 (SDK type complexity — discriminated union with JSDoc)
+**Rationale:** Terminal validation phase. Contract tests require a stable `openapi.json` (Phase 1) and a meaningful set of migrated Admin UI pages (Phase 3) to test against. Architecture is defined before writing any code to avoid the circular import trap.
+**Delivers:** `scripts/verify-openapi-contract.ts` — parses `openapi.json` component schema property names, asserts all Admin UI field access paths exist; integrated into CI alongside `verify-enum-ssot.ts` and `verify-admin-route-consistency.ts`; verification checklist from PITFALLS.md "Looks Done But Isn't" section confirmed clean.
+**Avoids:** Pitfall 9 (circular imports — contract tests read `openapi.json` as a file path; `packages/daemon/package.json` gains no `@waiaas/admin` dependency).
 
 ### Phase Ordering Rationale
 
-- Phase 1 before all others: zero-risk, immediate value, establishes schema conventions all later phases follow
-- Phase 2 before Phase 4: `humanAmount` depends on stable smallest-unit semantics; backward compat must be correct first
-- Phase 2 before Phase 3: `amountFormatted` interprets amount as smallest unit — if providers still accept human-readable, formatting would be wrong scale
-- Phases 3 and 4 can partially overlap in implementation but Phase 3's token registry pattern should be established first
-- Phase 5 always last: interface documentation reflects the complete, stable final behavior
+- Phase 1 is a strict prerequisite: `types.generated.ts` must exist before any typed client code can be written.
+- Phase 2 must precede Phase 3 to validate the migration pattern on one page before scaling to all pages.
+- Phase 4 is independent of Phases 2 and 3 but benefits from generated types being available (Phase 1); can be developed in parallel with Phase 2/3 by a separate track.
+- Phase 5 requires stable spec (Phase 1) and representative Admin UI usage (Phases 2-3) for meaningful coverage.
+- This ordering avoids the most dangerous failure mode: starting migration (Phase 3) before confirming spec completeness (Phase 1) causes the most rework and the hardest-to-diagnose runtime bugs.
 
 ### Research Flags
 
-Phases with standard patterns (no additional research needed):
-- **Phase 1:** Pure schema text changes, zero risk, well-understood Zod `.describe()` pattern; CLOB providers already identified
-- **Phase 5:** SDK discriminated union and skill file updates follow established project patterns (see v31.12 External Action skill file updates)
+Phases with well-documented patterns (skip additional research):
+- **Phase 1:** `createApp({})` extraction pattern is already proven in `scripts/validate-openapi.ts`. `openapi-typescript` v7 API is fully documented at `openapi-ts.dev`. No new research needed.
+- **Phase 2:** `openapi-fetch` middleware pattern is fully documented with working examples. The `typed-client.ts` wrapper pattern is standard.
+- **Phase 5:** Contract test pattern is already established in `scripts/verify-enum-ssot.ts`. No new research needed.
 
-Phases needing careful validation during implementation:
-- **Phase 2:** `migrateAmount()` decimal lookup for multi-asset providers. Aave V3 supports ~20 assets per network. Token registry coverage for all Aave-supported assets on each chain must be verified during implementation. If coverage is incomplete, an on-chain fallback (`decimals()` ERC-20 call) may be needed.
-- **Phase 3:** Token registry coverage determines `amountFormatted` null rate. If many tokens lack registry entries, `amountFormatted` will return null frequently, limiting DX improvement. Assess coverage before implementation.
-- **Phase 4:** `humanAmount` naming decision (Pitfall 7) — "universal `humanAmount`" vs "per-provider naming like `humanSellAmount`" — must be an explicit written decision before coding begins.
+Phases that need targeted investigation during implementation:
+- **Phase 1 (stub deps audit):** Before writing the extraction script, audit `server.ts` for every `if (deps.x)` conditional route registration block. Pass typed stub objects (not bare `{}`) to maximize route registration coverage. Confirm the resulting `openapi.json` path count versus the 73 endpoints in `endpoints.ts`.
+- **Phase 3 (discriminated union inspection):** Inspect the generated `openapi.json` for the 9-type `oneOf` schema to confirm whether each variant has a `const` discriminant literal. Document the exclusion decision explicitly so future phases do not attempt to migrate transaction union types.
+- **Phase 4 (SettingDefinition fields):** Confirm whether adding `label` and `description` to `SettingDefinition` requires a DB migration or is purely in-memory. A quick inspection of `setting-keys.ts` resolves this before coding.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | All capabilities in existing dependencies; verified by direct codebase inspection of utility functions and provider files |
-| Features | HIGH | Feature dependency graph is clear; CLOB exception scope is well-defined (3 providers); MCP spec inputSchema behavior is stable |
-| Architecture | HIGH | Based on direct codebase analysis; integration points identified with specific file paths (aave-v3/index.ts lines 161/193/220/252, kamino/index.ts line 191, mcp/action-provider.ts line 84) |
-| Pitfalls | HIGH | All 5 critical pitfalls identified with concrete code evidence and specific line references; prevention strategies are testable |
+| Stack | HIGH | Both libraries verified at exact versions via npm; official docs consulted; TypeScript 5.x peer dep and Node 22 compatibility confirmed |
+| Features | HIGH | Codebase inspected directly: 73 endpoints in `endpoints.ts`, 122 manual interfaces, 116 cast sites, `BUILTIN_PROVIDERS` 14-entry array, `SETTING_DEFINITIONS` struct confirmed |
+| Architecture | HIGH | Extract pattern proven in existing `validate-openapi.ts`; Turbo pipeline ordering confirmed via `turbo.json` inspection; CSP constraints confirmed via `cspMiddleware`; `app.doc('/doc')` unconditional registration confirmed at `server.ts:980` |
+| Pitfalls | HIGH (codebase) / MEDIUM (ecosystem) | Codebase-specific pitfalls from direct code inspection are HIGH confidence; discriminated union narrowing limitation confirmed via openapi-typescript GitHub issues but marked MEDIUM as ecosystem tooling behavior |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Token registry coverage for Aave V3 assets**: Aave V3 supports ~20 assets per network. If the WAIaaS token registry only covers common tokens (ETH, USDC, WBTC), `migrateAmount()` will fail to determine decimals for less common assets. Resolution during Phase 2: enumerate all Aave-supported assets, verify registry coverage, add missing entries or implement on-chain fallback (`decimals()` ERC-20 call).
-
-- **humanAmount field name convention**: Pitfall 7 identifies 6+ distinct field names across providers (`humanAmount`, `humanSellAmount`, `humanFromAmount`, `humanAmountIn`). The recommendation is universal `humanAmount` for simplicity, but this is a design decision that must be locked before Phase 4 starts.
-
-- **Suspicious amount threshold and price oracle availability**: Pitfall 2 recommends a configurable `SUSPICIOUS_AMOUNT_THRESHOLD` for near-zero transaction warnings. This requires price oracle integration (available via v1.5 DeFi Price Oracle). Confirm the price oracle can compute USD value for all 14 provider tokens at request time, including tokens not in the DeFi Price Oracle's supported list.
+- **Stub deps completeness:** The exact count of conditionally-registered routes in `server.ts` needs to be audited before Phase 1 to establish the correct baseline for the CI path-count assertion. If stub objects produce fewer than 73 paths, the assertion threshold must be documented with a rationale.
+- **`label` and `description` fields in `SettingDefinition`:** Required for the settings schema endpoint. Whether adding them is purely in-memory or requires a DB migration needs one inspection of `setting-keys.ts` at Phase 4 start.
+- **openapi-typescript `exportType` option:** The default `exportType: 'interface'` can cause issues with mapped types and intersection types. Needs to be verified after the first generation run; switching to `exportType: 'type'` may be required.
+- **openapi-typescript `defaultNonNullable` option:** v7 changed this default to `true`. After the first generation run, inspect 5 known-optional response fields (e.g., `ownerAddress`, `expiresAt`) in the generated types. If they appear non-optional, add `defaultNonNullable: false` to the generation config.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- Codebase: `packages/actions/src/providers/aave-v3/index.ts` — hardcoded decimals=18 at lines 161, 193, 220, 252
-- Codebase: `packages/actions/src/providers/kamino/index.ts` — hardcoded decimals=6 at lines 165, 187, 214, 236; HF simulation `Number(amount) / 1e6` at line 191
-- Codebase: `packages/actions/src/providers/lido-staking/index.ts` — hardcoded decimals=18 at lines 116, 135
-- Codebase: `packages/actions/src/providers/jito-staking/jito-stake-pool.ts` — hardcoded decimals=9 at line 400
-- Codebase: `packages/actions/src/common/amount-parser.ts` — parseTokenAmount utility
-- Codebase: `packages/core/src/utils/format-amount.ts` — formatAmount/parseAmount utilities
-- Codebase: `packages/mcp/src/tools/action-provider.ts` line 84 — `z.record(z.unknown())` current state
-- Milestone objective: `internal/objectives/m31-15-amount-unit-standardization.md` — D1-D7 decisions, R1-R6 requirements
-- [MCP Spec 2025-11-25 Tools](https://modelcontextprotocol.io/specification/2025-11-25/server/tools) — inputSchema is JSON Schema, outputSchema supported
-- [viem parseUnits/formatUnits](https://viem.sh/docs/ethers-migration.html) — standard BigInt unit conversion pattern
+- https://openapi-ts.dev/node — Node.js API: `openapiTS(object)` accepts in-memory JSON, `astToString()` helper
+- https://openapi-ts.dev/openapi-fetch/ — 6 KB bundle, type inference eliminates generics, Node.js 18+ requirement
+- https://openapi-ts.dev/openapi-fetch/middleware-auth — `onRequest`/`onResponse` middleware, auth header injection example
+- https://openapi-ts.dev/migration-guide — v7 breaking changes: AST output, `defaultNonNullable` now default `true`
+- https://github.com/openapi-ts/openapi-typescript/issues/1615 — `--check` flag (PR #1768, merged 2024-07-17)
+- `npm view openapi-typescript version` → `7.13.0` (verified 2026-03-15)
+- `npm view openapi-fetch version` → `0.17.0` (verified 2026-03-15)
+- WAIaaS codebase direct inspection: `scripts/validate-openapi.ts`, `packages/admin/src/api/client.ts`, `packages/admin/src/api/endpoints.ts`, `packages/daemon/src/api/server.ts:980`, `packages/admin/src/pages/actions.tsx`, `packages/admin/vitest.config.ts`, `turbo.json`
 
 ### Secondary (MEDIUM confidence)
-- [Coinbase AgentKit wallet schemas](https://github.com/coinbase/agentkit/blob/main/typescript/agentkit/src/action-providers/wallet/schemas.ts) — uses human-readable "1 ETH" convention (industry comparison for humanAmount pattern)
-- [Alchemy Transfers API](https://www.alchemy.com/docs/reference/transfers-api-quickstart) — returns `value` (decimal-converted), `asset` (symbol), `decimal` fields (industry comparison for amountFormatted/decimals/symbol pattern)
-- [ethers.js Display Logic](https://docs.ethers.org/v5/api/utils/display-logic/) — parseUnits/formatUnits as canonical amount handling
-- Internal: Issue #168 (Admin raw amount display), Issue #165 (notification raw amount) — real user pain point confirmation
+- https://github.com/openapi-ts/openapi-typescript/issues/1368 — `defaultNonNullable` and discriminated union behavior in v7
+- https://github.com/hey-api/openapi-ts/issues/3270 — discriminated unions not narrowed in generated types (confirmed open as of 2025)
+- https://github.com/openapi-ts/openapi-typescript/issues/1821 — `nullable: true + object` generates wrong union in v7.3.0
+- https://www.speakeasy.com/openapi/frameworks/hono — `createApp + getOpenAPIDocument` extraction pattern
 
 ### Tertiary (LOW confidence)
-- Zod-to-JSON-Schema lossy conversion: documented limitation in zod-to-json-schema README — supports the direct-reference recommendation but specific edge cases may vary by library version
+- None — all findings validated against official docs or direct codebase inspection
 
 ---
-*Research completed: 2026-03-14*
+*Research completed: 2026-03-15*
 *Ready for roadmap: yes*
