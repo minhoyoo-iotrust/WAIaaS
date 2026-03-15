@@ -10,19 +10,19 @@ const mockApiPatch = vi.fn();
 
 // Mock declarations moved to top-level const
 
-vi.mock('../api/typed-client', () => ({
-  api: {
-    GET: (...args: unknown[]) => mockApiGet(...args),
-    POST: (...args: unknown[]) => mockApiPost(...args),
-    PUT: (...args: unknown[]) => mockApiPut(...args),
-    DELETE: (...args: unknown[]) => mockApiDelete(...args),
-    PATCH: (...args: unknown[]) => mockApiPatch(...args),
-  },
-  ApiError: class ApiError extends Error {
-    status: number; code: string; serverMessage: string;
-    constructor(s: number, c: string, m: string) { super(`[${s}] ${c}: ${m}`); this.name = 'ApiError'; this.status = s; this.code = c; this.serverMessage = m; }
-  },
-}));
+vi.mock('../api/typed-client', async () => {
+  const { ApiError } = await import('../api/client');
+  return {
+    api: {
+      GET: (...args: unknown[]) => mockApiGet(...args),
+      POST: (...args: unknown[]) => mockApiPost(...args),
+      PUT: (...args: unknown[]) => mockApiPut(...args),
+      DELETE: (...args: unknown[]) => mockApiDelete(...args),
+      PATCH: (...args: unknown[]) => mockApiPatch(...args),
+    },
+    ApiError,
+  };
+});
 
 vi.mock('../components/toast', () => ({
   showToast: vi.fn(),
@@ -108,8 +108,8 @@ describe('PoliciesPage', () => {
 
   it('should render policy list with tier visualization for SPENDING_LIMIT', async () => {
     mockApiGet
-      .mockResolvedValueOnce(mockWallets) // wallets load
-      .mockResolvedValueOnce(mockPolicies); // policies load (triggered by filterWalletId effect)
+      .mockResolvedValueOnce({ data: mockWallets }) // wallets load
+      .mockResolvedValueOnce({ data: mockPolicies }); // policies load (triggered by filterWalletId effect)
 
     render(<PoliciesPage />);
 
@@ -136,11 +136,11 @@ describe('PoliciesPage', () => {
 
   it('should create policy via form', async () => {
     mockApiGet
-      .mockResolvedValueOnce(mockWallets) // wallets load
-      .mockResolvedValueOnce(mockPolicies) // initial policies load
-      .mockResolvedValueOnce(mockPolicies); // refresh after create
+      .mockResolvedValueOnce({ data: mockWallets }) // wallets load
+      .mockResolvedValueOnce({ data: mockPolicies }) // initial policies load
+      .mockResolvedValueOnce({ data: mockPolicies }); // refresh after create
 
-    mockApiPost.mockResolvedValueOnce({ id: 'policy-3' });
+    mockApiPost.mockResolvedValueOnce({ data: { id: 'policy-3' } });
 
     render(<PoliciesPage />);
 
@@ -163,16 +163,16 @@ describe('PoliciesPage', () => {
 
     await waitFor(() => {
       expect(mockApiPost).toHaveBeenCalledWith('/v1/policies', expect.objectContaining({
-        type: 'SPENDING_LIMIT',
+        body: expect.objectContaining({ type: 'SPENDING_LIMIT' }),
       }));
     });
   });
 
   it('should delete policy with confirmation modal', async () => {
     mockApiGet
-      .mockResolvedValueOnce(mockWallets) // wallets load
-      .mockResolvedValueOnce(mockPolicies) // policies load
-      .mockResolvedValueOnce([]); // refresh after delete
+      .mockResolvedValueOnce({ data: mockWallets }) // wallets load
+      .mockResolvedValueOnce({ data: mockPolicies }) // policies load
+      .mockResolvedValueOnce({ data: [] }); // refresh after delete
 
     mockApiDelete.mockResolvedValueOnce(undefined);
 
@@ -203,15 +203,16 @@ describe('PoliciesPage', () => {
 
     await waitFor(() => {
       expect(mockApiDelete).toHaveBeenCalledWith(
-        expect.stringMatching(/^\/v1\/policies\/policy-/),
+        '/v1/policies/{id}',
+        expect.objectContaining({ params: { path: { id: expect.stringMatching(/^policy-/) } } }),
       );
     });
   });
 
   it('shows ALLOWED_NETWORKS in policy type options', async () => {
     mockApiGet
-      .mockResolvedValueOnce(mockWallets)
-      .mockResolvedValueOnce(mockPolicies);
+      .mockResolvedValueOnce({ data: mockWallets })
+      .mockResolvedValueOnce({ data: mockPolicies });
 
     render(<PoliciesPage />);
 
@@ -235,8 +236,8 @@ describe('PoliciesPage', () => {
 
   it('shows Network column in policy table', async () => {
     mockApiGet
-      .mockResolvedValueOnce(mockWallets)
-      .mockResolvedValueOnce(mockPolicies);
+      .mockResolvedValueOnce({ data: mockWallets })
+      .mockResolvedValueOnce({ data: mockPolicies });
 
     render(<PoliciesPage />);
 

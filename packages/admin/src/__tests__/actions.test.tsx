@@ -21,19 +21,19 @@ const mockApiPatch = vi.fn();
 
 // Mock declarations moved to top-level const
 
-vi.mock('../api/typed-client', () => ({
-  api: {
-    GET: (...args: unknown[]) => mockApiGet(...args),
-    POST: (...args: unknown[]) => mockApiPost(...args),
-    PUT: (...args: unknown[]) => mockApiPut(...args),
-    DELETE: (...args: unknown[]) => mockApiDelete(...args),
-    PATCH: (...args: unknown[]) => mockApiPatch(...args),
-  },
-  ApiError: class ApiError extends Error {
-    status: number; code: string; serverMessage: string;
-    constructor(s: number, c: string, m: string) { super(`[${s}] ${c}: ${m}`); this.name = 'ApiError'; this.status = s; this.code = c; this.serverMessage = m; }
-  },
-}));
+vi.mock('../api/typed-client', async () => {
+  const { ApiError } = await import('../api/client');
+  return {
+    api: {
+      GET: (...args: unknown[]) => mockApiGet(...args),
+      POST: (...args: unknown[]) => mockApiPost(...args),
+      PUT: (...args: unknown[]) => mockApiPut(...args),
+      DELETE: (...args: unknown[]) => mockApiDelete(...args),
+      PATCH: (...args: unknown[]) => mockApiPatch(...args),
+    },
+    ApiError,
+  };
+});
 
 vi.mock('../components/toast', () => ({
   showToast: vi.fn(),
@@ -265,9 +265,9 @@ describe('ActionsPage', () => {
       expect(checkbox).toBeTruthy();
       expect(checkbox.checked).toBe(false);
 
-      mockApiPut.mockResolvedValueOnce({
+      mockApiPut.mockResolvedValueOnce({ data: {
         data: { updated: 1, settings: { actions: { jupiter_swap_enabled: 'true' } } },
-      });
+      } });
 
       fireEvent.change(checkbox, { target: { checked: true } });
 
@@ -290,9 +290,9 @@ describe('ActionsPage', () => {
         'input[name="actions.jupiter_swap_enabled"]',
       ) as HTMLInputElement;
 
-      mockApiPut.mockResolvedValueOnce({
+      mockApiPut.mockResolvedValueOnce({ data: {
         data: { updated: 1, settings: { actions: { jupiter_swap_enabled: 'true' } } },
-      });
+      } });
 
       fireEvent.change(checkbox, { target: { checked: true } });
 
@@ -340,7 +340,7 @@ describe('ActionsPage', () => {
       ) as HTMLInputElement;
       fireEvent.input(input, { target: { value: 'test-api-key' } });
 
-      mockApiPut.mockResolvedValueOnce({});
+      mockApiPut.mockResolvedValueOnce({ data: {} });
 
       fireEvent.click(screen.getByText('Save'));
 
@@ -471,10 +471,10 @@ describe('ActionsPage', () => {
       });
 
       const select = document.querySelector('select') as HTMLSelectElement;
-      mockApiPut.mockResolvedValueOnce({
+      mockApiPut.mockResolvedValueOnce({ data: {
         updated: 1,
         settings: { actions: { jupiter_swap_enabled: 'true', jupiter_swap_swap_tier: 'APPROVAL' } },
-      });
+      } });
 
       fireEvent.change(select, { target: { value: 'APPROVAL' } });
 
@@ -503,10 +503,10 @@ describe('ActionsPage', () => {
         expect(screen.getByText('reset')).toBeTruthy();
       });
 
-      mockApiPut.mockResolvedValueOnce({
+      mockApiPut.mockResolvedValueOnce({ data: {
         updated: 1,
         settings: { actions: { jupiter_swap_enabled: 'true' } },
-      });
+      } });
 
       fireEvent.click(screen.getByText('reset'));
 
@@ -574,10 +574,10 @@ describe('ActionsPage', () => {
       });
 
       expect(screen.getByText(/Dcent Swap Api Url/i)).toBeTruthy();
-      // Multiple providers share the same "Default Slippage (%)" label
-      const defaultSlippageLabels = screen.getAllByText(/Default Slippage \(%\)/i);
+      // Multiple providers share slippage labels (keyToLabel fallback produces title-case)
+      const defaultSlippageLabels = screen.getAllByText(/Default Slippage Bps/i);
       expect(defaultSlippageLabels.length).toBeGreaterThanOrEqual(1);
-      const maxSlippageLabels = screen.getAllByText(/Max Slippage \(%\)/i);
+      const maxSlippageLabels = screen.getAllByText(/Max Slippage Bps/i);
       expect(maxSlippageLabels.length).toBeGreaterThanOrEqual(1);
     });
 
@@ -613,10 +613,10 @@ describe('ActionsPage', () => {
       // Change the value
       fireEvent.input(input, { target: { value: 'https://custom-api.test' } });
 
-      mockApiPut.mockResolvedValueOnce({
+      mockApiPut.mockResolvedValueOnce({ data: {
         updated: 1,
         settings: { actions: { dcent_swap_api_url: 'https://custom-api.test' } },
-      });
+      } });
 
       // Blur the parent div to trigger save
       const parentDiv = input.closest('div[style]');

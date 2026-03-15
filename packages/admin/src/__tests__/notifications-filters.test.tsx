@@ -10,19 +10,19 @@ const mockApiPatch = vi.fn();
 
 // Mock declarations moved to top-level const
 
-vi.mock('../api/typed-client', () => ({
-  api: {
-    GET: (...args: unknown[]) => mockApiGet(...args),
-    POST: (...args: unknown[]) => mockApiPost(...args),
-    PUT: (...args: unknown[]) => mockApiPut(...args),
-    DELETE: (...args: unknown[]) => mockApiDelete(...args),
-    PATCH: (...args: unknown[]) => mockApiPatch(...args),
-  },
-  ApiError: class ApiError extends Error {
-    status: number; code: string; serverMessage: string;
-    constructor(s: number, c: string, m: string) { super(`[${s}] ${c}: ${m}`); this.name = 'ApiError'; this.status = s; this.code = c; this.serverMessage = m; }
-  },
-}));
+vi.mock('../api/typed-client', async () => {
+  const { ApiError } = await import('../api/client');
+  return {
+    api: {
+      GET: (...args: unknown[]) => mockApiGet(...args),
+      POST: (...args: unknown[]) => mockApiPost(...args),
+      PUT: (...args: unknown[]) => mockApiPut(...args),
+      DELETE: (...args: unknown[]) => mockApiDelete(...args),
+      PATCH: (...args: unknown[]) => mockApiPatch(...args),
+    },
+    ApiError,
+  };
+});
 
 vi.mock('../components/toast', () => ({
   showToast: vi.fn(),
@@ -83,8 +83,8 @@ const mockLogs = {
 
 function setupMocks(statusData = mockStatus, logData = mockLogs) {
   mockApiGet.mockImplementation((url: string) => {
-    if (url.includes('/notifications/status')) return Promise.resolve(statusData);
-    if (url.includes('/notifications/log')) return Promise.resolve(logData);
+    if (url.includes('/notifications/status')) return Promise.resolve({ data: statusData });
+    if (url.includes('/notifications/log')) return Promise.resolve({ data: logData });
     return Promise.reject(new Error(`Unexpected URL: ${url}`));
   });
 }
@@ -142,7 +142,7 @@ describe('Notification Log Filters and Wallet Link', () => {
         (c) => typeof c[0] === 'string' && c[0].includes('/notifications/log'),
       );
       expect(logCall).toBeTruthy();
-      expect(logCall![0]).toContain('eventType=tx.submitted');
+      expect((logCall![1] as any)?.params?.query?.eventType).toBe('tx.submitted');
     });
   });
 
@@ -170,7 +170,7 @@ describe('Notification Log Filters and Wallet Link', () => {
         (c) => typeof c[0] === 'string' && c[0].includes('/notifications/log'),
       );
       expect(logCall).toBeTruthy();
-      expect(logCall![0]).toContain('channel=telegram');
+      expect((logCall![1] as any)?.params?.query?.channel).toBe('telegram');
     });
   });
 
@@ -198,7 +198,7 @@ describe('Notification Log Filters and Wallet Link', () => {
         (c) => typeof c[0] === 'string' && c[0].includes('/notifications/log'),
       );
       expect(logCall).toBeTruthy();
-      expect(logCall![0]).toContain('status=sent');
+      expect((logCall![1] as any)?.params?.query?.status).toBe('sent');
     });
   });
 
@@ -226,8 +226,8 @@ describe('Notification Log Filters and Wallet Link', () => {
         (c) => typeof c[0] === 'string' && c[0].includes('/notifications/log'),
       );
       expect(logCall).toBeTruthy();
-      // Should contain since= followed by a number (Unix seconds)
-      expect(logCall![0]).toMatch(/since=\d+/);
+      // Should contain since param with a number (Unix seconds)
+      expect((logCall![1] as any)?.params?.query?.since).toMatch(/^\d+$/);
     });
   });
 
@@ -286,7 +286,7 @@ describe('Notification Log Filters and Wallet Link', () => {
     await waitFor(() => {
       const calls = mockApiGet.mock.calls;
       const logCall = calls.find(
-        (c) => typeof c[0] === 'string' && c[0].includes('eventType=tx.submitted'),
+        (c) => typeof c[0] === 'string' && c[0].includes('/notifications/log') && (c[1] as any)?.params?.query?.eventType === 'tx.submitted',
       );
       expect(logCall).toBeTruthy();
     });
@@ -306,7 +306,7 @@ describe('Notification Log Filters and Wallet Link', () => {
       );
       expect(logCall).toBeTruthy();
       // After clear, should NOT contain eventType param
-      expect(logCall![0]).not.toContain('eventType=');
+      expect((logCall![1] as any)?.params?.query?.eventType).toBeUndefined();
     });
   });
 });

@@ -21,19 +21,19 @@ const mockApiPatch = vi.fn();
 
 // Mock declarations moved to top-level const
 
-vi.mock('../api/typed-client', () => ({
-  api: {
-    GET: (...args: unknown[]) => mockApiGet(...args),
-    POST: (...args: unknown[]) => mockApiPost(...args),
-    PUT: (...args: unknown[]) => mockApiPut(...args),
-    DELETE: (...args: unknown[]) => mockApiDelete(...args),
-    PATCH: (...args: unknown[]) => mockApiPatch(...args),
-  },
-  ApiError: class ApiError extends Error {
-    status: number; code: string; serverMessage: string;
-    constructor(s: number, c: string, m: string) { super(`[${s}] ${c}: ${m}`); this.name = 'ApiError'; this.status = s; this.code = c; this.serverMessage = m; }
-  },
-}));
+vi.mock('../api/typed-client', async () => {
+  const { ApiError } = await import('../api/client');
+  return {
+    api: {
+      GET: (...args: unknown[]) => mockApiGet(...args),
+      POST: (...args: unknown[]) => mockApiPost(...args),
+      PUT: (...args: unknown[]) => mockApiPut(...args),
+      DELETE: (...args: unknown[]) => mockApiDelete(...args),
+      PATCH: (...args: unknown[]) => mockApiPatch(...args),
+    },
+    ApiError,
+  };
+});
 
 vi.mock('../components/toast', () => ({
   showToast: vi.fn(),
@@ -135,9 +135,9 @@ function mockApiCalls(
   apiKeysData: { keys: any[] } = mockApiKeys,
 ) {
   mockApiGet.mockImplementation(async (path: string) => {
-    if (path === '/v1/admin/settings') return settingsData;
-    if (path === '/v1/admin/api-keys') return apiKeysData;
-    return {};
+    if (path === '/v1/admin/settings') return { data: settingsData };
+    if (path === '/v1/admin/api-keys') return { data: apiKeysData };
+    return { data: {} };
   });
 }
 
@@ -338,15 +338,15 @@ describe('SystemPage', () => {
         expect(screen.getByText(/unsaved change/)).toBeTruthy();
       });
 
-      mockApiPut.mockResolvedValueOnce({ updated: 1, settings: mockSettingsResponse });
+      mockApiPut.mockResolvedValueOnce({ data: { updated: 1, settings: mockSettingsResponse } });
 
       fireEvent.click(screen.getByText('Save'));
 
       await waitFor(() => {
         expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', {
-          settings: expect.arrayContaining([
+          body: { settings: expect.arrayContaining([
             { key: 'daemon.log_level', value: 'debug' },
-          ]),
+          ]) },
         });
       });
     });
@@ -370,7 +370,7 @@ describe('SystemPage', () => {
         expect(screen.getByText(/unsaved change/)).toBeTruthy();
       });
 
-      mockApiPut.mockResolvedValueOnce({ updated: 1, settings: mockSettingsResponse });
+      mockApiPut.mockResolvedValueOnce({ data: { updated: 1, settings: mockSettingsResponse } });
 
       fireEvent.click(screen.getByText('Save'));
 
@@ -462,8 +462,8 @@ describe('SystemPage', () => {
       mockApiGet.mockImplementation(async (path: string) => {
         if (path === '/v1/admin/settings')
           throw new MockApiError(500, 'SETTINGS_FETCH_FAIL', 'Fail');
-        if (path === '/v1/admin/api-keys') return { keys: [] };
-        return {};
+        if (path === '/v1/admin/api-keys') return { data: { keys: [] } };
+        return { data: {} };
       });
 
       render(<SystemPage />);
@@ -580,15 +580,15 @@ describe('SystemPage', () => {
         expect(screen.getByText(/unsaved change/)).toBeTruthy();
       });
 
-      mockApiPut.mockResolvedValueOnce({ updated: 1, settings: mockSettingsResponse });
+      mockApiPut.mockResolvedValueOnce({ data: { updated: 1, settings: mockSettingsResponse } });
 
       fireEvent.click(screen.getByText('Save'));
 
       await waitFor(() => {
         expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', {
-          settings: expect.arrayContaining([
+          body: { settings: expect.arrayContaining([
             { key: 'gas_condition.enabled', value: 'false' },
-          ]),
+          ]) },
         });
       });
     });
@@ -614,15 +614,15 @@ describe('SystemPage', () => {
         expect(screen.getByText(/unsaved change/)).toBeTruthy();
       });
 
-      mockApiPut.mockResolvedValueOnce({ updated: 1, settings: mockSettingsResponse });
+      mockApiPut.mockResolvedValueOnce({ data: { updated: 1, settings: mockSettingsResponse } });
 
       fireEvent.click(screen.getByText('Save'));
 
       await waitFor(() => {
         expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', {
-          settings: expect.arrayContaining([
+          body: { settings: expect.arrayContaining([
             { key: 'gas_condition.poll_interval_sec', value: '60' },
-          ]),
+          ]) },
         });
       });
     });
@@ -707,7 +707,7 @@ describe('SystemPage', () => {
       ) as HTMLInputElement;
       fireEvent.input(input, { target: { value: 'SHUTDOWN' } });
 
-      mockApiPost.mockResolvedValueOnce({ message: 'ok' });
+      mockApiPost.mockResolvedValueOnce({ data: { message: 'ok' } });
 
       // Find and click the confirm button in modal footer
       const confirmBtn = document.querySelector(
@@ -816,15 +816,15 @@ describe('SystemPage', () => {
         expect(screen.getByText('Save')).toBeTruthy();
       });
 
-      mockApiPut.mockResolvedValueOnce({ updated: 1, settings: mockSettingsResponse });
+      mockApiPut.mockResolvedValueOnce({ data: { updated: 1, settings: mockSettingsResponse } });
 
       fireEvent.click(screen.getByText('Save'));
 
       await waitFor(() => {
         expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', {
-          settings: expect.arrayContaining([
+          body: { settings: expect.arrayContaining([
             expect.objectContaining({ key: 'smart_account.entry_point' }),
-          ]),
+          ]) },
         });
       });
     });

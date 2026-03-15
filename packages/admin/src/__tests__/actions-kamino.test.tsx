@@ -22,19 +22,19 @@ const mockApiPatch = vi.fn();
 
 // Mock declarations moved to top-level const
 
-vi.mock('../api/typed-client', () => ({
-  api: {
-    GET: (...args: unknown[]) => mockApiGet(...args),
-    POST: (...args: unknown[]) => mockApiPost(...args),
-    PUT: (...args: unknown[]) => mockApiPut(...args),
-    DELETE: (...args: unknown[]) => mockApiDelete(...args),
-    PATCH: (...args: unknown[]) => mockApiPatch(...args),
-  },
-  ApiError: class ApiError extends Error {
-    status: number; code: string; serverMessage: string;
-    constructor(s: number, c: string, m: string) { super(`[${s}] ${c}: ${m}`); this.name = 'ApiError'; this.status = s; this.code = c; this.serverMessage = m; }
-  },
-}));
+vi.mock('../api/typed-client', async () => {
+  const { ApiError } = await import('../api/client');
+  return {
+    api: {
+      GET: (...args: unknown[]) => mockApiGet(...args),
+      POST: (...args: unknown[]) => mockApiPost(...args),
+      PUT: (...args: unknown[]) => mockApiPut(...args),
+      DELETE: (...args: unknown[]) => mockApiDelete(...args),
+      PATCH: (...args: unknown[]) => mockApiPatch(...args),
+    },
+    ApiError,
+  };
+});
 
 vi.mock('../components/toast', () => ({
   showToast: vi.fn(),
@@ -159,10 +159,10 @@ describe('ActionsPage - Kamino Lending Card', () => {
     expect(checkbox).toBeTruthy();
     expect(checkbox.checked).toBe(false);
 
-    mockApiPut.mockResolvedValueOnce({
+    mockApiPut.mockResolvedValueOnce({ data: {
       updated: 1,
       settings: mockSettingsKaminoEnabled,
-    });
+    } });
 
     fireEvent.change(checkbox, { target: { checked: true } });
 
@@ -186,8 +186,8 @@ describe('ActionsPage - Kamino Lending Card', () => {
     expect(advancedHeaders.length).toBeGreaterThanOrEqual(1);
 
     // Check Kamino-specific setting fields
-    expect(screen.getByText('Market')).toBeTruthy();
-    expect(screen.getByText('HF Warning Threshold')).toBeTruthy();
+    expect(screen.getByText('Kamino Market')).toBeTruthy();
+    expect(screen.getByText('Kamino Hf Threshold')).toBeTruthy();
   });
 
   it('saving Kamino advanced setting calls mockApiPut with correct key', async () => {
@@ -204,10 +204,10 @@ describe('ActionsPage - Kamino Lending Card', () => {
     ) as HTMLInputElement;
     expect(marketInput).toBeTruthy();
 
-    mockApiPut.mockResolvedValueOnce({
+    mockApiPut.mockResolvedValueOnce({ data: {
       updated: 1,
       settings: mockSettingsKaminoEnabled,
-    });
+    } });
 
     // Change value
     fireEvent.input(marketInput, { target: { value: '7u3HeHxYDLhn' } });

@@ -19,19 +19,19 @@ const mockApiPatch = vi.fn();
 
 // Mock declarations moved to top-level const
 
-vi.mock('../api/typed-client', () => ({
-  api: {
-    GET: (...args: unknown[]) => mockApiGet(...args),
-    POST: (...args: unknown[]) => mockApiPost(...args),
-    PUT: (...args: unknown[]) => mockApiPut(...args),
-    DELETE: (...args: unknown[]) => mockApiDelete(...args),
-    PATCH: (...args: unknown[]) => mockApiPatch(...args),
-  },
-  ApiError: class ApiError extends Error {
-    status: number; code: string; serverMessage: string;
-    constructor(s: number, c: string, m: string) { super(`[${s}] ${c}: ${m}`); this.name = 'ApiError'; this.status = s; this.code = c; this.serverMessage = m; }
-  },
-}));
+vi.mock('../api/typed-client', async () => {
+  const { ApiError } = await import('../api/client');
+  return {
+    api: {
+      GET: (...args: unknown[]) => mockApiGet(...args),
+      POST: (...args: unknown[]) => mockApiPost(...args),
+      PUT: (...args: unknown[]) => mockApiPut(...args),
+      DELETE: (...args: unknown[]) => mockApiDelete(...args),
+      PATCH: (...args: unknown[]) => mockApiPatch(...args),
+    },
+    ApiError,
+  };
+});
 
 vi.mock('../components/toast', () => ({
   showToast: vi.fn(),
@@ -98,9 +98,9 @@ const mockSettingsResponse = {
 
 function mockApiCalls(ksState = mockKsActive, settingsData = mockSettingsResponse) {
   mockApiGet.mockImplementation(async (path: string) => {
-    if (path === '/v1/admin/kill-switch') return ksState;
-    if (path === '/v1/admin/settings') return settingsData;
-    return {};
+    if (path === '/v1/admin/kill-switch') return { data: ksState };
+    if (path === '/v1/admin/settings') return { data: settingsData };
+    return { data: {} };
   });
 }
 
@@ -319,7 +319,7 @@ describe('Security page: Kill Switch tab', () => {
     const MockApiError = (await import('../api/client')).ApiError;
     mockApiGet.mockImplementation(async (path: string) => {
       if (path === '/v1/admin/kill-switch') throw new MockApiError(500, 'KS_FETCH_FAIL', 'Fail');
-      return {};
+      return { data: {} };
     });
 
     render(<SecurityPage />);
@@ -422,13 +422,13 @@ describe('Security page: AutoStop Rules tab', () => {
       expect(screen.getByText(/unsaved change/)).toBeTruthy();
     });
 
-    mockApiPut.mockResolvedValueOnce({ updated: 1, settings: mockSettingsResponse });
+    mockApiPut.mockResolvedValueOnce({ data: { updated: 1, settings: mockSettingsResponse } });
 
     fireEvent.click(screen.getByText('Save'));
 
     await waitFor(() => {
       expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', {
-        settings: [{ key: 'autostop.consecutive_failures_threshold', value: '10' }],
+        body: { settings: [{ key: 'autostop.consecutive_failures_threshold', value: '10' }] },
       });
     });
 
@@ -523,9 +523,9 @@ describe('Security page: AutoStop Rules tab', () => {
   it('shows loading state before settings load', async () => {
     // Kill switch resolves immediately, settings never resolves
     mockApiGet.mockImplementation(async (path: string) => {
-      if (path === '/v1/admin/kill-switch') return mockKsActive;
+      if (path === '/v1/admin/kill-switch') return { data: mockKsActive };
       if (path === '/v1/admin/settings') return new Promise(() => {});
-      return {};
+      return { data: {} };
     });
 
     render(<SecurityPage />);
@@ -630,7 +630,7 @@ describe('Security page: Invalidate Sessions (JWT Rotation) tab', () => {
       expect(screen.getByText(/rotate the signing key/)).toBeTruthy();
     });
 
-    mockApiPost.mockResolvedValueOnce({ rotatedAt: 1707609600, message: 'ok' });
+    mockApiPost.mockResolvedValueOnce({ data: { rotatedAt: 1707609600, message: 'ok' } });
 
     // Click the "Invalidate" confirm button in the modal
     fireEvent.click(screen.getByText('Invalidate'));

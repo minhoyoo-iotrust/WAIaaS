@@ -20,19 +20,19 @@ const mockApiPatch = vi.fn();
 
 // Mock declarations moved to top-level const
 
-vi.mock('../api/typed-client', () => ({
-  api: {
-    GET: (...args: unknown[]) => mockApiGet(...args),
-    POST: (...args: unknown[]) => mockApiPost(...args),
-    PUT: (...args: unknown[]) => mockApiPut(...args),
-    DELETE: (...args: unknown[]) => mockApiDelete(...args),
-    PATCH: (...args: unknown[]) => mockApiPatch(...args),
-  },
-  ApiError: class ApiError extends Error {
-    status: number; code: string; serverMessage: string;
-    constructor(s: number, c: string, m: string) { super(`[${s}] ${c}: ${m}`); this.name = 'ApiError'; this.status = s; this.code = c; this.serverMessage = m; }
-  },
-}));
+vi.mock('../api/typed-client', async () => {
+  const { ApiError } = await import('../api/client');
+  return {
+    api: {
+      GET: (...args: unknown[]) => mockApiGet(...args),
+      POST: (...args: unknown[]) => mockApiPost(...args),
+      PUT: (...args: unknown[]) => mockApiPut(...args),
+      DELETE: (...args: unknown[]) => mockApiDelete(...args),
+      PATCH: (...args: unknown[]) => mockApiPatch(...args),
+    },
+    ApiError,
+  };
+});
 
 vi.mock('../components/toast', () => ({
   showToast: vi.fn(),
@@ -117,11 +117,11 @@ describe('Erc8004Page Reputation tab', () => {
 
   it('renders reputation score on Reputation tab', async () => {
         mockApiGet
-      .mockResolvedValueOnce(mockSettingsEnabled)
-      .mockResolvedValueOnce(mockProvidersResponse)
-      .mockResolvedValueOnce({ items: mockWallets })
-      .mockResolvedValueOnce(mockRegFileWithAgent)
-      .mockResolvedValueOnce(mockReputation);
+      .mockResolvedValueOnce({ data: mockSettingsEnabled })
+      .mockResolvedValueOnce({ data: mockProvidersResponse })
+      .mockResolvedValueOnce({ data: { items: mockWallets } })
+      .mockResolvedValueOnce({ data: mockRegFileWithAgent })
+      .mockResolvedValueOnce({ data: mockReputation });
 
     render(<Erc8004Page />);
 
@@ -140,12 +140,12 @@ describe('Erc8004Page Reputation tab', () => {
 
   it('external agent lookup calls reputation API', async () => {
         mockApiGet
-      .mockResolvedValueOnce(mockSettingsEnabled)
-      .mockResolvedValueOnce(mockProvidersResponse)
-      .mockResolvedValueOnce({ items: mockWallets })
-      .mockResolvedValueOnce(mockRegFileWithAgent)
-      .mockResolvedValueOnce(mockReputation) // My agent score
-      .mockResolvedValueOnce(mockReputationLow); // Lookup result
+      .mockResolvedValueOnce({ data: mockSettingsEnabled })
+      .mockResolvedValueOnce({ data: mockProvidersResponse })
+      .mockResolvedValueOnce({ data: { items: mockWallets } })
+      .mockResolvedValueOnce({ data: mockRegFileWithAgent })
+      .mockResolvedValueOnce({ data: mockReputation }) // My agent score
+      .mockResolvedValueOnce({ data: mockReputationLow }); // Lookup result
 
     render(<Erc8004Page />);
 
@@ -168,18 +168,19 @@ describe('Erc8004Page Reputation tab', () => {
 
     await waitFor(() => {
       expect(mockApiGet).toHaveBeenCalledWith(
-        expect.stringContaining('/v1/erc8004/agent/99/reputation'),
+        '/v1/erc8004/agent/{agentId}/reputation',
+        expect.objectContaining({ params: expect.objectContaining({ path: { agentId: '99' } }) }),
       );
     });
   });
 
   it('shows tag filter fields', async () => {
         mockApiGet
-      .mockResolvedValueOnce(mockSettingsEnabled)
-      .mockResolvedValueOnce(mockProvidersResponse)
-      .mockResolvedValueOnce({ items: mockWallets })
-      .mockResolvedValueOnce(mockRegFileWithAgent)
-      .mockResolvedValueOnce(mockReputation);
+      .mockResolvedValueOnce({ data: mockSettingsEnabled })
+      .mockResolvedValueOnce({ data: mockProvidersResponse })
+      .mockResolvedValueOnce({ data: { items: mockWallets } })
+      .mockResolvedValueOnce({ data: mockRegFileWithAgent })
+      .mockResolvedValueOnce({ data: mockReputation });
 
     render(<Erc8004Page />);
 
@@ -197,12 +198,12 @@ describe('Erc8004Page Reputation tab', () => {
 
   it('renders lookup result when Query returns data', async () => {
         mockApiGet
-      .mockResolvedValueOnce(mockSettingsEnabled)
-      .mockResolvedValueOnce(mockProvidersResponse)
-      .mockResolvedValueOnce({ items: mockWallets })
-      .mockResolvedValueOnce(mockRegFileWithAgent)
-      .mockResolvedValueOnce(mockReputation)   // My agent score
-      .mockResolvedValueOnce(mockReputationLow); // Lookup result
+      .mockResolvedValueOnce({ data: mockSettingsEnabled })
+      .mockResolvedValueOnce({ data: mockProvidersResponse })
+      .mockResolvedValueOnce({ data: { items: mockWallets } })
+      .mockResolvedValueOnce({ data: mockRegFileWithAgent })
+      .mockResolvedValueOnce({ data: mockReputation })   // My agent score
+      .mockResolvedValueOnce({ data: mockReputationLow }); // Lookup result
 
     render(<Erc8004Page />);
 

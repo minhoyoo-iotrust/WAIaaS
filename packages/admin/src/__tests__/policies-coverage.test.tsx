@@ -18,19 +18,19 @@ const mockApiPatch = vi.fn();
 
 // Mock declarations moved to top-level const
 
-vi.mock('../api/typed-client', () => ({
-  api: {
-    GET: (...args: unknown[]) => mockApiGet(...args),
-    POST: (...args: unknown[]) => mockApiPost(...args),
-    PUT: (...args: unknown[]) => mockApiPut(...args),
-    DELETE: (...args: unknown[]) => mockApiDelete(...args),
-    PATCH: (...args: unknown[]) => mockApiPatch(...args),
-  },
-  ApiError: class ApiError extends Error {
-    status: number; code: string; serverMessage: string;
-    constructor(s: number, c: string, m: string) { super(`[${s}] ${c}: ${m}`); this.name = 'ApiError'; this.status = s; this.code = c; this.serverMessage = m; }
-  },
-}));
+vi.mock('../api/typed-client', async () => {
+  const { ApiError } = await import('../api/client');
+  return {
+    api: {
+      GET: (...args: unknown[]) => mockApiGet(...args),
+      POST: (...args: unknown[]) => mockApiPost(...args),
+      PUT: (...args: unknown[]) => mockApiPut(...args),
+      DELETE: (...args: unknown[]) => mockApiDelete(...args),
+      PATCH: (...args: unknown[]) => mockApiPatch(...args),
+    },
+    ApiError,
+  };
+});
 
 vi.mock('../components/toast', () => ({
   showToast: vi.fn(),
@@ -145,8 +145,8 @@ const mockPolicies = [
 
 function setupMocks(policies = mockPolicies) {
   mockApiGet.mockImplementation((url: string) => {
-    if (url === '/v1/wallets') return Promise.resolve(mockWallets);
-    if (url.startsWith('/v1/policies')) return Promise.resolve(policies);
+    if (url === '/v1/wallets') return Promise.resolve({ data: mockWallets });
+    if (url.startsWith('/v1/policies')) return Promise.resolve({ data: policies });
     return Promise.reject(new Error(`Unexpected URL: ${url}`));
   });
 }
@@ -156,7 +156,7 @@ async function renderAndWait() {
   await waitFor(() => {
     expect(screen.getByText('Spending Limit')).toBeTruthy();
   });
-  return result;
+  return { data: result };
 }
 
 describe('PoliciesPage - Additional Coverage', () => {
@@ -202,7 +202,7 @@ describe('PoliciesPage - Additional Coverage', () => {
   describe('handleCreate structured form', () => {
     it('creates policy with default SPENDING_LIMIT rules', async () => {
       setupMocks();
-      mockApiPost.mockResolvedValueOnce({ id: 'new-policy' });
+      mockApiPost.mockResolvedValueOnce({ data: { id: 'new-policy' } });
 
       await renderAndWait();
 
@@ -218,9 +218,11 @@ describe('PoliciesPage - Additional Coverage', () => {
         expect(mockApiPost).toHaveBeenCalledWith(
           '/v1/policies',
           expect.objectContaining({
-            type: 'SPENDING_LIMIT',
-            priority: 0,
-            enabled: true,
+            body: expect.objectContaining({
+              type: 'SPENDING_LIMIT',
+              priority: 0,
+              enabled: true,
+            }),
           }),
         );
       });
@@ -233,7 +235,7 @@ describe('PoliciesPage - Additional Coverage', () => {
 
     it('resets form state after successful creation', async () => {
       setupMocks();
-      mockApiPost.mockResolvedValueOnce({ id: 'new-policy' });
+      mockApiPost.mockResolvedValueOnce({ data: { id: 'new-policy' } });
 
       await renderAndWait();
 
@@ -284,7 +286,7 @@ describe('PoliciesPage - Additional Coverage', () => {
   describe('handleCreate JSON mode', () => {
     it('creates policy via JSON mode', async () => {
       setupMocks();
-      mockApiPost.mockResolvedValueOnce({ id: 'json-policy' });
+      mockApiPost.mockResolvedValueOnce({ data: { id: 'json-policy' } });
 
       await renderAndWait();
 
@@ -308,7 +310,7 @@ describe('PoliciesPage - Additional Coverage', () => {
         expect(mockApiPost).toHaveBeenCalledWith(
           '/v1/policies',
           expect.objectContaining({
-            type: 'SPENDING_LIMIT',
+            body: expect.objectContaining({ type: 'SPENDING_LIMIT' }),
           }),
         );
       });
@@ -373,10 +375,10 @@ describe('PoliciesPage - Additional Coverage', () => {
 
       await waitFor(() => {
         expect(mockApiPut).toHaveBeenCalledWith(
-          '/v1/policies/p1',
+          '/v1/policies/{id}',
           expect.objectContaining({
-            priority: 0,
-            enabled: true,
+            params: { path: { id: 'p1' } },
+            body: expect.objectContaining({ priority: 0, enabled: true }),
           }),
         );
       });
@@ -511,7 +513,9 @@ describe('PoliciesPage - Additional Coverage', () => {
       fireEvent.click(allDeleteBtns[allDeleteBtns.length - 1]);
 
       await waitFor(() => {
-        expect(mockApiDelete).toHaveBeenCalledWith('/v1/policies/p1');
+        expect(mockApiDelete).toHaveBeenCalledWith('/v1/policies/{id}', expect.objectContaining({
+          params: { path: { id: 'p1' } },
+        }));
       });
 
       await waitFor(() => {
@@ -670,7 +674,7 @@ describe('PoliciesPage - Additional Coverage', () => {
 
       // Default type is SPENDING_LIMIT with valid defaults, so Create should call mockApiPost
       // We test this indirectly: the default rules are valid
-      mockApiPost.mockResolvedValueOnce({ id: 'ok' });
+      mockApiPost.mockResolvedValueOnce({ data: { id: 'ok' } });
       fireEvent.click(screen.getByText('Create'));
       await waitFor(() => {
         expect(mockApiPost).toHaveBeenCalled();
@@ -698,7 +702,7 @@ describe('PoliciesPage - Additional Coverage', () => {
       fireEvent.change(typeSelect, { target: { value: 'RATE_LIMIT' } });
 
       // Default RATE_LIMIT has valid values (100, 3600)
-      mockApiPost.mockResolvedValueOnce({ id: 'ok' });
+      mockApiPost.mockResolvedValueOnce({ data: { id: 'ok' } });
       fireEvent.click(screen.getByText('Create'));
       await waitFor(() => {
         expect(mockApiPost).toHaveBeenCalled();
@@ -761,7 +765,7 @@ describe('PoliciesPage - Additional Coverage', () => {
       fireEvent.change(typeSelect, { target: { value: 'TIME_RESTRICTION' } });
 
       // Default TIME_RESTRICTION has start=0, end=24, all days -> valid
-      mockApiPost.mockResolvedValueOnce({ id: 'ok' });
+      mockApiPost.mockResolvedValueOnce({ data: { id: 'ok' } });
       fireEvent.click(screen.getByText('Create'));
       await waitFor(() => {
         expect(mockApiPost).toHaveBeenCalled();
@@ -800,7 +804,7 @@ describe('PoliciesPage - Additional Coverage', () => {
       fireEvent.change(typeSelect, { target: { value: 'APPROVE_AMOUNT_LIMIT' } });
 
       // Default has valid maxAmount '1000000' -> should succeed
-      mockApiPost.mockResolvedValueOnce({ id: 'ok' });
+      mockApiPost.mockResolvedValueOnce({ data: { id: 'ok' } });
       fireEvent.click(screen.getByText('Create'));
       await waitFor(() => {
         expect(mockApiPost).toHaveBeenCalled();
@@ -814,7 +818,7 @@ describe('PoliciesPage - Additional Coverage', () => {
       const typeSelect = screen.getByLabelText('Type') as HTMLSelectElement;
       fireEvent.change(typeSelect, { target: { value: 'APPROVE_TIER_OVERRIDE' } });
 
-      mockApiPost.mockResolvedValueOnce({ id: 'ok' });
+      mockApiPost.mockResolvedValueOnce({ data: { id: 'ok' } });
       fireEvent.click(screen.getByText('Create'));
       await waitFor(() => {
         expect(mockApiPost).toHaveBeenCalled();
@@ -837,7 +841,9 @@ describe('PoliciesPage - Additional Coverage', () => {
       fireEvent.change(filterSelect, { target: { value: 'w1' } });
 
       await waitFor(() => {
-        expect(mockApiGet).toHaveBeenCalledWith('/v1/policies?walletId=w1');
+        expect(mockApiGet).toHaveBeenCalledWith('/v1/policies', expect.objectContaining({
+          params: { query: expect.objectContaining({ walletId: 'w1' }) },
+        }));
       });
     });
 
@@ -939,7 +945,7 @@ describe('PoliciesPage - Additional Coverage', () => {
   describe('enabled toggle and priority in form', () => {
     it('can toggle enabled checkbox and set priority', async () => {
       setupMocks();
-      mockApiPost.mockResolvedValueOnce({ id: 'ok' });
+      mockApiPost.mockResolvedValueOnce({ data: { id: 'ok' } });
 
       await renderAndWait();
 
@@ -962,8 +968,7 @@ describe('PoliciesPage - Additional Coverage', () => {
         expect(mockApiPost).toHaveBeenCalledWith(
           '/v1/policies',
           expect.objectContaining({
-            priority: 5,
-            enabled: false,
+            body: expect.objectContaining({ priority: 5, enabled: false }),
           }),
         );
       });
@@ -991,7 +996,7 @@ describe('PoliciesPage - Additional Coverage', () => {
 
     it('shows toast on policies fetch error', async () => {
       mockApiGet.mockImplementation((url: string) => {
-        if (url === '/v1/wallets') return Promise.resolve(mockWallets);
+        if (url === '/v1/wallets') return Promise.resolve({ data: mockWallets });
         if (url.startsWith('/v1/policies')) return Promise.reject(new Error('Fetch fail'));
         return Promise.reject(new Error('Unexpected'));
       });

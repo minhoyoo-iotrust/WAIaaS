@@ -21,19 +21,19 @@ const mockApiPatch = vi.fn();
 
 // Mock declarations moved to top-level const
 
-vi.mock('../api/typed-client', () => ({
-  api: {
-    GET: (...args: unknown[]) => mockApiGet(...args),
-    POST: (...args: unknown[]) => mockApiPost(...args),
-    PUT: (...args: unknown[]) => mockApiPut(...args),
-    DELETE: (...args: unknown[]) => mockApiDelete(...args),
-    PATCH: (...args: unknown[]) => mockApiPatch(...args),
-  },
-  ApiError: class ApiError extends Error {
-    status: number; code: string; serverMessage: string;
-    constructor(s: number, c: string, m: string) { super(`[${s}] ${c}: ${m}`); this.name = 'ApiError'; this.status = s; this.code = c; this.serverMessage = m; }
-  },
-}));
+vi.mock('../api/typed-client', async () => {
+  const { ApiError } = await import('../api/client');
+  return {
+    api: {
+      GET: (...args: unknown[]) => mockApiGet(...args),
+      POST: (...args: unknown[]) => mockApiPost(...args),
+      PUT: (...args: unknown[]) => mockApiPut(...args),
+      DELETE: (...args: unknown[]) => mockApiDelete(...args),
+      PATCH: (...args: unknown[]) => mockApiPatch(...args),
+    },
+    ApiError,
+  };
+});
 
 vi.mock('../components/toast', () => ({
   showToast: vi.fn(),
@@ -55,6 +55,7 @@ vi.mock('../utils/error-messages', () => ({
 }));
 
 import { showToast } from '../components/toast';
+import { ApiError } from '../api/client';
 import WalletConnectPage from '../pages/walletconnect';
 
 // ---------------------------------------------------------------------------
@@ -103,22 +104,21 @@ function mockApiCalls(
   sessions: Record<string, WcSession | null> = {},
   pairStatusResponse?: { status: string; session?: WcSession | null },
 ) {
-  mockApiGet.mockImplementation(async (path: string) => {
-    if (path === '/v1/wallets') return walletData;
+  mockApiGet.mockImplementation(async (path: string, opts?: { params?: { path?: { id?: string }; query?: Record<string, unknown> } }) => {
+    if (path === '/v1/wallets') return { data: walletData };
     // Per-wallet WC session: /v1/wallets/{id}/wc/session
-    const wcMatch = path.match(/\/v1\/wallets\/(.+)\/wc\/session$/);
-    if (wcMatch) {
-      const wId = wcMatch[1];
-      if (sessions[wId]) return sessions[wId];
-      throw new ApiError(404, 'NOT_FOUND', 'No session');
+    if (path === '/v1/wallets/{id}/wc/session') {
+      const wId = opts?.params?.path?.id ?? '';
+      if (sessions[wId]) return { data: sessions[wId] };
+      const { ApiError: AE } = await import('../api/client');
+      throw new AE(404, 'NOT_FOUND', 'No session');
     }
     // Pair status polling: /v1/wallets/{id}/wc/pair/status
-    const statusMatch = path.match(/\/v1\/wallets\/(.+)\/wc\/pair\/status$/);
-    if (statusMatch) {
-      if (pairStatusResponse) return pairStatusResponse;
-      return { status: 'pending' };
+    if (path === '/v1/wallets/{id}/wc/pair/status') {
+      if (pairStatusResponse) return { data: pairStatusResponse };
+      return { data: { status: 'pending' } };
     }
-    return {};
+    return { data: {} };
   });
 }
 
@@ -267,11 +267,11 @@ describe('WalletConnect page: Connect flow', () => {
       expect(screen.getByText('My Solana Wallet')).toBeTruthy();
     });
 
-    mockApiPost.mockResolvedValueOnce({
+    mockApiPost.mockResolvedValueOnce({ data: {
       uri: 'wc:xxx',
       qrCode: 'data:image/png;base64,abc',
       expiresAt: 9999999999,
-    });
+    } });
 
     // Click first Connect button (w1)
     const connectButtons = screen.getAllByText('Connect');
@@ -286,7 +286,9 @@ describe('WalletConnect page: Connect flow', () => {
     expect(img).toBeTruthy();
 
     // Verify mockApiPost was called correctly
-    expect(mockApiPost).toHaveBeenCalledWith('/v1/wallets/w1/wc/pair');
+    expect(mockApiPost).toHaveBeenCalledWith('/v1/wallets/{id}/wc/pair', expect.objectContaining({
+      params: { path: { id: 'w1' } },
+    }));
   });
 
   it('QR modal shows waiting text', async () => {
@@ -297,11 +299,11 @@ describe('WalletConnect page: Connect flow', () => {
       expect(screen.getByText('My Solana Wallet')).toBeTruthy();
     });
 
-    mockApiPost.mockResolvedValueOnce({
+    mockApiPost.mockResolvedValueOnce({ data: {
       uri: 'wc:xxx',
       qrCode: 'data:image/png;base64,abc',
       expiresAt: 9999999999,
-    });
+    } });
 
     const connectButtons = screen.getAllByText('Connect');
     fireEvent.click(connectButtons[0]!);
@@ -319,11 +321,11 @@ describe('WalletConnect page: Connect flow', () => {
       expect(screen.getByText('My Solana Wallet')).toBeTruthy();
     });
 
-    mockApiPost.mockResolvedValueOnce({
+    mockApiPost.mockResolvedValueOnce({ data: {
       uri: 'wc:xxx',
       qrCode: 'data:image/png;base64,abc',
       expiresAt: 9999999999,
-    });
+    } });
 
     const connectButtons = screen.getAllByText('Connect');
     fireEvent.click(connectButtons[0]!);
@@ -371,11 +373,11 @@ describe('WalletConnect page: Connect flow', () => {
       expect(screen.getByText('My Solana Wallet')).toBeTruthy();
     });
 
-    mockApiPost.mockResolvedValueOnce({
+    mockApiPost.mockResolvedValueOnce({ data: {
       uri: 'wc:xxx',
       qrCode: 'data:image/png;base64,abc',
       expiresAt: 9999999999,
-    });
+    } });
 
     const connectButtons = screen.getAllByText('Connect');
     fireEvent.click(connectButtons[0]!);
@@ -386,12 +388,10 @@ describe('WalletConnect page: Connect flow', () => {
 
     // Now mock the pair-status to return connected
     mockApiGet.mockImplementation(async (path: string) => {
-      if (path === '/v1/wallets') return mockWallets;
-      const wcMatch = path.match(/\/v1\/wallets\/(.+)\/wc\/session$/);
-      if (wcMatch) throw new ApiError(404, 'NOT_FOUND', 'No session');
-      const statusMatch = path.match(/\/v1\/wallets\/(.+)\/wc\/pair\/status$/);
-      if (statusMatch) return { status: 'connected', session: mockWcSession };
-      return {};
+      if (path === '/v1/wallets') return { data: mockWallets };
+      if (path === '/v1/wallets/{id}/wc/session') throw new ApiError(404, 'NOT_FOUND', 'No session');
+      if (path === '/v1/wallets/{id}/wc/pair/status') return { data: { status: 'connected', session: mockWcSession } };
+      return { data: {} };
     });
 
     // Advance timer to trigger polling
@@ -414,11 +414,11 @@ describe('WalletConnect page: Connect flow', () => {
       expect(screen.getByText('My Solana Wallet')).toBeTruthy();
     });
 
-    mockApiPost.mockResolvedValueOnce({
+    mockApiPost.mockResolvedValueOnce({ data: {
       uri: 'wc:xxx',
       qrCode: 'data:image/png;base64,abc',
       expiresAt: 9999999999,
-    });
+    } });
 
     const connectButtons = screen.getAllByText('Connect');
     fireEvent.click(connectButtons[0]!);
@@ -429,12 +429,10 @@ describe('WalletConnect page: Connect flow', () => {
 
     // Mock pair-status to return expired
     mockApiGet.mockImplementation(async (path: string) => {
-      if (path === '/v1/wallets') return mockWallets;
-      const wcMatch = path.match(/\/v1\/wallets\/(.+)\/wc\/session$/);
-      if (wcMatch) throw new ApiError(404, 'NOT_FOUND', 'No session');
-      const statusMatch = path.match(/\/v1\/wallets\/(.+)\/wc\/pair\/status$/);
-      if (statusMatch) return { status: 'expired' };
-      return {};
+      if (path === '/v1/wallets') return { data: mockWallets };
+      if (path === '/v1/wallets/{id}/wc/session') throw new ApiError(404, 'NOT_FOUND', 'No session');
+      if (path === '/v1/wallets/{id}/wc/pair/status') return { data: { status: 'expired' } };
+      return { data: {} };
     });
 
     // Advance timer to trigger polling
@@ -471,7 +469,9 @@ describe('WalletConnect page: Disconnect flow', () => {
     fireEvent.click(screen.getByText('Disconnect'));
 
     await waitFor(() => {
-      expect(mockApiDelete).toHaveBeenCalledWith('/v1/wallets/w1/wc/session');
+      expect(mockApiDelete).toHaveBeenCalledWith('/v1/wallets/{id}/wc/session', expect.objectContaining({
+        params: { path: { id: 'w1' } },
+      }));
     });
 
     await waitFor(() => {

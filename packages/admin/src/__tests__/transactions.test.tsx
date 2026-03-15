@@ -10,19 +10,19 @@ const mockApiPatch = vi.fn();
 
 // Mock declarations moved to top-level const
 
-vi.mock('../api/typed-client', () => ({
-  api: {
-    GET: (...args: unknown[]) => mockApiGet(...args),
-    POST: (...args: unknown[]) => mockApiPost(...args),
-    PUT: (...args: unknown[]) => mockApiPut(...args),
-    DELETE: (...args: unknown[]) => mockApiDelete(...args),
-    PATCH: (...args: unknown[]) => mockApiPatch(...args),
-  },
-  ApiError: class ApiError extends Error {
-    status: number; code: string; serverMessage: string;
-    constructor(s: number, c: string, m: string) { super(`[${s}] ${c}: ${m}`); this.name = 'ApiError'; this.status = s; this.code = c; this.serverMessage = m; }
-  },
-}));
+vi.mock('../api/typed-client', async () => {
+  const { ApiError } = await import('../api/client');
+  return {
+    api: {
+      GET: (...args: unknown[]) => mockApiGet(...args),
+      POST: (...args: unknown[]) => mockApiPost(...args),
+      PUT: (...args: unknown[]) => mockApiPut(...args),
+      DELETE: (...args: unknown[]) => mockApiDelete(...args),
+      PATCH: (...args: unknown[]) => mockApiPatch(...args),
+    },
+    ApiError,
+  };
+});
 
 vi.mock('../components/toast', () => ({
   showToast: vi.fn(),
@@ -52,6 +52,7 @@ vi.mock('../utils/dirty-guard', () => ({
   hasDirty: { value: false },
 }));
 
+import { ApiError } from '../api/client';
 import TransactionsPage from '../pages/transactions';
 
 // ---------------------------------------------------------------------------
@@ -139,11 +140,11 @@ const mockSettings = {
 
 function setupMocks(txResponse = mockTxResponse, incomingResponse = mockIncomingResponse) {
   mockApiGet.mockImplementation((url: string) => {
-    if (url.includes('/v1/admin/transactions')) return Promise.resolve(txResponse);
-    if (url.includes('/v1/admin/incoming')) return Promise.resolve(incomingResponse);
-    if (url.includes('/v1/wallets')) return Promise.resolve(mockWallets);
-    if (url.includes('/v1/admin/settings')) return Promise.resolve(mockSettings);
-    return Promise.resolve({});
+    if (url.includes('/v1/admin/transactions')) return Promise.resolve({ data: txResponse });
+    if (url.includes('/v1/admin/incoming')) return Promise.resolve({ data: incomingResponse });
+    if (url.includes('/v1/wallets')) return Promise.resolve({ data: mockWallets });
+    if (url.includes('/v1/admin/settings')) return Promise.resolve({ data: mockSettings });
+    return Promise.resolve({ data: {} });
   });
 }
 
@@ -350,12 +351,12 @@ describe('TransactionsPage', () => {
     mockApiGet.mockImplementation((url: string) => {
       if (url.includes('/v1/admin/transactions') || url.includes('/v1/admin/incoming')) {
         return new Promise((resolve) =>
-          setTimeout(() => resolve(mockTxResponse), 500),
+          setTimeout(() => resolve({ data: mockTxResponse }), 500),
         );
       }
-      if (url.includes('/v1/wallets')) return Promise.resolve(mockWallets);
-      if (url.includes('/v1/admin/settings')) return Promise.resolve(mockSettings);
-      return Promise.resolve({});
+      if (url.includes('/v1/wallets')) return Promise.resolve({ data: mockWallets });
+      if (url.includes('/v1/admin/settings')) return Promise.resolve({ data: mockSettings });
+      return Promise.resolve({ data: {} });
     });
 
     render(<TransactionsPage />);
@@ -380,9 +381,9 @@ describe('TransactionsPage', () => {
       if (url.includes('/v1/admin/transactions') || url.includes('/v1/admin/incoming')) {
         return Promise.reject(new ApiError(0, 'NETWORK_ERROR', 'Cannot connect'));
       }
-      if (url.includes('/v1/wallets')) return Promise.resolve(mockWallets);
-      if (url.includes('/v1/admin/settings')) return Promise.resolve(mockSettings);
-      return Promise.resolve({});
+      if (url.includes('/v1/wallets')) return Promise.resolve({ data: mockWallets });
+      if (url.includes('/v1/admin/settings')) return Promise.resolve({ data: mockSettings });
+      return Promise.resolve({ data: {} });
     });
 
     render(<TransactionsPage />);
@@ -422,8 +423,8 @@ describe('TransactionsPage', () => {
     await waitFor(() => {
       const calls = mockApiGet.mock.calls;
       const txCalls = calls.filter((c) => (c[0] as string).includes('/v1/admin/transactions'));
-      const lastCall = txCalls[txCalls.length - 1]?.[0] as string;
-      expect(lastCall).toContain('offset=20');
+      const lastOpts = txCalls[txCalls.length - 1]?.[1] as { params?: { query?: Record<string, string> } };
+      expect(lastOpts?.params?.query?.offset).toBe('20');
     });
   });
 
@@ -453,8 +454,8 @@ describe('TransactionsPage', () => {
     await waitFor(() => {
       const calls = mockApiGet.mock.calls;
       const txCalls = calls.filter((c) => (c[0] as string).includes('/v1/admin/transactions'));
-      const lastCall = txCalls[txCalls.length - 1]?.[0] as string;
-      expect(lastCall).toContain('type=APPROVE');
+      const lastOpts = txCalls[txCalls.length - 1]?.[1] as { params?: { query?: Record<string, string> } };
+      expect(lastOpts?.params?.query?.type).toBe('APPROVE');
     });
   });
 
@@ -496,7 +497,7 @@ describe('TransactionsPage', () => {
   });
 
   it('toggles wallet monitoring on click', async () => {
-    mockApiPatch.mockResolvedValue({ id: 'wallet-uuid-2', monitorIncoming: true });
+    mockApiPatch.mockResolvedValue({ data: { id: 'wallet-uuid-2', monitorIncoming: true } });
 
     render(<TransactionsPage />);
     await waitForTableData();
@@ -512,8 +513,11 @@ describe('TransactionsPage', () => {
 
     await waitFor(() => {
       expect(mockApiPatch).toHaveBeenCalledWith(
-        '/v1/wallets/wallet-uuid-2',
-        { monitorIncoming: true },
+        '/v1/wallets/{id}',
+        expect.objectContaining({
+          params: { path: { id: 'wallet-uuid-2' } },
+          body: { monitorIncoming: true },
+        }),
       );
     });
   });

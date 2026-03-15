@@ -1327,10 +1327,10 @@ describe('WalletConnectTab', () => {
     fireEvent.click(tabs[0]);
 
     await waitFor(() => {
-      expect(screen.getByLabelText('Project ID')).toBeTruthy();
+      expect(screen.getByLabelText('Project Id')).toBeTruthy();
     });
 
-    const projectInput = screen.getByLabelText('Project ID') as HTMLInputElement;
+    const projectInput = screen.getByLabelText('Project Id') as HTMLInputElement;
     fireEvent.input(projectInput, { target: { value: 'new-project-id' } });
 
     await waitFor(() => {

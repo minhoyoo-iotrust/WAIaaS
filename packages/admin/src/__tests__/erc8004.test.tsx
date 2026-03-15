@@ -23,19 +23,19 @@ const mockApiPatch = vi.fn();
 
 // Mock declarations moved to top-level const
 
-vi.mock('../api/typed-client', () => ({
-  api: {
-    GET: (...args: unknown[]) => mockApiGet(...args),
-    POST: (...args: unknown[]) => mockApiPost(...args),
-    PUT: (...args: unknown[]) => mockApiPut(...args),
-    DELETE: (...args: unknown[]) => mockApiDelete(...args),
-    PATCH: (...args: unknown[]) => mockApiPatch(...args),
-  },
-  ApiError: class ApiError extends Error {
-    status: number; code: string; serverMessage: string;
-    constructor(s: number, c: string, m: string) { super(`[${s}] ${c}: ${m}`); this.name = 'ApiError'; this.status = s; this.code = c; this.serverMessage = m; }
-  },
-}));
+vi.mock('../api/typed-client', async () => {
+  const { ApiError } = await import('../api/client');
+  return {
+    api: {
+      GET: (...args: unknown[]) => mockApiGet(...args),
+      POST: (...args: unknown[]) => mockApiPost(...args),
+      PUT: (...args: unknown[]) => mockApiPut(...args),
+      DELETE: (...args: unknown[]) => mockApiDelete(...args),
+      PATCH: (...args: unknown[]) => mockApiPatch(...args),
+    },
+    ApiError,
+  };
+});
 
 vi.mock('../components/toast', () => ({
   showToast: vi.fn(),
@@ -128,9 +128,10 @@ describe('Erc8004Page', () => {
 
   it('shows toggle and disabled message when feature gate is disabled', async () => {
         mockApiGet
-      .mockResolvedValueOnce(mockSettingsDisabled)  // settings
-      .mockResolvedValueOnce({ providers: [] })  // providers
-      .mockResolvedValueOnce({ items: [] })  // wallets (always loaded now)
+      .mockResolvedValueOnce({ data: mockSettingsDisabled })  // settings
+      .mockResolvedValueOnce({ data: { providers: [] } })  // providers
+      .mockResolvedValueOnce({ data: { items: [] } })  // wallets (always loaded now })
+
     ;
 
     render(<Erc8004Page />);
@@ -145,10 +146,10 @@ describe('Erc8004Page', () => {
 
   it('shows toggle in enabled state with table headers', async () => {
         mockApiGet
-      .mockResolvedValueOnce(mockSettingsEnabled) // settings
-      .mockResolvedValueOnce({ providers: [] }) // providers
-      .mockResolvedValueOnce({ items: mockWallets }) // wallets
-      .mockResolvedValueOnce(mockRegFile); // registration file for w1
+      .mockResolvedValueOnce({ data: mockSettingsEnabled }) // settings
+      .mockResolvedValueOnce({ data: { providers: [] } }) // providers
+      .mockResolvedValueOnce({ data: { items: mockWallets } }) // wallets
+      .mockResolvedValueOnce({ data: mockRegFile }); // registration file for w1
 
     render(<Erc8004Page />);
 
@@ -164,10 +165,10 @@ describe('Erc8004Page', () => {
 
   it('hides management tabs when disabled', async () => {
         mockApiGet
-      .mockResolvedValueOnce(mockSettingsDisabled) // settings
-      .mockResolvedValueOnce({ providers: [] }) // providers
-      .mockResolvedValueOnce({ items: mockWallets }) // wallets
-      .mockResolvedValueOnce(mockRegFile); // registration file for w1
+      .mockResolvedValueOnce({ data: mockSettingsDisabled }) // settings
+      .mockResolvedValueOnce({ data: { providers: [] } }) // providers
+      .mockResolvedValueOnce({ data: { items: mockWallets } }) // wallets
+      .mockResolvedValueOnce({ data: mockRegFile }); // registration file for w1
 
     render(<Erc8004Page />);
 
@@ -183,10 +184,10 @@ describe('Erc8004Page', () => {
 
   it('shows all tabs when enabled', async () => {
         mockApiGet
-      .mockResolvedValueOnce(mockSettingsEnabled) // settings
-      .mockResolvedValueOnce({ providers: [] }) // providers
-      .mockResolvedValueOnce({ items: mockWallets }) // wallets
-      .mockResolvedValueOnce(mockRegFile); // registration file for w1
+      .mockResolvedValueOnce({ data: mockSettingsEnabled }) // settings
+      .mockResolvedValueOnce({ data: { providers: [] } }) // providers
+      .mockResolvedValueOnce({ data: { items: mockWallets } }) // wallets
+      .mockResolvedValueOnce({ data: mockRegFile }); // registration file for w1
 
     render(<Erc8004Page />);
 
@@ -199,10 +200,11 @@ describe('Erc8004Page', () => {
 
   it('opens and closes Register Agent modal', async () => {
         mockApiGet
-      .mockResolvedValueOnce(mockSettingsEnabled)
-      .mockResolvedValueOnce({ providers: [] }) // providers
-      .mockResolvedValueOnce({ items: mockWallets })
-      .mockResolvedValueOnce(mockRegFile);
+      .mockResolvedValueOnce({ data: mockSettingsEnabled })
+      .mockResolvedValueOnce({ data: { providers: [] } }) // providers
+      .mockResolvedValueOnce({ data: { items: mockWallets } })
+
+      .mockResolvedValueOnce({ data: mockRegFile });
 
     render(<Erc8004Page />);
 
@@ -226,11 +228,12 @@ describe('Erc8004Page', () => {
 
   it('renders Registration File tab with JSON viewer', async () => {
         mockApiGet
-      .mockResolvedValueOnce(mockSettingsEnabled)
-      .mockResolvedValueOnce({ providers: [] }) // providers
-      .mockResolvedValueOnce({ items: mockWallets })
-      .mockResolvedValueOnce(mockRegFile)
-      .mockResolvedValueOnce(mockRegFile); // For registration file load
+      .mockResolvedValueOnce({ data: mockSettingsEnabled })
+      .mockResolvedValueOnce({ data: { providers: [] } }) // providers
+      .mockResolvedValueOnce({ data: { items: mockWallets } })
+
+      .mockResolvedValueOnce({ data: mockRegFile })
+      .mockResolvedValueOnce({ data: mockRegFile }); // For registration file load
 
     render(<Erc8004Page />);
 
@@ -250,12 +253,13 @@ describe('Erc8004Page', () => {
   it('calls WC pair API when Link Wallet is clicked', async () => {
         
     mockApiGet
-      .mockResolvedValueOnce(mockSettingsEnabled)
-      .mockResolvedValueOnce({ providers: [] }) // providers
-      .mockResolvedValueOnce({ items: mockWallets })
-      .mockResolvedValueOnce(mockRegFile);
+      .mockResolvedValueOnce({ data: mockSettingsEnabled })
+      .mockResolvedValueOnce({ data: { providers: [] } }) // providers
+      .mockResolvedValueOnce({ data: { items: mockWallets } })
 
-    mockApiPost.mockResolvedValueOnce({ uri: 'wc:test-uri@2' });
+      .mockResolvedValueOnce({ data: mockRegFile });
+
+    mockApiPost.mockResolvedValueOnce({ data: { uri: 'wc:test-uri@2' } });
 
     render(<Erc8004Page />);
 
@@ -266,7 +270,9 @@ describe('Erc8004Page', () => {
     fireEvent.click(screen.getByText('Link Wallet'));
 
     await waitFor(() => {
-      expect(mockApiPost).toHaveBeenCalledWith('/v1/wallets/w1/wc/pair', {});
+      expect(mockApiPost).toHaveBeenCalledWith('/v1/wallets/{id}/wc/pair', expect.objectContaining({
+        params: { path: { id: 'w1' } },
+      }));
     });
   });
 
@@ -281,14 +287,14 @@ describe('Erc8004Page', () => {
   it('calls PUT settings API when toggle is clicked', async () => {
         
     mockApiGet
-      .mockResolvedValueOnce(mockSettingsDisabled) // initial settings
-      .mockResolvedValueOnce({ providers: [] }) // providers
-      .mockResolvedValueOnce([]) // wallets
-      .mockResolvedValueOnce(mockSettingsEnabled) // settings after toggle
-      .mockResolvedValueOnce({ providers: [] }) // providers reload
-      .mockResolvedValueOnce({ items: mockWallets }); // wallets after reload
+      .mockResolvedValueOnce({ data: mockSettingsDisabled }) // initial settings
+      .mockResolvedValueOnce({ data: { providers: [] } }) // providers
+      .mockResolvedValueOnce({ data: { items: [] } }) // wallets
+      .mockResolvedValueOnce({ data: mockSettingsEnabled }) // settings after toggle
+      .mockResolvedValueOnce({ data: { providers: [] } }) // providers reload
+      .mockResolvedValueOnce({ data: { items: mockWallets } }); // wallets after reload
 
-    mockApiPut.mockResolvedValueOnce({ updated: 1, settings: mockSettingsEnabled });
+    mockApiPut.mockResolvedValueOnce({ data: { updated: 1, settings: mockSettingsEnabled } });
 
     render(<Erc8004Page />);
 
@@ -302,7 +308,7 @@ describe('Erc8004Page', () => {
 
     await waitFor(() => {
       expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', {
-        settings: [{ key: 'actions.erc8004_agent_enabled', value: 'true' }],
+        body: { settings: [{ key: 'actions.erc8004_agent_enabled', value: 'true' }] },
       });
     });
   });
@@ -310,10 +316,10 @@ describe('Erc8004Page', () => {
   describe('Registered Actions table (Phase 331)', () => {
     it('renders Registered Actions when erc8004_agent provider has actions', async () => {
             mockApiGet
-        .mockResolvedValueOnce(mockSettingsEnabled) // settings
-        .mockResolvedValueOnce(mockProvidersWithErc8004) // providers
-        .mockResolvedValueOnce({ items: mockWallets }) // wallets
-        .mockResolvedValueOnce(mockRegFile); // registration file
+        .mockResolvedValueOnce({ data: mockSettingsEnabled }) // settings
+        .mockResolvedValueOnce({ data: mockProvidersWithErc8004 }) // providers
+        .mockResolvedValueOnce({ data: { items: mockWallets } }) // wallets
+        .mockResolvedValueOnce({ data: mockRegFile }); // registration file
 
       render(<Erc8004Page />);
 
@@ -326,10 +332,11 @@ describe('Erc8004Page', () => {
 
     it('shows Description column with action descriptions', async () => {
             mockApiGet
-        .mockResolvedValueOnce(mockSettingsEnabled)
-        .mockResolvedValueOnce(mockProvidersWithErc8004)
-        .mockResolvedValueOnce({ items: mockWallets })
-        .mockResolvedValueOnce(mockRegFile);
+        .mockResolvedValueOnce({ data: mockSettingsEnabled })
+        .mockResolvedValueOnce({ data: mockProvidersWithErc8004 })
+        .mockResolvedValueOnce({ data: { items: mockWallets } })
+
+        .mockResolvedValueOnce({ data: mockRegFile });
 
       render(<Erc8004Page />);
 
@@ -341,10 +348,11 @@ describe('Erc8004Page', () => {
 
     it('tier dropdown is disabled when feature is disabled', async () => {
             mockApiGet
-        .mockResolvedValueOnce(mockSettingsDisabled)
-        .mockResolvedValueOnce(mockProvidersWithErc8004)
-        .mockResolvedValueOnce({ items: mockWallets })
-        .mockResolvedValueOnce(mockRegFile);
+        .mockResolvedValueOnce({ data: mockSettingsDisabled })
+        .mockResolvedValueOnce({ data: mockProvidersWithErc8004 })
+        .mockResolvedValueOnce({ data: { items: mockWallets } })
+
+        .mockResolvedValueOnce({ data: mockRegFile });
 
       render(<Erc8004Page />);
 
@@ -361,10 +369,11 @@ describe('Erc8004Page', () => {
 
     it('tier dropdown is enabled when feature is enabled', async () => {
             mockApiGet
-        .mockResolvedValueOnce(mockSettingsEnabled)
-        .mockResolvedValueOnce(mockProvidersWithErc8004)
-        .mockResolvedValueOnce({ items: mockWallets })
-        .mockResolvedValueOnce(mockRegFile);
+        .mockResolvedValueOnce({ data: mockSettingsEnabled })
+        .mockResolvedValueOnce({ data: mockProvidersWithErc8004 })
+        .mockResolvedValueOnce({ data: { items: mockWallets } })
+
+        .mockResolvedValueOnce({ data: mockRegFile });
 
       render(<Erc8004Page />);
 
@@ -382,15 +391,16 @@ describe('Erc8004Page', () => {
     it('dropdown change fires PUT with correct tier key', async () => {
             
       mockApiGet
-        .mockResolvedValueOnce(mockSettingsEnabled)
-        .mockResolvedValueOnce(mockProvidersWithErc8004)
-        .mockResolvedValueOnce({ items: mockWallets })
-        .mockResolvedValueOnce(mockRegFile);
+        .mockResolvedValueOnce({ data: mockSettingsEnabled })
+        .mockResolvedValueOnce({ data: mockProvidersWithErc8004 })
+        .mockResolvedValueOnce({ data: { items: mockWallets } })
 
-      mockApiPut.mockResolvedValueOnce({
+        .mockResolvedValueOnce({ data: mockRegFile });
+
+      mockApiPut.mockResolvedValueOnce({ data: {
         updated: 1,
         settings: { actions: { erc8004_agent_enabled: 'true', erc8004_agent_register_agent_tier: 'DELAY' } },
-      });
+      } });
 
       render(<Erc8004Page />);
 
@@ -404,7 +414,7 @@ describe('Erc8004Page', () => {
 
       await waitFor(() => {
         expect(mockApiPut).toHaveBeenCalledWith('/v1/admin/settings', {
-          settings: [{ key: 'actions.erc8004_agent_register_agent_tier', value: 'DELAY' }],
+          body: { settings: [{ key: 'actions.erc8004_agent_register_agent_tier', value: 'DELAY' }] },
         });
       });
     });

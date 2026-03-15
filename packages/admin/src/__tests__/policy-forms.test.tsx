@@ -10,19 +10,19 @@ const mockApiPatch = vi.fn();
 
 // Mock declarations moved to top-level const
 
-vi.mock('../api/typed-client', () => ({
-  api: {
-    GET: (...args: unknown[]) => mockApiGet(...args),
-    POST: (...args: unknown[]) => mockApiPost(...args),
-    PUT: (...args: unknown[]) => mockApiPut(...args),
-    DELETE: (...args: unknown[]) => mockApiDelete(...args),
-    PATCH: (...args: unknown[]) => mockApiPatch(...args),
-  },
-  ApiError: class ApiError extends Error {
-    status: number; code: string; serverMessage: string;
-    constructor(s: number, c: string, m: string) { super(`[${s}] ${c}: ${m}`); this.name = 'ApiError'; this.status = s; this.code = c; this.serverMessage = m; }
-  },
-}));
+vi.mock('../api/typed-client', async () => {
+  const { ApiError } = await import('../api/client');
+  return {
+    api: {
+      GET: (...args: unknown[]) => mockApiGet(...args),
+      POST: (...args: unknown[]) => mockApiPost(...args),
+      PUT: (...args: unknown[]) => mockApiPut(...args),
+      DELETE: (...args: unknown[]) => mockApiDelete(...args),
+      PATCH: (...args: unknown[]) => mockApiPatch(...args),
+    },
+    ApiError,
+  };
+});
 
 vi.mock('../components/toast', () => ({
   showToast: vi.fn(),
@@ -124,8 +124,8 @@ const mockPoliciesWithVis = [
 /** Helper: render PoliciesPage with standard mocks and open Create form */
 async function renderAndOpenForm() {
   mockApiGet
-    .mockResolvedValueOnce(mockWallets) // wallets
-    .mockResolvedValueOnce(mockPolicies); // policies
+      .mockResolvedValueOnce({ data: mockWallets }) // wallets
+    .mockResolvedValueOnce({ data: mockPolicies }); // policies
 
   render(<PoliciesPage />);
 
@@ -256,11 +256,11 @@ describe('PolicyFormRouter - type-specific forms', () => {
 
   it('creates SPENDING_LIMIT policy with correct rules via API', async () => {
     mockApiGet
-      .mockResolvedValueOnce(mockWallets) // wallets
-      .mockResolvedValueOnce(mockPolicies) // initial policies
-      .mockResolvedValueOnce(mockPolicies); // refresh after create
+      .mockResolvedValueOnce({ data: mockWallets }) // wallets
+      .mockResolvedValueOnce({ data: mockPolicies }) // initial policies
+      .mockResolvedValueOnce({ data: mockPolicies }); // refresh after create
 
-    mockApiPost.mockResolvedValueOnce({ id: 'policy-new' });
+    mockApiPost.mockResolvedValueOnce({ data: { id: 'policy-new' } });
 
     render(<PoliciesPage />);
 
@@ -294,12 +294,14 @@ describe('PolicyFormRouter - type-specific forms', () => {
       expect(mockApiPost).toHaveBeenCalledWith(
         '/v1/policies',
         expect.objectContaining({
-          type: 'SPENDING_LIMIT',
-          rules: expect.objectContaining({
-            instant_max: '2000000',
-            notify_max: '8000000',
-            delay_max: '20000000',
-            delay_seconds: 120,
+          body: expect.objectContaining({
+            type: 'SPENDING_LIMIT',
+            rules: expect.objectContaining({
+              instant_max: '2000000',
+              notify_max: '8000000',
+              delay_max: '20000000',
+              delay_seconds: 120,
+            }),
           }),
         }),
       );
@@ -308,10 +310,10 @@ describe('PolicyFormRouter - type-specific forms', () => {
 
   it('validates SPENDING_LIMIT: raw fields are optional when USD defaults present', async () => {
     mockApiGet
-      .mockResolvedValueOnce(mockWallets)
-      .mockResolvedValueOnce(mockPolicies)
-      .mockResolvedValueOnce(mockPolicies);
-    mockApiPost.mockResolvedValueOnce({ id: 'ok' });
+      .mockResolvedValueOnce({ data: mockWallets })
+      .mockResolvedValueOnce({ data: mockPolicies })
+      .mockResolvedValueOnce({ data: mockPolicies });
+    mockApiPost.mockResolvedValueOnce({ data: { id: 'ok' } });
 
     await renderAndOpenForm();
 
@@ -375,11 +377,11 @@ describe('PolicyFormRouter - type-specific forms', () => {
 
   it('creates APPROVE_TIER_OVERRIDE with correct tier value', async () => {
     mockApiGet
-      .mockResolvedValueOnce(mockWallets)
-      .mockResolvedValueOnce(mockPolicies)
-      .mockResolvedValueOnce(mockPolicies); // refresh after create
+      .mockResolvedValueOnce({ data: mockWallets })
+      .mockResolvedValueOnce({ data: mockPolicies })
+      .mockResolvedValueOnce({ data: mockPolicies }); // refresh after create
 
-    mockApiPost.mockResolvedValueOnce({ id: 'policy-tier' });
+    mockApiPost.mockResolvedValueOnce({ data: { id: 'policy-tier' } });
 
     render(<PoliciesPage />);
 
@@ -412,9 +414,9 @@ describe('PolicyFormRouter - type-specific forms', () => {
       expect(mockApiPost).toHaveBeenCalledWith(
         '/v1/policies',
         expect.objectContaining({
-          type: 'APPROVE_TIER_OVERRIDE',
-          rules: expect.objectContaining({
-            tier: 'DELAY',
+          body: expect.objectContaining({
+            type: 'APPROVE_TIER_OVERRIDE',
+            rules: expect.objectContaining({ tier: 'DELAY' }),
           }),
         }),
       );
@@ -593,8 +595,8 @@ describe('PolicyRulesSummary visualization', () => {
 
   it('ALLOWED_TOKENS: displays symbol badges in policy list', async () => {
     mockApiGet
-      .mockResolvedValueOnce(mockWallets)
-      .mockResolvedValueOnce(mockPoliciesWithVis);
+      .mockResolvedValueOnce({ data: mockWallets })
+      .mockResolvedValueOnce({ data: mockPoliciesWithVis });
 
     render(<PoliciesPage />);
 
@@ -607,8 +609,8 @@ describe('PolicyRulesSummary visualization', () => {
 
   it('RATE_LIMIT: displays "100 req / 1h" format in policy list', async () => {
     mockApiGet
-      .mockResolvedValueOnce(mockWallets)
-      .mockResolvedValueOnce(mockPoliciesWithVis);
+      .mockResolvedValueOnce({ data: mockWallets })
+      .mockResolvedValueOnce({ data: mockPoliciesWithVis });
 
     render(<PoliciesPage />);
 
@@ -626,8 +628,8 @@ describe('Edit modal - form prefill', () => {
 
   it('prefills SPENDING_LIMIT form with existing values on edit (EDIT-01)', async () => {
     mockApiGet
-      .mockResolvedValueOnce(mockWallets)
-      .mockResolvedValueOnce(mockPolicies);
+      .mockResolvedValueOnce({ data: mockWallets })
+      .mockResolvedValueOnce({ data: mockPolicies });
 
     render(<PoliciesPage />);
 
@@ -659,11 +661,11 @@ describe('Edit modal - form prefill', () => {
 
   it('saves edited policy via PUT API (EDIT-02)', async () => {
     mockApiGet
-      .mockResolvedValueOnce(mockWallets)
-      .mockResolvedValueOnce(mockPolicies)
-      .mockResolvedValueOnce(mockPolicies); // refresh after edit
+      .mockResolvedValueOnce({ data: mockWallets })
+      .mockResolvedValueOnce({ data: mockPolicies })
+      .mockResolvedValueOnce({ data: mockPolicies }); // refresh after edit
 
-    mockApiPut.mockResolvedValueOnce({ ok: true });
+    mockApiPut.mockResolvedValueOnce({ data: { ok: true } });
 
     render(<PoliciesPage />);
 
@@ -692,10 +694,11 @@ describe('Edit modal - form prefill', () => {
 
     await waitFor(() => {
       expect(mockApiPut).toHaveBeenCalledWith(
-        '/v1/policies/policy-1',
+        '/v1/policies/{id}',
         expect.objectContaining({
-          rules: expect.objectContaining({
-            instant_max: '2000000',
+          params: { path: { id: 'policy-1' } },
+          body: expect.objectContaining({
+            rules: expect.objectContaining({ instant_max: '2000000' }),
           }),
         }),
       );

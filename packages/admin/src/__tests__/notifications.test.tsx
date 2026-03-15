@@ -10,19 +10,19 @@ const mockApiPatch = vi.fn();
 
 // Mock declarations moved to top-level const
 
-vi.mock('../api/typed-client', () => ({
-  api: {
-    GET: (...args: unknown[]) => mockApiGet(...args),
-    POST: (...args: unknown[]) => mockApiPost(...args),
-    PUT: (...args: unknown[]) => mockApiPut(...args),
-    DELETE: (...args: unknown[]) => mockApiDelete(...args),
-    PATCH: (...args: unknown[]) => mockApiPatch(...args),
-  },
-  ApiError: class ApiError extends Error {
-    status: number; code: string; serverMessage: string;
-    constructor(s: number, c: string, m: string) { super(`[${s}] ${c}: ${m}`); this.name = 'ApiError'; this.status = s; this.code = c; this.serverMessage = m; }
-  },
-}));
+vi.mock('../api/typed-client', async () => {
+  const { ApiError } = await import('../api/client');
+  return {
+    api: {
+      GET: (...args: unknown[]) => mockApiGet(...args),
+      POST: (...args: unknown[]) => mockApiPost(...args),
+      PUT: (...args: unknown[]) => mockApiPut(...args),
+      DELETE: (...args: unknown[]) => mockApiDelete(...args),
+      PATCH: (...args: unknown[]) => mockApiPatch(...args),
+    },
+    ApiError,
+  };
+});
 
 vi.mock('../components/toast', () => ({
   showToast: vi.fn(),
@@ -99,8 +99,8 @@ const emptyLogs = {
 
 function setupMocks(statusData = mockStatus, logData = mockLogs) {
   mockApiGet.mockImplementation((url: string) => {
-    if (url.includes('/notifications/status')) return Promise.resolve(statusData);
-    if (url.includes('/notifications/log')) return Promise.resolve(logData);
+    if (url.includes('/notifications/status')) return Promise.resolve({ data: statusData });
+    if (url.includes('/notifications/log')) return Promise.resolve({ data: logData });
     return Promise.reject(new Error(`Unexpected URL: ${url}`));
   });
 }
@@ -152,12 +152,12 @@ describe('NotificationsPage', () => {
   it('should trigger POST on Test All Channels click and show results', async () => {
     setupMocks();
 
-    mockApiPost.mockResolvedValueOnce({
+    mockApiPost.mockResolvedValueOnce({ data: {
       results: [
         { channel: 'telegram', success: true },
         { channel: 'ntfy', success: true },
       ],
-    });
+    } });
 
     render(<NotificationsPage />);
 
@@ -214,17 +214,17 @@ describe('NotificationsPage', () => {
     });
 
     // Mock the page 2 fetch
-    mockApiGet.mockImplementation((url: string) => {
-      if (url.includes('/notifications/status')) return Promise.resolve(mockStatus);
-      if (url.includes('page=2')) {
-        return Promise.resolve({
+    mockApiGet.mockImplementation((url: string, opts?: any) => {
+      if (url.includes('/notifications/status')) return Promise.resolve({ data: mockStatus });
+      if (url.includes('/notifications/log') && opts?.params?.query?.page === '2') {
+        return Promise.resolve({ data: {
           logs: [{ id: '21', eventType: 'TX_SUBMITTED', walletId: 'wallet-20', channel: 'ntfy', status: 'sent', error: null, message: null, createdAt: 1707607600 }],
           total: 25,
           page: 2,
           pageSize: 20,
-        });
+        } });
       }
-      if (url.includes('/notifications/log')) return Promise.resolve(mockLogsPage1);
+      if (url.includes('/notifications/log')) return Promise.resolve({ data: mockLogsPage1 });
       return Promise.reject(new Error(`Unexpected URL: ${url}`));
     });
 
@@ -232,7 +232,8 @@ describe('NotificationsPage', () => {
 
     await waitFor(() => {
       expect(mockApiGet).toHaveBeenCalledWith(
-        '/v1/admin/notifications/log?page=2&pageSize=20',
+        '/v1/admin/notifications/log',
+        expect.objectContaining({ params: { query: expect.objectContaining({ page: '2', pageSize: '20' }) } }),
       );
     });
   });
@@ -263,12 +264,12 @@ describe('NotificationsPage', () => {
   it('should show error message for failed test channels', async () => {
     setupMocks();
 
-    mockApiPost.mockResolvedValueOnce({
+    mockApiPost.mockResolvedValueOnce({ data: {
       results: [
         { channel: 'telegram', success: true },
         { channel: 'ntfy', success: false, error: 'Connection timeout' },
       ],
-    });
+    } });
 
     render(<NotificationsPage />);
 
@@ -344,9 +345,9 @@ describe('NotificationsPage', () => {
   it('T-3: should send correct body when channel Test button is clicked', async () => {
     setupMocks();
 
-    mockApiPost.mockResolvedValueOnce({
+    mockApiPost.mockResolvedValueOnce({ data: {
       results: [{ channel: 'telegram', success: true }],
-    });
+    } });
 
     const { container } = render(<NotificationsPage />);
 
@@ -372,7 +373,7 @@ describe('NotificationsPage', () => {
     await waitFor(() => {
       expect(mockApiPost).toHaveBeenCalledWith(
         '/v1/admin/notifications/test',
-        { channel: 'telegram' },
+        { body: { channel: 'telegram' } },
       );
     });
   });
@@ -393,12 +394,12 @@ describe('NotificationsPage', () => {
   it('T-5: should send {} body when Test All Channels is clicked', async () => {
     setupMocks();
 
-    mockApiPost.mockResolvedValueOnce({
+    mockApiPost.mockResolvedValueOnce({ data: {
       results: [
         { channel: 'telegram', success: true },
         { channel: 'ntfy', success: true },
       ],
-    });
+    } });
 
     render(<NotificationsPage />);
 

@@ -19,19 +19,19 @@ const mockApiPatch = vi.fn();
 
 // Mock declarations moved to top-level const
 
-vi.mock('../api/typed-client', () => ({
-  api: {
-    GET: (...args: unknown[]) => mockApiGet(...args),
-    POST: (...args: unknown[]) => mockApiPost(...args),
-    PUT: (...args: unknown[]) => mockApiPut(...args),
-    DELETE: (...args: unknown[]) => mockApiDelete(...args),
-    PATCH: (...args: unknown[]) => mockApiPatch(...args),
-  },
-  ApiError: class ApiError extends Error {
-    status: number; code: string; serverMessage: string;
-    constructor(s: number, c: string, m: string) { super(`[${s}] ${c}: ${m}`); this.name = 'ApiError'; this.status = s; this.code = c; this.serverMessage = m; }
-  },
-}));
+vi.mock('../api/typed-client', async () => {
+  const { ApiError } = await import('../api/client');
+  return {
+    api: {
+      GET: (...args: unknown[]) => mockApiGet(...args),
+      POST: (...args: unknown[]) => mockApiPost(...args),
+      PUT: (...args: unknown[]) => mockApiPut(...args),
+      DELETE: (...args: unknown[]) => mockApiDelete(...args),
+      PATCH: (...args: unknown[]) => mockApiPatch(...args),
+    },
+    ApiError,
+  };
+});
 
 vi.mock('../components/toast', () => ({
   showToast: vi.fn(),
@@ -101,21 +101,21 @@ const confirmedTx = {
 function mockApiCalls(outgoingItems: any[] = [queuedTx]) {
   mockApiGet.mockImplementation(async (path: string) => {
     if (path.startsWith('/v1/admin/transactions')) {
-      return makeTxResponse(outgoingItems);
+      return { data: makeTxResponse(outgoingItems) };
     }
     if (path.startsWith('/v1/admin/incoming')) {
-      return makeTxResponse([]);
+      return { data: makeTxResponse([]) };
     }
     if (path === '/v1/wallets') {
-      return { items: [{ id: 'w-1', name: 'Test Wallet', chain: 'solana', status: 'ACTIVE' }] };
+      return { data: { items: [{ id: 'w-1', name: 'Test Wallet', chain: 'solana', status: 'ACTIVE' }] } };
     }
     if (path === '/v1/admin/settings') {
-      return {};
+      return { data: {} };
     }
     if (path.startsWith('/v1/admin/forex')) {
-      return { rates: {} };
+      return { data: { rates: {} } };
     }
-    return {};
+    return { data: {} };
   });
 }
 
@@ -185,7 +185,7 @@ describe('TransactionsPage cancel/reject buttons', () => {
 
   it('calls API on Cancel button click and refreshes', async () => {
     mockApiCalls([queuedTx]);
-    mockApiPost.mockResolvedValue({ id: queuedTx.id, status: 'CANCELLED' });
+    mockApiPost.mockResolvedValue({ data: { id: queuedTx.id, status: 'CANCELLED' } });
 
     // Mock window.confirm to return true
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
@@ -212,7 +212,9 @@ describe('TransactionsPage cancel/reject buttons', () => {
 
     // Should have called the cancel API
     await waitFor(() => {
-      expect(mockApiPost).toHaveBeenCalledWith(`/v1/admin/transactions/${queuedTx.id}/cancel`);
+      expect(mockApiPost).toHaveBeenCalledWith('/v1/admin/transactions/{id}/cancel', expect.objectContaining({
+        params: { path: { id: queuedTx.id } },
+      }));
     });
 
     // Should show success toast
