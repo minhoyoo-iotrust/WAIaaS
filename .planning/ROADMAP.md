@@ -14,6 +14,7 @@
 - ✅ **v0.10** — 구현 전 설계 완결성 확보 (shipped 2026-02-09)
 - ✅ **v1.0** — 구현 계획 수립 (shipped 2026-02-09)
 - ✅ **v1.1 ~ v31.17** — (103 milestones shipped)
+- 🚧 **v31.18** — Admin UI IA 재구조화 (in progress)
 
 ## Phases
 
@@ -71,7 +72,82 @@
 
 </details>
 
+### 🚧 v31.18 Admin UI IA 재구조화 (In Progress)
+
+**Milestone Goal:** Admin UI 사이드바의 17개 플랫 메뉴를 5개 섹션 헤더로 그룹화하고, 페이지 병합/분리, 지갑 상세 8탭→4탭 재구성, 레거시 파일 정리를 통해 일관된 정보 구조(IA) 확보.
+
+- [ ] **Phase 417: 사이드바 섹션 + 리네이밍 + 라우트 정리** - 섹션 그룹 사이드바, 메뉴 리네이밍, 경로 리다이렉트, TabNav 통일
+- [ ] **Phase 418: 페이지 병합 + 레거시 정리** - Tokens/RPC Proxy 탭 병합, 레거시 파일 제거
+- [ ] **Phase 419: Trading Settings 탭 제거** - Hyperliquid/Polymarket Settings 탭 제거 및 Providers 이관
+- [ ] **Phase 420: 지갑 상세 탭 재구성** - 8탭을 4탭(Overview/Activity/Assets/Setup)으로 통합
+
+## Phase Details
+
+### Phase 417: 사이드바 섹션 + 리네이밍 + 라우트 정리
+**Goal**: 사용자가 섹션별로 그룹화된 사이드바로 Admin UI를 탐색하고, 변경된 경로로 접근해도 올바른 페이지로 도달한다
+**Depends on**: Nothing (first phase)
+**Requirements**: SIDE-01, SIDE-02, SIDE-03, SIDE-04, SIDE-05, SIDE-06, SIDE-07, SIDE-08, ROUT-01, ROUT-02, ROUT-03, ROUT-04, ROUT-05, ROUT-06, ROUT-07, TNAV-01, TNAV-02, TNAV-03, TNAV-04
+**Success Criteria** (what must be TRUE):
+  1. 사이드바에 Wallets/Trading/Security/Channels/System 5개 섹션 헤더가 보이고 각 섹션 아래에 관련 메뉴가 그룹화되어 있다
+  2. Dashboard는 섹션 밖 최상단에 위치하고, DeFi/Security/System 메뉴가 각각 Providers/Protection/Settings로 표시된다
+  3. 이전 경로(#/defi, #/security, #/system, #/tokens, #/rpc-proxy)로 접근하면 새 경로로 리다이렉트되고, 기존 리다이렉트(erc8004 등)도 유지된다
+  4. Ctrl+K 검색에서 변경된 페이지명과 경로가 반영되어 검색 결과가 정확하다
+  5. Hyperliquid/Polymarket 페이지가 TabNav 공통 컴포넌트를 사용하고, Transactions/Policies 탭 라벨이 History/Rules로 변경되어 있다
+**Plans**: TBD
+
+Plans:
+- [ ] 417-01: NAV_ITEMS 섹션 그룹 구조 전환 + 사이드바 렌더링 + 리네이밍
+- [ ] 417-02: 라우트 리다이렉트 + Ctrl+K 검색 반영 + TabNav 통일
+
+### Phase 418: 페이지 병합 + 레거시 정리
+**Goal**: 관련 기능이 하나의 페이지 내 탭으로 통합되고, 불필요한 레거시 파일이 제거된다
+**Depends on**: Phase 417
+**Requirements**: MERG-01, MERG-02, MERG-03, MERG-04, MERG-05, MERG-06, LGCY-01, LGCY-02, LGCY-03, LGCY-04
+**Success Criteria** (what must be TRUE):
+  1. Wallets 페이지에서 Wallets/Tokens/RPC Endpoints/WalletConnect 4개 탭을 전환할 수 있다
+  2. Settings 페이지에서 General/API Keys/RPC Proxy 3개 탭을 전환할 수 있다
+  3. tokens.tsx, rpc-proxy.tsx, walletconnect.tsx, telegram-users.tsx의 독립 페이지 default export가 제거되고 콘텐츠가 적절한 탭 컴포넌트로 이동되었다
+  4. layout.tsx에서 삭제된 페이지의 import가 제거되고, skills/admin.skill.md가 새 메뉴 구조를 반영한다
+**Plans**: TBD
+
+Plans:
+- [ ] 418-01: Tokens + WalletConnect를 Wallets 탭으로 병합
+- [ ] 418-02: RPC Proxy를 Settings 탭으로 병합 + 레거시 파일 정리 + 스킬 파일 업데이트
+
+### Phase 419: Trading Settings 탭 제거
+**Goal**: Hyperliquid/Polymarket의 중복 Settings 탭이 제거되고 모든 설정이 Providers 페이지에서 관리된다
+**Depends on**: Phase 417
+**Requirements**: TRAD-01, TRAD-02, TRAD-03, TRAD-04, TRAD-05
+**Success Criteria** (what must be TRUE):
+  1. Hyperliquid 페이지에 Overview/Orders/Spot/Sub-accounts 4개 탭만 있고 Settings 탭이 없다
+  2. Polymarket 페이지에 Overview/Markets/Orders/Positions 4개 탭만 있고 Settings 탭이 없다
+  3. 두 페이지 상단에 "Configure in Trading > Providers" 링크가 있고 클릭 시 Providers 페이지로 이동한다
+  4. Providers 페이지에 Hyperliquid/Polymarket 설정 항목이 모두 존재한다
+**Plans**: TBD
+
+Plans:
+- [ ] 419-01: Hyperliquid/Polymarket Settings 탭 제거 + Providers 설정 이관 + 검증
+
+### Phase 420: 지갑 상세 탭 재구성
+**Goal**: 지갑 상세 페이지가 4개 탭(Overview/Activity/Assets/Setup)으로 재구성되어 관련 기능이 논리적으로 그룹화된다
+**Depends on**: Phase 418
+**Requirements**: DETL-01, DETL-02, DETL-03, DETL-04, DETL-05, DETL-06, DETL-07, DETL-08, DETL-09
+**Success Criteria** (what must be TRUE):
+  1. 지갑 상세 페이지에 Overview/Activity/Assets/Setup 4개 탭만 존재한다
+  2. Overview 탭에서 Wallet Info 아래에 Owner Protection 카드가 보이고, Owner 미등록 시 경고+CTA, 등록 시 상태 요약+Manage 버튼이 표시된다
+  3. Activity 탭에서 Transactions와 External Actions를 필터로 구분하여 볼 수 있다
+  4. Assets 탭에서 Staking Positions와 NFT Gallery가 섹션별로 통합 표시된다
+  5. Setup 탭에서 Credentials와 MCP Setup이 섹션별로 통합 표시된다
+**Plans**: TBD
+
+Plans:
+- [ ] 420-01: DETAIL_TABS 재정의 + Overview 탭 Owner Protection 카드 통합
+- [ ] 420-02: Activity/Assets/Setup 탭 콘텐츠 통합
+
 ## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 417 -> 418 -> 419 -> 420
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -99,3 +175,7 @@
 | 414. 인터페이스 점진적 마이그레이션 | v31.17 | 3/3 | Complete | 2026-03-14 |
 | 415. 백엔드 API 확장 및 상수 통합 | v31.17 | 3/3 | Complete | 2026-03-14 |
 | 416. Contract Test 및 검증 | v31.17 | 1/1 | Complete | 2026-03-15 |
+| 417. 사이드바 섹션 + 리네이밍 + 라우트 정리 | v31.18 | 0/2 | Not started | - |
+| 418. 페이지 병합 + 레거시 정리 | v31.18 | 0/2 | Not started | - |
+| 419. Trading Settings 탭 제거 | v31.18 | 0/1 | Not started | - |
+| 420. 지갑 상세 탭 재구성 | v31.18 | 0/2 | Not started | - |

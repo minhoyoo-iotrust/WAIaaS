@@ -94,13 +94,55 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (to be filled by roadmapper) | | |
+| SIDE-01 | Phase 417 | Pending |
+| SIDE-02 | Phase 417 | Pending |
+| SIDE-03 | Phase 417 | Pending |
+| SIDE-04 | Phase 417 | Pending |
+| SIDE-05 | Phase 417 | Pending |
+| SIDE-06 | Phase 417 | Pending |
+| SIDE-07 | Phase 417 | Pending |
+| SIDE-08 | Phase 417 | Pending |
+| ROUT-01 | Phase 417 | Pending |
+| ROUT-02 | Phase 417 | Pending |
+| ROUT-03 | Phase 417 | Pending |
+| ROUT-04 | Phase 417 | Pending |
+| ROUT-05 | Phase 417 | Pending |
+| ROUT-06 | Phase 417 | Pending |
+| ROUT-07 | Phase 417 | Pending |
+| TNAV-01 | Phase 417 | Pending |
+| TNAV-02 | Phase 417 | Pending |
+| TNAV-03 | Phase 417 | Pending |
+| TNAV-04 | Phase 417 | Pending |
+| MERG-01 | Phase 418 | Pending |
+| MERG-02 | Phase 418 | Pending |
+| MERG-03 | Phase 418 | Pending |
+| MERG-04 | Phase 418 | Pending |
+| MERG-05 | Phase 418 | Pending |
+| MERG-06 | Phase 418 | Pending |
+| LGCY-01 | Phase 418 | Pending |
+| LGCY-02 | Phase 418 | Pending |
+| LGCY-03 | Phase 418 | Pending |
+| LGCY-04 | Phase 418 | Pending |
+| TRAD-01 | Phase 419 | Pending |
+| TRAD-02 | Phase 419 | Pending |
+| TRAD-03 | Phase 419 | Pending |
+| TRAD-04 | Phase 419 | Pending |
+| TRAD-05 | Phase 419 | Pending |
+| DETL-01 | Phase 420 | Pending |
+| DETL-02 | Phase 420 | Pending |
+| DETL-03 | Phase 420 | Pending |
+| DETL-04 | Phase 420 | Pending |
+| DETL-05 | Phase 420 | Pending |
+| DETL-06 | Phase 420 | Pending |
+| DETL-07 | Phase 420 | Pending |
+| DETL-08 | Phase 420 | Pending |
+| DETL-09 | Phase 420 | Pending |
 
 **Coverage:**
 - v1 requirements: 38 total
-- Mapped to phases: 0
-- Unmapped: 38 ⚠️
+- Mapped to phases: 38
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-15*
-*Last updated: 2026-03-15 after initial definition*
+*Last updated: 2026-03-15 after roadmap creation*
