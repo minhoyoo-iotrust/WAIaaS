@@ -167,5 +167,5 @@ Phases execute in numeric order: 421 → 422 → 423
 | 419. Trading Settings 탭 제거 | v31.18 | 1/1 | Complete | 2026-03-15 |
 | 420. 지갑 상세 탭 재구성 | v31.18 | 2/2 | Complete | 2026-03-15 |
 | 421. Registry Core + Well-Known Data | v32.0 | 2/2 | Complete | 2026-03-15 |
-| 422. Notification Pipeline Integration | v32.0 | 1/1 | Complete | 2026-03-15 |
+| 422. Notification Pipeline Integration | v32.0 | Complete    | 2026-03-15 | 2026-03-15 |
 | 423. API + Admin UI Contract Names | v32.0 | 0/1 | Not started | - |
