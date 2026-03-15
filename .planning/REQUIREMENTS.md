@@ -41,10 +41,10 @@ Requirements for v32.0. Each maps to roadmap phases.
 
 ### Admin UI / API
 
-- [ ] **ADM-01**: TxDetailResponse에 contractName 필드를 추가한다 (nullable)
-- [ ] **ADM-02**: TxDetailResponse에 contractNameSource 필드를 추가한다 (nullable)
-- [ ] **ADM-03**: Admin UI 트랜잭션 목록에서 CONTRACT_CALL 행에 컨트랙트 이름을 표시한다
-- [ ] **ADM-04**: Admin UI 지갑 상세 Activity 탭에서 CONTRACT_CALL 행에 컨트랙트 이름을 표시한다
+- [x] **ADM-01**: TxDetailResponse에 contractName 필드를 추가한다 (nullable)
+- [x] **ADM-02**: TxDetailResponse에 contractNameSource 필드를 추가한다 (nullable)
+- [x] **ADM-03**: Admin UI 트랜잭션 목록에서 CONTRACT_CALL 행에 컨트랙트 이름을 표시한다
+- [x] **ADM-04**: Admin UI 지갑 상세 Activity 탭에서 CONTRACT_CALL 행에 컨트랙트 이름을 표시한다
 
 ## v2 Requirements
 
@@ -91,10 +91,10 @@ Deferred to future release. Tracked but not in current roadmap.
 | NTF-04 | Phase 422 | Complete |
 | NTF-05 | Phase 422 | Complete |
 | NTF-06 | Phase 422 | Complete |
-| ADM-01 | Phase 423 | Pending |
-| ADM-02 | Phase 423 | Pending |
-| ADM-03 | Phase 423 | Pending |
-| ADM-04 | Phase 423 | Pending |
+| ADM-01 | Phase 423 | Complete |
+| ADM-02 | Phase 423 | Complete |
+| ADM-03 | Phase 423 | Complete |
+| ADM-04 | Phase 423 | Complete |
 
 **Coverage:**
 - v1 requirements: 24 total
@@ -103,4 +103,4 @@ Deferred to future release. Tracked but not in current roadmap.
 
 ---
 *Requirements defined: 2026-03-15*
-*Last updated: 2026-03-15 after Phase 422 completion*
+*Last updated: 2026-03-15 after Phase 423 completion (milestone v32.0 complete)*

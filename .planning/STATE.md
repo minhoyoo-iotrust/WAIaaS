@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v32.0
 milestone_name: Contract Name Resolution
 status: completed
-stopped_at: Completed 422-01 (Phase 422 complete)
-last_updated: "2026-03-15T13:31:17.316Z"
-last_activity: 2026-03-15 — Phase 422 complete (1 plan, notification pipeline integration)
+stopped_at: Completed 423-01 (Phase 423 complete — milestone v32.0 done)
+last_updated: "2026-03-15T13:44:50Z"
+last_activity: 2026-03-15 — Phase 423 complete (1 plan, API + Admin UI contract names)
 progress:
   total_phases: 3
-  completed_phases: 2
-  total_plans: 3
-  completed_plans: 3
-  percent: 75
+  completed_phases: 3
+  total_plans: 4
+  completed_plans: 4
+  percent: 100
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-15)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 — 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Phase 423 — API + Admin UI Contract Names
+**Current focus:** Milestone v32.0 complete
 
 ## Current Position
 
 Phase: 3 of 3 (423. API + Admin UI Contract Names)
-Plan: 0 of 1 in current phase
-Status: Phase 422 complete, ready for Phase 423
-Last activity: 2026-03-15 — Phase 422 complete (1 plan, notification pipeline integration)
+Plan: 1 of 1 in current phase (COMPLETE)
+Status: Milestone v32.0 complete — all 3 phases, 4 plans done
+Last activity: 2026-03-15 — Phase 423 complete (1 plan, API + Admin UI contract names)
 
-Progress: [████████░░] 75%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
-- Average duration: 10.5 min
-- Total execution time: 0.35 hours
+- Total plans completed: 4
+- Average duration: 10 min
+- Total execution time: 0.67 hours
 
 **By Phase:**
 
@@ -46,6 +46,7 @@ Progress: [████████░░] 75%
 | Phase 421 P01 | 2 tasks | 16m | 8m |
 | Phase 421 P02 | 1 task | 5m | 5m |
 | Phase 422 P01 | 2 tasks | 12m | 6m |
+| Phase 423 P01 | 2 tasks | 7m | 3.5m |
 
 ### Decisions
 
@@ -55,6 +56,9 @@ Progress: [████████░░] 75%
 - [Phase 422]: resolveNotificationTo only enriches CONTRACT_CALL; TRANSFER/TOKEN_TRANSFER pass raw address unchanged
 - [Phase 422]: TX_SUBMITTED/TX_CONFIRMED i18n templates updated to include {to} field
 - [Phase 422]: Unregistered contracts return raw address (no truncation) for backward compatibility
+- [Phase 423]: Fallback source returns null for both contractName/contractNameSource -- toAddress already provides raw address
+- [Phase 423]: resolveContractFields() exported from admin-monitoring.ts as shared helper across 3 route files
+- [Phase 423]: Admin inline OpenAPI schemas updated alongside TxDetailResponseSchema for consistent API surface
 
 ### Pending Todos
 
@@ -67,6 +71,6 @@ Progress: [████████░░] 75%
 
 ## Session Continuity
 
-Last session: 2026-03-15T13:28:00Z
-Stopped at: Completed 422-01 (Phase 422 complete)
+Last session: 2026-03-15T13:44:50Z
+Stopped at: Completed 423-01 (Phase 423 complete — milestone v32.0 done)
 Resume file: None
