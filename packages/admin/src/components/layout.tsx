@@ -20,7 +20,6 @@ import HyperliquidPage from '../pages/hyperliquid';
 import PolymarketPage from '../pages/polymarket';
 import AuditLogsPage from '../pages/audit-logs';
 import CredentialsPage from '../pages/credentials';
-import RpcProxyPage from '../pages/rpc-proxy';
 
 function extractPath(hash: string): string {
   const raw = hash.slice(1) || '/dashboard';
@@ -45,7 +44,6 @@ const PAGE_TITLES: Record<string, string> = {
   '/polymarket': 'Polymarket',
   '/agent-identity': 'Agent Identity',
   '/credentials': 'Credentials',
-  '/rpc-proxy': 'RPC Proxy',
   '/policies': 'Policies',
   '/notifications': 'Notifications',
   '/protection': 'Protection',
@@ -64,7 +62,6 @@ const PAGE_SUBTITLES: Record<string, string> = {
   '/polymarket': 'Polymarket prediction market positions, orders, and settings',
   '/agent-identity': 'On-chain agent identity, reputation, and wallet linking',
   '/credentials': 'Manage encryption credentials for external service authentication',
-  '/rpc-proxy': 'EVM JSON-RPC proxy settings and monitoring',
   '/policies': 'Configure transaction policies and rules',
   '/notifications': 'Channel status, delivery logs, and settings',
   '/protection': 'Emergency controls and automatic protection rules',
@@ -155,7 +152,11 @@ function PageRouter() {
   else if (path === '/polymarket') page = <PolymarketPage />;
   else if (path === '/sessions') page = <SessionsPage />;
   else if (path === '/credentials') page = <CredentialsPage />;
-  else if (path === '/rpc-proxy') page = <RpcProxyPage />;
+  else if (path === '/rpc-proxy') {
+    pendingNavigation.value = { tab: 'rpc-proxy', fieldName: '' };
+    window.location.hash = '#/settings';
+    page = <SystemPage />;
+  }
   else if (path === '/policies') page = <PoliciesPage />;
   else if (path === '/notifications') page = <NotificationsPage />;
   else if (path === '/telegram-users') {

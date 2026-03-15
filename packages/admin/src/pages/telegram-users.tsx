@@ -24,10 +24,6 @@ export function TelegramUsersContent() {
   return <TelegramUsersInner />;
 }
 
-export default function TelegramUsersPage() {
-  return <TelegramUsersInner />;
-}
-
 function TelegramUsersInner() {
   const users = useSignal<TelegramUser[]>([]);
   const loading = useSignal(true);
