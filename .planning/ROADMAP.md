@@ -103,7 +103,10 @@ Plans:
 Plans:
 - [x] 425-01-PLAN.md — 인메모리 sliding-window Rate Limiter + 3계층 미들웨어 + createApp 등록 + 테스트
 
-- [ ] Phase 426: CORS + Resource Management (0/1 plan) — CORS 미들웨어 + 알림 타임아웃 + EventBus 정리
+- [ ] Phase 426: CORS + Resource Management (1 plan) — CORS 미들웨어 + 알림 타임아웃 + EventBus 정리
+
+Plans:
+- [ ] 426-01-PLAN.md — CORS 미들웨어 등록 + 알림 채널 fetch 타임아웃 + AutoStop EventBus 리스너 정리 + 테스트
 
 ## Progress
 
