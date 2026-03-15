@@ -2,6 +2,50 @@
 
 *A living document updated after each milestone. Lessons feed forward into future planning.*
 
+## Milestone: v31.18 — Admin UI IA 재구조화
+
+**Shipped:** 2026-03-15
+**Phases:** 4 | **Plans:** 7 | **Sessions:** 1
+
+### What Was Built
+- 사이드바 5개 섹션 헤더(Wallets/Trading/Security/Channels/System) 그룹화 + Dashboard 독립 배치
+- 페이지 리네이밍(DeFi→Providers, Security→Protection, System→Settings) + 5개 레거시 경로 리다이렉트
+- Tokens/RPC Proxy 독립 페이지를 Wallets/Settings 페이지 탭으로 병합
+- Hyperliquid/Polymarket Settings 탭 제거 → Providers 페이지 PROVIDER_ADVANCED_SETTINGS 중앙화
+- 지갑 상세 8탭→4탭(Overview/Activity/Assets/Setup) 통합 + Owner Protection 카드 인라인
+
+### What Worked
+- 4 phases 1일 완료 — 순수 프론트엔드 IA 재구조화, 백엔드 변경 없음
+- NAV_SECTIONS 섹션 구조가 map() 기반 렌더링으로 간결하게 구현됨
+- TabNav 공통 컴포넌트가 Hyperliquid/Polymarket 커스텀 탭을 일관성 있게 대체
+- pendingNavigation 패턴이 /tokens → /wallets#tokens 탭 활성화 리다이렉트를 깔끔하게 처리
+- PROVIDER_ADVANCED_SETTINGS 맵으로 Trading 설정을 한 곳에서 관리(SSoT)
+- 기존 탭 함수(StakingTab, NftTab 등)를 그대로 재사용하여 ActivityTab/AssetsTab/SetupTab 래퍼만 추가
+
+### What Was Inefficient
+- SUMMARY.md one_liner 필드 여전히 미기입 — summary-extract 도구 결과 null (반복 이슈)
+- Phase 419 ROADMAP.md Progress 테이블 milestone 컬럼 값 누락(1/1로 잘못 기입)
+- 2개 dead code 파일(SettingsPanel.tsx, PolymarketSettings.tsx) 잔류 — 테스트 참조로 인해 삭제 보류
+
+### Patterns Established
+- **NAV_SECTIONS 섹션 구조**: `{ section: string, items: NavItem[] }[]` 배열로 사이드바 그룹 렌더링
+- **탭 병합 패턴**: 독립 페이지 → named export Content + 부모 페이지 TabNav 통합
+- **필터 토글 탭**: sub-tab 대신 signal 기반 필터 버튼으로 동일 탭 내 콘텐츠 전환(ActivityTab)
+- **인라인 관리 패턴**: Owner Protection 카드에서 showOwnerManage signal로 관리 플로우 인라인 토글
+
+### Key Lessons
+1. 순수 프론트엔드 IA 재구조화는 백엔드 의존 없이 빠르게 진행 가능 — API 변경 0으로 리스크 최소
+2. 탭 병합 시 Content named export + default export 제거 패턴이 기존 코드 최소 변경으로 효과적
+3. 레거시 경로 리다이렉트는 pendingNavigation + hash 조합으로 탭 활성화까지 처리 가능
+4. dead code는 테스트에서 참조하면 삭제가 번거로워짐 — 테스트 먼저 업데이트 후 삭제 권장
+
+### Cost Observations
+- Model mix: 100% opus
+- Sessions: 1
+- Notable: 52 files, +3,311/-515 lines in 1 day — 기존 컴포넌트 재사용으로 높은 효율
+
+---
+
 ## Milestone: v31.17 — OpenAPI 기반 프론트엔드 타입 자동 생성
 
 **Shipped:** 2026-03-15
