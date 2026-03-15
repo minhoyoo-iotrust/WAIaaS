@@ -8,16 +8,9 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: v32.2 보안 패치
+## Previous Milestone: v32.2 보안 패치 — SHIPPED 2026-03-16
 
-**Goal:** 운영 환경 노출 시 악용될 수 있는 보안 취약점 5건을 패치하여 API 보안 기반을 확보한다.
-
-**Target features:**
-- SSRF 가드 적용 (Admin RPC Test 엔드포인트) + ssrf-guard 범용화
-- hostGuard `startsWith` 우회 수정
-- Rate Limit 미들웨어 구현 (IP/세션/트랜잭션 3계층)
-- CORS 미들웨어 등록
-- 알림 채널 fetch timeout + EventBus 리스너 정리
+SSRF 가드 범용화(infrastructure/security/) + Admin RPC Test SSRF 방어, hostGuard startsWith 우회 수정(정확 매칭만), SlidingWindowRateLimiter 인메모리 3계층(IP/세션/TX) Rate Limit 미들웨어 + RATE_LIMITED 에러 코드, hono/cors 미들웨어(cors_origins hot-reload), 알림 채널 10초 fetch timeout, AutoStop EventBus 리스너 정리. 3 phases, 3 plans, 14 requirements, 16 commits, 20 files, +1,228/-273 lines, 32 new tests.
 
 ## Previous Milestone: v32.0 Contract Name Resolution — SHIPPED 2026-03-15
 
