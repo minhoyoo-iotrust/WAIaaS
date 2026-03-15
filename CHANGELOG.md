@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.11.0-rc.12](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.11...v2.11.0-rc.12) (2026-03-15)
+
+
+### Bug Fixes
+
+* **ci:** use --no-daemon flag for Turborepo in chain-integration ([#352](https://github.com/minhoyoo-iotrust/WAIaaS/issues/352)) ([da2ea1c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/da2ea1c00b266e22877c28acc50f043da8e6e8fd))
+* **ci:** use --no-daemon flag for Turborepo in chain-integration ([#352](https://github.com/minhoyoo-iotrust/WAIaaS/issues/352)) ([7ca1b84](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7ca1b841a35138a199d06602eb0e66b1b7aa4537))
+
 ## [2.11.0-rc.11](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.10...v2.11.0-rc.11) (2026-03-15)
 
 
