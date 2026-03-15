@@ -55,7 +55,7 @@ type TabKey = 'transactions' | 'monitor';
 type Direction = 'all' | 'outgoing' | 'incoming';
 
 const TABS = [
-  { key: 'transactions', label: 'All Transactions' },
+  { key: 'transactions', label: 'History' },
   { key: 'monitor', label: 'Monitor Settings' },
 ];
 

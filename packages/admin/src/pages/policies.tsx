@@ -202,7 +202,7 @@ function getPolicyTypeLabel(type: string): string {
 }
 
 const POLICIES_TABS = [
-  { key: 'policies', label: 'Policies' },
+  { key: 'policies', label: 'Rules' },
   { key: 'defaults', label: 'Defaults' },
 ];
 
