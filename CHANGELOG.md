@@ -1,5 +1,40 @@
 # Changelog
 
+## [2.11.0-rc.9](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.8...v2.11.0-rc.9) (2026-03-15)
+
+
+### Features
+
+* **412-01:** add OpenAPI spec extraction script with full stub deps ([7f4e319](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7f4e319d457c78d2308187d48c74eac4261fb21b))
+* **412-01:** add type generation pipeline with generate:api-types command ([1bbb73a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1bbb73a8603d529ae7f93272c64e4e85226820f2))
+* **412-02:** add CI freshness gate for types.generated.ts ([de1c0d1](https://github.com/minhoyoo-iotrust/WAIaaS/commit/de1c0d10d6f87edba00514188498bf9400915bd2))
+* **413-01:** add openapi-fetch typed client with auth middleware ([57ac3ca](https://github.com/minhoyoo-iotrust/WAIaaS/commit/57ac3ca46ce908912080d20acc0b0e035b374550))
+* **413-02:** migrate dashboard.tsx to typed client and generated types ([4f7d2d4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4f7d2d435fb34308a4be0b01fa565ebf7da150e8))
+* **413-02:** update dashboard test mocks with satisfies generated types ([a223c82](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a223c8252e0e7497e0515605b64549b8146778fe))
+* **414-01:** create central type aliases module and migrate settings-helpers ([52e3910](https://github.com/minhoyoo-iotrust/WAIaaS/commit/52e39109dfdefc049d2c7c9c69c2c8771edc6996))
+* **414-01:** migrate 8 small pages and tests to typed client ([13e6d9d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/13e6d9da9cfe75d4fecec3b089c46e424330e85b))
+* **414-02:** migrate 9 medium pages to typed client ([561ae02](https://github.com/minhoyoo-iotrust/WAIaaS/commit/561ae020256d1e8047ace5a1b5417f1846b90bbd))
+* **414-03:** migrate SettingsPanel + PolymarketSettings to typed client ([bd386bb](https://github.com/minhoyoo-iotrust/WAIaaS/commit/bd386bb04af51e3b6633819d3e8b095f49cb54bd))
+* **414-03:** migrate wallets.tsx to typed client with generated types ([16b0d98](https://github.com/minhoyoo-iotrust/WAIaaS/commit/16b0d98ed6fef9d6bb8837e7dc22e5fda991d5b2))
+* **415-01:** add GET /v1/admin/settings/schema endpoint with metadata ([11505e2](https://github.com/minhoyoo-iotrust/WAIaaS/commit/11505e2f00c402496b23aae3c6314c9d18a81721))
+* **415-01:** enhance GET /v1/actions/providers with enabledKey, category, isEnabled ([d616b52](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d616b522771300933b4fe5888ba1ff783b1997a8))
+* **415-02:** add shared constants module for policy, credential, and error constants ([eadff06](https://github.com/minhoyoo-iotrust/WAIaaS/commit/eadff06626ff8d3358d8a2412d9134c69c6229a2))
+* **415-03:** replace BUILTIN_PROVIDERS with API-driven provider listing ([800faf5](https://github.com/minhoyoo-iotrust/WAIaaS/commit/800faf5a2b8fb4faa0e806739633057d8b161d2c))
+* **415-03:** replace hardcoded constants with @waiaas/shared imports ([01b610c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/01b610c8e5dd9b238b31f89356a357a547c7d734))
+* **416-01:** add API contract test script and vitest tests ([36a1d9f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/36a1d9f42076fa94b751cff829fc12bb0003177d))
+* add UAT report persistence with privacy masking ([#351](https://github.com/minhoyoo-iotrust/WAIaaS/issues/351)) ([d7e12da](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d7e12da7876286787a22695a8d9bab4a30959868))
+* **admin:** wire settings schema API to replace hardcoded keyToLabel map ([ca9f352](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ca9f352771eb65403f21cd0841e8f519bb23db3c))
+
+
+### Bug Fixes
+
+* add all daemon workspace deps to generate:api-types task ([145a104](https://github.com/minhoyoo-iotrust/WAIaaS/commit/145a1046f1ddbb255e547ed9cfddf2aab2a97f23))
+* add core/shared build deps to generate:api-types turbo task ([f0c310a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/f0c310af3dcbb890f20f9ec822dd0c26b86ca6c4))
+* **admin:** update 19 test files for typed-client mock patterns ([6aacffd](https://github.com/minhoyoo-iotrust/WAIaaS/commit/6aacffd10663d8341e4c65e052d431080ad83215))
+* credential list API response wrapper + pnpm-lock sync ([#349](https://github.com/minhoyoo-iotrust/WAIaaS/issues/349), [#350](https://github.com/minhoyoo-iotrust/WAIaaS/issues/350)) ([71a363e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/71a363e228fa8df64e804cc6814caac4c55f8946))
+* handle unknown setting keys in provider listing gracefully ([1ea6ef4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1ea6ef40843fa8eff4788b7189fdcf6aa2304147))
+* remove unused vitest imports in admin-settings-schema test ([3e58ad9](https://github.com/minhoyoo-iotrust/WAIaaS/commit/3e58ad97faac2ceb3b35e22b6ec42ff9af657bd5))
+
 ## [2.11.0-rc.8](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.7...v2.11.0-rc.8) (2026-03-14)
 
 
