@@ -37,30 +37,31 @@ v31.17 마일스톤에서 `turbo.json`에 다음 변경이 적용됨:
 - `test` job은 백그라운드 프로세스 없이 동일 빌드 성공
 - 에러가 빌드 시작 직후 (태스크 그래프 구성 단계) 발생
 
-## 1차 수정 (불완전)
+## 수정 이력
 
-`env:` 블록으로 `TURBO_DAEMON: 'false'` 설정 → **실패 지속**. Turborepo가 YAML `env:` 블록의 문자열 `'false'`를 올바르게 인식하지 못함.
+### 1차 수정 (실패) — env: TURBO_DAEMON: 'false'
 
-```yaml
-# 이 방식은 동작하지 않음
-- name: Build
-  run: pnpm turbo run build
-  env:
-    TURBO_DAEMON: 'false'
+`env:` 블록으로 `TURBO_DAEMON: 'false'` 설정 → **실패 지속**. Turborepo가 YAML `env:` 블록의 문자열 `'false'`를 올바르게 인식하지 못함. v2.11.0-rc.10에서 재현.
+
+### 2차 수정 (실패) — --daemon=false
+
+`--daemon=false` CLI 플래그 전달 → **실패**. Turborepo가 `--daemon`을 boolean-only 플래그로 취급하여 `unexpected value 'false'` 에러 발생. v2.11.0-rc.11에서 재현.
+
+```
+ERROR  unexpected value 'false' for '--daemon' found; no more were expected
+Usage: turbo run --daemon
 ```
 
-v2.11.0-rc.10 릴리스에서도 동일 에러 재현 확인.
+### 3차 수정 — --no-daemon
 
-## 해결 방안
-
-`--daemon=false` CLI 플래그를 직접 전달:
+`--no-daemon` 플래그 사용 (Turborepo의 negation 플래그 패턴):
 
 ```yaml
 - name: Build
-  run: pnpm turbo run build --daemon=false
+  run: pnpm turbo run build --no-daemon
 
 - name: Chain Tests
-  run: pnpm turbo run test:chain --daemon=false
+  run: pnpm turbo run test:chain --no-daemon
 ```
 
 ## 영향 범위
@@ -70,6 +71,6 @@ v2.11.0-rc.10 릴리스에서도 동일 에러 재현 확인.
 
 ## 테스트 항목
 
-- [ ] `--daemon=false` CLI 플래그 적용 후 chain-integration Build 성공 확인
+- [ ] `--no-daemon` 플래그 적용 후 chain-integration Build 성공 확인
 - [ ] chain-integration Chain Tests 정상 실행 확인
 - [ ] test job 기존 동작 영향 없음 확인
