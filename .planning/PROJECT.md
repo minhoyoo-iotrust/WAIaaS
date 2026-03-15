@@ -8,6 +8,17 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
+## Current Milestone: v32.2 보안 패치
+
+**Goal:** 운영 환경 노출 시 악용될 수 있는 보안 취약점 5건을 패치하여 API 보안 기반을 확보한다.
+
+**Target features:**
+- SSRF 가드 적용 (Admin RPC Test 엔드포인트) + ssrf-guard 범용화
+- hostGuard `startsWith` 우회 수정
+- Rate Limit 미들웨어 구현 (IP/세션/트랜잭션 3계층)
+- CORS 미들웨어 등록
+- 알림 채널 fetch timeout + EventBus 리스너 정리
+
 ## Previous Milestone: v32.0 Contract Name Resolution — SHIPPED 2026-03-15
 
 ContractNameRegistry 4단계 우선순위 동기 해석(Action Provider > Well-known > CONTRACT_WHITELIST > Fallback), well-known 305+ 정적 엔트리(5 EVM 체인 + Solana), 17개 Action Provider displayName 메타데이터, CONTRACT_CALL 알림 7개 호출지점에서 "Protocol Name (0xabcd...1234)" 포맷 표시, TxDetailResponse contractName/contractNameSource 필드 추가(5개 엔드포인트), Admin UI 트랜잭션 목록 + 지갑 Activity 탭 컨트랙트 이름 표시. 3 phases, 4 plans, 24 requirements, 22 commits, 64 files, +4,839/-975 lines, ~397,990 LOC TS.
