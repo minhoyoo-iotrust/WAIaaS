@@ -22,20 +22,20 @@ function callMapError(operation: string, error: unknown): never {
 describe('SolanaAdapter.mapError()', () => {
   it('re-throws WAIaaSError as-is', () => {
     const original = new WAIaaSError('WALLET_NOT_FOUND', { message: 'test' });
-    expect(() => callMapError('getBalance', original)).toThrow(original);
+    expect(() => callMapError('get balance', original)).toThrow(original);
   });
 
   it('re-throws ChainError as-is', () => {
     const original = new ChainError('INSUFFICIENT_BALANCE', 'solana', {
       message: 'not enough SOL',
     });
-    expect(() => callMapError('getBalance', original)).toThrow(original);
+    expect(() => callMapError('get balance', original)).toThrow(original);
   });
 
   it('wraps generic Error in WAIaaSError(CHAIN_ERROR) with operation context', () => {
     const original = new Error('network timeout');
     try {
-      callMapError('getBalance', original);
+      callMapError('get balance', original);
       expect.fail('should have thrown');
     } catch (err) {
       expect(err).toBeInstanceOf(WAIaaSError);
@@ -48,7 +48,7 @@ describe('SolanaAdapter.mapError()', () => {
 
   it('wraps non-Error value (string) in WAIaaSError(CHAIN_ERROR)', () => {
     try {
-      callMapError('submitTransaction', 'something went wrong');
+      callMapError('submit transaction', 'something went wrong');
       expect.fail('should have thrown');
     } catch (err) {
       expect(err).toBeInstanceOf(WAIaaSError);
@@ -62,7 +62,7 @@ describe('SolanaAdapter.mapError()', () => {
   it('preserves error cause chain for Error instances', () => {
     const cause = new Error('underlying network failure');
     try {
-      callMapError('estimateFee', cause);
+      callMapError('estimate fee', cause);
       expect.fail('should have thrown');
     } catch (err) {
       expect(err).toBeInstanceOf(WAIaaSError);
@@ -73,7 +73,7 @@ describe('SolanaAdapter.mapError()', () => {
 
   it('does not set cause for non-Error values', () => {
     try {
-      callMapError('getBalance', 42);
+      callMapError('get balance', 42);
       expect.fail('should have thrown');
     } catch (err) {
       expect(err).toBeInstanceOf(WAIaaSError);
