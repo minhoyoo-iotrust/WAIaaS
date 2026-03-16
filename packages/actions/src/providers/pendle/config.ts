@@ -37,6 +37,9 @@ export const PENDLE_CHAIN_ID_MAP: Record<string, number> = {
   'base-mainnet': 8453,
 };
 
+/** Networks where Pendle position queries are supported (MCHN-03). */
+export const PENDLE_POSITION_NETWORKS = ['ethereum-mainnet', 'arbitrum-mainnet'] as const;
+
 /**
  * Get Pendle chain ID for a WAIaaS network name.
  * @throws Error if network is not supported by Pendle.
