@@ -189,9 +189,13 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
   // 1. CORS: dynamic origin from settingsService (hot-reload) or config fallback (CORS-01, CORS-02)
   app.use('*', cors({
     origin: (origin) => {
-      const origins = deps.settingsService?.get('cors_origins') as string[] | undefined
-        ?? deps.config?.security?.cors_origins
-        ?? ['http://localhost:3100', 'http://127.0.0.1:3100'];
+      let origins: string[];
+      try {
+        const raw = deps.settingsService?.get('security.cors_origins');
+        origins = raw ? JSON.parse(raw) as string[] : (deps.config?.security?.cors_origins ?? ['http://localhost:3100', 'http://127.0.0.1:3100']);
+      } catch {
+        origins = deps.config?.security?.cors_origins ?? ['http://localhost:3100', 'http://127.0.0.1:3100'];
+      }
       return origins.includes(origin) ? origin : null;
     },
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],

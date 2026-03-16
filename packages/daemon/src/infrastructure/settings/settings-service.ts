@@ -86,7 +86,7 @@ export class SettingsService {
     // 2. Check config.toml (DaemonConfig already has env overrides + Zod defaults)
     const configValue = this.getConfigValue(def);
     if (configValue !== undefined) {
-      return String(configValue);
+      return SettingsService.stringify(configValue);
     }
 
     // 3. Return definition default
@@ -181,7 +181,7 @@ export class SettingsService {
         // Fallback: config.toml -> default
         const configValue = this.getConfigValue(def);
         catObj[fieldName] = configValue !== undefined
-          ? String(configValue)
+          ? SettingsService.stringify(configValue)
           : def.defaultValue;
       }
     }
@@ -239,7 +239,7 @@ export class SettingsService {
         } else {
           // Credential not in DB: check config fallback
           const configValue = this.getConfigValue(def);
-          const val = configValue !== undefined ? String(configValue) : def.defaultValue;
+          const val = configValue !== undefined ? SettingsService.stringify(configValue) : def.defaultValue;
           catObj[fieldName] = val !== '';
         }
       } else {
@@ -249,7 +249,7 @@ export class SettingsService {
         } else {
           const configValue = this.getConfigValue(def);
           catObj[fieldName] = configValue !== undefined
-            ? String(configValue)
+            ? SettingsService.stringify(configValue)
             : def.defaultValue;
         }
       }
@@ -398,7 +398,7 @@ export class SettingsService {
         continue;
       }
 
-      const strValue = String(configValue);
+      const strValue = SettingsService.stringify(configValue);
 
       // Skip if value equals default (don't fill DB with defaults)
       if (strValue === def.defaultValue) {
@@ -442,6 +442,17 @@ export class SettingsService {
 
     const value = (sectionObj as Record<string, unknown>)[field];
     return value;
+  }
+
+  /**
+   * Convert a config value to string for DB storage.
+   * Arrays and objects are JSON-serialized; primitives use String().
+   */
+  private static stringify(value: unknown): string {
+    if (Array.isArray(value) || (typeof value === 'object' && value !== null)) {
+      return JSON.stringify(value);
+    }
+    return String(value);
   }
 }
 

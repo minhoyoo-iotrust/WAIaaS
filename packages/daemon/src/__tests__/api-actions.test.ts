@@ -424,7 +424,8 @@ describe('GET /v1/actions/providers', () => {
     expect(res.status).toBe(200);
     const body = await json(res);
     const providers = body.providers as Array<Record<string, unknown>>;
-    expect(providers).toHaveLength(3);
+    // #354: providers list includes registered + unregistered builtin providers
+    expect(providers.length).toBeGreaterThanOrEqual(3);
 
     // Find test_provider
     const testProvider = providers.find((p) => p.name === 'test_provider');
