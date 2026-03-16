@@ -993,7 +993,7 @@ export async function stage4Wait(ctx: PipelineContext): Promise<void> {
             txId: ctx.txId,
             chain: ctx.wallet.chain as ChainType,
             network: ctx.resolvedNetwork,
-            type: (ctx.request as any).type ?? 'TRANSFER',
+            type: ('type' in ctx.request && ctx.request.type) ? ctx.request.type : 'TRANSFER',
             from: ctx.wallet.publicKey,
             to: getRequestTo(ctx.request),
             amount: getRequestAmount(ctx.request),
@@ -1473,11 +1473,10 @@ async function stage5ExecuteSmartAccount(ctx: PipelineContext): Promise<void> {
     // #251: Resolve viem Chain from EVM_CHAIN_MAP using network ID
     const { EVM_CHAIN_MAP } = await import('@waiaas/adapter-evm');
     const chainEntry = EVM_CHAIN_MAP[ctx.resolvedNetwork as import('@waiaas/core').EvmNetworkType];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const publicClient = createPublicClient({
       chain: chainEntry?.viemChain,
       transport: http(ctx.resolvedRpcUrl),
-    }) as any;
+    }) as unknown as import('viem').PublicClient;
     const smartAccountInfo = await smartAccountService.createSmartAccount({
       owner: localAccount,
       client: publicClient,
@@ -1494,16 +1493,24 @@ async function stage5ExecuteSmartAccount(ctx: PipelineContext): Promise<void> {
       aaPaymasterUrl: ctx.wallet.aaPaymasterUrl ?? null,
       aaPaymasterPolicyId: ctx.wallet.aaPaymasterPolicyId ?? null,
     };
+    // BundlerClient type from viem uses strict generic inference that requires
+    // explicit account in each call. We cast to a focused interface since account
+    // is already set in the client factory.
+    type BundlerOps = {
+      prepareUserOperation(args: { calls: { to: import('viem').Hex; value: bigint; data: import('viem').Hex }[] }): Promise<{ callGasLimit: bigint; verificationGasLimit: bigint; preVerificationGas: bigint }>;
+      sendUserOperation(args: { calls: { to: import('viem').Hex; value: bigint; data: import('viem').Hex }[]; userOperation?: { callGasLimit: bigint; verificationGasLimit: bigint; preVerificationGas: bigint } }): Promise<string>;
+      waitForUserOperationReceipt(args: { hash: string; timeout?: number }): Promise<{ receipt?: { transactionHash?: string } }>;
+    };
     const bundlerClient = createSmartAccountBundlerClient({
-      client: publicClient as any,
+      client: publicClient,
       account: smartAccountInfo.account,
       networkId: ctx.resolvedNetwork,
       walletProvider,
       settingsService: ctx.settingsService,
-    });
+    }) as unknown as BundlerOps;
 
     // Step 4: Prepare UserOperation to get gas estimates
-    const prepared = await (bundlerClient as any).prepareUserOperation({ calls });
+    const prepared = await bundlerClient.prepareUserOperation({ calls });
 
     // Step 5: Apply 120% gas safety margin per CLAUDE.md rule
     const safeCallGasLimit = (BigInt(prepared.callGasLimit) * GAS_SAFETY_NUMERATOR) / GAS_SAFETY_DENOMINATOR;
@@ -1512,7 +1519,7 @@ async function stage5ExecuteSmartAccount(ctx: PipelineContext): Promise<void> {
 
     // Step 6: Submit UserOperation with overridden gas limits
     ctx.metricsCounter?.increment('rpc.calls', { network: ctx.resolvedNetwork });
-    const userOpHash = await (bundlerClient as any).sendUserOperation({
+    const userOpHash = await bundlerClient.sendUserOperation({
       calls,
       userOperation: {
         callGasLimit: safeCallGasLimit,
@@ -1566,7 +1573,7 @@ async function stage5ExecuteSmartAccount(ctx: PipelineContext): Promise<void> {
     });
 
     // Step 7: Wait for UserOperation receipt (120s timeout)
-    const receipt = await (bundlerClient as any).waitForUserOperationReceipt({
+    const receipt = await bundlerClient.waitForUserOperationReceipt({
       hash: userOpHash,
       timeout: 120_000,
     });
