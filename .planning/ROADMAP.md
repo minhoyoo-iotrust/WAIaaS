@@ -74,9 +74,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 437-01-PLAN.md — migrate.ts 분할: DDL + 6개 마이그레이션 파일 추출, 러너만 유지
-- [ ] 437-02-PLAN.md — daemon.ts 분할: startup/shutdown/pipeline 추출, 클래스 셸만 유지
-- [ ] 437-03-PLAN.md — database-policy-engine.ts 분할: 6개 evaluator 추출, 조합 로직만 유지
+- [x] 437-01-PLAN.md — migrate.ts 분할: DDL + 6개 마이그레이션 파일 추출, 러너만 유지
+- [x] 437-02-PLAN.md — daemon.ts 분할: startup/shutdown/pipeline 추출, 클래스 셸만 유지
+- [x] 437-03-PLAN.md — database-policy-engine.ts 분할: 6개 evaluator 추출, 조합 로직만 유지
 
 ### Phase 438: 파이프라인 분할 + 추가 정리
 **Goal**: stages.ts가 스테이지별 모듈로 분리되고, Solana 에러 처리가 표준화되며, 로깅 추상화 인터페이스가 도입된다
@@ -87,11 +87,11 @@ Plans:
   2. Solana 어댑터의 catch 블록 20곳이 중앙 mapError() 메서드를 호출하고 에러 분류 테스트가 존재한다
   3. ILogger 인터페이스가 정의되고 console 기본 구현이 제공된다
   4. 전체 테스트 스위트(unit + typecheck + lint)가 통과한다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 438-01: TBD
-- [ ] 438-02: TBD
+- [ ] 438-01-PLAN.md — stages.ts를 pipeline-helpers.ts + 6개 stage 파일로 분할, barrel re-export
+- [ ] 438-02-PLAN.md — Solana mapError() 중앙화 + ILogger 인터페이스 도입
 
 ## Progress
 
