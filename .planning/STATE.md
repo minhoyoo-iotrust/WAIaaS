@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
 milestone: v32.5
-milestone_name: 멀티체인 DeFi 포지션 + 테스트넷 토글
-status: in_progress
-stopped_at: "Completed Phase 432 (Interface Extension) — 2/2 plans"
-last_updated: "2026-03-16T13:14:00.000Z"
-last_activity: 2026-03-16 -- Phase 432 complete (2 plans, 4 tasks)
+milestone_name: milestone
+status: completed
+stopped_at: Completed Phase 432 (Interface Extension) -- all 2 plans shipped
+last_updated: "2026-03-16T13:15:57.883Z"
+last_activity: 2026-03-16 -- Phase 432 Interface Extension shipped
 progress:
   total_phases: 3
   completed_phases: 1
