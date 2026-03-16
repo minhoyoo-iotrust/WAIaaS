@@ -23,6 +23,7 @@ N+1 쿼리 패턴 3건과 페이지네이션 미적용 2건을 해소하고, 1,5
 | P-4 | **Medium** | 무제한 세션 목록 | `sessions.ts` | 비취소 세션 전체 반환 (LIMIT 없음) |
 | P-5 | **Low** | 무제한 정책 목록 | `policies.ts` | 전체 정책 반환 (규칙 JSON 포함) |
 | P-6 | **Low** | Dynamic `import()` in hot path | `admin-auth.ts:255` | `GET /admin/status` 매 요청 시 `import('semver')` |
+| P-7 | **Medium** | N+1: 세션 생성 시 walletId별 조회 | `sessions.ts:333-336` | walletId당 개별 SELECT (`.map()` 내) |
 
 ### 구조 이슈
 
@@ -57,11 +58,11 @@ admin.ts는 이미 7개 서브라우터로 분할되어 있음. 이 Phase는 제
 
 | 대상 | 현재 | 개선 |
 |------|------|------|
-| `GET /sessions` 지갑 조회 (`sessions.ts:427-446`) | 세션당 1 쿼리 (`.map()` 내 개별 SELECT) | 단일 `IN(sessionIds)` 쿼리 + `Map<sessionId, wallet[]>` 클라이언트 그루핑 |
-| `POST /admin/sessions/prompt` 패턴 A (`admin-monitoring.ts:384`) | walletId당 1 쿼리 (`.map()` 내 개별 SELECT) | 단일 `IN(walletIds)` 쿼리 |
-| `POST /admin/sessions/prompt` 패턴 B (`admin-monitoring.ts:434`) | 후보 세션당 1 쿼리 (for 루프 내 linked count) | 단일 JOIN 쿼리로 후보 세션 + linked count 동시 조회 |
-| `formatTxAmount` 토큰 조회 (`admin-wallets.ts:29`) | 행당 1 쿼리 (호출 시마다 token_registry SELECT) | 결과셋의 unique `tokenAddress` 수집 → 단일 `IN()` 조회 → `Map<address, token>` 룩업. 함수 시그니처를 `(amount, chain, network, tokenAddr, tokenMap)` 으로 변경하고 호출부 3곳에서 사전 배치 조회 |
-| `sessions.ts:333-336` 세션 생성 시 지갑 조회 | walletId당 1 쿼리 (`.map()` 내 개별 SELECT) | 단일 `IN(walletIds)` 쿼리 |
+| P-1: `GET /sessions` 지갑 조회 (`sessions.ts:427-446`) | 세션당 1 쿼리 (`.map()` 내 개별 SELECT) | 단일 `IN(sessionIds)` 쿼리 + `Map<sessionId, wallet[]>` 클라이언트 그루핑 |
+| P-2: `POST /admin/sessions/prompt` 패턴 A (`admin-monitoring.ts:384`) | walletId당 1 쿼리 (`.map()` 내 개별 SELECT) | 단일 `IN(walletIds)` 쿼리 |
+| P-2: `POST /admin/sessions/prompt` 패턴 B (`admin-monitoring.ts:434`) | 후보 세션당 1 쿼리 (for 루프 내 linked count) | 단일 JOIN 쿼리로 후보 세션 + linked count 동시 조회 |
+| P-3: `formatTxAmount` 토큰 조회 (`admin-wallets.ts:29`) | 행당 1 쿼리 (호출 시마다 token_registry SELECT) | 결과셋의 unique `tokenAddress` 수집 → 단일 `IN()` 조회 → `Map<address, token>` 룩업. 함수 시그니처를 `(amount, chain, network, tokenAddr, tokenMap)` 으로 변경하고 호출부 3곳에서 사전 배치 조회 |
+| P-7: `sessions.ts:333-336` 세션 생성 시 지갑 조회 | walletId당 1 쿼리 (`.map()` 내 개별 SELECT) | 단일 `IN(walletIds)` 쿼리 |
 
 ### Phase 2: 페이지네이션 추가
 
