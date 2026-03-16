@@ -617,7 +617,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
         keyStore: deps.keyStore,
         masterPassword: effectiveMasterPassword,
         passwordRef: deps.passwordRef,
-        rpcConfig: deps.config?.rpc as unknown as Record<string, string>,
+        rpcConfig: deps.config?.rpc,
         metricsCounter: deps.metricsCounter,
         policyEngine: deps.policyEngine,
         notificationService: deps.notificationService,
@@ -926,7 +926,7 @@ export function createApp(deps: CreateAppDeps = {}): OpenAPIHono {
       '/v1',
       tokenRegistryRoutes({
         tokenRegistryService,
-        rpcConfig: deps.config?.rpc as unknown as Record<string, string>,
+        rpcConfig: deps.config?.rpc,
       }),
     );
   }

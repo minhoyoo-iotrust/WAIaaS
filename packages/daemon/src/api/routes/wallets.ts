@@ -431,7 +431,7 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
       if (deps.smartAccountService && wallet.chain === 'ethereum') {
         try {
           const rpcUrl = resolveRpcUrl(
-            deps.config.rpc as unknown as Record<string, string>,
+            deps.config.rpc,
             wallet.chain as ChainType,
             networkId,
           );
@@ -552,7 +552,7 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
 
       // Create viem client for address prediction
       const rpcUrl = resolveRpcUrl(
-        deps.config.rpc as unknown as Record<string, string>,
+        deps.config.rpc,
         chain,
         network,
       );
@@ -1359,7 +1359,7 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
     const singleNetwork = getSingleNetwork(wallet.chain as ChainType, wallet.environment as EnvironmentType);
     const withdrawNetwork = singleNetwork ?? getNetworksForEnvironment(wallet.chain as ChainType, wallet.environment as EnvironmentType)[0]!;
     const rpcUrl = resolveRpcUrl(
-      deps.config.rpc as unknown as Record<string, string>,
+      deps.config.rpc,
       wallet.chain,
       withdrawNetwork,
     );
@@ -1376,6 +1376,9 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
     );
 
     // Sweep all assets to owner address
+    if (!adapter.sweepAll) {
+      throw new WAIaaSError('CHAIN_ERROR', { message: 'sweepAll not supported for this chain' });
+    }
     const sweepResult = await adapter.sweepAll(
       wallet.publicKey,
       wallet.ownerAddress!,

@@ -9,7 +9,7 @@
  */
 
 import type { Database } from 'better-sqlite3';
-import type { INotificationChannel } from '@waiaas/core';
+import type { INotificationChannel, ChainType, NetworkType } from '@waiaas/core';
 import type { NotificationService } from '../../notifications/notification-service.js';
 import type { AdapterPool } from '../adapter-pool.js';
 import { configKeyToNetwork } from '../adapter-pool.js';
@@ -41,7 +41,7 @@ export interface HotReloadDeps {
   telegramBotRef?: { current: TelegramBotService | null };
   killSwitchService?: KillSwitchService | null;
   /** Duck-typed IncomingTxMonitorService to avoid circular imports */
-  incomingTxMonitorService?: { updateConfig: (config: Partial<any>) => void } | null;
+  incomingTxMonitorService?: { updateConfig: (config: Record<string, unknown>) => void } | null;
   /** Duck-typed ActionProviderRegistry ref for hot-reload */
   actionProviderRegistryRef?: { current: import('../action/action-provider-registry.js').ActionProviderRegistry | null } | null;
   /** IRpcCaller for Aave V3 on-chain reads via RpcPool */
@@ -595,9 +595,9 @@ export class HotReloadOrchestrator {
       // Determine chain type from network name
       const solanaNetworks = new Set(['solana-mainnet', 'solana-devnet', 'solana-testnet']);
       if (solanaNetworks.has(network)) {
-        await pool.evict('solana' as any, network as any);
+        await pool.evict('solana' as ChainType, network as NetworkType);
       } else {
-        await pool.evict('ethereum' as any, network as any);
+        await pool.evict('ethereum' as ChainType, network as NetworkType);
       }
     }
   }
@@ -631,12 +631,12 @@ export class HotReloadOrchestrator {
 
       if (field.startsWith('solana_')) {
         const network = `solana-${field.replace('solana_', '')}`;
-        await pool.evict('solana' as any, network as any);
+        await pool.evict('solana' as ChainType, network as NetworkType);
         console.log(`Hot-reload: Evicted solana:${network} adapter`);
       } else if (field.startsWith('evm_')) {
         // Convert evm_ethereum_sepolia -> ethereum-sepolia
         const network = field.replace('evm_', '').replace(/_/g, '-');
-        await pool.evict('ethereum' as any, network as any);
+        await pool.evict('ethereum' as ChainType, network as NetworkType);
         console.log(`Hot-reload: Evicted ethereum:${network} adapter`);
       }
     }

@@ -305,7 +305,7 @@ export default function SystemPage() {
 
   const NFT_INDEXER_PROVIDERS: Record<string, { label: string; description: string; dashboardUrl: string }> = {
     alchemy_nft: { label: 'Alchemy NFT', description: 'EVM NFT indexing (ERC-721, ERC-1155)', dashboardUrl: 'https://dashboard.alchemy.com' },
-    helius: { label: 'Helius', description: 'Solana NFT indexing (Metaplex)', dashboardUrl: 'https://dashboard.helius.dev' },
+    helius_das: { label: 'Helius', description: 'Solana NFT indexing (Metaplex)', dashboardUrl: 'https://dashboard.helius.dev' },
   };
 
   function NftIndexerSection() {

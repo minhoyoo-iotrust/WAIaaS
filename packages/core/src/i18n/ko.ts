@@ -63,6 +63,7 @@ export const messages: Messages = {
     SPENDING_LIMIT_EXCEEDED: '지출 한도를 초과했습니다',
     RATE_LIMIT_EXCEEDED: '요청 빈도 제한을 초과했습니다',
     WHITELIST_DENIED: '화이트리스트에 없는 주소입니다',
+    POLICY_RULES_CORRUPT: '정책 규칙 데이터가 손상되었거나 예상 스키마와 일치하지 않습니다',
     // OWNER domain (5)
     OWNER_ALREADY_CONNECTED: 'Owner가 이미 연결되어 있습니다',
     OWNER_NOT_CONNECTED: 'Owner가 연결되지 않았습니다',
@@ -83,6 +84,8 @@ export const messages: Messages = {
     SKILL_NOT_FOUND: '스킬을 찾을 수 없습니다',
     SCHEMA_INCOMPATIBLE: 'DB 스키마 버전이 현재 코드 버전과 호환되지 않습니다',
     RATE_LIMITED: '요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.',
+    INTERNAL_ERROR: '내부 서버 오류',
+    VALIDATION_FAILED: '검증에 실패했습니다',
     // WALLET domain (6)
     WALLET_NOT_FOUND: '지갑을 찾을 수 없습니다',
     WALLET_SUSPENDED: '지갑이 정지 상태입니다',

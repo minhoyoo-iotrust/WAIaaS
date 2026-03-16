@@ -20,8 +20,8 @@
  * Shutdown sequence (doc 28 section 3):
  *   1. Set isShuttingDown, start force timer, log signal
  *   2-4. HTTP server close
- *   5. In-flight signing -- STUB (Phase 50-04)
- *   6. Pending queue persistence -- STUB (Phase 50-04)
+ *   5. In-flight signing -- not yet implemented
+ *   6. Pending queue persistence -- not yet implemented
  *   6a. Stop PositionTracker, DeFiMonitorService, TelegramBot, WcSessionService, AutoStop, BalanceMonitor, IncomingTxMonitor, WebhookService
  *   6b. Remove all EventBus listeners
  *   7. workers.stopAll()
@@ -37,14 +37,15 @@ import { createRequire } from 'node:module';
 import { join, dirname } from 'node:path';
 import type { Database as DatabaseType } from 'better-sqlite3';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import { WAIaaSError, getSingleNetwork, EventBus, RpcPool, BUILT_IN_RPC_DEFAULTS } from '@waiaas/core';
+import { WAIaaSError, getSingleNetwork, EventBus, RpcPool, BUILT_IN_RPC_DEFAULTS, safeJsonParse } from '@waiaas/core';
+import { z } from 'zod';
 import { KillSwitchService } from '../services/kill-switch-service.js';
 import { AutoStopService } from '../services/autostop-service.js';
 import type { AutoStopConfig } from '../services/autostop-service.js';
 import { InMemoryCounter } from '../infrastructure/metrics/in-memory-counter.js';
 import { AdminStatsService } from '../services/admin-stats-service.js';
 import type { BalanceMonitorService, BalanceMonitorConfig } from '../services/monitoring/balance-monitor-service.js';
-import type { ChainType, NetworkType, EnvironmentType } from '@waiaas/core';
+import type { ChainType, NetworkType, EnvironmentType, IPolicyEngine } from '@waiaas/core';
 import type { AdapterPool } from '../infrastructure/adapter-pool.js';
 import { resolveRpcUrl, resolveRpcUrlFromPool } from '../infrastructure/adapter-pool.js';
 import { createDatabase, pushSchema, checkSchemaCompatibility } from '../infrastructure/database/index.js';
@@ -83,6 +84,14 @@ async function getLockfile(): Promise<LockfileModule> {
   _lockfile = (await import('proper-lockfile')) as unknown as LockfileModule;
   return _lockfile;
 }
+
+// ---------------------------------------------------------------------------
+// Null-object policy engine for stage 5-6 re-entry (policy already evaluated)
+// ---------------------------------------------------------------------------
+
+const NULL_POLICY_ENGINE: IPolicyEngine = {
+  evaluate: async () => ({ allowed: true, tier: 'INSTANT' as const }),
+};
 
 // ---------------------------------------------------------------------------
 // Timeout utility
@@ -327,7 +336,26 @@ export class DaemonLifecycle {
             // Existing user migration: validate by decrypting first keystore
             const keystorePath = join(keystoreDir, keystoreFiles[0]!);
             const content = readFileSync(keystorePath, 'utf-8');
-            const parsed = JSON.parse(content);
+            const KeystoreSchema = z.object({
+              crypto: z.object({
+                cipherparams: z.object({ iv: z.string() }),
+                ciphertext: z.string(),
+                authTag: z.string(),
+                kdfparams: z.object({
+                  salt: z.string(),
+                  memoryCost: z.number(),
+                  timeCost: z.number(),
+                  parallelism: z.number(),
+                  hashLength: z.number(),
+                }),
+              }),
+            });
+            const parseResult = safeJsonParse(content, KeystoreSchema);
+            if (!parseResult.success) {
+              console.error('Invalid keystore file format:', parseResult.error.message);
+              process.exit(1);
+            }
+            const parsed = parseResult.data;
             const encrypted = {
               iv: Buffer.from(parsed.crypto.cipherparams.iv, 'hex'),
               ciphertext: Buffer.from(parsed.crypto.ciphertext, 'hex'),
@@ -427,7 +455,7 @@ export class DaemonLifecycle {
 
           // 2. Seed config.toml URLs first (highest priority)
           //    WAIAAS_RPC_* env vars are already applied to config.rpc by applyEnvOverrides in loader.ts
-          const rpcConfig = this._config!.rpc as unknown as Record<string, string>;
+          const rpcConfig = this._config!.rpc;
           for (const [configKey, url] of Object.entries(rpcConfig)) {
             if (typeof url !== 'string' || !url) continue;
             const network = configKeyToNet(configKey);
@@ -1541,8 +1569,10 @@ export class DaemonLifecycle {
         // v31.14: Long-poll RPC proxy support -- keep connections alive for 10 minutes
         // Default Node.js keepAliveTimeout is 5s, which is too short for DELAY/APPROVAL tier
         // long-poll responses that can take up to 600s.
-        (server as any).keepAliveTimeout = 600_000; // 600 seconds in milliseconds
-        (server as any).headersTimeout = 605_000;   // Must be > keepAliveTimeout (Node.js docs)
+        // Hono serve() returns http.Server which exposes these timeout properties.
+        const httpServer = server as import('node:http').Server;
+        httpServer.keepAliveTimeout = 600_000; // 600 seconds in milliseconds
+        httpServer.headersTimeout = 605_000;   // Must be > keepAliveTimeout (Node.js docs)
 
         // Wait for server to actually start listening (catches EADDRINUSE)
         await new Promise<void>((resolve, reject) => {
@@ -1699,7 +1729,7 @@ export class DaemonLifecycle {
               if (this._isShuttingDown || !tx.txHash || !tx.network) continue;
               try {
                 const rpcUrl = resolveRpcUrl(
-                  this._config!.rpc as unknown as Record<string, string>,
+                  this._config!.rpc,
                   tx.chain,
                   tx.network,
                 );
@@ -1877,8 +1907,7 @@ export class DaemonLifecycle {
         console.log('Steps 2-4: HTTP server closed');
       }
 
-      // Steps 5: In-flight signing -- STUB (Phase 50-04)
-      // Steps 6: Pending queue persistence -- STUB (Phase 50-04)
+      // Steps 5-6: In-flight signing + pending queue persistence -- not yet implemented
 
       // Disconnect all chain adapters
       if (this.adapterPool) {
@@ -2083,7 +2112,7 @@ export class DaemonLifecycle {
 
       // Resolve adapter from pool using recorded network
       const rpcUrl = resolveRpcUrl(
-        this._config.rpc as unknown as Record<string, string>,
+        this._config.rpc,
         wallet.chain,
         resolvedNetwork,
       );
@@ -2095,12 +2124,15 @@ export class DaemonLifecycle {
 
       // Restore original request from metadata (#208)
       // DELAY/GAS_WAITING re-entry needs full request to rebuild correct tx type
-      const meta = tx.metadata ? JSON.parse(tx.metadata) : {};
-      const request = meta.originalRequest ?? {
+      const TxMetadataSchema = z.object({ originalRequest: z.record(z.unknown()).optional() }).passthrough();
+      const meta = tx.metadata
+        ? (() => { const r = safeJsonParse(tx.metadata as string, TxMetadataSchema); return r.success ? r.data : {}; })()
+        : {};
+      const request = (meta.originalRequest ?? {
         to: tx.toAddress ?? '',
         amount: tx.amount ?? '0',
         memo: undefined,
-      };
+      }) as import('@waiaas/core').SendTransactionRequest | import('@waiaas/core').TransactionRequest;
 
       // Construct PipelineContext for stages 5-6
       // Policy already evaluated at Stage 3 before GAS_WAITING entry
@@ -2108,7 +2140,7 @@ export class DaemonLifecycle {
         db: this._db,
         adapter,
         keyStore: this.keyStore,
-        policyEngine: null as any, // Not needed for stages 5-6
+        policyEngine: NULL_POLICY_ENGINE, // Not needed for stages 5-6
         masterPassword: this.masterPassword,
         walletId,
         wallet: {
@@ -2221,7 +2253,7 @@ export class DaemonLifecycle {
 
       // Resolve adapter from pool using recorded network
       const rpcUrl = resolveRpcUrl(
-        this._config.rpc as unknown as Record<string, string>,
+        this._config.rpc,
         wallet.chain,
         resolvedNetwork,
       );
@@ -2232,12 +2264,15 @@ export class DaemonLifecycle {
       );
 
       // Restore original request from metadata (#208)
-      const meta = tx.metadata ? JSON.parse(tx.metadata) : {};
-      let request = meta.originalRequest ?? {
+      const TxMetadataSchema2 = z.object({ originalRequest: z.record(z.unknown()).optional() }).passthrough();
+      const meta = tx.metadata
+        ? (() => { const r = safeJsonParse(tx.metadata as string, TxMetadataSchema2); return r.success ? r.data : {}; })()
+        : {};
+      let request = (meta.originalRequest ?? {
         to: tx.toAddress ?? '',
         amount: tx.amount ?? '0',
         memo: undefined,
-      };
+      }) as import('@waiaas/core').SendTransactionRequest | import('@waiaas/core').TransactionRequest;
 
       // Phase 321: Re-encode calldata for EIP-712 approvals (setAgentWallet)
       // The original calldata has a placeholder '0x' signature. On approval,
@@ -2250,7 +2285,10 @@ export class DaemonLifecycle {
 
         if (approvalRow?.approval_type === 'EIP712' && approvalRow.typed_data_json && approvalRow.owner_signature) {
           try {
-            const typedData = JSON.parse(approvalRow.typed_data_json);
+            const Eip712DataSchema = z.object({ message: z.object({ agentId: z.union([z.string(), z.number()]), newWallet: z.string(), deadline: z.union([z.string(), z.number()]) }) }).passthrough();
+            const typedDataResult = safeJsonParse(approvalRow.typed_data_json, Eip712DataSchema);
+            if (!typedDataResult.success) throw new Error('Invalid typed_data_json');
+            const typedData = typedDataResult.data;
             const { encodeFunctionData } = await import('viem');
             const { IDENTITY_REGISTRY_ABI } = await import('@waiaas/actions');
             const reEncodedCalldata = encodeFunctionData({
@@ -2264,7 +2302,7 @@ export class DaemonLifecycle {
               ],
             });
             // Replace calldata in the request object
-            request = { ...request, calldata: reEncodedCalldata };
+            request = { ...request, calldata: reEncodedCalldata } as typeof request;
           } catch (err) {
             console.warn(`[executeFromStage5] EIP-712 calldata re-encoding failed for ${txId}:`, err);
           }
@@ -2276,7 +2314,7 @@ export class DaemonLifecycle {
         db: this._db,
         adapter,
         keyStore: this.keyStore,
-        policyEngine: null as any, // Not needed for stages 5-6
+        policyEngine: NULL_POLICY_ENGINE, // Not needed for stages 5-6
         masterPassword: this.masterPassword,
         walletId,
         wallet: {

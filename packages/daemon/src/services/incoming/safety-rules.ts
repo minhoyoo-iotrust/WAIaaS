@@ -14,6 +14,7 @@
  */
 
 import type { IncomingTransaction } from '@waiaas/core';
+import { formatAmount } from '@waiaas/core';
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -55,8 +56,7 @@ export class DustAttackRule implements IIncomingSafetyRule {
   check(tx: IncomingTransaction, ctx: SafetyRuleContext): boolean {
     if (ctx.usdPrice === null) return false;
 
-    const amountUsd =
-      (Number(tx.amount) * ctx.usdPrice) / 10 ** ctx.decimals;
+    const amountUsd = Number(formatAmount(BigInt(tx.amount), ctx.decimals)) * ctx.usdPrice;
 
     return amountUsd < ctx.dustThresholdUsd;
   }
@@ -98,8 +98,7 @@ export class LargeAmountRule implements IIncomingSafetyRule {
   check(tx: IncomingTransaction, ctx: SafetyRuleContext): boolean {
     if (ctx.usdPrice === null || ctx.avgIncomingUsd === null) return false;
 
-    const amountUsd =
-      (Number(tx.amount) * ctx.usdPrice) / 10 ** ctx.decimals;
+    const amountUsd = Number(formatAmount(BigInt(tx.amount), ctx.decimals)) * ctx.usdPrice;
 
     return amountUsd > ctx.avgIncomingUsd * ctx.amountMultiplier;
   }

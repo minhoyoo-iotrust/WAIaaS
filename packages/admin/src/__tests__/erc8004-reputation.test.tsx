@@ -71,12 +71,6 @@ const mockSettingsEnabled = {
   },
 };
 
-const mockProvidersResponse = {
-  providers: [
-    { name: 'erc8004_agent', actions: [{ name: 'register', description: 'Register agent', chain: 'ethereum', riskLevel: 'LOW', defaultTier: 'standard' }] },
-  ],
-};
-
 const mockWallets = [
   { id: 'w1', name: 'test-wallet', chain: 'ethereum', network: 'ethereum-mainnet', publicKey: '0xabc', status: 'ACTIVE' },
 ];
@@ -118,7 +112,7 @@ describe('Erc8004Page Reputation tab', () => {
   it('renders reputation score on Reputation tab', async () => {
         mockApiGet
       .mockResolvedValueOnce({ data: mockSettingsEnabled })
-      .mockResolvedValueOnce({ data: mockProvidersResponse })
+
       .mockResolvedValueOnce({ data: { items: mockWallets } })
       .mockResolvedValueOnce({ data: mockRegFileWithAgent })
       .mockResolvedValueOnce({ data: mockReputation });
@@ -141,7 +135,7 @@ describe('Erc8004Page Reputation tab', () => {
   it('external agent lookup calls reputation API', async () => {
         mockApiGet
       .mockResolvedValueOnce({ data: mockSettingsEnabled })
-      .mockResolvedValueOnce({ data: mockProvidersResponse })
+
       .mockResolvedValueOnce({ data: { items: mockWallets } })
       .mockResolvedValueOnce({ data: mockRegFileWithAgent })
       .mockResolvedValueOnce({ data: mockReputation }) // My agent score
@@ -177,7 +171,7 @@ describe('Erc8004Page Reputation tab', () => {
   it('shows tag filter fields', async () => {
         mockApiGet
       .mockResolvedValueOnce({ data: mockSettingsEnabled })
-      .mockResolvedValueOnce({ data: mockProvidersResponse })
+
       .mockResolvedValueOnce({ data: { items: mockWallets } })
       .mockResolvedValueOnce({ data: mockRegFileWithAgent })
       .mockResolvedValueOnce({ data: mockReputation });
@@ -199,7 +193,7 @@ describe('Erc8004Page Reputation tab', () => {
   it('renders lookup result when Query returns data', async () => {
         mockApiGet
       .mockResolvedValueOnce({ data: mockSettingsEnabled })
-      .mockResolvedValueOnce({ data: mockProvidersResponse })
+
       .mockResolvedValueOnce({ data: { items: mockWallets } })
       .mockResolvedValueOnce({ data: mockRegFileWithAgent })
       .mockResolvedValueOnce({ data: mockReputation })   // My agent score

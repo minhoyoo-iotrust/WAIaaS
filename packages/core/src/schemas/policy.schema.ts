@@ -21,49 +21,49 @@ export type Policy = z.infer<typeof PolicySchema>;
 // ---------------------------------------------------------------------------
 
 /** ALLOWED_TOKENS: rules.tokens array (mint/contract addresses + optional CAIP-19). */
-const AllowedTokensRulesSchema = z.object({
+export const AllowedTokensRulesSchema = z.object({
   tokens: z.array(z.object({
     address: z.string().min(1),
     symbol: z.string().min(1).max(10).optional(),
     chain: ChainTypeEnum.optional(),
     assetId: Caip19Schema.optional(),
-  })).min(1, 'At least one token required'),
+  })),
 });
 
 /** CONTRACT_WHITELIST: rules.contracts array. */
-const ContractWhitelistRulesSchema = z.object({
+export const ContractWhitelistRulesSchema = z.object({
   contracts: z.array(z.object({
     address: z.string().min(1),
     name: z.string().optional(),
     chain: ChainTypeEnum.optional(),
-  })).min(1, 'At least one contract required'),
+  })),
 });
 
 /** METHOD_WHITELIST: rules.methods array (contract-specific allowed methods). */
-const MethodWhitelistRulesSchema = z.object({
+export const MethodWhitelistRulesSchema = z.object({
   methods: z.array(z.object({
     contractAddress: z.string().min(1),
-    selectors: z.array(z.string().min(1)).min(1),
-  })).min(1, 'At least one method entry required'),
+    selectors: z.array(z.string().min(1)),
+  })),
 });
 
 /** APPROVED_SPENDERS: rules.spenders array. */
-const ApprovedSpendersRulesSchema = z.object({
+export const ApprovedSpendersRulesSchema = z.object({
   spenders: z.array(z.object({
     address: z.string().min(1),
     name: z.string().optional(),
     maxAmount: z.string().regex(/^\d+$/).optional(),
-  })).min(1, 'At least one spender required'),
+  })),
 });
 
 /** APPROVE_AMOUNT_LIMIT: rules.maxAmount + rules.blockUnlimited. */
-const ApproveAmountLimitRulesSchema = z.object({
+export const ApproveAmountLimitRulesSchema = z.object({
   maxAmount: z.string().regex(/^\d+$/).optional(),
   blockUnlimited: z.boolean().default(true),
 });
 
 /** APPROVE_TIER_OVERRIDE: rules.tier (forced policy tier). */
-const ApproveTierOverrideRulesSchema = z.object({
+export const ApproveTierOverrideRulesSchema = z.object({
   tier: PolicyTierEnum,
 });
 
@@ -165,7 +165,7 @@ export const SpendingLimitRulesSchema = SpendingLimitRulesBaseSchema.superRefine
 export type SpendingLimitRules = z.infer<typeof SpendingLimitRulesSchema>;
 
 /** ALLOWED_NETWORKS: rules.networks array (permitted networks for wallet). */
-const AllowedNetworksRulesSchema = z.object({
+export const AllowedNetworksRulesSchema = z.object({
   networks: z.array(z.object({
     network: NetworkTypeEnum,
     name: z.string().optional(),
@@ -218,9 +218,67 @@ export const ReputationThresholdRulesSchema = z.object({
 });
 export type ReputationThresholdRules = z.infer<typeof ReputationThresholdRulesSchema>;
 
+/** LENDING_ASSET_WHITELIST: rules.assets array (permitted lending assets). */
+export const LendingAssetWhitelistRulesSchema = z.object({
+  assets: z.array(z.object({
+    address: z.string().min(1),
+    symbol: z.string().optional(),
+  })).min(1, 'At least one asset required'),
+});
+export type LendingAssetWhitelistRules = z.infer<typeof LendingAssetWhitelistRulesSchema>;
+
+/** LENDING_LTV_LIMIT: LTV-based borrow restriction. */
+export const LendingLtvLimitRulesSchema = z.object({
+  maxLtv: z.number().min(0).max(1),
+  warningLtv: z.number().min(0).max(1),
+});
+export type LendingLtvLimitRules = z.infer<typeof LendingLtvLimitRulesSchema>;
+
+/** PERP_MAX_LEVERAGE: Maximum leverage restriction. */
+export const PerpMaxLeverageRulesSchema = z.object({
+  maxLeverage: z.number().positive(),
+  warningLeverage: z.number().positive().optional(),
+});
+export type PerpMaxLeverageRules = z.infer<typeof PerpMaxLeverageRulesSchema>;
+
+/** PERP_MAX_POSITION_USD: Maximum position size restriction. */
+export const PerpMaxPositionUsdRulesSchema = z.object({
+  maxPositionUsd: z.number().positive(),
+  warningPositionUsd: z.number().positive().optional(),
+});
+export type PerpMaxPositionUsdRules = z.infer<typeof PerpMaxPositionUsdRulesSchema>;
+
+/** PERP_ALLOWED_MARKETS: Permitted perp markets. */
+export const PerpAllowedMarketsRulesSchema = z.object({
+  markets: z.array(z.object({
+    market: z.string().min(1),
+    name: z.string().optional(),
+  })).min(1, 'At least one market required'),
+});
+export type PerpAllowedMarketsRules = z.infer<typeof PerpAllowedMarketsRulesSchema>;
+
+/** VENUE_WHITELIST: Permitted external venues. */
+export const VenueWhitelistRulesSchema = z.object({
+  venues: z.array(z.object({
+    id: z.string().min(1),
+    name: z.string().optional(),
+  })).min(1, 'At least one venue required'),
+});
+export type VenueWhitelistRules = z.infer<typeof VenueWhitelistRulesSchema>;
+
+/** ACTION_CATEGORY_LIMIT: Per-category action spending limits. */
+export const ActionCategoryLimitRulesSchema = z.object({
+  category: z.string().min(1),
+  daily_limit_usd: z.number().positive().optional(),
+  monthly_limit_usd: z.number().positive().optional(),
+  per_action_limit_usd: z.number().positive().optional(),
+  tier_on_exceed: z.string().optional(),
+});
+export type ActionCategoryLimitRules = z.infer<typeof ActionCategoryLimitRulesSchema>;
+
 // Map of policy types to their rules schemas for superRefine lookup.
-// All 13 PolicyTypes with dedicated rules schemas are covered.
-const POLICY_RULES_SCHEMAS: Record<string, z.ZodTypeAny> = {
+// All 20 PolicyTypes with dedicated rules schemas are covered.
+export const POLICY_RULES_SCHEMAS: Record<string, z.ZodTypeAny> = {
   ALLOWED_TOKENS: AllowedTokensRulesSchema,
   CONTRACT_WHITELIST: ContractWhitelistRulesSchema,
   METHOD_WHITELIST: MethodWhitelistRulesSchema,
@@ -234,6 +292,13 @@ const POLICY_RULES_SCHEMAS: Record<string, z.ZodTypeAny> = {
   TIME_RESTRICTION: TimeRestrictionRulesSchema,
   X402_ALLOWED_DOMAINS: X402AllowedDomainsRulesSchema,
   REPUTATION_THRESHOLD: ReputationThresholdRulesSchema,
+  LENDING_ASSET_WHITELIST: LendingAssetWhitelistRulesSchema,
+  LENDING_LTV_LIMIT: LendingLtvLimitRulesSchema,
+  PERP_MAX_LEVERAGE: PerpMaxLeverageRulesSchema,
+  PERP_MAX_POSITION_USD: PerpMaxPositionUsdRulesSchema,
+  PERP_ALLOWED_MARKETS: PerpAllowedMarketsRulesSchema,
+  VENUE_WHITELIST: VenueWhitelistRulesSchema,
+  ACTION_CATEGORY_LIMIT: ActionCategoryLimitRulesSchema,
 };
 
 /**
@@ -258,6 +323,52 @@ export const CreatePolicyRequestSchema = z.object({
       ctx.addIssue({ ...issue, path: ['rules', ...issue.path] });
     }
   }
+
+  // API-level stricter validation: reject empty arrays that are semantically invalid
+  // (base schemas allow empty for DB backward compat, but creation must have items)
+  const rules = data.rules as Record<string, unknown>;
+  const emptyArrayChecks: Record<string, string[]> = {
+    ALLOWED_TOKENS: ['tokens'],
+    CONTRACT_WHITELIST: ['contracts'],
+    APPROVED_SPENDERS: ['spenders'],
+    WHITELIST: ['allowed_addresses'],
+    X402_ALLOWED_DOMAINS: ['domains'],
+  };
+  const fieldsToCheck = emptyArrayChecks[data.type];
+  if (fieldsToCheck) {
+    for (const field of fieldsToCheck) {
+      const arr = rules[field];
+      if (Array.isArray(arr) && arr.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.too_small,
+          minimum: 1,
+          type: 'array',
+          inclusive: true,
+          message: `At least one ${field.replace(/_/g, ' ')} entry required`,
+          path: ['rules', field],
+        });
+      }
+    }
+  }
+  // METHOD_WHITELIST: check methods array and inner selectors arrays
+  if (data.type === 'METHOD_WHITELIST') {
+    const methods = rules['methods'];
+    if (Array.isArray(methods)) {
+      for (let i = 0; i < methods.length; i++) {
+        const m = methods[i] as Record<string, unknown> | undefined;
+        if (m && Array.isArray(m['selectors']) && (m['selectors'] as unknown[]).length === 0) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.too_small,
+            minimum: 1,
+            type: 'array',
+            inclusive: true,
+            message: 'At least one selector required',
+            path: ['rules', 'methods', i, 'selectors'],
+          });
+        }
+      }
+    }
+  }
 });
 export type CreatePolicyRequest = z.infer<typeof CreatePolicyRequestSchema>;
 
@@ -272,3 +383,14 @@ export const UpdatePolicyRequestSchema = z.object({
   enabled: z.boolean().optional(),
 });
 export type UpdatePolicyRequest = z.infer<typeof UpdatePolicyRequestSchema>;
+
+// ---------------------------------------------------------------------------
+// v32.4: Inferred types for newly-exported rule schemas (Phase 427)
+// ---------------------------------------------------------------------------
+export type AllowedTokensRules = z.infer<typeof AllowedTokensRulesSchema>;
+export type ContractWhitelistRules = z.infer<typeof ContractWhitelistRulesSchema>;
+export type MethodWhitelistRules = z.infer<typeof MethodWhitelistRulesSchema>;
+export type ApprovedSpendersRules = z.infer<typeof ApprovedSpendersRulesSchema>;
+export type ApproveAmountLimitRules = z.infer<typeof ApproveAmountLimitRulesSchema>;
+export type ApproveTierOverrideRules = z.infer<typeof ApproveTierOverrideRulesSchema>;
+export type AllowedNetworksRules = z.infer<typeof AllowedNetworksRulesSchema>;

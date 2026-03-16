@@ -249,7 +249,7 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
       const results = await Promise.allSettled(
         networks.map(async (net) => {
           const rpcUrl = resolveRpcUrl(
-            deps.config!.rpc as unknown as Record<string, string>,
+            deps.config!.rpc,
             wallet.chain,
             net,
           );
@@ -309,7 +309,7 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
     }
 
     const rpcUrl = resolveRpcUrl(
-      deps.config.rpc as unknown as Record<string, string>,
+      deps.config.rpc,
       wallet.chain,
       targetNetwork,
     );
@@ -376,7 +376,7 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
       const results = await Promise.allSettled(
         networks.map(async (net) => {
           const rpcUrl = resolveRpcUrl(
-            deps.config!.rpc as unknown as Record<string, string>,
+            deps.config!.rpc,
             wallet.chain,
             net,
           );
@@ -446,7 +446,7 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
     }
 
     const rpcUrl = resolveRpcUrl(
-      deps.config.rpc as unknown as Record<string, string>,
+      deps.config.rpc,
       wallet.chain,
       targetNetwork,
     );
@@ -470,7 +470,7 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
 
     // CAIP-2 chainId for top-level
     let topChainId: string | undefined;
-    try { topChainId = networkToCaip2(targetNetwork as any); } catch { /* graceful */ }
+    try { topChainId = networkToCaip2(targetNetwork as NetworkType); } catch { /* graceful */ }
 
     return c.json(
       {

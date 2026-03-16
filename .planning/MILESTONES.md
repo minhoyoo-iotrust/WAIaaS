@@ -1,5 +1,26 @@
 # Project Milestones: WAIaaS
 
+## v32.4 타입 안전 + 코드 품질 (Shipped: 2026-03-16)
+
+**Phases completed:** 5 phases (427-431), 11 plans, 21 tasks, 51 requirements
+
+**Key accomplishments:**
+- safeJsonParse<T> 범용 헬퍼 + POLICY_RULES_SCHEMAS 20종 export (@waiaas/core SSoT)
+- IChainSubscriber 9메서드(6 base + 3 optional) 확장 + services/infrastructure에서 api/ import 0건
+- DatabasePolicyEngine 20건 JSON.parse→Zod safeParse 전환 + 17개 로컬 인터페이스 제거
+- 프로덕션 소스 `as any` 0건 달성 (wc.ts/daemon/stages/userop/actions 전체 교체)
+- NATIVE_DECIMALS/NATIVE_SYMBOLS SSoT + sleep/formatAmount/aggregateStakingBalance 통합
+- 4건 이슈 수정: IncomingTxMonitor 캐시(#359), NFT Indexer 키(#361), 사이드바 Protocols(#360), 프로토콜 토글 분리(#362)
+
+**Stats:**
+- 5 phases (427-431), 11 plans, 51 requirements complete
+- 47 commits, 140 files changed, +7,233/-1,967 lines
+- ~349,000 LOC TS
+- Timeline: 1 day (2026-03-16)
+- Audit: PASS (51/51 requirements, cross-phase integration verified)
+
+---
+
 ## v32.2 보안 패치 (Shipped: 2026-03-16)
 
 **Phases completed:** 3 phases, 3 plans, 14 requirements

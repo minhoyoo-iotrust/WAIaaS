@@ -22,7 +22,7 @@
 import type { Database } from 'better-sqlite3';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { EventBus, IChainSubscriber, IncomingTransaction, ChainType, EnvironmentType } from '@waiaas/core';
-import { getNetworksForEnvironment, formatAmount } from '@waiaas/core';
+import { getNetworksForEnvironment, formatAmount, nativeSymbol } from '@waiaas/core';
 import type { BackgroundWorkers } from '../../lifecycle/workers.js';
 import type { KillSwitchService } from '../kill-switch-service.js';
 import type { NotificationService } from '../../notifications/notification-service.js';
@@ -70,7 +70,6 @@ export interface IncomingTxMonitorDeps {
 
 // ── Helpers ─────────────────────────────────────────────────────
 
-const NATIVE_SYMBOLS: Record<string, string> = { solana: 'SOL', ethereum: 'ETH' };
 
 /**
  * Format incoming tx amount to human-readable string with symbol.
@@ -85,8 +84,7 @@ function formatIncomingAmount(
   try {
     const symbol = tokenSymbol
       ?? (tx.tokenAddress ? tx.tokenAddress.slice(0, 8) : null)
-      ?? NATIVE_SYMBOLS[tx.chain]
-      ?? tx.chain.toUpperCase();
+      ?? nativeSymbol(tx.chain);
     return `${formatAmount(BigInt(tx.amount), decimals)} ${symbol}`;
   } catch {
     return tx.amount;
@@ -426,12 +424,10 @@ export class IncomingTxMonitorService {
       }
     }
 
-    // USD price: not available in this phase (requires PriceOracle integration)
-    // Will be wired in Phase 227
+    // USD price: not yet wired (requires PriceOracle integration)
     const usdPrice: number | null = null;
 
-    // Average incoming USD: not computed yet (requires historical aggregation)
-    // Will be wired in Phase 227
+    // Average incoming USD: not yet computed (requires historical aggregation)
     const avgIncomingUsd: number | null = null;
 
     return {
@@ -484,10 +480,7 @@ export class IncomingTxMonitorService {
     const checkSolanaFinalized = async (txHash: string): Promise<boolean> => {
       const entries = this.multiplexer.getSubscribersForChain('solana');
       if (entries.length === 0) return false;
-      const sub = entries[0]!.subscriber as unknown as {
-        checkFinalized(txHash: string): Promise<boolean>;
-      };
-      return sub.checkFinalized(txHash);
+      return entries[0]!.subscriber.checkFinalized?.(txHash) ?? false;
     };
 
     this.workers.register('incoming-tx-confirm-solana', {
@@ -505,10 +498,10 @@ export class IncomingTxMonitorService {
       const entries = this.multiplexer.getSubscribersForChain('ethereum');
       const entry = entries.find((e) => e.key === `ethereum:${network}`);
       if (!entry) throw new Error(`No EVM subscriber for network ${network}`);
-      const sub = entry.subscriber as unknown as {
-        getBlockNumber(): Promise<bigint>;
-      };
-      return sub.getBlockNumber();
+      if (!entry.subscriber.getBlockNumber) {
+        throw new Error(`Subscriber for ${network} does not support getBlockNumber`);
+      }
+      return entry.subscriber.getBlockNumber();
     };
 
     this.workers.register('incoming-tx-confirm-evm', {
@@ -526,7 +519,7 @@ export class IncomingTxMonitorService {
         const entries = this.multiplexer.getSubscribersForChain('solana');
         for (const { subscriber } of entries) {
           try {
-            await (subscriber as unknown as { pollAll(): Promise<void> }).pollAll();
+            await subscriber.pollAll?.();
           } catch (err) {
             console.warn('Solana polling worker error:', err);
           }
@@ -543,7 +536,7 @@ export class IncomingTxMonitorService {
           const entry = entries[i];
           if (!entry) continue;
           try {
-            await (entry.subscriber as unknown as { pollAll(): Promise<void> }).pollAll();
+            await entry.subscriber.pollAll?.();
           } catch (err) {
             console.warn('EVM polling worker error:', err);
           }

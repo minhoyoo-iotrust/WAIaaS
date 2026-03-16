@@ -112,8 +112,8 @@ export interface IChainAdapter {
   /** Get current nonce for an address (EVM). Returns 0 for Solana. */
   getCurrentNonce(address: string): Promise<number>;
 
-  /** Sweep all assets from one address to another. */
-  sweepAll(from: string, to: string, privateKey: Uint8Array): Promise<SweepResult>;
+  /** Sweep all assets from one address to another (optional, not all chains implement). */
+  sweepAll?(from: string, to: string, privateKey: Uint8Array): Promise<SweepResult>;
 
   // -- Sign-only operations (2) -- v1.4.7
 

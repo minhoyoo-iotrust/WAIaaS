@@ -178,8 +178,7 @@ export class HeliusNftIndexer implements INftIndexer {
       });
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const json = await response.json() as any;
+    const json = await response.json() as { error?: { message?: string; code?: number }; result?: unknown };
 
     // Check for JSON-RPC error
     if (json.error) {
@@ -189,7 +188,7 @@ export class HeliusNftIndexer implements INftIndexer {
       });
     }
 
-    return json.result ?? {};
+    return (json.result ?? {}) as Record<string, unknown>;
   }
 }
 

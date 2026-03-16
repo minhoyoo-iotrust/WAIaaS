@@ -1,160 +1,158 @@
 # Project Research Summary
 
-**Project:** WAIaaS v32.0 — Contract Name Resolution
-**Domain:** Wallet notification enrichment / DeFi contract address display
-**Researched:** 2026-03-15
+**Project:** WAIaaS Type Safety + Zod SSoT Consolidation (v32.4)
+**Domain:** TypeScript Production Monorepo — Code Quality Refactoring
+**Researched:** 2026-03-16
 **Confidence:** HIGH
 
 ## Executive Summary
 
-Contract name resolution for WAIaaS is a read-only enrichment feature that maps raw contract addresses to human-readable protocol names in notifications and Admin UI. All four research tracks converge on one clear approach: a zero-dependency, synchronous, in-memory lookup using a 4-tier priority cascade (Action Provider metadata > well-known static registry > CONTRACT_WHITELIST user labels > abbreviated address fallback). No new npm packages, no new database tables, and no RPC calls are required. The feature layers cleanly onto existing infrastructure — the `actionProvider` pipeline field, the `CONTRACT_WHITELIST` `name?` field, the `{type}` template variable pattern, and the `amountFormatted` API enrichment pattern from v31.15 all serve as direct precedents.
+This milestone is a pure refactoring effort targeting type safety degradation in a mature 12-package TypeScript monorepo. No new dependencies are needed; all required tools (Zod 3.25.x, TypeScript 5.9.3 strict mode, Drizzle ORM 0.45.x) are already present. The work falls into four distinct problem categories: (1) `JSON.parse()` calls without runtime validation in security-critical code paths, (2) ~55 production `as any` casts that bypass the type system, (3) duplicate utility definitions across 5+ packages violating SSoT, and (4) one confirmed layer violation where a service imports from the API layer.
 
-The recommended approach is to implement a `ContractNameRegistry` service in `@waiaas/core` backed by a static `well-known-contracts.ts` data module (~200-300 curated entries across EVM chains + Solana), surface contract names via an upgraded `{to}` notification variable value (format: "Protocol Name (0xabcd...1234)"), and enrich the transaction API response with a `contractName` field consumed by the Admin UI. The Action Provider `metadata.name` field is the highest-value source because it already flows through the pipeline for every DeFi ACTION_PROVIDER path — wiring it to the notification output covers ~80% of CONTRACT_CALL notifications with zero new data required.
+The recommended approach is a bottom-up, dependency-order refactoring: fix the shared `@waiaas/core` exports first, then infrastructure utilities, then the policy engine's Zod validation, then `as any` elimination, and finally SSoT consolidation of duplicated utilities. This order is dictated by build dependency direction — changes to core affect all downstream packages, so they must be correct before downstream work begins.
 
-The primary risk is data correctness: EVM address case-sensitivity bugs and cross-chain address misidentification are the most likely failure modes. Both are preventable with a normalized lowercase-keyed, per-network compound-key registry structure. A secondary risk is notification template backward compatibility — fully mitigated by modifying the value produced for the existing `{to}` variable rather than introducing a new `{to_display}` variable, which eliminates the risk of unreplaced placeholder text appearing in sent notifications.
+The highest-risk area is adding Zod validation to `database-policy-engine.ts`. The 21 `JSON.parse(policy.rules)` calls must use `.safeParse()` rather than `.parse()` because existing DB data may predate recent schema changes (e.g., `instant_max` became optional in Phase 235). Failing to use the permissive parse path would cause policy evaluation failures that directly block transactions. The second major risk is `as any` removal triggering unexpected runtime behavior changes, particularly in the WalletConnect (8 occurrences) and AA bundler client (4 occurrences) paths, which require wrapper-function isolation rather than direct cast removal.
 
 ## Key Findings
 
 ### Recommended Stack
 
-Zero new dependencies. The well-known contract registry follows the exact pattern of `builtin-tokens.ts` — a static TypeScript `Record` keyed by network-then-lowercase-address, bundled in `@waiaas/core`. Every required integration point is covered by existing project tools: viem `getAddress()` for EVM checksum normalization, the existing i18n template variable substitution system for notification injection, and openapi-typescript auto-generation for Admin UI type propagation.
+No new packages should be added. The existing toolchain is sufficient. The `strict: true` TypeScript configuration is already in place including `noUncheckedIndexedAccess`. The codebase already contains Zod schemas for all 13 policy types in `@waiaas/core/schemas/policy.schema.ts`; the problem is that the policy engine does not use them at read time. Drizzle ORM 0.45.x does not yet expose a public `.$client` accessor, so the `wc.ts` raw SQLite access must be fixed by passing the `sqlite` handle through dependency injection — the same dual-handle pattern already used by 12+ other services.
 
-**Core technologies:**
-- TypeScript `Record<string, WellKnownContract[]>` in `@waiaas/core`: static well-known data — zero runtime cost, zero deps, follows `BUILTIN_TOKENS` pattern; ~120 addresses already exist across provider configs
-- `ActionProviderMetadataSchema` extension with optional `displayName`: provider-declared human name — self-documenting, covers all 14+ Action Provider paths, requires updating 20+ existing providers
-- Existing `CONTRACT_WHITELIST` `name?` field: user-labeled contracts — already stored in DB, just needs lookup path wired to resolver
-- Existing `message-templates.ts` placeholder system: notification variable injection — upgrade `{to}` value format rather than adding new variables, maintains backward compatibility
+**Core technologies and their role in this milestone:**
+- **Zod 3.25.76**: Runtime validation SSoT — use `safeParse()` to replace all bare `JSON.parse() as Type` in production paths; a `safeJsonParse<T>()` helper utility in `@waiaas/core` reduces per-call boilerplate
+- **TypeScript 5.9.3**: Already strict; the work is eliminating workarounds (`as any`, `as unknown as`) that already exist, not tightening compiler settings
+- **Drizzle ORM 0.45.1**: Fix the WC routes to receive `sqlite` directly via DI instead of accessing Drizzle internals with `(db as any).session?.client`
+- **@solana/kit 6.0.1**: Branded generics are a deliberate design choice; centralize the unavoidable cast into a single `appendInstruction<T>()` wrapper function rather than scattering `as any` across 8 call sites
 
 ### Expected Features
 
 **Must have (table stakes):**
-- Action Provider name in notifications — owner sees "Aave V3" not raw hex; `actionProvider` field already flows through pipeline, not surfaced in notification vars yet
-- Well-known contract registry (static) — every block explorer resolves known contracts; 200-300 curated entries across 5 EVM chains + Solana
-- CONTRACT_WHITELIST name fallback — users already enter `name` field in whitelist policies; not surfacing it in notifications wastes their effort
-- Abbreviated address fallback — unknown contracts must still show something; `0x8787...4E2` is the standard pattern
-- Notification template `{to}` enrichment — all 4 notification event types (TX_REQUESTED, TX_APPROVAL_REQUIRED, TX_SUBMITTED, TX_CONFIRMED) should show resolved name
-- Admin UI transaction list contract names — transaction history should show protocol names matching block explorer UX
+- `as any` removal in production code (~55 occurrences across daemon, adapters, actions, core) — scope explicitly excludes test files (~785 occurrences) and build scripts
+- `DatabasePolicyEngine` Zod validation — 21 `JSON.parse(policy.rules)` calls replaced with `safeParse` using existing `POLICY_RULES_SCHEMAS` from `@waiaas/core`
+- `NATIVE_DECIMALS` SSoT consolidation — 5 duplicate `Record<string, number>` definitions unified to one source
+- `sleep()` SSoT consolidation — 5 duplicate inline functions replaced with a single `core/src/utils/sleep.ts` export
+- `wc.ts` Drizzle raw client access fix — 8 `(db as any).session?.client` replaced with proper DI
 
 **Should have (differentiators):**
-- 4-tier priority resolution cascade with `source` attribution field in API responses — unique combination; enables consumer confidence decisions and debugging
-- Cross-chain same-address disambiguation via per-network compound keys — prevents misidentification on L2s where deployer addresses sometimes collide
-- Wallet detail Activity tab enrichment — extends the 4-tab wallet detail display (Overview/Activity/Assets/Setup)
+- `safeJsonParse<T>()` utility in `@waiaas/core` — reusable pattern for all future JSON parsing across the codebase
+- External-action-pipeline type precision — `ResolvedAction` discriminated union narrowing to remove 4 `as any` + 4 `as unknown as` casts
+- Layer violation fix for `wc-signing-bridge.ts` — move `verifySIWE` and `decodeBase58` from `api/middleware/` to `infrastructure/crypto/` with re-export bridges for backward compatibility
+- `bundlerClient` typed wrapper — isolate permissionless/viem type mismatch behind a `SmartAccountClient`-typed boundary
+- `isNetworkId()` type guard — replace 8 `network as any` casts in route handlers with a proper narrowing guard
 
 **Defer (v2+):**
-- ENS/SNS reverse resolution — DeFi contracts rarely set reverse records; <5% success rate; adds `@ensdomains/ensjs` dependency
-- Etherscan/Solscan API lookup — adds external dependency, rate limits, API key management, privacy exposure
-- User-editable address book — CONTRACT_WHITELIST `name` field already serves this purpose
-- Transaction calldata decoding ("what will this do") — full Rabby-style simulation; separate milestone scope
+- Test file `as any` cleanup (~785 occurrences) — different problem requiring mock factory patterns; separate milestone
+- Build script type improvements (`scripts/extract-openapi.ts`) — low ROI, not production runtime
+- Admin UI `formatDisplayCurrency` deduplication — requires verifying browser bundle constraints before moving to `@waiaas/core`
 
 ### Architecture Approach
 
-The `ContractNameRegistry` is a pure in-memory, synchronous, read-only service instantiated once at daemon startup. It has no I/O, no async methods, and no database writes. It is injected into the pipeline context and called at notification-emission points in `stages.ts` and at the transaction API route layer. Resolution order: CONTRACT_WHITELIST name (highest trust, user-defined) > well-known registry (static, verified) > Action Provider display name (provider self-declared) > null (fallback to truncated address). All data sources are in-memory; the resolve function returns `string | null` synchronously.
+The architecture of this milestone is purely internal refactoring within the existing 5-layer daemon structure (`api/ -> services/ -> pipeline/ -> infrastructure/ -> core`). Build order follows the dependency graph in reverse: core exports are fixed first, then infrastructure utilities are extracted, then pipeline Zod validation is applied, and finally `as any` casts are removed. No new packages, no new DB migrations, no API surface changes.
 
-**Major components:**
-1. `ContractNameRegistry` (`packages/core/src/registries/contract-name-registry.ts`) — synchronous in-memory lookup, O(1) `Map.get`, `resolve(address, network, opts)` signature
-2. `well-known-contracts.ts` (`packages/core/src/registries/`) — static data module, ~200-300 entries, keyed by `{network}:{lowercaseAddress}`
-3. `ActionProviderMetadataSchema.displayName` extension — optional field with snake_case auto-conversion fallback (`jupiter_swap` → `Jupiter Swap`), applied to all 20+ existing providers
-4. Pipeline `stages.ts` modifications — upgrade `{to}` variable value at Stage 1/3/5/6 notification calls; no new pipeline context fields needed
-5. `TxDetailResponseSchema.contractName: z.string().nullable()` — resolved at query time, matches `amountFormatted` enrichment pattern from v31.15
-6. Admin UI `transactions.tsx` + `policies.tsx` updates — consume `contractName` from auto-generated OpenAPI types
+**Major components affected:**
+1. **`@waiaas/core/schemas/policy.schema.ts`** — export `POLICY_RULES_SCHEMAS` record (currently internal const); add `safeJsonParse<T>()` helper to `core/src/utils/`
+2. **`packages/daemon/src/pipeline/database-policy-engine.ts`** — replace 21 bare `JSON.parse` calls with `parsePolicyRules()` helper; delete 12 redundant local interface definitions and use Zod-inferred types from core
+3. **`packages/daemon/src/api/routes/wc.ts`** — pass `sqlite` handle through DI instead of `(db as any).session?.client`; add `infrastructure/crypto/siwe-verify.ts` and `infrastructure/crypto/address-validation.ts` as extraction targets for the layer violation in `wc-signing-bridge.ts`
+4. **`packages/adapters/solana/src/utils/tx-builder.ts`** (new file) — centralize the `appendInstruction<T>()` wrapper to reduce Solana branded-generic casts from 8 scattered sites to 1
+5. **Shared utilities** — `core/src/utils/sleep.ts` becomes the canonical `sleep()` export; `NATIVE_DECIMALS` canonical location confirmed and all duplicates replaced with imports
 
 ### Critical Pitfalls
 
-1. **EVM address case-sensitivity in registry lookup** — Store all registry keys as lowercase; apply `.toLowerCase()` for EVM address lookups; use exact Base58 for Solana (case-sensitive). Test with checksum/lowercase/uppercase variants. Intermittent failure, easy to miss if tests always use one form.
-
-2. **Notification template backward compatibility** — Do NOT add a new `{to_display}` variable. Upgrade the value produced for the existing `{to}` variable to "Protocol Name (0xabcd...1234)" format. This eliminates the risk of unreplaced `{to_display}` placeholder text appearing in sent notifications. Any new variables added must be included in the `message-templates.ts` fallback cleanup list and updated in both `en.ts` and `ko.ts`.
-
-3. **Action Provider `displayName` gaps for all 20+ providers** — Add `displayName` as optional with snake_case auto-conversion fallback. Update all 20+ providers in the same phase, not deferred — separated phases risk partial coverage that is hard to detect. Without `displayName`, Action Provider path silently falls back to Well-known registry.
-
-4. **Synchronous-only constraint** — `ContractNameRegistry.resolve()` must be a pure synchronous `string | null` function. Pipeline Stage 1 constructs notification vars synchronously; any async resolution would block the transaction pipeline. RPC calls are strictly forbidden in the resolver. If on-chain resolution is ever needed, implement as a background cache pre-loader.
-
-5. **Cross-chain address key design** — Use compound key `{network}:{lowercaseAddress}` (e.g., `ethereum-mainnet:0xe592...`). Simple address-only keys allow SushiSwap on Polygon to match a different protocol on Ethereum when the deployer addresses happen to be identical. Wrong names are worse than no names.
+1. **Zod too strict for existing DB data** — use `.safeParse()` exclusively (never `.parse()`) for DB-sourced JSON; add `.partial()` or `.passthrough()` to schemas for fields that became optional after past milestones; validate against a real DB snapshot before merging Phase 3
+2. **`as any` removal silently changing runtime behavior** — categorize every cast before touching it; WC `(db as any).session?.client` (8) and `bundlerClient as any` (4) require wrapper isolation, not direct removal; run E2E regression tests for these two categories specifically
+3. **SSoT consolidation breaking downstream packages** — always leave a re-export bridge at the original location when moving code; run `pnpm turbo run typecheck` across the full monorepo before declaring any phase complete; never touch `@waiaas/sdk` public API exports
+4. **Layer violation fix creating import cycles** — move pure utility functions to `infrastructure/crypto/` before fixing service-layer imports; use `import type` for all interface-only imports; run `madge --circular` after Phase 2
+5. **`@ts-expect-error` accumulation during refactoring** — the codebase currently has 0 occurrences; enforce this with the existing `@typescript-eslint/ban-ts-comment` ESLint rule before starting Phase 1; never accept `@ts-expect-error` as a substitute for proper type resolution
 
 ## Implications for Roadmap
 
-Based on combined research, 3 phases are recommended in strict dependency order.
+Based on research, the architecture file's 5-phase build order maps cleanly to implementation phases. The dependency direction (core -> infrastructure -> pipeline -> services -> api) dictates the execution order.
 
-### Phase 1: Well-Known Data Collection + ContractNameRegistry Core
+### Phase 1: Core Exports + safeJsonParse Utility
+**Rationale:** All downstream phases depend on `POLICY_RULES_SCHEMAS` being exported from `@waiaas/core` and the `safeJsonParse<T>()` helper existing. Must be completed before Phase 3 can start.
+**Delivers:** `POLICY_RULES_SCHEMAS` exported, `safeJsonParse<T>()` in `core/src/utils/`, `sleep()` moved to `core/src/utils/sleep.ts` with re-exports in all current duplicate locations
+**Addresses:** SSoT for `sleep()` utility (5 duplicates); prerequisite for policy engine Zod validation
+**Avoids:** Pitfall 3 (downstream breakage) — re-export bridges maintained at all original locations
 
-**Rationale:** All downstream integration depends on the registry class and data existing. Pure data + core service work with no dependencies on other phases. Independently testable in isolation. The data collection (verified addresses from official protocol docs) is the only research-intensive subtask and must come before registry implementation.
-**Delivers:** `ContractNameRegistry` class with synchronous `resolve(address, network, opts)` API, `normalizeForLookup(address, chain)` utility (EVM lowercase / Solana exact), `well-known-contracts.ts` with 200-300 verified entries across 5 EVM chains + Solana, `ActionProviderMetadataSchema.displayName` optional field with auto-conversion fallback on all 20+ providers, unit tests including address variant testing (checksum/lowercase/uppercase), CI address-format and deduplication validation.
-**Addresses:** Table stakes features 1-4 (provider names, well-known registry, whitelist fallback, truncation fallback).
-**Avoids:** Pitfalls 1 (case sensitivity), 3 (displayName gaps), 5 (cross-chain address collision).
+### Phase 2: Infrastructure Utility Extraction + Layer Violation Fix
+**Rationale:** The layer violation (`wc-signing-bridge.ts` importing from `api/middleware/`) must be fixed before `as any` removal in Phase 4 touches the same files. Moving utilities to `infrastructure/crypto/` first eliminates the circular dependency risk.
+**Delivers:** `infrastructure/crypto/siwe-verify.ts`, `infrastructure/crypto/address-validation.ts` as canonical locations; original middleware files become re-export shims; `wc-signing-bridge.ts` import paths corrected
+**Avoids:** Pitfall 4 (import cycle creation) — pure functions extracted before import paths are changed; `madge --circular` gate required
 
-### Phase 2: Notification Pipeline Integration
+### Phase 3: DatabasePolicyEngine Zod Validation
+**Rationale:** The highest-ROI change in the milestone. The policy engine is a security-critical hot path that parses 21 JSON columns without runtime validation. Fixing it before `as any` removal (Phase 4) establishes the correct `safeParse` pattern that Phase 4 builds on.
+**Delivers:** 21 `JSON.parse(policy.rules) as Type` calls replaced with `parsePolicyRules()` helper; 12 local duplicate interface definitions deleted; `x402-domain-policy.ts` and `erc8128-domain-policy.ts` JSON.parse calls also covered; write-time validation strategy confirmed for hot-path performance
+**Addresses:** DatabasePolicyEngine Zod validation (table stakes), policy rules interface deduplication (table stakes)
+**Avoids:** Pitfall 1 (Zod too strict) — `.safeParse()` + fallback path for legacy DB data; Pitfall 7 (hot-path performance) — write-time validation strategy, not read-time `.parse()`
 
-**Rationale:** Notification enrichment is the highest-value user-facing change — it directly affects the Owner approval UX, which is the core WAIaaS security interaction. Depends on Phase 1 registry being stable. Ships before Admin UI because notification quality is more critical than display-layer enrichment.
-**Delivers:** Upgraded `{to}` variable value format ("Protocol Name (0xabcd...1234)") injected at TX_REQUESTED / TX_APPROVAL_REQUIRED / TX_SUBMITTED / TX_CONFIRMED notification points in `stages.ts`, updated `en.ts` + `ko.ts` i18n templates, `message-templates.ts` fallback placeholder list updated, integration tests verifying all 4 event types receive resolved names.
-**Uses:** `ContractNameRegistry` from Phase 1.
-**Avoids:** Pitfalls 2 (template backward compat — value-upgrade approach), 4 (async resolver blocked by synchronous constraint), 9 (`to`/`to_display` variable confusion).
+### Phase 4: `as any` Elimination (Production Code)
+**Rationale:** After Phases 1-3 establish correct patterns, the scattered `as any` casts can be addressed category by category. Working category-by-category rather than file-by-file ensures consistent fix strategies and prevents regression.
+**Delivers:** WC `(db as any).session?.client` → proper DI (8 casts); `bundlerClient as any` → `SmartAccountClient` wrapper (4-6 casts); `external-action-pipeline` discriminated union narrowing (4+4 casts); EIP-712 viem `TypedDataDefinition` pattern (3 casts); `network as any` → `isNetworkId()` guard (8 casts); daemon lifecycle `http.Server` type extension (2 casts)
+**Addresses:** All HIGH/MEDIUM priority `as any` categories from FEATURES.md
+**Avoids:** Pitfall 2 (runtime behavior change) — WC and bundlerClient categories handled with wrapper isolation, not direct removal; E2E regression required for these two
 
-### Phase 3: API Response Enrichment + Admin UI Display
-
-**Rationale:** Admin UI consumes the API enrichment, so API schema and UI changes ship together. OpenAPI type regeneration automatically propagates `contractName` to frontend. Comes last because it depends on the registry (Phase 1) and benefits from validated patterns from Phase 2; it also follows the v31.17 OpenAPI type generation pipeline established in the previous milestone.
-**Delivers:** `contractName: z.string().nullable()` field in `TxDetailResponseSchema`, server-side resolution in transaction query routes (GET /v1/wallets/:id/transactions), Admin UI `transactions.tsx` showing protocol names in transaction list/detail, Admin UI `policies.tsx` showing contract names in CONTRACT_WHITELIST display, Wallet Activity tab enrichment, auto-regenerated OpenAPI types for SDK/MCP propagation.
-**Uses:** `ContractNameRegistry` from Phase 1, OpenAPI type pipeline from v31.17.
-**Avoids:** Pitfall 8 (Admin UI performance — server-side resolution eliminates per-row client computation).
+### Phase 5: Solana Adapter + SSoT Cleanup + Final Polish
+**Rationale:** @solana/kit branded generic issues require library-internal knowledge; research confirms a wrapper function is the correct resolution. `NATIVE_DECIMALS` SSoT and any remaining small casts are low-risk and can be done last.
+**Delivers:** `appendInstruction<T>()` wrapper in `packages/adapters/solana/src/utils/tx-builder.ts` centralizing 8 Solana casts; `NATIVE_DECIMALS` SSoT confirmed/unified (5 duplicate locations); action-provider-registry generic cleanup (3 casts); zero `@ts-expect-error` confirmed in CI
+**Addresses:** Solana adapter differentiator features, `NATIVE_DECIMALS` SSoT (table stakes)
+**Avoids:** Pitfall 5 (`@ts-expect-error` accumulation) — final audit gate
 
 ### Phase Ordering Rationale
 
-- Phase 1 is strictly foundational: `ContractNameRegistry` and its data must exist before any integration can be written. The data collection subtask (verifying 80-180 additional well-known addresses from protocol docs) is the only work that cannot be parallelized.
-- Phase 2 before Phase 3 because the Owner notification path is the core security UX of WAIaaS. An Owner seeing "Aave V3" instead of a raw hex address in an approval request is the primary user value of this milestone.
-- Phase 3 last because it depends on the API schema change (contract adds `contractName` to `TxDetailResponse`) and the v31.17 OpenAPI type generation pipeline handles propagation to Admin UI automatically.
-- No separate SDK/MCP phase is needed: SDK types auto-regenerate from OpenAPI in Phase 3. MCP tool responses may include `contractName` implicitly through the enriched API.
+- Phase 1 before Phase 3: `POLICY_RULES_SCHEMAS` export and `safeJsonParse` utility must exist before the policy engine can use them
+- Phase 2 before Phase 4: the layer violation fix creates the infrastructure targets that Phase 4's `wc-signing-bridge.ts` correction depends on
+- Phase 3 before Phase 4: the `parsePolicyRules` helper established in Phase 3 sets the pattern for other JSON.parse replacements in Phase 4
+- Phase 5 last: Solana adapter work is high-complexity and isolated; `NATIVE_DECIMALS` SSoT and final polish carry the lowest regression risk and belong at the end
 
 ### Research Flags
 
-Phases likely needing targeted investigation during planning:
+Phases likely needing deeper investigation during execution:
+- **Phase 3:** Validate existing DB data against Zod schemas before merging — test fixtures alone do not cover legacy policy data formats from Phases 76-235
+- **Phase 4 (WC + bundlerClient):** Drizzle `.$client` API availability in v0.45.x needs confirmation against actual release notes; permissionless `SmartAccountClient` generic parameter requirements need viem version compatibility check
 
-- **Phase 1 (well-known data collection):** 120 addresses already exist in provider configs (verified in STACK.md). The remaining ~80-180 entries for non-integrated protocols (Uniswap V2/V3, Compound V3, Curve, 1inch, Raydium, Marinade, Orca, Metaplex, Chainlink, OpenSea Seaport, ERC-4337 EntryPoint, Morpho) need sourcing from official protocol deployment docs. Data accuracy is critical — incorrect addresses are worse than no data.
-- **Phase 2 (Solana `to` field semantics):** PITFALLS.md (Pitfall 7) flags that Solana CONTRACT_CALL `req.to` may contain a recipient address rather than a Program ID. If so, well-known Solana Program IDs in the registry will not match. Validate against `extractTransactionParam()` for Solana CONTRACT_CALL before implementing Stage 1 notification wiring. Action Provider 1st-priority resolution likely covers all Solana DeFi paths regardless.
-
-Phases with standard patterns (skip additional research):
-
-- **Phase 3 (API enrichment):** Follows the exact `amountFormatted` enrichment pattern from v31.15 — well-documented, zero ambiguity, established precedent in this codebase.
-- **Phase 1 (registry design):** Follows `builtin-tokens.ts` static data module pattern — established precedent, no design uncertainty.
+Phases with standard patterns (no additional research needed):
+- **Phase 1:** `sleep()` and utility SSoT consolidation is mechanical; re-export bridge pattern is established in codebase
+- **Phase 2:** Layer violation fix follows the documented re-export bridge pattern from ARCHITECTURE.md
+- **Phase 5:** `NATIVE_DECIMALS` consolidation is mechanical import replacement
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Zero new dependencies confirmed by direct codebase inspection of 13 provider configs. All integration pattern precedents exist and are verified. |
-| Features | HIGH | Based on direct codebase inspection + block explorer industry standards. Anti-features clearly scoped out with concrete rationale. MVP vs. defer boundaries are unambiguous. |
-| Architecture | HIGH | `ContractNameRegistry` design is straightforward. Every integration pattern has a direct codebase precedent: builtin-tokens, amountFormatted, {type} template var, CONTRACT_WHITELIST name field. |
-| Pitfalls | HIGH | All 12 pitfalls identified from direct code analysis of `stages.ts`, `message-templates.ts`, `database-policy-engine.ts`, `action-provider.types.ts`. Not speculative — each pitfall cites exact file and line context. |
+| Stack | HIGH | Based on direct codebase grep analysis; no external dependency research needed — zero new packages |
+| Features | HIGH | All ~55 production `as any` locations identified and categorized by direct grep; JSON.parse locations confirmed (21 policy + 25 other) |
+| Architecture | HIGH | Build order derived from actual package dependency graph; layer violation confirmed in `wc-signing-bridge.ts` by direct file analysis |
+| Pitfalls | HIGH | Based on direct code analysis + established TypeScript migration patterns; DB data compatibility risk is the one area requiring runtime validation |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Solana `to` field semantics for CONTRACT_CALL:** Needs runtime verification against `extractTransactionParam()` to confirm whether `req.to` is a Program ID or recipient address in Solana CONTRACT_CALL transactions. Mitigation: Action Provider 1st-priority resolution covers all Solana DeFi paths via the `actionProvider` pipeline field regardless. Well-known Solana registry entries may have limited impact.
-- **BATCH transaction `{to}` representation:** PITFALLS.md (Pitfall 11) flags that BATCH has multiple `to` addresses. Confirm current BATCH notification template usage during Phase 2 planning. Likely handled as "N contracts" summary or first-contract display. Low risk.
-- **Well-known data completeness (~80-180 addresses):** 120 addresses exist in provider configs; the remaining entries for non-integrated protocols need manual sourcing from official docs. CI address-format validation will catch format errors but cannot catch semantic errors (wrong address for a protocol). Recommend cross-referencing against at least two authoritative sources per protocol.
-- **`displayName` auto-conversion quality:** The `jupiter_swap` → `Jupiter Swap` snake_case conversion covers simple cases but protocols with abbreviations (`aave_v3`) need manual overrides. Verify the auto-conversion output for all 20+ providers before shipping Phase 1.
+- **DB legacy data compatibility:** The test suite uses fresh fixtures conforming to current schemas. Before merging Phase 3, a one-time scan of an actual production-like SQLite DB should confirm that all stored `policy.rules` JSON values pass `safeParse` with the current schemas (or document which fields need `.partial()`/`.default()` additions).
+- **Drizzle `.$client` in v0.45.x:** The PITFALLS research notes that Drizzle planned a public `.$client` accessor. The STACK research recommends the DI pattern (Option A) as preferred and a typed extraction utility (Option B) as fallback. Confirm `.$client` availability before deciding which option to implement in Phase 4.
+- **Admin UI `formatDisplayCurrency`:** Whether `@waiaas/admin` can import from `@waiaas/core` depends on the Vite/CSP browser bundle configuration. This was flagged as "confirm first" in FEATURES.md and is deferred from the current scope if the import is not viable.
 
 ## Sources
 
-### Primary (HIGH confidence)
-- Internal codebase: `packages/daemon/src/pipeline/stages.ts` — PipelineContext, notification variable construction patterns, stage functions
-- Internal codebase: `packages/daemon/src/notifications/templates/message-templates.ts` — placeholder fallback mechanism, existing variable list
-- Internal codebase: `packages/core/src/i18n/en.ts` + `ko.ts` — Messages type structure, existing template variables
-- Internal codebase: `packages/daemon/src/pipeline/database-policy-engine.ts` — CONTRACT_WHITELIST `name` field, address comparison pattern (`toLowerCase()`)
-- Internal codebase: `packages/core/src/interfaces/action-provider.types.ts` — `ActionProviderMetadataSchema`, 20+ provider metadata, `displayName` absence confirmed
-- Internal codebase: `packages/daemon/src/api/routes/openapi-schemas.ts` — `TxDetailResponseSchema`, `amountFormatted` enrichment precedent
-- Internal codebase: `packages/core/src/token-registry/builtin-tokens.ts` — static data module pattern, `source: 'builtin'` pattern
-- Internal codebase: provider configs (aave-v3, lido-staking, jito-staking, jupiter-swap, drift, zerox-swap, across, polymarket, dcent-swap) — 120 existing hardcoded addresses
-- [Uniswap V3 Deployment Addresses](https://docs.uniswap.org/contracts/v3/reference/deployments/) — official multi-chain deployment docs
+### Primary (HIGH confidence — direct codebase analysis)
+- `packages/core/src/schemas/policy.schema.ts` — 13 policy type Zod schemas confirmed, `POLICY_RULES_SCHEMAS` exists as internal const
+- `packages/daemon/src/pipeline/database-policy-engine.ts` — 21 JSON.parse + type assertion calls confirmed, 12 duplicate local interfaces confirmed
+- `packages/daemon/src/api/routes/wc.ts` — 8 `(db as any).session?.client` occurrences confirmed
+- `packages/daemon/src/services/wc-signing-bridge.ts` — layer violation import from `api/middleware/` confirmed
+- `packages/daemon/src/infrastructure/database/connection.ts` — `DatabaseConnection { sqlite, db }` dual-handle pattern confirmed
+- `packages/actions/src/common/async-status-tracker.ts` — `IAsyncStatusTracker` position confirmed, no move needed
+- Grep results: 830 total `as any` (140 production source, ~690 tests); 362 `JSON.parse` (128 files); 0 `@ts-expect-error` in production
 
-### Secondary (MEDIUM confidence)
-- [Etherscan Label Word Cloud](https://etherscan.io/labelcloud) — label categories and well-known address reference
-- [Rabby Wallet pre-sign security checks](https://support.rabby.io/hc/en-us/articles/11495471837071) — industry UX precedent for contract name display in wallet approval flows
-- Internal objective: `internal/objectives/m32-00-contract-name-resolution.md` — feature scope definition
+### Secondary (MEDIUM confidence — established patterns)
+- Drizzle ORM 0.45.x release notes — `.$client` planned API; dual-handle pattern used by 12+ existing services
+- @solana/kit 6.x documentation — branded generic types are intentional API design; wrapper function is documented workaround
+- permissionless 0.3.4 — `SmartAccountClient` type available for proper generic binding
+- WAIaaS CLAUDE.md — Zod SSoT principle, test coverage rules, migration strategy (primary project constraints)
 
-### Tertiary (LOW confidence)
-- `@bgd-labs/aave-address-book` npm — evaluated and rejected (too heavy for 15 addresses already hardcoded)
-- `eth-labels` npm (dawsbot) — evaluated and rejected (170k noisy entries, not curated for DeFi contracts)
-- `brianleect/etherscan-labels` GitHub — evaluated and rejected (stale 2023 scrape, no npm package)
+### Tertiary (LOW confidence — requires runtime validation)
+- DB legacy policy data compatibility — inferred from schema evolution history (Phase 235: `instant_max` became optional); needs empirical validation against real DB snapshot
 
 ---
-*Research completed: 2026-03-15*
+*Research completed: 2026-03-16*
 *Ready for roadmap: yes*

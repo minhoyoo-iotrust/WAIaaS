@@ -427,6 +427,13 @@ export const ERROR_CODES = {
     retryable: false,
     message: 'Address not in whitelist',
   },
+  POLICY_RULES_CORRUPT: {
+    code: 'POLICY_RULES_CORRUPT',
+    domain: 'POLICY',
+    httpStatus: 500,
+    retryable: false,
+    message: 'Policy rules data is corrupted or does not match expected schema',
+  },
 
   // --- OWNER domain (5) ---
   OWNER_ALREADY_CONNECTED: {
@@ -556,6 +563,20 @@ export const ERROR_CODES = {
     httpStatus: 429,
     retryable: true,
     message: 'Rate limit exceeded',
+  },
+  INTERNAL_ERROR: {
+    code: 'INTERNAL_ERROR',
+    domain: 'SYSTEM',
+    httpStatus: 500,
+    retryable: false,
+    message: 'Internal server error',
+  },
+  VALIDATION_FAILED: {
+    code: 'VALIDATION_FAILED',
+    domain: 'SYSTEM',
+    httpStatus: 400,
+    retryable: false,
+    message: 'Validation failed',
   },
 
   // --- WALLET domain (6) ---

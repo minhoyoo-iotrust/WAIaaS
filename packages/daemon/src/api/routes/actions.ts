@@ -36,7 +36,7 @@ import {
   stage1Validate,
   stage2Auth,
   stage3Policy,
-  stage3_5GasCondition,
+  stageGasCondition,
   stage4Wait,
   stage5Execute,
   stage6Confirm,
@@ -391,8 +391,8 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
     // 6b. v31.12: Check for signedData/signedHttp actions (kind-based routing)
     //     These don't need network resolution or adapter -- route to external pipeline
     const hasKindedActions = contractCalls.some(
-      (item: any) => item && typeof item === 'object' && 'kind' in item &&
-        ((item as any).kind === 'signedData' || (item as any).kind === 'signedHttp'),
+      (item: unknown) => item && typeof item === 'object' && 'kind' in item &&
+        ((item as { kind: string }).kind === 'signedData' || (item as { kind: string }).kind === 'signedHttp'),
     );
 
     if (hasKindedActions) {
@@ -404,18 +404,19 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
       }
 
       const pipelineResults: Array<{ id: string; status: string }> = [];
-      const contractCallsForLegacy: any[] = [];
+      const contractCallsForLegacy: Array<import('@waiaas/core').ContractCallRequest | import('@waiaas/core').ApiDirectResult> = [];
 
       for (const item of contractCalls) {
         // ApiDirectResult bypass
         if (isApiDirectResult(item)) {
-          pipelineResults.push({ id: (item as any).externalId, status: (item as any).status });
+          const direct = item as { externalId: string; status: string };
+          pipelineResults.push({ id: direct.externalId, status: direct.status });
           continue;
         }
 
         // Kind-based routing
         if (item && typeof item === 'object' && 'kind' in item) {
-          const kind = (item as any).kind;
+          const kind = (item as { kind: string }).kind;
           if (kind === 'signedData') {
             const externalDeps = {
               db: deps.db,
@@ -500,7 +501,7 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
 
     // 8. Resolve adapter from pool
     const rpcUrl = resolveRpcUrl(
-      deps.config.rpc as unknown as Record<string, string>,
+      deps.config.rpc,
       wallet.chain,
       resolvedNetwork,
     );
@@ -571,9 +572,7 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
         : contractCall;
 
       // Extract EIP-712 metadata from resolve result (Phase 321)
-      const eip712 = (contractCall as any).eip712 as
-        | { approvalType: 'EIP712'; typedDataJson: string; agentId: string; newWallet: string; deadline: string }
-        | undefined;
+      const eip712 = ('eip712' in contractCall ? (contractCall as { eip712?: { approvalType: 'EIP712'; typedDataJson: string; agentId: string; newWallet: string; deadline: string } }).eip712 : undefined);
 
       // Build EIP-712 metadata for pipeline context (fill owner from wallet DB)
       let eip712Metadata: PipelineContext['eip712Metadata'];
@@ -653,7 +652,7 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
         try {
           await stage2Auth(ctx);
           await stage3Policy(ctx);
-          await stage3_5GasCondition(ctx);
+          await stageGasCondition(ctx);
           await stage4Wait(ctx);
           await stage5Execute(ctx);
           await stage6Confirm(ctx);

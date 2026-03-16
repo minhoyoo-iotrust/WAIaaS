@@ -195,7 +195,7 @@ describe('POST /v1/transactions/simulate', () => {
       } as any, 'ethereum-mainnet', walletInfo);
       expect.fail('Expected to throw');
     } catch (err: any) {
-      expect(err.code).toBe('ACTION_VALIDATION_FAILED');
+      expect(err.code).toBe('VALIDATION_FAILED');
     }
   });
 

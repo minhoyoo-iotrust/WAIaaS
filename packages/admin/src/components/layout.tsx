@@ -95,11 +95,12 @@ const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    section: 'Trading',
+    section: 'Protocols',
     items: [
       { path: '/providers', label: 'Providers' },
       { path: '/hyperliquid', label: 'Hyperliquid' },
       { path: '/polymarket', label: 'Polymarket' },
+      { path: '/agent-identity', label: 'Agent Identity' },
     ],
   },
   {
@@ -107,7 +108,6 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { path: '/policies', label: 'Policies' },
       { path: '/protection', label: 'Protection' },
-      { path: '/agent-identity', label: 'Agent Identity' },
       { path: '/credentials', label: 'Credentials' },
     ],
   },

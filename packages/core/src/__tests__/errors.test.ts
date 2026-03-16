@@ -17,7 +17,9 @@ describe('Error code matrix', () => {
     // v31.10: +INVALID_TOKEN_IDENTIFIER, +STATS_NOT_CONFIGURED (+2)
     // v31.12: +CREDENTIAL_NOT_FOUND, +CREDENTIAL_EXPIRED, +SIGNING_SCHEME_UNSUPPORTED, +CAPABILITY_NOT_FOUND, +VENUE_NOT_ALLOWED, +EXTERNAL_ACTION_FAILED (+6)
     // v32.2: +RATE_LIMITED (+1)
-    expect(Object.keys(ERROR_CODES)).toHaveLength(144);
+    // v32.4: +INTERNAL_ERROR, +VALIDATION_FAILED (+2)
+    // v32.4-429: +POLICY_RULES_CORRUPT (+1)
+    expect(Object.keys(ERROR_CODES)).toHaveLength(147);
   });
 
   it('every error code entry has required fields', () => {
@@ -56,6 +58,12 @@ describe('Error code matrix', () => {
   it('AUTH domain has 8 codes', () => {
     const authCodes = Object.values(ERROR_CODES).filter((e) => e.domain === 'AUTH');
     expect(authCodes).toHaveLength(8);
+  });
+
+  it('POLICY domain has 6 codes', () => {
+    // v32.4-429: +POLICY_RULES_CORRUPT
+    const policyCodes = Object.values(ERROR_CODES).filter((e) => e.domain === 'POLICY');
+    expect(policyCodes).toHaveLength(7);
   });
 
   it('TX domain has 33 codes', () => {

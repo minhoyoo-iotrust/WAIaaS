@@ -26,7 +26,7 @@ import { WcSigningBridge, type WcSigningBridgeDeps } from '../services/wc-signin
 
 const mockVerifySIWE = vi.fn();
 
-vi.mock('../api/middleware/siwe-verify.js', () => ({
+vi.mock('../infrastructure/auth/siwe-verify.js', () => ({
   verifySIWE: (...args: unknown[]) => mockVerifySIWE(...args),
 }));
 

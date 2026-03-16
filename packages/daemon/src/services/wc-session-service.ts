@@ -24,11 +24,11 @@ import type { Database } from 'better-sqlite3';
 // exports map, so Node.js ESM loads the CJS bundle where the actual SignClient
 // class lives at .default.
 const SignClient: typeof SignClientModule =
-  (SignClientModule as any).default ?? SignClientModule;
+  (SignClientModule as { default?: typeof SignClientModule }).default ?? SignClientModule;
 type SignClientInstance = InstanceType<typeof SignClient>;
 import { WAIaaSError, NETWORK_TO_CAIP2 } from '@waiaas/core';
 import type { SettingsService } from '../infrastructure/settings/settings-service.js';
-import { SqliteKeyValueStorage } from './wc-storage.js';
+import { SqliteKeyValueStorage, type IKeyValueStorage } from './wc-storage.js';
 
 const require = createRequire(import.meta.url);
 const QRCode: typeof import('qrcode') = require('qrcode');
@@ -106,7 +106,8 @@ export class WcSessionService {
     this.signClient = await SignClient.init({
       projectId,
       relayUrl,
-      storage: this.storage as any, // IKeyValueStorage compatible
+      // SqliteKeyValueStorage implements IKeyValueStorage -- WC SDK accepts this shape
+      storage: this.storage as IKeyValueStorage,
       metadata: {
         name: 'WAIaaS Daemon',
         description: 'AI Agent Wallet-as-a-Service',
@@ -254,9 +255,9 @@ export class WcSessionService {
     );
 
     Promise.race([approval(), timeout])
-      .then(async (session: any) => {
+      .then(async (session: { topic: string; namespaces: Record<string, { accounts?: string[] }>; peer?: { metadata?: Record<string, unknown> }; expiry: number }) => {
         // Extract owner address from CAIP-10 accounts
-        const firstNamespace = Object.values(session.namespaces)[0] as any;
+        const firstNamespace = Object.values(session.namespaces)[0];
         const firstAccount: string = firstNamespace?.accounts?.[0] ?? '';
         // CAIP-10 format: "namespace:chainId:address" -> extract address part
         const parts = firstAccount.split(':');
@@ -424,7 +425,7 @@ export class WcSessionService {
     if (this.signClient) {
       try {
         // Attempt to disconnect the WebSocket relay connection
-        await (this.signClient.core?.relayer?.provider as any)?.disconnect?.();
+        await (this.signClient.core?.relayer?.provider as { disconnect?: () => Promise<void> })?.disconnect?.();
       } catch {
         // Ignore disconnect errors -- best effort cleanup
       }

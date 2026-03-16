@@ -364,12 +364,11 @@ export async function signSolanaTransferChecked(
     createTransactionMessage({ version: 0 }),
     (msg) => setTransactionMessageFeePayer(feePayerAddress, msg),
     (msg) => setTransactionMessageLifetimeUsingBlockhash(
-      // RPC blockhash is untyped (from mock/dynamic source), cast to satisfy branded type
-      blockhashInfo as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+      // @ts-expect-error @solana/kit branded Blockhash type from RPC response
+      blockhashInfo,
       msg,
     ),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (msg) => appendTransactionMessageInstruction(transferIx as any, msg),
+    (msg) => appendTransactionMessageInstruction(transferIx, msg),
   );
 
   // Compile transaction and sign with wallet private key (partial signing)

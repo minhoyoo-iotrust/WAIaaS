@@ -144,6 +144,39 @@ export {
   type TimeRestrictionRules,
   X402AllowedDomainsRulesSchema,
   type X402AllowedDomainsRules,
+  ReputationThresholdRulesSchema,
+  type ReputationThresholdRules,
+  // v32.4: newly-exported rule schemas + POLICY_RULES_SCHEMAS map (Phase 427)
+  POLICY_RULES_SCHEMAS,
+  AllowedTokensRulesSchema,
+  type AllowedTokensRules,
+  ContractWhitelistRulesSchema,
+  type ContractWhitelistRules,
+  MethodWhitelistRulesSchema,
+  type MethodWhitelistRules,
+  ApprovedSpendersRulesSchema,
+  type ApprovedSpendersRules,
+  ApproveAmountLimitRulesSchema,
+  type ApproveAmountLimitRules,
+  ApproveTierOverrideRulesSchema,
+  type ApproveTierOverrideRules,
+  AllowedNetworksRulesSchema,
+  type AllowedNetworksRules,
+  // v32.4-429: Lending/Perp/Venue/ActionCategory rule schemas
+  LendingAssetWhitelistRulesSchema,
+  type LendingAssetWhitelistRules,
+  LendingLtvLimitRulesSchema,
+  type LendingLtvLimitRules,
+  PerpMaxLeverageRulesSchema,
+  type PerpMaxLeverageRules,
+  PerpMaxPositionUsdRulesSchema,
+  type PerpMaxPositionUsdRules,
+  PerpAllowedMarketsRulesSchema,
+  type PerpAllowedMarketsRules,
+  VenueWhitelistRulesSchema,
+  type VenueWhitelistRules,
+  ActionCategoryLimitRulesSchema,
+  type ActionCategoryLimitRules,
   ConfigSchema,
   type Config,
   AssetInfoSchema,
@@ -500,6 +533,15 @@ export {
   NftListOptionsSchema,
   NftListResultSchema,
 } from './interfaces/index.js';
+
+// v32.4 Chain constants SSoT (SSOT-01)
+export { NATIVE_DECIMALS, NATIVE_SYMBOLS, nativeDecimals, nativeSymbol } from './utils/index.js';
+
+// v32.4 Sleep utility SSoT (SSOT-02)
+export { sleep } from './utils/index.js';
+
+// v32.4 Safe JSON parse with Zod validation (ZOD-01)
+export { safeJsonParse, type SafeJsonParseResult, type SafeJsonParseError } from './utils/index.js';
 
 // v1.5.3 Currency formatting utilities
 export { formatDisplayCurrency, formatRatePreview } from './utils/index.js';

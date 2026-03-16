@@ -17,7 +17,8 @@ import { randomBytes } from 'node:crypto';
 import { SignJWT, jwtVerify, errors as joseErrors } from 'jose';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { eq } from 'drizzle-orm';
-import { WAIaaSError } from '@waiaas/core';
+import { WAIaaSError, safeJsonParse } from '@waiaas/core';
+import { z } from 'zod';
 import type * as schema from '../database/schema.js';
 import { keyValueStore } from '../database/schema.js';
 
@@ -35,6 +36,11 @@ interface StoredSecret {
   secret: string; // hex
   createdAt: number; // epoch seconds
 }
+
+const StoredSecretSchema = z.object({
+  secret: z.string(),
+  createdAt: z.number(),
+});
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -70,7 +76,11 @@ export class JwtSecretManager {
       .get();
 
     if (existing) {
-      this._currentSecret = JSON.parse(existing.value) as StoredSecret;
+      const parsed = safeJsonParse(existing.value, StoredSecretSchema);
+      if (!parsed.success) {
+        throw new Error('Corrupt JWT secret in DB. Cannot start daemon.');
+      }
+      this._currentSecret = parsed.data;
     } else {
       const secret = randomBytes(SECRET_BYTES).toString('hex');
       const nowSec = Math.floor(Date.now() / 1000);
@@ -97,7 +107,11 @@ export class JwtSecretManager {
       .get();
 
     if (prev) {
-      this._previousSecret = JSON.parse(prev.value) as StoredSecret;
+      const parsed = safeJsonParse(prev.value, StoredSecretSchema);
+      if (parsed.success) {
+        this._previousSecret = parsed.data;
+      }
+      // If previous secret is corrupt, silently ignore (only affects rotation window)
     }
   }
 

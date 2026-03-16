@@ -8,7 +8,7 @@ import type { OpenAPIHono } from '@hono/zod-openapi';
 import { createRoute, z } from '@hono/zod-openapi';
 import { sql, eq, and, desc } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import { WAIaaSError, getNetworksForEnvironment, formatAmount } from '@waiaas/core';
+import { WAIaaSError, getNetworksForEnvironment, formatAmount, NATIVE_DECIMALS, NATIVE_SYMBOLS } from '@waiaas/core';
 import type { ChainType, EnvironmentType } from '@waiaas/core';
 import { wallets, transactions, tokenRegistry } from '../../infrastructure/database/schema.js';
 import type * as schema from '../../infrastructure/database/schema.js';
@@ -19,13 +19,8 @@ import {
 } from './openapi-schemas.js';
 import type { AdminRouteDeps } from './admin.js';
 import { resolveContractFields } from './admin-monitoring.js';
+import { aggregateStakingBalance } from '../../services/staking/aggregate-staking-balance.js';
 
-// ---------------------------------------------------------------------------
-// Amount formatting helpers (#168)
-// ---------------------------------------------------------------------------
-
-const NATIVE_DECIMALS: Record<string, number> = { solana: 9, ethereum: 18 };
-const NATIVE_SYMBOLS: Record<string, string> = { solana: 'SOL', ethereum: 'ETH' };
 
 /**
  * Format raw blockchain amount to human-readable string with token symbol.
@@ -389,7 +384,7 @@ export function registerAdminWalletRoutes(router: OpenAPIHono, deps: AdminRouteD
         const adapter = await deps.adapterPool!.resolve(chain, network, rpcUrl);
 
         const balanceInfo = await adapter.getBalance(wallet.publicKey);
-        const nativeBalance = (Number(balanceInfo.balance) / 10 ** balanceInfo.decimals).toString();
+        const nativeBalance = formatAmount(balanceInfo.balance, balanceInfo.decimals);
 
         // Resolve USD price for native token if price oracle is available
         let nativeUsd: number | null = null;
@@ -405,7 +400,7 @@ export function registerAdminWalletRoutes(router: OpenAPIHono, deps: AdminRouteD
           .filter((a) => !a.isNative)
           .map((a) => ({
             symbol: a.symbol,
-            balance: (Number(a.balance) / 10 ** a.decimals).toString(),
+            balance: formatAmount(a.balance, a.decimals),
             address: a.mint,
           }));
 
@@ -453,71 +448,9 @@ export function registerAdminWalletRoutes(router: OpenAPIHono, deps: AdminRouteD
     const LIDO_APY = '~3.5%';
     const JITO_APY = '~7.5%';
 
-    // Reuse aggregation logic inline (same as staking.ts)
-    function aggregateProvider(walletId: string, providerKey: string) {
-      const stakeRows = deps.sqlite!.prepare(
-        `SELECT amount, bridge_status, created_at, metadata
-         FROM transactions
-         WHERE wallet_id = ? AND status IN ('CONFIRMED', 'COMPLETED')
-           AND metadata LIKE ?
-         ORDER BY created_at ASC`,
-      ).all(walletId, `%${providerKey}%`) as Array<{ amount: string | null; bridge_status: string | null; created_at: number | null; metadata: string | null }>;
-
-      let totalStaked = 0n;
-      let totalUnstaked = 0n;
-
-      for (const row of stakeRows) {
-        // Fallback: if amount is NULL, try extracting from metadata (CONTRACT_CALL value)
-        let effectiveAmount = row.amount;
-        if (!effectiveAmount && row.metadata) {
-          try {
-            const meta = JSON.parse(row.metadata) as Record<string, unknown>;
-            const origReq = meta.originalRequest as Record<string, unknown> | undefined;
-            if (origReq?.value && typeof origReq.value === 'string') {
-              effectiveAmount = origReq.value;
-            }
-          } catch { /* ignore */ }
-        }
-        if (!effectiveAmount) continue;
-        let isUnstake = false;
-        if (row.metadata) {
-          try {
-            const meta = JSON.parse(row.metadata) as Record<string, unknown>;
-            if (meta.action === 'unstake' || meta.actionName === 'unstake') isUnstake = true;
-          } catch { /* ignore */ }
-        }
-        try {
-          const amountBig = BigInt(effectiveAmount);
-          if (isUnstake) totalUnstaked += amountBig;
-          else totalStaked += amountBig;
-        } catch { /* skip */ }
-      }
-
-      const pendingRow = deps.sqlite!.prepare(
-        `SELECT amount, bridge_status, created_at
-         FROM transactions
-         WHERE wallet_id = ? AND bridge_status = 'PENDING'
-           AND metadata LIKE ?
-         ORDER BY created_at DESC
-         LIMIT 1`,
-      ).get(walletId, `%${providerKey}%`) as { amount: string | null; bridge_status: string | null; created_at: number | null } | undefined;
-
-      let pendingUnstake: { amount: string; status: 'PENDING' | 'COMPLETED' | 'TIMEOUT'; requestedAt: number | null } | null = null;
-      if (pendingRow?.amount) {
-        pendingUnstake = {
-          amount: pendingRow.amount,
-          status: (pendingRow.bridge_status ?? 'PENDING') as 'PENDING' | 'COMPLETED' | 'TIMEOUT',
-          requestedAt: pendingRow.created_at ?? null,
-        };
-      }
-
-      const balanceWei = totalStaked > totalUnstaked ? totalStaked - totalUnstaked : 0n;
-      return { balanceWei, pendingUnstake };
-    }
-
     // Ethereum wallet -> Lido
     if (wallet.chain === 'ethereum') {
-      const { balanceWei, pendingUnstake } = aggregateProvider(id, 'lido_staking');
+      const { balanceWei, pendingUnstake } = aggregateStakingBalance(deps.sqlite!, id, 'lido_staking');
       if (balanceWei > 0n || pendingUnstake) {
         let balanceUsd: string | null = null;
         if (deps.priceOracle && balanceWei > 0n) {
@@ -532,7 +465,7 @@ export function registerAdminWalletRoutes(router: OpenAPIHono, deps: AdminRouteD
 
     // Solana wallet -> Jito
     if (wallet.chain === 'solana') {
-      const { balanceWei: balanceLamports, pendingUnstake } = aggregateProvider(id, 'jito_staking');
+      const { balanceWei: balanceLamports, pendingUnstake } = aggregateStakingBalance(deps.sqlite!, id, 'jito_staking');
       if (balanceLamports > 0n || pendingUnstake) {
         let balanceUsd: string | null = null;
         if (deps.priceOracle && balanceLamports > 0n) {

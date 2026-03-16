@@ -457,7 +457,7 @@ export function chainAdapterContractTests(
 
     it('sweepAll() returns SweepResult shape', async () => {
       if (shouldSkip(options, 'sweepAll')) return;
-      if (!options.privateKey) return;
+      if (!options.privateKey || !adapter.sweepAll) return;
       const result = await adapter.sweepAll(
         options.validAddress,
         options.validAddress2 ?? options.validAddress,

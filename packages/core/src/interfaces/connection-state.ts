@@ -63,10 +63,7 @@ export function calculateDelay(attempt: number, config: ReconnectConfig): number
   return Math.max(100, Math.floor(baseDelay + jitter));
 }
 
-/** Internal sleep helper. */
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+import { sleep } from '../utils/sleep.js';
 
 /**
  * Reconnection loop that manages the 3-state connection machine.

@@ -48,7 +48,7 @@ export default function PolymarketPage() {
   return (
     <div>
       <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-3)' }}>
-        <a href="#/providers" style={{ color: 'var(--color-primary)' }}>Configure in Trading &gt; Providers</a>
+        <a href="#/providers" style={{ color: 'var(--color-primary)' }}>Configure in Protocols &gt; Providers</a>
       </p>
 
       {/* Wallet selector */}

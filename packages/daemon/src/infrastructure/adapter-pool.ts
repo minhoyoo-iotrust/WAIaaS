@@ -16,6 +16,7 @@
 
 import type { IChainAdapter, ChainType, NetworkType, EvmNetworkType } from '@waiaas/core';
 import type { RpcPool } from '@waiaas/core';
+import type { RpcConfig } from './config/loader.js';
 
 /**
  * Build the RPC config key for a given chain:network pair.
@@ -45,12 +46,12 @@ export function rpcConfigKey(chain: string, network: string): string {
  *   ethereum + 'ethereum-sepolia' -> rpc.evm_ethereum_sepolia
  */
 export function resolveRpcUrl(
-  rpcConfig: Record<string, string>,
+  rpcConfig: Record<string, string> | RpcConfig,
   chain: string,
   network: string,
 ): string {
   const key = rpcConfigKey(chain, network);
-  return rpcConfig[key] || '';
+  return (rpcConfig as Record<string, string>)[key] || '';
 }
 
 /**

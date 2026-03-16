@@ -27,7 +27,7 @@ import {
   stage1Validate,
   stage2Auth,
   stage3Policy,
-  stage3_5GasCondition,
+  stageGasCondition,
   stage4Wait,
   stage5Execute,
   stage6Confirm,
@@ -214,7 +214,7 @@ export function adminActionRoutes(deps: AdminActionRouteDeps): OpenAPIHono {
 
     // 8. Resolve adapter from pool
     const rpcUrl = resolveRpcUrl(
-      deps.config.rpc as unknown as Record<string, string>,
+      deps.config.rpc,
       wallet.chain,
       resolvedNetwork,
     );
@@ -254,9 +254,7 @@ export function adminActionRoutes(deps: AdminActionRouteDeps): OpenAPIHono {
       }
 
       // Extract EIP-712 metadata from resolve result
-      const eip712 = (contractCall as any).eip712 as
-        | { approvalType: 'EIP712'; typedDataJson: string; agentId: string; newWallet: string; deadline: string }
-        | undefined;
+      const eip712 = ('eip712' in contractCall ? (contractCall as { eip712?: { approvalType: 'EIP712'; typedDataJson: string; agentId: string; newWallet: string; deadline: string } }).eip712 : undefined);
 
       let eip712Metadata: PipelineContext['eip712Metadata'];
       if (eip712) {
@@ -326,7 +324,7 @@ export function adminActionRoutes(deps: AdminActionRouteDeps): OpenAPIHono {
         try {
           await stage2Auth(ctx);
           await stage3Policy(ctx);
-          await stage3_5GasCondition(ctx);
+          await stageGasCondition(ctx);
           await stage4Wait(ctx);
           await stage5Execute(ctx);
           await stage6Confirm(ctx);

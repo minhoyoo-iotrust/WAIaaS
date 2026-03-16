@@ -12,7 +12,7 @@ updated: "2026-03-10"
 | mainnet | 6 | Mainnet 전송 검증 |
 | defi | 13 | DeFi 프로토콜 검증 |
 | admin | 13 | Admin UI 검증 |
-| advanced | 6 | 고급 기능 검증 |
+| advanced | 8 | 고급 기능 검증 |
 
 ## Categories
 
@@ -63,6 +63,8 @@ updated: "2026-03-10"
 | advanced-04 | Mainnet 수신 트랜잭션 감지 | ethereum-mainnet, solana-mainnet | Yes | $0.50 | medium |
 | advanced-05 | 잔액 모니터링 | ethereum-mainnet, solana-mainnet | Yes | $0.50 | medium |
 | advanced-06 | 가스 조건부 실행 | ethereum-mainnet | No | $0 | none |
+| advanced-07 | 메시지 서명 및 검증 | ethereum-mainnet | No | $0 | none |
+| advanced-08 | 트랜잭션 승인 워크플로우 | ethereum-mainnet | Yes | $0.50 | medium |
 
 ### Admin
 | ID | Title | Network | Funds | Cost | Risk |
@@ -88,7 +90,7 @@ updated: "2026-03-10"
 | ethereum-sepolia | testnet-01, testnet-03, testnet-06, testnet-07, advanced-01, admin-09 |
 | solana-devnet | testnet-02, testnet-04, testnet-07 |
 | hyperliquid-testnet | testnet-05 |
-| ethereum-mainnet | mainnet-01, mainnet-03, mainnet-06, defi-02, defi-03, defi-05, defi-07, defi-09, defi-12, advanced-02, advanced-03, advanced-04, advanced-05, advanced-06, admin-06, admin-07, admin-08, admin-12 |
+| ethereum-mainnet | mainnet-01, mainnet-03, mainnet-06, defi-02, defi-03, defi-05, defi-07, defi-09, defi-12, advanced-02, advanced-03, advanced-04, advanced-05, advanced-06, advanced-07, advanced-08, admin-06, admin-07, admin-08, admin-12 |
 | solana-mainnet | mainnet-02, mainnet-04, defi-01, defi-06, defi-08, defi-10, advanced-04, advanced-05, admin-06, admin-07, admin-08 |
 | polygon-mainnet | mainnet-05, defi-02, defi-07, defi-13 |
 | arbitrum-mainnet | mainnet-05, defi-03, defi-04 |
@@ -97,8 +99,8 @@ updated: "2026-03-10"
 
 ## Quick Filters
 - **마스터 패스워드 필요 (masterAuth)**: admin-01 ~ admin-13
-- **세션 토큰만 (sessionAuth)**: testnet-01 ~ testnet-07, mainnet-01 ~ mainnet-06, defi-01 ~ defi-13, advanced-01 ~ advanced-06
-- **무료 (no funds)**: advanced-02, advanced-06, admin-01, admin-02, admin-03, admin-05, admin-06, admin-07, admin-08, admin-10, admin-11, admin-12, admin-13
+- **세션 토큰만 (sessionAuth)**: testnet-01 ~ testnet-07, mainnet-01 ~ mainnet-06, defi-01 ~ defi-13, advanced-01 ~ advanced-08
+- **무료 (no funds)**: advanced-02, advanced-06, advanced-07, admin-01, admin-02, admin-03, admin-05, admin-06, admin-07, admin-08, admin-10, admin-11, admin-12, admin-13
 - **Low risk**: testnet-01, testnet-02, testnet-03, testnet-04, testnet-06, testnet-07, advanced-01, admin-04, admin-09, admin-11
-- **Medium risk**: testnet-05, mainnet-01, mainnet-02, mainnet-03, mainnet-04, mainnet-05, mainnet-06, defi-01, defi-02, defi-03, defi-04, defi-05, defi-06, defi-07, defi-08, defi-09, defi-10, defi-11, defi-12, defi-13, advanced-03, advanced-04, advanced-05
+- **Medium risk**: testnet-05, mainnet-01, mainnet-02, mainnet-03, mainnet-04, mainnet-05, mainnet-06, defi-01, defi-02, defi-03, defi-04, defi-05, defi-06, defi-07, defi-08, defi-09, defi-10, defi-11, defi-12, defi-13, advanced-03, advanced-04, advanced-05, advanced-08
 - **High risk**: (none yet)

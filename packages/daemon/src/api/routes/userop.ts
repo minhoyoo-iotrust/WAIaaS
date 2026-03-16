@@ -181,11 +181,10 @@ export function userOpRoutes(deps: UserOpRouteDeps) {
       // Resolve viem Chain from EVM_CHAIN_MAP
       const { EVM_CHAIN_MAP } = await import('@waiaas/adapter-evm');
       const chainEntry = EVM_CHAIN_MAP[network as EvmNetworkType];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const publicClient = createPublicClient({
         chain: chainEntry?.viemChain,
         transport: http(rpcUrl),
-      }) as any;
+      }) as unknown as import('viem').PublicClient;
 
       const smartAccountService = new SmartAccountService();
       const smartAccountInfo = await smartAccountService.createSmartAccount({
@@ -456,11 +455,10 @@ export function userOpRoutes(deps: UserOpRouteDeps) {
 
       const { EVM_CHAIN_MAP } = await import('@waiaas/adapter-evm');
       const chainEntry = EVM_CHAIN_MAP[network as EvmNetworkType];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const publicClient = createPublicClient({
         chain: chainEntry?.viemChain,
         transport: http(rpcUrl),
-      }) as any;
+      }) as unknown as import('viem').PublicClient;
 
       const smartAccountService = new SmartAccountService();
       const smartAccountInfo = await smartAccountService.createSmartAccount({

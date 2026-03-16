@@ -5,6 +5,7 @@
  * Inline implementation of formatDisplayCurrency logic from @waiaas/core
  * because Admin UI cannot import daemon/core code due to CSP restrictions.
  *
+ * SYNC: Must match packages/core/src/utils/format-currency.ts
  * @see packages/core/src/utils/format-currency.ts (canonical implementation)
  */
 

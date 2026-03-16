@@ -211,8 +211,7 @@ export class AlchemyNftIndexer implements INftIndexer {
       });
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return response.json() as any;
+    return response.json() as Promise<Record<string, unknown>>;
   }
 }
 

@@ -51,7 +51,7 @@ vi.mock('../pipeline/stages.js', () => ({
   stage1Validate: mockStage1Validate,
   stage2Auth: mockStage2Auth,
   stage3Policy: mockStage3Policy,
-  stage3_5GasCondition: mockStage3_5GasCondition,
+  stageGasCondition: mockStage3_5GasCondition,
   stage4Wait: mockStage4Wait,
   stage5Execute: mockStage5Execute,
   stage6Confirm: mockStage6Confirm,

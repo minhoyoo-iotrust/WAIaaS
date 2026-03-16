@@ -12,9 +12,6 @@
  *   waitForConfirmation, estimateFee, getTransactionFee, getAssets, getTokenInfo,
  *   buildApprove, buildBatch (BATCH_NOT_SUPPORTED), buildTokenTransfer, buildContractCall,
  *   parseTransaction, signExternalTransaction
- *
- * Stubs for later phases (1):
- *   sweepAll (Phase 80)
  */
 
 import {
@@ -45,7 +42,6 @@ import type {
   AssetInfo,
   FeeEstimate,
   TokenInfo,
-  SweepResult,
   TokenTransferParams,
   ContractCallParams,
   ApproveParams,
@@ -77,7 +73,7 @@ const GAS_SAFETY_DENOMINATOR = 100n;
  * Token: buildTokenTransfer, getTokenInfo
  * Contract: buildContractCall, buildApprove
  * Batch: buildBatch
- * Utility: getTransactionFee, getCurrentNonce, sweepAll
+ * Utility: getTransactionFee, getCurrentNonce
  */
 export class EvmAdapter implements IChainAdapter {
   readonly chain: ChainType = 'ethereum';
@@ -833,10 +829,6 @@ export class EvmAdapter implements IChainAdapter {
         cause: error instanceof Error ? error : undefined,
       });
     }
-  }
-
-  async sweepAll(_from: string, _to: string, _privateKey: Uint8Array): Promise<SweepResult> {
-    throw new Error('Not implemented: sweepAll will be implemented in Phase 80');
   }
 
   // -- Sign-only operations (2) -- v1.4.7

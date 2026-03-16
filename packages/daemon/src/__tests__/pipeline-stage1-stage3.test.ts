@@ -650,7 +650,7 @@ describe('Stage 3: type-based policy filtering', () => {
 
 import type { IPriceOracle, PriceInfo, CacheStats, TokenRef } from '@waiaas/core';
 import { auditLog } from '../infrastructure/database/schema.js';
-import { hintedTokens } from '../pipeline/stages.js';
+import { clearHintedTokens, hasHintedToken } from '../pipeline/stages.js';
 import { PriceNotAvailableError } from '../infrastructure/oracle/oracle-errors.js';
 
 function createMockPriceOracle(overrides: Partial<IPriceOracle> = {}): IPriceOracle {
@@ -678,7 +678,7 @@ function createMockPriceOracle(overrides: Partial<IPriceOracle> = {}): IPriceOra
 describe('Stage 3: USD Policy Integration', () => {
   beforeEach(() => {
     // Reset hintedTokens between tests
-    hintedTokens.clear();
+    clearHintedTokens();
   });
 
   it('priceOracle 있음 + TRANSFER + success: usdAmount가 evaluateAndReserve에 전달됨', async () => {
@@ -913,7 +913,7 @@ describe('Stage 3: USD Policy Integration', () => {
     expect(notifyCall[2].hint).toContain('CoinGecko API 키');
 
     // hintedTokens should contain the cache key
-    expect(hintedTokens.has('solana:UnknownMintABC')).toBe(true);
+    expect(hasHintedToken('solana:UnknownMintABC')).toBe(true);
   });
 
   it('notListed + 동일 토큰 재전송: 힌트가 두 번째에는 포함되지 않음 (최초 1회)', async () => {

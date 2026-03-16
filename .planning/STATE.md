@@ -1,64 +1,75 @@
 ---
 gsd_state_version: 1.0
-milestone: v32.2
-milestone_name: 보안 패치
+milestone: v32.4
+milestone_name: 타입 안전 + 코드 품질
 status: completed
-stopped_at: Completed 426-01-PLAN.md (milestone v32.2 complete)
-last_updated: "2026-03-15T15:40:56.237Z"
-last_activity: 2026-03-15 -- Phase 426 completed (milestone v32.2 complete)
+stopped_at: Completed 431-03-PLAN.md
+last_updated: "2026-03-16T08:23:52.855Z"
+last_activity: 2026-03-16 -- Phase 430 Plans 01-03 executed (6 tasks, 20 files, 0 production as any)
 progress:
-  total_phases: 184
-  completed_phases: 178
-  total_plans: 391
-  completed_plans: 385
-  percent: 100
+  total_phases: 5
+  completed_phases: 5
+  total_plans: 11
+  completed_plans: 11
+  percent: 80
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-15)
+See: .planning/PROJECT.md (updated 2026-03-16)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** v32.2 보안 패치 -- All phases complete
+**Current focus:** v32.4 shipped -- planning next milestone
 
 ## Current Position
 
-Phase: 3 of 3 (Phase 426: CORS + Resource Management)
-Plan: 1 of 1 in current phase
-Status: Complete
-Last activity: 2026-03-15 -- Phase 426 completed (milestone v32.2 complete)
+Milestone v32.4: SHIPPED (2026-03-16)
+All 5 phases complete, 11 plans, 51 requirements
+Last activity: 2026-03-16 -- Milestone v32.4 archived
 
 Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 4.7min
-- Total execution time: 0.23 hours
+- Total plans completed: 5
+- Average duration: ~9 minutes
+- Total execution time: ~0.7 hours
 
-**By Phase:**
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 424 | 1/1 | 4min | 4min |
-| 425 | 1/1 | 5min | 5min |
-| 426 | 1/1 | 5min | 5min |
-
-*Updated after each plan completion*
+| Phase | Plan | Duration | Tasks | Files |
+|-------|------|----------|-------|-------|
+| 427 | 01 | ~10 min | 2 | 18 |
+| 428 | 01 | ~8 min | 2 | 5 |
+| 428 | 02 | ~8 min | 2 | 11 |
+| Phase 429 P01 | ~3 min | 1 tasks | 9 files |
+| Phase 429 P02 | ~13 min | 2 tasks | 3 files |
+| Phase 430 P01-03 | 29min | 6 tasks | 20 files |
+| Phase 431 P01-03 | 43min | 6 tasks | 40 files |
 
 ## Accumulated Context
 
 ### Decisions
 
-- [v32.2]: 3개 보안 패치 페이즈 -- SSRF(424), Rate Limit(425), CORS+리소스(426) 순서로 실행
-- [424-01]: X402_SSRF_BLOCKED 에러 코드를 범용 SSRF 차단에도 재사용 (core 패키지 변경 불필요)
-- [424-01]: services/x402/ssrf-guard.ts를 re-export 심으로 유지하여 기존 import 경로 호환
-- [425-01]: 429 응답을 WAIaaSError throw 대신 직접 c.json() 반환 (Retry-After 헤더 보존)
-- [426-01]: CORS origin callback returns matched origin or null (hono/cors convention)
-- [426-01]: cors_origins는 config.security 섹션에 위치 (config.daemon 아님)
+- safeJsonParse returns discriminated union (SafeJsonParseResult<T>) instead of throwing
+- daemon/pipeline/sleep.ts kept as re-export to avoid breaking existing imports within daemon
+- connection-state.ts uses relative import (../utils/sleep.js) to avoid circular dependency
+- IChainSubscriber optional methods (pollAll?, checkFinalized?, getBlockNumber?) for chain-specific capabilities
+- Optional chaining for safe method dispatch instead of type casting
+- Re-export bridge pattern for backward-compatible layer migration (api/middleware/ re-exports from infrastructure/auth/)
+- ACTION_VALIDATION_FAILED kept for action-specific constraints; VALIDATION_FAILED for Zod parse errors
+- [Phase 429]: parseRules<S extends z.ZodTypeAny> generic for proper type inference from superRefine schemas
+- [Phase 429]: Empty whitelist/invalid CAIP-19 now caught at Zod parse time (stricter validation)
+- [Phase 429]: core/src/index.ts must explicitly re-export new schemas (barrel does not auto-forward)
+- [Phase 430]: getSqliteClient typed helper for raw better-sqlite3 client extraction from Drizzle
+- [Phase 430]: BundlerOps type interface for viem bundlerClient (avoids strict generic inference)
+- [Phase 430]: NULL_POLICY_ENGINE null-object for stage 5-6 re-entry where policy already evaluated
+- [Phase 430]: network as NetworkType assertion for DB-sourced network strings (already validated)
+- [Phase 431]: NATIVE_DECIMALS SSoT: object lookup (undefined for unknown) vs nativeDecimals() defaults to 18
+- [Phase 431]: resolveRpcUrl accepts Record<string,string>|RpcConfig union with internal cast
+- [Phase 431]: sweepAll made optional in IChainAdapter, stubs removed from adapters
+- [Phase 431]: configPath values preserved unchanged (comments only) to avoid SettingsService breakage
 
 ### Pending Todos
 
@@ -66,10 +77,11 @@ None.
 
 ### Blockers/Concerns
 
-None yet.
+- Phase 429 RESOLVED: DB 레거시 정책 데이터 -- Zod safeParse가 corrupt/invalid 데이터를 POLICY_RULES_CORRUPT로 처리
+- Phase 430: Drizzle v0.45.x .$client API 가용성 확인 필요 (DI 패턴 vs typed extraction)
 
 ## Session Continuity
 
-Last session: 2026-03-15
-Stopped at: Completed 426-01-PLAN.md (milestone v32.2 complete)
+Last session: 2026-03-16T07:27:56.602Z
+Stopped at: Completed 431-03-PLAN.md
 Resume file: None

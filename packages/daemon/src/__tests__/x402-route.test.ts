@@ -55,6 +55,17 @@ vi.mock('../services/x402/payment-signer.js', () => ({
   },
 }));
 
+// ---------------------------------------------------------------------------
+// Mock sleep from @waiaas/core (partial mock to avoid 60s+ delays in DELAY tests)
+// ---------------------------------------------------------------------------
+vi.mock('@waiaas/core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@waiaas/core')>();
+  return {
+    ...actual,
+    sleep: vi.fn().mockResolvedValue(undefined),
+  };
+});
+
 import { signPayment } from '../services/x402/payment-signer.js';
 const mockSignPayment = vi.mocked(signPayment);
 
@@ -165,7 +176,7 @@ function mockConfig(overrides?: Partial<DaemonConfig>): DaemonConfig {
     },
     x402: {
       enabled: true,
-      request_timeout: 30,
+      request_timeout: 120,
     },
     ...overrides,
   };
@@ -671,7 +682,7 @@ describe('POST /v1/x402/fetch', () => {
         rules: JSON.stringify({ domains: ['api.example.com'] }),
       });
 
-      // SPENDING_LIMIT: amount falls in DELAY range, delay_seconds=60 > request_timeout=30
+      // SPENDING_LIMIT: amount falls in DELAY range, delay_seconds=300 > request_timeout=120
       insertPolicy({
         walletId,
         type: 'SPENDING_LIMIT',
@@ -679,7 +690,7 @@ describe('POST /v1/x402/fetch', () => {
           instant_max: '100000',
           notify_max: '500000',
           delay_max: '100000000',
-          delay_seconds: 60,
+          delay_seconds: 300,
         }),
       });
 
@@ -710,7 +721,7 @@ describe('POST /v1/x402/fetch', () => {
         rules: JSON.stringify({ domains: ['api.example.com'] }),
       });
 
-      // delay_seconds=1, request_timeout=30 -> within timeout
+      // delay_seconds=60, request_timeout=120 -> within timeout (sleep mocked)
       insertPolicy({
         walletId,
         type: 'SPENDING_LIMIT',
@@ -718,7 +729,7 @@ describe('POST /v1/x402/fetch', () => {
           instant_max: '100000',
           notify_max: '500000',
           delay_max: '100000000',
-          delay_seconds: 1,
+          delay_seconds: 60,
         }),
       });
 
@@ -1000,7 +1011,7 @@ describe('POST /v1/x402/fetch', () => {
         rules: JSON.stringify({ domains: ['api.example.com'] }),
       });
 
-      // delay_seconds=60 > request_timeout=30
+      // delay_seconds=300 > request_timeout=120
       insertPolicy({
         walletId,
         type: 'SPENDING_LIMIT',
@@ -1008,7 +1019,7 @@ describe('POST /v1/x402/fetch', () => {
           instant_max: '100000',
           notify_max: '500000',
           delay_max: '100000000',
-          delay_seconds: 60,
+          delay_seconds: 300,
         }),
       });
 

@@ -9,7 +9,7 @@
  * - Solana: getRecentPrioritizationFees via JSON-RPC
  *
  * Uses raw fetch (no adapter dependency) with RPC URL from bridgeMetadata
- * (stored at GAS_WAITING entry time in stage3_5GasCondition).
+ * (stored at GAS_WAITING entry time in stageGasCondition).
  *
  * Batch evaluation: one RPC call per chain, evaluate all waiting txs.
  * Timeout: checked via metadata.gasConditionCreatedAt + timeout.

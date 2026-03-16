@@ -20,7 +20,7 @@ import {
   stage1Validate,
   stage2Auth,
   stage3Policy,
-  stage3_5GasCondition,
+  stageGasCondition,
   stage4Wait,
   stage5Execute,
   stage6Confirm,
@@ -49,13 +49,13 @@ export class SyncPipelineExecutor {
    */
   async execute(ctx: PipelineContext): Promise<string> {
     // Set source for audit trail (SEC-04 preparation for Phase 400)
-    (ctx as any).source = 'rpc-proxy';
+    (ctx as PipelineContext & { source?: string }).source = 'rpc-proxy';
 
     // Stages 1-3.5: always run directly
     await stage1Validate(ctx);
     await stage2Auth(ctx);
     await stage3Policy(ctx);
-    await stage3_5GasCondition(ctx);
+    await stageGasCondition(ctx);
 
     try {
       await stage4Wait(ctx);
