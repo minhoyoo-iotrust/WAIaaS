@@ -36,7 +36,7 @@ import {
   stage1Validate,
   stage2Auth,
   stage3Policy,
-  stage3_5GasCondition,
+  stageGasCondition,
   stage4Wait,
   stage5Execute,
   stage6Confirm,
@@ -652,7 +652,7 @@ export function actionRoutes(deps: ActionRouteDeps): OpenAPIHono {
         try {
           await stage2Auth(ctx);
           await stage3Policy(ctx);
-          await stage3_5GasCondition(ctx);
+          await stageGasCondition(ctx);
           await stage4Wait(ctx);
           await stage5Execute(ctx);
           await stage6Confirm(ctx);

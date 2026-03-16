@@ -93,7 +93,6 @@ const EXPECTED_METHODS = [
   'buildBatch',
   'getTransactionFee',
   'getCurrentNonce',
-  'sweepAll',
 ] as const;
 
 const TEST_ADDRESS_FROM = '0x1234567890abcdef1234567890abcdef12345678';
@@ -206,16 +205,6 @@ describe('EvmAdapter', () => {
       }
     });
 
-    it('sweepAll throws not implemented', async () => {
-      await adapter.connect('https://eth-mainnet.example.com');
-      await expect(
-        adapter.sweepAll('0x1', '0x2', new Uint8Array(32)),
-      ).rejects.toThrow('Not implemented');
-    });
-
-    it('sweepAll throws not implemented (only remaining stub)', async () => {
-      // buildContractCall is now fully implemented -- see buildContractCall tests below
-    });
   });
 
   // -- buildTransaction tests (4 tests) --

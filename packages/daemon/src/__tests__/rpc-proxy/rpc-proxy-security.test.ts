@@ -141,7 +141,7 @@ describe('audit log source (SEC-04)', () => {
       stage1Validate: mockStage1,
       stage2Auth: mockStage2,
       stage3Policy: mockStage3,
-      stage3_5GasCondition: mockStage3_5,
+      stageGasCondition: mockStage3_5,
       stage4Wait: mockStage4,
       stage5Execute: mockStage5,
       stage6Confirm: mockStage6,

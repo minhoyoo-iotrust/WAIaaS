@@ -49,7 +49,6 @@ import type {
   AssetInfo,
   FeeEstimate,
   TokenInfo,
-  SweepResult,
   TokenTransferParams,
   ContractCallParams,
   ApproveParams,
@@ -103,7 +102,7 @@ type SolanaRpc = ReturnType<typeof createSolanaRpc>;
  * Token: buildTokenTransfer, getTokenInfo
  * Contract: buildContractCall, buildApprove
  * Batch: buildBatch
- * Utility: getTransactionFee, getCurrentNonce, sweepAll
+ * Utility: getTransactionFee, getCurrentNonce
  * Sign-only: parseTransaction, signExternalTransaction
  */
 export class SolanaAdapter implements IChainAdapter {
@@ -1281,10 +1280,6 @@ export class SolanaAdapter implements IChainAdapter {
   async getCurrentNonce(_address: string): Promise<number> {
     // Solana doesn't use nonces in the EVM sense; return 0 as specified.
     return 0;
-  }
-
-  async sweepAll(_from: string, _to: string, _privateKey: Uint8Array): Promise<SweepResult> {
-    throw new Error('Not implemented: sweepAll will be implemented in Phase 80');
   }
 
   // -- Sign-only operations (2) -- v1.4.7

@@ -1,5 +1,5 @@
 /**
- * Unit tests for stage3_5GasCondition: Pipeline Stage 3.5 gas condition check.
+ * Unit tests for stageGasCondition: Pipeline Stage 3.5 gas condition check.
  *
  * Features tested:
  * 1. No gasCondition field -> no-op (backward compat)
@@ -20,7 +20,7 @@ import { createDatabase, pushSchema } from '../infrastructure/database/index.js'
 import type { DatabaseConnection } from '../infrastructure/database/index.js';
 import { wallets, transactions } from '../infrastructure/database/schema.js';
 import { generateId } from '../infrastructure/database/id.js';
-import { stage3_5GasCondition } from '../pipeline/stages.js';
+import { stageGasCondition } from '../pipeline/stages.js';
 import type { PipelineContext } from '../pipeline/stages.js';
 import { DefaultPolicyEngine } from '../pipeline/default-policy-engine.js';
 import { WAIaaSError } from '@waiaas/core';
@@ -170,7 +170,7 @@ afterEach(() => {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('stage3_5GasCondition', () => {
+describe('stageGasCondition', () => {
   describe('no-op when gasCondition absent', () => {
     it('passes through when request has no gasCondition (legacy SendTransactionRequest)', async () => {
       const walletId = await insertTestWallet();
@@ -180,7 +180,7 @@ describe('stage3_5GasCondition', () => {
       });
 
       // Should not throw
-      await stage3_5GasCondition(ctx);
+      await stageGasCondition(ctx);
 
       // Transaction status should remain PENDING (unchanged)
       const tx = await conn.db.select().from(transactions).where(eq(transactions.id, txId)).get();
@@ -193,7 +193,7 @@ describe('stage3_5GasCondition', () => {
       const ctx = createPipelineContext(walletId, txId);
 
       // Should not throw
-      await stage3_5GasCondition(ctx);
+      await stageGasCondition(ctx);
 
       const tx = await conn.db.select().from(transactions).where(eq(transactions.id, txId)).get();
       expect(tx!.status).toBe('PENDING');
@@ -214,8 +214,8 @@ describe('stage3_5GasCondition', () => {
       });
 
       try {
-        await stage3_5GasCondition(ctx);
-        expect.unreachable('stage3_5GasCondition should throw PIPELINE_HALTED');
+        await stageGasCondition(ctx);
+        expect.unreachable('stageGasCondition should throw PIPELINE_HALTED');
       } catch (err) {
         expect(err).toBeInstanceOf(WAIaaSError);
         expect((err as WAIaaSError).code).toBe('PIPELINE_HALTED');
@@ -239,7 +239,7 @@ describe('stage3_5GasCondition', () => {
       });
 
       try {
-        await stage3_5GasCondition(ctx);
+        await stageGasCondition(ctx);
       } catch { /* PIPELINE_HALTED expected */ }
 
       const tx = await conn.db.select().from(transactions).where(eq(transactions.id, txId)).get();
@@ -266,7 +266,7 @@ describe('stage3_5GasCondition', () => {
       });
 
       try {
-        await stage3_5GasCondition(ctx);
+        await stageGasCondition(ctx);
       } catch { /* PIPELINE_HALTED expected */ }
 
       const tx = await conn.db.select().from(transactions).where(eq(transactions.id, txId)).get();
@@ -287,7 +287,7 @@ describe('stage3_5GasCondition', () => {
       });
 
       try {
-        await stage3_5GasCondition(ctx);
+        await stageGasCondition(ctx);
       } catch { /* PIPELINE_HALTED expected */ }
 
       const tx = await conn.db.select().from(transactions).where(eq(transactions.id, txId)).get();
@@ -313,7 +313,7 @@ describe('stage3_5GasCondition', () => {
       });
 
       // Should not throw
-      await stage3_5GasCondition(ctx);
+      await stageGasCondition(ctx);
 
       const tx = await conn.db.select().from(transactions).where(eq(transactions.id, txId)).get();
       expect(tx!.status).toBe('PENDING');
@@ -333,7 +333,7 @@ describe('stage3_5GasCondition', () => {
       });
 
       try {
-        await stage3_5GasCondition(ctx);
+        await stageGasCondition(ctx);
         expect.unreachable('Should throw PIPELINE_HALTED');
       } catch (err) {
         expect((err as WAIaaSError).code).toBe('PIPELINE_HALTED');
@@ -365,7 +365,7 @@ describe('stage3_5GasCondition', () => {
       });
 
       try {
-        await stage3_5GasCondition(ctx);
+        await stageGasCondition(ctx);
         expect.unreachable('Should throw validation error');
       } catch (err) {
         expect(err).toBeInstanceOf(WAIaaSError);
@@ -400,7 +400,7 @@ describe('stage3_5GasCondition', () => {
       });
 
       try {
-        await stage3_5GasCondition(ctx);
+        await stageGasCondition(ctx);
         expect.unreachable('Should throw PIPELINE_HALTED');
       } catch (err) {
         expect((err as WAIaaSError).code).toBe('PIPELINE_HALTED');
@@ -431,7 +431,7 @@ describe('stage3_5GasCondition', () => {
       });
 
       try {
-        await stage3_5GasCondition(ctx);
+        await stageGasCondition(ctx);
       } catch { /* PIPELINE_HALTED expected */ }
 
       const tx = await conn.db.select().from(transactions).where(eq(transactions.id, txId)).get();
@@ -457,7 +457,7 @@ describe('stage3_5GasCondition', () => {
       });
 
       try {
-        await stage3_5GasCondition(ctx);
+        await stageGasCondition(ctx);
       } catch { /* PIPELINE_HALTED expected */ }
 
       const tx = await conn.db.select().from(transactions).where(eq(transactions.id, txId)).get();
@@ -484,7 +484,7 @@ describe('stage3_5GasCondition', () => {
       });
 
       try {
-        await stage3_5GasCondition(ctx);
+        await stageGasCondition(ctx);
       } catch { /* PIPELINE_HALTED expected */ }
 
       // Wait for fire-and-forget notification

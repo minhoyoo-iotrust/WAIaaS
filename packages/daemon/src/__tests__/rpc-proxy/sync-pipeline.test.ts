@@ -5,7 +5,7 @@ vi.mock('../../pipeline/stages.js', () => ({
   stage1Validate: vi.fn().mockResolvedValue(undefined),
   stage2Auth: vi.fn().mockResolvedValue(undefined),
   stage3Policy: vi.fn().mockResolvedValue(undefined),
-  stage3_5GasCondition: vi.fn().mockResolvedValue(undefined),
+  stageGasCondition: vi.fn().mockResolvedValue(undefined),
   stage4Wait: vi.fn().mockResolvedValue(undefined),
   stage5Execute: vi.fn().mockResolvedValue(undefined),
   stage6Confirm: vi.fn().mockResolvedValue(undefined),
@@ -17,7 +17,7 @@ import {
   stage1Validate,
   stage2Auth,
   stage3Policy,
-  stage3_5GasCondition,
+  stageGasCondition,
   stage4Wait,
   stage5Execute,
   stage6Confirm,
@@ -60,7 +60,7 @@ describe('SyncPipelineExecutor', () => {
     expect(stage1Validate).toHaveBeenCalledWith(ctx);
     expect(stage2Auth).toHaveBeenCalledWith(ctx);
     expect(stage3Policy).toHaveBeenCalledWith(ctx);
-    expect(stage3_5GasCondition).toHaveBeenCalledWith(ctx);
+    expect(stageGasCondition).toHaveBeenCalledWith(ctx);
     expect(stage4Wait).toHaveBeenCalledWith(ctx);
     expect(stage5Execute).toHaveBeenCalledWith(ctx);
     expect(stage6Confirm).toHaveBeenCalledWith(ctx);

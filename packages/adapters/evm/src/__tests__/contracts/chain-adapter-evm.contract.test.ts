@@ -116,7 +116,6 @@ describe('CT-2: EvmAdapter Contract Tests', () => {
       // - buildTokenTransfer: needs encodeFunctionData + gas estimation chain (tested in evm-token-transfer.test.ts)
       // - buildContractCall: needs calldata validation + gas (tested in evm-adapter.test.ts)
       // - buildApprove: needs encodeFunctionData + gas (tested in evm-adapter.test.ts)
-      // - sweepAll: stub (Not implemented, throws)
       // - signExternalTransaction: needs account mock + parseTransaction chain (tested in evm-sign-only.test.ts)
       skipMethods: [
         'signTransaction',

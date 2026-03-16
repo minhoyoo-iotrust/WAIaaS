@@ -1376,6 +1376,9 @@ export function walletCrudRoutes(deps: WalletCrudRouteDeps): OpenAPIHono {
     );
 
     // Sweep all assets to owner address
+    if (!adapter.sweepAll) {
+      throw new WAIaaSError('CHAIN_ERROR', { message: 'sweepAll not supported for this chain' });
+    }
     const sweepResult = await adapter.sweepAll(
       wallet.publicKey,
       wallet.ownerAddress!,

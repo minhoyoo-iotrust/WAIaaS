@@ -64,8 +64,10 @@ import { decryptProviderApiKey } from '../infrastructure/smart-account/aa-provid
 // v1.5: CoinGecko 키 안내 힌트 최초 1회 추적 (데몬 재시작 시 리셋 OK)
 const hintedTokens = new Set<string>();
 
-// Exported for test cleanup
-export { hintedTokens };
+/** Clear hintedTokens set (for testing). */
+export function clearHintedTokens(): void { hintedTokens.clear(); }
+/** Check if a token hint has been shown. */
+export function hasHintedToken(key: string): boolean { return hintedTokens.has(key); }
 
 // ---------------------------------------------------------------------------
 // Pipeline context
@@ -790,7 +792,7 @@ export async function stage3Policy(ctx: PipelineContext): Promise<void> {
  *
  * @see 258-CONTEXT.md for architecture details
  */
-export async function stage3_5GasCondition(ctx: PipelineContext): Promise<void> {
+export async function stageGasCondition(ctx: PipelineContext): Promise<void> {
   const req = ctx.request;
 
   // Check if request has gasCondition (present on all 5 discriminatedUnion types)
