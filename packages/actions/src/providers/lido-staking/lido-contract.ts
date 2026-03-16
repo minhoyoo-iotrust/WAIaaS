@@ -81,6 +81,59 @@ export const WSTETH_MAINNET = '0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0';
 export const WSTETH_HOLESKY = '0x8d09a4502Cc8Cf1547aD300E066060D043f6982D';
 
 // ---------------------------------------------------------------------------
+// Multichain contract config (MCHN-01, MCHN-04)
+// ---------------------------------------------------------------------------
+
+export interface LidoNetworkContracts {
+  stethAddress: string;
+  wstethAddress: string;
+  caip2: string; // e.g. 'eip155:1'
+}
+
+/**
+ * Lido wstETH is deployed on these 5 EVM mainnets.
+ * Scroll omitted: not a WAIaaS NetworkType.
+ */
+export const LIDO_NETWORK_CONFIG: Record<string, LidoNetworkContracts> = {
+  'ethereum-mainnet': {
+    stethAddress: '0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84',
+    wstethAddress: '0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0',
+    caip2: 'eip155:1',
+  },
+  'base-mainnet': {
+    stethAddress: '', // stETH not on Base, only wstETH
+    wstethAddress: '0xc1CBa3fCea344f92D9239c08C0568f6F2F0ee452',
+    caip2: 'eip155:8453',
+  },
+  'arbitrum-mainnet': {
+    stethAddress: '',
+    wstethAddress: '0x5979D7b546E38E414F7E9822514be443A4800529',
+    caip2: 'eip155:42161',
+  },
+  'optimism-mainnet': {
+    stethAddress: '',
+    wstethAddress: '0x1F32b1c2345538c0c6f582fCB022739c4A194Ebb',
+    caip2: 'eip155:10',
+  },
+  'polygon-mainnet': {
+    stethAddress: '',
+    wstethAddress: '0x03b54A6e9a984069379fae1a4fC4dBAE93B3bCCD',
+    caip2: 'eip155:137',
+  },
+};
+
+/**
+ * Testnet config (Holesky only, mapped to ethereum-sepolia network).
+ */
+export const LIDO_TESTNET_NETWORK_CONFIG: Record<string, LidoNetworkContracts> = {
+  'ethereum-sepolia': {
+    stethAddress: '0x3F1c547b21f65e10480dE3ad8E19fAAC46C95034',
+    wstethAddress: '0x8d09a4502Cc8Cf1547aD300E066060D043f6982D',
+    caip2: 'eip155:11155111',
+  },
+};
+
+// ---------------------------------------------------------------------------
 // balanceOf(address) -- function selector 0x70a08231
 // ---------------------------------------------------------------------------
 
