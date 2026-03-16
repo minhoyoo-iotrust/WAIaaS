@@ -328,8 +328,9 @@ export class DriftSdkWrapper implements IDriftSdkWrapper {
   private async loadSdk() {
     if (this._sdk) return this._sdk;
     try {
+      // @ts-ignore — optional dependency, type resolution varies by environment
       const solana = await import('@solana/web3.js');
-      // @ts-expect-error — @drift-labs/sdk has no type declarations
+      // @ts-ignore — optional dependency, type resolution varies by environment
       const drift = await import('@drift-labs/sdk');
       this._sdk = {
         Connection: solana.Connection,

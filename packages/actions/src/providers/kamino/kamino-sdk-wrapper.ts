@@ -281,7 +281,9 @@ export class KaminoSdkWrapper implements IKaminoSdkWrapper {
   private async loadSdk() {
     if (this._sdk) return this._sdk;
     try {
+      // @ts-ignore — optional dependency, type resolution varies by environment
       const solana = await import('@solana/web3.js');
+      // @ts-ignore — optional dependency, type resolution varies by environment
       const klend = await import('@kamino-finance/klend-sdk');
       this._sdk = {
         Connection: solana.Connection,
