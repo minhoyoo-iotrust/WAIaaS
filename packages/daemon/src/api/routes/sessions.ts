@@ -20,7 +20,7 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { createHash } from 'node:crypto';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
-import { eq, and, isNull, sql } from 'drizzle-orm';
+import { eq, and, isNull, sql, inArray } from 'drizzle-orm';
 import { WAIaaSError, type EventBus } from '@waiaas/core';
 import type { JwtSecretManager, JwtPayload } from '../../infrastructure/jwt/index.js';
 import { generateId } from '../../infrastructure/database/id.js';
@@ -241,14 +241,20 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
     // Normalize walletId/walletIds
     const walletIds: string[] = parsed.walletIds ?? (parsed.walletId ? [parsed.walletId] : []);
 
-    // Verify all wallets exist and are active
-    for (const wId of walletIds) {
-      const wallet = deps.db
+    // Verify all wallets exist and are active (batch query instead of N+1)
+    const walletMap = new Map<string, { id: string; name: string; status: string }>();
+    if (walletIds.length > 0) {
+      const walletRows = deps.db
         .select()
         .from(wallets)
-        .where(eq(wallets.id, wId))
-        .get();
-
+        .where(inArray(wallets.id, walletIds))
+        .all();
+      for (const w of walletRows) {
+        walletMap.set(w.id, w);
+      }
+    }
+    for (const wId of walletIds) {
+      const wallet = walletMap.get(wId);
       if (!wallet) {
         throw new WAIaaSError('WALLET_NOT_FOUND');
       }
@@ -329,9 +335,9 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
       }).run();
     }
 
-    // Build wallets array for response
-    const walletRows = walletIds.map((wId) => {
-      const w = deps.db.select().from(wallets).where(eq(wallets.id, wId)).get()!;
+    // Build wallets array for response (reuse batch-fetched walletMap)
+    const responseWallets = walletIds.map((wId) => {
+      const w = walletMap.get(wId)!;
       return { id: w.id, name: w.name };
     });
 
@@ -365,7 +371,7 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
         token,
         expiresAt,
         walletId: walletIds[0]!,
-        wallets: walletRows,
+        wallets: responseWallets,
       },
       201,
     );
@@ -424,26 +430,34 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
 
     const nowSec = Math.floor(Date.now() / 1000);
 
+    // Batch fetch all session-wallet links with wallet names (NQ-01: single query instead of N+1)
+    const sessionIds = sessionRows.map((r) => r.id);
+    const allSwRows = sessionIds.length > 0
+      ? deps.db
+          .select({
+            sessionId: sessionWallets.sessionId,
+            walletId: sessionWallets.walletId,
+            walletName: wallets.name,
+          })
+          .from(sessionWallets)
+          .leftJoin(wallets, eq(sessionWallets.walletId, wallets.id))
+          .where(inArray(sessionWallets.sessionId, sessionIds))
+          .all()
+      : [];
+    // Group by sessionId
+    const swBySession = new Map<string, Array<{ id: string; name: string }>>();
+    for (const sw of allSwRows) {
+      const list = swBySession.get(sw.sessionId) ?? [];
+      list.push({ id: sw.walletId, name: sw.walletName ?? 'Unknown' });
+      swBySession.set(sw.sessionId, list);
+    }
+
     const result = sessionRows.map((row) => {
       const expiresAtSec = Math.floor(row.expiresAt.getTime() / 1000);
       // Unlimited sessions (expiresAt=0) are always ACTIVE
       const status = expiresAtSec === 0 ? 'ACTIVE' : (expiresAtSec < nowSec ? 'EXPIRED' : 'ACTIVE');
 
-      // Fetch wallets linked to this session
-      const swRows = deps.db
-        .select({
-          walletId: sessionWallets.walletId,
-          walletName: wallets.name,
-        })
-        .from(sessionWallets)
-        .leftJoin(wallets, eq(sessionWallets.walletId, wallets.id))
-        .where(eq(sessionWallets.sessionId, row.id))
-        .all();
-
-      const walletsList = swRows.map((sw) => ({
-        id: sw.walletId,
-        name: sw.walletName ?? 'Unknown',
-      }));
+      const walletsList = swBySession.get(row.id) ?? [];
 
       return {
         id: row.id,
