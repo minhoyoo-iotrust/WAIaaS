@@ -48,7 +48,8 @@ describe('@waiaas/core package export verification', () => {
     // v31.10: +INVALID_TOKEN_IDENTIFIER, +STATS_NOT_CONFIGURED (+2)
     // v31.12: +CREDENTIAL_NOT_FOUND, +CREDENTIAL_EXPIRED, +SIGNING_SCHEME_UNSUPPORTED, +CAPABILITY_NOT_FOUND, +VENUE_NOT_ALLOWED, +EXTERNAL_ACTION_FAILED (+6)
     // v32.2: +RATE_LIMITED (+1)
-    expect(Object.keys(core.ERROR_CODES)).toHaveLength(144);
+    // v32.4: +INTERNAL_ERROR, +VALIDATION_FAILED (+2)
+    expect(Object.keys(core.ERROR_CODES)).toHaveLength(146);
   });
 
   it('getMessages function is exported', () => {

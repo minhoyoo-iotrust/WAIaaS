@@ -59,7 +59,7 @@ import type {
   NftTransferParams,
   NftApproveParams,
 } from '@waiaas/core';
-import { WAIaaSError, ChainError } from '@waiaas/core';
+import { WAIaaSError, ChainError, sleep } from '@waiaas/core';
 import { parseSolanaTransaction } from './tx-parser.js';
 
 /** Default SOL transfer fee in lamports (5000 = 0.000005 SOL). */
@@ -1644,10 +1644,6 @@ export class SolanaAdapter implements IChainAdapter {
     this.ensureConnected();
     return this._rpc!;
   }
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /** Check if an RPC error is retryable (429/408/5xx or network errors). */

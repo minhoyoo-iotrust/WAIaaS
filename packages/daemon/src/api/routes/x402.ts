@@ -22,7 +22,7 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { eq, or, and, isNull, desc } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
-import { WAIaaSError, resolveX402Network, CAIP2_TO_NETWORK } from '@waiaas/core';
+import { WAIaaSError, resolveX402Network, CAIP2_TO_NETWORK, sleep } from '@waiaas/core';
 import type { IPriceOracle, PolicyEvaluation, EventBus } from '@waiaas/core';
 import type { MasterPasswordRef } from '../middleware/master-auth.js';
 import type { AdapterPool } from '../../infrastructure/adapter-pool.js';
@@ -81,9 +81,6 @@ export interface X402RouteDeps {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-const sleep = (ms: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * Encode a payment payload as a base64 PAYMENT-SIGNATURE header value.

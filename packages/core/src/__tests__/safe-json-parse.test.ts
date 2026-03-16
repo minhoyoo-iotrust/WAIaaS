@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { z } from 'zod';
-import { safeJsonParse, type SafeJsonParseResult, type SafeJsonParseError } from '../utils/safe-json-parse.js';
+import { safeJsonParse } from '../utils/safe-json-parse.js';
 import { POLICY_RULES_SCHEMAS } from '../schemas/policy.schema.js';
 import { SpendingLimitRulesSchema } from '../schemas/policy.schema.js';
 import { ERROR_CODES } from '../errors/error-codes.js';

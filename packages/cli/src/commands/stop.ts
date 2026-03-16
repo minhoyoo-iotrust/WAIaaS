@@ -9,6 +9,7 @@
 
 import { existsSync, readFileSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
+import { sleep } from '@waiaas/core';
 
 /** Maximum time to wait for graceful shutdown (ms). */
 const STOP_TIMEOUT = 10_000;
@@ -70,6 +71,3 @@ function isProcessAlive(pid: number): boolean {
   }
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
