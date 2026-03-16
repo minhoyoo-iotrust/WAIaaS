@@ -1,39 +1,39 @@
 ---
 gsd_state_version: 1.0
-milestone: v32.5
-milestone_name: 멀티체인 DeFi 포지션 + 테스트넷 토글
-status: completed
-stopped_at: Milestone v32.5 archived
-last_updated: "2026-03-16T14:40:00.000Z"
-last_activity: 2026-03-16 -- Milestone v32.5 shipped and archived
+milestone: v32.6
+milestone_name: 성능 + 구조 개선
+status: active
+last_updated: "2026-03-17T00:00:00.000Z"
+last_activity: 2026-03-17 -- Milestone v32.6 started
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 8
-  completed_plans: 8
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-16)
+See: .planning/PROJECT.md (updated 2026-03-17)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** v32.5 shipped. Planning next milestone.
+**Current focus:** v32.6 성능 + 구조 개선
 
 ## Current Position
 
-Milestone v32.5 complete and archived.
-All 3 phases (432-434) shipped. 8 plans, 30 requirements.
-Ready for next milestone via /gsd:new-milestone.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-17 — Milestone v32.6 started
 
 ## Accumulated Context
 
 ### Decisions
 
-(Cleared -- see .planning/milestones/v32.5-ROADMAP.md for milestone decisions)
+(None yet)
 
 ### Pending Todos
 
@@ -45,6 +45,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-16
-Stopped at: Milestone v32.5 archived
+Last session: 2026-03-17
+Stopped at: Milestone v32.6 initialization
 Resume file: None
