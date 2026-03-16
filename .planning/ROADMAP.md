@@ -21,7 +21,11 @@
   2. PositionTracker.syncCategory()가 지갑 메타데이터로부터 컨텍스트를 자동 구성하여 프로바이더에 전달한다
   3. 8개 프로바이더(Lido, Jito, Aave, Kamino, Pendle, Drift, Hyperliquid Perp/Spot)가 새 시그니처로 동작한다
   4. Solana 지갑으로 Lido 포지션 조회 시 빈 배열이 반환되고 에러가 발생하지 않는다
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 432-01-PLAN.md — PositionQueryContext 타입 정의 + IPositionProvider 시그니처 확장 + PositionTracker 컨텍스트 구성
+- [ ] 432-02-PLAN.md — 8개 프로바이더 마이그레이션 + 체인 가드 추가
 
 ### Phase 433: Multichain Positions
 **Goal**: EVM DeFi 프로바이더가 지갑에 연결된 모든 네트워크에서 포지션을 병렬 조회하고, 단일 네트워크 실패가 전체 결과에 영향을 주지 않는다
@@ -53,6 +57,6 @@ Phases execute in numeric order: 432 → 433 → 434
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 432. Interface Extension | 0/? | Not started | - |
+| 432. Interface Extension | 0/2 | Not started | - |
 | 433. Multichain Positions | 0/? | Not started | - |
 | 434. Testnet Toggle | 0/? | Not started | - |
