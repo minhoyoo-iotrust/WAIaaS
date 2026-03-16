@@ -15,7 +15,7 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { eq } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { WAIaaSError, validateNetworkEnvironment, networkToCaip2 } from '@waiaas/core';
-import type { ChainType, NftItem, NftCollection } from '@waiaas/core';
+import type { ChainType, NetworkType, NftItem, NftCollection } from '@waiaas/core';
 import type { NftIndexerClient } from '../../infrastructure/nft/nft-indexer-client.js';
 import type { NftMetadataCacheService } from '../../services/nft-metadata-cache.js';
 import { wallets } from '../../infrastructure/database/schema.js';
@@ -262,7 +262,7 @@ async function handleNftList(
   const { network, pageSize = 50, pageKey, groupBy } = query;
 
   // Validate network matches wallet's environment
-  validateNetworkEnvironment(chain, environment, network as any);
+  validateNetworkEnvironment(chain, environment, network as NetworkType);
 
   // Fetch NFT list from indexer
   const result = await deps.nftIndexerClient.listNfts(chain, {
@@ -274,7 +274,7 @@ async function handleNftList(
 
   // Resolve chainId for this network (graceful)
   let chainId: string | undefined;
-  try { chainId = networkToCaip2(network as any); } catch { /* graceful */ }
+  try { chainId = networkToCaip2(network as NetworkType); } catch { /* graceful */ }
 
   // Helper to inject chainId into NFT items
   const addChainId = (items: NftItem[]) =>
@@ -346,7 +346,7 @@ async function handleNftMetadata(
   const environment = wallet.environment as 'mainnet' | 'testnet';
 
   // Validate network matches wallet's environment
-  validateNetworkEnvironment(chain, environment, network as any);
+  validateNetworkEnvironment(chain, environment, network as NetworkType);
 
   // Parse token identifier
   const { contractAddress, tokenId } = parseTokenIdentifier(tokenIdentifier, chain);
@@ -361,7 +361,7 @@ async function handleNftMetadata(
 
   // Inject chainId (graceful)
   let metaChainId: string | undefined;
-  try { metaChainId = networkToCaip2(network as any); } catch { /* graceful */ }
+  try { metaChainId = networkToCaip2(network as NetworkType); } catch { /* graceful */ }
 
   return c.json(metaChainId ? { ...metadata, chainId: metaChainId } : metadata, 200);
 }

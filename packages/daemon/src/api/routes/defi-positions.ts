@@ -21,7 +21,7 @@ import { wallets } from '../../infrastructure/database/schema.js';
 import type * as schema from '../../infrastructure/database/schema.js';
 import { resolveWalletId } from '../helpers/resolve-wallet-id.js';
 import type { ActionProviderRegistry } from '../../infrastructure/action/action-provider-registry.js';
-import type { ILendingProvider } from '@waiaas/core';
+import type { ILendingProvider, NetworkType } from '@waiaas/core';
 import { networkToCaip2 } from '@waiaas/core';
 import {
   DeFiPositionsResponseSchema,
@@ -171,7 +171,7 @@ export function createDefiPositionRoutes(deps: DefiPositionRouteDeps): OpenAPIHo
       // CAIP-2 chainId (graceful)
       let chainId: string | undefined;
       if (row.network) {
-        try { chainId = networkToCaip2(row.network as any); } catch { /* graceful */ }
+        try { chainId = networkToCaip2(row.network as NetworkType); } catch { /* graceful */ }
       }
 
       return {

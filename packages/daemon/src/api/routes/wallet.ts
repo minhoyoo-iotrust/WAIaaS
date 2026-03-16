@@ -470,7 +470,7 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
 
     // CAIP-2 chainId for top-level
     let topChainId: string | undefined;
-    try { topChainId = networkToCaip2(targetNetwork as any); } catch { /* graceful */ }
+    try { topChainId = networkToCaip2(targetNetwork as NetworkType); } catch { /* graceful */ }
 
     return c.json(
       {

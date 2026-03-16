@@ -20,7 +20,7 @@ import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { wallets } from '../../infrastructure/database/schema.js';
 import type * as schema from '../../infrastructure/database/schema.js';
 import { resolveWalletId } from '../helpers/resolve-wallet-id.js';
-import type { IPriceOracle } from '@waiaas/core';
+import type { IPriceOracle, NetworkType } from '@waiaas/core';
 import { networkToCaip2 } from '@waiaas/core';
 import {
   StakingPositionsResponseSchema,
@@ -240,7 +240,7 @@ export function createStakingRoutes(deps: StakingRouteDeps): OpenAPIHono {
         }
 
         let lidoChainId: string | undefined;
-        try { lidoChainId = networkToCaip2('ethereum-mainnet' as any); } catch { /* graceful */ }
+        try { lidoChainId = networkToCaip2('ethereum-mainnet' as NetworkType); } catch { /* graceful */ }
         positions.push({
           protocol: 'lido',
           chain: 'ethereum',
@@ -278,7 +278,7 @@ export function createStakingRoutes(deps: StakingRouteDeps): OpenAPIHono {
         }
 
         let jitoChainId: string | undefined;
-        try { jitoChainId = networkToCaip2('solana-mainnet' as any); } catch { /* graceful */ }
+        try { jitoChainId = networkToCaip2('solana-mainnet' as NetworkType); } catch { /* graceful */ }
         positions.push({
           protocol: 'jito',
           chain: 'solana',

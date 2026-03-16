@@ -8,7 +8,7 @@
  * @since v31.0
  */
 
-import type { ChainType, NftListOptions, NftListResult, NftMetadata } from '@waiaas/core';
+import type { ChainType, NetworkType, NftListOptions, NftListResult, NftMetadata } from '@waiaas/core';
 import type { INftIndexer } from '@waiaas/core';
 import { WAIaaSError } from '@waiaas/core';
 import { AlchemyNftIndexer } from './alchemy-nft-indexer.js';
@@ -107,8 +107,7 @@ export class NftIndexerClient {
   ): Promise<NftMetadata> {
     return this.withRetry(() => {
       const indexer = this.getIndexer(chain);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return indexer.getNftMetadata(network as any, contractAddress, tokenId);
+      return indexer.getNftMetadata(network as NetworkType, contractAddress, tokenId);
     });
   }
 
@@ -127,8 +126,7 @@ export class NftIndexerClient {
 
     const result = await this.withRetry(() => {
       const indexer = this.getIndexer(chain);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return indexer.getNftsByCollection(network as any, collectionAddress, pageKey);
+      return indexer.getNftsByCollection(network as NetworkType, collectionAddress, pageKey);
     });
 
     this.setCache(cacheKey, result);
