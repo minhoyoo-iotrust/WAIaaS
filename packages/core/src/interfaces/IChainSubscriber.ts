@@ -7,7 +7,7 @@ import type { IncomingTransaction } from './chain-subscriber.types.js';
  * Unlike IChainAdapter (stateless RPC calls), IChainSubscriber maintains
  * persistent connections (WebSocket or polling) for real-time detection.
  *
- * v27.1 scope: 6 methods (subscribe/unsubscribe + query + lifecycle).
+ * v32.4: 9 methods (6 base + 3 optional polling/confirmation).
  */
 export interface IChainSubscriber {
   readonly chain: ChainType;
@@ -59,4 +59,27 @@ export interface IChainSubscriber {
    * and release resources. Safe to call multiple times.
    */
   destroy(): Promise<void>;
+
+  // -- Optional polling/confirmation (3) --
+
+  /**
+   * Poll all subscribed wallets for new incoming transactions.
+   * Called by BackgroundWorkers on a configurable interval.
+   * Implemented by both EVM and Solana subscribers.
+   */
+  pollAll?(): Promise<void>;
+
+  /**
+   * Check whether a transaction has reached finalized confirmation status.
+   * Chain-specific: implemented by SolanaIncomingSubscriber only.
+   * Used by the Solana confirmation worker to update pending TX status.
+   */
+  checkFinalized?(txHash: string): Promise<boolean>;
+
+  /**
+   * Get the current block number from the chain.
+   * Chain-specific: implemented by EvmIncomingSubscriber only.
+   * Used by the EVM confirmation worker to check block confirmations.
+   */
+  getBlockNumber?(): Promise<bigint>;
 }
