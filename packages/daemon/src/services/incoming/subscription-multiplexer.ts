@@ -204,15 +204,10 @@ export class SubscriptionMultiplexer {
    * Get subscriber entries for gap recovery.
    * Returns a read-only view compatible with createGapRecoveryHandler deps.
    *
-   * Note: pollAll() is not part of IChainSubscriber interface but
-   * exists on both SolanaIncomingSubscriber and EvmIncomingSubscriber.
-   * The returned type uses structural typing to express this.
+   * IChainSubscriber includes optional pollAll() used by gap recovery handler.
    */
-  getSubscriberEntries(): Map<string, { subscriber: { pollAll: () => Promise<void> } }> {
-    return this.connections as unknown as Map<
-      string,
-      { subscriber: { pollAll: () => Promise<void> } }
-    >;
+  getSubscriberEntries(): Map<string, { subscriber: IChainSubscriber }> {
+    return this.connections;
   }
 
   /**

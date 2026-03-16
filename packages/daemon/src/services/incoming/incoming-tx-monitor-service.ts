@@ -484,10 +484,7 @@ export class IncomingTxMonitorService {
     const checkSolanaFinalized = async (txHash: string): Promise<boolean> => {
       const entries = this.multiplexer.getSubscribersForChain('solana');
       if (entries.length === 0) return false;
-      const sub = entries[0]!.subscriber as unknown as {
-        checkFinalized(txHash: string): Promise<boolean>;
-      };
-      return sub.checkFinalized(txHash);
+      return entries[0]!.subscriber.checkFinalized?.(txHash) ?? false;
     };
 
     this.workers.register('incoming-tx-confirm-solana', {
@@ -505,10 +502,10 @@ export class IncomingTxMonitorService {
       const entries = this.multiplexer.getSubscribersForChain('ethereum');
       const entry = entries.find((e) => e.key === `ethereum:${network}`);
       if (!entry) throw new Error(`No EVM subscriber for network ${network}`);
-      const sub = entry.subscriber as unknown as {
-        getBlockNumber(): Promise<bigint>;
-      };
-      return sub.getBlockNumber();
+      if (!entry.subscriber.getBlockNumber) {
+        throw new Error(`Subscriber for ${network} does not support getBlockNumber`);
+      }
+      return entry.subscriber.getBlockNumber();
     };
 
     this.workers.register('incoming-tx-confirm-evm', {
@@ -526,7 +523,7 @@ export class IncomingTxMonitorService {
         const entries = this.multiplexer.getSubscribersForChain('solana');
         for (const { subscriber } of entries) {
           try {
-            await (subscriber as unknown as { pollAll(): Promise<void> }).pollAll();
+            await subscriber.pollAll?.();
           } catch (err) {
             console.warn('Solana polling worker error:', err);
           }
@@ -543,7 +540,7 @@ export class IncomingTxMonitorService {
           const entry = entries[i];
           if (!entry) continue;
           try {
-            await (entry.subscriber as unknown as { pollAll(): Promise<void> }).pollAll();
+            await entry.subscriber.pollAll?.();
           } catch (err) {
             console.warn('EVM polling worker error:', err);
           }

@@ -58,8 +58,8 @@ interface RetentionWorkerDeps {
 }
 
 interface GapRecoveryDeps {
-  /** Map of connection key ("chain:network") to subscriber with pollAll(). */
-  subscribers: Map<string, { subscriber: { pollAll: () => Promise<void> } }>;
+  /** Map of connection key ("chain:network") to subscriber with optional pollAll(). */
+  subscribers: Map<string, { subscriber: { pollAll?: () => Promise<void> } }>;
 }
 
 // ── Confirmation Worker ─────────────────────────────────────────────
@@ -198,7 +198,7 @@ export function createGapRecoveryHandler(
     }
 
     try {
-      await entry.subscriber.pollAll();
+      await entry.subscriber.pollAll?.();
     } catch (err) {
       console.warn(`Gap recovery failed for ${key}:`, err);
     }

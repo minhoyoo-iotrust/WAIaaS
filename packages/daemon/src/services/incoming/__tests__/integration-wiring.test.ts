@@ -86,11 +86,14 @@ function createMockWorkers() {
 
 function createMockSubscriberFactory() {
   return vi.fn().mockReturnValue({
+    chain: 'solana',
     connect: vi.fn().mockResolvedValue(undefined),
     waitForDisconnect: vi.fn().mockReturnValue(new Promise(() => {})),
     subscribe: vi.fn().mockResolvedValue(undefined),
     unsubscribe: vi.fn().mockResolvedValue(undefined),
+    subscribedWallets: vi.fn().mockReturnValue([]),
     pollAll: vi.fn().mockResolvedValue(undefined),
+    checkFinalized: vi.fn().mockResolvedValue(true),
     destroy: vi.fn().mockResolvedValue(undefined),
   });
 }
@@ -413,11 +416,14 @@ describe('BUG-3: Gap Recovery Wiring', () => {
 
     const mockPollAll = vi.fn().mockResolvedValue(undefined);
     const subscriberFactory = vi.fn().mockReturnValue({
+      chain: 'solana',
       connect: vi.fn().mockResolvedValue(undefined),
       waitForDisconnect: vi.fn().mockReturnValue(new Promise(() => {})),
       subscribe: vi.fn().mockResolvedValue(undefined),
       unsubscribe: vi.fn().mockResolvedValue(undefined),
+      subscribedWallets: vi.fn().mockReturnValue([]),
       pollAll: mockPollAll,
+      checkFinalized: vi.fn().mockResolvedValue(true),
       destroy: vi.fn().mockResolvedValue(undefined),
     });
 
@@ -453,5 +459,67 @@ describe('BUG-3: Gap Recovery Wiring', () => {
     expect(mockPollAll).not.toHaveBeenCalled();
 
     await service.stop();
+  });
+});
+
+// ===========================================================================
+// Section 4: IChainSubscriber Interface Contract Tests
+// ===========================================================================
+
+describe('IChainSubscriber interface contract', () => {
+  it('interface includes optional polling/confirmation methods', () => {
+    // Verify that a mock subscriber satisfying IChainSubscriber
+    // can have pollAll, checkFinalized, and getBlockNumber as optional methods
+    const subscriber = createMockSubscriberFactory()();
+
+    // Base methods (required)
+    expect(typeof subscriber.subscribe).toBe('function');
+    expect(typeof subscriber.unsubscribe).toBe('function');
+    expect(typeof subscriber.subscribedWallets).toBe('function');
+    expect(typeof subscriber.connect).toBe('function');
+    expect(typeof subscriber.waitForDisconnect).toBe('function');
+    expect(typeof subscriber.destroy).toBe('function');
+
+    // Optional polling/confirmation methods
+    expect(typeof subscriber.pollAll).toBe('function');
+    expect(typeof subscriber.checkFinalized).toBe('function');
+  });
+
+  it('pollAll is callable via optional chaining on IChainSubscriber', async () => {
+    const subscriber = createMockSubscriberFactory()();
+    // This mirrors how incoming-tx-monitor-service.ts calls pollAll
+    await subscriber.pollAll?.();
+    expect(subscriber.pollAll).toHaveBeenCalledTimes(1);
+  });
+
+  it('checkFinalized is callable via optional chaining on IChainSubscriber', async () => {
+    const subscriber = createMockSubscriberFactory()();
+    const result = await subscriber.checkFinalized?.('tx-hash-123');
+    expect(result).toBe(true);
+    expect(subscriber.checkFinalized).toHaveBeenCalledWith('tx-hash-123');
+  });
+
+  it('subscriber without optional methods works with optional chaining', async () => {
+    // A minimal subscriber without optional methods (e.g., a future chain adapter)
+    const minimalSubscriber = {
+      chain: 'solana' as const,
+      subscribe: vi.fn().mockResolvedValue(undefined),
+      unsubscribe: vi.fn().mockResolvedValue(undefined),
+      subscribedWallets: vi.fn().mockReturnValue([]),
+      connect: vi.fn().mockResolvedValue(undefined),
+      waitForDisconnect: vi.fn().mockReturnValue(new Promise(() => {})),
+      destroy: vi.fn().mockResolvedValue(undefined),
+      // No pollAll, checkFinalized, or getBlockNumber
+    };
+
+    // Optional chaining should return undefined without throwing
+    const pollResult = await minimalSubscriber.pollAll?.();
+    expect(pollResult).toBeUndefined();
+
+    const finalizedResult = await minimalSubscriber.checkFinalized?.('tx-hash');
+    expect(finalizedResult).toBeUndefined();
+
+    const blockResult = await minimalSubscriber.getBlockNumber?.();
+    expect(blockResult).toBeUndefined();
   });
 });
