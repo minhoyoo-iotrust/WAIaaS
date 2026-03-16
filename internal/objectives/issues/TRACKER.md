@@ -372,6 +372,10 @@
 | 356 | ENHANCEMENT | LOW | 지갑 상세 Overview 탭 Owner Protection 섹션을 Balances 위로 이동 | — | FIXED | 2026-03-16 |
 | 357 | ENHANCEMENT | LOW | 대시보드 DeFi Positions 섹션이 포지션 없으면 숨겨짐 — 항상 표시로 변경 | — | FIXED | 2026-03-16 |
 | 358 | ENHANCEMENT | LOW | Hyperliquid, Polymarket, Across Bridge 기본 활성화로 변경 | — | FIXED | 2026-03-16 |
+| 359 | BUG | MEDIUM | IncomingTxMonitor 시작 시 중복 getBlockNumber 호출로 429 Rate Limit 발생 | v32.4 | FIXED | 2026-03-16 |
+| 360 | ENHANCEMENT | LOW | Admin UI 사이드바 "Trading" → "Protocols" 섹션 이름 변경 + Agent Identity 이동 | — | OPEN | — |
+| 361 | BUG | HIGH | Admin UI NFT Indexer API 키 설정이 반영되지 않음 — GET 목록 누락 + Helius 키 이름 불일치 | v32.4 | FIXED | 2026-03-16 |
+| 362 | ENHANCEMENT | MEDIUM | 프로토콜 페이지 책임 분리 — Providers(운영 설정) vs 프로토콜 페이지(특화 기능) 중복 제거 | — | OPEN | — |
 
 ## Type Legend
 
@@ -383,9 +387,9 @@
 
 ## Summary
 
-- **OPEN:** 0
-- **FIXED:** 358
+- **OPEN:** 3
+- **FIXED:** 359
 - **WONTFIX:** 1
-- **Total:** 359
+- **Total:** 363
 - **Archived:** 321 (001–321)
 

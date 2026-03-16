@@ -1,7 +1,7 @@
 /**
  * Tests for admin settings API endpoints.
  *
- * 18 tests covering:
+ * 21 tests covering:
  * GET /v1/admin/settings:
  *   1. Returns 200 with all settings categories (including signing_sdk, telegram)
  *   2. Returns default values when no DB entries exist
@@ -622,5 +622,120 @@ describe('POST /admin/settings/test-rpc', () => {
     });
 
     expect(res.status).toBe(401);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /admin/api-keys -- NFT indexer keys (#361)
+// ---------------------------------------------------------------------------
+
+describe('GET /admin/api-keys -- NFT indexer keys', () => {
+  it('should include alchemy_nft and helius_das entries even without ActionProviderRegistry providers', async () => {
+    const config = fullConfig();
+    const settingsService = new SettingsService({ db, config, masterPassword: TEST_PASSWORD });
+    const { ActionProviderRegistry } = await import('../infrastructure/action/action-provider-registry.js');
+    const registry = new ActionProviderRegistry();
+
+    const app = createApp({
+      db,
+      masterPasswordHash: passwordHash,
+      config,
+      settingsService,
+      actionProviderRegistry: registry,
+    });
+
+    const res = await app.request('/v1/admin/api-keys', {
+      headers: masterHeaders(),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await json(res) as { keys: Array<{ providerName: string; hasKey: boolean; requiresApiKey: boolean }> };
+    const names = body.keys.map((k) => k.providerName);
+    expect(names).toContain('alchemy_nft');
+    expect(names).toContain('helius_das');
+
+    // Both should show hasKey: false when not configured
+    const alchemyNft = body.keys.find((k) => k.providerName === 'alchemy_nft')!;
+    expect(alchemyNft.hasKey).toBe(false);
+    expect(alchemyNft.requiresApiKey).toBe(true);
+
+    const heliusDas = body.keys.find((k) => k.providerName === 'helius_das')!;
+    expect(heliusDas.hasKey).toBe(false);
+    expect(heliusDas.requiresApiKey).toBe(true);
+  });
+
+  it('should reflect saved NFT indexer API key via PUT then GET roundtrip', async () => {
+    const config = fullConfig();
+    const settingsService = new SettingsService({ db, config, masterPassword: TEST_PASSWORD });
+    const { ActionProviderRegistry } = await import('../infrastructure/action/action-provider-registry.js');
+    const registry = new ActionProviderRegistry();
+
+    const app = createApp({
+      db,
+      masterPasswordHash: passwordHash,
+      config,
+      settingsService,
+      actionProviderRegistry: registry,
+    });
+
+    // Save helius_das API key via PUT /admin/api-keys/helius_das
+    const putRes = await app.request('/v1/admin/api-keys/helius_das', {
+      method: 'PUT',
+      headers: masterJsonHeaders(),
+      body: JSON.stringify({ apiKey: 'test-helius-key-12345' }),
+    });
+    expect(putRes.status).toBe(200);
+
+    // GET should now show helius_das as configured
+    const getRes = await app.request('/v1/admin/api-keys', {
+      headers: masterHeaders(),
+    });
+    expect(getRes.status).toBe(200);
+
+    const body = await json(getRes) as { keys: Array<{ providerName: string; hasKey: boolean; maskedKey: string | null }> };
+    const heliusDas = body.keys.find((k) => k.providerName === 'helius_das')!;
+    expect(heliusDas.hasKey).toBe(true);
+    expect(heliusDas.maskedKey).not.toBeNull();
+
+    // Verify the key is retrievable by the same setting key that NftIndexerClient uses
+    const storedValue = settingsService.get('actions.helius_das_api_key');
+    expect(storedValue).toBe('test-helius-key-12345');
+  });
+
+  it('should reflect saved alchemy_nft API key via PUT then GET roundtrip', async () => {
+    const config = fullConfig();
+    const settingsService = new SettingsService({ db, config, masterPassword: TEST_PASSWORD });
+    const { ActionProviderRegistry } = await import('../infrastructure/action/action-provider-registry.js');
+    const registry = new ActionProviderRegistry();
+
+    const app = createApp({
+      db,
+      masterPasswordHash: passwordHash,
+      config,
+      settingsService,
+      actionProviderRegistry: registry,
+    });
+
+    // Save alchemy_nft API key
+    const putRes = await app.request('/v1/admin/api-keys/alchemy_nft', {
+      method: 'PUT',
+      headers: masterJsonHeaders(),
+      body: JSON.stringify({ apiKey: 'test-alchemy-key-67890' }),
+    });
+    expect(putRes.status).toBe(200);
+
+    // GET should now show alchemy_nft as configured
+    const getRes = await app.request('/v1/admin/api-keys', {
+      headers: masterHeaders(),
+    });
+    expect(getRes.status).toBe(200);
+
+    const body = await json(getRes) as { keys: Array<{ providerName: string; hasKey: boolean }> };
+    const alchemyNft = body.keys.find((k) => k.providerName === 'alchemy_nft')!;
+    expect(alchemyNft.hasKey).toBe(true);
+
+    // Verify the key is retrievable by the same setting key that NftIndexerClient uses
+    const storedValue = settingsService.get('actions.alchemy_nft_api_key');
+    expect(storedValue).toBe('test-alchemy-key-67890');
   });
 });

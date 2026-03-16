@@ -500,6 +500,24 @@ export function registerAdminSettingsRoutes(router: OpenAPIHono, deps: AdminRout
       };
     });
 
+    // Include NFT indexer keys (infrastructure, not in ActionProviderRegistry)
+    const NFT_INDEXER_PROVIDERS = ['alchemy_nft', 'helius_das'];
+    for (const name of NFT_INDEXER_PROVIDERS) {
+      // Skip if already present from ActionProviderRegistry (shouldn't happen, but guard)
+      if (keys.some((k) => k.providerName === name)) continue;
+
+      const hasKey = ss ? ss.hasApiKey(name) : false;
+      const maskedKey = ss ? ss.getApiKeyMasked(name) : null;
+      const updatedAt = ss ? ss.getApiKeyUpdatedAt(name) : null;
+      keys.push({
+        providerName: name,
+        hasKey,
+        maskedKey,
+        requiresApiKey: true,
+        updatedAt: updatedAt instanceof Date ? updatedAt.toISOString() : null,
+      });
+    }
+
     return c.json({ keys }, 200);
   });
 
