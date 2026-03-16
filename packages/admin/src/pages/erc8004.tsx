@@ -6,15 +6,15 @@
  * 2. Registration File - JSON tree viewer + URL copy
  * 3. Reputation - Score dashboard, tag filter, external lookup
  *
- * Toggle at the top enables/disables the feature (persisted via PUT /v1/admin/settings).
- * When disabled: read-only Identity tab shown, management tabs hidden.
+ * Enable/disable and tier settings are managed in the Providers page.
+ * When disabled: shows a banner directing users to Providers settings.
  */
 
 import { useSignal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
 import { api, ApiError } from '../api/typed-client';
 import type { components } from '../api/types.generated';
-import { Button, Badge, FormField } from '../components/form';
+import { Button, Badge } from '../components/form';
 import { Modal } from '../components/modal';
 import { CopyButton } from '../components/copy-button';
 import { EmptyState } from '../components/empty-state';
@@ -116,31 +116,12 @@ function JsonTree({ data, depth = 0 }: { data: unknown; depth?: number }) {
 // Component
 // ---------------------------------------------------------------------------
 
-// ---------------------------------------------------------------------------
-// Types for provider actions
-// ---------------------------------------------------------------------------
-
-interface ProviderAction {
-  name: string;
-  description: string;
-  chain: string;
-  riskLevel: string;
-  defaultTier: string;
-}
-
 export default function Erc8004Page() {
   const activeTab = useSignal('identity');
   const loading = useSignal(true);
   const featureEnabled = useSignal(false);
   const wallets = useSignal<Wallet[]>([]);
-  const erc8004Actions = useSignal<ProviderAction[]>([]);
   const agents = useSignal<AgentEntry[]>([]);
-
-  // Settings state for tier overrides
-  const settings = useSignal<SettingsData>({});
-
-  // Toggle state
-  const toggleSaving = useSignal(false);
 
   // Register modal state
   const showRegisterModal = useSignal(false);
@@ -176,18 +157,10 @@ export default function Erc8004Page() {
     try {
       // Check feature gate (unified nested SettingsData format)
       const { data: settingsData } = await api.GET('/v1/admin/settings');
-      settings.value = settingsData as unknown as SettingsData;
       const actionsCategory = (settingsData as unknown as SettingsData)['actions'] as Record<string, string> | undefined;
       featureEnabled.value = actionsCategory?.['erc8004_agent_enabled'] === 'true';
 
-      // Fetch erc8004_agent actions from providers list
-      try {
-        const { data: result } = await api.GET('/v1/actions/providers');
-        const erc8004 = (result as unknown as { providers: Array<{ name: string; actions: ProviderAction[] }> }).providers?.find(p => p.name === 'erc8004_agent');
-        erc8004Actions.value = erc8004?.actions ?? [];
-      } catch { /* keep empty */ }
-
-      // Always load wallets and agent entries (for read-only table when disabled)
+      // Load wallets and agent entries
       const { data: result } = await api.GET('/v1/wallets');
       const walletList = result!.items ?? [];
       wallets.value = walletList;
@@ -227,27 +200,6 @@ export default function Erc8004Page() {
   }
 
   useEffect(() => { loadData(); }, []);
-
-  // -----------------------------------------------------------------------
-  // Toggle handler
-  // -----------------------------------------------------------------------
-
-  async function handleToggleEnabled(newEnabled: boolean) {
-    toggleSaving.value = true;
-    try {
-      await api.PUT('/v1/admin/settings', {
-        body: { settings: [{ key: 'actions.erc8004_agent_enabled', value: String(newEnabled) }] },
-      });
-      featureEnabled.value = newEnabled;
-      showToast(`Agent Identity ${newEnabled ? 'enabled' : 'disabled'}`, 'success');
-      // Reload data to refresh UI
-      await loadData();
-    } catch (err) {
-      if (err instanceof ApiError) showToast(getErrorMessage(err.code), 'error');
-    } finally {
-      toggleSaving.value = false;
-    }
-  }
 
   // -----------------------------------------------------------------------
   // Register agent
@@ -408,42 +360,6 @@ export default function Erc8004Page() {
   }
 
   // -----------------------------------------------------------------------
-  // Tier override helpers (Phase 331)
-  // -----------------------------------------------------------------------
-
-  function getTierOverride(providerKey: string, actionName: string): string {
-    const cat = settings.value['actions'] as Record<string, string> | undefined;
-    return cat?.[`${providerKey}_${actionName}_tier`] || '';
-  }
-
-  function isOverridden(providerKey: string, actionName: string): boolean {
-    const override = getTierOverride(providerKey, actionName);
-    return override !== '' && override !== undefined;
-  }
-
-  async function handleTierChange(providerKey: string, actionName: string, newTier: string) {
-    const settingKey = `actions.${providerKey}_${actionName}_tier`;
-    try {
-      const { data: result } = await api.PUT('/v1/admin/settings', { body: { settings: [{ key: settingKey, value: newTier }] } });
-      settings.value = result!.settings as unknown as SettingsData;
-      showToast(`Tier updated for ${providerKey}/${actionName}`, 'success');
-    } catch (err) {
-      if (err instanceof ApiError) showToast(getErrorMessage(err.code), 'error');
-    }
-  }
-
-  async function handleTierReset(providerKey: string, actionName: string) {
-    const settingKey = `actions.${providerKey}_${actionName}_tier`;
-    try {
-      const { data: result } = await api.PUT('/v1/admin/settings', { body: { settings: [{ key: settingKey, value: '' }] } });
-      settings.value = result!.settings as unknown as SettingsData;
-      showToast(`Tier reset to default for ${providerKey}/${actionName}`, 'success');
-    } catch (err) {
-      if (err instanceof ApiError) showToast(getErrorMessage(err.code), 'error');
-    }
-  }
-
-  // -----------------------------------------------------------------------
   // Tab filtering: only show Identity tab when disabled
   // -----------------------------------------------------------------------
 
@@ -466,31 +382,27 @@ export default function Erc8004Page() {
 
   return (
     <div>
-      {/* Toggle section -- always visible */}
-      <div class="settings-category" style={{ marginBottom: 'var(--space-4)' }}>
-        <div class="settings-category-header">
-          <h3 style={{ margin: 0 }}>ERC-8004 Agent Identity</h3>
-        </div>
-        <div class="settings-category-body">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-            <FormField
-              label="Enabled"
-              name="actions.erc8004_agent_enabled"
-              type="checkbox"
-              value={featureEnabled.value}
-              onChange={(v) => handleToggleEnabled(!!v)}
-              disabled={toggleSaving.value}
-            />
-            {toggleSaving.value && <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)' }}>Saving...</span>}
-          </div>
-        </div>
-      </div>
-
-      {/* Disabled message */}
+      {/* Disabled banner -- shown when feature is disabled in Providers */}
       {!loading.value && !featureEnabled.value && (
-        <div class="empty-state" style={{ marginTop: 'var(--space-3)' }}>
-          <p>Agent Identity features are disabled. Enable the toggle above to manage agent registrations, reputation, and wallet linking.</p>
+        <div style={{
+          padding: 'var(--space-3) var(--space-4)',
+          marginBottom: 'var(--space-4)',
+          background: 'var(--color-bg-secondary)',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--radius-md)',
+          fontSize: 'var(--font-size-sm)',
+          color: 'var(--color-text-muted)',
+        }}>
+          Agent Identity is currently disabled.{' '}
+          <a href="#/providers" style={{ color: 'var(--color-primary)' }}>Enable this protocol in Providers settings</a>
         </div>
+      )}
+
+      {/* Providers link when enabled */}
+      {!loading.value && featureEnabled.value && (
+        <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-3)' }}>
+          <a href="#/providers" style={{ color: 'var(--color-primary)' }}>Configure in Protocols &gt; Providers</a>
+        </p>
       )}
 
       {/* Tabs + content */}
@@ -568,60 +480,6 @@ export default function Erc8004Page() {
                   <div style={{ marginTop: 'var(--space-2)' }}>
                     <CopyButton value={linkingUri.value} label="Copy URI" />
                   </div>
-                </div>
-              )}
-
-              {/* Registered Actions section (Phase 331) */}
-              {erc8004Actions.value.length > 0 && (
-                <div style={{ marginTop: 'var(--space-4)', borderTop: '1px solid var(--border)', paddingTop: 'var(--space-3)' }}>
-                  <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-2)', color: 'var(--text-secondary)' }}>
-                    Registered Actions
-                  </div>
-                  <table class="table">
-                    <thead>
-                      <tr>
-                        <th>Name</th>
-                        <th>Description</th>
-                        <th>Risk Level</th>
-                        <th>Tier</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {erc8004Actions.value.map(action => (
-                        <tr key={action.name}>
-                          <td>{action.name}</td>
-                          <td style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)', maxWidth: '300px' }}>{action.description}</td>
-                          <td>{action.riskLevel}</td>
-                          <td>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                              <select
-                                value={getTierOverride('erc8004_agent', action.name) || action.defaultTier}
-                                onChange={(e) => handleTierChange('erc8004_agent', action.name, (e.target as HTMLSelectElement).value)}
-                                style={{ padding: '2px 4px', fontSize: 'var(--font-size-sm)', borderRadius: 'var(--radius-sm)' }}
-                                disabled={!featureEnabled.value}
-                              >
-                                {['INSTANT', 'NOTIFY', 'DELAY', 'APPROVAL'].map(t => (
-                                  <option key={t} value={t}>{t}</option>
-                                ))}
-                              </select>
-                              {isOverridden('erc8004_agent', action.name) && featureEnabled.value && (
-                                <>
-                                  <Badge variant="warning">customized</Badge>
-                                  <button
-                                    onClick={() => handleTierReset('erc8004_agent', action.name)}
-                                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 'var(--font-size-xs)', color: 'var(--text-secondary)', textDecoration: 'underline' }}
-                                    title="Reset to provider default"
-                                  >
-                                    reset
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
                 </div>
               )}
             </div>
