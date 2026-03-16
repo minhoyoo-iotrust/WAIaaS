@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.11.0-rc.17](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.16...v2.11.0-rc.17) (2026-03-16)
+
+
+### Bug Fixes
+
+* register cors_origins setting key and fix array serialization ([9c3b659](https://github.com/minhoyoo-iotrust/WAIaaS/commit/9c3b659ddd459c894c456982c800a5b83ce66c68))
+
 ## [2.11.0-rc.16](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.15...v2.11.0-rc.16) (2026-03-16)
 
 
