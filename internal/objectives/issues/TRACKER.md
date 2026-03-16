@@ -23,7 +23,9 @@
 | 373 | BUG | HIGH | Pendle Yield buy_pt API 응답 스키마 불일치 (array vs object) | v32.5 | FIXED | 2026-03-16 |
 | 374 | MISSING | HIGH | KaminoSdkWrapper 실제 SDK 연결 구현 — 스텁에서 동적 import 기반 실제 연결로 전환 | v32.5 | FIXED | 2026-03-16 |
 | 375 | MISSING | HIGH | DriftSdkWrapper 실제 SDK 연결 구현 — 스텁에서 동적 import 기반 실제 연결로 전환 | v32.5 | FIXED | 2026-03-16 |
-| 376 | BUG | MEDIUM | E2E wallet-purge-cascades-data 정책 생성 스키마 불일치 — params/maxAmount 구버전 필드 사용 | — | OPEN | — |
+| 376 | BUG | MEDIUM | E2E wallet-purge-cascades-data 정책 생성 스키마 불일치 — params/maxAmount 구버전 필드 사용 | v32.5 | FIXED | 2026-03-16 |
+| 377 | ENHANCEMENT | LOW | advanced-02 WalletConnect Owner 승인 UAT 시나리오 제거 — DCent 지갑 연동 중심으로 전환 | v32.5 | FIXED | 2026-03-16 |
+| 378 | ENHANCEMENT | LOW | Agent UAT admin-ops 카테고리 신설 + 시나리오 재배치 — Admin 권한 필요 시나리오 분리, advanced-04 중복 제거 | v32.5 | FIXED | 2026-03-16 |
 
 ## Type Legend
 
@@ -35,8 +37,8 @@
 
 ## Summary
 
-- **OPEN:** 1
-- **FIXED:** 375
+- **OPEN:** 0
+- **FIXED:** 378
 - **WONTFIX:** 1
-- **Total:** 377
+- **Total:** 379
 - **Archived:** 366 (001–366)
