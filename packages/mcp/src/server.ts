@@ -1,5 +1,5 @@
 /**
- * createMcpServer: factory that creates an MCP server with 41 tools + 4 resource groups (3 static + 1 template).
+ * createMcpServer: factory that creates an MCP server with 42 tools + 4 resource groups (3 static + 1 template).
  *
  * Each tool/resource is registered via a dedicated register function
  * from its own module, following Dependency Injection pattern.
