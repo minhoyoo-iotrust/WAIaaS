@@ -27,7 +27,6 @@ import {
   encodeBalanceOfCalldata,
   encodeStEthPerTokenCalldata,
   decodeUint256Result,
-  WSTETH_MAINNET,
   LIDO_NETWORK_CONFIG,
   LIDO_TESTNET_NETWORK_CONFIG,
   type LidoNetworkContracts,
@@ -64,11 +63,8 @@ export class LidoStakingActionProvider implements IActionProvider {
   readonly actions: readonly ActionDefinition[];
 
   private readonly config: LidoStakingConfig;
-  private readonly rpcUrl?: string;
-
   constructor(config?: Partial<LidoStakingConfig>) {
     this.config = { ...LIDO_STAKING_DEFAULTS, ...config };
-    this.rpcUrl = this.config.rpcUrl;
 
     this.metadata = {
       name: 'lido_staking',

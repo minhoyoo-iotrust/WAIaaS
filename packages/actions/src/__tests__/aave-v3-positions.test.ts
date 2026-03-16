@@ -445,7 +445,7 @@ describe('AaveV3LendingProvider Multichain Positions', () => {
     const balance1e18 = '0x' + (10n ** 18n).toString(16).padStart(64, '0');
 
     // Mock fetch to respond based on rpcUrl
-    fetchMock.mockImplementation(async (url: string, opts: { body: string }) => {
+    fetchMock.mockImplementation(async (_url: string, opts: { body: string }) => {
       const body = JSON.parse(opts.body);
       const calldata = body.params?.[0]?.data as string;
 

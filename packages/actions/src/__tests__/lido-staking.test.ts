@@ -569,6 +569,6 @@ describe('LidoStakingActionProvider Multichain Positions', () => {
     expect(ethPos.length).toBeGreaterThan(0);
     expect(arbPos.length).toBeGreaterThan(0);
     // No position should have a mismatched network
-    expect(positions.every(p => ['ethereum-mainnet', 'arbitrum-mainnet'].includes(p.network))).toBe(true);
+    expect(positions.every(p => ['ethereum-mainnet', 'arbitrum-mainnet'].includes(p.network as string))).toBe(true);
   });
 });
