@@ -1,197 +1,319 @@
-# Domain Pitfalls: Contract Name Resolution
+# Pitfalls Research
 
-**Domain:** Contract name resolution for multi-chain wallet notification system
-**Researched:** 2026-03-15
+**Domain:** Type Safety + Code Quality Improvements for Production TypeScript Monorepo
+**Researched:** 2026-03-16
+**Confidence:** HIGH (based on direct codebase analysis + established TypeScript migration patterns)
 
 ## Critical Pitfalls
 
-### Pitfall 1: EVM Address Case Sensitivity in Registry Lookup
+### Pitfall 1: Zod Schema Too Strict for Existing DB Data
 
-**What goes wrong:** Well-known 컨트랙트 레지스트리에 EIP-55 checksum 주소(`0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2`)로 저장했는데, 파이프라인에서 전달되는 `to` 주소가 lowercase(`0xc02aaa39...`)이면 매칭 실패. 기존 CONTRACT_WHITELIST 정책 엔진은 `c.address.toLowerCase() === contractAddress.toLowerCase()` 패턴으로 비교하지만, 신규 레지스트리 조회 코드에서 이 패턴을 누락하면 이름 해석이 실패한다.
+**What goes wrong:**
+Zod 검증을 `JSON.parse()` 결과에 추가할 때, 기존 DB에 저장된 데이터가 현재 스키마와 불일치하여 런타임 에러 발생. 현재 `database-policy-engine.ts`에 21개의 `JSON.parse(policy.rules)` 호출이 type assertion만 사용 중 (`as SpendingLimitRules` 등). Zod로 전환 시 과거 마이그레이션 이전에 저장된 정책 데이터(예: `instant_max`가 required였던 시기의 데이터)가 즉시 실패할 수 있음.
 
-**Why it happens:** EVM 주소는 3가지 형태가 공존한다: (1) EIP-55 checksum mixed-case, (2) all-lowercase, (3) all-uppercase. viem은 기본적으로 getAddress()로 checksum 변환하지만, 파이프라인 내부의 `req.to`는 사용자 입력 그대로 전달될 수 있다. Solana 주소는 Base58로 case-sensitive이므로 EVM과 동일한 정규화 로직을 적용하면 오히려 매칭이 깨진다.
+**Why it happens:**
+- 스키마가 시간에 따라 진화했지만 DB 데이터는 저장 시점의 구조를 유지 (Phase 235에서 `instant_max`가 optional로 변경된 것이 대표적 예)
+- `JSON.parse() as Type`은 런타임 검증 없이 통과하지만, Zod `.parse()`는 즉시 throw
+- SQLite의 JSON 컬럼은 스키마 제약이 없어 다양한 형태의 데이터가 공존
 
-**Consequences:** CONTRACT_CALL 알림에서 Uniswap Router 같은 well-known 컨트랙트가 raw 주소로 표시됨. 사용자 경험 손상. 간헐적이라 테스트에서 놓치기 쉬움 (테스트가 항상 동일 형태 주소를 사용하므로).
+**How to avoid:**
+1. **`.safeParse()` + fallback 패턴**: `.parse()` 대신 `.safeParse()`를 사용하고, 실패 시 레거시 호환 파싱 경로 제공
+2. **Permissive schema first**: `.passthrough()` + `.partial()`로 시작, 점진적으로 strict 전환
+3. **DB 스캔 먼저**: 변경 전에 기존 데이터를 모두 읽어 스키마 호환성 확인하는 마이그레이션 스크립트 작성
+4. **정책 rules 스키마를 `z.preprocess()`로 감싸기**: 레거시 필드명/구조를 정규화한 후 검증
 
-**Prevention:**
-- 레지스트리 키를 **항상 lowercase**로 저장하고, 조회 시 EVM 주소는 `.toLowerCase()` 적용
-- Solana 주소는 Base58 그대로 exact match (대소문자 구분 필수)
-- 체인 타입 판별 후 정규화 함수를 분기: `normalizeForLookup(address, chain)`
-- 테스트에 checksum/lowercase/uppercase 3가지 변형 포함
+**Warning signs:**
+- 테스트는 통과하지만 실제 운영 DB에서 실패 (테스트 픽스처는 최신 스키마로만 작성)
+- `safeParse`가 아닌 `parse`를 바로 사용하는 코드
+- Zod 스키마에 `.default()` 없이 새 필드를 required로 추가
 
-**Detection:** `to_display` 변수가 raw 주소로 채워지는 비율 모니터링. Well-known 주소인데 이름이 해석되지 않으면 경고.
-
----
-
-### Pitfall 2: Notification Template Backward Compatibility 파괴
-
-**What goes wrong:** 기존 알림 템플릿 `{to}` 변수에 raw 주소가 들어가던 것을 `to_display` 변수로 교체하면서, 기존 템플릿을 업데이트하지 않거나 i18n 양쪽(en/ko) 중 하나만 수정하면 한쪽 언어에서 변수가 미치환 상태로 남는다.
-
-**Why it happens:** 현재 `getNotificationMessage()`는 미치환 placeholder를 빈 문자열로 대체하는 safety net이 있지만, 허용 리스트가 `['{display_amount}', '{type}', '{amount}', '{to}']` 로 하드코딩되어 있다. `{to_display}` 같은 신규 변수를 이 리스트에 추가하지 않으면, 미치환 시 `{to_display}`가 알림 본문에 그대로 노출된다.
-
-**Consequences:** 사용자에게 `{to_display}`라는 raw placeholder 텍스트가 알림으로 전송됨. 프로페셔널하지 못한 인상. 특히 Telegram/Discord 등 외부 채널에 노출되면 즉시 사용자 불만.
-
-**Prevention:**
-- 신규 변수 `to_display`를 message-templates.ts의 fallback placeholder 리스트에 반드시 추가
-- en.ts, ko.ts 양쪽 모두 동일한 변수 업데이트 (TypeScript `Messages` 인터페이스가 키 parity를 강제하므로 title/body 내부 변수까지는 검증 불가)
-- 변수 치환 후 `{...}` 패턴이 남아있으면 경고 로그를 남기는 방어 코드 추가
-- 알림 관련 4개 이벤트(TX_REQUESTED, TX_APPROVAL_REQUIRED, TX_SUBMITTED, TX_CONFIRMED) 모두에 대해 테스트에서 `to_display` 포함 여부 검증
-
-**Detection:** 알림 본문에 `{` 문자가 포함된 채로 전송되면 notification_logs에서 감지 가능.
+**Phase to address:**
+Phase 1 (DatabasePolicyEngine Zod 검증). 가장 먼저 해결해야 함 -- 21개 `JSON.parse` 지점이 집중되어 있고 정책 평가 실패는 트랜잭션 차단으로 이어짐.
 
 ---
 
-### Pitfall 3: Action Provider Metadata 매핑 누락으로 1순위 해석 실패
+### Pitfall 2: `as any` 제거 시 런타임 동작 변경
 
-**What goes wrong:** Action Provider의 `metadata.name`은 `jupiter_swap`, `aave_v3_lending` 같은 snake_case 내부 식별자인데, 이것을 사용자에게 보여줄 `displayName`(예: "Jupiter", "Aave V3")으로 변환하는 매핑이 불완전하면 1순위(비용 0) 해석이 대부분의 프로바이더에서 실패하고 Well-known 레지스트리로 fallback된다.
+**What goes wrong:**
+`as any`는 타입 시스템만 우회하는 것이 아니라, 해당 코드가 특정 런타임 동작에 의존하고 있을 수 있음. 제거 후 올바른 타입을 부여하면 TypeScript 컴파일러가 다른 코드 경로를 선택하게 만들거나, 타입 narrowing이 달라져 런타임 동작이 변경됨.
 
-**Why it happens:** 현재 `ActionProviderMetadataSchema`에 `displayName` 필드가 없다. `name` 필드만 존재하고, 이는 regex `/^[a-z][a-z0-9_]*$/`로 제한되어 사람이 읽기 어려운 형태다. displayName 추가는 스키마 변경이므로 모든 기존 프로바이더(20+개) 메타데이터를 업데이트해야 한다.
+**Why it happens:**
+현재 코드베이스의 프로덕션 `as any` 패턴별 위험도가 다름:
 
-**Consequences:** displayName이 없는 프로바이더는 `jupiter_swap` 같은 내부 이름이 그대로 노출되거나, 무조건 Well-known 레지스트리로 fallback. Action Provider 메타데이터 활용이라는 핵심 가치 훼손.
+| 패턴 | 건수 | 위험도 | 예시 |
+|------|------|--------|------|
+| WC `(db as any).session?.client` | 8건 | HIGH | Drizzle 내부 구조 접근, 버전 업시 깨짐 |
+| `policyEngine: null as any` | 2건 | MEDIUM | null을 주입하는 의도적 우회, 실제 호출 시 NPE |
+| `network as any` (CAIP 변환) | 6건 | LOW | 타입 좁히기 부족, 수정 안전 |
+| Solana `instruction as any` | 5건 | HIGH | @solana/kit 6.x 타입 불일치, 라이브러리 제약 |
+| hot-reload `pool.evict('solana' as any)` | 4건 | MEDIUM | 함수 시그니처와 실제 사용 불일치 |
+| `bundlerClient as any` (AA pipeline) | 4건 | HIGH | permissionless/viem 타입 불일치, 메서드 존재 여부 보장 없음 |
+| action-provider-registry mutation | 3건 | LOW | 타입에 없는 필드 추가, 오브젝트 mutation |
+| eip712-signer domain/types/message | 3건 | MEDIUM | viem EIP-712 타입과 내부 타입 불일치 |
+| external-action-pipeline | 4건 | MEDIUM | 파이프라인 context 타입 확장 필요 |
 
-**Prevention:**
-- `displayName`을 optional 필드로 추가 (`.optional().default(undefined)`)하여 기존 프로바이더 호환성 유지
-- displayName이 없으면 `name`에서 자동 변환하는 유틸리티: `jupiter_swap` -> `Jupiter Swap`
-- 기존 20+개 프로바이더에 displayName을 일괄 추가하는 것을 별도 phase로 분리하지 말 것 -- 같은 phase에서 처리해야 누락 방지
-- 프로바이더 등록 시 displayName 누락 경고 로그
+**How to avoid:**
+1. **카테고리별 분류 후 접근**: 각 `as any`의 이유를 파악하고 제거 전략을 카테고리별로 수립
+2. **외부 라이브러리 타입 불일치 (`@solana/kit`, WalletConnect, permissionless)**: 타입 단언을 제거하는 대신 wrapper function으로 타입 경계를 명시. 라이브러리 타입이 불완전한 경우 `.d.ts` 확장 사용
+3. **의도적 우회 (`policyEngine: null as any`)**: 타입을 `IPolicyEngine | null`로 확장하거나, optional parameter로 리팩토링
+4. **각 제거 건에 대해 기존 테스트 + regression 테스트 실행**: 특히 WC 8건과 bundlerClient 4건은 E2E 시나리오 필수
 
-**Detection:** Action Provider 경유 CONTRACT_CALL인데 `to_display`가 Well-known 또는 Whitelist 레벨에서 해석되면, Action Provider 매핑 누락 신호.
+**Warning signs:**
+- `as any` 제거 후 TypeScript가 다른 오버로드를 선택
+- 제거 후 새로운 `Property does not exist` 에러가 나타남 (실제 런타임에서도 없을 수 있음)
+- 테스트에서 mock이 `as any`를 사용하여 실제 타입과 괴리
+
+**Phase to address:**
+Phase 3 (`as any` 24건 제거). WC/bundlerClient 같은 외부 라이브러리 의존은 별도 단계로 분리하여 안전하게 처리.
 
 ---
 
-### Pitfall 4: ContractNameResolver에서 동기/비동기 혼합으로 알림 지연
+### Pitfall 3: SSoT 통합 시 Export 변경으로 다운스트림 깨짐
 
-**What goes wrong:** 알림 파이프라인(`notify()`)은 fire-and-forget 패턴으로 동작하지만, 변수 준비(`vars`)는 Stage 1(TX_REQUESTED) 시점에서 동기적으로 수행된다. ContractNameResolver가 RPC 호출이나 비동기 레지스트리 조회를 포함하면 파이프라인 전체가 블로킹된다.
+**What goes wrong:**
+중복 코드를 SSoT로 통합할 때 (예: `NATIVE_DECIMALS`, `sleep`, `formatDisplayCurrency`를 `@waiaas/core` 또는 `@waiaas/shared`로 이동), 기존 import 경로가 변경되면서:
+- 다른 패키지의 빌드가 실패
+- re-export를 빼먹어 외부 사용자(SDK 사용자)의 코드가 깨짐
+- 번들 사이즈가 증가 (barrel export로 tree-shaking 실패)
 
-**Why it happens:** 현재 `stages.ts`에서 TX_REQUESTED 알림의 vars는 `formatNotificationAmount()` 등 동기 함수로 즉시 구성된다. 4단계 우선순위 해석 중 Action Provider/Well-known/Whitelist는 모두 인메모리이므로 동기 가능하지만, Fallback 단계에서 on-chain 조회를 추가하면 비동기가 된다.
+**Why it happens:**
+- 12개 패키지 모노레포에서 `@waiaas/core`가 중앙 허브 역할, 이동 시 영향 범위가 넓음
+- `@waiaas/shared`가 이미 상수 모듈로 존재하지만, core와 shared의 경계가 불명확
+- TypeScript `composite: true` 프로젝트에서 export 변경은 다운스트림 `.d.ts` 재생성 필요
 
-**Consequences:** 파이프라인 Stage 1에서 예상치 못한 지연 발생. 특히 RPC 호출이 실패하거나 타임아웃되면 전체 트랜잭션 처리가 블로킹됨. 현재 설계에서 `void ctx.notificationService?.notify(...)` 패턴은 fire-and-forget이므로 알림 자체는 블로킹하지 않지만, **변수 준비가 동기적으로 파이프라인 내에서 수행**된다면 문제.
+**How to avoid:**
+1. **Re-export bridge**: 원래 위치에서 새 위치를 re-export하여 하위 호환 유지, deprecation 주석 추가
+2. **`pnpm turbo run typecheck` 전체 실행**: 이동 후 반드시 전 패키지 typecheck
+3. **SDK public API는 건드리지 않기**: `@waiaas/sdk`의 public export는 유지, 내부 이동만 수행
+4. **barrel export 대신 named import 유지**: `@waiaas/core`에서 모든 것을 re-export하지 말고 서브패스 import 사용
 
-**Prevention:**
-- ContractNameResolver는 순수 인메모리 조회만 수행 (RPC 호출 절대 금지)
-- 4단계 우선순위 중 Action Provider/Well-known/Whitelist 3단계만 구현, Fallback은 축약 주소
-- 해석 함수 시그니처를 `resolve(address, chain): string` 동기 함수로 강제
-- 미래에 on-chain 해석이 필요하면 background job으로 캐시 선행 적재
+**Warning signs:**
+- `pnpm turbo run typecheck`에서 일부 패키지만 실패
+- import 경로가 3단계 이상 깊어짐 (architecture smell)
+- `@waiaas/core`의 index.ts가 비대해짐
 
-**Detection:** Stage 1 소요 시간 모니터링. 1ms 이상이면 비동기 호출 혼입 가능성.
+**Phase to address:**
+Phase 4 (중복 코드 SSoT 통합). typecheck gate를 phase 진입 조건으로 설정.
 
-## Moderate Pitfalls
+---
 
-### Pitfall 5: Well-known 레지스트리 체인별 주소 중복/불일치
+### Pitfall 4: 레이어 위반 수정 시 Import Cycle 생성
 
-**What goes wrong:** 동일 프로토콜(예: USDC)이 5개 EVM 체인에서 서로 다른 컨트랙트 주소를 가진다. 레지스트리 키를 `address`만으로 하면, 체인 A의 Uniswap Router 주소가 체인 B에서는 전혀 다른 컨트랙트일 수 있다. 잘못된 이름 표시는 raw 주소보다 더 위험하다.
+**What goes wrong:**
+레이어 위반을 수정하면서 (예: service 레이어가 route 레이어를 import) 의존성 방향을 바꾸면, 간접적으로 순환 참조가 발생. Node.js ESM에서 순환 참조는 `undefined` import로 나타나 런타임에 `TypeError: X is not a function` 에러.
 
-**Why it happens:** 프로토콜 배포 주소는 체인마다 다르다 (CREATE2로 동일 주소를 달성하는 프로토콜도 있지만 소수). 단순한 `Map<address, name>` 구조로는 체인 구분 불가.
+**Why it happens:**
+- `IChainSubscriber` 인터페이스 확장 + 레이어 위반 수정이 milestone 대상
+- 현재 daemon 패키지의 레이어 구조: `api/routes` -> `services` -> `infrastructure` -> `core`
+- 수정 시 interface를 상위 레이어로 올리면 하위 레이어에서 import해야 하는 역방향 의존 발생
+- TypeScript에서는 컴파일 시점에 cycle을 감지하지 못하고, ESM 런타임에서만 문제 발생
 
-**Consequences:** Polygon의 SushiSwap Router 주소가 Ethereum에서는 전혀 다른 컨트랙트인데, "SushiSwap" 으로 표시됨. 잘못된 정보 제공은 미표시보다 심각.
+**How to avoid:**
+1. **Interface는 항상 core/types 레벨에 배치**: 구현체와 인터페이스를 분리, 인터페이스는 가장 하위 레이어에
+2. **`madge --circular` 또는 `dpdm` 도구로 cycle 탐지**: 레이어 이동 후 반드시 실행
+3. **`import type` 분리**: `import type`은 cycle을 만들지 않으므로, runtime import와 type import를 구분
+4. **Dependency Inversion**: 콘크리트 클래스 대신 인터페이스에 의존, DI 컨테이너에서 조립
 
-**Prevention:**
-- 레지스트리 키를 `{chain}:{lowercaseAddress}` 복합 키로 설계
-- 체인 파라미터 없이 조회 불가능하도록 API 강제
-- CREATE2 동일 주소 프로토콜은 별도 `universalContracts` 섹션으로 분리하되, 체인별 검증 후에만 사용
-- 테스트에서 각 체인별 독립 조회 검증
+**Warning signs:**
+- `import type` 아닌 `import`로 인터페이스를 가져오는 코드
+- 한 파일이 같은 패키지의 상위/하위 레이어를 동시에 import
+- 런타임에만 발생하는 `undefined` 에러 (테스트에서는 mock으로 우회되어 발견 안 됨)
 
-### Pitfall 6: Well-known 레지스트리 300+ 엔트리 유지보수 부담
+**Phase to address:**
+Phase 2 (IChainSubscriber 인터페이스 확장 + 레이어 위반 수정). `madge` 도구를 CI에 추가하는 것을 고려.
 
-**What goes wrong:** 정적 TS 데이터로 300+ 컨트랙트를 관리하면, 프로토콜 업그레이드(새 Router 주소 배포) 시 레지스트리가 outdated 되지만 데몬 업데이트 전까지 반영 불가.
+---
 
-**Why it happens:** DeFi 프로토콜은 주기적으로 새 버전을 배포한다 (Uniswap V2 -> V3 -> V4, Aave V2 -> V3). 정적 데이터는 코드 릴리스 주기에 묶인다.
+### Pitfall 5: @ts-expect-error 제거 대신 축적
 
-**Consequences:** 사용자가 최신 프로토콜 버전을 사용하는데 이름이 해석되지 않음. 또는 deprecated 버전 주소에 현재 이름 표시.
+**What goes wrong:**
+현재 코드베이스에 `@ts-expect-error`가 프로덕션 코드 0건이지만, `as any` 제거 과정에서 임시로 `@ts-expect-error`를 추가하여 "나중에 고치겠다"는 패턴이 축적됨. 이는 `as any`보다 위험한데, TypeScript 업그레이드 시 에러가 해소되면 `@ts-expect-error`가 unused가 되어 반대로 빌드가 깨짐.
 
-**Prevention:**
-- 레지스트리 엔트리에 `version` 필드 포함 (예: "Uniswap V3 Router")
-- 기존 Action Provider가 이미 지원하는 프로토콜은 Action Provider 메타데이터가 1순위이므로, Well-known은 Action Provider가 커버하지 않는 외부 프로토콜만 포함
-- deprecated 프로토콜 주소도 유지 (이전 버전 트랜잭션에도 이름 표시)
-- 실제 WAIaaS가 지원하는 프로토콜 위주로 초기 데이터 축소 (300+ -> 필수 ~100)
+**Why it happens:**
+- `as any`를 제거하면서 올바른 타입을 즉시 찾지 못할 때 임시 방편으로 사용
+- 코드 리뷰에서 `as any`보다 `@ts-expect-error`가 "더 나은 것"으로 오해
+- TypeScript strict 옵션 변경 시 새로운 에러 -> `@ts-expect-error`로 빠르게 해결하려는 유혹
 
-### Pitfall 7: Solana Program ID 특수 처리 누락
+**How to avoid:**
+1. **Zero @ts-expect-error 정책 유지**: 현재 0건 상태를 ESLint 규칙으로 강제 (`@typescript-eslint/ban-ts-comment`)
+2. **`as any` 대체로 `@ts-expect-error`를 허용하지 않기**: 올바른 타입을 찾거나, 타입 선언을 확장하거나, wrapper를 만들기
+3. **CI에서 `@ts-expect-error` count 체크**: 0이 아니면 실패하도록 설정
 
-**What goes wrong:** Solana의 "컨트랙트 주소"는 Program ID(Base58 인코딩)이며, EVM의 `to` 필드와는 의미가 다르다. Solana 트랜잭션의 `to` 필드에 들어가는 값은 수신 주소이지 Program ID가 아닐 수 있다. Program ID를 어디서 추출할지 정의하지 않으면 Solana에서 이름 해석이 전혀 동작하지 않는다.
+**Warning signs:**
+- PR에 `@ts-expect-error` 추가가 포함됨
+- "임시" 주석과 함께 사용
+- 같은 파일에 `@ts-expect-error`가 여러 개 나타남
 
-**Why it happens:** EVM에서 CONTRACT_CALL의 `to`는 컨트랙트 주소이지만, Solana에서 "컨트랙트" 개념은 Program Account이며, 트랜잭션 구조가 다르다. 현재 `extractTransactionParam()`에서 CONTRACT_CALL은 `req.to`를 사용하는데, Solana Action Provider 트랜잭션에서 이 값이 Program ID와 일치하는지 검증이 필요하다.
+**Phase to address:**
+전 phase에 걸쳐 적용. Phase 1 시작 전에 ESLint 규칙으로 강제 설정.
 
-**Consequences:** Solana 체인에서 Well-known 프로그램(Jupiter, Raydium, Marinade 등)의 이름이 해석되지 않음.
+---
 
-**Prevention:**
-- Solana Action Provider 경유 트랜잭션은 이미 `actionProvider` 필드가 설정되므로 1순위(Action Provider displayName)에서 해석 가능
-- Well-known 레지스트리에 Solana System Program, Token Program, Associated Token Program 등 핵심 프로그램만 포함
-- 알림 변수에서 Solana CONTRACT_CALL의 `to`가 Program ID인지 수신 주소인지 구분하는 로직 추가
+### Pitfall 6: 테스트 Mock의 `as any`가 실제 타입 불일치를 숨김
 
-### Pitfall 8: Admin UI 트랜잭션 목록 성능 저하
+**What goes wrong:**
+테스트 코드에서 `as any`가 ~800건 사용 중. 프로덕션 코드의 타입을 강화하면 테스트 mock이 실제 런타임 타입과 괴리가 커짐. 테스트는 통과하지만 실제 환경에서 타입 에러 발생.
 
-**What goes wrong:** Admin UI 트랜잭션 목록에서 각 행마다 ContractNameResolver를 호출하면, 대량 트랜잭션(100+건 페이지)에서 렌더링 지연. 특히 같은 컨트랙트에 대해 반복 조회하는 비효율.
+**Why it happens:**
+- Mock 객체를 빠르게 만들기 위해 `{} as any` 패턴 사용
+- 프로덕션 인터페이스가 변경되어도 mock은 업데이트되지 않음
+- `as any`가 TypeScript의 "미사용 필드" 경고를 억제
 
-**Why it happens:** 트랜잭션 목록은 페이지네이션으로 20-50건씩 로드하지만, 각 행의 `to` 필드에 대해 개별적으로 이름 해석을 수행하면 불필요한 반복 연산.
+**How to avoid:**
+1. **이번 milestone에서 테스트 `as any`는 건드리지 않기**: 프로덕션 코드 ~55건 제거가 우선, 테스트 ~785건은 별도 milestone
+2. **새로 작성하는 테스트는 `satisfies` + `Partial<T>` 패턴 사용**: mock 타입 안전성 확보
+3. **향후 mock factory 패턴 도입 고려**: `createMockPolicyEngine()` 같은 헬퍼로 중앙 관리
 
-**Consequences:** Admin UI 트랜잭션 페이지 로딩 시간 증가. 사용자 체감 성능 저하.
+**Warning signs:**
+- 프로덕션 인터페이스 변경 후 테스트가 여전히 통과 (mock이 변경을 반영하지 않음)
+- 새 필드 추가 후 해당 필드를 사용하는 코드가 테스트에서 undefined로 동작
 
-**Prevention:**
-- 서버 측에서 트랜잭션 목록 API 응답에 `toDisplay` 필드를 포함하여 반환 (클라이언트 해석 불필요)
-- 또는 클라이언트에서 해석하려면, 페이지 내 고유 주소 목록을 추출하여 일괄 해석 후 Map으로 캐싱
-- DB에 해석 결과를 저장하지 않음 (레지스트리 업데이트 시 stale 데이터 문제)
+**Phase to address:**
+이번 milestone 범위 밖. 단, Phase 3에서 프로덕션 `as any` 제거 시 해당 코드를 테스트하는 mock도 함께 정합성 확인.
 
-### Pitfall 9: `to_display`와 `to` 변수의 혼용
+---
 
-**What goes wrong:** 알림 템플릿에서 `{to}`(raw 주소)와 `{to_display}`(해석된 이름)를 동시에 사용할 때, 어떤 이벤트에는 `to`만, 어떤 이벤트에는 `to_display`만, 어떤 이벤트에는 둘 다 넣어야 하는 규칙이 불명확해져 일관성이 깨진다.
+### Pitfall 7: JSON.parse + Zod 검증의 성능 오버헤드
 
-**Why it happens:** TX_REQUESTED/TX_APPROVAL_REQUIRED는 `{to}` 변수를 이미 사용 중이다. `{to_display}`를 추가하면 `{to}`를 제거할지, 둘 다 유지할지 결정이 필요하다.
+**What goes wrong:**
+`database-policy-engine.ts`의 21개 `JSON.parse()` 지점에 Zod 검증을 추가하면, 매 트랜잭션 평가마다 Zod schema 파싱이 실행됨. 정책 평가는 hot path이고 `BEGIN IMMEDIATE` 트랜잭션 내에서 실행되므로, 지연이 동시 요청 직렬화에 영향.
 
-**Consequences:** 템플릿 변수가 과도하게 많아지고, 채널별(Telegram/Slack/Discord/ntfy) 포맷에서 레이아웃 깨짐.
+**Why it happens:**
+- Zod `.parse()`는 런타임 검증이므로 `as Type` 대비 CPU 비용 존재
+- `evaluateAndReserve`가 SQLite exclusive lock 내에서 실행
+- 정책이 여러 개일 때 각 정책마다 JSON.parse + Zod 검증 반복
 
-**Prevention:**
-- `{to}` 변수를 유지하되, 값 자체를 "해석된 이름 (축약 주소)" 형태로 교체: `"Uniswap V3 (0xE592...a085)"`
-- 신규 `{to_display}` 변수 추가 대신 기존 `{to}` 변수의 값 생성 로직만 변경
-- 이름 해석 실패 시 기존 동작 유지 (축약 주소 또는 raw 주소)
-- 이 접근이 기존 템플릿 변경을 최소화하고 backward compatibility를 자연스럽게 유지
+**How to avoid:**
+1. **저장 시점 검증 (write-time validation)**: 정책 생성/수정 API에서 Zod 검증, 읽기 시에는 `as Type` 유지 또는 lightweight assert
+2. **캐시**: 정책이 자주 변경되지 않으므로, parsed+validated 결과를 메모리 캐시
+3. **`.safeParse()` 대신 custom assert**: 성능이 중요한 경로에서는 수동 type guard 사용
 
-## Minor Pitfalls
+**Warning signs:**
+- 트랜잭션 처리 지연 증가 (벤치마크 비교 필요)
+- SQLite lock 대기 시간 증가
+- `evaluateAndReserve` 호출 빈도가 높은 환경에서 병목
 
-### Pitfall 10: Well-known 레지스트리 데이터 정확성
+**Phase to address:**
+Phase 1. Write-time validation 전략을 기본으로 채택, read-time에는 lightweight assert만 사용.
 
-**What goes wrong:** 수동으로 300+ 주소-이름 매핑을 입력하면서 오타, 잘못된 주소, 잘못된 체인 매핑이 포함됨.
+---
 
-**Prevention:**
-- 신뢰할 수 있는 소스(Etherscan verified contracts, DeFiLlama protocol list)에서 데이터 추출
-- 각 주소에 대해 checksum 검증 (viem `getAddress()` 호출 후 원본과 비교)
-- CI 테스트에서 주소 형식 유효성 + 중복 검사
+### Pitfall 8: 전체 `JSON.parse()` 46건 중 정책 외 지점 누락
 
-### Pitfall 11: BATCH 트랜잭션의 `to` 필드 다중 대상
+**What goes wrong:**
+`database-policy-engine.ts` 21건에 집중하면 나머지 25+건의 `JSON.parse()`가 방치됨. 특히 위험한 지점:
+- `wc-storage.ts`: WalletConnect 세션 데이터 파싱 (외부 데이터)
+- `backup-format.ts`: 백업 메타데이터 파싱 (파일 시스템 입력)
+- `admin-wallets.ts`: 트랜잭션 metadata 파싱 (4건, DB 데이터)
+- `daemon.ts`: config 파싱 + 트랜잭션 metadata 파싱 (4건)
+- `notification-service.ts`: 이벤트 필터 파싱 (2건, DB 데이터)
+- `webhook-service.ts`: 이벤트 구독 파싱
 
-**What goes wrong:** BATCH 트랜잭션은 여러 `to` 주소를 가진다. 단일 `to_display` 변수로는 표현 불가.
+**Why it happens:**
+- scope를 policy engine으로 한정하면 다른 위험 지점을 놓침
+- 각 파일이 독립적으로 `JSON.parse` + type assertion 패턴을 사용
 
-**Prevention:**
-- BATCH의 경우 첫 번째 대상만 해석하거나, "N contracts" 형태로 요약
-- 또는 `to_display`에 "Uniswap V3 + 2 others" 패턴 적용
-- BATCH는 별도 알림 포맷이므로 `{to}` 변수 자체를 사용하지 않을 수 있음 (현재 템플릿 확인 필요)
+**How to avoid:**
+1. **전수 조사 후 우선순위 분류**: 외부 입력 (HIGH) > DB 데이터 (MEDIUM) > 내부 데이터 (LOW)
+2. **외부 입력**: `wc-storage.ts`, `backup-format.ts`, `config/loader.ts` -> 반드시 Zod 검증
+3. **DB 데이터**: write-time validation이 보장되면 read-time은 assert로 충분
+4. **이번 milestone에서 모두 커버할지 범위 결정 필요**
 
-### Pitfall 12: HyperEVM Chain ID 매핑
+**Warning signs:**
+- `JSON.parse` 검색 결과에서 policy engine 외 파일이 여전히 type assertion만 사용
+- 외부 입력을 파싱하는 코드에 Zod 검증이 없음
 
-**What goes wrong:** HyperEVM (Chain ID 999/998)은 최근 추가된 체인이라 Well-known 컨트랙트 데이터가 부족. 레지스트리에 빈 엔트리로 남으면 HyperEVM CONTRACT_CALL은 항상 fallback 표시.
+**Phase to address:**
+Phase 1 확장 또는 별도 Phase. 최소한 외부 입력(`wc-storage.ts`, `backup-format.ts`)은 포함 권장.
 
-**Prevention:**
-- HyperEVM은 Hyperliquid L1 DEX 전용이므로 Action Provider 매핑으로 충분 (Perp/Spot/SubAccount 프로바이더가 커버)
-- Well-known 레지스트리에 HyperEVM 전용 엔트리를 무리하게 추가하지 않음
-- Action Provider 1순위 해석이 HyperEVM에서 특히 중요함을 테스트로 검증
+---
 
-## Phase-Specific Warnings
+## Technical Debt Patterns
 
-| Phase Topic | Likely Pitfall | Mitigation |
-|-------------|---------------|------------|
-| ContractNameResolver 설계 | 동기/비동기 혼합 (Pitfall 4) | 인메모리 전용 동기 함수로 강제 |
-| Well-known 레지스트리 구축 | 체인별 주소 중복 (Pitfall 5) + 데이터 정확성 (Pitfall 10) | 복합 키 + CI 검증 |
-| 알림 파이프라인 연동 | Template backward compat (Pitfall 2) + 변수 혼용 (Pitfall 9) | `{to}` 값 교체 방식 채택, en/ko 동시 업데이트 |
-| Action Provider displayName | 매핑 누락 (Pitfall 3) | optional + 자동 변환 fallback |
-| Admin UI 트랜잭션 목록 | 성능 (Pitfall 8) | 서버 측 toDisplay 포함 |
-| 주소 정규화 | EVM/Solana 혼합 (Pitfall 1, 7) | 체인별 분기 정규화 함수 |
+| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
+|----------|-------------------|----------------|-----------------|
+| `JSON.parse() as Type` (type assertion) | 빠른 구현, 컴파일 통과 | 런타임 데이터 불일치 시 디버깅 어려움 | Never (write-time validation으로 대체) |
+| `as any`로 외부 라이브러리 타입 우회 | 외부 타입 불일치 해결 | 라이브러리 업데이트 시 실제 API 변경 감지 불가 | 라이브러리 타입이 명백히 잘못된 경우만, 반드시 주석과 함께 |
+| 중복 유틸리티 (NATIVE_DECIMALS, sleep 등) | 패키지 간 의존성 없음 | 동기화 안 되면 동작 차이 발생 | Never (shared에 SSoT) |
+| 테스트에서 `{} as any` mock | 빠른 테스트 작성 | 인터페이스 변경 감지 불가 | MVP/프로토타입 단계만, 이후 mock factory로 전환 |
+| `policyEngine: null as any` 주입 | Stage 5-6에서 policy 불필요 | NPE 위험, 코드 의도 불명확 | Optional parameter로 리팩토링 |
+| `(db as any).session?.client` Drizzle 내부 접근 | WC에 SQLite handle 전달 | Drizzle 버전 업 시 즉시 깨짐 | Never (공식 `$client` API 사용) |
+
+## Integration Gotchas
+
+| Integration | Common Mistake | Correct Approach |
+|-------------|----------------|------------------|
+| WalletConnect SignClient | `(db as any).session?.client`로 Drizzle 내부 접근 (8건) | Drizzle의 `.$client` 프로퍼티 사용 (drizzle-orm v0.32+ 공식 API), 또는 별도 SQLite 인스턴스 주입 |
+| @solana/kit 6.x | `instruction as any`로 타입 불일치 우회 (5건) | `IInstruction` 인터페이스에 맞는 변환 함수 작성, 또는 generic parameter 명시 |
+| permissionless (AA) | `bundlerClient as any`로 메서드 호출 (4건) | `BundlerClient` 타입을 정확히 import하고 generic 파라미터 지정, 또는 adapter wrapper 패턴 |
+| viem EIP-712 | `domain as any`, `types as any` (3건) | viem의 `TypedDataDefinition` 타입 활용, 또는 `satisfies` 패턴 |
+| Zod + Drizzle schema 동기화 | Zod와 Drizzle 스키마를 별도 관리 | Zod SSoT에서 Drizzle 스키마 파생 (프로젝트 규칙 준수) |
+
+## Performance Traps
+
+| Trap | Symptoms | Prevention | When It Breaks |
+|------|----------|------------|----------------|
+| Zod validation in hot path (policy eval) | TX 처리 지연, SQLite lock 경합 증가 | Write-time validation, read-time lightweight assert | 동시 TX 10+/sec |
+| 과도한 re-export barrel | 번들 사이즈 증가, tree-shaking 실패 | Named import, subpath export | Admin UI 번들 100KB+ 증가 시 |
+| `safeParse` 에러 로깅 과다 | 로그 볼륨 폭증 (레거시 데이터 많을 때) | 첫 N건만 로깅, 이후 count만 기록 | 마이그레이션 직후 정책 100+ 건 |
+
+## Security Mistakes
+
+| Mistake | Risk | Prevention |
+|---------|------|------------|
+| Zod schema가 `JSON.parse` 결과를 신뢰 | 악의적 JSON injection (policies.rules 컬럼) | Write-time strict validation + DB 레벨 CHECK |
+| `as any` 제거 시 타입 가드 누락 | 검증 없이 데이터 사용 -> injection/overflow | 모든 외부 입력에 Zod, 내부 DB 데이터에는 assert |
+| WC `(db as any)` 패턴으로 SQLite 직접 접근 | Drizzle 트랜잭션 격리 우회 | 별도 SQLite connection 또는 Drizzle 공식 API |
+| 백업 파일 metadata JSON.parse 미검증 | 악의적 백업 파일로 코드 주입 가능 | `backup-format.ts`의 JSON.parse에 Zod 검증 추가 |
+
+## "Looks Done But Isn't" Checklist
+
+- [ ] **JSON.parse Zod 전환:** DB에 기존 데이터로 실제 테스트했는지 확인 -- fixture만으로는 레거시 데이터 커버 불가
+- [ ] **`as any` 제거:** 해당 코드의 테스트 커버리지가 실제 런타임 경로를 커버하는지 확인 -- 타입만 맞추고 끝이 아님
+- [ ] **SSoT 이동:** `pnpm turbo run typecheck && pnpm turbo run lint` 전체 통과 확인 -- 단일 패키지 빌드만으로는 부족
+- [ ] **레이어 위반 수정:** `import type`과 `import`가 적절히 분리되었는지 확인 -- 순환 참조는 런타임에서만 발견됨
+- [ ] **@ts-expect-error 0건 유지:** 제거 작업 중 임시로 추가된 것이 없는지 최종 확인
+- [ ] **정책 rules 스키마:** 모든 정책 타입(17종)에 대해 Zod 스키마가 정의되었는지 확인 -- 일부만 하면 불완전
+- [ ] **외부 라이브러리 as any:** @solana/kit, WC, permissionless 관련 건이 wrapper로 감싸졌는지 확인 -- 직접 `as any` 제거만으로는 타입 안전 미보장
+- [ ] **JSON.parse 전수 조사:** policy engine 외 25건도 분류되었는지 확인
+
+## Recovery Strategies
+
+| Pitfall | Recovery Cost | Recovery Steps |
+|---------|---------------|----------------|
+| Zod가 레거시 DB 데이터를 reject | LOW | `safeParse` fallback 추가 + 데이터 마이그레이션 스크립트 |
+| `as any` 제거 후 런타임 에러 | MEDIUM | 해당 건만 `as any` 복원 + 이슈 등록 + 별도 해결 |
+| SSoT 이동으로 SDK 깨짐 | HIGH | re-export bridge 긴급 추가, npm patch release |
+| Import cycle 런타임 에러 | MEDIUM | 순환 참조 관련 import를 `import type`으로 변경, 인터페이스 위치 재조정 |
+| @ts-expect-error 축적 | LOW | ESLint 규칙 강제 + CI gate 추가 |
+| 정책 평가 성능 저하 | LOW | Write-time 전략으로 전환, hot path에서 Zod 제거 |
+
+## Pitfall-to-Phase Mapping
+
+| Pitfall | Prevention Phase | Verification |
+|---------|------------------|--------------|
+| Zod too strict for DB data | Phase 1 (DatabasePolicyEngine Zod) | 기존 DB 스냅샷으로 safeParse 성공률 100% 확인 |
+| JSON.parse non-policy sites | Phase 1 확장 또는 별도 Phase | `JSON.parse` grep 결과에서 미처리 건 0 확인 |
+| `as any` runtime behavior change | Phase 3 (as any 제거) | 카테고리별 분류 후 regression test, E2E 시나리오 |
+| SSoT export breaking downstream | Phase 4 (중복 코드 SSoT) | `pnpm turbo run typecheck` 전체 통과 + SDK public API 변경 없음 확인 |
+| Layer fix creating import cycles | Phase 2 (IChainSubscriber + 레이어) | `madge --circular` 0건, 런타임 import 성공 확인 |
+| @ts-expect-error accumulation | 전 Phase (사전 ESLint 설정) | CI에서 `@ts-expect-error` count = 0 강제 |
+| Test mock divergence | Phase 3 (as any 제거 시 동반 확인) | 변경된 인터페이스의 mock이 새 타입과 정합성 확인 |
+| Zod in hot path performance | Phase 1 (write-time validation 전략) | TX 처리 latency 벤치마크 비교 (before/after) |
 
 ## Sources
 
-- 프로젝트 코드 분석: `packages/daemon/src/pipeline/stages.ts` (알림 변수 준비 패턴)
-- 프로젝트 코드 분석: `packages/daemon/src/notifications/templates/message-templates.ts` (placeholder fallback)
-- 프로젝트 코드 분석: `packages/core/src/i18n/en.ts` (TX_REQUESTED/TX_APPROVAL_REQUIRED 등 변수 사용)
-- 프로젝트 코드 분석: `packages/daemon/src/pipeline/database-policy-engine.ts` (CONTRACT_WHITELIST lowercase 비교 패턴)
-- 프로젝트 코드 분석: `packages/core/src/interfaces/action-provider.types.ts` (ActionProviderMetadataSchema, displayName 부재)
-- 프로젝트 코드 분석: `packages/core/src/schemas/policy.schema.ts` (ContractWhitelistRulesSchema name 필드)
-- EIP-55 checksum address specification (HIGH confidence -- well-established standard)
-- Solana Base58 address format (HIGH confidence -- well-established standard)
+- 직접 코드베이스 분석: `packages/daemon/src/pipeline/database-policy-engine.ts` (21 JSON.parse + type assertion, 17 정책 타입)
+- 직접 코드베이스 분석: 프로덕션 `as any` ~55건 (daemon 44건, adapters 5건, actions 3건, core/shared 3건)
+- 직접 코드베이스 분석: 테스트 `as any` ~785건 (136 파일)
+- 직접 코드베이스 분석: `as unknown as` 패턴 전수 조사 (테스트 mock 중심 + 프로덕션 Solana adapter/EIP-712)
+- 직접 코드베이스 분석: `@ts-expect-error` / `@ts-ignore` 프로덕션 코드 0건 (현재 clean 상태)
+- 직접 코드베이스 분석: `JSON.parse` daemon 프로덕션 코드 46건 (21 policy + 25 기타)
+- WAIaaS CLAUDE.md: Zod SSoT 원칙, 테스트 커버리지 규칙, 마이그레이션 전략
+- TypeScript handbook: Project References + composite mode import resolution
+- Node.js ESM circular dependency behavior: `undefined` import at runtime
+- drizzle-orm `$client` API: Drizzle ORM v0.32+ public client accessor
+
+---
+*Pitfalls research for: Type Safety + Code Quality Improvements (v32.4)*
+*Researched: 2026-03-16*

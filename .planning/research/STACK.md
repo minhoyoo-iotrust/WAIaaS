@@ -1,226 +1,272 @@
-# Technology Stack: Contract Name Resolution
+# Technology Stack: Type Safety Improvements
 
-**Project:** WAIaaS v32.0 -- Contract Name Resolution
-**Researched:** 2026-03-15
-**Overall confidence:** HIGH
-
-## Recommendation: Zero New Dependencies
-
-Contract name resolution requires **no new npm packages**. The well-known contract registry is best implemented as a static TypeScript data module within `@waiaas/core`, following the exact pattern already established by `builtin-tokens.ts`, Aave V3 `config.ts`, Lido `config.ts`, Jito `config.ts`, Across `config.ts`, and Polymarket `config.ts`.
-
-**Rationale:** Every action provider already hardcodes its contract addresses in TypeScript config files. The well-known registry is simply a centralized, address-indexed view of data that already exists across 13+ provider configs, plus additional well-known DeFi protocol contracts (Uniswap, Compound, etc.) that WAIaaS does not integrate but users may interact with via CONTRACT_CALL.
+**Project:** WAIaaS Type Safety + Zod SSoT Consolidation
+**Researched:** 2026-03-16
 
 ## Recommended Stack
 
-### Core: No New Libraries
+**NO new dependencies needed.** All required tools are already in the codebase. This milestone is about using existing tools correctly, not adding new ones.
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| TypeScript `Record<string, Record<string, WellKnownContract>>` | -- | Static well-known registry | Zero runtime cost, zero deps, tree-shakeable, type-safe, already the project pattern (see `BUILTIN_TOKENS`) |
-| Existing `ActionProviderMetadata` | -- | Provider display name source (Priority 1) | Already has `name`, `description`, `category` fields. Add `displayName` to `ActionProviderMetadataSchema` (Zod SSoT) |
-| Existing `CONTRACT_WHITELIST` policy | -- | User-labeled contracts (Priority 3) | Already stores `Array<{ address: string; name?: string }>`, just needs resolver access |
+### Current Versions (verified from lockfile)
 
-### What NOT to Add
+| Technology | Version | Purpose | Status |
+|------------|---------|---------|--------|
+| TypeScript | 5.9.3 | Type system | Already strict (`strict: true`, `noUncheckedIndexedAccess: true`) |
+| Zod | 3.25.76 | Runtime validation SSoT | Installed, underused for DB JSON parsing |
+| Drizzle ORM | 0.45.1 | Typed SQL queries | Installed, raw client access pattern needs cleanup |
+| better-sqlite3 | 11.10.0 / 12.6.2 | Raw SQLite access | Dual version (daemon vs push-relay), both fine |
+| @solana/kit | 6.0.1 | Solana chain adapter | Branded generics cause `as any` -- workaround needed |
+| viem | 2.x | EVM chain adapter | Some `as any` in EIP-712 typing |
+| permissionless | 0.3.4 | Account Abstraction (ERC-4337) | Heavy `as any` usage in bundler client calls |
 
-| Library/Service | Why Not |
-|----------------|---------|
-| `@bgd-labs/aave-address-book` (npm) | Massive Solidity-focused package (4.44.x), TypeScript bindings available but pulls in hundreds of addresses across 30+ deployments. We only need 5 chains x 3 addresses = 15 entries, already hardcoded in `aave-v3/config.ts`. Adding a 40KB+ dep for 15 addresses we already have is not justified. |
-| `eth-labels` / `eth-labels-mcp` (npm) | 170k+ addresses from Etherscan scraping. Data quality is unverified (scraped, not curated), includes exchange/phishing/EOA labels irrelevant to contract name resolution. Too noisy for a focused well-known DeFi contract registry. Also requires API calls or large data files. |
-| `brianleect/etherscan-labels` (GitHub) | 45k+ labels dumped from Etherscan. Same problem: bulk scrape data, stale (2023 snapshot), no npm package, Python scraper. Not suitable for a curated embedded registry. |
-| Etherscan Label API (`getlabelmasterlist`) | Requires API key per chain, rate-limited, adds RPC dependency for a feature designed to be zero-cost. The goal is offline-first name resolution. |
-| 4byte.directory / Sourcify | Function selector or source code databases, not contract name registries. Different problem space. |
-| On-chain ENS reverse resolution | Requires RPC call per address per lookup. Violates the zero-cost constraint. Could be a future Priority 5 but not for v32.0. |
+## Pattern-Specific Guidance
 
-## Integration Points
+### 1. Zod safeParse for JSON.parse Replacement
 
-### Priority 1: Action Provider Metadata (Zero Cost)
+**Problem:** 362 occurrences of `JSON.parse` across 128 files. Critical hotspot: `database-policy-engine.ts` with 21 occurrences doing `JSON.parse(policy.rules)` with manual type assertions to local interfaces -- while Zod schemas for the same types already exist in `@waiaas/core/schemas/policy.schema.ts`.
 
-The `ActionProviderMetadataSchema` in `@waiaas/core` needs one new field:
+**Pattern -- Use `safeParse` with existing Zod schemas:**
 
 ```typescript
-// Addition to ActionProviderMetadataSchema (packages/core/src/interfaces/action-provider.types.ts)
-displayName: z.string().min(1).max(100).optional(),
-```
+// BEFORE (current - SSoT violation, no runtime validation)
+const rules: SpendingLimitRules = JSON.parse(spendingPolicy.rules);
 
-Each provider's `metadata` object already knows which contracts it interacts with (e.g., Jupiter knows `JUPITER_PROGRAM_ID`, Aave knows `AAVE_V3_ADDRESSES`). The `ContractNameResolver` queries `ActionProviderRegistry.getProviders()` and matches the `to` address against each provider's known contract addresses.
+// AFTER (use existing Zod schema from @waiaas/core)
+import { SpendingLimitRulesSchema } from '@waiaas/core';
 
-**Implementation approach:** Each provider exposes its contract addresses via a new optional method:
-
-```typescript
-// Addition to IActionProvider interface
-getKnownContracts?(): Array<{ address: string; network: string; displayName: string }>;
-```
-
-This is the cheapest and most accurate source because the provider *itself* knows the exact address-to-protocol mapping.
-
-**Confidence:** HIGH -- Direct code inspection of `ActionProviderMetadataSchema` (line 41-68 of `action-provider.types.ts`) and 13 existing provider configs confirms the pattern.
-
-### Priority 2: Well-Known Contract Registry (Static Data)
-
-A new module in `@waiaas/core` or `@waiaas/daemon`:
-
-```
-packages/core/src/contracts/well-known-contracts.ts  (or packages/daemon/src/infrastructure/contracts/)
-```
-
-**Data structure:**
-
-```typescript
-export interface WellKnownContract {
-  /** Checksummed address (EVM) or base58 program ID (Solana) */
-  address: string;
-  /** Protocol display name (e.g., "Uniswap V3") */
-  protocol: string;
-  /** Specific contract role (e.g., "Router", "Pool") */
-  label: string;
-  /** Network identifier (WAIaaS format: "ethereum-mainnet", "solana-mainnet") */
-  network: string;
+const parsed = SpendingLimitRulesSchema.safeParse(
+  JSON.parse(spendingPolicy.rules)
+);
+if (!parsed.success) {
+  throw new WAIaaSError('POLICY_INVALID', `Invalid spending limit rules: ${parsed.error.message}`);
 }
-
-// Indexed by lowercase address for O(1) lookup
-export const WELL_KNOWN_CONTRACTS: Record<string, WellKnownContract[]> = { ... };
+const rules = parsed.data;
 ```
 
-**Data sources for 300+ entries (verified, manually curated):**
+**Where to apply (priority order):**
 
-| Protocol | Chains | Entry Count (est.) | Source |
-|----------|--------|-------------------|--------|
-| Uniswap V2/V3/Universal Router | ETH, ARB, OP, POLY, BASE | ~25 | [Uniswap deployment docs](https://docs.uniswap.org/contracts/v3/reference/deployments/) |
-| Aave V3 (Pool, DataProvider, Oracle) | ETH, ARB, OP, POLY, BASE | ~15 | Already in `aave-v3/config.ts` |
-| Lido (stETH, WithdrawalQueue, wstETH) | ETH | ~6 | Already in `lido-staking/config.ts` |
-| Compound V3 (cUSDCv3, Comet) | ETH, ARB, BASE, OP, POLY | ~15 | Compound docs |
-| Curve (Router, Pool Registry) | ETH, ARB, OP, POLY | ~12 | Curve docs |
-| 1inch (Router V5/V6) | ETH, ARB, OP, POLY, BASE | ~10 | 1inch docs |
-| 0x (AllowanceHolder, ExchangeProxy) | ETH, ARB, OP, POLY, BASE | ~10 | Already in `zerox-swap/config.ts` |
-| Jupiter (Program ID) | SOL | ~2 | Already in `jupiter-swap/config.ts` |
-| Jito (Stake Pool, JitoSOL mint) | SOL | ~5 | Already in `jito-staking/config.ts` |
-| Drift (Program ID) | SOL | ~2 | Already in `drift/config.ts` |
-| Raydium (AMM, CLMM) | SOL | ~4 | Raydium docs |
-| Marinade (mSOL, Stake Pool) | SOL | ~4 | Marinade docs |
-| Orca (Whirlpool) | SOL | ~2 | Orca docs |
-| Across (SpokePool per chain) | ETH, ARB, OP, POLY, BASE, LINEA | ~6 | Already in `across/config.ts` |
-| LI.FI (Diamond) | ETH, ARB, OP, POLY, BASE | ~5 | LI.FI docs |
-| Pendle (Router) | ETH, ARB | ~4 | Pendle docs |
-| Polymarket (CTF Exchange, NegRisk) | POLY | ~4 | Already in `polymarket/config.ts` |
-| Hyperliquid (HyperEVM contracts) | HYPER | ~3 | Already known |
-| OpenSea (Seaport) | ETH, ARB, OP, POLY, BASE | ~5 | OpenSea docs |
-| WETH/WMATIC/WPOL (Canonical wrappers) | ETH, ARB, OP, POLY, BASE | ~10 | Already in `builtin-tokens.ts` + `across/config.ts` |
-| ERC-4337 EntryPoint v0.6/v0.7 | ETH, ARB, OP, POLY, BASE | ~10 | ERC-4337 spec |
-| Chainlink (Price Feed Registry) | ETH, ARB, OP, POLY, BASE | ~5 | Chainlink docs |
-| Morpho (Blue, MetaMorpho) | ETH, BASE | ~4 | Morpho docs |
-| Lido wstETH bridges | ARB, OP, POLY, BASE | ~4 | Lido docs |
-| SPL Token Program, ATA Program, System | SOL | ~5 | Already in `jito-staking/config.ts` |
-| Metaplex (Token Metadata, Candy Machine) | SOL | ~4 | Metaplex docs |
-| **Total** | | **~180 curated + ~120 from existing configs** | |
+| Location | Occurrences | Risk | Approach |
+|----------|-------------|------|----------|
+| `database-policy-engine.ts` | 21 | HIGH -- policy bypass if malformed | safeParse with existing Zod schemas from `@waiaas/core` |
+| `wc-storage.ts` / `wc-session-service.ts` | 4 | MEDIUM -- WalletConnect state corruption | safeParse with `z.unknown()` catch-all |
+| `async-polling-service.ts` (bridgeMetadata) | 3 | LOW -- metadata only | safeParse with `z.record(z.unknown())` |
+| `ntfy-signing-channel.ts` | 2 | MEDIUM -- external input from ntfy | safeParse with signing response schema |
+| Monitors (health/margin/maturity) | 3 | LOW -- metadata parsing | safeParse with `z.record(z.unknown())` |
+| `webhook-service.ts` | 1 | LOW -- internal events array | safeParse with `z.array(z.string())` |
 
-**Confidence:** HIGH -- All addresses are publicly documented by their respective protocols. No API calls needed.
+**Implementation note:** `database-policy-engine.ts` currently declares 12 local interfaces (SpendingLimitRules, WhitelistRules, AllowedTokensRules, etc.) that duplicate Zod schema types in `@waiaas/core`. Delete these local interfaces and import the Zod-inferred types. This restores the Zod SSoT derivation chain per CLAUDE.md.
 
-### Priority 3: CONTRACT_WHITELIST User Labels
-
-Already exists in the policy engine (`database-policy-engine.ts` line 82):
+**Helper utility (reduces boilerplate, place in `@waiaas/core`):**
 
 ```typescript
-contracts: Array<{ address: string; name?: string }>;
-```
+// packages/core/src/utils/safe-json-parse.ts
+import { z } from 'zod';
 
-The `ContractNameResolver` simply queries the policy store for the wallet's CONTRACT_WHITELIST entries and uses the `name` field. No code changes to the policy engine needed.
-
-**Confidence:** HIGH -- Direct code inspection confirms the `name` field is already optional in the whitelist schema.
-
-### Priority 4: Fallback (Address Truncation)
-
-No library needed. Simple string formatting:
-
-```typescript
-function truncateAddress(address: string): string {
-  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+export function safeJsonParse<T extends z.ZodType>(
+  schema: T,
+  json: string,
+  context: string,
+): z.infer<T> {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(json);
+  } catch {
+    throw new Error(`Invalid JSON in ${context}`);
+  }
+  const result = schema.safeParse(raw);
+  if (!result.success) {
+    throw new Error(`Schema validation failed in ${context}: ${result.error.message}`);
+  }
+  return result.data;
 }
 ```
 
-**Confidence:** HIGH -- Trivial implementation.
+### 2. Drizzle ORM Raw Client Access
 
-## Notification Integration
+**Problem:** 8 occurrences in `wc.ts` of `(db as any).session?.client as Database` to access the underlying better-sqlite3 instance from a Drizzle ORM instance. This is a Drizzle internal API access that breaks type safety.
 
-The notification template system (`message-templates.ts`) already supports template variable interpolation via `{variable}` placeholders. The integration point is adding a `to_display` variable alongside the existing `to` variable.
+**Root cause:** `wc.ts` routes receive only the Drizzle `db` object but need raw SQL for WalletConnect storage operations. The `DatabaseConnection` interface at `infrastructure/database/connection.ts` already provides both `sqlite` and `db`, but the WC routes don't receive the `sqlite` handle.
 
-**Current state** (line 60 of `message-templates.ts`):
+**Pattern -- Pass `DatabaseConnection` or extract raw client properly:**
+
 ```typescript
-// Remove un-substituted optional placeholders (fallback safety net)
-for (const placeholder of ['{display_amount}', '{type}', '{amount}', '{to}']) {
+// OPTION A (preferred): Pass sqlite alongside db in service constructors
+// Already used by: delay-queue.ts, approval-workflow.ts, owner-state.ts
+constructor(
+  private readonly db: BetterSQLite3Database<typeof schema>,
+  private readonly sqlite: Database,  // raw better-sqlite3
+) {}
+
+// OPTION B: Type-safe extraction utility (for cases where refactoring injection is expensive)
+import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+import type { Database } from 'better-sqlite3';
+
+/**
+ * Extract the raw better-sqlite3 client from a Drizzle BetterSQLite3Database instance.
+ * Relies on Drizzle 0.45.x internal structure -- validated for this version.
+ */
+export function getRawClient(db: BetterSQLite3Database<any>): Database {
+  const internal = db as unknown as { _: { session: { client: Database } } };
+  return internal._.session.client;
+}
 ```
 
-**Required change:** Add `{to_display}` to the placeholder cleanup list and pass the resolved name from the pipeline notification emission points (`stages.ts` lines 445-450, 714-719).
+**Why Option A is preferred:** The dual-handle pattern (`db` + `sqlite`) is already established in the codebase (12+ services use it). WC routes are the exception that bypasses it. Fixing the injection graph costs more upfront but eliminates runtime coupling to Drizzle internals.
 
-The i18n message templates in `@waiaas/core` (`getMessages()`) need updated templates that use `{to_display}` instead of or alongside `{to}`.
+**Why NOT upgrade Drizzle:** Drizzle 0.45.x is recent. The `as any` pattern is not a Drizzle version issue -- it's a dependency injection issue in the WC routes. Drizzle's planned `.$client` accessor is not yet available.
 
-**Confidence:** HIGH -- Template system is well-understood, straightforward variable addition.
+### 3. @solana/kit Branded Generic Workarounds
 
-## Admin UI Integration
+**Problem:** 8 occurrences of `as any` + `as unknown as typeof txMessage` in `packages/adapters/solana/src/adapter.ts` due to `@solana/kit` 6.x's branded generic types. The `appendTransactionMessageInstruction` function uses complex branded type parameters that don't compose well when instructions are built separately.
 
-The Admin UI transaction list already displays `to` addresses. Adding contract name display requires:
+**Root cause:** `@solana/kit` 6.x uses TypeScript branded types (phantom type parameters) to track transaction message state (e.g., which instructions are attached, whether blockhash is set). When you build instructions outside the message pipeline, the brands don't match.
 
-1. Backend: Include `toDisplay` field in transaction API responses (computed by `ContractNameResolver`)
-2. Frontend: Display `toDisplay` with tooltip showing the raw address
+**Pattern -- Wrapper function to centralize the cast:**
 
-No new Admin UI libraries needed. The existing Preact + `@preact/signals` + openapi-fetch stack handles this.
+```typescript
+// packages/adapters/solana/src/utils/tx-builder.ts
+import {
+  appendTransactionMessageInstruction,
+  type IInstruction,
+  type TransactionMessage,
+} from '@solana/kit';
 
-**Confidence:** HIGH -- Existing pattern from `amountFormatted` response enrichment (v31.15).
+/**
+ * Append an instruction to a transaction message.
+ *
+ * Centralizes the branded-generic cast required by @solana/kit 6.x.
+ * @solana/kit uses phantom type parameters to track message state,
+ * which don't compose when instructions are built outside the pipeline.
+ *
+ * This is the standard workaround -- the branded types are intentionally
+ * strict for new code but require casts when integrating pre-built instructions.
+ */
+export function appendInstruction<T extends TransactionMessage>(
+  instruction: IInstruction,
+  message: T,
+): T {
+  return appendTransactionMessageInstruction(
+    instruction as Parameters<typeof appendTransactionMessageInstruction>[0],
+    message,
+  ) as unknown as T;
+}
+```
 
-## Data Maintenance Strategy
+**Why NOT upgrade @solana/kit:** The branded generics are by design in 6.x. Upgrading won't fix this -- it's the intended API surface. The wrapper pattern keeps the single `as unknown as T` cast in one place instead of scattered across 8+ call sites.
 
-The well-known registry is static TypeScript data, updated with code releases. This is acceptable because:
+**Why NOT use `@solana/web3.js` (legacy):** The codebase has already migrated to `@solana/kit` 6.x. Going back to the legacy API would be a regression.
 
-1. DeFi protocol contract addresses are immutable (proxy patterns may change implementation, but the proxy address remains stable)
-2. New protocols are added via code updates anyway (new action providers)
-3. The registry is a **supplement** to Action Provider metadata (Priority 1), which is always current
+### 4. `as any` Elimination Categories
 
-For future extensibility, the registry could support:
-- Admin Settings-based custom entries (runtime override)
-- Community-contributed JSON files loaded at startup
+**830 total `as any` occurrences across 133 files.** Categorized by fix strategy:
 
-But for v32.0, static TS data is sufficient.
+| Category | Count (src, non-test) | Fix Strategy | Priority |
+|----------|----------------------|--------------|----------|
+| **Drizzle raw client** (`wc.ts`) | 8 | Pass `sqlite` handle or extraction utility | HIGH |
+| **@solana/kit branded generics** | 8 | `appendInstruction` wrapper | HIGH |
+| **Policy engine JSON.parse** | 21 (JSON.parse, not `as any`) | Zod safeParse | HIGH |
+| **permissionless bundler client** | 6 | Type assertions with `satisfies` or interface extension | MEDIUM |
+| **WalletConnect SDK types** | 4 | `@walletconnect/sign-client` type quirks -- use `unknown` + narrowing | MEDIUM |
+| **Network ID string literals** | ~8 | Expand `NetworkId` union or use type guard | MEDIUM |
+| **EIP-712 viem types** | 3 | Use `viem`'s `TypedDataDefinition` properly | LOW |
+| **Action provider registry** | 3 | Proper generics on registry interface | LOW |
+| **External action pipeline** | 4 | Proper discriminated union narrowing | LOW |
+| **HTTP server timeouts** (`daemon.ts`) | 2 | Node.js `http.Server` type extension | LOW |
+| **Test files** | ~690 | Separate effort -- mock typing cleanup | DEFER |
 
-## Existing Contract Data Already in Codebase
+**Key insight:** Test files account for ~83% of `as any` usage. Production source has ~140 occurrences. Focus on the ~55 HIGH/MEDIUM priority production occurrences first.
 
-The following configs already contain hardcoded contract addresses that can be extracted into the unified registry:
+### 5. permissionless (ERC-4337) Type Fixes
 
-| Config File | Addresses | Networks |
-|-------------|-----------|----------|
-| `aave-v3/config.ts` | Pool, DataProvider, Oracle | 5 EVM chains |
-| `lido-staking/config.ts` | stETH, WithdrawalQueue | ETH, Holesky |
-| `jito-staking/config.ts` | StakePool, JitoSOL, Programs | SOL |
-| `jupiter-swap/config.ts` | JUPITER_PROGRAM_ID | SOL |
-| `drift/config.ts` | DRIFT_PROGRAM_ID | SOL |
-| `zerox-swap/config.ts` | AllowanceHolder (6 chains) | 6 EVM chains |
-| `across/config.ts` | SpokePool (6 chains), WETH (6 chains) | 6 EVM chains |
-| `polymarket/config.ts` | CTF Exchange, NegRisk CTF, NegRisk Adapter, Conditional Tokens | POLY |
-| `dcent-swap/auto-router.ts` | Intermediate tokens per chain | 6 EVM chains |
-| `builtin-tokens.ts` | 24+ ERC-20 token addresses | 5 EVM chains |
+**Problem:** `pipeline/stages.ts` has 6 `as any` casts for `bundlerClient.prepareUserOperation`, `sendUserOperation`, `waitForUserOperationReceipt` -- permissionless 0.3.x client types don't match viem's client type system perfectly.
 
-**Total existing:** ~120 contract addresses already hardcoded across the codebase.
+**Pattern -- Use SmartAccountClient type from permissionless:**
 
-## Installation
+```typescript
+import type { SmartAccountClient } from 'permissionless';
 
-```bash
-# No new packages to install
-# Zero dependency additions for v32.0
+// Cast once at creation, use properly typed methods thereafter
+const typedBundlerClient = bundlerClient as SmartAccountClient;
+const prepared = await typedBundlerClient.prepareUserOperation({ calls });
+```
+
+**Why NOT upgrade permissionless:** 0.3.x is the latest stable. The type issues are workaround-able with proper imports.
+
+### 6. Network ID String Literal Casts
+
+**Problem:** ~8 occurrences of `network as any` when calling `networkToCaip2()` -- the function expects a specific `NetworkId` union type but routes receive `string` from query params.
+
+**Pattern -- Validate at boundary with type guard:**
+
+```typescript
+// BEFORE
+try { chainId = networkToCaip2(network as any); } catch { /* graceful */ }
+
+// AFTER
+import { isNetworkId } from '@waiaas/core';
+
+if (isNetworkId(network)) {
+  chainId = networkToCaip2(network);
+}
+```
+
+**If `isNetworkId` type guard doesn't exist, create it:**
+
+```typescript
+// packages/core/src/utils/network.ts
+export function isNetworkId(value: string): value is NetworkId {
+  return NETWORK_IDS.includes(value as NetworkId);
+}
 ```
 
 ## Alternatives Considered
 
 | Category | Recommended | Alternative | Why Not |
 |----------|-------------|-------------|---------|
-| Well-known data source | Static TS `Record` | `eth-labels` npm | 170k noisy entries, API dependency, not curated for DeFi protocols |
-| Well-known data source | Static TS `Record` | `@bgd-labs/aave-address-book` | Only covers Aave, massive dep for 15 addresses we already have |
-| Well-known data source | Static TS `Record` | Etherscan API labels | Requires API key, rate limits, adds runtime dependency |
-| Provider-to-address mapping | `IActionProvider.getKnownContracts()` | Hardcoded map in resolver | Provider knows its own addresses best; avoids sync drift |
-| Notification format | `{to_display}` template var | Separate notification channel | Overcomplicated; template var is the existing pattern |
+| JSON validation | Zod safeParse (existing) | io-ts, typebox | Zod is already SSoT per CLAUDE.md |
+| Raw DB access | Dual-handle injection | Drizzle `.$client` (planned) | Not available in 0.45.x |
+| Solana branded types | Wrapper function | Downgrade to @solana/web3.js | Regression, already migrated |
+| Test `as any` | Separate cleanup phase | Fix alongside production | Too large scope, different problem |
+
+## What NOT to Change
+
+| DO NOT | Reason |
+|--------|--------|
+| Upgrade @solana/kit | Branded generics are by design in 6.x; upgrading won't help |
+| Upgrade Drizzle ORM | Raw client access is injection issue, not version issue |
+| Upgrade permissionless | 0.3.x is latest stable, type issues are workaround-able |
+| Add new validation library | Zod 3.25.x has everything needed |
+| Enable `noImplicitAny` | Already implied by `strict: true` in tsconfig |
+| Fix test `as any` in this milestone | 690 occurrences in tests; mock typing is separate concern |
+| Replace `JSON.parse` in test files | Test files use `JSON.parse` on known test fixtures; low risk |
+
+## Installation
+
+```bash
+# No new packages needed. Zero new dependencies.
+```
+
+## Verification Commands
+
+```bash
+# Count remaining `as any` after fixes (production src only)
+grep -r "as any" packages/*/src --include="*.ts" --exclude-dir="__tests__" | wc -l
+# Target: reduce from ~140 to <30 (external SDK boundary casts only)
+
+# Verify no JSON.parse without safeParse in policy engine
+grep -c "JSON.parse" packages/daemon/src/pipeline/database-policy-engine.ts
+# Target: 0 (all replaced with safeParse)
+
+# Verify no Drizzle internal access
+grep -r "\.session\?\.client" packages/daemon/src --include="*.ts"
+# Target: 0 occurrences
+```
 
 ## Sources
 
-- [Uniswap Deployment Addresses](https://docs.uniswap.org/contracts/v3/reference/deployments/) -- official multi-chain deployment docs
-- [@bgd-labs/aave-address-book npm](https://www.npmjs.com/package/@bgd-labs/aave-address-book) -- evaluated and rejected (too heavy)
-- [eth-labels GitHub](https://github.com/dawsbot/eth-labels) -- evaluated and rejected (too noisy)
-- [etherscan-labels GitHub](https://github.com/brianleect/etherscan-labels) -- evaluated and rejected (stale scrape data)
-- [Etherscan Label Cloud](https://etherscan.io/labelcloud) -- reference for label categories
-- Internal codebase inspection: `builtin-tokens.ts`, `aave-v3/config.ts`, `lido-staking/config.ts`, `jito-staking/config.ts`, `jupiter-swap/config.ts`, `drift/config.ts`, `zerox-swap/config.ts`, `across/config.ts`, `polymarket/config.ts`, `action-provider.types.ts`, `database-policy-engine.ts`, `message-templates.ts`, `stages.ts`
+- TypeScript 5.9.3 -- tsconfig.base.json (verified `strict: true`, `noUncheckedIndexedAccess: true`)
+- Zod 3.25.76 -- `safeParse` API stable since Zod 3.x
+- Drizzle ORM 0.45.1 -- `DatabaseConnection` interface at `infrastructure/database/connection.ts`
+- @solana/kit 6.0.1 -- branded generics are documented design choice
+- permissionless 0.3.4 -- `SmartAccountClient` type available for proper typing
+- Codebase analysis: 362 `JSON.parse` (128 files), 830 `as any` (140 production src, 690 tests)
