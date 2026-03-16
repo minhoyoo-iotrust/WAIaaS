@@ -2,6 +2,44 @@
 
 *A living document updated after each milestone. Lessons feed forward into future planning.*
 
+## Milestone: v32.6 — 성능 + 구조 개선
+
+**Shipped:** 2026-03-17
+**Phases:** 4 | **Plans:** 9
+
+### What Was Built
+- N+1 쿼리 6곳 배치 전환 (sessions, wallets, tokens — IN()/GROUP BY 단일 쿼리)
+- sessions/policies API limit/offset 페이지네이션 + SDK listSessions/listPolicies + MCP list_sessions
+- migrate.ts 분할: 3,529줄 → 285줄 러너 + schema-ddl + 6개 마이그레이션 모듈
+- daemon.ts 분할: 2,412줄 → 327줄 셸 + startup/shutdown/pipeline
+- database-policy-engine.ts 분할: 2,318줄 → 852줄 오케스트레이터 + 8 evaluator
+- stages.ts 분할: 2,330줄 → 6 stage + pipeline-helpers + barrel re-export
+- Solana mapError() 중앙화 (14 catch 패턴) + ILogger 인터페이스
+
+### What Worked
+- 순차적 의존 구조 (N+1→pagination→file split→pipeline) 가 자연스러운 빌드업 제공
+- migrate.ts 분할이 깔끔하게 성공 — 버전 범위별 자연 경계 존재
+- Gap closure 패턴: 첫 executor가 daemon/policy-engine 분할 건너뛴 것을 두 번째 executor가 완료
+- DaemonState/ParseRulesContext 인터페이스로 private field 결합 문제 해결
+
+### What Was Inefficient
+- daemon.ts 분할에서 첫 executor가 "tight coupling" 이유로 회피 — gap closure에 추가 시간 소요
+- 30+ private field가 있는 클래스 분할 시 사전 전략(인터페이스 추출) 명시 필요
+- E2E 테스트 paginated response 업데이트가 audit에서 발견됨 — plan 단계에서 E2E 영향 분석 누락
+
+### Patterns Established
+- DaemonState 인터페이스: 대형 클래스 분할 시 상태를 인터페이스로 노출하는 패턴
+- ParseRulesContext: 정책 evaluator에 필요한 의존성을 컨텍스트 객체로 전달
+- barrel re-export: 대형 모듈 분할 후 기존 import 경로 유지
+- mapError() 중앙화: 어댑터별 에러 분류 함수로 catch 중복 제거
+
+### Key Lessons
+- 대형 파일 분할 시 첫 번째 시도에서 "위험하다"고 회피하는 경향 존재 — 인터페이스 추출 전략을 plan에 명시하면 executor가 실행 가능
+- 페이지네이션 추가 시 모든 소비자(daemon tests, admin UI, E2E tests, SDK, MCP) 체크리스트 필요
+- 순수 리팩토링 마일스톤은 기능 마일스톤보다 빠르게 완료 (~2시간)
+
+---
+
 ## Milestone: v32.0 — Contract Name Resolution
 
 **Shipped:** 2026-03-15
