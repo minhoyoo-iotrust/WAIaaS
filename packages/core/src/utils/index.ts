@@ -1,3 +1,6 @@
+// v32.4 Safe JSON parse with Zod validation (ZOD-01)
+export { safeJsonParse, type SafeJsonParseResult, type SafeJsonParseError } from './safe-json-parse.js';
+
 // v1.5.3 Currency formatting utilities
 export { formatDisplayCurrency, formatRatePreview } from './format-currency.js';
 

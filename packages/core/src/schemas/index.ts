@@ -58,6 +58,24 @@ export {
   type TimeRestrictionRules,
   X402AllowedDomainsRulesSchema,
   type X402AllowedDomainsRules,
+  ReputationThresholdRulesSchema,
+  type ReputationThresholdRules,
+  // v32.4: newly-exported rule schemas + POLICY_RULES_SCHEMAS map
+  POLICY_RULES_SCHEMAS,
+  AllowedTokensRulesSchema,
+  type AllowedTokensRules,
+  ContractWhitelistRulesSchema,
+  type ContractWhitelistRules,
+  MethodWhitelistRulesSchema,
+  type MethodWhitelistRules,
+  ApprovedSpendersRulesSchema,
+  type ApprovedSpendersRules,
+  ApproveAmountLimitRulesSchema,
+  type ApproveAmountLimitRules,
+  ApproveTierOverrideRulesSchema,
+  type ApproveTierOverrideRules,
+  AllowedNetworksRulesSchema,
+  type AllowedNetworksRules,
 } from './policy.schema.js';
 export { ConfigSchema, type Config } from './config.schema.js';
 

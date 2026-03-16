@@ -21,7 +21,7 @@ export type Policy = z.infer<typeof PolicySchema>;
 // ---------------------------------------------------------------------------
 
 /** ALLOWED_TOKENS: rules.tokens array (mint/contract addresses + optional CAIP-19). */
-const AllowedTokensRulesSchema = z.object({
+export const AllowedTokensRulesSchema = z.object({
   tokens: z.array(z.object({
     address: z.string().min(1),
     symbol: z.string().min(1).max(10).optional(),
@@ -31,7 +31,7 @@ const AllowedTokensRulesSchema = z.object({
 });
 
 /** CONTRACT_WHITELIST: rules.contracts array. */
-const ContractWhitelistRulesSchema = z.object({
+export const ContractWhitelistRulesSchema = z.object({
   contracts: z.array(z.object({
     address: z.string().min(1),
     name: z.string().optional(),
@@ -40,7 +40,7 @@ const ContractWhitelistRulesSchema = z.object({
 });
 
 /** METHOD_WHITELIST: rules.methods array (contract-specific allowed methods). */
-const MethodWhitelistRulesSchema = z.object({
+export const MethodWhitelistRulesSchema = z.object({
   methods: z.array(z.object({
     contractAddress: z.string().min(1),
     selectors: z.array(z.string().min(1)).min(1),
@@ -48,7 +48,7 @@ const MethodWhitelistRulesSchema = z.object({
 });
 
 /** APPROVED_SPENDERS: rules.spenders array. */
-const ApprovedSpendersRulesSchema = z.object({
+export const ApprovedSpendersRulesSchema = z.object({
   spenders: z.array(z.object({
     address: z.string().min(1),
     name: z.string().optional(),
@@ -57,13 +57,13 @@ const ApprovedSpendersRulesSchema = z.object({
 });
 
 /** APPROVE_AMOUNT_LIMIT: rules.maxAmount + rules.blockUnlimited. */
-const ApproveAmountLimitRulesSchema = z.object({
+export const ApproveAmountLimitRulesSchema = z.object({
   maxAmount: z.string().regex(/^\d+$/).optional(),
   blockUnlimited: z.boolean().default(true),
 });
 
 /** APPROVE_TIER_OVERRIDE: rules.tier (forced policy tier). */
-const ApproveTierOverrideRulesSchema = z.object({
+export const ApproveTierOverrideRulesSchema = z.object({
   tier: PolicyTierEnum,
 });
 
@@ -165,7 +165,7 @@ export const SpendingLimitRulesSchema = SpendingLimitRulesBaseSchema.superRefine
 export type SpendingLimitRules = z.infer<typeof SpendingLimitRulesSchema>;
 
 /** ALLOWED_NETWORKS: rules.networks array (permitted networks for wallet). */
-const AllowedNetworksRulesSchema = z.object({
+export const AllowedNetworksRulesSchema = z.object({
   networks: z.array(z.object({
     network: NetworkTypeEnum,
     name: z.string().optional(),
@@ -220,7 +220,7 @@ export type ReputationThresholdRules = z.infer<typeof ReputationThresholdRulesSc
 
 // Map of policy types to their rules schemas for superRefine lookup.
 // All 13 PolicyTypes with dedicated rules schemas are covered.
-const POLICY_RULES_SCHEMAS: Record<string, z.ZodTypeAny> = {
+export const POLICY_RULES_SCHEMAS: Record<string, z.ZodTypeAny> = {
   ALLOWED_TOKENS: AllowedTokensRulesSchema,
   CONTRACT_WHITELIST: ContractWhitelistRulesSchema,
   METHOD_WHITELIST: MethodWhitelistRulesSchema,
@@ -272,3 +272,14 @@ export const UpdatePolicyRequestSchema = z.object({
   enabled: z.boolean().optional(),
 });
 export type UpdatePolicyRequest = z.infer<typeof UpdatePolicyRequestSchema>;
+
+// ---------------------------------------------------------------------------
+// v32.4: Inferred types for newly-exported rule schemas (Phase 427)
+// ---------------------------------------------------------------------------
+export type AllowedTokensRules = z.infer<typeof AllowedTokensRulesSchema>;
+export type ContractWhitelistRules = z.infer<typeof ContractWhitelistRulesSchema>;
+export type MethodWhitelistRules = z.infer<typeof MethodWhitelistRulesSchema>;
+export type ApprovedSpendersRules = z.infer<typeof ApprovedSpendersRulesSchema>;
+export type ApproveAmountLimitRules = z.infer<typeof ApproveAmountLimitRulesSchema>;
+export type ApproveTierOverrideRules = z.infer<typeof ApproveTierOverrideRulesSchema>;
+export type AllowedNetworksRules = z.infer<typeof AllowedNetworksRulesSchema>;

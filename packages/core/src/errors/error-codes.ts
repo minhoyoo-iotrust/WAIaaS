@@ -557,6 +557,20 @@ export const ERROR_CODES = {
     retryable: true,
     message: 'Rate limit exceeded',
   },
+  INTERNAL_ERROR: {
+    code: 'INTERNAL_ERROR',
+    domain: 'SYSTEM',
+    httpStatus: 500,
+    retryable: false,
+    message: 'Internal server error',
+  },
+  VALIDATION_FAILED: {
+    code: 'VALIDATION_FAILED',
+    domain: 'SYSTEM',
+    httpStatus: 400,
+    retryable: false,
+    message: 'Validation failed',
+  },
 
   // --- WALLET domain (6) ---
   WALLET_NOT_FOUND: {
