@@ -14,30 +14,26 @@ import type { PolymarketConfig, PolymarketDb } from '../infrastructure.js';
 
 function createMockApiKeyDb() {
   return {
-    getApiKey: vi.fn().mockResolvedValue(null),
-    setApiKey: vi.fn().mockResolvedValue(undefined),
-    deleteApiKey: vi.fn().mockResolvedValue(undefined),
-    getAllApiKeys: vi.fn().mockResolvedValue([]),
+    getApiKeyByWalletId: vi.fn().mockReturnValue(null),
+    insertApiKey: vi.fn(),
+    deleteApiKeyByWalletId: vi.fn(),
   };
 }
 
 function createMockOrderDb() {
   return {
-    saveOrder: vi.fn().mockResolvedValue(undefined),
-    getOrder: vi.fn().mockResolvedValue(null),
-    getOrdersByWallet: vi.fn().mockResolvedValue([]),
-    getActiveOrders: vi.fn().mockResolvedValue([]),
-    updateOrderStatus: vi.fn().mockResolvedValue(undefined),
+    insertOrder: vi.fn(),
+    updateOrderStatus: vi.fn(),
+    updateOrderStatusByOrderId: vi.fn(),
   };
 }
 
 function createMockPositionDb() {
   return {
-    savePosition: vi.fn().mockResolvedValue(undefined),
-    getPosition: vi.fn().mockResolvedValue(null),
-    getPositionsByWallet: vi.fn().mockResolvedValue([]),
-    deletePosition: vi.fn().mockResolvedValue(undefined),
-    getActivePositions: vi.fn().mockResolvedValue([]),
+    getPositions: vi.fn().mockReturnValue([]),
+    getPosition: vi.fn().mockReturnValue(null),
+    upsert: vi.fn(),
+    updateResolution: vi.fn(),
   };
 }
 

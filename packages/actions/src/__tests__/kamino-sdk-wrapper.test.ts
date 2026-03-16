@@ -515,7 +515,7 @@ describe('KaminoSdkWrapper with mocked SDK', () => {
     };
     const marketWithMixed = {
       ...mockMarket,
-      reserves: new Map([
+      reserves: new Map<string, typeof mockReserve | typeof reserveNoStats>([
         ['reserve1', mockReserve],
         ['reserve2', reserveNoStats],
       ]),
