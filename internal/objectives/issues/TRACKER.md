@@ -14,13 +14,13 @@
 
 | ID | 유형 | 심각도 | 제목 | 마일스톤 | 상태 | 수정일 |
 |----|------|--------|------|----------|------|--------|
-| 367 | ENHANCEMENT | LOW | mainnet-06 NFT 전송 시나리오 L2 체인 전환 — 가스비 절감 ($2.00→$0.01) | — | OPEN | — |
-| 368 | ENHANCEMENT | LOW | Admin UI 프로바이더 API Key 발급 링크 누락 — Jupiter/0x 키 발급 페이지 안내 없음 | — | OPEN | — |
-| 369 | BUG | HIGH | Jupiter Swap routePlan feeAmount/feeMint 필드 누락으로 스왑 전체 실패 | — | OPEN | — |
-| 370 | BUG | HIGH | Jito Staking reserve stake 주소 불일치로 DepositSol 실패 | — | OPEN | — |
-| 371 | BUG | HIGH | DCent Swap amount 단위 불일치로 스왑 트랜잭션 revert — smallest unit vs human amount | — | OPEN | — |
-| 372 | BUG | HIGH | Solana DeFi SDK 미설치로 Kamino/Drift 전체 기능 사용 불가 | — | OPEN | — |
-| 373 | BUG | HIGH | Pendle Yield buy_pt API 응답 스키마 불일치 (array vs object) | — | OPEN | — |
+| 367 | ENHANCEMENT | LOW | mainnet-06 NFT 전송 시나리오 L2 체인 전환 — 가스비 절감 ($2.00→$0.01) | v32.5 | FIXED | 2026-03-16 |
+| 368 | ENHANCEMENT | LOW | Admin UI 프로바이더 API Key 발급 링크 누락 — Jupiter/0x 키 발급 페이지 안내 없음 | v32.5 | FIXED | 2026-03-16 |
+| 369 | BUG | HIGH | Jupiter Swap routePlan feeAmount/feeMint 필드 누락으로 스왑 전체 실패 | v32.5 | FIXED | 2026-03-16 |
+| 370 | BUG | HIGH | Jito Staking reserve stake 주소 불일치로 DepositSol 실패 | v32.5 | FIXED | 2026-03-16 |
+| 371 | BUG | HIGH | DCent Swap amount 단위 불일치로 스왑 트랜잭션 revert — smallest unit vs human amount | v32.5 | FIXED | 2026-03-16 |
+| 372 | BUG | HIGH | Solana DeFi SDK 미설치로 Kamino/Drift 전체 기능 사용 불가 | v32.5 | FIXED | 2026-03-16 |
+| 373 | BUG | HIGH | Pendle Yield buy_pt API 응답 스키마 불일치 (array vs object) | v32.5 | FIXED | 2026-03-16 |
 
 ## Type Legend
 
@@ -32,8 +32,8 @@
 
 ## Summary
 
-- **OPEN:** 7
-- **FIXED:** 366
+- **OPEN:** 0
+- **FIXED:** 373
 - **WONTFIX:** 1
 - **Total:** 374
 - **Archived:** 366 (001–366)
