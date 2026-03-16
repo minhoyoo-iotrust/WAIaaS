@@ -7,7 +7,7 @@
 
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import { createRoute, z } from '@hono/zod-openapi';
-import { sql, desc, eq, and, isNull, gt, count as drizzleCount } from 'drizzle-orm';
+import { sql, desc, eq, and, isNull, gt, count as drizzleCount, inArray } from 'drizzle-orm';
 import { createHash } from 'node:crypto';
 import { WAIaaSError, getNetworksForEnvironment } from '@waiaas/core';
 import type { ContractNameRegistry } from '@waiaas/core';
@@ -380,9 +380,14 @@ export function registerAdminMonitoringRoutes(router: OpenAPIHono, deps: AdminRo
     let targetWallets: Array<{ id: string; name: string; chain: string; environment: string; publicKey: string }>;
 
     if (body.walletIds && body.walletIds.length > 0) {
-      targetWallets = body.walletIds
-        .map((wid) => deps.db.select().from(wallets).where(eq(wallets.id, wid)).get())
-        .filter((w): w is NonNullable<typeof w> => w != null && w.status === 'ACTIVE')
+      // NQ-02: batch wallet fetch via single IN() query instead of N individual queries
+      const walletRows = deps.db
+        .select()
+        .from(wallets)
+        .where(inArray(wallets.id, body.walletIds))
+        .all();
+      targetWallets = walletRows
+        .filter((w) => w.status === 'ACTIVE')
         .map((w) => ({ id: w.id, name: w.name, chain: w.chain, environment: w.environment, publicKey: w.publicKey }));
     } else {
       targetWallets = deps.db
@@ -429,20 +434,27 @@ export function registerAdminMonitoringRoutes(router: OpenAPIHono, deps: AdminRo
     let reusableSessionId: string | null = null;
     let reusableExpiresAt = 0;
 
+    // NQ-03: batch linked count via single GROUP BY query instead of N individual queries
+    const candidateIds = candidateSessions.map((c) => c.id);
+    const linkedCounts = candidateIds.length > 0 && targetWalletIds.length > 0
+      ? deps.db
+          .select({
+            sessionId: sessionWallets.sessionId,
+            cnt: drizzleCount(),
+          })
+          .from(sessionWallets)
+          .where(
+            and(
+              inArray(sessionWallets.sessionId, candidateIds),
+              inArray(sessionWallets.walletId, targetWalletIds),
+            ),
+          )
+          .groupBy(sessionWallets.sessionId)
+          .all()
+      : [];
+    const countMap = new Map(linkedCounts.map((r) => [r.sessionId, r.cnt]));
     for (const candidate of candidateSessions) {
-      // Count how many of our target wallets are linked to this session
-      const linkedCount = deps.db
-        .select({ cnt: drizzleCount() })
-        .from(sessionWallets)
-        .where(
-          and(
-            eq(sessionWallets.sessionId, candidate.id),
-            sql`${sessionWallets.walletId} IN (${sql.join(targetWalletIds.map((id) => sql`${id}`), sql`, `)})`,
-          ),
-        )
-        .get();
-
-      if (linkedCount && linkedCount.cnt === targetWalletIds.length) {
+      if ((countMap.get(candidate.id) ?? 0) === targetWalletIds.length) {
         reusableSessionId = candidate.id;
         reusableExpiresAt = candidate.expiresAt instanceof Date
           ? Math.floor(candidate.expiresAt.getTime() / 1000)
