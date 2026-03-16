@@ -21,6 +21,8 @@
 | 371 | BUG | HIGH | DCent Swap amount 단위 불일치로 스왑 트랜잭션 revert — smallest unit vs human amount | v32.5 | FIXED | 2026-03-16 |
 | 372 | BUG | HIGH | Solana DeFi SDK 미설치로 Kamino/Drift 전체 기능 사용 불가 | v32.5 | FIXED | 2026-03-16 |
 | 373 | BUG | HIGH | Pendle Yield buy_pt API 응답 스키마 불일치 (array vs object) | v32.5 | FIXED | 2026-03-16 |
+| 374 | MISSING | HIGH | KaminoSdkWrapper 실제 SDK 연결 구현 — 스텁에서 동적 import 기반 실제 연결로 전환 | — | OPEN | — |
+| 375 | MISSING | HIGH | DriftSdkWrapper 실제 SDK 연결 구현 — 스텁에서 동적 import 기반 실제 연결로 전환 | — | OPEN | — |
 
 ## Type Legend
 
@@ -32,8 +34,8 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 2
 - **FIXED:** 373
 - **WONTFIX:** 1
-- **Total:** 374
+- **Total:** 376
 - **Archived:** 366 (001–366)
