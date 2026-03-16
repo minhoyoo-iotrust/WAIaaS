@@ -8,16 +8,9 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: v32.4 타입 안전 + 코드 품질
+## Previous Milestone: v32.4 타입 안전 + 코드 품질 — SHIPPED 2026-03-16
 
-**Goal:** 프로덕션 코드의 `as any` 24건과 `as unknown as` 캐스팅을 제거하고, `JSON.parse()` 14건에 Zod 런타임 검증을 추가하며, 중복 코드를 SSoT로 통합하고, 레이어 위반을 수정하여 타입 시스템의 신뢰성과 코드 유지보수성을 확보한다.
-
-**Target features:**
-- DatabasePolicyEngine Zod 검증 + 정책 룰 스키마 SSoT
-- IChainSubscriber 인터페이스 확장 + 레이어 위반 수정
-- `as any` 24건 제거 (wc.ts, hot-reload, daemon lifecycle)
-- 중복 코드 SSoT 통합 (NATIVE_DECIMALS, sleep, formatDisplayCurrency 등)
-- 팬텀 설정 정리 + 기타 정리
+프로덕션 `as any` 0건 달성, DatabasePolicyEngine 20건 JSON.parse→Zod safeParse, IChainSubscriber 9메서드 확장, NATIVE_DECIMALS/sleep/formatAmount SSoT 통합, 레이어 위반 0건, 4건 이슈 수정(#359-#362). 5 phases, 11 plans, 51 requirements, 47 commits, 140 files, +7,233/-1,967 lines, ~349,000 LOC TS.
 
 ## Previous Milestone: v32.2 보안 패치 — SHIPPED 2026-03-16
 

@@ -1,7 +1,8 @@
 # 마일스톤 m32-04: 타입 안전 + 코드 품질
 
-- **Status:** PLANNED
+- **Status:** SHIPPED
 - **Milestone:** v32.4
+- **Completed:** 2026-03-16
 
 ## 목표
 
