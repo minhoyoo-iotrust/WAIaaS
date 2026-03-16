@@ -49,7 +49,7 @@ export class SyncPipelineExecutor {
    */
   async execute(ctx: PipelineContext): Promise<string> {
     // Set source for audit trail (SEC-04 preparation for Phase 400)
-    (ctx as any).source = 'rpc-proxy';
+    (ctx as PipelineContext & { source?: string }).source = 'rpc-proxy';
 
     // Stages 1-3.5: always run directly
     await stage1Validate(ctx);
