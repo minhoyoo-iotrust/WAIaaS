@@ -906,6 +906,83 @@ describe('WAIaaSClient', () => {
   });
 
   // =========================================================================
+  // listSessions / listPolicies (pagination)
+  // =========================================================================
+
+  describe('listSessions', () => {
+    it('should call GET /v1/sessions with master auth', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+      });
+
+      const paginatedResponse = { data: [], total: 0, limit: 50, offset: 0 };
+      fetchSpy.mockResolvedValueOnce(mockResponse(paginatedResponse));
+
+      const result = await client.listSessions('my-master-pw');
+      expect(result).toEqual(paginatedResponse);
+
+      const calledUrl = fetchSpy.mock.calls[0][0] as string;
+      expect(calledUrl).toBe('http://localhost:3000/v1/sessions');
+      const headers = fetchSpy.mock.calls[0][1].headers as Record<string, string>;
+      expect(headers['X-Master-Password']).toBe('my-master-pw');
+    });
+
+    it('should pass walletId/limit/offset query params', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+      });
+
+      const paginatedResponse = { data: [{ id: 's-1' }], total: 5, limit: 10, offset: 5 };
+      fetchSpy.mockResolvedValueOnce(mockResponse(paginatedResponse));
+
+      await client.listSessions('pw', { walletId: 'w-1', limit: 10, offset: 5 });
+
+      const calledUrl = fetchSpy.mock.calls[0][0] as string;
+      expect(calledUrl).toContain('walletId=w-1');
+      expect(calledUrl).toContain('limit=10');
+      expect(calledUrl).toContain('offset=5');
+    });
+  });
+
+  describe('listPolicies', () => {
+    it('should call GET /v1/policies with session auth', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+      });
+
+      const paginatedResponse = { data: [], total: 0, limit: 50, offset: 0 };
+      fetchSpy.mockResolvedValueOnce(mockResponse(paginatedResponse));
+
+      const result = await client.listPolicies();
+      expect(result).toEqual(paginatedResponse);
+
+      const calledUrl = fetchSpy.mock.calls[0][0] as string;
+      expect(calledUrl).toBe('http://localhost:3000/v1/policies');
+      const headers = fetchSpy.mock.calls[0][1].headers as Record<string, string>;
+      expect(headers['Authorization']).toContain('Bearer');
+    });
+
+    it('should pass walletId/limit query params', async () => {
+      const client = new WAIaaSClient({
+        baseUrl: 'http://localhost:3000',
+        sessionToken: mockToken,
+      });
+
+      const paginatedResponse = { data: [{ id: 'p-1' }], total: 3, limit: 5, offset: 0 };
+      fetchSpy.mockResolvedValueOnce(mockResponse(paginatedResponse));
+
+      await client.listPolicies({ limit: 5, walletId: 'w-2' });
+
+      const calledUrl = fetchSpy.mock.calls[0][0] as string;
+      expect(calledUrl).toContain('limit=5');
+      expect(calledUrl).toContain('walletId=w-2');
+    });
+  });
+
+  // =========================================================================
   // Token Management
   // =========================================================================
 

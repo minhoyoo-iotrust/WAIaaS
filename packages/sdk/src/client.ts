@@ -51,6 +51,10 @@ import type {
   CreateSessionResponse,
   RenewSessionResponse,
   RotateSessionTokenResponse,
+  ListSessionsParams,
+  PaginatedSessionList,
+  ListPoliciesParams,
+  PaginatedPolicyList,
   ConnectInfoResponse,
   EncodeCalldataParams,
   EncodeCalldataResponse,
@@ -643,6 +647,38 @@ export class WAIaaSClient {
       this.retryOptions,
     );
     return result;
+  }
+
+  /** List sessions with optional wallet filter and pagination (admin operation). */
+  async listSessions(masterPassword: string, params?: ListSessionsParams): Promise<PaginatedSessionList> {
+    const qs = new URLSearchParams();
+    if (params?.walletId) qs.set('walletId', params.walletId);
+    if (params?.limit !== undefined) qs.set('limit', String(params.limit));
+    if (params?.offset !== undefined) qs.set('offset', String(params.offset));
+    const query = qs.toString();
+    return withRetry(
+      () => this.http.get<PaginatedSessionList>(
+        `/v1/sessions${query ? `?${query}` : ''}`,
+        this.masterHeaders(masterPassword),
+      ),
+      this.retryOptions,
+    );
+  }
+
+  /** List policies with optional wallet filter and pagination (session auth). */
+  async listPolicies(params?: ListPoliciesParams): Promise<PaginatedPolicyList> {
+    const qs = new URLSearchParams();
+    if (params?.walletId) qs.set('walletId', params.walletId);
+    if (params?.limit !== undefined) qs.set('limit', String(params.limit));
+    if (params?.offset !== undefined) qs.set('offset', String(params.offset));
+    const query = qs.toString();
+    return withRetry(
+      () => this.http.get<PaginatedPolicyList>(
+        `/v1/policies${query ? `?${query}` : ''}`,
+        this.authHeaders(),
+      ),
+      this.retryOptions,
+    );
   }
 
   // --- Discovery ---

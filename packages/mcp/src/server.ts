@@ -31,6 +31,7 @@ import { registerWcStatus } from './tools/wc-status.js';
 import { registerWcDisconnect } from './tools/wc-disconnect.js';
 import { registerConnectInfo } from './tools/connect-info.js';
 import { registerGetPolicies } from './tools/get-policies.js';
+import { registerListSessions } from './tools/list-sessions.js';
 import { registerGetTokens } from './tools/get-tokens.js';
 import { registerListIncomingTransactions } from './tools/list-incoming-transactions.js';
 import { registerGetIncomingSummary } from './tools/get-incoming-summary.js';
@@ -83,8 +84,9 @@ export function createMcpServer(apiClient: ApiClient, walletContext?: WalletCont
     version: '0.0.0',
   });
 
-  // Register 41 tools
+  // Register 42 tools
   registerConnectInfo(server, apiClient);
+  registerListSessions(server, apiClient);
   registerGetPolicies(server, apiClient, walletContext);
   registerGetTokens(server, apiClient, walletContext);
   registerSendToken(server, apiClient, walletContext);

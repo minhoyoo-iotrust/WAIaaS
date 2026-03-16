@@ -367,6 +367,61 @@ export interface RotateSessionTokenResponse {
 }
 
 // ---------------------------------------------------------------------------
+// Session/Policy List (Paginated) Types
+// ---------------------------------------------------------------------------
+
+export interface ListSessionsParams {
+  walletId?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface SessionListItem {
+  id: string;
+  walletId: string;
+  walletName: string | null;
+  wallets: Array<{ id: string; name: string }>;
+  status: string;
+  renewalCount: number;
+  maxRenewals: number;
+  expiresAt: number;
+  absoluteExpiresAt: number;
+  createdAt: number;
+  lastRenewedAt: number | null;
+  source: 'api' | 'mcp';
+}
+
+export interface PaginatedSessionList {
+  data: SessionListItem[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface ListPoliciesParams {
+  walletId?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface PaginatedPolicyList {
+  data: Array<{
+    id: string;
+    walletId: string | null;
+    type: string;
+    rules: Record<string, unknown>;
+    priority: number;
+    enabled: boolean;
+    network: string | null;
+    createdAt: number;
+    updatedAt: number;
+  }>;
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+// ---------------------------------------------------------------------------
 // Connect Info (Discovery) Types
 // ---------------------------------------------------------------------------
 
