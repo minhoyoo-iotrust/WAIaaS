@@ -4,7 +4,7 @@ milestone: v32.6
 milestone_name: 성능 + 구조 개선
 status: completed
 stopped_at: Completed Phase 438 (final phase - milestone v32.6 complete)
-last_updated: "2026-03-17T19:51:00Z"
+last_updated: "2026-03-16T19:52:59.374Z"
 last_activity: 2026-03-17 — Phase 438 pipeline split + Solana mapError + ILogger
 progress:
   total_phases: 4
