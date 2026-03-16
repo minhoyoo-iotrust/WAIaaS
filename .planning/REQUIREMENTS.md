@@ -102,13 +102,63 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (populated by roadmapper) | | |
+| ZOD-01 | Phase 427 | Pending |
+| ZOD-02 | Phase 427 | Pending |
+| ZOD-03 | Phase 429 | Pending |
+| ZOD-04 | Phase 429 | Pending |
+| ZOD-05 | Phase 429 | Pending |
+| ZOD-06 | Phase 429 | Pending |
+| ZOD-07 | Phase 429 | Pending |
+| ZOD-08 | Phase 429 | Pending |
+| ZOD-09 | Phase 429 | Pending |
+| ZOD-10 | Phase 430 | Pending |
+| ZOD-11 | Phase 430 | Pending |
+| ZOD-12 | Phase 430 | Pending |
+| ZOD-13 | Phase 429 | Pending |
+| LAYER-01 | Phase 428 | Pending |
+| LAYER-02 | Phase 428 | Pending |
+| LAYER-03 | Phase 428 | Pending |
+| LAYER-04 | Phase 428 | Pending |
+| LAYER-05 | Phase 428 | Pending |
+| LAYER-06 | Phase 427 | Pending |
+| LAYER-07 | Phase 427 | Pending |
+| LAYER-08 | Phase 428 | Pending |
+| LAYER-09 | Phase 428 | Pending |
+| LAYER-10 | Phase 428 | Pending |
+| CAST-01 | Phase 430 | Pending |
+| CAST-02 | Phase 430 | Pending |
+| CAST-03 | Phase 430 | Pending |
+| CAST-04 | Phase 430 | Pending |
+| CAST-05 | Phase 430 | Pending |
+| CAST-06 | Phase 430 | Pending |
+| CAST-07 | Phase 430 | Pending |
+| CAST-08 | Phase 430 | Pending |
+| CAST-09 | Phase 430 | Pending |
+| CAST-10 | Phase 430 | Pending |
+| CAST-11 | Phase 430 | Pending |
+| CAST-12 | Phase 430 | Pending |
+| CAST-13 | Phase 430 | Pending |
+| SSOT-01 | Phase 431 | Pending |
+| SSOT-02 | Phase 427 | Pending |
+| SSOT-03 | Phase 431 | Pending |
+| SSOT-04 | Phase 431 | Pending |
+| SSOT-05 | Phase 431 | Pending |
+| SSOT-06 | Phase 431 | Pending |
+| SSOT-07 | Phase 431 | Pending |
+| CLN-01 | Phase 431 | Pending |
+| CLN-02 | Phase 431 | Pending |
+| CLN-03 | Phase 431 | Pending |
+| CLN-04 | Phase 431 | Pending |
+| CLN-05 | Phase 431 | Pending |
+| CLN-06 | Phase 431 | Pending |
+| CLN-07 | Phase 431 | Pending |
+| CLN-08 | Phase 431 | Pending |
 
 **Coverage:**
 - v1 requirements: 51 total
-- Mapped to phases: 0
-- Unmapped: 51 ⚠️
+- Mapped to phases: 51
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-16*
-*Last updated: 2026-03-16 after initial definition*
+*Last updated: 2026-03-16 after roadmap creation*
