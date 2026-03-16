@@ -97,13 +97,62 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (populated by roadmap) | | |
+| NQ-01 | Phase 435 | Pending |
+| NQ-02 | Phase 435 | Pending |
+| NQ-03 | Phase 435 | Pending |
+| NQ-04 | Phase 435 | Pending |
+| NQ-05 | Phase 435 | Pending |
+| NQ-06 | Phase 435 | Pending |
+| NQ-07 | Phase 435 | Pending |
+| PAG-01 | Phase 436 | Pending |
+| PAG-02 | Phase 436 | Pending |
+| PAG-03 | Phase 436 | Pending |
+| PAG-04 | Phase 436 | Pending |
+| PAG-05 | Phase 436 | Pending |
+| PAG-06 | Phase 436 | Pending |
+| PAG-07 | Phase 436 | Pending |
+| PAG-08 | Phase 436 | Pending |
+| MIG-01 | Phase 437 | Pending |
+| MIG-02 | Phase 437 | Pending |
+| MIG-03 | Phase 437 | Pending |
+| MIG-04 | Phase 437 | Pending |
+| MIG-05 | Phase 437 | Pending |
+| MIG-06 | Phase 437 | Pending |
+| MIG-07 | Phase 437 | Pending |
+| MIG-08 | Phase 437 | Pending |
+| MIG-09 | Phase 437 | Pending |
+| DMN-01 | Phase 437 | Pending |
+| DMN-02 | Phase 437 | Pending |
+| DMN-03 | Phase 437 | Pending |
+| DMN-04 | Phase 437 | Pending |
+| DMN-05 | Phase 437 | Pending |
+| DMN-06 | Phase 437 | Pending |
+| DPE-01 | Phase 437 | Pending |
+| DPE-02 | Phase 437 | Pending |
+| DPE-03 | Phase 437 | Pending |
+| DPE-04 | Phase 437 | Pending |
+| DPE-05 | Phase 437 | Pending |
+| DPE-06 | Phase 437 | Pending |
+| DPE-07 | Phase 437 | Pending |
+| DPE-08 | Phase 437 | Pending |
+| STG-01 | Phase 438 | Pending |
+| STG-02 | Phase 438 | Pending |
+| STG-03 | Phase 438 | Pending |
+| STG-04 | Phase 438 | Pending |
+| STG-05 | Phase 438 | Pending |
+| STG-06 | Phase 438 | Pending |
+| STG-07 | Phase 438 | Pending |
+| STG-08 | Phase 438 | Pending |
+| CLN-01 | Phase 438 | Pending |
+| CLN-02 | Phase 438 | Pending |
+| CLN-03 | Phase 438 | Pending |
+| CLN-04 | Phase 438 | Pending |
 
 **Coverage:**
 - v1 requirements: 46 total
-- Mapped to phases: 0
-- Unmapped: 46
+- Mapped to phases: 46
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-17*
-*Last updated: 2026-03-17 after initial definition*
+*Last updated: 2026-03-17 after roadmap creation*
