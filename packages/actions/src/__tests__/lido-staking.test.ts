@@ -13,7 +13,7 @@ import {
   decodeUint256Result,
   WSTETH_MAINNET,
 } from '../providers/lido-staking/lido-contract.js';
-import type { ActionContext } from '@waiaas/core';
+import type { ActionContext, PositionQueryContext } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------
 // Test context
@@ -218,6 +218,17 @@ describe('LidoStakingActionProvider IPositionProvider', () => {
   const RPC_URL = 'https://mock-rpc.example.com';
   const WALLET_ID = '0xABCDEF1234567890ABCDEF1234567890ABCDEF12';
 
+  /** Build an ethereum PositionQueryContext for testing. */
+  function makeCtx(walletId: string = WALLET_ID, chain: 'ethereum' | 'solana' = 'ethereum'): PositionQueryContext {
+    return {
+      walletId,
+      chain,
+      networks: chain === 'ethereum' ? ['ethereum-mainnet'] : ['solana-mainnet'],
+      environment: 'mainnet',
+      rpcUrls: {},
+    };
+  }
+
   let fetchMock: ReturnType<typeof vi.fn>;
   let provider: LidoStakingActionProvider;
 
@@ -272,7 +283,7 @@ describe('LidoStakingActionProvider IPositionProvider', () => {
       return rpcResult(zeroBalance);
     });
 
-    const positions = await provider.getPositions(WALLET_ID);
+    const positions = await provider.getPositions(makeCtx());
     expect(positions).toHaveLength(1);
     expect(positions[0]!.category).toBe('STAKING');
     expect(positions[0]!.provider).toBe('lido_staking');
@@ -280,6 +291,11 @@ describe('LidoStakingActionProvider IPositionProvider', () => {
     expect(positions[0]!.assetId).toContain('eip155:1/erc20:');
     expect(positions[0]!.amount).toBe('1.0');
     expect(positions[0]!.status).toBe('ACTIVE');
+  });
+
+  it('getPositions returns [] for solana wallet (chain guard)', async () => {
+    const positions = await provider.getPositions(makeCtx(WALLET_ID, 'solana'));
+    expect(positions).toEqual([]);
   });
 
   it('getPositions with wstETH balance 1e18 and stEthPerToken 1.15e18 returns correct underlyingAmount', async () => {
@@ -306,7 +322,7 @@ describe('LidoStakingActionProvider IPositionProvider', () => {
       return rpcResult(zeroBalance);
     });
 
-    const positions = await provider.getPositions(WALLET_ID);
+    const positions = await provider.getPositions(makeCtx());
     expect(positions).toHaveLength(1);
     expect(positions[0]!.metadata.token).toBe('wstETH');
     // underlyingAmount = (1e18 * 1.15e18) / 1e18 = 1.15
@@ -326,7 +342,7 @@ describe('LidoStakingActionProvider IPositionProvider', () => {
       return rpcResult('0x' + '0'.repeat(64));
     });
 
-    const positions = await provider.getPositions(WALLET_ID);
+    const positions = await provider.getPositions(makeCtx());
     expect(positions).toHaveLength(2);
     const tokens = positions.map((p) => p.metadata.token);
     expect(tokens).toContain('stETH');
@@ -337,14 +353,14 @@ describe('LidoStakingActionProvider IPositionProvider', () => {
     const zeroBalance = '0x' + '0'.repeat(64);
     fetchMock.mockResolvedValue(rpcResult(zeroBalance));
 
-    const positions = await provider.getPositions(WALLET_ID);
+    const positions = await provider.getPositions(makeCtx());
     expect(positions).toEqual([]);
   });
 
   it('getPositions returns empty array on RPC error (no throw)', async () => {
     fetchMock.mockRejectedValue(new Error('RPC connection failed'));
 
-    const positions = await provider.getPositions(WALLET_ID);
+    const positions = await provider.getPositions(makeCtx());
     expect(positions).toEqual([]);
   });
 });

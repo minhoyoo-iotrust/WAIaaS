@@ -19,6 +19,7 @@ import type {
   ApiDirectResult,
   PositionUpdate,
   PositionCategory,
+  PositionQueryContext,
 } from '@waiaas/core';
 import type { Hex } from 'viem';
 import type { HyperliquidExchangeClient } from './exchange-client.js';
@@ -360,7 +361,9 @@ export class HyperliquidSpotProvider implements IActionProvider {
     return ['PERP'];
   }
 
-  async getPositions(walletId: string): Promise<PositionUpdate[]> {
+  async getPositions(ctx: PositionQueryContext): Promise<PositionUpdate[]> {
+    if (ctx.chain !== 'ethereum') return [];
+    const walletId = ctx.walletId;
     try {
       const [balances, mids] = await Promise.all([
         this.marketData.getSpotBalances(walletId as Hex),

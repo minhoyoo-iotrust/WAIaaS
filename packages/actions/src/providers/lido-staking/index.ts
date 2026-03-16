@@ -30,7 +30,7 @@ import {
   WSTETH_MAINNET,
 } from './lido-contract.js';
 import { formatCaip19 } from '@waiaas/core';
-import type { PositionUpdate, PositionCategory } from '@waiaas/core';
+import type { PositionUpdate, PositionCategory, PositionQueryContext } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------
 // Input schemas (Zod SSoT)
@@ -185,8 +185,10 @@ export class LidoStakingActionProvider implements IActionProvider {
    * Query stETH and wstETH balances for the given wallet and return
    * STAKING position updates. Returns [] on zero balances or RPC error.
    */
-  async getPositions(walletId: string): Promise<PositionUpdate[]> {
+  async getPositions(ctx: PositionQueryContext): Promise<PositionUpdate[]> {
+    if (ctx.chain !== 'ethereum') return [];
     if (!this.rpcUrl) return [];
+    const walletId = ctx.walletId;
 
     try {
       const positions: PositionUpdate[] = [];

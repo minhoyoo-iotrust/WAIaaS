@@ -26,7 +26,7 @@ import type {
   MarketInfo,
   NetworkType,
 } from '@waiaas/core';
-import type { IPositionProvider, PositionUpdate, PositionCategory } from '@waiaas/core';
+import type { IPositionProvider, PositionUpdate, PositionCategory, PositionQueryContext } from '@waiaas/core';
 import type { AaveV3Config } from './config.js';
 import { getAaveAddresses } from './config.js';
 import {
@@ -443,8 +443,10 @@ export class AaveV3LendingProvider implements ILendingProvider, IPositionProvide
   // IPositionProvider methods
   // -------------------------------------------------------------------------
 
-  async getPositions(walletId: string): Promise<PositionUpdate[]> {
+  async getPositions(ctx: PositionQueryContext): Promise<PositionUpdate[]> {
+    if (ctx.chain !== 'ethereum') return [];
     if (!this.rpcCaller) return [];
+    const walletId = ctx.walletId;
 
     try {
       const network = 'ethereum-mainnet';

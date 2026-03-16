@@ -22,6 +22,7 @@ import type {
   IPositionProvider,
   PositionUpdate,
   PositionCategory,
+  PositionQueryContext,
 } from '@waiaas/core';
 import { PendleApiClient } from './pendle-api-client.js';
 import { type PendleConfig, PENDLE_DEFAULTS, getPendleChainId } from './config.js';
@@ -301,8 +302,10 @@ export class PendleYieldProvider implements IYieldProvider, IPositionProvider {
   // IPositionProvider methods
   // ---------------------------------------------------------------------------
 
-  async getPositions(walletId: string): Promise<PositionUpdate[]> {
+  async getPositions(ctx: PositionQueryContext): Promise<PositionUpdate[]> {
+    if (ctx.chain !== 'ethereum') return [];
     if (!this.config.rpcUrl) return [];
+    const walletId = ctx.walletId;
 
     try {
       const positions: PositionUpdate[] = [];

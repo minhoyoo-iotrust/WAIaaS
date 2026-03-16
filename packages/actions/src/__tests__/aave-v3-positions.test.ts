@@ -8,6 +8,7 @@
  * @see LEND-01, LEND-02, LEND-03, LEND-04, TEST-01
  */
 import { describe, it, expect, vi } from 'vitest';
+import type { PositionQueryContext } from '@waiaas/core';
 import { AaveV3LendingProvider } from '../providers/aave-v3/index.js';
 import {
   encodeGetReservesListCalldata,
@@ -146,6 +147,17 @@ describe('Aave V3 ABI decoding helpers', () => {
 // getPositions() tests
 // ---------------------------------------------------------------------------
 
+/** Build an ethereum PositionQueryContext for testing. */
+function makeEvmCtx(walletId: string = WALLET_ADDRESS, chain: 'ethereum' | 'solana' = 'ethereum'): PositionQueryContext {
+  return {
+    walletId,
+    chain,
+    networks: chain === 'ethereum' ? ['ethereum-mainnet'] : ['solana-mainnet'],
+    environment: 'mainnet',
+    rpcUrls: {},
+  };
+}
+
 describe('AaveV3LendingProvider.getPositions()', () => {
   function createMockRpcCaller(handlers: Record<string, string>): IRpcCaller {
     return {
@@ -217,7 +229,7 @@ describe('AaveV3LendingProvider.getPositions()', () => {
     };
 
     const provider = new AaveV3LendingProvider({}, createMockRpcCaller(handlers));
-    const positions = await provider.getPositions(WALLET_ADDRESS);
+    const positions = await provider.getPositions(makeEvmCtx());
 
     expect(positions).toHaveLength(1);
     expect(positions[0]!.category).toBe('LENDING');
@@ -258,7 +270,7 @@ describe('AaveV3LendingProvider.getPositions()', () => {
     };
 
     const provider = new AaveV3LendingProvider({}, createMockRpcCaller(handlers));
-    const positions = await provider.getPositions(WALLET_ADDRESS);
+    const positions = await provider.getPositions(makeEvmCtx());
 
     expect(positions).toHaveLength(1);
     expect(positions[0]!.metadata.positionType).toBe('BORROW');
@@ -293,7 +305,7 @@ describe('AaveV3LendingProvider.getPositions()', () => {
     };
 
     const provider = new AaveV3LendingProvider({}, createMockRpcCaller(handlers));
-    const positions = await provider.getPositions(WALLET_ADDRESS);
+    const positions = await provider.getPositions(makeEvmCtx());
 
     expect(positions).toHaveLength(1);
     expect(positions[0]!.metadata.healthFactor).toBeCloseTo(1.65, 1);
@@ -322,14 +334,14 @@ describe('AaveV3LendingProvider.getPositions()', () => {
     };
 
     const provider = new AaveV3LendingProvider({}, createMockRpcCaller(handlers));
-    const positions = await provider.getPositions(WALLET_ADDRESS);
+    const positions = await provider.getPositions(makeEvmCtx());
 
     expect(positions).toEqual([]);
   });
 
   it('Test 10: getPositions without rpcCaller returns []', async () => {
     const provider = new AaveV3LendingProvider({});
-    const positions = await provider.getPositions(WALLET_ADDRESS);
+    const positions = await provider.getPositions(makeEvmCtx());
     expect(positions).toEqual([]);
   });
 
@@ -364,7 +376,7 @@ describe('AaveV3LendingProvider.getPositions()', () => {
     };
 
     const provider = new AaveV3LendingProvider({}, createMockRpcCaller(handlers));
-    const positions = await provider.getPositions(WALLET_ADDRESS);
+    const positions = await provider.getPositions(makeEvmCtx());
 
     expect(positions).toHaveLength(2); // 1 supply + 1 borrow
     const supply = positions.find((p) => p.metadata.positionType === 'SUPPLY');
@@ -373,5 +385,11 @@ describe('AaveV3LendingProvider.getPositions()', () => {
     expect(borrow).toBeDefined();
     expect(supply!.amountUsd).toBeGreaterThan(0); // ETH price $2000
     expect(borrow!.amountUsd).toBeGreaterThan(0); // USDC price $1
+  });
+
+  it('Test 12: getPositions returns [] for solana wallet (chain guard)', async () => {
+    const provider = new AaveV3LendingProvider({}, createMockRpcCaller({}));
+    const positions = await provider.getPositions(makeEvmCtx(WALLET_ADDRESS, 'solana'));
+    expect(positions).toEqual([]);
   });
 });
