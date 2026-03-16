@@ -117,7 +117,7 @@
 **Goal**: 모든 하위 패키지가 사용할 공유 유틸리티와 스키마 export가 @waiaas/core에 존재한다
 **Depends on**: Nothing (first phase)
 **Requirements**: ZOD-01, ZOD-02, SSOT-02, LAYER-06, LAYER-07
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 **Success Criteria** (what must be TRUE):
   1. safeJsonParse<T>(json, schema) 호출 시 Zod 스키마 기반으로 JSON을 파싱+검증하며, 실패 시 구조화된 에러를 반환한다
   2. 다른 패키지(daemon 등)에서 import { POLICY_RULES_SCHEMAS } from '@waiaas/core'가 동작한다
@@ -184,7 +184,7 @@ Phases execute in numeric order: 427 -> 428 -> 429 -> 430 -> 431
 | 424. SSRF Guard + hostGuard Fix | v32.2 | 1/1 | Complete | 2026-03-16 |
 | 425. Rate Limit Middleware | v32.2 | 1/1 | Complete | 2026-03-16 |
 | 426. CORS + Resource Management | v32.2 | 1/1 | Complete | 2026-03-16 |
-| 427. Core Exports + safeJsonParse 유틸리티 | v32.4 | 1/1 | Complete | 2026-03-16 |
+| 427. Core Exports + safeJsonParse 유틸리티 | v32.4 | Complete    | 2026-03-16 | 2026-03-16 |
 | 428. 인터페이스 확장 + 레이어 위반 수정 | v32.4 | 0/TBD | Not started | - |
 | 429. DatabasePolicyEngine Zod 검증 | v32.4 | 0/TBD | Not started | - |
 | 430. as any 제거 | v32.4 | 0/TBD | Not started | - |
