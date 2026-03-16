@@ -15,11 +15,12 @@ export const BUILTIN_PROVIDER_METADATA: ReadonlyArray<{
   chains: readonly string[];
   mcpExpose: boolean;
   requiresApiKey: boolean;
+  apiKeyUrl?: string;
   enabledKey: string;
   category: string;
 }> = [
-  { name: 'jupiter_swap', displayName: 'Jupiter Swap', description: 'Jupiter DEX aggregator for Solana token swaps with MEV protection', version: '1.0.0', chains: ['solana'], mcpExpose: true, requiresApiKey: true, enabledKey: 'jupiter_swap', category: 'Swap' },
-  { name: 'zerox_swap', displayName: '0x Swap', description: '0x DEX aggregator for EVM token swaps via AllowanceHolder flow', version: '1.0.0', chains: ['ethereum'], mcpExpose: true, requiresApiKey: true, enabledKey: 'zerox_swap', category: 'Swap' },
+  { name: 'jupiter_swap', displayName: 'Jupiter Swap', description: 'Jupiter DEX aggregator for Solana token swaps with MEV protection', version: '1.0.0', chains: ['solana'], mcpExpose: true, requiresApiKey: true, apiKeyUrl: 'https://portal.jup.ag', enabledKey: 'jupiter_swap', category: 'Swap' },
+  { name: 'zerox_swap', displayName: '0x Swap', description: '0x DEX aggregator for EVM token swaps via AllowanceHolder flow', version: '1.0.0', chains: ['ethereum'], mcpExpose: true, requiresApiKey: true, apiKeyUrl: 'https://dashboard.0x.org', enabledKey: 'zerox_swap', category: 'Swap' },
   { name: 'lifi', displayName: 'LI.FI', description: 'LI.FI cross-chain bridge and swap aggregator (100+ bridges, 40+ chains)', version: '1.0.0', chains: ['ethereum', 'solana'], mcpExpose: true, requiresApiKey: false, enabledKey: 'lifi', category: 'Bridge' },
   { name: 'lido_staking', displayName: 'Lido Staking', description: 'Lido liquid staking protocol for ETH to stETH conversion with withdrawal support', version: '1.0.0', chains: ['ethereum'], mcpExpose: true, requiresApiKey: false, enabledKey: 'lido_staking', category: 'Staking' },
   { name: 'jito_staking', displayName: 'Jito Staking', description: 'Jito liquid staking for SOL to JitoSOL conversion on Solana', version: '1.0.0', chains: ['solana'], mcpExpose: true, requiresApiKey: false, enabledKey: 'jito_staking', category: 'Staking' },

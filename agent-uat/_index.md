@@ -35,7 +35,7 @@ updated: "2026-03-10"
 | mainnet-03 | ERC-20 USDC 전송 | ethereum-mainnet | Yes | $1.00 | medium |
 | mainnet-04 | SPL USDC 전송 | solana-mainnet | Yes | $0.001 | medium |
 | mainnet-05 | L2 네이티브 전송 | polygon/arbitrum/base | Yes | $0.05 | medium |
-| mainnet-06 | NFT 전송 | ethereum-mainnet | Yes | $2.00 | medium |
+| mainnet-06 | NFT 전송 | base-mainnet | Yes | $0.01 | medium |
 
 ### DeFi
 | ID | Title | Network | Funds | Cost | Risk |
@@ -90,11 +90,11 @@ updated: "2026-03-10"
 | ethereum-sepolia | testnet-01, testnet-03, testnet-06, testnet-07, advanced-01, admin-09 |
 | solana-devnet | testnet-02, testnet-04, testnet-07 |
 | hyperliquid-testnet | testnet-05 |
-| ethereum-mainnet | mainnet-01, mainnet-03, mainnet-06, defi-02, defi-03, defi-05, defi-07, defi-09, defi-12, advanced-02, advanced-03, advanced-04, advanced-05, advanced-06, advanced-07, advanced-08, admin-06, admin-07, admin-08, admin-12 |
+| ethereum-mainnet | mainnet-01, mainnet-03, defi-02, defi-03, defi-05, defi-07, defi-09, defi-12, advanced-02, advanced-03, advanced-04, advanced-05, advanced-06, advanced-07, advanced-08, admin-06, admin-07, admin-08, admin-12 |
 | solana-mainnet | mainnet-02, mainnet-04, defi-01, defi-06, defi-08, defi-10, advanced-04, advanced-05, admin-06, admin-07, admin-08 |
 | polygon-mainnet | mainnet-05, defi-02, defi-07, defi-13 |
 | arbitrum-mainnet | mainnet-05, defi-03, defi-04 |
-| base-mainnet | mainnet-05, defi-04, advanced-03 |
+| base-mainnet | mainnet-05, mainnet-06, defi-04, advanced-03 |
 | hyperliquid-mainnet | defi-11 |
 
 ## Quick Filters

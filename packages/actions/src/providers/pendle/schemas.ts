@@ -41,8 +41,17 @@ export const PendleMarketSchema = z.object({
 
 export type PendleMarket = z.infer<typeof PendleMarketSchema>;
 
-/** Full response from /v1/markets/all (array of markets). */
-export const PendleMarketsResponseSchema = z.array(PendleMarketSchema);
+/** Full response from /v1/markets/all — accepts both array and paginated object. */
+const PendleMarketsArraySchema = z.array(PendleMarketSchema);
+const PendleMarketsPaginatedSchema = z.object({
+  results: z.array(PendleMarketSchema),
+  total: z.number().optional(),
+  limit: z.number().optional(),
+}).passthrough();
+export const PendleMarketsResponseSchema = z.union([
+  PendleMarketsArraySchema,
+  PendleMarketsPaginatedSchema,
+]);
 export type PendleMarketsResponse = z.infer<typeof PendleMarketsResponseSchema>;
 
 // ---------------------------------------------------------------------------

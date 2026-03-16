@@ -343,8 +343,16 @@ export default function ActionsPage() {
               {/* API Key section -- only for providers that require keys */}
               {p.requiresApiKey && (
                 <div style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
-                  <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-2)', color: 'var(--text-secondary)' }}>
+                  <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-2)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                     API Key
+                    {(p as Record<string, unknown>).apiKeyUrl && (
+                      <a
+                        href={String((p as Record<string, unknown>).apiKeyUrl)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ fontSize: 'var(--font-size-xs)', fontWeight: 400 }}
+                      >Get API key &rarr;</a>
+                    )}
                   </div>
                   {apiKeyEditing.value === p.name ? (
                     <div style={{ display: 'flex', alignItems: 'flex-end', gap: 'var(--space-2)' }}>
