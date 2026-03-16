@@ -104,6 +104,8 @@
 ### v32.4 타입 안전 + 코드 품질 (Phases 427-431)
 
 - [ ] **Phase 427: Core Exports + safeJsonParse 유틸리티** - @waiaas/core에 safeJsonParse 헬퍼, POLICY_RULES_SCHEMAS export, sleep SSoT, 에러 코드 등록
+  Plans:
+  - [ ] 427-01-PLAN.md — safeJsonParse + POLICY_RULES_SCHEMAS export + sleep SSoT + 에러 코드 등록
 - [ ] **Phase 428: 인터페이스 확장 + 레이어 위반 수정** - IChainSubscriber 인터페이스 확장, MasterPasswordRef 이동, wc-signing-bridge 레이어 위반 해소
 - [ ] **Phase 429: DatabasePolicyEngine Zod 검증** - 21건 JSON.parse를 Zod safeParse로 교체, 로컬 인터페이스 제거, 정책 룰 검증 테스트
 - [ ] **Phase 430: as any 제거** - WC/bundler/hot-reload/daemon 등 프로덕션 as any 55건 제거, JSON.parse Zod 추가
@@ -115,12 +117,12 @@
 **Goal**: 모든 하위 패키지가 사용할 공유 유틸리티와 스키마 export가 @waiaas/core에 존재한다
 **Depends on**: Nothing (first phase)
 **Requirements**: ZOD-01, ZOD-02, SSOT-02, LAYER-06, LAYER-07
+**Plans:** 1 plan
 **Success Criteria** (what must be TRUE):
   1. safeJsonParse<T>(json, schema) 호출 시 Zod 스키마 기반으로 JSON을 파싱+검증하며, 실패 시 구조화된 에러를 반환한다
   2. 다른 패키지(daemon 등)에서 import { POLICY_RULES_SCHEMAS } from '@waiaas/core'가 동작한다
   3. sleep()이 @waiaas/core에서 export되고 기존 4곳 로컬 정의가 제거되어 중복이 0건이다
   4. INTERNAL_ERROR와 VALIDATION_FAILED 에러 코드가 ERROR_CODES 레지스트리에 존재한다
-**Plans**: TBD
 
 ### Phase 428: 인터페이스 확장 + 레이어 위반 수정
 **Goal**: IChainSubscriber 인터페이스가 실제 구현을 반영하고, services/infrastructure에서 api/ import가 0건이다
@@ -182,7 +184,7 @@ Phases execute in numeric order: 427 -> 428 -> 429 -> 430 -> 431
 | 424. SSRF Guard + hostGuard Fix | v32.2 | 1/1 | Complete | 2026-03-16 |
 | 425. Rate Limit Middleware | v32.2 | 1/1 | Complete | 2026-03-16 |
 | 426. CORS + Resource Management | v32.2 | 1/1 | Complete | 2026-03-16 |
-| 427. Core Exports + safeJsonParse 유틸리티 | v32.4 | 0/TBD | Not started | - |
+| 427. Core Exports + safeJsonParse 유틸리티 | v32.4 | 0/1 | Not started | - |
 | 428. 인터페이스 확장 + 레이어 위반 수정 | v32.4 | 0/TBD | Not started | - |
 | 429. DatabasePolicyEngine Zod 검증 | v32.4 | 0/TBD | Not started | - |
 | 430. as any 제거 | v32.4 | 0/TBD | Not started | - |
