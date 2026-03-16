@@ -8,6 +8,18 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
+## Current Milestone: v32.5 멀티체인 DeFi 포지션 + 테스트넷 토글
+
+**Goal:** IPositionProvider 인터페이스를 PositionQueryContext로 확장하여 멀티체인/멀티네트워크 DeFi 포지션 조회를 지원하고, Admin 대시보드에 테스트넷 포지션 토글을 제공한다.
+
+**Target features:**
+- IPositionProvider 인터페이스에 PositionQueryContext 도입 (chain, networks, environment, rpcUrl 매핑)
+- 8개 프로바이더 시그니처 일괄 변경 + PositionTracker 컨텍스트 전달
+- 프로바이더별 멀티체인 컨트랙트 주소 매핑 (Lido 6네트워크, Aave 5네트워크, Pendle 2네트워크)
+- 테스트넷 지갑 DeFi 포지션 조회 지원
+- Admin API `?includeTestnets` 필터 + UI 토글 (localStorage 유지)
+- `defi_positions.environment` 컬럼 DB 마이그레이션
+
 ## Previous Milestone: v32.4 타입 안전 + 코드 품질 — SHIPPED 2026-03-16
 
 프로덕션 `as any` 0건 달성, DatabasePolicyEngine 20건 JSON.parse→Zod safeParse, IChainSubscriber 9메서드 확장, NATIVE_DECIMALS/sleep/formatAmount SSoT 통합, 레이어 위반 0건, 4건 이슈 수정(#359-#362). 5 phases, 11 plans, 51 requirements, 47 commits, 140 files, +7,233/-1,967 lines, ~349,000 LOC TS.
