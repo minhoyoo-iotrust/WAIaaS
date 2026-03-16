@@ -2,13 +2,14 @@
 gsd_state_version: 1.0
 milestone: v32.6
 milestone_name: 성능 + 구조 개선
-status: active
-last_updated: "2026-03-17T16:52:00.000Z"
-last_activity: 2026-03-17 -- Phase 435 complete (2/2 plans, 7 requirements)
+status: completed
+stopped_at: Completed 435-02-PLAN.md (Phase 435 complete)
+last_updated: "2026-03-16T17:20:34.945Z"
+last_activity: 2026-03-17 — Phase 435 complete (N+1 쿼리 해소)
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 9
+  total_plans: 2
   completed_plans: 2
   percent: 22
 ---
