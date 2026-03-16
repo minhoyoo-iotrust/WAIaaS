@@ -22,7 +22,7 @@ See `.planning/milestones/v32.5-ROADMAP.md` for full details.
 - Integer phases (435, 436, 437, 438): Planned milestone work
 - Decimal phases (e.g., 435.1): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 435: N+1 쿼리 해소** - 세션/지갑/토큰 조회의 개별 쿼리를 배치 쿼리로 전환
+- [x] **Phase 435: N+1 쿼리 해소** - 세션/지갑/토큰 조회의 개별 쿼리를 배치 쿼리로 전환
 - [ ] **Phase 436: 페이지네이션 추가** - sessions/policies API에 limit/offset 페이지네이션 적용
 - [ ] **Phase 437: 대형 파일 분할 (migrate + daemon + policy-engine)** - 3개 대형 모듈을 책임 단위로 분리
 - [ ] **Phase 438: 파이프라인 분할 + 추가 정리** - stages.ts 6단계 분할, Solana mapError, ILogger 인터페이스
@@ -42,8 +42,8 @@ See `.planning/milestones/v32.5-ROADMAP.md` for full details.
 **Plans**: 2 plans
 
 Plans:
-- [ ] 435-01-PLAN.md — 세션 관련 N+1 배치 전환 (sessions.ts, admin-monitoring.ts agent-prompt)
-- [ ] 435-02-PLAN.md — formatTxAmount 토큰 정보 배치 조회 전환 (admin-wallets, admin-monitoring, admin-auth)
+- [x] 435-01-PLAN.md — 세션 관련 N+1 배치 전환 (sessions.ts, admin-monitoring.ts agent-prompt)
+- [x] 435-02-PLAN.md — formatTxAmount 토큰 정보 배치 조회 전환 (admin-wallets, admin-monitoring, admin-auth)
 
 ### Phase 436: 페이지네이션 추가
 **Goal**: 대량 데이터를 반환하는 목록 API가 페이지네이션을 지원하여 클라이언트가 필요한 범위만 조회할 수 있다
@@ -100,7 +100,7 @@ Phases execute in numeric order: 435 -> 436 -> 437 -> 438
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 435. N+1 쿼리 해소 | 0/2 | Not started | - |
+| 435. N+1 쿼리 해소 | 2/2 | Complete | 2026-03-17 |
 | 436. 페이지네이션 추가 | 0/2 | Not started | - |
 | 437. 대형 파일 분할 | 0/3 | Not started | - |
 | 438. 파이프라인 분할 + 추가 정리 | 0/2 | Not started | - |

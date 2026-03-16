@@ -9,13 +9,13 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### N+1 쿼리 해소
 
-- [ ] **NQ-01**: GET /sessions에서 세션당 개별 wallet 쿼리 대신 단일 IN(sessionIds) 쿼리로 지갑 목록을 조회한다
-- [ ] **NQ-02**: POST /admin/sessions/prompt에서 walletId별 개별 쿼리 대신 단일 IN(walletIds) 쿼리로 지갑 정보를 조회한다
-- [ ] **NQ-03**: POST /admin/sessions/prompt에서 후보 세션별 linked count 개별 쿼리 대신 단일 JOIN 쿼리로 동시 조회한다
-- [ ] **NQ-04**: formatTxAmount에서 행당 token_registry 개별 조회 대신 unique tokenAddress 수집 후 단일 IN() 배치 조회한다
-- [ ] **NQ-05**: formatTxAmount 호출부 3곳(admin-wallets, admin-monitoring x2, admin-auth)에서 사전 배치 조회 후 tokenMap을 전달한다
-- [ ] **NQ-06**: 세션 생성 시 walletId별 개별 조회 대신 단일 IN(walletIds) 쿼리로 지갑을 검증한다
-- [ ] **NQ-07**: N+1 해소 후 기존 테스트가 전체 통과한다
+- [x] **NQ-01**: GET /sessions에서 세션당 개별 wallet 쿼리 대신 단일 IN(sessionIds) 쿼리로 지갑 목록을 조회한다
+- [x] **NQ-02**: POST /admin/sessions/prompt에서 walletId별 개별 쿼리 대신 단일 IN(walletIds) 쿼리로 지갑 정보를 조회한다
+- [x] **NQ-03**: POST /admin/sessions/prompt에서 후보 세션별 linked count 개별 쿼리 대신 단일 JOIN 쿼리로 동시 조회한다
+- [x] **NQ-04**: formatTxAmount에서 행당 token_registry 개별 조회 대신 unique tokenAddress 수집 후 단일 IN() 배치 조회한다
+- [x] **NQ-05**: formatTxAmount 호출부 3곳(admin-wallets, admin-monitoring x2, admin-auth)에서 사전 배치 조회 후 tokenMap을 전달한다
+- [x] **NQ-06**: 세션 생성 시 walletId별 개별 조회 대신 단일 IN(walletIds) 쿼리로 지갑을 검증한다
+- [x] **NQ-07**: N+1 해소 후 기존 테스트가 전체 통과한다
 
 ### 페이지네이션
 
@@ -97,13 +97,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| NQ-01 | Phase 435 | Pending |
-| NQ-02 | Phase 435 | Pending |
-| NQ-03 | Phase 435 | Pending |
-| NQ-04 | Phase 435 | Pending |
-| NQ-05 | Phase 435 | Pending |
-| NQ-06 | Phase 435 | Pending |
-| NQ-07 | Phase 435 | Pending |
+| NQ-01 | Phase 435 | Complete |
+| NQ-02 | Phase 435 | Complete |
+| NQ-03 | Phase 435 | Complete |
+| NQ-04 | Phase 435 | Complete |
+| NQ-05 | Phase 435 | Complete |
+| NQ-06 | Phase 435 | Complete |
+| NQ-07 | Phase 435 | Complete |
 | PAG-01 | Phase 436 | Pending |
 | PAG-02 | Phase 436 | Pending |
 | PAG-03 | Phase 436 | Pending |
@@ -155,4 +155,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-17*
-*Last updated: 2026-03-17 after roadmap creation*
+*Last updated: 2026-03-17 after Phase 435 completion*
