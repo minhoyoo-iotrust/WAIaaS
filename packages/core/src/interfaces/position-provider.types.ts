@@ -26,6 +26,7 @@ export interface PositionUpdate {
   status: PositionStatus;
   openedAt: number;
   closedAt?: number | null;
+  environment?: string;
 }
 
 /**

@@ -79,7 +79,7 @@ const LEGACY_NETWORK_NORMALIZE: Record<string, string> = {
  * pushSchema() records this version for fresh databases so migrations are skipped.
  * Increment this whenever DDL statements are updated to match a new migration.
  */
-export const LATEST_SCHEMA_VERSION = 58;
+export const LATEST_SCHEMA_VERSION = 59;
 
 function getCreateTableStatements(): string[] {
   return [
@@ -325,6 +325,7 @@ function getCreateTableStatements(): string[] {
   category TEXT NOT NULL CHECK(category IN (${inList(POSITION_CATEGORIES)})),
   provider TEXT NOT NULL,
   chain TEXT NOT NULL CHECK(chain IN (${inList(CHAIN_TYPES)})),
+  environment TEXT NOT NULL DEFAULT 'mainnet',
   network TEXT CHECK(network IS NULL OR network IN (${inList(NETWORK_TYPES)})),
   asset_id TEXT,
   amount TEXT NOT NULL,
@@ -632,6 +633,8 @@ function getCreateIndexStatements(): string[] {
     'CREATE INDEX IF NOT EXISTS idx_defi_positions_wallet_provider ON defi_positions(wallet_id, provider)',
     'CREATE INDEX IF NOT EXISTS idx_defi_positions_status ON defi_positions(status)',
     'CREATE UNIQUE INDEX IF NOT EXISTS idx_defi_positions_unique ON defi_positions(wallet_id, provider, asset_id, category)',
+    // v59: defi_positions environment index (Testnet Toggle)
+    'CREATE INDEX IF NOT EXISTS idx_defi_positions_environment ON defi_positions(environment)',
 
     // v34: wallet_apps.wallet_type index
     'CREATE INDEX IF NOT EXISTS idx_wallet_apps_wallet_type ON wallet_apps(wallet_type)',
@@ -3292,6 +3295,20 @@ MIGRATIONS.push({
     if (fkErrors.length > 0) {
       throw new Error(`FK integrity violation after v58: ${JSON.stringify(fkErrors)}`);
     }
+  },
+});
+
+// ---------------------------------------------------------------------------
+// v59: Add environment column to defi_positions (Testnet Toggle)
+// ---------------------------------------------------------------------------
+
+MIGRATIONS.push({
+  version: 59,
+  description: 'Add environment column to defi_positions table (Testnet Toggle)',
+  up: (sqlite) => {
+    // ALTER TABLE ADD COLUMN with NOT NULL DEFAULT auto-backfills existing rows to 'mainnet'
+    sqlite.exec("ALTER TABLE defi_positions ADD COLUMN environment TEXT NOT NULL DEFAULT 'mainnet'");
+    sqlite.exec('CREATE INDEX IF NOT EXISTS idx_defi_positions_environment ON defi_positions(environment)');
   },
 });
 

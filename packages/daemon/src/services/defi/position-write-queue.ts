@@ -22,7 +22,7 @@ import { generateId } from '../../infrastructure/database/id.js';
 const MAX_BATCH = 100;
 
 /** INSERT ... ON CONFLICT DO UPDATE statement for defi_positions. */
-const UPSERT_SQL = `INSERT INTO defi_positions (id, wallet_id, category, provider, chain, network, asset_id, amount, amount_usd, metadata, status, opened_at, closed_at, last_synced_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(wallet_id, provider, asset_id, category) DO UPDATE SET amount=excluded.amount, amount_usd=excluded.amount_usd, metadata=excluded.metadata, status=excluded.status, closed_at=excluded.closed_at, last_synced_at=excluded.last_synced_at, updated_at=excluded.updated_at`;
+const UPSERT_SQL = `INSERT INTO defi_positions (id, wallet_id, category, provider, chain, environment, network, asset_id, amount, amount_usd, metadata, status, opened_at, closed_at, last_synced_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(wallet_id, provider, asset_id, category) DO UPDATE SET amount=excluded.amount, amount_usd=excluded.amount_usd, metadata=excluded.metadata, status=excluded.status, environment=excluded.environment, closed_at=excluded.closed_at, last_synced_at=excluded.last_synced_at, updated_at=excluded.updated_at`;
 
 // ---------------------------------------------------------------------------
 // Internal upsert row type
@@ -34,6 +34,7 @@ interface PositionUpsert {
   category: string;
   provider: string;
   chain: string;
+  environment: string;
   network: string | null;
   assetId: string | null;
   amount: string;
@@ -75,6 +76,7 @@ export class PositionWriteQueue {
       category: update.category,
       provider: update.provider,
       chain: update.chain,
+      environment: update.environment ?? 'mainnet',
       network: update.network ?? null,
       assetId: update.assetId ?? null,
       amount: update.amount,
@@ -121,6 +123,7 @@ export class PositionWriteQueue {
           item.category,
           item.provider,
           item.chain,
+          item.environment,
           item.network,
           item.assetId,
           item.amount,

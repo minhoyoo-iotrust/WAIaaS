@@ -128,4 +128,20 @@ describe('PositionWriteQueue', () => {
     queue.clear();
     expect(queue.size).toBe(0);
   });
+
+  it('stores environment field when provided', () => {
+    queue.enqueue({ ...makeUpdate(), environment: 'testnet' } as PositionUpdate & { environment?: string });
+    queue.flush(sqlite);
+
+    const row = sqlite.prepare('SELECT environment FROM defi_positions').get() as { environment: string };
+    expect(row.environment).toBe('testnet');
+  });
+
+  it('defaults environment to mainnet when not provided', () => {
+    queue.enqueue(makeUpdate());
+    queue.flush(sqlite);
+
+    const row = sqlite.prepare('SELECT environment FROM defi_positions').get() as { environment: string };
+    expect(row.environment).toBe('mainnet');
+  });
 });
