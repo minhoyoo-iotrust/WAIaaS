@@ -16,7 +16,9 @@ import { SolanaAdapter } from '../adapter.js';
 function callMapError(operation: string, error: unknown): never {
   const adapter = new SolanaAdapter('solana-devnet');
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (adapter as any).mapError(operation, error);
+  (adapter as any).mapError(operation, error);
+  // mapError always throws, so this line is unreachable
+  throw new Error('mapError did not throw');
 }
 
 describe('SolanaAdapter.mapError()', () => {
