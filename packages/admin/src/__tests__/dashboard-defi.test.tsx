@@ -9,8 +9,8 @@
  *
  * @see ADMN-01
  */
-import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, waitFor, cleanup } from '@testing-library/preact';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
+import { render, screen, waitFor, cleanup, fireEvent } from '@testing-library/preact';
 import type { components, paths } from '../api/types.generated';
 
 const mockApiGet = vi.fn();
@@ -94,6 +94,7 @@ const mockDefiPositions = {
       category: 'LENDING',
       provider: 'aave_v3',
       chain: 'ethereum',
+      environment: 'mainnet',
       network: 'ethereum-mainnet',
       assetId: null as string | null,
       amount: '1000',
@@ -136,9 +137,14 @@ function mockApiCallsWithDefi(defiData: DefiPositionResponse = mockDefiPositions
 // ---------------------------------------------------------------------------
 
 describe('DashboardPage - DeFi Positions section', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+    localStorage.clear();
   });
 
   it('renders DeFi Positions section when active positions exist', async () => {
@@ -279,13 +285,13 @@ describe('DashboardPage - DeFi Positions section', () => {
       positions: [
         {
           id: 'pos-1', walletId: 'w-1', category: 'LENDING', provider: 'aave-v3',
-          chain: 'ethereum', network: 'ethereum-mainnet' as string | null, assetId: null as string | null,
+          chain: 'ethereum', environment: 'mainnet', network: 'ethereum-mainnet' as string | null, assetId: null as string | null,
           amount: '1000', amountUsd: 2500.0, metadata: { positionType: 'SUPPLY', healthFactor: 1.8 },
           status: 'ACTIVE', openedAt: 1700000000, lastSyncedAt: 1700001000,
         },
         {
           id: 'pos-2', walletId: 'w-1', category: 'STAKING', provider: 'lido',
-          chain: 'ethereum', network: 'ethereum-mainnet' as string | null, assetId: null as string | null,
+          chain: 'ethereum', environment: 'mainnet', network: 'ethereum-mainnet' as string | null, assetId: null as string | null,
           amount: '5.0', amountUsd: 10000.0, metadata: { protocol: 'Lido', exchangeRate: 1.15 },
           status: 'ACTIVE', openedAt: 1700000000, lastSyncedAt: 1700001000,
         },
@@ -301,6 +307,46 @@ describe('DashboardPage - DeFi Positions section', () => {
       expect(screen.getByText('Aave V3')).toBeTruthy();
     });
     expect(screen.getByText('Lido')).toBeTruthy();
+  });
+
+  it('renders Include testnets checkbox', async () => {
+    mockApiCallsWithDefi(mockDefiPositions);
+    render(<DashboardPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Include testnets')).toBeTruthy();
+    });
+
+    const checkbox = screen.getByLabelText('Include testnets') as HTMLInputElement;
+    expect(checkbox.type).toBe('checkbox');
+    expect(checkbox.checked).toBe(false);
+  });
+
+  it('persists Include testnets toggle to localStorage', async () => {
+    mockApiCallsWithDefi(mockDefiPositions);
+    render(<DashboardPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Include testnets')).toBeTruthy();
+    });
+
+    const checkbox = screen.getByLabelText('Include testnets') as HTMLInputElement;
+    fireEvent.click(checkbox);
+
+    expect(localStorage.getItem('defi-include-testnets')).toBe('true');
+  });
+
+  it('initializes Include testnets from localStorage', async () => {
+    localStorage.setItem('defi-include-testnets', 'true');
+    mockApiCallsWithDefi(mockDefiPositions);
+    render(<DashboardPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Include testnets')).toBeTruthy();
+    });
+
+    const checkbox = screen.getByLabelText('Include testnets') as HTMLInputElement;
+    expect(checkbox.checked).toBe(true);
   });
 
   it('renders wallet filter dropdown', async () => {
