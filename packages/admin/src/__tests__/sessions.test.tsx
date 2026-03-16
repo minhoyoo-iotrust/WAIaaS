@@ -121,8 +121,8 @@ describe('SessionsPage', () => {
   it('should load and display sessions for selected agent', async () => {
     mockApiGet
       .mockResolvedValueOnce({ data: mockWallets }) // wallets load
-      .mockResolvedValueOnce([]) // initial sessions (all wallets)
-      .mockResolvedValueOnce({ data: mockSessions }); // sessions for selected wallet
+      .mockResolvedValueOnce({ data: { data: [], total: 0, limit: 50, offset: 0 } }) // initial sessions (all wallets)
+      .mockResolvedValueOnce({ data: { data: mockSessions, total: mockSessions.length, limit: 50, offset: 0 } }); // sessions for selected wallet
 
     render(<SessionsPage />);
 
@@ -147,8 +147,8 @@ describe('SessionsPage', () => {
   it('should create session and show token modal', async () => {
     mockApiGet
       .mockResolvedValueOnce({ data: mockWallets }) // initial wallets load
-      .mockResolvedValueOnce([]) // initial sessions (all wallets)
-      .mockResolvedValueOnce({ data: mockSessions }); // refresh after create
+      .mockResolvedValueOnce({ data: { data: [], total: 0, limit: 50, offset: 0 } }) // initial sessions (all wallets)
+      .mockResolvedValueOnce({ data: { data: mockSessions, total: mockSessions.length, limit: 50, offset: 0 } }); // refresh after create
 
     mockApiPost.mockResolvedValueOnce({ data: mockCreatedSession });
 
@@ -189,9 +189,9 @@ describe('SessionsPage', () => {
   it('should revoke session with confirmation modal', async () => {
     mockApiGet
       .mockResolvedValueOnce({ data: mockWallets }) // wallets load
-      .mockResolvedValueOnce([]) // initial sessions (all wallets)
-      .mockResolvedValueOnce({ data: mockSessions }) // sessions for selected wallet
-      .mockResolvedValueOnce([]); // refresh after revoke
+      .mockResolvedValueOnce({ data: { data: [], total: 0, limit: 50, offset: 0 } }) // initial sessions (all wallets)
+      .mockResolvedValueOnce({ data: { data: mockSessions, total: mockSessions.length, limit: 50, offset: 0 } }) // sessions for selected wallet
+      .mockResolvedValueOnce({ data: { data: [], total: 0, limit: 50, offset: 0 } }); // refresh after revoke
 
     mockApiDelete.mockResolvedValueOnce(undefined);
 
@@ -355,7 +355,7 @@ describe('SessionsPage - Error handling', () => {
   it('shows error toast when handleCreate fails', async () => {
     mockApiGet
       .mockResolvedValueOnce({ data: mockWallets }) // wallets
-      .mockResolvedValueOnce([]); // initial sessions
+      .mockResolvedValueOnce({ data: { data: [], total: 0, limit: 50, offset: 0 } }); // initial sessions
 
     mockApiPost.mockRejectedValueOnce(new ApiError(400, 'CREATE_FAIL', 'Creation failed'));
 
@@ -389,8 +389,8 @@ describe('SessionsPage - Error handling', () => {
   it('shows error toast when handleRevoke fails', async () => {
     mockApiGet
       .mockResolvedValueOnce({ data: mockWallets })
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce({ data: mockSessions });
+      .mockResolvedValueOnce({ data: { data: [], total: 0, limit: 50, offset: 0 } })
+      .mockResolvedValueOnce({ data: { data: mockSessions, total: mockSessions.length, limit: 50, offset: 0 } });
 
     mockApiDelete.mockRejectedValueOnce(new ApiError(500, 'REVOKE_FAIL', 'Failed'));
 

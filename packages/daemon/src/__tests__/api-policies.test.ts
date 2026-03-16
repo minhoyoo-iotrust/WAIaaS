@@ -300,11 +300,14 @@ describe('GET /v1/policies', () => {
     });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as unknown[];
-    expect(body).toHaveLength(2);
+    const body = (await res.json()) as { data: Array<Record<string, unknown>>; total: number; limit: number; offset: number };
+    expect(body.data).toHaveLength(2);
+    expect(body.total).toBe(2);
+    expect(body.limit).toBe(50);
+    expect(body.offset).toBe(0);
     // Ordered by priority DESC: WHITELIST (10) first, SPENDING_LIMIT (5) second
-    expect((body[0] as Record<string, unknown>).type).toBe('WHITELIST');
-    expect((body[1] as Record<string, unknown>).type).toBe('SPENDING_LIMIT');
+    expect(body.data[0]!.type).toBe('WHITELIST');
+    expect(body.data[1]!.type).toBe('SPENDING_LIMIT');
   });
 
   it('should filter by walletId and include global policies', async () => {
@@ -335,8 +338,57 @@ describe('GET /v1/policies', () => {
     });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as unknown[];
-    expect(body).toHaveLength(2); // both global and wallet-specific
+    const body = (await res.json()) as { data: unknown[]; total: number };
+    expect(body.data).toHaveLength(2); // both global and wallet-specific
+    expect(body.total).toBe(2);
+  });
+
+  it('should paginate with limit and offset', async () => {
+    // Create 3 policies
+    for (const priority of [1, 5, 10]) {
+      await app.request('/v1/policies', {
+        method: 'POST',
+        headers: masterHeaders(),
+        body: JSON.stringify({
+          type: 'WHITELIST',
+          rules: { allowed_addresses: ['Addr1'] },
+          priority,
+        }),
+      });
+    }
+
+    const res = await app.request('/v1/policies?limit=1&offset=1', {
+      headers: masterHeaders(),
+    });
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { data: unknown[]; total: number; limit: number; offset: number };
+    expect(body.data).toHaveLength(1);
+    expect(body.total).toBe(3);
+    expect(body.limit).toBe(1);
+    expect(body.offset).toBe(1);
+  });
+
+  it('should return empty data when offset exceeds total', async () => {
+    await app.request('/v1/policies', {
+      method: 'POST',
+      headers: masterHeaders(),
+      body: JSON.stringify({
+        type: 'WHITELIST',
+        rules: { allowed_addresses: ['Addr1'] },
+      }),
+    });
+
+    const res = await app.request('/v1/policies?limit=10&offset=999', {
+      headers: masterHeaders(),
+    });
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { data: unknown[]; total: number; limit: number; offset: number };
+    expect(body.data).toHaveLength(0);
+    expect(body.total).toBe(1);
+    expect(body.limit).toBe(10);
+    expect(body.offset).toBe(999);
   });
 });
 
@@ -422,8 +474,9 @@ describe('DELETE /v1/policies/:id', () => {
     const listRes = await app.request('/v1/policies', {
       headers: masterHeaders(),
     });
-    const list = (await listRes.json()) as unknown[];
-    expect(list).toHaveLength(0);
+    const list = (await listRes.json()) as { data: unknown[]; total: number };
+    expect(list.data).toHaveLength(0);
+    expect(list.total).toBe(0);
   });
 
   it('should return 404 for non-existent policy ID', async () => {

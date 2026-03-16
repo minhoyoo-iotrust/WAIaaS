@@ -23,6 +23,9 @@ import {
   RotateSecretResponseSchema,
   buildErrorResponses,
 } from './openapi-schemas.js';
+import semver from 'semver';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import type { AdminRouteDeps } from './admin.js';
 import { formatTxAmount, buildTokenMap } from './admin-wallets.js';
 
@@ -258,14 +261,11 @@ export function registerAdminAuthRoutes(router: OpenAPIHono, deps: AdminRouteDep
       : deps.getKillSwitchState();
 
     const latestVersion = deps.versionCheckService?.getLatest() ?? null;
-    const semverMod = await import('semver');
     const updateAvailable = latestVersion !== null
-      && semverMod.default.valid(latestVersion) !== null
-      && semverMod.default.gt(latestVersion, deps.version);
+      && semver.valid(latestVersion) !== null
+      && semver.gt(latestVersion, deps.version);
 
     // Check for auto-provisioned status (recovery.key exists in data dir)
-    const { existsSync } = await import('node:fs');
-    const { join } = await import('node:path');
     const autoProvisioned = deps.dataDir
       ? existsSync(join(deps.dataDir, 'recovery.key'))
       : false;

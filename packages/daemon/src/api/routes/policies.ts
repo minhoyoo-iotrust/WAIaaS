@@ -23,6 +23,8 @@ import type * as schema from '../../infrastructure/database/schema.js';
 import {
   CreatePolicyRequestOpenAPI,
   UpdatePolicyRequestOpenAPI,
+  PaginatedPolicyListSchema,
+  PaginationQuerySchema,
   PolicyResponseSchema,
   PolicyDeleteResponseSchema,
   buildErrorResponses,
@@ -158,12 +160,12 @@ const listPoliciesRoute = createRoute({
   request: {
     query: z.object({
       walletId: z.string().uuid().optional(),
-    }),
+    }).merge(PaginationQuerySchema),
   },
   responses: {
     200: {
-      description: 'List of policies',
-      content: { 'application/json': { schema: z.array(PolicyResponseSchema) } },
+      description: 'Paginated list of policies',
+      content: { 'application/json': { schema: PaginatedPolicyListSchema } },
     },
   },
 });
@@ -285,6 +287,11 @@ export function policyRoutes(deps: PolicyRouteDeps): OpenAPIHono {
   router.openapi(listPoliciesRoute, (c) => {
     const sessionId = c.get('sessionId' as never) as string | undefined;
 
+    // Extract pagination params (merged into query schema)
+    const query = c.req.valid('query');
+    const limit = query.limit ?? 50;
+    const offset = query.offset ?? 0;
+
     let rows;
     if (sessionId) {
       // sessionAuth: restrict to session's wallet policies + global policies
@@ -299,7 +306,7 @@ export function policyRoutes(deps: PolicyRouteDeps): OpenAPIHono {
         .all();
     } else {
       // masterAuth: existing admin behavior
-      const { walletId } = c.req.valid('query');
+      const { walletId } = query;
       if (walletId) {
         rows = deps.db
           .select()
@@ -330,7 +337,10 @@ export function policyRoutes(deps: PolicyRouteDeps): OpenAPIHono {
       updatedAt: Math.floor(row.updatedAt.getTime() / 1000),
     }));
 
-    return c.json(result, 200);
+    const total = result.length;
+    const paginatedData = result.slice(offset, offset + limit);
+
+    return c.json({ data: paginatedData, total, limit, offset }, 200);
   });
 
   // -------------------------------------------------------------------------

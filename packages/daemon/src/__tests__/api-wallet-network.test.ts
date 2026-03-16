@@ -303,10 +303,10 @@ describe('ALLOWED_NETWORKS Policy CRUD', () => {
     });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as Array<Record<string, unknown>>;
-    expect(body.length).toBeGreaterThanOrEqual(1);
+    const body = (await res.json()) as { data: Array<Record<string, unknown>> };
+    expect(body.data.length).toBeGreaterThanOrEqual(1);
 
-    const found = body.find((p) => p.id === policyId);
+    const found = body.data.find((p) => p.id === policyId);
     expect(found).toBeTruthy();
     expect(found!.type).toBe('ALLOWED_NETWORKS');
     const rules = found!.rules as Record<string, unknown>;
@@ -346,8 +346,8 @@ describe('ALLOWED_NETWORKS Policy CRUD', () => {
     const listRes = await app.request('/v1/policies', {
       headers: masterHeaders(),
     });
-    const list = (await listRes.json()) as Array<Record<string, unknown>>;
-    const found = list.find((p) => p.id === policyId);
+    const list = (await listRes.json()) as { data: Array<Record<string, unknown>> };
+    const found = list.data.find((p) => p.id === policyId);
     expect(found).toBeUndefined();
   });
 });

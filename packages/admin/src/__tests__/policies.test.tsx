@@ -109,7 +109,7 @@ describe('PoliciesPage', () => {
   it('should render policy list with tier visualization for SPENDING_LIMIT', async () => {
     mockApiGet
       .mockResolvedValueOnce({ data: mockWallets }) // wallets load
-      .mockResolvedValueOnce({ data: mockPolicies }); // policies load (triggered by filterWalletId effect)
+      .mockResolvedValueOnce({ data: { data: mockPolicies, total: mockPolicies.length, limit: 50, offset: 0 } }); // policies load (triggered by filterWalletId effect)
 
     render(<PoliciesPage />);
 
@@ -137,8 +137,8 @@ describe('PoliciesPage', () => {
   it('should create policy via form', async () => {
     mockApiGet
       .mockResolvedValueOnce({ data: mockWallets }) // wallets load
-      .mockResolvedValueOnce({ data: mockPolicies }) // initial policies load
-      .mockResolvedValueOnce({ data: mockPolicies }); // refresh after create
+      .mockResolvedValueOnce({ data: { data: mockPolicies, total: mockPolicies.length, limit: 50, offset: 0 } }) // initial policies load
+      .mockResolvedValueOnce({ data: { data: mockPolicies, total: mockPolicies.length, limit: 50, offset: 0 } }); // refresh after create
 
     mockApiPost.mockResolvedValueOnce({ data: { id: 'policy-3' } });
 
@@ -171,8 +171,8 @@ describe('PoliciesPage', () => {
   it('should delete policy with confirmation modal', async () => {
     mockApiGet
       .mockResolvedValueOnce({ data: mockWallets }) // wallets load
-      .mockResolvedValueOnce({ data: mockPolicies }) // policies load
-      .mockResolvedValueOnce({ data: [] }); // refresh after delete
+      .mockResolvedValueOnce({ data: { data: mockPolicies, total: mockPolicies.length, limit: 50, offset: 0 } }) // policies load
+      .mockResolvedValueOnce({ data: { data: [], total: 0, limit: 50, offset: 0 } }); // refresh after delete
 
     mockApiDelete.mockResolvedValueOnce(undefined);
 
@@ -212,7 +212,7 @@ describe('PoliciesPage', () => {
   it('shows ALLOWED_NETWORKS in policy type options', async () => {
     mockApiGet
       .mockResolvedValueOnce({ data: mockWallets })
-      .mockResolvedValueOnce({ data: mockPolicies });
+      .mockResolvedValueOnce({ data: { data: mockPolicies, total: mockPolicies.length, limit: 50, offset: 0 } });
 
     render(<PoliciesPage />);
 
@@ -237,7 +237,7 @@ describe('PoliciesPage', () => {
   it('shows Network column in policy table', async () => {
     mockApiGet
       .mockResolvedValueOnce({ data: mockWallets })
-      .mockResolvedValueOnce({ data: mockPolicies });
+      .mockResolvedValueOnce({ data: { data: mockPolicies, total: mockPolicies.length, limit: 50, offset: 0 } });
 
     render(<PoliciesPage />);
 

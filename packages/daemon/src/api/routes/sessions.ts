@@ -33,7 +33,8 @@ import type { NotificationService } from '../../notifications/notification-servi
 import {
   CreateSessionRequestOpenAPI,
   SessionCreateResponseSchema,
-  SessionListItemSchema,
+  PaginatedSessionListSchema,
+  PaginationQuerySchema,
   SessionRevokeResponseSchema,
   SessionRenewResponseSchema,
   SessionRotateResponseSchema,
@@ -90,12 +91,12 @@ const listSessionsRoute = createRoute({
   request: {
     query: z.object({
       walletId: z.string().uuid().optional(),
-    }),
+    }).merge(PaginationQuerySchema),
   },
   responses: {
     200: {
-      description: 'List of active sessions',
-      content: { 'application/json': { schema: z.array(SessionListItemSchema) } },
+      description: 'Paginated list of active sessions',
+      content: { 'application/json': { schema: PaginatedSessionListSchema } },
     },
     ...buildErrorResponses(['WALLET_NOT_FOUND']),
   },
@@ -381,7 +382,9 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
   // GET /sessions -- list active sessions
   // -------------------------------------------------------------------------
   router.openapi(listSessionsRoute, (c) => {
-    const { walletId: filterWalletId } = c.req.valid('query');
+    const { walletId: filterWalletId, limit: rawLimit, offset: rawOffset } = c.req.valid('query');
+    const limit = rawLimit ?? 50;
+    const offset = rawOffset ?? 0;
 
     // Base query: all non-revoked sessions
     let sessionRows;
@@ -478,7 +481,10 @@ export function sessionRoutes(deps: SessionRouteDeps): OpenAPIHono {
       };
     });
 
-    return c.json(result, 200);
+    const total = result.length;
+    const paginatedData = result.slice(offset, offset + limit);
+
+    return c.json({ data: paginatedData, total, limit, offset }, 200);
   });
 
   // -------------------------------------------------------------------------

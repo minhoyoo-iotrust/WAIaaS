@@ -255,10 +255,13 @@ describe('Session CRUD API', () => {
     });
     expect(res.status).toBe(200);
 
-    const body = (await res.json()) as Array<Record<string, unknown>>;
-    expect(body).toHaveLength(2);
+    const body = (await res.json()) as { data: Array<Record<string, unknown>>; total: number; limit: number; offset: number };
+    expect(body.data).toHaveLength(2);
+    expect(body.total).toBe(2);
+    expect(body.limit).toBe(50);
+    expect(body.offset).toBe(0);
 
-    const first = body[0]!;
+    const first = body.data[0]!;
     expect(first.status).toBe('ACTIVE');
     expect(first.walletId).toBe(testWalletId);
     expect(first.renewalCount).toBe(0);
@@ -293,8 +296,9 @@ describe('Session CRUD API', () => {
     });
     expect(listRes.status).toBe(200);
 
-    const sessions = (await listRes.json()) as Array<Record<string, unknown>>;
-    expect(sessions).toHaveLength(0);
+    const body = (await listRes.json()) as { data: Array<Record<string, unknown>>; total: number };
+    expect(body.data).toHaveLength(0);
+    expect(body.total).toBe(0);
   });
 
   // -----------------------------------------------------------------------
@@ -461,10 +465,10 @@ describe('Session CRUD API', () => {
     });
     expect(listRes.status).toBe(200);
 
-    const sessions = (await listRes.json()) as Array<Record<string, unknown>>;
-    expect(sessions).toHaveLength(1);
-    expect(sessions[0]!.status).toBe('ACTIVE');
-    expect(sessions[0]!.expiresAt).toBe(0);
+    const body = (await listRes.json()) as { data: Array<Record<string, unknown>>; total: number };
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0]!.status).toBe('ACTIVE');
+    expect(body.data[0]!.expiresAt).toBe(0);
   });
 
   it('unlimited session counts toward session limit', async () => {
@@ -488,6 +492,95 @@ describe('Session CRUD API', () => {
 
     const body = await json(res);
     expect(body.code).toBe('SESSION_LIMIT_EXCEEDED');
+  });
+
+  // -----------------------------------------------------------------------
+  // Pagination tests (PAG-01, PAG-03, PAG-04)
+  // -----------------------------------------------------------------------
+
+  it('GET /v1/sessions returns paginated wrapper with defaults', async () => {
+    // Create 3 sessions
+    for (let i = 0; i < 3; i++) {
+      await app.request('/v1/sessions', {
+        method: 'POST',
+        headers: masterAuthJsonHeaders(),
+        body: JSON.stringify({ walletId: testWalletId }),
+      });
+    }
+
+    const res = await app.request('/v1/sessions', {
+      headers: masterAuthHeader(),
+    });
+    expect(res.status).toBe(200);
+
+    const body = (await res.json()) as { data: unknown[]; total: number; limit: number; offset: number };
+    expect(body.data).toHaveLength(3);
+    expect(body.total).toBe(3);
+    expect(body.limit).toBe(50);
+    expect(body.offset).toBe(0);
+  });
+
+  it('GET /v1/sessions?limit=2&offset=0 returns at most 2 items', async () => {
+    // Create 3 sessions
+    for (let i = 0; i < 3; i++) {
+      await app.request('/v1/sessions', {
+        method: 'POST',
+        headers: masterAuthJsonHeaders(),
+        body: JSON.stringify({ walletId: testWalletId }),
+      });
+    }
+
+    const res = await app.request('/v1/sessions?limit=2&offset=0', {
+      headers: masterAuthHeader(),
+    });
+    expect(res.status).toBe(200);
+
+    const body = (await res.json()) as { data: unknown[]; total: number; limit: number; offset: number };
+    expect(body.data).toHaveLength(2);
+    expect(body.total).toBe(3);
+    expect(body.limit).toBe(2);
+    expect(body.offset).toBe(0);
+  });
+
+  it('GET /v1/sessions?limit=10&offset=999 returns empty data', async () => {
+    await app.request('/v1/sessions', {
+      method: 'POST',
+      headers: masterAuthJsonHeaders(),
+      body: JSON.stringify({ walletId: testWalletId }),
+    });
+
+    const res = await app.request('/v1/sessions?limit=10&offset=999', {
+      headers: masterAuthHeader(),
+    });
+    expect(res.status).toBe(200);
+
+    const body = (await res.json()) as { data: unknown[]; total: number; limit: number; offset: number };
+    expect(body.data).toHaveLength(0);
+    expect(body.total).toBe(1);
+    expect(body.limit).toBe(10);
+    expect(body.offset).toBe(999);
+  });
+
+  it('GET /v1/sessions?walletId=X&limit=1 filters by wallet AND paginates', async () => {
+    // Create 2 sessions for test wallet
+    for (let i = 0; i < 2; i++) {
+      await app.request('/v1/sessions', {
+        method: 'POST',
+        headers: masterAuthJsonHeaders(),
+        body: JSON.stringify({ walletId: testWalletId }),
+      });
+    }
+
+    const res = await app.request(`/v1/sessions?walletId=${testWalletId}&limit=1`, {
+      headers: masterAuthHeader(),
+    });
+    expect(res.status).toBe(200);
+
+    const body = (await res.json()) as { data: unknown[]; total: number; limit: number; offset: number };
+    expect(body.data).toHaveLength(1);
+    expect(body.total).toBe(2);
+    expect(body.limit).toBe(1);
+    expect(body.offset).toBe(0);
   });
 
   it('POST /v1/sessions with per-session maxRenewals and absoluteLifetime', async () => {

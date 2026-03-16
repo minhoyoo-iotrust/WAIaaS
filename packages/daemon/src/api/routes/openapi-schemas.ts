@@ -200,6 +200,35 @@ export const SessionListItemSchema = z
   .openapi('SessionListItem');
 
 // ---------------------------------------------------------------------------
+// Pagination Schemas (v32.6 PAG-01..PAG-05)
+// ---------------------------------------------------------------------------
+
+export const PaginationQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(200).default(50).optional(),
+  offset: z.coerce.number().int().min(0).default(0).optional(),
+});
+
+/**
+ * Factory to create paginated response schema wrapping an item schema.
+ */
+export function createPaginatedSchema<T extends z.ZodTypeAny>(
+  itemSchema: T,
+  name: string,
+) {
+  return z.object({
+    data: z.array(itemSchema),
+    total: z.number().int(),
+    limit: z.number().int(),
+    offset: z.number().int(),
+  }).openapi(name);
+}
+
+export const PaginatedSessionListSchema = createPaginatedSchema(
+  SessionListItemSchema,
+  'PaginatedSessionList',
+);
+
+// ---------------------------------------------------------------------------
 // Session-Wallet Management Schemas (v26.4)
 // ---------------------------------------------------------------------------
 
@@ -312,6 +341,11 @@ export const PolicyResponseSchema = z
     updatedAt: z.number().int(),
   })
   .openapi('PolicyResponse');
+
+export const PaginatedPolicyListSchema = createPaginatedSchema(
+  PolicyResponseSchema,
+  'PaginatedPolicyList',
+);
 
 export const PolicyDeleteResponseSchema = z
   .object({
