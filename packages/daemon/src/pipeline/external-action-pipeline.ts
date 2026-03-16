@@ -85,7 +85,7 @@ export async function executeSignedDataAction(
         venue: action.venue,
         actionCategory: action.policyContext.actionCategory,
         notionalUsd: action.policyContext.notionalUsd,
-      } as any);
+      } as { type: string; amount: string; toAddress: string; chain: string; venue?: string; actionCategory?: string; notionalUsd?: string });
 
       if (!policyResult.allowed) {
         throw new WAIaaSError('POLICY_DENIED', {
@@ -241,7 +241,7 @@ export async function executeSignedHttpAction(
         venue: action.venue,
         actionCategory: action.policyContext.actionCategory,
         notionalUsd: action.policyContext.notionalUsd,
-      } as any);
+      } as { type: string; amount: string; toAddress: string; chain: string; venue?: string; actionCategory?: string; notionalUsd?: string });
 
       if (!policyResult.allowed) {
         throw new WAIaaSError('POLICY_DENIED', {
@@ -307,13 +307,13 @@ export async function executeSignedHttpAction(
         },
         {
           walletAddress: deps.wallet.publicKey,
-          chain: deps.wallet.chain as any,
+          chain: deps.wallet.chain as import('@waiaas/core').ChainType,
           walletId: deps.walletId,
           sessionId: deps.sessionId,
         },
       );
       if (executeResult && typeof executeResult === 'object' && 'externalId' in executeResult) {
-        externalId = (executeResult as any).externalId;
+        externalId = (executeResult as { externalId: string }).externalId;
       }
     }
 

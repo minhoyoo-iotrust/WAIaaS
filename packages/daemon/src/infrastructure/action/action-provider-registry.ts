@@ -215,9 +215,8 @@ export class ActionProviderRegistry {
         const kind = (item as { kind: string }).kind;
         if (kind === 'signedData' || kind === 'signedHttp') {
           // Auto-tag with provider/action metadata for pipeline tracking
-          (item as any).actionProvider = entry.provider.metadata.name;
-          (item as any).actionName = entry.action.name;
-          validated.push(item as any);
+          const tagged = { ...(item as Record<string, unknown>), actionProvider: entry.provider.metadata.name, actionName: entry.action.name };
+          validated.push(tagged as unknown as ContractCallRequest);
           continue;
         }
       }

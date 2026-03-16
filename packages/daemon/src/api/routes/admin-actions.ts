@@ -254,9 +254,7 @@ export function adminActionRoutes(deps: AdminActionRouteDeps): OpenAPIHono {
       }
 
       // Extract EIP-712 metadata from resolve result
-      const eip712 = (contractCall as any).eip712 as
-        | { approvalType: 'EIP712'; typedDataJson: string; agentId: string; newWallet: string; deadline: string }
-        | undefined;
+      const eip712 = ('eip712' in contractCall ? (contractCall as { eip712?: { approvalType: 'EIP712'; typedDataJson: string; agentId: string; newWallet: string; deadline: string } }).eip712 : undefined);
 
       let eip712Metadata: PipelineContext['eip712Metadata'];
       if (eip712) {
