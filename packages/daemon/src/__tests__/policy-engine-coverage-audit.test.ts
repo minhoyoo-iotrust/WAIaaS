@@ -226,11 +226,11 @@ describe('DatabasePolicyEngine - Combined WHITELIST + SPENDING_LIMIT (coverage a
   });
 
   it('should allow any address when whitelist has empty allowed_addresses alongside SPENDING_LIMIT', async () => {
-    await insertPolicy({
-      type: 'WHITELIST',
-      rules: JSON.stringify({ allowed_addresses: [] }), // inactive whitelist
-      priority: 20,
-    });
+    // v32.4: WhitelistRulesSchema now requires min(1) addresses, so an empty
+    // allowed_addresses array is rejected at the Zod level. An "inactive whitelist"
+    // is equivalent to having no WHITELIST policy at all -- only SPENDING_LIMIT.
+    // This test verifies that without a WHITELIST policy, any address is allowed
+    // and tier is determined solely by SPENDING_LIMIT.
 
     await insertPolicy({
       type: 'SPENDING_LIMIT',
@@ -243,7 +243,7 @@ describe('DatabasePolicyEngine - Combined WHITELIST + SPENDING_LIMIT (coverage a
       priority: 10,
     });
 
-    // Any address should pass since whitelist is inactive
+    // Any address should pass since no whitelist policy exists
     const result = await engine.evaluate(walletId, tx('500000000', 'AnyAddress'));
 
     expect(result.allowed).toBe(true);

@@ -173,9 +173,12 @@ describe('Admin API Keys endpoints', () => {
       updatedAt: string | null;
     }>;
 
-    expect(keys).toHaveLength(2);
+    // 2 mock providers + 2 NFT indexer providers (alchemy_nft, helius_das) added in v32.4
+    expect(keys).toHaveLength(4);
     const testProvider = keys.find((k) => k.providerName === 'test_provider');
     const freeProvider = keys.find((k) => k.providerName === 'free_provider');
+    const alchemyNft = keys.find((k) => k.providerName === 'alchemy_nft');
+    const heliusDas = keys.find((k) => k.providerName === 'helius_das');
 
     expect(testProvider).toBeDefined();
     expect(testProvider!.hasKey).toBe(false);
@@ -186,6 +189,15 @@ describe('Admin API Keys endpoints', () => {
     expect(freeProvider).toBeDefined();
     expect(freeProvider!.hasKey).toBe(false);
     expect(freeProvider!.requiresApiKey).toBe(false);
+
+    // NFT indexer providers are infrastructure-level (not in ActionProviderRegistry)
+    expect(alchemyNft).toBeDefined();
+    expect(alchemyNft!.hasKey).toBe(false);
+    expect(alchemyNft!.requiresApiKey).toBe(true);
+
+    expect(heliusDas).toBeDefined();
+    expect(heliusDas!.hasKey).toBe(false);
+    expect(heliusDas!.requiresApiKey).toBe(true);
   });
 
   it('PUT /v1/admin/api-keys/test_provider -- sets API key (200)', async () => {
