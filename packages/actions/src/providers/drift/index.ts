@@ -348,6 +348,7 @@ export class DriftPerpProvider implements IPerpProvider, IPositionProvider {
   async getPositions(ctx: PositionQueryContext): Promise<PositionUpdate[]> {
     if (ctx.chain !== 'solana') return [];
     const walletId = ctx.walletId;
+    const network = ctx.networks[0] ?? 'solana-mainnet';
     try {
       const positions = await this.sdkWrapper.getPositions(walletId);
       const now = Math.floor(Date.now() / 1000);
@@ -356,7 +357,7 @@ export class DriftPerpProvider implements IPerpProvider, IPositionProvider {
         category: 'PERP' as PositionCategory,
         provider: 'drift_perp',
         chain: 'solana',
-        network: 'solana-mainnet',
+        network,
         assetId: null,
         amount: pos.baseAssetAmount,
         amountUsd: pos.notionalValueUsd,

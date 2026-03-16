@@ -398,4 +398,21 @@ describe('JitoStakingActionProvider IPositionProvider', () => {
     const positions = await provider.getPositions(makeSolCtx(WALLET_ID, 'ethereum'));
     expect(positions).toEqual([]);
   });
+
+  it('getPositions uses ctx.networks[0] for network field (MCHN-08)', async () => {
+    setupMocks({ uiAmount: 1.0, rawAmount: '1000000000' });
+
+    const ctx: PositionQueryContext = {
+      walletId: WALLET_ID,
+      chain: 'solana',
+      networks: ['solana-devnet'],
+      environment: 'testnet',
+      rpcUrls: {},
+    };
+    const positions = await provider.getPositions(ctx);
+    expect(positions).toHaveLength(1);
+    expect(positions[0]!.network).toBe('solana-devnet');
+    // CAIP-2 should use solana-devnet identifier
+    expect(positions[0]!.assetId).toContain('solana:');
+  });
 });

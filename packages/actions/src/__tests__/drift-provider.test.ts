@@ -506,6 +506,19 @@ describe('IPositionProvider compliance', () => {
     const positions = await provider.getPositions(makeSolCtx('test-wallet', 'ethereum'));
     expect(positions).toEqual([]);
   });
+
+  it('should use ctx.networks[0] for network field (MCHN-08)', async () => {
+    const ctx: PositionQueryContext = {
+      walletId: 'test-wallet',
+      chain: 'solana',
+      networks: ['solana-devnet'],
+      environment: 'testnet',
+      rpcUrls: {},
+    };
+    const positions = await provider.getPositions(ctx);
+    expect(positions.length).toBeGreaterThanOrEqual(1);
+    expect(positions[0]!.network).toBe('solana-devnet');
+  });
 });
 
 // ---------------------------------------------------------------------------
