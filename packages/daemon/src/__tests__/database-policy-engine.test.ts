@@ -309,16 +309,15 @@ describe('DatabasePolicyEngine - WHITELIST', () => {
     expect(result.allowed).toBe(true);
   });
 
-  it('should allow transaction when whitelist has empty allowed_addresses', async () => {
+  it('should throw POLICY_RULES_CORRUPT when whitelist has empty allowed_addresses', async () => {
+    // v32.4-429: Zod WhitelistRulesSchema requires min(1) on allowed_addresses
     await insertPolicy({
       type: 'WHITELIST',
       rules: JSON.stringify({ allowed_addresses: [] }),
       priority: 20,
     });
 
-    const result = await engine.evaluate(walletId, tx('1000'));
-
-    expect(result.allowed).toBe(true);
+    await expect(engine.evaluate(walletId, tx('1000'))).rejects.toMatchObject({ code: 'POLICY_RULES_CORRUPT' });
   });
 
   it('should allow transaction when toAddress is in whitelist', async () => {
@@ -712,7 +711,8 @@ describe('DatabasePolicyEngine - ALLOWED_TOKENS', () => {
 describe('DatabasePolicyEngine - ALLOWED_TOKENS CAIP-19 matching', () => {
   const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 
-  it('Scenario 2: denies when policy assetId is invalid CAIP-19 and TX has address only', async () => {
+  it('Scenario 2: throws POLICY_RULES_CORRUPT when policy assetId is invalid CAIP-19', async () => {
+    // v32.4-429: Zod AllowedTokensRulesSchema validates assetId via Caip19Schema
     await insertPolicy({
       type: 'ALLOWED_TOKENS',
       rules: JSON.stringify({
@@ -721,11 +721,10 @@ describe('DatabasePolicyEngine - ALLOWED_TOKENS CAIP-19 matching', () => {
       priority: 15,
     });
 
-    // TX has tokenAddress only (no assetId) -> Scenario 2 catch returns false
-    const result = await engine.evaluate(walletId, tokenTx('1000000', USDC_MINT));
-
-    expect(result.allowed).toBe(false);
-    expect(result.reason).toContain('Token not in allowed list');
+    // Invalid CAIP-19 in policy rules causes POLICY_RULES_CORRUPT
+    await expect(
+      engine.evaluate(walletId, tokenTx('1000000', USDC_MINT)),
+    ).rejects.toMatchObject({ code: 'POLICY_RULES_CORRUPT' });
   });
 
   it('Scenario 3: denies when TX assetId is invalid CAIP-19 and policy has address only', async () => {
@@ -2863,5 +2862,127 @@ describe('DatabasePolicyEngine - Backward Compatibility (CMPT-01/02/03)', () => 
 
     expect(result.allowed).toBe(true);
     expect(result.tier).toBe('NOTIFY');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 429: Zod safeParse validation -- corrupt data handling tests
+// ---------------------------------------------------------------------------
+
+describe('Zod safeParse validation (Phase 429)', () => {
+  it('corrupt JSON in SPENDING_LIMIT throws POLICY_RULES_CORRUPT', async () => {
+    await insertPolicy({
+      walletId,
+      type: 'SPENDING_LIMIT',
+      rules: '{invalid json!!!',
+      priority: 1,
+    });
+    await expect(engine.evaluate(walletId, tx('1000'))).rejects.toMatchObject({ code: 'POLICY_RULES_CORRUPT' });
+  });
+
+  it('schema-mismatched SPENDING_LIMIT throws POLICY_RULES_CORRUPT', async () => {
+    // Valid JSON but wrong structure (missing all limit fields -- superRefine requires at least one)
+    await insertPolicy({
+      walletId,
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({ unrelated_field: true }),
+      priority: 1,
+    });
+    await expect(engine.evaluate(walletId, tx('1000'))).rejects.toMatchObject({ code: 'POLICY_RULES_CORRUPT' });
+  });
+
+  it('valid SPENDING_LIMIT rules parse correctly (regression guard)', async () => {
+    await insertPolicy({
+      walletId,
+      type: 'SPENDING_LIMIT',
+      rules: JSON.stringify({
+        instant_max: '1000000000',
+        notify_max: '5000000000',
+        delay_max: '10000000000',
+        delay_seconds: 900,
+      }),
+      priority: 1,
+    });
+    const result = await engine.evaluate(walletId, tx('500000000'));
+    expect(result.allowed).toBe(true);
+    expect(result.tier).toBe('INSTANT');
+  });
+
+  it('corrupt JSON in WHITELIST throws POLICY_RULES_CORRUPT', async () => {
+    await insertPolicy({
+      walletId,
+      type: 'WHITELIST',
+      rules: 'not-json',
+      priority: 1,
+    });
+    await expect(engine.evaluate(walletId, tx('1000'))).rejects.toMatchObject({ code: 'POLICY_RULES_CORRUPT' });
+  });
+
+  it('corrupt JSON in ALLOWED_TOKENS throws POLICY_RULES_CORRUPT', async () => {
+    await insertPolicy({
+      walletId,
+      type: 'ALLOWED_TOKENS',
+      rules: '{{bad',
+      priority: 1,
+    });
+    await expect(
+      engine.evaluate(walletId, tokenTx('1000', 'TokenMintAddr1')),
+    ).rejects.toMatchObject({ code: 'POLICY_RULES_CORRUPT' });
+  });
+
+  it('corrupt JSON in CONTRACT_WHITELIST throws POLICY_RULES_CORRUPT', async () => {
+    await insertPolicy({
+      walletId,
+      type: 'CONTRACT_WHITELIST',
+      rules: '!!invalid!!',
+      priority: 1,
+    });
+    await expect(
+      engine.evaluate(walletId, contractCallTx({ contractAddress: '0xabc' })),
+    ).rejects.toMatchObject({ code: 'POLICY_RULES_CORRUPT' });
+  });
+
+  it('corrupt JSON in APPROVE_TIER_OVERRIDE (batch path) throws POLICY_RULES_CORRUPT', async () => {
+    // Need APPROVED_SPENDERS so the spender check passes first, then APPROVE_TIER_OVERRIDE is reached
+    await insertPolicy({
+      walletId,
+      type: 'APPROVED_SPENDERS',
+      rules: JSON.stringify({ spenders: [{ address: '0xspender', name: 'test' }] }),
+      priority: 2,
+    });
+    await insertPolicy({
+      walletId,
+      type: 'APPROVE_TIER_OVERRIDE',
+      rules: '{corrupt!}',
+      priority: 1,
+    });
+    await expect(
+      engine.evaluateBatch(walletId, [
+        { type: 'APPROVE', amount: '0', toAddress: '0xspender', chain: 'ethereum', spenderAddress: '0xspender', approveAmount: '1000' },
+      ]),
+    ).rejects.toMatchObject({ code: 'POLICY_RULES_CORRUPT' });
+  });
+
+  it('corrupt JSON in ALLOWED_NETWORKS throws POLICY_RULES_CORRUPT', async () => {
+    await insertPolicy({
+      walletId,
+      type: 'ALLOWED_NETWORKS',
+      rules: 'not-json',
+      priority: 1,
+    });
+    await expect(
+      engine.evaluate(walletId, { ...tx('1000'), network: 'solana-mainnet' }),
+    ).rejects.toMatchObject({ code: 'POLICY_RULES_CORRUPT' });
+  });
+
+  it('schema-mismatched WHITELIST throws POLICY_RULES_CORRUPT', async () => {
+    // Valid JSON but wrong structure (missing allowed_addresses)
+    await insertPolicy({
+      walletId,
+      type: 'WHITELIST',
+      rules: JSON.stringify({ wrong_key: ['addr1'] }),
+      priority: 1,
+    });
+    await expect(engine.evaluate(walletId, tx('1000'))).rejects.toMatchObject({ code: 'POLICY_RULES_CORRUPT' });
   });
 });
