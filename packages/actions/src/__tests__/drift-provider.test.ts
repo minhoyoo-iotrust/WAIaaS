@@ -10,7 +10,11 @@ import { DriftPerpProvider } from '../providers/drift/index.js';
 import { MockDriftSdkWrapper } from '../providers/drift/drift-sdk-wrapper.js';
 import type { IDriftSdkWrapper } from '../providers/drift/drift-sdk-wrapper.js';
 import { DRIFT_PROGRAM_ID } from '../providers/drift/config.js';
-import type { ActionContext, ContractCallRequest } from '@waiaas/core';
+import type { ActionContext, ContractCallRequest, PositionQueryContext } from '@waiaas/core';
+
+function makeSolCtx(walletId: string, chain: 'solana' | 'ethereum' = 'solana'): PositionQueryContext {
+  return { walletId, chain, networks: chain === 'solana' ? ['solana-mainnet'] : ['ethereum-mainnet'], environment: 'mainnet', rpcUrls: {} };
+}
 
 // ---------------------------------------------------------------------------
 // Test constants
@@ -474,7 +478,7 @@ describe('IPositionProvider compliance', () => {
   });
 
   it('should return PositionUpdate[] with category=PERP from getPositions', async () => {
-    const positions = await provider.getPositions('test-wallet');
+    const positions = await provider.getPositions(makeSolCtx('test-wallet'));
     expect(Array.isArray(positions)).toBe(true);
     expect(positions.length).toBeGreaterThanOrEqual(1);
     const pos = positions[0]!;
@@ -482,7 +486,7 @@ describe('IPositionProvider compliance', () => {
   });
 
   it('should have correct provider/chain/network on position updates', async () => {
-    const positions = await provider.getPositions('test-wallet');
+    const positions = await provider.getPositions(makeSolCtx('test-wallet'));
     const pos = positions[0]!;
     expect(pos.provider).toBe('drift_perp');
     expect(pos.chain).toBe('solana');
@@ -491,11 +495,16 @@ describe('IPositionProvider compliance', () => {
   });
 
   it('should have direction, leverage, market in position metadata', async () => {
-    const positions = await provider.getPositions('test-wallet');
+    const positions = await provider.getPositions(makeSolCtx('test-wallet'));
     const pos = positions[0]!;
     expect(pos.metadata.direction).toBe('LONG');
     expect(pos.metadata.leverage).toBe(5);
     expect(pos.metadata.market).toBe('SOL-PERP');
+  });
+
+  it('should return [] for ethereum wallet (chain guard)', async () => {
+    const positions = await provider.getPositions(makeSolCtx('test-wallet', 'ethereum'));
+    expect(positions).toEqual([]);
   });
 });
 

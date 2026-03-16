@@ -413,6 +413,7 @@ export type {
   ILendingProvider,
   // v29.2 position provider types
   PositionUpdate,
+  PositionQueryContext,
   IPositionProvider,
   // v29.2 DeFi monitor types
   IDeFiMonitor,

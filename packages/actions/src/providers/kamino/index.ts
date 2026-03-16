@@ -26,7 +26,7 @@ import type {
   HealthFactor,
   MarketInfo,
 } from '@waiaas/core';
-import type { IPositionProvider, PositionUpdate, PositionCategory } from '@waiaas/core';
+import type { IPositionProvider, PositionUpdate, PositionCategory, PositionQueryContext } from '@waiaas/core';
 import type { KaminoConfig } from './config.js';
 import { KAMINO_DEFAULTS, resolveMarketAddress } from './config.js';
 import type { IKaminoSdkWrapper, KaminoInstruction } from './kamino-sdk-wrapper.js';
@@ -419,7 +419,9 @@ export class KaminoLendingProvider implements ILendingProvider, IPositionProvide
   // IPositionProvider methods
   // -------------------------------------------------------------------------
 
-  async getPositions(walletId: string): Promise<PositionUpdate[]> {
+  async getPositions(ctx: PositionQueryContext): Promise<PositionUpdate[]> {
+    if (ctx.chain !== 'solana') return [];
+    const walletId = ctx.walletId;
     try {
       const marketAddress = resolveMarketAddress(this.config.market);
       const obligation = await this.sdkWrapper.getObligation({

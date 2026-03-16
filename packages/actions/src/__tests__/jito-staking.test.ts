@@ -7,7 +7,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { JitoStakingActionProvider } from '../providers/jito-staking/index.js';
 import { JITO_MAINNET_ADDRESSES, getJitoAddresses } from '../providers/jito-staking/config.js';
-import type { ActionContext, ContractCallRequest } from '@waiaas/core';
+import type { ActionContext, ContractCallRequest, PositionQueryContext } from '@waiaas/core';
+
+function makeSolCtx(walletId: string, chain: 'solana' | 'ethereum' = 'solana'): PositionQueryContext {
+  return { walletId, chain, networks: chain === 'solana' ? ['solana-mainnet'] : ['ethereum-mainnet'], environment: 'mainnet', rpcUrls: {} };
+}
 
 // ---------------------------------------------------------------------------
 // Test context
@@ -348,7 +352,7 @@ describe('JitoStakingActionProvider IPositionProvider', () => {
   it('getPositions with jitoSOL balance 2e9 returns 1 STAKING PositionUpdate', async () => {
     setupMocks({ uiAmount: 2.0, rawAmount: '2000000000' });
 
-    const positions = await provider.getPositions(WALLET_ID);
+    const positions = await provider.getPositions(makeSolCtx(WALLET_ID));
     expect(positions).toHaveLength(1);
     expect(positions[0]!.category).toBe('STAKING');
     expect(positions[0]!.provider).toBe('jito_staking');
@@ -368,7 +372,7 @@ describe('JitoStakingActionProvider IPositionProvider', () => {
       poolTokenSupply: 1000000000n,
     });
 
-    const positions = await provider.getPositions(WALLET_ID);
+    const positions = await provider.getPositions(makeSolCtx(WALLET_ID));
     expect(positions).toHaveLength(1);
     expect(positions[0]!.metadata.token).toBe('jitoSOL');
     expect(positions[0]!.metadata.underlyingToken).toBe('SOL');
@@ -379,14 +383,19 @@ describe('JitoStakingActionProvider IPositionProvider', () => {
   it('getPositions with zero jitoSOL balance returns empty array', async () => {
     setupMocks({ empty: true });
 
-    const positions = await provider.getPositions(WALLET_ID);
+    const positions = await provider.getPositions(makeSolCtx(WALLET_ID));
     expect(positions).toEqual([]);
   });
 
   it('getPositions returns empty array on RPC error (no throw)', async () => {
     fetchMock.mockRejectedValue(new Error('RPC connection failed'));
 
-    const positions = await provider.getPositions(WALLET_ID);
+    const positions = await provider.getPositions(makeSolCtx(WALLET_ID));
+    expect(positions).toEqual([]);
+  });
+
+  it('getPositions returns [] for ethereum wallet (chain guard)', async () => {
+    const positions = await provider.getPositions(makeSolCtx(WALLET_ID, 'ethereum'));
     expect(positions).toEqual([]);
   });
 });

@@ -27,7 +27,7 @@ import {
 import { migrateAmount } from '../../common/migrate-amount.js';
 import { resolveProviderHumanAmount } from '../../common/resolve-human-amount.js';
 import { formatCaip19 } from '@waiaas/core';
-import type { PositionUpdate, PositionCategory } from '@waiaas/core';
+import type { PositionUpdate, PositionCategory, PositionQueryContext } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------
 // Input schemas (Zod SSoT)
@@ -164,8 +164,10 @@ export class JitoStakingActionProvider implements IActionProvider {
    * Query jitoSOL token balance and stake pool exchange rate for the given wallet.
    * Returns STAKING position with SOL-equivalent underlyingAmount.
    */
-  async getPositions(walletId: string): Promise<PositionUpdate[]> {
+  async getPositions(ctx: PositionQueryContext): Promise<PositionUpdate[]> {
+    if (ctx.chain !== 'solana') return [];
     if (!this.rpcUrl) return [];
+    const walletId = ctx.walletId;
 
     try {
       const balance = await getJitoSolBalance(
