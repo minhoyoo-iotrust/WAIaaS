@@ -12,8 +12,10 @@ import {
   encodeStEthPerTokenCalldata,
   decodeUint256Result,
   WSTETH_MAINNET,
+  LIDO_NETWORK_CONFIG,
+  LIDO_TESTNET_NETWORK_CONFIG,
 } from '../providers/lido-staking/lido-contract.js';
-import type { ActionContext } from '@waiaas/core';
+import type { ActionContext, PositionQueryContext } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------
 // Test context
@@ -218,6 +220,17 @@ describe('LidoStakingActionProvider IPositionProvider', () => {
   const RPC_URL = 'https://mock-rpc.example.com';
   const WALLET_ID = '0xABCDEF1234567890ABCDEF1234567890ABCDEF12';
 
+  /** Build an ethereum PositionQueryContext for testing. */
+  function makeCtx(walletId: string = WALLET_ID, chain: 'ethereum' | 'solana' = 'ethereum'): PositionQueryContext {
+    return {
+      walletId,
+      chain,
+      networks: chain === 'ethereum' ? ['ethereum-mainnet'] : ['solana-mainnet'],
+      environment: 'mainnet',
+      rpcUrls: chain === 'ethereum' ? { 'ethereum-mainnet': RPC_URL } : {},
+    };
+  }
+
   let fetchMock: ReturnType<typeof vi.fn>;
   let provider: LidoStakingActionProvider;
 
@@ -272,7 +285,7 @@ describe('LidoStakingActionProvider IPositionProvider', () => {
       return rpcResult(zeroBalance);
     });
 
-    const positions = await provider.getPositions(WALLET_ID);
+    const positions = await provider.getPositions(makeCtx());
     expect(positions).toHaveLength(1);
     expect(positions[0]!.category).toBe('STAKING');
     expect(positions[0]!.provider).toBe('lido_staking');
@@ -280,6 +293,11 @@ describe('LidoStakingActionProvider IPositionProvider', () => {
     expect(positions[0]!.assetId).toContain('eip155:1/erc20:');
     expect(positions[0]!.amount).toBe('1.0');
     expect(positions[0]!.status).toBe('ACTIVE');
+  });
+
+  it('getPositions returns [] for solana wallet (chain guard)', async () => {
+    const positions = await provider.getPositions(makeCtx(WALLET_ID, 'solana'));
+    expect(positions).toEqual([]);
   });
 
   it('getPositions with wstETH balance 1e18 and stEthPerToken 1.15e18 returns correct underlyingAmount', async () => {
@@ -306,7 +324,7 @@ describe('LidoStakingActionProvider IPositionProvider', () => {
       return rpcResult(zeroBalance);
     });
 
-    const positions = await provider.getPositions(WALLET_ID);
+    const positions = await provider.getPositions(makeCtx());
     expect(positions).toHaveLength(1);
     expect(positions[0]!.metadata.token).toBe('wstETH');
     // underlyingAmount = (1e18 * 1.15e18) / 1e18 = 1.15
@@ -326,7 +344,7 @@ describe('LidoStakingActionProvider IPositionProvider', () => {
       return rpcResult('0x' + '0'.repeat(64));
     });
 
-    const positions = await provider.getPositions(WALLET_ID);
+    const positions = await provider.getPositions(makeCtx());
     expect(positions).toHaveLength(2);
     const tokens = positions.map((p) => p.metadata.token);
     expect(tokens).toContain('stETH');
@@ -337,14 +355,220 @@ describe('LidoStakingActionProvider IPositionProvider', () => {
     const zeroBalance = '0x' + '0'.repeat(64);
     fetchMock.mockResolvedValue(rpcResult(zeroBalance));
 
-    const positions = await provider.getPositions(WALLET_ID);
+    const positions = await provider.getPositions(makeCtx());
     expect(positions).toEqual([]);
   });
 
   it('getPositions returns empty array on RPC error (no throw)', async () => {
     fetchMock.mockRejectedValue(new Error('RPC connection failed'));
 
-    const positions = await provider.getPositions(WALLET_ID);
+    const positions = await provider.getPositions(makeCtx());
     expect(positions).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Multichain getPositions tests (MCHN-01)
+// ---------------------------------------------------------------------------
+
+describe('LidoStakingActionProvider Multichain Positions', () => {
+  const WALLET_ID = '0xABCDEF1234567890ABCDEF1234567890ABCDEF12';
+  const ETH_RPC = 'https://eth-rpc.example.com';
+  const BASE_RPC = 'https://base-rpc.example.com';
+  const ARB_RPC = 'https://arb-rpc.example.com';
+
+  let fetchMock: ReturnType<typeof vi.fn>;
+  let provider: LidoStakingActionProvider;
+
+  beforeEach(() => {
+    fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    provider = new LidoStakingActionProvider({ enabled: true, rpcUrl: ETH_RPC });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function rpcResult(hexValue: string): Response {
+    return new Response(JSON.stringify({ jsonrpc: '2.0', id: 1, result: hexValue }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  function makeMultiCtx(opts?: {
+    networks?: string[];
+    environment?: 'mainnet' | 'testnet';
+  }): PositionQueryContext {
+    return {
+      walletId: WALLET_ID,
+      chain: 'ethereum',
+      networks: (opts?.networks ?? ['ethereum-mainnet', 'base-mainnet']) as any,
+      environment: opts?.environment ?? 'mainnet',
+      rpcUrls: {
+        'ethereum-mainnet': ETH_RPC,
+        'base-mainnet': BASE_RPC,
+        'arbitrum-mainnet': ARB_RPC,
+        'ethereum-sepolia': 'https://sepolia-rpc.example.com',
+      },
+    };
+  }
+
+  it('queries positions from multiple networks with correct CAIP-19 assetIds', async () => {
+    const balance1e18 = '0x' + (10n ** 18n).toString(16).padStart(64, '0');
+    const zeroBalance = '0x' + '0'.repeat(64);
+
+    fetchMock.mockImplementation(async (url: string, opts: { body: string }) => {
+      const body = JSON.parse(opts.body);
+      const calldata = body.params?.[0]?.data as string;
+
+      // wstETH balanceOf returns 1e18 for all networks
+      if (calldata?.startsWith('0x70a08231')) {
+        // stETH only on ethereum
+        const to = (body.params?.[0]?.to as string)?.toLowerCase();
+        const ethSteth = LIDO_NETWORK_CONFIG['ethereum-mainnet']!.stethAddress.toLowerCase();
+        if (to === ethSteth && url === ETH_RPC) return rpcResult(balance1e18);
+        // wstETH on both networks
+        const ethWsteth = LIDO_NETWORK_CONFIG['ethereum-mainnet']!.wstethAddress.toLowerCase();
+        const baseWsteth = LIDO_NETWORK_CONFIG['base-mainnet']!.wstethAddress.toLowerCase();
+        if (to === ethWsteth && url === ETH_RPC) return rpcResult(balance1e18);
+        if (to === baseWsteth && url === BASE_RPC) return rpcResult(balance1e18);
+        return rpcResult(zeroBalance);
+      }
+      // stEthPerToken
+      if (calldata?.startsWith('0x035faf82')) return rpcResult(balance1e18);
+      return rpcResult(zeroBalance);
+    });
+
+    const ctx = makeMultiCtx({ networks: ['ethereum-mainnet', 'base-mainnet'] });
+    const positions = await provider.getPositions(ctx);
+
+    // Ethereum: stETH + wstETH, Base: wstETH only (no stETH on Base)
+    expect(positions.length).toBeGreaterThanOrEqual(2);
+
+    // Check CAIP-19 for Ethereum positions
+    const ethPositions = positions.filter(p => p.network === 'ethereum-mainnet');
+    expect(ethPositions.length).toBeGreaterThan(0);
+    for (const p of ethPositions) {
+      expect(p.assetId).toContain('eip155:1/erc20:');
+    }
+
+    // Check CAIP-19 for Base positions
+    const basePositions = positions.filter(p => p.network === 'base-mainnet');
+    expect(basePositions.length).toBeGreaterThan(0);
+    for (const p of basePositions) {
+      expect(p.assetId).toContain('eip155:8453/erc20:');
+    }
+  });
+
+  it('single network RPC failure does not affect other networks (Promise.allSettled resilience)', async () => {
+    const balance1e18 = '0x' + (10n ** 18n).toString(16).padStart(64, '0');
+    const zeroBalance = '0x' + '0'.repeat(64);
+
+    fetchMock.mockImplementation(async (url: string, opts: { body: string }) => {
+      // Base RPC fails
+      if (url === BASE_RPC) throw new Error('Base RPC down');
+
+      const body = JSON.parse(opts.body);
+      const calldata = body.params?.[0]?.data as string;
+      const to = (body.params?.[0]?.to as string)?.toLowerCase();
+      const ethWsteth = LIDO_NETWORK_CONFIG['ethereum-mainnet']!.wstethAddress.toLowerCase();
+
+      if (calldata?.startsWith('0x70a08231') && to === ethWsteth) return rpcResult(balance1e18);
+      if (calldata?.startsWith('0x035faf82')) return rpcResult(balance1e18);
+      return rpcResult(zeroBalance);
+    });
+
+    const ctx = makeMultiCtx({ networks: ['ethereum-mainnet', 'base-mainnet'] });
+    const positions = await provider.getPositions(ctx);
+
+    // Should still get Ethereum positions despite Base failure
+    expect(positions.length).toBeGreaterThan(0);
+    expect(positions.every(p => p.network === 'ethereum-mainnet')).toBe(true);
+  });
+
+  it('testnet environment uses testnet contract addresses (Holesky)', async () => {
+    const balance1e18 = '0x' + (10n ** 18n).toString(16).padStart(64, '0');
+    const zeroBalance = '0x' + '0'.repeat(64);
+    const sepoliaRpc = 'https://sepolia-rpc.example.com';
+
+    fetchMock.mockImplementation(async (url: string, opts: { body: string }) => {
+      if (url !== sepoliaRpc) return rpcResult(zeroBalance);
+      const body = JSON.parse(opts.body);
+      const calldata = body.params?.[0]?.data as string;
+      const to = (body.params?.[0]?.to as string)?.toLowerCase();
+      const testnetConfig = LIDO_TESTNET_NETWORK_CONFIG['ethereum-sepolia']!;
+
+      if (calldata?.startsWith('0x70a08231') && to === testnetConfig.wstethAddress.toLowerCase()) {
+        return rpcResult(balance1e18);
+      }
+      if (calldata?.startsWith('0x035faf82')) return rpcResult(balance1e18);
+      return rpcResult(zeroBalance);
+    });
+
+    const ctx = makeMultiCtx({
+      networks: ['ethereum-sepolia'],
+      environment: 'testnet',
+    });
+    const positions = await provider.getPositions(ctx);
+
+    expect(positions.length).toBeGreaterThan(0);
+    expect(positions[0]!.assetId).toContain('eip155:11155111/erc20:');
+    expect(positions[0]!.network).toBe('ethereum-sepolia');
+  });
+
+  it('filters ctx.networks to only Lido-supported networks', async () => {
+    const balance1e18 = '0x' + (10n ** 18n).toString(16).padStart(64, '0');
+    const zeroBalance = '0x' + '0'.repeat(64);
+
+    fetchMock.mockImplementation(async (_url: string, opts: { body: string }) => {
+      const body = JSON.parse(opts.body);
+      const calldata = body.params?.[0]?.data as string;
+      const to = (body.params?.[0]?.to as string)?.toLowerCase();
+      const ethWsteth = LIDO_NETWORK_CONFIG['ethereum-mainnet']!.wstethAddress.toLowerCase();
+
+      if (calldata?.startsWith('0x70a08231') && to === ethWsteth) return rpcResult(balance1e18);
+      if (calldata?.startsWith('0x035faf82')) return rpcResult(balance1e18);
+      return rpcResult(zeroBalance);
+    });
+
+    // Include unsupported 'hyperevm-mainnet' -- should be silently ignored
+    const ctx = makeMultiCtx({ networks: ['ethereum-mainnet', 'hyperevm-mainnet' as any] });
+    const positions = await provider.getPositions(ctx);
+
+    // Only ethereum-mainnet positions returned
+    expect(positions.every(p => p.network === 'ethereum-mainnet')).toBe(true);
+  });
+
+  it('each position network field matches the queried network', async () => {
+    const balance1e18 = '0x' + (10n ** 18n).toString(16).padStart(64, '0');
+    const zeroBalance = '0x' + '0'.repeat(64);
+
+    fetchMock.mockImplementation(async (url: string, opts: { body: string }) => {
+      const body = JSON.parse(opts.body);
+      const calldata = body.params?.[0]?.data as string;
+      const to = (body.params?.[0]?.to as string)?.toLowerCase();
+
+      if (calldata?.startsWith('0x70a08231')) {
+        const ethWsteth = LIDO_NETWORK_CONFIG['ethereum-mainnet']!.wstethAddress.toLowerCase();
+        const arbWsteth = LIDO_NETWORK_CONFIG['arbitrum-mainnet']!.wstethAddress.toLowerCase();
+        if (to === ethWsteth && url === ETH_RPC) return rpcResult(balance1e18);
+        if (to === arbWsteth && url === ARB_RPC) return rpcResult(balance1e18);
+        return rpcResult(zeroBalance);
+      }
+      if (calldata?.startsWith('0x035faf82')) return rpcResult(balance1e18);
+      return rpcResult(zeroBalance);
+    });
+
+    const ctx = makeMultiCtx({ networks: ['ethereum-mainnet', 'arbitrum-mainnet'] });
+    const positions = await provider.getPositions(ctx);
+
+    const ethPos = positions.filter(p => p.network === 'ethereum-mainnet');
+    const arbPos = positions.filter(p => p.network === 'arbitrum-mainnet');
+    expect(ethPos.length).toBeGreaterThan(0);
+    expect(arbPos.length).toBeGreaterThan(0);
+    // No position should have a mismatched network
+    expect(positions.every(p => ['ethereum-mainnet', 'arbitrum-mainnet'].includes(p.network as string))).toBe(true);
   });
 });

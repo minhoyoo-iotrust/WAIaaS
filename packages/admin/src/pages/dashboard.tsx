@@ -303,6 +303,7 @@ export default function DashboardPage() {
   const defiLoading = useSignal(true);
   const categoryFilter = useSignal<string>('ALL');
   const walletFilter = useSignal<string>('');
+  const includeTestnets = useSignal(typeof localStorage !== 'undefined' && localStorage.getItem('defi-include-testnets') === 'true');
   const walletList = useSignal<Array<{ id: string; name: string }>>([]);
   const statsData = useSignal<AdminStats | null>(null);
   const statsLoading = useSignal(true);
@@ -322,9 +323,10 @@ export default function DashboardPage() {
   const fetchDefi = async () => {
     defiLoading.value = true;
     try {
-      const query: { wallet_id?: string; category?: 'STAKING' | 'LENDING' | 'YIELD' | 'PERP' } = {};
+      const query: { wallet_id?: string; category?: 'STAKING' | 'LENDING' | 'YIELD' | 'PERP'; includeTestnets?: 'true' | 'false' } = {};
       if (walletFilter.value) query.wallet_id = walletFilter.value;
       if (categoryFilter.value !== 'ALL') query.category = categoryFilter.value as 'STAKING' | 'LENDING' | 'YIELD' | 'PERP';
+      if (includeTestnets.value) query.includeTestnets = 'true';
       const { data: result } = await api.GET('/v1/admin/defi/positions', { params: { query } });
       defiData.value = result!;
     } catch {
@@ -407,7 +409,7 @@ export default function DashboardPage() {
   // Re-fetch defi data when filters change
   useEffect(() => {
     fetchDefi();
-  }, [categoryFilter.value, walletFilter.value]);
+  }, [categoryFilter.value, walletFilter.value, includeTestnets.value]);
 
   const isInitialLoad = loading.value && !data.value;
 
@@ -558,6 +560,18 @@ export default function DashboardPage() {
                 <option key={w.id} value={w.id}>{w.name}</option>
               ))}
             </select>
+            <label class="defi-testnet-toggle" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)', cursor: 'pointer', fontSize: 'var(--font-sm)' }}>
+              <input
+                type="checkbox"
+                checked={includeTestnets.value}
+                onChange={(e) => {
+                  const checked = (e.target as HTMLInputElement).checked;
+                  includeTestnets.value = checked;
+                  localStorage.setItem('defi-include-testnets', String(checked));
+                }}
+              />
+              Include testnets
+            </label>
           </div>
           <div class="stat-grid">
             <StatCard

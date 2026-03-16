@@ -1,5 +1,5 @@
 ---
-id: "advanced-06"
+id: "advanced-03"
 title: "가스 조건부 실행"
 category: "advanced"
 auth: "session"
@@ -13,7 +13,7 @@ tags: ["gas", "conditional", "execution", "gas-price"]
 # 가스 조건부 실행
 
 ## Metadata
-- **ID**: advanced-06
+- **ID**: advanced-03
 - **Category**: advanced
 - **Network**: ethereum-mainnet
 - **Requires Funds**: No

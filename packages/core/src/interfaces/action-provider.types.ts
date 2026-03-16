@@ -53,6 +53,8 @@ export const ActionProviderMetadataSchema = z.object({
   mcpExpose: z.boolean().default(false),
   /** Whether this provider requires an API key. Defaults to false. */
   requiresApiKey: z.boolean().default(false),
+  /** URL where users can obtain an API key for this provider. */
+  apiKeyUrl: z.string().url().optional(),
   /** List of required external API identifiers. Defaults to []. */
   requiredApis: z.array(z.string()).optional().default([]),
   /** Provider category for grouping (e.g. 'Swap', 'Bridge', 'Staking', 'Lending', 'Yield', 'Perp'). */

@@ -518,6 +518,7 @@ export const defiPositions = sqliteTable(
     category: text('category').notNull(),
     provider: text('provider').notNull(),
     chain: text('chain').notNull(),
+    environment: text('environment').notNull().default('mainnet'),
     network: text('network'),
     assetId: text('asset_id'),
     amount: text('amount').notNull(),

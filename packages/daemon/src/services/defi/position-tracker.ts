@@ -18,9 +18,11 @@
  */
 
 import type { Database } from 'better-sqlite3';
-import type { IPositionProvider, PositionCategory } from '@waiaas/core';
-import { POSITION_CATEGORIES } from '@waiaas/core';
+import type { IPositionProvider, PositionCategory, PositionQueryContext } from '@waiaas/core';
+import type { ChainType, EnvironmentType } from '@waiaas/core';
+import { POSITION_CATEGORIES, getNetworksForEnvironment } from '@waiaas/core';
 import { PositionWriteQueue } from './position-write-queue.js';
+import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
 import type { SettingsService } from '../../infrastructure/settings/settings-service.js';
 
 // ---------------------------------------------------------------------------
@@ -46,14 +48,20 @@ const DEFAULT_INTERVALS: Record<PositionCategory, number> = {
 export class PositionTracker {
   private readonly sqlite: Database;
   private readonly settingsService?: SettingsService;
+  private readonly rpcConfig: Record<string, string>;
   private readonly writeQueue: PositionWriteQueue;
   private readonly providers = new Map<string, IPositionProvider>();
   private readonly timers = new Map<PositionCategory, NodeJS.Timeout>();
   private readonly running = new Map<PositionCategory, boolean>();
 
-  constructor(opts: { sqlite: Database; settingsService?: SettingsService }) {
+  constructor(opts: {
+    sqlite: Database;
+    settingsService?: SettingsService;
+    rpcConfig?: Record<string, string>;
+  }) {
     this.sqlite = opts.sqlite;
     this.settingsService = opts.settingsService;
+    this.rpcConfig = opts.rpcConfig ?? {};
     this.writeQueue = new PositionWriteQueue();
   }
 
@@ -139,16 +147,33 @@ export class PositionTracker {
       const categoryProviders = this.getProvidersForCategory(category);
       if (categoryProviders.length === 0) return;
 
-      // Get active wallet IDs
+      // Get active wallets with chain/environment metadata
       const wallets = this.sqlite
-        .prepare("SELECT id FROM wallets WHERE status = 'ACTIVE'")
-        .all() as Array<{ id: string }>;
+        .prepare("SELECT id, chain, environment FROM wallets WHERE status = 'ACTIVE'")
+        .all() as Array<{ id: string; chain: string; environment: string }>;
 
       for (const provider of categoryProviders) {
         for (const wallet of wallets) {
           try {
-            const positions = await provider.getPositions(wallet.id);
+            // Build PositionQueryContext from wallet metadata
+            const chain = wallet.chain as ChainType;
+            const environment = wallet.environment as EnvironmentType;
+            const networks = getNetworksForEnvironment(chain, environment);
+            const rpcUrls: Record<string, string> = {};
+            for (const net of networks) {
+              const url = resolveRpcUrl(this.rpcConfig, chain, net);
+              if (url) rpcUrls[net] = url;
+            }
+            const ctx: PositionQueryContext = {
+              walletId: wallet.id,
+              chain,
+              networks,
+              environment,
+              rpcUrls,
+            };
+            const positions = await provider.getPositions(ctx);
             for (const pos of positions) {
+              pos.environment = wallet.environment;
               this.writeQueue.enqueue(pos);
             }
           } catch (err) {

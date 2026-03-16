@@ -11,7 +11,7 @@ import {
   PendleSwappingPricesSchema,
 } from './schemas.js';
 import type {
-  PendleMarketsResponse,
+  PendleMarket,
   PendleConvertResponse,
   PendleSwappingPrices,
 } from './schemas.js';
@@ -33,10 +33,11 @@ export class PendleApiClient extends ActionApiClient {
    * Fetch all active markets for the configured chain.
    * GET /v1/markets/all?chainId={chainId}
    */
-  async getMarkets(): Promise<PendleMarketsResponse> {
-    return this.get('v1/markets/all', PendleMarketsResponseSchema, {
+  async getMarkets(): Promise<PendleMarket[]> {
+    const raw = await this.get('v1/markets/all', PendleMarketsResponseSchema, {
       chainId: String(this.chainId),
     });
+    return Array.isArray(raw) ? raw : raw.results;
   }
 
   /**

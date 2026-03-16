@@ -6,7 +6,7 @@ import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { PendleYieldProvider } from '../index.js';
-import type { ActionContext } from '@waiaas/core';
+import type { ActionContext, PositionQueryContext } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------
 // Mock data
@@ -298,6 +298,24 @@ describe('PendleYieldProvider', () => {
     const MOCK_RPC_URL = 'http://localhost:9999';
     const WALLET_ADDRESS = '0x1234567890abcdef1234567890abcdef12345678';
 
+    function makeCtx(
+      chain: 'ethereum' | 'solana' = 'ethereum',
+      opts?: { emptyRpcUrls?: boolean },
+    ): PositionQueryContext {
+      const rpcUrls: Record<string, string> = opts?.emptyRpcUrls
+        ? {}
+        : chain === 'ethereum'
+          ? { 'ethereum-mainnet': MOCK_RPC_URL }
+          : {};
+      return {
+        walletId: WALLET_ADDRESS,
+        chain,
+        networks: chain === 'ethereum' ? ['ethereum-mainnet'] : ['solana-mainnet'],
+        environment: 'mainnet',
+        rpcUrls,
+      };
+    }
+
     // Future expiry (2027-12-26) for ACTIVE positions
     const FUTURE_EXPIRY = '2027-12-26T00:00:00Z';
     // Past expiry for MATURED positions
@@ -336,7 +354,13 @@ describe('PendleYieldProvider', () => {
 
     it('returns [] when rpcUrl is not configured', async () => {
       const provider = new PendleYieldProvider({ enabled: true });
-      const positions = await provider.getPositions(WALLET_ADDRESS);
+      const positions = await provider.getPositions(makeCtx('ethereum', { emptyRpcUrls: true }));
+      expect(positions).toEqual([]);
+    });
+
+    it('returns [] for solana wallet (chain guard)', async () => {
+      const provider = new PendleYieldProvider({ enabled: true, rpcUrl: MOCK_RPC_URL });
+      const positions = await provider.getPositions(makeCtx('solana'));
       expect(positions).toEqual([]);
     });
 
@@ -350,7 +374,7 @@ describe('PendleYieldProvider', () => {
       );
 
       const provider = new PendleYieldProvider({ enabled: true, rpcUrl: MOCK_RPC_URL });
-      const positions = await provider.getPositions(WALLET_ADDRESS);
+      const positions = await provider.getPositions(makeCtx());
 
       expect(positions).toHaveLength(1);
       const pos = positions[0]!;
@@ -377,7 +401,7 @@ describe('PendleYieldProvider', () => {
       );
 
       const provider = new PendleYieldProvider({ enabled: true, rpcUrl: MOCK_RPC_URL });
-      const positions = await provider.getPositions(WALLET_ADDRESS);
+      const positions = await provider.getPositions(makeCtx());
 
       expect(positions).toHaveLength(1);
       const pos = positions[0]!;
@@ -399,7 +423,7 @@ describe('PendleYieldProvider', () => {
       );
 
       const provider = new PendleYieldProvider({ enabled: true, rpcUrl: MOCK_RPC_URL });
-      const positions = await provider.getPositions(WALLET_ADDRESS);
+      const positions = await provider.getPositions(makeCtx());
 
       expect(positions).toHaveLength(1);
       expect(positions[0]!.status).toBe('MATURED');
@@ -415,7 +439,7 @@ describe('PendleYieldProvider', () => {
       );
 
       const provider = new PendleYieldProvider({ enabled: true, rpcUrl: MOCK_RPC_URL });
-      const positions = await provider.getPositions(WALLET_ADDRESS);
+      const positions = await provider.getPositions(makeCtx());
       expect(positions).toEqual([]);
     });
 
@@ -441,7 +465,7 @@ describe('PendleYieldProvider', () => {
       );
 
       const provider = new PendleYieldProvider({ enabled: true, rpcUrl: MOCK_RPC_URL });
-      const positions = await provider.getPositions(WALLET_ADDRESS);
+      const positions = await provider.getPositions(makeCtx());
 
       expect(positions).toHaveLength(2);
       expect(positions[0]!.metadata.underlyingAsset).toBe('stETH');
@@ -458,7 +482,7 @@ describe('PendleYieldProvider', () => {
       );
 
       const provider = new PendleYieldProvider({ enabled: true, rpcUrl: MOCK_RPC_URL });
-      const positions = await provider.getPositions(WALLET_ADDRESS);
+      const positions = await provider.getPositions(makeCtx());
 
       expect(positions).toHaveLength(1);
       // CAIP-19 format: eip155:1/erc20:0xPTAddr
@@ -473,7 +497,7 @@ describe('PendleYieldProvider', () => {
       );
 
       const provider = new PendleYieldProvider({ enabled: true, rpcUrl: MOCK_RPC_URL });
-      const positions = await provider.getPositions(WALLET_ADDRESS);
+      const positions = await provider.getPositions(makeCtx());
       expect(positions).toEqual([]);
     });
   });

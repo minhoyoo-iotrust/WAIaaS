@@ -1,7 +1,7 @@
 ---
-id: "testnet-07"
+id: "admin-ops-01"
 title: "수신 트랜잭션 감지"
-category: "testnet"
+category: "admin-ops"
 auth: "session"
 network: ["ethereum-sepolia", "solana-devnet"]
 requires_funds: true
@@ -13,8 +13,8 @@ tags: ["incoming", "monitor", "detection", "sepolia", "devnet"]
 # 수신 트랜잭션 감지
 
 ## Metadata
-- **ID**: testnet-07
-- **Category**: testnet
+- **ID**: admin-ops-01
+- **Category**: admin-ops
 - **Network**: ethereum-sepolia, solana-devnet
 - **Requires Funds**: Yes
 - **Estimated Cost**: ~$0.01

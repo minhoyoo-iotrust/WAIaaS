@@ -31,7 +31,7 @@ export const JITO_MAINNET_ADDRESSES = {
 export const JITO_WITHDRAW_AUTHORITY = '6iQKfEyhr3bZMotVkW6beNZz5CPAkiwvgV2CTje9pVSS';
 
 /** Reserve stake account for the Jito Stake Pool. */
-export const JITO_RESERVE_STAKE = 'BgKUXdS2jFbByBaPQRf6eSCjMH3mRLDPH1MCVLhEAD3c';
+export const JITO_RESERVE_STAKE = 'BgKUXdS29YcHCFrPm5M8oLHiTzZaMDjsebggjoaQ6KFL';
 
 /** Manager fee account for the Jito Stake Pool. */
 export const JITO_MANAGER_FEE = 'B1aLzaNMeFVAyQ6f3XbbUyKcH2YPHu2fqiEagmiF23VR';

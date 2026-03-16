@@ -9,7 +9,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { PositionTracker } from '../services/defi/position-tracker.js';
 import { createDatabase, pushSchema } from '../infrastructure/database/index.js';
-import type { IPositionProvider, PositionUpdate, PositionCategory } from '@waiaas/core';
+import type { IPositionProvider, PositionUpdate, PositionCategory, PositionQueryContext } from '@waiaas/core';
 import type { Database as DatabaseType } from 'better-sqlite3';
 
 // ---------------------------------------------------------------------------
@@ -24,8 +24,8 @@ function makeMockProvider(overrides: Partial<{
   return {
     getProviderName: () => overrides.name ?? 'mock_provider',
     getSupportedCategories: () => overrides.categories ?? (['LENDING'] as PositionCategory[]),
-    getPositions: overrides.getPositions ?? vi.fn().mockResolvedValue([{
-      walletId: 'wallet-1',
+    getPositions: overrides.getPositions ?? vi.fn().mockImplementation((ctx: PositionQueryContext) => Promise.resolve([{
+      walletId: ctx.walletId,
       category: 'LENDING' as PositionCategory,
       provider: overrides.name ?? 'mock_provider',
       chain: 'ethereum',
@@ -37,7 +37,7 @@ function makeMockProvider(overrides: Partial<{
       status: 'ACTIVE',
       openedAt: Math.floor(Date.now() / 1000),
       closedAt: null,
-    }] as PositionUpdate[]),
+    }] as PositionUpdate[])),
   };
 }
 
@@ -155,13 +155,13 @@ describe('PositionTracker', () => {
   it('isolates per-wallet errors', async () => {
     let _callCount = 0;
     const errorProvider = makeMockProvider({
-      getPositions: vi.fn().mockImplementation((walletId: string) => {
+      getPositions: vi.fn().mockImplementation((ctx: PositionQueryContext) => {
         _callCount++;
-        if (walletId === 'wallet-1') {
+        if (ctx.walletId === 'wallet-1') {
           throw new Error('RPC error');
         }
         return Promise.resolve([{
-          walletId,
+          walletId: ctx.walletId,
           category: 'LENDING' as PositionCategory,
           provider: 'mock_provider',
           chain: 'ethereum',
@@ -288,6 +288,82 @@ describe('PositionTracker', () => {
 
     setIntervalSpy.mockRestore();
     trackerWithSettings.stop();
+  });
+
+  // -------------------------------------------------------------------------
+  // PositionQueryContext construction tests (Phase 432)
+  // -------------------------------------------------------------------------
+
+  it('syncCategory builds PositionQueryContext with correct chain/networks/environment', async () => {
+    const capturedContexts: PositionQueryContext[] = [];
+    const ctxProvider = makeMockProvider({
+      getPositions: vi.fn().mockImplementation((ctx: PositionQueryContext) => {
+        capturedContexts.push(ctx);
+        return Promise.resolve([]);
+      }),
+    });
+    tracker.registerProvider(ctxProvider);
+
+    await tracker.syncCategory('LENDING');
+
+    // 2 wallets in DB (both ethereum/testnet from insertTestWallet)
+    expect(capturedContexts).toHaveLength(2);
+
+    const ctx1 = capturedContexts[0]!;
+    expect(ctx1.walletId).toBe('wallet-1');
+    expect(ctx1.chain).toBe('ethereum');
+    expect(ctx1.environment).toBe('testnet');
+    expect(ctx1.networks).toBeDefined();
+    expect(ctx1.networks.length).toBeGreaterThan(0);
+    expect(ctx1.rpcUrls).toBeDefined();
+  });
+
+  it('syncCategory builds PositionQueryContext with rpcUrls from rpcConfig', async () => {
+    const trackerWithRpc = new PositionTracker({
+      sqlite,
+      rpcConfig: { evm_ethereum_sepolia: 'http://localhost:8545' },
+    });
+
+    const capturedContexts: PositionQueryContext[] = [];
+    const ctxProvider = makeMockProvider({
+      getPositions: vi.fn().mockImplementation((ctx: PositionQueryContext) => {
+        capturedContexts.push(ctx);
+        return Promise.resolve([]);
+      }),
+    });
+    trackerWithRpc.registerProvider(ctxProvider);
+
+    await trackerWithRpc.syncCategory('LENDING');
+
+    const ctx1 = capturedContexts[0]!;
+    expect(ctx1.rpcUrls['ethereum-sepolia']).toBe('http://localhost:8545');
+
+    trackerWithRpc.stop();
+  });
+
+  it('syncCategory builds solana context for solana wallets', async () => {
+    // Insert a solana wallet
+    sqlite.prepare(
+      "INSERT INTO wallets (id, name, chain, environment, public_key, status, created_at, updated_at) VALUES ('sol-wallet', 'sol-test', 'solana', 'mainnet', 'pk-sol', 'ACTIVE', 0, 0)",
+    ).run();
+
+    const capturedContexts: PositionQueryContext[] = [];
+    const ctxProvider = makeMockProvider({
+      getPositions: vi.fn().mockImplementation((ctx: PositionQueryContext) => {
+        capturedContexts.push(ctx);
+        return Promise.resolve([]);
+      }),
+    });
+    tracker.registerProvider(ctxProvider);
+
+    await tracker.syncCategory('LENDING');
+
+    // 3 wallets: wallet-1 (eth), wallet-2 (eth), sol-wallet (sol)
+    expect(capturedContexts).toHaveLength(3);
+    const solCtx = capturedContexts.find((c) => c.walletId === 'sol-wallet')!;
+    expect(solCtx.chain).toBe('solana');
+    expect(solCtx.environment).toBe('mainnet');
+    expect(solCtx.networks).toContain('solana-mainnet');
   });
 
   // -------------------------------------------------------------------------

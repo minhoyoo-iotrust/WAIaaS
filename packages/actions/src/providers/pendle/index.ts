@@ -22,9 +22,10 @@ import type {
   IPositionProvider,
   PositionUpdate,
   PositionCategory,
+  PositionQueryContext,
 } from '@waiaas/core';
 import { PendleApiClient } from './pendle-api-client.js';
-import { type PendleConfig, PENDLE_DEFAULTS, getPendleChainId } from './config.js';
+import { type PendleConfig, PENDLE_DEFAULTS, getPendleChainId, PENDLE_POSITION_NETWORKS } from './config.js';
 import type { PendleMarket } from './schemas.js';
 import { formatCaip19 } from '@waiaas/core';
 import { addressToHex } from '../../common/contract-encoding.js';
@@ -301,78 +302,99 @@ export class PendleYieldProvider implements IYieldProvider, IPositionProvider {
   // IPositionProvider methods
   // ---------------------------------------------------------------------------
 
-  async getPositions(walletId: string): Promise<PositionUpdate[]> {
-    if (!this.config.rpcUrl) return [];
+  async getPositions(ctx: PositionQueryContext): Promise<PositionUpdate[]> {
+    if (ctx.chain !== 'ethereum') return [];
+    const walletId = ctx.walletId;
 
-    try {
-      const positions: PositionUpdate[] = [];
-      const now = Math.floor(Date.now() / 1000);
+    // Filter ctx.networks to only Pendle position-supported networks (MCHN-03)
+    const supportedNetworks = ctx.networks.filter(
+      n => (PENDLE_POSITION_NETWORKS as readonly string[]).includes(n),
+    );
+    if (supportedNetworks.length === 0) return [];
 
-      // Only query ethereum-mainnet (Pendle's primary chain)
-      const network = 'ethereum-mainnet';
-      const chainId = getPendleChainId(network);
-      const client = new PendleApiClient(this.config, chainId);
-      const markets = await client.getMarkets();
+    // Query each network in parallel via Promise.allSettled (MCHN-06)
+    const results = await Promise.allSettled(
+      supportedNetworks.map(network => {
+        const rpcUrl = ctx.rpcUrls[network];
+        if (!rpcUrl) return Promise.resolve([] as PositionUpdate[]);
+        return this.queryNetworkPendlePositions(walletId, network, rpcUrl);
+      }),
+    );
 
-      for (const market of markets) {
-        const maturity = Math.floor(new Date(market.expiry).getTime() / 1000);
-        const status = maturity < now ? 'MATURED' : 'ACTIVE';
-        const impliedApy = market.details?.impliedApy ?? 0;
-        const underlyingAsset = market.underlyingAsset.symbol;
+    // Collect only fulfilled results (MCHN-07)
+    return results.flatMap(r => r.status === 'fulfilled' ? r.value : []);
+  }
 
-        // Check PT balance
-        const ptBalance = await this.ethCallUint256(market.pt, this.encodeBalanceOfCalldata(walletId));
-        if (ptBalance > 0n) {
-          positions.push({
-            walletId,
-            category: 'YIELD',
-            provider: 'pendle',
-            chain: 'ethereum',
-            network,
-            assetId: formatCaip19(`eip155:${chainId}`, 'erc20', market.pt),
-            amount: this.formatWei(ptBalance),
-            amountUsd: null,
-            metadata: {
-              tokenType: 'PT',
-              maturity,
-              underlyingAsset,
-              impliedApy,
-              marketAddress: market.address,
-            },
-            status,
-            openedAt: now,
-          });
-        }
+  /**
+   * Query Pendle PT/YT positions on a single network.
+   */
+  private async queryNetworkPendlePositions(
+    walletId: string,
+    network: string,
+    rpcUrl: string,
+  ): Promise<PositionUpdate[]> {
+    const positions: PositionUpdate[] = [];
+    const now = Math.floor(Date.now() / 1000);
+    const chainId = getPendleChainId(network);
+    const client = new PendleApiClient(this.config, chainId);
+    const markets = await client.getMarkets();
 
-        // Check YT balance
-        const ytBalance = await this.ethCallUint256(market.yt, this.encodeBalanceOfCalldata(walletId));
-        if (ytBalance > 0n) {
-          positions.push({
-            walletId,
-            category: 'YIELD',
-            provider: 'pendle',
-            chain: 'ethereum',
-            network,
-            assetId: formatCaip19(`eip155:${chainId}`, 'erc20', market.yt),
-            amount: this.formatWei(ytBalance),
-            amountUsd: null,
-            metadata: {
-              tokenType: 'YT',
-              maturity,
-              underlyingAsset,
-              impliedApy,
-              marketAddress: market.address,
-            },
-            status,
-            openedAt: now,
-          });
-        }
+    for (const market of markets) {
+      const maturity = Math.floor(new Date(market.expiry).getTime() / 1000);
+      const status = maturity < now ? 'MATURED' : 'ACTIVE';
+      const impliedApy = market.details?.impliedApy ?? 0;
+      const underlyingAsset = market.underlyingAsset.symbol;
+
+      // Check PT balance
+      const ptBalance = await this.ethCallUint256WithRpc(rpcUrl, market.pt, this.encodeBalanceOfCalldata(walletId));
+      if (ptBalance > 0n) {
+        positions.push({
+          walletId,
+          category: 'YIELD',
+          provider: 'pendle',
+          chain: 'ethereum',
+          network,
+          assetId: formatCaip19(`eip155:${chainId}`, 'erc20', market.pt),
+          amount: this.formatWei(ptBalance),
+          amountUsd: null,
+          metadata: {
+            tokenType: 'PT',
+            maturity,
+            underlyingAsset,
+            impliedApy,
+            marketAddress: market.address,
+          },
+          status,
+          openedAt: now,
+        });
       }
 
-      return positions;
-    } catch {
-      return [];
+      // Check YT balance
+      const ytBalance = await this.ethCallUint256WithRpc(rpcUrl, market.yt, this.encodeBalanceOfCalldata(walletId));
+      if (ytBalance > 0n) {
+        positions.push({
+          walletId,
+          category: 'YIELD',
+          provider: 'pendle',
+          chain: 'ethereum',
+          network,
+          assetId: formatCaip19(`eip155:${chainId}`, 'erc20', market.yt),
+          amount: this.formatWei(ytBalance),
+          amountUsd: null,
+          metadata: {
+            tokenType: 'YT',
+            maturity,
+            underlyingAsset,
+            impliedApy,
+            marketAddress: market.address,
+          },
+          status,
+          openedAt: now,
+        });
+      }
     }
+
+    return positions;
   }
 
   getProviderName(): string {
@@ -451,10 +473,10 @@ export class PendleYieldProvider implements IYieldProvider, IPositionProvider {
   }
 
   /**
-   * Execute a single eth_call and decode the result as uint256.
+   * Execute a single eth_call with explicit rpcUrl and decode the result as uint256.
    */
-  private async ethCallUint256(to: string, data: string): Promise<bigint> {
-    const resp = await fetch(this.config.rpcUrl!, {
+  private async ethCallUint256WithRpc(rpcUrl: string, to: string, data: string): Promise<bigint> {
+    const resp = await fetch(rpcUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

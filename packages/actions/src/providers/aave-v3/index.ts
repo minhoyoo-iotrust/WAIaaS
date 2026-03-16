@@ -26,9 +26,9 @@ import type {
   MarketInfo,
   NetworkType,
 } from '@waiaas/core';
-import type { IPositionProvider, PositionUpdate, PositionCategory } from '@waiaas/core';
+import type { IPositionProvider, PositionUpdate, PositionCategory, PositionQueryContext } from '@waiaas/core';
 import type { AaveV3Config } from './config.js';
-import { getAaveAddresses } from './config.js';
+import { getAaveAddresses, AAVE_V3_ADDRESSES } from './config.js';
 import {
   encodeSupplyCalldata,
   encodeBorrowCalldata,
@@ -443,147 +443,151 @@ export class AaveV3LendingProvider implements ILendingProvider, IPositionProvide
   // IPositionProvider methods
   // -------------------------------------------------------------------------
 
-  async getPositions(walletId: string): Promise<PositionUpdate[]> {
-    if (!this.rpcCaller) return [];
+  async getPositions(ctx: PositionQueryContext): Promise<PositionUpdate[]> {
+    if (ctx.chain !== 'ethereum') return [];
+    const walletId = ctx.walletId;
 
-    try {
-      const network = 'ethereum-mainnet';
-      const addresses = getAaveAddresses(network);
-      const chainCaip2 = `eip155:${addresses.chainId}`;
-      const now = Math.floor(Date.now() / 1000);
-      const positions: PositionUpdate[] = [];
+    // Filter ctx.networks to only AAVE_V3_ADDRESSES-supported networks (MCHN-02)
+    const supportedNetworks = ctx.networks.filter(n => AAVE_V3_ADDRESSES[n]);
+    if (supportedNetworks.length === 0) return [];
 
-      // 1. Get reserves list
-      const reservesHex = await this.rpcCaller.call({
-        to: addresses.pool,
-        data: encodeGetReservesListCalldata(),
-        chainId: addresses.chainId,
-      });
-      const reserves = decodeAddressArray(reservesHex);
-      if (reserves.length === 0) return [];
+    // Query each network in parallel via Promise.allSettled (MCHN-06)
+    const results = await Promise.allSettled(
+      supportedNetworks.map(network => {
+        const rpcUrl = ctx.rpcUrls[network];
+        if (!rpcUrl) return Promise.resolve([] as PositionUpdate[]);
+        return this.queryNetworkAavePositions(walletId, network, rpcUrl);
+      }),
+    );
 
-      // 2. Get oracle prices for all reserves at once
-      const pricesHex = await this.rpcCaller.call({
-        to: addresses.oracle,
-        data: encodeGetAssetsPricesCalldata(reserves),
-        chainId: addresses.chainId,
-      });
-      const prices = decodeUint256Array(pricesHex); // 8 decimals USD
+    // Collect only fulfilled results (MCHN-07)
+    return results.flatMap(r => r.status === 'fulfilled' ? r.value : []);
+  }
 
-      // 3. Get user account data (for Health Factor)
-      const accountDataHex = await this.rpcCaller.call({
-        to: addresses.pool,
-        data: encodeGetUserAccountDataCalldata(walletId),
-        chainId: addresses.chainId,
-      });
-      const accountData = decodeGetUserAccountData(accountDataHex);
-      const healthFactor = hfToNumber(accountData.healthFactor);
+  /**
+   * Query Aave V3 supply/borrow positions on a single network using raw fetch RPC.
+   */
+  private async queryNetworkAavePositions(
+    walletId: string,
+    network: string,
+    rpcUrl: string,
+  ): Promise<PositionUpdate[]> {
+    const addresses = getAaveAddresses(network);
+    const chainCaip2 = `eip155:${addresses.chainId}`;
+    const now = Math.floor(Date.now() / 1000);
+    const positions: PositionUpdate[] = [];
 
-      // 4. For each reserve: get token addresses, balances, and reserve data
-      for (let i = 0; i < reserves.length; i++) {
-        const asset = reserves[i]!;
-        const priceUsd8 = prices[i] ?? 0n; // 8 decimals
+    // 1. Get reserves list
+    const reservesHex = await this.rpcCall(rpcUrl, addresses.pool, encodeGetReservesListCalldata());
+    const reserves = decodeAddressArray(reservesHex);
+    if (reserves.length === 0) return [];
 
-        // Get aToken/debtToken addresses
-        const tokensHex = await this.rpcCaller.call({
-          to: addresses.dataProvider,
-          data: encodeGetReserveTokensAddressesCalldata(asset),
-          chainId: addresses.chainId,
+    // 2. Get oracle prices for all reserves at once
+    const pricesHex = await this.rpcCall(rpcUrl, addresses.oracle, encodeGetAssetsPricesCalldata(reserves));
+    const prices = decodeUint256Array(pricesHex); // 8 decimals USD
+
+    // 3. Get user account data (for Health Factor)
+    const accountDataHex = await this.rpcCall(rpcUrl, addresses.pool, encodeGetUserAccountDataCalldata(walletId));
+    const accountData = decodeGetUserAccountData(accountDataHex);
+    const healthFactor = hfToNumber(accountData.healthFactor);
+
+    // 4. For each reserve: get token addresses, balances, and reserve data
+    for (let i = 0; i < reserves.length; i++) {
+      const asset = reserves[i]!;
+      const priceUsd8 = prices[i] ?? 0n;
+
+      const tokensHex = await this.rpcCall(rpcUrl, addresses.dataProvider, encodeGetReserveTokensAddressesCalldata(asset));
+      const tokens = decodeReserveTokensAddresses(tokensHex);
+
+      const aBalHex = await this.rpcCall(rpcUrl, tokens.aToken, encodeBalanceOfCalldata(walletId));
+      const aBalance = BigInt(aBalHex.length > 2 ? aBalHex : '0x0');
+
+      const vBalHex = await this.rpcCall(rpcUrl, tokens.variableDebtToken, encodeBalanceOfCalldata(walletId));
+      const vBalance = BigInt(vBalHex.length > 2 ? vBalHex : '0x0');
+
+      if (aBalance === 0n && vBalance === 0n) continue;
+
+      const reserveDataHex = await this.rpcCall(rpcUrl, addresses.dataProvider, encodeGetReserveDataCalldata(asset));
+      const reserveData = decodeGetReserveData(reserveDataHex);
+
+      const formatWei = (val: bigint): string => {
+        const str = val.toString();
+        if (str.length <= 18) return '0.' + str.padStart(18, '0');
+        const whole = str.slice(0, str.length - 18);
+        const frac = str.slice(str.length - 18);
+        const trimmed = frac.replace(/0+$/, '');
+        return trimmed ? `${whole}.${trimmed}` : whole;
+      };
+
+      const calcUsd = (balance: bigint, price: bigint): number => {
+        return Number((balance * price) / 10n ** 18n) / 1e8;
+      };
+
+      const assetId = formatCaip19(chainCaip2, 'erc20', asset.toLowerCase());
+
+      if (aBalance > 0n) {
+        positions.push({
+          walletId,
+          category: 'LENDING' as PositionCategory,
+          provider: 'aave_v3',
+          chain: 'ethereum',
+          network,
+          assetId,
+          amount: formatWei(aBalance),
+          amountUsd: calcUsd(aBalance, priceUsd8),
+          metadata: {
+            positionType: 'SUPPLY',
+            apy: rayToApy(reserveData.liquidityRate),
+            healthFactor,
+            aTokenAddress: tokens.aToken,
+          },
+          status: 'ACTIVE',
+          openedAt: now,
         });
-        const tokens = decodeReserveTokensAddresses(tokensHex);
-
-        // Get aToken balance (supply)
-        const aBalHex = await this.rpcCaller.call({
-          to: tokens.aToken,
-          data: encodeBalanceOfCalldata(walletId),
-          chainId: addresses.chainId,
-        });
-        const aBalance = BigInt(aBalHex.length > 2 ? aBalHex : '0x0');
-
-        // Get variableDebtToken balance (borrow)
-        const vBalHex = await this.rpcCaller.call({
-          to: tokens.variableDebtToken,
-          data: encodeBalanceOfCalldata(walletId),
-          chainId: addresses.chainId,
-        });
-        const vBalance = BigInt(vBalHex.length > 2 ? vBalHex : '0x0');
-
-        if (aBalance === 0n && vBalance === 0n) continue;
-
-        // Get reserve data for APY
-        const reserveDataHex = await this.rpcCaller.call({
-          to: addresses.dataProvider,
-          data: encodeGetReserveDataCalldata(asset),
-          chainId: addresses.chainId,
-        });
-        const reserveData = decodeGetReserveData(reserveDataHex);
-
-        // Format amount from wei (18 decimals)
-        const formatWei = (val: bigint): string => {
-          const str = val.toString();
-          if (str.length <= 18) return '0.' + str.padStart(18, '0');
-          const whole = str.slice(0, str.length - 18);
-          const frac = str.slice(str.length - 18);
-          // Trim trailing zeros for cleaner display
-          const trimmed = frac.replace(/0+$/, '');
-          return trimmed ? `${whole}.${trimmed}` : whole;
-        };
-
-        // Calculate USD value: balance * price / 10^18 / 10^8
-        const calcUsd = (balance: bigint, price: bigint): number => {
-          return Number((balance * price) / 10n ** 18n) / 1e8;
-        };
-
-        const assetId = formatCaip19(chainCaip2, 'erc20', asset.toLowerCase());
-
-        if (aBalance > 0n) {
-          positions.push({
-            walletId,
-            category: 'LENDING' as PositionCategory,
-            provider: 'aave_v3',
-            chain: 'ethereum',
-            network,
-            assetId,
-            amount: formatWei(aBalance),
-            amountUsd: calcUsd(aBalance, priceUsd8),
-            metadata: {
-              positionType: 'SUPPLY',
-              apy: rayToApy(reserveData.liquidityRate),
-              healthFactor,
-              aTokenAddress: tokens.aToken,
-            },
-            status: 'ACTIVE',
-            openedAt: now,
-          });
-        }
-
-        if (vBalance > 0n) {
-          positions.push({
-            walletId,
-            category: 'LENDING' as PositionCategory,
-            provider: 'aave_v3',
-            chain: 'ethereum',
-            network,
-            assetId,
-            amount: formatWei(vBalance),
-            amountUsd: calcUsd(vBalance, priceUsd8),
-            metadata: {
-              positionType: 'BORROW',
-              interestRateMode: 'variable',
-              apy: rayToApy(reserveData.variableBorrowRate),
-              healthFactor,
-              debtTokenAddress: tokens.variableDebtToken,
-            },
-            status: 'ACTIVE',
-            openedAt: now,
-          });
-        }
       }
 
-      return positions;
-    } catch {
-      return [];
+      if (vBalance > 0n) {
+        positions.push({
+          walletId,
+          category: 'LENDING' as PositionCategory,
+          provider: 'aave_v3',
+          chain: 'ethereum',
+          network,
+          assetId,
+          amount: formatWei(vBalance),
+          amountUsd: calcUsd(vBalance, priceUsd8),
+          metadata: {
+            positionType: 'BORROW',
+            interestRateMode: 'variable',
+            apy: rayToApy(reserveData.variableBorrowRate),
+            healthFactor,
+            debtTokenAddress: tokens.variableDebtToken,
+          },
+          status: 'ACTIVE',
+          openedAt: now,
+        });
+      }
     }
+
+    return positions;
+  }
+
+  /**
+   * Raw JSON-RPC eth_call via fetch (used for multichain position queries).
+   */
+  private async rpcCall(rpcUrl: string, to: string, data: string): Promise<string> {
+    const resp = await fetch(rpcUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'eth_call',
+        params: [{ to, data }, 'latest'],
+      }),
+    });
+    const json = (await resp.json()) as { result: string };
+    return json.result;
   }
 
   getProviderName(): string {

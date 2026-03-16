@@ -50,8 +50,8 @@ describe('DB v58 Migration: CONTRACT_DEPLOY in transactions type CHECK', () => {
     }
   });
 
-  it('LATEST_SCHEMA_VERSION is 58', () => {
-    expect(LATEST_SCHEMA_VERSION).toBe(58);
+  it('LATEST_SCHEMA_VERSION is 59', () => {
+    expect(LATEST_SCHEMA_VERSION).toBe(59);
   });
 
   it('v58 migration applies successfully from v57', () => {
@@ -60,7 +60,7 @@ describe('DB v58 Migration: CONTRACT_DEPLOY in transactions type CHECK', () => {
 
     runMigrations(sqlite);
 
-    expect(getMaxVersion(sqlite)).toBe(58);
+    expect(getMaxVersion(sqlite)).toBe(59);
   });
 
   it('CONTRACT_DEPLOY type can be inserted after v58 migration', () => {
@@ -133,12 +133,12 @@ describe('DB v58 Migration: CONTRACT_DEPLOY in transactions type CHECK', () => {
     expect(row.status).toBe('CONFIRMED');
   });
 
-  it('fresh pushSchema records v58 in schema_version', () => {
+  it('fresh pushSchema records v59 in schema_version', () => {
     sqlite = new Database(':memory:');
     sqlite.pragma('journal_mode = WAL');
     sqlite.pragma('foreign_keys = ON');
     pushSchema(sqlite);
 
-    expect(getMaxVersion(sqlite)).toBe(58);
+    expect(getMaxVersion(sqlite)).toBe(59);
   });
 });

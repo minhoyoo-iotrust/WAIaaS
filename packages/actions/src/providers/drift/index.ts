@@ -29,6 +29,7 @@ import type {
   IPositionProvider,
   PositionUpdate,
   PositionCategory,
+  PositionQueryContext,
 } from '@waiaas/core';
 import { DRIFT_DEFAULTS, DRIFT_PROGRAM_ID } from './config.js';
 import type { DriftConfig } from './config.js';
@@ -344,7 +345,10 @@ export class DriftPerpProvider implements IPerpProvider, IPositionProvider {
   // IPositionProvider methods
   // -------------------------------------------------------------------------
 
-  async getPositions(walletId: string): Promise<PositionUpdate[]> {
+  async getPositions(ctx: PositionQueryContext): Promise<PositionUpdate[]> {
+    if (ctx.chain !== 'solana') return [];
+    const walletId = ctx.walletId;
+    const network = ctx.networks[0] ?? 'solana-mainnet';
     try {
       const positions = await this.sdkWrapper.getPositions(walletId);
       const now = Math.floor(Date.now() / 1000);
@@ -353,7 +357,7 @@ export class DriftPerpProvider implements IPerpProvider, IPositionProvider {
         category: 'PERP' as PositionCategory,
         provider: 'drift_perp',
         chain: 'solana',
-        network: 'solana-mainnet',
+        network,
         assetId: null,
         amount: pos.baseAssetAmount,
         amountUsd: pos.notionalValueUsd,

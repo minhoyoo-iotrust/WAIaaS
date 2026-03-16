@@ -1,5 +1,5 @@
 ---
-id: "advanced-07"
+id: "advanced-04"
 title: "메시지 서명 및 검증"
 category: "advanced"
 auth: "session"
@@ -13,7 +13,7 @@ tags: ["sign-message", "personal_sign", "eip-712", "typedData", "verify"]
 # 메시지 서명 및 검증
 
 ## Metadata
-- **ID**: advanced-07
+- **ID**: advanced-04
 - **Category**: advanced
 - **Network**: ethereum-mainnet
 - **Requires Funds**: No

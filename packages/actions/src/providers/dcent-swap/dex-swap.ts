@@ -7,7 +7,7 @@
  *
  * Design source: doc 77 sections 7.1-7.5 (DEX Swap pipeline mapping).
  */
-import { ChainError, parseCaip19 } from '@waiaas/core';
+import { ChainError, parseCaip19, formatAmount } from '@waiaas/core';
 import type { ContractCallRequest } from '@waiaas/core';
 import { caip19ToDcentId } from './currency-mapper.js';
 import { DcentSwapApiClient } from './dcent-api-client.js';
@@ -69,7 +69,7 @@ export async function getDcentQuotes(
   const response = await client.getQuotes({
     fromId,
     toId,
-    amount: params.amount,
+    amount: formatAmount(BigInt(params.amount), params.fromDecimals),
     fromDecimals: params.fromDecimals,
     toDecimals: params.toDecimals,
   });
@@ -216,7 +216,7 @@ export async function executeDexSwap(
   const txDataResponse = await client.getDexSwapTransactionData({
     fromId,
     toId,
-    fromAmount: params.amount,
+    fromAmount: formatAmount(BigInt(params.amount), params.fromDecimals),
     fromDecimals: params.fromDecimals,
     toDecimals: params.toDecimals,
     fromWalletAddress: params.walletAddress,

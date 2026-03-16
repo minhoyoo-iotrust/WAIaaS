@@ -445,5 +445,107 @@ describe('dcent-dex-swap', () => {
       // Max is 500 bps (5%), DCent API expects integer percent
       expect(capturedSlippage).toBe(5);
     });
+
+    it('throws when specified providerId not found in DEX providers', async () => {
+      const client = createClient();
+      await expect(
+        executeDexSwap(client, {
+          fromAsset: ETH_CAIP19,
+          toAsset: USDC_CAIP19,
+          amount: '1000000000000000000',
+          fromDecimals: 18,
+          toDecimals: 6,
+          walletAddress: '0xwallet',
+          providerId: 'nonexistent_provider',
+        }, DEFAULT_CONFIG),
+      ).rejects.toThrow('not available or not a DEX provider');
+    });
+
+    it('throws when no DEX providers in successful quote', async () => {
+      server.use(
+        http.post(`${BASE_URL}/api/swap/v3/get_quotes`, () => {
+          return HttpResponse.json({
+            status: 'success',
+            fromId: 'ETHEREUM',
+            toId: 'ERC20/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+            providers: {
+              bestOrder: [],
+              common: [
+                {
+                  id: 'failed_swap',
+                  status: 'fail_chain_not_supported',
+                  providerId: 'failed_swap',
+                  providerType: 'swap',
+                  name: 'Failed',
+                },
+              ],
+            },
+          });
+        }),
+      );
+
+      const client = createClient();
+      await expect(
+        executeDexSwap(client, {
+          fromAsset: ETH_CAIP19,
+          toAsset: USDC_CAIP19,
+          amount: '1000000000000000000',
+          fromDecimals: 18,
+          toDecimals: 6,
+          walletAddress: '0xwallet',
+        }, DEFAULT_CONFIG),
+      ).rejects.toThrow('No DEX swap route available');
+    });
+
+    it('throws when DCent API returns no txdata object', async () => {
+      server.use(
+        http.post(`${BASE_URL}/api/swap/v3/get_dex_swap_transaction_data`, () => {
+          return HttpResponse.json({
+            status: 'success',
+            // txdata omitted entirely
+          });
+        }),
+      );
+
+      const client = createClient();
+      await expect(
+        executeDexSwap(client, {
+          fromAsset: ETH_CAIP19,
+          toAsset: USDC_CAIP19,
+          amount: '1000000000000000000',
+          fromDecimals: 18,
+          toDecimals: 6,
+          walletAddress: '0xwallet',
+        }, DEFAULT_CONFIG),
+      ).rejects.toThrow('DCent API returned empty txdata');
+    });
+
+    it('handles txdata with no value (defaults to 0)', async () => {
+      server.use(
+        http.post(`${BASE_URL}/api/swap/v3/get_dex_swap_transaction_data`, () => {
+          return HttpResponse.json({
+            status: 'success',
+            txdata: {
+              from: '0xwallet',
+              to: SUSHI_SPENDER,
+              data: '0xdata',
+              // value omitted (optional field)
+            },
+          });
+        }),
+      );
+
+      const client = createClient();
+      const result = await executeDexSwap(client, {
+        fromAsset: ETH_CAIP19,
+        toAsset: USDC_CAIP19,
+        amount: '1000000000000000000',
+        fromDecimals: 18,
+        toDecimals: 6,
+        walletAddress: '0xwallet',
+      }, DEFAULT_CONFIG);
+
+      expect(result[0]!.value).toBe('0');
+    });
   });
 });

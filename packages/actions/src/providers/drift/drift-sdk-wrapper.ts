@@ -308,29 +308,95 @@ export class MockDriftSdkWrapper implements IDriftSdkWrapper {
  * Lazily imports the SDK at first use. If the SDK is not installed,
  * all methods throw ChainError('INVALID_INSTRUCTION', 'solana').
  *
- * The real implementation will convert TransactionInstruction results
+ * Converts TransactionInstruction results from the SDK
  * to DriftInstruction format (programId + base64 + accounts).
  */
 export class DriftSdkWrapper implements IDriftSdkWrapper {
-  /** RPC URL for future SDK connection. Stored for when drift-sdk is installed. */
   readonly rpcUrl: string;
-  /** Sub-account index (DEC-PERP-15). */
   readonly subAccount: number;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private _sdk: { Connection: any; PublicKey: any; Wallet: any; BN: any; DriftClient: any; PositionDirection: any; OrderType: any; MarketType: any; PRICE_PRECISION: any; BASE_PRECISION: any; QUOTE_PRECISION: any; convertToNumber: any; getMarketOrderParams: any; getLimitOrderParams: any } | null = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private _client: any = null;
 
   constructor(rpcUrl: string, subAccount: number) {
     this.rpcUrl = rpcUrl;
     this.subAccount = subAccount;
   }
 
-  private async throwNotConfigured(): Promise<never> {
-    const { ChainError } = await import('@waiaas/core');
-    throw new ChainError('INVALID_INSTRUCTION', 'solana', {
-      message:
-        'Drift SDK not available. Install @drift-labs/sdk and @solana/web3.js as optional dependencies.',
-    });
+  private async loadSdk() {
+    if (this._sdk) return this._sdk;
+    try {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-expect-error — optional dependency, may not be installed
+      const solana = await import('@solana/web3.js');
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-expect-error — optional dependency, may not be installed
+      const drift = await import('@drift-labs/sdk');
+      this._sdk = {
+        Connection: solana.Connection,
+        PublicKey: solana.PublicKey,
+        Wallet: drift.Wallet,
+        BN: drift.BN,
+        DriftClient: drift.DriftClient,
+        PositionDirection: drift.PositionDirection,
+        OrderType: drift.OrderType,
+        MarketType: drift.MarketType,
+        PRICE_PRECISION: drift.PRICE_PRECISION,
+        BASE_PRECISION: drift.BASE_PRECISION,
+        QUOTE_PRECISION: drift.QUOTE_PRECISION,
+        convertToNumber: drift.convertToNumber,
+        getMarketOrderParams: drift.getMarketOrderParams,
+        getLimitOrderParams: drift.getLimitOrderParams,
+      };
+      return this._sdk;
+    } catch {
+      const { ChainError } = await import('@waiaas/core');
+      throw new ChainError('INVALID_INSTRUCTION', 'solana', {
+        message:
+          'Drift SDK not available. Install @drift-labs/sdk and @solana/web3.js as optional dependencies.',
+      });
+    }
   }
 
-  async buildOpenPositionInstruction(_params: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private async getClient(): Promise<any> {
+    if (this._client) return this._client;
+    const sdk = await this.loadSdk();
+    const connection = new sdk.Connection(this.rpcUrl, 'confirmed');
+    const client = new sdk.DriftClient({
+      connection,
+      wallet: sdk.Wallet.local(), // read-only dummy wallet for queries
+      programID: new sdk.PublicKey(DRIFT_PROGRAM_ID),
+      activeSubAccountId: this.subAccount,
+    });
+    await client.subscribe();
+    this._client = client;
+    return client;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private convertInstruction(ix: any): DriftInstruction {
+    return {
+      programId: ix.programId.toBase58(),
+      instructionData: Buffer.from(ix.data).toString('base64'),
+      accounts: ix.keys.map((k: { pubkey: { toBase58(): string }; isSigner: boolean; isWritable: boolean }) => ({
+        pubkey: k.pubkey.toBase58(),
+        isSigner: k.isSigner,
+        isWritable: k.isWritable,
+      })),
+    };
+  }
+
+  private resolveMarketIndex(market: string): number {
+    const match = market.match(/^(\w+)-PERP$/);
+    if (!match || !match[1]) return 0;
+    const known: Record<string, number> = { SOL: 0, BTC: 1, ETH: 2, APT: 3, MATIC: 4, ARB: 5, DOGE: 6, BNB: 7, SUI: 8, PEPE: 9 };
+    return known[match[1]] ?? 0;
+  }
+
+  async buildOpenPositionInstruction(params: {
     market: string;
     direction: 'LONG' | 'SHORT';
     size: string;
@@ -338,51 +404,193 @@ export class DriftSdkWrapper implements IDriftSdkWrapper {
     limitPrice?: string;
     walletAddress: string;
   }): Promise<DriftInstruction[]> {
-    return this.throwNotConfigured();
+    const sdk = await this.loadSdk();
+    const client = await this.getClient();
+    const marketIndex = this.resolveMarketIndex(params.market);
+    const direction = params.direction === 'LONG' ? sdk.PositionDirection.LONG : sdk.PositionDirection.SHORT;
+    const baseAmount = new sdk.BN(parseFloat(params.size) * 1e9);
+
+    let orderParams;
+    if (params.orderType === 'LIMIT' && params.limitPrice) {
+      const price = new sdk.BN(parseFloat(params.limitPrice) * 1e6);
+      orderParams = sdk.getLimitOrderParams({ marketIndex, direction, baseAssetAmount: baseAmount, price, marketType: sdk.MarketType.PERP });
+    } else {
+      orderParams = sdk.getMarketOrderParams({ marketIndex, direction, baseAssetAmount: baseAmount, marketType: sdk.MarketType.PERP });
+    }
+    const ix = await client.getPlacePerpOrderIx(orderParams);
+    return [this.convertInstruction(ix)];
   }
 
-  async buildClosePositionInstruction(_params: {
+  async buildClosePositionInstruction(params: {
     market: string;
     size?: string;
     walletAddress: string;
   }): Promise<DriftInstruction[]> {
-    return this.throwNotConfigured();
+    const sdk = await this.loadSdk();
+    const client = await this.getClient();
+    const marketIndex = this.resolveMarketIndex(params.market);
+
+    if (!params.size) {
+      const ix = await client.getCloseSpotMarketOrderIx
+        ? await client.getPlacePerpOrderIx(sdk.getMarketOrderParams({
+            marketIndex,
+            direction: sdk.PositionDirection.SHORT,
+            baseAssetAmount: new sdk.BN(0),
+            reduceOnly: true,
+            marketType: sdk.MarketType.PERP,
+          }))
+        : await client.getPlacePerpOrderIx(sdk.getMarketOrderParams({
+            marketIndex,
+            direction: sdk.PositionDirection.SHORT,
+            baseAssetAmount: new sdk.BN(0),
+            reduceOnly: true,
+            marketType: sdk.MarketType.PERP,
+          }));
+      return [this.convertInstruction(ix)];
+    }
+
+    const baseAmount = new sdk.BN(parseFloat(params.size) * 1e9);
+    const ix = await client.getPlacePerpOrderIx(sdk.getMarketOrderParams({
+      marketIndex,
+      direction: sdk.PositionDirection.SHORT,
+      baseAssetAmount: baseAmount,
+      reduceOnly: true,
+      marketType: sdk.MarketType.PERP,
+    }));
+    return [this.convertInstruction(ix)];
   }
 
-  async buildModifyPositionInstruction(_params: {
+  async buildModifyPositionInstruction(params: {
     market: string;
     newSize?: string;
     newLimitPrice?: string;
     walletAddress: string;
   }): Promise<DriftInstruction[]> {
-    return this.throwNotConfigured();
+    const sdk = await this.loadSdk();
+    const client = await this.getClient();
+    const marketIndex = this.resolveMarketIndex(params.market);
+
+    const orderParams: Record<string, unknown> = {
+      marketIndex,
+      marketType: sdk.MarketType.PERP,
+    };
+    if (params.newSize) {
+      orderParams.baseAssetAmount = new sdk.BN(parseFloat(params.newSize) * 1e9);
+    }
+    if (params.newLimitPrice) {
+      orderParams.price = new sdk.BN(parseFloat(params.newLimitPrice) * 1e6);
+    }
+    const ix = await client.getPlacePerpOrderIx(orderParams);
+    return [this.convertInstruction(ix)];
   }
 
-  async buildDepositInstruction(_params: {
+  async buildDepositInstruction(params: {
     amount: string;
     asset: string;
     walletAddress: string;
   }): Promise<DriftInstruction[]> {
-    return this.throwNotConfigured();
+    const sdk = await this.loadSdk();
+    const client = await this.getClient();
+    const amount = new sdk.BN(parseFloat(params.amount) * 1e6);
+    const ix = await client.getDepositIx(amount, 0, new sdk.PublicKey(params.walletAddress));
+    return [this.convertInstruction(ix)];
   }
 
-  async buildWithdrawInstruction(_params: {
+  async buildWithdrawInstruction(params: {
     amount: string;
     asset: string;
     walletAddress: string;
   }): Promise<DriftInstruction[]> {
-    return this.throwNotConfigured();
+    const sdk = await this.loadSdk();
+    const client = await this.getClient();
+    const amount = new sdk.BN(parseFloat(params.amount) * 1e6);
+    const ix = await client.getWithdrawIx(amount, 0);
+    return [this.convertInstruction(ix)];
   }
 
   async getPositions(_walletAddress: string): Promise<DriftPosition[]> {
-    return this.throwNotConfigured();
+    const sdk = await this.loadSdk();
+    const client = await this.getClient();
+    const user = client.getUser();
+    const perpPositions = user.getActivePerpPositions();
+
+    return perpPositions.map((pos: { marketIndex: number; baseAssetAmount: { toString(): string; toNumber(): number }; quoteEntryAmount: { toNumber(): number }; quoteBreakEvenAmount: { toNumber(): number } }) => {
+      const isLong = pos.baseAssetAmount.toNumber() > 0;
+      const baseAmount = Math.abs(pos.baseAssetAmount.toNumber()) / 1e9;
+      const entryPrice = pos.quoteEntryAmount
+        ? Math.abs(pos.quoteEntryAmount.toNumber() / 1e6) / baseAmount
+        : null;
+      const market = client.getPerpMarketAccount(pos.marketIndex);
+      const oraclePrice = market?.amm?.lastOracleNormalisedPrice
+        ? sdk.convertToNumber(market.amm.lastOracleNormalisedPrice, sdk.PRICE_PRECISION)
+        : null;
+      const notional = oraclePrice ? baseAmount * oraclePrice : null;
+      const unrealizedPnl = oraclePrice && entryPrice
+        ? (oraclePrice - entryPrice) * baseAmount * (isLong ? 1 : -1)
+        : null;
+
+      return {
+        market: `${market?.name ? Buffer.from(market.name).toString('utf-8').replace(/\0/g, '').trim() : `PERP-${pos.marketIndex}`}`,
+        marketIndex: pos.marketIndex,
+        direction: isLong ? 'LONG' as const : 'SHORT' as const,
+        baseAssetAmount: pos.baseAssetAmount.toString(),
+        entryPrice,
+        leverage: 1,
+        unrealizedPnl,
+        liquidationPrice: null,
+        margin: null,
+        notionalValueUsd: notional,
+      };
+    });
   }
 
   async getMarginInfo(_walletAddress: string): Promise<DriftMarginInfo> {
-    return this.throwNotConfigured();
+    const sdk = await this.loadSdk();
+    const client = await this.getClient();
+    const user = client.getUser();
+
+    const totalCollateral = sdk.convertToNumber(user.getTotalCollateral(), sdk.QUOTE_PRECISION);
+    const freeCollateral = sdk.convertToNumber(user.getFreeCollateral(), sdk.QUOTE_PRECISION);
+    const marginRatio = user.getMarginRatio ? sdk.convertToNumber(user.getMarginRatio(), new sdk.BN(10000)) : 0.3;
+
+    return {
+      totalMargin: totalCollateral,
+      freeMargin: freeCollateral,
+      maintenanceMarginRatio: 0.0625,
+      marginRatio,
+    };
   }
 
   async getMarkets(): Promise<DriftMarketInfo[]> {
-    return this.throwNotConfigured();
+    const sdk = await this.loadSdk();
+    const client = await this.getClient();
+    const perpMarkets = client.getPerpMarketAccounts();
+
+    return perpMarkets.map((market: { marketIndex: number; name: Uint8Array; amm: { lastOracleNormalisedPrice: unknown; baseAssetAmountLong: { toNumber(): number }; baseAssetAmountShort: { toNumber(): number } }; marginRatioInitial: number; lastFundingRate?: unknown }) => {
+      const name = Buffer.from(market.name).toString('utf-8').replace(/\0/g, '').trim();
+      const baseAsset = name.replace(/-PERP$/, '');
+      const oraclePrice = market.amm?.lastOracleNormalisedPrice
+        ? sdk.convertToNumber(market.amm.lastOracleNormalisedPrice, sdk.PRICE_PRECISION)
+        : null;
+      const oi = market.amm
+        ? (Math.abs(market.amm.baseAssetAmountLong.toNumber()) + Math.abs(market.amm.baseAssetAmountShort.toNumber())) / 1e9 * (oraclePrice ?? 0)
+        : null;
+      const fundingRate = market.lastFundingRate
+        ? sdk.convertToNumber(market.lastFundingRate, sdk.PRICE_PRECISION)
+        : null;
+      const maxLeverage = market.marginRatioInitial > 0
+        ? Math.round(10000 / market.marginRatioInitial)
+        : 20;
+
+      return {
+        market: name,
+        marketIndex: market.marketIndex,
+        baseAsset,
+        maxLeverage,
+        fundingRate,
+        openInterest: oi,
+        oraclePrice,
+      };
+    });
   }
 }

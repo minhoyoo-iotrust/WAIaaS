@@ -7,7 +7,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { HyperliquidSpotProvider } from '../spot-provider.js';
 import type { HyperliquidExchangeClient } from '../exchange-client.js';
 import type { HyperliquidMarketData } from '../market-data.js';
-import type { ActionContext } from '@waiaas/core';
+import type { ActionContext, PositionQueryContext } from '@waiaas/core';
+
+function makeEvmCtx(walletId: string = 'wallet-001', chain: 'ethereum' | 'solana' = 'ethereum'): PositionQueryContext {
+  return { walletId, chain, networks: chain === 'ethereum' ? ['ethereum-mainnet'] : ['solana-mainnet'], environment: 'mainnet', rpcUrls: {} };
+}
 
 // ---------------------------------------------------------------------------
 // Mock factories
@@ -327,7 +331,7 @@ describe('HyperliquidSpotProvider', () => {
         'ETH': '2000',
       });
 
-      const positions = await provider.getPositions('wallet-001');
+      const positions = await provider.getPositions(makeEvmCtx());
 
       expect(positions).toHaveLength(2); // ETH filtered out (zero total)
 
@@ -358,14 +362,19 @@ describe('HyperliquidSpotProvider', () => {
       ]);
       (marketData.getAllMidPrices as ReturnType<typeof vi.fn>).mockResolvedValue({});
 
-      const positions = await provider.getPositions('wallet-001');
+      const positions = await provider.getPositions(makeEvmCtx());
       expect(positions).toEqual([]);
     });
 
     it('getPositions returns [] on API error', async () => {
       (marketData.getSpotBalances as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('API down'));
 
-      const positions = await provider.getPositions('wallet-001');
+      const positions = await provider.getPositions(makeEvmCtx());
+      expect(positions).toEqual([]);
+    });
+
+    it('getPositions returns [] for solana wallet (chain guard)', async () => {
+      const positions = await provider.getPositions(makeEvmCtx('wallet-001', 'solana'));
       expect(positions).toEqual([]);
     });
 
@@ -375,7 +384,7 @@ describe('HyperliquidSpotProvider', () => {
       ]);
       (marketData.getAllMidPrices as ReturnType<typeof vi.fn>).mockResolvedValue({});
 
-      const positions = await provider.getPositions('wallet-001');
+      const positions = await provider.getPositions(makeEvmCtx());
       expect(positions).toHaveLength(1);
       expect(positions[0]!.amountUsd).toBeNull();
     });

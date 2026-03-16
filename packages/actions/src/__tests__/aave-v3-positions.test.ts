@@ -7,7 +7,8 @@
  *
  * @see LEND-01, LEND-02, LEND-03, LEND-04, TEST-01
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { PositionQueryContext } from '@waiaas/core';
 import { AaveV3LendingProvider } from '../providers/aave-v3/index.js';
 import {
   encodeGetReservesListCalldata,
@@ -17,7 +18,6 @@ import {
 import {
   decodeAddressArray,
   decodeUint256Array,
-  type IRpcCaller,
 } from '../providers/aave-v3/aave-rpc.js';
 import { AAVE_V3_ADDRESSES } from '../providers/aave-v3/config.js';
 
@@ -146,39 +146,63 @@ describe('Aave V3 ABI decoding helpers', () => {
 // getPositions() tests
 // ---------------------------------------------------------------------------
 
+const MOCK_ETH_RPC = 'https://mock-eth-rpc.example.com';
+
+/** Build an ethereum PositionQueryContext for testing. */
+function makeEvmCtx(walletId: string = WALLET_ADDRESS, chain: 'ethereum' | 'solana' = 'ethereum'): PositionQueryContext {
+  return {
+    walletId,
+    chain,
+    networks: chain === 'ethereum' ? ['ethereum-mainnet'] : ['solana-mainnet'],
+    environment: 'mainnet',
+    rpcUrls: chain === 'ethereum' ? { 'ethereum-mainnet': MOCK_ETH_RPC } : {},
+  };
+}
+
 describe('AaveV3LendingProvider.getPositions()', () => {
-  function createMockRpcCaller(handlers: Record<string, string>): IRpcCaller {
-    return {
-      call: vi.fn().mockImplementation(async (params: { to: string; data: string }) => {
-        const to = params.to.toLowerCase();
-        const selector = params.data.slice(0, 10);
-        const key = `${to}:${selector}`;
+  let fetchMock: ReturnType<typeof vi.fn>;
 
-        // Try exact match first, then fallback patterns
-        if (handlers[key]) return handlers[key];
+  beforeEach(() => {
+    fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+  });
 
-        // balanceOf calls may be to various token addresses
-        if (selector === '0x70a08231') {
-          const balanceKey = `${to}:balanceOf`;
-          if (handlers[balanceKey]) return handlers[balanceKey];
-          return '0x' + '0'.repeat(64); // default zero balance
-        }
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
 
-        // getReserveTokensAddresses calls
-        if (selector === '0xd2493b6c') {
-          const assetHex = '0x' + params.data.slice(34); // extract asset from calldata
-          const tokenKey = `tokens:${assetHex.slice(0, 42).toLowerCase()}`;
-          if (handlers[tokenKey]) return handlers[tokenKey];
-        }
+  /**
+   * Setup fetch mock to respond to JSON-RPC eth_call requests
+   * based on the same handler pattern used previously with IRpcCaller.
+   */
+  function setupFetchHandlers(handlers: Record<string, string>): void {
+    fetchMock.mockImplementation(async (_url: string, opts: { body: string }) => {
+      const body = JSON.parse(opts.body);
+      const to = (body.params?.[0]?.to as string)?.toLowerCase() ?? '';
+      const data = body.params?.[0]?.data as string ?? '';
+      const selector = data.slice(0, 10);
+      const key = `${to}:${selector}`;
 
-        // getReserveData calls
-        if (selector === '0x35ea6a75') {
-          if (handlers['reserveData']) return handlers['reserveData'];
-        }
+      let result = '0x' + '0'.repeat(64);
 
-        return '0x' + '0'.repeat(64);
-      }),
-    };
+      if (handlers[key]) {
+        result = handlers[key];
+      } else if (selector === '0x70a08231') {
+        const balanceKey = `${to}:balanceOf`;
+        if (handlers[balanceKey]) result = handlers[balanceKey];
+      } else if (selector === '0xd2493b6c') {
+        const assetHex = '0x' + data.slice(34);
+        const tokenKey = `tokens:${assetHex.slice(0, 42).toLowerCase()}`;
+        if (handlers[tokenKey]) result = handlers[tokenKey];
+      } else if (selector === '0x35ea6a75') {
+        if (handlers['reserveData']) result = handlers['reserveData'];
+      }
+
+      return new Response(JSON.stringify({ jsonrpc: '2.0', id: 1, result }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    });
   }
 
   const ethMainAddresses = AAVE_V3_ADDRESSES['ethereum-mainnet']!;
@@ -187,37 +211,30 @@ describe('AaveV3LendingProvider.getPositions()', () => {
     const balance1e18 = '0x' + (10n ** 18n).toString(16).padStart(64, '0');
     const priceUsd = 200000000000n; // $2000 in 8 decimals
 
-    const handlers: Record<string, string> = {
-      // Pool.getReservesList() -> [ASSET_A]
+    setupFetchHandlers({
       [`${ethMainAddresses.pool.toLowerCase()}:0xd1946dbc`]: encodeAddressArrayResponse([ASSET_A]),
-      // Oracle.getAssetsPrices() -> [$2000]
       [`${ethMainAddresses.oracle.toLowerCase()}:0x9d23d9f2`]: encodeUint256ArrayResponse([priceUsd]),
-      // Pool.getUserAccountData()
       [`${ethMainAddresses.pool.toLowerCase()}:0xbf92857c`]: encodeUserAccountData({
-        totalCollateralBase: 200000000000n, // $2000
+        totalCollateralBase: 200000000000n,
         totalDebtBase: 0n,
         availableBorrowsBase: 160000000000n,
         currentLiquidationThreshold: 8250n,
         ltv: 8000n,
-        healthFactor: BigInt('115792089237316195423570985008687907853269984665640564039457584007913129639935'), // max uint256 (no debt)
+        healthFactor: BigInt('115792089237316195423570985008687907853269984665640564039457584007913129639935'),
       }),
-      // PoolDataProvider.getReserveTokensAddresses(ASSET_A)
       [`tokens:${ASSET_A.toLowerCase()}`]: encodeThreeAddresses(A_TOKEN_A, S_DEBT_TOKEN_A, V_DEBT_TOKEN_A),
-      // aToken balanceOf -> 1e18
       [`${A_TOKEN_A.toLowerCase()}:balanceOf`]: balance1e18,
-      // variableDebtToken balanceOf -> 0
       [`${V_DEBT_TOKEN_A.toLowerCase()}:balanceOf`]: '0x' + '0'.repeat(64),
-      // getReserveData for APY
       reserveData: encodeReserveData({
-        liquidityIndex: 10n ** 27n, // 1.0 in ray
+        liquidityIndex: 10n ** 27n,
         variableBorrowIndex: 10n ** 27n,
-        liquidityRate: 35n * 10n ** 24n, // ~3.5% APY in ray
+        liquidityRate: 35n * 10n ** 24n,
         variableBorrowRate: 50n * 10n ** 24n,
       }),
-    };
+    });
 
-    const provider = new AaveV3LendingProvider({}, createMockRpcCaller(handlers));
-    const positions = await provider.getPositions(WALLET_ADDRESS);
+    const provider = new AaveV3LendingProvider({});
+    const positions = await provider.getPositions(makeEvmCtx());
 
     expect(positions).toHaveLength(1);
     expect(positions[0]!.category).toBe('LENDING');
@@ -231,34 +248,31 @@ describe('AaveV3LendingProvider.getPositions()', () => {
 
   it('Test 7: getPositions with 1 borrow (debtToken balance > 0) returns BORROW position with interestRateMode, APY', async () => {
     const balance1e18 = '0x' + (10n ** 18n).toString(16).padStart(64, '0');
-    const priceUsd = 100000000n; // $1 in 8 decimals (stablecoin)
 
-    const handlers: Record<string, string> = {
+    setupFetchHandlers({
       [`${ethMainAddresses.pool.toLowerCase()}:0xd1946dbc`]: encodeAddressArrayResponse([ASSET_A]),
-      [`${ethMainAddresses.oracle.toLowerCase()}:0x9d23d9f2`]: encodeUint256ArrayResponse([priceUsd]),
+      [`${ethMainAddresses.oracle.toLowerCase()}:0x9d23d9f2`]: encodeUint256ArrayResponse([100000000n]),
       [`${ethMainAddresses.pool.toLowerCase()}:0xbf92857c`]: encodeUserAccountData({
         totalCollateralBase: 200000000000n,
         totalDebtBase: 100000000000n,
         availableBorrowsBase: 60000000000n,
         currentLiquidationThreshold: 8250n,
         ltv: 8000n,
-        healthFactor: 1_650_000_000_000_000_000n, // 1.65
+        healthFactor: 1_650_000_000_000_000_000n,
       }),
       [`tokens:${ASSET_A.toLowerCase()}`]: encodeThreeAddresses(A_TOKEN_A, S_DEBT_TOKEN_A, V_DEBT_TOKEN_A),
-      // aToken balanceOf -> 0
       [`${A_TOKEN_A.toLowerCase()}:balanceOf`]: '0x' + '0'.repeat(64),
-      // variableDebtToken balanceOf -> 1e18
       [`${V_DEBT_TOKEN_A.toLowerCase()}:balanceOf`]: balance1e18,
       reserveData: encodeReserveData({
         liquidityIndex: 10n ** 27n,
         variableBorrowIndex: 10n ** 27n,
         liquidityRate: 20n * 10n ** 24n,
-        variableBorrowRate: 50n * 10n ** 24n, // ~5% APY
+        variableBorrowRate: 50n * 10n ** 24n,
       }),
-    };
+    });
 
-    const provider = new AaveV3LendingProvider({}, createMockRpcCaller(handlers));
-    const positions = await provider.getPositions(WALLET_ADDRESS);
+    const provider = new AaveV3LendingProvider({});
+    const positions = await provider.getPositions(makeEvmCtx());
 
     expect(positions).toHaveLength(1);
     expect(positions[0]!.metadata.positionType).toBe('BORROW');
@@ -268,18 +282,17 @@ describe('AaveV3LendingProvider.getPositions()', () => {
 
   it('Test 8: getPositions includes healthFactor from getUserAccountData in metadata', async () => {
     const balance1e18 = '0x' + (10n ** 18n).toString(16).padStart(64, '0');
-    const priceUsd = 200000000000n;
 
-    const handlers: Record<string, string> = {
+    setupFetchHandlers({
       [`${ethMainAddresses.pool.toLowerCase()}:0xd1946dbc`]: encodeAddressArrayResponse([ASSET_A]),
-      [`${ethMainAddresses.oracle.toLowerCase()}:0x9d23d9f2`]: encodeUint256ArrayResponse([priceUsd]),
+      [`${ethMainAddresses.oracle.toLowerCase()}:0x9d23d9f2`]: encodeUint256ArrayResponse([200000000000n]),
       [`${ethMainAddresses.pool.toLowerCase()}:0xbf92857c`]: encodeUserAccountData({
         totalCollateralBase: 400000000000n,
         totalDebtBase: 200000000000n,
         availableBorrowsBase: 120000000000n,
         currentLiquidationThreshold: 8250n,
         ltv: 8000n,
-        healthFactor: 1_650_000_000_000_000_000n, // 1.65
+        healthFactor: 1_650_000_000_000_000_000n,
       }),
       [`tokens:${ASSET_A.toLowerCase()}`]: encodeThreeAddresses(A_TOKEN_A, S_DEBT_TOKEN_A, V_DEBT_TOKEN_A),
       [`${A_TOKEN_A.toLowerCase()}:balanceOf`]: balance1e18,
@@ -290,17 +303,17 @@ describe('AaveV3LendingProvider.getPositions()', () => {
         liquidityRate: 35n * 10n ** 24n,
         variableBorrowRate: 50n * 10n ** 24n,
       }),
-    };
+    });
 
-    const provider = new AaveV3LendingProvider({}, createMockRpcCaller(handlers));
-    const positions = await provider.getPositions(WALLET_ADDRESS);
+    const provider = new AaveV3LendingProvider({});
+    const positions = await provider.getPositions(makeEvmCtx());
 
     expect(positions).toHaveLength(1);
     expect(positions[0]!.metadata.healthFactor).toBeCloseTo(1.65, 1);
   });
 
   it('Test 9: getPositions with no positions (all balances 0) returns []', async () => {
-    const handlers: Record<string, string> = {
+    setupFetchHandlers({
       [`${ethMainAddresses.pool.toLowerCase()}:0xd1946dbc`]: encodeAddressArrayResponse([ASSET_A]),
       [`${ethMainAddresses.oracle.toLowerCase()}:0x9d23d9f2`]: encodeUint256ArrayResponse([100000000n]),
       [`${ethMainAddresses.pool.toLowerCase()}:0xbf92857c`]: encodeUserAccountData({
@@ -312,35 +325,39 @@ describe('AaveV3LendingProvider.getPositions()', () => {
         healthFactor: BigInt('115792089237316195423570985008687907853269984665640564039457584007913129639935'),
       }),
       [`tokens:${ASSET_A.toLowerCase()}`]: encodeThreeAddresses(A_TOKEN_A, S_DEBT_TOKEN_A, V_DEBT_TOKEN_A),
-      // All balances zero (default)
       reserveData: encodeReserveData({
         liquidityIndex: 10n ** 27n,
         variableBorrowIndex: 10n ** 27n,
         liquidityRate: 0n,
         variableBorrowRate: 0n,
       }),
-    };
+    });
 
-    const provider = new AaveV3LendingProvider({}, createMockRpcCaller(handlers));
-    const positions = await provider.getPositions(WALLET_ADDRESS);
+    const provider = new AaveV3LendingProvider({});
+    const positions = await provider.getPositions(makeEvmCtx());
 
     expect(positions).toEqual([]);
   });
 
-  it('Test 10: getPositions without rpcCaller returns []', async () => {
+  it('Test 10: getPositions with no rpcUrls returns []', async () => {
     const provider = new AaveV3LendingProvider({});
-    const positions = await provider.getPositions(WALLET_ADDRESS);
+    const ctx: PositionQueryContext = {
+      walletId: WALLET_ADDRESS,
+      chain: 'ethereum',
+      networks: ['ethereum-mainnet'],
+      environment: 'mainnet',
+      rpcUrls: {},
+    };
+    const positions = await provider.getPositions(ctx);
     expect(positions).toEqual([]);
   });
 
   it('Test 11: getPositions uses Oracle getAssetsPrices for USD conversion (amountUsd is non-null)', async () => {
     const balance1e18 = '0x' + (10n ** 18n).toString(16).padStart(64, '0');
-    const ethPrice = 200000000000n; // $2000 in 8 decimals
-    const usdcPrice = 100000000n; // $1 in 8 decimals
 
-    const handlers: Record<string, string> = {
+    setupFetchHandlers({
       [`${ethMainAddresses.pool.toLowerCase()}:0xd1946dbc`]: encodeAddressArrayResponse([ASSET_A, ASSET_B]),
-      [`${ethMainAddresses.oracle.toLowerCase()}:0x9d23d9f2`]: encodeUint256ArrayResponse([ethPrice, usdcPrice]),
+      [`${ethMainAddresses.oracle.toLowerCase()}:0x9d23d9f2`]: encodeUint256ArrayResponse([200000000000n, 100000000n]),
       [`${ethMainAddresses.pool.toLowerCase()}:0xbf92857c`]: encodeUserAccountData({
         totalCollateralBase: 200000000000n,
         totalDebtBase: 100000000000n,
@@ -351,27 +368,269 @@ describe('AaveV3LendingProvider.getPositions()', () => {
       }),
       [`tokens:${ASSET_A.toLowerCase()}`]: encodeThreeAddresses(A_TOKEN_A, S_DEBT_TOKEN_A, V_DEBT_TOKEN_A),
       [`tokens:${ASSET_B.toLowerCase()}`]: encodeThreeAddresses(A_TOKEN_B, S_DEBT_TOKEN_B, V_DEBT_TOKEN_B),
-      [`${A_TOKEN_A.toLowerCase()}:balanceOf`]: balance1e18, // 1 ETH supplied
+      [`${A_TOKEN_A.toLowerCase()}:balanceOf`]: balance1e18,
       [`${V_DEBT_TOKEN_A.toLowerCase()}:balanceOf`]: '0x' + '0'.repeat(64),
       [`${A_TOKEN_B.toLowerCase()}:balanceOf`]: '0x' + '0'.repeat(64),
-      [`${V_DEBT_TOKEN_B.toLowerCase()}:balanceOf`]: balance1e18, // 1 USDC-like borrowed
+      [`${V_DEBT_TOKEN_B.toLowerCase()}:balanceOf`]: balance1e18,
       reserveData: encodeReserveData({
         liquidityIndex: 10n ** 27n,
         variableBorrowIndex: 10n ** 27n,
         liquidityRate: 35n * 10n ** 24n,
         variableBorrowRate: 50n * 10n ** 24n,
       }),
-    };
+    });
 
-    const provider = new AaveV3LendingProvider({}, createMockRpcCaller(handlers));
-    const positions = await provider.getPositions(WALLET_ADDRESS);
+    const provider = new AaveV3LendingProvider({});
+    const positions = await provider.getPositions(makeEvmCtx());
 
-    expect(positions).toHaveLength(2); // 1 supply + 1 borrow
+    expect(positions).toHaveLength(2);
     const supply = positions.find((p) => p.metadata.positionType === 'SUPPLY');
     const borrow = positions.find((p) => p.metadata.positionType === 'BORROW');
     expect(supply).toBeDefined();
     expect(borrow).toBeDefined();
-    expect(supply!.amountUsd).toBeGreaterThan(0); // ETH price $2000
-    expect(borrow!.amountUsd).toBeGreaterThan(0); // USDC price $1
+    expect(supply!.amountUsd).toBeGreaterThan(0);
+    expect(borrow!.amountUsd).toBeGreaterThan(0);
+  });
+
+  it('Test 12: getPositions returns [] for solana wallet (chain guard)', async () => {
+    const provider = new AaveV3LendingProvider({});
+    const positions = await provider.getPositions(makeEvmCtx(WALLET_ADDRESS, 'solana'));
+    expect(positions).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Multichain getPositions tests (MCHN-02)
+// ---------------------------------------------------------------------------
+
+describe('AaveV3LendingProvider Multichain Positions', () => {
+  const ETH_RPC = 'https://eth-rpc.example.com';
+  const BASE_RPC = 'https://base-rpc.example.com';
+
+  function rpcResult(hexValue: string): Response {
+    return new Response(JSON.stringify({ jsonrpc: '2.0', id: 1, result: hexValue }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  function makeMultiCtx(opts?: {
+    networks?: string[];
+    environment?: 'mainnet' | 'testnet';
+  }): PositionQueryContext {
+    return {
+      walletId: WALLET_ADDRESS,
+      chain: 'ethereum',
+      networks: (opts?.networks ?? ['ethereum-mainnet', 'base-mainnet']) as any,
+      environment: opts?.environment ?? 'mainnet',
+      rpcUrls: {
+        'ethereum-mainnet': ETH_RPC,
+        'base-mainnet': BASE_RPC,
+      },
+    };
+  }
+
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('Test 13: queries positions from multiple networks with correct CAIP-19 assetIds', async () => {
+    const balance1e18 = '0x' + (10n ** 18n).toString(16).padStart(64, '0');
+
+    // Mock fetch to respond based on rpcUrl
+    fetchMock.mockImplementation(async (_url: string, opts: { body: string }) => {
+      const body = JSON.parse(opts.body);
+      const calldata = body.params?.[0]?.data as string;
+
+      // getReservesList -> 1 asset
+      if (calldata?.startsWith('0xd1946dbc')) {
+        return rpcResult(encodeAddressArrayResponse([ASSET_A]));
+      }
+      // getAssetsPrices
+      if (calldata?.startsWith('0x9d23d9f2')) {
+        return rpcResult(encodeUint256ArrayResponse([200000000000n]));
+      }
+      // getUserAccountData
+      if (calldata?.startsWith('0xbf92857c')) {
+        return rpcResult(encodeUserAccountData({
+          totalCollateralBase: 200000000000n,
+          totalDebtBase: 0n,
+          availableBorrowsBase: 160000000000n,
+          currentLiquidationThreshold: 8250n,
+          ltv: 8000n,
+          healthFactor: BigInt('115792089237316195423570985008687907853269984665640564039457584007913129639935'),
+        }));
+      }
+      // getReserveTokensAddresses
+      if (calldata?.startsWith('0xd2493b6c')) {
+        return rpcResult(encodeThreeAddresses(A_TOKEN_A, S_DEBT_TOKEN_A, V_DEBT_TOKEN_A));
+      }
+      // balanceOf for aToken -> 1e18
+      if (calldata?.startsWith('0x70a08231')) {
+        const to = (body.params?.[0]?.to as string)?.toLowerCase();
+        if (to === A_TOKEN_A.toLowerCase()) return rpcResult(balance1e18);
+        return rpcResult('0x' + '0'.repeat(64));
+      }
+      // getReserveData
+      if (calldata?.startsWith('0x35ea6a75')) {
+        return rpcResult(encodeReserveData({
+          liquidityIndex: 10n ** 27n,
+          variableBorrowIndex: 10n ** 27n,
+          liquidityRate: 35n * 10n ** 24n,
+          variableBorrowRate: 50n * 10n ** 24n,
+        }));
+      }
+      return rpcResult('0x' + '0'.repeat(64));
+    });
+
+    const provider = new AaveV3LendingProvider({});
+    const positions = await provider.getPositions(makeMultiCtx());
+
+    // Should have positions from both networks
+    expect(positions.length).toBeGreaterThanOrEqual(2);
+
+    const ethPositions = positions.filter(p => p.network === 'ethereum-mainnet');
+    const basePositions = positions.filter(p => p.network === 'base-mainnet');
+
+    expect(ethPositions.length).toBeGreaterThan(0);
+    expect(basePositions.length).toBeGreaterThan(0);
+
+    // Check CAIP-19 prefixes
+    for (const p of ethPositions) {
+      expect(p.assetId).toContain('eip155:1/erc20:');
+    }
+    for (const p of basePositions) {
+      expect(p.assetId).toContain('eip155:8453/erc20:');
+    }
+  });
+
+  it('Test 14: single network RPC failure returns positions from other networks', async () => {
+    const balance1e18 = '0x' + (10n ** 18n).toString(16).padStart(64, '0');
+
+    fetchMock.mockImplementation(async (url: string, opts: { body: string }) => {
+      // Base RPC fails
+      if (url === BASE_RPC) throw new Error('Base RPC down');
+
+      const body = JSON.parse(opts.body);
+      const calldata = body.params?.[0]?.data as string;
+
+      if (calldata?.startsWith('0xd1946dbc')) {
+        return rpcResult(encodeAddressArrayResponse([ASSET_A]));
+      }
+      if (calldata?.startsWith('0x9d23d9f2')) {
+        return rpcResult(encodeUint256ArrayResponse([200000000000n]));
+      }
+      if (calldata?.startsWith('0xbf92857c')) {
+        return rpcResult(encodeUserAccountData({
+          totalCollateralBase: 200000000000n,
+          totalDebtBase: 0n,
+          availableBorrowsBase: 160000000000n,
+          currentLiquidationThreshold: 8250n,
+          ltv: 8000n,
+          healthFactor: BigInt('115792089237316195423570985008687907853269984665640564039457584007913129639935'),
+        }));
+      }
+      if (calldata?.startsWith('0xd2493b6c')) {
+        return rpcResult(encodeThreeAddresses(A_TOKEN_A, S_DEBT_TOKEN_A, V_DEBT_TOKEN_A));
+      }
+      if (calldata?.startsWith('0x70a08231')) {
+        const to = (body.params?.[0]?.to as string)?.toLowerCase();
+        if (to === A_TOKEN_A.toLowerCase()) return rpcResult(balance1e18);
+        return rpcResult('0x' + '0'.repeat(64));
+      }
+      if (calldata?.startsWith('0x35ea6a75')) {
+        return rpcResult(encodeReserveData({
+          liquidityIndex: 10n ** 27n,
+          variableBorrowIndex: 10n ** 27n,
+          liquidityRate: 35n * 10n ** 24n,
+          variableBorrowRate: 50n * 10n ** 24n,
+        }));
+      }
+      return rpcResult('0x' + '0'.repeat(64));
+    });
+
+    const provider = new AaveV3LendingProvider({});
+    const positions = await provider.getPositions(makeMultiCtx());
+
+    expect(positions.length).toBeGreaterThan(0);
+    expect(positions.every(p => p.network === 'ethereum-mainnet')).toBe(true);
+  });
+
+  it('Test 15: unsupported networks filtered out silently', async () => {
+    fetchMock.mockResolvedValue(rpcResult('0x' + '0'.repeat(64)));
+
+    const provider = new AaveV3LendingProvider({});
+    const ctx = makeMultiCtx({ networks: ['hyperevm-mainnet' as any, 'optimism-sepolia' as any] });
+    const positions = await provider.getPositions(ctx);
+
+    expect(positions).toEqual([]);
+  });
+
+  it('Test 16: testnet environment returns empty (no testnet addresses defined)', async () => {
+    fetchMock.mockResolvedValue(rpcResult('0x' + '0'.repeat(64)));
+
+    const provider = new AaveV3LendingProvider({});
+    const ctx = makeMultiCtx({ networks: ['ethereum-sepolia' as any], environment: 'testnet' });
+    const positions = await provider.getPositions(ctx);
+
+    expect(positions).toEqual([]);
+  });
+
+  it('Test 17: each position network field matches the queried network', async () => {
+    const balance1e18 = '0x' + (10n ** 18n).toString(16).padStart(64, '0');
+
+    fetchMock.mockImplementation(async (_url: string, opts: { body: string }) => {
+      const body = JSON.parse(opts.body);
+      const calldata = body.params?.[0]?.data as string;
+
+      if (calldata?.startsWith('0xd1946dbc')) {
+        return rpcResult(encodeAddressArrayResponse([ASSET_A]));
+      }
+      if (calldata?.startsWith('0x9d23d9f2')) {
+        return rpcResult(encodeUint256ArrayResponse([100000000n]));
+      }
+      if (calldata?.startsWith('0xbf92857c')) {
+        return rpcResult(encodeUserAccountData({
+          totalCollateralBase: 100000000n,
+          totalDebtBase: 0n,
+          availableBorrowsBase: 80000000n,
+          currentLiquidationThreshold: 8250n,
+          ltv: 8000n,
+          healthFactor: BigInt('115792089237316195423570985008687907853269984665640564039457584007913129639935'),
+        }));
+      }
+      if (calldata?.startsWith('0xd2493b6c')) {
+        return rpcResult(encodeThreeAddresses(A_TOKEN_A, S_DEBT_TOKEN_A, V_DEBT_TOKEN_A));
+      }
+      if (calldata?.startsWith('0x70a08231')) {
+        const to = (body.params?.[0]?.to as string)?.toLowerCase();
+        if (to === A_TOKEN_A.toLowerCase()) return rpcResult(balance1e18);
+        return rpcResult('0x' + '0'.repeat(64));
+      }
+      if (calldata?.startsWith('0x35ea6a75')) {
+        return rpcResult(encodeReserveData({
+          liquidityIndex: 10n ** 27n,
+          variableBorrowIndex: 10n ** 27n,
+          liquidityRate: 20n * 10n ** 24n,
+          variableBorrowRate: 30n * 10n ** 24n,
+        }));
+      }
+      return rpcResult('0x' + '0'.repeat(64));
+    });
+
+    const provider = new AaveV3LendingProvider({});
+    const ctx = makeMultiCtx({ networks: ['ethereum-mainnet', 'base-mainnet'] });
+    const positions = await provider.getPositions(ctx);
+
+    for (const p of positions) {
+      expect(['ethereum-mainnet', 'base-mainnet']).toContain(p.network);
+    }
   });
 });

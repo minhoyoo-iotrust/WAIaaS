@@ -1,7 +1,8 @@
 # 마일스톤 m32-05: 멀티체인 DeFi 포지션 + 테스트넷 토글
 
-- **Status:** PLANNED
+- **Status:** SHIPPED
 - **Milestone:** v32.5
+- **Completed:** 2026-03-16
 
 ## 목표
 
@@ -18,7 +19,9 @@ DeFi 포지션 시스템의 `IPositionProvider` 인터페이스를 확장하여 
 3. **멀티체인 미지원**: wstETH가 Base/Arbitrum/Optimism/Polygon에도 브릿지되어 있지만 이더리움 메인넷만 조회한다.
 4. **테스트넷 포지션 누락**: 테스트넷 지갑의 DeFi 포지션이 대시보드에 표시되지 않는다 (Assets 탭의 Staking Positions는 트랜잭션 집계 방식이라 정상 작동).
 
-### 영향받는 프로바이더 (10개)
+### 영향받는 프로바이더 (8개)
+
+`IPositionProvider`를 구현하는 프로바이더만 대상. Polymarket은 자체 `polymarket_positions` 테이블로 별도 관리하므로 제외. DCent Swap, Across Bridge는 포지션 프로바이더가 아니므로 제외.
 
 | 프로바이더 | 현재 하드코딩 네트워크 | 멀티체인 컨트랙트 존재 |
 |-----------|----------------------|---------------------|
@@ -30,8 +33,6 @@ DeFi 포지션 시스템의 `IPositionProvider` 인터페이스를 확장하여 
 | Drift | `solana-mainnet` | Solana만 |
 | Hyperliquid Perp | Hyperliquid L1 | Hyperliquid만 |
 | Hyperliquid Spot | Hyperliquid L1 | Hyperliquid만 |
-| Polymarket | Polygon | Polygon만 |
-| DCent Swap | N/A (포지션 아님) | — |
 
 ---
 
@@ -44,7 +45,7 @@ DeFi 포지션 시스템의 `IPositionProvider` 인터페이스를 확장하여 
 | `IPositionProvider` 인터페이스 변경 | `getPositions(walletId: string)` → `getPositions(context: PositionQueryContext)` |
 | `PositionQueryContext` 타입 정의 | `{ walletId, chain, networks: NetworkInfo[], environment }` — 지갑이 속한 체인과 활성 네트워크 목록 전달 |
 | `PositionTracker.syncCategory()` 수정 | 지갑 조회 시 `chain`, `environment` 포함. `getNetworksForEnvironment()`로 네트워크 목록 결정 후 컨텍스트에 포함 |
-| 기존 프로바이더 시그니처 일괄 수정 | 10개 프로바이더의 `getPositions` 시그니처를 `PositionQueryContext` 수용으로 변경 (동작은 기존 유지) |
+| 기존 프로바이더 시그니처 일괄 수정 | 8개 프로바이더의 `getPositions` 시그니처를 `PositionQueryContext` 수용으로 변경 (동작은 기존 유지) |
 | 테스트 | 인터페이스 contract 테스트, PositionTracker 컨텍스트 전달 테스트 |
 
 ### Phase 2: 프로바이더별 멀티체인 컨트랙트 매핑
@@ -56,7 +57,7 @@ DeFi 포지션 시스템의 `IPositionProvider` 인터페이스를 확장하여 
 | Aave V3 멀티체인 | Pool/PoolDataProvider 주소: Ethereum, Base, Arbitrum, Optimism, Polygon — 네트워크별 RPC 호출 |
 | Pendle 멀티체인 | Router/Market 주소: Ethereum, Arbitrum — 네트워크별 조회 |
 | Solana 프로바이더 (Jito, Kamino, Drift) | `context.networks`에서 Solana 네트워크 추출, 하드코딩 제거 |
-| Hyperliquid/Polymarket | 단일 네트워크이므로 컨텍스트 기반 조건부 스킵 (해당 체인이 아니면 `[]` 반환) |
+| Hyperliquid Perp/Spot | 단일 네트워크이므로 컨텍스트 기반 조건부 스킵 (해당 체인이 아니면 `[]` 반환) |
 | 테스트넷 지원 | 테스트넷 환경의 지갑도 해당 네트워크의 컨트랙트 주소로 조회 (Sepolia stETH 등) |
 | 테스트 | 프로바이더별 멀티네트워크 조회 테스트, 미지원 네트워크 스킵 테스트 |
 
@@ -78,7 +79,7 @@ DeFi 포지션 시스템의 `IPositionProvider` 인터페이스를 확장하여 
 |---|----------|--------|----------|
 | 1 | 인터페이스 변경 방식 | (A) 기존 시그니처 유지 + 오버로드 (B) **breaking change로 일괄 변경** | **B** — 내부 전용 인터페이스이고 모든 프로바이더가 daemon 내부에 있으므로 클린 전환이 가능. 오버로드는 불필요한 복잡성 |
 | 2 | 멀티체인 주소 저장 위치 | (A) DB 테이블 (B) **프로바이더 내부 상수** | **B** — 컨트랙트 주소는 불변이고 프로바이더 배포와 함께 버전 관리되어야 함. 런타임 변경 불필요 |
-| 3 | 네트워크별 RPC URL 확보 | (A) PositionQueryContext에 rpcUrl 포함 (B) **프로바이더가 RpcPool에서 resolve** | **A** — 프로바이더는 actions 패키지에 위치하므로 daemon의 RpcPool에 직접 접근 불가. 컨텍스트에 네트워크별 rpcUrl 매핑 포함 |
+| 3 | 네트워크별 RPC URL 확보 | (A) **PositionQueryContext에 rpcUrl 포함** (B) 프로바이더가 RpcPool에서 resolve | **A** — 프로바이더는 actions 패키지에 위치하므로 daemon의 RpcPool에 직접 접근 불가. 컨텍스트에 네트워크별 rpcUrl 매핑 포함 |
 | 4 | 테스트넷 판별 방법 | (A) `environment` 컬럼 조회 (B) **네트워크 ID 패턴 매칭** (`*-sepolia`, `*-goerli`, `solana-devnet`) | **A** — `PositionUpdate.network` 저장 시 지갑의 `environment` 정보도 함께 저장. 패턴 매칭은 신규 테스트넷 추가 시 누락 위험 |
 | 5 | 토글 기본값 | (A) **OFF (메인넷만)** (B) ON (전체) | **A** — 운영 환경에서 테스트넷 포지션은 노이즈. 필요한 사용자만 ON으로 전환 |
 | 6 | `defi_positions` 환경 컬럼 | (A) **`environment` 컬럼 추가** (B) network에서 추론 | **A** — 명시적 컬럼이 쿼리 성능과 정확성 보장. DB 마이그레이션 1건 추가 |
@@ -141,8 +142,8 @@ DeFi 포지션 시스템의 `IPositionProvider` 인터페이스를 확장하여 
 | 1 | 멀티체인 컨트랙트 주소 오류 | 잘못된 주소로 조회 시 잔액 0 반환 또는 revert | 각 체인의 공식 배포 문서에서 주소 확인. 체인별 smoke test로 검증 |
 | 2 | 멀티네트워크 RPC 부하 증가 | 네트워크 수 × 지갑 수만큼 RPC 호출 증가 | `Promise.allSettled` + RPC Pool 기존 Rate Limiter 활용. PositionTracker sync 주기는 기존 유지 |
 | 3 | `defi_positions` 마이그레이션 | `environment` 컬럼 추가 시 기존 데이터 기본값 설정 필요 | `ALTER TABLE ADD COLUMN environment TEXT DEFAULT 'mainnet'` — 기존 행은 메인넷으로 안전하게 기본 설정 |
-| 4 | 테스트넷 컨트랙트 주소 가용성 | 일부 프로토콜(Pendle, Drift 등)은 테스트넷 배포 없음 | 테스트넷 미배포 프로토콜은 `[]` 반환으로 graceful skip. 지원 여부를 주소 매핑 존재로 판단 |
-| 5 | IPositionProvider breaking change | 모든 프로바이더 동시 수정 필요 | Phase 1에서 인터페이스 + 전 프로바이더 시그니처를 한 번에 변경. 내부 전용이므로 외부 영향 없음 |
+| 4 | 테스트넷 컨트랙트 주소 가용성 | 일부 프로토콜은 테스트넷 배포 없음 | 테스트넷 미배포 프로토콜(Pendle, Drift, Hyperliquid Perp/Spot, Kamino)은 `[]` 반환으로 graceful skip. 테스트넷 배포 확인된 프로토콜: Lido(Sepolia stETH), Aave V3(Sepolia), Jito(devnet). 지원 여부를 주소 매핑 존재로 판단 |
+| 5 | IPositionProvider breaking change | 8개 프로바이더 동시 수정 필요 | Phase 1에서 인터페이스 + 전 프로바이더 시그니처를 한 번에 변경. 내부 전용이므로 외부 영향 없음 |
 
 ---
 
@@ -152,7 +153,7 @@ DeFi 포지션 시스템의 `IPositionProvider` 인터페이스를 확장하여 
 |------|------|
 | 페이즈 | 3개 |
 | 신규 파일 | 3-5개 (PositionQueryContext 타입, 멀티체인 주소 매핑, DB 마이그레이션) |
-| 수정 파일 | 20-30개 (10개 프로바이더 + PositionTracker + API 라우트 + Admin UI) |
+| 수정 파일 | 18-25개 (8개 프로바이더 + PositionTracker + API 라우트 + Admin UI) |
 | DB 마이그레이션 | 1건 (`defi_positions.environment` 컬럼 추가) |
 | 예상 LOC 변경 | +1,200/-300 (멀티체인 주소 매핑 + 테스트 추가, 하드코딩 제거) |
 

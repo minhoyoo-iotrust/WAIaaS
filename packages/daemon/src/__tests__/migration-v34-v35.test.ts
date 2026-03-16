@@ -146,15 +146,15 @@ describe('Migration v35: subscription_token column', () => {
 });
 
 describe('Schema version', () => {
-  it('LATEST_SCHEMA_VERSION is 58', () => {
-    expect(LATEST_SCHEMA_VERSION).toBe(58);
+  it('LATEST_SCHEMA_VERSION is 59', () => {
+    expect(LATEST_SCHEMA_VERSION).toBe(59);
   });
 
-  it('fresh DB schema_version max is 58', () => {
+  it('fresh DB schema_version max is 59', () => {
     const row = sqlite
       .prepare('SELECT MAX(version) AS max_version FROM schema_version')
       .get() as { max_version: number };
-    expect(row.max_version).toBe(58);
+    expect(row.max_version).toBe(59);
   });
 
   it('wallet_apps table has 11 columns', () => {

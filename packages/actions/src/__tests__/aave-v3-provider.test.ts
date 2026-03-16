@@ -8,7 +8,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { AaveV3LendingProvider } from '../providers/aave-v3/index.js';
 import { AAVE_V3_ADDRESSES } from '../providers/aave-v3/config.js';
 import type { IRpcCaller } from '../providers/aave-v3/aave-rpc.js';
-import type { ActionContext, ContractCallRequest } from '@waiaas/core';
+import type { ActionContext, ContractCallRequest, PositionQueryContext } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------
 // Test constants
@@ -412,7 +412,8 @@ describe('IPositionProvider compliance', () => {
   });
 
   it('should return empty positions when no rpcCaller', async () => {
-    const positions = await provider.getPositions('test-wallet');
+    const ctx: PositionQueryContext = { walletId: 'test-wallet', chain: 'ethereum', networks: ['ethereum-mainnet'], environment: 'mainnet', rpcUrls: {} };
+    const positions = await provider.getPositions(ctx);
     expect(positions).toEqual([]);
   });
 });

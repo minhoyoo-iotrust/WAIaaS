@@ -4652,6 +4652,7 @@ export type paths = {
                 query?: {
                     wallet_id?: string;
                     category?: "STAKING" | "LENDING" | "YIELD" | "PERP";
+                    includeTestnets?: "true" | "false";
                 };
                 header?: never;
                 path?: never;
@@ -4672,6 +4673,7 @@ export type paths = {
                                 category: string;
                                 provider: string;
                                 chain: string;
+                                environment: string;
                                 network: string | null;
                                 assetId: string | null;
                                 amount: string;
@@ -8455,6 +8457,7 @@ export type components = {
                 chains: string[];
                 mcpExpose: boolean;
                 requiresApiKey: boolean;
+                apiKeyUrl?: string;
                 hasApiKey: boolean;
                 enabledKey: string;
                 category: string;

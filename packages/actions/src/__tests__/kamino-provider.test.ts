@@ -10,7 +10,11 @@ import { KaminoLendingProvider } from '../providers/kamino/index.js';
 import { MockKaminoSdkWrapper } from '../providers/kamino/kamino-sdk-wrapper.js';
 import type { IKaminoSdkWrapper } from '../providers/kamino/kamino-sdk-wrapper.js';
 import { KAMINO_MAIN_MARKET } from '../providers/kamino/config.js';
-import type { ActionContext, ContractCallRequest } from '@waiaas/core';
+import type { ActionContext, ContractCallRequest, PositionQueryContext } from '@waiaas/core';
+
+function makeSolCtx(walletId: string, chain: 'solana' | 'ethereum' = 'solana'): PositionQueryContext {
+  return { walletId, chain, networks: chain === 'solana' ? ['solana-mainnet'] : ['ethereum-mainnet'], environment: 'mainnet', rpcUrls: {} };
+}
 
 // ---------------------------------------------------------------------------
 // Test constants
@@ -554,7 +558,7 @@ describe('IPositionProvider compliance', () => {
   });
 
   it('should return PositionUpdate[] from obligation data', async () => {
-    const positions = await provider.getPositions('test-wallet');
+    const positions = await provider.getPositions(makeSolCtx('test-wallet'));
     expect(Array.isArray(positions)).toBe(true);
     expect(positions.length).toBeGreaterThanOrEqual(1);
     // Check structure of first position
@@ -565,6 +569,24 @@ describe('IPositionProvider compliance', () => {
     expect(pos.chain).toBe('solana');
     expect(pos.status).toBe('ACTIVE');
     expect(typeof pos.amount).toBe('string');
+  });
+
+  it('should return [] for ethereum wallet (chain guard)', async () => {
+    const positions = await provider.getPositions(makeSolCtx('test-wallet', 'ethereum'));
+    expect(positions).toEqual([]);
+  });
+
+  it('should use ctx.networks[0] for network field (MCHN-08)', async () => {
+    const ctx: PositionQueryContext = {
+      walletId: 'test-wallet',
+      chain: 'solana',
+      networks: ['solana-devnet'],
+      environment: 'testnet',
+      rpcUrls: {},
+    };
+    const positions = await provider.getPositions(ctx);
+    expect(positions.length).toBeGreaterThanOrEqual(1);
+    expect(positions[0]!.network).toBe('solana-devnet');
   });
 });
 

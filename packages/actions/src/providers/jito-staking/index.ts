@@ -26,8 +26,8 @@ import {
 } from './jito-stake-pool.js';
 import { migrateAmount } from '../../common/migrate-amount.js';
 import { resolveProviderHumanAmount } from '../../common/resolve-human-amount.js';
-import { formatCaip19 } from '@waiaas/core';
-import type { PositionUpdate, PositionCategory } from '@waiaas/core';
+import { formatCaip19, networkToCaip2 } from '@waiaas/core';
+import type { NetworkType, PositionUpdate, PositionCategory, PositionQueryContext } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------
 // Input schemas (Zod SSoT)
@@ -164,8 +164,11 @@ export class JitoStakingActionProvider implements IActionProvider {
    * Query jitoSOL token balance and stake pool exchange rate for the given wallet.
    * Returns STAKING position with SOL-equivalent underlyingAmount.
    */
-  async getPositions(walletId: string): Promise<PositionUpdate[]> {
+  async getPositions(ctx: PositionQueryContext): Promise<PositionUpdate[]> {
+    if (ctx.chain !== 'solana') return [];
     if (!this.rpcUrl) return [];
+    const walletId = ctx.walletId;
+    const network = ctx.networks[0] ?? 'solana-mainnet';
 
     try {
       const balance = await getJitoSolBalance(
@@ -184,15 +187,18 @@ export class JitoStakingActionProvider implements IActionProvider {
       const solEquivalent = balance.uiAmount * exchangeRate;
       const now = Math.floor(Date.now() / 1000);
 
+      // Use networkToCaip2 for correct CAIP-2 identifier per network (MCHN-08)
+      const caip2 = networkToCaip2(network as NetworkType);
+
       return [
         {
           walletId,
           category: 'STAKING' as PositionCategory,
           provider: 'jito_staking',
           chain: 'solana',
-          network: 'solana-mainnet',
+          network,
           assetId: formatCaip19(
-            'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp',
+            caip2,
             'token',
             this.config.jitosolMint,
           ),

@@ -27,10 +27,12 @@ import {
   encodeBalanceOfCalldata,
   encodeStEthPerTokenCalldata,
   decodeUint256Result,
-  WSTETH_MAINNET,
+  LIDO_NETWORK_CONFIG,
+  LIDO_TESTNET_NETWORK_CONFIG,
+  type LidoNetworkContracts,
 } from './lido-contract.js';
 import { formatCaip19 } from '@waiaas/core';
-import type { PositionUpdate, PositionCategory } from '@waiaas/core';
+import type { PositionUpdate, PositionCategory, PositionQueryContext } from '@waiaas/core';
 
 // ---------------------------------------------------------------------------
 // Input schemas (Zod SSoT)
@@ -61,11 +63,8 @@ export class LidoStakingActionProvider implements IActionProvider {
   readonly actions: readonly ActionDefinition[];
 
   private readonly config: LidoStakingConfig;
-  private readonly rpcUrl?: string;
-
   constructor(config?: Partial<LidoStakingConfig>) {
     this.config = { ...LIDO_STAKING_DEFAULTS, ...config };
-    this.rpcUrl = this.config.rpcUrl;
 
     this.metadata = {
       name: 'lido_staking',
@@ -182,38 +181,55 @@ export class LidoStakingActionProvider implements IActionProvider {
   // -------------------------------------------------------------------------
 
   /**
-   * Query stETH and wstETH balances for the given wallet and return
-   * STAKING position updates. Returns [] on zero balances or RPC error.
+   * Query stETH and wstETH balances across all supported networks in ctx.networks.
+   * Uses Promise.allSettled for partial failure resilience (MCHN-06, MCHN-07).
    */
-  async getPositions(walletId: string): Promise<PositionUpdate[]> {
-    if (!this.rpcUrl) return [];
+  async getPositions(ctx: PositionQueryContext): Promise<PositionUpdate[]> {
+    if (ctx.chain !== 'ethereum') return [];
+    const walletId = ctx.walletId;
 
-    try {
-      const positions: PositionUpdate[] = [];
-      const now = Math.floor(Date.now() / 1000);
+    // Select config map based on environment (MCHN-10)
+    const networkConfig = ctx.environment === 'testnet'
+      ? LIDO_TESTNET_NETWORK_CONFIG
+      : LIDO_NETWORK_CONFIG;
 
-      // 1. Read stETH balance
-      const stethBalance = await this.ethCallUint256(
-        this.config.stethAddress,
+    // Filter ctx.networks to only Lido-supported networks
+    const supportedNetworks = ctx.networks.filter(n => networkConfig[n]);
+    if (supportedNetworks.length === 0) return [];
+
+    // Query each network in parallel via Promise.allSettled (MCHN-06)
+    const results = await Promise.allSettled(
+      supportedNetworks.map(network => {
+        const rpcUrl = ctx.rpcUrls[network];
+        if (!rpcUrl) return Promise.resolve([] as PositionUpdate[]);
+        return this.queryNetworkPositions(walletId, network, networkConfig[network]!, rpcUrl);
+      }),
+    );
+
+    // Collect only fulfilled results (MCHN-07)
+    return results.flatMap(r => r.status === 'fulfilled' ? r.value : []);
+  }
+
+  /**
+   * Query stETH + wstETH positions on a single network.
+   */
+  private async queryNetworkPositions(
+    walletId: string,
+    network: string,
+    config: LidoNetworkContracts,
+    rpcUrl: string,
+  ): Promise<PositionUpdate[]> {
+    const positions: PositionUpdate[] = [];
+    const now = Math.floor(Date.now() / 1000);
+
+    // 1. Read stETH balance (only on networks that have stETH deployed)
+    if (config.stethAddress) {
+      const stethBalance = await this.ethCallUint256WithRpc(
+        rpcUrl,
+        config.stethAddress,
         encodeBalanceOfCalldata(walletId),
       );
 
-      // 2. Read wstETH balance
-      const wstethBalance = await this.ethCallUint256(
-        WSTETH_MAINNET,
-        encodeBalanceOfCalldata(walletId),
-      );
-
-      // 3. Read stEthPerToken exchange rate (for wstETH -> stETH conversion)
-      let stEthPerToken = 10n ** 18n; // default 1:1
-      if (wstethBalance > 0n) {
-        stEthPerToken = await this.ethCallUint256(
-          WSTETH_MAINNET,
-          encodeStEthPerTokenCalldata(),
-        );
-      }
-
-      // 4. Build stETH position if non-zero
       if (stethBalance > 0n) {
         const amount = this.formatWei(stethBalance);
         positions.push({
@@ -221,8 +237,8 @@ export class LidoStakingActionProvider implements IActionProvider {
           category: 'STAKING' as PositionCategory,
           provider: 'lido_staking',
           chain: 'ethereum',
-          network: 'ethereum-mainnet',
-          assetId: formatCaip19('eip155:1', 'erc20', this.config.stethAddress),
+          network,
+          assetId: formatCaip19(config.caip2, 'erc20', config.stethAddress),
           amount,
           amountUsd: null,
           metadata: { token: 'stETH', underlyingAmount: amount },
@@ -230,32 +246,48 @@ export class LidoStakingActionProvider implements IActionProvider {
           openedAt: now,
         });
       }
+    }
 
-      // 5. Build wstETH position if non-zero
-      if (wstethBalance > 0n) {
-        const amount = this.formatWei(wstethBalance);
-        const underlyingRaw = (wstethBalance * stEthPerToken) / (10n ** 18n);
-        const underlyingAmount = this.formatWei(underlyingRaw);
+    // 2. Read wstETH balance
+    const wstethBalance = await this.ethCallUint256WithRpc(
+      rpcUrl,
+      config.wstethAddress,
+      encodeBalanceOfCalldata(walletId),
+    );
 
-        positions.push({
-          walletId,
-          category: 'STAKING' as PositionCategory,
-          provider: 'lido_staking',
-          chain: 'ethereum',
-          network: 'ethereum-mainnet',
-          assetId: formatCaip19('eip155:1', 'erc20', WSTETH_MAINNET),
-          amount,
-          amountUsd: null,
-          metadata: { token: 'wstETH', underlyingAmount },
-          status: 'ACTIVE',
-          openedAt: now,
-        });
+    if (wstethBalance > 0n) {
+      // 3. Read stEthPerToken exchange rate
+      let stEthPerToken = 10n ** 18n; // default 1:1
+      try {
+        stEthPerToken = await this.ethCallUint256WithRpc(
+          rpcUrl,
+          config.wstethAddress,
+          encodeStEthPerTokenCalldata(),
+        );
+      } catch {
+        // Fallback to 1:1 if stEthPerToken fails (L2 wstETH may not have this method)
       }
 
-      return positions;
-    } catch {
-      return [];
+      const amount = this.formatWei(wstethBalance);
+      const underlyingRaw = (wstethBalance * stEthPerToken) / (10n ** 18n);
+      const underlyingAmount = this.formatWei(underlyingRaw);
+
+      positions.push({
+        walletId,
+        category: 'STAKING' as PositionCategory,
+        provider: 'lido_staking',
+        chain: 'ethereum',
+        network,
+        assetId: formatCaip19(config.caip2, 'erc20', config.wstethAddress),
+        amount,
+        amountUsd: null,
+        metadata: { token: 'wstETH', underlyingAmount },
+        status: 'ACTIVE',
+        openedAt: now,
+      });
     }
+
+    return positions;
   }
 
   getProviderName(): string {
@@ -271,10 +303,10 @@ export class LidoStakingActionProvider implements IActionProvider {
   // -------------------------------------------------------------------------
 
   /**
-   * Execute a single eth_call and decode the result as uint256.
+   * Execute a single eth_call with explicit rpcUrl and decode the result as uint256.
    */
-  private async ethCallUint256(to: string, data: string): Promise<bigint> {
-    const resp = await fetch(this.rpcUrl!, {
+  private async ethCallUint256WithRpc(rpcUrl: string, to: string, data: string): Promise<bigint> {
+    const resp = await fetch(rpcUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
