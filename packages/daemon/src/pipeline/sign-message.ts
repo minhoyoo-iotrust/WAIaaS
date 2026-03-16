@@ -74,7 +74,7 @@ export async function executeSignMessage(
   // Step 1: Validate request via Zod (superRefine handles cross-field validation)
   const parsed = SignMessageRequestSchema.safeParse(body);
   if (!parsed.success) {
-    throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
+    throw new WAIaaSError('VALIDATION_FAILED', {
       message: parsed.error.issues.map((i) => i.message).join('; '),
     });
   }

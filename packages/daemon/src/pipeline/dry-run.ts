@@ -90,7 +90,7 @@ export interface DryRunCollector {
  * @param resolvedNetwork - Pre-resolved network
  * @param walletInfo - Wallet public key, chain, environment
  * @returns DryRunSimulationResult
- * @throws WAIaaSError('ACTION_VALIDATION_FAILED') for invalid request format
+ * @throws WAIaaSError('VALIDATION_FAILED') for invalid request format
  */
 export async function executeDryRun(
   deps: DryRunDeps,
@@ -122,7 +122,7 @@ export async function executeDryRun(
 
   const parseResult = TransactionRequestSchema.safeParse(request);
   if (!parseResult.success) {
-    throw new WAIaaSError('ACTION_VALIDATION_FAILED', {
+    throw new WAIaaSError('VALIDATION_FAILED', {
       message: `Request validation failed: ${parseResult.error.message}`,
     });
   }
