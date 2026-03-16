@@ -263,71 +263,197 @@ export class MockKaminoSdkWrapper implements IKaminoSdkWrapper {
  * KaminoSdkWrapper: wraps @kamino-finance/klend-sdk.
  *
  * Lazily imports the SDK at first use. If the SDK is not installed,
- * all methods throw ChainError('PROVIDER_NOT_CONFIGURED', 'solana').
+ * all methods throw ChainError('INVALID_INSTRUCTION', 'solana').
  *
- * The real implementation converts TransactionInstruction results
+ * Converts TransactionInstruction results from the SDK
  * to KaminoInstruction format (programId + base64 + accounts).
  */
 export class KaminoSdkWrapper implements IKaminoSdkWrapper {
-  /** RPC URL for future SDK connection. Stored for when klend-sdk is installed. */
   readonly rpcUrl: string;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private _sdk: { Connection: any; PublicKey: any; KaminoMarket: any; KaminoAction: any; VanillaObligation: any } | null = null;
 
   constructor(rpcUrl: string) {
     this.rpcUrl = rpcUrl;
   }
 
-  private async throwNotConfigured(): Promise<never> {
-    const { ChainError } = await import('@waiaas/core');
-    throw new ChainError('INVALID_INSTRUCTION', 'solana', {
-      message:
-        'Kamino K-Lend SDK not available. Install @kamino-finance/klend-sdk and @solana/web3.js as dependencies.',
-    });
+  private async loadSdk() {
+    if (this._sdk) return this._sdk;
+    try {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-expect-error — optional dependency, may not be installed
+      const solana = await import('@solana/web3.js');
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-expect-error — optional dependency, may not be installed
+      const klend = await import('@kamino-finance/klend-sdk');
+      this._sdk = {
+        Connection: solana.Connection,
+        PublicKey: solana.PublicKey,
+        KaminoMarket: klend.KaminoMarket,
+        KaminoAction: klend.KaminoAction,
+        VanillaObligation: klend.VanillaObligation,
+      };
+      return this._sdk;
+    } catch {
+      const { ChainError } = await import('@waiaas/core');
+      throw new ChainError('INVALID_INSTRUCTION', 'solana', {
+        message:
+          'Kamino K-Lend SDK not available. Install @kamino-finance/klend-sdk and @solana/web3.js as dependencies.',
+      });
+    }
   }
 
-  async buildSupplyInstruction(_params: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private async loadMarket(marketAddress: string): Promise<{ market: any; connection: any }> {
+    const sdk = await this.loadSdk();
+    const connection = new sdk.Connection(this.rpcUrl, 'confirmed');
+    const marketPubkey = new sdk.PublicKey(marketAddress);
+    const market = await sdk.KaminoMarket.load(connection, marketPubkey);
+    if (!market) {
+      const { ChainError } = await import('@waiaas/core');
+      throw new ChainError('INVALID_INSTRUCTION', 'solana', {
+        message: `Kamino market not found: ${marketAddress}`,
+      });
+    }
+    return { market, connection };
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private convertInstructions(ixs: any[]): KaminoInstruction[] {
+    return ixs.map((ix) => ({
+      programId: ix.programId.toBase58(),
+      instructionData: Buffer.from(ix.data).toString('base64'),
+      accounts: ix.keys.map((k: { pubkey: { toBase58(): string }; isSigner: boolean; isWritable: boolean }) => ({
+        pubkey: k.pubkey.toBase58(),
+        isSigner: k.isSigner,
+        isWritable: k.isWritable,
+      })),
+    }));
+  }
+
+  async buildSupplyInstruction(params: {
     market: string;
     asset: string;
     amount: bigint;
     walletAddress: string;
   }): Promise<KaminoInstruction[]> {
-    return this.throwNotConfigured();
+    const sdk = await this.loadSdk();
+    const { market } = await this.loadMarket(params.market);
+    const wallet = new sdk.PublicKey(params.walletAddress);
+    const mint = new sdk.PublicKey(params.asset);
+    const action = await sdk.KaminoAction.buildDepositTxns(
+      market, params.amount.toString(), mint, wallet, new sdk.VanillaObligation(KAMINO_PROGRAM_ID),
+    );
+    const allIxs = [...(action.setupIxs || []), ...action.lendingIxs, ...(action.cleanupIxs || [])];
+    return this.convertInstructions(allIxs.filter((ix: unknown) => ix != null));
   }
 
-  async buildBorrowInstruction(_params: {
+  async buildBorrowInstruction(params: {
     market: string;
     asset: string;
     amount: bigint;
     walletAddress: string;
   }): Promise<KaminoInstruction[]> {
-    return this.throwNotConfigured();
+    const sdk = await this.loadSdk();
+    const { market } = await this.loadMarket(params.market);
+    const wallet = new sdk.PublicKey(params.walletAddress);
+    const mint = new sdk.PublicKey(params.asset);
+    const action = await sdk.KaminoAction.buildBorrowTxns(
+      market, params.amount.toString(), mint, wallet, new sdk.VanillaObligation(KAMINO_PROGRAM_ID),
+    );
+    const allIxs = [...(action.setupIxs || []), ...action.lendingIxs, ...(action.cleanupIxs || [])];
+    return this.convertInstructions(allIxs.filter((ix: unknown) => ix != null));
   }
 
-  async buildRepayInstruction(_params: {
+  async buildRepayInstruction(params: {
     market: string;
     asset: string;
     amount: bigint | 'max';
     walletAddress: string;
   }): Promise<KaminoInstruction[]> {
-    return this.throwNotConfigured();
+    const sdk = await this.loadSdk();
+    const { market } = await this.loadMarket(params.market);
+    const wallet = new sdk.PublicKey(params.walletAddress);
+    const mint = new sdk.PublicKey(params.asset);
+    const amountStr = params.amount === 'max' ? 'max' : params.amount.toString();
+    const action = await sdk.KaminoAction.buildRepayTxns(
+      market, amountStr, mint, wallet, new sdk.VanillaObligation(KAMINO_PROGRAM_ID),
+    );
+    const allIxs = [...(action.setupIxs || []), ...action.lendingIxs, ...(action.cleanupIxs || [])];
+    return this.convertInstructions(allIxs.filter((ix: unknown) => ix != null));
   }
 
-  async buildWithdrawInstruction(_params: {
+  async buildWithdrawInstruction(params: {
     market: string;
     asset: string;
     amount: bigint | 'max';
     walletAddress: string;
   }): Promise<KaminoInstruction[]> {
-    return this.throwNotConfigured();
+    const sdk = await this.loadSdk();
+    const { market } = await this.loadMarket(params.market);
+    const wallet = new sdk.PublicKey(params.walletAddress);
+    const mint = new sdk.PublicKey(params.asset);
+    const amountStr = params.amount === 'max' ? 'max' : params.amount.toString();
+    const action = await sdk.KaminoAction.buildWithdrawTxns(
+      market, amountStr, mint, wallet, new sdk.VanillaObligation(KAMINO_PROGRAM_ID),
+    );
+    const allIxs = [...(action.setupIxs || []), ...action.lendingIxs, ...(action.cleanupIxs || [])];
+    return this.convertInstructions(allIxs.filter((ix: unknown) => ix != null));
   }
 
-  async getObligation(_params: {
+  async getObligation(params: {
     market: string;
     walletAddress: string;
   }): Promise<KaminoObligation | null> {
-    return this.throwNotConfigured();
+    const sdk = await this.loadSdk();
+    const { market } = await this.loadMarket(params.market);
+    const wallet = new sdk.PublicKey(params.walletAddress);
+    await market.loadReserves();
+    const obligations = await market.getObligationByWallet(wallet, new sdk.VanillaObligation(KAMINO_PROGRAM_ID));
+    if (!obligations) return null;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const deposits = (obligations.deposits as any[])
+      .filter((d) => Number(d.amount.toString()) > 0)
+      .map((d) => ({
+        mintAddress: String(d.mintAddress.toBase58?.() ?? d.mintAddress),
+        amount: d.amount.toBigInt ? d.amount.toBigInt() : BigInt(d.amount.toString()),
+        marketValueUsd: d.marketValueSf ? Number(d.marketValueSf.toString()) / 1e12 : 0,
+      }));
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const borrows = (obligations.borrows as any[])
+      .filter((b) => Number(b.amount.toString()) > 0)
+      .map((b) => ({
+        mintAddress: String(b.mintAddress.toBase58?.() ?? b.mintAddress),
+        amount: b.amount.toBigInt ? b.amount.toBigInt() : BigInt(b.amount.toString()),
+        marketValueUsd: b.marketValueSf ? Number(b.marketValueSf.toString()) / 1e12 : 0,
+      }));
+
+    const loanToValue = obligations.loanToValue?.() ?? 0;
+
+    return { deposits, borrows, loanToValue };
   }
 
-  async getReserves(_market: string): Promise<KaminoReserve[]> {
-    return this.throwNotConfigured();
+  async getReserves(market: string): Promise<KaminoReserve[]> {
+    const { market: kaminoMarket } = await this.loadMarket(market);
+    await kaminoMarket.loadReserves();
+    const reserves = kaminoMarket.reserves;
+
+    const result: KaminoReserve[] = [];
+    for (const [, reserve] of reserves) {
+      const stats = reserve.stats;
+      if (!stats) continue;
+      result.push({
+        mintAddress: reserve.getLiquidityMint().toBase58(),
+        symbol: stats.symbol ?? reserve.getLiquidityMint().toBase58().slice(0, 6),
+        supplyApy: stats.supplyInterestAPY ?? 0,
+        borrowApy: stats.borrowInterestAPY ?? 0,
+        ltvPct: (stats.loanToValuePct ?? 0),
+        availableLiquidity: stats.availableAmount?.toString() ?? '0',
+      });
+    }
+    return result;
   }
 }
