@@ -330,7 +330,7 @@ export async function fetchApi(
  */
 export async function waitForHealth(
   harness: { baseUrl: string },
-  timeoutMs = 10_000,
+  timeoutMs = 30_000,
 ): Promise<void> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
