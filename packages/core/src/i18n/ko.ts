@@ -63,6 +63,7 @@ export const messages: Messages = {
     SPENDING_LIMIT_EXCEEDED: '지출 한도를 초과했습니다',
     RATE_LIMIT_EXCEEDED: '요청 빈도 제한을 초과했습니다',
     WHITELIST_DENIED: '화이트리스트에 없는 주소입니다',
+    POLICY_RULES_CORRUPT: '정책 규칙 데이터가 손상되었거나 예상 스키마와 일치하지 않습니다',
     // OWNER domain (5)
     OWNER_ALREADY_CONNECTED: 'Owner가 이미 연결되어 있습니다',
     OWNER_NOT_CONNECTED: 'Owner가 연결되지 않았습니다',

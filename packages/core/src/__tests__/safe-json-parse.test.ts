@@ -84,8 +84,10 @@ describe('safeJsonParse', () => {
 // ---------------------------------------------------------------------------
 
 describe('POLICY_RULES_SCHEMAS', () => {
-  it('has 13 entries covering all policy types', () => {
-    expect(Object.keys(POLICY_RULES_SCHEMAS)).toHaveLength(13);
+  it('has 20 entries covering all policy types', () => {
+    // v32.4-429: +LENDING_ASSET_WHITELIST, +LENDING_LTV_LIMIT, +PERP_MAX_LEVERAGE,
+    // +PERP_MAX_POSITION_USD, +PERP_ALLOWED_MARKETS, +VENUE_WHITELIST, +ACTION_CATEGORY_LIMIT (+7)
+    expect(Object.keys(POLICY_RULES_SCHEMAS)).toHaveLength(20);
   });
 
   it('SPENDING_LIMIT maps to SpendingLimitRulesSchema', () => {

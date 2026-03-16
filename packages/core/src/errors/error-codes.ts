@@ -427,6 +427,13 @@ export const ERROR_CODES = {
     retryable: false,
     message: 'Address not in whitelist',
   },
+  POLICY_RULES_CORRUPT: {
+    code: 'POLICY_RULES_CORRUPT',
+    domain: 'POLICY',
+    httpStatus: 500,
+    retryable: false,
+    message: 'Policy rules data is corrupted or does not match expected schema',
+  },
 
   // --- OWNER domain (5) ---
   OWNER_ALREADY_CONNECTED: {

@@ -57,7 +57,8 @@ describe('i18n message system', () => {
     // v31.12: +CREDENTIAL_NOT_FOUND, +CREDENTIAL_EXPIRED, +SIGNING_SCHEME_UNSUPPORTED, +CAPABILITY_NOT_FOUND, +VENUE_NOT_ALLOWED, +EXTERNAL_ACTION_FAILED (+6)
     // v32.2: +RATE_LIMITED (+1)
     // v32.4: +INTERNAL_ERROR, +VALIDATION_FAILED (+2)
-    expect(Object.keys(en.errors).length).toBe(146);
+    // v32.4-429: +POLICY_RULES_CORRUPT (+1)
+    expect(Object.keys(en.errors).length).toBe(147);
   });
 
   it('error code keys match ERROR_CODES keys', () => {

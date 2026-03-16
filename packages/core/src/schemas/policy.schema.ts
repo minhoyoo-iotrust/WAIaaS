@@ -218,8 +218,66 @@ export const ReputationThresholdRulesSchema = z.object({
 });
 export type ReputationThresholdRules = z.infer<typeof ReputationThresholdRulesSchema>;
 
+/** LENDING_ASSET_WHITELIST: rules.assets array (permitted lending assets). */
+export const LendingAssetWhitelistRulesSchema = z.object({
+  assets: z.array(z.object({
+    address: z.string().min(1),
+    symbol: z.string().optional(),
+  })).min(1, 'At least one asset required'),
+});
+export type LendingAssetWhitelistRules = z.infer<typeof LendingAssetWhitelistRulesSchema>;
+
+/** LENDING_LTV_LIMIT: LTV-based borrow restriction. */
+export const LendingLtvLimitRulesSchema = z.object({
+  maxLtv: z.number().min(0).max(1),
+  warningLtv: z.number().min(0).max(1),
+});
+export type LendingLtvLimitRules = z.infer<typeof LendingLtvLimitRulesSchema>;
+
+/** PERP_MAX_LEVERAGE: Maximum leverage restriction. */
+export const PerpMaxLeverageRulesSchema = z.object({
+  maxLeverage: z.number().positive(),
+  warningLeverage: z.number().positive().optional(),
+});
+export type PerpMaxLeverageRules = z.infer<typeof PerpMaxLeverageRulesSchema>;
+
+/** PERP_MAX_POSITION_USD: Maximum position size restriction. */
+export const PerpMaxPositionUsdRulesSchema = z.object({
+  maxPositionUsd: z.number().positive(),
+  warningPositionUsd: z.number().positive().optional(),
+});
+export type PerpMaxPositionUsdRules = z.infer<typeof PerpMaxPositionUsdRulesSchema>;
+
+/** PERP_ALLOWED_MARKETS: Permitted perp markets. */
+export const PerpAllowedMarketsRulesSchema = z.object({
+  markets: z.array(z.object({
+    market: z.string().min(1),
+    name: z.string().optional(),
+  })).min(1, 'At least one market required'),
+});
+export type PerpAllowedMarketsRules = z.infer<typeof PerpAllowedMarketsRulesSchema>;
+
+/** VENUE_WHITELIST: Permitted external venues. */
+export const VenueWhitelistRulesSchema = z.object({
+  venues: z.array(z.object({
+    id: z.string().min(1),
+    name: z.string().optional(),
+  })).min(1, 'At least one venue required'),
+});
+export type VenueWhitelistRules = z.infer<typeof VenueWhitelistRulesSchema>;
+
+/** ACTION_CATEGORY_LIMIT: Per-category action spending limits. */
+export const ActionCategoryLimitRulesSchema = z.object({
+  category: z.string().min(1),
+  daily_limit_usd: z.number().positive().optional(),
+  monthly_limit_usd: z.number().positive().optional(),
+  per_action_limit_usd: z.number().positive().optional(),
+  tier_on_exceed: z.string().optional(),
+});
+export type ActionCategoryLimitRules = z.infer<typeof ActionCategoryLimitRulesSchema>;
+
 // Map of policy types to their rules schemas for superRefine lookup.
-// All 13 PolicyTypes with dedicated rules schemas are covered.
+// All 20 PolicyTypes with dedicated rules schemas are covered.
 export const POLICY_RULES_SCHEMAS: Record<string, z.ZodTypeAny> = {
   ALLOWED_TOKENS: AllowedTokensRulesSchema,
   CONTRACT_WHITELIST: ContractWhitelistRulesSchema,
@@ -234,6 +292,13 @@ export const POLICY_RULES_SCHEMAS: Record<string, z.ZodTypeAny> = {
   TIME_RESTRICTION: TimeRestrictionRulesSchema,
   X402_ALLOWED_DOMAINS: X402AllowedDomainsRulesSchema,
   REPUTATION_THRESHOLD: ReputationThresholdRulesSchema,
+  LENDING_ASSET_WHITELIST: LendingAssetWhitelistRulesSchema,
+  LENDING_LTV_LIMIT: LendingLtvLimitRulesSchema,
+  PERP_MAX_LEVERAGE: PerpMaxLeverageRulesSchema,
+  PERP_MAX_POSITION_USD: PerpMaxPositionUsdRulesSchema,
+  PERP_ALLOWED_MARKETS: PerpAllowedMarketsRulesSchema,
+  VENUE_WHITELIST: VenueWhitelistRulesSchema,
+  ACTION_CATEGORY_LIMIT: ActionCategoryLimitRulesSchema,
 };
 
 /**

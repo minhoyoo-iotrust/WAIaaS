@@ -117,6 +117,7 @@ export const messages: Messages = {
     SPENDING_LIMIT_EXCEEDED: 'Spending limit exceeded',
     RATE_LIMIT_EXCEEDED: 'Rate limit exceeded',
     WHITELIST_DENIED: 'Address not in whitelist',
+    POLICY_RULES_CORRUPT: 'Policy rules data is corrupted or does not match expected schema',
     // OWNER domain (5)
     OWNER_ALREADY_CONNECTED: 'Owner already connected',
     OWNER_NOT_CONNECTED: 'Owner not connected',

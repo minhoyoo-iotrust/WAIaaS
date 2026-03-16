@@ -76,6 +76,21 @@ export {
   type ApproveTierOverrideRules,
   AllowedNetworksRulesSchema,
   type AllowedNetworksRules,
+  // v32.4-429: Lending/Perp/Venue/ActionCategory rule schemas
+  LendingAssetWhitelistRulesSchema,
+  type LendingAssetWhitelistRules,
+  LendingLtvLimitRulesSchema,
+  type LendingLtvLimitRules,
+  PerpMaxLeverageRulesSchema,
+  type PerpMaxLeverageRules,
+  PerpMaxPositionUsdRulesSchema,
+  type PerpMaxPositionUsdRules,
+  PerpAllowedMarketsRulesSchema,
+  type PerpAllowedMarketsRules,
+  VenueWhitelistRulesSchema,
+  type VenueWhitelistRules,
+  ActionCategoryLimitRulesSchema,
+  type ActionCategoryLimitRules,
 } from './policy.schema.js';
 export { ConfigSchema, type Config } from './config.schema.js';
 
