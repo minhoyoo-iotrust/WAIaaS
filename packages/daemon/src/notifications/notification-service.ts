@@ -8,7 +8,8 @@
 
 import type { INotificationChannel, NotificationPayload } from '@waiaas/core';
 import type { NotificationEventType, SupportedLocale } from '@waiaas/core';
-import { EVENT_CATEGORY_MAP, getExplorerTxUrl } from '@waiaas/core';
+import { EVENT_CATEGORY_MAP, getExplorerTxUrl, safeJsonParse } from '@waiaas/core';
+import { z } from 'zod';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { eq } from 'drizzle-orm';
 import { getNotificationMessage } from './templates/message-templates.js';
@@ -251,16 +252,17 @@ export class NotificationService {
       // Prefer per-event filter
       const eventsJson = this.settingsService.get('notifications.notify_events');
       if (eventsJson && eventsJson !== '[]') {
-        const allowedEvents = JSON.parse(eventsJson) as string[];
-        if (Array.isArray(allowedEvents) && allowedEvents.length > 0) {
-          return !allowedEvents.includes(eventType);
+        const eventsResult = safeJsonParse(eventsJson, z.array(z.string()));
+        if (eventsResult.success && eventsResult.data.length > 0) {
+          return !eventsResult.data.includes(eventType);
         }
       }
       // Fallback to legacy category filter
       const filterJson = this.settingsService.get('notifications.notify_categories');
       if (!filterJson || filterJson === '[]') return false;
-      const allowed = JSON.parse(filterJson) as string[];
-      if (!Array.isArray(allowed) || allowed.length === 0) return false;
+      const filterResult = safeJsonParse(filterJson, z.array(z.string()));
+      if (!filterResult.success || filterResult.data.length === 0) return false;
+      const allowed = filterResult.data;
       const category = EVENT_CATEGORY_MAP[eventType];
       if (!category) return false;
       return !allowed.includes(category);
