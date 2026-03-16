@@ -1,5 +1,46 @@
 # Changelog
 
+## [2.11.0-rc.18](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.17...v2.11.0-rc.18) (2026-03-16)
+
+
+### Features
+
+* **427-01:** add safeJsonParse helper, export POLICY_RULES_SCHEMAS, register error codes ([88d35bc](https://github.com/minhoyoo-iotrust/WAIaaS/commit/88d35bc900f422b2634008e81ce32f02b812a46b))
+* **427-01:** consolidate sleep() to @waiaas/core SSoT, remove 5 local duplicates ([92f45b0](https://github.com/minhoyoo-iotrust/WAIaaS/commit/92f45b0d41fd7f54e405d8bd113ea083ec0a4011))
+* **428-01:** extend IChainSubscriber with pollAll, checkFinalized, getBlockNumber ([7c6f053](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7c6f053d29b0be532b403d985ae472b4e83351a6))
+* **429-01:** add 7 Zod rule schemas + POLICY_RULES_CORRUPT error code ([5087604](https://github.com/minhoyoo-iotrust/WAIaaS/commit/50876045338c7efad91da47ee8079133b2c83a1c))
+* **429-02:** replace JSON.parse with safeJsonParse in DatabasePolicyEngine ([d2ee31c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d2ee31cb930c00c191aa8b2ae4cd5cf15d546a92))
+* **430-01:** add Zod validation to JSON.parse in daemon, notification, JWT secret ([c00c125](https://github.com/minhoyoo-iotrust/WAIaaS/commit/c00c125e7c6c1c848331629d4462e7752c127c34))
+* **431-01:** NATIVE_DECIMALS/NATIVE_SYMBOLS SSoT + formatAmount integration ([6461ae7](https://github.com/minhoyoo-iotrust/WAIaaS/commit/6461ae7c5302ec4e9633c2e91d15eab718dca5bf))
+* **431-01:** resolveRpcUrl typed overload removes as unknown as Record casts ([8acc270](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8acc2704d76b871b50d7e05096e5812857d4b9cb))
+* rename Trading sidebar section to Protocols and move Agent Identity ([#360](https://github.com/minhoyoo-iotrust/WAIaaS/issues/360)) ([0d69e50](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0d69e5058f90c59ed269a49730eb20e86c52aeec))
+
+
+### Bug Fixes
+
+* **428-01:** remove as unknown as castings from incoming TX monitor pipeline ([e7b468d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e7b468db5117cf2f735326d75231270a5fee6367))
+* **428-02:** replace ACTION_VALIDATION_FAILED misuse with VALIDATION_FAILED for Zod parse errors ([82e7ab2](https://github.com/minhoyoo-iotrust/WAIaaS/commit/82e7ab2c3f1df58b1c63cc044694fd36114b9337))
+* **430-01:** remove as any from wc.ts, daemon.ts, wc-session-service.ts, signing files ([19c92f5](https://github.com/minhoyoo-iotrust/WAIaaS/commit/19c92f58affcf219c64f8ea1f1b32bc69b573545))
+* **430-02:** remove as any from hot-reload.ts and sync-pipeline.ts ([8e6eab2](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8e6eab22c23086d589f7e5b633663e80ce9a4453))
+* **430-02:** remove as any from stages.ts and userop.ts bundlerClient/publicClient ([6220493](https://github.com/minhoyoo-iotrust/WAIaaS/commit/6220493f1ed1f7f72cc33b8ef1a0ccf7b6d0b040))
+* **430-03:** fix pre-existing type error in integration-wiring test mock ([2f8024e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2f8024e4c03b7db32a1d1de9b852128ce10cf151))
+* **430-03:** remove as any from external-action-pipeline, actions, admin-actions, registry ([f603c5a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/f603c5a59cebb33dc9a29d44b0e293d6c82b52ba))
+* **430-03:** replace network as any with NetworkType assertion across API routes and NFT indexers ([efb4470](https://github.com/minhoyoo-iotrust/WAIaaS/commit/efb44706dcae77afd0507b1debd28c13cd21ba94))
+* add API-level empty array validation in CreatePolicyRequestSchema superRefine ([65a3341](https://github.com/minhoyoo-iotrust/WAIaaS/commit/65a334152def79b7363ee1ffacf5f69fbd35bdc8))
+* deduplicate getBlockNumber calls per network in EvmIncomingSubscriber ([#359](https://github.com/minhoyoo-iotrust/WAIaaS/issues/359)) ([341c2ac](https://github.com/minhoyoo-iotrust/WAIaaS/commit/341c2ac4a8c2f85b60cd480dd698cd8f8821c410))
+* include NFT indexer keys in api-keys endpoint and align Helius key name ([#361](https://github.com/minhoyoo-iotrust/WAIaaS/issues/361)) ([7ab9030](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7ab9030490452f736f782cc6e6b8be970690df91))
+* relax Zod schema min(1) constraints for policy rule arrays ([95e47ff](https://github.com/minhoyoo-iotrust/WAIaaS/commit/95e47ff9d63f00047a337dc7a198efbbda9d41e4))
+* remove unused SOLANA_PUBLIC_KEY lint error in sign-message tests ([b033c71](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b033c71bb6f9fb26882c9f95987c509d6003756c))
+* update test expectations for v32.4 Zod validation and error code changes ([76b8603](https://github.com/minhoyoo-iotrust/WAIaaS/commit/76b8603b02abc63d6aa10c141e7a31e6d04f52f2))
+
+
+### Code Refactoring
+
+* **428-02:** move verifySIWE, decodeBase58, MasterPasswordRef to infrastructure/auth/ ([d4bcd37](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d4bcd377a493b6b8c92a66f34c471a171356042d))
+* **431-02:** extract aggregateStakingBalance shared utility + sync display-currency ([7b3c9c7](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7b3c9c70b5843389be725c0961ba391039b428c6))
+* **431-02:** sweepAll optional + stageGasCondition rename + hintedTokens encapsulation ([f48d8a6](https://github.com/minhoyoo-iotrust/WAIaaS/commit/f48d8a6c8161635064c8bc618653c05175ad7ec1))
+* remove duplicate protocol toggles from protocol pages ([#362](https://github.com/minhoyoo-iotrust/WAIaaS/issues/362)) ([9febc36](https://github.com/minhoyoo-iotrust/WAIaaS/commit/9febc362c6af0368e211210ad0937eb1aad0a377))
+
 ## [2.11.0-rc.17](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.16...v2.11.0-rc.17) (2026-03-16)
 
 
