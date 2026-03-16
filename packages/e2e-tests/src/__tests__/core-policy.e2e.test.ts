@@ -69,16 +69,19 @@ describe('policy-crud-dryrun', () => {
     });
 
     it('lists policies and finds the created one', async () => {
-      const { status, body } = await session.admin.get<
-        Array<{ id: string; type: string; rules: Record<string, unknown> }>
-      >(
+      const { status, body } = await session.admin.get<{
+        data: Array<{ id: string; type: string; rules: Record<string, unknown> }>;
+        total: number;
+        limit: number;
+        offset: number;
+      }>(
         `/v1/policies?walletId=${session.walletId}`,
         adminHeaders(),
       );
       expect(status).toBe(200);
-      expect(Array.isArray(body)).toBe(true);
-      expect(body.length).toBeGreaterThanOrEqual(1);
-      const found = body.find((p) => p.id === policyId);
+      expect(Array.isArray(body.data)).toBe(true);
+      expect(body.data.length).toBeGreaterThanOrEqual(1);
+      const found = body.data.find((p) => p.id === policyId);
       expect(found).toBeTruthy();
       expect(found!.type).toBe('SPENDING_LIMIT');
     });
@@ -103,14 +106,17 @@ describe('policy-crud-dryrun', () => {
     });
 
     it('verifies updated values in list', async () => {
-      const { status, body } = await session.admin.get<
-        Array<{ id: string; rules: Record<string, unknown> }>
-      >(
+      const { status, body } = await session.admin.get<{
+        data: Array<{ id: string; rules: Record<string, unknown> }>;
+        total: number;
+        limit: number;
+        offset: number;
+      }>(
         `/v1/policies?walletId=${session.walletId}`,
         adminHeaders(),
       );
       expect(status).toBe(200);
-      const found = body.find((p) => p.id === policyId);
+      const found = body.data.find((p) => p.id === policyId);
       expect(found).toBeTruthy();
       expect(found!.rules.instant_max).toBe('2000000000000000000');
     });
@@ -124,14 +130,17 @@ describe('policy-crud-dryrun', () => {
     });
 
     it('confirms deletion from list', async () => {
-      const { status, body } = await session.admin.get<
-        Array<{ id: string }>
-      >(
+      const { status, body } = await session.admin.get<{
+        data: Array<{ id: string }>;
+        total: number;
+        limit: number;
+        offset: number;
+      }>(
         `/v1/policies?walletId=${session.walletId}`,
         adminHeaders(),
       );
       expect(status).toBe(200);
-      const found = body.find((p) => p.id === policyId);
+      const found = body.data.find((p) => p.id === policyId);
       expect(found).toBeUndefined();
     });
   });
