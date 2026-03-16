@@ -323,6 +323,52 @@ export const CreatePolicyRequestSchema = z.object({
       ctx.addIssue({ ...issue, path: ['rules', ...issue.path] });
     }
   }
+
+  // API-level stricter validation: reject empty arrays that are semantically invalid
+  // (base schemas allow empty for DB backward compat, but creation must have items)
+  const rules = data.rules as Record<string, unknown>;
+  const emptyArrayChecks: Record<string, string[]> = {
+    ALLOWED_TOKENS: ['tokens'],
+    CONTRACT_WHITELIST: ['contracts'],
+    APPROVED_SPENDERS: ['spenders'],
+    WHITELIST: ['allowed_addresses'],
+    X402_ALLOWED_DOMAINS: ['domains'],
+  };
+  const fieldsToCheck = emptyArrayChecks[data.type];
+  if (fieldsToCheck) {
+    for (const field of fieldsToCheck) {
+      const arr = rules[field];
+      if (Array.isArray(arr) && arr.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.too_small,
+          minimum: 1,
+          type: 'array',
+          inclusive: true,
+          message: `At least one ${field.replace(/_/g, ' ')} entry required`,
+          path: ['rules', field],
+        });
+      }
+    }
+  }
+  // METHOD_WHITELIST: check methods array and inner selectors arrays
+  if (data.type === 'METHOD_WHITELIST') {
+    const methods = rules['methods'];
+    if (Array.isArray(methods)) {
+      for (let i = 0; i < methods.length; i++) {
+        const m = methods[i] as Record<string, unknown> | undefined;
+        if (m && Array.isArray(m['selectors']) && (m['selectors'] as unknown[]).length === 0) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.too_small,
+            minimum: 1,
+            type: 'array',
+            inclusive: true,
+            message: 'At least one selector required',
+            path: ['rules', 'methods', i, 'selectors'],
+          });
+        }
+      }
+    }
+  }
 });
 export type CreatePolicyRequest = z.infer<typeof CreatePolicyRequestSchema>;
 
