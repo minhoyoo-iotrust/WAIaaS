@@ -23,10 +23,12 @@ export class Eip712SignerCapability implements ISignerCapability {
     try {
       const account = privateKeyToAccount(p.privateKey);
       const signature = await account.signTypedData({
-        domain: p.domain as any,
-        types: p.types as any,
+        // EIP-712 domain/types/message are loosely typed in our signing params
+        // but viem requires specific literal generics -- use targeted assertions
+        domain: p.domain as Record<string, unknown>,
+        types: p.types as Record<string, Array<{ name: string; type: string }>>,
         primaryType: p.primaryType,
-        message: p.value as any,
+        message: p.value as Record<string, unknown>,
       });
       return { signature };
     } catch (err) {

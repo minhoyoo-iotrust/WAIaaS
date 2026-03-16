@@ -20,10 +20,17 @@
 
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+import type { Database as BetterSqlite3DB } from 'better-sqlite3';
 import { WAIaaSError, getSingleNetwork, getNetworksForEnvironment } from '@waiaas/core';
 import type { ChainType, EnvironmentType } from '@waiaas/core';
 import type { WcSessionService, WcServiceRef } from '../../services/wc-session-service.js';
 import type * as schema from '../../infrastructure/database/schema.js';
+
+/** Extract the raw better-sqlite3 Database from a Drizzle BetterSQLite3Database instance. */
+function getSqliteClient(db: BetterSQLite3Database<typeof schema>): BetterSqlite3DB {
+  // Drizzle v0.38+ exposes .$client for raw driver access
+  return (db as unknown as { $client: BetterSqlite3DB }).$client;
+}
 import {
   WcPairingResponseSchema,
   WcSessionResponseSchema,
@@ -205,7 +212,7 @@ export function wcRoutes(deps: WcRouteDeps): OpenAPIHono {
     const { id } = c.req.valid('param');
 
     // Look up wallet via raw SQL (simpler, avoids Drizzle query builder complexity)
-    const sqlite = (db as any).session?.client as import('better-sqlite3').Database;
+    const sqlite = getSqliteClient(db);
     const wallet = sqlite
       .prepare('SELECT id, chain, environment, status, owner_address FROM wallets WHERE id = ?')
       .get(id) as { id: string; chain: string; environment: string; status: string; owner_address: string | null } | undefined;
@@ -246,7 +253,7 @@ export function wcRoutes(deps: WcRouteDeps): OpenAPIHono {
     const svc = requireWcService(wcServiceRef);
 
     // Verify wallet exists
-    const sqlite = (db as any).session?.client as import('better-sqlite3').Database;
+    const sqlite = getSqliteClient(db);
     const wallet = sqlite
       .prepare('SELECT id FROM wallets WHERE id = ?')
       .get(id) as { id: string } | undefined;
@@ -272,7 +279,7 @@ export function wcRoutes(deps: WcRouteDeps): OpenAPIHono {
     const svc = requireWcService(wcServiceRef);
 
     // Verify wallet exists
-    const sqlite = (db as any).session?.client as import('better-sqlite3').Database;
+    const sqlite = getSqliteClient(db);
     const wallet = sqlite
       .prepare('SELECT id FROM wallets WHERE id = ?')
       .get(id) as { id: string } | undefined;
@@ -295,7 +302,7 @@ export function wcRoutes(deps: WcRouteDeps): OpenAPIHono {
     const svc = requireWcService(wcServiceRef);
 
     // Verify wallet exists
-    const sqlite = (db as any).session?.client as import('better-sqlite3').Database;
+    const sqlite = getSqliteClient(db);
     const wallet = sqlite
       .prepare('SELECT id FROM wallets WHERE id = ?')
       .get(id) as { id: string } | undefined;
@@ -330,13 +337,13 @@ export function wcSessionRoutes(deps: WcRouteDeps): OpenAPIHono {
   const { db, wcServiceRef } = deps;
 
   // Helper: resolve walletId from query > defaultWalletId with session_wallets access check
-  const getWalletId = (c: any): string => {
+  const getWalletId = (c: import('hono').Context): string => {
     return resolveWalletId(c, db);
   };
 
   // Helper: raw SQL lookup for wallet
   const lookupWallet = (walletId: string) => {
-    const sqlite = (db as any).session?.client as import('better-sqlite3').Database;
+    const sqlite = getSqliteClient(db);
     return sqlite
       .prepare('SELECT id, chain, environment, status, owner_address FROM wallets WHERE id = ?')
       .get(walletId) as { id: string; chain: string; environment: string; status: string; owner_address: string | null } | undefined;
@@ -380,7 +387,7 @@ export function wcSessionRoutes(deps: WcRouteDeps): OpenAPIHono {
     const walletId = getWalletId(c);
     const svc = requireWcService(wcServiceRef);
 
-    const sqlite = (db as any).session?.client as import('better-sqlite3').Database;
+    const sqlite = getSqliteClient(db);
     const wallet = sqlite
       .prepare('SELECT id FROM wallets WHERE id = ?')
       .get(walletId) as { id: string } | undefined;
@@ -400,7 +407,7 @@ export function wcSessionRoutes(deps: WcRouteDeps): OpenAPIHono {
     const walletId = getWalletId(c);
     const svc = requireWcService(wcServiceRef);
 
-    const sqlite = (db as any).session?.client as import('better-sqlite3').Database;
+    const sqlite = getSqliteClient(db);
     const wallet = sqlite
       .prepare('SELECT id FROM wallets WHERE id = ?')
       .get(walletId) as { id: string } | undefined;
@@ -419,7 +426,7 @@ export function wcSessionRoutes(deps: WcRouteDeps): OpenAPIHono {
     const walletId = getWalletId(c);
     const svc = requireWcService(wcServiceRef);
 
-    const sqlite = (db as any).session?.client as import('better-sqlite3').Database;
+    const sqlite = getSqliteClient(db);
     const wallet = sqlite
       .prepare('SELECT id FROM wallets WHERE id = ?')
       .get(walletId) as { id: string } | undefined;
