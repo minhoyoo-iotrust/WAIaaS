@@ -534,6 +534,9 @@ export {
   NftListResultSchema,
 } from './interfaces/index.js';
 
+// v32.4 Chain constants SSoT (SSOT-01)
+export { NATIVE_DECIMALS, NATIVE_SYMBOLS, nativeDecimals, nativeSymbol } from './utils/index.js';
+
 // v32.4 Sleep utility SSoT (SSOT-02)
 export { sleep } from './utils/index.js';
 

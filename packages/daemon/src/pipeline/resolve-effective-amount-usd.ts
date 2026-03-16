@@ -14,6 +14,7 @@
 
 import type { IPriceOracle, PriceInfo, NetworkType } from '@waiaas/core';
 import type { ChainType } from '@waiaas/core';
+import { nativeDecimals } from '@waiaas/core';
 import { PriceNotAvailableError } from '../infrastructure/oracle/oracle-errors.js';
 
 // ---------------------------------------------------------------------------
@@ -46,14 +47,6 @@ export type PriceResult =
   | PriceResultOracleDown
   | PriceResultNotListed;
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const NATIVE_DECIMALS: Record<string, number> = {
-  solana: 9,
-  ethereum: 18,
-};
 
 // ---------------------------------------------------------------------------
 // resolveEffectiveAmountUsd
@@ -79,7 +72,7 @@ export async function resolveEffectiveAmountUsd(
         const nativePrice = await priceOracle.getNativePrice(
           chain as ChainType,
         );
-        const decimals = NATIVE_DECIMALS[chain] ?? 18;
+        const decimals = nativeDecimals(chain);
         const humanAmount = Number(req.amount) / Math.pow(10, decimals);
         return {
           type: 'success',
@@ -129,7 +122,7 @@ export async function resolveEffectiveAmountUsd(
         const nativePrice = await priceOracle.getNativePrice(
           chain as ChainType,
         );
-        const decimals = NATIVE_DECIMALS[chain] ?? 18;
+        const decimals = nativeDecimals(chain);
         const humanAmount = Number(req.value) / Math.pow(10, decimals);
         return {
           type: 'success',
@@ -186,7 +179,7 @@ async function resolveBatchUsd(
     return { type: 'oracleDown' };
   }
 
-  const decimals = NATIVE_DECIMALS[chain] ?? 18;
+  const decimals = nativeDecimals(chain);
   let totalUsd = 0;
   let isStale = nativePrice.isStale;
   let failedCount = 0;

@@ -22,7 +22,7 @@
 import type { Database } from 'better-sqlite3';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { EventBus, IChainSubscriber, IncomingTransaction, ChainType, EnvironmentType } from '@waiaas/core';
-import { getNetworksForEnvironment, formatAmount } from '@waiaas/core';
+import { getNetworksForEnvironment, formatAmount, nativeSymbol } from '@waiaas/core';
 import type { BackgroundWorkers } from '../../lifecycle/workers.js';
 import type { KillSwitchService } from '../kill-switch-service.js';
 import type { NotificationService } from '../../notifications/notification-service.js';
@@ -70,7 +70,6 @@ export interface IncomingTxMonitorDeps {
 
 // ── Helpers ─────────────────────────────────────────────────────
 
-const NATIVE_SYMBOLS: Record<string, string> = { solana: 'SOL', ethereum: 'ETH' };
 
 /**
  * Format incoming tx amount to human-readable string with symbol.
@@ -85,8 +84,7 @@ function formatIncomingAmount(
   try {
     const symbol = tokenSymbol
       ?? (tx.tokenAddress ? tx.tokenAddress.slice(0, 8) : null)
-      ?? NATIVE_SYMBOLS[tx.chain]
-      ?? tx.chain.toUpperCase();
+      ?? nativeSymbol(tx.chain);
     return `${formatAmount(BigInt(tx.amount), decimals)} ${symbol}`;
   } catch {
     return tx.amount;

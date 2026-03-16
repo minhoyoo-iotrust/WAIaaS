@@ -17,6 +17,8 @@
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { eq } from 'drizzle-orm';
 import {
+  NATIVE_DECIMALS,
+  NATIVE_SYMBOLS,
   TransactionRequestSchema,
   WAIaaSError,
   type IChainAdapter,
@@ -41,8 +43,6 @@ import { GAS_SAFETY_NUMERATOR, GAS_SAFETY_DENOMINATOR } from '../constants.js';
 // Constants
 // ---------------------------------------------------------------------------
 
-const NATIVE_DECIMALS: Record<string, number> = { solana: 9, ethereum: 18 };
-const NATIVE_SYMBOLS: Record<string, string> = { solana: 'SOL', ethereum: 'ETH' };
 
 // ---------------------------------------------------------------------------
 // DryRunDeps -- subset of PipelineDeps (no keyStore, no masterPassword)

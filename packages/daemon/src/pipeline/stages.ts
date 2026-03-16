@@ -47,7 +47,7 @@ import type { NotificationService } from '../notifications/notification-service.
 import type { SettingsService } from '../infrastructure/settings/settings-service.js';
 import { GAS_SAFETY_NUMERATOR, GAS_SAFETY_DENOMINATOR } from '../constants.js';
 import type { IPriceOracle, IForexRateService, CurrencyCode, IMetricsCounter } from '@waiaas/core';
-import { formatDisplayCurrency, formatAmount, type EventBus, type ChainType } from '@waiaas/core';
+import { NATIVE_DECIMALS, NATIVE_SYMBOLS, formatDisplayCurrency, formatAmount, type EventBus, type ChainType } from '@waiaas/core';
 import type { WcSigningBridge } from '../services/wc-signing-bridge.js';
 import type { ApprovalChannelRouter } from '../services/signing-sdk/approval-channel-router.js';
 import { resolveEffectiveAmountUsd, type PriceResult } from './resolve-effective-amount-usd.js';
@@ -251,8 +251,6 @@ export function getRequestMemo(req: SendTransactionRequest | TransactionRequest)
 // Helper: format notification amount with token symbol
 // ---------------------------------------------------------------------------
 
-const NATIVE_DECIMALS: Record<string, number> = { solana: 9, ethereum: 18 };
-const NATIVE_SYMBOLS: Record<string, string> = { solana: 'SOL', ethereum: 'ETH' };
 
 /**
  * Format raw blockchain amount to human-readable string with token symbol.

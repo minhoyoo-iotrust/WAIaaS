@@ -8,7 +8,7 @@ import type { OpenAPIHono } from '@hono/zod-openapi';
 import { createRoute, z } from '@hono/zod-openapi';
 import { sql, eq, and, desc } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import { WAIaaSError, getNetworksForEnvironment, formatAmount } from '@waiaas/core';
+import { WAIaaSError, getNetworksForEnvironment, formatAmount, NATIVE_DECIMALS, NATIVE_SYMBOLS } from '@waiaas/core';
 import type { ChainType, EnvironmentType } from '@waiaas/core';
 import { wallets, transactions, tokenRegistry } from '../../infrastructure/database/schema.js';
 import type * as schema from '../../infrastructure/database/schema.js';
@@ -20,12 +20,6 @@ import {
 import type { AdminRouteDeps } from './admin.js';
 import { resolveContractFields } from './admin-monitoring.js';
 
-// ---------------------------------------------------------------------------
-// Amount formatting helpers (#168)
-// ---------------------------------------------------------------------------
-
-const NATIVE_DECIMALS: Record<string, number> = { solana: 9, ethereum: 18 };
-const NATIVE_SYMBOLS: Record<string, string> = { solana: 'SOL', ethereum: 'ETH' };
 
 /**
  * Format raw blockchain amount to human-readable string with token symbol.
@@ -389,7 +383,7 @@ export function registerAdminWalletRoutes(router: OpenAPIHono, deps: AdminRouteD
         const adapter = await deps.adapterPool!.resolve(chain, network, rpcUrl);
 
         const balanceInfo = await adapter.getBalance(wallet.publicKey);
-        const nativeBalance = (Number(balanceInfo.balance) / 10 ** balanceInfo.decimals).toString();
+        const nativeBalance = formatAmount(balanceInfo.balance, balanceInfo.decimals);
 
         // Resolve USD price for native token if price oracle is available
         let nativeUsd: number | null = null;
@@ -405,7 +399,7 @@ export function registerAdminWalletRoutes(router: OpenAPIHono, deps: AdminRouteD
           .filter((a) => !a.isNative)
           .map((a) => ({
             symbol: a.symbol,
-            balance: (Number(a.balance) / 10 ** a.decimals).toString(),
+            balance: formatAmount(a.balance, a.decimals),
             address: a.mint,
           }));
 

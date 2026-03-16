@@ -17,7 +17,7 @@
 
 import type { Database } from 'better-sqlite3';
 import type { ChainType, EnvironmentType, NetworkType } from '@waiaas/core';
-import { getNetworksForEnvironment } from '@waiaas/core';
+import { getNetworksForEnvironment, formatAmount } from '@waiaas/core';
 import type { AdapterPool } from '../../infrastructure/adapter-pool.js';
 import { resolveRpcUrl } from '../../infrastructure/adapter-pool.js';
 import type { NotificationService } from '../../notifications/notification-service.js';
@@ -149,8 +149,7 @@ export class BalanceMonitorService {
         const balanceInfo = await adapter.getBalance(wallet.public_key);
 
         // Convert from smallest unit to decimal
-        const decimalBalance =
-          Number(balanceInfo.balance) / 10 ** balanceInfo.decimals;
+        const decimalBalance = Number(formatAmount(balanceInfo.balance, balanceInfo.decimals));
         const threshold = this.getThreshold(chain);
         const currency = balanceInfo.symbol;
 

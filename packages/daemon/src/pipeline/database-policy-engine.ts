@@ -42,6 +42,7 @@
 
 import type { IPolicyEngine, PolicyEvaluation, PolicyTier } from '@waiaas/core';
 import {
+  NATIVE_DECIMALS,
   parseCaip19,
   safeJsonParse,
   WAIaaSError,
@@ -76,11 +77,6 @@ import type { ReputationCacheService } from '../services/erc8004/reputation-cach
 /** Threshold for detecting "unlimited" approve amounts. */
 const UNLIMITED_THRESHOLD = (2n ** 256n - 1n) / 2n;
 
-// Phase 236: Native token decimal places for human-readable conversion
-const NATIVE_DECIMALS: Record<string, number> = {
-  solana: 9,
-  ethereum: 18,
-};
 
 /**
  * Parse a human-readable decimal string (e.g. "1.5", "1000") to raw bigint units.
