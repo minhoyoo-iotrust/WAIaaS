@@ -62,7 +62,29 @@ import { ApprovalWorkflow } from '../workflow/approval-workflow.js';
 import { DatabasePolicyEngine } from '../pipeline/database-policy-engine.js';
 import { JwtSecretManager } from '../infrastructure/jwt/index.js';
 import argon2 from 'argon2';
-import type { IPriceOracle, IForexRateService } from '@waiaas/core';
+import type { IPriceOracle, IForexRateService, NotificationEventType, ContractNameRegistry } from '@waiaas/core';
+import type { MasterPasswordRef } from '../api/middleware/master-auth.js';
+import type { NotificationService } from '../notifications/notification-service.js';
+import type { SettingsService } from '../infrastructure/settings/settings-service.js';
+import type { ActionProviderRegistry } from '../infrastructure/action/action-provider-registry.js';
+import type { TelegramBotService } from '../infrastructure/telegram/telegram-bot-service.js';
+import type { WcSessionService, WcServiceRef } from '../services/wc-session-service.js';
+import type { WcSigningBridgeRef } from '../services/wc-signing-bridge.js';
+import type { ApprovalChannelRouter } from '../services/signing-sdk/approval-channel-router.js';
+import type { VersionCheckService } from '../infrastructure/version/version-check-service.js';
+import type { IncomingTxMonitorService } from '../services/incoming/incoming-tx-monitor-service.js';
+import type { AsyncPollingService } from '../services/async-polling-service.js';
+import type { PositionTracker } from '../services/defi/position-tracker.js';
+import type { DeFiMonitorService } from '../services/monitoring/defi-monitor-service.js';
+import type { EncryptedBackupService } from '../infrastructure/backup/encrypted-backup-service.js';
+import type { WebhookService } from '../services/webhook-service.js';
+import type { HyperliquidMarketData } from '@waiaas/actions';
+import type { PolymarketInfraDeps } from '../api/routes/polymarket.js';
+import type { SendTransactionRequest, TransactionRequest } from '@waiaas/core';
+import type { PipelineContext } from '../pipeline/stages.js';
+import type { IPositionProvider } from '@waiaas/core';
+import type { Address } from 'viem';
+import type { Server as HttpServer } from 'node:http';
 
 const esmRequire = createRequire(import.meta.url);
 
@@ -136,7 +158,7 @@ export class DaemonLifecycle {
   private _db: BetterSQLite3Database<typeof schema> | null = null;
   private keyStore: LocalKeyStore | null = null;
   private masterPassword = '';
-  private passwordRef: import('../api/middleware/master-auth.js').MasterPasswordRef | null = null;
+  private passwordRef: MasterPasswordRef | null = null;
   private rpcPool: RpcPool | null = null;
   /** IRpcCaller for Aave V3 on-chain reads, passed to HotReloadOrchestrator */
   private rpcCaller: { call: (params: { to: string; data: string; chainId?: number }) => Promise<string> } | undefined;
@@ -151,34 +173,34 @@ export class DaemonLifecycle {
   private approvalWorkflow: ApprovalWorkflow | null = null;
   private jwtSecretManager: JwtSecretManager | null = null;
   private masterPasswordHash = '';
-  private notificationService: import('../notifications/notification-service.js').NotificationService | null = null;
-  private _settingsService: import('../infrastructure/settings/settings-service.js').SettingsService | null = null;
+  private notificationService: NotificationService | null = null;
+  private _settingsService: SettingsService | null = null;
   private priceOracle: IPriceOracle | undefined;
-  private actionProviderRegistry: import('../infrastructure/action/action-provider-registry.js').ActionProviderRegistry | null = null;
+  private actionProviderRegistry: ActionProviderRegistry | null = null;
   // apiKeyStore removed in v29.5 (#214) -- API keys now managed by SettingsService
   private forexRateService: IForexRateService | null = null;
   private eventBus: EventBus = new EventBus();
   private killSwitchService: KillSwitchService | null = null;
   private autoStopService: AutoStopService | null = null;
   private balanceMonitorService: BalanceMonitorService | null = null;
-  private telegramBotService: import('../infrastructure/telegram/telegram-bot-service.js').TelegramBotService | null = null;
-  private telegramBotRef: { current: import('../infrastructure/telegram/telegram-bot-service.js').TelegramBotService | null } = { current: null };
-  private wcSessionService: import('../services/wc-session-service.js').WcSessionService | null = null;
-  private wcServiceRef: import('../services/wc-session-service.js').WcServiceRef = { current: null };
-  private wcSigningBridgeRef: import('../services/wc-signing-bridge.js').WcSigningBridgeRef = { current: null };
-  private approvalChannelRouter: import('../services/signing-sdk/approval-channel-router.js').ApprovalChannelRouter | null = null;
-  private _versionCheckService: import('../infrastructure/version/version-check-service.js').VersionCheckService | null = null;
-  private incomingTxMonitorService: import('../services/incoming/incoming-tx-monitor-service.js').IncomingTxMonitorService | null = null;
-  private _asyncPollingService: import('../services/async-polling-service.js').AsyncPollingService | null = null;
-  private positionTracker: import('../services/defi/position-tracker.js').PositionTracker | null = null;
-  private defiMonitorService: import('../services/monitoring/defi-monitor-service.js').DeFiMonitorService | null = null;
-  private _encryptedBackupService: import('../infrastructure/backup/encrypted-backup-service.js').EncryptedBackupService | null = null;
-  private webhookService: import('../services/webhook-service.js').WebhookService | null = null;
+  private telegramBotService: TelegramBotService | null = null;
+  private telegramBotRef: { current: TelegramBotService | null } = { current: null };
+  private wcSessionService: WcSessionService | null = null;
+  private wcServiceRef: WcServiceRef = { current: null };
+  private wcSigningBridgeRef: WcSigningBridgeRef = { current: null };
+  private approvalChannelRouter: ApprovalChannelRouter | null = null;
+  private _versionCheckService: VersionCheckService | null = null;
+  private incomingTxMonitorService: IncomingTxMonitorService | null = null;
+  private _asyncPollingService: AsyncPollingService | null = null;
+  private positionTracker: PositionTracker | null = null;
+  private defiMonitorService: DeFiMonitorService | null = null;
+  private _encryptedBackupService: EncryptedBackupService | null = null;
+  private webhookService: WebhookService | null = null;
   private metricsCounter: InMemoryCounter | null = null;
   private adminStatsService: AdminStatsService | null = null;
-  private hyperliquidMarketData: import('@waiaas/actions').HyperliquidMarketData | null = null;
-  private polymarketInfra: import('../api/routes/polymarket.js').PolymarketInfraDeps | null = null;
-  private contractNameRegistry: import('@waiaas/core').ContractNameRegistry | null = null;
+  private hyperliquidMarketData: HyperliquidMarketData | null = null;
+  private polymarketInfra: PolymarketInfraDeps | null = null;
+  private contractNameRegistry: ContractNameRegistry | null = null;
   private daemonStartTime: number = Math.floor(Date.now() / 1000);
 
   /** Whether shutdown has been initiated. */
@@ -197,22 +219,22 @@ export class DaemonLifecycle {
   }
 
   /** SettingsService instance (available after Step 2, used by route handlers). */
-  get settingsService(): import('../infrastructure/settings/settings-service.js').SettingsService | null {
+  get settingsService(): SettingsService | null {
     return this._settingsService;
   }
 
   /** VersionCheckService instance (available after Step 6, used by Health endpoint). */
-  get versionCheckService(): import('../infrastructure/version/version-check-service.js').VersionCheckService | null {
+  get versionCheckService(): VersionCheckService | null {
     return this._versionCheckService;
   }
 
   /** AsyncPollingService instance (available after Step 4c-10, used by action providers to register trackers). */
-  get pollingService(): import('../services/async-polling-service.js').AsyncPollingService | null {
+  get pollingService(): AsyncPollingService | null {
     return this._asyncPollingService;
   }
 
   /** PositionTracker instance (available after Step 4c-10.5). */
-  get positionTrackerInstance(): import('../services/defi/position-tracker.js').PositionTracker | null {
+  get positionTrackerInstance(): PositionTracker | null {
     return this.positionTracker;
   }
 
@@ -445,7 +467,7 @@ export class DaemonLifecycle {
                   totalEndpoints: String(event.totalEndpoints),
                 };
                 void this.notificationService.notify(
-                  event.type as import('@waiaas/core').NotificationEventType,
+                  event.type as NotificationEventType,
                   'system',
                   vars,
                 );
@@ -944,9 +966,9 @@ export class DaemonLifecycle {
             // Token address resolver for getLogs address filter (#203)
             const { TokenRegistryService } = await import('../infrastructure/token-registry/index.js');
             const tokenRegistry = this._db ? new TokenRegistryService(this._db) : null;
-            let cachedTokenAddresses: import('viem').Address[] = [];
+            let cachedTokenAddresses: Address[] = [];
             let cacheExpiry = 0;
-            const resolveTokenAddresses = (): import('viem').Address[] => {
+            const resolveTokenAddresses = (): Address[] => {
               const now = Date.now();
               if (now < cacheExpiry) return cachedTokenAddresses;
               // Refresh every 60s to pick up runtime token additions
@@ -956,7 +978,7 @@ export class DaemonLifecycle {
                   // Use a cached snapshot refreshed periodically
                   void tokenRegistry.getTokensForNetwork(network).then((tokens) => {
                     cachedTokenAddresses = tokens
-                      .map((t) => t.address as import('viem').Address);
+                      .map((t) => t.address as Address);
                     cacheExpiry = Date.now() + 60_000;
                   });
                 }
@@ -967,7 +989,7 @@ export class DaemonLifecycle {
             if (tokenRegistry) {
               try {
                 const tokens = await tokenRegistry.getTokensForNetwork(network);
-                cachedTokenAddresses = tokens.map((t) => t.address as import('viem').Address);
+                cachedTokenAddresses = tokens.map((t) => t.address as Address);
                 cacheExpiry = Date.now() + 60_000;
               } catch { /* empty cache is fine — ERC-20 polling will be skipped */ }
             }
@@ -1019,7 +1041,7 @@ export class DaemonLifecycle {
           emitNotification: (eventType, walletId, data) => {
             if (this.notificationService) {
               void this.notificationService.notify(
-                eventType as import('@waiaas/core').NotificationEventType,
+                eventType as NotificationEventType,
                 walletId,
                 undefined, // vars (template interpolation — not needed for bridge events)
                 data,      // details (metadata passed through to notification)
@@ -1298,7 +1320,7 @@ export class DaemonLifecycle {
           );
           this.actionProviderRegistry.register(pmInfra.orderProvider);
           this.actionProviderRegistry.register(pmInfra.ctfProvider);
-          this.polymarketInfra = pmInfra as unknown as import('../api/routes/polymarket.js').PolymarketInfraDeps;
+          this.polymarketInfra = pmInfra as unknown as PolymarketInfraDeps;
           console.debug('Step 4f-pm: Polymarket providers registered (order + ctf)');
         } catch (err) {
           console.warn('Step 4f-pm (fail-soft): Polymarket registration failed:', err);
@@ -1412,7 +1434,7 @@ export class DaemonLifecycle {
         for (const meta of this.actionProviderRegistry.listProviders()) {
           const provider = this.actionProviderRegistry.getProvider(meta.name);
           if (provider && 'getPositions' in provider && 'getSupportedCategories' in provider && 'getProviderName' in provider) {
-            this.positionTracker.registerProvider(provider as unknown as import('@waiaas/core').IPositionProvider);
+            this.positionTracker.registerProvider(provider as unknown as IPositionProvider);
             console.debug(`Step 4f-5: Registered ${meta.name} with PositionTracker`);
           }
         }
@@ -1570,7 +1592,7 @@ export class DaemonLifecycle {
         // Default Node.js keepAliveTimeout is 5s, which is too short for DELAY/APPROVAL tier
         // long-poll responses that can take up to 600s.
         // Hono serve() returns http.Server which exposes these timeout properties.
-        const httpServer = server as import('node:http').Server;
+        const httpServer = server as HttpServer;
         httpServer.keepAliveTimeout = 600_000; // 600 seconds in milliseconds
         httpServer.headersTimeout = 605_000;   // Must be > keepAliveTimeout (Node.js docs)
 
@@ -2132,11 +2154,11 @@ export class DaemonLifecycle {
         to: tx.toAddress ?? '',
         amount: tx.amount ?? '0',
         memo: undefined,
-      }) as import('@waiaas/core').SendTransactionRequest | import('@waiaas/core').TransactionRequest;
+      }) as SendTransactionRequest | TransactionRequest;
 
       // Construct PipelineContext for stages 5-6
       // Policy already evaluated at Stage 3 before GAS_WAITING entry
-      const ctx: import('../pipeline/stages.js').PipelineContext = {
+      const ctx: PipelineContext = {
         db: this._db,
         adapter,
         keyStore: this.keyStore,
@@ -2272,7 +2294,7 @@ export class DaemonLifecycle {
         to: tx.toAddress ?? '',
         amount: tx.amount ?? '0',
         memo: undefined,
-      }) as import('@waiaas/core').SendTransactionRequest | import('@waiaas/core').TransactionRequest;
+      }) as SendTransactionRequest | TransactionRequest;
 
       // Phase 321: Re-encode calldata for EIP-712 approvals (setAgentWallet)
       // The original calldata has a placeholder '0x' signature. On approval,
@@ -2310,7 +2332,7 @@ export class DaemonLifecycle {
       }
 
       // Construct PipelineContext for stages 5-6
-      const ctx: import('../pipeline/stages.js').PipelineContext = {
+      const ctx: PipelineContext = {
         db: this._db,
         adapter,
         keyStore: this.keyStore,
