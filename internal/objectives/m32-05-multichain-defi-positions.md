@@ -1,7 +1,8 @@
 # 마일스톤 m32-05: 멀티체인 DeFi 포지션 + 테스트넷 토글
 
-- **Status:** PLANNED
+- **Status:** SHIPPED
 - **Milestone:** v32.5
+- **Completed:** 2026-03-16
 
 ## 목표
 

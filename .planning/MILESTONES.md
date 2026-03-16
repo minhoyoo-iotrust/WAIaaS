@@ -1,5 +1,27 @@
 # Project Milestones: WAIaaS
 
+## v32.5 멀티체인 DeFi 포지션 + 테스트넷 토글 (Shipped: 2026-03-16)
+
+**Phases completed:** 3 phases (432-434), 8 plans, 30 requirements
+
+**Key accomplishments:**
+- PositionQueryContext 타입 정의 + IPositionProvider 시그니처 확장 — 8개 프로바이더 마이그레이션, 체인 가드 패턴 적용
+- Lido 5네트워크 / Aave V3 5네트워크 / Pendle 2네트워크 멀티체인 포지션 조회 — Promise.allSettled 병렬 실행, 단일 네트워크 실패 격리
+- Solana 프로바이더(Jito/Kamino/Drift) 동적 네트워크 추출 — ctx.networks[0] 패턴으로 하드코딩 제거
+- DB migration v59 — defi_positions.environment 컬럼 추가, mainnet 자동 백필
+- Admin DeFi Positions API includeTestnets 필터 + Admin UI "Include testnets" 토글 (localStorage 영속)
+- 이슈 3건 수정: E2E 정책 스키마(#376), WalletConnect UAT 제거(#377), admin-ops 카테고리 신설(#378)
+
+**Stats:**
+- 3 phases (432-434), 8 plans, 30 requirements complete
+- 37 commits, 94 files changed, +5,349/-880 lines
+- ~339,000 LOC TS
+- Timeline: 1 day (2026-03-16)
+- Git range: feat(432-01) → docs(mark issues #376-#378)
+- Audit: PASS (30/30 requirements wired, 3/3 E2E flows verified)
+
+---
+
 ## v32.4 타입 안전 + 코드 품질 (Shipped: 2026-03-16)
 
 **Phases completed:** 5 phases (427-431), 11 plans, 21 tasks, 51 requirements
