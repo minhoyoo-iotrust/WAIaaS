@@ -30,15 +30,15 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### migrate.ts 분할
 
-- [ ] **MIG-01**: 초기 DDL이 schema-ddl.ts로 분리된다
-- [ ] **MIG-02**: 마이그레이션 v2-v10이 migrations/v2-v10.ts로 분리된다
-- [ ] **MIG-03**: 마이그레이션 v11-v20이 migrations/v11-v20.ts로 분리된다
-- [ ] **MIG-04**: 마이그레이션 v21-v30이 migrations/v21-v30.ts로 분리된다
-- [ ] **MIG-05**: 마이그레이션 v31-v40이 migrations/v31-v40.ts로 분리된다
-- [ ] **MIG-06**: 마이그레이션 v41-v50이 migrations/v41-v50.ts로 분리된다
-- [ ] **MIG-07**: 마이그레이션 v51-v59가 migrations/v51-v59.ts로 분리된다
-- [ ] **MIG-08**: migrate.ts가 마이그레이션 러너만 포함하고 분할된 모듈을 import한다
-- [ ] **MIG-09**: v1→v59 순차 마이그레이션 체인 테스트가 통과한다
+- [x] **MIG-01**: 초기 DDL이 schema-ddl.ts로 분리된다
+- [x] **MIG-02**: 마이그레이션 v2-v10이 migrations/v2-v10.ts로 분리된다
+- [x] **MIG-03**: 마이그레이션 v11-v20이 migrations/v11-v20.ts로 분리된다
+- [x] **MIG-04**: 마이그레이션 v21-v30이 migrations/v21-v30.ts로 분리된다
+- [x] **MIG-05**: 마이그레이션 v31-v40이 migrations/v31-v40.ts로 분리된다
+- [x] **MIG-06**: 마이그레이션 v41-v50이 migrations/v41-v50.ts로 분리된다
+- [x] **MIG-07**: 마이그레이션 v51-v59가 migrations/v51-v59.ts로 분리된다
+- [x] **MIG-08**: migrate.ts가 마이그레이션 러너만 포함하고 분할된 모듈을 import한다
+- [x] **MIG-09**: v1→v59 순차 마이그레이션 체인 테스트가 통과한다
 
 ### daemon.ts 분할
 
@@ -46,7 +46,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 - [ ] **DMN-02**: daemon-shutdown.ts로 stop()과 graceful shutdown 로직이 분리된다
 - [ ] **DMN-03**: daemon-pipeline.ts로 reEntryPendingTransactions() 로직이 분리된다
 - [ ] **DMN-04**: daemon.ts가 DaemonLifecycle 조합 클래스와 필드 선언만 포함한다
-- [ ] **DMN-05**: inline import() 타입이 정적 import type으로 교체된다
+- [x] **DMN-05**: inline import() 타입이 정적 import type으로 교체된다
 - [ ] **DMN-06**: 분할 후 데몬 시작→요청 처리→종료 플로우 기존 테스트가 통과한다
 
 ### database-policy-engine.ts 분할
@@ -112,20 +112,20 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PAG-06 | Phase 436 | Complete |
 | PAG-07 | Phase 436 | Complete |
 | PAG-08 | Phase 436 | Complete |
-| MIG-01 | Phase 437 | Pending |
-| MIG-02 | Phase 437 | Pending |
-| MIG-03 | Phase 437 | Pending |
-| MIG-04 | Phase 437 | Pending |
-| MIG-05 | Phase 437 | Pending |
-| MIG-06 | Phase 437 | Pending |
-| MIG-07 | Phase 437 | Pending |
-| MIG-08 | Phase 437 | Pending |
-| MIG-09 | Phase 437 | Pending |
+| MIG-01 | Phase 437 | Complete |
+| MIG-02 | Phase 437 | Complete |
+| MIG-03 | Phase 437 | Complete |
+| MIG-04 | Phase 437 | Complete |
+| MIG-05 | Phase 437 | Complete |
+| MIG-06 | Phase 437 | Complete |
+| MIG-07 | Phase 437 | Complete |
+| MIG-08 | Phase 437 | Complete |
+| MIG-09 | Phase 437 | Complete |
 | DMN-01 | Phase 437 | Pending |
 | DMN-02 | Phase 437 | Pending |
 | DMN-03 | Phase 437 | Pending |
 | DMN-04 | Phase 437 | Pending |
-| DMN-05 | Phase 437 | Pending |
+| DMN-05 | Phase 437 | Complete |
 | DMN-06 | Phase 437 | Pending |
 | DPE-01 | Phase 437 | Pending |
 | DPE-02 | Phase 437 | Pending |

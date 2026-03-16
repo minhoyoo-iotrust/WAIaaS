@@ -24,7 +24,7 @@ See `.planning/milestones/v32.5-ROADMAP.md` for full details.
 
 - [x] **Phase 435: N+1 쿼리 해소** - 세션/지갑/토큰 조회의 개별 쿼리를 배치 쿼리로 전환
 - [x] **Phase 436: 페이지네이션 추가** - sessions/policies API에 limit/offset 페이지네이션 적용
-- [ ] **Phase 437: 대형 파일 분할 (migrate + daemon + policy-engine)** - 3개 대형 모듈을 책임 단위로 분리
+- [x] **Phase 437: 대형 파일 분할 (migrate + daemon + policy-engine)** - 3개 대형 모듈을 책임 단위로 분리 (completed 2026-03-16)
 - [ ] **Phase 438: 파이프라인 분할 + 추가 정리** - stages.ts 6단계 분할, Solana mapError, ILogger 인터페이스
 
 ## Phase Details
@@ -102,5 +102,5 @@ Phases execute in numeric order: 435 -> 436 -> 437 -> 438
 |-------|----------------|--------|-----------|
 | 435. N+1 쿼리 해소 | 2/2 | Complete    | 2026-03-16 |
 | 436. 페이지네이션 추가 | 2/2 | Complete    | 2026-03-16 |
-| 437. 대형 파일 분할 | 0/3 | Not started | - |
+| 437. 대형 파일 분할 | 3/3 | Complete   | 2026-03-16 |
 | 438. 파이프라인 분할 + 추가 정리 | 0/2 | Not started | - |

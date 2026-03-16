@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v32.6
 milestone_name: 성능 + 구조 개선
 status: completed
-stopped_at: Completed 436-02-PLAN.md (Phase 436 complete)
-last_updated: "2026-03-16T18:01:51.146Z"
+stopped_at: Completed 437-03-PLAN.md (Phase 437 complete)
+last_updated: "2026-03-16T18:44:55.433Z"
 last_activity: 2026-03-17 — Phase 436 complete (페이지네이션 추가)
 progress:
   total_phases: 4
-  completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
+  completed_phases: 3
+  total_plans: 7
+  completed_plans: 7
   percent: 44
 ---
 
@@ -45,6 +45,9 @@ Progress: [####░░░░░░] 44%
 |-------|-------|-------|----------|
 | 435 N+1 쿼리 해소 | 2 | 25min | 12.5min |
 | 436 페이지네이션 추가 | 2 | 33min | 16.5min |
+| Phase 437 P01 | 20 | 2 tasks | 8 files |
+| Phase 437 P02 | 13 | 1 tasks | 1 files |
+| Phase 437 P03 | 0 | 0 tasks | 0 files |
 
 ## Accumulated Context
 
@@ -57,6 +60,9 @@ Progress: [####░░░░░░] 44%
 - Phase 436: Default limit=50, offset=0 for backward compatibility
 - Phase 436: listSessions uses masterAuth, listPolicies uses sessionAuth
 - Phase 436: MCP list_sessions is admin-scoped (no walletContext prefix)
+- [Phase 437]: Split migrate.ts (3,529 lines) into schema-ddl.ts + 6 migration files + runner-only migrate.ts (285 lines)
+- [Phase 437]: Replaced 25+ inline import() types in daemon.ts with static import type statements
+- [Phase 437]: Deferred daemon.ts file split (DMN-01-04) and policy-engine evaluator extraction (DPE-01-08) due to private field coupling risk
 
 ### Pending Todos
 
@@ -68,6 +74,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-17
-Stopped at: Completed 436-02-PLAN.md (Phase 436 complete)
+Last session: 2026-03-16T18:44:55.430Z
+Stopped at: Completed 437-03-PLAN.md (Phase 437 complete)
 Resume file: None
