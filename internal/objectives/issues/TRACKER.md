@@ -376,6 +376,10 @@
 | 360 | ENHANCEMENT | LOW | Admin UI 사이드바 "Trading" → "Protocols" 섹션 이름 변경 + Agent Identity 이동 | v32.4 | FIXED | 2026-03-16 |
 | 361 | BUG | HIGH | Admin UI NFT Indexer API 키 설정이 반영되지 않음 — GET 목록 누락 + Helius 키 이름 불일치 | v32.4 | FIXED | 2026-03-16 |
 | 362 | ENHANCEMENT | MEDIUM | 프로토콜 페이지 책임 분리 — Providers(운영 설정) vs 프로토콜 페이지(특화 기능) 중복 제거 | v32.4 | FIXED | 2026-03-16 |
+| 363 | MISSING | MEDIUM | Wallet Suspend/Resume/Purge E2E 테스트 추가 — 세션 차단/복원/DB 삭제 연쇄 효과 검증 | — | OPEN | — |
+| 364 | MISSING | MEDIUM | sign-message 단위/E2E 테스트 커버리지 보강 — 인증/인가/키관리/이벤트 15~20개 추가 | — | OPEN | — |
+| 365 | MISSING | LOW | sign-message 실제 서명 검증 UAT 시나리오 추가 — ecrecover/verifyTypedData 온체인 검증 | — | OPEN | — |
+| 366 | MISSING | MEDIUM | TX approve/reject/cancel 승인 워크플로우 UAT 시나리오 추가 — Owner 설정 상태 다단계 검증 | — | OPEN | — |
 
 ## Type Legend
 
@@ -387,9 +391,9 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 4
 - **FIXED:** 362
 - **WONTFIX:** 1
-- **Total:** 363
+- **Total:** 367
 - **Archived:** 321 (001–321)
 
