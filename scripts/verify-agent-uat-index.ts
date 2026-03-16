@@ -45,7 +45,7 @@ function extractIdFromFrontmatter(content: string): string | null {
 
 function extractIdsFromIndex(content: string): Set<string> {
   const ids = new Set<string>();
-  const regex = /^\|\s*(testnet-\d+|mainnet-\d+|defi-\d+|admin-\d+|advanced-\d+)\s*\|/gm;
+  const regex = /^\|\s*(testnet-\d+|mainnet-\d+|defi-\d+|admin-ops-\d+|admin-\d+|advanced-\d+)\s*\|/gm;
   let match;
   while ((match = regex.exec(content)) !== null) {
     ids.add(match[1]);

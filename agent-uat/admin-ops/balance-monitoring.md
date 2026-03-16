@@ -1,31 +1,31 @@
 ---
-id: "advanced-05"
+id: "admin-ops-02"
 title: "잔액 모니터링"
-category: "advanced"
+category: "admin-ops"
 auth: "session"
-network: ["ethereum-mainnet", "solana-mainnet"]
+network: ["ethereum-sepolia", "solana-devnet"]
 requires_funds: true
-estimated_cost_usd: "0.50"
-risk_level: "medium"
+estimated_cost_usd: "0.01"
+risk_level: "low"
 tags: ["balance", "monitoring", "alert", "notification"]
 ---
 
 # 잔액 모니터링
 
 ## Metadata
-- **ID**: advanced-05
-- **Category**: advanced
-- **Network**: ethereum-mainnet, solana-mainnet
+- **ID**: admin-ops-02
+- **Category**: admin-ops
+- **Network**: ethereum-sepolia, solana-devnet
 - **Requires Funds**: Yes
-- **Estimated Cost**: ~$0.50
-- **Risk Level**: medium -- 메인넷 자기 전송으로 잔액 변동 발생, 손실은 가스비만
+- **Estimated Cost**: ~$0.01
+- **Risk Level**: low -- Testnet 자금만 사용, 자기 전송으로 잔액 변동 발생, 손실은 가스비만
 
 ## Prerequisites
 - [ ] WAIaaS 데몬 실행 중 (`http://localhost:3100`)
 - [ ] 세션 토큰 보유 (sessionAuth)
 - [ ] 잔액 모니터링 활성화 (Admin Settings)
 - [ ] 알림 채널 설정 (ntfy 등)
-- [ ] ETH 보유 (Ethereum Mainnet, 최소 0.002 ETH) 또는 SOL 보유 (Solana Mainnet, 최소 0.01 SOL)
+- [ ] Sepolia ETH 보유 (최소 0.002 ETH) 또는 Devnet SOL 보유 (최소 0.01 SOL)
 
 ## Scenario Steps
 
@@ -41,7 +41,7 @@ curl -s http://localhost:3100/v1/admin/settings \
 ### Step 2: 현재 잔액 기록
 **Action**: 대상 지갑의 현재 잔액을 기록한다.
 ```bash
-curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=ethereum-mainnet \
+curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=ethereum-sepolia \
   -H 'Authorization: Bearer <session-token>'
 ```
 **Expected**: 200 OK, 현재 잔액이 반환된다
@@ -66,7 +66,7 @@ curl -s -X POST http://localhost:3100/v1/transactions/send \
     "type": "TRANSFER",
     "to": "<OWN_ADDRESS>",
     "amount": "1000000000000000",
-    "network": "ethereum-mainnet"
+    "network": "ethereum-sepolia"
   }'
 ```
 **Expected**: 200 OK, 트랜잭션 ID 반환
@@ -99,10 +99,10 @@ curl -s http://localhost:3100/v1/admin/stats \
 ## Estimated Cost
 | Item | Network | Estimated Gas | USD |
 |------|---------|---------------|-----|
-| ETH self-transfer | ethereum-mainnet | ~21,000 | ~$0.50 |
-| **Total** | | | **~$0.50** |
+| Sepolia ETH self-transfer | ethereum-sepolia | ~21,000 | ~$0.01 |
+| **Total** | | | **~$0.01** |
 
-> **Note**: 자기 전송이므로 가스비만 소비된다. Solana 사용 시 비용은 ~$0.001로 대폭 절감된다.
+> **Note**: 자기 전송이므로 가스비만 소비된다. Testnet 사용으로 실제 비용은 $0이다.
 
 ## Troubleshooting
 | Symptom | Cause | Resolution |

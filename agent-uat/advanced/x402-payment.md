@@ -1,5 +1,5 @@
 ---
-id: "advanced-03"
+id: "advanced-02"
 title: "x402 HTTP 결제"
 category: "advanced"
 auth: "session"
@@ -13,7 +13,7 @@ tags: ["x402", "payment", "http-payment"]
 # x402 HTTP 결제
 
 ## Metadata
-- **ID**: advanced-03
+- **ID**: advanced-02
 - **Category**: advanced
 - **Network**: ethereum-mainnet, base-mainnet
 - **Requires Funds**: Yes

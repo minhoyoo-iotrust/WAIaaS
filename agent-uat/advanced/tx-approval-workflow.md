@@ -1,5 +1,5 @@
 ---
-id: "advanced-08"
+id: "advanced-05"
 title: "트랜잭션 승인 워크플로우"
 category: "advanced"
 auth: "session"
@@ -13,7 +13,7 @@ tags: ["approval", "reject", "cancel", "pending", "owner", "spending-limit"]
 # 트랜잭션 승인 워크플로우
 
 ## Metadata
-- **ID**: advanced-08
+- **ID**: advanced-05
 - **Category**: advanced
 - **Network**: ethereum-mainnet
 - **Requires Funds**: Yes
