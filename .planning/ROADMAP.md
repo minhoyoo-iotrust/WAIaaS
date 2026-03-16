@@ -54,7 +54,11 @@ Plans:
   2. GET /v1/admin/defi/positions가 기본적으로 메인넷 포지션만 반환하고, includeTestnets=true 시 전체를 반환한다
   3. Admin DeFi Positions 대시보드에 "Include testnets" 토글이 표시되고, 상태가 localStorage에 저장되어 새로고침 후에도 유지된다
   4. 기존 메인넷 포지션이 인터페이스 변경 전후로 동일하게 표시된다 (회귀 없음)
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 434-01-PLAN.md — DB migration v59 + PositionWriteQueue environment + Admin API includeTestnets filter
+- [ ] 434-02-PLAN.md — Admin DeFi Positions 대시보드 "Include testnets" 토글 + localStorage 저장
 
 ## Progress
 
@@ -65,4 +69,4 @@ Phases execute in numeric order: 432 → 433 → 434
 |-------|----------------|--------|-----------|
 | 432. Interface Extension | 2/2 | Complete    | 2026-03-16 |
 | 433. Multichain Positions | 4/4 | Complete    | 2026-03-16 |
-| 434. Testnet Toggle | 0/? | Not started | - |
+| 434. Testnet Toggle | 0/2 | Not started | - |
