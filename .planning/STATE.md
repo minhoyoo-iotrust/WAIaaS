@@ -4,7 +4,7 @@ milestone: v32.5
 milestone_name: milestone
 status: completed
 stopped_at: Completed Phase 434 (Testnet Toggle) -- all 2 plans shipped
-last_updated: "2026-03-16T14:01:47.863Z"
+last_updated: "2026-03-16T14:02:27.233Z"
 last_activity: 2026-03-16 -- Phase 433 Multichain Positions shipped
 progress:
   total_phases: 3
