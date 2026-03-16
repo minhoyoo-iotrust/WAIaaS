@@ -6,7 +6,7 @@
 
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import { createRoute, z } from '@hono/zod-openapi';
-import { sql, eq, and, desc } from 'drizzle-orm';
+import { sql, eq, and, desc, inArray } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { WAIaaSError, getNetworksForEnvironment, formatAmount, NATIVE_DECIMALS, NATIVE_SYMBOLS } from '@waiaas/core';
 import type { ChainType, EnvironmentType } from '@waiaas/core';
@@ -22,9 +22,49 @@ import { resolveContractFields } from './admin-monitoring.js';
 import { aggregateStakingBalance } from '../../services/staking/aggregate-staking-balance.js';
 
 
+// ---------------------------------------------------------------------------
+// Token batch lookup types and helpers (NQ-04)
+// ---------------------------------------------------------------------------
+
+export type TokenInfo = { symbol: string; decimals: number };
+
+/**
+ * Batch-fetch token info for multiple addresses in a single IN() query.
+ * Returns a Map keyed by `${address}:${network ?? '*'}`.
+ */
+export function buildTokenMap(
+  tokenAddresses: Array<{ address: string; network: string | null }>,
+  db: BetterSQLite3Database<typeof schema>,
+): Map<string, TokenInfo> {
+  if (tokenAddresses.length === 0) return new Map();
+  const uniqueAddrs = [...new Set(tokenAddresses.map((t) => t.address))];
+  const rows = db
+    .select({
+      address: tokenRegistry.address,
+      network: tokenRegistry.network,
+      symbol: tokenRegistry.symbol,
+      decimals: tokenRegistry.decimals,
+    })
+    .from(tokenRegistry)
+    .where(inArray(tokenRegistry.address, uniqueAddrs))
+    .all();
+  const map = new Map<string, TokenInfo>();
+  for (const row of rows) {
+    map.set(`${row.address}:${row.network ?? '*'}`, { symbol: row.symbol, decimals: row.decimals });
+    // Also store without network as fallback
+    if (!map.has(`${row.address}:*`)) {
+      map.set(`${row.address}:*`, { symbol: row.symbol, decimals: row.decimals });
+    }
+  }
+  return map;
+}
+
 /**
  * Format raw blockchain amount to human-readable string with token symbol.
  * Returns null if formatting is not possible (unknown token, null amount, etc).
+ *
+ * When `tokenMap` is provided, token info is looked up from the pre-fetched map
+ * instead of querying the database per call (NQ-04 batch optimization).
  */
 export function formatTxAmount(
   amount: string | null,
@@ -32,12 +72,19 @@ export function formatTxAmount(
   network: string | null,
   tokenAddress: string | null,
   db: BetterSQLite3Database<typeof schema>,
+  tokenMap?: Map<string, TokenInfo>,
 ): string | null {
   if (!amount || amount === '0') return amount;
 
   try {
     if (tokenAddress) {
-      // Token transfer: look up decimals/symbol from token_registry
+      // Try pre-fetched map first (NQ-04)
+      const cached = tokenMap?.get(`${tokenAddress}:${network ?? '*'}`)
+        ?? tokenMap?.get(`${tokenAddress}:*`);
+      if (cached) {
+        return `${formatAmount(BigInt(amount), cached.decimals)} ${cached.symbol}`;
+      }
+      // Fallback: individual query (backward compat for callers without tokenMap)
       const token = db
         .select({ symbol: tokenRegistry.symbol, decimals: tokenRegistry.decimals })
         .from(tokenRegistry)
@@ -336,6 +383,12 @@ export function registerAdminWalletRoutes(router: OpenAPIHono, deps: AdminRouteD
       .get();
     const total = totalResult?.count ?? 0;
 
+    // Pre-batch token lookups (NQ-04)
+    const tokenAddrs = rows
+      .map((tx) => ({ address: tx.tokenMint ?? tx.contractAddress ?? '', network: tx.network ?? null }))
+      .filter((t) => t.address !== '');
+    const tokenMap = buildTokenMap(tokenAddrs, deps.db);
+
     const items = rows.map((tx) => {
       const tokenAddr = tx.tokenMint ?? tx.contractAddress ?? null;
       return {
@@ -344,7 +397,7 @@ export function registerAdminWalletRoutes(router: OpenAPIHono, deps: AdminRouteD
         status: tx.status,
         toAddress: tx.toAddress ?? null,
         amount: tx.amount ?? null,
-        formattedAmount: formatTxAmount(tx.amount ?? null, tx.chain, tx.network ?? null, tokenAddr, deps.db),
+        formattedAmount: formatTxAmount(tx.amount ?? null, tx.chain, tx.network ?? null, tokenAddr, deps.db, tokenMap),
         amountUsd: tx.amountUsd ?? null,
         network: tx.network ?? null,
         txHash: tx.txHash ?? null,
