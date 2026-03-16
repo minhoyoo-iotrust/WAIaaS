@@ -131,6 +131,9 @@ const EXCLUDED_KEYS: Record<string, string> = {
   'smart_account.pimlico.paymaster_policy_id': 'Per-wallet AA provider config',
   'smart_account.alchemy.api_key': 'Credential: per-wallet AA provider key',
   'smart_account.alchemy.paymaster_policy_id': 'Per-wallet AA provider config',
+
+  // --- CORS: infrastructure setting, requires restart ---
+  'security.cors_origins': 'Infrastructure: CORS origins configured in config.toml, requires restart',
 };
 
 // ---------------------------------------------------------------------------
