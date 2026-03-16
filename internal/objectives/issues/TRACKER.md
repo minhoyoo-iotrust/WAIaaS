@@ -377,10 +377,12 @@
 | 361 | BUG | HIGH | Admin UI NFT Indexer API 키 설정이 반영되지 않음 — GET 목록 누락 + Helius 키 이름 불일치 | v32.4 | FIXED | 2026-03-16 |
 | 362 | ENHANCEMENT | MEDIUM | 프로토콜 페이지 책임 분리 — Providers(운영 설정) vs 프로토콜 페이지(특화 기능) 중복 제거 | v32.4 | FIXED | 2026-03-16 |
 | 363 | MISSING | MEDIUM | Wallet Suspend/Resume/Purge E2E 테스트 추가 — 세션 차단/복원/DB 삭제 연쇄 효과 검증 | v32.4 | FIXED | 2026-03-16 |
-| 364 | MISSING | MEDIUM | sign-message 단위/E2E 테스트 커버리지 보강 — 인증/인가/키관리/이벤트 15~20개 추가 | — | OPEN | — |
+| 364 | MISSING | MEDIUM | sign-message 단위/E2E 테스트 커버리지 보강 — 인증/인가/키관리/이벤트 15~20개 추가 | v32.4 | FIXED | 2026-03-16 |
 | 365 | MISSING | LOW | sign-message 실제 서명 검증 UAT 시나리오 추가 — ecrecover/verifyTypedData 온체인 검증 | v32.4 | FIXED | 2026-03-16 |
 | 366 | MISSING | MEDIUM | TX approve/reject/cancel 승인 워크플로우 UAT 시나리오 추가 — Owner 설정 상태 다단계 검증 | v32.4 | FIXED | 2026-03-16 |
 | 367 | ENHANCEMENT | LOW | mainnet-06 NFT 전송 시나리오 L2 체인 전환 — 가스비 절감 ($2.00→$0.01) | — | OPEN | — |
+| 368 | ENHANCEMENT | LOW | Admin UI 프로바이더 API Key 발급 링크 누락 — Jupiter/0x 키 발급 페이지 안내 없음 | — | OPEN | — |
+| 369 | BUG | HIGH | Jupiter Swap routePlan feeAmount/feeMint 필드 누락으로 스왑 전체 실패 | — | OPEN | — |
 
 ## Type Legend
 
@@ -392,9 +394,9 @@
 
 ## Summary
 
-- **OPEN:** 2
-- **FIXED:** 365
+- **OPEN:** 4
+- **FIXED:** 366
 - **WONTFIX:** 1
-- **Total:** 368
+- **Total:** 371
 - **Archived:** 321 (001–321)
 
