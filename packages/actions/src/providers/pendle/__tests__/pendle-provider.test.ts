@@ -298,13 +298,21 @@ describe('PendleYieldProvider', () => {
     const MOCK_RPC_URL = 'http://localhost:9999';
     const WALLET_ADDRESS = '0x1234567890abcdef1234567890abcdef12345678';
 
-    function makeCtx(chain: 'ethereum' | 'solana' = 'ethereum'): PositionQueryContext {
+    function makeCtx(
+      chain: 'ethereum' | 'solana' = 'ethereum',
+      opts?: { emptyRpcUrls?: boolean },
+    ): PositionQueryContext {
+      const rpcUrls: Record<string, string> = opts?.emptyRpcUrls
+        ? {}
+        : chain === 'ethereum'
+          ? { 'ethereum-mainnet': MOCK_RPC_URL }
+          : {};
       return {
         walletId: WALLET_ADDRESS,
         chain,
         networks: chain === 'ethereum' ? ['ethereum-mainnet'] : ['solana-mainnet'],
         environment: 'mainnet',
-        rpcUrls: {},
+        rpcUrls,
       };
     }
 
@@ -346,7 +354,7 @@ describe('PendleYieldProvider', () => {
 
     it('returns [] when rpcUrl is not configured', async () => {
       const provider = new PendleYieldProvider({ enabled: true });
-      const positions = await provider.getPositions(makeCtx());
+      const positions = await provider.getPositions(makeCtx('ethereum', { emptyRpcUrls: true }));
       expect(positions).toEqual([]);
     });
 
