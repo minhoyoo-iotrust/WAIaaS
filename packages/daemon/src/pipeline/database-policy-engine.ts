@@ -41,7 +41,30 @@
  */
 
 import type { IPolicyEngine, PolicyEvaluation, PolicyTier } from '@waiaas/core';
-import { parseCaip19 } from '@waiaas/core';
+import {
+  parseCaip19,
+  safeJsonParse,
+  WAIaaSError,
+  SpendingLimitRulesSchema,
+  WhitelistRulesSchema,
+  AllowedTokensRulesSchema,
+  ContractWhitelistRulesSchema,
+  MethodWhitelistRulesSchema,
+  ApprovedSpendersRulesSchema,
+  ApproveAmountLimitRulesSchema,
+  ApproveTierOverrideRulesSchema,
+  AllowedNetworksRulesSchema,
+  ReputationThresholdRulesSchema,
+  LendingAssetWhitelistRulesSchema,
+  LendingLtvLimitRulesSchema,
+  PerpMaxLeverageRulesSchema,
+  PerpMaxPositionUsdRulesSchema,
+  PerpAllowedMarketsRulesSchema,
+  VenueWhitelistRulesSchema,
+  ActionCategoryLimitRulesSchema,
+} from '@waiaas/core';
+import type { SpendingLimitRules } from '@waiaas/core';
+import { type z } from 'zod';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
 import { eq, or, and, isNull, desc } from 'drizzle-orm';
@@ -49,107 +72,6 @@ import { policies, wallets, agentIdentities } from '../infrastructure/database/s
 import type * as schema from '../infrastructure/database/schema.js';
 import type { SettingsService } from '../infrastructure/settings/settings-service.js';
 import type { ReputationCacheService } from '../services/erc8004/reputation-cache-service.js';
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface SpendingLimitRules {
-  instant_max?: string;   // Phase 235: optional (was required, now optional for USD-only/token_limits-only policies)
-  notify_max?: string;    // Phase 235: optional
-  delay_max?: string;     // Phase 235: optional
-  delay_seconds: number;
-  // Phase 127: USD 기준 (optional)
-  instant_max_usd?: number;
-  notify_max_usd?: number;
-  delay_max_usd?: number;
-  // Phase 136: 누적 USD 한도 (optional)
-  daily_limit_usd?: number;
-  monthly_limit_usd?: number;
-  // Phase 235: 토큰별 한도 (optional)
-  token_limits?: Record<string, { instant_max: string; notify_max: string; delay_max: string }>;
-}
-
-interface WhitelistRules {
-  allowed_addresses: string[];
-}
-
-interface AllowedTokensRules {
-  tokens: Array<{ address: string; assetId?: string }>;
-}
-
-interface ContractWhitelistRules {
-  contracts: Array<{ address: string; name?: string }>;
-}
-
-interface MethodWhitelistRules {
-  methods: Array<{ contractAddress: string; selectors: string[] }>;
-}
-
-interface ApprovedSpendersRules {
-  spenders: Array<{ address: string; name?: string; maxAmount?: string }>;
-}
-
-interface ApproveAmountLimitRules {
-  maxAmount?: string;
-  blockUnlimited: boolean;
-}
-
-interface ApproveTierOverrideRules {
-  tier: string; // PolicyTier value
-}
-
-/** LTV-based borrow restriction rules (Phase 275). */
-interface LendingLtvLimitRules {
-  maxLtv: number;       // e.g., 0.80 (80%)
-  warningLtv: number;   // e.g., 0.70 (70%) — DELAY tier
-}
-
-/** Lending asset whitelist rules (Phase 275). */
-interface LendingAssetWhitelistRules {
-  assets: Array<{ address: string; symbol?: string }>;
-}
-
-/** Perp max leverage restriction rules (Phase 297). */
-export interface PerpMaxLeverageRules {
-  maxLeverage: number;       // e.g., 10 (10x)
-  warningLeverage?: number;  // e.g., 5 (5x) -- DELAY tier
-}
-
-/** Perp max position USD restriction rules (Phase 297). */
-export interface PerpMaxPositionUsdRules {
-  maxPositionUsd: number;    // e.g., 10000 ($10,000)
-  warningPositionUsd?: number; // e.g., 8000 -- DELAY tier
-}
-
-/** Perp allowed markets whitelist rules (Phase 297). */
-export interface PerpAllowedMarketsRules {
-  markets: Array<{ market: string; name?: string }>;
-}
-
-/** Reputation threshold rules for counterparty reputation check (Phase 320). */
-interface ReputationThresholdRules {
-  min_score: number;
-  below_threshold_tier: string;
-  unrated_tier: string;
-  tag1?: string;
-  tag2?: string;
-  check_counterparty: boolean;
-}
-
-/** Venue whitelist rules (Phase 389). */
-interface VenueWhitelistRules {
-  venues: Array<{ id: string; name?: string }>;
-}
-
-/** Action category limit rules (Phase 389). */
-interface ActionCategoryLimitRules {
-  category: string;
-  daily_limit_usd?: number;
-  monthly_limit_usd?: number;
-  per_action_limit_usd?: number;
-  tier_on_exceed?: string; // PolicyTier, default 'DELAY'
-}
 
 /** Threshold for detecting "unlimited" approve amounts. */
 const UNLIMITED_THRESHOLD = (2n ** 256n - 1n) / 2n;
@@ -193,10 +115,7 @@ interface PolicyRow {
   network: string | null;
 }
 
-/** AllowedNetworksRules: rules JSON for ALLOWED_NETWORKS policy type. */
-interface AllowedNetworksRules {
-  networks: Array<{ network: string; name?: string }>;
-}
+// AllowedNetworksRules imported from @waiaas/core
 
 /** Transaction parameter for policy evaluation. */
 interface TransactionParam {
@@ -284,6 +203,18 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     this.sqlite = sqlite ?? null;
     this.settingsService = settingsService ?? null;
     this.reputationCacheService = reputationCacheService ?? null;
+  }
+
+  /**
+   * Parse policy rules JSON with Zod validation.
+   * Throws POLICY_RULES_CORRUPT on invalid JSON or schema mismatch.
+   */
+  private parseRules<S extends z.ZodTypeAny>(rules: string, zodSchema: S, policyType: string): z.infer<S> {
+    const result = safeJsonParse(rules, zodSchema);
+    if (!result.success) {
+      throw new WAIaaSError('POLICY_RULES_CORRUPT', { message: `${policyType} policy rules corrupt: ${result.error.message}` });
+    }
+    return result.data;
   }
 
   /**
@@ -572,7 +503,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       const approveTierPolicy = resolved.find((p) => p.type === 'APPROVE_TIER_OVERRIDE');
       let approveTier: PolicyTier;
       if (approveTierPolicy) {
-        const rules: { tier: string } = JSON.parse(approveTierPolicy.rules);
+        const rules = this.parseRules(approveTierPolicy.rules, ApproveTierOverrideRulesSchema, 'APPROVE_TIER_OVERRIDE');
         approveTier = rules.tier as PolicyTier;
       } else {
         approveTier = 'APPROVAL';
@@ -844,7 +775,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
 
         // Step 6: Cumulative USD limit evaluation (daily/monthly rolling window)
         if (usdAmount !== undefined && usdAmount > 0) {
-          const rules: SpendingLimitRules = JSON.parse(spendingPolicy.rules);
+          const rules = this.parseRules(spendingPolicy.rules, SpendingLimitRulesSchema, 'SPENDING_LIMIT');
           const hasCumulativeLimits = rules.daily_limit_usd !== undefined || rules.monthly_limit_usd !== undefined;
 
           if (hasCumulativeLimits) {
@@ -1096,7 +1027,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     // No ALLOWED_NETWORKS policy -> permissive default (all networks allowed)
     if (!policy) return null;
 
-    const rules: AllowedNetworksRules = JSON.parse(policy.rules);
+    const rules = this.parseRules(policy.rules, AllowedNetworksRulesSchema, 'ALLOWED_NETWORKS');
 
     // Case-insensitive comparison
     const isAllowed = rules.networks.some(
@@ -1130,7 +1061,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     const whitelist = resolved.find((p) => p.type === 'WHITELIST');
     if (!whitelist) return null;
 
-    const rules: WhitelistRules = JSON.parse(whitelist.rules);
+    const rules = this.parseRules(whitelist.rules, WhitelistRulesSchema, 'WHITELIST');
 
     // Empty allowed_addresses = whitelist inactive
     if (!rules.allowed_addresses || rules.allowed_addresses.length === 0) {
@@ -1196,7 +1127,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     }
 
     // Parse rules.tokens array
-    const rules: AllowedTokensRules = JSON.parse(allowedTokensPolicy.rules);
+    const rules = this.parseRules(allowedTokensPolicy.rules, AllowedTokensRulesSchema, 'ALLOWED_TOKENS');
     const txTokenAddress = transaction.tokenAddress;
     const txAssetId = transaction.assetId;
 
@@ -1306,7 +1237,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     }
 
     // Parse rules.contracts array
-    const rules: ContractWhitelistRules = JSON.parse(contractWhitelistPolicy.rules);
+    const rules = this.parseRules(contractWhitelistPolicy.rules, ContractWhitelistRulesSchema, 'CONTRACT_WHITELIST');
     const contractAddress = transaction.contractAddress ?? transaction.toAddress;
 
     // Check if contract is in whitelist (case-insensitive comparison for EVM addresses)
@@ -1356,7 +1287,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     if (!methodWhitelistPolicy) return null;
 
     // Parse rules.methods array
-    const rules: MethodWhitelistRules = JSON.parse(methodWhitelistPolicy.rules);
+    const rules = this.parseRules(methodWhitelistPolicy.rules, MethodWhitelistRulesSchema, 'METHOD_WHITELIST');
     const contractAddress = transaction.contractAddress ?? transaction.toAddress;
     const selector = transaction.selector;
 
@@ -1432,7 +1363,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     }
 
     // Parse rules.spenders array
-    const rules: ApprovedSpendersRules = JSON.parse(approvedSpendersPolicy.rules);
+    const rules = this.parseRules(approvedSpendersPolicy.rules, ApprovedSpendersRulesSchema, 'APPROVED_SPENDERS');
     const spenderAddress = transaction.spenderAddress;
 
     if (!spenderAddress) {
@@ -1501,7 +1432,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     }
 
     // Parse rules
-    const rules: ApproveAmountLimitRules = JSON.parse(approveAmountPolicy.rules);
+    const rules = this.parseRules(approveAmountPolicy.rules, ApproveAmountLimitRulesSchema, 'APPROVE_AMOUNT_LIMIT');
 
     // Check unlimited block
     if (rules.blockUnlimited && amount >= UNLIMITED_THRESHOLD) {
@@ -1557,7 +1488,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     }
 
     // Parse rules
-    const rules: ApproveTierOverrideRules = JSON.parse(approveTierPolicy.rules);
+    const rules = this.parseRules(approveTierPolicy.rules, ApproveTierOverrideRulesSchema, 'APPROVE_TIER_OVERRIDE');
     return { allowed: true, tier: rules.tier as PolicyTier };
   }
 
@@ -1591,7 +1522,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     const spending = resolved.find((p) => p.type === 'SPENDING_LIMIT');
     if (!spending) return null;
 
-    const rules: SpendingLimitRules = JSON.parse(spending.rules);
+    const rules = this.parseRules(spending.rules, SpendingLimitRulesSchema, 'SPENDING_LIMIT');
 
     // 1. Token-specific tier (Phase 236)
     let tokenTier: PolicyTier = 'INSTANT';
@@ -1797,7 +1728,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       };
     }
 
-    const rules = JSON.parse(assetPolicy.rules) as LendingAssetWhitelistRules;
+    const rules = this.parseRules(assetPolicy.rules, LendingAssetWhitelistRulesSchema, 'LENDING_ASSET_WHITELIST');
     const targetAddress = transaction.contractAddress ?? transaction.toAddress;
     const isWhitelisted = rules.assets.some(
       (a) => a.address.toLowerCase() === targetAddress.toLowerCase(),
@@ -1842,7 +1773,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     const ltvPolicy = resolved.find((p) => p.type === 'LENDING_LTV_LIMIT');
     if (!ltvPolicy) return null; // No LTV policy -> pass through
 
-    const rules = JSON.parse(ltvPolicy.rules) as LendingLtvLimitRules;
+    const rules = this.parseRules(ltvPolicy.rules, LendingLtvLimitRulesSchema, 'LENDING_LTV_LIMIT');
 
     // Read cached position data from defi_positions
     if (!this.sqlite) return null;
@@ -1929,7 +1860,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       };
     }
 
-    const rules = JSON.parse(marketPolicy.rules) as PerpAllowedMarketsRules;
+    const rules = this.parseRules(marketPolicy.rules, PerpAllowedMarketsRulesSchema, 'PERP_ALLOWED_MARKETS');
     const targetMarket = transaction.contractAddress ?? transaction.toAddress;
     const isAllowed = rules.markets.some(
       (m) => m.market.toLowerCase() === targetMarket.toLowerCase(),
@@ -1971,7 +1902,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     const leveragePolicy = resolved.find((p) => p.type === 'PERP_MAX_LEVERAGE');
     if (!leveragePolicy) return null; // No leverage policy -> pass through
 
-    const rules = JSON.parse(leveragePolicy.rules) as PerpMaxLeverageRules;
+    const rules = this.parseRules(leveragePolicy.rules, PerpMaxLeverageRulesSchema, 'PERP_MAX_LEVERAGE');
     const leverage = transaction.perpLeverage;
     if (typeof leverage !== 'number') return null; // No leverage info -> pass through
 
@@ -2020,7 +1951,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     const sizePolicy = resolved.find((p) => p.type === 'PERP_MAX_POSITION_USD');
     if (!sizePolicy) return null; // No size policy -> pass through
 
-    const rules = JSON.parse(sizePolicy.rules) as PerpMaxPositionUsdRules;
+    const rules = this.parseRules(sizePolicy.rules, PerpMaxPositionUsdRulesSchema, 'PERP_MAX_POSITION_USD');
     const sizeUsd = transaction.perpSizeUsd;
     if (typeof sizeUsd !== 'number') return null; // No size info -> pass through
 
@@ -2071,7 +2002,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     const policy = resolved.find((p) => p.type === 'REPUTATION_THRESHOLD');
     if (!policy) return null;
 
-    const rules: ReputationThresholdRules = JSON.parse(policy.rules);
+    const rules = this.parseRules(policy.rules, ReputationThresholdRulesSchema, 'REPUTATION_THRESHOLD');
 
     // If check_counterparty is disabled, skip entirely
     if (!rules.check_counterparty) return null;
@@ -2181,7 +2112,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     const policy = resolved.find((p) => p.type === 'REPUTATION_THRESHOLD');
     if (!policy) return undefined;
 
-    const rules: ReputationThresholdRules = JSON.parse(policy.rules);
+    const rules = this.parseRules(policy.rules, ReputationThresholdRulesSchema, 'REPUTATION_THRESHOLD');
     if (!rules.check_counterparty) return undefined;
 
     // Resolve counterparty agentId
@@ -2255,7 +2186,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       };
     }
 
-    const rules: VenueWhitelistRules = JSON.parse(policy.rules);
+    const rules = this.parseRules(policy.rules, VenueWhitelistRulesSchema, 'VENUE_WHITELIST');
     const isAllowed = rules.venues.some((v) => v.id.toLowerCase() === venueNorm);
 
     if (!isAllowed) {
@@ -2298,7 +2229,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     if (categoryPolicies.length === 0) return null;
 
     for (const policy of categoryPolicies) {
-      const rules: ActionCategoryLimitRules = JSON.parse(policy.rules);
+      const rules = this.parseRules(policy.rules, ActionCategoryLimitRulesSchema, 'ACTION_CATEGORY_LIMIT');
       if (rules.category !== transaction.actionCategory) continue;
 
       const tierOnExceed = (rules.tier_on_exceed ?? 'DELAY') as PolicyTier;
