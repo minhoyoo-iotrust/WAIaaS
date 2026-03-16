@@ -249,7 +249,7 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
       const results = await Promise.allSettled(
         networks.map(async (net) => {
           const rpcUrl = resolveRpcUrl(
-            deps.config!.rpc as unknown as Record<string, string>,
+            deps.config!.rpc,
             wallet.chain,
             net,
           );
@@ -309,7 +309,7 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
     }
 
     const rpcUrl = resolveRpcUrl(
-      deps.config.rpc as unknown as Record<string, string>,
+      deps.config.rpc,
       wallet.chain,
       targetNetwork,
     );
@@ -376,7 +376,7 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
       const results = await Promise.allSettled(
         networks.map(async (net) => {
           const rpcUrl = resolveRpcUrl(
-            deps.config!.rpc as unknown as Record<string, string>,
+            deps.config!.rpc,
             wallet.chain,
             net,
           );
@@ -446,7 +446,7 @@ export function walletRoutes(deps: WalletRouteDeps): OpenAPIHono {
     }
 
     const rpcUrl = resolveRpcUrl(
-      deps.config.rpc as unknown as Record<string, string>,
+      deps.config.rpc,
       wallet.chain,
       targetNetwork,
     );

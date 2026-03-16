@@ -455,7 +455,7 @@ export class DaemonLifecycle {
 
           // 2. Seed config.toml URLs first (highest priority)
           //    WAIAAS_RPC_* env vars are already applied to config.rpc by applyEnvOverrides in loader.ts
-          const rpcConfig = this._config!.rpc as unknown as Record<string, string>;
+          const rpcConfig = this._config!.rpc;
           for (const [configKey, url] of Object.entries(rpcConfig)) {
             if (typeof url !== 'string' || !url) continue;
             const network = configKeyToNet(configKey);
@@ -1729,7 +1729,7 @@ export class DaemonLifecycle {
               if (this._isShuttingDown || !tx.txHash || !tx.network) continue;
               try {
                 const rpcUrl = resolveRpcUrl(
-                  this._config!.rpc as unknown as Record<string, string>,
+                  this._config!.rpc,
                   tx.chain,
                   tx.network,
                 );
@@ -2113,7 +2113,7 @@ export class DaemonLifecycle {
 
       // Resolve adapter from pool using recorded network
       const rpcUrl = resolveRpcUrl(
-        this._config.rpc as unknown as Record<string, string>,
+        this._config.rpc,
         wallet.chain,
         resolvedNetwork,
       );
@@ -2254,7 +2254,7 @@ export class DaemonLifecycle {
 
       // Resolve adapter from pool using recorded network
       const rpcUrl = resolveRpcUrl(
-        this._config.rpc as unknown as Record<string, string>,
+        this._config.rpc,
         wallet.chain,
         resolvedNetwork,
       );

@@ -568,7 +568,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
 
     // Resolve adapter from pool for this wallet's chain:resolvedNetwork
     const rpcUrl = resolveRpcUrl(
-      deps.config.rpc as unknown as Record<string, string>,
+      deps.config.rpc,
       wallet.chain,
       resolvedNetwork,
     );
@@ -769,7 +769,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
 
     // Resolve adapter from pool
     const rpcUrl = resolveRpcUrl(
-      deps.config.rpc as unknown as Record<string, string>,
+      deps.config.rpc,
       wallet.chain,
       resolvedNetwork,
     );
@@ -821,7 +821,7 @@ export function transactionRoutes(deps: TransactionRouteDeps): OpenAPIHono {
 
     // Resolve adapter
     const rpcUrl = resolveRpcUrl(
-      deps.config.rpc as unknown as Record<string, string>,
+      deps.config.rpc,
       wallet.chain,
       resolvedNetwork,
     );

@@ -196,6 +196,7 @@ export const DaemonConfigSchema = z.object({
 });
 
 export type DaemonConfig = z.infer<typeof DaemonConfigSchema>;
+export type RpcConfig = DaemonConfig['rpc'];
 
 // ---------------------------------------------------------------------------
 // Known TOML sections

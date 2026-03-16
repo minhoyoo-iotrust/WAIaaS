@@ -254,7 +254,7 @@ export function rpcProxyRoutes(deps: RpcProxyRouteDeps): OpenAPIHono {
 
     // Resolve adapter and RPC URL for pipeline
     const rpcUrl = resolveRpcUrl(
-      deps.config.rpc as unknown as Record<string, string>,
+      deps.config.rpc,
       wallet.chain,
       resolvedNetwork,
     );

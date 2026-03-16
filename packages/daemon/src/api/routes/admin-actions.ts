@@ -214,7 +214,7 @@ export function adminActionRoutes(deps: AdminActionRouteDeps): OpenAPIHono {
 
     // 8. Resolve adapter from pool
     const rpcUrl = resolveRpcUrl(
-      deps.config.rpc as unknown as Record<string, string>,
+      deps.config.rpc,
       wallet.chain,
       resolvedNetwork,
     );
