@@ -111,7 +111,7 @@
   Plans:
   - [x] 428-01-PLAN.md — IChainSubscriber 인터페이스 확장 + as unknown as 캐스팅 제거
   - [x] 428-02-PLAN.md — 레이어 위반 수정 (verifySIWE/decodeBase58/MasterPasswordRef 이동 + ACTION_VALIDATION_FAILED 교체)
-- [ ] **Phase 429: DatabasePolicyEngine Zod 검증** - 21건 JSON.parse를 Zod safeParse로 교체, 로컬 인터페이스 제거, 정책 룰 검증 테스트
+- [x] **Phase 429: DatabasePolicyEngine Zod 검증** - 21건 JSON.parse를 Zod safeParse로 교체, 로컬 인터페이스 제거, 정책 룰 검증 테스트 (completed 2026-03-16)
   **Plans:** 2 plans
   Plans:
   - [ ] 429-01-PLAN.md — Lending/Perp/Venue/ActionCategory 7개 Zod 스키마 추가 + POLICY_RULES_CORRUPT 에러 코드
@@ -148,7 +148,7 @@
 **Goal**: 정책 엔진이 DB에서 읽은 JSON을 Zod safeParse로 검증하여 corrupt 데이터를 안전하게 처리한다
 **Depends on**: Phase 427
 **Requirements**: ZOD-03, ZOD-04, ZOD-05, ZOD-06, ZOD-07, ZOD-08, ZOD-09, ZOD-13
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 **Success Criteria** (what must be TRUE):
   1. DatabasePolicyEngine의 모든 JSON.parse(policy.rules) 호출이 Zod safeParse를 사용하며, corrupt JSON 시 POLICY_RULES_CORRUPT 에러를 throw한다
   2. 로컬 interface 정의(SpendingLimitRules 등)가 제거되고 Zod z.infer<> 타입으로 대체되었다
@@ -194,6 +194,6 @@ Phases execute in numeric order: 427 -> 428 -> 429 -> 430 -> 431
 | 426. CORS + Resource Management | v32.2 | 1/1 | Complete | 2026-03-16 |
 | 427. Core Exports + safeJsonParse 유틸리티 | v32.4 | Complete    | 2026-03-16 | 2026-03-16 |
 | 428. 인터페이스 확장 + 레이어 위반 수정 | v32.4 | Complete    | 2026-03-16 | 2026-03-16 |
-| 429. DatabasePolicyEngine Zod 검증 | v32.4 | 0/2 | Not started | - |
+| 429. DatabasePolicyEngine Zod 검증 | 2/2 | Complete   | 2026-03-16 | - |
 | 430. as any 제거 | v32.4 | 0/TBD | Not started | - |
 | 431. SSoT 통합 + 설정 정리 | v32.4 | 0/TBD | Not started | - |

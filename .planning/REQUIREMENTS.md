@@ -11,17 +11,17 @@ Requirements for v32.4. Each maps to roadmap phases.
 
 - [x] **ZOD-01**: safeJsonParse<T> 범용 헬퍼가 @waiaas/core에 존재하며 Zod 스키마 기반 JSON 파싱+검증을 수행한다
 - [x] **ZOD-02**: POLICY_RULES_SCHEMAS 매핑이 @waiaas/core에서 export되어 외부 패키지에서 사용 가능하다
-- [ ] **ZOD-03**: DatabasePolicyEngine의 SpendingLimitRules JSON.parse가 Zod safeParse로 교체되어 corrupt 데이터 시 POLICY_RULES_CORRUPT 에러를 throw한다
-- [ ] **ZOD-04**: DatabasePolicyEngine의 WhitelistRules JSON.parse가 Zod safeParse로 교체된다
-- [ ] **ZOD-05**: DatabasePolicyEngine의 AllowedTokensRules JSON.parse가 Zod safeParse로 교체된다
-- [ ] **ZOD-06**: DatabasePolicyEngine의 LendingAssetWhitelistRules JSON.parse가 Zod safeParse로 교체된다
-- [ ] **ZOD-07**: DatabasePolicyEngine의 LendingLtvLimitRules JSON.parse가 Zod safeParse로 교체된다
-- [ ] **ZOD-08**: DatabasePolicyEngine의 나머지 정책 룰 JSON.parse(~16건)가 모두 Zod safeParse로 교체된다
-- [ ] **ZOD-09**: DatabasePolicyEngine의 로컬 interface 정의가 제거되고 Zod z.infer<> 타입으로 교체된다
+- [x] **ZOD-03**: DatabasePolicyEngine의 SpendingLimitRules JSON.parse가 Zod safeParse로 교체되어 corrupt 데이터 시 POLICY_RULES_CORRUPT 에러를 throw한다
+- [x] **ZOD-04**: DatabasePolicyEngine의 WhitelistRules JSON.parse가 Zod safeParse로 교체된다
+- [x] **ZOD-05**: DatabasePolicyEngine의 AllowedTokensRules JSON.parse가 Zod safeParse로 교체된다
+- [x] **ZOD-06**: DatabasePolicyEngine의 LendingAssetWhitelistRules JSON.parse가 Zod safeParse로 교체된다
+- [x] **ZOD-07**: DatabasePolicyEngine의 LendingLtvLimitRules JSON.parse가 Zod safeParse로 교체된다
+- [x] **ZOD-08**: DatabasePolicyEngine의 나머지 정책 룰 JSON.parse(~16건)가 모두 Zod safeParse로 교체된다
+- [x] **ZOD-09**: DatabasePolicyEngine의 로컬 interface 정의가 제거되고 Zod z.infer<> 타입으로 교체된다
 - [ ] **ZOD-10**: daemon.ts의 JSON.parse 3건에 Zod 검증이 추가된다
 - [ ] **ZOD-11**: notification-service.ts의 JSON.parse 2건에 Zod 검증이 추가된다
 - [ ] **ZOD-12**: jwt-secret-manager.ts의 JSON.parse 2건에 Zod 검증이 추가된다
-- [ ] **ZOD-13**: 정상 규칙 파싱, corrupt JSON 처리, 스키마 불일치 처리에 대한 테스트가 존재한다
+- [x] **ZOD-13**: 정상 규칙 파싱, corrupt JSON 처리, 스키마 불일치 처리에 대한 테스트가 존재한다
 
 ### 인터페이스 + 레이어 정비
 
@@ -104,17 +104,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | ZOD-01 | Phase 427 | Complete |
 | ZOD-02 | Phase 427 | Complete |
-| ZOD-03 | Phase 429 | Pending |
-| ZOD-04 | Phase 429 | Pending |
-| ZOD-05 | Phase 429 | Pending |
-| ZOD-06 | Phase 429 | Pending |
-| ZOD-07 | Phase 429 | Pending |
-| ZOD-08 | Phase 429 | Pending |
-| ZOD-09 | Phase 429 | Pending |
+| ZOD-03 | Phase 429 | Complete |
+| ZOD-04 | Phase 429 | Complete |
+| ZOD-05 | Phase 429 | Complete |
+| ZOD-06 | Phase 429 | Complete |
+| ZOD-07 | Phase 429 | Complete |
+| ZOD-08 | Phase 429 | Complete |
+| ZOD-09 | Phase 429 | Complete |
 | ZOD-10 | Phase 430 | Pending |
 | ZOD-11 | Phase 430 | Pending |
 | ZOD-12 | Phase 430 | Pending |
-| ZOD-13 | Phase 429 | Pending |
+| ZOD-13 | Phase 429 | Complete |
 | LAYER-01 | Phase 428 | Complete |
 | LAYER-02 | Phase 428 | Complete |
 | LAYER-03 | Phase 428 | Complete |
