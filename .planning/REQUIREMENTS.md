@@ -37,14 +37,14 @@ Requirements for milestone v32.5. Each maps to roadmap phases.
 
 ### Testnet (테스트넷 토글)
 
-- [ ] **TEST-01**: defi_positions 테이블에 environment TEXT DEFAULT 'mainnet' 컬럼이 추가된다
-- [ ] **TEST-02**: 기존 defi_positions 행의 environment가 'mainnet'으로 기본 채워진다
-- [ ] **TEST-03**: PositionUpdate 저장 시 지갑의 environment 정보가 함께 저장된다
-- [ ] **TEST-04**: GET /v1/admin/defi/positions가 ?includeTestnets=false(기본)일 때 메인넷 포지션만 반환한다
-- [ ] **TEST-05**: GET /v1/admin/defi/positions가 ?includeTestnets=true일 때 전체 포지션을 반환한다
-- [ ] **TEST-06**: Admin DeFi Positions 대시보드에 "Include testnets" 토글이 표시된다
-- [ ] **TEST-07**: 토글 상태가 localStorage에 저장되어 새로고침 후에도 유지된다
-- [ ] **TEST-08**: 기존 메인넷 포지션이 인터페이스 변경 후에도 동일하게 표시된다
+- [x] **TEST-01**: defi_positions 테이블에 environment TEXT DEFAULT 'mainnet' 컬럼이 추가된다
+- [x] **TEST-02**: 기존 defi_positions 행의 environment가 'mainnet'으로 기본 채워진다
+- [x] **TEST-03**: PositionUpdate 저장 시 지갑의 environment 정보가 함께 저장된다
+- [x] **TEST-04**: GET /v1/admin/defi/positions가 ?includeTestnets=false(기본)일 때 메인넷 포지션만 반환한다
+- [x] **TEST-05**: GET /v1/admin/defi/positions가 ?includeTestnets=true일 때 전체 포지션을 반환한다
+- [x] **TEST-06**: Admin DeFi Positions 대시보드에 "Include testnets" 토글이 표시된다
+- [x] **TEST-07**: 토글 상태가 localStorage에 저장되어 새로고침 후에도 유지된다
+- [x] **TEST-08**: 기존 메인넷 포지션이 인터페이스 변경 후에도 동일하게 표시된다
 
 ## v2 Requirements
 
@@ -87,14 +87,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MCHN-08 | Phase 433 | Complete |
 | MCHN-09 | Phase 433 | Complete |
 | MCHN-10 | Phase 433 | Complete |
-| TEST-01 | Phase 434 | Pending |
-| TEST-02 | Phase 434 | Pending |
-| TEST-03 | Phase 434 | Pending |
-| TEST-04 | Phase 434 | Pending |
-| TEST-05 | Phase 434 | Pending |
-| TEST-06 | Phase 434 | Pending |
-| TEST-07 | Phase 434 | Pending |
-| TEST-08 | Phase 434 | Pending |
+| TEST-01 | Phase 434 | Complete |
+| TEST-02 | Phase 434 | Complete |
+| TEST-03 | Phase 434 | Complete |
+| TEST-04 | Phase 434 | Complete |
+| TEST-05 | Phase 434 | Complete |
+| TEST-06 | Phase 434 | Complete |
+| TEST-07 | Phase 434 | Complete |
+| TEST-08 | Phase 434 | Complete |
 
 **Coverage:**
 - v1 requirements: 30 total

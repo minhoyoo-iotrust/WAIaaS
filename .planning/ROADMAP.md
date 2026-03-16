@@ -8,7 +8,7 @@
 
 - [x] **Phase 432: Interface Extension** - IPositionProvider 시그니처를 PositionQueryContext 기반으로 확장하고 8개 프로바이더를 마이그레이션
 - [x] **Phase 433: Multichain Positions** - EVM 프로바이더별 멀티체인 컨트랙트 매핑 및 병렬 조회 (completed 2026-03-16)
-- [ ] **Phase 434: Testnet Toggle** - DB environment 컬럼 추가, API 필터링, Admin 대시보드 테스트넷 토글
+- [x] **Phase 434: Testnet Toggle** - DB environment 컬럼 추가, API 필터링, Admin 대시보드 테스트넷 토글 (completed 2026-03-16)
 
 ## Phase Details
 
@@ -54,7 +54,7 @@ Plans:
   2. GET /v1/admin/defi/positions가 기본적으로 메인넷 포지션만 반환하고, includeTestnets=true 시 전체를 반환한다
   3. Admin DeFi Positions 대시보드에 "Include testnets" 토글이 표시되고, 상태가 localStorage에 저장되어 새로고침 후에도 유지된다
   4. 기존 메인넷 포지션이 인터페이스 변경 전후로 동일하게 표시된다 (회귀 없음)
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 434-01-PLAN.md — DB migration v59 + PositionWriteQueue environment + Admin API includeTestnets filter
@@ -69,4 +69,4 @@ Phases execute in numeric order: 432 → 433 → 434
 |-------|----------------|--------|-----------|
 | 432. Interface Extension | 2/2 | Complete    | 2026-03-16 |
 | 433. Multichain Positions | 4/4 | Complete    | 2026-03-16 |
-| 434. Testnet Toggle | 0/2 | Not started | - |
+| 434. Testnet Toggle | 2/2 | Complete   | 2026-03-16 |

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v32.5
 milestone_name: milestone
 status: completed
-stopped_at: Completed Phase 433 (Multichain Positions) -- all 4 plans shipped
-last_updated: "2026-03-16T13:45:06.282Z"
+stopped_at: Completed Phase 434 (Testnet Toggle) -- all 2 plans shipped
+last_updated: "2026-03-16T14:01:47.863Z"
 last_activity: 2026-03-16 -- Phase 433 Multichain Positions shipped
 progress:
   total_phases: 3
-  completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
+  completed_phases: 3
+  total_plans: 8
+  completed_plans: 8
   percent: 67
 ---
 
@@ -42,6 +42,8 @@ Progress: [######░░░░] 67%
 | 433-02 | 1 | 6min | 2 | Aave V3 5-network multichain positions |
 | 433-03 | 1 | 5min | 3 | Pendle 2-network multichain positions |
 | 433-04 | 1 | 4min | 6 | Solana dynamic network + Hyperliquid guard verified |
+| Phase 434 P01 | 5min | 2 tasks | 7 files |
+| Phase 434 P02 | 3min | 1 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -65,6 +67,9 @@ Progress: [######░░░░] 67%
 - Solana providers use ctx.networks[0] with 'solana-mainnet' fallback
 - Jito uses networkToCaip2() for correct per-network CAIP-2
 - Hyperliquid MCHN-09 already satisfied by Phase 432 chain guards
+- [Phase 434]: ALTER TABLE ADD COLUMN with NOT NULL DEFAULT 'mainnet' auto-backfills existing rows
+- [Phase 434]: includeTestnets defaults to 'false' via z.enum for string query params
+- [Phase 434]: localStorage-backed useSignal for persistent checkbox state
 
 ### Pending Todos
 
@@ -76,6 +81,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-16
-Stopped at: Completed Phase 433 (Multichain Positions) -- all 4 plans shipped
+Last session: 2026-03-16T14:01:47.860Z
+Stopped at: Completed Phase 434 (Testnet Toggle) -- all 2 plans shipped
 Resume file: None
