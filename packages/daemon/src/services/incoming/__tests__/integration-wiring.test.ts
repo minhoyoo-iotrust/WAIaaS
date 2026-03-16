@@ -501,7 +501,18 @@ describe('IChainSubscriber interface contract', () => {
 
   it('subscriber without optional methods works with optional chaining', async () => {
     // A minimal subscriber without optional methods (e.g., a future chain adapter)
-    const minimalSubscriber = {
+    const minimalSubscriber: {
+      chain: 'solana';
+      subscribe: ReturnType<typeof vi.fn>;
+      unsubscribe: ReturnType<typeof vi.fn>;
+      subscribedWallets: ReturnType<typeof vi.fn>;
+      connect: ReturnType<typeof vi.fn>;
+      waitForDisconnect: ReturnType<typeof vi.fn>;
+      destroy: ReturnType<typeof vi.fn>;
+      pollAll?: () => Promise<void>;
+      checkFinalized?: (txHash: string) => Promise<boolean>;
+      getBlockNumber?: () => Promise<bigint>;
+    } = {
       chain: 'solana' as const,
       subscribe: vi.fn().mockResolvedValue(undefined),
       unsubscribe: vi.fn().mockResolvedValue(undefined),
@@ -509,7 +520,7 @@ describe('IChainSubscriber interface contract', () => {
       connect: vi.fn().mockResolvedValue(undefined),
       waitForDisconnect: vi.fn().mockReturnValue(new Promise(() => {})),
       destroy: vi.fn().mockResolvedValue(undefined),
-      // No pollAll, checkFinalized, or getBlockNumber
+      // No pollAll, checkFinalized, or getBlockNumber -- tests verify optional chaining
     };
 
     // Optional chaining should return undefined without throwing
