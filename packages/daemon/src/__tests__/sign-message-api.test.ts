@@ -149,7 +149,8 @@ function mockConfig(): DaemonConfig {
 const REAL_PRIVATE_KEY = generatePrivateKey();
 const REAL_ACCOUNT = privateKeyToAccount(REAL_PRIVATE_KEY);
 const EVM_PUBLIC_KEY = REAL_ACCOUNT.address;
-const SOLANA_PUBLIC_KEY = '11111111111111111111111111111112';
+// Solana public key reserved for future Solana sign-message tests
+const _SOLANA_PUBLIC_KEY = '11111111111111111111111111111112';
 
 function mockKeyStore(): LocalKeyStore {
   const keyBytes = Buffer.from(REAL_PRIVATE_KEY.slice(2), 'hex');
