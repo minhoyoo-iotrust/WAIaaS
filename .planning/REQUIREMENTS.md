@@ -62,21 +62,21 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### stages.ts 분할
 
-- [ ] **STG-01**: stage1-validate.ts로 Stage 1 검증 로직이 분리된다
-- [ ] **STG-02**: stage2-auth.ts로 Stage 2 인증 로직이 분리된다
-- [ ] **STG-03**: stage3-policy.ts로 Stage 3 정책 로직이 분리된다
-- [ ] **STG-04**: stage4-wait.ts로 Stage 4 대기 로직이 분리된다
-- [ ] **STG-05**: stage5-execute.ts로 Stage 5 실행 로직이 분리된다
-- [ ] **STG-06**: stage6-confirm.ts로 Stage 6 확인 로직이 분리된다
-- [ ] **STG-07**: pipeline-helpers.ts로 공유 헬퍼/타입이 분리된다
-- [ ] **STG-08**: 분할 후 파이프라인 기존 테스트가 전체 통과한다
+- [x] **STG-01**: stage1-validate.ts로 Stage 1 검증 로직이 분리된다
+- [x] **STG-02**: stage2-auth.ts로 Stage 2 인증 로직이 분리된다
+- [x] **STG-03**: stage3-policy.ts로 Stage 3 정책 로직이 분리된다
+- [x] **STG-04**: stage4-wait.ts로 Stage 4 대기 로직이 분리된다
+- [x] **STG-05**: stage5-execute.ts로 Stage 5 실행 로직이 분리된다
+- [x] **STG-06**: stage6-confirm.ts로 Stage 6 확인 로직이 분리된다
+- [x] **STG-07**: pipeline-helpers.ts로 공유 헬퍼/타입이 분리된다
+- [x] **STG-08**: 분할 후 파이프라인 기존 테스트가 전체 통과한다
 
 ### 추가 정리
 
-- [ ] **CLN-01**: Solana 어댑터에 중앙화된 mapError() 메서드가 생성되어 20곳 catch 패턴을 대체한다
-- [ ] **CLN-02**: Solana 에러 분류 테스트가 추가된다
-- [ ] **CLN-03**: ILogger 인터페이스가 정의되고 console 기본 구현이 제공된다
-- [ ] **CLN-04**: 전체 테스트 스위트(unit + typecheck + lint)가 통과한다
+- [x] **CLN-01**: Solana 어댑터에 중앙화된 mapError() 메서드가 생성되어 14곳 catch 패턴을 대체한다
+- [x] **CLN-02**: Solana 에러 분류 테스트가 추가된다
+- [x] **CLN-03**: ILogger 인터페이스가 정의되고 console 기본 구현이 제공된다
+- [x] **CLN-04**: 전체 테스트 스위트(unit + typecheck + lint)가 통과한다
 
 ## v2 Requirements
 
@@ -135,18 +135,18 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DPE-06 | Phase 437 | Complete |
 | DPE-07 | Phase 437 | Complete |
 | DPE-08 | Phase 437 | Complete |
-| STG-01 | Phase 438 | Pending |
-| STG-02 | Phase 438 | Pending |
-| STG-03 | Phase 438 | Pending |
-| STG-04 | Phase 438 | Pending |
-| STG-05 | Phase 438 | Pending |
-| STG-06 | Phase 438 | Pending |
-| STG-07 | Phase 438 | Pending |
-| STG-08 | Phase 438 | Pending |
-| CLN-01 | Phase 438 | Pending |
-| CLN-02 | Phase 438 | Pending |
-| CLN-03 | Phase 438 | Pending |
-| CLN-04 | Phase 438 | Pending |
+| STG-01 | Phase 438 | Complete |
+| STG-02 | Phase 438 | Complete |
+| STG-03 | Phase 438 | Complete |
+| STG-04 | Phase 438 | Complete |
+| STG-05 | Phase 438 | Complete |
+| STG-06 | Phase 438 | Complete |
+| STG-07 | Phase 438 | Complete |
+| STG-08 | Phase 438 | Complete |
+| CLN-01 | Phase 438 | Complete |
+| CLN-02 | Phase 438 | Complete |
+| CLN-03 | Phase 438 | Complete |
+| CLN-04 | Phase 438 | Complete |
 
 **Coverage:**
 - v1 requirements: 46 total
