@@ -24,7 +24,7 @@ import {
   buildErrorResponses,
 } from './openapi-schemas.js';
 import type { AdminRouteDeps } from './admin.js';
-import { formatTxAmount } from './admin-wallets.js';
+import { formatTxAmount, buildTokenMap } from './admin-wallets.js';
 
 // ---------------------------------------------------------------------------
 // Route definitions
@@ -227,6 +227,12 @@ export function registerAdminAuthRoutes(router: OpenAPIHono, deps: AdminRouteDep
       .limit(5)
       .all();
 
+    // Pre-batch token lookups for recent transactions (NQ-05)
+    const recentTokenAddrs = recentTxRows
+      .map((tx) => ({ address: tx.tokenMint ?? tx.contractAddress ?? '', network: tx.network ?? null }))
+      .filter((t) => t.address !== '');
+    const recentTokenMap = buildTokenMap(recentTokenAddrs, deps.db);
+
     const recentTransactions = recentTxRows.map((tx) => {
       const tokenAddr = tx.tokenMint ?? tx.contractAddress ?? null;
       return {
@@ -237,7 +243,7 @@ export function registerAdminAuthRoutes(router: OpenAPIHono, deps: AdminRouteDep
       status: tx.status,
       toAddress: tx.toAddress ?? null,
       amount: tx.amount ?? null,
-      formattedAmount: formatTxAmount(tx.amount ?? null, tx.chain, tx.network ?? null, tokenAddr, deps.db),
+      formattedAmount: formatTxAmount(tx.amount ?? null, tx.chain, tx.network ?? null, tokenAddr, deps.db, recentTokenMap),
       amountUsd: tx.amountUsd ?? null,
       network: tx.network ?? null,
       txHash: tx.txHash ?? null,

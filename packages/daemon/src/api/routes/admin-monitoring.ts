@@ -26,7 +26,7 @@ import {
   buildErrorResponses,
 } from './openapi-schemas.js';
 import type { AdminRouteDeps } from './admin.js';
-import { formatTxAmount } from './admin-wallets.js';
+import { formatTxAmount, buildTokenMap } from './admin-wallets.js';
 
 // ---------------------------------------------------------------------------
 // Contract name resolution helper (v32.0 Phase 423)
@@ -237,6 +237,12 @@ export function registerAdminMonitoringRoutes(router: OpenAPIHono, deps: AdminRo
       .limit(limit)
       .all();
 
+    // Pre-batch token lookups (NQ-05)
+    const txTokenAddrs = rows
+      .map((row) => ({ address: row.tokenMint ?? row.contractAddress ?? '', network: row.network ?? null }))
+      .filter((t) => t.address !== '');
+    const txTokenMap = buildTokenMap(txTokenAddrs, deps.db);
+
     const items = rows.map((row) => {
       const tokenAddr = row.tokenMint ?? row.contractAddress ?? null;
       return {
@@ -248,7 +254,7 @@ export function registerAdminMonitoringRoutes(router: OpenAPIHono, deps: AdminRo
         tier: row.tier ?? null,
         toAddress: row.toAddress ?? null,
         amount: row.amount ?? null,
-        formattedAmount: formatTxAmount(row.amount ?? null, row.chain, row.network ?? null, tokenAddr, deps.db),
+        formattedAmount: formatTxAmount(row.amount ?? null, row.chain, row.network ?? null, tokenAddr, deps.db, txTokenMap),
         amountUsd: row.amountUsd ?? null,
         network: row.network ?? null,
         txHash: row.txHash ?? null,
@@ -320,6 +326,12 @@ export function registerAdminMonitoringRoutes(router: OpenAPIHono, deps: AdminRo
       .limit(limit)
       .all();
 
+    // Pre-batch token lookups for incoming transactions (NQ-05)
+    const inTokenAddrs = rows
+      .map((row) => ({ address: row.tokenAddress ?? '', network: row.network ?? null }))
+      .filter((t) => t.address !== '');
+    const inTokenMap = buildTokenMap(inTokenAddrs, deps.db);
+
     const items = rows.map((row) => ({
       id: row.id,
       txHash: row.txHash,
@@ -327,7 +339,7 @@ export function registerAdminMonitoringRoutes(router: OpenAPIHono, deps: AdminRo
       walletName: row.walletName ?? null,
       fromAddress: row.fromAddress,
       amount: row.amount,
-      formattedAmount: formatTxAmount(row.amount, row.chain, row.network, row.tokenAddress ?? null, deps.db),
+      formattedAmount: formatTxAmount(row.amount, row.chain, row.network, row.tokenAddress ?? null, deps.db, inTokenMap),
       tokenAddress: row.tokenAddress ?? null,
       chain: row.chain,
       network: row.network,
