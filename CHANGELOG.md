@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.11.0-rc.16](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.15...v2.11.0-rc.16) (2026-03-16)
+
+
+### Bug Fixes
+
+* exclude CLI e2e/platform tests from test:unit ([712d49c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/712d49c0ef37c6cd9d583cbdf52e690dc4e02066))
+* increase CLI e2e health check timeout to 30s for CI ([7907892](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7907892362b97f9fb86e77edda27ac1c65c9675e))
+* lower CLI branches coverage threshold to 78% after e2e exclusion ([b53f66a](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b53f66a1f6d6a2be46fe8bd795fd338b110c5229))
+
 ## [2.11.0-rc.15](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.14...v2.11.0-rc.15) (2026-03-15)
 
 
