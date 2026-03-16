@@ -123,6 +123,11 @@
   - [ ] 430-02-PLAN.md — hot-reload + stages + userop + sync-pipeline as any 제거
   - [ ] 430-03-PLAN.md — external-action-pipeline + API 라우트 + NFT indexer as any 제거 + 최종 sweep
 - [ ] **Phase 431: SSoT 통합 + 설정 정리** - NATIVE_DECIMALS/formatAmount 등 중복 통합, 팬텀 설정/stale 참조 정리
+  **Plans:** 3 plans
+  Plans:
+  - [ ] 431-01-PLAN.md — NATIVE_DECIMALS/NATIVE_SYMBOLS SSoT + formatAmount 통합 + resolveRpcUrl typed overload
+  - [ ] 431-02-PLAN.md — formatDisplayCurrency 동기화 + aggregateStakingBalance 공유 추출 + sweepAll/stage naming/hintedTokens 정리
+  - [ ] 431-03-PLAN.md — Settings configPath 감사 + stale phase 주석 정리 + SSoT 불변성 테스트
 
 ## Phase Details
 
@@ -176,12 +181,12 @@
 **Goal**: 중복 유틸리티/상수가 단일 소스로 통합되고, 팬텀 설정과 stale 참조가 제거되었다
 **Depends on**: Phase 430
 **Requirements**: SSOT-01, SSOT-03, SSOT-04, SSOT-05, SSOT-06, SSOT-07, CLN-01, CLN-02, CLN-03, CLN-04, CLN-05, CLN-06, CLN-07, CLN-08
+**Plans:** 3 plans
 **Success Criteria** (what must be TRUE):
   1. NATIVE_DECIMALS, NATIVE_SYMBOLS가 @waiaas/core에 정의되고 5곳에서 import하여 로컬 중복이 0건이다
   2. Balance formatting 6곳이 formatAmount() 사용으로 통합되고, resolveRpcUrl의 as unknown as Record 캐스팅 8곳이 제거되었다
   3. Settings configPath 5건이 실제 동작과 일치하고, stale phase 참조 주석 40+건이 제거되었다
   4. pnpm turbo run test:unit이 전체 통과한다
-**Plans**: TBD
 
 ## Progress
 
@@ -201,4 +206,4 @@ Phases execute in numeric order: 427 -> 428 -> 429 -> 430 -> 431
 | 428. 인터페이스 확장 + 레이어 위반 수정 | v32.4 | Complete    | 2026-03-16 | 2026-03-16 |
 | 429. DatabasePolicyEngine Zod 검증 | 2/2 | Complete    | 2026-03-16 | - |
 | 430. as any 제거 | 3/3 | Complete    | 2026-03-16 | - |
-| 431. SSoT 통합 + 설정 정리 | v32.4 | 0/TBD | Not started | - |
+| 431. SSoT 통합 + 설정 정리 | v32.4 | 0/3 | Not started | - |
