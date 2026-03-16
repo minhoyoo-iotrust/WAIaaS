@@ -263,7 +263,7 @@ describe('wallet-purge-cascades-data', () => {
       {
         walletId,
         type: 'SPENDING_LIMIT',
-        params: { maxAmount: '1000000000', period: 'daily' },
+        rules: { instant_max: '1000000000', notify_max: '5000000000', delay_max: '10000000000' },
       },
       adminHeaders(),
     );
