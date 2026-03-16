@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v32.4
 milestone_name: 타입 안전 + 코드 품질
 status: completed
-stopped_at: Completed 430-03-PLAN.md
-last_updated: "2026-03-16T06:37:17.679Z"
+stopped_at: Completed 431-03-PLAN.md
+last_updated: "2026-03-16T07:28:04.622Z"
 last_activity: 2026-03-16 -- Phase 430 Plans 01-03 executed (6 tasks, 20 files, 0 production as any)
 progress:
   total_phases: 5
-  completed_phases: 4
-  total_plans: 8
-  completed_plans: 8
+  completed_phases: 5
+  total_plans: 11
+  completed_plans: 11
   percent: 80
 ---
 
@@ -47,6 +47,7 @@ Progress: [████████░░] 80%
 | Phase 429 P01 | ~3 min | 1 tasks | 9 files |
 | Phase 429 P02 | ~13 min | 2 tasks | 3 files |
 | Phase 430 P01-03 | 29min | 6 tasks | 20 files |
+| Phase 431 P01-03 | 43min | 6 tasks | 40 files |
 
 ## Accumulated Context
 
@@ -66,6 +67,10 @@ Progress: [████████░░] 80%
 - [Phase 430]: BundlerOps type interface for viem bundlerClient (avoids strict generic inference)
 - [Phase 430]: NULL_POLICY_ENGINE null-object for stage 5-6 re-entry where policy already evaluated
 - [Phase 430]: network as NetworkType assertion for DB-sourced network strings (already validated)
+- [Phase 431]: NATIVE_DECIMALS SSoT: object lookup (undefined for unknown) vs nativeDecimals() defaults to 18
+- [Phase 431]: resolveRpcUrl accepts Record<string,string>|RpcConfig union with internal cast
+- [Phase 431]: sweepAll made optional in IChainAdapter, stubs removed from adapters
+- [Phase 431]: configPath values preserved unchanged (comments only) to avoid SettingsService breakage
 
 ### Pending Todos
 
@@ -78,6 +83,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-16T06:36:34.792Z
-Stopped at: Completed 430-03-PLAN.md
+Last session: 2026-03-16T07:27:56.602Z
+Stopped at: Completed 431-03-PLAN.md
 Resume file: None

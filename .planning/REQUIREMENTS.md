@@ -54,24 +54,24 @@ Requirements for v32.4. Each maps to roadmap phases.
 
 ### SSoT 통합
 
-- [ ] **SSOT-01**: NATIVE_DECIMALS, NATIVE_SYMBOLS 상수가 @waiaas/core에 정의되고 5곳에서 import된다
+- [x] **SSOT-01**: NATIVE_DECIMALS, NATIVE_SYMBOLS 상수가 @waiaas/core에 정의되고 5곳에서 import된다
 - [x] **SSOT-02**: sleep() 유틸리티가 @waiaas/core에서 export되고 4곳 로컬 정의가 제거된다
-- [ ] **SSOT-03**: formatDisplayCurrency가 Admin UI에서 @waiaas/core import로 통합된다
-- [ ] **SSOT-04**: aggregateStakingBalance가 공유 모듈로 추출되고 admin.ts 인라인 복제가 제거된다
-- [ ] **SSOT-05**: resolveRpcUrl 시그니처가 typed config를 수용하여 8곳 as unknown as Record 캐스팅이 제거된다
-- [ ] **SSOT-06**: Balance formatting Number(balance) / 10 ** decimals 6곳이 formatAmount() 사용으로 교체된다
-- [ ] **SSOT-07**: 로컬 중복 정의가 0건이다 (grep 검증: sleep, NATIVE_DECIMALS 패턴)
+- [x] **SSOT-03**: formatDisplayCurrency가 Admin UI에서 @waiaas/core import로 통합된다
+- [x] **SSOT-04**: aggregateStakingBalance가 공유 모듈로 추출되고 admin.ts 인라인 복제가 제거된다
+- [x] **SSOT-05**: resolveRpcUrl 시그니처가 typed config를 수용하여 8곳 as unknown as Record 캐스팅이 제거된다
+- [x] **SSOT-06**: Balance formatting Number(balance) / 10 ** decimals 6곳이 formatAmount() 사용으로 교체된다
+- [x] **SSOT-07**: 로컬 중복 정의가 0건이다 (grep 검증: sleep, NATIVE_DECIMALS 패턴)
 
 ### 설정 + 정리
 
-- [ ] **CLN-01**: rpc.evm_default_network가 SETTING_DEFINITIONS에 등록되거나 하드코딩이 명시적 파라미터로 교체된다
-- [ ] **CLN-02**: Settings configPath 5건(oracle, signing_sdk, gas_condition, rpc_pool, position_tracker)이 실제 동작과 일치하도록 수정된다
-- [ ] **CLN-03**: hintedTokens export가 제거되고 테스트에서 모킹으로 전환된다
-- [ ] **CLN-04**: stale phase 참조 주석 40+건이 제거된다 (Phase 80, Phase 50-04 등)
-- [ ] **CLN-05**: sweepAll() stub가 인터페이스에서 제거된다
-- [ ] **CLN-06**: stage3_5GasCondition 네이밍이 일관된 형식으로 변경된다
-- [ ] **CLN-07**: 설정 키 등록 검증 테스트와 stale 참조 부재 확인 테스트가 존재한다
-- [ ] **CLN-08**: pnpm turbo run test:unit이 전체 통과한다
+- [x] **CLN-01**: rpc.evm_default_network가 SETTING_DEFINITIONS에 등록되거나 하드코딩이 명시적 파라미터로 교체된다
+- [x] **CLN-02**: Settings configPath 5건(oracle, signing_sdk, gas_condition, rpc_pool, position_tracker)이 실제 동작과 일치하도록 수정된다
+- [x] **CLN-03**: hintedTokens export가 제거되고 테스트에서 모킹으로 전환된다
+- [x] **CLN-04**: stale phase 참조 주석 40+건이 제거된다 (Phase 80, Phase 50-04 등)
+- [x] **CLN-05**: sweepAll() stub가 인터페이스에서 제거된다
+- [x] **CLN-06**: stage3_5GasCondition 네이밍이 일관된 형식으로 변경된다
+- [x] **CLN-07**: 설정 키 등록 검증 테스트와 stale 참조 부재 확인 테스트가 존재한다
+- [x] **CLN-08**: pnpm turbo run test:unit이 전체 통과한다
 
 ## v2 Requirements
 
@@ -138,21 +138,21 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CAST-11 | Phase 430 | Complete |
 | CAST-12 | Phase 430 | Complete |
 | CAST-13 | Phase 430 | Complete |
-| SSOT-01 | Phase 431 | Pending |
+| SSOT-01 | Phase 431 | Complete |
 | SSOT-02 | Phase 427 | Complete |
-| SSOT-03 | Phase 431 | Pending |
-| SSOT-04 | Phase 431 | Pending |
-| SSOT-05 | Phase 431 | Pending |
-| SSOT-06 | Phase 431 | Pending |
-| SSOT-07 | Phase 431 | Pending |
-| CLN-01 | Phase 431 | Pending |
-| CLN-02 | Phase 431 | Pending |
-| CLN-03 | Phase 431 | Pending |
-| CLN-04 | Phase 431 | Pending |
-| CLN-05 | Phase 431 | Pending |
-| CLN-06 | Phase 431 | Pending |
-| CLN-07 | Phase 431 | Pending |
-| CLN-08 | Phase 431 | Pending |
+| SSOT-03 | Phase 431 | Complete |
+| SSOT-04 | Phase 431 | Complete |
+| SSOT-05 | Phase 431 | Complete |
+| SSOT-06 | Phase 431 | Complete |
+| SSOT-07 | Phase 431 | Complete |
+| CLN-01 | Phase 431 | Complete |
+| CLN-02 | Phase 431 | Complete |
+| CLN-03 | Phase 431 | Complete |
+| CLN-04 | Phase 431 | Complete |
+| CLN-05 | Phase 431 | Complete |
+| CLN-06 | Phase 431 | Complete |
+| CLN-07 | Phase 431 | Complete |
+| CLN-08 | Phase 431 | Complete |
 
 **Coverage:**
 - v1 requirements: 51 total
