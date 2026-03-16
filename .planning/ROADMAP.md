@@ -132,7 +132,7 @@
 **Goal**: IChainSubscriber 인터페이스가 실제 구현을 반영하고, services/infrastructure에서 api/ import가 0건이다
 **Depends on**: Phase 427
 **Requirements**: LAYER-01, LAYER-02, LAYER-03, LAYER-04, LAYER-05, LAYER-08, LAYER-09, LAYER-10
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 **Success Criteria** (what must be TRUE):
   1. IChainSubscriber에 pollAll()과 checkFinalized() 메서드가 선언되어 있고, 기존 구현체가 인터페이스를 만족한다
   2. incoming-tx-monitor-service.ts와 subscription-multiplexer.ts의 as unknown as 캐스팅이 0건이다
@@ -189,7 +189,7 @@ Phases execute in numeric order: 427 -> 428 -> 429 -> 430 -> 431
 | 425. Rate Limit Middleware | v32.2 | 1/1 | Complete | 2026-03-16 |
 | 426. CORS + Resource Management | v32.2 | 1/1 | Complete | 2026-03-16 |
 | 427. Core Exports + safeJsonParse 유틸리티 | v32.4 | Complete    | 2026-03-16 | 2026-03-16 |
-| 428. 인터페이스 확장 + 레이어 위반 수정 | v32.4 | 2/2 | Complete | 2026-03-16 |
+| 428. 인터페이스 확장 + 레이어 위반 수정 | v32.4 | Complete    | 2026-03-16 | 2026-03-16 |
 | 429. DatabasePolicyEngine Zod 검증 | v32.4 | 0/TBD | Not started | - |
 | 430. as any 제거 | v32.4 | 0/TBD | Not started | - |
 | 431. SSoT 통합 + 설정 정리 | v32.4 | 0/TBD | Not started | - |
