@@ -180,6 +180,7 @@ const adminDefiPositionsRoute = createRoute({
     query: z.object({
       wallet_id: z.string().uuid().optional(),
       category: z.enum(['STAKING', 'LENDING', 'YIELD', 'PERP']).optional(),
+      includeTestnets: z.enum(['true', 'false']).optional().default('false'),
     }),
   },
   responses: {
@@ -194,6 +195,7 @@ const adminDefiPositionsRoute = createRoute({
               category: z.string(),
               provider: z.string(),
               chain: z.string(),
+              environment: z.string(),
               network: z.string().nullable(),
               assetId: z.string().nullable(),
               amount: z.string(),
@@ -557,7 +559,7 @@ export function registerAdminWalletRoutes(router: OpenAPIHono, deps: AdminRouteD
 
   // GET /admin/defi/positions
   router.openapi(adminDefiPositionsRoute, async (c) => {
-    const { wallet_id, category } = c.req.valid('query');
+    const { wallet_id, category, includeTestnets } = c.req.valid('query');
 
     if (!deps.sqlite) {
       return c.json({ positions: [], totalValueUsd: null, worstHealthFactor: null, activeCount: 0 }, 200);
@@ -566,7 +568,7 @@ export function registerAdminWalletRoutes(router: OpenAPIHono, deps: AdminRouteD
     // Cross-wallet DeFi positions query
     type PositionRow = {
       id: string; wallet_id: string; category: string; provider: string;
-      chain: string; network: string | null; asset_id: string | null;
+      chain: string; environment: string; network: string | null; asset_id: string | null;
       amount: string; amount_usd: number | null; metadata: string | null;
       status: string; opened_at: number; last_synced_at: number;
     };
@@ -574,6 +576,9 @@ export function registerAdminWalletRoutes(router: OpenAPIHono, deps: AdminRouteD
     const conditions: string[] = ["status = 'ACTIVE'"];
     const params: unknown[] = [];
 
+    if (includeTestnets !== 'true') {
+      conditions.push("environment = 'mainnet'");
+    }
     if (wallet_id) {
       conditions.push('wallet_id = ?');
       params.push(wallet_id);
@@ -585,7 +590,7 @@ export function registerAdminWalletRoutes(router: OpenAPIHono, deps: AdminRouteD
 
     const whereClause = conditions.join(' AND ');
     const rows = deps.sqlite.prepare(
-      `SELECT id, wallet_id, category, provider, chain, network, asset_id,
+      `SELECT id, wallet_id, category, provider, chain, environment, network, asset_id,
               amount, amount_usd, metadata, status, opened_at, last_synced_at
        FROM defi_positions
        WHERE ${whereClause}
@@ -603,6 +608,7 @@ export function registerAdminWalletRoutes(router: OpenAPIHono, deps: AdminRouteD
       category: row.category,
       provider: row.provider,
       chain: row.chain,
+      environment: row.environment,
       network: row.network,
       assetId: row.asset_id,
       amount: row.amount,

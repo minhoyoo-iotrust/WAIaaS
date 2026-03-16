@@ -275,6 +275,59 @@ describe('GET /admin/defi/positions', () => {
     expect((body.positions[0]!.metadata as Record<string, unknown>).positionType).toBe('SUPPLY');
   });
 
+  it('should default to mainnet-only positions (no includeTestnets param)', async () => {
+    const wid = '00000000-0000-0000-0000-000000000020';
+    insertPosition({ id: 'pos-mn-1', walletId: wid, amountUsd: 100 });
+    insertPosition({ id: 'pos-mn-2', walletId: wid, amountUsd: 200, provider: 'lido' });
+    // Insert testnet position manually
+    sqlite.prepare(`UPDATE defi_positions SET environment = 'testnet' WHERE id = ?`).run('pos-mn-2');
+
+    const config = fullConfig();
+    const settingsService = new SettingsService({ db, config, masterPassword: TEST_PASSWORD });
+    const app = createApp({ db, sqlite, masterPasswordHash: passwordHash, config, settingsService });
+
+    const res = await app.request('/v1/admin/defi/positions', { headers: masterHeaders() });
+    expect(res.status).toBe(200);
+    const body = await res.json() as { positions: unknown[]; activeCount: number };
+    expect(body.positions).toHaveLength(1);
+    expect(body.activeCount).toBe(1);
+  });
+
+  it('should return all positions with includeTestnets=true', async () => {
+    const wid = '00000000-0000-0000-0000-000000000021';
+    insertPosition({ id: 'pos-all-1', walletId: wid, amountUsd: 100 });
+    insertPosition({ id: 'pos-all-2', walletId: wid, amountUsd: 200, provider: 'lido' });
+    // Mark one as testnet
+    sqlite.prepare(`UPDATE defi_positions SET environment = 'testnet' WHERE id = ?`).run('pos-all-2');
+
+    const config = fullConfig();
+    const settingsService = new SettingsService({ db, config, masterPassword: TEST_PASSWORD });
+    const app = createApp({ db, sqlite, masterPasswordHash: passwordHash, config, settingsService });
+
+    const res = await app.request('/v1/admin/defi/positions?includeTestnets=true', { headers: masterHeaders() });
+    expect(res.status).toBe(200);
+    const body = await res.json() as { positions: Array<{ environment?: string }>; activeCount: number };
+    expect(body.positions).toHaveLength(2);
+    expect(body.activeCount).toBe(2);
+  });
+
+  it('should return mainnet-only with explicit includeTestnets=false', async () => {
+    const wid = '00000000-0000-0000-0000-000000000022';
+    insertPosition({ id: 'pos-expl-1', walletId: wid, amountUsd: 50 });
+    insertPosition({ id: 'pos-expl-2', walletId: wid, amountUsd: 75, provider: 'lido' });
+    sqlite.prepare(`UPDATE defi_positions SET environment = 'testnet' WHERE id = ?`).run('pos-expl-2');
+
+    const config = fullConfig();
+    const settingsService = new SettingsService({ db, config, masterPassword: TEST_PASSWORD });
+    const app = createApp({ db, sqlite, masterPasswordHash: passwordHash, config, settingsService });
+
+    const res = await app.request('/v1/admin/defi/positions?includeTestnets=false', { headers: masterHeaders() });
+    expect(res.status).toBe(200);
+    const body = await res.json() as { positions: unknown[]; activeCount: number };
+    expect(body.positions).toHaveLength(1);
+    expect(body.activeCount).toBe(1);
+  });
+
   it('should combine wallet_id and category filters', async () => {
     const wid1 = '00000000-0000-0000-0000-000000000011';
     const wid2 = '00000000-0000-0000-0000-000000000012';

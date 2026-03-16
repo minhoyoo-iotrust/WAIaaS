@@ -173,6 +173,7 @@ export class PositionTracker {
             };
             const positions = await provider.getPositions(ctx);
             for (const pos of positions) {
+              pos.environment = wallet.environment;
               this.writeQueue.enqueue(pos);
             }
           } catch (err) {
