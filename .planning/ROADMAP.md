@@ -107,6 +107,10 @@
   Plans:
   - [x] 427-01-PLAN.md — safeJsonParse + POLICY_RULES_SCHEMAS export + sleep SSoT + 에러 코드 등록
 - [ ] **Phase 428: 인터페이스 확장 + 레이어 위반 수정** - IChainSubscriber 인터페이스 확장, MasterPasswordRef 이동, wc-signing-bridge 레이어 위반 해소
+  **Plans:** 2 plans
+  Plans:
+  - [ ] 428-01-PLAN.md — IChainSubscriber 인터페이스 확장 + as unknown as 캐스팅 제거
+  - [ ] 428-02-PLAN.md — 레이어 위반 수정 (verifySIWE/decodeBase58/MasterPasswordRef 이동 + ACTION_VALIDATION_FAILED 교체)
 - [ ] **Phase 429: DatabasePolicyEngine Zod 검증** - 21건 JSON.parse를 Zod safeParse로 교체, 로컬 인터페이스 제거, 정책 룰 검증 테스트
 - [ ] **Phase 430: as any 제거** - WC/bundler/hot-reload/daemon 등 프로덕션 as any 55건 제거, JSON.parse Zod 추가
 - [ ] **Phase 431: SSoT 통합 + 설정 정리** - NATIVE_DECIMALS/formatAmount 등 중복 통합, 팬텀 설정/stale 참조 정리
@@ -128,13 +132,13 @@
 **Goal**: IChainSubscriber 인터페이스가 실제 구현을 반영하고, services/infrastructure에서 api/ import가 0건이다
 **Depends on**: Phase 427
 **Requirements**: LAYER-01, LAYER-02, LAYER-03, LAYER-04, LAYER-05, LAYER-08, LAYER-09, LAYER-10
+**Plans:** 2 plans
 **Success Criteria** (what must be TRUE):
   1. IChainSubscriber에 pollAll()과 checkFinalized() 메서드가 선언되어 있고, 기존 구현체가 인터페이스를 만족한다
   2. incoming-tx-monitor-service.ts와 subscription-multiplexer.ts의 as unknown as 캐스팅이 0건이다
   3. wc-signing-bridge.ts가 api/middleware/에서 아무것도 import하지 않으며, 유틸리티가 infrastructure/에 위치한다
   4. grep으로 확인 시 services/ 및 infrastructure/에서 api/ import가 0건이다
   5. 인터페이스 contract 테스트가 새 메서드를 검증한다
-**Plans**: TBD
 
 ### Phase 429: DatabasePolicyEngine Zod 검증
 **Goal**: 정책 엔진이 DB에서 읽은 JSON을 Zod safeParse로 검증하여 corrupt 데이터를 안전하게 처리한다
@@ -185,7 +189,7 @@ Phases execute in numeric order: 427 -> 428 -> 429 -> 430 -> 431
 | 425. Rate Limit Middleware | v32.2 | 1/1 | Complete | 2026-03-16 |
 | 426. CORS + Resource Management | v32.2 | 1/1 | Complete | 2026-03-16 |
 | 427. Core Exports + safeJsonParse 유틸리티 | v32.4 | Complete    | 2026-03-16 | 2026-03-16 |
-| 428. 인터페이스 확장 + 레이어 위반 수정 | v32.4 | 0/TBD | Not started | - |
+| 428. 인터페이스 확장 + 레이어 위반 수정 | v32.4 | 0/2 | Not started | - |
 | 429. DatabasePolicyEngine Zod 검증 | v32.4 | 0/TBD | Not started | - |
 | 430. as any 제거 | v32.4 | 0/TBD | Not started | - |
 | 431. SSoT 통합 + 설정 정리 | v32.4 | 0/TBD | Not started | - |
