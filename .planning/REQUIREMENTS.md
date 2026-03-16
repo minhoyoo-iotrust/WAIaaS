@@ -18,9 +18,9 @@ Requirements for v32.4. Each maps to roadmap phases.
 - [x] **ZOD-07**: DatabasePolicyEngine의 LendingLtvLimitRules JSON.parse가 Zod safeParse로 교체된다
 - [x] **ZOD-08**: DatabasePolicyEngine의 나머지 정책 룰 JSON.parse(~16건)가 모두 Zod safeParse로 교체된다
 - [x] **ZOD-09**: DatabasePolicyEngine의 로컬 interface 정의가 제거되고 Zod z.infer<> 타입으로 교체된다
-- [ ] **ZOD-10**: daemon.ts의 JSON.parse 3건에 Zod 검증이 추가된다
-- [ ] **ZOD-11**: notification-service.ts의 JSON.parse 2건에 Zod 검증이 추가된다
-- [ ] **ZOD-12**: jwt-secret-manager.ts의 JSON.parse 2건에 Zod 검증이 추가된다
+- [x] **ZOD-10**: daemon.ts의 JSON.parse 3건에 Zod 검증이 추가된다
+- [x] **ZOD-11**: notification-service.ts의 JSON.parse 2건에 Zod 검증이 추가된다
+- [x] **ZOD-12**: jwt-secret-manager.ts의 JSON.parse 2건에 Zod 검증이 추가된다
 - [x] **ZOD-13**: 정상 규칙 파싱, corrupt JSON 처리, 스키마 불일치 처리에 대한 테스트가 존재한다
 
 ### 인터페이스 + 레이어 정비
@@ -38,19 +38,19 @@ Requirements for v32.4. Each maps to roadmap phases.
 
 ### as any 제거
 
-- [ ] **CAST-01**: wc.ts의 (db as any).session?.client 8건이 typed 헬퍼로 교체된다
-- [ ] **CAST-02**: hot-reload.ts의 'solana' as any 4건이 타입 안전한 코드로 교체된다
-- [ ] **CAST-03**: daemon.ts의 policyEngine: null as any 2건이 optional 또는 null-object 패턴으로 교체된다
-- [ ] **CAST-04**: stages.ts의 (ctx.request as any).type 1건이 타입 가드로 교체된다
-- [ ] **CAST-05**: wc-signing-bridge.ts의 catch (error: any)가 catch (error: unknown) + 타입 내로잉으로 교체된다
-- [ ] **CAST-06**: wc-session-service.ts의 ESM interop/storage/namespace as any 3건이 타입 안전한 코드로 교체된다
-- [ ] **CAST-07**: solana/adapter.ts의 instruction as any, any[] 반환 3건이 @ts-expect-error + 명시적 주석으로 전환된다
-- [ ] **CAST-08**: payment-signer.ts의 branded type 우회 as any가 제거된다
-- [ ] **CAST-09**: hot-reload.ts의 Partial<any>가 실제 config 타입으로 교체된다
-- [ ] **CAST-10**: bundlerClient 관련 as any (~4건)가 wrapper 함수 또는 타입 가드로 교체된다
-- [ ] **CAST-11**: external-action-pipeline 관련 as any가 적절한 타입으로 교체된다
-- [ ] **CAST-12**: 프로덕션 소스에 as any가 0건이다 (Solana @ts-expect-error 전환 제외)
-- [ ] **CAST-13**: pnpm turbo run typecheck가 전체 패키지에서 통과한다
+- [x] **CAST-01**: wc.ts의 (db as any).session?.client 8건이 typed 헬퍼로 교체된다
+- [x] **CAST-02**: hot-reload.ts의 'solana' as any 4건이 타입 안전한 코드로 교체된다
+- [x] **CAST-03**: daemon.ts의 policyEngine: null as any 2건이 optional 또는 null-object 패턴으로 교체된다
+- [x] **CAST-04**: stages.ts의 (ctx.request as any).type 1건이 타입 가드로 교체된다
+- [x] **CAST-05**: wc-signing-bridge.ts의 catch (error: any)가 catch (error: unknown) + 타입 내로잉으로 교체된다
+- [x] **CAST-06**: wc-session-service.ts의 ESM interop/storage/namespace as any 3건이 타입 안전한 코드로 교체된다
+- [x] **CAST-07**: solana/adapter.ts의 instruction as any, any[] 반환 3건이 @ts-expect-error + 명시적 주석으로 전환된다
+- [x] **CAST-08**: payment-signer.ts의 branded type 우회 as any가 제거된다
+- [x] **CAST-09**: hot-reload.ts의 Partial<any>가 실제 config 타입으로 교체된다
+- [x] **CAST-10**: bundlerClient 관련 as any (~4건)가 wrapper 함수 또는 타입 가드로 교체된다
+- [x] **CAST-11**: external-action-pipeline 관련 as any가 적절한 타입으로 교체된다
+- [x] **CAST-12**: 프로덕션 소스에 as any가 0건이다 (Solana @ts-expect-error 전환 제외)
+- [x] **CAST-13**: pnpm turbo run typecheck가 전체 패키지에서 통과한다
 
 ### SSoT 통합
 
@@ -111,9 +111,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ZOD-07 | Phase 429 | Complete |
 | ZOD-08 | Phase 429 | Complete |
 | ZOD-09 | Phase 429 | Complete |
-| ZOD-10 | Phase 430 | Pending |
-| ZOD-11 | Phase 430 | Pending |
-| ZOD-12 | Phase 430 | Pending |
+| ZOD-10 | Phase 430 | Complete |
+| ZOD-11 | Phase 430 | Complete |
+| ZOD-12 | Phase 430 | Complete |
 | ZOD-13 | Phase 429 | Complete |
 | LAYER-01 | Phase 428 | Complete |
 | LAYER-02 | Phase 428 | Complete |
@@ -125,19 +125,19 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LAYER-08 | Phase 428 | Complete |
 | LAYER-09 | Phase 428 | Complete |
 | LAYER-10 | Phase 428 | Complete |
-| CAST-01 | Phase 430 | Pending |
-| CAST-02 | Phase 430 | Pending |
-| CAST-03 | Phase 430 | Pending |
-| CAST-04 | Phase 430 | Pending |
-| CAST-05 | Phase 430 | Pending |
-| CAST-06 | Phase 430 | Pending |
-| CAST-07 | Phase 430 | Pending |
-| CAST-08 | Phase 430 | Pending |
-| CAST-09 | Phase 430 | Pending |
-| CAST-10 | Phase 430 | Pending |
-| CAST-11 | Phase 430 | Pending |
-| CAST-12 | Phase 430 | Pending |
-| CAST-13 | Phase 430 | Pending |
+| CAST-01 | Phase 430 | Complete |
+| CAST-02 | Phase 430 | Complete |
+| CAST-03 | Phase 430 | Complete |
+| CAST-04 | Phase 430 | Complete |
+| CAST-05 | Phase 430 | Complete |
+| CAST-06 | Phase 430 | Complete |
+| CAST-07 | Phase 430 | Complete |
+| CAST-08 | Phase 430 | Complete |
+| CAST-09 | Phase 430 | Complete |
+| CAST-10 | Phase 430 | Complete |
+| CAST-11 | Phase 430 | Complete |
+| CAST-12 | Phase 430 | Complete |
+| CAST-13 | Phase 430 | Complete |
 | SSOT-01 | Phase 431 | Pending |
 | SSOT-02 | Phase 427 | Complete |
 | SSOT-03 | Phase 431 | Pending |

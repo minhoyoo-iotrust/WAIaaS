@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v32.4
 milestone_name: 타입 안전 + 코드 품질
 status: completed
-stopped_at: Completed 429-02-PLAN.md
-last_updated: "2026-03-16T05:57:46.806Z"
+stopped_at: Completed 430-03-PLAN.md
+last_updated: "2026-03-16T06:36:34.795Z"
 last_activity: 2026-03-16 -- Phase 429 Plans 01-02 executed (3 tasks, 12 files, 8 corrupt data tests)
 progress:
   total_phases: 5
-  completed_phases: 3
-  total_plans: 5
-  completed_plans: 5
+  completed_phases: 4
+  total_plans: 8
+  completed_plans: 8
   percent: 60
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-16)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Phase 429 complete -- ready for Phase 430
+**Current focus:** Phase 430 complete -- ready for Phase 431
 
 ## Current Position
 
-Phase: 3 of 5 (Phase 429: DatabasePolicyEngine Zod 검증) -- COMPLETE
-Plan: 2 of 2 in current phase -- COMPLETE
-Status: Phase 429 complete
-Last activity: 2026-03-16 -- Phase 429 Plans 01-02 executed (3 tasks, 12 files, 8 corrupt data tests)
+Phase: 4 of 5 (Phase 430: as any 제거) -- COMPLETE
+Plan: 3 of 3 in current phase -- COMPLETE
+Status: Phase 430 complete
+Last activity: 2026-03-16 -- Phase 430 Plans 01-03 executed (6 tasks, 20 files, 0 production as any)
 
-Progress: [######░░░░] 60%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
@@ -46,6 +46,7 @@ Progress: [######░░░░] 60%
 | 428 | 02 | ~8 min | 2 | 11 |
 | Phase 429 P01 | ~3 min | 1 tasks | 9 files |
 | Phase 429 P02 | ~13 min | 2 tasks | 3 files |
+| Phase 430 P01-03 | 29min | 6 tasks | 20 files |
 
 ## Accumulated Context
 
@@ -61,6 +62,10 @@ Progress: [######░░░░] 60%
 - [Phase 429]: parseRules<S extends z.ZodTypeAny> generic for proper type inference from superRefine schemas
 - [Phase 429]: Empty whitelist/invalid CAIP-19 now caught at Zod parse time (stricter validation)
 - [Phase 429]: core/src/index.ts must explicitly re-export new schemas (barrel does not auto-forward)
+- [Phase 430]: getSqliteClient typed helper for raw better-sqlite3 client extraction from Drizzle
+- [Phase 430]: BundlerOps type interface for viem bundlerClient (avoids strict generic inference)
+- [Phase 430]: NULL_POLICY_ENGINE null-object for stage 5-6 re-entry where policy already evaluated
+- [Phase 430]: network as NetworkType assertion for DB-sourced network strings (already validated)
 
 ### Pending Todos
 
@@ -73,6 +78,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-16T05:56:42.987Z
-Stopped at: Completed 429-02-PLAN.md
+Last session: 2026-03-16T06:36:34.792Z
+Stopped at: Completed 430-03-PLAN.md
 Resume file: None
