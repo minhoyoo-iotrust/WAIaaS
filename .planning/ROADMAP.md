@@ -40,10 +40,10 @@ Plans:
 **Plans:** 4 plans
 
 Plans:
-- [ ] 433-01-PLAN.md — Lido 멀티체인 컨트랙트 매핑 + 5 네트워크 병렬 포지션 조회
-- [ ] 433-02-PLAN.md — Aave V3 멀티네트워크 getPositions + Promise.allSettled
-- [ ] 433-03-PLAN.md — Pendle 멀티네트워크 getPositions (Ethereum + Arbitrum)
-- [ ] 433-04-PLAN.md — Solana 프로바이더 네트워크 동적 추출 + Hyperliquid 가드 확인
+- [x] 433-01-PLAN.md — Lido 멀티체인 컨트랙트 매핑 + 5 네트워크 병렬 포지션 조회
+- [x] 433-02-PLAN.md — Aave V3 멀티네트워크 getPositions + Promise.allSettled
+- [x] 433-03-PLAN.md — Pendle 멀티네트워크 getPositions (Ethereum + Arbitrum)
+- [x] 433-04-PLAN.md — Solana 프로바이더 네트워크 동적 추출 + Hyperliquid 가드 확인
 
 ### Phase 434: Testnet Toggle
 **Goal**: Admin 대시보드에서 테스트넷 포지션을 포함/제외할 수 있고, DB에 환경 정보가 영구 저장된다
@@ -64,5 +64,5 @@ Phases execute in numeric order: 432 → 433 → 434
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 432. Interface Extension | 2/2 | Complete    | 2026-03-16 |
-| 433. Multichain Positions | 0/4 | Not started | - |
+| 433. Multichain Positions | 4/4 | Complete    | 2026-03-16 |
 | 434. Testnet Toggle | 0/? | Not started | - |

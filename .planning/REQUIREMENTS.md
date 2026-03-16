@@ -24,16 +24,16 @@ Requirements for milestone v32.5. Each maps to roadmap phases.
 
 ### Multichain (멀티체인 포지션)
 
-- [ ] **MCHN-01**: Lido가 Ethereum/Base/Arbitrum/Optimism/Polygon/Scroll 6개 네트워크에서 stETH/wstETH 포지션을 조회한다
-- [ ] **MCHN-02**: Aave V3가 Ethereum/Base/Arbitrum/Optimism/Polygon 5개 네트워크에서 supply/borrow 포지션을 조회한다
-- [ ] **MCHN-03**: Pendle가 Ethereum/Arbitrum 2개 네트워크에서 PT/YT 포지션을 조회한다
-- [ ] **MCHN-04**: 프로바이더별 멀티체인 컨트랙트 주소가 프로바이더 내부 상수로 정의된다
-- [ ] **MCHN-05**: 각 네트워크의 CAIP-19 assetId가 해당 네트워크의 chainId에 맞게 생성된다
-- [ ] **MCHN-06**: 멀티네트워크 조회가 Promise.allSettled로 병렬 실행된다
-- [ ] **MCHN-07**: 단일 네트워크 RPC 실패 시 나머지 네트워크 결과가 정상 반환된다
-- [ ] **MCHN-08**: Solana 프로바이더(Jito/Kamino/Drift)가 하드코딩 대신 context.networks에서 네트워크를 추출한다
-- [ ] **MCHN-09**: Hyperliquid Perp/Spot이 해당 체인이 아니면 빈 배열을 반환한다
-- [ ] **MCHN-10**: 테스트넷 환경 지갑이 테스트넷 컨트랙트 주소(Sepolia stETH, Sepolia Aave 등)로 포지션을 조회한다
+- [x] **MCHN-01**: Lido가 Ethereum/Base/Arbitrum/Optimism/Polygon 5개 네트워크에서 stETH/wstETH 포지션을 조회한다 (Scroll 제외 -- WAIaaS NetworkType 미지원)
+- [x] **MCHN-02**: Aave V3가 Ethereum/Base/Arbitrum/Optimism/Polygon 5개 네트워크에서 supply/borrow 포지션을 조회한다
+- [x] **MCHN-03**: Pendle가 Ethereum/Arbitrum 2개 네트워크에서 PT/YT 포지션을 조회한다
+- [x] **MCHN-04**: 프로바이더별 멀티체인 컨트랙트 주소가 프로바이더 내부 상수로 정의된다
+- [x] **MCHN-05**: 각 네트워크의 CAIP-19 assetId가 해당 네트워크의 chainId에 맞게 생성된다
+- [x] **MCHN-06**: 멀티네트워크 조회가 Promise.allSettled로 병렬 실행된다
+- [x] **MCHN-07**: 단일 네트워크 RPC 실패 시 나머지 네트워크 결과가 정상 반환된다
+- [x] **MCHN-08**: Solana 프로바이더(Jito/Kamino/Drift)가 하드코딩 대신 context.networks에서 네트워크를 추출한다
+- [x] **MCHN-09**: Hyperliquid Perp/Spot이 해당 체인이 아니면 빈 배열을 반환한다
+- [x] **MCHN-10**: 테스트넷 환경 지갑이 테스트넷 컨트랙트 주소(Holesky stETH/wstETH)로 포지션을 조회한다
 
 ### Testnet (테스트넷 토글)
 
@@ -77,16 +77,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INTF-10 | Phase 432 | Complete |
 | INTF-11 | Phase 432 | Complete |
 | INTF-12 | Phase 432 | Complete |
-| MCHN-01 | Phase 433 | Pending |
-| MCHN-02 | Phase 433 | Pending |
-| MCHN-03 | Phase 433 | Pending |
-| MCHN-04 | Phase 433 | Pending |
-| MCHN-05 | Phase 433 | Pending |
-| MCHN-06 | Phase 433 | Pending |
-| MCHN-07 | Phase 433 | Pending |
-| MCHN-08 | Phase 433 | Pending |
-| MCHN-09 | Phase 433 | Pending |
-| MCHN-10 | Phase 433 | Pending |
+| MCHN-01 | Phase 433 | Complete |
+| MCHN-02 | Phase 433 | Complete |
+| MCHN-03 | Phase 433 | Complete |
+| MCHN-04 | Phase 433 | Complete |
+| MCHN-05 | Phase 433 | Complete |
+| MCHN-06 | Phase 433 | Complete |
+| MCHN-07 | Phase 433 | Complete |
+| MCHN-08 | Phase 433 | Complete |
+| MCHN-09 | Phase 433 | Complete |
+| MCHN-10 | Phase 433 | Complete |
 | TEST-01 | Phase 434 | Pending |
 | TEST-02 | Phase 434 | Pending |
 | TEST-03 | Phase 434 | Pending |
