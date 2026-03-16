@@ -27,7 +27,7 @@ export const AllowedTokensRulesSchema = z.object({
     symbol: z.string().min(1).max(10).optional(),
     chain: ChainTypeEnum.optional(),
     assetId: Caip19Schema.optional(),
-  })).min(1, 'At least one token required'),
+  })),
 });
 
 /** CONTRACT_WHITELIST: rules.contracts array. */
@@ -36,15 +36,15 @@ export const ContractWhitelistRulesSchema = z.object({
     address: z.string().min(1),
     name: z.string().optional(),
     chain: ChainTypeEnum.optional(),
-  })).min(1, 'At least one contract required'),
+  })),
 });
 
 /** METHOD_WHITELIST: rules.methods array (contract-specific allowed methods). */
 export const MethodWhitelistRulesSchema = z.object({
   methods: z.array(z.object({
     contractAddress: z.string().min(1),
-    selectors: z.array(z.string().min(1)).min(1),
-  })).min(1, 'At least one method entry required'),
+    selectors: z.array(z.string().min(1)),
+  })),
 });
 
 /** APPROVED_SPENDERS: rules.spenders array. */
@@ -53,7 +53,7 @@ export const ApprovedSpendersRulesSchema = z.object({
     address: z.string().min(1),
     name: z.string().optional(),
     maxAmount: z.string().regex(/^\d+$/).optional(),
-  })).min(1, 'At least one spender required'),
+  })),
 });
 
 /** APPROVE_AMOUNT_LIMIT: rules.maxAmount + rules.blockUnlimited. */
