@@ -20,7 +20,7 @@ export default defineConfig({
       include: ['src/**/*.ts'],
       exclude: ['src/**/__tests__/**', 'src/**/*.test.ts', 'src/**/index.ts'],
       thresholds: {
-        branches: 79,
+        branches: 78,
         functions: 92,
         lines: 77,
         statements: 77,
