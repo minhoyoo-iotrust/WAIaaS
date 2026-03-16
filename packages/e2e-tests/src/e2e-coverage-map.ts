@@ -42,9 +42,9 @@ export const routeCoverage: Record<string, string[]> = {
   // Core
   'health': ['core-auth-wallet-session.ts'],
   'sessions': ['core-auth-wallet-session.ts'],
-  'wallets': ['core-auth-wallet-session.ts'],
+  'wallets': ['core-auth-wallet-session.ts', 'core-wallet-lifecycle.ts'],
   'wallet': ['core-auth-wallet-session.ts'],
-  'policies': ['core-policy.ts'],
+  'policies': ['core-policy.ts', 'core-wallet-lifecycle.ts'],
   'transactions': ['core-auth-wallet-session.ts', 'onchain-human-amount.ts'],
 
   // Interface
