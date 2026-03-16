@@ -25,16 +25,16 @@ Requirements for v32.4. Each maps to roadmap phases.
 
 ### 인터페이스 + 레이어 정비
 
-- [ ] **LAYER-01**: IChainSubscriber에 pollAll(): Promise<void> 메서드가 선언되어 있다
-- [ ] **LAYER-02**: IChainSubscriber에 checkFinalized(txHash: string): Promise<boolean> 메서드가 선언되어 있다
-- [ ] **LAYER-03**: incoming-tx-monitor-service.ts와 subscription-multiplexer.ts의 as unknown as 캐스팅 4건이 제거된다
-- [ ] **LAYER-04**: wc-signing-bridge.ts의 services/ → api/middleware/ import가 제거되고 유틸리티가 infrastructure/로 이동한다
-- [ ] **LAYER-05**: MasterPasswordRef 타입이 api/middleware/ → infrastructure/auth/types.ts로 이동한다 (re-export bridge 포함)
+- [x] **LAYER-01**: IChainSubscriber에 pollAll(): Promise<void> 메서드가 선언되어 있다
+- [x] **LAYER-02**: IChainSubscriber에 checkFinalized(txHash: string): Promise<boolean> 메서드가 선언되어 있다
+- [x] **LAYER-03**: incoming-tx-monitor-service.ts와 subscription-multiplexer.ts의 as unknown as 캐스팅 4건이 제거된다
+- [x] **LAYER-04**: wc-signing-bridge.ts의 services/ → api/middleware/ import가 제거되고 유틸리티가 infrastructure/로 이동한다
+- [x] **LAYER-05**: MasterPasswordRef 타입이 api/middleware/ → infrastructure/auth/types.ts로 이동한다 (re-export bridge 포함)
 - [x] **LAYER-06**: INTERNAL_ERROR가 ERROR_CODES 레지스트리에 등록된다
 - [x] **LAYER-07**: VALIDATION_FAILED 에러 코드가 추가되어 일반 Zod 검증 에러에 사용된다
-- [ ] **LAYER-08**: ACTION_VALIDATION_FAILED의 일반 Zod 에러 오용이 VALIDATION_FAILED로 교체된다
-- [ ] **LAYER-09**: services/ 및 infrastructure/에서 api/ import가 0건이다 (grep 검증)
-- [ ] **LAYER-10**: 인터페이스 contract 테스트가 갱신되어 새 메서드를 검증한다
+- [x] **LAYER-08**: ACTION_VALIDATION_FAILED의 일반 Zod 에러 오용이 VALIDATION_FAILED로 교체된다
+- [x] **LAYER-09**: services/ 및 infrastructure/에서 api/ import가 0건이다 (grep 검증)
+- [x] **LAYER-10**: 인터페이스 contract 테스트가 갱신되어 새 메서드를 검증한다
 
 ### as any 제거
 
@@ -115,16 +115,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ZOD-11 | Phase 430 | Pending |
 | ZOD-12 | Phase 430 | Pending |
 | ZOD-13 | Phase 429 | Pending |
-| LAYER-01 | Phase 428 | Pending |
-| LAYER-02 | Phase 428 | Pending |
-| LAYER-03 | Phase 428 | Pending |
-| LAYER-04 | Phase 428 | Pending |
-| LAYER-05 | Phase 428 | Pending |
+| LAYER-01 | Phase 428 | Complete |
+| LAYER-02 | Phase 428 | Complete |
+| LAYER-03 | Phase 428 | Complete |
+| LAYER-04 | Phase 428 | Complete |
+| LAYER-05 | Phase 428 | Complete |
 | LAYER-06 | Phase 427 | Complete |
 | LAYER-07 | Phase 427 | Complete |
-| LAYER-08 | Phase 428 | Pending |
-| LAYER-09 | Phase 428 | Pending |
-| LAYER-10 | Phase 428 | Pending |
+| LAYER-08 | Phase 428 | Complete |
+| LAYER-09 | Phase 428 | Complete |
+| LAYER-10 | Phase 428 | Complete |
 | CAST-01 | Phase 430 | Pending |
 | CAST-02 | Phase 430 | Pending |
 | CAST-03 | Phase 430 | Pending |

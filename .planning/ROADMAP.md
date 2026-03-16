@@ -106,11 +106,11 @@
 - [x] **Phase 427: Core Exports + safeJsonParse 유틸리티** - @waiaas/core에 safeJsonParse 헬퍼, POLICY_RULES_SCHEMAS export, sleep SSoT, 에러 코드 등록
   Plans:
   - [x] 427-01-PLAN.md — safeJsonParse + POLICY_RULES_SCHEMAS export + sleep SSoT + 에러 코드 등록
-- [ ] **Phase 428: 인터페이스 확장 + 레이어 위반 수정** - IChainSubscriber 인터페이스 확장, MasterPasswordRef 이동, wc-signing-bridge 레이어 위반 해소
-  **Plans:** 2 plans
+- [x] **Phase 428: 인터페이스 확장 + 레이어 위반 수정** - IChainSubscriber 인터페이스 확장, MasterPasswordRef 이동, wc-signing-bridge 레이어 위반 해소
+  **Plans:** 2/2 plans complete
   Plans:
-  - [ ] 428-01-PLAN.md — IChainSubscriber 인터페이스 확장 + as unknown as 캐스팅 제거
-  - [ ] 428-02-PLAN.md — 레이어 위반 수정 (verifySIWE/decodeBase58/MasterPasswordRef 이동 + ACTION_VALIDATION_FAILED 교체)
+  - [x] 428-01-PLAN.md — IChainSubscriber 인터페이스 확장 + as unknown as 캐스팅 제거
+  - [x] 428-02-PLAN.md — 레이어 위반 수정 (verifySIWE/decodeBase58/MasterPasswordRef 이동 + ACTION_VALIDATION_FAILED 교체)
 - [ ] **Phase 429: DatabasePolicyEngine Zod 검증** - 21건 JSON.parse를 Zod safeParse로 교체, 로컬 인터페이스 제거, 정책 룰 검증 테스트
 - [ ] **Phase 430: as any 제거** - WC/bundler/hot-reload/daemon 등 프로덕션 as any 55건 제거, JSON.parse Zod 추가
 - [ ] **Phase 431: SSoT 통합 + 설정 정리** - NATIVE_DECIMALS/formatAmount 등 중복 통합, 팬텀 설정/stale 참조 정리
@@ -189,7 +189,7 @@ Phases execute in numeric order: 427 -> 428 -> 429 -> 430 -> 431
 | 425. Rate Limit Middleware | v32.2 | 1/1 | Complete | 2026-03-16 |
 | 426. CORS + Resource Management | v32.2 | 1/1 | Complete | 2026-03-16 |
 | 427. Core Exports + safeJsonParse 유틸리티 | v32.4 | Complete    | 2026-03-16 | 2026-03-16 |
-| 428. 인터페이스 확장 + 레이어 위반 수정 | v32.4 | 0/2 | Not started | - |
+| 428. 인터페이스 확장 + 레이어 위반 수정 | v32.4 | 2/2 | Complete | 2026-03-16 |
 | 429. DatabasePolicyEngine Zod 검증 | v32.4 | 0/TBD | Not started | - |
 | 430. as any 제거 | v32.4 | 0/TBD | Not started | - |
 | 431. SSoT 통합 + 설정 정리 | v32.4 | 0/TBD | Not started | - |

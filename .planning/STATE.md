@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v32.4
 milestone_name: 타입 안전 + 코드 품질
 status: completed
-stopped_at: Completed 427-01-PLAN.md
-last_updated: "2026-03-16T05:19:22.506Z"
-last_activity: 2026-03-16 -- Phase 427 Plan 01 executed (2 tasks, 27 tests added)
+stopped_at: Completed 428-02-PLAN.md
+last_updated: "2026-03-16T05:38:00.000Z"
+last_activity: 2026-03-16 -- Phase 428 Plans 01-02 executed (4 tasks, 15 files, 4 contract tests)
 progress:
   total_phases: 5
-  completed_phases: 1
-  total_plans: 1
-  completed_plans: 1
-  percent: 20
+  completed_phases: 2
+  total_plans: 3
+  completed_plans: 3
+  percent: 40
 ---
 
 # Project State
@@ -21,27 +21,29 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-16)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Phase 427 complete -- ready for Phase 428
+**Current focus:** Phase 428 complete -- ready for Phase 429
 
 ## Current Position
 
-Phase: 1 of 5 (Phase 427: Core Exports + safeJsonParse 유틸리티) -- COMPLETE
-Plan: 1 of 1 in current phase -- COMPLETE
-Status: Phase 427 complete
-Last activity: 2026-03-16 -- Phase 427 Plan 01 executed (2 tasks, 27 tests added)
+Phase: 2 of 5 (Phase 428: 인터페이스 확장 + 레이어 위반 수정) -- COMPLETE
+Plan: 2 of 2 in current phase -- COMPLETE
+Status: Phase 428 complete
+Last activity: 2026-03-16 -- Phase 428 Plans 01-02 executed (4 tasks, 15 files, 4 contract tests)
 
-Progress: [##░░░░░░░░] 20%
+Progress: [####░░░░░░] 40%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
-- Average duration: ~10 minutes
-- Total execution time: ~0.17 hours
+- Total plans completed: 3
+- Average duration: ~9 minutes
+- Total execution time: ~0.45 hours
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
 | 427 | 01 | ~10 min | 2 | 18 |
+| 428 | 01 | ~8 min | 2 | 5 |
+| 428 | 02 | ~8 min | 2 | 11 |
 
 ## Accumulated Context
 
@@ -50,6 +52,10 @@ Progress: [##░░░░░░░░] 20%
 - safeJsonParse returns discriminated union (SafeJsonParseResult<T>) instead of throwing
 - daemon/pipeline/sleep.ts kept as re-export to avoid breaking existing imports within daemon
 - connection-state.ts uses relative import (../utils/sleep.js) to avoid circular dependency
+- IChainSubscriber optional methods (pollAll?, checkFinalized?, getBlockNumber?) for chain-specific capabilities
+- Optional chaining for safe method dispatch instead of type casting
+- Re-export bridge pattern for backward-compatible layer migration (api/middleware/ re-exports from infrastructure/auth/)
+- ACTION_VALIDATION_FAILED kept for action-specific constraints; VALIDATION_FAILED for Zod parse errors
 
 ### Pending Todos
 
@@ -63,5 +69,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-16
-Stopped at: Completed 427-01-PLAN.md
+Stopped at: Completed 428-02-PLAN.md
 Resume file: None
