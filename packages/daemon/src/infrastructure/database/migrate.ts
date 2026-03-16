@@ -3306,8 +3306,12 @@ MIGRATIONS.push({
   version: 59,
   description: 'Add environment column to defi_positions table (Testnet Toggle)',
   up: (sqlite) => {
-    // ALTER TABLE ADD COLUMN with NOT NULL DEFAULT auto-backfills existing rows to 'mainnet'
-    sqlite.exec("ALTER TABLE defi_positions ADD COLUMN environment TEXT NOT NULL DEFAULT 'mainnet'");
+    // Check if column already exists (pushSchema creates table with environment column)
+    const cols = (sqlite.prepare("PRAGMA table_info('defi_positions')").all() as Array<{ name: string }>).map(c => c.name);
+    if (!cols.includes('environment')) {
+      // ALTER TABLE ADD COLUMN with NOT NULL DEFAULT auto-backfills existing rows to 'mainnet'
+      sqlite.exec("ALTER TABLE defi_positions ADD COLUMN environment TEXT NOT NULL DEFAULT 'mainnet'");
+    }
     sqlite.exec('CREATE INDEX IF NOT EXISTS idx_defi_positions_environment ON defi_positions(environment)');
   },
 });

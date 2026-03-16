@@ -111,9 +111,10 @@ describe('Migration v25: defi_positions table', () => {
     expect(colNames).toContain('opened_at');
     expect(colNames).toContain('closed_at');
     expect(colNames).toContain('last_synced_at');
+    expect(colNames).toContain('environment');
     expect(colNames).toContain('created_at');
     expect(colNames).toContain('updated_at');
-    expect(columns).toHaveLength(16);
+    expect(columns).toHaveLength(17);
   });
 
   it('creates required indexes', () => {

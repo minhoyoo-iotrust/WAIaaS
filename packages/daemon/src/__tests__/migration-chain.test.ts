@@ -1003,7 +1003,7 @@ describe('edge cases', () => {
     const row = db.prepare('SELECT message FROM notification_logs WHERE id = ?').get('notif-pre-v10') as { message: string | null };
     expect(row.message).toBeNull();
 
-    // Verify LATEST_SCHEMA_VERSION is 58
+    // Verify LATEST_SCHEMA_VERSION is 59
     expect(LATEST_SCHEMA_VERSION).toBe(59);
   });
 
