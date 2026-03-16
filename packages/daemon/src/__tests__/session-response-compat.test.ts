@@ -273,10 +273,10 @@ describe('Session Response (v29.3 -- no default wallet)', () => {
       headers: masterAuthHeader(),
     });
     expect(listRes.status).toBe(200);
-    const sessions = (await listRes.json()) as Array<Record<string, unknown>>;
-    expect(sessions.length).toBeGreaterThanOrEqual(1);
+    const body = (await listRes.json()) as { data: Array<Record<string, unknown>> };
+    expect(body.data.length).toBeGreaterThanOrEqual(1);
 
-    const session = sessions[0]!;
+    const session = body.data[0]!;
 
     // walletId = first wallet
     expect(session.walletId).toBe(walletA);
@@ -338,8 +338,8 @@ describe('Session Response (v29.3 -- no default wallet)', () => {
       headers: masterAuthHeader(),
     });
     expect(listRes.status).toBe(200);
-    const sessions = (await listRes.json()) as Array<Record<string, unknown>>;
-    const session = sessions[0]!;
+    const body = (await listRes.json()) as { data: Array<Record<string, unknown>> };
+    const session = body.data[0]!;
 
     // walletId is a valid UUID string
     expect(typeof session.walletId).toBe('string');
@@ -377,8 +377,8 @@ describe('Session Response (v29.3 -- no default wallet)', () => {
       headers: masterAuthHeader(),
     });
     expect(listRes.status).toBe(200);
-    const sessions = (await listRes.json()) as Array<Record<string, unknown>>;
-    const session = sessions[0]!;
+    const body = (await listRes.json()) as { data: Array<Record<string, unknown>> };
+    const session = body.data[0]!;
     const listedWallets = session.wallets as Array<{ id: string; name: string }>;
 
     // Both should have the same number of wallets
