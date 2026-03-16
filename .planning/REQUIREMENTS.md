@@ -42,23 +42,23 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### daemon.ts 분할
 
-- [ ] **DMN-01**: daemon-startup.ts로 start()와 서비스 초기화 로직이 분리된다
-- [ ] **DMN-02**: daemon-shutdown.ts로 stop()과 graceful shutdown 로직이 분리된다
-- [ ] **DMN-03**: daemon-pipeline.ts로 reEntryPendingTransactions() 로직이 분리된다
-- [ ] **DMN-04**: daemon.ts가 DaemonLifecycle 조합 클래스와 필드 선언만 포함한다
+- [x] **DMN-01**: daemon-startup.ts로 start()와 서비스 초기화 로직이 분리된다
+- [x] **DMN-02**: daemon-shutdown.ts로 stop()과 graceful shutdown 로직이 분리된다
+- [x] **DMN-03**: daemon-pipeline.ts로 reEntryPendingTransactions() 로직이 분리된다
+- [x] **DMN-04**: daemon.ts가 DaemonLifecycle 조합 클래스와 필드 선언만 포함한다
 - [x] **DMN-05**: inline import() 타입이 정적 import type으로 교체된다
-- [ ] **DMN-06**: 분할 후 데몬 시작→요청 처리→종료 플로우 기존 테스트가 통과한다
+- [x] **DMN-06**: 분할 후 데몬 시작→요청 처리→종료 플로우 기존 테스트가 통과한다
 
 ### database-policy-engine.ts 분할
 
-- [ ] **DPE-01**: evaluators/spending-limit.ts로 SpendingLimit 평가 로직이 분리된다
-- [ ] **DPE-02**: evaluators/contract-whitelist.ts로 CONTRACT_WHITELIST 평가 로직이 분리된다
-- [ ] **DPE-03**: evaluators/allowed-tokens.ts로 ALLOWED_TOKENS 평가 로직이 분리된다
-- [ ] **DPE-04**: evaluators/approved-spenders.ts로 APPROVED_SPENDERS 평가 로직이 분리된다
-- [ ] **DPE-05**: evaluators/lending-asset-whitelist.ts로 Lending 자산 화이트리스트 평가 로직이 분리된다
-- [ ] **DPE-06**: evaluators/lending-ltv-limit.ts로 Lending LTV 한도 평가 로직이 분리된다
-- [ ] **DPE-07**: database-policy-engine.ts가 evaluator 조합과 공통 로직만 포함한다
-- [ ] **DPE-08**: 7개+ 정책 타입 기존 테스트가 전체 통과한다
+- [x] **DPE-01**: evaluators/spending-limit.ts로 SpendingLimit 평가 로직이 분리된다
+- [x] **DPE-02**: evaluators/contract-whitelist.ts로 CONTRACT_WHITELIST 평가 로직이 분리된다
+- [x] **DPE-03**: evaluators/allowed-tokens.ts로 ALLOWED_TOKENS 평가 로직이 분리된다
+- [x] **DPE-04**: evaluators/approved-spenders.ts로 APPROVED_SPENDERS 평가 로직이 분리된다
+- [x] **DPE-05**: evaluators/lending-asset-whitelist.ts로 Lending 자산 화이트리스트 평가 로직이 분리된다
+- [x] **DPE-06**: evaluators/lending-ltv-limit.ts로 Lending LTV 한도 평가 로직이 분리된다
+- [x] **DPE-07**: database-policy-engine.ts가 evaluator 조합과 공통 로직만 포함한다
+- [x] **DPE-08**: 7개+ 정책 타입 기존 테스트가 전체 통과한다
 
 ### stages.ts 분할
 
@@ -121,20 +121,20 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MIG-07 | Phase 437 | Complete |
 | MIG-08 | Phase 437 | Complete |
 | MIG-09 | Phase 437 | Complete |
-| DMN-01 | Phase 437 | Pending |
-| DMN-02 | Phase 437 | Pending |
-| DMN-03 | Phase 437 | Pending |
-| DMN-04 | Phase 437 | Pending |
+| DMN-01 | Phase 437 | Complete |
+| DMN-02 | Phase 437 | Complete |
+| DMN-03 | Phase 437 | Complete |
+| DMN-04 | Phase 437 | Complete |
 | DMN-05 | Phase 437 | Complete |
-| DMN-06 | Phase 437 | Pending |
-| DPE-01 | Phase 437 | Pending |
-| DPE-02 | Phase 437 | Pending |
-| DPE-03 | Phase 437 | Pending |
-| DPE-04 | Phase 437 | Pending |
-| DPE-05 | Phase 437 | Pending |
-| DPE-06 | Phase 437 | Pending |
-| DPE-07 | Phase 437 | Pending |
-| DPE-08 | Phase 437 | Pending |
+| DMN-06 | Phase 437 | Complete |
+| DPE-01 | Phase 437 | Complete |
+| DPE-02 | Phase 437 | Complete |
+| DPE-03 | Phase 437 | Complete |
+| DPE-04 | Phase 437 | Complete |
+| DPE-05 | Phase 437 | Complete |
+| DPE-06 | Phase 437 | Complete |
+| DPE-07 | Phase 437 | Complete |
+| DPE-08 | Phase 437 | Complete |
 | STG-01 | Phase 438 | Pending |
 | STG-02 | Phase 438 | Pending |
 | STG-03 | Phase 438 | Pending |
@@ -155,4 +155,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-17*
-*Last updated: 2026-03-17 after Phase 435 completion*
+*Last updated: 2026-03-17 after Phase 437 gap closure (DMN-01-06, DPE-01-08)*
