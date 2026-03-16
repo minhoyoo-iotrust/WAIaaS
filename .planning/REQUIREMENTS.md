@@ -9,18 +9,18 @@ Requirements for milestone v32.5. Each maps to roadmap phases.
 
 ### Interface (인터페이스 확장)
 
-- [ ] **INTF-01**: PositionQueryContext 타입이 walletId, chain, networks[], environment, rpcUrls 매핑을 포함한다
-- [ ] **INTF-02**: IPositionProvider.getPositions 시그니처가 PositionQueryContext를 수용한다
-- [ ] **INTF-03**: PositionTracker.syncCategory()가 지갑의 chain/environment/networks를 조회하여 컨텍스트를 구성한다
-- [ ] **INTF-04**: Lido 프로바이더가 PositionQueryContext 시그니처를 수용한다
-- [ ] **INTF-05**: Jito 프로바이더가 PositionQueryContext 시그니처를 수용한다
-- [ ] **INTF-06**: Aave V3 프로바이더가 PositionQueryContext 시그니처를 수용한다
-- [ ] **INTF-07**: Kamino 프로바이더가 PositionQueryContext 시그니처를 수용한다
-- [ ] **INTF-08**: Pendle 프로바이더가 PositionQueryContext 시그니처를 수용한다
-- [ ] **INTF-09**: Drift 프로바이더가 PositionQueryContext 시그니처를 수용한다
-- [ ] **INTF-10**: Hyperliquid Perp 프로바이더가 PositionQueryContext 시그니처를 수용한다
-- [ ] **INTF-11**: Hyperliquid Spot 프로바이더가 PositionQueryContext 시그니처를 수용한다
-- [ ] **INTF-12**: 미지원 체인 프로바이더가 빈 배열을 반환한다 (Solana 지갑 → Lido = [])
+- [x] **INTF-01**: PositionQueryContext 타입이 walletId, chain, networks[], environment, rpcUrls 매핑을 포함한다
+- [x] **INTF-02**: IPositionProvider.getPositions 시그니처가 PositionQueryContext를 수용한다
+- [x] **INTF-03**: PositionTracker.syncCategory()가 지갑의 chain/environment/networks를 조회하여 컨텍스트를 구성한다
+- [x] **INTF-04**: Lido 프로바이더가 PositionQueryContext 시그니처를 수용한다
+- [x] **INTF-05**: Jito 프로바이더가 PositionQueryContext 시그니처를 수용한다
+- [x] **INTF-06**: Aave V3 프로바이더가 PositionQueryContext 시그니처를 수용한다
+- [x] **INTF-07**: Kamino 프로바이더가 PositionQueryContext 시그니처를 수용한다
+- [x] **INTF-08**: Pendle 프로바이더가 PositionQueryContext 시그니처를 수용한다
+- [x] **INTF-09**: Drift 프로바이더가 PositionQueryContext 시그니처를 수용한다
+- [x] **INTF-10**: Hyperliquid Perp 프로바이더가 PositionQueryContext 시그니처를 수용한다
+- [x] **INTF-11**: Hyperliquid Spot 프로바이더가 PositionQueryContext 시그니처를 수용한다
+- [x] **INTF-12**: 미지원 체인 프로바이더가 빈 배열을 반환한다 (Solana 지갑 → Lido = [])
 
 ### Multichain (멀티체인 포지션)
 
@@ -65,18 +65,18 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INTF-01 | Phase 432 | Pending |
-| INTF-02 | Phase 432 | Pending |
-| INTF-03 | Phase 432 | Pending |
-| INTF-04 | Phase 432 | Pending |
-| INTF-05 | Phase 432 | Pending |
-| INTF-06 | Phase 432 | Pending |
-| INTF-07 | Phase 432 | Pending |
-| INTF-08 | Phase 432 | Pending |
-| INTF-09 | Phase 432 | Pending |
-| INTF-10 | Phase 432 | Pending |
-| INTF-11 | Phase 432 | Pending |
-| INTF-12 | Phase 432 | Pending |
+| INTF-01 | Phase 432 | Complete |
+| INTF-02 | Phase 432 | Complete |
+| INTF-03 | Phase 432 | Complete |
+| INTF-04 | Phase 432 | Complete |
+| INTF-05 | Phase 432 | Complete |
+| INTF-06 | Phase 432 | Complete |
+| INTF-07 | Phase 432 | Complete |
+| INTF-08 | Phase 432 | Complete |
+| INTF-09 | Phase 432 | Complete |
+| INTF-10 | Phase 432 | Complete |
+| INTF-11 | Phase 432 | Complete |
+| INTF-12 | Phase 432 | Complete |
 | MCHN-01 | Phase 433 | Pending |
 | MCHN-02 | Phase 433 | Pending |
 | MCHN-03 | Phase 433 | Pending |

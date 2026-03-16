@@ -6,7 +6,7 @@
 
 ## Phases
 
-- [ ] **Phase 432: Interface Extension** - IPositionProvider 시그니처를 PositionQueryContext 기반으로 확장하고 8개 프로바이더를 마이그레이션
+- [x] **Phase 432: Interface Extension** - IPositionProvider 시그니처를 PositionQueryContext 기반으로 확장하고 8개 프로바이더를 마이그레이션
 - [ ] **Phase 433: Multichain Positions** - EVM 프로바이더별 멀티체인 컨트랙트 매핑 및 병렬 조회
 - [ ] **Phase 434: Testnet Toggle** - DB environment 컬럼 추가, API 필터링, Admin 대시보드 테스트넷 토글
 
@@ -21,11 +21,11 @@
   2. PositionTracker.syncCategory()가 지갑 메타데이터로부터 컨텍스트를 자동 구성하여 프로바이더에 전달한다
   3. 8개 프로바이더(Lido, Jito, Aave, Kamino, Pendle, Drift, Hyperliquid Perp/Spot)가 새 시그니처로 동작한다
   4. Solana 지갑으로 Lido 포지션 조회 시 빈 배열이 반환되고 에러가 발생하지 않는다
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
-- [ ] 432-01-PLAN.md — PositionQueryContext 타입 정의 + IPositionProvider 시그니처 확장 + PositionTracker 컨텍스트 구성
-- [ ] 432-02-PLAN.md — 8개 프로바이더 마이그레이션 + 체인 가드 추가
+- [x] 432-01-PLAN.md — PositionQueryContext 타입 정의 + IPositionProvider 시그니처 확장 + PositionTracker 컨텍스트 구성
+- [x] 432-02-PLAN.md — 8개 프로바이더 마이그레이션 + 체인 가드 추가
 
 ### Phase 433: Multichain Positions
 **Goal**: EVM DeFi 프로바이더가 지갑에 연결된 모든 네트워크에서 포지션을 병렬 조회하고, 단일 네트워크 실패가 전체 결과에 영향을 주지 않는다
@@ -57,6 +57,6 @@ Phases execute in numeric order: 432 → 433 → 434
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 432. Interface Extension | 0/2 | Not started | - |
+| 432. Interface Extension | 2/2 | Complete   | 2026-03-16 |
 | 433. Multichain Positions | 0/? | Not started | - |
 | 434. Testnet Toggle | 0/? | Not started | - |
