@@ -156,6 +156,7 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'walletconnect.relay_url', category: 'walletconnect', configPath: 'walletconnect.relay_url', defaultValue: 'wss://relay.walletconnect.com', isCredential: false, label: 'Relay URL', description: 'WalletConnect relay server WebSocket URL' },
 
   // --- oracle category ---
+  // DB-only: no config.toml [oracle] section. Managed exclusively via Admin Settings.
   { key: 'oracle.coingecko_api_key', category: 'oracle', configPath: 'oracle.coingecko_api_key', defaultValue: '', isCredential: true, label: 'Coingecko API Key', description: 'API key for external service authentication' },
   { key: 'oracle.cross_validation_threshold', category: 'oracle', configPath: 'oracle.cross_validation_threshold', defaultValue: '5', isCredential: false, label: 'Cross Validation Threshold', description: 'Threshold value for triggering action' },
 
@@ -187,6 +188,7 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'telegram.locale', category: 'telegram', configPath: 'telegram.locale', defaultValue: 'en', isCredential: false, label: 'Locale', description: 'Telegram bot message language' },
 
   // --- signing_sdk category (CONF-01: 6 operational keys, CONF-02: 1 wallets JSON key) ---
+  // DB-only: no config.toml [signing_sdk] section. Managed exclusively via Admin Settings.
   { key: 'signing_sdk.enabled', category: 'signing_sdk', configPath: 'signing_sdk.enabled', defaultValue: 'false', isCredential: false, label: 'Enabled', description: 'Enable or disable this feature' },
   { key: 'signing_sdk.request_expiry_min', category: 'signing_sdk', configPath: 'signing_sdk.request_expiry_min', defaultValue: '30', isCredential: false, label: 'Request Expiry Min', description: 'Signing request expiry time in minutes' },
   { key: 'signing_sdk.preferred_channel', category: 'signing_sdk', configPath: 'signing_sdk.preferred_channel', defaultValue: 'ntfy', isCredential: false, label: 'Preferred Channel', description: 'Preferred signing notification channel (ntfy, telegram)' },
@@ -279,6 +281,7 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'actions.drift_position_sync_interval_sec', category: 'actions', configPath: 'actions.drift_position_sync_interval_sec', defaultValue: '60', isCredential: false, label: 'Drift Position Sync Interval Sec', description: 'Polling or check interval duration' },
 
   // --- gas_condition category (Gas conditional execution) ---
+  // DB-only: no config.toml [gas_condition] section. Managed exclusively via Admin Settings.
   { key: 'gas_condition.enabled', category: 'gas_condition', configPath: 'gas_condition.enabled', defaultValue: 'true', isCredential: false, label: 'Enabled', description: 'Enable or disable this feature' },
   { key: 'gas_condition.poll_interval_sec', category: 'gas_condition', configPath: 'gas_condition.poll_interval_sec', defaultValue: '30', isCredential: false, label: 'Poll Interval Sec', description: 'Polling or check interval duration' },
   { key: 'gas_condition.default_timeout_sec', category: 'gas_condition', configPath: 'gas_condition.default_timeout_sec', defaultValue: '3600', isCredential: false, label: 'Default Timeout Sec', description: 'Timeout duration in seconds' },
@@ -286,6 +289,7 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'gas_condition.max_pending_count', category: 'gas_condition', configPath: 'gas_condition.max_pending_count', defaultValue: '100', isCredential: false, label: 'Max Pending Count', description: 'Maximum gas-conditional transactions in queue' },
 
   // --- rpc_pool category (per-network URL lists managed via Admin Settings API) ---
+  // DB-only: no config.toml [rpc_pool] section. Managed exclusively via Admin Settings.
   { key: 'rpc_pool.solana-mainnet', category: 'rpc_pool', configPath: 'rpc_pool.solana-mainnet', defaultValue: '[]', isCredential: false, label: 'Solana-Mainnet', description: 'JSON array of RPC endpoint URLs for pool rotation' },
   { key: 'rpc_pool.solana-devnet', category: 'rpc_pool', configPath: 'rpc_pool.solana-devnet', defaultValue: '[]', isCredential: false, label: 'Solana-Devnet', description: 'JSON array of RPC endpoint URLs for pool rotation' },
   { key: 'rpc_pool.solana-testnet', category: 'rpc_pool', configPath: 'rpc_pool.solana-testnet', defaultValue: '[]', isCredential: false, label: 'Solana-Testnet', description: 'JSON array of RPC endpoint URLs for pool rotation' },
@@ -303,6 +307,7 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   { key: 'rpc_pool.hyperevm-testnet', category: 'rpc_pool', configPath: 'rpc_pool.hyperevm-testnet', defaultValue: '[]', isCredential: false, label: 'Hyperevm-Testnet', description: 'JSON array of RPC endpoint URLs for pool rotation' },
 
   // --- position_tracker category (DeFi position sync) ---
+  // DB-only: no config.toml [position_tracker] section. Managed exclusively via Admin Settings.
   { key: 'position_tracker.enabled', category: 'position_tracker', configPath: 'position_tracker.enabled', defaultValue: 'true', isCredential: false, label: 'Enabled', description: 'Enable or disable this feature' },
 
   // --- smart_account category (ERC-4337 Account Abstraction) ---

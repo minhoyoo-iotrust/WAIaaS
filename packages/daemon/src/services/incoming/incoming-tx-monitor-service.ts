@@ -424,12 +424,10 @@ export class IncomingTxMonitorService {
       }
     }
 
-    // USD price: not available in this phase (requires PriceOracle integration)
-    // Will be wired in Phase 227
+    // USD price: not yet wired (requires PriceOracle integration)
     const usdPrice: number | null = null;
 
-    // Average incoming USD: not computed yet (requires historical aggregation)
-    // Will be wired in Phase 227
+    // Average incoming USD: not yet computed (requires historical aggregation)
     const avgIncomingUsd: number | null = null;
 
     return {

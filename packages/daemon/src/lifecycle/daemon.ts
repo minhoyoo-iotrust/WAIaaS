@@ -20,8 +20,8 @@
  * Shutdown sequence (doc 28 section 3):
  *   1. Set isShuttingDown, start force timer, log signal
  *   2-4. HTTP server close
- *   5. In-flight signing -- STUB (Phase 50-04)
- *   6. Pending queue persistence -- STUB (Phase 50-04)
+ *   5. In-flight signing -- not yet implemented
+ *   6. Pending queue persistence -- not yet implemented
  *   6a. Stop PositionTracker, DeFiMonitorService, TelegramBot, WcSessionService, AutoStop, BalanceMonitor, IncomingTxMonitor, WebhookService
  *   6b. Remove all EventBus listeners
  *   7. workers.stopAll()
@@ -1907,8 +1907,7 @@ export class DaemonLifecycle {
         console.log('Steps 2-4: HTTP server closed');
       }
 
-      // Steps 5: In-flight signing -- STUB (Phase 50-04)
-      // Steps 6: Pending queue persistence -- STUB (Phase 50-04)
+      // Steps 5-6: In-flight signing + pending queue persistence -- not yet implemented
 
       // Disconnect all chain adapters
       if (this.adapterPool) {
