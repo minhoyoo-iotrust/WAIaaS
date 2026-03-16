@@ -1,5 +1,40 @@
 # Changelog
 
+## [2.11.0-rc.19](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.18...v2.11.0-rc.19) (2026-03-16)
+
+
+### Features
+
+* **432-01:** define PositionQueryContext type and update IPositionProvider signature ([80875dc](https://github.com/minhoyoo-iotrust/WAIaaS/commit/80875dc080cd9392bdd0e01bbd50a55eeb810794))
+* **432-01:** update PositionTracker.syncCategory to build PositionQueryContext ([425dd14](https://github.com/minhoyoo-iotrust/WAIaaS/commit/425dd14978c9b8c84ace3dfce14632af1e8df9fc))
+* **432-02:** migrate 3 Solana providers to PositionQueryContext + fix core re-export ([618a3f6](https://github.com/minhoyoo-iotrust/WAIaaS/commit/618a3f65ba0ff58dcdcf15fb5b2bed322a0d8fd3))
+* **432-02:** migrate 5 EVM providers to PositionQueryContext with chain guards ([72c36c4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/72c36c46b97e90fe7fe0434915a70ea21b2c34ce))
+* **433-01:** Lido multichain contract mapping + 5-network parallel positions ([7d36218](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7d362189cf13ada9db816e072c0ce614e702d1d1))
+* **433-02:** Aave V3 multinetwork getPositions + Promise.allSettled ([46e0633](https://github.com/minhoyoo-iotrust/WAIaaS/commit/46e063337a14f50569f79d3c18124c9813bd3d27))
+* **433-03:** Pendle multinetwork getPositions (Ethereum + Arbitrum) ([d91aa22](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d91aa22bdd8fb7ab8751601c94c26c3a55b55c9f))
+* **433-04:** Solana providers use ctx.networks dynamic extraction ([8e3fadb](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8e3fadbe3b89c5cc6b5d3a3fb4185fbeb2a570c1))
+* **434-01:** add environment column to defi_positions (migration v59) ([e80b395](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e80b39504f140499b5638c35c8c6859a417faf6b))
+* **434-01:** add includeTestnets filter to admin defi positions API ([cc5f156](https://github.com/minhoyoo-iotrust/WAIaaS/commit/cc5f156a1e21a8634dd4007cb1110b6e3b54fb3e))
+* **434-02:** add Include testnets toggle to Admin DeFi dashboard ([552e879](https://github.com/minhoyoo-iotrust/WAIaaS/commit/552e879560313712c126b4f139f1409f8ffab595))
+* implement real SDK wrappers for Kamino and Drift ([#374](https://github.com/minhoyoo-iotrust/WAIaaS/issues/374), [#375](https://github.com/minhoyoo-iotrust/WAIaaS/issues/375)) ([a14e052](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a14e0522f948c1853908b395b2d02386ef3e5721))
+
+
+### Bug Fixes
+
+* **433:** resolve typecheck errors in Lido and Aave test files ([1af4f58](https://github.com/minhoyoo-iotrust/WAIaaS/commit/1af4f586026221eed284d7f1cf64539cdee75881))
+* add eslint-disable for [@ts-ignore](https://github.com/ts-ignore) on optional SDK dynamic imports ([ee04743](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ee04743c3098224ec66e0101f3a38b1be2b3e82e))
+* remove unused [@ts-expect-error](https://github.com/ts-expect-error) directives for SDK imports ([144f6eb](https://github.com/minhoyoo-iotrust/WAIaaS/commit/144f6ebfa0b50b7da20d8ff2055020d34e495dac))
+* reorganize UAT scenarios — add admin-ops category, remove WalletConnect ([#377](https://github.com/minhoyoo-iotrust/WAIaaS/issues/377), [#378](https://github.com/minhoyoo-iotrust/WAIaaS/issues/378)) ([cbb484d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/cbb484da5b799ef9355b3d8acceb968e2696557c))
+* resolve issues [#367](https://github.com/minhoyoo-iotrust/WAIaaS/issues/367)-[#373](https://github.com/minhoyoo-iotrust/WAIaaS/issues/373) — DeFi provider bugs + Admin DX improvements ([970dea4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/970dea4d816d9c256afea8d4a508d34fc7dc9548))
+* resolve typecheck errors in new test files ([186c21e](https://github.com/minhoyoo-iotrust/WAIaaS/commit/186c21e7457686e7b16bbc86d62757ed994ebee9))
+* revert lockfile and remove optional SDK deps from package.json ([8d05cf5](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8d05cf52d5fb22e2146958e318d33dfd5fae9722))
+* update daemon tests for schema v59 migration ([2af1a0f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2af1a0f65c6aaeb7969b331cbfbad4d9f081918b))
+* update E2E wallet-purge policy creation to current schema ([#376](https://github.com/minhoyoo-iotrust/WAIaaS/issues/376)) ([2c017fa](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2c017fac2898e20d300b630915327707312f588d))
+* update migration-runner tests for schema v59 ([106c511](https://github.com/minhoyoo-iotrust/WAIaaS/commit/106c5116d929ed4305fbff9ee3ae0191a3340315))
+* update Pendle test makeCtx() to provide rpcUrls for getPositions ([37909c7](https://github.com/minhoyoo-iotrust/WAIaaS/commit/37909c7e3bf9b915f9353615643c72347baf8ad9))
+* update pnpm-lock.yaml for Kamino/Drift SDK dependencies ([401b062](https://github.com/minhoyoo-iotrust/WAIaaS/commit/401b062e8c86e1f6699d2f9585eae5646f5352ab))
+* use [@ts-ignore](https://github.com/ts-ignore) for SDK dynamic imports to handle cross-env type resolution ([d1e6149](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d1e6149a0fc1e5d5fd54aa8b0ce6e38b360c1596))
+
 ## [2.11.0-rc.18](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.17...v2.11.0-rc.18) (2026-03-16)
 
 
