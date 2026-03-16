@@ -24,7 +24,7 @@ import type { DaemonConfig } from '../config/loader.js';
 import { SETTING_DEFINITIONS, SETTING_CATEGORIES, getSettingDefinition } from './setting-keys.js';
 import type { SettingDefinition } from './setting-keys.js';
 import { encryptSettingValue, decryptSettingValue } from './settings-crypto.js';
-import type { MasterPasswordRef } from '../../api/middleware/master-auth.js';
+import type { MasterPasswordRef } from '../auth/types.js';
 
 // ---------------------------------------------------------------------------
 // SettingsService

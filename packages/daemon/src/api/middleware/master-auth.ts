@@ -19,11 +19,8 @@ import { insertAuditLog } from '../../infrastructure/database/audit-helper.js';
 // Types
 // ---------------------------------------------------------------------------
 
-/** Mutable ref for in-memory master password + hash, enabling hot-swap on password change. */
-export interface MasterPasswordRef {
-  password: string;
-  hash: string;
-}
+export type { MasterPasswordRef } from '../../infrastructure/auth/types.js';
+import type { MasterPasswordRef } from '../../infrastructure/auth/types.js';
 
 export interface MasterAuthDeps {
   masterPasswordHash?: string; // Argon2id hash stored during daemon init
