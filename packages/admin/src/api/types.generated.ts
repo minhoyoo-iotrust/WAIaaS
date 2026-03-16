@@ -888,6 +888,8 @@ export type paths = {
             parameters: {
                 query?: {
                     walletId?: string;
+                    limit?: number;
+                    offset?: number | null;
                 };
                 header?: never;
                 path?: never;
@@ -895,13 +897,13 @@ export type paths = {
             };
             requestBody?: never;
             responses: {
-                /** @description List of active sessions */
+                /** @description Paginated list of active sessions */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["SessionListItem"][];
+                        "application/json": components["schemas"]["PaginatedSessionList"];
                     };
                 };
                 /** @description WALLET_NOT_FOUND: Wallet not found */
@@ -1312,6 +1314,8 @@ export type paths = {
             parameters: {
                 query?: {
                     walletId?: string;
+                    limit?: number;
+                    offset?: number | null;
                 };
                 header?: never;
                 path?: never;
@@ -1319,13 +1323,13 @@ export type paths = {
             };
             requestBody?: never;
             responses: {
-                /** @description List of policies */
+                /** @description Paginated list of policies */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["PolicyResponse"][];
+                        "application/json": components["schemas"]["PaginatedPolicyList"];
                     };
                 };
             };
@@ -7975,6 +7979,12 @@ export type components = {
             /** @enum {string} */
             source: "api" | "mcp";
         };
+        PaginatedSessionList: {
+            data: components["schemas"]["SessionListItem"][];
+            total: number;
+            limit: number;
+            offset: number;
+        };
         SessionRevokeResponse: {
             /** Format: uuid */
             id: string;
@@ -8040,6 +8050,12 @@ export type components = {
             enabled: boolean;
             /** @enum {string} */
             network?: "solana-mainnet" | "solana-devnet" | "solana-testnet" | "ethereum-mainnet" | "ethereum-sepolia" | "polygon-mainnet" | "polygon-amoy" | "arbitrum-mainnet" | "arbitrum-sepolia" | "optimism-mainnet" | "optimism-sepolia" | "base-mainnet" | "base-sepolia" | "hyperevm-mainnet" | "hyperevm-testnet";
+        };
+        PaginatedPolicyList: {
+            data: components["schemas"]["PolicyResponse"][];
+            total: number;
+            limit: number;
+            offset: number;
         };
         UpdatePolicyRequest: {
             rules?: {
