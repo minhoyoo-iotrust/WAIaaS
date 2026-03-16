@@ -9,8 +9,8 @@ Requirements for v32.4. Each maps to roadmap phases.
 
 ### Zod 런타임 검증
 
-- [ ] **ZOD-01**: safeJsonParse<T> 범용 헬퍼가 @waiaas/core에 존재하며 Zod 스키마 기반 JSON 파싱+검증을 수행한다
-- [ ] **ZOD-02**: POLICY_RULES_SCHEMAS 매핑이 @waiaas/core에서 export되어 외부 패키지에서 사용 가능하다
+- [x] **ZOD-01**: safeJsonParse<T> 범용 헬퍼가 @waiaas/core에 존재하며 Zod 스키마 기반 JSON 파싱+검증을 수행한다
+- [x] **ZOD-02**: POLICY_RULES_SCHEMAS 매핑이 @waiaas/core에서 export되어 외부 패키지에서 사용 가능하다
 - [ ] **ZOD-03**: DatabasePolicyEngine의 SpendingLimitRules JSON.parse가 Zod safeParse로 교체되어 corrupt 데이터 시 POLICY_RULES_CORRUPT 에러를 throw한다
 - [ ] **ZOD-04**: DatabasePolicyEngine의 WhitelistRules JSON.parse가 Zod safeParse로 교체된다
 - [ ] **ZOD-05**: DatabasePolicyEngine의 AllowedTokensRules JSON.parse가 Zod safeParse로 교체된다
@@ -30,8 +30,8 @@ Requirements for v32.4. Each maps to roadmap phases.
 - [ ] **LAYER-03**: incoming-tx-monitor-service.ts와 subscription-multiplexer.ts의 as unknown as 캐스팅 4건이 제거된다
 - [ ] **LAYER-04**: wc-signing-bridge.ts의 services/ → api/middleware/ import가 제거되고 유틸리티가 infrastructure/로 이동한다
 - [ ] **LAYER-05**: MasterPasswordRef 타입이 api/middleware/ → infrastructure/auth/types.ts로 이동한다 (re-export bridge 포함)
-- [ ] **LAYER-06**: INTERNAL_ERROR가 ERROR_CODES 레지스트리에 등록된다
-- [ ] **LAYER-07**: VALIDATION_FAILED 에러 코드가 추가되어 일반 Zod 검증 에러에 사용된다
+- [x] **LAYER-06**: INTERNAL_ERROR가 ERROR_CODES 레지스트리에 등록된다
+- [x] **LAYER-07**: VALIDATION_FAILED 에러 코드가 추가되어 일반 Zod 검증 에러에 사용된다
 - [ ] **LAYER-08**: ACTION_VALIDATION_FAILED의 일반 Zod 에러 오용이 VALIDATION_FAILED로 교체된다
 - [ ] **LAYER-09**: services/ 및 infrastructure/에서 api/ import가 0건이다 (grep 검증)
 - [ ] **LAYER-10**: 인터페이스 contract 테스트가 갱신되어 새 메서드를 검증한다
@@ -55,7 +55,7 @@ Requirements for v32.4. Each maps to roadmap phases.
 ### SSoT 통합
 
 - [ ] **SSOT-01**: NATIVE_DECIMALS, NATIVE_SYMBOLS 상수가 @waiaas/core에 정의되고 5곳에서 import된다
-- [ ] **SSOT-02**: sleep() 유틸리티가 @waiaas/core에서 export되고 4곳 로컬 정의가 제거된다
+- [x] **SSOT-02**: sleep() 유틸리티가 @waiaas/core에서 export되고 4곳 로컬 정의가 제거된다
 - [ ] **SSOT-03**: formatDisplayCurrency가 Admin UI에서 @waiaas/core import로 통합된다
 - [ ] **SSOT-04**: aggregateStakingBalance가 공유 모듈로 추출되고 admin.ts 인라인 복제가 제거된다
 - [ ] **SSOT-05**: resolveRpcUrl 시그니처가 typed config를 수용하여 8곳 as unknown as Record 캐스팅이 제거된다
@@ -102,8 +102,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ZOD-01 | Phase 427 | Pending |
-| ZOD-02 | Phase 427 | Pending |
+| ZOD-01 | Phase 427 | Complete |
+| ZOD-02 | Phase 427 | Complete |
 | ZOD-03 | Phase 429 | Pending |
 | ZOD-04 | Phase 429 | Pending |
 | ZOD-05 | Phase 429 | Pending |
@@ -120,8 +120,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LAYER-03 | Phase 428 | Pending |
 | LAYER-04 | Phase 428 | Pending |
 | LAYER-05 | Phase 428 | Pending |
-| LAYER-06 | Phase 427 | Pending |
-| LAYER-07 | Phase 427 | Pending |
+| LAYER-06 | Phase 427 | Complete |
+| LAYER-07 | Phase 427 | Complete |
 | LAYER-08 | Phase 428 | Pending |
 | LAYER-09 | Phase 428 | Pending |
 | LAYER-10 | Phase 428 | Pending |
@@ -139,7 +139,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CAST-12 | Phase 430 | Pending |
 | CAST-13 | Phase 430 | Pending |
 | SSOT-01 | Phase 431 | Pending |
-| SSOT-02 | Phase 427 | Pending |
+| SSOT-02 | Phase 427 | Complete |
 | SSOT-03 | Phase 431 | Pending |
 | SSOT-04 | Phase 431 | Pending |
 | SSOT-05 | Phase 431 | Pending |
@@ -161,4 +161,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-16*
-*Last updated: 2026-03-16 after roadmap creation*
+*Last updated: 2026-03-16 after Phase 427 completion*

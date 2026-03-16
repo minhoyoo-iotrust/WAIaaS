@@ -103,9 +103,9 @@
 
 ### v32.4 타입 안전 + 코드 품질 (Phases 427-431)
 
-- [ ] **Phase 427: Core Exports + safeJsonParse 유틸리티** - @waiaas/core에 safeJsonParse 헬퍼, POLICY_RULES_SCHEMAS export, sleep SSoT, 에러 코드 등록
+- [x] **Phase 427: Core Exports + safeJsonParse 유틸리티** - @waiaas/core에 safeJsonParse 헬퍼, POLICY_RULES_SCHEMAS export, sleep SSoT, 에러 코드 등록
   Plans:
-  - [ ] 427-01-PLAN.md — safeJsonParse + POLICY_RULES_SCHEMAS export + sleep SSoT + 에러 코드 등록
+  - [x] 427-01-PLAN.md — safeJsonParse + POLICY_RULES_SCHEMAS export + sleep SSoT + 에러 코드 등록
 - [ ] **Phase 428: 인터페이스 확장 + 레이어 위반 수정** - IChainSubscriber 인터페이스 확장, MasterPasswordRef 이동, wc-signing-bridge 레이어 위반 해소
 - [ ] **Phase 429: DatabasePolicyEngine Zod 검증** - 21건 JSON.parse를 Zod safeParse로 교체, 로컬 인터페이스 제거, 정책 룰 검증 테스트
 - [ ] **Phase 430: as any 제거** - WC/bundler/hot-reload/daemon 등 프로덕션 as any 55건 제거, JSON.parse Zod 추가
@@ -184,7 +184,7 @@ Phases execute in numeric order: 427 -> 428 -> 429 -> 430 -> 431
 | 424. SSRF Guard + hostGuard Fix | v32.2 | 1/1 | Complete | 2026-03-16 |
 | 425. Rate Limit Middleware | v32.2 | 1/1 | Complete | 2026-03-16 |
 | 426. CORS + Resource Management | v32.2 | 1/1 | Complete | 2026-03-16 |
-| 427. Core Exports + safeJsonParse 유틸리티 | v32.4 | 0/1 | Not started | - |
+| 427. Core Exports + safeJsonParse 유틸리티 | v32.4 | 1/1 | Complete | 2026-03-16 |
 | 428. 인터페이스 확장 + 레이어 위반 수정 | v32.4 | 0/TBD | Not started | - |
 | 429. DatabasePolicyEngine Zod 검증 | v32.4 | 0/TBD | Not started | - |
 | 430. as any 제거 | v32.4 | 0/TBD | Not started | - |
