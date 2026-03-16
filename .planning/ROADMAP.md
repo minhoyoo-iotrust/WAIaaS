@@ -71,12 +71,12 @@ Plans:
   3. database-policy-engine.ts가 evaluator 조합 로직만 포함하고 6개 정책 evaluator가 별도 파일이다
   4. v1-v59 마이그레이션 체인 테스트, 데몬 라이프사이클 테스트, 7개+ 정책 타입 테스트가 모두 통과한다
   5. 모든 inline import() 타입이 정적 import type으로 교체되어 있다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 437-01: TBD
-- [ ] 437-02: TBD
-- [ ] 437-03: TBD
+- [ ] 437-01-PLAN.md — migrate.ts 분할: DDL + 6개 마이그레이션 파일 추출, 러너만 유지
+- [ ] 437-02-PLAN.md — daemon.ts 분할: startup/shutdown/pipeline 추출, 클래스 셸만 유지
+- [ ] 437-03-PLAN.md — database-policy-engine.ts 분할: 6개 evaluator 추출, 조합 로직만 유지
 
 ### Phase 438: 파이프라인 분할 + 추가 정리
 **Goal**: stages.ts가 스테이지별 모듈로 분리되고, Solana 에러 처리가 표준화되며, 로깅 추상화 인터페이스가 도입된다
