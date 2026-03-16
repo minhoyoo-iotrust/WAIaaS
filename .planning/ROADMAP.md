@@ -32,12 +32,18 @@ Plans:
 **Depends on**: Phase 432
 **Requirements**: MCHN-01, MCHN-02, MCHN-03, MCHN-04, MCHN-05, MCHN-06, MCHN-07, MCHN-08, MCHN-09, MCHN-10
 **Success Criteria** (what must be TRUE):
-  1. Lido가 6개 네트워크, Aave V3가 5개 네트워크, Pendle이 2개 네트워크에서 포지션을 조회하여 통합 결과를 반환한다
+  1. Lido가 5개 네트워크(Scroll 제외 — WAIaaS NetworkType 미지원), Aave V3가 5개 네트워크, Pendle이 2개 네트워크에서 포지션을 조회하여 통합 결과를 반환한다
   2. 각 포지션의 CAIP-19 assetId가 해당 네트워크의 chainId에 맞게 생성된다 (예: eip155:8453/erc20:0x... for Base)
   3. 하나의 네트워크 RPC가 실패해도 나머지 네트워크의 포지션 결과가 정상 반환된다
-  4. 테스트넷 환경 지갑이 테스트넷 컨트랙트 주소(Sepolia stETH, Sepolia Aave 등)로 포지션을 조회한다
+  4. 테스트넷 환경 지갑이 테스트넷 컨트랙트 주소(Holesky stETH/wstETH)로 포지션을 조회한다
   5. Solana 프로바이더(Jito/Kamino/Drift)가 context.networks에서 네트워크를 추출하고 하드코딩을 사용하지 않는다
-**Plans**: TBD
+**Plans:** 4 plans
+
+Plans:
+- [ ] 433-01-PLAN.md — Lido 멀티체인 컨트랙트 매핑 + 5 네트워크 병렬 포지션 조회
+- [ ] 433-02-PLAN.md — Aave V3 멀티네트워크 getPositions + Promise.allSettled
+- [ ] 433-03-PLAN.md — Pendle 멀티네트워크 getPositions (Ethereum + Arbitrum)
+- [ ] 433-04-PLAN.md — Solana 프로바이더 네트워크 동적 추출 + Hyperliquid 가드 확인
 
 ### Phase 434: Testnet Toggle
 **Goal**: Admin 대시보드에서 테스트넷 포지션을 포함/제외할 수 있고, DB에 환경 정보가 영구 저장된다
@@ -58,5 +64,5 @@ Phases execute in numeric order: 432 → 433 → 434
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 432. Interface Extension | 2/2 | Complete    | 2026-03-16 |
-| 433. Multichain Positions | 0/? | Not started | - |
+| 433. Multichain Positions | 0/4 | Not started | - |
 | 434. Testnet Toggle | 0/? | Not started | - |
