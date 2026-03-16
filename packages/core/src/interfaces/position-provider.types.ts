@@ -7,6 +7,7 @@
  * Design source: m29-00 design doc section 6.1.
  */
 import type { PositionCategory, PositionStatus } from '../enums/defi.js';
+import type { ChainType, NetworkType, EnvironmentType } from '../enums/chain.js';
 
 /**
  * Position update data for batch upsert into defi_positions table.
@@ -28,6 +29,21 @@ export interface PositionUpdate {
 }
 
 /**
+ * Context passed to IPositionProvider.getPositions() containing wallet
+ * chain/network/environment information needed for multi-chain position queries.
+ *
+ * Constructed by PositionTracker from wallet metadata + RPC config.
+ * @see INTF-01
+ */
+export interface PositionQueryContext {
+  walletId: string;
+  chain: ChainType;
+  networks: readonly NetworkType[];
+  environment: EnvironmentType;
+  rpcUrls: Record<string, string>; // network -> rpcUrl mapping
+}
+
+/**
  * Read-only position data source for PositionTracker.
  *
  * Any provider that participates in position tracking must implement
@@ -35,7 +51,7 @@ export interface PositionUpdate {
  * both IActionProvider and IPositionProvider.
  */
 export interface IPositionProvider {
-  getPositions(walletId: string): Promise<PositionUpdate[]>;
+  getPositions(ctx: PositionQueryContext): Promise<PositionUpdate[]>;
   getProviderName(): string;
   getSupportedCategories(): PositionCategory[];
 }

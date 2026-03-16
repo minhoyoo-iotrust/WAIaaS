@@ -136,7 +136,7 @@ export {
 } from './lending-provider.types.js';
 
 // v29.2 Position Provider types
-export type { PositionUpdate, IPositionProvider } from './position-provider.types.js';
+export type { PositionUpdate, PositionQueryContext, IPositionProvider } from './position-provider.types.js';
 
 // v29.2 DeFi Monitor types
 export type { IDeFiMonitor, MonitorSeverity, MonitorEvaluation } from './defi-monitor.types.js';
