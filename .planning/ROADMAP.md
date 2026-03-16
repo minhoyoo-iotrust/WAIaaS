@@ -117,6 +117,11 @@
   - [ ] 429-01-PLAN.md — Lending/Perp/Venue/ActionCategory 7개 Zod 스키마 추가 + POLICY_RULES_CORRUPT 에러 코드
   - [ ] 429-02-PLAN.md — DatabasePolicyEngine JSON.parse -> safeJsonParse 교체 + corrupt 데이터 테스트
 - [ ] **Phase 430: as any 제거** - WC/bundler/hot-reload/daemon 등 프로덕션 as any 55건 제거, JSON.parse Zod 추가
+  **Plans:** 3 plans
+  Plans:
+  - [ ] 430-01-PLAN.md — WC DB client + daemon + wc-session + signing as any 제거 + JSON.parse Zod 검증
+  - [ ] 430-02-PLAN.md — hot-reload + stages + userop + sync-pipeline as any 제거
+  - [ ] 430-03-PLAN.md — external-action-pipeline + API 라우트 + NFT indexer as any 제거 + 최종 sweep
 - [ ] **Phase 431: SSoT 통합 + 설정 정리** - NATIVE_DECIMALS/formatAmount 등 중복 통합, 팬텀 설정/stale 참조 정리
 
 ## Phase Details
@@ -159,13 +164,13 @@
 **Goal**: 프로덕션 소스에서 as any가 0건이며(Solana @ts-expect-error 전환 제외), 모든 타입 캐스팅이 타입 안전한 패턴으로 교체되었다
 **Depends on**: Phase 428, Phase 429
 **Requirements**: CAST-01, CAST-02, CAST-03, CAST-04, CAST-05, CAST-06, CAST-07, CAST-08, CAST-09, CAST-10, CAST-11, CAST-12, CAST-13, ZOD-10, ZOD-11, ZOD-12
+**Plans:** 3 plans
 **Success Criteria** (what must be TRUE):
   1. wc.ts의 (db as any).session?.client 8건이 DI 또는 typed 헬퍼로 교체되어 as any가 0건이다
   2. hot-reload.ts, daemon.ts, stages.ts의 as any가 모두 타입 안전한 코드로 교체되었다
   3. bundlerClient, external-action-pipeline, payment-signer의 as any가 wrapper 함수 또는 타입 가드로 교체되었다
   4. daemon.ts, notification-service.ts, jwt-secret-manager.ts의 JSON.parse에 Zod 검증이 추가되었다
   5. pnpm turbo run typecheck가 전체 패키지에서 통과한다
-**Plans**: TBD
 
 ### Phase 431: SSoT 통합 + 설정 정리
 **Goal**: 중복 유틸리티/상수가 단일 소스로 통합되고, 팬텀 설정과 stale 참조가 제거되었다
@@ -195,5 +200,5 @@ Phases execute in numeric order: 427 -> 428 -> 429 -> 430 -> 431
 | 427. Core Exports + safeJsonParse 유틸리티 | v32.4 | Complete    | 2026-03-16 | 2026-03-16 |
 | 428. 인터페이스 확장 + 레이어 위반 수정 | v32.4 | Complete    | 2026-03-16 | 2026-03-16 |
 | 429. DatabasePolicyEngine Zod 검증 | 2/2 | Complete    | 2026-03-16 | - |
-| 430. as any 제거 | v32.4 | 0/TBD | Not started | - |
+| 430. as any 제거 | v32.4 | 0/3 | Not started | - |
 | 431. SSoT 통합 + 설정 정리 | v32.4 | 0/TBD | Not started | - |
