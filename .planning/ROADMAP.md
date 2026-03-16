@@ -23,7 +23,7 @@ See `.planning/milestones/v32.5-ROADMAP.md` for full details.
 - Decimal phases (e.g., 435.1): Urgent insertions (marked with INSERTED)
 
 - [x] **Phase 435: N+1 쿼리 해소** - 세션/지갑/토큰 조회의 개별 쿼리를 배치 쿼리로 전환
-- [ ] **Phase 436: 페이지네이션 추가** - sessions/policies API에 limit/offset 페이지네이션 적용
+- [x] **Phase 436: 페이지네이션 추가** - sessions/policies API에 limit/offset 페이지네이션 적용
 - [ ] **Phase 437: 대형 파일 분할 (migrate + daemon + policy-engine)** - 3개 대형 모듈을 책임 단위로 분리
 - [ ] **Phase 438: 파이프라인 분할 + 추가 정리** - stages.ts 6단계 분할, Solana mapError, ILogger 인터페이스
 
@@ -58,8 +58,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 436-01-PLAN.md — API 페이지네이션 구현 (sessions/policies route + OpenAPI 스키마 + semver 정적 import)
-- [ ] 436-02-PLAN.md — SDK listSessions/listPolicies 메서드 + MCP list_sessions/get_policies pagination
+- [x] 436-01-PLAN.md — API 페이지네이션 구현 (sessions/policies route + OpenAPI 스키마 + semver 정적 import)
+- [x] 436-02-PLAN.md — SDK listSessions/listPolicies 메서드 + MCP list_sessions/get_policies pagination
 
 ### Phase 437: 대형 파일 분할 (migrate + daemon + policy-engine)
 **Goal**: 1,500줄 이상 대형 파일 3개가 책임 단위 모듈로 분리되어 각 파일이 단일 책임을 가진다
@@ -101,6 +101,6 @@ Phases execute in numeric order: 435 -> 436 -> 437 -> 438
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 435. N+1 쿼리 해소 | 2/2 | Complete    | 2026-03-16 |
-| 436. 페이지네이션 추가 | 0/2 | Not started | - |
+| 436. 페이지네이션 추가 | 2/2 | Complete    | 2026-03-17 |
 | 437. 대형 파일 분할 | 0/3 | Not started | - |
 | 438. 파이프라인 분할 + 추가 정리 | 0/2 | Not started | - |

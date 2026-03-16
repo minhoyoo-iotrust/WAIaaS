@@ -19,14 +19,14 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### 페이지네이션
 
-- [ ] **PAG-01**: GET /v1/sessions가 limit/offset 쿼리 파라미터를 지원하고 응답에 total을 포함한다
-- [ ] **PAG-02**: GET /v1/policies가 limit/offset 쿼리 파라미터를 지원하고 응답에 total을 포함한다
-- [ ] **PAG-03**: 파라미터 생략 시 기본값(limit=50, offset=0)이 적용되어 하위 호환성을 유지한다
-- [ ] **PAG-04**: offset이 total을 초과하면 빈 배열을 반환한다
-- [ ] **PAG-05**: OpenAPI 스키마에 페이지네이션 파라미터와 응답 스키마가 반영된다
-- [ ] **PAG-06**: SDK listSessions()와 listPolicies()에 pagination 옵션이 추가된다
-- [ ] **PAG-07**: MCP list-sessions와 list-policies 도구에 pagination 파라미터가 추가된다
-- [ ] **PAG-08**: admin-auth.ts의 dynamic import('semver')가 정적 import로 교체된다
+- [x] **PAG-01**: GET /v1/sessions가 limit/offset 쿼리 파라미터를 지원하고 응답에 total을 포함한다
+- [x] **PAG-02**: GET /v1/policies가 limit/offset 쿼리 파라미터를 지원하고 응답에 total을 포함한다
+- [x] **PAG-03**: 파라미터 생략 시 기본값(limit=50, offset=0)이 적용되어 하위 호환성을 유지한다
+- [x] **PAG-04**: offset이 total을 초과하면 빈 배열을 반환한다
+- [x] **PAG-05**: OpenAPI 스키마에 페이지네이션 파라미터와 응답 스키마가 반영된다
+- [x] **PAG-06**: SDK listSessions()와 listPolicies()에 pagination 옵션이 추가된다
+- [x] **PAG-07**: MCP list-sessions와 list-policies 도구에 pagination 파라미터가 추가된다
+- [x] **PAG-08**: admin-auth.ts의 dynamic import('semver')가 정적 import로 교체된다
 
 ### migrate.ts 분할
 
@@ -104,14 +104,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NQ-05 | Phase 435 | Complete |
 | NQ-06 | Phase 435 | Complete |
 | NQ-07 | Phase 435 | Complete |
-| PAG-01 | Phase 436 | Pending |
-| PAG-02 | Phase 436 | Pending |
-| PAG-03 | Phase 436 | Pending |
-| PAG-04 | Phase 436 | Pending |
-| PAG-05 | Phase 436 | Pending |
-| PAG-06 | Phase 436 | Pending |
-| PAG-07 | Phase 436 | Pending |
-| PAG-08 | Phase 436 | Pending |
+| PAG-01 | Phase 436 | Complete |
+| PAG-02 | Phase 436 | Complete |
+| PAG-03 | Phase 436 | Complete |
+| PAG-04 | Phase 436 | Complete |
+| PAG-05 | Phase 436 | Complete |
+| PAG-06 | Phase 436 | Complete |
+| PAG-07 | Phase 436 | Complete |
+| PAG-08 | Phase 436 | Complete |
 | MIG-01 | Phase 437 | Pending |
 | MIG-02 | Phase 437 | Pending |
 | MIG-03 | Phase 437 | Pending |
