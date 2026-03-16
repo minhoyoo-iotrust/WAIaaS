@@ -922,9 +922,9 @@ describe('WAIaaSClient', () => {
       const result = await client.listSessions('my-master-pw');
       expect(result).toEqual(paginatedResponse);
 
-      const calledUrl = fetchSpy.mock.calls[0][0] as string;
+      const calledUrl = fetchSpy.mock.calls[0]![0] as string;
       expect(calledUrl).toBe('http://localhost:3000/v1/sessions');
-      const headers = fetchSpy.mock.calls[0][1].headers as Record<string, string>;
+      const headers = (fetchSpy.mock.calls[0]![1] as Record<string, unknown>).headers as Record<string, string>;
       expect(headers['X-Master-Password']).toBe('my-master-pw');
     });
 
@@ -939,7 +939,7 @@ describe('WAIaaSClient', () => {
 
       await client.listSessions('pw', { walletId: 'w-1', limit: 10, offset: 5 });
 
-      const calledUrl = fetchSpy.mock.calls[0][0] as string;
+      const calledUrl = fetchSpy.mock.calls[0]![0] as string;
       expect(calledUrl).toContain('walletId=w-1');
       expect(calledUrl).toContain('limit=10');
       expect(calledUrl).toContain('offset=5');
@@ -959,9 +959,9 @@ describe('WAIaaSClient', () => {
       const result = await client.listPolicies();
       expect(result).toEqual(paginatedResponse);
 
-      const calledUrl = fetchSpy.mock.calls[0][0] as string;
+      const calledUrl = fetchSpy.mock.calls[0]![0] as string;
       expect(calledUrl).toBe('http://localhost:3000/v1/policies');
-      const headers = fetchSpy.mock.calls[0][1].headers as Record<string, string>;
+      const headers = (fetchSpy.mock.calls[0]![1] as Record<string, unknown>).headers as Record<string, string>;
       expect(headers['Authorization']).toContain('Bearer');
     });
 
@@ -976,7 +976,7 @@ describe('WAIaaSClient', () => {
 
       await client.listPolicies({ limit: 5, walletId: 'w-2' });
 
-      const calledUrl = fetchSpy.mock.calls[0][0] as string;
+      const calledUrl = fetchSpy.mock.calls[0]![0] as string;
       expect(calledUrl).toContain('limit=5');
       expect(calledUrl).toContain('walletId=w-2');
     });
