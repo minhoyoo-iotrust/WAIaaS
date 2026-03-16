@@ -55,11 +55,11 @@ Plans:
   3. limit/offset 생략 시 기본값(50/0)이 적용되어 기존 클라이언트가 동작 변경 없이 사용할 수 있다
   4. SDK listSessions()/listPolicies()와 MCP list-sessions/list-policies에서 pagination 옵션을 사용할 수 있다
   5. OpenAPI 스키마에 페이지네이션 파라미터와 응답 형식이 문서화되어 있다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 436-01: TBD
-- [ ] 436-02: TBD
+- [ ] 436-01-PLAN.md — API 페이지네이션 구현 (sessions/policies route + OpenAPI 스키마 + semver 정적 import)
+- [ ] 436-02-PLAN.md — SDK listSessions/listPolicies 메서드 + MCP list_sessions/get_policies pagination
 
 ### Phase 437: 대형 파일 분할 (migrate + daemon + policy-engine)
 **Goal**: 1,500줄 이상 대형 파일 3개가 책임 단위 모듈로 분리되어 각 파일이 단일 책임을 가진다
