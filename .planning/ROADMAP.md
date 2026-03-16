@@ -39,11 +39,11 @@ See `.planning/milestones/v32.5-ROADMAP.md` for full details.
   3. 트랜잭션 목록 조회 시 토큰 정보가 unique address 기반 배치 조회로 수행된다
   4. 세션 생성 시 다수 walletId 검증이 단일 IN() 쿼리로 수행된다
   5. 기존 전체 테스트 스위트가 변경 없이 통과한다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 435-01: TBD
-- [ ] 435-02: TBD
+- [ ] 435-01-PLAN.md — 세션 관련 N+1 배치 전환 (sessions.ts, admin-monitoring.ts agent-prompt)
+- [ ] 435-02-PLAN.md — formatTxAmount 토큰 정보 배치 조회 전환 (admin-wallets, admin-monitoring, admin-auth)
 
 ### Phase 436: 페이지네이션 추가
 **Goal**: 대량 데이터를 반환하는 목록 API가 페이지네이션을 지원하여 클라이언트가 필요한 범위만 조회할 수 있다
