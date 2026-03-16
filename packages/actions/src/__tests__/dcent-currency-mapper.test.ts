@@ -228,3 +228,28 @@ describe('dcent-currency-mapper', () => {
     );
   });
 });
+
+// ---------------------------------------------------------------------------
+// Error path coverage: caip19ToDcentId
+// ---------------------------------------------------------------------------
+
+describe('caip19ToDcentId error paths', () => {
+  it('throws for unsupported Solana asset namespace', () => {
+    // erc721 is not a valid Solana namespace
+    expect(() =>
+      caip19ToDcentId('solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/erc721:SomeNft123'),
+    ).toThrow('Unsupported Solana asset namespace');
+  });
+
+  it('throws for unsupported EVM asset namespace (erc721)', () => {
+    expect(() =>
+      caip19ToDcentId('eip155:1/erc721:0x1234567890abcdef1234567890abcdef12345678'),
+    ).toThrow('Unsupported EVM asset namespace');
+  });
+
+  it('throws for unsupported chain namespace', () => {
+    expect(() =>
+      caip19ToDcentId('cosmos:cosmoshub-4/slip44:118'),
+    ).toThrow('Unsupported chain namespace for DCent conversion');
+  });
+});
