@@ -1,40 +1,15 @@
 /**
  * DatabasePolicyEngine - v1.2 DB-backed policy engine with network scoping.
  *
+ * This file contains the orchestration class that dispatches to evaluator modules
+ * in the evaluators/ directory. Each policy type has its own evaluator file.
+ *
  * Evaluates transactions against policies stored in the policies table.
- * Supports SPENDING_LIMIT (4-tier classification), WHITELIST (address filtering),
- * ALLOWED_NETWORKS (network whitelist, permissive default),
- * ALLOWED_TOKENS (token transfer whitelist, default deny),
- * CONTRACT_WHITELIST (contract call whitelist, default deny),
- * METHOD_WHITELIST (optional method-level restriction for contract calls),
- * APPROVED_SPENDERS (approve spender whitelist, default deny),
- * APPROVE_AMOUNT_LIMIT (unlimited approve block + amount cap),
- * and APPROVE_TIER_OVERRIDE (forced tier for APPROVE transactions).
- *
- * Algorithm:
- * 1. Load enabled policies for wallet (wallet-specific + global), ORDER BY priority DESC
- * 2. If no policies found, return INSTANT passthrough (Phase 7 compat)
- * 3. Resolve overrides: 4-level priority (wallet+network > wallet+null > global+network > global+null)
- * 4. Evaluate WHITELIST: deny if toAddress not in allowed_addresses
- * 4a.5. Evaluate ALLOWED_NETWORKS: deny if network not in allowed list (permissive default)
- * 4b. Evaluate ALLOWED_TOKENS: deny TOKEN_TRANSFER if no policy or token not whitelisted
- * 4c. Evaluate CONTRACT_WHITELIST: deny CONTRACT_CALL if no policy or contract not whitelisted
- * 4d. Evaluate METHOD_WHITELIST: deny CONTRACT_CALL if method selector not whitelisted (optional)
- * 4e. Evaluate APPROVED_SPENDERS: deny APPROVE if no policy or spender not approved
- * 4f. Evaluate APPROVE_AMOUNT_LIMIT: deny APPROVE if unlimited or exceeds max amount
- * 4g. Evaluate APPROVE_TIER_OVERRIDE: force tier for APPROVE (defaults to APPROVAL, skips SPENDING_LIMIT)
- * 4h. Evaluate LENDING_ASSET_WHITELIST: deny lending action if asset not whitelisted (default-deny)
- * 4h-b. Evaluate LENDING_LTV_LIMIT: deny borrow if projected LTV exceeds maxLtv
- * 4i. Evaluate PERP_ALLOWED_MARKETS: deny perp action if market not whitelisted (default-deny)
- * 4i-b. Evaluate PERP_MAX_LEVERAGE: deny open/modify if leverage exceeds max
- * 4i-c. Evaluate PERP_MAX_POSITION_USD: deny open/modify if position USD exceeds max
- * 5. Evaluate SPENDING_LIMIT: classify amount into INSTANT/NOTIFY/DELAY/APPROVAL
- *    (skip for non-spending lending actions: supply/repay/withdraw)
- *
- * TOCTOU Prevention (evaluateAndReserve):
- * Uses BEGIN IMMEDIATE to serialize concurrent policy evaluations.
- * reserved_amount tracks pending amounts to prevent two requests from both passing
- * under the same spending limit.
+ * Supports SPENDING_LIMIT, WHITELIST, ALLOWED_NETWORKS, ALLOWED_TOKENS,
+ * CONTRACT_WHITELIST, METHOD_WHITELIST, APPROVED_SPENDERS, APPROVE_AMOUNT_LIMIT,
+ * APPROVE_TIER_OVERRIDE, LENDING_ASSET_WHITELIST, LENDING_LTV_LIMIT,
+ * PERP_ALLOWED_MARKETS, PERP_MAX_LEVERAGE, PERP_MAX_POSITION_USD,
+ * VENUE_WHITELIST, ACTION_CATEGORY_LIMIT, and REPUTATION_THRESHOLD.
  *
  * @see docs/33-time-lock-approval-mechanism.md
  * @see docs/71-policy-engine-network-extension-design.md
@@ -42,29 +17,12 @@
 
 import type { IPolicyEngine, PolicyEvaluation, PolicyTier } from '@waiaas/core';
 import {
-  NATIVE_DECIMALS,
-  parseCaip19,
   safeJsonParse,
   WAIaaSError,
   SpendingLimitRulesSchema,
-  WhitelistRulesSchema,
-  AllowedTokensRulesSchema,
-  ContractWhitelistRulesSchema,
-  MethodWhitelistRulesSchema,
-  ApprovedSpendersRulesSchema,
-  ApproveAmountLimitRulesSchema,
   ApproveTierOverrideRulesSchema,
-  AllowedNetworksRulesSchema,
   ReputationThresholdRulesSchema,
-  LendingAssetWhitelistRulesSchema,
-  LendingLtvLimitRulesSchema,
-  PerpMaxLeverageRulesSchema,
-  PerpMaxPositionUsdRulesSchema,
-  PerpAllowedMarketsRulesSchema,
-  VenueWhitelistRulesSchema,
-  ActionCategoryLimitRulesSchema,
 } from '@waiaas/core';
-import type { SpendingLimitRules } from '@waiaas/core';
 import { type z } from 'zod';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { Database as SQLiteDatabase } from 'better-sqlite3';
@@ -74,101 +32,18 @@ import type * as schema from '../infrastructure/database/schema.js';
 import type { SettingsService } from '../infrastructure/settings/settings-service.js';
 import type { ReputationCacheService } from '../services/erc8004/reputation-cache-service.js';
 
-/** Threshold for detecting "unlimited" approve amounts. */
-const UNLIMITED_THRESHOLD = (2n ** 256n - 1n) / 2n;
+// Evaluator imports
+import { evaluateWhitelist, evaluateAllowedNetworks, evaluateAllowedTokens } from './evaluators/allowed-tokens.js';
+import { evaluateContractWhitelist, evaluateMethodWhitelist, evaluateVenueWhitelist, evaluatePerpAllowedMarkets } from './evaluators/contract-whitelist.js';
+import { evaluateApprovedSpenders, evaluateApproveAmountLimit, evaluateApproveTierOverride } from './evaluators/approved-spenders.js';
+import { evaluateSpendingLimit, evaluateActionCategoryLimit } from './evaluators/spending-limit.js';
+import { evaluateLendingAssetWhitelist } from './evaluators/lending-asset-whitelist.js';
+import { evaluateLendingLtvLimit, evaluatePerpMaxLeverage, evaluatePerpMaxPositionUsd } from './evaluators/lending-ltv-limit.js';
+import { maxTier } from './evaluators/helpers.js';
+import type { PolicyRow, TransactionParam, ParseRulesContext, SettingsContext } from './evaluators/types.js';
 
-
-/**
- * Parse a human-readable decimal string (e.g. "1.5", "1000") to raw bigint units.
- * Multiplies the value by 10^decimals for precise BigInt comparison.
- *
- * Examples:
- *   parseDecimalToBigInt("1.5", 9) -> 1500000000n (1.5 SOL in lamports)
- *   parseDecimalToBigInt("1000", 6) -> 1000000000n (1000 USDC in raw)
- */
-function parseDecimalToBigInt(value: string, decimals: number): bigint {
-  const parts = value.split('.');
-  const integerPart = parts[0] ?? '0';
-  let fractionalPart = parts[1] ?? '';
-
-  // Pad or truncate fractional part to exactly `decimals` digits
-  if (fractionalPart.length > decimals) {
-    fractionalPart = fractionalPart.slice(0, decimals);
-  } else {
-    fractionalPart = fractionalPart.padEnd(decimals, '0');
-  }
-
-  return BigInt(integerPart + fractionalPart);
-}
-
-interface PolicyRow {
-  id: string;
-  walletId: string | null;
-  type: string;
-  rules: string;
-  priority: number;
-  enabled: boolean | null;
-  network: string | null;
-}
-
-// AllowedNetworksRules imported from @waiaas/core
-
-/** Transaction parameter for policy evaluation. */
-interface TransactionParam {
-  type: string;
-  amount: string;
-  toAddress: string;
-  chain: string;
-  /** Resolved network for ALLOWED_NETWORKS evaluation + network scoping. */
-  network?: string;
-  /** Token address for ALLOWED_TOKENS evaluation (TOKEN_TRANSFER only). */
-  tokenAddress?: string;
-  /** CAIP-19 asset identifier for ALLOWED_TOKENS 4-scenario matching (TOKEN_TRANSFER only). */
-  assetId?: string;
-  /** Contract address for CONTRACT_WHITELIST evaluation (CONTRACT_CALL only). */
-  contractAddress?: string;
-  /** Function selector (4-byte hex, e.g. '0x12345678') for METHOD_WHITELIST evaluation (CONTRACT_CALL only). */
-  selector?: string;
-  /** Spender address for APPROVED_SPENDERS evaluation (APPROVE only). */
-  spenderAddress?: string;
-  /** Approve amount in raw units for APPROVE_AMOUNT_LIMIT evaluation (APPROVE only). */
-  approveAmount?: string;
-  /** Token decimals for token_limits human-readable conversion (TOKEN_TRANSFER/APPROVE only). */
-  tokenDecimals?: number;
-  /** Action provider name for provider-trust policy bypass (set by ActionProviderRegistry). */
-  actionProvider?: string;
-  /** Action name for lending policy evaluation (supply/borrow/repay/withdraw). Set by ActionProviderRegistry. */
-  actionName?: string;
-  /** Leverage for perp policy evaluation (open_position/modify_position). Set by ActionProviderRegistry. */
-  perpLeverage?: number;
-  /** Position size in USD for perp policy evaluation. Set by ActionProviderRegistry. */
-  perpSizeUsd?: number;
-  // Phase 389: External action fields
-  /** Venue identifier for VENUE_WHITELIST evaluation (signedData/signedHttp only). */
-  venue?: string;
-  /** Action category for ACTION_CATEGORY_LIMIT evaluation (e.g., 'trade', 'withdraw'). */
-  actionCategory?: string;
-  /** Notional USD value for ACTION_CATEGORY_LIMIT evaluation. */
-  notionalUsd?: number;
-  /** Leverage for off-chain action (for policy context). */
-  leverage?: number;
-  /** Expiry timestamp (ISO string) for off-chain action. */
-  expiry?: string;
-  /** Whether the off-chain action has withdrawal capability. */
-  hasWithdrawCapability?: boolean;
-}
-
-// ---------------------------------------------------------------------------
-// Tier order + maxTier helper (Phase 127)
-// ---------------------------------------------------------------------------
-
-const TIER_ORDER: PolicyTier[] = ['INSTANT', 'NOTIFY', 'DELAY', 'APPROVAL'];
-
-function maxTier(a: PolicyTier, b: PolicyTier): PolicyTier {
-  const aIdx = TIER_ORDER.indexOf(a);
-  const bIdx = TIER_ORDER.indexOf(b);
-  return TIER_ORDER[Math.max(aIdx, bIdx)]!;
-}
+// Re-export types for consumers
+export type { PolicyRow, TransactionParam, ParseRulesContext };
 
 // ---------------------------------------------------------------------------
 // DatabasePolicyEngine
@@ -181,9 +56,6 @@ function maxTier(a: PolicyTier, b: PolicyTier): PolicyTier {
  *
  * Network scoping: policies can target specific networks via the `network` column.
  * 4-level override priority: wallet+network > wallet+null > global+network > global+null.
- *
- * Constructor takes a Drizzle DB instance typed with the full schema,
- * and optionally a raw better-sqlite3 Database instance for BEGIN IMMEDIATE transactions.
  */
 export class DatabasePolicyEngine implements IPolicyEngine {
   private readonly sqlite: SQLiteDatabase | null;
@@ -199,6 +71,14 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     this.sqlite = sqlite ?? null;
     this.settingsService = settingsService ?? null;
     this.reputationCacheService = reputationCacheService ?? null;
+  }
+
+  /** Evaluator context with parseRules + settingsService access. */
+  private get ctx(): ParseRulesContext & SettingsContext {
+    return {
+      parseRules: this.parseRules.bind(this),
+      settingsService: this.settingsService,
+    };
   }
 
   /**
@@ -242,131 +122,103 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       return { allowed: true, tier: 'INSTANT' };
     }
 
-    // Step 3: Resolve overrides (4-level: wallet+network > wallet+null > global+network > global+null)
+    // Step 3: Resolve overrides
     const resolved = this.resolveOverrides(rows as PolicyRow[], walletId, transaction.network);
+    const ctx = this.ctx;
 
     // Step 4: Evaluate WHITELIST (deny-first)
-    const whitelistResult = this.evaluateWhitelist(resolved, transaction.toAddress);
-    if (whitelistResult !== null) {
-      return whitelistResult;
-    }
+    const whitelistResult = evaluateWhitelist(ctx, resolved, transaction.toAddress);
+    if (whitelistResult !== null) return whitelistResult;
 
-    // Step 4a.5: Evaluate ALLOWED_NETWORKS (network whitelist, permissive default)
+    // Step 4a.5: Evaluate ALLOWED_NETWORKS
     if (transaction.network) {
-      const allowedNetworksResult = this.evaluateAllowedNetworks(resolved, transaction.network);
-      if (allowedNetworksResult !== null) {
-        return allowedNetworksResult;
-      }
+      const allowedNetworksResult = evaluateAllowedNetworks(ctx, resolved, transaction.network);
+      if (allowedNetworksResult !== null) return allowedNetworksResult;
     }
 
-    // Step 4b: Evaluate ALLOWED_TOKENS (token transfer whitelist)
-    const allowedTokensResult = this.evaluateAllowedTokens(resolved, transaction);
-    if (allowedTokensResult !== null) {
-      return allowedTokensResult;
-    }
+    // Step 4b: Evaluate ALLOWED_TOKENS
+    const allowedTokensResult = evaluateAllowedTokens(ctx, resolved, transaction);
+    if (allowedTokensResult !== null) return allowedTokensResult;
 
-    // Step 4c: Evaluate CONTRACT_WHITELIST (contract call whitelist)
-    const contractWhitelistResult = this.evaluateContractWhitelist(resolved, transaction);
-    if (contractWhitelistResult !== null) {
-      return contractWhitelistResult;
-    }
+    // Step 4c: Evaluate CONTRACT_WHITELIST
+    const contractWhitelistResult = evaluateContractWhitelist(ctx, resolved, transaction);
+    if (contractWhitelistResult !== null) return contractWhitelistResult;
 
-    // Step 4d: Evaluate METHOD_WHITELIST (method-level restriction)
-    const methodWhitelistResult = this.evaluateMethodWhitelist(resolved, transaction);
-    if (methodWhitelistResult !== null) {
-      return methodWhitelistResult;
-    }
+    // Step 4d: Evaluate METHOD_WHITELIST
+    const methodWhitelistResult = evaluateMethodWhitelist(ctx, resolved, transaction);
+    if (methodWhitelistResult !== null) return methodWhitelistResult;
 
-    // Step 4e: Evaluate APPROVED_SPENDERS (approve spender whitelist)
-    const approvedSpendersResult = this.evaluateApprovedSpenders(resolved, transaction);
-    if (approvedSpendersResult !== null) {
-      return approvedSpendersResult;
-    }
+    // Step 4e: Evaluate APPROVED_SPENDERS
+    const approvedSpendersResult = evaluateApprovedSpenders(ctx, resolved, transaction);
+    if (approvedSpendersResult !== null) return approvedSpendersResult;
 
-    // Step 4e.5: Evaluate REPUTATION_THRESHOLD (counterparty reputation check, Phase 320)
+    // Step 4e.5: Evaluate REPUTATION_THRESHOLD (async, kept in this class)
     const reputationFloorTier = await this.evaluateReputationThreshold(resolved, transaction);
 
-    // Step 4f: Evaluate APPROVE_AMOUNT_LIMIT (unlimited approve block + amount cap)
-    const approveAmountResult = this.evaluateApproveAmountLimit(resolved, transaction);
-    if (approveAmountResult !== null) {
-      return approveAmountResult;
-    }
+    // Step 4f: Evaluate APPROVE_AMOUNT_LIMIT
+    const approveAmountResult = evaluateApproveAmountLimit(ctx, resolved, transaction);
+    if (approveAmountResult !== null) return approveAmountResult;
 
-    // Step 4g: Evaluate APPROVE_TIER_OVERRIDE (forced tier for APPROVE transactions)
-    const approveTierResult = this.evaluateApproveTierOverride(resolved, transaction);
-    if (approveTierResult !== null) {
-      return approveTierResult; // FINAL result, skips SPENDING_LIMIT (including token_limits)
-    }
+    // Step 4g: Evaluate APPROVE_TIER_OVERRIDE
+    const approveTierResult = evaluateApproveTierOverride(ctx, resolved, transaction);
+    if (approveTierResult !== null) return approveTierResult;
 
     // Step 4g.5: NFT_TRANSFER default tier APPROVAL (PLCY-03, v31.0)
-    // NFT transfers default to APPROVAL tier (owner approval required) unless overridden.
     if (transaction.type === 'NFT_TRANSFER') {
       let nftTierOverride: string | null = null;
       try {
         nftTierOverride = this.settingsService?.get('policy.nft_transfer_default_tier') ?? null;
-      } catch {
-        // Setting key not registered yet -- use default
-      }
+      } catch { /* Setting key not registered yet */ }
       const nftTier = (nftTierOverride ?? 'APPROVAL') as PolicyTier;
       const finalTier = reputationFloorTier ? maxTier(nftTier, reputationFloorTier) : nftTier;
       return { allowed: true, tier: finalTier };
     }
 
     // v31.14: CONTRACT_DEPLOY default tier APPROVAL (DEPL-04)
-    // Contract deployments default to APPROVAL tier (owner approval required) unless overridden.
     if (transaction.type === 'CONTRACT_DEPLOY') {
       let deployTierOverride: string | null = null;
       try {
         deployTierOverride = this.settingsService?.get('rpc_proxy.deploy_default_tier') ?? null;
-      } catch {
-        // Setting key not registered yet -- use default
-      }
+      } catch { /* Setting key not registered yet */ }
       const deployTier = (deployTierOverride ?? 'APPROVAL') as PolicyTier;
       const finalTier = reputationFloorTier ? maxTier(deployTier, reputationFloorTier) : deployTier;
       return { allowed: true, tier: finalTier };
     }
 
-    // Step 4h: Evaluate LENDING_ASSET_WHITELIST (default-deny for lending assets)
-    const lendingAssetResult = this.evaluateLendingAssetWhitelist(resolved, transaction);
-    if (lendingAssetResult !== null) {
-      return lendingAssetResult;
-    }
+    // Step 4h: Evaluate LENDING_ASSET_WHITELIST
+    const lendingAssetResult = evaluateLendingAssetWhitelist(ctx, resolved, transaction);
+    if (lendingAssetResult !== null) return lendingAssetResult;
 
-    // Step 4h-b: Evaluate LENDING_LTV_LIMIT (LTV-based borrow restriction)
-    const ltvResult = this.evaluateLendingLtvLimit(resolved, transaction, walletId);
-    if (ltvResult !== null) {
-      return ltvResult;
-    }
+    // Step 4h-b: Evaluate LENDING_LTV_LIMIT
+    const ltvResult = evaluateLendingLtvLimit(ctx, resolved, transaction, walletId, this.sqlite);
+    if (ltvResult !== null) return ltvResult;
 
-    // Step 4i: Evaluate PERP_ALLOWED_MARKETS (default-deny for perp markets)
-    const perpMarketResult = this.evaluatePerpAllowedMarkets(resolved, transaction);
+    // Step 4i: Evaluate PERP_ALLOWED_MARKETS
+    const perpMarketResult = evaluatePerpAllowedMarkets(ctx, resolved, transaction);
     if (perpMarketResult !== null) return perpMarketResult;
 
-    // Step 4i-b: Evaluate PERP_MAX_LEVERAGE (deny if leverage exceeds max)
-    const leverageResult = this.evaluatePerpMaxLeverage(resolved, transaction);
+    // Step 4i-b: Evaluate PERP_MAX_LEVERAGE
+    const leverageResult = evaluatePerpMaxLeverage(ctx, resolved, transaction);
     if (leverageResult !== null) return leverageResult;
 
-    // Step 4i-c: Evaluate PERP_MAX_POSITION_USD (deny if position USD exceeds max)
-    const positionUsdResult = this.evaluatePerpMaxPositionUsd(resolved, transaction);
+    // Step 4i-c: Evaluate PERP_MAX_POSITION_USD
+    const positionUsdResult = evaluatePerpMaxPositionUsd(ctx, resolved, transaction);
     if (positionUsdResult !== null) return positionUsdResult;
 
-    // Step 4j: Evaluate VENUE_WHITELIST (Phase 389)
-    const venueResult = this.evaluateVenueWhitelist(resolved, transaction);
+    // Step 4j: Evaluate VENUE_WHITELIST
+    const venueResult = evaluateVenueWhitelist(ctx, resolved, transaction);
     if (venueResult !== null) return venueResult;
 
-    // Step 4k: Evaluate ACTION_CATEGORY_LIMIT (Phase 389)
-    const categoryLimitResult = this.evaluateActionCategoryLimit(resolved, transaction, walletId);
+    // Step 4k: Evaluate ACTION_CATEGORY_LIMIT
+    const categoryLimitResult = evaluateActionCategoryLimit(ctx, resolved, transaction, walletId, this.sqlite);
     if (categoryLimitResult !== null) {
-      // ACTION_CATEGORY_LIMIT returns allowed:true with escalated tier
-      // Combine with reputation floor tier and return
       if (reputationFloorTier) {
         categoryLimitResult.tier = maxTier(categoryLimitResult.tier as PolicyTier, reputationFloorTier);
       }
       return categoryLimitResult;
     }
 
-    // Step 5: Non-spending classification for lending actions (LEND-08, research flag M6)
-    // supply/repay/withdraw are non-spending — skip SPENDING_LIMIT entirely
+    // Step 5: Non-spending classification for lending actions
     const NON_SPENDING_ACTIONS = new Set(['supply', 'repay', 'withdraw', 'close_position', 'add_margin']);
     if (transaction.actionName && NON_SPENDING_ACTIONS.has(transaction.actionName)) {
       const baseTier = 'INSTANT' as PolicyTier;
@@ -374,21 +226,18 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       return { allowed: true, tier: finalTier };
     }
 
-    // Step 5 (continued): Evaluate SPENDING_LIMIT (tier classification)
-    // Phase 236: Build tokenContext from transaction for token_limits evaluation
+    // Step 5 (continued): Evaluate SPENDING_LIMIT
     const spendingPolicy = resolved.find((p) => p.type === 'SPENDING_LIMIT');
     const tokenContext = this.buildTokenContext(transaction, spendingPolicy);
-    const spendingResult = this.evaluateSpendingLimit(resolved, transaction.amount, undefined, tokenContext);
+    const spendingResult = evaluateSpendingLimit(ctx, resolved, transaction.amount, undefined, tokenContext);
     if (spendingResult !== null) {
-      // [Phase 320] Apply reputation floor tier via maxTier (escalation only)
       if (reputationFloorTier) {
         spendingResult.tier = maxTier(spendingResult.tier as PolicyTier, reputationFloorTier);
       }
       return spendingResult;
     }
 
-    // Default: INSTANT passthrough (no applicable rules)
-    // [Phase 320] Apply reputation floor tier if set
+    // Default: INSTANT passthrough
     const defaultTier = 'INSTANT' as PolicyTier;
     const finalDefaultTier = reputationFloorTier ? maxTier(defaultTier, reputationFloorTier) : defaultTier;
     return { allowed: true, tier: finalDefaultTier };
@@ -398,27 +247,11 @@ export class DatabasePolicyEngine implements IPolicyEngine {
   // Batch evaluation: evaluateBatch
   // -------------------------------------------------------------------------
 
-  /**
-   * Evaluate a batch of instructions using 2-stage policy evaluation.
-   *
-   * Phase A: Evaluate each instruction individually against its applicable policies.
-   *          All-or-Nothing: if any instruction is denied, entire batch is denied.
-   *
-   * Phase B: Sum native amounts (TRANSFER.amount) and evaluate
-   *          aggregate against SPENDING_LIMIT. If batch contains APPROVE, apply
-   *          APPROVE_TIER_OVERRIDE and take max(amount tier, approve tier).
-   *
-   * @param walletId - Wallet whose policies to evaluate
-   * @param instructions - Array of instruction parameters (same shape as TransactionParam)
-   * @returns PolicyEvaluation with final tier or denial with violation details
-   */
   async evaluateBatch(
     walletId: string,
     instructions: TransactionParam[],
     batchUsdAmount?: number,
   ): Promise<PolicyEvaluation> {
-    // Step 1: Load policies with network filter
-    // All instructions in a BATCH share the same network
     const resolvedNetwork = instructions[0]?.network;
 
     const rows = await this.db
@@ -437,18 +270,15 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       .orderBy(desc(policies.priority))
       .all();
 
-    if (rows.length === 0) {
-      return { allowed: true, tier: 'INSTANT' };
-    }
+    if (rows.length === 0) return { allowed: true, tier: 'INSTANT' };
 
     const resolved = this.resolveOverrides(rows as PolicyRow[], walletId, resolvedNetwork);
+    const ctx = this.ctx;
 
     // ALLOWED_NETWORKS evaluation before Phase A
     if (resolvedNetwork) {
-      const allowedNetworksResult = this.evaluateAllowedNetworks(resolved, resolvedNetwork);
-      if (allowedNetworksResult !== null) {
-        return allowedNetworksResult;
-      }
+      const allowedNetworksResult = evaluateAllowedNetworks(ctx, resolved, resolvedNetwork);
+      if (allowedNetworksResult !== null) return allowedNetworksResult;
     }
 
     // Phase A: Evaluate each instruction individually
@@ -483,19 +313,14 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       if (instr.type === 'TRANSFER') {
         totalNativeAmount += BigInt(instr.amount);
       }
-      // TOKEN_TRANSFER and APPROVE: 0 (no native amount)
-      // CONTRACT_CALL: Solana has no native value attachment in CPI, so 0
     }
 
-    // Evaluate aggregate against SPENDING_LIMIT (Phase 127: pass batchUsdAmount for USD evaluation)
-    // BATCH: token_limits not applicable -- aggregate native amount evaluated via raw/USD only (tokenContext intentionally omitted)
-    const amountTier = this.evaluateSpendingLimit(resolved, totalNativeAmount.toString(), batchUsdAmount);
+    const amountTier = evaluateSpendingLimit(ctx, resolved, totalNativeAmount.toString(), batchUsdAmount);
     let finalTier = amountTier ? (amountTier.tier as PolicyTier) : ('INSTANT' as PolicyTier);
 
     // If batch contains APPROVE, apply APPROVE_TIER_OVERRIDE
     const hasApprove = instructions.some((i) => i.type === 'APPROVE');
     if (hasApprove) {
-      // Get approve tier from APPROVE_TIER_OVERRIDE policy (or default APPROVAL)
       const approveTierPolicy = resolved.find((p) => p.type === 'APPROVE_TIER_OVERRIDE');
       let approveTier: PolicyTier;
       if (approveTierPolicy) {
@@ -505,80 +330,64 @@ export class DatabasePolicyEngine implements IPolicyEngine {
         approveTier = 'APPROVAL';
       }
 
-      // Final tier = max(amount tier, approve tier)
       const tierOrder: PolicyTier[] = ['INSTANT', 'NOTIFY', 'DELAY', 'APPROVAL'];
       const amountIdx = tierOrder.indexOf(finalTier);
       const approveIdx = tierOrder.indexOf(approveTier);
       finalTier = tierOrder[Math.max(amountIdx, approveIdx)]!;
     }
 
-    return {
-      allowed: true,
-      tier: finalTier,
-    };
+    return { allowed: true, tier: finalTier };
   }
 
   // -------------------------------------------------------------------------
   // Private: Per-instruction policy evaluation (Phase A helper)
   // -------------------------------------------------------------------------
 
-  /**
-   * Evaluate applicable policies for a single instruction in a batch.
-   *
-   * Only evaluates type-specific policies:
-   * - TRANSFER: WHITELIST
-   * - TOKEN_TRANSFER: WHITELIST + ALLOWED_TOKENS
-   * - CONTRACT_CALL: CONTRACT_WHITELIST + METHOD_WHITELIST
-   * - APPROVE: APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT
-   *
-   * Does NOT evaluate SPENDING_LIMIT (that's Phase B aggregate) or
-   * APPROVE_TIER_OVERRIDE (that's Phase B).
-   *
-   * Returns null if all policies pass, PolicyEvaluation with allowed=false if denied.
-   */
   private evaluateInstructionPolicies(
     resolved: PolicyRow[],
     instr: TransactionParam,
   ): PolicyEvaluation | null {
+    const ctx = this.ctx;
+
     // WHITELIST applies to TRANSFER and TOKEN_TRANSFER
     if (instr.type === 'TRANSFER' || instr.type === 'TOKEN_TRANSFER') {
-      const whitelistResult = this.evaluateWhitelist(resolved, instr.toAddress);
+      const whitelistResult = evaluateWhitelist(ctx, resolved, instr.toAddress);
       if (whitelistResult !== null) return whitelistResult;
     }
 
     // ALLOWED_TOKENS applies to TOKEN_TRANSFER
     if (instr.type === 'TOKEN_TRANSFER') {
-      const allowedTokensResult = this.evaluateAllowedTokens(resolved, instr);
+      const allowedTokensResult = evaluateAllowedTokens(ctx, resolved, instr);
       if (allowedTokensResult !== null) return allowedTokensResult;
     }
 
     // CONTRACT_WHITELIST applies to CONTRACT_CALL
     if (instr.type === 'CONTRACT_CALL') {
-      const contractResult = this.evaluateContractWhitelist(resolved, instr);
+      const contractResult = evaluateContractWhitelist(ctx, resolved, instr);
       if (contractResult !== null) return contractResult;
 
-      const methodResult = this.evaluateMethodWhitelist(resolved, instr);
+      const methodResult = evaluateMethodWhitelist(ctx, resolved, instr);
       if (methodResult !== null) return methodResult;
     }
 
     // APPROVED_SPENDERS + APPROVE_AMOUNT_LIMIT apply to APPROVE
     if (instr.type === 'APPROVE') {
-      const spendersResult = this.evaluateApprovedSpenders(resolved, instr);
+      const spendersResult = evaluateApprovedSpenders(ctx, resolved, instr);
       if (spendersResult !== null) return spendersResult;
 
-      const amountResult = this.evaluateApproveAmountLimit(resolved, instr);
+      const amountResult = evaluateApproveAmountLimit(ctx, resolved, instr);
       if (amountResult !== null) return amountResult;
     }
 
-    // LENDING_ASSET_WHITELIST applies to lending actions (CONTRACT_CALL with actionName)
+    // LENDING_ASSET_WHITELIST applies to lending actions
     if (instr.type === 'CONTRACT_CALL') {
-      const lendingAssetResult = this.evaluateLendingAssetWhitelist(resolved, instr);
+      const lendingAssetResult = evaluateLendingAssetWhitelist(ctx, resolved, instr);
       if (lendingAssetResult !== null) return lendingAssetResult;
     }
 
-    // PERP_ALLOWED_MARKETS applies to perp actions (CONTRACT_CALL with actionName)
+    // PERP_ALLOWED_MARKETS applies to perp actions
     if (instr.type === 'CONTRACT_CALL') {
-      const perpMarketResult = this.evaluatePerpAllowedMarkets(resolved, instr);
+      const perpMarketResult = evaluatePerpAllowedMarkets(ctx, resolved, instr);
       if (perpMarketResult !== null) return perpMarketResult;
     }
 
@@ -589,24 +398,6 @@ export class DatabasePolicyEngine implements IPolicyEngine {
   // TOCTOU Prevention: evaluateAndReserve
   // -------------------------------------------------------------------------
 
-  /**
-   * Evaluate transaction and reserve amount atomically using BEGIN IMMEDIATE.
-   *
-   * This method:
-   * 1. Begins an IMMEDIATE transaction (exclusive write lock)
-   * 2. Loads policies (same as evaluate)
-   * 3. For SPENDING_LIMIT: computes current reserved total from PENDING/QUEUED txs
-   * 4. Adds current request amount to reserved total
-   * 5. Evaluates against limits with reserved total considered
-   * 6. If allowed: sets reserved_amount on the transaction row
-   * 7. Commits
-   *
-   * @param walletId - The wallet whose policies to evaluate
-   * @param transaction - Transaction details for evaluation
-   * @param txId - The transaction ID to update with reserved_amount
-   * @returns PolicyEvaluation result
-   * @throws Error if sqlite instance not provided in constructor
-   */
   evaluateAndReserve(
     walletId: string,
     transaction: TransactionParam,
@@ -619,10 +410,9 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     }
 
     const sqlite = this.sqlite;
+    const ctx = this.ctx;
 
-    // Use better-sqlite3 transaction().immediate() for BEGIN IMMEDIATE
     const txn = sqlite.transaction(() => {
-      // Step 1: Load enabled policies via raw SQL with network filter (inside IMMEDIATE txn)
       const policyRows = sqlite
         .prepare(
           `SELECT id, wallet_id AS walletId, type, rules, priority, enabled, network
@@ -634,96 +424,59 @@ export class DatabasePolicyEngine implements IPolicyEngine {
         )
         .all(walletId, transaction.network ?? null) as PolicyRow[];
 
-      // Step 2: No policies -> INSTANT passthrough (apply reputation floor if set)
       if (policyRows.length === 0) {
         const baseTier = 'INSTANT' as PolicyTier;
         const effectiveTier = reputationFloorTier ? maxTier(baseTier, reputationFloorTier) : baseTier;
         return { allowed: true, tier: effectiveTier };
       }
 
-      // Step 3: Resolve overrides (4-level with network)
       const resolved = this.resolveOverrides(policyRows, walletId, transaction.network);
 
-      // Step 4: Evaluate WHITELIST (deny-first)
-      const whitelistResult = this.evaluateWhitelist(resolved, transaction.toAddress);
-      if (whitelistResult !== null) {
-        return whitelistResult;
-      }
+      const whitelistResult = evaluateWhitelist(ctx, resolved, transaction.toAddress);
+      if (whitelistResult !== null) return whitelistResult;
 
-      // Step 4a.5: Evaluate ALLOWED_NETWORKS (network whitelist, permissive default)
       if (transaction.network) {
-        const allowedNetworksResult = this.evaluateAllowedNetworks(resolved, transaction.network);
-        if (allowedNetworksResult !== null) {
-          return allowedNetworksResult;
-        }
+        const allowedNetworksResult = evaluateAllowedNetworks(ctx, resolved, transaction.network);
+        if (allowedNetworksResult !== null) return allowedNetworksResult;
       }
 
-      // Step 4b: Evaluate ALLOWED_TOKENS (token transfer whitelist)
-      const allowedTokensResult = this.evaluateAllowedTokens(resolved, transaction);
-      if (allowedTokensResult !== null) {
-        return allowedTokensResult;
-      }
+      const allowedTokensResult = evaluateAllowedTokens(ctx, resolved, transaction);
+      if (allowedTokensResult !== null) return allowedTokensResult;
 
-      // Step 4c: Evaluate CONTRACT_WHITELIST (contract call whitelist)
-      const contractWhitelistResult = this.evaluateContractWhitelist(resolved, transaction);
-      if (contractWhitelistResult !== null) {
-        return contractWhitelistResult;
-      }
+      const contractWhitelistResult = evaluateContractWhitelist(ctx, resolved, transaction);
+      if (contractWhitelistResult !== null) return contractWhitelistResult;
 
-      // Step 4d: Evaluate METHOD_WHITELIST (method-level restriction)
-      const methodWhitelistResult = this.evaluateMethodWhitelist(resolved, transaction);
-      if (methodWhitelistResult !== null) {
-        return methodWhitelistResult;
-      }
+      const methodWhitelistResult = evaluateMethodWhitelist(ctx, resolved, transaction);
+      if (methodWhitelistResult !== null) return methodWhitelistResult;
 
-      // Step 4e: Evaluate APPROVED_SPENDERS (approve spender whitelist)
-      const approvedSpendersResult = this.evaluateApprovedSpenders(resolved, transaction);
-      if (approvedSpendersResult !== null) {
-        return approvedSpendersResult;
-      }
+      const approvedSpendersResult = evaluateApprovedSpenders(ctx, resolved, transaction);
+      if (approvedSpendersResult !== null) return approvedSpendersResult;
 
-      // Step 4f: Evaluate APPROVE_AMOUNT_LIMIT (unlimited approve block + amount cap)
-      const approveAmountResult = this.evaluateApproveAmountLimit(resolved, transaction);
-      if (approveAmountResult !== null) {
-        return approveAmountResult;
-      }
+      const approveAmountResult = evaluateApproveAmountLimit(ctx, resolved, transaction);
+      if (approveAmountResult !== null) return approveAmountResult;
 
-      // Step 4g: Evaluate APPROVE_TIER_OVERRIDE (forced tier for APPROVE transactions)
-      const approveTierResult = this.evaluateApproveTierOverride(resolved, transaction);
-      if (approveTierResult !== null) {
-        return approveTierResult; // FINAL result, skips SPENDING_LIMIT (including token_limits)
-      }
+      const approveTierResult = evaluateApproveTierOverride(ctx, resolved, transaction);
+      if (approveTierResult !== null) return approveTierResult;
 
-      // Step 4h: Evaluate LENDING_ASSET_WHITELIST (default-deny for lending assets)
-      const lendingAssetResult = this.evaluateLendingAssetWhitelist(resolved, transaction);
-      if (lendingAssetResult !== null) {
-        return lendingAssetResult;
-      }
+      const lendingAssetResult = evaluateLendingAssetWhitelist(ctx, resolved, transaction);
+      if (lendingAssetResult !== null) return lendingAssetResult;
 
-      // Step 4h-b: Evaluate LENDING_LTV_LIMIT (LTV-based borrow restriction)
-      const ltvResult = this.evaluateLendingLtvLimit(resolved, transaction, walletId, usdAmount);
-      if (ltvResult !== null) {
-        return ltvResult;
-      }
+      const ltvResult = evaluateLendingLtvLimit(ctx, resolved, transaction, walletId, sqlite, usdAmount);
+      if (ltvResult !== null) return ltvResult;
 
-      // Step 4i: Evaluate PERP_ALLOWED_MARKETS (default-deny for perp markets)
-      const perpMarketResult = this.evaluatePerpAllowedMarkets(resolved, transaction);
+      const perpMarketResult = evaluatePerpAllowedMarkets(ctx, resolved, transaction);
       if (perpMarketResult !== null) return perpMarketResult;
 
-      // Step 4i-b: Evaluate PERP_MAX_LEVERAGE
-      const leverageResult = this.evaluatePerpMaxLeverage(resolved, transaction);
+      const leverageResult = evaluatePerpMaxLeverage(ctx, resolved, transaction);
       if (leverageResult !== null) return leverageResult;
 
-      // Step 4i-c: Evaluate PERP_MAX_POSITION_USD
-      const positionUsdResult = this.evaluatePerpMaxPositionUsd(resolved, transaction);
+      const positionUsdResult = evaluatePerpMaxPositionUsd(ctx, resolved, transaction);
       if (positionUsdResult !== null) return positionUsdResult;
 
-      // Step 4j: Evaluate VENUE_WHITELIST (Phase 389)
-      const venueResult = this.evaluateVenueWhitelist(resolved, transaction);
+      const venueResult = evaluateVenueWhitelist(ctx, resolved, transaction);
       if (venueResult !== null) return venueResult;
 
-      // Step 4k: Evaluate ACTION_CATEGORY_LIMIT (Phase 389)
-      const categoryLimitResult = this.evaluateActionCategoryLimit(resolved, transaction, walletId);
+      const categoryLimitResult = evaluateActionCategoryLimit(ctx, resolved, transaction, walletId, sqlite);
       if (categoryLimitResult !== null) {
         if (reputationFloorTier) {
           categoryLimitResult.tier = maxTier(categoryLimitResult.tier as PolicyTier, reputationFloorTier);
@@ -731,8 +484,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
         return categoryLimitResult;
       }
 
-      // Step 5: Non-spending classification for lending actions (LEND-08, research flag M6)
-      // supply/repay/withdraw are non-spending — skip SPENDING_LIMIT entirely
+      // Non-spending actions
       const NON_SPENDING_ACTIONS_R = new Set(['supply', 'repay', 'withdraw', 'close_position', 'add_margin']);
       if (transaction.actionName && NON_SPENDING_ACTIONS_R.has(transaction.actionName)) {
         const baseTier = 'INSTANT' as PolicyTier;
@@ -740,11 +492,9 @@ export class DatabasePolicyEngine implements IPolicyEngine {
         return { allowed: true, tier: finalTier };
       }
 
-      // Step 5 (continued): Compute reserved total for SPENDING_LIMIT evaluation
+      // SPENDING_LIMIT with reservation
       const spendingPolicy = resolved.find((p) => p.type === 'SPENDING_LIMIT');
       if (spendingPolicy) {
-        // Sum of reserved_amount for wallet's PENDING/QUEUED/SIGNED transactions
-        // SIGNED included for sign-only pipeline reservation (TOCTOU prevention)
         const reservedRow = sqlite
           .prepare(
             `SELECT COALESCE(SUM(CAST(reserved_amount AS INTEGER)), 0) AS total
@@ -759,17 +509,16 @@ export class DatabasePolicyEngine implements IPolicyEngine {
         const requestAmount = BigInt(transaction.amount);
         const effectiveAmount = reservedTotal + requestAmount;
 
-        // Evaluate with effective amount (reserved + current) via unified evaluateSpendingLimit
-        // Phase 236: Build tokenContext for token_limits evaluation
         const tokenContext = this.buildTokenContext(transaction, spendingPolicy);
-        const spendingResult = this.evaluateSpendingLimit(
+        const spendingResult = evaluateSpendingLimit(
+          ctx,
           resolved,
           effectiveAmount.toString(),
           usdAmount,
           tokenContext,
         );
 
-        // Step 6: Cumulative USD limit evaluation (daily/monthly rolling window)
+        // Cumulative USD limit evaluation
         if (usdAmount !== undefined && usdAmount > 0) {
           const rules = this.parseRules(spendingPolicy.rules, SpendingLimitRulesSchema, 'SPENDING_LIMIT');
           const hasCumulativeLimits = rules.daily_limit_usd !== undefined || rules.monthly_limit_usd !== undefined;
@@ -780,9 +529,8 @@ export class DatabasePolicyEngine implements IPolicyEngine {
             let cumulativeReason: 'cumulative_daily' | 'cumulative_monthly' | undefined;
             let cumulativeWarning: { type: 'daily' | 'monthly'; ratio: number; spent: number; limit: number } | undefined;
 
-            // 6a: Daily (24h rolling window)
             if (rules.daily_limit_usd !== undefined) {
-              const windowStart = now - 86400; // 24 * 60 * 60
+              const windowStart = now - 86400;
               const spent = this.getCumulativeUsdSpent(sqlite, walletId, windowStart);
               const totalWithCurrent = spent + usdAmount;
 
@@ -790,7 +538,6 @@ export class DatabasePolicyEngine implements IPolicyEngine {
                 cumulativeTier = 'APPROVAL';
                 cumulativeReason = 'cumulative_daily';
               } else {
-                // 80% warning check
                 const ratio = totalWithCurrent / rules.daily_limit_usd;
                 if (ratio >= 0.8) {
                   cumulativeWarning = { type: 'daily', ratio, spent: totalWithCurrent, limit: rules.daily_limit_usd };
@@ -798,9 +545,8 @@ export class DatabasePolicyEngine implements IPolicyEngine {
               }
             }
 
-            // 6b: Monthly (30-day rolling window) -- only if daily didn't already escalate
             if (rules.monthly_limit_usd !== undefined && cumulativeReason === undefined) {
-              const windowStart = now - 2592000; // 30 * 24 * 60 * 60
+              const windowStart = now - 2592000;
               const spent = this.getCumulativeUsdSpent(sqlite, walletId, windowStart);
               const totalWithCurrent = spent + usdAmount;
 
@@ -808,7 +554,6 @@ export class DatabasePolicyEngine implements IPolicyEngine {
                 cumulativeTier = 'APPROVAL';
                 cumulativeReason = 'cumulative_monthly';
               } else if (!cumulativeWarning) {
-                // 80% warning check (only if daily warning not already set)
                 const ratio = totalWithCurrent / rules.monthly_limit_usd;
                 if (ratio >= 0.8) {
                   cumulativeWarning = { type: 'monthly', ratio, spent: totalWithCurrent, limit: rules.monthly_limit_usd };
@@ -816,24 +561,20 @@ export class DatabasePolicyEngine implements IPolicyEngine {
               }
             }
 
-            // Step 7: Final tier = max(per-tx tier, cumulative tier)
             const perTxTier = spendingResult?.tier ?? ('INSTANT' as PolicyTier);
             const finalTier = maxTier(perTxTier, cumulativeTier);
 
-            // Determine approvalReason
             let approvalReason: 'per_tx' | 'cumulative_daily' | 'cumulative_monthly' | undefined;
             if (finalTier === 'APPROVAL') {
               approvalReason = cumulativeReason ?? 'per_tx';
             }
 
-            // Record USD amounts + reserved_amount
             sqlite
               .prepare(
                 `UPDATE transactions SET reserved_amount = ?, amount_usd = ?, reserved_amount_usd = ? WHERE id = ?`,
               )
               .run(transaction.amount, usdAmount, usdAmount, txId);
 
-            // [Phase 320] Apply reputation floor tier via maxTier (escalation only)
             const repFinalTier = reputationFloorTier ? maxTier(finalTier, reputationFloorTier) : finalTier;
 
             return {
@@ -846,8 +587,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
           }
         }
 
-        // No cumulative limits or usdAmount not available -- use per-tx result
-        // Set reserved_amount on the transaction row + USD amounts if available
+        // No cumulative limits
         if (usdAmount !== undefined) {
           sqlite
             .prepare(
@@ -862,7 +602,6 @@ export class DatabasePolicyEngine implements IPolicyEngine {
             .run(transaction.amount, txId);
         }
 
-        // [Phase 320] Apply reputation floor tier via maxTier (escalation only)
         const baseResult = spendingResult ?? { allowed: true, tier: 'INSTANT' as PolicyTier };
         if (reputationFloorTier && baseResult.allowed) {
           baseResult.tier = maxTier(baseResult.tier as PolicyTier, reputationFloorTier);
@@ -870,13 +609,11 @@ export class DatabasePolicyEngine implements IPolicyEngine {
         return baseResult;
       }
 
-      // No SPENDING_LIMIT -> INSTANT passthrough (whitelist already passed)
-      // [Phase 320] Apply reputation floor tier if set
+      // No SPENDING_LIMIT -> INSTANT passthrough
       const noSpendingTier = reputationFloorTier ?? ('INSTANT' as PolicyTier);
       return { allowed: true, tier: noSpendingTier };
     });
 
-    // Execute with IMMEDIATE isolation
     return txn.immediate();
   }
 
@@ -884,12 +621,6 @@ export class DatabasePolicyEngine implements IPolicyEngine {
   // releaseReservation
   // -------------------------------------------------------------------------
 
-  /**
-   * Release a reserved amount on a transaction.
-   * Called when transaction reaches FAILED/CANCELLED/EXPIRED state.
-   *
-   * @param txId - The transaction ID to clear reservation for
-   */
   releaseReservation(txId: string): void {
     if (!this.sqlite) {
       throw new Error('releaseReservation requires raw sqlite instance in constructor');
@@ -904,16 +635,7 @@ export class DatabasePolicyEngine implements IPolicyEngine {
   // Private: Cumulative USD spending aggregation
   // -------------------------------------------------------------------------
 
-  /**
-   * Get cumulative USD spent by wallet within a time window.
-   * Includes both confirmed amounts (amount_usd) and pending reservations (reserved_amount_usd).
-   *
-   * CONFIRMED/SIGNED: counted via amount_usd (confirmed or about to be broadcasted).
-   * PENDING/QUEUED: counted via reserved_amount_usd (awaiting processing, not yet confirmed).
-   * Deduplication: SIGNED is in the first query only (amount_usd). PENDING/QUEUED in second only.
-   */
   private getCumulativeUsdSpent(sqlite: SQLiteDatabase, walletId: string, windowStart: number): number {
-    // 1. Confirmed transactions (CONFIRMED/SIGNED) amount_usd within window
     const confirmedRow = sqlite
       .prepare(
         `SELECT COALESCE(SUM(amount_usd), 0) AS total
@@ -923,7 +645,6 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       )
       .get(walletId, windowStart) as { total: number };
 
-    // 2. Pending transactions (PENDING/QUEUED) reserved_amount_usd (no window filter -- all pending count)
     const pendingRow = sqlite
       .prepare(
         `SELECT COALESCE(SUM(reserved_amount_usd), 0) AS total
@@ -940,20 +661,6 @@ export class DatabasePolicyEngine implements IPolicyEngine {
   // Private: Override resolution
   // -------------------------------------------------------------------------
 
-  /**
-   * Resolve policy overrides with 4-level priority:
-   *   1. wallet-specific + network-specific (highest)
-   *   2. wallet-specific + all-networks
-   *   3. global + network-specific
-   *   4. global + all-networks (lowest)
-   *
-   * For each policy type, one policy is selected.
-   * Lower priority entries are inserted first, higher priority entries overwrite.
-   * Key: typeMap[row.type] (same as current -- no composite key needed, PLCY-D03).
-   *
-   * Backward compat: when all policies have network=NULL,
-   * phases 2+4 collapse into current 2-level (wallet > global) behavior.
-   */
   private resolveOverrides(
     rows: PolicyRow[],
     walletId: string,
@@ -997,1000 +704,9 @@ export class DatabasePolicyEngine implements IPolicyEngine {
   }
 
   // -------------------------------------------------------------------------
-  // Private: ALLOWED_NETWORKS evaluation
-  // -------------------------------------------------------------------------
-
-  /**
-   * Evaluate ALLOWED_NETWORKS policy.
-   *
-   * Logic:
-   * - Applies to ALL 5 transaction types (TRANSFER, TOKEN_TRANSFER, CONTRACT_CALL, APPROVE, BATCH)
-   * - If no ALLOWED_NETWORKS policy exists: return null (permissive default -- all networks allowed)
-   * - If policy exists: check if resolvedNetwork is in rules.networks[].network
-   *   -> If found: return null (continue to next evaluation)
-   *   -> If not found: deny with reason 'Network not in allowed list'
-   * - Comparison: case-insensitive (toLowerCase)
-   * - Tier: INSTANT (immediate denial)
-   *
-   * Returns PolicyEvaluation if denied, null if allowed (or no policy).
-   */
-  private evaluateAllowedNetworks(
-    resolved: PolicyRow[],
-    resolvedNetwork: string,
-  ): PolicyEvaluation | null {
-    const policy = resolved.find((p) => p.type === 'ALLOWED_NETWORKS');
-
-    // No ALLOWED_NETWORKS policy -> permissive default (all networks allowed)
-    if (!policy) return null;
-
-    const rules = this.parseRules(policy.rules, AllowedNetworksRulesSchema, 'ALLOWED_NETWORKS');
-
-    // Case-insensitive comparison
-    const isAllowed = rules.networks.some(
-      (n) => n.network.toLowerCase() === resolvedNetwork.toLowerCase(),
-    );
-
-    if (!isAllowed) {
-      const allowedList = rules.networks.map((n) => n.network).join(', ');
-      return {
-        allowed: false,
-        tier: 'INSTANT',
-        reason: `Network '${resolvedNetwork}' not in allowed networks list. Allowed: ${allowedList}`,
-      };
-    }
-
-    return null; // Network allowed, continue evaluation
-  }
-
-  // -------------------------------------------------------------------------
-  // Private: WHITELIST evaluation
-  // -------------------------------------------------------------------------
-
-  /**
-   * Evaluate WHITELIST policy.
-   * Returns PolicyEvaluation if denied, null if allowed (or no whitelist).
-   */
-  private evaluateWhitelist(
-    resolved: PolicyRow[],
-    toAddress: string,
-  ): PolicyEvaluation | null {
-    const whitelist = resolved.find((p) => p.type === 'WHITELIST');
-    if (!whitelist) return null;
-
-    const rules = this.parseRules(whitelist.rules, WhitelistRulesSchema, 'WHITELIST');
-
-    // Empty allowed_addresses = whitelist inactive
-    if (!rules.allowed_addresses || rules.allowed_addresses.length === 0) {
-      return null;
-    }
-
-    // Case-insensitive comparison (EVM compat)
-    const normalizedTo = toAddress.toLowerCase();
-    const isWhitelisted = rules.allowed_addresses.some(
-      (addr) => addr.toLowerCase() === normalizedTo,
-    );
-
-    if (!isWhitelisted) {
-      return {
-        allowed: false,
-        tier: 'INSTANT',
-        reason: `Address ${toAddress} not in whitelist`,
-      };
-    }
-
-    return null;
-  }
-
-  // -------------------------------------------------------------------------
-  // Private: ALLOWED_TOKENS evaluation
-  // -------------------------------------------------------------------------
-
-  /**
-   * Evaluate ALLOWED_TOKENS policy with 4-scenario matching matrix (PLCY-03).
-   *
-   * Logic:
-   * - Only applies to TOKEN_TRANSFER transaction type
-   * - If transaction type is TOKEN_TRANSFER and no ALLOWED_TOKENS policy exists:
-   *   -> deny with reason 'Token transfer not allowed: no ALLOWED_TOKENS policy configured'
-   * - If ALLOWED_TOKENS policy exists, match using 4-scenario matrix:
-   *   Scenario 1: Policy assetId + TX assetId -> exact CAIP-19 string match
-   *   Scenario 2: Policy assetId + TX address only -> extract address from policy assetId, compare lowercase
-   *   Scenario 3: Policy address only + TX assetId -> extract address from TX assetId, compare lowercase
-   *   Scenario 4: Policy address only + TX address only -> current behavior (case-insensitive)
-   * - EVM addresses normalized to lowercase for comparison (PLCY-04)
-   *
-   * Returns PolicyEvaluation if denied, null if allowed (or not applicable).
-   */
-  private evaluateAllowedTokens(
-    resolved: PolicyRow[],
-    transaction: TransactionParam,
-  ): PolicyEvaluation | null {
-    // Only evaluate for TOKEN_TRANSFER transactions
-    if (transaction.type !== 'TOKEN_TRANSFER') return null;
-
-    const allowedTokensPolicy = resolved.find((p) => p.type === 'ALLOWED_TOKENS');
-
-    // No ALLOWED_TOKENS policy -> check toggle, then deny (default deny)
-    if (!allowedTokensPolicy) {
-      if (this.settingsService?.get('policy.default_deny_tokens') === 'false') {
-        return null; // default-allow mode: skip token whitelist check
-      }
-      return {
-        allowed: false,
-        tier: 'INSTANT',
-        reason: 'Token transfer not allowed: no ALLOWED_TOKENS policy configured',
-      };
-    }
-
-    // Parse rules.tokens array
-    const rules = this.parseRules(allowedTokensPolicy.rules, AllowedTokensRulesSchema, 'ALLOWED_TOKENS');
-    const txTokenAddress = transaction.tokenAddress;
-    const txAssetId = transaction.assetId;
-
-    if (!txTokenAddress && !txAssetId) {
-      return {
-        allowed: false,
-        tier: 'INSTANT',
-        reason: 'Token transfer missing token address',
-      };
-    }
-
-    // 4-scenario matching matrix (PLCY-03)
-    const isAllowed = rules.tokens.some((policyToken) => {
-      // Scenario 1: Both have assetId -> exact CAIP-19 string match
-      // CAIP-19 strings are already normalized (EVM lowercase by tokenAssetId, Solana preserved)
-      if (policyToken.assetId && txAssetId) {
-        return policyToken.assetId === txAssetId;
-      }
-
-      // Scenario 2: Policy has assetId, TX has address only
-      if (policyToken.assetId && txTokenAddress) {
-        try {
-          const policyAddr = parseCaip19(policyToken.assetId).assetReference;
-          return policyAddr.toLowerCase() === txTokenAddress.toLowerCase();
-        } catch {
-          return false; // Invalid policy assetId -> no match
-        }
-      }
-
-      // Scenario 3: Policy has address only, TX has assetId
-      if (!policyToken.assetId && txAssetId) {
-        try {
-          const txAddr = parseCaip19(txAssetId).assetReference;
-          return policyToken.address.toLowerCase() === txAddr.toLowerCase();
-        } catch {
-          return false; // Invalid TX assetId -> no match
-        }
-      }
-
-      // Scenario 4: Both address only -> current behavior (case-insensitive)
-      return policyToken.address.toLowerCase() === (txTokenAddress ?? '').toLowerCase();
-    });
-
-    if (!isAllowed) {
-      return {
-        allowed: false,
-        tier: 'INSTANT',
-        reason: `Token not in allowed list: ${txAssetId ?? txTokenAddress}`,
-      };
-    }
-
-    return null; // Token is allowed, continue evaluation
-  }
-
-  // -------------------------------------------------------------------------
-  // Private: CONTRACT_WHITELIST evaluation
-  // -------------------------------------------------------------------------
-
-  /**
-   * Evaluate CONTRACT_WHITELIST policy.
-   *
-   * Logic:
-   * - Only applies to CONTRACT_CALL transaction type
-   * - Provider-trust: if transaction has actionProvider and the provider is enabled
-   *   in SettingsService, skip CONTRACT_WHITELIST entirely (trusted provider bypass)
-   * - If transaction type is CONTRACT_CALL and no CONTRACT_WHITELIST policy exists:
-   *   -> deny with reason 'Contract calls disabled: no CONTRACT_WHITELIST policy configured'
-   * - If CONTRACT_WHITELIST policy exists, check if contract address is in rules.contracts[].address:
-   *   -> If found: return null (continue to next evaluation)
-   *   -> If not found: deny with reason 'Contract not whitelisted: {address}'
-   * - For non-CONTRACT_CALL types: return null (not applicable)
-   *
-   * Returns PolicyEvaluation if denied, null if allowed (or not applicable).
-   */
-  private evaluateContractWhitelist(
-    resolved: PolicyRow[],
-    transaction: TransactionParam,
-  ): PolicyEvaluation | null {
-    // Evaluate for CONTRACT_CALL and NFT_TRANSFER transactions (v31.0)
-    if (transaction.type !== 'CONTRACT_CALL' && transaction.type !== 'NFT_TRANSFER') return null;
-
-    // Provider-trust: skip CONTRACT_WHITELIST for trusted action providers
-    if (transaction.actionProvider && this.settingsService) {
-      const enabledKey = `actions.${transaction.actionProvider}_enabled`;
-      try {
-        const enabled = this.settingsService.get(enabledKey);
-        if (enabled === 'true') {
-          return null; // Skip CONTRACT_WHITELIST -- provider is trusted
-        }
-      } catch {
-        // Unknown setting key means provider is not registered -- fall through to normal check
-      }
-    }
-
-    const contractWhitelistPolicy = resolved.find((p) => p.type === 'CONTRACT_WHITELIST');
-
-    // No CONTRACT_WHITELIST policy -> check toggle, then deny (default deny)
-    if (!contractWhitelistPolicy) {
-      if (this.settingsService?.get('policy.default_deny_contracts') === 'false') {
-        return null; // default-allow mode: skip contract whitelist check
-      }
-      return {
-        allowed: false,
-        tier: 'INSTANT',
-        reason: 'Contract calls disabled: no CONTRACT_WHITELIST policy configured',
-      };
-    }
-
-    // Parse rules.contracts array
-    const rules = this.parseRules(contractWhitelistPolicy.rules, ContractWhitelistRulesSchema, 'CONTRACT_WHITELIST');
-    const contractAddress = transaction.contractAddress ?? transaction.toAddress;
-
-    // Check if contract is in whitelist (case-insensitive comparison for EVM addresses)
-    const isWhitelisted = rules.contracts.some(
-      (c) => c.address.toLowerCase() === contractAddress.toLowerCase(),
-    );
-
-    if (!isWhitelisted) {
-      return {
-        allowed: false,
-        tier: 'INSTANT',
-        reason: `Contract not whitelisted: ${contractAddress}`,
-      };
-    }
-
-    return null; // Contract is whitelisted, continue evaluation
-  }
-
-  // -------------------------------------------------------------------------
-  // Private: METHOD_WHITELIST evaluation
-  // -------------------------------------------------------------------------
-
-  /**
-   * Evaluate METHOD_WHITELIST policy.
-   *
-   * Logic:
-   * - Only applies to CONTRACT_CALL transaction type
-   * - If no METHOD_WHITELIST policy exists: return null (method restriction is optional)
-   * - If METHOD_WHITELIST policy exists, find matching entry for transaction's contract address:
-   *   -> If no entry for this contract: return null (no method restriction for this contract)
-   *   -> If entry found, check if transaction's selector is in entry.selectors:
-   *     -> If found: return null (method allowed)
-   *     -> If not found: deny with reason 'Method not whitelisted: {selector} on contract {address}'
-   *
-   * Returns PolicyEvaluation if denied, null if allowed (or not applicable).
-   */
-  private evaluateMethodWhitelist(
-    resolved: PolicyRow[],
-    transaction: TransactionParam,
-  ): PolicyEvaluation | null {
-    // Only evaluate for CONTRACT_CALL transactions
-    if (transaction.type !== 'CONTRACT_CALL') return null;
-
-    const methodWhitelistPolicy = resolved.find((p) => p.type === 'METHOD_WHITELIST');
-
-    // No METHOD_WHITELIST policy -> no method restriction (optional policy)
-    if (!methodWhitelistPolicy) return null;
-
-    // Parse rules.methods array
-    const rules = this.parseRules(methodWhitelistPolicy.rules, MethodWhitelistRulesSchema, 'METHOD_WHITELIST');
-    const contractAddress = transaction.contractAddress ?? transaction.toAddress;
-    const selector = transaction.selector;
-
-    // Find matching entry for this contract (case-insensitive)
-    const entry = rules.methods.find(
-      (m) => m.contractAddress.toLowerCase() === contractAddress.toLowerCase(),
-    );
-
-    // No entry for this contract -> no method restriction for this specific contract
-    if (!entry) return null;
-
-    // Check if selector is in the allowed list (case-insensitive)
-    if (!selector) {
-      return {
-        allowed: false,
-        tier: 'INSTANT',
-        reason: `Method not whitelisted: missing selector on contract ${contractAddress}`,
-      };
-    }
-
-    const isAllowed = entry.selectors.some(
-      (s) => s.toLowerCase() === selector.toLowerCase(),
-    );
-
-    if (!isAllowed) {
-      return {
-        allowed: false,
-        tier: 'INSTANT',
-        reason: `Method not whitelisted: ${selector} on contract ${contractAddress}`,
-      };
-    }
-
-    return null; // Method is whitelisted, continue evaluation
-  }
-
-  // -------------------------------------------------------------------------
-  // Private: APPROVED_SPENDERS evaluation
-  // -------------------------------------------------------------------------
-
-  /**
-   * Evaluate APPROVED_SPENDERS policy.
-   *
-   * Logic:
-   * - Only applies to APPROVE transaction type
-   * - If transaction type is APPROVE and no APPROVED_SPENDERS policy exists:
-   *   -> deny with reason 'Token approvals disabled: no APPROVED_SPENDERS policy configured'
-   * - If APPROVED_SPENDERS policy exists, check if transaction's spenderAddress is in rules.spenders[]:
-   *   -> If found: return null (continue evaluation)
-   *   -> If not found: deny with reason 'Spender not in approved list: {address}'
-   * - Case-insensitive comparison (EVM addresses)
-   *
-   * Returns PolicyEvaluation if denied, null if allowed (or not applicable).
-   */
-  private evaluateApprovedSpenders(
-    resolved: PolicyRow[],
-    transaction: TransactionParam,
-  ): PolicyEvaluation | null {
-    // Only evaluate for APPROVE transactions
-    if (transaction.type !== 'APPROVE') return null;
-
-    const approvedSpendersPolicy = resolved.find((p) => p.type === 'APPROVED_SPENDERS');
-
-    // No APPROVED_SPENDERS policy -> check toggle, then deny (default deny)
-    if (!approvedSpendersPolicy) {
-      if (this.settingsService?.get('policy.default_deny_spenders') === 'false') {
-        return null; // default-allow mode: skip approved spenders check
-      }
-      return {
-        allowed: false,
-        tier: 'INSTANT',
-        reason: 'Token approvals disabled: no APPROVED_SPENDERS policy configured',
-      };
-    }
-
-    // Parse rules.spenders array
-    const rules = this.parseRules(approvedSpendersPolicy.rules, ApprovedSpendersRulesSchema, 'APPROVED_SPENDERS');
-    const spenderAddress = transaction.spenderAddress;
-
-    if (!spenderAddress) {
-      return {
-        allowed: false,
-        tier: 'INSTANT',
-        reason: 'Approve missing spender address',
-      };
-    }
-
-    // Check if spender is in approved list (case-insensitive for EVM addresses)
-    const isApproved = rules.spenders.some(
-      (s) => s.address.toLowerCase() === spenderAddress.toLowerCase(),
-    );
-
-    if (!isApproved) {
-      return {
-        allowed: false,
-        tier: 'INSTANT',
-        reason: `Spender not in approved list: ${spenderAddress}`,
-      };
-    }
-
-    return null; // Spender is approved, continue evaluation
-  }
-
-  // -------------------------------------------------------------------------
-  // Private: APPROVE_AMOUNT_LIMIT evaluation
-  // -------------------------------------------------------------------------
-
-  /**
-   * Evaluate APPROVE_AMOUNT_LIMIT policy.
-   *
-   * Logic:
-   * - Only applies to APPROVE transaction type
-   * - Checks for unlimited approve amounts (>= UNLIMITED_THRESHOLD)
-   * - Checks for amount cap (maxAmount)
-   * - If no policy exists: default block_unlimited=true (block unlimited approvals)
-   *
-   * Returns PolicyEvaluation if denied, null if allowed (or not applicable).
-   */
-  private evaluateApproveAmountLimit(
-    resolved: PolicyRow[],
-    transaction: TransactionParam,
-  ): PolicyEvaluation | null {
-    // Only evaluate for APPROVE transactions
-    if (transaction.type !== 'APPROVE') return null;
-
-    const approveAmount = transaction.approveAmount;
-    if (!approveAmount) return null; // No amount to check
-
-    const amount = BigInt(approveAmount);
-
-    const approveAmountPolicy = resolved.find((p) => p.type === 'APPROVE_AMOUNT_LIMIT');
-
-    if (!approveAmountPolicy) {
-      // No policy: default block unlimited
-      if (amount >= UNLIMITED_THRESHOLD) {
-        return {
-          allowed: false,
-          tier: 'INSTANT',
-          reason: 'Unlimited token approval is blocked',
-        };
-      }
-      return null;
-    }
-
-    // Parse rules
-    const rules = this.parseRules(approveAmountPolicy.rules, ApproveAmountLimitRulesSchema, 'APPROVE_AMOUNT_LIMIT');
-
-    // Check unlimited block
-    if (rules.blockUnlimited && amount >= UNLIMITED_THRESHOLD) {
-      return {
-        allowed: false,
-        tier: 'INSTANT',
-        reason: 'Unlimited token approval is blocked',
-      };
-    }
-
-    // Check maxAmount cap
-    if (rules.maxAmount && amount > BigInt(rules.maxAmount)) {
-      return {
-        allowed: false,
-        tier: 'INSTANT',
-        reason: 'Approve amount exceeds limit',
-      };
-    }
-
-    return null; // Amount within limits, continue evaluation
-  }
-
-  // -------------------------------------------------------------------------
-  // Private: APPROVE_TIER_OVERRIDE evaluation
-  // -------------------------------------------------------------------------
-
-  /**
-   * Evaluate APPROVE_TIER_OVERRIDE policy.
-   *
-   * Logic:
-   * - Only applies to APPROVE transaction type
-   * - If APPROVE_TIER_OVERRIDE policy exists: return configured tier (FINAL, skips SPENDING_LIMIT)
-   * - If no APPROVE_TIER_OVERRIDE policy exists: return null (Phase 236: fall through to SPENDING_LIMIT
-   *   for token_limits evaluation; if no SPENDING_LIMIT either, INSTANT passthrough)
-   *
-   * Phase 236 change: Previously defaulted to APPROVAL when no override policy existed.
-   * Now falls through to SPENDING_LIMIT to allow token_limits evaluation for APPROVE transactions.
-   *
-   * Returns PolicyEvaluation if override policy exists, null otherwise.
-   */
-  private evaluateApproveTierOverride(
-    resolved: PolicyRow[],
-    transaction: TransactionParam,
-  ): PolicyEvaluation | null {
-    // Only evaluate for APPROVE transactions
-    if (transaction.type !== 'APPROVE') return null;
-
-    const approveTierPolicy = resolved.find((p) => p.type === 'APPROVE_TIER_OVERRIDE');
-
-    if (!approveTierPolicy) {
-      // Phase 236: No override -> fall through to SPENDING_LIMIT for token_limits evaluation
-      return null;
-    }
-
-    // Parse rules
-    const rules = this.parseRules(approveTierPolicy.rules, ApproveTierOverrideRulesSchema, 'APPROVE_TIER_OVERRIDE');
-    return { allowed: true, tier: rules.tier as PolicyTier };
-  }
-
-  // -------------------------------------------------------------------------
-  // Private: SPENDING_LIMIT evaluation
-  // -------------------------------------------------------------------------
-
-  /**
-   * Evaluate SPENDING_LIMIT policy.
-   * Returns PolicyEvaluation with tier classification, or null if no spending limit.
-   *
-   * Phase 127: usdAmount가 전달되고 rules에 USD 임계값이 설정되어 있으면,
-   * 네이티브 티어와 USD 티어 중 더 보수적인(높은) 티어를 채택한다.
-   *
-   * Phase 236: tokenContext가 전달되고 rules에 token_limits가 설정되어 있으면,
-   * evaluateTokenTier()를 사용하여 토큰별 human-readable 한도를 평가한다.
-   */
-  private evaluateSpendingLimit(
-    resolved: PolicyRow[],
-    amount: string,
-    usdAmount?: number,
-    tokenContext?: {
-      type: string;
-      tokenAddress?: string;
-      tokenDecimals?: number;
-      chain?: string;
-      assetId?: string;
-      policyNetwork?: string;
-    },
-  ): PolicyEvaluation | null {
-    const spending = resolved.find((p) => p.type === 'SPENDING_LIMIT');
-    if (!spending) return null;
-
-    const rules = this.parseRules(spending.rules, SpendingLimitRulesSchema, 'SPENDING_LIMIT');
-
-    // 1. Token-specific tier (Phase 236)
-    let tokenTier: PolicyTier = 'INSTANT';
-    if (tokenContext && rules.token_limits) {
-      const tokenResult = this.evaluateTokenTier(BigInt(amount), rules, tokenContext);
-      if (tokenResult !== null) {
-        tokenTier = tokenResult;
-      } else {
-        // No token_limits match -> fall back to raw fields
-        tokenTier = this.evaluateNativeTier(BigInt(amount), rules);
-      }
-    } else {
-      // No tokenContext or no token_limits -> use raw fields (existing behavior)
-      tokenTier = this.evaluateNativeTier(BigInt(amount), rules);
-    }
-
-    // 2. USD 기준 티어 (Phase 127)
-    let finalTier = tokenTier;
-    if (usdAmount !== undefined && usdAmount > 0 && this.hasUsdThresholds(rules)) {
-      const usdTier = this.evaluateUsdTier(usdAmount, rules);
-      finalTier = maxTier(tokenTier, usdTier);
-    }
-
-    // delaySeconds는 최종 tier가 DELAY일 때만 포함
-    const delaySeconds = finalTier === 'DELAY' ? rules.delay_seconds : undefined;
-
-    return {
-      allowed: true,
-      tier: finalTier,
-      ...(delaySeconds !== undefined ? { delaySeconds } : {}),
-      ...(finalTier === 'APPROVAL' ? { approvalReason: 'per_tx' as const } : {}),
-    };
-  }
-
-  /**
-   * Evaluate token-specific tier using token_limits with CAIP-19 key matching.
-   * Returns PolicyTier if a matching token limit is found, null otherwise (-> raw fallback).
-   *
-   * Matching priority:
-   * 1. Exact CAIP-19 asset ID match (TOKEN_TRANSFER, APPROVE)
-   * 2. "native:{chain}" match (TRANSFER)
-   * 3. "native" shorthand match (TRANSFER, only when policy has network set)
-   * 4. No match -> return null (caller falls back to raw fields)
-   */
-  private evaluateTokenTier(
-    amountBig: bigint,
-    rules: SpendingLimitRules,
-    tokenContext: {
-      type: string;
-      tokenAddress?: string;
-      tokenDecimals?: number;
-      chain?: string;
-      assetId?: string;
-      policyNetwork?: string;
-    },
-  ): PolicyTier | null {
-    if (!rules.token_limits) return null;
-
-    // Skip for CONTRACT_CALL and BATCH (they don't use token_limits)
-    if (tokenContext.type === 'CONTRACT_CALL' || tokenContext.type === 'BATCH') {
-      return null;
-    }
-
-    let matchedLimit: { instant_max: string; notify_max: string; delay_max: string } | undefined;
-    let decimals: number | undefined;
-
-    if (tokenContext.type === 'TOKEN_TRANSFER' || tokenContext.type === 'APPROVE') {
-      // Try exact CAIP-19 asset ID match
-      if (tokenContext.assetId && rules.token_limits[tokenContext.assetId]) {
-        matchedLimit = rules.token_limits[tokenContext.assetId];
-        decimals = tokenContext.tokenDecimals;
-      }
-    } else if (tokenContext.type === 'TRANSFER') {
-      // Try "native:{chain}" match
-      const nativeChainKey = tokenContext.chain ? `native:${tokenContext.chain}` : undefined;
-      if (nativeChainKey && rules.token_limits[nativeChainKey]) {
-        matchedLimit = rules.token_limits[nativeChainKey];
-        decimals = tokenContext.chain ? NATIVE_DECIMALS[tokenContext.chain] : undefined;
-      }
-      // Fallback: try "native" shorthand (only when policy has a network set)
-      if (!matchedLimit && tokenContext.policyNetwork && rules.token_limits['native']) {
-        matchedLimit = rules.token_limits['native'];
-        decimals = tokenContext.chain ? NATIVE_DECIMALS[tokenContext.chain] : undefined;
-      }
-    }
-
-    if (!matchedLimit || decimals === undefined) {
-      return null; // No match -> caller falls back to raw fields
-    }
-
-    // Use fixed-point comparison: multiply limit by divisor (avoids precision loss)
-    const instantMaxRaw = parseDecimalToBigInt(matchedLimit.instant_max, decimals);
-    const notifyMaxRaw = parseDecimalToBigInt(matchedLimit.notify_max, decimals);
-    const delayMaxRaw = parseDecimalToBigInt(matchedLimit.delay_max, decimals);
-
-    if (amountBig <= instantMaxRaw) return 'INSTANT';
-    if (amountBig <= notifyMaxRaw) return 'NOTIFY';
-    if (amountBig <= delayMaxRaw) return 'DELAY';
-    return 'APPROVAL';
-  }
-
-  /**
-   * Evaluate native amount tier (extracted from evaluateSpendingLimit).
-   * Phase 236: proper undefined guards for optional raw fields.
-   */
-  private evaluateNativeTier(amountBig: bigint, rules: SpendingLimitRules): PolicyTier {
-    // Phase 236: raw fields are now optional -- skip native tier if all undefined
-    if (rules.instant_max === undefined && rules.notify_max === undefined && rules.delay_max === undefined) {
-      return 'INSTANT'; // No raw thresholds -> permissive (USD/token_limits will handle)
-    }
-
-    const instantMax = rules.instant_max !== undefined ? BigInt(rules.instant_max) : 0n;
-    const notifyMax = rules.notify_max !== undefined ? BigInt(rules.notify_max) : 0n;
-    const delayMax = rules.delay_max !== undefined ? BigInt(rules.delay_max) : 0n;
-
-    if (amountBig <= instantMax) return 'INSTANT';
-    if (amountBig <= notifyMax) return 'NOTIFY';
-    if (amountBig <= delayMax) return 'DELAY';
-    return 'APPROVAL';
-  }
-
-  /**
-   * Check if rules have any USD thresholds configured.
-   */
-  private hasUsdThresholds(rules: SpendingLimitRules): boolean {
-    return rules.instant_max_usd !== undefined
-      || rules.notify_max_usd !== undefined
-      || rules.delay_max_usd !== undefined;
-  }
-
-  /**
-   * Evaluate USD amount tier.
-   */
-  private evaluateUsdTier(usdAmount: number, rules: SpendingLimitRules): PolicyTier {
-    if (rules.instant_max_usd !== undefined && usdAmount <= rules.instant_max_usd) {
-      return 'INSTANT';
-    }
-    if (rules.notify_max_usd !== undefined && usdAmount <= rules.notify_max_usd) {
-      return 'NOTIFY';
-    }
-    if (rules.delay_max_usd !== undefined && usdAmount <= rules.delay_max_usd) {
-      return 'DELAY';
-    }
-    return 'APPROVAL';
-  }
-
-  /**
-   * Build tokenContext from TransactionParam for evaluateTokenTier().
-   * Phase 236: Extracts relevant fields and attaches the policy's network.
-   */
-  private buildTokenContext(
-    transaction: TransactionParam,
-    spendingPolicy?: PolicyRow,
-  ): {
-    type: string;
-    tokenAddress?: string;
-    tokenDecimals?: number;
-    chain?: string;
-    assetId?: string;
-    policyNetwork?: string;
-  } {
-    return {
-      type: transaction.type,
-      tokenAddress: transaction.tokenAddress,
-      tokenDecimals: transaction.tokenDecimals,
-      chain: transaction.chain,
-      assetId: transaction.assetId,
-      policyNetwork: spendingPolicy?.network ?? undefined,
-    };
-  }
-
-  // -------------------------------------------------------------------------
-  // Private: LENDING_ASSET_WHITELIST evaluation (Step 4h)
-  // -------------------------------------------------------------------------
-
-  /**
-   * Evaluate LENDING_ASSET_WHITELIST policy.
-   *
-   * Logic:
-   * - Only applies to lending actions (supply/borrow/repay/withdraw)
-   * - If no LENDING_ASSET_WHITELIST policy exists: deny (default-deny per CLAUDE.md)
-   * - If policy exists: check if target contract address is in rules.assets[].address
-   *
-   * Returns PolicyEvaluation if denied, null if allowed (or not applicable).
-   */
-  private evaluateLendingAssetWhitelist(
-    resolved: PolicyRow[],
-    transaction: TransactionParam,
-  ): PolicyEvaluation | null {
-    // Only applies to lending actions
-    const LENDING_ACTIONS = new Set(['supply', 'borrow', 'repay', 'withdraw']);
-    if (!transaction.actionName || !LENDING_ACTIONS.has(transaction.actionName)) {
-      return null;
-    }
-
-    const assetPolicy = resolved.find((p) => p.type === 'LENDING_ASSET_WHITELIST');
-    if (!assetPolicy) {
-      // Default-deny (CLAUDE.md compliance): no whitelist -> deny lending
-      return {
-        allowed: false,
-        tier: 'INSTANT',
-        reason: 'No LENDING_ASSET_WHITELIST policy configured. Lending assets require explicit whitelist.',
-      };
-    }
-
-    const rules = this.parseRules(assetPolicy.rules, LendingAssetWhitelistRulesSchema, 'LENDING_ASSET_WHITELIST');
-    const targetAddress = transaction.contractAddress ?? transaction.toAddress;
-    const isWhitelisted = rules.assets.some(
-      (a) => a.address.toLowerCase() === targetAddress.toLowerCase(),
-    );
-
-    if (!isWhitelisted) {
-      return {
-        allowed: false,
-        tier: 'INSTANT',
-        reason: `Asset ${targetAddress} not in lending asset whitelist`,
-      };
-    }
-    return null; // pass through
-  }
-
-  // -------------------------------------------------------------------------
-  // Private: LENDING_LTV_LIMIT evaluation (Step 4h-b)
-  // -------------------------------------------------------------------------
-
-  /**
-   * Evaluate LENDING_LTV_LIMIT policy for borrow actions.
-   *
-   * Logic:
-   * - Only applies to borrow actions
-   * - Reads cached LENDING positions from defi_positions table
-   * - Calculates projected LTV = (currentDebtUsd + newBorrowUsd) / totalCollateralUsd
-   * - Denies if projected LTV > maxLtv
-   * - Returns DELAY tier if projected LTV > warningLtv
-   *
-   * @param usdAmount - USD value of the new borrow (from pipeline IPriceOracle, LEND-09)
-   * Returns PolicyEvaluation if denied/escalated, null if allowed (or not applicable).
-   */
-  private evaluateLendingLtvLimit(
-    resolved: PolicyRow[],
-    transaction: TransactionParam,
-    walletId: string,
-    usdAmount?: number,
-  ): PolicyEvaluation | null {
-    // Only applies to borrow actions (matches 'borrow', 'aave_borrow', 'kamino_borrow', etc.)
-    if (!transaction.actionName?.endsWith('borrow')) return null;
-
-    const ltvPolicy = resolved.find((p) => p.type === 'LENDING_LTV_LIMIT');
-    if (!ltvPolicy) return null; // No LTV policy -> pass through
-
-    const rules = this.parseRules(ltvPolicy.rules, LendingLtvLimitRulesSchema, 'LENDING_LTV_LIMIT');
-
-    // Read cached position data from defi_positions
-    if (!this.sqlite) return null;
-
-    const positions = this.sqlite.prepare(
-      "SELECT amount_usd, metadata, status FROM defi_positions WHERE wallet_id = ? AND category = 'LENDING' AND status = 'ACTIVE'",
-    ).all(walletId) as Array<{ amount_usd: number | null; metadata: string | null; status: string }>;
-
-    // Aggregate collateral and debt from positions
-    let totalCollateralUsd = 0;
-    let totalDebtUsd = 0;
-    for (const pos of positions) {
-      if (!pos.metadata) continue;
-      try {
-        const meta = JSON.parse(pos.metadata) as Record<string, unknown>;
-        const posType = meta.positionType as string | undefined;
-        const usd = pos.amount_usd ?? 0;
-        if (posType === 'SUPPLY') totalCollateralUsd += usd;
-        else if (posType === 'BORROW') totalDebtUsd += usd;
-      } catch { /* ignore parse errors */ }
-    }
-
-    // Calculate projected LTV including new borrow amount (LEND-09)
-    const newBorrowUsd = usdAmount ?? 0;
-
-    const projectedLtv = totalCollateralUsd > 0
-      ? (totalDebtUsd + newBorrowUsd) / totalCollateralUsd
-      : (totalDebtUsd > 0 || newBorrowUsd > 0 ? Infinity : 0);
-
-    if (projectedLtv > rules.maxLtv) {
-      return {
-        allowed: false,
-        tier: 'INSTANT',
-        reason: `Borrow would exceed max LTV (projected: ${(projectedLtv * 100).toFixed(1)}%, limit: ${(rules.maxLtv * 100).toFixed(1)}%)`,
-      };
-    }
-    if (projectedLtv > rules.warningLtv) {
-      return {
-        allowed: true,
-        tier: 'DELAY' as PolicyTier,
-        reason: `LTV approaching limit (projected: ${(projectedLtv * 100).toFixed(1)}%)`,
-      };
-    }
-    return null; // pass through
-  }
-
-  // -------------------------------------------------------------------------
-  // Private: PERP_ALLOWED_MARKETS evaluation (Step 4i)
-  // -------------------------------------------------------------------------
-
-  /**
-   * Evaluate PERP_ALLOWED_MARKETS policy.
-   *
-   * Logic:
-   * - Only applies to perp actions (suffix matching: open_position, close_position,
-   *   modify_position, add_margin, withdraw_margin)
-   * - If no PERP_ALLOWED_MARKETS policy exists: deny (default-deny per CLAUDE.md)
-   * - If policy exists: check if transaction's market (from actionName prefix or params)
-   *   is in rules.markets[].market (case-insensitive)
-   *
-   * Market identification: TransactionParam.contractAddress is used as the market
-   * identifier for perp actions (the protocol program/contract address).
-   */
-  private evaluatePerpAllowedMarkets(
-    resolved: PolicyRow[],
-    transaction: TransactionParam,
-  ): PolicyEvaluation | null {
-    const PERP_ACTIONS = new Set([
-      'open_position', 'close_position', 'modify_position',
-      'add_margin', 'withdraw_margin',
-    ]);
-    // Suffix matching for prefixed actions (drift_open_position -> open_position)
-    const actionSuffix = transaction.actionName
-      ? [...PERP_ACTIONS].find((a) => transaction.actionName!.endsWith(a))
-      : undefined;
-    if (!actionSuffix) return null; // Not a perp action
-
-    const marketPolicy = resolved.find((p) => p.type === 'PERP_ALLOWED_MARKETS');
-    if (!marketPolicy) {
-      return {
-        allowed: false,
-        tier: 'INSTANT',
-        reason: 'No PERP_ALLOWED_MARKETS policy configured. Perp markets require explicit whitelist.',
-      };
-    }
-
-    const rules = this.parseRules(marketPolicy.rules, PerpAllowedMarketsRulesSchema, 'PERP_ALLOWED_MARKETS');
-    const targetMarket = transaction.contractAddress ?? transaction.toAddress;
-    const isAllowed = rules.markets.some(
-      (m) => m.market.toLowerCase() === targetMarket.toLowerCase(),
-    );
-
-    if (!isAllowed) {
-      return {
-        allowed: false,
-        tier: 'INSTANT',
-        reason: `Market ${targetMarket} not in perp allowed markets whitelist`,
-      };
-    }
-    return null;
-  }
-
-  // -------------------------------------------------------------------------
-  // Private: PERP_MAX_LEVERAGE evaluation (Step 4i-b)
-  // -------------------------------------------------------------------------
-
-  /**
-   * Evaluate PERP_MAX_LEVERAGE policy.
-   *
-   * Logic:
-   * - Only applies to open_position and modify_position (suffix matching)
-   * - Reads perpLeverage from TransactionParam
-   * - Denies if perpLeverage > rules.maxLeverage
-   * - Returns DELAY tier if perpLeverage > rules.warningLeverage (optional)
-   */
-  private evaluatePerpMaxLeverage(
-    resolved: PolicyRow[],
-    transaction: TransactionParam,
-  ): PolicyEvaluation | null {
-    if (!transaction.actionName) return null;
-    const isLeverageAction =
-      transaction.actionName.endsWith('open_position') ||
-      transaction.actionName.endsWith('modify_position');
-    if (!isLeverageAction) return null;
-
-    const leveragePolicy = resolved.find((p) => p.type === 'PERP_MAX_LEVERAGE');
-    if (!leveragePolicy) return null; // No leverage policy -> pass through
-
-    const rules = this.parseRules(leveragePolicy.rules, PerpMaxLeverageRulesSchema, 'PERP_MAX_LEVERAGE');
-    const leverage = transaction.perpLeverage;
-    if (typeof leverage !== 'number') return null; // No leverage info -> pass through
-
-    if (leverage > rules.maxLeverage) {
-      return {
-        allowed: false,
-        tier: 'INSTANT',
-        reason: `Leverage ${leverage}x exceeds max allowed (${rules.maxLeverage}x)`,
-      };
-    }
-
-    if (rules.warningLeverage && leverage > rules.warningLeverage) {
-      return {
-        allowed: true,
-        tier: 'DELAY' as PolicyTier,
-        reason: `Leverage ${leverage}x approaching limit (warning: ${rules.warningLeverage}x, max: ${rules.maxLeverage}x)`,
-      };
-    }
-
-    return null;
-  }
-
-  // -------------------------------------------------------------------------
-  // Private: PERP_MAX_POSITION_USD evaluation (Step 4i-c)
-  // -------------------------------------------------------------------------
-
-  /**
-   * Evaluate PERP_MAX_POSITION_USD policy.
-   *
-   * Logic:
-   * - Only applies to open_position and modify_position (suffix matching)
-   * - Reads perpSizeUsd from TransactionParam
-   * - Denies if perpSizeUsd > rules.maxPositionUsd
-   * - Returns DELAY tier if perpSizeUsd > rules.warningPositionUsd (optional)
-   */
-  private evaluatePerpMaxPositionUsd(
-    resolved: PolicyRow[],
-    transaction: TransactionParam,
-  ): PolicyEvaluation | null {
-    if (!transaction.actionName) return null;
-    const isSizeAction =
-      transaction.actionName.endsWith('open_position') ||
-      transaction.actionName.endsWith('modify_position');
-    if (!isSizeAction) return null;
-
-    const sizePolicy = resolved.find((p) => p.type === 'PERP_MAX_POSITION_USD');
-    if (!sizePolicy) return null; // No size policy -> pass through
-
-    const rules = this.parseRules(sizePolicy.rules, PerpMaxPositionUsdRulesSchema, 'PERP_MAX_POSITION_USD');
-    const sizeUsd = transaction.perpSizeUsd;
-    if (typeof sizeUsd !== 'number') return null; // No size info -> pass through
-
-    if (sizeUsd > rules.maxPositionUsd) {
-      return {
-        allowed: false,
-        tier: 'INSTANT',
-        reason: `Position size $${sizeUsd.toLocaleString()} exceeds max allowed ($${rules.maxPositionUsd.toLocaleString()})`,
-      };
-    }
-
-    if (rules.warningPositionUsd && sizeUsd > rules.warningPositionUsd) {
-      return {
-        allowed: true,
-        tier: 'DELAY' as PolicyTier,
-        reason: `Position size $${sizeUsd.toLocaleString()} approaching limit (warning: $${rules.warningPositionUsd.toLocaleString()}, max: $${rules.maxPositionUsd.toLocaleString()})`,
-      };
-    }
-
-    return null;
-  }
-
-  // -------------------------------------------------------------------------
   // Private: REPUTATION_THRESHOLD evaluation (Phase 320)
   // -------------------------------------------------------------------------
 
-  /**
-   * Evaluate REPUTATION_THRESHOLD policy.
-   *
-   * Logic:
-   * - Find REPUTATION_THRESHOLD policy in resolved list
-   * - If not found or check_counterparty=false, return null (skip)
-   * - Resolve counterparty agentId from toAddress via agent_identities table
-   * - If no agentId found, treat as unrated
-   * - If no reputationCacheService, treat as unrated
-   * - Lookup reputation score via cache
-   * - If null (unrated/RPC failure), return unrated_tier
-   * - If score < min_score, return below_threshold_tier
-   * - If score >= min_score, return null (pass, continue evaluation)
-   *
-   * Returns the reputation floor tier (PolicyTier) or null if no escalation needed.
-   * The caller applies maxTier to the final result.
-   */
   private async evaluateReputationThreshold(
     resolved: PolicyRow[],
     transaction: TransactionParam,
@@ -2000,59 +716,40 @@ export class DatabasePolicyEngine implements IPolicyEngine {
 
     const rules = this.parseRules(policy.rules, ReputationThresholdRulesSchema, 'REPUTATION_THRESHOLD');
 
-    // If check_counterparty is disabled, skip entirely
     if (!rules.check_counterparty) return null;
 
-    // Resolve counterparty agentId from toAddress
     const agentId = this.resolveAgentIdFromAddress(transaction.toAddress);
 
-    // No agent identity found -> treat as unrated
     if (!agentId) {
       return (rules.unrated_tier ?? 'APPROVAL') as PolicyTier;
     }
 
-    // No reputation cache service -> treat as unrated
     if (!this.reputationCacheService) {
       return (rules.unrated_tier ?? 'APPROVAL') as PolicyTier;
     }
 
-    // Lookup reputation
     const reputation = await this.reputationCacheService.getReputation(
       agentId,
       rules.tag1 ?? '',
       rules.tag2 ?? '',
     );
 
-    // Unrated (no data or RPC failure)
     if (!reputation) {
       return (rules.unrated_tier ?? 'APPROVAL') as PolicyTier;
     }
 
-    // Score below threshold -> escalate
     if (reputation.score < rules.min_score) {
       return (rules.below_threshold_tier ?? 'APPROVAL') as PolicyTier;
     }
 
-    // Score meets threshold -> no escalation
     return null;
   }
 
-  /**
-   * Resolve ERC-8004 agentId from a counterparty address.
-   *
-   * Looks up agent_identities table via wallet publicKey join to find
-   * the chain_agent_id for the counterparty. Case-insensitive for EVM addresses.
-   *
-   * @returns chain_agent_id string if found, null otherwise
-   */
   private resolveAgentIdFromAddress(toAddress: string): string | null {
     if (!toAddress) return null;
 
     const normalizedAddress = toAddress.toLowerCase();
 
-    // Join agent_identities + wallets to find chain_agent_id for the address.
-    // Case-insensitive comparison (EVM address case varies).
-    // Only consider REGISTERED or WALLET_LINKED identities.
     const rows = this.db
       .select({
         chainAgentId: agentIdentities.chainAgentId,
@@ -2072,20 +769,11 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     return match?.chainAgentId ?? null;
   }
 
-  /**
-   * Pre-fetch reputation floor tier for use in evaluateAndReserve (synchronous context).
-   *
-   * Called from stage3Policy before entering the IMMEDIATE transaction, since
-   * evaluateReputationThreshold is async (RPC call) but evaluateAndReserve is sync.
-   *
-   * @returns Object with tier and notification context if escalation needed, undefined otherwise
-   */
   async prefetchReputationTier(
     walletId: string,
     transaction: TransactionParam,
     reputationCache: ReputationCacheService,
   ): Promise<{ tier: PolicyTier; score?: string; threshold?: string } | undefined> {
-    // Load policies to check for REPUTATION_THRESHOLD
     const rows = await this.db
       .select()
       .from(policies)
@@ -2111,13 +799,11 @@ export class DatabasePolicyEngine implements IPolicyEngine {
     const rules = this.parseRules(policy.rules, ReputationThresholdRulesSchema, 'REPUTATION_THRESHOLD');
     if (!rules.check_counterparty) return undefined;
 
-    // Resolve counterparty agentId
     const agentId = this.resolveAgentIdFromAddress(transaction.toAddress);
     if (!agentId) {
       return { tier: (rules.unrated_tier ?? 'APPROVAL') as PolicyTier };
     }
 
-    // Lookup reputation via the provided cache
     const reputation = await reputationCache.getReputation(
       agentId,
       rules.tag1 ?? '',
@@ -2136,183 +822,31 @@ export class DatabasePolicyEngine implements IPolicyEngine {
       };
     }
 
-    return undefined; // Score meets threshold
+    return undefined;
   }
 
-  // ---------------------------------------------------------------------------
-  // Phase 389: VENUE_WHITELIST evaluation
-  // ---------------------------------------------------------------------------
+  // -------------------------------------------------------------------------
+  // Private: buildTokenContext helper
+  // -------------------------------------------------------------------------
 
-  /**
-   * Evaluate VENUE_WHITELIST policy (default-deny when enabled).
-   *
-   * Logic:
-   * - If transaction has no venue (contractCall) -> return null (skip)
-   * - If venue_whitelist_enabled setting is not 'true' -> return null (disabled)
-   * - Find VENUE_WHITELIST policy in resolved list
-   * - If no policy found + venue present -> DENY (default-deny)
-   * - If policy found + venue in whitelist -> return null (allowed)
-   * - If policy found + venue not in whitelist -> DENY
-   */
-  private evaluateVenueWhitelist(
-    resolved: PolicyRow[],
+  private buildTokenContext(
     transaction: TransactionParam,
-  ): PolicyEvaluation | null {
-    // No venue (contractCall) -> skip
-    if (!transaction.venue) return null;
-
-    // Check if venue whitelist is enabled via Admin Settings
-    let enabled = false;
-    try {
-      enabled = this.settingsService?.get('venue_whitelist_enabled') === 'true';
-    } catch {
-      // Setting key not registered -- disabled by default
-    }
-    if (!enabled) return null;
-
-    const policy = resolved.find((p) => p.type === 'VENUE_WHITELIST');
-    const venueNorm = transaction.venue.toLowerCase();
-
-    if (!policy) {
-      // Default-deny: venue present but no whitelist policy
-      return {
-        allowed: false,
-        tier: 'INSTANT',
-        reason: `VENUE_NOT_ALLOWED: venue '${transaction.venue}' is not whitelisted (no VENUE_WHITELIST policy)`,
-      };
-    }
-
-    const rules = this.parseRules(policy.rules, VenueWhitelistRulesSchema, 'VENUE_WHITELIST');
-    const isAllowed = rules.venues.some((v) => v.id.toLowerCase() === venueNorm);
-
-    if (!isAllowed) {
-      return {
-        allowed: false,
-        tier: 'INSTANT',
-        reason: `VENUE_NOT_ALLOWED: venue '${transaction.venue}' is not in the whitelist`,
-      };
-    }
-
-    return null; // Venue allowed
-  }
-
-  // ---------------------------------------------------------------------------
-  // Phase 389: ACTION_CATEGORY_LIMIT evaluation
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Evaluate ACTION_CATEGORY_LIMIT policy (per-action, daily, monthly USD limits).
-   *
-   * Logic:
-   * - If transaction has no actionCategory or notionalUsd -> return null (skip)
-   * - Find ACTION_CATEGORY_LIMIT policies matching transaction.actionCategory
-   * - Check per_action_limit_usd: deny if notionalUsd exceeds
-   * - Check daily_limit_usd: query cumulative notionalUsd for category today
-   * - Check monthly_limit_usd: query cumulative notionalUsd for category this month
-   * - On exceed: return tier_on_exceed (default 'DELAY')
-   */
-  private evaluateActionCategoryLimit(
-    resolved: PolicyRow[],
-    transaction: TransactionParam,
-    walletId?: string,
-  ): PolicyEvaluation | null {
-    if (!transaction.actionCategory || transaction.notionalUsd === undefined) return null;
-
-    // Find matching ACTION_CATEGORY_LIMIT policies
-    const categoryPolicies = resolved.filter(
-      (p) => p.type === 'ACTION_CATEGORY_LIMIT',
-    );
-    if (categoryPolicies.length === 0) return null;
-
-    for (const policy of categoryPolicies) {
-      const rules = this.parseRules(policy.rules, ActionCategoryLimitRulesSchema, 'ACTION_CATEGORY_LIMIT');
-      if (rules.category !== transaction.actionCategory) continue;
-
-      const tierOnExceed = (rules.tier_on_exceed ?? 'DELAY') as PolicyTier;
-
-      // Per-action limit
-      if (rules.per_action_limit_usd !== undefined && transaction.notionalUsd > rules.per_action_limit_usd) {
-        return {
-          allowed: true,
-          tier: tierOnExceed,
-          reason: `ACTION_CATEGORY_LIMIT: per-action $${transaction.notionalUsd} exceeds ${rules.category} limit $${rules.per_action_limit_usd}`,
-        };
-      }
-
-      // Daily limit (cumulative query)
-      if (rules.daily_limit_usd !== undefined && this.sqlite) {
-        const todayStart = new Date();
-        todayStart.setUTCHours(0, 0, 0, 0);
-        const todayStartSec = Math.floor(todayStart.getTime() / 1000);
-
-        const row = this.sqlite.prepare(`
-          SELECT COALESCE(SUM(
-            CASE
-              WHEN json_extract(metadata, '$.notionalUsd') IS NOT NULL
-              THEN CAST(json_extract(metadata, '$.notionalUsd') AS REAL)
-              ELSE 0
-            END
-          ), 0) AS total
-          FROM transactions
-          WHERE wallet_id = ?
-            AND action_kind IN ('signedData', 'signedHttp')
-            AND json_extract(metadata, '$.actionCategory') = ?
-            AND created_at >= ?
-            AND status != 'FAILED'
-        `).get(
-          walletId ?? resolved[0]?.walletId ?? null,
-          rules.category,
-          todayStartSec,
-        ) as { total: number } | undefined;
-
-        const cumulative = (row?.total ?? 0) + transaction.notionalUsd;
-        if (cumulative > rules.daily_limit_usd) {
-          return {
-            allowed: true,
-            tier: tierOnExceed,
-            reason: `ACTION_CATEGORY_LIMIT: daily cumulative $${cumulative.toFixed(2)} exceeds ${rules.category} limit $${rules.daily_limit_usd}`,
-          };
-        }
-      }
-
-      // Monthly limit (cumulative query)
-      if (rules.monthly_limit_usd !== undefined && this.sqlite) {
-        const monthStart = new Date();
-        monthStart.setUTCDate(1);
-        monthStart.setUTCHours(0, 0, 0, 0);
-        const monthStartSec = Math.floor(monthStart.getTime() / 1000);
-
-        const row = this.sqlite.prepare(`
-          SELECT COALESCE(SUM(
-            CASE
-              WHEN json_extract(metadata, '$.notionalUsd') IS NOT NULL
-              THEN CAST(json_extract(metadata, '$.notionalUsd') AS REAL)
-              ELSE 0
-            END
-          ), 0) AS total
-          FROM transactions
-          WHERE wallet_id = ?
-            AND action_kind IN ('signedData', 'signedHttp')
-            AND json_extract(metadata, '$.actionCategory') = ?
-            AND created_at >= ?
-            AND status != 'FAILED'
-        `).get(
-          walletId ?? resolved[0]?.walletId ?? null,
-          rules.category,
-          monthStartSec,
-        ) as { total: number } | undefined;
-
-        const cumulative = (row?.total ?? 0) + transaction.notionalUsd;
-        if (cumulative > rules.monthly_limit_usd) {
-          return {
-            allowed: true,
-            tier: tierOnExceed,
-            reason: `ACTION_CATEGORY_LIMIT: monthly cumulative $${cumulative.toFixed(2)} exceeds ${rules.category} limit $${rules.monthly_limit_usd}`,
-          };
-        }
-      }
-    }
-
-    return null; // Within limits
+    spendingPolicy?: PolicyRow,
+  ): {
+    type: string;
+    tokenAddress?: string;
+    tokenDecimals?: number;
+    chain?: string;
+    assetId?: string;
+    policyNetwork?: string;
+  } {
+    return {
+      type: transaction.type,
+      tokenAddress: transaction.tokenAddress,
+      tokenDecimals: transaction.tokenDecimals,
+      chain: transaction.chain,
+      assetId: transaction.assetId,
+      policyNetwork: spendingPolicy?.network ?? undefined,
+    };
   }
 }
