@@ -23,6 +23,7 @@
 | 373 | BUG | HIGH | Pendle Yield buy_pt API 응답 스키마 불일치 (array vs object) | v32.5 | FIXED | 2026-03-16 |
 | 374 | MISSING | HIGH | KaminoSdkWrapper 실제 SDK 연결 구현 — 스텁에서 동적 import 기반 실제 연결로 전환 | v32.5 | FIXED | 2026-03-16 |
 | 375 | MISSING | HIGH | DriftSdkWrapper 실제 SDK 연결 구현 — 스텁에서 동적 import 기반 실제 연결로 전환 | v32.5 | FIXED | 2026-03-16 |
+| 376 | BUG | MEDIUM | E2E wallet-purge-cascades-data 정책 생성 스키마 불일치 — params/maxAmount 구버전 필드 사용 | — | OPEN | — |
 
 ## Type Legend
 
@@ -34,8 +35,8 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 1
 - **FIXED:** 375
 - **WONTFIX:** 1
-- **Total:** 376
+- **Total:** 377
 - **Archived:** 366 (001–366)
