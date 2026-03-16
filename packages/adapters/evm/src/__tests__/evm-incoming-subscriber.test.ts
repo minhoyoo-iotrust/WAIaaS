@@ -133,6 +133,103 @@ describe('EvmIncomingSubscriber - IChainSubscriber interface', () => {
   });
 });
 
+describe('EvmIncomingSubscriber - subscribe block number caching (#359)', () => {
+  let subscriber: EvmIncomingSubscriber;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    idCounter = 0;
+    subscriber = new EvmIncomingSubscriber({
+      rpcUrl: TEST_RPC_URL,
+      generateId: mockGenerateId,
+    });
+  });
+
+  it('calls getBlockNumber only once for multiple wallets on the same network', async () => {
+    mockClient.getBlockNumber.mockResolvedValueOnce(200n);
+
+    await subscriber.subscribe('wallet-1', TEST_WALLET_ADDRESS, 'ethereum-sepolia', vi.fn());
+    await subscriber.subscribe('wallet-2', TEST_SENDER_ADDRESS, 'ethereum-sepolia', vi.fn());
+    await subscriber.subscribe('wallet-3', '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 'ethereum-sepolia', vi.fn());
+
+    // Only 1 RPC call despite 3 wallets on same network
+    expect(mockClient.getBlockNumber).toHaveBeenCalledOnce();
+    expect(subscriber.subscribedWallets()).toEqual(['wallet-1', 'wallet-2', 'wallet-3']);
+  });
+
+  it('calls getBlockNumber separately for different networks', async () => {
+    mockClient.getBlockNumber
+      .mockResolvedValueOnce(100n)  // ethereum-sepolia
+      .mockResolvedValueOnce(500n); // arbitrum-mainnet
+
+    await subscriber.subscribe('wallet-1', TEST_WALLET_ADDRESS, 'ethereum-sepolia', vi.fn());
+    await subscriber.subscribe('wallet-2', TEST_SENDER_ADDRESS, 'arbitrum-mainnet', vi.fn());
+
+    // 2 RPC calls for 2 different networks
+    expect(mockClient.getBlockNumber).toHaveBeenCalledTimes(2);
+  });
+
+  it('second wallet on same network uses cached block number (no extra RPC call)', async () => {
+    mockClient.getBlockNumber.mockResolvedValueOnce(150n);
+
+    const onTx1 = vi.fn();
+    const onTx2 = vi.fn();
+    await subscriber.subscribe('wallet-1', TEST_WALLET_ADDRESS, 'ethereum-mainnet', onTx1);
+    await subscriber.subscribe('wallet-2', TEST_SENDER_ADDRESS, 'ethereum-mainnet', onTx2);
+
+    expect(mockClient.getBlockNumber).toHaveBeenCalledOnce();
+
+    // Verify both wallets start from same block by polling
+    mockClient.getBlockNumber.mockResolvedValueOnce(151n);
+    mockClient.getLogs.mockResolvedValueOnce([]); // wallet-1
+    mockClient.getLogs.mockResolvedValueOnce([]); // wallet-2
+    mockClient.getBlock.mockResolvedValueOnce({ transactions: [] }); // wallet-1
+    mockClient.getBlock.mockResolvedValueOnce({ transactions: [] }); // wallet-2
+    await subscriber.pollAll();
+
+    // Both wallets should have been polled from block 151 (lastBlock was 150)
+    // getBlock called twice: once per wallet (blocks 151 for each)
+    expect(mockClient.getBlock).toHaveBeenCalledTimes(2);
+  });
+
+  it('reduces 8 wallets x 1 network from 8 to 1 getBlockNumber call', async () => {
+    mockClient.getBlockNumber.mockResolvedValueOnce(300n);
+
+    for (let i = 0; i < 8; i++) {
+      await subscriber.subscribe(
+        `wallet-${i}`,
+        `0x${i.toString().padStart(40, '0')}`,
+        'ethereum-mainnet',
+        vi.fn(),
+      );
+    }
+
+    expect(mockClient.getBlockNumber).toHaveBeenCalledOnce();
+    expect(subscriber.subscribedWallets()).toHaveLength(8);
+  });
+
+  it('8 wallets x 3 networks results in only 3 getBlockNumber calls', async () => {
+    const networks = ['ethereum-mainnet', 'arbitrum-mainnet', 'base-mainnet'];
+    mockClient.getBlockNumber
+      .mockResolvedValueOnce(100n)
+      .mockResolvedValueOnce(200n)
+      .mockResolvedValueOnce(300n);
+
+    for (let i = 0; i < 8; i++) {
+      await subscriber.subscribe(
+        `wallet-${i}`,
+        `0x${i.toString().padStart(40, '0')}`,
+        networks[i % 3]!,
+        vi.fn(),
+      );
+    }
+
+    // 3 networks → 3 calls (not 8)
+    expect(mockClient.getBlockNumber).toHaveBeenCalledTimes(3);
+    expect(subscriber.subscribedWallets()).toHaveLength(8);
+  });
+});
+
 describe('EvmIncomingSubscriber - pollAll ERC-20', () => {
   let subscriber: EvmIncomingSubscriber;
 
@@ -823,10 +920,9 @@ describe('EvmIncomingSubscriber - per-wallet backoff (#175)', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     // Use L2 network to skip pollNativeETH
+    // Both wallets on same network: getBlockNumber cached after first subscribe (#359)
     mockClient.getBlockNumber.mockResolvedValueOnce(100n);
     await subscriber.subscribe('wallet-1', TEST_WALLET_ADDRESS, 'arbitrum-mainnet', vi.fn());
-
-    mockClient.getBlockNumber.mockResolvedValueOnce(100n);
     await subscriber.subscribe('wallet-2', TEST_SENDER_ADDRESS, 'arbitrum-mainnet', vi.fn());
 
     // First poll: wallet-1 fails, wallet-2 succeeds

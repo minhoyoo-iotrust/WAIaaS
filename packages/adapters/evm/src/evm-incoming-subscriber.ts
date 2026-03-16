@@ -87,6 +87,11 @@ export class EvmIncomingSubscriber implements IChainSubscriber {
   private backoffUntil = 0;
   /** Track wallets that already emitted RPC_HEALTH_DEGRADED to avoid spam. */
   private alertedWallets = new Set<string>();
+  /**
+   * Cache of block numbers per network to avoid redundant getBlockNumber() calls
+   * during subscribe(). Keyed by network string (#359).
+   */
+  private blockNumberCache = new Map<string, bigint>();
 
   constructor(config: {
     rpcUrl?: string;
@@ -121,7 +126,14 @@ export class EvmIncomingSubscriber implements IChainSubscriber {
   ): Promise<void> {
     if (this.subscriptions.has(walletId)) return; // idempotent
 
-    const currentBlock = await this.client.getBlockNumber();
+    // Reuse cached block number for the same network to avoid redundant RPC calls (#359).
+    // With N wallets × M networks, this reduces getBlockNumber() calls from N*M to M.
+    let currentBlock = this.blockNumberCache.get(network);
+    if (currentBlock === undefined) {
+      currentBlock = await this.client.getBlockNumber();
+      this.blockNumberCache.set(network, currentBlock);
+    }
+
     this.subscriptions.set(walletId, {
       address,
       network,
