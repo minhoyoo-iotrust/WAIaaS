@@ -66,30 +66,30 @@
 
 ### sdk 테스트
 
-- [ ] **SDK-01**: client.ts HTTP 에러/엣지 경로 + DeFi/ERC-8004 메서드 테스트 커버
-- [ ] **SDK-02**: validation.ts 검증 분기 + 옵셔널 파라미터 조합 테스트 커버
-- [ ] **SDK-03**: sdk Lines ≥ 90% 달성 (현재 85.89%)
-- [ ] **SDK-04**: sdk Functions ≥ 95% 달성 (현재 85.91%, +9.09%p)
+- [x] **SDK-01**: client.ts HTTP 에러/엣지 경로 + DeFi/ERC-8004 메서드 테스트 커버
+- [x] **SDK-02**: validation.ts 검증 분기 + 옵셔널 파라미터 조합 테스트 커버
+- [x] **SDK-03**: sdk Lines ≥ 90% 달성 (현재 85.89%)
+- [x] **SDK-04**: sdk Functions ≥ 95% 달성 (현재 85.91%, +9.09%p)
 
 ### shared 패키지
 
-- [ ] **SHR-01**: shared 패키지 vitest.config.ts 설정 추가 (현재 미설정)
-- [ ] **SHR-02**: shared 패키지 유틸리티 함수, 상수 모듈 테스트 추가
-- [ ] **SHR-03**: shared Lines ≥ 90% / Branches ≥ 85% / Functions ≥ 95% 달성
+- [x] **SHR-01**: shared 패키지 vitest.config.ts 설정 추가 (현재 미설정)
+- [x] **SHR-02**: shared 패키지 유틸리티 함수, 상수 모듈 테스트 추가
+- [x] **SHR-03**: shared Lines ≥ 90% / Branches ≥ 85% / Functions ≥ 95% 달성
 
 ### 소량 갭 패키지
 
-- [ ] **GAP-01**: core Functions ≥ 95% 달성 (현재 93.75%, +1.25%p)
-- [ ] **GAP-02**: actions Branches ≥ 85% 달성 (현재 84.59%, +0.41%p)
-- [ ] **GAP-03**: mcp Branches ≥ 85% 달성 (현재 84.85%, +0.15%p)
+- [x] **GAP-01**: core Functions ≥ 95% 달성 (현재 93.75%, +1.25%p)
+- [x] **GAP-02**: actions Branches ≥ 85% 달성 (현재 84.59%, +0.41%p)
+- [x] **GAP-03**: mcp Branches ≥ 85% 달성 (현재 84.85%, +0.15%p)
 
 ### 임계값 인상 + CI Gate
 
-- [ ] **GATE-01**: 전 패키지 vitest.config.ts 임계값을 max(현재 임계값, 통일 기준)으로 인상
-- [ ] **GATE-02**: 이미 달성한 패키지(solana, push-relay) 임계값 즉시 인상
-- [ ] **GATE-03**: coverage-gate.sh와 vitest.config.ts 임계값 동기화
-- [ ] **GATE-04**: `pnpm turbo run test:unit` 전체 통과 (0 failures) 확인
-- [ ] **GATE-05**: 기존 임계값 절대 하향 금지 확인
+- [x] **GATE-01**: 전 패키지 vitest.config.ts 임계값을 max(현재 임계값, 통일 기준)으로 인상
+- [x] **GATE-02**: 이미 달성한 패키지(solana, push-relay) 임계값 즉시 인상
+- [x] **GATE-03**: coverage-gate.sh와 vitest.config.ts 임계값 동기화
+- [x] **GATE-04**: `pnpm turbo run test:unit` 전체 통과 (0 failures) 확인
+- [x] **GATE-05**: 기존 임계값 절대 하향 금지 확인
 
 ## v2 Requirements
 
@@ -141,21 +141,21 @@
 | CLI-01 | Phase 447 | Complete |
 | CLI-02 | Phase 447 | Complete |
 | CLI-03 | Phase 447 | Complete |
-| SDK-01 | Phase 448 | Pending |
-| SDK-02 | Phase 448 | Pending |
-| SDK-03 | Phase 448 | Pending |
-| SDK-04 | Phase 448 | Pending |
-| SHR-01 | Phase 448 | Pending |
-| SHR-02 | Phase 448 | Pending |
-| SHR-03 | Phase 448 | Pending |
-| GAP-01 | Phase 448 | Pending |
-| GAP-02 | Phase 448 | Pending |
-| GAP-03 | Phase 448 | Pending |
-| GATE-01 | Phase 448 | Pending |
-| GATE-02 | Phase 448 | Pending |
-| GATE-03 | Phase 448 | Pending |
-| GATE-04 | Phase 448 | Pending |
-| GATE-05 | Phase 448 | Pending |
+| SDK-01 | Phase 448 | Complete |
+| SDK-02 | Phase 448 | Complete |
+| SDK-03 | Phase 448 | Complete |
+| SDK-04 | Phase 448 | Complete |
+| SHR-01 | Phase 448 | Complete |
+| SHR-02 | Phase 448 | Complete |
+| SHR-03 | Phase 448 | Complete |
+| GAP-01 | Phase 448 | Complete |
+| GAP-02 | Phase 448 | Complete |
+| GAP-03 | Phase 448 | Complete |
+| GATE-01 | Phase 448 | Complete |
+| GATE-02 | Phase 448 | Complete |
+| GATE-03 | Phase 448 | Complete |
+| GATE-04 | Phase 448 | Complete |
+| GATE-05 | Phase 448 | Complete |
 
 **Coverage:**
 - v32.8 requirements: 48 total
