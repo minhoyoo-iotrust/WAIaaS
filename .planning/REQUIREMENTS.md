@@ -51,18 +51,18 @@
 
 ### admin 테스트
 
-- [ ] **ADM-01**: Admin 페이지 이벤트 핸들러 — 폼 제출, 버튼 클릭, 모달 인터랙션 테스트 커버
-- [ ] **ADM-02**: Admin 조건부 렌더링 헬퍼 함수 — 상태별 UI 분기, 로딩/에러/빈 상태 테스트 커버
-- [ ] **ADM-03**: Admin 폼 검증/변환 유틸 — 입력 검증, 데이터 변환, 에러 메시지 테스트 커버
-- [ ] **ADM-04**: admin Lines ≥ 90% 달성 (현재 87.56%)
-- [ ] **ADM-05**: admin Branches ≥ 85% 달성 (현재 80.29%)
-- [ ] **ADM-06**: admin Functions ≥ 95% 달성 (현재 71.39%, +23.61%p)
+- [x] **ADM-01**: Admin 페이지 이벤트 핸들러 — 폼 제출, 버튼 클릭, 모달 인터랙션 테스트 커버
+- [x] **ADM-02**: Admin 조건부 렌더링 헬퍼 함수 — 상태별 UI 분기, 로딩/에러/빈 상태 테스트 커버
+- [x] **ADM-03**: Admin 폼 검증/변환 유틸 — 입력 검증, 데이터 변환, 에러 메시지 테스트 커버
+- [x] **ADM-04**: admin Lines ≥ 90% 달성 (현재 87.56%)
+- [x] **ADM-05**: admin Branches ≥ 85% 달성 (현재 80.29%)
+- [x] **ADM-06**: admin Functions ≥ 95% 달성 (현재 71.39%, +23.61%p)
 
 ### cli 테스트
 
-- [ ] **CLI-01**: CLI 명령어 엣지 케이스 — 인자 파싱 실패, config 미설정, 네트워크 에러 테스트 커버
-- [ ] **CLI-02**: cli Lines ≥ 90% 달성 (현재 81.08%, +8.92%p)
-- [ ] **CLI-03**: cli Branches ≥ 85% 달성 (현재 78.25%, +6.75%p)
+- [x] **CLI-01**: CLI 명령어 엣지 케이스 — 인자 파싱 실패, config 미설정, 네트워크 에러 테스트 커버
+- [x] **CLI-02**: cli Lines ≥ 90% 달성 (현재 81.08%, +8.92%p)
+- [x] **CLI-03**: cli Branches ≥ 85% 달성 (현재 78.25%, +6.75%p)
 
 ### sdk 테스트
 
@@ -132,15 +132,15 @@
 | EVM-04 | Phase 446 | Complete |
 | WSDK-01 | Phase 446 | Complete |
 | WSDK-02 | Phase 446 | Complete |
-| ADM-01 | Phase 447 | Pending |
-| ADM-02 | Phase 447 | Pending |
-| ADM-03 | Phase 447 | Pending |
-| ADM-04 | Phase 447 | Pending |
-| ADM-05 | Phase 447 | Pending |
-| ADM-06 | Phase 447 | Pending |
-| CLI-01 | Phase 447 | Pending |
-| CLI-02 | Phase 447 | Pending |
-| CLI-03 | Phase 447 | Pending |
+| ADM-01 | Phase 447 | Complete |
+| ADM-02 | Phase 447 | Complete |
+| ADM-03 | Phase 447 | Complete |
+| ADM-04 | Phase 447 | Complete |
+| ADM-05 | Phase 447 | Complete |
+| ADM-06 | Phase 447 | Complete |
+| CLI-01 | Phase 447 | Complete |
+| CLI-02 | Phase 447 | Complete |
+| CLI-03 | Phase 447 | Complete |
 | SDK-01 | Phase 448 | Pending |
 | SDK-02 | Phase 448 | Pending |
 | SDK-03 | Phase 448 | Pending |

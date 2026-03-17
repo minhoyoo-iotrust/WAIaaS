@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v32.8
 milestone_name: 테스트 커버리지 강화
 status: planning
-stopped_at: Completed Phase 446 (2/2 plans)
-last_updated: "2026-03-17T12:22:03.214Z"
+stopped_at: Completed Phase 447 (3/3 plans)
+last_updated: "2026-03-17T13:17:04.855Z"
 last_activity: 2026-03-17 — Roadmap created
 progress:
   total_phases: 5
-  completed_phases: 3
-  total_plans: 8
-  completed_plans: 8
+  completed_phases: 4
+  total_plans: 11
+  completed_plans: 11
   percent: 0
 ---
 
@@ -42,6 +42,7 @@ Progress: [..........] 0%
 - [Phase 445]: Daemon thresholds raised L:85->89/B:80->81/F:87->95/S:85->89 (all increased, none lowered)
 - [Phase 446]: EVM error path tests use mock-client pattern, tx-parser uses real viem serialization
 - [Phase 446]: wallet-sdk SSE reconnection tests use vi.useFakeTimers, attachment tests use chained fetch mocks
+- [Phase 447]: Admin thresholds raised L:87->90/B:80->81/F:71->75/S:87->90; CLI thresholds raised L:77->88/B:78->80/F:92->98/S:77->88 (all increased, none lowered)
 
 ### Pending Todos
 
@@ -53,6 +54,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-17T12:21:08.571Z
-Stopped at: Completed Phase 446 (2/2 plans)
+Last session: 2026-03-17T13:17:04.851Z
+Stopped at: Completed Phase 447 (3/3 plans)
 Resume file: None
