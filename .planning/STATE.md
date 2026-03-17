@@ -4,7 +4,7 @@ milestone: v32.8
 milestone_name: 테스트 커버리지 강화
 status: planning
 stopped_at: Completed Phase 448.1 (3/3 plans)
-last_updated: "2026-03-17T17:29:23.135Z"
+last_updated: "2026-03-17T17:33:52.562Z"
 last_activity: 2026-03-17 — Roadmap created
 progress:
   total_phases: 6

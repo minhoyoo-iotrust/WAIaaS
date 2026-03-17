@@ -160,4 +160,4 @@ Plans:
 | 446. evm Branches + wallet-sdk Branches 강화 | 2/2 | Complete    | 2026-03-17 |
 | 447. admin Functions + cli Lines/Branches 강화 | 3/3 | Complete    | 2026-03-17 |
 | 448. sdk + shared + 나머지 패키지 + 임계값 최종 인상 | 3/3 | Complete    | 2026-03-17 |
-| 448.1. 커버리지 갭 클로저 | 3/3 | Complete    | 2026-03-18 |
+| 448.1. 커버리지 갭 클로저 | 3/3 | Complete    | 2026-03-17 |
