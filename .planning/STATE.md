@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v32.8
 milestone_name: 테스트 커버리지 강화
 status: planning
-stopped_at: Completed Phase 445 (3/3 plans)
-last_updated: "2026-03-17T12:00:51.694Z"
+stopped_at: Completed Phase 446 (2/2 plans)
+last_updated: "2026-03-17T12:21:08.575Z"
 last_activity: 2026-03-17 — Roadmap created
 progress:
   total_phases: 5
-  completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
+  completed_phases: 3
+  total_plans: 8
+  completed_plans: 8
   percent: 0
 ---
 
@@ -40,6 +40,8 @@ Progress: [..........] 0%
 - [Phase 444]: DeFi Provider 테스트는 기존 테스트 보완 방식 (humanAmount 변환, 엣지 케이스), Pipeline 테스트는 DB 상태 전이와 GasConditionTracker 보충
 - [Phase 445]: Lifecycle orchestrator files excluded from unit coverage (daemon-startup/pipeline/shutdown/daemon.ts) -- integration-level wiring tested via e2e
 - [Phase 445]: Daemon thresholds raised L:85->89/B:80->81/F:87->95/S:85->89 (all increased, none lowered)
+- [Phase 446]: EVM error path tests use mock-client pattern, tx-parser uses real viem serialization
+- [Phase 446]: wallet-sdk SSE reconnection tests use vi.useFakeTimers, attachment tests use chained fetch mocks
 
 ### Pending Todos
 
@@ -51,6 +53,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-17T11:59:57.647Z
-Stopped at: Completed Phase 445 (3/3 plans)
+Last session: 2026-03-17T12:21:08.571Z
+Stopped at: Completed Phase 446 (2/2 plans)
 Resume file: None

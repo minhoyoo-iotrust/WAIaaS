@@ -39,15 +39,15 @@
 
 ### evm 테스트
 
-- [ ] **EVM-01**: EVM 가스 추정 체인별 분기 커버 — EIP-1559/legacy/EIP-4844 각 경로 테스트
-- [ ] **EVM-02**: ERC-20/721/1155 에러 경로 — 잔액 부족, 승인 부족, 컨트랙트 리버트 테스트 커버
-- [ ] **EVM-03**: RPC 재시도/fallback 분기 — 타임아웃, 프로바이더 전환 테스트 커버
-- [ ] **EVM-04**: evm Branches ≥ 85% 달성 (현재 76.53%, +8.47%p)
+- [x] **EVM-01**: EVM 가스 추정 체인별 분기 커버 — EIP-1559/legacy/EIP-4844 각 경로 테스트
+- [x] **EVM-02**: ERC-20/721/1155 에러 경로 — 잔액 부족, 승인 부족, 컨트랙트 리버트 테스트 커버
+- [x] **EVM-03**: RPC 재시도/fallback 분기 — 타임아웃, 프로바이더 전환 테스트 커버
+- [x] **EVM-04**: evm Branches ≥ 85% 달성 (현재 76.53%, +8.47%p)
 
 ### wallet-sdk 테스트
 
-- [ ] **WSDK-01**: 서명 채널별 에러 경로, 타임아웃, 재시도 분기 테스트 커버
-- [ ] **WSDK-02**: wallet-sdk Branches ≥ 85% 달성 (현재 79.09%, +5.91%p)
+- [x] **WSDK-01**: 서명 채널별 에러 경로, 타임아웃, 재시도 분기 테스트 커버
+- [x] **WSDK-02**: wallet-sdk Branches ≥ 85% 달성 (현재 79.09%, +5.91%p)
 
 ### admin 테스트
 
@@ -126,12 +126,12 @@
 | DCOV-01 | Phase 445 | Complete |
 | DCOV-02 | Phase 445 | Complete |
 | DCOV-03 | Phase 445 | Complete |
-| EVM-01 | Phase 446 | Pending |
-| EVM-02 | Phase 446 | Pending |
-| EVM-03 | Phase 446 | Pending |
-| EVM-04 | Phase 446 | Pending |
-| WSDK-01 | Phase 446 | Pending |
-| WSDK-02 | Phase 446 | Pending |
+| EVM-01 | Phase 446 | Complete |
+| EVM-02 | Phase 446 | Complete |
+| EVM-03 | Phase 446 | Complete |
+| EVM-04 | Phase 446 | Complete |
+| WSDK-01 | Phase 446 | Complete |
+| WSDK-02 | Phase 446 | Complete |
 | ADM-01 | Phase 447 | Pending |
 | ADM-02 | Phase 447 | Pending |
 | ADM-03 | Phase 447 | Pending |
