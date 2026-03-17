@@ -363,6 +363,79 @@ async function build() {
   console.log(`  Blog: ${blogCount} articles (Why WAIaaS: ${whyCount}, Guides: ${guidesCount})`);
   console.log(`  Docs: ${docsCount} articles`);
   console.log(`  Listing pages: 2 (blog, docs)`);
+
+  // Phase 3: Link Validation
+  console.log('\nValidating internal links...');
+  const brokenLinks = validateInternalLinks();
+  console.log(`  Internal links: ${brokenLinks.total} checked, ${brokenLinks.broken} broken`);
+
+  if (brokenLinks.broken > 0) {
+    console.error('\nERROR: Broken internal links found:');
+    for (const item of brokenLinks.details) {
+      console.error(`  ${item.source} -> ${item.href}`);
+    }
+    process.exit(1);
+  }
+}
+
+/**
+ * Validate all internal links in generated HTML files.
+ * Checks that href="/..." paths resolve to actual files under site/.
+ */
+function validateInternalLinks() {
+  const htmlFiles = [];
+  collectHtmlFiles(SITE_DIR, htmlFiles);
+
+  const hrefRegex = /href="(\/[^"#]*)"/g;
+  let total = 0;
+  let broken = 0;
+  const details = [];
+
+  for (const htmlPath of htmlFiles) {
+    const content = fs.readFileSync(htmlPath, 'utf8');
+    const relative = path.relative(SITE_DIR, htmlPath);
+    let match;
+    while ((match = hrefRegex.exec(content)) !== null) {
+      const href = match[1];
+
+      // Skip external protocol links that happen to start with /
+      if (href.startsWith('//')) continue;
+
+      total++;
+
+      // Determine expected file path
+      let expectedPath;
+      if (href.endsWith('/')) {
+        // Directory URL -> check for index.html
+        expectedPath = path.join(SITE_DIR, href, 'index.html');
+      } else {
+        // Static file (e.g., /article.css, /favicon.svg)
+        expectedPath = path.join(SITE_DIR, href);
+      }
+
+      if (!fs.existsSync(expectedPath)) {
+        broken++;
+        details.push({ source: relative, href });
+      }
+    }
+  }
+
+  return { total, broken, details };
+}
+
+/**
+ * Recursively collect all index.html files under a directory
+ */
+function collectHtmlFiles(dir, result) {
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      collectHtmlFiles(full, result);
+    } else if (entry.name === 'index.html') {
+      result.push(full);
+    }
+  }
 }
 
 build().catch((err) => {
