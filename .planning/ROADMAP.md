@@ -95,10 +95,10 @@ Plans:
   1. pages.yml에 Node.js 빌드 스텝이 포함되어 push 시 HTML이 자동 생성된다
   2. docs/** 변경 시 자동 재빌드가 트리거된다
   3. 생성된 HTML 파일이 .gitignore에 등록되어 리포지토리에 커밋되지 않는다
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 442-01: GitHub Actions 빌드 스텝 + .gitignore 설정
+- [ ] 442-01-PLAN.md — GitHub Actions 빌드 스텝 + .gitignore 설정
 
 ### Phase 443: SEO Landing Pages + External Distribution
 **Goal**: "AI wallet" 카테고리를 정의하는 SEO 랜딩 페이지가 발행되고, 외부 디렉토리 등록 자료가 준비된다
