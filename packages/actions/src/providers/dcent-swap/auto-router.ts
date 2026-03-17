@@ -86,6 +86,11 @@ export const INTERMEDIATE_TOKENS: Record<string, IntermediateToken[]> = {
     { caip19: 'eip155:42161/erc20:0xaf88d065e77c8cc2239327c5edb3a432268e5831', symbol: 'USDC', decimals: 6 },
     { caip19: 'eip155:42161/erc20:0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9', symbol: 'USDT', decimals: 6 },
   ],
+  'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp': [
+    { caip19: 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/slip44:501', symbol: 'SOL', decimals: 9 },
+    { caip19: 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', symbol: 'USDC', decimals: 6 },
+    { caip19: 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', symbol: 'USDT', decimals: 6 },
+  ],
 };
 
 /**
@@ -153,6 +158,7 @@ export async function findTwoHopRoutes(
         amount: params.amount,
         fromDecimals: params.fromDecimals,
         toDecimals: intermediate.decimals,
+        fromWalletAddress: params.fromWalletAddress,
       });
 
       if ('noRoute' in hop1Result || !hop1Result.result.bestDexProvider) {
@@ -170,6 +176,7 @@ export async function findTwoHopRoutes(
         amount: hop1ExpectedAmount,
         fromDecimals: intermediate.decimals,
         toDecimals: params.toDecimals,
+        fromWalletAddress: params.fromWalletAddress,
       });
 
       if ('noRoute' in hop2Result || !hop2Result.result.bestDexProvider) {
@@ -262,6 +269,7 @@ export async function executeTwoHopSwap(
       amount: params.amount,
       fromDecimals: params.fromDecimals,
       toDecimals: params.toDecimals,
+      fromWalletAddress: params.walletAddress,
     });
     if (!quoteResult.bestRoute) {
       throw new ChainError('INVALID_INSTRUCTION', 'ethereum', {

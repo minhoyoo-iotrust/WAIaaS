@@ -35,6 +35,7 @@ export interface GetQuotesParams {
   amount: string;     // smallest unit
   fromDecimals: number;
   toDecimals: number;
+  fromWalletAddress?: string;
 }
 
 export interface ExecuteDexSwapParams {
@@ -72,6 +73,7 @@ export async function getDcentQuotes(
     amount: formatAmount(BigInt(params.amount), params.fromDecimals),
     fromDecimals: params.fromDecimals,
     toDecimals: params.toDecimals,
+    ...(params.fromWalletAddress ? { fromWalletAddress: params.fromWalletAddress } : {}),
   });
 
   // Check for total failure
@@ -163,6 +165,7 @@ export async function executeDexSwap(
     amount: params.amount,
     fromDecimals: params.fromDecimals,
     toDecimals: params.toDecimals,
+    fromWalletAddress: params.walletAddress,
   });
 
   // No DEX providers available

@@ -139,14 +139,61 @@ curl -s -X POST http://localhost:3100/v1/transactions/send \
 **Expected**: 주문이 목록에 존재하고, 취소가 성공한다
 **Check**: Perp open orders에서 주문 확인 후 취소 응답 확인
 
-### Step 7: 최종 잔액 확인
-**Action**: 모든 주문 취소 후 잔액이 원래와 동일한지 확인한다.
+### Step 7: Perp 포지션 오픈 (optional — 체결되는 가격으로)
+**Action**: 소량 ETH-PERP 시장가 매수 주문으로 실제 포지션을 오픈한다.
+```bash
+curl -s -X POST http://localhost:3100/v1/transactions/send \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer <session-token>' \
+  -d '{
+    "walletId": "<WALLET_ID>",
+    "type": "CONTRACT_CALL",
+    "action": "hyperliquid-perp-order",
+    "params": {
+      "coin": "ETH",
+      "size": "0.001",
+      "side": "buy",
+      "orderType": "market",
+      "leverage": 2
+    },
+    "network": "hyperliquid-mainnet"
+  }'
+```
+**Expected**: 200 OK, 시장가 주문이 즉시 체결되어 Long 포지션이 오픈된다
+**Check**: `orderId` 기록, 포지션 확인
+
+### Step 8: Perp 포지션 클로즈 (optional)
+**Action**: 반대 방향 시장가 매도 주문으로 포지션을 청산한다.
+```bash
+curl -s -X POST http://localhost:3100/v1/transactions/send \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer <session-token>' \
+  -d '{
+    "walletId": "<WALLET_ID>",
+    "type": "CONTRACT_CALL",
+    "action": "hyperliquid-perp-order",
+    "params": {
+      "coin": "ETH",
+      "size": "0.001",
+      "side": "sell",
+      "orderType": "market",
+      "leverage": 2,
+      "reduceOnly": true
+    },
+    "network": "hyperliquid-mainnet"
+  }'
+```
+**Expected**: 200 OK, 포지션이 청산되고 PnL이 정산된다
+**Check**: 포지션이 0이 되었는지 확인. reduceOnly=true로 새 포지션이 열리지 않음
+
+### Step 9: 최종 잔액 확인
+**Action**: 모든 주문 취소/포지션 청산 후 잔액을 확인한다.
 ```bash
 curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=hyperliquid-mainnet \
   -H 'Authorization: Bearer <session-token>'
 ```
-**Expected**: 잔액이 Step 1과 동일 (주문 취소했으므로 변동 없음)
-**Check**: USDC 잔액이 Step 1과 동일한지 확인
+**Expected**: 잔액이 Step 1과 유사 (Step 7-8 실행 시 소액 PnL 변동 가능)
+**Check**: USDC 잔액 확인
 
 ## Verification
 - [ ] Hyperliquid mainnet 잔액 조회 성공
@@ -155,7 +202,9 @@ curl -s http://localhost:3100/v1/wallet/balance?walletId=<WALLET_ID>&network=hyp
 - [ ] Spot 주문 취소 성공
 - [ ] Perp 리밋 주문 생성 성공 (레버리지 2x, 체결 방지 가격)
 - [ ] Perp 주문 확인 및 취소 성공
-- [ ] 최종 잔액이 초기 잔액과 동일
+- [ ] (optional) Perp 시장가 매수로 포지션 오픈 성공
+- [ ] (optional) 반대 매매 시장가 매도로 포지션 클로즈 성공 (reduceOnly)
+- [ ] 최종 잔액 확인
 
 ## Estimated Cost
 | Item | Network | Estimated Gas | USD |

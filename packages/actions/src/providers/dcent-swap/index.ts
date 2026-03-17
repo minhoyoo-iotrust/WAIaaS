@@ -128,7 +128,7 @@ export class DcentSwapActionProvider implements IActionProvider {
         // DS-07: get_quotes is informational. Use queryQuotes() for direct access.
         const input = GetQuotesInputSchema.parse(rp);
         if (!input.amount) throw new ChainError('INVALID_INSTRUCTION', context.chain, { message: 'Either amount or humanAmount (with decimals) is required' });
-        const result = await getDcentQuotes(this.getClient(), input as GetQuotesParams);
+        const result = await getDcentQuotes(this.getClient(), { ...input, fromWalletAddress: context.walletAddress } as GetQuotesParams);
         throw new ChainError('INVALID_INSTRUCTION', context.chain, {
           message: `get_quotes is informational. Use queryQuotes() query method. Result: ${JSON.stringify({
             dexProviders: result.dexProviders.length,

@@ -128,6 +128,26 @@ curl -s http://localhost:3100/v1/polymarket/pnl?walletId=<WALLET_ID> \
 **Expected**: 200 OK (빈 배열도 OK -- 체결된 주문이 없으므로)
 **Check**: API 정상 응답 확인
 
+### Step 9: 아웃컴 토큰 매도 (optional — 포지션 보유 시)
+**Action**: 체결된 주문이 있어 아웃컴 토큰을 보유 중이라면, 해당 토큰을 시장가 매도하여 포지션을 정리한다.
+```bash
+curl -s -X POST http://localhost:3100/v1/actions/polymarket_order/sell \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer <session-token>' \
+  -d '{
+    "walletId": "<WALLET_ID>",
+    "conditionId": "<CONDITION_ID>",
+    "outcomeIndex": 0,
+    "side": "sell",
+    "size": "<POSITION_SIZE>",
+    "price": "0.99"
+  }'
+```
+**Expected**: 201 OK, 매도 주문이 CLOB에 제출됨
+**Check**: `orderId` 반환, 포지션이 감소 또는 0으로 전환
+
+> **Note**: 매도 가격은 현재 시장가보다 낮게 설정해야 즉시 체결된다. 포지션이 없으면 이 스텝을 건너뛴다. 마켓 결과 확정 후에는 `polymarket_redeem` 액션으로 정산도 가능하다.
+
 ## Verification
 - [ ] Admin Settings에서 Polymarket 활성화 확인됨
 - [ ] API Key 생성/조회 정상 동작
@@ -135,6 +155,7 @@ curl -s http://localhost:3100/v1/polymarket/pnl?walletId=<WALLET_ID> \
 - [ ] 리밋 매수 주문이 CLOB에 제출됨 (ApiDirectResult 패턴)
 - [ ] 주문 조회 + 취소 정상 동작
 - [ ] 포지션/PnL 조회 API 정상 응답
+- [ ] (optional) 아웃컴 토큰 매도로 포지션 정리 성공
 
 ## Estimated Cost
 | Item | Network | Estimated Gas | USD |

@@ -29,6 +29,7 @@ export interface GetQuotesParams {
   amount: string;
   fromDecimals: number;
   toDecimals: number;
+  fromWalletAddress?: string;
 }
 
 export interface DexSwapTxParams {
