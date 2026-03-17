@@ -33,10 +33,10 @@ PACKAGES=(
 )
 THRESHOLDS=(
   97    # core
-  89    # daemon
+  90    # daemon
   94    # adapters/solana
   99    # sdk
-  88    # cli
+  90    # cli
   90    # mcp
   90    # admin
   98    # adapters/evm
