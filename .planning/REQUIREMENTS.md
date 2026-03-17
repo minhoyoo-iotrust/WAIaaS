@@ -9,19 +9,19 @@
 
 ### daemon DeFi Provider 테스트
 
-- [ ] **DDEFI-01**: Jupiter Swap Provider resolve/execute 성공/실패 경로 테스트 커버 (목킹 기반)
-- [ ] **DDEFI-02**: 0x Swap Provider 견적 조회, 체인 매핑, hex→decimal 변환 테스트 커버
-- [ ] **DDEFI-03**: LI.FI Bridge Provider 크로스체인 라우트, 토큰 주소 매핑, 타임아웃 테스트 커버
-- [ ] **DDEFI-04**: Lido/Jito Staking Provider deposit/withdraw, 스테이크 계정 처리 테스트 커버
-- [ ] **DDEFI-05**: Aave V3 Lending Provider supply/borrow/repay/withdraw, health factor 테스트 커버
+- [x] **DDEFI-01**: Jupiter Swap Provider resolve/execute 성공/실패 경로 테스트 커버 (목킹 기반)
+- [x] **DDEFI-02**: 0x Swap Provider 견적 조회, 체인 매핑, hex→decimal 변환 테스트 커버
+- [x] **DDEFI-03**: LI.FI Bridge Provider 크로스체인 라우트, 토큰 주소 매핑, 타임아웃 테스트 커버
+- [x] **DDEFI-04**: Lido/Jito Staking Provider deposit/withdraw, 스테이크 계정 처리 테스트 커버
+- [x] **DDEFI-05**: Aave V3 Lending Provider supply/borrow/repay/withdraw, health factor 테스트 커버
 
 ### daemon Pipeline 테스트
 
-- [ ] **DPIPE-01**: Pipeline stages 엣지 케이스 — DELAY 재진입 시 원본 request 보존 검증
-- [ ] **DPIPE-02**: GAS_WAITING 재진입 시 원본 request 보존 및 가스 조건 충족 후 실행 검증
-- [ ] **DPIPE-03**: 서명 타임아웃 → FAILED 상태 전이 + 알림 발송 검증
-- [ ] **DPIPE-04**: 가스 추정 실패 시 유의미한 에러 메시지 반환 검증
-- [ ] **DPIPE-05**: Gas Conditional Executor 가스 조건 평가, 폴링 로직, 만료 처리 테스트 커버
+- [x] **DPIPE-01**: Pipeline stages 엣지 케이스 — DELAY 재진입 시 원본 request 보존 검증
+- [x] **DPIPE-02**: GAS_WAITING 재진입 시 원본 request 보존 및 가스 조건 충족 후 실행 검증
+- [x] **DPIPE-03**: 서명 타임아웃 → FAILED 상태 전이 + 알림 발송 검증
+- [x] **DPIPE-04**: 가스 추정 실패 시 유의미한 에러 메시지 반환 검증
+- [x] **DPIPE-05**: Gas Conditional Executor 가스 조건 평가, 폴링 로직, 만료 처리 테스트 커버
 
 ### daemon Infra 테스트
 
@@ -108,16 +108,16 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DDEFI-01 | Phase 444 | Pending |
-| DDEFI-02 | Phase 444 | Pending |
-| DDEFI-03 | Phase 444 | Pending |
-| DDEFI-04 | Phase 444 | Pending |
-| DDEFI-05 | Phase 444 | Pending |
-| DPIPE-01 | Phase 444 | Pending |
-| DPIPE-02 | Phase 444 | Pending |
-| DPIPE-03 | Phase 444 | Pending |
-| DPIPE-04 | Phase 444 | Pending |
-| DPIPE-05 | Phase 444 | Pending |
+| DDEFI-01 | Phase 444 | Complete |
+| DDEFI-02 | Phase 444 | Complete |
+| DDEFI-03 | Phase 444 | Complete |
+| DDEFI-04 | Phase 444 | Complete |
+| DDEFI-05 | Phase 444 | Complete |
+| DPIPE-01 | Phase 444 | Complete |
+| DPIPE-02 | Phase 444 | Complete |
+| DPIPE-03 | Phase 444 | Complete |
+| DPIPE-04 | Phase 444 | Complete |
+| DPIPE-05 | Phase 444 | Complete |
 | DINF-01 | Phase 445 | Pending |
 | DINF-02 | Phase 445 | Pending |
 | DINF-03 | Phase 445 | Pending |

@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v32.8
 milestone_name: 테스트 커버리지 강화
-status: Ready to plan
-stopped_at: Roadmap created
-last_updated: "2026-03-17T10:30:00.000Z"
-last_activity: 2026-03-17 -- Roadmap created with 5 phases (444-448), 48 requirements mapped
+status: planning
+stopped_at: Completed Phase 444 (3/3 plans)
+last_updated: "2026-03-17T09:54:35.006Z"
+last_activity: 2026-03-17 — Roadmap created
 progress:
   total_phases: 5
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  completed_phases: 1
+  total_plans: 3
+  completed_plans: 3
   percent: 0
 ---
 
@@ -37,6 +37,7 @@ Progress: [..........] 0%
 ### Decisions
 
 - Roadmap: 5 phases, daemon 먼저(가장 큰 패키지), 이후 evm/wallet-sdk/admin/cli 병렬 가능, 최종 Phase 448에서 통일 임계값 인상
+- [Phase 444]: DeFi Provider 테스트는 기존 테스트 보완 방식 (humanAmount 변환, 엣지 케이스), Pipeline 테스트는 DB 상태 전이와 GasConditionTracker 보충
 
 ### Pending Todos
 
@@ -48,6 +49,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-17
-Stopped at: Roadmap created, ready to plan Phase 444
+Last session: 2026-03-17T09:54:34.999Z
+Stopped at: Completed Phase 444 (3/3 plans)
 Resume file: None

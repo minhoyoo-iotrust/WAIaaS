@@ -49,7 +49,7 @@ See `.planning/milestones/v32.7-ROADMAP.md` for full details.
 
 ## Phases
 
-- [ ] **Phase 444: daemon DeFi Provider + Pipeline 테스트 강화** - DeFi 5개 Provider와 Pipeline 엣지 케이스 테스트 추가
+- [x] **Phase 444: daemon DeFi Provider + Pipeline 테스트 강화** - DeFi 5개 Provider와 Pipeline 엣지 케이스 테스트 추가 (completed 2026-03-17)
 - [ ] **Phase 445: daemon Infra + Admin API + Notification 테스트** - IncomingTx, RPC Pool, Admin API, Notification 테스트로 daemon 90/85/95 달성
 - [ ] **Phase 446: evm Branches + wallet-sdk Branches 강화** - EVM 가스/토큰/RPC 분기와 wallet-sdk 서명 채널 에러 경로 커버
 - [ ] **Phase 447: admin Functions + cli Lines/Branches 강화** - Admin 이벤트 핸들러/헬퍼/유틸 테스트와 CLI 엣지 케이스 테스트 추가
@@ -122,7 +122,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 444. daemon DeFi Provider + Pipeline 테스트 강화 | 0/3 | In progress | - |
+| 444. daemon DeFi Provider + Pipeline 테스트 강화 | 3/3 | Complete   | 2026-03-17 |
 | 445. daemon Infra + Admin API + Notification 테스트 | 0/TBD | Not started | - |
 | 446. evm Branches + wallet-sdk Branches 강화 | 0/TBD | Not started | - |
 | 447. admin Functions + cli Lines/Branches 강화 | 0/TBD | Not started | - |
