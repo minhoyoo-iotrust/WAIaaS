@@ -1,3 +1,11 @@
+---
+title: "AI Agent Wallet Models Compared"
+description: "Comparing custodial APIs, embedded wallets, MPC, smart contract wallets, and self-hosted daemons for AI agent crypto access."
+date: "2026-02-05"
+section: "blog"
+slug: "ai-agent-wallet-models-compared"
+category: "Why WAIaaS"
+---
 # Why WAIaaS: AI Agent Wallet Models Compared
 
 ## Overview
@@ -265,3 +273,9 @@ Sources:
 - [Crypto.com AI Agent SDK](https://ai-agent-sdk-docs.crypto.com/)
 - [ElizaOS Documentation](https://docs.elizaos.ai)
 - [Solana Agent Kit v2](https://docs.sendai.fun/)
+
+## Related
+
+- [The AI Agent Wallet Security Crisis](/blog/ai-agent-wallet-security-crisis/) - Why existing wallet solutions fail for AI agents
+- [Security Model](/docs/security-model/) - Deep dive into the 3-layer security architecture
+- [Deployment Guide](/docs/deployment/) - Get started with WAIaaS deployment options

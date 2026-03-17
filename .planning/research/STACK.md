@@ -1,272 +1,306 @@
-# Technology Stack: Type Safety Improvements
+# Technology Stack: SEO/AEO Optimization
 
-**Project:** WAIaaS Type Safety + Zod SSoT Consolidation
-**Researched:** 2026-03-16
+**Project:** WAIaaS v32.7 SEO/AEO
+**Researched:** 2026-03-17
 
 ## Recommended Stack
 
-**NO new dependencies needed.** All required tools are already in the codebase. This milestone is about using existing tools correctly, not adding new ones.
+### Constraint: No Framework, Pure HTML + Build Script
 
-### Current Versions (verified from lockfile)
+The existing site (`site/index.html`) is a hand-crafted single HTML file with inline CSS, deployed via `actions/upload-pages-artifact` directly from the `site/` directory. There is no SSG framework (no Hugo, no Eleventy, no Astro). Introducing one would be a fundamental architecture change that is unnecessary for this scope.
 
-| Technology | Version | Purpose | Status |
-|------------|---------|---------|--------|
-| TypeScript | 5.9.3 | Type system | Already strict (`strict: true`, `noUncheckedIndexedAccess: true`) |
-| Zod | 3.25.76 | Runtime validation SSoT | Installed, underused for DB JSON parsing |
-| Drizzle ORM | 0.45.1 | Typed SQL queries | Installed, raw client access pattern needs cleanup |
-| better-sqlite3 | 11.10.0 / 12.6.2 | Raw SQLite access | Dual version (daemon vs push-relay), both fine |
-| @solana/kit | 6.0.1 | Solana chain adapter | Branded generics cause `as any` -- workaround needed |
-| viem | 2.x | EVM chain adapter | Some `as any` in EIP-712 typing |
-| permissionless | 0.3.4 | Account Abstraction (ERC-4337) | Heavy `as any` usage in bundler client calls |
+**Decision: Custom Node.js build script** (`scripts/build-site.mjs`) that converts markdown to HTML using templates. This matches the project's pattern of self-contained build scripts (cf. `generate-og-image.mjs` already in `site/`).
 
-## Pattern-Specific Guidance
+### Markdown-to-HTML Pipeline
 
-### 1. Zod safeParse for JSON.parse Replacement
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| marked | ^17.0.4 | Markdown parser | Zero dependencies, fast, extensible via `marked.use()`. 11k+ npm dependents. No need for remark/unified complexity for static content pages. |
+| gray-matter | ^4.0.3 | YAML front-matter extraction | De facto standard (3,200+ dependents). Extracts title, description, date, schema type, keywords from markdown front-matter. Stable API since 2019, no breaking changes. |
+| marked-highlight | ^2.2.1 | Code syntax highlighting bridge | Official marked extension from markedjs org. Integrates highlight function into marked pipeline. |
+| highlight.js | ^11.11.1 | Syntax highlighting | Ships pre-built CSS themes, works at build time (zero client JS). Use `github-dark` theme to match CRT aesthetic. Lighter than Shiki (no WASM). |
 
-**Problem:** 362 occurrences of `JSON.parse` across 128 files. Critical hotspot: `database-policy-engine.ts` with 21 occurrences doing `JSON.parse(policy.rules)` with manual type assertions to local interfaces -- while Zod schemas for the same types already exist in `@waiaas/core/schemas/policy.schema.ts`.
+### Why NOT These Alternatives
 
-**Pattern -- Use `safeParse` with existing Zod schemas:**
+| Category | Rejected | Why Not |
+|----------|----------|---------|
+| SSG Framework | Eleventy, Hugo, Astro | Overkill. Site is 1 index.html + will become ~20 pages. Custom script is simpler, no framework lock-in, no config files, no theme system. Build script will be <200 lines. |
+| Markdown Parser | markdown-it, remark | marked is simpler, zero deps, sufficient for content pages. remark/unified brings plugin ecosystem complexity. |
+| Syntax Highlighter | Shiki | Requires WASM loading at build time, heavier install (~50MB). highlight.js is sufficient for code examples in blog/docs. |
+| Front-matter | front-matter (npm) | gray-matter is more widely adopted, handles edge cases better, supports TOML/JSON front-matter if needed. |
+| Template Engine | EJS, Handlebars, Nunjucks | Plain JavaScript template literals are sufficient. The HTML template is one file with `${variable}` interpolation. No logic branching needed in templates. |
 
-```typescript
-// BEFORE (current - SSoT violation, no runtime validation)
-const rules: SpendingLimitRules = JSON.parse(spendingPolicy.rules);
+## Build Script Architecture
 
-// AFTER (use existing Zod schema from @waiaas/core)
-import { SpendingLimitRulesSchema } from '@waiaas/core';
+### Input/Output
 
-const parsed = SpendingLimitRulesSchema.safeParse(
-  JSON.parse(spendingPolicy.rules)
-);
-if (!parsed.success) {
-  throw new WAIaaSError('POLICY_INVALID', `Invalid spending limit rules: ${parsed.error.message}`);
-}
-const rules = parsed.data;
+```
+docs/                          # Source markdown (existing, 17 files)
+  why-waiaas/001-*.md         # Blog-style articles (4 files)
+  security-model.md           # Technical docs
+  architecture.md             # Technical docs
+  deployment.md               # Guide
+  guides/*.md                 # How-to guides (5 files)
+  admin-manual/*.md           # Admin guides (1 file)
+
+site/                          # Output (GitHub Pages root)
+  index.html                  # Existing landing page (untouched)
+  style.css                   # Extracted shared stylesheet
+  blog/                       # Generated from docs/why-waiaas/
+    ai-agent-wallet-security-crisis/index.html
+    ai-agent-wallet-models-compared/index.html
+    ...
+  docs/                       # Generated from docs/ technical articles
+    security-model/index.html
+    architecture/index.html
+    deployment/index.html
+    ...
+  sitemap.xml                 # Auto-generated with all URLs
 ```
 
-**Where to apply (priority order):**
+### Front-Matter Schema
 
-| Location | Occurrences | Risk | Approach |
-|----------|-------------|------|----------|
-| `database-policy-engine.ts` | 21 | HIGH -- policy bypass if malformed | safeParse with existing Zod schemas from `@waiaas/core` |
-| `wc-storage.ts` / `wc-session-service.ts` | 4 | MEDIUM -- WalletConnect state corruption | safeParse with `z.unknown()` catch-all |
-| `async-polling-service.ts` (bridgeMetadata) | 3 | LOW -- metadata only | safeParse with `z.record(z.unknown())` |
-| `ntfy-signing-channel.ts` | 2 | MEDIUM -- external input from ntfy | safeParse with signing response schema |
-| Monitors (health/margin/maturity) | 3 | LOW -- metadata parsing | safeParse with `z.record(z.unknown())` |
-| `webhook-service.ts` | 1 | LOW -- internal events array | safeParse with `z.array(z.string())` |
+Add YAML front-matter to existing markdown files:
 
-**Implementation note:** `database-policy-engine.ts` currently declares 12 local interfaces (SpendingLimitRules, WhitelistRules, AllowedTokensRules, etc.) that duplicate Zod schema types in `@waiaas/core`. Delete these local interfaces and import the Zod-inferred types. This restores the Zod SSoT derivation chain per CLAUDE.md.
+```yaml
+---
+title: "Why AI Agents Need Self-Hosted Wallets"
+description: "AI agents managing crypto face a security crisis..."
+date: 2026-03-17
+type: blog | docs | guide       # Determines JSON-LD schema type and URL prefix
+keywords: [ai wallet, security, self-hosted]
+schema: TechArticle | BlogPosting  # JSON-LD @type override (optional)
+---
+```
 
-**Helper utility (reduces boilerplate, place in `@waiaas/core`):**
+### Template Strategy
 
-```typescript
-// packages/core/src/utils/safe-json-parse.ts
-import { z } from 'zod';
+One HTML template file (`site/_template.html`) with:
+- Same CSS variables, JetBrains Mono font, scanline effect as index.html
+- Nav bar with active state for current section (Blog / Docs / GitHub / npm)
+- `<article>` wrapper for rendered markdown content
+- JSON-LD block injected per page from front-matter
+- Canonical URL, OG tags, meta description from front-matter
+- BreadcrumbList JSON-LD for navigation hierarchy
 
-export function safeJsonParse<T extends z.ZodType>(
-  schema: T,
-  json: string,
-  context: string,
-): z.infer<T> {
-  let raw: unknown;
-  try {
-    raw = JSON.parse(json);
-  } catch {
-    throw new Error(`Invalid JSON in ${context}`);
+**No client-side JavaScript** for content pages. Pages are pure static HTML with zero JS.
+
+## Structured Data (JSON-LD)
+
+### Schema Types Per Page Type
+
+| Page Type | Schema.org Type | Key Properties | Confidence |
+|-----------|----------------|----------------|------------|
+| Landing (index.html) | SoftwareApplication + FAQPage + HowTo | Already exists. Add Organization. | HIGH |
+| Blog articles (why-waiaas/) | BlogPosting | headline, datePublished, author, description | HIGH |
+| Technical docs | TechArticle | headline, proficiencyLevel, dependencies | HIGH |
+| Guides | HowTo | name, step[], totalTime, tool[] | HIGH |
+| SEO landing pages | WebPage + FAQPage | mainEntity, speakable | MEDIUM |
+
+### New Structured Data
+
+**Organization (inject on all pages via template):**
+```json
+{
+  "@type": "Organization",
+  "name": "WAIaaS",
+  "url": "https://waiaas.ai",
+  "logo": "https://waiaas.ai/og-image.png",
+  "sameAs": [
+    "https://github.com/minhoyoo-iotrust/WAIaaS",
+    "https://www.npmjs.com/package/@waiaas/cli"
+  ]
+}
+```
+
+**BreadcrumbList (on all content pages):**
+```json
+{
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {"@type": "ListItem", "position": 1, "name": "Home", "item": "https://waiaas.ai/"},
+    {"@type": "ListItem", "position": 2, "name": "Blog", "item": "https://waiaas.ai/blog/"},
+    {"@type": "ListItem", "position": 3, "name": "${title}"}
+  ]
+}
+```
+
+**BlogPosting (blog articles -- `docs/why-waiaas/*.md`):**
+```json
+{
+  "@type": "BlogPosting",
+  "headline": "${title}",
+  "datePublished": "${date}",
+  "dateModified": "${date}",
+  "author": { "@type": "Organization", "name": "WAIaaS" },
+  "publisher": { "@type": "Organization", "name": "WAIaaS" },
+  "description": "${description}",
+  "mainEntityOfPage": "${canonicalUrl}"
+}
+```
+
+**TechArticle (technical docs):**
+```json
+{
+  "@type": "TechArticle",
+  "headline": "${title}",
+  "proficiencyLevel": "Advanced",
+  "dependencies": "Node.js 22+",
+  "datePublished": "${date}",
+  "author": { "@type": "Organization", "name": "WAIaaS" }
+}
+```
+
+### Existing JSON-LD Enhancement
+
+The current index.html has SoftwareApplication, FAQPage, and HowTo schemas. Enhancements:
+- Add `Organization` as `publisher` to SoftwareApplication
+- Expand FAQPage from 5 to 10+ Q&A pairs (AEO coverage)
+- Add `speakable` property for answer engine discoverability
+
+## AEO-Specific Patterns
+
+### No Additional Libraries Needed
+
+AEO optimization is content structure, not technology. The build script handles:
+
+1. **Question-first headings**: `## What is an AI Wallet?` format in markdown
+2. **40-word answer blocks**: First paragraph after H2 is a concise, self-contained answer (AEO best practice per CXL 2026 guide)
+3. **Per-page FAQ extraction**: Markdown `## FAQ` sections auto-converted to FAQPage JSON-LD
+4. **Entity-centric knowledge graph**: Organization schema with service categories, GitHub/npm sameAs links
+
+### Sitemap Generation
+
+The build script auto-generates `sitemap.xml` by scanning all generated HTML files. No library -- XML string interpolation:
+
+```javascript
+const urls = generatedPages.map(p => `
+  <url>
+    <loc>https://waiaas.ai/${p.path}</loc>
+    <lastmod>${p.date}</lastmod>
+    <changefreq>${p.type === 'blog' ? 'monthly' : 'weekly'}</changefreq>
+    <priority>${p.path === '' ? '1.0' : '0.8'}</priority>
+  </url>`).join('');
+```
+
+## CSS Strategy
+
+### Shared Stylesheet Extraction
+
+Currently CSS is inline in index.html (~600 lines). Extract to `site/style.css`:
+- Shared by index.html and all generated pages
+- Add article-specific styles (~100 lines): prose typography, code blocks with highlight.js theme, tables, blockquotes
+- Maintain CRT theme (JetBrains Mono, `--bg: #0c0c0c`, `--green: #00ff41`, scanline effect)
+- highlight.js `github-dark` theme colors integrated into `style.css` (no separate CSS file load)
+
+**No CSS framework.** The existing custom CSS is small and consistent.
+
+## GitHub Actions Integration
+
+### Pages Workflow Update
+
+Current `pages.yml` deploys `site/` directory directly. Add build step before deploy:
+
+```yaml
+steps:
+  - uses: actions/checkout@v4
+  - uses: actions/setup-node@v4
+    with:
+      node-version: 22
+  - name: Install site build dependencies
+    run: cd scripts/site-build && npm ci
+  - name: Build site (markdown -> HTML)
+    run: node scripts/build-site.mjs
+  - uses: actions/configure-pages@v5
+  - uses: actions/upload-pages-artifact@v3
+    with:
+      path: site
+  - uses: actions/deploy-pages@v4
+```
+
+The build script converts markdown to HTML in the `site/` output directory. Source markdown in `docs/`, generated HTML in `site/blog/` and `site/docs/`.
+
+### Build Script Dependencies Package
+
+```json
+{
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "marked": "^17.0.4",
+    "gray-matter": "^4.0.3",
+    "marked-highlight": "^2.2.1",
+    "highlight.js": "^11.11.1"
   }
-  const result = schema.safeParse(raw);
-  if (!result.success) {
-    throw new Error(`Schema validation failed in ${context}: ${result.error.message}`);
-  }
-  return result.data;
 }
 ```
 
-### 2. Drizzle ORM Raw Client Access
-
-**Problem:** 8 occurrences in `wc.ts` of `(db as any).session?.client as Database` to access the underlying better-sqlite3 instance from a Drizzle ORM instance. This is a Drizzle internal API access that breaks type safety.
-
-**Root cause:** `wc.ts` routes receive only the Drizzle `db` object but need raw SQL for WalletConnect storage operations. The `DatabaseConnection` interface at `infrastructure/database/connection.ts` already provides both `sqlite` and `db`, but the WC routes don't receive the `sqlite` handle.
-
-**Pattern -- Pass `DatabaseConnection` or extract raw client properly:**
-
-```typescript
-// OPTION A (preferred): Pass sqlite alongside db in service constructors
-// Already used by: delay-queue.ts, approval-workflow.ts, owner-state.ts
-constructor(
-  private readonly db: BetterSQLite3Database<typeof schema>,
-  private readonly sqlite: Database,  // raw better-sqlite3
-) {}
-
-// OPTION B: Type-safe extraction utility (for cases where refactoring injection is expensive)
-import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import type { Database } from 'better-sqlite3';
-
-/**
- * Extract the raw better-sqlite3 client from a Drizzle BetterSQLite3Database instance.
- * Relies on Drizzle 0.45.x internal structure -- validated for this version.
- */
-export function getRawClient(db: BetterSQLite3Database<any>): Database {
-  const internal = db as unknown as { _: { session: { client: Database } } };
-  return internal._.session.client;
-}
-```
-
-**Why Option A is preferred:** The dual-handle pattern (`db` + `sqlite`) is already established in the codebase (12+ services use it). WC routes are the exception that bypasses it. Fixing the injection graph costs more upfront but eliminates runtime coupling to Drizzle internals.
-
-**Why NOT upgrade Drizzle:** Drizzle 0.45.x is recent. The `as any` pattern is not a Drizzle version issue -- it's a dependency injection issue in the WC routes. Drizzle's planned `.$client` accessor is not yet available.
-
-### 3. @solana/kit Branded Generic Workarounds
-
-**Problem:** 8 occurrences of `as any` + `as unknown as typeof txMessage` in `packages/adapters/solana/src/adapter.ts` due to `@solana/kit` 6.x's branded generic types. The `appendTransactionMessageInstruction` function uses complex branded type parameters that don't compose well when instructions are built separately.
-
-**Root cause:** `@solana/kit` 6.x uses TypeScript branded types (phantom type parameters) to track transaction message state (e.g., which instructions are attached, whether blockhash is set). When you build instructions outside the message pipeline, the brands don't match.
-
-**Pattern -- Wrapper function to centralize the cast:**
-
-```typescript
-// packages/adapters/solana/src/utils/tx-builder.ts
-import {
-  appendTransactionMessageInstruction,
-  type IInstruction,
-  type TransactionMessage,
-} from '@solana/kit';
-
-/**
- * Append an instruction to a transaction message.
- *
- * Centralizes the branded-generic cast required by @solana/kit 6.x.
- * @solana/kit uses phantom type parameters to track message state,
- * which don't compose when instructions are built outside the pipeline.
- *
- * This is the standard workaround -- the branded types are intentionally
- * strict for new code but require casts when integrating pre-built instructions.
- */
-export function appendInstruction<T extends TransactionMessage>(
-  instruction: IInstruction,
-  message: T,
-): T {
-  return appendTransactionMessageInstruction(
-    instruction as Parameters<typeof appendTransactionMessageInstruction>[0],
-    message,
-  ) as unknown as T;
-}
-```
-
-**Why NOT upgrade @solana/kit:** The branded generics are by design in 6.x. Upgrading won't fix this -- it's the intended API surface. The wrapper pattern keeps the single `as unknown as T` cast in one place instead of scattered across 8+ call sites.
-
-**Why NOT use `@solana/web3.js` (legacy):** The codebase has already migrated to `@solana/kit` 6.x. Going back to the legacy API would be a regression.
-
-### 4. `as any` Elimination Categories
-
-**830 total `as any` occurrences across 133 files.** Categorized by fix strategy:
-
-| Category | Count (src, non-test) | Fix Strategy | Priority |
-|----------|----------------------|--------------|----------|
-| **Drizzle raw client** (`wc.ts`) | 8 | Pass `sqlite` handle or extraction utility | HIGH |
-| **@solana/kit branded generics** | 8 | `appendInstruction` wrapper | HIGH |
-| **Policy engine JSON.parse** | 21 (JSON.parse, not `as any`) | Zod safeParse | HIGH |
-| **permissionless bundler client** | 6 | Type assertions with `satisfies` or interface extension | MEDIUM |
-| **WalletConnect SDK types** | 4 | `@walletconnect/sign-client` type quirks -- use `unknown` + narrowing | MEDIUM |
-| **Network ID string literals** | ~8 | Expand `NetworkId` union or use type guard | MEDIUM |
-| **EIP-712 viem types** | 3 | Use `viem`'s `TypedDataDefinition` properly | LOW |
-| **Action provider registry** | 3 | Proper generics on registry interface | LOW |
-| **External action pipeline** | 4 | Proper discriminated union narrowing | LOW |
-| **HTTP server timeouts** (`daemon.ts`) | 2 | Node.js `http.Server` type extension | LOW |
-| **Test files** | ~690 | Separate effort -- mock typing cleanup | DEFER |
-
-**Key insight:** Test files account for ~83% of `as any` usage. Production source has ~140 occurrences. Focus on the ~55 HIGH/MEDIUM priority production occurrences first.
-
-### 5. permissionless (ERC-4337) Type Fixes
-
-**Problem:** `pipeline/stages.ts` has 6 `as any` casts for `bundlerClient.prepareUserOperation`, `sendUserOperation`, `waitForUserOperationReceipt` -- permissionless 0.3.x client types don't match viem's client type system perfectly.
-
-**Pattern -- Use SmartAccountClient type from permissionless:**
-
-```typescript
-import type { SmartAccountClient } from 'permissionless';
-
-// Cast once at creation, use properly typed methods thereafter
-const typedBundlerClient = bundlerClient as SmartAccountClient;
-const prepared = await typedBundlerClient.prepareUserOperation({ calls });
-```
-
-**Why NOT upgrade permissionless:** 0.3.x is the latest stable. The type issues are workaround-able with proper imports.
-
-### 6. Network ID String Literal Casts
-
-**Problem:** ~8 occurrences of `network as any` when calling `networkToCaip2()` -- the function expects a specific `NetworkId` union type but routes receive `string` from query params.
-
-**Pattern -- Validate at boundary with type guard:**
-
-```typescript
-// BEFORE
-try { chainId = networkToCaip2(network as any); } catch { /* graceful */ }
-
-// AFTER
-import { isNetworkId } from '@waiaas/core';
-
-if (isNetworkId(network)) {
-  chainId = networkToCaip2(network);
-}
-```
-
-**If `isNetworkId` type guard doesn't exist, create it:**
-
-```typescript
-// packages/core/src/utils/network.ts
-export function isNetworkId(value: string): value is NetworkId {
-  return NETWORK_IDS.includes(value as NetworkId);
-}
-```
-
-## Alternatives Considered
-
-| Category | Recommended | Alternative | Why Not |
-|----------|-------------|-------------|---------|
-| JSON validation | Zod safeParse (existing) | io-ts, typebox | Zod is already SSoT per CLAUDE.md |
-| Raw DB access | Dual-handle injection | Drizzle `.$client` (planned) | Not available in 0.45.x |
-| Solana branded types | Wrapper function | Downgrade to @solana/web3.js | Regression, already migrated |
-| Test `as any` | Separate cleanup phase | Fix alongside production | Too large scope, different problem |
-
-## What NOT to Change
-
-| DO NOT | Reason |
-|--------|--------|
-| Upgrade @solana/kit | Branded generics are by design in 6.x; upgrading won't help |
-| Upgrade Drizzle ORM | Raw client access is injection issue, not version issue |
-| Upgrade permissionless | 0.3.x is latest stable, type issues are workaround-able |
-| Add new validation library | Zod 3.25.x has everything needed |
-| Enable `noImplicitAny` | Already implied by `strict: true` in tsconfig |
-| Fix test `as any` in this milestone | 690 occurrences in tests; mock typing is separate concern |
-| Replace `JSON.parse` in test files | Test files use `JSON.parse` on known test fixtures; low risk |
+Place at `scripts/site-build/package.json`. Isolated from monorepo package dependencies (site build tools are unrelated to daemon runtime).
 
 ## Installation
 
 ```bash
-# No new packages needed. Zero new dependencies.
+# Create site build package (isolated from monorepo)
+mkdir -p scripts/site-build
+cd scripts/site-build
+npm init -y
+npm install marked@^17.0.4 gray-matter@^4.0.3 marked-highlight@^2.2.1 highlight.js@^11.11.1
 ```
 
-## Verification Commands
+**Total new dependencies: 4 packages** (marked: 0 deps, gray-matter: 4 deps, marked-highlight: 0 deps, highlight.js: 0 deps).
 
-```bash
-# Count remaining `as any` after fixes (production src only)
-grep -r "as any" packages/*/src --include="*.ts" --exclude-dir="__tests__" | wc -l
-# Target: reduce from ~140 to <30 (external SDK boundary casts only)
+## What NOT to Add
 
-# Verify no JSON.parse without safeParse in policy engine
-grep -c "JSON.parse" packages/daemon/src/pipeline/database-policy-engine.ts
-# Target: 0 (all replaced with safeParse)
+| Technology | Why Not |
+|------------|---------|
+| React/Preact for content pages | Static content does not need interactivity. Admin UI uses Preact; site pages are pure HTML. |
+| Tailwind CSS | Existing custom CSS is small and consistent. Tailwind adds build complexity for marginal benefit on ~20 pages. |
+| Any SSG (Hugo/Eleventy/Astro) | A 200-line build script is simpler, faster, no version/plugin compatibility issues. |
+| Search library (Pagefind, Lunr) | Premature for ~20 pages. Users can use browser find or site nav. |
+| Analytics (GA, Plausible) | Out of scope. Can add later as a single `<script>` tag. |
+| RSS feed library | RSS is simple XML template literal interpolation, same as sitemap. No library needed. |
+| Image optimizer (sharp) | No user-uploaded images. OG image is a static PNG. |
+| HTML minifier | Pages are <50KB each. Minification savings negligible for static content. |
+| CMS (Decap, Tina) | Content is markdown in git. No CMS needed. |
+| markdown-it plugins ecosystem | Ecosystem complexity not warranted. marked extensions (marked-highlight) are sufficient. |
 
-# Verify no Drizzle internal access
-grep -r "\.session\?\.client" packages/daemon/src --include="*.ts"
-# Target: 0 occurrences
-```
+## Integration Points with Existing Site
+
+| Existing Asset | Integration |
+|----------------|-------------|
+| `site/index.html` | Untouched. Extract inline CSS to `style.css`, link from both index and templates. |
+| `site/sitemap.xml` | Replaced by auto-generated sitemap from build script. |
+| `site/robots.txt` | No change needed. Already allows all crawlers. |
+| `site/llms.txt` | Update to include links to new blog/docs pages. |
+| `site/og-image.png` | Reused as default OG image for all pages. |
+| `site/favicon.*` | Shared across all pages via template. |
+| `site/CNAME` | No change (waiaas.ai). |
+| `site/.well-known/` | No change. |
+| `.github/workflows/pages.yml` | Add Node.js setup + build step before deploy. |
+| `docs/*.md` (17 files) | Source files. Add YAML front-matter headers. Content unchanged. |
+
+## Confidence Assessment
+
+| Area | Confidence | Notes |
+|------|------------|-------|
+| marked + gray-matter | HIGH | Verified on npm (v17.0.4 / v4.0.3), stable APIs, zero/minimal deps |
+| highlight.js | HIGH | Standard choice, github-dark theme fits CRT aesthetic |
+| JSON-LD schemas | HIGH | schema.org types verified (TechArticle, BlogPosting, HowTo, FAQPage, BreadcrumbList) |
+| AEO content patterns | MEDIUM | Based on 2026 AEO guides; content structure patterns are evidence-based but effectiveness depends on execution quality |
+| Build script approach | HIGH | Matches existing project patterns (generate-og-image.mjs), minimal complexity, proven approach for small static sites |
+| GitHub Actions integration | HIGH | Current workflow is simple; adding a build step is straightforward |
 
 ## Sources
 
-- TypeScript 5.9.3 -- tsconfig.base.json (verified `strict: true`, `noUncheckedIndexedAccess: true`)
-- Zod 3.25.76 -- `safeParse` API stable since Zod 3.x
-- Drizzle ORM 0.45.1 -- `DatabaseConnection` interface at `infrastructure/database/connection.ts`
-- @solana/kit 6.0.1 -- branded generics are documented design choice
-- permissionless 0.3.4 -- `SmartAccountClient` type available for proper typing
-- Codebase analysis: 362 `JSON.parse` (128 files), 830 `as any` (140 production src, 690 tests)
+- [marked npm](https://www.npmjs.com/package/marked) -- v17.0.4, zero dependencies, 11k+ dependents
+- [gray-matter npm](https://www.npmjs.com/package/gray-matter) -- v4.0.3, YAML front-matter parser, 3.2k dependents
+- [marked-highlight GitHub](https://github.com/markedjs/marked-highlight) -- Official marked syntax highlighting extension
+- [highlight.js npm](https://www.npmjs.com/package/highlight.js) -- v11.11.1, build-time syntax highlighting
+- [Schema.org TechArticle](https://schema.org/TechArticle) -- Technical article schema type
+- [Schema.org SoftwareApplication](https://schema.org/SoftwareApplication) -- Software product schema
+- [Google Structured Data Intro](https://developers.google.com/search/docs/appearance/structured-data/intro-structured-data) -- JSON-LD implementation guide
+- [CXL AEO Guide 2026](https://cxl.com/blog/answer-engine-optimization-aeo-the-comprehensive-guide/) -- Answer Engine Optimization best practices
+- [Schema Markup for AEO](https://pbjmarketing.com/blog/schema-markup-for-aeo) -- Structured data for answer engines
+- [Structured Data in AEO](https://higoodie.com/blog/structured-data-in-aeo) -- Entity-centric knowledge graphs
+- [GitHub Pages Docs](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site) -- Custom build workflows
+- [Schema Markup for SaaS](https://www.datadab.com/blog/schema-markup-for-saas-content-a-technical-guide/) -- SaaS-specific schema patterns

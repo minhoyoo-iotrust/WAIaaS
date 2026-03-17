@@ -1,3 +1,11 @@
+---
+title: "OpenClaw Integration Guide"
+description: "Connect WAIaaS to OpenClaw AI agent bot. Skill file installation, configuration, and verification."
+date: "2026-02-10"
+section: "blog"
+slug: "openclaw-integration"
+category: "Guides"
+---
 # OpenClaw Integration Guide
 
 This guide walks you through connecting WAIaaS to [OpenClaw](https://openclaw.io), an open-source AI agent bot that follows the Agent Skills open standard.
@@ -124,3 +132,9 @@ Check that your session token is correct in `openclaw.json`. You can verify with
 ```bash
 curl -H "Authorization: Bearer <session-token>" http://localhost:3100/v1/connect-info
 ```
+
+## Related
+
+- [Agent Skills Integration Guide](/blog/agent-skills-integration/) - General skill installation for all agents
+- [Agent Self-Setup Guide](/blog/agent-self-setup/) - Automated daemon setup from an agent
+- [API Reference](/docs/api-reference/) - REST API documentation for direct integration

@@ -1,3 +1,11 @@
+---
+title: "Claude Code Integration Guide"
+description: "Connect WAIaaS to Claude Code via skill files or MCP server. Step-by-step setup with verification."
+date: "2026-02-10"
+section: "blog"
+slug: "claude-code-integration"
+category: "Guides"
+---
 # Claude Code Integration Guide
 
 This guide walks you through connecting WAIaaS to [Claude Code](https://claude.ai/claude-code), Anthropic's official CLI for Claude. WAIaaS provides two integration methods: skill files and MCP server.
@@ -130,3 +138,9 @@ If using MCP integration, verify the setup:
 ```bash
 waiaas mcp setup --check
 ```
+
+## Related
+
+- [Agent Skills Integration Guide](/blog/agent-skills-integration/) - General skill installation for all agents
+- [Agent Self-Setup Guide](/blog/agent-self-setup/) - Automated daemon setup from an agent
+- [API Reference](/docs/api-reference/) - REST API documentation for direct integration

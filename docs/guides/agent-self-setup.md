@@ -1,3 +1,11 @@
+---
+title: "Agent Self-Setup Guide"
+description: "How an autonomous AI agent can set up WAIaaS from scratch with zero human interaction using auto-provision mode."
+date: "2026-02-10"
+section: "blog"
+slug: "agent-self-setup"
+category: "Guides"
+---
 # Agent Self-Setup Guide
 
 This guide describes how an autonomous AI agent can set up WAIaaS from scratch with zero human interaction using the **auto-provision** mode.
@@ -76,3 +84,9 @@ This returns accessible wallets, policies, capabilities, and an AI-ready usage p
 - [Agent Skills Integration](agent-skills-integration.md) -- Install WAIaaS skill files to teach your agent wallet operations
 - [Claude Code Integration](claude-code-integration.md) -- Claude Code specific skill setup
 - [OpenClaw Integration](openclaw-integration.md) -- OpenClaw specific skill setup
+
+## Related
+
+- [Agent Skills Integration Guide](/blog/agent-skills-integration/) - Install WAIaaS skill files for your agent
+- [Deployment Guide](/docs/deployment/) - WAIaaS deployment and configuration options
+- [The AI Agent Wallet Security Crisis](/blog/ai-agent-wallet-security-crisis/) - Why secure agent setup matters

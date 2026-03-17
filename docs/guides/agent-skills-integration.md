@@ -1,3 +1,11 @@
+---
+title: "Agent Skills Integration Guide"
+description: "Install WAIaaS skill files using the Agent Skills open standard. Compatible with 27+ AI agent platforms."
+date: "2026-02-10"
+section: "blog"
+slug: "agent-skills-integration"
+category: "Guides"
+---
 # Agent Skills Integration Guide
 
 This guide walks you through installing WAIaaS skill files using the [Agent Skills](https://agentskills.io) open standard. This format is compatible with 27+ AI agent platforms.
@@ -111,3 +119,9 @@ If not running:
 ```bash
 waiaas start
 ```
+
+## Related
+
+- [Agent Self-Setup Guide](/blog/agent-self-setup/) - Autonomous daemon provisioning for agents
+- [API Reference](/docs/api-reference/) - REST API that skills interact with
+- [Autonomous AI Agents Deserve Secure Wallets](/blog/autonomous-agents-deserve-secure-wallets/) - Why agents need secure wallet access

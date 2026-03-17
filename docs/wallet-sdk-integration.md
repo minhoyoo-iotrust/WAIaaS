@@ -1,3 +1,11 @@
+---
+title: "Wallet SDK Integration Guide"
+description: "Integrate external wallet apps with WAIaaS Signing Protocol using @waiaas/wallet-sdk. Architecture and code examples."
+date: "2026-02-17"
+section: "docs"
+slug: "wallet-sdk-integration"
+category: "Technical"
+---
 # Wallet SDK Integration Guide
 
 This guide walks through integrating an external wallet application with the WAIaaS Signing Protocol using `@waiaas/wallet-sdk`.
@@ -419,3 +427,9 @@ A: The daemon accepts only the first valid response per requestId. Subsequent re
 
 **Q: How do I handle different chains (EVM vs Solana)?**
 A: The `chain` field in SignRequest tells you which signing algorithm to use. For EVM, use `eth_sign` or equivalent. For Solana, use `ed25519` signing.
+
+## Related
+
+- [Security Model](/docs/security-model/) - Security architecture that the Wallet SDK implements
+- [Agent Self-Setup Guide](/blog/agent-self-setup/) - Using the SDK for automated agent setup
+- [Self-Custody for Agents Means Self-Hosting](/blog/self-custody-means-self-hosting/) - Self-custody principles behind the SDK

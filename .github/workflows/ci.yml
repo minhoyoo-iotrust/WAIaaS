@@ -94,6 +94,9 @@ jobs:
       - name: Security Tests
         run: pnpm turbo run test:security
 
+      - name: E2E Offchain Tests
+        run: pnpm --filter @waiaas/e2e-tests test:offchain
+
       - name: Verify Enum SSoT
         run: pnpm run verify:enums
 

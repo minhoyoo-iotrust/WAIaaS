@@ -1,3 +1,11 @@
+---
+title: "The AI Agent Wallet Security Crisis"
+description: "Real-world attacks on AI agent wallets: skill file trojans, prompt injection fund drains, and supply chain compromises. Why agents need isolated wallet infrastructure."
+date: "2026-02-05"
+section: "blog"
+slug: "ai-agent-wallet-security-crisis"
+category: "Why WAIaaS"
+---
 # Why WAIaaS: The AI Agent Wallet Security Crisis
 
 ## The Problem
@@ -209,3 +217,9 @@ Your agent can be prompt-injected, skill-file-poisoned, or tool-chain-attacked. 
 ---
 
 *Last updated: 2026-02-15*
+
+## Related
+
+- [AI Agent Wallet Models Compared](/blog/ai-agent-wallet-models-compared/) - Compare custodial, MPC, and self-hosted wallet approaches for AI agents
+- [Autonomous AI Agents Deserve Secure Wallets](/blog/autonomous-agents-deserve-secure-wallets/) - Why autonomous agents need purpose-built wallet infrastructure
+- [Architecture](/docs/architecture/) - Technical architecture of the WAIaaS daemon and transaction pipeline

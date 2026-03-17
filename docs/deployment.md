@@ -1,3 +1,11 @@
+---
+title: "Deployment Guide"
+description: "Deploy WAIaaS via npm global install or Docker Compose. Production setup, configuration, and TLS termination."
+date: "2026-02-10"
+section: "docs"
+slug: "deployment"
+category: "Technical"
+---
 # Deployment Guide
 
 This guide covers two deployment methods for WAIaaS: **npm global install** (recommended for development and single-host setups) and **Docker Compose** (recommended for production).
@@ -601,3 +609,9 @@ Error: Failed to connect to Solana RPC
 - Verify your RPC URL is correct and accessible.
 - For mainnet, consider using a dedicated RPC provider (Alchemy, QuickNode, Helius) instead of the public endpoint.
 - Test connectivity via Admin API: `POST /v1/admin/settings/test-rpc`.
+
+## Related
+
+- [Architecture](/docs/architecture/) - System architecture overview
+- [Agent Self-Setup Guide](/blog/agent-self-setup/) - Automated daemon provisioning for agents
+- [Running WAIaaS Inside an Agent Docker Container](/blog/docker-sidecar-install/) - Docker sidecar deployment pattern

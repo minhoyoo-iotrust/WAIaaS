@@ -1,3 +1,11 @@
+---
+title: "Smart Account Lite / Full Mode Guide"
+description: "WAIaaS Smart Account (ERC-4337) modes: Lite for basic signing, Full for UserOp bundling with gas sponsorship."
+date: "2026-02-15"
+section: "docs"
+slug: "smart-account-guide"
+category: "Technical"
+---
 # Smart Account (AA) Lite / Full Mode Guide
 
 ## Overview
@@ -393,3 +401,9 @@ Two validations are performed at sign time:
 ### Mode Transition
 
 Lite → Full transition is available at any time. Setting an AA Provider switches to Full mode without recreating the wallet.
+
+## Related
+
+- [ERC-4337 Sponsor Proxy Server Specification](/docs/erc-4337-sponsor-proxy-spec/) - Gas sponsorship proxy for smart accounts
+- [API Reference](/docs/api-reference/) - UserOp build/sign API endpoints
+- [Self-Custody for Agents Means Self-Hosting](/blog/self-custody-means-self-hosting/) - Why self-hosted smart accounts matter

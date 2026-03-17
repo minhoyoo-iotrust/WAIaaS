@@ -1,3 +1,11 @@
+---
+title: "API Reference"
+description: "WAIaaS REST API reference: authentication, endpoint categories, request/response schemas, and error codes."
+date: "2026-02-10"
+section: "docs"
+slug: "api-reference"
+category: "Technical"
+---
 # API Reference
 
 WAIaaS exposes a REST API on `http://127.0.0.1:3100`. All endpoints are defined using OpenAPI 3.0 decorators and the daemon serves the full specification at runtime.
@@ -312,3 +320,9 @@ waiaas mcp setup  # Automatic Claude Desktop configuration
 **Resources:** `waiaas://wallet/balance`, `waiaas://wallet/address`, `waiaas://system/status`.
 
 See: [@waiaas/mcp on npm](https://www.npmjs.com/package/@waiaas/mcp)
+
+## Related
+
+- [Architecture](/docs/architecture/) - System architecture and pipeline overview
+- [Agent Self-Setup Guide](/blog/agent-self-setup/) - Using the API for automated setup
+- [Agent Skills Integration Guide](/blog/agent-skills-integration/) - Teaching agents to use the API via skills

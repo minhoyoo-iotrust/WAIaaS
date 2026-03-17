@@ -1,94 +1,181 @@
 # Feature Landscape
 
-**Domain:** Type Safety + Code Quality Refactoring (WAIaaS v32.4)
-**Researched:** 2026-03-16
+**Domain:** SEO/AEO 최적화 (정적 GitHub Pages 사이트 확장)
+**Researched:** 2026-03-17
+
+## 현재 상태 (이미 구축됨)
+
+| 기존 기능 | 상태 | 비고 |
+|-----------|------|------|
+| 단일 페이지 랜딩 (CRT 터미널 테마) | 완료 | index.html 1,109줄 |
+| 기본 meta tags (OG, Twitter Card) | 완료 | title/description/image |
+| JSON-LD SoftwareApplication | 완료 | schema.org 타입 |
+| JSON-LD FAQPage (5개 Q&A) | 완료 | 기본 FAQ |
+| JSON-LD HowTo (3-step quickstart) | 완료 | 설치 가이드 |
+| sitemap.xml (1 URL) | 완료 | 루트만 |
+| robots.txt | 완료 | Allow: / |
+| llms.txt | 완료 | 2,615자 AI 크롤러용 |
+| .well-known/ai-plugin.json | 완료 | AI 플러그인 디스커버리 |
+| CNAME (waiaas.ai) | 완료 | 커스텀 도메인 |
+| /docs/ 마크다운 콘텐츠 | 완료 | 17개 .md 파일 (GitHub 렌더링만) |
 
 ## Table Stakes
 
-Features users expect. Missing = refactoring feels incomplete.
+사용자(검색엔진 + AI 엔진)가 기대하는 기능. 누락 시 검색 노출 자체가 불가능.
 
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| `as any` 제거 (production code ~40건) | `as any`는 타입 시스템을 무력화하여 런타임 버그의 원인이 됨. 리팩토링 마일스톤에서 가장 기본적인 기대 | Med | wc.ts(8건), stages.ts(6건), external-action-pipeline.ts(4건), Solana adapter(5건), daemon lifecycle(3건), eip712-signer(3건), routes(~10건) 등 카테고리별 접근 필요 |
-| DatabasePolicyEngine JSON.parse Zod 검증 | DB에 JSON 문자열로 저장된 정책 rules를 `JSON.parse()` 후 TypeScript interface로만 캐스팅 중. 손상된 DB 데이터가 런타임 크래시 유발 가능 | Med | 20건 이상의 `JSON.parse(policy.rules)` 호출. @waiaas/core에 Zod 스키마가 이미 존재(13개 policy type)하나 engine 내부에서 사용하지 않음 |
-| NATIVE_DECIMALS 상수 SSoT 통합 | 동일한 `Record<string, number>` 정의가 5곳에 중복. 값 불일치 시 금액 계산 오류 직결 | Low | dry-run.ts, resolve-effective-amount-usd.ts, stages.ts, database-policy-engine.ts, admin-wallets.ts |
-| sleep 유틸리티 SSoT 통합 | 동일한 `sleep(ms)` 함수가 5곳에 중복 정의 | Low | core, cli, solana adapter, daemon pipeline, x402 routes. daemon/src/pipeline/sleep.ts가 이미 존재하나 다른 패키지에서 사용하지 않음 |
-| wc.ts Drizzle DB 접근 패턴 수정 | `(db as any).session?.client`로 Drizzle 내부 구현에 접근하는 코드 8건. Drizzle 버전 업그레이드 시 깨짐 | Med | raw SQL을 Drizzle query builder로 교체하거나, 명시적 sqlite 참조를 DI로 전달 |
-| 정책 rules 인터페이스 중복 제거 | database-policy-engine.ts에 12개 plain interface 정의, core/schemas/policy.schema.ts에 동일한 Zod 스키마 존재. 양쪽이 drift하면 런타임/타입 불일치 | Low | engine 내부 interface 제거 -> core Zod infer 타입 사용 |
+| Feature | 기대 이유 | Complexity | 기존 의존성 | 비고 |
+|---------|-----------|------------|------------|------|
+| 마크다운 -> HTML 빌드 스크립트 | /docs/ 콘텐츠가 GitHub raw 렌더링만 됨, 검색엔진은 HTML 페이지를 인덱싱 | Med | 17개 .md 파일 | Node.js 스크립트, SSG 프레임워크 불필요 |
+| HTML 페이지 템플릿 | 일관된 레이아웃, head meta, nav, footer 공유 | Med | index.html CRT 테마 | 템플릿 리터럴 or 간단한 HTML 템플릿 |
+| 전역 네비게이션 | 멀티 페이지 사이트에서 페이지 간 이동 필수 | Low | 단일 페이지라 없음 | header nav bar, 모바일 반응형 |
+| 확장된 sitemap.xml | 모든 HTML 페이지 자동 등록, 검색엔진 크롤링 필수 | Low | 기존 1 URL sitemap | 빌드 스크립트에서 자동 생성 |
+| 페이지별 meta tags | 각 페이지 고유 title/description/canonical, 검색 결과 표시 품질 | Low | 기존 루트 페이지만 | 마크다운 frontmatter에서 추출 |
+| 페이지별 OG/Twitter Card | SNS 공유 시 미리보기, 외부 분배 필수 | Low | 기존 루트만 | og:title, og:description, og:url |
+| Blog 섹션 | why-waiaas 4편 + guides 5편 = 기존 콘텐츠 웹 발행 | Low | docs/ 마크다운 | URL: /blog/{slug}/ |
+| Docs 섹션 | architecture, security-model, api-reference 등 기술 문서 웹 발행 | Low | docs/ 마크다운 | URL: /docs/{slug}/ |
 
 ## Differentiators
 
-Features that set product apart. Not expected, but valued.
+경쟁 프로젝트 대비 차별점. 기대되진 않지만, 있으면 SEO/AEO 순위를 결정적으로 끌어올림.
 
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| JSON.parse 안전 파서 유틸리티 | `safeParseJson<T>(json, schema): T` 유틸리티로 Zod 검증 + 에러 컨텍스트를 한 곳에서 제공. 향후 모든 JSON.parse를 대체하는 패턴 확립 | Low | @waiaas/core에 배치. try/catch + ZodError -> WAIaaSError 변환 포함 |
-| bundlerClient 타입 안전 래퍼 | stages.ts의 `(bundlerClient as any).prepareUserOperation` 등 3건을 타입 안전 래퍼로 교체. viem/permissionless AA 타입이 불완전한 부분을 래퍼로 격리 | Med | viem bundler 타입이 실제로 지원하는지 확인 필요. 미지원 시 래퍼 인터페이스로 `as any` 격리 |
-| Solana adapter 제네릭 타입 수정 | `appendTransactionMessageInstruction` 호출 시 `as any` + `as unknown as typeof txMessage` 5건. @solana/kit 제네릭 타입 불일치 원인 분석 후 근본 해결 | High | @solana/kit 6.x 타입 시스템 조사 필요. 제네릭 파라미터 명시로 해결 가능할 수 있으나, 라이브러리 자체 제한일 수도 있음 |
-| external-action-pipeline 타입 정밀화 | `as any` 4건 + `as unknown as` 4건. ResolvedAction union 타입의 kind별 narrowing 미적용이 원인 | Med | discriminatedUnion narrowing + 적절한 타입 가드 추가로 대부분 해결 가능 |
-| Admin UI formatDisplayCurrency 중복 제거 | @waiaas/core의 함수를 인라인 복사한 packages/admin 내 중복 구현 | Low | Admin이 브라우저 번들이므로 core에서 직접 import 불가한 사정이 있을 수 있음. 확인 후 shared 유틸리티 또는 core에서 export하는 방향 |
-| `as unknown as` 캐스트 격리 | Solana adapter, external-action-pipeline 등에서 `as unknown as` 캐스트가 타입 안전성을 우회. 래퍼 함수로 캐스트를 한 곳에 격리하고 JSDoc으로 이유 문서화 | Low | 라이브러리 타입 불일치로 불가피한 캐스트는 `// SAFETY: ...` 주석 + 래퍼 격리 |
+| Feature | 가치 | Complexity | 기존 의존성 | 비고 |
+|---------|------|------------|------------|------|
+| SEO 랜딩 페이지 (카테고리 정의) | "AI wallet" 키워드 카테고리 자체를 정의하는 long-form 콘텐츠 -- 검색 의도에 직접 응답 | Med | why-waiaas 콘텐츠 소스 | /what-is-ai-wallet/ 등 2-3개 전용 페이지 |
+| 확장된 JSON-LD 구조화 데이터 | Article/TechArticle/BreadcrumbList 등 페이지 타입별 스키마 -- AI 엔진 인용 확률 증가 | Med | 기존 SoftwareApplication + FAQ | 페이지별 자동 주입 |
+| FAQ 대규모 확장 | 5개 -> 20-30개 Q&A -- AEO 40-word rule 적용, AI 엔진이 직접 인용 가능한 응답 | Med | 기존 5개 FAQ | 카테고리별 분류 (설치/보안/DeFi/체인) |
+| llms-full.txt | llms.txt의 확장판 -- 전체 문서 내용을 LLM이 단일 요청으로 소화 가능한 형태 제공 | Low | 기존 llms.txt | llms.txt에서 링크, 빌드 시 생성 |
+| AI 디렉토리 등록 자료 패키지 | 등록용 description/screenshot/category 통일 세트 -- 10+ 디렉토리 일괄 등록 | Low | 기존 OG 이미지 | SUBMISSION_KIT.md |
+| Comparison 페이지 | "WAIaaS vs Lit Protocol", "WAIaaS vs Turnkey" 등 -- 경쟁 키워드 포착 | Med | why-waiaas/002 비교 콘텐츠 | /compare/{competitor}/ |
+| 커뮤니티 포스팅 초안 | Reddit/HN/Discord/Twitter 용 포맷별 초안 -- 외부 백링크 확보 가속 | Low | 없음 | 마크다운 초안 파일 |
+| BreadcrumbList JSON-LD | 검색 결과에 경로 표시 (waiaas.ai > Blog > Article) -- 클릭률 증가 | Low | 없음 | 모든 서브 페이지에 자동 적용 |
 
 ## Anti-Features
 
-Features to explicitly NOT build.
+명시적으로 만들지 않을 것.
 
-| Anti-Feature | Why Avoid | What to Do Instead |
-|--------------|-----------|-------------------|
-| `@ts-expect-error`로 일괄 대체 | `as any`를 `@ts-expect-error`로 바꾸면 타입 에러를 숨길 뿐, 근본 해결이 아님 | 각 `as any`의 근본 원인(타입 불일치, 라이브러리 제한, 잘못된 타입 설계)을 분석하여 적절한 해결 |
-| 테스트 코드의 `as any` 제거 | 테스트 코드의 `as any`는 mock/stub 구성에 필수적인 경우가 많음. 프로덕션 코드와 다른 기준 적용 필요 | 프로덕션 코드만 대상. 테스트 코드는 별도 마일스톤에서 검토 |
-| scripts/ 내 `as any` 제거 | extract-openapi.ts 등은 stub 객체를 의도적으로 `as any`로 생성. 빌드 도구의 타입 정밀화는 ROI가 낮음 | scripts/는 제외. 프로덕션 런타임 코드만 대상 |
-| 전체 JSON.parse에 Zod 추가 | MCP 테스트 파일, 스크립트 내 JSON.parse는 검증 불필요(이미 타입 검증된 입력). 무분별한 Zod 추가는 성능 오버헤드 | DatabasePolicyEngine(20건) + wallet-sdk parse-request(3건) + MCP session-manager(1건) 등 외부 입력만 대상 |
-| strict mode 전환 | tsconfig strict 옵션 전환은 파급 범위가 너무 큼 | 현재 설정 유지. 점진적으로 타입 안전성 향상 |
-| Drizzle 버전 업그레이드 | wc.ts 문제 해결을 위해 Drizzle를 업그레이드하면 마이그레이션 위험 | 현재 Drizzle 버전 내에서 query builder 사용 또는 sqlite 참조 DI |
+| Anti-Feature | 회피 이유 | 대안 |
+|--------------|----------|------|
+| SSG 프레임워크 도입 (Jekyll/Hugo/Astro) | 의존성 과잉, GitHub Pages 순수 HTML 컨셉 파괴, 빌드 복잡도 증가 | Node.js 단일 빌드 스크립트 (marked + 템플릿 리터럴) |
+| SPA 라우팅 (React/Preact) | CSR은 SEO 불리, 크롤러가 JS 실행 필요, 기존 CRT 테마와 충돌 | 정적 HTML 멀티 페이지 |
+| 서버 사이드 렌더링 | GitHub Pages는 정적 호스팅만 지원 | 빌드 타임 HTML 생성 |
+| CMS 통합 | 오버엔지니어링, 마크다운 직접 편집이 충분 | Git 기반 콘텐츠 관리 |
+| Google Analytics | 프라이버시 우려, 로딩 성능 영향, 초기 트래픽에서 불필요 | 없음 (또는 추후 privacy-friendly 대안) |
+| 자동 번역 (i18n) | 콘텐츠가 영어 타깃, 번역 품질 관리 비용 과다 | 영어 단일 언어 |
+| 댓글 시스템 | 정적 사이트에 동적 요소 불필요, 스팸 관리 부담 | GitHub Discussions 링크 |
+| A/B 테스팅 | 초기 트래픽 없이 통계적 유의미성 불가 | 수동 콘텐츠 최적화 |
 
 ## Feature Dependencies
 
 ```
-NATIVE_DECIMALS SSoT -> (독립, 의존성 없음)
-sleep SSoT -> (독립, 의존성 없음)
-정책 rules interface 중복 제거 -> DatabasePolicyEngine JSON.parse Zod 검증
-  (interface를 먼저 core Zod infer 타입으로 교체한 후, JSON.parse에 Zod 검증 추가)
-safeParseJson 유틸리티 -> DatabasePolicyEngine JSON.parse Zod 검증
-  (유틸리티를 먼저 만든 후, engine에서 사용)
-wc.ts DB 접근 수정 -> (독립, 그러나 Drizzle API 확인 필요)
-bundlerClient 래퍼 -> stages.ts as any 제거
-external-action-pipeline 타입 정밀화 -> (ResolvedAction Zod 스키마 이미 존재)
-Solana adapter 타입 수정 -> (@solana/kit 타입 조사 선행 필요)
+마크다운 -> HTML 빌드 스크립트 ---+---> HTML 페이지 템플릿
+                                +---> 전역 네비게이션
+                                +---> 확장된 sitemap.xml (자동 생성)
+                                +---> 페이지별 meta tags (frontmatter 파싱)
+                                +---> 페이지별 OG/Twitter Card
+
+HTML 페이지 템플릿 ---+---> Blog 섹션 (docs/why-waiaas/ + docs/guides/)
+                      +---> Docs 섹션 (docs/*.md 기술 문서)
+                      +---> SEO 랜딩 페이지 (신규 콘텐츠)
+                      +---> Comparison 페이지 (신규 콘텐츠)
+                      +---> BreadcrumbList JSON-LD
+
+Blog/Docs 섹션 ------+---> 확장된 JSON-LD (Article/TechArticle)
+                      +---> FAQ 대규모 확장
+
+llms.txt (기존) -----------> llms-full.txt (빌드 시 생성)
+
+OG 이미지 (기존) ----+---> AI 디렉토리 등록 자료
+                     +---> 커뮤니티 포스팅 초안
 ```
+
+## 콘텐츠 매핑: 기존 마크다운 -> 웹 페이지
+
+### Blog 섹션 (/blog/)
+
+| 소스 파일 | 웹 URL | SEO 타깃 키워드 |
+|-----------|--------|----------------|
+| docs/why-waiaas/001-ai-agent-wallet-security-crisis.md | /blog/ai-agent-wallet-security-crisis/ | "AI agent wallet security" |
+| docs/why-waiaas/002-ai-agent-wallet-models-compared.md | /blog/ai-agent-wallet-models-compared/ | "AI agent wallet comparison" |
+| docs/why-waiaas/003-autonomous-agents-deserve-secure-wallets.md | /blog/autonomous-agents-secure-wallets/ | "autonomous AI agent wallet" |
+| docs/why-waiaas/004-self-custody-means-self-hosting.md | /blog/self-custody-self-hosting/ | "self-hosted crypto wallet" |
+| docs/guides/claude-code-integration.md | /blog/claude-code-wallet-integration/ | "Claude Code crypto wallet" |
+| docs/guides/openclaw-integration.md | /blog/openclaw-wallet-integration/ | "OpenClaw AI agent wallet" |
+| docs/guides/docker-sidecar-install.md | /blog/docker-sidecar-wallet-setup/ | "Docker AI wallet daemon" |
+| docs/guides/agent-skills-integration.md | /blog/agent-skills-wallet-integration/ | "AI agent skill files" |
+| docs/guides/agent-self-setup.md | /blog/agent-self-setup-wallet/ | "AI agent wallet setup" |
+
+### Docs 섹션 (/docs/)
+
+| 소스 파일 | 웹 URL | SEO 타깃 키워드 |
+|-----------|--------|----------------|
+| docs/architecture.md | /docs/architecture/ | "wallet as a service architecture" |
+| docs/security-model.md | /docs/security-model/ | "AI wallet security model" |
+| docs/deployment.md | /docs/deployment/ | "wallet daemon deployment" |
+| docs/api-reference.md | /docs/api-reference/ | "wallet API reference" |
+| docs/wallet-sdk-integration.md | /docs/wallet-sdk/ | "wallet SDK integration" |
+| docs/smart-account-lite-full-guide.md | /docs/smart-account/ | "ERC-4337 smart account" |
+| docs/erc-4337-sponsor-proxy-spec.md | /docs/erc4337-sponsor-proxy/ | "ERC-4337 paymaster" |
+| docs/admin-manual/telegram-setup.md | /docs/telegram-setup/ | "Telegram wallet bot setup" |
+
+### SEO 랜딩 페이지 (신규 작성)
+
+| 페이지 | 웹 URL | 주요 키워드 | 콘텐츠 성격 |
+|--------|--------|------------|------------|
+| AI Wallet이란? | /what-is-ai-wallet/ | "AI wallet", "what is AI wallet" | 카테고리 정의 -- "AI wallet"이라는 개념 자체를 설명하고 WAIaaS를 대표 솔루션으로 포지셔닝 |
+| AI Agent를 위한 안전한 지갑 | /ai-agent-wallet-security/ | "AI agent wallet security", "secure AI wallet" | 보안 관점 랜딩 -- 3계층 보안, default-deny, kill switch 강조 |
+| MCP Wallet 통합 가이드 | /mcp-wallet/ | "MCP wallet", "model context protocol wallet" | MCP 통합 사용 사례 -- AI 에이전트가 지갑을 사용하는 구체적 시나리오 |
+
+## JSON-LD 구조화 데이터 계획
+
+| 페이지 유형 | Schema.org 타입 | 용도 |
+|------------|----------------|------|
+| 홈 (기존) | SoftwareApplication + FAQPage + HowTo | 유지 |
+| Blog 글 | Article + BreadcrumbList | 검색 결과 리치 스니펫, AI 인용 |
+| Docs 기술 문서 | TechArticle + BreadcrumbList | 기술 문서 특화 마크업 |
+| SEO 랜딩 | WebPage + FAQPage + BreadcrumbList | 카테고리 정의 + FAQ 리치 결과 |
+| Comparison | WebPage + BreadcrumbList | 비교 검색 의도 매칭 |
+
+## AEO 최적화 전략
+
+| 기법 | 적용 방식 | 기대 효과 |
+|------|----------|----------|
+| 40-word answer rule | 모든 FAQ 응답을 40단어 이내로 시작, 이후 상세 설명 | AI 엔진 직접 인용 확률 증가 |
+| Question-first heading | H2/H3를 "How to...", "What is..." 형태로 구성 | AI 프롬프트 패턴 매칭 |
+| Speakable 마크업 | 핵심 응답 블록에 speakable 속성 | 음성 어시스턴트 응답 소스 |
+| Entity 강화 | WAIaaS를 SoftwareApplication 엔티티로 일관되게 참조 | 지식 그래프 등록 가속 |
+| llms-full.txt | 전체 문서 단일 파일 -- LLM RAG 소스 | Claude/GPT가 WAIaaS 정보를 정확하게 응답 |
 
 ## MVP Recommendation
 
-Prioritize:
-1. **NATIVE_DECIMALS + sleep SSoT** - 가장 간단하고 즉시 효과적. 중복 5곳씩 통합
-2. **safeParseJson 유틸리티 + 정책 rules 타입 통합 + DatabasePolicyEngine Zod 검증** - 정책 엔진이 코어 보안 계층이므로 런타임 검증 추가가 가장 높은 ROI
-3. **wc.ts DB 접근 패턴 수정** - 8건의 `(db as any).session?.client` 일괄 해결
-4. **stages.ts/userop.ts bundlerClient as any** - 래퍼 격리로 6건 해결
-5. **external-action-pipeline 타입 정밀화** - discriminatedUnion narrowing으로 4건 해결
-6. **EIP-712 signer + route 파일 as any** - 개별 수정 (~10건)
-7. **Solana adapter as any** - @solana/kit 타입 조사 후 가능한 범위에서 수정
+### 우선 빌드 (Phase 1-2에 해당)
 
-Defer:
-- **Solana adapter `as unknown as typeof txMessage`**: @solana/kit 6.x 제네릭 타입 제한으로 불가피할 수 있음. 조사 후 판단
-- **Admin UI formatDisplayCurrency 통합**: 브라우저 번들 제약 확인 후 별도 처리
-- **테스트/스크립트 코드 타입 개선**: 다른 마일스톤에서
+1. **마크다운 -> HTML 빌드 스크립트** -- 모든 후속 기능의 기반, 이것 없이는 아무것도 배포 불가
+2. **HTML 템플릿 + 네비게이션** -- 멀티 페이지 사이트의 기본 구조
+3. **Blog + Docs 섹션** -- 기존 17개 .md 파일 즉시 웹 발행, 새 콘텐츠 작성 없이 페이지 수 확보
+4. **확장된 sitemap.xml** -- 빌드 스크립트에 자동 생성 포함
+5. **페이지별 meta/OG** -- frontmatter 파싱으로 자동 적용
 
-## Complexity Assessment
+### 차순위 빌드 (Phase 3에 해당)
 
-| Category | 건수 | Complexity | Rationale |
-|----------|------|------------|-----------|
-| SSoT 통합 (NATIVE_DECIMALS, sleep) | ~10곳 | **Low** | 단순 import 교체, 행위 변경 없음 |
-| DatabasePolicyEngine Zod 검증 | ~20건 JSON.parse | **Med** | 기존 Zod 스키마 재사용 가능하나, 에러 핸들링 전략 결정 필요 (fail-open vs fail-closed) |
-| wc.ts DB 접근 | 8건 | **Med** | Drizzle raw SQL API 또는 DI 패턴 결정 필요 |
-| bundlerClient 래퍼 | 3-4건 | **Med** | viem/permissionless 타입 조사 필요 |
-| external-action-pipeline | ~8건 | **Med** | discriminatedUnion narrowing 패턴 적용 |
-| Solana adapter | ~5건 | **High** | @solana/kit 제네릭 타입 시스템 깊은 이해 필요 |
-| 기타 개별 as any | ~10건 | **Low-Med** | 각각 원인이 다름 (server timeout, networkToCaip2, eip712 등) |
+6. **SEO 랜딩 페이지 2-3개** -- "AI wallet" 카테고리 정의 콘텐츠
+7. **확장된 JSON-LD** -- Article/TechArticle/BreadcrumbList 자동 주입
+8. **FAQ 확장 (20-30개)** -- 카테고리별 Q&A 대규모 추가
+
+### Defer
+
+- **Comparison 페이지**: 초기 트래픽 확보 후 경쟁 키워드 분석 기반으로 작성 (Phase 4+)
+- **AI 디렉토리 등록 자료**: 사이트 안정화 후 일괄 등록 (Phase 5)
+- **커뮤니티 포스팅 초안**: 콘텐츠 완성 후 외부 분배 (Phase 5)
 
 ## Sources
 
-- 코드베이스 직접 조사: `grep -rn "as any"`, `grep -rn "JSON.parse"`, `grep -rn "NATIVE_DECIMALS"`, `grep -rn "sleep"` 결과 기반
-- @waiaas/core/src/schemas/policy.schema.ts: 13개 정책 타입별 Zod 스키마 이미 존재 확인
-- packages/daemon/src/pipeline/database-policy-engine.ts: 12개 plain interface + 20건 bare JSON.parse 확인
-- packages/daemon/src/api/routes/wc.ts: 8건 `(db as any).session?.client` 확인
-- v31.10 마일스톤 히스토리: 이전 리팩토링에서 `as any` 24곳 제거 + admin.ts 분할 완료 확인 (현재 남은 건은 그때 해결하지 않은 것)
+- [SEO for Static Websites: The 2026 Guide](https://simplystatic.com/tutorials/seo-for-static-websites/) -- MEDIUM confidence
+- [Answer Engine Optimization: The Comprehensive Guide for 2026](https://cxl.com/blog/answer-engine-optimization-aeo-the-comprehensive-guide/) -- MEDIUM confidence
+- [AEO Guide 2026](https://llmrefs.com/answer-engine-optimization) -- MEDIUM confidence
+- [GitHub Pages SEO Setup Guide](https://wrigo.io/blog/github-pages-seo-setup-guide-how-to-rank-your-developer-documentation-site) -- MEDIUM confidence
+- [llms.txt Guide](https://www.bluehost.com/blog/what-is-llms-txt/) -- MEDIUM confidence
+- [Should Websites Implement llms.txt in 2026?](https://www.linkbuildinghq.com/blog/should-websites-implement-llms-txt-in-2026/) -- MEDIUM confidence
+- [Google Structured Data Intro](https://developers.google.com/search/docs/appearance/structured-data/intro-structured-data) -- HIGH confidence (official)
+- [Schema.org](https://schema.org/) -- HIGH confidence (official)
+- [AI Tools Directory List](https://github.com/best-of-ai/ai-directories) -- MEDIUM confidence
+- Site audit: `/Users/minho.yoo/dev/wallet/WAIaaS/site/` directory direct analysis -- HIGH confidence

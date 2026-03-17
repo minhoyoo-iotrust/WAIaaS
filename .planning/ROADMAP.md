@@ -4,6 +4,7 @@
 
 - ✅ **v32.5 멀티체인 DeFi 포지션 + 테스트넷 토글** — Phases 432-434 (shipped 2026-03-16)
 - ✅ **v32.6 성능 + 구조 개선** — Phases 435-438 (shipped 2026-03-17)
+- ✅ **v32.7 SEO/AEO 최적화** — Phases 439-443 (shipped 2026-03-17)
 
 <details>
 <summary>✅ v32.5 멀티체인 DeFi 포지션 + 테스트넷 토글 (Phases 432-434) — SHIPPED 2026-03-16</summary>
@@ -27,3 +28,16 @@ See `.planning/milestones/v32.5-ROADMAP.md` for full details.
 </details>
 
 See `.planning/milestones/v32.6-ROADMAP.md` for full details.
+
+<details>
+<summary>✅ v32.7 SEO/AEO 최적화 (Phases 439-443) — SHIPPED 2026-03-17</summary>
+
+- [x] Phase 439: Build Infrastructure (1/1 plan) — completed 2026-03-17
+- [x] Phase 440: Content Publishing + Navigation (1/1 plan) — completed 2026-03-17
+- [x] Phase 441: Technical SEO & AEO (2/2 plans) — completed 2026-03-17
+- [x] Phase 442: CI Integration (1/1 plan) — completed 2026-03-17
+- [x] Phase 443: SEO Landing Pages + External Distribution (2/2 plans) — completed 2026-03-17
+
+</details>
+
+See `.planning/milestones/v32.7-ROADMAP.md` for full details.

@@ -1,3 +1,11 @@
+---
+title: "ERC-4337 Sponsor Proxy Server Specification"
+description: "API spec for a gas sponsorship proxy server. WAIaaS agents use this as a custom AA provider for sponsored transactions."
+date: "2026-02-15"
+section: "docs"
+slug: "erc-4337-sponsor-proxy-spec"
+category: "Technical"
+---
 # ERC-4337 Sponsor Proxy Server — API Specification
 
 > API specification for a proxy server operated by a gas sponsorship service.
@@ -245,3 +253,9 @@ Pimlico chainId mapping (partial):
 
 viem may send JSON-RPC batch requests (`[{...}, {...}]`) in some cases.
 To support this, detect array input and apply per-request processing to each item.
+
+## Related
+
+- [Smart Account Lite / Full Mode Guide](/docs/smart-account-guide/) - Guide to using smart accounts with WAIaaS
+- [Architecture](/docs/architecture/) - System architecture including AA pipeline
+- [API Reference](/docs/api-reference/) - REST API endpoints for UserOp operations

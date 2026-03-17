@@ -1181,6 +1181,39 @@
 
 ---
 
+## Milestone: v32.7 — SEO/AEO 최적화
+
+**Shipped:** 2026-03-17
+**Phases:** 5 | **Plans:** 7
+
+### What Was Built
+- ESM 빌드 파이프라인 (`site/build.mjs`) — gray-matter + marked + highlight.js로 19개 마크다운→CRT 테마 HTML 변환
+- Blog/Docs 목록 페이지 + 활성 네비게이션 + 259개 내부 링크 빌드타임 검증
+- sitemap.xml (22 URL) + JSON-LD (Article/TechArticle + BreadcrumbList) + canonical URL
+- llms-full.txt (188KB) AEO 최적화 + 20개 FAQ Q&A (FAQPage 스키마)
+- GitHub Actions CI 파이프라인 (docs/** 자동 빌드 + GitHub Pages 배포)
+- SEO 랜딩 페이지 3종 + SUBMISSION_KIT (7 플랫폼) + 커뮤니티 포스팅 초안 4개
+
+### What Worked
+- 순차적 빌드업 구조 (빌드→콘텐츠→SEO→CI→랜딩)가 각 phase에서 이전 산출물을 자연스럽게 소비
+- Autopilot으로 5 phases 전체를 ~30분 만에 계획+실행+감사 완료
+- 기존 CRT 테마 디자인 시스템 재활용으로 일관된 사이트 완성
+- Front-matter SSoT 패턴: title/description/date/section/slug 하나로 메타태그+URL+목록+sitemap 모두 결정
+
+### What Was Inefficient
+- 없음 — 콘텐츠 마일스톤은 런타임 코드/테스트 의존이 없어서 순조롭게 진행
+
+### Patterns Established
+- `site/` 디렉토리에 정적 사이트 빌드 인프라 표준화 (build.mjs + template.html + article.css)
+- `docs/seo/` 디렉토리에 SEO 전용 콘텐츠 배치, `site/distribution/`에 외부 배포 자료 배치
+- `{{PLACEHOLDER}}` 패턴으로 template.html에 빌드타임 데이터 주입 (JSON_LD, ACTIVE_BLOG 등)
+
+### Key Lessons
+- 콘텐츠 전용 마일스톤은 테스트/CI 의존이 없어서 autopilot 1회에 완료 가능
+- llms-full.txt + FAQ JSON-LD + pillar-cluster 링크가 AEO 3종 세트로 함께 적용되면 효과적
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -1211,6 +1244,7 @@
 | v31.12 | 1 | 7 | External Action 프레임워크 구현(풀스택), 144 파일 4.5시간 완료 |
 | v31.13 | 1 | 5 | DeFi 포지션 대시보드 완성(5개 프로바이더 getPositions), 44 파일 5시간 완료 |
 | v31.14 | 1 | 4 | EVM RPC 프록시 모드(JSON-RPC proxy + CONTRACT_DEPLOY 9-type), 82 파일 4시간 완료 |
+| v32.7 | 1 | 5 | SEO/AEO 최적화(정적 사이트 빌드), 53 파일 30분 완료 |
 
 ### Cumulative Quality
 
@@ -1240,6 +1274,7 @@
 | v31.12 | ~7,673 (+219) | maintained | +23 decisions |
 | v31.13 | ~7,861 (+188) | maintained | +21 decisions |
 | v31.14 | ~8,050 (+189) | maintained | +10 decisions |
+| v32.7 | ~8,050 (unchanged) | maintained | +15 decisions |
 
 ### Top Lessons (Verified Across Milestones)
 

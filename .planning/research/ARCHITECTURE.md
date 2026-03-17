@@ -1,332 +1,517 @@
-# Architecture Patterns: Type Safety + Code Quality Refactoring
+# Architecture Patterns
 
-**Domain:** 타입 안전 개선 및 코드 품질 리팩토링
-**Researched:** 2026-03-16
+**Domain:** SEO/AEO optimization for existing static site (waiaas.ai)
+**Researched:** 2026-03-17
+
+## Current Architecture Snapshot
+
+### What Exists
+
+| Asset | Location | Purpose | Lines |
+|-------|----------|---------|-------|
+| Landing page | `site/index.html` | Single monolithic HTML (CRT terminal theme) | 1,109 |
+| OG image template | `site/og-template.html` | Puppeteer-rendered Open Graph image | 167 |
+| OG image generator | `site/generate-og-image.mjs` | Node.js script to render og-template | - |
+| Favicons | `site/favicon.*`, `apple-touch-icon.png` | Multiple formats | - |
+| robots.txt | `site/robots.txt` | Basic Allow: / + sitemap | 4 |
+| sitemap.xml | `site/sitemap.xml` | Single URL entry (homepage only) | 10 |
+| llms.txt | `site/llms.txt` | AEO: LLM-readable site summary | 64 |
+| ai-plugin.json | `site/.well-known/ai-plugin.json` | OpenAI plugin manifest (AEO) | 17 |
+| CNAME | `site/CNAME` | waiaas.ai custom domain | 1 |
+| GitHub Actions | `.github/workflows/pages.yml` | Deploy `site/` to GitHub Pages on push to main | 38 |
+| Docs (markdown) | `docs/` | 10+ markdown files, 4 "Why WAIaaS" articles, 5 guides | - |
+
+### What Does NOT Exist
+
+- No build step (pure static HTML, no preprocessing)
+- No template system (everything is inline in index.html)
+- No multi-page routing (single page only)
+- No llms-full.txt (only llms.txt summary)
+- No blog/article pages on the site (articles exist only as GitHub markdown)
+- No per-page OG images (single shared og-image.png)
+- No structured data beyond homepage JSON-LD
+
+### Current SEO State (Already Good)
+
+The homepage already has solid SEO foundations:
+- `<title>`, `<meta description>`, `<meta keywords>`
+- Open Graph + Twitter Card meta tags
+- JSON-LD: SoftwareApplication, FAQPage, HowTo schemas
+- Canonical URL
+- Mobile responsive CSS
 
 ## Recommended Architecture
 
-기존 WAIaaS 모노레포 아키텍처를 변경하지 않고, 4개 핵심 영역에서 점진적 타입 안전 강화를 수행한다. 행위 변경 없음, API 변경 없음, DB 마이그레이션 없음.
+### Design Principle: Minimal Build, Maximum Output
 
-### Component Boundaries (현재 패키지 의존 그래프)
+The existing pure-HTML approach is a strength, not a weakness. GitHub Pages requires no server-side rendering. The goal is to add a **thin build layer** that:
+1. Converts `docs/` markdown into themed HTML pages
+2. Generates sitemap, llms-full.txt, and per-page meta automatically
+3. Outputs everything into `site/` for the existing deploy pipeline
 
-```
-@waiaas/core          <- 모든 패키지가 의존 (Zod SSoT, 인터페이스, 에러)
-  ^
-@waiaas/actions       <- core만 의존 (ActionProvider, IAsyncStatusTracker)
-  ^
-@waiaas/daemon        <- core + actions + adapters 의존
-  |-- api/            <- Hono 라우트, 미들웨어
-  |-- services/       <- 비즈니스 로직
-  |-- pipeline/       <- 6-stage 트랜잭션 파이프라인
-  |-- infrastructure/ <- DB, 설정, 키스토어
-  |-- workflow/       <- 지연/승인 워크플로우
-  |-- notifications/  <- 알림 서비스
-  +-- signing/        <- 서명 기능
-```
+**Do NOT adopt a full SSG framework** (Jekyll, Hugo, 11ty). The project has 10-15 content pages total, not hundreds. A custom Node.js build script (< 300 lines) keeps full control and zero framework lock-in.
 
-### 데이터 흐름 (Policy Rule JSON.parse 경로)
+### Component Boundaries
 
-```
-DB (policies.rules TEXT) -> JSON.parse() -> as Type 캐스팅 (현재, 위험)
-                         -> JSON.parse() -> Zod safeParse -> typed result (목표)
-```
+| Component | Responsibility | New/Modified |
+|-----------|---------------|--------------|
+| `site/index.html` | Landing page (unchanged) | **Unchanged** |
+| `site/build.mjs` | Build script: md-to-HTML, sitemap, llms-full.txt | **New** |
+| `site/_template.html` | HTML shell template for content pages | **New** |
+| `docs/**/*.md` | Source content (unchanged) | **Unchanged** |
+| `site/docs/**/*.html` | Generated HTML pages from docs/ markdown | **New (generated)** |
+| `site/blog/**/*.html` | Generated HTML pages from docs/why-waiaas/ | **New (generated)** |
+| `site/sitemap.xml` | Auto-generated sitemap (all pages) | **Modified (generated)** |
+| `site/llms.txt` | LLM summary (auto-generated) | **Modified (generated)** |
+| `site/llms-full.txt` | Full content dump for AI crawlers | **New (generated)** |
+| `site/robots.txt` | Add llms-full.txt reference | **Modified** |
+| `.github/workflows/pages.yml` | Add build step before deploy | **Modified** |
 
-## 질문 1: Policy Rule Schema 위치 -- core에 유지
-
-**결론: `@waiaas/core/schemas/policy.schema.ts`에 유지한다.**
-
-현재 상태 분석:
-- `core/schemas/policy.schema.ts`에 이미 13개 PolicyType별 rules 스키마가 존재한다 (`AllowedTokensRulesSchema`, `SpendingLimitRulesSchema`, `WhitelistRulesSchema` 등)
-- `POLICY_RULES_SCHEMAS` 레코드가 이미 타입-스키마 매핑을 관리한다
-- `CreatePolicyRequestSchema.superRefine`에서 입력 시점 검증에 사용 중
-- `database-policy-engine.ts`에서 DB 읽기 시에는 검증 없이 `JSON.parse(row.rules) as Type`으로 캐스팅 중 (문제 지점)
-
-**왜 core인가:**
-1. 이미 core에 존재하므로 이동이 불필요하다
-2. `POLICY_RULES_SCHEMAS` 매핑은 API 라우트(입력 검증)와 파이프라인(DB 읽기 검증) 양쪽에서 필요하다
-3. core는 daemon/actions/sdk 모두가 의존하는 공유 계층이므로 SSoT로 적합하다
-
-**필요한 변경:**
-- `POLICY_RULES_SCHEMAS` 매핑을 export해야 한다 (현재 모듈 내부 const)
-- `database-policy-engine.ts`에서 `JSON.parse(row.rules) as Type` 패턴을 `safeParse` 패턴으로 교체
-
-```typescript
-// core/schemas/policy.schema.ts -- 기존 내부 매핑을 export
-export const POLICY_RULES_SCHEMAS: Record<string, z.ZodTypeAny> = { ... };
-
-// daemon/pipeline/database-policy-engine.ts -- 사용 패턴
-import { POLICY_RULES_SCHEMAS } from '@waiaas/core';
-
-function parsePolicyRules<T>(type: string, rawJson: string): T {
-  const parsed: unknown = JSON.parse(rawJson);
-  const schema = POLICY_RULES_SCHEMAS[type];
-  if (!schema) return parsed as T; // 전용 스키마 없는 타입은 pass-through
-  const result = schema.safeParse(parsed);
-  if (!result.success) {
-    throw new ChainError('POLICY_INVALID', `Invalid ${type} rules: ${result.error.message}`);
-  }
-  return result.data as T;
-}
-```
-
-### 컴포넌트 영향도
-
-| 컴포넌트 | 변경 유형 | 상세 |
-|----------|----------|------|
-| `core/schemas/policy.schema.ts` | export 추가 | `POLICY_RULES_SCHEMAS` export |
-| `core/index.ts` | re-export 추가 | `POLICY_RULES_SCHEMAS` |
-| `daemon/pipeline/database-policy-engine.ts` | 수정 | ~20개 `JSON.parse as` -> `parsePolicyRules` |
-| `daemon/services/x402/x402-domain-policy.ts` | 수정 | 1개 `JSON.parse` |
-| `daemon/services/erc8128/erc8128-domain-policy.ts` | 수정 | 1개 `JSON.parse` |
-
-## 질문 2: Raw SQLite Client 노출 방식 -- DatabaseConnection 인터페이스 유지
-
-**결론: 현재 `DatabaseConnection { sqlite, db }` 패턴을 유지한다. 추상화를 강화하지 않는다.**
-
-현재 상태:
-- `infrastructure/database/connection.ts`가 `DatabaseConnection { sqlite: DatabaseType; db: BetterSQLite3Database }` 반환
-- `DatabasePolicyEngine` 생성자가 `db` (Drizzle) + optional `sqlite` (raw) 이중 패턴 사용
-- `delay-queue.ts`도 동일한 이중 패턴
-- `api/routes/incoming.ts`가 `deps.sqlite.prepare()` 직접 사용 (GROUP BY + date formatting)
-- Raw SQLite가 필요한 이유: `BEGIN IMMEDIATE` 트랜잭션 (Drizzle에서 미지원), 복잡한 집계 SQL
-
-**왜 추상화를 강화하지 않는가:**
-1. `DatabaseConnection`이 이미 명시적 인터페이스로 양쪽을 노출한다
-2. Raw SQLite 사용처가 정당한 사유를 갖고 있다 (BEGIN IMMEDIATE, 복잡 집계)
-3. 래퍼를 추가하면 Drizzle의 타입 안전성을 raw 쿼리에 적용할 수 없어 실익이 없다
-4. 이 마일스톤의 범위는 기존 `as any` 제거이지 DB 추상화 재설계가 아니다
-
-**타입 안전 관점에서 필요한 변경:**
-- Raw SQLite 사용 시 결과를 `as` 캐스팅 대신 Zod 스키마로 검증
-- `incoming.ts`의 `rawRows = deps.sqlite.prepare(sqlQuery).all(...params) as RawRow[]` -> 명시적 타입 가드
-
-```typescript
-// 현재 (위험)
-const rawRows = deps.sqlite.prepare(sqlQuery).all(...params) as RawRow[];
-
-// 개선 (Zod 검증)
-const RawRowSchema = z.object({
-  date: z.string(),
-  count: z.number(),
-  // ...
-});
-const rawRows = z.array(RawRowSchema).parse(
-  deps.sqlite.prepare(sqlQuery).all(...params)
-);
-```
-
-## 질문 3: IAsyncStatusTracker 패키지 이동 -- 이동 불필요, 이미 올바른 위치
-
-**결론: `@waiaas/actions`에 유지한다. 이동이 필요하지 않다.**
-
-현재 상태 분석:
-- `IAsyncStatusTracker`는 `@waiaas/actions/src/common/async-status-tracker.ts`에 정의
-- `actions/src/index.ts`에서 re-export
-- daemon이 `@waiaas/actions`에서 import하여 사용 (`async-polling-service.ts`, `gas-condition-tracker.ts`)
-- actions 패키지의 구현체들이 이 인터페이스를 implement (`bridge-status-tracker.ts`, `withdrawal-tracker.ts`, `epoch-tracker.ts`)
-
-**의존 방향:**
-```
-core <- actions(인터페이스 정의 + 구현체) <- daemon(소비자)
-```
-
-이 의존 방향은 정상이다:
-1. actions 패키지가 인터페이스를 정의하고 구현체를 제공하는 것은 올바른 소유권
-2. daemon이 actions에 의존하는 것은 기존 패키지 그래프에 부합
-3. core로 올리면 core가 비대해지고, actions 패키지 존재 이유가 약화됨
-
-**만약 미래에 이동이 필요해진다면 (예: 새 패키지가 actions 없이 인터페이스만 필요할 때):**
-
-```typescript
-// Step 1: core에 인터페이스 추가
-// core/src/interfaces/async-status-tracker.ts
-
-// Step 2: actions에서 re-export (하위 호환)
-// actions/src/common/async-status-tracker.ts
-export type { IAsyncStatusTracker } from '@waiaas/core';
-
-// Step 3: daemon import 경로는 변경 불필요 (actions re-export 유지)
-```
-
-이 패턴은 "re-export bridge"로, 소비자 코드 변경 없이 인터페이스를 이동할 수 있다. **하지만 현재는 불필요하다.**
-
-## 질문 4: 레이어 위반 수정 -- 유틸리티 승격 패턴
-
-**결론: `services/ -> api/middleware/` 방향 import를 유틸리티 모듈 추출로 해결한다.**
-
-### 현재 위반 지점
-
-```typescript
-// daemon/src/services/wc-signing-bridge.ts (서비스 계층)
-import { verifySIWE } from '../api/middleware/siwe-verify.js';      // <- api 계층 import (위반)
-import { decodeBase58 } from '../api/middleware/address-validation.js'; // <- api 계층 import (위반)
-```
-
-**정상 레이어 방향:**
-```
-api/ -> services/ -> infrastructure/   (상위 -> 하위만 허용)
-```
-
-**수정 전략: 순수 함수를 적절한 계층으로 이동**
-
-`verifySIWE`와 `decodeBase58`는 HTTP 컨텍스트에 의존하지 않는 순수 함수이므로 미들웨어가 아닌 유틸리티에 속한다.
+### Directory Structure (After Build)
 
 ```
-수정 전:
-  api/middleware/siwe-verify.ts      (verifySIWE 정의)
-  api/middleware/address-validation.ts (decodeBase58 정의)
-  services/wc-signing-bridge.ts      (위 두 파일 import -- 위반)
+site/
+  index.html                          # Landing page (hand-crafted, unchanged)
+  _template.html                      # HTML shell for generated pages (not deployed itself)
+  build.mjs                           # Build script (not deployed)
+  package.json                        # Build dependencies (marked, gray-matter)
 
-수정 후:
-  infrastructure/crypto/siwe-verify.ts     (verifySIWE 이동)
-  infrastructure/crypto/address-validation.ts (decodeBase58 이동)
-  api/middleware/siwe-verify.ts            -> re-export from infrastructure (하위 호환)
-  api/middleware/address-validation.ts     -> re-export from infrastructure (하위 호환)
-  services/wc-signing-bridge.ts            -> import from infrastructure (정상 방향)
+  # Generated content pages
+  docs/
+    architecture/index.html           # From docs/architecture.md
+    security-model/index.html         # From docs/security-model.md
+    deployment/index.html             # From docs/deployment.md
+    api-reference/index.html          # From docs/api-reference.md
+    wallet-sdk-integration/index.html # From docs/wallet-sdk-integration.md
+    smart-account-lite-full-guide/index.html
+    erc-4337-sponsor-proxy-spec/index.html
+    guides/
+      claude-code-integration/index.html
+      openclaw-integration/index.html
+      agent-skills-integration/index.html
+      agent-self-setup/index.html
+      docker-sidecar-install/index.html
+
+  blog/
+    ai-agent-wallet-security-crisis/index.html     # From docs/why-waiaas/001-*
+    ai-agent-wallet-models-compared/index.html     # From docs/why-waiaas/002-*
+    autonomous-agents-deserve-secure-wallets/index.html  # From docs/why-waiaas/003-*
+    self-custody-means-self-hosting/index.html     # From docs/why-waiaas/004-*
+
+  # SEO/AEO assets (generated)
+  sitemap.xml                         # All URLs
+  llms.txt                            # Summary for LLMs
+  llms-full.txt                       # Full content for AI crawlers
+  robots.txt                          # Updated with llms-full.txt
+
+  # Existing assets (unchanged)
+  og-image.png
+  og-template.html
+  generate-og-image.mjs
+  favicon.svg, favicon-16.png, favicon-32.png, apple-touch-icon.png
+  CNAME
+  .well-known/ai-plugin.json
 ```
 
-**단계별 실행 계획:**
+### URL Routing Strategy
 
-1. **신규 파일 생성**: `infrastructure/crypto/siwe-verify.ts`, `infrastructure/crypto/address-validation.ts`
-2. **기존 미들웨어 파일을 re-export로 변환**: 기존 import 경로를 사용하는 다른 코드가 깨지지 않도록
-3. **서비스 레이어 import 경로 변경**: `../api/middleware/` -> `../infrastructure/crypto/`
-4. **테스트 확인**: 행위 변경 없으므로 기존 테스트 통과 확인만
+GitHub Pages serves `dir/index.html` as `dir/`. Use the **directory/index.html pattern** for clean URLs:
 
-```typescript
-// infrastructure/crypto/siwe-verify.ts (신규, 순수 함수)
-export { verifySIWE, type VerifySIWEParams } from './siwe-verify-impl.js';
+| Source File | Output File | Public URL |
+|-------------|-------------|------------|
+| `docs/architecture.md` | `site/docs/architecture/index.html` | `https://waiaas.ai/docs/architecture/` |
+| `docs/why-waiaas/001-*.md` | `site/blog/ai-agent-wallet-security-crisis/index.html` | `https://waiaas.ai/blog/ai-agent-wallet-security-crisis/` |
+| `docs/guides/claude-code-integration.md` | `site/docs/guides/claude-code-integration/index.html` | `https://waiaas.ai/docs/guides/claude-code-integration/` |
 
-// api/middleware/siwe-verify.ts (기존, re-export로 변환)
-// 하위 호환: 기존 api/ 내부 import는 그대로 작동
-export { verifySIWE, type VerifySIWEParams } from '../../infrastructure/crypto/siwe-verify.js';
+This works natively on GitHub Pages without any redirect hacks. GitHub Pages automatically resolves `/docs/architecture/` to `/docs/architecture/index.html`.
+
+## Data Flow
+
+### Build Pipeline
+
 ```
+docs/**/*.md
+    |
+    v
+[build.mjs] ---- reads ---- site/_template.html
+    |
+    |-- parse frontmatter (gray-matter)
+    |-- convert markdown to HTML (marked + highlight.js)
+    |-- inject into template (title, description, canonical, OG, JSON-LD)
+    |-- write site/docs/**/index.html or site/blog/**/index.html
+    |
+    |-- generate site/sitemap.xml (all URLs + lastmod from git)
+    |-- generate site/llms-full.txt (concatenated markdown content)
+    +-- generate site/llms.txt (summary with links to all pages)
+```
+
+### Build Script Design (`site/build.mjs`)
+
+Single ESM script, ~200-300 lines. Dependencies: `marked`, `gray-matter`, `highlight.js`.
+
+```javascript
+// Pseudocode for build.mjs
+import { marked } from 'marked';
+import matter from 'gray-matter';
+import hljs from 'highlight.js';
+
+// 1. Read template
+const template = readFile('site/_template.html');
+
+// 2. Discover source markdown files
+const contentMap = [
+  { src: 'docs/*.md', dest: 'site/docs/', urlBase: '/docs/' },
+  { src: 'docs/guides/*.md', dest: 'site/docs/guides/', urlBase: '/docs/guides/' },
+  { src: 'docs/why-waiaas/*.md', dest: 'site/blog/', urlBase: '/blog/' },
+];
+
+// 3. For each file: parse frontmatter, render HTML, inject into template
+// 4. Generate sitemap.xml from all output URLs
+// 5. Generate llms-full.txt from all markdown content
+// 6. Generate llms.txt summary with links
+```
+
+### Template Design (`site/_template.html`)
+
+The template must match the existing CRT terminal dark theme from `index.html`. Key design decisions:
+
+- Same CSS variables (`--bg`, `--surface`, `--border`, `--green`, `--cyan`, etc.)
+- Same JetBrains Mono font
+- Same nav structure (logo + links)
+- Same scanline CRT overlay effect
+- Same footer
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{title}} -- WAIaaS</title>
+  <meta name="description" content="{{description}}">
+  <link rel="canonical" href="https://waiaas.ai{{path}}">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="{{title}}">
+  <meta property="og:description" content="{{description}}">
+  <meta property="og:url" content="https://waiaas.ai{{path}}">
+  <meta property="og:image" content="https://waiaas.ai/og-image.png">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{title}}">
+  <meta name="twitter:description" content="{{description}}">
+
+  <!-- JSON-LD -->
+  <script type="application/ld+json">
+  {{jsonLd}}
+  </script>
+
+  <!-- Inline styles matching index.html CRT theme -->
+  <style>
+    /* Same CSS variables and base styles as index.html */
+    /* Article-specific styles for rendered markdown */
+  </style>
+</head>
+<body>
+  <nav><!-- Same nav as index.html --></nav>
+  <article class="content-page">
+    <div class="container">
+      <div class="breadcrumb">{{breadcrumb}}</div>
+      <h1>{{title}}</h1>
+      <div class="article-body">
+        {{content}}
+      </div>
+    </div>
+  </article>
+  <footer><!-- Same footer as index.html --></footer>
+</body>
+</html>
+```
+
+Placeholder substitution uses simple `{{variable}}` string replacement -- no templating engine needed.
+
+### Markdown Frontmatter Convention
+
+Add YAML frontmatter to each markdown file in `docs/`:
+
+```yaml
+---
+title: "Architecture Overview"
+description: "WAIaaS system architecture: 6-stage pipeline, chain adapters, policy engine"
+category: docs          # docs | blog | guide
+date: 2026-02-25
+---
+```
+
+For files without frontmatter (backward compat), the build script extracts:
+- **title**: First `# heading` in the markdown
+- **description**: First paragraph (truncated to 160 chars)
+- **date**: Git last-modified date via `git log -1 --format=%aI -- <file>`
 
 ## Patterns to Follow
 
-### Pattern 1: Zod safeParse for DB JSON columns
+### Pattern 1: Generated vs Hand-Crafted Separation
 
-**What:** DB에서 읽은 JSON 문자열을 Zod 스키마로 검증 후 사용
-**When:** `JSON.parse()` 결과를 `as Type` 캐스팅하는 모든 곳
-**Example:**
+**What:** `index.html` remains hand-crafted. All other HTML pages are generated from markdown.
+**When:** Always.
+**Why:** The landing page has unique layout (hero, feature grid, architecture diagram, tabbed content). Content pages share a common article layout. Mixing hand-crafted and generated pages in the same directory is fine as long as `.gitignore` excludes generated directories.
 
-```typescript
-// 범용 헬퍼 (daemon/pipeline/policy-rule-parser.ts)
-import { POLICY_RULES_SCHEMAS } from '@waiaas/core';
+**Rule:** Never edit generated files in `site/docs/` or `site/blog/`. Edit the source `docs/*.md` instead.
 
-export function parsePolicyRules(type: string, rulesJson: string): unknown {
-  const parsed: unknown = JSON.parse(rulesJson);
-  const schema = POLICY_RULES_SCHEMAS[type];
-  if (!schema) return parsed;
-  const result = schema.safeParse(parsed);
-  if (!result.success) {
-    throw new ChainError('POLICY_INVALID',
-      `Corrupted ${type} policy rules in DB: ${result.error.message}`);
-  }
-  return result.data;
-}
+### Pattern 2: Additive Sitemap Generation
+
+**What:** Build script generates sitemap.xml with all pages, including hand-crafted index.html.
+**When:** Every build.
+**Why:** Sitemap must stay in sync with actual pages. Manual sitemap maintenance is error-prone. The current sitemap has only 1 URL -- it should have 15+.
+
+### Pattern 3: JSON-LD Per Page Type
+
+**What:** Each page gets appropriate Schema.org type injected by the build script.
+**When:** Template rendering.
+
+| Page Type | Schema.org Type | Key Properties |
+|-----------|----------------|----------------|
+| Landing | SoftwareApplication + FAQPage + HowTo | (existing, unchanged) |
+| Docs | TechArticle | headline, author, datePublished, publisher |
+| Blog | Article | headline, author, datePublished, description |
+| Guide | HowTo | name, step[], totalTime |
+
+### Pattern 4: llms-full.txt as Content Index
+
+**What:** Single markdown file concatenating all page content with clear section delimiters.
+**When:** Generated during build.
+**Format:**
+
+```markdown
+# WAIaaS Documentation - Full Content
+
+## Architecture Overview
+[full content of docs/architecture.md]
+
+---
+
+## Security Model
+[full content of docs/security-model.md]
+
+---
+[etc.]
 ```
 
-### Pattern 2: Re-export Bridge for Cross-Package Migration
+This allows AI crawlers to fetch all site content in a single request instead of crawling individual pages. Studies show llms-full.txt can increase AI crawl rates by 5-10x.
 
-**What:** 인터페이스/유틸리티를 다른 패키지로 이동할 때 원래 위치에 re-export를 남겨 소비자 코드 변경을 최소화
-**When:** 패키지 간 또는 레이어 간 코드 이동 시
-**Example:**
+### Pattern 5: Blog URL Slug from Filename
 
-```typescript
-// 원래 위치 (api/middleware/siwe-verify.ts)
-// 구현은 infrastructure로 이동, 여기는 re-export만
-export { verifySIWE, type VerifySIWEParams } from '../../infrastructure/crypto/siwe-verify.js';
-```
-
-### Pattern 3: SSoT 통합 (중복 유틸리티)
-
-**What:** 동일 함수가 여러 패키지에 중복 정의된 경우 하나로 통합
-**When:** `sleep`, `NATIVE_DECIMALS` 등 4+ 중복 정의가 발견될 때
-**Example:**
-
-```
-sleep() 중복 현황:
-  - daemon/src/pipeline/sleep.ts       (canonical, export됨)
-  - core/src/interfaces/connection-state.ts (내부 함수)
-  - cli/src/commands/stop.ts           (내부 함수)
-  - adapters/solana/src/adapter.ts     (내부 함수)
-
-통합 방향:
-  - core/src/utils/sleep.ts 로 이동 -> 전 패키지에서 import
-  - 내부 함수들은 core import로 교체
-```
+**What:** Strip numeric prefix and extension from Why WAIaaS filenames for clean blog URLs.
+**When:** URL generation for blog posts.
+**Example:** `001-ai-agent-wallet-security-crisis.md` becomes `/blog/ai-agent-wallet-security-crisis/`
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: as any/as unknown as 캐스팅으로 타입 시스템 우회
+### Anti-Pattern 1: Adopting a Full SSG Framework
 
-**What:** 타입 불일치를 `as any` 또는 `as unknown as TargetType`으로 강제 캐스팅
-**Why bad:** 런타임 타입 불일치를 컴파일 타임에 감지 불가, DB 스키마 변경 시 조용히 깨짐
-**Instead:** Zod 스키마 검증, 제네릭 타입 제약, 명시적 타입 가드
+**What:** Using Hugo, Jekyll, 11ty, or Astro for 15 pages.
+**Why bad:** Adds massive dependency surface, framework-specific config, build complexity, and upgrade burden. The existing hand-crafted index.html would need to be ported into the framework's template system, breaking the current simple deploy.
+**Instead:** Single build script (~300 lines) with 3 npm dependencies (`marked`, `gray-matter`, `highlight.js`).
 
-### Anti-Pattern 2: 레이어 역방향 import
+### Anti-Pattern 2: SPA-Style Client-Side Routing
 
-**What:** 하위 계층(services)이 상위 계층(api)의 코드를 import
-**Why bad:** 순환 의존성 위험, 테스트 격리 불가, 변경 전파 범위 확대
-**Instead:** 공유 기능을 하위 계층(infrastructure) 또는 공유 패키지(core)로 추출
+**What:** Using JavaScript to load content dynamically (hash routing, history API).
+**Why bad:** Search engines and AI crawlers need real HTML at each URL. Client-side rendering defeats SEO/AEO purpose entirely.
+**Instead:** Static HTML files at each URL path (directory/index.html pattern).
 
-### Anti-Pattern 3: 모듈 내부 유틸리티 함수 무분별 복제
+### Anti-Pattern 3: Extracting CSS from index.html Prematurely
 
-**What:** `sleep()`, 포맷팅 함수 등을 각 파일에 로컬로 재정의
-**Why bad:** 수정 시 모든 복사본을 찾아야 함, 일관성 보장 불가
-**Instead:** `@waiaas/core/utils` 또는 패키지 내 공유 유틸리티로 단일 정의
+**What:** Splitting index.html's inline styles into a separate CSS file to share with template.
+**Why bad:** index.html works perfectly as-is. Changing it introduces risk to the production landing page. The template needs different styles anyway (article layout vs landing page layout).
+**Instead:** The template includes its own inline styles. Common CSS variables (colors, fonts) are duplicated between index.html and _template.html. This is intentional -- 15 CSS variables duplicated across 2 files is simpler than a shared CSS file with import coordination.
 
-## Build Order (의존성 기반 단계 순서)
+### Anti-Pattern 4: Dynamic Sitemap/llms.txt (Runtime Generation)
 
-타입 안전 리팩토링은 의존성 방향(core -> actions -> daemon)의 역순으로 진행해야 한다. 하위 계층부터 안전하게 만든 후 상위 계층을 수정한다.
+**What:** Generating sitemap.xml or llms-full.txt at request time.
+**Why bad:** GitHub Pages is static. There is no runtime. Everything must be pre-generated at build time.
+**Instead:** Build step generates all files. CI deploys the complete output.
+
+### Anti-Pattern 5: Duplicating Content in index.html and docs/
+
+**What:** Copying FAQ answers, feature descriptions, or quickstart steps into separate markdown files.
+**Why bad:** Content drift between landing page and docs.
+**Instead:** Keep landing page self-contained. Docs pages go deeper on specific topics. Cross-link between them.
+
+## Integration Points with Existing Architecture
+
+### 1. GitHub Actions Pipeline (Modified)
+
+Current `pages.yml` deploys `site/` directly with no build step. Add Node.js build:
+
+```yaml
+jobs:
+  deploy:
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # Need git history for lastmod dates
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build site
+        working-directory: site
+        run: |
+          npm ci
+          node build.mjs
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+```
+
+**Key changes:**
+- `fetch-depth: 0` -- required to get git log dates for sitemap `<lastmod>`
+- Node.js setup + `npm ci` + `node build.mjs` -- the actual build step
+
+### 2. pages.yml Trigger Paths (Modified)
+
+Current trigger: `paths: ['site/**']`. Must add `docs/**` since doc changes should trigger site rebuilds:
+
+```yaml
+on:
+  push:
+    branches: [main]
+    paths: ['site/**', 'docs/**']
+```
+
+### 3. Generated Files Strategy
+
+Generated HTML pages are built in CI only, not committed to the repo. Add to `.gitignore`:
 
 ```
-Phase 1: Core 계층 export 정비
-  |-- POLICY_RULES_SCHEMAS export
-  |-- sleep() SSoT 이동 (core/utils/)
-  +-- NATIVE_DECIMALS SSoT 확인
-
-Phase 2: Infrastructure 계층 유틸리티 추출
-  |-- infrastructure/crypto/siwe-verify.ts 신규
-  |-- infrastructure/crypto/address-validation.ts 신규
-  +-- api/middleware re-export 전환
-
-Phase 3: Pipeline 계층 Zod 검증 적용
-  |-- parsePolicyRules 헬퍼 생성
-  |-- database-policy-engine.ts ~20개 JSON.parse 교체
-  +-- 기타 서비스의 JSON.parse 교체
-
-Phase 4: as any 제거 + 레이어 위반 수정
-  |-- wc-signing-bridge.ts import 경로 변경
-  |-- hot-reload.ts as any 제거
-  |-- daemon lifecycle as any 제거
-  +-- 기타 프로덕션 코드 as any 제거
-
-Phase 5: 중복 코드 SSoT 통합 + 정리
-  |-- sleep() 중복 4개 -> core import
-  |-- formatDisplayCurrency 통합 확인
-  +-- 팬텀 설정 정리
+site/node_modules/
+site/docs/
+site/blog/
 ```
 
-**Phase 순서 근거:**
-- Phase 1이 먼저인 이유: Phase 3에서 사용할 export가 필요
-- Phase 2가 Phase 4보다 앞인 이유: 레이어 위반 수정의 전제 조건 (이동 대상 먼저 생성)
-- Phase 3이 Phase 4보다 앞인 이유: Zod 검증이 적용되어야 일부 `as any` 제거가 가능
-- Phase 5가 마지막인 이유: 기능적 리스크가 가장 낮고 독립적
+This keeps the repo clean. The `site/index.html` (hand-crafted) and `docs/*.md` (source) are committed. Generated output exists only in the GitHub Pages artifact.
+
+**Note:** `site/sitemap.xml`, `site/llms.txt`, and `site/llms-full.txt` are also generated by the build script, so they should also be gitignored. But this changes the current behavior where `sitemap.xml` and `llms.txt` are committed. The transition requires deleting the committed versions and adding them to `.gitignore`.
+
+### 4. Existing llms.txt (Replaced by Generated)
+
+Current `llms.txt` is hand-written (64 lines). The build script will auto-generate both:
+- `llms.txt` -- summary with links to all pages
+- `llms-full.txt` -- full content concatenated
+
+The hand-written content serves as the template for the generated version.
+
+### 5. Existing JSON-LD on index.html (Unchanged)
+
+The landing page already has 3 JSON-LD blocks (SoftwareApplication, FAQPage, HowTo). These remain untouched. Content pages get their own JSON-LD injected by the template.
+
+### 6. Navigation Links (One Change to index.html)
+
+The landing page nav currently links to GitHub for docs:
+
+```html
+<a href="https://github.com/minhoyoo-iotrust/WAIaaS/blob/main/docs/deployment.md">Docs</a>
+```
+
+After build, this should link to the on-site docs:
+
+```html
+<a href="/docs/">Docs</a>
+```
+
+This is the **only change** to `index.html`: updating the Docs nav link. This also requires a docs index page (`site/docs/index.html`) with a table of contents listing all documentation.
+
+### 7. robots.txt (Modified)
+
+Add llms-full.txt reference:
+
+```
+User-agent: *
+Allow: /
+
+Sitemap: https://waiaas.ai/sitemap.xml
+```
+
+No changes needed to robots.txt itself -- the sitemap already points crawlers to all pages. But adding a direct reference to llms-full.txt in llms.txt is important for AI crawlers that look for it.
 
 ## Scalability Considerations
 
-| Concern | 현재 상태 | 리팩토링 후 |
-|---------|----------|------------|
-| Zod 검증 성능 | JSON.parse만 (빠름) | JSON.parse + safeParse (미미한 오버헤드, policy는 요청당 수 회) |
-| 패키지 빌드 시간 | core 변경 시 전체 재빌드 | 동일 (core export 추가는 minor) |
-| 테스트 안정성 | `as any`로 타입 불일치 은폐 가능 | safeParse 실패 시 명시적 에러로 조기 발견 |
-| DB 스키마 변경 안전성 | 런타임에서만 발견 | Zod 검증이 잘못된 데이터를 즉시 포착 |
+| Concern | At 15 pages (now) | At 50 pages | At 200+ pages |
+|---------|-------------------|-------------|---------------|
+| Build time | < 1s | < 2s | Consider caching, still < 5s |
+| Build script | Single file ~300 LOC | Same file, still manageable | Consider splitting into modules |
+| Template | Single `_template.html` | May need doc vs blog variants | Add layout selection in frontmatter |
+| Navigation | Manual nav links | Auto-generated docs sidebar | Auto-generated from file tree |
+| sitemap.xml | Single flat file | Single flat file | Consider sitemap index |
+| llms-full.txt | Single file ~100KB | Single file ~250KB | Consider splitting by section |
+
+At the current scale (15 pages), the minimal build script is the right choice. If the site grows beyond 50 pages, evaluate 11ty (which has the lightest footprint among established SSGs and can incrementally adopt).
+
+## Build Order (Implementation Phases)
+
+Based on dependency analysis, the recommended build order:
+
+### Phase 1: Build Infrastructure (no content changes)
+1. Create `site/package.json` with build dependencies (`marked`, `gray-matter`, `highlight.js`)
+2. Create `site/_template.html` (content page shell, CRT theme matching index.html)
+3. Create `site/build.mjs` (markdown-to-HTML core, sitemap generation, llms-full.txt generation)
+4. Test locally: verify one doc renders correctly with `node build.mjs`
+
+**Dependencies:** None. Can start immediately.
+
+### Phase 2: Content Pages
+5. Add frontmatter to `docs/*.md` files (title, description -- non-breaking addition)
+6. Generate all doc pages (`site/docs/**`)
+7. Generate blog pages from Why WAIaaS articles (`site/blog/**`)
+8. Create docs index page (`site/docs/index.html`) with table of contents
+9. Create blog index page (`site/blog/index.html`) with article list
+10. Verify clean URLs work locally
+
+**Dependencies:** Phase 1 complete.
+
+### Phase 3: SEO/AEO Assets
+11. Auto-generate `sitemap.xml` (all URLs + lastmod from git)
+12. Auto-generate `llms-full.txt` (concatenated markdown)
+13. Auto-generate `llms.txt` (summary with links)
+14. Per-page JSON-LD (TechArticle/Article schemas)
+15. BreadcrumbList JSON-LD for content pages
+
+**Dependencies:** Phase 2 complete (needs page list for sitemap).
+
+### Phase 4: CI Integration + Go-Live
+16. Update `.github/workflows/pages.yml` (add build step, fetch-depth, trigger paths)
+17. Update `index.html` nav Docs link to `/docs/`
+18. Add `.gitignore` entries for generated files
+19. Remove committed `sitemap.xml` and `llms.txt` (replaced by generated versions)
+20. End-to-end test: push to branch, verify Pages deployment
+
+**Dependencies:** Phases 1-3 complete.
+
+### Phase ordering rationale:
+- Phase 1 before Phase 2: template and build script must exist before content can be generated
+- Phase 2 before Phase 3: SEO assets (sitemap, llms) need the full page list
+- Phase 3 before Phase 4: all generated content must be verified before CI deployment
+- Phase 4 last: the "go-live" phase that modifies production pipeline
 
 ## Sources
 
-- `packages/core/src/schemas/policy.schema.ts` -- 기존 13개 policy rule 스키마 (직접 코드 분석)
-- `packages/daemon/src/infrastructure/database/connection.ts` -- DatabaseConnection 인터페이스 (직접 코드 분석)
-- `packages/actions/src/common/async-status-tracker.ts` -- IAsyncStatusTracker 위치 확인 (직접 코드 분석)
-- `packages/daemon/src/services/wc-signing-bridge.ts` -- 레이어 위반 지점 확인 (직접 코드 분석)
-- `packages/daemon/src/pipeline/database-policy-engine.ts` -- JSON.parse as Type 패턴 20+ 지점 (직접 코드 분석)
+- [GitHub Pages documentation](https://docs.github.com/en/pages/getting-started-with-github-pages/creating-a-github-pages-site) - HIGH confidence
+- [GitHub Pages clean URLs (directory/index.html)](https://rsp.github.io/gh-pages-no-extension/) - HIGH confidence
+- [llms.txt specification](https://llmstxt.org/) - HIGH confidence (official spec)
+- [llms-full.txt guide](https://aioseo.com/what-is-llms-full-txt/) - MEDIUM confidence
+- [AEO Complete Guide 2026](https://llmrefs.com/answer-engine-optimization) - MEDIUM confidence
+- [marked.js documentation](https://marked.js.org/) - HIGH confidence
+- [Schema.org TechArticle](https://schema.org/TechArticle) - HIGH confidence
+- Existing codebase analysis: `site/index.html`, `site/llms.txt`, `site/sitemap.xml`, `.github/workflows/pages.yml` - HIGH confidence (direct inspection)

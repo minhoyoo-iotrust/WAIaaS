@@ -1,3 +1,11 @@
+---
+title: "Security Model"
+description: "WAIaaS 3-layer security: session auth, time-delay with owner approval, monitoring with kill switch. Defense in depth."
+date: "2026-02-09"
+section: "docs"
+slug: "security-model"
+category: "Technical"
+---
 # Security Model
 
 WAIaaS implements defense in depth -- multiple independent security layers protect funds even if one layer is compromised.
@@ -132,3 +140,9 @@ All transactions pass through a 6-stage pipeline with an 8-state machine:
 6. **Broadcast** -- Chain submission and confirmation
 
 A sign-only mode is available for transactions that need signing without broadcast.
+
+## Related
+
+- [Architecture](/docs/architecture/) - Overall system architecture and transaction pipeline
+- [Agent Self-Setup Guide](/blog/agent-self-setup/) - Secure agent provisioning workflow
+- [Self-Custody for Agents Means Self-Hosting](/blog/self-custody-means-self-hosting/) - Why self-hosting is essential for security
