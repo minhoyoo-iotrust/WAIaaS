@@ -146,8 +146,7 @@ describe('dcent-auto-router', () => {
   });
 
   describe('INTERMEDIATE_TOKENS', () => {
-    it('contains per-chain intermediate tokens', () => {
-      // Ethereum chain should have ETH, USDC, USDT
+    it('contains per-chain intermediate tokens for Ethereum', () => {
       const ethIntermediates = INTERMEDIATE_TOKENS['eip155:1'];
       expect(ethIntermediates).toBeDefined();
       expect(ethIntermediates!.length).toBeGreaterThanOrEqual(3);
@@ -155,6 +154,32 @@ describe('dcent-auto-router', () => {
       expect(symbols).toContain('ETH');
       expect(symbols).toContain('USDC');
       expect(symbols).toContain('USDT');
+    });
+
+    it('contains Solana mainnet intermediate tokens (SOL, USDC, USDT)', () => {
+      const solIntermediates = INTERMEDIATE_TOKENS['solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp'];
+      expect(solIntermediates).toBeDefined();
+      expect(solIntermediates!.length).toBe(3);
+
+      const symbols = solIntermediates!.map(t => t.symbol);
+      expect(symbols).toContain('SOL');
+      expect(symbols).toContain('USDC');
+      expect(symbols).toContain('USDT');
+
+      // Verify SOL details
+      const sol = solIntermediates!.find(t => t.symbol === 'SOL')!;
+      expect(sol.caip19).toBe('solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/slip44:501');
+      expect(sol.decimals).toBe(9);
+
+      // Verify USDC details
+      const usdc = solIntermediates!.find(t => t.symbol === 'USDC')!;
+      expect(usdc.caip19).toBe('solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
+      expect(usdc.decimals).toBe(6);
+
+      // Verify USDT details
+      const usdt = solIntermediates!.find(t => t.symbol === 'USDT')!;
+      expect(usdt.caip19).toBe('solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB');
+      expect(usdt.decimals).toBe(6);
     });
   });
 
