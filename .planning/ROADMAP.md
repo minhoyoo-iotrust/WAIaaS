@@ -52,7 +52,7 @@ See `.planning/milestones/v32.6-ROADMAP.md` for full details.
   2. 필수 front-matter(title, description, date) 누락 시 빌드가 에러와 함께 중단된다
   3. 생성된 HTML이 clean URL 패턴(directory/index.html)을 따른다
   4. 코드 블록에 구문 강조가 적용되고, article 영역이 긴 콘텐츠에서 가독성을 유지한다
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
 - [ ] 439-01: 빌드 스크립트 + HTML 템플릿 + article CSS
