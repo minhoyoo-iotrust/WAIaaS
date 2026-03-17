@@ -107,8 +107,9 @@ function validateFrontmatter(data, filePath) {
 
 /**
  * Apply template placeholders with front-matter values and rendered content.
+ * @param {string} activeSection - 'blog', 'docs', or '' for no active nav
  */
-function applyTemplate(template, frontmatter, htmlContent, canonicalUrl) {
+function applyTemplate(template, frontmatter, htmlContent, canonicalUrl, activeSection = '') {
   const title = frontmatter.title;
   const description = frontmatter.description;
   const date = frontmatter.date instanceof Date
@@ -124,7 +125,9 @@ function applyTemplate(template, frontmatter, htmlContent, canonicalUrl) {
     .replaceAll('{{OG_TITLE}}', escapeHtml(ogTitle))
     .replaceAll('{{OG_DESCRIPTION}}', escapeHtml(ogDescription))
     .replaceAll('{{DATE}}', date)
-    .replaceAll('{{CONTENT}}', htmlContent);
+    .replaceAll('{{CONTENT}}', htmlContent)
+    .replaceAll('{{ACTIVE_BLOG}}', activeSection === 'blog' ? 'active' : '')
+    .replaceAll('{{ACTIVE_DOCS}}', activeSection === 'docs' ? 'active' : '');
 }
 
 /**
@@ -136,6 +139,106 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
+}
+
+/**
+ * Inline CSS for listing pages (not in article.css since these are index pages, not articles)
+ */
+const LISTING_CSS = `
+<style>
+  .listing { list-style: none; padding: 0; }
+  .listing li { border-bottom: 1px solid var(--border); padding: 16px 0; }
+  .listing a { font-size: 1.1rem; color: var(--green); font-weight: 500; }
+  .listing time { font-size: 0.8rem; color: var(--text-dim); margin-left: 12px; }
+  .listing p { color: var(--text); margin-top: 4px; font-size: 0.85rem; }
+  .listing-category { margin-top: 32px; }
+  .listing-category h2 { font-size: 1rem; color: var(--cyan); margin-bottom: 8px; }
+  .listing-category h2::before { content: "## "; color: var(--text-dim); }
+</style>
+`;
+
+/**
+ * Generate a listing page (blog index or docs index)
+ * @param {'blog'|'docs'} section
+ * @param {Array} pages - front-matter objects with title, description, date, slug, category
+ * @param {string} template - HTML template
+ */
+function generateListingPage(section, pages, template) {
+  let listHtml = LISTING_CSS;
+
+  if (section === 'blog') {
+    // Blog: sorted by date descending
+    const sorted = [...pages].sort((a, b) => {
+      const da = new Date(a.date);
+      const db = new Date(b.date);
+      return db - da;
+    });
+    listHtml += '<ul class="listing">\n';
+    for (const p of sorted) {
+      const dateStr = p.date instanceof Date ? p.date.toISOString().split('T')[0] : String(p.date);
+      listHtml += `  <li>\n`;
+      listHtml += `    <a href="/blog/${p.slug}/">${escapeHtml(p.title)}</a>\n`;
+      listHtml += `    <time>${dateStr}</time>\n`;
+      listHtml += `    <p>${escapeHtml(p.description)}</p>\n`;
+      listHtml += `  </li>\n`;
+    }
+    listHtml += '</ul>\n';
+
+    const frontmatter = {
+      title: 'Blog',
+      description: 'Insights on AI agent wallet security, architecture, and integration guides.',
+      date: '',
+    };
+    const canonicalUrl = `${BASE_URL}/blog/`;
+    const html = applyTemplate(template, frontmatter, listHtml, canonicalUrl, 'blog');
+    // Remove the date line for listing pages
+    const finalHtml = html.replace(/<div class="article-meta"><\/div>\n?/, '');
+
+    const outputPath = path.join(SITE_DIR, 'blog', 'index.html');
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+    fs.writeFileSync(outputPath, finalHtml, 'utf8');
+    console.log('  blog/index.html (listing)');
+  } else {
+    // Docs: grouped by category
+    const byCategory = {};
+    for (const p of pages) {
+      const cat = p.category || 'General';
+      if (!byCategory[cat]) byCategory[cat] = [];
+      byCategory[cat].push(p);
+    }
+    // Sort each category's pages by title
+    for (const cat of Object.keys(byCategory)) {
+      byCategory[cat].sort((a, b) => a.title.localeCompare(b.title));
+    }
+
+    for (const [cat, items] of Object.entries(byCategory)) {
+      listHtml += `<div class="listing-category">\n`;
+      listHtml += `  <h2>${escapeHtml(cat)}</h2>\n`;
+      listHtml += '  <ul class="listing">\n';
+      for (const p of items) {
+        listHtml += `    <li>\n`;
+        listHtml += `      <a href="/docs/${p.slug}/">${escapeHtml(p.title)}</a>\n`;
+        listHtml += `      <p>${escapeHtml(p.description)}</p>\n`;
+        listHtml += `    </li>\n`;
+      }
+      listHtml += '  </ul>\n';
+      listHtml += '</div>\n';
+    }
+
+    const frontmatter = {
+      title: 'Documentation',
+      description: 'Technical references for WAIaaS architecture, API, security, and deployment.',
+      date: '',
+    };
+    const canonicalUrl = `${BASE_URL}/docs/`;
+    const html = applyTemplate(template, frontmatter, listHtml, canonicalUrl, 'docs');
+    const finalHtml = html.replace(/<div class="article-meta"><\/div>\n?/, '');
+
+    const outputPath = path.join(SITE_DIR, 'docs', 'index.html');
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+    fs.writeFileSync(outputPath, finalHtml, 'utf8');
+    console.log('  docs/index.html (listing)');
+  }
 }
 
 /**
@@ -190,9 +293,11 @@ async function build() {
     process.exit(1);
   }
 
-  // Phase 2: Build all pages
+  // Phase 2: Build all pages and collect front-matter for listing pages
   let blogCount = 0;
   let docsCount = 0;
+  const blogPages = [];
+  const docsPages = [];
 
   for (const filePath of eligibleFiles) {
     const raw = fs.readFileSync(filePath, 'utf8');
@@ -205,8 +310,20 @@ async function build() {
     const outputPath = getOutputPath(data, filePath);
     const canonicalUrl = getCanonicalUrl(data, filePath);
 
-    // Apply template
-    const finalHtml = applyTemplate(template, data, htmlContent, canonicalUrl);
+    const section = data.section || 'docs';
+    const slug = data.slug || deriveSlug(filePath);
+
+    // Collect page data for listing pages
+    const pageInfo = {
+      title: data.title,
+      description: data.description,
+      date: data.date,
+      slug,
+      category: data.category || 'General',
+    };
+
+    // Apply template with active section
+    const finalHtml = applyTemplate(template, data, htmlContent, canonicalUrl, section);
 
     // Ensure output directory exists
     const outputDir = path.dirname(outputPath);
@@ -215,11 +332,12 @@ async function build() {
     // Write output
     fs.writeFileSync(outputPath, finalHtml, 'utf8');
 
-    const section = data.section || 'docs';
     if (section === 'blog') {
       blogCount++;
+      blogPages.push(pageInfo);
     } else {
       docsCount++;
+      docsPages.push(pageInfo);
     }
 
     const relative = path.relative(SITE_DIR, outputPath);
@@ -228,6 +346,23 @@ async function build() {
 
   const total = blogCount + docsCount;
   console.log(`\nBuilt ${total} pages (${blogCount} blog, ${docsCount} docs)`);
+
+  // Phase 2b: Generate listing pages
+  console.log('\nGenerating listing pages...');
+  if (blogPages.length > 0) {
+    generateListingPage('blog', blogPages, template);
+  }
+  if (docsPages.length > 0) {
+    generateListingPage('docs', docsPages, template);
+  }
+
+  // Count blog categories
+  const whyCount = blogPages.filter(p => p.category === 'Why WAIaaS').length;
+  const guidesCount = blogPages.filter(p => p.category === 'Guides').length;
+  console.log(`\nContent stats:`);
+  console.log(`  Blog: ${blogCount} articles (Why WAIaaS: ${whyCount}, Guides: ${guidesCount})`);
+  console.log(`  Docs: ${docsCount} articles`);
+  console.log(`  Listing pages: 2 (blog, docs)`);
 }
 
 build().catch((err) => {
