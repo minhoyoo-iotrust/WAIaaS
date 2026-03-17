@@ -8,9 +8,16 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: (planning next)
+## Current Milestone: v32.7 SEO/AEO 최적화
 
-No active milestone. Run `/gsd:new-milestone` to start the next one.
+**Goal:** 단일 페이지 waiaas.ai를 GitHub Pages 순수 HTML로 확장하여 SEO/AEO를 강화하고 "AI wallet" 카테고리 키워드를 선점한다.
+
+**Target features:**
+- 페이지 템플릿 + 네비게이션 인프라 (마크다운 → HTML 변환 스크립트)
+- 기존 `/docs/` 콘텐츠 웹 발행 (Blog + Docs 섹션)
+- SEO 랜딩 페이지 신규 작성 ("AI Wallet" 카테고리 정의)
+- 기술 SEO + AEO 강화 (sitemap, JSON-LD, FAQ 확장)
+- 외부 분배 준비 (AI directory 등록 자료, 커뮤니티 포스팅 초안)
 
 ## Previous Milestone: v32.6 성능 + 구조 개선 — SHIPPED 2026-03-17
 

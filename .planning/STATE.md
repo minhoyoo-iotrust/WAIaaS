@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v32.6
-milestone_name: 성능 + 구조 개선
-status: shipped
-stopped_at: Milestone v32.6 shipped and archived
+milestone: v32.7
+milestone_name: SEO/AEO 최적화
+status: defining_requirements
+stopped_at: Defining requirements for milestone v32.7
 last_updated: "2026-03-17T00:00:00.000Z"
-last_activity: 2026-03-17 — Milestone v32.6 archived
+last_activity: 2026-03-17 — Milestone v32.7 started
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 9
-  completed_plans: 9
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -21,26 +21,20 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-17)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Planning next milestone
+**Current focus:** Milestone v32.7 — SEO/AEO 최적화
 
 ## Current Position
 
-Milestone v32.6 shipped and archived.
-Ready for next milestone.
-
-Progress: [##########] 100%
-
-## Performance Metrics
-
-**Velocity:**
-- Total plans completed: 9
-- Total execution time: ~2.0 hours
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-17 — Milestone v32.7 started
 
 ## Accumulated Context
 
 ### Decisions
 
-(Archived to milestones/v32.6-ROADMAP.md)
+None yet.
 
 ### Pending Todos
 
@@ -53,5 +47,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-17
-Stopped at: Milestone v32.6 shipped and archived
+Stopped at: Defining requirements for milestone v32.7
 Resume file: None
