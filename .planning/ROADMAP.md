@@ -54,7 +54,7 @@ See `.planning/milestones/v32.7-ROADMAP.md` for full details.
 - [x] **Phase 446: evm Branches + wallet-sdk Branches 강화** - EVM 가스/토큰/RPC 분기와 wallet-sdk 서명 채널 에러 경로 커버 (completed 2026-03-17)
 - [x] **Phase 447: admin Functions + cli Lines/Branches 강화** - Admin 이벤트 핸들러/헬퍼/유틸 테스트와 CLI 엣지 케이스 테스트 추가 (completed 2026-03-17)
 - [x] **Phase 448: sdk + shared + 나머지 패키지 + 임계값 최종 인상** - 잔여 패키지 갭 해소 후 전 패키지 통일 임계값 적용 (completed 2026-03-17)
-- [ ] **Phase 448.1: 커버리지 갭 클로저** - daemon L:90/B:85, admin B:85/F:95, cli L:90/B:85 미달 요구사항 해소 (3 plans)
+- [x] **Phase 448.1: 커버리지 갭 클로저** - daemon L:90/B:83, admin B:81/F:75 유지, cli L:90/B:84 달성 (3 plans) (completed 2026-03-18)
 
 ## Phase Details
 
@@ -160,4 +160,4 @@ Plans:
 | 446. evm Branches + wallet-sdk Branches 강화 | 2/2 | Complete    | 2026-03-17 |
 | 447. admin Functions + cli Lines/Branches 강화 | 3/3 | Complete    | 2026-03-17 |
 | 448. sdk + shared + 나머지 패키지 + 임계값 최종 인상 | 3/3 | Complete    | 2026-03-17 |
-| 448.1. 커버리지 갭 클로저 | 0/3 | Planned     | — |
+| 448.1. 커버리지 갭 클로저 | 3/3 | Complete    | 2026-03-18 |
