@@ -1,0 +1,210 @@
+/* Article CSS — CRT-themed long-form content styles */
+/* Uses CSS variables from template.html :root (does NOT redefine them) */
+
+/* Article container */
+.article {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 48px 24px;
+}
+
+/* Typography — headings */
+.article h1 {
+  font-size: 1.6rem;
+  color: var(--text-bright);
+  margin-bottom: 8px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.article h2 {
+  font-size: 1.2rem;
+  color: var(--green);
+  margin-top: 40px;
+  margin-bottom: 16px;
+  font-weight: 700;
+}
+.article h2::before {
+  content: "## ";
+  color: var(--text-dim);
+}
+
+.article h3 {
+  font-size: 1rem;
+  color: var(--cyan);
+  margin-top: 32px;
+  margin-bottom: 12px;
+  font-weight: 700;
+}
+.article h3::before {
+  content: "### ";
+  color: var(--text-dim);
+}
+
+.article h4 {
+  font-size: 0.95rem;
+  color: var(--yellow);
+  margin-top: 24px;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+/* Typography — body text */
+.article p {
+  line-height: 1.8;
+  margin-bottom: 20px;
+  color: var(--text);
+}
+
+/* Article meta (published date) */
+.article-meta {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin-bottom: 32px;
+}
+.article-meta::before {
+  content: "// published ";
+}
+
+/* Code blocks */
+.article pre {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 16px 20px;
+  overflow-x: auto;
+  margin: 20px 0;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.article pre code {
+  background: none;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+}
+
+/* Inline code */
+.article code {
+  background: var(--surface);
+  padding: 2px 6px;
+  color: var(--cyan);
+  font-size: 0.9em;
+}
+
+/* highlight.js background override to match CRT theme */
+.article .hljs {
+  background: var(--surface);
+}
+
+/* Lists */
+.article ul,
+.article ol {
+  margin: 16px 0;
+  padding-left: 24px;
+}
+
+.article li {
+  margin-bottom: 8px;
+  line-height: 1.7;
+}
+
+.article ul li::marker {
+  color: var(--green);
+}
+
+.article ol li::marker {
+  color: var(--green);
+}
+
+/* Tables */
+.article table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px 0;
+  font-size: 0.85rem;
+}
+
+.article th {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--cyan);
+  text-align: left;
+  font-weight: 500;
+}
+
+.article td {
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Blockquotes */
+.article blockquote {
+  border-left: 2px solid var(--green-dim);
+  padding-left: 16px;
+  color: var(--text-dim);
+  margin: 20px 0;
+  font-style: italic;
+}
+
+.article blockquote p {
+  color: var(--text-dim);
+}
+
+/* Links */
+.article a {
+  color: var(--cyan);
+  text-decoration: none;
+}
+.article a:hover {
+  text-decoration: underline;
+}
+.article a:visited {
+  color: var(--magenta);
+}
+
+/* Horizontal rules */
+.article hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 40px 0;
+}
+
+/* Images */
+.article img {
+  max-width: 100%;
+  border: 1px solid var(--border);
+}
+
+/* Strong and emphasis */
+.article strong {
+  color: var(--text-bright);
+  font-weight: 700;
+}
+
+.article em {
+  font-style: italic;
+  color: var(--text);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .article {
+    padding: 32px 16px;
+  }
+
+  .article h1 {
+    font-size: 1.3rem;
+  }
+
+  .article pre {
+    font-size: 0.8rem;
+    padding: 12px;
+  }
+
+  .article table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
