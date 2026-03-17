@@ -34,10 +34,10 @@ Requirements for milestone v32.7. Each maps to roadmap phases.
 
 ### SEO Landing Pages
 
-- [ ] **SEO-01**: "What is an AI Wallet" 카테고리 정의 페이지가 생성된다
-- [ ] **SEO-02**: "AI Agent Wallet Security" 페이지가 AEO Question→Answer 구조로 작성된다
-- [ ] **SEO-03**: "MCP Wallet" 페이지가 타겟 키워드와 함께 생성된다
-- [ ] **SEO-04**: 각 SEO 랜딩 페이지에 targeted meta description과 keywords가 설정된다
+- [x] **SEO-01**: "What is an AI Wallet" 카테고리 정의 페이지가 생성된다
+- [x] **SEO-02**: "AI Agent Wallet Security" 페이지가 AEO Question→Answer 구조로 작성된다
+- [x] **SEO-03**: "MCP Wallet" 페이지가 타겟 키워드와 함께 생성된다
+- [x] **SEO-04**: 각 SEO 랜딩 페이지에 targeted meta description과 keywords가 설정된다
 
 ### Technical SEO & AEO
 
@@ -56,10 +56,10 @@ Requirements for milestone v32.7. Each maps to roadmap phases.
 
 ### External Distribution
 
-- [ ] **DIST-01**: AI directory 등록용 SUBMISSION_KIT.md가 프로젝트 설명/카테고리/태그를 포함한다
-- [ ] **DIST-02**: 등록 대상 플랫폼별 체크리스트가 작성된다
-- [ ] **DIST-03**: MCP directory 등록 정보가 최신화된다
-- [ ] **DIST-04**: 커뮤니티 포스팅 초안(HN Show HN, Reddit)이 작성된다
+- [x] **DIST-01**: AI directory 등록용 SUBMISSION_KIT.md가 프로젝트 설명/카테고리/태그를 포함한다
+- [x] **DIST-02**: 등록 대상 플랫폼별 체크리스트가 작성된다
+- [x] **DIST-03**: MCP directory 등록 정보가 최신화된다
+- [x] **DIST-04**: 커뮤니티 포스팅 초안(HN Show HN, Reddit)이 작성된다
 
 ## Future Requirements
 
@@ -109,10 +109,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NAV-01 | Phase 440 | Complete |
 | NAV-02 | Phase 440 | Complete |
 | NAV-03 | Phase 440 | Complete |
-| SEO-01 | Phase 443 | Pending |
-| SEO-02 | Phase 443 | Pending |
-| SEO-03 | Phase 443 | Pending |
-| SEO-04 | Phase 443 | Pending |
+| SEO-01 | Phase 443 | Complete |
+| SEO-02 | Phase 443 | Complete |
+| SEO-03 | Phase 443 | Complete |
+| SEO-04 | Phase 443 | Complete |
 | TSEO-01 | Phase 441 | Complete |
 | TSEO-02 | Phase 441 | Complete |
 | TSEO-03 | Phase 441 | Complete |
@@ -122,10 +122,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CI-01 | Phase 442 | Complete |
 | CI-02 | Phase 442 | Complete |
 | CI-03 | Phase 442 | Complete |
-| DIST-01 | Phase 443 | Pending |
-| DIST-02 | Phase 443 | Pending |
-| DIST-03 | Phase 443 | Pending |
-| DIST-04 | Phase 443 | Pending |
+| DIST-01 | Phase 443 | Complete |
+| DIST-02 | Phase 443 | Complete |
+| DIST-03 | Phase 443 | Complete |
+| DIST-04 | Phase 443 | Complete |
 
 **Coverage:**
 - v1 requirements: 33 total

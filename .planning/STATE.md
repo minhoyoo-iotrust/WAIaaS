@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v32.5
 milestone_name: milestone
 status: Ready for Phase 443
-stopped_at: Completed 442-01-PLAN.md
-last_updated: "2026-03-17T07:53:45.216Z"
+stopped_at: Completed 443-02-PLAN.md
+last_updated: "2026-03-17T08:06:19.871Z"
 last_activity: 2026-03-17 -- Phase 442 completed
 progress:
   total_phases: 5
-  completed_phases: 4
-  total_plans: 5
-  completed_plans: 5
+  completed_phases: 5
+  total_plans: 7
+  completed_plans: 7
   percent: 80
 ---
 
@@ -45,6 +45,7 @@ Progress: [████████░░] 80%
 |-------|-------|-------|----------|
 | 441 | 2 | 10min | 5min |
 | Phase 442 P01 | 2min | 2 tasks | 2 files |
+| Phase 443 P01+02 | 8min | 3 tasks | 5 files |
 
 ## Accumulated Context
 | Phase 439 P01 | 5min | 2 tasks | 20 files |
@@ -67,6 +68,8 @@ Progress: [████████░░] 80%
 - [Phase 441]: llms-full.txt sorted: blog date-desc first, then docs title-alpha
 - [Phase 441]: Each markdown file gets 3 Related cross-links for pillar-cluster topology
 - [Phase 442]: pnpm install --filter . for root-only devDependencies in CI
+- [Phase 443]: SEO pages use section:blog with category 'SEO Landing' for blog listing visibility
+- [Phase 443]: Distribution materials in site/distribution/ outside docs/ build scope
 
 ### Pending Todos
 
@@ -78,6 +81,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-17T07:53:05.072Z
-Stopped at: Completed 442-01-PLAN.md
+Last session: 2026-03-17T08:06:19.867Z
+Stopped at: Completed 443-02-PLAN.md
 Resume file: None

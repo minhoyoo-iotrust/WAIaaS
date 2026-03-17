@@ -39,7 +39,7 @@ See `.planning/milestones/v32.6-ROADMAP.md` for full details.
 - [x] **Phase 440: Content Publishing + Navigation** - 기존 문서 Blog/Docs 섹션 발행 및 네비게이션 연결 (completed 2026-03-17)
 - [x] **Phase 441: Technical SEO & AEO** - sitemap, JSON-LD, FAQ 확장, llms-full.txt, 내부 링크 (completed 2026-03-17)
 - [x] **Phase 442: CI Integration** - GitHub Actions 빌드 스텝, 자동 재빌드, .gitignore (completed 2026-03-17)
-- [ ] **Phase 443: SEO Landing Pages + External Distribution** - AI wallet 카테고리 랜딩 페이지 신규 작성 및 배포 자료 준비
+- [x] **Phase 443: SEO Landing Pages + External Distribution** - AI wallet 카테고리 랜딩 페이지 신규 작성 및 배포 자료 준비 (completed 2026-03-17)
 
 ## Phase Details
 
@@ -126,4 +126,4 @@ Phases execute in numeric order: 439 → 440 → 441 → 442 → 443
 | 440. Content Publishing + Navigation | 1/1 | Complete    | 2026-03-17 |
 | 441. Technical SEO & AEO | 2/2 | Complete    | 2026-03-17 |
 | 442. CI Integration | 1/1 | Complete    | 2026-03-17 |
-| 443. SEO Landing Pages + External Distribution | 0/2 | Not started | - |
+| 443. SEO Landing Pages + External Distribution | 2/2 | Complete   | 2026-03-17 |
