@@ -63,9 +63,9 @@ See `.planning/milestones/v32.7-ROADMAP.md` for full details.
 **Requirements**: DDEFI-01, DDEFI-02, DDEFI-03, DDEFI-04, DDEFI-05, DPIPE-01, DPIPE-02, DPIPE-03, DPIPE-04, DPIPE-05
 **Plans**: 3 plans
 Plans:
-- [ ] 444-01-PLAN.md — Jupiter/0x/LiFi Provider 단위 테스트
-- [ ] 444-02-PLAN.md — Lido+Jito/Aave Provider 단위 테스트
-- [ ] 444-03-PLAN.md — Pipeline 엣지 케이스 테스트 (DELAY/GAS_WAITING 재진입, 서명 타임아웃, 가스 추정 실패, Gas Conditional)
+- [x] 444-01-PLAN.md — Jupiter/0x/LiFi Provider 단위 테스트
+- [x] 444-02-PLAN.md — Lido+Jito/Aave Provider 단위 테스트
+- [x] 444-03-PLAN.md — Pipeline 엣지 케이스 테스트 (DELAY/GAS_WAITING 재진입, 서명 타임아웃, 가스 추정 실패, Gas Conditional)
 **Success Criteria** (what must be TRUE):
   1. Jupiter/0x/LI.FI/Lido+Jito/Aave 각 Provider의 성공 및 실패 경로가 목킹 기반 테스트로 검증된다
   2. Pipeline DELAY 재진입 시 원본 request가 보존되고, GAS_WAITING 재진입 후 가스 조건 충족 시 정상 실행된다
@@ -76,13 +76,17 @@ Plans:
 **Goal**: daemon 패키지가 Lines 90% / Branches 85% / Functions 95% 통일 기준을 달성한다
 **Depends on**: Phase 444
 **Requirements**: DINF-01, DINF-02, DINF-03, DINF-04, DINF-05, DCOV-01, DCOV-02, DCOV-03
+**Plans**: 3 plans
+Plans:
+- [ ] 445-01-PLAN.md — IncomingTx Monitor/Workers + Notification 서비스 + RPC Proxy 라우트 테스트
+- [ ] 445-02-PLAN.md — Admin API 라우트 (wallets/settings/auth/monitoring/wallet-apps) 테스트
+- [ ] 445-03-PLAN.md — 잔여 커버리지 갭 sweep + vitest.config.ts 임계값 인상 (90/85/95)
 **Success Criteria** (what must be TRUE):
   1. IncomingTxMonitor 구독 관리, 감지, DB 저장, 알림 트리거가 테스트로 검증된다
   2. EVM/Solana Subscriber 폴링, WSS 재연결, 블록 스캔이 테스트로 검증된다
   3. RPC Pool 로테이션, 재시도, 장애 격리가 테스트로 검증된다
   4. Admin API 라우트와 Notification 템플릿 엣지 케이스가 테스트로 검증된다
   5. daemon 패키지 `pnpm test:unit` 실행 시 Lines >= 90%, Branches >= 85%, Functions >= 95% 임계값을 통과한다
-**Plans**: TBD
 
 ### Phase 446: evm Branches + wallet-sdk Branches 강화
 **Goal**: evm 패키지 Branches 85%와 wallet-sdk 패키지 Branches 85%를 달성한다
@@ -116,14 +120,13 @@ Plans:
   3. core Functions >= 95%, actions Branches >= 85%, mcp Branches >= 85% 소량 갭이 해소된다
   4. 전 패키지 vitest.config.ts 임계값이 통일 기준으로 인상되고, `pnpm turbo run test:unit` 전체 0 failures로 통과한다
   5. coverage-gate.sh와 vitest.config.ts 임계값이 동기화되고, 기존 임계값 하향이 없음이 확인된다
-**Plans**: TBD
 
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 444. daemon DeFi Provider + Pipeline 테스트 강화 | 3/3 | Complete    | 2026-03-17 |
-| 445. daemon Infra + Admin API + Notification 테스트 | 0/TBD | Not started | - |
+| 445. daemon Infra + Admin API + Notification 테스트 | 0/3 | Not started | - |
 | 446. evm Branches + wallet-sdk Branches 강화 | 0/TBD | Not started | - |
 | 447. admin Functions + cli Lines/Branches 강화 | 0/TBD | Not started | - |
 | 448. sdk + shared + 나머지 패키지 + 임계값 최종 인상 | 0/TBD | Not started | - |
