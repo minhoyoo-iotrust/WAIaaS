@@ -93,45 +93,45 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BUILD-01 | — | Pending |
-| BUILD-02 | — | Pending |
-| BUILD-03 | — | Pending |
-| BUILD-04 | — | Pending |
-| BUILD-05 | — | Pending |
-| BUILD-06 | — | Pending |
-| CONT-01 | — | Pending |
-| CONT-02 | — | Pending |
-| CONT-03 | — | Pending |
-| CONT-04 | — | Pending |
-| CONT-05 | — | Pending |
-| CONT-06 | — | Pending |
-| CONT-07 | — | Pending |
-| NAV-01 | — | Pending |
-| NAV-02 | — | Pending |
-| NAV-03 | — | Pending |
-| SEO-01 | — | Pending |
-| SEO-02 | — | Pending |
-| SEO-03 | — | Pending |
-| SEO-04 | — | Pending |
-| TSEO-01 | — | Pending |
-| TSEO-02 | — | Pending |
-| TSEO-03 | — | Pending |
-| TSEO-04 | — | Pending |
-| TSEO-05 | — | Pending |
-| TSEO-06 | — | Pending |
-| CI-01 | — | Pending |
-| CI-02 | — | Pending |
-| CI-03 | — | Pending |
-| DIST-01 | — | Pending |
-| DIST-02 | — | Pending |
-| DIST-03 | — | Pending |
-| DIST-04 | — | Pending |
+| BUILD-01 | Phase 439 | Pending |
+| BUILD-02 | Phase 439 | Pending |
+| BUILD-03 | Phase 439 | Pending |
+| BUILD-04 | Phase 439 | Pending |
+| BUILD-05 | Phase 439 | Pending |
+| BUILD-06 | Phase 439 | Pending |
+| CONT-01 | Phase 440 | Pending |
+| CONT-02 | Phase 440 | Pending |
+| CONT-03 | Phase 440 | Pending |
+| CONT-04 | Phase 440 | Pending |
+| CONT-05 | Phase 440 | Pending |
+| CONT-06 | Phase 440 | Pending |
+| CONT-07 | Phase 440 | Pending |
+| NAV-01 | Phase 440 | Pending |
+| NAV-02 | Phase 440 | Pending |
+| NAV-03 | Phase 440 | Pending |
+| SEO-01 | Phase 443 | Pending |
+| SEO-02 | Phase 443 | Pending |
+| SEO-03 | Phase 443 | Pending |
+| SEO-04 | Phase 443 | Pending |
+| TSEO-01 | Phase 441 | Pending |
+| TSEO-02 | Phase 441 | Pending |
+| TSEO-03 | Phase 441 | Pending |
+| TSEO-04 | Phase 441 | Pending |
+| TSEO-05 | Phase 441 | Pending |
+| TSEO-06 | Phase 441 | Pending |
+| CI-01 | Phase 442 | Pending |
+| CI-02 | Phase 442 | Pending |
+| CI-03 | Phase 442 | Pending |
+| DIST-01 | Phase 443 | Pending |
+| DIST-02 | Phase 443 | Pending |
+| DIST-03 | Phase 443 | Pending |
+| DIST-04 | Phase 443 | Pending |
 
 **Coverage:**
 - v1 requirements: 33 total
-- Mapped to phases: 0
-- Unmapped: 33 ⚠️
+- Mapped to phases: 33
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-17*
-*Last updated: 2026-03-17 after initial definition*
+*Last updated: 2026-03-17 after roadmap creation*
