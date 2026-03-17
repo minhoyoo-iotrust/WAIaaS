@@ -35,7 +35,7 @@ See `.planning/milestones/v32.6-ROADMAP.md` for full details.
 - Integer phases (439, 440, ...): Planned milestone work
 - Decimal phases (439.1, 439.2): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 439: Build Infrastructure** - 마크다운-to-HTML 빌드 스크립트, HTML 템플릿, article CSS 구축
+- [x] **Phase 439: Build Infrastructure** - 마크다운-to-HTML 빌드 스크립트, HTML 템플릿, article CSS 구축 (completed 2026-03-17)
 - [ ] **Phase 440: Content Publishing + Navigation** - 기존 문서 Blog/Docs 섹션 발행 및 네비게이션 연결
 - [ ] **Phase 441: Technical SEO & AEO** - sitemap, JSON-LD, FAQ 확장, llms-full.txt, 내부 링크
 - [ ] **Phase 442: CI Integration** - GitHub Actions 빌드 스텝, 자동 재빌드, .gitignore
@@ -123,7 +123,7 @@ Phases execute in numeric order: 439 → 440 → 441 → 442 → 443
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 439. Build Infrastructure | 0/1 | Not started | - |
+| 439. Build Infrastructure | 1/1 | Complete   | 2026-03-17 |
 | 440. Content Publishing + Navigation | 0/2 | Not started | - |
 | 441. Technical SEO & AEO | 0/2 | Not started | - |
 | 442. CI Integration | 0/1 | Not started | - |

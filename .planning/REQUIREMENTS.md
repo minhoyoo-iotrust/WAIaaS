@@ -9,12 +9,12 @@ Requirements for milestone v32.7. Each maps to roadmap phases.
 
 ### Build Infrastructure
 
-- [ ] **BUILD-01**: Build script가 markdown 파일을 front-matter와 함께 파싱하여 HTML로 변환한다
-- [ ] **BUILD-02**: HTML 템플릿이 CRT 터미널 테마를 공유하며 nav/footer를 포함한다
-- [ ] **BUILD-03**: Article CSS가 긴 콘텐츠에서 WCAG AA 대비율을 유지하며 가독성을 제공한다
-- [ ] **BUILD-04**: Front-matter에 필수 필드(title, description, date) 누락 시 빌드가 실패한다
-- [ ] **BUILD-05**: 코드 블록에 build-time 구문 강조(highlight.js)가 적용된다
-- [ ] **BUILD-06**: Clean URL 패턴(directory/index.html)으로 페이지를 생성한다
+- [x] **BUILD-01**: Build script가 markdown 파일을 front-matter와 함께 파싱하여 HTML로 변환한다
+- [x] **BUILD-02**: HTML 템플릿이 CRT 터미널 테마를 공유하며 nav/footer를 포함한다
+- [x] **BUILD-03**: Article CSS가 긴 콘텐츠에서 WCAG AA 대비율을 유지하며 가독성을 제공한다
+- [x] **BUILD-04**: Front-matter에 필수 필드(title, description, date) 누락 시 빌드가 실패한다
+- [x] **BUILD-05**: 코드 블록에 build-time 구문 강조(highlight.js)가 적용된다
+- [x] **BUILD-06**: Clean URL 패턴(directory/index.html)으로 페이지를 생성한다
 
 ### Content Publishing
 
@@ -93,12 +93,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BUILD-01 | Phase 439 | Pending |
-| BUILD-02 | Phase 439 | Pending |
-| BUILD-03 | Phase 439 | Pending |
-| BUILD-04 | Phase 439 | Pending |
-| BUILD-05 | Phase 439 | Pending |
-| BUILD-06 | Phase 439 | Pending |
+| BUILD-01 | Phase 439 | Complete |
+| BUILD-02 | Phase 439 | Complete |
+| BUILD-03 | Phase 439 | Complete |
+| BUILD-04 | Phase 439 | Complete |
+| BUILD-05 | Phase 439 | Complete |
+| BUILD-06 | Phase 439 | Complete |
 | CONT-01 | Phase 440 | Pending |
 | CONT-02 | Phase 440 | Pending |
 | CONT-03 | Phase 440 | Pending |
