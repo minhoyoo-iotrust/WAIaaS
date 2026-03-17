@@ -106,10 +106,81 @@ function validateFrontmatter(data, filePath) {
 }
 
 /**
+ * Generate JSON-LD structured data for an article page.
+ * Blog pages get Article type, docs pages get TechArticle type.
+ * All article pages also get a BreadcrumbList.
+ * @returns {string} One or more <script type="application/ld+json"> blocks
+ */
+function generateJsonLd(frontmatter, canonicalUrl, section) {
+  const dateStr = frontmatter.date instanceof Date
+    ? frontmatter.date.toISOString().split('T')[0]
+    : String(frontmatter.date);
+
+  const articleType = section === 'blog' ? 'Article' : 'TechArticle';
+  const sectionLabel = section === 'blog' ? 'Blog' : 'Docs';
+  const sectionUrl = `${BASE_URL}/${section}/`;
+
+  const article = {
+    '@context': 'https://schema.org',
+    '@type': articleType,
+    headline: frontmatter.title,
+    description: frontmatter.description,
+    datePublished: dateStr,
+    url: canonicalUrl,
+    author: { '@type': 'Organization', name: 'WAIaaS' },
+    publisher: { '@type': 'Organization', name: 'WAIaaS', url: BASE_URL },
+  };
+
+  const breadcrumb = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: `${BASE_URL}/` },
+      { '@type': 'ListItem', position: 2, name: sectionLabel, item: sectionUrl },
+      { '@type': 'ListItem', position: 3, name: frontmatter.title, item: canonicalUrl },
+    ],
+  };
+
+  return `<script type="application/ld+json">\n${JSON.stringify(article, null, 2)}\n</script>\n`
+    + `<script type="application/ld+json">\n${JSON.stringify(breadcrumb, null, 2)}\n</script>`;
+}
+
+/**
+ * Generate JSON-LD for listing pages (blog/index, docs/index).
+ * Uses CollectionPage + BreadcrumbList.
+ */
+function generateListingJsonLd(section, canonicalUrl) {
+  const sectionLabel = section === 'blog' ? 'Blog' : 'Documentation';
+
+  const collection = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: sectionLabel,
+    description: section === 'blog'
+      ? 'Insights on AI agent wallet security, architecture, and integration guides.'
+      : 'Technical references for WAIaaS architecture, API, security, and deployment.',
+    url: canonicalUrl,
+  };
+
+  const breadcrumb = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: `${BASE_URL}/` },
+      { '@type': 'ListItem', position: 2, name: sectionLabel, item: canonicalUrl },
+    ],
+  };
+
+  return `<script type="application/ld+json">\n${JSON.stringify(collection, null, 2)}\n</script>\n`
+    + `<script type="application/ld+json">\n${JSON.stringify(breadcrumb, null, 2)}\n</script>`;
+}
+
+/**
  * Apply template placeholders with front-matter values and rendered content.
  * @param {string} activeSection - 'blog', 'docs', or '' for no active nav
+ * @param {string} jsonLd - JSON-LD script blocks to inject
  */
-function applyTemplate(template, frontmatter, htmlContent, canonicalUrl, activeSection = '') {
+function applyTemplate(template, frontmatter, htmlContent, canonicalUrl, activeSection = '', jsonLd = '') {
   const title = frontmatter.title;
   const description = frontmatter.description;
   const date = frontmatter.date instanceof Date
@@ -127,7 +198,8 @@ function applyTemplate(template, frontmatter, htmlContent, canonicalUrl, activeS
     .replaceAll('{{DATE}}', date)
     .replaceAll('{{CONTENT}}', htmlContent)
     .replaceAll('{{ACTIVE_BLOG}}', activeSection === 'blog' ? 'active' : '')
-    .replaceAll('{{ACTIVE_DOCS}}', activeSection === 'docs' ? 'active' : '');
+    .replaceAll('{{ACTIVE_DOCS}}', activeSection === 'docs' ? 'active' : '')
+    .replaceAll('{{JSON_LD}}', jsonLd);
 }
 
 /**
@@ -190,7 +262,8 @@ function generateListingPage(section, pages, template) {
       date: '',
     };
     const canonicalUrl = `${BASE_URL}/blog/`;
-    const html = applyTemplate(template, frontmatter, listHtml, canonicalUrl, 'blog');
+    const listingJsonLd = generateListingJsonLd('blog', canonicalUrl);
+    const html = applyTemplate(template, frontmatter, listHtml, canonicalUrl, 'blog', listingJsonLd);
     // Remove the date line for listing pages
     const finalHtml = html.replace(/<div class="article-meta"><\/div>\n?/, '');
 
@@ -231,7 +304,8 @@ function generateListingPage(section, pages, template) {
       date: '',
     };
     const canonicalUrl = `${BASE_URL}/docs/`;
-    const html = applyTemplate(template, frontmatter, listHtml, canonicalUrl, 'docs');
+    const listingJsonLd = generateListingJsonLd('docs', canonicalUrl);
+    const html = applyTemplate(template, frontmatter, listHtml, canonicalUrl, 'docs', listingJsonLd);
     const finalHtml = html.replace(/<div class="article-meta"><\/div>\n?/, '');
 
     const outputPath = path.join(SITE_DIR, 'docs', 'index.html');
@@ -298,6 +372,7 @@ async function build() {
   let docsCount = 0;
   const blogPages = [];
   const docsPages = [];
+  const builtPages = []; // For sitemap generation
 
   for (const filePath of eligibleFiles) {
     const raw = fs.readFileSync(filePath, 'utf8');
@@ -322,8 +397,11 @@ async function build() {
       category: data.category || 'General',
     };
 
-    // Apply template with active section
-    const finalHtml = applyTemplate(template, data, htmlContent, canonicalUrl, section);
+    // Generate JSON-LD for this article page
+    const jsonLd = generateJsonLd(data, canonicalUrl, section);
+
+    // Apply template with active section and JSON-LD
+    const finalHtml = applyTemplate(template, data, htmlContent, canonicalUrl, section, jsonLd);
 
     // Ensure output directory exists
     const outputDir = path.dirname(outputPath);
@@ -331,6 +409,12 @@ async function build() {
 
     // Write output
     fs.writeFileSync(outputPath, finalHtml, 'utf8');
+
+    // Track for sitemap
+    const dateStr = data.date instanceof Date
+      ? data.date.toISOString().split('T')[0]
+      : String(data.date);
+    builtPages.push({ url: canonicalUrl, lastmod: dateStr, section });
 
     if (section === 'blog') {
       blogCount++;
@@ -364,6 +448,9 @@ async function build() {
   console.log(`  Docs: ${docsCount} articles`);
   console.log(`  Listing pages: 2 (blog, docs)`);
 
+  // Phase 2c: Generate sitemap.xml
+  generateSitemap(builtPages);
+
   // Phase 3: Link Validation
   console.log('\nValidating internal links...');
   const brokenLinks = validateInternalLinks();
@@ -376,6 +463,51 @@ async function build() {
     }
     process.exit(1);
   }
+}
+
+/**
+ * Generate sitemap.xml from built pages.
+ * @param {Array<{url: string, lastmod: string, section: string}>} pages
+ */
+function generateSitemap(pages) {
+  const today = new Date().toISOString().split('T')[0];
+
+  let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+  xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
+
+  // Homepage
+  xml += '  <url>\n';
+  xml += `    <loc>${BASE_URL}/</loc>\n`;
+  xml += `    <lastmod>${today}</lastmod>\n`;
+  xml += '    <changefreq>weekly</changefreq>\n';
+  xml += '    <priority>1.0</priority>\n';
+  xml += '  </url>\n';
+
+  // Listing pages
+  for (const section of ['blog', 'docs']) {
+    xml += '  <url>\n';
+    xml += `    <loc>${BASE_URL}/${section}/</loc>\n`;
+    xml += `    <lastmod>${today}</lastmod>\n`;
+    xml += '    <changefreq>weekly</changefreq>\n';
+    xml += '    <priority>0.8</priority>\n';
+    xml += '  </url>\n';
+  }
+
+  // Article pages
+  for (const page of pages) {
+    xml += '  <url>\n';
+    xml += `    <loc>${page.url}</loc>\n`;
+    xml += `    <lastmod>${page.lastmod || today}</lastmod>\n`;
+    xml += '    <changefreq>monthly</changefreq>\n';
+    xml += '    <priority>0.6</priority>\n';
+    xml += '  </url>\n';
+  }
+
+  xml += '</urlset>\n';
+
+  const outputPath = path.join(SITE_DIR, 'sitemap.xml');
+  fs.writeFileSync(outputPath, xml, 'utf8');
+  console.log(`\nGenerated sitemap.xml (${pages.length + 3} URLs)`);
 }
 
 /**
