@@ -1,10 +1,10 @@
 ---
 gsd_state_version: 1.0
-milestone: v32.7
+milestone: v32.5
 milestone_name: milestone
 status: Ready for Phase 442
 stopped_at: Completed 441-02-PLAN.md
-last_updated: "2026-03-17T07:47:00Z"
+last_updated: "2026-03-17T07:47:32.578Z"
 last_activity: 2026-03-17 -- Phase 441 completed
 progress:
   total_phases: 5
