@@ -22,6 +22,7 @@ import {
   encodeFunctionData,
   hexToBytes,
   toHex,
+  getAddress,
   type PublicClient,
   type Chain,
   type TransactionSerializedEIP1559,
@@ -98,9 +99,12 @@ export class EvmAdapter implements IChainAdapter {
     this._nativeName = nativeName;
   }
 
-  /** Set the allowed tokens list for getAssets ERC-20 queries. */
+  /** Set the allowed tokens list for getAssets ERC-20 queries. Normalizes addresses to EIP-55 checksum. */
   setAllowedTokens(tokens: Array<{ address: string; symbol?: string; name?: string; decimals?: number }>): void {
-    this._allowedTokens = tokens;
+    this._allowedTokens = tokens.map(token => ({
+      ...token,
+      address: getAddress(token.address),
+    }));
   }
 
   // -- Connection management (4) --
