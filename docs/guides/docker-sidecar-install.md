@@ -1,3 +1,11 @@
+---
+title: "Running WAIaaS Inside an Agent Docker Container"
+description: "Solve data persistence when running WAIaaS inside AI agent Docker containers. Volume mount and sidecar patterns."
+date: "2026-02-10"
+section: "blog"
+slug: "docker-sidecar-install"
+category: "Guides"
+---
 # Running WAIaaS Inside an Agent Docker Container
 
 When you install an AI agent (e.g., OpenClaw, SWE-agent) in a Docker container and install WAIaaS via npm inside the same container, **WAIaaS data will be lost when the container image is rebuilt**. This guide explains the problem and how to prevent it.

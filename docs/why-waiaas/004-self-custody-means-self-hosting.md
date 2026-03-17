@@ -1,3 +1,11 @@
+---
+title: "Self-Custody for Agents Means Self-Hosting"
+description: "Why true self-custody for AI agent wallets requires self-hosted infrastructure. The case against custodial APIs."
+date: "2026-02-05"
+section: "blog"
+slug: "self-custody-means-self-hosting"
+category: "Why WAIaaS"
+---
 # Why WAIaaS: Self-Custody for Agents Ultimately Means Self-Hosting
 
 ## "Not Your Keys, Not Your Crypto"

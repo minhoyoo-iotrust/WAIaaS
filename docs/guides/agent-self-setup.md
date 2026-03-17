@@ -1,3 +1,11 @@
+---
+title: "Agent Self-Setup Guide"
+description: "How an autonomous AI agent can set up WAIaaS from scratch with zero human interaction using auto-provision mode."
+date: "2026-02-10"
+section: "blog"
+slug: "agent-self-setup"
+category: "Guides"
+---
 # Agent Self-Setup Guide
 
 This guide describes how an autonomous AI agent can set up WAIaaS from scratch with zero human interaction using the **auto-provision** mode.

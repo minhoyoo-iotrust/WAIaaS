@@ -1,3 +1,11 @@
+---
+title: "API Reference"
+description: "WAIaaS REST API reference: authentication, endpoint categories, request/response schemas, and error codes."
+date: "2026-02-10"
+section: "docs"
+slug: "api-reference"
+category: "Technical"
+---
 # API Reference
 
 WAIaaS exposes a REST API on `http://127.0.0.1:3100`. All endpoints are defined using OpenAPI 3.0 decorators and the daemon serves the full specification at runtime.

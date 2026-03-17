@@ -1,3 +1,11 @@
+---
+title: "AI Agent Wallet Models Compared"
+description: "Comparing custodial APIs, embedded wallets, MPC, smart contract wallets, and self-hosted daemons for AI agent crypto access."
+date: "2026-02-05"
+section: "blog"
+slug: "ai-agent-wallet-models-compared"
+category: "Why WAIaaS"
+---
 # Why WAIaaS: AI Agent Wallet Models Compared
 
 ## Overview

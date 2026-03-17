@@ -1,3 +1,11 @@
+---
+title: "Deployment Guide"
+description: "Deploy WAIaaS via npm global install or Docker Compose. Production setup, configuration, and TLS termination."
+date: "2026-02-10"
+section: "docs"
+slug: "deployment"
+category: "Technical"
+---
 # Deployment Guide
 
 This guide covers two deployment methods for WAIaaS: **npm global install** (recommended for development and single-host setups) and **Docker Compose** (recommended for production).

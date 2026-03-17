@@ -1,3 +1,11 @@
+---
+title: "Architecture"
+description: "WAIaaS internal architecture: component interactions, 6-stage transaction pipeline, chain adapters, and design decisions."
+date: "2026-02-09"
+section: "docs"
+slug: "architecture"
+category: "Technical"
+---
 # Architecture
 
 WAIaaS is a self-hosted wallet daemon that sits between AI agents and blockchains. This document describes the internal architecture, component interactions, and key design decisions.

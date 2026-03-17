@@ -1,3 +1,11 @@
+---
+title: "Smart Account Lite / Full Mode Guide"
+description: "WAIaaS Smart Account (ERC-4337) modes: Lite for basic signing, Full for UserOp bundling with gas sponsorship."
+date: "2026-02-15"
+section: "docs"
+slug: "smart-account-guide"
+category: "Technical"
+---
 # Smart Account (AA) Lite / Full Mode Guide
 
 ## Overview

@@ -1,3 +1,11 @@
+---
+title: "The AI Agent Wallet Security Crisis"
+description: "Real-world attacks on AI agent wallets: skill file trojans, prompt injection fund drains, and supply chain compromises. Why agents need isolated wallet infrastructure."
+date: "2026-02-05"
+section: "blog"
+slug: "ai-agent-wallet-security-crisis"
+category: "Why WAIaaS"
+---
 # Why WAIaaS: The AI Agent Wallet Security Crisis
 
 ## The Problem

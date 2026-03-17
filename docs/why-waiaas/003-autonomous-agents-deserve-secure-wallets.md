@@ -1,3 +1,11 @@
+---
+title: "Autonomous AI Agents Deserve Secure Wallets"
+description: "Why Web4 autonomous agents need wallet isolation instead of direct private key access. Analysis of architecture risks."
+date: "2026-02-05"
+section: "blog"
+slug: "autonomous-agents-deserve-secure-wallets"
+category: "Why WAIaaS"
+---
 # Why WAIaaS: Autonomous AI Agents Deserve Secure Wallets
 
 ## Summary

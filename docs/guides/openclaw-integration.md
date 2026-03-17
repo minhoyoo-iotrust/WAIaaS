@@ -1,3 +1,11 @@
+---
+title: "OpenClaw Integration Guide"
+description: "Connect WAIaaS to OpenClaw AI agent bot. Skill file installation, configuration, and verification."
+date: "2026-02-10"
+section: "blog"
+slug: "openclaw-integration"
+category: "Guides"
+---
 # OpenClaw Integration Guide
 
 This guide walks you through connecting WAIaaS to [OpenClaw](https://openclaw.io), an open-source AI agent bot that follows the Agent Skills open standard.

@@ -1,3 +1,11 @@
+---
+title: "Wallet SDK Integration Guide"
+description: "Integrate external wallet apps with WAIaaS Signing Protocol using @waiaas/wallet-sdk. Architecture and code examples."
+date: "2026-02-17"
+section: "docs"
+slug: "wallet-sdk-integration"
+category: "Technical"
+---
 # Wallet SDK Integration Guide
 
 This guide walks through integrating an external wallet application with the WAIaaS Signing Protocol using `@waiaas/wallet-sdk`.
