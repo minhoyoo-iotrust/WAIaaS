@@ -98,7 +98,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 442-01-PLAN.md — GitHub Actions 빌드 스텝 + .gitignore 설정
+- [x] 442-01: GitHub Actions 빌드 스텝 + .gitignore 설정
 
 ### Phase 443: SEO Landing Pages + External Distribution
 **Goal**: "AI wallet" 카테고리를 정의하는 SEO 랜딩 페이지가 발행되고, 외부 디렉토리 등록 자료가 준비된다
@@ -109,11 +109,11 @@ Plans:
   2. 각 SEO 랜딩 페이지에 targeted meta description, keywords, AEO Question-Answer 구조가 적용된다
   3. SUBMISSION_KIT.md에 프로젝트 설명/카테고리/태그가 포함되고, 플랫폼별 등록 체크리스트가 작성된다
   4. MCP directory 등록 정보가 최신화되고, 커뮤니티 포스팅 초안(HN, Reddit)이 준비된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 443-01: SEO 랜딩 페이지 3종 작성
-- [ ] 443-02: 외부 배포 자료 준비 (SUBMISSION_KIT, 포스팅 초안)
+- [ ] 443-01-PLAN.md — SEO 랜딩 페이지 3종 작성
+- [ ] 443-02-PLAN.md — 외부 배포 자료 준비 (SUBMISSION_KIT, 포스팅 초안)
 
 ## Progress
 
