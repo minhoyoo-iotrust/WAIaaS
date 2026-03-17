@@ -109,6 +109,126 @@
           "@type": "Answer",
           "text": "WAIaaS uses a 3-layer security model: session authentication (JWT), time-delay and owner approval (via WalletConnect, Telegram, or Wallet SDK), and monitoring with kill switch. It enforces default-deny policies for tokens, contracts, and spenders. Private keys are encrypted at rest with Argon2id key derivation."
         }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I set up WAIaaS with Docker?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Run 'docker run -d -p 127.0.0.1:3100:3100 -v waiaas-data:/data -e WAIAAS_AUTO_PROVISION=true waiaas/daemon'. This starts the daemon on port 3100 with persistent storage. Access the Admin UI at http://localhost:3100/admin to manage wallets and configure policies."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What are the system requirements for WAIaaS?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "WAIaaS requires Node.js 22+ (for npm install) or Docker (for containerized deployment). It runs on macOS, Linux, and Windows. The daemon uses SQLite for local storage, so no external database is needed. Minimal resource requirements: any machine that can run Node.js."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I configure WAIaaS?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Initial configuration is done via config.toml for infrastructure settings (port, host, RPC URLs). Runtime settings are managed through the Admin Settings UI or the REST API (PUT /v1/admin/settings), which supports hot-reload without daemon restart. The Admin UI at /admin provides a visual interface for all configuration."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How are private keys stored in WAIaaS?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Private keys are encrypted at rest using sodium-native (libsodium) with Argon2id key derivation from the master password. Keys are stored in a local SQLite database on your machine. The master password never leaves your device — WAIaaS is self-hosted, so no keys are transmitted to any external server."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What is the default-deny policy in WAIaaS?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "WAIaaS enforces a default-deny security model. AI agents cannot interact with tokens, contracts, or spenders unless explicitly whitelisted. You configure ALLOWED_TOKENS (which tokens can be sent), CONTRACT_WHITELIST (which contracts can be called), and APPROVED_SPENDERS (which addresses can receive funds). This prevents unauthorized transactions even if an agent is compromised."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How does owner approval work in WAIaaS?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "WAIaaS supports three owner approval channels: WalletConnect (sign with your mobile wallet), Telegram Bot (approve via chat), and Wallet SDK (custom approval flows). When a transaction exceeds policy thresholds, the daemon pauses execution and sends an approval request to the configured channel. The owner reviews and approves or rejects."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can AI agents trade on DEXes with WAIaaS?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. WAIaaS integrates with Jupiter (Solana DEX), 0x (EVM DEX aggregator), and D'CENT Swap for decentralized token trading. Agents can execute swaps with slippage protection, and all trades pass through the policy engine for spending limit enforcement."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does WAIaaS support DeFi lending?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. WAIaaS integrates with Aave V3 (EVM lending across Ethereum, Polygon, Arbitrum, Optimism, Base) and Kamino (Solana lending). AI agents can supply collateral, borrow assets, repay loans, and monitor positions — all through the same policy-controlled pipeline."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can AI agents bridge tokens cross-chain with WAIaaS?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. WAIaaS integrates with LI.FI and Across Bridge for cross-chain token transfers. Agents can bridge assets between EVM networks and Solana with route optimization and fee comparison."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What is the TypeScript SDK for WAIaaS?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "The @waiaas/sdk package is a TypeScript SDK that wraps the WAIaaS REST API. It provides typed methods for wallet management, transaction submission, policy configuration, and DeFi operations. Install with 'npm install @waiaas/sdk' and initialize with your daemon URL and session token."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How does MCP integration work in WAIaaS?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "WAIaaS includes a built-in MCP (Model Context Protocol) server with 42 tools. AI agents like Claude can directly call wallet operations through MCP without HTTP requests. The connect_info tool provides self-discovery of available wallets, policies, and capabilities. Set up with 'waiaas mcp setup'."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can I use WAIaaS with Claude Code?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. Install skills with 'npx @waiaas/skills claude-code' which adds 8 skill files to .claude/skills/. Alternatively, use MCP integration by adding the WAIaaS MCP server to .claude/settings.json. Claude Code can then manage wallets, send transactions, and interact with DeFi protocols."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What is the 6-stage transaction pipeline?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Every transaction in WAIaaS passes through 6 stages: (1) Validate — check parameters and format, (2) Policy — enforce spending limits and whitelist rules, (3) Delay/Approval — optional time delay or owner approval, (4) Sign — cryptographic signature with the wallet key, (5) Broadcast — submit to the blockchain network, (6) Confirm — wait for on-chain confirmation. This pipeline ensures security at every step."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does WAIaaS support ERC-4337 Account Abstraction?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. WAIaaS supports ERC-4337 Smart Accounts in two modes: Lite (standard EOA with UserOp wrapping) and Full (CREATE2-deployed smart contract accounts). Features include gas sponsorship via paymasters, bundler integration (Pimlico, Alchemy), and a UserOp build/sign API for custom flows."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What is the Admin Web UI?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "The Admin Web UI is a browser-based dashboard at /admin for managing your WAIaaS daemon. It provides wallet management, policy configuration, session control, DeFi position monitoring, audit logs, notification settings, and real-time status. Built with Preact and secured with master password authentication."
+        }
       }
     ]
   }
@@ -702,6 +822,39 @@
       flex-shrink: 0;
     }
 
+    /* FAQ Section */
+    .faq-section { padding: 48px 0; }
+    .faq-list { max-width: 800px; margin: 0 auto; }
+    .faq-list details {
+      border-bottom: 1px solid var(--border);
+      padding: 0;
+    }
+    .faq-list summary {
+      color: var(--cyan);
+      cursor: pointer;
+      padding: 14px 0;
+      font-size: 0.9rem;
+      font-weight: 500;
+      list-style: none;
+    }
+    .faq-list summary::-webkit-details-marker { display: none; }
+    .faq-list summary::before { content: "+ "; color: var(--text-dim); }
+    .faq-list details[open] summary::before { content: "- "; color: var(--green); }
+    .faq-list details[open] summary { color: var(--green); }
+    .faq-list details p {
+      color: var(--text);
+      padding: 0 0 14px 16px;
+      font-size: 0.85rem;
+      line-height: 1.6;
+    }
+    .faq-list details p code {
+      background: var(--surface);
+      padding: 1px 5px;
+      font-family: inherit;
+      font-size: 0.8rem;
+      color: var(--green);
+    }
+
     /* Footer */
     footer {
       border-top: 1px solid var(--border);
@@ -1088,6 +1241,34 @@
             <div class="sub">Claude Code, OpenClaw, and more</div>
           </div>
         </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="faq-section">
+    <div class="container">
+      <h2 class="section-title">Frequently Asked Questions</h2>
+      <div class="faq-list">
+        <details><summary>What is WAIaaS?</summary><p>WAIaaS (Wallet AI as a Service) is a self-hosted daemon that gives AI agents secure, policy-controlled access to crypto wallets across EVM and Solana chains. It runs locally on your machine — your keys, your rules.</p></details>
+        <details><summary>How do I install WAIaaS?</summary><p>Install via npm with <code>npm install -g @waiaas/cli</code>, then run <code>waiaas quickset</code> for instant setup. Alternatively, use Docker: <code>docker run -d -p 127.0.0.1:3100:3100 -v waiaas-data:/data -e WAIAAS_AUTO_PROVISION=true waiaas/daemon</code>.</p></details>
+        <details><summary>Which blockchains does WAIaaS support?</summary><p>WAIaaS supports 8 EVM networks (Ethereum, Polygon, Arbitrum, Optimism, Base, Avalanche, BNB Chain, HyperEVM) and Solana. It handles native tokens, ERC-20/SPL tokens, and NFTs (ERC-721, ERC-1155, Metaplex).</p></details>
+        <details><summary>How do AI agents connect to WAIaaS?</summary><p>AI agents can connect via three interfaces: MCP (Model Context Protocol) for direct tool integration, REST API for HTTP-based access, or the TypeScript SDK (@waiaas/sdk) for programmatic control. Skill files are also available for Claude Code and OpenClaw.</p></details>
+        <details><summary>Is WAIaaS secure for managing real funds?</summary><p>WAIaaS uses a 3-layer security model: session authentication (JWT), time-delay and owner approval (via WalletConnect, Telegram, or Wallet SDK), and monitoring with kill switch. It enforces default-deny policies for tokens, contracts, and spenders. Private keys are encrypted at rest with Argon2id key derivation.</p></details>
+        <details><summary>How do I set up WAIaaS with Docker?</summary><p>Run <code>docker run -d -p 127.0.0.1:3100:3100 -v waiaas-data:/data -e WAIAAS_AUTO_PROVISION=true waiaas/daemon</code>. This starts the daemon on port 3100 with persistent storage. Access the Admin UI at <code>http://localhost:3100/admin</code> to manage wallets and configure policies.</p></details>
+        <details><summary>What are the system requirements for WAIaaS?</summary><p>WAIaaS requires Node.js 22+ (for npm install) or Docker (for containerized deployment). It runs on macOS, Linux, and Windows. The daemon uses SQLite for local storage, so no external database is needed.</p></details>
+        <details><summary>How do I configure WAIaaS?</summary><p>Initial configuration is done via config.toml for infrastructure settings (port, host, RPC URLs). Runtime settings are managed through the Admin Settings UI or the REST API (PUT /v1/admin/settings), which supports hot-reload without daemon restart.</p></details>
+        <details><summary>How are private keys stored in WAIaaS?</summary><p>Private keys are encrypted at rest using sodium-native (libsodium) with Argon2id key derivation from the master password. Keys are stored in a local SQLite database on your machine. The master password never leaves your device.</p></details>
+        <details><summary>What is the default-deny policy in WAIaaS?</summary><p>WAIaaS enforces a default-deny security model. AI agents cannot interact with tokens, contracts, or spenders unless explicitly whitelisted via ALLOWED_TOKENS, CONTRACT_WHITELIST, and APPROVED_SPENDERS policies.</p></details>
+        <details><summary>How does owner approval work in WAIaaS?</summary><p>WAIaaS supports three owner approval channels: WalletConnect (sign with your mobile wallet), Telegram Bot (approve via chat), and Wallet SDK (custom approval flows). When a transaction exceeds policy thresholds, the daemon sends an approval request to the configured channel.</p></details>
+        <details><summary>Can AI agents trade on DEXes with WAIaaS?</summary><p>Yes. WAIaaS integrates with Jupiter (Solana DEX), 0x (EVM DEX aggregator), and D'CENT Swap for decentralized token trading. Agents can execute swaps with slippage protection through the policy-controlled pipeline.</p></details>
+        <details><summary>Does WAIaaS support DeFi lending?</summary><p>Yes. WAIaaS integrates with Aave V3 (EVM lending across Ethereum, Polygon, Arbitrum, Optimism, Base) and Kamino (Solana lending). AI agents can supply collateral, borrow assets, repay loans, and monitor positions.</p></details>
+        <details><summary>Can AI agents bridge tokens cross-chain with WAIaaS?</summary><p>Yes. WAIaaS integrates with LI.FI and Across Bridge for cross-chain token transfers between EVM networks and Solana with route optimization and fee comparison.</p></details>
+        <details><summary>What is the TypeScript SDK for WAIaaS?</summary><p>The @waiaas/sdk package is a TypeScript SDK that wraps the WAIaaS REST API. It provides typed methods for wallet management, transaction submission, policy configuration, and DeFi operations.</p></details>
+        <details><summary>How does MCP integration work in WAIaaS?</summary><p>WAIaaS includes a built-in MCP (Model Context Protocol) server with 42 tools. AI agents like Claude can directly call wallet operations through MCP without HTTP requests. The connect_info tool provides self-discovery of available wallets and capabilities.</p></details>
+        <details><summary>Can I use WAIaaS with Claude Code?</summary><p>Yes. Install skills with <code>npx @waiaas/skills claude-code</code> which adds 8 skill files to .claude/skills/. Alternatively, use MCP integration by adding the WAIaaS MCP server to .claude/settings.json.</p></details>
+        <details><summary>What is the 6-stage transaction pipeline?</summary><p>Every transaction passes through 6 stages: Validate (check parameters), Policy (enforce limits), Delay/Approval (optional owner approval), Sign (cryptographic signature), Broadcast (submit to blockchain), and Confirm (wait for on-chain confirmation).</p></details>
+        <details><summary>Does WAIaaS support ERC-4337 Account Abstraction?</summary><p>Yes. WAIaaS supports ERC-4337 Smart Accounts in Lite (EOA + UserOp wrapping) and Full (CREATE2-deployed smart contract) modes. Features include gas sponsorship via paymasters and bundler integration (Pimlico, Alchemy).</p></details>
+        <details><summary>What is the Admin Web UI?</summary><p>The Admin Web UI is a browser-based dashboard at /admin for managing your WAIaaS daemon. It provides wallet management, policy configuration, session control, DeFi position monitoring, audit logs, and notification settings.</p></details>
       </div>
     </div>
   </section>
