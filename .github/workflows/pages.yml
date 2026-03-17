@@ -3,7 +3,7 @@ name: Deploy GitHub Pages
 on:
   push:
     branches: [main]
-    paths: ['site/**']
+    paths: ['site/**', 'docs/**']
   workflow_dispatch:
 
 permissions:
@@ -23,6 +23,20 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install build dependencies
+        run: pnpm install --frozen-lockfile --filter .
+
+      - name: Build site
+        run: node site/build.mjs
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
