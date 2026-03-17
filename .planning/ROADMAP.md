@@ -37,7 +37,7 @@ See `.planning/milestones/v32.6-ROADMAP.md` for full details.
 
 - [x] **Phase 439: Build Infrastructure** - 마크다운-to-HTML 빌드 스크립트, HTML 템플릿, article CSS 구축 (completed 2026-03-17)
 - [x] **Phase 440: Content Publishing + Navigation** - 기존 문서 Blog/Docs 섹션 발행 및 네비게이션 연결 (completed 2026-03-17)
-- [ ] **Phase 441: Technical SEO & AEO** - sitemap, JSON-LD, FAQ 확장, llms-full.txt, 내부 링크
+- [x] **Phase 441: Technical SEO & AEO** - sitemap, JSON-LD, FAQ 확장, llms-full.txt, 내부 링크 (completed 2026-03-17)
 - [ ] **Phase 442: CI Integration** - GitHub Actions 빌드 스텝, 자동 재빌드, .gitignore
 - [ ] **Phase 443: SEO Landing Pages + External Distribution** - AI wallet 카테고리 랜딩 페이지 신규 작성 및 배포 자료 준비
 
@@ -84,8 +84,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 441-01: sitemap, JSON-LD, canonical 자동 생성
-- [ ] 441-02: FAQ 확장 + llms-full.txt + 내부 링크 구조
+- [x] 441-01: sitemap, JSON-LD, canonical 자동 생성
+- [x] 441-02: FAQ 확장 + llms-full.txt + 내부 링크 구조
 
 ### Phase 442: CI Integration
 **Goal**: docs/ 변경 시 자동으로 HTML이 빌드되어 GitHub Pages에 배포된다
@@ -124,6 +124,6 @@ Phases execute in numeric order: 439 → 440 → 441 → 442 → 443
 |-------|----------------|--------|-----------|
 | 439. Build Infrastructure | 1/1 | Complete    | 2026-03-17 |
 | 440. Content Publishing + Navigation | 1/1 | Complete    | 2026-03-17 |
-| 441. Technical SEO & AEO | 0/2 | Not started | - |
+| 441. Technical SEO & AEO | 2/2 | Complete    | 2026-03-17 |
 | 442. CI Integration | 0/1 | Not started | - |
 | 443. SEO Landing Pages + External Distribution | 0/2 | Not started | - |

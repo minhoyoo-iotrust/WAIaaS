@@ -41,12 +41,12 @@ Requirements for milestone v32.7. Each maps to roadmap phases.
 
 ### Technical SEO & AEO
 
-- [ ] **TSEO-01**: sitemap.xml이 전체 페이지 URL을 자동 반영한다
-- [ ] **TSEO-02**: 각 페이지에 적절한 JSON-LD 스키마가 포함된다 (Article/TechArticle/BreadcrumbList)
-- [ ] **TSEO-03**: 홈페이지 FAQ가 5개에서 20개 이상 Q&A로 확장된다
-- [ ] **TSEO-04**: 각 페이지에 canonical URL이 설정된다
-- [ ] **TSEO-05**: llms-full.txt가 전체 콘텐츠를 포함하여 자동 생성된다
-- [ ] **TSEO-06**: 페이지 간 상호 내부 링크(pillar-cluster 구조)가 설정된다
+- [x] **TSEO-01**: sitemap.xml이 전체 페이지 URL을 자동 반영한다
+- [x] **TSEO-02**: 각 페이지에 적절한 JSON-LD 스키마가 포함된다 (Article/TechArticle/BreadcrumbList)
+- [x] **TSEO-03**: 홈페이지 FAQ가 5개에서 20개 이상 Q&A로 확장된다
+- [x] **TSEO-04**: 각 페이지에 canonical URL이 설정된다
+- [x] **TSEO-05**: llms-full.txt가 전체 콘텐츠를 포함하여 자동 생성된다
+- [x] **TSEO-06**: 페이지 간 상호 내부 링크(pillar-cluster 구조)가 설정된다
 
 ### CI Integration
 
@@ -113,12 +113,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SEO-02 | Phase 443 | Pending |
 | SEO-03 | Phase 443 | Pending |
 | SEO-04 | Phase 443 | Pending |
-| TSEO-01 | Phase 441 | Pending |
-| TSEO-02 | Phase 441 | Pending |
-| TSEO-03 | Phase 441 | Pending |
-| TSEO-04 | Phase 441 | Pending |
-| TSEO-05 | Phase 441 | Pending |
-| TSEO-06 | Phase 441 | Pending |
+| TSEO-01 | Phase 441 | Complete |
+| TSEO-02 | Phase 441 | Complete |
+| TSEO-03 | Phase 441 | Complete |
+| TSEO-04 | Phase 441 | Complete |
+| TSEO-05 | Phase 441 | Complete |
+| TSEO-06 | Phase 441 | Complete |
 | CI-01 | Phase 442 | Pending |
 | CI-02 | Phase 442 | Pending |
 | CI-03 | Phase 442 | Pending |
