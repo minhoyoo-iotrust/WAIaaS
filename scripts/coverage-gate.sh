@@ -29,19 +29,21 @@ PACKAGES=(
   "packages/wallet-sdk"
   "packages/push-relay"
   "packages/actions"
+  "packages/shared"
 )
 THRESHOLDS=(
-  95    # core
-  85    # daemon
-  89    # adapters/solana
-  80    # sdk
-  77    # cli
-  87    # mcp
-  87    # admin
-  92    # adapters/evm
-  87    # wallet-sdk
-  82    # push-relay
-  95    # actions
+  97    # core
+  89    # daemon
+  94    # adapters/solana
+  99    # sdk
+  88    # cli
+  90    # mcp
+  90    # admin
+  98    # adapters/evm
+  98    # wallet-sdk
+  93    # push-relay
+  97    # actions
+  100   # shared
 )
 
 get_threshold() {
