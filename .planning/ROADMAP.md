@@ -142,4 +142,4 @@ Plans:
 | 445. daemon Infra + Admin API + Notification 테스트 | 3/3 | Complete    | 2026-03-17 |
 | 446. evm Branches + wallet-sdk Branches 강화 | 2/2 | Complete    | 2026-03-17 |
 | 447. admin Functions + cli Lines/Branches 강화 | 3/3 | Complete    | 2026-03-17 |
-| 448. sdk + shared + 나머지 패키지 + 임계값 최종 인상 | 3/3 | Complete   | 2026-03-17 |
+| 448. sdk + shared + 나머지 패키지 + 임계값 최종 인상 | 3/3 | Complete    | 2026-03-17 |
