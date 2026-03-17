@@ -50,9 +50,9 @@ Requirements for milestone v32.7. Each maps to roadmap phases.
 
 ### CI Integration
 
-- [ ] **CI-01**: pages.yml에 Node.js 빌드 스텝이 추가된다
-- [ ] **CI-02**: docs/** 변경 시 자동 재빌드가 트리거된다
-- [ ] **CI-03**: 생성된 HTML 파일이 .gitignore에 등록된다
+- [x] **CI-01**: pages.yml에 Node.js 빌드 스텝이 추가된다
+- [x] **CI-02**: docs/** 변경 시 자동 재빌드가 트리거된다
+- [x] **CI-03**: 생성된 HTML 파일이 .gitignore에 등록된다
 
 ### External Distribution
 
@@ -119,9 +119,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TSEO-04 | Phase 441 | Complete |
 | TSEO-05 | Phase 441 | Complete |
 | TSEO-06 | Phase 441 | Complete |
-| CI-01 | Phase 442 | Pending |
-| CI-02 | Phase 442 | Pending |
-| CI-03 | Phase 442 | Pending |
+| CI-01 | Phase 442 | Complete |
+| CI-02 | Phase 442 | Complete |
+| CI-03 | Phase 442 | Complete |
 | DIST-01 | Phase 443 | Pending |
 | DIST-02 | Phase 443 | Pending |
 | DIST-03 | Phase 443 | Pending |

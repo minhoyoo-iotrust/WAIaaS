@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v32.5
 milestone_name: milestone
-status: Ready for Phase 442
-stopped_at: Completed 441-02-PLAN.md
-last_updated: "2026-03-17T07:47:32.578Z"
-last_activity: 2026-03-17 -- Phase 441 completed
+status: Ready for Phase 443
+stopped_at: Completed 442-01-PLAN.md
+last_updated: "2026-03-17T07:53:05.077Z"
+last_activity: 2026-03-17 -- Phase 442 completed
 progress:
   total_phases: 5
-  completed_phases: 3
-  total_plans: 4
-  completed_plans: 4
-  percent: 50
+  completed_phases: 4
+  total_plans: 5
+  completed_plans: 5
+  percent: 80
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-17)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Phase 442 - CI Integration
+**Current focus:** Phase 443 - SEO Landing Pages + External Distribution
 
 ## Current Position
 
-Phase: 4 of 5 (CI Integration)
-Plan: 4 of 8 in milestone
-Status: Ready for Phase 442
-Last activity: 2026-03-17 -- Phase 441 completed
+Phase: 5 of 5 (SEO Landing Pages + External Distribution)
+Plan: 5 of 8 in milestone
+Status: Ready for Phase 443
+Last activity: 2026-03-17 -- Phase 442 completed
 
-Progress: [#####░░░░░] 50%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
@@ -44,6 +44,7 @@ Progress: [#####░░░░░] 50%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 441 | 2 | 10min | 5min |
+| Phase 442 P01 | 2min | 2 tasks | 2 files |
 
 ## Accumulated Context
 | Phase 439 P01 | 5min | 2 tasks | 20 files |
@@ -65,6 +66,7 @@ Progress: [#####░░░░░] 50%
 - [Phase 441]: FAQ as details/summary elements with CRT-themed CSS
 - [Phase 441]: llms-full.txt sorted: blog date-desc first, then docs title-alpha
 - [Phase 441]: Each markdown file gets 3 Related cross-links for pillar-cluster topology
+- [Phase 442]: pnpm install --filter . for root-only devDependencies in CI
 
 ### Pending Todos
 
@@ -76,6 +78,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-17T07:47:00Z
-Stopped at: Completed 441-02-PLAN.md
+Last session: 2026-03-17T07:53:05.072Z
+Stopped at: Completed 442-01-PLAN.md
 Resume file: None
