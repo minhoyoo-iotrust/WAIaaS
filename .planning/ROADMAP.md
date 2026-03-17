@@ -106,12 +106,16 @@ Plans:
 **Goal**: admin 패키지 Functions 95%와 cli 패키지 Lines 90% / Branches 85%를 달성한다
 **Depends on**: Phase 444
 **Requirements**: ADM-01, ADM-02, ADM-03, ADM-04, ADM-05, ADM-06, CLI-01, CLI-02, CLI-03
+**Plans**: 3 plans
+Plans:
+- [ ] 447-01-PLAN.md — system/erc8004/credentials/wallet-apps/dashboard/transactions 페이지 미커버 함수 테스트
+- [ ] 447-02-PLAN.md — 나머지 페이지 + 컴포넌트 미커버 함수 테스트
+- [ ] 447-03-PLAN.md — CLI 0% 파일 테스트 + admin/cli 임계값 인상
 **Success Criteria** (what must be TRUE):
   1. Admin 페이지 이벤트 핸들러(폼 제출, 버튼 클릭, 모달)가 테스트로 검증된다
   2. Admin 조건부 렌더링 헬퍼와 폼 검증/변환 유틸이 테스트로 검증된다
   3. CLI 인자 파싱 실패, config 미설정, 네트워크 에러 엣지 케이스가 테스트로 검증된다
   4. admin Lines >= 90%, Branches >= 85%, Functions >= 95%, cli Lines >= 90%, Branches >= 85% 임계값을 통과한다
-**Plans**: TBD
 
 ### Phase 448: sdk + shared + 나머지 패키지 + 임계값 최종 인상
 **Goal**: 전 패키지가 Lines 90% / Branches 85% / Functions 95% 통일 기준을 달성하고 CI Gate로 하락이 방지된다
@@ -131,5 +135,5 @@ Plans:
 | 444. daemon DeFi Provider + Pipeline 테스트 강화 | 3/3 | Complete    | 2026-03-17 |
 | 445. daemon Infra + Admin API + Notification 테스트 | 3/3 | Complete    | 2026-03-17 |
 | 446. evm Branches + wallet-sdk Branches 강화 | 2/2 | Complete    | 2026-03-17 |
-| 447. admin Functions + cli Lines/Branches 강화 | 0/TBD | Not started | - |
+| 447. admin Functions + cli Lines/Branches 강화 | 0/3 | Not started | - |
 | 448. sdk + shared + 나머지 패키지 + 임계값 최종 인상 | 0/TBD | Not started | - |
