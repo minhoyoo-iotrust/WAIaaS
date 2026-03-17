@@ -1,5 +1,26 @@
 # Project Milestones: WAIaaS
 
+## v32.7 SEO/AEO Optimization (Shipped: 2026-03-17)
+
+**Phases completed:** 5 phases (439-443), 7 plans, 33 requirements
+
+**Key accomplishments:**
+- ESM 빌드 파이프라인 (`site/build.mjs`) — 19개 마크다운 파일을 CRT 테마 HTML 페이지로 변환, 빌드타임 구문 강조
+- Blog/Docs 목록 페이지 + 활성 네비게이션 + 259개 내부 링크 검증 (0 broken)
+- sitemap.xml (22 URL), JSON-LD 구조화 데이터 (Article/TechArticle + BreadcrumbList), canonical URL
+- llms-full.txt (188KB) AEO 최적화 + 20개 FAQ Q&A (FAQPage 스키마)
+- GitHub Actions CI 파이프라인 — docs/** 변경 시 자동 빌드 + GitHub Pages 배포
+- SEO 랜딩 페이지 3종 ("AI wallet" 카테고리) + SUBMISSION_KIT (7 플랫폼) + 커뮤니티 포스팅 초안 4개
+
+**Stats:**
+- 5 phases (439-443), 7 plans, 33 requirements complete
+- 30 commits, 53 files changed, +6,080/-867 lines
+- ~355,935 LOC TS
+- Timeline: 1 day (2026-03-17)
+- Audit: PASS (33/33 requirements satisfied)
+
+---
+
 ## v32.6 성능 + 구조 개선 (Shipped: 2026-03-17)
 
 **Phases completed:** 4 phases (435-438), 9 plans, 46 requirements
