@@ -97,7 +97,10 @@ Plans:
   2. ERC-20/721/1155 잔액 부족, 승인 부족, 컨트랙트 리버트 에러 경로가 테스트로 검증된다
   3. wallet-sdk 서명 채널별 에러, 타임아웃, 재시도 분기가 테스트로 검증된다
   4. evm Branches >= 85%, wallet-sdk Branches >= 85% 임계값을 통과한다
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 446-01-PLAN.md — EVM adapter.ts 에러 경로 + tx-parser.ts 분기 테스트 + 임계값 인상
+- [ ] 446-02-PLAN.md — wallet-sdk ntfy.ts SSE 재연결/에러 + parse-request.ts remote fetch 분기 테스트 + 임계값 인상
 
 ### Phase 447: admin Functions + cli Lines/Branches 강화
 **Goal**: admin 패키지 Functions 95%와 cli 패키지 Lines 90% / Branches 85%를 달성한다
@@ -127,6 +130,6 @@ Plans:
 |-------|----------------|--------|-----------|
 | 444. daemon DeFi Provider + Pipeline 테스트 강화 | 3/3 | Complete    | 2026-03-17 |
 | 445. daemon Infra + Admin API + Notification 테스트 | 3/3 | Complete    | 2026-03-17 |
-| 446. evm Branches + wallet-sdk Branches 강화 | 0/TBD | Not started | - |
+| 446. evm Branches + wallet-sdk Branches 강화 | 0/2 | Not started | - |
 | 447. admin Functions + cli Lines/Branches 강화 | 0/TBD | Not started | - |
 | 448. sdk + shared + 나머지 패키지 + 임계값 최종 인상 | 0/TBD | Not started | - |
