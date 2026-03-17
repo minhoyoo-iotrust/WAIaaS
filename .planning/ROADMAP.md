@@ -61,12 +61,16 @@ See `.planning/milestones/v32.7-ROADMAP.md` for full details.
 **Goal**: daemon 패키지의 DeFi Provider 5종과 Pipeline 상태 머신 엣지 케이스가 테스트로 커버된다
 **Depends on**: Nothing (first phase)
 **Requirements**: DDEFI-01, DDEFI-02, DDEFI-03, DDEFI-04, DDEFI-05, DPIPE-01, DPIPE-02, DPIPE-03, DPIPE-04, DPIPE-05
+**Plans**: 3 plans
+Plans:
+- [ ] 444-01-PLAN.md — Jupiter/0x/LiFi Provider 단위 테스트
+- [ ] 444-02-PLAN.md — Lido+Jito/Aave Provider 단위 테스트
+- [ ] 444-03-PLAN.md — Pipeline 엣지 케이스 테스트 (DELAY/GAS_WAITING 재진입, 서명 타임아웃, 가스 추정 실패, Gas Conditional)
 **Success Criteria** (what must be TRUE):
   1. Jupiter/0x/LI.FI/Lido+Jito/Aave 각 Provider의 성공 및 실패 경로가 목킹 기반 테스트로 검증된다
   2. Pipeline DELAY 재진입 시 원본 request가 보존되고, GAS_WAITING 재진입 후 가스 조건 충족 시 정상 실행된다
   3. 서명 타임아웃이 FAILED 상태 전이와 알림 발송을 트리거하고, 가스 추정 실패 시 유의미한 에러 메시지가 반환된다
   4. Gas Conditional Executor의 조건 평가, 폴링, 만료 처리가 테스트로 검증된다
-**Plans**: TBD
 
 ### Phase 445: daemon Infra + Admin API + Notification 테스트
 **Goal**: daemon 패키지가 Lines 90% / Branches 85% / Functions 95% 통일 기준을 달성한다
@@ -118,7 +122,7 @@ See `.planning/milestones/v32.7-ROADMAP.md` for full details.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 444. daemon DeFi Provider + Pipeline 테스트 강화 | 0/TBD | Not started | - |
+| 444. daemon DeFi Provider + Pipeline 테스트 강화 | 0/3 | In progress | - |
 | 445. daemon Infra + Admin API + Notification 테스트 | 0/TBD | Not started | - |
 | 446. evm Branches + wallet-sdk Branches 강화 | 0/TBD | Not started | - |
 | 447. admin Functions + cli Lines/Branches 강화 | 0/TBD | Not started | - |
