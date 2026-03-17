@@ -18,19 +18,19 @@ Requirements for milestone v32.7. Each maps to roadmap phases.
 
 ### Content Publishing
 
-- [ ] **CONT-01**: Why WAIaaS 4편이 Blog 섹션 HTML 페이지로 발행된다
-- [ ] **CONT-02**: Guides 문서들이 Blog 섹션 HTML 페이지로 발행된다
-- [ ] **CONT-03**: 기술 문서(Architecture, Security Model, Deployment Guide 등)가 Docs 섹션으로 발행된다
-- [ ] **CONT-04**: Blog 목록 페이지(site/blog/index.html)가 글 목록과 요약을 표시한다
-- [ ] **CONT-05**: Docs 목록 페이지(site/docs/index.html)가 카테고리별 문서 목록을 표시한다
-- [ ] **CONT-06**: 각 페이지에 title, description, canonical, OG 메타 태그가 설정된다
-- [ ] **CONT-07**: 마크다운 변환 시 코드 블록/테이블/링크가 정확히 렌더링된다
+- [x] **CONT-01**: Why WAIaaS 4편이 Blog 섹션 HTML 페이지로 발행된다
+- [x] **CONT-02**: Guides 문서들이 Blog 섹션 HTML 페이지로 발행된다
+- [x] **CONT-03**: 기술 문서(Architecture, Security Model, Deployment Guide 등)가 Docs 섹션으로 발행된다
+- [x] **CONT-04**: Blog 목록 페이지(site/blog/index.html)가 글 목록과 요약을 표시한다
+- [x] **CONT-05**: Docs 목록 페이지(site/docs/index.html)가 카테고리별 문서 목록을 표시한다
+- [x] **CONT-06**: 각 페이지에 title, description, canonical, OG 메타 태그가 설정된다
+- [x] **CONT-07**: 마크다운 변환 시 코드 블록/테이블/링크가 정확히 렌더링된다
 
 ### Navigation
 
-- [ ] **NAV-01**: 메인페이지 nav에 Blog, Docs 링크가 추가된다 (본문 미변경)
-- [ ] **NAV-02**: 서브페이지에서 현재 섹션이 active 상태로 표시된다
-- [ ] **NAV-03**: 모든 내부 링크가 유효하다 (404 없음)
+- [x] **NAV-01**: 메인페이지 nav에 Blog, Docs 링크가 추가된다 (본문 미변경)
+- [x] **NAV-02**: 서브페이지에서 현재 섹션이 active 상태로 표시된다
+- [x] **NAV-03**: 모든 내부 링크가 유효하다 (404 없음)
 
 ### SEO Landing Pages
 
@@ -99,16 +99,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BUILD-04 | Phase 439 | Complete |
 | BUILD-05 | Phase 439 | Complete |
 | BUILD-06 | Phase 439 | Complete |
-| CONT-01 | Phase 440 | Pending |
-| CONT-02 | Phase 440 | Pending |
-| CONT-03 | Phase 440 | Pending |
-| CONT-04 | Phase 440 | Pending |
-| CONT-05 | Phase 440 | Pending |
-| CONT-06 | Phase 440 | Pending |
-| CONT-07 | Phase 440 | Pending |
-| NAV-01 | Phase 440 | Pending |
-| NAV-02 | Phase 440 | Pending |
-| NAV-03 | Phase 440 | Pending |
+| CONT-01 | Phase 440 | Complete |
+| CONT-02 | Phase 440 | Complete |
+| CONT-03 | Phase 440 | Complete |
+| CONT-04 | Phase 440 | Complete |
+| CONT-05 | Phase 440 | Complete |
+| CONT-06 | Phase 440 | Complete |
+| CONT-07 | Phase 440 | Complete |
+| NAV-01 | Phase 440 | Complete |
+| NAV-02 | Phase 440 | Complete |
+| NAV-03 | Phase 440 | Complete |
 | SEO-01 | Phase 443 | Pending |
 | SEO-02 | Phase 443 | Pending |
 | SEO-03 | Phase 443 | Pending |
