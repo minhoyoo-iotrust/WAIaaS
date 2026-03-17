@@ -26,6 +26,13 @@
 | 376 | BUG | MEDIUM | E2E wallet-purge-cascades-data 정책 생성 스키마 불일치 — params/maxAmount 구버전 필드 사용 | v32.5 | FIXED | 2026-03-16 |
 | 377 | ENHANCEMENT | LOW | advanced-02 WalletConnect Owner 승인 UAT 시나리오 제거 — DCent 지갑 연동 중심으로 전환 | v32.5 | FIXED | 2026-03-16 |
 | 378 | ENHANCEMENT | LOW | Agent UAT admin-ops 카테고리 신설 + 시나리오 재배치 — Admin 권한 필요 시나리오 분리, advanced-04 중복 제거 | v32.5 | FIXED | 2026-03-16 |
+| 379 | BUG | HIGH | EVM 토큰 주소 EIP-55 체크섬 검증 누락으로 multicall 전체 실패 — PIM 잘못된 체크섬이 전체 토큰 잔액 조회 연쇄 실패 유발 | v32.8 | FIXED | 2026-03-18 |
+| 380 | BUG | HIGH | PositionTracker RPC URL 미해결로 DeFi 대시보드 포지션 미표시 — resolveRpcUrl에 빈 rpcConfig 전달, Admin Settings 미연동 | v32.8 | FIXED | 2026-03-18 |
+| 381 | MISSING | HIGH | SEO 메타 태그 / OG / Canonical 누락으로 검색엔진·SNS 노출 저하 — meta description, OG, Twitter Card, canonical, lang, favicon 전무 | v32.7 | FIXED | 2026-03-18 |
+| 382 | MISSING | MEDIUM | DeFi 포지션 해제 UAT 시나리오 누락 — Lido 언스테이킹 없음, Hyperliquid/Polymarket 포지션 클로즈 없음 | v32.8 | FIXED | 2026-03-18 |
+| 383 | BUG | MEDIUM | DCent Swap 견적 요청 시 fromWalletAddress 누락으로 LiFi 프로바이더 견적 실패 | v32.8 | FIXED | 2026-03-18 |
+| 384 | MISSING | MEDIUM | DCent Swap Solana 출발 2-hop 라우팅 불가 — INTERMEDIATE_TOKENS에 Solana 체인 누락 | v32.8 | FIXED | 2026-03-18 |
+| 385 | MISSING | MEDIUM | DCent Swap UAT 시나리오 누락 — 2-hop 라우팅 / 크로스체인 / Solana 미검증 | v32.8 | FIXED | 2026-03-18 |
 
 ## Type Legend
 
@@ -38,7 +45,7 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 378
+- **FIXED:** 385
 - **WONTFIX:** 1
-- **Total:** 379
+- **Total:** 386
 - **Archived:** 366 (001–366)
