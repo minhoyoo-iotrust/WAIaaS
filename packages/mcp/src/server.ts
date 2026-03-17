@@ -1,5 +1,5 @@
 /**
- * createMcpServer: factory that creates an MCP server with 41 tools + 4 resource groups (3 static + 1 template).
+ * createMcpServer: factory that creates an MCP server with 42 tools + 4 resource groups (3 static + 1 template).
  *
  * Each tool/resource is registered via a dedicated register function
  * from its own module, following Dependency Injection pattern.
@@ -31,6 +31,7 @@ import { registerWcStatus } from './tools/wc-status.js';
 import { registerWcDisconnect } from './tools/wc-disconnect.js';
 import { registerConnectInfo } from './tools/connect-info.js';
 import { registerGetPolicies } from './tools/get-policies.js';
+import { registerListSessions } from './tools/list-sessions.js';
 import { registerGetTokens } from './tools/get-tokens.js';
 import { registerListIncomingTransactions } from './tools/list-incoming-transactions.js';
 import { registerGetIncomingSummary } from './tools/get-incoming-summary.js';
@@ -83,8 +84,9 @@ export function createMcpServer(apiClient: ApiClient, walletContext?: WalletCont
     version: '0.0.0',
   });
 
-  // Register 41 tools
+  // Register 42 tools
   registerConnectInfo(server, apiClient);
+  registerListSessions(server, apiClient);
   registerGetPolicies(server, apiClient, walletContext);
   registerGetTokens(server, apiClient, walletContext);
   registerSendToken(server, apiClient, walletContext);

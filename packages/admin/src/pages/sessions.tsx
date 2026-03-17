@@ -248,7 +248,8 @@ export default function SessionsPage() {
     try {
       const query = selectedWalletId.value ? { walletId: selectedWalletId.value } : undefined;
       const { data: result } = await api.GET('/v1/sessions', { params: { query: query as Record<string, string> } });
-      sessions.value = (result as unknown as Session[]);
+      const paginated = result as unknown as { data: Session[] };
+      sessions.value = paginated.data ?? (result as unknown as Session[]);
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');
       showToast('error', getErrorMessage(e.code));

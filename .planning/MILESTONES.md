@@ -1,5 +1,27 @@
 # Project Milestones: WAIaaS
 
+## v32.6 성능 + 구조 개선 (Shipped: 2026-03-17)
+
+**Phases completed:** 4 phases (435-438), 9 plans, 46 requirements
+
+**Key accomplishments:**
+- N+1 쿼리 6곳 배치 전환 — sessions/wallets/tokens 조회를 IN()/GROUP BY 단일 쿼리로 통합
+- sessions/policies API limit/offset 페이지네이션 — SDK listSessions/listPolicies + MCP list_sessions 도구 추가
+- migrate.ts 분할 — 3,529줄 → 285줄 러너 + schema-ddl.ts + 6개 버전별 마이그레이션 모듈
+- daemon.ts 분할 — 2,412줄 → 327줄 클래스 셸 + startup(1,704)/shutdown(195)/pipeline(321) 모듈
+- database-policy-engine.ts 분할 — 2,318줄 → 852줄 오케스트레이터 + 8개 evaluator 모듈
+- stages.ts 분할 — 2,330줄 → 6개 stage 파일 + pipeline-helpers + 12줄 barrel re-export
+- Solana mapError() 중앙화 (14개 catch 패턴 통합) + ILogger 인터페이스 도입 (@waiaas/core)
+
+**Stats:**
+- 4 phases (435-438), 9 plans, 46 requirements complete
+- 34 commits, 83 files changed, +13,451/-9,755 lines
+- ~313,564 LOC TS
+- Timeline: 1 day (2026-03-17)
+- Audit: CONDITIONAL PASS → PASS (E2E pagination assertions fixed)
+
+---
+
 ## v32.5 멀티체인 DeFi 포지션 + 테스트넷 토글 (Shipped: 2026-03-16)
 
 **Phases completed:** 3 phases (432-434), 8 plans, 30 requirements

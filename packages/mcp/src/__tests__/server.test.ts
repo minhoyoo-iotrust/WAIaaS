@@ -84,12 +84,13 @@ describe('createMcpServer', () => {
     const apiClient = createMockApiClient();
     createMcpServer(apiClient, { walletName: 'trading-bot' });
 
-    // 59 tools: 26 wallet + 3 NFT + 3 ERC-8004 + 2 ERC-8128 + 2 UserOp + connect_info + 10 Hyperliquid + 8 Polymarket + 2 External Actions + 1 RPC Proxy + 1 resolve_asset
-    expect(mockTool).toHaveBeenCalledTimes(59);
+    // 60 tools: 26 wallet + 3 NFT + 3 ERC-8004 + 2 ERC-8128 + 2 UserOp + connect_info + list_sessions + 10 Hyperliquid + 8 Polymarket + 2 External Actions + 1 RPC Proxy + 1 resolve_asset
+    expect(mockTool).toHaveBeenCalledTimes(60);
 
     // Some tools are not wallet-scoped (no prefix): connect_info, global market data tools
     const nonWalletScopedTools = new Set([
       'connect_info',
+      'list_sessions',
       'resolve_asset',
       'waiaas_hl_get_markets',
       'waiaas_hl_get_funding_rates',

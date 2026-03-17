@@ -472,10 +472,12 @@ export default function PoliciesPage() {
         ? { walletId: filterWalletId.value }
         : undefined;
       const { data: result } = await api.GET('/v1/policies', { params: { query: query as Record<string, string> } });
+      const paginated = result as unknown as { data: Policy[] };
+      const items = paginated.data ?? (result as unknown as Policy[]);
       if (filterWalletId.value === '__global__') {
-        policies.value = (result as unknown as Policy[]).filter((p) => p.walletId === null);
+        policies.value = items.filter((p) => p.walletId === null);
       } else {
-        policies.value = result as unknown as Policy[];
+        policies.value = items;
       }
     } catch (err) {
       const e = err instanceof ApiError ? err : new ApiError(0, 'UNKNOWN', 'Unknown error');

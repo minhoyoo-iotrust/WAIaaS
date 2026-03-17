@@ -1,3 +1,7 @@
+// Logger abstraction
+export type { ILogger } from './logger.js';
+export { ConsoleLogger } from './logger.js';
+
 // Chain adapter types
 export type {
   TokenAmount,

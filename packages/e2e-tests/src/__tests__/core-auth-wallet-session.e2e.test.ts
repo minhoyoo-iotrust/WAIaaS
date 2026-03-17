@@ -40,13 +40,18 @@ describe('auth-session-crud', () => {
     expect(session.walletId).toBeTruthy();
 
     // List sessions via masterAuth -- should have at least 1
-    const { status, body } = await session.admin.get<Array<{ id: string }>>(
+    const { status, body } = await session.admin.get<{
+      data: Array<{ id: string }>;
+      total: number;
+      limit: number;
+      offset: number;
+    }>(
       '/v1/sessions',
       { headers: { 'X-Master-Password': daemon.masterPassword } },
     );
     expect(status).toBe(200);
-    expect(Array.isArray(body)).toBe(true);
-    expect(body.length).toBeGreaterThanOrEqual(1);
+    expect(Array.isArray(body.data)).toBe(true);
+    expect(body.data.length).toBeGreaterThanOrEqual(1);
 
     // Clean up
     await session.deleteSession();

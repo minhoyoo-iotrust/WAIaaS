@@ -161,10 +161,7 @@ export class SolanaAdapter implements IChainAdapter {
         symbol: 'SOL',
       };
     } catch (error) {
-      throw new WAIaaSError('CHAIN_ERROR', {
-        message: `Failed to get balance: ${error instanceof Error ? error.message : String(error)}`,
-        cause: error instanceof Error ? error : undefined,
-      });
+      this.mapError('get balance', error);
     }
   }
 
@@ -258,11 +255,7 @@ export class SolanaAdapter implements IChainAdapter {
 
       return assets;
     } catch (error) {
-      if (error instanceof WAIaaSError) throw error;
-      throw new WAIaaSError('CHAIN_ERROR', {
-        message: `Failed to get assets: ${error instanceof Error ? error.message : String(error)}`,
-        cause: error instanceof Error ? error : undefined,
-      });
+      this.mapError('get assets', error);
     }
   }
 
@@ -322,11 +315,7 @@ export class SolanaAdapter implements IChainAdapter {
         },
       };
     } catch (error) {
-      if (error instanceof WAIaaSError) throw error;
-      throw new WAIaaSError('CHAIN_ERROR', {
-        message: `Failed to build transaction: ${error instanceof Error ? error.message : String(error)}`,
-        cause: error instanceof Error ? error : undefined,
-      });
+      this.mapError('build transaction', error);
     }
   }
 
@@ -349,11 +338,7 @@ export class SolanaAdapter implements IChainAdapter {
         error: simValue.err ? JSON.stringify(simValue.err, (_, v) => typeof v === 'bigint' ? v.toString() : v) : undefined,
       };
     } catch (error) {
-      if (error instanceof WAIaaSError) throw error;
-      throw new WAIaaSError('CHAIN_ERROR', {
-        message: `Failed to simulate transaction: ${error instanceof Error ? error.message : String(error)}`,
-        cause: error instanceof Error ? error : undefined,
-      });
+      this.mapError('simulate transaction', error);
     }
   }
 
@@ -388,11 +373,7 @@ export class SolanaAdapter implements IChainAdapter {
       // Re-encode the signed transaction
       return new Uint8Array(txEncoder.encode(signedTx));
     } catch (error) {
-      if (error instanceof WAIaaSError) throw error;
-      throw new WAIaaSError('CHAIN_ERROR', {
-        message: `Failed to sign transaction: ${error instanceof Error ? error.message : String(error)}`,
-        cause: error instanceof Error ? error : undefined,
-      });
+      this.mapError('sign transaction', error);
     }
   }
 
@@ -412,11 +393,7 @@ export class SolanaAdapter implements IChainAdapter {
         status: 'submitted',
       };
     } catch (error) {
-      if (error instanceof WAIaaSError) throw error;
-      throw new WAIaaSError('CHAIN_ERROR', {
-        message: `Failed to submit transaction: ${error instanceof Error ? error.message : String(error)}`,
-        cause: error instanceof Error ? error : undefined,
-      });
+      this.mapError('submit transaction', error);
     }
   }
 
@@ -509,12 +486,7 @@ export class SolanaAdapter implements IChainAdapter {
       // Native SOL transfer
       return { fee: DEFAULT_SOL_TRANSFER_FEE };
     } catch (error) {
-      if (error instanceof ChainError) throw error;
-      if (error instanceof WAIaaSError) throw error;
-      throw new WAIaaSError('CHAIN_ERROR', {
-        message: `Failed to estimate fee: ${error instanceof Error ? error.message : String(error)}`,
-        cause: error instanceof Error ? error : undefined,
-      });
+      this.mapError('estimate fee', error);
     }
   }
 
@@ -647,12 +619,7 @@ export class SolanaAdapter implements IChainAdapter {
         },
       };
     } catch (error) {
-      if (error instanceof ChainError) throw error;
-      if (error instanceof WAIaaSError) throw error;
-      throw new WAIaaSError('CHAIN_ERROR', {
-        message: `Failed to build token transfer: ${error instanceof Error ? error.message : String(error)}`,
-        cause: error instanceof Error ? error : undefined,
-      });
+      this.mapError('build token transfer', error);
     }
   }
 
@@ -694,12 +661,7 @@ export class SolanaAdapter implements IChainAdapter {
         programId,
       };
     } catch (error) {
-      if (error instanceof ChainError) throw error;
-      if (error instanceof WAIaaSError) throw error;
-      throw new WAIaaSError('CHAIN_ERROR', {
-        message: `Failed to get token info: ${error instanceof Error ? error.message : String(error)}`,
-        cause: error instanceof Error ? error : undefined,
-      });
+      this.mapError('get token info', error);
     }
   }
 
@@ -840,12 +802,7 @@ export class SolanaAdapter implements IChainAdapter {
         },
       };
     } catch (error) {
-      if (error instanceof ChainError) throw error;
-      if (error instanceof WAIaaSError) throw error;
-      throw new WAIaaSError('CHAIN_ERROR', {
-        message: `Failed to build contract call: ${error instanceof Error ? error.message : String(error)}`,
-        cause: error instanceof Error ? error : undefined,
-      });
+      this.mapError('build contract call', error);
     }
   }
 
@@ -936,12 +893,7 @@ export class SolanaAdapter implements IChainAdapter {
         },
       };
     } catch (error) {
-      if (error instanceof ChainError) throw error;
-      if (error instanceof WAIaaSError) throw error;
-      throw new WAIaaSError('CHAIN_ERROR', {
-        message: `Failed to build approve: ${error instanceof Error ? error.message : String(error)}`,
-        cause: error instanceof Error ? error : undefined,
-      });
+      this.mapError('build approve', error);
     }
   }
 
@@ -1021,12 +973,7 @@ export class SolanaAdapter implements IChainAdapter {
         },
       };
     } catch (error) {
-      if (error instanceof ChainError) throw error;
-      if (error instanceof WAIaaSError) throw error;
-      throw new WAIaaSError('CHAIN_ERROR', {
-        message: `Failed to build batch: ${error instanceof Error ? error.message : String(error)}`,
-        cause: error instanceof Error ? error : undefined,
-      });
+      this.mapError('build batch', error);
     }
   }
 
@@ -1483,12 +1430,7 @@ export class SolanaAdapter implements IChainAdapter {
         },
       };
     } catch (error) {
-      if (error instanceof ChainError) throw error;
-      if (error instanceof WAIaaSError) throw error;
-      throw new WAIaaSError('CHAIN_ERROR', {
-        message: `Failed to build NFT transfer: ${error instanceof Error ? error.message : String(error)}`,
-        cause: error instanceof Error ? error : undefined,
-      });
+      this.mapError('build NFT transfer', error);
     }
   }
 
@@ -1594,16 +1536,26 @@ export class SolanaAdapter implements IChainAdapter {
         },
       };
     } catch (error) {
-      if (error instanceof ChainError) throw error;
-      if (error instanceof WAIaaSError) throw error;
-      throw new WAIaaSError('CHAIN_ERROR', {
-        message: `Failed to build NFT approval: ${error instanceof Error ? error.message : String(error)}`,
-        cause: error instanceof Error ? error : undefined,
-      });
+      this.mapError('build NFT approval', error);
     }
   }
 
   // -- Private helpers --
+
+  /**
+   * Centralized error mapping for catch blocks.
+   * - WAIaaSError: re-throw as-is
+   * - ChainError: re-throw as-is (Stage 5 converts to WAIaaSError)
+   * - Other: wrap in WAIaaSError('CHAIN_ERROR')
+   */
+  private mapError(operation: string, error: unknown): never {
+    if (error instanceof WAIaaSError) throw error;
+    if (error instanceof ChainError) throw error;
+    throw new WAIaaSError('CHAIN_ERROR', {
+      message: `Failed to ${operation}: ${error instanceof Error ? error.message : String(error)}`,
+      cause: error instanceof Error ? error : undefined,
+    });
+  }
 
   private ensureConnected(): void {
     if (!this._connected || !this._rpc) {

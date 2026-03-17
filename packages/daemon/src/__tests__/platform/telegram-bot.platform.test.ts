@@ -1029,19 +1029,19 @@ describe('PLAT-03 Telegram Bot Platform Tests', () => {
     });
 
     it('PLAT-03-SHUT-02: DaemonLifecycle.shutdown() calls telegramBotService.stop()', () => {
-      // Verify by reading daemon.ts source code
-      const daemonSource = readFileSync(
+      // Verify by reading daemon-shutdown.ts source code (extracted from daemon.ts)
+      const shutdownSource = readFileSync(
         resolve(
           __dirname,
-          '../../../src/lifecycle/daemon.ts',
+          '../../../src/lifecycle/daemon-shutdown.ts',
         ),
         'utf-8',
       );
 
       // DaemonLifecycle shutdown includes telegramBotService.stop()
-      expect(daemonSource).toContain('this.telegramBotService.stop()');
+      expect(shutdownSource).toContain('.telegramBotService.stop()');
       // It's in the shutdown path (surrounded by null assignment pattern)
-      expect(daemonSource).toContain('this.telegramBotService = null');
+      expect(shutdownSource).toContain('.telegramBotService = null');
     });
   });
 });

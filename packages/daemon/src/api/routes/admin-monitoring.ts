@@ -7,7 +7,7 @@
 
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import { createRoute, z } from '@hono/zod-openapi';
-import { sql, desc, eq, and, isNull, gt, count as drizzleCount } from 'drizzle-orm';
+import { sql, desc, eq, and, isNull, gt, count as drizzleCount, inArray } from 'drizzle-orm';
 import { createHash } from 'node:crypto';
 import { WAIaaSError, getNetworksForEnvironment } from '@waiaas/core';
 import type { ContractNameRegistry } from '@waiaas/core';
@@ -26,7 +26,7 @@ import {
   buildErrorResponses,
 } from './openapi-schemas.js';
 import type { AdminRouteDeps } from './admin.js';
-import { formatTxAmount } from './admin-wallets.js';
+import { formatTxAmount, buildTokenMap } from './admin-wallets.js';
 
 // ---------------------------------------------------------------------------
 // Contract name resolution helper (v32.0 Phase 423)
@@ -237,6 +237,12 @@ export function registerAdminMonitoringRoutes(router: OpenAPIHono, deps: AdminRo
       .limit(limit)
       .all();
 
+    // Pre-batch token lookups (NQ-05)
+    const txTokenAddrs = rows
+      .map((row) => ({ address: row.tokenMint ?? row.contractAddress ?? '', network: row.network ?? null }))
+      .filter((t) => t.address !== '');
+    const txTokenMap = buildTokenMap(txTokenAddrs, deps.db);
+
     const items = rows.map((row) => {
       const tokenAddr = row.tokenMint ?? row.contractAddress ?? null;
       return {
@@ -248,7 +254,7 @@ export function registerAdminMonitoringRoutes(router: OpenAPIHono, deps: AdminRo
         tier: row.tier ?? null,
         toAddress: row.toAddress ?? null,
         amount: row.amount ?? null,
-        formattedAmount: formatTxAmount(row.amount ?? null, row.chain, row.network ?? null, tokenAddr, deps.db),
+        formattedAmount: formatTxAmount(row.amount ?? null, row.chain, row.network ?? null, tokenAddr, deps.db, txTokenMap),
         amountUsd: row.amountUsd ?? null,
         network: row.network ?? null,
         txHash: row.txHash ?? null,
@@ -320,6 +326,12 @@ export function registerAdminMonitoringRoutes(router: OpenAPIHono, deps: AdminRo
       .limit(limit)
       .all();
 
+    // Pre-batch token lookups for incoming transactions (NQ-05)
+    const inTokenAddrs = rows
+      .map((row) => ({ address: row.tokenAddress ?? '', network: row.network ?? null }))
+      .filter((t) => t.address !== '');
+    const inTokenMap = buildTokenMap(inTokenAddrs, deps.db);
+
     const items = rows.map((row) => ({
       id: row.id,
       txHash: row.txHash,
@@ -327,7 +339,7 @@ export function registerAdminMonitoringRoutes(router: OpenAPIHono, deps: AdminRo
       walletName: row.walletName ?? null,
       fromAddress: row.fromAddress,
       amount: row.amount,
-      formattedAmount: formatTxAmount(row.amount, row.chain, row.network, row.tokenAddress ?? null, deps.db),
+      formattedAmount: formatTxAmount(row.amount, row.chain, row.network, row.tokenAddress ?? null, deps.db, inTokenMap),
       tokenAddress: row.tokenAddress ?? null,
       chain: row.chain,
       network: row.network,
@@ -380,9 +392,14 @@ export function registerAdminMonitoringRoutes(router: OpenAPIHono, deps: AdminRo
     let targetWallets: Array<{ id: string; name: string; chain: string; environment: string; publicKey: string }>;
 
     if (body.walletIds && body.walletIds.length > 0) {
-      targetWallets = body.walletIds
-        .map((wid) => deps.db.select().from(wallets).where(eq(wallets.id, wid)).get())
-        .filter((w): w is NonNullable<typeof w> => w != null && w.status === 'ACTIVE')
+      // NQ-02: batch wallet fetch via single IN() query instead of N individual queries
+      const walletRows = deps.db
+        .select()
+        .from(wallets)
+        .where(inArray(wallets.id, body.walletIds))
+        .all();
+      targetWallets = walletRows
+        .filter((w) => w.status === 'ACTIVE')
         .map((w) => ({ id: w.id, name: w.name, chain: w.chain, environment: w.environment, publicKey: w.publicKey }));
     } else {
       targetWallets = deps.db
@@ -429,20 +446,27 @@ export function registerAdminMonitoringRoutes(router: OpenAPIHono, deps: AdminRo
     let reusableSessionId: string | null = null;
     let reusableExpiresAt = 0;
 
+    // NQ-03: batch linked count via single GROUP BY query instead of N individual queries
+    const candidateIds = candidateSessions.map((c) => c.id);
+    const linkedCounts = candidateIds.length > 0 && targetWalletIds.length > 0
+      ? deps.db
+          .select({
+            sessionId: sessionWallets.sessionId,
+            cnt: drizzleCount(),
+          })
+          .from(sessionWallets)
+          .where(
+            and(
+              inArray(sessionWallets.sessionId, candidateIds),
+              inArray(sessionWallets.walletId, targetWalletIds),
+            ),
+          )
+          .groupBy(sessionWallets.sessionId)
+          .all()
+      : [];
+    const countMap = new Map(linkedCounts.map((r) => [r.sessionId, r.cnt]));
     for (const candidate of candidateSessions) {
-      // Count how many of our target wallets are linked to this session
-      const linkedCount = deps.db
-        .select({ cnt: drizzleCount() })
-        .from(sessionWallets)
-        .where(
-          and(
-            eq(sessionWallets.sessionId, candidate.id),
-            sql`${sessionWallets.walletId} IN (${sql.join(targetWalletIds.map((id) => sql`${id}`), sql`, `)})`,
-          ),
-        )
-        .get();
-
-      if (linkedCount && linkedCount.cnt === targetWalletIds.length) {
+      if ((countMap.get(candidate.id) ?? 0) === targetWalletIds.length) {
         reusableSessionId = candidate.id;
         reusableExpiresAt = candidate.expiresAt instanceof Date
           ? Math.floor(candidate.expiresAt.getTime() / 1000)

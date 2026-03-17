@@ -95,15 +95,18 @@ describe('x402-settings-crud', () => {
   });
 
   it('lists policies and finds X402_ALLOWED_DOMAINS', async () => {
-    const { status, body } = await session.admin.get<
-      Array<{ id: string; type: string }>
-    >(
+    const { status, body } = await session.admin.get<{
+      data: Array<{ id: string; type: string }>;
+      total: number;
+      limit: number;
+      offset: number;
+    }>(
       `/v1/policies?walletId=${walletId}`,
       adminHeaders(),
     );
     expect(status).toBe(200);
-    expect(Array.isArray(body)).toBe(true);
-    const found = body.find((p) => p.type === 'X402_ALLOWED_DOMAINS');
+    expect(Array.isArray(body.data)).toBe(true);
+    const found = body.data.find((p) => p.type === 'X402_ALLOWED_DOMAINS');
     expect(found).toBeTruthy();
     expect(found!.id).toBe(policyId);
   });
@@ -117,14 +120,17 @@ describe('x402-settings-crud', () => {
   });
 
   it('confirms deletion from policy list', async () => {
-    const { status, body } = await session.admin.get<
-      Array<{ id: string; type: string }>
-    >(
+    const { status, body } = await session.admin.get<{
+      data: Array<{ id: string; type: string }>;
+      total: number;
+      limit: number;
+      offset: number;
+    }>(
       `/v1/policies?walletId=${walletId}`,
       adminHeaders(),
     );
     expect(status).toBe(200);
-    const found = body.find((p) => p.id === policyId);
+    const found = body.data.find((p) => p.id === policyId);
     expect(found).toBeUndefined();
   });
 

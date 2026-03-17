@@ -810,10 +810,10 @@ describe('Multi-Wallet Session E2E (v26.4)', () => {
       headers: masterAuthHeader(),
     });
     expect(listRes.status).toBe(200);
-    const sessions = (await listRes.json()) as Array<Record<string, unknown>>;
-    expect(sessions.length).toBeGreaterThanOrEqual(1);
+    const body = (await listRes.json()) as { data: Array<Record<string, unknown>> };
+    expect(body.data.length).toBeGreaterThanOrEqual(1);
 
-    const session = sessions[0]!;
+    const session = body.data[0]!;
     const walletsList = session.wallets as Array<{ id: string }>;
     expect(walletsList).toHaveLength(2);
     // walletId = first wallet
