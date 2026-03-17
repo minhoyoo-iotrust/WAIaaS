@@ -126,7 +126,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 444. daemon DeFi Provider + Pipeline 테스트 강화 | 3/3 | Complete    | 2026-03-17 |
-| 445. daemon Infra + Admin API + Notification 테스트 | 3/3 | Complete   | 2026-03-17 |
+| 445. daemon Infra + Admin API + Notification 테스트 | 3/3 | Complete    | 2026-03-17 |
 | 446. evm Branches + wallet-sdk Branches 강화 | 0/TBD | Not started | - |
 | 447. admin Functions + cli Lines/Branches 강화 | 0/TBD | Not started | - |
 | 448. sdk + shared + 나머지 패키지 + 임계값 최종 인상 | 0/TBD | Not started | - |
