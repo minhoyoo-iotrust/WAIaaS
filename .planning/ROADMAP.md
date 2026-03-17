@@ -81,7 +81,7 @@ Plans:
   2. 각 페이지에 타입별(Article/TechArticle/BreadcrumbList) JSON-LD 스키마가 포함된다
   3. 홈페이지 FAQ가 20개 이상 Q&A로 확장되고 FAQPage 스키마를 포함한다
   4. llms-full.txt가 전체 콘텐츠를 포함하여 자동 생성되고, 페이지 간 pillar-cluster 내부 링크가 설정된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
 - [ ] 441-01: sitemap, JSON-LD, canonical 자동 생성
