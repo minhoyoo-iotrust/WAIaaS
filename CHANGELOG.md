@@ -1,5 +1,36 @@
 # Changelog
 
+## [2.11.0-rc.20](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.19...v2.11.0-rc.20) (2026-03-17)
+
+
+### Features
+
+* **436-01:** add pagination to sessions and policies list APIs ([b5bd519](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b5bd519abedae723d204c81d6f1b8f31d3005a46))
+* **436-02:** add SDK listSessions/listPolicies and MCP list_sessions tool ([bf405e1](https://github.com/minhoyoo-iotrust/WAIaaS/commit/bf405e14729327dbd6e6634820471bc57bff3292))
+* **438-02:** add ILogger interface + ConsoleLogger in @waiaas/core ([e5d61e6](https://github.com/minhoyoo-iotrust/WAIaaS/commit/e5d61e685478e3cf4ea424ab81594fdc2939a101))
+* **438-02:** centralize Solana adapter error handling with mapError() ([5316a64](https://github.com/minhoyoo-iotrust/WAIaaS/commit/5316a64363af280dae98cf5b9d2dd79635e86fa0))
+
+
+### Bug Fixes
+
+* **436-01:** update session list assertions for paginated response format ([bd9c37b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/bd9c37b02a3c4c784f82915a12160e589784c552))
+* **436-02:** fix TypeScript strict null assertions in SDK pagination tests ([3e1dd11](https://github.com/minhoyoo-iotrust/WAIaaS/commit/3e1dd118b51065da6aad10f795a45cb10ed166d1))
+* **436-02:** update MCP server tool count to 42 after list_sessions addition ([fc53fdb](https://github.com/minhoyoo-iotrust/WAIaaS/commit/fc53fdb56a295dfe93ea92643eb38869a30c5ebe))
+* **436:** update E2E test assertions for paginated session/policy responses ([fefbb73](https://github.com/minhoyoo-iotrust/WAIaaS/commit/fefbb73101966d08224456341ef387c59633e1bc))
+
+
+### Code Refactoring
+
+* **435-01:** batch queries in admin-monitoring agent-prompt ([777593d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/777593d735d4b4f0e225de975c331df45ed9bfbf))
+* **435-01:** batch session wallet queries in sessions.ts ([0d3db8b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0d3db8b459f2f19721a7dd702da5f84e9f5f777a))
+* **435-02:** add tokenMap parameter to formatTxAmount and batch helper ([be066e1](https://github.com/minhoyoo-iotrust/WAIaaS/commit/be066e1c5e224963ac602d7364bd1173cd75ebec))
+* **435-02:** update remaining call sites to use batch tokenMap ([0170429](https://github.com/minhoyoo-iotrust/WAIaaS/commit/017042956aa5f3eb498368c9ebfba24d6a5d2a9d))
+* **437-01:** split migrate.ts into schema-ddl + 6 migration modules ([fcf3ccf](https://github.com/minhoyoo-iotrust/WAIaaS/commit/fcf3ccfac5982b07007b7d757696872c1bef2c59))
+* **437-02:** replace all inline import() types with static import type in daemon.ts ([07c4702](https://github.com/minhoyoo-iotrust/WAIaaS/commit/07c47025da12bc8997303a1d547535867e57211d))
+* **437-02:** split daemon.ts into startup/shutdown/pipeline modules ([d5e2fff](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d5e2fffc9c37e703c1f5550e527d3e540627b00f))
+* **437-03:** split database-policy-engine.ts into 6 evaluator modules ([092b0e4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/092b0e411316227aa1adad4f4aa24e9be829fb7e))
+* **438-01:** split stages.ts into 6 stage files + pipeline-helpers + barrel re-export ([06f92e1](https://github.com/minhoyoo-iotrust/WAIaaS/commit/06f92e1ba4aa8bcc580f8ea2ce0b423a103ade94))
+
 ## [2.11.0-rc.19](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.18...v2.11.0-rc.19) (2026-03-16)
 
 
