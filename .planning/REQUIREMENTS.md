@@ -25,17 +25,17 @@
 
 ### daemon Infra 테스트
 
-- [ ] **DINF-01**: IncomingTxMonitor 구독 관리, 감지 로직, DB 저장, 알림 트리거 테스트 커버
-- [ ] **DINF-02**: EVM/Solana Subscriber 폴링/WSS 재연결, 블록 스캔, 트랜잭션 파싱 테스트 커버
-- [ ] **DINF-03**: RPC Pool 로테이션, 재시도, 장애 격리, WSS 전환 테스트 커버
-- [ ] **DINF-04**: Admin API 라우트 settings/actions/sessions/wallets CRUD 엣지 케이스 테스트 커버
-- [ ] **DINF-05**: Notification 템플릿 금액 포맷팅, 익스플로러 링크, 카테고리 필터링 테스트 커버
+- [x] **DINF-01**: IncomingTxMonitor 구독 관리, 감지 로직, DB 저장, 알림 트리거 테스트 커버
+- [x] **DINF-02**: EVM/Solana Subscriber 폴링/WSS 재연결, 블록 스캔, 트랜잭션 파싱 테스트 커버
+- [x] **DINF-03**: RPC Pool 로테이션, 재시도, 장애 격리, WSS 전환 테스트 커버
+- [x] **DINF-04**: Admin API 라우트 settings/actions/sessions/wallets CRUD 엣지 케이스 테스트 커버
+- [x] **DINF-05**: Notification 템플릿 금액 포맷팅, 익스플로러 링크, 카테고리 필터링 테스트 커버
 
 ### daemon 커버리지 목표
 
-- [ ] **DCOV-01**: daemon Lines ≥ 90% 달성 (현재 85.31%)
-- [ ] **DCOV-02**: daemon Branches ≥ 85% 달성 (현재 81.36%)
-- [ ] **DCOV-03**: daemon Functions ≥ 95% 달성 (현재 94.26%)
+- [x] **DCOV-01**: daemon Lines ≥ 90% 달성 (현재 85.31%)
+- [x] **DCOV-02**: daemon Branches ≥ 85% 달성 (현재 81.36%)
+- [x] **DCOV-03**: daemon Functions ≥ 95% 달성 (현재 94.26%)
 
 ### evm 테스트
 
@@ -118,14 +118,14 @@
 | DPIPE-03 | Phase 444 | Complete |
 | DPIPE-04 | Phase 444 | Complete |
 | DPIPE-05 | Phase 444 | Complete |
-| DINF-01 | Phase 445 | Pending |
-| DINF-02 | Phase 445 | Pending |
-| DINF-03 | Phase 445 | Pending |
-| DINF-04 | Phase 445 | Pending |
-| DINF-05 | Phase 445 | Pending |
-| DCOV-01 | Phase 445 | Pending |
-| DCOV-02 | Phase 445 | Pending |
-| DCOV-03 | Phase 445 | Pending |
+| DINF-01 | Phase 445 | Complete |
+| DINF-02 | Phase 445 | Complete |
+| DINF-03 | Phase 445 | Complete |
+| DINF-04 | Phase 445 | Complete |
+| DINF-05 | Phase 445 | Complete |
+| DCOV-01 | Phase 445 | Complete |
+| DCOV-02 | Phase 445 | Complete |
+| DCOV-03 | Phase 445 | Complete |
 | EVM-01 | Phase 446 | Pending |
 | EVM-02 | Phase 446 | Pending |
 | EVM-03 | Phase 446 | Pending |
