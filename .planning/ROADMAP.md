@@ -78,9 +78,9 @@ Plans:
 **Requirements**: DINF-01, DINF-02, DINF-03, DINF-04, DINF-05, DCOV-01, DCOV-02, DCOV-03
 **Plans**: 3 plans
 Plans:
-- [ ] 445-01-PLAN.md — IncomingTx Monitor/Workers + Notification 서비스 + RPC Proxy 라우트 테스트
-- [ ] 445-02-PLAN.md — Admin API 라우트 (wallets/settings/auth/monitoring/wallet-apps) 테스트
-- [ ] 445-03-PLAN.md — 잔여 커버리지 갭 sweep + vitest.config.ts 임계값 인상 (90/85/95)
+- [x] 445-01-PLAN.md — IncomingTx Monitor/Workers + Notification 서비스 + RPC Proxy 라우트 테스트
+- [x] 445-02-PLAN.md — Admin API 라우트 (wallets/settings/auth/monitoring/wallet-apps) 테스트
+- [x] 445-03-PLAN.md — 잔여 커버리지 갭 sweep + vitest.config.ts 임계값 인상 (90/85/95)
 **Success Criteria** (what must be TRUE):
   1. IncomingTxMonitor 구독 관리, 감지, DB 저장, 알림 트리거가 테스트로 검증된다
   2. EVM/Solana Subscriber 폴링, WSS 재연결, 블록 스캔이 테스트로 검증된다
@@ -99,8 +99,8 @@ Plans:
   4. evm Branches >= 85%, wallet-sdk Branches >= 85% 임계값을 통과한다
 **Plans**: 2 plans
 Plans:
-- [ ] 446-01-PLAN.md — EVM adapter.ts 에러 경로 + tx-parser.ts 분기 테스트 + 임계값 인상
-- [ ] 446-02-PLAN.md — wallet-sdk ntfy.ts SSE 재연결/에러 + parse-request.ts remote fetch 분기 테스트 + 임계값 인상
+- [x] 446-01-PLAN.md — EVM adapter.ts 에러 경로 + tx-parser.ts 분기 테스트 + 임계값 인상
+- [x] 446-02-PLAN.md — wallet-sdk ntfy.ts SSE 재연결/에러 + parse-request.ts remote fetch 분기 테스트 + 임계값 인상
 
 ### Phase 447: admin Functions + cli Lines/Branches 강화
 **Goal**: admin 패키지 Functions 95%와 cli 패키지 Lines 90% / Branches 85%를 달성한다
@@ -108,9 +108,10 @@ Plans:
 **Requirements**: ADM-01, ADM-02, ADM-03, ADM-04, ADM-05, ADM-06, CLI-01, CLI-02, CLI-03
 **Plans**: 3 plans
 Plans:
-- [ ] 447-01-PLAN.md — system/erc8004/credentials/wallet-apps/dashboard/transactions 페이지 미커버 함수 테스트
-- [ ] 447-02-PLAN.md — 나머지 페이지 + 컴포넌트 미커버 함수 테스트
-- [ ] 447-03-PLAN.md — CLI 0% 파일 테스트 + admin/cli 임계값 인상
+- [x] 447-01-PLAN.md — system/erc8004/credentials/wallet-apps/dashboard/transactions 페이지 미커버 함수 테스트
+- [x] 447-02-PLAN.md — 나머지 페이지 + 컴포넌트 미커버 함수 테스트
+- [x] 447-03-PLAN.md — CLI 0% 파일 테스트 + admin/cli 임계값 인상
+
 **Success Criteria** (what must be TRUE):
   1. Admin 페이지 이벤트 핸들러(폼 제출, 버튼 클릭, 모달)가 테스트로 검증된다
   2. Admin 조건부 렌더링 헬퍼와 폼 검증/변환 유틸이 테스트로 검증된다
@@ -121,6 +122,11 @@ Plans:
 **Goal**: 전 패키지가 Lines 90% / Branches 85% / Functions 95% 통일 기준을 달성하고 CI Gate로 하락이 방지된다
 **Depends on**: Phase 444, Phase 445, Phase 446, Phase 447
 **Requirements**: SDK-01, SDK-02, SDK-03, SDK-04, SHR-01, SHR-02, SHR-03, GAP-01, GAP-02, GAP-03, GATE-01, GATE-02, GATE-03, GATE-04, GATE-05
+**Plans**: 3 plans
+Plans:
+- [ ] 448-01-PLAN.md — SDK client.ts/validation.ts/http.ts 미커버 경로 테스트 + 임계값 인상
+- [ ] 448-02-PLAN.md — shared vitest 설정 + networks.ts 테스트 + core/actions/mcp 소량 갭 해소
+- [ ] 448-03-PLAN.md — 전 패키지 임계값 최종 인상 + coverage-gate.sh 동기화 + 전체 검증
 **Success Criteria** (what must be TRUE):
   1. sdk client.ts HTTP 에러/DeFi 메서드와 validation.ts 검증 분기가 테스트로 검증된다
   2. shared 패키지에 vitest.config.ts가 설정되고 유틸리티 함수 테스트가 통과한다
@@ -136,4 +142,4 @@ Plans:
 | 445. daemon Infra + Admin API + Notification 테스트 | 3/3 | Complete    | 2026-03-17 |
 | 446. evm Branches + wallet-sdk Branches 강화 | 2/2 | Complete    | 2026-03-17 |
 | 447. admin Functions + cli Lines/Branches 강화 | 3/3 | Complete    | 2026-03-17 |
-| 448. sdk + shared + 나머지 패키지 + 임계값 최종 인상 | 0/TBD | Not started | - |
+| 448. sdk + shared + 나머지 패키지 + 임계값 최종 인상 | 0/3 | Not started | - |
