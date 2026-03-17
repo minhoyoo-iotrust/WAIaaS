@@ -320,3 +320,9 @@ waiaas mcp setup  # Automatic Claude Desktop configuration
 **Resources:** `waiaas://wallet/balance`, `waiaas://wallet/address`, `waiaas://system/status`.
 
 See: [@waiaas/mcp on npm](https://www.npmjs.com/package/@waiaas/mcp)
+
+## Related
+
+- [Architecture](/docs/architecture/) - System architecture and pipeline overview
+- [Agent Self-Setup Guide](/blog/agent-self-setup/) - Using the API for automated setup
+- [Agent Skills Integration Guide](/blog/agent-skills-integration/) - Teaching agents to use the API via skills

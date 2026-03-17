@@ -461,3 +461,9 @@ The `IChainSubscriber` interface (6 methods):
 - **Gas safety margin**: `(estimatedGas * 120n) / 100n` using bigint arithmetic.
 - **Local-only by default**: `hostGuard` middleware ensures the daemon only accepts localhost connections.
 - **No third-party custody**: Private keys are encrypted with sodium-native and never leave the machine.
+
+## Related
+
+- [Security Model](/docs/security-model/) - Detailed security architecture and policy engine
+- [API Reference](/docs/api-reference/) - Complete REST API documentation
+- [Self-Custody for Agents Means Self-Hosting](/blog/self-custody-means-self-hosting/) - Why self-hosted architecture matters

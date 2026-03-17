@@ -140,3 +140,9 @@ All transactions pass through a 6-stage pipeline with an 8-state machine:
 6. **Broadcast** -- Chain submission and confirmation
 
 A sign-only mode is available for transactions that need signing without broadcast.
+
+## Related
+
+- [Architecture](/docs/architecture/) - Overall system architecture and transaction pipeline
+- [Agent Self-Setup Guide](/blog/agent-self-setup/) - Secure agent provisioning workflow
+- [Self-Custody for Agents Means Self-Hosting](/blog/self-custody-means-self-hosting/) - Why self-hosting is essential for security

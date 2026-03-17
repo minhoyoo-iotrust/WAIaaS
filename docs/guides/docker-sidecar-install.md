@@ -165,3 +165,9 @@ docker compose exec agent waiaas status   # should show same wallets/config
 - [Deployment Guide](../deployment.md) -- WAIaaS native Docker deployment with `docker-compose.yml`
 - [OpenClaw Integration](openclaw-integration.md) -- Connecting WAIaaS to OpenClaw agents
 - [Agent Self-Setup Guide](agent-self-setup.md) -- Autonomous daemon provisioning with `waiaas init --auto-provision`
+
+## Related
+
+- [Deployment Guide](/docs/deployment/) - WAIaaS native Docker deployment
+- [Agent Self-Setup Guide](/blog/agent-self-setup/) - Autonomous daemon provisioning
+- [Architecture](/docs/architecture/) - System architecture overview

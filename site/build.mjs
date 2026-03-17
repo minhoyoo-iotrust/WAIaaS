@@ -448,7 +448,9 @@ async function build() {
   console.log(`  Docs: ${docsCount} articles`);
   console.log(`  Listing pages: 2 (blog, docs)`);
 
-  // Phase 2c: Generate sitemap.xml
+  // Phase 2c: Generate llms-full.txt and sitemap.xml
+  console.log('\nGenerating llms-full.txt...');
+  generateLlmsFullTxt(eligibleFiles);
   generateSitemap(builtPages);
 
   // Phase 3: Link Validation
@@ -463,6 +465,54 @@ async function build() {
     }
     process.exit(1);
   }
+}
+
+/**
+ * Generate llms-full.txt containing all article content for LLM consumption.
+ * Blog articles first (date descending), then docs articles (title alphabetical).
+ * @param {Array<string>} eligibleFiles - All markdown file paths
+ */
+function generateLlmsFullTxt(eligibleFiles) {
+  const blogEntries = [];
+  const docsEntries = [];
+
+  for (const filePath of eligibleFiles) {
+    const raw = fs.readFileSync(filePath, 'utf8');
+    const { data, content } = matter(raw);
+    const canonicalUrl = getCanonicalUrl(data, filePath);
+    const section = data.section || 'docs';
+    const dateStr = data.date instanceof Date
+      ? data.date.toISOString().split('T')[0]
+      : String(data.date);
+
+    const entry = { title: data.title, url: canonicalUrl, content: content.trim(), date: dateStr };
+
+    if (section === 'blog') {
+      blogEntries.push(entry);
+    } else {
+      docsEntries.push(entry);
+    }
+  }
+
+  // Sort: blog by date descending, docs by title alphabetical
+  blogEntries.sort((a, b) => b.date.localeCompare(a.date));
+  docsEntries.sort((a, b) => a.title.localeCompare(b.title));
+
+  let output = '# WAIaaS — Wallet-as-a-Service for AI Agents\n';
+  output += '> Full content for LLM consumption. See also: llms.txt (summary version)\n';
+  output += `> Source: ${BASE_URL}\n\n`;
+
+  const allEntries = [...blogEntries, ...docsEntries];
+  for (const entry of allEntries) {
+    output += '---\n';
+    output += `# ${entry.title}\n`;
+    output += `URL: ${entry.url}\n\n`;
+    output += `${entry.content}\n\n`;
+  }
+
+  const outputPath = path.join(SITE_DIR, 'llms-full.txt');
+  fs.writeFileSync(outputPath, output, 'utf8');
+  console.log(`Generated llms-full.txt (${allEntries.length} articles, ${Math.round(output.length / 1024)}KB)`);
 }
 
 /**

@@ -119,3 +119,9 @@ If not running:
 ```bash
 waiaas start
 ```
+
+## Related
+
+- [Agent Self-Setup Guide](/blog/agent-self-setup/) - Autonomous daemon provisioning for agents
+- [API Reference](/docs/api-reference/) - REST API that skills interact with
+- [Autonomous AI Agents Deserve Secure Wallets](/blog/autonomous-agents-deserve-secure-wallets/) - Why agents need secure wallet access

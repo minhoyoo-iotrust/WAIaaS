@@ -253,3 +253,9 @@ Pimlico chainId mapping (partial):
 
 viem may send JSON-RPC batch requests (`[{...}, {...}]`) in some cases.
 To support this, detect array input and apply per-request processing to each item.
+
+## Related
+
+- [Smart Account Lite / Full Mode Guide](/docs/smart-account-guide/) - Guide to using smart accounts with WAIaaS
+- [Architecture](/docs/architecture/) - System architecture including AA pipeline
+- [API Reference](/docs/api-reference/) - REST API endpoints for UserOp operations

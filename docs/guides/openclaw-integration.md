@@ -132,3 +132,9 @@ Check that your session token is correct in `openclaw.json`. You can verify with
 ```bash
 curl -H "Authorization: Bearer <session-token>" http://localhost:3100/v1/connect-info
 ```
+
+## Related
+
+- [Agent Skills Integration Guide](/blog/agent-skills-integration/) - General skill installation for all agents
+- [Agent Self-Setup Guide](/blog/agent-self-setup/) - Automated daemon setup from an agent
+- [API Reference](/docs/api-reference/) - REST API documentation for direct integration

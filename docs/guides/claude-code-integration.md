@@ -138,3 +138,9 @@ If using MCP integration, verify the setup:
 ```bash
 waiaas mcp setup --check
 ```
+
+## Related
+
+- [Agent Skills Integration Guide](/blog/agent-skills-integration/) - General skill installation for all agents
+- [Agent Self-Setup Guide](/blog/agent-self-setup/) - Automated daemon setup from an agent
+- [API Reference](/docs/api-reference/) - REST API documentation for direct integration

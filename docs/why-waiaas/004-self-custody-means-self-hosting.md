@@ -220,3 +220,9 @@ Sources:
 - [Bybit $1.4B Hack — CoinDesk](https://www.coindesk.com/business/2025/02/21/bybit-suffers-potential-hack-on-eth-cold-wallet-over-1-billion-in-outflows/)
 - [MetaMask Venezuela Block — CoinDesk](https://www.coindesk.com/policy/2024/06/14/metamask-blocks-venezuela-users-amid-us-sanctions-confusion/)
 - [AI Agent Payment Infrastructure — CoinGecko](https://www.coingecko.com/learn/ai-agent-payment-infrastructure-crypto-and-big-tech)
+
+## Related
+
+- [Autonomous AI Agents Deserve Secure Wallets](/blog/autonomous-agents-deserve-secure-wallets/) - The case for purpose-built agent wallet infrastructure
+- [The AI Agent Wallet Security Crisis](/blog/ai-agent-wallet-security-crisis/) - Understanding the current security landscape
+- [Smart Account Lite / Full Mode Guide](/docs/smart-account-guide/) - Advanced account abstraction for agent wallets

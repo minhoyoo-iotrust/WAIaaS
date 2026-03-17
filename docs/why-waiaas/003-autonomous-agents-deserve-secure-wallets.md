@@ -238,3 +238,9 @@ Sources:
 - [Vitalik Warns Against Autonomous AI (BTCUSA)](https://btcusa.com/vitalik-warns-against-autonomous-ai-as-ethereum-debate-over-self-sovereign-agents-intensifies/)
 - [Web 4.0 & Autonomous AI Agents (IndexBox)](https://www.indexbox.io/blog/web-40-defined-as-autonomous-ai-agents-by-sigil-wen/)
 - [Web 4.0 — Autonomous AI Agents Powered by Crypto (Decrypt)](https://decrypt.co/358385/morning-minute-web-4-0-autonomous-ai-agents-powered-by-crypto)
+
+## Related
+
+- [The AI Agent Wallet Security Crisis](/blog/ai-agent-wallet-security-crisis/) - The security challenges that autonomous agents face
+- [Self-Custody for Agents Means Self-Hosting](/blog/self-custody-means-self-hosting/) - Why self-hosted wallets are the answer
+- [Architecture](/docs/architecture/) - How WAIaaS solves agent wallet security at the architecture level
