@@ -55,7 +55,7 @@ See `.planning/milestones/v32.6-ROADMAP.md` for full details.
 **Plans**: 1 plan
 
 Plans:
-- [ ] 439-01: 빌드 스크립트 + HTML 템플릿 + article CSS
+- [x] 439-01: 빌드 스크립트 + HTML 템플릿 + article CSS
 
 ### Phase 440: Content Publishing + Navigation
 **Goal**: 기존 문서가 Blog/Docs 섹션 웹 페이지로 발행되고, 네비게이션으로 탐색할 수 있다
@@ -67,11 +67,10 @@ Plans:
   3. 메인페이지 nav에 Blog/Docs 링크가 있고, 서브페이지에서 현재 섹션이 active 표시된다
   4. 각 페이지에 title, description, canonical, OG 메타 태그가 설정되고, 코드 블록/테이블/링크가 정확히 렌더링된다
   5. 모든 내부 링크가 유효하다 (404 없음)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 440-01: 마크다운 front-matter 추가 및 Blog/Docs 콘텐츠 발행
-- [ ] 440-02: 목록 페이지 생성 및 네비게이션 통합
+- [ ] 440-01-PLAN.md — Blog/Docs 목록 페이지 생성, 네비게이션 통합, 내부 링크 검증
 
 ### Phase 441: Technical SEO & AEO
 **Goal**: 검색 엔진과 AI 답변 엔진이 모든 페이지를 정확히 인덱싱하고 인용할 수 있다
@@ -124,7 +123,7 @@ Phases execute in numeric order: 439 → 440 → 441 → 442 → 443
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 439. Build Infrastructure | 1/1 | Complete    | 2026-03-17 |
-| 440. Content Publishing + Navigation | 0/2 | Not started | - |
+| 440. Content Publishing + Navigation | 0/1 | Not started | - |
 | 441. Technical SEO & AEO | 0/2 | Not started | - |
 | 442. CI Integration | 0/1 | Not started | - |
 | 443. SEO Landing Pages + External Distribution | 0/2 | Not started | - |
