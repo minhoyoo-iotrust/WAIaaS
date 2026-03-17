@@ -5,7 +5,7 @@
 - ✅ **v32.5 멀티체인 DeFi 포지션 + 테스트넷 토글** — Phases 432-434 (shipped 2026-03-16)
 - ✅ **v32.6 성능 + 구조 개선** — Phases 435-438 (shipped 2026-03-17)
 - ✅ **v32.7 SEO/AEO 최적화** — Phases 439-443 (shipped 2026-03-17)
-- **v32.8 테스트 커버리지 강화** — Phases 444-448 (in progress)
+- **v32.8 테스트 커버리지 강화** — Phases 444-448.1 (in progress)
 
 <details>
 <summary>✅ v32.5 멀티체인 DeFi 포지션 + 테스트넷 토글 (Phases 432-434) — SHIPPED 2026-03-16</summary>
@@ -54,6 +54,7 @@ See `.planning/milestones/v32.7-ROADMAP.md` for full details.
 - [x] **Phase 446: evm Branches + wallet-sdk Branches 강화** - EVM 가스/토큰/RPC 분기와 wallet-sdk 서명 채널 에러 경로 커버 (completed 2026-03-17)
 - [x] **Phase 447: admin Functions + cli Lines/Branches 강화** - Admin 이벤트 핸들러/헬퍼/유틸 테스트와 CLI 엣지 케이스 테스트 추가 (completed 2026-03-17)
 - [x] **Phase 448: sdk + shared + 나머지 패키지 + 임계값 최종 인상** - 잔여 패키지 갭 해소 후 전 패키지 통일 임계값 적용 (completed 2026-03-17)
+- [ ] **Phase 448.1: 커버리지 갭 클로저** - daemon L:90/B:85, admin B:85/F:95, cli L:90/B:85 미달 요구사항 해소 (3 plans)
 
 ## Phase Details
 
@@ -124,15 +125,31 @@ Plans:
 **Requirements**: SDK-01, SDK-02, SDK-03, SDK-04, SHR-01, SHR-02, SHR-03, GAP-01, GAP-02, GAP-03, GATE-01, GATE-02, GATE-03, GATE-04, GATE-05
 **Plans**: 3 plans
 Plans:
-- [ ] 448-01-PLAN.md — SDK client.ts/validation.ts/http.ts 미커버 경로 테스트 + 임계값 인상
-- [ ] 448-02-PLAN.md — shared vitest 설정 + networks.ts 테스트 + core/actions/mcp 소량 갭 해소
-- [ ] 448-03-PLAN.md — 전 패키지 임계값 최종 인상 + coverage-gate.sh 동기화 + 전체 검증
+- [x] 448-01-PLAN.md — SDK client.ts/validation.ts/http.ts 미커버 경로 테스트 + 임계값 인상
+- [x] 448-02-PLAN.md — shared vitest 설정 + networks.ts 테스트 + core/actions/mcp 소량 갭 해소
+- [x] 448-03-PLAN.md — 전 패키지 임계값 최종 인상 + coverage-gate.sh 동기화 + 전체 검증
 **Success Criteria** (what must be TRUE):
   1. sdk client.ts HTTP 에러/DeFi 메서드와 validation.ts 검증 분기가 테스트로 검증된다
   2. shared 패키지에 vitest.config.ts가 설정되고 유틸리티 함수 테스트가 통과한다
   3. core Functions >= 95%, actions Branches >= 85%, mcp Branches >= 85% 소량 갭이 해소된다
   4. 전 패키지 vitest.config.ts 임계값이 통일 기준으로 인상되고, `pnpm turbo run test:unit` 전체 0 failures로 통과한다
   5. coverage-gate.sh와 vitest.config.ts 임계값이 동기화되고, 기존 임계값 하향이 없음이 확인된다
+
+### Phase 448.1: 커버리지 갭 클로저 (Gap Closure)
+**Goal**: 마일스톤 감사에서 발견된 6개 미충족 요구사항 (DCOV-01, DCOV-02, ADM-05, ADM-06, CLI-02, CLI-03)을 해소하여 전 패키지 통일 기준 달성
+**Depends on**: Phase 448
+**Requirements**: DCOV-01, DCOV-02, ADM-05, ADM-06, CLI-02, CLI-03
+**Plans**: 3 plans
+Plans:
+- [ ] 448.1-01-PLAN.md — daemon route handler + pipeline branch coverage + 임계값 인상 (90/85)
+- [ ] 448.1-02-PLAN.md — admin wallets/system/dashboard/나머지 페이지 함수+분기 테스트 + 임계값 인상
+- [ ] 448.1-03-PLAN.md — cli restore/wallet/quickstart/update 분기 테스트 + 임계값 인상 + coverage-gate.sh 동기화
+**Success Criteria** (what must be TRUE):
+  1. daemon Lines >= 90%, Branches >= 85% (DCOV-01, DCOV-02 해소)
+  2. admin Branches >= 85%, Functions 최대 달성 가능 수준 (ADM-05, ADM-06 해소)
+  3. cli Lines >= 90%, Branches >= 85% (CLI-02, CLI-03 해소)
+  4. coverage-gate.sh가 daemon/admin/cli 새 임계값과 동기화됨
+  5. `pnpm turbo run test:unit` 전체 0 failures
 
 ## Progress
 
@@ -143,3 +160,4 @@ Plans:
 | 446. evm Branches + wallet-sdk Branches 강화 | 2/2 | Complete    | 2026-03-17 |
 | 447. admin Functions + cli Lines/Branches 강화 | 3/3 | Complete    | 2026-03-17 |
 | 448. sdk + shared + 나머지 패키지 + 임계값 최종 인상 | 3/3 | Complete    | 2026-03-17 |
+| 448.1. 커버리지 갭 클로저 | 0/3 | Planned     | — |
