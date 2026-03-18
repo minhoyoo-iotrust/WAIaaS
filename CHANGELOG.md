@@ -1,5 +1,38 @@
 # Changelog
 
+## [2.11.0-rc.22](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.21...v2.11.0-rc.22) (2026-03-18)
+
+
+### Features
+
+* **449-01:** replace ntfy with push_relay in core schemas ([b396882](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b396882eee0c9b0367b6f1983234d9cb2e208e5d))
+* **449-01:** update sign-request-builder to push_relay + fix schema-ddl CHECK ([cfdf198](https://github.com/minhoyoo-iotrust/WAIaaS/commit/cfdf198ac691e7d63da2e1abcb554ac2cf4ad0ef))
+* **449-02:** add DB v60 migration for push_relay_url + ntfy cleanup ([5d081e6](https://github.com/minhoyoo-iotrust/WAIaaS/commit/5d081e63392f29e84b9feca4df50f97c00e1c6ac))
+* **449-03:** add sign_responses DB store + rewrite sign-response-routes ([8815ccb](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8815ccb1b6ef625c3f52624001613ca3d6c15624))
+* **449-03:** remove ntfy code from push-relay, add direct push API ([ff16b1f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ff16b1ff4741f404abe5ffbf653f4942725fa092))
+* **450-01:** replace NtfySigningChannel with PushRelaySigningChannel ([47a35ad](https://github.com/minhoyoo-iotrust/WAIaaS/commit/47a35adb5ebd39389608b245b855b85bbfe4a91b))
+* **450-01:** update ApprovalChannelRouter and daemon startup for sdk_push ([8ddebcc](https://github.com/minhoyoo-iotrust/WAIaaS/commit/8ddebcc55cd776d771c62e4d7822d7195af48749))
+* **450-02:** rewrite WalletNotificationChannel to use Push Relay HTTP POST ([34bef0d](https://github.com/minhoyoo-iotrust/WAIaaS/commit/34bef0dc308ade802abeadbe1110a781dbb5cbb1))
+* **451-01:** add push_relay_url to WalletApp API and fix notification channel ([095eec9](https://github.com/minhoyoo-iotrust/WAIaaS/commit/095eec91b86e505aeead960818923ae563c16189))
+* **451-01:** deprecate SDK ntfy channel functions ([2af5fb4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2af5fb4ca5d08dde97533f26b92bab8ee4bc7883))
+* **451-02:** update Admin UI human-wallet-apps from ntfy to Push Relay ([03e1fec](https://github.com/minhoyoo-iotrust/WAIaaS/commit/03e1fec05285be7f7d3cace316c7794349d5405f))
+* **451-02:** update wallets.tsx approval method labels from ntfy to Push ([77e9f0b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/77e9f0b96a9d54539abc948c8b0f263fd79cd0df))
+* add Env column and --env filter to Agent UAT scenarios ([4c03900](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4c03900fd9eea20cfae99f5f196305d92969d0e4))
+
+
+### Bug Fixes
+
+* **450-01:** update remaining ntfy references in SDK tests and preset-auto-setup ([efae3ff](https://github.com/minhoyoo-iotrust/WAIaaS/commit/efae3ff1b1fe8d5317af6f0c5bf37508e9ec55c9))
+* correct DCent Swap UAT scenario API endpoints and amounts ([2a53b47](https://github.com/minhoyoo-iotrust/WAIaaS/commit/2a53b47980ffea7959cb2c74b0b06317fdd5c2bc))
+* correct Lido testnet contract addresses from Holesky to Sepolia ([73ef0c3](https://github.com/minhoyoo-iotrust/WAIaaS/commit/73ef0c3432e018e82322b60dbe378bece158982e))
+* include error details in Telegram Bot retry warning logs ([99b1002](https://github.com/minhoyoo-iotrust/WAIaaS/commit/99b10026e45f9f7744b4e1465817414f9062ab67))
+* remove duplicate H1 title on SEO pages ([ae3ba56](https://github.com/minhoyoo-iotrust/WAIaaS/commit/ae3ba5659cb980ef4b1befb96ed9bc7a3d5c4b55))
+* remove formatAmount() from DCent Swap API calls ([646366f](https://github.com/minhoyoo-iotrust/WAIaaS/commit/646366fde152657bc5b553e191e9ecaca76ea165))
+* remove ntfy channel status from admin-notifications API ([be542b0](https://github.com/minhoyoo-iotrust/WAIaaS/commit/be542b0de98bac461ec2e6c6fc3e5df35f5a174c))
+* remove obsolete cancelTopicEdit test for removed feature ([6875180](https://github.com/minhoyoo-iotrust/WAIaaS/commit/68751803a293c5c7f639f6d9f825233d4b7f31a4))
+* remove stale ntfy references from tests and admin UI ([19529b7](https://github.com/minhoyoo-iotrust/WAIaaS/commit/19529b73dc9a987c5f42af1b05af50dddc57910f))
+* resolve lint errors in push-relay-signing-channel and signing-sdk-e2e test ([9fbc3bb](https://github.com/minhoyoo-iotrust/WAIaaS/commit/9fbc3bb3ac49d333e300e36508e02d39cf93dd0d))
+
 ## [2.11.0-rc.21](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.20...v2.11.0-rc.21) (2026-03-18)
 
 
