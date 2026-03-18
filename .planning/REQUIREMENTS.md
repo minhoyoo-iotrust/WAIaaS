@@ -7,10 +7,10 @@
 
 ### Document Structure (DOC)
 
-- [ ] **DOC-01**: docs/guides/ 디렉토리가 docs/agent-guides/로 이름 변경되고 5개 기존 가이드가 유지된다
-- [ ] **DOC-02**: README.md 내 docs/guides/ 경로 참조가 docs/agent-guides/로 업데이트된다
-- [ ] **DOC-03**: site/index.html 내 docs/guides GitHub 링크가 docs/agent-guides/로 업데이트된다
-- [ ] **DOC-04**: 코드베이스 내 모든 docs/guides/ 참조가 docs/agent-guides/로 업데이트된다 (아카이브 제외)
+- [x] **DOC-01**: docs/guides/ 디렉토리가 docs/agent-guides/로 이름 변경되고 5개 기존 가이드가 유지된다
+- [x] **DOC-02**: README.md 내 docs/guides/ 경로 참조가 docs/agent-guides/로 업데이트된다
+- [x] **DOC-03**: site/index.html 내 docs/guides GitHub 링크가 docs/agent-guides/로 업데이트된다
+- [x] **DOC-04**: 코드베이스 내 모든 docs/guides/ 참조가 docs/agent-guides/로 업데이트된다 (아카이브 제외)
 - [ ] **DOC-05**: docs/admin-manual/README.md 인덱스 파일이 8개 매뉴얼 페이지를 안내한다
 - [ ] **DOC-06**: docs/admin-manual/setup-guide.md가 설치·초기화·첫 시작 절차를 안내한다
 - [ ] **DOC-07**: docs/admin-manual/daemon-operations.md가 데몬 운영·Kill Switch·설정·백업을 안내한다
@@ -87,10 +87,10 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DOC-01 | Phase 452 | Pending |
-| DOC-02 | Phase 452 | Pending |
-| DOC-03 | Phase 452 | Pending |
-| DOC-04 | Phase 452 | Pending |
+| DOC-01 | Phase 452 | Complete |
+| DOC-02 | Phase 452 | Complete |
+| DOC-03 | Phase 452 | Complete |
+| DOC-04 | Phase 452 | Complete |
 | DOC-05 | Phase 453 | Pending |
 | DOC-06 | Phase 453 | Pending |
 | DOC-07 | Phase 453 | Pending |
