@@ -9,17 +9,17 @@ Requirements for Push Relay 직접 연동 (ntfy.sh 제거). Each maps to roadmap
 
 ### DB & Migration
 
-- [ ] **DB-01**: v60 마이그레이션으로 wallet_apps 테이블에 push_relay_url TEXT 컬럼 추가
-- [ ] **DB-02**: v60 마이그레이션에서 dcent wallet_type의 push_relay_url을 'https://waiaas-push.dcentwallet.com'으로 자동 설정
-- [ ] **DB-03**: sign_topic, notify_topic 컬럼을 NULL로 비우고 코드에서 미참조 처리
-- [ ] **DB-04**: Push Relay DB에 sign_responses 테이블 생성 (request_id PK, response TEXT, expires_at/created_at INTEGER)
-- [ ] **DB-05**: sign_responses 테이블의 만료 레코드를 TTL 기반으로 주기적 자동 정리
+- [x] **DB-01**: v60 마이그레이션으로 wallet_apps 테이블에 push_relay_url TEXT 컬럼 추가
+- [x] **DB-02**: v60 마이그레이션에서 dcent wallet_type의 push_relay_url을 'https://waiaas-push.dcentwallet.com'으로 자동 설정
+- [x] **DB-03**: sign_topic, notify_topic 컬럼을 NULL로 비우고 코드에서 미참조 처리
+- [x] **DB-04**: Push Relay DB에 sign_responses 테이블 생성 (request_id PK, response TEXT, expires_at/created_at INTEGER)
+- [x] **DB-05**: sign_responses 테이블의 만료 레코드를 TTL 기반으로 주기적 자동 정리
 
 ### Core Types
 
-- [ ] **CORE-01**: ResponseChannelSchema에서 type: 'ntfy' 제거하고 type: 'push_relay' (pushRelayUrl, requestId) 추가
-- [ ] **CORE-02**: APPROVAL_METHODS에서 'sdk_ntfy'를 'sdk_push'로 변경
-- [ ] **CORE-03**: sign-request-builder에서 responseChannel을 type: 'push_relay'로 구성
+- [x] **CORE-01**: ResponseChannelSchema에서 type: 'ntfy' 제거하고 type: 'push_relay' (pushRelayUrl, requestId) 추가
+- [x] **CORE-02**: APPROVAL_METHODS에서 'sdk_ntfy'를 'sdk_push'로 변경
+- [x] **CORE-03**: sign-request-builder에서 responseChannel을 type: 'push_relay'로 구성
 
 ### Daemon Signing
 
@@ -37,13 +37,13 @@ Requirements for Push Relay 직접 연동 (ntfy.sh 제거). Each maps to roadmap
 
 ### Push Relay Server
 
-- [ ] **RELAY-01**: ntfy-subscriber.ts 전체 제거 (SSE 연결/재연결/토픽 관리)
-- [ ] **RELAY-02**: POST /v1/push API 추가 (subscriptionToken, category, payload → IPushProvider 라우팅)
-- [ ] **RELAY-03**: POST /v1/sign-response를 ntfy relay 대신 자체 DB에 응답 저장으로 변경
-- [ ] **RELAY-04**: GET /v1/sign-response/:requestId?timeout=N long-polling API 구현 (응답 있으면 즉시, 없으면 timeout 후 204)
-- [ ] **RELAY-05**: config.ts에서 ntfy_server, sign_topic_prefix, notify_topic_prefix 설정 제거
-- [ ] **RELAY-06**: bin.ts에서 NtfySubscriber 초기화 및 토픽 복원 로직 제거
-- [ ] **RELAY-07**: server.ts에서 ServerOpts ntfy 관련 필드 제거
+- [x] **RELAY-01**: ntfy-subscriber.ts 전체 제거 (SSE 연결/재연결/토픽 관리)
+- [x] **RELAY-02**: POST /v1/push API 추가 (subscriptionToken, category, payload → IPushProvider 라우팅)
+- [x] **RELAY-03**: POST /v1/sign-response를 ntfy relay 대신 자체 DB에 응답 저장으로 변경
+- [x] **RELAY-04**: GET /v1/sign-response/:requestId?timeout=N long-polling API 구현 (응답 있으면 즉시, 없으면 timeout 후 204)
+- [x] **RELAY-05**: config.ts에서 ntfy_server, sign_topic_prefix, notify_topic_prefix 설정 제거
+- [x] **RELAY-06**: bin.ts에서 NtfySubscriber 초기화 및 토픽 복원 로직 제거
+- [x] **RELAY-07**: server.ts에서 ServerOpts ntfy 관련 필드 제거
 
 ### Wallet SDK
 
