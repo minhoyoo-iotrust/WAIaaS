@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v32.5
 milestone_name: milestone
 status: completed
-stopped_at: Completed 454-02-PLAN.md
-last_updated: "2026-03-18T13:04:28.686Z"
+stopped_at: Completed 455-02-PLAN.md
+last_updated: "2026-03-18T13:15:41.078Z"
 last_activity: 2026-03-18 — Phase 453 executed (admin-manual + skills cleanup)
 progress:
   total_phases: 4
-  completed_phases: 3
-  total_plans: 5
-  completed_plans: 5
+  completed_phases: 4
+  total_plans: 7
+  completed_plans: 7
   percent: 50
 ---
 
@@ -59,6 +59,8 @@ Progress: [█████░░░░░] 50%
 - [453-02] 5 additional skill files cleaned beyond plan scope for zero masterAuth references
 - [Phase 454]: Used workspace:* for @waiaas/sdk dependency (>=2.11.0 cannot resolve rc versions)
 - [Phase 454]: 17 tools total: Wallet(3)+Transfer(3)+DeFi(3)+NFT(2)+Utility(6), plan objective said ~22 but explicit list is 17
+- [Phase 455]: Plugin Method placed before Skill Method in openclaw-integration.md (recommended first)
+- [Phase 455]: openclaw-plugin managed as extra-files in root release-please package (not separate component)
 
 ### Pending Todos
 
@@ -72,6 +74,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-18T13:03:42.071Z
-Stopped at: Completed 454-02-PLAN.md
+Last session: 2026-03-18T13:15:35.757Z
+Stopped at: Completed 455-02-PLAN.md
 Resume file: None

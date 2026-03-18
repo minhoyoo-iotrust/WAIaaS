@@ -40,31 +40,31 @@
 
 ### OpenClaw Plugin (OCP)
 
-- [ ] **OCP-01**: packages/openclaw-plugin/openclaw.plugin.json 매니페스트가 유효하다 (id, name, description, configSchema)
-- [ ] **OCP-02**: packages/openclaw-plugin/package.json이 @waiaas/sdk 의존성과 openclaw peerDependency를 선언한다
-- [ ] **OCP-03**: register() 함수가 동기적으로 ~22개 sessionAuth 도구를 api.registerTool()로 등록한다
-- [ ] **OCP-04**: Wallet 도구 그룹(get_wallet_info, get_balance, connect_info 등)이 등록된다
-- [ ] **OCP-05**: Transfer 도구 그룹(transfer, token_transfer, get_transaction, list_transactions)이 등록된다
-- [ ] **OCP-06**: DeFi 도구 그룹(swap, bridge, stake, unstake, lend, borrow 등)이 등록된다
-- [ ] **OCP-07**: NFT 도구 그룹(list_nfts, transfer_nft)이 등록된다
-- [ ] **OCP-08**: Utility 도구 그룹(sign_message, get_price, contract_call, approve, batch)이 등록된다
-- [ ] **OCP-09**: 플러그인이 sessionToken으로만 동작하고 masterAuth 도구를 등록하지 않는다
-- [ ] **OCP-10**: 각 도구의 inputSchema가 JSON Schema 형식으로 올바르게 정의된다
-- [ ] **OCP-11**: 도구 핸들러가 @waiaas/sdk를 통해 WAIaaS daemon API를 정상 호출한다
-- [ ] **OCP-12**: register() 테스트에서 ~22개 도구 등록 + masterAuth 도구 미등록이 검증된다
-- [ ] **OCP-13**: 패키지 빌드가 성공하고 dist/ 출력물이 올바르다
+- [x] **OCP-01**: packages/openclaw-plugin/openclaw.plugin.json 매니페스트가 유효하다 (id, name, description, configSchema)
+- [x] **OCP-02**: packages/openclaw-plugin/package.json이 @waiaas/sdk 의존성과 openclaw peerDependency를 선언한다
+- [x] **OCP-03**: register() 함수가 동기적으로 ~22개 sessionAuth 도구를 api.registerTool()로 등록한다
+- [x] **OCP-04**: Wallet 도구 그룹(get_wallet_info, get_balance, connect_info 등)이 등록된다
+- [x] **OCP-05**: Transfer 도구 그룹(transfer, token_transfer, get_transaction, list_transactions)이 등록된다
+- [x] **OCP-06**: DeFi 도구 그룹(swap, bridge, stake, unstake, lend, borrow 등)이 등록된다
+- [x] **OCP-07**: NFT 도구 그룹(list_nfts, transfer_nft)이 등록된다
+- [x] **OCP-08**: Utility 도구 그룹(sign_message, get_price, contract_call, approve, batch)이 등록된다
+- [x] **OCP-09**: 플러그인이 sessionToken으로만 동작하고 masterAuth 도구를 등록하지 않는다
+- [x] **OCP-10**: 각 도구의 inputSchema가 JSON Schema 형식으로 올바르게 정의된다
+- [x] **OCP-11**: 도구 핸들러가 @waiaas/sdk를 통해 WAIaaS daemon API를 정상 호출한다
+- [x] **OCP-12**: register() 테스트에서 ~22개 도구 등록 + masterAuth 도구 미등록이 검증된다
+- [x] **OCP-13**: 패키지 빌드가 성공하고 dist/ 출력물이 올바르다
 
 ### CI/CD & Documentation (CID)
 
-- [ ] **CID-01**: release-please-config.json에 packages/openclaw-plugin이 추가된다
-- [ ] **CID-02**: .release-please-manifest.json에 packages/openclaw-plugin 초기 버전이 추가된다
-- [ ] **CID-03**: turbo.json에 openclaw-plugin 빌드/테스트/린트 태스크가 추가된다
-- [ ] **CID-04**: npm trusted publishing 파이프라인에서 @waiaas/openclaw-plugin이 퍼블리시된다
-- [ ] **CID-05**: docs/agent-guides/openclaw-integration.md가 플러그인 방식(권장) + 스킬 방식(레거시) 구조로 업데이트된다
-- [ ] **CID-06**: openclaw-integration.md에서 admin/setup 스킬 참조가 제거된다
-- [ ] **CID-07**: docs/seo/openclaw-plugin.md SEO 랜딩 페이지가 작성된다
-- [ ] **CID-08**: sitemap.xml에 admin-manual 8페이지 + openclaw-plugin 페이지가 추가된다
-- [ ] **CID-09**: llms-full.txt에 admin-manual 내용이 포함된다
+- [x] **CID-01**: release-please-config.json에 packages/openclaw-plugin이 추가된다
+- [x] **CID-02**: .release-please-manifest.json에 packages/openclaw-plugin 초기 버전이 추가된다
+- [x] **CID-03**: turbo.json에 openclaw-plugin 빌드/테스트/린트 태스크가 추가된다
+- [x] **CID-04**: npm trusted publishing 파이프라인에서 @waiaas/openclaw-plugin이 퍼블리시된다
+- [x] **CID-05**: docs/agent-guides/openclaw-integration.md가 플러그인 방식(권장) + 스킬 방식(레거시) 구조로 업데이트된다
+- [x] **CID-06**: openclaw-integration.md에서 admin/setup 스킬 참조가 제거된다
+- [x] **CID-07**: docs/seo/openclaw-plugin.md SEO 랜딩 페이지가 작성된다
+- [x] **CID-08**: sitemap.xml에 admin-manual 8페이지 + openclaw-plugin 페이지가 추가된다
+- [x] **CID-09**: llms-full.txt에 admin-manual 내용이 포함된다
 
 ## v2 Requirements
 
@@ -114,28 +114,28 @@
 | SKL-10 | Phase 453 | Pending |
 | SKL-11 | Phase 453 | Pending |
 | SKL-12 | Phase 453 | Pending |
-| OCP-01 | Phase 454 | Pending |
-| OCP-02 | Phase 454 | Pending |
-| OCP-03 | Phase 454 | Pending |
-| OCP-04 | Phase 454 | Pending |
-| OCP-05 | Phase 454 | Pending |
-| OCP-06 | Phase 454 | Pending |
-| OCP-07 | Phase 454 | Pending |
-| OCP-08 | Phase 454 | Pending |
-| OCP-09 | Phase 454 | Pending |
-| OCP-10 | Phase 454 | Pending |
-| OCP-11 | Phase 454 | Pending |
-| OCP-12 | Phase 454 | Pending |
-| OCP-13 | Phase 454 | Pending |
-| CID-01 | Phase 455 | Pending |
-| CID-02 | Phase 455 | Pending |
-| CID-03 | Phase 455 | Pending |
-| CID-04 | Phase 455 | Pending |
-| CID-05 | Phase 455 | Pending |
-| CID-06 | Phase 455 | Pending |
-| CID-07 | Phase 455 | Pending |
-| CID-08 | Phase 455 | Pending |
-| CID-09 | Phase 455 | Pending |
+| OCP-01 | Phase 454 | Complete |
+| OCP-02 | Phase 454 | Complete |
+| OCP-03 | Phase 454 | Complete |
+| OCP-04 | Phase 454 | Complete |
+| OCP-05 | Phase 454 | Complete |
+| OCP-06 | Phase 454 | Complete |
+| OCP-07 | Phase 454 | Complete |
+| OCP-08 | Phase 454 | Complete |
+| OCP-09 | Phase 454 | Complete |
+| OCP-10 | Phase 454 | Complete |
+| OCP-11 | Phase 454 | Complete |
+| OCP-12 | Phase 454 | Complete |
+| OCP-13 | Phase 454 | Complete |
+| CID-01 | Phase 455 | Complete |
+| CID-02 | Phase 455 | Complete |
+| CID-03 | Phase 455 | Complete |
+| CID-04 | Phase 455 | Complete |
+| CID-05 | Phase 455 | Complete |
+| CID-06 | Phase 455 | Complete |
+| CID-07 | Phase 455 | Complete |
+| CID-08 | Phase 455 | Complete |
+| CID-09 | Phase 455 | Complete |
 
 **Coverage:**
 - v1 requirements: 48 total
