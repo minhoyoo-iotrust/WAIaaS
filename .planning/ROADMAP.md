@@ -74,7 +74,7 @@ See `.planning/milestones/v32.9-ROADMAP.md` for full details.
 
 - [x] **Phase 452: Document Structure Rename** - docs/guides/ 를 docs/agent-guides/ 로 이름 변경하고 모든 참조를 업데이트한다
 - [x] **Phase 453: Skills Cleanup + Admin Manual** - masterAuth 콘텐츠를 docs/admin-manual/ 로 추출하고 스킬 파일을 sessionAuth 전용으로 정리한다 (completed 2026-03-18)
-- [ ] **Phase 454: OpenClaw Plugin Package** - @waiaas/openclaw-plugin 패키지를 구현하고 ~22개 sessionAuth 도구를 등록한다
+- [x] **Phase 454: OpenClaw Plugin Package** - @waiaas/openclaw-plugin 패키지를 구현하고 ~22개 sessionAuth 도구를 등록한다 (completed 2026-03-18)
 - [ ] **Phase 455: CI/CD, Documentation, SEO** - release-please 통합, 문서 업데이트, SEO 랜딩 페이지, npm 퍼블리시 준비를 완료한다
 
 ## Phase Details
@@ -170,5 +170,5 @@ Phases execute in numeric order: 452 -> 453 -> 454 -> 455
 | 451. 클라이언트 업데이트 | v32.9 | 2/2 | Complete | 2026-03-18 |
 | 452. Document Structure Rename | v32.10 | Complete    | 2026-03-18 | 2026-03-18 |
 | 453. Skills Cleanup + Admin Manual | v32.10 | Complete    | 2026-03-18 | 2026-03-18 |
-| 454. OpenClaw Plugin Package | v32.10 | 0/2 | In progress | - |
+| 454. OpenClaw Plugin Package | 2/2 | Complete   | 2026-03-18 | - |
 | 455. CI/CD, Documentation, SEO | v32.10 | 0/? | Not started | - |
