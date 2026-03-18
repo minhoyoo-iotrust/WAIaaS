@@ -1,15 +1,15 @@
 /**
  * E2E integration tests for the signing-sdk module.
  *
- * Tests the full flow: SignRequestBuilder -> NtfySigningChannel -> SSE -> SignResponseHandler.
- * All HTTP calls are mocked with vi.fn() -- no actual ntfy server.
+ * Tests the full flow: SignRequestBuilder -> PushRelaySigningChannel -> long-polling -> SignResponseHandler.
+ * All HTTP calls are mocked with vi.fn() -- no actual Push Relay server.
  *
  * Scenarios:
- * 1. ntfy E2E approve flow
- * 2. ntfy E2E reject flow
+ * 1. Push Relay E2E approve flow
+ * 2. Push Relay E2E reject flow
  * 3. Expiration scenario (short TTL)
  * 4. SDK parseSignRequest round-trip
- * 5. SDK sendViaNtfy round-trip
+ * 5. SDK sendViaRelay round-trip
  *
  * @see packages/daemon/src/services/signing-sdk/index.ts
  */
@@ -17,7 +17,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { SignRequest, SignResponse } from '@waiaas/core';
 import { encodeSignRequest } from '@waiaas/core';
-import { NtfySigningChannel } from '../services/signing-sdk/channels/ntfy-signing-channel.js';
+import { PushRelaySigningChannel } from '../services/signing-sdk/channels/push-relay-signing-channel.js';
 import { SignRequestBuilder } from '../services/signing-sdk/sign-request-builder.js';
 import type { HandleResult } from '../services/signing-sdk/sign-response-handler.js';
 import type { WalletLinkConfig } from '@waiaas/core';
@@ -25,7 +25,7 @@ import type { WalletLinkConfig } from '@waiaas/core';
 // Verify module index exports work
 import {
   SignRequestBuilder as IndexedBuilder,
-  NtfySigningChannel as IndexedChannel,
+  PushRelaySigningChannel as IndexedChannel,
 } from '../services/signing-sdk/index.js';
 
 // ---------------------------------------------------------------------------
@@ -49,9 +49,6 @@ const walletConfig: WalletLinkConfig = {
     base: 'https://link.dcentwallet.com',
     signPath: '/waiaas/sign',
   },
-  ntfy: {
-    requestTopic: 'waiaas-sign-dcent',
-  },
 };
 
 // ---------------------------------------------------------------------------
@@ -63,10 +60,8 @@ function createMockSettingsService(overrides: Record<string, string> = {}) {
     'signing_sdk.enabled': 'true',
     'signing_sdk.preferred_wallet': 'dcent',
     'signing_sdk.request_expiry_min': '30',
-    'signing_sdk.preferred_channel': 'ntfy',
-    'signing_sdk.ntfy_request_topic_prefix': 'waiaas-sign',
-    'signing_sdk.ntfy_response_topic_prefix': 'waiaas-response',
-    'notifications.ntfy_server': 'https://ntfy.sh',
+    'signing_sdk.preferred_channel': 'push_relay',
+    'signing_sdk.push_relay_api_key': 'test-api-key',
     'telegram.bot_token': '',
   };
   const store = { ...defaults, ...overrides };
@@ -110,35 +105,11 @@ function createMockSignResponseHandler(): {
 }
 
 // ---------------------------------------------------------------------------
-// Helper: create SSE stream from SignResponse objects
-// ---------------------------------------------------------------------------
-
-function createSseStream(responses: SignResponse[]) {
-  const encoder = new TextEncoder();
-  const chunks: { done: boolean; value?: Uint8Array }[] = [];
-
-  for (const response of responses) {
-    const encoded = Buffer.from(JSON.stringify(response), 'utf-8').toString('base64url');
-    const sseData = JSON.stringify({ message: encoded });
-    const sseEvent = `data: ${sseData}\n\n`;
-    chunks.push({ done: false, value: encoder.encode(sseEvent) });
-  }
-  chunks.push({ done: true, value: undefined });
-
-  const readFn = vi.fn();
-  for (const chunk of chunks) {
-    readFn.mockResolvedValueOnce(chunk);
-  }
-
-  return { read: readFn, releaseLock: vi.fn() };
-}
-
-// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
 describe('signing-sdk E2E integration', () => {
-  let channel: NtfySigningChannel;
+  let channel: PushRelaySigningChannel;
   let builder: SignRequestBuilder;
   let mockHandler: ReturnType<typeof createMockSignResponseHandler>;
   let mockSettings: ReturnType<typeof createMockSettingsService>;
@@ -157,7 +128,7 @@ describe('signing-sdk E2E integration', () => {
       walletLinkRegistry: mockRegistry as any,
     });
 
-    channel = new NtfySigningChannel({
+    channel = new PushRelaySigningChannel({
       signRequestBuilder: builder,
       signResponseHandler: mockHandler as any,
       settingsService: mockSettings as any,
@@ -175,45 +146,55 @@ describe('signing-sdk E2E integration', () => {
 
   it('exports all signing-sdk components from module index', () => {
     expect(IndexedBuilder).toBe(SignRequestBuilder);
-    expect(IndexedChannel).toBe(NtfySigningChannel);
+    expect(IndexedChannel).toBe(PushRelaySigningChannel);
   });
 
   // -----------------------------------------------------------------------
-  // Scenario 1: ntfy E2E approve flow
+  // Scenario 1: Push Relay E2E approve flow
   // -----------------------------------------------------------------------
 
-  it('E2E approve: SignRequest -> ntfy publish -> SSE -> approve', async () => {
+  it('E2E approve: SignRequest -> Push Relay POST -> long-poll -> approve', async () => {
     mockHandler.handle.mockResolvedValue({ action: 'approved', txId } as HandleResult);
 
-    // Build the approve response that the SSE will deliver
     const approveResponse: SignResponse = {
       version: '1',
-      requestId: '', // Will be set dynamically after buildRequest
+      requestId: '',
       action: 'approve',
       signature: '0xvalidsignature',
       signerAddress,
       signedAt: new Date().toISOString(),
     };
 
-    // We need to intercept the requestId from SignRequestBuilder
-    let capturedRequestId = '';
-    const originalBuildRequest = builder.buildRequest.bind(builder);
-    vi.spyOn(builder, 'buildRequest').mockImplementation((params) => {
-      const result = originalBuildRequest(params);
-      capturedRequestId = result.request.requestId;
-      approveResponse.requestId = capturedRequestId;
-      return result;
+    let capturedRequestId = '01935a3b-0001-7e00-b123-000000000001';
+    approveResponse.requestId = capturedRequestId;
+
+    vi.spyOn(builder, 'buildRequest').mockImplementation(() => {
+      return {
+        request: {
+          version: '1',
+          requestId: capturedRequestId,
+          caip2ChainId: 'eip155:1',
+          networkName: 'ethereum-mainnet',
+          signerAddress,
+          message: 'approve tx',
+          displayMessage: 'TRANSFER 1.5 ETH',
+          metadata: { txId, type: 'TRANSFER', from: signerAddress, to: toAddress, amount: '1.5', symbol: 'ETH', policyTier: 'APPROVAL' as const },
+          responseChannel: { type: 'push_relay' as const, pushRelayUrl: 'https://relay.test.com', requestId: capturedRequestId },
+          expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+        },
+        universalLinkUrl: 'https://link.dcentwallet.com/waiaas/sign?data=mock',
+        requestTopic: 'dcent',
+      };
     });
 
-    // Setup fetch mocks
     fetchMock
-      .mockResolvedValueOnce({ ok: true }) // ntfy publish
+      .mockResolvedValueOnce({ ok: true, status: 200 }) // POST /v1/push
       .mockImplementationOnce(() => {
-        // SSE subscribe -- return the approve response
-        const reader = createSseStream([approveResponse]);
+        const encodedResponse = Buffer.from(JSON.stringify(approveResponse), 'utf-8').toString('base64url');
         return Promise.resolve({
           ok: true,
-          body: { getReader: () => reader },
+          status: 200,
+          json: () => Promise.resolve({ response: encodedResponse }),
         });
       });
 
@@ -231,16 +212,15 @@ describe('signing-sdk E2E integration', () => {
       walletId: 'dcent',
     });
 
-    // Wait for async SSE processing
     await new Promise((resolve) => setTimeout(resolve, 300));
 
-    // Verify: publish was called with correct format
+    // Verify: POST was called with correct format
     expect(fetchMock).toHaveBeenCalled();
-    const [publishUrl, publishOpts] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(publishUrl).toBe('https://ntfy.sh/waiaas-sign-dcent');
-    const publishBody = JSON.parse(publishOpts.body as string);
-    expect(publishBody.priority).toBe(5);
-    expect(publishBody.actions[0].url).toContain('https://link.dcentwallet.com/waiaas/sign?data=');
+    const [postUrl, postOpts] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(postUrl).toContain('/v1/push');
+    const postBody = JSON.parse(postOpts.body as string);
+    expect(postBody.category).toBe('sign_request');
+    expect(postBody.payload.universalLinkUrl).toContain('https://link.dcentwallet.com/waiaas/sign?data=');
 
     // Verify: SignResponseHandler.handle() was called with approve response
     expect(mockHandler.handle).toHaveBeenCalledOnce();
@@ -250,41 +230,52 @@ describe('signing-sdk E2E integration', () => {
 
     // Verify: result contains correct IDs
     expect(result.requestId).toBe(capturedRequestId);
-    expect(result.requestTopic).toBe('waiaas-sign-dcent');
-    expect(result.responseTopic).toContain('waiaas-response-');
+    expect(result.requestTopic).toBe('dcent');
   });
 
   // -----------------------------------------------------------------------
-  // Scenario 2: ntfy E2E reject flow
+  // Scenario 2: Push Relay E2E reject flow
   // -----------------------------------------------------------------------
 
-  it('E2E reject: SignRequest -> ntfy publish -> SSE -> reject', async () => {
+  it('E2E reject: SignRequest -> Push Relay POST -> long-poll -> reject', async () => {
     mockHandler.handle.mockResolvedValue({ action: 'rejected', txId } as HandleResult);
 
-    let capturedRequestId = '';
+    let capturedRequestId = '01935a3b-0001-7e00-b123-000000000002';
     const rejectResponse: SignResponse = {
       version: '1',
-      requestId: '',
+      requestId: capturedRequestId,
       action: 'reject',
       signerAddress,
       signedAt: new Date().toISOString(),
     };
 
-    const originalBuildRequest = builder.buildRequest.bind(builder);
-    vi.spyOn(builder, 'buildRequest').mockImplementation((params) => {
-      const result = originalBuildRequest(params);
-      capturedRequestId = result.request.requestId;
-      rejectResponse.requestId = capturedRequestId;
-      return result;
+    vi.spyOn(builder, 'buildRequest').mockImplementation(() => {
+      return {
+        request: {
+          version: '1',
+          requestId: capturedRequestId,
+          caip2ChainId: 'eip155:1',
+          networkName: 'ethereum-mainnet',
+          signerAddress,
+          message: 'approve tx',
+          displayMessage: 'TRANSFER 1.5 ETH',
+          metadata: { txId, type: 'TRANSFER', from: signerAddress, to: toAddress, amount: '1.5', symbol: 'ETH', policyTier: 'APPROVAL' as const },
+          responseChannel: { type: 'push_relay' as const, pushRelayUrl: 'https://relay.test.com', requestId: capturedRequestId },
+          expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+        },
+        universalLinkUrl: 'https://link.dcentwallet.com/waiaas/sign?data=mock',
+        requestTopic: 'dcent',
+      };
     });
 
     fetchMock
-      .mockResolvedValueOnce({ ok: true }) // publish
+      .mockResolvedValueOnce({ ok: true, status: 200 }) // POST
       .mockImplementationOnce(() => {
-        const reader = createSseStream([rejectResponse]);
+        const encodedResponse = Buffer.from(JSON.stringify(rejectResponse), 'utf-8').toString('base64url');
         return Promise.resolve({
           ok: true,
-          body: { getReader: () => reader },
+          status: 200,
+          json: () => Promise.resolve({ response: encodedResponse }),
         });
       });
 
@@ -302,9 +293,8 @@ describe('signing-sdk E2E integration', () => {
       walletId: 'dcent',
     });
 
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
-    // Verify: handle() called with reject
     expect(mockHandler.handle).toHaveBeenCalledOnce();
     const handledResponse = mockHandler.handle.mock.calls[0][0] as SignResponse;
     expect(handledResponse.action).toBe('reject');
@@ -315,43 +305,44 @@ describe('signing-sdk E2E integration', () => {
   // Scenario 3: Expiration scenario
   // -----------------------------------------------------------------------
 
-  it('E2E expiry: short TTL -> SSE subscription auto-terminates', async () => {
+  it('E2E expiry: short TTL -> long-polling auto-terminates', async () => {
     vi.useFakeTimers();
     try {
-      // Set very short expiry
-      mockSettings = createMockSettingsService({
-        'signing_sdk.request_expiry_min': '0', // will be parsed as 0, fallback to NaN -> 30, so we need a different approach
-      });
-
-      // Override: create builder with custom expiry
       const shortBuilder = new SignRequestBuilder({
         settingsService: createMockSettingsService({
-          'signing_sdk.request_expiry_min': '1', // 1 minute
+          'signing_sdk.request_expiry_min': '1',
         }) as any,
         walletLinkRegistry: mockRegistry as any,
       });
 
-      // Patch expiresAt on the result to be very short (100ms from now)
-      const originalBuildRequest = shortBuilder.buildRequest.bind(shortBuilder);
-      vi.spyOn(shortBuilder, 'buildRequest').mockImplementation((params) => {
-        const result = originalBuildRequest(params);
-        result.request = {
-          ...result.request,
-          expiresAt: new Date(Date.now() + 500).toISOString(), // 500ms
+      vi.spyOn(shortBuilder, 'buildRequest').mockImplementation(() => {
+        return {
+          request: {
+            version: '1',
+            requestId: '01935a3b-0001-7e00-b123-000000000004',
+            caip2ChainId: 'eip155:1',
+            networkName: 'ethereum-mainnet',
+            signerAddress,
+            message: 'approve tx',
+            displayMessage: 'TRANSFER',
+            metadata: { txId, type: 'TRANSFER', from: signerAddress, to: toAddress, policyTier: 'APPROVAL' as const },
+            responseChannel: { type: 'push_relay' as const, pushRelayUrl: 'https://relay.test.com', requestId: '01935a3b-0001-7e00-b123-000000000004' },
+            expiresAt: new Date(Date.now() + 500).toISOString(),
+          },
+          universalLinkUrl: 'https://link.dcentwallet.com/waiaas/sign?data=mock',
+          requestTopic: 'dcent',
         };
-        return result;
       });
 
-      const shortChannel = new NtfySigningChannel({
+      const shortChannel = new PushRelaySigningChannel({
         signRequestBuilder: shortBuilder,
         signResponseHandler: mockHandler as any,
         settingsService: mockSettings as any,
       });
 
-      // Mock a hanging SSE connection
       const abortError = new DOMException('The operation was aborted', 'AbortError');
       fetchMock
-        .mockResolvedValueOnce({ ok: true }) // publish
+        .mockResolvedValueOnce({ ok: true, status: 200 }) // POST
         .mockImplementationOnce(
           (_url: string, init: { signal: AbortSignal }) =>
             new Promise((_resolve, reject) => {
@@ -372,11 +363,9 @@ describe('signing-sdk E2E integration', () => {
         walletId: 'dcent',
       });
 
-      // Advance past expiry
       vi.advanceTimersByTime(1000);
       await vi.advanceTimersByTimeAsync(100);
 
-      // handler.handle should NOT have been called (no response received before expiry)
       expect(mockHandler.handle).not.toHaveBeenCalled();
 
       shortChannel.shutdown();
@@ -390,7 +379,6 @@ describe('signing-sdk E2E integration', () => {
   // -----------------------------------------------------------------------
 
   it('round-trip: daemon SignRequest -> universalLink -> SDK parseSignRequest', async () => {
-    // Use the real builder to create a request
     const buildResult = builder.buildRequest({
       txId,
       chain: 'ethereum',
@@ -404,19 +392,15 @@ describe('signing-sdk E2E integration', () => {
       walletName: 'dcent',
     });
 
-    // The universalLinkUrl is built by the mock registry using encodeSignRequest
     const { request, universalLinkUrl } = buildResult;
 
-    // Parse the URL manually (simulating what wallet-sdk's parseSignRequest does)
     const url = new URL(universalLinkUrl);
     const data = url.searchParams.get('data');
     expect(data).toBeTruthy();
 
-    // Decode base64url -> JSON -> parse
     const json = Buffer.from(data!, 'base64url').toString('utf-8');
     const parsed = JSON.parse(json) as SignRequest;
 
-    // Verify round-trip: decoded request matches original
     expect(parsed.version).toBe(request.version);
     expect(parsed.requestId).toBe(request.requestId);
     expect(parsed.caip2ChainId).toBe(request.caip2ChainId);
@@ -431,63 +415,55 @@ describe('signing-sdk E2E integration', () => {
     expect(parsed.metadata.symbol).toBe(request.metadata.symbol);
     expect(parsed.metadata.policyTier).toBe(request.metadata.policyTier);
     expect(parsed.expiresAt).toBe(request.expiresAt);
-
-    // Verify display message is human-readable
     expect(request.displayMessage).toContain('TRANSFER');
     expect(request.displayMessage).toContain('1.5 ETH');
   });
 
   // -----------------------------------------------------------------------
-  // Scenario 5: SDK sendViaNtfy round-trip
+  // Scenario 5: SDK sendViaRelay round-trip
   // -----------------------------------------------------------------------
 
-  it('round-trip: SDK sendViaNtfy -> NtfySigningChannel receives via SSE', async () => {
+  it('round-trip: SDK sendViaRelay -> PushRelaySigningChannel receives via long-poll', async () => {
     mockHandler.handle.mockResolvedValue({ action: 'approved', txId } as HandleResult);
 
-    // 1. Build a SignResponse (simulating what wallet-sdk's buildSignResponse does)
-    let capturedRequestId = '';
-    const originalBuildRequest = builder.buildRequest.bind(builder);
-    vi.spyOn(builder, 'buildRequest').mockImplementation((params) => {
-      const result = originalBuildRequest(params);
-      capturedRequestId = result.request.requestId;
-      return result;
-    });
+    let capturedRequestId = '01935a3b-0001-7e00-b123-000000000003';
 
     const signResponse: SignResponse = {
       version: '1',
-      requestId: '', // Will be set after buildRequest
+      requestId: capturedRequestId,
       action: 'approve',
       signature: '0xsdk-generated-signature',
       signerAddress,
       signedAt: new Date().toISOString(),
     };
 
-    // 2. Setup: the SDK's sendViaNtfy would POST base64url-encoded response to ntfy
-    //    Then ntfy delivers it via SSE to the daemon's NtfySigningChannel
+    vi.spyOn(builder, 'buildRequest').mockImplementation(() => {
+      return {
+        request: {
+          version: '1',
+          requestId: capturedRequestId,
+          caip2ChainId: 'eip155:1',
+          networkName: 'ethereum-mainnet',
+          signerAddress,
+          message: 'approve tx',
+          displayMessage: 'TRANSFER 1.5 ETH',
+          metadata: { txId, type: 'TRANSFER', from: signerAddress, to: toAddress, amount: '1.5', symbol: 'ETH', policyTier: 'APPROVAL' as const },
+          responseChannel: { type: 'push_relay' as const, pushRelayUrl: 'https://relay.test.com', requestId: capturedRequestId },
+          expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+        },
+        universalLinkUrl: 'https://link.dcentwallet.com/waiaas/sign?data=mock',
+        requestTopic: 'dcent',
+      };
+    });
+
     fetchMock
-      .mockResolvedValueOnce({ ok: true }) // daemon's ntfy publish (sendRequest)
+      .mockResolvedValueOnce({ ok: true, status: 200 }) // POST /v1/push
       .mockImplementationOnce(() => {
-        // daemon's SSE subscribe -- delivers the response that SDK sent
-        signResponse.requestId = capturedRequestId;
-
-        // Simulate: SDK called sendViaNtfy -> ntfy server stores it -> SSE delivers
-        const encoded = Buffer.from(JSON.stringify(signResponse), 'utf-8').toString('base64url');
-        const sseData = JSON.stringify({ message: encoded });
-        const sseEvent = `data: ${sseData}\n\n`;
-
-        const mockReader = {
-          read: vi.fn()
-            .mockResolvedValueOnce({
-              done: false,
-              value: new TextEncoder().encode(sseEvent),
-            })
-            .mockResolvedValueOnce({ done: true, value: undefined }),
-          releaseLock: vi.fn(),
-        };
-
+        const encodedResponse = Buffer.from(JSON.stringify(signResponse), 'utf-8').toString('base64url');
         return Promise.resolve({
           ok: true,
-          body: { getReader: () => mockReader },
+          status: 200,
+          json: () => Promise.resolve({ response: encodedResponse }),
         });
       });
 
@@ -507,7 +483,6 @@ describe('signing-sdk E2E integration', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 300));
 
-    // Verify: daemon received the SDK-generated response
     expect(mockHandler.handle).toHaveBeenCalledOnce();
     const received = mockHandler.handle.mock.calls[0][0] as SignResponse;
     expect(received.signature).toBe('0xsdk-generated-signature');
