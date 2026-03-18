@@ -18,11 +18,8 @@ EVM JSON-RPC proxy that lets standard EVM tools (Forge, Hardhat, ethers.js, viem
 ## Quick Start
 
 ```bash
-# 1. Enable RPC proxy (Admin)
-curl -X PUT http://localhost:3100/v1/admin/settings \
-  -H "X-Master-Password: $MASTER_PW" \
-  -H "Content-Type: application/json" \
-  -d '{"rpc_proxy.enabled": true}'
+# 1. Enable RPC proxy (Admin -- see docs/admin-manual/daemon-operations.md)
+# Admin enables rpc_proxy.enabled=true via Admin UI or Settings API
 
 # 2. Use with Forge (Agent session)
 forge script Deploy.s.sol --broadcast --timeout 600 \

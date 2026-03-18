@@ -29,10 +29,7 @@ All action endpoints require **sessionAuth** via `Authorization: Bearer <token>`
 - List action providers and their available actions
 - Execute actions (subject to policy evaluation)
 
-### Admin (masterAuth -- prerequisite)
-- Register API keys for action providers via Admin UI Settings
-- Enable/configure built-in providers via Admin UI > DeFi (`#/defi`) or Agent Identity (`#/agent-identity`)
-- Configure CONTRACT_WHITELIST/ALLOWED_TOKENS policies for provider contracts (or use provider-trust bypass)
+> Provider 활성화, API 키 등록, CONTRACT_WHITELIST 설정은 관리자가 사전에 완료해야 합니다. docs/admin-manual/defi-providers.md 를 참조하세요.
 
 ```
 Authorization: Bearer wai_sess_eyJ...

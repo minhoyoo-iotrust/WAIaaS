@@ -1,6 +1,6 @@
 ---
 name: "WAIaaS Policies"
-description: "Policy engine CRUD: 16 policy types for spending limits, whitelists, time restrictions, rate limits, token/contract/approve controls, network restrictions, x402 domain controls, ERC-8128 domain controls, reputation threshold, venue whitelist, action category limits"
+description: "Policy queries: view applied spending limits, whitelists, time restrictions, and access controls"
 category: "api"
 tags: [wallet, blockchain, policies, security, waiass]
 version: "2.6.0-rc"
@@ -9,13 +9,13 @@ dispatch:
   allowedCommands: ["curl"]
 ---
 
-# WAIaaS Policy Management
-
-> **Policy CRUD (create/update/delete) is Operator only** (requires masterAuth). AI agents can read policies via GET endpoints with sessionAuth, but cannot modify them.
+# WAIaaS Policy Queries
 
 > AI agents must NEVER request the master password. Use only your session token.
 
-Policy engine for enforcing rules on wallet operations. Policies control spending limits, allowed recipients, time windows, rate limits, token whitelists, contract access, approval requirements, and network restrictions.
+> 정책 CRUD(생성/수정/삭제)는 관리자 전용입니다. docs/admin-manual/policy-management.md 를 참조하세요.
+
+Policy reference for AI agents. Agents can query applied policies via GET endpoints with sessionAuth, but cannot create, modify, or delete policies.
 
 ## Base URL
 
@@ -28,767 +28,141 @@ http://localhost:3100
 ### Agent (sessionAuth)
 - **GET /v1/policies** -- Query policies applied to own wallet (filtered by session wallet)
 
-### Admin (masterAuth)
-- **GET /v1/policies** -- Query all policies (with optional walletId filter)
-- **POST /v1/policies** -- Create new policies
-- **PUT /v1/policies/{id}** -- Update existing policies
-- **DELETE /v1/policies/{id}** -- Delete policies
-
-## Authentication
-
-- **GET** accepts both `Authorization: Bearer <token>` (sessionAuth) and `X-Master-Password` (masterAuth).
-  - sessionAuth: returns only policies for the session's wallet + global policies.
-  - masterAuth: returns all policies (with optional walletId filter).
-- **POST/PUT/DELETE** require `X-Master-Password` (masterAuth) only.
-
 ---
 
-## 1. Policy CRUD Endpoints
+## 1. Query Policies
 
-### POST /v1/policies -- Create Policy (masterAuth)
+### GET /v1/policies -- List Applied Policies (sessionAuth)
 
-Create a new policy. Policies can be wallet-specific (`walletId`) or global (omit `walletId`).
+Returns policies applied to the session's wallet + global policies.
 
 ```bash
-curl -s -X POST http://localhost:3100/v1/policies \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: <password>' \
-  -d '{
+curl -s 'http://localhost:3100/v1/policies' \
+  -H 'Authorization: Bearer <token>'
+```
+
+**Response (200):** Array of policy objects, ordered by priority descending.
+
+```json
+[
+  {
+    "id": "<policy-uuid>",
     "walletId": "<wallet-uuid>",
     "type": "SPENDING_LIMIT",
     "rules": {"instant_max": "100000000", "notify_max": "500000000", "delay_max": "1000000000"},
     "priority": 0,
-    "enabled": true
-  }'
-```
-
-**Parameters:**
-
-| Parameter  | Type    | Required | Description                                              |
-| ---------- | ------- | -------- | -------------------------------------------------------- |
-| `walletId` | UUID    | No       | Target wallet. Omit for global policy (applies to all).  |
-| `type`     | string  | Yes      | One of 12 policy types (see below).                      |
-| `rules`    | object  | Yes      | Type-specific rules object (see type sections).          |
-| `priority` | integer | No       | Higher = more important. Default: 0.                     |
-| `enabled`  | boolean | No       | Whether policy is active. Default: true.                 |
-| `network`  | string  | No       | Network scope (e.g., `"ethereum-mainnet"` or CAIP-2 `"eip155:1"`). When set, policy applies only to transactions on this network. Omit for all networks. |
-
-**Response (201):**
-```json
-{
-  "id": "<policy-uuid>",
-  "walletId": "<wallet-uuid>",
-  "type": "SPENDING_LIMIT",
-  "rules": {"instant_max": "100000000", "notify_max": "500000000", "delay_max": "1000000000"},
-  "priority": 0,
-  "enabled": true,
-  "network": null,
-  "createdAt": 1707000000,
-  "updatedAt": 1707000000
-}
-```
-
-### GET /v1/policies -- List Policies (sessionAuth or masterAuth)
-
-List policies. Agents see only their own wallet's policies + global policies. Admins see all.
-
-```bash
-# Agent (sessionAuth) -- auto-scoped to session wallet
-curl -s 'http://localhost:3100/v1/policies' \
-  -H 'Authorization: Bearer <token>'
-
-# Admin (masterAuth) -- all policies or filtered
-curl -s 'http://localhost:3100/v1/policies?walletId=<wallet-uuid>' \
-  -H 'X-Master-Password: <password>'
-```
-
-**Query Parameters:**
-
-| Parameter  | Type | Required | Description                                           |
-| ---------- | ---- | -------- | ----------------------------------------------------- |
-| `walletId` | UUID | No       | Filter by wallet. Returns wallet + global policies.   |
-
-**Response (200):** Array of policy objects, ordered by priority descending.
-
-### PUT /v1/policies/{id} -- Update Policy (masterAuth)
-
-Update a policy's rules, priority, or enabled state. All fields are optional (partial update).
-
-```bash
-curl -s -X PUT http://localhost:3100/v1/policies/<policy-uuid> \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: <password>' \
-  -d '{"rules": {"instant_max": "200000000", "notify_max": "1000000000", "delay_max": "2000000000"}, "enabled": true}'
-```
-
-**Parameters:**
-
-| Parameter  | Type    | Required | Description                       |
-| ---------- | ------- | -------- | --------------------------------- |
-| `rules`    | object  | No       | Updated type-specific rules.      |
-| `priority` | integer | No       | Updated priority.                 |
-| `enabled`  | boolean | No       | Updated enabled state.            |
-
-**Response (200):** Updated policy object.
-
-### DELETE /v1/policies/{id} -- Delete Policy (masterAuth)
-
-```bash
-curl -s -X DELETE http://localhost:3100/v1/policies/<policy-uuid> \
-  -H 'X-Master-Password: <password>'
-```
-
-**Response (200):**
-```json
-{"id": "<policy-uuid>", "deleted": true}
+    "enabled": true,
+    "network": null,
+    "createdAt": 1707000000,
+    "updatedAt": 1707000000
+  }
+]
 ```
 
 ---
 
-## 2. Policy Types (16 Types)
+## 2. Policy Types Reference (16 Types)
 
-Each policy type has a specific `rules` schema. The `type` field determines which rules structure is required.
+Each policy type has a specific `rules` schema. This is a read-only reference for agents to understand which policies apply to them.
 
 ### a. SPENDING_LIMIT
 
-Maximum spend per tier. Amounts are digit strings in the chain's smallest unit (lamports for SOL, wei for ETH).
+Maximum spend per tier. Amounts are digit strings in the chain's smallest unit.
 
-**Rules schema:**
-```json
-{
-  "instant_max": "100000000",
-  "notify_max": "500000000",
-  "delay_max": "1000000000",
-  "delay_seconds": 300,
-  "instant_max_usd": 10,
-  "notify_max_usd": 100,
-  "delay_max_usd": 1000,
-  "daily_limit_usd": 500,
-  "monthly_limit_usd": 5000,
-  "token_limits": {
-    "native:solana": {"instant_max": "1", "notify_max": "10", "delay_max": "50"},
-    "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v": {"instant_max": "100", "notify_max": "1000", "delay_max": "10000"}
-  }
-}
-```
+- `instant_max`: Max for INSTANT tier (immediate execution)
+- `notify_max`: Max for NOTIFY tier (execute + notify)
+- `delay_max`: Max for DELAY tier (cooldown wait)
+- `instant_max_usd` / `notify_max_usd` / `delay_max_usd`: USD-based thresholds (oracle)
+- `daily_limit_usd` / `monthly_limit_usd`: Cumulative rolling window limits
+- `token_limits`: Per-token limits in human-readable units, keyed by CAIP-19
 
-| Field               | Type   | Required | Description                                          |
-| ------------------- | ------ | -------- | ---------------------------------------------------- |
-| `instant_max`       | string | No       | Max amount for INSTANT tier (digit string, raw units). Optional when token_limits or USD thresholds are set. |
-| `notify_max`        | string | No       | Max amount for NOTIFY tier (digit string, raw units). Optional when token_limits or USD thresholds are set. |
-| `delay_max`         | string | No       | Max amount for DELAY tier (digit string, raw units). Optional when token_limits or USD thresholds are set. |
-| `delay_seconds`     | number | No       | Cooldown for DELAY tier (seconds). Min 60, default: 900. |
-| `instant_max_usd`   | number | No       | Max USD amount for INSTANT tier (oracle-based).      |
-| `notify_max_usd`    | number | No       | Max USD amount for NOTIFY tier.                      |
-| `delay_max_usd`     | number | No       | Max USD amount for DELAY tier.                       |
-| `daily_limit_usd`   | number | No       | Cumulative USD spending limit in 24h rolling window. Exceeding escalates to APPROVAL. |
-| `monthly_limit_usd` | number | No       | Cumulative USD spending limit in 30d rolling window. Exceeding escalates to APPROVAL. |
-| `token_limits`      | object | No       | Token-specific spending limits in human-readable units, keyed by CAIP-19 asset identifier. See Token-Specific Limits below. |
-
-**Tier assignment:** Amount <= instant_max -> INSTANT. Amount <= notify_max -> NOTIFY. Amount <= delay_max -> DELAY. Amount > delay_max -> APPROVAL (requires owner approval). USD tiers (if set) are evaluated via price oracle and take precedence over native amount tiers.
-
-**Cumulative limit evaluation:** After per-transaction tier assignment, if `daily_limit_usd` or `monthly_limit_usd` is set, the engine checks rolling-window cumulative USD spending (confirmed + pending reserved amounts). If cumulative + current transaction exceeds the limit, the tier is escalated to APPROVAL regardless of the per-transaction tier. The `TX_APPROVAL_REQUIRED` notification includes a `reason` field (`per_tx`, `cumulative_daily`, or `cumulative_monthly`).
-
-**Token-specific limits (token_limits):**
-
-When `token_limits` is set, the policy engine evaluates transaction amounts against per-token thresholds in human-readable units (e.g., SOL, USDC) instead of raw smallest-unit amounts. Each key is a CAIP-19 asset identifier or native token shorthand.
-
-**Key format:**
-- `"native"` -- native token of the policy's network (only valid when policy has `network` set)
-- `"native:{chain}"` -- native token of a specific chain (e.g., `"native:solana"` for SOL, `"native:ethereum"` for ETH)
-- `"{caip19}"` -- CAIP-19 asset ID for a specific token (e.g., `"solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"` for USDC on Solana)
-
-**Matching priority:** exact CAIP-19 asset ID > `native:{chain}` > `native` shorthand > raw field fallback.
-
-**Value format:** Each value is an object with `instant_max`, `notify_max`, `delay_max` as human-readable decimal strings (e.g., `"1.5"` for 1.5 SOL, `"1000"` for 1000 USDC).
-
-**Fallback behavior:** When a transaction's token does not match any `token_limits` key, the engine falls back to raw fields (`instant_max`/`notify_max`/`delay_max`). When raw fields are also absent, the native tier defaults to INSTANT (most permissive), and USD thresholds alone determine the tier.
-
-**Scope:** `token_limits` applies to TRANSFER, TOKEN_TRANSFER, and APPROVE transactions. CONTRACT_CALL and BATCH use raw/USD evaluation only.
-
-**Interaction with USD and cumulative limits:** Per-transaction tier = `max(USD tier, token/native tier)`. Cumulative limits (`daily_limit_usd`, `monthly_limit_usd`) are evaluated independently after per-transaction tier assignment and are unaffected by `token_limits`.
-
-Token-specific limit keys use CAIP-19 format. See **transactions.skill.md** Section 13 for the complete CAIP reference.
-
-```bash
-curl -s -X POST http://localhost:3100/v1/policies \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: <password>' \
-  -d '{"walletId":"<uuid>","type":"SPENDING_LIMIT","rules":{"instant_max":"100000000","notify_max":"500000000","delay_max":"1000000000","daily_limit_usd":500,"monthly_limit_usd":5000}}'
-```
+Tier assignment: Amount <= instant_max -> INSTANT, <= notify_max -> NOTIFY, <= delay_max -> DELAY, > delay_max -> APPROVAL.
 
 ### b. WHITELIST
 
-Allowed recipient addresses. Transactions to addresses not in the list are blocked.
-
-**Rules schema:**
-```json
-{
-  "allowed_addresses": ["<address1>", "<address2>"]
-}
-```
-
-| Field               | Type     | Required | Description                      |
-| ------------------- | -------- | -------- | -------------------------------- |
-| `allowed_addresses` | string[] | Yes      | List of allowed recipient addresses. |
-
-```bash
-curl -s -X POST http://localhost:3100/v1/policies \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: <password>' \
-  -d '{"walletId":"<uuid>","type":"WHITELIST","rules":{"allowed_addresses":["<addr1>","<addr2>"]}}'
-```
+Allowed recipient addresses. Transfers to unlisted addresses are blocked.
 
 ### c. TIME_RESTRICTION
 
-Allowed time windows for transactions. Transactions outside the window are blocked.
-
-**Rules schema:**
-```json
-{
-  "allowedHours": {"start": 9, "end": 17},
-  "timezone": "UTC"
-}
-```
-
-| Field          | Type   | Required | Description                                  |
-| -------------- | ------ | -------- | -------------------------------------------- |
-| `allowedHours` | object | Yes      | `{start: number, end: number}` (0-23 hours). |
-| `timezone`     | string | No       | Timezone name. Default: "UTC".               |
-
-```bash
-curl -s -X POST http://localhost:3100/v1/policies \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: <password>' \
-  -d '{"walletId":"<uuid>","type":"TIME_RESTRICTION","rules":{"allowedHours":{"start":9,"end":17},"timezone":"UTC"}}'
-```
+Allowed time windows. Transactions outside the window are blocked.
 
 ### d. RATE_LIMIT
 
-Maximum number of transactions per time period.
-
-**Rules schema:**
-```json
-{
-  "maxTransactions": 10,
-  "period": "hourly"
-}
-```
-
-| Field             | Type   | Required | Description                                             |
-| ----------------- | ------ | -------- | ------------------------------------------------------- |
-| `maxTransactions` | number | Yes      | Maximum transactions allowed per period.                 |
-| `period`          | string | Yes      | One of: "hourly", "daily", "weekly", "monthly".         |
-
-```bash
-curl -s -X POST http://localhost:3100/v1/policies \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: <password>' \
-  -d '{"walletId":"<uuid>","type":"RATE_LIMIT","rules":{"maxTransactions":10,"period":"hourly"}}'
-```
-
-### e. ALLOWED_TOKENS (v1.4)
-
-Token whitelist for TOKEN_TRANSFER transactions. **Default deny**: tokens not listed in any ALLOWED_TOKENS policy are blocked.
-
-**Rules schema:**
-```json
-{
-  "tokens": [
-    {"address": "<mint-or-contract>", "symbol": "USDC", "chain": "solana"},
-    {"address": "<erc20-address>", "symbol": "USDT", "chain": "ethereum", "assetId": "eip155:1/erc20:<erc20-address>"}
-  ]
-}
-```
-
-| Field     | Type   | Required | Description                                      |
-| --------- | ------ | -------- | ------------------------------------------------ |
-| `tokens`  | array  | Yes      | At least 1 token entry.                          |
-| `address` | string | Yes      | Token mint (Solana) or contract address (EVM).   |
-| `symbol`  | string | No       | Token symbol for display (e.g., "USDC").         |
-| `chain`   | string | No       | "solana" or "ethereum". For documentation only.  |
-| `assetId` | string | No       | CAIP-19 asset identifier. Enables cross-chain matching. |
-
-**CAIP-19 matching:** When `assetId` is present in both the policy token entry and the transaction's token object, exact CAIP-19 matching is used (highest confidence). When only one side has `assetId`, the daemon extracts and compares addresses. When neither has `assetId`, legacy address-only matching is used. All 4 scenarios are backward compatible.
-
-```bash
-curl -s -X POST http://localhost:3100/v1/policies \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: <password>' \
-  -d '{"walletId":"<uuid>","type":"ALLOWED_TOKENS","rules":{"tokens":[{"address":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","symbol":"USDC","chain":"solana"}]}}'
-```
-
-### f. CONTRACT_WHITELIST (v1.4)
-
-Contract address whitelist for CONTRACT_CALL transactions. **Default deny**: contracts not listed are blocked.
-
-**Rules schema:**
-```json
-{
-  "contracts": [
-    {"address": "<contract-address>", "name": "Uniswap V3 Router", "chain": "ethereum"}
-  ]
-}
-```
-
-| Field      | Type   | Required | Description                               |
-| ---------- | ------ | -------- | ----------------------------------------- |
-| `contracts`| array  | Yes      | At least 1 contract entry.                |
-| `address`  | string | Yes      | Contract address.                         |
-| `name`     | string | No       | Contract display name.                    |
-| `chain`    | string | No       | "solana" or "ethereum".                   |
-
-```bash
-curl -s -X POST http://localhost:3100/v1/policies \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: <password>' \
-  -d '{"walletId":"<uuid>","type":"CONTRACT_WHITELIST","rules":{"contracts":[{"address":"0xE592427A0AEce92De3Edee1F18E0157C05861564","name":"Uniswap V3 Router","chain":"ethereum"}]}}'
-```
-
-### g. METHOD_WHITELIST (v1.4)
-
-Allowed contract methods (function selectors) per contract address. Used with CONTRACT_CALL to restrict which functions can be called.
-
-**Rules schema:**
-```json
-{
-  "methods": [
-    {"contractAddress": "<addr>", "selectors": ["0xa9059cbb", "0x095ea7b3"]}
-  ]
-}
-```
-
-| Field             | Type     | Required | Description                                    |
-| ----------------- | -------- | -------- | ---------------------------------------------- |
-| `methods`         | array    | Yes      | At least 1 method entry.                       |
-| `contractAddress` | string   | Yes      | Contract address to restrict.                  |
-| `selectors`       | string[] | Yes      | 4-byte function selectors (hex, e.g., "0xa9059cbb"). |
-
-Common EVM selectors:
-- `0xa9059cbb` -- transfer(address,uint256)
-- `0x095ea7b3` -- approve(address,uint256)
-- `0x23b872dd` -- transferFrom(address,address,uint256)
-- `0x38ed1739` -- swapExactTokensForTokens
-
-```bash
-curl -s -X POST http://localhost:3100/v1/policies \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: <password>' \
-  -d '{"walletId":"<uuid>","type":"METHOD_WHITELIST","rules":{"methods":[{"contractAddress":"0xE592427A0AEce92De3Edee1F18E0157C05861564","selectors":["0xa9059cbb","0x095ea7b3"]}]}}'
-```
-
-### h. APPROVED_SPENDERS (v1.4)
-
-Allowed spender addresses for APPROVE transactions. **Default deny**: spenders not listed are blocked from receiving token approvals.
-
-**Rules schema:**
-```json
-{
-  "spenders": [
-    {"address": "<spender-address>", "name": "Uniswap Router", "maxAmount": "1000000000"}
-  ]
-}
-```
-
-| Field      | Type   | Required | Description                                         |
-| ---------- | ------ | -------- | --------------------------------------------------- |
-| `spenders` | array  | Yes      | At least 1 spender entry.                           |
-| `address`  | string | Yes      | Spender contract/address.                           |
-| `name`     | string | No       | Spender display name.                               |
-| `maxAmount`| string | No       | Max approval amount (digit string). Optional cap.   |
-
-```bash
-curl -s -X POST http://localhost:3100/v1/policies \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: <password>' \
-  -d '{"walletId":"<uuid>","type":"APPROVED_SPENDERS","rules":{"spenders":[{"address":"0xE592427A0AEce92De3Edee1F18E0157C05861564","name":"Uniswap V3 Router","maxAmount":"1000000000000000000"}]}}'
-```
-
-### i. APPROVE_AMOUNT_LIMIT (v1.4)
-
-Maximum approval amount and unlimited approval blocking for APPROVE transactions.
-
-**Rules schema:**
-```json
-{
-  "maxAmount": "1000000000",
-  "blockUnlimited": true
-}
-```
-
-| Field            | Type    | Required | Description                                           |
-| ---------------- | ------- | -------- | ----------------------------------------------------- |
-| `maxAmount`      | string  | No       | Maximum approval amount (digit string).               |
-| `blockUnlimited` | boolean | No       | Block unlimited (max uint256) approvals. Default: true.|
-
-```bash
-curl -s -X POST http://localhost:3100/v1/policies \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: <password>' \
-  -d '{"walletId":"<uuid>","type":"APPROVE_AMOUNT_LIMIT","rules":{"maxAmount":"1000000000000000000","blockUnlimited":true}}'
-```
-
-### j. APPROVE_TIER_OVERRIDE (v1.4)
-
-Force a specific policy tier for all APPROVE transactions. Useful for requiring owner approval on every token approval.
-
-**Rules schema:**
-```json
-{
-  "tier": "APPROVAL"
-}
-```
-
-| Field  | Type   | Required | Description                                               |
-| ------ | ------ | -------- | --------------------------------------------------------- |
-| `tier` | string | Yes      | One of: "INSTANT", "NOTIFY", "DELAY", "APPROVAL".        |
-
-```bash
-curl -s -X POST http://localhost:3100/v1/policies \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: <password>' \
-  -d '{"walletId":"<uuid>","type":"APPROVE_TIER_OVERRIDE","rules":{"tier":"APPROVAL"}}'
-```
-
-### k. ALLOWED_NETWORKS (v1.4.6)
-
-Restrict which networks a wallet can use for transactions. Permissive by default: if no ALLOWED_NETWORKS policy exists, all networks valid for the wallet's environment are allowed.
-
-**Rules schema:**
-```json
-{
-  "networks": [
-    {"network": "ethereum-sepolia"},
-    {"network": "polygon-amoy", "name": "Polygon Testnet"}
-  ]
-}
-```
-
-| Field      | Type   | Required | Description                            |
-| ---------- | ------ | -------- | -------------------------------------- |
-| `networks` | array  | Yes      | At least 1 network entry.              |
-| `network`  | string | Yes      | Network identifier (e.g., `"ethereum-sepolia"` or CAIP-2 `"eip155:11155111"`). |
-| `name`     | string | No       | Display name for the network.          |
-
-```bash
-curl -s -X POST http://localhost:3100/v1/policies \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: <password>' \
-  -d '{"walletId":"<uuid>","type":"ALLOWED_NETWORKS","rules":{"networks":[{"network":"ethereum-sepolia"},{"network":"polygon-amoy"}]}}'
-```
-
-Using CAIP-2 format:
-```bash
-curl -s -X POST http://localhost:3100/v1/policies \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: <password>' \
-  -d '{"walletId":"<uuid>","type":"ALLOWED_NETWORKS","rules":{"networks":[{"network":"eip155:11155111"},{"network":"eip155:137"}]}}'
-```
-
-Note: ALLOWED_NETWORKS is permissive by default (all networks allowed until the first ALLOWED_NETWORKS policy is created for a wallet).
-
-### l. X402_ALLOWED_DOMAINS (v1.5.1)
-
-Allowed domains for x402 automatic payments. **Default deny**: if any X402_ALLOWED_DOMAINS policy exists, x402 payments to unlisted domains are blocked.
-
-**Rules schema:**
-```json
-{
-  "domains": ["api.example.com", "*.openai.com"]
-}
-```
-
-| Field     | Type     | Required | Description                                  |
-| --------- | -------- | -------- | -------------------------------------------- |
-| `domains` | string[] | Yes      | At least 1 domain. Glob patterns supported.  |
-
-```bash
-curl -s -X POST http://localhost:3100/v1/policies \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: <password>' \
-  -d '{"walletId":"<uuid>","type":"X402_ALLOWED_DOMAINS","rules":{"domains":["api.example.com","*.openai.com"]}}'
-```
-
-Note: X402_ALLOWED_DOMAINS is default deny: once any policy of this type exists for a wallet, only listed domains can receive x402 payments.
-
-### m. ERC8128_ALLOWED_DOMAINS (v30.10)
-
-Allowed domains for ERC-8128 HTTP message signing. **Default deny**: if `policy.default_deny_erc8128_domains` is enabled (Admin Settings), signing requests to unlisted domains are blocked.
-
-**Rules schema:**
-```json
-{
-  "domains": ["api.example.com", "*.service.io"]
-}
-```
-
-Supports wildcard patterns: `*.example.com` matches any subdomain of example.com.
-
-```bash
-curl -s -X POST http://localhost:3100/v1/policies \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: <password>' \
-  -d '{"walletId":"<uuid>","type":"ERC8128_ALLOWED_DOMAINS","rules":{"domains":["api.example.com","*.openai.com"]}}'
-```
-
-Note: ERC8128_ALLOWED_DOMAINS is default deny when enabled: only listed domains can be signed for. For full ERC-8128 documentation, see **erc8128.skill.md**.
-
-### n. REPUTATION_THRESHOLD (v30.8)
-
-Evaluate the counterparty agent's on-chain reputation score via the ERC-8004 Reputation Registry. When reputation is below the threshold, escalate the transaction security tier. Requires the ERC-8004 feature to be enabled (`actions.erc8004_agent_enabled=true` in Admin Settings).
-
-**Rules schema:**
-```json
-{
-  "min_score": 50,
-  "below_threshold_tier": "APPROVAL",
-  "unrated_tier": "APPROVAL",
-  "tag1": "",
-  "tag2": "",
-  "check_counterparty": true
-}
-```
-
-| Field                  | Type    | Required | Description                                                     |
-| ---------------------- | ------- | -------- | --------------------------------------------------------------- |
-| `min_score`            | number  | Yes      | Minimum acceptable reputation score (0-100).                    |
-| `below_threshold_tier` | string  | No       | Tier when score < min_score. One of: INSTANT, NOTIFY, DELAY, APPROVAL. Default: APPROVAL. |
-| `unrated_tier`         | string  | No       | Tier when counterparty has no reputation data or RPC fails. Default: APPROVAL. |
-| `tag1`                 | string  | No       | Reputation tag filter (max 32 chars). Empty = all categories.   |
-| `tag2`                 | string  | No       | Second reputation tag filter (max 32 chars).                    |
-| `check_counterparty`   | boolean | No       | Whether to check the counterparty's reputation. Default: true.  |
-
-**Tier escalation only:** The reputation policy can only escalate the tier, never downgrade. If a previous policy (e.g., SPENDING_LIMIT) already assigned APPROVAL, the reputation policy cannot lower it to NOTIFY. This uses `maxTier` logic -- the highest tier wins.
-
-**Evaluation position:** Stage 3, position 6 (after APPROVED_SPENDERS, before SPENDING_LIMIT).
-
-```bash
-curl -s -X POST http://localhost:3100/v1/policies \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: <password>' \
-  -d '{"walletId":"<uuid>","type":"REPUTATION_THRESHOLD","rules":{"min_score":50,"below_threshold_tier":"APPROVAL","unrated_tier":"DELAY","check_counterparty":true}}'
-```
-
-For full ERC-8004 documentation, see **erc8004.skill.md**.
-
-### o. VENUE_WHITELIST (v31.12)
-
-Controls which external venues (exchanges, off-chain protocols) are allowed for off-chain actions. Uses **default-deny** when enabled: only whitelisted venues can execute signedData/signedHttp actions.
-
-**Prerequisites:**
-- Enable via Admin Settings: set `venue_whitelist_enabled` to `true` (default: `false` -- disabled means all venues are allowed)
-- Create VENUE_WHITELIST policy with allowed venues
-
-**Rules schema:**
-```json
-{
-  "venues": ["polymarket", "hyperliquid", "0x"]
-}
-```
-
-| Field    | Type     | Required | Description                                |
-| -------- | -------- | -------- | ------------------------------------------ |
-| `venues` | string[] | Yes      | List of allowed venue names.               |
-
-```bash
-curl -s -X POST http://localhost:3100/v1/policies \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: <password>' \
-  -d '{"walletId":"<uuid>","type":"VENUE_WHITELIST","rules":{"venues":["polymarket","hyperliquid"]}}'
-```
-
-When `venue_whitelist_enabled=true` and a venue is not in any matching VENUE_WHITELIST policy, the action is blocked with error code `VENUE_NOT_ALLOWED`.
-
-### p. ACTION_CATEGORY_LIMIT (v31.12)
-
-Per-category USD spending limits for off-chain actions. Limits are evaluated using the `notionalUsd` value from action metadata. Supports per-action, daily, and monthly rolling windows.
-
-**Rules schema:**
-```json
-{
-  "category": "defi_trading",
-  "per_action": 1000,
-  "daily": 5000,
-  "monthly": 50000,
-  "tier_on_exceed": "auto"
-}
-```
-
-| Field            | Type   | Required | Description                                                    |
-| ---------------- | ------ | -------- | -------------------------------------------------------------- |
-| `category`       | string | Yes      | Action category (e.g. "defi_trading", "prediction_market").    |
-| `per_action`     | number | No       | Max USD per single action.                                     |
-| `daily`          | number | No       | Max cumulative USD per 24h rolling window.                     |
-| `monthly`        | number | No       | Max cumulative USD per 30d rolling window.                     |
-| `tier_on_exceed` | string | No       | Behavior when limit exceeded: "auto" (block), "tier1" (NOTIFY), "tier2" (APPROVAL). Default: "auto". |
-
-```bash
-curl -s -X POST http://localhost:3100/v1/policies \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: <password>' \
-  -d '{"walletId":"<uuid>","type":"ACTION_CATEGORY_LIMIT","rules":{"category":"defi_trading","per_action":1000,"daily":5000,"monthly":50000,"tier_on_exceed":"auto"}}'
-```
-
-Cumulative spending is calculated from transaction metadata using `json_extract` on the `metadata` column, summing `notionalUsd` for matching venue+category within the rolling window.
-
-For full off-chain action documentation, see **external-actions.skill.md**.
+Maximum transactions per period (hourly, daily, weekly, monthly).
+
+### e. ALLOWED_TOKENS
+
+Token whitelist for TOKEN_TRANSFER. **Default deny**: unlisted tokens are blocked.
+
+### f. CONTRACT_WHITELIST
+
+Contract whitelist for CONTRACT_CALL. **Default deny**: unlisted contracts are blocked.
+
+### g. METHOD_WHITELIST
+
+Allowed contract function selectors per contract address.
+
+### h. APPROVED_SPENDERS
+
+Allowed spenders for APPROVE transactions. **Default deny**: unlisted spenders are blocked.
+
+### i. APPROVE_AMOUNT_LIMIT
+
+Maximum approval amount and unlimited approval blocking.
+
+### j. APPROVE_TIER_OVERRIDE
+
+Force a specific tier for all APPROVE transactions.
+
+### k. ALLOWED_NETWORKS
+
+Restrict which networks a wallet can use. Permissive by default.
+
+### l. X402_ALLOWED_DOMAINS
+
+Allowed domains for x402 payments. **Default deny**.
+
+### m. ERC8128_ALLOWED_DOMAINS
+
+Allowed domains for ERC-8128 HTTP signing. **Default deny**.
+
+### n. REPUTATION_THRESHOLD
+
+ERC-8004 reputation-based tier escalation.
+
+### o. VENUE_WHITELIST
+
+Allowed external venues for off-chain actions. **Default deny** when enabled.
+
+### p. ACTION_CATEGORY_LIMIT
+
+Per-category USD spending limits for off-chain actions.
 
 ---
 
 ## 3. Policy Evaluation Flow
 
-When a transaction is submitted (`POST /v1/transactions/send`), the policy engine evaluates all applicable policies:
+When a transaction is submitted, the policy engine evaluates all applicable policies:
 
-1. **Collect policies** -- All enabled policies for the wallet + global policies, sorted by priority. If a policy has a `network` field set, it applies only to transactions on that specific network. Override priority: wallet+network > wallet+null > global+network > global+null.
-2. **Default deny checks** -- ALLOWED_TOKENS, CONTRACT_WHITELIST, and APPROVED_SPENDERS use **default deny**: if any policy of that type exists but the transaction's token/contract/spender is not in any matching policy, the transaction is blocked with `POLICY_VIOLATION`.
-3. **Tier assignment** -- SPENDING_LIMIT determines the transaction tier (INSTANT/NOTIFY/DELAY/APPROVAL) based on amount. REPUTATION_THRESHOLD evaluates counterparty reputation and may escalate the tier (after APPROVED_SPENDERS, before SPENDING_LIMIT). APPROVE_TIER_OVERRIDE overrides the tier for APPROVE transactions.
-   - **Action tier override (v30.11):** When a transaction is executed via the Action Provider framework, the action's tier override (configured via Admin Settings key `actions.{provider}_{action}_tier`) is combined with the policy-assigned tier using escalation-only logic: `effectiveTier = max(policyTier, actionTier)`. The action tier can only raise the security level, never lower it. For example, if a SPENDING_LIMIT policy assigns NOTIFY but the action tier override is DELAY, the effective tier is DELAY. If the policy assigns APPROVAL, it remains APPROVAL regardless of action tier.
-4. **Constraint checks** -- WHITELIST, TIME_RESTRICTION, RATE_LIMIT, METHOD_WHITELIST, APPROVE_AMOUNT_LIMIT, ALLOWED_NETWORKS are evaluated. Any violation blocks the transaction.
-5. **Tier execution** -- INSTANT executes immediately, NOTIFY executes + sends notification, DELAY waits for cooldown, APPROVAL requires owner approval via `POST /v1/transactions/{id}/approve`.
-
-For action tier configuration, see **actions.skill.md** Section 14 and **admin.skill.md** Section 15.
-
-### Default Deny Policy Types
-
-These 3 policy types block transactions unless explicitly whitelisted:
-
-| Policy Type          | Applies To          | Effect                                          |
-| -------------------- | ------------------- | ----------------------------------------------- |
-| `ALLOWED_TOKENS`     | TOKEN_TRANSFER      | Token must be in allowed list to transfer.       |
-| `CONTRACT_WHITELIST` | CONTRACT_CALL       | Contract must be in whitelist to call.           |
-| `APPROVED_SPENDERS`  | APPROVE             | Spender must be in approved list to approve.     |
-
-If no policies of a given default-deny type exist for a wallet, the check is skipped (permissive by default until the first policy is created).
+1. **Collect policies** -- wallet + global, sorted by priority
+2. **Default deny checks** -- ALLOWED_TOKENS, CONTRACT_WHITELIST, APPROVED_SPENDERS
+3. **Tier assignment** -- SPENDING_LIMIT, REPUTATION_THRESHOLD, APPROVE_TIER_OVERRIDE
+4. **Constraint checks** -- WHITELIST, TIME_RESTRICTION, RATE_LIMIT, etc.
+5. **Tier execution** -- INSTANT (immediate), NOTIFY (immediate + notify), DELAY (cooldown), APPROVAL (owner approval)
 
 ---
 
-## 4. Common Workflows
+## 4. Error Reference
 
-### Allow USDC token transfers
-
-1. Create ALLOWED_TOKENS policy to whitelist USDC (with optional CAIP-19 assetId):
-```bash
-curl -s -X POST http://localhost:3100/v1/policies \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: <password>' \
-  -d '{"walletId":"<uuid>","type":"ALLOWED_TOKENS","rules":{"tokens":[{"address":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","symbol":"USDC","assetId":"solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"}]}}'
-```
-
-2. Send TOKEN_TRANSFER (see `transactions.skill.md` for full transaction reference):
-```bash
-curl -s -X POST http://localhost:3100/v1/transactions/send \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: <password>' \
-  -d '{"type":"TOKEN_TRANSFER","to":"<recipient>","amount":"5000000","token":{"address":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","decimals":6,"symbol":"USDC","assetId":"solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"}}'
-```
-
-### Allow Uniswap contract calls
-
-1. Create CONTRACT_WHITELIST for Uniswap Router:
-```bash
-curl -s -X POST http://localhost:3100/v1/policies \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: <password>' \
-  -d '{"walletId":"<uuid>","type":"CONTRACT_WHITELIST","rules":{"contracts":[{"address":"0xE592427A0AEce92De3Edee1F18E0157C05861564","name":"Uniswap V3 Router"}]}}'
-```
-
-2. (Optional) Restrict allowed methods with METHOD_WHITELIST:
-```bash
-curl -s -X POST http://localhost:3100/v1/policies \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: <password>' \
-  -d '{"walletId":"<uuid>","type":"METHOD_WHITELIST","rules":{"methods":[{"contractAddress":"0xE592427A0AEce92De3Edee1F18E0157C05861564","selectors":["0x414bf389"]}]}}'
-```
-
-### Require owner approval for large transfers
-
-Create SPENDING_LIMIT with low tier thresholds:
-```bash
-curl -s -X POST http://localhost:3100/v1/policies \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: <password>' \
-  -d '{"walletId":"<uuid>","type":"SPENDING_LIMIT","rules":{"instant_max":"10000000","notify_max":"100000000","delay_max":"500000000"}}'
-```
-
-Any transfer exceeding `delay_max` (500M lamports = 0.5 SOL) requires owner approval.
-
-### Require approval for all token approvals
-
-```bash
-curl -s -X POST http://localhost:3100/v1/policies \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: <password>' \
-  -d '{"walletId":"<uuid>","type":"APPROVE_TIER_OVERRIDE","rules":{"tier":"APPROVAL"}}'
-```
-
-### Restrict wallet to specific networks
-
-Networks can be specified as plain strings or CAIP-2 identifiers.
-
-```bash
-curl -s -X POST http://localhost:3100/v1/policies \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: <password>' \
-  -d '{"walletId":"<uuid>","type":"ALLOWED_NETWORKS","rules":{"networks":[{"network":"ethereum-sepolia"},{"network":"polygon-amoy"}]}}'
-```
-
-Transactions to unlisted networks will be blocked with POLICY_VIOLATION.
-
-### Set daily/monthly cumulative spending limits
-
-Prevent split-transaction bypass by limiting total USD spending per rolling window:
-```bash
-curl -s -X POST http://localhost:3100/v1/policies \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: <password>' \
-  -d '{"walletId":"<uuid>","type":"SPENDING_LIMIT","rules":{"instant_max":"100000000","notify_max":"500000000","delay_max":"1000000000","daily_limit_usd":500,"monthly_limit_usd":5000}}'
-```
-
-When cumulative spending exceeds the limit, the transaction is escalated to APPROVAL. Owner can then approve, reject, or increase the limit.
-
-### Set token-specific spending limits
-
-```bash
-# Set per-token limits: 1 SOL instant, 10 SOL notify, 50 SOL delay for native Solana
-# Plus 100 USDC instant, 1000 USDC notify, 10000 USDC delay for USDC
-curl -s -X POST http://localhost:3100/v1/policies \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: <password>' \
-  -d '{"walletId":"<uuid>","type":"SPENDING_LIMIT","rules":{"token_limits":{"native:solana":{"instant_max":"1","notify_max":"10","delay_max":"50"},"solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/token:EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v":{"instant_max":"100","notify_max":"1000","delay_max":"10000"}},"daily_limit_usd":500}}'
-```
-
-Native SOL transfers of <= 1 SOL are INSTANT. USDC transfers of <= 100 USDC are INSTANT. Both respect the $500/day cumulative limit.
+| Error Code | HTTP | Description |
+|------------|------|-------------|
+| `POLICY_VIOLATION` | 403 | Transaction violates one or more active policies. |
+| `POLICY_NOT_FOUND` | 404 | Policy ID does not exist. |
 
 ---
 
-## 5. Error Reference
+## 5. Related Skill Files
 
-| Error Code                      | HTTP | Description                                       |
-| ------------------------------- | ---- | ------------------------------------------------- |
-| `POLICY_NOT_FOUND`              | 404  | Policy ID does not exist.                         |
-| `POLICY_VIOLATION`              | 403  | Transaction violates one or more active policies. |
-| `ACTION_VALIDATION_FAILED`      | 400  | Invalid rules schema for the given policy type.   |
-| `WALLET_NOT_FOUND`              | 404  | walletId does not match any existing wallet.      |
-| `ENVIRONMENT_NETWORK_MISMATCH`  | 400  | Network scope not valid for wallet's environment. |
-
-**Error response format:**
-```json
-{
-  "code": "POLICY_VIOLATION",
-  "message": "Transaction blocked by ALLOWED_TOKENS policy",
-  "retryable": false,
-  "details": {},
-  "requestId": "<uuid>",
-  "hint": "Add the token to an ALLOWED_TOKENS policy first"
-}
-```
-
----
-
-## 6. Related Skill Files
-
-- **transactions.skill.md** -- 6-type transaction reference (policies affect transaction execution)
-- **external-actions.skill.md** -- Off-chain action framework (VENUE_WHITELIST and ACTION_CATEGORY_LIMIT apply here)
-- **wallet.skill.md** -- Wallet CRUD and session management
-- **admin.skill.md** -- Admin API for daemon operations and credential management
-- **erc8004.skill.md** -- ERC-8004 trustless agent identity and reputation
+- **transactions.skill.md** -- Transaction types and lifecycle
+- **external-actions.skill.md** -- Off-chain action framework (VENUE_WHITELIST, ACTION_CATEGORY_LIMIT)
+- **erc8004.skill.md** -- ERC-8004 reputation (REPUTATION_THRESHOLD)

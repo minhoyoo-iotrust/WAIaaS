@@ -22,7 +22,8 @@ http://localhost:3100
 ```
 
 Action execution and queries use **sessionAuth** (`Authorization: Bearer <token>`).
-Credential management uses **masterAuth** (`X-Master-Password`).
+
+> Credential 관리(생성/삭제/교체)는 관리자 전용입니다. docs/admin-manual/credentials.md 를 참조하세요.
 
 ## Permissions
 
@@ -31,14 +32,6 @@ Credential management uses **masterAuth** (`X-Master-Password`).
 - List off-chain action history via `GET /v1/wallets/:id/actions`
 - Get off-chain action detail via `GET /v1/wallets/:id/actions/:actionId`
 - List credential metadata via `GET /v1/wallets/:id/credentials` (names and types only -- never values)
-
-### Admin (masterAuth)
-- Create credentials: `POST /v1/wallets/:id/credentials`
-- Delete credentials: `DELETE /v1/wallets/:id/credentials/:ref`
-- Rotate credentials: `PUT /v1/wallets/:id/credentials/:ref/rotate`
-- Global credentials: `GET/POST/DELETE/PUT /v1/admin/credentials[/:ref[/rotate]]`
-- Venue whitelist policy: via `POST /v1/policies` with type `VENUE_WHITELIST`
-- Category limit policy: via `POST /v1/policies` with type `ACTION_CATEGORY_LIMIT`
 
 ---
 
@@ -74,41 +67,9 @@ Schemes that require credentials reference a `credentialRef` string that resolve
 
 ---
 
-## 3. Credential Management
+## 3. Credential Queries
 
-Credentials are stored encrypted with AES-256-GCM (per-wallet encryption key derived via HKDF from master password). Credential values are **never** returned in API responses.
-
-### Credential Scope
-
-- **Per-wallet**: Stored under `/v1/wallets/:id/credentials`. Only accessible by that wallet's pipeline.
-- **Global**: Stored under `/v1/admin/credentials`. Accessible by all wallets. Per-wallet credentials take priority over global ones with the same name.
-
-### Create Credential (masterAuth)
-
-```bash
-curl -s -X POST http://localhost:3100/v1/wallets/<wallet-id>/credentials \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: <password>' \
-  -d '{
-    "name": "polymarket-api-key",
-    "type": "api_key",
-    "value": "secret-api-key-value",
-    "expiresAt": 1735689600
-  }'
-```
-
-**Response (201):**
-```json
-{
-  "id": "cred-uuid",
-  "name": "polymarket-api-key",
-  "type": "api_key",
-  "walletId": "<wallet-id>",
-  "expiresAt": 1735689600,
-  "createdAt": 1700000000,
-  "updatedAt": 1700000000
-}
-```
+Credentials are stored encrypted with AES-256-GCM. Credential values are **never** returned in API responses.
 
 ### List Credentials (sessionAuth)
 
@@ -117,23 +78,7 @@ curl -s http://localhost:3100/v1/wallets/<wallet-id>/credentials \
   -H 'Authorization: Bearer <token>'
 ```
 
-Returns array of `CredentialMetadata` (no `value` field).
-
-### Delete Credential (masterAuth)
-
-```bash
-curl -s -X DELETE http://localhost:3100/v1/wallets/<wallet-id>/credentials/polymarket-api-key \
-  -H 'X-Master-Password: <password>'
-```
-
-### Rotate Credential (masterAuth)
-
-```bash
-curl -s -X PUT http://localhost:3100/v1/wallets/<wallet-id>/credentials/polymarket-api-key/rotate \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: <password>' \
-  -d '{"value": "new-secret-value"}'
-```
+Returns array of `CredentialMetadata` (names, types, expiry -- no `value` field).
 
 ---
 
@@ -260,11 +205,6 @@ import { WAIaaSClient } from '@waiaas/sdk';
 const actions = await client.listOffchainActions({ walletId: 'w1', venue: 'polymarket', limit: 10 });
 const detail = await client.getActionResult('w1', 'act-uuid');
 const creds = await client.listCredentials('w1');
-
-// Credential CRUD (masterAuth -- admin only)
-const cred = await client.createCredential('w1', { name: 'api-key', type: 'api_key', value: 'secret' });
-await client.deleteCredential('w1', 'api-key');
-await client.rotateCredential('w1', 'api-key', 'new-secret');
 
 // Off-chain action execution (sessionAuth -- uses existing executeAction)
 const result = await client.executeAction('polymarket_order', 'pm_buy', {

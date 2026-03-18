@@ -31,10 +31,12 @@ WAIaaS uses two authentication methods:
 
 | Auth Type | Header | Used For | Who |
 |-----------|--------|----------|-----|
-| **masterAuth** | `X-Master-Password: <password>` | Wallet creation, session creation, policy config, admin | **Operator only** |
+| **masterAuth** | Admin-only (CLI/Admin UI) | Wallet creation, session creation, policy config | **Operator only** |
 | **sessionAuth** | `Authorization: Bearer <token>` | Balance queries, transactions, wallet info, session renewal | AI agents |
 
-- **masterAuth** is for administrative operations performed by the **Operator** via Admin UI or CLI. AI agents must NEVER request or use the master password.
+> AI agents must NEVER request the master password. Use only your session token.
+
+- **masterAuth** is for administrative operations performed by the **Operator** via Admin UI or CLI. See docs/admin-manual/ for details.
 - **sessionAuth** is for wallet-scoped operations. AI agents operate exclusively with session tokens (Bearer wai_sess_...).
 
 ## Self-Discovery (Recommended First Step)
@@ -77,87 +79,20 @@ Response:
 }
 ```
 
-### Step 2: Create a Wallet
+### Step 2: Create Wallet and Session (Operator Action)
 
-Create a new wallet with a key pair. Requires **masterAuth**. Each wallet belongs to an **environment** (testnet or mainnet) which determines the available networks.
-
-**Solana wallet (default):**
+The operator creates wallets and sessions using the CLI or Admin UI. This is NOT an agent action.
 
 ```bash
-curl -s -X POST http://localhost:3100/v1/wallets \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: your-master-password' \
-  -d '{"name": "my-first-wallet", "chain": "solana", "environment": "mainnet"}'
+# CLI approach (recommended)
+waiaas quickset
 ```
 
-**EVM wallet (Ethereum):**
+Or the operator uses the Admin UI at `http://localhost:3100/admin`. See docs/admin-manual/setup-guide.md for full setup instructions.
 
-```bash
-curl -s -X POST http://localhost:3100/v1/wallets \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: your-master-password' \
-  -d '{"name": "my-eth-wallet", "chain": "ethereum", "environment": "mainnet"}'
-```
+Once the operator provides a session token, save it for all wallet operations below.
 
-**EVM Smart Account (ERC-4337):**
-
-```bash
-curl -s -X POST http://localhost:3100/v1/wallets \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: your-master-password' \
-  -d '{"name": "my-smart-wallet", "chain": "ethereum", "environment": "mainnet", "accountType": "smart"}'
-```
-
-Smart accounts use ERC-4337 Account Abstraction. Transactions are bundled as UserOperations and submitted via a bundler. The wallet address is a counterfactual CREATE2 address (deployed on first transaction). See **wallet.skill.md** section "Create Smart Account Wallet" for full details.
-
-Parameters:
-- `name` (required): 1-100 characters
-- `chain` (optional): `"solana"` (default) or `"ethereum"`
-- `environment` (optional): `"mainnet"` (default) or `"testnet"` -- determines available networks
-- `accountType` (optional): `"eoa"` (default) or `"smart"` -- EVM only; smart creates an ERC-4337 account abstraction wallet
-- `createSession` (optional): boolean, default `true` -- auto-creates a session and includes it in the response
-
-Response (201):
-```json
-{
-  "id": "01958f3a-1234-7000-8000-abcdef123456",
-  "name": "my-first-wallet",
-  "chain": "solana",
-  "network": "solana-mainnet",
-  "environment": "mainnet",
-  "publicKey": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
-  "status": "ACTIVE",
-  "createdAt": 1707000000,
-  "session": {
-    "id": "01958f3b-5678-7000-8000-abcdef654321",
-    "token": "wai_sess_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "expiresAt": 1709592000
-  }
-}
-```
-
-The `network` field shows the wallet's primary network. Solana has a single auto-resolved network per environment (e.g., `solana-mainnet`). EVM wallets require explicit network specification (e.g., `ethereum-mainnet`, `polygon-mainnet`).
-
-The `session` field contains the auto-created session token. Save the `token` value -- use it as `Authorization: Bearer <token>` for all wallet operations below. To skip auto-session creation, set `createSession: false`.
-
-### Step 3: Create Additional Sessions (Optional)
-
-A session is already created in Step 2. Use this only if you need additional sessions. Requires **masterAuth**.
-
-```bash
-curl -s -X POST http://localhost:3100/v1/sessions \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: your-master-password' \
-  -d '{"walletId": "01958f3a-1234-7000-8000-abcdef123456"}'
-```
-
-Parameters:
-- `walletId` (required): UUID of the wallet from Step 2
-- `ttl` (optional): session lifetime in seconds (omit for unlimited session)
-- `maxRenewals` (optional): max renewal count, 0 = unlimited (default: 0)
-- `absoluteLifetime` (optional): absolute session lifetime in seconds, 0 = unlimited (default: 0)
-
-By default, sessions are created with no expiration (unlimited). Specify `ttl` to create a finite session.
+### Step 3: Verify Session (Optional)
 
 Response (201):
 ```json

@@ -80,13 +80,7 @@ This generates a new session with an AI-ready connection prompt.
 3. Click "Create Session" and select the wallets
 4. Copy the generated token
 
-**Option C: REST API**
-```bash
-curl -s -X POST http://localhost:3100/v1/sessions \
-  -H "Content-Type: application/json" \
-  -H "X-Master-Password: <operator-enters-password>" \
-  -d '{"walletIds": ["<wallet-id>"]}' | jq .
-```
+**Option C: REST API** -- The operator creates a new session via the admin API (see docs/admin-manual/daemon-operations.md).
 
 ### Step 3: Apply the New Token
 
@@ -121,13 +115,10 @@ MASTER_PW=$(cat ~/.waiaas/recovery.key)
 
 ### Step 2: Create a New Session
 
-Use the recovery key to create a new session via the admin API:
+Use the recovery key to create a new session via the CLI:
 
 ```bash
-curl -s -X POST http://localhost:3100/v1/sessions \
-  -H "Content-Type: application/json" \
-  -H "X-Master-Password: ${MASTER_PW}" \
-  -d '{"walletIds": ["<wallet-id>"]}'
+waiaas quickset
 ```
 
 ### Step 3: Apply and Verify
