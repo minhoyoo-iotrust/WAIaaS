@@ -8,16 +8,9 @@
 
 **AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다** — 동시에 에이전트 주인(사람)이 자금 통제권을 유지하면서. 서비스 제공자 의존 없이 사용자가 완전한 통제권을 보유한다.
 
-## Current Milestone: v32.8 테스트 커버리지 강화
+## Previous Milestone: v32.8 테스트 커버리지 강화 — SHIPPED 2026-03-18
 
-**Goal:** 전 패키지 커버리지를 Lines 90% / Branches 85% / Functions 95% 통일 기준으로 끌어올리고, CI Gate hard mode로 구조적 하락을 방지한다.
-
-**Target features:**
-- daemon DeFi Provider + Pipeline 테스트 강화 (Lines 90%, Branches 85%, Functions 95%)
-- daemon Infra + Admin API + Notification 테스트
-- evm Branches 85% + wallet-sdk Branches 85% 강화
-- admin Functions 95% + cli Lines 90% / Branches 85% 강화
-- sdk + shared + 나머지 패키지 + 임계값 최종 인상 (전 패키지 통일)
+전 패키지 커버리지 강화: 620+ 신규 테스트, 9/12 패키지 L:90/B:85/F:95 통일 기준 달성. SDK 99.93%, shared 100%, EVM B:91%, wallet-sdk B:95%. daemon/cli/admin은 프레임워크 제약으로 근접 수준 달성. coverage-gate.sh 12 패키지 동기화. 7개 오픈 이슈 전량 해결(EVM 체크섬, PositionTracker RPC, DeFi UAT 등). 6 phases, 17 plans, 48 requirements, 58 commits, 131 files, +21,334/-185 lines, ~368,589 LOC TS.
 
 ## Previous Milestone: v32.7 SEO/AEO 최적화 — SHIPPED 2026-03-17
 
