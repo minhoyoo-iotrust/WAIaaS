@@ -37,6 +37,7 @@
 | 387 | BUG | HIGH | DCent Swap formatAmount() 회귀 — get_quotes/getDexSwapTransactionData에 human amount 전달로 전 프로바이더 실패 | v32.9 | FIXED | 2026-03-18 |
 | 388 | BUG | MEDIUM | defi-12 DCent Swap UAT 시나리오 API 엔드포인트 오류 — /v1/transactions/* 대신 /v1/actions/dcent_swap/* 사용 필요 | v32.9 | FIXED | 2026-03-18 |
 | 389 | ENHANCEMENT | LOW | Agent UAT 시나리오 환경(Environment) 분류 누락 — Env 컬럼 및 --env 필터 추가 필요 | v32.9 | FIXED | 2026-03-18 |
+| 390 | BUG | CRITICAL | Migration v60 CHECK 제약조건 미갱신으로 sdk_push UPDATE 실패 — 기존 DB 업그레이드 시 데몬 시작 불가 | v32.10 | FIXED | 2026-03-18 |
 
 ## Type Legend
 
@@ -49,7 +50,7 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 389
+- **FIXED:** 390
 - **WONTFIX:** 1
-- **Total:** 390
+- **Total:** 391
 - **Archived:** 366 (001–366)

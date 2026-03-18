@@ -20,6 +20,10 @@ import {
   TRANSACTION_STATUSES,
   TRANSACTION_TYPES,
   POLICY_TIERS,
+  CHAIN_TYPES,
+  ENVIRONMENT_TYPES,
+  WALLET_STATUSES,
+  ACCOUNT_TYPES,
 } from '@waiaas/core';
 import { inList } from '../schema-ddl.js';
 
@@ -363,6 +367,7 @@ export const migrations: Migration[] = [
   {
     version: 60,
     description: 'Add wallet_apps.push_relay_url, clear sign_topic/notify_topic, rename sdk_ntfy to sdk_push',
+    managesOwnTransaction: true,
     up: (sqlite: Database) => {
       // 1. Add push_relay_url column to wallet_apps
       const cols = (sqlite.prepare("PRAGMA table_info('wallet_apps')").all() as Array<{ name: string }>).map(c => c.name);
@@ -378,8 +383,81 @@ export const migrations: Migration[] = [
       // 3. Clear sign_topic and notify_topic (no longer used)
       sqlite.exec("UPDATE wallet_apps SET sign_topic = NULL, notify_topic = NULL");
 
-      // 4. Update owner_approval_method from 'sdk_ntfy' to 'sdk_push' in wallets
-      sqlite.exec("UPDATE wallets SET owner_approval_method = 'sdk_push' WHERE owner_approval_method = 'sdk_ntfy'");
+      // 4. Rebuild wallets table to update CHECK constraint: sdk_ntfy -> sdk_push
+      // SQLite cannot ALTER CHECK constraints, so we must rebuild the table.
+      // Only rebuild if the existing CHECK still references 'sdk_ntfy' (idempotency).
+      const walletsCreateSql = (sqlite.prepare(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name='wallets'",
+      ).get() as { sql: string } | undefined)?.sql ?? '';
+
+      if (walletsCreateSql.includes('sdk_ntfy')) {
+        sqlite.pragma('foreign_keys = OFF');
+        sqlite.exec('BEGIN');
+        try {
+          sqlite.exec(`CREATE TABLE wallets_new (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  chain TEXT NOT NULL CHECK (chain IN (${inList(CHAIN_TYPES)})),
+  environment TEXT NOT NULL CHECK (environment IN (${inList(ENVIRONMENT_TYPES)})),
+  public_key TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'CREATING' CHECK (status IN (${inList(WALLET_STATUSES)})),
+  owner_address TEXT,
+  owner_verified INTEGER NOT NULL DEFAULT 0 CHECK (owner_verified IN (0, 1)),
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  suspended_at INTEGER,
+  suspension_reason TEXT,
+  monitor_incoming INTEGER NOT NULL DEFAULT 0,
+  owner_approval_method TEXT CHECK (owner_approval_method IS NULL OR owner_approval_method IN ('sdk_push', 'sdk_telegram', 'walletconnect', 'telegram_bot', 'rest')),
+  wallet_type TEXT,
+  account_type TEXT NOT NULL DEFAULT 'eoa' CHECK (account_type IN (${inList(ACCOUNT_TYPES)})),
+  signer_key TEXT,
+  deployed INTEGER NOT NULL DEFAULT 1,
+  entry_point TEXT,
+  aa_provider TEXT CHECK (aa_provider IS NULL OR aa_provider IN ('pimlico', 'alchemy', 'custom')),
+  aa_provider_api_key_encrypted TEXT,
+  aa_bundler_url TEXT,
+  aa_paymaster_url TEXT,
+  aa_paymaster_policy_id TEXT,
+  factory_address TEXT
+)`);
+
+          sqlite.exec(`INSERT INTO wallets_new (
+  id, name, chain, environment, public_key, status, owner_address, owner_verified,
+  created_at, updated_at, suspended_at, suspension_reason, monitor_incoming,
+  owner_approval_method, wallet_type, account_type, signer_key, deployed,
+  entry_point, aa_provider, aa_provider_api_key_encrypted, aa_bundler_url,
+  aa_paymaster_url, aa_paymaster_policy_id, factory_address
+) SELECT
+  id, name, chain, environment, public_key, status, owner_address, owner_verified,
+  created_at, updated_at, suspended_at, suspension_reason, monitor_incoming,
+  CASE WHEN owner_approval_method = 'sdk_ntfy' THEN 'sdk_push' ELSE owner_approval_method END,
+  wallet_type, account_type, signer_key, deployed,
+  entry_point, aa_provider, aa_provider_api_key_encrypted, aa_bundler_url,
+  aa_paymaster_url, aa_paymaster_policy_id, factory_address
+FROM wallets`);
+
+          sqlite.exec('DROP TABLE wallets');
+          sqlite.exec('ALTER TABLE wallets_new RENAME TO wallets');
+
+          // Recreate indexes
+          sqlite.exec('CREATE UNIQUE INDEX idx_wallets_public_key ON wallets(public_key)');
+          sqlite.exec('CREATE INDEX idx_wallets_status ON wallets(status)');
+          sqlite.exec('CREATE INDEX idx_wallets_chain_environment ON wallets(chain, environment)');
+          sqlite.exec('CREATE INDEX idx_wallets_owner_address ON wallets(owner_address)');
+
+          sqlite.exec('COMMIT');
+        } catch (err) {
+          sqlite.exec('ROLLBACK');
+          throw err;
+        }
+
+        sqlite.pragma('foreign_keys = ON');
+        const fkErrors = sqlite.pragma('foreign_key_check') as unknown[];
+        if (fkErrors.length > 0) {
+          throw new Error(`FK integrity violation after v60: ${JSON.stringify(fkErrors)}`);
+        }
+      }
     },
   },
 ];

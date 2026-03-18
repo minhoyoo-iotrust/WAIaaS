@@ -96,14 +96,9 @@ Response includes:
 
 Note: Metadata is cached in the database with a 24-hour TTL.
 
-### GET /v1/wallets/{id}/nfts -- List NFTs (masterAuth)
+### Admin NFT Query
 
-Operator endpoint to query any wallet's NFTs.
-
-```bash
-curl -s 'http://localhost:3100/v1/wallets/01958f3a-1234-7000-8000-abcdef123456/nfts?network=ethereum-mainnet' \
-  -H 'X-Master-Password: your-master-password'
-```
+Operators can query any wallet's NFTs via `GET /v1/wallets/{id}/nfts` -- see docs/admin-manual/wallet-management.md.
 
 ## 3. NFT Transfer (sessionAuth)
 

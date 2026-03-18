@@ -19,6 +19,8 @@ jobs:
   # Stage 1: push + PR common - affected packages only
   stage1:
     runs-on: ubuntu-latest
+    env:
+      NODE_OPTIONS: '--max-old-space-size=8192'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,6 +29,14 @@ jobs:
 
       - name: Setup
         uses: ./.github/actions/setup
+
+      - name: Configure swap
+        run: |
+          sudo swapoff -a
+          sudo fallocate -l 8G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
 
       - name: Fetch base branch
         shell: bash
@@ -55,7 +65,7 @@ jobs:
           TURBO_SCM_BASE: ${{ steps.affected-base.outputs.base }}
 
       - name: Unit Tests (affected)
-        run: pnpm turbo run test:unit --affected -- --coverage
+        run: pnpm turbo run test:unit --affected --concurrency 1 -- --coverage
         env:
           TURBO_SCM_BASE: ${{ steps.affected-base.outputs.base }}
 
@@ -70,6 +80,8 @@ jobs:
     if: github.event_name != 'push'
     needs: stage1
     runs-on: ubuntu-latest
+    env:
+      NODE_OPTIONS: '--max-old-space-size=8192'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -78,6 +90,14 @@ jobs:
 
       - name: Setup
         uses: ./.github/actions/setup
+
+      - name: Configure swap
+        run: |
+          sudo swapoff -a
+          sudo fallocate -l 8G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
 
       - name: Build
         run: pnpm turbo run build

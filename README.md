@@ -133,7 +133,7 @@ waiaas quickset                  # Creates wallets + sessions automatically
 waiaas set-master                # (Later) Harden password, then delete recovery.key
 ```
 
-The `--auto-provision` flag generates a cryptographically random master password and saves it to `~/.waiaas/recovery.key`. All subsequent CLI commands read it automatically. See the [Agent Self-Setup Guide](docs/guides/agent-self-setup.md) for the complete flow.
+The `--auto-provision` flag generates a cryptographically random master password and saves it to `~/.waiaas/recovery.key`. All subsequent CLI commands read it automatically. See the [Agent Self-Setup Guide](docs/agent-guides/agent-self-setup.md) for the complete flow.
 
 For manual setup with human-guided password entry, install skills and follow `waiaas-setup/SKILL.md`:
 
@@ -215,10 +215,10 @@ Enabled by default (`admin_ui = true` in config.toml).
 | [Security Model](docs/security-model.md) | Authentication, policy engine, Kill Switch, AutoStop |
 | [Deployment Guide](docs/deployment.md) | Docker, npm, configuration reference |
 | [API Reference](docs/api-reference.md) | REST API endpoints and authentication |
-| [Agent Self-Setup Guide](docs/guides/agent-self-setup.md) | Fully autonomous setup with auto-provision |
-| [Agent Skills Integration](docs/guides/agent-skills-integration.md) | Universal guide for 27+ AI agent platforms |
-| [Claude Code Integration](docs/guides/claude-code-integration.md) | Skill files + MCP server setup for Claude Code |
-| [OpenClaw Integration](docs/guides/openclaw-integration.md) | Quick setup for OpenClaw bot |
+| [Agent Self-Setup Guide](docs/agent-guides/agent-self-setup.md) | Fully autonomous setup with auto-provision |
+| [Agent Skills Integration](docs/agent-guides/agent-skills-integration.md) | Universal guide for 27+ AI agent platforms |
+| [Claude Code Integration](docs/agent-guides/claude-code-integration.md) | Skill files + MCP server setup for Claude Code |
+| [OpenClaw Integration](docs/agent-guides/openclaw-integration.md) | Quick setup for OpenClaw bot |
 | [Wallet SDK Integration](docs/wallet-sdk-integration.md) | Integration guide for wallet developers |
 | [Why WAIaaS?](docs/why-waiaas/) | Background on AI agent wallet security |
 | [Contributing](CONTRIBUTING.md) | Development setup, code style, testing, PR guidelines |

@@ -1,8 +1,8 @@
 ---
 name: "WAIaaS Wallet Management"
-description: "Wallet CRUD, asset queries, session management, token registry, MCP provisioning, owner management"
+description: "Wallet queries, asset balances, session info, token list"
 category: "api"
-tags: [wallet, blockchain, solana, ethereum, sessions, tokens, mcp, waiass]
+tags: [wallet, blockchain, solana, ethereum, sessions, tokens, waiass]
 version: "2.5.0-rc"
 dispatch:
   kind: "tool"
@@ -11,364 +11,28 @@ dispatch:
 
 # WAIaaS Wallet Management
 
-Complete reference for wallet CRUD operations, asset queries, session management, token registry, MCP provisioning, and owner management. All endpoints use base URL `http://localhost:3100`.
+Reference for wallet queries, asset balances, session renewal, and token list. All endpoints use base URL `http://localhost:3100`.
+
+> AI agents must NEVER request the master password. Use only your session token.
+
+> 관리자 설정(지갑 생성, 세션 생성, Owner 설정, 토큰 등록, MCP 프로비저닝)은 docs/admin-manual/ 을 참조하세요.
 
 ## Permissions
 
-### Agent (sessionAuth) — AI agents use these
+### Agent (sessionAuth) -- AI agents use these
 - Query wallet balance, assets, address, nonce, and info
 - Send transactions via transaction endpoints (see transactions.skill.md)
 - Get registered tokens via `GET /v1/tokens`
 - Get applied policies via `GET /v1/policies`
 - Query NFT holdings via `GET /v1/wallet/nfts` (see nft.skill.md)
-
-### Operator only (masterAuth) — NOT for AI agents
-- Create/list/update/delete wallets
-- Create/list/delete sessions, manage session-wallet links
-- Create/delete MCP tokens
-- Register/remove custom tokens
-- Set owner addresses, manage networks
-- WalletConnect pairing management
-- Query any wallet's NFTs via `GET /v1/wallets/{id}/nfts`
-
-> AI agents must NEVER request the master password. Use only your session token.
+- Renew session tokens via `PUT /v1/sessions/{id}/renew`
+- WalletConnect pairing and status via session-scoped endpoints
 
 ## Amount Units
 
 For `amount` and `humanAmount` usage in transactions, see **transactions.skill.md** section "Amount Units". Use `humanAmount` for human-readable values (e.g., `"1.5"` for 1.5 ETH); use `amount` for smallest-unit values (e.g., `"1500000000000000000"` wei). These are mutually exclusive (XOR).
 
-## 1. Wallet CRUD
-
-All wallet CRUD endpoints require **masterAuth** (`X-Master-Password` header), except `PUT /v1/wallets/{id}` and `DELETE /v1/wallets/{id}` which require **sessionAuth** (`Authorization: Bearer <token>`).
-
-### POST /v1/wallets -- Create Wallet (masterAuth)
-
-Create a new wallet with an auto-generated key pair. Each wallet belongs to an **environment** (testnet or mainnet) which determines the available networks.
-
-```bash
-curl -s -X POST http://localhost:3100/v1/wallets \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: your-master-password' \
-  -d '{"name": "trading-bot", "chain": "solana", "environment": "mainnet"}'
-```
-
-Parameters:
-- `name` (required): string, 1-100 characters
-- `chain` (optional): `"solana"` (default) or `"ethereum"`
-- `environment` (optional): `"mainnet"` (default) or `"testnet"` -- determines available networks
-- `accountType` (optional): `"eoa"` (default) or `"smart"` -- ERC-4337 Smart Account (EVM chains only)
-- `createSession` (optional): boolean, default `true` -- auto-creates a session token in the response
-
-Note: `accountType: "smart"` is only valid for EVM chains (ethereum). Attempting to create a smart account on Solana returns an error. Smart account support is enabled by default (`smart_account.enabled=true` in Admin Settings). After creating a smart wallet, configure a provider via `PUT /v1/wallets/:id/provider`.
-
-Response (201):
-```json
-{
-  "id": "01958f3a-1234-7000-8000-abcdef123456",
-  "name": "trading-bot",
-  "chain": "solana",
-  "network": "solana-mainnet",
-  "environment": "mainnet",
-  "publicKey": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
-  "status": "ACTIVE",
-  "createdAt": 1707000000,
-  "session": {
-    "id": "01958f3a-5678-7000-8000-abcdef789012",
-    "token": "wai_sess_eyJhbGciOiJIUzI1NiJ9...",
-    "expiresAt": 1709592000
-  }
-}
-```
-
-The `network` field shows the wallet's primary network (chain-dependent: Solana has a single auto-resolved network; EVM requires explicit network specification). The `session` field is included when `createSession` is `true` (default); set to `false` to create the wallet without a session.
-
-### Smart Account Modes
-
-Smart Account wallets operate in two modes:
-
-- **Lite mode**: Created without an AA provider (`aaProvider` omitted). Only `userop/build` + `userop/sign` API available. The platform handles gas sponsorship and bundler submission externally.
-- **Full mode**: Created with an AA provider (pimlico/alchemy/custom). Full AA functionality including `POST /v1/transactions/send` for automatic bundler submission.
-
-Switch from Lite to Full: `PUT /v1/wallets/{id}/provider` with provider config.
-
-### Create Smart Account Wallet (EVM, ERC-4337)
-
-Create an ERC-4337 smart account wallet. Without `aaProvider`, the wallet is in **Lite mode** (UserOp API only). Add a provider for **Full mode** (automatic bundler submission). Smart account support is enabled by default.
-
-```bash
-curl -s -X POST http://localhost:3100/v1/wallets \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: your-master-password' \
-  -d '{"name": "smart-agent", "chain": "ethereum", "environment": "testnet", "accountType": "smart"}'
-```
-
-Response (201):
-```json
-{
-  "id": "01958f3a-1234-7000-8000-abcdef123456",
-  "name": "smart-agent",
-  "chain": "ethereum",
-  "network": "ethereum-sepolia",
-  "environment": "testnet",
-  "publicKey": "0x1234567890abcdef1234567890abcdef12345678",
-  "status": "ACTIVE",
-  "accountType": "smart",
-  "signerKey": "0xabcdef1234567890abcdef1234567890abcdef12",
-  "deployed": false,
-  "createdAt": 1707000000,
-  "session": {
-    "id": "01958f3b-5678-7000-8000-abcdef654321",
-    "token": "wai_sess_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "expiresAt": 1709592000
-  }
-}
-```
-
-**Smart Account fields:**
-- `accountType`: `"smart"` -- ERC-4337 smart account
-- `signerKey`: EOA signer (owner) address that controls the smart account
-- `deployed`: `false` until the first transaction (lazy deployment via CREATE2)
-- `factoryAddress`: The factory contract address used to create this smart account
-- `factorySupportedNetworks`: Array of network IDs where the factory contract is deployed (e.g., `["ethereum-mainnet", "base-mainnet", ...]`). `null` for EOA wallets.
-- `factoryVerifiedOnNetwork`: `true` if the factory was verified via `eth_getCode` on the current network, `false` if not found, `null` if verification was skipped or failed
-
-**Key differences from EOA:**
-- Gas can be sponsored by a Paymaster (agent needs no ETH for gas)
-- BATCH transactions execute atomically as a single UserOperation (all-or-nothing)
-- Address is predicted via CREATE2 before on-chain deployment
-- First transaction automatically deploys the smart account contract
-
-**Requirements:**
-- EVM chains only (ethereum). Solana does not support ERC-4337.
-- `smart_account.enabled` must be `true` in Admin Settings (default: `true`)
-- A provider must be configured for the wallet via `PUT /v1/wallets/:id/provider`
-
-**Provider Setup (after wallet creation):**
-
-```bash
-# Option 1: Managed provider (pimlico or alchemy) -- auto-resolves bundler/paymaster URLs
-curl -s -X PUT http://localhost:3100/v1/wallets/WALLET_ID/provider \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: your-master-password' \
-  -d '{"provider": "pimlico", "apiKey": "YOUR_PIMLICO_API_KEY"}'
-
-# Option 2: Custom provider -- explicit bundler/paymaster URLs
-curl -s -X PUT http://localhost:3100/v1/wallets/WALLET_ID/provider \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: your-master-password' \
-  -d '{"provider": "custom", "bundlerUrl": "https://bundler.example.com", "paymasterUrl": "https://paymaster.example.com"}'
-```
-
-Both **masterAuth** and **sessionAuth** are supported for provider configuration. The provider status is included in `GET /v1/wallets/:id` responses.
-
-### GET /v1/wallets -- List Wallets (masterAuth)
-
-```bash
-curl -s http://localhost:3100/v1/wallets \
-  -H 'X-Master-Password: your-master-password'
-```
-
-Response (200):
-```json
-{
-  "items": [
-    {
-      "id": "01958f3a-1234-7000-8000-abcdef123456",
-      "name": "trading-bot",
-      "chain": "solana",
-      "network": "solana-mainnet",
-      "environment": "mainnet",
-      "publicKey": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
-      "status": "ACTIVE",
-      "createdAt": 1707000000
-    }
-  ]
-}
-```
-
-### GET /v1/wallets/{id} -- Wallet Detail (masterAuth)
-
-Returns full wallet info including owner state and available networks.
-
-```bash
-curl -s http://localhost:3100/v1/wallets/01958f3a-1234-7000-8000-abcdef123456 \
-  -H 'X-Master-Password: your-master-password'
-```
-
-Response (200):
-```json
-{
-  "id": "01958f3a-1234-7000-8000-abcdef123456",
-  "name": "trading-bot",
-  "chain": "solana",
-  "network": "solana-mainnet",
-  "environment": "mainnet",
-  "publicKey": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
-  "status": "ACTIVE",
-  "ownerAddress": null,
-  "ownerVerified": null,
-  "ownerState": "NONE",
-  "approvalMethod": null,
-  "createdAt": 1707000000,
-  "updatedAt": null
-}
-```
-
-Owner states: `NONE` (no owner set), `GRACE` (owner set, not verified), `LOCKED` (owner verified via SIWS/SIWE signature).
-
-Approval methods: `sdk_ntfy` (Human Wallet App via ntfy push notifications), `sdk_telegram` (Wallet SDK via Telegram), `walletconnect` (WalletConnect), `telegram_bot` (Telegram Bot), `rest` (REST API polling), or `null` (auto-detect based on infrastructure).
-
-### PUT /v1/wallets/{id} -- Update Wallet Name (sessionAuth)
-
-```bash
-curl -s -X PUT http://localhost:3100/v1/wallets/01958f3a-1234-7000-8000-abcdef123456 \
-  -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer wai_sess_eyJ...' \
-  -d '{"name": "renamed-bot"}'
-```
-
-Parameters:
-- `name` (required): string, 1-100 characters
-
-Response (200): same schema as create wallet response.
-
-### DELETE /v1/wallets/{id} -- Terminate Wallet (sessionAuth)
-
-Terminates a wallet permanently. Cannot be undone.
-
-```bash
-curl -s -X DELETE http://localhost:3100/v1/wallets/01958f3a-1234-7000-8000-abcdef123456 \
-  -H 'Authorization: Bearer wai_sess_eyJ...'
-```
-
-Response (200):
-```json
-{
-  "id": "01958f3a-1234-7000-8000-abcdef123456",
-  "status": "TERMINATED"
-}
-```
-
-### DELETE /v1/wallets/{id}/purge -- Permanently Delete Wallet (masterAuth)
-
-Permanently removes a terminated wallet and all associated data (transactions, sessions, policies, keys). Only works on wallets in TERMINATED status.
-
-```bash
-curl -s -X DELETE http://localhost:3100/v1/wallets/01958f3a-1234-7000-8000-abcdef123456/purge \
-  -H 'X-Master-Password: your-master-password'
-```
-
-Response (200):
-```json
-{
-  "id": "01958f3a-1234-7000-8000-abcdef123456",
-  "status": "PURGED"
-}
-```
-
-### PUT /v1/wallets/{id}/owner -- Set Owner Address (masterAuth)
-
-Register a human owner address for this wallet. Enables owner-based approval workflows.
-
-```bash
-curl -s -X PUT http://localhost:3100/v1/wallets/01958f3a-1234-7000-8000-abcdef123456/owner \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: your-master-password' \
-  -d '{"owner_address": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"}'
-```
-
-Parameters:
-- `owner_address` (required): blockchain address (Solana base58 or Ethereum 0x-prefixed, EIP-55 normalized)
-- `approval_method` (optional): Owner approval method override for this wallet. Valid values: `"sdk_ntfy"`, `"sdk_telegram"`, `"walletconnect"`, `"telegram_bot"`, `"rest"`, or `null` (auto-detect). Set to `null` to clear and use automatic channel detection.
-- `wallet_type` (optional): Built-in wallet preset type. Valid values: `"dcent"`. When specified, the preset's approval_method and preferred_wallet override manual settings.
-
-```bash
-# With wallet preset:
-curl -s -X PUT http://localhost:3100/v1/wallets/01958f3a-1234-7000-8000-abcdef123456/owner \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: your-master-password' \
-  -d '{"owner_address": "0x1234...abcd", "wallet_type": "dcent"}'
-```
-
-When `wallet_type: "dcent"` is specified:
-- `approval_method` is automatically set to `sdk_ntfy` (push notification signing via ntfy)
-- The D'CENT app is auto-registered in the Human Wallet Apps registry (`wallet_apps` table)
-- Signing requests are routed to the `waiaas-sign-dcent` ntfy topic
-- Activity alerts are sent to the `waiaas-notify-dcent` ntfy topic (if Alerts toggle is enabled)
-- WalletConnect is NOT required -- D'CENT uses direct push notification signing
-
-Response (200):
-```json
-{
-  "id": "01958f3a-1234-7000-8000-abcdef123456",
-  "name": "trading-bot",
-  "chain": "solana",
-  "network": "solana-mainnet",
-  "environment": "mainnet",
-  "publicKey": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
-  "status": "ACTIVE",
-  "ownerAddress": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
-  "ownerVerified": false,
-  "approvalMethod": null,
-  "walletType": null,
-  "warning": null,
-  "updatedAt": 1707000100
-}
-```
-
-When both `wallet_type` and `approval_method` are provided, the preset's approval_method takes precedence and a `warning` field is included in the response.
-
-Error: `OWNER_ALREADY_CONNECTED` (409) if wallet is in LOCKED state -- use ownerAuth to change owner.
-
-### POST /v1/wallets/{id}/owner/verify -- Verify Owner Signature (masterAuth + ownerAuth)
-
-Verify the owner wallet by providing a cryptographic signature. Transitions owner state from GRACE to LOCKED.
-Requires both masterAuth (X-Master-Password) and ownerAuth (X-Owner-Signature, X-Owner-Message, X-Owner-Address) headers.
-
-```bash
-curl -s -X POST http://localhost:3100/v1/wallets/01958f3a-1234-7000-8000-abcdef123456/owner/verify \
-  -H 'X-Master-Password: your-master-password' \
-  -H 'X-Owner-Signature: <base64-ed25519-or-0x-hex>' \
-  -H 'X-Owner-Message: <signed-message>' \
-  -H 'X-Owner-Address: 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU'
-```
-
-Response (200):
-```json
-{
-  "ownerState": "LOCKED",
-  "ownerAddress": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
-  "ownerVerified": true
-}
-```
-
-Errors:
-- `OWNER_NOT_CONNECTED` (404): No owner address registered
-- `INVALID_SIGNATURE` (401): Signature verification failed
-- LOCKED state returns 200 (no-op, already verified)
-
-### GET /v1/wallets/{id}/networks -- List Available Networks (masterAuth)
-
-Get all networks available for a wallet based on its chain and environment.
-
-```bash
-curl -s http://localhost:3100/v1/wallets/01958f3a-1234-7000-8000-abcdef123456/networks \
-  -H 'X-Master-Password: your-master-password'
-```
-
-Response (200):
-```json
-{
-  "id": "01958f3a-1234-7000-8000-abcdef123456",
-  "chain": "solana",
-  "environment": "mainnet",
-  "availableNetworks": [
-    {"network": "solana-mainnet"}
-  ]
-}
-```
-
-## 2. Multi-Wallet Operations
+## 1. Multi-Wallet Operations
 
 When your session has multiple wallets, you can target a specific wallet:
 - GET requests: add `?walletId=<id>` query parameter
@@ -392,7 +56,7 @@ curl -s http://localhost:3100/v1/connect-info \
 
 Returns wallets with their addresses and chains, applicable policies per wallet, available capabilities (transfer, token_transfer, balance, assets, sign, actions, x402, erc8004, erc8128, smart_account), and an AI-ready prompt.
 
-## 3. Wallet Query (Session-Scoped)
+## 2. Wallet Query (Session-Scoped)
 
 These endpoints operate on the wallet bound to the session token (or the specified walletId). Require **sessionAuth**.
 
@@ -444,7 +108,7 @@ Note: `balance` is in the smallest unit. Divide by `10^decimals` for human-reada
 
 ### GET /v1/wallet/balance?network=all -- Get All Network Balances
 
-Returns native balances for all networks in the wallet's environment. Useful for getting a complete picture across all chains in one call. Uses `Promise.allSettled` so partial RPC failures return error entries for failed networks while successful networks still return data.
+Returns native balances for all networks in the wallet's environment. Uses `Promise.allSettled` so partial RPC failures return error entries for failed networks.
 
 ```bash
 curl -s 'http://localhost:3100/v1/wallet/balance?network=all' \
@@ -465,8 +129,6 @@ Response (200):
 }
 ```
 
-Each entry either has `balance`/`decimals`/`symbol` (success) or `error` (failure).
-
 ### GET /v1/wallet/assets -- Get All Assets
 
 Returns all assets: native token + SPL tokens (Solana) or ERC-20 tokens (Ethereum).
@@ -476,7 +138,7 @@ curl -s http://localhost:3100/v1/wallet/assets \
   -H 'Authorization: Bearer wai_sess_eyJ...'
 ```
 
-Query a specific network by appending `?network=devnet`. Accepts plain string (e.g., `"ethereum-mainnet"`) or CAIP-2 (e.g., `"eip155:1"`). Required for EVM wallets; auto-resolved for Solana.
+Query a specific network by appending `?network=devnet`. Required for EVM wallets; auto-resolved for Solana.
 
 Response (200):
 ```json
@@ -509,33 +171,13 @@ Response (200):
 }
 ```
 
-For EVM wallets, assets include ERC-20 tokens from the token registry and ALLOWED_TOKENS policy.
-
 ### GET /v1/wallet/assets?network=all -- Get All Network Assets
 
-Returns token assets for all networks in the wallet's environment. Same partial failure handling as balance.
+Returns token assets for all networks in the wallet's environment.
 
 ```bash
 curl -s 'http://localhost:3100/v1/wallet/assets?network=all' \
   -H 'Authorization: Bearer wai_sess_eyJ...'
-```
-
-Response (200):
-```json
-{
-  "walletId": "01958f3a-1234-7000-8000-abcdef123456",
-  "chain": "ethereum",
-  "environment": "testnet",
-  "networkAssets": [
-    {
-      "network": "ethereum-sepolia",
-      "assets": [
-        { "mint": "0x0", "symbol": "ETH", "name": "Ether", "balance": "500000000000000000", "decimals": 18, "isNative": true }
-      ]
-    },
-    { "network": "polygon-amoy", "error": "RPC timeout" }
-  ]
-}
 ```
 
 ### Display Currency Support
@@ -547,118 +189,16 @@ Balance and assets endpoints accept an optional `?display_currency=KRW` query pa
 | `GET /v1/wallet/balance` | `displayBalance`, `displayCurrency` |
 | `GET /v1/wallet/assets` | `assets[].displayValue`, `displayCurrency` |
 
-If `display_currency` is omitted, the server's configured display currency (Admin Settings > Display Currency) is used.
+### GET /v1/tokens -- List Registered Tokens (sessionAuth)
 
-Example:
 ```bash
-curl -s 'http://localhost:3100/v1/wallet/balance?display_currency=JPY' \
+curl -s 'http://localhost:3100/v1/tokens?network=ethereum-mainnet' \
   -H 'Authorization: Bearer wai_sess_eyJ...'
 ```
 
-Response:
-```json
-{
-  "walletId": "01958f3a-1234-7000-8000-abcdef123456",
-  "chain": "solana",
-  "network": "solana-devnet",
-  "address": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
-  "balance": "2500000000",
-  "decimals": 9,
-  "symbol": "SOL",
-  "displayBalance": null,
-  "displayCurrency": "JPY"
-}
-```
+Returns the token registry for the specified network. Token sources: `builtin` (pre-configured) or `custom` (admin-added).
 
-Note: `displayBalance` requires price oracle data and may be `null` when unavailable. For assets, `displayValue` converts the `usdValue` field when available.
-
-#### MCP Tools
-
-The following MCP tools support an optional `display_currency` parameter:
-- `get_balance` -- includes `displayBalance`/`displayCurrency` in response
-- `get_assets` -- includes `assets[].displayValue`/`displayCurrency` in response
-
-## 4. Session Management
-
-Session creation and listing require **masterAuth**. Revocation requires **masterAuth**. Renewal requires **sessionAuth** (the session's own token).
-
-### POST /v1/sessions -- Create Session (masterAuth)
-
-**Single wallet:**
-```bash
-curl -s -X POST http://localhost:3100/v1/sessions \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: your-master-password' \
-  -d '{"walletId": "01958f3a-1234-7000-8000-abcdef123456", "ttl": 86400}'
-```
-
-**Multi-wallet:**
-```bash
-curl -s -X POST http://localhost:3100/v1/sessions \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: your-master-password' \
-  -d '{"walletIds": ["wallet-1-uuid", "wallet-2-uuid"]}'
-```
-
-Parameters:
-- `walletId` (string): UUID of a single wallet (backward compatible)
-- `walletIds` (string[]): UUIDs of multiple wallets (mutually exclusive with walletId)
-- `ttl` (optional): session lifetime in seconds, 300-604800 (default: 86400 = 24 hours)
-- `constraints` (optional): custom constraints object
-
-Response (201):
-```json
-{
-  "id": "01958f3b-5678-7000-8000-abcdef654321",
-  "token": "wai_sess_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "expiresAt": 1707086400,
-  "walletId": "01958f3a-1234-7000-8000-abcdef123456"
-}
-```
-
-Error: `SESSION_LIMIT_EXCEEDED` (403) if wallet has too many active sessions.
-
-### GET /v1/sessions -- List Active Sessions (masterAuth)
-
-```bash
-curl -s 'http://localhost:3100/v1/sessions?walletId=01958f3a-1234-7000-8000-abcdef123456' \
-  -H 'X-Master-Password: your-master-password'
-```
-
-Query parameters:
-- `walletId` (required): UUID to filter sessions by wallet
-
-Response (200):
-```json
-[
-  {
-    "id": "01958f3b-5678-7000-8000-abcdef654321",
-    "walletId": "01958f3a-1234-7000-8000-abcdef123456",
-    "status": "ACTIVE",
-    "renewalCount": 0,
-    "maxRenewals": 30,
-    "expiresAt": 1707086400,
-    "absoluteExpiresAt": 1709592000,
-    "createdAt": 1707000000,
-    "lastRenewedAt": null
-  }
-]
-```
-
-### DELETE /v1/sessions/{id} -- Revoke Session (masterAuth)
-
-```bash
-curl -s -X DELETE http://localhost:3100/v1/sessions/01958f3b-5678-7000-8000-abcdef654321 \
-  -H 'X-Master-Password: your-master-password'
-```
-
-Response (200):
-```json
-{
-  "id": "01958f3b-5678-7000-8000-abcdef654321",
-  "status": "REVOKED"
-}
-```
+## 3. Session Renewal
 
 ### PUT /v1/sessions/{id}/renew -- Renew Session (sessionAuth)
 
@@ -681,135 +221,7 @@ Response (200):
 
 Safety checks: 50% TTL must have elapsed, max 30 renewals, 30-day absolute lifetime, token hash CAS to prevent replay.
 
-Errors: `RENEWAL_TOO_EARLY` (403), `RENEWAL_LIMIT_REACHED` (403), `SESSION_REVOKED` (401), `SESSION_ABSOLUTE_LIFETIME_EXCEEDED` (403), `SESSION_RENEWAL_MISMATCH` (401).
-
-## 5. Token Registry (EVM Only)
-
-Manage the known token list for EVM networks. Token registry is UX-only -- adding/removing tokens here does NOT affect ALLOWED_TOKENS policy. Requires **masterAuth**.
-
-### GET /v1/tokens?network={network} -- List Tokens
-
-```bash
-curl -s 'http://localhost:3100/v1/tokens?network=ethereum-mainnet' \
-  -H 'X-Master-Password: your-master-password'
-```
-
-Response (200):
-```json
-{
-  "network": "ethereum-mainnet",
-  "tokens": [
-    {
-      "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-      "symbol": "USDC",
-      "name": "USD Coin",
-      "decimals": 6,
-      "source": "builtin"
-    },
-    {
-      "address": "0xCustomTokenAddress",
-      "symbol": "MYT",
-      "name": "My Token",
-      "decimals": 18,
-      "source": "custom"
-    }
-  ]
-}
-```
-
-Token sources: `builtin` (pre-configured, 24 tokens across 5 EVM mainnets) or `custom` (user-added). Each token response also includes an auto-generated `assetId` (CAIP-19 identifier).
-
-### POST /v1/tokens -- Add Custom Token (masterAuth)
-
-```bash
-curl -s -X POST http://localhost:3100/v1/tokens \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: your-master-password' \
-  -d '{
-    "network": "ethereum-mainnet",
-    "address": "0x514910771AF9Ca656af840dff83E8264EcF986CA",
-    "symbol": "LINK",
-    "name": "Chainlink Token",
-    "decimals": 18
-  }'
-```
-
-Response (201):
-```json
-{
-  "id": "custom-token-id",
-  "network": "ethereum-mainnet",
-  "address": "0x514910771AF9Ca656af840dff83E8264EcF986CA",
-  "symbol": "LINK"
-}
-```
-
-Error: `ACTION_VALIDATION_FAILED` (400) if token already exists (duplicate address + network).
-
-### DELETE /v1/tokens -- Remove Custom Token (masterAuth)
-
-Only custom tokens can be removed. Builtin tokens cannot be deleted.
-
-```bash
-curl -s -X DELETE http://localhost:3100/v1/tokens \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: your-master-password' \
-  -d '{"network": "ethereum-mainnet", "address": "0x514910771AF9Ca656af840dff83E8264EcF986CA"}'
-```
-
-Response (200):
-```json
-{
-  "removed": true,
-  "network": "ethereum-mainnet",
-  "address": "0x514910771AF9Ca656af840dff83E8264EcF986CA"
-}
-```
-
-## 6. MCP Token Provisioning (masterAuth)
-
-One-stop provisioning for Claude Desktop MCP integration: creates a session, writes the JWT to a token file, and returns the Claude Desktop config snippet.
-
-### POST /v1/mcp/tokens -- Create MCP Token
-
-```bash
-curl -s -X POST http://localhost:3100/v1/mcp/tokens \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: your-master-password' \
-  -d '{"walletId": "01958f3a-1234-7000-8000-abcdef123456"}'
-```
-
-Parameters:
-- `walletId` (required): UUID of the wallet
-- `ttl` (optional): session lifetime in seconds (omit for unlimited session)
-- `maxRenewals` (optional): max renewal count, 0 = unlimited (default: 0)
-- `absoluteLifetime` (optional): absolute session lifetime in seconds, 0 = unlimited (default: 0)
-
-Response (201):
-```json
-{
-  "walletId": "01958f3a-1234-7000-8000-abcdef123456",
-  "walletName": "trading-bot",
-  "tokenPath": "/home/user/.waiaas/mcp-tokens/01958f3a-1234-7000-8000-abcdef123456",
-  "expiresAt": 1707604800,
-  "claudeDesktopConfig": {
-    "waiaas-trading-bot": {
-      "command": "npx",
-      "args": ["@waiaas/mcp"],
-      "env": {
-        "WAIAAS_DATA_DIR": "/home/user/.waiaas",
-        "WAIAAS_BASE_URL": "http://127.0.0.1:3100",
-        "WAIAAS_WALLET_ID": "01958f3a-1234-7000-8000-abcdef123456",
-        "WAIAAS_WALLET_NAME": "trading-bot"
-      }
-    }
-  }
-}
-```
-
-Copy the `claudeDesktopConfig` object into your Claude Desktop `claude_desktop_config.json` under `mcpServers`.
-
-## 7. Auth Nonce
+## 4. Auth Nonce
 
 Public endpoint (no auth required). Returns a nonce for owner signature verification (SIWS for Solana, SIWE for Ethereum).
 
@@ -827,9 +239,7 @@ Response (200):
 }
 ```
 
-The nonce is a random 32-byte hex string valid for 5 minutes. Used by owner wallets to construct SIWS/SIWE authentication signatures.
-
-## 8. Multi-Chain Notes
+## 5. Multi-Chain Notes
 
 ### Environment-Network Reference
 
@@ -852,41 +262,26 @@ The nonce is a random 32-byte hex string valid for 5 minutes. Used by owner wall
 | Batch transactions | Supported | Not supported (BATCH_NOT_SUPPORTED) |
 | Owner signature | SIWS (Sign-In With Solana) | SIWE (Sign-In With Ethereum) |
 
-## 9. MCP Tools Reference
+## 6. MCP Tools Reference
 
-The MCP server exposes 24 tools for AI agents. Key wallet management tools:
+The MCP server exposes tools for AI agents. Key wallet management tools:
 
 ### get_balance
 
 Get native token balance. Supports `network` parameter:
 - Required for EVM wallets; auto-resolved for Solana
 - Accepts plain string (e.g., `"ethereum-mainnet"`) or CAIP-2 (e.g., `"eip155:1"`)
-- Specific network name: queries that network
 - `"all"`: returns balances for all networks in the wallet's environment
 
 ### get_assets
 
-Get all assets (native + tokens). Same `network` parameter support as `get_balance`:
-- Required for EVM wallets; auto-resolved for Solana
-- Accepts plain string (e.g., `"ethereum-mainnet"`) or CAIP-2 (e.g., `"eip155:1"`)
-- Specific network name: queries that network
-- `"all"`: returns assets for all networks in the wallet's environment
+Get all assets (native + tokens). Same `network` parameter support as `get_balance`.
 
 ### get_wallet_info
 
 Combined wallet information including address, chain, environment, and all available networks.
 
-## 10. CLI Commands
-
-### waiaas wallet info
-
-Displays wallet information including chain, environment, address, and all available networks.
-
-```bash
-waiaas wallet info
-```
-
-## 11. SDK Methods
+## 7. SDK Methods
 
 ### TypeScript SDK
 
@@ -900,11 +295,9 @@ const info = await client.getWalletInfo();
 
 // Get all balances across networks
 const allBalances = await client.getAllBalances();
-// Returns: { walletId, chain, environment, balances: [{ network, balance, decimals, symbol } | { network, error }] }
 
 // Get all assets across networks
 const allAssets = await client.getAllAssets();
-// Returns: { walletId, chain, environment, networkAssets: [{ network, assets } | { network, error }] }
 ```
 
 ### Python SDK
@@ -923,36 +316,28 @@ async with WAIaaSClient("http://localhost:3100", "wai_sess_...") as client:
     all_assets = await client.get_all_assets()
 ```
 
-## 12. Error Reference
+## 8. Error Reference
 
 | Code | HTTP | Description |
 |------|------|-------------|
 | `WALLET_NOT_FOUND` | 404 | Wallet ID does not exist |
 | `WALLET_TERMINATED` | 410 | Wallet has been terminated |
-| `WALLET_NOT_TERMINATED` | 409 | Wallet must be terminated before purging |
 | `SESSION_NOT_FOUND` | 404 | Session ID does not exist |
 | `SESSION_EXPIRED` | 401 | Session JWT has expired |
 | `SESSION_REVOKED` | 401 | Session has been revoked |
-| `SESSION_LIMIT_EXCEEDED` | 403 | Too many active sessions for this wallet |
 | `RENEWAL_TOO_EARLY` | 403 | Less than 50% of TTL has elapsed |
 | `RENEWAL_LIMIT_REACHED` | 403 | Max 30 renewals exceeded |
 | `SESSION_ABSOLUTE_LIFETIME_EXCEEDED` | 403 | 30-day absolute lifetime exceeded |
 | `SESSION_RENEWAL_MISMATCH` | 401 | Token hash mismatch (stale token) |
-| `OWNER_ALREADY_CONNECTED` | 409 | Owner is LOCKED, use ownerAuth |
 | `ENVIRONMENT_NETWORK_MISMATCH` | 400 | Network not valid for wallet's environment |
-| `ACTION_VALIDATION_FAILED` | 400 | Request validation failed |
 | `CHAIN_ERROR` | 502 | Blockchain RPC error |
 | `UNAUTHORIZED` | 401 | Missing or invalid auth header |
 
-## 13. WalletConnect Session Management
+## 9. WalletConnect Session Management
 
-> **Note:** Wallets using `sdk_ntfy` approval method (e.g., D'CENT preset) do not require WalletConnect. WalletConnect is only needed when `approval_method` is set to `walletconnect`. In Admin UI, the WalletConnect section is hidden when `sdk_ntfy` is active.
-
-WalletConnect allows the wallet owner to connect an external wallet (D'CENT, MetaMask, Phantom, etc.) to approve high-tier transactions. The daemon manages WC pairing, sessions, and signing bridges.
+> **Note:** Wallets using `sdk_ntfy` approval method (e.g., D'CENT preset) do not require WalletConnect.
 
 ### REST API Endpoints (sessionAuth)
-
-Session-scoped endpoints operate on the wallet bound to the session token.
 
 #### POST /v1/wallet/wc/pair -- Start WC Pairing
 
@@ -970,8 +355,6 @@ Response (200):
 }
 ```
 
-Share the `uri` with the wallet owner -- they paste it into their wallet app. The `qrCode` is a base64-encoded PNG for HTML rendering contexts.
-
 #### GET /v1/wallet/wc/session -- Get WC Session Info
 
 ```bash
@@ -979,34 +362,11 @@ curl -s http://localhost:3100/v1/wallet/wc/session \
   -H 'Authorization: Bearer wai_sess_eyJ...'
 ```
 
-Response (200):
-```json
-{
-  "walletId": "01958f3a-1234-7000-8000-abcdef123456",
-  "topic": "abc123...",
-  "peerName": "MetaMask",
-  "peerUrl": "https://metamask.io",
-  "chainId": "eip155:1",
-  "ownerAddress": "0x1234...abcd",
-  "expiry": 1707086400,
-  "createdAt": 1707000000
-}
-```
-
-Error: `WC_NO_SESSION` (404) if no active WalletConnect session.
-
 #### DELETE /v1/wallet/wc/session -- Disconnect WC Session
 
 ```bash
 curl -s -X DELETE http://localhost:3100/v1/wallet/wc/session \
   -H 'Authorization: Bearer wai_sess_eyJ...'
-```
-
-Response (200):
-```json
-{
-  "disconnected": true
-}
 ```
 
 #### GET /v1/wallet/wc/pair/status -- Poll Pairing Status
@@ -1016,457 +376,113 @@ curl -s http://localhost:3100/v1/wallet/wc/pair/status \
   -H 'Authorization: Bearer wai_sess_eyJ...'
 ```
 
-Response (200):
-```json
-{
-  "status": "paired",
-  "peerName": "MetaMask"
-}
-```
-
-Status values: `pending` (waiting for owner to scan), `paired` (connected), `expired` (URI expired).
-
-### Admin REST API Endpoints (masterAuth)
-
-Admin endpoints operate on any wallet by ID.
-
-- `POST /v1/wallets/{id}/wc/pair` -- Start WC pairing for a specific wallet
-- `GET /v1/wallets/{id}/wc/session` -- Get WC session info for a specific wallet
-- `DELETE /v1/wallets/{id}/wc/session` -- Disconnect WC session for a specific wallet
-- `GET /v1/wallets/{id}/wc/pair/status` -- Poll pairing status for a specific wallet
-
-All admin WC endpoints use the same request/response schemas as the session-scoped versions.
-
 ### MCP Tools
 
 | Tool | Description |
 |------|-------------|
-| `wc_connect` | Start WalletConnect pairing. Returns URI + QR code for the owner to connect. |
-| `wc_status` | Get WalletConnect session status (peer wallet, chain, expiry). |
+| `wc_connect` | Start WalletConnect pairing. Returns URI + QR code. |
+| `wc_status` | Get WalletConnect session status. |
 | `wc_disconnect` | Disconnect the active WalletConnect session. |
 
 ### SDK Methods
 
-#### TypeScript SDK
-
 ```typescript
-import { WAIaaSClient } from '@waiaas/sdk';
-
-const client = new WAIaaSClient({ baseUrl: 'http://localhost:3100', sessionToken: 'wai_sess_...' });
-
-// Start WC pairing
 const pairing = await client.wcConnect();
-console.log(pairing.uri);      // Share with wallet owner
-console.log(pairing.qrCode);   // Base64 PNG for display
-console.log(pairing.expiresAt); // Expiry timestamp
-
-// Check session status
 const session = await client.wcStatus();
-console.log(session.peerName, session.chainId, session.ownerAddress);
-
-// Disconnect
 const result = await client.wcDisconnect();
-console.log(result.disconnected); // true
 ```
 
-#### Python SDK
+## 10. Wallet SDK: Notification Functions
 
-```python
-from waiaas import WAIaaSClient
-
-async with WAIaaSClient("http://localhost:3100", "wai_sess_...") as client:
-    # Start WC pairing
-    pairing = await client.wc_connect()
-    print(pairing.uri)         # Share with wallet owner
-    print(pairing.qr_code)     # Base64 PNG for display
-    print(pairing.expires_at)  # Expiry timestamp
-
-    # Check session status
-    session = await client.wc_status()
-    print(session.peer_name, session.chain_id, session.owner_address)
-
-    # Disconnect
-    result = await client.wc_disconnect()
-    print(result.disconnected)  # True
-```
-
-## 14. Wallet SDK: Notification Functions
-
-The `@waiaas/wallet-sdk` package provides functions for wallet apps to receive real-time notification events from the WAIaaS daemon.
+The `@waiaas/wallet-sdk` package provides functions for wallet apps to receive real-time notification events.
 
 ### subscribeToNotifications(topic, callback, serverUrl?)
-
-Subscribe to notification events via ntfy SSE stream. The daemon pushes notification events (transaction confirmations, policy violations, security alerts, etc.) to `waiaas-notify-{walletName}` ntfy topics.
 
 ```typescript
 import { subscribeToNotifications } from '@waiaas/wallet-sdk';
 
 const subscription = subscribeToNotifications(
-  'waiaas-notify-trading-bot',   // ntfy topic
+  'waiaas-notify-trading-bot',
   (notification) => {
-    console.log(notification.eventType);  // e.g. 'TX_CONFIRMED'
-    console.log(notification.category);   // e.g. 'transaction'
-    console.log(notification.title);      // Human-readable title
-    console.log(notification.body);       // Human-readable body
+    console.log(notification.eventType);
+    console.log(notification.category);
   },
-  'https://ntfy.sh',  // optional, defaults to https://ntfy.sh
 );
 
-// Later: unsubscribe
 subscription.unsubscribe();
-```
-
-### parseNotification(data)
-
-Decode and validate a base64url-encoded NotificationMessage. Used internally by `subscribeToNotifications`, but also available for manual parsing.
-
-```typescript
-import { parseNotification } from '@waiaas/wallet-sdk';
-
-const notification = parseNotification(base64urlEncodedString);
-// notification: { version, eventType, walletId, walletName, category, title, body, details?, timestamp }
-```
-
-## 14b. Wallet SDK: Push Relay Device Management
-
-The `@waiaas/wallet-sdk` package provides helper functions for registering and managing devices with the Push Relay server.
-
-### registerDevice(pushRelayUrl, apiKey, opts)
-
-Register a device for native push delivery via Push Relay.
-
-```typescript
-import { registerDevice } from '@waiaas/wallet-sdk';
-
-const { subscriptionToken } = await registerDevice(
-  'https://your-push-relay:3200',
-  'your-secret-api-key',
-  { walletName: 'my-wallet', pushToken: devicePushToken, platform: 'android' },
-);
-```
-
-### unregisterDevice(pushRelayUrl, apiKey, pushToken)
-
-Remove a device registration from Push Relay.
-
-```typescript
-import { unregisterDevice } from '@waiaas/wallet-sdk';
-
-await unregisterDevice('https://your-push-relay:3200', 'your-secret-api-key', devicePushToken);
-```
-
-### getSubscriptionToken(pushRelayUrl, apiKey, pushToken)
-
-Look up the subscription token for a registered device. Returns `null` if not found.
-
-```typescript
-import { getSubscriptionToken } from '@waiaas/wallet-sdk';
-
-const token = await getSubscriptionToken('https://your-push-relay:3200', 'your-secret-api-key', devicePushToken);
-```
-
-### NotificationMessage Type
-
-```typescript
-interface NotificationMessage {
-  version: '1';
-  eventType: string;        // One of 28 NotificationEventType values
-  walletId: string;         // UUID of the wallet
-  walletName: string;       // Human-readable wallet name
-  category: 'transaction' | 'policy' | 'security_alert' | 'session' | 'owner' | 'system';
-  title: string;            // Notification title
-  body: string;             // Notification body
-  details?: Record<string, unknown>;  // Optional event-specific details
-  timestamp: number;        // Unix epoch seconds
-}
 ```
 
 ### Notification Categories
 
-| Category | Events | ntfy Priority |
-|----------|--------|---------------|
-| transaction | TX_REQUESTED, TX_QUEUED, TX_SUBMITTED, TX_CONFIRMED, TX_FAILED, TX_CANCELLED, TX_DOWNGRADED_DELAY, TX_APPROVAL_REQUIRED, TX_APPROVAL_EXPIRED | 3 (default) |
+| Category | Events | Priority |
+|----------|--------|----------|
+| transaction | TX_REQUESTED, TX_CONFIRMED, TX_FAILED, TX_APPROVAL_REQUIRED, ... | 3 (default) |
 | policy | POLICY_VIOLATION, CUMULATIVE_LIMIT_WARNING | 3 (default) |
-| security_alert | WALLET_SUSPENDED, KILL_SWITCH_ACTIVATED, KILL_SWITCH_RECOVERED, KILL_SWITCH_ESCALATED, AUTO_STOP_TRIGGERED | **5 (urgent)** |
-| session | SESSION_EXPIRING_SOON, SESSION_EXPIRED, SESSION_CREATED, SESSION_WALLET_ADDED, SESSION_WALLET_REMOVED | 3 (default) |
+| security_alert | WALLET_SUSPENDED, KILL_SWITCH_ACTIVATED, ... | **5 (urgent)** |
+| session | SESSION_EXPIRING_SOON, SESSION_EXPIRED, SESSION_CREATED, ... | 3 (default) |
 | owner | OWNER_SET, OWNER_REMOVED, OWNER_VERIFIED | 3 (default) |
-| system | DAILY_SUMMARY, LOW_BALANCE, APPROVAL_CHANNEL_SWITCHED, UPDATE_AVAILABLE | 3 (default) |
+| system | DAILY_SUMMARY, LOW_BALANCE, UPDATE_AVAILABLE | 3 (default) |
 
-## 15. Incoming Transactions
+## 11. Incoming Transactions
 
-Monitor and query incoming (received) transactions to your wallet. Requires **sessionAuth**.
+Monitor and query incoming (received) transactions. Requires **sessionAuth**.
 
-### GET /v1/wallet/incoming -- List Incoming Transactions (sessionAuth)
-
-List incoming transactions with cursor-based pagination and filters. By default, only confirmed transactions are returned.
+### GET /v1/wallet/incoming -- List Incoming Transactions
 
 ```bash
 curl -s http://localhost:3100/v1/wallet/incoming \
   -H 'Authorization: Bearer wai_sess_xxx'
 ```
 
-Query Parameters:
-- `limit` (optional): Max results, 1-100 (default: 20)
-- `cursor` (optional): Pagination cursor from previous response
-- `chain` (optional): Filter by chain (`solana` or `ethereum`)
-- `network` (optional): Filter by network (e.g., `solana-devnet`, `ethereum-mainnet`)
-- `status` (optional): `DETECTED` or `CONFIRMED` (default: `CONFIRMED`)
-- `token` (optional): Filter by token address (omit for native transfers)
-- `from_address` (optional): Filter by sender address
-- `since` (optional): Only transactions detected after this epoch (seconds)
-- `until` (optional): Only transactions detected before this epoch (seconds)
-- `wallet_id` (optional): Target wallet ID (for multi-wallet sessions)
+Query Parameters: `limit`, `cursor`, `chain`, `network`, `status`, `token`, `from_address`, `since`, `until`, `wallet_id`.
 
-Response (200):
-```json
-{
-  "data": [
-    {
-      "id": "01958f3a-1234-7000-8000-abcdef123456",
-      "txHash": "5VERv8NMvzbJ...",
-      "walletId": "01958f3a-0000-7000-8000-abcdef000001",
-      "fromAddress": "7xKXtg2CW87d...",
-      "amount": "1000000000",
-      "tokenAddress": null,
-      "chain": "solana",
-      "network": "solana-devnet",
-      "status": "CONFIRMED",
-      "blockNumber": 280000000,
-      "detectedAt": 1707000000,
-      "confirmedAt": 1707000030,
-      "suspicious": false
-    }
-  ],
-  "nextCursor": "eyJkIjoxNzA3MDAwMDAwLCJpIjoiMDE5NThmM2EtMTIzNC03MDAwLTgwMDAtYWJjZGVmMTIzNDU2In0",
-  "hasMore": true
-}
-```
-
-### GET /v1/wallet/incoming/summary -- Incoming Transaction Summary (sessionAuth)
-
-Get period-based aggregated summary of incoming transactions with USD conversion.
+### GET /v1/wallet/incoming/summary -- Incoming Transaction Summary
 
 ```bash
 curl -s 'http://localhost:3100/v1/wallet/incoming/summary?period=daily' \
   -H 'Authorization: Bearer wai_sess_xxx'
 ```
 
-Query Parameters:
-- `period` (optional): `daily`, `weekly`, or `monthly` (default: `daily`)
-- `chain` (optional): Filter by chain
-- `network` (optional): Filter by network
-- `since` (optional): Summary start epoch (seconds)
-- `until` (optional): Summary end epoch (seconds)
-- `wallet_id` (optional): Target wallet ID
-
-Response (200):
-```json
-{
-  "period": "daily",
-  "entries": [
-    {
-      "date": "2026-02-22",
-      "totalCount": 5,
-      "totalAmountNative": "5500000000",
-      "totalAmountUsd": 825.00,
-      "suspiciousCount": 0
-    }
-  ]
-}
-```
-
-### PATCH /v1/wallets/{id} -- Toggle Incoming Monitoring (masterAuth)
-
-Enable or disable incoming transaction monitoring for a specific wallet.
-
-```bash
-curl -s -X PATCH http://localhost:3100/v1/wallets/WALLET_ID \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: your-master-password' \
-  -d '{"monitorIncoming": true}'
-```
-
-Response (200):
-```json
-{
-  "id": "01958f3a-0000-7000-8000-abcdef000001",
-  "monitorIncoming": true
-}
-```
-
 ### MCP Tools
 
 - **list_incoming_transactions**: List incoming transaction history with filters and pagination.
-- **get_incoming_summary**: Get period-based incoming transaction summary (daily/weekly/monthly).
+- **get_incoming_summary**: Get period-based incoming transaction summary.
 
-### SDK Methods
+## 12. DeFi Positions
 
-**TypeScript:**
-```typescript
-const incoming = await client.listIncomingTransactions({ limit: 10, status: 'CONFIRMED' });
-const summary = await client.getIncomingTransactionSummary({ period: 'weekly' });
-```
-
-**Python:**
-```python
-incoming = await client.list_incoming_transactions(limit=10, status="CONFIRMED")
-summary = await client.get_incoming_transaction_summary(period="weekly")
-```
-
-## 16. DeFi Positions
-
-Query DeFi lending positions and health factor for the wallet. Requires **sessionAuth**.
+Query DeFi lending positions and health factor. Requires **sessionAuth**.
 
 ### GET /v1/wallet/positions -- Get DeFi Positions
-
-Returns all active DeFi positions tracked for the wallet, with USD valuations.
 
 ```bash
 curl -s http://localhost:3100/v1/wallet/positions \
   -H 'Authorization: Bearer wai_sess_eyJ...'
 ```
 
-Query Parameters:
-- `wallet_id` (optional): Target wallet ID. Required for multi-wallet sessions; auto-resolved for single wallet.
-
-Response (200):
-```json
-{
-  "walletId": "01958f3a-1234-7000-8000-abcdef123456",
-  "positions": [
-    {
-      "id": "pos-001",
-      "category": "LENDING",
-      "provider": "aave_v3",
-      "chain": "ethereum",
-      "network": "ethereum-mainnet",
-      "assetId": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-      "amount": "1000000000000000000",
-      "amountUsd": 2500.0,
-      "metadata": {"aToken": "0xabc..."},
-      "status": "ACTIVE",
-      "openedAt": 1700000000,
-      "lastSyncedAt": 1700003600
-    }
-  ],
-  "totalValueUsd": 2500.0
-}
-```
-
-Position categories: `LENDING`, `YIELD`, `PERP`, `STAKING`.
-Position statuses: `ACTIVE`, `CLOSED`, `LIQUIDATED`. Only ACTIVE positions are returned by default.
-
-Fields:
-- `assetId`: Token contract address (nullable)
-- `amount`: Raw amount as digit string (smallest units)
-- `amountUsd`: USD equivalent (null if price unavailable)
-- `metadata`: Provider-specific metadata (nullable)
-- `totalValueUsd`: Sum of all position USD values (null if no positions)
-
 ### GET /v1/wallet/health-factor -- Get Lending Health Factor
-
-Returns the lending health factor for the wallet, queried live from the lending protocol (e.g., Aave V3). The health factor indicates how close the wallet is to liquidation.
 
 ```bash
 curl -s http://localhost:3100/v1/wallet/health-factor \
   -H 'Authorization: Bearer wai_sess_eyJ...'
 ```
 
-Query Parameters:
-- `wallet_id` (optional): Target wallet ID
-- `network` (optional): Target network for health factor query (e.g., `ethereum-mainnet`)
-
-Response (200):
-```json
-{
-  "walletId": "01958f3a-1234-7000-8000-abcdef123456",
-  "factor": 2.5,
-  "totalCollateralUsd": 10000.0,
-  "totalDebtUsd": 4000.0,
-  "currentLtv": 0.4,
-  "status": "safe"
-}
-```
-
-Health factor status classification:
-- `safe`: factor > 2.0 -- healthy position
-- `warning`: 1.5 < factor <= 2.0 -- monitor closely
-- `danger`: 1.1 < factor <= 1.5 -- at risk of liquidation
-- `critical`: factor <= 1.1 -- immediate liquidation risk
-
-If no lending positions exist, returns a default safe response (factor: Infinity, totalCollateralUsd: 0, totalDebtUsd: 0).
+Health factor status: `safe` (>2.0), `warning` (1.5-2.0), `danger` (1.1-1.5), `critical` (<=1.1).
 
 ### MCP Tools
 
 | Tool | Description |
 |------|-------------|
-| `waiaas_get_defi_positions` | Get all DeFi positions for the wallet. Supports optional `wallet_id` parameter. |
-| `waiaas_get_health_factor` | Get lending health factor. Supports optional `wallet_id` and `network` parameters. |
+| `waiaas_get_defi_positions` | Get all DeFi positions for the wallet. |
+| `waiaas_get_health_factor` | Get lending health factor. |
 
-### SDK Methods
+## 13. NFT Support
 
-**TypeScript:**
-```typescript
-import { WAIaaSClient } from '@waiaas/sdk';
-
-const client = new WAIaaSClient({ baseUrl: 'http://localhost:3100', sessionToken: 'wai_sess_...' });
-
-// Get all DeFi positions
-const positions = await client.getPositions();
-// Returns: { walletId, positions: [...], totalValueUsd }
-
-// Get positions for a specific wallet
-const walletPositions = await client.getPositions({ walletId: 'wlt-123' });
-
-// Get lending health factor
-const health = await client.getHealthFactor();
-// Returns: { walletId, factor, totalCollateralUsd, totalDebtUsd, currentLtv, status }
-
-// Get health factor for a specific wallet and network
-const walletHealth = await client.getHealthFactor({ walletId: 'wlt-123', network: 'ethereum-mainnet' });
-```
-
-**Python:**
-```python
-from waiaas import WAIaaSClient
-
-async with WAIaaSClient("http://localhost:3100", "wai_sess_...") as client:
-    # Get all DeFi positions
-    positions = await client.get_positions()
-
-    # Get positions for a specific wallet
-    wallet_positions = await client.get_positions(wallet_id="wlt-123")
-
-    # Get lending health factor
-    health = await client.get_health_factor()
-
-    # Get health factor for a specific wallet and network
-    wallet_health = await client.get_health_factor(wallet_id="wlt-123", network="ethereum-mainnet")
-```
-
-## 17. NFT Support
-
-For full NFT query, transfer, and approval documentation, see **nft.skill.md**.
+For full NFT documentation, see **nft.skill.md**.
 
 Key capabilities:
 - **Query**: List NFTs, get metadata (ERC-721, ERC-1155, Metaplex)
 - **Transfer**: `POST /v1/transactions/send` with `type: "NFT_TRANSFER"`
 - **Approve**: `POST /v1/transactions/send` with `type: "APPROVE"` and `nft` field
-
-The Admin UI wallet detail page includes an **NFTs** tab showing NFT grid/list views with metadata modal. NFT indexer API keys (Alchemy for EVM, Helius for Solana) can be configured in **Settings > NFT Indexer**.
-
-## 18. Hyperliquid Perp Trading
-
-EVM wallets can trade Hyperliquid perpetual futures when enabled via Admin Settings (`actions.hyperliquid_enabled=true`).
-
-> AI agents must NEVER request the master password. Use only your session token.
-
-Key capabilities:
-- **Trade**: Open/close positions, place/cancel orders via action provider pipeline
-- **Query**: Get positions, orders, account state, trade history, market data, funding rates
-- **Configure**: Set leverage, margin mode (cross/isolated), USDC transfers (spot to perp)
-
-See **transactions.skill.md** for full Hyperliquid REST/MCP/SDK reference and **admin.skill.md** for Hyperliquid Admin Settings.
 
 ## CAIP-2 Network Identifiers
 

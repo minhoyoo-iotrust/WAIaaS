@@ -7,6 +7,7 @@
 - ✅ **v32.7 SEO/AEO 최적화** — Phases 439-443 (shipped 2026-03-17)
 - ✅ **v32.8 테스트 커버리지 강화** — Phases 444-448.1 (shipped 2026-03-18)
 - ✅ **v32.9 Push Relay 직접 연동 (ntfy.sh 제거)** — Phases 449-451 (shipped 2026-03-18)
+- ✅ **v32.10 에이전트 스킬 정리 + OpenClaw 플러그인** — Phases 452-455 (shipped 2026-03-18)
 
 <details>
 <summary>✅ v32.5 멀티체인 DeFi 포지션 + 테스트넷 토글 (Phases 432-434) — SHIPPED 2026-03-16</summary>
@@ -69,6 +70,18 @@ See `.planning/milestones/v32.8-ROADMAP.md` for full details.
 
 See `.planning/milestones/v32.9-ROADMAP.md` for full details.
 
+<details>
+<summary>✅ v32.10 에이전트 스킬 정리 + OpenClaw 플러그인 (Phases 452-455) — SHIPPED 2026-03-18</summary>
+
+- [x] Phase 452: Document Structure Rename (1/1 plan) — completed 2026-03-18
+- [x] Phase 453: Skills Cleanup + Admin Manual (2/2 plans) — completed 2026-03-18
+- [x] Phase 454: OpenClaw Plugin Package (2/2 plans) — completed 2026-03-18
+- [x] Phase 455: CI/CD, Documentation, SEO (2/2 plans) — completed 2026-03-18
+
+</details>
+
+See `.planning/milestones/v32.10-ROADMAP.md` for full details.
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -94,3 +107,7 @@ See `.planning/milestones/v32.9-ROADMAP.md` for full details.
 | 449. Foundation | v32.9 | 3/3 | Complete | 2026-03-18 |
 | 450. Daemon 서명 채널 재작성 | v32.9 | 2/2 | Complete | 2026-03-18 |
 | 451. 클라이언트 업데이트 | v32.9 | 2/2 | Complete | 2026-03-18 |
+| 452. Document Structure Rename | v32.10 | 1/1 | Complete | 2026-03-18 |
+| 453. Skills Cleanup + Admin Manual | v32.10 | 2/2 | Complete | 2026-03-18 |
+| 454. OpenClaw Plugin Package | v32.10 | 2/2 | Complete | 2026-03-18 |
+| 455. CI/CD, Documentation, SEO | v32.10 | 2/2 | Complete | 2026-03-18 |

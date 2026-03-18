@@ -56,7 +56,6 @@ Add to ~/.openclaw/openclaw.json:
         "waiaas-quickstart": {
           "env": {
             "WAIAAS_BASE_URL": "http://localhost:3100",
-            "WAIAAS_MASTER_PASSWORD": "<your-master-password>",
             "WAIAAS_SESSION_TOKEN": "<your-session-token>"
           }
         }

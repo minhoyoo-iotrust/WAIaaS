@@ -41,6 +41,7 @@ PACKAGES=(
   "packages/wallet-sdk"
   "packages/push-relay"
   "packages/actions"
+  "packages/openclaw-plugin"
 )
 
 echo ""
@@ -80,6 +81,7 @@ npm install \
   "${TARBALLS[@waiaas/adapter-evm]}" \
   "${TARBALLS[@waiaas/push-relay]}" \
   "${TARBALLS[@waiaas/actions]}" \
+  "${TARBALLS[@waiaas/openclaw-plugin]}" \
   --save
 
 # Step 4: Verify ESM imports
@@ -112,6 +114,7 @@ verify_import "@waiaas/daemon" "import '@waiaas/daemon';" || true
 verify_import "@waiaas/adapter-solana" "import { SolanaAdapter } from '@waiaas/adapter-solana';"
 verify_import "@waiaas/adapter-evm" "import { EvmAdapter } from '@waiaas/adapter-evm';"
 verify_import "@waiaas/push-relay" "import { loadConfig, DeviceRegistry } from '@waiaas/push-relay';"
+verify_import "@waiaas/openclaw-plugin" "import { register } from '@waiaas/openclaw-plugin';"
 
 # Step 5: Verify Admin UI in daemon package
 echo ""

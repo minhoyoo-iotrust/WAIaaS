@@ -1,0 +1,70 @@
+{
+  "name": "@waiaas/openclaw-plugin",
+  "version": "1.0.0",
+  "description": "WAIaaS OpenClaw plugin — AI agent wallet tools for OpenClaw Gateway",
+  "keywords": [
+    "openclaw",
+    "openclaw-plugin",
+    "wallet",
+    "crypto",
+    "blockchain",
+    "ai-agent",
+    "wallet-as-a-service",
+    "defi",
+    "ethereum",
+    "solana"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/minhoyoo-iotrust/WAIaaS.git",
+    "directory": "packages/openclaw-plugin"
+  },
+  "homepage": "https://github.com/minhoyoo-iotrust/WAIaaS#readme",
+  "bugs": {
+    "url": "https://github.com/minhoyoo-iotrust/WAIaaS/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "openclaw.plugin.json",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "peerDependencies": {
+    "openclaw": ">=1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "openclaw": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@waiaas/sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.3",
+    "vitest": "^3.0.0"
+  }
+}

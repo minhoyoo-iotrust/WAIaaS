@@ -149,25 +149,7 @@ Transfer SPL tokens (Solana) or ERC-20 tokens (Ethereum) to a recipient.
 
 ### Prerequisite
 
-The token must be whitelisted via an **ALLOWED_TOKENS** policy for the wallet. Without this policy, TOKEN_TRANSFER requests are denied.
-
-```bash
-# First, create an ALLOWED_TOKENS policy (masterAuth)
-curl -s -X POST http://localhost:3100/v1/policies \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: your-master-password' \
-  -d '{
-    "walletId": "01958f3a-1234-7000-8000-abcdef123456",
-    "type": "ALLOWED_TOKENS",
-    "rules": {
-      "tokens": [
-        {"address": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "symbol": "USDC"}
-      ]
-    },
-    "priority": 0,
-    "enabled": true
-  }'
-```
+The token must be whitelisted via an **ALLOWED_TOKENS** policy for the wallet. Without this policy, TOKEN_TRANSFER requests are denied. Policy setup is an admin task -- see docs/admin-manual/policy-management.md.
 
 ### Request
 
@@ -206,23 +188,7 @@ Invoke an arbitrary smart contract. Supports both EVM and Solana program calls.
 
 ### Prerequisite
 
-The contract address must be whitelisted via a **CONTRACT_WHITELIST** policy. Default-deny: without this policy, all CONTRACT_CALL requests are rejected.
-
-```bash
-# Create a CONTRACT_WHITELIST policy (masterAuth)
-curl -s -X POST http://localhost:3100/v1/policies \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: your-master-password' \
-  -d '{
-    "walletId": "01958f3a-1234-7000-8000-abcdef123456",
-    "type": "CONTRACT_WHITELIST",
-    "rules": {
-      "addresses": ["0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984"]
-    },
-    "priority": 0,
-    "enabled": true
-  }'
-```
+The contract address must be whitelisted via a **CONTRACT_WHITELIST** policy. Default-deny: without this policy, all CONTRACT_CALL requests are rejected. Policy setup is an admin task -- see docs/admin-manual/policy-management.md.
 
 ### EVM Contract Call
 
@@ -280,23 +246,7 @@ Approve a spender address to spend tokens on behalf of the wallet. ERC-20 `appro
 
 ### Prerequisite
 
-The spender must be whitelisted via an **APPROVED_SPENDERS** policy.
-
-```bash
-# Create an APPROVED_SPENDERS policy (masterAuth)
-curl -s -X POST http://localhost:3100/v1/policies \
-  -H 'Content-Type: application/json' \
-  -H 'X-Master-Password: your-master-password' \
-  -d '{
-    "walletId": "01958f3a-1234-7000-8000-abcdef123456",
-    "type": "APPROVED_SPENDERS",
-    "rules": {
-      "spenders": ["0xDEFiRouterAddress"]
-    },
-    "priority": 0,
-    "enabled": true
-  }'
-```
+The spender must be whitelisted via an **APPROVED_SPENDERS** policy. Policy setup is an admin task -- see docs/admin-manual/policy-management.md.
 
 ### Request
 
@@ -1312,7 +1262,7 @@ Parameters: Same as `send_token` (to, amount, type, token, calldata, abi, value,
 
 For Smart Account wallets in **Lite mode** (no bundler provider), the UserOp API allows building and signing ERC-4337 UserOperations without requiring a bundler. The platform fills gas/paymaster fields externally and submits to a bundler of its choice.
 
-### POST /v1/wallets/{id}/userop/build (masterAuth)
+### POST /v1/wallets/{id}/userop/build
 
 Build an unsigned UserOperation from a standard TransactionRequest.
 
@@ -1339,7 +1289,7 @@ Build an unsigned UserOperation from a standard TransactionRequest.
 
 `factory`/`factoryData` are `null` for already-deployed accounts. The platform must fill gas fields (`callGasLimit`, `verificationGasLimit`, `preVerificationGas`, `maxFeePerGas`, `maxPriorityFeePerGas`) and optional paymaster fields before signing.
 
-### POST /v1/wallets/{id}/userop/sign (masterAuth)
+### POST /v1/wallets/{id}/userop/sign
 
 Sign a completed UserOperation (platform must fill gas and paymaster fields first).
 
@@ -1437,27 +1387,27 @@ curl -X POST http://localhost:3100/v1/actions/hyperliquid_perp/hl_set_leverage \
 ```bash
 # Get positions
 curl http://localhost:3100/v1/wallets/$WID/hyperliquid/positions \
-  -H "X-Master-Password: $PASS"
+  -H "Authorization: Bearer $TOKEN"
 
 # Get open orders
 curl http://localhost:3100/v1/wallets/$WID/hyperliquid/orders \
-  -H "X-Master-Password: $PASS"
+  -H "Authorization: Bearer $TOKEN"
 
 # Get account state (balances, margins)
 curl http://localhost:3100/v1/wallets/$WID/hyperliquid/account \
-  -H "X-Master-Password: $PASS"
+  -H "Authorization: Bearer $TOKEN"
 
 # Get trade history
 curl http://localhost:3100/v1/wallets/$WID/hyperliquid/fills?limit=50 \
-  -H "X-Master-Password: $PASS"
+  -H "Authorization: Bearer $TOKEN"
 
 # Get market list (no wallet needed)
 curl http://localhost:3100/v1/hyperliquid/markets \
-  -H "X-Master-Password: $PASS"
+  -H "Authorization: Bearer $TOKEN"
 
 # Get funding rates
 curl http://localhost:3100/v1/hyperliquid/funding-rates?market=ETH \
-  -H "X-Master-Password: $PASS"
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 ### MCP Tools
@@ -1545,11 +1495,11 @@ curl -X POST http://localhost:3100/v1/actions/hyperliquid_spot/hl_spot_cancel \
 ```bash
 # Get spot token balances
 curl http://localhost:3100/v1/wallets/$WID/hyperliquid/spot/balances \
-  -H "X-Master-Password: $PASS"
+  -H "Authorization: Bearer $TOKEN"
 
 # Get spot market list
 curl http://localhost:3100/v1/hyperliquid/spot/markets \
-  -H "X-Master-Password: $PASS"
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 ### MCP Tools
@@ -1611,11 +1561,11 @@ curl -X POST http://localhost:3100/v1/actions/hyperliquid_sub/hl_sub_transfer \
 ```bash
 # List sub-accounts
 curl http://localhost:3100/v1/wallets/$WID/hyperliquid/sub-accounts \
-  -H "X-Master-Password: $PASS"
+  -H "Authorization: Bearer $TOKEN"
 
 # Get sub-account positions
 curl http://localhost:3100/v1/wallets/$WID/hyperliquid/sub-accounts/0xSub.../positions \
-  -H "X-Master-Password: $PASS"
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 ### MCP Tools
