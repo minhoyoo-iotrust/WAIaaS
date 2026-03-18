@@ -61,8 +61,9 @@ const validSignRequest: SignRequest = {
   displayMessage: 'Transfer 1.5 SOL to GsbwXf...',
   metadata: validMetadata,
   responseChannel: {
-    type: 'ntfy',
-    responseTopic: 'waiaas-response-01935a3b-7c8d-7e00-b123-456789abcdef',
+    type: 'push_relay',
+    pushRelayUrl: 'https://relay.example.com',
+    requestId: '01935a3b-7c8d-7e00-b123-456789abcdef',
   },
   expiresAt: '2026-03-01T00:00:00Z',
 };
@@ -87,9 +88,6 @@ const validWalletLinkConfig: WalletLinkConfig = {
     scheme: 'dcent-wallet',
     signPath: '/waiaas/sign',
   },
-  ntfy: {
-    requestTopic: 'waiaas-sign-dcent',
-  },
 };
 
 // ---------------------------------------------------------------------------
@@ -103,7 +101,7 @@ describe('SignRequestSchema', () => {
     expect(result.requestId).toBe('01935a3b-7c8d-7e00-b123-456789abcdef');
     expect(result.caip2ChainId).toBe('solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1');
     expect(result.networkName).toBe('solana-devnet');
-    expect(result.responseChannel.type).toBe('ntfy');
+    expect(result.responseChannel.type).toBe('push_relay');
     expect(result.metadata.policyTier).toBe('APPROVAL');
   });
 
@@ -213,7 +211,6 @@ describe('WalletLinkConfigSchema', () => {
     expect(result.displayName).toBe("D'CENT Wallet");
     expect(result.universalLink.base).toBe('https://link.dcentwallet.com');
     expect(result.deepLink?.scheme).toBe('dcent-wallet');
-    expect(result.ntfy?.requestTopic).toBe('waiaas-sign-dcent');
   });
 
   it('parses a minimal config without optional fields', () => {
@@ -227,7 +224,6 @@ describe('WalletLinkConfigSchema', () => {
     };
     const result = WalletLinkConfigSchema.parse(minimalConfig);
     expect(result.deepLink).toBeUndefined();
-    expect(result.ntfy).toBeUndefined();
   });
 
   it('rejects invalid universal link base URL', () => {
@@ -257,11 +253,15 @@ describe('ApprovalMethodSchema', () => {
   });
 
   it('contains expected values', () => {
-    expect(APPROVAL_METHODS).toContain('sdk_ntfy');
+    expect(APPROVAL_METHODS).toContain('sdk_push');
     expect(APPROVAL_METHODS).toContain('sdk_telegram');
     expect(APPROVAL_METHODS).toContain('walletconnect');
     expect(APPROVAL_METHODS).toContain('telegram_bot');
     expect(APPROVAL_METHODS).toContain('rest');
+  });
+
+  it('does NOT contain sdk_ntfy', () => {
+    expect(APPROVAL_METHODS).not.toContain('sdk_ntfy');
   });
 
   it('rejects invalid value', () => {
@@ -270,23 +270,22 @@ describe('ApprovalMethodSchema', () => {
 });
 
 describe('ResponseChannelSchema', () => {
-  it('parses ntfy channel', () => {
+  it('parses push_relay channel', () => {
     const channel = {
-      type: 'ntfy' as const,
-      responseTopic: 'waiaas-response-test',
-      serverUrl: 'https://ntfy.example.com',
+      type: 'push_relay' as const,
+      pushRelayUrl: 'https://relay.example.com',
+      requestId: '01935a3b-7c8d-7e00-b123-456789abcdef',
     };
     const result = ResponseChannelSchema.parse(channel);
-    expect(result.type).toBe('ntfy');
+    expect(result.type).toBe('push_relay');
   });
 
-  it('parses ntfy channel without optional serverUrl', () => {
+  it('rejects type ntfy', () => {
     const channel = {
-      type: 'ntfy' as const,
+      type: 'ntfy',
       responseTopic: 'waiaas-response-test',
     };
-    const result = ResponseChannelSchema.parse(channel);
-    expect(result.type).toBe('ntfy');
+    expect(() => ResponseChannelSchema.parse(channel)).toThrow();
   });
 
   it('parses telegram channel', () => {
