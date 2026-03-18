@@ -119,11 +119,11 @@ Plans:
   3. 각 도구 그룹(Wallet, Transfer, DeFi, NFT, Utility)이 올바른 inputSchema 와 함께 등록된다
   4. 도구 핸들러가 @waiaas/sdk 를 통해 WAIaaS daemon API 를 정상 호출한다
   5. 패키지가 빌드되어 dist/ 출력물이 생성된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 454-01: TBD
-- [ ] 454-02: TBD
+- [ ] 454-01-PLAN.md — Package scaffold: package.json + manifest + HTTP client + register() stub
+- [ ] 454-02-PLAN.md — Tool groups (Wallet/Transfer/DeFi/NFT/Utility) + tests + build verification
 
 ### Phase 455: CI/CD, Documentation, SEO
 **Goal**: @waiaas/openclaw-plugin 이 npm 퍼블리시 파이프라인에 통합되고, 문서와 SEO 자산이 완성된다
@@ -170,5 +170,5 @@ Phases execute in numeric order: 452 -> 453 -> 454 -> 455
 | 451. 클라이언트 업데이트 | v32.9 | 2/2 | Complete | 2026-03-18 |
 | 452. Document Structure Rename | v32.10 | Complete    | 2026-03-18 | 2026-03-18 |
 | 453. Skills Cleanup + Admin Manual | v32.10 | Complete    | 2026-03-18 | 2026-03-18 |
-| 454. OpenClaw Plugin Package | v32.10 | 0/? | Not started | - |
+| 454. OpenClaw Plugin Package | v32.10 | 0/2 | In progress | - |
 | 455. CI/CD, Documentation, SEO | v32.10 | 0/? | Not started | - |
