@@ -112,11 +112,11 @@ Plans:
   2. Register Wallet App 다이얼로그에서 Push Relay URL을 입력할 수 있고, 프리셋 wallet type은 자동으로 채워진다
   3. Registered Apps 카드에서 Push Relay URL과 Subscription Token이 표시된다 (ntfy Topics 미표시)
   4. Approval Method 라벨이 "Wallet App (Push)"로 표시되고, 프리셋 wallet type은 라디오가 비활성화된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 451-01: Wallet SDK ntfy 함수 deprecated 처리
-- [ ] 451-02: Admin UI Push Relay 전환 (다이얼로그, 카드, 라벨, 프리셋)
+- [ ] 451-01-PLAN.md — SDK ntfy deprecated + API push_relay_url 필드 추가
+- [ ] 451-02-PLAN.md — Admin UI Push Relay 전환 (라벨, 다이얼로그, 카드, 프리셋)
 
 ## Progress
 
