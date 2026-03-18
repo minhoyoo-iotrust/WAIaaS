@@ -1,7 +1,8 @@
 # 마일스톤 m32-08: 테스트 커버리지 강화
 
-- **Status:** PLANNED
+- **Status:** SHIPPED
 - **Milestone:** v32.8
+- **Completed:** 2026-03-18
 
 ## 목표
 
