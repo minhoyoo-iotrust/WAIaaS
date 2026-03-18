@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -54,17 +54,17 @@ import { quickstartCommand } from '../commands/quickstart.js';
 
 describe('quickstartCommand', () => {
   let fetchMock: ReturnType<typeof vi.fn>;
-  let logSpy: ReturnType<typeof vi.spyOn>;
+  let _logSpy: ReturnType<typeof vi.spyOn>;
   let errorSpy: ReturnType<typeof vi.spyOn>;
-  let exitSpy: ReturnType<typeof vi.spyOn>;
+  let _exitSpy: ReturnType<typeof vi.spyOn>;
   let tmpDir: string;
 
   beforeEach(() => {
     fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
-    logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    _logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    exitSpy = vi.spyOn(process, 'exit').mockImplementation((code) => {
+    _exitSpy = vi.spyOn(process, 'exit').mockImplementation((code) => {
       throw new ExitError(code as number);
     });
     tmpDir = mkdtempSync(join(tmpdir(), 'cli-quickstart-'));
@@ -73,7 +73,7 @@ describe('quickstartCommand', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
-    try { rmSync(tmpDir, { recursive: true }); } catch {}
+    try { rmSync(tmpDir, { recursive: true }); } catch { /* noop */ }
   });
 
   it('exits when daemon health check fails (not running)', async () => {
@@ -149,16 +149,16 @@ import { updateCommand } from '../commands/update.js';
 
 describe('updateCommand', () => {
   let fetchMock: ReturnType<typeof vi.fn>;
-  let logSpy: ReturnType<typeof vi.spyOn>;
-  let errorSpy: ReturnType<typeof vi.spyOn>;
-  let exitSpy: ReturnType<typeof vi.spyOn>;
+  let _logSpy: ReturnType<typeof vi.spyOn>;
+  let _errorSpy: ReturnType<typeof vi.spyOn>;
+  let _exitSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
-    logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    exitSpy = vi.spyOn(process, 'exit').mockImplementation((code) => {
+    _logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    _errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    _exitSpy = vi.spyOn(process, 'exit').mockImplementation((code) => {
       throw new ExitError(code as number);
     });
   });

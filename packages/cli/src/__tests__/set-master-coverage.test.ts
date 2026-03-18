@@ -48,7 +48,7 @@ describe('setMasterCommand', () => {
     process.exit = originalExit;
     globalThis.fetch = originalFetch;
     vi.restoreAllMocks();
-    try { rmSync(testDir, { recursive: true, force: true }); } catch {}
+    try { rmSync(testDir, { recursive: true, force: true }); } catch { /* noop */ }
   });
 
   it('success: changes password and prints result', async () => {
