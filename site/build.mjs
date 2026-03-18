@@ -27,7 +27,7 @@ const DOCS_DIR = path.resolve(ROOT, 'docs');
 const BASE_URL = 'https://waiaas.ai';
 
 // Directories to exclude from build
-const EXCLUDE_DIRS = ['admin-manual'];
+const EXCLUDE_DIRS = [];
 
 // Required front-matter fields
 const REQUIRED_FIELDS = ['title', 'description', 'date'];
