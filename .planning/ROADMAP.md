@@ -168,7 +168,7 @@ Phases execute in numeric order: 452 -> 453 -> 454 -> 455
 | 449. Foundation | v32.9 | 3/3 | Complete | 2026-03-18 |
 | 450. Daemon 서명 채널 재작성 | v32.9 | 2/2 | Complete | 2026-03-18 |
 | 451. 클라이언트 업데이트 | v32.9 | 2/2 | Complete | 2026-03-18 |
-| 452. Document Structure Rename | v32.10 | 1/1 | Complete | 2026-03-18 |
+| 452. Document Structure Rename | v32.10 | Complete    | 2026-03-18 | 2026-03-18 |
 | 453. Skills Cleanup + Admin Manual | v32.10 | 0/? | Not started | - |
 | 454. OpenClaw Plugin Package | v32.10 | 0/? | Not started | - |
 | 455. CI/CD, Documentation, SEO | v32.10 | 0/? | Not started | - |

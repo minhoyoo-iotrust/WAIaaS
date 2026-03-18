@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
-milestone: v32.10
-milestone_name: 에이전트 스킬 정리 + OpenClaw 플러그인
-status: active
-stopped_at: "Completed 452-01-PLAN.md"
-last_updated: "2026-03-18T12:01:33.083Z"
-last_activity: 2026-03-18 — Phase 452 complete (1/1 plans)
+milestone: v32.5
+milestone_name: milestone
+status: completed
+stopped_at: Completed 452-01-PLAN.md
+last_updated: "2026-03-18T12:02:33.699Z"
+last_activity: 2026-03-18 — Phase 452 executed (docs/guides/ -> docs/agent-guides/)
 progress:
   total_phases: 4
   completed_phases: 1
