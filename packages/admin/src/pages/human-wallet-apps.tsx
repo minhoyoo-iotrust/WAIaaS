@@ -33,6 +33,7 @@ export default function HumanWalletAppsPage() {
   const registerName = useSignal('');
   const registerDisplayName = useSignal('');
   const registerWalletType = useSignal('');
+  const registerPushRelayUrl = useSignal('');
   const registerSaving = useSignal(false);
 
   // Subscription token editing state: maps app.id -> token value
@@ -41,10 +42,6 @@ export default function HumanWalletAppsPage() {
 
   // Toggle saving state
   const toggleSaving = useSignal<string | null>(null);
-
-  // Topic editing state: maps app.id -> { signTopic, notifyTopic }
-  const topicEditing = useSignal<Record<string, { signTopic: string; notifyTopic: string }>>({});
-  const topicSaving = useSignal<string | null>(null);
 
   // ---------------------------------------------------------------------------
   // Data fetching
@@ -121,7 +118,7 @@ export default function HumanWalletAppsPage() {
         params: { path: { id: app.id } },
       });
       if (result!.success) {
-        showToast(`Test notification sent to ${result!.topic}`, 'success');
+        showToast('Test notification sent successfully', 'success');
       } else {
         showToast(result!.error || 'Test notification failed', 'error');
       }
@@ -146,11 +143,15 @@ export default function HumanWalletAppsPage() {
       if (registerWalletType.value.trim()) {
         body.wallet_type = registerWalletType.value.trim();
       }
-      await api.POST('/v1/admin/wallet-apps', { body: body as { name: string; display_name: string; wallet_type?: string } });
+      if (registerPushRelayUrl.value.trim()) {
+        body.push_relay_url = registerPushRelayUrl.value.trim();
+      }
+      await api.POST('/v1/admin/wallet-apps', { body: body as { name: string; display_name: string; wallet_type?: string; push_relay_url?: string } });
       registerModal.value = false;
       registerName.value = '';
       registerDisplayName.value = '';
       registerWalletType.value = '';
+      registerPushRelayUrl.value = '';
       await fetchApps();
       showToast('Wallet app registered', 'success');
     } catch (err) {
@@ -198,44 +199,6 @@ export default function HumanWalletAppsPage() {
     }
   };
 
-  const startTopicEdit = (app: WalletAppApi) => {
-    topicEditing.value = {
-      ...topicEditing.value,
-      [app.id]: {
-        signTopic: app.sign_topic ?? '',
-        notifyTopic: app.notify_topic ?? '',
-      },
-    };
-  };
-
-  const cancelTopicEdit = (appId: string) => {
-    const next = { ...topicEditing.value };
-    delete next[appId];
-    topicEditing.value = next;
-  };
-
-  const handleTopicSave = async (app: WalletAppApi) => {
-    const edit = topicEditing.value[app.id];
-    if (!edit) return;
-    topicSaving.value = app.id;
-    try {
-      await api.PUT('/v1/admin/wallet-apps/{id}', {
-        params: { path: { id: app.id } },
-        body: {
-          sign_topic: edit.signTopic || undefined,
-          notify_topic: edit.notifyTopic || undefined,
-        },
-      });
-      cancelTopicEdit(app.id);
-      await fetchApps();
-      showToast('Topics updated', 'success');
-    } catch {
-      showToast('Failed to update topics', 'error');
-    } finally {
-      topicSaving.value = null;
-    }
-  };
-
   // Check if any app has alerts enabled (for warning banner)
   const hasAlertsEnabledApp = apps.value.some((a) => a.alerts_enabled);
 
@@ -254,7 +217,7 @@ export default function HumanWalletAppsPage() {
         <div class="settings-category-header">
           <h3>Wallet App Notifications</h3>
           <p class="settings-description">
-            Push event notifications (transaction alerts, balance changes) to registered wallet apps via ntfy
+            Push event notifications (transaction alerts, balance changes) to registered wallet apps via Push Relay
           </p>
         </div>
         <div class="settings-category-body">
@@ -457,73 +420,15 @@ export default function HumanWalletAppsPage() {
                     )}
                   </div>
 
-                  {/* ntfy Topics */}
-                  {topicEditing.value[app.id] ? (
-                    <div style={{ marginTop: '0.75rem', borderTop: '1px solid var(--border)', paddingTop: '0.75rem' }}>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 500, display: 'block', marginBottom: '0.5rem' }}>ntfy Topics</span>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                        <FormField
-                          label="Sign Topic"
-                          name={`sign-topic-${app.id}`}
-                          type="text"
-                          value={topicEditing.value[app.id]!.signTopic}
-                          onChange={(v) => {
-                            topicEditing.value = {
-                              ...topicEditing.value,
-                              [app.id]: { ...topicEditing.value[app.id]!, signTopic: String(v) },
-                            };
-                          }}
-                          placeholder={`waiaas-sign-${app.name}`}
-                          description="ntfy topic for signing requests"
-                        />
-                        <FormField
-                          label="Notify Topic"
-                          name={`notify-topic-${app.id}`}
-                          type="text"
-                          value={topicEditing.value[app.id]!.notifyTopic}
-                          onChange={(v) => {
-                            topicEditing.value = {
-                              ...topicEditing.value,
-                              [app.id]: { ...topicEditing.value[app.id]!, notifyTopic: String(v) },
-                            };
-                          }}
-                          placeholder={`waiaas-notify-${app.name}`}
-                          description="ntfy topic for activity alerts"
-                        />
-                      </div>
-                      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
-                        <Button variant="secondary" size="sm" onClick={() => cancelTopicEdit(app.id)}>
-                          Cancel
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => handleTopicSave(app)}
-                          disabled={topicSaving.value === app.id}
-                        >
-                          {topicSaving.value === app.id ? 'Saving...' : 'Save Topics'}
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={{ marginTop: '0.75rem', borderTop: '1px solid var(--border)', paddingTop: '0.75rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                        <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>ntfy Topics</span>
-                        <Button variant="secondary" size="sm" onClick={() => startTopicEdit(app)}>
-                          Edit
-                        </Button>
-                      </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.85rem' }}>
-                        <div>
-                          <span style={{ color: 'var(--text-muted)' }}>Sign Topic: </span>
-                          <code>{app.sign_topic ?? '(default)'}</code>
-                        </div>
-                        <div>
-                          <span style={{ color: 'var(--text-muted)' }}>Notify Topic: </span>
-                          <code>{app.notify_topic ?? '(default)'}</code>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                  {/* Push Relay URL */}
+                  <div style={{ marginTop: '0.75rem' }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>Push Relay URL: </span>
+                    {app.push_relay_url ? (
+                      <code style={{ fontSize: '0.85rem' }}>{app.push_relay_url}</code>
+                    ) : (
+                      <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Not configured</span>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -561,9 +466,26 @@ export default function HumanWalletAppsPage() {
             name="register-app-wallet-type"
             type="text"
             value={registerWalletType.value}
-            onChange={(v) => { registerWalletType.value = String(v); }}
+            onChange={(v) => {
+              registerWalletType.value = String(v);
+              // Auto-fill Push Relay URL for known presets
+              const PRESET_PUSH_RELAY_URLS: Record<string, string> = {
+                dcent: 'https://waiaas-push.dcentwallet.com',
+              };
+              const preset = PRESET_PUSH_RELAY_URLS[String(v)];
+              registerPushRelayUrl.value = preset ?? '';
+            }}
             placeholder="dcent, ledger, or custom"
             description="Group multiple devices under the same wallet type. Defaults to app name."
+          />
+          <FormField
+            label="Push Relay URL (optional)"
+            name="register-app-push-relay-url"
+            type="text"
+            value={registerPushRelayUrl.value}
+            onChange={(v) => { registerPushRelayUrl.value = String(v); }}
+            placeholder="https://push-relay.example.com"
+            description="Push Relay server URL for sign requests and notifications"
           />
           <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
             <Button variant="secondary" onClick={() => { registerModal.value = false; }}>
