@@ -97,11 +97,11 @@ Plans:
   3. approval-channel-router가 sdk_push 메서드로 올바르게 라우팅한다
   4. NtfyChannel과 ntfy 관련 config/hot-reload 코드가 완전히 제거된다
   5. Push Relay 다운 시 PENDING_APPROVAL 유지 + 에러 로그, long-polling 실패 시 지수 백오프 재시도 후 서명 요청 만료 처리가 동작한다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 450-01: PushRelaySigningChannel 구현 (서명 요청 POST + long-polling 응답 수신)
-- [ ] 450-02: 알림 채널 + 라우터 + NtfyChannel 제거 + config 정리
+- [ ] 450-01: PushRelaySigningChannel 구현 + ApprovalChannelRouter sdk_push 라우팅
+- [ ] 450-02: 알림 채널 Push Relay 전환 + NtfyChannel 제거 + config 정리
 
 ### Phase 451: 클라이언트 업데이트 -- SDK deprecated + Admin UI
 **Goal**: Wallet SDK의 ntfy 함수가 deprecated 표시되고, Admin UI가 Push Relay URL 기반 워크플로우를 제공하는 상태
