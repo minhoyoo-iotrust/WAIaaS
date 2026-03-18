@@ -6,9 +6,9 @@
 
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import { createRoute, z } from '@hono/zod-openapi';
-import { sql, desc, eq, and, gte, lte, count as drizzleCount } from 'drizzle-orm';
+import { desc, eq, and, gte, lte, count as drizzleCount } from 'drizzle-orm';
 import type { INotificationChannel, NotificationPayload } from '@waiaas/core';
-import { notificationLogs, walletApps } from '../../infrastructure/database/schema.js';
+import { notificationLogs } from '../../infrastructure/database/schema.js';
 import {
   NotificationStatusResponseSchema,
   NotificationTestRequestSchema,
@@ -109,19 +109,6 @@ export function registerAdminNotificationRoutes(router: OpenAPIHono, deps: Admin
           channelNames.includes('discord')
         ),
       },
-      (() => {
-        // v29.10+: ntfy topics are per-wallet in wallet_apps table, not global config
-        const ntfyWalletCount = deps.db
-          .select({ count: sql<number>`count(*)` })
-          .from(walletApps)
-          .where(sql`${walletApps.signTopic} IS NOT NULL OR ${walletApps.notifyTopic} IS NOT NULL`)
-          .get()?.count ?? 0;
-        return {
-          name: 'ntfy' as const,
-          enabled: ntfyWalletCount > 0,
-          configuredWallets: ntfyWalletCount,
-        };
-      })(),
       {
         name: 'slack',
         enabled: !!(

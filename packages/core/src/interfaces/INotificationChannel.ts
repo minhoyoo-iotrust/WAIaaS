@@ -31,7 +31,7 @@ export interface NotificationPayload {
 
 /**
  * Notification channel interface.
- * All notification channels (Telegram, Discord, ntfy.sh) implement this interface.
+ * All notification channels (Telegram, Discord, Slack) implement this interface.
  *
  * Design reference: 35-notification-architecture.md
  */
