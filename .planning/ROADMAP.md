@@ -103,11 +103,11 @@ Plans:
   3. skills/ 디렉토리 내 모든 파일에서 masterAuth 엔드포인트 참조가 0건이다 (보안 안내 문구 제외)
   4. site/build.mjs EXCLUDE_DIRS 에서 admin-manual 이 제거되어 빌드 대상에 포함된다
   5. sync-skills.mjs 가 admin/setup 스킬을 복사하지 않고, openclaw.ts 인스톨러에서 WAIAAS_MASTER_PASSWORD 출력이 없다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 453-01: TBD
-- [ ] 453-02: TBD
+- [ ] 453-01-PLAN.md — docs/admin-manual/ 9개 파일 생성 + site/build.mjs EXCLUDE_DIRS 제거
+- [ ] 453-02-PLAN.md — skills/ masterAuth 콘텐츠 제거 + 레지스트리/인스톨러 업데이트
 
 ### Phase 454: OpenClaw Plugin Package
 **Goal**: @waiaas/openclaw-plugin 패키지가 ~22개 sessionAuth 도구를 OpenClaw Gateway에 등록할 수 있다
@@ -169,6 +169,6 @@ Phases execute in numeric order: 452 -> 453 -> 454 -> 455
 | 450. Daemon 서명 채널 재작성 | v32.9 | 2/2 | Complete | 2026-03-18 |
 | 451. 클라이언트 업데이트 | v32.9 | 2/2 | Complete | 2026-03-18 |
 | 452. Document Structure Rename | v32.10 | Complete    | 2026-03-18 | 2026-03-18 |
-| 453. Skills Cleanup + Admin Manual | v32.10 | 0/? | Not started | - |
+| 453. Skills Cleanup + Admin Manual | v32.10 | 0/2 | Not started | - |
 | 454. OpenClaw Plugin Package | v32.10 | 0/? | Not started | - |
 | 455. CI/CD, Documentation, SEO | v32.10 | 0/? | Not started | - |
