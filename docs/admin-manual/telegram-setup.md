@@ -1,3 +1,11 @@
+---
+title: "Telegram Bot Setup Guide"
+description: "Configure WAIaaS Telegram bot for transaction alerts, security notifications, and interactive approve/reject signing"
+keywords: ["telegram", "bot", "notifications", "signing", "approval"]
+date: "2026-03-18"
+section: "docs"
+category: "Admin Manual"
+---
 # Telegram Bot Setup Guide
 
 WAIaaS provides transaction alerts, security notifications, and interactive bot features (balance queries, transaction approve/reject, kill switch) through Telegram. This guide walks through the full flow from creating a bot with BotFather to connecting it with WAIaaS and managing bot users.
