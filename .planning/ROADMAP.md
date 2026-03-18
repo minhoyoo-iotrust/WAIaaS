@@ -134,11 +134,11 @@ Plans:
   2. turbo.json 에 openclaw-plugin 빌드/테스트/린트 태스크가 포함되고 npm trusted publishing 파이프라인에서 퍼블리시 가능하다
   3. openclaw-integration.md 가 플러그인 방식(권장) + 스킬 방식(레거시) 구조로 업데이트되고 admin/setup 스킬 참조가 없다
   4. sitemap.xml 에 admin-manual 8페이지 + openclaw-plugin 페이지가 포함되고 llms-full.txt 에 admin-manual 내용이 포함된다
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 455-01: TBD
-- [ ] 455-02: TBD
+- [ ] 455-01-PLAN.md — release-please + turbo + release.yml + smoke-test 파이프라인 통합
+- [ ] 455-02-PLAN.md — openclaw-integration.md 재작성 + openclaw-plugin SEO 랜딩 페이지 + 사이트 빌드
 
 ## Progress
 
@@ -171,4 +171,4 @@ Phases execute in numeric order: 452 -> 453 -> 454 -> 455
 | 452. Document Structure Rename | v32.10 | Complete    | 2026-03-18 | 2026-03-18 |
 | 453. Skills Cleanup + Admin Manual | v32.10 | Complete    | 2026-03-18 | 2026-03-18 |
 | 454. OpenClaw Plugin Package | 2/2 | Complete    | 2026-03-18 | - |
-| 455. CI/CD, Documentation, SEO | v32.10 | 0/? | Not started | - |
+| 455. CI/CD, Documentation, SEO | v32.10 | 0/2 | Not started | - |
