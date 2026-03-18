@@ -53,6 +53,7 @@ jobs:
         run: pnpm turbo run typecheck --affected
         env:
           TURBO_SCM_BASE: ${{ steps.affected-base.outputs.base }}
+          NODE_OPTIONS: '--max-old-space-size=6144'
 
       - name: Unit Tests (affected)
         run: pnpm turbo run test:unit --affected -- --coverage
