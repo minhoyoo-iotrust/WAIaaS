@@ -148,6 +148,7 @@ jobs:
             packages/wallet-sdk
             packages/push-relay
             packages/actions
+            packages/openclaw-plugin
           )
           for pkg_path in "${PACKAGES[@]}"; do
             cp README.md "$pkg_path/README.md"
@@ -176,6 +177,7 @@ jobs:
             packages/wallet-sdk
             packages/push-relay
             packages/actions
+            packages/openclaw-plugin
           )
           for pkg_path in "${PACKAGES[@]}"; do
             echo "--- Checking $pkg_path ---"
@@ -199,6 +201,7 @@ jobs:
             packages/wallet-sdk
             packages/push-relay
             packages/actions
+            packages/openclaw-plugin
           )
           PACK_DIR=$(mktemp -d)
           FAILED=0
@@ -383,6 +386,7 @@ jobs:
             packages/wallet-sdk
             packages/push-relay
             packages/actions
+            packages/openclaw-plugin
           )
           for pkg_path in "${PACKAGES[@]}"; do
             cp README.md "$pkg_path/README.md"
@@ -417,6 +421,7 @@ jobs:
             packages/wallet-sdk
             packages/push-relay
             packages/actions
+            packages/openclaw-plugin
           )
           PACK_DIR=$(mktemp -d)
           for pkg_path in "${PACKAGES[@]}"; do
@@ -449,7 +454,7 @@ jobs:
           echo "## Deploy Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- **Version:** ${{ github.event.release.tag_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **npm:** 12 packages published with OIDC provenance" >> $GITHUB_STEP_SUMMARY
+          echo "- **npm:** 13 packages published with OIDC provenance" >> $GITHUB_STEP_SUMMARY
           echo "- **Docker (GHCR):** ghcr.io/${{ github.repository }}, ghcr.io/${{ github.repository }}-push-relay" >> $GITHUB_STEP_SUMMARY
           echo "- **Docker (Hub):** waiaas/daemon, waiaas/push-relay" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
