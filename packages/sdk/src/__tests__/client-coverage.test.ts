@@ -46,7 +46,7 @@ describe('WAIaaSClient coverage tests', () => {
         limit: 10,
         chain: 'solana',
         network: 'solana-mainnet',
-        status: 'confirmed',
+        status: 'CONFIRMED',
         token: 'SOL',
         fromAddress: '0xabc',
         since: 1000,
@@ -79,7 +79,7 @@ describe('WAIaaSClient coverage tests', () => {
     it('calls GET /v1/wallet/incoming/summary with query params', async () => {
       fetchSpy.mockResolvedValue(mockResponse({ totalCount: 5 }));
       await client.getIncomingTransactionSummary({
-        period: '24h',
+        period: 'daily',
         chain: 'ethereum',
         network: 'ethereum-mainnet',
         since: 100,
@@ -158,7 +158,7 @@ describe('WAIaaSClient coverage tests', () => {
       const result = await client.getConnectInfo();
       const url = fetchSpy.mock.calls[0]![0] as string;
       expect(url).toBe('http://localhost:3100/v1/connect-info');
-      expect(result.walletId).toBe('w1');
+      expect(result.wallets).toBeDefined();
     });
   });
 
@@ -272,16 +272,16 @@ describe('WAIaaSClient coverage tests', () => {
 
     it('revokeFeedback calls erc8004_agent/revoke_feedback', async () => {
       fetchSpy.mockResolvedValue(mockResponse({ txId: 'tx1' }));
-      await client.revokeFeedback({ agentId: 'a1', feedbackId: 'fb1', network: 'ethereum-mainnet', walletId: 'w1' });
+      await client.revokeFeedback({ targetAgentId: 'a1', network: 'ethereum-mainnet', walletId: 'w1' });
       const body = JSON.parse(fetchSpy.mock.calls[0]![1].body);
-      expect(body.params.feedbackId).toBe('fb1');
+      expect(body.params.targetAgentId).toBe('a1');
     });
 
     it('requestValidation calls erc8004_agent/request_validation', async () => {
       fetchSpy.mockResolvedValue(mockResponse({ txId: 'tx1' }));
-      await client.requestValidation({ agentId: 'a1', validatorAddress: '0xval', network: 'ethereum-mainnet', walletId: 'w1' });
+      await client.requestValidation({ requestURI: 'https://validator.example.com', network: 'ethereum-mainnet', walletId: 'w1' });
       const body = JSON.parse(fetchSpy.mock.calls[0]![1].body);
-      expect(body.params.validatorAddress).toBe('0xval');
+      expect(body.params.requestURI).toBe('https://validator.example.com');
     });
   });
 
@@ -292,14 +292,14 @@ describe('WAIaaSClient coverage tests', () => {
   describe('Across Bridge methods', () => {
     it('acrossBridgeQuote calls across_bridge/quote', async () => {
       fetchSpy.mockResolvedValue(mockResponse({ quote: {} }));
-      await client.acrossBridgeQuote({ fromToken: '0x1', toToken: '0x2', amount: '1000', walletId: 'w1', network: 'ethereum-mainnet' });
+      await client.acrossBridgeQuote({ fromChain: 'ethereum', toChain: 'arbitrum', inputToken: '0x1', outputToken: '0x2', amount: '1000', walletId: 'w1', network: 'ethereum-mainnet' });
       const url = fetchSpy.mock.calls[0]![0] as string;
       expect(url).toContain('/v1/actions/across_bridge/quote');
     });
 
     it('acrossBridgeExecute calls across_bridge/execute', async () => {
       fetchSpy.mockResolvedValue(mockResponse({ txId: 'tx1' }));
-      await client.acrossBridgeExecute({ fromToken: '0x1', toToken: '0x2', amount: '1000', walletId: 'w1', network: 'ethereum-mainnet' });
+      await client.acrossBridgeExecute({ fromChain: 'ethereum', toChain: 'arbitrum', inputToken: '0x1', outputToken: '0x2', amount: '1000', walletId: 'w1', network: 'ethereum-mainnet' });
       const url = fetchSpy.mock.calls[0]![0] as string;
       expect(url).toContain('/v1/actions/across_bridge/execute');
     });
@@ -528,7 +528,7 @@ describe('WAIaaSClient coverage tests', () => {
   describe('getDcentQuotes', () => {
     it('calls dcent_swap/get_quotes action', async () => {
       fetchSpy.mockResolvedValue(mockResponse({ quotes: [] }));
-      await client.getDcentQuotes({ fromToken: 'ETH', toToken: 'USDC', amount: '1000', network: 'ethereum-mainnet', walletId: 'w1' });
+      await client.getDcentQuotes({ fromAsset: 'ETH', toAsset: 'USDC', amount: '1000', fromDecimals: 18, toDecimals: 6, network: 'ethereum-mainnet', walletId: 'w1' });
       const url = fetchSpy.mock.calls[0]![0] as string;
       expect(url).toContain('/v1/actions/dcent_swap/get_quotes');
     });
@@ -537,7 +537,7 @@ describe('WAIaaSClient coverage tests', () => {
   describe('dcentDexSwap', () => {
     it('calls dcent_swap/dex_swap action', async () => {
       fetchSpy.mockResolvedValue(mockResponse({ txId: 'tx' }));
-      await client.dcentDexSwap({ fromToken: 'ETH', toToken: 'USDC', amount: '1000', network: 'ethereum-mainnet', walletId: 'w1' });
+      await client.dcentDexSwap({ fromAsset: 'ETH', toAsset: 'USDC', amount: '1000', fromDecimals: 18, toDecimals: 6, network: 'ethereum-mainnet', walletId: 'w1' });
       const url = fetchSpy.mock.calls[0]![0] as string;
       expect(url).toContain('/v1/actions/dcent_swap/dex_swap');
     });
