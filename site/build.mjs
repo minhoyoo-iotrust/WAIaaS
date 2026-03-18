@@ -378,8 +378,11 @@ async function build() {
     const raw = fs.readFileSync(filePath, 'utf8');
     const { data, content } = matter(raw);
 
+    // Strip leading H1 from markdown (template already renders the title)
+    const strippedContent = content.replace(/^\s*#\s+.+\n*/, '');
+
     // Convert markdown to HTML
-    const htmlContent = await marked.parse(content);
+    const htmlContent = await marked.parse(strippedContent);
 
     // Determine output path
     const outputPath = getOutputPath(data, filePath);
