@@ -229,7 +229,7 @@ export class PushRelaySigningChannel {
 
           // Non-2xx error -- count as error retry
           throw new Error(`Long-poll failed: HTTP ${res.status}`);
-        } catch (err) {
+        } catch (_err) {
           if (abortController.signal.aborted) break;
 
           errorRetries++;

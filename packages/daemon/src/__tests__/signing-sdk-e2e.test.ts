@@ -165,7 +165,7 @@ describe('signing-sdk E2E integration', () => {
       signedAt: new Date().toISOString(),
     };
 
-    let capturedRequestId = '01935a3b-0001-7e00-b123-000000000001';
+    const capturedRequestId = '01935a3b-0001-7e00-b123-000000000001';
     approveResponse.requestId = capturedRequestId;
 
     vi.spyOn(builder, 'buildRequest').mockImplementation(() => {
@@ -240,7 +240,7 @@ describe('signing-sdk E2E integration', () => {
   it('E2E reject: SignRequest -> Push Relay POST -> long-poll -> reject', async () => {
     mockHandler.handle.mockResolvedValue({ action: 'rejected', txId } as HandleResult);
 
-    let capturedRequestId = '01935a3b-0001-7e00-b123-000000000002';
+    const capturedRequestId = '01935a3b-0001-7e00-b123-000000000002';
     const rejectResponse: SignResponse = {
       version: '1',
       requestId: capturedRequestId,
@@ -426,7 +426,7 @@ describe('signing-sdk E2E integration', () => {
   it('round-trip: SDK sendViaRelay -> PushRelaySigningChannel receives via long-poll', async () => {
     mockHandler.handle.mockResolvedValue({ action: 'approved', txId } as HandleResult);
 
-    let capturedRequestId = '01935a3b-0001-7e00-b123-000000000003';
+    const capturedRequestId = '01935a3b-0001-7e00-b123-000000000003';
 
     const signResponse: SignResponse = {
       version: '1',
