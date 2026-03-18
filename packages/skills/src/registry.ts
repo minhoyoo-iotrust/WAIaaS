@@ -8,12 +8,6 @@ export interface SkillEntry {
 
 export const SKILL_REGISTRY: readonly SkillEntry[] = [
   {
-    name: "setup",
-    filename: "setup.skill.md",
-    description:
-      "Zero-state daemon setup: install CLI, initialize, start daemon, create wallet, configure session",
-  },
-  {
     name: "quickstart",
     filename: "quickstart.skill.md",
     description:
@@ -23,7 +17,7 @@ export const SKILL_REGISTRY: readonly SkillEntry[] = [
     name: "wallet",
     filename: "wallet.skill.md",
     description:
-      "Wallet CRUD, asset queries, session management, token registry, MCP provisioning, owner management",
+      "Wallet queries, asset balances, session info, token list",
   },
   {
     name: "transactions",
@@ -35,13 +29,7 @@ export const SKILL_REGISTRY: readonly SkillEntry[] = [
     name: "policies",
     filename: "policies.skill.md",
     description:
-      "Policy engine CRUD: 12 policy types for spending limits, whitelists, time restrictions, rate limits, token/contract/approve controls, network restrictions, x402 domain controls",
-  },
-  {
-    name: "admin",
-    filename: "admin.skill.md",
-    description:
-      "Admin API: daemon status, kill switch, notifications, settings management, JWT rotation, shutdown, oracle status, API key management",
+      "Policy queries: view applied spending limits, whitelists, time restrictions",
   },
   {
     name: "actions",
