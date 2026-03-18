@@ -1,517 +1,587 @@
 # Architecture Patterns
 
-**Domain:** SEO/AEO optimization for existing static site (waiaas.ai)
-**Researched:** 2026-03-17
-
-## Current Architecture Snapshot
-
-### What Exists
-
-| Asset | Location | Purpose | Lines |
-|-------|----------|---------|-------|
-| Landing page | `site/index.html` | Single monolithic HTML (CRT terminal theme) | 1,109 |
-| OG image template | `site/og-template.html` | Puppeteer-rendered Open Graph image | 167 |
-| OG image generator | `site/generate-og-image.mjs` | Node.js script to render og-template | - |
-| Favicons | `site/favicon.*`, `apple-touch-icon.png` | Multiple formats | - |
-| robots.txt | `site/robots.txt` | Basic Allow: / + sitemap | 4 |
-| sitemap.xml | `site/sitemap.xml` | Single URL entry (homepage only) | 10 |
-| llms.txt | `site/llms.txt` | AEO: LLM-readable site summary | 64 |
-| ai-plugin.json | `site/.well-known/ai-plugin.json` | OpenAI plugin manifest (AEO) | 17 |
-| CNAME | `site/CNAME` | waiaas.ai custom domain | 1 |
-| GitHub Actions | `.github/workflows/pages.yml` | Deploy `site/` to GitHub Pages on push to main | 38 |
-| Docs (markdown) | `docs/` | 10+ markdown files, 4 "Why WAIaaS" articles, 5 guides | - |
-
-### What Does NOT Exist
-
-- No build step (pure static HTML, no preprocessing)
-- No template system (everything is inline in index.html)
-- No multi-page routing (single page only)
-- No llms-full.txt (only llms.txt summary)
-- No blog/article pages on the site (articles exist only as GitHub markdown)
-- No per-page OG images (single shared og-image.png)
-- No structured data beyond homepage JSON-LD
-
-### Current SEO State (Already Good)
-
-The homepage already has solid SEO foundations:
-- `<title>`, `<meta description>`, `<meta keywords>`
-- Open Graph + Twitter Card meta tags
-- JSON-LD: SoftwareApplication, FAQPage, HowTo schemas
-- Canonical URL
-- Mobile responsive CSS
+**Domain:** Agent Skill Cleanup + OpenClaw Plugin + Admin Manual
+**Researched:** 2026-03-18
 
 ## Recommended Architecture
 
-### Design Principle: Minimal Build, Maximum Output
+### High-Level Integration Map
 
-The existing pure-HTML approach is a strength, not a weakness. GitHub Pages requires no server-side rendering. The goal is to add a **thin build layer** that:
-1. Converts `docs/` markdown into themed HTML pages
-2. Generates sitemap, llms-full.txt, and per-page meta automatically
-3. Outputs everything into `site/` for the existing deploy pipeline
+```
+                       +-----------------------+
+                       |    skills/ (SSoT)     |
+                       |  (agent-only, 13 files)|
+                       +-----------+-----------+
+                                   |
+                    sync-skills.mjs (prebuild copy)
+                                   |
+               +-------------------+-------------------+
+               |                                       |
+    +----------v-----------+             +-------------v-----------+
+    |  packages/skills     |             | packages/openclaw-plugin |
+    |  @waiaas/skills      |             | @waiaas/openclaw-plugin  |
+    |  (npx CLI install)   |             | (register() + tools)    |
+    +----------------------+             +------+------------------+
+                                                |
+                                         imports @waiaas/sdk
+                                                |
+                                    +-----------v-----------+
+                                    |    packages/sdk       |
+                                    |    @waiaas/sdk        |
+                                    |    (WAIaaSClient)     |
+                                    +-----------------------+
 
-**Do NOT adopt a full SSG framework** (Jekyll, Hugo, 11ty). The project has 10-15 content pages total, not hundreds. A custom Node.js build script (< 300 lines) keeps full control and zero framework lock-in.
+    +---------------------------+     +---------------------------+
+    |  docs/admin-manual/ (8)   |     |  docs/agent-guides/ (5)  |
+    |  (masterAuth content)     |     |  (renamed from guides/)  |
+    +------------+--------------+     +------------+--------------+
+                 |                                 |
+          site/build.mjs (EXCLUDE_DIRS 제거)       |
+                 |                                 |
+          site/docs/admin-*/              site/blog/ (기존 경로)
+```
 
 ### Component Boundaries
 
-| Component | Responsibility | New/Modified |
-|-----------|---------------|--------------|
-| `site/index.html` | Landing page (unchanged) | **Unchanged** |
-| `site/build.mjs` | Build script: md-to-HTML, sitemap, llms-full.txt | **New** |
-| `site/_template.html` | HTML shell template for content pages | **New** |
-| `docs/**/*.md` | Source content (unchanged) | **Unchanged** |
-| `site/docs/**/*.html` | Generated HTML pages from docs/ markdown | **New (generated)** |
-| `site/blog/**/*.html` | Generated HTML pages from docs/why-waiaas/ | **New (generated)** |
-| `site/sitemap.xml` | Auto-generated sitemap (all pages) | **Modified (generated)** |
-| `site/llms.txt` | LLM summary (auto-generated) | **Modified (generated)** |
-| `site/llms-full.txt` | Full content dump for AI crawlers | **New (generated)** |
-| `site/robots.txt` | Add llms-full.txt reference | **Modified** |
-| `.github/workflows/pages.yml` | Add build step before deploy | **Modified** |
+| Component | Responsibility | Communicates With | New/Modified |
+|-----------|---------------|-------------------|--------------|
+| `skills/` (root) | SSoT agent-only skill files (13 files) | `packages/skills` (sync copy) | **Modified** (2 files removed, 7 files trimmed) |
+| `packages/openclaw-plugin/` | OpenClaw plugin: `register(api)` entry point, ~22 tools | `@waiaas/sdk` (API calls), OpenClaw runtime | **New** |
+| `packages/skills/` | npm distributable skill files + CLI | `skills/` root (sync copy at prebuild) | **Modified** (admin skills removed from install targets) |
+| `docs/admin-manual/` | masterAuth content extracted from skills | `site/build.mjs` (HTML generation) | **New** (8 files + README) |
+| `docs/agent-guides/` | Agent integration guides (renamed) | `site/build.mjs` (existing blog section) | **Modified** (renamed from `docs/guides/`) |
+| `site/build.mjs` | Static site generator | `docs/**/*.md` (source) | **Modified** (EXCLUDE_DIRS change) |
+| `release-please-config.json` | Version management | All package.json files | **Modified** (add openclaw-plugin) |
+| `turbo.json` | Build orchestration | Package build tasks | **Modified** (add openclaw-plugin task) |
 
-### Directory Structure (After Build)
+### Data Flow
 
+**Skill content flow (build time):**
 ```
-site/
-  index.html                          # Landing page (hand-crafted, unchanged)
-  _template.html                      # HTML shell for generated pages (not deployed itself)
-  build.mjs                           # Build script (not deployed)
-  package.json                        # Build dependencies (marked, gray-matter)
-
-  # Generated content pages
-  docs/
-    architecture/index.html           # From docs/architecture.md
-    security-model/index.html         # From docs/security-model.md
-    deployment/index.html             # From docs/deployment.md
-    api-reference/index.html          # From docs/api-reference.md
-    wallet-sdk-integration/index.html # From docs/wallet-sdk-integration.md
-    smart-account-lite-full-guide/index.html
-    erc-4337-sponsor-proxy-spec/index.html
-    guides/
-      claude-code-integration/index.html
-      openclaw-integration/index.html
-      agent-skills-integration/index.html
-      agent-self-setup/index.html
-      docker-sidecar-install/index.html
-
-  blog/
-    ai-agent-wallet-security-crisis/index.html     # From docs/why-waiaas/001-*
-    ai-agent-wallet-models-compared/index.html     # From docs/why-waiaas/002-*
-    autonomous-agents-deserve-secure-wallets/index.html  # From docs/why-waiaas/003-*
-    self-custody-means-self-hosting/index.html     # From docs/why-waiaas/004-*
-
-  # SEO/AEO assets (generated)
-  sitemap.xml                         # All URLs
-  llms.txt                            # Summary for LLMs
-  llms-full.txt                       # Full content for AI crawlers
-  robots.txt                          # Updated with llms-full.txt
-
-  # Existing assets (unchanged)
-  og-image.png
-  og-template.html
-  generate-og-image.mjs
-  favicon.svg, favicon-16.png, favicon-32.png, apple-touch-icon.png
-  CNAME
-  .well-known/ai-plugin.json
+skills/*.skill.md (root SSoT, 13 agent-only files)
+  --> sync-skills.mjs copies to packages/skills/skills/
+  --> @waiaas/skills npm package (agent installation via npx)
 ```
 
-### URL Routing Strategy
-
-GitHub Pages serves `dir/index.html` as `dir/`. Use the **directory/index.html pattern** for clean URLs:
-
-| Source File | Output File | Public URL |
-|-------------|-------------|------------|
-| `docs/architecture.md` | `site/docs/architecture/index.html` | `https://waiaas.ai/docs/architecture/` |
-| `docs/why-waiaas/001-*.md` | `site/blog/ai-agent-wallet-security-crisis/index.html` | `https://waiaas.ai/blog/ai-agent-wallet-security-crisis/` |
-| `docs/guides/claude-code-integration.md` | `site/docs/guides/claude-code-integration/index.html` | `https://waiaas.ai/docs/guides/claude-code-integration/` |
-
-This works natively on GitHub Pages without any redirect hacks. GitHub Pages automatically resolves `/docs/architecture/` to `/docs/architecture/index.html`.
-
-## Data Flow
-
-### Build Pipeline
-
+**OpenClaw plugin flow (runtime):**
 ```
-docs/**/*.md
-    |
-    v
-[build.mjs] ---- reads ---- site/_template.html
-    |
-    |-- parse frontmatter (gray-matter)
-    |-- convert markdown to HTML (marked + highlight.js)
-    |-- inject into template (title, description, canonical, OG, JSON-LD)
-    |-- write site/docs/**/index.html or site/blog/**/index.html
-    |
-    |-- generate site/sitemap.xml (all URLs + lastmod from git)
-    |-- generate site/llms-full.txt (concatenated markdown content)
-    +-- generate site/llms.txt (summary with links to all pages)
+openclaw plugins install @waiaas/openclaw-plugin
+  --> OpenClaw loads openclaw.plugin.json manifest
+  --> Validates configSchema (daemonUrl, sessionToken)
+  --> Calls default export register(api) from src/index.ts
+  --> register() calls api.registerTool() x ~22 times
+  --> Each tool handler uses WAIaaSClient from config
+  --> WAIaaSClient calls daemon REST API with sessionToken
 ```
 
-### Build Script Design (`site/build.mjs`)
+**Admin manual flow (build time):**
+```
+docs/admin-manual/*.md (frontmatter: section "docs")
+  --> site/build.mjs (EXCLUDE_DIRS에서 'admin-manual' 제거)
+  --> site/docs/{slug}/index.html
+  --> sitemap.xml에 URL 자동 추가
+  --> llms-full.txt에 내용 자동 포함
+```
 
-Single ESM script, ~200-300 lines. Dependencies: `marked`, `gray-matter`, `highlight.js`.
+---
+
+## New Component: `packages/openclaw-plugin/`
+
+### Package Structure
+
+```
+packages/openclaw-plugin/
+  openclaw.plugin.json          # OpenClaw manifest (id, configSchema, name)
+  package.json                  # @waiaas/openclaw-plugin, dep: @waiaas/sdk
+  tsconfig.json                 # extends ../../tsconfig.base.json
+  tsconfig.build.json           # build config (exclude test)
+  vitest.config.ts              # test config
+  src/
+    index.ts                    # default export: register(api) function
+    client.ts                   # WAIaaSClient factory (config -> client instance)
+    types.ts                    # OpenClaw API type stubs
+    tools/
+      wallet.ts                 # get_wallet_info, get_balance, connect_info, get_assets
+      transfer.ts               # transfer, token_transfer, list_transactions, get_transaction
+      defi.ts                   # swap, bridge, stake, unstake, lend, borrow, repay, ...
+      nft.ts                    # list_nfts, transfer_nft
+      utility.ts                # sign_message, get_price, contract_call, approve, batch
+  test/
+    register.test.ts            # register() 호출 시 도구 등록 검증 + admin 도구 미등록 검증
+    client.test.ts              # client factory 테스트
+    tools/
+      wallet.test.ts
+      transfer.test.ts
+      defi.test.ts
+      nft.test.ts
+      utility.test.ts
+```
+
+### OpenClaw Plugin API Integration
+
+OpenClaw plugin system verified from official docs (MEDIUM confidence -- docs fetched live but API may evolve):
+
+**Manifest (`openclaw.plugin.json`):**
+```json
+{
+  "id": "waiaas",
+  "name": "WAIaaS Wallet",
+  "description": "AI Agent Wallet-as-a-Service: balances, transfers, DeFi, NFTs, signing",
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "daemonUrl": {
+        "type": "string",
+        "description": "WAIaaS daemon URL",
+        "default": "http://localhost:3000"
+      },
+      "sessionToken": {
+        "type": "string",
+        "description": "WAIaaS session token (JWT)"
+      }
+    },
+    "required": ["daemonUrl", "sessionToken"]
+  },
+  "uiHints": {
+    "sessionToken": { "label": "Session Token", "sensitive": true }
+  }
+}
+```
+
+**Entry point pattern:**
+```typescript
+// packages/openclaw-plugin/src/index.ts
+import { WAIaaSClient } from '@waiaas/sdk';
+import { registerWalletTools } from './tools/wallet.js';
+import { registerTransferTools } from './tools/transfer.js';
+import { registerDefiTools } from './tools/defi.js';
+import { registerNftTools } from './tools/nft.js';
+import { registerUtilityTools } from './tools/utility.js';
+
+interface OpenClawPluginApi {
+  config: { daemonUrl: string; sessionToken: string };
+  registerTool(def: ToolDefinition): void;
+}
+
+interface ToolDefinition {
+  id: string;
+  description: string;
+  input: Record<string, unknown>; // JSON Schema
+  handler: (input: Record<string, unknown>) => Promise<unknown>;
+}
+
+export default function register(api: OpenClawPluginApi): void {
+  const client = new WAIaaSClient({
+    baseUrl: api.config.daemonUrl,
+    sessionToken: api.config.sessionToken,
+  });
+
+  registerWalletTools(api, client);
+  registerTransferTools(api, client);
+  registerDefiTools(api, client);
+  registerNftTools(api, client);
+  registerUtilityTools(api, client);
+}
+```
+
+### Tool Registration Pattern
+
+Each tool is a thin wrapper around one `WAIaaSClient` method. OpenClaw uses JSON Schema for input (not Zod):
+
+```typescript
+// packages/openclaw-plugin/src/tools/wallet.ts
+import type { WAIaaSClient } from '@waiaas/sdk';
+
+export function registerWalletTools(api: OpenClawPluginApi, client: WAIaaSClient): void {
+  api.registerTool({
+    id: 'waiaas_get_balance',
+    description: 'Get the current balance of the wallet',
+    input: {
+      type: 'object',
+      properties: {
+        network: {
+          type: 'string',
+          description: 'Network (e.g., "polygon-mainnet" or CAIP-2 "eip155:137"). Use "all" for all networks.',
+        },
+        wallet_id: {
+          type: 'string',
+          description: 'Target wallet ID. Required for multi-wallet sessions.',
+        },
+      },
+    },
+    handler: async (input) => {
+      return client.getBalance({
+        network: input.network as string,
+        walletId: input.wallet_id as string,
+      });
+    },
+  });
+
+  api.registerTool({
+    id: 'waiaas_connect_info',
+    description: 'Discover available wallets, policies, and capabilities',
+    input: { type: 'object', properties: {} },
+    handler: async () => client.getConnectInfo(),
+  });
+
+  // ... get_wallet_info, get_assets
+}
+```
+
+### Tool List (~22 sessionAuth tools)
+
+| Group | Tool ID | SDK Method |
+|-------|---------|------------|
+| **Wallet** | `waiaas_get_balance` | `getBalance()` |
+| **Wallet** | `waiaas_connect_info` | `getConnectInfo()` |
+| **Wallet** | `waiaas_get_wallet_info` | `getWalletInfo()` |
+| **Wallet** | `waiaas_get_assets` | `getAssets()` |
+| **Transfer** | `waiaas_transfer` | `sendToken({ type: 'TRANSFER' })` |
+| **Transfer** | `waiaas_token_transfer` | `sendToken({ type: 'TOKEN_TRANSFER' })` |
+| **Transfer** | `waiaas_get_transaction` | `getTransaction()` |
+| **Transfer** | `waiaas_list_transactions` | `listTransactions()` |
+| **DeFi** | `waiaas_swap` | `executeAction('swap', ...)` |
+| **DeFi** | `waiaas_bridge` | `executeAction('bridge', ...)` |
+| **DeFi** | `waiaas_stake` | `executeAction('stake', ...)` |
+| **DeFi** | `waiaas_unstake` | `executeAction('unstake', ...)` |
+| **DeFi** | `waiaas_lend` | `executeAction('supply', ...)` |
+| **DeFi** | `waiaas_borrow` | `executeAction('borrow', ...)` |
+| **DeFi** | `waiaas_repay` | `executeAction('repay', ...)` |
+| **DeFi** | `waiaas_withdraw_lending` | `executeAction('withdraw', ...)` |
+| **DeFi** | `waiaas_get_defi_positions` | `getDefiPositions()` |
+| **NFT** | `waiaas_list_nfts` | `listNfts()` |
+| **NFT** | `waiaas_transfer_nft` | `sendToken({ type: 'NFT_TRANSFER' })` |
+| **Utility** | `waiaas_sign_message` | `signMessage()` |
+| **Utility** | `waiaas_contract_call` | `sendToken({ type: 'CONTRACT_CALL' })` |
+| **Utility** | `waiaas_approve` | `sendToken({ type: 'APPROVE' })` |
+| **Utility** | `waiaas_batch` | `sendToken({ type: 'BATCH' })` |
+
+### Key Design Decisions
+
+1. **`@waiaas/sdk` as regular dependency (not peer)**: The plugin bundles SDK for zero-config installation. OpenClaw users run `openclaw plugins install @waiaas/openclaw-plugin` and get everything. Version is locked to monorepo release.
+
+2. **No MCP code reuse**: MCP tools use `@modelcontextprotocol/sdk` + Zod schemas + `McpServer.tool()`. OpenClaw tools use JSON Schema + `api.registerTool()`. Different APIs require separate implementations. The _logic_ (SDK method calls) is identical but the _registration wrappers_ differ.
+
+3. **sessionAuth only**: The plugin wraps `WAIaaSClient` (session-based). No `WAIaaSAdminClient` or masterAuth methods exposed. This is the core safety guarantee.
+
+4. **Tool naming: `waiaas_` prefix**: Avoids collisions in OpenClaw's global tool namespace. Matches the `waiaas` plugin ID.
+
+5. **Client created once in `register()`**: Single `WAIaaSClient` instance shared across all tools. Created from OpenClaw-validated config. No module-level singletons.
+
+---
+
+## Modified Component: `site/build.mjs`
+
+### Change Required
+
+`EXCLUDE_DIRS` at line 30 currently contains `['admin-manual']` -- this was a forward-looking exclusion added before admin manual content existed. To include admin manual pages in the site build:
 
 ```javascript
-// Pseudocode for build.mjs
-import { marked } from 'marked';
-import matter from 'gray-matter';
-import hljs from 'highlight.js';
+// Before (line 30)
+const EXCLUDE_DIRS = ['admin-manual'];
 
-// 1. Read template
-const template = readFile('site/_template.html');
-
-// 2. Discover source markdown files
-const contentMap = [
-  { src: 'docs/*.md', dest: 'site/docs/', urlBase: '/docs/' },
-  { src: 'docs/guides/*.md', dest: 'site/docs/guides/', urlBase: '/docs/guides/' },
-  { src: 'docs/why-waiaas/*.md', dest: 'site/blog/', urlBase: '/blog/' },
-];
-
-// 3. For each file: parse frontmatter, render HTML, inject into template
-// 4. Generate sitemap.xml from all output URLs
-// 5. Generate llms-full.txt from all markdown content
-// 6. Generate llms.txt summary with links
+// After
+const EXCLUDE_DIRS = [];
 ```
 
-### Template Design (`site/_template.html`)
-
-The template must match the existing CRT terminal dark theme from `index.html`. Key design decisions:
-
-- Same CSS variables (`--bg`, `--surface`, `--border`, `--green`, `--cyan`, etc.)
-- Same JetBrains Mono font
-- Same nav structure (logo + links)
-- Same scanline CRT overlay effect
-- Same footer
-
-```html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{title}} -- WAIaaS</title>
-  <meta name="description" content="{{description}}">
-  <link rel="canonical" href="https://waiaas.ai{{path}}">
-
-  <!-- Open Graph -->
-  <meta property="og:type" content="article">
-  <meta property="og:title" content="{{title}}">
-  <meta property="og:description" content="{{description}}">
-  <meta property="og:url" content="https://waiaas.ai{{path}}">
-  <meta property="og:image" content="https://waiaas.ai/og-image.png">
-
-  <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="{{title}}">
-  <meta name="twitter:description" content="{{description}}">
-
-  <!-- JSON-LD -->
-  <script type="application/ld+json">
-  {{jsonLd}}
-  </script>
-
-  <!-- Inline styles matching index.html CRT theme -->
-  <style>
-    /* Same CSS variables and base styles as index.html */
-    /* Article-specific styles for rendered markdown */
-  </style>
-</head>
-<body>
-  <nav><!-- Same nav as index.html --></nav>
-  <article class="content-page">
-    <div class="container">
-      <div class="breadcrumb">{{breadcrumb}}</div>
-      <h1>{{title}}</h1>
-      <div class="article-body">
-        {{content}}
-      </div>
-    </div>
-  </article>
-  <footer><!-- Same footer as index.html --></footer>
-</body>
-</html>
-```
-
-Placeholder substitution uses simple `{{variable}}` string replacement -- no templating engine needed.
-
-### Markdown Frontmatter Convention
-
-Add YAML frontmatter to each markdown file in `docs/`:
+No other changes to build.mjs needed. The script auto-discovers all `docs/**/*.md` files, parses frontmatter, and generates HTML pages. Each admin manual file needs standard frontmatter:
 
 ```yaml
 ---
-title: "Architecture Overview"
-description: "WAIaaS system architecture: 6-stage pipeline, chain adapters, policy engine"
-category: docs          # docs | blog | guide
-date: 2026-02-25
+title: "WAIaaS Admin Guide: Wallet Management"
+description: "Create wallets, manage sessions, configure owner protection"
+date: "2026-03-18"
+section: "docs"
+slug: "admin-wallet-management"
+category: "Admin Manual"
 ---
 ```
 
-For files without frontmatter (backward compat), the build script extracts:
-- **title**: First `# heading` in the markdown
-- **description**: First paragraph (truncated to 160 chars)
-- **date**: Git last-modified date via `git log -1 --format=%aI -- <file>`
+### Impact on Generated Assets
+
+- **sitemap.xml**: +9 new URLs automatically (8 admin manual + 1 OpenClaw SEO page)
+- **llms-full.txt**: +9 content blocks automatically
+- **docs/index.html listing page**: Admin manual pages appear in Docs listing automatically
+- **No URL changes** for existing pages -- only additions
+
+---
+
+## Modified Component: `docs/guides/` to `docs/agent-guides/`
+
+### Reference Impact Analysis
+
+Files referencing `docs/guides/` that need updating:
+
+| File | Type | Change |
+|------|------|--------|
+| `README.md` | 4 links | `docs/guides/X` -> `docs/agent-guides/X` |
+| `site/index.html` | 1 GitHub tree link (line 1238) | `docs/guides` -> `docs/agent-guides` |
+
+### SEO URL Stability
+
+The site build outputs guides to `site/blog/{slug}/` based on frontmatter `section: "blog"`. Source file location does not affect output URLs -- only frontmatter `section` and `slug` determine paths. **Renaming `docs/guides/` to `docs/agent-guides/` has zero impact on published URLs.** Only source references (README, site/index.html) need updating.
+
+### Internal Cross-References
+
+Guide files reference each other with relative paths (e.g., `[Agent Self-Setup Guide](agent-self-setup.md)`). Since all 5 files move together to the same directory, relative links remain valid. No changes needed within guide files for relative references.
+
+Absolute site URLs in guide frontmatter (like `slug: "openclaw-integration"`) also remain unchanged.
+
+---
+
+## Modified Component: `skills/` Cleanup
+
+### Before/After
+
+**Before (15 files):** 2 pure admin + 6 pure agent + 7 mixed
+**After (13 files):** 0 admin + 13 agent-only
+
+| File | Before | After |
+|------|--------|-------|
+| `admin.skill.md` | Pure admin | **Removed** (-> `docs/admin-manual/daemon-operations.md`) |
+| `setup.skill.md` | Pure admin | **Removed** (-> `docs/admin-manual/setup-guide.md`) |
+| `wallet.skill.md` | Mixed | **Trimmed**: wallet CRUD/session/owner/MCP/token registry CRUD removed |
+| `transactions.skill.md` | Mixed | **Trimmed**: policy setup guidance removed |
+| `policies.skill.md` | Mixed | **Trimmed**: POST/PUT/DELETE CRUD removed, GET only |
+| `actions.skill.md` | Mixed | **Trimmed**: provider setup/API keys/env vars removed |
+| `external-actions.skill.md` | Mixed | **Trimmed**: credential CRUD/global credential removed |
+| `erc8004.skill.md` | Mixed | **Trimmed**: provider/registry setup/policy creation removed |
+| `erc8128.skill.md` | Mixed | **Trimmed**: feature activation/domain policy setup removed |
+| `quickstart.skill.md` | Pure agent | No change |
+| `nft.skill.md` | Pure agent | No change |
+| `polymarket.skill.md` | Pure agent | No change |
+| `rpc-proxy.skill.md` | Pure agent | No change |
+| `x402.skill.md` | Pure agent | No change |
+| `session-recovery.skill.md` | Pure agent | No change |
+
+### Cascade Effects
+
+1. **`packages/skills/scripts/sync-skills.mjs`**: Copies whatever `*.skill.md` exists in `skills/`. Removing `admin.skill.md` and `setup.skill.md` means they stop being synced. **No script change needed.**
+
+2. **`packages/skills/src/cli.ts`**: The OpenClaw install command copies specific skill files. Must update to remove `waiaas-admin` and `waiaas-setup` from the OpenClaw target list. Also update the total count (8 -> 6 or similar).
+
+3. **Existing user installations**: Users who already have `waiaas-setup/SKILL.md` and `waiaas-admin/SKILL.md` in `~/.openclaw/skills/` keep them (stale). The `--force` reinstall will no longer include them. This is acceptable -- plugin method replaces skill-file method.
+
+---
+
+## Modified Component: `release-please-config.json`
+
+Add `packages/openclaw-plugin/package.json` to `extra-files`:
+
+```json
+{
+  "packages": {
+    ".": {
+      "extra-files": [
+        "packages/openclaw-plugin/package.json",
+        ... // existing entries
+      ]
+    }
+  }
+}
+```
+
+Release-please bumps the version in `packages/openclaw-plugin/package.json` alongside all other packages on release.
+
+---
+
+## Modified Component: `turbo.json`
+
+Add openclaw-plugin build task:
+
+```json
+{
+  "@waiaas/openclaw-plugin#build": {
+    "dependsOn": ["@waiaas/sdk#build"],
+    "outputs": ["dist/**"]
+  }
+}
+```
+
+The plugin depends only on `@waiaas/sdk`. No dependency on daemon, admin, MCP, or other packages.
+
+---
 
 ## Patterns to Follow
 
-### Pattern 1: Generated vs Hand-Crafted Separation
+### Pattern 1: SDK Wrapper (Thin Plugin)
 
-**What:** `index.html` remains hand-crafted. All other HTML pages are generated from markdown.
-**When:** Always.
-**Why:** The landing page has unique layout (hero, feature grid, architecture diagram, tabbed content). Content pages share a common article layout. Mixing hand-crafted and generated pages in the same directory is fine as long as `.gitignore` excludes generated directories.
+**What:** Each OpenClaw tool is a thin wrapper around one `WAIaaSClient` method. No business logic in the plugin.
 
-**Rule:** Never edit generated files in `site/docs/` or `site/blog/`. Edit the source `docs/*.md` instead.
+**When:** Always. The plugin is a bridge layer, not a feature layer.
 
-### Pattern 2: Additive Sitemap Generation
-
-**What:** Build script generates sitemap.xml with all pages, including hand-crafted index.html.
-**When:** Every build.
-**Why:** Sitemap must stay in sync with actual pages. Manual sitemap maintenance is error-prone. The current sitemap has only 1 URL -- it should have 15+.
-
-### Pattern 3: JSON-LD Per Page Type
-
-**What:** Each page gets appropriate Schema.org type injected by the build script.
-**When:** Template rendering.
-
-| Page Type | Schema.org Type | Key Properties |
-|-----------|----------------|----------------|
-| Landing | SoftwareApplication + FAQPage + HowTo | (existing, unchanged) |
-| Docs | TechArticle | headline, author, datePublished, publisher |
-| Blog | Article | headline, author, datePublished, description |
-| Guide | HowTo | name, step[], totalTime |
-
-### Pattern 4: llms-full.txt as Content Index
-
-**What:** Single markdown file concatenating all page content with clear section delimiters.
-**When:** Generated during build.
-**Format:**
-
-```markdown
-# WAIaaS Documentation - Full Content
-
-## Architecture Overview
-[full content of docs/architecture.md]
-
----
-
-## Security Model
-[full content of docs/security-model.md]
-
----
-[etc.]
+**Example:**
+```typescript
+api.registerTool({
+  id: 'waiaas_transfer',
+  description: 'Send native tokens to an address',
+  input: {
+    type: 'object',
+    properties: {
+      to: { type: 'string', description: 'Recipient address' },
+      amount: { type: 'string', description: 'Amount in human-readable units (e.g., "0.1")' },
+      network: { type: 'string', description: 'Target network' },
+      wallet_id: { type: 'string', description: 'Wallet ID (multi-wallet sessions)' },
+    },
+    required: ['to', 'amount'],
+  },
+  handler: async (input) => client.sendToken({
+    type: 'TRANSFER',
+    to: input.to as string,
+    humanAmount: input.amount as string,
+    network: input.network as string,
+    walletId: input.wallet_id as string,
+  }),
+});
 ```
 
-This allows AI crawlers to fetch all site content in a single request instead of crawling individual pages. Studies show llms-full.txt can increase AI crawl rates by 5-10x.
+### Pattern 2: Domain-Grouped Tool Files
 
-### Pattern 5: Blog URL Slug from Filename
+**What:** Tools organized by domain (wallet, transfer, defi, nft, utility) matching the existing MCP tool organization.
 
-**What:** Strip numeric prefix and extension from Why WAIaaS filenames for clean blog URLs.
-**When:** URL generation for blog posts.
-**Example:** `001-ai-agent-wallet-security-crisis.md` becomes `/blog/ai-agent-wallet-security-crisis/`
+**When:** For all tool registrations in the plugin.
+
+**Why:** Mirrors `packages/mcp/src/tools/` structure, making it easy to verify coverage parity between MCP and OpenClaw.
+
+### Pattern 3: Frontmatter-Driven Section Routing
+
+**What:** Admin manual pages use `section: "docs"` in frontmatter to route to `site/docs/` output path.
+
+**When:** For all new `docs/admin-manual/*.md` files.
+
+**Why:** `site/build.mjs` routes based on frontmatter `section` field. `"docs"` produces `TechArticle` JSON-LD. The slug determines the output path.
+
+### Pattern 4: Content Extraction (Not Duplication)
+
+**What:** masterAuth content is _moved_ from skills to admin-manual, not _copied_. Skills reference admin manual ("See [Admin Guide: Wallet Management](/docs/admin-wallet-management/) for setup.") instead of duplicating.
+
+**When:** During the skill cleanup phase.
+
+**Why:** Single source of truth. Admin manual becomes the canonical reference for admin operations.
+
+---
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: Adopting a Full SSG Framework
+### Anti-Pattern 1: Reusing MCP Tool Definitions
 
-**What:** Using Hugo, Jekyll, 11ty, or Astro for 15 pages.
-**Why bad:** Adds massive dependency surface, framework-specific config, build complexity, and upgrade burden. The existing hand-crafted index.html would need to be ported into the framework's template system, breaking the current simple deploy.
-**Instead:** Single build script (~300 lines) with 3 npm dependencies (`marked`, `gray-matter`, `highlight.js`).
+**What:** Importing Zod schemas or registration functions from `packages/mcp/`.
 
-### Anti-Pattern 2: SPA-Style Client-Side Routing
+**Why bad:** MCP uses `@modelcontextprotocol/sdk` with Zod-based schemas and `McpServer.tool()`. OpenClaw uses JSON Schema with `api.registerTool()`. Different APIs make sharing create dependency on MCP internals + schema conversion complexity.
 
-**What:** Using JavaScript to load content dynamically (hash routing, history API).
-**Why bad:** Search engines and AI crawlers need real HTML at each URL. Client-side rendering defeats SEO/AEO purpose entirely.
-**Instead:** Static HTML files at each URL path (directory/index.html pattern).
+**Instead:** Write clean JSON Schema definitions in the plugin. Use `@waiaas/sdk` directly.
 
-### Anti-Pattern 3: Extracting CSS from index.html Prematurely
+### Anti-Pattern 2: Embedding masterAuth Logic in Plugin
 
-**What:** Splitting index.html's inline styles into a separate CSS file to share with template.
-**Why bad:** index.html works perfectly as-is. Changing it introduces risk to the production landing page. The template needs different styles anyway (article layout vs landing page layout).
-**Instead:** The template includes its own inline styles. Common CSS variables (colors, fonts) are duplicated between index.html and _template.html. This is intentional -- 15 CSS variables duplicated across 2 files is simpler than a shared CSS file with import coordination.
+**What:** Adding admin tools (wallet creation, policy CRUD) with a separate admin token config option.
 
-### Anti-Pattern 4: Dynamic Sitemap/llms.txt (Runtime Generation)
+**Why bad:** Defeats the purpose of the cleanup. Violates the security boundary.
 
-**What:** Generating sitemap.xml or llms-full.txt at request time.
-**Why bad:** GitHub Pages is static. There is no runtime. Everything must be pre-generated at build time.
-**Instead:** Build step generates all files. CI deploys the complete output.
+**Instead:** Plugin only accepts `sessionToken`. Only sessionAuth-compatible SDK methods are wrapped.
 
-### Anti-Pattern 5: Duplicating Content in index.html and docs/
+### Anti-Pattern 3: Module-Level Client Singleton
 
-**What:** Copying FAQ answers, feature descriptions, or quickstart steps into separate markdown files.
-**Why bad:** Content drift between landing page and docs.
-**Instead:** Keep landing page self-contained. Docs pages go deeper on specific topics. Cross-link between them.
+**What:** Creating WAIaaSClient at module import time.
 
-## Integration Points with Existing Architecture
+**Why bad:** OpenClaw may call `register()` multiple times or with different configs.
 
-### 1. GitHub Actions Pipeline (Modified)
+**Instead:** Create client inside `register()` from the provided `api.config`.
 
-Current `pages.yml` deploys `site/` directly with no build step. Add Node.js build:
+### Anti-Pattern 4: Removing skills/ Files Before Admin Manual Exists
 
-```yaml
-jobs:
-  deploy:
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0          # Need git history for lastmod dates
+**What:** Deleting admin content from skills before creating the admin manual.
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
+**Why bad:** Content is lost temporarily. Harder to verify completeness.
 
-      - name: Build site
-        working-directory: site
-        run: |
-          npm ci
-          node build.mjs
+**Instead:** Create admin manual files first (extracting content), then trim skills. Phase 2 order matters.
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
+---
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: site
+## Suggested Build Order
 
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
-```
+Dependencies flow bottom-up. Phases should follow this order:
 
-**Key changes:**
-- `fetch-depth: 0` -- required to get git log dates for sitemap `<lastmod>`
-- Node.js setup + `npm ci` + `node build.mjs` -- the actual build step
+### Phase 1: Document Structure Cleanup (no code dependencies)
 
-### 2. pages.yml Trigger Paths (Modified)
+1. `docs/guides/` -> `docs/agent-guides/` rename (`git mv`)
+2. Update references in `README.md` (4 links), `site/index.html` (1 link)
+3. Verify site build still works (URLs unchanged due to frontmatter routing)
 
-Current trigger: `paths: ['site/**']`. Must add `docs/**` since doc changes should trigger site rebuilds:
+**Rationale:** Isolated rename with predictable impact. All downstream phases reference `docs/agent-guides/` paths.
 
-```yaml
-on:
-  push:
-    branches: [main]
-    paths: ['site/**', 'docs/**']
-```
+### Phase 2: Skills Cleanup + Admin Manual Creation (depends on Phase 1)
 
-### 3. Generated Files Strategy
+1. Create `docs/admin-manual/` directory structure
+2. Create 8 admin manual markdown files (extracting from skill files + admin/setup)
+3. Add frontmatter to all admin manual files (title, description, date, section, slug)
+4. Remove `admin.skill.md` and `setup.skill.md` from `skills/`
+5. Trim masterAuth content from 7 mixed skill files
+6. Remove `'admin-manual'` from `site/build.mjs` EXCLUDE_DIRS
+7. Update `packages/skills/` CLI (remove admin/setup from install targets)
+8. Verify: `skills/` has 0 masterAuth references, admin manual has complete content
+9. Verify: site build generates admin manual HTML pages
 
-Generated HTML pages are built in CI only, not committed to the repo. Add to `.gitignore`:
+**Rationale:** Admin manual must exist before trimming skills (Pattern 4 above). Skills cleanup must complete before plugin work, because the plugin tool list depends on the cleaned-up agent-only skill set.
 
-```
-site/node_modules/
-site/docs/
-site/blog/
-```
+### Phase 3: OpenClaw Plugin Package (depends on Phase 2)
 
-This keeps the repo clean. The `site/index.html` (hand-crafted) and `docs/*.md` (source) are committed. Generated output exists only in the GitHub Pages artifact.
+1. Create `packages/openclaw-plugin/` package structure + `package.json`
+2. Write `openclaw.plugin.json` manifest
+3. Implement `src/types.ts` (OpenClaw API type stubs)
+4. Implement `src/client.ts` (WAIaaSClient factory)
+5. Implement `src/index.ts` (`register()` entry point)
+6. Implement tool files (wallet, transfer, defi, nft, utility)
+7. Write tests: register verification, tool handler unit tests, admin tool exclusion test
+8. Add to `turbo.json` (build task with SDK dependency)
+9. Add to `release-please-config.json` (extra-files)
 
-**Note:** `site/sitemap.xml`, `site/llms.txt`, and `site/llms-full.txt` are also generated by the build script, so they should also be gitignored. But this changes the current behavior where `sitemap.xml` and `llms.txt` are committed. The transition requires deleting the committed versions and adding them to `.gitignore`.
+**Rationale:** Plugin wraps the agent-only tool list finalized in Phase 2. Build config integration comes last to avoid build failures during development.
 
-### 4. Existing llms.txt (Replaced by Generated)
+### Phase 4: CI/CD + Documentation + SEO (depends on Phase 3)
 
-Current `llms.txt` is hand-written (64 lines). The build script will auto-generate both:
-- `llms.txt` -- summary with links to all pages
-- `llms-full.txt` -- full content concatenated
+1. Update `docs/agent-guides/openclaw-integration.md` (plugin method first, skills legacy)
+2. Create `docs/seo/openclaw-plugin.md` (SEO landing page with frontmatter)
+3. Create `skills/integrations.skill.md` (agent skill for plugin usage)
+4. Create `packages/openclaw-plugin/README.md`
+5. Verify site build (admin manual + OpenClaw SEO page generate correctly)
+6. Verify sitemap.xml and llms-full.txt include all new pages
+7. npm publish dry-run for `@waiaas/openclaw-plugin`
 
-The hand-written content serves as the template for the generated version.
+**Rationale:** Documentation and SEO are final polish after all functional changes are complete. The plugin package must exist before its README and integration guide can be finalized.
 
-### 5. Existing JSON-LD on index.html (Unchanged)
-
-The landing page already has 3 JSON-LD blocks (SoftwareApplication, FAQPage, HowTo). These remain untouched. Content pages get their own JSON-LD injected by the template.
-
-### 6. Navigation Links (One Change to index.html)
-
-The landing page nav currently links to GitHub for docs:
-
-```html
-<a href="https://github.com/minhoyoo-iotrust/WAIaaS/blob/main/docs/deployment.md">Docs</a>
-```
-
-After build, this should link to the on-site docs:
-
-```html
-<a href="/docs/">Docs</a>
-```
-
-This is the **only change** to `index.html`: updating the Docs nav link. This also requires a docs index page (`site/docs/index.html`) with a table of contents listing all documentation.
-
-### 7. robots.txt (Modified)
-
-Add llms-full.txt reference:
+### Phase Ordering Rationale Summary
 
 ```
-User-agent: *
-Allow: /
-
-Sitemap: https://waiaas.ai/sitemap.xml
+Phase 1 (rename)
+  |
+  v
+Phase 2 (skills + admin manual)  -- content must exist before plugin tools list
+  |
+  v
+Phase 3 (openclaw plugin)        -- depends on finalized tool list from Phase 2
+  |
+  v
+Phase 4 (docs + CI/CD + SEO)     -- references plugin package from Phase 3
 ```
 
-No changes needed to robots.txt itself -- the sitemap already points crawlers to all pages. But adding a direct reference to llms-full.txt in llms.txt is important for AI crawlers that look for it.
+---
 
 ## Scalability Considerations
 
-| Concern | At 15 pages (now) | At 50 pages | At 200+ pages |
-|---------|-------------------|-------------|---------------|
-| Build time | < 1s | < 2s | Consider caching, still < 5s |
-| Build script | Single file ~300 LOC | Same file, still manageable | Consider splitting into modules |
-| Template | Single `_template.html` | May need doc vs blog variants | Add layout selection in frontmatter |
-| Navigation | Manual nav links | Auto-generated docs sidebar | Auto-generated from file tree |
-| sitemap.xml | Single flat file | Single flat file | Consider sitemap index |
-| llms-full.txt | Single file ~100KB | Single file ~250KB | Consider splitting by section |
+| Concern | Current (22 tools) | At 50 tools | At 100+ tools |
+|---------|---------------------|-------------|---------------|
+| Plugin registration | Single `register()` call | Same, group by domain files | Consider lazy loading per domain |
+| SDK dependency | Direct import | Same | Same |
+| Test coverage | Per-tool unit tests | Per-domain test files | Test generator from tool registry |
+| Plugin dist size | < 50KB | < 100KB | Split into sub-plugins |
 
-At the current scale (15 pages), the minimal build script is the right choice. If the site grows beyond 50 pages, evaluate 11ty (which has the lightest footprint among established SSGs and can incrementally adopt).
+For the current scope (~22 tools), the single-plugin architecture is appropriate. No sub-plugins or lazy loading needed.
 
-## Build Order (Implementation Phases)
-
-Based on dependency analysis, the recommended build order:
-
-### Phase 1: Build Infrastructure (no content changes)
-1. Create `site/package.json` with build dependencies (`marked`, `gray-matter`, `highlight.js`)
-2. Create `site/_template.html` (content page shell, CRT theme matching index.html)
-3. Create `site/build.mjs` (markdown-to-HTML core, sitemap generation, llms-full.txt generation)
-4. Test locally: verify one doc renders correctly with `node build.mjs`
-
-**Dependencies:** None. Can start immediately.
-
-### Phase 2: Content Pages
-5. Add frontmatter to `docs/*.md` files (title, description -- non-breaking addition)
-6. Generate all doc pages (`site/docs/**`)
-7. Generate blog pages from Why WAIaaS articles (`site/blog/**`)
-8. Create docs index page (`site/docs/index.html`) with table of contents
-9. Create blog index page (`site/blog/index.html`) with article list
-10. Verify clean URLs work locally
-
-**Dependencies:** Phase 1 complete.
-
-### Phase 3: SEO/AEO Assets
-11. Auto-generate `sitemap.xml` (all URLs + lastmod from git)
-12. Auto-generate `llms-full.txt` (concatenated markdown)
-13. Auto-generate `llms.txt` (summary with links)
-14. Per-page JSON-LD (TechArticle/Article schemas)
-15. BreadcrumbList JSON-LD for content pages
-
-**Dependencies:** Phase 2 complete (needs page list for sitemap).
-
-### Phase 4: CI Integration + Go-Live
-16. Update `.github/workflows/pages.yml` (add build step, fetch-depth, trigger paths)
-17. Update `index.html` nav Docs link to `/docs/`
-18. Add `.gitignore` entries for generated files
-19. Remove committed `sitemap.xml` and `llms.txt` (replaced by generated versions)
-20. End-to-end test: push to branch, verify Pages deployment
-
-**Dependencies:** Phases 1-3 complete.
-
-### Phase ordering rationale:
-- Phase 1 before Phase 2: template and build script must exist before content can be generated
-- Phase 2 before Phase 3: SEO assets (sitemap, llms) need the full page list
-- Phase 3 before Phase 4: all generated content must be verified before CI deployment
-- Phase 4 last: the "go-live" phase that modifies production pipeline
+---
 
 ## Sources
 
-- [GitHub Pages documentation](https://docs.github.com/en/pages/getting-started-with-github-pages/creating-a-github-pages-site) - HIGH confidence
-- [GitHub Pages clean URLs (directory/index.html)](https://rsp.github.io/gh-pages-no-extension/) - HIGH confidence
-- [llms.txt specification](https://llmstxt.org/) - HIGH confidence (official spec)
-- [llms-full.txt guide](https://aioseo.com/what-is-llms-full-txt/) - MEDIUM confidence
-- [AEO Complete Guide 2026](https://llmrefs.com/answer-engine-optimization) - MEDIUM confidence
-- [marked.js documentation](https://marked.js.org/) - HIGH confidence
-- [Schema.org TechArticle](https://schema.org/TechArticle) - HIGH confidence
-- Existing codebase analysis: `site/index.html`, `site/llms.txt`, `site/sitemap.xml`, `.github/workflows/pages.yml` - HIGH confidence (direct inspection)
+- [OpenClaw Plugin Developer Docs](https://docs.openclaw.ai/tools/plugin) -- plugin manifest, register(api), tool registration API (MEDIUM confidence, fetched live)
+- [OpenClaw Skills Docs](https://docs.openclaw.ai/tools/skills) -- SKILL.md format, skills-plugin relationship (MEDIUM confidence, fetched live)
+- [OpenClaw Tools Overview](https://docs.openclaw.ai/tools) -- tool configuration, allow/deny (MEDIUM confidence, fetched live)
+- Codebase inspection: `site/build.mjs`, `packages/skills/`, `packages/mcp/src/tools/` (45 files), `packages/sdk/`, `turbo.json`, `release-please-config.json` (HIGH confidence, direct source)
