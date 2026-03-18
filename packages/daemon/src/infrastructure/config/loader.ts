@@ -89,8 +89,6 @@ export const DaemonConfigSchema = z.object({
       telegram_bot_token: z.string().default(''),
       telegram_chat_id: z.string().default(''),
       discord_webhook_url: z.string().default(''),
-      ntfy_server: z.string().default('https://ntfy.sh'),
-      ntfy_topic: z.string().default(''),
       slack_webhook_url: z.string().default(''),
       locale: z.enum(['en', 'ko']).default('en'),
       rate_limit_rpm: z.number().int().min(1).max(60).default(20),

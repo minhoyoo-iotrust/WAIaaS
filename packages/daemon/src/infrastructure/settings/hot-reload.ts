@@ -57,8 +57,6 @@ const NOTIFICATION_KEYS = new Set([
   'notifications.telegram_bot_token',
   'notifications.telegram_chat_id',
   'notifications.discord_webhook_url',
-  'notifications.ntfy_server',
-  // notifications.ntfy_topic removed in v29.10 -- per-wallet topics now in wallet_apps table
   'notifications.slack_webhook_url',
   'notifications.locale',
   'notifications.rate_limit_rpm',
