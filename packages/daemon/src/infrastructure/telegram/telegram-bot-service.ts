@@ -169,10 +169,11 @@ export class TelegramBotService {
         // Exponential backoff on network errors
         if (this.running) {
           this.retryCount++;
-          // Log warning every 3 consecutive failures
+          // Log warning every 3 consecutive failures (include error details)
           if (this.retryCount % 3 === 0) {
+            const errMsg = err instanceof Error ? err.message : String(err);
             console.warn(
-              `Telegram Bot: ${this.retryCount} consecutive failures, retrying in ${this.backoffMs}ms`,
+              `Telegram Bot: ${this.retryCount} consecutive failures, retrying in ${this.backoffMs}ms — ${errMsg}`,
             );
           }
           await this.sleep(this.backoffMs);
