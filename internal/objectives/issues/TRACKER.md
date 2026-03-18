@@ -36,6 +36,7 @@
 | 386 | BUG | HIGH | Lido 테스트넷 포지션 미표시 — Holesky 컨트랙트 주소가 Sepolia 네트워크에 매핑됨 | v32.9 | FIXED | 2026-03-18 |
 | 387 | BUG | HIGH | DCent Swap formatAmount() 회귀 — get_quotes/getDexSwapTransactionData에 human amount 전달로 전 프로바이더 실패 | v32.9 | FIXED | 2026-03-18 |
 | 388 | BUG | MEDIUM | defi-12 DCent Swap UAT 시나리오 API 엔드포인트 오류 — /v1/transactions/* 대신 /v1/actions/dcent_swap/* 사용 필요 | v32.9 | FIXED | 2026-03-18 |
+| 389 | ENHANCEMENT | LOW | Agent UAT 시나리오 환경(Environment) 분류 누락 — Env 컬럼 및 --env 필터 추가 필요 | — | OPEN | — |
 
 ## Type Legend
 
@@ -47,8 +48,8 @@
 
 ## Summary
 
-- **OPEN:** 0
+- **OPEN:** 1
 - **FIXED:** 388
 - **WONTFIX:** 1
-- **Total:** 389
+- **Total:** 390
 - **Archived:** 366 (001–366)
