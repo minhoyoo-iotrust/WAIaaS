@@ -80,7 +80,7 @@ See `.planning/milestones/v32.8-ROADMAP.md` for full details.
   3. wallet_apps 테이블에 push_relay_url 컬럼이 존재하고, dcent 프리셋은 자동으로 DCent Push Relay URL이 설정된다
   4. Push Relay 서버가 POST /v1/push, POST /v1/sign-response, GET /v1/sign-response/:requestId long-polling API를 제공하고, ntfy SSE 코드가 완전히 제거된다
   5. sign_responses 테이블의 만료 레코드가 자동 정리된다
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
 - [ ] 449-01: Core 타입 변경 (ResponseChannelSchema, APPROVAL_METHODS, sign-request-builder)
