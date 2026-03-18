@@ -57,13 +57,8 @@ jobs:
           sudo mkswap /swapfile
           sudo swapon /swapfile
 
-      - name: Typecheck (affected, excluding MCP)
-        run: pnpm turbo run typecheck --affected --filter='!@waiaas/mcp'
-        env:
-          TURBO_SCM_BASE: ${{ steps.affected-base.outputs.base }}
-
-      - name: Typecheck MCP (if affected)
-        run: pnpm turbo run typecheck --affected --filter='@waiaas/mcp'
+      - name: Typecheck (affected)
+        run: pnpm turbo run typecheck --affected --concurrency 1
         env:
           TURBO_SCM_BASE: ${{ steps.affected-base.outputs.base }}
           NODE_OPTIONS: '--max-old-space-size=8192'
