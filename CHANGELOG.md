@@ -1,5 +1,30 @@
 # Changelog
 
+## [2.11.0-rc.21](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.20...v2.11.0-rc.21) (2026-03-18)
+
+
+### Features
+
+* **439-01:** add CRT-themed article CSS for long-form content ([181e681](https://github.com/minhoyoo-iotrust/WAIaaS/commit/181e6813b182b97750097c7026e8be70cb87176c))
+* **439-01:** add markdown-to-HTML build script and template ([17b6d39](https://github.com/minhoyoo-iotrust/WAIaaS/commit/17b6d39e30d279a12b7ce930c0bc8cebd56cabec))
+* **440-01:** add Blog/Docs listing pages and navigation integration ([f31a32b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/f31a32b6072efc30e591a53bb34668cac364e1dc))
+* **440-01:** add internal link validation and content stats to build ([3df91b0](https://github.com/minhoyoo-iotrust/WAIaaS/commit/3df91b0f0d95e84f4018ae0758107911f8481553))
+* **441-01:** add auto-generated sitemap.xml and JSON-LD structured data ([40bacff](https://github.com/minhoyoo-iotrust/WAIaaS/commit/40bacff2fa8e4b1e80e648be854d2d706fc46131))
+* **441-02:** add llms-full.txt auto-generation and pillar-cluster internal links ([07a6401](https://github.com/minhoyoo-iotrust/WAIaaS/commit/07a64013538cb600fa2e374c63fd3fdbd3e3cbac))
+* **441-02:** expand FAQ to 20 Q&As with visual accordion section ([74436e4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/74436e4b1a066cf292d9224d9292cd23ee17ba85))
+* **443-01:** add 3 SEO landing pages for AI wallet category keywords ([a87c64b](https://github.com/minhoyoo-iotrust/WAIaaS/commit/a87c64bc9a62fe45e4c1ee27b8efde8e63635b90))
+* add DeFi position exit and DCent Swap extended UAT scenarios ([016b160](https://github.com/minhoyoo-iotrust/WAIaaS/commit/016b160e273890f0d0a6130f17095aaea222e433))
+
+
+### Bug Fixes
+
+* add GET /policies/:id route and fix unused import lint errors ([b28c5b5](https://github.com/minhoyoo-iotrust/WAIaaS/commit/b28c5b5f47a98057365e87ea68fd07151d410eef))
+* align SDK test assertions with actual URL query values ([4a279b4](https://github.com/minhoyoo-iotrust/WAIaaS/commit/4a279b4d1511fc2406224e21d05a431196d64861))
+* normalize EVM token addresses with EIP-55 checksum validation ([d0d7229](https://github.com/minhoyoo-iotrust/WAIaaS/commit/d0d72295f143a06be779f9c42d59fad8f63e60de)), closes [#379](https://github.com/minhoyoo-iotrust/WAIaaS/issues/379)
+* resolve PositionTracker RPC URLs via RpcPool for DeFi dashboard ([62539c7](https://github.com/minhoyoo-iotrust/WAIaaS/commit/62539c79117af45c76f090d5a0954bdb3ced8aab)), closes [#380](https://github.com/minhoyoo-iotrust/WAIaaS/issues/380)
+* resolve type errors in SDK client-coverage test ([7740848](https://github.com/minhoyoo-iotrust/WAIaaS/commit/7740848448635b7875e11e03a7ed1ecb10560af2))
+* resolve unused variable and empty block lint errors in CLI tests ([0b9c23c](https://github.com/minhoyoo-iotrust/WAIaaS/commit/0b9c23cedc89405f2de4fb7064d169dcfb1ed0fe))
+
 ## [2.11.0-rc.20](https://github.com/minhoyoo-iotrust/WAIaaS/compare/v2.11.0-rc.19...v2.11.0-rc.20) (2026-03-17)
 
 
