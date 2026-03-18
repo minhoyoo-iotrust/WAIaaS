@@ -63,8 +63,8 @@ function getWalletColumns(): string[] {
 // ---------------------------------------------------------------------------
 
 describe('LATEST_SCHEMA_VERSION', () => {
-  it('should be 59', () => {
-    expect(LATEST_SCHEMA_VERSION).toBe(59);
+  it('should be 60', () => {
+    expect(LATEST_SCHEMA_VERSION).toBe(60);
   });
 });
 
@@ -74,8 +74,8 @@ describe('Fresh DB (pushSchema)', () => {
     expect(columns).toContain('owner_approval_method');
   });
 
-  it('schema_version max is 59', () => {
-    expect(getMaxVersion()).toBe(59);
+  it('schema_version max is 60', () => {
+    expect(getMaxVersion()).toBe(60);
   });
 
   it('owner_approval_method defaults to NULL', () => {
@@ -91,7 +91,7 @@ describe('Fresh DB (pushSchema)', () => {
 
   it('CHECK constraint accepts valid approval methods on fresh DB', () => {
     const ts = Math.floor(Date.now() / 1000);
-    const validMethods = ['sdk_ntfy', 'sdk_telegram', 'walletconnect', 'telegram_bot', 'rest'];
+    const validMethods = ['sdk_push', 'sdk_telegram', 'walletconnect', 'telegram_bot', 'rest'];
 
     for (let i = 0; i < validMethods.length; i++) {
       expect(() => {
@@ -145,7 +145,7 @@ describe('v18 migration on existing DB', () => {
     // Since pushSchema records all versions, we test v18 in isolation
     const v18Migration: Migration[] = [
       {
-        version: 60, // Use 60 to avoid conflict with existing v1-v59
+        version: 61, // Use 61 to avoid conflict with existing v1-v60
         description: 'Test: Add owner_approval_method via ALTER (simulated)',
         up: (db) => {
           // Check column was already added by the real v18 migration

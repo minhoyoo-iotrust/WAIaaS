@@ -132,13 +132,13 @@ describe('PUT /wallets/:id/owner approval_method', () => {
       headers: masterAuthJsonHeaders(),
       body: JSON.stringify({
         owner_address: VALID_SOLANA_ADDRESS,
-        approval_method: 'sdk_ntfy',
+        approval_method: 'sdk_push',
       }),
     });
 
     expect(res.status).toBe(200);
     const body = await json(res);
-    expect(body.approvalMethod).toBe('sdk_ntfy');
+    expect(body.approvalMethod).toBe('sdk_push');
   });
 
   it('should accept all 5 valid APPROVAL_METHODS values', async () => {
@@ -217,11 +217,11 @@ describe('PUT /wallets/:id/owner approval_method', () => {
       headers: masterAuthJsonHeaders(),
       body: JSON.stringify({
         owner_address: VALID_SOLANA_ADDRESS,
-        approval_method: 'sdk_ntfy',
+        approval_method: 'sdk_push',
       }),
     });
     expect(res1.status).toBe(200);
-    expect((await json(res1)).approvalMethod).toBe('sdk_ntfy');
+    expect((await json(res1)).approvalMethod).toBe('sdk_push');
 
     // Clear with explicit null
     const res2 = await app.request(`/v1/wallets/${walletId}/owner`, {
@@ -269,13 +269,13 @@ describe('PUT /wallets/:id/owner approval_method', () => {
     const walletId = generateId();
     seedWallet(sqlite, walletId);
 
-    // Step 1: Set to sdk_ntfy
+    // Step 1: Set to sdk_push
     const res1 = await app.request(`/v1/wallets/${walletId}/owner`, {
       method: 'PUT',
       headers: masterAuthJsonHeaders(),
       body: JSON.stringify({
         owner_address: VALID_SOLANA_ADDRESS,
-        approval_method: 'sdk_ntfy',
+        approval_method: 'sdk_push',
       }),
     });
     expect(res1.status).toBe(200);

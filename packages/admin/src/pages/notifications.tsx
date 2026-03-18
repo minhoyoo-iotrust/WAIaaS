@@ -70,7 +70,6 @@ const LOG_FILTER_FIELDS: FilterField[] = [
     options: [
       { value: 'telegram', label: 'Telegram' },
       { value: 'discord', label: 'Discord' },
-      { value: 'ntfy', label: 'ntfy' },
       { value: 'slack', label: 'Slack' },
       { value: 'wallet_app', label: 'Wallet App' },
     ],
@@ -295,25 +294,6 @@ function NotificationSettingsTab() {
             </div>
           </FieldGroup>
 
-          <FieldGroup legend="ntfy" description="Push notification channel for Human Wallet Apps (signing requests and activity alerts)">
-            <div class="settings-info-box" style={{ marginBottom: '0.75rem' }}>
-              ntfy is the push notification infrastructure used by Human Wallet Apps for signing requests and activity alerts.
-              Per-wallet ntfy topics (sign topic, notify topic) are managed in{' '}
-              <a href="#/wallet-apps">Human Wallet Apps</a>.
-              The server URL below is shared across all wallet apps.
-            </div>
-            <div class="settings-fields-grid">
-              <FormField
-                label={keyToLabel('ntfy_server')}
-                name="notifications.ntfy_server"
-                type="text"
-                value={getEffectiveValue(settings.value, dirty.value, 'notifications', 'ntfy_server')}
-                onChange={(v) => handleFieldChange('notifications.ntfy_server', v)}
-                description="Server URL for ntfy push notifications"
-              />
-            </div>
-          </FieldGroup>
-
           <FieldGroup legend="Other Channels" description="Discord, Slack, and rate limiting">
             <div class="settings-info-box" style={{ marginBottom: '0.75rem' }}>
               <strong>Discord:</strong> Create a webhook in Server Settings &gt; Integrations &gt;{' '}
@@ -479,7 +459,7 @@ function NotificationSettingsTab() {
               );
             })()}
             <div class="settings-info-box" style={{ marginTop: '0.5rem' }}>
-              Applies to all notification channels (Telegram, Discord, ntfy, Slack) and wallet app side channel.
+              Applies to all notification channels (Telegram, Discord, Slack) and wallet app side channel.
               Broadcast events (Kill Switch, Auto Stop, Suspicious TX) always bypass the filter.
             </div>
           </FieldGroup>

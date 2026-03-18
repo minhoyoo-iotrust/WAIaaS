@@ -108,8 +108,9 @@ function createTestRequest(overrides: Partial<SignRequest> = {}): SignRequest {
       policyTier: 'APPROVAL',
     },
     responseChannel: {
-      type: 'ntfy',
-      responseTopic: `waiaas-response-${requestId}`,
+      type: 'push_relay',
+      pushRelayUrl: 'http://localhost:3200',
+      requestId: requestId,
     },
     expiresAt,
     ...overrides,

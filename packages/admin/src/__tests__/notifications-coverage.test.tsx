@@ -77,7 +77,7 @@ const mockStatus = {
   channels: [
     { name: 'telegram', enabled: true },
     { name: 'discord', enabled: false },
-    { name: 'ntfy', enabled: true },
+    { name: 'slack', enabled: true },
   ],
 };
 
@@ -131,7 +131,7 @@ const mockLogsPage2 = {
     id: String(i + 21),
     eventType: 'TX_SUBMITTED',
     walletId: `wallet-${i + 20}`,
-    channel: 'ntfy',
+    channel: 'slack',
     status: 'sent',
     error: null,
     message: `Message ${i + 20}`,
@@ -212,7 +212,7 @@ describe('NotificationsPage - Additional Coverage', () => {
       setupMocks();
 
       mockApiPost.mockResolvedValueOnce({ data: {
-        results: [{ channel: 'ntfy', success: false, error: 'Connection refused' }],
+        results: [{ channel: 'slack', success: false, error: 'Connection refused' }],
       } });
 
       const { container } = render(<NotificationsPage />);
@@ -221,23 +221,23 @@ describe('NotificationsPage - Additional Coverage', () => {
         expect(screen.getByText('Channel Status')).toBeTruthy();
       });
 
-      // Find ntfy channel card's Test button
+      // Find slack channel card's Test button
       const channelCards = container.querySelectorAll('.channel-card');
-      let ntfyTestBtn: HTMLButtonElement | null = null;
+      let slackTestBtn: HTMLButtonElement | null = null;
       channelCards.forEach((card) => {
-        if (card.textContent?.includes('ntfy')) {
+        if (card.textContent?.includes('slack')) {
           const btns = card.querySelectorAll('button');
           btns.forEach((btn) => {
-            if (btn.textContent === 'Test') ntfyTestBtn = btn as HTMLButtonElement;
+            if (btn.textContent === 'Test') slackTestBtn = btn as HTMLButtonElement;
           });
         }
       });
 
-      expect(ntfyTestBtn).toBeTruthy();
-      fireEvent.click(ntfyTestBtn!);
+      expect(slackTestBtn).toBeTruthy();
+      fireEvent.click(slackTestBtn!);
 
       await waitFor(() => {
-        expect(vi.mocked(showToast)).toHaveBeenCalledWith('warning', 'ntfy test failed');
+        expect(vi.mocked(showToast)).toHaveBeenCalledWith('warning', 'slack test failed');
       });
     });
 
@@ -538,7 +538,7 @@ describe('NotificationsPage - Additional Coverage', () => {
       mockApiPost.mockResolvedValueOnce({ data: {
         results: [
           { channel: 'telegram', success: true },
-          { channel: 'ntfy', success: true },
+          { channel: 'slack', success: true },
         ],
       } });
 
@@ -772,8 +772,6 @@ describe('NotificationsPage - Additional Coverage', () => {
             telegram_chat_id: '12345',
             locale: 'en',
             discord_webhook_url: false,
-            ntfy_server: '',
-            ntfy_topic: '',
             slack_webhook_url: false,
             rate_limit_rpm: '20',
           },
@@ -1022,14 +1020,12 @@ describe('NotificationsPage - Additional Coverage', () => {
   });
 
   // -----------------------------------------------------------------------
-  // ntfy FieldGroup separation
+  // ntfy FieldGroup removed (v32.9 Push Relay migration)
   // -----------------------------------------------------------------------
 
-  describe('ntfy FieldGroup separation', () => {
-    const mockSettingsForNtfy = {
+  describe('ntfy FieldGroup removed', () => {
+    const mockSettingsForChannels = {
       'notifications.enabled': { value: 'true', source: 'default' },
-      'notifications.ntfy_server': { value: 'https://ntfy.sh', source: 'default' },
-      'notifications.ntfy_topic': { value: 'waiaas', source: 'default' },
       'notifications.discord_webhook_url': { value: '', source: 'default' },
       'notifications.slack_webhook_url': { value: '', source: 'default' },
       'notifications.rate_limit_rpm': { value: '20', source: 'default' },
@@ -1044,12 +1040,12 @@ describe('NotificationsPage - Additional Coverage', () => {
       mockApiGet.mockImplementation((url: string) => {
         if (url.includes('/notifications/status')) return Promise.resolve({ data: mockStatus });
         if (url.includes('/notifications/log')) return Promise.resolve({ data: mockLogs });
-        if (url === '/v1/admin/settings') return Promise.resolve({ data: mockSettingsForNtfy });
+        if (url === '/v1/admin/settings') return Promise.resolve({ data: mockSettingsForChannels });
         return Promise.resolve({ data: {} });
       });
     }
 
-    it('renders ntfy as independent FieldGroup section in Settings tab', async () => {
+    it('does not render ntfy FieldGroup in Settings tab', async () => {
       vi.useRealTimers();
       setupSettingsMocks();
 
@@ -1063,16 +1059,10 @@ describe('NotificationsPage - Additional Coverage', () => {
         expect(screen.getByText('Notification Configuration')).toBeTruthy();
       });
 
-      // Find the ntfy FieldGroup legend
+      // ntfy FieldGroup should NOT exist
       const legends = container.querySelectorAll('legend');
       const ntfyLegend = Array.from(legends).find(l => l.textContent === 'ntfy');
-      expect(ntfyLegend).toBeTruthy();
-
-      // Verify the ntfy FieldGroup has the push notification description
-      const ntfyFieldset = ntfyLegend!.closest('fieldset');
-      expect(ntfyFieldset).toBeTruthy();
-      const desc = ntfyFieldset!.querySelector('.field-group-description');
-      expect(desc?.textContent).toContain('Push notification');
+      expect(ntfyLegend).toBeUndefined();
     });
 
     it('Other Channels shows only Discord and Slack (no ntfy fields)', async () => {
@@ -1102,38 +1092,6 @@ describe('NotificationsPage - Additional Coverage', () => {
       expect(desc?.textContent).toContain('Discord');
       expect(desc?.textContent).toContain('Slack');
       expect(desc?.textContent).not.toContain('ntfy');
-
-      // Info box inside Other Channels should NOT mention ntfy
-      const infoBox = otherFieldset!.querySelector('.settings-info-box');
-      expect(infoBox?.textContent).toContain('Discord');
-      expect(infoBox?.textContent).toContain('Slack');
-      expect(infoBox?.textContent).not.toContain('ntfy');
-    });
-
-    it('ntfy section contains Human Wallet Apps link', async () => {
-      vi.useRealTimers();
-      setupSettingsMocks();
-
-      const { container } = render(<NotificationsPage />);
-
-      // Switch to Settings tab
-      const settingsBtns = screen.getAllByText('Settings');
-      fireEvent.click(settingsBtns[0]);
-
-      await waitFor(() => {
-        expect(screen.getByText('Notification Configuration')).toBeTruthy();
-      });
-
-      // Find the Human Wallet Apps link
-      const link = screen.getByText('Human Wallet Apps') as HTMLAnchorElement;
-      expect(link).toBeTruthy();
-      expect(link.getAttribute('href')).toBe('#/wallet-apps');
-
-      // Verify the link is inside the ntfy FieldGroup
-      const legends = container.querySelectorAll('legend');
-      const ntfyLegend = Array.from(legends).find(l => l.textContent === 'ntfy');
-      const ntfyFieldset = ntfyLegend!.closest('fieldset');
-      expect(ntfyFieldset!.contains(link)).toBe(true);
     });
   });
 
