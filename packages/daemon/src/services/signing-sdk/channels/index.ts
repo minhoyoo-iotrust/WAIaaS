@@ -4,12 +4,12 @@
  * @see internal/design/73-signing-protocol-v1.md
  */
 
-export { NtfySigningChannel } from './ntfy-signing-channel.js';
+export { PushRelaySigningChannel } from './push-relay-signing-channel.js';
 export type {
-  NtfySigningChannelOpts,
+  PushRelaySigningChannelOpts,
   SendRequestParams,
   SendRequestResult,
-} from './ntfy-signing-channel.js';
+} from './push-relay-signing-channel.js';
 
 export { TelegramSigningChannel } from './telegram-signing-channel.js';
 export type { TelegramSigningChannelOpts } from './telegram-signing-channel.js';
