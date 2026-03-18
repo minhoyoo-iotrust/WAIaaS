@@ -215,8 +215,8 @@ describe('WalletNotificationChannel', () => {
   // -------------------------------------------------------------------------
   // DAEMON-05: priority by category
   // -------------------------------------------------------------------------
-  describe('DAEMON-05: priority by category', () => {
-    it('uses priority 5 for security_alert events (KILL_SWITCH_ACTIVATED)', async () => {
+  describe('DAEMON-05: category classification', () => {
+    it('uses security_alert category for KILL_SWITCH_ACTIVATED', async () => {
       const settings = createMockSettings();
       const sqlite = createMockSqlite([APP_DCENT]);
       const channel = new WalletNotificationChannel({ sqlite, settingsService: settings });
@@ -224,10 +224,10 @@ describe('WalletNotificationChannel', () => {
       await channel.notify('KILL_SWITCH_ACTIVATED', SOME_WALLET_ID, 'Kill Switch', 'Activated!');
 
       const body = JSON.parse(fetchMock.mock.calls[0]![1].body);
-      expect(body.payload.priority).toBe(5);
+      expect(body.payload.category).toBe('security_alert');
     });
 
-    it('uses priority 3 for transaction events (TX_CONFIRMED)', async () => {
+    it('uses transaction category for TX_CONFIRMED', async () => {
       const settings = createMockSettings();
       const sqlite = createMockSqlite([APP_DCENT]);
       const channel = new WalletNotificationChannel({ sqlite, settingsService: settings });
@@ -235,7 +235,7 @@ describe('WalletNotificationChannel', () => {
       await channel.notify('TX_CONFIRMED', SOME_WALLET_ID, 'Tx Confirmed', 'Body');
 
       const body = JSON.parse(fetchMock.mock.calls[0]![1].body);
-      expect(body.payload.priority).toBe(3);
+      expect(body.payload.category).toBe('transaction');
     });
   });
 

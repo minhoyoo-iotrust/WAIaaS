@@ -42,7 +42,7 @@ function mockSettingsService(values: Record<string, string> = {}): SettingsServi
       if (key in values) return values[key];
       if (key === 'signing_sdk.enabled') return 'true';
       if (key === 'signing_sdk.notifications_enabled') return 'true';
-      if (key === 'notifications.ntfy_server') return 'https://ntfy.example.com';
+      if (key === 'signing_sdk.push_relay_api_key') return 'test-api-key';
       return '';
     }),
     set: vi.fn(),
@@ -58,9 +58,10 @@ const TEST_APP = {
   displayName: "D'CENT Wallet",
   signingEnabled: true,
   alertsEnabled: true,
-  signTopic: 'waiaas-sign-dcent',
-  notifyTopic: 'waiaas-notify-dcent',
+  signTopic: null,
+  notifyTopic: null,
   subscriptionToken: 'a1b2c3d4',
+  pushRelayUrl: 'https://relay.example.com',
   createdAt: 1700000000,
   updatedAt: 1700000000,
 };
@@ -150,7 +151,7 @@ describe('POST /admin/wallet-apps/:id/test-notification', () => {
     expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 
-  it('sends test notification in base64url JSON format', async () => {
+  it('sends test notification via Push Relay JSON format', async () => {
     const walletAppService = mockWalletAppService({
       getById: vi.fn().mockReturnValue(TEST_APP),
     });
@@ -158,31 +159,30 @@ describe('POST /admin/wallet-apps/:id/test-notification', () => {
 
     const router = createWalletAppsRoutes({ walletAppService, settingsService });
     const res = await router.request('/admin/wallet-apps/app-1/test-notification', { method: 'POST' });
-    const body = await res.json() as { success: boolean; topic?: string };
+    const body = await res.json() as { success: boolean };
 
     expect(res.status).toBe(200);
     expect(body.success).toBe(true);
-    expect(body.topic).toBe('waiaas-notify-dcent');
 
-    // Verify fetch was called with base64url-encoded JSON body + ntfy headers
+    // Verify fetch was called with Push Relay JSON body
     const fetchMock = globalThis.fetch as ReturnType<typeof vi.fn>;
     expect(fetchMock).toHaveBeenCalledWith(
-      'https://ntfy.example.com/waiaas-notify-dcent',
+      'https://relay.example.com/v1/push',
       expect.objectContaining({
         method: 'POST',
         headers: expect.objectContaining({
-          'Priority': '3',
-          'Title': 'Test Notification',
-          'Tags': 'waiaas,system',
+          'Content-Type': 'application/json',
+          'X-Api-Key': 'test-api-key',
         }),
       }),
     );
 
-    // Decode and validate the base64url body matches NotificationMessage schema
+    // Validate the JSON body matches Push Relay format
     const callArgs = fetchMock.mock.calls[0] as [string, { body: string }];
-    const encodedBody = callArgs[1].body;
-    const decoded = JSON.parse(Buffer.from(encodedBody, 'base64url').toString('utf-8'));
-    expect(decoded).toMatchObject({
+    const parsed = JSON.parse(callArgs[1].body);
+    expect(parsed.subscriptionToken).toBe('a1b2c3d4');
+    expect(parsed.category).toBe('notification');
+    expect(parsed.payload).toMatchObject({
       version: '1',
       eventType: 'TEST',
       walletId: '',
@@ -191,7 +191,7 @@ describe('POST /admin/wallet-apps/:id/test-notification', () => {
       title: 'Test Notification',
       body: expect.stringContaining("D'CENT Wallet"),
     });
-    expect(typeof decoded.timestamp).toBe('number');
+    expect(typeof parsed.payload.timestamp).toBe('number');
   });
 
   it('returns 404 when app not found', async () => {

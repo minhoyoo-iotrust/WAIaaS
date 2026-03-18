@@ -432,8 +432,8 @@ describe('SettingsService', () => {
     });
 
     it('has expected number of definitions', () => {
-      // 10 notifications + 15 rpc + 15 security (+1 cors_origins) + 1 daemon + 2 walletconnect + 2 oracle + 1 display + 6 autostop + 5 monitoring + 2 telegram + 8 signing_sdk + 7 incoming + 2 incoming hyperevm wss + 85 actions (+2 hyperliquid_request_timeout_ms, cors_origins) + 1 policy + 5 gas_condition + 15 rpc_pool + 1 position_tracker + 3 per-rule autostop + 9 erc8004 + 1 policy.default_deny_erc8128_domains + 6 erc8128 + 4 smart_account (pimlico/alchemy api_key + paymaster_policy_id) + 1 external_actions + 7 rpc_proxy = 215
-      expect(SETTING_DEFINITIONS.length).toBe(215);
+      // 7 notifications (ntfy removed) + 15 rpc + 15 security (+1 cors_origins) + 1 daemon + 2 walletconnect + 2 oracle + 1 display + 6 autostop + 5 monitoring + 2 telegram + 8 signing_sdk + 7 incoming + 2 incoming hyperevm wss + 85 actions (+2 hyperliquid_request_timeout_ms, cors_origins) + 1 policy + 5 gas_condition + 15 rpc_pool + 1 position_tracker + 3 per-rule autostop + 9 erc8004 + 1 policy.default_deny_erc8128_domains + 6 erc8128 + 4 smart_account (pimlico/alchemy api_key + paymaster_policy_id) + 1 external_actions + 7 rpc_proxy = 212
+      expect(SETTING_DEFINITIONS.length).toBe(212);
     });
   });
 
@@ -564,10 +564,11 @@ describe('SettingsService', () => {
 
   describe('importFromConfig() - empty string skip', () => {
     it('skips empty string config values that differ from default', () => {
-      // ntfy_server defaults to 'https://ntfy.sh', config value '' differs from default
-      // so it passes the default check but gets caught by empty string check
+      // telegram_bot_token defaults to '', config value '' matches default
+      // slack_webhook_url defaults to '', config value '' also matches default
+      // Use discord_webhook_url which defaults to '' - setting it to '' should be skipped
       const customConfig = createTestConfig({
-        notifications: { ntfy_server: '' },
+        notifications: { discord_webhook_url: '' },
       });
       const svc = new SettingsService({
         db,
@@ -577,9 +578,9 @@ describe('SettingsService', () => {
 
       const result = svc.importFromConfig();
 
-      // ntfy_server should NOT be imported (empty string skipped)
+      // discord_webhook_url empty string should NOT be imported (either matches default or empty string skip)
       const row = db.select().from(settings)
-        .where(eq(settings.key, 'notifications.ntfy_server')).get();
+        .where(eq(settings.key, 'notifications.discord_webhook_url')).get();
       expect(row).toBeUndefined();
       expect(result.skipped).toBeGreaterThan(0);
     });

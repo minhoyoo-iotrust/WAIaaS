@@ -1003,8 +1003,8 @@ describe('edge cases', () => {
     const row = db.prepare('SELECT message FROM notification_logs WHERE id = ?').get('notif-pre-v10') as { message: string | null };
     expect(row.message).toBeNull();
 
-    // Verify LATEST_SCHEMA_VERSION is 59
-    expect(LATEST_SCHEMA_VERSION).toBe(59);
+    // Verify LATEST_SCHEMA_VERSION is 60
+    expect(LATEST_SCHEMA_VERSION).toBe(60);
   });
 
   it('T-13: existing notification_logs data preserved after v10 migration', () => {
@@ -1333,7 +1333,7 @@ describe('v12 migration: x402 CHECK constraints', () => {
     // Verify final version is 19
     const versions = getVersions(db);
     expect(versions).toContain(19);
-    expect(Math.max(...versions)).toBe(59);
+    expect(Math.max(...versions)).toBe(60);
 
     // Verify data survived the entire chain (v27 drops default_network)
     const wallet = db.prepare('SELECT * FROM wallets WHERE id = ?').get('a-chain-12') as { environment: string };
@@ -1513,7 +1513,7 @@ describe('v13 migration: amount_usd and reserved_amount_usd columns', () => {
     // Verify final version is 19
     const versions = getVersions(db);
     expect(versions).toContain(19);
-    expect(Math.max(...versions)).toBe(59);
+    expect(Math.max(...versions)).toBe(60);
 
     // Verify amount_usd columns exist and are NULL for migrated data
     const tx = db.prepare('SELECT amount_usd, reserved_amount_usd FROM transactions WHERE id = ?').get('tx-chain-13') as {
@@ -1733,7 +1733,7 @@ describe('v16 migration: WC infra tables + approval_channel', () => {
     // Verify final version is 19
     const versions = getVersions(db);
     expect(versions).toContain(19);
-    expect(Math.max(...versions)).toBe(59);
+    expect(Math.max(...versions)).toBe(60);
 
     // Verify wc_sessions and wc_store tables exist
     const wcSessions = db.prepare(
@@ -1815,7 +1815,7 @@ describe('v24 migration: wallet_type column for preset auto-setup', () => {
     db = conn.sqlite;
     pushSchema(db);
 
-    expect(LATEST_SCHEMA_VERSION).toBe(59);
+    expect(LATEST_SCHEMA_VERSION).toBe(60);
 
     const versions = getVersions(db);
     expect(versions).toContain(24);
@@ -1907,7 +1907,7 @@ describe('v24 migration: wallet_type column for preset auto-setup', () => {
     // Verify final version is 24
     const versions = getVersions(db);
     expect(versions).toContain(24);
-    expect(Math.max(...versions)).toBe(59);
+    expect(Math.max(...versions)).toBe(60);
 
     // Verify wallets table has wallet_type column
     const columns = getTableColumns(db, 'wallets');
