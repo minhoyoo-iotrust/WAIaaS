@@ -33,6 +33,9 @@
 | 383 | BUG | MEDIUM | DCent Swap 견적 요청 시 fromWalletAddress 누락으로 LiFi 프로바이더 견적 실패 | v32.8 | FIXED | 2026-03-18 |
 | 384 | MISSING | MEDIUM | DCent Swap Solana 출발 2-hop 라우팅 불가 — INTERMEDIATE_TOKENS에 Solana 체인 누락 | v32.8 | FIXED | 2026-03-18 |
 | 385 | MISSING | MEDIUM | DCent Swap UAT 시나리오 누락 — 2-hop 라우팅 / 크로스체인 / Solana 미검증 | v32.8 | FIXED | 2026-03-18 |
+| 386 | BUG | HIGH | Lido 테스트넷 포지션 미표시 — Holesky 컨트랙트 주소가 Sepolia 네트워크에 매핑됨 | v32.9 | FIXED | 2026-03-18 |
+| 387 | BUG | HIGH | DCent Swap formatAmount() 회귀 — get_quotes/getDexSwapTransactionData에 human amount 전달로 전 프로바이더 실패 | v32.9 | FIXED | 2026-03-18 |
+| 388 | BUG | MEDIUM | defi-12 DCent Swap UAT 시나리오 API 엔드포인트 오류 — /v1/transactions/* 대신 /v1/actions/dcent_swap/* 사용 필요 | v32.9 | FIXED | 2026-03-18 |
 
 ## Type Legend
 
@@ -45,7 +48,7 @@
 ## Summary
 
 - **OPEN:** 0
-- **FIXED:** 385
+- **FIXED:** 388
 - **WONTFIX:** 1
-- **Total:** 386
+- **Total:** 389
 - **Archived:** 366 (001–366)
