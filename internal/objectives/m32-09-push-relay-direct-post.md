@@ -1,7 +1,8 @@
 # 마일스톤 m32-09: Push Relay 직접 연동 (ntfy.sh 제거)
 
-- **Status:** PLANNED
+- **Status:** SHIPPED
 - **Milestone:** v32.9
+- **Completed:** 2026-03-18
 
 ## 목표
 
