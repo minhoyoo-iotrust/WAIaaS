@@ -13,7 +13,7 @@
  * T-OWN-03: LOCKED state read-only with disabled radios
  * T-OWN-04: Approval preview text is correct for each preset
  * T-OWN-05: GRACE wallet_type change triggers API call
- * T-OWN-06: WC section hidden when sdk_ntfy
+ * T-OWN-06: WC section hidden when sdk_push
  * T-OWN-07: WC section visible when walletconnect
  *
  * @see Phase 266-02 — Admin UI Dropdown
@@ -141,7 +141,7 @@ const graceWalletSdkNtfy = {
   ownerAddress: '0x1234567890abcdef1234567890abcdef12345678',
   ownerState: 'GRACE' as const,
   walletType: 'dcent',
-  approvalMethod: 'sdk_ntfy',
+  approvalMethod: 'sdk_push',
 };
 
 const graceWalletWc = {
@@ -158,7 +158,7 @@ const lockedWallet = {
   ownerVerified: true,
   ownerState: 'LOCKED' as const,
   walletType: 'dcent',
-  approvalMethod: 'sdk_ntfy',
+  approvalMethod: 'sdk_push',
 };
 
 const mockNetworks = {
@@ -250,7 +250,7 @@ describe('Admin UI wallet preset dropdown', () => {
 
   it('T-ADUI-02: preset selection sends wallet_type in API body', async () => {
     setupApiMocks(noneWallet);
-    vi.mocked(api.PUT).mockResolvedValue({ data: { ...noneWallet, walletType: 'dcent', approvalMethod: 'sdk_ntfy' } });
+    vi.mocked(api.PUT).mockResolvedValue({ data: { ...noneWallet, walletType: 'dcent', approvalMethod: 'sdk_push' } });
     await renderAndWaitForDetail();
 
     await switchToOwnerTab();
@@ -389,7 +389,7 @@ describe('Admin UI Owner tab — Phase 292', () => {
 
     // Approval method preview should appear
     await waitFor(() => {
-      expect(screen.getByText(/Approval:.*Wallet App \(ntfy\)/)).toBeTruthy();
+      expect(screen.getByText(/Approval:.*Wallet App \(Push\)/)).toBeTruthy();
     });
   });
 
@@ -459,7 +459,7 @@ describe('Admin UI Owner tab — Phase 292', () => {
 
     // Preview appears
     await waitFor(() => {
-      expect(screen.getByText(/Approval:.*Wallet App \(ntfy\)/)).toBeTruthy();
+      expect(screen.getByText(/Approval:.*Wallet App \(Push\)/)).toBeTruthy();
     });
   });
 
@@ -507,7 +507,7 @@ describe('Admin UI Owner tab — Phase 292', () => {
     });
   });
 
-  it('T-OWN-06: WalletConnect section hidden when approvalMethod is sdk_ntfy', async () => {
+  it('T-OWN-06: WalletConnect section hidden when approvalMethod is sdk_push', async () => {
     setupApiMocks(graceWalletSdkNtfy);
     await renderAndWaitForDetail();
     await switchToOwnerTab();
