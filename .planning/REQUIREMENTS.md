@@ -23,17 +23,17 @@ Requirements for Push Relay 직접 연동 (ntfy.sh 제거). Each maps to roadmap
 
 ### Daemon Signing
 
-- [ ] **SIGN-01**: NtfySigningChannel을 PushRelaySigningChannel로 리네이밍 및 Push Relay HTTP POST로 서명 요청 전송
-- [ ] **SIGN-02**: subscribeToResponseTopic을 ntfy SSE에서 Push Relay long-polling으로 교체
-- [ ] **SIGN-03**: wallet-notification-channel에서 ntfy publish를 Push Relay HTTP POST로 교체
-- [ ] **SIGN-04**: approval-channel-router에서 sdk_ntfy를 sdk_push로 라우팅 변경
-- [ ] **SIGN-05**: NtfyChannel (notifications/channels/ntfy.ts) 제거
+- [x] **SIGN-01**: NtfySigningChannel을 PushRelaySigningChannel로 리네이밍 및 Push Relay HTTP POST로 서명 요청 전송
+- [x] **SIGN-02**: subscribeToResponseTopic을 ntfy SSE에서 Push Relay long-polling으로 교체
+- [x] **SIGN-03**: wallet-notification-channel에서 ntfy publish를 Push Relay HTTP POST로 교체
+- [x] **SIGN-04**: approval-channel-router에서 sdk_ntfy를 sdk_push로 라우팅 변경
+- [x] **SIGN-05**: NtfyChannel (notifications/channels/ntfy.ts) 제거
 
 ### Daemon Config
 
-- [ ] **CONF-01**: config/loader.ts에서 ntfy_server, ntfy_topic 기본값 및 스키마 필드 제거
-- [ ] **CONF-02**: setting-keys.ts에서 notifications.ntfy_server 설정 키 제거
-- [ ] **CONF-03**: hot-reload.ts에서 ntfy hot-reload 트리거 제거
+- [x] **CONF-01**: config/loader.ts에서 ntfy_server, ntfy_topic 기본값 및 스키마 필드 제거
+- [x] **CONF-02**: setting-keys.ts에서 notifications.ntfy_server 설정 키 제거
+- [x] **CONF-03**: hot-reload.ts에서 ntfy hot-reload 트리거 제거
 
 ### Push Relay Server
 
@@ -47,22 +47,22 @@ Requirements for Push Relay 직접 연동 (ntfy.sh 제거). Each maps to roadmap
 
 ### Wallet SDK
 
-- [ ] **SDK-01**: sendViaNtfy(), subscribeToRequests(), subscribeToNotifications(), parseNotification() deprecated 표시
-- [ ] **SDK-02**: sendViaRelay(), registerDevice(), unregisterDevice(), getSubscriptionToken() 유지 확인
+- [x] **SDK-01**: sendViaNtfy(), subscribeToRequests(), subscribeToNotifications(), parseNotification() deprecated 표시
+- [x] **SDK-02**: sendViaRelay(), registerDevice(), unregisterDevice(), getSubscriptionToken() 유지 확인
 
 ### Admin UI
 
-- [ ] **ADMIN-01**: Register Wallet App 다이얼로그에 Push Relay URL 필드 추가 (프리셋 시 자동 채움)
-- [ ] **ADMIN-02**: Registered Apps 카드에서 ntfy Topics 표시를 Push Relay URL + Subscription Token으로 변경
-- [ ] **ADMIN-03**: Approval Method 라디오 라벨 "Wallet App (ntfy)" → "Wallet App (Push)" 변경
-- [ ] **ADMIN-04**: 프리셋 wallet type의 Approval Method 라디오 비활성화 + 안내 표시
-- [ ] **ADMIN-05**: custom wallet type에서 push_relay_url 유무에 따른 Wallet App (Push) 옵션 조건부 표시
-- [ ] **ADMIN-06**: 페이지 헤더 ntfy 참조를 Push Relay로 변경
+- [x] **ADMIN-01**: Register Wallet App 다이얼로그에 Push Relay URL 필드 추가 (프리셋 시 자동 채움)
+- [x] **ADMIN-02**: Registered Apps 카드에서 ntfy Topics 표시를 Push Relay URL + Subscription Token으로 변경
+- [x] **ADMIN-03**: Approval Method 라디오 라벨 "Wallet App (ntfy)" → "Wallet App (Push)" 변경
+- [x] **ADMIN-04**: 프리셋 wallet type의 Approval Method 라디오 비활성화 + 안내 표시
+- [x] **ADMIN-05**: custom wallet type에서 push_relay_url 유무에 따른 Wallet App (Push) 옵션 조건부 표시
+- [x] **ADMIN-06**: 페이지 헤더 ntfy 참조를 Push Relay로 변경
 
 ### Error Handling
 
-- [ ] **ERR-01**: Push Relay 다운 시 데몬이 서명 요청 POST 실패 → PENDING_APPROVAL 유지, 에러 로그
-- [ ] **ERR-02**: long-polling 연결 실패 시 지수 백오프 재시도 (최대 3회), 최종 실패 시 서명 요청 만료
+- [x] **ERR-01**: Push Relay 다운 시 데몬이 서명 요청 POST 실패 → PENDING_APPROVAL 유지, 에러 로그
+- [x] **ERR-02**: long-polling 연결 실패 시 지수 백오프 재시도 (최대 3회), 최종 실패 시 서명 요청 만료
 
 ## Future Requirements
 
@@ -83,39 +83,39 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CORE-01 | Phase 449 | Pending |
-| CORE-02 | Phase 449 | Pending |
-| CORE-03 | Phase 449 | Pending |
-| DB-01 | Phase 449 | Pending |
-| DB-02 | Phase 449 | Pending |
-| DB-03 | Phase 449 | Pending |
-| DB-04 | Phase 449 | Pending |
-| DB-05 | Phase 449 | Pending |
-| RELAY-01 | Phase 449 | Pending |
-| RELAY-02 | Phase 449 | Pending |
-| RELAY-03 | Phase 449 | Pending |
-| RELAY-04 | Phase 449 | Pending |
-| RELAY-05 | Phase 449 | Pending |
-| RELAY-06 | Phase 449 | Pending |
-| RELAY-07 | Phase 449 | Pending |
-| SIGN-01 | Phase 450 | Pending |
-| SIGN-02 | Phase 450 | Pending |
-| SIGN-03 | Phase 450 | Pending |
-| SIGN-04 | Phase 450 | Pending |
-| SIGN-05 | Phase 450 | Pending |
-| CONF-01 | Phase 450 | Pending |
-| CONF-02 | Phase 450 | Pending |
-| CONF-03 | Phase 450 | Pending |
-| ERR-01 | Phase 450 | Pending |
-| ERR-02 | Phase 450 | Pending |
-| SDK-01 | Phase 451 | Pending |
-| SDK-02 | Phase 451 | Pending |
-| ADMIN-01 | Phase 451 | Pending |
-| ADMIN-02 | Phase 451 | Pending |
-| ADMIN-03 | Phase 451 | Pending |
-| ADMIN-04 | Phase 451 | Pending |
-| ADMIN-05 | Phase 451 | Pending |
-| ADMIN-06 | Phase 451 | Pending |
+| CORE-01 | Phase 449 | Complete |
+| CORE-02 | Phase 449 | Complete |
+| CORE-03 | Phase 449 | Complete |
+| DB-01 | Phase 449 | Complete |
+| DB-02 | Phase 449 | Complete |
+| DB-03 | Phase 449 | Complete |
+| DB-04 | Phase 449 | Complete |
+| DB-05 | Phase 449 | Complete |
+| RELAY-01 | Phase 449 | Complete |
+| RELAY-02 | Phase 449 | Complete |
+| RELAY-03 | Phase 449 | Complete |
+| RELAY-04 | Phase 449 | Complete |
+| RELAY-05 | Phase 449 | Complete |
+| RELAY-06 | Phase 449 | Complete |
+| RELAY-07 | Phase 449 | Complete |
+| SIGN-01 | Phase 450 | Complete |
+| SIGN-02 | Phase 450 | Complete |
+| SIGN-03 | Phase 450 | Complete |
+| SIGN-04 | Phase 450 | Complete |
+| SIGN-05 | Phase 450 | Complete |
+| CONF-01 | Phase 450 | Complete |
+| CONF-02 | Phase 450 | Complete |
+| CONF-03 | Phase 450 | Complete |
+| ERR-01 | Phase 450 | Complete |
+| ERR-02 | Phase 450 | Complete |
+| SDK-01 | Phase 451 | Complete |
+| SDK-02 | Phase 451 | Complete |
+| ADMIN-01 | Phase 451 | Complete |
+| ADMIN-02 | Phase 451 | Complete |
+| ADMIN-03 | Phase 451 | Complete |
+| ADMIN-04 | Phase 451 | Complete |
+| ADMIN-05 | Phase 451 | Complete |
+| ADMIN-06 | Phase 451 | Complete |
 
 **Coverage:**
 - v32.9 requirements: 32 total
@@ -124,4 +124,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-18*
-*Last updated: 2026-03-18 after roadmap creation*
+*Last updated: 2026-03-18 after Phase 451 completion (all requirements complete)*

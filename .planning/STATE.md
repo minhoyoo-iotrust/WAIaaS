@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v32.9
 milestone_name: Push Relay 직접 연동 (ntfy.sh 제거)
 status: completed
-stopped_at: Phase 450 completed (2/2 plans)
-last_updated: "2026-03-18T05:28:26.258Z"
-last_activity: 2026-03-18 — Phase 449 completed (3/3 plans)
+stopped_at: Phase 451 completed (2/2 plans) -- milestone complete
+last_updated: "2026-03-18T05:46:00.000Z"
+last_activity: 2026-03-18 — Phase 451 completed (2/2 plans)
 progress:
   total_phases: 3
-  completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
-  percent: 43
+  completed_phases: 3
+  total_plans: 7
+  completed_plans: 7
+  percent: 100
 ---
 
 # Project State
@@ -21,31 +21,33 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** AI 에이전트가 안전하고 자율적으로 온체인 거래를 수행할 수 있어야 한다 -- 동시에 에이전트 주인이 자금 통제권을 유지하면서.
-**Current focus:** Phase 449 complete, ready for Phase 450
+**Current focus:** Milestone v32.9 complete -- all 3 phases done
 
 ## Current Position
 
-Phase: 1 of 3 (Phase 449: Foundation) -- COMPLETE
-Plan: 3 of 3 in current phase
-Status: Phase 449 complete
-Last activity: 2026-03-18 — Phase 449 completed (3/3 plans)
+Phase: 3 of 3 (Phase 451: Client Update) -- COMPLETE
+Plan: 2 of 2 in current phase
+Status: Milestone v32.9 complete
+Last activity: 2026-03-18 — Phase 451 completed (2/2 plans)
 
-Progress: [####░░░░░░] 43%
+Progress: [##########] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: ~4min
-- Total execution time: ~13 minutes
+- Total plans completed: 7
+- Average duration: ~5min
+- Total execution time: ~33 minutes
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
 | 449 | 01 | ~5min | 2 | 7 |
 | 449 | 02 | ~3min | 1 | 4 |
 | 449 | 03 | ~5min | 2 | 22 |
-| Phase 450 P01 | ~10min | 2 tasks | 12 files |
-| Phase 450 P02 | ~5min | 2 tasks | 8 files |
+| 450 | 01 | ~10min | 2 | 12 |
+| 450 | 02 | ~5min | 2 | 8 |
+| 451 | 01 | ~5min | 2 | 7 |
+| 451 | 02 | ~5min | 2 | 4 |
 
 ## Accumulated Context
 
@@ -63,6 +65,12 @@ Progress: [####░░░░░░] 43%
 - [Phase 450]: PushRelaySigningChannel replaces NtfySigningChannel with HTTP POST + long-polling
 - [Phase 450]: WalletNotificationChannel uses Push Relay POST instead of ntfy topics
 - [Phase 450]: NtfyChannel completely deleted, ntfy config/settings removed
+- [Phase 451]: SDK ntfy functions deprecated with @deprecated JSDoc (not removed)
+- [Phase 451]: WalletApp API extended with push_relay_url field
+- [Phase 451]: Test notification uses Push Relay POST instead of ntfy topic
+- [Phase 451]: Admin UI approval method labels changed to "Wallet App (Push)" / sdk_push
+- [Phase 451]: Preset wallet types get disabled approval radios with guidance note
+- [Phase 451]: ntfy Topics section removed from app cards, replaced with Push Relay URL display
 
 ### Pending Todos
 
@@ -74,6 +82,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-18T05:27:47.123Z
-Stopped at: Phase 450 completed (2/2 plans)
+Last session: 2026-03-18T05:46:00.000Z
+Stopped at: Phase 451 completed (2/2 plans) -- milestone complete
 Resume file: None

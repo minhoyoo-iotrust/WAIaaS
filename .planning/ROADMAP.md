@@ -66,7 +66,7 @@ See `.planning/milestones/v32.8-ROADMAP.md` for full details.
 
 - [x] **Phase 449: Foundation -- Core 타입 + DB 마이그레이션 + Push Relay 서버** - 모든 패키지가 의존하는 타입 변경, DB 스키마, Push Relay 서버 자체 응답 저장소 전환
 - [x] **Phase 450: Daemon 서명 채널 재작성** - NtfySigningChannel을 PushRelaySigningChannel로 교체하고, ntfy 설정/코드 제거, 에러 핸들링 구현 (completed 2026-03-18)
-- [ ] **Phase 451: 클라이언트 업데이트 -- SDK deprecated + Admin UI** - Wallet SDK ntfy 함수 deprecated 처리, Admin UI의 ntfy 참조를 Push Relay로 전환
+- [x] **Phase 451: 클라이언트 업데이트 -- SDK deprecated + Admin UI** - Wallet SDK ntfy 함수 deprecated 처리, Admin UI의 ntfy 참조를 Push Relay로 전환 (completed 2026-03-18)
 
 ## Phase Details
 
@@ -115,8 +115,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 451-01-PLAN.md — SDK ntfy deprecated + API push_relay_url 필드 추가
-- [ ] 451-02-PLAN.md — Admin UI Push Relay 전환 (라벨, 다이얼로그, 카드, 프리셋)
+- [x] 451-01-PLAN.md — SDK ntfy deprecated + API push_relay_url 필드 추가
+- [x] 451-02-PLAN.md — Admin UI Push Relay 전환 (라벨, 다이얼로그, 카드, 프리셋)
 
 ## Progress
 
@@ -127,4 +127,4 @@ Phases execute in numeric order: 449 -> 450 -> 451
 |-------|----------------|--------|-----------|
 | 449. Foundation | 3/3 | Complete    | 2026-03-18 |
 | 450. Daemon 서명 채널 재작성 | 2/2 | Complete    | 2026-03-18 |
-| 451. 클라이언트 업데이트 | 0/2 | Not started | - |
+| 451. 클라이언트 업데이트 | 2/2 | Complete    | 2026-03-18 |
