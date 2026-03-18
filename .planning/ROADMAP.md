@@ -125,6 +125,6 @@ Phases execute in numeric order: 449 -> 450 -> 451
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 449. Foundation | 3/3 | Complete | 2026-03-18 |
+| 449. Foundation | 3/3 | Complete    | 2026-03-18 |
 | 450. Daemon 서명 채널 재작성 | 0/2 | Not started | - |
 | 451. 클라이언트 업데이트 | 0/2 | Not started | - |
